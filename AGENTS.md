@@ -51,4 +51,4 @@
 
 ## 规则来源
 
-通用规则迁移自 MotionJEPA commit `a9a467e3a4536e68f620283703e331ed469a561d` 的 [`CLAUDE.md`](https://github.com/hongzefu/MotionJEPA/blob/a9a467e3a4536e68f620283703e331ed469a561d/CLAUDE.md)。Claude Workflow 模型选择规则、Wan/v7 专属架构、旧评估指标和旧项目命令不属于通用规则，未迁移到本仓库。
+通用规则迁移自 MotionJEPA commit `a9a467e3a4536e68f620283703e331ed469a561d` 的 [`CLAUDE.md`](https://github.com/hongzefu/MotionJEPA/blob/a9a467e3a4536e68f620283703e331ed469a561d/CLAUDE.md)。Wan/v7 专属架构、旧评估指标和旧项目命令不属于通用规则，未迁移到本仓库。Claude Workflow 与 Agent 模型选择规则属于 Claude Code 独有机制，不写在本文件，已落在仓库根目录 [`CLAUDE.md`](CLAUDE.md)。
