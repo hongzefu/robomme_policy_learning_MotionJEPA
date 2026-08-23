@@ -207,3 +207,11 @@ marimo/_lsp/
 __marimo__/
 
 *local.sh
+
+# v1 本地数据、模型、缓存和运行产物全部位于项目内, 但不进入 Git.
+/data/
+/runs/
+/artifacts/
+/.openpi-data/
+/.runtime-home/
+/wandb/

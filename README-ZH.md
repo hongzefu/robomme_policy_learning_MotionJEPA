@@ -4,7 +4,7 @@
 
 当前工作分支为 `v1-dataloader-Restructure`。
 
-本轮只完成仓库 `/init`：创建中文项目说明和 agent 工作规则。当前尚未实现 dataloader 重构，尚未处理四任务数据，尚未运行 smoke run，也尚未接入 MotionJEPA motion token。
+仓库 `/init` 已完成。当前任务只增加与原版行为一致的可复现外围脚本，尚未处理四任务数据、运行 smoke run 或接入 MotionJEPA motion token；原版 builder、dataset、dataloader、frame sampling 和训练逻辑均保持不变。
 
 ## 项目总体目标
 
@@ -48,7 +48,27 @@ MotionJEPA 的参考分支为 `v6.1.1-slurmWanExtract`。本仓库当前只完�
 /data/hongzefu/robomme_policy_learning_MotionJEPA
 ```
 
-具体子目录结构将在对应实现任务开始前由用户确认，本次初始化不预设新的数据格式或模型目录。
+本轮已固定以下项目内路径：
+
+- `.openpi-data/`：SigLIP、PaliGemma tokenizer 和 pi05_base。
+- `data/robomme_preprocessed_4task_original_smoke/`：每任务 `episode_0` 的原版 smoke 数据。
+- `data/robomme_preprocessed_4task_original/`：每任务 400 episodes 的原版全量数据。
+- `runs/assets/mme_vla_suite/robomme/norm_stats.json`：当前数据对应的 norm stats。
+- `.cache/` 与 `.runtime-home/`：uv、JAX、wandb 等运行缓存。
+- `artifacts/v1_dataloader_restructure/`：构建日志、smoke 日志和不可由 Git 还原的验收结果。
+
+## 固定可复现入口
+
+所有实际命令均写入 Bash，不依赖聊天记录：
+
+```bash
+bash scripts/v1_dataloader_restructure/stage_project_models.sh
+bash scripts/v1_dataloader_restructure/launch_4task_smoke_dataset_tmux.sh
+bash scripts/v1_dataloader_restructure/launch_4task_training_smoke_tmux.sh
+bash scripts/v1_dataloader_restructure/launch_4task_full_dataset_tmux.sh
+```
+
+训练 smoke 由 Bash 调用 `scripts/smoke_train_once.py`，该入口只调用一次现有 `scripts.train.main()`，并强制原版 tentative 口径的 12 steps。它不复制或修改 dataloader、loss、优化器与模型逻辑。
 
 ### 本地与 NFS
 
@@ -65,4 +85,4 @@ MotionJEPA 的参考分支为 `v6.1.1-slurmWanExtract`。本仓库当前只完�
 
 ## 后续阶段
 
-完成本次 `/init` 后，后续任务将由用户逐项明确启动。预期顺序是：先处理 v1 dataloader 和四任务 smoke，再在 NFS 上验证吞吐；MotionJEPA motion token 接入属于更后的独立阶段。
+当前已获用户确认的执行顺序是：复制项目内模型，构建四任务 smoke 数据，运行原版 12-step training smoke，再启动四任务各 400 episodes 的原版全量预处理。MotionJEPA motion token 接入仍属于更后的独立阶段。
