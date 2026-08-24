@@ -71,8 +71,12 @@
 - A/B 两边**同机、同驱动、同 `XLA_FLAGS`、同 mesh（2 卡 fsdp=2）、同 batch 档**——
   逐项核对两份 `env.json` 相同（TF32 等矩阵精度行为由 XLA 按硬件+flags 决定，
   两边同设即抵消）；
-- 本基准未额外加 `--xla_gpu_deterministic_ops`（加了就偏离官方口径）；若第 1 级
-  发现同配置重跑自身都不 bitwise 稳定，再考虑两边同开该 flag。
+- 本基准未额外加 `--xla_gpu_deterministic_ops`（加了就偏离官方口径）。
+- **2026-08-24 实测：同配置同 seed 重跑两轮，参数校验和逐步全不相同——本机默认
+  设置下并非 bitwise 确定**（疑因每轮删了 jax 编译缓存、XLA 重新 autotune 选中
+  不同 kernel/归约实现）。因此做 A/B 前必须先立稳前提：两边同开
+  `--xla_gpu_deterministic_ops=true`、固定/关闭 autotune、共用同一份编译缓存，
+  并用两次相同 run 验证校验和逐步一致后再开始 dataloader 改动对比。
 
 ### 第 2 级：梯度范数 + 参数校验和（便宜，且校验和是累积效应）
 
