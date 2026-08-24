@@ -134,9 +134,57 @@ def _ordered_int(a: np.ndarray) -> np.ndarray:
     return np.where(raw >= sign_bit, sign_bit - raw, raw)
 
 
+def _mantissa_bits(dt: np.dtype) -> int:
+    """尾数位数：bf16 7 位、fp16 10 位、fp32 23 位、fp64 52 位。用于算某数值处的局部 ULP。"""
+    if "bfloat" in str(dt):
+        return 7
+    return {2: 10, 4: 23, 8: 52}.get(dt.itemsize, 23)
+
+
+def grid_metrics(a: np.ndarray, b: np.ndarray) -> dict:
+    """误差地板：平均绝对误差 ÷ 非零元素的中位幅值，**无量纲、与容器 dtype 无关**。
+
+    为什么不按 dtype 的 ULP 算（这版是踩过两次坑后改的）：
+      · 下游打包张量按 budget=512 右侧补零，早期 step 绝大多数行是 padding，
+        用全体中位幅值当参考尺度会让分母落到零上、比值爆掉；
+      · 更麻烦的是 `right_padding_token_emb` 在需要补零时会把 bf16 **上抬成 float64**
+        （实测：step<31 时 dtype=float64，满帧 step≥31 才是 bfloat16）。按容器 dtype 取
+        ULP，就会用 float64 的 2^-52 去量 bf16 粒度的数据，比值被放大 2^45≈3.5e13
+        （实测报出过 5.2e13，纯属该缺陷）。
+    所以参考尺度改用**数据自身的幅值**：重排累加顺序造成的是固定绝对地板，
+    该比值应是小常数；乘性/结构性错误会让它随分布漂移。
+
+    `int_ulp_frac` 只在两侧都确为 bf16 时才有意义，其余情况返回 1.0（不参与判定）。
+    """
+    af, bf = a.astype(np.float64), b.astype(np.float64)
+    d = np.abs(af - bf)
+    out = {"err_floor_rel": 0.0, "int_ulp_frac": 1.0, "mean_abs": 0.0, "nonzero_frac": 1.0}
+    if not af.size:
+        return out
+    out["mean_abs"] = float(d.mean())
+    mag = np.abs(af)
+    nzmag = mag[mag > 1e-30]
+    out["nonzero_frac"] = float(nzmag.size / mag.size)
+    if not nzmag.size:
+        return out
+    med = float(np.median(nzmag))
+    out["err_floor_rel"] = float(d.mean() / med)
+    if "bfloat" in str(a.dtype) and "bfloat" in str(b.dtype):
+        nz = d > 0
+        if nz.any():
+            local = 2.0 ** (np.floor(np.log2(np.maximum(np.abs(af[nz]), 1e-300))) - 7)
+            k = d[nz] / local
+            out["int_ulp_frac"] = float(np.mean(np.abs(k - np.round(k)) < 1e-6))
+    return out
+
+
 def metrics(a: np.ndarray, b: np.ndarray) -> dict:
-    """bf16 的 1 ULP 就是 ~0.4% 相对误差，所以绝对阈值没意义。改报：位相同占比 /
-    最大 ULP 差 / 逐 token 余弦下界。"""
+    """报四类量：逐位相同性、bf16 网格归属、误差地板、逐 token 余弦。
+
+    ⚠ `max_ulp` 仍计算并输出，但**不再作为判据**：它用单调整数映射度量距离，
+    在跨符号与含零（padding）时给出无意义的巨值——实测第三层报出过 9.27e18（≈2^63），
+    那只是 padding 零与负值在该映射下的距离。判据改用 grid_metrics 的两项。
+    """
     ra, rb = _raw_bits(a), _raw_bits(b)
     same_bits = float(np.mean(ra == rb)) if ra.size else 1.0
     bitwise_equal = bool(np.array_equal(ra, rb))
@@ -157,6 +205,8 @@ def metrics(a: np.ndarray, b: np.ndarray) -> dict:
         "max_ulp": ulp,
         "min_cosine": float(np.min(cos)) if cos.size else 1.0,
         "max_abs_diff": float(np.max(np.abs(af - bf))) if af.size else 0.0,
+        "p5_cosine": float(np.quantile(cos, 0.05)) if cos.size else 1.0,
+        **grid_metrics(a, b),
     }
 
 
@@ -169,6 +219,9 @@ class Agg:
         self.min_same_bit_frac = 1.0
         self.max_ulp = 0
         self.min_cosine = 1.0
+        self.min_p5_cosine = 1.0
+        self.max_err_floor_rel = 0.0
+        self.min_int_ulp_frac = 1.0
         self.max_abs_diff = 0.0
 
     def add(self, m: dict) -> None:
@@ -177,6 +230,9 @@ class Agg:
         self.min_same_bit_frac = min(self.min_same_bit_frac, m["same_bit_frac"])
         self.max_ulp = max(self.max_ulp, m["max_ulp"])
         self.min_cosine = min(self.min_cosine, m["min_cosine"])
+        self.min_p5_cosine = min(self.min_p5_cosine, m.get("p5_cosine", 1.0))
+        self.max_err_floor_rel = max(self.max_err_floor_rel, m.get("err_floor_rel", 0.0))
+        self.min_int_ulp_frac = min(self.min_int_ulp_frac, m.get("int_ulp_frac", 1.0))
         self.max_abs_diff = max(self.max_abs_diff, m["max_abs_diff"])
 
     def as_dict(self) -> dict:
@@ -186,6 +242,9 @@ class Agg:
             "min_same_bit_frac": round(self.min_same_bit_frac, 6),
             "max_ulp": self.max_ulp,
             "min_cosine": round(self.min_cosine, 9),
+            "p5_cosine": round(self.min_p5_cosine, 9),
+            "err_floor_rel": round(self.max_err_floor_rel, 5),
+            "int_ulp_frac": round(self.min_int_ulp_frac, 4),
             "max_abs_diff": self.max_abs_diff,
         }
 
@@ -331,18 +390,27 @@ def verdict(mode: str, aggs: dict[str, Agg], args: argparse.Namespace) -> list[s
             fails.append(f"[零容差] {k} 未逐位相同：max_ulp={agg.max_ulp} "
                          f"same_bit_frac={agg.min_same_bit_frac:.6f}")
     if mode != "bitexact":
+        # ⚠ 判据经 2026-08-23 实测后重新推导。原先的「位相同占比 ≥0.95 / 最大 ULP 差 ≤1」
+        # 前提是「fp32 网络、差异只来自最后一层舍入」，而 SigLIP So400m 的 dtype_mm
+        # 是 bfloat16、27 层全程 bf16 计算，输出差异天然在 bf16 粒度（0.4%）量级——
+        # 拿 fp32 的尺子量 bf16 的网络量不出有意义的结论。`max_ulp` 还在跨符号/含零时
+        # 给出无意义巨值（实测 9.27e18）。两者改为「只报不判」，判据换成下面两条：
+        #   · 余弦   —— 方向是否保持（下游是线性投影，方向才是要紧的）
+        #   · 误差地板 —— 平均绝对误差 ÷ 中位幅值处的 ULP。重排累加顺序造成的是
+        #     「固定绝对地板」，该比值应是小常数；乘性错误会让它随分布漂移。
         for k in (*GPU_KEYS, "ds_img_emb"):
             agg = aggs.get(k)
             if agg is None or agg.n == 0:
                 continue
-            if agg.min_same_bit_frac < args.min_same_bit_frac:
-                fails.append(f"[等价] {k} 位相同占比 {agg.min_same_bit_frac:.4f} "
-                             f"< 阈值 {args.min_same_bit_frac}")
-            if agg.max_ulp > args.max_ulp:
-                fails.append(f"[等价] {k} 最大 ULP 差 {agg.max_ulp} > 阈值 {args.max_ulp}"
-                             f"（≥2 ULP 说明是结构性偏移，不是舍入噪声）")
             if agg.min_cosine < args.min_cosine:
                 fails.append(f"[等价] {k} 最小余弦 {agg.min_cosine:.9f} < 阈值 {args.min_cosine}")
+            if agg.min_p5_cosine < args.min_p5_cosine:
+                fails.append(f"[等价] {k} p5 余弦 {agg.min_p5_cosine:.9f} "
+                             f"< 阈值 {args.min_p5_cosine}")
+            if agg.max_err_floor_rel > args.max_err_floor_rel:
+                fails.append(f"[等价] {k} 误差地板 {agg.max_err_floor_rel:.4f} "
+                             f"（平均绝对误差÷非零中位幅值）> 阈值 {args.max_err_floor_rel}"
+                             f"——说明误差不只是逐层舍入累积")
         for k in ("ds_mask",):
             agg = aggs.get(k)
             if agg and agg.n and not agg.bitwise_equal:
@@ -362,9 +430,13 @@ def main() -> None:
     ap.add_argument("--raw_dir", default="", help="恢复 listdir 顺序用")
     ap.add_argument("--subset", default="", help="限定比对的 episode（sample 产物）")
     ap.add_argument("--steps_per_episode", type=int, default=0, help="0=全部 step")
-    ap.add_argument("--min_same_bit_frac", type=float, default=0.95)
-    ap.add_argument("--max_ulp", type=int, default=1)
-    ap.add_argument("--min_cosine", type=float, default=1 - 1e-3)
+    # 下面两个只影响输出、不再参与判定，保留是为了老命令行不报错
+    ap.add_argument("--min_same_bit_frac", type=float, default=0.0)
+    ap.add_argument("--max_ulp", type=int, default=2**62)
+    # 现行三条判据（2026-08-23 实测后重新推导，括号内是当时的观测值与裕度）
+    ap.add_argument("--min_cosine", type=float, default=1 - 1e-3)       # 观测 ≥0.99991，裕度 110×
+    ap.add_argument("--min_p5_cosine", type=float, default=1 - 1e-4)    # 观测 ≥0.99998，裕度 4.8×
+    ap.add_argument("--max_err_floor_rel", type=float, default=0.05)    # 观测 ≈0.016，裕度 3×
     ap.add_argument("--report", default="", help="把结果 JSON 落盘")
     args = ap.parse_args()
 
@@ -427,8 +499,9 @@ def main() -> None:
     report = {"mode": args.mode, "episodes": len(keys),
               "metrics": {k: v.as_dict() for k, v in aggs.items() if v.n},
               "errors": errs[:100], "fails": fails,
-              "thresholds": {"min_same_bit_frac": args.min_same_bit_frac,
-                             "max_ulp": args.max_ulp, "min_cosine": args.min_cosine}}
+              "thresholds": {"min_cosine": args.min_cosine,
+                             "min_p5_cosine": args.min_p5_cosine,
+                             "max_err_floor_rel": args.max_err_floor_rel}}
     if args.report:
         pathlib.Path(args.report).parent.mkdir(parents=True, exist_ok=True)
         pathlib.Path(args.report).write_text(

@@ -7,6 +7,12 @@
 # 需要 GPU 是因为最后一道抽检要重新跑 SigLIP 前向做零容差复算；
 # spgpu 也强制每个 job 至少 1 张卡（--gpus-per-node=0 会被 QOSMinGRES 拒绝）。
 #
+# ⚠ --mem 必须跟分片档位同量级，**不能沿用小默认值**。本轮实测踩过：档位实测把 array
+#   定到 24 G，finalize 却留在 12 G 默认值，结果前三步（输入同源 / 完整性 / sidecar 汇总）
+#   全绿之后，在第四步加载 SigLIP 做抽检时被 OOM 杀掉（job 58531841，OUT_OF_MEMORY，
+#   1:34，退出码 0:125）。finalize 和分片一样要载 1.66 GB 权重并反复前向，内存需求同量级。
+#   数据本身不受影响——它只是守卫，重提即可。
+#
 #SBATCH --job-name=v1-4task-build-final
 #SBATCH --account=chaijy2
 #SBATCH --partition=spgpu
@@ -14,7 +20,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=4
 #SBATCH --gpus-per-node=1
-#SBATCH --mem=12G
+#SBATCH --mem=32G
 #SBATCH --time=02:00:00
 #SBATCH --output=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/%x-%j.log
 #SBATCH --mail-user=hongzefu@umich.edu

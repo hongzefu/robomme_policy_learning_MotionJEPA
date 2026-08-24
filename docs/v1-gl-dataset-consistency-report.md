@@ -344,6 +344,105 @@ listdir 实际顺序: ['ButtonUnmaskSwap', 'ButtonUnmask', 'VideoUnmaskSwap', 'V
 2. **最大 ULP 差 ≤ 1** —— 只允许差一个最小单位；出现 ≥2 ULP 说明是结构性偏移而非舍入噪声；
 3. **逐 token 余弦相似度 ≥ 1 − 1e-3**。
 
+### 4.3.1 判据的重新推导（2026-08-23，实测后修正）
+
+**先说结论：我最初为 `image_emb_*` 定的两条阈值是错的，已作废。**
+
+原判据「bf16 位完全相同的元素占比 ≥0.95」与「最大 ULP 差 ≤1」，前提是
+*「网络在 fp32 下计算，差异只来自最后一层转 bf16 时的舍入」*。这个前提不成立——
+`SigLipTokenizer` 传的是 `dtype_mm="bfloat16"`，而 `dtype_mm` 在 `siglip.py` 里被施加到
+`nn.Dense` / `nn.LayerNorm` / 注意力上，**So400m/14 的 27 层全程在 bf16 下计算**。
+输出差异天然就在 bf16 粒度（0.4%）的量级，拿 fp32 的尺子去量必然量不出有意义的结论。
+
+`max_ulp` 还有一个独立缺陷：它用单调整数映射度量距离，**跨符号或含零（padding）时给出
+无意义的巨值**——第三层实测报出过 `9271856101593186304`（≈2^63），那只是 padding 零与
+负值在该映射下的距离，不是任何真实差异。
+
+**现行三条判据**（`compare_datasets.py` 已实装，旧两条降级为「只报不判」）：
+
+| 判据 | 阈值 | 观测值 | 裕度 | 为什么它有判别力 |
+|---|---|---|---|---|
+| 最小逐 token 余弦 | ≥ 1−1e-3 | ≥0.99991 | 110× | 下游是线性投影，**方向**才是要紧的 |
+| p5 逐 token 余弦 | ≥ 1−1e-4 | ≥0.99998 | 4.8× | 排除「个别 token 崩掉」被最小值掩盖 |
+| **误差地板（ULP）** | ≤ 8 | **≤2.82** | 2.8× | 平均绝对误差 ÷ 中位幅值处的 ULP。重排累加顺序造成的是**固定绝对地板**，该比值是小常数；若是乘性/结构性错误，比值会随分布漂移 |
+
+合成对照验证这套判据确有判别力：人为造 3 ULP 的舍入型差异 → 误差地板 0.75、余弦 0.999988；
+把一个值从 2.0 改成 2.5（结构型）→ 误差地板 **16.0**（21 倍）、余弦 0.9957。
+
+**另外自我修正一条**：我一度把「差异恰为 ULP 整数倍的占比（`int_ulp_frac`）」也当强判据，
+这不对——两个 bf16 数的差本来就几乎总是较细 ULP 的整数倍，该指标对 bf16↔bf16 近乎恒真
+（实测 98.4–98.9%，缺的那点只是两边指数相差很远的近零元素）。它是幅值接近度的代理量，
+已降级为只报不判。
+
+### 4.3.2 误差成因：分层指纹归因（实测，非推断）
+
+固定同一张图（`ButtonUnmask#0` 的 `timestep_0`），在 A40 与本机 Ada 上分别 dump
+SigLIP 前向的各阶段中间量并逐位比对：
+
+| 阶段 | dtype | 逐位相同 | 位不同占比 |
+|---|---|:--:|---:|
+| `stage0` H5 原图 | uint8 | **✓** | 0.00% |
+| `stage1` 归一化 + `resize_with_pad` 之后 | fp32 | **✓** | 0.00% |
+| **`stage2` SigLIP 输出（池化前）** | **bf16** | **✗** | **85.85%** |
+| `stage3` 池化后 | bf16 | ✗ | 80.22% |
+
+**差异 100% 起源于 SigLIP 网络内部**：输入与预处理跨架构逐位相同——注意
+`resize_with_pad` 本身也含归约，但它是 fp32、项数少，重排后仍舍入到同一个值。
+
+**机制链**（每一环都有实测支撑）：
+
+1. So400m/14 **深度 27 层**，width 1152、mlp_dim 4304、16 头；`dtype_mm="bfloat16"`
+   ⇒ 每层的矩阵乘是 1152 或 4304 项的点积，**在 bf16 下累加**。
+2. bf16 尾数仅 **7 位**，最小步长约 0.4%。
+3. A40（sm_86）与 RTX 6000 Ada（sm_89）的 **tensor core 分块形状与 split-K 划分不同**
+   ⇒ 同一个点积的**累加顺序不同**。
+4. 累加顺序一变，每个部分和的舍入就变 ⇒ 逐层产生 ULP 级差异 ⇒ 27 层累积。
+5. 实测落点：输出的平均绝对误差 **≈2–3 个 bf16 ULP**，且相对误差与幅值成反比
+   （固定绝对地板的特征），大幅值元素（|v|>5）相对误差仅 0.24%。
+
+**决定性的对照组是 `pos_emb`**：它同样跑在 GPU、同样过 JAX、同样在这条链路里，
+但 `jnp.einsum("m,d->md")` 是**秩一外积、没有归约累加**——**跨架构逐位相同**。
+这一条把「GPU 不同」「JAX 版本不同」「驱动不同」全部排除，
+成因唯一锁定在**归约累加顺序**上。
+
+与 `greatlakes.md` 既往结论一致：Wan VAE 上是同一现象（97% 元素有差），
+且 determinism 三档全部无效——因为这不是 cuDNN 的非确定性，而是**不同硬件的不同分块策略**，
+没有 flag 可解。**同一架构内则完全确定**：本机 4 进程逐位相同、A40 上 256/256 复算 `max|diff|=0`。
+
+### 4.3.3 教训：度量工具比被测对象更容易出错
+
+本轮验证阶段一共出现 **4 次判定失败，全部出在度量工具上，零次出在数据上**。
+如实记下来，因为它直接影响该怎么读这套判据的结论。
+
+| # | 缺陷 | 表现 | 根因 | 处置 |
+|---|---|---|---|---|
+| 1 | `Agg` 属性名不一致（`all_bitwise_equal` vs `bitwise_equal`） | 判定阶段 `AttributeError` 崩溃 | 纯代码 bug | 统一命名 |
+| 2 | `epis_idx` 被当内容比对 | 第一层报 30+ 条「pkl 不逐位相同」 | 它是**身份标签**，两库编号体系本就不同（未改动 builder 的 `episode_0` 实测其实是 `ButtonUnmaskSwap#0`） | 改为分别校验各库标的是不是自己的目录号 |
+| 3 | `max_ulp` 跨符号/含零时无意义 | 第三层报出 `9.27e18`（≈2^63） | 单调整数映射在 padding 零与负值之间给出的是「符号翻转」量级的距离 | 降为只报不判 |
+| 4 | 误差地板按容器 dtype 取 ULP | 第三层报出 `5.2e13` ULP | `right_padding_token_emb` 在补零时把 bf16 **上抬成 float64**（实测 step<31 是 float64、满帧才是 bf16），用 float64 的 2^-52 去量 bf16 粒度的数据，放大 2^45≈3.5e13 | 改为无量纲：平均绝对误差 ÷ 非零中位幅值 |
+
+**方法论结论：判据必须先在「已知答案」的合成用例上验证判别力，再拿去判真实数据。**
+现行三条判据都补了这道自检——人为造 3 ULP 的舍入型差异 → 误差地板 0.39%、余弦 0.99999；
+把一个值从 2.0 改成 2.5 的结构型差异 → 误差地板 **8.3%**（拦住）、余弦 0.9957。
+两类差异被拉开 21 倍，判据确有判别力，不是「调到刚好能过」。
+
+### 4.3.4 顺带发现：`right_padding_token_emb` 把 bf16 上抬成 float64
+
+诊断缺陷 #4 时测出来的，**与本分支的重构本职直接相关**：
+
+| step | 选帧数 | `img_emb` dtype | 非零占比 |
+|---:|---:|---|---:|
+| 0 | 1 | **float64** | 3.1% |
+| 3 | 4 | **float64** | 12.5% |
+| 10 | 11 | **float64** | 34.4% |
+| 31 | 32 | bfloat16 | 100% |
+| 40 / 120 | 32 | bfloat16 | 100% |
+
+只要需要右侧补零（`step < budget/token_per_image = 32`），`np.zeros` 的默认 dtype 就把
+bf16 拼成了 float64——喂给模型的张量**体积涨 8 倍**，且 **dtype 随 step 变化**。
+本轮不动它（会改变数值语义），但它是「不改训练语义前提下优化吞吐」的现成靶子，
+记为 dataloader 重构候选项。
+
 ### 4.4 第三层：下游等价（真正决定训练是否等价的一道）
 
 前两层比字节，这层比**训练实际怎么用它**。用 `perceptual-framesamp-context.yaml` 同一配置，
@@ -388,10 +487,20 @@ hostname / GPU 型号 / jax 版本 / git commit / 清单 sha / 资源档位，fi
 
 ## 五、CPU / mem 档位实测
 
-见独立文档 [`v1-gl-resource-tier-bench.md`](v1-gl-resource-tier-bench.md)。
-结论（选定档位、A40 实测 step/s、walltime 反算）回填到这里：
+完整方法、九档本机扫描表、四档集群探针表与三条教训见独立文档
+[`v1-gl-resource-tier-bench.md`](v1-gl-resource-tier-bench.md)。此处只记结论：
 
-> **待回填** —— `step_bench.sh report` 之后。
+**选定 `--cpus-per-task=2 --mem=24G`。** 四个 A40 探针里，速率判据（±2%）与
+GPU 利用率判据（±2pp）四档全过——流水线 I/O 受限、GPU 只忙约 21%，CPU 从 4 降到 1
+对速率毫无影响。真正起筛选作用的只有内存判据（峰值 ≤ 0.6×申请）：
+2C/16G 卡在 67%、1C/24G 卡在 61%，**只有 2C/24G 的 43% 合格**。
+
+全量跑完的复核证实这个选择是必要的：最重分片的 `cg_anon` 峰达 **14.78 GiB**，
+比探针测到的 10.41 GiB **高 42%**——若当初压到 16 G，全量下就是 92%，几乎必然 OOM。
+
+**walltime**：GPU 侧估算 34 分、I/O 侧 1h37（取大者），×1.5 = 2h26，用户加码到 04:00:00。
+**实际耗时 36m45s**，裕度 6.5×——`IO_BW_MBPS=132` 的假设过于保守，
+8 路并发实测聚合带宽约 **320 MB/s**。
 
 ---
 
@@ -427,22 +536,158 @@ hostname / GPU 型号 / jax 版本 / git commit / 清单 sha / 资源档位，fi
    `RoboMMEDataset.__getitem__` 正是拿它去找 `features/episode_{epis_idx}/`，标错了训练就读错 episode。
    改口径后其余 8 个 key 本就全绿，这条是唯一的假失败。
 
-### 6.1 正式验证结果
+### 6.1 第一层：分片语义无损（本机，零容差）—— **PASS**
 
-> **待回填** —— 各层在 turbo 上跑完后填入判定行与实测数字：
->
-> - 第一层 逐字节判定（`v1-store/reports/layer1_bitexact.json`）
-> - 第二层 逐 key 判定，含 `pos_emb_*` 最终桶归属、`image_emb` 的位相同占比 / 最大 ULP 差 / 最小余弦
->   （`v1-store/reports/layer2_crossarch.json`）
-> - 第三层 选帧索引与 mask 判定（`v1-store/reports/layer3_downstream.json`）
-> - finalize 的输入 sha256、完整性、同架构零容差抽检判定行
-> - 第四层 smoke 的 loss 序列
-> - 产物体积实测与 588 KiB/step 估算的偏差
+`ref-untouched`（未改动 `build_dataset.py --max_episodes 3`）对 `ref-shard`
+（`build_shard.py --num_shards 4`），同一批 **12 个 episode / 3,862 步全覆盖**：
+
+```
+✓ 映射交叉验证通过（listdir 顺序与 builder 日志一致）
+COMPARE_RESULT=bitexact PASS
+```
+
+九个 key 全部逐位相同：`image_emb_{8x8,4x4,2x2}`、`pos_emb_{8x8,4x4,2x2}`、`state_emb`、
+`kept_indices.json`、`data/*.pkl`。报告落在 `v1-store/reports/layer1_bitexact.json`。
+
+**「分片」这个变量到此清零，`build_shard.py` 取得「本地真值」资格。**
+
+### 6.2 集群侧五道守卫（finalize job 58532400）—— **全绿**
+
+```
+[1/5] 输入 H5 同源核验（level=size）    ✓ 四个文件字节数一致
+[2/5] 产物完整性核验                    ✓ feature 目录缺失=0；pkl 实得 395,289 == 期望
+[3/5] 分片 sidecar 汇总                 ✓ sidecar=8，覆盖 episode=1600，残留 claim=0
+[4/5] 同架构零容差抽检（256 条）        ✓ 全体 max|diff|=0.000e+00，逐位一致 PASS
+[5/5] stats={'execution_samples': 395289, 'total_samples': 483291}
+      provenance: host=gl1507 gpu=NVIDIA A40 jax=0.5.3
+全部检查通过 PASS      FINALIZE_EXIT_CODE=0
+```
+
+第 [4] 步尤其关键：它在**同一节点重新算** 256 条 `token_emb` 并要求 `max|diff|` 严格为 0，
+排除了线程调度、cuDNN 算法选择这类**同架构非确定性**。这条不过的话，
+后面任何跨架构比对都失去意义。
+
+八个分片全部 `SHARD_EXIT_CODE=0`，步数 3×60,412 + 5×60,411 = **483,291，与清单逐个吻合**。
+
+### 6.3 第二层：跨架构逐 key 分类对拍 —— **PASS**
+
+`ref-crossarch`（本机 Ada，47 个全域分层随机 episode）对 `4task-gl`（A40 全量库），
+每 episode 取 24 个 step，共 1,128 个 `token_emb`：
+
+**零容差桶（全部逐位相同）**
+
+| key | 计算路径 | 结果 |
+|---|---|---|
+| `kept_indices.json` | numpy 像素差 + heapq，未碰 GPU | ✓ 逐位相同 |
+| `data/*.pkl` | 从 H5 直读 | ✓ 逐位相同 |
+| `state_emb` | 即那个 `state` numpy 数组 | ✓ 逐位相同 |
+| **`pos_emb_8x8/4x4/2x2`** | JAX/GPU，但秩一外积无归约 | **✓ 逐位相同 → 实测判入零容差桶** |
+
+`pos_emb_*` 的桶归属就此定案。方案阶段我拒绝先验假定它、交给实测判定，结果是**它确实逐位相同**，
+而这恰恰成了整个归因论证的对照组（见 4.3.2）。
+
+**bf16 数值桶 `image_emb_*`**
+
+| 判据 | 阈值 | 实测（`image_emb_8x8`） | 裕度 |
+|---|---|---|---|
+| 最小逐 token 余弦 | ≥0.999 | **0.999842** | 6.3× |
+| p5 逐 token 余弦 | ≥0.9999 | **0.999975** | 4.1× |
+| 误差地板（均绝对误差÷非零中位幅值） | ≤0.05 | **0.01924** | 2.6× |
+
+```
+COMPARE_RESULT=crossarch PASS      LAYER2_EXIT=0
+```
+
+只报不判的参考量：位相同占比 0.158、`max_ulp` 31,660（后者跨符号无意义，见 4.3.3）。
+
+### 6.4 第三层：下游等价 —— **PASS**
+
+同一批 `(episode, step)` 走 `prepare_frame_sampling`，376 组对比：
+
+| 下游产物 | 结果 | 含义 |
+|---|---|---|
+| `ds_indices`（选帧索引） | **✓ 逐位相同** | 选哪些帧完全一致 |
+| `ds_mask`（padding mask） | **✓ 逐位相同** | 有效 token 边界完全一致 |
+| `ds_pos_emb` | **✓ 逐位相同** | 位置信息完全一致 |
+| `ds_img_emb` | 误差地板 0.01108、最小余弦 0.999985 | 按 bf16 数值桶口径通过 |
+
+```
+COMPARE_RESULT=downstream PASS     LAYER3_EXIT=0
+```
+
+**这是整套方案里最要紧的一条结论：跨架构的数值差异没有改变 dataloader 的任何离散决策。**
+
+### 6.5 第四层：训练可用性 —— **PASS**
+
+本地 2 GPU（`--fsdp-devices 2`、batch 2）用 `perceptual-framesamp-context` 直接吃 A40 全量库：
+
+```
+norm stats: 395,289 样本 / 3,088 batch，29 分钟（从 NFS 读约 158 GB）
+Step 0..11 共 12 步，loss ∈ [0.4340, 0.8644]，末值 0.6362，全部有限
+==========Tentative run completed==========
+```
+
+`grad_norm` 在 34–382 之间波动、`param_norm` 稳定在 1803.09，无 NaN/Inf、无形状或键缺失。
+⚠ 按 AGENTS.md 第 13 条，这是**功能性 smoke，不是吞吐基准**——代码与数据都在 turbo，
+且 frame sampling 每样本要读 32 个 `token_emb`（≈19 MB）。
 
 ---
 
 ## 七、复现命令与续跑口径
 
-> **待回填** —— 逐段实际命令与实测耗时。骨架见
-> [`scripts/data-preprocess-GL/README.md`](../scripts/data-preprocess-GL/README.md)
-> 的「逐段流程」「续跑与故障处理」两节。
+### 7.1 逐段命令与实测耗时（2026-08-23 实跑）
+
+```bash
+cd /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA
+S=scripts/data-preprocess-GL
+
+# 第 0 段 置备（venv 重建 6m28s+4m14s；H5 rsync 321GB @99.5MB/s；两侧 sha256 313s/2864s）
+bash $S/step0_setup_turbo.sh all
+
+# 第一层 分片语义无损（清单扫描 2872s + 双跑 + 逐字节对拍）
+bash $S/step_local_baseline.sh                       # → LAYER1_PASS
+
+# 档位实测（本机九档约 30min；集群四档探针各 3m29s、零排队）
+MEM_TIERS=32,24,16,12,10 CPU_TIERS=8,4,2,1 bash $S/step_bench.sh local
+CLUSTER_TIERS="4:32 2:24 2:16 1:24" PROBE_N=3 bash $S/step_bench.sh cluster
+bash $S/step_bench.sh report
+
+# 【审批点】全量：8×1GPU / 2 CPU / 24 G / 04:00:00
+CONFIRM_FULL=yes RATE=28.913 TIER_CPUS=2 TIER_MEM_GB=24 WALLTIME=04:00:00 \
+  RAW_BYTES=321134403214 FTIME=03:00:00 SPOT_CHECK=256 bash $S/step_submit.sh
+# → array 58531840（八片 33:40–36:45 全 SHARD_EXIT_CODE=0）
+# → finalize 58532400（FINALIZE_EXIT_CODE=0）
+
+# 第二、三层
+bash $S/step_verify.sh                               # → crossarch PASS / downstream PASS
+
+# 第四层（norm stats 29min + 12 step）
+bash scripts/smoke-local/run_gl_dataset_training_smoke.sh   # → LAYER4_PASS
+```
+
+| 阶段 | 实测耗时 |
+|---|---|
+| H5 rsync 本机→turbo（321 GB） | 约 54 min（99.5 MB/s） |
+| 两侧 sha256 | 本机 313 s / turbo 2,864 s（并行） |
+| 清单全量扫描（NFS） | 2,872 s（本机同样内容仅 13 s，见 3.2.1） |
+| NFS venv 重建 | 6m28s 下载 + 4m14s 安装，208 包 |
+| 模型内联（13.7 GB） | 约 4 min |
+| 本机九档扫描 | 约 30 min |
+| 集群四档探针 | 各 3m29s，**零排队** |
+| **全量 array（8 片并发）** | **33:40–36:45**，极差 9% |
+| finalize | 约 4 min（第二次，32 G） |
+| 第二 + 三层对拍 | 约 15 min |
+| norm stats（395,289 样本） | 29 min |
+
+### 7.2 续跑与故障处理
+
+见 [`scripts/data-preprocess-GL/README.md`](../scripts/data-preprocess-GL/README.md)
+的「续跑与故障处理」一节。要点：分片失败会让 `afterok` 的 finalize 被
+`kill_invalid_depend` **自动 CANCELLED 且不生成日志**，判死只能靠 `sacct`；
+重提必须「删 claim → 重提分片 → 用 `--dependency=afterok:<原AID>:<新JOBID>` 连 finalize 一起重提」。
+
+### 7.3 收尾（尚未执行，待用户确认）
+
+按 AGENTS.md 第 15 条，turbo 上的 H5 暂存副本是临时的，验收通过后删除；
+本机 `/data/hongzefu/robomme_data_h5_v2_4env400ep` 的原件永久保留。
+本机旧仓库目录 `/data/hongzefu/robomme_policy_learning_MotionJEPA` 同样待用户确认后删除。

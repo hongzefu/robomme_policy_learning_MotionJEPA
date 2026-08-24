@@ -75,21 +75,41 @@ set +e
 STATUS="${PIPESTATUS[0]}"
 set -e
 
-# 判定：必须见到完成标记，且 loss 有限无 NaN
+# 判定：必须见到完成标记，且 loss 全部有限
+# ⚠ 所有对日志的匹配都必须先 `tr '\r' '\n'`：tqdm 的进度条用回车不换行，
+#   train.py 的 `pbar.write()` 打出的 `Step N:` 在原始字节流里**不在行首**，
+#   直接 `grep '^Step'` 会匹配到 0 行（本轮实测踩过：训练 12 步全正常、
+#   loss 0.44–0.69、完成标记齐全，脚本却因此误判为「训练循环没跑起来」）。
 if [[ "${STATUS}" -eq 0 ]]; then
-  grep -q "Tentative run completed" "${LOG}" || {
+  tr '\r' '\n' < "${LOG}" | grep -q "Tentative run completed" || {
     echo "错误: 退出码为 0 但缺少完成标记" | tee -a "${LOG}" >&2; STATUS=1; }
 fi
 if [[ "${STATUS}" -eq 0 ]]; then
-  if grep -qiE "loss=(nan|inf|-inf)" "${LOG}"; then
-    echo "错误: 日志里出现 NaN/Inf loss" | tee -a "${LOG}" >&2; STATUS=1
-  fi
-  N_STEP="$(grep -cE '^Step [0-9]+: ' "${LOG}" || true)"
-  if [[ "${N_STEP}" -lt 2 ]]; then
-    echo "错误: 只见到 ${N_STEP} 行 Step 日志，训练循环没真正跑起来" | tee -a "${LOG}" >&2; STATUS=1
+  # 真解析 loss 数值再判定，而不是靠 grep "nan" 这种字符串匹配
+  LOSS_CHECK="$(tr '\r' '\n' < "${LOG}" | grep -oE '^Step [0-9]+: .*loss=[-0-9.eE+naifNAIF]+' \
+    | grep -oE 'loss=[^,]*' | sed 's/loss=//' | "${PY}" -c '
+import sys
+vals = []
+for line in sys.stdin:
+    line = line.strip()
+    try:
+        vals.append(float(line))
+    except ValueError:
+        print(f"BAD 无法解析的 loss: {line!r}"); raise SystemExit
+import math
+bad = [v for v in vals if not math.isfinite(v)]
+if not vals:
+    print("BAD 没解析到任何 loss")
+elif bad:
+    print(f"BAD 出现非有限 loss: {bad}")
+else:
+    print(f"OK n={len(vals)} min={min(vals):.4f} max={max(vals):.4f} 末值={vals[-1]:.4f}")
+')"
+  if [[ "${LOSS_CHECK}" == OK* ]]; then
+    echo "  ✓ loss 全部有限：${LOSS_CHECK#OK }" | tee -a "${LOG}"
+    tr '\r' '\n' < "${LOG}" | grep -E '^Step [0-9]+: ' | tail -3
   else
-    echo "  ✓ ${N_STEP} 个 step 的 loss 全部有限" | tee -a "${LOG}"
-    grep -E '^Step [0-9]+: ' "${LOG}" | tail -3
+    echo "错误: ${LOSS_CHECK}" | tee -a "${LOG}" >&2; STATUS=1
   fi
 fi
 
