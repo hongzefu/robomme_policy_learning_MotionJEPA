@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ── 第二/三层验收：跨架构逐 key 分类对拍 + 下游等价 ────────────────────────────
 #
-# 前置：第一层（step_local_baseline.sh）已 PASS——那层证明了分片实现与未改动 builder
+# 前置：第一层（legacy/step_local_baseline.sh，已归档）已 PASS——那层证明了分片实现与未改动 builder
 # 逐字节相同，所以本机跑 build_shard.py 产出的 ref-crossarch 才有资格当「本地真值」，
 # 也才能摆脱未改动 builder「只能取前缀」的限制，在全 1600 里分层随机抽样。
 #

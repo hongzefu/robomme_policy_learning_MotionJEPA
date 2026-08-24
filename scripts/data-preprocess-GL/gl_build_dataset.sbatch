@@ -9,8 +9,9 @@
 #   afterok 串接 finalize）；RAW_DIR / OUT / MANIFEST 三个路径必须经 --export 显式
 #   传入，缺任一立即退出（防裸跑把几百 GB 写进无关目录）。
 #
-# ⚠ CPU / mem 由 step_bench.sh 的档位实测结果在提交时用 CLI 覆盖决定，
-#   下面的默认值只是兜底。判据见 docs/v1-gl-resource-tier-bench.md。
+# ⚠ CPU / mem 档位在提交时由 step_submit.sh 用 CLI 覆盖决定（定案值 2 CPU / 24G，
+#   实测过程见 docs/v1-gl-resource-tier-bench.md；复测入口 legacy/step_bench.sh），
+#   下面的默认值只是兜底。
 #
 # ⚠ 8×1GPU 并发与长 walltime 超出 greatlakes.md 的调试限额（≤2 GPU、≤30 分钟），
 #   必须由用户逐次显式放行后才可提交。

@@ -99,7 +99,7 @@ kill "$SAMPLER" 2>/dev/null || true
 wait "$SAMPLER" 2>/dev/null || true
 
 echo "=== [4/4] 档位判据取数 ==="
-"$PY" "$REPO/scripts/data-preprocess-GL/sample_summary.py" "$SAMPLOG" --tier "${TIER_NAME}(cpus=${NCPU},mem=${SLURM_MEM_PER_NODE:-?}M)"
+"$PY" "$REPO/scripts/data-preprocess-GL/legacy/sample_summary.py" "$SAMPLOG" --tier "${TIER_NAME}(cpus=${NCPU},mem=${SLURM_MEM_PER_NODE:-?}M)"
 
 echo "PROBE_EXIT_CODE=$RC tier=$TIER_NAME"
 exit "$RC"

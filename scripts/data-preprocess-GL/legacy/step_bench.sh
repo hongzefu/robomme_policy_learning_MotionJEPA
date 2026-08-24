@@ -22,8 +22,11 @@
 #   bash step_bench.sh local     # 本机扫档（不占集群配额），筛出候选
 #   bash step_bench.sh cluster   # 候选档位各提一个 ≤30min 的 1-GPU 探针（限额内，无需放行）
 #   bash step_bench.sh report    # 汇总两边结果
+#
+# ⚠ 已归档进 legacy/：档位已定案 2 CPU / 24G（实测过程与结论见
+#   docs/v1-gl-resource-tier-bench.md），仅在数据形制变化需复测档位时使用。
 set -euo pipefail
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/paths.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../paths.sh"
 
 v1_prepare_dirs
 v1_require_venv
@@ -37,7 +40,7 @@ SUBSET_PROBE="${V1_STORE}/subset_prefix${PROBE_N}.json"
 CLUSTER_TIERS="${CLUSTER_TIERS:-4:16 2:12 2:8 1:8}"
 
 ensure_subset() {
-  [[ -f "${MANIFEST_PATH}" ]] || { echo "错误: 先跑 step_local_baseline.sh 生成清单" >&2; exit 1; }
+  [[ -f "${MANIFEST_PATH}" ]] || { echo "错误: 先跑 step0_setup_turbo.sh manifest 生成清单" >&2; exit 1; }
   [[ -f "${SUBSET_PROBE}" ]] || "${PY}" "${V1_SCRIPT_DIR}/scan_manifest.py" sample \
       --manifest "${MANIFEST_PATH}" --out "${SUBSET_PROBE}" --mode prefix --n "${PROBE_N}"
 }
@@ -51,7 +54,7 @@ do_local() {
   echo "            cpuset 控制器没下放，进程 affinity 仍是 0-31）。"
   echo "  输入刻意用本机 H5 原件：本机扫档要隔离的是 CPU/内存两个变量，"
   echo "            走 NFS 会把 turbo 带宽波动掺进来；集群探针那边才读 turbo。"
-  "${PY}" "${V1_SCRIPT_DIR}/bench_resources.py" \
+  "${PY}" "${V1_SCRIPT_DIR}/legacy/bench_resources.py" \
       --manifest "${MANIFEST_PATH}" --raw_dir "${RAW_H5_LOCAL}" \
       --subset "${SUBSET_PROBE}" --bench_dir "${BENCH_DIR}" \
       --python "${PY}" --gpu "${BENCH_GPU:-0}" \
@@ -76,7 +79,7 @@ do_cluster() {
     local jid
     jid="$(uv run --no-project --with pexpect python "${V1_SCRIPT_DIR}/gl_submit.py" \
         "sbatch --parsable --cpus-per-task=${cpus} --mem=${mem}G --job-name=v1-tierprobe-${name} \
-         --export=${exports} scripts/data-preprocess-GL/gl_probe.sbatch" \
+         --export=${exports} scripts/data-preprocess-GL/legacy/gl_probe.sbatch" \
         | grep -Eo '^[0-9]+$' | tail -1)"
     [[ -n "${jid}" ]] || { echo "错误: 探针 ${name} 未取得 jobid" >&2; exit 1; }
     echo "  jobid=${jid}  日志=${LOGS_DIR}/v1-tierprobe-${name}-${jid}.log"
@@ -90,7 +93,7 @@ do_cluster() {
     "JAXCHK|TIER_SUMMARY|SHARD_DONE|PROBE_EXIT_CODE|Error|Traceback|CANCELLED|out of memory"
 sacct 兜底： uv run --no-project --with pexpect python ${V1_SCRIPT_DIR}/gl_submit.py \\
     "sacct -j $(IFS=,; echo "${ids[*]}") --format=JobID,State,Elapsed,Submit,Start,ExitCode -X"
-全绿后： bash ${V1_SCRIPT_DIR}/step_bench.sh report
+全绿后： bash ${V1_SCRIPT_DIR}/legacy/step_bench.sh report
 EOF
 }
 

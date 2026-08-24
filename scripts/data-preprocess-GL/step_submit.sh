@@ -22,9 +22,9 @@ v1_require_cmd jq uv
 v1_require_venv
 
 NUM_SHARDS="${NUM_SHARDS:-8}"
-TIER_CPUS="${TIER_CPUS:-2}"          # 由 step_bench.sh 的实测结论填入
-TIER_MEM_GB="${TIER_MEM_GB:-12}"
-RATE="${RATE:-0}"                    # A40 实测 step/s，来自探针；0 表示未测
+TIER_CPUS="${TIER_CPUS:-2}"          # 2026-08-23 档位实测定案值（复测入口 legacy/step_bench.sh）
+TIER_MEM_GB="${TIER_MEM_GB:-24}"     # 同上定案值。全量实测最重分片 anon 峰 14.78 GiB，压到 16G 几乎必然 OOM
+RATE="${RATE:-0}"                    # A40 实测 step/s（定案值 28.913，来自探针）；0 表示未给，pre-flight 会拒绝
 WALLTIME="${WALLTIME:-}"             # 留空则按 RATE 反算
 FTIME="${FTIME:-03:00:00}"   # 完整性核验要在 NFS 上 scandir 39.5 万个 pkl + 1600 个目录
 SPOT_CHECK="${SPOT_CHECK:-256}"
@@ -51,7 +51,7 @@ import sys; sys.path.insert(0, '${V1_SCRIPT_DIR}')
 from scan_manifest import load_manifest; load_manifest('${MANIFEST_PATH}')" \
     && echo "  ✓ 清单 sha256 自洽" || { echo "  ✗ 清单 sha256 不符"; FAIL=1; }
 else
-  echo "  ✗ 缺清单 ${MANIFEST_PATH}——先跑 step_local_baseline.sh"; FAIL=1; TOTAL_STEPS=0
+  echo "  ✗ 缺清单 ${MANIFEST_PATH}——先跑 step0_setup_turbo.sh manifest"; FAIL=1; TOTAL_STEPS=0
 fi
 
 # ② 输入清单与 H5
@@ -86,7 +86,7 @@ v1_require_models 0 && echo "  ✓ 项目内 SigLIP 就位"
 #    全量 I/O = 读 321 GB 原始 H5 + 写 ≈(总步数 × 每步字节)；8 个分片并发共享同一个卷，
 #    所以 I/O 侧的耗时对每个分片都是「全量字节 ÷ 卷带宽」，不再除以 8。
 IO_BW_MBPS="${IO_BW_MBPS:-132}"          # turbo 卷实测天花板（greatlakes.md）
-BYTES_PER_STEP="${BYTES_PER_STEP:-932154}"   # 910 KiB/step，step_local_baseline.sh 实测校准值
+BYTES_PER_STEP="${BYTES_PER_STEP:-932154}"   # 910 KiB/step，legacy/step_local_baseline.sh 实测校准值
                                              # （token_emb 的 602,144 B + data/*.pkl 里的原图与 wrist 图）
 RAW_BYTES="${RAW_BYTES:-344999999999}"       # 321 GiB 原始 H5
 if [[ "${RATE}" != "0" && "${TOTAL_STEPS}" -gt 0 ]]; then
@@ -112,7 +112,7 @@ h, m, s = '${WALLTIME}'.split(':'); print(int(h) * 3600 + int(m) * 60 + int(s))"
     && echo "  ✓ walltime 裕度 ≥1.2×" \
     || { echo "  ✗ walltime 裕度 <1.2×——提高 WALLTIME 或 NUM_SHARDS（超时=每片一轮重提周转）"; FAIL=1; }
 else
-  echo "  ✗ 未提供 RATE（A40 实测 step/s）——先跑 step_bench.sh cluster 拿速率"; FAIL=1
+  echo "  ✗ 未提供 RATE（A40 实测 step/s）——定案值 RATE=28.913；数据形制变了则先跑 legacy/step_bench.sh cluster 重测"; FAIL=1
 fi
 
 # ⑧ 配额：8×档位必须装得下 chaijy2 的剩余 CPU / MEM

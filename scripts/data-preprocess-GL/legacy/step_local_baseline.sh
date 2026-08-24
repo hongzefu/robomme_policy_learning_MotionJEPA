@@ -13,8 +13,13 @@
 # 这一层过了，「分片」被彻底排除，后续差异只可能来自硬件；同时 build_shard.py 取得
 # **「本地真值」资格**——第二/三层的跨架构对拍就不再受未改动 builder「只能取前缀」
 # 的限制，可以在全 1600 里分层随机抽样。
+#
+# ⚠ 已归档进 legacy/：第一层已 PASS（12 episode / 3,862 步逐字节相同，见
+#   docs/v1-gl-dataset-consistency-report.md 第 6.1 节）。只要 build_shard.py /
+#   scan_manifest.py 不再改动，结论持续有效；改动后须重跑本脚本重新取得资格。
+#   清单生成一步已上移为 step0_setup_turbo.sh manifest。
 set -euo pipefail
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/paths.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../paths.sh"
 
 v1_prepare_dirs
 v1_require_cmd jq
@@ -97,4 +102,4 @@ PYCAL
 
 echo "LAYER1_PASS  第一层通过：分片实现与未改动 builder 逐字节相同，"
 echo "             build_shard.py 已取得「本地真值」资格。"
-echo "下一步：bash ${V1_SCRIPT_DIR}/step_bench.sh   （CPU/mem 档位实测）"
+echo "下一步：bash ${V1_SCRIPT_DIR}/legacy/step_bench.sh   （CPU/mem 档位实测，已定案 2C/24G，仅需复测时跑）"
