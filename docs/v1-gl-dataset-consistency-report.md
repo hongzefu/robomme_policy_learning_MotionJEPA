@@ -686,8 +686,30 @@ bash scripts/smoke-local/run_gl_dataset_training_smoke.sh   # → LAYER4_PASS
 `kill_invalid_depend` **自动 CANCELLED 且不生成日志**，判死只能靠 `sacct`；
 重提必须「删 claim → 重提分片 → 用 `--dependency=afterok:<原AID>:<新JOBID>` 连 finalize 一起重提」。
 
-### 7.3 收尾（尚未执行，待用户确认）
+### 7.3 收尾（2026-08-24 执行）
 
-按 AGENTS.md 第 15 条，turbo 上的 H5 暂存副本是临时的，验收通过后删除；
-本机 `/data/hongzefu/robomme_data_h5_v2_4env400ep` 的原件永久保留。
-本机旧仓库目录 `/data/hongzefu/robomme_policy_learning_MotionJEPA` 同样待用户确认后删除。
+**已删除**：本机旧仓库目录 `/data/hongzefu/robomme_policy_learning_MotionJEPA`
+（9.8 MB 工作区 + 7.1 GB venv）。删除前四道核对：
+
+1. turbo 侧 `git fsck` 通过、工作区干净、`d6f97af` 在位；
+2. `diff -rq` 逐文件比对两侧工作区，确认本机**零个独有文件**；
+3. 对 10 个内容不同的文件逐个查 turbo git 历史，确认本机是**严格更旧**的版本——
+   本机独有行全是 `待回填` 占位符与被实测取代的旧代码（`BYTES_PER_STEP=602112`、
+   带 `user=hongzefu` 的坏配额查询、stdin/heredoc 互顶的内联 Python）；
+4. 把本机 `v1-store/` 里 424 KB 的迁移前验证证据（清单、子集、三份日志、
+   `premigrate_layer1.json`）保全到 turbo 的 `v1-store/premigrate-evidence/`——
+   那是本报告 6.0 节的原始依据，turbo 上原本没有。
+
+**保留（经用户明示决定）**：
+
+| 路径 | 处置 |
+|---|---|
+| `/data/hongzefu/robomme_data_h5_v2_4env400ep` | **永久保留**（300 GB，最初的全局原始 H5） |
+| `/nfs/turbo/.../robomme_data_h5_v2_4env400ep` | **保留，不删**（用户 2026-08-24 明示「turbo上的h5不要动」） |
+
+⚠ 最后一行**偏离 AGENTS.md 第 15 条**（该条要求 turbo 上的 H5 暂存副本在验收通过后删除）。
+这是用户的明示决定，记录在此以免后来者按第 15 条误删。若将来要回收这 321 GB，
+删除前请先确认没有依赖它的在跑作业——`gl_build_dataset.sbatch` 与 `gl_finalize.sbatch`
+的 `RAW_DIR` 都指向它。
+
+**当前布局**：仓库单副本在 turbo，本机 `/data/hongzefu` 只剩原始 H5，符合 AGENTS.md 第 13 条。
