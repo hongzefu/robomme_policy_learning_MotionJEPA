@@ -80,7 +80,8 @@ def main() -> None:
           f"warmup={n_warmup} measure={n_measure} 数据集={config.dataset_path}")
 
     for w in workers_list:
-        seed = 42 + w                       # 各档不同 seed，防 page cache 档间重叠
+        # 各档/各 job 不同 seed，防 page cache 重叠；拆分单档 job 用 BENCH_SEED 显式指定
+        seed = int(os.environ.get("BENCH_SEED", 42 + w))
         loader = _data_loader.create_data_loader(
             config.dataset_path, data_config,
             history_config=config.model.history_config,
