@@ -47,5 +47,5 @@
 
 - **请求计划批准只能走 `ExitPlanMode`**，不得在正文里问「这个计划行不行 / 要不要开始」，也不得用 `AskUserQuestion` 问批准。`AskUserQuestion` 只用于澄清需求或在多个方案间取舍。
 - `AGENTS.md` 第 2 条「遇到范围、实现方式或破坏性操作存在歧义必须先询问用户」在 plan mode 下的落地方式是：**在 `ExitPlanMode` 之前用 `AskUserQuestion` 问清，不得带着歧义退出 plan mode。**
-- 计划正文写进 harness 指定的计划文件（`~/.claude/plans/<slug>.md`），按「Context（为什么做这件事）→ 推荐方案 → 关键文件 → 验证方式」组织，只写推荐方案不罗列所有备选。
+- 计划正文写进 harness 指定的计划文件（`~/.claude/plans/<slug>.md`），按 `AGENTS.md` 第 2 条的双部分结构组织（权威定义以 `AGENTS.md` 为准）：**第一部分给人看**（含 Context——为什么做这件事——与推荐方案概述，少黑话、少代码细节，文件引用与步骤描述精确）；**第二部分技术细节供 agent 追踪**（含关键文件与验证方式等实现细节）。只写推荐方案不罗列所有备选。
 - plan mode 期间除该计划文件外一律只读：不改代码、不改配置、不 commit、不跑任何有副作用的命令。
