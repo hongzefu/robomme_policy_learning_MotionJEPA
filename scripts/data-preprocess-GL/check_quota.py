@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """校验本次提交是否装得下 chaijy2 的剩余配额（GPU / CPU / MEM 三维）。
 
-单独成文件而不是内联在 step_submit.sh 里：内联 python 在 bash 里要处理三层嵌套引号，
+单独成文件而不是内联在 step1_submit.sh 里：内联 python 在 bash 里要处理三层嵌套引号，
 本轮已经在这里踩过两次（一次是「管道喂 stdin + heredoc 传源码」互相顶掉导致
 sys.stdin 读到空串、三维配额全部「未解析出」；一次是 -c 单引号里的转义被当字面量）。
 pre-flight 是拦住 8 个 job 集体炸掉的最后一道闸，不该建在这种脆弱写法上。

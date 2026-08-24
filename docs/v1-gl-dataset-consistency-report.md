@@ -639,7 +639,8 @@ Step 0..11 共 12 步，loss ∈ [0.4340, 0.8644]，末值 0.6362，全部有限
 
 > ⚠ 目录整理说明：下方命令中的 `step_local_baseline.sh` 与 `step_bench.sh`（及其组件
 > `bench_resources.py` / `sample_summary.py` / `gl_probe.sbatch`）已归档至
-> `scripts/data-preprocess-GL/legacy/`；清单生成一步上移为 `step0_setup_turbo.sh manifest`。
+> `scripts/data-preprocess-GL/legacy/`；清单生成一步上移为 `step0_setup_turbo.sh manifest`；
+> 入口脚本已统一编号：`step_submit.sh` → `step1_submit.sh`、`step_verify.sh` → `step2_verify.sh`。
 > 本节按当时实跑原样留档，路径不回改；现行活跃流程见
 > [`scripts/data-preprocess-GL/README.md`](../scripts/data-preprocess-GL/README.md)。
 

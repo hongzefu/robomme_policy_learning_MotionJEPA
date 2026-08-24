@@ -97,7 +97,7 @@ per = size / steps
 total = manifest["totals"]["timesteps"]
 print(f"CALIBRATION steps={steps} bytes={size} per_step={per / 1024:.0f} KiB "
       f"→ 全量 {total} step 外推 {per * total / 1e9:.0f} GB")
-print(f"CALIBRATION_BYTES_PER_STEP={int(per)}   # 提交时用: BYTES_PER_STEP={int(per)} bash step_submit.sh")
+print(f"CALIBRATION_BYTES_PER_STEP={int(per)}   # 提交时用: BYTES_PER_STEP={int(per)} bash step1_submit.sh")
 PYCAL
 
 echo "LAYER1_PASS  第一层通过：分片实现与未改动 builder 逐字节相同，"

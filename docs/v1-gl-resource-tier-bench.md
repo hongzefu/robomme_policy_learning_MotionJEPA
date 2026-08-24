@@ -8,7 +8,8 @@
 >
 > ⚠ 目录整理说明：本文提到的 `step_bench.sh` / `bench_resources.py` / `sample_summary.py` /
 > `gl_probe.sbatch` 已归档至 `scripts/data-preprocess-GL/legacy/`（档位定案后退役），
-> 复测时从该子目录调用；文中命令的路径不再回改。
+> 复测时从该子目录调用；文中命令的路径不再回改。入口脚本已统一编号：
+> `step_submit.sh` → `step1_submit.sh`、`step_verify.sh` → `step2_verify.sh`。
 
 ---
 

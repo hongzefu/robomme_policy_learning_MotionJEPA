@@ -5,11 +5,11 @@
 # array task 逐个独立调度，等价于「8 个分开请求的 1-GPU 小 job」，某片排不上队
 # 不阻塞其余七片，先起的先干活。
 #
-# ⚠ 本模板不手提，由 step_submit.sh 经 gl_submit.py 提交（它负责 pre-flight 与
+# ⚠ 本模板不手提，由 step1_submit.sh 经 gl_submit.py 提交（它负责 pre-flight 与
 #   afterok 串接 finalize）；RAW_DIR / OUT / MANIFEST 三个路径必须经 --export 显式
 #   传入，缺任一立即退出（防裸跑把几百 GB 写进无关目录）。
 #
-# ⚠ CPU / mem 档位在提交时由 step_submit.sh 用 CLI 覆盖决定（定案值 2 CPU / 24G，
+# ⚠ CPU / mem 档位在提交时由 step1_submit.sh 用 CLI 覆盖决定（定案值 2 CPU / 24G，
 #   实测过程见 docs/v1-gl-resource-tier-bench.md；复测入口 legacy/step_bench.sh），
 #   下面的默认值只是兜底。
 #
@@ -46,7 +46,7 @@ STORE="$REPO/v1-store"
 
 for VAR in RAW_DIR OUT MANIFEST; do
     if [ -z "${!VAR:-}" ]; then
-        echo "缺必传参数 $VAR（应由 step_submit.sh 经 --export 传入），拒绝起跑"
+        echo "缺必传参数 $VAR（应由 step1_submit.sh 经 --export 传入），拒绝起跑"
         exit 1
     fi
 done

@@ -33,7 +33,7 @@ STORE="$REPO/v1-store"
 
 for VAR in RAW_DIR OUT MANIFEST; do
     if [ -z "${!VAR:-}" ]; then
-        echo "缺必传参数 $VAR（应由 step_submit.sh 经 --export 传入），拒绝起跑"
+        echo "缺必传参数 $VAR（应由 step1_submit.sh 经 --export 传入），拒绝起跑"
         exit 1
     fi
 done

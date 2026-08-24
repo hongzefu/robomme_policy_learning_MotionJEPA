@@ -3,7 +3,7 @@
 #
 # ⚠ 审批闸门：8 并发 GPU 与长 walltime **超出 greatlakes.md 的调试限额**
 #   （硬规则：≤2 GPU、≤00:30:00）。必须由用户逐次显式放行：
-#       CONFIRM_FULL=yes bash step_submit.sh
+#       CONFIRM_FULL=yes bash step1_submit.sh
 #
 # pre-flight 九项，任一失败拒绝提交——否则 8 个 job 排队几小时后集体炸，
 # 还要人工清 8 个 claim。
@@ -167,6 +167,6 @@ cat <<EOF
     "PROGRESS|EPISODE|SHARD_EXIT_CODE|FINALIZE_EXIT_CODE|Error|Traceback|CLAIM_EXISTS|CANCELLED|out of memory"
   sacct 兜底（finalize 因依赖失败被 CANCELLED 时不会有日志文件）：
     gl_submit.py "sacct -j ${AID},${FID} --format=JobID,State,Elapsed,ExitCode -X"
-全绿后： bash ${V1_SCRIPT_DIR}/step_verify.sh
+全绿后： bash ${V1_SCRIPT_DIR}/step2_verify.sh
 SUBMITTED array=${AID} finalize=${FID}
 EOF
