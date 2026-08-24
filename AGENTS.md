@@ -20,7 +20,7 @@
 
 6. 启动正式长训练前必须向用户确认一个全新的 `run_name`。禁止通过复用名称或覆盖参数清空已有 run。跑完即删的 smoke 或短测可以自行命名，但验证完成后必须清理对应临时 run。
 
-7. 预计超过 5 分钟的训练、抽取、评估或全量数据构建必须放入 detached tmux session。日志使用 `PYTHONUNBUFFERED=1`、`set -o pipefail` 和 `tee`，结束时写入 `EXIT_CODE=`。禁止使用裸 `pgrep -f` 判断进程存活；tmux 任务使用 `tmux has-session`，其他任务记录精确 PID。
+7. 预计超过 5 分钟的训练、抽取、评估或全量数据构建必须放入 detached tmux session。日志使用 `PYTHONUNBUFFERED=1`、`set -o pipefail` 和 `tee`，结束时写入 `EXIT_CODE=`。禁止使用裸 `pgrep -f` 判断进程存活；tmux 任务使用 `tmux has-session`，其他任务记录精确 PID。 盯日志的 Monitor/过滤管道里**每一级都必须行缓冲**：中间夹的 `tr`/`awk`/`sed` 对管道输出默认 4KB 块缓冲，任务结束后最后几行（RESULT/EXIT_CODE）会永远卡在缓冲区、监听端静默不报——`tr` 写成 `stdbuf -oL tr`、awk 加 `fflush()`、sed 加 `-u`，只给 `grep --line-buffered` 不够（2026-08-24 epoch 基准与冷缓存复测两次实测踩中）。
 
 8. 向 GreatLakes 提交 Slurm 作业前必须遵守仓库根目录的 `greatlakes.md`。如果该文件尚不存在，必须先向用户确认集群 account、partition、资源上限和 NFS 路径，不得直接复制其他仓库的集群配置。
 

@@ -28,6 +28,26 @@ MOUNT_POINT="/nfs/turbo/coe-chaijy-unreplicated"
 [[ -e "${CKPT_DIR}" ]] && { echo "错误: run 目录已存在: ${CKPT_DIR}" >&2; exit 1; }
 mkdir -p "${RECORD_DIR}"
 
+# 环境留档
+"${PY}" - "${RECORD_DIR}" <<EOF
+import json, platform, subprocess, sys
+import jax
+d = {
+    "run_name": "${RUN_NAME}", "batch_size": ${BATCH}, "workers": ${WORKERS},
+    "steps": ${STEPS}, "seed": ${SEED}, "fsdp_devices": 2,
+    "history_config": "perceptual-framesamp-context.yaml",
+    "dataset_path": "${GL_DATASET}",
+    "git_head": subprocess.run(["git", "-C", "${REPO_ROOT}", "rev-parse", "HEAD"],
+                               capture_output=True, text=True).stdout.strip(),
+    "XLA_PYTHON_CLIENT_MEM_FRACTION": "0.95", "CUDA_VISIBLE_DEVICES": "0,1",
+    "hostname": platform.node(), "python": sys.version, "jax": jax.__version__,
+    "nvidia_smi": subprocess.run(
+        ["nvidia-smi", "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"],
+        capture_output=True, text=True).stdout.strip().splitlines(),
+}
+json.dump(d, open("${RECORD_DIR}/env.json", "w"), indent=2, ensure_ascii=False)
+EOF
+
 # 遥测采样器（每 5 秒）：GPU 利用率 + turbo 挂载真实读字节（server_read）
 GPULOG="${RECORD_DIR}/gpu_util.csv"
 NFSLOG="${RECORD_DIR}/nfs_read.csv"
