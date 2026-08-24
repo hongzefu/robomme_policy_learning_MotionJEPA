@@ -37,17 +37,20 @@
 
 12. 正式训练或评估必须从 clean HEAD 启动，并在 `docs/training-doc/<run_name>/` 留档。正式全量数据集构建必须在 `docs/dataset-build-doc/<dataset_name>/` 留档。起跑前记录可复现的 commit、命令、配置、数据来源和输出路径；只归档 Git 无法还原的日志、指标和结果，不归档大模型权重。
 
-13. 本机 `/data` 只用于数据处理、正确性检查和 smoke run。本机结果不得作为 dataloader 最终吞吐结论；正式吞吐基准必须在 NFS 数据副本上运行，并记录存储位置、batch size、worker 数、warmup 和稳定态统计。
+13. **仓库单副本位于 NFS turbo `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA`，本机不保留任何仓库副本。** 本机 `/data/hongzefu` 只保留最初的全局原始 H5；本机 GPU 只用于一致性验证的本地对照产物、资源档位实测和功能性 smoke run。本机结果不得作为 dataloader 最终吞吐结论；正式吞吐基准必须在 NFS 数据副本上运行，并记录存储位置、batch size、worker 数、warmup 和稳定态统计。
 
-14. 除最初的全局原始 H5 外，派生数据、索引、缓存、模型、tokenizer、checkpoint、日志和 smoke 产物都必须放在本仓库目录内。不得自行把新的外部目录作为长期依赖。
+14. 除最初的全局原始 H5 外，派生数据、索引、缓存、模型、tokenizer、checkpoint、日志和 smoke 产物都必须放在本仓库目录内，且一律收敛到单一根 `v1-store/`（整体不进 git）。不得自行把新的外部目录作为长期依赖。**禁止覆盖 `HOME`** —— 覆盖会让 ssh 找不到 `~/.ssh/config` 与 ControlMaster socket、直接打断集群提交；改为逐项显式设置 `UV_CACHE_DIR` / `XDG_CACHE_HOME` / `WANDB_*` / `HF_HOME` 等缓存类环境变量指向 `v1-store/cache/`。
+
+15. 为集群作业而在 turbo 上暂存的原始 H5 副本属于**临时暂存**：必须与本机原件逐文件 sha256 核对同源，并在全流程验收通过后删除；本机 `/data` 的原件永久保留。
 
 ## 项目 scope（未来工作，不代表当前实施授权）
 
 - 仓库总体目标：修改 MME-VLA 的 `perceptual-framesamp-context`，并在后续阶段接入 [MotionJEPA](https://github.com/hongzefu/MotionJEPA) motion token。
 - `v1-dataloader-Restructure` 分支只用于 dataloader 重构，目标是在不改变训练语义的前提下尽可能提升训练吞吐。
 - v1 只关注 `ButtonUnmask`、`VideoUnmask`、`ButtonUnmaskSwap`、`VideoUnmaskSwap` 四个任务。
-- 未来的数据处理和 smoke run 在本机 `/data/hongzefu` 完成；本机吞吐不作为最终指标，最终吞吐在 NFS 上验证。
-- 除全局原始 H5 外，后续生成的文件和模型全部放在 `/data/hongzefu/robomme_policy_learning_MotionJEPA` 项目内。
+- 四任务全量数据处理在 GreatLakes 上以 8×1GPU job array 完成；本机只跑一致性验证的对照产物、资源档位实测与功能性 smoke run，本机吞吐不作为最终指标。
+- 除全局原始 H5 外，后续生成的文件和模型全部放在 turbo 仓库副本的 `v1-store/` 内。
+- commit `d951aef` 的 `scripts/v1_dataloader_restructure/` 与 `scripts/smoke_train_once.py` 经判定不可靠，已删除弃用，勿从 git 历史里翻出重新采用。
 
 ## 规则来源
 

@@ -208,7 +208,10 @@ __marimo__/
 
 *local.sh
 
-# v1 本地数据、模型、缓存和运行产物全部位于项目内, 但不进入 Git.
+# v1 派生产物（数据、模型、缓存、日志、run 目录、档位实测采样）全部收敛到单一根 v1-store/，
+# 位于项目内但不进入 Git。旧的 /data /runs /artifacts /.openpi-data /.runtime-home 约定随
+# scripts/v1_dataloader_restructure/ 一并弃用，此处保留忽略规则仅为兜底防误提交。
+/v1-store/
 /data/
 /runs/
 /artifacts/
