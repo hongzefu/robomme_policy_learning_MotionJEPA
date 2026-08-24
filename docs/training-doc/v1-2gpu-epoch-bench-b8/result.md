@@ -24,6 +24,6 @@
 
 ## 产物位置
 
-- 记录（保留）：`v1-store/bench/2gpu-epoch-bench/v1-2gpu-epoch-bench-b8/`（`metrics.jsonl` 300 行、`param_checksums.jsonl` 12 行、`env.json`；格式见 `scripts/smoke-local/README.md`）
+- 记录（git 归档，第 12 条口径）：本目录 `records/`（`metrics.jsonl` 300 行、`param_checksums.jsonl` 12 行、`env.json`；格式见 `scripts/smoke-local/README.md`）；`v1-store/bench/2gpu-epoch-bench/v1-2gpu-epoch-bench-b8/` 下留有内容一致的工作副本
 - 日志（保留）：`v1-store/logs/2gpu-epoch-bench-driver.log`（第 3 轮）、`*.round1/round2.log`（前两轮）、`v1-store/logs/v1-2gpu-epoch-bench-b{64,32,16,8}*.log`
 - run 目录与 `~/.cache/jax_*`：已按脚本自动清理，无 checkpoint 产物

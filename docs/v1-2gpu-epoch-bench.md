@@ -11,4 +11,4 @@
 
 **重要附带发现**：同配置同 seed 重跑两轮，参数校验和逐步全不相同——本机默认设置下训练**非 bitwise 确定**（疑 XLA autotune 重编译所致）。未来一致性 A/B 前须先加确定性设置（`--xla_gpu_deterministic_ops`、固定/关闭 autotune、共用 jax 编译缓存，两边同设）并用两次重跑验证校验和逐步一致。
 
-一致性检验记录（`metrics.jsonl` 逐步 loss/梯度范数 hex 精度、`param_checksums.jsonl` 逐叶子 sha256、`env.json`）保留在 `v1-store/bench/2gpu-epoch-bench/v1-2gpu-epoch-bench-b8/`，格式与三级比较协议见 `scripts/smoke-local/README.md`；起跑/轮次/完整数字见 `docs/training-doc/v1-2gpu-epoch-bench/`。
+一致性检验记录（`metrics.jsonl` 逐步 loss/梯度范数 hex 精度、`param_checksums.jsonl` 逐叶子 sha256、`env.json`）已按 AGENTS.md 第 12 条归档进 git：`docs/training-doc/v1-2gpu-epoch-bench-b8/records/`（`v1-store/bench/2gpu-epoch-bench/v1-2gpu-epoch-bench-b8/` 下留有内容一致的工作副本）。格式与三级比较协议见 `scripts/smoke-local/README.md`；起跑/轮次/完整数字见 `docs/training-doc/v1-2gpu-epoch-bench-b8/`。

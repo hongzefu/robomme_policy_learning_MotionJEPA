@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # ── 本机 2 GPU epoch 时长基准（官方口径 + 一致性检验记录底座）───────────────────
 #
-# 目标：配置尽可能对齐 scripts/finetune_mme_vla_suite.sh（batch 64、num-workers 4、
-# use_history + framesamp-context），在 2 卡 + NFS turbo 数据上跑 300 步，
+# 目标：配置尽可能对齐 scripts/finetune_mme_vla_suite.sh（num-workers 4、
+# use_history + framesamp-context；batch 固定 8——官方 64 在 2 卡 OOM，见下），
+# 在 2 卡 + NFS turbo 数据上跑 300 步，
 # 用稳态 s/step 外推 1 个 epoch（395,289 样本）的时长；同时逐步记录 loss/梯度范数、
 # 每 SAVE_INTERVAL 步记录参数校验和，为将来 dataloader 改动的一致性检验留底。
 # 与官方默认训练的逐项差异及记录文件格式见同目录 README.md。
@@ -30,26 +31,22 @@ BENCH_ROOT="${V1_STORE}/bench/2gpu-epoch-bench"
 [[ -f "${NORM_STATS}" ]] || {
   echo "错误: norm stats 缺失: ${NORM_STATS}（用 scripts/compute_norm_stats.py 先生成）" >&2; exit 1; }
 
-STATUS=1
-FINAL_BATCH=""
-FINAL_RECORD_DIR=""
+# batch 固定为 8：2026-08-24 实测 2 卡下唯一确认可跑的档位——64/32/16 全部 OOM
+# （失败张量 17.62/12.61/10.38 GiB，激活固定底座约 8 GiB，每卡还驻留约 28 GB
+# 参数+优化器+EMA 状态；官方 4 卡每卡状态减半故能跑 64），batch 8 以 300 步
+# 全程验证通过（稳态 1.060 s/step）。改档位属超参变更：须按 AGENTS.md 第 10 条
+# 先与用户确认，且需重新实测显存，不提供环境变量覆盖。
+BATCH=8
+RUN_NAME="v1-2gpu-epoch-bench-b${BATCH}"
+CKPT_DIR="${TRAIN_RUNS}/mme_vla_suite/${RUN_NAME}"
+RECORD_DIR="${BENCH_ROOT}/${RUN_NAME}"
+LOG="${LOGS_DIR}/${RUN_NAME}.log"
 
-# OOM 自动降档：64 是官方全局 batch 口径；2 卡下 per-device 翻倍。
-# 2026-08-24 实测：64/32/16 全部 OOM（失败张量 17.62/12.61/10.38 GiB，固定底座约 8 GiB，
-# 每卡还驻留约 28 GB 参数+优化器+EMA 状态），故梯子延伸到 8/4/2（batch 2 此前 smoke 已跑通）。
-# 可用 BATCHES 环境变量覆盖起跑档位，跳过已有实证的失败档。
-BATCHES="${BATCHES:-64 32 16 8 4 2}"
-for BATCH in ${BATCHES}; do
-  RUN_NAME="v1-2gpu-epoch-bench-b${BATCH}"
-  CKPT_DIR="${TRAIN_RUNS}/mme_vla_suite/${RUN_NAME}"
-  RECORD_DIR="${BENCH_ROOT}/${RUN_NAME}"
-  LOG="${LOGS_DIR}/${RUN_NAME}.log"
-
-  [[ -e "${CKPT_DIR}" ]] && {
-    echo "错误: run 目录已存在, 禁止 overwrite: ${CKPT_DIR}" >&2; exit 1; }
-  [[ -e "${RECORD_DIR}" ]] && {
-    echo "错误: 记录目录已存在, 禁止覆盖既有记录: ${RECORD_DIR}" >&2; exit 1; }
-  mkdir -p "${RECORD_DIR}"
+[[ -e "${CKPT_DIR}" ]] && {
+  echo "错误: run 目录已存在, 禁止 overwrite: ${CKPT_DIR}" >&2; exit 1; }
+[[ -e "${RECORD_DIR}" ]] && {
+  echo "错误: 记录目录已存在, 禁止覆盖既有记录: ${RECORD_DIR}" >&2; exit 1; }
+mkdir -p "${RECORD_DIR}"
 
   # 环境留档：将来一致性 A/B 的对照 run 必须逐项同设（见 README.md）
   "${PY}" - "$RECORD_DIR" <<EOF
@@ -77,71 +74,59 @@ d = {
 json.dump(d, open("$RECORD_DIR/env.json", "w"), indent=2, ensure_ascii=False)
 EOF
 
-  echo "=== 2 GPU epoch 基准: ${RUN_NAME} (${STEPS} steps, batch ${BATCH}, workers ${WORKERS}) ==="
-  echo "  数据集: ${DATASET_PATH}"
-  echo "  记录目录: ${RECORD_DIR}"
-  set +e
-  (
-    set -e
-    cd "${REPO_ROOT}"
-    BENCH_RECORD_DIR="${RECORD_DIR}" \
-    CUDA_VISIBLE_DEVICES=0,1 \
-    XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
-    PYTHONUNBUFFERED=1 \
-    WANDB_MODE=disabled \
-    "${PY}" "${REPO_ROOT}/scripts/smoke-local/bench_train_steps.py" mme_vla_suite \
-      --exp-name "${RUN_NAME}" \
-      --assets-base-dir "${TRAIN_ASSETS}" \
-      --checkpoint-base-dir "${TRAIN_RUNS}" \
-      --batch-size "${BATCH}" \
-      --num-workers "${WORKERS}" \
-      --num-train-steps "${STEPS}" \
-      --log-interval 1 \
-      --save-interval "${SAVE_INTERVAL}" \
-      --seed 42 \
-      --fsdp-devices 2 \
-      --dataset-path "${DATASET_PATH}" \
-      --weight-loader.params-path "${MODELS_DIR}/openpi-assets/checkpoints/pi05_base/params" \
-      --model.use-history \
-      --model.history-config perceptual-framesamp-context.yaml \
-      --no-wandb-enabled
-  ) 2>&1 | tee "${LOG}"
-  RC="${PIPESTATUS[0]}"
+echo "=== 2 GPU epoch 基准: ${RUN_NAME} (${STEPS} steps, batch ${BATCH}, workers ${WORKERS}) ==="
+echo "  数据集: ${DATASET_PATH}"
+echo "  记录目录: ${RECORD_DIR}"
+set +e
+(
   set -e
+  cd "${REPO_ROOT}"
+  BENCH_RECORD_DIR="${RECORD_DIR}" \
+  CUDA_VISIBLE_DEVICES=0,1 \
+  XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
+  PYTHONUNBUFFERED=1 \
+  WANDB_MODE=disabled \
+  "${PY}" "${REPO_ROOT}/scripts/smoke-local/bench_train_steps.py" mme_vla_suite \
+    --exp-name "${RUN_NAME}" \
+    --assets-base-dir "${TRAIN_ASSETS}" \
+    --checkpoint-base-dir "${TRAIN_RUNS}" \
+    --batch-size "${BATCH}" \
+    --num-workers "${WORKERS}" \
+    --num-train-steps "${STEPS}" \
+    --log-interval 1 \
+    --save-interval "${SAVE_INTERVAL}" \
+    --seed 42 \
+    --fsdp-devices 2 \
+    --dataset-path "${DATASET_PATH}" \
+    --weight-loader.params-path "${MODELS_DIR}/openpi-assets/checkpoints/pi05_base/params" \
+    --model.use-history \
+    --model.history-config perceptual-framesamp-context.yaml \
+    --no-wandb-enabled
+) 2>&1 | tee "${LOG}"
+RC="${PIPESTATUS[0]}"
+set -e
 
-  # 跑完（无论成败）清理：run 目录只剩 orbax 的空壳；jax 编译缓存被 train.main
-  # 硬编码写到 ~/.cache/jax_<exp_name>（jax_compilation_cache_dir），一并删
-  if [[ -e "${CKPT_DIR}" ]]; then
-    case "${CKPT_DIR}" in
-      "${TRAIN_RUNS}/mme_vla_suite/${RUN_NAME}") rm -rf -- "${CKPT_DIR}" ;;
-      *) echo "错误: 拒绝清理非预期路径 ${CKPT_DIR}" >&2; exit 1 ;;
-    esac
-  fi
-  rm -rf -- "${HOME}/.cache/jax_${RUN_NAME}"
+# 跑完（无论成败）清理：run 目录只剩 orbax 的空壳；jax 编译缓存被 train.main
+# 硬编码写到 ~/.cache/jax_<exp_name>（jax_compilation_cache_dir），一并删
+if [[ -e "${CKPT_DIR}" ]]; then
+  case "${CKPT_DIR}" in
+    "${TRAIN_RUNS}/mme_vla_suite/${RUN_NAME}") rm -rf -- "${CKPT_DIR}" ;;
+    *) echo "错误: 拒绝清理非预期路径 ${CKPT_DIR}" >&2; exit 1 ;;
+  esac
+fi
+rm -rf -- "${HOME}/.cache/jax_${RUN_NAME}"
 
-  if [[ "${RC}" -eq 0 ]]; then
-    STATUS=0; FINAL_BATCH="${BATCH}"; FINAL_RECORD_DIR="${RECORD_DIR}"
-    break
-  fi
-  # ⚠ 日志匹配须先 tr '\r' '\n'：tqdm 用回车不换行，直接 grep 会漏行。
-  # ⚠ 这里不能用 grep -q：-q 命中即退会 SIGPIPE 杀掉上游 tr（退出码 141），
-  #   在 set -o pipefail 下整条管道判非零 → OOM 被误判为「非 OOM 失败」
-  #   （2026-08-24 b16 实测踩过，b64/b32 没触发纯属时序运气）。grep 不带 -q
-  #   会读完全部输入再退出，无竞态。
-  if tr '\r' '\n' < "${LOG}" | grep -E "RESOURCE_EXHAUSTED|[Oo]ut of memory|OOM" >/dev/null; then
-    echo "!!! batch ${BATCH} OOM，降档重试" | tee -a "${LOG}"
-    rm -rf -- "${RECORD_DIR}"             # 失败档的记录不保留，避免半截文件误导
-    continue
-  fi
-  echo "错误: batch ${BATCH} 非 OOM 失败（退出码 ${RC}），不降档，人工排查: ${LOG}" >&2
+# 任何失败（含 OOM）直接 fail-loud，不降档不重试——batch 8 是实测钉死的档位，
+# 在它上面再出 OOM 说明环境变了（驱动/常驻占用/代码），须人工排查而不是掩盖
+if [[ "${RC}" -ne 0 ]]; then
+  echo "错误: 基准失败（退出码 ${RC}），人工排查: ${LOG}" >&2
+  rm -rf -- "${RECORD_DIR}"               # 失败的半截记录不保留，避免误导
   exit "${RC}"
-done
-
-[[ "${STATUS}" -eq 0 ]] || { echo "错误: 全部 batch 档（${BATCHES}）均失败" >&2; exit 1; }
+fi
 
 # ── 结果判定与外推：直接吃 metrics.jsonl（比解析 tqdm 日志可靠）──────────────────
-"${PY}" - "${FINAL_RECORD_DIR}" "${STEPS}" "${SAVE_INTERVAL}" "${WARMUP_STEPS}" \
-         "${FINAL_BATCH}" "${EPOCH_SAMPLES}" <<'EOF'
+"${PY}" - "${RECORD_DIR}" "${STEPS}" "${SAVE_INTERVAL}" "${WARMUP_STEPS}" \
+         "${BATCH}" "${EPOCH_SAMPLES}" <<'EOF'
 import json, math, statistics, sys
 record_dir, steps, save_iv, warmup, batch, epoch_samples = (
     sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]),
@@ -185,6 +170,6 @@ EOF
 RC=$?
 [[ "${RC}" -eq 0 ]] || { echo "错误: 结果判定失败" >&2; exit "${RC}"; }
 
-echo "记录文件保留在: ${FINAL_RECORD_DIR}"
+echo "记录文件保留在: ${RECORD_DIR}"
 echo "EXIT_CODE=0"
 echo "BENCH_PASS 基准完成"

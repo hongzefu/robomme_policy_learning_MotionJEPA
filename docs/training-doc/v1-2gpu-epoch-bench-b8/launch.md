@@ -1,4 +1,6 @@
-# v1-2gpu-epoch-bench 系列起跑留档
+# v1-2gpu-epoch-bench-b8 起跑留档
+
+（目录名按 AGENTS.md 第 12 条取最终成功 run_name `v1-2gpu-epoch-bench-b8`；探档期失败档 b64/b32/b16 的轮次记录一并留在本文件。）
 
 按 AGENTS.md 第 12 条：正式训练从 clean HEAD 启动，起跑前记录可复现的 commit、命令、配置、数据来源与输出路径。本基准是「OOM 自动降档」系列，run_name 按档位命名为 `v1-2gpu-epoch-bench-b<batch>`。
 
@@ -36,7 +38,7 @@
 
 ## 输出路径
 
-- 一致性记录（保留，仅成功档）：`v1-store/bench/2gpu-epoch-bench/v1-2gpu-epoch-bench-b<batch>/`（`metrics.jsonl`、`param_checksums.jsonl`、`env.json`；格式见 `scripts/smoke-local/README.md`；OOM 档的记录目录随即删除）
+- 一致性记录（仅成功档）：git 归档于本目录 `records/`（`metrics.jsonl`、`param_checksums.jsonl`、`env.json`；格式见 `scripts/smoke-local/README.md`）；`v1-store/bench/2gpu-epoch-bench/v1-2gpu-epoch-bench-b8/` 为内容一致的工作副本；OOM 档的记录目录随即删除
 - 日志（保留）：`v1-store/logs/2gpu-epoch-bench-driver.log`、`v1-store/logs/v1-2gpu-epoch-bench-b<batch>.log`
 - run 目录 `v1-store/train-runs/mme_vla_suite/v1-2gpu-epoch-bench-b<batch>` 与 `~/.cache/jax_v1-2gpu-epoch-bench-b<batch>`：跑完即删（无 checkpoint 产出）
 
