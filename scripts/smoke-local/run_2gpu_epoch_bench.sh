@@ -34,8 +34,12 @@ STATUS=1
 FINAL_BATCH=""
 FINAL_RECORD_DIR=""
 
-# OOM 自动降档：64 是官方全局 batch 口径；2 卡下 per-device 翻倍，显存无历史实测
-for BATCH in 64 32 16; do
+# OOM 自动降档：64 是官方全局 batch 口径；2 卡下 per-device 翻倍。
+# 2026-08-24 实测：64/32/16 全部 OOM（失败张量 17.62/12.61/10.38 GiB，固定底座约 8 GiB，
+# 每卡还驻留约 28 GB 参数+优化器+EMA 状态），故梯子延伸到 8/4/2（batch 2 此前 smoke 已跑通）。
+# 可用 BATCHES 环境变量覆盖起跑档位，跳过已有实证的失败档。
+BATCHES="${BATCHES:-64 32 16 8 4 2}"
+for BATCH in ${BATCHES}; do
   RUN_NAME="v1-2gpu-epoch-bench-b${BATCH}"
   CKPT_DIR="${TRAIN_RUNS}/mme_vla_suite/${RUN_NAME}"
   RECORD_DIR="${BENCH_ROOT}/${RUN_NAME}"
@@ -119,8 +123,12 @@ EOF
     STATUS=0; FINAL_BATCH="${BATCH}"; FINAL_RECORD_DIR="${RECORD_DIR}"
     break
   fi
-  # ⚠ 日志匹配须先 tr '\r' '\n'：tqdm 用回车不换行，直接 grep 会漏行
-  if tr '\r' '\n' < "${LOG}" | grep -qE "RESOURCE_EXHAUSTED|[Oo]ut of memory|OOM"; then
+  # ⚠ 日志匹配须先 tr '\r' '\n'：tqdm 用回车不换行，直接 grep 会漏行。
+  # ⚠ 这里不能用 grep -q：-q 命中即退会 SIGPIPE 杀掉上游 tr（退出码 141），
+  #   在 set -o pipefail 下整条管道判非零 → OOM 被误判为「非 OOM 失败」
+  #   （2026-08-24 b16 实测踩过，b64/b32 没触发纯属时序运气）。grep 不带 -q
+  #   会读完全部输入再退出，无竞态。
+  if tr '\r' '\n' < "${LOG}" | grep -E "RESOURCE_EXHAUSTED|[Oo]ut of memory|OOM" >/dev/null; then
     echo "!!! batch ${BATCH} OOM，降档重试" | tee -a "${LOG}"
     rm -rf -- "${RECORD_DIR}"             # 失败档的记录不保留，避免半截文件误导
     continue
@@ -129,7 +137,7 @@ EOF
   exit "${RC}"
 done
 
-[[ "${STATUS}" -eq 0 ]] || { echo "错误: 全部 batch 档（64/32/16）均失败" >&2; exit 1; }
+[[ "${STATUS}" -eq 0 ]] || { echo "错误: 全部 batch 档（${BATCHES}）均失败" >&2; exit 1; }
 
 # ── 结果判定与外推：直接吃 metrics.jsonl（比解析 tqdm 日志可靠）──────────────────
 "${PY}" - "${FINAL_RECORD_DIR}" "${STEPS}" "${SAVE_INTERVAL}" "${WARMUP_STEPS}" \

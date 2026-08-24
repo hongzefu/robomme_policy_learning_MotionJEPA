@@ -4,7 +4,7 @@
 
 | 文件 | 作用 |
 |---|---|
-| `run_2gpu_epoch_bench.sh` | 驱动脚本：官方口径 2 卡跑 `STEPS`（默认 300）步，OOM 自动降档 64→32→16，算稳态 s/step 并外推 1 epoch 时长，留下一致性检验记录 |
+| `run_2gpu_epoch_bench.sh` | 驱动脚本：官方口径 2 卡跑 `STEPS`（默认 300）步，OOM 自动降档 64→32→16→8→4→2（可用 `BATCHES` 覆盖），算稳态 s/step 并外推 1 epoch 时长，留下一致性检验记录 |
 | `bench_train_steps.py` | 训练入口：只调一次 `train.main(config)`，训练循环一行不改；靠两处 monkeypatch 把逐步标量与参数校验和写成 jsonl |
 | `README.md` | 本文件 |
 
@@ -27,7 +27,7 @@
 |---|---|---|---|
 | A1 | 4 卡 `fsdp_devices=4` → 2 卡 `fsdp_devices=2` | mesh 从 (1,4) 变 (1,2)，参数/激活分片与跨卡归约顺序不同；浮点加法不结合，**loss/梯度与 4 卡 run 必然逐位不同**（数学期望等价：同一全局 batch、同一组样本） | 本机 A/B 检验不受影响——比较的是两条 2 卡轨迹；但**本目录的记录不能拿去和任何 4 卡 run 逐位比对** |
 | A2 | per-device batch 16 → 32（全局 batch 64 不变） | 参与每步梯度的样本集合相同、梯度数学值相同，但每卡求和分块不同 → 逐位不同；也是显存翻倍、OOM 风险的来源 | 同 A1：A/B 两边同为 2 卡即无影响 |
-| A3 | 若触发 OOM 降档（batch 32/16） | **实质超参变更**：全局 batch 变小 → steps_per_epoch 变多、梯度噪声变大、lr 与 batch 配比偏离官方 | epoch 外推按实际档换算并明确标注非官方口径；A/B 两边用同一档即可 |
+| A3 | 若触发 OOM 降档（batch 32→…→2） | **实质超参变更**：全局 batch 变小 → steps_per_epoch 变多、梯度噪声变大、lr 与 batch 配比偏离官方。2026-08-24 实测 2 卡下 64/32/16 全部 OOM（失败张量 17.62/12.61/10.38 GiB：每卡驻留约 28 GB 参数+优化器+EMA，激活固定底座约 8 GiB——官方 4 卡下每卡状态减半所以能跑 batch 64） | epoch 外推按实际档换算并明确标注非官方口径；A/B 两边用同一档即可 |
 | A4 | history 变体：官方脚本默认 `perceptual-framesamp-modul` → 本基准锁死 `perceptual-framesamp-context` | 模型结构分支不同（14 变体之一），有意选择：与此前本机 smoke、GL 数据集验证、已就绪的 norm stats 同口径 | 入口有护栏强制该变体，A/B 天然同口径 |
 | A5 | 硬件：RTX 6000 Ada + 本机驱动 vs 集群 A40 | 不同 GPU/驱动/XLA 编译选择 → 浮点行为逐位不同 | 跨机器逐位比对不成立；`env.json` 留档硬件与环境，A/B 前逐项核对 |
 
