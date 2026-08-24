@@ -5,7 +5,8 @@
 ## 轮次记录
 
 - **第 1 轮**（commit `fb4f03a`，梯子 64→32→16）：2026-08-24 约 13:35 起跑，**三档全部 OOM**——失败张量 17.62 GiB（b64）/ 12.61 GiB（b32）/ 10.38 GiB（b16）。定性：2 卡 FSDP 下每卡驻留约 28 GB 参数+优化器+EMA 状态，43.7 GB 显存池的剩余空间装不下固定底座约 8 GiB 的激活张量（官方 4 卡每卡状态减半，故能跑 batch 64）。另暴露驱动脚本 `grep -q` + pipefail 的 SIGPIPE 竞态：b16 的 OOM 被误判为「非 OOM 失败」。
-- **第 2 轮**（修复误判 bug、梯子延伸至 8→4→2 的 commit，见 git log 本文件所在提交；`BATCHES="8 4 2"` 跳过已有实证的失败档）：结果见同目录 `result.md`。
+- **第 2 轮**（commit `891d6e3`，修复误判 bug、梯子延伸至 8→4→2，`BATCHES="8 4 2"`）：**b8 不 OOM，300 步训练本体全部完成**（loss 0.58→0.04 全有限、12 次参数校验和齐全、单次约 47 s），但 `metrics.jsonl` 一行未写、结果判定 fail-loud 退出——`train.main` 里的 `wandb.init(mode="disabled")` 会把 wandb 模块级 `log` 重新赋值成 run stub，盖掉了 bench 入口装在 `wandb.log` 上的记录器。
+- **第 3 轮**（修复方式：`train` 模块的全局名 `wandb` 替换为代理对象，`log` 先记录再转发、其余属性透传，`wandb.init` 改真模块属性影响不到代理；commit 见 git log，`BATCHES="8 4 2"`）：结果见同目录 `result.md`。
 
 ## 可复现信息
 

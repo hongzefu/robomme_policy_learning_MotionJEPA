@@ -61,16 +61,23 @@ def _record_dir() -> pathlib.Path:
     return d
 
 
-def _install_metrics_recorder(record_dir: pathlib.Path) -> None:
-    """把 train 模块里的 wandb.log 换成 metrics.jsonl 记录器。
+class _WandbProxy:
+    """替换 train 模块全局名 `wandb` 的代理：log 先记录再转发，其余属性透传。
 
-    train.py 里对 wandb.log 有两处调用：step 0 的 camera_views（wandb.Image 列表，
-    非标量，跳过）与每个 log_interval 的 reduced_info（全标量，逐键记录）。
+    ⚠ 不能直接 patch `wandb.log`：train.main 里的 `wandb.init(mode="disabled")`
+    会把 wandb 模块级的 `log` 重新赋值成 run 的 stub，把 patch 盖掉（2026-08-24
+    b8 首跑实测踩过：训练 300 步全部正常、校验和 12 次齐全，metrics.jsonl 却一行
+    没写）。代理对象让 train.py 的 `wandb.log` 查找永远先经过记录器，真 wandb
+    模块随便改自己的属性都影响不到。
     """
-    metrics_path = record_dir / "metrics.jsonl"
-    real_log = _train.wandb.log
 
-    def recording_log(data, step=None, **kwargs):
+    def __init__(self, real_wandb, metrics_path: pathlib.Path):
+        self._real = real_wandb
+        self._metrics_path = metrics_path
+
+    def log(self, data, step=None, **kwargs):
+        # train.py 两处调用：step 0 的 camera_views（wandb.Image 列表，非标量，
+        # 跳过）与每个 log_interval 的 reduced_info（全标量，逐键记录）
         row: dict = {"step": int(step) if step is not None else None,
                      "wall_time": time.time()}
         n_scalar = 0
@@ -78,15 +85,20 @@ def _install_metrics_recorder(record_dir: pathlib.Path) -> None:
             try:
                 fv = float(v)
             except (TypeError, ValueError):
-                continue           # 跳过 camera_views 这类非标量条目
+                continue
             row[k] = {"dec": fv, "hex": fv.hex()}
             n_scalar += 1
         if n_scalar:
-            with metrics_path.open("a") as f:
+            with self._metrics_path.open("a") as f:
                 f.write(json.dumps(row) + "\n")
-        return real_log(data, step=step, **kwargs)   # disabled 模式下是 no-op
+        return self._real.log(data, step=step, **kwargs)   # disabled 模式下是 no-op
 
-    _train.wandb.log = recording_log
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
+def _install_metrics_recorder(record_dir: pathlib.Path) -> None:
+    _train.wandb = _WandbProxy(_train.wandb, record_dir / "metrics.jsonl")
 
 
 def _install_checksum_recorder(record_dir: pathlib.Path) -> None:
