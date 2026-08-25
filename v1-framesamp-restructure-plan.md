@@ -1,14 +1,15 @@
 # framesample+context 数据链路彻底重构计划（v1-dataloader-Restructure）
 
-> 本文件是计划文档，尚未实施。v1 定稿于 2026-08-24；本版为**修订 v2（2026-08-25）**，依据两轮独立对抗验证修订：
+> 本文件是计划文档，尚未实施。v1 定稿于 2026-08-24；v2 于 2026-08-25 依据两轮独立对抗验证修订；本版为**定稿 v3（2026-08-25）**：
 > ① 61-agent 对抗验证 workflow（报告 `v1-framesamp-restructure-adversarial-review.md`：确认问题 high 4 / medium 6 / low 10，驳回 3）；
-> ② Codex 四路独立审计（8 阻断 / 12 高风险 / 6 规格缺口；其 file:line 断言已逐条读码复核属实）。
+> ② Codex 四路独立审计（8 阻断 / 16 高风险 / 8 规格缺口；其 file:line 断言已逐条读码复核属实）；
+> ③ 定稿复核 workflow（全 opus，6 agent：修订落实 ×2 / 数字复算 / 设计自洽 / 残留扫描 + 裁决）：裁决清单必须修 M1–M13、建议修 S1–S9 已全部落实，驳回 R1–R6 维持原文。
 > 全部修订对照见文末「修订记录」。范围：只兼容 `perceptual-framesamp-context` 一种 run。
 
 ## Context（为什么做这件事）
 
-- v1 端到端实测（`docs/training-doc/v1-e2e-b64/`）：GPU util 均值仅 69.7%（中位 100% 是假象）、0% 采样占比 27.8%、慢步占稳态墙钟 32.9%；步时中位 6.933 s，而 compute-only 下界 4.778 s（+45%）。NFS 带宽已排除（供给 398–628 MB/s vs 需求 251 MB/s），坐实瓶颈在 dataloader worker 的 CPU/文件层。
-- 16 CPU 档纯参数调整不解决问题已有实据：v1-e2efix-w8c16 已完成（步时中位 **5.301 s**、util 均值 **71.2%**、epoch ≈9.09 h），距 compute-only 下界仍差 11%、util 仍未吃满；w16c16 / w12c16 定稿时在跑。需要代码级彻底重构。
+- v1 端到端实测（`docs/training-doc/v1-e2e-b64/`）：GPU util 均值仅 69.7%（中位 100% 是假象）、0% 采样占比 27.8%、慢步占稳态墙钟 32.9%；步时中位 6.933 s，而 compute-only 下界 4.778 s（+45%）。NFS 带宽已排除（供给 398–628 MB/s vs 需求 256 MB/s），坐实瓶颈在 dataloader worker 的 CPU/文件层。
+- 16 CPU 档纯参数调整不解决问题已有**三档完整实据**：w8c16 **5.301 s / 71.2% / epoch ≈9.09 h**、w12c16 **5.319 s / 70.6% / ≈9.13 h**、w16c16 **5.327 s / 67.1% / ≈9.14 h**——workers 8/12/16 曲线完全平坦，三档均距 compute-only 下界 4.778 s 差约 11%、util 均值仍只有 67–71%、慢步墙钟 32–36%。需要代码级彻底重构。
 - 本轮范围：**只兼容 `perceptual-framesamp-context` 一种 run**；硬性要求**每个 step 拿到的 memory token 近乎一致、训练梯度差距极小**（本计划把目标提到「受控环境下逐位一致」并给出证明梯子，有效性域见第三节）；同时让整条流程更具可读性。
 - 用户已拍板：正式训练交付 dtype 用 **native bf16 模式**；GL e2e 验收**尽快并行提交**（接受与在跑档位互相排队）。
 
@@ -105,7 +106,7 @@
 │       逐帧 np.load(token_emb_{f}.npy, allow_pickle).item() 全量反序列化          │
 │       = ≤32 次 NFS open+close（实测 32 次 open 本身 74.3 ms）                    │
 │       + ≤32 次 589 KiB 整包 pickle（每次 4.0–4.9 ms，只用 112 KiB）              │
-│       读 19.7 MB 用 3.6 MB              热 17.7 ms / 冷 ~110 ms                 │
+│       读 19.3 MB 用 3.7 MB（上界，只含 npy 不含 pkl 0.4 MB）热 17.7/冷 ~110 ms  │
 │  ④ 拼装 (n,16,2048) bf16 / (n,16,768) f32 / (n,8) f32 / mask (n,)              │
 │  ⑤ right_padding_token_emb             ⚠ np.zeros 未指定 dtype：                │
 │       t < 31 的短样本（占 6.27%）整体提升 float64（2.1 MB → 8.4 MB）；           │
@@ -120,7 +121,7 @@
 │  ⑧ _collate_fn（np.stack）在 worker 内执行：batch 内含任一短样本（b64 概率      │
 │       98.4%）→ memory 键整批提升 float64（仅 static_image_emb 一键 537 MB）      │
 └──────┬─────────────────────────────────────────────────────────────────────────┘
-       │ 已合并的 batch 经 IPC 回主进程（含短样本时 memory 三键 ~757 MB/batch）
+       │ 已合并的 batch 经 IPC 回主进程（含短样本时 batch 载荷 ~757 MB：三键 740+原图 19）
        ▼
 ┌─ 主进程 交付 ──────────────────────────────────────────────────────────────────┐
 │ jax.make_array_from_process_local_data：host 侧把 f64 降回 f32 再 H2D           │
@@ -139,16 +140,18 @@
 └────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 1.4 字节帐与耗时帐（实测；来源与留档口径见 B.6 修订项）
+### 1.4 字节帐与耗时帐（实测；数字来源与留档口径见第五节「探针脚本固化」与 A.2 的 probe_layout.py）
 
 | 口径 | 现状数值 | 备注 |
 |---|---|---|
-| 每样本读盘 | 均值 18.7 MB（上界 19.7 MB） | 其中真正用到 ≈4.1 MB，放大 4.6×；单看 npy 是 589 KiB 只用 112 KiB（5.3×） |
+| 每样本读盘 | 均值 19.08 MB（上界 19.69 MB） | 其中真正用到 均值 3.95 MB（上界 4.07 MB），放大 ≈4.8×；单看 npy 是 589 KiB 只用 112 KiB（5.3×） |
 | 每样本耗时（热/冷） | 25.4 / 132.4 ms | gather 占 17.7 / ~110 ms；32 次 open 本身 74.3 ms |
-| 每 step（b64）读盘 | 1.20 GB | 需求 251 MB/s，NFS 供给 398–628 MB/s（带宽不是瓶颈） |
+| 每 step（b64）读盘 | 1.22 GB | 需求 256 MB/s，NFS 供给 398–628 MB/s（带宽不是瓶颈） |
 | 每 step 文件打开 | 2,112 次 | 64 pkl + 64×32 npy |
-| collate / IPC / device_put | 52 ms / 757 MB / 73 ms | float64 提升的直接代价；collate 在 worker 内执行（num_workers>0 时） |
+| collate / IPC / device_put | 52 ms / 757 MB / 73 ms | float64 提升的直接代价；collate 在 worker 内执行（num_workers>0 时）；757 MB 为 batch 载荷（memory 三键 740 MB + 两张原图 19 MB） |
 | 步时 | 中位 6.933 s（compute-only 下界 4.778 s，+45%） | GPU util 均值 69.7%、0% 采样 27.8%、慢步墙钟 32.9% |
+
+> 注：全表统一十进制 MB（1 MB = 10⁶ B），与既有留档中的 MiB 数字不可直接比。
 
 ### 1.5 浪费在哪里（按影响排序）
 
@@ -187,8 +190,8 @@
                                     │  · 只抽 image_emb_4x4 / pos_emb_4x4 / state_emb
                                     │  · 写侧逐帧校验（pos memcmp 钉死 t；见 A.2）
                                     │  · 写后 pread 读回校验 + 逐 part sha256 原子落盘
-                                    │  · verify 子命令独立进程做「全量 483,291 帧
-                                    │    写×读对拍」——g 级身份零遗漏的唯一凭据
+                                    │  · verify 子命令独立后验（16 进程）做「全量
+                                    │    483,291 帧写×读对拍」——g 级零遗漏唯一凭据
                                     ▼
  v1-store/datasets/4task-gl-framesamp/            共 31.7 GB（特征侧体积的 1/9）
  ├── meta/store_meta.json         唯一契约：布局/形状/dtype/字节序/part 边界/源库根
@@ -236,7 +239,7 @@
 │  ④ gather：32 个常驻 fd 上 fadvise 预读 + 游程合并 preadv 直读进预分配数组        │
 │     （短读循环补齐，EOF/越界才 raise）                                           │
 │     0 次 open、0 线程池、0 pickle       热 0.3–0.5 ms / 冷 10–30 ms（待实测）    │
-│     pos/state 从 mmap 小表切片（跨 worker 共享 page cache，零副本——由懒加载保证） │
+│     pos/state 从进程内常驻小表按行取（44 MB/worker，无 NFS 缺页）                │
 │  ⑤ _pad_native：预分配 bf16/f32，填充区清零 —— 无 float64 提升                   │
 │  ⑥⑦⑧ 拼装、transforms 与 worker 内 collate 与旧路径完全相同                     │
 └──────┬─────────────────────────────────────────────────────────────────────────┘
@@ -253,21 +256,21 @@
 | 维度 | 现状 | 重构后 |
 |---|---|---|
 | 每样本文件打开 | ≤33 次（1 pkl + ≤32 npy） | 1 次（特征走常驻 fd） |
-| 每样本读盘 | 均值 18.7 MB（上界 19.7 MB），只用 4.1 MB | 均值 2.43 MB（上界 2.49 MB），几乎全用到 |
+| 每样本读盘 | 均值 19.08 MB（上界 19.69 MB），只用 3.95 MB | 均值 2.43 MB（上界 2.49 MB），几乎全用到 |
 | 反序列化 | ≤32 次全量 pickle | 0 次（裸字节直读） |
 | 线程池 | 每样本新建 ≤32 线程 | 无 |
 | padding dtype | 隐式 float64 提升 | 显式 bf16/f32（native 模式） |
-| collate 后 memory 三键 | ~757 MB/batch（98.4% 的 batch；image 单键 537 MB） | ~257 MB/batch（image 单键 134 MB） |
-| 每 step 读盘 / 打开 | 1.20 GB / 2,112 次 | 均值 155 MB（上界 159.5 MB）/ 64 次 |
+| collate 后 batch 载荷（memory 三键＋两张原图） | ~757 MB/batch（98.4% 的 batch；三键 740 MB，image 单键 537 MB） | ~257 MB/batch（三键 236 MB，image 单键 134 MB） |
+| 每 step 读盘 / 打开 | 1.22 GB / 2,112 次 | 均值 155 MB（上界 159.5 MB）/ 64 次 |
 | 单样本耗时（热/冷） | 25.4 / 132 ms | ≈7 / 15–40 ms（预估，S8 实测为准） |
 | 供给余量（vs 计算需求） | 不足（GPU 空转 30%） | ≈15× |
-| 预期步时 / epoch | 6.933 s / 11.9 h | ≈4.9 s / ≈8.5 h（下界 4.778 s / 8.2 h） |
+| 预期步时 / epoch | 6.933 s / 11.9 h | ≈4.9–5.0 s / 8.4–8.6 h（下界 4.778 s / 8.2 h） |
 
 ### 2.4 接口与开关（新增，给人看的版本；细节在 B.2/B.4）
 
-- **backend 显式三态**：`MMEVLA_DATA_BACKEND ∈ {packed, legacy, auto}`。`packed`＝新链路，meta 缺失/损坏/指纹不符**直接报错，绝不静默回退**；`legacy`＝旧链路逐字不动；`auto`＝按 meta 存在性分派并打 WARNING，**仅限本机探索**。正式 launcher 一律显式 `packed`——「按目录内容猜路径」被彻底禁止。
+- **backend 显式三态**：`MMEVLA_DATA_BACKEND ∈ {packed, legacy, auto}`。`packed`＝新链路，meta 缺失/损坏/指纹不符**直接报错，绝不静默回退**；`legacy`＝旧链路逐字不动；`auto`＝按 meta 存在性分派并打 WARNING，**仅限本机探索且必须显式设置才生效**。**环境变量未设置时默认 `legacy`——与现状行为逐字节相同，零静默切换。**正式 launcher 一律显式 `packed` 或 `legacy`——「按目录内容猜路径」被彻底禁止。
 - **双根契约**：打包库、源库（pkl 所在）、清单三个位置全部显式：`store_meta.json` 记录 `source_dataset_root` 与 `manifest_path`（绝对路径），可被环境变量覆盖（节点本地盘缓存场景：store 在 `/tmp`，pkl 与清单仍在 NFS）。
-- **store 生命周期**：常驻 fd 与 mmap **不跨进程携带**——Dataset 被 pickle 进 spawn worker 时剔除句柄，worker 内首次取数时按 pid 懒构造。这是「0 次 open、跨 worker 共享 page cache」承诺的实现路径（v1 计划的空白，对抗验证 A2/Codex 阻断 2 命中）。
+- **store 生命周期**：常驻 fd 与两张小表**不跨进程携带**——Dataset 被 pickle 进 spawn worker 时剔除句柄，worker 内首次取数时按 pid 懒构造（小表 `np.fromfile` 全量读入进程内存，44 MB/worker）。这是「0 次 open」承诺的实现路径（v1 计划的空白，对抗验证 A2/Codex 阻断 2 命中）。
 
 ## 三、「memory token 近乎一致」怎么保证（结论：受控环境下可做到逐位一致）
 
@@ -295,13 +298,13 @@
 | 第 0 层 | 恒等链 (1)：样本序列 | 新旧 loader 同 seed dump index 序列对拍（w0/w4/w8 三档，dump 步数 < 1 个 epoch）+ 真实训练链路旁证（主进程 batch_sampler 层记录） | diff 为空 |
 | 第 1 层 | 恒等链 (2)(3)：交付内容 | 8,200 个**定点**样本（step∈{0,1,2,29,30,31,32,33} 边界全覆盖 + 每 episode 首样本 + 随机）逐键对拍，另加 200 个真实 batch 过 collate 对拍 | replica 模式全键逐位零容差；native 模式 astype(f32) 后逐位 |
 | 第 2 层 | **IO 重构本身对训练零影响** | 同一 clean HEAD 下 legacy backend vs packed+replica：本机 2 卡 b8 跑 300 步，逐步比 loss/grad_norm 等五个量的 hex ＋ 每 25 步完整 TrainState 摘要 | 全部 bitwise 相同 |
-| 第 3 层 | **dtype 正规化不改数** | 先单步定点梯度对拍（**主判据取「含短样本」batch——唯一有 dtype 差异的场景；「整批满长」batch 作阴性对照**），再 replica vs native 300 步；另加 GL b64 100 步短程抽查 | 主判据 bitwise |
+| 第 3 层 | **dtype 正规化不改数** | 先单步定点梯度对拍（**主判据取「含短样本」batch——唯一有 dtype 差异的场景；「整批满长」batch 作阴性对照**），再 replica vs native 300 步；另加 GL b64 100 步短程抽查 | 主判据 bitwise（本机 2 卡 b8）；GL b64 抽查只判 3.4 量化判据 |
 
 说明三点：
 
 - **replica 复刻模式**是专为第 2 层设计的交付模式：精确复现现状的 f64 padding 与 collate 提升，使新旧链路的差异只剩「字节从哪读」——第 2 层通过即证明重构没改任何东西；第 3 层再单独隔离 dtype 这一个变量。
 - **dtype 差异场景与档位选择（v2 修订，方向纠正）**：replica 与 native 的交付 dtype 差异只出现在**含短样本**的 batch（replica f64 vs native bf16）；「整批满长」batch 两种模式本就同为 bf16，比对它零证伪力、只能当阴性对照。含短样本 batch 占比 **b64 = 98.4%、b8 = 40.4%**——单 batch 暴露率 **b64 比 b8 高约 2.4 倍**，b8 不构成更严的检验（v1 计划「b8 严 38 倍」为方向性错误，已废弃）。b8 的真实价值：本机 2 卡唯一可跑档位、迭代快，且 300 步内期望命中差异场景约 121 次，配合单步定点对拍足以证伪；b64 规模的直接证据由第 3 层新增的 GL 短程抽查补齐（C.4）。
-- **本机 2×RTX 6000 Ada 与 GL 4×A40 是两种硬件**：第 2/3 层的 bitwise 结论在本机受控环境内自洽；GL 侧不重复 bitwise 证明（无稳定基线，见 3.3），由 GL b64 短程抽查 + 3.4 量化判据覆盖。
+- **本机 2×RTX 6000 Ada 与 GL 4×A40 是两种硬件**：第 2/3 层的 bitwise 结论在本机受控环境内自洽；GL 侧不重复 bitwise 证明（无稳定基线，见 3.3），由 GL b64 短程抽查 + 3.4 量化判据覆盖——**GL 抽查不承担 bitwise 举证，只做量级复核**。
 
 ### 3.3 前置条件：先证明「同配置重跑本身可复现」
 
@@ -312,7 +315,7 @@
 ### 3.4 任何一层失败怎么办（「梯度差距极小」的硬兜底）
 
 - **定位手段**：第 0/1 层失败输出首个失配 idx/键/元素的 hex，配合守卫测试把问题缩小到 gather/padding/reshape/normalize 四段之一；第 0 层若差异恰从 epoch 边界开始 → 先检查是否跨 epoch（1.6 的 torch 既有语义），非 Dataset 问题。第 2/3 层失败用参数 sha256 逐叶子二分找首个分叉模块——分叉在 `mem_enc*` 指向交付内容（回第 1 层），分叉在 LLM 主干而 mem 一致指向非确定性（回 3.3 重立前提）。
-- **量化兜底**（参数化判据全文见 C.4）：若第 3 层 bitwise 失败，先证 native 自身重跑稳定，再启用量化判据——loss 逐步相对差 median ≤ 1e-6 / p95 ≤ 1e-5 / max ≤ 1e-4，梯度范数各松一档，且相对差对 step 的回归斜率不得显著为正（轨迹不允许发散，无论绝对值多小）。阈值比 bf16 在 [1,2) 区间的 1 ULP（2⁻⁷ ≈ 0.78%）保守两个数量级以上。
+- **量化兜底**（参数化判据全文见 C.4）：若第 3 层 bitwise 失败，先证 native 自身重跑稳定，再启用量化判据——loss 逐步相对差 median ≤ 1e-6 / p95 ≤ 1e-5 / max ≤ 1e-4，梯度范数三项 median/p95 各松一档、max 与 loss 同为 1e-4，且相对差对 step 的回归斜率不得显著为正（轨迹不允许发散，无论绝对值多小）。精度参照：bf16 在 [1,2) 区间 1 ULP = 2⁻⁷ ≈ 0.78%（半 ULP ≈ 0.39%）——median 档比 1 ULP 保守 2.9–3.9 个数量级、p95 档 1.9–2.9 个数量级、max 档约 1.9 个数量级（异常值兜底）。
 - **降级路径**：量化判据仍不达标，正式模式从 native 降级 f32 或 replica（三模式开关收敛在一处，随时可切），**绝不「差不多就行」**。
 
 ## 四、明确不做的事，与本重构解耦的既有问题
@@ -365,8 +368,9 @@ v1-store/datasets/4task-gl-framesamp/
 - `store_meta.json` 关键字段：
   - 布局与格式契约：`layout="framesamp-4x4-v1"`、三张表的 shape/dtype/row_bytes、**`byte_order="little"`、`array_order="C"`、`bf16_encoding="ml_dtypes.bfloat16 (1s+8e+7m)"`**、`writer_versions{python,numpy,ml_dtypes,git_commit}`；
   - 身份与双根：`manifest_sha256`（须等于当前 `episode_manifest.json` 顶层 `sha256`）、**`manifest_path`、`source_dataset_root`**（绝对路径，运行期可被环境变量覆盖，见 B.4）、`source_provenance_sha256`、`source_spot_sha256`（16 个抽样源文件摘要，读侧启动抽验）；
-  - 规模与校验：`num_rows/num_exec_samples/num_pos_rows`、`parts[]`（含每 part 精确行边界与 sha256）、`packer`（host/reader/校验覆盖率）、`verify`（全量对拍的 seed/时间/结论，verify 通过后回填）。
-  - **meta 最后写**，它是「打包完成」的唯一标志；`verify` 字段回填前，读侧（packed 模式）拒绝使用该库用于正式训练（bench/开发可用 `MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED=1` 显式放行）。
+  - 规模与校验：`num_rows/num_exec_samples/num_pos_rows`、`parts[]`（含每 part 精确行边界、sha256 与 **`head_tail_digest`**——blake2b-128，覆盖该 part 首尾各 1 MiB；part 小于 2 MiB 时覆盖全文件并标 `full_covered: true`，供 fast 档不读全 part 复验）、`packer`（host/reader/校验覆盖率）、`verify`（全量对拍的 seed/时间/结论）。
+  - **meta 两阶段写，均为 tmp + fsync + replace 原子落盘（v3 定稿）**：阶段 1 `pack` 结束写 meta（`status: "packed"`、`verify: null`）——这是「打包完成」的标志；阶段 2 `verify` 通过后原子回填（`status: "verified"`）。verify 期间**继续持有 `pack.lock`**，回填完成后才删锁。**verify 闸只落在 `create_data_loader` 的 packed 分派层**（`status != "verified"` 且未显式设 `MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED=1` 即 raise，放行必打 WARNING，见 R17/G14）；`FrameSampStore` 本身不看 `verify` 字段——否则打包工具读不了自己正在验的库。provenance 统一记**回填后**的 `store_meta.json` sha256（该 sha 只在 verify 通过后才稳定）。
+  - **迷你库契约（守卫/开发专用，v3 新增）**：`store_meta` 增 `manifest_scope ∈ {"full","subset"}`；`subset` 时必须带 `subset_episodes[]`（`global_episode_idx` 列表）与 `mini_manifest_sha256`，fast 档的覆盖校验相应改为「`parts` 连续覆盖 subset 声明的行区间」，`manifest_sha256` 仍记全量清单值但只作溯源、不作相等断言。**`manifest_scope=="subset"` 的库禁止用于 S5 及以上任何判据**（packed 分派检出即 raise）。
 
 ### A.2 打包工具
 
@@ -375,7 +379,7 @@ v1-store/datasets/4task-gl-framesamp/
 - **真值与复用**：清单经 `scan_manifest.load_manifest()`（sha256 fail-loud）；格式常量与 `row_of()` 从 `src/mme_vla_suite/datastore/framesamp_store.py` import，**绝不复制**（沿用 `build_shard.py` 从 `scan_manifest.py` import 的既定做法）。
 - **运行位置**：**本机 detached tmux**（纯 CPU+NFS，不占 GL 的 spgpu GPU 配额；产物是确定性字节、由全量对拍背书，不属于「本机吞吐结论」，不违反 AGENTS 13）。带宽受限（NFS 供给 398–628 MB/s、decode 总读 291 GB），预计 **20–40 min**。
 - **并行与事务协议**（v2 补全，Codex 阻断 7）：
-  1. **排他锁**：启动时 `O_CREAT|O_EXCL` 创建 `meta/pack.lock`（内容 build_uuid/host/pid/开始时间）。锁已存在时：pid 同 host 且存活 → 拒跑；否则视为残锁，`--resume` 显式确认后接管并换新 build_uuid。**双实例并发被此闸排除**。
+  1. **排他锁**：启动时 `O_CREAT|O_EXCL` 创建 `meta/pack.lock`（内容 build_uuid/host/pid/开始时间）。锁已存在时：pid 同 host 且存活 → 拒跑；否则视为残锁，`--resume` 显式确认后接管并换新 build_uuid。**双实例并发被此闸排除**；锁在全量 verify 回填 meta 后才释放（见 A.1 两阶段协议）。
   2. **小表先行、主进程独写**：`pos_emb_4x4.f32.bin` 与 `state_emb.f32.bin` 由主进程在并行阶段**之前**单独构建、校验、原子落盘（pos 表从源库抽取拼装，见下）；worker 只读它们做逐帧比对，全程无人再写小表——「谁写全局表」的归属唯一。
   3. **image part 并行**：`multiprocessing.Pool`（默认 `min(16, cpu)`），**每 part 唯一属主**（按 part 划分任务），天然无锁。
   4. **progress 单写**：worker 完成一个 part 后经 `multiprocessing` 队列把 `(idx, rows, sha256, elapsed)` 汇报给父进程，**只有父进程追加 `pack_progress.jsonl`**——排除多进程交错写坏行。读侧解析时对**尾部半行**（崩溃残留）直接丢弃，不视为损坏。
@@ -383,7 +387,7 @@ v1-store/datasets/4task-gl-framesamp/
   6. **崩溃语义**：SIGKILL/断电/ENOSPC 后重跑 `--resume`：按 progress 校验「存在+大小+sha256」跳过完好 part；`.tmp` 残留一律清除重做；ENOSPC 在写入前有 `df` 预检（源目录所在文件系统余量 ≥ 40 GB）。
 - **源读取两档** `--reader`：`decode`（首跑默认，逐帧 `np.load(allow_pickle).item()` 全量 602,951 B，零布局假设，总读 291 GB）；`slice`（已实测 npy 内部偏移恒定：`image_emb_4x4`@262,595、`pos_emb_4x4`@541,352、`state_emb`@602,906，120/120 文件大小一致、60/60 memcmp 通过，本次对抗验证又独立复现 9/9；三重守卫：st_size==602,951、数据段前 64 B 前缀与基准逐字节相同、逐帧 pos 窗口 100% memcmp——留作重跑加速档）。偏移常数是**数据格式常量**（非代码行号），由 `probe_layout.py` 可随时复核。
 - **写侧逐帧校验（100% 覆盖，写入路径内；口径按 v2 修正——钉 t 不钉 g）**：① 该帧 `pos_emb_4x4` ≟ `pos_table[t]`（memcmp，**钉死 t 与「pos 只依赖 t」两条不变量；不钉 g**——pos 是 t 的纯函数，数学上不可能区分「同 t 不同 episode」的调包）；② `state_emb` ≟ state 表同一行（同源自证，防行内错乱，同样不构成独立 g 证据）；③ episode slab 写入 `.tmp` 后 `os.pread` 读回与内存 memcmp（read-after-write，多读 31.7 GB ≈ 80 s）；④ part 完成 → sha256 → `os.replace` → 汇报 progress。
-- **g 级身份的唯一凭据：`verify` 子命令全量对拍（v2 从 5 万帧抽样升级为全量，Codex 阻断 6 / 对抗验证 A3）**：独立进程遍历**全部 483,291 个 (g,t)**，重新完整 decode 源 npy，与 `FrameSampStore.read_image_rows()` 走真实读路径 memcmp，同时逐行产出 `row_digests.blake2b.bin`（blake2b-128）。总读 ≈291 GB（源）+ 31.7 GB（store），预计 20–40 min，与打包同量级、一次性成本。判定行 `VERIFY_PACK=PASS scanned=483291 mismatches=0`。**「零遗漏」「逐位」只在全量 verify 通过后才允许宣称**；`--sample N` 抽样档仅供开发期快检（10% 抽样对单行错位漏检率约 90%，不得用于交付判定）。verify 通过后把结论回填 `store_meta.json.verify`。
+- **g 级身份的唯一凭据：`verify` 子命令全量对拍（v2 从 5 万帧抽样升级为全量，Codex 阻断 6 / 对抗验证 A3）**：独立于 pack 的一次后验遍历，覆盖**全部 483,291 个 (g,t)**——重新完整 decode 源 npy，与 `FrameSampStore.read_image_rows()` 走真实读路径 memcmp，同时逐行产出 blake2b-128 摘要。**进程模型（v3 定稿）**：复用与 pack 同一套 `multiprocessing.Pool(min(16, cpu))`、按 part 划分任务；每个 worker 只返回本 part 的（起始行号、逐行摘要字节块、mismatch 列表），**由父进程按 part 序拼接后单写** `meta/row_digests.blake2b.bin`（同样 tmp → fsync → replace → 目录 fd fsync；worker 不写任何文件）。总读 ≈291 GB（源）+ 31.7 GB（store），**16 进程预计 20–40 min**（单进程口径按实测 decode 冷 12.3 ms/帧外推约 1.7 h，不采用）。判定行 `VERIFY_PACK=PASS scanned=483291 mismatches=0`。**「零遗漏」「逐位」只在全量 verify 通过后才允许宣称**；`--sample N` 抽样档仅供开发期快检（10% 抽样对单行错位漏检率约 90%，不得用于交付判定）。verify 通过后按 A.1 两阶段协议原子回填 `store_meta.json`。
 - **pos 表来源（定论）**：**主方案从源库抽取拼装**（用若干 episode 凑齐 t=0..585 的 `pos_emb_4x4`，逐位同源、零后端风险），主 pass 的 100% memcmp 即证明「只依赖 t」。`PosEmb3D` 现生成仅作旁证：**已实测 CPU 后端生成与库中值不逐位一致（max|diff| ≈ 7e-7，落在 1e-7~1e-5 区间），GPU 后端一致**——若走生成路径必须校验 `jax.devices()[0].platform == "gpu"`（不符 raise），守卫测试钉死（G7）。
 - **留档**：`docs/dataset-build-doc/4task-gl-framesamp/README.md`（AGENTS 12：commit、命令、源库指纹、耗时、写侧校验与全量 verify 结果、探针脚本输出附录）。
 
@@ -401,12 +405,13 @@ v1-store/datasets/4task-gl-framesamp/
 | 新增·装配层 | `src/mme_vla_suite/training/framesamp_dataset.py` | FrameSampDataset |
 | 新增·工具 | `scripts/data-pack-framesamp/{pack_framesamp_store.py, run_pack.sh, probe_layout.py, dump_index_seq.py, compare_batches.py, test_pack_guards.py, README.md}` | 打包/探针/对拍/守卫 |
 | 修改·接线 | `src/mme_vla_suite/training/dataloader.py` | `create_data_loader` 内 backend 分派（约 15 行） |
-| 修改·验证资产 | `scripts/smoke-local/run_2gpu_epoch_bench.sh` | S0：EXP_NAME/RUN_TAG 拆分、KEEP_JAX_CACHE、缓存软链进 v1-store、XLA_FLAGS 注入、preflight 兼容 packed 库（`stats.json` **或** `store_meta.json`） |
-| 修改·验证资产 | `scripts/smoke-local/bench_train_steps.py` | S0：checksum recorder 扩展（每 SAVE_INTERVAL 全 TrainState 摘要）；`BENCH_DUMP_IDX` 改 batch_sampler 层记录 |
+| 修改·验证资产 | `scripts/smoke-local/run_2gpu_epoch_bench.sh` | S0：EXP_NAME/RUN_TAG 拆分、KEEP_JAX_CACHE、缓存软链进 v1-store、XLA_FLAGS 注入、preflight 兼容 packed 库（`stats.json` **或** `store_meta.json`）、env.json provenance 字段扩展（清单与 D 节一致） |
+| 修改·验证资产 | `scripts/smoke-local/bench_train_steps.py` | S0：checksum recorder 扩展（每 SAVE_INTERVAL 全 TrainState 摘要）；`BENCH_DUMP_IDX` 改 batch_sampler 层记录（monkeypatch `create_data_loader` 取 loader + `object.__setattr__` 安装包装器，首次 `iter()` 前——torch 禁止初始化后直接赋值） |
 | 修改·验证资产 | `scripts/smoke-local/README.md` | 同步 S0 用法 |
-| 修改·验收资产 | `scripts/bottleneck-bench-v2/gl_e2e_fix.sbatch` | S8 前：`--dataset-path`/backend/dtype 参数化（默认值=现状）、meminfo 采样、provenance 字段扩展 |
-| 修改·验收资产 | `scripts/bottleneck-bench/gl-dataloader/dataloader_bench.py` | S8 前：`_AVG_BYTES_PER_SAMPLE` 从 history_config+manifest 推导、`block_until_ready` 覆盖整个 (obs, actions) pytree、gather/pkl 分段计时 |
-| 修改·验收资产 | `scripts/bottleneck-bench-v2/analyze_gpu_util.py` | S8 前：新增机器判定输出 `E2E_ACCEPT=PASS|FAIL`（D 节判据表阈值全部代码化，FAIL 时退出码非零） |
+| 修改·验收资产 | `scripts/bottleneck-bench-v2/gl_e2e_fix.sbatch` | S7.5：`--dataset-path`/backend/dtype/`--save-interval`（默认 1000＝现状，S7 抽查传 25）/`--time` 参数化（默认值=现状）、新增 `COLDHOT=1` 双跑模式（同 allocation 先 C1 后 H1，`--time=04:00:00`）、meminfo 采样、provenance 字段扩展 |
+| 修改·验收资产 | `scripts/bottleneck-bench/gl-dataloader/{gl_dlbench_single,gl_dataloader_bench}.sbatch` | S7.5：`DATASET_PATH`/`MMEVLA_DATA_BACKEND`/dtype 参数化（默认值＝现状 `4task-gl`+`legacy`），env.json 同步；`submit_split_jobs.sh` 的 `--export` 同步补项 |
+| 修改·验收资产 | `scripts/bottleneck-bench/gl-dataloader/dataloader_bench.py` | S7.5：`_AVG_BYTES_PER_SAMPLE` 从 history_config+manifest 推导、`block_until_ready` 覆盖整个 (obs, actions) pytree、gather/pkl 分段计时 |
+| 修改·验收资产 | `scripts/bottleneck-bench-v2/analyze_gpu_util.py` | S7.5：主判据表 5 项机器判定输出 `E2E_ACCEPT=PASS|FAIL`（FAIL 退出码非零）；每步读盘公式口径去掉硬编码 1.20 GB，改从 history_config+manifest 现场推导（与 `_AVG_BYTES_PER_SAMPLE` 同源）；另加吃多个 record_dir 的附加判据汇总入口 |
 | 新增·文档 | `docs/dataset-build-doc/4task-gl-framesamp/README.md`、`docs/v2-dataloader-restructure-report.md`、`docs/v1-framesamp-dataflow.md` | 留档与汇总 |
 | **不动** | `scripts/train.py`、`src/openpi/**`、`src/mme_vla_suite/models/**`、`training/dataset.py`、`shared/**` | 硬红线（G 节 R2）；v1 的 `prefetch_factor` 可选项已裁定本轮不实施 |
 
@@ -419,12 +424,12 @@ v1-store/datasets/4task-gl-framesamp/
 - **构造与 pickle 契约（对抗验证 A2 / Codex 阻断 2 的修法，定论：懒加载）**：
   - `FrameSampDataset.__init__`（主进程）只做：读 `store_meta.json` + 全部 fail-loud 静态校验（fast 档）+ 清单派生查表数组；**不打开任何 part fd、不建任何 mmap**。
   - `FrameSampDataset.__getstate__` 剔除 `_store` 句柄字段（只序列化路径/meta/查表数组）——Dataset 被 pickle 进 spawn worker 时**不携带任何内核资源**。
-  - **每进程首次 `__getitem__` 时懒构造** `FrameSampStore`：`os.open` 32 个 part fd（`O_RDONLY|O_CLOEXEC`）+ 两张小表 `np.memmap(mode='r')`，记录 `_owner_pid = os.getpid()`；此后每次取数校验 `os.getpid() == _owner_pid`，不符（异常的二次 fork 等）即丢弃重建。`close()` 幂等。w0（num_workers=0）路径同样适用（主进程即 owner）。
-  - 该契约保证：worker 各自持有效 fd；两张小表每 worker 各自 mmap 同一文件，**共享的是 page cache 页**（不是映射对象），零数据副本。
+  - **每进程首次 `__getitem__` 时懒构造** `FrameSampStore`：`os.open` 32 个 part fd（`O_RDONLY|O_CLOEXEC`）+ 两张小表 `np.fromfile` 全量读入，记录 `_owner_pid = os.getpid()`；此后每次取数校验 `os.getpid() == _owner_pid`，不符（异常的二次 fork 等）即丢弃重建。`close()` 幂等。w0（num_workers=0）路径同样适用（主进程即 owner）。
+  - 该契约保证：worker 各自持有效 fd；两张小表为进程内常驻副本（44 MB/worker），热路径零 NFS 缺页。
 - **校验档位** `MMEVLA_FRAMESAMP_VERIFY ∈ {fast, full}`（Codex 高 4）：
-  - `fast`（默认，每进程懒构造时执行）：layout / `manifest_sha256` 现场重算比对 / parts 连续覆盖 [0,num_rows) / 每 part 存在且 `st_size == meta.bytes` / 抽 1 个 part 头尾 1 MiB 与 meta 记录的分段摘要复验 / 抽 1 条 `source_spot_sha256` 复验源库未动。
+  - `fast`（默认，每进程懒构造时执行）：layout / `manifest_sha256` 现场重算比对 / parts 连续覆盖 [0,num_rows)（subset 库按声明行区间，见 A.1 迷你库契约）/ 每 part 存在且 `st_size == meta.bytes` / 抽 1 个 part 头尾 1 MiB 与 meta `parts[].head_tail_digest` 复验 / 抽 1 条 `source_spot_sha256` 复验源库未动。
   - `full`（正式 GL run 由 sbatch 显式设置）：主进程在构造 DataLoader **之前**额外做**全部 32 个 part + 两张小表的完整 sha256** 对 meta 比对（≈31.7 GB 读，~1–2 min），能抓「同尺寸中部翻转」；worker 内仍只跑 fast + `fstat` 尺寸复核（避免 N 个 worker 各读 31.7 GB）。校验结果写入 run 的 env.json（provenance，见 D 节）。
-- **大表用 pread、小表用 mmap**（实测：32×64 KiB 常开 fd pread 0.33 ms，np.memmap 切片 2.4–2.5 ms 走 NFS 缺页/revalidate 路径）：`read_image_rows(rows, out)` 先对全部行发 `posix_fadvise(POSIX_FADV_WILLNEED)` 触发内核并发预读（`ENOSYS`/`EOPNOTSUPP` 时打一次 WARNING 后永久跳过，纯性能 hint），再按连续行游程合并 `os.preadv` 直读进预分配 bf16 数组（短样本 32 行天然连续 → 1 次调用）。
+- **大表用 pread、两张小表在懒构造时一次性 `np.fromfile` 全量读入进程内存**（v3 修正：pos 28.8 MB + state 15.5 MB = 44.3 MB/worker，16 worker ≈ 700 MB，远小于 native 模式省下的在途内存 ~16 GB；实测同一 NFS 上 32×64 KiB 常开 fd pread 0.33 ms、`np.memmap` 切片 2.4–2.5 ms 走缺页/revalidate 路径——**热路径不留任何 NFS mmap**）：`read_image_rows(rows, out)` 先对全部行发 `posix_fadvise(POSIX_FADV_WILLNEED)` 触发内核并发预读（`ENOSYS`/`EOPNOTSUPP` 时打一次 WARNING 后永久跳过，纯性能 hint），再按连续行游程合并 `os.preadv` 直读进预分配 bf16 数组（短样本 32 行天然连续 → 1 次调用）。
 - **短读处理（v2 修正，B3/Codex 高 6）**：`preadv` 返回字节数不足**不立即判损坏**——从已读偏移继续补读，连续 3 次零进展才 raise；**读到 0 字节（EOF）或请求区间越出 part 边界立即 raise**（这才是完整性判据）。本仓库 NFS4.2 `hard` 挂载实测 320 次 2 MB 单调用零短读，该循环是稳健性兜底而非常态路径。
 - **fail-open 禁令**：packed 模式下任何校验不过**直接 raise，绝不回退散 npy**。
 
@@ -471,15 +476,15 @@ def __getitem__(self, idx):
 - **`_pad_native`**：按最终形状一次性 `np.empty` 分配（img bf16 / pos f32 / stt f32），填充区清零，全程零 concatenate。**`_pad_f32`**：同上 img 改 f32（精确升位）。**`_pad_replica`**：直接调用原 `right_padding_token_emb`（短样本触发 f64 提升、满长纯切片保持 bf16——与现状分支行为逐位复刻，含 n==32 不走 concatenate 这一点）。
 - **`_collate_fn` 一行不改**：replica 下逐样本 dtype 与现状一致，`np.stack` 提升行为自然复现；native/f32 下 batch 内 dtype 一致无提升。
 - **static_state_emb 定论：保留精确计算不置零**——`HistAugObservation` 虽允许 None，但置 None 改变 jit 输入 pytree 结构（多一份编译 + 与在线评估路径分叉），而精确计算成本 <0.05 ms、1–2 MB/batch。`_normalize_state` 因 norm stats q01/q99 为 f64，输出恒 f64，与现状逐位同。
-- **dtype 三模式帐**（实测；口径显式标注）：host memory 三键（image/pos/state）replica ~757 MB/batch（同现状，image 单键 537 MB）→ native **~257 MB**（image 单键 134 MB）→ f32 ~391 MB；collate 52→19/27 ms；device_put 73→23/38 ms。f64 降精度已核实发生在 host 侧——执行者是 `jax/_src/interpreters/xla.py::_canonicalize_ndarray_dtype`（`np.asarray(x, canonicalize_dtype(x.dtype))`，经 `pxla.shard_args` 调用，先于数据交给 PJRT；v1 计划所写「jaxlib `Squash64BitTypes`」为机制误标，已订正）；XLA 编译产物从 2 份（dtype 随 batch 摆动）→ 1 份。**正式默认 native（用户已拍板）**，replica 仅用于 A/B，f32 作保守回退。逐位相同论证链已实测：`nnx.Linear(dtype=bf16)` 的 `promote_dtype` 使三种交付进 `pos_proj`/`encoder_static` 的实际张量完全相同。
+- **dtype 三模式帐**（实测；口径显式标注——三个总数是 **batch 载荷（memory 三键＋两张原图 19 MB）**）：replica ~757 MB/batch（三键 740 MB，image 单键 537 MB，同现状）→ native **~257 MB**（三键 236 MB，image 单键 134 MB）→ f32 ~391 MB（三键 370 MB）；collate 52→19/27 ms；device_put 73→23/38 ms。f64 降精度已核实发生在 host 侧——执行者是 `jax/_src/interpreters/xla.py::_canonicalize_ndarray_dtype`（`np.asarray(x, canonicalize_dtype(x.dtype))`，经 `pxla.shard_args` 调用，先于数据交给 PJRT；v1 计划所写「jaxlib `Squash64BitTypes`」为机制误标，已订正）；XLA 编译产物从 2 份（dtype 随 batch 摆动）→ 1 份。**正式默认 native（用户已拍板）**，replica 仅用于 A/B，f32 作保守回退。逐位相同论证链已实测：`nnx.Linear(dtype=bf16)` 的 `promote_dtype` 使三种交付进 `pos_proj`/`encoder_static` 的实际张量完全相同。
 
 ### B.4 接线（v2 重写：backend 显式开关 + 双根契约）
 
 `create_data_loader`（`mme_vla_suite/training/dataloader.py`）按 **`MMEVLA_DATA_BACKEND ∈ {packed, legacy, auto}`** 分派（Codex 阻断 5——「按 meta 是否存在自动分派」与 fail-loud 红线矛盾，已废弃为唯一机制）：
 
-- **`packed`**：`dataset_path` 必须是打包库根；`meta/store_meta.json` 缺失、损坏、指纹不符、未通过 verify（且未显式放行）→ **直接 raise，绝不回退**（与 G4 守卫一致）。构造 `FrameSampDataset`。
+- **`packed`**：`dataset_path` 必须是打包库根；`meta/store_meta.json` 缺失、损坏、指纹不符、未通过 verify（`status != "verified"` 且未设 `MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED=1`，见 A.1/R17）、`manifest_scope=="subset"`（S5 及以上）→ **直接 raise，绝不回退**（与 G4/G14 守卫一致）。构造 `FrameSampDataset`。
 - **`legacy`**：走原 `RoboMMEDataset`（旧路径逐字未动），`dataset_path` 语义不变。
-- **`auto`**（默认值，仅为本机探索保留）：按 `store_meta.json` 存在性分派并打 WARNING 标明所选 backend。**正式 launcher（sbatch/bench 驱动）一律显式设置 `packed` 或 `legacy`，不许依赖 auto。**
+- **`auto`**（**必须显式设置才生效**，仅为本机探索保留）：按 `store_meta.json` 存在性分派并打 WARNING 标明所选 backend。**环境变量未设置时默认 `legacy`——与现状行为逐字节相同，零静默切换。正式 launcher（sbatch/bench 驱动/dataloader-only）一律显式设置 `packed` 或 `legacy`，不许依赖 auto（R16）。**
 - **双根契约**（Codex 阻断 3）：packed 模式下三个位置全部显式解析——打包库根＝`dataset_path`；源库根（pkl）＝`MMEVLA_FRAMESAMP_SOURCE`（未设则取 `store_meta.source_dataset_root`）；清单＝`MMEVLA_FRAMESAMP_MANIFEST`（未设则取 `store_meta.manifest_path`）。解析结果三者全部写进 run 的 env.json（provenance）。**禁止从打包库目录名删除 `-framesamp` 之类的字符串变换推导源库。**
 - dtype 模式取环境变量 `MMEVLA_FRAMESAMP_DTYPE`（默认 native，非法值 raise）。其余（`transform_dataset` + `TorchDataLoader` + `DataLoaderImpl`）一行不动——同 workers 档位下 index 序列逐位不变的构造性保证。
 - **不新增 `_CONFIGS` 条目**（`assets_dirs = assets_base_dir / self.name`，换名会把 norm_stats 路径指飞）；**不新增 CLI 参数**（`bench_train_steps.py` 护栏保持零改动；backend/dtype/双根全走环境变量）。启动侧变化：sbatch 里 `--dataset-path …/4task-gl-framesamp` + `export MMEVLA_DATA_BACKEND=packed`（+ 可选 `MMEVLA_FRAMESAMP_DTYPE=replica`）。
@@ -504,7 +509,7 @@ def __getitem__(self, idx):
 已读码确认：**同一迭代器生命周期内** torch index 序列只由 `(len, seed, batch_size, drop_last, shuffle)` 决定、与 num_workers 无关；跨 epoch 因 `persistent_workers` 与 w0 消耗 generator 节奏不同而分叉（1.6，torch 既有语义）。perceptual 路径不消耗 Python RNG。
 
 - 新工具 `dump_index_seq.py`（并入 `scripts/data-pack-framesamp/`）用探针数据集 + 同一 `TorchDataLoader` dump 序列，w0/w4/w8 三档 diff 为空。**约束：dump 步数必须 < 一个 epoch 的 batch 数**（探针数据集较小时尤其注意），否则 w0 与 w>0 在 epoch 边界后的分叉会制造假阳性。
-- **端到端旁证（v2 重写，A7/Codex 高 7——原「patch `_collate_fn` 记 `_probe_idx`」方案废弃：collate 在 worker 子进程执行、签名不含 idx，两点都不成立）**：`BENCH_DUMP_IDX=1` 时在**主进程**包装 `loader._data_loader.torch_loader.batch_sampler`——batch_sampler 在主进程枚举 batch idx 列表，包装器把每个 batch 的 idx 顺序追加到 `$BENCH_RECORD_DIR/idx_seq.jsonl` 后原样 yield，交付内容零改动。与第 0 层 dump 对拍。
+- **端到端旁证（v3 按实测收紧实现与判据；原 v1「patch `_collate_fn` 记 `_probe_idx`」方案废弃——collate 在 worker 子进程执行、签名不含 idx）**：`BENCH_DUMP_IDX=1` 时，bench 侧参照 `scripts/bottleneck-bench/gl-compute-only/compute_only_train_steps.py` 的做法 monkeypatch `mme_vla_suite.training.dataloader.create_data_loader` 取得 loader，在**首次 `iter()` 之前**执行 `object.__setattr__(loader._data_loader.torch_loader, "batch_sampler", _IdxProbe(orig))`——**必须绕过 `DataLoader.__setattr__` 的赋值守卫**（初始化后直接赋值会 `ValueError`，torch 2.7.1 实测；`object.__setattr__` 绕道后 `_index_sampler` 正确返回包装器，`persistent_workers` 下跨 epoch 持续生效）。`_IdxProbe` 需实现 `__iter__`（把每个 batch 的 idx 追加写 `$BENCH_RECORD_DIR/idx_seq.jsonl` 后原样 yield）与 `__len__`（`DataLoader.__len__` 走 `len(self._index_sampler)`）。交付内容零改动。**判据（v3 修正）**：batch_sampler 的枚举比交付**超前 `prefetch_factor × num_workers` 个 batch**（w4/pf2 实测超前 8），因此判据不是「diff 为空」，而是「`idx_seq.jsonl` 的**前 N 条**与第 0 层 dump 逐条相同，N＝实际消费步数；尾部允许至多 `prefetch_factor × num_workers` 条超前记录」。
 - 失败定位：len 不等 → 误用 `total_samples`；序列不同且恰从 epoch 边界开始 → 跨 epoch 的 torch 既有语义（非 Dataset 问题）；其余 → 查 sampler/drop_last。
 
 ### C.2 第 1 层：样本/batch 内容等价
@@ -518,7 +523,7 @@ def __getitem__(self, idx):
 
 ### C.3 第 2 层：300 步训练轨迹 bitwise（本机 2 卡 b8）
 
-**A/B 同一 clean HEAD（v2 修正，Codex 高 13——不再跨 commit 对比）**：旧链路原地保留使这可行。A = `MMEVLA_DATA_BACKEND=legacy`（旧链路），B = `MMEVLA_DATA_BACKEND=packed` + `MMEVLA_FRAMESAMP_DTYPE=replica`。同 `EXP_NAME`（共用编译缓存；replica 下 dtype 序列相同 → HLO 相同 → 缓存命中）、同 XLA_FLAGS、同 seed 42、同 num_workers、b8、300 步、save-interval 25。判定：五个标量 hex 列 + 每 25 步 `state_digest` 逐步 diff 全空。失败定位：分叉叶子在 `mem_enc*` → 回第 1 层；在 LLM 主干而 mem 一致 → 非确定性回 C.0；再不然走 smoke-local README 第 3 级（固定 batch 单步逐元素梯度，固定 batch 直接用第 1 层落盘的 npz）。
+**A/B 同一 clean HEAD（v2 修正，Codex 高 13——不再跨 commit 对比）**：旧链路原地保留使这可行。A = `MMEVLA_DATA_BACKEND=legacy`（旧链路），B = `MMEVLA_DATA_BACKEND=packed` + `MMEVLA_FRAMESAMP_DTYPE=replica`。同 `EXP_NAME`（共用编译缓存；replica 下 dtype 序列相同 → HLO 相同 → 缓存命中）、同 XLA_FLAGS、同 seed 42、同 num_workers、b8、300 步、save-interval 25。判定：五个标量 hex 列 + 每 25 步 `state_digest` 逐步 diff 全空；前置断言：A/B 两侧 env.json 的 backend/dtype 与预期一致且 backend 为显式设置（R16）。失败定位：分叉叶子在 `mem_enc*` → 回第 1 层；在 LLM 主干而 mem 一致 → 非确定性回 C.0；再不然走 smoke-local README 第 3 级（固定 batch 单步逐元素梯度，固定 batch 直接用第 1 层落盘的 npz）。
 
 ### C.4 第 3 层：native 模式（主判据 bitwise；v2 按 A1 方向纠正重写）
 
@@ -527,14 +532,14 @@ def __getitem__(self, idx):
    - **补充：「全短样本」batch**（差异密度最大化）；
    - **阴性对照：「整批满长」batch**（两模式本就同为 bf16，必须逐位相同；若不同说明 gather/pad 另有 bug，与 dtype 无关）。
 2. **300 步 B(replica) vs C(native)**：独立 EXP_NAME（dtype 变 → 缓存 key 必变），主判据逐步标量 hex + 每 25 步 `state_digest` bitwise。b8 下含短样本 batch 占 40.4%，300 步期望命中约 121 次，覆盖充分（b64 暴露率 98.4% 更高，但本机 2 卡只能 b8——v1「b8 严 38 倍」的说法方向反了，已废弃）。
-3. **GL b64 短程抽查（v2 新增，补齐 b64 规模直接证据）**：在 GL 4×A40 上以 D2 环境跑 replica vs native 各 100 步（b64，同 seed/workers，走 `gl_e2e_fix.sbatch` 参数化入口），判据同上。轻量（每 job ~15 min 计算 + 排队），置于 S7 内、S8 正式 e2e 之前。
+3. **GL b64 短程抽查（v3 定稿：补齐 b64 规模的量级证据，不承担 bitwise 举证）**：在 GL 4×A40 的**默认 autotune 环境**下跑 replica vs native 各 100 步（b64，同 seed/workers，走 `gl_e2e_fix.sbatch` 参数化入口，传 `--save-interval 25`）。**判据只用第 4 条的量化判据**（rel 三档阈值 + OLS 趋势），**不判 bitwise**——GL 侧无确定性基线（3.3），非 bitwise 不构成证伪。若量化判据 FAIL，先在同一个 job 内重跑 native 两轮自比给出 GL 自身噪声底，再判定是否 dtype 问题。轻量（每 job ~15 min 计算 + 排队），置于 S7 内、S8b 正式 e2e 之前。判定前置断言同 C.3（env.json backend/dtype 显式且符合预期）。
 4. **降级判据（v2 参数化，Codex 高 11；仅当主判据失败且先证 C==C' 重跑稳定后启用）**：
    - 相对差定义：`rel(a,b) = |a−b| / max(|a|,|b|, 1e-8)`，逐步计算；
    - loss：median ≤ 1e-6 / p95 ≤ 1e-5 / max ≤ 1e-4；
-   - grad_norm、llm_grad_norm、mem_enc_norm：各松一档＝median ≤ 1e-5 / p95 ≤ 1e-4 / max ≤ 1e-3；
+   - grad_norm、llm_grad_norm、mem_enc_norm：median ≤ 1e-5 / p95 ≤ 1e-4 / **max ≤ 1e-4**（v3 收紧：原 1e-3 距 1 ULP 不足一个数量级）；
    - 末步 param_norm：rel ≤ 1e-5；
    - **趋势判据**：对 (step, rel_loss) 做 OLS 回归，斜率 β>0 且 p ≤ 0.05 即 FAIL（单调上升无论多小判 FAIL）；β≤0 或 p>0.05 通过；
-   - 精度参照：bf16 在 [1,2) 区间 1 ULP = 2⁻⁷ ≈ 0.78%（半 ULP ≈ 0.39%），上述阈值比它保守两个数量级以上。
+   - 精度参照：bf16 在 [1,2) 区间 1 ULP = 2⁻⁷ ≈ 0.78%（半 ULP ≈ 0.39%）；median 档比 1 ULP 保守 2.9–3.9 个数量级、p95 档 1.9–2.9 个数量级、max 档约 1.9 个数量级（异常值兜底）。
 5. 若失败 → 正式模式降级 f32 或 replica，不「差不多就行」。
 
 ### C.5 守卫测试
@@ -547,25 +552,26 @@ def __getitem__(self, idx):
 - G5 blob 截短 1 字节启动即炸；同尺寸中部翻转由 full 校验档抓出；
 - G7 CPU 后端生成 pos 表被拒（固化实测发现）；
 - G11（v2 新增，A3）：构造「两个 episode 在同一 t 的帧互换」的迷你库，断言写侧校验抓不到（预期行为，钉死「pos memcmp 不钉 g」的边界认知）而 verify 全量对拍必须亮红灯；
-- G12（v2 新增，B3）：mock 短读（首次返回一半字节），断言续读补齐且结果正确；mock EOF/越界，断言 raise。
+- G12（v2 新增，B3）：mock 短读（首次返回一半字节），断言续读补齐且结果正确；mock EOF/越界，断言 raise；
+- G14（v3 新增，S2）：`meta.status != "verified"` 时 packed 分派必 raise；设 `MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED=1` 后放行且必须打 WARNING。
 
 **Dataset 组（S3 交付，依赖 FrameSampDataset）**：
-- G2 dtype 边界钉死（step=30→replica f64 / step=31→bf16）；
+- G2 dtype 边界钉死（step=30→replica f64 / step=31→bf16；所用 (g,t) 必须落在迷你库 subset 覆盖内，迷你库构造时按此挑 episode）；
 - G3 选帧重复索引必须重复输出不去重；
-- G6 `len(new_ds)==395289`，且抽查 VideoUnmask / VideoUnmaskSwap 各一个 episode 的首样本 `_step_of == exec_start_idx`（换算公式带前缀的直接验证）；
+- G6a（S3 交付）：换算公式单测——直接用**全量清单**构造查表数组（不构造 Dataset、不碰 store），断言 `len==395289` 且 VideoUnmask / VideoUnmaskSwap 各一个 episode 首样本 `_step_of == exec_start_idx`；G6b（S5 随第 0/1 层一起绿）：在全量打包库上构造 `FrameSampDataset` 复验同两条；
 - G8 mock 线程池抛错证明已彻底移除；
 - G9 `use_state_emb is False` 前提钉死；
-- G10（v2 新增，A2）：spawn 一个子进程消费 Dataset，断言子进程内 store 懒构造（`_owner_pid == 子进程 pid`）、fd 有效可读、`memmap.filename is not None`、父进程 Dataset 无句柄泄漏；
+- G10（v2 新增，A2；断言随 M12 更新）：spawn 一个子进程消费 Dataset，断言子进程内 store 懒构造（`_owner_pid == 子进程 pid`）、fd 有效可读、两张小表数组 `.nbytes` 与 meta 声明一致且 `.base is None`（进程内副本而非映射）、父进程 Dataset 无句柄泄漏；
 - G13（v2 新增，Codex 高 3）：喂 `perceptual-framesamp-modul.yaml`（integration_type=modulation、memory_token_dim=1024，其余同形），断言 `__init__` raise。
 
 ## D. 吞吐验收（GL；dataloader-only 可在 S4 后先行，正式 e2e 依赖 S7 定稿 dtype——v2 修正依赖）
 
-- **MB/s 新口径**：`dataloader_bench.py` 的 `_AVG_BYTES_PER_SAMPLE` 改为**从 history_config + `episode_manifest.json` 现场推导**（均值帧数 = Σ min(t+1,32)/395,289 = 30.996 → 均值 2.43 MB/样本；上界 2.49 MB；勿再写死，也勿只从 history_config 推 32 帧上界）；主判读换 mountstats `server_read`，新增 **majflt** 采样（mmap 缺页，`rchar` 对 mmap 无效；注意 majflt 主要反映两张 mmap 小表，image 大表走 pread 不计入）。**`block_until_ready` 覆盖整个 `(obs, actions)` pytree**（v2 修正，Codex 高 8——原来只 block actions，obs 里的大 memory 张量可能尚未完成 H2D，低估 device_put 成本）。**新增 gather/pkl 分段计时**（每样本两段耗时直方图落 records——F 节风险 3「谁是新瓶颈」的观测资产，v1 计划有承诺无资产）。
+- **MB/s 新口径**：`dataloader_bench.py` 的 `_AVG_BYTES_PER_SAMPLE` 改为**从 history_config + `episode_manifest.json` 现场推导**（均值帧数 = Σ min(t+1,32)/395,289 = 30.996 → 均值 2.43 MB/样本；上界 2.49 MB；勿再写死，也勿只从 history_config 推 32 帧上界）；主判读换 mountstats `server_read`，新增 **majflt** 采样（页缺失口径；v3 后两张小表已改进程内常驻，majflt 主要反映源库 pkl 读与页回收，保留作冷/热证据链辅助量）。**`block_until_ready` 覆盖整个 `(obs, actions)` pytree**（v2 修正，Codex 高 8——原来只 block actions，obs 里的大 memory 张量可能尚未完成 H2D，低估 device_put 成本）。**新增 gather/pkl 分段计时**（每样本两段耗时直方图落 records——F 节风险 3「谁是新瓶颈」的观测资产，v1 计划有承诺无资产）。
 - **dataloader-only 四档**（单 GPU job）：w2/w4/w8/w16，seed 310–313（避开已用 42/200–205/210–212 防 page cache 串扰）。
 - **e2e 600 步**（`gl_e2e_fix.sbatch` **参数化后**入口，4×A40/16C/96G；v1 计划「sbatch 零改动」的说法废弃——它硬编码 `--dataset-path …/4task-gl` 于训练命令与 env.json 两处，必须参数化，默认值保持现状）：T1 w4（**最重要**：官方默认 workers 还需不需要调）→ T2 w8（直接对 v1-e2efix-w8c16）→ T3 w2（探底）；条件档 T4 w16、T5 w4c8（8C 直接对 v1-e2e-b64，「官方口径净收益」最干净对照）。
-- **对照组（v2 更新，A8）**：v1-e2e-b64（6.933 s / 69.7%）、**v1-e2efix-w8c16 已落地：5.301 s / 71.2% / epoch ≈9.09 h（「只调参上限」的实测锚点）**、w16c16 / w12c16 结果落地后补入、compute-only 4.778 s。
-- **冷/热（v2 方法修正，Codex 高 9：证据口径降为 cold-like）**：31.7 GB 打包库一个 epoch 内即可全驻 page cache，热态数字必然偏乐观；pkl 156 GB 仍是长期 NFS 流量来源。C1/H1 **在同一个 allocation 内串行执行**（一个 sbatch 先 C1 后 H1，排除节点差异），共用**同一冻结 index 序列**（同 seed + 第 0 层 dump 存证）；`/proc/meminfo` Cached 15 s 采样落 `meminfo.csv` + **cgroup `memory.stat` 的 pgmajfault** 同步采样。「冷」无法严格证明（新 allocation 的节点也可能带缓存），结论一律称 **cold-like**，判据 `(C1稳态−H1稳态)/H1 ≤ 15%`。并行采 `nvidia-smi --query-compute-apps` 存证 worker CUDA context。
-- **成功判据**（AGENTS 16 口径，禁中位数标题结论；**由 `analyze_gpu_util.py` 机器执行全部阈值，输出单行 `E2E_ACCEPT=PASS|FAIL`，FAIL 退出码非零**——v2 新增，人工判读只做复核）：
+- **对照组（v3 更新，三档已全部落地）**：v1-e2e-b64（6.933 s / 69.7%）、v1-e2efix 三档——w8c16 **5.301 s / 71.2% / ≈9.09 h**、w12c16 **5.319 s / 70.6% / ≈9.13 h**、w16c16 **5.327 s / 67.1% / ≈9.14 h**（workers 8/12/16 曲线完全平坦，「只调参上限」＝三档最优 5.301 s）、compute-only 4.778 s。
+- **冷/热（v2 方法修正，Codex 高 9：证据口径降为 cold-like）**：31.7 GB 打包库一个 epoch 内即可全驻 page cache，热态数字必然偏乐观；pkl 156 GB 仍是长期 NFS 流量来源。C1/H1 **各 300 步**（只取稳态窗口，与 T1–T3 的 600 步分开口径），**在同一个 allocation 内串行执行**（`COLDHOT=1` 双跑模式、`--time=04:00:00`；先 C1 后 H1，排除节点差异），共用**同一冻结 index 序列**（同 seed + 第 0 层 dump 存证）；`/proc/meminfo` Cached 15 s 采样落 `meminfo.csv` + **cgroup `memory.stat` 的 pgmajfault** 同步采样。「冷」无法严格证明（新 allocation 的节点也可能带缓存），结论一律称 **cold-like**，判据 `(C1稳态−H1稳态)/H1 ≤ 15%`。并行采 `nvidia-smi --query-compute-apps` 存证 worker CUDA context。
+- **成功判据**（AGENTS 16 口径，禁中位数标题结论；**主判据表 5 项由 `analyze_gpu_util.py` 机器判定并输出单行 `E2E_ACCEPT=PASS|FAIL`（FAIL 退出码非零）；附加判据（w4/w8 步时差、majflt 趋势、server_read 区间）由一个吃多个 record_dir 的汇总脚本判定**——人工只做复核）：
 
 | 指标 | v1 基线 | 必达 | 期望 | 下界 |
 |---|---|---|---|---|
@@ -575,26 +581,29 @@ def __getitem__(self, idx):
 | 慢步(>8s)墙钟占比 | 32.9% | ≤5% | ≤2% | — |
 | epoch(6,176 步) | 11.9 h | ≤8.6 h | ≤8.5 h | 8.2 h |
 
-  必达 ≤5.00 s 有意严于「只调参上限」5.301 s（w8c16 实测）——低于它才证明重构有超出调参的净收益。附加判据：w4 与 w8 步时差 ≤3%（否则 CPU 侧仍未松绑）；NFS server_read 应落 60–160 MB/s 量级——仍 400+ 则属 readahead 读放大，处置（v2 修正，Codex 高 10）：**image 大表在 fd 上以 `posix_fadvise(POSIX_FADV_RANDOM)` 替换 `WILLNEED` 对照重测**（pread 路径的 readahead 由 fadvise 管，`madvise` 只作用于 mmap 的两张小表）；majflt 随 epoch 单调下降。
-- **provenance（v2 新增，Codex 缺口 4）**：每个 run 的 env.json 必记：resolved 后的 `dataset_path`/`source_dataset_root`/`manifest_path`、`store_meta.json` 的 sha256、`manifest_sha256`、backend、dtype 模式、`MMEVLA_FRAMESAMP_VERIFY` 档位与 full 校验结果、local-cache 是否命中及其 sha 校验结果、XLA_FLAGS、git HEAD。
+  必达 ≤5.00 s 有意严于「只调参上限」5.301 s（w8c16 实测）——低于它才证明重构有超出调参的净收益。附加判据：w4 与 w8 步时差 ≤3%（否则 CPU 侧仍未松绑）；**NFS server_read（e2e，T1–T3；v3 重定标）**：公式上界 ≈31–33 MB/s（＝155 MB/step ÷ 目标步时 4.778–5.00 s），历史实测普遍为公式口径的 0.54–0.71 倍，稳态实测期望 ≈17–25 MB/s，**>65 MB/s（≈2× 公式上界）即视为读放大信号**，处置（Codex 高 10）：image 大表在 fd 上以 `posix_fadvise(POSIX_FADV_RANDOM)` 替换 `WILLNEED` 对照重测（pread 路径的 readahead 由 fadvise 管）；热态（打包库全驻 page cache 后）只剩 pkl 流量 25.3 MB/step ≈5 MB/s 属正常；**dataloader-only（S8a）不套用本带**，按 samples/s × 2.43 MB 现场折算；majflt 随 epoch 单调下降（无小表 mmap 贡献后作辅助量）。
+- **provenance（v2 新增，Codex 缺口 4；v3 扩展到所有 run——含本机 bench 与 dataloader-only）**：env.json 必记：resolved 后的 `dataset_path`/`source_dataset_root`/`manifest_path`、`store_meta.json` 的 sha256（verify 回填后口径）、`manifest_sha256`、backend 及其来源（显式设置 / auto 推断——**S5 及以上任何 run 出现 auto 推断即判该 run 无效**，R16）、dtype 模式、`MMEVLA_FRAMESAMP_VERIFY` 档位与 full 校验结果、`MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED` 取值与是否生效、local-cache 是否命中及其 sha 校验结果、XLA_FLAGS、git HEAD。
 - 结果分析一律 `analyze_gpu_util.py`；每个 >5 min run 留档 `docs/training-doc/<run_name>/`（records 含 env.json/metrics/gpu_util_dense/nfs_read/meminfo.csv/pgmajfault/分段计时/param_checksums）。
 
 ## E. 实施顺序、提交切分与留档（v2 重排：mini 全链路先行，全量打包后置）
 
 | 步 | 内容 | 依赖 | 判定 | 预计 |
 |---|---|---|---|---|
-| S0 | 修 bench 驱动（EXP_NAME/RUN_TAG 拆分、KEEP_JAX_CACHE+缓存软链进 v1-store、XLA_FLAGS 注入、TrainState 摘要扩展、preflight 兼容 packed、BENCH_DUMP_IDX 改 batch_sampler 层） | — | STEPS=3 连跑两次不拒跑、缓存未删且落 v1-store/cache/jax/ | ~30 min |
-| S1 | 确定性前提 D0/D1/D2（各两轮 100 步） | S0 | 两轮标量 hex + state_digest diff 空 | ~1 h |
-| S2 | 格式层 + 打包工具 + **Store 组守卫（G1/G4/G5/G7/G11/G12）**，ref-shard 迷你库全流程（含迷你库全量 verify） | — | Store 组 pytest 全绿 | ~2 h 开发 |
-| S3 | FrameSampDataset + backend 分派接线 + **Dataset 组守卫（G2/G3/G6/G8/G9/G10/G13）** + **迷你库上真实 spawn loader 矩阵：w0/w1/w4/w16 × 2 epoch**（fd 泄漏检查：前后 `ls /proc/<pid>/fd` 计数） | S2 | Dataset 组 pytest 全绿 + 矩阵无错无泄漏 | ~1.5 h |
-| S4 | **全量打包**（本机 tmux，decode 档）+ **全量 verify（483,291 帧对拍 + row_digests）** + 构建留档 | S3 | `VERIFY_PACK=PASS scanned=483291 mismatches=0` | 20–40 min + 20–40 min |
-| S5 | 第 0/1 层（定点 8,200 样本 + 200 真实 batch；run_name `v1-framesamp-cmp-{replica,native,f32}`，留档 `docs/training-doc/`） | S4 | `COMPARE_BATCH=* PASS` | 30–60 min |
-| S6 | 第 2 层：同 HEAD legacy vs packed+replica 300 步 bitwise | S1+S5 | 标量 hex + state_digest diff 空 | ~30 min |
-| S7 | 第 3 层：单步定点（含短样本主判据/全短/满长阴性对照）+ 300 步 replica vs native + **GL b64 100 步抽查** | S6 | bitwise PASS（或 C.4 降级判据） | ~1 h + GL 排队 |
-| S8a | GL dataloader-only 四档（w2/w4/w8/w16） | S4 | 吞吐数据落档 | 15 min×4 + 排队 |
-| S8b | GL e2e 600 步 T1–T3(+条件档) + cold-like/hot | **S7**（dtype 定稿后才跑正式 e2e——若 S7 降级，先前 e2e 数字不代表交付版本） | `E2E_ACCEPT=PASS` | 3×2 h + 2×2 h |
+| S0 | 修 bench 驱动（EXP_NAME/RUN_TAG 拆分、KEEP_JAX_CACHE+缓存软链进 v1-store、XLA_FLAGS 注入、TrainState 摘要扩展、preflight 兼容 packed、BENCH_DUMP_IDX 改 batch_sampler 层、env.json provenance 扩展） | — | STEPS=3 连跑两次不拒跑、缓存未删且落 v1-store/cache/jax/ | ~30 min |
+| S1 | 确定性前提 D0/D1/D2（各两轮 100 步） | S0 | 两轮标量 hex + state_digest diff 空 + `docs/training-doc/<run_name>/` 留档 | ~2 h |
+| S2 | 格式层 + 打包工具 + **Store 组守卫（G1/G4/G5/G7/G11/G12/G14）**，ref-shard 派生迷你库（subset 契约）全流程（含迷你库全量 verify） | — | Store 组 pytest 全绿 | ~2 h 开发 |
+| S3 | FrameSampDataset + backend 分派接线 + **Dataset 组守卫（G2/G3/G6a/G8/G9/G10/G13）** + **迷你库上真实 spawn loader 矩阵：w0/w1/w4/w16 × 2 epoch**（fd 泄漏检查：前后 `ls /proc/<pid>/fd` 计数） | S2 | Dataset 组 pytest 全绿（G6 只跑 G6a）+ 矩阵无错无泄漏 | ~1.5 h |
+| S4 | **全量打包**（本机 tmux，decode 档）+ **全量 verify（16 进程，483,291 帧对拍 + row_digests）** + 构建留档 | S3 | `VERIFY_PACK=PASS scanned=483291 mismatches=0` | 20–40 min + 20–40 min（均 16 进程） |
+| S5 | 第 0/1 层（定点 8,200 样本 + 200 真实 batch + G6b；run_name `v1-framesamp-cmp-{replica,native,f32}`，留档 `docs/training-doc/`） | S4 | `COMPARE_BATCH=* PASS` + G6b 绿 | 30–60 min |
+| S6 | 第 2 层：同 HEAD legacy vs packed+replica 300 步 bitwise | S1+S5 | 标量 hex + state_digest diff 空 + 留档 | ~1 h |
+| S7 | 第 3 层：单步定点（含短样本主判据/全短/满长阴性对照）+ 300 步 replica vs native + **GL b64 100 步抽查** | S6 | 本机 bitwise PASS（或 C.4.4 降级判据）+ GL 抽查量化判据 PASS + 留档 | ~1.5 h + GL 排队 |
+| S7.5 | 验收资产参数化（gl_e2e_fix.sbatch、gl-dataloader 两个 sbatch、dataloader_bench.py、analyze_gpu_util.py，默认值＝现状） | S4 | 三个 launcher 用默认值跑通、env.json 记到 backend/dtype/resolved 双根 | ~40 min |
+| S8a | GL dataloader-only 四档（w2/w4/w8/w16） | S7.5 | 吞吐数据落档（env.json backend==packed 且显式设置） | 15 min×4 + 排队 |
+| S8b | GL e2e 600 步 T1–T3(+条件档) + cold-like/hot（COLDHOT 双跑各 300 步） | **S7**+S7.5（dtype 定稿后才跑正式 e2e——若 S7 降级，先前 e2e 数字不代表交付版本） | `E2E_ACCEPT=PASS` | 3×2 h + 1×4 h（C1+H1 同 job） |
 
-- **commit 切分**（沿用 `commitV<大>.<小>:` 中文体例，dataloader 重构起 V2 系列）：V2.1 bench 驱动改造解锁 A/B → V2.2 确定性前提确立 → V2.3 格式层+打包工具+Store 守卫（迷你库通过）→ V2.4 新 Dataset+backend 接线+Dataset 守卫+spawn 矩阵 → docs 打包留档（S4 后）→ V2.5 第 0/1 层通过 → V2.6 第 2 层逐位一致 → V2.7 第 3 层 native 定稿 → docs GL 验收留档 + `docs/v1-framesamp-dataflow.md` 定稿。每 commit 可独立回滚。
+> 工时注：摘要开销按实测 47.3 s/次（110 叶子，params+EMA）为基准，扩完整 TrainState（含 opt_state）后按 2–3× 估——S1/S6/S7 的预计已含该开销。
+
+- **commit 切分**（沿用 `commitV<大>.<小>:` 中文体例，dataloader 重构起 V2 系列）：V2.1 bench 驱动改造解锁 A/B → V2.2 确定性前提确立 → V2.3 格式层+打包工具+Store 守卫（迷你库通过）→ V2.4 新 Dataset+backend 接线+Dataset 守卫+spawn 矩阵 → docs 打包留档（S4 后）→ V2.5 第 0/1 层通过 → V2.6 第 2 层逐位一致 → V2.7 第 3 层 native 定稿 → V2.8 验收资产参数化（S7.5）→ docs GL 验收留档 + `docs/v1-framesamp-dataflow.md` 定稿。每 commit 可独立回滚。
 - **run_name 建议**（起跑前逐个交用户确认，AGENTS 6）：`v1-framesamp-det-d{0,1,2}-r{1,2}`、`v1-framesamp-cmp-{replica,native,f32}`（S5）、`v1-framesamp-ab-{legacy,replica,native}`（S6/S7）、`v1-framesamp-b64chk-{replica,native}`（S7 GL 抽查）、`v1-framesamp-dl-w{2,4,8,16}`、`v1-framesamp-e2e-w{4,8,2}c16`、`…-coldlike/-hot`；打包库名 `4task-gl-framesamp`。
 - **回滚策略（v2 修正，Codex 缺口 5——不再是「删目录」）**：功能回滚＝launcher 里 `MMEVLA_DATA_BACKEND` 切回 `legacy` + `--dataset-path` 指回源库 + 撤 dtype 环境变量（三件事必须一起回退）；打包库保留作证据不删（不进 git，占 31.7 GB）。只有确认彻底放弃该方案时才删库目录。
 - **收官清理**：验证全部结束后清理 `v1-store/cache/jax/` 下各 EXP_NAME 缓存与 `~/.cache/jax_*` 软链（A9 的对账义务），并清理 S 步产生的临时 run（AGENTS 6）。
@@ -604,7 +613,7 @@ def __getitem__(self, idx):
 
 1. **行号错位（静默错帧，loss 只会慢慢变差不报错）**——防线分工如实陈述：写侧 100% pos memcmp 钉死 **t** 与帧序（不钉 g）；写读共用 `row_of()` 排除公式分叉；**g 级身份唯一凭据是 verify 全量对拍（483,291 帧零遗漏）+ row_digests 逐行摘要**；运行时逐样本 pkl 身份校验（显式 raise）钉每次访问。G11 守卫保证「换帧攻击」在 verify 层必然亮红灯。
 2. **native 逐位结论被上游推翻**（flax promote_dtype 语义变更 / 有人改 `Pi0Config.dtype`）——梯子 C.3/C.4 是可证伪的硬验收而非「跑一下看看」；失败即降级 f32/replica，留档。
-3. **page cache 假象与 pkl 新墙**——头条结论用 cold-like 口径（同 allocation 串行 + pgmajfault 证据链）；bench 分段打点 gather/pkl 各自耗时直接看谁是新瓶颈；pkl 若成墙走已预留的 Phase C；worker 在途内存 native 模式从 ~24 GB 降到 ~8 GB（v1 OOM 的根源之一顺带缓解）。
+3. **page cache 假象与 pkl 新墙**——头条结论用 cold-like 口径（同 allocation 串行 + pgmajfault 证据链）；bench 分段打点 gather/pkl 各自耗时直接看谁是新瓶颈；pkl 若成墙走已预留的 Phase C；worker 在途内存 native 模式从 ~24 GB 降到 ~8 GB（batch 载荷口径 × 16 worker × prefetch 2；v1 OOM 的根源之一顺带缓解）。
 
 ## G. 红线清单（实施期逐条自检；v2 显式编号，杜绝「红线 N」引用漂移）
 
@@ -621,10 +630,12 @@ def __getitem__(self, idx):
 | R9 | uv 纪律（`uv run`、`UV_LINK_MODE=copy`） |
 | R10 | >5 min 任务 tmux+tee+EXIT_CODE、Monitor 每级行缓冲 |
 | R11 | GPU util 判读 AGENTS 16 口径（机器判定 `E2E_ACCEPT` 为准） |
-| R12 | 正式 run clean HEAD 起跑+留档+run_name 用户确认；S5 及以上每个 >5 min run 均留档 |
+| R12 | 正式 run clean HEAD 起跑+run_name 用户确认；**S1 起**凡预计或实际 >5 min 的诊断/基准/等价性 run（含 S1 六轮、S6/S7 全部 A/B、S8a/S8b）一律在 `docs/training-doc/<run_name>/` 留档（AGENTS 17）；S4 全量打包走 `docs/dataset-build-doc/` |
 | R13 | commit 逐文件 add、中文 body 详写过程 |
 | R14 | 缓存类目录收敛 `v1-store/cache/`（含 jax 编译缓存软链）；禁止覆盖 `HOME`；收官清理 |
 | R15 | GL 节点 `/tmp` 本地缓存属规约例外，启用前须用户显式批准；退出 trap 清理 |
+| R16 | 正式 launcher（sbatch/bench 驱动/dataloader-only）必须**显式**设置 `MMEVLA_DATA_BACKEND`（未设置默认 legacy）；env.json 标明该值是显式设置还是 auto 推断，S5 及以上任何 run 出现 auto 推断即判该 run 无效 |
+| R17 | S5 及以上与全部 GL 验收禁止设置 `MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED`；该开关仅迷你库/开发期可用 |
 
 ---
 
@@ -671,3 +682,34 @@ def __getitem__(self, idx):
 | provenance 字段清单（resolved 路径、meta/manifest sha、backend、dtype、校验结果、local-cache 命中） | Codex 缺口 4 | D |
 | 回滚改「切 backend 三件套、保留打包库」，不删目录 | Codex 缺口 5 | E |
 | `E2E_ACCEPT=PASS|FAIL` 机器判定（analyzer 阈值代码化，FAIL 非零退出） | Codex 建议 9 | B.0、D |
+
+### v2 → v3（2026-08-25，定稿）
+
+依据：定稿复核 workflow（全 opus，6 agent；裁决清单必须修 M1–M13 / 建议修 S1–S9 均已落实；R1–R6 驳回维持原文）。
+
+| 修订 | 落点 |
+|---|---|
+| M1 GL b64 抽查判据统一为量化判据（默认 autotune 环境、不承担 bitwise 举证、FAIL 先测 GL 噪声底）；save-interval/--time 参数化入 B.0 | 3.2、C.4、B.0、E |
+| M2 idx 旁证实现收紧：monkeypatch `create_data_loader` 取 loader + `object.__setattr__` 绕 torch 赋值守卫；判据改「前 N 条一致 + 允许 prefetch_factor×num_workers 条超前」（实测超前 8） | C.1、B.0 |
+| M3 迷你库 subset 契约（manifest_scope/subset_episodes/mini_manifest_sha256，禁用于 S5+）；G6 拆 G6a（S3，公式单测）/G6b（S5，全量库复验） | A.1、B.2、C.5、E |
+| M4 全量 verify 进程模型定稿：16 进程 Pool 按 part 分任务、父进程按序单写 row_digests（单进程实测外推 1.7 h，不采用） | A.2、2.2、E |
+| M5 留档下界改「S1 起」（AGENTS 17；S1 单轮实测口径 ≥12 min） | G(R12)、E |
+| M6 legacy 列字节帐重算：均值 19.08 / 上界 19.69 MB、用 3.95/4.07 MB、放大 ≈4.8×、1.22 GB/step、需求 256 MB/s；1.3 图 gather 段 19.3/3.7 MB；全表统一十进制 MB 加注 | Context、1.3、1.4、2.3 |
+| M7 server_read 判据重定标：公式上界 ≈31–33 MB/s、实测期望 17–25、>65 报警；热态 pkl ≈5 MB/s 属正常；S8a 不套用；analyzer 公式口径去硬编码 1.20 GB | D、B.0 |
+| M8 B.0 补 gl-dataloader 两个 sbatch 行与 env.json provenance；新增 S7.5 步与 V2.8 commit；provenance 扩展到所有 run；C.3/C.4/S8a 补 backend/dtype 显式性前置断言 | B.0、E、D、C.3、C.4 |
+| M9 w12c16（5.319 s/70.6%/9.13 h）与 w16c16（5.327 s/67.1%/9.14 h）已落地：Context 与 D 对照组三档齐全，「落地后补入」删除 | Context、D |
+| M10 `auto` 不再是默认值：未设置默认 `legacy`（与现状逐字节相同）；R16 显式 backend 红线 + auto 推断判 run 无效 | 2.4、B.4、G、D |
+| M11 量化判据 max 档收紧：梯度三项 max 1e-3→1e-4；「保守两个数量级」宣称改为分档如实表述 | 3.4、C.4 |
+| M12 两张小表弃 mmap，懒构造时 `np.fromfile` 全量读入（44.3 MB/worker）；删「零副本/共享 page cache」表述；G10 断言与 majflt 口径同步更新 | 2.3、2.4、B.2、C.5、D |
+| M13 cold-like 双跑定稿：C1/H1 各 300 步同 sbatch 串行（COLDHOT=1、--time=04:00:00）；S8b 预计改 3×2 h + 1×4 h | D、B.0、E |
+| S1 S1/S6/S7 工时上调（checksum 实测 47.3 s/次，扩 TrainState 后 2–3×，E 表加注） | E |
+| S2 `MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED` 开关补 R17 红线、G14 守卫、provenance 必记 | G、C.5、D、A.1 |
+| S3 store_meta 两阶段写（status packed→verified 原子回填）、pack.lock 持有至回填、verify 闸只落分派层、provenance 记回填后 sha | A.1、A.2、B.4 |
+| S4 `parts[].head_tail_digest` 字段定义（blake2b-128 首尾各 1 MiB，<2 MiB 全覆盖标注） | A.1、B.2 |
+| S5 「机器执行全部阈值」收窄为主判据表 5 项；附加判据走多 record_dir 汇总脚本 | D、B.0 |
+| S6 757/257/391 标签订正为 batch 载荷（三键 740/236/370 + 原图 19 MB）；F 节口径注明 | 1.3、1.4、2.3、B.3、F |
+| S7 1.4 标题移除对审计报告条目编号「B.6」的正文交叉引用 | 1.4 |
+| S8 文首 Codex 计数订正为 8 阻断 / 16 高风险 / 8 缺口 | 文首 |
+| S9 2.3 预期步时改区间 ≈4.9–5.0 s / 8.4–8.6 h | 2.3 |
+
+驳回维持原文：R1（GL 补确定性档）、R2（改 757/257/391 数值）、R3（verify 单进程选项）、R4（小表坚持 mmap）、R5（≈4.9 s 判不自洽）、R6（旁证「同样不可实施」论）。
