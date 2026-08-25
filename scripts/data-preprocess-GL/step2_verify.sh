@@ -12,9 +12,11 @@
 # 第三层比训练实际怎么用它：选帧索引与 mask 必须逐位相同。
 #
 # ⚠ 跨架构逐位一致是做不到的（greatlakes.md 已实证 A40 vs Ada 不逐位、determinism
-#   三档全部无效）。所以交付按「换合同」口径：集群产物自成一份数据集，provenance
-#   逐条带硬件/软件指纹并断言同源，**机制上杜绝**与本地字节混用；验收标准是等价判据，
-#   而不是「和本地一模一样」。
+#   三档全部无效）。所以交付按「换合同」口径：集群产物自成一份数据集，每个分片在自己的
+#   sidecar 里记硬件/软件指纹、finalize 断言跨片同源，**机制上杜绝**与本地字节混用；
+#   验收标准是等价判据，而不是「和本地一模一样」。
+#   ⚠ provenance.json 的**顶层**字段描述的是 finalize 节点，构建节点的指纹在
+#     shard_fingerprints 里（两层语义见 README「provenance 的两层语义」）。
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/paths.sh"
 

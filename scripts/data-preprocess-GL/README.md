@@ -14,9 +14,9 @@
 
 | 入口 | 功能 | 实测时长 |
 |---|---|---|
-| `step0_setup_turbo.sh` | 一次性置备：NFS venv 重建 / H5 暂存到 turbo + 两侧 sha256 同源核验 / **episode 清单生成（`manifest` 子命令，全流程唯一真值源）** / 模型内联 / 自检。幂等，可反复跑 | 首跑约 2.5–3 h（rsync 321 GB 约 54 min + 两侧 sha256 并行约 48 min + 清单 NFS 扫描约 48 min + venv 约 11 min + 模型约 4 min）；复跑全命中复用为分钟级 |
-| `step1_submit.sh` | 九项 pre-flight（清单/输入同源/输出洁净/claim/ControlMaster/模型/walltime 裕度/配额/审批闸门）→ 提交 8×1GPU array + afterok finalize（五道守卫） | 提交秒级；array 实测 33:40–36:45（八片极差 9%）、finalize 约 4 min，端到端约 40 min |
-| `step2_verify.sh` | 本地对照：本机建 47 个分层随机 episode 参照库（`build_shard.py`）→ 第二层跨架构逐 key 分类对拍 + 第三层下游等价（`compare_datasets.py`） | 参照库构建约 12 min（约 14,200 步 @ ~20 step/s NFS）+ 两层对拍约 15 min，合计约 30 min |
+| `step0_setup_turbo.sh` | 一次性置备：NFS venv 重建 / H5 暂存到 turbo + 两侧 sha256 同源核验 / **episode 清单生成（`manifest` 子命令，全流程唯一真值源）** / 模型内联 / 自检。幂等，可反复跑 | 首跑约 2.5–3 h（rsync 321 GB 约 54 min + 两侧 sha256 并行约 48 min + 清单 NFS 扫描约 48 min + venv 约 11 min + 模型约 4 min）；复跑全命中复用为分钟级（H5 段的复用要求两份 sha256 清单齐全、`.files` 一致且四个 H5 实际 size 与记录相符；强制重算用 `FORCE_REHASH=1`） |
+| `step1_submit.sh` | 九项 pre-flight（清单/输入同源/输出洁净/claim/ControlMaster/模型/walltime 裕度/配额/审批闸门）→ 提交 8×1GPU array + afterok finalize（五道守卫）。**配额一项：查询或解析失败即判 FAIL 拒绝提交**，确需带病提交须显式 `ALLOW_QUOTA_SKIP=yes` | 提交秒级；array 实测 33:40–36:45（八片极差 9%）、finalize 约 4 min，端到端约 40 min |
+| `step2_verify.sh` | 本地对照：本机建 47 个分层随机 episode 参照库（`build_shard.py`）→ 第二层跨架构逐 key 分类对拍 + 第三层下游等价（`compare_datasets.py`） | 参照库构建约 12 min（约 14,200 步 @ ~20 step/s NFS）+ 两层对拍约 15 min，合计约 30 min；参照库已在位时 `--resume` 全部跳过，只剩两层对拍 |
 
 ```bash
 cd /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA
@@ -59,16 +59,52 @@ bash scripts/smoke-local/run_gl_dataset_training_smoke.sh   # 【第四层】首
    → 跨架构**逐位相同**，把「GPU/驱动/JAX 版本不同」全部排除。determinism 三档对此无效
    （不是 cuDNN 非确定性，是硬件分块策略），任何人跨这两种卡都会得到同量级差异。
 2. **除 `image_emb` 外一切逐位相同**：`kept_indices.json`（numpy 像素差）、`data/*.pkl`（H5 直读）、
-   `state_emb`、`pos_emb_*` 跨架构全部零容差通过。
+   `state_emb`、`pos_emb_*` 跨架构全部零容差通过。**且现在由判据强制**——2026-08-24 之前
+   `pos_emb_*` 只被打印、不参与 PASS/FAIL（详见下面「判据覆盖」小节），逐位相同是观察结论
+   而非机器判据；现已纳入零容差。
 3. **数值噪声没有改变任何离散决策**：下游 `prepare_frame_sampling` 的选帧索引与 padding mask
    逐位相同——训练读到的「选哪些帧、哪些 token 有效」与本地完全一致。
 4. **判据本身经过判别力验证**：先在已知答案的合成用例上标定——人为造 3 ULP 舍入型差异
    vs 把一个值 2.0→2.5 的结构型差异，误差地板拉开 **21 倍**，判据能拦真错误，不是「调到刚好能过」。
 
 因此交付按「**换合同**」口径：跨架构逐位一致本来就做不到，集群产物自成一份数据集，
-`meta/provenance.json` 逐条带硬件/软件指纹并由 finalize 断言全体同源，
+硬件/软件指纹由 finalize 断言全体同源（两层语义见下面「provenance 的两层语义」小节），
 **机制上杜绝与本地字节混用**；验收标准是上述等价判据，而不是「和本地一模一样」。
 成因的分层指纹归因全文见一致性报告 4.3.2 节。
+
+#### 判据覆盖（2026-08-24 对抗审查后收紧）
+
+审查发现两处「算了、打印了，却不参与 PASS/FAIL」的缺口，均已补上：
+
+- **`pos_emb_*` / `ds_pos_emb` 纳入零容差**。它们此前只在 `bitexact` 模式下才进判据，
+  crossarch/downstream 下无论差成什么样都不影响结论——而上面第 1 条恰恰把
+  「`pos_emb_*` 跨架构逐位相同」当作归因论证的**决定性对照组**。这项一旦失守，
+  论证本身就塌了，必须判死交人工重审，而不是继续观察。桶归属打印保留作诊断。
+- **新增 NaN/Inf 零容差通道**。GPU 真出数值故障时，三道现有判据会**同时失明**：
+  含 NaN 的行范数是 NaN、`NaN > 0` 恒 False，该行被当成 padding 跳过、余弦保留 1.0；
+  误差地板变 NaN 而 NaN 与阈值比较恒 False；连 `bitwise_equal` 都假通过（两侧同一
+  NaN 位模式时位比较全等）。故 `has_nonfinite` 独立成判据，对所有参与判定的 key
+  一律零容差，报告另有 `has_nonfinite_any` 顶层字段供一行 jq 判死。
+
+同批还删掉了 `--min_same_bit_frac` / `--max_ulp` 两个早已「只报不判」却仍被接受的参数
+（传它们现在会被 argparse 明确报错），并让 `step2_verify.sh` 显式传真正生效的三条阈值。
+
+#### provenance 的两层语义
+
+`meta/provenance.json` 里的信息分属两个来源，别搞混：
+
+- **顶层**字段（`host` / `gpu_device_kind` / `jax` / `resource_tier` …）描述的是**跑
+  finalize 的那个节点**，不是产出数据的分片节点；
+- **`shard_fingerprints`** 与每片 `meta/_shard*.json` 里的 `fingerprint` 才是**构建节点**
+  的指纹。finalize 断言 `gpu_device_kind` / `jax` / `jaxlib` / `git_commit` **跨八片唯一**，
+  `host` / `slurm_job` / `resource_tier` 只记录不断言（array task 本就落在不同节点，
+  单片重提也允许换档位）。
+
+⚠ 两条历史事实：① 2026-08-24 之前分片根本不记指纹，「断言全体同源」实际只比了
+`manifest_sha256`；② 已交付的 4task-gl，其顶层 `resource_tier` 是 finalize job 的
+**4 CPU / 32 G**，而分片实际跑的是 2 CPU / 24 G，step2 一度把它当构建档位打印。
+③ 因此该库缺 `shard_fingerprints`，**重跑 finalize check 会 fail-loud**；
+日常验收 `step2_verify.sh` 不受影响（它只读 finalize 当时的日志判定行）。
 
 ### b. 分片：为什么要求且能做到 bit-by-bit 一致
 
@@ -78,9 +114,11 @@ bash scripts/smoke-local/run_gl_dataset_training_smoke.sh   # 【第四层】首
 
 **为什么能做到**（三个机制保证，对拍只是兜底证据）：
 
-1. **计算本体一行不动**：`build_shard.py` 子类化 `DatasetProcessor`，只覆盖 `__init__`
+1. **计算逻辑原样继承**：`build_shard.py` 子类化 `DatasetProcessor`，只覆盖 `__init__`
    （跳过会互删产物的 `shutil.rmtree`）与 `run()`（按清单遍历 + 喂偏移量），
-   `_process_episode` 原样继承——语义同构由构造方式保证。
+   `_process_episode` 的计算逻辑原样继承——语义同构由构造方式保证。
+   唯一的例外是落盘方式：`kept_indices.json` 已改为原子写（`.tmp` + `os.replace`，
+   见下面「续跑与故障处理」的动因），**写出的字节与改前逐字节相同**，第一层已重跑验证。
 2. **清单把并行错号的根源掐死**：原版三个计数器（`global_episode_idx` / `exec_sample_id` /
    `total_sample_id`）从 0 跨文件累加、遍历还用非确定序的 `os.listdir`，直接并行必然错号覆盖。
    `scan_manifest.py` 按规范序 `sorted(*.h5) × sorted(episode_i)` 把每个 episode 的三个 ID
@@ -90,8 +128,10 @@ bash scripts/smoke-local/run_gl_dataset_training_smoke.sh   # 【第四层】首
 
 **实测结论**：12 episode / 3,862 步全覆盖，9 个 key（`image_emb_*`×3、`pos_emb_*`×3、
 `state_emb`、`kept_indices.json`、`data/*.pkl`）全部逐字节相同，`COMPARE_RESULT=bitexact PASS`。
-验证脚本已归档为 `legacy/step_local_baseline.sh`；**若改动 `build_shard.py` 或
-`scan_manifest.py`，须重跑它重新取得「本地真值」资格**。
+验证脚本已归档为 `legacy/step_local_baseline.sh`；**若改动 `build_shard.py`、
+`scan_manifest.py` 或 `src/mme_vla_suite/dataset_builder/build_robomme_dataset.py`，
+须重跑它重新取得「本地真值」资格**（第三个文件在列，是因为参照系与被测共用它的
+`_process_episode`）。
 
 集群侧另有第五道自证：finalize 在同一节点随机复算 256 条 `token_emb`，断言 `max|diff|=0`
 （同架构可以零容差），排除线程调度、cuDNN 算法选择这类非确定性。
@@ -103,6 +143,10 @@ bash scripts/smoke-local/run_gl_dataset_training_smoke.sh   # 【第四层】首
 证明 16G 档几乎必然 OOM）的完整实测过程见
 [`docs/v1-gl-resource-tier-bench.md`](../../docs/v1-gl-resource-tier-bench.md)。
 复测入口：`legacy/step_bench.sh`。
+
+⚠ **别拿 `provenance.json` 顶层的 `resource_tier` 当构建档位**——那是 finalize job 的
+（`gl_finalize.sbatch` 申请 4 CPU / 32 G）。分片档位在 `shard_fingerprints.resource_tiers`
+里，详见上面「provenance 的两层语义」。
 
 ## 为什么需要预扫描（这条决定了整个设计）
 
@@ -131,7 +175,8 @@ bash scripts/smoke-local/run_gl_dataset_training_smoke.sh   # 【第四层】首
 | `compare_datasets.py` | 分层一致性比对（`bitexact` / `crossarch` / `downstream`） |
 | `finalize_checks.py` | `hash-inputs` 算 H5 sha256；`check` 完整性/stats/provenance/零容差抽检 |
 | `stage_models.sh` | SigLIP / tokenizer / pi05_base → `v1-store/models/`，带逐项校验 |
-| `check_quota.py` | 解析组配额输出，pre-flight 判断本次提交是否超出 chaijy2 剩余额度 |
+| `check_quota.py` | 解析组配额输出，pre-flight 判断本次提交是否超出 chaijy2 剩余额度。任一维解析不出即判死（不再默认放行） |
+| `test_guards.py` | 本目录十余项守卫的回归测试，`uv run pytest` 秒级。**改动任何判据后必跑** |
 | `gl_submit.py` | 提交器（ControlMaster 复用，免 2FA） |
 | `gl_build_dataset.sbatch` | `--array=0-7` 分片构建 job |
 | `gl_finalize.sbatch` | `afterok` 收尾守卫 job |
@@ -140,11 +185,12 @@ bash scripts/smoke-local/run_gl_dataset_training_smoke.sh   # 【第四层】首
 
 | 文件 | 作用 | 定案结论 |
 |---|---|---|
-| `step_local_baseline.sh` | 第一层：分片语义无损（未改动 builder vs 分片实现，逐字节零容差） | 已 PASS；改动 `build_shard.py`/`scan_manifest.py` 后须重跑 |
+| `step_local_baseline.sh` | 第一层：分片语义无损（计算逻辑未改动的 builder vs 分片实现，逐字节零容差） | 已 PASS；改动 `build_shard.py` / `scan_manifest.py` / `build_robomme_dataset.py` 后须重跑 |
 | `step_bench.sh` | 档位实测入口（`local` / `cluster` / `report`） | 定案 **2 CPU / 24G**；数据形制变化后须重测 |
 | `bench_resources.py` | 本机档位扫描器（`systemd-run` 限内存 + `taskset` 限核） | 只被 step_bench 调用 |
 | `sample_summary.py` | 采样汇总器，本机与集群共用，保证指标定义逐字相同 | 只被 bench_resources 与 gl_probe 调用 |
 | `gl_probe.sbatch` | 多档位探针 job，1 GPU / ≤30 min（限额内，无需放行） | 定案 RATE=28.913 step/s（A40 稳态） |
+| `test_step1_quota_gate.sh` | step1 第 ⑧ 项配额闸门的桩测试（假 `uv` 挡死一切 sbatch 路径，安全） | 已 PASS，7 项断言 |
 
 ## 取代关系
 
@@ -195,10 +241,20 @@ gl_submit.py "sbatch --dependency=afterok:<原AID>:<新JOBID> ... gl_finalize.sb
 `kill_invalid_depend` 自动 CANCELLED，此时连日志文件都不会生成**——判死只能靠
 `sacct -j <AID>,<FID> --format=JobID,State,ExitCode -X`。
 
-`build_shard.py --resume` 会跳过已完整落盘的 episode（判据是 `kept_indices.json` 存在
-且 `token_emb_*.npy` 数量对得上），中断损失上界 = 单 episode ≤ 586 步。
+`build_shard.py --resume` 会跳过已完整落盘的 episode，中断损失上界 = 单 episode ≤ 586 步。
+完整性判据是**三段**：`kept_indices.json` 存在**且能被 `json.loads` 解析**、
+`token_emb_*.npy` 数量对得上、该 episode 的 `data/{offset..offset+n}.pkl` 区间齐全。
 残缺 episode 会被**先清后重做**——不清的话 `_process_episode` 里的
 `assert not os.path.exists(pkl_path)` 会撞上半截 pkl 直接炸。
+
+> 判据为什么是三段（2026-08-24 加严）：`kept_indices.json` 既是产物又是完整性锚点，
+> 而 `open(path, "w")` 一调用文件就已经「存在」了。进程若恰在写它时被杀（walltime 耗尽
+> 被 SLURM 强杀，正是续跑的触发场景），会留下空壳/半截文件，此时该 episode 的
+> `token_emb` 早已写全、旧的两段判据必然满足——坏 episode 会被当成完整永久跳过，
+> finalize 用同构判据同样放行。现在写入侧改了原子写、读取侧解析内容，两头堵住。
+
+**已交付库的存量核查**：4task-gl 的 1600 个 `kept_indices.json` 已全量 `json.loads`
+扫过，1600/1600 合法、零 `.tmp` 残留（见一致性报告第八节）。
 
 ## 收尾（验收通过后）
 
@@ -209,6 +265,16 @@ gl_submit.py "sbatch --dependency=afterok:<原AID>:<新JOBID> ... gl_finalize.sb
 
 ## 已知坑
 
+- **非原子写的 JSON 会毒化「文件存在 = 已完成」的判据。** `kept_indices.json` 既是产物
+  又是完整性锚点，而 `open(path, "w")` 一调用文件就已经存在了——只判存在性等于把
+  「写到一半」当成「写完了」。凡是「某文件在 ⇒ 某阶段完成」的判据，**写入侧必须原子
+  （`.tmp` + `os.replace`）、读取侧必须解析内容**。同类风险还有 `scan_manifest.py` 写的
+  清单与 `hash-inputs` 写的 sha256 清单（后者已在 `step0` 的复用判据里用 `jq -e` 挡住）。
+- **`set -e` 会从两个相反方向让守卫失效。** ① `X=$(cmd | grep ...)`：grep 无匹配时整条
+  赋值失败、脚本**当场被杀**，紧随其后你自己写的 `[[ -n "$X" ]] || { echo 诊断; }`
+  永远执行不到；② `cmd && echo ✓`：cmd 失败时 `set -e` **不触发**，脚本继续往下跑到
+  成功横幅。两个方向本目录都踩过（step1 的 jobid 解析、step2 的 VERIFY_PASS）。
+  一律改写成显式 `if/else`，或「先 `|| RC=$?` 捕获退出码再判」。
 - **绝不要在 Bash 脚本执行期间编辑它本身。** bash 是**增量读取**脚本文件的：长命令
   （如 14 GB 的 rsync）执行完返回后，它会从**保存的字节偏移**继续往下读。此时若文件
   已被编辑、偏移对应的位置变了，就会读到半截语句并报

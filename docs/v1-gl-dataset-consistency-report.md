@@ -4,6 +4,10 @@
 > 五～七节（档位实测、验证结果、复现命令）随流水线推进回填，每跑完一段就补，
 > 不等全部结束才动笔。档位实测另有独立文档
 > [`v1-gl-resource-tier-bench.md`](v1-gl-resource-tier-bench.md)。
+>
+> **第八节是 2026-08-24 对抗审查后的补记**：守卫缺陷的修复、判据口径的三处变化、
+> provenance 的事实更正，以及「已交付数据集不需重跑」的证据链。
+> 一～七节保持原样未改动，与第八节冲突处以第八节为准。
 
 本报告是这条链路的唯一权威留档。实现见 [`scripts/data-preprocess-GL/`](../scripts/data-preprocess-GL/README.md)。
 
@@ -720,3 +724,179 @@ bash scripts/smoke-local/run_gl_dataset_training_smoke.sh   # → LAYER4_PASS
 的 `RAW_DIR` 都指向它。
 
 **当前布局**：仓库单副本在 turbo，本机 `/data/hongzefu` 只剩原始 H5，符合 AGENTS.md 第 13 条。
+
+---
+
+## 八、审查后补记（2026-08-24）
+
+本节是对第一至七节的**追加**，不修改其中任何既有记录。触发事件：用户对
+`scripts/data-preprocess-GL` 发起对抗审查（37 个 agent：6 视角 finder → 30 次对抗验证
+投票 → 1 次综合），确认 7 条问题、反驳 4 条误报、留下 8 条未验证候选。经用户批准修复
+7 条确认 + 3 条证据最扎实的候选，规划阶段又发现 3 条同类问题，共 13 项，
+落地为 commitV1.12–V1.15 与本次文档 commit。
+
+### 8.1 结论：已交付的 1600 episode 数据集不需要重跑
+
+审查确认的缺陷**全部属于「守卫失灵」而非「计算出错」**——守卫失灵只意味着「若坏事
+发生则不会被发现」，所以判断是否重跑只需回答：生产那一次跑，坏事实际发生过吗？
+五条证据，全部否定：
+
+| # | 证据 | 出处 |
+|---|---|---|
+| 1 | 半截 `kept_indices.json` 的触发前提（分片被杀后 `--resume` 续跑）**从未发生**：单一 array 58531840、8 片全 `SHARD_EXIT_CODE=0` 且 **`skipped=0`**（续跑路径一次都没走过）、`_claims/` 为空 | 6.2 节与 `v1-store/logs/v1-4task-build-58531840_{0..7}.log` |
+| 2 | 三份落盘对拍报告数值完整、全部为正常有限值、`compared` 计数非零，**无任何 NaN 痕迹** | `v1-store/reports/layer{1,2,3}_*.json` |
+| 3 | `pos_emb_*` 虽未进自动判据，但数值被完整记录：**三层全部逐位相同**（`bitwise_equal=true`、`max_ulp=0`、`max_abs_diff=0.0`） | 6.3、6.4 节 |
+| 4 | 总量三方独立吻合：`stats.json` 的 395,289 / 483,291 == 8 片 `steps` 之和 == `data/` 下 pkl 实际文件数 | 6.2 节与 `meta/stats.json` |
+| 5 | **本次新增的全量补检**：1600 个 `kept_indices.json` 逐个 `json.loads`，**1600/1600 合法、坏 0、空列表 0、`.tmp` 残留 0**，耗时 11 s | 见 8.4 的复现命令 |
+
+生产期间唯一真实发生过的故障是 finalize job 58531841 因内存不足被 OOM 杀
+（`FINALIZE_EXIT_CODE=137`），重提为 58532400 后全绿——该 job 是只读守卫，不写数据。
+
+### 8.2 判据口径的三处变化（对比新旧报告时会看到）
+
+1. **`pos_emb_*` / `ds_pos_emb` 从「只报不判」升为零容差判据**。它们此前只在 `bitexact`
+   模式下才进 `zero_tolerance`，而第 4.3.2 与 6.3 节恰恰把「`pos_emb_*` 跨架构逐位相同」
+   当作「`image_emb` 差异成因是归约累加顺序、不是 bug」的**决定性对照组**——这项一旦
+   失守，整条归因论证就塌了，必须判死交人工重审。桶归属打印保留作诊断。
+2. **新增 `has_nonfinite` 零容差通道**。GPU 真出数值故障时三道现有判据会同时失明：
+   含 NaN 的行范数是 NaN、`NaN > 0` 恒 False ⇒ 该行被当 padding 跳过、余弦保留 1.0；
+   误差地板变 NaN 而 NaN 与阈值比较恒 False；`bitwise_equal` 对同一 NaN 位模式假通过。
+   现对所有参与判定的 key 一律零容差，报告另有 `has_nonfinite_any` 顶层字段。
+3. **报告删除 `ds_indices` 行，新增 `ds_frames_present` 行**。6.4 节表里的 `ds_indices`
+   是装饰性的：`get_frame_sampling_indices` 是 `(step_idx, budget, token_per_image)` 的
+   纯函数，两库共用**同一次**计算，`bitwise_equal` 恒填 `True`，从未真正对拍。
+   顶替它的 `ds_frames_present` 检查两库各自的选帧目标文件是否都在，是真判据。
+   同期修掉的还有 pkl 聚合的同类硬编码，以及缺帧时不 `continue` 导致整个进程崩溃
+   （报告与全部诊断一起丢失）的问题。
+
+报告另加 `episodes`（真实比对数）/ `episodes_selected` / `aborted_early` 三字段——
+此前错误过多提前中止时，报告仍写「比对了全部 N 个」。
+
+### 8.3 provenance 的事实更正
+
+第 6.2 节记录的 `provenance: host=gl1507 gpu=NVIDIA A40 jax=0.5.3` 与其中的
+`resource_tier: 4 CPU / 32768 MB`，描述的是**跑 finalize 的那个节点（job 58532400）**，
+不是产出数据的 8 个分片节点——分片实际档位是 **2 CPU / 24 G**，`step2_verify.sh` 一度
+把顶层 `resource_tier` 当构建档位打印。当时的分片 sidecar **不含任何硬件/软件指纹**，
+所谓「finalize 断言全体同源」实际只比了 `manifest_sha256`。
+
+现已修复：每个分片在自己的 `meta/_shard*.json` 里记 `fingerprint`（host / GPU 型号 /
+jax·jaxlib / git commit / 资源档位），finalize 汇总进 `shard_fingerprints` 并断言
+`gpu_device_kind` / `jax` / `jaxlib` / `git_commit` 跨八片唯一。
+
+⚠ 对已交付库的影响：4task-gl 缺 `shard_fingerprints`，**重跑 finalize check 会
+fail-loud**（报「产出于指纹字段引入之前」）。日常验收 `step2_verify.sh` 不受影响，
+它只读 finalize 当时的日志判定行。8 个分片当时的节点名已无从追回（claim 文件正常
+收尾时被删），只能通过旁证支持同源：8 片共用 turbo 上唯一一份 venv、spgpu 分区
+30 节点全 A40、8 片 `peak gpu_mib` 完全一致（10091）。
+
+### 8.4 复现命令
+
+```bash
+cd /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA
+
+# 守卫回归测试（秒级）
+UV_LINK_MODE=copy JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES= \
+  uv run pytest scripts/data-preprocess-GL/test_guards.py -q
+
+# 配额闸门桩测试（假 uv 挡死一切 sbatch 路径，不会真提交）
+bash scripts/data-preprocess-GL/legacy/test_step1_quota_gate.sh
+
+# 存量全量补检（8.1 的证据 5）
+UV_LINK_MODE=copy uv run python - <<'PY'
+import json, pathlib
+root = pathlib.Path("v1-store/datasets/4task-gl/features")
+bad, n, tmp = [], 0, 0
+for d in sorted(root.iterdir()):
+    if not d.is_dir():
+        continue
+    tmp += len(list(d.glob("*.tmp")))
+    try:
+        json.loads((d / "kept_indices.json").read_text())
+        n += 1
+    except Exception as e:
+        bad.append(f"{d.name}: {e}")
+print(f"合法 {n}  坏 {len(bad)}  .tmp 残留 {tmp}")
+PY
+```
+
+第一层与第二/三层的全量复测入口不变（`legacy/step_local_baseline.sh` 与
+`step2_verify.sh`），结果见 8.5。
+
+### 8.5 修复后的全量复测
+
+两个复测都在本机跑（tmux detached + `tee`，`BENCH_GPU=1`），不碰集群。
+`RAW_H5_DIR` 保持默认（turbo 副本）——换输入源等于换变量，既有结论就不可比了。
+
+#### 第一层 bitexact（`legacy/step_local_baseline.sh`，2026-08-24 复跑）
+
+**为什么必须重跑**：本轮改了 `build_shard.py` 与 `build_robomme_dataset.py`，按第 6.1 节
+的口径，分片实现要重新取得「本地真值」资格。它同时是**「原子写字节零变化」的唯一硬证明**
+——`kept_indices.json` 在这一层是按字节比对的，落盘方式若改动了哪怕一个分隔符都会当场失败；
+而 step2 因 `--resume` 会跳过参照库构建，验不到这一点。
+
+结果：**`COMPARE_RESULT=bitexact PASS` / `LAYER1_PASS` / `EXIT_CODE=0`**。
+12 episode / 3,862 步全覆盖，9 个 key 全部逐字节相同：
+
+| key | compared | bitwise_equal | max_ulp | max_abs_diff | has_nonfinite |
+|---|---:|---|---:|---:|---|
+| `image_emb_{8x8,4x4,2x2}` | 各 3862 | true | 0 | 0.0 | false |
+| `pos_emb_{8x8,4x4,2x2}` | 各 3862 | true | 0 | 0.0 | false |
+| `state_emb` | 3862 | true | 0 | 0.0 | false |
+| `kept_indices` | 12 | true | 0 | 0.0 | false |
+| `pkl` | 96 | true | 0 | 0.0 | false |
+
+`fails: []`、`errors: []`、新增字段 `has_nonfinite_any: false`、`episodes: 12`、
+`aborted_early: false` 均按预期产出（报告落在 `v1-store/reports/layer1_bitexact.json`）。
+参照库与被测库**均无 `.tmp` 残留**，原子写的临时文件全部正常改名。
+体积校准复现出与既往一致的 `CALIBRATION_BYTES_PER_STEP=932154`（910 KiB/step）。
+
+耗时：参照系 4.9 min + 4 个分片约 6 min + 对拍与校准约 3 min。
+
+#### 第二 / 三层（`step2_verify.sh`，2026-08-24 复跑）
+
+**为什么要重跑**：本轮把 `pos_emb_*` / `ds_pos_emb` 从「只报不判」升为零容差、
+新增了 NaN 通道、删掉了 `ds_indices` 假对拍、并把 `[5/5]` 改成硬判据——要确认新判据
+在**已交付库**上依然全绿，而不是把本来正常的数据判死。
+
+结果：**`COMPARE_RESULT=crossarch PASS` / `COMPARE_RESULT=downstream PASS` /
+`VERIFY_PASS` / `EXIT_CODE=0`**。四项与本轮修复直接相关的观察：
+
+1. **加严的完整性判据没有误伤存量**：`[2/5]` 的参照库构建报
+   `SHARD_DONE shard=0 episodes=0 skipped=47 elapsed=0.5s`——47 个既有 episode 在
+   「`json.loads` 合法 + `token_emb` 计数 + pkl 区间齐全」三段判据下全部判为完整。
+2. **`pos_emb_*` 这次是真的被判过了**（此前只打印不判定）：三个 key 各 1128 项、
+   `bitwise_equal: true`、`max_ulp=0`，桶归属打印仍为「零容差桶（跨架构逐位相同）」。
+   第三层的 `ds_pos_emb` 同样 376/376 逐位相同。
+3. **`ds_indices` 已从报告消失，`ds_frames_present` 顶替它并真实通过**（376/376）。
+4. **`[5/5]` 的三处新逻辑各按设计工作**：stats 硬判据打印 `✓ stats.json 合理`；
+   provenance 打印标注了「finalize 节点」；已交付库因缺 `shard_fingerprints` 走**兼容
+   提示分支**而不是判死（这正是把新字段做成「有则打印」的理由）。
+
+跨架构数值与 6.3 节的既往实测**逐位一致**，未因判据改动而漂移：
+
+| key | compared | bitwise_equal | min_cosine | err_floor_rel | has_nonfinite |
+|---|---:|---|---:|---:|---|
+| `image_emb_2x2` | 1128 | false | 0.999989977 | 0.01314 | false |
+| `image_emb_4x4` | 1128 | false | 0.999984836 | 0.01442 | false |
+| `image_emb_8x8` | 1128 | false | **0.999841657** | **0.01924** | false |
+| `pos_emb_{8x8,4x4,2x2}` | 各 1128 | **true** | 1.0 | 0.0 | false |
+| `state_emb` / `kept_indices` / `pkl` | 1128 / 47 / 376 | true | 1.0 | 0.0 | false |
+| `ds_img_emb`（第三层） | 376 | false | 0.999984859 | 0.01108 | false |
+| `ds_mask` / `ds_pos_emb` / `ds_frames_present` | 各 376 | **true** | 1.0 | 0.0 | false |
+
+两份报告的 `fails` 与 `errors` 均为空，`has_nonfinite_any: false`，
+`episodes: 47`、`aborted_early: false`。
+
+### 8.6 当前状态
+
+13 项守卫修复已全部落地（`commitV1.12`–`V1.15` + 本文档 commit），三关验证全绿：
+守卫回归测试 35 条、配额闸门桩测试 7 项断言、两个全量复测 + 存量补检。
+**已交付的 4task-gl 数据集维持原状、不需重跑**，其验收结论在收紧后的判据下重新成立。
+
+遗留（不影响当前交付，供后来者取舍）：
+- 4task-gl 缺分片指纹，**重跑 finalize check 会 fail-loud**（见 8.3）；若将来确需对它
+  重跑收尾守卫，要么补一份指纹 sidecar，要么临时跳过该断言。
+- 对抗审查另有 5 条低优先级候选未修（`paths.sh` 的 `readonly` 无重入保护、
+  `scan_manifest.py` 清单非原子写、`pick_steps` 在 `--steps_per_episode 1` 时除零、
+  finalize 第 [5/5] 步「守卫」名不副实、`check_completeness` 的 errs 有 50 条上限）。
