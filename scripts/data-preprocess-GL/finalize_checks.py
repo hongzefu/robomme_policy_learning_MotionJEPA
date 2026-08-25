@@ -9,10 +9,17 @@
               被杀，都会在这里现形。
   stats    —— 按清单前缀和写 meta/stats.json，并断言与实际落盘数一致。形制与串行
               builder 完全一样，下游 SampleDataset 读它决定 __len__。
-  provenance —— 逐条记录 hostname / GPU 型号 / jax 版本 / git commit / 清单 sha /
-              资源档位，并断言全体同源。跨架构逐位一致做不到（greatlakes.md 已实证），
-              所以交付按「换合同」口径：集群产物自成一份数据集，**机制上杜绝**与本地
-              字节混用。
+  provenance —— 分两层，别搞混：**每个分片**在自己的 meta/_shard*.json 里记
+              hostname / GPU 型号 / jax·jaxlib 版本 / git commit / 资源档位；
+              finalize 把八片的指纹汇总进 meta/provenance.json 的 shard_fingerprints，
+              并断言 gpu_device_kind / jax / jaxlib / git_commit **跨片唯一**
+              （host、slurm_job、资源档位只记录不断言——array task 本就在不同节点）。
+              provenance.json 的**顶层**字段描述的则是跑 finalize 的那个节点。
+              跨架构逐位一致做不到（greatlakes.md 已实证），所以交付按「换合同」口径：
+              集群产物自成一份数据集，**机制上杜绝**与本地字节混用。
+              ⚠ 该断言 2026-08-24 才补上：更早产出的库（如 4task-gl）sidecar 里没有
+              指纹字段，重跑 check 会 fail-loud 报「产出于指纹字段引入之前」。
+              日常验收 step2_verify.sh 不受影响，它只读 finalize 当时的日志判定行。
   抽检     —— 随机抽 N 条在**同一节点**复算并要求 max|diff| == 0。同架构，所以可以
               零容差。它排除的是线程调度、cudnn 算法选择这类非确定性——如果这条不过，
               后面任何跨架构比对都失去意义。
@@ -247,6 +254,47 @@ def git_commit(repo: pathlib.Path) -> str:
         return "unknown"
 
 
+# 必须跨全部分片唯一的指纹项。host / slurm_job / resource_tier 刻意不在此列：
+# 8 个 array task 本来就落在不同节点上，单片重提时也允许换档位。
+FINGERPRINT_SAME_KEYS = ("gpu_device_kind", "jax", "jaxlib", "git_commit")
+
+
+def aggregate_shard_fingerprints(docs: list[tuple[str, dict]]) -> tuple[dict, list[str]]:
+    """跨分片指纹汇总 + 同源断言（纯函数，便于单测）。
+
+    这是「换合同」交付口径的机制保证：集群产物自成一份数据集，其可信度建立在
+    「八片是同一份代码、同一套运行时、同一种卡跑出来的」之上。此前 provenance 里的
+    指纹全部取自 finalize 自己那个节点，从未与分片比对过，这条承诺是空的。
+    """
+    errs: list[str] = []
+    vals: dict[str, set[str]] = {k: set() for k in FINGERPRINT_SAME_KEYS}
+    hosts, jobs, tiers = [], [], []
+    for name, d in docs:
+        fp = d.get("fingerprint")
+        if not isinstance(fp, dict):
+            errs.append(f"{name} 缺分片指纹（schema_version={d.get('schema_version')}）"
+                        f"——该库产出于指纹字段引入之前，需重跑分片才能通过 finalize")
+            continue
+        hosts.append(fp.get("host", ""))
+        jobs.append(fp.get("slurm_job", ""))
+        tiers.append(fp.get("resource_tier", {}))
+        for k in FINGERPRINT_SAME_KEYS:
+            v = str(fp.get(k, ""))
+            if v.startswith("unavailable:"):
+                # 采集失败等于没有指纹，同源断言无从谈起 —— fail-loud，不放行
+                errs.append(f"{name} 的 {k} 采集失败（{v}），无法断言同源")
+            vals[k].add(v)
+    for k in FINGERPRINT_SAME_KEYS:
+        if len(vals[k]) > 1:
+            errs.append(f"分片间 {k} 不一致：{sorted(vals[k])}"
+                        f"——八片不是同源产出，产物不可作为一份数据集交付")
+    agg = {k: (next(iter(vals[k])) if len(vals[k]) == 1 else sorted(vals[k]))
+           for k in FINGERPRINT_SAME_KEYS}
+    agg.update({"hosts": hosts, "slurm_jobs": jobs, "resource_tiers": tiers,
+                "shards_with_fingerprint": len(hosts)})
+    return agg, errs
+
+
 def cmd_check(args: argparse.Namespace) -> None:
     manifest = load_manifest(args.manifest)
     out_dir = args.out
@@ -268,14 +316,26 @@ def cmd_check(args: argparse.Namespace) -> None:
     sidecars = sorted(meta.glob("_shard*of*.json"))
     covered: set[int] = set()
     shard_info = []
+    sidecar_docs: list[tuple[str, dict]] = []
     for s in sidecars:
-        d = json.loads(s.read_text())
-        shard_info.append({k: d[k] for k in ("shard_idx", "num_shards", "episodes_done",
-                                             "episodes_skipped", "steps", "elapsed_s",
-                                             "rate_step_per_s") if k in d})
+        try:
+            d = json.loads(s.read_text())
+        except ValueError as exc:
+            all_errs.append(f"{s.name} 不是合法 JSON（半截落盘？）: {exc}")
+            continue
+        sidecar_docs.append((s.name, d))
+        # ⚠ 末尾的 `if k in d` 会静默吞掉白名单外的字段：往 sidecar 加字段必须同步改这里。
+        # 指纹刻意做成嵌套子对象，就是为了不必再动这份白名单。
+        shard_info.append({k: d[k] for k in ("schema_version", "shard_idx", "num_shards",
+                                             "episodes_done", "episodes_skipped", "steps",
+                                             "elapsed_s", "rate_step_per_s",
+                                             "rate_steady_step_per_s") if k in d})
+        shard_info[-1]["fingerprint"] = d.get("fingerprint")
         covered |= set(d.get("episodes", []))
         if d.get("manifest_sha256") != manifest["sha256"]:
             all_errs.append(f"{s.name} 的 manifest_sha256 与当前清单不符（混用了不同清单？）")
+    fp_agg, fp_errs = aggregate_shard_fingerprints(sidecar_docs)
+    all_errs += fp_errs
     want = {e["global_episode_idx"] for e in manifest["episodes"]}
     if covered != want:
         all_errs.append(f"分片 sidecar 覆盖的 episode 集合不等于清单全集: "
@@ -307,6 +367,14 @@ def cmd_check(args: argparse.Namespace) -> None:
             jax_ver = jaxlib_ver = gpu = f"unavailable: {exc}"
         prov = {
             "produced_by": "scripts/data-preprocess-GL/build_shard.py",
+            # ⚠ 语义分两层，别再搞混（2026-08-24 审查坐实过一次事实错误）：
+            #   · 下面这组顶层字段描述的是**跑 finalize 的那个节点**，不是产出数据的
+            #     8 个分片节点。历史上 step2 把这里的 resource_tier 当构建档位打印，
+            #     实际打出来的是 finalize job 的 4 CPU / 32 G，而分片是 2 CPU / 24 G。
+            #   · 构建节点的真实指纹在 shard_fingerprints（以及每片 meta/_shard*.json
+            #     的 fingerprint），跨片同源断言也是在那上面做的。
+            #   顶层键名保持不变：step2_verify.sh 的 jq 与已交付库都依赖这个形状。
+            "finalize_host": socket.gethostname(),
             "host": socket.gethostname(),
             "slurm_job": os.environ.get("SLURM_JOB_ID", ""),
             "gpu_device_kind": gpu,
@@ -319,13 +387,18 @@ def cmd_check(args: argparse.Namespace) -> None:
                 "cpus_per_task": os.environ.get("SLURM_CPUS_PER_TASK", ""),
                 "mem_per_node_mb": os.environ.get("SLURM_MEM_PER_NODE", ""),
             },
+            "shard_fingerprints": fp_agg,
             "shards": shard_info,
             "stats": stats,
         }
         pathlib.Path(out_dir, "meta", "provenance.json").write_text(
             json.dumps(prov, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"  stats={stats}")
-        print(f"  provenance: host={prov['host']} gpu={prov['gpu_device_kind']} jax={prov['jax']}")
+        print(f"  provenance(finalize 节点): host={prov['host']} "
+              f"gpu={prov['gpu_device_kind']} jax={prov['jax']}")
+        print(f"  provenance(构建分片): gpu={fp_agg['gpu_device_kind']} jax={fp_agg['jax']} "
+              f"commit={str(fp_agg['git_commit'])[:12]} "
+              f"节点={fp_agg['shards_with_fingerprint']} 个 全体同源 ✓")
 
     if all_errs:
         print("\n=== 失败明细 ===")

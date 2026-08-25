@@ -72,10 +72,35 @@ echo "=== [4/5] 第三层：下游等价（prepare_frame_sampling 的选帧索�
     --report "${REPORT_DIR}/layer3_downstream.json"
 
 echo "=== [5/5] 全量库自洽复核 ==="
-jq -e '.execution_samples > 0 and .total_samples > 0' "${GL_DATASET}/meta/stats.json" >/dev/null \
-  && echo "  ✓ stats.json 合理：$(jq -c . "${GL_DATASET}/meta/stats.json")"
-jq -r '"  provenance: host=\(.host) gpu=\(.gpu_device_kind) jax=\(.jax) commit=\(.git_commit[0:12]) 档位=\(.resource_tier.cpus_per_task)CPU/\(.resource_tier.mem_per_node_mb)M"' \
-  "${GL_DATASET}/meta/provenance.json"
+STATS_JSON="${GL_DATASET}/meta/stats.json"
+PROV_JSON="${GL_DATASET}/meta/provenance.json"
+# ⚠ 原写法是 `jq -e ... && echo ✓`：jq 失败时它只是不打印那行 ✓，脚本继续往下跑到
+#   最后无条件打印 VERIFY_PASS —— 唯一一道 stats 数值合理性判据被 bash 语义吞掉了。
+#   一律改成 if/else + exit 1。
+if jq -e '.execution_samples > 0 and .total_samples > 0' "${STATS_JSON}" >/dev/null 2>&1; then
+  echo "  ✓ stats.json 合理：$(jq -c . "${STATS_JSON}")"
+else
+  echo "  ✗ stats.json 缺失、非法 JSON 或数值不合理：${STATS_JSON}"; exit 1
+fi
+
+if ! jq -e 'has("host") and has("gpu_device_kind") and has("jax") and has("git_commit")' \
+      "${PROV_JSON}" >/dev/null 2>&1; then
+  echo "  ✗ provenance.json 缺失、非法 JSON 或缺必需字段：${PROV_JSON}"; exit 1
+fi
+# 顶层字段描述的是 **finalize 节点**，不是产出数据的分片节点（见 finalize_checks.py
+# 的模块 docstring）。历史上这里把顶层 resource_tier 当构建档位打印，实际打的是
+# finalize job 的 4CPU/32G，而分片是 2CPU/24G —— 档位改从 shard_fingerprints 取。
+jq -r '"  provenance(finalize 节点): host=\(.host) gpu=\(.gpu_device_kind) jax=\(.jax) commit=\(.git_commit[0:12])"' \
+  "${PROV_JSON}"
+# 分片指纹是 2026-08-24 才引入的；旧库没有它只提示、不判死，否则本来全绿的复测会
+# 因为一个装饰性字段失败。
+if jq -e 'has("shard_fingerprints")' "${PROV_JSON}" >/dev/null 2>&1; then
+  jq -r '"  provenance(构建分片): gpu=\(.shard_fingerprints.gpu_device_kind) jax=\(.shard_fingerprints.jax) commit=\(.shard_fingerprints.git_commit[0:12]) 节点=\(.shard_fingerprints.hosts|length) 个 档位=\(.shard_fingerprints.resource_tiers[0].cpus_per_task)CPU/\(.shard_fingerprints.resource_tiers[0].mem_per_node_mb)M"' \
+    "${PROV_JSON}"
+else
+  echo "  · 该库产出于分片指纹字段引入之前，无 shard_fingerprints；"
+  echo "    注意顶层 resource_tier 是 finalize job 的档位，不是分片档位（分片实为 2CPU/24G）"
+fi
 du -sh "${GL_DATASET}" 2>/dev/null || true
 
 echo

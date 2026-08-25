@@ -29,6 +29,7 @@ import json
 import os
 import pathlib
 import shutil
+import socket
 import sys
 import time
 
@@ -39,6 +40,7 @@ _REPO_ROOT = _HERE.parents[1]
 sys.path.insert(0, str(_REPO_ROOT / "src"))
 sys.path.insert(0, str(_HERE))
 
+from finalize_checks import git_commit  # noqa: E402
 from scan_manifest import assign_shards_lpt  # noqa: E402
 from scan_manifest import load_manifest  # noqa: E402
 
@@ -272,16 +274,48 @@ def main() -> None:
     proc = ShardProcessor(args.raw_dir, args.out)
     stats = proc.run_shard(mine, resume=args.resume, report_every=args.report_every)
 
+    # 硬件/软件指纹：交付口径承诺「metadata 逐条带硬件/软件 provenance，finalize 断言
+    # 全体同源」，但此前 sidecar 里一个指纹字段都没有，finalize 只能记它自己那个节点的
+    # 信息（等于出生证明上写护士的名字）。这里由**产出数据的分片本人**记录。
+    # jax 在此刻早已被 MemoryBuffer(prepare_buffer=True) 初始化完，取它零额外开销；
+    # 放模块顶层反而会让 --help 也去加载 jax。
+    try:
+        import jax
+        import jaxlib
+        _gpu = str(jax.devices()[0].device_kind)
+        _jax, _jaxlib = jax.__version__, jaxlib.__version__
+    except Exception as exc:  # 采集失败必须留痕，不能静默成空串——finalize 会据此判死
+        _gpu = _jax = _jaxlib = f"unavailable: {exc}"
+    fingerprint = {
+        "host": socket.gethostname(),
+        "slurm_job": os.environ.get("SLURM_JOB_ID", ""),
+        "slurm_array_job": os.environ.get("SLURM_ARRAY_JOB_ID", ""),
+        "slurm_array_task": os.environ.get("SLURM_ARRAY_TASK_ID", ""),
+        "gpu_device_kind": _gpu,
+        "jax": _jax,
+        "jaxlib": _jaxlib,
+        "git_commit": git_commit(_REPO_ROOT),
+        "resource_tier": {
+            "cpus_per_task": os.environ.get("SLURM_CPUS_PER_TASK", ""),
+            "mem_per_node_mb": os.environ.get("SLURM_MEM_PER_NODE", ""),
+        },
+    }
+
     pathlib.Path(args.out, "meta").mkdir(parents=True, exist_ok=True)
     side = pathlib.Path(args.out, "meta", f"_shard{args.shard_idx}of{args.num_shards}.json")
+    # 指纹用嵌套子对象而不是平铺：finalize 汇总时有一份字段白名单，平铺的话每加一个
+    # 指纹字段都得同步改白名单（漏改会被 `if k in d` 静默吞掉）。schema_version 让
+    # finalize 能对「产出于指纹引入之前的旧库」给出精确报错而不是含糊的 KeyError。
     side.write_text(
         json.dumps(
             {
+                "schema_version": 2,
                 "shard_idx": args.shard_idx,
                 "num_shards": args.num_shards,
                 "manifest_sha256": manifest["sha256"],
                 "subset": args.subset or None,
                 "episodes": [e["global_episode_idx"] for e in mine],
+                "fingerprint": fingerprint,
                 **stats,
             },
             ensure_ascii=False,

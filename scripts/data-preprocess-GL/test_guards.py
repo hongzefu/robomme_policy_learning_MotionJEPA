@@ -328,3 +328,62 @@ def test_compare_episode_kept_indices_reports_false(tmp_path: pathlib.Path) -> N
     # 审查前失败时根本不 add（n==0），verdict 的 `n == 0: continue` 会整项跳过
     assert aggs["kept_indices"].n == 1
     assert aggs["kept_indices"].bitwise_equal is False
+
+
+# ── 分片指纹的跨片同源断言 ────────────────────────────────────────────────────
+def _fp(**kw) -> dict:
+    base = {"host": "gl1500", "slurm_job": "1", "gpu_device_kind": "NVIDIA A40",
+            "jax": "0.5.3", "jaxlib": "0.5.3", "git_commit": "abc123",
+            "resource_tier": {"cpus_per_task": "2", "mem_per_node_mb": "24576"}}
+    base.update(kw)
+    return base
+
+
+def test_aggregate_fingerprints_all_same() -> None:
+    from finalize_checks import aggregate_shard_fingerprints
+
+    docs = [(f"_shard{i}of3.json", {"schema_version": 2, "fingerprint": _fp(host=f"gl150{i}")})
+            for i in range(3)]
+    agg, errs = aggregate_shard_fingerprints(docs)
+    assert errs == []
+    assert agg["gpu_device_kind"] == "NVIDIA A40"
+    # host 允许不同（array task 本就落在不同节点），只记录不断言
+    assert agg["hosts"] == ["gl1500", "gl1501", "gl1502"]
+    assert agg["shards_with_fingerprint"] == 3
+
+
+def test_aggregate_fingerprints_detects_mismatch() -> None:
+    from finalize_checks import aggregate_shard_fingerprints
+
+    docs = [("_shard0of2.json", {"schema_version": 2, "fingerprint": _fp()}),
+            ("_shard1of2.json", {"schema_version": 2, "fingerprint": _fp(git_commit="deadbee")})]
+    _, errs = aggregate_shard_fingerprints(docs)
+    assert any("git_commit 不一致" in e for e in errs), errs
+
+
+def test_aggregate_fingerprints_detects_jax_mismatch() -> None:
+    from finalize_checks import aggregate_shard_fingerprints
+
+    docs = [("_shard0of2.json", {"schema_version": 2, "fingerprint": _fp()}),
+            ("_shard1of2.json", {"schema_version": 2, "fingerprint": _fp(jax="0.6.0")})]
+    _, errs = aggregate_shard_fingerprints(docs)
+    assert any("jax 不一致" in e for e in errs), errs
+
+
+def test_aggregate_fingerprints_flags_legacy_sidecar() -> None:
+    """产出于指纹引入之前的旧 sidecar：必须 fail-loud 且消息可读。"""
+    from finalize_checks import aggregate_shard_fingerprints
+
+    docs = [("_shard0of1.json", {"shard_idx": 0, "steps": 100})]
+    _, errs = aggregate_shard_fingerprints(docs)
+    assert any("产出于指纹字段引入之前" in e for e in errs), errs
+
+
+def test_aggregate_fingerprints_flags_unavailable() -> None:
+    """指纹采集失败等于没有指纹，不能当同源放行。"""
+    from finalize_checks import aggregate_shard_fingerprints
+
+    docs = [("_shard0of1.json",
+             {"schema_version": 2, "fingerprint": _fp(gpu_device_kind="unavailable: no gpu")})]
+    _, errs = aggregate_shard_fingerprints(docs)
+    assert any("采集失败" in e for e in errs), errs
