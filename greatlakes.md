@@ -80,7 +80,7 @@ master 就建立 master——认证一次，30d 内所有提交/查询免认证�
 socket，之后 `ssh greatlakes <cmd>` 直接复用已认证通道、**不再发起任何 SSH 认证握手**，
 因此零密码零 MFA 零手机（slave 不认证，与服务器 MFA 策略无关）。
 
-提交器:**`scripts/train-script-hongzefu/gl_submit.py`**（自包含，纯系统 ssh + ControlMaster，
+提交器:**`scripts/data-preprocess-GL/gl_submit.py`**（自包含，纯系统 ssh + ControlMaster，
 不再用 paramiko）——逻辑就是"没 master 就建 master，再经系统 ssh 复用提交":
 
 - **master 存活** → 直接提交，**无需任何凭据、不必问验证方式**；
@@ -102,14 +102,14 @@ socket，之后 `ssh greatlakes <cmd>` 直接复用已认证通道、**不再发
    ```
 2. **存活 → 直接提交/查询**（零认证零手机，不必问验证方式）:
    ```bash
-   uv run --no-project --with pexpect python scripts/train-script-hongzefu/gl_submit.py "squeue -u hongzefu"
-   uv run --no-project --with pexpect python scripts/train-script-hongzefu/gl_submit.py   # 无参数=只打印队列
+   uv run --no-project --with pexpect python scripts/data-preprocess-GL/gl_submit.py "squeue -u hongzefu"
+   uv run --no-project --with pexpect python scripts/data-preprocess-GL/gl_submit.py   # 无参数=只打印队列
    ```
 3. **不存活 → 建主连接**（**仅此步需要验证方式**，推荐 TOTP、给一次码无需手机匹配）。
    gl_submit 在无 master 时会自动用凭据建连后再提交;也可设好凭据直接跑:
    ```bash
    export GLPW='<密码>' GLOTP='<当前6位码>'
-   uv run --no-project --with pexpect python scripts/train-script-hongzefu/gl_submit.py "<命令>"
+   uv run --no-project --with pexpect python scripts/data-preprocess-GL/gl_submit.py "<命令>"
    unset GLPW GLOTP
    ```
    建好后 30 天内所有提交/查询走第 2 步、免认证；到期后重建。（skill `greatlakes-usage`
