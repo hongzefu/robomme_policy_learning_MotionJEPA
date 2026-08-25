@@ -48,7 +48,7 @@ import jax  # noqa: E402
 
 import mme_vla_suite.training.config as _config  # noqa: E402
 
-_MAX_BENCH_STEPS = 500
+_MAX_BENCH_STEPS = 600  # bottleneck-bench v2 修复验证需 600 步（用户 2026-08-24 指定）；上限仍远低于正式训练量级
 _EXPECTED_HISTORY_CONFIG = "perceptual-framesamp-context.yaml"
 
 
