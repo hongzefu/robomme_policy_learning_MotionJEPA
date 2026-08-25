@@ -157,3 +157,174 @@ def test_check_completeness_passes_clean_lib(tmp_path: pathlib.Path) -> None:
     errs, stats = check_completeness(_mini_manifest(2, 1), str(tmp_path))
     assert errs == []
     assert stats == {"execution_samples": 1, "total_samples": 2}
+
+
+# ── NaN/Inf 零容差通道 ────────────────────────────────────────────────────────
+def test_metrics_nan_flag_and_cosine_stays_one() -> None:
+    """这条同时钉住「为什么必须独立成通道」：余弦对 NaN 行给的是满分 1.0。"""
+    from compare_datasets import metrics
+
+    a = np.ones((4, 8), dtype=np.float32)
+    b = a.copy()
+    b[1, 3] = np.nan
+    m = metrics(a, b)
+    assert m["has_nonfinite"] is True
+    # 含 NaN 的那一行落进 ~ok 分支、cos 保留初值 1.0 —— 两道余弦判据依然稳稳过阈值
+    # （比的是生产阈值而非精确 1.0：其余全一行的余弦本身就是 0.999999999999…）
+    assert m["min_cosine"] >= 0.999
+    assert m["p5_cosine"] >= 0.9999
+
+
+def test_metrics_same_nan_bitpattern_is_false_pass() -> None:
+    """两侧同一位置同一 NaN 位模式：bitwise_equal 假通过，只有 has_nonfinite 抓得住。"""
+    from compare_datasets import metrics
+
+    a = np.ones((2, 4), dtype=np.float32)
+    a[0, 0] = np.nan
+    m = metrics(a, a.copy())
+    assert m["bitwise_equal"] is True
+    assert m["has_nonfinite"] is True
+
+
+def test_grid_metrics_nan_flag() -> None:
+    from compare_datasets import grid_metrics
+
+    a = np.ones((3, 3), dtype=np.float32)
+    b = a.copy()
+    b[2, 2] = np.inf
+    assert grid_metrics(a, b)["has_nonfinite"] is True
+
+
+def test_agg_nonfinite_not_folded_and_report_is_valid_json() -> None:
+    from compare_datasets import Agg
+
+    agg = Agg()
+    agg.add({"bitwise_equal": True, "same_bit_frac": 1.0, "max_ulp": 0,
+             "min_cosine": 1.0, "max_abs_diff": 0.0})
+    agg.add({"bitwise_equal": True, "same_bit_frac": float("nan"), "max_ulp": 0,
+             "min_cosine": float("nan"), "max_abs_diff": float("nan"),
+             "err_floor_rel": float("nan"), "has_nonfinite": True})
+    assert agg.has_nonfinite is True
+    assert agg.n_nonfinite == 1
+    assert agg.n == 2
+    # NaN 一旦折叠进数值字段，json.dumps 会写出裸 NaN token —— 那不是合法 JSON，jq 会炸
+    dumped = json.dumps(agg.as_dict())
+    assert "NaN" not in dumped
+    assert json.loads(dumped)["nonfinite_items"] == 1
+
+
+def _ns(**kw):
+    import argparse as _ap
+    base = {"min_cosine": 0.999, "min_p5_cosine": 0.9999, "max_err_floor_rel": 0.05}
+    base.update(kw)
+    return _ap.Namespace(**base)
+
+
+def _agg_with(**kw):
+    from compare_datasets import Agg
+    agg = Agg()
+    agg.n = 1
+    for k, v in kw.items():
+        setattr(agg, k, v)
+    return agg
+
+
+@pytest.mark.parametrize("mode", ["bitexact", "crossarch", "downstream"])
+def test_verdict_nonfinite_always_fails(mode: str) -> None:
+    from compare_datasets import verdict
+
+    aggs = {"state_emb": _agg_with(has_nonfinite=True, n_nonfinite=1)}
+    assert verdict(mode, aggs, _ns()), f"{mode} 下 NaN 未判死"
+
+
+# ── pos_emb 必须参与判定（审查前它在 crossarch/downstream 下只被打印）──────────
+@pytest.mark.parametrize("mode", ["bitexact", "crossarch", "downstream"])
+def test_verdict_pos_emb_is_zero_tolerance(mode: str) -> None:
+    from compare_datasets import verdict
+
+    bad = {"pos_emb_8x8": _agg_with(bitwise_equal=False)}
+    good = {"pos_emb_8x8": _agg_with(bitwise_equal=True)}
+    assert verdict(mode, bad, _ns()), f"{mode} 下 pos_emb 不逐位相同却未判死"
+    assert verdict(mode, good, _ns()) == []
+
+
+def test_verdict_ds_pos_emb_is_zero_tolerance() -> None:
+    from compare_datasets import verdict
+
+    aggs = {"ds_pos_emb": _agg_with(bitwise_equal=False)}
+    assert verdict("downstream", aggs, _ns())
+
+
+def test_verdict_ds_frames_present_is_zero_tolerance() -> None:
+    from compare_datasets import verdict
+
+    aggs = {"ds_frames_present": _agg_with(bitwise_equal=False)}
+    fails = verdict("downstream", aggs, _ns())
+    assert any("选帧目标文件" in f for f in fails), fails
+
+
+def test_verdict_equiv_thresholds_still_fire() -> None:
+    """判据重构不能把原有的三条等价阈值弄丢。"""
+    from compare_datasets import verdict
+
+    assert verdict("crossarch", {"image_emb_8x8": _agg_with(min_cosine=0.9)}, _ns())
+    assert verdict("crossarch", {"image_emb_8x8": _agg_with(min_p5_cosine=0.99)}, _ns())
+    assert verdict("crossarch", {"image_emb_8x8": _agg_with(max_err_floor_rel=0.9)}, _ns())
+    # bitexact 模式下 image_emb 走零容差、不走阈值
+    assert verdict("bitexact", {"image_emb_8x8": _agg_with(min_cosine=0.9)}, _ns()) == []
+
+
+def test_deprecated_thresholds_are_rejected() -> None:
+    """删掉的废弃参数必须明确报错，不能静默忽略（使用者会以为阈值生效）。"""
+    import subprocess
+
+    r = subprocess.run(
+        [sys.executable, str(_HERE / "compare_datasets.py"), "--mode", "bitexact",
+         "--manifest", "x", "--a_lib", "x", "--b_lib", "x", "--max_ulp", "1"],
+        capture_output=True, text=True, timeout=120,
+    )
+    assert r.returncode != 0
+    assert "unrecognized arguments" in r.stderr
+
+
+# ── pkl / kept_indices 的聚合必须如实（审查前恒填 True）────────────────────────
+def test_compare_episode_pkl_reports_false(tmp_path: pathlib.Path) -> None:
+    from compare_datasets import Agg, compare_episode
+
+    ep = {"h5_file": "a.h5", "raw_ep_idx": 0, "num_timesteps": 1, "exec_samples": 1}
+    for side, arr in (("A", np.zeros(3, dtype=np.float32)), ("B", np.ones(3, dtype=np.float32))):
+        d = tmp_path / side / "features" / "episode_0"
+        d.mkdir(parents=True)
+        (d / "kept_indices.json").write_text("[[0,0,1]]")
+        np.save(d / "token_emb_0.npy", np.array({"state_emb": np.zeros(2, dtype=np.float32)}))
+        (tmp_path / side / "data").mkdir(parents=True)
+        (tmp_path / side / "data" / "0.pkl").write_bytes(
+            pickle.dumps({"epis_idx": 0, "actions": arr}))
+
+    aggs = {"kept_indices": Agg(), "pkl": Agg()}
+    errs: list[str] = []
+    a = {"local_g": 0, "exec_offset": 0, "ep": ep}
+    compare_episode(str(tmp_path / "A"), str(tmp_path / "B"), a, dict(a), [0], aggs, errs)
+    assert errs, "pkl 数组不同却没报错"
+    assert aggs["pkl"].bitwise_equal is False, "pkl 聚合仍恒填 True"
+
+
+def test_compare_episode_kept_indices_reports_false(tmp_path: pathlib.Path) -> None:
+    from compare_datasets import Agg, compare_episode
+
+    ep = {"h5_file": "a.h5", "raw_ep_idx": 0, "num_timesteps": 1, "exec_samples": 1}
+    for side, kept in (("A", "[[0,0,1]]"), ("B", "[[0,0,2]]")):
+        d = tmp_path / side / "features" / "episode_0"
+        d.mkdir(parents=True)
+        (d / "kept_indices.json").write_text(kept)
+        np.save(d / "token_emb_0.npy", np.array({"state_emb": np.zeros(2, dtype=np.float32)}))
+        (tmp_path / side / "data").mkdir(parents=True)
+        (tmp_path / side / "data" / "0.pkl").write_bytes(pickle.dumps({"epis_idx": 0}))
+
+    aggs = {"kept_indices": Agg(), "pkl": Agg()}
+    errs: list[str] = []
+    a = {"local_g": 0, "exec_offset": 0, "ep": ep}
+    compare_episode(str(tmp_path / "A"), str(tmp_path / "B"), a, dict(a), [0], aggs, errs)
+    # 审查前失败时根本不 add（n==0），verdict 的 `n == 0: continue` 会整项跳过
+    assert aggs["kept_indices"].n == 1
+    assert aggs["kept_indices"].bitwise_equal is False

@@ -27,6 +27,11 @@
 
 episode 一律按**物理身份 (h5_file, raw_ep_idx)** 匹配，绝不按目录名——两个库的
 `features/episode_{g}/` 编号体系不同（对照库只到 11 或 39，集群库是 0–1599）。
+
+报告里 `errors` 与 `fails` 对同一失败**双报是刻意的**，因为两者的截断行为不同：
+  · `errors` 是逐条明细，供人定位，**有上限**（累计 >100 条即提前中止，报告只留前 100 条）；
+  · `fails`  是聚合判据，供机器判死与跨次回归对比，条数恒定、**不会被截断**。
+只留明细会在错误多时丢失判据，只留聚合则定位不到具体是哪个 episode。
 """
 
 from __future__ import annotations
@@ -158,9 +163,14 @@ def grid_metrics(a: np.ndarray, b: np.ndarray) -> dict:
     """
     af, bf = a.astype(np.float64), b.astype(np.float64)
     d = np.abs(af - bf)
-    out = {"err_floor_rel": 0.0, "int_ulp_frac": 1.0, "mean_abs": 0.0, "nonzero_frac": 1.0}
+    out = {"err_floor_rel": 0.0, "int_ulp_frac": 1.0, "mean_abs": 0.0, "nonzero_frac": 1.0,
+           "has_nonfinite": False}
     if not af.size:
         return out
+    # NaN/Inf 单独走布尔通道：下面全部用 d.mean()，任一元素为 NaN 就让 err_floor_rel
+    # 整体变 NaN，而 NaN 与阈值的任何比较恒为 False —— 判据会静默失效。
+    # 转 float64 后再 isfinite，避开 ml_dtypes 的 bf16 ufunc 支持问题（转换本来就要做）。
+    out["has_nonfinite"] = bool(not (np.isfinite(af).all() and np.isfinite(bf).all()))
     out["mean_abs"] = float(d.mean())
     mag = np.abs(af)
     nzmag = mag[mag > 1e-30]
@@ -184,6 +194,13 @@ def metrics(a: np.ndarray, b: np.ndarray) -> dict:
     ⚠ `max_ulp` 仍计算并输出，但**不再作为判据**：它用单调整数映射度量距离，
     在跨符号与含零（padding）时给出无意义的巨值——实测第三层报出过 9.27e18（≈2^63），
     那只是 padding 零与负值在该映射下的距离。判据改用 grid_metrics 的两项。
+
+    ⚠ NaN/Inf 必须走独立的 `has_nonfinite` 通道，不能指望任何数值判据兜住它：
+      · 余弦：含 NaN 的行范数是 NaN，`NaN > 0` 恒 False ⇒ 该行落进 `~ok` 分支，
+        `cos` 保留初值 1.0（被当成完美一致），min/p5 余弦都不会变小；
+      · 误差地板：d.mean() 变 NaN，而 NaN 与阈值比较恒 False；
+      · 连 `bitwise_equal` 都会**假通过** —— 两侧产出同一个 NaN 位模式时 ra==rb 全 True。
+    也就是说 GPU 真出数值故障时，三道判据会同时失明。
     """
     ra, rb = _raw_bits(a), _raw_bits(b)
     same_bits = float(np.mean(ra == rb)) if ra.size else 1.0
@@ -194,8 +211,13 @@ def metrics(a: np.ndarray, b: np.ndarray) -> dict:
         ulp = -1
     af = a.astype(np.float64).reshape(-1, a.shape[-1]) if a.ndim >= 2 else a.astype(np.float64).reshape(1, -1)
     bf = b.astype(np.float64).reshape(af.shape)
+    finite_row = (np.isfinite(af) & np.isfinite(bf)).all(axis=-1)
+    has_nonfinite = bool(not finite_row.all()) if finite_row.size else False
     na, nb = np.linalg.norm(af, axis=-1), np.linalg.norm(bf, axis=-1)
-    ok = (na > 0) & (nb > 0)
+    # 掩码里显式带上 finite_row，把「零范数 padding」与「NaN 污染」分成两回事：
+    # 前者保留 cos=1.0 是对的（补零行本就该视为一致），后者的 1.0 只是占位，
+    # 真正的判定由 has_nonfinite 承担（见 verdict）。
+    ok = finite_row & (na > 0) & (nb > 0)
     cos = np.ones(af.shape[0])
     if ok.any():
         cos[ok] = np.sum(af[ok] * bf[ok], axis=-1) / (na[ok] * nb[ok])
@@ -207,6 +229,9 @@ def metrics(a: np.ndarray, b: np.ndarray) -> dict:
         "max_abs_diff": float(np.max(np.abs(af - bf))) if af.size else 0.0,
         "p5_cosine": float(np.quantile(cos, 0.05)) if cos.size else 1.0,
         **grid_metrics(a, b),
+        # 必须写在 **grid_metrics 之后：后写的键覆盖先展开的键，
+        # 两者本应一致，这样写能保证行级判定与标量标志永不打架。
+        "has_nonfinite": has_nonfinite,
     }
 
 
@@ -223,9 +248,22 @@ class Agg:
         self.max_err_floor_rel = 0.0
         self.min_int_ulp_frac = 1.0
         self.max_abs_diff = 0.0
+        self.has_nonfinite = False
+        self.n_nonfinite = 0
 
     def add(self, m: dict) -> None:
         self.n += 1
+        if m.get("has_nonfinite", False):
+            self.has_nonfinite = True
+            self.n_nonfinite += 1
+            # 非有限项一律**不折叠**进下面任何字段，三个理由：
+            #   · Python 内建 min/max 对 NaN 的结果取决于入参顺序
+            #     （max(0.0, nan)==0.0 而 max(nan, 0.0)==nan），会把污染静默吞掉；
+            #   · NaN 落进 report 会让 json.dumps 写出裸 NaN token，不是合法 JSON，
+            #     谁用 jq 读这份报告都会直接炸；
+            #   · bitwise_equal 对同位 NaN 是假通过，折叠进来只会污染这个字段。
+            # 数值字段的语义因此固定为「仅在有限项上的最坏值」，判定走布尔通道。
+            return
         self.bitwise_equal &= m["bitwise_equal"]
         self.min_same_bit_frac = min(self.min_same_bit_frac, m["same_bit_frac"])
         self.max_ulp = max(self.max_ulp, m["max_ulp"])
@@ -246,6 +284,9 @@ class Agg:
             "err_floor_rel": round(self.max_err_floor_rel, 5),
             "int_ulp_frac": round(self.min_int_ulp_frac, 4),
             "max_abs_diff": self.max_abs_diff,
+            # 上面的数值都只统计有限项；这两个字段才是 NaN/Inf 的唯一去处
+            "has_nonfinite": self.has_nonfinite,
+            "nonfinite_items": self.n_nonfinite,
         }
 
 
@@ -266,12 +307,15 @@ def compare_episode(a_lib: str, b_lib: str, a: dict, b: dict, steps: list[int],
 
     ka = pathlib.Path(a_lib, "features", f"episode_{ga}", "kept_indices.json")
     kb = pathlib.Path(b_lib, "features", f"episode_{gb}", "kept_indices.json")
-    if ka.read_bytes() != kb.read_bytes():
+    # 无论成败都 add 真实结果：只在成功时 add 会让失败的 episode 不进聚合（n 不增），
+    # verdict 里 `agg.n == 0: continue` 就把整项判据跳过了。
+    kept_same = ka.read_bytes() == kb.read_bytes()
+    if not kept_same:
         errs.append(f"{tag}: kept_indices.json 不逐位相同（它是纯 numpy 像素差算的，"
                     f"没碰 GPU，出现差异一定是 bug 不是硬件噪声）")
-    else:
-        aggs["kept_indices"].add({"bitwise_equal": True, "same_bit_frac": 1.0,
-                                  "max_ulp": 0, "min_cosine": 1.0, "max_abs_diff": 0.0})
+    aggs["kept_indices"].add({"bitwise_equal": kept_same,
+                              "same_bit_frac": 1.0 if kept_same else 0.0,
+                              "max_ulp": 0, "min_cosine": 1.0, "max_abs_diff": 0.0})
 
     for s in steps:
         fa = np.load(pathlib.Path(a_lib, "features", f"episode_{ga}", f"token_emb_{s}.npy"),
@@ -296,8 +340,11 @@ def compare_episode(a_lib: str, b_lib: str, a: dict, b: dict, steps: list[int],
         pa = pathlib.Path(a_lib, "data", f"{a['exec_offset'] + j}.pkl")
         pb = pathlib.Path(b_lib, "data", f"{b['exec_offset'] + j}.pkl")
         da, db = pickle.loads(pa.read_bytes()), pickle.loads(pb.read_bytes())
+        pkl_ok = True
         if set(da) != set(db):
             errs.append(f"{tag} exec{j}: pkl key 集合不同")
+            aggs["pkl"].add({"bitwise_equal": False, "same_bit_frac": 0.0,
+                             "max_ulp": 0, "min_cosine": 1.0, "max_abs_diff": 0.0})
             continue
         for k in sorted(da):
             va, vb = da[k], db[k]
@@ -309,16 +356,20 @@ def compare_episode(a_lib: str, b_lib: str, a: dict, b: dict, steps: list[int],
                 # 正是拿它去找 features/episode_{epis_idx}/，标错了训练就读错 episode。
                 if int(np.asarray(va).reshape(-1)[0]) != ga:
                     errs.append(f"{tag} exec{j}: A 库 epis_idx={va} ≠ 其目录号 {ga}")
+                    pkl_ok = False
                 if int(np.asarray(vb).reshape(-1)[0]) != gb:
                     errs.append(f"{tag} exec{j}: B 库 epis_idx={vb} ≠ 其目录号 {gb}")
+                    pkl_ok = False
                 continue
             if isinstance(va, np.ndarray):
                 if not np.array_equal(va, vb):
                     errs.append(f"{tag} exec{j} {k}: pkl 数组不逐位相同（直接来自 H5，"
                                 f"不该有任何差异）")
+                    pkl_ok = False
             elif va != vb:
                 errs.append(f"{tag} exec{j} {k}: pkl 标量/字符串不同: {va!r} vs {vb!r}")
-        aggs["pkl"].add({"bitwise_equal": True, "same_bit_frac": 1.0,
+                pkl_ok = False
+        aggs["pkl"].add({"bitwise_equal": pkl_ok, "same_bit_frac": 1.0 if pkl_ok else 0.0,
                          "max_ulp": 0, "min_cosine": 1.0, "max_abs_diff": 0.0})
 
 
@@ -347,18 +398,28 @@ def compare_downstream(a_lib: str, b_lib: str, a: dict, b: dict, steps: list[int
     tag = f"{a['ep']['h5_file']}#{a['ep']['raw_ep_idx']}"
     for s in steps:
         # 选帧索引只依赖 (step_idx, budget, token_per_image)，与库无关——这是**设计事实**，
-        # 不是需要对拍的假设。真正要验的是：两个库各自 gather 完之后，打包出来的 mask
-        # 与 state_emb 是否逐位相同（任一库缺帧或错位都会在这里暴露）。
+        # 不是需要对拍的假设：get_frame_sampling_indices 是纯函数，两个库喂的是同一组
+        # 入参、共用这**一次**计算。曾经这里挂过一个 ds_indices 聚合项、恒填
+        # bitwise_equal=True，那是装饰性的假对拍（改成「各算一次再比」只会更糟：
+        # 比的是同一个纯函数对同一组入参是否给出同一结果，测的是 numpy 不是数据集）。
+        # 已删除，换成下面 ds_frames_present 这项真检查：两个库各自的帧文件是否都在。
         idx = buf.get_frame_sampling_indices(s, cfg["budget"], cfg["token_per_image"])
-        aggs.setdefault("ds_indices", Agg()).add(
-            {"bitwise_equal": True, "same_bit_frac": 1.0, "max_ulp": 0,
-             "min_cosine": 1.0, "max_abs_diff": 0.0})
+        frames_ok = True
         for lib, ent in ((a_lib, a), (b_lib, b)):
             missing = [i for i in idx
                        if not pathlib.Path(lib, "features", f"episode_{ent['local_g']}",
                                            f"token_emb_{i}.npy").is_file()]
             if missing:
                 errs.append(f"{tag} step{s}: {lib} 缺帧 {missing[:5]}（选帧索引 {list(idx)[:8]}…）")
+                frames_ok = False
+        aggs.setdefault("ds_frames_present", Agg()).add(
+            {"bitwise_equal": frames_ok, "same_bit_frac": 1.0 if frames_ok else 0.0,
+             "max_ulp": 0, "min_cosine": 1.0, "max_abs_diff": 0.0})
+        if not frames_ok:
+            # 必须 continue：不跳过的话下面 prepare_frame_sampling → gather 会 np.load
+            # 一个不存在的文件，FileNotFoundError 直接把进程带 traceback 打死——
+            # 上面那条自己写的缺帧诊断、以及此前累积的整份 report 全都看不到。
+            continue
         ra = buf.prepare_frame_sampling(s, cfg["budget"], cfg["token_per_image"],
                                         gather_fn_factory(a_lib, a["local_g"]))
         rb = buf.prepare_frame_sampling(s, cfg["budget"], cfg["token_per_image"],
@@ -379,16 +440,39 @@ def compare_downstream(a_lib: str, b_lib: str, a: dict, b: dict, steps: list[int
 # ── 判据 ──────────────────────────────────────────────────────────────────────
 def verdict(mode: str, aggs: dict[str, Agg], args: argparse.Namespace) -> list[str]:
     fails: list[str] = []
-    zero_tolerance = ["kept_indices", "pkl", *EXACT_KEYS]
+    # pos_emb_*（UNDECIDED_KEYS）无条件进零容差，不再只在 bitexact 下才判。
+    # 它是「image_emb 的跨架构差异成因是归约累加顺序、不是 bug」这条论证的**对照组**：
+    # 同走 GPU/JAX，但秩一外积无归约 ⇒ 跨架构逐位相同（2026-08-23 实测判入零容差桶）。
+    # 一旦它不再逐位相同，那条归因论证本身就塌了，必须判死让人重新审，
+    # 而不是像从前那样只把数值打印出来、任何差异都不影响 PASS/FAIL。
+    # 三种 mode 都安全：下面的循环对 `agg is None or agg.n == 0` 已有 continue。
+    zero_tolerance = ["kept_indices", "pkl", *EXACT_KEYS, *UNDECIDED_KEYS]
     if mode == "bitexact":
-        zero_tolerance += list(GPU_KEYS) + list(UNDECIDED_KEYS)
+        zero_tolerance += list(GPU_KEYS)
+    equiv_keys: tuple[str, ...] = () if mode == "bitexact" else (*GPU_KEYS, "ds_img_emb")
+    ds_zero: tuple[str, ...] = () if mode == "bitexact" else (
+        "ds_mask", "ds_pos_emb", "ds_frames_present")
+
+    # NaN/Inf 零容差通道：对所有参与判定的 key 一律判死。理由见 metrics 的 docstring——
+    # 余弦、误差地板、bitwise_equal 三道判据在 NaN 面前会同时失明，只能独立成判据。
+    for k in (*zero_tolerance, *equiv_keys, *ds_zero):
+        agg = aggs.get(k)
+        if agg is None or agg.n == 0:
+            continue
+        if agg.has_nonfinite:
+            fails.append(f"[零容差] {k} 的输入含 NaN/Inf（{agg.n_nonfinite}/{agg.n} 项）"
+                         f"——数值判据对非有限值一律失效，故独立判死")
+
     for k in zero_tolerance:
         agg = aggs.get(k)
         if agg is None or agg.n == 0:
             continue
         if not agg.bitwise_equal:
-            fails.append(f"[零容差] {k} 未逐位相同：max_ulp={agg.max_ulp} "
-                         f"same_bit_frac={agg.min_same_bit_frac:.6f}")
+            # kept_indices / pkl 的聚合是手工合成的（max_ulp 恒 0、same_bit_frac 恒 1），
+            # 直接打印这两个数会让失败读起来像「明明一样」，故按项数报并指向逐条明细。
+            fails.append(f"[零容差] {k} 未逐位相同（{agg.n} 项中至少 1 项不同："
+                         f"max_ulp={agg.max_ulp} same_bit_frac={agg.min_same_bit_frac:.6f}；"
+                         f"逐条明细见 report 的 errors）")
     if mode != "bitexact":
         # ⚠ 判据经 2026-08-23 实测后重新推导。原先的「位相同占比 ≥0.95 / 最大 ULP 差 ≤1」
         # 前提是「fp32 网络、差异只来自最后一层舍入」，而 SigLIP So400m 的 dtype_mm
@@ -398,7 +482,7 @@ def verdict(mode: str, aggs: dict[str, Agg], args: argparse.Namespace) -> list[s
         #   · 余弦   —— 方向是否保持（下游是线性投影，方向才是要紧的）
         #   · 误差地板 —— 平均绝对误差 ÷ 中位幅值处的 ULP。重排累加顺序造成的是
         #     「固定绝对地板」，该比值应是小常数；乘性错误会让它随分布漂移。
-        for k in (*GPU_KEYS, "ds_img_emb"):
+        for k in equiv_keys:
             agg = aggs.get(k)
             if agg is None or agg.n == 0:
                 continue
@@ -411,10 +495,15 @@ def verdict(mode: str, aggs: dict[str, Agg], args: argparse.Namespace) -> list[s
                 fails.append(f"[等价] {k} 误差地板 {agg.max_err_floor_rel:.4f} "
                              f"（平均绝对误差÷非零中位幅值）> 阈值 {args.max_err_floor_rel}"
                              f"——说明误差不只是逐层舍入累积")
-        for k in ("ds_mask",):
+        for k in ds_zero:
             agg = aggs.get(k)
             if agg and agg.n and not agg.bitwise_equal:
-                fails.append(f"[零容差] {k} 不逐位相同——数值差异改变了 dataloader 的离散决策")
+                if k == "ds_frames_present":
+                    fails.append(f"[零容差] {k}：有 step 的选帧目标文件在某一侧缺失"
+                                 f"（{agg.n} 项中至少 1 项，逐条明细见 report 的 errors）")
+                else:
+                    fails.append(f"[零容差] {k} 不逐位相同"
+                                 f"——数值差异改变了 dataloader 的离散决策")
     return fails
 
 
@@ -430,9 +519,9 @@ def main() -> None:
     ap.add_argument("--raw_dir", default="", help="恢复 listdir 顺序用")
     ap.add_argument("--subset", default="", help="限定比对的 episode（sample 产物）")
     ap.add_argument("--steps_per_episode", type=int, default=0, help="0=全部 step")
-    # 下面两个只影响输出、不再参与判定，保留是为了老命令行不报错
-    ap.add_argument("--min_same_bit_frac", type=float, default=0.0)
-    ap.add_argument("--max_ulp", type=int, default=2**62)
+    # ⚠ 曾有 --min_same_bit_frac / --max_ulp 两个参数，2026-08-23 判据重推后它们已不参与
+    # 判定，却仍被接受、还被 step2_verify.sh 一直传着——使用者以为设了阈值，其实完全无效。
+    # 2026-08-24 删除：传旧参数现在会被 argparse 明确报错，比静默忽略正确得多。
     # 现行三条判据（2026-08-23 实测后重新推导，括号内是当时的观测值与裕度）
     ap.add_argument("--min_cosine", type=float, default=1 - 1e-3)       # 观测 ≥0.99991，裕度 110×
     ap.add_argument("--min_p5_cosine", type=float, default=1 - 1e-4)    # 观测 ≥0.99998，裕度 4.8×
@@ -466,6 +555,8 @@ def main() -> None:
     cfg = {"budget": 512, "token_per_image": 16, "num_views": 1,
            "img_emb_dim": 2048, "pos_emb_dim": 768, "state_emb_dim": 8}
 
+    n = 0
+    aborted_early = False
     for n, key in enumerate(keys, 1):
         a, b = a_idx[key], b_idx[key]
         steps = pick_steps(a["ep"]["num_timesteps"], args.steps_per_episode)
@@ -479,6 +570,7 @@ def main() -> None:
             print(f"  ...{n}/{len(keys)} episode", flush=True)
         if len(errs) > 100:
             errs.append("错误过多，提前中止")
+            aborted_early = True
             break
 
     print("\n=== 逐 key 结果 ===")
@@ -492,12 +584,20 @@ def main() -> None:
         for k in UNDECIDED_KEYS:
             agg = aggs.get(k)
             if agg and agg.n:
-                bucket = "零容差桶（跨架构逐位相同）" if agg.bitwise_equal else \
-                         f"等价桶（max_ulp={agg.max_ulp}, min_cos={agg.min_cosine:.9f}）"
-                print(f"  {k}: {bucket}")
+                if agg.bitwise_equal:
+                    print(f"  {k}: 零容差桶（跨架构逐位相同）")
+                else:
+                    print(f"  {k}: ⚠ 跨架构不再逐位相同"
+                          f"（max_ulp={agg.max_ulp}, min_cos={agg.min_cosine:.9f}）"
+                          f"——已按零容差判 FAIL。")
+                    print(f"     这同时推翻了「{k} 无归约 ⇒ 跨架构逐位相同」这条对照论证，"
+                          f"image_emb 差异的归因需人工重新判定。")
 
-    report = {"mode": args.mode, "episodes": len(keys),
+    # episodes 记**真实比对数**而不是 len(keys)：提前中止时后者是假的。
+    report = {"mode": args.mode, "episodes": n, "episodes_selected": len(keys),
+              "aborted_early": aborted_early,
               "metrics": {k: v.as_dict() for k, v in aggs.items() if v.n},
+              "has_nonfinite_any": any(v.has_nonfinite for v in aggs.values() if v.n),
               "errors": errs[:100], "fails": fails,
               "thresholds": {"min_cosine": args.min_cosine,
                              "min_p5_cosine": args.min_p5_cosine,

@@ -56,8 +56,9 @@ echo "=== [3/5] 第二层：跨架构逐 key 分类对拍 ==="
     --manifest "${MANIFEST_PATH}" \
     --a_lib "${REF_CROSSARCH}" --b_lib "${GL_DATASET}" \
     --subset "${SUBSET_STRAT}" --steps_per_episode "${STEPS_PER_EP:-24}" \
-    --min_same_bit_frac "${MIN_SAME_BIT_FRAC:-0.95}" \
-    --max_ulp "${MAX_ULP:-1}" --min_cosine "${MIN_COSINE:-0.999}" \
+    --min_cosine "${MIN_COSINE:-0.999}" \
+    --min_p5_cosine "${MIN_P5_COSINE:-0.9999}" \
+    --max_err_floor_rel "${MAX_ERR_FLOOR_REL:-0.05}" \
     --report "${REPORT_DIR}/layer2_crossarch.json"
 
 echo "=== [4/5] 第三层：下游等价（prepare_frame_sampling 的选帧索引与 mask）==="
@@ -65,8 +66,9 @@ echo "=== [4/5] 第三层：下游等价（prepare_frame_sampling 的选帧索�
     --manifest "${MANIFEST_PATH}" \
     --a_lib "${REF_CROSSARCH}" --b_lib "${GL_DATASET}" \
     --subset "${SUBSET_STRAT}" \
-    --min_same_bit_frac "${MIN_SAME_BIT_FRAC:-0.95}" \
-    --max_ulp "${MAX_ULP:-1}" --min_cosine "${MIN_COSINE:-0.999}" \
+    --min_cosine "${MIN_COSINE:-0.999}" \
+    --min_p5_cosine "${MIN_P5_COSINE:-0.9999}" \
+    --max_err_floor_rel "${MAX_ERR_FLOOR_REL:-0.05}" \
     --report "${REPORT_DIR}/layer3_downstream.json"
 
 echo "=== [5/5] 全量库自洽复核 ==="
