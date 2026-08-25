@@ -1,6 +1,6 @@
-# 4 卡 batch 64 的 NFS 瓶颈判定——四实验汇总（2026-08-24）
+# 4 卡 batch 64 的 NFS 瓶颈判定——四实验汇总 + v2 修复验证（2026-08-24/25）
 
-**结论：NFS turbo 存储侧对 4×A40、全局 batch 64 的官方口径训练没有瓶颈——供给（398-628 MB/s）是需求（251 MB/s）的 1.6-2.5 倍。但端到端实测暴露了另一个真瓶颈：job 内 CPU 配比。官方口径 `num_workers=4` 配 8 CPU 时，dataloader worker 被 jax 主进程挤压，e2e 步时 6.93 s/step（epoch ≈ 11.9 h），比纯计算的 4.78 s/step（epoch ≈ 8.2 h）慢 45%。把 `--cpus-per-task` 提到 ≥12-16（或 worker 提到 8-16）即可释放，无需改代码。**
+**结论（经 v2 三档实测修订）：NFS turbo 存储侧对 4×A40、全局 batch 64 的官方口径训练没有瓶颈——供给（398-628 MB/s）是需求（251 MB/s）的 1.6-2.5 倍。端到端的真瓶颈之一是 job 内 CPU 配比：`--cpus-per-task` 8→16 后步时中位 6.93→5.30 s、epoch 11.9→9.1 h（v2 三档实测）。但 CPU/worker/RAM 侧修复到此为止：GPU util 均值仍只有 ~67-71%、约 1/3 墙钟耗在与 worker 数无关的整段长停顿上，epoch 没有回到 8.2-8.9 h 的预期区间——残余瓶颈不在启动参数层，见下方 v2 一节。**
 
 ## 判据链与四个实验
 
@@ -20,14 +20,37 @@ e2e 实测 6.93 s/step，期间 NFS 仅 122 MB/s           ← 实验 4（4×A40
 | 3 需求 | 58619547 | **4.778 s/step**（p10-p90 仅 0.015 s）→ 需求 251 MB/s；epoch 计算下限 **8.2 h** |
 | 4 e2e | 58627883 | **6.933 s/step**（p10 5.01 / p90 8.54）→ **epoch 11.9 h**；NFS 实际仅 122 MB/s；GPU util 均值仅 69-70%（约 1/3 采样 <100%、大量为 0%，空转段与慢步一一对应——「中位 100%」是假象） |
 
+## v2 修复验证：三档 16C 矩阵（2026-08-24/25，`scripts/bottleneck-bench-v2/`）
+
+三档均为 4×A40 / b64 / **16 CPU / 96G** / e2e 600 步，只变 `num_workers`（seed 210/211/212 互异防 page cache 跨 job 污染）；GPU 采样双通道（dense `nvidia-smi -lms 500` 主判读 + v1 同款 15s legacy 对照），判读按 AGENTS.md 第 16 条（均值/0% 占比/慢步分层，禁中位数）。
+
+| 档（job） | 步时中位 | util 均值 | 慢步(>8s)墙钟 | 慢步/非慢步 util | epoch | 终态 |
+|---|---|---|---|---|---|---|
+| v1 基线 8C/4w（58627883） | 6.933 s | 69.7% | 32.9% | 54%/79% | 11.89 h | 末步校验和 OOM(64G) |
+| w8c16（58638708） | **5.301 s** | 71.2% | 32.0% | 33%/**89%** | **9.09 h** | EXIT_CODE=0 |
+| w12c16（58638741） | 5.319 s | 70.6% | 36.4% | 32%/**93%** | 9.13 h | EXIT_CODE=0 |
+| w16c16（58638709） | 5.327 s | 67.1% | 35.0% | 24%/**90%** | 9.14 h | 末步校验和 OOM(96G)，训练/指标无损 |
+
+**v2 实测结论**：
+
+1. **16 CPU 解决了供给面**：非慢步时段 util 从 79% 升到 89-93%，步时中位从 6.933 压到 ~5.3 s（逼近 compute-only 下界 4.778 s）。
+2. **workers 8/12/16 曲线完全平坦**（步时差 <0.5%）：加 worker 无增益，只多耗内存——16w 档 96G 在末步参数校验和被 OOM-kill（12w 档 96G 恰好撑住）。
+3. **GPU 仍未吃满，且这不是 CPU/worker/RAM 能修的**：util 均值 ~67-71% 与基线几乎持平，约 1/3 墙钟耗在整段长停顿（慢步时段 util 24-33%、p90 步时 9-16.6 s），停顿期间 NFS 实测掉到 106-123 MB/s（远低于供给上限）。三档、三个 job、两个节点（gl1521/gl1522）一致复现。
+4. **采样方法学**：dense−legacy 均值差仅 −0.5~−0.7pp——v1 的 15s 采样无系统偏差，此前误判纯粹出在「中位数」统计口径（附录中位仍是 100%）。
+
+**残余长停顿的下一步排查方向**（超出「只动启动参数」范围，需另立一轮）：
+- 对齐停顿时间窗与 NFS 客户端延迟统计（mountstats 的 per-op RTT/queue），判定是 turbo 共享负载的延迟尖峰还是客户端行为；
+- dataloader 侧候选（需改代码，本轮明确未动）：`prefetch_factor`（现为 PyTorch 默认 2，仓库无配置入口）加深预取缓冲以跨越停顿、`pin_memory` 等；
+- 检查停顿是否与样本重量分布（每样本 1-32 个 token_emb 文件）或 shuffle 访问模式相关。
+
 ## 归因与建议
 
 1. **e2e 慢 45% 的机制**：8 CPU 里 jax 主进程（驱动 4 卡）与 4 个 spawn worker 抢核。standalone 同 4 worker 配足 CPU 能供 27-36 样本/s，e2e 里连在线需求 13.4 样本/s 都供不稳（p10 步 ≈ 纯计算步时、p90 步在等数据）。
-2. **正式训练建议**（启动参数级，无代码改动）：`--cpus-per-task=16`、`num_workers=8`（供给侧已证明 NFS 余量充足、worker CPU 超订无损）；预期步时压回 ~4.8-5.2 s、epoch ~8.2-8.9 h、80k 步全程 ~4.4-4.8 天。
+2. **正式训练建议**（经 v2 实测修订，启动参数级、无代码改动）：`--cpus-per-task=16`、`num_workers=8`、`--mem=96G`（w8c16 实测最优且校验和不 OOM；workers >8 无增益只多耗内存）。**实测口径**：步时中位 ~5.30 s、epoch ~9.1 h、80k 步全程 ~4.9 天——原「压回 8.2-8.9 h」的预期未全实现，缺口即上节的残余长停顿。
 3. **数据形态注记**：每样本 = 1 pkl（395 KB）+ ≤32 个 token_emb（603 KB），公式上界 18.7 MB/样本；同 episode 相邻样本文件高度重叠，客户端缓存实际吃掉 6-27% 的重复读——真实需求比公式还低，判定更稳。
 4. **内存教训**：4 卡 run 若触发参数校验和（device_get ~28 GB），host 内存须 ≥96G——实验 4 的 64G 在末步校验和被 OOM-kill（训练数据无损）；吞吐类 run 应干脆不开校验和。
 5. **历史锚点修正**：本机到 turbo 的 132/320 MB/s 不能外推集群——GL 节点实测 4-6 倍于此。
 
 ## 溯源
 
-各实验的起跑/结果/记录归档：`docs/training-doc/{v1-gl-dlbench, v1-coldcache-b8, v1-computeonly-b64, v1-e2e-b64}/`；脚本与判据说明：`scripts/bottleneck-bench/README.md`；工作副本记录：`v1-store/bench/bottleneck/`。
+各实验的起跑/结果/记录归档：`docs/training-doc/{v1-gl-dlbench, v1-coldcache-b8, v1-computeonly-b64, v1-e2e-b64, v1-e2efix-w8c16, v1-e2efix-w12c16, v1-e2efix-w16c16}/`；脚本与判据说明：`scripts/bottleneck-bench/README.md`（v1 四实验）与 `scripts/bottleneck-bench-v2/README.md`（v2 三档修复验证）；工作副本记录：`v1-store/bench/bottleneck/`。
