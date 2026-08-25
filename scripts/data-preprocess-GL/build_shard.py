@@ -7,9 +7,12 @@
               一并删掉），只 makedirs；
   `run`    ：改为按清单遍历本分片的 episode，并用清单预先算死的偏移量喂
               `_process_episode` 的三个计数器。
-`_process_episode` 本体**一行不动**——语义与串行 builder 同构是由构造方式保证的，
+`_process_episode` 的**计算逻辑原样继承**——语义与串行 builder 同构是由构造方式保证的，
 而不是靠事后对拍碰运气。原实现里现成的 `assert not os.path.exists(pkl_path)`
 顺带就是跨分片撞号的兜底断言。
+（唯一的例外是落盘方式：`kept_indices.json` 已从 `json.dump` 换成 `atomic_write_json`
+的原子写，写出的**字节与改前逐字节相同**，第一层 bitexact 已重跑验证。改动动因见
+`episode_is_complete` 的 docstring。）
 
 用法（集群）：
   python build_shard.py --manifest <清单> --raw_dir <H5目录> --out <输出库> \
@@ -61,14 +64,54 @@ class ShardProcessor(DatasetProcessor):
         for p in (self.dataset_path, self.feature_path, self.data_path, self.meta_path):
             os.makedirs(p, exist_ok=True)
 
+        # data/ 下 pkl id 的一次性快照，仅 --resume 的完整性判据用（见 _exec_ids_present）
+        self._exec_ids_cache: set[int] | None = None
+
+    def _exec_ids_present(self) -> set[int]:
+        """data/ 下已落盘的 pkl id 快照，整个分片只扫一次。
+
+        为什么可以缓存：各分片的 exec id 区间由清单的前缀和算死、彼此不相交，
+        我们只查自己名下尚未处理的 episode，别的分片并发写入不会让快照失效。
+        为什么不逐文件 os.path.isfile：一个 episode 平均约 247 个 pkl，
+        全量 1600 个 episode 是 39.5 万次 NFS LOOKUP，一次 scandir 是唯一可接受的写法。
+        """
+        if self._exec_ids_cache is None:
+            ids: set[int] = set()
+            with os.scandir(self.data_path) as it:
+                for e in it:
+                    if e.name.endswith(".pkl"):
+                        try:
+                            ids.add(int(e.name[:-4]))
+                        except ValueError:
+                            pass
+            self._exec_ids_cache = ids
+        return self._exec_ids_cache
+
     def episode_is_complete(self, ep: dict) -> bool:
-        """完整性判据：kept_indices.json 是 `_process_episode` 的最后一步写的，
-        它在 ⇒ 该 episode 的 feature 与 pkl 循环都已走完。再核一次 feature 数兜底。"""
+        """完整性判据三段：kept_indices.json 内容合法、feature 数对得上、pkl 区间齐全。
+
+        ⚠ 只判「kept_indices.json 存在」是不够的：它虽然是 `_process_episode` 的最后一步，
+        但 open(path, "w") 一调用文件就已经「存在」了。进程若在写它的过程中被杀
+        （walltime 耗尽被 SLURM 强杀正是续跑的触发场景），会留下空壳/半截 JSON，
+        而此时该 episode 的 token_emb 早已写全、计数判据必然满足——旧判据会把这个
+        坏 episode 当成完整、永久跳过。写入侧已改原子写（见 build_robomme_dataset.py 的
+        atomic_write_json），这里再做一次内容解析兜底旧产物与非原子写的历史残留。
+        """
         d = os.path.join(self.feature_path, f"episode_{ep['global_episode_idx']}")
-        if not os.path.isfile(os.path.join(d, "kept_indices.json")):
+        kept = os.path.join(d, "kept_indices.json")
+        if not os.path.isfile(kept):
+            return False
+        try:
+            json.loads(pathlib.Path(kept).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
             return False
         n = sum(1 for f in os.listdir(d) if f.startswith("token_emb_") and f.endswith(".npy"))
-        return n == ep["num_timesteps"]
+        if n != ep["num_timesteps"]:
+            return False
+        # pkl 区间与 purge_episode 的删除范围必须逐字一致，否则会出现「判不完整但清不干净」
+        start = ep["exec_sample_offset"]
+        want = set(range(start, start + ep["exec_samples"]))
+        return want <= self._exec_ids_present()
 
     def purge_episode(self, ep: dict) -> None:
         """清掉一个残缺 episode 的全部产物。必须做——`_process_episode` 里的

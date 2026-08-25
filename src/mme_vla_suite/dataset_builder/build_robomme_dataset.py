@@ -43,6 +43,25 @@ VIS_FPS_SAMPLED = 2
 VIS_FPS_TOKENDROP = 10
 
 
+def atomic_write_json(path: str, obj) -> None:
+    """原子落盘：先写同目录 .tmp，fsync 后 os.replace 改名。
+
+    `kept_indices.json` 不只是产物，还是「该 episode 已完整落盘」的判断锚点
+    （见 build_shard.py 的 episode_is_complete 与 finalize_checks.py 的完整性核验）。
+    非原子写会在进程被杀时留下空壳/半截文件，而 open(path, "w") 一调用就已经
+    让文件「存在」了——两处只看存在性的判据都会把它当成「写完了」。
+
+    ⚠ 必须用 json.dumps 的默认分隔符，禁止加 indent / ensure_ascii：
+    一致性比对是按**字节**比 kept_indices.json 的，改格式会让第一层 bitexact 直接失败。
+    """
+    tmp = f"{path}.tmp"
+    with open(tmp, "w") as f:
+        f.write(json.dumps(obj))
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
+
 def get_action_chunk(
     data: h5py.Group, idx: int, horizon: int = ACTION_CHUNK_HORIZON
 ) -> np.ndarray:
@@ -303,8 +322,8 @@ class DatasetProcessor:
             record_videos.append(np.concatenate([image, wrist_image], axis=1))
 
         kept_indices = mem_buffer.get_token_dropping_indices()
-        with open(os.path.join(episode_feature_dir, "kept_indices.json"), "w") as f:
-            json.dump(kept_indices, f)
+        # 原子写：它同时是「该 episode 已完整」的判断锚点，半截文件会被续跑误判为完整
+        atomic_write_json(os.path.join(episode_feature_dir, "kept_indices.json"), kept_indices)
 
         if self.visualize:
             keyframe_idxs = self._remove_redundant_keyframes(keyframe_idxs, exec_start_idx)

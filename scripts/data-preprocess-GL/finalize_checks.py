@@ -131,6 +131,16 @@ def check_completeness(manifest: dict, out_dir: str) -> tuple[list[str], dict]:
         names = set(os.listdir(d))
         if "kept_indices.json" not in names:
             errs.append(f"episode_{g} 缺 kept_indices.json")
+        else:
+            # 只判存在性会放过「空壳/半截 JSON」——它是被杀的进程留下的，
+            # 而此时 token_emb 早已写全、下面的计数判据必然通过。必须解析内容。
+            try:
+                json.loads((pathlib.Path(d) / "kept_indices.json").read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                errs.append(f"episode_{g} 的 kept_indices.json 不是合法 JSON（半截落盘？）: {exc}")
+        tmp_left = sorted(f for f in names if f.endswith(".tmp"))
+        if tmp_left:
+            errs.append(f"episode_{g} 残留原子写临时文件 {tmp_left}（说明写到一半被杀）")
         n = sum(1 for f in names if f.startswith("token_emb_") and f.endswith(".npy"))
         if n != ep["num_timesteps"]:
             errs.append(f"episode_{g} token_emb 数 {n} != 期望 {ep['num_timesteps']}")

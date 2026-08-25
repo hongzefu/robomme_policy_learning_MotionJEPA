@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ── 第一层：清零「分片」这个变量（本机，同机同架构，零容差）─────────────────────
 # 同一批 episode 跑两遍：
-#   参照系 = 仓库**未改动的** scripts/build_dataset.py --max_episodes 3
+#   参照系 = 仓库**计算逻辑未改动的** scripts/build_dataset.py --max_episodes 3
 #   被测   = 本目录的 build_shard.py --num_shards 4
 # 硬件变量为零 ⇒ 两份产物必须**逐字节相同**，没有任何容差。
 #
@@ -16,7 +16,9 @@
 #
 # ⚠ 已归档进 legacy/：第一层已 PASS（12 episode / 3,862 步逐字节相同，见
 #   docs/v1-gl-dataset-consistency-report.md 第 6.1 节）。只要 build_shard.py /
-#   scan_manifest.py 不再改动，结论持续有效；改动后须重跑本脚本重新取得资格。
+#   scan_manifest.py / src 下的 build_robomme_dataset.py 不再改动，结论持续有效；
+#   改动后须重跑本脚本重新取得资格。（参照系与被测共用 build_robomme_dataset.py 的
+#   `_process_episode`，所以它也在触发列表里。）
 #   清单生成一步已上移为 step0_setup_turbo.sh manifest。
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../paths.sh"
@@ -53,7 +55,7 @@ echo "=== [2/6] 抽 episode 子集 ==="
 "${PY}" "${V1_SCRIPT_DIR}/scan_manifest.py" sample \
     --manifest "${MANIFEST_PATH}" --out "${SUBSET_STRAT}" --mode strat --n "${STRAT_N}"
 
-echo "=== [3/6] 参照系：未改动的 build_dataset.py --max_episodes ${PREFIX_N} ==="
+echo "=== [3/6] 参照系：计算逻辑未改动的 build_dataset.py --max_episodes ${PREFIX_N} ==="
 # 原版 builder 在 __init__ 里 shutil.rmtree(输出目录)，所以这里先做一道路径护栏：
 # 只允许它指向 datasets/ 下的 ref-untouched，绝不可能误删别的东西。
 case "${REF_UNTOUCHED}" in
@@ -100,6 +102,6 @@ print(f"CALIBRATION steps={steps} bytes={size} per_step={per / 1024:.0f} KiB "
 print(f"CALIBRATION_BYTES_PER_STEP={int(per)}   # 提交时用: BYTES_PER_STEP={int(per)} bash step1_submit.sh")
 PYCAL
 
-echo "LAYER1_PASS  第一层通过：分片实现与未改动 builder 逐字节相同，"
+echo "LAYER1_PASS  第一层通过：分片实现与计算逻辑未改动的 builder 逐字节相同，"
 echo "             build_shard.py 已取得「本地真值」资格。"
 echo "下一步：bash ${V1_SCRIPT_DIR}/legacy/step_bench.sh   （CPU/mem 档位实测，已定案 2C/24G，仅需复测时跑）"
