@@ -45,6 +45,10 @@
 
 15. 为集群作业而在 turbo 上暂存的原始 H5 副本属于**临时暂存**：必须与本机原件逐文件 sha256 核对同源，并在全流程验收通过后删除；本机 `/data` 的原件永久保留。
 
+16. GPU 利用率的测量与判读必须防止「中位数假象」：结论必须以稳态窗口内的 **util 均值、0% 采样占比、慢步/非慢步分层均值** 为准，禁止以中位数作为标题结论；采样间隔必须显著小于步时——步时数秒量级时用 `nvidia-smi -lms 500` 流式密集采样（500ms 即 NVML 有效密度上限，`utilization.gpu` 本身是其约 1/6~1 秒内部周期的均值），需要与旧数据对照时可并行保留 15 秒 legacy 采样通道。性能优化的首要判据是「GPU 是否吃满」，不得凭单一统计量宣称无瓶颈（2026-08-24 v1-e2e-b64 中位 100% 掩盖了均值仅 69-70% 的实测教训）。
+
+17. 所有调试 / 基准 / 诊断 run 一律视作完整运行，同等适用第 12 条：从 clean HEAD 启动、在 `docs/training-doc/<run_name>/` 留档（launch.md、result.md、records/），不得以「只是调试」为由跳过留档。
+
 ## 项目 scope（未来工作，不代表当前实施授权）
 
 - 仓库总体目标：修改 MME-VLA 的 `perceptual-framesamp-context`，并在后续阶段接入 [MotionJEPA](https://github.com/hongzefu/MotionJEPA) motion token。
