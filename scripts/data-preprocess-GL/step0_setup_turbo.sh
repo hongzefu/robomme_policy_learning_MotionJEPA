@@ -38,6 +38,31 @@ do_venv() {
   echo "  解释器 -> $(readlink -f "${PY}")"
 }
 
+# 判断上一次的 sha256 清单能否复用。任一条不满足即 return 1 走全量重算。
+# 刻意放在 rsync 之后：本机原件真变了、rsync 真传了新字节时，第 ⑤ 条 size 比对会失配，
+# 自动触发重算——这是保留 rsync（只有 8 个文件、同步态秒级）的全部理由。
+_h5_manifests_reusable() {
+  local name want_size got_size
+  # ① 两份清单都在  ② 都能被 jq 正常解析（顺带挡住半截 JSON）
+  [[ -f "${INPUT_MANIFEST_PATH}" && -f "${INPUT_MANIFEST_LOCAL_PATH}" ]] || return 1
+  jq -e . "${INPUT_MANIFEST_PATH}"       >/dev/null 2>&1 || return 1
+  jq -e . "${INPUT_MANIFEST_LOCAL_PATH}" >/dev/null 2>&1 || return 1
+  # ③ 各自的 raw_dir 对得上，防止把给别的目录算的清单当成这次的
+  [[ "$(jq -r '.raw_dir' "${INPUT_MANIFEST_PATH}")"       == "${RAW_H5_TURBO}" ]] || return 1
+  [[ "$(jq -r '.raw_dir' "${INPUT_MANIFEST_LOCAL_PATH}")" == "${RAW_H5_LOCAL}" ]] || return 1
+  # ④ 两侧 files 字段一致（即上次已证同源）
+  diff <(jq -S '.files' "${INPUT_MANIFEST_LOCAL_PATH}") \
+       <(jq -S '.files' "${INPUT_MANIFEST_PATH}") >/dev/null 2>&1 || return 1
+  # ⑤ 四个 H5 的实际 size 与清单记录相符（4 次 stat，瞬时）
+  #    jq 取不到键会输出字符串 null，故用字符串比较，不能用 -eq（会报语法错并被 set -e 打死）
+  for name in "${EXPECTED_H5[@]}"; do
+    want_size="$(jq -r ".files[\"${name}\"].size" "${INPUT_MANIFEST_PATH}")"
+    got_size="$(stat -c %s "${RAW_H5_TURBO}/${name}" 2>/dev/null || echo missing)"
+    [[ "${want_size}" == "${got_size}" ]] || return 1
+  done
+  return 0
+}
+
 do_h5() {
   echo "=== [H5] 暂存到 turbo 并两侧 sha256 核对 ==="
   v1_validate_raw_h5 "${RAW_H5_LOCAL}"
@@ -45,11 +70,22 @@ do_h5() {
   rsync -a --info=stats2 "${RAW_H5_LOCAL}/" "${RAW_H5_TURBO}/"
   v1_validate_raw_h5 "${RAW_H5_TURBO}"
 
-  local local_manifest="${V1_STORE}/input_manifest_local.json"
+  # 复用判据（本函数此前是全脚本唯一没有跳过分支的一步，与「幂等、复跑分钟级」
+  # 的自我声称矛盾：每跑一次就重读 321 GB 白算约 40 分钟 sha256）。
+  # 注意必须写成 `if _h5_manifests_reusable; then`——if 条件位置豁免 set -e，
+  # 函数里的 return 1 才不会把脚本打死。
+  if [[ "${FORCE_REHASH:-0}" != "1" ]] && _h5_manifests_reusable; then
+    echo "  ✓ 复用既有 sha256 清单（两份清单合法、files 一致、四个 H5 实际 size 与记录相符）"
+    echo "    ${INPUT_MANIFEST_PATH}"
+    echo "    ${INPUT_MANIFEST_LOCAL_PATH}"
+    echo "    强制重算： FORCE_REHASH=1 bash $0 h5   （turbo 侧全量 sha256 约 40 分钟）"
+    return 0
+  fi
+
   # 两侧并行算：本机 NVMe 约 4 分钟、turbo NFS 读 321 GB 约 40 分钟，串行是纯浪费。
   echo "  并行计算两侧 sha256（本机约 4 分钟 / turbo 约 40 分钟）..."
   "${PY}" "${V1_SCRIPT_DIR}/finalize_checks.py" hash-inputs \
-      --raw_dir "${RAW_H5_LOCAL}" --out "${local_manifest}" \
+      --raw_dir "${RAW_H5_LOCAL}" --out "${INPUT_MANIFEST_LOCAL_PATH}" \
       > "${LOGS_DIR}/hash_local.log" 2>&1 &
   local pid_local=$!
   "${PY}" "${V1_SCRIPT_DIR}/finalize_checks.py" hash-inputs \
@@ -60,7 +96,8 @@ do_h5() {
   wait "${pid_turbo}" || { echo "错误: turbo sha256 计算失败, 见 ${LOGS_DIR}/hash_turbo.log" >&2; exit 1; }
 
   # 只比 files 字段：raw_dir 本来就不同，比它必然失败
-  if ! diff <(jq -S '.files' "${local_manifest}") <(jq -S '.files' "${INPUT_MANIFEST_PATH}"); then
+  if ! diff <(jq -S '.files' "${INPUT_MANIFEST_LOCAL_PATH}") \
+            <(jq -S '.files' "${INPUT_MANIFEST_PATH}"); then
     echo "错误: turbo H5 副本与本机原件不同源——一致性验证的地基塌了，拒绝继续" >&2
     exit 1
   fi

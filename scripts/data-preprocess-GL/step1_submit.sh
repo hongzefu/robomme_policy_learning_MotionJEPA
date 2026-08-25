@@ -116,16 +116,26 @@ else
 fi
 
 # ⑧ 配额：8×档位必须装得下 chaijy2 的剩余 CPU / MEM
+# ⚠ 退出码必须「先捕获再判」。原写法末尾一个 `|| true` 兼了两件事：
+#   ① 不让 set -euo pipefail 把脚本打死；② 查询失败时静默跳过该项。
+#   ② 是 fail-open —— ControlMaster 掉线或 sacctmgr 抽风时，第 ⑧ 项悄悄变成「通过」，
+#   配额真不够也照样提交 8 个 GPU job 去挤爆组内共享额度。拆开：仍不打死脚本，但判 FAIL。
+QUOTA=""; QUOTA_RC=0
 QUOTA="$(uv run --no-project --with pexpect python "${V1_SCRIPT_DIR}/gl_submit.py" \
   "sacctmgr -nP show assoc account=chaijy2 format=GrpTRES 2>/dev/null | grep -m1 . ; \
-   echo ---; squeue -A chaijy2 -t RUNNING -h -O 'tres-alloc:300'" 2>/dev/null || true)"
+   echo ---; squeue -A chaijy2 -t RUNNING -h -O 'tres-alloc:300'" 2>/dev/null)" || QUOTA_RC=$?
 NEED_CPU=$((NUM_SHARDS * TIER_CPUS)); NEED_MEM=$((NUM_SHARDS * TIER_MEM_GB)); NEED_GPU="${NUM_SHARDS}"
 echo "  · 本次需求：GPU ${NEED_GPU} / CPU ${NEED_CPU} / MEM ${NEED_MEM}G"
-if [[ -n "${QUOTA}" ]]; then
+if [[ "${QUOTA_RC}" -eq 0 && -n "${QUOTA}" ]]; then
   "${PY}" "${V1_SCRIPT_DIR}/check_quota.py" --quota_text "${QUOTA}" \
       --need_gpu "${NEED_GPU}" --need_cpu "${NEED_CPU}" --need_mem_gb "${NEED_MEM}" || FAIL=1
+elif [[ "${ALLOW_QUOTA_SKIP:-}" == "yes" ]]; then
+  echo "  ⚠ 配额查询失败（rc=${QUOTA_RC}），已按 ALLOW_QUOTA_SKIP=yes 显式豁免——"
+  echo "    提交后必须自行用 skill greatlakes-usage 复核，本项不构成绿灯"
 else
-  echo "  · 配额查询失败，跳过该项（提交后请自行用 skill greatlakes-usage 复核）"
+  echo "  ✗ 配额查询失败（rc=${QUOTA_RC}）——集群不可达或 ControlMaster 掉了。"
+  echo "    确需带病提交： ALLOW_QUOTA_SKIP=yes CONFIRM_FULL=yes ... bash $0"
+  FAIL=1
 fi
 
 # ⑨ 审批闸门
@@ -142,20 +152,60 @@ EXPORTS="ALL,NUM_SHARDS=${NUM_SHARDS},RAW_DIR=${RAW_H5_TURBO},OUT=${OUT}"
 EXPORTS="${EXPORTS},MANIFEST=${MANIFEST_PATH},INPUT_MANIFEST=${INPUT_MANIFEST_PATH}"
 EXPORTS="${EXPORTS},SPOT_CHECK=${SPOT_CHECK},REQUIRE_EMPTY=${REQUIRE_EMPTY}"
 
+# ⚠ 提交结果必须「先整份捕获、再单独解析」。原写法把提交与解析写成一条管道
+#   `AID="$(... | grep -Eo '^[0-9]+$' | tail -1)"`：grep 无匹配即退出码 1，pipefail 让
+#   整条管道非零，命令替换赋值随之失败，set -e 当场杀掉脚本——紧跟其后那句自己写的
+#   `✗ 未取得 array jobid` 诊断**永远执行不到**。下面 `|| RC=$?` 是这条链路的关键。
 echo "[提交] array..."
-AID="$(uv run --no-project --with pexpect python "${V1_SCRIPT_DIR}/gl_submit.py" \
+ARRAY_OUT=""; ARRAY_RC=0
+ARRAY_OUT="$(uv run --no-project --with pexpect python "${V1_SCRIPT_DIR}/gl_submit.py" \
   "sbatch --parsable --array=0-$((NUM_SHARDS - 1)) --cpus-per-task=${TIER_CPUS} \
    --mem=${TIER_MEM_GB}G --time=${WALLTIME} --job-name=${JOB} --export=${EXPORTS} \
-   scripts/data-preprocess-GL/gl_build_dataset.sbatch" | grep -Eo '^[0-9]+$' | tail -1)"
-[[ -n "${AID}" ]] || { echo "✗ 未取得 array jobid"; exit 1; }
+   scripts/data-preprocess-GL/gl_build_dataset.sbatch" 2>&1)" || ARRAY_RC=$?
+# grep 整行锚定，混进来的 stderr（如 `[remote exit 5]`）不会被误认成 jobid
+AID="$(printf '%s\n' "${ARRAY_OUT}" | grep -Eo '^[0-9]+$' | tail -1 || true)"
+if [[ "${ARRAY_RC}" -ne 0 || -z "${AID}" ]]; then
+  echo "✗ array 提交失败（rc=${ARRAY_RC}），未取得 jobid。"
+  echo "  **本次没有提交任何作业**，排除故障后原样重跑本脚本即可。"
+  echo "  提交器原始输出："
+  printf '%s\n' "${ARRAY_OUT}" | sed 's/^/    /'
+  echo "SUBMITTED_NONE"
+  exit 1
+fi
 echo "  array jobid = ${AID}"
 
 echo "[提交] finalize（afterok:${AID}）..."
-FID="$(uv run --no-project --with pexpect python "${V1_SCRIPT_DIR}/gl_submit.py" \
+FIN_OUT=""; FIN_RC=0
+FIN_OUT="$(uv run --no-project --with pexpect python "${V1_SCRIPT_DIR}/gl_submit.py" \
   "sbatch --parsable --dependency=afterok:${AID} --time=${FTIME} \
    --job-name=${JOB}-final --export=${EXPORTS} \
-   scripts/data-preprocess-GL/gl_finalize.sbatch" | grep -Eo '^[0-9]+$' | tail -1)"
-[[ -n "${FID}" ]] || { echo "✗ 未取得 finalize jobid"; exit 1; }
+   scripts/data-preprocess-GL/gl_finalize.sbatch" 2>&1)" || FIN_RC=$?
+FID="$(printf '%s\n' "${FIN_OUT}" | grep -Eo '^[0-9]+$' | tail -1 || true)"
+if [[ "${FIN_RC}" -ne 0 || -z "${FID}" ]]; then
+  # 这是真正危险的半途状态：8 个 GPU job 已经在跑，却没有收尾守卫绑在后面。
+  # 重跑本脚本会二次提交 array（且第 ③ 项输出洁净检查会拦住你）。必须手工补交。
+  cat <<EOF
+✗ finalize 提交失败（rc=${FIN_RC}），但 array ${AID} **已经提交、可能正在跑**。
+  这是半途状态，重跑本脚本会二次提交 array。正确做法是手工补交 finalize：
+
+  ① 先确认 array 状态：
+     uv run --no-project --with pexpect python ${V1_SCRIPT_DIR}/gl_submit.py \\
+       "sacct -j ${AID} --format=JobID,State,Elapsed,ExitCode -X"
+  ② 补交 finalize（即 README「续跑与故障处理」三步的第三步）：
+     uv run --no-project --with pexpect python ${V1_SCRIPT_DIR}/gl_submit.py \\
+       "sbatch --parsable --dependency=afterok:${AID} --time=${FTIME} \\
+        --job-name=${JOB}-final --export=${EXPORTS} \\
+        scripts/data-preprocess-GL/gl_finalize.sbatch"
+  ③ 若决定不补交，必须先取消 array，避免留下一份从未过收尾守卫
+     （完整性 / stats / provenance / 同架构零容差抽检）的库：
+     uv run --no-project --with pexpect python ${V1_SCRIPT_DIR}/gl_submit.py "scancel ${AID}"
+
+  提交器原始输出：
+EOF
+  printf '%s\n' "${FIN_OUT}" | sed 's/^/    /'
+  echo "SUBMITTED_PARTIAL array=${AID} finalize=NONE"
+  exit 1
+fi
 echo "  finalize jobid = ${FID}"
 
 cat <<EOF

@@ -51,9 +51,13 @@ def main() -> None:
     limits, used = parse(args.quota_text)
     need = {"gres/gpu": args.need_gpu, "cpu": args.need_cpu, "mem": args.need_mem_gb}
     ok = True
+    unparsed: list[str] = []
     for key, label in _DIMS:
         if key not in limits:
-            print(f"  · {label} 配额未解析出，跳过该维校验")
+            # 解析不出配额与「查询失败」是同一类故障，不再默认放行：pre-flight 的
+            # 全部价值就是拦住「8 个 job 排队几小时后集体炸」。确需带病提交，
+            # 走 step1_submit.sh 的 ALLOW_QUOTA_SKIP=yes；本脚本自身不留后门。
+            unparsed.append(label)
             continue
         left = limits[key] - used[key]
         mark = "✓" if left >= need[key] else "✗"
@@ -61,6 +65,10 @@ def main() -> None:
             ok = False
         print(f"  {mark} {label}: 配额 {limits[key]:.0f} 已用 {used[key]:.0f} "
               f"余 {left:.0f}，本次需 {need[key]}（占配额 {need[key] / limits[key]:.0%}）")
+    if unparsed:
+        print(f"  ✗ 以下维度未能从集群输出解析出配额上限：{unparsed}"
+              f"——与「查询失败」同一类故障，不再默认放行")
+        ok = False
     sys.exit(0 if ok else 1)
 
 

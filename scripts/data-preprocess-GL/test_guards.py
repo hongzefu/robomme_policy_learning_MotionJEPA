@@ -387,3 +387,31 @@ def test_aggregate_fingerprints_flags_unavailable() -> None:
              {"schema_version": 2, "fingerprint": _fp(gpu_device_kind="unavailable: no gpu")})]
     _, errs = aggregate_shard_fingerprints(docs)
     assert any("采集失败" in e for e in errs), errs
+
+
+# ── 配额判据：解析不出某维不能再默认放行 ──────────────────────────────────────
+def _run_check_quota(quota_text: str) -> "subprocess.CompletedProcess[str]":
+    import subprocess
+    return subprocess.run(
+        [sys.executable, str(_HERE / "check_quota.py"), "--quota_text", quota_text,
+         "--need_gpu", "8", "--need_cpu", "16", "--need_mem_gb", "192"],
+        capture_output=True, text=True, timeout=120,
+    )
+
+
+def test_check_quota_unparsed_dimension_fails() -> None:
+    """三维都解析不出时，旧实现会打「跳过该维校验」然后 exit 0（pre-flight 报 ✓）。"""
+    r = _run_check_quota("完全解析不出的内容\n---\n")
+    assert r.returncode != 0, r.stdout
+    assert "未能从集群输出解析出配额上限" in r.stdout
+
+
+def test_check_quota_sufficient_passes() -> None:
+    """余量充足时仍须通过——判据收紧不能把正常路径一起判死。"""
+    r = _run_check_quota("cpu=80,gres/gpu=20,mem=960G\n---\n")
+    assert r.returncode == 0, r.stdout
+
+
+def test_check_quota_insufficient_fails() -> None:
+    r = _run_check_quota("cpu=80,gres/gpu=4,mem=960G\n---\n")
+    assert r.returncode != 0, r.stdout

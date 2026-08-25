@@ -47,7 +47,9 @@ readonly REF_SHARD="${DATASETS_DIR}/ref-shard"            # 分片实现，第�
 readonly REF_CROSSARCH="${DATASETS_DIR}/ref-crossarch"    # 本地真值，第二/三层跨架构对拍
 
 readonly MANIFEST_PATH="${V1_STORE}/episode_manifest.json"
+# 两份 H5 sha256 清单：turbo 副本侧（集群消费的那份）与本机原件侧（只用来 diff 证同源）
 readonly INPUT_MANIFEST_PATH="${V1_STORE}/input_manifest.json"
+readonly INPUT_MANIFEST_LOCAL_PATH="${V1_STORE}/input_manifest_local.json"
 
 # ── 原始 H5 ────────────────────────────────────────────────────────────────────
 readonly RAW_H5_LOCAL="/data/hongzefu/robomme_data_h5_v2_4env400ep"   # 本机原件，永久保留
