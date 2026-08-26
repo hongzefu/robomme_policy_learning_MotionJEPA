@@ -64,6 +64,21 @@
     - **重锚**：用户在审计期间明确要求查看新改动时允许重锚（记 `AUDIT_BASE_2`，报告分段标明各自锚点）；除用户明确指令外不得自行重锚。
     - 附：本仓库禁止 `git clean -x` / `git clean -X`（会删除 `v1-store/` 下含 678 GB 数据集在内的全部不进 git 产物，且会破坏 worktree 管理状态）。
 
+20. **Codex 专属：`apply_patch` 的无管理员权限回退**（本条只对 Codex 生效，不适用于 Claude、其他 agent 或人工工作流）：
+    - **默认工具不变**：Codex 编辑文件仍必须优先使用 `apply_patch`。只有当 `apply_patch` 明确因 Bubblewrap / namespace 权限失败（例如输出含 `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted` 或同因的 `fs sandbox helper failed`），且当前用户没有管理员权限时，才允许启用本条回退。补丁语法错误、上下文不匹配、普通文件权限错误不属于本例外。
+    - **普通命令**：普通命令若受同一沙箱错误阻断，Codex 应优先使用产品提供的、经批准的 unsandboxed / full-access 执行；不得自行修改 sysctl、AppArmor、setuid、Linux capabilities 或其他宿主机安全配置。
+    - **受控补丁回退**：使用同一份 unified diff，严格按顺序执行：
+      ```bash
+      patch --dry-run --batch --fuzz=0 -p1 < change.patch
+      patch --batch --fuzz=0 -p1 < change.patch
+      git diff --check
+      ```
+      `change.patch` 只能作为临时补丁载体放在 `/tmp` 或通过 stdin 提供，不得作为仓库长期文件；应用后必须清理临时文件。
+    - **硬闸**：只有 dry-run 退出码为 0 才能应用正式 patch；dry-run 与正式应用必须消费完全相同的补丁字节，必须保持 `--fuzz=0`，禁止用 offset/fuzz 勉强套用。dry-run 失败即停止并报告用户，不得强制应用。
+    - **禁止整文件覆盖**：本例外只允许补丁式修改，禁止改用 `cat >`、`sed -i`、`perl -pi`、脚本重写或其他整文件覆盖方式规避 `apply_patch`。
+    - **应用后核对**：除 `git diff --check` 外，还必须运行 `git status --short`，并对本轮每个明确目标逐文件检查 `git diff -- <path>`；发现越界文件、`.orig` / `.rej`、非预期 hunk 或用户在途改动被带入时立即停止，不得暂存或提交。
+    - **授权边界不扩张**：本回退只替代失效的文件补丁传输机制，不授权扩大修改范围、绕过破坏性操作审批，也不改变第 11 条逐文件暂存和保护他人在途改动的要求。
+
 ## 项目 scope（未来工作，不代表当前实施授权）
 
 - 仓库总体目标：修改 MME-VLA 的 `perceptual-framesamp-context`，并在后续阶段接入 [MotionJEPA](https://github.com/hongzefu/MotionJEPA) motion token。
