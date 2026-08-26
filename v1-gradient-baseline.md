@@ -120,6 +120,36 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 
 后续（不在本计划）：dtype 修复本体自 commit V2.4 起（其 P3–P6，见该计划 T5）。
 
+## 八、G0 与正式训练入口默认配置的差距（有效域声明，2026-08-26 增补）
+
+正式训练入口是 `scripts/finetune_mme_vla_suite.sh` → `scripts/train.py`（配置真值源 `src/mme_vla_suite/training/config.py` 的 `TrainConfig(name="mme_vla_suite")`）。G0 走 bench 入口，两者差距逐项如下（脚本与配置实读核对，2026-08-26）：
+
+### 8.1 训练语义核心——完全相同（这是 G0 能当基线的根据）
+
+模型结构与 history 机制（同一 `HistoryPi0Config`：pi05、action_horizon=20、use_history）、lr schedule（CosineDecay warmup 10k / peak 5e-5 / decay 100k）、optimizer（AdamW + clip_gradient_norm=1.0）、EMA（0.999）、freeze_filter、norm stats、数据链路代码（`RoboMMEDataset` → transforms → collate）、初始权重（pi05_base，bench 显式传路径、finetune 走 `OPENPI_DATA_HOME` 默认，同一份文件）、seed（双方均 42：bench 显式传、finetune 走 TrainConfig 默认）、num_workers（均 4）、`XLA_PYTHON_CLIENT_MEM_FRACTION=0.95`——**逐项同值**。
+
+### 8.2 差异项（逐项列死，防止将来拿 G0 数字直接当 finetune 默认配置的参照）
+
+| 维度 | finetune 默认 | G0 | 影响 |
+|---|---|---|---|
+| 入口 | `scripts/train.py`（尾部双次 `main()`：先 tentative 后正式） | `bench_train_steps.py`（单次 main，`--num-train-steps` 截断） | 计算图定义同源；bench 以 monkeypatch 挂记录器，不改训练语义 |
+| history 变体 | 脚本文件默认 `MME_VLA_TYPE="perceptual-framesamp-modul"`（**非 context**，跑 v1 范围须手改） | `perceptual-framesamp-context.yaml` | **模型不同**——G0 只锚定 context 变体（v1 范围唯一支持） |
+| 硬件/并行 | 4 GPU（`CUDA_VISIBLE_DEVICES=0,1,2,3`、fsdp_devices=4；实践为 GL 4×A40） | 本机 2×RTX 6000 Ada、fsdp_devices=2 | 位级不可比（三条不可比之二） |
+| batch | 64 | 8（本机 2 卡 64/32/16 全 OOM 实测，b8 唯一可跑档） | 位级不可比；样本序列也不同（同 seed 下序列由 batch_size 参与决定） |
+| 步数 | 80,000（完整训练） | 300 | G0 只覆盖前 300 步轨迹 |
+| checkpoint | 真落 ckpt（save_interval 10,000；仅 assets/params，train_state handler 被注释——IO 重构计划 4.2 既有问题） | 不落 ckpt（`save_state` 被替换为校验和记录器；校验和步有 device_get 开销，正式训练没有） | 记录行为差异，不进计算图 |
+| wandb | 启用（须填 `WANDB_API_KEY`） | `WANDB_MODE=disabled` + `--no-wandb-enabled` | 不进计算图 |
+| log_interval | 100 | 1 | 不进计算图 |
+| dataset-path | `data/robomme_preprocessed_data`（示例占位路径） | `v1-store/datasets/4task-gl` | G0 锚定 4task-gl 库（含 manifest 指纹） |
+| XLA_FLAGS | 无（autotune 默认开） | P2 选定确定性档（deterministic_ops + autotune 0 等） | **核心差异**：G0 是受控确定性口径，finetune 默认属「生产 autotune」不可比（三条不可比之三） |
+| 编译缓存 | `train.py` 硬编码 `~/.cache/jax_<exp_name>`，自然增长 | P1 后 KEEP_JAX_CACHE + 软链收敛 `v1-store/cache/jax/` | 机制同源（同一 `jax_compilation_cache_dir`），管理方式不同 |
+
+### 8.3 边界结论
+
+1. **G0 锚定的是训练语义**（数据链路交付内容 + 模型前向/反向计算的定义，8.1 那一列），**不是 finetune 启动面的位级轨迹**——batch/卡数/XLA 档不同，位级结果本就不同，此差距已被二节「三条不可比」中 GL 4×A40 与生产 autotune 两条覆盖，本节把逐项差距写死防误用。
+2. 基线链的对拍语义之所以成立：链上所有 A/B 都在 G0 同口径（bench 入口、本机 2 卡、b8、确定性档）下进行，唯一变量是被测改动本身；改动对 finetune 默认配置的等价性由「改动经 G0 口径证明等价 + 改动不含任何 batch/卡数/入口相关分支」间接保证（各计划红线已禁止此类分支）。
+3. finetune 脚本自身的三个既有问题**不在基线链 scope**（如实登记，处置须用户单独拍板）：`MME_VLA_TYPE` 默认是 modul 非 context；`train.py` 双次 `main()` 在全新 run_name 下必然 `FileExistsError`（IO 重构计划 4.2 已记录）；`dataset-path` 是示例占位路径。
+
 ---
 
 # 第二部分（技术细节，供 agent 追踪）
