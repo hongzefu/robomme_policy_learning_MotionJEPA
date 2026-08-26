@@ -14,11 +14,37 @@
 
 # 第一部分（给人看）
 
+## 〇、符号总表（两族 run 的权威定义，其余文档只引用不复制；2026-08-26 增订）
+
+全部 run 分两族，**正确性族证明「改动没改变训练结果」，性能族回答「优化值不值得做」，一个 run 不得身兼两职**：
+
+### 正确性族（带 TrainState 摘要 + batch 输入摘要 + 确定性 XLA 档；util/步时仅留档参考，禁作性能结论）
+
+| 符号 | run_name | 是什么 |
+|---|---|---|
+| D0 / D1 / D2 / D2-cold | `v1-det-*` | 确定性预备实验（P2），各两轮 100 步，证明「同配置重跑两次结果逐位一样」在什么条件下成立 |
+| **G0**（round1 正本 + round2 自证） | `v1-grad-baseline-g0` | 三计划均未实施的原始训练语义黄金基线，300 步，产物固化进 git，之后所有改动拿它对拍 |
+| G1 | `v1-dtype-ab-post`（B 侧） | dtype 修复后节点，对拍 G0 |
+| G2 | IO 重构计划 C.3 的 packed 侧 | packed IO 后节点，对拍 G1（bitwise）+ G0（对账） |
+| G3+ | 届时命名 | roadmap 各项节点，对拍上一节点 + G0 |
+
+### 性能族——speed 链（无 TrainState 摘要、无 batch_digests、**生产 XLA 档**：不注入确定性 flags、autotune 默认开）
+
+| 符号 | run_name | 什么时候跑 | 对比对象 |
+|---|---|---|---|
+| **G0-speed**（步骤名 PG0-speed） | `v1-g0-speed` | 随本计划执行序列在 G0 之后同场次**预先跑完** | speed 链的锚点 |
+| G2-speed | `v1-g2-speed` | IO 重构计划（v4）收官后 | vs `v1-g0-speed`（dtype+IO 重构合并性能效果一并体现） |
+| G3+-speed | `v1-g<n>-speed` | roadmap 每项收官后 | vs 上一 speed 节点 + `v1-g0-speed` |
+
+- **G1 无 speed run**（用户 2026-08-26 裁定：dtype 修复预期影响仅 ~80 ms/step，不值专门一轮；其性能效果并入 G2-speed 观察）。
+- **speed run 统一口径（权威定义）**：`bench_train_steps.py` 入口、本机 2×RTX 6000 Ada、b8、300 步、seed 42、num_workers=4；不注入 `XLA_FLAGS`；`SAVE_INTERVAL=0`（禁 TrainState 摘要）、`BATCH_DIGESTS=0`（禁输入摘要），逐步 loss 标量记录保留（毫秒级）；`nvidia-smi -lms 500` 密集采样 + 15 s legacy 通道；报 util 稳态均值 / 0% 采样占比 / 慢步分层均值 / 步时中位与均值（AGENTS 16，禁中位数标题结论），标注「本机口径，不作最终吞吐结论」（AGENTS 13）。GL 吞吐验收（v4 计划 D 节）照旧是 GL 侧主判据，speed 链是本机口径的链式对账，两者并存。
+- 每个 speed run >5 min，按 AGENTS 17 留档 `docs/training-doc/<run_name>/`，留档以 `docs:` commit 提交、不占 V2.x 编号；run_name 起跑前仍按 AGENTS 6 逐个向用户确认。
+
 ## 一、G0 是什么，为什么能「跑一次就不再重跑」
 
-- **G0**：三个计划都未实施的训练语义，在受控确定性环境（P2 选定档）下的一轮真实训练。口径：本机 2×RTX 6000 Ada、b8、300 步、seed 42、SAVE_INTERVAL=25，走 `bench_train_steps.py` 入口，并行 `nvidia-smi -lms 500` 采样。
+- **G0**：三个计划都未实施的训练语义，在受控确定性环境（P2 选定档）下的一轮真实训练。口径：本机 2×RTX 6000 Ada、b8、300 步、seed 42、SAVE_INTERVAL=100（步 0 与末步必记，共 4 次摘要——2026-08-26 由 25 稀疏化：一次完整 TrainState 摘要约 95–140 s，每 25 步记 12 次纯停顿 19–28 min、比训练本体还贵；分歧定位主靠逐步标量 hex，密摘要买不到额外灵敏度），走 `bench_train_steps.py` 入口，并行 `nvidia-smi -lms 500` 采样。
 - **跑两轮**（G0 主轮 + G0' 自证轮，同配置重跑）：第二轮提供 300 步尺度的可复现自证（P2 只证到 100 步）、产物交叉校验、以及量化判据的同 HLO null 对；第二轮走编译缓存命中，耗时更短。round1 为正本，round2 为自证。
-- **双重身份（仅限正确性对拍）**：G0 兼任 dtype 计划 P6 的 A 侧（修复前），P6 随之只跑 B 侧。**G0 的 util/步时数据不充当决策门数据**——正确性 run 的摘要停顿（每 25 步一次完整 TrainState 摘要，实测 47.3 s/次、扩完整 TrainState 后 2–3×）与确定性 XLA 档都污染性能口径；决策门数据由 dtype 计划的专用性能 run `v1-dtype-perf-{pre,post}` 提供（口径以该计划第四节为权威）。
+- **双重身份（仅限正确性对拍）**：G0 兼任 dtype 计划 P6 的 A 侧（修复前），P6 随之只跑 B 侧。**G0 的 util/步时数据不作任何性能结论**——正确性 run 的摘要停顿（一次完整 TrainState 摘要实测 47.3 s/次、扩完整 TrainState 后 2–3×）与确定性 XLA 档都污染性能口径；性能基线由同场次预跑的 **G0-speed**（`v1-g0-speed`，符号总表）承担。
 - **「不再重跑」的三个前提**（缺一即不成立，全部做成硬判定）：
   1. **仪器完整**（P1）：现有 checksum recorder 只哈希 params/EMA，缺 Adam 动量（opt_state）与 step——动量是「两条轨迹是否同一条」最灵敏的累积量，基线跑在扩展之前这一列就永久缺失且补不回来；
   2. **确定性成立**（P2）：尤其 D2-cold 档（独立重编译两次仍 bitwise 一致）——未来与 G0 对拍的 run 计算图都变了、必然现场重编译，无缓存可继承，**D2-cold PASS 是 G0 跨期充当 bitwise 判据一侧的唯一授权闸**；
@@ -33,12 +59,12 @@
 ## 三、产物清单（全文本，进 git `docs/training-doc/v1-grad-baseline-g0/records/round{1,2}/`）
 
 1. `metrics.jsonl`：逐步五标量（loss/grad_norm/llm_grad_norm/mem_enc_norm/param_norm）十进制 + hex；
-2. `param_checksums.jsonl`：每 25 步**完整 TrainState** 摘要（params/opt_state/EMA/step 全部叶子逐个 sha256 + `state_digest`）；
-3. `batch_digests.jsonl`：步 0/1/2 + 每 25 步，交付 batch 逐键 `sha256(dtype‖shape‖bytes)`。**性质与输出摘要完全不同**：与 XLA/缓存/驱动无关、跨计算图（HLO）永远逐位可比——roadmap 项 2/3（改输入签名）场景对拍 G0 的**主判据**；
+2. `param_checksums.jsonl`：每 100 步（步 0 与末步必记）**完整 TrainState** 摘要（params/opt_state/EMA/step 全部叶子逐个 sha256 + `state_digest`）；
+3. `batch_digests.jsonl`：步 0/1/2 + 每 100 步，交付 batch 逐键 `sha256(dtype‖shape‖bytes)`。**性质与输出摘要完全不同**：与 XLA/缓存/驱动无关、跨计算图（HLO）永远逐位可比——roadmap 项 2/3（改输入签名）场景对拍 G0 的**主判据**；
 4. `scalars_hex.tsv`：`metrics.jsonl` 的规范化投影（`step<TAB>loss.hex<TAB>…`，剔除 wall_time 等易变字段）+ 其 sha256——「两轮是否一致」退化为一次 sha256 比较，人和机器都不会搞错（`metrics.jsonl` 含 wall_time，不可直接 diff）；
 5. `env.json`：环境指纹（真实 argv、库版本、GPU/驱动、XLA_FLAGS、编译缓存命中/编译计数——见 T2）；
 6. `BASELINE_MANIFEST.json`：逐产物 sha256 / 行数 / schema 版本——防产物腐烂与工具漂移；
-7. util 采样原始数据与统计（AGENTS 16 口径：稳态均值、0% 采样占比、慢步分层均值）、launch.md、result.md。**util/步时数据受摘要停顿与确定性档影响，仅作留档参考，禁止作性能结论或决策门数据**（性能口径见 dtype 计划第四节的专用性能 run）。
+7. util 采样原始数据与统计（AGENTS 16 口径：稳态均值、0% 采样占比、慢步分层均值）、launch.md、result.md。**util/步时数据受摘要停顿与确定性档影响，仅作留档参考，禁止作性能结论**（性能口径以符号总表的 speed 链为准）。
 
 ## 四、失效条件与 preflight
 
@@ -52,7 +78,7 @@
 
 ## 五、三方对拍矩阵与基线链
 
-基线链：**G0（原始）→ G1（dtype 修复后）→ G2（packed IO）→ G3…（roadmap 各项）**。每个新节点：vs 上一节点（主判据，尽可能 bitwise）+ vs G0（锚定）。
+基线链：**G0（原始）→ G1（dtype 修复后）→ G2（packed IO）→ G3…（roadmap 各项）**。每个新节点：vs 上一节点（主判据，尽可能 bitwise）+ vs G0（锚定）。**与之平行的 speed 链**：`v1-g0-speed` → `v1-g2-speed` → `v1-g<n>-speed`（G1 跳过，符号总表）——每个基线链节点（G2 起）收官后跑对应 speed run，与上一 speed 节点及 `v1-g0-speed` 对比，作为该级优化的性能结论与下一级立项输入。
 
 | 对拍 | 判据 | 说明 |
 |---|---|---|
@@ -75,7 +101,7 @@
 - **趋势判据**：主用包络——A/B 的 rel(t) 逐步不超过 null 对 rel(t) 上包络 × 2；可选辅助诊断 `log(rel)` 斜率与 null 斜率对比（差异增长是乘性的），仅作定位参考、不单独作 FAIL 依据。
 - 量化判据在 IO 重构计划 C.3 场景仍**不作为放行依据**（该计划 3.4 既有裁定不变：无 dtype 差异的 A/B 出现任何残差都指向 bug 或非确定性，必须修到 bitwise）。
 
-## 七、执行序列（本文档实施时执行；预计 5.5–6.5 h 墙钟，全程 tmux + Monitor）
+## 七、执行序列（本文档实施时执行；预计 4.5–5.5 h 墙钟——摘要稀疏化省约 2–3 h、新增 PG0-speed 约 +40 min；全程 tmux + Monitor）
 
 总逻辑：G0 要「一次跑定、以后所有改动拿它当参照」，前提有二——**P1 把记录仪器补完整**（仪器缺项，基线就有永久盲区；仪器说谎，指纹就没法比）、**P2 证明同配置重跑两次结果完全一样**并找出成立条件（否则以后任何对拍差异都分不清是「改动引起」还是「重跑噪声」）。之后才轮到 G0 本体。
 
@@ -89,11 +115,11 @@
 4. **`--checkpoint-base-dir` 按 RUN_TAG 分目录**：A/B 共用 EXP_NAME（为共享 per-fusion autotune 缓存，见 dtype 计划 T4 修订）后 run 目录撞名，`initialize_checkpoint_dir` 遇已存在目录直接 `FileExistsError` 拒跑；按轮次分目录，不靠「跑完删目录」避让（崩溃残留会卡死第二轮）。
 5. **两个新脚本**：`check_baseline_env.py`（preflight，断言项见 T5）；`compare_baseline.py`（对拍工具与基线同 commit 固化，防一年后工具漂移、口径变了；功能见 T2）。
 6. **`scripts/smoke-local/README.md` 同步**：现文「本基准未额外加 `--xla_gpu_deterministic_ops`」在 P1/P2 后变假，不改即错误文档；P2 收官把 D0–D2-cold 结论一并写入。
-7. **性能口径开关**：`SAVE_INTERVAL=0` 禁 TrainState 摘要、`BATCH_DIGESTS=0` 禁输入摘要（默认值保持现行为）——供 dtype 计划专用性能 run `v1-dtype-perf-{pre,post}` 使用（正确性与性能分跑，口径以该计划第四节为权威）。
+7. **性能口径开关**：`SAVE_INTERVAL=0` 禁 TrainState 摘要、`BATCH_DIGESTS=0` 禁输入摘要（默认值保持现行为）——供 speed 链全部 run（`v1-g0-speed` 起）使用（正确性与性能分跑，口径以符号总表为权威）。
 
 P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且未被删、argv 如实进 env.json、`batch_digests.jsonl` 落盘；另加一条 autotune 共享实证——A 轮后记 `xla_gpu_per_fusion_autotune_cache_dir` 条目数、B 轮后复查复用（把「共用 EXP_NAME 即共享 autotune」从机制推断变实测）。
 
-### P2（commit V2.2，确定性实验，四档各两轮 100 步、SAVE_INTERVAL=10）
+### P2（commit V2.2，确定性实验，四档各两轮 100 步、SAVE_INTERVAL=50——步 0 与末步必记，每轮 3 次摘要）
 
 每档判定行相同：两轮逐步标量 hex + 全部 `state_digest` diff 为空。
 
@@ -112,14 +138,15 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 | D2-cold FAIL、共享缓存档（D1 或 D2）PASS | G0 仍固化，但**跨 HLO 对拍降级**：主判据改为 `batch_digests` 输入摘要 bitwise + 量化判据（null 以 D0 两轮标定）；同场次同 HLO A/B（如 C.3 legacy vs packed）仍走 bitwise。**不得以「保留缓存」为由声称跨期 bitwise 可得**——jax 编译缓存 key 含 HLO 与拓扑，跨 commit 模块级缓存必 miss，保留无用 |
 | 全档 FAIL | 停：按 dtype 计划 T2 既有路径排查（加 exclude flag、降 50 步二分），G0 暂不固化 |
 
-### PG0（commit V2.3，G0 两轮 + 产物固化）
+### PG0（commit V2.3，G0 两轮 + 产物固化）与 PG0-speed（速度基线预跑）
 
 1. 从 clean HEAD 起跑前先过 `G0_SCOPE` 断言（二节）；run_name `v1-grad-baseline-g0`（用户已确认；实施起跑前仍按 AGENTS 6 再次确认）。
 2. round1（正本）→ round2（自证轮，同配置重跑）；round1 vs round2 按 P2 结果判定：D2-cold PASS 环境下应逐位一致，否则记录残差并入六节 null 对。
 3. 产物按三节清单固化，`BASELINE_MANIFEST.json` 校验通过后逐文件 `git add` 提交；登记簿（T8）回填 `<G0-HEAD>`、指纹 sha、判定结论。
-4. util/步时统计写入 result.md，标注「本机口径，不作最终吞吐结论」（AGENTS 13/16）且**仅作留档参考、不进决策门**——受摘要停顿与确定性档污染，决策门数据由 dtype 计划专用性能 run `v1-dtype-perf-{pre,post}` 提供。
+4. util/步时统计写入 result.md，标注「本机口径，不作最终吞吐结论」（AGENTS 13/16）且**仅作留档参考**——受摘要停顿与确定性档污染，性能结论一律以 speed 链为准。
+5. **PG0-speed（速度基线预跑，随本计划收官完成）**：G0 两轮之后同场次跑 `v1-g0-speed` 一轮（口径以符号总表为权威：生产 XLA 档、`SAVE_INTERVAL=0`、`BATCH_DIGESTS=0`、300 步 b8），留档 `docs/training-doc/v1-g0-speed/`——它是 speed 链锚点，v4 与 roadmap 各项收官的 speed run 都与它对比。约 40 min。
 
-后续（不在本计划）：dtype 修复本体自 commit V2.4 起（其 P3–P6，见该计划 T5）。
+后续（不在本计划）：dtype 修复本体自 commit V2.4 起（其 P3–P6，见该计划 T5；dtype 不跑 speed run，用户 2026-08-26 裁定）。
 
 ## 八、G0 与正式训练入口的入口层差异（有效域声明，2026-08-26 增补）
 
@@ -143,7 +170,7 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 | wandb | 正常初始化并上报 | disabled，并由 `_WandbProxy` 记录指标 | 不进入更新公式；影响网络、日志、墙钟与 wandb 失败面 |
 | 日志频率 | `log_interval=100`，写区间聚合均值 | `log_interval=1`，写逐步值 | 不改变 TrainState；bench 的 host 同步更频繁，且两份日志不能直接逐行比较 |
 | checkpoint 行为 | 调用真实 `_checkpoints.save_state()` | monkeypatch 为 checksum recorder | checksum 不修改当前 TrainState，但 G0 不验证真实 checkpoint 序列化、异步完成或 resume |
-| checksum 同步 | 无高频完整状态拉回 | G0 计划每 25 步执行大规模 `device_get` | 显著增加墙钟并扰动吞吐、预取与 GPU 利用率，不改变训练更新公式 |
+| checksum 同步 | 无高频完整状态拉回 | G0 计划每 100 步（步 0 与末步必记）执行大规模 `device_get` | 显著增加墙钟并扰动吞吐、预取与 GPU 利用率，不改变训练更新公式 |
 | checksum 实测开销 | 无对应高频开销 | 既有 300 步 bench 前身共 12 次，单次中位约 47.3 s，合计约 9.4 min | 占该轮 15.3 min 总墙钟约六成；这是验证观测开销，不是训练数值差距 |
 | 步数限制 | 无 bench 上限，按正式配置运行 | 入口护栏最多 600 步，G0 计划跑 300 步 | 前 300 步的训练定义不变，但 G0 不覆盖后续轨迹、正式保存点或长程行为 |
 | runner / cwd | `uv run scripts/train.py`，依赖从仓库根启动 | 固定项目解释器，并在调用前显式切到仓库根 | 环境版本相同时不产生数值差异；正式入口对调用环境和 cwd 更敏感 |
@@ -176,13 +203,14 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 
 ## T3 P2 四档参数
 
-- 全档：本机 2 卡、b8、100 步、SAVE_INTERVAL=10、seed 42；run_name `v1-det-d{0,1,2}-r{1,2}` + `v1-det-d2cold-r{1,2}`；>5 min 一律 `docs/training-doc/<run_name>/` 留档（AGENTS 17）。
+- 全档：本机 2 卡、b8、100 步、SAVE_INTERVAL=50（步 0 与末步必记）、seed 42；run_name `v1-det-d{0,1,2}-r{1,2}` + `v1-det-d2cold-r{1,2}`；>5 min 一律 `docs/training-doc/<run_name>/` 留档（AGENTS 17）。
 - D2-cold 的两轮 EXP_NAME 各异（如 `det-d2cold-a` / `det-d2cold-b`），各自空缓存目录，flags 与 D2 逐字相同。
 - 判定行示例：`DET_CHECK=PASS tier=d2cold steps=100 scalar_hex_diff=0 state_digest_diff=0`。
 
 ## T4 G0 run 参数
 
-- 入口与口径：`bench_train_steps.py`、2×RTX 6000 Ada、b8、300 步、seed 42、SAVE_INTERVAL=25、P2 选定确定性档的 XLA_FLAGS、`nvidia-smi -lms 500` 并行采样（另保留 15 s legacy 通道对照，AGENTS 16）。
+- 入口与口径：`bench_train_steps.py`、2×RTX 6000 Ada、b8、300 步、seed 42、SAVE_INTERVAL=100（步 0 与末步必记）、P2 选定确定性档的 XLA_FLAGS、`nvidia-smi -lms 500` 并行采样（另保留 15 s legacy 通道对照，AGENTS 16）。
+- PG0-speed（`v1-g0-speed`）：同机同 b8 同 seed，300 步；生产 XLA 档（不注入 `XLA_FLAGS`）、`SAVE_INTERVAL=0`、`BATCH_DIGESTS=0`；EXP_NAME 独立（不与确定性档共享编译缓存）；留档 `docs/training-doc/v1-g0-speed/`。
 - EXP_NAME 与 dtype 计划 B 侧共用（per-fusion autotune 共享，见该计划 T4 修订）；RUN_TAG 区分 round1/round2 与未来 B 侧。
 - 留档：`docs/training-doc/v1-grad-baseline-g0/{launch.md,result.md,records/round{1,2}/}`。
 
@@ -206,7 +234,7 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 ## T7 commit 切分与 run_name 汇总
 
 - V2.1 = P1（bench 驱动改造 + 两个新脚本 + README 同步）；V2.2 = P2（四档八轮 + D0 固化留档 + 三支处置结论）；V2.3 = PG0（G0 两轮留档 + 产物固化 + 登记簿回填）。dtype 修复顺延 **V2.4**（原 V2.3），IO 重构计划自 **V2.5** 顺延（原 V2.4–V2.8 → V2.5–V2.9）。
-- run_name 全表（起跑前逐个交用户确认，AGENTS 6）：`v1-det-d{0,1,2}-r{1,2}`、`v1-det-d2cold-r{1,2}`、`v1-grad-baseline-g0`；dtype B 侧沿用其计划的 `v1-dtype-ab-post`（`v1-dtype-ab-pre` 已由 G0 兼任、不再单独跑）。
+- run_name 全表（起跑前逐个交用户确认，AGENTS 6）：`v1-det-d{0,1,2}-r{1,2}`、`v1-det-d2cold-r{1,2}`、`v1-grad-baseline-g0`、`v1-g0-speed`（speed 链锚点，PG0-speed 步骤）；dtype B 侧沿用其计划的 `v1-dtype-ab-post`（`v1-dtype-ab-pre` 已由 G0 兼任、不再单独跑）。后续 speed 链 run_name 按 `v1-g<n>-speed` 命名（符号总表）。
 
 ## T8 基线链登记簿（唯一权威；实施时回填，三份计划只引用本表）
 
@@ -216,6 +244,8 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 | G0 | `v1-grad-baseline-g0` | 待回填（`<G0-HEAD>`） | 待回填 | G0_SCOPE + round1/2 自证 | 待回填 | `docs/training-doc/v1-grad-baseline-g0/` |
 | G1（dtype 修复后） | `v1-dtype-ab-post` | 待回填 | 待回填 | vs G0：bitwise + 量化兜底 | 待回填 | dtype 计划留档 |
 | G2（packed） | IO 重构计划 C.3 的 packed 侧 | 待回填 | 待回填 | vs G1 bitwise；vs G0 对账 | 待回填 | IO 重构计划留档 |
+| G0-speed（速度基线） | `v1-g0-speed` | 待回填 | 待回填 | speed 链锚点（AGENTS 16 稳态统计） | 待回填 | `docs/training-doc/v1-g0-speed/` |
+| G2-speed | `v1-g2-speed` | 待回填 | 待回填 | vs `v1-g0-speed` | 待回填 | IO 重构计划留档 |
 
 ## T9 红线（实施期逐条自检）
 
@@ -227,3 +257,4 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 | B4 | G2 vs G0 只作对账，不作独立判据，不得用于放行 |
 | B5 | run_name 起跑前用户确认；>5 min run 全部留档；收官清理临时 run 与缓存软链（保留 G0 固化产物） |
 | B6 | 登记簿数字只在本文档维护一份，三份计划只引用不复制 |
+| B7 | 性能结论只取 speed 链 run（符号总表口径）；带 TrainState 摘要 / batch_digests / 确定性 XLA 档的正确性 run，其 util/步时禁作任何性能结论 |

@@ -1,6 +1,6 @@
 # framesample+context 数据链路彻底重构计划（v1-dataloader-Restructure）
 
-> 本文件是计划文档，尚未实施。v1 定稿于 2026-08-24；v2 于 2026-08-25 依据两轮独立对抗验证修订；v3 定稿于 2026-08-25；本版为 **v4（2026-08-26，拆分瘦身）**：dtype 统一已拆分为**前置计划 [`v1-dtype-unify-plan.md`](v1-dtype-unify-plan.md)**（先行独立验收），本计划随之删除 replica/f32 交付模式、`MMEVLA_FRAMESAMP_DTYPE` 三态开关、第 3 层验证（原 C.4）与 GL b64 dtype 抽查——A/B 变为单变量（只剩「字节从哪读」）。**实施前提：用户审阅前置计划产出的本机 GPU 占用对比结论（其第四节决策门，数据来自专用性能 run `v1-dtype-perf-{pre,post}`——正确性对拍 run 的 util/步时不作性能结论）后拍板开工。** v3 的评审背书如下：
+> 本文件是计划文档，尚未实施。v1 定稿于 2026-08-24；v2 于 2026-08-25 依据两轮独立对抗验证修订；v3 定稿于 2026-08-25；本版为 **v4（2026-08-26，拆分瘦身）**：dtype 统一已拆分为**前置计划 [`v1-dtype-unify-plan.md`](v1-dtype-unify-plan.md)**（先行独立验收），本计划随之删除 replica/f32 交付模式、`MMEVLA_FRAMESAMP_DTYPE` 三态开关、第 3 层验证（原 C.4）与 GL b64 dtype 抽查——A/B 变为单变量（只剩「字节从哪读」）。**实施前提：前置计划两块正确性验收通过后由用户拍板开工（2026-08-26 裁定：dtype 修复不做性能对比，其性能效果并入本计划收官的 `v1-g2-speed` vs `v1-g0-speed` speed 链对比一并体现——符号与口径以基线计划「符号总表」为权威）。** v3 的评审背书如下：
 > ① 61-agent 对抗验证 workflow（报告 `v1-framesamp-restructure-adversarial-review.md`：确认问题 high 4 / medium 6 / low 10，驳回 3）；
 > ② Codex 四路独立审计（8 阻断 / 16 高风险 / 8 规格缺口；其 file:line 断言已逐条读码复核属实）；
 > ③ 定稿复核 workflow（全 opus，6 agent：修订落实 ×2 / 数字复算 / 设计自洽 / 残留扫描 + 裁决）：裁决清单必须修 M1–M13、建议修 S1–S9 已全部落实，驳回 R1–R6 维持原文。
@@ -147,7 +147,7 @@
 | 每 step（b64）读盘 | 1.22 GB | 需求 256 MB/s，NFS 供给 398–628 MB/s（带宽不是瓶颈） |
 | 每 step 文件打开 | 2,112 次 | 64 pkl + 64×32 npy |
 | collate / IPC / device_put | 19 ms / ~257 MB / 23 ms | 前置计划修复后口径（修复前 52 ms / 757 MB / 73 ms）；collate 在 worker 内执行（num_workers>0 时）；257 MB 为 batch 载荷（memory 三键 236 MB + 两张原图 19 MB） |
-| 步时 | 中位 6.933 s（compute-only 下界 4.778 s，+45%） | GPU util 均值 69.7%、0% 采样 27.8%、慢步墙钟 32.9%；f64 时代实测，标注口径不重测（用户拍板）——dtype 修复影响预计 ≤0.1 s 量级，本机实测差值见前置计划专用性能 run（`v1-dtype-perf-{pre,post}`）留档 |
+| 步时 | 中位 6.933 s（compute-only 下界 4.778 s，+45%） | GPU util 均值 69.7%、0% 采样 27.8%、慢步墙钟 32.9%；f64 时代实测，标注口径不重测（用户拍板）——dtype 修复影响预计 ≤0.1 s 量级，不单独实测，本机效果见收官 speed 链对比（`v1-g2-speed` vs `v1-g0-speed`） |
 
 > 注：全表统一十进制 MB（1 MB = 10⁶ B），与既有留档中的 MiB 数字不可直接比。
 
@@ -290,7 +290,7 @@
 |---|---|---|---|
 | 第 0 层 | 恒等链 (1)：样本序列 | 新旧 loader 同 seed dump index 序列对拍（w0/w4/w8 三档，dump 步数 < 1 个 epoch）+ 真实训练链路旁证（主进程 batch_sampler 层记录） | diff 为空 |
 | 第 1 层 | 恒等链 (2)(3)：交付内容 | 8,200 个**定点**样本（step∈{0,1,2,29,30,31,32,33} 边界全覆盖 + 每 episode 首样本 + 随机）逐键对拍，另加 200 个真实 batch 过 collate 对拍 | 全键 shape/dtype/逐位零容差（两侧 dtype 相同，无需 astype 折算） |
-| 第 2 层 | **IO 重构对训练零影响（单变量终局检验）** | 同一 clean HEAD 下 legacy backend vs packed：本机 2 卡 b8 跑 300 步，逐步比 loss/grad_norm 等五个量的 hex ＋ 每 25 步完整 TrainState 摘要（两侧交付 dtype 相同 → HLO 相同 → 共用编译缓存） | 全部 bitwise 相同 |
+| 第 2 层 | **IO 重构对训练零影响（单变量终局检验）** | 同一 clean HEAD 下 legacy backend vs packed：本机 2 卡 b8 跑 300 步，逐步比 loss/grad_norm 等五个量的 hex ＋ 每 100 步（步 0 与末步必记）完整 TrainState 摘要（两侧交付 dtype 相同 → HLO 相同 → 共用编译缓存） | 全部 bitwise 相同 |
 
 说明两点：
 
@@ -509,7 +509,7 @@ def __getitem__(self, idx):
 
 ### C.3 第 2 层：300 步训练轨迹 bitwise（本机 2 卡 b8）
 
-**A/B 同一 clean HEAD（v2 修正，Codex 高 13——不再跨 commit 对比）**：旧链路原地保留使这可行。A = `MMEVLA_DATA_BACKEND=legacy`（旧链路，dtype 已由前置计划统一），B = `MMEVLA_DATA_BACKEND=packed`。同 `EXP_NAME`（共用编译缓存；两侧交付 dtype 相同 → HLO 相同 → 缓存命中）、同 XLA_FLAGS、同 seed 42、同 num_workers、b8、300 步、save-interval 25。判定：五个标量 hex 列 + 每 25 步 `state_digest` 逐步 diff 全空；前置断言：A/B 两侧 env.json 的 backend 与预期一致且为显式设置（R16）。失败定位：分叉叶子在 `mem_enc*` → 回第 1 层；在 LLM 主干而 mem 一致 → 非确定性回 C.0；再不然走 smoke-local README 第 3 级（固定 batch 单步逐元素梯度，固定 batch 直接用第 1 层落盘的 npz）。**本层即本计划的终局等价性检验**（v3 的第 3 层已随拆分移入前置计划）。
+**A/B 同一 clean HEAD（v2 修正，Codex 高 13——不再跨 commit 对比）**：旧链路原地保留使这可行。A = `MMEVLA_DATA_BACKEND=legacy`（旧链路，dtype 已由前置计划统一），B = `MMEVLA_DATA_BACKEND=packed`。同 `EXP_NAME`（共用编译缓存；两侧交付 dtype 相同 → HLO 相同 → 缓存命中）、同 XLA_FLAGS、同 seed 42、同 num_workers、b8、300 步、save-interval 100（步 0 与末步必记，2026-08-26 摘要稀疏化）。判定：五个标量 hex 列 + 每 100 步 `state_digest` 逐步 diff 全空；前置断言：A/B 两侧 env.json 的 backend 与预期一致且为显式设置（R16）。失败定位：分叉叶子在 `mem_enc*` → 回第 1 层；在 LLM 主干而 mem 一致 → 非确定性回 C.0；再不然走 smoke-local README 第 3 级（固定 batch 单步逐元素梯度，固定 batch 直接用第 1 层落盘的 npz）。**本层即本计划的终局等价性检验**（v3 的第 3 层已随拆分移入前置计划）。
 
 **G2 vs G0 对账（2026-08-26 增补，非独立判据）**：本层 bitwise PASS 意味着 packed 轨迹与 legacy（=G1，dtype 修复后）逐位相同，于是「packed vs G0（原始基线）」在数学上恒等于前置计划已留档的「G1 vs G0」——它不是新证据。收官时执行一次**对账**：用 git 里 G0 与 G1 的固化产物离线重算（`compare_baseline.py`，零额外 run），所得报告须与前置计划 V2.4 留档的 G1 vs G0 报告**逐字节相同**；它检出的是固化产物腐烂、对比工具漂移或留档记错，不是链路问题。若本层 bitwise 未过（按上文属必须修复的失败），对账自动失去意义，**不得用它「曲线救国」放行**。结论回填基线计划登记簿（其 T8）。
 
@@ -544,7 +544,7 @@ v3 的第 3 层（单步定点梯度对拍、300 步 replica vs native、GL b64 
 - **MB/s 新口径**：`dataloader_bench.py` 的 `_AVG_BYTES_PER_SAMPLE` 改为**从 history_config + `episode_manifest.json` 现场推导**（均值帧数 = Σ min(t+1,32)/395,289 = 30.996 → 均值 2.43 MB/样本；上界 2.49 MB；勿再写死，也勿只从 history_config 推 32 帧上界）；主判读换 mountstats `server_read`，新增 **majflt** 采样（页缺失口径；v3 后两张小表已改进程内常驻，majflt 主要反映源库 pkl 读与页回收，保留作冷/热证据链辅助量）。**`block_until_ready` 覆盖整个 `(obs, actions)` pytree**（v2 修正，Codex 高 8——原来只 block actions，obs 里的大 memory 张量可能尚未完成 H2D，低估 device_put 成本）。**新增 gather/pkl 分段计时**（每样本两段耗时直方图落 records——F 节风险 3「谁是新瓶颈」的观测资产，v1 计划有承诺无资产）。
 - **dataloader-only 四档**（单 GPU job）：w2/w4/w8/w16，seed 310–313（避开已用 42/200–205/210–212 防 page cache 串扰）。
 - **e2e 600 步**（`gl_e2e_fix.sbatch` **参数化后**入口，4×A40/16C/96G；v1 计划「sbatch 零改动」的说法废弃——它硬编码 `--dataset-path …/4task-gl` 于训练命令与 env.json 两处，必须参数化，默认值保持现状）：T1 w4（**最重要**：官方默认 workers 还需不需要调）→ T2 w8（直接对 v1-e2efix-w8c16）→ T3 w2（探底）；条件档 T4 w16、T5 w4c8（8C 直接对 v1-e2e-b64，「官方口径净收益」最干净对照）。
-- **对照组（v3 更新，三档已全部落地）**：v1-e2e-b64（6.933 s / 69.7%）、v1-e2efix 三档——w8c16 **5.301 s / 71.2% / ≈9.09 h**、w12c16 **5.319 s / 70.6% / ≈9.13 h**、w16c16 **5.327 s / 67.1% / ≈9.14 h**（workers 8/12/16 曲线完全平坦，「只调参上限」＝三档最优 5.301 s）、compute-only 4.778 s。**v4 口径注**：以上均为 dtype 修复前（f64 时代）GL 实测；按用户拍板标注口径、不重测——修复对 GL 步时影响预计 ≤0.1 s 量级，本机实测差值见前置计划专用性能 run（`v1-dtype-perf-{pre,post}`）留档。
+- **对照组（v3 更新，三档已全部落地）**：v1-e2e-b64（6.933 s / 69.7%）、v1-e2efix 三档——w8c16 **5.301 s / 71.2% / ≈9.09 h**、w12c16 **5.319 s / 70.6% / ≈9.13 h**、w16c16 **5.327 s / 67.1% / ≈9.14 h**（workers 8/12/16 曲线完全平坦，「只调参上限」＝三档最优 5.301 s）、compute-only 4.778 s。**v4 口径注**：以上均为 dtype 修复前（f64 时代）GL 实测；按用户拍板标注口径、不重测——修复对 GL 步时影响预计 ≤0.1 s 量级，不单独实测，本机效果见收官 speed 链对比（`v1-g2-speed` vs `v1-g0-speed`）。
 - **冷/热（v2 方法修正，Codex 高 9：证据口径降为 cold-like）**：31.7 GB 打包库一个 epoch 内即可全驻 page cache，热态数字必然偏乐观；pkl 156 GB 仍是长期 NFS 流量来源。C1/H1 **各 300 步**（只取稳态窗口，与 T1–T3 的 600 步分开口径），**在同一个 allocation 内串行执行**（`COLDHOT=1` 双跑模式、`--time=04:00:00`；先 C1 后 H1，排除节点差异），共用**同一冻结 index 序列**（同 seed + 第 0 层 dump 存证）；`/proc/meminfo` Cached 15 s 采样落 `meminfo.csv` + **cgroup `memory.stat` 的 pgmajfault** 同步采样。「冷」无法严格证明（新 allocation 的节点也可能带缓存），结论一律称 **cold-like**，判据 `(C1稳态−H1稳态)/H1 ≤ 15%`。并行采 `nvidia-smi --query-compute-apps` 存证 worker CUDA context。
 - **成功判据**（AGENTS 16 口径，禁中位数标题结论；**主判据表 5 项由 `analyze_gpu_util.py` 机器判定并输出单行 `E2E_ACCEPT=PASS|FAIL`（FAIL 退出码非零）；附加判据（w4/w8 步时差、majflt 趋势、server_read 区间）由一个吃多个 record_dir 的汇总脚本判定**——人工只做复核）：
 
@@ -560,13 +560,13 @@ v3 的第 3 层（单步定点梯度对拍、300 步 replica vs native、GL b64 
 
   必达 ≤5.00 s 有意严于「只调参上限」5.301 s（w8c16 实测）——低于它才证明重构有超出调参的净收益。附加判据：w4 与 w8 步时差 ≤3%（否则 CPU 侧仍未松绑）；**NFS server_read（e2e，T1–T3；v3 重定标）**：公式上界 ≈31–33 MB/s（＝155 MB/step ÷ 目标步时 4.778–5.00 s），历史实测普遍为公式口径的 0.54–0.71 倍，稳态实测期望 ≈17–25 MB/s，**>65 MB/s（≈2× 公式上界）即视为读放大信号**，处置（Codex 高 10）：image 大表在 fd 上以 `posix_fadvise(POSIX_FADV_RANDOM)` 替换 `WILLNEED` 对照重测（pread 路径的 readahead 由 fadvise 管）；热态（打包库全驻 page cache 后）只剩 pkl 流量 25.3 MB/step ≈5 MB/s 属正常；**dataloader-only（S8a）不套用本带**，按 samples/s × 2.43 MB 现场折算；majflt 随 epoch 单调下降（无小表 mmap 贡献后作辅助量）。
 - **provenance（v2 新增，Codex 缺口 4；v3 扩展到所有 run——含本机 bench 与 dataloader-only）**：env.json 必记：resolved 后的 `dataset_path`/`source_dataset_root`/`manifest_path`、`store_meta.json` 的 sha256（verify 回填后口径）、`manifest_sha256`、backend 及其来源（显式设置 / auto 推断——**S5 及以上任何 run 出现 auto 推断即判该 run 无效**，R16）、`MMEVLA_FRAMESAMP_VERIFY` 档位与 full 校验结果、`MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED` 取值与是否生效、local-cache 是否命中及其 sha 校验结果、XLA_FLAGS、git HEAD。
-- 结果分析一律 `analyze_gpu_util.py`；每个 >5 min run 留档 `docs/training-doc/<run_name>/`（records 含 env.json/metrics/gpu_util_dense/nfs_read/meminfo.csv/pgmajfault/分段计时/param_checksums）。**正确性/性能分跑口径注**：本节吞吐 run 的 `--save-interval` 默认 1000，300/600 步内不触发 TrainState 摘要，性能口径不受摘要停顿污染（与前置计划第四节的分跑裁定一致）；对照组基线亦同口径。
+- 结果分析一律 `analyze_gpu_util.py`；每个 >5 min run 留档 `docs/training-doc/<run_name>/`（records 含 env.json/metrics/gpu_util_dense/nfs_read/meminfo.csv/pgmajfault/分段计时/param_checksums）。**正确性/性能分跑口径注**：本节吞吐 run 的 `--save-interval` 默认 1000，300/600 步内不触发 TrainState 摘要，性能口径不受摘要停顿污染（分跑规约以基线计划「符号总表」为权威）；对照组基线亦同口径。**与 speed 链的分工**：本节 GL 验收是 GL 侧主判据（过/不过阈值在此）；S9-speed 的 `v1-g2-speed` vs `v1-g0-speed` 是本机口径的链式对账（不设阈值、只报数），两者并存互不替代。
 
 ## E. 实施顺序、提交切分与留档（v2 重排：mini 全链路先行，全量打包后置）
 
 | 步 | 内容 | 依赖 | 判定 | 预计 |
 |---|---|---|---|---|
-| ~~S0/S1~~ | bench 驱动改造与确定性前提——**已随 v4 拆分移入前置计划（其 P1/P2，commit V2.1/V2.2）**，本计划直接复用 | 前置计划验收通过 + 用户依据其决策门拍板开工 | —（以前置计划留档为准） | — |
+| ~~S0/S1~~ | bench 驱动改造与确定性前提——**已随 v4 拆分移入前置计划（其 P1/P2，commit V2.1/V2.2）**，本计划直接复用 | 前置计划两块正确性验收通过 + 用户拍板开工 | —（以前置计划留档为准） | — |
 | S0' | 验证资产补齐：preflight 兼容 packed（stats.json 或 store_meta.json）、`BENCH_DUMP_IDX` batch_sampler 层记录、env.json provenance 扩展、README 同步 | 前置计划 P1 | STEPS=3 跑通、idx_seq.jsonl 落盘 | ~30 min |
 | S2 | 格式层 + 打包工具 + **Store 组守卫（G1/G4/G5/G7/G11/G12/G14）**，ref-shard 派生迷你库（subset 契约）全流程（含迷你库全量 verify） | — | Store 组 pytest 全绿 | ~2 h 开发 |
 | S3 | FrameSampDataset + backend 分派接线 + **Dataset 组守卫（G2/G3/G6a/G8/G9/G10/G13）** + **迷你库上真实 spawn loader 矩阵：w0/w1/w4/w16 × 2 epoch**（fd 泄漏检查：前后 `ls /proc/<pid>/fd` 计数） | S2 | Dataset 组 pytest 全绿（G6 只跑 G6a）+ 矩阵无错无泄漏 | ~1.5 h |
@@ -576,11 +576,12 @@ v3 的第 3 层（单步定点梯度对拍、300 步 replica vs native、GL b64 
 | S7.5 | 验收资产参数化（gl_e2e_fix.sbatch、gl-dataloader 两个 sbatch、dataloader_bench.py、analyze_gpu_util.py，默认值＝现状） | S4 | 三个 launcher 用默认值跑通、env.json 记到 backend/resolved 双根 | ~40 min |
 | S8a | GL dataloader-only 四档（w2/w4/w8/w16） | S7.5 | 吞吐数据落档（env.json backend==packed 且显式设置） | 15 min×4 + 排队 |
 | S8b | GL e2e 600 步 T1–T3(+条件档) + cold-like/hot（COLDHOT 双跑各 300 步）——**全链收官测试** | S6+S7.5（第 2 层通过后才跑正式 e2e） | `E2E_ACCEPT=PASS` + 距 100% 残差分解 | 3×2 h + 1×4 h（C1+H1 同 job） |
+| S9-speed | **本机 speed 链对账**：`v1-g2-speed` 一轮 300 步（生产 XLA 档、禁摘要，口径以基线计划「符号总表」为权威），与 `v1-g0-speed` 对比落档——dtype+IO 重构的合并本机性能效果在此体现 | S6（等价性通过后；GL 验收可并行） | 稳态统计 + vs `v1-g0-speed` 对比表落档、回填基线计划登记簿 | ~40 min |
 
 > 工时注：摘要开销按实测 47.3 s/次（110 叶子，params+EMA）为基准，扩完整 TrainState（含 opt_state）后按 2–3× 估——S6 的预计已含该开销（S1/S7 已随拆分移入前置计划）。
 
 - **commit 切分**（沿用 `commitV<大>.<小>:` 中文体例；**V2.1、V2.2、V2.4 归前置计划，V2.3 归 G0 基线固化（2026-08-26 增补顺延），本计划从 V2.5 顺延**）：V2.5 验证资产补齐（S0'）+格式层+打包工具+Store 守卫（迷你库通过）→ V2.6 新 Dataset+backend 接线+Dataset 守卫+spawn 矩阵 → docs 打包留档（S4 后）→ V2.7 第 0/1 层通过 → V2.8 第 2 层逐位一致（含 G2 vs G0 对账，C.3）→ V2.9 验收资产参数化（S7.5）→ docs GL 验收留档 + `docs/v1-framesamp-dataflow.md` 定稿。每 commit 可独立回滚。
-- **run_name 建议**（起跑前逐个交用户确认，AGENTS 6）：`v1-framesamp-cmp`（S5）、`v1-framesamp-ab-{legacy,packed}`（S6）、`v1-framesamp-dl-w{2,4,8,16}`、`v1-framesamp-e2e-w{4,8,2}c16`、`…-coldlike/-hot`；打包库名 `4task-gl-framesamp`。（确定性 run `v1-det-*` 与 dtype A/B run 归前置计划。）
+- **run_name 建议**（起跑前逐个交用户确认，AGENTS 6）：`v1-framesamp-cmp`（S5）、`v1-framesamp-ab-{legacy,packed}`（S6）、`v1-framesamp-dl-w{2,4,8,16}`、`v1-framesamp-e2e-w{4,8,2}c16`、`…-coldlike/-hot`、`v1-g2-speed`（S9-speed，speed 链）；打包库名 `4task-gl-framesamp`。（确定性 run `v1-det-*` 与 dtype A/B run 归前置计划。）
 - **回滚策略（v2 修正，Codex 缺口 5——不再是「删目录」）**：功能回滚＝launcher 里 `MMEVLA_DATA_BACKEND` 切回 `legacy` + `--dataset-path` 指回源库（两件事必须一起回退；v4 起无 dtype 环境变量）；打包库保留作证据不删（不进 git，占 31.7 GB）。只有确认彻底放弃该方案时才删库目录。
 - **收官清理**：验证全部结束后清理 `v1-store/cache/jax/` 下各 EXP_NAME 缓存与 `~/.cache/jax_*` 软链（A9 的对账义务），并清理 S 步产生的临时 run（AGENTS 6）。
 - 汇总报告：新增 `docs/v2-dataloader-restructure-report.md`；`docs/v1-nfs-bottleneck-analysis.md` 只加指针不改结论。
@@ -692,7 +693,7 @@ v3 的第 3 层（单步定点梯度对拍、300 步 replica vs native、GL b64 
 
 ### v3 → v4（2026-08-26，拆分瘦身）
 
-依据：用户拍板将 dtype 双路径问题拆为前置计划 `v1-dtype-unify-plan.md` 先行修复（在旧链路上原地修 `right_padding_token_emb` 三个 `np.zeros` 的 dtype，`shared/**` 红线的函数级例外已获授权），本计划的「重构前基线」随之变为 dtype 统一后的旧链路，A/B 成为单变量。同批拍板：本计划实施前须用户审阅前置计划决策门（2026-08-26 裁定改由专用性能 run `v1-dtype-perf-{pre,post}` 产出 GPU 占用/步时对比，原「300 步 A/B 顺带产出」作废——正确性 run 的摘要停顿与确定性档污染性能口径）；GL 基线数字标注口径不重测；整链方向性目标 GPU 占用 100%（north star，验收阈值不动）；commit V2.1–V2.3 归前置计划、本计划从 V2.4 顺延；前置计划不做 GL 侧验证。
+依据：用户拍板将 dtype 双路径问题拆为前置计划 `v1-dtype-unify-plan.md` 先行修复（在旧链路上原地修 `right_padding_token_emb` 三个 `np.zeros` 的 dtype，`shared/**` 红线的函数级例外已获授权），本计划的「重构前基线」随之变为 dtype 统一后的旧链路，A/B 成为单变量。同批拍板：本计划实施前提为前置计划两块正确性验收通过 + 用户拍板（2026-08-26 裁定：dtype 不做性能对比，原「300 步 A/B 顺带产出决策门」作废——正确性 run 的摘要停顿与确定性档污染性能口径；性能对比统一走 speed 链，本计划收官跑 `v1-g2-speed` vs `v1-g0-speed`）；GL 基线数字标注口径不重测；整链方向性目标 GPU 占用 100%（north star，验收阈值不动）；commit V2.1–V2.3 归前置计划、本计划从 V2.4 顺延；前置计划不做 GL 侧验证。
 
 | 修订 | 落点 |
 |---|---|
