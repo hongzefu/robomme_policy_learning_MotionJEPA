@@ -2,6 +2,7 @@
 
 > 本文件只记录**立项顺序结论与各项的确定 scope**，不含实施细节。前提链条：
 > [`v1-dtype-unify-plan.md`](v1-dtype-unify-plan.md)（前置）→ [`v1-framesamp-restructure-plan.md`](v1-framesamp-restructure-plan.md)（IO 重构 v4）→ 本文件所列各项。
+> 2026-08-26 增补：全链梯度对拍锚定黄金基线 G0，权威载体 [`v1-gradient-baseline.md`](v1-gradient-baseline.md)，本文件各项适用文末「梯度对拍规约」。
 > **本文件所列各项一律在 v4 落地并通过 GL 验收之后才允许立项**，且每项立项前须用户单独拍板；此处不构成实施授权（AGENTS 2）。
 > 结论来源：2026-08-26 会话讨论（问题一"dtype 之外的机制修复"与问题二"memory token 取数机制可读性重构"）。
 
@@ -39,6 +40,15 @@ v4 的等价性证明依赖"新旧两侧只有『字节从哪读』一个变量"
 
 - **背景**：训练侧 framesamp 取数链的可读性问题（三层回调倒挂、dict-of-dicts 中间格式）**随 v4 的 `FrameSampDataset` 交付自动消失**，无需立项。剩余的"复杂"只在旧类里：`MemoryBuffer` 一类身兼在线评估有状态 buffer 与离线训练无状态工具两职，另含 token_drop / recurrent 分支。
 - **确定 scope**：把 `MemoryBuffer` 拆为"在线评估 buffer"与"纯函数集"两块。这些代码在线评估仍在用、不可删；v1 范围外，属锦上添花，优先级排在项 1–3 之后，仅在确有需要时立项。
+
+## 梯度对拍规约（2026-08-26 增补，适用于上列每一项）
+
+每项立项后的等价性验证除各自的「vs 自己改动前」（即基线链上一节点）外，**必须同时锚定 G0**（三个计划都未实施的原始训练，定义、产物与失效条件以 [`v1-gradient-baseline.md`](v1-gradient-baseline.md) 为权威）：
+
+- **vs 上一基线**：主判据届时商定，能 bitwise 则 bitwise。
+- **vs G0**：项 1（CPU resize 改计算实现）与项 2/3（改输入签名，HLO 必变）的输出侧 bitwise 天然不可得，**主判据 = G0 固化的 `batch_digests` 输入侧逐位对拍**（与 XLA/缓存/驱动无关、跨 HLO 有效——例：项 2 把 pos 挪到 GPU 侧生成后，设备端 gather 出的 pos 张量与 G0 的 `static_pos_emb` 摘要对拍即是逐位判据），辅以量化复核（等价性检验形态，基线计划「量化判据」节）与单步 fixture 回归闸（约 2 分钟重锚 G0）。
+- **引用 G0 产物前必须 `BASELINE_ENV=PASS` preflight**（AGENTS 18 末句）；结论回填基线计划登记簿。
+- **revert 链形态**：若 dtype 修复被 revert，G1 不存在、v4 退回 v3 形态，基线链变为 G0 → G2'（v3 形态）；G0 保持链头不变。
 
 ## 已裁定不做 / 无独立价值（避免重复讨论）
 

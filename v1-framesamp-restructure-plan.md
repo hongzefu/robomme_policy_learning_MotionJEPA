@@ -301,12 +301,12 @@
 
 2026-08-24 实测：同配置同 seed 重跑两轮（两轮间仅有 bench 记录层的 `_WandbProxy` 改动，不进计算图，见 `docs/training-doc/v1-2gpu-epoch-bench-b8/result.md`），参数校验和逐步全不相同——**当前默认设置下训练不是 bitwise 确定的**。根因已定位：bench 驱动脚本 run 名写死（跑不了第二轮）、结尾删 jax 编译缓存、`train.py` 硬编码覆盖缓存目录 → 每轮空缓存 → XLA 每轮重新 autotune、可能选中不同 kernel。这个问题不修，任何 A/B 的差异都无法归因给 dataloader。
 
-修法（已核实可行性）：驱动脚本拆分「实验名/轮次名」并保留缓存；两轮**共用同一份 jax 编译缓存**（jax 0.5.3 的持久编译缓存默认托管 XLA per-fusion autotune 缓存，共用目录即复用 autotune 结果）；必要时经 `XLA_FLAGS` 加 `--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0`（六个相关 flag 已在本仓库 venv 的 XLA 插件二进制里逐个确认存在，jax 0.5.3 无对应 config 开关，只能走 `XLA_FLAGS`）。**缓存目录按 AGENTS 14 收敛进 `v1-store/cache/jax/`**（软链方案，不动 `train.py` 也不覆盖 `HOME`），验证收官后统一清理。**S0（bench 驱动改造）与 S1（D0/D1/D2 三档「同配置重跑两轮」实验）已随 v4 拆分移入前置计划（其 T2/P1/P2）**——本计划直接复用其选定的确定性档位与已改造的 bench 驱动，只自补两项验证资产（见 C.0）；前置计划两轮逐步校验和完全一致后，才开始 3.2 的任何 A/B。
+修法（已核实可行性）：驱动脚本拆分「实验名/轮次名」并保留缓存；两轮**共用同一份 jax 编译缓存**（jax 0.5.3 的持久编译缓存默认托管 XLA per-fusion autotune 缓存，共用目录即复用 autotune 结果）；必要时经 `XLA_FLAGS` 加 `--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0`（六个相关 flag 已在本仓库 venv 的 XLA 插件二进制里逐个确认存在，jax 0.5.3 无对应 config 开关，只能走 `XLA_FLAGS`）。**缓存目录按 AGENTS 14 收敛进 `v1-store/cache/jax/`**（软链方案，不动 `train.py` 也不覆盖 `HOME`），验证收官后统一清理。**S0（bench 驱动改造）与 S1（D0/D1/D2/D2-cold 四档「同配置重跑两轮」实验，2026-08-26 增补 D2-cold）已随 v4 拆分移入前置计划（其 T2/P1/P2）**——本计划直接复用其选定的确定性档位与已改造的 bench 驱动，只自补两项验证资产（见 C.0）；前置计划两轮逐步校验和完全一致后，才开始 3.2 的任何 A/B。
 
 ### 3.4 任何一层失败怎么办（「梯度差距极小」的硬兜底）
 
 - **定位手段**：第 0/1 层失败输出首个失配 idx/键/元素的 hex，配合守卫测试把问题缩小到 gather/padding/reshape/normalize 四段之一；第 0 层若差异恰从 epoch 边界开始 → 先检查是否跨 epoch（1.6 的 torch 既有语义），非 Dataset 问题。第 2 层失败用参数 sha256 逐叶子二分找首个分叉模块——分叉在 `mem_enc*` 指向交付内容（回第 1 层），分叉在 LLM 主干而 mem 一致指向非确定性（回 3.3 重立前提）。
-- **处置**：第 2 层 bitwise 失败且定位后仍有残差 → 以前置计划 T4 的参数化量化判据（rel 三档阈值 + OLS 趋势，权威版本在该计划）评估，但**不作为放行依据**——本计划 A/B 无 dtype 差异，任何数值残差都指向 bug 或非确定性，必须定位修复后重跑至 bitwise 通过，**绝不「差不多就行」**。本计划无 dtype 降级路径（交付 dtype 与旧链路相同，无档可降）。
+- **处置**：第 2 层 bitwise 失败且定位后仍有残差 → 以量化判据（等价性检验形态：null 对标定 + 包络，2026-08-26 起权威版本在基线计划 `v1-gradient-baseline.md`「量化判据」节，原 OLS-p 判据已废）评估，但**不作为放行依据**——本计划 A/B 无 dtype 差异，任何数值残差都指向 bug 或非确定性，必须定位修复后重跑至 bitwise 通过，**绝不「差不多就行」**。本计划无 dtype 降级路径（交付 dtype 与旧链路相同，无档可降）。
 
 ## 四、明确不做的事，与本重构解耦的既有问题
 
@@ -484,7 +484,7 @@ def __getitem__(self, idx):
 
 ### C.0 前置：确定性前提（v4：已由前置计划确立，本计划复用）——不过这关不开任何 A/B
 
-根因链与杠杆的完整论证见 3.3 与前置计划 T2；**S0（bench 驱动改造：EXP_NAME/RUN_TAG 拆分、KEEP_JAX_CACHE、缓存软链进 `v1-store/cache/jax/`、XLA_FLAGS 注入、checksum recorder 扩展为逐步标量 hex + 每 SAVE_INTERVAL 完整 TrainState `state_digest`）与 S1（D0/D1/D2 三档各两轮 100 步重跑实验）已随拆分移入前置计划并在其 P1/P2 交付**。本计划直接复用前置计划选定的首个 PASS 档（XLA_FLAGS/缓存机制）作为 C.1–C.3 全部 A/B 的环境，另自补两项验证资产（**S0'**，见 E 表）：
+根因链与杠杆的完整论证见 3.3 与前置计划 T2；**S0（bench 驱动改造：EXP_NAME/RUN_TAG 拆分、KEEP_JAX_CACHE、缓存软链进 `v1-store/cache/jax/`、XLA_FLAGS 注入、checksum recorder 扩展为逐步标量 hex + 每 SAVE_INTERVAL 完整 TrainState `state_digest`，另含 G0 基线计划的 P1 扩展项——`batch_digests` 输入摘要、真实 argv、缓存计数、preflight 与对拍脚本）与 S1（D0/D1/D2/D2-cold 四档各两轮 100 步重跑实验，2026-08-26 增补 D2-cold 档）已随拆分移入前置计划并在其 P1/P2 交付**。本计划直接复用前置计划选定的首个 PASS 档（XLA_FLAGS/缓存机制）作为 C.1–C.3 全部 A/B 的环境；黄金基线 G0 的定义、产物与引用规约以 [`v1-gradient-baseline.md`](v1-gradient-baseline.md) 为权威（引用其产物前必须 `BASELINE_ENV=PASS` preflight，AGENTS 18 末句）。另自补两项验证资产（**S0'**，见 E 表）：
 
 1. preflight 从「必须存在 `meta/stats.json`」改为「`meta/stats.json` **或** `meta/store_meta.json` 二选一」（否则 packed 库根本过不了启动检查——v1 计划漏改）。
 2. `BENCH_DUMP_IDX` batch_sampler 层记录（实现与判据见 C.1）。
@@ -511,9 +511,11 @@ def __getitem__(self, idx):
 
 **A/B 同一 clean HEAD（v2 修正，Codex 高 13——不再跨 commit 对比）**：旧链路原地保留使这可行。A = `MMEVLA_DATA_BACKEND=legacy`（旧链路，dtype 已由前置计划统一），B = `MMEVLA_DATA_BACKEND=packed`。同 `EXP_NAME`（共用编译缓存；两侧交付 dtype 相同 → HLO 相同 → 缓存命中）、同 XLA_FLAGS、同 seed 42、同 num_workers、b8、300 步、save-interval 25。判定：五个标量 hex 列 + 每 25 步 `state_digest` 逐步 diff 全空；前置断言：A/B 两侧 env.json 的 backend 与预期一致且为显式设置（R16）。失败定位：分叉叶子在 `mem_enc*` → 回第 1 层；在 LLM 主干而 mem 一致 → 非确定性回 C.0；再不然走 smoke-local README 第 3 级（固定 batch 单步逐元素梯度，固定 batch 直接用第 1 层落盘的 npz）。**本层即本计划的终局等价性检验**（v3 的第 3 层已随拆分移入前置计划）。
 
+**G2 vs G0 对账（2026-08-26 增补，非独立判据）**：本层 bitwise PASS 意味着 packed 轨迹与 legacy（=G1，dtype 修复后）逐位相同，于是「packed vs G0（原始基线）」在数学上恒等于前置计划已留档的「G1 vs G0」——它不是新证据。收官时执行一次**对账**：用 git 里 G0 与 G1 的固化产物离线重算（`compare_baseline.py`，零额外 run），所得报告须与前置计划 V2.4 留档的 G1 vs G0 报告**逐字节相同**；它检出的是固化产物腐烂、对比工具漂移或留档记错，不是链路问题。若本层 bitwise 未过（按上文属必须修复的失败），对账自动失去意义，**不得用它「曲线救国」放行**。结论回填基线计划登记簿（其 T8）。
+
 ### C.4 （v4 已删除）dtype 正规化验证——整体移入前置计划
 
-v3 的第 3 层（单步定点梯度对拍、300 步 replica vs native、GL b64 100 步抽查、参数化量化降级判据）随拆分整体移入前置计划 `v1-dtype-unify-plan.md`（其 T4/P5/P6）并在该计划内完成验收。量化判据的参数化阈值（rel 三档 + OLS 趋势）以该计划 T4 为权威版本；本计划 3.4 的兜底评估引用之，但不作为放行依据（见 3.4）。
+v3 的第 3 层（单步定点梯度对拍、300 步 replica vs native、GL b64 100 步抽查、参数化量化降级判据）随拆分整体移入前置计划 `v1-dtype-unify-plan.md`（其 T4/P5/P6）并在该计划内完成验收。量化判据的参数化定义（等价性检验形态：null 对标定 + 包络，原 rel 三档先验阈值 + OLS 趋势已于 2026-08-26 废除重做）以基线计划 `v1-gradient-baseline.md`「量化判据」节为权威版本；本计划 3.4 的兜底评估引用之，但不作为放行依据（见 3.4）。
 
 ### C.5 守卫测试
 
@@ -577,7 +579,7 @@ v3 的第 3 层（单步定点梯度对拍、300 步 replica vs native、GL b64 
 
 > 工时注：摘要开销按实测 47.3 s/次（110 叶子，params+EMA）为基准，扩完整 TrainState（含 opt_state）后按 2–3× 估——S6 的预计已含该开销（S1/S7 已随拆分移入前置计划）。
 
-- **commit 切分**（沿用 `commitV<大>.<小>:` 中文体例；**V2.1–V2.3 已归前置计划**，本计划从 V2.4 顺延——用户拍板）：V2.4 验证资产补齐（S0'）+格式层+打包工具+Store 守卫（迷你库通过）→ V2.5 新 Dataset+backend 接线+Dataset 守卫+spawn 矩阵 → docs 打包留档（S4 后）→ V2.6 第 0/1 层通过 → V2.7 第 2 层逐位一致 → V2.8 验收资产参数化（S7.5）→ docs GL 验收留档 + `docs/v1-framesamp-dataflow.md` 定稿。每 commit 可独立回滚。
+- **commit 切分**（沿用 `commitV<大>.<小>:` 中文体例；**V2.1、V2.2、V2.4 归前置计划，V2.3 归 G0 基线固化（2026-08-26 增补顺延），本计划从 V2.5 顺延**）：V2.5 验证资产补齐（S0'）+格式层+打包工具+Store 守卫（迷你库通过）→ V2.6 新 Dataset+backend 接线+Dataset 守卫+spawn 矩阵 → docs 打包留档（S4 后）→ V2.7 第 0/1 层通过 → V2.8 第 2 层逐位一致（含 G2 vs G0 对账，C.3）→ V2.9 验收资产参数化（S7.5）→ docs GL 验收留档 + `docs/v1-framesamp-dataflow.md` 定稿。每 commit 可独立回滚。
 - **run_name 建议**（起跑前逐个交用户确认，AGENTS 6）：`v1-framesamp-cmp`（S5）、`v1-framesamp-ab-{legacy,packed}`（S6）、`v1-framesamp-dl-w{2,4,8,16}`、`v1-framesamp-e2e-w{4,8,2}c16`、`…-coldlike/-hot`；打包库名 `4task-gl-framesamp`。（确定性 run `v1-det-*` 与 dtype A/B run 归前置计划。）
 - **回滚策略（v2 修正，Codex 缺口 5——不再是「删目录」）**：功能回滚＝launcher 里 `MMEVLA_DATA_BACKEND` 切回 `legacy` + `--dataset-path` 指回源库（两件事必须一起回退；v4 起无 dtype 环境变量）；打包库保留作证据不删（不进 git，占 31.7 GB）。只有确认彻底放弃该方案时才删库目录。
 - **收官清理**：验证全部结束后清理 `v1-store/cache/jax/` 下各 EXP_NAME 缓存与 `~/.cache/jax_*` 软链（A9 的对账义务），并清理 S 步产生的临时 run（AGENTS 6）。
@@ -702,3 +704,14 @@ v3 的第 3 层（单步定点梯度对拍、300 步 replica vs native、GL b64 
 | C.2 判据统一为全键逐位零容差（无 astype 折算、无 dtype 差异清单）；G2 守卫改断言单一 dtype 组合；「触发 f64」措辞改「触发 padding」 | C.2、C.5 |
 | D 节对照组加 f64 时代口径注；provenance 删 dtype 模式字段；R2 补前置计划例外记录；R12 留档范围同步；run_name 清单同步（det/b64chk/replica/native 系列移除） | D、G、E |
 | F 风险 2 改「dtype 恒等前提被上游推翻」（验收归前置计划）；F3「native 模式」措辞改「dtype 修复后」 | F |
+
+### v4 → v4.1（2026-08-26，G0 黄金基线增补）
+
+依据：用户拍板建立黄金基线 G0（三方对拍：每个改动除 vs 自己改动前，还须锚定「三个计划都没动」的原始训练；G0 一次跑定、产物固化进 git 复用），权威载体为新文档 [`v1-gradient-baseline.md`](v1-gradient-baseline.md)；方案经 opus 对抗复核修订。本计划同步四处：
+
+| 修订 | 落点 |
+|---|---|
+| C.0 引用基线计划：前置 S1 扩为四档（增 D2-cold，G0 跨期复用唯一授权闸）、S0 含 P1 扩展项（batch_digests/argv/缓存计数/preflight 与对拍脚本）；引用基线产物前必过 `BASELINE_ENV` preflight（AGENTS 18 末句） | C.0 |
+| C.3 增「G2 vs G0 对账」段：非独立判据，离线重算须与前置计划 G1 vs G0 留档逐字节相同，检产物腐烂/工具漂移，不得用于放行；结论回填基线登记簿 | C.3 |
+| 3.4 量化判据引用改基线计划权威版本（等价性检验：null 对标定 + 包络，OLS-p 判据废除） | 3.4 |
+| commit 编号再顺延：V2.3 归 G0 基线固化、前置计划 dtype 修复改 V2.4，本计划 V2.4–V2.8 → V2.5–V2.9 | E |
