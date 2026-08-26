@@ -18,6 +18,7 @@
   - **用 Agent 工具 launch 单个 subagent：强制 `model: "opus"`。**
   - **Workflow 脚本里调 `agent()`：默认且仅允许 `model: "sonnet"`。唯一例外**：workflow 收尾的总结/综合 agent、或负责制定计划（plan）的 agent，可用 `model: "opus"`，但**单次 workflow 内（按 workflow 计，不是按完整任务计——一个任务跑多个 workflow 时每个 workflow 各自计数）**累计使用 opus 不得超过 3 次。
   - 两条通用：禁止 haiku、fable 及一切白名单外模型。
+- **同一进度点并行 spawn 不设上限（2026-08-26 新增）**：同一轮决策下互相独立、无依赖的多个任务，用 Agent 工具并行 spawn subagent **不设数量上限**——等待时间由最慢的一个决定，多 spawn 近乎免费，应尽可能积极地一次性并行派发（在同一条消息里发出全部 Agent 调用，每个都按上条规则用 `model: "opus"`）。**仅限真正并行的场景**：后一个 agent 的输入依赖前一个的结果时保持默认串行机制，不为凑并行强行拆分——串行依赖本质上需要成倍等待时间，并行化不了。
 - **`model` 参数不得省略**：省略时会静默继承主会话模型（主会话常是 fable），同样算违规——每次派 agent 都必须显式写 `model`。
 - **不设置任何额外并发限制**：`parallel()` / `pipeline()` 按需传入完整条目即可，不要为控制并发人为拆批、加节流或降低单批数量——Workflow 工具自身已有并发上限（`min(16, cpu核数-2)`），脚本层面不必也不应该叠加限制。
 
