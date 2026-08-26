@@ -18,7 +18,7 @@
 
 - **G0**：三个计划都未实施的训练语义，在受控确定性环境（P2 选定档）下的一轮真实训练。口径：本机 2×RTX 6000 Ada、b8、300 步、seed 42、SAVE_INTERVAL=25，走 `bench_train_steps.py` 入口，并行 `nvidia-smi -lms 500` 采样。
 - **跑两轮**（G0 主轮 + G0' 自证轮，同配置重跑）：第二轮提供 300 步尺度的可复现自证（P2 只证到 100 步）、产物交叉校验、以及量化判据的同 HLO null 对；第二轮走编译缓存命中，耗时更短。round1 为正本，round2 为自证。
-- **双重身份**：G0 兼任 dtype 计划 P6 的 A 侧（修复前），P6 随之只跑 B 侧；G0 的 util/步时采样同时充当其决策门的「修复前」侧数据。
+- **双重身份（仅限正确性对拍）**：G0 兼任 dtype 计划 P6 的 A 侧（修复前），P6 随之只跑 B 侧。**G0 的 util/步时数据不充当决策门数据**——正确性 run 的摘要停顿（每 25 步一次完整 TrainState 摘要，实测 47.3 s/次、扩完整 TrainState 后 2–3×）与确定性 XLA 档都污染性能口径；决策门数据由 dtype 计划的专用性能 run `v1-dtype-perf-{pre,post}` 提供（口径以该计划第四节为权威）。
 - **「不再重跑」的三个前提**（缺一即不成立，全部做成硬判定）：
   1. **仪器完整**（P1）：现有 checksum recorder 只哈希 params/EMA，缺 Adam 动量（opt_state）与 step——动量是「两条轨迹是否同一条」最灵敏的累积量，基线跑在扩展之前这一列就永久缺失且补不回来；
   2. **确定性成立**（P2）：尤其 D2-cold 档（独立重编译两次仍 bitwise 一致）——未来与 G0 对拍的 run 计算图都变了、必然现场重编译，无缓存可继承，**D2-cold PASS 是 G0 跨期充当 bitwise 判据一侧的唯一授权闸**；
@@ -38,7 +38,7 @@
 4. `scalars_hex.tsv`：`metrics.jsonl` 的规范化投影（`step<TAB>loss.hex<TAB>…`，剔除 wall_time 等易变字段）+ 其 sha256——「两轮是否一致」退化为一次 sha256 比较，人和机器都不会搞错（`metrics.jsonl` 含 wall_time，不可直接 diff）；
 5. `env.json`：环境指纹（真实 argv、库版本、GPU/驱动、XLA_FLAGS、编译缓存命中/编译计数——见 T2）；
 6. `BASELINE_MANIFEST.json`：逐产物 sha256 / 行数 / schema 版本——防产物腐烂与工具漂移；
-7. util 采样原始数据与统计（AGENTS 16 口径：稳态均值、0% 采样占比、慢步分层均值）、launch.md、result.md。
+7. util 采样原始数据与统计（AGENTS 16 口径：稳态均值、0% 采样占比、慢步分层均值）、launch.md、result.md。**util/步时数据受摘要停顿与确定性档影响，仅作留档参考，禁止作性能结论或决策门数据**（性能口径见 dtype 计划第四节的专用性能 run）。
 
 ## 四、失效条件与 preflight
 
@@ -89,6 +89,7 @@
 4. **`--checkpoint-base-dir` 按 RUN_TAG 分目录**：A/B 共用 EXP_NAME（为共享 per-fusion autotune 缓存，见 dtype 计划 T4 修订）后 run 目录撞名，`initialize_checkpoint_dir` 遇已存在目录直接 `FileExistsError` 拒跑；按轮次分目录，不靠「跑完删目录」避让（崩溃残留会卡死第二轮）。
 5. **两个新脚本**：`check_baseline_env.py`（preflight，断言项见 T5）；`compare_baseline.py`（对拍工具与基线同 commit 固化，防一年后工具漂移、口径变了；功能见 T2）。
 6. **`scripts/smoke-local/README.md` 同步**：现文「本基准未额外加 `--xla_gpu_deterministic_ops`」在 P1/P2 后变假，不改即错误文档；P2 收官把 D0–D2-cold 结论一并写入。
+7. **性能口径开关**：`SAVE_INTERVAL=0` 禁 TrainState 摘要、`BATCH_DIGESTS=0` 禁输入摘要（默认值保持现行为）——供 dtype 计划专用性能 run `v1-dtype-perf-{pre,post}` 使用（正确性与性能分跑，口径以该计划第四节为权威）。
 
 P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且未被删、argv 如实进 env.json、`batch_digests.jsonl` 落盘；另加一条 autotune 共享实证——A 轮后记 `xla_gpu_per_fusion_autotune_cache_dir` 条目数、B 轮后复查复用（把「共用 EXP_NAME 即共享 autotune」从机制推断变实测）。
 
@@ -116,7 +117,7 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 1. 从 clean HEAD 起跑前先过 `G0_SCOPE` 断言（二节）；run_name `v1-grad-baseline-g0`（用户已确认；实施起跑前仍按 AGENTS 6 再次确认）。
 2. round1（正本）→ round2（自证轮，同配置重跑）；round1 vs round2 按 P2 结果判定：D2-cold PASS 环境下应逐位一致，否则记录残差并入六节 null 对。
 3. 产物按三节清单固化，`BASELINE_MANIFEST.json` 校验通过后逐文件 `git add` 提交；登记簿（T8）回填 `<G0-HEAD>`、指纹 sha、判定结论。
-4. util/步时统计写入 result.md，标注「本机口径，不作最终吞吐结论」（AGENTS 13/16），充当 dtype 计划决策门 A 侧数据。
+4. util/步时统计写入 result.md，标注「本机口径，不作最终吞吐结论」（AGENTS 13/16）且**仅作留档参考、不进决策门**——受摘要停顿与确定性档污染，决策门数据由 dtype 计划专用性能 run `v1-dtype-perf-{pre,post}` 提供。
 
 后续（不在本计划）：dtype 修复本体自 commit V2.4 起（其 P3–P6，见该计划 T5）。
 

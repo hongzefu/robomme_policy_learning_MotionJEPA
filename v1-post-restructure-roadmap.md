@@ -49,6 +49,7 @@ v4 的等价性证明依赖"新旧两侧只有『字节从哪读』一个变量"
 - **vs G0**：项 1（CPU resize 改计算实现）与项 2/3（改输入签名，HLO 必变）的输出侧 bitwise 天然不可得，**主判据 = G0 固化的 `batch_digests` 输入侧逐位对拍**（与 XLA/缓存/驱动无关、跨 HLO 有效——例：项 2 把 pos 挪到 GPU 侧生成后，设备端 gather 出的 pos 张量与 G0 的 `static_pos_emb` 摘要对拍即是逐位判据），辅以量化复核（等价性检验形态，基线计划「量化判据」节）与单步 fixture 回归闸（约 2 分钟重锚 G0）。
 - **引用 G0 产物前必须 `BASELINE_ENV=PASS` preflight**（AGENTS 18 末句）；结论回填基线计划登记簿。
 - **revert 链形态**：若 dtype 修复被 revert，G1 不存在、v4 退回 v3 形态，基线链变为 G0 → G2'（v3 形态）；G0 保持链头不变。
+- **正确性 run 与性能 run 必须分跑（2026-08-26 用户裁定，适用上列每一项）**：带 TrainState 摘要 / batch_digests / 确定性 XLA 档的对拍 run，其 util/步时一律不作性能结论；各项的性能判断只取专用性能口径 run（无摘要、生产 XLA 档，口径参照 dtype 计划第四节的 `v1-dtype-perf-{pre,post}` 定义）。
 
 ## 已裁定不做 / 无独立价值（避免重复讨论）
 

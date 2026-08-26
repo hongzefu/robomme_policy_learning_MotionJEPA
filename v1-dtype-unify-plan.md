@@ -4,14 +4,14 @@
 >
 > 拆分依据（用户拍板）：旧训练自身存在两条 dtype 路径并存——98.4% 的 batch 因 padding 未指定 dtype 被提升 float64、回主进程降回 f32 上卡，1.6% 的「整批满长」batch 不触发 padding、以 bf16 上卡。先用本计划把这个问题在旧链路上原地修掉，IO 重构计划的 A/B 两侧 dtype 天然相同，其 replica 复刻模式、f32 回退、dtype 三态开关、第 3 层验证（原 C.4）、GL b64 dtype 抽查全部可删——每份计划变成单变量、归因干净。
 >
-> **2026-08-26 增补（G0 黄金基线，权威载体 [`v1-gradient-baseline.md`](v1-gradient-baseline.md)，本计划只引用不复制）**：① S1 确定性实验增 **D2-cold** 档（独立重编译可复现，G0 跨期复用的唯一授权闸）；② P6 的 A 侧（修复前）由 G0 基线 run `v1-grad-baseline-g0` 兼任，本计划只跑 B 侧，`v1-dtype-ab-pre` 不再单独跑；③ 300 步 A/B 改为**共用 `EXP_NAME`**（共享 per-fusion autotune 缓存，原「独立 EXP_NAME」裁定反转）；④ 量化兜底判据改等价性检验形态（null 标定，删 OLS-p 判据）；⑤ commit 编号顺延——本计划占 V2.1、V2.2、V2.4，V2.3 归 G0 基线固化，IO 重构计划自 V2.5 顺延。
+> **2026-08-26 增补（G0 黄金基线，权威载体 [`v1-gradient-baseline.md`](v1-gradient-baseline.md)，本计划只引用不复制）**：① S1 确定性实验增 **D2-cold** 档（独立重编译可复现，G0 跨期复用的唯一授权闸）；② P6 的 A 侧（修复前）由 G0 基线 run `v1-grad-baseline-g0` 兼任（**仅限正确性对拍**，见⑥），本计划只跑 B 侧，`v1-dtype-ab-pre` 不再单独跑；③ 300 步 A/B 改为**共用 `EXP_NAME`**（共享 per-fusion autotune 缓存，原「独立 EXP_NAME」裁定反转）；④ 量化兜底判据改等价性检验形态（null 标定，删 OLS-p 判据）；⑤ commit 编号顺延——本计划占 V2.1、V2.2、V2.4，V2.3 归 G0 基线固化，IO 重构计划自 V2.5 顺延；⑥ **正确性与性能分跑（2026-08-26 用户裁定）**——正确性对拍 run（带 TrainState 摘要 / batch_digests / 确定性 XLA 档）的 util/步时数据一律不作性能结论，决策门数据改由两个专用性能 run `v1-dtype-perf-{pre,post}` 提供（口径见第四节，原「B 侧顺带产出、零额外 run」设计作废）。
 
 ## Context（为什么做这件事）
 
 - 现状（实测，数字来源见 IO 重构计划 1.3–1.5 节）：`right_padding_token_emb` 的三个 `np.zeros` 未指定 dtype（默认 float64），`t < 31` 的短样本（占 6.27%）整体提升 f64；batch 内含任一短样本（b64 概率 98.4%、b8 概率 40.4%）时 collate 的 `np.stack` 把 memory 三键整批提升 f64——batch 载荷 ~757 MB（仅 `static_image_emb` 一键 537 MB）在 worker→collate→IPC→device_put 全程白搬运，host 侧再由 jax 降回 f32 上卡。剩余 1.6% 满长 batch 以 bf16 上卡——**dtype 随 batch 摆动，XLA 编译两份产物**。
 - 模型侧已实测钉死：第一层 `nnx.Linear` 显式 `dtype=bfloat16`，flax `promote_dtype` 在任何算术前把输入统一转 bf16；bf16→f32→f64 均为精确升位（全部 65,536 个 bf16 位型验证过往返无损）——**三种交付（bf16/f32/f64）进 `pos_proj`/`encoder_static` 的实际张量逐位相同**（真实形状实测 memory token 输出全等，max 差 0.0）。因此本修复**不是引入新行为，而是把现状 1.6% batch 的行为推广到 100%**。
 - 直接收益（实测数字）：batch 载荷 757→~257 MB、collate 52→19 ms、device_put 73→23 ms、XLA 编译产物 2 份合 1 份、worker 在途内存约降 2/3。本机 b8 步时预期变化很小（步时大头在 IO，collate+device_put 合计仅省 ~80 ms/step 量级）——**本计划的本职是消除双路径、给 IO 重构铺路，吞吐硬判据由 IO 重构计划的 GL 验收承担**。
-- 最终目标口径（用户 2026-08-26 拍板）：整个两计划链条的方向性目标是 **GPU 占用 100%**（north star；验收阈值仍按 IO 重构计划 D 节的 util 均值必达 ≥90%/期望 ≥95% 执行，字面 100% 物理不可达）。**本计划结束时必须给出修复前后本机 GPU 占用与步时的对比结论，作为用户决定是否实施 IO 重构计划的决策输入。**
+- 最终目标口径（用户 2026-08-26 拍板）：整个两计划链条的方向性目标是 **GPU 占用 100%**（north star；验收阈值仍按 IO 重构计划 D 节的 util 均值必达 ≥90%/期望 ≥95% 执行，字面 100% 物理不可达）。**本计划结束时必须给出修复前后本机 GPU 占用与步时的对比结论，作为用户决定是否实施 IO 重构计划的决策输入；对比数据来自两个专用性能 run（`v1-dtype-perf-{pre,post}`，第四节），不得取自任何正确性对拍 run。**
 
 ---
 
@@ -84,13 +84,22 @@
 3. 300 步 A/B：**A 侧＝G0 黄金基线固化产物**（`v1-grad-baseline-g0`，兼任本计划修复前一侧，定义与产物见 `v1-gradient-baseline.md`），本计划只跑 B（修复后，`v1-dtype-ab-post`）；B 起跑前必过 `BASELINE_ENV` preflight，并应尽快接续 G0（理想同场次——跨期复用能力是给无法重跑 A 侧的后续链节用的，不是推迟 B 侧的理由）。逐步比 loss/grad_norm/llm_grad_norm/mem_enc_norm/param_norm 五个标量 hex + 每 25 步完整 TrainState 摘要。主判据 bitwise；因 A/B 输入 dtype 不同、XLA 编译产物不同，bitwise 存在虚假失败的可能——预设量化判据兜底（等价性检验形态，权威版本见基线计划「量化判据」节），启用前须先证 B 自身重跑稳定。
 4. **两块全部通过才允许宣称修复等价；任何一块不过且量化判据也不过 → revert 修复 commit，IO 重构计划退回 v3 形态（replica/native 机器恢复）。**
 
-## 四、吞吐与 GPU 占用对比（决策门）
+## 四、吞吐与 GPU 占用对比（决策门；本节为专用性能 run 口径的权威定义）
 
-修复前一侧的数据直接取 G0 基线留档（其 run 已按同口径采样），第二块的 300 步 B 侧 run **顺带产出**修复后一侧（零额外 run，不阻塞）：
+**正确性 run 与性能 run 必须分跑（2026-08-26 用户裁定）。** 原设计（A 侧取 G0 留档、B 侧顺带产出、零额外 run）作废，原因是正确性 run 对性能口径有三个污染源：
 
-- 口径按 AGENTS 16：`nvidia-smi -lms 500` 密集采样，报 **util 稳态均值、0% 采样占比、慢步/非慢步分层均值**（禁中位数标题结论）；另报步时分布与 collate/device_put 分段耗时。
+1. **摘要停顿**：每 25 步一次完整 TrainState 摘要，实测 47.3 s/次（110 叶子），扩完整 TrainState 后按 2–3× 估（约 95–140 s/次）；300 步 12 次合计约 19–28 分钟纯停顿，而本修复的预期收益只有约 80 ms/step（collate+device_put 合计）——信号比噪声小两个数量级，util 均值 / 0% 采样占比 / 步时全部失真；
+2. **确定性档非生产口径**：G0/B 侧跑在 deterministic_ops + autotune 0 下，kernel 选择不代表正常训练性能（基线计划八节 8.2 已把此列为「三条不可比」之一）；
+3. **污染不对称**：修复前后张量 dtype/字节量不同，摘要与 batch_digests 的 device_get / sha256 耗时两侧不同，污染不会相互抵消。
+
+**决策门数据由两个专用性能 run 提供**：
+
+- `v1-dtype-perf-pre`：修复前 clean HEAD（必须早于修复 commit V2.4），1 轮 300 步；`v1-dtype-perf-post`：修复后 clean HEAD，1 轮 300 步。
+- 统一口径：`bench_train_steps.py` 入口（经 P1 改造）、本机 2×RTX 6000 Ada、b8、seed 42、num_workers=4；**生产 XLA 档**（不注入 `XLA_FLAGS`，autotune 默认开）；`SAVE_INTERVAL=0`（禁 TrainState 摘要）、`BATCH_DIGESTS=0`（禁输入摘要）——逐步 loss 标量记录保留（毫秒级且两侧对称）。
+- 采样与报表按 AGENTS 16：`nvidia-smi -lms 500` 密集采样（另保留 15 s legacy 通道对照），报 **util 稳态均值、0% 采样占比、慢步/非慢步分层均值**（禁中位数标题结论）；另报步时中位与均值、collate/device_put 分段耗时。生产档 autotune 有少量重跑噪声，结论以稳态窗口统计为准、不取单点。
 - 预期：util 与步时变化很小（本机瓶颈在 IO），collate/device_put 段应有明显下降；**数字按 AGENTS 13 标注「本机口径，不作最终吞吐结论」**。
 - **决策门：对比结论（GPU 占用提升多少、步时变化多少）交用户，由用户决定是否实施 IO 重构计划（v4）。本计划验收不给吞吐设过/不过阈值。**
+- G0 与 B 侧（`v1-dtype-ab-post`）等一切带摘要/确定性档的 run，其 util/步时数据一律降级为留档参考，禁止进入决策门。
 
 ---
 
@@ -118,7 +127,7 @@ np.zeros((max_size - sampled_state_emb.shape[0], *sampled_state_emb.shape[1:]), 
   3. `scripts/smoke-local/bench_train_steps.py` checksum recorder 扩展：逐步标量 hex（loss/grad_norm/llm_grad_norm/mem_enc_norm/param_norm）外，每 `SAVE_INTERVAL` 记一次完整 TrainState 摘要（params/opt_state/EMA/step 全部叶子逐个 sha256 汇成 `state_digest`）。
   4. 同步更新 `scripts/smoke-local/README.md`。
   5. （原 S0 的 preflight packed 兼容与 `BENCH_DUMP_IDX` 两项**不在本计划**，留给 IO 重构计划 v4 自补。）
-  6. **G0 基线计划的 P1 扩展项一并在本步交付**（清单与逐项作用以 `v1-gradient-baseline.md` 执行序列 P1 节为权威）：`batch_digests` 输入摘要记录、env.json 改记真实 argv（现 heredoc 硬编码 seed/fsdp_devices，参数化后会说谎）、编译缓存命中/编译计数进 env.json、`--checkpoint-base-dir` 按 RUN_TAG 分目录、新脚本 `check_baseline_env.py` 与 `compare_baseline.py`、README 同步扩展至确定性口径。
+  6. **G0 基线计划的 P1 扩展项一并在本步交付**（清单与逐项作用以 `v1-gradient-baseline.md` 执行序列 P1 节为权威）：`batch_digests` 输入摘要记录、env.json 改记真实 argv（现 heredoc 硬编码 seed/fsdp_devices，参数化后会说谎）、编译缓存命中/编译计数进 env.json、`--checkpoint-base-dir` 按 RUN_TAG 分目录、新脚本 `check_baseline_env.py` 与 `compare_baseline.py`、README 同步扩展至确定性口径；另加**性能口径开关**——`SAVE_INTERVAL=0` 禁 TrainState 摘要、`BATCH_DIGESTS=0` 禁输入摘要（默认值保持现行为，符合红线 D3），供第四节专用性能 run 使用。
 - **S1 四档实验**（各两轮相同 run，100 步，SAVE_INTERVAL=10）：D0=现状删缓存（预期 FAIL，复现对照；**两轮产物固化留档**，标注「字面现状口径，非判据基线，只作噪声底与口径对照」）；D1=共用缓存；D2=D1+`--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0`（期望 PASS）；**D2-cold**=同 D2 flags、两轮各用全新空缓存目录（`EXP_NAME` 各异）——强制独立编译两次，证「编译两次得到同样行为」，这是 D1/D2 共用缓存测不到、而「G0 固化后跨期复用」唯一依赖的性质，**D2-cold PASS 是 G0 跨期充当 bitwise 判据一侧的唯一授权闸**。判定行：两轮逐步标量 hex 与全部 `state_digest` diff 为空（逐档）。取首个 PASS 档固定为本计划第二块与 IO 重构计划全部 A/B 的环境；按 D2-cold 结果落三支处置（PASS / FAIL 但共享缓存档 PASS / 全 FAIL，权威表述见基线计划「P2 三支处置」）；D2 仍 FAIL 则加 exclude flag 并降 50 步二分。
 - 摘要开销按实测 47.3 s/次（110 叶子）为基准，扩完整 TrainState 后按 2–3× 估。
 
@@ -140,7 +149,7 @@ np.zeros((max_size - sampled_state_emb.shape[0], *sampled_state_emb.shape[1:]), 
 1. **单步定点梯度对拍**（~5 min）：同一初始 state 各算一步逐元素比梯度；三种 batch 用 T3 落盘的 npz 直接构造（含短样本 batch 主判据 / 全短样本补充 / 整批满长阴性对照）。判据：主判据与补充 bitwise；阴性对照必须逐位相同（不同则说明改动越界，与 dtype 无关，立即停下排查）。**该定点 fixture（固定初始 state + 固定 batch npz）存 `v1-store/fixtures/`、逐文件 sha256 摘要进 git，升格为基线链的常规回归闸**——后续任何 commit 花约 2 分钟即可重锚 G0（见基线计划「三方对拍矩阵」节）。
 2. **300 步 A/B**（本机 2 卡 b8，S1 选定的确定性环境）：**A=G0 基线固化产物（不重跑），B=修复后 commit 现跑** `v1-dtype-ab-post`；同 seed 42、同 num_workers、同 `XLA_FLAGS`；**共用 `EXP_NAME`**（2026-08-26 裁定反转：模块级缓存 key 含 HLO，A/B 天然不互相命中、无污染风险，共用目录才能让 `xla_gpu_per_fusion_autotune_cache_dir` 这一目录级按-fusion 缓存把两侧未变化 fusion——整个 LLM 主干——的 autotune 结论复用起来，消除「两次独立 autotune」噪声源；`RUN_TAG` 区分记录目录、`--checkpoint-base-dir` 按 RUN_TAG 分 run 目录避免 `initialize_checkpoint_dir` 的 `FileExistsError`）；SAVE_INTERVAL=25；B 起跑前 `BASELINE_ENV=PASS` 是硬前置。判据：五个标量 hex 列 + 每 25 步 `state_digest` 逐步 diff 全空。
 3. **量化兜底**（仅当 bitwise 失败且先证 B 重跑两轮自身 bitwise 稳定后启用）：等价性检验形态——rel 各统计档以 null 对（D2-cold 两轮，或 D0 两轮作上界）实测分布标定上界（×2 余量），原绝对阈值（loss 1e-6 / 梯度范数 1e-5 / 末步 param_norm 1e-5 等）降级为下限守卫；趋势判据用逐步包络，不用 OLS-p（原「β>0 且 p≤0.05 即 FAIL」已删除：rel 序列强自相关使 p 值失标定、混沌轨迹下任何扰动都 β>0，无鉴别力）。参数化定义以基线计划「量化判据」节为权威。
-4. **吞吐/util 顺带采集**（决策门数据）：A 侧数据直接取 G0 基线留档（其 run 已按同口径 `nvidia-smi -lms 500` 采样）；B 轮并行起同口径采样落 records；产出对比表：util 稳态均值 / 0% 采样占比 / 慢步分层均值 / 步时中位与均值 / collate、device_put 分段耗时。写进 result.md 的「决策门」一节，明确标注本机口径。
+4. **决策门数据不在本步采集**（2026-08-26 裁定）：P6 的 A/B 两侧均为正确性口径（摘要停顿 + 确定性档），其 util/步时仅落 records 作留档参考。决策门对比表由 Pperf-pre/Pperf-post 两个专用性能 run 产出（口径以第四节为权威）：util 稳态均值 / 0% 采样占比 / 慢步分层均值 / 步时中位与均值 / collate、device_put 分段耗时，写进 `v1-dtype-perf-post` 的 result.md「决策门」一节，明确标注本机口径。
 5. 失败处置：任何判据最终不过 → `revert` 修复 commit（V2.4），本计划关闭，IO 重构计划退回 v3 形态；留档记录失败证据（基线链形态变化见基线计划「revert 链形态」）。
 
 ## T5 实施顺序、commit 切分、run_name、留档
@@ -149,14 +158,16 @@ np.zeros((max_size - sampled_state_emb.shape[0], *sampled_state_emb.shape[1:]), 
 |---|---|---|---|---|
 | P1 | S0 bench 驱动改造（T2 子集 + G0 基线计划 P1 扩展项） | — | STEPS=3 连跑两次不拒跑、缓存未删且落 `v1-store/cache/jax/`、argv 如实进 env.json、batch_digests 落盘、autotune 共享实证 | ~1 h |
 | P2 | S1 确定性 D0/D1/D2/D2-cold（各两轮 100 步）+ 留档（D0 产物固化） | P1 | 两轮标量 hex + state_digest diff 空（逐档）+ 三支处置结论落档 | ~2.5 h |
-| PG0 | G0 基线两轮 + 产物固化（流程与判定以基线计划 PG0 节为权威；兼任本计划 P6 的 A 侧） | P2 | `G0_SCOPE=PASS` + `BASELINE_MANIFEST.json` 校验 + 固化 commit | ~2.5 h |
+| PG0 | G0 基线两轮 + 产物固化（流程与判定以基线计划 PG0 节为权威；兼任本计划 P6 的 A 侧，仅正确性对拍） | P2 | `G0_SCOPE=PASS` + `BASELINE_MANIFEST.json` 校验 + 固化 commit | ~2.5 h |
+| Pperf-pre | 专用性能 run 修复前侧 `v1-dtype-perf-pre`（生产 XLA 档、禁摘要，口径见第四节）；**必须在修复 commit V2.4 落地前跑**，建议 PG0 后同场次 | P1 | 稳态统计落档（AGENTS 16 口径） | ~40 min |
 | P3 | 修复前 dump（T3 修复前侧） | — | npz 落盘完整 | ~15 min |
 | P4 | 应用 T1 修复 + 修复后 dump + 第一块对拍 | P3 | `COMPARE_DTYPE=PASS` | ~30 min |
 | P5 | 单步定点梯度对拍（fixture 落 `v1-store/fixtures/`） | P2+P4 | 三种 batch 判据全过 | ~15 min |
-| P6 | 300 步 B 侧 + 与 G0 固化产物对拍 + 吞吐/util 采集 + 决策门结论 | PG0+P5，起跑前 `BASELINE_ENV=PASS` | bitwise（或量化兜底）PASS + 对比表落档 | ~1 h |
+| P6 | 300 步 B 侧 + 与 G0 固化产物对拍（纯正确性，util 数据仅留档参考） | PG0+P5，起跑前 `BASELINE_ENV=PASS` | bitwise（或量化兜底）PASS | ~1 h |
+| Pperf-post | 专用性能 run 修复后侧 `v1-dtype-perf-post`（同 Pperf-pre 口径，修复后 clean HEAD）+ 决策门对比表 | P4（修复落地后） | 稳态统计 + pre/post 对比表落档 | ~40 min |
 
-- **commit 切分**（2026-08-26 G0 增补后顺延：本计划占 V2.1、V2.2、V2.4，**V2.3 归 G0 基线固化**，IO 重构计划从 V2.5 顺延）：V2.1 bench 驱动改造（P1，含扩展项）→ V2.2 确定性前提确立（P2 四档，含留档）→ V2.3 G0 基线固化（PG0，归 `v1-gradient-baseline.md`）→ V2.4 dtype 修复 + 两块验证 + 决策门数据（P4–P6，代码改动与工具、留档分文件逐个 add）。
-- **run_name（起跑前逐个交用户确认，AGENTS 6）**：确定性实验 `v1-det-d{0,1,2}-r{1,2}` + `v1-det-d2cold-r{1,2}`（同时服务后续 IO 重构计划）；G0 基线 `v1-grad-baseline-g0`（兼任修复前一侧，归 V2.3）；300 步 B 侧 `v1-dtype-ab-post`（`v1-dtype-ab-pre` 不再单独跑，由 G0 兼任）。>5 min 的 run 一律 `docs/training-doc/<run_name>/` 留档（AGENTS 17）；P3–P5 短程不强制留档，但对拍判定行与单步梯度结论并入 V2.4 commit body 与 `v1-dtype-ab-post` 的 result.md。
+- **commit 切分**（2026-08-26 G0 增补后顺延：本计划占 V2.1、V2.2、V2.4，**V2.3 归 G0 基线固化**，IO 重构计划从 V2.5 顺延）：V2.1 bench 驱动改造（P1，含扩展项）→ V2.2 确定性前提确立（P2 四档，含留档）→ V2.3 G0 基线固化（PG0，归 `v1-gradient-baseline.md`）→ V2.4 dtype 修复 + 两块验证（P4–P6，代码改动与工具、留档分文件逐个 add）。**Pperf-pre / Pperf-post 两个性能 run 的留档各以 `docs:` commit 提交，不占 V2.x 编号**（Pperf-pre 留档在 V2.3 与 V2.4 之间，Pperf-post 留档在 V2.4 之后）。
+- **run_name（起跑前逐个交用户确认，AGENTS 6）**：确定性实验 `v1-det-d{0,1,2}-r{1,2}` + `v1-det-d2cold-r{1,2}`（同时服务后续 IO 重构计划）；G0 基线 `v1-grad-baseline-g0`（兼任修复前一侧，归 V2.3）；300 步 B 侧 `v1-dtype-ab-post`（`v1-dtype-ab-pre` 不再单独跑，由 G0 兼任正确性一侧）；专用性能 run `v1-dtype-perf-pre` / `v1-dtype-perf-post`（决策门数据唯一来源，第四节）。>5 min 的 run 一律 `docs/training-doc/<run_name>/` 留档（AGENTS 17）；P3–P5 短程不强制留档，但对拍判定行与单步梯度结论并入 V2.4 commit body 与 `v1-dtype-ab-post` 的 result.md。
 - 所有训练/dump 运行走 `uv run`；>5 min 的 P2/P6 按 AGENTS 7 tmux + tee + `EXIT_CODE=` + Monitor。
 
 ## T6 红线（实施期逐条自检）
@@ -166,6 +177,6 @@ np.zeros((max_size - sampled_state_emb.shape[0], *sampled_state_emb.shape[1:]), 
 | D1 | 代码改动仅限 `right_padding_token_emb` 三个 `np.zeros` 加 dtype（授权例外）；其余 `shared/**` 与一切训练代码零改动 |
 | D2 | 训练循环/模型/超参/seed 零改动；不新增任何运行时开关或环境变量 |
 | D3 | 验证资产改动（S0）默认行为等价现状（新变量不设即旧行为） |
-| D4 | 决策门只报数不设吞吐阈值；本机数字必须标注「不作最终吞吐结论」（AGENTS 13）、util 判读按 AGENTS 16 口径 |
+| D4 | 决策门只报数不设吞吐阈值；本机数字必须标注「不作最终吞吐结论」（AGENTS 13）、util 判读按 AGENTS 16 口径；**性能数字禁止取自带 TrainState 摘要 / batch_digests / 确定性 XLA 档的 run**——决策门数据只能来自 `v1-dtype-perf-{pre,post}` |
 | D5 | 任何一致性判据最终不过即 revert，禁止「差不多就行」 |
 | D6 | run_name 起跑前用户确认；>5 min run 留档；收官清理临时 run 与 jax 缓存软链 |
