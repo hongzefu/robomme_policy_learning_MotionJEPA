@@ -1,12 +1,13 @@
 # smoke-local：本机 2 GPU epoch 基准 + 一致性检验记录底座
 
-本目录三个文件：
+本目录五个文件：
 
 | 文件 | 作用 |
 |---|---|
-| `run_2gpu_epoch_bench.sh` | 驱动脚本：2 卡跑 `STEPS`（默认 300）步，**batch 固定 8**（2 卡实测唯一确认可跑档，64/32/16 均 OOM；改档属超参变更须先确认并重新实测），算稳态 s/step 并外推 1 epoch 时长，留下一致性检验记录；任何失败 fail-loud 不重试 |
-| `bench_train_steps.py` | 训练入口：只调一次 `train.main(config)`，训练循环一行不改；靠两处 monkeypatch 把逐步标量与参数校验和写成 jsonl |
-| `README.md` | 本文件 |
+| `run_2gpu_epoch_bench.sh` | 驱动脚本：2 卡跑 `STEPS`（默认 300）步，**batch 固定 8**（2 卡实测唯一确认可跑档，64/32/16 均 OOM；改档属超参变更须先确认并重新实测），算稳态 s/step 并外推 1 epoch 时长，留下一致性检验记录；任何失败 fail-loud 不重试。身份拆分：`EXP_NAME` 决定 jax 编译缓存目录（对拍两轮共用即共享编译产物与 per-fusion autotune），`RUN_TAG` 决定记录/日志/checkpoint 目录（每轮各异）；`KEEP_JAX_CACHE=1` 收官保留缓存，`XLA_FLAGS` 外部注入并留档 |
+| `bench_train_steps.py` | 训练入口：只调一次 `train.main(config)`，训练循环一行不改；靠 monkeypatch 把逐步标量、完整 TrainState 摘要（params/opt_state/EMA/step，步 0 必记）、输入 batch 摘要写成 jsonl，另留档编译缓存事件计数与真实 argv。速度口径开关：`SAVE_INTERVAL=0` 禁 TrainState 摘要、`BATCH_DIGESTS=0` 禁输入摘要（speed 链 run 专用，见 `v1-gradient-baseline.md` 符号总表） |
+| `check_baseline_env.py` | 环境指纹 `dump`（起跑留档进 env.json）/ `check`（**引用任何基线产物前的强制 preflight**，输出 `BASELINE_ENV=PASS|FAIL`）/ `manifest`（生成 `BASELINE_MANIFEST.json` 防产物腐烂） |
+| `compare_baseline.py` | 两份 records 目录对拍：逐步标量 hex diff、`state_digest`/`batch_digest` diff、rel 分布与包络（量化判据权威版本见 `v1-gradient-baseline.md` 六节），输出 `DET_CHECK=` / `QUANT_EQUIV=` 判定行 |
 
 一句话定位：**测「本机 2 卡、数据在 NFS turbo 时 1 个 epoch 要多久」，同时为将来
 修改 dataloader 后的一致性检验（数据允许等价但不逐位相同）留下可逐位比对的轨迹记录。**
@@ -71,12 +72,16 @@
 - A/B 两边**同机、同驱动、同 `XLA_FLAGS`、同 mesh（2 卡 fsdp=2）、同 batch 档**——
   逐项核对两份 `env.json` 相同（TF32 等矩阵精度行为由 XLA 按硬件+flags 决定，
   两边同设即抵消）；
-- 本基准未额外加 `--xla_gpu_deterministic_ops`（加了就偏离官方口径）。
+- 确定性档由调用方经 `XLA_FLAGS` 注入（2026-08-26 起支持；正确性对拍 run 跑在
+  `--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0` 档，**偏离官方生产
+  口径是有意的**——G0 的语义是「受控确定性档位下的当前训练语义」；speed 链 run 不注入
+  flags，保持生产口径。两族 run 的权威口径见 `v1-gradient-baseline.md` 符号总表）。
 - **2026-08-24 实测：同配置同 seed 重跑两轮，参数校验和逐步全不相同——本机默认
   设置下并非 bitwise 确定**（疑因每轮删了 jax 编译缓存、XLA 重新 autotune 选中
   不同 kernel/归约实现）。因此做 A/B 前必须先立稳前提：两边同开
   `--xla_gpu_deterministic_ops=true`、固定/关闭 autotune、共用同一份编译缓存，
   并用两次相同 run 验证校验和逐步一致后再开始 dataloader 改动对比。
+  四档确定性实验（D0/D1/D2/D2-cold，各两轮 100 步）的实测结论跑完后回填于此。
 
 ### 第 2 级：梯度范数 + 参数校验和（便宜，且校验和是累积效应）
 
@@ -116,15 +121,31 @@
 
 ```json
 {"step": 25, "wall_time": 1756056100.5, "checksum_seconds": 21.3, "n_leaves": 1234,
- "global_digest": "3f8a…(sha256)",
- "per_leaf": {"params.PaliGemma.llm…kernel": "9c1d…", "ema_params.…": "77b2…"}}
+ "global_digest": "3f8a…(sha256)", "state_digest": "b02c…(sha256)",
+ "per_leaf": {"params.PaliGemma.llm…kernel": "9c1d…", "opt_state.…": "4e6a…",
+              "ema_params.…": "77b2…", "step": "a1f0…"}}
 ```
 
-- `global_digest`：全部叶子按 key 排序后拼接再 sha256——**快速判整体一致只看这一列**；
-- `per_leaf`：`{params|ema_params}` 前缀 + pytree 路径 → 该叶子（dtype+shape+字节）
-  的 sha256——**定位分叉模块用这一层**；
-- 触发步：`step % save_interval == 0 (step>0)` 及最后一步（沿用 `train.main` 里
-  `save_interval` 的既有触发逻辑，只是保存动作被换成校验和）。
+- `state_digest`：**完整 TrainState**（params/opt_state/EMA/step）全部叶子按 key
+  排序后拼接再 sha256——**判整体一致的主列**（Adam 动量是最灵敏的累积量）；
+- `global_digest`：只覆盖 params+ema 的旧口径列，供与 2026-08-24 之前的记录续比；
+- `per_leaf`：`{params|opt_state|ema_params|step}` 前缀 + pytree 路径 → 该叶子
+  （dtype+shape+字节）的 sha256——**定位分叉模块用这一层**；
+- 触发步：步 0（init 后立即记，`init_train_state` 包装所致）、
+  `step % save_interval == 0 (step>0)` 及最后一步。
+
+**`batch_digests.jsonl`** —— 输入侧摘要（collate 后、device_put 前的 host 侧 batch，
+逐键 `sha256(dtype‖shape‖bytes)`），步 0/1/2 + 每 `save_interval` + 末步。与
+XLA/缓存/驱动无关、跨计算图（HLO）永远逐位可比——改输入签名场景对拍的主判据：
+
+```json
+{"step": 0, "wall_time": 1756056000.2, "digest_seconds": 0.4, "n_keys": 18,
+ "batch_digest": "c9d2…(sha256)", "per_key": {"['actions']": "0b3f…"}}
+```
+
+**`run_meta.json`** —— 训练进程真实 `sys.argv` + jax.monitoring 事件计数（编译
+缓存命中/编译次数——判定「这轮是热缓存还是冷编译」的留档事实）；驱动脚本收官时
+并入 `env.json` 的 `run_meta` 键。
 
 **`env.json`** —— 启动时留档：git HEAD 与 dirty 标记、batch/steps/workers/seed/
 fsdp/变体、`XLA_FLAGS`、`XLA_PYTHON_CLIENT_MEM_FRACTION`、`CUDA_VISIBLE_DEVICES`、

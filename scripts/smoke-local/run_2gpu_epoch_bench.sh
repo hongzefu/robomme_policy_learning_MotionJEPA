@@ -3,13 +3,28 @@
 #
 # 目标：配置尽可能对齐 scripts/finetune_mme_vla_suite.sh（num-workers 4、
 # use_history + framesamp-context；batch 固定 8——官方 64 在 2 卡 OOM，见下），
-# 在 2 卡 + NFS turbo 数据上跑 300 步，
+# 在 2 卡 + NFS turbo 数据上跑 STEPS 步，
 # 用稳态 s/step 外推 1 个 epoch（395,289 样本）的时长；同时逐步记录 loss/梯度范数、
-# 每 SAVE_INTERVAL 步记录参数校验和，为将来 dataloader 改动的一致性检验留底。
+# 每 SAVE_INTERVAL 步记录完整 TrainState 摘要与输入 batch 摘要，
+# 为 dataloader 改动的一致性检验留底。
 # 与官方默认训练的逐项差异及记录文件格式见同目录 README.md。
 #
-# ⚠ 本机数字按 AGENTS.md 第 13 条只作估算，不作正式吞吐结论。
-# ⚠ 不落任何 checkpoint（save_state 已被 bench 入口替换为校验和记录器）。
+# 身份拆分（v1-gradient-baseline.md P1）：
+#   EXP_NAME —— 决定 jax 编译缓存目录（A/B 对拍两轮共用它即共享编译产物与
+#               per-fusion autotune 结论）；
+#   RUN_TAG  —— 决定记录目录 / 日志 / checkpoint run 目录（每轮各异，避免
+#               initialize_checkpoint_dir 的 FileExistsError）。
+#
+# 可调环境变量：
+#   STEPS（≤600）、WORKERS、WARMUP_STEPS、DATASET_PATH
+#   SAVE_INTERVAL   TrainState 摘要间隔；0 = 完全禁摘要（speed 链口径）
+#   BATCH_DIGESTS   1（默认）记输入摘要；0 = 禁（speed 链口径）
+#   KEEP_JAX_CACHE  1 = 收官保留编译缓存（确定性 A/B 共用缓存用）；默认 0 删除
+#   XLA_FLAGS       原样注入训练进程并留档 env.json（确定性档由调用方给定）
+#
+# ⚠ 本机数字按 AGENTS.md 第 13 条只作估算，不作正式吞吐结论；带摘要/确定性档的
+#   run 其 util/步时按基线计划红线 B7 禁作任何性能结论。
+# ⚠ 不落任何 checkpoint（save_state 已被 bench 入口替换为摘要记录器）。
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../data-preprocess-GL" && pwd)/paths.sh"
 
@@ -20,7 +35,9 @@ v1_require_models 1                       # 需要 tokenizer 与 pi05_base
 DATASET_PATH="${DATASET_PATH:-${GL_DATASET}}"
 STEPS="${STEPS:-300}"
 WORKERS="${WORKERS:-4}"                   # 官方口径
-SAVE_INTERVAL="${SAVE_INTERVAL:-25}"      # 参数校验和间隔（不落 ckpt）
+SAVE_INTERVAL="${SAVE_INTERVAL:-25}"      # TrainState 摘要间隔（不落 ckpt）；0 = 禁摘要
+BATCH_DIGESTS="${BATCH_DIGESTS:-1}"       # 输入 batch 摘要开关
+KEEP_JAX_CACHE="${KEEP_JAX_CACHE:-0}"     # 1 = 保留编译缓存供下一轮共用
 WARMUP_STEPS="${WARMUP_STEPS:-50}"        # 稳态统计丢弃的头部步数（JIT 编译 + worker 起步）
 EPOCH_SAMPLES=395289                      # meta/stats.json 的 execution_samples，drop_last
 NORM_STATS="${TRAIN_ASSETS}/mme_vla_suite/robomme/norm_stats.json"
@@ -37,10 +54,21 @@ BENCH_ROOT="${V1_STORE}/bench/2gpu-epoch-bench"
 # 全程验证通过（稳态 1.060 s/step）。改档位属超参变更：须按 AGENTS.md 第 10 条
 # 先与用户确认，且需重新实测显存，不提供环境变量覆盖。
 BATCH=8
-RUN_NAME="v1-2gpu-epoch-bench-b${BATCH}"
-CKPT_DIR="${TRAIN_RUNS}/mme_vla_suite/${RUN_NAME}"
-RECORD_DIR="${BENCH_ROOT}/${RUN_NAME}"
-LOG="${LOGS_DIR}/${RUN_NAME}.log"
+EXP_NAME="${EXP_NAME:-v1-2gpu-epoch-bench-b${BATCH}}"
+RUN_TAG="${RUN_TAG:-${EXP_NAME}}"
+CKPT_BASE="${TRAIN_RUNS}/${RUN_TAG}"      # 按 RUN_TAG 分目录：共用 EXP_NAME 的两轮不撞名
+CKPT_DIR="${CKPT_BASE}/mme_vla_suite/${EXP_NAME}"
+RECORD_DIR="${BENCH_ROOT}/${RUN_TAG}"
+LOG="${LOGS_DIR}/${RUN_TAG}.log"
+
+# jax 编译缓存收敛进 v1-store（AGENTS 14，不动 train.py、不覆盖 HOME）：
+# train.main 硬编码写 ~/.cache/jax_<exp_name>，用软链把它指到 v1-store/cache/jax/
+JAX_CACHE_DIR="${CACHE_DIR}/jax/${EXP_NAME}"
+JAX_CACHE_LINK="${HOME}/.cache/jax_${EXP_NAME}"
+mkdir -p "${JAX_CACHE_DIR}" "${HOME}/.cache"
+[[ -e "${JAX_CACHE_LINK}" && ! -L "${JAX_CACHE_LINK}" ]] && {
+  echo "错误: ${JAX_CACHE_LINK} 已存在且不是软链, 拒绝覆盖" >&2; exit 1; }
+ln -sfn "${JAX_CACHE_DIR}" "${JAX_CACHE_LINK}"
 
 [[ -e "${CKPT_DIR}" ]] && {
   echo "错误: run 目录已存在, 禁止 overwrite: ${CKPT_DIR}" >&2; exit 1; }
@@ -48,15 +76,53 @@ LOG="${LOGS_DIR}/${RUN_NAME}.log"
   echo "错误: 记录目录已存在, 禁止覆盖既有记录: ${RECORD_DIR}" >&2; exit 1; }
 mkdir -p "${RECORD_DIR}"
 
-  # 环境留档：将来一致性 A/B 的对照 run 必须逐项同设（见 README.md）
-  "${PY}" - "$RECORD_DIR" <<EOF
+# SAVE_INTERVAL=0（speed 链口径）：入口层禁摘要；train.main 的 step%interval 不能吃 0，
+# 传一个大于步数上限的值让周期触发失效（末步触发由 BENCH_CHECKSUM=0 变 no-op）
+if [[ "${SAVE_INTERVAL}" -eq 0 ]]; then
+  SAVE_INTERVAL_ARG=1000000
+  BENCH_CHECKSUM=0
+else
+  SAVE_INTERVAL_ARG="${SAVE_INTERVAL}"
+  BENCH_CHECKSUM=1
+fi
+
+# 训练命令的唯一真值源：env.json 的 argv 与实际执行的是同一个数组，不再手抄字面量
+ARGS=(
+  "${REPO_ROOT}/scripts/smoke-local/bench_train_steps.py" mme_vla_suite
+  --exp-name "${EXP_NAME}"
+  --assets-base-dir "${TRAIN_ASSETS}"
+  --checkpoint-base-dir "${CKPT_BASE}"
+  --batch-size "${BATCH}"
+  --num-workers "${WORKERS}"
+  --num-train-steps "${STEPS}"
+  --log-interval 1
+  --save-interval "${SAVE_INTERVAL_ARG}"
+  --seed 42
+  --fsdp-devices 2
+  --dataset-path "${DATASET_PATH}"
+  --weight-loader.params-path "${MODELS_DIR}/openpi-assets/checkpoints/pi05_base/params"
+  --model.use-history
+  --model.history-config perceptual-framesamp-context.yaml
+  --no-wandb-enabled
+)
+
+# 环境留档：将来一致性 A/B 的对照 run 必须逐项同设（见 README.md）。
+# argv 直接来自上面的 ARGS 数组，经位置参数传入（不能走管道——heredoc 已占用 stdin）
+"${PY}" - "$RECORD_DIR" "${ARGS[@]}" <<EOF
 import json, subprocess, sys, platform
 import jax
+argv = sys.argv[2:]
 d = {
+    "argv": argv,
     "argv_batch": ${BATCH}, "steps": ${STEPS}, "workers": ${WORKERS},
-    "save_interval": ${SAVE_INTERVAL}, "seed": 42, "fsdp_devices": 2,
+    "exp_name": "${EXP_NAME}", "run_tag": "${RUN_TAG}",
+    "save_interval_requested": ${SAVE_INTERVAL},
+    "save_interval_effective": ${SAVE_INTERVAL_ARG},
+    "batch_digests": ${BATCH_DIGESTS}, "keep_jax_cache": ${KEEP_JAX_CACHE},
+    "seed": 42, "fsdp_devices": 2,
     "history_config": "perceptual-framesamp-context.yaml",
     "dataset_path": "${DATASET_PATH}",
+    "jax_cache_dir": "${JAX_CACHE_DIR}",
     "git_head": subprocess.run(["git", "-C", "${REPO_ROOT}", "rev-parse", "HEAD"],
                                capture_output=True, text=True).stdout.strip(),
     "git_dirty": bool(subprocess.run(["git", "-C", "${REPO_ROOT}", "status", "--porcelain"],
@@ -74,47 +140,49 @@ d = {
 json.dump(d, open("$RECORD_DIR/env.json", "w"), indent=2, ensure_ascii=False)
 EOF
 
-echo "=== 2 GPU epoch 基准: ${RUN_NAME} (${STEPS} steps, batch ${BATCH}, workers ${WORKERS}) ==="
+# 环境指纹并入 env.json（preflight 同一套采集代码，保证跨期可比对；
+# 环境变量与训练进程逐项同口径）
+XLA_FLAGS="${XLA_FLAGS:-}" \
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
+CUDA_VISIBLE_DEVICES=0,1 \
+"${PY}" "${REPO_ROOT}/scripts/smoke-local/check_baseline_env.py" dump \
+  --record-dir "${RECORD_DIR}" --dataset "${DATASET_PATH}"
+
+echo "=== 2 GPU epoch 基准: ${RUN_TAG} (exp=${EXP_NAME}, ${STEPS} steps, batch ${BATCH}, workers ${WORKERS}) ==="
 echo "  数据集: ${DATASET_PATH}"
 echo "  记录目录: ${RECORD_DIR}"
+echo "  XLA_FLAGS: ${XLA_FLAGS:-<未设>}"
 set +e
 (
   set -e
   cd "${REPO_ROOT}"
   BENCH_RECORD_DIR="${RECORD_DIR}" \
+  BENCH_CHECKSUM="${BENCH_CHECKSUM}" \
+  BENCH_BATCH_DIGESTS="${BATCH_DIGESTS}" \
   CUDA_VISIBLE_DEVICES=0,1 \
   XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
+  XLA_FLAGS="${XLA_FLAGS:-}" \
   PYTHONUNBUFFERED=1 \
   WANDB_MODE=disabled \
-  "${PY}" "${REPO_ROOT}/scripts/smoke-local/bench_train_steps.py" mme_vla_suite \
-    --exp-name "${RUN_NAME}" \
-    --assets-base-dir "${TRAIN_ASSETS}" \
-    --checkpoint-base-dir "${TRAIN_RUNS}" \
-    --batch-size "${BATCH}" \
-    --num-workers "${WORKERS}" \
-    --num-train-steps "${STEPS}" \
-    --log-interval 1 \
-    --save-interval "${SAVE_INTERVAL}" \
-    --seed 42 \
-    --fsdp-devices 2 \
-    --dataset-path "${DATASET_PATH}" \
-    --weight-loader.params-path "${MODELS_DIR}/openpi-assets/checkpoints/pi05_base/params" \
-    --model.use-history \
-    --model.history-config perceptual-framesamp-context.yaml \
-    --no-wandb-enabled
+  "${PY}" "${ARGS[@]}"
 ) 2>&1 | tee "${LOG}"
 RC="${PIPESTATUS[0]}"
 set -e
 
-# 跑完（无论成败）清理：run 目录只剩 orbax 的空壳；jax 编译缓存被 train.main
-# 硬编码写到 ~/.cache/jax_<exp_name>（jax_compilation_cache_dir），一并删
+# 跑完（无论成败）清理 run 目录空壳；编译缓存按 KEEP_JAX_CACHE 处置（软链总是拆掉）
 if [[ -e "${CKPT_DIR}" ]]; then
   case "${CKPT_DIR}" in
-    "${TRAIN_RUNS}/mme_vla_suite/${RUN_NAME}") rm -rf -- "${CKPT_DIR}" ;;
+    "${TRAIN_RUNS}/${RUN_TAG}/mme_vla_suite/${EXP_NAME}") rm -rf -- "${CKPT_BASE}" ;;
     *) echo "错误: 拒绝清理非预期路径 ${CKPT_DIR}" >&2; exit 1 ;;
   esac
 fi
-rm -rf -- "${HOME}/.cache/jax_${RUN_NAME}"
+rm -f -- "${JAX_CACHE_LINK}"
+if [[ "${KEEP_JAX_CACHE}" != "1" ]]; then
+  case "${JAX_CACHE_DIR}" in
+    "${CACHE_DIR}/jax/${EXP_NAME}") rm -rf -- "${JAX_CACHE_DIR}" ;;
+    *) echo "错误: 拒绝清理非预期缓存路径 ${JAX_CACHE_DIR}" >&2; exit 1 ;;
+  esac
+fi
 
 # 任何失败（含 OOM）直接 fail-loud，不降档不重试——batch 8 是实测钉死的档位，
 # 在它上面再出 OOM 说明环境变了（驱动/常驻占用/代码），须人工排查而不是掩盖
@@ -124,13 +192,27 @@ if [[ "${RC}" -ne 0 ]]; then
   exit "${RC}"
 fi
 
+# 缓存事件计数（run_meta.json，bench 入口落盘）并进 env.json
+"${PY}" - "${RECORD_DIR}" <<'EOF'
+import json, pathlib, sys
+d = pathlib.Path(sys.argv[1])
+env = json.load(open(d / "env.json"))
+meta = json.load(open(d / "run_meta.json"))
+env["run_meta"] = meta
+assert env["argv"] == meta["argv"][1:] or env["argv"] == meta["argv"], \
+    f"env.json argv 与进程实际 argv 不一致: {env['argv'][:2]} vs {meta['argv'][:3]}"
+json.dump(env, open(d / "env.json", "w"), indent=2, ensure_ascii=False)
+print("OK run_meta 并入 env.json, 缓存事件:",
+      {k: v for k, v in meta["monitoring_event_counts"].items() if "cache" in k or "compil" in k})
+EOF
+
 # ── 结果判定与外推：直接吃 metrics.jsonl（比解析 tqdm 日志可靠）──────────────────
-"${PY}" - "${RECORD_DIR}" "${STEPS}" "${SAVE_INTERVAL}" "${WARMUP_STEPS}" \
-         "${BATCH}" "${EPOCH_SAMPLES}" <<'EOF'
-import json, math, statistics, sys
-record_dir, steps, save_iv, warmup, batch, epoch_samples = (
+"${PY}" - "${RECORD_DIR}" "${STEPS}" "${SAVE_INTERVAL_ARG}" "${WARMUP_STEPS}" \
+         "${BATCH}" "${EPOCH_SAMPLES}" "${BENCH_CHECKSUM}" "${BATCH_DIGESTS}" <<'EOF'
+import json, math, os, statistics, sys
+record_dir, steps, save_iv, warmup, batch, epoch_samples, ck_on, dg_on = (
     sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]),
-    int(sys.argv[5]), int(sys.argv[6]))
+    int(sys.argv[5]), int(sys.argv[6]), int(sys.argv[7]), int(sys.argv[8]))
 
 rows = [json.loads(l) for l in open(f"{record_dir}/metrics.jsonl")]
 rows = [r for r in rows if r.get("loss") is not None]
@@ -144,16 +226,38 @@ if bad:
 for r in rows[:3] + rows[-3:]:
     assert float.fromhex(r["loss"]["hex"]) == r["loss"]["dec"], "hex 精度回读不一致"
 
-cks = [json.loads(l) for l in open(f"{record_dir}/param_checksums.jsonl")]
-expect_ck = len([s for s in range(1, steps) if s % save_iv == 0] + [steps - 1])
-if len(cks) != expect_ck:
-    raise SystemExit(f"BAD 校验和条数 {len(cks)} != 预期 {expect_ck}")
+if ck_on:
+    cks = [json.loads(l) for l in open(f"{record_dir}/param_checksums.jsonl")]
+    expect_steps = sorted({0, steps - 1} | {s for s in range(1, steps) if s % save_iv == 0})
+    got_steps = [c["step"] for c in cks]
+    if got_steps != expect_steps:
+        raise SystemExit(f"BAD 摘要步序列 {got_steps} != 预期 {expect_steps}")
+    assert all("state_digest" in c for c in cks), "BAD 缺 state_digest（完整 TrainState 摘要）"
+    print(f"OK TrainState 摘要 {len(cks)} 次 @steps={got_steps}, "
+          f"末值 state={cks[-1]['state_digest'][:16]}…, "
+          f"单次耗时中位 {statistics.median(c['checksum_seconds'] for c in cks):.1f}s")
+else:
+    assert not os.path.exists(f"{record_dir}/param_checksums.jsonl"), \
+        "BAD BENCH_CHECKSUM=0 却写了 param_checksums.jsonl"
+    print("OK speed 口径: 无 TrainState 摘要")
+
+if dg_on:
+    dgs = [json.loads(l) for l in open(f"{record_dir}/batch_digests.jsonl")]
+    expect_dg = sorted({0, 1, 2, steps - 1} | {s for s in range(steps) if s % save_iv == 0})
+    got_dg = [d["step"] for d in dgs]
+    if got_dg != expect_dg:
+        raise SystemExit(f"BAD 输入摘要步序列 {got_dg} != 预期 {expect_dg}")
+    print(f"OK 输入摘要 {len(dgs)} 次 @steps={got_dg}, 末值 {dgs[-1]['batch_digest'][:16]}…")
+else:
+    assert not os.path.exists(f"{record_dir}/batch_digests.jsonl"), \
+        "BAD BATCH_DIGESTS=0 却写了 batch_digests.jsonl"
+    print("OK speed 口径: 无输入摘要")
 
 by_step = {r["step"]: r["wall_time"] for r in rows}
 deltas = []
 for s in range(warmup + 1, steps):
     if s % save_iv == 0 or (s - 1) % save_iv == 0:
-        continue      # 剔除校验和步本身及其下一步（device_get ~14GB 的开销，正式训练没有）
+        continue      # 剔除摘要步本身及其下一步（device_get 的开销，正式训练没有）
     if s in by_step and s - 1 in by_step:
         deltas.append(by_step[s] - by_step[s - 1])
 
@@ -161,8 +265,6 @@ steady = statistics.median(deltas)
 spe = epoch_samples // batch
 epoch_s = steady * spe
 print(f"OK loss n={len(losses)} min={min(losses):.4f} max={max(losses):.4f} 末值={losses[-1]:.4f}")
-print(f"OK 校验和 {len(cks)} 次, 全局摘要末值 {cks[-1]['global_digest'][:16]}…, "
-      f"单次耗时中位 {statistics.median(c['checksum_seconds'] for c in cks):.1f}s")
 print(f"RESULT batch={batch} 稳态={steady:.3f}s/step (n={len(deltas)}, "
       f"p10={sorted(deltas)[len(deltas)//10]:.3f}, p90={sorted(deltas)[len(deltas)*9//10]:.3f})")
 print(f"RESULT steps_per_epoch={spe}  epoch估算={epoch_s:.0f}s ≈ {epoch_s/3600:.2f} 小时")
