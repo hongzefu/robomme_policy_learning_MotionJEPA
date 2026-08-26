@@ -49,6 +49,10 @@
 
 17. 预计或实际运行超过 5 分钟的调试 / 基准 / 诊断 run 一律视作完整运行，同等适用第 12 条：从 clean HEAD 启动、在 `docs/training-doc/<run_name>/` 留档（launch.md、result.md、records/），不得以「只是调试」为由跳过留档。≤5 分钟的短 smoke 不强制留档，但仍受第 6 条临时 run 清理约束。
 
+18. 每次针对训练链路的修复或重构（含 dataloader、数据格式、dtype/精度、transforms、collate、交付路径等一切影响训练输入或训练语义的改动），必须产出**重构前后两张链路图**（从数据源到进入模型的逐跳图，标注形状/dtype/字节量与「这一跳有没有改数」），并**分两块讨论一致性**：
+    - **第一块（非训练轻量化测试）**：不启动训练，用轻量对拍（index 序列、逐样本/逐 batch 内容、dtype/shape 逐键比对等）证明新旧链路交付内容一致，判据显式（逐位或量化阈值）。
+    - **第二块（本机训练梯度一致，最后检验）**：在本机可跑档位启动真实训练，新旧链路各跑前 N 步（步数按当次改动商定），逐步比对 loss/梯度范数等标量与参数摘要一致，作为收尾检验。第二块不通过不得宣称改动等价。
+
 ## 项目 scope（未来工作，不代表当前实施授权）
 
 - 仓库总体目标：修改 MME-VLA 的 `perceptual-framesamp-context`，并在后续阶段接入 [MotionJEPA](https://github.com/hongzefu/MotionJEPA) motion token。
