@@ -121,35 +121,43 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 
 后续（不在本计划）：dtype 修复本体自 commit V2.4 起（其 P3–P6，见该计划 T5）。
 
-## 八、G0 与正式训练入口默认配置的差距（有效域声明，2026-08-26 增补）
+## 八、G0 与正式训练入口的入口层差异（有效域声明，2026-08-26 增补）
 
-正式训练入口是 `scripts/finetune_mme_vla_suite.sh` → `scripts/train.py`（配置真值源 `src/mme_vla_suite/training/config.py` 的 `TrainConfig(name="mme_vla_suite")`）。G0 走 bench 入口，两者差距逐项如下（脚本与配置实读核对，2026-08-26）：
+正式训练入口是 `scripts/finetune_mme_vla_suite.sh` → `scripts/train.py`，G0 走 `scripts/smoke-local/run_2gpu_epoch_bench.sh` → `scripts/smoke-local/bench_train_steps.py`。本节只隔离比较**入口包装本身**：双方均使用同一个 `perceptual-framesamp-context`，dataset、初始权重、batch、硬件、seed、训练超参和 XLA 配置完全相同；这些共同条件不在本节重复比较。
 
-### 8.1 训练语义核心——完全相同（这是 G0 能当基线的根据）
+### 8.1 比较前提——共享同一条核心训练路径
 
-模型结构与 history 机制（同一 `HistoryPi0Config`：pi05、action_horizon=20、use_history）、lr schedule（CosineDecay warmup 10k / peak 5e-5 / decay 100k）、optimizer（AdamW + clip_gradient_norm=1.0）、EMA（0.999）、freeze_filter、norm stats、数据链路代码（`RoboMMEDataset` → transforms → collate）、初始权重（pi05_base，bench 显式传路径、finetune 走 `OPENPI_DATA_HOME` 默认，同一份文件）、seed（双方均 42：bench 显式传、finetune 走 TrainConfig 默认）、num_workers（均 4）、`XLA_PYTHON_CLIENT_MEM_FRACTION=0.95`——**逐项同值**。
+两种入口最终都调用同一个 `train.main(config)`，并共享 `init_train_state()`、dataloader 创建与迭代、`train_step()`、loss、optimizer 和 EMA 更新。因而在解析后的 config、初始 TrainState、输入 batch 与 XLA executable 完全相同时，入口包装本身不应改变 loss、梯度或参数更新；下面只比较顶层控制流、观测行为、保存行为与运行时副作用。
 
-### 8.2 差异项（逐项列死，防止将来拿 G0 数字直接当 finetune 默认配置的参照）
+### 8.2 入口差异表
 
-| 维度 | finetune 默认 | G0 | 影响 |
+| 维度 | 正式入口 | G0 bench 入口 | 影响 |
 |---|---|---|---|
-| 入口 | `scripts/train.py`（尾部双次 `main()`：先 tentative 后正式） | `bench_train_steps.py`（单次 main，`--num-train-steps` 截断） | 计算图定义同源；bench 以 monkeypatch 挂记录器，不改训练语义 |
-| history 变体 | 脚本文件默认 `MME_VLA_TYPE="perceptual-framesamp-modul"`（**非 context**，跑 v1 范围须手改） | `perceptual-framesamp-context.yaml` | **模型不同**——G0 只锚定 context 变体（v1 范围唯一支持） |
-| 硬件/并行 | 4 GPU（`CUDA_VISIBLE_DEVICES=0,1,2,3`、fsdp_devices=4；实践为 GL 4×A40） | 本机 2×RTX 6000 Ada、fsdp_devices=2 | 位级不可比（三条不可比之二） |
-| batch | 64 | 8（本机 2 卡 64/32/16 全 OOM 实测，b8 唯一可跑档） | 位级不可比；样本序列也不同（同 seed 下序列由 batch_size 参与决定） |
-| 步数 | 80,000（完整训练） | 300 | G0 只覆盖前 300 步轨迹 |
-| checkpoint | 真落 ckpt（save_interval 10,000；仅 assets/params，train_state handler 被注释——IO 重构计划 4.2 既有问题） | 不落 ckpt（`save_state` 被替换为校验和记录器；校验和步有 device_get 开销，正式训练没有） | 记录行为差异，不进计算图 |
-| wandb | 启用（须填 `WANDB_API_KEY`） | `WANDB_MODE=disabled` + `--no-wandb-enabled` | 不进计算图 |
-| log_interval | 100 | 1 | 不进计算图 |
-| dataset-path | `data/robomme_preprocessed_data`（示例占位路径） | `v1-store/datasets/4task-gl` | G0 锚定 4task-gl 库（含 manifest 指纹） |
-| XLA_FLAGS | 无（autotune 默认开） | P2 选定确定性档（deterministic_ops + autotune 0 等） | **核心差异**：G0 是受控确定性口径，finetune 默认属「生产 autotune」不可比（三条不可比之三） |
-| 编译缓存 | `train.py` 硬编码 `~/.cache/jax_<exp_name>`，自然增长 | P1 后 KEEP_JAX_CACHE + 软链收敛 `v1-store/cache/jax/` | 机制同源（同一 `jax_compilation_cache_dir`），管理方式不同 |
+| 顶层调用 | `scripts/train.py` 的 `__main__` | `bench_train_steps.py::main()` | 只改变入口包装，核心训练函数同源 |
+| `main()` 次数 | tentative + 正式，共两次 | 单次 | 两边实际训练都调用同一个 `train.main(config)` |
+| tentative 更新 | tentative 循环临时执行 step 0–11，共 12 个 optimizer step | 无 tentative 轮 | tentative 的 TrainState 随调用结束被丢弃，不进入随后重新初始化的正式参数轨迹 |
+| checkpoint 目录 | tentative 已创建目录；第二次 `main()` 在默认 `overwrite=False`、`resume=False` 下触发 `FileExistsError` | 单次初始化目录，能够进入并完成受控短轨迹 | 这是正式入口的可运行性阻断，不是模型计算或训练公式差异 |
+| 配置解析 | 每次调用 `_config.cli()` | 调用同一个 `_config.cli()` | 同 argv 时解析结果应一致；入口差异不改变 config 含义 |
+| 初始化与训练循环 | `train.main(config)` | 同一个 `train.main(config)` | 同初始状态、batch 和 XLA executable 时，loss、梯度和参数更新预期一致 |
+| 编译预热 | tentative 提前完成训练图编译与部分 autotune | 正式轨迹内首次编译 | 会改变缓存命中、启动时间；默认 autotune 下还可能影响 kernel 选择，从而使结果不再 bitwise |
+| wandb | 正常初始化并上报 | disabled，并由 `_WandbProxy` 记录指标 | 不进入更新公式；影响网络、日志、墙钟与 wandb 失败面 |
+| 日志频率 | `log_interval=100`，写区间聚合均值 | `log_interval=1`，写逐步值 | 不改变 TrainState；bench 的 host 同步更频繁，且两份日志不能直接逐行比较 |
+| checkpoint 行为 | 调用真实 `_checkpoints.save_state()` | monkeypatch 为 checksum recorder | checksum 不修改当前 TrainState，但 G0 不验证真实 checkpoint 序列化、异步完成或 resume |
+| checksum 同步 | 无高频完整状态拉回 | G0 计划每 25 步执行大规模 `device_get` | 显著增加墙钟并扰动吞吐、预取与 GPU 利用率，不改变训练更新公式 |
+| checksum 实测开销 | 无对应高频开销 | 既有 300 步 bench 前身共 12 次，单次中位约 47.3 s，合计约 9.4 min | 占该轮 15.3 min 总墙钟约六成；这是验证观测开销，不是训练数值差距 |
+| 步数限制 | 无 bench 上限，按正式配置运行 | 入口护栏最多 600 步，G0 计划跑 300 步 | 前 300 步的训练定义不变，但 G0 不覆盖后续轨迹、正式保存点或长程行为 |
+| runner / cwd | `uv run scripts/train.py`，依赖从仓库根启动 | 固定项目解释器，并在调用前显式切到仓库根 | 环境版本相同时不产生数值差异；正式入口对调用环境和 cwd 更敏感 |
+| 最终训练数值差距 | 当前默认入口因目录冲突不能形成完整正式轨迹 | 能够完成受控短轨迹 | 修复正式入口后，同条件下入口本身的**预期数值差距为 0**；仍须用入口-only A/B 实测确认 |
+
+> “预期数值差距为 0”是由两种入口共享同一核心源码路径得出的结论；当前尚未完成“只切换入口、其余条件完全相同”的直接 A/B，因此不得写成已经实测 bitwise 一致。
 
 ### 8.3 边界结论
 
-1. **G0 锚定的是训练语义**（数据链路交付内容 + 模型前向/反向计算的定义，8.1 那一列），**不是 finetune 启动面的位级轨迹**——batch/卡数/XLA 档不同，位级结果本就不同，此差距已被二节「三条不可比」中 GL 4×A40 与生产 autotune 两条覆盖，本节把逐项差距写死防误用。
-2. 基线链的对拍语义之所以成立：链上所有 A/B 都在 G0 同口径（bench 入口、本机 2 卡、b8、确定性档）下进行，唯一变量是被测改动本身；改动对 finetune 默认配置的等价性由「改动经 G0 口径证明等价 + 改动不含任何 batch/卡数/入口相关分支」间接保证（各计划红线已禁止此类分支）。
-3. finetune 脚本自身的三个既有问题**不在基线链 scope**（如实登记，处置须用户单独拍板）：`MME_VLA_TYPE` 默认是 modul 非 context；`train.py` 双次 `main()` 在全新 run_name 下必然 `FileExistsError`（IO 重构计划 4.2 已记录）；`dataset-path` 是示例占位路径。
+1. 入口包装本身不改变模型计算、loss、optimizer 或 EMA 更新公式；相同条件下的核心训练轨迹预期一致。
+2. 当前正式入口的双 `main()` checkpoint 目录冲突是可运行性阻断，G0 的单次入口绕开了该问题，但没有修复或验证正式 wrapper。
+3. tentative 预热、编译缓存和 autotune 可能改变 kernel 选择与位级结果，但不改变训练目标；未做入口-only A/B 前不能宣称 bitwise 一致。
+4. wandb、逐步日志和 checksum 主要改变同步频率、墙钟、吞吐与失败面，不应被解释为 loss/梯度公式差异。
+5. G0 不验证真实 checkpoint/save-resume 链路；证明入口完全等价仍需在相同 config、固定 batch 和相同 XLA/cache 条件下，仅切换入口，对拍逐步指标与完整 TrainState。
 
 ---
 
