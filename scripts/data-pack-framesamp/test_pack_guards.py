@@ -1,6 +1,8 @@
-"""Store 组守卫测试（v2 计划 C.5，S2 交付：G1/G4/G5/G7/G11/G12/G14）。
+"""framesamp 守卫测试（v2 计划 C.5）——Store 组（S2）+ Dataset 组（S3）。
 
-刻意制造失败断言亮红灯；JAX_PLATFORMS=cpu、pytest 直跑：
+Store 组：G1/G4/G5/G7/G11/G12/G14；Dataset 组：G2/G3/G6a/G8/G9/G10/G13 +
+backend 分派闸（G6b 属 S5，随第一块在全量库上跑）。刻意制造失败断言亮红灯；
+JAX_PLATFORMS=cpu、pytest 从仓库根直跑（get_history_config 按相对路径找 yaml）：
 
     UV_LINK_MODE=copy uv run pytest scripts/data-pack-framesamp/test_pack_guards.py -x -q
 
@@ -8,8 +10,10 @@
 [0..2]（ButtonUnmask 前 3 个 episode，episode 0 有 291 帧满足 ≥33 硬约束），
 session 级 fixture 打包一次（含全量 verify）供各守卫复用。
 
-⚠ 测试定义顺序有意为之：G7 懒 import jax 必须排在一切 fork Pool 用例（fixture
-构建、G11 verify）之后——jax 不允许进 fork 前进程。
+⚠ 测试定义顺序有意为之：fork Pool 用例（fixture 构建、G11 verify）在前；
+import jax 的用例（Dataset 组经 shared.data_utils 拉 flax、G7 懒 import jax）
+一律排在其后——jax 不允许进 fork 前进程，故 Dataset 组的重型 import 全部
+函数内懒加载。
 """
 
 from __future__ import annotations
@@ -303,6 +307,214 @@ def test_g14_pack_lock_blocks_dispatch(mini_store, tmp_path):
     (bad / fs.LOCK_RELPATH).write_text("{}", encoding="utf-8")
     with pytest.raises(RuntimeError, match="pack.lock"):
         fs.require_no_pack_lock(bad)
+
+
+# ════ Dataset 组（S3；以下用例懒 import framesamp_dataset → flax/jax，必须在
+# ════ 全部 fork Pool 用例之后）═══════════════════════════════════════════════
+
+
+def _fake_data_config() -> types.SimpleNamespace:
+    """FrameSampDataset 只访问 norm_stats['state'] 的 q01/q99/mean/std 与
+    use_quantile_norm——守卫用轻量替身（f64，与真实 json 加载后同 dtype）。"""
+    ns = types.SimpleNamespace(
+        q01=np.linspace(-1.0, -0.5, 8), q99=np.linspace(0.5, 1.0, 8),
+        mean=np.zeros(8), std=np.ones(8))
+    return types.SimpleNamespace(norm_stats={"state": ns}, use_quantile_norm=True)
+
+
+def _make_dataset(mini_store: pathlib.Path, hc_name="perceptual-framesamp-context.yaml"):
+    from mme_vla_suite.models.config.utils import get_history_config
+    from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+    return FrameSampDataset(
+        str(mini_store), data_config=_fake_data_config(),
+        history_config=get_history_config(hc_name), action_horizon=20,
+        source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
+
+
+def test_g6a_exec_lookup_formula():
+    """换算公式单测：直接用全量清单构造查表数组（不构造 Dataset、不碰 store）。"""
+    manifest = fs.load_manifest(MANIFEST)
+    epis_of, step_of, row_base = fs.build_exec_lookup(manifest)
+    assert len(epis_of) == 395289
+    for h5 in ("record_dataset_VideoUnmask.h5", "record_dataset_VideoUnmaskSwap.h5"):
+        ep = next(e for e in manifest["episodes"] if e["h5_file"] == h5)
+        idx = ep["exec_sample_offset"]
+        assert ep["exec_start_idx"] > 0, h5   # Video* 任务必有 demo 前缀
+        assert int(step_of[idx]) == ep["exec_start_idx"], h5   # ⚠ 漏 exec_start_idx 即错位
+        assert int(epis_of[idx]) == ep["global_episode_idx"]
+        assert int(row_base[ep["global_episode_idx"]]) == ep["total_sample_offset"]
+
+
+def test_g2_pad_dtype_boundary(mini_store):
+    """step=30 短样本与 step=31 满长样本经 _pad 后各键 dtype 一致且为
+    image bf16 / pos f32 / stt f32（episode 0 exec_start=0 → idx 即 step）。"""
+    import ml_dtypes
+    ds = _make_dataset(mini_store)
+    try:
+        store = ds._ensure_store()
+        from mme_vla_suite.shared.data_utils import even_sampling_indices
+        results = {}
+        for step in (30, 31):
+            frames = np.asarray(even_sampling_indices(step, 32), np.int64)
+            rows = ds._row_base[0] + frames
+            img, pos, stt, mask = ds._pad(
+                store.read_image_rows(rows), store.pos_rows(frames),
+                store.state_rows(rows), len(frames))
+            assert img.dtype == ml_dtypes.bfloat16 and img.shape == (32, 16, 2048)
+            assert pos.dtype == np.float32 and stt.dtype == np.float32
+            assert mask.dtype == np.bool_ and int(mask.sum()) == step + 1
+            results[step] = (img.dtype, pos.dtype, stt.dtype)
+        assert results[30] == results[31]   # 短/满长 dtype 逐键一致
+        # 全链 getitem 交付层复核（含 padding 后 reshape/repeat）
+        for idx, n in ((30, 31), (31, 32)):
+            item = ds[idx]
+            assert item["static_image_emb"].dtype == ml_dtypes.bfloat16
+            assert item["static_image_emb"].shape == (512, 2048)
+            assert item["static_pos_emb"].dtype == np.float32
+            assert item["static_state_emb"].dtype == np.float64   # normalize 后恒 f64（同旧路径）
+            assert int(item["static_mask"].sum()) == n * 16
+    finally:
+        ds.close()
+
+
+def test_g3_duplicate_indices_not_deduped(mini_store):
+    """选帧重复索引必须重复输出不去重（防未来 gather 实现引入 unique/排序优化）。"""
+    ds = _make_dataset(mini_store)
+    try:
+        store = ds._ensure_store()
+        # episode 0 开场数十帧为静止帧、特征逐位相同（2026-08-27 实测 t0..t20 全等、
+        # t50 起不同）——动态找一行与 row 7 不同的行，避免对内容做静态假设
+        base = store.read_image_rows(np.array([7], np.int64))[0].tobytes()
+        distinct = next(r for r in range(8, store.num_rows)
+                        if store.read_image_rows(np.array([r], np.int64))[0]
+                        .tobytes() != base)
+        out = store.read_image_rows(np.array([7, 7, distinct], np.int64))
+        assert out.shape[0] == 3
+        assert out[0].tobytes() == out[1].tobytes() == base
+        assert out[2].tobytes() != base
+        assert store.pos_rows([3, 3]).shape[0] == 2
+        assert store.state_rows([5, 5]).shape[0] == 2
+    finally:
+        ds.close()
+
+
+def test_g8_no_thread_pool(mini_store, monkeypatch):
+    """mock 线程池抛错证明已彻底移除（旧路径每样本新建 ≤32 线程）。"""
+    import concurrent.futures as cf
+
+    def boom(*a, **k):
+        raise AssertionError("FrameSampDataset 路径不得使用 ThreadPoolExecutor")
+
+    ds = _make_dataset(mini_store)
+    try:
+        monkeypatch.setattr(cf.ThreadPoolExecutor, "__init__", boom)
+        item = ds[5]
+        assert item["static_image_emb"].shape == (512, 2048)
+    finally:
+        ds.close()
+
+
+def test_g9_use_state_emb_pinned(mini_store):
+    from omegaconf import OmegaConf
+    from mme_vla_suite.models.config.utils import get_history_config
+    from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+    hc = OmegaConf.merge(get_history_config("perceptual-framesamp-context.yaml"),
+                         {"use_state_emb": True})
+    with pytest.raises(ValueError, match="use_state_emb"):
+        FrameSampDataset(str(mini_store), data_config=_fake_data_config(),
+                         history_config=hc, action_horizon=20,
+                         source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
+
+
+def test_g13_modul_config_rejected(mini_store):
+    """喂同形的 modul 配置（integration_type=modulation、memory_token_dim=1024）必拒。"""
+    with pytest.raises(ValueError, match="形制断言失败"):
+        _make_dataset(mini_store, hc_name="perceptual-framesamp-modul.yaml")
+
+
+def _g10_child(ds, expect_pos_nbytes, expect_state_nbytes, q):
+    """G10 spawn 子进程体：消费 Dataset 并回报 store 懒构造契约各断言项。"""
+    try:
+        item = ds[0]
+        s = ds._store
+        os.fstat(s._fds[0])   # fd 有效可读
+        q.put({"ok": True,
+               "pid_ok": s.owner_pid == os.getpid(),
+               "shape_ok": item["static_image_emb"].shape == (512, 2048),
+               "pos_nbytes_ok": s.pos_table.nbytes == expect_pos_nbytes,
+               "state_nbytes_ok": s.state_table.nbytes == expect_state_nbytes,
+               "pos_base_none": s.pos_table.base is None,
+               "state_base_none": s.state_table.base is None})
+    except Exception as e:  # noqa: BLE001 —— 子进程任何失败原样带回父进程判定
+        q.put({"ok": False, "err": repr(e)})
+
+
+def test_g10_spawn_lazy_store(mini_store):
+    """spawn 子进程消费 Dataset：worker 内 store 懒构造、两张小表为进程内副本、
+    父进程全程无句柄（__getstate__ 剔除契约）。"""
+    import multiprocessing
+    ds = _make_dataset(mini_store)   # 父进程刻意不触发 __getitem__
+    meta = fs.StoreMeta.load(mini_store)
+    ctx = multiprocessing.get_context("spawn")
+    q = ctx.Queue()
+    p = ctx.Process(target=_g10_child, args=(
+        ds, meta.raw["tables"][fs.POS_KEY]["byte_count"],
+        meta.raw["tables"][fs.STATE_KEY]["byte_count"], q))
+    p.start()
+    res = q.get(timeout=180)
+    p.join(30)
+    assert res.get("ok"), res
+    assert all(res[k] for k in ("pid_ok", "shape_ok", "pos_nbytes_ok",
+                                "state_nbytes_ok", "pos_base_none", "state_base_none")), res
+    assert ds._store is None   # 父进程无句柄泄漏（从未构造）
+
+
+def test_dispatch_backend_resolution(mini_store, tmp_path, monkeypatch, caplog):
+    import importlib
+    dl = importlib.import_module("mme_vla_suite.training.dataloader")
+    monkeypatch.delenv("MMEVLA_DATA_BACKEND", raising=False)
+    assert dl._resolve_backend(str(mini_store)) == "legacy"   # 未设默认 legacy，零静默切换
+    monkeypatch.setenv("MMEVLA_DATA_BACKEND", "bogus")
+    with pytest.raises(ValueError, match="MMEVLA_DATA_BACKEND"):
+        dl._resolve_backend(str(mini_store))
+    monkeypatch.setenv("MMEVLA_DATA_BACKEND", "auto")
+    with caplog.at_level(logging.WARNING):
+        assert dl._resolve_backend(str(mini_store)) == "packed"   # meta 存在 → packed
+        assert dl._resolve_backend(str(tmp_path)) == "legacy"     # 无 meta → legacy
+    assert any("auto" in r.message for r in caplog.records)       # auto 必打 WARNING
+
+
+def test_dispatch_packed_gates(mini_store, tmp_path, monkeypatch):
+    import importlib
+    dl = importlib.import_module("mme_vla_suite.training.dataloader")
+    from mme_vla_suite.models.config.utils import get_history_config
+    from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+    hc = get_history_config("perceptual-framesamp-context.yaml")
+    dc = _fake_data_config()
+
+    # subset 闸：默认 raise，开发期显式放行
+    monkeypatch.delenv("MMEVLA_FRAMESAMP_ALLOW_SUBSET", raising=False)
+    with pytest.raises(RuntimeError, match="subset"):
+        dl._create_framesamp_dataset(str(mini_store), dc, hc, 20)
+    monkeypatch.setenv("MMEVLA_FRAMESAMP_ALLOW_SUBSET", "1")
+    ds = dl._create_framesamp_dataset(str(mini_store), dc, hc, 20)
+    assert isinstance(ds, FrameSampDataset) and len(ds) == fs.StoreMeta.load(
+        mini_store).num_exec_samples
+    ds.close()
+
+    # pack.lock 闸
+    locked = _copy_store(mini_store, tmp_path)
+    (locked / fs.LOCK_RELPATH).write_text("{}", encoding="utf-8")
+    with pytest.raises(RuntimeError, match="pack.lock"):
+        dl._create_framesamp_dataset(str(locked), dc, hc, 20)
+
+    # unverified 闸（G14 的分派层落点）
+    unv = tmp_path / "unv"
+    shutil.copytree(mini_store, unv)
+    _patch_meta(unv, lambda m: m.update(status="packed", verify=None))
+    monkeypatch.delenv("MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED", raising=False)
+    with pytest.raises(RuntimeError, match="未通过全量 verify"):
+        dl._create_framesamp_dataset(str(unv), dc, hc, 20)
 
 
 # ── G7：CPU 后端生成 pos 表被拒（懒 import jax，必须排在全部 fork 用例之后）────

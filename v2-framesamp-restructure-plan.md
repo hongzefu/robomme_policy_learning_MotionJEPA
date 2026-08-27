@@ -516,7 +516,7 @@ def __getitem__(self, idx):
 
 `create_data_loader`（`src/mme_vla_suite/training/dataloader.py`）按 **`MMEVLA_DATA_BACKEND ∈ {packed, legacy, auto}`** 分派：
 
-- **`packed`**：`dataset_path` 必须是打包库根；`meta/store_meta.json` 缺失、损坏、指纹不符、未通过 verify（`status != "verified"` 且未设 `MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED=1`）、`manifest_scope=="subset"`（S5 及以上）、`meta/pack.lock` 存在 → **直接 raise，绝不回退**。构造 `FrameSampDataset`。
+- **`packed`**：`dataset_path` 必须是打包库根；`meta/store_meta.json` 缺失、损坏、指纹不符、未通过 verify（`status != "verified"` 且未设 `MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED=1`）、`manifest_scope=="subset"`（未设 `MMEVLA_FRAMESAMP_ALLOW_SUBSET=1`——该开关为 S3 实施时新增的开发期放行阀，与 ALLOW_UNVERIFIED 同族、放行必打 WARNING，S5 及以上判据 run 出现即 run 无效）、`meta/pack.lock` 存在 → **直接 raise，绝不回退**。构造 `FrameSampDataset`。
 - **`legacy`**：走原 `RoboMMEDataset`（旧路径逐字未动），`dataset_path` 语义不变。
 - **`auto`**（必须显式设置才生效，仅本机探索）：按 `store_meta.json` 存在性分派并打 WARNING。**未设置默认 `legacy`——与现状逐字节相同，零静默切换。正式 launcher 一律显式 `packed` 或 `legacy`（R16）。**
 - **双根契约**：packed 模式三个位置全部显式解析——打包库根＝`dataset_path`；源库根（pkl）＝`MMEVLA_FRAMESAMP_SOURCE`（未设取 `store_meta.source_dataset_root`）；清单＝`MMEVLA_FRAMESAMP_MANIFEST`（未设取 `store_meta.manifest_path`）。解析结果三者全部写进 env.json（provenance）。**禁止从打包库目录名做字符串变换推导源库。**
@@ -684,7 +684,7 @@ def __getitem__(self, idx):
 | R14 | 缓存类目录收敛 `v1-store/cache/`（含 jax 编译缓存软链）；禁止覆盖 `HOME`；收官清理 |
 | R15 | GL 节点 `/tmp` 本地缓存属规约例外，启用前须用户显式批准；退出 trap 清理 |
 | R16 | 正式 launcher（sbatch/bench 驱动/dataloader-only）必须**显式**设置 `MMEVLA_DATA_BACKEND`（未设置默认 legacy）；env.json 标明显式/auto，S5 及以上出现 auto 推断即判该 run 无效 |
-| R17 | S5 及以上与全部 GL 验收禁止设置 `MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED`；该开关仅迷你库/开发期可用 |
+| R17 | S5 及以上与全部 GL 验收禁止设置 `MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED` 与 `MMEVLA_FRAMESAMP_ALLOW_SUBSET`（后者为 S3 实施时新增的 subset 迷你库开发期放行阀）；两开关仅迷你库/开发期可用 |
 
 ## T. 基线机读细节
 

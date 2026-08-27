@@ -9,7 +9,8 @@
 | `pack_framesamp_store.py` | 子命令 `plan`（只算贪心切分）/ `pack`（三张表构建：写侧逐帧校验① pos memcmp 钉 t 不钉 g、② state 同源自证、③ slab read-after-write，part sha256 原子落盘，`meta/pack.lock` 排他锁 + `pack_progress.jsonl` 断点续跑）/ `verify`（**全量写×读对拍，g 级零遗漏唯一凭据**：重新 decode 全部源帧，三键各经真实读 API 逐行 memcmp，产出 `row_digests.blake2b.bin`，通过后 meta 回填 `status="verified"` 并释放锁；FAIL 保留锁阻断读侧）/ `report` |
 | `run_pack.sh` | S4 全量打包的 tmux 驱动（pack → verify 串联，tee + `EXIT_CODE=`；判定行 `VERIFY_PACK=PASS scanned=483291 mismatches=0`） |
 | `probe_layout.py` | 源 npy 布局常量探针（st_size 602,951；三键偏移 262,595 / 541,352 / 602,906）——`--reader slice` 加速档的前提复核，任一不符即非零退出 |
-| `test_pack_guards.py` | Store 组守卫 G1/G4/G5/G7/G11/G12/G14（迷你库 = ref-shard 派生连续前缀 [0..2]，session fixture 打包一次含全量 verify） |
+| `test_pack_guards.py` | 守卫测试：Store 组 G1/G4/G5/G7/G11/G12/G14（S2）+ Dataset 组 G2/G3/G6a/G8/G9/G10/G13 与 backend 分派闸（S3）；迷你库 = ref-shard 派生连续前缀 [0..2]，session fixture 打包一次含全量 verify。fork Pool 用例在前、import jax 的用例（Dataset 组、G7）懒加载在后——jax 不进 fork 前进程 |
+| `spawn_matrix.py` | S3 判定工具：FrameSampDataset 上起真实 torch spawn DataLoader，w0/w1/w4/w16 × 2 epoch，fd 泄漏检查（先预热 spawn 基础设施再取基线——resource_tracker 单例是进程级一次性 fd、非泄漏）。判定行 `MATRIX=PASS` |
 
 ## 常用命令
 
@@ -44,4 +45,7 @@ UV_LINK_MODE=copy uv run pytest scripts/data-pack-framesamp/test_pack_guards.py 
 - **pos 旁证生成**（`generate_pos_table_posemb3d`）：CPU 后端一律拒绝（实测与库中值
   max|diff|≈7e-7，G7 钉死）；主方案是源库抽取拼装，旁证生成体未实装。
 - **迷你库**（`--subset-prefix K`）：只允许 global_episode_idx 连续前缀 [0..K]，
-  前缀内必须含 ≥33 帧 episode；`manifest_scope="subset"` 的库禁止用于 S5 及以上判据。
+  前缀内必须含 ≥33 帧 episode；`manifest_scope="subset"` 的库禁止用于 S5 及以上判据
+  （packed 分派检出即 raise；开发期须显式设 `MMEVLA_FRAMESAMP_ALLOW_SUBSET=1` 放行且
+  必打 WARNING——该开关为 S3 实施时新增，与 `ALLOW_UNVERIFIED` 同族，判据 run 里出现
+  即 run 无效）。

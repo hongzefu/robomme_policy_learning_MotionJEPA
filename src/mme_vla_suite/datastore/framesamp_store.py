@@ -85,16 +85,23 @@ def row_of(total_sample_offset: int, t: int) -> int:
     return int(total_sample_offset) + int(t)
 
 
-def build_exec_lookup(manifest: dict) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def build_exec_lookup(manifest: dict, *, num_episodes: int | None = None,
+                      ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """从清单派生执行样本查表数组（O(1) 换算，禁止目录序）。
 
     返回 (_epis_of, _step_of, _row_base)：
       _epis_of[idx] = g；_step_of[idx] = exec_start_idx + k（⚠ 必须带
       exec_start_idx——Video* 任务漏掉即错 66–216 帧）；_row_base[g] =
       total_sample_offset。身份校验一律显式 raise（R6，禁 assert）。
+    num_episodes：只取 episodes 连续前缀 [0..num_episodes)（subset 迷你库——
+    前缀保证全局行号即物理行号、偏移原值可用，A.1）；None = 全量。
     """
     episodes = manifest["episodes"]
-    n = int(manifest["totals"]["exec_samples"])
+    if num_episodes is not None:
+        episodes = episodes[:num_episodes]
+        n = sum(int(ep["exec_samples"]) for ep in episodes)
+    else:
+        n = int(manifest["totals"]["exec_samples"])
     epis_of = np.empty(n, np.int32)
     step_of = np.empty(n, np.int32)
     row_base = np.empty(len(episodes), np.int64)
@@ -395,10 +402,12 @@ class FrameSampStore:
         except OSError:
             self.close()
             raise
+        # 就地设 shape（不走 reshape 视图）：保证 .base is None——小表是进程内
+        # 拥有内存的副本、非映射非视图（B.2/G10 契约）
         self._pos_table = np.fromfile(self._root / POS_TABLE_RELPATH, dtype=POS_DTYPE)
-        self._pos_table = self._pos_table.reshape((self._meta.num_pos_rows,) + POS_ROW_SHAPE)
+        self._pos_table.shape = (self._meta.num_pos_rows,) + POS_ROW_SHAPE
         self._state_table = np.fromfile(self._root / STATE_TABLE_RELPATH, dtype=STATE_DTYPE)
-        self._state_table = self._state_table.reshape((self._meta.num_rows,) + STATE_ROW_SHAPE)
+        self._state_table.shape = (self._meta.num_rows,) + STATE_ROW_SHAPE
         self._owner_pid = os.getpid()
         self._fadvise_ok = hasattr(os, "posix_fadvise")
 

@@ -42,4 +42,7 @@
   中部翻转）**禁止在性能 allocation 内执行**（会预热 page cache，B.2）。
 
 守卫测试：`scripts/data-pack-framesamp/test_pack_guards.py`（Store 组 G1/G4/G5/G7/
-G11/G12/G14）。
+G11/G12/G14 + Dataset 组 G2/G3/G6a/G8/G9/G10/G13 与分派闸）；spawn 生命周期验收另见
+`scripts/data-pack-framesamp/spawn_matrix.py`。消费侧装配层见
+`src/mme_vla_suite/training/framesamp_dataset.py`，backend 三态分派（`MMEVLA_DATA_BACKEND`，
+未设默认 legacy）见 `training/dataloader.py` 的 `_resolve_backend` / `_create_framesamp_dataset`。
