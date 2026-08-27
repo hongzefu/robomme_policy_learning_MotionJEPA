@@ -6,7 +6,7 @@
 
 ## 一、实验口径
 
-- commit `d9e509e41a1665c15faff6ef62f2fef6ac813813`（V2.1）clean HEAD 起跑；本机
+- commit `d9e509e41a1665c15faff6ef62f2fef6ac813813`（V2.1）clean HEAD 起跑（例外：`v1-det-d2cold-r2` 起跑于 `9c49cf6`——期间插入的外部纯文档 commit，仅改 `v1-dtype-unify-plan.md`、G0_SCOPE 白名单内、训练语义零影响；该轮与 r1 对拍仍 bitwise PASS）；本机
   2×RTX 6000 Ada、batch 8、seed 42、`fsdp_devices=2`、`num_workers=4`、100 步、
   SAVE_INTERVAL=50（TrainState 摘要 @ 步 0/50/99，177 叶子含 params/opt_state/EMA/step）、
   输入摘要 @ 步 0/1/2/50/99；数据集 `v1-store/datasets/4task-gl`。
