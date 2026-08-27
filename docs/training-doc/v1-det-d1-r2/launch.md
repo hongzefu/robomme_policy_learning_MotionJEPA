@@ -1,0 +1,8 @@
+# v1-det-d1-r2（P2 确定性预备实验，档位 D1）
+
+- **目的**：共用编译缓存档：r1 冷编译写缓存（cache_misses=2），r2 全命中（cache_hits=2、零 miss）——测「给定同一可执行体，运行期是否可复现」。四档定义与判定见 `v1-gradient-baseline.md` P2 节；本轮为该档第 2 轮。
+- **commit**：`d9e509e41a1665c15faff6ef62f2fef6ac813813`（V2.1，clean HEAD，env.json `git_dirty=false`）
+- **入口**：`scripts/smoke-local/run_2gpu_epoch_bench.sh` → `bench_train_steps.py`（正确性族口径：TrainState 摘要 + 输入摘要开启）
+- **命令**：`STEPS=100 SAVE_INTERVAL=50 WARMUP_STEPS=50 WORKERS=4 RUN_TAG=v1-det-d1-r2 EXP_NAME=v1-det-d1 KEEP_JAX_CACHE=1 XLA_FLAGS="" bash scripts/smoke-local/run_2gpu_epoch_bench.sh`（由 P2 驱动脚本顺序调用，全程 tmux + tee）
+- **口径**：本机 2×RTX 6000 Ada、batch 8、seed 42、fsdp_devices 2、数据集 `v1-store/datasets/4task-gl`；完整 argv 与环境指纹见 `records/env.json`
+- ⚠ 正确性族 run：util/步时受摘要停顿与确定性档污染，仅留档参考，禁作性能结论（基线计划红线 B7）

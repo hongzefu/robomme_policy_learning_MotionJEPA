@@ -78,10 +78,17 @@
   flags，保持生产口径。两族 run 的权威口径见 `v1-gradient-baseline.md` 符号总表）。
 - **2026-08-24 实测：同配置同 seed 重跑两轮，参数校验和逐步全不相同——本机默认
   设置下并非 bitwise 确定**（疑因每轮删了 jax 编译缓存、XLA 重新 autotune 选中
-  不同 kernel/归约实现）。因此做 A/B 前必须先立稳前提：两边同开
-  `--xla_gpu_deterministic_ops=true`、固定/关闭 autotune、共用同一份编译缓存，
-  并用两次相同 run 验证校验和逐步一致后再开始 dataloader 改动对比。
-  四档确定性实验（D0/D1/D2/D2-cold，各两轮 100 步）的实测结论跑完后回填于此。
+  不同 kernel/归约实现）。
+- **2026-08-26 四档确定性实验定档（D0/D1/D2/D2-cold 各两轮 100 步，commit V2.1，
+  留档 `docs/training-doc/v1-det-*/`，权威结论见 `docs/v1-determinism-conclusions.md`）**：
+  - D0（删缓存、无 flags）FAIL：从步 0 起逐步全分歧，loss rel 噪声底 median 2.7e-3 /
+    max 4.6e-2——上面 2026-08-24 的观察被系统复现并量化；
+  - D1（共用编译缓存、无 flags）FAIL 但仅差 ULP：100 步中 2 步 llm_grad_norm 差一个
+    最低位，末段分歧只有 embedder input_embedding 一族（scatter-add atomics）；
+  - D2（+`--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0`，共用缓存）
+    **PASS**：两轮 100 步逐位一致；
+  - **D2-cold（同 flags、独立空缓存强制重编译两次）PASS**：独立编译两次仍逐位一致，
+    且与 D2 轮交叉对拍亦 PASS——正确性 A/B 一律注入 D2 flags 即可跨编译对拍 bitwise。
 
 ### 第 2 级：梯度范数 + 参数校验和（便宜，且校验和是累积效应）
 

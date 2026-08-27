@@ -1,6 +1,8 @@
 # 梯度对拍黄金基线 G0 与基线链规约
 
-> 本文件是计划文档，**尚未实施**。2026-08-26 立项，用户指令：三份计划（[`v1-dtype-unify-plan.md`](v1-dtype-unify-plan.md)、[`v1-framesamp-restructure-plan.md`](v1-framesamp-restructure-plan.md)、[`v1-post-restructure-roadmap.md`](v1-post-restructure-roadmap.md)）的梯度对拍不仅要和自己的改动前比，还要和「三个都没动」的训练（当前仓库状态，git 锁定，必要时 sha256 校验）比；最好现在先跑一轮记下产物、产物进 git 后固化复用。方案经一轮 opus 对抗复核（12 条必须修 / 10 条建议修全部吸收）。
+> **实施状态（2026-08-26）**：P1（commit V2.1 `d9e509e`）与 P2（commit V2.2，四档八轮）已完成；**D2 与 D2-cold 双 PASS，三支处置走第一支**——G0 获准跨期充当 bitwise 判据一侧，正确性族固定确定性档 `--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0`。核心一致性结论独立留档 [`docs/v1-determinism-conclusions.md`](docs/v1-determinism-conclusions.md)，逐轮产物 `docs/training-doc/v1-det-*/`。PG0（G0 两轮 + PG0-speed）按用户指令**待汇报后启动**。
+>
+> 本文件立项时为计划文档。2026-08-26 立项，用户指令：三份计划（[`v1-dtype-unify-plan.md`](v1-dtype-unify-plan.md)、[`v1-framesamp-restructure-plan.md`](v1-framesamp-restructure-plan.md)、[`v1-post-restructure-roadmap.md`](v1-post-restructure-roadmap.md)）的梯度对拍不仅要和自己的改动前比，还要和「三个都没动」的训练（当前仓库状态，git 锁定，必要时 sha256 校验）比；最好现在先跑一轮记下产物、产物进 git 后固化复用。方案经一轮 opus 对抗复核（12 条必须修 / 10 条建议修全部吸收）。
 >
 > **本文档是基线链的唯一权威载体**：G0 的定义、锁定断言、产物清单、失效条件、量化判据参数与登记簿都只在本文档维护一份；三份计划一律引用本文档章节，不复制其中数字（引用锚点用章节名，AGENTS 9）。
 
@@ -138,6 +140,8 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 | D2-cold FAIL、共享缓存档（D1 或 D2）PASS | G0 仍固化，但**跨 HLO 对拍降级**：主判据改为 `batch_digests` 输入摘要 bitwise + 量化判据（null 以 D0 两轮标定）；同场次同 HLO A/B（如 C.3 legacy vs packed）仍走 bitwise。**不得以「保留缓存」为由声称跨期 bitwise 可得**——jax 编译缓存 key 含 HLO 与拓扑，跨 commit 模块级缓存必 miss，保留无用 |
 | 全档 FAIL | 停：按 dtype 计划 T2 既有路径排查（加 exclude flag、降 50 步二分），G0 暂不固化 |
 
+**P2 实测结果（2026-08-26，commit V2.1 起跑，权威结论见 [`docs/v1-determinism-conclusions.md`](docs/v1-determinism-conclusions.md)）**：D0 FAIL（步 0 起全分歧，loss rel 噪声底 median 2.7e-3 / max 4.6e-2，作六节 null 上界）；D1 FAIL 但仅 2 步 `llm_grad_norm` 差 ULP、分歧定位 embedder scatter-add atomics；**D2 PASS、D2-cold PASS**（独立冷编译两次逐位一致，交叉对拍亦 PASS）——**三支处置走第一支**。八轮输入摘要全一致：同 seed 下 dataloader 交付逐位确定。
+
 ### PG0（commit V2.3，G0 两轮 + 产物固化）与 PG0-speed（速度基线预跑）
 
 1. 从 clean HEAD 起跑前先过 `G0_SCOPE` 断言（二节）；run_name `v1-grad-baseline-g0`（用户已确认；实施起跑前仍按 AGENTS 6 再次确认）。
@@ -240,7 +244,8 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 
 | 链节 | run_name | commit | env 指纹 sha | 判据 | 结论 | 产物路径 |
 |---|---|---|---|---|---|---|
-| D0（字面现状，非判据） | `v1-det-d0-r{1,2}` | 待回填 | 待回填 | 两轮重跑噪声底 | 待回填 | `docs/training-doc/v1-det-d0-r{1,2}/` |
+| D0（字面现状，非判据） | `v1-det-d0-r{1,2}` | `d9e509e`（V2.1） | 各轮 env.json `fingerprint` 键（uv.lock `02cbc3ba…`） | 两轮重跑噪声底 | FAIL（预期）：loss rel median 2.7e-3 / max 4.6e-2，全表见 `docs/v1-determinism-conclusions.md` 三节 | `docs/training-doc/v1-det-d0-r{1,2}/` |
+| D1/D2/D2-cold（定档实验） | `v1-det-d{1,2}-r{1,2}`、`v1-det-d2cold-r{1,2}` | `d9e509e`（V2.1） | 同上 | 两轮逐步 hex + state_digest + batch_digest diff 为空 | D1 FAIL（ULP 级，atomics）；D2 PASS；**D2-cold PASS（授权闸开）** | `docs/training-doc/v1-det-*/` |
 | G0 | `v1-grad-baseline-g0` | 待回填（`<G0-HEAD>`） | 待回填 | G0_SCOPE + round1/2 自证 | 待回填 | `docs/training-doc/v1-grad-baseline-g0/` |
 | G1（dtype 修复后） | `v1-dtype-ab-post` | 待回填 | 待回填 | vs G0：bitwise + 量化兜底 | 待回填 | dtype 计划留档 |
 | G2（packed） | IO 重构计划 C.3 的 packed 侧 | 待回填 | 待回填 | vs G1 bitwise；vs G0 对账 | 待回填 | IO 重构计划留档 |
