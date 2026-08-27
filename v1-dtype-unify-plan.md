@@ -1,6 +1,8 @@
 # dtype 统一修复计划（framesample+context 双 dtype 路径消除）
 
-> 本文件是计划文档，尚未实施。2026-08-26 自 `v1-framesamp-restructure-plan.md`（v3）拆分而来：**本计划先行、独立验收，是该 IO 重构计划（v4）的前置**。范围只兼容 `perceptual-framesamp-context` 一种 run。
+> **实施状态（2026-08-27）：P3–P7 全部执行完毕，两块正确性与性能对比均已产出。** 工具 commit **V2.4a `f2e7348`** + 三行修复 **V2.4b `a0f76f8`**；第一块 `COMPARE_DTYPE=PASS`（2,600 样本 / 200 batch / 0 失配）、单步定点梯度 `COMPARE_GRAD=PASS`（3 档 × 32 叶逐位相同）、第二块 G1 vs G0b 千步 bitwise 全过（`scalars_hex.tsv` sha256 与 G0b r1/r2 逐字节相同）、P7 `v1-g1-speed` vs `v1-g0-speed-r2` 步时均值 **−7.21%** / util 均值 **+5.64pp**。留档见 `docs/training-doc/v1-dtype-p{3,4,5}-*`、`v1-dtype-ab-post-r1`、`v1-g1-speed`；登记簿以 [`v1-gradient-baseline.md`](v1-gradient-baseline.md) T8 为权威。
+>
+> 本文件原为计划文档。2026-08-26 自 `v1-framesamp-restructure-plan.md`（v3）拆分而来：**本计划先行、独立验收，是该 IO 重构计划（v4）的前置**。范围只兼容 `perceptual-framesamp-context` 一种 run。
 >
 > 拆分依据（用户拍板）：旧训练自身存在两条 dtype 路径并存——98.4% 的 batch 因 padding 未指定 dtype 被提升 float64、回主进程降回 f32 上卡，1.6% 的「整批满长」batch 不触发 padding、以 bf16 上卡。先用本计划把这个问题在旧链路上原地修掉，IO 重构计划的 A/B 两侧 dtype 天然相同，其 replica 复刻模式、f32 回退、dtype 三态开关、第 3 层验证（原 C.4）、GL b64 dtype 抽查全部可删——每份计划变成单变量、归因干净。
 >

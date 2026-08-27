@@ -1,0 +1,30 @@
+{
+  "records_dir": "docs/training-doc/v1-g0-speed-r2/records",
+  "steps": 1000,
+  "warmup": 50,
+  "n_steady": 950,
+  "step_median_s": 1.152,
+  "step_mean_s": 1.1858,
+  "step_p10_s": 1.0967,
+  "step_p90_s": 1.2753,
+  "slow_steps": [
+    122,
+    335,
+    419
+  ],
+  "slow_mean_s": 1.9594,
+  "fast_mean_s": 1.1834,
+  "epoch_hours": 16.276,
+  "util": {
+    "csv": "docs/training-doc/v1-g0-speed-r2/records/util-lms500.csv",
+    "n_samples": 3412,
+    "n_excluded_pause": 0,
+    "mean_pct": 86.46,
+    "median_pct": 100.0,
+    "zero_pct_share": 4.89,
+    "per_gpu_mean": {
+      "0": 85.83,
+      "1": 87.09
+    }
+  }
+}

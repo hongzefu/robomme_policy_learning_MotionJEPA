@@ -1,0 +1,26 @@
+{
+  "records_dir": "v1-store/bench/2gpu-epoch-bench/v1-g1-speed",
+  "steps": 1000,
+  "warmup": 50,
+  "n_steady": 950,
+  "step_median_s": 1.0809,
+  "step_mean_s": 1.1003,
+  "step_p10_s": 1.0483,
+  "step_p90_s": 1.1798,
+  "slow_steps": [],
+  "slow_mean_s": null,
+  "fast_mean_s": 1.1003,
+  "epoch_hours": 15.102,
+  "util": {
+    "csv": "v1-store/bench/2gpu-epoch-bench/v1-g1-speed/util-lms500.csv",
+    "n_samples": 3084,
+    "n_excluded_pause": 0,
+    "mean_pct": 92.1,
+    "median_pct": 100.0,
+    "zero_pct_share": 1.2,
+    "per_gpu_mean": {
+      "0": 91.38,
+      "1": 92.81
+    }
+  }
+}
