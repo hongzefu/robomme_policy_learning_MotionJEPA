@@ -315,7 +315,7 @@ memory token 由四个因素完全决定，重构后全部构造性不变：① 
 
 - **S8a**：GL dataloader-only 四档（w2/w4/w8/w16），fast 校验档 + 冷态自证 provenance。
 - **S8b（全链收官测试）**：GL e2e 600 步 T1–T3（+条件档）+ cold-like/hot 双跑；主判据表 5 项机器判定 `E2E_ACCEPT=PASS|FAIL`（必达：步时中位 ≤5.00 s、util 稳态均值 ≥90%、0% 采样 ≤5%、慢步墙钟 ≤5%、epoch ≤8.6 h，全表见 D 节），并附「距 100% 的残差分解」。
-- 秩序：S8a 可在全量打包（S4）后先行；**S8b 必须在第二块 G2 bitwise 通过后才跑**；每个超 GL 硬限的 job（4×A40 / 2–4 h）提交前逐个向用户做资源审批并在 `greatlakes.md` 留记录，run_name 确认不能替代资源审批。
+- 秩序：**全程严格串行（用户 2026-08-27 拍板，E 节）**——全部 GL 验收在第二块 G2 bitwise 通过之后，按 S7.5 → S8a → S8b 顺序执行，不提前排队、不与本机验证并行（也避免 GL 侧与本机验证竞争读取同一份 NFS 数据）；每个超 GL 硬限的 job（4×A40 / 2–4 h）提交前逐个向用户做资源审批并在 `greatlakes.md` 留记录，run_name 确认不能替代资源审批。
 - GL 侧不重复 bitwise 证明（与本机是两种硬件、GL 无稳定确定性基线）；GL 侧异常按量化判据思想兜底、量级由本块吞吐验收覆盖。
 
 ### 放行规则与回滚
@@ -356,6 +356,34 @@ memory token 由四个因素完全决定，重构后全部构造性不变：① 
 1. **`scripts/train.py` 正式入口双次 `main()`**：尾部先 `main(tentative_run=True)` 再正式 `main()`；`initialize_checkpoint_dir` 默认 `overwrite=False, resume=False` 且目录已存在即 `FileExistsError`——全新 run_name 下第二次 `main()` 必然报错（tentative 已建目录），除非显式传 `--overwrite`/`--resume`。全部验证与验收走 `bench_train_steps.py` 入口（单次 main）不触发。「用 `scripts/train.py` 起正式长训练」在该问题修复前不纳入本轮交付声明。
 2. **checkpoint 只保存 `assets`/`params`**（`train_state` handler 被注释）：中断恢复不保证 optimizer/EMA/step 连续，不在本轮任何判据之内。
 3. **`jax.process_count() > 1` 明确不支持**（`TorchDataLoader` 直接 raise）：本计划全部内容仅覆盖单进程多 GPU。
+
+## 六、实施顺序一览（说人话版）
+
+> 本节是 E 节的大白话版，只讲「先做什么、后做什么、每步过关标准是什么」；参数、commit 切分等细节以 E 节为准。**全程严格串行（用户 2026-08-27 拍板）：前一步判定过关，才开下一步；没有任何并行或提前排队的安排。**
+
+**阶段 1：把代码和工具写好（本机开发，约半天）**
+
+1. **S0' 补验证小工具**：让 bench 驱动认得 packed 库、能记录 index 序列。过关：3 步烟测跑通、idx 序列落盘。
+2. **S2 写格式层和打包工具**：先造一个小的「迷你库」，把打包 → 读取全流程走一遍。过关：Store 组守卫测试全绿。
+3. **S3 写新 Dataset 和切换开关**：迷你库上起真实多进程 loader 跑两个 epoch。过关：Dataset 组守卫全绿、不崩、不漏文件句柄。
+
+**阶段 2：造正式数据（本机 tmux，一两个小时）**
+
+4. **S4 全量打包 + 全量校验**：把 678 GB 源库里 framesample 真正用到的三张表抽出来，压成 31.7 GB 打包库；然后 483,291 帧逐帧和源库对拍。过关：`VERIFY_PACK=PASS`、零失配。
+
+**阶段 3：证明「没改数」（本机，核心验证）**
+
+5. **S5 第一块·不训练对拍**：8,200 个定点样本 + 200 个真实 batch，新旧两条链的交付内容逐位比较。过关：`COMPARE_BATCH=PASS`、零失配。
+6. **S6 第二块·真跑训练对拍（终局检验）**：packed 链路真跑 1000 步训练，逐步和固化的 G0 黄金基线逐位对拍。过关：五个训练标量 + 12 次完整模型状态摘要全部逐位相同。**这一步过了，才允许说「重构不改变训练」。**
+
+**阶段 4：证明「变快了」（S6 过关后才开始）**
+
+7. **S7.5 GL 验收资产参数化**：把 GL 侧提交脚本和分析脚本改成可切 packed（默认值保持现状）。过关：默认值跑通。
+8. **S8a GL dataloader 单测四档**：不训练，只测新链路在 GL 上的取数吞吐（w2/w4/w8/w16）。每个超硬限 job 提交前逐个找用户审批资源。
+9. **S8b GL e2e 收官测试**：GL 4×A40 真跑 600 步端到端 + 冷/热双跑。过关：`E2E_ACCEPT=PASS`（步时中位 ≤5.00 s、util 均值 ≥90% 等五项必达，D 节）。
+10. **S9 本机速度对账**：本机跑 `v1-g2-speed`，和锚点 `v1-g0-speed-r2`（1.152 s/step）对比报数，回填登记簿（T8）。
+
+**当前位置**：一步都还没开工，第一个动作是 S0'（commit V2.5），等用户拍板。
 
 ---
 
@@ -557,7 +585,7 @@ def __getitem__(self, idx):
 - G10 spawn 一个子进程消费 Dataset，断言子进程内 store 懒构造（`_owner_pid == 子进程 pid`）、fd 有效可读、两张小表 `.nbytes` 与 meta 一致且 `.base is None`（进程内副本非映射）、父进程无句柄泄漏；
 - G13 喂 `perceptual-framesamp-modul.yaml`（integration_type=modulation、memory_token_dim=1024，其余同形），断言 `__init__` raise。
 
-## D. GL 吞吐验收（第三块的机读版；dataloader-only 可在 S4 后先行，正式 e2e 依赖 S6 通过）
+## D. GL 吞吐验收（第三块的机读版；全部 GL 验收按 E 节严格串行顺序执行）
 
 - **MB/s 口径**：`dataloader_bench.py` 的 `_AVG_BYTES_PER_SAMPLE` 从 history_config + `episode_manifest.json` 现场推导（均值帧数 = Σ min(t+1,32)/395,289 = 30.996 → 均值 2.43 MB/样本；上界 2.49 MB；勿写死）；主判读换 mountstats `server_read`；新增 majflt 采样（页缺失口径，冷/热证据链辅助量）。`block_until_ready` 覆盖整个 `(obs, actions)` pytree（只 block actions 会低估 device_put 成本）。新增 gather/pkl 分段计时（每样本两段耗时直方图落 records——「谁是新瓶颈」的观测资产）。
 - **dataloader-only 四档（S8a，单 GPU job）**：w2/w4/w8/w16，seed 310–313（避开已用 42/200–205/210–212 防 page cache 串扰）。
@@ -581,22 +609,50 @@ def __getitem__(self, idx):
 - **provenance（所有 run，含本机 bench 与 dataloader-only）**：env.json 必记：resolved 后的 `dataset_path`/`source_dataset_root`/`manifest_path`、`store_meta.json` sha256（verify 回填后口径）、`manifest_sha256`、backend 及其来源（显式/auto——S5 及以上出现 auto 即判 run 无效）、`MMEVLA_FRAMESAMP_VERIFY` 档位与 full 结果、`MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED` 取值、local-cache 命中与 sha 校验结果、XLA_FLAGS、git HEAD。
 - 结果分析一律 `analyze_gpu_util.py`；每个 >5 min run 留档 `docs/training-doc/<run_name>/`（records 含 env.json/metrics/gpu_util_dense/nfs_read/meminfo.csv/pgmajfault/分段计时/param_checksums）。本节吞吐 run 的 `--save-interval` 默认 1000，300/600 步内不触发 TrainState 摘要，性能口径不受摘要停顿污染。**与本机 speed 的分工**：本节是 GL 侧主判据（过/不过在此）；S9 的 G2-speed 是本机口径链式对账（不设阈值只报数），并存互不替代。
 
-## E. 实施顺序、提交切分与留档（mini 全链路先行，全量打包后置）
+## E. 实施顺序、提交切分与留档
+
+**总逻辑（先读这段再看表）**：整个实施分四个阶段——先在小数据上把全部新代码走通（**阶段 1 写代码**：迷你库全链路先行，代码没定型前不碰大数据，避免反复重造 31.7 GB）；再造一次正式数据（**阶段 2 造数据**：全量打包 + 全量校验）；然后证明「没改数」（**阶段 3 正确性**：先不训练逐位对拍，再真跑 1000 步对拍 G0 黄金基线）；最后证明「变快了」（**阶段 4 性能**：GL 验收 + 本机速度对账）。**全程严格串行（用户 2026-08-27 拍板）：前一步判定过关才开下一步，无任何并行或先行安排。**说人话版见第一部分六节。
+
+### 阶段 1：写代码（本机开发，迷你库全链路先行）
 
 | 步 | 内容 | 依赖 | 判定 | 预计 |
 |---|---|---|---|---|
-| S0' | 验证资产补齐：preflight 兼容 packed、`BENCH_DUMP_IDX`、env.json provenance 扩展、README 同步；（可顺手）`compare_baseline.py` 总判定行分口径聚合（C.3 缺口） | 用户拍板开工 | STEPS=3 跑通、idx_seq.jsonl 落盘 | ~30 min |
-| S2 | 格式层 + 打包工具 + Store 组守卫（G1/G4/G5/G7/G11/G12/G14），ref-shard 派生迷你库全流程（含迷你库全量 verify） | S0' | Store 组 pytest 全绿 | ~2 h 开发 |
-| S3 | FrameSampDataset + backend 接线 + Dataset 组守卫（G2/G3/G6a/G8/G9/G10/G13）+ 迷你库真实 spawn loader 矩阵 w0/w1/w4/w16 × 2 epoch（fd 泄漏检查：前后 `ls /proc/<pid>/fd` 计数） | S2 | Dataset 组 pytest 全绿（G6 只跑 G6a）+ 矩阵无错无泄漏 | ~1.5 h |
-| S4 | **全量打包**（本机 tmux，decode 档，双趟源读 ≈582 GB）+ **全量 verify**（16 进程三键对拍 + row_digests）+ 构建留档 | S3 + launch 预提交 | `VERIFY_PACK=PASS scanned=483291 mismatches=0` | 40–80 min + 20–40 min |
-| S5 | 第一块（定点 8,200 样本 + 200 真实 batch + G6b；run_name 建议 `v1-framesamp-cmp`） | S0'+S4 | `COMPARE_BATCH=PASS` + G6b 绿 | 30–60 min |
-| S6 | **第二块 G2（终局检验）**：packed 一轮 1000 步（clean HEAD 起跑、preflight 必过）→ `compare_baseline.py` 离线对拍 G0 固化产物 | S4+S5（第一块通过后）| 五标量 hex 1000 步 + 12×state_digest diff 空 + canonical/index 一致 + 留档 | ~2–2.5 h + 对拍 |
-| S7.5 | 验收资产参数化（gl_e2e_fix.sbatch、gl-dataloader 两个 sbatch、dataloader_bench.py、analyze_gpu_util.py，默认值＝现状） | S4 | 三个 launcher 默认值跑通、env.json 记到 backend/resolved 双根 | ~40 min |
-| S8a | GL dataloader-only 四档（w2/w4/w8/w16） | S7.5 + launch 预提交 + 超限 job 逐个资源审批 | 吞吐数据落档（backend==packed 显式、fast 档冷态自证） | 15 min×4 + 排队 |
-| S8b | GL e2e 600 步 T1–T3(+条件档) + cold-like/hot（COLDHOT 双跑各 300 步）——**全链收官测试** | S6+S7.5 + launch 预提交 + 逐 job 资源审批（4×A40 / 2–4 h 超硬限） | `E2E_ACCEPT=PASS` + 距 100% 残差分解 | 3×2 h + 1×4 h |
-| S9 | **G2-speed**：`v1-g2-speed` 一轮 **1000 步**（speed 统一口径，〇节），vs `v1-g0-speed-r2` 对比落档、回填登记簿 | S6（等价性通过后；GL 验收可并行） | 稳态统计 + 对比表落档 | ~40 min |
+| S0' | **补验证小工具**：preflight 兼容 packed、`BENCH_DUMP_IDX`、env.json provenance 扩展、README 同步；（可顺手）`compare_baseline.py` 总判定行分口径聚合（C.3 缺口） | 用户拍板开工 | STEPS=3 跑通、idx_seq.jsonl 落盘 | ~30 min |
+| S2 | **写格式层和打包工具**：+ Store 组守卫（G1/G4/G5/G7/G11/G12/G14），ref-shard 派生迷你库全流程（含迷你库全量 verify） | S0' | Store 组 pytest 全绿 | ~2 h 开发 |
+| S3 | **写新 Dataset 和切换开关**：FrameSampDataset + backend 接线 + Dataset 组守卫（G2/G3/G6a/G8/G9/G10/G13）+ 迷你库真实 spawn loader 矩阵 w0/w1/w4/w16 × 2 epoch（fd 泄漏检查：前后 `ls /proc/<pid>/fd` 计数） | S2 | Dataset 组 pytest 全绿（G6 只跑 G6a）+ 矩阵无错无泄漏 | ~1.5 h |
 
-- **commit 切分**（沿用 `commitV<大>.<小>:` 中文体例，本计划从 **V2.5** 起；每个正式 run 拆「launch.md 预提交 → clean HEAD 起跑 → 结果留档提交」三段，兼顾 AGENTS 12「起跑前记录」与 clean HEAD）：V2.5 验证资产补齐（S0'）+格式层+打包工具+Store 守卫（迷你库通过）→ docs：S4 launch 预提交 → S4 全量打包+verify（clean HEAD 起跑）→ docs：S4 构建留档（`docs/dataset-build-doc/`）→ V2.6 新 Dataset+接线+Dataset 守卫+spawn 矩阵 → docs：S5/S6 launch 预提交 → S5/S6 运行（clean HEAD 起跑）→ V2.7 第一块通过（结果留档）→ V2.8 G2 对拍通过（结果留档 + 登记簿回填）→ V2.9 验收资产参数化（S7.5）→ docs：S8a/S8b/S9 launch 预提交（每 run 各一份，GL 资源审批记录随附）→ 各 run clean HEAD 起跑 → docs GL 验收留档 + `docs/v1-framesamp-dataflow.md` 定稿。每 commit 可独立回滚。
+### 阶段 2：造正式数据（本机 tmux）
+
+| 步 | 内容 | 依赖 | 判定 | 预计 |
+|---|---|---|---|---|
+| S4 | **全量打包 + 全量校验**（decode 档，双趟源读 ≈582 GB；verify 16 进程三键对拍 + row_digests）+ 构建留档 | S3 + launch 预提交 | `VERIFY_PACK=PASS scanned=483291 mismatches=0` | 40–80 min + 20–40 min |
+
+### 阶段 3：证明「没改数」（本机，核心验证）
+
+| 步 | 内容 | 依赖 | 判定 | 预计 |
+|---|---|---|---|---|
+| S5 | **第一块·不训练对拍**：定点 8,200 样本 + 200 真实 batch + G6b（run_name 建议 `v1-framesamp-cmp`） | S4 | `COMPARE_BATCH=PASS` + G6b 绿 | 30–60 min |
+| S6 | **第二块·G2 训练对拍（终局检验）**：packed 一轮 1000 步（clean HEAD 起跑、preflight 必过）→ `compare_baseline.py` 离线对拍 G0 固化产物 | S5（第一块通过后）| 五标量 hex 1000 步 + 12×state_digest diff 空 + canonical/index 一致 + 留档 | ~2–2.5 h + 对拍 |
+
+### 阶段 4：证明「变快了」（S6 通过后才开始）
+
+| 步 | 内容 | 依赖 | 判定 | 预计 |
+|---|---|---|---|---|
+| S7.5 | **GL 验收资产参数化**（gl_e2e_fix.sbatch、gl-dataloader 两个 sbatch、dataloader_bench.py、analyze_gpu_util.py，默认值＝现状） | S6 | 三个 launcher 默认值跑通、env.json 记到 backend/resolved 双根 | ~40 min |
+| S8a | **GL dataloader 单测四档**（w2/w4/w8/w16，不训练只测取数吞吐） | S7.5 + launch 预提交 + 超限 job 逐个资源审批 | 吞吐数据落档（backend==packed 显式、fast 档冷态自证） | 15 min×4 + 排队 |
+| S8b | **GL e2e 收官测试**：600 步 T1–T3(+条件档) + cold-like/hot（COLDHOT 双跑各 300 步） | S8a + launch 预提交 + 逐 job 资源审批（4×A40 / 2–4 h 超硬限） | `E2E_ACCEPT=PASS` + 距 100% 残差分解 | 3×2 h + 1×4 h |
+| S9 | **本机速度对账 G2-speed**：`v1-g2-speed` 一轮 **1000 步**（speed 统一口径，〇节），vs `v1-g0-speed-r2` 对比落档、回填登记簿 | S8b | 稳态统计 + 对比表落档 | ~40 min |
+
+- **commit 切分**（沿用 `commitV<大>.<小>:` 中文体例，本计划从 **V2.5** 起；每个正式 run 拆「launch.md 预提交 → clean HEAD 起跑 → 结果留档提交」三段，兼顾 AGENTS 12「起跑前记录」与 clean HEAD；顺序与 S 步严格串行一致，每 commit 可独立回滚）：
+  1. **V2.5**（阶段 1 前半，S0'+S2）：验证资产补齐 + 格式层 + 打包工具 + Store 组守卫（迷你库通过）；
+  2. **V2.6**（阶段 1 后半，S3）：新 Dataset + backend 接线 + Dataset 组守卫 + spawn 矩阵；
+  3. **docs**：S4 launch 预提交 → S4 全量打包+verify（clean HEAD 起跑）→ docs：S4 构建留档（`docs/dataset-build-doc/`）；
+  4. **docs**：S5/S6 launch 预提交 → S5/S6 运行（clean HEAD 起跑）；
+  5. **V2.7**（S5 收官）：第一块通过（结果留档）；
+  6. **V2.8**（S6 收官）：G2 对拍通过（结果留档 + 登记簿 T8 回填）；
+  7. **V2.9**（S7.5）：GL 验收资产参数化；
+  8. **docs**：S8a → S8b → S9 逐 run「launch 预提交（GL 资源审批记录随附）→ clean HEAD 起跑 → 结果留档」，按串行顺序逐个走完；
+  9. **docs**：GL 验收汇总留档 + `docs/v1-framesamp-dataflow.md` 定稿。
 - **run_name 建议**（起跑前逐个交用户确认，AGENTS 6）：`v1-framesamp-cmp`（S5）、`v1-framesamp-g2`（S6）、`v1-framesamp-dl-w{2,4,8,16}`、`v1-framesamp-e2e-w{4,8,2}c16`、`…-coldlike/-hot`、`v1-g2-speed`（S9）；打包库名 `4task-gl-framesamp`。
 - **回滚策略**：功能回滚＝launcher 里 `MMEVLA_DATA_BACKEND` 切回 `legacy` + `--dataset-path` 指回源库（必须一起回退）；打包库保留作证据不删（不进 git，31.7 GB），确认彻底放弃方案时才删。
 - **收官清理**：验证结束后清理 `v1-store/cache/jax/` 下各 EXP_NAME 缓存与 `~/.cache/jax_*` 软链，清理 S 步临时 run（AGENTS 6）。
