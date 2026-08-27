@@ -1,6 +1,6 @@
 # 梯度对拍黄金基线 G0 与基线链规约
 
-> **实施状态（2026-08-26）**：P1（commit V2.1 `d9e509e`）与 P2（commit V2.2，四档八轮）已完成；**D2 与 D2-cold 双 PASS，三支处置走第一支**——G0 获准跨期充当 bitwise 判据一侧，正确性族固定确定性档 `--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0`。核心一致性结论独立留档 [`docs/v1-determinism-conclusions.md`](docs/v1-determinism-conclusions.md)，逐轮产物 `docs/training-doc/v1-det-*/`。PG0（G0 两轮 + PG0-speed）按用户指令**待汇报后启动**。
+> **实施状态（2026-08-26）**：P1（commit V2.1 `d9e509e`）与 P2（commit V2.2，四档八轮）已完成；**D2 与 D2-cold 双 PASS，三支处置走第一支**——G0 获准跨期充当 bitwise 判据一侧，正确性族固定确定性档 `--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0`。核心一致性结论独立留档 [`docs/v1-determinism-conclusions.md`](docs/v1-determinism-conclusions.md)，逐轮产物 `docs/training-doc/v1-det-*/`。**PG0 已完成（commit V2.3）**：G0 两轮 300 步自证 PASS（逐位一致，`<G0-HEAD>=624d417`），产物固化 `docs/training-doc/v1-grad-baseline-g0/`；PG0-speed（`v1-g0-speed`）已预跑，speed 链锚点 1.117 s/step。**本计划全部执行完毕**，登记簿见 T8；后续接 dtype 计划 P3（V2.4 起）。
 >
 > 本文件立项时为计划文档。2026-08-26 立项，用户指令：三份计划（[`v1-dtype-unify-plan.md`](v1-dtype-unify-plan.md)、[`v1-framesamp-restructure-plan.md`](v1-framesamp-restructure-plan.md)、[`v1-post-restructure-roadmap.md`](v1-post-restructure-roadmap.md)）的梯度对拍不仅要和自己的改动前比，还要和「三个都没动」的训练（当前仓库状态，git 锁定，必要时 sha256 校验）比；最好现在先跑一轮记下产物、产物进 git 后固化复用。方案经一轮 opus 对抗复核（12 条必须修 / 10 条建议修全部吸收）。
 >
@@ -246,10 +246,10 @@ P1 验收：STEPS=3 连跑两次不拒跑、缓存落 `v1-store/cache/jax/` 且�
 |---|---|---|---|---|---|---|
 | D0（字面现状，非判据） | `v1-det-d0-r{1,2}` | `d9e509e`（V2.1） | 各轮 env.json `fingerprint` 键（uv.lock `02cbc3ba…`） | 两轮重跑噪声底 | FAIL（预期）：loss rel median 2.7e-3 / max 4.6e-2，全表见 `docs/v1-determinism-conclusions.md` 三节 | `docs/training-doc/v1-det-d0-r{1,2}/` |
 | D1/D2/D2-cold（定档实验） | `v1-det-d{1,2}-r{1,2}`、`v1-det-d2cold-r{1,2}` | `d9e509e`（V2.1） | 同上 | 两轮逐步 hex + state_digest + batch_digest diff 为空 | D1 FAIL（ULP 级，atomics）；D2 PASS；**D2-cold PASS（授权闸开）** | `docs/training-doc/v1-det-*/` |
-| G0 | `v1-grad-baseline-g0` | 待回填（`<G0-HEAD>`） | 待回填 | G0_SCOPE + round1/2 自证 | 待回填 | `docs/training-doc/v1-grad-baseline-g0/` |
+| G0 | `v1-grad-baseline-g0` | `624d417`（`<G0-HEAD>`，锚点差异 76 文件全过白名单） | round1/2 env.json `fingerprint` 键；scalars_hex sha256 `5da1a1c6…`（两轮相同） | G0_SCOPE=PASS + round1/2 自证 | **PASS**：300 步标量 hex / 4×state_digest / 6×batch_digest 全逐位一致；缓存已清理留 sha256 清单 | `docs/training-doc/v1-grad-baseline-g0/` |
 | G1（dtype 修复后） | `v1-dtype-ab-post` | 待回填 | 待回填 | vs G0：bitwise + 量化兜底 | 待回填 | dtype 计划留档 |
 | G2（packed） | IO 重构计划 C.3 的 packed 侧 | 待回填 | 待回填 | vs G1 bitwise；vs G0 对账 | 待回填 | IO 重构计划留档 |
-| G0-speed（速度基线） | `v1-g0-speed` | 待回填 | 待回填 | speed 链锚点（AGENTS 16 稳态统计） | 待回填 | `docs/training-doc/v1-g0-speed/` |
+| G0-speed（速度基线） | `v1-g0-speed` | `624d417` | records/env.json `fingerprint` 键 | speed 链锚点（AGENTS 16 稳态统计） | 稳态 1.117 s/step（中位，n=249）、util 均值 86.3%、0% 采样 5.3%、epoch 外推 15.33 h（本机口径，非最终吞吐结论） | `docs/training-doc/v1-g0-speed/` |
 | G2-speed | `v1-g2-speed` | 待回填 | 待回填 | vs `v1-g0-speed` | 待回填 | IO 重构计划留档 |
 
 ## T9 红线（实施期逐条自检）
