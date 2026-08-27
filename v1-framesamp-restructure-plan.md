@@ -1,6 +1,6 @@
 # framesample+context 数据链路彻底重构计划（v1-dataloader-Restructure）
 
-> **⚠ 本文件已并入 [`v2-gradient-baseline.md`](v2-gradient-baseline.md)（2026-08-27，用户拍板彻底重构为独立可执行单一文档）**：重构前后链路、三块验证、GL 吞吐验收、实施顺序与红线的现行权威版本均在 v2 文件；本文件只作历史存档，不再更新，内容冲突时一律以 v2 为准。
+> **⚠ 本文件已并入 [`v2-framesamp-restructure-plan.md`](v2-framesamp-restructure-plan.md)（2026-08-27，用户拍板彻底重构为独立可执行单一文档）**：重构前后链路、三块验证、GL 吞吐验收、实施顺序与红线的现行权威版本均在 v2 文件；本文件只作历史存档，不再更新，内容冲突时一律以 v2 为准。
 
 > 本文件是计划文档，尚未实施。v1 定稿于 2026-08-24；v2 于 2026-08-25 依据两轮独立对抗验证修订；v3 定稿于 2026-08-25；本版为 **v4（2026-08-26，拆分瘦身）**：dtype 统一已拆分为**前置计划 [`v1-dtype-unify-plan.md`](v1-dtype-unify-plan.md)**（先行独立验收），本计划随之删除 replica/f32 交付模式、`MMEVLA_FRAMESAMP_DTYPE` 三态开关、第 3 层验证（原 C.4）与 GL b64 dtype 抽查——A/B 变为单变量（只剩「字节从哪读」）。**实施前提：前置计划两块正确性验收通过后由用户拍板开工（2026-08-26 裁定：dtype 修复不做性能对比，其性能效果并入本计划收官的 `v1-g2-speed` vs `v1-g0-speed` speed 链对比一并体现——符号与口径以基线计划「符号总表」为权威）。** v3 的评审背书如下：
 > ① 61-agent 对抗验证 workflow（报告 `v1-framesamp-restructure-adversarial-review.md`：确认问题 high 4 / medium 6 / low 10，驳回 3）；
