@@ -35,10 +35,11 @@
 | 符号 | run_name | 什么时候跑 | 对比对象 |
 |---|---|---|---|
 | **G0-speed**（步骤名 PG0-speed） | `v1-g0-speed` | 随本计划执行序列在 G0 之后同场次**预先跑完** | speed 链的锚点 |
-| G2-speed | `v1-g2-speed` | IO 重构计划（v4）收官后 | vs `v1-g0-speed`（dtype+IO 重构合并性能效果一并体现） |
+| G1-speed | `v1-g1-speed` | dtype 计划 P7：两块正确性（G1 vs G0）通过后 | vs `v1-g0-speed`（dtype 修复单独性能效果；v4 决策输入之一） |
+| G2-speed | `v1-g2-speed` | IO 重构计划（v4）收官后 | vs `v1-g1-speed` + `v1-g0-speed`（dtype 效果已由 G1-speed 单独体现，本级归因干净） |
 | G3+-speed | `v1-g<n>-speed` | roadmap 每项收官后 | vs 上一 speed 节点 + `v1-g0-speed` |
 
-- **G1 无 speed run**（用户 2026-08-26 裁定：dtype 修复预期影响仅 ~80 ms/step，不值专门一轮；其性能效果并入 G2-speed 观察）。
+- **G1-speed（2026-08-26 同日反转裁定）**：原裁定「G1 无 speed run（dtype 修复预期影响仅 ~80 ms/step，不值专门一轮；性能效果并入 G2-speed 观察）」，同日经用户再裁定反转——新增 `v1-g1-speed`（dtype 计划 P7，两块正确性通过后跑，口径同下条 speed run 统一口径），vs `v1-g0-speed` 产出 dtype 修复的单独性能对比，作为「是否实施 IO 重构计划（v4）」的用户决策两份输入之一（另一份是 G1 vs G0 正确性验收结论）；副产收益是 G2-speed 不再合并承载 dtype 效果、IO 重构性能归因变干净。
 - **speed run 统一口径（权威定义）**：`bench_train_steps.py` 入口、本机 2×RTX 6000 Ada、b8、300 步、seed 42、num_workers=4；不注入 `XLA_FLAGS`；`SAVE_INTERVAL=0`（禁 TrainState 摘要）、`BATCH_DIGESTS=0`（禁输入摘要），逐步 loss 标量记录保留（毫秒级）；`nvidia-smi -lms 500` 密集采样 + 15 s legacy 通道；报 util 稳态均值 / 0% 采样占比 / 慢步分层均值 / 步时中位与均值（AGENTS 16，禁中位数标题结论），标注「本机口径，不作最终吞吐结论」（AGENTS 13）。GL 吞吐验收（v4 计划 D 节）照旧是 GL 侧主判据，speed 链是本机口径的链式对账，两者并存。
 - 每个 speed run >5 min，按 AGENTS 17 留档 `docs/training-doc/<run_name>/`，留档以 `docs:` commit 提交、不占 V2.x 编号；run_name 起跑前仍按 AGENTS 6 逐个向用户确认。
 
@@ -80,7 +81,7 @@
 
 ## 五、三方对拍矩阵与基线链
 
-基线链：**G0（原始）→ G1（dtype 修复后）→ G2（packed IO）→ G3…（roadmap 各项）**。每个新节点：vs 上一节点（主判据，尽可能 bitwise）+ vs G0（锚定）。**与之平行的 speed 链**：`v1-g0-speed` → `v1-g2-speed` → `v1-g<n>-speed`（G1 跳过，符号总表）——每个基线链节点（G2 起）收官后跑对应 speed run，与上一 speed 节点及 `v1-g0-speed` 对比，作为该级优化的性能结论与下一级立项输入。
+基线链：**G0（原始）→ G1（dtype 修复后）→ G2（packed IO）→ G3…（roadmap 各项）**。每个新节点：vs 上一节点（主判据，尽可能 bitwise）+ vs G0（锚定）。**与之平行的 speed 链**：`v1-g0-speed` → `v1-g1-speed` → `v1-g2-speed` → `v1-g<n>-speed`（符号总表；原「G1 跳过」已于 2026-08-26 同日反转）——每个基线链节点收官后跑对应 speed run，与上一 speed 节点及 `v1-g0-speed` 对比，作为该级优化的性能结论与下一级立项输入。
 
 | 对拍 | 判据 | 说明 |
 |---|---|---|
@@ -162,7 +163,7 @@ P1 固化的量具经审计发现四处缺口，在 G0 已固化的前提下按�
 4b. **README 同步**：`scripts/smoke-local/README.md` 可调变量清单补 `EXP_NAME/RUN_TAG/KEEP_JAX_CACHE/BATCH_DIGESTS` 四项，步数上限「≤500」订正为与 `bench_train_steps.py` 护栏一致的「≤600」（两处，含差异表）——P1 落地时漏同步。
 5. **G0 摘要补录 replica 轮**：P1b 代码落地后、G1 起跑前，用扩展量具按 G0 口径（确定性档、同 seed、300 步）重放一轮，run_name `v1-grad-baseline-g0-replay`（起跑前确认）。判定：raw `scalars_hex` / `state_digest` / `batch_digests` 与固化 G0 **逐位一致** ⇒ 重放有效（同时证明 uv runner 改造与 canonical 通道不改变计算）；同场次录得 canonical 输入摘要，并把摘要步完整 TrainState 数组落 `v1-store/baselines/g0-replay/`（不进 git，manifest sha256 进 git）作为 G1 对拍的数值参照。判定 FAIL ⇒ 量具改造有害，revert P1b 功能 commit 后排查。
 
-后续（不在本计划）：dtype 修复本体自 commit V2.4 起（其 P3–P6，见该计划 T5；dtype 不跑 speed run，用户 2026-08-26 裁定）。
+后续（不在本计划）：dtype 修复本体自 commit V2.4 起（其 P3–P7，见该计划 T5；P7 即 `v1-g1-speed`——原「dtype 不跑 speed run」裁定已于 2026-08-26 同日反转，见符号总表）。
 
 ## 八、G0 与正式训练入口的入口层差异（有效域声明，2026-08-26 增补）
 
@@ -250,7 +251,7 @@ P1 固化的量具经审计发现四处缺口，在 G0 已固化的前提下按�
 ## T7 commit 切分与 run_name 汇总
 
 - V2.1 = P1（bench 驱动改造 + 两个新脚本 + README 同步）；V2.2 = P2（四档八轮 + D0 固化留档 + 三支处置结论）；V2.3 = PG0（G0 两轮留档 + 产物固化 + 登记簿回填）；**P1b（审计修正增补）单独占一个功能 commit**（量具补遗 + 补录轮留档随后以 `docs:` 提交），排在 V2.4（dtype 修复）之前。dtype 修复顺延 **V2.4**（原 V2.3），IO 重构计划自 **V2.5** 顺延（原 V2.4–V2.8 → V2.5–V2.9）。
-- run_name 全表（起跑前逐个交用户确认，AGENTS 6）：`v1-det-d{0,1,2}-r{1,2}`、`v1-det-d2cold-r{1,2}`、`v1-grad-baseline-g0`、`v1-g0-speed`（speed 链锚点，PG0-speed 步骤）、`v1-grad-baseline-g0-replay`（P1b 补录轮）；dtype B 侧沿用其计划的 `v1-dtype-ab-post`（`v1-dtype-ab-pre` 已由 G0 兼任、不再单独跑）。后续 speed 链 run_name 按 `v1-g<n>-speed` 命名（符号总表）。
+- run_name 全表（起跑前逐个交用户确认，AGENTS 6）：`v1-det-d{0,1,2}-r{1,2}`、`v1-det-d2cold-r{1,2}`、`v1-grad-baseline-g0`、`v1-g0-speed`（speed 链锚点，PG0-speed 步骤）、`v1-grad-baseline-g0-replay`（P1b 补录轮）；dtype B 侧沿用其计划的 `v1-dtype-ab-post`（`v1-dtype-ab-pre` 已由 G0 兼任、不再单独跑）；`v1-g1-speed`（dtype 计划 P7，2026-08-26 反转裁定新增）。后续 speed 链 run_name 按 `v1-g<n>-speed` 命名（符号总表）。
 - **run_name 轮次规约（2026-08-26 审计修正）**：G0 两轮共用 `v1-grad-baseline-g0`、以 RUN_TAG 分轮，与 AGENTS 6「每次正式 run 全新 run_name」存在语义歧义——该 run 已固化留档，属既成事实，**不追溯改名**；自本条起，同一符号需多轮正式 run 的场景，run_name 一律带 `-r<N>`（或语义后缀如 `-replay`）逐轮确认，P2 的 `v1-det-*-r{1,2}` 即该体例。
 
 ## T8 基线链登记簿（唯一权威；实施时回填，三份计划只引用本表）
@@ -263,7 +264,8 @@ P1 固化的量具经审计发现四处缺口，在 G0 已固化的前提下按�
 | G1（dtype 修复后） | `v1-dtype-ab-post` | 待回填 | 待回填 | vs G0：bitwise + 量化兜底 | 待回填 | dtype 计划留档 |
 | G2（packed） | IO 重构计划 C.3 的 packed 侧 | 待回填 | 待回填 | vs G1 bitwise；vs G0 对账 | 待回填 | IO 重构计划留档 |
 | G0-speed（速度基线） | `v1-g0-speed` | `624d417` | records/env.json `fingerprint` 键 | speed 链锚点（AGENTS 16 稳态统计） | 稳态 1.117 s/step（中位，n=249）、util 均值 86.3%、0% 采样 5.3%、epoch 外推 15.33 h（本机口径，非最终吞吐结论） | `docs/training-doc/v1-g0-speed/` |
-| G2-speed | `v1-g2-speed` | 待回填 | 待回填 | vs `v1-g0-speed` | 待回填 | IO 重构计划留档 |
+| G1-speed | `v1-g1-speed` | 待回填 | 待回填 | vs `v1-g0-speed` | 待回填（2026-08-26 反转「G1 无 speed run」裁定新增，dtype 计划 P7） | dtype 计划留档（`docs/training-doc/v1-g1-speed/`） |
+| G2-speed | `v1-g2-speed` | 待回填 | 待回填 | vs `v1-g1-speed` + `v1-g0-speed` | 待回填 | IO 重构计划留档 |
 
 ## T9 红线（实施期逐条自检）
 
