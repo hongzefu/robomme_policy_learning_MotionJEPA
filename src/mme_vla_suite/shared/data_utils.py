@@ -28,7 +28,8 @@ def right_padding_token_emb(
                     (
                         max_size - sampled_img_emb.shape[0],
                         *sampled_img_emb.shape[1:],
-                    )
+                    ),
+                    dtype=sampled_img_emb.dtype,
                 ),
             ],
             axis=0,
@@ -40,7 +41,8 @@ def right_padding_token_emb(
                     (
                         max_size - sampled_pos_emb.shape[0],
                         *sampled_pos_emb.shape[1:],
-                    )
+                    ),
+                    dtype=sampled_pos_emb.dtype,
                 ),
             ],
             axis=0,
@@ -52,7 +54,8 @@ def right_padding_token_emb(
                     (
                         max_size - sampled_state_emb.shape[0],
                         *sampled_state_emb.shape[1:],
-                    )
+                    ),
+                    dtype=sampled_state_emb.dtype,
                 ),
             ],
             axis=0,
