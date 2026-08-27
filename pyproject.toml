@@ -136,6 +136,7 @@ unfixable = [
 # 判为「歧义 Unicode 字符」。这两个目录是本轮新增的中文注释密集区，按目录豁免这三条。
 "scripts/data-preprocess-GL/*.py" = ["RUF001", "RUF002", "RUF003"]
 "scripts/smoke-local/*.py" = ["RUF001", "RUF002", "RUF003"]
+"scripts/dtype-unify/*.py" = ["RUF001", "RUF002", "RUF003"]
 # gl_submit.py 是从已验证仓库逐字复制的提交器，只改过 REPO 常量；不做风格改写以免引入回归。
 "scripts/data-preprocess-GL/gl_submit.py" = ["RUF001", "RUF002", "RUF003", "PLW1510", "SIM108"]
 
