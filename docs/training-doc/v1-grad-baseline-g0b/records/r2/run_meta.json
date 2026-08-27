@@ -3,21 +3,21 @@
     "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/scripts/smoke-local/bench_train_steps.py",
     "mme_vla_suite",
     "--exp-name",
-    "v1-grad-baseline-g0",
+    "v1-grad-baseline-g0b",
     "--assets-base-dir",
     "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
     "--checkpoint-base-dir",
-    "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/train-runs/v1-grad-baseline-g0-round1",
+    "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/train-runs/v1-grad-baseline-g0b-r2",
     "--batch-size",
     "8",
     "--num-workers",
     "4",
     "--num-train-steps",
-    "300",
+    "1000",
     "--log-interval",
     "1",
     "--save-interval",
-    "100",
+    "1",
     "--seed",
     "42",
     "--fsdp-devices",
@@ -39,8 +39,13 @@
     "/jax/orbax/async_checkpointer/init": 1,
     "/jax/orbax/checkpointer/init": 1,
     "/jax/checkpoint/read/bytes": 1,
-    "/jax/compilation_cache/cache_misses": 2
+    "/jax/compilation_cache/cache_hits": 2
   },
   "bench_checksum_enabled": true,
-  "bench_batch_digests_enabled": true
+  "bench_batch_digests_enabled": true,
+  "digest_interval_effective": 100,
+  "extra_digest_steps": [
+    299
+  ],
+  "state_dump_steps": []
 }

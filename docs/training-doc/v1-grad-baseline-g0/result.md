@@ -1,5 +1,7 @@
 # v1-grad-baseline-g0 结果
 
+> **已被取代（2026-08-27）**：records 已删除（新旧逐位对拍 PASS 后，用户裁定），本文数字留作历史存证；现行基线见 [`v1-grad-baseline-g0b`](../v1-grad-baseline-g0b/result.md)。
+
 ## 自证判定（round1 vs round2，`compare_baseline.py`）
 
 ```

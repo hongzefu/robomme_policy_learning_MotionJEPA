@@ -1,6 +1,6 @@
 # 梯度对拍黄金基线 G0 与基线链规约
 
-> **实施状态（2026-08-26）**：P1（commit V2.1 `d9e509e`）与 P2（commit V2.2，四档八轮）已完成；**D2 与 D2-cold 双 PASS，三支处置走第一支**——G0 获准跨期充当 bitwise 判据一侧，正确性族固定确定性档 `--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0`。核心一致性结论独立留档 [`docs/v1-determinism-conclusions.md`](docs/v1-determinism-conclusions.md)，逐轮产物 `docs/training-doc/v1-det-*/`。**PG0 已完成（commit V2.3）**：G0 两轮 300 步自证 PASS（逐位一致，`<G0-HEAD>=624d417`），产物固化 `docs/training-doc/v1-grad-baseline-g0/`；PG0-speed（`v1-g0-speed`）已预跑，speed 链锚点 1.117 s/step。**原计划工序（P1/P2/PG0/PG0-speed）全部执行完毕**，登记簿见 T8；2026-08-26 两份审计后增补量具补遗工序 **P1b（未执行，G1 起跑前必须完成，见七节）**；后续接 dtype 计划 P3（V2.4 起）。
+> **实施状态（2026-08-26）**：P1（commit V2.1 `d9e509e`）与 P2（commit V2.2，四档八轮）已完成；**D2 与 D2-cold 双 PASS，三支处置走第一支**——G0 获准跨期充当 bitwise 判据一侧，正确性族固定确定性档 `--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0`。核心一致性结论独立留档 [`docs/v1-determinism-conclusions.md`](docs/v1-determinism-conclusions.md)，逐轮产物 `docs/training-doc/v1-det-*/`。**PG0 已完成（commit V2.3）**：G0 两轮 300 步自证 PASS（逐位一致，`<G0-HEAD>=624d417`），产物固化 `docs/training-doc/v1-grad-baseline-g0/`；PG0-speed（`v1-g0-speed`）已预跑，speed 链锚点 1.117 s/step。**原计划工序（P1/P2/PG0/PG0-speed）全部执行完毕**，登记簿见 T8；2026-08-26 两份审计后增补量具补遗工序 **P1b——已完成（commitV2.3.1 `570287f`，2026-08-27）**：经用户裁定「允许全部重跑」，原第 5 项补录 replay 轮取消，改为量具落地后**重跑基线两轮（升级 1000 步，`v1-grad-baseline-g0b`）+ 重测速度锚点（`v1-g0-speed-r2`，1000 步）**；G0b 千步自证与新旧前 300 步前缀对拍全 PASS，旧 G0 records 按用户裁定删除，G0b 升任链头（T8）。**dtype 计划（原后续 V2.4 起）执行已由用户 2026-08-27 指令中止**，基线链后续接续以届时指令为准。
 >
 > 本文件立项时为计划文档。2026-08-26 立项，用户指令：三份计划（[`v1-dtype-unify-plan.md`](v1-dtype-unify-plan.md)、[`v1-framesamp-restructure-plan.md`](v1-framesamp-restructure-plan.md)、[`v1-post-restructure-roadmap.md`](v1-post-restructure-roadmap.md)）的梯度对拍不仅要和自己的改动前比，还要和「三个都没动」的训练（当前仓库状态，git 锁定，必要时 sha256 校验）比；最好现在先跑一轮记下产物、产物进 git 后固化复用。方案经一轮 opus 对抗复核（12 条必须修 / 10 条建议修全部吸收）。
 >
@@ -34,7 +34,7 @@
 
 | 符号 | run_name | 什么时候跑 | 对比对象 |
 |---|---|---|---|
-| **G0-speed**（步骤名 PG0-speed） | `v1-g0-speed` | 随本计划执行序列在 G0 之后同场次**预先跑完** | speed 链的锚点 |
+| **G0-speed**（步骤名 PG0-speed） | `v1-g0-speed` →（2026-08-27 起）`v1-g0-speed-r2` | 300 步版随本计划在 G0 之后预跑；P1b 后按用户裁定以 1000 步 `v1-g0-speed-r2` 重测换锚 | speed 链的锚点（现行 = `v1-g0-speed-r2`，1000 步口径；后续 speed run 一律 1000 步与之对比） |
 | G1-speed | `v1-g1-speed` | dtype 计划 P7：两块正确性（G1 vs G0）通过后 | vs `v1-g0-speed`（dtype 修复单独性能效果；v4 决策输入之一） |
 | G2-speed | `v1-g2-speed` | IO 重构计划（v4）收官后 | vs `v1-g1-speed` + `v1-g0-speed`（dtype 效果已由 G1-speed 单独体现，本级归因干净） |
 | G3+-speed | `v1-g<n>-speed` | roadmap 每项收官后 | vs 上一 speed 节点 + `v1-g0-speed` |
@@ -63,7 +63,7 @@
 
 1. `metrics.jsonl`：逐步五标量（loss/grad_norm/llm_grad_norm/mem_enc_norm/param_norm）十进制 + hex；
 2. `param_checksums.jsonl`：每 100 步（步 0 与末步必记）**完整 TrainState** 摘要（params/opt_state/EMA/step 全部叶子逐个 sha256 + `state_digest`）；
-3. `batch_digests.jsonl`：步 0/1/2 + 每 100 步，交付 batch 逐键 `sha256(dtype‖shape‖bytes)`。**性质与输出摘要完全不同**：与 XLA/缓存/驱动无关、跨计算图（HLO）永远逐位可比——roadmap 项 2/3（改输入签名）场景对拍 G0 的**主判据**。**口径限定（2026-08-26 审计修正）**：上式是 **raw 物理口径**（dtype 参与哈希），只适用于「输入应逐字节不变」的场景；**跨 dtype 场景（G1 vs G0）它必然全线失配且无鉴别力**（分不清「只是类型变了」与「数值真变了」），须改用 P1b 增设的 **canonical 数值口径**（逐键升到 f32 后按位视图哈希）。G0 固化产物只含 raw 摘要，sha256 事后不可换算——G0 侧 canonical 摘要由 P1b 的补录 replica 轮产生；
+3. `batch_digests.jsonl`：步 0/1/2 + 每 100 步，交付 batch 逐键 `sha256(dtype‖shape‖bytes)`。**性质与输出摘要完全不同**：与 XLA/缓存/驱动无关、跨计算图（HLO）永远逐位可比——roadmap 项 2/3（改输入签名）场景对拍 G0 的**主判据**。**口径限定（2026-08-26 审计修正）**：上式是 **raw 物理口径**（dtype 参与哈希），只适用于「输入应逐字节不变」的场景；**跨 dtype 场景（G1 vs G0）它必然全线失配且无鉴别力**（分不清「只是类型变了」与「数值真变了」），须改用 P1b 增设的 **canonical 数值口径**（逐键升到 f32 后按位视图哈希）。G0 固化产物只含 raw 摘要，sha256 事后不可换算——基线侧 canonical 摘要由 G0b 重跑原生产出（2026-08-27 起链头为 `v1-grad-baseline-g0b`，补录 replica 轮已取消，见七节 P1b）；
 4. `scalars_hex.tsv`：`metrics.jsonl` 的规范化投影（`step<TAB>loss.hex<TAB>…`，剔除 wall_time 等易变字段）+ 其 sha256——「两轮是否一致」退化为一次 sha256 比较，人和机器都不会搞错（`metrics.jsonl` 含 wall_time，不可直接 diff）；
 5. `env.json`：环境指纹（真实 argv、库版本、GPU/驱动、XLA_FLAGS、编译缓存命中/编译计数——见 T2）；
 6. `BASELINE_MANIFEST.json`：逐产物 sha256 / 行数 / schema 版本——防产物腐烂与工具漂移；
@@ -103,7 +103,7 @@
 - **判据**：A/B 的 rel 各统计档 ≤ null 对相应档 × 2（余量）；**下限守卫**：null 档位低于绝对下限（loss 1e-6 / 三个梯度范数 1e-5 / 末步 param_norm 1e-5）时以绝对下限为准——比天然噪声还小的差异不必吹毛求疵。（阈值低于噪声底必误报、远高于噪声底无鉴别力，故必须经验标定而非先验拍数。）
 - **趋势判据**：主用包络——A/B 的 rel(t) 逐步不超过 null 对 rel(t) 上包络 × 2；可选辅助诊断 `log(rel)` 斜率与 null 斜率对比（差异增长是乘性的），仅作定位参考、不单独作 FAIL 依据。
 - 量化判据在 IO 重构计划 C.3 场景仍**不作为放行依据**（该计划 3.4 既有裁定不变：无 dtype 差异的 A/B 出现任何残差都指向 bug 或非确定性，必须修到 bitwise）。
-- **TrainState 数值裁决（2026-08-26 审计修正）**：`state_digest` 失配时，仅凭五个标量的量化统计**不足以判 PASS**——参数、Adam 动量或 EMA 明显不同但范数接近时会漏判。失配后必须给出**逐叶数值统计**（每叶 max-abs、max-rel、L2 相对差、cosine，覆盖 params / opt_state / EMA 全部叶子），由 `compare_baseline.py` 计算（P1b 扩展）。固化产物只含 sha256、事后补算不出数值——与固化基线对拍时，数值参照取 P1b 补录轮落盘的摘要步 TrainState 数组；拿不出逐叶统计时判定只能写 `INCONCLUSIVE`，不得写 PASS。
+- **TrainState 数值裁决（2026-08-26 审计修正）**：`state_digest` 失配时，仅凭五个标量的量化统计**不足以判 PASS**——参数、Adam 动量或 EMA 明显不同但范数接近时会漏判。失配后必须给出**逐叶数值统计**（每叶 max-abs、max-rel、L2 相对差、cosine，覆盖 params / opt_state / EMA 全部叶子），由 `compare_baseline.py` 计算（P1b 扩展）。固化产物只含 sha256、事后补算不出数值——与固化基线对拍时，数值参照取 G0b r1 落盘的摘要步 TrainState 数组（步 0/299/999，存本机 `/data/hongzefu/v1-baselines/g0b-r1-state-dump/`，sha 清单进 git；失配步不在所存步时按 D2-cold 授权重放补落）；拿不出逐叶统计时判定只能写 `INCONCLUSIVE`，不得写 PASS。
 
 ## 七、执行序列（本文档实施时执行；预计 4.5–5.5 h 墙钟——摘要稀疏化省约 2–3 h、新增 PG0-speed 约 +40 min；全程 tmux + Monitor）
 
@@ -161,7 +161,9 @@ P1 固化的量具经审计发现四处缺口，在 G0 已固化的前提下按�
 3. **runner 收敛 `uv run`**：bench 驱动的全部 Python 调用改为 `UV_LINK_MODE=copy uv run`（同一 `.venv` 解释器，计算行为预期不变；八节差异表 runner 行随之收敛）。此为 AGENTS 3 合规修正，经用户 2026-08-26 拍板；发生在 G0 固化之后，故补录轮（下条）同时充当 runner 改造的等价性实证。
 4. **speed 口径联动**：驱动脚本在 `SAVE_INTERVAL=0` 时默认联动 `BATCH_DIGESTS=0`（保留显式覆盖）——speed 链口径要求两者都关，此前须调用方手动同时设置，易漏。
 4b. **README 同步**：`scripts/smoke-local/README.md` 可调变量清单补 `EXP_NAME/RUN_TAG/KEEP_JAX_CACHE/BATCH_DIGESTS` 四项，步数上限「≤500」订正为与 `bench_train_steps.py` 护栏一致的「≤600」（两处，含差异表）——P1 落地时漏同步。
-5. **G0 摘要补录 replica 轮**：P1b 代码落地后、G1 起跑前，用扩展量具按 G0 口径（确定性档、同 seed、300 步）重放一轮，run_name `v1-grad-baseline-g0-replay`（起跑前确认）。判定：raw `scalars_hex` / `state_digest` / `batch_digests` 与固化 G0 **逐位一致** ⇒ 重放有效（同时证明 uv runner 改造与 canonical 通道不改变计算）；同场次录得 canonical 输入摘要，并把摘要步完整 TrainState 数组落 `v1-store/baselines/g0-replay/`（不进 git，manifest sha256 进 git）作为 G1 对拍的数值参照。判定 FAIL ⇒ 量具改造有害，revert P1b 功能 commit 后排查。
+5. ~~**G0 摘要补录 replica 轮**~~（**取消，2026-08-26 用户裁定「允许全部重跑」后由 G0b 重跑取代**）：改为 P1b 代码落地后直接重跑基线两轮 `v1-grad-baseline-g0b-r{1,2}`（**升级 1000 步**，同用户裁定；SAVE_INTERVAL=100 + 附加摘要步 299 对齐旧末步；r1 另落 TrainState 数组 @0/299/999）+ 重测速度锚点 `v1-g0-speed-r2`（1000 步）。判定三条：① 新 r1 vs r2 千步逐位自证；② 新 r1 前 300 步 vs 旧固化 G0 raw 口径逐位前缀对拍（= uv runner 与 canonical 通道不改变计算的等价性实证；FAIL 即 revert P1b 排查）；③ manifest 校验。**已执行，全 PASS（2026-08-27，T8）**：canonical 摘要与 index 序列由 G0b 原生产出；TrainState 数组经逐文件 sha256 核对迁存本机 `/data/hongzefu/v1-baselines/g0b-r1-state-dump/`（用户裁定不留 NFS，sha 清单进 git）；旧 G0 records 对拍通过后删除。
+
+P1b 实际落地记录（2026-08-27）：功能 commit **V2.3.1 `570287f`**（上列 1–4、4b，另含配合 1000 步的护栏放宽 600→1200、`EXTRA_DIGEST_STEPS` 附加摘要步与 `STATE_DUMP_STEPS` TrainState 数组落盘机制）；STEPS=6 三连烟测 + `compare_baseline.py` 四场景构造样例自检全过；G0b 两轮与 `v1-g0-speed-r2` 留档 `docs/training-doc/v1-grad-baseline-g0b/`、`docs/training-doc/v1-g0-speed-r2/`。
 
 后续（不在本计划）：dtype 修复本体自 commit V2.4 起（其 P3–P7，见该计划 T5；P7 即 `v1-g1-speed`——原「dtype 不跑 speed run」裁定已于 2026-08-26 同日反转，见符号总表）。
 
@@ -190,7 +192,7 @@ P1 固化的量具经审计发现四处缺口，在 G0 已固化的前提下按�
 | checksum 同步 | 无高频完整状态拉回 | G0 计划每 100 步（步 0 与末步必记）执行大规模 `device_get` | 显著增加墙钟并扰动吞吐、预取与 GPU 利用率，不改变训练更新公式 |
 | checksum 实测开销 | 无对应高频开销 | 既有 300 步 bench 前身共 12 次，单次中位约 47.3 s，合计约 9.4 min | 占该轮 15.3 min 总墙钟约六成；这是验证观测开销，不是训练数值差距 |
 | 步数限制 | 无 bench 上限，按正式配置运行 | 入口护栏最多 600 步，G0 计划跑 300 步 | 前 300 步的训练定义不变，但 G0 不覆盖后续轨迹、正式保存点或长程行为 |
-| runner / cwd | `uv run scripts/train.py`，依赖从仓库根启动 | P1b 前：固定项目解释器；P1b 起：同为 `UV_LINK_MODE=copy uv run`（同一 `.venv` 解释器），并在调用前显式切到仓库根 | 环境版本相同时不产生数值差异（P1b 补录轮以 raw 摘要逐位一致实证）；正式入口对调用环境和 cwd 更敏感 |
+| runner / cwd | `uv run scripts/train.py`，依赖从仓库根启动 | P1b 前：固定项目解释器；P1b 起：同为 `UV_LINK_MODE=copy uv run`（同一 `.venv` 解释器），并在调用前显式切到仓库根 | 环境版本相同时不产生数值差异（G0b 重跑 vs 旧 G0 前 300 步 raw 口径逐位前缀对拍实证）；正式入口对调用环境和 cwd 更敏感 |
 | 最终训练数值差距 | 当前默认入口因目录冲突不能形成完整正式轨迹 | 能够完成受控短轨迹 | 修复正式入口后，同条件下入口本身的**预期数值差距为 0**；仍须用入口-only A/B 实测确认 |
 
 > “预期数值差距为 0”是由两种入口共享同一核心源码路径得出的结论；当前尚未完成“只切换入口、其余条件完全相同”的直接 A/B，因此不得写成已经实测 bitwise 一致。
@@ -250,8 +252,8 @@ P1 固化的量具经审计发现四处缺口，在 G0 已固化的前提下按�
 
 ## T7 commit 切分与 run_name 汇总
 
-- V2.1 = P1（bench 驱动改造 + 两个新脚本 + README 同步）；V2.2 = P2（四档八轮 + D0 固化留档 + 三支处置结论）；V2.3 = PG0（G0 两轮留档 + 产物固化 + 登记簿回填）；**P1b（审计修正增补）单独占一个功能 commit**（量具补遗 + 补录轮留档随后以 `docs:` 提交），排在 V2.4（dtype 修复）之前。dtype 修复顺延 **V2.4**（原 V2.3），IO 重构计划自 **V2.5** 顺延（原 V2.4–V2.8 → V2.5–V2.9）。
-- run_name 全表（起跑前逐个交用户确认，AGENTS 6）：`v1-det-d{0,1,2}-r{1,2}`、`v1-det-d2cold-r{1,2}`、`v1-grad-baseline-g0`、`v1-g0-speed`（speed 链锚点，PG0-speed 步骤）、`v1-grad-baseline-g0-replay`（P1b 补录轮）；dtype B 侧沿用其计划的 `v1-dtype-ab-post`（`v1-dtype-ab-pre` 已由 G0 兼任、不再单独跑）；`v1-g1-speed`（dtype 计划 P7，2026-08-26 反转裁定新增）。后续 speed 链 run_name 按 `v1-g<n>-speed` 命名（符号总表）。
+- V2.1 = P1（bench 驱动改造 + 两个新脚本 + README 同步）；V2.2 = P2（四档八轮 + D0 固化留档 + 三支处置结论）；V2.3 = PG0（G0 两轮留档 + 产物固化 + 登记簿回填）；**P1b（审计修正增补）单独占一个功能 commit——已落地为 V2.3.1 `570287f`**（量具补遗；G0b/speed-r2 重跑留档随后以 `docs:` 提交），排在 V2.4（dtype 修复）之前。dtype 修复顺延 **V2.4**（原 V2.3），IO 重构计划自 **V2.5** 顺延（原 V2.4–V2.8 → V2.5–V2.9）。
+- run_name 全表（起跑前逐个交用户确认，AGENTS 6）：`v1-det-d{0,1,2}-r{1,2}`、`v1-det-d2cold-r{1,2}`、`v1-grad-baseline-g0`（已被 G0b 取代）、`v1-g0-speed`（原 300 步锚点，已被 r2 取代）、`v1-grad-baseline-g0b-r{1,2}` 与 `v1-g0-speed-r2`（P1b 重跑，1000 步，取代已取消的补录轮 `v1-grad-baseline-g0-replay`）；dtype B 侧沿用其计划的 `v1-dtype-ab-post`（`v1-dtype-ab-pre` 已由 G0 兼任、不再单独跑）；`v1-g1-speed`（dtype 计划 P7，2026-08-26 反转裁定新增）。后续 speed 链 run_name 按 `v1-g<n>-speed` 命名（符号总表）。
 - **run_name 轮次规约（2026-08-26 审计修正）**：G0 两轮共用 `v1-grad-baseline-g0`、以 RUN_TAG 分轮，与 AGENTS 6「每次正式 run 全新 run_name」存在语义歧义——该 run 已固化留档，属既成事实，**不追溯改名**；自本条起，同一符号需多轮正式 run 的场景，run_name 一律带 `-r<N>`（或语义后缀如 `-replay`）逐轮确认，P2 的 `v1-det-*-r{1,2}` 即该体例。
 
 ## T8 基线链登记簿（唯一权威；实施时回填，三份计划只引用本表）
@@ -260,11 +262,13 @@ P1 固化的量具经审计发现四处缺口，在 G0 已固化的前提下按�
 |---|---|---|---|---|---|---|
 | D0（字面现状，非判据） | `v1-det-d0-r{1,2}` | `d9e509e`（V2.1） | 各轮 env.json `fingerprint` 键（uv.lock `02cbc3ba…`） | 两轮重跑噪声底 | FAIL（预期）：loss rel median 2.7e-3 / max 4.6e-2，全表见 `docs/v1-determinism-conclusions.md` 三节 | `docs/training-doc/v1-det-d0-r{1,2}/` |
 | D1/D2/D2-cold（定档实验） | `v1-det-d{1,2}-r{1,2}`、`v1-det-d2cold-r{1,2}` | `d9e509e`（V2.1） | 同上 | 两轮逐步 hex + state_digest + batch_digest diff 为空 | D1 FAIL（ULP 级，atomics）；D2 PASS；**D2-cold PASS（授权闸开）** | `docs/training-doc/v1-det-*/` |
-| G0 | `v1-grad-baseline-g0` | `624d417`（`<G0-HEAD>`，锚点差异 76 文件全过白名单） | round1/2 env.json `fingerprint` 键；scalars_hex sha256 `5da1a1c6…`（两轮相同） | G0_SCOPE=PASS + round1/2 自证 | **PASS**：300 步标量 hex / 4×state_digest / 6×batch_digest 全逐位一致；缓存已清理留 sha256 清单 | `docs/training-doc/v1-grad-baseline-g0/` |
-| G1（dtype 修复后） | `v1-dtype-ab-post` | 待回填 | 待回填 | vs G0：bitwise + 量化兜底 | 待回填 | dtype 计划留档 |
+| G0（300 步旧版，已被 G0b 取代） | `v1-grad-baseline-g0` | `624d417` | scalars_hex sha256 `5da1a1c6…`（两轮相同） | 同下（历史） | PASS（300 步两轮逐位一致）；**records 已于 2026-08-27 删除**（新旧前缀对拍通过后，用户裁定），launch/result.md 留存证 | `docs/training-doc/v1-grad-baseline-g0/`（仅 md） |
+| **G0b（现行链头）** | `v1-grad-baseline-g0b-r{1,2}` | `570287f`（`<G0b-HEAD>`=V2.3.1，锚点差异全过白名单） | r1/r2 env.json `fingerprint` 键；scalars_hex sha256 `c799a0b2…`（两轮相同） | G0_SCOPE=PASS + preflight（vs 旧 G0）PASS + r1/r2 千步自证 + r1 前 300 步 vs 旧 G0 前缀对拍 | **PASS**：1000 步标量 hex / 12×state_digest / 14×batch_digest（raw+canonical）/ index 8072 全逐位一致；前缀对拍逐位一致（P1b 量具等价性实证）；TrainState 数组 @0/299/999 迁存 `/data/hongzefu/v1-baselines/g0b-r1-state-dump/`（sha 清单进 git）；缓存已清理留 sha256 清单 | `docs/training-doc/v1-grad-baseline-g0b/` |
+| G1（dtype 修复后） | `v1-dtype-ab-post` | — | — | vs G0b：bitwise + 量化兜底 | **dtype 计划执行已中止（用户 2026-08-27 指令）**，本行悬置 | dtype 计划留档 |
 | G2（packed） | IO 重构计划 C.3 的 packed 侧 | 待回填 | 待回填 | vs G1 bitwise；vs G0 对账 | 待回填 | IO 重构计划留档 |
-| G0-speed（速度基线） | `v1-g0-speed` | `624d417` | records/env.json `fingerprint` 键 | speed 链锚点（AGENTS 16 稳态统计） | 稳态 1.117 s/step（中位，n=249）、util 均值 86.3%、0% 采样 5.3%、epoch 外推 15.33 h（本机口径，非最终吞吐结论） | `docs/training-doc/v1-g0-speed/` |
-| G1-speed | `v1-g1-speed` | 待回填 | 待回填 | vs `v1-g0-speed` | 待回填（2026-08-26 反转「G1 无 speed run」裁定新增，dtype 计划 P7） | dtype 计划留档（`docs/training-doc/v1-g1-speed/`） |
+| G0-speed（300 步旧锚，已被 r2 取代） | `v1-g0-speed` | `624d417` | records/env.json `fingerprint` 键 | 历史锚点 | 稳态 1.117 s/step（中位，n=249）、util 均值 86.3%、0% 采样 5.3%、epoch 外推 15.33 h（留档保存，不再作对比对象） | `docs/training-doc/v1-g0-speed/` |
+| **G0-speed-r2（现行锚点）** | `v1-g0-speed-r2` | `570287f` | records/env.json `fingerprint` 键 | speed 链锚点（AGENTS 16 稳态统计，1000 步口径） | 稳态中位 **1.152 s/step**（n=949，p10 1.097/p90 1.276）、均值 1.186、util 均值 86.5%、0% 采样 4.9%、慢步 3（分层 1.959 vs 1.184 s）、epoch 外推 15.82 h（本机口径，非最终吞吐结论；vs 旧锚 +3.1%，主因 1000 步窗稀释 page cache 乐观偏差） | `docs/training-doc/v1-g0-speed-r2/` |
+| G1-speed | `v1-g1-speed` | — | — | vs `v1-g0-speed-r2` | **dtype 计划执行已中止（用户 2026-08-27 指令）**，本行悬置 | dtype 计划留档（`docs/training-doc/v1-g1-speed/`） |
 | G2-speed | `v1-g2-speed` | 待回填 | 待回填 | vs `v1-g1-speed` + `v1-g0-speed` | 待回填 | IO 重构计划留档 |
 
 ## T9 红线（实施期逐条自检）
@@ -288,6 +292,12 @@ P1 固化的量具经审计发现四处缺口，在 G0 已固化的前提下按�
 3. 新增 P1b 量具补遗工序（canonical 通道、逐叶统计、uv runner 收敛、speed 口径联动、G0 补录 replica 轮），置于 G1 之前（七节、T7）；
 4. run_name 轮次规约：G0 共用名属既成事实不追溯，后续多轮 run 一律 `-r<N>`/语义后缀（T7）；
 5. G3+ 设备端对拍的前置缺口如实标注（五节）。
+
+**2026-08-27 P1b 落地与 G0b 重跑记录（用户裁定变更，附记于此）**：
+
+6. 用户裁定「基线可全部重跑」+「G0 两轮与 G0-speed 升级 1000 步」——P1b 第 5 项补录 replica 轮取消，改为 G0b 重跑取代（七节 P1b 落地记录）；量具功能 commit V2.3.1 `570287f`（含护栏 600→1200、`EXTRA_DIGEST_STEPS`、`STATE_DUMP_STEPS`）。
+7. G0b 千步自证与新旧前 300 步前缀对拍全 PASS（T8），旧 G0 records 删除、G0b 升任链头；速度锚点换 `v1-g0-speed-r2`（1000 步口径）。TrainState 数组参照经用户裁定迁存本机 `/data/hongzefu/v1-baselines/g0b-r1-state-dump/`（不留 NFS）。
+8. dtype 统一计划（V2.4 起）执行由用户 2026-08-27 指令中止，T8 相关行悬置。
 
 审计指出、经核对**已在此前提交解决**的问题（存证，不再列为待办）：
 
