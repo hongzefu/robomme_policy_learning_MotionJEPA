@@ -363,7 +363,7 @@ memory token 由四个因素完全决定，重构后全部构造性不变：① 
 
 **阶段 1：把代码和工具写好（本机开发，约半天）**
 
-1. **S0' 补验证小工具**：让 bench 驱动认得 packed 库、能记录 index 序列。过关：3 步烟测跑通、idx 序列落盘。
+1. **S0' 补验证小工具**：让 bench 驱动认得 packed 库、能记录 index 序列。过关：5 步烟测跑通、idx 序列落盘（原「3 步」判据 2026-08-27 实施时发现结构性不可行——稳态统计剔除摘要步及其邻步后 3 步的样本集必为空，经用户拍板改 5 步）。
 2. **S2 写格式层和打包工具**：先造一个小的「迷你库」，把打包 → 读取全流程走一遍。过关：Store 组守卫测试全绿。
 3. **S3 写新 Dataset 和切换开关**：迷你库上起真实多进程 loader 跑两个 epoch。过关：Dataset 组守卫全绿、不崩、不漏文件句柄。
 
@@ -617,7 +617,7 @@ def __getitem__(self, idx):
 
 | 步 | 内容 | 依赖 | 判定 | 预计 |
 |---|---|---|---|---|
-| S0' | **补验证小工具**：preflight 兼容 packed、`BENCH_DUMP_IDX`、env.json provenance 扩展、README 同步。`compare_baseline.py` 不修（C.3 缺口处置已定：G2 分项判读） | 用户拍板开工 | STEPS=3 跑通、idx_seq.jsonl 落盘 | ~30 min |
+| S0' | **补验证小工具**：preflight 兼容 packed、`BENCH_DUMP_IDX`、env.json provenance 扩展、README 同步。`compare_baseline.py` 不修（C.3 缺口处置已定：G2 分项判读） | 用户拍板开工 | STEPS=5 跑通（WARMUP_STEPS=0；原 3 步判据结构性不可行，用户拍板改 5）、idx_seq.jsonl 落盘 | ~30 min |
 | S2 | **写格式层和打包工具**：+ Store 组守卫（G1/G4/G5/G7/G11/G12/G14），ref-shard 派生迷你库全流程（含迷你库全量 verify） | S0' | Store 组 pytest 全绿 | ~2 h 开发 |
 | S3 | **写新 Dataset 和切换开关**：FrameSampDataset + backend 接线 + Dataset 组守卫（G2/G3/G6a/G8/G9/G10/G13）+ 迷你库真实 spawn loader 矩阵 w0/w1/w4/w16 × 2 epoch（fd 泄漏检查：前后 `ls /proc/<pid>/fd` 计数） | S2 | Dataset 组 pytest 全绿（G6 只跑 G6a）+ 矩阵无错无泄漏 | ~1.5 h |
 

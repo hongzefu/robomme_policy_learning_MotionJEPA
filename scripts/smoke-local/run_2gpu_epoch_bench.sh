@@ -27,6 +27,8 @@
 #                   落 <记录目录>/state_dump/，G1 逐叶数值裁决的参照）
 #   KEEP_JAX_CACHE  1 = 收官保留编译缓存（确定性 A/B 共用缓存用）；默认 0 删除
 #   XLA_FLAGS       原样注入训练进程并留档 env.json（确定性档由调用方给定）
+#   BENCH_DUMP_IDX  1 = batch_sampler 层 index 记录（S0'，v2 计划 C.1 端到端旁证），
+#                   每 batch 追加写 <记录目录>/idx_seq.jsonl；默认 0（现行为不变）
 #
 # runner（P1b）：一律 UV_LINK_MODE=copy uv run（AGENTS 3；同一 .venv 解释器，
 # 计算行为不变——由 G0b 重跑 vs 旧 G0 前 300 步逐位对拍实证）。
@@ -65,8 +67,11 @@ EPOCH_SAMPLES=395289                      # meta/stats.json 的 execution_sample
 NORM_STATS="${TRAIN_ASSETS}/mme_vla_suite/robomme/norm_stats.json"
 BENCH_ROOT="${V1_STORE}/bench/2gpu-epoch-bench"
 
-[[ -f "${DATASET_PATH}/meta/stats.json" ]] || {
-  echo "错误: 数据集不存在或未 finalize: ${DATASET_PATH}/meta/stats.json" >&2; exit 1; }
+BENCH_DUMP_IDX="${BENCH_DUMP_IDX:-0}"     # S0'：batch_sampler 层 index 记录开关
+
+# S0'：preflight 兼容 packed 库——legacy 库有 meta/stats.json，打包库有 meta/store_meta.json
+[[ -f "${DATASET_PATH}/meta/stats.json" || -f "${DATASET_PATH}/meta/store_meta.json" ]] || {
+  echo "错误: 数据集不存在或未 finalize: ${DATASET_PATH}/meta/ 下 stats.json 与 store_meta.json 均缺失" >&2; exit 1; }
 [[ -f "${NORM_STATS}" ]] || {
   echo "错误: norm stats 缺失: ${NORM_STATS}（用 scripts/compute_norm_stats.py 先生成）" >&2; exit 1; }
 
@@ -175,7 +180,37 @@ d = {
     "nvidia_smi": subprocess.run(
         ["nvidia-smi", "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"],
         capture_output=True, text=True).stdout.strip().splitlines(),
+    # ── S0'：framesamp packed 库 provenance（v2 计划 D 节清单；backend 分派 S3 落地，
+    #    此处如实记录环境变量原值与来源判定，legacy 库下 resolved 字段见下方回填）──
+    "MMEVLA_DATA_BACKEND": "${MMEVLA_DATA_BACKEND:-}",
+    "backend_source": ("explicit" if "${MMEVLA_DATA_BACKEND:-}" else "unset-default-legacy"),
+    "MMEVLA_FRAMESAMP_VERIFY": "${MMEVLA_FRAMESAMP_VERIFY:-}",
+    "MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED": "${MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED:-}",
+    "MMEVLA_FRAMESAMP_SOURCE": "${MMEVLA_FRAMESAMP_SOURCE:-}",
+    "MMEVLA_FRAMESAMP_MANIFEST": "${MMEVLA_FRAMESAMP_MANIFEST:-}",
+    "MMEVLA_FRAMESAMP_LOCAL_CACHE": "${MMEVLA_FRAMESAMP_LOCAL_CACHE:-}",
+    "BENCH_DUMP_IDX": "${BENCH_DUMP_IDX}",
 }
+# resolved 双根（v2 计划 B.4）：打包库读 store_meta.json（env 可覆盖），legacy 库
+# 源库根即 dataset_path 自身、无独立清单依赖
+import hashlib, pathlib
+_sm = pathlib.Path("${DATASET_PATH}") / "meta" / "store_meta.json"
+if _sm.exists():
+    _raw = _sm.read_bytes()
+    _meta = json.loads(_raw)
+    d["store_meta_sha256"] = hashlib.sha256(_raw).hexdigest()
+    d["store_meta_status"] = _meta.get("status")
+    d["manifest_sha256"] = _meta.get("manifest_sha256")
+    d["source_dataset_root_resolved"] = ("${MMEVLA_FRAMESAMP_SOURCE:-}"
+                                        or _meta.get("source_dataset_root"))
+    d["manifest_path_resolved"] = ("${MMEVLA_FRAMESAMP_MANIFEST:-}"
+                                   or _meta.get("manifest_path"))
+else:
+    d["store_meta_sha256"] = None
+    d["store_meta_status"] = None
+    d["manifest_sha256"] = None
+    d["source_dataset_root_resolved"] = "${DATASET_PATH}"
+    d["manifest_path_resolved"] = None
 json.dump(d, open("$RECORD_DIR/env.json", "w"), indent=2, ensure_ascii=False)
 EOF
 
@@ -202,6 +237,7 @@ set +e
   BENCH_EXTRA_DIGEST_STEPS="${EXTRA_DIGEST_STEPS}" \
   BENCH_STATE_DUMP_STEPS="${STATE_DUMP_STEPS}" \
   BENCH_STATE_DUMP_DIR="${STATE_DUMP_DIR}" \
+  BENCH_DUMP_IDX="${BENCH_DUMP_IDX}" \
   CUDA_VISIBLE_DEVICES=0,1 \
   XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
   XLA_FLAGS="${XLA_FLAGS:-}" \

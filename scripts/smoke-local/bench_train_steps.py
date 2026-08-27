@@ -45,6 +45,14 @@
    不重排），收官写 `index_sequence.json`（全序列 + sha256）。「同一批样本、同一
    顺序」由此独立可证，是跨 dtype 对拍的另一半输入侧判据。
 
+6. `BENCH_DUMP_IDX=1` → batch_sampler 层 index 记录器（S0'，v2 计划 C.1 端到端旁证）：
+   包 `mme_vla_suite.training.dataloader.create_data_loader`，拿到 loader 后、首次
+   `iter()` 之前把 torch DataLoader 的 `batch_sampler` 换成 `_IdxProbe`（必须
+   `object.__setattr__` 绕过 DataLoader 初始化后的 `__setattr__` 赋值守卫），每个
+   batch 的 index 列表追加写 `idx_seq.jsonl` 后原样 yield。与第 5 条互补：本层记录
+   batch_sampler 的真实产出（含 prefetch 超前），比对时取前 N 条（N=实际消费步数），
+   尾部允许至多 prefetch_factor × num_workers 条超前记录。默认 0（关闭，现行为不变）。
+
 另注册 jax.monitoring 事件监听（编译缓存命中/编译计数），训练结束时连同真实
 `sys.argv` 写 `run_meta.json`——「这轮是热缓存还是冷编译」从口头猜测变成留档事实。
 
@@ -461,6 +469,70 @@ def _install_batch_digest_recorder(record_dir: pathlib.Path, interval: int,
     return finalize
 
 
+class _IdxProbe:
+    """batch_sampler 层 index 记录器（S0'，v2 计划 C.1 端到端旁证；BENCH_DUMP_IDX=1 启用）。
+
+    包 torch DataLoader 的 batch_sampler：每个 batch 的 index 列表追加写
+    idx_seq.jsonl 后原样 yield。`sampler` 属性读写转发给内层 BatchSampler——
+    输入摘要记录器（_install_batch_digest_recorder）要在 bs.sampler 上包
+    _LoggingSampler，不转发的话赋值会落在本包装器上、内层 BatchSampler 照旧
+    迭代旧 sampler，index_sequence.json 就静默记不到——两个记录器必须可叠加。
+    """
+
+    def __init__(self, inner, path: pathlib.Path):
+        self._inner = inner
+        self._path = path
+        self._n = 0
+        self._f = None
+
+    @property
+    def sampler(self):
+        return self._inner.sampler
+
+    @sampler.setter
+    def sampler(self, value):
+        self._inner.sampler = value
+
+    def __iter__(self):
+        if self._f is None:
+            self._f = self._path.open("a")
+        for batch_indices in self._inner:
+            self._f.write(json.dumps(
+                {"batch": self._n, "indices": [int(i) for i in batch_indices]}) + "\n")
+            self._f.flush()
+            self._n += 1
+            yield batch_indices
+
+    def __len__(self):
+        return len(self._inner)
+
+
+def _install_idx_probe(record_dir: pathlib.Path) -> None:
+    """包 create_data_loader：返回 loader 前把 torch DataLoader 的 batch_sampler 换成 _IdxProbe。
+
+    安装点天然在首次 iter() 之前（train.main 先 create 后 iter）。替换必须走
+    object.__setattr__——torch DataLoader 初始化后直接赋值 batch_sampler 会被
+    __setattr__ 守卫拒绝（ValueError，torch 2.7.1 实测）；绕道后 _index_sampler
+    正确返回包装器，persistent_workers 下跨 epoch 持续生效（v2 计划 C.1）。
+    """
+    dl_mod = _train._data_loader
+    orig_create = dl_mod.create_data_loader
+
+    def create_and_probe(*args, **kwargs):
+        loader = orig_create(*args, **kwargs)
+        torch_dl = getattr(getattr(loader, "_data_loader", None), "torch_loader", None)
+        if torch_dl is None or getattr(torch_dl, "batch_sampler", None) is None:
+            raise RuntimeError(
+                "BENCH_DUMP_IDX: loader._data_loader.torch_loader.batch_sampler 结构与"
+                "预期不符，请检查 mme_vla_suite/training/dataloader.py 是否已改动")
+        object.__setattr__(torch_dl, "batch_sampler",
+                           _IdxProbe(torch_dl.batch_sampler,
+                                     record_dir / "idx_seq.jsonl"))
+        return loader
+
+    dl_mod.create_data_loader = create_and_probe
+
+
 class _CacheEventCounter:
     """jax.monitoring 事件计数器：编译缓存命中/未中/编译请求从口头猜测变成留档事实。"""
 
@@ -549,6 +621,13 @@ def main() -> None:
         finalize_digests = _install_batch_digest_recorder(
             record_dir, interval=digest_interval, extra_steps=extra_steps,
             max_step=config.num_train_steps - 1)
+    dump_idx_on = os.environ.get("BENCH_DUMP_IDX", "0") == "1"
+    if dump_idx_on:
+        # fail-loud：安装点依赖 train.main 里的 create_data_loader 调用，变了立刻炸
+        if "create_data_loader(" not in src:
+            raise RuntimeError("train.main 源码中找不到 create_data_loader 调用点，"
+                               "BENCH_DUMP_IDX 安装前提失效，请检查 train.py 是否已改动")
+        _install_idx_probe(record_dir)
     try:
         _train.main(config)
     finally:
@@ -560,6 +639,7 @@ def main() -> None:
             "monitoring_event_counts": cache_counter.counts,
             "bench_checksum_enabled": checksum_on,
             "bench_batch_digests_enabled": digests_on,
+            "bench_dump_idx_enabled": dump_idx_on,
             "digest_interval_effective": digest_interval,
             "extra_digest_steps": sorted(extra_steps),
             "state_dump_steps": sorted(dump_steps),

@@ -4,8 +4,8 @@
 
 | 文件 | 作用 |
 |---|---|
-| `run_2gpu_epoch_bench.sh` | 驱动脚本：2 卡跑 `STEPS`（默认 300）步，**batch 固定 8**（2 卡实测唯一确认可跑档，64/32/16 均 OOM；改档属超参变更须先确认并重新实测），算稳态 s/step 并外推 1 epoch 时长，留下一致性检验记录；任何失败 fail-loud 不重试。身份拆分：`EXP_NAME` 决定 jax 编译缓存目录（对拍两轮共用即共享编译产物与 per-fusion autotune），`RUN_TAG` 决定记录/日志/checkpoint 目录（每轮各异）；`KEEP_JAX_CACHE=1` 收官保留缓存，`XLA_FLAGS` 外部注入并留档。runner 一律 `UV_LINK_MODE=copy uv run`（P1b，AGENTS 3） |
-| `bench_train_steps.py` | 训练入口：只调一次 `train.main(config)`，训练循环一行不改；靠 monkeypatch 把逐步标量、完整 TrainState 摘要（params/opt_state/EMA/step，步 0 必记）、输入 batch 摘要（raw + canonical 双口径，P1b）与样本 index 序列写成 jsonl/json，另留档编译缓存事件计数与真实 argv。速度口径开关：`SAVE_INTERVAL=0` 禁 TrainState 摘要并默认联动禁输入摘要（P1b；`BATCH_DIGESTS` 显式设置可覆盖，speed 链 run 专用，见 `v1-gradient-baseline.md` 符号总表）。`EXTRA_DIGEST_STEPS` 加记附加摘要步、`STATE_DUMP_STEPS` 在指定摘要步把 TrainState 数组按位落盘（G1 逐叶数值裁决参照，P1b） |
+| `run_2gpu_epoch_bench.sh` | 驱动脚本：2 卡跑 `STEPS`（默认 300）步，**batch 固定 8**（2 卡实测唯一确认可跑档，64/32/16 均 OOM；改档属超参变更须先确认并重新实测），算稳态 s/step 并外推 1 epoch 时长，留下一致性检验记录；任何失败 fail-loud 不重试。身份拆分：`EXP_NAME` 决定 jax 编译缓存目录（对拍两轮共用即共享编译产物与 per-fusion autotune），`RUN_TAG` 决定记录/日志/checkpoint 目录（每轮各异）；`KEEP_JAX_CACHE=1` 收官保留缓存，`XLA_FLAGS` 外部注入并留档。runner 一律 `UV_LINK_MODE=copy uv run`（P1b，AGENTS 3）。S0'（v2 计划）：preflight 兼容 packed 库（`meta/stats.json` **或** `meta/store_meta.json` 二选一），env.json 增记 framesamp provenance（backend 及来源、resolved 双根、store_meta/manifest sha256、`MMEVLA_FRAMESAMP_*` 各开关原值） |
+| `bench_train_steps.py` | 训练入口：只调一次 `train.main(config)`，训练循环一行不改；靠 monkeypatch 把逐步标量、完整 TrainState 摘要（params/opt_state/EMA/step，步 0 必记）、输入 batch 摘要（raw + canonical 双口径，P1b）与样本 index 序列写成 jsonl/json，另留档编译缓存事件计数与真实 argv。速度口径开关：`SAVE_INTERVAL=0` 禁 TrainState 摘要并默认联动禁输入摘要（P1b；`BATCH_DIGESTS` 显式设置可覆盖，speed 链 run 专用，见 `v2-framesamp-restructure-plan.md` 符号总表）。`EXTRA_DIGEST_STEPS` 加记附加摘要步、`STATE_DUMP_STEPS` 在指定摘要步把 TrainState 数组按位落盘（逐叶数值裁决参照，P1b）。`BENCH_DUMP_IDX=1`（S0'，v2 计划 C.1）batch_sampler 层逐 batch 记 index 到 `idx_seq.jsonl`（端到端旁证，含 prefetch 超前；默认关） |
 | `check_baseline_env.py` | 环境指纹 `dump`（起跑留档进 env.json）/ `check`（**引用任何基线产物前的强制 preflight**，输出 `BASELINE_ENV=PASS|FAIL`）/ `manifest`（生成 `BASELINE_MANIFEST.json` 防产物腐烂） |
 | `compare_baseline.py` | 两份 records 目录对拍：逐步标量 hex diff、`state_digest`/`batch_digest` diff（raw 与 canonical 双口径，P1b）、index 序列前缀对比、rel 分布与包络（量化判据权威版本见 `v1-gradient-baseline.md` 六节），输出 `DET_CHECK=` / `CANON_CHECK=` / `INDEX_SEQ=` / `QUANT_EQUIV=` 判定行；`state_digest` 失配时经 `--state-arrays-*` 输出逐叶 max-abs/max-rel/L2/cosine 数值裁决，拿不出数组即 `INCONCLUSIVE`（不得判 PASS，P1b） |
 
@@ -157,7 +157,11 @@ XLA/缓存/驱动无关、跨计算图（HLO）永远逐位可比。schema 2（P
 ```
 
 **`index_sequence.json`** —— 样本 index 全序列 + sha256（P1b；尾部可含 prefetch
-余量，比对取前 steps×batch 个）。**`state_dump/state_step_<N>.{json,bin}`** ——
+余量，比对取前 steps×batch 个）。**`idx_seq.jsonl`**（`BENCH_DUMP_IDX=1` 时，S0'）
+—— batch_sampler 层逐 batch 一行 `{"batch": k, "indices": [...]}`：真实链路端到端
+旁证（v2 计划 C.1）。batch_sampler 枚举比交付超前 prefetch_factor × num_workers 个
+batch，比对时取前 N 条（N=实际消费步数）、尾部允许至多该数量的超前记录。
+**`state_dump/state_step_<N>.{json,bin}`** ——
 `STATE_DUMP_STEPS` 指定摘要步的完整 TrainState 数组按位落盘（裸字节容器——npy/npz
 丢 bf16 类型故禁用；meta 逐叶 dtype/shape/offset/sha256，与 `per_leaf` 同源可防腐），
 `compare_baseline.py --state-arrays-*` 的数值裁决参照。单步约 14 GB，默认不落。
@@ -168,7 +172,12 @@ XLA/缓存/驱动无关、跨计算图（HLO）永远逐位可比。schema 2（P
 
 **`env.json`** —— 启动时留档：git HEAD 与 dirty 标记、batch/steps/workers/seed/
 fsdp/变体、`XLA_FLAGS`、`XLA_PYTHON_CLIENT_MEM_FRACTION`、`CUDA_VISIBLE_DEVICES`、
-主机名、Python/jax 版本、GPU 型号与驱动。**A/B 对比前必须逐项核对相同。**
+主机名、Python/jax 版本、GPU 型号与驱动；S0' 起另记 framesamp provenance（v2 计划
+D 节清单）：`MMEVLA_DATA_BACKEND` 原值与 `backend_source`（explicit /
+unset-default-legacy）、`MMEVLA_FRAMESAMP_*` 各开关原值、resolved 双根
+（`source_dataset_root_resolved` / `manifest_path_resolved`）、`store_meta_sha256`
+与 `store_meta_status`、`manifest_sha256`（legacy 库下 store_meta 相关字段为 null）。
+**A/B 对比前必须逐项核对相同。**
 
 ### 最小对比命令
 
@@ -210,5 +219,6 @@ tmux new-session -d -s epoch-bench \
 可调环境变量：`STEPS`（≤1200）、`SAVE_INTERVAL`、`WARMUP_STEPS`、`DATASET_PATH`、
 `EXP_NAME`、`RUN_TAG`、`KEEP_JAX_CACHE`、`BATCH_DIGESTS`（未设时联动
 `SAVE_INTERVAL`：0 → 0，否则 1）、`XLA_FLAGS`、`EXTRA_DIGEST_STEPS`（附加摘要步）、
-`STATE_DUMP_STEPS`（TrainState 数组落盘步，P1b）。
+`STATE_DUMP_STEPS`（TrainState 数组落盘步，P1b）、`BENCH_DUMP_IDX`（batch_sampler
+层 index 记录，S0'，默认 0）。
 run 目录与 `~/.cache/jax_<exp_name>` 跑完即删；记录目录与日志保留。
