@@ -16,11 +16,20 @@
 #               initialize_checkpoint_dir 的 FileExistsError）。
 #
 # 可调环境变量：
-#   STEPS（≤600）、WORKERS、WARMUP_STEPS、DATASET_PATH
+#   STEPS（≤1200）、WORKERS、WARMUP_STEPS、DATASET_PATH
 #   SAVE_INTERVAL   TrainState 摘要间隔；0 = 完全禁摘要（speed 链口径）
-#   BATCH_DIGESTS   1（默认）记输入摘要；0 = 禁（speed 链口径）
+#   BATCH_DIGESTS   记输入摘要开关；未设时默认联动 SAVE_INTERVAL（P1b：
+#                   SAVE_INTERVAL=0 → 0，否则 1）；显式设 0/1 可覆盖
+#   EXTRA_DIGEST_STEPS  逗号分隔附加摘要步（如 299——对齐旧 300 步基线末步摘要）；
+#                   实现：给 train 传 --save-interval 1、记录器按
+#                   BENCH_DIGEST_INTERVAL=SAVE_INTERVAL + 附加步自选
+#   STATE_DUMP_STEPS  逗号分隔 TrainState 数组落盘步（须是摘要步；单步约 14 GB，
+#                   落 <记录目录>/state_dump/，G1 逐叶数值裁决的参照）
 #   KEEP_JAX_CACHE  1 = 收官保留编译缓存（确定性 A/B 共用缓存用）；默认 0 删除
 #   XLA_FLAGS       原样注入训练进程并留档 env.json（确定性档由调用方给定）
+#
+# runner（P1b）：一律 UV_LINK_MODE=copy uv run（AGENTS 3；同一 .venv 解释器，
+# 计算行为不变——由 G0b 重跑 vs 旧 G0 前 300 步逐位对拍实证）。
 #
 # ⚠ 本机数字按 AGENTS.md 第 13 条只作估算，不作正式吞吐结论；带摘要/确定性档的
 #   run 其 util/步时按基线计划红线 B7 禁作任何性能结论。
@@ -32,11 +41,24 @@ v1_prepare_dirs
 v1_require_venv
 v1_require_models 1                       # 需要 tokenizer 与 pi05_base
 
+# runner 收敛 uv run（P1b，AGENTS 3）：同一 .venv 解释器，NFS 上强制 copy 链接
+export UV_LINK_MODE=copy
+UVPY=(uv run --project "${REPO_ROOT}" python)
+
 DATASET_PATH="${DATASET_PATH:-${GL_DATASET}}"
 STEPS="${STEPS:-300}"
 WORKERS="${WORKERS:-4}"                   # 官方口径
 SAVE_INTERVAL="${SAVE_INTERVAL:-25}"      # TrainState 摘要间隔（不落 ckpt）；0 = 禁摘要
-BATCH_DIGESTS="${BATCH_DIGESTS:-1}"       # 输入 batch 摘要开关
+BATCH_DIGESTS_REQUESTED="${BATCH_DIGESTS:-auto}"   # 留档：显式值或 auto（联动）
+if [[ -z "${BATCH_DIGESTS:-}" ]]; then    # P1b：未显式设置时联动 SAVE_INTERVAL——
+  if [[ "${SAVE_INTERVAL}" -eq 0 ]]; then #   speed 链口径要求两摘要一起关，此前须
+    BATCH_DIGESTS=0                       #   调用方手动同时设置、易漏
+  else
+    BATCH_DIGESTS=1
+  fi
+fi
+EXTRA_DIGEST_STEPS="${EXTRA_DIGEST_STEPS:-}"   # 附加摘要步（逗号分隔；P1b）
+STATE_DUMP_STEPS="${STATE_DUMP_STEPS:-}"       # TrainState 数组落盘步（逗号分隔；P1b）
 KEEP_JAX_CACHE="${KEEP_JAX_CACHE:-0}"     # 1 = 保留编译缓存供下一轮共用
 WARMUP_STEPS="${WARMUP_STEPS:-50}"        # 稳态统计丢弃的头部步数（JIT 编译 + worker 起步）
 EPOCH_SAMPLES=395289                      # meta/stats.json 的 execution_samples，drop_last
@@ -77,14 +99,27 @@ ln -sfn "${JAX_CACHE_DIR}" "${JAX_CACHE_LINK}"
 mkdir -p "${RECORD_DIR}"
 
 # SAVE_INTERVAL=0（speed 链口径）：入口层禁摘要；train.main 的 step%interval 不能吃 0，
-# 传一个大于步数上限的值让周期触发失效（末步触发由 BENCH_CHECKSUM=0 变 no-op）
+# 传一个大于步数上限的值让周期触发失效（末步触发由 BENCH_CHECKSUM=0 变 no-op）。
+# EXTRA_DIGEST_STEPS/STATE_DUMP_STEPS（P1b）：给 train 传 --save-interval 1（save
+# 分支只调已被换成记录器的 save_state，每步空调用零开销），记录器按
+# BENCH_DIGEST_INTERVAL=SAVE_INTERVAL + 附加步自选摘要步。
+BENCH_DIGEST_INTERVAL=""
 if [[ "${SAVE_INTERVAL}" -eq 0 ]]; then
+  [[ -n "${EXTRA_DIGEST_STEPS}${STATE_DUMP_STEPS}" ]] && {
+    echo "错误: SAVE_INTERVAL=0（禁摘要）与 EXTRA_DIGEST_STEPS/STATE_DUMP_STEPS 互斥" >&2
+    exit 1; }
   SAVE_INTERVAL_ARG=1000000
   BENCH_CHECKSUM=0
+elif [[ -n "${EXTRA_DIGEST_STEPS}" || -n "${STATE_DUMP_STEPS}" ]]; then
+  SAVE_INTERVAL_ARG=1
+  BENCH_CHECKSUM=1
+  BENCH_DIGEST_INTERVAL="${SAVE_INTERVAL}"
 else
   SAVE_INTERVAL_ARG="${SAVE_INTERVAL}"
   BENCH_CHECKSUM=1
 fi
+STATE_DUMP_DIR=""
+[[ -n "${STATE_DUMP_STEPS}" ]] && STATE_DUMP_DIR="${RECORD_DIR}/state_dump"
 
 # 训练命令的唯一真值源：env.json 的 argv 与实际执行的是同一个数组，不再手抄字面量
 ARGS=(
@@ -108,7 +143,7 @@ ARGS=(
 
 # 环境留档：将来一致性 A/B 的对照 run 必须逐项同设（见 README.md）。
 # argv 直接来自上面的 ARGS 数组，经位置参数传入（不能走管道——heredoc 已占用 stdin）
-"${PY}" - "$RECORD_DIR" "${ARGS[@]}" <<EOF
+"${UVPY[@]}" - "$RECORD_DIR" "${ARGS[@]}" <<EOF
 import json, subprocess, sys, platform
 import jax
 argv = sys.argv[2:]
@@ -118,7 +153,11 @@ d = {
     "exp_name": "${EXP_NAME}", "run_tag": "${RUN_TAG}",
     "save_interval_requested": ${SAVE_INTERVAL},
     "save_interval_effective": ${SAVE_INTERVAL_ARG},
-    "batch_digests": ${BATCH_DIGESTS}, "keep_jax_cache": ${KEEP_JAX_CACHE},
+    "batch_digests": ${BATCH_DIGESTS},
+    "batch_digests_requested": "${BATCH_DIGESTS_REQUESTED}",
+    "extra_digest_steps": "${EXTRA_DIGEST_STEPS}",
+    "state_dump_steps": "${STATE_DUMP_STEPS}",
+    "keep_jax_cache": ${KEEP_JAX_CACHE},
     "seed": 42, "fsdp_devices": 2,
     "history_config": "perceptual-framesamp-context.yaml",
     "dataset_path": "${DATASET_PATH}",
@@ -145,7 +184,7 @@ EOF
 XLA_FLAGS="${XLA_FLAGS:-}" \
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
 CUDA_VISIBLE_DEVICES=0,1 \
-"${PY}" "${REPO_ROOT}/scripts/smoke-local/check_baseline_env.py" dump \
+"${UVPY[@]}" "${REPO_ROOT}/scripts/smoke-local/check_baseline_env.py" dump \
   --record-dir "${RECORD_DIR}" --dataset "${DATASET_PATH}"
 
 echo "=== 2 GPU epoch 基准: ${RUN_TAG} (exp=${EXP_NAME}, ${STEPS} steps, batch ${BATCH}, workers ${WORKERS}) ==="
@@ -159,12 +198,16 @@ set +e
   BENCH_RECORD_DIR="${RECORD_DIR}" \
   BENCH_CHECKSUM="${BENCH_CHECKSUM}" \
   BENCH_BATCH_DIGESTS="${BATCH_DIGESTS}" \
+  BENCH_DIGEST_INTERVAL="${BENCH_DIGEST_INTERVAL}" \
+  BENCH_EXTRA_DIGEST_STEPS="${EXTRA_DIGEST_STEPS}" \
+  BENCH_STATE_DUMP_STEPS="${STATE_DUMP_STEPS}" \
+  BENCH_STATE_DUMP_DIR="${STATE_DUMP_DIR}" \
   CUDA_VISIBLE_DEVICES=0,1 \
   XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
   XLA_FLAGS="${XLA_FLAGS:-}" \
   PYTHONUNBUFFERED=1 \
   WANDB_MODE=disabled \
-  "${PY}" "${ARGS[@]}"
+  "${UVPY[@]}" "${ARGS[@]}"
 ) 2>&1 | tee "${LOG}"
 RC="${PIPESTATUS[0]}"
 set -e
@@ -193,7 +236,7 @@ if [[ "${RC}" -ne 0 ]]; then
 fi
 
 # 缓存事件计数（run_meta.json，bench 入口落盘）并进 env.json
-"${PY}" - "${RECORD_DIR}" <<'EOF'
+"${UVPY[@]}" - "${RECORD_DIR}" <<'EOF'
 import json, pathlib, sys
 d = pathlib.Path(sys.argv[1])
 env = json.load(open(d / "env.json"))
@@ -207,12 +250,18 @@ print("OK run_meta 并入 env.json, 缓存事件:",
 EOF
 
 # ── 结果判定与外推：直接吃 metrics.jsonl（比解析 tqdm 日志可靠）──────────────────
-"${PY}" - "${RECORD_DIR}" "${STEPS}" "${SAVE_INTERVAL_ARG}" "${WARMUP_STEPS}" \
-         "${BATCH}" "${EPOCH_SAMPLES}" "${BENCH_CHECKSUM}" "${BATCH_DIGESTS}" <<'EOF'
+"${UVPY[@]}" - "${RECORD_DIR}" "${STEPS}" "${SAVE_INTERVAL}" "${WARMUP_STEPS}" \
+         "${BATCH}" "${EPOCH_SAMPLES}" "${BENCH_CHECKSUM}" "${BATCH_DIGESTS}" \
+         "${EXTRA_DIGEST_STEPS}" "${STATE_DUMP_STEPS}" <<'EOF'
 import json, math, os, statistics, sys
 record_dir, steps, save_iv, warmup, batch, epoch_samples, ck_on, dg_on = (
     sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]),
     int(sys.argv[5]), int(sys.argv[6]), int(sys.argv[7]), int(sys.argv[8]))
+extra = {int(s) for s in sys.argv[9].split(",") if s.strip()}
+dump_steps = {int(s) for s in sys.argv[10].split(",") if s.strip()}
+# save_iv 是请求值（SAVE_INTERVAL 原值）；摘要步集合 = 0/末步/间隔倍数/附加步
+ck_steps = ({0, steps - 1} | extra
+            | ({s for s in range(1, steps) if s % save_iv == 0} if save_iv > 0 else set()))
 
 rows = [json.loads(l) for l in open(f"{record_dir}/metrics.jsonl")]
 rows = [r for r in rows if r.get("loss") is not None]
@@ -228,7 +277,7 @@ for r in rows[:3] + rows[-3:]:
 
 if ck_on:
     cks = [json.loads(l) for l in open(f"{record_dir}/param_checksums.jsonl")]
-    expect_steps = sorted({0, steps - 1} | {s for s in range(1, steps) if s % save_iv == 0})
+    expect_steps = sorted(ck_steps)
     got_steps = [c["step"] for c in cks]
     if got_steps != expect_steps:
         raise SystemExit(f"BAD 摘要步序列 {got_steps} != 预期 {expect_steps}")
@@ -236,6 +285,16 @@ if ck_on:
     print(f"OK TrainState 摘要 {len(cks)} 次 @steps={got_steps}, "
           f"末值 state={cks[-1]['state_digest'][:16]}…, "
           f"单次耗时中位 {statistics.median(c['checksum_seconds'] for c in cks):.1f}s")
+    for s in sorted(dump_steps):   # TrainState 数组落盘完整性（P1b）
+        meta_p = f"{record_dir}/state_dump/state_step_{s}.json"
+        bin_p = f"{record_dir}/state_dump/state_step_{s}.bin"
+        if not (os.path.exists(meta_p) and os.path.exists(bin_p)):
+            raise SystemExit(f"BAD STATE_DUMP 步 {s} 缺产物: {meta_p}")
+        m = json.load(open(meta_p))
+        if os.path.getsize(bin_p) != m["total_bytes"]:
+            raise SystemExit(f"BAD STATE_DUMP 步 {s} bin 大小与 meta 不符")
+    if dump_steps:
+        print(f"OK TrainState 数组落盘 {len(dump_steps)} 步 @{sorted(dump_steps)}")
 else:
     assert not os.path.exists(f"{record_dir}/param_checksums.jsonl"), \
         "BAD BENCH_CHECKSUM=0 却写了 param_checksums.jsonl"
@@ -243,11 +302,23 @@ else:
 
 if dg_on:
     dgs = [json.loads(l) for l in open(f"{record_dir}/batch_digests.jsonl")]
-    expect_dg = sorted({0, 1, 2, steps - 1} | {s for s in range(steps) if s % save_iv == 0})
+    expect_dg = sorted({0, 1, 2} | ck_steps)
     got_dg = [d["step"] for d in dgs]
     if got_dg != expect_dg:
         raise SystemExit(f"BAD 输入摘要步序列 {got_dg} != 预期 {expect_dg}")
-    print(f"OK 输入摘要 {len(dgs)} 次 @steps={got_dg}, 末值 {dgs[-1]['batch_digest'][:16]}…")
+    # P1b schema 2：canonical 双口径 + 逐步样本 index + index 全序列
+    for d_ in dgs:
+        if d_.get("schema") != 2 or "batch_digest_canonical" not in d_ \
+                or "per_key_canonical" not in d_:
+            raise SystemExit(f"BAD 步 {d_['step']} 缺 canonical 摘要（schema 2）")
+        if not d_.get("sample_indices"):
+            raise SystemExit(f"BAD 步 {d_['step']} 缺 sample_indices")
+    seq = json.load(open(f"{record_dir}/index_sequence.json"))
+    if seq["n"] < steps * batch:
+        raise SystemExit(f"BAD index 序列长度 {seq['n']} < steps×batch {steps*batch}")
+    print(f"OK 输入摘要 {len(dgs)} 次 @steps={got_dg}, raw 末值 {dgs[-1]['batch_digest'][:16]}…, "
+          f"canonical 末值 {dgs[-1]['batch_digest_canonical'][:16]}…, "
+          f"index 序列 {seq['n']} 个 sha={seq['indices_sha256'][:16]}…")
 else:
     assert not os.path.exists(f"{record_dir}/batch_digests.jsonl"), \
         "BAD BATCH_DIGESTS=0 却写了 batch_digests.jsonl"
@@ -256,7 +327,7 @@ else:
 by_step = {r["step"]: r["wall_time"] for r in rows}
 deltas = []
 for s in range(warmup + 1, steps):
-    if s % save_iv == 0 or (s - 1) % save_iv == 0:
+    if s in ck_steps or s - 1 in ck_steps:
         continue      # 剔除摘要步本身及其下一步（device_get 的开销，正式训练没有）
     if s in by_step and s - 1 in by_step:
         deltas.append(by_step[s] - by_step[s - 1])

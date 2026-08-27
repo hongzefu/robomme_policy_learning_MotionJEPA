@@ -31,10 +31,19 @@
    save 触发条件 `step % save_interval == 0 and step > start_step` 永远轮不到步 0。
 
 4. `openpi.training.data_loader.TorchDataLoader.__iter__` → 输入摘要记录器：对
-   collate 后、device_put 前的 host 侧 batch 逐键 `sha256(dtype‖shape‖bytes)`，写
-   `batch_digests.jsonl`（步 0/1/2 + 每 SAVE_INTERVAL + 末步）。输出摘要把「输入变了」
-   与「计算变了」混在一起且跨计算图失比；输入摘要与 XLA/缓存/驱动无关，跨 HLO 永远
-   逐位可比，是 roadmap 改输入签名场景对拍 G0 的主判据。
+   collate 后、device_put 前的 host 侧 batch 逐键记**双口径**摘要（schema 2，P1b）：
+   - raw：`sha256(dtype‖shape‖bytes)`——「输入应逐字节不变」场景的主判据；
+   - canonical：浮点键升到 float32 后 `sha256("f32"‖shape‖bytes)`（dtype 不入摘要域），
+     非浮点键与 raw 同——跨 dtype 对拍（G1 vs G0）的输入侧判据：类型变化被抹平、
+     数值变化仍逃不掉（无谓升档的 f64←f32 降回 f32 逐位还原，canonical 相等）。
+   写 `batch_digests.jsonl`（步 0/1/2 + 每摘要间隔 + 附加步 + 末步），每行附该步
+   样本 index（见下）。输出摘要把「输入变了」与「计算变了」混在一起且跨计算图失比；
+   输入摘要与 XLA/缓存/驱动无关，跨 HLO 永远逐位可比。
+
+5. `BatchSampler.sampler` → index 序列记录器（P1b）：包一层记录 torch DataLoader
+   主进程侧抽出的全部样本 index（抽取顺序与 batch 交付顺序一致，prefetch 只提前
+   不重排），收官写 `index_sequence.json`（全序列 + sha256）。「同一批样本、同一
+   顺序」由此独立可证，是跨 dtype 对拍的另一半输入侧判据。
 
 另注册 jax.monitoring 事件监听（编译缓存命中/编译计数），训练结束时连同真实
 `sys.argv` 写 `run_meta.json`——「这轮是热缓存还是冷编译」从口头猜测变成留档事实。
@@ -42,6 +51,18 @@
 记录文件落在环境变量 `BENCH_RECORD_DIR` 指定的目录（由驱动脚本传入）。
 性能口径开关（供 speed 链 run 使用，默认全开、保持现行为）：
 `BENCH_CHECKSUM=0` 禁 TrainState 摘要（连同步 0），`BENCH_BATCH_DIGESTS=0` 禁输入摘要。
+
+摘要步集合的记录器侧自选（P1b，供「附加摘要步」与 TrainState 数组落盘使用）：
+- `BENCH_DIGEST_INTERVAL`：有效摘要间隔；设了它时驱动脚本会给 train 传
+  `--save-interval 1`（train 的 save 分支只调 save_state 一个函数，本入口已把它换成
+  记录器，每步空调用零开销），由记录器按本间隔 + 附加步自选；未设时沿用
+  config.save_interval（现行为，train 侧自身过滤）。
+- `BENCH_EXTRA_DIGEST_STEPS`：逗号分隔附加摘要步（如 `299`——对齐旧 300 步基线的
+  末步摘要，使前缀对拍每个旧摘要步都有逐位对应点）。
+- `BENCH_STATE_DUMP_STEPS` + `BENCH_STATE_DUMP_DIR`：在指定摘要步把完整 TrainState
+  数组按位落盘（每步一对 `state_step_<N>.json`/`.bin`，逐叶 dtype/shape/offset/sha256
+  进 meta；npy/npz 会丢 bf16 类型故用裸字节容器）——G1 对拍逐叶数值裁决的参照
+  （compare_baseline.py 的 --state-arrays-*）。单步全量约 14 GB，只在明确指定的步落。
 
 同时做几道 fail-loud 护栏，防止这个入口被误当成正式训练启动器。
 """
@@ -69,7 +90,7 @@ import openpi.training.data_loader as _openpi_dl  # noqa: E402
 
 import mme_vla_suite.training.config as _config  # noqa: E402
 
-_MAX_BENCH_STEPS = 600  # bottleneck-bench v2 修复验证需 600 步（用户 2026-08-24 指定）；上限仍远低于正式训练量级
+_MAX_BENCH_STEPS = 1200  # G0b 基线升级为 1000 步（用户 2026-08-26 指定）；上限仍远低于正式训练量级
 _EXPECTED_HISTORY_CONFIG = "perceptual-framesamp-context.yaml"
 
 
@@ -130,14 +151,100 @@ def _leaf_sha256(arr) -> str:
     return h.hexdigest()
 
 
-def _checksum_full_state(checksums_path: pathlib.Path, state, step: int) -> None:
+def _canonical_sha256(arr: np.ndarray) -> str:
+    """canonical 数值口径（P1b）：浮点叶子升到 float32 后按位哈希，dtype 不入摘要域。
+
+    跨 dtype 对拍（G1 vs G0）用：类型变化被抹平、数值变化仍逃不掉——无谓升档的
+    f64（原值是 f32 的精确升档）降回 f32 逐位还原，canonical 相等；真数值差异则
+    在 f32 分辨率下必然失配。非浮点叶子（int/bool/uint）保持 raw 口径（dtype 入域）
+    ——它们的 dtype 变化本身就是 bug，不该被抹平。
+    kind 'f' 是标准浮点；'V' 覆盖 ml_dtypes 自定义浮点（bfloat16 等），若真是
+    structured dtype 则 astype 会当场抛错（fail-loud，不静默算错口径）。
+    """
+    h = hashlib.sha256()
+    if arr.dtype.kind in "fV":
+        a32 = arr.astype(np.float32)
+        h.update(b"f32")
+        h.update(str(a32.shape).encode())
+        h.update(a32.tobytes())
+    else:
+        h.update(str(arr.dtype).encode())
+        h.update(str(arr.shape).encode())
+        h.update(arr.tobytes())
+    return h.hexdigest()
+
+
+def _parse_step_set(env_name: str) -> set[int]:
+    raw = os.environ.get(env_name, "")
+    return {int(s) for s in raw.split(",") if s.strip()}
+
+
+def _make_digest_gate(config) -> "callable":
+    """摘要步集合的记录器侧判定（P1b）。
+
+    BENCH_DIGEST_INTERVAL 未设时恒真（train 侧按 config.save_interval 自身过滤，
+    现行为不变）；设了时按「步 0 / 末步 / 间隔倍数 / 附加步」自选（此时驱动脚本
+    给 train 传 --save-interval 1，让每步都轮到本记录器判定）。
+    """
+    interval_env = os.environ.get("BENCH_DIGEST_INTERVAL") or None  # 空串视同未设
+    extra = _parse_step_set("BENCH_EXTRA_DIGEST_STEPS")
+    last_step = config.num_train_steps - 1
+    bad = {s for s in extra if not 0 <= s <= last_step}
+    if bad:
+        raise ValueError(f"BENCH_EXTRA_DIGEST_STEPS 越界（须在 0..{last_step}）: {sorted(bad)}")
+    if interval_env is None:
+        if extra:
+            raise ValueError("BENCH_EXTRA_DIGEST_STEPS 需要配合 BENCH_DIGEST_INTERVAL"
+                             "（驱动脚本 EXTRA_DIGEST_STEPS 路径会一并设置）")
+        return lambda step: True
+    interval = int(interval_env)
+
+    def gate(step: int) -> bool:
+        return (step == 0 or step == last_step or step in extra
+                or (interval > 0 and step > 0 and step % interval == 0))
+    return gate
+
+
+def _state_dump_config(config) -> tuple[set[int], pathlib.Path | None]:
+    """TrainState 数组落盘配置（P1b）：只在明确指定的摘要步落，单步全量约 14 GB。"""
+    steps = _parse_step_set("BENCH_STATE_DUMP_STEPS")
+    if not steps:
+        return set(), None
+    raw = os.environ.get("BENCH_STATE_DUMP_DIR")
+    if not raw:
+        raise ValueError("设置了 BENCH_STATE_DUMP_STEPS 就必须设置 BENCH_STATE_DUMP_DIR")
+    last_step = config.num_train_steps - 1
+    bad = {s for s in steps if not 0 <= s <= last_step}
+    if bad:
+        raise ValueError(f"BENCH_STATE_DUMP_STEPS 越界（须在 0..{last_step}）: {sorted(bad)}")
+    d = pathlib.Path(raw)
+    d.mkdir(parents=True, exist_ok=True)
+    return steps, d
+
+
+def _checksum_full_state(checksums_path: pathlib.Path, state, step: int,
+                         dump_dir: pathlib.Path | None = None) -> None:
     """完整 TrainState 摘要：params / ema_params / opt_state / step 全部叶子逐个 sha256。
 
     `global_digest` 只覆盖 params+ema（与旧记录同口径可续比），`state_digest`
     覆盖全部叶子——Adam 动量（opt_state）是最灵敏的累积量，缺了它基线就有永久盲区。
+
+    dump_dir 非 None 时（P1b）同趟把每个叶子的原始字节顺序写进
+    `state_step_<step>.bin`，逐叶 dtype/shape/offset/nbytes/sha256 进
+    `state_step_<step>.json`——与摘要同一次 device_get，不加第二趟停顿；meta 里的
+    sha 与 per_leaf 完全同源，落盘产物可独立防腐。
     """
     t0 = time.time()
     per_leaf: dict[str, str] = {}
+    dump_meta: dict[str, dict] = {}
+    dump_f = None
+    dump_offset = 0
+    if dump_dir is not None:
+        bin_path = dump_dir / f"state_step_{step}.bin"
+        meta_path = dump_dir / f"state_step_{step}.json"
+        if bin_path.exists() or meta_path.exists():
+            raise FileExistsError(f"TrainState 落盘目标已存在, 拒绝覆盖: {bin_path}")
+        dump_f = bin_path.open("wb")
     trees = {"params": state.params, "opt_state": state.opt_state, "step": state.step}
     if state.ema_params is not None:
         trees["ema_params"] = state.ema_params
@@ -147,7 +254,22 @@ def _checksum_full_state(checksums_path: pathlib.Path, state, step: int) -> None
             if leaf is None:
                 continue
             key = tree_name + jax.tree_util.keystr(path)
-            per_leaf[key] = _leaf_sha256(np.asarray(jax.device_get(leaf)))
+            arr = np.asarray(jax.device_get(leaf))
+            per_leaf[key] = _leaf_sha256(arr)
+            if dump_f is not None:
+                data = arr.tobytes()
+                dump_f.write(data)
+                dump_meta[key] = {"dtype": str(arr.dtype), "shape": list(arr.shape),
+                                  "offset": dump_offset, "nbytes": len(data),
+                                  "sha256": per_leaf[key]}
+                dump_offset += len(data)
+    if dump_f is not None:
+        dump_f.close()
+        with meta_path.open("w") as f:
+            json.dump({"step": int(step), "schema": 1, "total_bytes": dump_offset,
+                       "leaves": dump_meta}, f, indent=1, ensure_ascii=False)
+        print(f"\n[bench] step {step}: TrainState 数组落盘 {dump_offset/2**30:.1f} GiB "
+              f"→ {bin_path.name} ({len(dump_meta)} 叶子)")
     g = hashlib.sha256()   # 旧口径：仅 params+ema
     s = hashlib.sha256()   # 全量口径：全部叶子
     for key in sorted(per_leaf):
@@ -171,23 +293,30 @@ def _checksum_full_state(checksums_path: pathlib.Path, state, step: int) -> None
           f"({len(per_leaf)} 叶子, 耗时 {row['checksum_seconds']}s)")
 
 
-def _install_checksum_recorder(record_dir: pathlib.Path, enabled: bool) -> None:
+def _install_checksum_recorder(record_dir: pathlib.Path, enabled: bool, gate,
+                               dump_steps: set[int],
+                               dump_dir: pathlib.Path | None) -> None:
     """把 train 模块里的 _checkpoints.save_state 换成完整 TrainState 摘要记录器（不落权重）。
 
     enabled=False（BENCH_CHECKSUM=0，speed 链口径）时替换为纯 no-op：既不落 14 GB
-    checkpoint，也不做任何 device_get 停顿。
+    checkpoint，也不做任何 device_get 停顿。gate 决定哪些步真正记摘要（P1b：驱动
+    脚本走附加摘要步路径时给 train 传 --save-interval 1，每步都进到这里，由 gate
+    自选；空调用零开销）。
     """
     checksums_path = record_dir / "param_checksums.jsonl"
 
     def checksum_state(checkpoint_manager, state, data_loader, step):
         del checkpoint_manager, data_loader
-        if enabled:
-            _checksum_full_state(checksums_path, state, int(step))
+        step = int(step)
+        if enabled and gate(step):
+            _checksum_full_state(checksums_path, state, step,
+                                 dump_dir=dump_dir if step in dump_steps else None)
 
     _train._checkpoints.save_state = checksum_state
 
 
-def _install_step0_checksum(record_dir: pathlib.Path) -> None:
+def _install_step0_checksum(record_dir: pathlib.Path, dump_steps: set[int],
+                            dump_dir: pathlib.Path | None) -> None:
     """包 train.init_train_state：初始化完成后立即记 step 0 完整 TrainState 摘要。
 
     train.main 的 save 触发条件（step % save_interval == 0 and step > start_step）
@@ -199,44 +328,98 @@ def _install_step0_checksum(record_dir: pathlib.Path) -> None:
     def init_and_checksum(config, init_rng, mesh, *, resume):
         train_state, state_sharding = orig_init(config, init_rng, mesh, resume=resume)
         jax.block_until_ready(train_state)
-        _checksum_full_state(checksums_path, train_state, step=0)
+        _checksum_full_state(checksums_path, train_state, step=0,
+                             dump_dir=dump_dir if 0 in dump_steps else None)
         return train_state, state_sharding
 
     _train.init_train_state = init_and_checksum
 
 
+class _LoggingSampler:
+    """包 BatchSampler.sampler：记录主进程侧抽出的样本 index 全序列（P1b）。
+
+    torch DataLoader 的 index 抽取发生在主进程（worker 只按派发的 index 取数），
+    且 _MultiProcessingDataLoaderIter 按抽取顺序交付 batch——prefetch 只提前不重排，
+    故本序列第 k 个 batch_size 段就是交付的第 k 个 batch 的样本 index。
+    序列尾部可能含已抽取未交付的 prefetch 余量，比对时取前 steps×batch 个即可。
+    """
+
+    def __init__(self, inner, log: list):
+        self._inner = inner
+        self._log = log
+
+    def __iter__(self):
+        for i in self._inner:
+            self._log.append(int(i))
+            yield i
+
+    def __len__(self):
+        return len(self._inner)
+
+
 def _install_batch_digest_recorder(record_dir: pathlib.Path, interval: int,
-                                   max_step: int) -> None:
+                                   extra_steps: set[int], max_step: int):
     """把 TorchDataLoader.__iter__ 换成带输入摘要的版本（host 侧、device_put 前）。
 
     重实现原 __iter__ 的循环（原版在 yield 前就把 batch 转成了 device array，包不进
     去），插入点是 collate 后、`make_array_from_process_local_data` 前的 numpy batch。
-    记录步：0/1/2、每 interval 步（interval>0 时）、末步 max_step；train.main 在末步
-    之后还会多取一个 batch（idx == max_step+1，取而不用），不记录。
+    记录步：0/1/2、每 interval 步（interval>0 时）、附加步（P1b）、末步 max_step；
+    train.main 在末步之后还会多取一个 batch（idx == max_step+1，取而不用），不记录。
+    每行 raw + canonical 双口径（schema 2）并附该步样本 index。
+
+    返回收官回调：把 index 全序列写 index_sequence.json（main 的 finally 调）。
     """
     digests_path = record_dir / "batch_digests.jsonl"
+    index_log: list[int] = []
 
     def record(idx: int, batch) -> None:
         t0 = time.time()
         flat, _ = jax.tree_util.tree_flatten_with_path(batch)
         per_key = {}
+        per_key_canonical = {}
+        batch_size = None
         for path, leaf in flat:
-            per_key[jax.tree_util.keystr(path)] = _leaf_sha256(np.asarray(leaf))
+            arr = np.asarray(leaf)
+            key = jax.tree_util.keystr(path)
+            per_key[key] = _leaf_sha256(arr)
+            per_key_canonical[key] = _canonical_sha256(arr)
+            if batch_size is None and arr.ndim > 0:
+                batch_size = int(arr.shape[0])
         g = hashlib.sha256()
+        c = hashlib.sha256()
         for key in sorted(per_key):
             g.update(f"{key}:{per_key[key]}\n".encode())
+            c.update(f"{key}:{per_key_canonical[key]}\n".encode())
+        # 本 batch 的样本 index：抽取顺序 == 交付顺序，第 idx 段即本步样本；
+        # 能走到这里说明该段必已抽出（没有 index 就产不出 batch），断言防口径漂移
+        sample_indices = None
+        if batch_size is not None and len(index_log) >= (idx + 1) * batch_size:
+            sample_indices = index_log[idx * batch_size:(idx + 1) * batch_size]
         row = {
+            "schema": 2,
             "step": idx,
             "wall_time": time.time(),
             "digest_seconds": round(time.time() - t0, 3),
             "n_keys": len(per_key),
             "batch_digest": g.hexdigest(),
+            "batch_digest_canonical": c.hexdigest(),
+            "sample_indices": sample_indices,
             "per_key": per_key,
+            "per_key_canonical": per_key_canonical,
         }
         with digests_path.open("a") as f:
             f.write(json.dumps(row) + "\n")
 
     def iter_with_digest(self):
+        # 包 index 记录器：BatchSampler 每次 __iter__ 都 iter(self.sampler)，普通
+        # 属性替换即可生效（DataLoader 本体的 batch_sampler 属性有 __setattr__ 护栏，
+        # 不动它）；guard 防重复包（train.main 只建一次 loader，防御式仍加）
+        bs = getattr(self._data_loader, "batch_sampler", None)
+        if bs is None or not hasattr(bs, "sampler"):
+            raise RuntimeError("torch DataLoader 无 batch_sampler.sampler，"
+                               "index 序列记录前提失效，请检查 DataLoader 构造")
+        if not isinstance(bs.sampler, _LoggingSampler):
+            bs.sampler = _LoggingSampler(bs.sampler, index_log)
         num_items = 0
         while True:
             data_iter = iter(self._data_loader)
@@ -250,7 +433,7 @@ def _install_batch_digest_recorder(record_dir: pathlib.Path, interval: int,
                 idx = num_items
                 num_items += 1
                 if idx <= max_step and (
-                    idx in (0, 1, 2) or idx == max_step
+                    idx in (0, 1, 2) or idx == max_step or idx in extra_steps
                     or (interval > 0 and idx % interval == 0)
                 ):
                     record(idx, batch)
@@ -262,6 +445,20 @@ def _install_batch_digest_recorder(record_dir: pathlib.Path, interval: int,
                     yield jax.tree.map(_openpi_dl.torch.as_tensor, batch)
 
     _openpi_dl.TorchDataLoader.__iter__ = iter_with_digest
+
+    def finalize() -> None:
+        if not index_log:
+            return
+        seq_sha = hashlib.sha256(json.dumps(index_log).encode()).hexdigest()
+        with (record_dir / "index_sequence.json").open("w") as f:
+            json.dump({"schema": 1, "n": len(index_log),
+                       "note": "主进程抽取顺序==交付顺序; 尾部可含 prefetch 余量, "
+                               "比对取前 steps×batch 个",
+                       "indices_sha256": seq_sha, "indices": index_log}, f)
+        print(f"[bench] index 序列 {len(index_log)} 个已写 index_sequence.json "
+              f"(sha256 {seq_sha[:16]}…)")
+
+    return finalize
 
 
 class _CacheEventCounter:
@@ -315,24 +512,57 @@ def main() -> None:
     checksum_on = os.environ.get("BENCH_CHECKSUM", "1") != "0"
     digests_on = os.environ.get("BENCH_BATCH_DIGESTS", "1") != "0"
 
+    # P1b：摘要步集合的记录器侧自选 + TrainState 数组落盘配置
+    gate = _make_digest_gate(config)
+    extra_steps = _parse_step_set("BENCH_EXTRA_DIGEST_STEPS")
+    digest_interval_env = os.environ.get("BENCH_DIGEST_INTERVAL") or None  # 空串视同未设
+    digest_interval = (int(digest_interval_env) if digest_interval_env
+                       else config.save_interval)
+    dump_steps, dump_dir = _state_dump_config(config)
+    if dump_steps and not checksum_on:
+        raise ValueError("BENCH_STATE_DUMP_STEPS 需要 BENCH_CHECKSUM=1（落盘与摘要同趟）")
+    not_digested = {s for s in dump_steps if not gate(s)}
+    if not_digested:
+        raise ValueError(f"BENCH_STATE_DUMP_STEPS 含非摘要步 {sorted(not_digested)}——"
+                         f"落盘只在摘要步进行（同趟 device_get、sha 同源可防腐）")
+    if dump_steps and digest_interval_env is None:
+        # 记录器侧 gate 恒真、真实过滤在 train 侧（step%save_interval），落盘步不在
+        # 该调度上会被静默跳过——必须 fail-loud
+        last = config.num_train_steps - 1
+        iv = config.save_interval
+        missed = {s for s in dump_steps
+                  if s not in (0, last) and not (iv > 0 and s > 0 and s % iv == 0)}
+        if missed:
+            raise ValueError(f"BENCH_STATE_DUMP_STEPS {sorted(missed)} 不在 train 侧 "
+                             f"save 调度（间隔 {iv}）上且未设 BENCH_DIGEST_INTERVAL，"
+                             f"会被静默跳过；请经驱动脚本 EXTRA_DIGEST_STEPS 路径启用")
+
     record_dir = _record_dir()
     cache_counter = _CacheEventCounter()
     _install_metrics_recorder(record_dir)
-    _install_checksum_recorder(record_dir, enabled=checksum_on)
+    _install_checksum_recorder(record_dir, enabled=checksum_on, gate=gate,
+                               dump_steps=dump_steps, dump_dir=dump_dir)
     if checksum_on:
-        _install_step0_checksum(record_dir)
+        _install_step0_checksum(record_dir, dump_steps=dump_steps, dump_dir=dump_dir)
+    finalize_digests = None
     if digests_on:
-        _install_batch_digest_recorder(record_dir, interval=config.save_interval,
-                                       max_step=config.num_train_steps - 1)
+        finalize_digests = _install_batch_digest_recorder(
+            record_dir, interval=digest_interval, extra_steps=extra_steps,
+            max_step=config.num_train_steps - 1)
     try:
         _train.main(config)
     finally:
+        if finalize_digests is not None:
+            finalize_digests()
         # 真实 argv 与编译缓存事件计数——驱动脚本收官时并进 env.json
         meta = {
             "argv": list(sys.argv),
             "monitoring_event_counts": cache_counter.counts,
             "bench_checksum_enabled": checksum_on,
             "bench_batch_digests_enabled": digests_on,
+            "digest_interval_effective": digest_interval,
+            "extra_digest_steps": sorted(extra_steps),
+            "state_dump_steps": sorted(dump_steps),
         }
         with (record_dir / "run_meta.json").open("w") as f:
             json.dump(meta, f, indent=2, ensure_ascii=False)

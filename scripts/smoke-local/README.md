@@ -4,10 +4,10 @@
 
 | 文件 | 作用 |
 |---|---|
-| `run_2gpu_epoch_bench.sh` | 驱动脚本：2 卡跑 `STEPS`（默认 300）步，**batch 固定 8**（2 卡实测唯一确认可跑档，64/32/16 均 OOM；改档属超参变更须先确认并重新实测），算稳态 s/step 并外推 1 epoch 时长，留下一致性检验记录；任何失败 fail-loud 不重试。身份拆分：`EXP_NAME` 决定 jax 编译缓存目录（对拍两轮共用即共享编译产物与 per-fusion autotune），`RUN_TAG` 决定记录/日志/checkpoint 目录（每轮各异）；`KEEP_JAX_CACHE=1` 收官保留缓存，`XLA_FLAGS` 外部注入并留档 |
-| `bench_train_steps.py` | 训练入口：只调一次 `train.main(config)`，训练循环一行不改；靠 monkeypatch 把逐步标量、完整 TrainState 摘要（params/opt_state/EMA/step，步 0 必记）、输入 batch 摘要写成 jsonl，另留档编译缓存事件计数与真实 argv。速度口径开关：`SAVE_INTERVAL=0` 禁 TrainState 摘要、`BATCH_DIGESTS=0` 禁输入摘要（speed 链 run 专用，见 `v1-gradient-baseline.md` 符号总表） |
+| `run_2gpu_epoch_bench.sh` | 驱动脚本：2 卡跑 `STEPS`（默认 300）步，**batch 固定 8**（2 卡实测唯一确认可跑档，64/32/16 均 OOM；改档属超参变更须先确认并重新实测），算稳态 s/step 并外推 1 epoch 时长，留下一致性检验记录；任何失败 fail-loud 不重试。身份拆分：`EXP_NAME` 决定 jax 编译缓存目录（对拍两轮共用即共享编译产物与 per-fusion autotune），`RUN_TAG` 决定记录/日志/checkpoint 目录（每轮各异）；`KEEP_JAX_CACHE=1` 收官保留缓存，`XLA_FLAGS` 外部注入并留档。runner 一律 `UV_LINK_MODE=copy uv run`（P1b，AGENTS 3） |
+| `bench_train_steps.py` | 训练入口：只调一次 `train.main(config)`，训练循环一行不改；靠 monkeypatch 把逐步标量、完整 TrainState 摘要（params/opt_state/EMA/step，步 0 必记）、输入 batch 摘要（raw + canonical 双口径，P1b）与样本 index 序列写成 jsonl/json，另留档编译缓存事件计数与真实 argv。速度口径开关：`SAVE_INTERVAL=0` 禁 TrainState 摘要并默认联动禁输入摘要（P1b；`BATCH_DIGESTS` 显式设置可覆盖，speed 链 run 专用，见 `v1-gradient-baseline.md` 符号总表）。`EXTRA_DIGEST_STEPS` 加记附加摘要步、`STATE_DUMP_STEPS` 在指定摘要步把 TrainState 数组按位落盘（G1 逐叶数值裁决参照，P1b） |
 | `check_baseline_env.py` | 环境指纹 `dump`（起跑留档进 env.json）/ `check`（**引用任何基线产物前的强制 preflight**，输出 `BASELINE_ENV=PASS|FAIL`）/ `manifest`（生成 `BASELINE_MANIFEST.json` 防产物腐烂） |
-| `compare_baseline.py` | 两份 records 目录对拍：逐步标量 hex diff、`state_digest`/`batch_digest` diff、rel 分布与包络（量化判据权威版本见 `v1-gradient-baseline.md` 六节），输出 `DET_CHECK=` / `QUANT_EQUIV=` 判定行 |
+| `compare_baseline.py` | 两份 records 目录对拍：逐步标量 hex diff、`state_digest`/`batch_digest` diff（raw 与 canonical 双口径，P1b）、index 序列前缀对比、rel 分布与包络（量化判据权威版本见 `v1-gradient-baseline.md` 六节），输出 `DET_CHECK=` / `CANON_CHECK=` / `INDEX_SEQ=` / `QUANT_EQUIV=` 判定行；`state_digest` 失配时经 `--state-arrays-*` 输出逐叶 max-abs/max-rel/L2/cosine 数值裁决，拿不出数组即 `INCONCLUSIVE`（不得判 PASS，P1b） |
 
 一句话定位：**测「本机 2 卡、数据在 NFS turbo 时 1 个 epoch 要多久」，同时为将来
 修改 dataloader 后的一致性检验（数据允许等价但不逐位相同）留下可逐位比对的轨迹记录。**
@@ -48,8 +48,8 @@
 |---|---|---|
 | C1 | wandb 开启 → `--no-wandb-enabled` + `wandb.log` 替换为 jsonl 记录器 | disabled 模式下 `wandb.log` 本来就是 no-op，记录器只是把丢掉的数据接住；不进计算图 |
 | C2 | 路径显式化：`--assets-base-dir`/`--checkpoint-base-dir` 指到 `v1-store`、`--dataset-path` 指 GL 全量库 | 纯目录选择；norm stats 用 GL 数据集上已算好的那份，与数据集自洽 |
-| C3 | `uv run` → 直接 `${PY}`（turbo 仓库 `.venv` 的解释器） | 同一 venv，无差异 |
-| C4 | bench 入口的 fail-loud 护栏（≤500 步、强制关 wandb、禁 overwrite/resume、锁 history_config、强制 `log_interval=1`） | 只在启动前检查参数，不参与训练 |
+| C3 | runner：与正式入口同为 `UV_LINK_MODE=copy uv run`（P1b 收敛；此前曾直调 `${PY}`——同一 `.venv` 解释器） | 同一 venv 同一解释器，无差异（由 G0b 重跑 vs 旧 G0 前 300 步逐位对拍实证） |
+| C4 | bench 入口的 fail-loud 护栏（≤1200 步、强制关 wandb、禁 overwrite/resume、锁 history_config、强制 `log_interval=1`） | 只在启动前检查参数，不参与训练 |
 | C5 | `seed=42`、`num_workers=4`、`XLA_PYTHON_CLIENT_MEM_FRACTION=0.95`、EMA、优化器、loss | 与官方完全相同。同数据集同 seed 下 dataloader 的逐 epoch shuffle 顺序也与官方一致（torch generator 按 `config.seed` 固定） |
 
 **结论**：会让数值逐位偏离官方 4 卡 run 的只有 A 组（2 卡切分、per-device batch、
@@ -141,14 +141,26 @@
 - 触发步：步 0（init 后立即记，`init_train_state` 包装所致）、
   `step % save_interval == 0 (step>0)` 及最后一步。
 
-**`batch_digests.jsonl`** —— 输入侧摘要（collate 后、device_put 前的 host 侧 batch，
-逐键 `sha256(dtype‖shape‖bytes)`），步 0/1/2 + 每 `save_interval` + 末步。与
-XLA/缓存/驱动无关、跨计算图（HLO）永远逐位可比——改输入签名场景对拍的主判据：
+**`batch_digests.jsonl`** —— 输入侧摘要（collate 后、device_put 前的 host 侧 batch），
+步 0/1/2 + 每 `save_interval` + 附加步（`EXTRA_DIGEST_STEPS`）+ 末步。与
+XLA/缓存/驱动无关、跨计算图（HLO）永远逐位可比。schema 2（P1b）逐键双口径：
+- `per_key`（raw）：`sha256(dtype‖shape‖bytes)`——「输入应逐字节不变」场景主判据；
+- `per_key_canonical`：浮点键升 float32 后 `sha256("f32"‖shape‖bytes)`（dtype 不入域），
+  非浮点键与 raw 同——跨 dtype 对拍（G1 vs G0）的输入侧判据；
+- `sample_indices`：本步 batch 的样本 index（主进程抽取顺序==交付顺序）。
 
 ```json
-{"step": 0, "wall_time": 1756056000.2, "digest_seconds": 0.4, "n_keys": 18,
- "batch_digest": "c9d2…(sha256)", "per_key": {"['actions']": "0b3f…"}}
+{"schema": 2, "step": 0, "wall_time": 1756056000.2, "digest_seconds": 0.4, "n_keys": 18,
+ "batch_digest": "c9d2…(sha256)", "batch_digest_canonical": "7a1e…(sha256)",
+ "sample_indices": [312007, 88123, …], "per_key": {"['actions']": "0b3f…"},
+ "per_key_canonical": {"['actions']": "5c9a…"}}
 ```
+
+**`index_sequence.json`** —— 样本 index 全序列 + sha256（P1b；尾部可含 prefetch
+余量，比对取前 steps×batch 个）。**`state_dump/state_step_<N>.{json,bin}`** ——
+`STATE_DUMP_STEPS` 指定摘要步的完整 TrainState 数组按位落盘（裸字节容器——npy/npz
+丢 bf16 类型故禁用；meta 逐叶 dtype/shape/offset/sha256，与 `per_leaf` 同源可防腐），
+`compare_baseline.py --state-arrays-*` 的数值裁决参照。单步约 14 GB，默认不落。
 
 **`run_meta.json`** —— 训练进程真实 `sys.argv` + jax.monitoring 事件计数（编译
 缓存命中/编译次数——判定「这轮是热缓存还是冷编译」的留档事实）；驱动脚本收官时
@@ -195,5 +207,8 @@ tmux new-session -d -s epoch-bench \
 ```
 
 结束后日志尾部有 `RESULT` 两行（稳态 s/step 与 epoch 外推）与 `BENCH_PASS`。
-可调环境变量：`STEPS`（≤500）、`SAVE_INTERVAL`、`WARMUP_STEPS`、`DATASET_PATH`。
+可调环境变量：`STEPS`（≤1200）、`SAVE_INTERVAL`、`WARMUP_STEPS`、`DATASET_PATH`、
+`EXP_NAME`、`RUN_TAG`、`KEEP_JAX_CACHE`、`BATCH_DIGESTS`（未设时联动
+`SAVE_INTERVAL`：0 → 0，否则 1）、`XLA_FLAGS`、`EXTRA_DIGEST_STEPS`（附加摘要步）、
+`STATE_DUMP_STEPS`（TrainState 数组落盘步，P1b）。
 run 目录与 `~/.cache/jax_<exp_name>` 跑完即删；记录目录与日志保留。
