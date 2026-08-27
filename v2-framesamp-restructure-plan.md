@@ -4,7 +4,7 @@
 >
 > **范围**：只兼容 `perceptual-framesamp-context` 一种 run。对拍与验收只关注五样：**G0**（黄金基线固化产物）、**G2**（packed IO 重构后）、**G0-speed**（本机速度锚点）、**G2-speed**（重构后本机速度）、**GreatLakes 吞吐验收**。
 >
-> **当前状态**：G0、G0-speed 已固化（登记簿 T8）；IO 重构（G2 级，commit V2.5 起）**尚未开工，等用户拍板**。
+> **当前状态**：G0、G0-speed 已固化（登记簿 T8）；IO 重构（G2 级，commit V3.0 起）**已于 2026-08-27 经用户拍板开工**（commit 编号同日由用户指定从 V3.0 始，原 V2.5–V2.9 作废）。
 
 ## Context（为什么做这件事）
 
@@ -383,7 +383,7 @@ memory token 由四个因素完全决定，重构后全部构造性不变：① 
 9. **S8b GL e2e 收官测试**：GL 4×A40 真跑 600 步端到端 + 冷/热双跑。过关：`E2E_ACCEPT=PASS`（步时中位 ≤5.00 s、util 均值 ≥90% 等五项必达，D 节）。
 10. **S9 本机速度对账**：本机跑 `v1-g2-speed`，和锚点 `v1-g0-speed-r2`（1.152 s/step）对比报数，回填登记簿（T8）。
 
-**当前位置**：一步都还没开工，第一个动作是 S0'（commit V2.5），等用户拍板。
+**当前位置**：2026-08-27 用户已拍板开工，第一个动作是 S0'（commit V3.0）。
 
 ---
 
@@ -561,7 +561,7 @@ def __getitem__(self, idx):
   2. 12 次摘要步 `state_digest` diff 为空；
   3. 输入侧：canonical 摘要（14 个记录步）+ 全步 index 序列（8,072 条）与 G0 逐位一致；**raw 输入摘要不计入判据**（G0 产物 raw 口径与现行 HEAD 在 4 个摘要步的 `static_image_emb`/`static_pos_emb` 两键上存在已知的预期失配——基线固化后交付 dtype 经过一次已验收的统一；canonical 同步一致）。
 - **失败处置**（三节第二块已给完整流程，此处机读要点）：参数 sha256 逐叶二分找首个分叉模块；`mem_enc*` 分叉 → 回 C.2；LLM 主干分叉而 mem 一致 → 先跑 packed `-r2` 自证重跑稳定；无法归因 → 现场加跑同 HEAD legacy 一轮三方定位（定位手段非判据）；量化判据（四节/T6）只作评估参考不作放行。TrainState 逐叶数值参照取本机 `/data/hongzefu/v1-baselines/g0b-r1-state-dump/`（@0/299/999）。
-- **工具已知缺口**：`compare_baseline.py` 总判定行 `DET_CHECK` 未区分 raw/canonical 口径——raw 预期失配会拖累总行 FAIL。**G2 使用方式二选一（实施时定）**：S0' 顺手修工具（总行按「五标量+state_digest+canonical+index」四分项聚合，raw 单列不聚合），或沿用分项判读并在留档写明。
+- **工具已知缺口**：`compare_baseline.py` 总判定行 `DET_CHECK` 未区分 raw/canonical 口径——raw 预期失配会拖累总行 FAIL。**处置已定（2026-08-27 用户拍板）：不修工具本体**——G2 对拍时沿用分项判读（五标量 hex / state_digest / canonical 输入 / index 序列四分项逐项判定），并在留档写明 raw 预期失配的来源；总行 FAIL 不作为 G2 结论依据。
 
 ### C.5 守卫测试
 
@@ -617,7 +617,7 @@ def __getitem__(self, idx):
 
 | 步 | 内容 | 依赖 | 判定 | 预计 |
 |---|---|---|---|---|
-| S0' | **补验证小工具**：preflight 兼容 packed、`BENCH_DUMP_IDX`、env.json provenance 扩展、README 同步；（可顺手）`compare_baseline.py` 总判定行分口径聚合（C.3 缺口） | 用户拍板开工 | STEPS=3 跑通、idx_seq.jsonl 落盘 | ~30 min |
+| S0' | **补验证小工具**：preflight 兼容 packed、`BENCH_DUMP_IDX`、env.json provenance 扩展、README 同步。`compare_baseline.py` 不修（C.3 缺口处置已定：G2 分项判读） | 用户拍板开工 | STEPS=3 跑通、idx_seq.jsonl 落盘 | ~30 min |
 | S2 | **写格式层和打包工具**：+ Store 组守卫（G1/G4/G5/G7/G11/G12/G14），ref-shard 派生迷你库全流程（含迷你库全量 verify） | S0' | Store 组 pytest 全绿 | ~2 h 开发 |
 | S3 | **写新 Dataset 和切换开关**：FrameSampDataset + backend 接线 + Dataset 组守卫（G2/G3/G6a/G8/G9/G10/G13）+ 迷你库真实 spawn loader 矩阵 w0/w1/w4/w16 × 2 epoch（fd 泄漏检查：前后 `ls /proc/<pid>/fd` 计数） | S2 | Dataset 组 pytest 全绿（G6 只跑 G6a）+ 矩阵无错无泄漏 | ~1.5 h |
 
@@ -643,14 +643,14 @@ def __getitem__(self, idx):
 | S8b | **GL e2e 收官测试**：600 步 T1–T3(+条件档) + cold-like/hot（COLDHOT 双跑各 300 步） | S8a + launch 预提交 + 逐 job 资源审批（4×A40 / 2–4 h 超硬限） | `E2E_ACCEPT=PASS` + 距 100% 残差分解 | 3×2 h + 1×4 h |
 | S9 | **本机速度对账 G2-speed**：`v1-g2-speed` 一轮 **1000 步**（speed 统一口径，〇节），vs `v1-g0-speed-r2` 对比落档、回填登记簿 | S8b | 稳态统计 + 对比表落档 | ~40 min |
 
-- **commit 切分**（沿用 `commitV<大>.<小>:` 中文体例，本计划从 **V2.5** 起；每个正式 run 拆「launch.md 预提交 → clean HEAD 起跑 → 结果留档提交」三段，兼顾 AGENTS 12「起跑前记录」与 clean HEAD；顺序与 S 步严格串行一致，每 commit 可独立回滚）：
-  1. **V2.5**（阶段 1 前半，S0'+S2）：验证资产补齐 + 格式层 + 打包工具 + Store 组守卫（迷你库通过）；
-  2. **V2.6**（阶段 1 后半，S3）：新 Dataset + backend 接线 + Dataset 组守卫 + spawn 矩阵；
+- **commit 切分**（沿用 `commitV<大>.<小>:` 中文体例，本计划从 **V3.0** 起（2026-08-27 用户指定，原 V2.5–V2.9 编号作废）；每个正式 run 拆「launch.md 预提交 → clean HEAD 起跑 → 结果留档提交」三段，兼顾 AGENTS 12「起跑前记录」与 clean HEAD；顺序与 S 步严格串行一致，每 commit 可独立回滚）：
+  1. **V3.0**（阶段 1 前半，S0'+S2）：验证资产补齐 + 格式层 + 打包工具 + Store 组守卫（迷你库通过）；
+  2. **V3.1**（阶段 1 后半，S3）：新 Dataset + backend 接线 + Dataset 组守卫 + spawn 矩阵；
   3. **docs**：S4 launch 预提交 → S4 全量打包+verify（clean HEAD 起跑）→ docs：S4 构建留档（`docs/dataset-build-doc/`）；
   4. **docs**：S5/S6 launch 预提交 → S5/S6 运行（clean HEAD 起跑）；
-  5. **V2.7**（S5 收官）：第一块通过（结果留档）；
-  6. **V2.8**（S6 收官）：G2 对拍通过（结果留档 + 登记簿 T8 回填）；
-  7. **V2.9**（S7.5）：GL 验收资产参数化；
+  5. **V3.2**（S5 收官）：第一块通过（结果留档）；
+  6. **V3.3**（S6 收官）：G2 对拍通过（结果留档 + 登记簿 T8 回填）；
+  7. **V3.4**（S7.5）：GL 验收资产参数化；
   8. **docs**：S8a → S8b → S9 逐 run「launch 预提交（GL 资源审批记录随附）→ clean HEAD 起跑 → 结果留档」，按串行顺序逐个走完；
   9. **docs**：GL 验收汇总留档 + `docs/v1-framesamp-dataflow.md` 定稿。
 - **run_name 建议**（起跑前逐个交用户确认，AGENTS 6）：`v1-framesamp-cmp`（S5）、`v1-framesamp-g2`（S6）、`v1-framesamp-dl-w{2,4,8,16}`、`v1-framesamp-e2e-w{4,8,2}c16`、`…-coldlike/-hot`、`v1-g2-speed`（S9）；打包库名 `4task-gl-framesamp`。
