@@ -47,7 +47,29 @@
 | `v1-framesamp-e2e-w4c16`（T1，最重要：官方默认档还需不需要调） | 4 | 600 | 2h | 320 | job 58996749 @gl1512 |
 | `v1-framesamp-e2e-w8c16`（T2，直接对 v1-e2efix-w8c16） | 8 | 600 | 2h | 321 | 无依赖重提 58996987（原 58996750 已撤） |
 | `v1-framesamp-e2e-w2c16`（T3，探底） | 2 | 600 | 2h | 322 | 无依赖重提 58997004（原 58996751 已撤） |
-| `v1-framesamp-e2e-w4c16-coldlike` + `…-hot`（COLDHOT=1 同 allocation 先 C1 后 H1） | 4 | 300+300 | 4h | 323 | T2/T3 起跑后带冷节点排除清单提交（原 58996752 已撤） |
+| `v1-framesamp-e2e-w4c16-coldlike` + `…-hot`（COLDHOT=1 同 allocation 先 C1 后 H1） | 4 | 300+300 | 4h | 323 | job 59001191（排除 gl1514/1501/1508/1512/1519） |
+| `v1-framesamp-e2e-w12c16`（T4′，补齐 legacy 四档对照） | 12 | 600 | 2h | 324 | job 59001192 |
+| `v1-framesamp-e2e-w16c16`（T5′，同上 + 验证超订拐点） | 16 | 600 | 2h | 325 | job 59001193 |
+
+### 三次拍板（2026-08-27 深夜，用户「不改动训练逻辑 把现有的实验跑完…先全部提交 job 排队」）
+
+不改任何训练/dataloader 代码，仅把剩余档位跑完拿完整结论。新增两档理由：
+
+- **packed 侧只有 w4/w8，legacy 侧有 w4/w8/w12/w16 完整四档**——补齐 w12/w16 才能给出
+  同口径的「worker 量级 → util」全曲线对比。
+- **w12 是不改代码前提下唯一可能达标的候选**：packed w4→w8 的 util 是 85.2%→89.2%
+  （+4.0pp，与 legacy「加 worker 反而降」的走向相反，因瓶颈已从 NFS 带宽换成 worker
+  供给）；若 w12 延续增益即可越过 90% 阈值。
+- **w16 验证超订拐点**：慢步归因分析（见 result.md）推断瓶颈在 worker 侧 CPU 超订
+  （`_worker_init_fn` 未收敛线程数、worker 继承 `OMP_NUM_THREADS=16`），预测 w16 会
+  退化；实测可证实/证伪，且 legacy w16 有对照。
+- **COLDHOT 意义不减反增**：T1/T2 实测 NFS 仅 8–10 MB/s 对公式口径 29–32 MB/s，
+  证实约 2/3 的读命中 page cache——即 T1–T3 数字本身偏热态、偏乐观；而 T2 的
+  epoch 8.35 h 距 8.6 h 阈值仅剩 0.25 h 余量，冷态惩罚哪怕 3% 就击穿。COLDHOT 正是
+  量化这个惩罚的唯一实验，直接决定 T2 的 epoch ✓ 作不作数。
+- 资源包络与已批四 job 完全一致（4×A40/16C/96G，600 步 2h、COLDHOT 4h），未扩。
+- 排队策略（用户指定）：集群紧张，全部先提交排队；若出现同节点共驻干扰，scancel
+  后起者加 exclude 重提。
 
 - 入口 `gl_e2e_fix.sbatch`（S7.5 参数化）：`MMEVLA_DATA_BACKEND=packed`（显式）、
   `DATASET_PATH=…/4task-gl-framesamp`（status=verified）、`SAVE_INTERVAL=1000`
