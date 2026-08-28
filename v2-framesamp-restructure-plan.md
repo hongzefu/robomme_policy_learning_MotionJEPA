@@ -647,12 +647,13 @@ def __getitem__(self, idx):
   1. **V3.0**（阶段 1 前半，S0'+S2）：验证资产补齐 + 格式层 + 打包工具 + Store 组守卫（迷你库通过）；
   2. **V3.1**（阶段 1 后半，S3）：新 Dataset + backend 接线 + Dataset 组守卫 + spawn 矩阵；
   3. **docs**：S4 launch 预提交 → S4 全量打包+verify（clean HEAD 起跑）→ docs：S4 构建留档（`docs/dataset-build-doc/`）；
-  4. **docs**：S5/S6 launch 预提交 → S5/S6 运行（clean HEAD 起跑）；
-  5. **V3.2**（S5 收官）：第一块通过（结果留档）；
-  6. **V3.3**（S6 收官）：G2 对拍通过（结果留档 + 登记簿 T8 回填）；
-  7. **V3.4**（S7.5）：GL 验收资产参数化；
-  8. **docs**：S8a → S8b → S9 逐 run「launch 预提交（GL 资源审批记录随附）→ clean HEAD 起跑 → 结果留档」，按串行顺序逐个走完；
-  9. **docs**：GL 验收汇总留档 + `docs/v1-framesamp-dataflow.md` 定稿。
+  4. **V3.2**（S5 对拍工具；2026-08-27 用户拍板提前占用本号，后续依次顺延）：`dump_index_seq.py` + `compare_batches.py`（clean HEAD 起跑要求工具先入库）；
+  5. **docs**：S5/S6 launch 预提交 → S5/S6 运行（clean HEAD 起跑）；
+  6. **V3.3**（S5 收官）：第一块通过（结果留档）；
+  7. **V3.4**（S6 收官）：G2 对拍通过（结果留档 + 登记簿 T8 回填）；
+  8. **V3.5**（S7.5）：GL 验收资产参数化；
+  9. **docs**：S8a → S8b → S9 逐 run「launch 预提交（GL 资源审批记录随附）→ clean HEAD 起跑 → 结果留档」，按串行顺序逐个走完；
+  10. **docs**：GL 验收汇总留档 + `docs/v1-framesamp-dataflow.md` 定稿。
 - **run_name 建议**（起跑前逐个交用户确认，AGENTS 6）：`v1-framesamp-cmp`（S5）、`v1-framesamp-g2`（S6）、`v1-framesamp-dl-w{2,4,8,16}`、`v1-framesamp-e2e-w{4,8,2}c16`、`…-coldlike/-hot`、`v1-g2-speed`（S9）；打包库名 `4task-gl-framesamp`。
 - **回滚策略**：功能回滚＝launcher 里 `MMEVLA_DATA_BACKEND` 切回 `legacy` + `--dataset-path` 指回源库（必须一起回退）；打包库保留作证据不删（不进 git，31.7 GB），确认彻底放弃方案时才删。
 - **收官清理**：验证结束后清理 `v1-store/cache/jax/` 下各 EXP_NAME 缓存与 `~/.cache/jax_*` 软链，清理 S 步临时 run（AGENTS 6）。
