@@ -6,6 +6,7 @@
 ## 起跑环境
 
 - **起跑 commit**：`6ee74948c3a79332143172a54236b45657740a18`（commitV3.1，clean HEAD）
+  - **更正（2026-08-27，随结果留档补记）**：上行写于本文件预提交之前，口径不准——本文件的 docs commit `3b52d211fc4f1aef7e82a92fd398c0153dd6ab6f` 先于起跑，**实际起跑 HEAD 为 `3b52d21…`**（打包库 meta 的 `packer.git_commit` 实证；两 commit 间 diff 仅本 launch.md，代码零差异）
 - **机器**：本机（2×RTX 6000 Ada 所在工作站；本任务纯 CPU+NFS，不占 GPU）
 - **执行方式**：detached tmux（AGENTS 7；`PYTHONUNBUFFERED=1` + `pipefail` + `tee` + 尾行 `EXIT_CODE=`）
 
