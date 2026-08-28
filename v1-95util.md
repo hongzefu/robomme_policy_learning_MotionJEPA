@@ -8,13 +8,69 @@
 > **目标**：GL 4×A40 e2e 的 dense 稳态 **util 均值 ≥95%**（用户 2026-08-28 指定）。
 >
 > **两条全局原则**：
-> 1. **旧性能数字全部作废，重新开始**。此前所有性能族基线与量具口径——`v1-g0-speed-r2` 锚点、
->    S8b 各档数字（含 89.2%）、旧 `E2E_ACCEPT`/`E2E_EXTRA` 判据、speed 链的一切历史对齐——
->    一律降为历史参照，不再作为任何对比基线。新基准由 L0 重立。
-> 2. **【硬性原则，用户两次强调】G0/G2 正确性对拍链原样保留、一项不减**——这是全程**不漂移**
->    的关键保证（200 batch raw bits 零失配、1000 步五标量逐步 hex、`state_digest`、canonical
->    batch digest、index 序列判据；`scalars_hex.tsv` sha256 锚 `c799a0b2…`）。正确性族 run 照旧跑
->    `log_interval=1` 确定性档，其量具、判据、固化产物本轮完全不动。废弃范围严格限定在性能族。
+> 1. **旧性能数字全部作废，重新开始**。此前所有性能族基线与量具口径——旧 speed 锚
+>    `v1-g0-speed-r2`、S8b 各档数字（含 89.2%）、旧 `E2E_ACCEPT`/`E2E_EXTRA` 判据、speed 链的
+>    一切历史对齐——一律降为历史参照，不再作为任何对比基线。新 speed 锚 **S0** 由 L0 重立。
+> 2. **【硬性原则，用户两次强调】与 G0 的正确性对拍链原样保留、一项不减**——这是全程**不漂移**
+>    的关键保证，完整定义见下「正确性对拍」节。废弃范围严格限定在性能族。
+
+## 符号定义
+
+### 正确性族（确定性档：log_interval=1、确定性 XLA、摘要全开；util/步时禁作性能结论）
+
+| 符号 | run_name | 定义与地位 |
+|---|---|---|
+| **G0** | `v1-grad-baseline-g0b`（r1/r2 双跑） | **正确性链头基线**：本机 2 卡、batch 8、seed 42、1000 步、确定性 XLA 档（`--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0`）。固化产物在 `docs/training-doc/v1-grad-baseline-g0b/records/r{1,2}/`（`scalars_hex.tsv`、state_digest、batch_digests、`index_sequence.json`）。**一切「不漂移」主张的唯一锚。** |
+| **G2** | `v1-framesamp-g2` | packed IO 重构后对 G0 的对拍 run，四分项全过（已收官）。它证明「packed 链路 = G0 训练语义」。 |
+| **G3** | `v1-l2-overlap-g3`（预留，进入 L2 才跑） | L2 取数重叠落地后对 G0 的对拍 run，判据与 G2 完全相同（见「正确性对拍」节）。 |
+
+### 性能族（生产档：生产 XLA 不注入确定性 flags、autotune 默认开、`BENCH_CHECKSUM=0`、`BENCH_BATCH_DIGESTS=0`；本文件新定义的符号）
+
+| 符号 | run_name（起跑前逐个确认） | 定义与地位 |
+|---|---|---|
+| **S0c** | `v1-l0-gauge-log1` | L0 **对照档**：新量具、`LOG_INTERVAL=1`，与旧 89.2% 同口径。只用于把「量具口径差异」归因出来，**不作基准**。 |
+| **S0** | `v1-l0-gauge-log100` | **新 speed 基准锚点**：新量具、`LOG_INTERVAL=100` 生产口径、w8c16、packed、prefetch=2、线程现状。本文件唯一现行 speed 锚，后续一切性能对比的分母。 |
+| **S1** | `v1-l1-cfg-w8` | L1 配置打包档（log100 + w8 + 线程 1 + prefetch 4），vs S0。 |
+| **S2** | `v1-l2-overlap-e2e` | L2 落地后的 GL 性能档，vs S0/S1。 |
+| （作废） | `v1-g0-speed-r2` 等 | 旧 speed 锚（1.152 s/step、util 86.5%），随旧量具一并作废，仅历史参照。 |
+
+两族纪律：**两族永不混用一个 run**——性能族 run 不开摘要（其数字才可信），正确性族 run 不谈性能
+（T9-B5）。每个符号对应一个独立 run，留档 `docs/training-doc/<run_name>/`。
+
+## 与 G0 的正确性对拍（硬闸，完整定义）
+
+**「对拍」= 候选链路在与 G0 完全相同的配置下重跑，产物与 G0 固化产物离线逐位比对。** 具体：
+
+- **配置逐项相同**：本机 2 卡、batch 8、seed 42、1000 步、确定性 XLA 档、`log_interval=1`、
+  摘要全开（`BENCH_CHECKSUM=1`、`BENCH_BATCH_DIGESTS=1`）；
+- **比对工具**：`scripts/smoke-local/compare_baseline.py`，对拍对象为 G0 r1 固化产物；
+- **前置 preflight**：`scripts/smoke-local/check_baseline_env.py` 必须 `BASELINE_ENV=PASS`
+  （T5 指纹：`uv.lock`、库版本、GPU/驱动、git 外资产（norm_stats/pi05_base/tokenizer/manifest
+  sha/数据集抽样）、`XLA_FLAGS`、产物 sha；**不含仓库代码文件的 sha**，所以改代码不破坏指纹）。
+  指纹不符 = G0 基线失效，必须先重跑基线再对拍。
+
+**四分项判据（一项不减，全过才算 PASS）**：
+
+| 分项 | 比对内容 | 判据 | 数量 |
+|---|---|---|---|
+| **SCALARS** | 五标量 `loss` / `grad_norm` / `llm_grad_norm` / `mem_enc_norm` / `param_norm` 的逐步 IEEE hex | `hex_mismatch_steps=0`（逐位全等，非近似） | 1000 步 × 5 标量 |
+| **STATE_DIGEST** | TrainState（全部参数+优化器状态）的逐叶摘要 | `mismatch=0` | 12 个摘要步 |
+| **CANON_CHECK** | 上卡前 host batch 的 canonical 摘要（浮点升 f32 后哈希；raw 摘要只记录不计判据，T9-B3） | `CANON_CHECK=PASS` | 14 个摘要步 |
+| **INDEX_SEQ** | 实际消费的样本 index 全序列 | 逐位全等；预取类改动允许**尾部超前量增加**，但共同前缀必须逐位不变、不重排（R3） | n=8072 |
+
+**一行收官判据**：候选 run 的 `scalars_hex.tsv` 的 sha256 仍等于
+`c799a0b299f243c1740f1594b62aec920cf7ad0033a29d37b851051d52105757`（G0 锚）。
+
+**配套的非训练轻量对拍**（AGENTS 18 第一块，训练对拍之前先做）：200 个真实 batch 逐键
+shape/dtype/raw bits 零失配；loader 装配类改动（如 prefetch）另补两 epoch 实际消费 index 对拍。
+
+**为什么正确性族不需要 log100**：`train.py` 日志步记录的是 100 步**区间均值**，log100 天然没有
+逐步五标量；正确性族维持 log1 确定性档即可完整保留逐步 hex 证据链（其 util/步时本就禁作性能
+结论，量具打断对它无害），**无须为取证动 `scripts/train.py`**。
+
+**各层对拍义务**：L0 量具改动不触训练语义（性能模式默认关闭、log1 路径逐字节不变），无须重跑
+对拍；L1 只有 prefetch 透传需 INDEX_SEQ 级对拍；L2 须全套四分项（即 G3）；L3 输出侧 bitwise
+原理上不可得，退「输入侧逐位 + 输出侧量化」；L4 须先换尺子再重新主张。
 
 ## 量具缺陷发现（本次改写的起因，Codex 审计核实）
 
@@ -52,21 +108,21 @@ DataLoader，而是修量具、按生产口径重测——生产口径下缺口�
 
 ## 二、五层方案：每层的实际作用、修改的文件、改完要跑什么
 
-| 层 | 一句话 | 改动量 | 与 G0 的对齐 |
+| 层 | 一句话 | 改动量 | 与 G0 的对拍义务 |
 |---|---|---|---|
-| **L0** | 修量具，按生产口径重立基准 | 3 个量具文件 | 不触训练语义 |
-| **L1** | 配置收敛（log100 + w8 + 线程1 + 预取4） | 环境变量 + 1 个形参透传 | index 序列对拍即可 |
-| **L2** | 取数与 GPU 计算重叠 | 1 个文件 | ✅ 逐位 bitwise 可证 |
+| **L0** | 修量具，按生产口径重立基准（S0c/S0） | 3 个量具文件 | 不触训练语义，无须对拍 |
+| **L1** | 配置收敛（log100 + w8 + 线程1 + 预取4）→ S1 | 环境变量 + 1 个形参透传 | INDEX_SEQ 级对拍 |
+| **L2** | 取数与 GPU 计算重叠 → G3 + S2 | 1 个文件 | ✅ 全套四分项（bitwise） |
 | **L3** | 不传 pos/state，GPU 侧查表 | 9 个 src/ 文件（5 个在红线内） | ⚠ 输出侧 bitwise 不可得 |
 | **L4** | 进程间通道换共享内存 | 自建 loader + 换量具尺子 | ⚠ 理论可得，尺子要换 |
 
 ---
 
-### L0：修量具 + 重立基准
+### L0：修量具 + 重立基准（产出 S0c、S0）
 
 **实际作用**：让量尺不再打断被测对象（允许按生产方式 100 步才同步一次），让统计口径正确
 （epoch/步时用真实墙钟均值，不再用中位数；补上「GPU 工作时是否吃满」的 active_util 等缺失
-统计），然后重测基准——回答「生产口径下到底还缺多少」。**如果直接达标，整个项目就此收官。**
+统计），然后重测基准——回答「生产口径下到底还缺多少」。**如果 S0 直接达标，整个项目就此收官。**
 
 **修改的文件（3 个，全部是量具，不碰任何训练代码）**：
 
@@ -82,13 +138,14 @@ DataLoader，而是修量具、按生产口径重测——生产口径下缺口�
 **改完要跑什么**：同一配置（w8c16、packed、prefetch=2、线程现状）两档 GL run，各 600 步、
 4×A40/16C/96G：
 
-1. **log1 对照档**：与旧 89.2% 同口径，新旧 analyzer 对同一记录目录双跑，把「量具口径差异」
-   单独归因出来；
-2. **log100 生产档**：**新 speed 基准**，判 `E2E95_ACCEPT`——全过即收官，后面所有层都不做。
+1. **S0c（log1 对照档）**：与旧 89.2% 同口径，新旧 analyzer 对同一记录目录双跑，把「量具口径
+   差异」单独归因出来；
+2. **S0（log100 生产档）**：**新 speed 基准锚点**，判 `E2E95_ACCEPT`——全过即收官，后面所有层
+   都不做。
 
 ---
 
-### L1：配置收敛（不改任何训练逻辑）
+### L1：配置收敛（不改任何训练逻辑，产出 S1）
 
 **实际作用**：把四项配置调对，纯配置层把剩余空窗再压一压：
 
@@ -109,21 +166,21 @@ DataLoader，而是修量具、按生产口径重测——生产口径下缺口�
 
 **改完要跑什么**：
 
-1. prefetch 透传属 loader 装配改动 → 先补 **index 序列对拍**（共同前缀逐位不变、尾部超前量
-   只增不重排，R3）+ 两 epoch 实际消费 index 对拍；
-2. 一个 GL 打包档 600 步（四项配置一起上，用户拍板打包跑），判 `E2E95_ACCEPT`；
+1. prefetch 透传属 loader 装配改动 → 先做 **INDEX_SEQ 级对拍**（见「正确性对拍」节：共同前缀
+   逐位不变、尾部超前量只增不重排）+ 两 epoch 实际消费 index 对拍；
+2. **S1**：一个 GL 打包档 600 步（四项配置一起上，用户拍板打包跑），vs S0 判 `E2E95_ACCEPT`；
    约束 MaxRSS <80 GB、无 major fault 激增；prefetch 一项收益不足（util <1pp 或步时 <2%）回退 2。
    全过即收官。
 
 ---
 
-### L2：取数与 GPU 计算重叠（代码级首选）
+### L2：取数与 GPU 计算重叠（代码级首选，产出 G3 + S2）
 
 **实际作用**：现在主循环是「发计算 → 等算完 → 才去拿下一批」；改成拿数据和算数据**同时发生**，
 把交接等待藏进 GPU 计算。**不改任何一个数、不改喂给模型的顺序**，只改「什么时候去搬」。
 本机实测（复刻每步同步的旧结构）：步时 5.27→4.63 s，最长步 9.31→4.74 s，周期性慢步完全消失。
 注意：log100 生产口径下「现状」侧本就没有每步屏障，此收益幅度不能直接外推——L2 是否还值得做，
-完全取决于 L0/L1 的实测结果。
+完全取决于 S0/S1 的实测结果。
 
 **修改的文件（三选一落法）**：
 
@@ -135,10 +192,10 @@ DataLoader，而是修量具、按生产口径重测——生产口径下缺口�
 
 **改完要跑什么**（训练交付路径改动，AGENTS 18 全套）：
 
-1. 重构前后两张链路图 + 第一块轻量对拍（index 序列：前缀逐位不变）；
-2. **本机 1000 步确定性档 bitwise 硬闸**：五标量逐步 hex 全等（`scalars_hex.tsv` sha256 ==
-   `c799a0b2…`）、`state_digest` 全等、canonical batch digest 全等、index 全等（n=8072）；
-3. GL 性能档 600 步判 `E2E95_ACCEPT`。全过即收官。
+1. 重构前后两张链路图 + 第一块轻量对拍（200 batch 逐键零失配 + INDEX_SEQ 前缀逐位不变）；
+2. **G3（本机 bitwise 硬闸）**：按「正确性对拍」节全套四分项对 G0 对拍，一行收官
+   `scalars_hex.tsv` sha256 == `c799a0b2…`；
+3. **S2**：GL 性能档 600 步，vs S0/S1 判 `E2E95_ACCEPT`。全过即收官。
 
 ---
 
@@ -161,7 +218,7 @@ DataLoader，而是修量具、按生产口径重测——生产口径下缺口�
 在线推理链会因签名改变当场崩，必须先裁决迁移还是报废。
 
 **改完要跑什么**：先落设备端观测点 → 输入侧逐位对拍 + 输出侧量化复核（模型输入签名变了，
-HLO 必变，**输出侧 bitwise 原理上拿不到**——这是 L3 排最后的根本原因）→ GL 性能档判
+HLO 必变，**输出侧 bitwise 原理上拿不到**——这是 L3 排最后的根本原因）→ GL 性能档 vs S0 判
 `E2E95_ACCEPT`。
 
 ---
@@ -178,11 +235,12 @@ collate 出 torch（bf16 走 uint16 位视图桥）→ 主进程 dlpack 还原 �
 | 文件 | 改什么 |
 |---|---|
 | `src/mme_vla_suite/training/dataloader.py` | 自建 `TorchDataLoader` 等价类（torch collate + uint16 桥 + dlpack 交付），逐字复刻 index 恒等要素（shuffle/seed/spawn/drop_last/跨 epoch 重建）满足 R3。不能改 `src/openpi/**`（硬红线） |
-| `scripts/smoke-local/bench_train_steps.py` | 三处量具安装点（`TorchDataLoader.__iter__` patch、源码守卫、idx probe）全部跟着改——**这是 L4 与 L2 的本质差别：L2 用原尺子量，L4 得先换尺子再量** |
+| `scripts/smoke-local/bench_train_steps.py` | 三处量具安装点（`TorchDataLoader.__iter__` patch、源码守卫、idx probe）全部跟着改——**这是 L4 与 L2 的本质差别：L2 用原尺子量（G3 直接对 G0），L4 得先换尺子、重新定义对拍口径后才能主张等价** |
 
-**改完要跑什么**：先重新定义判据口径（尺子换了）→ bitwise 对拍 → GL 性能档判 `E2E95_ACCEPT`。
-另有两笔帐必须先算：torch shm 是**不可回收**内存（约 `257 MB × prefetch × workers`，
-`--mem=96G` 要按档重核）；fd 泄漏判据（`spawn_matrix.py`）需重定基线。
+**改完要跑什么**：先重新定义判据口径（尺子换了）→ bitwise 对拍 → GL 性能档 vs S0 判
+`E2E95_ACCEPT`。另有两笔帐必须先算：torch shm 是**不可回收**内存（约
+`257 MB × prefetch × workers`，`--mem=96G` 要按档重核）；fd 泄漏判据（`spawn_matrix.py`）
+需重定基线。
 
 ---
 
@@ -206,15 +264,15 @@ collate 出 torch（bf16 走 uint16 位视图桥）→ 主进程 dlpack 还原 �
 
 ```
 第 1 步  L0 修量具        改 3 个量具文件 → commit（commitV3.6）
-第 2 步  L0 两档基准       log1 对照档 + log100 生产档，各 600 步 GL
-            ├─ log100 全过 E2E95_ACCEPT ──→ 双 seed 复验 → 收官（回填 T8/roadmap，L1–L4 全不做）
+第 2 步  L0 两档基准       S0c（log1 对照）+ S0（log100 生产 = 新 speed 锚），各 600 步 GL
+            ├─ S0 全过 E2E95_ACCEPT ──→ 双 seed 复验 → 收官（回填 T8/roadmap，L1–L4 全不做）
             └─ 未过 ↓
 第 3 步  L1 配置收敛       改 sbatch 线程 + dataloader.py prefetch 透传
-                          → index 序列对拍 → GL 打包档 600 步
+                          → INDEX_SEQ 对拍 → S1（GL 打包档 600 步，vs S0）
             ├─ 全过 ──→ 双 seed 复验 → 收官
             └─ 未过 ↓
-第 4 步  L2 取数重叠       L2b 落地 → 本机 1000 步 bitwise 硬闸（sha256 == c799a0b2…）
-                          → GL 性能档 600 步
+第 4 步  L2 取数重叠       L2b 落地 → G3（本机 1000 步四分项对 G0，sha256 == c799a0b2…）
+                          → S2（GL 性能档 600 步，vs S0/S1）
             ├─ 全过 ──→ 双 seed 复验 → 收官
             └─ 未过 ↓
 第 5 步  按缺口性质再评估   L4（通道，bitwise 理论可得）优先于 L3（削载荷，输出侧 bitwise 不可得，
@@ -232,9 +290,6 @@ collate 出 torch（bf16 走 uint16 位视图桥）→ 主进程 dlpack 还原 �
      （性能 run 禁摘要，防 T9-B5 违规）；未设时保持现行为（`log_interval≠1` 即报错）。
    - 尾段：`train.py` 末步非日志步时尾段指标不落盘——不动 `train.py`，接受此损失，`step_mean`
      以真实墙钟为准，不依赖末行 metrics。
-   - **正确性族为何不需要 log100**：`train.py` 日志步记录的是 100 步**区间均值**，log100 天然没有
-     逐步五标量；正确性族维持 log1 确定性档即可完整保留逐步 hex 证据链（其 util/步时本就禁作
-     性能结论，量具打断对它无害），**无须为取证动 `scripts/train.py`**。
 2. **L2b 实现点**（进入 L2 时启用）：结构照抄
    `scripts/bottleneck-bench/gl-compute-only/compute_only_train_steps.py::_RepeatFirstBatchLoader`
    的包装写法。四条硬要求：`BENCH_PREFETCH` 默认关闭；不做 generator，显式迭代器自管线程与队列
@@ -243,15 +298,14 @@ collate 出 torch（bf16 走 uint16 位视图桥）→ 主进程 dlpack 还原 �
    不触；显存只 +64 MB/卡；T5 环境指纹不含代码 sha，改代码不破坏 `BASELINE_ENV=PASS`，
    G0 固化产物可直接引用对拍。
 3. **run 纪律（每步通用）**：
-   - 性能族 run：生产 XLA（不注入确定性 flags、autotune 默认开）、`BENCH_CHECKSUM=0`、
+   - 性能族 run（S 系）：生产 XLA（不注入确定性 flags、autotune 默认开）、`BENCH_CHECKSUM=0`、
      `BENCH_BATCH_DIGESTS=0`、dense 500 ms NVML、只用均值/0%/真实墙钟判读；
-   - 正确性族 run：log1 确定性档、摘要全开，util/步时禁作性能结论；两族永不混用一个 run；
+   - 正确性族 run（G 系）：log1 确定性档、摘要全开，util/步时禁作性能结论；两族永不混用一个 run；
    - 起跑前 `BASELINE_ENV=PASS` preflight 必过；clean HEAD 起跑；每个 >5 min 的 run 按 AGENTS 17
      留档 `docs/training-doc/<run_name>/`；run_name 起跑前逐个交用户确认（AGENTS 6）；
      4×A40/2h 超出 `greatlakes.md` 硬限，提交前逐个走资源审批并留放行记录。
-4. **run 命名占位**（起跑前逐个确认）：L0 两档 `v1-l0-gauge-log1` / `v1-l0-gauge-log100`；
-   L1 `v1-l1-cfg-w8`；L2 本机 `v1-l2-overlap-g3`、GL `v1-l2-overlap-e2e`。
-5. **明确不动**：`scripts/train.py`、`src/openpi/**`、`src/mme_vla_suite/models/**`、
+4. **明确不动**：`scripts/train.py`、`src/openpi/**`、`src/mme_vla_suite/models/**`、
    `training/dataset.py`、`shared/**`（R2 硬红线，L2a/L3 若要触碰须先显式解禁/独立立项）；
    正确性族量具与判据（digest/index/compare 路径）在 L0–L2 期间一行不改。
-6. **收官动作**：回填 v2 计划 T8 登记簿（含旧性能族基线的作废标记）与 roadmap 决策门结论。
+5. **收官动作**：回填 v2 计划 T8 登记簿（含旧性能族基线的作废标记与新符号 S0/S1/S2/G3 的登记）
+   与 roadmap 决策门结论。
