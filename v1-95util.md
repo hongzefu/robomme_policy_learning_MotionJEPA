@@ -7,6 +7,10 @@
 >
 > **目标**：GL 4×A40 e2e 的 dense 稳态 **util 均值 ≥95%**（用户 2026-08-28 指定）。
 >
+> **执行范围（用户 2026-08-28 拍板）**：本计划**只实施到 L0 → L1 → L2b 为止**，
+> 且 **L2 只考虑 L2b 一种落法**（L2a/L2c 不予考虑）。L2b 之后仍不达标 →
+> **停止，找用户确认下一步**；L3/L4 仅为评估储备，未经用户明确确认一律不开工。
+>
 > **两条全局原则**：
 > 1. **旧性能数字全部作废，重新开始**。此前所有性能族基线与量具口径——旧 speed 锚
 >    `v1-g0-speed-r2`、S8b 各档数字（含 89.2%）、旧 `E2E_ACCEPT`/`E2E_EXTRA` 判据、speed 链的
@@ -182,13 +186,14 @@ DataLoader，而是修量具、按生产口径重测——生产口径下缺口�
 注意：log100 生产口径下「现状」侧本就没有每步屏障，此收益幅度不能直接外推——L2 是否还值得做，
 完全取决于 S0/S1 的实测结果。
 
-**修改的文件（三选一落法）**：
+**修改的文件（唯一落法 L2b，用户拍板；不考虑改 `train.py` 或生产 loader 的其他落法）**：
 
 | 落法 | 改哪个文件 | 怎么改 | 红线 |
 |---|---|---|---|
-| L2a | `scripts/train.py` | 把 `batch = next(data_iter)` 一行从 `device_get` 之后移到之前（唯一合法插入点：`infos.append` 之后、日志块之前——放到 `ptrain_step` 之前就是静默错帧，对拍全线 FAIL） | ❌ 撞 R1+R2 硬红线，需显式解禁 |
-| **L2b（首选）** | `scripts/smoke-local/bench_train_steps.py` | monkeypatch 包住 `create_data_loader`，套一层后台预取（有界队列+单线程），`BENCH_PREFETCH` 默认关闭 | ✅ T1 白名单内 |
-| L2c | `src/mme_vla_suite/training/dataloader.py` | 同样的预取层落进生产 loader | ✅ 不在不动清单 |
+| **L2b** | `scripts/smoke-local/bench_train_steps.py` | monkeypatch 包住 `create_data_loader`，套一层后台预取（有界队列+单线程），`BENCH_PREFETCH` 默认关闭 | ✅ T1 白名单内，不触 R2 |
+
+注意事项（对预取层实现同样适用）：预取只能超前缓存、**绝不能改变「step s 用 batch s」的对应关系**
+——若把取数挪到 `ptrain_step` 之前就是静默错帧，对拍全线 FAIL。
 
 **改完要跑什么**（训练交付路径改动，AGENTS 18 全套）：
 
@@ -275,8 +280,9 @@ collate 出 torch（bf16 走 uint16 位视图桥）→ 主进程 dlpack 还原 �
                           → S2（GL 性能档 600 步，vs S0/S1）
             ├─ 全过 ──→ 双 seed 复验 → 收官
             └─ 未过 ↓
-第 5 步  按缺口性质再评估   L4（通道，bitwise 理论可得）优先于 L3（削载荷，输出侧 bitwise 不可得，
-                          且三个前置不解决不开工）
+第 5 步  【硬停止点】停止实施，把 S0c/S0/S1/G3/S2 的全部实测数字交用户确认下一步。
+        自动执行到此为止；L3/L4 均须用户明确拍板才开工
+        （评估参考：L4 通道 bitwise 理论可得，优先于 L3；L3 三个前置不解决不开工）
 ```
 
 ## 各步执行要点
@@ -305,7 +311,7 @@ collate 出 torch（bf16 走 uint16 位视图桥）→ 主进程 dlpack 还原 �
      留档 `docs/training-doc/<run_name>/`；run_name 起跑前逐个交用户确认（AGENTS 6）；
      4×A40/2h 超出 `greatlakes.md` 硬限，提交前逐个走资源审批并留放行记录。
 4. **明确不动**：`scripts/train.py`、`src/openpi/**`、`src/mme_vla_suite/models/**`、
-   `training/dataset.py`、`shared/**`（R2 硬红线，L2a/L3 若要触碰须先显式解禁/独立立项）；
+   `training/dataset.py`、`shared/**`（R2 硬红线；L3 若经用户拍板立项，须先显式解禁/独立立项）；
    正确性族量具与判据（digest/index/compare 路径）在 L0–L2 期间一行不改。
 5. **收官动作**：回填 v2 计划 T8 登记簿（含旧性能族基线的作废标记与新符号 S0/S1/S2/G3 的登记）
    与 roadmap 决策门结论。
