@@ -4,7 +4,7 @@
 >
 > **范围**：只兼容 `perceptual-framesamp-context` 一种 run。对拍与验收只关注五样：**G0**（黄金基线固化产物）、**G2**（packed IO 重构后）、**G0-speed**（本机速度锚点）、**G2-speed**（重构后本机速度）、**GreatLakes 吞吐验收**。
 >
-> **当前状态**：G0、G0-speed 已固化（登记簿 T8）；IO 重构（G2 级，commit V3.0 起）**已于 2026-08-27 经用户拍板开工**（commit 编号同日由用户指定从 V3.0 始，原 V2.5–V2.9 作废）。
+> **当前状态**：G0、G0-speed 已固化（登记簿 T8）；IO 重构 2026-08-27 拍板开工（编号 V3.0 始，原 V2.5–V2.9 作废）。**同日已完成：阶段 1（V3.0/V3.1）、阶段 2 S4（`VERIFY_PACK=PASS scanned=483291 mismatches=0`）、阶段 3 双过——S5 第一块（commitV3.3，零失配）与 S6 第二块 G2（登记簿 T8，bitwise 全过）——「IO 重构不改变训练语义」已按放行规则第 1 条正式成立。** 余下阶段 4（S7.5→S8a→S8b→S9，GL 验收与本机速度对账）。
 
 ## Context（为什么做这件事）
 
@@ -735,7 +735,7 @@ def __getitem__(self, idx):
 | 确定性资产·生产档噪声底 | `v1-det-d0-r{1,2}` | `d9e509e` | 两轮重跑噪声底（非判据基线） | FAIL（预期）：loss rel median 2.7e-3 / max 4.6e-2，作 T6 null 上界 | `docs/training-doc/v1-det-d0-r{1,2}/` |
 | 确定性资产·确定性档 | `v1-det-d2-r{1,2}`、`v1-det-d2cold-r{1,2}` | `d9e509e` | 两轮逐步 hex + state_digest + batch_digest diff 为空 | **双 PASS**（共用缓存与独立冷编译均逐位一致——跨期 bitwise 判据授权闸开） | `docs/training-doc/v1-det-*/` |
 | **G0（链头）** | `v1-grad-baseline-g0b-r{1,2}` | `570287f`（`<G0-HEAD>`） | G0_SCOPE + r1/r2 千步自证 | **PASS**：1000 步标量 hex / 12×state_digest / 14×batch_digest（raw+canonical）/ index 8072 全逐位一致（scalars_hex sha256 `c799a0b2…`）；TrainState 数组 @0/299/999 存 `/data/hongzefu/v1-baselines/g0b-r1-state-dump/`（sha 清单进 git） | `docs/training-doc/v1-grad-baseline-g0b/` |
-| **G2** | `v1-framesamp-g2`（建议名） | 待回填 | vs G0 固化产物：五标量 hex + 12×state_digest bitwise + canonical 输入 + index（C.3） | 待回填 | 待回填 |
+| **G2** | `v1-framesamp-g2` | `cf64ddd`（起跑 HEAD，clean） | vs G0 r1 固化产物：五标量 hex + 12×state_digest bitwise + canonical 输入 + index（C.3，分项判读） | **PASS**（2026-08-27）：1000 步五标量 hex 零失配、12×state_digest 零失配、canonical 14 步零失配、index 8072 逐个一致；`scalars_hex.tsv` sha256 与 G0 同值 `c799a0b2…`；raw 4 步×2 键预期失配（B3 不计入，V2.4b dtype 统一来源）；与 S5 并行（用户豁免） | `docs/training-doc/v1-framesamp-g2/` |
 | **G0-speed（锚点）** | `v1-g0-speed-r2` | `570287f` | speed 链锚点（AGENTS 16 稳态统计，1000 步口径） | 稳态中位 **1.152 s/step**（n=949，p10 1.097/p90 1.276）、均值 1.186、util 均值 86.5%、0% 采样 4.9%、慢步 3、epoch 外推 15.82 h（本机口径，非最终吞吐结论） | `docs/training-doc/v1-g0-speed-r2/` |
 | **G2-speed** | `v1-g2-speed` | 待回填 | vs `v1-g0-speed-r2`（合并对账，只报数） | 待回填 | 待回填 |
 | **GL 验收** | `v1-framesamp-dl-*`、`v1-framesamp-e2e-*` | 待回填 | `E2E_ACCEPT`（D 节五项）+ 附加判据 | 待回填 | 待回填 |
