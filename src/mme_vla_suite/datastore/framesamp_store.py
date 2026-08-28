@@ -124,6 +124,37 @@ def build_exec_lookup(manifest: dict, *, num_episodes: int | None = None,
     return epis_of, step_of, row_base
 
 
+def mean_sampled_frames(manifest: dict, max_frames: int = 32) -> float:
+    """执行样本均值选帧数 Σ min(step+1, max_frames) / N（S7.5：读盘字节帐现场推导，
+    替代硬编码；step 含 exec_start_idx 偏移——Video* 任务首样本即满长）。
+
+    真实清单实测 = 30.996（max_frames=32）；每样本读盘均值由调用侧按 backend 折算：
+    legacy = pkl + mean_frames×602,951（整包 npy）；packed = pkl + mean_frames×65,536
+    （image 行；pos/state 走进程内小表不走盘）。
+    """
+    total = 0
+    n = 0
+    for ep in manifest["episodes"]:
+        k = int(ep["exec_samples"])
+        s0 = int(ep["exec_start_idx"])
+        # steps s0..s0+k-1；min(step+1, m) 分段闭式求和，避免 40 万次逐样本循环
+        m = max_frames
+        if s0 + 1 >= m:
+            total += k * m
+        elif s0 + k <= m:
+            total += (s0 + 1 + s0 + k) * k // 2
+        else:
+            j = m - 1 - s0                    # 前 j 个样本 step+1 < m
+            total += (s0 + 1 + m - 1) * j // 2 + (k - j) * m
+        n += k
+    if n == 0:
+        raise ValueError("清单无执行样本")
+    return total / n
+
+
+SOURCE_PKL_BYTES_FLOOR = 395_440   # data/{idx}.pkl 下界（内嵌变长字符串，1.2 节实测）
+
+
 def sha256_file(p: pathlib.Path) -> str:
     h = hashlib.sha256()
     with p.open("rb") as f:

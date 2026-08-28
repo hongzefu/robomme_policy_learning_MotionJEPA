@@ -24,6 +24,9 @@ REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJ
 PY="$REPO/.venv/bin/python"
 STORE="$REPO/v1-store"
 NCPU="${SLURM_CPUS_PER_TASK:-6}"
+# S7.5 参数化（默认值=现状）：packed 库由提交侧经 --export 显式传入（R16）
+DATASET_PATH="${DATASET_PATH:-$STORE/datasets/4task-gl}"
+export MMEVLA_DATA_BACKEND="${MMEVLA_DATA_BACKEND:-legacy}"
 
 for VAR in WORKERS BENCH_SEED TAG; do
     if [ -z "${!VAR:-}" ]; then
@@ -52,7 +55,9 @@ d = {
     "run_name": "v1-dlb-${TAG}", "batch_size": 64,
     "workers": int("${WORKERS}"), "seed": int("${BENCH_SEED}"),
     "warmup_batches": 5, "measure_batches": 40,
-    "dataset_path": "$STORE/datasets/4task-gl",
+    "dataset_path": "$DATASET_PATH",
+    "MMEVLA_DATA_BACKEND": "${MMEVLA_DATA_BACKEND}",
+    "backend_source": "explicit",
     "git_head": subprocess.run(["git", "-C", "$REPO", "rev-parse", "HEAD"],
                                capture_output=True, text=True).stdout.strip(),
     "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
@@ -64,17 +69,34 @@ d = {
         ["nvidia-smi", "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"],
         capture_output=True, text=True).stdout.strip().splitlines(),
 }
+import hashlib, pathlib
+sm = pathlib.Path("$DATASET_PATH") / "meta" / "store_meta.json"
+if sm.exists():
+    raw = sm.read_bytes()
+    meta = json.loads(raw)
+    d["store_meta_sha256"] = hashlib.sha256(raw).hexdigest()
+    d["store_meta_status"] = meta.get("status")
+    d["manifest_sha256"] = meta.get("manifest_sha256")
+    d["source_dataset_root_resolved"] = (os.environ.get("MMEVLA_FRAMESAMP_SOURCE")
+                                         or meta.get("source_dataset_root"))
+    d["manifest_path_resolved"] = (os.environ.get("MMEVLA_FRAMESAMP_MANIFEST")
+                                   or meta.get("manifest_path"))
+else:
+    d["store_meta_sha256"] = None; d["store_meta_status"] = None
+    d["manifest_sha256"] = None
+    d["source_dataset_root_resolved"] = "$DATASET_PATH"
+    d["manifest_path_resolved"] = None
 json.dump(d, open("$RECORD_DIR/env.json", "w"), indent=2, ensure_ascii=False)
 EOF
 
-echo "=== dataloader-only 单档基准 v1-dlb-${TAG} (workers=${WORKERS}, cpus=${NCPU}, node=$(hostname), job=$SLURM_JOB_ID) ==="
+echo "=== dataloader-only 单档基准 v1-dlb-${TAG} (backend=${MMEVLA_DATA_BACKEND}, dataset=${DATASET_PATH}, workers=${WORKERS}, cpus=${NCPU}, node=$(hostname), job=$SLURM_JOB_ID) ==="
 BENCH_RECORD_DIR="$RECORD_DIR" WORKERS_LIST="$WORKERS" BENCH_SEED="$BENCH_SEED" \
 "$PY" "$REPO/scripts/bottleneck-bench/gl-dataloader/dataloader_bench.py" mme_vla_suite \
     --exp-name "v1-dlb-${TAG}" \
     --assets-base-dir "$STORE/train-assets" \
     --checkpoint-base-dir "$STORE/train-runs" \
     --batch-size 64 \
-    --dataset-path "$STORE/datasets/4task-gl" \
+    --dataset-path "$DATASET_PATH" \
     --model.use-history \
     --model.history-config perceptual-framesamp-context.yaml \
     --no-wandb-enabled

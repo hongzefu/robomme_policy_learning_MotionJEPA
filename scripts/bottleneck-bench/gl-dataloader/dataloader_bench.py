@@ -31,13 +31,100 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 
 import jax  # noqa: E402
+import numpy as np  # noqa: E402
 
 import mme_vla_suite.training.config as _config  # noqa: E402
 import mme_vla_suite.training.dataloader as _data_loader  # noqa: E402
+from mme_vla_suite.datastore import framesamp_store as _fs  # noqa: E402
+from mme_vla_suite.datastore import load_manifest  # noqa: E402
+from mme_vla_suite.models.config.utils import get_history_config  # noqa: E402
 
 _EXPECTED_HISTORY_CONFIG = "perceptual-framesamp-context.yaml"
-_AVG_BYTES_PER_SAMPLE = 395_440 + 30.4 * 602_951   # min(step+1,32) 在 ~302 步 episode 上的均值 ≈ 30.4
 _MOUNT_POINT = "/nfs/turbo/coe-chaijy-unreplicated"
+
+
+def _resolve_backend_and_bytes(dataset_path: str, history_config_name: str):
+    """S7.5：每样本读盘字节从 history_config + 清单现场推导（勿写死，D 节）。
+
+    返回 (backend, mean_frames, avg_bytes, manifest_path, source_root)。
+    legacy = pkl + mean_frames × 602,951（整包 npy）；
+    packed = pkl + mean_frames × 65,536（image 行；pos/state 进程内小表不走盘）。
+    """
+    backend = _data_loader._resolve_backend(dataset_path)
+    hc = get_history_config(history_config_name)
+    max_frames = int(hc.budget) // (int(hc.token_per_image) * int(hc.num_views))
+    if backend == "packed":
+        meta = _fs.StoreMeta.load(dataset_path)
+        manifest_path = os.environ.get("MMEVLA_FRAMESAMP_MANIFEST") or meta.manifest_path
+        source_root = os.environ.get("MMEVLA_FRAMESAMP_SOURCE") or meta.source_dataset_root
+        per_frame = _fs.IMAGE_ROW_BYTES
+    else:
+        manifest_path = os.environ.get(
+            "MMEVLA_FRAMESAMP_MANIFEST",
+            str(_REPO_ROOT / "v1-store" / "episode_manifest.json"))
+        source_root = dataset_path
+        per_frame = _fs.SOURCE_NPY_SIZE
+    manifest = load_manifest(manifest_path)
+    mean_frames = _fs.mean_sampled_frames(manifest, max_frames)
+    avg_bytes = _fs.SOURCE_PKL_BYTES_FLOOR + mean_frames * per_frame
+    return backend, mean_frames, avg_bytes, manifest_path, source_root
+
+
+def _segment_probe(record_dir: pathlib.Path, backend: str, dataset_path: str,
+                   source_root: str, manifest_path: str, n: int, seed: int) -> None:
+    """S7.5：gather/pkl 分段计时（每样本两段耗时落 seg_timing.jsonl——
+    「谁是新瓶颈」的观测资产）。
+
+    主进程探针口径（非 worker 内路径，但同节点同存储同 API）：
+    ① pkl 段 = pickle.load(data/{idx}.pkl)；
+    ② gather 段 = packed 走 FrameSampStore 真实读 API（image+pos+state），
+       legacy 走逐帧 np.load 整包反序列化（与 _gather_history_feat 同量）。
+    """
+    import pickle
+
+    manifest = load_manifest(manifest_path)
+    epis_of, step_of, row_base = _fs.build_exec_lookup(manifest)
+    rng = np.random.default_rng(seed)
+    picks = rng.choice(len(epis_of), size=min(n, len(epis_of)), replace=False)
+    store = _fs.FrameSampStore(dataset_path) if backend == "packed" else None
+    seg_path = record_dir / "seg_timing.jsonl"
+    try:
+        with seg_path.open("a") as f:
+            for idx in picks:
+                idx = int(idx)
+                g, step = int(epis_of[idx]), int(step_of[idx])
+                frames = list(range(step + 1)) if step < 32 else \
+                    np.linspace(0, step, 32, dtype=np.int32).tolist()
+                t0 = time.perf_counter()
+                with open(os.path.join(source_root, "data", f"{idx}.pkl"), "rb") as pf:
+                    pickle.load(pf)
+                t1 = time.perf_counter()
+                if store is not None:
+                    rows = row_base[g] + np.asarray(frames, np.int64)
+                    store.read_image_rows(rows)
+                    store.pos_rows(np.asarray(frames, np.int64))
+                    store.state_rows(rows)
+                else:
+                    for t in frames:
+                        with open(os.path.join(
+                                source_root, "features", f"episode_{g}",
+                                f"token_emb_{t}.npy"), "rb") as nf:
+                            np.load(nf, allow_pickle=True).item()
+                t2 = time.perf_counter()
+                f.write(json.dumps({"idx": idx, "backend": backend,
+                                    "n_frames": len(frames),
+                                    "pkl_ms": round((t1 - t0) * 1e3, 3),
+                                    "gather_ms": round((t2 - t1) * 1e3, 3)}) + "\n")
+    finally:
+        if store is not None:
+            store.close()
+    rows = [json.loads(l) for l in seg_path.open()]
+    pkl = sorted(r["pkl_ms"] for r in rows)
+    gat = sorted(r["gather_ms"] for r in rows)
+    med = lambda v: v[len(v) // 2]  # noqa: E731
+    print(f"SEGPROBE backend={backend} n={len(rows)} "
+          f"pkl_ms(med/p90)={med(pkl):.2f}/{pkl[len(pkl) * 9 // 10]:.2f} "
+          f"gather_ms(med/p90)={med(gat):.2f}/{gat[len(gat) * 9 // 10]:.2f}")
 
 
 def _turbo_read_bytes() -> dict[str, int]:
@@ -76,8 +163,20 @@ def main() -> None:
     batches_path = record_dir / "batches.jsonl"
     summary_path = record_dir / "summary.jsonl"
 
+    # S7.5：backend 分派 + 读盘字节帐现场推导（替代硬编码 _AVG_BYTES_PER_SAMPLE）
+    backend, mean_frames, avg_bytes, manifest_path, source_root = \
+        _resolve_backend_and_bytes(config.dataset_path, config.model.history_config)
+    print(f"[bench] backend={backend} mean_frames={mean_frames:.3f} "
+          f"每样本读盘均值={avg_bytes / 1e6:.2f} MB（下界口径；manifest={manifest_path}）")
+
     print(f"[bench] batch={config.batch_size} 档位={workers_list} "
           f"warmup={n_warmup} measure={n_measure} 数据集={config.dataset_path}")
+
+    # S7.5：gather/pkl 分段计时探针（观测资产；SEG_PROBE_N=0 可关）
+    seg_n = int(os.environ.get("SEG_PROBE_N", "200"))
+    if seg_n > 0:
+        _segment_probe(record_dir, backend, config.dataset_path, source_root,
+                       manifest_path, seg_n, seed=int(os.environ.get("BENCH_SEED", "42")))
 
     for w in workers_list:
         # 各档/各 job 不同 seed，防 page cache 重叠；拆分单档 job 用 BENCH_SEED 显式指定
@@ -92,14 +191,16 @@ def main() -> None:
         it = iter(loader)
         for _ in range(n_warmup):           # warmup：worker 起步 + 首批预取
             obs, actions = next(it)
-        jax.block_until_ready(actions)
+        jax.block_until_ready((obs, actions))   # S7.5：block 覆盖整个 pytree
 
         io0 = _turbo_read_bytes()
         t0 = time.time()
         prev = t0
         for i in range(n_measure):
             obs, actions = next(it)
-            jax.block_until_ready(actions)  # 含 device_put，完整对齐训练侧消费口径
+            # S7.5：block 覆盖整个 (obs, actions) pytree——只 block actions 会低估
+            # device_put 成本（memory 三键 ~236 MB/batch 在 obs 侧）
+            jax.block_until_ready((obs, actions))
             now = time.time()
             with batches_path.open("a") as f:
                 f.write(json.dumps({"workers": w, "batch_idx": i,
@@ -111,10 +212,14 @@ def main() -> None:
         elapsed = t1 - t0
         n_samples = n_measure * config.batch_size
         sps = n_samples / elapsed
-        mbps_formula = sps * _AVG_BYTES_PER_SAMPLE / 1e6
+        mbps_formula = sps * avg_bytes / 1e6
         mbps_server = (io1["server_read"] - io0["server_read"]) / elapsed / 1e6
         mbps_normal = (io1["normal_read"] - io0["normal_read"]) / elapsed / 1e6
         row = {"workers": w, "seed": seed, "batch_size": config.batch_size,
+               "backend": backend, "dataset_path": str(config.dataset_path),
+               "source_root": source_root, "manifest_path": manifest_path,
+               "mean_frames": round(mean_frames, 3),
+               "avg_bytes_per_sample": int(avg_bytes),
                "n_batches": n_measure, "elapsed_s": round(elapsed, 3),
                "samples_per_s": round(sps, 3),
                "mbps_formula": round(mbps_formula, 1),

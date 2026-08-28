@@ -18,11 +18,17 @@ MATRIX=(
   "w16c18 16  18  48G 205"
 )
 
+# S7.5：DATASET_PATH / MMEVLA_DATA_BACKEND 经 --export 显式透传（未设时 sbatch 内
+# 落默认值 = 现状 legacy + 4task-gl；S8a packed 档提交前先经用户确认档位与资源）
+EXTRA_EXPORT=""
+[ -n "${DATASET_PATH:-}" ] && EXTRA_EXPORT="${EXTRA_EXPORT},DATASET_PATH=${DATASET_PATH}"
+[ -n "${MMEVLA_DATA_BACKEND:-}" ] && EXTRA_EXPORT="${EXTRA_EXPORT},MMEVLA_DATA_BACKEND=${MMEVLA_DATA_BACKEND}"
+
 for row in "${MATRIX[@]}"; do
   read -r TAG W C M S <<< "$row"
   echo "--- 提交 v1-dlb-${TAG} (workers=${W}, cpus=${C}, mem=${M}, seed=${S})"
   OUT=$(timeout 90 uv run --no-project --with pexpect python scripts/data-preprocess-GL/gl_submit.py \
-    "sbatch --parsable --job-name=v1-dlb-${TAG} --cpus-per-task=${C} --mem=${M} --export=ALL,WORKERS=${W},BENCH_SEED=${S},TAG=${TAG} ${SBATCH_FILE}" 2>&1)
+    "sbatch --parsable --job-name=v1-dlb-${TAG} --cpus-per-task=${C} --mem=${M} --export=ALL,WORKERS=${W},BENCH_SEED=${S},TAG=${TAG}${EXTRA_EXPORT} ${SBATCH_FILE}" 2>&1)
   JOBID=$(echo "$OUT" | grep -Eo '^[0-9]+$' | tail -1)
   if [ -z "$JOBID" ]; then
     echo "错误: v1-dlb-${TAG} 提交失败，输出如下：" >&2

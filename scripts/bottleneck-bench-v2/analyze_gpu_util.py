@@ -28,6 +28,34 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# S7.5 判据/字节帐依赖格式层（venv 内已装 mme_vla_suite 包）
+from mme_vla_suite.datastore import framesamp_store as _fs
+from mme_vla_suite.datastore import load_manifest
+
+# D 节主判据表（必达档；--accept 时机器判定）
+ACCEPT_THRESHOLDS = {"step_med_s": 5.00, "util_mean_pct": 90.0,
+                     "zero_pct": 5.0, "slow_wall_pct": 5.0, "epoch_h": 8.6}
+
+
+def per_step_read_bytes(record_dir: Path) -> tuple[float, str]:
+    """S7.5：每步读盘从 env.json(backend/dataset_path) + history_config + 清单现场
+    推导（替代硬编码 1.20 GB）。返回 (bytes_per_step, 口径说明)；推导不了时回退
+    legacy 全量清单公式并注明。"""
+    env = {}
+    try:
+        env = json.load(open(record_dir / "env.json"))
+    except (OSError, json.JSONDecodeError):
+        pass
+    batch = int(env.get("batch_size") or env.get("argv_batch") or 64)
+    backend = env.get("MMEVLA_DATA_BACKEND") or env.get("backend") or "legacy"
+    manifest_path = env.get("manifest_path_resolved") or env.get("manifest_path") or \
+        str(Path(__file__).resolve().parents[2] / "v1-store" / "episode_manifest.json")
+    per_frame = _fs.IMAGE_ROW_BYTES if backend == "packed" else _fs.SOURCE_NPY_SIZE
+    manifest = load_manifest(manifest_path)
+    mean_frames = _fs.mean_sampled_frames(manifest, 32)
+    per_sample = _fs.SOURCE_PKL_BYTES_FLOOR + mean_frames * per_frame
+    return batch * per_sample, f"backend={backend} b{batch} mean_frames={mean_frames:.3f}"
+
 # v1-e2e-b64 基线（8C/4w/64G，300 步，15s 采样），供对照行
 V1_BASELINE = {
     "run": "v1-e2e-b64",
@@ -85,12 +113,42 @@ def pct(vals, cond):
     return 100.0 * sum(1 for v in vals if cond(v)) / len(vals) if vals else float("nan")
 
 
+def extra_summary(dirs: list[Path], steps: int, warmup: int) -> int:
+    """S7.5：吃多个 record_dir 的附加判据汇总（D 节）：w4 与 w8 步时差 ≤3%。"""
+    med_by_w = {}
+    for d in dirs:
+        env = json.load(open(d / "env.json"))
+        w = int(env.get("num_workers") or env.get("workers"))
+        _, deltas, _ = load_steps(d, steps, warmup)
+        med_by_w[w] = statistics.median(sorted(deltas.values()))
+        print(f"EXTRA dir={d.name} workers={w} 步时中位={med_by_w[w]:.3f}s")
+    rc = 0
+    if 4 in med_by_w and 8 in med_by_w:
+        diff = abs(med_by_w[4] - med_by_w[8]) / min(med_by_w[4], med_by_w[8]) * 100
+        ok = diff <= 3.0
+        print(f"E2E_EXTRA w4w8_step_diff={diff:.2f}% 阈值=3% → "
+              f"{'PASS' if ok else 'FAIL（CPU 侧仍未松绑）'}")
+        rc = 0 if ok else 1
+    else:
+        print("E2E_EXTRA 缺 w4/w8 对，无法判附加判据")
+    return rc
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("record_dir", type=Path)
+    ap.add_argument("record_dir", type=Path, nargs="?", default=None)
     ap.add_argument("--steps", type=int, required=True)
     ap.add_argument("--warmup", type=int, default=50)
+    ap.add_argument("--accept", action="store_true",
+                    help="S8b 主判据表 5 项机器判定（E2E_ACCEPT 单行，FAIL 非零退出）；"
+                         "默认关=现状行为（回归旧 record 不受影响）")
+    ap.add_argument("--extra", type=Path, nargs="+", default=None,
+                    help="附加判据汇总入口：传多个 record_dir（含 w4/w8）")
     args = ap.parse_args()
+    if args.extra:
+        return extra_summary(args.extra, args.steps, args.warmup)
+    if args.record_dir is None:
+        ap.error("缺 record_dir（单目录分析），或改用 --extra <dirs…> 汇总模式")
     d = args.record_dir
 
     t, deltas, losses = load_steps(d, args.steps, args.warmup)
@@ -142,7 +200,14 @@ def main():
         nwin = [(float(a), int(c)) for a, b, c in nfs if t_lo <= float(a) <= t_hi]
         if len(nwin) >= 2:
             mbps = (nwin[-1][1] - nwin[0][1]) / (nwin[-1][0] - nwin[0][0]) / 1e6
-            print(f"RESULT NFS实测={mbps:.0f} MB/s（公式口径 {1.20e3 / step_med:.0f} MB/s = 1.20GB/步时）")
+            # S7.5：每步读盘从 env.json+清单现场推导，替代硬编码 1.20 GB
+            try:
+                step_bytes, note = per_step_read_bytes(d)
+                print(f"RESULT NFS实测={mbps:.0f} MB/s"
+                      f"（公式口径 {step_bytes / 1e6 / step_med:.0f} MB/s = "
+                      f"{step_bytes / 1e9:.3f}GB/步时，{note}）")
+            except Exception as e:  # noqa: BLE001 —— 推导失败降级注明，不掩盖分析
+                print(f"RESULT NFS实测={mbps:.0f} MB/s（公式口径推导失败: {e}）")
 
     print(f"----- 对照 v1 基线 {V1_BASELINE['run']}（8C/4w/64G）-----")
     print(f"对照 步时中位 {V1_BASELINE['step_median']:.3f}s → {step_med:.3f}s；util 均值 {V1_BASELINE['util_mean']} → {statistics.mean(utils):.1f}%；"
@@ -160,6 +225,25 @@ def main():
     # 附录：中位数仅供交叉核对——禁止用作标题结论（中位数假象见文件头注释）
     print("----- 附录（勿作标题结论）-----")
     print(f"附录 GPU util 中位={statistics.median(utils):.0f}%")
+
+    # S7.5：主判据表 5 项机器判定（D 节；--accept 时启用，FAIL 非零退出）
+    if args.accept:
+        vals = {"step_med_s": step_med,
+                "util_mean_pct": statistics.mean(utils),
+                "zero_pct": pct(utils, lambda v: v == 0),
+                "slow_wall_pct": 100 * slow_wall / total_wall,
+                "epoch_h": EPOCH_STEPS * step_med / 3600}
+        checks = {"step_med_s": vals["step_med_s"] <= ACCEPT_THRESHOLDS["step_med_s"],
+                  "util_mean_pct": vals["util_mean_pct"] >= ACCEPT_THRESHOLDS["util_mean_pct"],
+                  "zero_pct": vals["zero_pct"] <= ACCEPT_THRESHOLDS["zero_pct"],
+                  "slow_wall_pct": vals["slow_wall_pct"] <= ACCEPT_THRESHOLDS["slow_wall_pct"],
+                  "epoch_h": vals["epoch_h"] <= ACCEPT_THRESHOLDS["epoch_h"]}
+        verdict = "PASS" if all(checks.values()) else "FAIL"
+        detail = " ".join(
+            f"{k}={vals[k]:.3f}{'✓' if checks[k] else '✗(阈' + str(ACCEPT_THRESHOLDS[k]) + ')'}"
+            for k in vals)
+        print(f"E2E_ACCEPT={verdict} {detail}")
+        return 0 if verdict == "PASS" else 1
     return 0
 
 
