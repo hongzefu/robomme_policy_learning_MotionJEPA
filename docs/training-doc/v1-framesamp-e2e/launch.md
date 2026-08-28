@@ -5,11 +5,36 @@
 
 ## 拍板与豁免（2026-08-27，用户 AskUserQuestion）
 
-- 「GL e2e 收官测试 评估是否可以同时提交」→ 拍板**依赖链串行**：现在全部提交、
+- 「GL e2e 收官测试 评估是否可以同时提交」→ 初版拍板**依赖链串行**：现在全部提交、
   `--dependency=afterany` 链 T1→T2→T3→COLDHOT 严格串行执行——立即排队但一次只跑
   一个（S8b 是负载敏感的性能验收，与 S5/S6 bitwise 并行是本质不同场景；避免同节点
   共驻/互相预热污染 `E2E_ACCEPT`）。与 S8a 的时间重叠风险接受（S8a 单 job ≤30 min，
   4 卡 job 排队大概率更久）。
+- **改并行（2026-08-27 二次拍板，用户授权「可以自由提交这些 job」）**：T1 运行期间
+  撤销 T2/T3/CH 依赖链（scancel 58996750/58996751/58996752），T2/T3 无依赖重提
+  （58996987/58997004，均 `--exclude=gl1514`），Slurm 一有节点释放即起。评估结论：
+  - **配额账**：chaijy2 上限 GPU 20/CPU 80/MEM 960G，组内他人占 GPU 6/CPU 18/
+    MEM 256G；T1+T2+T3 并行 = 我方 12 GPU/48C/288G，放得下；**四个同时超配额**
+    （22 GPU/82C）→ CH 必须等 T1 退出，改为 T2/T3 起跑后带全量冷节点排除清单
+    另行提交（见下）。
+  - **节点现状**：提交时 spgpu 无任何节点同时空出 4GPU+16C+96G（有 4 空卡节点
+    CPU/内存均被占满），「锁定空节点立即并行」不可行，故不用 `-w` 钉节点、只用
+    exclude 消极隔离；T1 结束释放 gl1512 是确定空位。
+  - **同节点共驻风险**：当前无 8 空卡节点，T2/T3 落同一节点需大 job 恰好退出，
+    概率低；由 squeue Monitor 盯节点分配，一旦同节点即 scancel 后起的一个并加
+    exclude 重提（代价 ~10 min）。
+  - **暖缓存口径**：T2/T3 允许落 gl1512（T1 刚跑过）——packed 库 30 GiB、每 run
+    读 ~93 GB（全库重读 ~3 遍），稳态中位对起跑缓存状态不敏感；且 T1 自身起跑时
+    gl1512 已被 dl-w4/w16 与 OOM run 焐过（pgmajfault=685 极低），条件对称。真冷
+    代价由 COLDHOT 专项量化，其节点必须未碰过 packed 库（exclude
+    gl1501/gl1508/gl1512/gl1514 + T2/T3 实际节点）。
+  - **NFS 交叉负载**：并行 2–3 个 run 合计 ~50–75 MB/s，对 turbo 聚合带宽可忽略；
+    server_read 遥测按节点采样，不受他 job 混淆。
+- **96G 内存评估（用户问「96G 节点 OOM 评估是否需要增大」）：不需要。** OOM 根因
+  （步 0 TrainState 摘要 device_get 45.4 GiB）已被 beb464f
+  （`BENCH_CHECKSUM=0 BENCH_BATCH_DIGESTS=0`）移除；T1 实测 sstat MaxRSS=46.3 GiB
+  （AveRSS 41.9 GiB），96G 余量近半；维持 96G 亦保持与 legacy 基线 v1-e2efix 同
+  资源包络可比。
 - 资源审批「四个全批」：放行记录见仓库根 `greatlakes.md`「放行记录（robomme
   framesamp v2 计划，2026-08-27）」。
 - **S9 G2-speed 用户决策暂时不跑**（计划 T8/E 表同步标注）。
@@ -17,12 +42,12 @@
 
 ## run 表（全部 4×A40/16C/96G，packed 库，`ANALYZE_ACCEPT=1`）
 
-| run_name | workers | 步数 | walltime | seed | 依赖 |
+| run_name | workers | 步数 | walltime | seed | 调度（二次拍板后） |
 |---|---|---|---|---|---|
-| `v1-framesamp-e2e-w4c16`（T1，最重要：官方默认档还需不需要调） | 4 | 600 | 2h | 320 | 无 |
-| `v1-framesamp-e2e-w8c16`（T2，直接对 v1-e2efix-w8c16） | 8 | 600 | 2h | 321 | afterany:T1 |
-| `v1-framesamp-e2e-w2c16`（T3，探底） | 2 | 600 | 2h | 322 | afterany:T2 |
-| `v1-framesamp-e2e-w4c16-coldlike` + `…-hot`（COLDHOT=1 同 allocation 先 C1 后 H1） | 4 | 300+300 | 4h | 323 | afterany:T3 |
+| `v1-framesamp-e2e-w4c16`（T1，最重要：官方默认档还需不需要调） | 4 | 600 | 2h | 320 | job 58996749 @gl1512 |
+| `v1-framesamp-e2e-w8c16`（T2，直接对 v1-e2efix-w8c16） | 8 | 600 | 2h | 321 | 无依赖重提 58996987（原 58996750 已撤） |
+| `v1-framesamp-e2e-w2c16`（T3，探底） | 2 | 600 | 2h | 322 | 无依赖重提 58997004（原 58996751 已撤） |
+| `v1-framesamp-e2e-w4c16-coldlike` + `…-hot`（COLDHOT=1 同 allocation 先 C1 后 H1） | 4 | 300+300 | 4h | 323 | T2/T3 起跑后带冷节点排除清单提交（原 58996752 已撤） |
 
 - 入口 `gl_e2e_fix.sbatch`（S7.5 参数化）：`MMEVLA_DATA_BACKEND=packed`（显式）、
   `DATASET_PATH=…/4task-gl-framesamp`（status=verified）、`SAVE_INTERVAL=1000`
