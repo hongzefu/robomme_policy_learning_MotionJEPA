@@ -216,12 +216,24 @@ json.dump(d, open("$RECORD_DIR/env.json", "w"), indent=2, ensure_ascii=False)
 EOF
 
 # 环境指纹并入 env.json（preflight 同一套采集代码，保证跨期可比对；
-# 环境变量与训练进程逐项同口径）
+# 环境变量与训练进程逐项同口径）。
+# S6 补：packed 库无 data/ 目录（pkl/原图仍从源库读），dataset_spot 指纹一律
+# 锚在源库——store_meta.source_dataset_root（可被 MMEVLA_FRAMESAMP_SOURCE 覆盖），
+# 与 check 侧「vs G0 的源数据未动」口径一致
+DUMP_DATASET="${DATASET_PATH}"
+if [[ -f "${DATASET_PATH}/meta/store_meta.json" ]]; then
+  DUMP_DATASET="$("${UVPY[@]}" - "${DATASET_PATH}" <<'PYEOF'
+import json, os, sys
+meta = json.load(open(os.path.join(sys.argv[1], "meta", "store_meta.json")))
+print(os.environ.get("MMEVLA_FRAMESAMP_SOURCE") or meta["source_dataset_root"])
+PYEOF
+)"
+fi
 XLA_FLAGS="${XLA_FLAGS:-}" \
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
 CUDA_VISIBLE_DEVICES=0,1 \
 "${UVPY[@]}" "${REPO_ROOT}/scripts/smoke-local/check_baseline_env.py" dump \
-  --record-dir "${RECORD_DIR}" --dataset "${DATASET_PATH}"
+  --record-dir "${RECORD_DIR}" --dataset "${DUMP_DATASET}"
 
 echo "=== 2 GPU epoch 基准: ${RUN_TAG} (exp=${EXP_NAME}, ${STEPS} steps, batch ${BATCH}, workers ${WORKERS}) ==="
 echo "  数据集: ${DATASET_PATH}"
