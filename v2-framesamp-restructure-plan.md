@@ -641,7 +641,7 @@ def __getitem__(self, idx):
 | S7.5 | **GL 验收资产参数化**（gl_e2e_fix.sbatch、gl-dataloader 两个 sbatch、dataloader_bench.py、analyze_gpu_util.py，默认值＝现状） | S6 | 三个 launcher 默认值跑通、env.json 记到 backend/resolved 双根 | ~40 min |
 | S8a | **GL dataloader 单测四档**（默认 w2/w4/w8/w16；**提交 job 前档位须与用户确认，2026-08-27 用户指定**，计划默认值不视为已授权） | S7.5 + launch 预提交 + 档位确认 + 超限 job 逐个资源审批 | 吞吐数据落档（backend==packed 显式、fast 档冷态自证） | 15 min×4 + 排队 |
 | S8b | **GL e2e 收官测试**：600 步 T1–T3(+条件档) + cold-like/hot（COLDHOT 双跑各 300 步） | S8a + launch 预提交 + 逐 job 资源审批（4×A40 / 2–4 h 超硬限） | `E2E_ACCEPT=PASS` + 距 100% 残差分解 | 3×2 h + 1×4 h |
-| S9 | **本机速度对账 G2-speed**：`v1-g2-speed` 一轮 **1000 步**（speed 统一口径，〇节），vs `v1-g0-speed-r2` 对比落档、回填登记簿 | S8b | 稳态统计 + 对比表落档 | ~40 min |
+| S9 | **本机速度对账 G2-speed**：`v1-g2-speed` 一轮 **1000 步**（speed 统一口径，〇节），vs `v1-g0-speed-r2` 对比落档、回填登记簿。**2026-08-27 用户决策暂缓不跑** | S8b + 用户重新拍板 | 稳态统计 + 对比表落档 | ~40 min |
 
 - **commit 切分**（沿用 `commitV<大>.<小>:` 中文体例，本计划从 **V3.0** 起（2026-08-27 用户指定，原 V2.5–V2.9 编号作废）；每个正式 run 拆「launch.md 预提交 → clean HEAD 起跑 → 结果留档提交」三段，兼顾 AGENTS 12「起跑前记录」与 clean HEAD；顺序与 S 步严格串行一致，每 commit 可独立回滚）：
   1. **V3.0**（阶段 1 前半，S0'+S2）：验证资产补齐 + 格式层 + 打包工具 + Store 组守卫（迷你库通过）；
@@ -737,7 +737,7 @@ def __getitem__(self, idx):
 | **G0（链头）** | `v1-grad-baseline-g0b-r{1,2}` | `570287f`（`<G0-HEAD>`） | G0_SCOPE + r1/r2 千步自证 | **PASS**：1000 步标量 hex / 12×state_digest / 14×batch_digest（raw+canonical）/ index 8072 全逐位一致（scalars_hex sha256 `c799a0b2…`）；TrainState 数组 @0/299/999 存 `/data/hongzefu/v1-baselines/g0b-r1-state-dump/`（sha 清单进 git） | `docs/training-doc/v1-grad-baseline-g0b/` |
 | **G2** | `v1-framesamp-g2` | `cf64ddd`（起跑 HEAD，clean） | vs G0 r1 固化产物：五标量 hex + 12×state_digest bitwise + canonical 输入 + index（C.3，分项判读） | **PASS**（2026-08-27）：1000 步五标量 hex 零失配、12×state_digest 零失配、canonical 14 步零失配、index 8072 逐个一致；`scalars_hex.tsv` sha256 与 G0 同值 `c799a0b2…`；raw 4 步×2 键预期失配（B3 不计入，V2.4b dtype 统一来源）；与 S5 并行（用户豁免） | `docs/training-doc/v1-framesamp-g2/` |
 | **G0-speed（锚点）** | `v1-g0-speed-r2` | `570287f` | speed 链锚点（AGENTS 16 稳态统计，1000 步口径） | 稳态中位 **1.152 s/step**（n=949，p10 1.097/p90 1.276）、均值 1.186、util 均值 86.5%、0% 采样 4.9%、慢步 3、epoch 外推 15.82 h（本机口径，非最终吞吐结论） | `docs/training-doc/v1-g0-speed-r2/` |
-| **G2-speed** | `v1-g2-speed` | 待回填 | vs `v1-g0-speed-r2`（合并对账，只报数） | 待回填 | 待回填 |
+| **G2-speed** | `v1-g2-speed` | 待回填 | vs `v1-g0-speed-r2`（合并对账，只报数） | **用户决策暂缓（2026-08-27，暂不跑）** | 待回填 |
 | **GL 验收** | `v1-framesamp-dl-*`、`v1-framesamp-e2e-*` | 待回填 | `E2E_ACCEPT`（D 节五项）+ 附加判据 | 待回填 | 待回填 |
 
 ### T9 基线侧红线（与 G 节并行自检）

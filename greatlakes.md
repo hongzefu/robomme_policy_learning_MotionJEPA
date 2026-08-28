@@ -342,3 +342,20 @@ ButtonUnmaskSwap_ep3），与 v8 冒烟的 `data-raw-smoke/`（6 entry）集合�
 - `(AssocGrpMemLimit)` → chaijy2 总 mem 配额满了，先降 `--mem`（`--qos=interactive` 实测无效，别用）；
 - `(AssocGrpGRES)` → chaijy2 总 GPU 配额满了，只能等组内其他用户的 job 退出，不可换 account；
 - `(Resources)` → spgpu 全集群节点都被占，等就行。
+
+## 放行记录（robomme framesamp v2 计划，2026-08-27）
+
+**S8b GL e2e 收官四 job 放行**（v2-framesamp-restructure-plan.md D 节；均超调试限额
+≤2 GPU / ≤30 min，经用户 AskUserQuestion 显式批准「四个全批」）：
+
+| job | 资源 | walltime | 备注 |
+|---|---|---|---|
+| `v1-framesamp-e2e-w4c16`（T1） | 4×A40 / 16C / 96G | 02:00:00 | 600 步 / seed 320 |
+| `v1-framesamp-e2e-w8c16`（T2） | 4×A40 / 16C / 96G | 02:00:00 | 600 步 / seed 321 |
+| `v1-framesamp-e2e-w2c16`（T3） | 4×A40 / 16C / 96G | 02:00:00 | 600 步 / seed 322 |
+| `v1-framesamp-e2e-w4c16` COLDHOT（`…-coldlike`/`…-hot`） | 4×A40 / 16C / 96G | 04:00:00 | 各 300 步 / seed 323 |
+
+提交方式同次拍板：**现在全部提交、`--dependency=afterany` 链 T1→T2→T3→COLDHOT 严格
+串行执行**（避免同节点共驻/互相预热污染 E2E_ACCEPT 性能判据）；条件档 T4/T5 未批、
+视 T1–T3 结果另行审批。同日 S8a 四个 1×A40/30min job（58995916–58995919）在调试
+包络内、无需特批，随档位确认提交。
