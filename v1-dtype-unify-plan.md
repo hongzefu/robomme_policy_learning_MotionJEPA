@@ -1,5 +1,7 @@
 # dtype 统一修复计划（framesample+context 双 dtype 路径消除）
 
+> **人类审阅版报告**：本文件第一部分与全部实测结论已整理为 [`docs/v1-phase2-dtype-unify-report.md`](docs/v1-phase2-dtype-unify-report.md)（第二阶段报告）。只想看做了什么、结论是什么，读那份；本文件保留实现级细节（第二部分 T1–T7）。
+
 > **实施状态（2026-08-27）：P3–P7 全部执行完毕，两块正确性与性能对比均已产出。** 工具 commit **V2.4a `f2e7348`** + 三行修复 **V2.4b `a0f76f8`**；第一块 `COMPARE_DTYPE=PASS`（2,600 样本 / 200 batch / 0 失配）、单步定点梯度 `COMPARE_GRAD=PASS`（3 档 × 32 叶逐位相同）、第二块 G1 vs G0b 千步 bitwise 全过（`scalars_hex.tsv` sha256 与 G0b r1/r2 逐字节相同）、P7 `v1-g1-speed` vs `v1-g0-speed-r2` 步时均值 **−7.21%** / util 均值 **+5.64pp**。留档见 `docs/training-doc/v1-dtype-p{3,4,5}-*`、`v1-dtype-ab-post-r1`、`v1-g1-speed`；登记簿以 [`v1-gradient-baseline.md`](v1-gradient-baseline.md) T8 为权威。
 >
 > 本文件原为计划文档。2026-08-26 自 `v1-framesamp-restructure-plan.md`（v3）拆分而来：**本计划先行、独立验收，是该 IO 重构计划（v4）的前置**。范围只兼容 `perceptual-framesamp-context` 一种 run。

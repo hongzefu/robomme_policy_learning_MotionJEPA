@@ -80,7 +80,7 @@
   设置下并非 bitwise 确定**（疑因每轮删了 jax 编译缓存、XLA 重新 autotune 选中
   不同 kernel/归约实现）。
 - **2026-08-26 四档确定性实验定档（D0/D1/D2/D2-cold 各两轮 100 步，commit V2.1，
-  留档 `docs/training-doc/v1-det-*/`，权威结论见 `docs/v1-determinism-conclusions.md`）**：
+  留档 `docs/training-doc/v1-det-*/`，权威结论见 `docs/v1-phase1-gradient-baseline-report.md` 九节）**：
   - D0（删缓存、无 flags）FAIL：从步 0 起逐步全分歧，loss rel 噪声底 median 2.7e-3 /
     max 4.6e-2——上面 2026-08-24 的观察被系统复现并量化；
   - D1（共用编译缓存、无 flags）FAIL 但仅差 ULP：100 步中 2 步 llm_grad_norm 差一个
