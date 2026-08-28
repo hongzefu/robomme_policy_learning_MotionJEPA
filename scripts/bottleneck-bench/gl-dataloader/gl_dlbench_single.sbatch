@@ -42,7 +42,10 @@ export JAX_COMPILATION_CACHE_DIR="$STORE/cache/jax"
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
 export PYTHONUNBUFFERED=1
 
-RECORD_DIR="$STORE/bench/bottleneck/v1-dlb-${TAG}"
+# S8a：RUN_NAME 可经 --export 覆盖（如 v1-framesamp-dl-w4，按计划建议名与用户确认名对齐）；
+# 未设时保持历史 v1-dlb-${TAG} 口径不变
+RUN_NAME="${RUN_NAME:-v1-dlb-${TAG}}"
+RECORD_DIR="$STORE/bench/bottleneck/${RUN_NAME}"
 if [ -e "$RECORD_DIR" ]; then
     echo "错误: 记录目录已存在, 禁止覆盖: $RECORD_DIR"; exit 1
 fi
@@ -52,7 +55,7 @@ mkdir -p "$RECORD_DIR"
 import json, platform, subprocess, sys, os
 import jax
 d = {
-    "run_name": "v1-dlb-${TAG}", "batch_size": 64,
+    "run_name": "${RUN_NAME}", "batch_size": 64,
     "workers": int("${WORKERS}"), "seed": int("${BENCH_SEED}"),
     "warmup_batches": 5, "measure_batches": 40,
     "dataset_path": "$DATASET_PATH",
@@ -89,10 +92,10 @@ else:
 json.dump(d, open("$RECORD_DIR/env.json", "w"), indent=2, ensure_ascii=False)
 EOF
 
-echo "=== dataloader-only 单档基准 v1-dlb-${TAG} (backend=${MMEVLA_DATA_BACKEND}, dataset=${DATASET_PATH}, workers=${WORKERS}, cpus=${NCPU}, node=$(hostname), job=$SLURM_JOB_ID) ==="
+echo "=== dataloader-only 单档基准 ${RUN_NAME} (backend=${MMEVLA_DATA_BACKEND}, dataset=${DATASET_PATH}, workers=${WORKERS}, cpus=${NCPU}, node=$(hostname), job=$SLURM_JOB_ID) ==="
 BENCH_RECORD_DIR="$RECORD_DIR" WORKERS_LIST="$WORKERS" BENCH_SEED="$BENCH_SEED" \
 "$PY" "$REPO/scripts/bottleneck-bench/gl-dataloader/dataloader_bench.py" mme_vla_suite \
-    --exp-name "v1-dlb-${TAG}" \
+    --exp-name "${RUN_NAME}" \
     --assets-base-dir "$STORE/train-assets" \
     --checkpoint-base-dir "$STORE/train-runs" \
     --batch-size 64 \
