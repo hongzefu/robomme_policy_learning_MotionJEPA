@@ -177,7 +177,9 @@ stop_samplers() {
 }
 
 run_bench() {   # $1=RUN_NAME $2=STEPS → 返回 bench 退出码
+                # 副作用：写全局 BENCH_TRAIN_RC = 训练本身退出码（不含 analyzer accept 判定）
     local run_name="$1" steps="$2"
+    BENCH_TRAIN_RC=1   # 提前 return 的分支也给确定值，不残留上一轮的值
     local record_dir="$STORE/bench/bottleneck/$run_name"
     local ckpt_dir="$STORE/train-runs/mme_vla_suite/$run_name"
     if [ -e "$record_dir" ]; then echo "错误: 记录目录已存在: $record_dir"; return 1; fi
@@ -210,6 +212,7 @@ run_bench() {   # $1=RUN_NAME $2=STEPS → 返回 bench 退出码
         --model.history-config perceptual-framesamp-context.yaml \
         --no-wandb-enabled
     local rc=$?
+    BENCH_TRAIN_RC="$rc"   # analyzer accept 判定会覆盖下面的 rc，先存住训练自身的退出码
     stop_samplers
     if [ -e "$ckpt_dir" ]; then
       case "$ckpt_dir" in
@@ -230,8 +233,16 @@ run_bench() {   # $1=RUN_NAME $2=STEPS → 返回 bench 退出码
 if [ "$COLDHOT" = "1" ]; then
     # 同 allocation 串行先 C1 后 H1（排除节点差异）；同 seed 冻结 index 序列（D 节）
     run_bench "${TAG}-coldlike" "$COLDHOT_STEPS"; RC=$?
-    if [ "$RC" -eq 0 ]; then
+    C1_TRAIN_RC="$BENCH_TRAIN_RC"
+    # 只看训练是否跑完，不看 RC：ANALYZE_ACCEPT=1 时 RC 已被 analyzer 的
+    # E2E_ACCEPT 判定覆盖，而 C1 是冷态、判 FAIL 属预期内；COLDHOT 的判据是
+    # (C1稳态−H1稳态)/H1 ≤ 15%，与 E2E_ACCEPT 五项无关。
+    # 2026-08-28 job 59001191 实测教训：C1 E2E_ACCEPT=FAIL → rc=1 → H1 被跳过，
+    # 4h allocation 只产出一半数据，对照组缺失、判据算不出来。
+    if [ "$C1_TRAIN_RC" -eq 0 ]; then
         run_bench "${TAG}-hot" "$COLDHOT_STEPS"; RC=$?
+    else
+        echo "C1 训练本身失败（train_rc=$C1_TRAIN_RC），跳过 H1"
     fi
 else
     run_bench "$TAG" "$STEPS"; RC=$?

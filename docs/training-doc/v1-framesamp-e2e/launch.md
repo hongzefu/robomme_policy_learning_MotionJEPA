@@ -101,3 +101,83 @@ uv run --no-project --with pexpect python scripts/data-preprocess-GL/gl_submit.p
    --export=ALL,WORKERS=<W>,BENCH_SEED=<S>,TAG=<run_name 基名>,ANALYZE_ACCEPT=1[,COLDHOT=1],DATASET_PATH=…/4task-gl-framesamp,MMEVLA_DATA_BACKEND=packed \
    scripts/bottleneck-bench-v2/gl_e2e_fix.sbatch"
 ```
+
+## 四次拍板（2026-08-28 午间）：COLDHOT 的 H1 缺失——脚本修复 + 同节点补跑
+
+用户原话：先问「目前排队的 job 跑完要多久」，答复中报出本问题后追加两条指令——
+「COLDHOT 修复重新跑」、「w16 取消不跑了」。
+
+### 问题：H1 被 C1 的 accept 判定挡掉，4h allocation 只会产出一半数据
+
+`gl_e2e_fix.sbatch` 的 `run_bench` 在训练成功后，用 `analyze_gpu_util.py` 的退出码
+**覆盖**了自己的返回码；`--accept`（`ANALYZE_ACCEPT=1`）判 FAIL 时 analyzer 非零退出
+（见 `analyze_gpu_util.py` 的 `--accept` 分支「FAIL 非零退出」）。而 COLDHOT 分支写的是
+`if [ "$RC" -eq 0 ]` 才跑 H1，于是：
+
+- C1 是 **cold-like 冷态**，`E2E_ACCEPT` 五项必达档几乎必然 FAIL——热态的 T2 w8c16
+  （job 58996987）都已经 `E2E_ACCEPT=FAIL util_mean_pct=89.178✗ zero_pct=9.739✗`；
+- → C1 返回 1 → H1 被 `if` 挡掉 → job 在 C1 结束后直接 `EXIT_CODE=1` 退出；
+- → COLDHOT 判据 `(C1稳态−H1稳态)/H1 ≤ 15%` 缺对照组，**整个 4h run 白跑**。
+
+判据本身与 `E2E_ACCEPT` 五项无关，C1 判 FAIL 属预期内，不该作为流程闸门——这是纯粹
+的脚本缺陷，不是实验设计问题。
+
+### 修复：训练退出码与 accept 判定解耦（不改任何训练/dataloader 语义）
+
+`gl_e2e_fix.sbatch` 三处改动，均在 `run_bench` 与其后的 COLDHOT 分支内：
+
+1. `run_bench` 新增副作用全局量 `BENCH_TRAIN_RC`，在 `local rc=$?` 捕获训练退出码后
+   立即存住（analyzer 覆盖 `rc` 之前）；函数入口初始化为 1，使「记录目录已存在」等
+   提前 `return` 的分支也有确定值、不残留上一轮。
+2. COLDHOT 分支改判 `C1_TRAIN_RC="$BENCH_TRAIN_RC"`——**只看训练是否跑完，不看 accept
+   判定**；C1 训练本身失败（OOM 等）仍跳过 H1 并打印原因。
+3. `run_bench` 的返回值语义不变（仍是含 accept 的综合码），因此非 COLDHOT 路径
+   （T1/T2/T3/T4′/T5′ 各档）的 `EXIT_CODE` 口径与既有 run 完全一致，历史数据可比。
+
+验证（不启动训练）：`bash -n` 语法检查通过；把脚本内 COLDHOT 分支原文抽出、套 mock
+`run_bench` 跑三场景——「C1 训练成功+accept FAIL（本次实况）」与「C1 训练成功+accept
+PASS」均调用到 `t-hot`，「C1 训练本身失败」不调用 `t-hot`，三项符合预期。
+
+### 补跑策略：不重跑 C1，H1 用 `-w gl1515` 钉同节点单独跑
+
+发现问题时 C1 已跑到 233/300（4.8–5.1 s/it，冷态数据完整有效），5 分钟后即结束。
+权衡后**不 scancel、不整体重跑**：
+
+- **同 allocation 的实质是同节点 + C1 焐热的 page cache**，而 page cache 是 OS 级的、
+  不随 job 退出清空。C1 job 退出到 H1 起跑之间只隔 analyzer 的约 1 分钟，`-w gl1515`
+  钉回同一节点即可复现 H1 所需的热态现场。
+- 整体重跑的代价：作废 25 分钟已完成的冷态数据，且需另找一个**从未读过 packed 库**的
+  冷节点（gl1512/1515/1517 及原 exclude 清单已全部污染），排队到 w12 释放（约 14:33）
+  才起，收尾推迟约 1 小时。
+- 为保住这个不可逆的时间窗，在 C1 结束前先行提交 H1 排队（job 59044123，
+  `PENDING (AssocGrpGRES)` 等 C1 释放配额）；w16 已由用户于 13:38:49 自行 scancel
+  （`CANCELLED by 114466650`）并明示「取消不跑了」，无其他 job 竞争 gl1515。
+- **H1 走非 COLDHOT 路径**（`COLDHOT` 缺省 0、`STEPS=300`、`TAG=v1-framesamp-e2e-w4c16-hot`），
+  故 record_dir 落在 `v1-store/bench/bottleneck/v1-framesamp-e2e-w4c16-hot`——与原
+  COLDHOT 路径下 `${TAG}-hot` 的命名完全一致，与 C1 的 `-coldlike` 天然配对，
+  对拍脚本无需特判。seed 仍 323，与 C1 同 seed 冻结 index 序列（D 节要求）。
+
+  ```bash
+  sbatch --parsable --job-name=v1-framesamp-e2e-ch-hot --time=01:00:00 -w gl1515 \
+    --export=ALL,WORKERS=4,BENCH_SEED=323,TAG=v1-framesamp-e2e-w4c16-hot,STEPS=300,\
+ANALYZE_ACCEPT=1,DATASET_PATH=…/4task-gl-framesamp,MMEVLA_DATA_BACKEND=packed \
+    scripts/bottleneck-bench-v2/gl_e2e_fix.sbatch
+  ```
+
+### 结果判读前必须先验的前提（热态自证）
+
+`-w gl1515` 补跑相对同 allocation 的唯一风险是 job 间隙 page cache 漂移（含集群
+epilog 可能 drop_caches）。该风险**可事后证伪**，判读 `(C1−H1)/H1` 之前必须先验：
+
+- H1 的 meminfo 采样起跑即高 `Cached`、`pgmajfault` 显著低于 C1 → 热态成立，结论有效；
+- 若 H1 的 pgmajfault 与 C1 同量级 → 缓存已被清，H1 实为第二次冷跑，
+  `(C1−H1)/H1` 偏小、判据偏乐观，**该次结果作废**，须按修复后的脚本另找冷节点整体重跑。
+
+### 本轮 job 台账
+
+| job | run | 结果 |
+|---|---|---|
+| 59001191 | `v1-framesamp-e2e-w4c16-coldlike`（C1，gl1515） | 300 步跑完，H1 被缺陷挡掉；C1 数据保留 |
+| 59044123 | `v1-framesamp-e2e-w4c16-hot`（H1，`-w gl1515`） | 本次补跑 |
+| 59001192 | `v1-framesamp-e2e-w12c16` | 正常运行中，不受影响 |
+| 59001193 | `v1-framesamp-e2e-w16c16` | 用户 13:38:49 scancel，**取消不跑** |
