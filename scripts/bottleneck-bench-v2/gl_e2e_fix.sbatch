@@ -186,7 +186,13 @@ run_bench() {   # $1=RUN_NAME $2=STEPS → 返回 bench 退出码
     REPO_ENV="$REPO" STORE_ENV="$STORE" NCPU_ENV="$NCPU" write_env "$record_dir" "$run_name" "$steps"
     start_samplers "$record_dir"
     echo "=== e2e 基准 (run=$run_name, backend=$MMEVLA_DATA_BACKEND, dataset=$DATASET_PATH, workers=$WORKERS, cpus=$NCPU, node=$(hostname), job=${SLURM_JOB_ID:-?}, ${steps} steps) ==="
+    # 性能 run 硬口径（B5）：禁全部摘要。BENCH_CHECKSUM=0 连步 0 的 TrainState 摘要
+    # 一并关——步 0 摘要会把完整 TrainState device_get 拉回 host（实测 45.4 GiB），
+    # 96G 节点直接 OOM（2026-08-27 T1 job 58996083 EXIT_CODE=137 实测教训；历史
+    # e2efix 96G 能过是因当时 bench 尚无步 0 必记）。
     BENCH_RECORD_DIR="$record_dir" \
+    BENCH_CHECKSUM=0 \
+    BENCH_BATCH_DIGESTS=0 \
     "$PY" "$REPO/scripts/smoke-local/bench_train_steps.py" mme_vla_suite \
         --exp-name "$run_name" \
         --assets-base-dir "$STORE/train-assets" \
