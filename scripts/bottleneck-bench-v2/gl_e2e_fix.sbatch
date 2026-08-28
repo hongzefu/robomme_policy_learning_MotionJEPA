@@ -43,6 +43,11 @@ export MMEVLA_DATA_BACKEND="${MMEVLA_DATA_BACKEND:-legacy}"
 COLDHOT="${COLDHOT:-0}"
 COLDHOT_STEPS="${COLDHOT_STEPS:-300}"
 ANALYZE_ACCEPT="${ANALYZE_ACCEPT:-0}"
+# write_env 的 python 子进程按 os.environ 读取——默认值路径也必须 export
+# （2026-08-27 T1 job 58996024 实测 KeyError: 'SAVE_INTERVAL' 教训；WORKERS/TAG/
+# BENCH_SEED 经 sbatch --export 已在环境，重复 export 无害）
+export STEPS SAVE_INTERVAL DATASET_PATH COLDHOT COLDHOT_STEPS ANALYZE_ACCEPT
+export WORKERS TAG BENCH_SEED
 
 for VAR in WORKERS TAG BENCH_SEED; do
     if [ -z "${!VAR:-}" ]; then
