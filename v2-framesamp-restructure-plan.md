@@ -379,7 +379,7 @@ memory token 由四个因素完全决定，重构后全部构造性不变：① 
 **阶段 4：证明「变快了」（S6 过关后才开始）**
 
 7. **S7.5 GL 验收资产参数化**：把 GL 侧提交脚本和分析脚本改成可切 packed（默认值保持现状）。过关：默认值跑通。
-8. **S8a GL dataloader 单测四档**：不训练，只测新链路在 GL 上的取数吞吐（w2/w4/w8/w16）。每个超硬限 job 提交前逐个找用户审批资源。
+8. **S8a GL dataloader 单测四档**：不训练，只测新链路在 GL 上的取数吞吐（默认 w2/w4/w8/w16）。**提交 job 前先和用户确定跑哪几个档位**（2026-08-27 用户指定），每个超硬限 job 提交前再逐个找用户审批资源。
 9. **S8b GL e2e 收官测试**：GL 4×A40 真跑 600 步端到端 + 冷/热双跑。过关：`E2E_ACCEPT=PASS`（步时中位 ≤5.00 s、util 均值 ≥90% 等五项必达，D 节）。
 10. **S9 本机速度对账**：本机跑 `v1-g2-speed`，和锚点 `v1-g0-speed-r2`（1.152 s/step）对比报数，回填登记簿（T8）。
 
@@ -588,7 +588,7 @@ def __getitem__(self, idx):
 ## D. GL 吞吐验收（第三块的机读版；全部 GL 验收按 E 节严格串行顺序执行）
 
 - **MB/s 口径**：`dataloader_bench.py` 的 `_AVG_BYTES_PER_SAMPLE` 从 history_config + `episode_manifest.json` 现场推导（均值帧数 = Σ min(t+1,32)/395,289 = 30.996 → 均值 2.43 MB/样本；上界 2.49 MB；勿写死）；主判读换 mountstats `server_read`；新增 majflt 采样（页缺失口径，冷/热证据链辅助量）。`block_until_ready` 覆盖整个 `(obs, actions)` pytree（只 block actions 会低估 device_put 成本）。新增 gather/pkl 分段计时（每样本两段耗时直方图落 records——「谁是新瓶颈」的观测资产）。
-- **dataloader-only 四档（S8a，单 GPU job）**：w2/w4/w8/w16，seed 310–313（避开已用 42/200–205/210–212 防 page cache 串扰）。
+- **dataloader-only 四档（S8a，单 GPU job）**：默认 w2/w4/w8/w16，seed 310–313（避开已用 42/200–205/210–212 防 page cache 串扰）；**档位在提交 job 前须与用户确认（2026-08-27 用户指定），与逐 job 资源审批分列、两者都不可省**。
 - **e2e 600 步（S8b，`gl_e2e_fix.sbatch` 参数化后入口，4×A40/16C/96G）**：T1 w4（**最重要**：官方默认 workers 还需不需要调）→ T2 w8（直接对 v1-e2efix-w8c16）→ T3 w2（探底）；条件档 T4 w16、T5 w4c8（8C 直接对 v1-e2e-b64，「官方口径净收益」最干净对照）。sbatch 硬编码的 `--dataset-path` 两处（训练命令与 env.json）必须参数化，默认值保持现状。
 - **对照组（历史 GL 实测，标注口径不重测）**：v1-e2e-b64（6.933 s / 69.7%）、w8c16 5.301 s / 71.2%、w12c16 5.319 s / 70.6%、w16c16 5.327 s / 67.1%（三档平坦，「只调参上限」＝5.301 s）、compute-only 4.778 s。
 - **冷/热（证据口径 cold-like）**：31.7 GB 打包库一个 epoch 内即全驻 page cache，热态必然偏乐观；pkl 156 GB 仍是长期 NFS 流量来源。C1/H1 各 300 步（稳态窗口，与 T1–T3 的 600 步分开口径），同一 allocation 内串行（`COLDHOT=1`、`--time=04:00:00`；先 C1 后 H1，排除节点差异），共用同一冻结 index 序列（同 seed + C.1 dump 存证）；`/proc/meminfo` Cached 15 s 采样落 `meminfo.csv` + cgroup `memory.stat` 的 pgmajfault 同步采样。「冷」无法严格证明，结论一律称 **cold-like**，判据 `(C1稳态−H1稳态)/H1 ≤ 15%`。并行采 `nvidia-smi --query-compute-apps` 存证 worker CUDA context。
@@ -639,7 +639,7 @@ def __getitem__(self, idx):
 | 步 | 内容 | 依赖 | 判定 | 预计 |
 |---|---|---|---|---|
 | S7.5 | **GL 验收资产参数化**（gl_e2e_fix.sbatch、gl-dataloader 两个 sbatch、dataloader_bench.py、analyze_gpu_util.py，默认值＝现状） | S6 | 三个 launcher 默认值跑通、env.json 记到 backend/resolved 双根 | ~40 min |
-| S8a | **GL dataloader 单测四档**（w2/w4/w8/w16，不训练只测取数吞吐） | S7.5 + launch 预提交 + 超限 job 逐个资源审批 | 吞吐数据落档（backend==packed 显式、fast 档冷态自证） | 15 min×4 + 排队 |
+| S8a | **GL dataloader 单测四档**（默认 w2/w4/w8/w16；**提交 job 前档位须与用户确认，2026-08-27 用户指定**，计划默认值不视为已授权） | S7.5 + launch 预提交 + 档位确认 + 超限 job 逐个资源审批 | 吞吐数据落档（backend==packed 显式、fast 档冷态自证） | 15 min×4 + 排队 |
 | S8b | **GL e2e 收官测试**：600 步 T1–T3(+条件档) + cold-like/hot（COLDHOT 双跑各 300 步） | S8a + launch 预提交 + 逐 job 资源审批（4×A40 / 2–4 h 超硬限） | `E2E_ACCEPT=PASS` + 距 100% 残差分解 | 3×2 h + 1×4 h |
 | S9 | **本机速度对账 G2-speed**：`v1-g2-speed` 一轮 **1000 步**（speed 统一口径，〇节），vs `v1-g0-speed-r2` 对比落档、回填登记簿 | S8b | 稳态统计 + 对比表落档 | ~40 min |
 
