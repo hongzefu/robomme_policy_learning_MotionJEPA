@@ -564,8 +564,19 @@ def main() -> None:
         raise ValueError(
             f"batch_size {config.batch_size} 必须能被 fsdp_devices {config.fsdp_devices} 整除"
         )
-    if config.log_interval != 1:
-        raise ValueError("bench 必须 --log-interval 1，否则 metrics.jsonl 不是逐步记录")
+    # 性能模式开关（L0，v1-95util）：BENCH_PERF_MODE=1 才放行 log_interval≠1（生产
+    # 口径，metrics 记录的是 log_interval 步区间均值），且强制要求禁全部摘要——
+    # 性能 run 的数字才可信（T9-B5）。未设时保持现行为：log_interval≠1 直接报错，
+    # log1 正确性族路径逐字节不变。
+    perf_mode = os.environ.get("BENCH_PERF_MODE", "0") == "1"
+    if perf_mode:
+        if os.environ.get("BENCH_CHECKSUM", "1") != "0":
+            raise ValueError("BENCH_PERF_MODE=1 必须显式 BENCH_CHECKSUM=0（性能 run 禁摘要，T9-B5）")
+        if os.environ.get("BENCH_BATCH_DIGESTS", "1") != "0":
+            raise ValueError("BENCH_PERF_MODE=1 必须显式 BENCH_BATCH_DIGESTS=0（性能 run 禁摘要，T9-B5）")
+    elif config.log_interval != 1:
+        raise ValueError("bench 必须 --log-interval 1，否则 metrics.jsonl 不是逐步记录"
+                         "（性能口径需显式 BENCH_PERF_MODE=1 放行）")
 
     # fail-loud：monkeypatch 依赖 train.py 当前的调用点，train.py 变了这里要立刻炸
     src = inspect.getsource(_train.main)

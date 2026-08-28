@@ -7,10 +7,19 @@
 #   MMEVLA_DATA_BACKEND    默认 legacy（R16 显式三态；packed 由提交侧显式传入）
 #   SAVE_INTERVAL          默认 1000（600 步内不触发 TrainState 摘要，性能口径不受污染）
 #   STEPS                  默认 600
-#   ANALYZE_ACCEPT         默认 0；=1 时 analyzer 跑 D 节主判据表 5 项（E2E_ACCEPT，S8b 用）
+#   ANALYZE_ACCEPT         默认 0；=1 时 analyzer 跑 E2E95_ACCEPT 五项（v1-95util L0 起）
 #   COLDHOT                默认 0；=1 时同 allocation 先 C1(${TAG}-coldlike) 后 H1(${TAG}-hot)
 #                          各 COLDHOT_STEPS(默认300) 步、同 seed 冻结序列——需提交侧
 #                          sbatch --time=04:00:00 覆盖（--time 无法用环境变量参数化）
+# L0 量具参数（v1-95util，2026-08-28）：
+#   LOG_INTERVAL           默认 1（现状）；≠1 时自动置 BENCH_PERF_MODE=1（生产口径，
+#                          metrics 记录区间均值；bench 侧强制禁摘要）
+#   GAUGE_DUAL             默认 0；=1 时同 allocation 先 ${TAG}-log1(seed=BENCH_SEED)
+#                          后 ${TAG}-log100(seed=BENCH_SEED2，必传)——两档差异归因量具
+#                          口径；需提交侧 sbatch --time=04:00:00 覆盖
+#   EPOCH_STEPS            默认 6176（epoch 换算步数，写入 env.json 供 analyzer 取用）
+#   PREFETCH_FACTOR        默认 2 = torch 现状默认值（L0 只记录实效值入 env.json，
+#                          不改变 loader 行为；L1 起经 MMEVLA_PREFETCH_FACTOR 生效）
 # WORKERS / TAG / BENCH_SEED 必须经 --export 传入（TAG 即 run_name；各档 seed 互不相同
 # 且避开已用 42/200-205/210-212，防同节点复跑 page cache 跨 job 污染）。
 # ⚠ 4 GPU + 2-4h 超出 greatlakes.md debug 包络，每个 job 提交前逐个经用户资源审批。
@@ -31,8 +40,13 @@
 
 set -uo pipefail
 REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA
-PY="$REPO/.venv/bin/python"
 STORE="$REPO/v1-store"
+# AGENTS 3：python 调用一律走 uv run（L0 修复存量 .venv/bin/python 直调，用户批准）；
+# --no-sync = 只用现有 NFS venv、不做环境同步、不碰网络（用户 2026-08-28 拍板）
+export UV_LINK_MODE=copy
+command -v uv >/dev/null 2>&1 || export PATH="$HOME/.local/bin:$PATH"
+command -v uv >/dev/null 2>&1 || { echo "错误: 计算节点找不到 uv"; exit 1; }
+run_py() { uv run --no-sync --project "$REPO" python "$@"; }
 NCPU="${SLURM_CPUS_PER_TASK:-16}"
 MOUNT_POINT="/nfs/turbo/coe-chaijy-unreplicated"
 
@@ -43,11 +57,21 @@ export MMEVLA_DATA_BACKEND="${MMEVLA_DATA_BACKEND:-legacy}"
 COLDHOT="${COLDHOT:-0}"
 COLDHOT_STEPS="${COLDHOT_STEPS:-300}"
 ANALYZE_ACCEPT="${ANALYZE_ACCEPT:-0}"
+LOG_INTERVAL="${LOG_INTERVAL:-1}"
+GAUGE_DUAL="${GAUGE_DUAL:-0}"
+EPOCH_STEPS="${EPOCH_STEPS:-6176}"
+PREFETCH_FACTOR="${PREFETCH_FACTOR:-2}"
 # write_env 的 python 子进程按 os.environ 读取——默认值路径也必须 export
 # （2026-08-27 T1 job 58996024 实测 KeyError: 'SAVE_INTERVAL' 教训；WORKERS/TAG/
 # BENCH_SEED 经 sbatch --export 已在环境，重复 export 无害）
 export STEPS SAVE_INTERVAL DATASET_PATH COLDHOT COLDHOT_STEPS ANALYZE_ACCEPT
+export LOG_INTERVAL EPOCH_STEPS PREFETCH_FACTOR
 export WORKERS TAG BENCH_SEED
+
+if [ "$GAUGE_DUAL" = "1" ] && [ -z "${BENCH_SEED2:-}" ]; then
+    echo "GAUGE_DUAL=1 缺必传参数 BENCH_SEED2（log100 档 seed，各档 seed 互不相同），拒绝起跑"
+    exit 1
+fi
 
 for VAR in WORKERS TAG BENCH_SEED; do
     if [ -z "${!VAR:-}" ]; then
@@ -65,7 +89,7 @@ export PYTHONUNBUFFERED=1
 export WANDB_MODE=disabled
 
 write_env() {   # $1=RECORD_DIR $2=RUN_NAME $3=STEPS
-    "$PY" - "$1" "$2" "$3" <<'EOF'
+    run_py - "$1" "$2" "$3" <<'EOF'
 import json, os, platform, subprocess, sys
 import jax
 record_dir, run_name, steps = sys.argv[1], sys.argv[2], int(sys.argv[3])
@@ -85,6 +109,14 @@ d = {
                                capture_output=True, text=True).stdout.strip(),
     "slurm_job_id": os.environ.get("SLURM_JOB_ID"),
     "hostname": platform.node(),
+    # ── L0 量具口径（v1-95util）：analyzer 判读全部从这里取，不靠猜 ──
+    "log_interval": int(os.environ["LOG_INTERVAL"]),
+    "epoch_steps": int(os.environ["EPOCH_STEPS"]),
+    "prefetch_factor": int(os.environ["PREFETCH_FACTOR"]),   # 实效值（L0=torch 默认 2）
+    "OMP_NUM_THREADS": os.environ.get("OMP_NUM_THREADS"),
+    "MKL_NUM_THREADS": os.environ.get("MKL_NUM_THREADS"),
+    "OPENBLAS_NUM_THREADS": os.environ.get("OPENBLAS_NUM_THREADS"),
+    "NUMEXPR_NUM_THREADS": os.environ.get("NUMEXPR_NUM_THREADS"),
     "XLA_PYTHON_CLIENT_MEM_FRACTION": "0.95",
     "python": sys.version, "jax": jax.__version__,
     "nvidia_smi": subprocess.run(
@@ -140,7 +172,7 @@ start_samplers() {   # $1=RECORD_DIR
     SAMPLER_PIDS+=($!)
     # NFS server_read 计数
     ( while true; do
-        "$PY" - "$MOUNT_POINT" <<'PYEOF'
+        run_py - "$MOUNT_POINT" <<'PYEOF'
 import sys, time
 mp = sys.argv[1]; in_m = False
 for line in open("/proc/self/mountstats"):
@@ -176,9 +208,12 @@ stop_samplers() {
     SAMPLER_PIDS=()
 }
 
-run_bench() {   # $1=RUN_NAME $2=STEPS → 返回 bench 退出码
+run_bench() {   # $1=RUN_NAME $2=STEPS [$3=LOG_INTERVAL 覆盖，缺省用全局值] → 返回 bench 退出码
                 # 副作用：写全局 BENCH_TRAIN_RC = 训练本身退出码（不含 analyzer accept 判定）
     local run_name="$1" steps="$2"
+    export LOG_INTERVAL="${3:-$LOG_INTERVAL}"   # 逐 run 覆盖并入 env.json（write_env 读取）
+    local perf_mode=0
+    [ "$LOG_INTERVAL" != "1" ] && perf_mode=1   # ≠1 自动置性能模式（bench 侧强制禁摘要）
     BENCH_TRAIN_RC=1   # 提前 return 的分支也给确定值，不残留上一轮的值
     local record_dir="$STORE/bench/bottleneck/$run_name"
     local ckpt_dir="$STORE/train-runs/mme_vla_suite/$run_name"
@@ -195,14 +230,15 @@ run_bench() {   # $1=RUN_NAME $2=STEPS → 返回 bench 退出码
     BENCH_RECORD_DIR="$record_dir" \
     BENCH_CHECKSUM=0 \
     BENCH_BATCH_DIGESTS=0 \
-    "$PY" "$REPO/scripts/smoke-local/bench_train_steps.py" mme_vla_suite \
+    BENCH_PERF_MODE="$perf_mode" \
+    run_py "$REPO/scripts/smoke-local/bench_train_steps.py" mme_vla_suite \
         --exp-name "$run_name" \
         --assets-base-dir "$STORE/train-assets" \
         --checkpoint-base-dir "$STORE/train-runs" \
         --batch-size 64 \
         --num-workers "$WORKERS" \
         --num-train-steps "$steps" \
-        --log-interval 1 \
+        --log-interval "$LOG_INTERVAL" \
         --save-interval "$SAVE_INTERVAL" \
         --seed "$BENCH_SEED" \
         --fsdp-devices 4 \
@@ -223,14 +259,30 @@ run_bench() {   # $1=RUN_NAME $2=STEPS → 返回 bench 退出码
     if [ "$rc" -eq 0 ]; then
       ACCEPT_FLAG=()
       [ "$ANALYZE_ACCEPT" = "1" ] && ACCEPT_FLAG=(--accept)
-      "$PY" "$REPO/scripts/bottleneck-bench-v2/analyze_gpu_util.py" \
+      run_py "$REPO/scripts/bottleneck-bench-v2/analyze_gpu_util.py" \
           "$record_dir" --steps "$steps" "${ACCEPT_FLAG[@]}"
       rc=$?
     fi
     return "$rc"
 }
 
-if [ "$COLDHOT" = "1" ]; then
+if [ "$GAUGE_DUAL" = "1" ]; then
+    # L0 两档基准（v1-95util）：同 allocation 同节点先 S0c(log1 对照) 后 S0(log100 生产)，
+    # 两档差异归因量具口径。S0c 判 E2E95 预期 FAIL（旧口径缺口所在），故对照档不带
+    # --accept、只出报表；E2E95_ACCEPT 判定只落在 log100 档（S0 = 新 speed 锚）。
+    # 各档 seed 互不相同（BENCH_SEED / BENCH_SEED2），防同节点复跑 page cache 污染归因。
+    SAVED_ACCEPT="$ANALYZE_ACCEPT"
+    ANALYZE_ACCEPT=0 run_bench "${TAG}-log1" "$STEPS" 1; RC1=$?
+    G1_TRAIN_RC="$BENCH_TRAIN_RC"
+    echo "GAUGE_DUAL: log1 对照档 rc=$RC1 (train_rc=$G1_TRAIN_RC)"
+    if [ "$G1_TRAIN_RC" -eq 0 ]; then
+        export BENCH_SEED="$BENCH_SEED2"
+        ANALYZE_ACCEPT="$SAVED_ACCEPT" run_bench "${TAG}-log100" "$STEPS" 100; RC=$?
+    else
+        echo "log1 对照档训练本身失败（train_rc=$G1_TRAIN_RC），跳过 log100 档"
+        RC=1
+    fi
+elif [ "$COLDHOT" = "1" ]; then
     # 同 allocation 串行先 C1 后 H1（排除节点差异）；同 seed 冻结 index 序列（D 节）
     run_bench "${TAG}-coldlike" "$COLDHOT_STEPS"; RC=$?
     C1_TRAIN_RC="$BENCH_TRAIN_RC"
