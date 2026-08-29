@@ -44,7 +44,45 @@ v4（IO 重构，commitV3.0–V3.7）交付 `FrameSampDataset` 后，训练主�
 
 每个 commit 各有 ≤5 分钟的便宜验证（AGENTS 4），另设分段对拍闸门 N1–N5（第二部分五节）——真出问题不必在 1000 步长跑里回溯七个提交。**对拍 A 侧沿用 G0b 固化产物**（`docs/training-doc/v1-grad-baseline-g0b/records/r1/`），不在当前 HEAD 重录基线（G 链「跑一次固化」纪律；G2 已证当前链 bitwise ≡ G0b）。
 
-## 四、影响面结论
+## 四、scripts/ 顶层前后对比（V3.14 完成后的目标形态）
+
+修改前（现状 22 项）→ 修改后（2 个域文件夹），逐项去向：
+
+| 现状条目 | 性质 | 去向 |
+|---|---|---|
+| `train.py` | 训练主入口 | → `training/train.py` |
+| `finetune_mme_vla_suite.sh` / `finetune_pi05_baseline.sh` | 训练启动脚本 | → `training/`（菜单在 V3.13 已清成三个 framesamp） |
+| `eval.sh` / `serve_policy.py` / `compute_results.py` | 评估/部署入口 | → `training/`（symbolic 分支在 V3.13 已删） |
+| `compute_norm_stats.py` | norm stats 生产（V3.9 已内联读取器） | → `training/` |
+| `download_pi05_base.py` | 下载 pi05 初始权重 | → `training/` |
+| `unzip_ckpt.py` | checkpoint 解压工具 | → `training/` |
+| `__init__.py` | 包标记（一行注释） | → `training/__init__.py` 原样随迁 |
+| `smoke-local/` | G 链量具（bench/preflight/compare 四件） | → `training/bench/`（另收 `compare_online_memory.py` 新量具） |
+| `train-prod/` | 正式训练启动器 + 趋势分析 | → `training/prod/` |
+| `dtype-unify/` | dtype 专题（历史验收） | 6 件活工具（`single_step_grad` / `dump_fixture_samples` / `compare_dtype_fix` / `_common` / `test_padding_dtype` / `run_dtype_grad.sh`）→ `training/tests/`，`analyze_util.py` → `training/bench/`；**目录整删** |
+| `bottleneck-bench/` | 历史性能专题 | `gl-dataloader/` V3.9 已删；**余部整删** |
+| `bottleneck-bench-v2/` | 历史性能专题 | `analyze_gpu_util.py`（活量具，prod sbatch 在用）→ `training/bench/`；**余部整删** |
+| `data-pack-framesamp/` | 打包工具 + 训练侧守卫混装 | 打包件（`pack_framesamp_store.py` / `probe_layout.py` / `run_pack.sh` / README）→ `dataset/pack/`；守卫与量具（`test_pack_guards.py` / `spawn_matrix.py` / `dump_index_seq.py`）→ `training/tests/`；`compare_batches.py` V3.9 已删；**目录删** |
+| `data-preprocess-GL/` | GL 建库域主体 | → `dataset/gl/` 整目录冻结随迁（含 `gl_submit.py`、sbatch、自己的 `paths.sh`、`legacy/`） |
+| `build_dataset.py` | 建库分派入口 | → `dataset/build_dataset.py` |
+| `tarxz_h5.py` | 原始 H5 压缩工具 | → `dataset/` |
+| `unzip_data.py` | 数据解压工具 | → `dataset/` |
+| `finetune_vlm_subgoal_predictor.sh` | symbolic 数据生产配套（vlm_subgoal builder 同域，冻结不改内容） | → `dataset/` |
+| `__pycache__/` | 缓存 | 不进 git，忽略 |
+| （新增） | 训练域自带 `paths.sh` | `training/paths.sh`（切断对建库域 paths.sh 的跨域 source） |
+
+修改后顶层只剩两项：
+
+```
+scripts/
+  training/   train.py、finetune_*.sh、eval.sh、serve_policy.py、compute_results.py、
+              compute_norm_stats.py、download_pi05_base.py、unzip_ckpt.py、__init__.py、paths.sh
+              ├ prod/   ├ bench/   └ tests/
+  dataset/    build_dataset.py、tarxz_h5.py、unzip_data.py、finetune_vlm_subgoal_predictor.sh
+              ├ gl/     └ pack/
+```
+
+## 五、影响面结论
 
 - 已建好的 packed 库与正式训练：零影响，不重建。
 - challenge_interface（framesamp-modul）：零改动（三种集成保留，`policy_config`/serving 不动）。
@@ -145,7 +183,7 @@ v4（IO 重构，commitV3.0–V3.7）交付 `FrameSampDataset` 后，训练主�
 scripts/
   training/                  ← 训练域
     train.py、finetune_mme_vla_suite.sh、finetune_pi05_baseline.sh、eval.sh、serve_policy.py、
-    compute_results.py、compute_norm_stats.py、download_pi05_base.py 等散件
+    compute_results.py、compute_norm_stats.py、download_pi05_base.py、unzip_ckpt.py、__init__.py
     prod/     ← train-prod/（gl_train_prod.sbatch、prod_train_once.py、downsample_util_csv.py）
     bench/    ← smoke-local/ 四件 + compare_online_memory.py + analyze_gpu_util.py（自 bottleneck-bench-v2）
                  + analyze_util.py（自 dtype-unify）
@@ -156,8 +194,10 @@ scripts/
   dataset/                   ← 数据集预处理域（自包含隔离域）
     gl/       ← data-preprocess-GL/ 整目录（内容冻结，只随目录移动）
     pack/     ← pack_framesamp_store.py、probe_layout.py、run_pack.sh、README
-    build_dataset.py
+    build_dataset.py、tarxz_h5.py、unzip_data.py、finetune_vlm_subgoal_predictor.sh
 ```
+
+（顶层散件逐项去向的完整对照表见第一部分四节。）
 
 - 随后删除空壳/退役目录：`bottleneck-bench/` 余部、`bottleneck-bench-v2/`、`dtype-unify/`、`data-pack-framesamp/`、`smoke-local/`、`train-prod/`、`data-preprocess-GL/`。
 - 路径修正点：`prod_train_once.py` 的 sys.path 插入（smoke-local→training/bench）；`gl_train_prod.sbatch` 的 analyze_gpu_util 路径；`run_2gpu_epoch_bench.sh` 自引用路径与 paths.sh source；`pyproject.toml` testpaths；README 规范命令；`bench_train_steps.py`/`single_step_grad.py` 等 `sys.path.insert(0,'scripts')` 类插入改指 `scripts/training`。**历史留档 docs/training-doc/*/launch.md 一律不改。**
