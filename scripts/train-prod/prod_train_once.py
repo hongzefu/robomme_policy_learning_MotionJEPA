@@ -55,9 +55,16 @@ def _record_dir() -> pathlib.Path:
     if not raw:
         raise ValueError("必须设置 PROD_RECORD_DIR 指定记录输出目录（由驱动脚本传入）")
     d = pathlib.Path(raw)
-    if d.exists() and any(d.iterdir()):
-        raise FileExistsError(f"记录目录已存在且非空，拒绝覆盖: {d}")
+    # ⚠ 不能用「目录非空即拒」做护栏：驱动 sbatch 会先 mkdir、写 env.json、起五路采样器，
+    # 之后才调本入口——那时目录里已经有 6 个文件了（2026-08-28 job 59092143 实测被自己的
+    # 护栏打死，42 秒 FAILED）。「该目录是否已被某次训练用过」的正确信号是 metrics.jsonl，
+    # 它只由本入口写。run 目录复用的防护在驱动侧（sbatch 起跑前对 RECORD_DIR / CKPT_DIR
+    # 各做一次 `[ -e ]` 检查）与下面的 checkpoint_dir 护栏，此处不重复。
     d.mkdir(parents=True, exist_ok=True)
+    metrics = d / "metrics.jsonl"
+    if metrics.exists():
+        raise FileExistsError(f"记录目录已有 metrics.jsonl（该目录已被某次训练用过），"
+                              f"拒绝覆盖: {metrics}")
     return d
 
 
