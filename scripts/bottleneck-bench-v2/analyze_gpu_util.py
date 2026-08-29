@@ -49,9 +49,22 @@ SLOW_THRESH = 8.0   # 慢步阈值（秒）：legacy 档 p90 16.6s 时代所定�
 EPOCH_STEPS_FALLBACK = 6176   # 仅旧 record（env.json 无 epoch_steps）回退用，须告警
 
 
+def resolve_batch(env: dict) -> tuple[int, str | None]:
+    """batch 取值：GL 记录写 batch_size，本机记录写 argv_batch——两个键都必须认。
+
+    返回 (batch, 告警文案)；两个键都缺时回退 64 并给出告警文案（此前只认
+    batch_size，分析本机 b8 记录会静默按 64 算，吞吐与字节账 8 倍偏差）。
+    两处调用点共用本函数，避免再次出现单侧漏项。
+    """
+    for key in ("batch_size", "argv_batch"):
+        if env.get(key):
+            return int(env[key]), None
+    return 64, "告警: env.json 无 batch_size / argv_batch 字段，回退 batch=64"
+
+
 def per_step_read_bytes(record_dir: Path, env: dict) -> tuple[float, str]:
     """S7.5：每步读盘从 env.json(backend/dataset_path) + 清单现场推导。"""
-    batch = int(env.get("batch_size") or 64)
+    batch, _ = resolve_batch(env)
     backend = env.get("MMEVLA_DATA_BACKEND") or env.get("backend") or "legacy"
     manifest_path = env.get("manifest_path_resolved") or env.get("manifest_path") or \
         str(Path(__file__).resolve().parents[2] / "v1-store" / "episode_manifest.json")
@@ -131,9 +144,9 @@ def main():
     else:
         epoch_steps = EPOCH_STEPS_FALLBACK
         print(f"告警: env.json 无 epoch_steps 字段（旧 record），回退 {epoch_steps}")
-    batch = int(env.get("batch_size") or 64)
-    if "batch_size" not in env:
-        print("告警: env.json 无 batch_size 字段，回退 batch=64")
+    batch, batch_warn = resolve_batch(env)
+    if batch_warn:
+        print(batch_warn)
     workers = env.get("num_workers")
 
     t, losses = load_metrics(d)

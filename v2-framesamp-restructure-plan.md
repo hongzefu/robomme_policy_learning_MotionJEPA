@@ -736,9 +736,12 @@ def __getitem__(self, idx):
 | 确定性资产·确定性档 | `v1-det-d2-r{1,2}`、`v1-det-d2cold-r{1,2}` | `d9e509e` | 两轮逐步 hex + state_digest + batch_digest diff 为空 | **双 PASS**（共用缓存与独立冷编译均逐位一致——跨期 bitwise 判据授权闸开） | `docs/training-doc/v1-det-*/` |
 | **G0（链头）** | `v1-grad-baseline-g0b-r{1,2}` | `570287f`（`<G0-HEAD>`） | G0_SCOPE + r1/r2 千步自证 | **PASS**：1000 步标量 hex / 12×state_digest / 14×batch_digest（raw+canonical）/ index 8072 全逐位一致（scalars_hex sha256 `c799a0b2…`）；TrainState 数组 @0/299/999 存 `/data/hongzefu/v1-baselines/g0b-r1-state-dump/`（sha 清单进 git） | `docs/training-doc/v1-grad-baseline-g0b/` |
 | **G2** | `v1-framesamp-g2` | `cf64ddd`（起跑 HEAD，clean） | vs G0 r1 固化产物：五标量 hex + 12×state_digest bitwise + canonical 输入 + index（C.3，分项判读） | **PASS**（2026-08-27）：1000 步五标量 hex 零失配、12×state_digest 零失配、canonical 14 步零失配、index 8072 逐个一致；`scalars_hex.tsv` sha256 与 G0 同值 `c799a0b2…`；raw 4 步×2 键预期失配（B3 不计入，V2.4b dtype 统一来源）；与 S5 并行（用户豁免） | `docs/training-doc/v1-framesamp-g2/` |
-| **G0-speed（锚点）** | `v1-g0-speed-r2` | `570287f` | speed 链锚点（AGENTS 16 稳态统计，1000 步口径） | 稳态中位 **1.152 s/step**（n=949，p10 1.097/p90 1.276）、均值 1.186、util 均值 86.5%、0% 采样 4.9%、慢步 3、epoch 外推 15.82 h（本机口径，非最终吞吐结论） | `docs/training-doc/v1-g0-speed-r2/` |
-| **G2-speed** | `v1-g2-speed` | 待回填 | vs `v1-g0-speed-r2`（合并对账，只报数） | **用户决策暂缓（2026-08-27，暂不跑）** | 待回填 |
-| **GL 验收** | `v1-framesamp-dl-*`、`v1-framesamp-e2e-*` | 待回填 | `E2E_ACCEPT`（D 节五项）+ 附加判据 | 待回填 | 待回填 |
+| ~~G0-speed（旧锚点）~~ | `v1-g0-speed-r2` | `570287f` | ~~speed 链锚点~~ | **⚠ 2026-08-28 作废**（v1-95util L0）：其量具每步强制 `device_get` 打断流水线，所测非生产形态。旧值仅历史参照：稳态中位 1.152 s/step、util 均值 86.5%。新锚见下 S0 行 | `docs/training-doc/v1-g0-speed-r2/` |
+| **G2-speed** | `v1-g2-speed` | — | vs `v1-g0-speed-r2`（合并对账，只报数） | **用户决策暂缓（2026-08-27，暂不跑）；其对比对象已随旧锚作废** | — |
+| S0c（量具对照，非基准） | `v1-l0-gauge-log1` | `afb9714` | 与旧 89.2% 同口径的 log1 对照档，只作口径归因、不判 accept | 600 步 GL 4×A40：util 均值 88.1%、0% 采样 10.7%、active_util 98.6%、步时均值 5.537 s、epoch 9.50 h；慢步相位 `step%8` 两格（本 seed 落 r1/r2） | `docs/training-doc/v1-l0-gauge/` |
+| **S0（新 speed 锚点）** | `v1-l0-gauge-log100` | `afb9714` | `E2E95_ACCEPT` 五项（util≥95 / 0%≤3.8 / active≥98 / 步时≤5.013 s / epoch≤8.6 h） | **PASS**（2026-08-28，gl1513，seed 331）：util 均值 **99.718%**、0% 采样 0.125%、active_util 99.842%、步时均值 **4.756 s**、epoch 8.159 h。生产口径 log100，取数与计算天然重叠 | `docs/training-doc/v1-l0-gauge/` |
+| **S0 复验** | `v1-l0-gauge-log100-r2` | `afb9714` | 同上（独立 seed/节点，两 run 全过才算最终通过） | **PASS**（gl1517，seed 334，冷页缓存）：util 均值 **99.904%**、0% 采样 0.020%、active_util 99.924%、步时均值 **4.647 s**、epoch 7.973 h | `docs/training-doc/v1-l0-gauge/` |
+| **GL 验收** | `v1-framesamp-dl-*`、`v1-framesamp-e2e-*` | `cf64ddd` 起 | 旧 `E2E_ACCEPT`（D 节五项）+ 附加判据 | **判据已作废**（连同旧量具，v1-95util）：w8c16 等各档 89.2%/5.301 s 一族数字降为历史参照；现行性能判据是 `E2E95_ACCEPT`，结论以 S0 + 复验为准 | `docs/training-doc/v1-framesamp-e2e/` |
 
 ### T9 基线侧红线（与 G 节并行自检）
 
