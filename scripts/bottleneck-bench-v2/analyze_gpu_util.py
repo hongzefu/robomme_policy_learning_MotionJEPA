@@ -130,6 +130,10 @@ def main():
     ap.add_argument("--warmup", type=int, default=50)
     ap.add_argument("--accept", action="store_true",
                     help="E2E95_ACCEPT 五项机器判定（FAIL 非零退出）；默认关=只出报表")
+    ap.add_argument("--trend", action="store_true",
+                    help="分时趋势视图（长训用）：按步号分段输出 util/步时走势 + TREND_OK 判定")
+    ap.add_argument("--trend-step", type=int, default=1000,
+                    help="趋势分段粒度（步），须为 log_interval 的整数倍；默认 1000")
     args = ap.parse_args()
     d = args.record_dir
 
@@ -271,6 +275,55 @@ def main():
     print(f"附录 GPU util 中位={statistics.median(utils):.0f}%")
     if per_step:
         print(f"附录 步时中位={step_med:.3f}s")
+
+    # 分时趋势（长训用，v1-prod-trend-10h）：现有报表只给稳态窗口一个总均值，看不出
+    # 随时间的走势；长训要回答的是「利用率能不能一直稳住」，故按步号分段输出。
+    # 段边界取 trend_step 的整数倍，从而与 checkpoint 步（save_interval 的倍数）天然对齐，
+    # 保存造成的停顿可以直接从对应段的 util/步时读出来。
+    if args.trend:
+        if args.trend_step % log_interval:
+            raise SystemExit(f"--trend-step {args.trend_step} 必须是 log_interval "
+                             f"{log_interval} 的整数倍（段边界必须落在日志步上）")
+        buckets = []
+        b = (s_lo // args.trend_step) * args.trend_step
+        while b <= s_hi:
+            lo, hi = max(b, s_lo), min(b + args.trend_step, s_hi)
+            if hi > lo:
+                buckets.append((lo, hi))
+            b += args.trend_step
+        print(f"----- 分时趋势（每 {args.trend_step} 步一段，n={len(buckets)}）-----")
+        print(f"{'步区间':>16s} {'时长':>8s} {'步时均值':>9s} {'util均值':>8s} "
+              f"{'0%占比':>7s} {'active':>7s} {'n采样':>7s}")
+        for lo, hi in buckets:
+            tlo, thi = t[lo], t[hi]
+            bw = [u for ts, _, u, _ in win if tlo <= ts <= thi]
+            if not bw:
+                print(f"{f'{lo}-{hi}':>16s}   （该段无 GPU 采样，跳过）")
+                continue
+            bnz = [u for u in bw if u > 0]
+            print(f"{f'{lo}-{hi}':>16s} {(thi - tlo) / 60:7.1f}m "
+                  f"{(thi - tlo) / (hi - lo):8.3f}s {statistics.mean(bw):7.1f}% "
+                  f"{pct(bw, lambda v: v == 0):6.1f}% "
+                  f"{statistics.mean(bnz) if bnz else float('nan'):6.1f}% {len(bw):7d}")
+        # 「无单调下滑」的可执行定义：按稳态窗口的时间中点切两半，后半段 util 均值
+        # 不得低于前半段 1pp 以上。用时间中点而非段序号，避免首段被 warmup 截短而失衡。
+        t_mid = (t[s_lo] + t[s_hi]) / 2
+        first = [u for ts, _, u, _ in win if ts <= t_mid]
+        second = [u for ts, _, u, _ in win if ts > t_mid]
+        ok_mean = util_mean >= ACCEPT95_THRESHOLDS["util_mean_pct"]
+        drop = float("nan")
+        ok_drop = True
+        if first and second:
+            drop = statistics.mean(first) - statistics.mean(second)
+            ok_drop = drop <= 1.0
+            print(f"趋势 前半段 util={statistics.mean(first):.2f}%  "
+                  f"后半段={statistics.mean(second):.2f}%  下滑={drop:+.2f}pp（阈值 ≤1.0pp）")
+        verdict = "PASS" if (ok_mean and ok_drop) else "FAIL"
+        print(f"TREND_OK={verdict} util_mean={util_mean:.3f}"
+              f"{'✓' if ok_mean else '✗(阈95.0)'} drop={drop:+.2f}pp"
+              f"{'✓' if ok_drop else '✗(阈1.0)'}")
+        # 注：TREND_OK 不影响退出码——长训的退出码只反映训练本身是否跑完，
+        # 判据由人读这一行（长训按计划不带 --accept，其阈值是按 600 步 bench 标定的）。
 
     # E2E95_ACCEPT 五项机器判定（v1-95util 判据表；--accept 时启用，FAIL 非零退出）
     if args.accept:
