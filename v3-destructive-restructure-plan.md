@@ -126,6 +126,110 @@ scripts/
 
 **已知不作判据的两项（预先声明防误读）**：raw 口径 `BATCH_DIGEST mismatch=4 first_bad_step=100 bad_keys=2 (static_image_emb/static_pos_emb)` 是 V2.4b dtype 统一的**预期失配**——与 G2 逐字吻合即正常，**不是** 4 步×2 键则升格为信号；总行 `DET_CHECK=FAIL` 是已拍板不修的工具聚合缺口，分项判读为准。
 
+## 七、全部改动文件清单（新增 / 修改 / 删除 / 纯搬移）
+
+> 按文件索引的总清单；每项标注所属 commit。与第二部分逐 commit 条目同源，冲突时以第二部分为准。
+
+### 7.1 新增文件（9 项）
+
+| 文件 | 作用 | 改动内容 | commit |
+|---|---|---|---|
+| `src/mme_vla_suite/dataset_builder/data_utils.py` | 建库域副本：even_sampling / 左右 padding / pool 四函数 | 自 `shared/data_utils.py` **逐字节复制**，零改动 | V3.8 |
+| `src/mme_vla_suite/dataset_builder/posemb_3d.py` | 建库域副本：`PosEmb3D` 3D 位置编码 | 逐字节复制，零改动 | V3.8 |
+| `src/mme_vla_suite/dataset_builder/siglip_tokenizer.py` | 建库域副本：SigLIP 编码器加载 | 逐字节复制，零改动 | V3.8 |
+| `src/mme_vla_suite/dataset_builder/mem_buffer.py` | 建库域副本：`MemoryBuffer` 全类（含 token_drop，建库仍用） | 复制后**恰改 3 行 import**（`shared.` → `dataset_builder.`），函数体一字不动 | V3.8 |
+| `src/mme_vla_suite/shared/sampling.py` | 训练/在线共用的选帧函数新家 | `even_sampling_indices` 函数体原样搬入；只 import numpy，不拉 flax（解 worker 导入负担） | V3.12 |
+| `src/mme_vla_suite/policies/framesamp_memory.py` | 在线评估 framesamp 专用记忆缓冲 `FrameSampMemory` | 新写：`add_buffer`（注入 `vision_enc_fn`、只算 4x4 池化）+ `prepare_frame_sampling`（与旧装配逐字同式，复用 `right_padding_token_emb`）+ `n_steps`/`clear` | V3.12 |
+| `scripts/smoke-local/compare_online_memory.py` | ONLINE_MEM 三层 A/B 量具（POS_TABLE/ENC_LAYER/ASSEMBLY 判定行） | 新写；V3.14 随迁 `training/bench/` | V3.12 |
+| `scripts/training/paths.sh` | 训练域自带路径定义 | 新建，切断 `run_2gpu_epoch_bench.sh` 对建库域 `paths.sh` 的跨域 source | V3.14 |
+| `scripts/training/` + `scripts/dataset/` 目录结构 | 两域顶层 | 见第一部分四节对照表 | V3.14 |
+
+### 7.2 修改文件（按域分组）
+
+**建库域（V3.8，只改 import 行 + 哨兵）**
+
+| 文件 | 作用 | 改动内容 |
+|---|---|---|
+| `src/mme_vla_suite/dataset_builder/build_robomme_dataset.py` | 旧建库主流程（`DatasetProcessor`，被 build_shard 复用） | import 行改指 `dataset_builder.mem_buffer` |
+| `scripts/data-preprocess-GL/build_shard.py` | GL 8×GPU 分片建库主循环 | 同上一行 import |
+| `scripts/data-preprocess-GL/finalize_checks.py` | 建库收尾校验（含 `spot_check` 零容差复算） | 函数内局部 import 改指 |
+| `scripts/data-preprocess-GL/compare_datasets.py` | 新旧库三层对拍（v4 验收资产） | 函数内局部 import 改指 |
+| `scripts/data-preprocess-GL/test_guards.py` | 建库守卫 pytest | 加 sha256 哨兵用例（断言副本 `mem_buffer.py` 哈希等于固化常量，防发散） |
+
+**训练数据链（V3.9–V3.10）**
+
+| 文件 | 作用 | 改动内容 |
+|---|---|---|
+| `src/mme_vla_suite/training/dataloader.py` | 训练 DataLoader 装配入口 | 删 `_resolve_backend` 三态与 RoboMMEDataset import，`create_data_loader` 压成无条件 packed；`DataLoaderImpl`/`_create_framesamp_dataset` 本体一字不动 |
+| `src/mme_vla_suite/training/framesamp_dataset.py` | packed 唯一训练数据集 | V3.9 仅改三处注释措辞；V3.10 `_NONE_KEYS` 删 6 项（recur_*4+subgoal2）；V3.12 import 改指 `shared.sampling`；`integration_type=="context"` 断言不动 |
+| `src/mme_vla_suite/training/config.py` | 训练配置 + transforms 工厂 + tokenizer | ①RepackTransform 删 6 键；②`TokenizePromptWithSymbolicMemory` 删 symbolic 分支与两个无默认 pop；③`ModelTransformFactory` 删 symbolic 块与 `max_token_len*=2`；④`PaligemmaTokenizer.tokenize` 删 subgoal 形参分支（先改 `_download.maybe_download` 再删 import，R2）；⑤删死类 `LeRobotMMEVLARealRobotDataConfig`、`MMEVLAWeightLoader` |
+| `src/mme_vla_suite/shared/data_utils.py` | 训练/在线共享工具 | 删 `even_sampling_indices`（搬走）与 `left_padding_token_emb`（调用者归零）；保留 right_padding + pool |
+| `scripts/compute_norm_stats.py` | norm stats 唯一生产链 | 删 RoboMMEDataset 依赖，内联 `_PklSampleDataset`（等价性八要点）；加 `--output-dir` 防覆盖生产 norm_stats.json |
+
+**模型侧（V3.11）**
+
+| 文件 | 作用 | 改动内容 |
+|---|---|---|
+| `src/mme_vla_suite/models/integration/history_pi0.py` | 模型主体（HistoryPi0） | `create`/`inputs_spec`/`__init__`/`embed_memory`/`embed_prefix`/`compute_loss`/`sample_actions` 七处删 recurrent/symbolic 分支与 stats 返回链；expert/modulation 构图与 lazy_init 参数一字不动 |
+| `src/mme_vla_suite/models/integration/history_observation.py` | 训练/在线共用的观测数据类 | 删 `recur_*`8 + `symbolic_*`2 字段及四处镜像；`static_*` 与基类字段全留 |
+| `src/mme_vla_suite/models/representation/mem_encoder.py` | memory token 投影器 `FeatureEncoder` | 删 `encoder_recur`/`encode_recurrent_memory`/`ouput_dim_for_recur`/`ndim==5` 分支 |
+| `src/mme_vla_suite/models/representation/percep_mem.py` | perceptual memory 编码模块 | 删 `ouput_dim_for_recur=None` 实参与无消费点的 `mem_type` 赋值 |
+| `src/mme_vla_suite/models/representation/utils.py` | 初始化器等工具 | 保留 `kernel_init`+`kernel_init_out_proj`（history_gemma 依赖），删 ttt/rmt/rope 系函数 |
+| `src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context.yaml` | 唯一训练配置 | 值一字不动；可选加中文字段注释（R6 schema 补偿，须 G3 前完成） |
+| `scripts/train.py` | 训练主入口 | `train_step` 三返回改二返回（注解同 hunk）、删 `get_stats` 与 recurrent 统计打印、`ptrain_step` out_shardings 同步；四个 bench 指纹字符串一字不动 |
+
+**在线评估侧（V3.12）**
+
+| 文件 | 作用 | 改动内容 |
+|---|---|---|
+| `src/mme_vla_suite/policies/policy.py` | 在线评估 policy（serving/challenge 共用） | 删 mem_buffer import 换 `FrameSampMemory`；`_prepare_mem_buffer` 压单支；infer 断言改 `n_steps`+显式 raise；`_prepare_history` 只留 frame_sampling |
+| `src/mme_vla_suite/policies/robomme_policy.py` | 输入 transforms（`RoboMMEInputs`） | 删 recur_*4 + subgoal2 共 6 个 `data.get` |
+
+**量具与外围脚本（V3.9–V3.14）**
+
+| 文件 | 作用 | 改动内容 |
+|---|---|---|
+| `scripts/dtype-unify/single_step_grad.py` | 单步定点梯度对拍（GRAD_FIXTURE 的 B 侧） | V3.9 数据源改 `_create_framesamp_dataset`；V3.11 `loss_fn` 同步去 stats/has_aux（第二耦合点）；V3.14 迁 `training/tests/` |
+| `scripts/dtype-unify/dump_fixture_samples.py` | 逐样本/逐 batch 逐键落盘量具 | 数据源改指 packed；迁 `training/tests/` |
+| `scripts/dtype-unify/run_dtype_grad.sh` | GRAD_FIXTURE 驱动 | `--dataset-path` 改 `${DATASET_PATH:-${GL_DATASET}}`；迁 `training/tests/` |
+| `scripts/data-pack-framesamp/test_pack_guards.py` | packed 库/数据集守卫 pytest | 删 backend 三态用例（含 `pytest.raises(match="MMEVLA_DATA_BACKEND")`）；import 改 `shared.sampling`；迁 `training/tests/` |
+| `scripts/data-pack-framesamp/dump_index_seq.py` | index 序列交付对拍 | 仅改 `--legacy-root` help 文本（实指源 pkl 库）；迁 `training/tests/` |
+| `scripts/data-pack-framesamp/spawn_matrix.py` | spawn/fd 泄漏守卫 | docstring 措辞更新（flax 导入链说明失效）；迁 `training/tests/` |
+| `scripts/smoke-local/run_2gpu_epoch_bench.sh` | G 链正式起跑驱动 | V3.9 删 env.json 的 `MMEVLA_DATA_BACKEND`/`backend_source` 两行；V3.14 自引用路径 + source 训练域自带 paths.sh |
+| `scripts/smoke-local/bench_train_steps.py` | G 链 bench 入口（源码指纹护栏所在） | 仅 V3.14 的 sys.path 插入改指 `scripts/training`；护栏与判据零改动 |
+| `scripts/train-prod/gl_train_prod.sbatch` | 正式训练 sbatch | 删 `MMEVLA_DATA_BACKEND` 四处（export/注释/env.json 键/echo，set -u 下必须同删）；V3.14 analyze_gpu_util 路径更新 |
+| `scripts/train-prod/prod_train_once.py` | 正式训练薄启动器 | V3.14 sys.path 插入 smoke-local→training/bench |
+| `scripts/bottleneck-bench-v2/gl_e2e_fix.sbatch` | 历史 e2e sbatch | V3.9 同删 backend 四处（该文件 V3.14 随目录退役） |
+| `scripts/bottleneck-bench-v2/analyze_gpu_util.py` | util 稳态分析（prod 趋势在用的活量具） | 读历史 env.json 逻辑不改，加一行历史遗留注释；V3.14 迁 `training/bench/` |
+| `scripts/eval.sh` | 在线评估启动 | 删 symbolic/MemER 分派与菜单，默认 MODEL_TYPE 改 `perceptual-framesamp-modul` |
+| `scripts/finetune_mme_vla_suite.sh` | 训练启动 | 注释菜单 14 变体 → 3 个 framesamp |
+| `scripts/compute_results.py` | 评估结果统计 | 删 `--symbolic_type` 与 symbolic 分支，默认 model_dir 改 framesamp-modul |
+| `examples/robomme/eval.py` | 评估客户端 | 删 subgoal 全链（import/参数/注入/存档分支） |
+| `examples/robomme/utils.py` | 客户端工具 | 删 `SUBGOAL_TYPES` 与 record 的 subgoal 形参/文字叠加 |
+| `examples/robomme/env_runner.py` | 环境 runner | 删两个 subgoal oracle property |
+| `pyproject.toml` | 项目配置 | V3.14 testpaths 指新目录 |
+| `README.md` | 仓库说明 | V3.14 规范命令改新路径 |
+
+### 7.3 删除文件
+
+| 文件/目录 | 作用（删除理由） | commit |
+|---|---|---|
+| `src/mme_vla_suite/training/dataset.py` | legacy 数据链（RoboMMEDataset/SampleDataset），packed 唯一化后无消费者 | V3.9 |
+| `scripts/data-pack-framesamp/compare_batches.py` | packed-vs-legacy 对拍工具，A 侧消失 | V3.9 |
+| `scripts/bottleneck-bench/gl-dataloader/` 整目录 | 调私有 `_resolve_backend` 的历史基准 | V3.9 |
+| `src/mme_vla_suite/models/representation/{recur_mem,rmt,ttt}.py` | recurrent 记忆模型（RMT/TTT），唯一消费链已删 | V3.11 |
+| `models/config/robomme/` 11 个非 framesamp yaml + `models/config/base.yaml` | tokendrop/recurrent/symbolic 配置与无引用模板 | V3.11 |
+| `src/mme_vla_suite/shared/mem_buffer.py` | 训练/在线均已脱钩，建库域有冻结副本 | V3.12 |
+| `src/mme_vla_suite/shared/siglip_tokenizer.py` | 训练/在线零使用（在线注入模型编码器），建库域有副本 | V3.12 |
+| `examples/robomme/subgoal_predictor.py` + `subgoal_prediction/` 子树 | symbolic 在线预测链 | V3.13 |
+| `scripts/bottleneck-bench/` 余部、`bottleneck-bench-v2/`、`dtype-unify/`（活件迁走后） | 历史专题目录退役 | V3.14 |
+| 旧目录空壳：`smoke-local/`、`train-prod/`、`data-preprocess-GL/`、`data-pack-framesamp/` | 内容已迁入两域 | V3.14 |
+
+### 7.4 纯搬移（内容零改动，V3.14，git mv）
+
+- `data-preprocess-GL/` 整目录 → `dataset/gl/`（冻结随迁）；`pack_framesamp_store.py`/`probe_layout.py`/`run_pack.sh`/README → `dataset/pack/`；`build_dataset.py`/`tarxz_h5.py`/`unzip_data.py`/`finetune_vlm_subgoal_predictor.sh` → `dataset/`。
+- `smoke-local/` 四件 + `compare_online_memory.py` → `training/bench/`；`train-prod/` → `training/prod/`；`analyze_util.py`/`_common.py`/`test_padding_dtype.py` → 各自去处见四节对照表；`train.py` 等顶层散件 → `training/`。
+
 ---
 
 # 第二部分（技术细节，供 agent 追踪）
