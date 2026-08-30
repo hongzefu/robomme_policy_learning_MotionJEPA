@@ -1,8 +1,5 @@
-# A total of 14 VLA variants are considered in our experiments:
-#  FrameSamp                        TokenDrop                       RMT                       TTT                      Symbolic
-# perceptual-framesamp-context  perceptual-tokendrop-context  recurrent-rmt-context  recurrent-ttt-context  symbolic-grounded-subgoal
-# perceptual-framesamp-expert   perceptual-tokendrop-expert   recurrent-rmt-expert   recurrent-ttt-expert   symbolic-simple-subgoal
-# perceptual-framesamp-modul    perceptual-tokendrop-modul    recurrent-rmt-modul    recurrent-ttt-modul
+# 可选 MME_VLA_TYPE（commitV4.5 收敛后仅存 framesamp 三变体）：
+# perceptual-framesamp-context  perceptual-framesamp-modul  perceptual-framesamp-expert
 
 MME_VLA_TYPE="perceptual-framesamp-modul"
 

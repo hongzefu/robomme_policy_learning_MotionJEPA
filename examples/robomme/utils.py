@@ -35,10 +35,6 @@ TASK_NAME_LIST=  [
     "RouteStick"
 ]
 
-SUBGOAL_TYPES = ("simple_subgoal", "grounded_subgoal")
-
-
-
 def pack_buffer(image_buffer, state_buffer, exec_start_idx=0):
     image_output = np.stack(image_buffer, axis=0).astype(np.uint8)[:, None]
     state_output = np.stack(state_buffer, axis=0).astype(np.float32)
@@ -50,9 +46,7 @@ def pack_buffer(image_buffer, state_buffer, exec_start_idx=0):
     }
     
 def check_args(args):
-    assert args.subgoal_type in ["simple_subgoal", "grounded_subgoal", None] and args.obs_horizon == 16
-    if args.use_memer:
-        args.subgoal_type = "grounded_subgoal"
+    assert args.obs_horizon == 16
 
 
 
@@ -91,14 +85,7 @@ class RolloutRecorder:
         self.fps = fps
         self.task_goal = task_goal
         
-    def _extract_points(self, subgoal: str):
-        match = re.findall(r'<(\d+), (\d+)>', subgoal)
-        points = []
-        for m in match:
-            points.append((int(m[0]), int(m[1])))
-        return points
-        
-    def record(self, image: np.ndarray, wrist_image: np.ndarray, state: np.ndarray, action: np.ndarray=None, is_video_demo: bool=False, subgoal: Optional[str] = None):
+    def record(self, image: np.ndarray, wrist_image: np.ndarray, state: np.ndarray, action: np.ndarray=None, is_video_demo: bool=False):
         
         concat_image = np.concatenate([image, wrist_image], axis=1)
         if is_video_demo: # add a red border
@@ -109,16 +96,6 @@ class RolloutRecorder:
         
         goal_text = "Task Goal: " + self.task_goal
         goal_text_area = self.add_text_area(goal_text, concat_image.shape)
-        
-        if subgoal is not None:
-            subgoal_text = "Subgoal: " + subgoal
-            subgoal_text_area = self.add_text_area(subgoal_text, concat_image.shape)
-            
-            if self._extract_points(subgoal) is not None:
-                for point in self._extract_points(subgoal):
-                    concat_image = cv2.circle(concat_image, point[::-1], 5, (255, 255, 0), -1)
-                    
-            concat_image = np.concatenate([subgoal_text_area, concat_image], axis=0)
         
         state_text = "State: " + ','.join([f"{i:.4f}" for i in state])
         state_text_area = self.add_text_area(state_text, concat_image.shape)

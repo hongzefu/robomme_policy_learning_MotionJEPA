@@ -2,11 +2,7 @@
 Automatically gather the results from all ckpt_list and seed_list, and compute the final results (mean + std)
 
 Example usage:
-For perceptual or recurrent memory models:
-uv run scripts/compute_results.py --model_dir perceptual-tokendrop-modul --ckpt_list ckpt60000,ckpt70000,ckpt79999 --seed_list seed0,seed42,seed7
-
-For symbolic memory models:
-uv run scripts/compute_results.py --model_dir symbolic-grounded-subgoal --ckpt_list ckpt60000,ckpt70000,ckpt79999 --seed_list seed0,seed42,seed7 --symbolic_type oracle
+uv run scripts/compute_results.py --model_dir perceptual-framesamp-modul --ckpt_list ckpt60000,ckpt70000,ckpt79999 --seed_list seed0,seed42,seed7
 """
 
 import pandas as pd
@@ -17,20 +13,13 @@ from typing import List
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model_dir", type=str, default="perceptual-tokendrop-modul")
+parser.add_argument("--model_dir", type=str, default="perceptual-framesamp-modul")
 parser.add_argument("--ckpt_list", type=str, default="ckpt60000,ckpt70000,ckpt79999")
 parser.add_argument("--seed_list", type=str, default="seed0,seed42,seed7")
-parser.add_argument("--symbolic_type", type=str, default="") # oracle / gemini / qwenvl / memer or empty
 args = parser.parse_args()
-DIR = Path("runs/evaluation")
+DIR = Path("v1-store/evaluation")
 
 MODEL_DIR = args.model_dir
-SYMBOLIC_TYPE = args.symbolic_type
-
-if "symbolic" in MODEL_DIR:
-    assert SYMBOLIC_TYPE in ["oracle", "gemini", "qwenvl", "memer"], "Invalid symbolic type"
-else:
-    assert SYMBOLIC_TYPE == "", "Symbolic type is not supported for this model type"
 
 CKPT_LIST = args.ckpt_list.split(",")
 SEED_LIST = args.seed_list.split(",")
@@ -93,11 +82,7 @@ def load_results(model_dir: str, ckpt_list: List[str], seed_list: List[str]) -> 
                 continue
                 
             try:
-                # Determine log path based on symbolic_type
-                if SYMBOLIC_TYPE:
-                    log_path = seed_name / SYMBOLIC_TYPE / "log.json"
-                else:
-                    log_path = seed_name / "log.json"
+                log_path = seed_name / "log.json"
                 
                 if not log_path.exists():
                     print(f"Warning: Log file not found: {log_path}")
@@ -377,7 +362,6 @@ def compute_final_results():
     # Print configuration
     print(f"Model: {MODEL_DIR}")
     print(f"Checkpoints: {CKPT_LIST}")
-    print(f"Symbolic type: '{SYMBOLIC_TYPE}' (empty means default)")
     print()
     
     # Load all results with checkpoint filtering

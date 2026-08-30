@@ -20,7 +20,7 @@ def pack_state(joint_state: np.ndarray, gripper_state: np.ndarray) -> np.ndarray
 class EnvRunner:
     """
     Wraps RoboMME BenchmarkEnvBuilder for a single task: create env per episode,
-    expose initial observation and step API, and optional subgoal oracles.
+    expose initial observation and step API.
     """
 
     def __init__(self, env_id: str, video_save_dir: str, max_steps: int = 1300) -> None:
@@ -93,15 +93,7 @@ class EnvRunner:
         stop = terminated or truncated
                 
         return (img, wrist_img, state), stop, outcome
-    
-    @property
-    def simple_subgoal_oracle(self) -> str:
-        return self.info["simple_subgoal_online"]
-    
-    @property
-    def grounded_subgoal_oracle(self) -> str:
-        return self.info["grounded_subgoal_online"]
-    
+
     def close_env(self) -> None:
         """Close and clear the current env."""
         if self.env is not None:

@@ -14,17 +14,10 @@ from utils import (
     check_args,
     TASK_NAME_LIST,
     TASK_WITH_VIDEO_DEMO,
-    SUBGOAL_TYPES,
     EpisodeState,
 )
 from utils import RolloutRecorder
 from env_runner import EnvRunner
-from subgoal_predictor import build_subgoal_predictor, SubgoalPredictorBase
-
-# qwen3-vl environment variables
-os.environ['IMAGE_MAX_TOKEN_NUM'] = '256'
-os.environ['VIDEO_MAX_TOKEN_NUM'] = '64'
-os.environ['FPS_MAX_FRAMES'] = '10'
 
 
 
@@ -35,7 +28,7 @@ class Args:
 
     obs_horizon: int = 16
     max_steps: int = 1300
-    save_dir: str = "runs/evaluation"
+    save_dir: str = "v1-store/evaluation"
     overwrite: bool = False
 
     use_history: bool = True
@@ -48,20 +41,6 @@ class Args:
     only_tasks: str = "" # tasks split by comma
     exclude_tasks: str = "" # tasks split by comma
 
-    # VLM subgoal predictor
-    use_oracle: bool = False
-    use_qwenvl: bool = False
-    use_memer: bool = False
-    use_gemini: bool = False
-    subgoal_type: Optional[str] = None  # [simple_subgoal, grounded_subgoal]
-    gemini_model_name: str = "gemini-2.5-pro"
-    qwenvl_simpleSG_adapter_path: str = "runs/ckpts/vlm_subgoal_predictor/qwenvl/simple_subgoal/checkpoint-1400"
-    qwenvl_groundSG_adapter_path: str = "runs/ckpts/vlm_subgoal_predictor/qwenvl/grounded_subgoal/checkpoint-1200"
-    memer_adapter_path: str = "runs/ckpts/vlm_subgoal_predictor/memer/grounded_subgoal/checkpoint-1300"
-    subgoal_keep_period: int = 1 # ever subgoal should be kept for this many steps
-    # this can accelerate the evaluation process for symbolic memory
-    # In our experiments, we just set this to 1
-
 
 
 class EpisodeEvaluator:
@@ -72,7 +51,6 @@ class EpisodeEvaluator:
     def eval_each_episode(
         self,
         env_runner: EnvRunner,
-        subgoal_predictor: SubgoalPredictorBase,
         video_save_dir: Path,
     ) -> str:
         client = _websocket_client_policy.MMEVLAWebsocketClientPolicy(
@@ -84,40 +62,20 @@ class EpisodeEvaluator:
 
         epstate = EpisodeState()
         task_goal, recorder = self.init_episode(env_runner, epstate, video_save_dir)
-        subgoal_predictor.start_episode(epstate, env_runner)        
 
         img, wrist_img, robot_state = epstate.get_current_obs()
         prompt = task_goal
         success_flag = "unknown"
-        subgoal = None
-        last_subgoal = None
 
         while True:
-            subgoal_predictor.step(epstate)
-
             if not epstate.action_plan:
-                if epstate.count % self.args.subgoal_keep_period == 0 or last_subgoal is None:
-                    subgoal, has_api_error = subgoal_predictor.get_subgoal(
-                        epstate.count,
-                        subgoal,
-                        last_subgoal,
-                    )
-                else:
-                    subgoal = last_subgoal
-                    has_api_error = False
-
-                if has_api_error:
-                    break
-
                 action_chunk = self.get_action_chunk(
-                    client, epstate, img, wrist_img, robot_state, prompt, subgoal, 
+                    client, epstate, img, wrist_img, robot_state, prompt,
                     exec_horizon=self.args.obs_horizon
                 )
 
                 epstate.action_plan.extend(action_chunk)
                 epstate.clear_buffers()
-
-                last_subgoal = subgoal
 
             action = epstate.action_plan.popleft()
             obs, stop_flag, success_flag = env_runner.step(action)
@@ -135,7 +93,6 @@ class EpisodeEvaluator:
                 wrist_image=wrist_img.copy(),
                 state=robot_state.copy(),
                 action=action.copy(),
-                subgoal=subgoal,
             )
 
             if stop_flag:
@@ -147,7 +104,6 @@ class EpisodeEvaluator:
         video_filename = f"{env_runner.env_id}_ep{env_runner.episode_id}_{success_flag}_{task_goal}_{env_runner.difficulty}.mp4"
         recorder.save_video(video_filename)
 
-        subgoal_predictor.end_episode(epstate, success_flag)
         return success_flag
 
 
@@ -174,7 +130,6 @@ class EpisodeEvaluator:
                 wrist_image=pre_traj["wrist_images"][i].copy(),
                 state=pre_traj["states"][i].copy(),
                 is_video_demo=env_runner.env_id in TASK_WITH_VIDEO_DEMO and i < len(pre_traj["images"]) - 1,
-                subgoal=None if self.args.subgoal_type is None else "[initializing...]",
             )
 
         epstate.exec_start_idx = len(epstate.image_buffer) - 1
@@ -189,7 +144,6 @@ class EpisodeEvaluator:
         wrist_img: np.ndarray,
         robot_state: np.ndarray,
         prompt: str,
-        subgoal: Optional[str],
         exec_horizon: int,
     ) -> list:
         if self.args.use_history:
@@ -208,10 +162,6 @@ class EpisodeEvaluator:
             "prompt": prompt,
         }
 
-        if subgoal is not None:
-            element['simple_subgoal'] = subgoal
-            element['grounded_subgoal'] = subgoal
-
         action_chunk = client.infer(element)["actions"]
         return action_chunk[:exec_horizon]
 
@@ -224,16 +174,6 @@ def setup_save_directory(args: Args) -> Path:
         / f"ckpt{args.model_ckpt_id}"
         / f"seed{args.model_seed}"
     )
-
-    if args.subgoal_type in SUBGOAL_TYPES:
-        if args.use_gemini:
-            save_dir = save_dir / "gemini"
-        elif args.use_qwenvl:
-            save_dir = save_dir / "qwenvl"
-        elif args.use_memer:
-            save_dir = save_dir / "memer"
-        else:
-            save_dir = save_dir / "oracle"
 
     if save_dir.exists():
         if args.overwrite:
@@ -298,7 +238,6 @@ def evaluate(args: Args):
         for task in args.exclude_tasks.split(","):
             log_dict[task] = {str(i): False for i in range(50)}
 
-    subgoal_predictor = build_subgoal_predictor(args, save_dir)
     evaluator = EpisodeEvaluator(args, save_dir)
 
     while not os.path.exists(save_dir / "log.json"):
@@ -320,7 +259,7 @@ def evaluate(args: Args):
                 print(f"\n[robomme] env for task {task_name} episode {episode_id} setup finished")
 
                 try:
-                    success_flag = evaluator.eval_each_episode(env_runner, subgoal_predictor, video_save_dir)
+                    success_flag = evaluator.eval_each_episode(env_runner, video_save_dir)
                     if success_flag == "unknown":
                         log_dict[task_name][episode_id] = "error"
                     else:

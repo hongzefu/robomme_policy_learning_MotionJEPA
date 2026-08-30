@@ -72,8 +72,8 @@ def main():
     parser.add_argument(
         "root",
         nargs="?",
-        default="runs/ckpts",
-        help="Root directory to search for .zip files (default: runs/ckpts)",
+        default="v1-store/train-runs",
+        help="Root directory to search for .zip files (default: v1-store/train-runs)",
     )
     parser.add_argument(
         "-p",
