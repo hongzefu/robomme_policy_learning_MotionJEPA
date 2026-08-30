@@ -83,7 +83,7 @@ echo "    XLA_FLAGS ${DET_FLAGS}"
     --num-workers 4 \
     --fsdp-devices 2 \
     --seed 42 \
-    --dataset-path "${GL_DATASET}" \
+    --dataset-path "${DATASET_PATH:-${GL_DATASET}}" \
     --weight-loader.params-path "${MODELS_DIR}/openpi-assets/checkpoints/pi05_base/params" \
     --model.use-history \
     --model.history-config perceptual-framesamp-context.yaml \

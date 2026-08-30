@@ -469,21 +469,6 @@ def test_g10_spawn_lazy_store(mini_store):
     assert ds._store is None   # 父进程无句柄泄漏（从未构造）
 
 
-def test_dispatch_backend_resolution(mini_store, tmp_path, monkeypatch, caplog):
-    import importlib
-    dl = importlib.import_module("mme_vla_suite.training.dataloader")
-    monkeypatch.delenv("MMEVLA_DATA_BACKEND", raising=False)
-    assert dl._resolve_backend(str(mini_store)) == "legacy"   # 未设默认 legacy，零静默切换
-    monkeypatch.setenv("MMEVLA_DATA_BACKEND", "bogus")
-    with pytest.raises(ValueError, match="MMEVLA_DATA_BACKEND"):
-        dl._resolve_backend(str(mini_store))
-    monkeypatch.setenv("MMEVLA_DATA_BACKEND", "auto")
-    with caplog.at_level(logging.WARNING):
-        assert dl._resolve_backend(str(mini_store)) == "packed"   # meta 存在 → packed
-        assert dl._resolve_backend(str(tmp_path)) == "legacy"     # 无 meta → legacy
-    assert any("auto" in r.message for r in caplog.records)       # auto 必打 WARNING
-
-
 def test_dispatch_packed_gates(mini_store, tmp_path, monkeypatch):
     import importlib
     dl = importlib.import_module("mme_vla_suite.training.dataloader")

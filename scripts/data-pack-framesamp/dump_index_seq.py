@@ -52,7 +52,8 @@ class ProbeDataset:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--legacy-root",
-                    default=str(_REPO_ROOT / "v1-store/datasets/4task-gl"))
+                    default=str(_REPO_ROOT / "v1-store/datasets/4task-gl"),
+                    help="源 pkl 库根（packed 库的源数据集，读其 meta/stats.json 取样本数）")
     ap.add_argument("--packed-root",
                     default=str(_REPO_ROOT / "v1-store/datasets/4task-gl-framesamp"))
     ap.add_argument("--steps", type=int, default=200)

@@ -4,7 +4,6 @@
 # （v1 基线：8C/4w/64G，util 均值 69-70%，慢步(>8s)占稳态墙钟 33%，6.933 s/step）。
 # S7.5（v2 计划）参数化（--export 传入，默认值全部等于历史现状）：
 #   DATASET_PATH           默认 $STORE/datasets/4task-gl（packed 库传 …/4task-gl-framesamp）
-#   MMEVLA_DATA_BACKEND    默认 legacy（R16 显式三态；packed 由提交侧显式传入）
 #   SAVE_INTERVAL          默认 1000（600 步内不触发 TrainState 摘要，性能口径不受污染）
 #   STEPS                  默认 600
 #   ANALYZE_ACCEPT         默认 0；=1 时 analyzer 跑 E2E95_ACCEPT 五项（v1-95util L0 起）
@@ -53,7 +52,6 @@ MOUNT_POINT="/nfs/turbo/coe-chaijy-unreplicated"
 STEPS="${STEPS:-600}"
 SAVE_INTERVAL="${SAVE_INTERVAL:-1000}"
 DATASET_PATH="${DATASET_PATH:-$STORE/datasets/4task-gl}"
-export MMEVLA_DATA_BACKEND="${MMEVLA_DATA_BACKEND:-legacy}"
 COLDHOT="${COLDHOT:-0}"
 COLDHOT_STEPS="${COLDHOT_STEPS:-300}"
 ANALYZE_ACCEPT="${ANALYZE_ACCEPT:-0}"
@@ -123,8 +121,6 @@ d = {
         ["nvidia-smi", "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"],
         capture_output=True, text=True).stdout.strip().splitlines(),
     # ── S7.5 framesamp provenance（D 节清单；legacy 库下 store 字段为 None）──
-    "MMEVLA_DATA_BACKEND": os.environ.get("MMEVLA_DATA_BACKEND", ""),
-    "backend_source": "explicit",   # 本脚本恒显式设置（R16）
     "MMEVLA_FRAMESAMP_VERIFY": os.environ.get("MMEVLA_FRAMESAMP_VERIFY", ""),
     "MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED": os.environ.get("MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED", ""),
     "MMEVLA_FRAMESAMP_ALLOW_SUBSET": os.environ.get("MMEVLA_FRAMESAMP_ALLOW_SUBSET", ""),
@@ -222,7 +218,7 @@ run_bench() {   # $1=RUN_NAME $2=STEPS [$3=LOG_INTERVAL 覆盖，缺省用全局
     mkdir -p "$record_dir"
     REPO_ENV="$REPO" STORE_ENV="$STORE" NCPU_ENV="$NCPU" write_env "$record_dir" "$run_name" "$steps"
     start_samplers "$record_dir"
-    echo "=== e2e 基准 (run=$run_name, backend=$MMEVLA_DATA_BACKEND, dataset=$DATASET_PATH, workers=$WORKERS, cpus=$NCPU, node=$(hostname), job=${SLURM_JOB_ID:-?}, ${steps} steps) ==="
+    echo "=== e2e 基准 (run=$run_name, dataset=$DATASET_PATH, workers=$WORKERS, cpus=$NCPU, node=$(hostname), job=${SLURM_JOB_ID:-?}, ${steps} steps) ==="
     # 性能 run 硬口径（B5）：禁全部摘要。BENCH_CHECKSUM=0 连步 0 的 TrainState 摘要
     # 一并关——步 0 摘要会把完整 TrainState device_get 拉回 host（实测 45.4 GiB），
     # 96G 节点直接 OOM（2026-08-27 T1 job 58996083 EXIT_CODE=137 实测教训；历史

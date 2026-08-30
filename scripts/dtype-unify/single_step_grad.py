@@ -54,7 +54,7 @@ import train as _train  # noqa: E402
 from mme_vla_suite.models.config.utils import get_history_config  # noqa: E402
 from mme_vla_suite.models.integration.history_observation import HistAugObservation  # noqa: E402
 import mme_vla_suite.training.config as _config  # noqa: E402
-from mme_vla_suite.training.dataset import RoboMMEDataset  # noqa: E402
+from mme_vla_suite.training.dataloader import _create_framesamp_dataset  # noqa: E402
 from openpi.training import sharding  # noqa: E402
 from openpi.training.data_loader import _collate_fn  # noqa: E402
 from openpi.training.data_loader import transform_dataset  # noqa: E402
@@ -142,7 +142,7 @@ def _build_batches(config, plan: list[dict], fixture_dir: pathlib.Path) -> dict[
     """按定点计划构造三个 batch（走完整 transform 链），并落 fixture 位型容器。"""
     history_config = get_history_config(config.model.history_config)
     data_config = config.data.create(config.assets_dirs, config.model)
-    ds = RoboMMEDataset(
+    ds = _create_framesamp_dataset(
         dataset_path=str(config.dataset_path),
         data_config=data_config,
         history_config=history_config,

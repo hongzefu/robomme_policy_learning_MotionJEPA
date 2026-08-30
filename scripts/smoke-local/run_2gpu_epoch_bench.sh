@@ -180,10 +180,8 @@ d = {
     "nvidia_smi": subprocess.run(
         ["nvidia-smi", "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"],
         capture_output=True, text=True).stdout.strip().splitlines(),
-    # ── S0'：framesamp packed 库 provenance（v2 计划 D 节清单；backend 分派 S3 落地，
-    #    此处如实记录环境变量原值与来源判定，legacy 库下 resolved 字段见下方回填）──
-    "MMEVLA_DATA_BACKEND": "${MMEVLA_DATA_BACKEND:-}",
-    "backend_source": ("explicit" if "${MMEVLA_DATA_BACKEND:-}" else "unset-default-legacy"),
+    # ── S0'：framesamp packed 库 provenance（v2 计划 D 节清单；commitV4.1 起
+    #    packed 为唯一数据链，backend 字段已随 MMEVLA_DATA_BACKEND 三态一并删除）──
     "MMEVLA_FRAMESAMP_VERIFY": "${MMEVLA_FRAMESAMP_VERIFY:-}",
     "MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED": "${MMEVLA_FRAMESAMP_ALLOW_UNVERIFIED:-}",
     "MMEVLA_FRAMESAMP_ALLOW_SUBSET": "${MMEVLA_FRAMESAMP_ALLOW_SUBSET:-}",
@@ -280,7 +278,12 @@ fi
 # 在它上面再出 OOM 说明环境变了（驱动/常驻占用/代码），须人工排查而不是掩盖
 if [[ "${RC}" -ne 0 ]]; then
   echo "错误: 基准失败（退出码 ${RC}），人工排查: ${LOG}" >&2
-  rm -rf -- "${RECORD_DIR}"               # 失败的半截记录不保留，避免误导
+  # 失败记录原子改名保留（commitV4.1，计划二节第 9 条）：它是定位分叉/失败的
+  # 唯一证据，禁止删除；后缀取现存最大值 +1，绝不覆盖历史失败记录
+  _fn=1
+  while [[ -e "${RECORD_DIR}.failed-${_fn}" ]]; do _fn=$((_fn + 1)); done
+  mv -- "${RECORD_DIR}" "${RECORD_DIR}.failed-${_fn}"
+  echo "失败记录已保留: ${RECORD_DIR}.failed-${_fn}" >&2
   exit "${RC}"
 fi
 

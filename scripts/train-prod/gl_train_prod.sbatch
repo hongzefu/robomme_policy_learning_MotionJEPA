@@ -51,8 +51,6 @@ EPOCH_STEPS="${EPOCH_STEPS:-6176}"
 TREND_STEP="${TREND_STEP:-1000}"
 DOWNSAMPLE_EVERY="${DOWNSAMPLE_EVERY:-10}"
 DATASET_PATH="${DATASET_PATH:-$STORE/datasets/4task-gl-framesamp}"
-# packed 必须显式设：_resolve_backend 未设时默认 legacy（慢 3.4-3.6×，R16 三态）
-export MMEVLA_DATA_BACKEND="${MMEVLA_DATA_BACKEND:-packed}"
 # write_env 的 python 子进程按 os.environ 读取，默认值路径也必须 export
 export STEPS SEED WORKERS BATCH FSDP LOG_INTERVAL SAVE_INTERVAL EPOCH_STEPS DATASET_PATH
 export RUN_NAME
@@ -116,8 +114,6 @@ d = {
     "nvidia_smi": subprocess.run(
         ["nvidia-smi", "--query-gpu=name,driver_version,memory.total", "--format=csv,noheader"],
         capture_output=True, text=True).stdout.strip().splitlines(),
-    "MMEVLA_DATA_BACKEND": os.environ.get("MMEVLA_DATA_BACKEND", ""),
-    "backend_source": "explicit",
     "OMP_NUM_THREADS": os.environ.get("OMP_NUM_THREADS"),
     "MKL_NUM_THREADS": os.environ.get("MKL_NUM_THREADS"),
 }
@@ -184,7 +180,7 @@ stop_samplers() {
 REPO_ENV="$REPO" NCPU_ENV="$NCPU" write_env "$RECORD_DIR"
 start_samplers "$RECORD_DIR"
 
-echo "=== 正式训练 (run=$RUN_NAME, backend=$MMEVLA_DATA_BACKEND, dataset=$DATASET_PATH, workers=$WORKERS, cpus=$NCPU, mem=${SLURM_MEM_PER_NODE:-?}, node=$(hostname), job=${SLURM_JOB_ID:-?}, ${STEPS} steps, log_interval=$LOG_INTERVAL, save_interval=$SAVE_INTERVAL) ==="
+echo "=== 正式训练 (run=$RUN_NAME, dataset=$DATASET_PATH, workers=$WORKERS, cpus=$NCPU, mem=${SLURM_MEM_PER_NODE:-?}, node=$(hostname), job=${SLURM_JOB_ID:-?}, ${STEPS} steps, log_interval=$LOG_INTERVAL, save_interval=$SAVE_INTERVAL) ==="
 
 PROD_RECORD_DIR="$RECORD_DIR" \
 run_py "$REPO/scripts/train-prod/prod_train_once.py" mme_vla_suite \

@@ -7,7 +7,8 @@
 shuffle 撞边界），因此两份产物逐键可比。
 
 **两层取证，对应两层判据**：
-1. 逐样本层（约 2,600 个）走裸 `RoboMMEDataset`——直接看 padding 产物，不被后续
+1. 逐样本层（约 2,600 个）走裸数据集（commitV4.1 起为 packed `FrameSampDataset`，
+   经 `_create_framesamp_dataset` 构造）——直接看 padding 产物，不被后续
    transforms 掩盖；
 2. batch 层（200 个）走完整 `transform_dataset` + `_collate_fn`——与 P6 `batch_digests`
    的记录点（collate 后、device_put 前）逐字对齐，专验「batch 内含短样本时
@@ -47,7 +48,7 @@ import numpy as np  # noqa: E402
 
 from mme_vla_suite.models.config.utils import get_history_config  # noqa: E402
 import mme_vla_suite.training.config as _config  # noqa: E402
-from mme_vla_suite.training.dataset import RoboMMEDataset  # noqa: E402
+from mme_vla_suite.training.dataloader import _create_framesamp_dataset  # noqa: E402
 from openpi.training.data_loader import _collate_fn  # noqa: E402
 from openpi.training.data_loader import transform_dataset  # noqa: E402
 
@@ -171,7 +172,7 @@ def main() -> None:
 
     history_config = get_history_config(config.model.history_config)
     data_config = config.data.create(config.assets_dirs, config.model)
-    ds = RoboMMEDataset(
+    ds = _create_framesamp_dataset(
         dataset_path=str(dataset_path),
         data_config=data_config,
         history_config=history_config,

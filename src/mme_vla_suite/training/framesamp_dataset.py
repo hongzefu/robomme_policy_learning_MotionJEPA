@@ -43,7 +43,7 @@ from mme_vla_suite.shared.data_utils import even_sampling_indices
 
 logger = logging.getLogger(__name__)
 
-# 与 RoboMMEDataset.__getitem__ 尾部补空键列表逐字一致（recur_* / subgoal 等
+# 与旧 RoboMMEDataset.__getitem__（commitV4.1 已删，见 git 历史）尾部补空键列表逐字一致（recur_* / subgoal 等
 # 下游 transforms 会索引的键）
 _NONE_KEYS = (
     "static_image_emb",
@@ -166,7 +166,7 @@ class FrameSampDataset(Dataset):
 
     # ―― 装配（与旧路径逐字对齐处已注明）――
     def _normalize_state(self, state):
-        # 与 RoboMMEDataset._normalize_state 逐字同式（q01/q99 为 f64，输出恒 f64）
+        # 与旧 RoboMMEDataset._normalize_state（commitV4.1 已删）逐字同式（q01/q99 为 f64，输出恒 f64）
         if self.use_quantiles:
             return (state - self.state_norm_stats.q01) / (
                 self.state_norm_stats.q99 - self.state_norm_stats.q01 + 1e-6) * 2.0 - 1.0

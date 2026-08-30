@@ -555,38 +555,6 @@ OPENPI_DATA_HOME = os.getenv("OPENPI_DATA_HOME", "~/.cache/openpi")
 
 _CONFIGS = [
     TrainConfig(
-        name="pi05_baseline",
-        model=history_pi0.HistoryPi0Config(
-            pi05=True, 
-            action_horizon=20,
-            use_history=False, 
-            history_config=None,
-            discrete_state_input=False,
-        ),
-        data=RoboMMEDataConfig(
-            repo_id=f"robomme",
-            base_config=DataConfig(prompt_from_task=True),
-        ),
-        batch_size=128,
-        lr_schedule=_optimizer.CosineDecaySchedule(
-            warmup_steps=10_000,
-            peak_lr=5e-5,
-            decay_steps=100_000,
-            decay_lr=5e-5,
-        ),
-        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
-        freeze_filter=history_pi0.HistoryPi0Config().get_freeze_filter(),
-        weight_loader=weight_loaders.CheckpointWeightLoader(
-            os.path.join(OPENPI_DATA_HOME, "openpi-assets/checkpoints/pi05_base/params"),
-        ),
-        num_train_steps=80_000, 
-        save_interval=10_000,
-        keep_period=10_000,
-        num_workers=4,
-        ema_decay=0.999,
-        fsdp_devices=4,
-    ),
-    TrainConfig(
         name="mme_vla_suite",
         model=history_pi0.HistoryPi0Config(
             pi05=True, 

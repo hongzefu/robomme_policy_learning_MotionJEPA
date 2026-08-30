@@ -65,6 +65,8 @@ def resolve_batch(env: dict) -> tuple[int, str | None]:
 def per_step_read_bytes(record_dir: Path, env: dict) -> tuple[float, str]:
     """S7.5：每步读盘从 env.json(backend/dataset_path) + 清单现场推导。"""
     batch, _ = resolve_batch(env)
+    # 历史遗留：MMEVLA_DATA_BACKEND 三态已于 commitV4.1 删除，新 run 的 env.json
+    # 不再含该字段；此处保留读取仅为兼容分析历史 run 的旧 env.json，勿删。
     backend = env.get("MMEVLA_DATA_BACKEND") or env.get("backend") or "legacy"
     manifest_path = env.get("manifest_path_resolved") or env.get("manifest_path") or \
         str(Path(__file__).resolve().parents[2] / "v1-store" / "episode_manifest.json")
