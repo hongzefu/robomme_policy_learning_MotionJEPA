@@ -128,7 +128,7 @@ STATE_DUMP_DIR=""
 
 # 训练命令的唯一真值源：env.json 的 argv 与实际执行的是同一个数组，不再手抄字面量
 ARGS=(
-  "${REPO_ROOT}/scripts/training/bench/bench_train_steps.py" mme_vla_suite
+  "${REPO_ROOT}/scripts/training/g0/bench_train_steps.py" mme_vla_suite
   --exp-name "${EXP_NAME}"
   --assets-base-dir "${TRAIN_ASSETS}"
   --checkpoint-base-dir "${CKPT_BASE}"
@@ -230,7 +230,7 @@ fi
 XLA_FLAGS="${XLA_FLAGS:-}" \
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
 CUDA_VISIBLE_DEVICES=0,1 \
-"${UVPY[@]}" "${REPO_ROOT}/scripts/training/bench/check_baseline_env.py" dump \
+"${UVPY[@]}" "${REPO_ROOT}/scripts/training/g0/check_baseline_env.py" dump \
   --record-dir "${RECORD_DIR}" --dataset "${DUMP_DATASET}"
 
 echo "=== 2 GPU epoch 基准: ${RUN_TAG} (exp=${EXP_NAME}, ${STEPS} steps, batch ${BATCH}, workers ${WORKERS}) ==="

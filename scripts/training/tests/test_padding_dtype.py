@@ -7,7 +7,7 @@
    恒为 f64，把修复效果完全掩盖了）。修复尚未落地时（V2.4a 阶段）该组自动 skip，
    V2.4b 落地后自动转为真断言——不用改测试文件。
 2. **哈希口径守卫**——本目录 `_common` 的 raw / canonical 摘要必须与
-   `scripts/training/bench/bench_train_steps.py` 的同名实现逐字节同结果。两处口径一旦
+   `scripts/training/g0/bench_train_steps.py` 的同名实现逐字节同结果。两处口径一旦
    漂移，G1 vs G0b 的输入侧对拍就会拿两把不同的尺子量同一件事。
 3. **位型容器 round-trip**——覆盖 bf16 / f32 / f64 / bool 全部出现的类型。
 
@@ -78,7 +78,7 @@ def test_padding_preserves_dtype(t: int) -> None:
 
 
 def _load_bench_module():
-    p = C.REPO_ROOT / "scripts" / "training" / "bench" / "bench_train_steps.py"
+    p = C.REPO_ROOT / "scripts" / "training" / "g0" / "bench_train_steps.py"
     spec = importlib.util.spec_from_file_location("_bench_for_hash_guard", p)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

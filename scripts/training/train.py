@@ -1,7 +1,11 @@
 import dataclasses
 import functools
+import json
 import logging
+import os
+import pathlib
 import platform
+import sys
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -23,7 +27,6 @@ import openpi.training.optimizer as _optimizer
 import openpi.training.sharding as sharding
 import openpi.training.utils as training_utils
 import openpi.training.weight_loaders as _weight_loaders
-from openpi.training.optimizer import CosineDecaySchedule
 
 
 import mme_vla_suite.models.integration.history_pi0 as _model
@@ -286,10 +289,21 @@ def train_step(
     return new_state, info
 
 
-def main(config: _config.TrainConfig, tentative_run: bool = False):
+def main(config: _config.TrainConfig):
     init_logging()
     logging.info(f"Running on: {platform.node()}")
     logging.info(f"TrainConfig: {config}")
+
+    # ── fail-loud 护栏（早于权重加载与 JIT）─────────────────────────────
+    # checkpoint 只存 EMA 权重、不存优化器状态，续跑会丢 AdamW 动量并把 warmup
+    # 从头再爬一遍，故一律禁用两个开关（沿袭 prod_train_once.py 的护栏，v5.0 迁入）。
+    if config.overwrite or config.resume:
+        raise ValueError("本入口禁用 --overwrite / --resume：续跑语义有损"
+                         "（checkpoint 只存 EMA，丢 AdamW 动量与 warmup 计数）")
+    # HistoryPi0.__init__ 的 else 分支（# safe setting）会静默训出不含记忆分支的
+    # 模型且全链路零告警，这是唯一的「静默」失败模式，必须 fail-loud。
+    if not config.model.use_history:
+        raise ValueError("正式训练必须启用 --model.use-history")
 
     if config.batch_size % jax.device_count() != 0:
         raise ValueError(
@@ -374,13 +388,10 @@ def main(config: _config.TrainConfig, tentative_run: bool = False):
     )
 
     start_step = int(train_state.step)
-    tentative_run_step = 10 # on our cluster, we need to run the tentative run for a few steps to warm up the A40 machine. 
-    # Otherwise it would be very slow. I guess it is because of JAX compilation cache.
-    
+
     if config.resum_ckpt_id is not None:
         start_step += config.resum_ckpt_id
-        tentative_run_step += config.resum_ckpt_id
-    
+
     pbar = tqdm.tqdm(
         range(start_step, config.num_train_steps),
         initial=start_step,
@@ -404,10 +415,6 @@ def main(config: _config.TrainConfig, tentative_run: bool = False):
 
         batch = next(data_iter)
 
-        if tentative_run and step > tentative_run_step:
-            print("\n\n\n==========Tentative run completed==========\n\n\n")
-            break
-
         if (
             step % config.save_interval == 0 and step > start_step
         ) or step == config.num_train_steps - 1:
@@ -417,7 +424,83 @@ def main(config: _config.TrainConfig, tentative_run: bool = False):
     checkpoint_manager.wait_until_finished()
 
 
+# ── 可选 metrics 记录器（仅 __main__ 路径、设 TRAIN_RECORD_DIR 时装载）───────────
+# 供集群收尾判读：util/analyze_gpu_util.py 以 metrics.jsonl 为唯一硬依赖，
+# prod_train_once.py 删除后由本记录器自产（v5.0）。未设 TRAIN_RECORD_DIR 时零行为差异。
+# 记录目录经环境变量传入、不走命令行——_config.cli()（tyro）会吃掉整个 sys.argv[1:]
+# 且对未知参数直接报错退出。
+
+
+class _MetricsProxy:
+    """替换本模块全局名 `wandb` 的代理：log 先记录再转发，其余属性透传。
+
+    ⚠ 不能直接 patch `wandb.log`：main 里的 `wandb.init(mode="disabled")` 会把
+    wandb 模块级的 `log` 重新赋值成 run 的 stub，把 patch 盖掉（2026-08-24 实测）。
+    行 schema 与 g0/bench_train_steps.py::_WandbProxy 逐字段相同。
+    """
+
+    def __init__(self, real_wandb, metrics_path: pathlib.Path):
+        self._real = real_wandb
+        self._metrics_path = metrics_path
+
+    def log(self, data, step=None, **kwargs):
+        # main 两处调用：step 0 的 camera_views（wandb.Image 列表，非标量，跳过）
+        # 与每个 log_interval 的 reduced_info（全标量，逐键记录）
+        row: dict = {"step": int(step) if step is not None else None,
+                     "wall_time": time.time()}
+        n_scalar = 0
+        for k, v in data.items():
+            try:
+                fv = float(v)
+            except (TypeError, ValueError):
+                continue
+            row[k] = {"dec": fv, "hex": fv.hex()}
+            n_scalar += 1
+        if n_scalar:
+            with self._metrics_path.open("a") as f:
+                f.write(json.dumps(row) + "\n")
+        return self._real.log(data, step=step, **kwargs)   # disabled 模式下是 no-op
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
+def _install_metrics_recorder(record_dir: pathlib.Path) -> None:
+    # ⚠ 不能用「目录非空即拒」做护栏：驱动 sbatch 会先 mkdir、写 env.json、起五路
+    # 采样器之后才起训练——那时目录里已有 6 个文件（2026-08-28 job 59092143 实测被
+    # 自己的护栏打死）。「该目录是否已被某次训练用过」的正确信号是 metrics.jsonl。
+    record_dir.mkdir(parents=True, exist_ok=True)
+    metrics = record_dir / "metrics.jsonl"
+    if metrics.exists():
+        raise FileExistsError(f"记录目录已有 metrics.jsonl（该目录已被某次训练用过），"
+                              f"拒绝覆盖: {metrics}")
+    globals()["wandb"] = _MetricsProxy(wandb, metrics)
+
+
+def _finalize_record(record_dir: pathlib.Path, config: _config.TrainConfig) -> None:
+    meta = {
+        "argv": list(sys.argv),
+        "entry": "scripts/training/train.py",
+        "checkpoint_dir": str(config.checkpoint_dir),
+        "num_train_steps": config.num_train_steps,
+        "log_interval": config.log_interval,
+        "save_interval": config.save_interval,
+    }
+    with (record_dir / "run_meta.json").open("w") as f:
+        json.dump(meta, f, indent=2, ensure_ascii=False)
+    try:
+        wandb.finish()
+    except Exception as e:  # 收尾失败不掩盖训练本身的结果
+        print(f"[train] wandb.finish() 失败（忽略）: {e}", flush=True)
+
+
 if __name__ == "__main__":
-    main(_config.cli(), tentative_run=True)
-    time.sleep(20)
-    main(_config.cli())
+    _record_dir = os.environ.get("TRAIN_RECORD_DIR")
+    _cfg = _config.cli()
+    if _record_dir:
+        _install_metrics_recorder(pathlib.Path(_record_dir))
+    try:
+        main(_cfg)
+    finally:
+        if _record_dir:
+            _finalize_record(pathlib.Path(_record_dir), _cfg)

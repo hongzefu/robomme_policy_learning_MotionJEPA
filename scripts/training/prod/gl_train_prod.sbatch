@@ -1,10 +1,28 @@
 #!/usr/bin/env bash
 # ── 正式训练（GL 4×A40）：10 小时利用率趋势观测 run ────────────────────────────
 # 计划：~/.claude/plans/worker8-packed-run-name-smooth-flute.md（用户 2026-08-28 批准）
+# v5.0（v5.0-train-entry-restructure-plan.md）：prod_train_once.py 删除，本脚本直调
+# scripts/training/train.py（已改单跑、自带 TRAIN_RECORD_DIR 记录器）；同批做退出码
+# 硬化——此前 write_env/analyzer/downsample 任一失败都不改变最终 EXIT_CODE，新记录器
+# schema 出错会以「analyzer 崩溃」形式出现却仍报 EXIT_CODE=0，故改为四段 RC 各自留档、
+# 最终取首个非零（训练码优先），并用 trap 保证 stop_samplers 与 EXIT_CODE= 行在任何
+# 退出路径（含被 Slurm SIGTERM）都执行。
 #
-# 与历史 gl_e2e_fix.sbatch（bottleneck-bench-v2，已随目录退役，见 git 历史）的关系：骨架、五路采样器、write_env、
-# run_py 全部沿用；差别只有三处——入口换成 prod_train_once.py（真落 checkpoint）、
-# 资源包络放大到 128G/12h、收尾多跑降采样与趋势分析。
+# 与历史 gl_e2e_fix.sbatch（bottleneck-bench-v2，已随目录退役，见 git 历史）的关系：
+# 骨架、五路采样器、write_env、run_py 全部沿用；资源包络放大到 128G/12h、收尾多跑
+# 降采样与趋势分析。
+#
+# ── 历史坑登记（自 prod_train_once.py 头注释迁入，详见 scripts/training/g0/README.md 第四节）──
+# 1. train.py 双跑必崩：历史 __main__ 连跑两次 main()，第二次必 FileExistsError——
+#    v5.0 已改单跑，此坑消失（历史记录）。
+# 2. bench 不落权重：g0/bench_train_steps.py 把 save_state 换成摘要器，全程不落
+#    checkpoint，拿它跑正式训练会白跑几小时。
+# 3. 不能直接 patch wandb.log：wandb.init() 会重赋值模块级 log 盖掉 patch；train.py
+#    内置 _MetricsProxy 用「替换模块全局名 wandb」的正确做法。
+# 4. 记录目录只能走环境变量 TRAIN_RECORD_DIR（tyro 会吃掉全部 argv）；防覆盖判据是
+#    metrics.jsonl 是否已存在，不是目录非空（本脚本先建目录写 env.json、起采样器）。
+# ⚠ 续跑语义有损：checkpoint 只存 EMA，丢 AdamW 动量与 warmup 计数——train.py 已
+#    fail-loud 禁用 --overwrite / --resume。
 #
 # ⚠ 本 job 远超 greatlakes.md 调试包络（≤2 GPU / ≤30 min），提交前须用户逐个放行。
 #   放行记录见 docs/training-doc/<RUN_NAME>/launch.md。
@@ -29,6 +47,22 @@
 # 注：不要加 --qos=interactive —— chaijy2/spgpu 实测报 Invalid qos specification。
 
 set -uo pipefail
+
+# ── 退出码硬化（v5.0）：trap 保证采样器清理与 EXIT_CODE= 行在任何退出路径都执行 ──
+SAMPLER_PIDS=()
+stop_samplers() {
+    [ "${#SAMPLER_PIDS[@]}" -eq 0 ] && return 0
+    kill "${SAMPLER_PIDS[@]}" 2>/dev/null || true
+    SAMPLER_PIDS=()
+}
+_finalize() {
+    rc=$?
+    stop_samplers
+    echo "EXIT_CODE=$rc"
+}
+trap _finalize EXIT
+trap 'exit 143' TERM INT
+
 REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA
 STORE="$REPO/v1-store"
 NCPU="${SLURM_CPUS_PER_TASK:-16}"
@@ -100,7 +134,7 @@ d = {
     "save_interval": int(os.environ["SAVE_INTERVAL"]),
     "cpus": int(os.environ["NCPU_ENV"]),
     "mem": os.environ.get("SLURM_MEM_PER_NODE"),
-    "entry": "scripts/training/prod/prod_train_once.py",
+    "entry": "scripts/training/train.py",
     "tentative_run": False,
     "history_config": "perceptual-framesamp-context.yaml",
     "dataset_path": os.environ["DATASET_PATH"],
@@ -129,7 +163,6 @@ json.dump(d, open(os.path.join(record_dir, "env.json"), "w"), indent=2, ensure_a
 EOF
 }
 
-SAMPLER_PIDS=()
 start_samplers() {   # $1=RECORD_DIR —— 五路，与 gl_e2e_fix.sbatch 逐字同口径
     local rd="$1"
     # legacy 通道（15s，epoch秒,卡号,util%,显存MiB），交叉核对用
@@ -172,18 +205,15 @@ start_samplers() {   # $1=RECORD_DIR —— 五路，与 gl_e2e_fix.sbatch 逐�
       done ) >> "$rd/compute_apps.csv" 2>/dev/null &
     SAMPLER_PIDS+=($!)
 }
-stop_samplers() {
-    kill "${SAMPLER_PIDS[@]}" 2>/dev/null || true
-    SAMPLER_PIDS=()
-}
-
 REPO_ENV="$REPO" NCPU_ENV="$NCPU" write_env "$RECORD_DIR"
+ENV_RC=$?
+echo "ENV_RC=$ENV_RC"
 start_samplers "$RECORD_DIR"
 
 echo "=== 正式训练 (run=$RUN_NAME, dataset=$DATASET_PATH, workers=$WORKERS, cpus=$NCPU, mem=${SLURM_MEM_PER_NODE:-?}, node=$(hostname), job=${SLURM_JOB_ID:-?}, ${STEPS} steps, log_interval=$LOG_INTERVAL, save_interval=$SAVE_INTERVAL) ==="
 
-PROD_RECORD_DIR="$RECORD_DIR" \
-run_py "$REPO/scripts/training/prod/prod_train_once.py" mme_vla_suite \
+TRAIN_RECORD_DIR="$RECORD_DIR" \
+run_py "$REPO/scripts/training/train.py" mme_vla_suite \
     --exp-name "$RUN_NAME" \
     --assets-base-dir "$STORE/train-assets" \
     --checkpoint-base-dir "$STORE/train-runs" \
@@ -199,22 +229,33 @@ run_py "$REPO/scripts/training/prod/prod_train_once.py" mme_vla_suite \
     --model.use-history \
     --model.history-config perceptual-framesamp-context.yaml \
     --no-wandb-enabled
-RC=$?
+TRAIN_RC=$?
 stop_samplers
-echo "TRAIN_RC=$RC"
+echo "TRAIN_RC=$TRAIN_RC"
 
-if [ "$RC" -eq 0 ]; then
+ANALYZE_RC=0
+DOWNSAMPLE_RC=0
+if [ "$TRAIN_RC" -eq 0 ]; then
     # 判读永远跑全分辨率原件；--trend 出分时走势与 TREND_OK，长训不带 --accept
     # （E2E95_ACCEPT 的五项阈值是按 600 步、全程不落 checkpoint 标定的）
-    run_py "$REPO/scripts/training/bench/analyze_gpu_util.py" \
+    run_py "$REPO/scripts/training/util/analyze_gpu_util.py" \
         "$RECORD_DIR" --steps "$STEPS" --trend --trend-step "$TREND_STEP"
+    ANALYZE_RC=$?
+    echo "ANALYZE_RC=$ANALYZE_RC"
     # 降采样只服务归档（AGENTS 12 留档 vs AGENTS 14 大产物不进 git 的化解方式）
-    run_py "$REPO/scripts/training/prod/downsample_util_csv.py" \
+    run_py "$REPO/scripts/training/util/downsample_util_csv.py" \
         "$RECORD_DIR/gpu_util_dense.csv" \
         "$RECORD_DIR/gpu_util_dense.ds${DOWNSAMPLE_EVERY}.csv" \
         --every "$DOWNSAMPLE_EVERY"
+    DOWNSAMPLE_RC=$?
+    echo "DOWNSAMPLE_RC=$DOWNSAMPLE_RC"
     echo "CKPT_LIST:"; ls -1 "$CKPT_DIR" 2>/dev/null
     echo "CKPT_SIZE: $(du -sh "$CKPT_DIR" 2>/dev/null | cut -f1)"
 fi
-echo "EXIT_CODE=$RC"
+
+# 最终 RC = 四段首个非零（训练码优先）；EXIT_CODE= 行由 trap 统一输出
+RC=0
+for r in "$TRAIN_RC" "$ENV_RC" "$ANALYZE_RC" "$DOWNSAMPLE_RC"; do
+    if [ "$r" -ne 0 ]; then RC=$r; break; fi
+done
 exit "$RC"

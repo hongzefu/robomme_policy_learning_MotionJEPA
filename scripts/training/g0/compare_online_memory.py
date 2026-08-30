@@ -19,7 +19,7 @@
 
 用法（1 卡 ~10GB）：
   CUDA_VISIBLE_DEVICES=0 OPENPI_DATA_HOME=<REPO_ROOT>/v1-store/models \\
-  UV_LINK_MODE=copy uv run scripts/training/bench/compare_online_memory.py \\
+  UV_LINK_MODE=copy uv run scripts/training/g0/compare_online_memory.py \\
     --h5 /data/hongzefu/robomme_data_h5_v2_4env400ep/record_dataset_ButtonUnmask.h5 \\
     --out v1-store/bench/online-mem/<TAG>
 """

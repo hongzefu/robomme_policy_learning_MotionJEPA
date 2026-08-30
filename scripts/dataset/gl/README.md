@@ -30,7 +30,8 @@ CONFIRM_FULL=yes RATE=28.913 TIER_CPUS=2 TIER_MEM_GB=24 WALLTIME=04:00:00 \
   bash $S/step1_submit.sh
 
 bash $S/step2_verify.sh                   # 【第二、三层】→ VERIFY_PASS
-bash scripts/training/bench/run_gl_dataset_training_smoke.sh   # 【第四层】首次接入训练前建议跑
+# 【第四层】训练侧接入检验：跑 scripts/training/g0/run_2gpu_epoch_bench.sh（原
+# run_gl_dataset_training_smoke.sh 已随不可靠脚本一并删除，见 AGENTS.md 项目 scope）
 ```
 
 ## GreatLakes 构建一致性
@@ -290,7 +291,8 @@ gl_submit.py "sbatch --dependency=afterok:<原AID>:<新JOBID> ... gl_finalize.sb
 - **spgpu 强制每个 job 至少 1 GPU**，纯 CPU 的 job 也要带 `--gpus-per-node=1`。
 - **`systemd-run --user -p AllowedCPUs` 不生效**（user slice 没下放 cpuset 控制器，
   进程 affinity 仍是全核），本机限核必须用 `taskset`；`-p MemoryMax` 则确实生效。
-- **`scripts/training/train.py` 的 `__main__` 会连跑两次 `main()`**（tentative 之后紧接 80k step
-  正式训练），smoke 必须走 `scripts/training/bench/smoke_train_once.py`。
+- **`scripts/training/train.py` 的 `__main__` 自 v5.0 起为单跑**（历史上会连跑两次
+  `main()`、第二次必 `FileExistsError`；tentative 机制已删）。smoke 可直接走该入口或
+  `scripts/training/g0/` 量具族（原 `smoke_train_once.py` 已判定不可靠删除）。
 - **抽取期间 8 个 task 同读写一个 turbo 卷**（实测天花板 ~132 MB/s 为保守值，
   8 路并发聚合实测约 320 MB/s），期间勿并行起集群训练。

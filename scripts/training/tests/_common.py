@@ -4,7 +4,7 @@
 落盘格式与哈希口径，而对拍脚本必须能在不拉起 jax 训练栈的前提下跑（它只读文件）。
 把容器与哈希收在这里，入口脚本各自只 import 自己真正需要的重活。
 
-**哈希口径与 `scripts/training/bench/bench_train_steps.py` 逐字相同**（raw =
+**哈希口径与 `scripts/training/g0/bench_train_steps.py` 逐字相同**（raw =
 `sha256(dtype‖shape‖bytes)`，canonical = 浮点键升 f32 后 `sha256("f32"‖shape‖bytes)`）。
 两份实现的一致性由 `test_padding_dtype.py::test_hash_kouging_matches_bench` 用
 importlib 加载 bench 模块现场比对锁死，防止口径漂移。

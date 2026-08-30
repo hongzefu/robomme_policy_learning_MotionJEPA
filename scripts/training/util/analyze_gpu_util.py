@@ -20,7 +20,7 @@
   gpu_util.csv         legacy 通道（15s 采样，交叉核对用）
   nfs_read.csv         可选（时间戳,normal_read累计,server_read累计）
 
-用法：uv run scripts/training/bench/analyze_gpu_util.py <record_dir> --steps 600 [--accept]
+用法：uv run scripts/training/util/analyze_gpu_util.py <record_dir> --steps 600 [--accept]
 """
 
 import argparse

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """稳态步时与 GPU util 统计（AGENTS 16 口径）。
 
-**为什么另写一个**：`scripts/training/bench/analyze_gpu_util.py` 期望的文件名与
+**为什么另写一个**：`scripts/training/util/analyze_gpu_util.py` 期望的文件名与
 列格式（`gpu_util_dense.csv`，legacy 为 `epoch秒,卡号,util%,显存MiB`）与本轮 speed /
 正确性 run 采集的 `nvidia-smi --query-gpu=timestamp,index,utilization.gpu,
 utilization.memory,memory.used,power.draw --format=csv,noheader` 不同，直接喂会解析错。
@@ -14,7 +14,7 @@ utilization.memory,memory.used,power.draw --format=csv,noheader` 不同，直接
   纯停顿，正确性 run 不剔除就没法看步时。
 
 用法：
-    uv run scripts/training/bench/analyze_util.py <records_dir> --steps 1000 \
+    uv run scripts/training/util/analyze_util.py <records_dir> --steps 1000 \
         [--warmup 50] [--digest-steps 0,100,...] [--util-csv <path>]
 """
 

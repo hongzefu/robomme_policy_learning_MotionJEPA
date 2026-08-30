@@ -1,6 +1,6 @@
 # smoke-local：本机 2 GPU epoch 基准 + 一致性检验记录底座
 
-本目录五个文件：
+本目录（v5.0 起由 `bench/` 更名拆出，GPU 利用率观测族已移至 `util/`）共六个文件（含本 README）：
 
 | 文件 | 作用 |
 |---|---|
@@ -8,6 +8,7 @@
 | `bench_train_steps.py` | 训练入口：只调一次 `train.main(config)`，训练循环一行不改；靠 monkeypatch 把逐步标量、完整 TrainState 摘要（params/opt_state/EMA/step，步 0 必记）、输入 batch 摘要（raw + canonical 双口径，P1b）与样本 index 序列写成 jsonl/json，另留档编译缓存事件计数与真实 argv。速度口径开关：`SAVE_INTERVAL=0` 禁 TrainState 摘要并默认联动禁输入摘要（P1b；`BATCH_DIGESTS` 显式设置可覆盖，speed 链 run 专用，见 `v2-framesamp-restructure-plan.md` 符号总表）。`EXTRA_DIGEST_STEPS` 加记附加摘要步、`STATE_DUMP_STEPS` 在指定摘要步把 TrainState 数组按位落盘（逐叶数值裁决参照，P1b）。`BENCH_DUMP_IDX=1`（S0'，v2 计划 C.1）batch_sampler 层逐 batch 记 index 到 `idx_seq.jsonl`（端到端旁证，含 prefetch 超前；默认关） |
 | `check_baseline_env.py` | 环境指纹 `dump`（起跑留档进 env.json）/ `check`（**引用任何基线产物前的强制 preflight**，输出 `BASELINE_ENV=PASS|FAIL`）/ `manifest`（生成 `BASELINE_MANIFEST.json` 防产物腐烂） |
 | `compare_baseline.py` | 两份 records 目录对拍：逐步标量 hex diff、`state_digest`/`batch_digest` diff（raw 与 canonical 双口径，P1b）、index 序列前缀对比、rel 分布与包络（量化判据权威版本见 `v1-gradient-baseline.md` 六节），输出 `DET_CHECK=` / `CANON_CHECK=` / `INDEX_SEQ=` / `QUANT_EQUIV=` 判定行；`state_digest` 失配时经 `--state-arrays-*` 输出逐叶 max-abs/max-rel/L2/cosine 数值裁决，拿不出数组即 `INCONCLUSIVE`（不得判 PASS，P1b） |
+| `compare_online_memory.py` | N4 非训练对拍量具（不在 G 链上，判定行体例同 `compare_baseline.py` 族，依赖 `tests/_common.py`） |
 
 一句话定位：**测「本机 2 卡、数据在 NFS turbo 时 1 个 epoch 要多久」，同时为将来
 修改 dataloader 后的一致性检验（数据允许等价但不逐位相同）留下可逐位比对的轨迹记录。**
@@ -210,7 +211,7 @@ PYEOF
 ```bash
 tmux new-session -d -s epoch-bench \
   "set -o pipefail; PYTHONUNBUFFERED=1 \
-   bash scripts/training/bench/run_2gpu_epoch_bench.sh 2>&1 \
+   bash scripts/training/g0/run_2gpu_epoch_bench.sh 2>&1 \
    | tee v1-store/logs/2gpu-epoch-bench-driver.log; \
    echo \"EXIT_CODE=\$?\" >> v1-store/logs/2gpu-epoch-bench-driver.log"
 ```
@@ -222,3 +223,23 @@ tmux new-session -d -s epoch-bench \
 `STATE_DUMP_STEPS`（TrainState 数组落盘步，P1b）、`BENCH_DUMP_IDX`（batch_sampler
 层 index 记录，S0'，默认 0）。
 run 目录与 `~/.cache/jax_<exp_name>` 跑完即删；记录目录与日志保留。
+
+---
+
+## 四、历史坑登记（v5.0 自 prod_train_once.py 迁入）
+
+`prod_train_once.py` 已于 v5.0 删除（集群 sbatch 直调 `scripts/training/train.py`），
+其文件头登记的四条坑迁存于此：
+
+1. **`train.py` 双跑必崩（已修）**：历史 `__main__` 连跑两次 `main()`，第二次在默认
+   `overwrite=False/resume=False` 下必 `FileExistsError`。v5.0 已改单跑、删 tentative
+   机制，此坑就地消失，仅作历史记录。
+2. **bench 不落权重**：`bench_train_steps.py` 把 `save_state` 换成摘要记录器，
+   **全程一个权重都不落**——拿它跑正式训练会白跑几小时。正式训练必须走 `train.py`。
+3. **不能直接 patch `wandb.log`**：`wandb.init()` 会重新赋值模块级 `log` 把 patch 盖掉
+   （2026-08-24 实测：训练 300 步全正常，metrics.jsonl 一行没写）。正确做法是替换
+   train 模块全局名 `wandb` 为代理对象（`_WandbProxy` / train.py 内置 `_MetricsProxy`）。
+4. **记录目录不能走命令行**：`_config.cli()`（tyro）会吃掉整个 `sys.argv[1:]` 且对未知
+   参数直接报错退出，只能走环境变量（bench 侧各自 env、train.py 侧 `TRAIN_RECORD_DIR`）。
+   防覆盖判据是 `metrics.jsonl` 是否已存在，**不是目录非空**（sbatch 会先建目录写
+   env.json、起五路采样器，2026-08-28 job 59092143 实测被「目录非空即拒」打死）。

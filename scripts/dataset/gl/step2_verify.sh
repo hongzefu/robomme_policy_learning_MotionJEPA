@@ -107,4 +107,4 @@ du -sh "${GL_DATASET}" 2>/dev/null || true
 
 echo
 echo "VERIFY_PASS  第二、三层全绿。"
-echo "下一步：训练侧烟测见 scripts/training/bench/run_2gpu_epoch_bench.sh"
+echo "下一步：训练侧烟测见 scripts/training/g0/run_2gpu_epoch_bench.sh"

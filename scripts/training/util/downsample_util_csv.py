@@ -16,7 +16,7 @@
 若按「每 N 行取一行」naive 抽稀，4 卡会被切得不均（N 与卡数不互质时甚至只剩某一张卡）。
 本工具对**每张卡各自计数**，保证各卡采样点数一致、时间轴对齐。
 
-用法：uv run scripts/training/prod/downsample_util_csv.py <src.csv> <dst.csv> [--every 10]
+用法：uv run scripts/training/util/downsample_util_csv.py <src.csv> <dst.csv> [--every 10]
 """
 
 from __future__ import annotations
