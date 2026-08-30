@@ -1,0 +1,13 @@
+OK manifest 复验通过: docs/training-doc/v1-grad-baseline-g0b/records/r1/BASELINE_MANIFEST.json（10 条）
+SCALARS steps=1000 keys=5 hex_mismatch_steps=0 first_mismatch_step=None
+REL key=loss median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=grad_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=llm_grad_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=mem_enc_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=param_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+STATE_DIGEST rows=12 mismatch=0
+BATCH_DIGEST rows=14 mismatch=4 first_bad_step=100 bad_keys=2 首个: ["['static_image_emb']"]
+BATCH_DIGEST_CANONICAL rows=14 mismatch=0
+CANON_CHECK=PASS steps=14
+INDEX_SEQ=PASS n=8072（共同前缀逐个一致, steps≈1000）
+DET_CHECK=FAIL tier=g3-vs-g0b steps=1000 scalar_hex_diff=0 state_digest_diff=0 batch_digest_diff=4

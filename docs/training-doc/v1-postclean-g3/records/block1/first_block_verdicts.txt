@@ -1,0 +1,16 @@
+第一块（非训练轻量对拍）五判定行汇总（v3 计划五节；各自执行时点见对应 commit body）
+
+COPY_DIFF=PASS files=4 nonimport_lines=0 base=732fae3b        # V4.0 tip（三叶子零差异 + mem_buffer 恰 3 行 import）
+IMPORT_ISOLATION=PASS builder_leaks=0 train_leaks=0 online_leaks=0 whitelisted=1   # V4.4 后复核（静态双向 grep + 动态 sys.modules）
+COMPARE_GRAD=PASS kinds=3 mismatches=0                         # N3 GRAD_FIXTURE @ V4.3 tip（A 侧 docs/training-doc/v1-dtype-p5-grad 固化件）
+POS_TABLE=PASS rows=4096 a==b=True a==c=True                   # N4 ONLINE_MEM @ V4.4 后 clean HEAD
+ENC_LAYER=PASS steps=13 keys=3 mismatch=0                      # 同上
+ASSEMBLY=PASS steps=13 mismatch=0                              # 同上
+OOB_PROBE=PASS a=empty-slice-detected b=empty-slice-detected c=raise   # 同上
+ONLINE_MEM=PASS base=732fae3b                                  # 同上（三方：legacy git-show 提取件 / 建库域冻结副本 / FrameSampMemory）
+SMOKE5（预 G3）=PASS                                            # V4.6 tip 新布局：docs/training-doc/v46-smoke5-preg3/
+RELOCATION_REFS=PASS old_refs=0 whitelisted=2                  # V4.6（openpi 冻结文件报错文案两处白名单）
+RELOCATION_ROOT=PASS entries=20 mismatch=0                     # V4.6
+RELOCATION_COLLECT=PASS（135 collected 零 error）               # V4.6
+BASELINE_ENV=PASS                                              # G3 preflight @ 3eccb10
+BUILDER_SPOT：未执行（可选确认档；c-1 COPY_DIFF PASS 时按计划降为可选）
