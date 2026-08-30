@@ -13,7 +13,7 @@ from openpi.shared import nnx_utils
 
 from mme_vla_suite.models.integration.history_observation import HistAugObservation
 from mme_vla_suite.models.integration.history_pi0 import HistoryPi0
-from mme_vla_suite.shared.mem_buffer import MemoryBuffer, MemoryBufferRecurrent
+from mme_vla_suite.policies.framesamp_memory import FrameSampMemory
 
 class MME_VLA_Policy:
     def __init__(
@@ -49,36 +49,21 @@ class MME_VLA_Policy:
         
     
     def _prepare_mem_buffer(self):
-        if self.config is None or self.config.representation_type == "symbolic":
-            self.mem_buffer = None
-        elif self.config.representation_type == "recurrent":
-            self.mem_buffer = MemoryBufferRecurrent(
-                num_views=self.config.num_views,
-                img_emb_dim=self.config.memory_feature.img.input_dim,
-                pos_emb_dim=self.config.memory_feature.pos.input_dim,
-                state_emb_dim=self.config.memory_feature.state.input_dim,
-                input_obs_horizon=self.config.streaming_obs_horizon,
-                max_recur_steps=self.config.recurrent_memory.max_recur_steps,
-                max_video_steps=self.config.recurrent_memory.max_pretraj_steps,
-                prepare_buffer=True, vision_enc_fn=self._vision_encode,
-            )
-        else:
-            self.mem_buffer = MemoryBuffer(
-                num_views=self.config.num_views,
-                img_emb_dim=self.config.memory_feature.img.input_dim,
-                pos_emb_dim=self.config.memory_feature.pos.input_dim,
-                state_emb_dim=self.config.memory_feature.state.input_dim,
-                compute_token_drop_score = self.config.perceptual_memory.type == "token_dropping",
-                token_drop_stride=self.config.streaming_obs_horizon // 2,
-                prepare_buffer=True, vision_enc_fn=self._vision_encode,
-            )
+        # commitV4.4：framesamp 是唯一在线记忆路径（recurrent/symbolic/token_dropping
+        # 与 pi05_baseline 的 config is None 分支均已删除，见 git 历史）
+        self.mem_buffer = FrameSampMemory(
+            num_views=self.config.num_views,
+            img_emb_dim=self.config.memory_feature.img.input_dim,
+            pos_emb_dim=self.config.memory_feature.pos.input_dim,
+            state_emb_dim=self.config.memory_feature.state.input_dim,
+            vision_enc_fn=self._vision_encode,
+        )
 
     @override
     def infer(self, obs: dict) -> dict:
-        if self.config is not None and self.config.representation_type != "symbolic":
-            assert len(self.mem_buffer._history_feats) > 0, \
-                "history feats is empty, add buffer first"
-                                        
+        if self.mem_buffer.n_steps == 0:
+            raise RuntimeError("history feats is empty, add buffer first")
+
         inputs = jax.tree.map(lambda x: x, obs)
         inputs = self._prepare_history(inputs)
         inputs = self._input_transform(inputs)
@@ -127,40 +112,18 @@ class MME_VLA_Policy:
             return (state - self.state_norm_stats.mean) / (self.state_norm_stats.std + 1e-6)
 
     def _prepare_history(self, inputs: dict) -> dict:
-        if self.config is None or self.config.representation_type == "symbolic":
-            return inputs
-        
-        if self.config.representation_type == "recurrent":
-            history_feats_gather_fn = self.mem_buffer.default_history_feats_gather_fn
-            recur_image_emb, recur_pos_emb, recur_state_emb, recur_mask = \
-                self.mem_buffer.prepare_token_recurrent(
-                    self.step_idx, self.exec_start_idx, history_feats_gather_fn)
-            inputs["recur_image_emb"] = recur_image_emb
-            inputs["recur_pos_emb"] = recur_pos_emb
-            inputs["recur_state_emb"] = self._normalize_state(recur_state_emb)
-            inputs["recur_mask"] = recur_mask
-        elif self.config.representation_type == "perceptual":
-            history_feats_gather_fn = self.mem_buffer.default_history_feats_gather_fn
-            token_budget = self.config.budget
-            
-            if self.config.perceptual_memory.type == "token_dropping":
-                static_image_emb, static_pos_emb, static_state_emb, static_mask = \
-                    self.mem_buffer.prepare_token_dropping(
-                        self.step_idx, token_budget, history_feats_gather_fn)
-            else:
-                token_per_image = self.config.token_per_image
-                static_image_emb, static_pos_emb, static_state_emb, static_mask = \
-                    self.mem_buffer.prepare_frame_sampling(
-                        self.step_idx, token_budget, token_per_image, history_feats_gather_fn)
-            
-            inputs["static_image_emb"] = static_image_emb
-            inputs["static_pos_emb"] = static_pos_emb
-            inputs["static_state_emb"] = self._normalize_state(static_state_emb)
-            inputs["static_mask"] = static_mask
-        else:
-            raise ValueError(f"Not supported representation type: {self.config.representation_type}")
-        
-    
+        history_feats_gather_fn = self.mem_buffer.default_history_feats_gather_fn
+        token_budget = self.config.budget
+        token_per_image = self.config.token_per_image
+        static_image_emb, static_pos_emb, static_state_emb, static_mask = \
+            self.mem_buffer.prepare_frame_sampling(
+                self.step_idx, token_budget, token_per_image, history_feats_gather_fn)
+
+        inputs["static_image_emb"] = static_image_emb
+        inputs["static_pos_emb"] = static_pos_emb
+        inputs["static_state_emb"] = self._normalize_state(static_state_emb)
+        inputs["static_mask"] = static_mask
+
         return inputs
 
     @property

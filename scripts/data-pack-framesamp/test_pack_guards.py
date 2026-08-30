@@ -352,7 +352,7 @@ def test_g2_pad_dtype_boundary(mini_store):
     ds = _make_dataset(mini_store)
     try:
         store = ds._ensure_store()
-        from mme_vla_suite.shared.data_utils import even_sampling_indices
+        from mme_vla_suite.shared.sampling import even_sampling_indices
         results = {}
         for step in (30, 31):
             frames = np.asarray(even_sampling_indices(step, 32), np.int64)

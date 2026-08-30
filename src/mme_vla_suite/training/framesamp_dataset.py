@@ -39,7 +39,7 @@ from mme_vla_suite.datastore import (
     run_fast_checks,
     run_full_checks,
 )
-from mme_vla_suite.shared.data_utils import even_sampling_indices
+from mme_vla_suite.shared.sampling import even_sampling_indices
 
 logger = logging.getLogger(__name__)
 

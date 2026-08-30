@@ -6,8 +6,9 @@
 /proc/self/fd 计数回到基线（B.2 fd 生命周期契约的验收）。
 
 只测 spawn/fd/懒构造行为，不测数值（内容逐位一致归 S5 第一块）；默认
-JAX_PLATFORMS=cpu（worker import 链经 shared.data_utils 拉 flax/jax——既有
-worker-JAX 问题，本轮只存证不修，计划 1.5 ⑤）。norm stats 用轻量替身。
+JAX_PLATFORMS=cpu（历史上 worker import 链经 shared.data_utils 拉 flax/jax；
+commitV4.4 起选帧函数已搬 shared.sampling（只依赖 numpy）、该导入负担解除，
+此处保留 cpu 档仅为口径与历史记录可比）。norm stats 用轻量替身。
 
 用法（迷你库需先经 test_pack_guards.py 的 fixture 同款流程打包，或指向任一
 verified 库）：

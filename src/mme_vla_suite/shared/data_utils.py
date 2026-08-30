@@ -4,14 +4,8 @@ import einops
 import flax.nnx as nnx
 
 
-
-def even_sampling_indices(step_idx: int, token_budget: int) -> list[int]:
-    """Generate evenly spaced indices for sampling frames."""
-    if step_idx < token_budget:
-        return list(range(step_idx+1))
-    else:
-        return np.linspace(0, step_idx, token_budget, dtype=np.int32).tolist()
-    
+# even_sampling_indices 已于 commitV4.4 原样搬入 shared/sampling.py（只依赖 numpy，
+# 解 dataloader worker 的 flax/jax 导入负担），函数体一字未动。
 
 
 def right_padding_token_emb(
@@ -69,68 +63,6 @@ def right_padding_token_emb(
         sampled_state_emb = sampled_state_emb[:max_size]
         mask = mask[:max_size]
     return sampled_img_emb, sampled_pos_emb, sampled_state_emb, mask
-
-
-
-def left_padding_token_emb(
-    recur_image_emb, # (l v p d1)
-    recur_pos_emb, # (l v p d2)
-    recur_state_emb, # (l d3)
-    recur_mask, # (l)
-    max_recur_steps: int
-):
-    if recur_image_emb.shape[0] < max_recur_steps:
-        recur_image_emb = np.concatenate(
-            [
-                np.zeros(
-                    (
-                        max_recur_steps - recur_image_emb.shape[0],
-                        *recur_image_emb.shape[1:],
-                    )
-                ),
-                recur_image_emb,
-            ],
-            axis=0,
-        )
-        recur_pos_emb = np.concatenate(
-            [
-                np.zeros(
-                    (
-                        max_recur_steps - recur_pos_emb.shape[0],
-                        *recur_pos_emb.shape[1:],
-                    )
-                ),
-                recur_pos_emb,
-            ],
-            axis=0,
-        )
-        recur_state_emb = np.concatenate(
-            [
-                np.zeros(
-                    (
-                        max_recur_steps - recur_state_emb.shape[0],
-                        *recur_state_emb.shape[1:],
-                    )
-                ),
-                recur_state_emb,
-            ],
-            axis=0,
-        )
-        recur_mask = np.concatenate(
-            [
-                np.zeros(max_recur_steps - recur_mask.shape[0], dtype=np.bool_),
-                recur_mask,
-            ],
-            axis=0,
-        )
-    else:
-        recur_image_emb = recur_image_emb[-max_recur_steps:]
-        recur_pos_emb = recur_pos_emb[-max_recur_steps:]
-        recur_state_emb = recur_state_emb[-max_recur_steps:]
-        recur_mask = recur_mask[-max_recur_steps:]
-
-    return recur_image_emb, recur_pos_emb, recur_state_emb, recur_mask
-
 
 
 
