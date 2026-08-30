@@ -44,5 +44,32 @@
 守卫测试：`scripts/data-pack-framesamp/test_pack_guards.py`（Store 组 G1/G4/G5/G7/
 G11/G12/G14 + Dataset 组 G2/G3/G6a/G8/G9/G10/G13 与分派闸）；spawn 生命周期验收另见
 `scripts/data-pack-framesamp/spawn_matrix.py`。消费侧装配层见
-`src/mme_vla_suite/training/framesamp_dataset.py`，backend 三态分派（`MMEVLA_DATA_BACKEND`，
-未设默认 legacy）见 `training/dataloader.py` 的 `_resolve_backend` / `_create_framesamp_dataset`。
+`src/mme_vla_suite/training/framesamp_dataset.py`；packed 是唯一训练数据路径
+（commitV4.1 起，backend 三态与 `_resolve_backend` 已删除），构造入口见
+`training/dataloader.py` 的 `_create_framesamp_dataset`。
+
+## history_config schema（R6 补偿：`models/config/base.yaml` 已删，此处为唯一 schema 文档）
+
+训练唯一配置 `models/config/robomme/perceptual-framesamp-context.yaml`（文件本体
+一字不动——`FrameSampDataset` 的形制断言与 `_EXPECTED_HISTORY_CONFIG` 依赖其字段与
+文件名）。各键含义（modul/expert 变体仅 `integration_type` 不同）：
+
+- `representation_type: perceptual` — 记忆表征类型；v4 重构后训练/在线仅存 perceptual
+  一种（recurrent/symbolic 已删，见 git 历史 commitV4.2/V4.3）。
+- `integration_type: context` — 记忆接入方式，∈ {context, modulation, expert}；
+  训练链固定 context（`FrameSampDataset` 形制断言），modul/expert 仅在线评估/部署。
+- `perceptual_memory.type: frame_sampling` — perceptual 记忆的采样策略；v4 后仅存
+  frame_sampling（token_dropping 已删）。
+- `budget` — 记忆 token 预算（frame_sampling 下 = 采样帧数 × token_per_image）。
+- `token_per_image` — 每帧图像池化后 token 数（4x4 池化 → 16）。
+- `num_views` — 视角数（本数据集为 1）。
+- `streaming_obs_horizon` — 流式观测窗口长度；train.py 断言其为 16 且
+  `action_horizon==20`。
+- `pool_type: mean` — 建库侧特征池化方式。
+- `memory_feature.{img,pos,state}.input_dim` — 三路特征的输入维度（SigLIP 图像
+  emb / 3D 位置编码 / 关节状态）；`img.net: identity` 表示图像特征不再过投影网络；
+  `pos.hidden_dim`、`state.hidden_dim` 为 `FeatureEncoder` 两路投影的输出维度。
+- `memory_token_dim` — `FeatureEncoder.encoder_static` 输出的记忆 token 维度
+  （= 主干 LLM width）。
+- `use_pos_emb` / `use_state_emb` — 是否拼接 pos/state 投影（影响
+  `FeatureEncoder` 的参数树与 RNG 消耗序，禁改）。

@@ -11,8 +11,6 @@ class PerceptualMemory(nnx.Module):
         self.config = config
         self.dtype = dtype
 
-        self.mem_type = config.perceptual_memory.type
-
         self.feature_encoder = FeatureEncoder(
             rngs=rngs,
             dtype=dtype,
@@ -21,7 +19,6 @@ class PerceptualMemory(nnx.Module):
             state_input_dim=self.config.memory_feature.state.input_dim,
             pos_output_dim=self.config.memory_feature.pos.hidden_dim,
             state_output_dim=self.config.memory_feature.state.hidden_dim,
-            ouput_dim_for_recur=None,
             output_dim_for_percep=self.config.memory_token_dim,
             use_pos_emb=self.config.use_pos_emb,
             use_state_emb=self.config.use_state_emb,

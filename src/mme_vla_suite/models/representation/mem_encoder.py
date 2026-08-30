@@ -16,7 +16,6 @@ class FeatureEncoder(nnx.Module):
         state_input_dim,
         state_output_dim,
         output_dim_for_percep=None,
-        ouput_dim_for_recur=None,
         use_pos_emb=True,
         use_state_emb=False,
     ):
@@ -52,16 +51,6 @@ class FeatureEncoder(nnx.Module):
             )
         else:
             self.encoder_static = None
-        if ouput_dim_for_recur is not None:
-            self.encoder_recur = nnx.Linear(
-                input_dim,
-                ouput_dim_for_recur,
-                rngs=rngs,
-                dtype=dtype,
-                kernel_init=kernel_init,
-            )
-        else:
-            self.encoder_recur = None
 
     def _add_pos_emb(
         self,
@@ -77,15 +66,9 @@ class FeatureEncoder(nnx.Module):
         base_emb,
         state_emb,
     ):
-        if base_emb.ndim == 5:
-            _, _, v, p, _ = base_emb.shape
-            state_emb = nnx.silu(self.state_proj(state_emb))
-            state_emb = jnp.tile(state_emb[:, :, None, None, :], (1, 1, v, p, 1))
-            base_emb = jnp.concatenate([base_emb, state_emb], axis=-1)
-        else:
-            state_emb = nnx.silu(self.state_proj(state_emb))
-            base_emb = jnp.concatenate([base_emb, state_emb], axis=-1)
-            
+        state_emb = nnx.silu(self.state_proj(state_emb))
+        base_emb = jnp.concatenate([base_emb, state_emb], axis=-1)
+
         return base_emb
 
     def _encode_memory(
@@ -116,19 +99,4 @@ class FeatureEncoder(nnx.Module):
             static_pos_emb,
             static_state_emb,
             self.encoder_static,
-        )
-
-    def encode_recurrent_memory(
-        self,
-        recurrent_image_emb: at.Float[at.Array, "b t v p d1"],
-        recurrent_pos_emb: at.Float[at.Array, "b t v p d2"],
-        recurrent_state_emb: at.Float[at.Array, "b t d3"],
-        *args,
-        **kwargs,
-    ):
-        return self._encode_memory(
-            recurrent_image_emb,
-            recurrent_pos_emb,
-            recurrent_state_emb,
-            self.encoder_recur,
         )

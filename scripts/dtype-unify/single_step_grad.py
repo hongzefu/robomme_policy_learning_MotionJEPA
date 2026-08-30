@@ -73,6 +73,8 @@ def _guard_train_step_source() -> None:
         "nnx.DiffState(0, config.trainable_filter)",
         "model.compute_loss(rng, observation, actions, train=True)",
         "jax.random.fold_in(rng, state.step)",
+        # commitV4.3 起 train_step 为二返回（stats 链整删）；stats/has_aux 回潮时此针立断
+        "return new_state, info",
     ):
         if needle not in src:
             raise SystemExit(
@@ -91,13 +93,13 @@ def _grad_only(config, rng, state, batch):
     model.train()
 
     def loss_fn(model, rng, observation, actions):
-        chunked_loss, stats = model.compute_loss(rng, observation, actions, train=True)
-        return jax.numpy.mean(chunked_loss), stats
+        chunked_loss = model.compute_loss(rng, observation, actions, train=True)
+        return jax.numpy.mean(chunked_loss)
 
     train_rng = jax.random.fold_in(rng, state.step)
     observation, actions = batch
     diff_state = nnx.DiffState(0, config.trainable_filter)
-    (loss, _stats), grads = nnx.value_and_grad(loss_fn, argnums=diff_state, has_aux=True)(
+    loss, grads = nnx.value_and_grad(loss_fn, argnums=diff_state)(
         model, train_rng, observation, actions
     )
     return loss, grads

@@ -215,7 +215,7 @@ def train_step(
     state: training_utils.TrainState,
     batch: tuple[HistAugObservation, _model.Actions],
 ) -> tuple[
-    training_utils.TrainState, dict[str, at.Array], Any
+    training_utils.TrainState, dict[str, at.Array]
 ]:
     model = nnx.merge(state.model_def, state.params)
     model.train()
@@ -227,16 +227,16 @@ def train_step(
         observation: HistAugObservation,
         actions: _model.Actions,
     ):
-        chunked_loss, stats = model.compute_loss(rng, observation, actions, train=True)
-        return jnp.mean(chunked_loss), stats
+        chunked_loss = model.compute_loss(rng, observation, actions, train=True)
+        return jnp.mean(chunked_loss)
 
     train_rng = jax.random.fold_in(rng, state.step)
     observation, actions = batch
 
     # Filter out frozen params.
     diff_state = nnx.DiffState(0, config.trainable_filter)
-    (loss, stats), grads = nnx.value_and_grad(
-        loss_fn, argnums=diff_state, has_aux=True
+    loss, grads = nnx.value_and_grad(
+        loss_fn, argnums=diff_state
     )(model, train_rng, observation, actions)
 
     params = state.params.filter(config.trainable_filter)
@@ -282,35 +282,7 @@ def train_step(
     if config.model.use_history and hasattr(grads, "mem_encoder"):
         info["mem_enc_norm"] = optax.global_norm(grads.mem_encoder)
 
-    return new_state, info, stats
-
-
-def get_stats(stats_dict) -> dict[str, at.Array]:
-    mask = stats_dict["mask"]
-    if mask.ndim == 2:
-        b, l = mask.shape  # for rmt
-    else:
-        b, _, l = mask.shape  # for ttt
-        stats_dict = {k: v.mean(axis=1) for k, v in stats_dict.items()}
-
-    dic = {}
-    for k in stats_dict.keys():
-        dic[k] = [[] for _ in range(l)]
-
-    mask = stats_dict["mask"]
-    for batch_idx in range(b):
-        for step_idx in range(l):
-            if mask[batch_idx, step_idx]:
-                for k, v in stats_dict.items():
-                    dic[k][step_idx].append(v[batch_idx, step_idx])
-
-    stats = {}
-    for k, v in dic.items():
-        stats[k] = np.zeros((l,))
-        for step in range(l):
-            if len(v[step]) > 0:
-                stats[k][step] = np.array(v[step]).mean()
-    return stats
+    return new_state, info
 
 
 def main(config: _config.TrainConfig, tentative_run: bool = False):
@@ -396,7 +368,7 @@ def main(config: _config.TrainConfig, tentative_run: bool = False):
     ptrain_step = jax.jit(
         functools.partial(train_step, config),
         in_shardings=(replicated_sharding, train_state_sharding, data_sharding),
-        out_shardings=(train_state_sharding, replicated_sharding, replicated_sharding),
+        out_shardings=(train_state_sharding, replicated_sharding),
         donate_argnums=(1,),
     )
 
@@ -418,20 +390,11 @@ def main(config: _config.TrainConfig, tentative_run: bool = False):
     infos = []
     for step in pbar:
         with sharding.set_mesh(mesh):
-            train_state, info, stats = ptrain_step(train_rng, train_state, batch)
+            train_state, info = ptrain_step(train_rng, train_state, batch)
         infos.append(info)
         if step % config.log_interval == 0:
             stacked_infos = common_utils.stack_forest(infos)
             reduced_info = jax.device_get(jax.tree.map(jnp.mean, stacked_infos))
-
-            if (
-                config.model.use_history and history_config.representation_type == "recurrent"
-                and history_config.recurrent_memory.output_stats
-            ):
-                stats = jax.device_get(stats)
-                if stats:
-                    stats_dict = get_stats(stats)
-                    pbar.write(f"Recurrent Memory Stats: {stats_dict}")
 
             info_str = ", ".join(f"{k}={v:.4f}" for k, v in reduced_info.items())
             pbar.write(f"Step {step}: {info_str}")

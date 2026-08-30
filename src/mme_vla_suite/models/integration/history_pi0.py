@@ -1,7 +1,6 @@
 import dataclasses
 import logging
 import os
-from typing import Any
 
 import einops
 import flax.nnx as nnx
@@ -89,16 +88,7 @@ class HistoryPi0Config(Pi0Config):
             loaded_config = get_history_config(self.history_config)
             # Create a new config with the loaded history config
             config_with_loaded_history = dataclasses.replace(self, history_config=loaded_config)
-            
-            max_token_len = self.max_token_len
-            if loaded_config.representation_type == "symbolic":
-                if loaded_config.symbolic_memory.type in ["simple_subgoal", "grounded_subgoal"]:
-                    max_token_len *= 2
-                else:
-                    raise ValueError(f"Not supported symbolic memory type: {loaded_config.symbolic_memory.type}")
-                config_with_loaded_history = dataclasses.replace(config_with_loaded_history, max_token_len=max_token_len) 
-                print("symbolic_memory_type: ", loaded_config.symbolic_memory.type)
-                   
+
             print("max_token_len: ", config_with_loaded_history.max_token_len)
 
             return HistoryPi0(config_with_loaded_history, rngs=nnx.Rngs(rng))
@@ -108,95 +98,37 @@ class HistoryPi0Config(Pi0Config):
     def inputs_spec(self, *, batch_size: int = 1) -> tuple[HistAugObservation, Actions]:
         base_obs_spec, action_spec = super().inputs_spec(batch_size=batch_size)
         with at.disable_typechecking():
-            if not self.use_history:
-                observation_spec = base_obs_spec  # basic pi0
-            else:
-                if self.history_config.representation_type == "symbolic":
-                    observation_spec = HistAugObservation.from_base_obs(
-                        base_obs_spec,
-                        symbolic_tokenized_prompt=jax.ShapeDtypeStruct(
-                            [batch_size, self.max_token_len], jnp.int32
-                        ),
-                        symbolic_tokenized_prompt_mask=jax.ShapeDtypeStruct(
-                            [batch_size, self.max_token_len], bool
-                        ),
-                    )
-                elif self.history_config.representation_type == "perceptual":
-                    observation_spec = HistAugObservation.from_base_obs(
-                        base_obs_spec,
-                        static_image_emb=jax.ShapeDtypeStruct(
-                            [
-                                batch_size,
-                                self.history_config.budget,
-                                self.history_config.memory_feature.img.input_dim,
-                            ],
-                            jnp.float32,
-                        ),
-                        static_mask=jax.ShapeDtypeStruct(
-                            [batch_size, self.history_config.budget],
-                            jnp.bool_,
-                        ),
-                        static_pos_emb=jax.ShapeDtypeStruct(
-                            [
-                                batch_size,
-                                self.history_config.budget,
-                                self.history_config.memory_feature.pos.input_dim,
-                            ],
-                            jnp.float32,
-                        ),
-                        static_state_emb=jax.ShapeDtypeStruct(
-                            [
-                                batch_size,
-                                self.history_config.budget,
-                                self.history_config.memory_feature.state.input_dim,
-                            ],
-                            jnp.float32,
-                        ),
-                    )
-                elif self.history_config.representation_type == "recurrent":
-                    observation_spec = HistAugObservation.from_base_obs(
-                        base_obs_spec,
-                        recur_image_emb=jax.ShapeDtypeStruct(
-                            [
-                                batch_size,
-                                self.history_config.recurrent_memory.max_recur_steps,
-                                self.history_config.num_views,
-                                self.history_config.token_per_image,
-                                self.history_config.memory_feature.img.input_dim,
-                            ],
-                            jnp.float32,
-                        ),
-                        recur_mask=jax.ShapeDtypeStruct(
-                            [
-                                batch_size,
-                                self.history_config.recurrent_memory.max_recur_steps,
-                            ],
-                            jnp.bool_,
-                        ),
-                        recur_pos_emb=jax.ShapeDtypeStruct(
-                            [
-                                batch_size,
-                                self.history_config.recurrent_memory.max_recur_steps,
-                                self.history_config.num_views,
-                                self.history_config.token_per_image,
-                                self.history_config.memory_feature.pos.input_dim,
-                            ],
-                            jnp.float32,
-                        ),
-                        recur_state_emb=jax.ShapeDtypeStruct(
-                            [
-                                batch_size,
-                                self.history_config.recurrent_memory.max_recur_steps,
-                                self.history_config.memory_feature.state.input_dim,
-                            ],
-                            jnp.float32,
-                        ),
-                    )
-
-                else:
-                    raise ValueError(
-                        f"Not supported representation type: {self.history_config.representation_type}"
-                    )
+            observation_spec = HistAugObservation.from_base_obs(
+                base_obs_spec,
+                static_image_emb=jax.ShapeDtypeStruct(
+                    [
+                        batch_size,
+                        self.history_config.budget,
+                        self.history_config.memory_feature.img.input_dim,
+                    ],
+                    jnp.float32,
+                ),
+                static_mask=jax.ShapeDtypeStruct(
+                    [batch_size, self.history_config.budget],
+                    jnp.bool_,
+                ),
+                static_pos_emb=jax.ShapeDtypeStruct(
+                    [
+                        batch_size,
+                        self.history_config.budget,
+                        self.history_config.memory_feature.pos.input_dim,
+                    ],
+                    jnp.float32,
+                ),
+                static_state_emb=jax.ShapeDtypeStruct(
+                    [
+                        batch_size,
+                        self.history_config.budget,
+                        self.history_config.memory_feature.state.input_dim,
+                    ],
+                    jnp.float32,
+                ),
+            )
 
         return observation_spec, action_spec
 
@@ -247,48 +179,22 @@ class HistoryPi0(BaseModel):
         if self.use_history:
             self.history_config = config.history_config
             self.integration_type = config.history_config.integration_type
-            self.representation_type = config.history_config.representation_type
             assert self.integration_type in ["context", "modulation", "expert"]
-            assert self.representation_type in ["perceptual", "recurrent", "symbolic"]
 
-            if self.representation_type == "perceptual":
-                from mme_vla_suite.models.representation.percep_mem import (
-                    PerceptualMemory,
-                )
-
-                self.mem_encoder = PerceptualMemory(
-                    config=self.history_config,
-                    rngs=rngs,
-                    dtype=config.dtype,
-                )
-            elif self.representation_type == "recurrent":
-                from mme_vla_suite.models.representation.recur_mem import (
-                    RecurrentMemory,
-                )
-
-                self.mem_encoder = RecurrentMemory(
-                    config=self.history_config,
-                    rngs=rngs,
-                    dtype=config.dtype,
-                )
-            elif self.representation_type == "symbolic":
-                self.integration_type = (
-                    None  # if symbolic, we only use it as languge input
-                )
-            else:
-                raise ValueError(
-                    f"Not supported representation type: {self.representation_type}"
-                )
-                
-            print(
-                f"====== Using History, Representation Type: {self.representation_type} , Integration Type: {self.integration_type} ======"
+            from mme_vla_suite.models.representation.percep_mem import (
+                PerceptualMemory,
             )
-            if self.representation_type == "perceptual":
-                print(f"Perceptual Memory using {self.history_config.perceptual_memory.type} type\n")
-            elif self.representation_type == "recurrent":
-                print(f"Recurrent Memory using {self.history_config.recurrent_memory.type} type\n")
-            else:
-                print("\n")
+
+            self.mem_encoder = PerceptualMemory(
+                config=self.history_config,
+                rngs=rngs,
+                dtype=config.dtype,
+            )
+
+            print(
+                f"====== Using History, Representation Type: perceptual , Integration Type: {self.integration_type} ======"
+            )
+            print(f"Perceptual Memory using {self.history_config.perceptual_memory.type} type\n")
 
             if self.integration_type == "expert":
                 memory_expert_config = _gemma.get_config(config.memory_expert_variant)
@@ -330,9 +236,7 @@ class HistoryPi0(BaseModel):
 
         else:
             # safe setting
-            self.history_config = self.integration_type = self.representation_type = (
-                None
-            )
+            self.history_config = self.integration_type = None
 
             llm = nnx_bridge.ToNNX(
                 _gemma.Module(
@@ -393,26 +297,13 @@ class HistoryPi0(BaseModel):
 
     @at.typecheck
     def embed_memory(self, obs: HistAugObservation):
-        if self.representation_type == "perceptual":
-            tokens, _, stats = self.mem_encoder(
-                obs.static_image_emb, obs.static_pos_emb, obs.static_state_emb
-            )
-            input_mask = obs.static_mask
-            ar_mask = [False] * tokens.shape[1]
-            na_mask = [False] * tokens.shape[1]
-        elif self.representation_type == "recurrent":
-            (tokens, input_mask), _, stats = self.mem_encoder(
-                obs.recur_image_emb, obs.recur_mask, obs.recur_pos_emb, obs.recur_state_emb
-            )
-            ar_mask = [False] * tokens.shape[1]
-            na_mask = [False] * tokens.shape[1]
-        else:
-            tokens = None
-            input_mask = None
-            ar_mask = None
-            na_mask = None
-            stats = None
-        return tokens, input_mask, ar_mask, na_mask, stats
+        tokens, _, _ = self.mem_encoder(
+            obs.static_image_emb, obs.static_pos_emb, obs.static_state_emb
+        )
+        input_mask = obs.static_mask
+        ar_mask = [False] * tokens.shape[1]
+        na_mask = [False] * tokens.shape[1]
+        return tokens, input_mask, ar_mask, na_mask
 
     @at.typecheck
     def embed_prefix(
@@ -422,7 +313,6 @@ class HistoryPi0(BaseModel):
         at.Bool[at.Array, "b s"],
         at.Bool[at.Array, " s"],
         at.Bool[at.Array, " s"],
-        Any | None,
     ]:
         input_mask = []
         ar_mask = []
@@ -435,15 +325,12 @@ class HistoryPi0(BaseModel):
                 mem_input_mask,
                 mem_ar_mask,
                 mem_na_mask,
-                stats,
             ) = self.embed_memory(obs)
             if mem_tokens is not None:
                 tokens.append(mem_tokens)
                 input_mask.append(mem_input_mask)
                 ar_mask += mem_ar_mask
                 na_mask += mem_na_mask
-        else:
-            stats = None
 
         # embed images
         for i, name in enumerate(obs.images):
@@ -465,17 +352,7 @@ class HistoryPi0(BaseModel):
             na_mask += [True] * image_tokens.shape[1]
 
         # add language (aka tokenized inputs)
-        if self.use_history and self.representation_type == "symbolic":
-            tokenized_inputs = self.PaliGemma.llm(
-                obs.symbolic_tokenized_prompt, method="embed"
-            )
-            tokens.append(tokenized_inputs)
-            input_mask.append(obs.symbolic_tokenized_prompt_mask)
-            # full attention between image and language inputs
-            ar_mask += [False] * tokenized_inputs.shape[1]
-            na_mask += [False] * tokenized_inputs.shape[1]
-
-        elif obs.tokenized_prompt is not None:
+        if obs.tokenized_prompt is not None:
             tokenized_inputs = self.PaliGemma.llm(obs.tokenized_prompt, method="embed")
             tokens.append(tokenized_inputs)
             input_mask.append(obs.tokenized_prompt_mask)
@@ -488,7 +365,7 @@ class HistoryPi0(BaseModel):
         ar_mask = jnp.array(ar_mask)
         na_mask = jnp.array(na_mask)
 
-        return tokens, input_mask, ar_mask, na_mask, stats
+        return tokens, input_mask, ar_mask, na_mask
 
     @at.typecheck
     def embed_suffix(
@@ -572,15 +449,15 @@ class HistoryPi0(BaseModel):
         x_t = time_expanded * noise + (1 - time_expanded) * actions
         u_t = noise - actions
         # one big forward pass of prefix + suffix at once
-        prefix_tokens, prefix_mask, prefix_ar_mask, prefix_na_mask, stats = (
+        prefix_tokens, prefix_mask, prefix_ar_mask, prefix_na_mask = (
             self.embed_prefix(observation)
         )
         suffix_tokens, suffix_mask, suffix_ar_mask, suffix_na_mask, adarms_cond = (
             self.embed_suffix(observation, x_t, time)
         )
-        
+
         if self.integration_type == "expert":
-            mem_tokens, mem_input_mask, mem_ar_mask, mem_na_mask, stats = (
+            mem_tokens, mem_input_mask, mem_ar_mask, mem_na_mask = (
                 self.embed_memory(observation)
             )
             mem_ar_mask = jnp.array(mem_ar_mask)
@@ -599,7 +476,7 @@ class HistoryPi0(BaseModel):
             ar_mask = jnp.concatenate([prefix_ar_mask, suffix_ar_mask], axis=0)
             na_mask = jnp.concatenate([prefix_na_mask, suffix_na_mask], axis=0)
 
-        if self.use_history and self.representation_type != "symbolic":
+        if self.use_history:
             attn_mask = make_attn_mask(input_mask, ar_mask, na_mask)
         else:
             attn_mask = make_attn_mask(input_mask, ar_mask)
@@ -614,7 +491,7 @@ class HistoryPi0(BaseModel):
                 adarms_cond=[None, None, adarms_cond],
             )
         elif self.integration_type == "modulation":
-            mem_seq, mem_mask, _, _, stats = self.embed_memory(observation)
+            mem_seq, mem_mask, _, _ = self.embed_memory(observation)
             (prefix_out, suffix_out), _ = self.PaliGemma.llm(
                 [prefix_tokens, suffix_tokens],
                 mask=attn_mask,
@@ -632,10 +509,10 @@ class HistoryPi0(BaseModel):
             )
 
         v_t = self.action_out_proj(suffix_out[:, -self.action_horizon :])
-        
+
         # import pdb; pdb.set_trace()
 
-        return jnp.mean(jnp.square(v_t - u_t), axis=-1), stats
+        return jnp.mean(jnp.square(v_t - u_t), axis=-1)
 
     @override
     def sample_actions(
@@ -658,8 +535,8 @@ class HistoryPi0(BaseModel):
             )
 
         if self.integration_type == "expert":
-            mem_tokens, mem_input_mask, mem_ar_mask, mem_na_mask, _ = self.embed_memory(observation)
-            vlm_tokens, vlm_mask, vlm_ar_mask, vlm_na_mask, _ = self.embed_prefix(observation)
+            mem_tokens, mem_input_mask, mem_ar_mask, mem_na_mask = self.embed_memory(observation)
+            vlm_tokens, vlm_mask, vlm_ar_mask, vlm_na_mask = self.embed_prefix(observation)
             mem_ar_mask = jnp.array(mem_ar_mask)
             mem_na_mask = jnp.array(mem_na_mask)
             prefix_mask = jnp.concatenate([mem_input_mask, vlm_mask], axis=1)
@@ -676,16 +553,16 @@ class HistoryPi0(BaseModel):
             )
 
         elif self.integration_type == "modulation":
-            prefix_tokens, prefix_mask, prefix_ar_mask, _, _ = self.embed_prefix(observation)
+            prefix_tokens, prefix_mask, prefix_ar_mask, _ = self.embed_prefix(observation)
             prefix_attn_mask = make_attn_mask(prefix_mask, prefix_ar_mask)
             positions = jnp.cumsum(prefix_mask, axis=1) - 1
             _, kv_cache = self.PaliGemma.llm(
                 [prefix_tokens, None], mask=prefix_attn_mask, positions=positions
             )
-            mem_seq, mem_mask, _, _, _ = self.embed_memory(observation)
-            
+            mem_seq, mem_mask, _, _ = self.embed_memory(observation)
+
         else:
-            prefix_tokens, prefix_mask, prefix_ar_mask, prefix_na_mask, _ = self.embed_prefix(observation)
+            prefix_tokens, prefix_mask, prefix_ar_mask, prefix_na_mask = self.embed_prefix(observation)
             if self.integration_type == "context":
                 prefix_attn_mask = make_attn_mask(prefix_mask, prefix_ar_mask, prefix_na_mask)
             else:
