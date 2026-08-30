@@ -1,6 +1,6 @@
 """episode_manifest.json 读取（sha256 fail-loud）——消费侧唯一真值源入口。
 
-schema 与 `scripts/data-preprocess-GL/scan_manifest.py`（建库侧，原样保留）一致：
+schema 与 `scripts/dataset/gl/scan_manifest.py`（建库侧，原样保留）一致：
 顶层 version / raw_dir / canonical_order / num_shards / totals / shard_load_timesteps /
 episodes / sha256；每个 episode 记 global_episode_idx / h5_file / raw_ep_idx /
 num_timesteps / exec_start_idx / exec_samples / exec_sample_offset /

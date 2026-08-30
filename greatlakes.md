@@ -80,7 +80,7 @@ master 就建立 master——认证一次，30d 内所有提交/查询免认证�
 socket，之后 `ssh greatlakes <cmd>` 直接复用已认证通道、**不再发起任何 SSH 认证握手**，
 因此零密码零 MFA 零手机（slave 不认证，与服务器 MFA 策略无关）。
 
-提交器:**`scripts/data-preprocess-GL/gl_submit.py`**（自包含，纯系统 ssh + ControlMaster，
+提交器:**`scripts/dataset/gl/gl_submit.py`**（自包含，纯系统 ssh + ControlMaster，
 不再用 paramiko）——逻辑就是"没 master 就建 master，再经系统 ssh 复用提交":
 
 - **master 存活** → 直接提交，**无需任何凭据、不必问验证方式**；
@@ -102,14 +102,14 @@ socket，之后 `ssh greatlakes <cmd>` 直接复用已认证通道、**不再发
    ```
 2. **存活 → 直接提交/查询**（零认证零手机，不必问验证方式）:
    ```bash
-   uv run --no-project --with pexpect python scripts/data-preprocess-GL/gl_submit.py "squeue -u hongzefu"
-   uv run --no-project --with pexpect python scripts/data-preprocess-GL/gl_submit.py   # 无参数=只打印队列
+   uv run --no-project --with pexpect python scripts/dataset/gl/gl_submit.py "squeue -u hongzefu"
+   uv run --no-project --with pexpect python scripts/dataset/gl/gl_submit.py   # 无参数=只打印队列
    ```
 3. **不存活 → 建主连接**（**仅此步需要验证方式**，推荐 TOTP、给一次码无需手机匹配）。
    gl_submit 在无 master 时会自动用凭据建连后再提交;也可设好凭据直接跑:
    ```bash
    export GLPW='<密码>' GLOTP='<当前6位码>'
-   uv run --no-project --with pexpect python scripts/data-preprocess-GL/gl_submit.py "<命令>"
+   uv run --no-project --with pexpect python scripts/dataset/gl/gl_submit.py "<命令>"
    unset GLPW GLOTP
    ```
    建好后 30 天内所有提交/查询走第 2 步、免认证；到期后重建。（skill `greatlakes-usage`
@@ -230,7 +230,7 @@ anon/file 峰值复核）；④anon 实测 3.85 GiB 支持后续再做 12G 对�
 ⚠ 新增 slurm 脚本时注意：`tests/test_train_script_overrides.py` 会 glob
 `scripts/train-script-hongzefu/*.sh`，要求**每个 `.sh` 至少含 1 条 Hydra 覆盖、键在 §7.3
 白名单内、字面量值不得与 `configs/default.yaml` 相同**。因此 slurm 脚本不能只是
-`srun bash <本地入口>.sh`，必须自己直调 `scripts/train.py` 并带覆盖项；脚本内局部变量
+`srun bash <本地入口>.sh`，必须自己直调 `scripts/training/train.py` 并带覆盖项；脚本内局部变量
 一律全大写命名（小写 `key=value` 会被正则误当成 Hydra 覆盖）。
 
 ## 分布式 Wan latent 抽取（2026-08-16 新增，slurm-wan-extract）

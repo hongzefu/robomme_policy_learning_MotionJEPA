@@ -70,20 +70,21 @@ git clone https://huggingface.co/Yinpei/perceptual-framesamp-modul <your_specify
 Then run
 ```
 # terminal 0
-CUDA_VISIBLE_DEVICES=0 uv run scripts/serve_policy.py --seed=7  --port=8000 policy:checkpoint --policy.dir=<your_specify_model_path>/79999 --policy.config=mme_vla_suite
+CUDA_VISIBLE_DEVICES=0 uv run scripts/training/serve_policy.py --seed=7  --port=8000 policy:checkpoint --policy.dir=<your_specify_model_path>/79999 --policy.config=mme_vla_suite
 
 # terminal 1 
 micromamba activate robomme
 CUDA_VISIBLE_DEVICES=1 python examples/robomme/eval.py --args.model_seed=7 --args.port=8000 --args.policy_name=<your_specify_policy_name> --args.model_ckpt_id=79999
 ```
-Then the evaluations results will be stored in `runs/evaluation/<your_specify_policy_name>/ckpt79999/seed7`
+Then the evaluations results will be stored in `v1-store/evaluation/<your_specify_policy_name>/ckpt79999/seed7`
 > Remember to manually set CUDA_VISIBLE_DEVICES using one card for serve_policy.py, as JAX will automatically use all GPUs by default.
 
 ### Training 
 ```bash
 # Build the assets for MME-VLA and copy the provided norm_stats.json
-mkdir -p runs/assets/mme_vla_suite 
-cp -r assets/norm_stats.json runs/assets/mme_vla_suite
+# （本仓库训练资产根为 v1-store/train-assets，AGENTS 14 单一产物根）
+mkdir -p v1-store/train-assets/mme_vla_suite/robomme
+cp assets/norm_stats.json v1-store/train-assets/mme_vla_suite/robomme/
 
 # Download a small set of preprocessed training dataset for quick training 
 mkdir data
@@ -95,7 +96,7 @@ git clone git@hf.co:datasets/Yinpei/robomme_preprocessed_data_sample data/robomm
 export WANDB_API_KEY=<YOUR_WANDB_API_KEY>
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 export MME_VLA_TYPE="perceptual-framesamp-modul"
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 uv run scripts/train.py mme_vla_suite \
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 uv run scripts/training/train.py mme_vla_suite \
 --exp-name=<model_name> \
 --batch-size=64 \
 --num-workers=4 \
@@ -150,7 +151,7 @@ git clone git@hf.co:datasets/Yinpei/robomme_data_h5 data/robomme_data_h5
 ```
 Then run 
 ```
-uv run scripts/tarxz_h5.py decompress --input_dir data/robomme_data_h5 --jobs 16 --remove_archive
+uv run scripts/dataset/tarxz_h5.py decompress --input_dir data/robomme_data_h5 --jobs 16 --remove_archive
 ```
 to extract the *.xz files.
 
@@ -158,9 +159,9 @@ to extract the *.xz files.
 ```
 git clone git@hf.co:datasets/Yinpei/robomme_preprocessed_data data/robomme_preprocessed_data
 ```
-and run `uv run scripts/unzip_data.py data/robomme_preprocessed_data` to unzip the files.  
+and run `uv run scripts/dataset/unzip_data.py data/robomme_preprocessed_data` to unzip the files.  
 
-Alternatively, you can run `uv run scripts/build_dataset.py` to generate the preprocessed pickle files (takes about 2–3 hours) and/or the VLM subgoal predictor training data (takes about 30–60 minutes).   
+Alternatively, you can run `uv run scripts/dataset/build_dataset.py` to generate the preprocessed pickle files (takes about 2–3 hours) and/or the VLM subgoal predictor training data (takes about 30–60 minutes).   
 
 We also provide data in the LeRobot format [here](https://huggingface.co/datasets/Yinpei/robomme_data_lerobot). In our experiments, however, the LeRobot dataloader significantly increased CPU memory usage during training, which can be a bottleneck in shared training environments (e.g., on HPC clusters). For this reason, we use our custom data format and [dataloader](https://github.com/RoboMME/robomme_policy_learning/blob/89efeaab461cc2b00ede344edf4283692e9c3ada/src/mme_vla_suite/training/dataset.py#L42) in this repository. 
 
@@ -168,7 +169,7 @@ We also provide data in the LeRobot format [here](https://huggingface.co/dataset
 ### 🧠 Download Pre-trained Models
 Download the $\pi_{0.5}$-base backbone:
 ```
-uv run scripts/download_pi05_base.py
+uv run scripts/training/download_pi05_base.py
 ```
 Download the [pi05_vision_encoder](https://huggingface.co/Yinpei/pi05_vision_encoder), which is a subset of the $\pi_{0.5}$ parameters used for dataset feature construction without loading the full model. Visual token embeddings are computed and cached for training, and the vision encoder remains frozen in our experiment:
 ```
@@ -177,37 +178,27 @@ git clone git@hf.co:Yinpei/pi05_vision_encoder
 ```
 
 ### 🧪 Download Fine-tuned VLA/VLM Checkpoints (Optional)
-Fine-tuned models and evaluation results are stored under the `runs` directory. Create it if needed:
-```
-mkdir runs
-mkdir runs/ckpts        # save all trained models here
-mkdir runs/evaluation   # evaluation results
-mkdir runs/assets       # save all normalization statistics files here
-```
+Fine-tuned models and evaluation results are stored under `v1-store/`（本仓库
+单一产物根）: checkpoints 在 `v1-store/train-runs/`，评估结果在 `v1-store/evaluation/`。
 
-You can skip the following steps if you plan to fine-tune your own VLA/VLM models directly; see [Model Training](#model-training).
+You can skip the following steps if you plan to fine-tune your own VLA models directly; see [Model Training](#model-training).
 
 Download MME-VLA variants [here](https://huggingface.co/Yinpei/mme_vla_suite):
 ```
-git clone git@hf.co:Yinpei/mme_vla_suite runs/ckpts/mme_vla_suite
+git clone git@hf.co:Yinpei/mme_vla_suite v1-store/train-runs/mme_vla_suite
 ```
-We release all checkpoints for symbolic and perceptual memory, and a subset of recurrent memory variants for research. Recurrent memory is still underperforming; we will release more recurrent variants as results improve.
+本仓库自 commitV4.6 起仅保留 perceptual frame_sampling 三变体的评估路径；其余变体
+的 checkpoint 仍可下载但需从 git 历史取回旧代码运行。
 
-Download VLM subgoal predictors [here](https://huggingface.co/Yinpei/vlm_subgoal_predictor):
+After downloading fine-tuned checkpoints, you can run
 ```
-git clone git@hf.co:Yinpei/vlm_subgoal_predictor runs/ckpts/vlm_subgoal_predictor
-```
-
-Download the fine-tuned $\pi_{0.5}$ baseline [here](https://huggingface.co/Yinpei/pi05_baseline):
-```
-git clone git@hf.co:Yinpei/pi05_baseline runs/ckpts/pi05_baseline
-```
-
-After downloading fine-tuned checkpoints, you can run 
-```
-uv run ./scripts/unzip_ckpt.py runs/ckpts
+uv run ./scripts/training/unzip_ckpt.py v1-store/train-runs
 ```
 to unzip all of them.
+
+> commitV4.6 注：本仓库已单一化为 perceptual frame_sampling 三变体；π₀.₅ baseline、
+> VLM subgoal predictor、symbolic/tokendrop/recurrent 变体的下载与训练入口已删除，
+> 需要时从 git 历史取回旧版 README。checkpoint 根统一为 `v1-store/train-runs/`。
 
 
 ## 🏋️ Model Training
@@ -215,38 +206,21 @@ to unzip all of them.
 ### 🧰 Data Preparation
 Prepare training data by either downloading [preprocessed files](https://huggingface.co/datasets/Yinpei/robomme_preprocessed_data) or running:
 ```
-uv run scripts/build_dataset.py --dataset_type robomme_pkl --raw_data_path <downloaded_h5_data_dir> --preprocessed_data_path <your_target_dir>
+uv run scripts/dataset/build_dataset.py --dataset_type robomme_pkl --raw_data_path <downloaded_h5_data_dir> --preprocessed_data_path <your_target_dir>
 ```
 
-Then compute normalization statistics (this takes about 3 minutes):
+Then compute normalization statistics (this takes about 3 minutes; `--output-dir`
+为必填——生产 norm_stats.json 是基线指纹项，验证/试跑请先写临时目录)：
 ```
-uv run scripts/compute_norm_stats.py --config-name mme_vla_suite --repo-id robomme --dataset-path="data/robomme_preprocessed_data"
-uv run scripts/compute_norm_stats.py --config-name pi05_baseline --repo-id robomme --dataset-path="data/robomme_preprocessed_data"
+uv run scripts/training/compute_norm_stats.py --output-dir <your_output_dir> --config-name mme_vla_suite --repo-id robomme --dataset-path="data/robomme_preprocessed_data"
 ```
-This produces the following structure under `runs`:
-```
-.
-├── assets
-│   ├── mme_vla_suite
-│   │   └── robomme
-│   │       └── norm_stats.json
-│   └── pi05_baseline
-│       └── robomme
-│           └── norm_stats.json
-```
+This produces `<your_output_dir>/robomme/norm_stats.json`.
 
 You can also compare against our reference `norm_stats.json` provided [here](assets/norm_stats.json) to check whether your processing is correct. Small differences are acceptable.
 
-### 🎛️ Train π₀.₅ baseline
-This variant does not use history and fine-tunes the $\pi_{0.5}$ checkpoints with the vision encoder frozen (for comparison with MME-VLA):
-```
-bash scripts/finetune_pi05_baseline.sh
-```
-You can change `--exp-name` to suit your own experiment naming.
-
 ### 🧠 Train MME-VLA policies
 ```
-bash scripts/finetune_mme_vla_suite.sh
+bash scripts/training/finetune_mme_vla_suite.sh
 ```
 Set `MME_VLA_TYPE` to train a specific model variant. You can also change `--exp-name` to suit your own experiment naming.
 
@@ -255,14 +229,14 @@ We provide a sample training-curve description in [`docs/training_curve_sample.m
 ### 🧭 Train VLM subgoal predictor
 [robomme_preprocessed_data](https://huggingface.co/datasets/Yinpei/robomme_preprocessed_data) already contains VLM subgoal prediction data, but you can also generate it with:
 ```
-uv run scripts/build_dataset.py --dataset_type vlm_subgoal_qwenvl  --raw_data_path=<downloaded_h5_data_dir> --preprocessed_data_path=<your_target_dir>
-uv run scripts/build_dataset.py --dataset_type vlm_subgoal_memer  --raw_data_path=<downloaded_h5_data_dir> --preprocessed_data_path=<your_target_dir>
+uv run scripts/dataset/build_dataset.py --dataset_type vlm_subgoal_qwenvl  --raw_data_path=<downloaded_h5_data_dir> --preprocessed_data_path=<your_target_dir>
+uv run scripts/dataset/build_dataset.py --dataset_type vlm_subgoal_memer  --raw_data_path=<downloaded_h5_data_dir> --preprocessed_data_path=<your_target_dir>
 ```
 
 After the data is ready, run:
 ```
 micromamba activate robomme
-bash scripts/finetune_vlm_subgoal_predictor.sh
+bash scripts/dataset/finetune_vlm_subgoal_predictor.sh
 ```
 Set `DATASET_PATH` according to which VLM you are training: (1) simple subgoals, (2) grounded subgoals, or (3) MemER-style subgoals.
 
@@ -272,13 +246,10 @@ Set `DATASET_PATH` according to which VLM you are training: (1) simple subgoals,
 ### 🚀 Evaluation with the integrated script
 After downloading the fine-tuned checkpoints, run:
 ```
-bash scripts/eval.sh
+bash scripts/training/eval.sh
 ```
 Set the `MODEL_TYPE` variable to one of the following:
-1. **Prior methods:** `pi05_baseline`, `MemER`
-2. **Symbolic MME-VLA:** `symbolic_simpleSG_oracle`, `symbolic_simpleSG_gemini`, `symbolic_simpleSG_qwenvl`, `symbolic_groundedSG_oracle`, `symbolic_groundedSG_gemini`, `symbolic_groundedSG_qwenvl`
-3. **Perceptual MME-VLA:** `perceptual-framesamp-context`, `perceptual-framesamp-modul`, `perceptual-framesamp-expert`, `perceptual-tokendrop-context`, `perceptual-tokendrop-modul`, `perceptual-tokendrop-expert`
-4. **Recurrent MME-VLA:** `recurrent-rmt-context`, `recurrent-rmt-modul`, `recurrent-rmt-expert`, `recurrent-ttt-context`, `recurrent-ttt-modul`, `recurrent-ttt-expert`
+`perceptual-framesamp-context`, `perceptual-framesamp-modul`, `perceptual-framesamp-expert`
 
 Running `eval.sh` automatically starts two tmux windows: one for the policy server and one for RoboMME evaluation. If the evaluation is interrupted, you can rerun the script; it will automatically resume from the generated `progress.json`.
 
@@ -309,7 +280,7 @@ os.environ['MUJOCO_GL'] = 'osmesa'
 ```
 
 Q2: Why does the evaluation stop?  
-A2: We observed that, on long-horizon tasks such as VideoPlaceButton, the WebSocket connection can break due to large video frames. If the evaluation process is interrupted, you can rerun `scripts/eval.sh`, and the program will resume based on the generated `progress.json`.
+A2: We observed that, on long-horizon tasks such as VideoPlaceButton, the WebSocket connection can break due to large video frames. If the evaluation process is interrupted, you can rerun `scripts/training/eval.sh`, and the program will resume based on the generated `progress.json`.
 
 Q3: CUDA runs out of memory when training VLA models.  
 A3: You can set the environment variable `XLA_PYTHON_CLIENT_MEM_FRACTION=0.95` to allow JAX to use more GPU memory.

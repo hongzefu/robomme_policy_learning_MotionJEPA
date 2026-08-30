@@ -166,7 +166,7 @@ def sha256_file(p: pathlib.Path) -> str:
 def headtail_digest(p: pathlib.Path) -> tuple[int, str, bool]:
     """(字节数, 首尾各 1 MiB 的 blake2b-128, 是否覆盖全文件)。
 
-    与 scripts/smoke-local/check_baseline_env.py 的 _headtail_digest 同口径；
+    与 scripts/training/bench/check_baseline_env.py 的 _headtail_digest 同口径；
     文件 ≤ 2 MiB 时覆盖全文件（full_covered=True）。
     """
     size = p.stat().st_size

@@ -1,7 +1,7 @@
 # datastore：framesamp packed 特征库格式层
 
 对应 `v2-framesamp-restructure-plan.md`（A.1 布局契约、B.2 Store 行为）。本包是格式层
-**唯一实现**：打包工具（`scripts/data-pack-framesamp/`）、`FrameSampDataset`、对拍工具
+**唯一实现**：打包工具（`scripts/dataset/pack/`）、`FrameSampDataset`、对拍工具
 一律从这里 import，绝不复制；本包不 import 任何 training/model 模块（单向依赖，B.1）。
 
 | 文件 | 内容 |
@@ -41,9 +41,9 @@
   抽 1 part 首尾 1 MiB digest / 抽 1 条源库抽样指纹；full 档（全部 sha256，能抓同尺寸
   中部翻转）**禁止在性能 allocation 内执行**（会预热 page cache，B.2）。
 
-守卫测试：`scripts/data-pack-framesamp/test_pack_guards.py`（Store 组 G1/G4/G5/G7/
+守卫测试：`scripts/training/tests/test_pack_guards.py`（Store 组 G1/G4/G5/G7/
 G11/G12/G14 + Dataset 组 G2/G3/G6a/G8/G9/G10/G13 与分派闸）；spawn 生命周期验收另见
-`scripts/data-pack-framesamp/spawn_matrix.py`。消费侧装配层见
+`scripts/training/tests/spawn_matrix.py`。消费侧装配层见
 `src/mme_vla_suite/training/framesamp_dataset.py`；packed 是唯一训练数据路径
 （commitV4.1 起，backend 三态与 `_resolve_backend` 已删除），构造入口见
 `training/dataloader.py` 的 `_create_framesamp_dataset`。

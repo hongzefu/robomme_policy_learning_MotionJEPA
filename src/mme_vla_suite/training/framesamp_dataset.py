@@ -1,5 +1,8 @@
 """FrameSampDataset：packed 特征库上的装配层（v2 计划 B.3）。
 
+（本文件注释中的「旧路径」均指已删除的 legacy 数据链 RoboMMEDataset +
+散 npy + MemoryBuffer——commitV4.1 删除，见 git 历史；对齐结论在删除前逐字核对固化。）
+
 单一路径、无分支、只服务 `perceptual-framesamp-context` 一种 run：
 ① 清单查表得 (g, step)（O(1) 数组，含 exec_start_idx 换算，不读目录）；
 ② pickle.load 源库 data/{idx}.pkl（与旧路径同源同字节）＋ pkl 内身份互校
