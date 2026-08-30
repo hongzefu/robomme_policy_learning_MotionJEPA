@@ -1,0 +1,14 @@
+OK manifest 复验通过: docs/training-doc/v1-grad-baseline-g0b/records/r1/BASELINE_MANIFEST.json（10 条）
+WARN 步集合不同: A 独有 [5, 6, 7, 8, 9]…, B 独有 []…
+SCALARS steps=5 keys=5 hex_mismatch_steps=0 first_mismatch_step=None
+REL key=loss median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=grad_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=llm_grad_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=mem_enc_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=param_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+STATE_DIGEST rows=1 mismatch=0
+BATCH_DIGEST rows=3 mismatch=0
+BATCH_DIGEST_CANONICAL rows=3 mismatch=0
+CANON_CHECK=PASS steps=3
+INDEX_SEQ=PASS n=112（共同前缀逐个一致, steps≈5）
+DET_CHECK=PASS tier=pre-g3-smoke5 steps=5 scalar_hex_diff=0 state_digest_diff=0 batch_digest_diff=0
