@@ -39,12 +39,6 @@ _NONE_KEYS = (
     "static_pos_emb",
     "static_state_emb",
     "static_mask",
-    "recur_image_emb",
-    "recur_pos_emb",
-    "recur_state_emb",
-    "recur_mask",
-    "simple_subgoal",
-    "grounded_subgoal",
     "prompt",
 )
 

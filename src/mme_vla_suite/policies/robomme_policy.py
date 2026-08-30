@@ -64,14 +64,6 @@ class RoboMMEInputs(transforms.DataTransformFn):
             "static_pos_emb": data.get("static_pos_emb", None), # (budget, d2)
             "static_state_emb": data.get("static_state_emb", None), # (budget, d3)
             "static_mask": data.get("static_mask", None), # (budget)
-            # recurrent memory
-            "recur_image_emb": data.get("recur_image_emb", None), # (max_recur_steps, views, p, d1)
-            "recur_pos_emb": data.get("recur_pos_emb", None), # (max_recur_steps, views, p, d2)
-            "recur_state_emb": data.get("recur_state_emb", None), # (max_recur_steps, d3)
-            "recur_mask": data.get("recur_mask", None), # (max_recur_steps)
-            # symbolic memory
-            "simple_subgoal": data.get("simple_subgoal", None),
-            "grounded_subgoal": data.get("grounded_subgoal", None),
         }
 
         # Pad actions to the model action dimension. Keep this for your own dataset.

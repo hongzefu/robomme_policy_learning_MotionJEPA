@@ -29,7 +29,6 @@ import os
 
 from mme_vla_suite.models.integration import history_pi0
 from mme_vla_suite.policies.robomme_policy import RoboMMEInputs, RoboMMEOutputs
-from mme_vla_suite.models.config.utils import get_history_config
 
 
 ModelType: TypeAlias = _model.ModelType
@@ -111,35 +110,22 @@ class PaligemmaTokenizer:
     def __init__(self, max_len: int = 48):
         self._max_len = max_len
 
-        path = download.maybe_download("gs://big_vision/paligemma_tokenizer.model", gs={"token": "anon"})
+        path = _download.maybe_download("gs://big_vision/paligemma_tokenizer.model", gs={"token": "anon"})
         with path.open("rb") as f:
             self._tokenizer = sentencepiece.SentencePieceProcessor(model_proto=f.read())
 
     def tokenize(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         state: np.ndarray | None = None,
-        subgoal: str | None = None, 
     ) -> tuple[np.ndarray, np.ndarray]:
         cleaned_text = prompt.strip().replace("_", " ").replace("\n", " ")
         if state is not None:
-            if subgoal is None:
-                # This is original Pi05 format, where the state is part of the discrete language input.
-                state = np.clip(state, -1, 1)
-                discretized_state = np.digitize(state, bins=np.linspace(-1, 1, 256 + 1)[:-1]) - 1
-                state_str = " ".join(map(str, discretized_state))
-                full_prompt = f"Task: {cleaned_text}; State: {state_str};\nAction: "
-                tokens = self._tokenizer.encode(full_prompt, add_bos=True)
-            else:
-                # this is used only for real robot symbolic variant. We do not use proprioceptive states in our experiment 
-                subgoal = subgoal.strip().replace("_", " ").replace("\n", " ")
-                full_prompt = f"Task: {cleaned_text}\nCurrent Subgoal: {subgoal}.\nAction: "
-                tokens = self._tokenizer.encode(full_prompt, add_bos=True)
-                
-        elif subgoal is not None:
-            # This is the subgoal format, where the subgoal is part of the language input. for both simple and grounded.
-            subgoal = subgoal.strip().replace("_", " ").replace("\n", " ")
-            full_prompt = f"Task: {cleaned_text};\nCurrent Subgoal: {subgoal};\nAction: "
+            # This is original Pi05 format, where the state is part of the discrete language input.
+            state = np.clip(state, -1, 1)
+            discretized_state = np.digitize(state, bins=np.linspace(-1, 1, 256 + 1)[:-1]) - 1
+            state_str = " ".join(map(str, discretized_state))
+            full_prompt = f"Task: {cleaned_text}; State: {state_str};\nAction: "
             tokens = self._tokenizer.encode(full_prompt, add_bos=True)
         else:
             # This is the Pi0 format, where the state is part of the continuous action expert input.
@@ -167,10 +153,12 @@ class PaligemmaTokenizer:
 
 
 @dataclasses.dataclass(frozen=True)
-class TokenizePromptWithSymbolicMemory(DataTransformFn):
+class TokenizePromptWithState(DataTransformFn):
+    """prompt(+离散化 state) tokenize（commitV4.2 由 TokenizePromptWithSymbolicMemory
+    删 symbolic 分支收敛而来，保留支路逐字不变）。"""
+
     tokenizer: PaligemmaTokenizer
     discrete_state_input: bool = True
-    symbolic_memory_type: str | None = None
 
     def __call__(self, data: DataDict) -> DataDict:
         if (prompt := data.pop("prompt", None)) is None:
@@ -185,29 +173,10 @@ class TokenizePromptWithSymbolicMemory(DataTransformFn):
         if not isinstance(prompt, str):
             prompt = prompt.item()
 
-        
+
         tokens, token_masks = self.tokenizer.tokenize(prompt, state)
-        
-        if self.symbolic_memory_type is None:
-            data.pop("simple_subgoal")
-            data.pop("grounded_subgoal")
-            return {**data, "tokenized_prompt": tokens, "tokenized_prompt_mask": token_masks}
-        
-        if self.symbolic_memory_type == "simple_subgoal":
-            simple_subgoal = data['simple_subgoal']
-            symbolic_tokenized_prompt, symbolic_tokenized_prompt_mask = self.tokenizer.tokenize(prompt=prompt, subgoal=simple_subgoal, state=state)
-        elif self.symbolic_memory_type == "grounded_subgoal":
-            grounded_subgoal = data['grounded_subgoal']
-            symbolic_tokenized_prompt, symbolic_tokenized_prompt_mask = self.tokenizer.tokenize(prompt=prompt, subgoal=grounded_subgoal, state=state)
-        else:
-            raise ValueError(f"Invalid symbolic memory type: {self.symbolic_memory_type}")
-        
-        data.pop("simple_subgoal")
-        data.pop("grounded_subgoal")
-                    
-        return {**data, "tokenized_prompt": tokens, "tokenized_prompt_mask": token_masks, 
-                "symbolic_tokenized_prompt": symbolic_tokenized_prompt,
-                "symbolic_tokenized_prompt_mask": symbolic_tokenized_prompt_mask}
+
+        return {**data, "tokenized_prompt": tokens, "tokenized_prompt_mask": token_masks}
 
 @dataclasses.dataclass(frozen=True)
 class ModelTransformFactory(GroupFactory):
@@ -231,26 +200,17 @@ class ModelTransformFactory(GroupFactory):
                 )
             case _model.ModelType.PI05:
                 # This is MME-VLA set up
-                symbolic_memory_type = None
                 max_token_len = model_config.max_token_len
-                
-                if model_config.use_history and model_config.history_config is not None:
-                    loaded_config = get_history_config(model_config.history_config)
 
-                    if loaded_config.representation_type == "symbolic":
-                        symbolic_memory_type = loaded_config.symbolic_memory.type
-                        max_token_len *= 2 # it's enough for subgoals, no need to set into 512.
-                
                 print(f"max_token_len: {max_token_len}")
-                
+
                 return _transforms.Group(
                         inputs=[
                             _transforms.InjectDefaultPrompt(self.default_prompt),
                             _transforms.ResizeImages(224, 224),
-                            TokenizePromptWithSymbolicMemory(
+                            TokenizePromptWithState(
                                 PaligemmaTokenizer(max_token_len),
                                 discrete_state_input=model_config.discrete_state_input,
-                                symbolic_memory_type=symbolic_memory_type,
                             ),
                             _transforms.PadStatesAndActions(model_config.action_dim),
                         ],
@@ -349,14 +309,6 @@ class RoboMMEDataConfig(DataConfigFactory):
                         "static_pos_emb": "static_pos_emb", # (b, l, d2)
                         "static_state_emb": "static_state_emb", # (b, l, d3)
                         "static_mask": "static_mask", # (b, l)
-                        # recurrent memory
-                        "recur_image_emb": "recur_image_emb", # (b, t, v, p, d1)
-                        "recur_pos_emb": "recur_pos_emb", # (b, t, v, p, d2)
-                        "recur_state_emb": "recur_state_emb", # (b, t, d3)
-                        "recur_mask": "recur_mask",
-                        # symbolic memory
-                        "simple_subgoal": "simple_subgoal",
-                        "grounded_subgoal": "grounded_subgoal",
                     }
                 )
             ]
@@ -382,72 +334,6 @@ class RoboMMEDataConfig(DataConfigFactory):
         )
 
 
-
-
-@dataclasses.dataclass(frozen=True)
-class LeRobotMMEVLARealRobotDataConfig(DataConfigFactory):
-
-    @override
-    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
-        repack_transform = _transforms.Group(
-            inputs=[
-                _transforms.RepackTransform(
-                    {
-                        "observation/left_shoulder_image": "left_shoulder_image",
-                        "observation/right_shoulder_image": "right_shoulder_image",
-                        "observation/wrist_image": "wrist_image",
-                        "observation/state": "state",
-                        "actions": "actions",
-                        "prompt": "prompt",
-                        # ---- New added keys ----
-                        # perceptual memory
-                        "static_image_emb": "static_image_emb", # (b, l, d1)
-                        "static_pos_emb": "static_pos_emb", # (b, l, d2)
-                        "static_state_emb": "static_state_emb", # (b, l, d3)
-                        "static_mask": "static_mask", # (b, l)
-                        # recurrent memory
-                        "recur_image_emb": "recur_image_emb", # (b, t, v, p, d1)
-                        "recur_pos_emb": "recur_pos_emb", # (b, t, v, p, d2)
-                        "recur_state_emb": "recur_state_emb", # (b, t, d3)
-                        "recur_mask": "recur_mask",
-                        # symbolic memory
-                        "simple_subgoal": "simple_subgoal",
-                        "grounded_subgoal": "grounded_subgoal",
-                    }
-                )
-            ]
-        )
-
-        data_transforms = _transforms.Group(
-            inputs=[RoboMMERealRobotInputs(model_type=model_config.model_type)],
-            outputs=[RoboMMERealRobotOutputs()],
-        )
-
-        delta_action_mask = _transforms.make_bool_mask(7, -1)
-        data_transforms = data_transforms.push(
-            inputs=[_transforms.DeltaActions(delta_action_mask)],
-            outputs=[_transforms.AbsoluteActions(delta_action_mask)],
-        )
-
-        model_transforms = ModelTransformFactory()(model_config)
-        return dataclasses.replace(
-            self.create_base_config(assets_dirs, model_config),
-            repack_transforms=repack_transform,
-            data_transforms=data_transforms,
-            model_transforms=model_transforms,
-        )
-
-import openpi.shared.array_typing as at
-from openpi.training.weight_loaders import WeightLoader, download, _merge_params
-@dataclasses.dataclass(frozen=True)
-class MMEVLAWeightLoader(WeightLoader):
-    params_path: str
-
-    def load(self, params: at.Params) -> at.Params:
-        # We are loading np.ndarray and relying on the training code to properly convert and shard the params.
-        loaded_params = _model.restore_params(download.maybe_download(self.params_path), restore_type=np.ndarray)
-        # Add all missing LoRA weights. And our new weights
-        return _merge_params(loaded_params, params, missing_regex=".*")
 
 
 ####################### RoboMME #######################
