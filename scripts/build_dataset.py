@@ -64,6 +64,11 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Write visualization MP4s",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="覆盖已存在的输出目录（不加 --force 时拒绝已存在的输出目录，防误删）",
+    )
     return parser.parse_args()
 
 
@@ -77,6 +82,7 @@ if __name__ == "__main__":
             preprocessed_data_path=args.preprocessed_data_path,
             visualize=args.visualize,
             max_episodes=args.max_episodes,
+            force=args.force,
         )
         processor.run()
     elif args.dataset_type == "vlm_subgoal_qwenvl":

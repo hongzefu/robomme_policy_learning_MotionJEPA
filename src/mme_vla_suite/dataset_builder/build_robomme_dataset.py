@@ -17,7 +17,7 @@ import h5py
 import imageio
 import numpy as np
 
-from mme_vla_suite.shared.mem_buffer import MemoryBuffer, create_dict
+from mme_vla_suite.dataset_builder.mem_buffer import MemoryBuffer, create_dict
 
 from mme_vla_suite.dataset_builder.robomme_h5_utils import (
     first_execution_step,
@@ -188,6 +188,8 @@ class DatasetProcessor:
         execution_horizon: int = 16,
         visualize: bool = False,
         max_episodes: int | None = None,
+        *,
+        force: bool = False,
     ) -> None:
         self.raw_data_path = raw_data_path
         self.dataset_path = preprocessed_data_path
@@ -195,6 +197,13 @@ class DatasetProcessor:
         self.visualize = visualize
         self.max_episodes = max_episodes
         if os.path.exists(self.dataset_path):
+            # 破坏性护栏：目标目录已存在时默认拒绝，防止误传 v1-store 等
+            # 已有数据根导致整树被 rmtree（不可恢复）。确认要覆盖必须显式 force=True。
+            if not force:
+                raise FileExistsError(
+                    f"输出目录已存在: {self.dataset_path}；"
+                    "默认拒绝覆盖。确认要删除重建请加 --force。"
+                )
             shutil.rmtree(self.dataset_path)
         os.makedirs(self.dataset_path, exist_ok=True)
 

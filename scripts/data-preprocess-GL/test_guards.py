@@ -415,3 +415,46 @@ def test_check_quota_sufficient_passes() -> None:
 def test_check_quota_insufficient_fails() -> None:
     r = _run_check_quota("cpu=80,gres/gpu=4,mem=960G\n---\n")
     assert r.returncode != 0, r.stdout
+
+
+# ── 建库域冻结副本 sha256 哨兵（commitV4.0 起冻结，防与训练侧「好心同步」发散）────
+# 常量在 V4.0 落地时固化：三个叶子文件与 shared/ 源逐字节相同，
+# mem_buffer.py 恰好改 3 行 import（shared.→dataset_builder.）。
+# V4.4（计划 V3.12）之后 shared/ 侧源文件或删或改，这四条哨兵是唯一在岗的冻结证明。
+_FROZEN_BUILDER_SHA256 = {
+    "data_utils.py": "20f9e7163dff43c9adb6ab7443f2427cdeb4eeabeaf763ef5ffeb7be8214f4ee",
+    "posemb_3d.py": "65e232935010b0dfebb46288c74da7ce0ce638cc8db508cd56cfb84e72caba0b",
+    "siglip_tokenizer.py": "72fb842327467a4d7cb0f770a514278d67b20721c84d59c82e6cae25f4ce0858",
+    "mem_buffer.py": "76e20064c3bcd0b9619ab2472b46643f28fc96f72e446623467c09b5214e6075",
+}
+
+
+@pytest.mark.parametrize("fname", sorted(_FROZEN_BUILDER_SHA256))
+def test_builder_copy_frozen_sha256(fname: str) -> None:
+    import hashlib
+    p = _REPO_ROOT / "src" / "mme_vla_suite" / "dataset_builder" / fname
+    got = hashlib.sha256(p.read_bytes()).hexdigest()
+    assert got == _FROZEN_BUILDER_SHA256[fname], (
+        f"建库域冻结副本 {fname} 内容已变（sha256 {got}）。该文件自 commitV4.0 起冻结，"
+        "任何改动（包括从训练侧同步）都会破坏建库产物一致性证明；如确需变更须用户拍板并更新常量。"
+    )
+
+
+# ── 建库输出 --force 闸：目标已存在且未给 force 时必须拒绝，且目录原样保留 ────────
+def test_dataset_processor_refuses_existing_output_without_force(
+    tmp_path: pathlib.Path,
+) -> None:
+    from mme_vla_suite.dataset_builder.build_robomme_dataset import DatasetProcessor
+
+    out = tmp_path / "existing_out"
+    out.mkdir()
+    sentinel = out / "precious.txt"
+    sentinel.write_text("不可误删")
+
+    with pytest.raises(FileExistsError, match="--force"):
+        DatasetProcessor(
+            raw_data_path=str(tmp_path / "raw"),
+            preprocessed_data_path=str(out),
+        )
+    # 拒绝路径必须零副作用：目录与内容原样保留
+    assert sentinel.read_text() == "不可误删"

@@ -192,7 +192,7 @@ def spot_check(manifest: dict, out_dir: str, raw_dir: str, n: int, seed: int) ->
     """
     import h5py
 
-    from mme_vla_suite.shared.mem_buffer import MemoryBuffer
+    from mme_vla_suite.dataset_builder.mem_buffer import MemoryBuffer
 
     rng = random.Random(seed)
     picks = []

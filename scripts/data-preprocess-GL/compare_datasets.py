@@ -387,7 +387,7 @@ def compare_downstream(a_lib: str, b_lib: str, a: dict, b: dict, steps: list[int
                        cfg: dict, aggs: dict[str, Agg], errs: list[str]) -> None:
     """第三层：同一批 (episode, step) 走 prepare_frame_sampling，比选帧索引 / mask / img_emb。
     prepare_buffer=False ⇒ 不载 SigLIP、不碰 GPU，纯打包路径。"""
-    from mme_vla_suite.shared.mem_buffer import MemoryBuffer
+    from mme_vla_suite.dataset_builder.mem_buffer import MemoryBuffer
 
     buf = MemoryBuffer(
         num_views=cfg["num_views"],

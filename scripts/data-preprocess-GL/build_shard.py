@@ -45,7 +45,7 @@ from scan_manifest import assign_shards_lpt  # noqa: E402
 from scan_manifest import load_manifest  # noqa: E402
 
 from mme_vla_suite.dataset_builder.build_robomme_dataset import DatasetProcessor  # noqa: E402
-from mme_vla_suite.shared.mem_buffer import MemoryBuffer  # noqa: E402
+from mme_vla_suite.dataset_builder.mem_buffer import MemoryBuffer  # noqa: E402
 
 
 class ShardProcessor(DatasetProcessor):
