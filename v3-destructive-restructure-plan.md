@@ -2,7 +2,7 @@
 
 > **本文件是自包含的单一权威文档**（2026-08-29 定稿）：执行本计划的人和 agent 不需要再阅读其他计划 md——决策依据、commit 切片、逐文件改动、对拍闸门、G3 runbook、链路图要点、风险登记全部内联。历史沿革见 git 历史与会话记录。
 >
-> **锚点**：分支 `v1-dataloader-Restructure`，现 HEAD `732fae3b13e2ff5f485d7014473b99ed577de387`（初稿制定时为 `0ce75be`；其后五个提交 `f2eb900`/`d42b3cc`/`a898299`/`6d0d576`/`732fae3` **全是本文档自身的 docs 提交、代码零变更**，故初稿的全部源码事实描述在本锚点上仍然有效），工作区 clean。commit 编号沿用 V3.x 序列（V3.7 之后），计划占用 **V3.8–V3.14**。2026-08-29 用户显式批准追加 **commitV3.15**（`scripts/training/main.py` 统一入口 + 入口等效性验证，G3 之后执行），见文末第三部分；第一、二部分已审计内容零改动。
+> **锚点**：分支 `v1-dataloader-Restructure`，现 HEAD `732fae3b13e2ff5f485d7014473b99ed577de387`（初稿制定时为 `0ce75be`；其后五个提交 `f2eb900`/`d42b3cc`/`a898299`/`6d0d576`/`732fae3` **全是本文档自身的 docs 提交、代码零变更**，故初稿的全部源码事实描述在本锚点上仍然有效），工作区 clean。commit 编号沿用 V3.x 序列（V3.7 之后），计划占用 **V3.8–V3.14**。2026-08-29 用户显式批准追加统一入口工作（`scripts/training/main.py` 统一入口 + 入口等效性验证，G3 之后执行；原编号 commitV3.15，2026-08-30 改定 **commitV5.0**），已拆出为仓库根目录独立计划 `v5.0-unified-entry-plan.md`、文末第三部分缩为指针；第一、二部分已审计内容零改动。
 >
 > **本稿是 2026-08-29 对抗审计后的修订版**：经一轮 17-agent 对抗验证（8 维事实核对 + 8 维对抗证伪 + 综合裁决，锚定 `732fae3b`）与一轮 Codex 独立审计交叉核对，原稿查出 9 项会让执行当场失败的缺陷与十余项事实错误，已全部落进本稿。两轮审计一致认定：**原稿的 bitwise 红线本身没有缺陷**——所有 blocker 都是「跑不起来」，不是「跑出错数」。修订触及范围的七项决策由用户当场逐条拍板，见二节后半「第二轮拍板」。
 >
@@ -60,7 +60,7 @@ v4（IO 重构，commitV3.0–V3.7）交付 `FrameSampDataset` 后，训练主�
 
 每个 commit 各有 ≤5 分钟的便宜验证（AGENTS 4），另设分段对拍闸门 N1–N5（第二部分五节）——真出问题不必在 1000 步长跑里回溯七个提交。**对拍 A 侧沿用 G0b 固化产物**（`docs/training-doc/v1-grad-baseline-g0b/records/r1/`），不在当前 HEAD 重录基线（G 链「跑一次固化」纪律；G2 已证当前链 bitwise ≡ G0b）。
 
-**G3 之后另有追加 commitV3.15**（2026-08-29 用户显式批准）：`scripts/training/main.py` 统一入口与入口等效性验证。它不在上表七刀序列内、不改训练链任何文件、不影响 G3 判据，全文见文末第三部分。
+**G3 之后另有追加的统一入口工作**（2026-08-29 用户显式批准；原编号 commitV3.15，2026-08-30 改定 commitV5.0）：`scripts/training/main.py` 统一入口与入口等效性验证。它不在上表七刀序列内、不改训练链任何文件、不影响 G3 判据，权威文档为仓库根目录 `v5.0-unified-entry-plan.md`（文末第三部分已缩为指针）。
 
 **全局烟测口径（审计新增，四刀通用，漏一项即当场失败）**：凡本计划写「确定性档 `STEPS=5` 烟测」处，命令一律带齐
 
@@ -689,142 +689,6 @@ UV_LINK_MODE=copy uv run scripts/training/bench/compare_baseline.py \
 
 ---
 
-# 第三部分（2026-08-29 追加拍板）：commitV3.15 —— `scripts/training/main.py` 统一入口 + 入口等效性验证
+# 第三部分（已拆出）：统一入口 —— 见 `v5.0-unified-entry-plan.md`
 
-> 本部分为 **G3 验收通过之后**的追加 commit，2026-08-29 用户显式批准写入（「同意 写入！」）。它不在第一、二部分的七刀序列内，不改训练链任何文件，不影响 V3.8–V3.14 与 G3 的任何判据、顺序与红线。用户需求原话（按时间序）：「我希望……修改后 尽可能调用一个python文件」→「不！我要的是一个类似scripts/train.py的统一接口」→「需要保证改为统一接口后 测速 正确对拍 和原版能对齐 并且增加一个等效性测试 测试和现有的 scripts/train.py 等效 训练数值上等价」。
-
-## 一（给人看）：做什么
-
-新增单一用户入口 `scripts/training/main.py`，与 `train.py` 同式：**第一个位置参数选子命令，其余参数交给该子命令自己现有的 CLI**，不做任何参数改写：
-
-```
-uv run scripts/training/main.py train mme_vla_suite --exp-name=... --batch-size=64 \
-    --model.use_history --model.history_config=perceptual-framesamp-context.yaml ...
-uv run scripts/training/main.py serve ...        # → serve_policy.py（本就是 tyro）
-uv run scripts/training/main.py norm-stats ...   # → compute_norm_stats.py（本就是 tyro）
-uv run scripts/training/main.py results ...      # → compute_results.py（argparse 透传）
-uv run scripts/training/main.py unzip-ckpt ...   # → unzip_ckpt.py（argparse 透传）
-uv run scripts/training/main.py download-base    # → download_pi05_base.py
-```
-
-train 子命令下 config 名仍是二级子命令（`_config.cli()` 即 `tyro.extras.overridable_config_cli`），`main.py train mme_vla_suite --exp-name=x` 与 `train.py mme_vla_suite --exp-name=x` **逐字符同参**。G 链量具（bench / 对拍 / GRAD_FIXTURE 那套）按二节第 13 条纪律**不**收进子命令，继续独立。
-
-## 二（给人看）：三条硬保证
-
-### 保证一：测速与正确对拍链与原版对齐——「量具绕开入口 + 零 diff」双重成立
-
-G 链测速与对拍从来不走 `train.py` 的 `__main__` 入口：`bench_train_steps.py` 是 `import train` 后直调 `train.main(config)`（其文件头自述「训练循环一行不改」），四个源码指纹护栏锚在 `train.main` 函数体上。所以 G0b/G3 基线、测速口径、`compare_baseline.py` 判据**天然与入口方式无关**。V3.15 再加一道机器闸：对 `train.py`、`bench/`、`prod/` 全部零 diff（判定行 `TRAIN_PY_FROZEN`，见技术细节节），`main.py` 又不被任何训练链文件 import（判定行 `ENTRY_ISOLATION`）——量具链在 V3.15 tip 上原封不动。另跑一轮 STEPS=5 确定性烟测（bench 原路，三节全局口径）vs G0b，`SCALARS steps=5 hex_mismatch_steps=0` 作实测复核。
-
-### 保证二：入口等效性的三层证明（不是口头声明）
-
-**第 1 层（源码同一）**：main.py 的 train 分支就是 `train.py` 尾部 `__main__` 块三条语句照抄（`main(_config.cli(), tentative_run=True)` → `time.sleep(20)` → `main(_config.cli())`），调的是 `import train` 拿到的**同一函数对象**，不存在第二份实现。`_config.cli()` 被调两次、每次重读进程级 `sys.argv`——main.py 在分支入口把 `sys.argv` 改写成 `[argv0, *rest]` 一次即可，与脚本模式同构。
-
-**第 2 层（入口方式差异清单逐条归零）**：「直接跑一个 .py」与「被另一个 .py import 后调用」的差异是有限清单，逐条实测归零：
-
-| 差异点 | 脚本模式 | main.py 模式 | 影响 |
-|---|---|---|---|
-| `sys.path[0]` | train.py 所在目录 | main.py 所在目录 | **零**：两文件同在 `scripts/training/`，字面相同；且 train.py 的 import 全是 `openpi.*`/`mme_vla_suite.*` 已装包，不依赖 path[0] |
-| `__name__` | `"__main__"` | `"train"` | **零**：train.py 全文 `__name__` 只出现在入口守卫处，无其他依赖（logger 用裸 `logging`，`init_logging()` 在 `main()` 内部调用，不在模块级） |
-| `__file__` | train.py 自身路径 | 仍是 train.py 自身路径 | **零**：`wandb.run.log_code(epath.Path(__file__).parent.parent)` 绑的是 train **模块**的 `__file__`，import 方式不改变它 |
-| spawn worker 重导入 `__main__` | `__main__`=train.py | `__main__`=main.py | **零，但有一条纪律**：进 worker 的对象（`FrameSampDataset`、collate）全定义在 `mme_vla_suite.*` 包里、按模块名 pickle，与 `__main__` 是谁无关；train.py 无任何对象进 worker。纪律：**main.py 必须带 `if __name__ == "__main__": main()` 守卫**（R26） |
-| `argv[0]` | `scripts/train.py` | `scripts/training/main.py` | 仅进 tyro `--help` 的 prog 名，纯外观，不进解析 |
-
-模块级副作用也相同：train.py 模块体只有 import，两种入口都恰好执行一次、时机都在环境变量已就位之后（分发阶段零重依赖 import）。
-
-**第 3 层（机器判定）**：ENTRY_CONFIG_EQ（秒级 pytest，闸 argv 管道）+ ENTRY_EQ（确定性档双入口真实训练，位级判据），见下。
-
-### 保证三：训练数值位级等价（ENTRY_EQ）——与原版官方启动链怎么对比
-
-**第 0 层：先确认原版启动链里谁在「算数」。** 官方启动路径 `finetune_mme_vla_suite.sh` 的全部内容就是「环境变量 + 一行命令」：
-
-```bash
-CUDA_VISIBLE_DEVICES=... XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 uv run scripts/train.py mme_vla_suite \
-  --exp-name=... --batch-size=64 ... --model.use_history --model.history_config=...
-```
-
-shell 脚本对训练数值的贡献**只有 env 和 argv 两样**，真正被执行的 python 实体是 `train.py` 以脚本身份跑起来的尾部 `__main__` 块。所以「和原版对比」严格说就是「和**带着同样 env、同样 argv、以脚本身份执行的 train.py** 对比」——ENTRY_EQ 的 A 侧把这三样逐字复刻。
-
-**第 1 层：A/B 两侧各自怎么跑。** 两侧是两个独立 subprocess，唯一差异是入口文件与 argv 头部：
-
-| | A 侧（原版） | B 侧（统一接口） |
-|---|---|---|
-| 被执行的入口 | `scripts/training/train.py` | `scripts/training/main.py` |
-| argv | `["train.py", "mme_vla_suite", <公共尾巴>]` | `["main.py", "train", "mme_vla_suite", <公共尾巴>]` |
-| env | 完全相同（确定性档 XLA_FLAGS、MEM_FRACTION=0.95、CUDA_VISIBLE_DEVICES=0,1、同一编译缓存目录） | 同左 |
-
-A 侧执行方式是 `runpy.run_path("scripts/training/train.py", run_name="__main__")`——这就是 python 解释器跑脚本这件事的库形态：train.py 模块体以 `__name__ == "__main__"` 执行，于是尾部三条语句**原样真实执行**，连「tentative 预热段（`tentative_run_step = 10`，跑到 step 11 触发 break）再正式跑一遍」的入口语义都不是模拟出来的。B 侧同法跑 main.py，走它的 train 分支。
-
-**第 2 层：位级数字从哪来——记录点全是原版代码本来就会执行的调用。** 原版入口没有任何记录器，stdout 只打 4 位小数，没法位级对比。harness 在启动入口**之前**装两处只读观测补丁（手法与 G 链 `bench_train_steps.py` 完全同源）：
-
-1. **`wandb.log` → hex 记录器**。train.py 每 `log_interval` 步本来就会调 `wandb.log(reduced_info, step=step)`（这行还是 bench 四个指纹字符串之一）；补丁只把这次调用的实参——loss / grad_norm / llm_grad_norm / mem_enc_norm / param_norm——按 `float.hex()` 逐步落盘。`--log-interval=1` 让它逐步都记；记录器按 step 回绕切分 tentative / 正式两段。
-2. **`_checkpoints.save_state` → TrainState 摘要记录器**。正式段末步（`step == num_train_steps - 1`）原版本来就会调一次 save_state；补丁把这次调用改为对完整 TrainState（params + Adam 动量 + EMA）逐叶 `sha256(device_get(leaf).tobytes())`，不落 14 GB 真 checkpoint。
-
-关键性质：两处都是**模块属性替换**（train.py 调用形式是 `wandb.log(...)`、`_checkpoints.save_state(...)`，属调用时属性查找），A、B 两侧进程里补丁装在同一个 wandb / checkpoints 模块对象上，**对两侧一视同仁地生效**；补丁本身不触碰训练循环任何一行，只抄写原版调用点递出来的数——所以「装了记录器的 A 侧」与「裸跑的原版」计算逐位相同。
-
-**第 3 层：怎么比、判什么。** 跑完后比两侧落盘文件：
-
-- 逐步五标量 hex 串逐位相等，tentative 段与正式段分开判：`ENTRY_SCALARS phase=tentative steps=<实测钉死> keys=5 hex_mismatch=0`、`ENTRY_SCALARS phase=main steps=20 keys=5 hex_mismatch=0`；
-- 末步完整 TrainState 逐叶 sha 相等：`ENTRY_STATE_DIGEST rows=1 mismatch=0`——这一条最狠：20 步里任何一步、任何一个参数/动量/EMA 叶子差一个字节，末步摘要必炸。
-
-**一处必须如实标注的口径差**：ENTRY_EQ **不复刻官方脚本的生产规模**（b64 / 4 卡 / 80k 步），用 G 链一贯的 2 卡 / b8 / 20 步确定性档。这是成立的，因为被测变量是「入口方式」（argv 管道 + import 方式），与规模无关且两侧规模严格相同；「不同 config 组合下 argv 都被正确交付」由 ENTRY_CONFIG_EQ 单独闸住。直接拿 `bash finetune_mme_vla_suite.sh` 原样跑两遍做不到位级对比：它是 80k 步生产规模、真连 wandb、且无任何位级记录出口。
-
-**等价链一行总结**：官方 shell（=env+argv 薄壳）≡ 脚本身份的 `train.py __main__` ≡ ENTRY_EQ 的 A 侧；A 与 B 位级判据全 PASS ⇒ `main.py train` ≡ 原版官方启动路径。
-
-## 三（技术细节，供 agent 追踪）
-
-**新增文件（4 个，均不被训练链 import）**：
-
-| 文件 | 作用 |
-|---|---|
-| `scripts/training/main.py` | 统一入口分发器（惰性 import + `__main__` 守卫） |
-| `scripts/training/tests/test_entry_config_eq.py` | ENTRY_CONFIG_EQ pytest |
-| `scripts/training/tests/entry_equiv.py` | ENTRY_EQ 单侧 harness（补丁 + runpy） |
-| `scripts/training/tests/run_entry_equiv.sh` | ENTRY_EQ 驱动（起两侧 subprocess + 比对 + 判定行） |
-
-**main.py 要点**：
-- 分发阶段零重依赖 import；各分支惰性 import（jax/XLA 环境变量仍以命令前缀生效）。
-- train 分支：`sys.argv = [sys.argv[0], *rest]` 后照抄 `__main__` 三语句。
-- serve：`serve_policy.main(tyro.cli(serve_policy.Args, args=rest))`；norm-stats：`tyro.cli(compute_norm_stats.main, args=rest)`；results / unzip-ckpt / download-base：**首版把 rest 交给原 parser、不做 argparse→tyro 改写**（不改写就不需要额外的解析等价证明；改写另行拍板）。
-- 顶部注释声明「只作入口、禁止被 import」；必带 `if __name__ == "__main__": main()` 守卫。
-
-**ENTRY_CONFIG_EQ（秒级，无 GPU）**：pytest 内 monkeypatch `train.main` 为捕获桩，对代表性 argv 矩阵（三个 framesamp 变体 × exp-name / batch-size / num-workers / model.* override 组合）跑 main.py 分发捕获 config；同时直接置 `sys.argv` 调 `_config.cli()`（脚本模式语义）取对照 config；两侧 `dataclasses.asdict` 逐键比对。判定行 `ENTRY_CONFIG_EQ=PASS cases=<N> mismatch=0`。
-
-**ENTRY_EQ（约 30–45 min 含冷编译，2 卡，tmux + AGENTS 17 留档）**：
-- 每侧一个独立 subprocess：`uv run python scripts/training/tests/entry_equiv.py --entry <入口路径> --record-dir <dir> -- <入口 argv 尾巴>`。harness 先装两处补丁，再 `sys.path.insert(0, <入口所在目录>)`、`sys.argv = [<入口名>, *tail]`、`runpy.run_path(<入口>, run_name="__main__")`。
-- 公共尾巴：`--num-train-steps=20 --log-interval=1 --save-interval=10000 --batch-size=8 --num-workers=4 --fsdp-devices=2 --no-wandb-enabled --model.use_history --model.history_config=perceptual-framesamp-context.yaml --dataset-path=<REPO_ROOT>/v1-store/datasets/4task-gl-framesamp`。`--num-train-steps=20` 必须大于 `tentative_run_step=10`（两段都被覆盖）；`--save-interval=10000` 钉死 save_state 只在正式段末步触发一次；`--no-wandb-enabled` 下 `wandb.init(mode="disabled")` 照走、`wandb.log` 照调（记录器仍生效）。
-- 两侧仅 `--exp-name` 不同（`entry-eq-a` / `entry-eq-b`）：exp_name 只进 checkpoint 目录路径与 wandb run 名，不进任何数值路径（不可观测性随留档写明；如仍存疑改同名 + 清理后串行重跑，R27）。
-- 环境：`XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'`、`XLA_PYTHON_CLIENT_MEM_FRACTION=0.95`、`CUDA_VISIBLE_DEVICES=0,1`；两侧共享同一 `JAX_COMPILATION_CACHE_DIR`（B 侧热缓存只省时间——D2-cold 已证跨编译 bitwise 成立，缓存与判据无关）。
-- 判定行（tentative 段逐步行数以首轮实测钉死后写进 launch.md，预期 step 0..11 共 12 行）：
-
-  ```
-  ENTRY_SCALARS phase=tentative steps=<实测> keys=5 hex_mismatch=0
-  ENTRY_SCALARS phase=main steps=20 keys=5 hex_mismatch=0
-  ENTRY_STATE_DIGEST rows=1 mismatch=0
-  ENTRY_EQ=PASS
-  ```
-- 留档 `docs/training-doc/v1-entry-eq/`（launch.md / result.md / records/，run_name 起跑前按 AGENTS 6 经用户确认）；两侧 checkpoint 目录属临时 run，PASS 后按 AGENTS 6 清理（FAIL 记录按九节纪律保留）。
-
-**冻结判定（保证一的机器化）**：
-
-```
-TRAIN_PY_FROZEN=PASS   # git diff <G3 收官 HEAD>..HEAD -- scripts/training/train.py scripts/training/bench scripts/training/prod 为空
-ENTRY_ISOLATION=PASS   # grep -rnE "^\s*(import main\b|from main import)" scripts src 为空（main.py 不被任何模块 import）
-```
-
-**V3.15 验证清单（commit 前逐条）**：`TRAIN_PY_FROZEN`、`ENTRY_ISOLATION`、`ENTRY_CONFIG_EQ`、`ENTRY_EQ` 四族判定行；STEPS=5 确定性烟测（三节全局口径，bench 原路）vs G0b `SCALARS steps=5 hex_mismatch_steps=0`（复核量具链）；`uv run pytest --collect-only -q src scripts packages` 零 error；ruff。
-
-**范围明确不做（需另拍板）**：①`compute_results.py` / `unzip_ckpt.py` 的 argparse→tyro 改写；②`finetune_mme_vla_suite.sh` / `eval.sh` / README 的规范命令是否切到 `main.py` 调用（改是一行且已被 ENTRY_EQ 覆盖，但属对外口径变更）。
-
-**新增风险登记（续七节编号）**：
-
-| # | 风险 | 规避 |
-|---|---|---|
-| R26 | dataloader spawn worker 重导入 `__main__`（=main.py）时递归分发或重 import 重依赖 | main.py 模块体只有轻量定义 + `if __name__ == "__main__"` 守卫；进 worker 的对象全在 `mme_vla_suite.*` 包内按模块名 pickle，两入口同构 |
-| R27 | ENTRY_EQ 两侧 `--exp-name` 不同被质疑引入差异 | exp_name 只进 checkpoint 路径与 wandb 名，不进数值路径；如仍存疑改同名 + 清理后串行重跑 |
-| R28 | main.py 被误当训练链模块 import，破坏「入口 / 库」边界 | `ENTRY_ISOLATION` 判定行 + main.py 顶部注释声明「只作入口、禁止被 import」 |
-
-**留档补充（续九节表）**：
-
-| 闸门 | 时长 | 留档 |
-|---|---|---|
-| ENTRY_EQ（V3.15 tip、clean HEAD） | 30–45min | `docs/training-doc/v1-entry-eq/` 全套；两侧 record jsonl 入 records/ |
+> 本部分正文已于 2026-08-30 拆出为仓库根目录独立计划 **`v5.0-unified-entry-plan.md`**，以该文件为唯一权威，本处仅留指针。拆出时用户同步拍板两处修订：commit 编号由原批准的 V3.15 改定 **commitV5.0**（V4.x 序列已落地，避免 git log 编号倒序）；`main.py train` 由「照抄 `train.py` `__main__` 双跑」改为**单跑薄封装**，等效性锚点由同分支 `train.py` 改为 **main 分支 `ecf086c` 官方入口真跑对拍**。原第三部分全文可在本文件的 git 历史（本次 docs commit 之前的版本）查阅。第一、二部分（V3.8–V3.14 与 G3）内容与权威性不受影响。
