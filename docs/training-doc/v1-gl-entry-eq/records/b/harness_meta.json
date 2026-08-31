@@ -1,0 +1,39 @@
+{
+  "entry": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/scripts/training/train.py",
+  "argv_tail": [
+    "mme_vla_suite",
+    "--exp-name",
+    "gl-entry-eq-b",
+    "--num-train-steps",
+    "1000",
+    "--log-interval",
+    "1",
+    "--save-interval",
+    "100",
+    "--batch-size",
+    "64",
+    "--num-workers",
+    "8",
+    "--seed",
+    "42",
+    "--fsdp-devices",
+    "4",
+    "--dataset-path",
+    "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-gl-framesamp",
+    "--assets-base-dir",
+    "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+    "--checkpoint-base-dir",
+    "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/entryeq/ckpt-b",
+    "--weight-loader.params-path",
+    "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params",
+    "--model.use-history",
+    "--model.history-config",
+    "perceptual-framesamp-context.yaml",
+    "--no-wandb-enabled"
+  ],
+  "expect_root": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA",
+  "forbid_roots": [
+    "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/entryeq/worktree-main"
+  ],
+  "expect_steps": 1000
+}

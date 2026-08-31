@@ -1,0 +1,12 @@
+A_SIDE_SEGMENTS tentative_rows=12 main_rows=1000
+B_SIDE_SEGMENTS tentative_rows=0 main_rows=1000
+ENTRY_SCALARS steps=1000 keys=5 hex_mismatch=0
+ENTRY_STATE_DIGEST rows=10 mismatch=0
+CFG_SPOTLIGHT field=ema_decay SAME
+CFG_SPOTLIGHT field=optimizer SAME
+CFG_SPOTLIGHT field=lr_schedule SAME
+ENTRY_RESOLVED_CFG mismatch=0 whitelist=4
+ENTRY_PROVENANCE=PASS
+A_SCALARS_SHA256 140658da6c0225f6cdae41da6955e381afde76cee2ba0828b2e3fd7ed68a314d anchor=SKIPPED
+B_SCALARS_SHA256 140658da6c0225f6cdae41da6955e381afde76cee2ba0828b2e3fd7ed68a314d anchor=SKIPPED
+ENTRY_EQ=PASS
