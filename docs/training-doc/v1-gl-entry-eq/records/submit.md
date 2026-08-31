@@ -14,3 +14,8 @@
 - 教训与规约：重提后至该 job 转 R 之前**冻结一切 commit**；job id 与实际起跑记录
   见 result.md（不再于排队窗口内回写本文件）。
 - --export 全串同首次，仅 EXPECTED_GIT_HEAD 换为本 commit 后 HEAD。
+
+## 重提实录
+
+- 重提 job id：**59349729**，EXPECTED_GIT_HEAD=`5ddb19ca703ba5f7d13e6e15f7d4572b23617475`；
+  已转 R 并过闸（`ENV_RC=0`），A 段（上游 1000 步）进行中。
