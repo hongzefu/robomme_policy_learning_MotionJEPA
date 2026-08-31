@@ -31,6 +31,9 @@
 # 可覆盖：STEPS(7000) SEED(335) WORKERS(8) BATCH(64) FSDP(4) LOG_INTERVAL(100)
 #         SAVE_INTERVAL(2000) EPOCH_STEPS(6176) DATASET_PATH TREND_STEP(1000)
 #         DOWNSAMPLE_EVERY(10)
+# v5.1 新增（均可选）：EXPECTED_GIT_HEAD（传入则起跑前断言 HEAD 未漂移 + 工作区 clean）；
+#         WANDB_PROJECT（传入则 wandb online，须配 WANDB_API_KEY，WANDB_ENTITY 可覆盖
+#         上报归属；不传则 WANDB_MODE=disabled，与 v5.0 前口径逐字节等价）
 #
 #SBATCH --job-name=v1-prod-trend
 #SBATCH --account=chaijy2
@@ -68,6 +71,17 @@ STORE="$REPO/v1-store"
 NCPU="${SLURM_CPUS_PER_TASK:-16}"
 MOUNT_POINT="/nfs/turbo/coe-chaijy-unreplicated"
 
+# ── 起跑闸（v5.1）：排队期间仓库变动 fail-fast；EXPECTED_GIT_HEAD 经 --export 传入 ──
+if [ -n "${EXPECTED_GIT_HEAD:-}" ]; then
+    ACTUAL_HEAD="$(git -C "$REPO" rev-parse HEAD)"
+    if [ "$ACTUAL_HEAD" != "$EXPECTED_GIT_HEAD" ]; then
+        echo "错误: HEAD 漂移（期望 $EXPECTED_GIT_HEAD，实际 $ACTUAL_HEAD），拒绝起跑"; exit 1
+    fi
+    if [ -n "$(git -C "$REPO" status --porcelain)" ]; then
+        echo "错误: 工作区不 clean，拒绝起跑"; git -C "$REPO" status --porcelain; exit 1
+    fi
+fi
+
 # AGENTS 3：python 一律走 uv run；--no-sync = 只用现有 NFS venv、不同步、不碰网络
 export UV_LINK_MODE=copy
 command -v uv >/dev/null 2>&1 || export PATH="$HOME/.local/bin:$PATH"
@@ -98,7 +112,25 @@ export OPENPI_DATA_HOME="$STORE/models"
 export XDG_CACHE_HOME="$STORE/cache/xdg" HF_HOME="$STORE/cache/hf"
 export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 export PYTHONUNBUFFERED=1
-export WANDB_MODE=disabled          # 用户拍板关 wandb；与所有已有基准同口径、无出网依赖
+
+# ── wandb 条件块（v5.1）：设 WANDB_PROJECT 走 online，否则与旧口径逐字节等价（disabled）──
+# 抽成函数供本机双分支实测（source 后调用，断言 WANDB_ARGS 与 env）
+resolve_wandb_args() {
+    if [ -n "${WANDB_PROJECT:-}" ]; then
+        if [ -z "${WANDB_API_KEY:-}" ]; then
+            echo "错误: 设了 WANDB_PROJECT 但缺 WANDB_API_KEY，拒绝起跑"; return 1
+        fi
+        export WANDB_MODE=online          # 强制，不允许继承 disabled/offline
+        export WANDB_DIR="$STORE/cache/wandb" WANDB_CACHE_DIR="$STORE/cache/wandb" WANDB_CONFIG_DIR="$STORE/cache/wandb"
+        mkdir -p "$WANDB_DIR"
+        WANDB_ARGS=(--project-name "$WANDB_PROJECT")
+        # WANDB_ENTITY 经 --export=ALL 透传给 train.py 的 os.environ.get，此处不改写
+    else
+        export WANDB_MODE=disabled
+        WANDB_ARGS=(--no-wandb-enabled)
+    fi
+}
+resolve_wandb_args || exit 1
 
 RECORD_DIR="$STORE/train-records/$RUN_NAME"
 CKPT_DIR="$STORE/train-runs/mme_vla_suite/$RUN_NAME"
@@ -208,6 +240,8 @@ start_samplers() {   # $1=RECORD_DIR —— 五路，与 gl_e2e_fix.sbatch 逐�
 REPO_ENV="$REPO" NCPU_ENV="$NCPU" write_env "$RECORD_DIR"
 ENV_RC=$?
 echo "ENV_RC=$ENV_RC"
+# v5.1：env.json 写不出即环境已坏，立即终止，不再带病跑 80h
+if [ "$ENV_RC" -ne 0 ]; then exit "$ENV_RC"; fi
 start_samplers "$RECORD_DIR"
 
 echo "=== 正式训练 (run=$RUN_NAME, dataset=$DATASET_PATH, workers=$WORKERS, cpus=$NCPU, mem=${SLURM_MEM_PER_NODE:-?}, node=$(hostname), job=${SLURM_JOB_ID:-?}, ${STEPS} steps, log_interval=$LOG_INTERVAL, save_interval=$SAVE_INTERVAL) ==="
@@ -228,8 +262,8 @@ run_py "$REPO/scripts/training/train.py" mme_vla_suite \
     --weight-loader.params-path "$STORE/models/openpi-assets/checkpoints/pi05_base/params" \
     --model.use-history \
     --model.history-config perceptual-framesamp-context.yaml \
-    --no-wandb-enabled
-TRAIN_RC=$?
+    "${WANDB_ARGS[@]}" 2>&1 | tee "$RECORD_DIR/train_console.log"
+TRAIN_RC=${PIPESTATUS[0]}
 stop_samplers
 echo "TRAIN_RC=$TRAIN_RC"
 

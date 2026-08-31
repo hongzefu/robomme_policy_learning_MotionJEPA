@@ -33,7 +33,16 @@
 
 **judge**：读两侧 record 目录，输出 4.5 的判定行（纯标准库 + 同目录 project_scalars）。
     uv run scripts/training/tests/entry_equiv.py judge \\
-      --a-dir <A 侧 record> --b-dir <B 侧 record> --expect-sha256 <锚点>
+      --a-dir <A 侧 record> --b-dir <B 侧 record> [--expect-sha256 <锚点>] \\
+      [--expect-steps N] [--expect-tentative-a 12] \\
+      [--expect-state-steps 100,200,...,999] [--expect-head-a <sha> --expect-head-b <sha>]
+
+  v5.1 硬化（v5.1-prod-60k-wandb-plan.md D1，堵对抗审计列出的假阳性孔洞）：
+  步集合必须恰为 0..N-1、A 段 tentative 行数恰 12/N 且 B 段恰 0（进退出码）、
+  状态摘要步集合恰为期望集且原始行数无重复、provenance HEAD 断言 + porcelain 必须空；
+  --expect-sha256 改可选（A40 无本机锚点时打 anchor=SKIPPED、不进判据）。
+  run 侧新增可重复 --forbid-root：断言项目模块不落在该目录下（B 侧传 A worktree
+  路径——worktree 在仓库 v1-store/ 子目录下，仅 expect_root 归属检查拦不住）。
 """
 
 from __future__ import annotations
@@ -85,7 +94,8 @@ class _WandbRecorderProxy:
         return getattr(self._real, name)
 
 
-def _assert_provenance(expect_root: pathlib.Path) -> None:
+def _assert_provenance(expect_root: pathlib.Path,
+                       forbid_roots: list[pathlib.Path]) -> None:
     for name, mod in list(sys.modules.items()):
         if name.split(".")[0] not in _PROJECT_TOPLEVELS:
             continue
@@ -96,6 +106,12 @@ def _assert_provenance(expect_root: pathlib.Path) -> None:
         if not p.is_relative_to(expect_root):
             raise SystemExit(f"ENTRY_PROVENANCE 违例: 模块 {name} 来自 {p}，"
                              f"不在 --expect-root {expect_root} 下（来源污染，立即停）")
+        # v5.1：forbid-root 补拦「禁根是 expect_root 子目录」的情形——B 侧 expect_root
+        # 是仓库根、A worktree 在 v1-store/ 下，仅 is_relative_to(expect_root) 拦不住
+        for fr in forbid_roots:
+            if p.is_relative_to(fr):
+                raise SystemExit(f"ENTRY_PROVENANCE 违例: 模块 {name} 来自 {p}，"
+                                 f"落在 --forbid-root {fr} 下（来源污染，立即停）")
 
 
 def _module_provenance(expect_root: pathlib.Path, entry: pathlib.Path) -> dict:
@@ -111,10 +127,13 @@ def _module_provenance(expect_root: pathlib.Path, entry: pathlib.Path) -> dict:
                       "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=os.getcwd(),
                           capture_output=True, text=True, check=False).stdout.strip()
+    porcelain = subprocess.run(["git", "status", "--porcelain"], cwd=os.getcwd(),
+                               capture_output=True, text=True, check=False).stdout
     return {"expect_root": str(expect_root),
             "entry": {"file": str(entry),
                       "sha256": hashlib.sha256(entry.read_bytes()).hexdigest()},
-            "cwd": os.getcwd(), "git_head_of_cwd": head, "modules": mods}
+            "cwd": os.getcwd(), "git_head_of_cwd": head,
+            "git_porcelain_of_cwd": porcelain, "modules": mods}
 
 
 def _split_segments(all_path: pathlib.Path, record_dir: pathlib.Path) -> tuple[int, int]:
@@ -158,19 +177,28 @@ def _run(args, tail: list[str]) -> int:
     entry = pathlib.Path(args.entry).resolve()
     record_dir = pathlib.Path(args.record_dir).resolve()
     expect_root = pathlib.Path(args.expect_root).resolve()
+    forbid_roots = [pathlib.Path(p).resolve() for p in (args.forbid_root or [])]
 
     if "PYTHONPATH" in os.environ or "PYTHONHOME" in os.environ:
         raise SystemExit("来源污染防护: 必须以 env -u PYTHONPATH -u PYTHONHOME 启动")
     if not entry.is_relative_to(expect_root):
         raise SystemExit(f"入口 {entry} 不在 --expect-root {expect_root} 下")
+    for fr in forbid_roots:
+        if entry.is_relative_to(fr):
+            raise SystemExit(f"入口 {entry} 落在 --forbid-root {fr} 下")
     import importlib.util
     for top in _PROJECT_TOPLEVELS:
         spec = importlib.util.find_spec(top)
         if spec is None or not spec.origin:
             raise SystemExit(f"find_spec({top!r}) 失败，环境不完整")
-        if not pathlib.Path(spec.origin).resolve().is_relative_to(expect_root):
+        origin = pathlib.Path(spec.origin).resolve()
+        if not origin.is_relative_to(expect_root):
             raise SystemExit(f"来源污染: {top} 解析到 {spec.origin}，"
                              f"不在 {expect_root} 下")
+        for fr in forbid_roots:
+            if origin.is_relative_to(fr):
+                raise SystemExit(f"来源污染: {top} 解析到 {spec.origin}，"
+                                 f"落在 --forbid-root {fr} 下")
 
     record_dir.mkdir(parents=True, exist_ok=True)
     all_path = record_dir / "metrics_all.jsonl"
@@ -190,7 +218,7 @@ def _run(args, tail: list[str]) -> int:
     _orig_init_dir = _ckpt.initialize_checkpoint_dir
 
     def _wrapped_init_dir(*a, **kw):
-        _assert_provenance(expect_root)   # main 已开始、任何计算之前
+        _assert_provenance(expect_root, forbid_roots)   # main 已开始、任何计算之前
         return _orig_init_dir(*a, **kw)
 
     def _summarize_state(checkpoint_manager, state, data_loader, step):
@@ -243,6 +271,7 @@ def _run(args, tail: list[str]) -> int:
     sys.argv = [entry.name, *tail]
     (record_dir / "harness_meta.json").write_text(json.dumps(
         {"entry": str(entry), "argv_tail": tail, "expect_root": str(expect_root),
+         "forbid_roots": [str(p) for p in forbid_roots],
          "expect_steps": args.expect_steps}, indent=2, ensure_ascii=False))
 
     rc = 0
@@ -254,7 +283,7 @@ def _run(args, tail: list[str]) -> int:
         print(f"[entry_equiv] 入口异常: {type(e).__name__}: {e}", flush=True)
         rc = 1
     finally:
-        _assert_provenance(expect_root)
+        _assert_provenance(expect_root, forbid_roots)
         (record_dir / "provenance.json").write_text(json.dumps(
             _module_provenance(expect_root, entry), indent=2, ensure_ascii=False))
         _dump_resolved_config(record_dir)
@@ -292,14 +321,28 @@ def _judge(args) -> int:
     a_dir, b_dir = pathlib.Path(args.a_dir), pathlib.Path(args.b_dir)
     fails: list[str] = []
 
-    # A 侧分段留档（非判据）
-    tent = a_dir / "metrics_tentative.jsonl"
-    tent_rows = sum(1 for _ in tent.open()) if tent.exists() else 0
+    # 两侧分段行数（v5.1：--expect-tentative-a 传入时进退出码，堵「A 忘挂 --overwrite
+    # 没跑 tentative 段 / B 多出 tentative 段」的假阳性）
     a_metrics = _load_metrics(a_dir / "metrics.jsonl")
     b_metrics = _load_metrics(b_dir / "metrics.jsonl")
-    print(f"A_SIDE_SEGMENTS tentative_rows={tent_rows} main_rows={len(a_metrics)}")
+    seg = {}
+    for side, d, m in (("A", a_dir, a_metrics), ("B", b_dir, b_metrics)):
+        tent = d / "metrics_tentative.jsonl"
+        tent_rows = sum(1 for _ in tent.open()) if tent.exists() else 0
+        raw_rows = sum(1 for x in (d / "metrics.jsonl").open() if x.strip())
+        seg[side] = (tent_rows, raw_rows)
+        print(f"{side}_SIDE_SEGMENTS tentative_rows={tent_rows} main_rows={raw_rows}")
+        if raw_rows != len(m):
+            fails.append(f"{side} 侧 metrics.jsonl 有重复/无 step 行: "
+                         f"raw={raw_rows} unique_steps={len(m)}")
+    if args.expect_tentative_a is not None:
+        if seg["A"][0] != args.expect_tentative_a:
+            fails.append(f"A 侧 tentative 行数 {seg['A'][0]} != 期望 {args.expect_tentative_a}")
+        if seg["B"][0] != 0:
+            fails.append(f"B 侧 tentative 行数 {seg['B'][0]} != 0")
 
-    # ① ENTRY_SCALARS：逐步五键 hex 互比
+    # ① ENTRY_SCALARS：逐步五键 hex 互比；步集合必须恰为 0..expect_steps-1（两侧同）
+    expect_set = set(range(args.expect_steps))
     common = sorted(set(a_metrics) & set(b_metrics))
     mism = 0
     for s in common:
@@ -308,20 +351,34 @@ def _judge(args) -> int:
             if va is None or vb is None or va["hex"] != vb["hex"]:
                 mism += 1
                 break
-    if len(a_metrics) != len(b_metrics) or len(common) != len(a_metrics):
-        fails.append(f"两侧步集合不同: A={len(a_metrics)} B={len(b_metrics)} 共同={len(common)}")
+    for side, m in (("A", a_metrics), ("B", b_metrics)):
+        if set(m) != expect_set:
+            missing = sorted(expect_set - set(m))[:5]
+            extra = sorted(set(m) - expect_set)[:5]
+            fails.append(f"{side} 侧步集合非恰 0..{args.expect_steps - 1}: "
+                         f"缺{missing} 多{extra} (n={len(m)})")
     print(f"ENTRY_SCALARS steps={len(common)} keys={len(_SCALAR_KEYS)} hex_mismatch={mism}")
-    if mism or len(common) != 1000:
+    if mism or len(common) != args.expect_steps:
         fails.append(f"ENTRY_SCALARS 失配: steps={len(common)} mismatch={mism}")
 
-    # ② ENTRY_STATE_DIGEST：strict/treedef/keyset 三域互比
-    a_st = {r["step"]: r for r in _load_jsonl(a_dir / "state_digests.jsonl")}
-    b_st = {r["step"]: r for r in _load_jsonl(b_dir / "state_digests.jsonl")}
+    # ② ENTRY_STATE_DIGEST：strict/treedef/keyset 三域互比；--expect-state-steps 传入时
+    # 步集合必须恰为该集、原始行数 == 集合大小（无重复），两侧同
+    a_st_rows = _load_jsonl(a_dir / "state_digests.jsonl")
+    b_st_rows = _load_jsonl(b_dir / "state_digests.jsonl")
+    a_st = {r["step"]: r for r in a_st_rows}
+    b_st = {r["step"]: r for r in b_st_rows}
     st_common = sorted(set(a_st) & set(b_st))
     st_mism = sum(1 for s in st_common if any(
         a_st[s][k] != b_st[s][k] for k in ("strict_global", "treedef_sha", "keyset_sha")))
     if set(a_st) != set(b_st):
         fails.append(f"状态摘要步集合不同: A={sorted(a_st)} B={sorted(b_st)}")
+    if args.expect_state_steps is not None:
+        want = {int(x) for x in args.expect_state_steps.split(",")}
+        for side, rows, st in (("A", a_st_rows, a_st), ("B", b_st_rows, b_st)):
+            if set(st) != want:
+                fails.append(f"{side} 侧状态摘要步集合 {sorted(st)} != 期望 {sorted(want)}")
+            if len(rows) != len(want):
+                fails.append(f"{side} 侧状态摘要原始行数 {len(rows)} != {len(want)}（有重复或缺行）")
     print(f"ENTRY_STATE_DIGEST rows={len(st_common)} mismatch={st_mism}")
     if st_mism or not st_common:
         fails.append(f"ENTRY_STATE_DIGEST 失配: rows={len(st_common)} mismatch={st_mism}")
@@ -346,9 +403,10 @@ def _judge(args) -> int:
     if cfg_mism != 0:
         fails.append(f"ENTRY_RESOLVED_CFG mismatch={cfg_mism}")
 
-    # ④ ENTRY_PROVENANCE：两侧各自归位且根不同
+    # ④ ENTRY_PROVENANCE：两侧各自归位且根不同；v5.1 增 HEAD 断言 + porcelain 必须空
     prov_ok = True
     roots = []
+    expect_heads = {"A": args.expect_head_a, "B": args.expect_head_b}
     for side, d in (("A", a_dir), ("B", b_dir)):
         p = json.loads((d / "provenance.json").read_text())
         root = pathlib.Path(p["expect_root"])
@@ -357,6 +415,20 @@ def _judge(args) -> int:
             if not pathlib.Path(m["file"]).is_relative_to(root):
                 print(f"PROVENANCE_BAD side={side} module={name} file={m['file']}")
                 prov_ok = False
+        if expect_heads[side] is not None:
+            head = p.get("git_head_of_cwd", "")
+            if head != expect_heads[side]:
+                print(f"PROVENANCE_BAD side={side} git_head={head!r} "
+                      f"!= 期望 {expect_heads[side]!r}")
+                prov_ok = False
+            if "git_porcelain_of_cwd" not in p:
+                print(f"PROVENANCE_BAD side={side} 记录缺 git_porcelain_of_cwd"
+                      "（旧版 harness 产物，HEAD 断言口径下不接受）")
+                prov_ok = False
+            elif p["git_porcelain_of_cwd"].strip():
+                print(f"PROVENANCE_BAD side={side} 起跑时工作区不 clean: "
+                      f"{p['git_porcelain_of_cwd']!r}")
+                prov_ok = False
     if len(roots) == 2 and roots[0] == roots[1]:
         print("PROVENANCE_BAD 两侧 expect_root 相同——A/B 跑的是同一份代码")
         prov_ok = False
@@ -364,12 +436,15 @@ def _judge(args) -> int:
     if not prov_ok:
         fails.append("ENTRY_PROVENANCE=FAIL")
 
-    # ⑤ 两侧各自投影对锚点
+    # ⑤ 两侧各自投影对锚点；v5.1 起锚点可选（A40 无本机锚点时打 SKIPPED，不进判据）
     shas = {}
     for side, d in (("A", a_dir), ("B", b_dir)):
         text = project_scalars.project(d / "metrics.jsonl")
         (d / "scalars_hex.tsv").write_text(text)
         shas[side] = hashlib.sha256(text.encode()).hexdigest()
+        if args.expect_sha256 is None:
+            print(f"{side}_SCALARS_SHA256 {shas[side]} anchor=SKIPPED")
+            continue
         hit = shas[side] == args.expect_sha256
         print(f"{side}_SCALARS_SHA256 {shas[side]} anchor_hit={hit}")
         if not hit:
@@ -389,11 +464,24 @@ def main() -> int:
     p_run.add_argument("--entry", required=True)
     p_run.add_argument("--record-dir", required=True)
     p_run.add_argument("--expect-root", required=True)
+    p_run.add_argument("--forbid-root", action="append", default=[],
+                       help="可重复；断言项目模块 __file__ 不落在该目录下")
     p_run.add_argument("--expect-steps", type=int, default=1000)
     p_judge = sub.add_parser("judge")
     p_judge.add_argument("--a-dir", required=True)
     p_judge.add_argument("--b-dir", required=True)
-    p_judge.add_argument("--expect-sha256", required=True)
+    p_judge.add_argument("--expect-sha256", default=None,
+                        help="v5.1 起可选；缺省打 anchor=SKIPPED、不进判据")
+    p_judge.add_argument("--expect-steps", type=int, default=1000,
+                        help="scalar 步集合必须恰为 0..N-1（两侧同）")
+    p_judge.add_argument("--expect-tentative-a", type=int, default=None,
+                        help="A 段 tentative 行数必须恰为此值且 B 段恰 0，进退出码")
+    p_judge.add_argument("--expect-state-steps", default=None,
+                        help="逗号分隔；状态摘要步集合必须恰为此集且无重复（两侧同）")
+    p_judge.add_argument("--expect-head-a", default=None,
+                        help="A 侧 provenance git HEAD 断言 + porcelain 必须空")
+    p_judge.add_argument("--expect-head-b", default=None,
+                        help="B 侧 provenance git HEAD 断言 + porcelain 必须空")
 
     argv = sys.argv[1:]
     tail: list[str] = []

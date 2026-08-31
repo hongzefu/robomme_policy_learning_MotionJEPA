@@ -85,7 +85,9 @@ def init_wandb(
             name=config.exp_name,
             config=dataclasses.asdict(config),
             project=config.project_name,
-            entity="daiyp_umich",
+            # 2026-08-30 实测：本组 API key 写 daiyp_umich 报 403，写
+            # hongzefu-university-of-michigan PASS；经 WANDB_ENTITY 覆盖、默认保持上游值
+            entity=os.environ.get("WANDB_ENTITY", "daiyp_umich"),
         )
         (ckpt_dir / "wandb_id.txt").write_text(wandb.run.id)
 
