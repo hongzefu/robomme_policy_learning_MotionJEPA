@@ -36,6 +36,9 @@
     - 提交前运行 `git status --short`，只对本轮明确文件逐个执行 `git add`。
     - 禁止 `git add .`、`git add -A` 和 `git commit -a`。
     - 不得提交、stash、删除或回滚用户及其他 agent 的在途改动。
+    - **每次 `git commit` 完成后必须立即 `git push` 同步到 GitHub `origin`**（`https://github.com/hongzefu/robomme_policy_learning_MotionJEPA.git`），不得让已提交的 commit 滞留本地；本轮结束时 `git status -sb` 首行不得残留 `ahead` 计数。凭据走 gh CLI（`credential.https://github.com.helper=!/usr/bin/gh auth git-credential`），HTTPS 免交互；该同步已获用户长期授权，无需逐次确认。
+    - push 只推当前分支到其既有 upstream（裸 `git push`）。当前分支没有 upstream 时必须先询问用户，不得自行 `git push -u` 在远端创建分支。
+    - **禁止 `git push --force` 与 `--force-with-lease`**。push 被拒（非快进、认证失败、网络不可达）时立即停止，将 git 原始报错交用户处置，不得改写历史或反复重试。
 
 12. 正式训练或评估必须从 clean HEAD 启动，并在 `docs/training-doc/<run_name>/` 留档。正式全量数据集构建必须在 `docs/dataset-build-doc/<dataset_name>/` 留档。起跑前记录可复现的 commit、命令、配置、数据来源和输出路径；只归档 Git 无法还原的日志、指标和结果，不归档大模型权重。
 
