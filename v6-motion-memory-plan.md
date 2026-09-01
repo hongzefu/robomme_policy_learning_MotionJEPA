@@ -21,8 +21,8 @@ framesamp 单一路径（v5.2 收官，60k 全量 run 在跑），本计划是�
 每帧给 16 个 4×4 池化的 SigLIP token，共 512 个 memory token。这一路描述的是**静态外观**
 （那一帧长什么样），不描述**运动**（那一段时间里在发生什么）。v6 并联第二路。
 
-**一句话方案**：memory 从「512 个外观 token」变成「512 个外观 token **并列** 32 个运动 token」，
-prefix 记忆区 512 → **544**。运动特征来自 MotionJEPA 的两级链路：Wan VAE（离线冻结）→
+**一句话方案**：memory 从「512 个外观 token」变成「512 个外观 token **并列** 80 个运动 token」，
+prefix 记忆区 512 → **592**。运动特征来自 MotionJEPA 的两级链路：Wan VAE（离线冻结）→
 `WanLatentMotionEncoder`；接入形态按用户拍板「**作为 memory 的一部分**」——记忆序列的
 第二路，不是插单个 token 进 prefix。帧路照旧——用户明确「**逻辑不变，你不用管**」，
 `even_sampling_indices` 一字不动、变长间隔铺满全历史；运动路与帧路**完全独立**：按段内
@@ -33,8 +33,9 @@ prefix 记忆区 512 → **544**。运动特征来自 MotionJEPA 的两级链路
 
 1. **段内绝对网格**（起点 = 段起点 + 20m）。
 2. **前视窗口 + 尾端 ≤ 当前帧**（起点往后 33 帧）。
-3. **预算 N=32，零截断**；代价是平均填充率仅 25.3%。
-4. **并列拼接**（512 + 32）。
+3. **预算 N=80，零截断**；容量按 16 任务全集 `/data/hongzefu/robomme_data_h5` 定标（全集最大需 69），
+   **不按当前 4 任务训练集定标**；代价是平均填充率仅 4env 10.1% / 16env 19.1%。
+4. **并列拼接**（512 + 80）。
 5. **缺失走 `motion_mask`**（与 `static_mask` 同款）。
 
 下文按 窗口（二节）→ 链路（三节）→ 对齐（四节）展开，再给实施步骤（五节）与影响面（六节）。
@@ -108,45 +109,91 @@ t = 206
 - **训练与部署共用同一套网格**：上线时 policy 每 20 步推理一次、真实 chunk 边界就是
   绝对网格，训练口径与部署口径天然一致。
 
-### 2.3 预算 N=32：零截断
+### 2.3 预算 N=80：零截断，按 16 任务全集定标
 
-运动路在 memory 中固定占 **N=32** 个位置，合法起点多于 32 时取最近 32 个——实测最大只需
-27，**永不触发截断**。段内绝对网格下，合法起点个数实测（395,289 个样本全量）：
+**定标原则（明文口径）**：`motion.budget` 以及一切「随数据分布定的容量上限」类超参，一律以
+16 任务完整数据集 **`/data/hongzefu/robomme_data_h5`**（16 任务 × 100 ep = 1600 ep）的统计定标，
+**不以当前 v1 的 4 任务训练集** `robomme_data_h5_v2_4env400ep` 定标。理由两条：4 任务集是全集的
+窄子集（只含 ButtonUnmask / ButtonUnmaskSwap / VideoUnmask / VideoUnmaskSwap，且这四个恰好都是
+短 demo 任务），按它定的容量在 scope 扩到全集时必然溢出；两集段长口径同源——4 个共同任务
+ep0–99 的 `(num_timesteps, exec_start_idx)` 400 条逐条相同，所以全集统计可以直接用作上界。
+该原则在第二部分〇节列为红线 8。
+
+**16 任务全集实测**（1600 ep，476,857 个 exec 样本；按 2.2 网格换算 `num_grid = ceil((段帧数 − 32) / 20)`，
+一个样本的起点上界 = `num_grid(demo) + num_grid(exec)`）：
+
+```
+  P25 = 6    中位 = 12    P75 = 20    P90 = 36    P95 = 43    P99 = 56    最大 = 69
+  均值 15.31    一个合法起点都没有的样本：4.72%
+```
+
+| 预算 N | 32 | 48 | 56 | 64 | 69 | 72 | **80** |
+|---|---|---|---|---|---|---|---|
+| 截断样本数 | 56,235 | 10,821 | 4,085 | 207 | 0 | 0 | **0** |
+| 截断样本占比 | 11.793% | 2.269% | 0.857% | 0.043% | 0.000% | 0.000% | **0.000%** |
+| 平均填充率 | 47.9% | 31.9% | 27.3% | 23.9% | 22.2% | 21.3% | **19.1%** |
+
+零截断最小 N = **69**。最长纪录三条：最长 episode 是 VideoPlaceOrder ep4（1411 帧 = demo 1118 +
+exec 293 → 55 + 14 = 69）；最长 demo 段 VideoPlaceOrder ep90（1145 帧 → 56）；最长 exec 段
+BinFill（1044 帧 → 51）。逐任务上界超 32 的有五个：VideoPlaceOrder 69、VideoPlaceButton 52、
+BinFill 51、VideoRepick 50、PickXtimes 50；RouteStick 32 正好卡满；v1 四任务分别为
+ButtonUnmaskSwap 27、VideoUnmaskSwap 27、ButtonUnmask 21、VideoUnmask 18。
+
+**溢出根因是 demo 段，不是 exec 段**：VideoPlace* 系列 demo 动辄 1000+ 帧，而按 2.2 的定义
+demo 段整段已见、与 `t` 无关，贡献的是「从 episode 第 0 步就顶满」的常数项——200/1600 = 12.5%
+的 episode 仅 demo 网格起点数就 > 32（demo 网格 MAX = 56），这些 episode 的每个样本都会截断，
+丢的正是最早的历史。exec 网格单独看 MAX = 51、P90 = 25。
+
+**为什么是 80 而不是 69 / 72**：裕度按同一把尺子——4env 上 MAX 27 取 32 是 18.5% 裕度，同比例
+套到 69 是 81.8，80 落在同一档（15.9%）；69 / 72 贴着观测最大值走，数据集再动一下就顶穿。
+另附一条弱证据：4 个共同任务上 400ep 版的各任务最长 exec 与前 100ep 逐个相同
+（452/452、555/555、333/333、370/370），长尾大概率已采到，但无法证明饱和，这也是不取 72 的原因。
+
+**硬地板 51**：若想压预算，demo 段单独放大 stride 到 40 可把零截断线从 69 降到 51，再放
+（60 / 80 / 100）不再下降——瓶颈换成 BinFill 1044 帧 / PickXtimes 1025 帧的 exec 段（这两个任务
+没有 demo 段）。守住「exec 每 20 帧一采 + 零截断」两条，N 不可能低于 51；要再往下压只能动
+exec stride，那正是「间隔一个 action chunk」的本意所在。**本计划不采用 demo 独立 stride**，
+只把它列为 S4 消融备选。
+
+**当前 4 任务训练集在 N=80 下的实况**（395,289 个样本全量）：
 
 ```
   P25 = 4    中位 = 7    P75 = 12    P90 = 16    P95 = 18    P99 = 21    最大 = 27
   均值 8.09    一个合法起点都没有的样本：6.48%
 ```
 
-| 预算 N | 16 | 20 | 24 | 28 | **32** |
-|---|---|---|---|---|---|
-| 截断样本占比 | 8.880% | 1.807% | 0.032% | 0.000% | **0.000%** |
-| 平均填充率 | 48.9% | 40.3% | 33.7% | 28.9% | **25.3%** |
+| 预算 N | 32 | 48 | 64 | **80** |
+|---|---|---|---|---|
+| 截断样本占比 | 0.000% | 0.000% | 0.000% | **0.000%** |
+| 平均填充率 | 25.3% | 16.9% | 12.6% | **10.1%** |
 
-**N=32**：最大只需 27，32 有裕度、**零截断**，且等于 framesample 的 `_max_frames = 32`，
-两路同预算、形制对齐——用户的三条拍板「尽可能不截断任何样本」「尽可能和 framesample
-现在对齐」「使用 32」同时满足。
+**与 framesample 的对齐关系**：N=80 不等于帧路的 `_max_frames = 32`，「两路同预算」这一层对齐
+**不成立**；「尽可能和 framesample 对齐」只保留在 padding + mask 同款这一层（3.3、3.4）。用户的
+三条拍板为「尽可能不截断任何样本」「容量按全集定标」「padding / mask 与 framesample 同款」。
 
-### 2.4 ⚠ 零截断的代价：平均只有 8 个位置是真数据
+### 2.4 ⚠ 零截断的代价：4env 上平均只有 8 个、16env 上平均只有 15 个位置是真数据
 
 **这是本方案最需要清醒认识的一点，用户明确要求「写入 plan 让用户清楚认知」，
 不藏在技术细节里：**
 
-- 运动路固定占 **32 个 memory 位置**，但平均只有 **8.09 个**是真 motion token；
-- 其余 **约 24 个位置（74.7%）是 padding**，靠 `motion_mask=False` 屏蔽；
-- **6.48% 的样本（约 25,600 个）一个真 motion token 都没有**——整条运动路全是 padding，
-  这些样本等价于「motion 功能未启用」；
-- 分布很偏：P25 只有 4 个真数据，中位 7 个，要到 P90 才有 16 个（半满）。
+- 运动路固定占 **80 个 memory 位置**，但 4env 上平均只有 **8.09 个**是真 motion token，
+  16env 上平均 **15.31 个**；
+- 其余 **约 72 个位置（89.9%）是 padding**（16env 为 64.7 个 / 80.9%），靠 `motion_mask=False` 屏蔽；
+- **6.48% 的样本（约 25,600 个）一个真 motion token 都没有**（16env 为 4.72%）——整条运动路全是
+  padding，这些样本等价于「motion 功能未启用」；
+- 分布很偏：4env P25 只有 4 个真数据，中位 7 个，要到 P90 才有 16 个；16env P25 6、中位 12、
+  P75 20——四分之三的样本连 20 个位置都填不满，却要为 12.5% 的长 demo episode 全程背 80 个位置。
 
-**为什么仍然接受**：这是「零截断」的直接代价。要提高填充率只能降预算（N=16 时填充率
-48.9%，但 8.88% 的样本被截断，丢的是最早的历史），或改用变间隔采样（违背「间隔一个
-action chunk」的本意）。用户已明确选择零截断优先。
+**为什么仍然接受**：这是「零截断 + 按全集定标」的直接代价。要提高填充率只能降预算（4env 上
+N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历史；全集上零截断硬地板是 51，
+见 2.3），或改用变间隔采样（违背「间隔一个 action chunk」的本意）。用户已明确选择零截断优先。
 
 **三个后果需要在实验中盯住**：
-1. attention 里 74.7% 的运动位置被 mask，计算恒定支出但无信息——形状固定是 JAX jit 的硬约束，
-   省不掉（详见 3.3）。
-2. 早期样本（`t` 小）与晚期样本（`t` 大）的运动路信息量差异极大（0 个 vs 27 个），
-   模型可能学成「按 motion 有效数判断 episode 进度」的捷径——S4 需要一个消融专门测这个。
+1. attention 里 89.9%（4env）/ 80.9%（16env）的运动位置被 mask，计算恒定支出但无信息——形状
+   固定是 JAX jit 的硬约束，省不掉（详见 3.3）。
+2. 早期样本（`t` 小）与晚期样本（`t` 大）的运动路信息量差异极大（0 个 vs 69 个，4env 内
+   0 个 vs 27 个），模型可能学成「按 motion 有效数判断 episode 进度」的捷径——S4 需要一个消融
+   专门测这个。
 3. 6.48% 全空样本使得「motion 到底有没有用」的评估必须**分层看**（按有效数分桶），
    整体平均会被全空样本稀释。
 
@@ -216,7 +263,7 @@ action chunk」的本意）。用户已明确选择零截断优先。
               │                                                   │
   even_sampling_indices(t, 32)               段内绝对网格起点 0, 20, 40, …（2.2）
   变长间隔铺满 [0, t]                         合法条件：起点+32 ≤ 当前帧（前视 33 帧窗口）
-              │                              取最近 ≤32 个（实测最多 27、平均 8.09）
+              │                              取最近 ≤80 个（4env 最多 27、16env 最多 69）
               │                                                   │
   查 FrameSampStore                     ┌─ 训练：查离线表 motion_token.f32.bin
   (32,16,2048) bf16                     │      (20958,768) f32 = 61.4 MiB
@@ -225,27 +272,27 @@ action chunk」的本意）。用户已明确选择零截断优先。
   reshape 512                                  → Wan VAE 冻结 → (9,16,32,32)
               │                                → WanLatentMotionEncoder 冻结 → (768,)
               ▼                                                   ▼
-  static_image_emb (b,512,2048)               motion_emb  (b,32,768) f32  padding 行填 0
-  static_pos_emb   (b,512,768)                motion_mask (b,32) bool     padding 位 False
-  static_mask      (b,512)                    pos_f       (b,32,768) f32  padding 行填 0
+  static_image_emb (b,512,2048)               motion_emb  (b,80,768) f32  padding 行填 0
+  static_pos_emb   (b,512,768)                motion_mask (b,80) bool     padding 位 False
+  static_mask      (b,512)                    pos_f       (b,80,768) f32  padding 行填 0
               │                               ↑ 起点帧 16 个 pos 的均值（3.2）
               │                                                   │
   pos_proj(768→768)+silu                      motion_pos_proj(768→768)+silu      ★新参数
-  concat → (b,512,2816)                       concat → (b,32,1536)
+  concat → (b,512,2816)                       concat → (b,80,1536)
   encoder_static(2816→2048)                   motion_encoder_static(1536→2048)   ★新参数
               │                                                   │
               ▼                                                   ▼
-  帧 tokens (b,512,2048)                      motion tokens (b,32,2048)
+  帧 tokens (b,512,2048)                      motion tokens (b,80,2048)
               └────────────────────┬──────────────────────────────┘
-                                   │ 长度轴 concat：512 + 32 = 544
+                                   │ 长度轴 concat：512 + 80 = 592
                                    ▼
-            memory (b,544,2048)    input_mask (b,544) = [static_mask ⊕ motion_mask]
-                                   │ ar_mask / na_mask 各追加 32 个 False
+            memory (b,592,2048)    input_mask (b,592) = [static_mask ⊕ motion_mask]
+                                   │ ar_mask / na_mask 各追加 80 个 False
                                    ▼
- prefix ┌─ mem 512 ─┬─ motion 32 ★─┬─ img 2×256=512 ─┬─ prompt ≤64 ─┐ = 1120（原 1088）
+ prefix ┌─ mem 512 ─┬─ motion 80 ★─┬─ img 2×256=512 ─┬─ prompt ≤64 ─┐ = 1168（原 1088）
         │ ar=F na=F │  ar=F na=F   │   ar=T/F na=T   │  ar=F na=F   │
-        └──── 记忆区扩到 544：image 看不到，prompt / action 看得到 ────┘
- suffix  不变 → 全序列 1140（原 1108），attention 1140²（+5.86%）
+        └──── 记忆区扩到 592：image 看不到，prompt / action 看得到 ────┘
+ suffix  不变 → 全序列 1188（原 1108），attention 1188²（+14.96%）
 ```
 
 读图抓三条对应关系：
@@ -254,7 +301,7 @@ action chunk」的本意）。用户已明确选择零截断优先。
    2048」。区别只在输入粒度——帧路一帧出 16 个外观 token，运动路一个 33 帧窗口只出
    1 个运动 token。
 2. **两列在 concat 之前互不相干**：采样各采各的（变长间隔 vs 绝对网格）、表各查各的、
-   投影各用各的参数；唯一交汇点就是最后那次 `512 + 32` 的长度轴 concat。
+   投影各用各的参数；唯一交汇点就是最后那次 `512 + 80` 的长度轴 concat。
 3. **重活全在训练环外**：右列的 Wan VAE 与 `WanLatentMotionEncoder` 只在离线抽表 /
    在线评估时跑（在线按 2.2 的网格每 20 帧才增量编 1 个窗口，见 3.6）；训练时右列就是
    「seek 读几行 f32 + 两个小 Linear」，新可训练参数只有打 ★ 的两层，合计 3.74 M（六节）。
@@ -280,7 +327,7 @@ action chunk」的本意）。用户已明确选择零截断优先。
 
 **运动路 `pos_f`**：每个合法起点先换算成全 timestep 域帧号（exec 段起点 `u` → `es + u`；
 demo 段起点 `s` → `s`），调同一个 `pos_rows` 查出该帧 `(16, 768)`，**沿 16 那个轴取均值**
-得 `(768,)`；32 个起点堆成 `(32, 768)`，padding 行填 0。均值的真实语义要说清楚：
+得 `(768,)`；80 个起点堆成 `(80, 768)`，padding 行填 0。均值的真实语义要说清楚：
 
 - 前 256 维（时间）：16 行本来就相同，均值 = 原值，**无损保留**——这正是运动路需要 pos
   的原因（motion token 只描述「窗口里发生了什么」，不含「发生在什么时候」）；
@@ -297,7 +344,7 @@ frame_mean` 因此是权宜（盲区清单第 3 条），列为 S4 可选消融�
 ### 3.3 两路 padding 与 mask 的实现
 
 先说清 padding 在解决什么问题。模型走 JAX jit，每个张量的形状在编译期就固定：帧路必须是
-`(b, 512, …)`、运动路必须是 `(b, 32, …)`，不能因样本而变。但两路的**真数据个数都是变的**：
+`(b, 512, …)`、运动路必须是 `(b, 80, …)`，不能因样本而变。但两路的**真数据个数都是变的**：
 帧路在 episode 开头只有 `t+1 < 32` 帧历史，运动路的合法起点平均只有 8 个。于是要做两件事，
 缺一不可：
 
@@ -369,32 +416,33 @@ data["static_mask"] = np.repeat(mask, self._tokens_per_frame)   # (32,) → (512
 **(d) 运动路 padding：同一套规则，少一步展开，多一份常态**
 
 - **来源不同**：不是「历史不够」，而是「合法起点不够」。2.2 的段内绝对网格 + 前视 33 帧
-  条件筛出的合法起点，实测平均 8.09 个、最多 27 个、6.48% 的样本为 0 个。
-- **填法相同**：合法起点按时间序放前 `k` 行，`motion_emb (32,768)` 与 `pos_f (32,768)` 的
-  后 `32−k` 行填 0，`motion_mask (32,)` 前 `k` 位 True。`k=8` 时 `motion_mask = [T×8, F×24]`。
+  条件筛出的合法起点，4env 实测平均 8.09 个、最多 27 个、6.48% 的样本为 0 个（16env：平均
+  15.31、最多 69、4.72%）。
+- **填法相同**：合法起点按时间序放前 `k` 行，`motion_emb (80,768)` 与 `pos_f (80,768)` 的
+  后 `80−k` 行填 0，`motion_mask (80,)` 前 `k` 位 True。`k=8` 时 `motion_mask = [T×8, F×72]`。
 - **填充函数另写，不复用 `_pad`**：`_pad` 的目标长度是内部常量 `_max_frames`、签名是
   img/pos/stt 三键；运动路的目标长度是 `motion.budget`、只有 emb/pos_f 两键，长度语义与
   签名都不同，硬套只会制造耦合（第二部分 2.6 已定）。
-- **少一步**：运动路一个起点只有 1 个 token，`(32,)` 的 mask 天然就是 token 级，**没有**
+- **少一步**：运动路一个起点只有 1 个 token，`(80,)` 的 mask 天然就是 token 级，**没有**
   `np.repeat(…, 16)` 这一步。
 - **模型侧同帧路**：padding 行照过 `motion_pos_proj` / `motion_encoder_static`，屏蔽交给 (e)。
 - **频率差异**（2.4 的另一面）：帧路 padding 是 episode 开头 31 帧的例外；运动路 padding 是
-  常态——平均 32 位里 24 位是填充，6.48% 的样本 32 位全是。
+  常态——平均 80 位里 72 位是填充，6.48% 的样本 80 位全是。
 
 **(e) mask 是怎么让模型真的无视 padding 的：四层数据流**
 
 dataloader 交出去的只是一条布尔向量，它要经过四层才变成「模型看不见 padding」这个事实。
 
 *第一层：dataloader 只交付布尔向量，不是 attention 矩阵。* `static_mask (512,)` /
-`motion_mask (32,)`，真数据位 True、padding 位 False，仅此而已。
+`motion_mask (80,)`，真数据位 True、padding 位 False，仅此而已。
 
 *第二层：模型侧把各段布尔向量首尾拼成整条序列的 `input_mask`。* `history_pi0.py` 的
 `embed_memory` 直接 `input_mask = obs.static_mask`（v6 后为 `[static_mask ⊕ motion_mask]`，
-544 位，见 3.1.2 图）；`compute_loss` 再把 memory、prefix、suffix 三段拼起来：
+592 位，见 3.1.2 图）；`compute_loss` 再把 memory、prefix、suffix 三段拼起来：
 
 ```python
 input_mask = jnp.concatenate([mem_input_mask, prefix_mask, suffix_mask], axis=1)
-# (b, 544 + 512 img + ≤64 prompt + 20 action) = (b, 1140)，现状 (b, 1108)
+# (b, 592 + 512 img + ≤64 prompt + 20 action) = (b, 1188)，现状 (b, 1108)
 ```
 
 `motion_mask` 在这里**没有任何特殊处理**，只是被 concat 进去。拼完之后下游不知道也不关心
@@ -448,8 +496,8 @@ encoded = jnp.einsum("BKGTS,BSKH->BTKGH", probs, v)
 两条附注：
 
 - **位置编码也不数 padding**：`compute_loss` 里 `positions = jnp.cumsum(input_mask, axis=1) - 1`，
-  padding 位不推进 RoPE 位置计数。所以运动路平均 24 位 padding 不会挤动后面 img / prompt /
-  action 的位置；`motion.enabled=false` 时全 False 的 32 位对 positions 同样零贡献，这是
+  padding 位不推进 RoPE 位置计数。所以运动路平均 72 位 padding 不会挤动后面 img / prompt /
+  action 的位置；`motion.enabled=false` 时全 False 的 80 位对 positions 同样零贡献，这是
   「一键退回逐位等价」的又一个前提。
 - **两路 mask 在这套机制里完全对称**：`static_mask` 与 `motion_mask` 进入 `input_mask` 后
   身份消失，第三、四层对二者一视同仁。运动路 padding 的语义与帧路「逐字同构」，指的就是
@@ -457,7 +505,7 @@ encoded = jnp.einsum("BKGTS,BSKH->BTKGH", probs, v)
 
 ### 3.4 并列拼接 + motion_mask
 
-运动路以**并列拼接**进入记忆序列：`[512 帧路] + [32 运动路]` = 544。运动路完全独立——
+运动路以**并列拼接**进入记忆序列：`[512 帧路] + [80 运动路]` = 592。运动路完全独立——
 独立采样、独立投影、独立 mask，`motion.enabled=false` 一键退回**逐位等价**的旧链路。
 缺失位置（padding）喂 0 向量并置 `motion_mask=False`，语义与 framesample 的 `static_mask`
 **完全同款**——帧路在 `step<32` 时同样是 padding + mask，用户要求的「尽可能和 framesample
@@ -551,7 +599,7 @@ demo 段网格： s = 0, 20, 40, …        （s 是 demo 段内偏移；demo �
 | **S1 特征就位** | 冻结 encoder，从已有 latent 读 **20,958 个网格窗口**（11.5 GiB / 261 GiB）跑 encoder，落 `v1-store/datasets/4task-gl-motion/`（**61.4 MiB**），沿用 framesamp 的 packed→verified 两阶段 + 逐行 digest | 200 条在线跑 encoder vs 表逐位相等；500 样本索引映射对拍；行数账 20,958 = exec 17,514 + demo 3,444 |
 | **S2 model 接线** | 双路 memory + `motion.enabled` 开关 + `motion_mask`（本计划主体） | 关闭态与 HEAD **逐位等价**；开启态 smoke 跑通；`‖motion_tok‖/‖mem_tok‖` 同量级；有效数分布与 2.3 一致 |
 | **S3 在线接线** | `FrameSampMemory` 绝对网格增量编码 + Wan VAE 常驻 + 尖峰处理 | 在线/离线同一起点特征一致；端到端 ms/step 实测 |
-| **S4 消融** | ① 预算 N（32 / 24 / 16） ② 叠加 adaRMS 调制 ③ 运动段放 img 之后 ④ `motion.stride` ⑤ 冻结 vs JAX 移植微调 ⑥ **按有效数分桶的分层评估**（2.4 后果 3） | 训练曲线 + 在线成功率 |
+| **S4 消融** | ① 预算 N（80 / 64 / 48 / 32）+ demo 独立 stride（2.3「硬地板 51」） ② 叠加 adaRMS 调制 ③ 运动段放 img 之后 ④ `motion.stride` ⑤ 冻结 vs JAX 移植微调 ⑥ **按有效数分桶的分层评估**（2.4 后果 3） | 训练曲线 + 在线成功率 |
 
 S1 与 S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AGENTS.md` 第 12、17 条从 clean HEAD
 起跑并留档（`docs/dataset-build-doc/4task-gl-motion/` 与 `docs/training-doc/<run_name>/`）。
@@ -561,17 +609,17 @@ S1 与 S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AG
 
 | 项 | 现在 | 之后 | 增幅 |
 |---|---|---|---|
-| memory 段 | 512 | **544**（512 帧路 + 32 运动路） | +6.25% |
-| prefix 总长 | 1088（mem 512 + img 2×256 + prompt 64） | 1120 | +2.94% |
-| 全序列（含 20 个 action token） | 1108 | 1140 | +2.89% |
-| attention 计算量（O(L²)） | 1108² | 1140² | **+5.86%** |
-| 每样本数据字节 | 3.52 MiB（`static_*` 四键） | +96 KiB（`motion_emb` 32×768 f32） | +2.7% |
-| batch=64 每批额外 | — | +6 MiB | — |
+| memory 段 | 512 | **592**（512 帧路 + 80 运动路） | +15.63% |
+| prefix 总长 | 1088（mem 512 + img 2×256 + prompt 64） | 1168 | +7.35% |
+| 全序列（含 20 个 action token） | 1108 | 1188 | +7.22% |
+| attention 计算量（O(L²)） | 1108² | 1188² | **+14.96%** |
+| 每样本数据字节 | 3.52 MiB（`static_*` 四键） | +240 KiB（`motion_emb` 80×768 f32） | +6.7% |
+| batch=64 每批额外 | — | +15 MiB | — |
 | 离线表 | — | 61.4 MiB | — |
 | 新增训练参数 | — | `motion_pos_proj` 589,824 + `motion_encoder_static` 3,145,728 = **3,735,552 ≈ 3.74 M** | 可忽略 |
 
 - **训练语义**：`motion.enabled=false` 时零影响（逐位等价，M5 判据）；`true` 时 prefix 记忆区
-  512 → 544，其后所有 token 的 RoPE 位置整体右移 32。
+  512 → 592，其后所有 token 的 RoPE 位置整体右移 80。
 - **冻结**：两个新投影挂在 `HistoryPi0.mem_encoder`（`PerceptualMemory`）下，路径形如
   `mem_encoder.motion_encoder_static`。当前 `HistoryPi0Config.get_freeze_filter` 返回
   `PathRegex(".*img.*")`（`paligemma_variant="gemma_2b"`，无 lora），不匹配 → **默认可训练**。
@@ -611,6 +659,11 @@ S1 与 S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AG
 6. **禁止 `git clean -x` / `-X`**（`AGENTS.md` 第 19 条附则），会删掉 `v1-store/` 全部产物。
 7. **禁止引入两类已废弃设计**：① motion 与 framesample 采样帧一一对齐；
    ② `missing_motion_emb` + 恒 True 的 `input_mask`。
+8. **容量类超参按 16 任务全集定标**。`motion.budget` 及一切随数据分布定的容量上限，一律以
+   `/data/hongzefu/robomme_data_h5`（16 任务 × 100 ep）的统计定标，**不以当前 4 任务训练集**
+   `robomme_data_h5_v2_4env400ep` 定标（2.3 定标原则）。改预算前必须先在全集上重跑 2.3 的起点
+   统计（`num_grid = ceil((段帧数 − 32) / 20)`，样本上界 = demo + exec 两段之和），在零截断线
+   之上留裕度；4env 上的统计只用于描述当前训练集的填充率实况，不作为容量依据。
 
 ## 一、离线 motion 表格式契约（S1）
 
@@ -671,7 +724,7 @@ demo 段： for m in range(entries[g].demo.num_grid):
               s = 20*m
               if s + 32 <= es - 1:  取 row = entries[g].demo.row_base + m
           （demo 段整段已见，该条件与 t 无关，可在 __init__ 预计算成每 episode 的定值）
-合并后按起点的全局帧号升序排列，取最近 32 个（实测最大 27，永不触发），右填充到 32
+合并后按起点的全局帧号升序排列，取最近 80 个（4env 最大 27、16env 最大 69，永不触发），右填充到 80
 ```
 
 `num_grid = ceil(num_chunks / 20)`，即 `len(range(0, num_chunks, 20))`。
@@ -695,7 +748,8 @@ demo 段： for m in range(entries[g].demo.num_grid):
 motion:
   enabled: false            # 总开关；false 时链路逐位等价于当前 HEAD
   dim: 768                  # = MotionJEPA config 的 motion.dim
-  budget: 32                # 运动路 memory 位置数（零截断；实测最大需 27）
+  budget: 80                # 运动路 memory 位置数。零截断；按 16 任务全集定标
+                            #   （全集最大需 69，4env 最大需 27），见红线 8
   stride: 20                # 段内绝对网格步长。⚠ 独立配置键：默认值取自当前
                             #   action_horizon=20，但**不自动跟随**——改 action_horizon
                             #   不改本键，避免离线表语义绑定到训练超参上
@@ -712,7 +766,7 @@ motion:
 不校验内容；`FrameSampDataset.__init__` 的 `_req(...)` 形制断言只查既有键的值。**加节不触发
 任何现有断言**，但**必须新增对 `motion.*` 的同款 `_req` 断言**（显式 `raise`，禁 `assert`
 ——`PYTHONOPTIMIZE=1` 会剥离 `assert`，见该文件头部注释的 R6），至少覆盖：
-`motion.dim == 768`、`motion.budget == 32`、`motion.stride >= 1`、`motion.window_frames == 33`、
+`motion.dim == 768`、`motion.budget == 80`、`motion.stride >= 1`、`motion.window_frames == 33`、
 `motion.window_direction == "forward"`、`motion.grid_origin == "segment_start"`。
 
 ### 2.2 `src/mme_vla_suite/models/integration/history_observation.py`
@@ -721,7 +775,7 @@ motion:
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| `motion_emb` | `at.Float[at.Array, "b l4 d4"] \| None` | `l4 = motion.budget = 32`，`d4 = 768` |
+| `motion_emb` | `at.Float[at.Array, "b l4 d4"] \| None` | `l4 = motion.budget = 80`，`d4 = 768` |
 | `motion_mask` | `at.Bool[at.Array, "b l4"] \| None` | padding 位 False，语义与 `static_mask` 同款 |
 
 同步改动：`from_dict`（`data.get(..., None)`）、`to_dict`、`from_base_obs` 形参与传递、
@@ -762,16 +816,16 @@ self.motion_encoder_static = nnx.Linear(motion.dim + pos.hidden_dim, memory_toke
 （帧路仍是 512）；新增运动路分支，形制断言同款显式 `raise`：
 
 ```
-motion_emb (b,32,768) ──────────────────────────────────────────┐
-pos_f      (b,32,768) ── silu(motion_pos_proj(pos_f)) ──────────┼→ concat(-1) → (b,32,1536)
-                                                                └→ motion_encoder_static → (b,32,2048)
+motion_emb (b,80,768) ──────────────────────────────────────────┐
+pos_f      (b,80,768) ── silu(motion_pos_proj(pos_f)) ──────────┼→ concat(-1) → (b,80,1536)
+                                                                └→ motion_encoder_static → (b,80,2048)
 ```
 
 padding 位不做特殊处理（`motion_emb` 该位为 0），屏蔽完全交给 `input_mask` —— 与帧路对
 padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static_mask=False`）。
 
 返回值仍为 `(hidden_states, None, None)` 三元组以保持 `embed_memory` 的解包不变，
-运动段作为 `hidden_states` 的后 32 个位置拼接返回。
+运动段作为 `hidden_states` 的后 80 个位置拼接返回。
 
 `mem_encoder.py` 的 `FeatureEncoder` **一字不动**——运动路不复用它（复用会共享 `use_pos_emb`
 分支与参数树，破坏可退性）。
@@ -780,8 +834,8 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
 
 `RoboMMEInputs.__call__` 的 `inputs` 字典补两键，写法与既有四个 `static_*` 键完全一致：
 ```python
-"motion_emb":  data.get("motion_emb", None),   # (32, 768)
-"motion_mask": data.get("motion_mask", None),  # (32,)
+"motion_emb":  data.get("motion_emb", None),   # (80, 768)
+"motion_mask": data.get("motion_mask", None),  # (80,)
 ```
 
 ### 2.6 数据侧（本轮只定契约，实现归 S1/S3）
@@ -825,8 +879,8 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
 | **M3** 索引映射 | S1 | 随机 500 个 `(g, t)`，按一节公式解出的起点集合 == 独立实现（直接遍历 metadata）解出的集合；且 `row_base + m` 读出的行 == 按 episode 名直读 `.bin` 第 `20m` 个 chunk 过 encoder 的输出 | 不等即查 `motion_index.json` 定序 |
 | **M4** 行数账 | S1 | 表行数 == **20,958**；exec 17,514 + demo 3,444；逐段 `num_grid == len(range(0, num_chunks, 20))` | 不符即 metadata 与实际 `.bin` 不配套 |
 | **M5** 关闭态等价 | S2 | `motion.enabled=false`，`embed_prefix` 的四个返回张量与当前 HEAD **逐位相同**（同 rng、同输入 fixture） | 不等即红线 5 被违反（RNG 消耗序变了） |
-| **M6** 开启态形制 | S2 | prefix 序列长 == 1120；`ar_mask` / `na_mask` 在运动段全 False；运动段 `input_mask` == `motion_mask` | — |
-| **M7** 有效数分布 | S2 | 逐 batch 统计 `motion_mask.sum(axis=1)`，分布须与 2.3 实测一致（中位 7、均值 8.09、6.48% 全零） | 不一致即起点集合算错 |
+| **M6** 开启态形制 | S2 | prefix 序列长 == 1168；`ar_mask` / `na_mask` 在运动段全 False；运动段 `input_mask` == `motion_mask` | — |
+| **M7** 有效数分布 | S2 | 逐 batch 统计 `motion_mask.sum(axis=1)`，分布须与 2.3 的 4env 实测一致（中位 7、均值 8.09、6.48% 全零；若训练集换成 16env，应为中位 12、均值 15.31、4.72% 全零） | 不一致即起点集合算错 |
 | **M8** 尺度 | S2 | `‖motion_tok‖₂ / ‖mem_tok‖₂`（**只在 valid 位上算**）的 batch 均值落在 [0.3, 3.0] | 越界则在 `motion_encoder_static` 后补 RMSNorm |
 | **M9** 梯度一致 | S2 收尾 | `motion.enabled=false` 本机跑前 N 步，逐步 loss / grad-norm / 参数摘要与既有基线一致（N 起工前商定） | 不一致即 S2 不得宣称等价 |
 | **M10** 在线/离线一致 | S3 | 同一 `(g, 段, 网格序号)` 的在线编码 vs 离线表，余弦 ≥ M1 阈值；且在线解出的起点集合 == 离线解出的集合 | — |
@@ -862,7 +916,7 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
 | # | 风险 | 概率 | 影响 | 处置 |
 |---|---|---|---|---|
 | R1 | 在线延迟 | 低 | 低 | 绝对网格下摊薄 0.079 s/step；剩余的是第 20 步 1.57 s 尖峰，S3 可预编化解 |
-| R2 | **填充率仅 25.3%，运动路信号被 padding 稀释** | **高** | **中** | 已在 2.4 显式记账；M7 盯有效数分布；S4 增「按有效数分桶的分层评估」与预算 N 消融 |
+| R2 | **填充率仅 10.1%（4env）/ 19.1%（16env），运动路信号被 padding 稀释** | **高** | **中** | 已在 2.4 显式记账；M7 盯有效数分布；S4 增「按有效数分桶的分层评估」与预算 N 消融 |
 | R3 | 6.48% 样本运动路全空，模型可能学成「按有效数猜 episode 进度」的捷径 | 中 | 中 | S4 专项消融：对比「全空样本参与训练」与「全空样本的运动路整体 mask 掉」两档 |
 | R4 | TF32+bf16 在线口径与 fp32 离线表漂移过大 | 中 | 低 | M1 定量；可直接退回 fp32/关TF32（每 20 步 1.57 s 仍可接受），不必冒漂移风险 |
 | R5 | 新参数插入位置错误改变 RNG 消耗序 | 低 | 高 | 红线 5 明写；M5 是它的探测器 |
@@ -879,7 +933,7 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
    离当前帧 8~27 帧——**当前时刻的运动始终缺席**（2.5，用户已知并拍板不补）。
 3. **`pos_source: frame_mean` 是权宜**。16 个 4×4 空间 pos 取均值得到的向量，在 `PosEmb3D`
    的 sin/cos 结构里没有明确语义（均值不是某个网格点的编码）。列为 S4 可选项。
-4. **填充率 25.3% 的影响未经实验量化**，2.4 的三条后果都是推理不是实测。
+4. **填充率 10.1%（4env）/ 19.1%（16env）的影响未经实验量化**，2.4 的三条后果都是推理不是实测。
 5. **消融覆盖不全**：S4 六项互相有交互，本计划不承诺跑满全矩阵。
 6. **未覆盖 `expert` / `modulation` 两种 integration_type**。
 
