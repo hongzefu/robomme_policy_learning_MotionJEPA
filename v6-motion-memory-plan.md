@@ -296,29 +296,164 @@ frame_mean` 因此是权宜（盲区清单第 3 条），列为 S4 可选消融�
 
 #### 3.1.4 两路 padding 的实现
 
-**帧路（现状）**：
+先说清 padding 在解决什么问题。模型走 JAX jit，每个张量的形状在编译期就固定：帧路必须是
+`(b, 512, …)`、运动路必须是 `(b, 32, …)`，不能因样本而变。但两路的**真数据个数都是变的**：
+帧路在 episode 开头只有 `t+1 < 32` 帧历史，运动路的合法起点平均只有 8 个。于是要做两件事，
+缺一不可：
 
-- 训练侧：`t + 1 < 32` 时 `even_sampling_indices` 只返回 `n = t+1` 个帧号。
-  `FrameSampDataset._pad` 按最终形状 `(32, …)` 一次性预分配，前 `n` 行填真数据、后
-  `32 − n` 行整体清零（img / pos / stt 三键同式），并产出**帧级** mask `(32,)`（前 `n` 位
-  True）；随后 `np.repeat(mask, 16)` 展成 **token 级** `static_mask (512,)`——一帧 padding
-  即该帧 16 个位置全 False。
-- 在线侧：同语义由 `right_padding_token_emb` 完成（`framesamp_memory.py` 注释明记
-  「必须复用——只换模块、不换数值路径」）。
-- 模型侧：padding 位**不做任何特殊计算**——零向量照过 `pos_proj` / `encoder_static`
-  （形状固定是 JAX jit 的硬约束），屏蔽完全交给 `make_attn_mask` 里 `input_mask` 的位与。
+- **padding**：把不足的部分补齐到固定长度，让形状合法；
+- **mask**：告诉模型哪些位置是补上去的，让模型把它们当成不存在。
 
-**运动路（v6 新增，逐字同构）**：
+下面按数据流顺序，(a)–(c) 讲帧路现状，(d) 讲运动路怎么照搬，(e) 讲 mask 到了模型里
+究竟是怎么起作用的。
 
-- 合法起点 ≤32（实测最多 27）右填充到 `motion.budget = 32`：`motion_emb` 填充行 0、
-  `pos_f` 填充行 0、`motion_mask` 填充位 False。填充函数**另写**（目标长度
-  `motion.budget` ≠ `_max_frames`，不复用 `_pad`，第二部分 2.6 已定）；运动路一个起点
-  本来就只有 1 个 token，mask 天然就是 token 级，**没有**帧级→token 级的展开一步。
-- 模型侧同帧路：padding 行照过 `motion_pos_proj` / `motion_encoder_static`，屏蔽交给
-  `input_mask` 的后 32 位（= `motion_mask`）。
+**(a) 帧路 padding 从哪来：`even_sampling_indices` 在 episode 开头返回不足 32 个帧号**
 
-**两路 padding 的频率差异**（2.4 的另一面）：帧路 padding 只出现在 episode 开头 31 帧
-（`t < 31`）；运动路 padding 是**常态**——平均 24/32 位是 padding，6.48% 的样本 32 位全是。
+选帧函数在 `shared/sampling.py`，函数体只有 4 行：
+
+```python
+def even_sampling_indices(step_idx: int, token_budget: int) -> list[int]:
+    if step_idx < token_budget:
+        return list(range(step_idx+1))
+    else:
+        return np.linspace(0, step_idx, token_budget, dtype=np.int32).tolist()
+```
+
+`token_budget` 固定传 32。当前帧 `t < 32` 时走第一支，返回 `0, 1, …, t` 共 `t+1` 个帧号：
+`t=0` 返回 1 个、`t=5` 返回 6 个、`t=30` 返回 31 个。`t ≥ 31` 起走第二支，`linspace`
+在 `[0, t]` 上均匀取 32 个，恒满。所以**帧路 padding 只出现在每个 episode 的前 31 帧**，
+之后永远不出现。
+
+**(b) 帧路 padding 填了什么：`_pad` 预分配 `(32, …)`，前 n 行真数据、后 32−n 行清零，外加 32 位帧级 mask**
+
+`FrameSampDataset.__getitem__` 拿到 `n` 个帧号后查表得到 `img (n,16,2048)` / `pos (n,16,768)`
+/ `stt (n,8)`，然后交给 `_pad`。`_pad` 的主体（`framesamp_dataset.py`）：
+
+```python
+m = self._max_frames                                   # 32
+out_img = np.empty((m,) + img.shape[1:], dtype=img.dtype)   # 按最终形状一次性预分配
+out_img[:n] = img                                      # 前 n 行放真数据
+out_img[n:] = 0                                        # 后 32−n 行清零
+# pos / stt 两键同式
+mask = np.zeros(m, dtype=np.bool_)
+mask[:n] = True                                        # 帧级 mask：前 n 位 True
+return out_img, out_pos, out_stt, mask
+```
+
+以 `t=5` 为例：`n=6`，`img (6,16,2048) → (32,16,2048)`，第 0–5 帧是真数据，第 6–31 帧
+全 0；`mask = [T,T,T,T,T,T, F×26]`。填 0 的 dtype 无需特判：bf16 与 f32 的 0 位型都是全零
+字节，所以新旧链路对拍时可以逐字节比。
+
+**(c) 帧级 mask 怎么变成 token 级：`np.repeat(mask, 16)`**
+
+一帧有 16 个外观 token。`__getitem__` 随后把 `(32,16,2048)` `reshape(-1, 2048)` 成
+`(512, 2048)`，32 帧 × 16 token 铺成 512 个位置。mask 必须跟着对齐，做法是每一位复制 16 份：
+
+```python
+data["static_mask"] = np.repeat(mask, self._tokens_per_frame)   # (32,) → (512,)
+```
+
+继续 `t=5` 的例子：`[T×6, F×26]` → `[T×96, F×416]`。**一帧是 padding，它的 16 个位置就
+全 False**。这就是交付给模型的 `static_mask (512,)`。
+
+在线侧（`framesamp_memory.py` 的 `_prepare_frame_sampling`）做的是同一件事，只是填充函数
+是 `right_padding_token_emb`（`shared/data_utils.py`）——它用 `np.concatenate([x, np.zeros(…)])`
+把零块拼到尾部，而不是预分配后原地填，数值结果与 `_pad` 相同；随后同样
+`mask = np.repeat(mask, self.num_views * token_per_image)` 展成 token 级。该函数注释明记
+「必须复用——只换模块、不换数值路径」，训练侧 `_pad` 是它的等价预分配版。
+
+模型侧对 padding 位**不做任何特殊计算**：全零的 `static_image_emb` 行和 `static_pos_emb`
+行照样过 `pos_proj` / `encoder_static`，算出一个非零的 memory token。形状固定是 jit 的
+硬约束，「算了再屏蔽」是这个框架里唯一可行的路，屏蔽本身全部交给 (e)。
+
+**(d) 运动路 padding：同一套规则，少一步展开，多一份常态**
+
+- **来源不同**：不是「历史不够」，而是「合法起点不够」。2.2 的段内绝对网格 + 前视 33 帧
+  条件筛出的合法起点，实测平均 8.09 个、最多 27 个、6.48% 的样本为 0 个。
+- **填法相同**：合法起点按时间序放前 `k` 行，`motion_emb (32,768)` 与 `pos_f (32,768)` 的
+  后 `32−k` 行填 0，`motion_mask (32,)` 前 `k` 位 True。`k=8` 时 `motion_mask = [T×8, F×24]`。
+- **填充函数另写，不复用 `_pad`**：`_pad` 的目标长度是内部常量 `_max_frames`、签名是
+  img/pos/stt 三键；运动路的目标长度是 `motion.budget`、只有 emb/pos_f 两键，长度语义与
+  签名都不同，硬套只会制造耦合（第二部分 2.6 已定）。
+- **少一步**：运动路一个起点只有 1 个 token，`(32,)` 的 mask 天然就是 token 级，**没有**
+  `np.repeat(…, 16)` 这一步。
+- **模型侧同帧路**：padding 行照过 `motion_pos_proj` / `motion_encoder_static`，屏蔽交给 (e)。
+- **频率差异**（2.4 的另一面）：帧路 padding 是 episode 开头 31 帧的例外；运动路 padding 是
+  常态——平均 32 位里 24 位是填充，6.48% 的样本 32 位全是。
+
+**(e) mask 是怎么让模型真的无视 padding 的：四层数据流**
+
+dataloader 交出去的只是一条布尔向量，它要经过四层才变成「模型看不见 padding」这个事实。
+
+*第一层：dataloader 只交付布尔向量，不是 attention 矩阵。* `static_mask (512,)` /
+`motion_mask (32,)`，真数据位 True、padding 位 False，仅此而已。
+
+*第二层：模型侧把各段布尔向量首尾拼成整条序列的 `input_mask`。* `history_pi0.py` 的
+`embed_memory` 直接 `input_mask = obs.static_mask`（v6 后为 `[static_mask ⊕ motion_mask]`，
+544 位，见 3.1.2 图）；`compute_loss` 再把 memory、prefix、suffix 三段拼起来：
+
+```python
+input_mask = jnp.concatenate([mem_input_mask, prefix_mask, suffix_mask], axis=1)
+# (b, 544 + 512 img + ≤64 prompt + 20 action) = (b, 1140)，现状 (b, 1108)
+```
+
+`motion_mask` 在这里**没有任何特殊处理**，只是被 concat 进去。拼完之后下游不知道也不关心
+哪一位来自帧路、哪一位来自运动路——3.2 说的「与 `static_mask` 完全同款」在模型侧的落地就是
+这一句。
+
+*第三层：`make_attn_mask` 把 `input_mask` 做一次外积，padding 列整列封死。* 先说 attention
+mask 是什么：一张 `N×N` 的布尔表，格子 `(q, k)` 为 True 表示「第 q 个 token 允许看第 k 个
+token」。`make_attn_mask`（`history_pi0.py`）的核心三行：
+
+```python
+attn_mask  = cumsum[:, None, :] <= cumsum[:, :, None]         # 结构规则：prefix / causal 谁能看谁
+valid_mask = input_mask[:, None, :] * input_mask[:, :, None]   # 逐格：query 位 且 key 位 都为 True
+return jnp.logical_and(attn_mask, valid_mask)                  # 有 mask_na 时再 where 一次（3.3）
+```
+
+第二行是外积：格子 `(q, k)` 只有在 `input_mask[q]` 与 `input_mask[k]` 同为 True 时才 True。
+于是只要第 `k` 位是 padding，`valid_mask` 的第 `k` **列**整列 False——**不管谁当 query，
+都不允许看这一列**。用一个 6 位的迷你例子，`input_mask = [T,T,T,T,F,F]`：
+
+```
+valid_mask        k=0 1 2 3 4 5
+        q=0 (真)    T T T T F F
+        q=1 (真)    T T T T F F
+        q=2 (真)    T T T T F F
+        q=3 (真)    T T T T F F
+        q=4 (pad)   F F F F F F
+        q=5 (pad)   F F F F F F
+```
+
+后两列全 F，是「padding 对任何 query 不可见」；后两行也全 F，是「padding 自己谁也看不到」，
+但 padding 位的输出没有人消费，这一半无关紧要。最后再与结构规则 `attn_mask` 按位与——结构
+规则允许看的位置，还得是真数据才真的能看。
+
+*第四层：gemma 注意力里 False 格子的 logit 被换成 −2.38e38，softmax 后权重严格为 0。*
+`src/openpi/models/gemma.py` 的 `Attention.__call__`：
+
+```python
+logits = jnp.einsum("BTKGH,BSKH->BKGTS", q, k, preferred_element_type=jnp.float32)
+big_neg = -2.3819763e38                                          # See gemma/modules.py
+masked_logits = jnp.where(attn_mask[:, :, None, :, :], logits, big_neg)
+probs = jax.nn.softmax(masked_logits, axis=-1).astype(dtype)
+encoded = jnp.einsum("BKGTS,BSKH->BTKGH", probs, v)
+```
+
+`where` 把 mask 为 False 的格子替成 f32 最小值；softmax 里 `exp(−2.38e38) = 0`，该格 prob
+严格为 0；随后 `probs @ v` 时 padding 位的 value 乘的是 0。**所以 padding 位的零向量确实
+过了 `motion_pos_proj` / `motion_encoder_static`，算出了非零的 key 和 value，但该列权重恒
+为 0，对任何输出零贡献。填 0 不是屏蔽手段，只是为了确定性和便于对拍；真正屏蔽的是 mask。**
+
+两条附注：
+
+- **位置编码也不数 padding**：`compute_loss` 里 `positions = jnp.cumsum(input_mask, axis=1) - 1`，
+  padding 位不推进 RoPE 位置计数。所以运动路平均 24 位 padding 不会挤动后面 img / prompt /
+  action 的位置；`motion.enabled=false` 时全 False 的 32 位对 positions 同样零贡献，这是
+  「一键退回逐位等价」的又一个前提。
+- **两路 mask 在这套机制里完全对称**：`static_mask` 与 `motion_mask` 进入 `input_mask` 后
+  身份消失，第三、四层对二者一视同仁。运动路 padding 的语义与帧路「逐字同构」，指的就是
+  从 (b) 到 (e) 每一步都走同一条路、没有任何一处按来源分支。
 
 ### 3.2 并列拼接 + motion_mask
 
