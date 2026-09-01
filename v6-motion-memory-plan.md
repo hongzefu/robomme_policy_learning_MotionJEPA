@@ -571,9 +571,11 @@ main(config)
     out    = probs @ v               ← padding 位 value × 0，对任何输出零贡献
 ```
 
-下面跟着这两个样本逐站走，每站给输入输出的形状与 dtype。
+下面跟着这两个样本逐站走。第一至四站在 dataloader 侧（训练时是 worker 进程里的
+`FrameSampDataset.__getitem__`，推理时是主进程的 `FrameSampMemory`，都是 numpy / CPU）；
+第五至七站在 JAX jit 内（GPU）。每站给输入输出的形状与 dtype。
 
-**第一站：这个样本有多少真数据**
+**第一站（dataloader 侧）：这个时刻能取到多少真数据**
 
 帧路，样本 `(g, t=5)`。`FrameSampDataset.__getitem__` 调 `even_sampling_indices(step=5,
 token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` 分支，返回帧号
@@ -587,7 +589,7 @@ token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` �
 时 `f ≤ 168`，合法起点为 `0, 20, …, 160` 共 `k = 9` 个，缺 71 个。同一条 episode 若在 `t = 5`，
 一个合法起点都没有，`k = 0`，80 位全是 padding，这就是 2.4 说的 6.48%。
 
-**第二站：查表，拿到变长的真数据**
+**第二站（dataloader 侧）：逐帧 / 逐起点取单帧特征，行数随真数据个数变**
 
 帧路。6 个帧号先加 `row_base[g]` 得到全局行号，然后三次查表（`FrameSampStore`）：
 
@@ -609,7 +611,7 @@ token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` �
 
 训练时 motion 行从离线表读，在线评估时现编（3.6）。
 
-**第三站：补齐到固定长度，填 0 并生成布尔 mask**
+**第三站（dataloader 侧）：拼成这一个时刻的完整 memory，不足补 0 并记下 mask**
 
 帧路走 `FrameSampDataset._pad(img, pos, stt, n=6)`：按目标长度 `m = _max_frames = 32` 一次性
 `np.empty` 预分配，`out[:6]` 放真数据，`out[6:] = 0`，三键同式；同时
@@ -639,7 +641,7 @@ token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` �
 填 0 的 dtype 不需要特判：bf16 与 f32 的 0 位型都是全零字节，新旧链路对拍可以逐字节比。填 0
 本身不是屏蔽手段，模型不是靠「看到 0」来忽略这些位置的，真正起作用的是从第五站开始的 mask。
 
-**第四站：帧路多一步，帧级 mask 摊成 token 级**
+**第四站（dataloader 侧）：帧路把帧级 memory 摊成 token 级，mask 跟着 ×16**
 
 帧路一帧 16 个 token，`__getitem__` 把 `(32,16,2048)` `reshape(-1, 2048)` 铺成 512 个位置，mask
 必须跟着每位复制 16 份：`np.repeat(mask, 16)`，`(32,) → (512,)`。交付：
@@ -656,7 +658,15 @@ token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` �
 `static_pos_emb (b,512,768)`、`static_mask (b,512)`、`motion_emb (b,80,768)`、`pos_f (b,80,768)`、
 `motion_mask (b,80)`。关于 padding 的全部信息只有两条布尔向量。
 
-**第五站：模型把 padding 位照常算成 token，再把所有 mask 拼成一条**
+**第五站（JAX，jit 内）：帧路 img ⊕ pos 2816→2048、运动路 motion ⊕ pos_f 1536→2048，各自压成 2048 维记忆 token；再把各段 mask 接成一条**
+
+模型主干只认 2048 维 token，所以这一站前半段是一次「翻译」：帧路每个位置把外观特征（2048）
+和位置编码（768）拼成 2816 维，过一个线性层压到 2048；运动路把 motion token（768）和 `pos_f`
+（768）拼成 1536 维，用另一组线性层扩到 2048。两者终点都是 2048，因为那是 gemma 的隐层宽度，
+帧路恰好是压缩、运动路恰好是扩张，只是特征本体宽度不同，不是设计上的取舍。补齐的零行照样过
+这两层，出来是普通的非零向量，模型此刻分不出哪些是真的。后半段是「拼装」：记忆、图像、文本、
+动作各段自带的布尔向量按顺序首尾接成一条 1188 位的 `input_mask`，`motion_mask` 没有任何特殊
+待遇，接完之后下游不再知道哪一位来自哪一路。
 
 `embed_memory`（`history_pi0.py`）不对 padding 位做任何分支：
 
@@ -665,7 +675,9 @@ token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` �
   → `(b,512,2048)`。第 96–511 行输入是零向量，输出是 bias 决定的**非零**向量。
 - 运动路：`pos_f` 过 `motion_pos_proj: Linear(768→768) + silu` → `(b,80,768)`，与 `motion_emb`
   concat → `(b,80,1536)`，过 `motion_encoder_static: Linear(1536→2048)` → `(b,80,2048)`。
-  第 9–79 行同样是非零向量。
+  第 9–79 行同样是非零向量。`pos_f` 是起点帧 16 个位置编码沿 16 轴的均值（3.2）：前 256 维
+  时间编码 16 行本就相同，均值无损保留；后 512 维 xy 编码取平均后对所有起点、所有样本都是
+  同一个常数向量——**xy 那些维度还在，但不再携带信息**，下游 `motion_pos_proj` 会学会忽略它。
 - 两段在长度轴 concat → memory `(b,592,2048)`；`input_mask = [static_mask ⊕ motion_mask]` →
   `(b,592)` bool。`motion_mask` 在这里没有任何特殊处理，只是接在后面。
 
@@ -676,7 +688,9 @@ suffix 20 action], axis=1)` → `(b,1188)` bool（现状 1108）。`ar_mask`、`
 对 `t=5` 的帧路样本，这 1188 位里第 96–511 位 False；对 `t=200` 的运动路样本，第 521–591 位
 False。
 
-**第六站：`make_attn_mask` 把 1188 位向量变成 1188 × 1188 的「谁能看谁」表**
+**第六站（JAX，jit 内）：`make_attn_mask` 把一条 1188 位向量变成 1188 × 1188「谁能看谁」表，补齐位整列封死**
+
+这一站把「哪些位是补的」这条一维信息变成「谁不能看谁」的二维规则。
 
 attention 里每个 token（query，行 `q`）要决定看序列里每个 token（key，列 `k`）多少。控制这件事
 的是 `(b,1188,1188)` 的布尔表，`(q,k)` 为 True 表示允许。`make_attn_mask(input_mask, ar_mask,
@@ -705,7 +719,9 @@ valid_mask     k=0  k=1  k=2  k=3  k=4  k=5
 一半无关紧要。回到我们的样本：`t=5` 时第 96–511 列、`t=200` 时第 521–591 列，在 1188 × 1188
 的表里整列 False，不论结构规则怎么允许。
 
-**第七站：gemma 里 False 格子的权重严格为 0**
+**第七站（JAX，jit 内，gemma）：False 格子在 softmax 里权重严格为 0，补齐位对任何输出零贡献**
+
+这一站把第六站的「不能看」落实成数值上的 0。
 
 `src/openpi/models/gemma.py` 的 `Attention.__call__` 收到的 mask 形状是 `(b,1,1188,1188)`：
 
