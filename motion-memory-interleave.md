@@ -82,106 +82,152 @@ collate 把 64 个样本逐键摞成 batch，`RepackTransform` 与 `HistAugObser
 
 ### 3.1 入口：`train_step` → `loss_fn` → `compute_loss`〔Pi0，train.py 包一层〕
 
-`scripts/training/train.py` 的 `train_step` 被 `jax.jit` 编译。它把参数合进模型，定义 `loss_fn` 为 `model.compute_loss(rng, observation, actions, train=True)` 的均值，用 `nnx.value_and_grad` 一次算出 loss 与所有可训练参数的梯度，再由 optax 更新参数、更新 EMA。它记的四个标量是 `loss`、`grad_norm`、`param_norm`（所有二维以上 kernel 的全局范数）、`llm_grad_norm`，开了记忆再加 `mem_enc_norm`。交错方案不动这一层。
+`scripts/training/train.py` 的 `train_step` 被 `jax.jit` 编译。它把参数合进模型，定义 `loss_fn` 为 `model.compute_loss(rng, observation, actions, train=True)` 的均值，用 `nnx.value_and_grad` 一次算出 loss（标量）与所有可训练参数的梯度（与参数树同形），再由 optax 更新参数、更新 EMA。它记的四个标量是 `loss`、`grad_norm`、`param_norm`（所有二维以上 kernel 的全局范数）、`llm_grad_norm`，开了记忆再加 `mem_enc_norm`。交错方案不动这一层。
 
 ### 3.2 观测预处理与加噪〔Pi0〕
 
-`HistoryPi0.compute_loss` 先把 rng 一分为三，然后：
+`HistoryPi0.compute_loss(rng, observation, actions, train=True)` 收到的输入（b 为 batch，动作维 32，动作步数 20）：
 
-- `preprocess_observation`（`history_observation.py`）拆出基类观测交给 openpi 的同名函数：图像若不是 224×224 先 `resize_with_pad`；训练时对非腕部图像做随机裁剪 95%、放回原尺寸、旋转 ±5°，再做亮度 / 对比度 / 饱和度抖动。做完把 `static_*` 四键原样放回。★交错方案下 `motion_*` 三键与 `mem_order` 也在这里原样透传，不参与任何运算。
-- 加噪：`noise ~ N(0,1)`，形状与 actions 同 (b, 20, action_dim)；`time ~ Beta(1.5, 1) × 0.999 + 0.001`，形状 (b,)；`x_t = time · noise + (1 − time) · actions`；目标速度 `u_t = noise − actions`。
+| 键 | 形状 / dtype | 说明 |
+|---|---|---|
+| `images["base_0_rgb"]`、`images["left_wrist_0_rgb"]` | (b,224,224,3) f32，值域 [−1,1] | 当前观测两张图 |
+| `image_masks` 两键 | (b,) bool | 恒 True |
+| `tokenized_prompt` / `tokenized_prompt_mask` | (b,64) int32 / (b,64) bool | 文本里已含离散化 state：state 裁到 [−1,1] 分 256 桶，写成 `Task: …; State: …;\nAction: ` 再分词（pi05 格式，`config.py` 的 `PaligemmaTokenizer.tokenize`） |
+| `state` | (b,32) f32 | pi05 下不再单独进模型，只经上一行的文本进入 |
+| `static_image_emb` / `static_pos_emb` / `static_state_emb` / `static_mask` | (b,512,2048) bf16 / (b,512,768) f32 / (b,512,8) f32 / (b,512) bool | 帧路，3.0 交付 |
+| `motion_emb` / `motion_pos` / `motion_mask`〔motion〕 | (b,80,768) f32 / (b,80,256) f32 / (b,80) bool | 运动路 |
+| `mem_order` ★ | (b,592) int32 | 交错次序表 |
+| `actions` | (b,20,32) f32 | 真实动作 |
+
+两步计算：
+
+- `preprocess_observation`（`history_observation.py` → openpi 同名函数）：图像若非 224 先 `resize_with_pad`；训练时对 `base_0_rgb` 做随机裁剪 95%、放回原尺寸、旋转 ±5°，两张图都做亮度 / 对比度 / 饱和度抖动；形状不变。记忆相关的八个键原样透传，不参与运算。
+- 加噪：`noise ~ N(0,1)` (b,20,32)；`time ~ Beta(1.5,1) × 0.999 + 0.001` (b,)；`x_t = time · noise + (1 − time) · actions` (b,20,32)；目标速度 `u_t = noise − actions` (b,20,32)。
 
 ### 3.3 `embed_prefix`：把记忆、图像、文本编成一条前缀〔HistoryPi0 改写自 Pi0〕
 
-`Pi0.embed_prefix` 只做图像与文本两段。`HistoryPi0.embed_prefix` 在 `integration_type == "context"` 时先调 `embed_memory` 得到记忆段，把它排在最前面，然后图像、文本照 `Pi0` 的写法。三段各自产出 token、`input_mask`、`ar_mask`，`HistoryPi0` 再多产一条 `na_mask`。
+`Pi0.embed_prefix` 只做图像与文本两段；`HistoryPi0.embed_prefix` 先调 `embed_memory` 得记忆段排在最前，并多产一条 `na_mask`。六步：
 
-**3.3.1 记忆段：`embed_memory`〔HistoryPi0〕→ `PerceptualMemory.__call__` → `FeatureEncoder.encode_perceptual_memory`**
-
-帧路（并列与交错完全相同）：
-
-| 步 | 函数 | 计算 | 输出 |
+| 步 | 函数 | 输入 | 输出 |
 |---|---|---|---|
-| a | `FeatureEncoder._add_pos_emb` | `static_pos_emb` (b,512,768) 过 `pos_proj`（Linear 768→768），过 `nnx.silu`，与 `static_image_emb` (b,512,2048) 在最后一维拼接 | (b,512,2816) |
-| b | `FeatureEncoder._encode_memory` | 过 `encoder_static`（Linear 2816→2048） | (b,512,2048) |
+| 记忆·帧路 | `embed_memory` → `PerceptualMemory.__call__` → `FeatureEncoder`：`pos_proj`（Linear 768→768）+ `silu`，与图像特征拼成 2816 维，过 `encoder_static`（Linear 2816→2048） | (b,512,2048) + (b,512,768) | (b,512,2048) |
+| 记忆·运动路〔motion〕 | `motion_pos_proj`（Linear 256→768）+ `silu`，与 motion token 拼成 1536 维，过 `motion_encoder_static`（Linear 1536→2048） | (b,80,768) + (b,80,256) | (b,80,2048) |
+| 记忆·拼接 | 长度轴 concat；`input_mask = [static_mask ⊕ motion_mask]` | 上两行 | (b,592,2048)、(b,592) |
+| 记忆·重排 ★ | `jnp.take_along_axis(…, mem_order)` 对 token 与 mask 各做一次 | (b,592,2048)、(b,592)、(b,592) int | 形状不变，行序按时间 |
+| 图像 | `PaliGemma.img`，SigLIP So400m/14，每张 16×16 = 256 个 patch；参数被 `.*img.*` 冻结 | (b,224,224,3) × 2 | (b,256,2048) × 2 |
+| 文本 | `PaliGemma.llm(method="embed")`，查 (257152,2048) 词表再乘 √2048 | (b,64) int | (b,64,2048) |
 
-`use_state_emb=False`，`static_state_emb` 不参与。`PerceptualMemory.__call__` 开头断言 `static_image_emb.shape[1] == budget`（512），返回 `(hidden_states, None, None)`。padding 行是零向量，过两层 Linear 后是由 bias 决定的非零向量，这里不做任何分支。
-
-运动路〔motion〕（并列与交错完全相同）：
-
-| 步 | 函数 | 计算 | 输出 |
-|---|---|---|---|
-| c | `PerceptualMemory.__call__` 运动分支 | `motion_pos` (b,80,256) 过 `motion_pos_proj`（Linear 256→768），过 `nnx.silu`，与 `motion_emb` (b,80,768) 拼接 | (b,80,1536) |
-| d | 同上 | 过 `motion_encoder_static`（Linear 1536→2048） | (b,80,2048) |
-| e | 同上 | 与帧路在长度轴拼接，得并列顺序的 memory | (b,592,2048) |
-
-`embed_memory` 再把 `input_mask = [static_mask ⊕ motion_mask]` (b,592) 接好，`ar_mask` 与 `na_mask` 各 592 个 False。
-
-★交错方案在 e 之后多一步 f：
-
-| 步 | 函数 | 计算 | 输出 |
-|---|---|---|---|
-| f ★ | `embed_memory` 新增 | 按 `mem_order` (b,592) 用 `jnp.take_along_axis` 把 memory 的 592 行与 `input_mask` 的 592 位一起换到时间序位置 | (b,592,2048)、(b,592) |
-
-`ar_mask` / `na_mask` 全 False，不需要换。motion 关闭时 c–f 四步都不存在，`embed_memory` 与今天逐字相同。
-
-**3.3.2 图像段〔Pi0〕**
-
-每个视角的图像 (b,224,224,3) 过 `self.PaliGemma.img`，即 SigLIP So400m/14，patch 14 像素，16×16 = 256 个 patch，输出 (b,256,2048)。两个视角共 512 个 token。`input_mask` 由 `image_masks` 广播得到；`HistoryPi0` 把第一个视角第一个 token 的 `ar_mask` 记 True（这是记忆块与图像块的分界），其余 False；`na_mask` 图像段全 True。SigLIP 参数被 `get_freeze_filter` 的 `.*img.*` 冻结，不参与梯度。
-
-**3.3.3 文本段〔Pi0〕**
-
-`tokenized_prompt` (b,≤64) 过 `self.PaliGemma.llm(..., method="embed")`，即 gemma `Embedder.encode`：查 (257152, 2048) 的词表再乘 √2048，输出 (b,≤64,2048)。`input_mask` 取 `tokenized_prompt_mask`；`ar_mask` 与 `na_mask` 全 False。
-
-三段在长度轴拼接：prefix tokens (b,1168,2048)，`prefix_mask` (b,1168)，`prefix_ar_mask` (1168,)，`prefix_na_mask` (1168,)。
+三段拼成 `prefix_tokens` (b,1168,2048)。三条 mask：`prefix_mask` (b,1168) 由 592 位记忆 mask、512 位图像 mask、64 位文本 mask 接成；`prefix_ar_mask` (1168,) 只有第 592 位（第一个图像 token）True；`prefix_na_mask` (1168,) 第 592 到 1103 位（512 个图像 token）True，其余 False。padding 行的零向量过两层 Linear 后是非零向量，这里不分支，屏蔽交给 3.5 的 mask。motion 关闭时运动路、拼接、重排三步都不存在。
 
 ### 3.4 `embed_suffix`：把带噪动作编成后缀〔Pi0，pi05 分支〕
 
-- `action_in_proj`（Linear action_dim→1024）作用于 `x_t` (b,20,action_dim)，得 (b,20,1024)。
-- `posemb_sincos(time, 1024, 4e-3, 4.0)` 把标量时间编成 (b,1024)，过 `time_mlp_in`（Linear 1024→1024）、`nnx.swish`、`time_mlp_out`、`nnx.swish`，得 `adarms_cond` (b,1024)。pi05 下没有 state token，状态只通过 `adarms_cond` 进模型。
-- `input_mask` 全 True (b,20)；`ar_mask = [True] + [False]×19`；`na_mask` 全 False。
+| 步 | 函数 | 输入 | 输出 |
+|---|---|---|---|
+| 动作投影 | `action_in_proj`（Linear 32→1024） | `x_t` (b,20,32) | `suffix_tokens` (b,20,1024) |
+| 时间编码 | `posemb_sincos(time, 1024, 4e-3, 4.0)` | `time` (b,) | (b,1024) |
+| 时间 MLP | `time_mlp_in`（1024→1024）→ `swish` → `time_mlp_out`（1024→1024）→ `swish` | (b,1024) | `adarms_cond` (b,1024) |
+
+`suffix_mask` (b,20) 全 True；`suffix_ar_mask` (20,) = [True, False × 19]；`suffix_na_mask` (20,) 全 False。pi05 没有 state token，时间信息只经 `adarms_cond` 在 3.6 的 RMSNorm 里进入。
 
 ### 3.5 三条 mask 拼接、`make_attn_mask`、位置号〔HistoryPi0 改写自 Pi0〕
 
-`compute_loss` 把 prefix 与 suffix 首尾相接：`input_mask` (b,1188)、`ar_mask` (1188,)、`na_mask` (1188,)。
+`compute_loss` 把 prefix 与 suffix 首尾相接：
 
-`make_attn_mask(input_mask, ar_mask, na_mask)`（`history_pi0.py` 版本，比 openpi 版多 `na_mask` 一参）：
-
-1. `cumsum(ar_mask)` 给每个 token 一个块号：记忆段 592 位块号 0，图像 + 文本块号 1，动作块号 2。`attn_mask[q,k] = 块号[k] ≤ 块号[q]`，即只能看同块或更早的块。
-2. `valid_mask = input_mask[:,None,:] ∧ input_mask[:,:,None]`，padding 位整行整列 False。
-3. `mask_not_attend`：`na_mask` 为 True 的 token（图像）不能看 `cumsum(na_mask) ≤ 0` 的 token（图像段之前的所有位置，即记忆段）。
-4. 三者合成 `attn_mask` (b,1188,1188)。
-
-效果是：记忆只看记忆；图像看图像与文本、看不到记忆；文本看记忆、图像、文本；动作看一切；padding 谁都看不到。★交错方案下这张表的 True/False 个数不变，只是记忆段内 padding 列的编号从两段合成尾部一段。
-
-`positions = jnp.cumsum(input_mask, axis=1) − 1` (b,1188) int。★交错方案下 memory 段 592 个整数的取值变了（帧 token 后移、motion 前移，二节数字），第 593 位起（图像、文本、动作）逐位不变。
-
-### 3.6 主干：`PaliGemma.llm([prefix_tokens, suffix_tokens], mask, positions, adarms_cond)`〔Pi0〕
-
-`history_gemma.Module.__call__` 先把两段 token 转成 bf16，mask 加一维成 (b,1,1188,1188)，然后 `nn.scan` 依次跑 18 个 `HistoryBlock`。`HistoryBlock` 在 `integration_type == "context"` 下与 openpi 的 `Block` 逐步相同（`MemoryAttention` 只在 modulation 模式出现，本链路不走），其内部的 `Attention`、`RMSNorm`、`FeedForward`、`_apply_rope`、`_gated_residual` 全部直接 import 自 `src/openpi/models/gemma.py`。每层按顺序：
-
-| 步 | 函数 | 计算 |
+| 量 | 形状 | 取值 |
 |---|---|---|
-| g | `RMSNorm`（`pre_attention_norm`） | prefix 走普通 RMSNorm：x / √(mean(x²)+1e−6) × (1+scale)；suffix 走自适应版：用 `adarms_cond` 过一个 Dense 得 scale / shift / gate，归一后 × (1+scale) + shift |
-| h | `Attention.__call__` 投影 | prefix 过 `q_einsum` (2048→8×256) 与 `kv_einsum` (2048→1×256 两份)；suffix 过 `q_einsum_1` / `kv_einsum_1`（1024 宽）；两段在长度轴拼成 q (b,1188,8,256)、k (b,1188,1,256)、v 同 k |
-| i ★ | `_apply_rope(q, positions)`、`_apply_rope(k, positions)` | 对每个 token 的 256 维按 `positions / 10000^(2j/256)` 算旋转角，前后两半做二维旋转；q 再乘 256^−0.5。**这是整条训练链里唯一直接消费位置号的计算**，交错方案改的数值只从这里进入 |
-| j | `Attention.__call__` 打分 | `logits = einsum(q, k)` 以 f32 累加，得 (b,1,8,1188,1188)；`where(mask, logits, −2.3819763e38)`；`softmax` 沿最后一维；`probs @ v` 得 (b,1188,8,256) |
-| k | `attn_vec_einsum` / `attn_vec_einsum_1` | 8×256 拼回各自宽度，prefix 段回 2048、suffix 段回 1024 |
-| l | `_gated_residual` | prefix：x + attn_out；suffix：x + attn_out × gate |
-| m | `RMSNorm`（`pre_ffw_norm`）+ `FeedForward` | 归一后过 gating_einsum 两路（gelu 门 × 线性）再过 linear，prefix 宽 2048→16384→2048，suffix 宽 1024→4096→1024；再一次 `_gated_residual` |
+| `input_mask` | (b,1188) bool | 记忆段真 token True（t=200 为 521 位）、图像 512 位 True、文本按实际长度、动作 20 位 True |
+| `ar_mask` | (1188,) bool | 只有第 592 位与第 1168 位 True |
+| `na_mask` | (1188,) bool | 第 592 到 1103 位 True |
 
-18 层跑完各段过自己的 `final_norm`。输出 `prefix_out` (b,1168,2048) 与 `suffix_out` (b,20,1024)。
+`make_attn_mask(input_mask, ar_mask, na_mask)`（`history_pi0.py` 版本，比 openpi 版多 `na_mask`）四步：
 
-j 步里被 mask 为 False 的格子经 `where` 换成 f32 最小值，`exp` 后精确为 0，所以 padding 列在 `probs @ v` 里乘 0，对任何输出零贡献。这与位置号无关，交错方案不改这一机制。
+1. `cumsum(ar_mask)` (b,1188)：记忆段块号 0，图像与文本块号 1，动作块号 2。`attn_mask[q,k] = 块号[k] ≤ 块号[q]` → (b,1188,1188)。
+2. `valid_mask = input_mask[:,None,:] ∧ input_mask[:,:,None]` → (b,1188,1188)，padding 位整行整列 False。
+3. `mask_not_attend`：`na_mask` 为 True 的 token（图像）不能看 `cumsum(na_mask) ≤ 0` 的位置（图像段之前的全部，即记忆段）→ (b,1188,1188)。
+4. 合成 `attn_mask` (b,1188,1188) bool。
+
+效果：记忆只看记忆；图像看图像与文本、看不到记忆；文本看记忆、图像、文本；动作看一切；padding 谁都看不到。★ 交错方案下 True 的个数不变，记忆段内 padding 列从两段合成尾部一段。
+
+`positions = jnp.cumsum(input_mask, axis=1) − 1` → (b,1188) int32。这一行**不是 RoPE 编码本身**，它只给每个 token 一个一维序号，意思是「它前面有几个真 token」，padding 位不推进。RoPE 的旋转在 3.6 每一层的 `Attention` 里由 `_apply_rope` 做，把这个序号换算成角度作用到 q 和 k 上；gemma 不往 token 内容里加任何绝对位置向量，PaliGemma 的 LLM 位置信息只有这一种一维 RoPE。图像 token 的二维位置是 SigLIP 内部加的、记忆 token 的帧号时间码是 PosEmb3D 放在内容里的，这两种与 RoPE 是叠加关系，互不替代。★ 交错方案改的就是这个数组里 memory 段 592 个整数的取值（二节表：m160 从 520 变 408 等），第 593 位起逐位不变。
+
+### 3.6 主干：`PaliGemma.llm([prefix_tokens, suffix_tokens], mask, positions, adarms_cond)`〔Pi0，history_gemma 复用〕
+
+**入口 `history_gemma.Module.__call__`。** 输入：`embedded = [prefix (b,1168,2048), suffix (b,20,1024)]`，先 `astype(bf16)`；`positions` (b,1188) int32；`mask` (b,1188,1188) 加一维成 (b,1,1188,1188)；`adarms_cond = [None, (b,1024)]`；`kv_cache = None`。然后 `nn.scan` 依次跑 18 个 `HistoryBlock`，18 层的参数在每个张量前面多一个长度 18 的轴。`HistoryBlock` 在 `integration_type == "context"` 下与 openpi 的 `Block` 逐步相同（`MemoryAttention` 只在 modulation 模式出现，本链路不走），其内部的 `Attention`、`RMSNorm`、`FeedForward`、`_apply_rope`、`_gated_residual` 全部直接 import 自 `src/openpi/models/gemma.py`。两个 expert 各有一套权重：expert 0 是 PaliGemma（宽 2048，作用于 prefix 1168 个 token），expert 1 是 action expert（宽 1024，作用于 suffix 20 个 token），两者只在注意力打分那一步交汇。
+
+**每层七步（g–m），形状逐一给出：**
+
+**g. 注意力前归一化 `RMSNorm(pre_attention_norm)`**
+
+| expert | 计算 | 输入 | 输出 |
+|---|---|---|---|
+| 0（prefix） | `var = mean(x², −1)` (b,1168,1) f32；`x / √(var+1e−6) × (1 + scale)`，`scale` 参数 (2048,) | (b,1168,2048) | (b,1168,2048)，gate 为 None |
+| 1（suffix，自适应） | `Dense(1024→3072)(adarms_cond)` → (b,3072) → 加轴 (b,1,3072) → 切成 scale / shift / gate 各 (b,1,1024)；`x / √(var+1e−6) × (1 + scale) + shift` | (b,20,1024) + cond (b,1024) | (b,20,1024)，gate (b,1,1024) |
+
+**h. q / k / v 投影 `Attention.__call__` 前半**（8 个 query 头、1 个 key/value 头、每头 256 维）
+
+| expert | 权重 | 输入 | 输出 |
+|---|---|---|---|
+| 0 | `q_einsum` (8,2048,256)；`kv_einsum` (2,1,2048,256) | (b,1168,2048) | q (b,1168,8,256)；k、v 各 (b,1168,1,256) |
+| 1 | `q_einsum_1` (8,1024,256)；`kv_einsum_1` (2,1,1024,256) | (b,20,1024) | q (b,20,8,256)；k、v 各 (b,20,1,256) |
+| 合并 | 沿长度轴 concat | | q (b,1188,8,256)；k (b,1188,1,256)；v (b,1188,1,256) |
+
+**i. RoPE `_apply_rope(q, positions)`、`_apply_rope(k, positions)` ★**
+
+这是整条训练链里唯一直接消费 `positions` 的计算，交错方案改的数值只从这里进入：
+
+| 子步 | 计算 | 形状 |
+|---|---|---|
+| 频率 | `timescale_j = 10000^(2j/256)`，j = 0…127 | (128,) f32 |
+| 角度 | `radians = positions[…,None] / timescale` | (b,1188,128) → 加头轴 (b,1188,1,128) f32 |
+| 三角 | `sin(radians)`、`cos(radians)` | 各 (b,1188,1,128) |
+| 切半 | q 的 256 维切成前后两半 x1、x2 | 各 (b,1188,8,128) |
+| 旋转 | `[x1·cos − x2·sin, x2·cos + x1·sin]` 拼回 | (b,1188,8,256)，转回 bf16 |
+| 缩放 | `q *= 256^−0.5 = 1/16` | (b,1188,8,256) |
+| k 同法 | 只有 1 个头 | (b,1188,1,256) |
+
+每个 token 的 q、k 被按自己的序号旋转；旋转后的 q_i · k_j 只取决于两者序号之差 `positions[i] − positions[j]`。所以交错方案只改「memory 内部两两之差」与「action 到各 memory token 之差」，image、文本、action 相互之间的差不变。
+
+**j. 打分、屏蔽、softmax、加权 `Attention.__call__` 后半**
+
+| 子步 | 计算 | 形状 |
+|---|---|---|
+| 重排 q | `"B T (K G) H -> B T K G H"`，K = 1 个 kv 头、G = 8 | (b,1188,1,8,256) |
+| logits | `einsum("BTKGH,BSKH->BKGTS", q, k)`，f32 累加 | (b,1,8,1188,1188) f32 |
+| 屏蔽 | `mask[:, :, None]` 广播到 (b,1,1,1188,1188)；`where(mask, logits, −2.3819763e38)` | (b,1,8,1188,1188) |
+| softmax | 沿最后一维；False 格子 `exp(−2.38e38)` 精确为 0 | (b,1,8,1188,1188)，转 bf16 |
+| 加权 | `einsum("BKGTS,BSKH->BTKGH", probs, v)` | (b,1188,1,8,256) → 重排 (b,1188,8,256) |
+
+padding 列的权重严格为 0，它们的 v 乘 0，对任何 token 的输出零贡献。这一机制不看位置号，交错不改。
+
+**k. 输出投影**
+
+| expert | 权重 | 输入 | 输出 |
+|---|---|---|---|
+| 0 | `attn_vec_einsum` (8,256,2048) | 前 1168 行 (b,1168,8,256) | (b,1168,2048) |
+| 1 | `attn_vec_einsum_1` (8,256,1024) | 后 20 行 (b,20,8,256) | (b,20,1024) |
+
+**l. 残差 `_gated_residual`**：prefix `x + y` → (b,1168,2048)；suffix `x + y × gate` → (b,20,1024)，gate 来自 g 步。
+
+**m. FFN 前归一化 + `FeedForward` + 残差**
+
+| expert | 计算 | 形状 |
+|---|---|---|
+| 0 | `RMSNorm(pre_ffw_norm)` 同 g；`gating_einsum` (2,2048,16384)：`gelu(x·W0) × (x·W1)` → `linear` (16384,2048) | (b,1168,2048) → (b,1168,16384) → (b,1168,2048)；残差 `x + y` |
+| 1 | 自适应 RMSNorm 同 g（另一组 Dense，gate 另算）；`gating_einsum_1` (2,1024,4096) → `linear_1` (4096,1024) | (b,20,1024) → (b,20,4096) → (b,20,1024)；残差 `x + y × gate` |
+
+**每层返回的 kv_cache**：该层 h 步拼好、i 步旋转后的 k 与 v，各 (b,1188,1,256)；`nn.scan` 把 18 层堆成 (18,b,1188,1,256) × 2。训练时 `compute_loss` 丢弃它；推理时它就是 4.3 存下的缓存。
+
+**出口**：18 层跑完，prefix 过 `final_norm`（普通 RMSNorm）、suffix 过 `final_norm_1`（自适应）→ `prefix_out` (b,1168,2048) bf16、`suffix_out` (b,20,1024) bf16。`compute_loss` 只用 `suffix_out`。
 
 ### 3.7 输出头与 loss〔Pi0〕
 
-`action_out_proj`（Linear 1024→action_dim）作用于 `suffix_out[:, −20:]` 得 `v_t` (b,20,action_dim)。`compute_loss` 返回 `mean((v_t − u_t)², axis=−1)` (b,20)，`loss_fn` 再对 b 与 20 取均值得标量。
+`action_out_proj`（Linear 1024→32）作用于 `suffix_out[:, −20:]` (b,20,1024) 得 `v_t` (b,20,32)。`compute_loss` 返回 `mean((v_t − u_t)², axis=−1)` (b,20)，`loss_fn` 再对 b 与 20 取均值得标量。
 
 ### 3.8 反向与更新〔train.py〕
 
 `nnx.value_and_grad` 沿 3.2–3.7 反传，SigLIP 被冻结不拿梯度，其余（gemma 两个 expert、`mem_encoder` 下的四个 Linear、action 头与 time MLP）全部更新。★交错方案的 `take_along_axis` 是可微的索引操作，梯度按同一张 `mem_order` 表原路搬回并列顺序，再分别流向帧路与运动路的投影。
 
-**三节小结**：交错方案在训练链上只出现在四处——3.0 的 e 步（dataloader 排序）、3.3.1 的 f 步（模型侧 gather）、3.5 的 memory 段位置号取值、3.6 的 i 步旋转角。其余每一步的函数与计算逐字不变。
+**三节小结**：交错方案在训练链上只出现在四处——3.0 的 e 步（dataloader 排序）、3.3 的重排步（模型侧 gather）、3.5 的 memory 段位置号取值、3.6 的 i 步旋转角。其余每一步的函数与计算逐字不变。
 
 ---
 
@@ -223,10 +269,10 @@ j 步里被 mask 为 False 的格子经 `where` 换成 f32 最小值，`exp` 后
 | 步 | 函数 | 计算 |
 |---|---|---|
 | l | `preprocess_observation(None, obs, train=False)` | 只做尺寸检查，不做增广；记忆键原样透传 |
-| m | `embed_prefix` | 与训练 3.3 逐字同一函数：`embed_memory`（含 ★ f 步 gather）、SigLIP、词表；得 (1,1168,2048) |
+| m | `embed_prefix` | 与训练 3.3 逐字同一函数：`embed_memory`（含 ★ 重排）、SigLIP、词表；得 (1,1168,2048) 与三条 mask |
 | n | `make_attn_mask(prefix_mask, prefix_ar_mask, prefix_na_mask)` | (1,1168,1168)，规则同 3.5 |
 | o ★ | `positions = cumsum(prefix_mask) − 1` | (1,1168)；memory 段 592 个取值随交错而变 |
-| p | `PaliGemma.llm([prefix_tokens, None], mask, positions)` | 只跑 expert 0。每层 `Attention` 里 k 经 `_apply_rope(k, positions)` 旋转后与 v 一起作为该层的 `(k, v)` 返回；18 层堆成 kv_cache，形状 18 × (1,1168,1,256) × 2 |
+| p | `PaliGemma.llm([prefix_tokens, None], mask, positions)` | 只跑 expert 0，3.6 的 g–m 七步只对 (1,1168,2048) 做；每层 h 步的 k (1,1168,1,256) 经 i 步 `_apply_rope(k, positions)` 旋转后与 v 一起返回；18 层堆成 kv_cache (18,1,1168,1,256) × 2 |
 
 ★交错方案下 memory token 的旋转角在 p 步就烙进 kv_cache 的 k 里，后面去噪循环直接消费这份缓存。
 
@@ -236,12 +282,12 @@ j 步里被 mask 为 False 的格子经 `where` 换成 f32 最小值，`exp` 后
 
 | 步 | 函数 | 计算 |
 |---|---|---|
-| q | `embed_suffix(obs, x_t, time)` | 同训练 3.4，得 (1,20,1024) 与 `adarms_cond` |
+| q | `embed_suffix(obs, x_t, time)` | 同训练 3.4：`x_t` (1,20,32) → (1,20,1024)；`adarms_cond` (1,1024) |
 | r | `make_attn_mask(suffix_mask, suffix_ar_mask)` | 20×20 因果表 |
 | s | `einops.repeat(prefix_mask, "b p -> b s p", s=20)` | 动作对前缀的可见性直接复制 `prefix_mask` 20 行，padding 列第二次被封；与 r 拼成 (1,20,1188) |
 | t | `positions = sum(prefix_mask) + cumsum(suffix_mask) − 1` | 动作的位置号接在前缀真 token 数之后；交错不改 |
-| u | `PaliGemma.llm([None, suffix_tokens], mask, positions, kv_cache)` | 只跑 expert 1 的 q / k / v 投影；`Attention` 把缓存的 1168 个 k、v 与新的 20 个拼接；20 个 q 经 `_apply_rope` 旋转；logits (1,1,8,20,1188)；`where` / `softmax` / `@v`；`attn_vec_einsum_1`；残差、FFN 同 3.6 |
-| v | `action_out_proj` | `v_t` (1,20,action_dim)；Euler 一步 `x_t ← x_t + dt · v_t`，`time ← time + dt` |
+| u | `PaliGemma.llm([None, suffix_tokens], mask, positions, kv_cache)` | 只跑 expert 1：g 步自适应 RMSNorm (1,20,1024)；h 步 `q_einsum_1` / `kv_einsum_1` 得 q (1,20,8,256)、k、v 各 (1,20,1,256)；i 步 20 个 q 与新 k 经 `_apply_rope` 旋转；缓存的 k、v (1,1168,1,256) 与新 20 个拼成 (1,1188,1,256)；j 步 logits (1,1,8,20,1188)、mask (1,1,1,20,1188)、softmax、`@v` 得 (1,20,8,256)；k 步 `attn_vec_einsum_1` → (1,20,1024)；l、m 步同 3.6 |
+| v | `action_out_proj`（1024→32） | `suffix_out` (1,20,1024) → `v_t` (1,20,32)；Euler 一步 `x_t ← x_t + dt · v_t` (1,20,32)，`time ← time + dt` |
 
 循环结束的 `x_0` 经 `_output_transform` 反归一化后作为动作输出。
 
