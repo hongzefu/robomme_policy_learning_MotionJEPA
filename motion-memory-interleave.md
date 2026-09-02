@@ -310,34 +310,145 @@ SigLIP 不更新，其余参数全部更新。★ `take_along_axis` 可微，梯
 
 ### 5.3 前缀 pass：前缀 (1,1168,2048) → 18 层 → kv_cache (18,1,1168,1,256) × 2〔HistoryPi0 改写自 Pi0〕
 
-`_sample_actions` 是 `module_jit(HistoryPi0.sample_actions)`。
+`_sample_actions` 是 `module_jit(HistoryPi0.sample_actions)`。这一段对应训练的 4.2、4.3、4.5、4.6 四站，但序列里只有前缀 1168 个 token，没有动作段。下面按同样的站位列出，**与训练相同的只写「同 4.x」，只展开不一样的地方**。
 
-| 步 | 函数 | 计算 |
+**5.3.1 预处理：图像形状不变，不增广（对应 4.2）**
+
+| 步 | 函数 | 与训练的区别 | 输入 → 输出 |
+|---|---|---|---|
+| l | `preprocess_observation(None, obs, train=False)` | 无随机裁剪、旋转、色彩抖动；不生成 `noise`、不采 `time`、没有 `x_t` / `u_t` | 两张图各 (1,224,224,3) → 同形 |
+
+`compute_loss` 里 `rng` 一分为三，这里 `rng` 传 `None`，整段前缀计算没有随机数。
+
+**5.3.2 `embed_prefix`：同 4.3**
+
+| 步 | 函数 | 与训练的区别 | 输入 → 输出 |
+|---|---|---|---|
+| m | `embed_prefix` | 逐字同一函数，只是 b = 1；`embed_memory` 含 ★ 重排 | 记忆 592 + 图像 512 + 文本 64 → (1,1168,2048)；`prefix_mask` (1,1168)；`ar_mask` (1168,) 第 592 位 True；`na_mask` (1168,) 第 592–1103 位 True |
+
+**5.3.3 mask 与位置号：只有前缀 1168 位（对应 4.5）**
+
+| 步 | 函数 | 与训练的区别 | 输入 → 输出 |
+|---|---|---|---|
+| n | `make_attn_mask(prefix_mask, prefix_ar_mask, prefix_na_mask)` | 三条向量长 1168 而非 1188；`ar_mask` 只有一个 True（第 592 位），块号只有 0（记忆）与 1（图像 + 文本），没有块 2 | 三条 (1,1168) → (1,1168,1168) |
+| o ★ | `positions = cumsum(prefix_mask) − 1` | 长 1168；前 592 位取值与训练完全相同（★ 交错改的就是这些） | (1,1168) → (1,1168) int32 |
+
+训练时前缀 token 本来就看不到动作段（块 2 > 块 0、1），所以这张 1168 × 1168 的表与训练 (b,1188,1188) 表的左上角 1168 × 1168 逐格相同。
+
+**5.3.4 主干：只跑 expert 0（对应 4.6）**
+
+输入：`prefix` (1,1168,2048)、`suffix = None`、`positions` (1,1168)、`mask` (1,1168,1168)、`adarms_cond = [None, None]`。18 层每层七步，只有 expert 0 那一列在算：
+
+| 步 | 与训练 4.6 的区别 | 形状 |
 |---|---|---|
-| l | `preprocess_observation(None, obs, train=False)` | 只做尺寸检查，不做增广；记忆键原样透传 |
-| m | `embed_prefix` | 与训练 4.3 逐字同一函数：`embed_memory`（含 ★ 重排）、SigLIP、词表；得 (1,1168,2048) 与三条 mask |
-| n | `make_attn_mask(prefix_mask, prefix_ar_mask, prefix_na_mask)` | (1,1168,1168)，规则同 4.5 |
-| o ★ | `positions = cumsum(prefix_mask) − 1` | (1,1168)；memory 段 592 个取值随交错而变 |
-| p | `PaliGemma.llm([prefix_tokens, None], mask, positions)` | 只跑 expert 0，4.6 的 g–m 七步只对 (1,1168,2048) 做；每层 h 步的 k (1,1168,1,256) 经 i 步 `_apply_rope(k, positions)` 旋转后与 v 一起返回；18 层堆成 kv_cache (18,1,1168,1,256) × 2 |
+| g | 只有普通 `RMSNorm`；自适应版与 gate 不存在 | (1,1168,2048) → (1,1168,2048) |
+| h | 只有 `q_einsum` / `kv_einsum`；没有 suffix 的 20 行可拼，长度停在 1168 | q (1,1168,8,256)；k、v 各 (1,1168,1,256) |
+| i ★ | 同 4.6，但只旋转 1168 个 | q (1,1168,8,256)；k (1,1168,1,256) |
+| j | logits 是 1168 × 1168 | (1,1,8,1168,1168) → 加权 (1,1168,8,256) |
+| k | 只有 `attn_vec_einsum` | (1,1168,8,256) → (1,1168,2048) |
+| l | 只有普通残差 `x + y` | (1,1168,2048) |
+| m | 只有 2048 → 16384 → 2048 那一路 | (1,1168,2048) |
 
-★交错方案下 memory token 的旋转角在 p 步就烙进 kv_cache 的 k 里，后面去噪循环直接消费这份缓存。
+每层 h 步投影、i 步旋转后的 k 与 v 各 (1,1168,1,256) 被收集起来，18 层堆成 kv_cache (18,1,1168,1,256) × 2；`prefix_out` (1,1168,2048) 直接丢弃。
+
+与训练的本质区别只有一条：**训练里前缀 token 的 k、v 是在 1188 长的序列里算的，推理里是在 1168 长的序列里算的，但两者数值上是同一个东西**——k、v 只由该 token 自己的输入与序号决定，不看别的 token；前缀 token 的序号两边相同，输入两边相同。所以缓存下来的 k、v 与训练时前缀部分的 k、v 一一对应，这是 kv_cache 可以只算一次的依据。★ 交错方案下 memory token 的旋转角在这一步烙进缓存，去噪循环直接消费。
 
 ### 5.4 去噪循环 `step` × 10：噪声 (1,20,32) 逐步 Euler 积分 → 动作 (1,20,32)〔Pi0〕
 
-`jax.lax.while_loop` 从 `x_t = noise`、`time = 1.0` 起，每步 `dt = −1/num_steps`（默认 10 步）：
+`jax.lax.while_loop` 的 carry 是 `(x_t, time)`，初值 `x_t = noise ~ N(0,1)` (1,20,32)、`time = 1.0`；每步 `dt = −1/10`，条件 `time ≥ 0.05`，共 10 步，`time` 依次取 1.0, 0.9, …, 0.1。每步对应训练的 4.4、4.5、4.6、4.7 四站，**同样只展开不一样的地方**。
 
-| 步 | 函数 | 计算 |
+**5.4.1 `embed_suffix`：同 4.4，但 `time` 是定值**
+
+| 步 | 函数 | 与训练的区别 | 输入 → 输出 |
+|---|---|---|---|
+| q | `embed_suffix(obs, x_t, broadcast(time))` | `x_t` 是上一步积分结果而非 `time·noise + (1−time)·actions`；`time` 是循环变量而非 Beta 采样 | `x_t` (1,20,32) → (1,20,1024)；`time` (1,) → `adarms_cond` (1,1024) |
+
+**5.4.2 mask 与位置号：只给 20 个动作 query 建表（对应 4.5）**
+
+| 步 | 函数 | 与训练的区别 | 输入 → 输出 |
+|---|---|---|---|
+| r | `make_attn_mask(suffix_mask, suffix_ar_mask)` | 两参版（openpi 原版，无 `na_mask`）；`ar_mask = [True, False×19]` 全在块 1，20 个动作 token 互相全可见 | (1,20) → (1,20,20) 全 True |
+| s | `einops.repeat(prefix_mask, "b p -> b s p", s=20)` 与 r 拼接 | 训练是 1188 × 1188 的全表，这里只造 20 行：动作对前缀的可见性直接复制 `prefix_mask`，不再算外积，也不再算块号 | (1,1168) → (1,20,1168)；拼 r → `full_attn_mask` (1,20,1188) |
+| t | `positions = sum(prefix_mask) + cumsum(suffix_mask) − 1` | 训练是对整条 1188 位 `cumsum`；这里用「前缀真 token 数」作偏移再加 0…19 | (1,) + (1,20) → (1,20) int32 |
+
+这 20 行与训练 (b,1188,1188) 表的最后 20 行逐格相同：训练里动作 query 在块 2，能看所有块，只受 `valid_mask` 限制，而 `valid_mask` 的一行就是 `input_mask` 本身。`positions` 的 20 个值也与训练动作段相同，都是 `16k + m + 512 + L` 起连续 20 个。★ 交错不改这一步。
+
+**5.4.3 主干：只跑 expert 1，k、v 来自缓存 + 新 20 个（对应 4.6）**
+
+输入：`prefix = None`、`suffix` (1,20,1024)、`positions` (1,20)、`mask` (1,20,1188)、`adarms_cond = [None, (1,1024)]`、`kv_cache` (18,1,1168,1,256) × 2。18 层每层七步，只有 expert 1 那一列在算：
+
+| 步 | 与训练 4.6 的区别 | 形状 |
 |---|---|---|
-| q | `embed_suffix(obs, x_t, time)` | 同训练 4.4：`x_t` (1,20,32) → (1,20,1024)；`adarms_cond` (1,1024) |
-| r | `make_attn_mask(suffix_mask, suffix_ar_mask)` | 20×20 因果表 |
-| s | `einops.repeat(prefix_mask, "b p -> b s p", s=20)` | 动作对前缀的可见性直接复制 `prefix_mask` 20 行，padding 列第二次被封；与 r 拼成 (1,20,1188) |
-| t | `positions = sum(prefix_mask) + cumsum(suffix_mask) − 1` | 动作的位置号接在前缀真 token 数之后；交错不改 |
-| u | `PaliGemma.llm([None, suffix_tokens], mask, positions, kv_cache)` | 只跑 expert 1：g 步自适应 RMSNorm (1,20,1024)；h 步 `q_einsum_1` / `kv_einsum_1` 得 q (1,20,8,256)、k、v 各 (1,20,1,256)；i 步 20 个 q 与新 k 经 `_apply_rope` 旋转；缓存的 k、v (1,1168,1,256) 与新 20 个拼成 (1,1188,1,256)；j 步 logits (1,1,8,20,1188)、mask (1,1,1,20,1188)、softmax、`@v` 得 (1,20,8,256)；k 步 `attn_vec_einsum_1` → (1,20,1024)；l、m 步同 4.6 |
-| v | `action_out_proj`（1024→32） | `suffix_out` (1,20,1024) → `v_t` (1,20,32)；Euler 一步 `x_t ← x_t + dt · v_t` (1,20,32)，`time ← time + dt` |
+| g | 只有自适应 `RMSNorm` | (1,20,1024) + (1,1024) → (1,20,1024)，gate (1,1,1024) |
+| h | 只有 `q_einsum_1` / `kv_einsum_1`，得 20 行 | q (1,20,8,256)；k、v 各 (1,20,1,256) |
+| i | 只旋转这 20 个 q 与 20 个 k，用 t 步的 `positions` (1,20) | q (1,20,8,256)；k (1,20,1,256) |
+| 缓存拼接（训练没有） | 本层缓存的 k、v (1,1168,1,256) 接在新 20 个前面 | k、v 各 (1,1188,1,256) |
+| j | query 只有 20 个，logits 是 20 × 1188 而非 1188 × 1188；mask 是 (1,20,1188) 加轴成 (1,1,1,20,1188) | (1,1,8,20,1188) → 加权 (1,20,8,256) |
+| k | 只有 `attn_vec_einsum_1` | (1,20,8,256) → (1,20,1024) |
+| l | 门控残差 `x + y × gate` | (1,20,1024) |
+| m | 只有 1024 → 4096 → 1024 那一路 | (1,20,1024) |
 
-循环结束的 `x_0` 经 `_output_transform` 反归一化后作为动作输出。
+每层也会返回拼好的 k、v (1,1188,1,256)，但被丢弃，缓存不更新。18 层跑完过 `final_norm_1` → `suffix_out` (1,20,1024)。
+
+与训练的本质区别：训练里 20 个动作 token 的 q 与 1188 个 k 打分，其中 1168 个 k 是同一次前向里现算的；推理里这 1168 个 k 从缓存读，只现算自己那 20 个。数值上两边的 logits 是同一个式子，只是 1168 个 k 的来源不同。
+
+**5.4.4 输出头与积分：没有 loss（对应 4.7）**
+
+| 步 | 函数 | 与训练的区别 | 输入 → 输出 |
+|---|---|---|---|
+| v | `action_out_proj` | 同 4.7 得 `v_t`，但不与 `u_t` 比较、没有 loss；改做一步 Euler | (1,20,1024) → `v_t` (1,20,32)；`x_t ← x_t + dt · v_t` (1,20,32)；`time ← time + dt` |
+
+10 步跑完得 `x_0` (1,20,32)，`MME_VLA_Policy.infer` 去掉 batch 维得 (20,32)，经 `_output_transform` 反归一化后输出。
 
 **五节小结**：推理链上交错方案改的地方与训练完全对应——k 步排序（对应训练 4.0 的 e 步）、m 步 gather（同一个 `embed_memory`）、o 步位置号、p 步 k 的旋转角。去噪循环 q–v 六步代码与数值机制不变，只是消费的 kv_cache 已经不同。训练与在线必须共用同一个排序函数，规则只在一处定义；两侧若各写一份，排序稍有出入就会让在线模型看到与训练不同的位置号分配，不报错，只静默降效果。
+
+### 5.5 训练与推理数值链对比图
+
+左列训练一次前向，右列推理前缀一次加去噪十次。同一行是同一站，★ 标交错改动处，形状随行给出。
+
+```
+      训练 compute_loss（一次前向，b 个样本）                 推理 sample_actions（前缀一次 + 去噪 10 次，b = 1）
+ ═══════════════════════════════════════════════════   ═══════════════════════════════════════════════════════
+ 4.0 dataloader 键                                      5.1 add_buffer 每步现编 → 字典
+     帧路 512 位 / 运动路 80 位 / ★mem_order (592,)          5.2 _prepare_history：帧路 512 / 运动路 80 / ★mem_order
+              │                                                        │
+ 4.2 preprocess(train=True) 图像增广                    5.3.1 preprocess(train=False) 不增广
+     noise (b,20,32)、time~Beta (b,)                        （无 noise、无 time）
+     x_t = time·noise + (1−time)·actions (b,20,32)
+     u_t = noise − actions (b,20,32)
+              │                                                        │
+ 4.3 embed_prefix → (b,1168,2048)                       5.3.2 embed_prefix → (1,1168,2048)
+     ★ embed_memory 里 take_along_axis 重排                 ★ 同一函数，同样重排
+ 4.4 embed_suffix → (b,20,1024), cond (b,1024)               （此时没有 suffix）
+              │                                                        │
+ 4.5 三条 mask 拼成 (b,1188)                            5.3.3 三条 mask 只有前缀 (1,1168)
+     make_attn_mask → (b,1188,1188)                          make_attn_mask → (1,1168,1168)
+     positions = cumsum − 1 → (b,1188)  ★memory 段            positions = cumsum − 1 → (1,1168)  ★memory 段
+              │                                                        │
+ 4.6 llm([prefix, suffix]) 18 层                        5.3.4 llm([prefix, None]) 18 层，只跑 expert 0
+     q (b,1188,8,256)  k,v (b,1188,1,256)                    q (1,1168,8,256)  k,v (1,1168,1,256)
+     ★ _apply_rope 用 positions 旋转 q、k                    ★ _apply_rope 旋转后的 k、v 存下 →
+     logits (b,1,8,1188,1188)                                kv_cache (18,1,1168,1,256) × 2
+     → prefix_out (b,1168,2048) 丢弃                          prefix_out 丢弃
+     → suffix_out (b,20,1024)                                          │
+              │                                         ┌──── 循环 10 次，time = 1.0 → 0.1 ────────────────┐
+              │                                         │ 5.4.1 embed_suffix(x_t, time)                    │
+              │                                         │       → (1,20,1024), cond (1,1024)               │
+              │                                         │ 5.4.2 mask = [prefix_mask×20 行 | 20×20 全 True]  │
+              │                                         │       → (1,20,1188)                              │
+              │                                         │       positions = Σprefix_mask + 0…19 → (1,20)   │
+              │                                         │ 5.4.3 llm([None, suffix], kv_cache) 只跑 expert 1│
+              │                                         │       q (1,20,8,256)                             │
+              │                                         │       k,v = [缓存 1168 | 新 20] → (1,1188,1,256)  │
+              │                                         │       logits (1,1,8,20,1188)                     │
+              │                                         │       → suffix_out (1,20,1024)                   │
+ 4.7 action_out_proj → v_t (b,20,32)                    │ 5.4.4 action_out_proj → v_t (1,20,32)            │
+     loss = mean((v_t − u_t)²) → 标量                    │       x_t ← x_t − 0.1·v_t ；time ← time − 0.1     │
+              │                                         └──────────────────────────────────────────────────┘
+ 4.8 grad → 参数更新                                     x_0 (1,20,32) → (20,32) → 反归一化 → 动作
+```
+
+两列的对应关系：训练 4.5 的 (b,1188,1188) 表等于推理 5.3.3 的 1168 × 1168 表放在左上角、5.4.2 的 20 × 1188 表放在最后 20 行；训练 4.6 里前缀 token 的 k、v 等于推理 5.3.4 缓存的 k、v；训练 4.6 里动作 token 的 q 与 logits 等于推理 5.4.3 每一步算的 q 与 logits。★ 两列各有三处，位置一一对应：memory 次序表、memory 段位置号、memory 段 k 的旋转角。
 
 ---
 
