@@ -329,6 +329,23 @@ SigLIP 不更新，其余参数全部更新。★ `take_along_axis` 可微，梯
 | u | `PaliGemma.llm([None, suffix_tokens], mask, positions, kv_cache)` | 只跑 expert 1；前缀的 k、v 从缓存读，只现算自己 20 个；logits 是 20 行而非整张方表 |
 | v | `action_out_proj` | 同 4.7 得速度，但不与 `u_t` 比较、没有 loss，改做一步 Euler 积分 |
 
+**u 步展开：`PaliGemma.llm([None, suffix_tokens], mask, positions, kv_cache)` 内部每层七步，与训练 4.6 的区别**
+
+expert 0 的输入是 `None`，18 层里只有 expert 1 那一列在算；kv_cache 逐层取出本层缓存。
+
+| 步 | 与训练 4.6 的区别 |
+|---|---|
+| g 归一化 | 只有自适应 `RMSNorm` 那一路，吃 q 步的 `adarms_cond`；expert 0 的普通版不跑 |
+| h 投影 | 只有 `q_einsum_1` / `kv_einsum_1`，只对 20 个动作 token 算 q、k、v；训练里前缀 1168 个 token 的投影这里不算 |
+| i RoPE | 只旋转这 20 个 q 与 20 个 k，用的是 t 步那 20 个序号；前缀的 k 不再旋转，因为缓存里存的已经是旋转后的 |
+| 缓存拼接（训练没有这一步） | 本层缓存的前缀 k、v 接在新算的 20 个前面，拼成完整的 1188 个 k、v；训练里这 1188 个是同一次前向现算的 |
+| j 打分 | query 只有 20 行，logits 是 20 × 1188 而不是 1188 × 1188；mask 用 s 步的 20 行表；softmax、加权同训练 |
+| k 输出投影 | 只有 `attn_vec_einsum_1` |
+| l 残差 | 只有门控残差那一路 |
+| m 前馈 | 只有 action expert 那一路 `FeedForward`；结束后每层也会返回拼好的 k、v，但被丢弃，缓存不更新 |
+
+18 层跑完只过 `final_norm_1`，得到 20 个动作 token 的输出交给 v 步。与训练的本质区别只有一条：训练里动作 token 打分用的 1168 个前缀 k、v 是同一次前向现算的，推理里从缓存读，数值上是同一个东西（5.3 表后那句的推论）。
+
 这 20 行 mask 与 20 个序号与训练那张大表的最后 20 行相同：训练里动作 query 能看所有块，只受 `valid_mask` 限制，而它的一行就是 `input_mask` 本身。十步跑完得到动作，去掉 batch 维、反归一化后输出。
 
 **五节小结**：推理链上交错方案改的地方与训练完全对应——k 步排序（对应训练 4.0 的 e 步）、m 步 gather（同一个 `embed_memory`）、o 步位置号、p 步 k 的旋转角。去噪循环 q–v 六步代码与数值机制不变，只是消费的 kv_cache 已经不同。训练与在线必须共用同一个排序函数，规则只在一处定义；两侧若各写一份，排序稍有出入就会让在线模型看到与训练不同的位置号分配，不报错，只静默降效果。
