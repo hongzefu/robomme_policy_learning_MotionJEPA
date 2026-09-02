@@ -20,7 +20,7 @@
 
 ---
 
-## 二、数轴：并列 vs 交错
+## 二、数轴：并列 vs 交错——同样 521 个真 token 的两种排法
 
 取当前帧 t = 200、段起点 0 的样本。帧路 32 帧全满，运动路合法起点 0, 20, …, 160 共 9 个。两种方案的 token 一个不多一个不少，只是顺序换了。
 
@@ -57,11 +57,11 @@ f161×16 f167×16 f174×16 f180×16 f187×16 f193×16 f200×16 │ pad×71
 
 ---
 
-## 三、三层代码：openpi `Pi0` → `HistoryPi0` → 加 motion memory
+## 三、三层代码：openpi `Pi0` → `HistoryPi0` → 加 motion memory——前缀从 576 位到 1088 位再到 1168 位，各层改了哪些函数
 
 后面两节讲数值计算时，每一步都标注它是哪一层加的。本节先把三层的关系讲清：每一层在上一层的哪些函数上改了什么、加了什么，没提到的函数就是一字不改。
 
-### 3.1 底层：openpi 的 `Pi0`（`src/openpi/models/pi0.py`）
+### 3.1 底层 `Pi0`：图像 2×(b,256,2048) + 文本 (b,64,2048) + 带噪动作 (b,20,1024) → 速度 (b,20,32)（`src/openpi/models/pi0.py`）
 
 模块四件：`PaliGemma.img`（SigLIP 图像编码器）、`PaliGemma.llm`（gemma `Module`，装两个 expert）、动作侧三个 Linear（`action_in_proj`、`action_out_proj`）与时间 MLP（`time_mlp_in`、`time_mlp_out`，pi05 才有）。
 
@@ -77,7 +77,7 @@ f161×16 f167×16 f174×16 f180×16 f187×16 f193×16 f200×16 │ pad×71
 
 gemma 侧（`src/openpi/models/gemma.py`）：`Module` 用 `nn.scan` 叠 18 个 `Block`；每个 `Block` = `RMSNorm`（expert 0 普通版，expert 1 自适应版吃 `adarms_cond`）→ `Attention`（含 `_apply_rope`）→ `_gated_residual` → `RMSNorm` → `FeedForward` → `_gated_residual`。expert 0 是 PaliGemma（宽 2048，作用于 prefix），expert 1 是 action expert（宽 1024，作用于 suffix），各有一套权重，只在 `Attention` 里把两段的 q、k、v 沿长度轴拼起来打分时交汇。位置信息只有 `_apply_rope` 这一种一维 RoPE，作用在 q 与 k 上，不往 token 内容里加位置向量。
 
-### 3.2 中层：`HistoryPi0` 在 `Pi0` 上加了什么（`src/mme_vla_suite/models/integration/history_pi0.py`）
+### 3.2 中层 `HistoryPi0`：前缀最前加 512 位记忆 token (b,512,2048)，prefix 576 → 1088（`src/mme_vla_suite/models/integration/history_pi0.py`）
 
 `HistoryPi0` 不继承 `Pi0`，而是把 `Pi0` 的四个函数整体复制一份再改。逐项对照：
 
@@ -97,7 +97,7 @@ gemma 侧（`src/openpi/models/gemma.py`）：`Module` 用 `nn.scan` 叠 18 个 
 
 块号规则合起来的效果：记忆只看记忆；图像看图像与文本、看不到记忆；文本看记忆、图像、文本；动作看一切。
 
-### 3.3 上层：motion memory 在 `HistoryPi0` 上加了什么
+### 3.3 上层 motion memory：记忆 512 → 592 位（并 80 个运动 token），★ 交错再加一张 (b,592) 次序表
 
 并列方案与交错方案共有的部分：
 
@@ -125,11 +125,11 @@ gemma 侧（`src/openpi/models/gemma.py`）：`Module` 用 `nn.scan` 叠 18 个 
 
 ---
 
-## 四、训练：一步 `train_step` 里的全部数值计算
+## 四、训练：一个 batch 从 dataloader 交付的键到标量 loss 与梯度
 
 本节按顺序列出训练一步的每次数值计算，每步给函数与输入输出形状；〔〕标出三节的哪一层，★ 标出交错方案与并列方案有差别的地方。常量：batch 记 b，主干宽 2048，action expert 宽 1024，18 层，8 个 query 头、1 个 key/value 头、每头 256 维；示例样本 t = 200，memory 段 521 个真 token。
 
-### 4.0 数据侧：`FrameSampDataset.__getitem__`〔dataloader，motion 新增运动路〕
+### 4.0 数据侧 `FrameSampDataset.__getitem__`：离线表 → 每样本帧路 512 位 + 运动路 80 位 + 次序表 (592,)〔dataloader，motion 新增运动路〕
 
 | 步 | 函数 | 计算 | 输出 |
 |---|---|---|---|
@@ -142,11 +142,11 @@ gemma 侧（`src/openpi/models/gemma.py`）：`Module` 用 `nn.scan` 叠 18 个 
 
 e 步的键定义兑现了三条口径：按时刻排即「按起点 f 插入」，类型 0 < 1 即「同刻帧在前」，padding 时刻 ∞ 即「mask 全在尾部」。collate 后每键前面多一个 b 维。
 
-### 4.1 入口：`train_step` → `loss_fn` → `compute_loss`〔Pi0〕
+### 4.1 入口 `train_step` → `loss_fn` → `compute_loss`：一个 batch → 标量 loss 与全部梯度〔Pi0〕
 
 `loss_fn = mean(model.compute_loss(rng, observation, actions))` 得标量；`nnx.value_and_grad` 得与参数树同形的梯度。
 
-### 4.2 观测预处理与加噪〔Pi0〕
+### 4.2 观测预处理与加噪：图像增广形状不变；`actions` (b,20,32) → `x_t`、`u_t` 各 (b,20,32)〔Pi0〕
 
 `compute_loss` 收到的输入：
 
@@ -165,7 +165,7 @@ e 步的键定义兑现了三条口径：按时刻排即「按起点 f 插入」
 - `preprocess_observation`：训练时图像做随机裁剪、旋转、色彩抖动，形状不变；记忆相关各键原样透传。
 - 加噪：`noise ~ N(0,1)` (b,20,32)；`time ~ Beta(1.5,1) × 0.999 + 0.001` (b,)；`x_t = time · noise + (1 − time) · actions` (b,20,32)；`u_t = noise − actions` (b,20,32)。
 
-### 4.3 `embed_prefix`〔HistoryPi0〕
+### 4.3 `embed_prefix`：记忆 592 + 图像 512 + 文本 64 → 前缀 token (b,1168,2048) 与三条 mask〔HistoryPi0〕
 
 | 步 | 函数 | 输入 | 输出 |
 |---|---|---|---|
@@ -178,7 +178,7 @@ e 步的键定义兑现了三条口径：按时刻排即「按起点 f 插入」
 
 三段拼成 `prefix_tokens` (b,1168,2048)；`prefix_mask` (b,1168)；`prefix_ar_mask` (1168,) 只有第 592 位 True；`prefix_na_mask` (1168,) 第 592 到 1103 位 True。
 
-### 4.4 `embed_suffix`〔Pi0〕
+### 4.4 `embed_suffix`：`x_t` (b,20,32) → 动作 token (b,20,1024)；`time` (b,) → `adarms_cond` (b,1024)〔Pi0〕
 
 | 步 | 函数 | 输入 | 输出 |
 |---|---|---|---|
@@ -188,7 +188,7 @@ e 步的键定义兑现了三条口径：按时刻排即「按起点 f 插入」
 
 `suffix_mask` (b,20) 全 True；`suffix_ar_mask` (20,) = [True, False × 19]；`suffix_na_mask` (20,) 全 False。
 
-### 4.5 三条 mask 拼接、`make_attn_mask`、位置号〔HistoryPi0〕
+### 4.5 mask 与位置号：三条 (b,1188) 布尔向量 → 可见表 (b,1188,1188) + 序号 (b,1188)〔HistoryPi0〕
 
 | 量 | 形状 | 取值 |
 |---|---|---|
@@ -205,18 +205,18 @@ e 步的键定义兑现了三条口径：按时刻排即「按起点 f 插入」
 
 `positions = cumsum(input_mask, axis=1) − 1` → (b,1188) int32，每个 token 的一维序号，padding 位不推进。它不是 RoPE 本身：RoPE 在 4.6 的 i 步把这个序号变成角度作用到 q、k 上；gemma 不往 token 内容里加位置向量，图像的二维位置在 SigLIP 内部、记忆的帧号时间码在 PosEmb3D 内容里，与 RoPE 叠加。★ 交错方案改的是 memory 段 592 个整数的取值（二节表），第 593 位起不变。
 
-### 4.6 主干：`PaliGemma.llm([prefix_tokens, suffix_tokens], mask, positions, adarms_cond)`〔Pi0〕
+### 4.6 主干 `PaliGemma.llm`：(b,1168,2048) + (b,20,1024) → 18 层 → (b,1168,2048) + (b,20,1024)〔Pi0〕
 
 输入：`prefix` (b,1168,2048)、`suffix` (b,20,1024)、`positions` (b,1188)、`mask` (b,1188,1188)、`adarms_cond` (b,1024)。18 层结构相同，每层七步：
 
-**g. 注意力前归一化 `RMSNorm`**
+**g. 注意力前归一化 `RMSNorm`：逐 token 归一化，(b,1168,2048) / (b,20,1024) → 同形，expert 1 另出 gate (b,1,1024)**
 
 | expert | 计算 | 输入 | 输出 |
 |---|---|---|---|
 | 0 | `x / √(mean(x²) + 1e−6) × (1 + scale)`，`scale` (2048,) | (b,1168,2048) | (b,1168,2048) |
 | 1 | `Dense(1024→3072)(adarms_cond)` 切成 scale / shift / gate 各 (b,1,1024)；`x / √(mean(x²) + 1e−6) × (1 + scale) + shift` | (b,20,1024) + (b,1024) | (b,20,1024)，gate (b,1,1024) |
 
-**h. q / k / v 投影**
+**h. q / k / v 投影：两段 token → q (b,1188,8,256)、k 与 v 各 (b,1188,1,256)**
 
 | expert | 权重 | 输入 | 输出 |
 |---|---|---|---|
@@ -224,7 +224,7 @@ e 步的键定义兑现了三条口径：按时刻排即「按起点 f 插入」
 | 1 | `q_einsum_1` (8,1024,256)；`kv_einsum_1` (2,1,1024,256) | (b,20,1024) | q (b,20,8,256)；k、v 各 (b,20,1,256) |
 | 合并 | 沿长度轴 concat | | q (b,1188,8,256)；k、v 各 (b,1188,1,256) |
 
-**i. RoPE `_apply_rope(q, positions)`、`_apply_rope(k, positions)` ★**
+**i. RoPE `_apply_rope`：按序号旋转 q 与 k，形状不变 ★**
 
 | 子步 | 计算 | 形状 |
 |---|---|---|
@@ -236,7 +236,7 @@ e 步的键定义兑现了三条口径：按时刻排即「按起点 f 插入」
 
 旋转后 q_i · k_j 只取决于序号之差 `positions[i] − positions[j]`。所以交错只改「memory 内部两两之差」与「action 到各 memory token 之差」，image、文本、action 相互之差不变。
 
-**j. 打分、屏蔽、softmax、加权**
+**j. 打分、屏蔽、softmax、加权：q·k → 权重 (b,1,8,1188,1188) → 加权 v 得 (b,1188,8,256)**
 
 | 子步 | 计算 | 形状 |
 |---|---|---|
@@ -247,16 +247,16 @@ e 步的键定义兑现了三条口径：按时刻排即「按起点 f 插入」
 
 False 格子 softmax 后权重严格为 0，padding 列对任何输出零贡献。
 
-**k. 输出投影**
+**k. 输出投影：(b,1188,8,256) 拆回 (b,1168,2048) 与 (b,20,1024)**
 
 | expert | 权重 | 输入 | 输出 |
 |---|---|---|---|
 | 0 | `attn_vec_einsum` (8,256,2048) | 前 1168 行 (b,1168,8,256) | (b,1168,2048) |
 | 1 | `attn_vec_einsum_1` (8,256,1024) | 后 20 行 (b,20,8,256) | (b,20,1024) |
 
-**l. 残差**：expert 0 `x + y` → (b,1168,2048)；expert 1 `x + y × gate` → (b,20,1024)。
+**l. 残差：注意力输出加回输入，形状不变**——expert 0 `x + y` → (b,1168,2048)；expert 1 `x + y × gate` → (b,20,1024)。
 
-**m. FFN 前归一化 + `FeedForward` + 残差**
+**m. 前馈 `FeedForward` 与残差：2048 → 16384 → 2048 / 1024 → 4096 → 1024，形状不变**
 
 | expert | 计算 | 形状 |
 |---|---|---|
@@ -265,11 +265,11 @@ False 格子 softmax 后权重严格为 0，padding 列对任何输出零贡献�
 
 每层的 k、v 各 (b,1188,1,256) 作为 kv_cache 返回，18 层堆成 (18,b,1188,1,256) × 2；训练时丢弃，推理时即 5.3 的缓存。18 层跑完各过 `final_norm`：`prefix_out` (b,1168,2048)、`suffix_out` (b,20,1024)，只用后者。
 
-### 4.7 输出头与 loss〔Pi0〕
+### 4.7 输出头与 loss：(b,20,1024) → `v_t` (b,20,32) → loss (b,20) → 标量〔Pi0〕
 
 `action_out_proj`（1024→32）作用于 `suffix_out[:, −20:]` (b,20,1024) 得 `v_t` (b,20,32)；`mean((v_t − u_t)², axis=−1)` → (b,20)；再对 b 与 20 取均值得标量。
 
-### 4.8 反向与更新
+### 4.8 反向与更新：标量 loss → 与参数树同形的梯度 → 参数更新
 
 SigLIP 不更新，其余参数全部更新。★ `take_along_axis` 可微，梯度按同一张 `mem_order` 表搬回并列顺序，再分别流向帧路与运动路的投影。
 
@@ -277,11 +277,11 @@ SigLIP 不更新，其余参数全部更新。★ `take_along_axis` 可微，梯
 
 ---
 
-## 五、推理：一次 `infer` 里的全部数值计算
+## 五、推理：一帧观测 → 20 步动作 (20,32)
 
 推理入口是 `src/mme_vla_suite/policies/policy.py` 的 `MME_VLA_Policy`。与训练的两点结构差异：记忆特征不是从离线表读，是每步现编后存进内存字典；主干不是一次算完 1188 个 token，而是先算 1168 个前缀存 kv_cache，再在去噪循环里每步只算 20 个动作 query。
 
-### 5.1 每步入库：`add_buffer`〔HistoryPi0 在线侧，motion 新增运动路〕
+### 5.1 每步入库 `add_buffer`：当前帧 (224,224,3) → 外观 token (16,2048) + 位置码 (16,768) 存字典；每 20 帧另编一个 motion token (768,)〔HistoryPi0 在线侧，motion 新增运动路〕
 
 `MME_VLA_Policy.add_buffer` 把当前帧交给 `FrameSampMemory.add_buffer`：
 
@@ -295,7 +295,7 @@ SigLIP 不更新，其余参数全部更新。★ `take_along_axis` 可微，梯
 
 ★运动路〔motion，主计划六节〕：另存一份 256 域原图滚动缓冲；当「下一个网格起点 + 32」这 33 帧到齐，喂 sidecar 里的 Wan VAE 与 `WanLatentMotionEncoder` 得一个 768 维 token，存 `_history_feats_motion[起点]`。每 20 帧触发一次。交错方案不改这一步。
 
-### 5.2 组装记忆：`infer` → `_prepare_history`〔HistoryPi0 在线侧〕
+### 5.2 组装记忆 `_prepare_history`：字典 → 帧路 512 位 + 运动路 80 位 + 次序表 (592,)，加 batch 维 b = 1〔HistoryPi0 在线侧〕
 
 | 步 | 函数 | 计算 |
 |---|---|---|
@@ -308,7 +308,7 @@ SigLIP 不更新，其余参数全部更新。★ `take_along_axis` 可微，梯
 
 `_prepare_history` 把这些键塞进 `inputs`，再过 `_input_transform`（状态归一化等）、`HistAugObservation.from_dict`、加 batch 维 b = 1。
 
-### 5.3 前缀 pass：`sample_actions` 前半〔HistoryPi0 改写自 Pi0〕
+### 5.3 前缀 pass：前缀 (1,1168,2048) → 18 层 → kv_cache (18,1,1168,1,256) × 2〔HistoryPi0 改写自 Pi0〕
 
 `_sample_actions` 是 `module_jit(HistoryPi0.sample_actions)`。
 
@@ -322,7 +322,7 @@ SigLIP 不更新，其余参数全部更新。★ `take_along_axis` 可微，梯
 
 ★交错方案下 memory token 的旋转角在 p 步就烙进 kv_cache 的 k 里，后面去噪循环直接消费这份缓存。
 
-### 5.4 去噪循环：`step` × `num_steps`〔Pi0〕
+### 5.4 去噪循环 `step` × 10：噪声 (1,20,32) 逐步 Euler 积分 → 动作 (1,20,32)〔Pi0〕
 
 `jax.lax.while_loop` 从 `x_t = noise`、`time = 1.0` 起，每步 `dt = −1/num_steps`（默认 10 步）：
 
@@ -341,7 +341,7 @@ SigLIP 不更新，其余参数全部更新。★ `take_along_axis` 可微，梯
 
 ---
 
-## 六、数值层面的结论
+## 六、数值层面的结论：交错只改 memory 段 592 个序号，计算量与 padding 数不变
 
 **数学上**：transformer 的每一层对 token 顺序是置换等变的，把 token 行、它的 mask 行列、它的位置号一起换顺序，每个 token 算出来的输出向量不变，只是行的摆放顺序换了。loss 只读 action 那 20 行，那 20 行不动。所以物理交错这件事本身没有效果，效果全部来自「换了位置号」，进入计算的位置只有 4.6 的 i 步与 5.3 的 p 步那两行 `_apply_rope`。
 
@@ -351,7 +351,7 @@ SigLIP 不更新，其余参数全部更新。★ `take_along_axis` 可微，梯
 
 ---
 
-## 七、与主计划的关系
+## 七、与主计划的关系：一节口径 4 等五处需回写，其余口径不变
 
 主计划一至三节冻结，本文不改它。交错方案与主计划冲突或需补充的位置如下，供日后决定是否回写：
 
@@ -365,7 +365,7 @@ SigLIP 不更新，其余参数全部更新。★ `take_along_axis` 可微，梯
 
 ---
 
-## 八、已知的未知
+## 八、已知的未知：效果无先验、位置密度不均、建议列为消融项
 
 - 交错对效果有没有帮助，没有先验证据。token 内容里已带时间码，交错只是把「时间相邻」额外写进 RoPE 距离。
 - RoPE 位置密度不均：一个帧占 16 个连续位置号，一个 motion 只占 1 个。
