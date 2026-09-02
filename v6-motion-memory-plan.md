@@ -712,6 +712,18 @@ na_mask)` 用三部分按位与得到它：
 3. **`valid_mask = input_mask[:, None, :] * input_mask[:, :, None]`**，`(b,1188) → (b,1188,1188)`
    的外积：`(q,k)` 为 True 当且仅当第 `q` 位和第 `k` 位都是真数据。
 
+**接入 motion memory 后这一站改了什么：函数本身一字不改，三条输入向量各长 80 位。**
+
+- `input_mask`：记忆 512 位后接 `motion_mask` 80 位，前 m 位 True，其余 False。这是三条向量里
+  唯一由数据决定的新内容。
+- `ar_mask`：追加 80 个 False。两个 True 从第 512、1088 位后移到第 592、1168 位，相对位置不变，
+  仍是图像段与动作段的第一个 token；`cumsum` 之后运动段与记忆段同属块号 0。
+- `na_mask`：追加 80 个 False。第一个 True 仍是图像段第一个 token，从第 512 位后移到第 592 位；
+  `cumsum(na) <= 0` 的记忆区从第 0–511 位扩到第 0–591 位，运动段被包进去，因此上面第 2 项
+  「image 不看 memory」自动覆盖运动段。
+- 三条变长都发生在 `embed_memory` 的返回值里（第五站）。`make_attn_mask` 函数体一字不改，输出从
+  `(b,1108,1108)` 变为 `(b,1188,1188)`。3.3 那张图的下四行就是这个输出矩阵按 q 所在段分组后的行。
+
 第 3 项是 padding 屏蔽的全部。用 6 位迷你例子，`input_mask = [T,T,T,T,F,F]`：
 
 ```
@@ -741,6 +753,11 @@ masked = where(attn_mask, logits, −2.3819763e38)   False 格子换成 f32 最�
 probs  = softmax(masked, axis=-1)                  exp(−2.38e38) 精确为 0，不是很小的正数
 out    = probs @ v                                 padding 列的 value 乘的是 0
 ```
+
+**接入 motion memory 后这一站改了什么：没有。** gemma 的 `Attention.__call__` 收到的 mask 从
+`(b,1,1108,1108)` 变成 `(b,1,1188,1188)`，多出的 80 行 80 列由第六站产生，gemma 代码不区分来源；
+运动路 padding 列与帧路 padding 列在 `where` 里换成同一个 `−2.3819763e38`，softmax 后同为精确 0。
+loss、`sample_actions` 的前缀 pass 与去噪循环同样不改。
 
 所以整件事收口在这里：padding 位的零向量确实经过了 `motion_pos_proj` / `motion_encoder_static`，
 算出了非零的 key 和 value，但没有任何 query 能给它非零权重。模型的每一个输出，与这 26 帧、这
