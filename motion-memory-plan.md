@@ -855,7 +855,7 @@ mkdir -p <lib>/oracle/wan-mj && PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES=<
 **motion encoder 对 inference-example（D5）。** oracle = 原版 `motion_token`（同一驱动、MotionJEPA `.venv`），被测 = 复制件 `motion_token`（`v1-store/venvs/wan`）；两侧输入都取我方 `wan-latents/*.bin`，同机同卡、共用 `v1-store/external/motionjepa/` 那份 ckpt。全部 619 窗 `np.array_equal`，另比两侧 77 张量 sha256 清单与 `provenance()` 白名单键。
 判定行：`ENCODER_BITEXACT=PASS compared=619 mismatches=0`。
 
-另有八条低成本附加检查——原始帧同源、清单一致、跨卡与双 venv 探针、旧库 crossarch 旁证、v7 latent 旁证、字节数账——判据与失败处置见第二部分四节 D3–D10。
+另有七条低成本附加检查——原始帧同源（D3）、清单一致（D4）、跨卡与双 venv 探针（D6、D7）、旧库 crossarch 旁证（D8）、v7 latent 旁证（D9）、字节数账（D10）——判据与失败处置见第二部分四节总表。
 
 ### 4.4 改完后的数据集结构
 
