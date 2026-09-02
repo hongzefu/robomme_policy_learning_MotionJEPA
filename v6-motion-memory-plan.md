@@ -29,7 +29,7 @@ prefix 记忆区 512 → **592**。运动特征来自 MotionJEPA 的两级链路
 绝对网格每 20 帧取一个起点、每个起点往后 33 帧编一个运动向量、窗口尾端不得越过当前帧。
 训练读离线表，在线评估每 20 帧增量现编一次。
 
-五个已定死的口径（依据分别在 2.2、2.1、2.3–2.4、3.5、3.4）：
+五个已定死的口径（依据分别在 2.2、2.1、2.3–2.4、3.1、3.4）：
 
 1. **段内绝对网格**（起点 = 段起点 + 20m）。
 2. **前视窗口 + 尾端 ≤ 当前帧**（起点往后 33 帧）。
@@ -102,7 +102,7 @@ t = 206
                                       1.57 s ÷ 20 步 ≈ 0.079 s/step
 ```
 
-绝对网格的两项直接收益（实测口径见 2.3 与 3.7）：
+绝对网格的两项直接收益（实测口径见 2.3 与 3.5）：
 
 - **离线表小、在线增量少**：全数据集的网格窗口只有 **20,958 行 = 61.4 MiB**；在线每
   20 步只新编 1 个窗口，摊薄 **0.079 s/step**（实测 1.57 s/窗口）。
@@ -168,7 +168,7 @@ exec stride，那正是「间隔一个 action chunk」的本意所在。**本计
 | 平均填充率 | 25.3% | 16.9% | 12.6% | **10.1%** |
 
 **与 framesample 的对齐关系**：N=80 不等于帧路的 `_max_frames = 32`，「两路同预算」这一层对齐
-**不成立**；「尽可能和 framesample 对齐」只保留在 padding + mask 同款这一层（3.4、3.5）。用户的
+**不成立**；「尽可能和 framesample 对齐」只保留在 padding + mask 同款这一层（3.4）。用户的
 三条拍板为「尽可能不截断任何样本」「容量按全集定标」「padding / mask 与 framesample 同款」。
 
 ### 2.4 ⚠ 零截断的代价：4env 上平均只有 8 个、16env 上平均只有 15 个位置是真数据
@@ -303,7 +303,7 @@ N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历�
 2. **两列在 concat 之前互不相干**：采样各采各的（变长间隔 vs 绝对网格）、表各查各的、
    投影各用各的参数；唯一交汇点就是最后那次 `512 + 80` 的长度轴 concat。
 3. **重活全在训练环外**：右列的 Wan VAE 与 `WanLatentMotionEncoder` 只在离线抽表 /
-   在线评估时跑（在线按 2.2 的网格每 20 帧才增量编 1 个窗口，见 3.7）；训练时右列就是
+   在线评估时跑（在线按 2.2 的网格每 20 帧才增量编 1 个窗口，见 3.5）；训练时右列就是
    「seek 读几行 f32 + 两个小 Linear」，新可训练参数只有打 ★ 的两层，合计 3.74 M（六节）。
 
 ### 3.2 `static_pos_emb` 与 `pos_f` 的实现
@@ -478,7 +478,7 @@ main(config)
        内存字典 _history_feats[step]。这个字典就是推理时的「离线表」，一步步长出来。
        ★motion memory 接入：另存一份 256 域原图滚动缓冲（运动编码器要 256 域，视觉编码器用
        的是 224）。每当「下一个网格起点 + 32」这 33 帧全部到齐，把它们过运动编码器得一个
-       768 维 motion token，存 _history_feats_motion[f]。每 20 帧才触发一次（3.7）。
+       768 维 motion token，存 _history_feats_motion[f]。每 20 帧才触发一次（3.5）。
 
 阶段二（每步）：MME_VLA_Policy.infer(obs)
 │
@@ -619,7 +619,7 @@ token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` �
 | motion 行 | `motion_token.f32.bin (20958, 768)`，按 `(段, 网格序号)` 定位行号，`seek(row × 3072)` 读 1 行 | 每起点 `(768,)`，堆成 `(9, 768)` | f32 |
 | pos_f | 同一张 `pos_rows`，取起点帧 `(16, 768)` 沿 16 轴均值（3.2） | 每起点 `(768,)`，堆成 `(9, 768)` | f32 |
 
-训练时 motion 行从离线表读，在线评估时现编（3.7）。
+训练时 motion 行从离线表读，在线评估时现编（3.5）。
 
 **第三站（dataloader 侧）：拼成这一个时刻的完整 memory，不足补 0 并记下 mask**
 
@@ -736,7 +736,7 @@ out    = probs @ v                                 padding 列的 value 乘的�
   image / prompt / action 拿到的位置编号一样；`motion.enabled=false` 时全 False 的 80 位对
   positions 零贡献，这是逐位退回的又一个前提。
 - 两路在这条链上完全对称。从第三站填 0 到第七站权重为 0，帧路和运动路走的是同一条路，没有
-  任何一处按来源分支。3.5 说运动路 padding 与 `static_mask`「完全同款」，指的就是这个。
+  任何一处按来源分支。运动路 padding 与 `static_mask`「完全同款」，指的就是这个。
 
 **推理时 padding 被封两次**
 
@@ -748,25 +748,7 @@ out    = probs @ v                                 padding 列的 value 乘的�
 `prefix_mask` 里 False 的位直接成了整列 False，所以 action token 在每一步都看不到 padding 列，
 不需要再算一次外积；`positions` 用 `sum(prefix_mask)` 起算，padding 位同样不占位置编号。
 
-### 3.5 并列拼接 + motion_mask
-
-运动路以**并列拼接**进入记忆序列：`[512 帧路] + [80 运动路]` = 592。运动路完全独立——
-独立采样、独立投影、独立 mask，`motion.enabled=false` 一键退回**逐位等价**的旧链路。
-缺失位置（padding）喂 0 向量并置 `motion_mask=False`，语义与 framesample 的 `static_mask`
-**完全同款**——帧路在 `step<32` 时同样是 padding + mask，用户要求的「尽可能和 framesample
-对齐」也指向这一边。
-
-### 3.6 注入点与冻结边界
-
-**运动段放在 img 之前**：`make_attn_mask` 的
-`mask_not_attend = (na[k] | na[q]) & (cumsum(na) <= 0)`，第一个 `na=True` 的位置是 image token。
-放在 img 之前 ⇒ 运动段落入记忆区，沿用原设计「image token 不 attend memory」对预训练 VLM
-视觉-语言对齐的保护；放在 img 之后则与所有 token 双向可见——列为 S4 消融项，不做默认。
-
-**两级冻结边界**：Wan VAE 与 `WanLatentMotionEncoder` 都在训练环外、无梯度回传；训练环内
-只有 `motion_pos_proj` 与 `motion_encoder_static` 两个新投影。
-
-### 3.7 在线推理：增量编码与延迟账
+### 3.5 在线推理：增量编码与延迟账
 
 MotionJEPA v8 全量抽取的**实测吞吐 0.635 chunk/s**（单 A40，fp32、**关 TF32**、窗口 batch 恒 1；
 `docs/dataset-build-doc/v8-400ep-full/README.md` 记 396,302 chunk ÷ 8 分片，sacct Elapsed
@@ -871,7 +853,7 @@ S1 与 S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AG
   若日后启用 lora，filters 为 `Any(All(".*llm.*", Not(".*lora.*"), Not(".*mem.*")), ".*img.*")`，
   路径含 `mem` 恰被 `Not(".*mem.*")` 排除出冻结集 → **仍可训练**。两种情形都安全。
 - **数据**：新增 61.4 MiB 离线表（`v1-store/` 内，不进 git，符合第 14 条）；不动 261 GB latent。
-- **在线评估**：多背一个 Wan VAE（PyTorch）常驻，延迟见 3.7。
+- **在线评估**：多背一个 Wan VAE（PyTorch）常驻，延迟见 3.5。
 - **不影响**：正在跑的 `v1-prod-60k` 全量 run（本计划一行代码都还没动）。
 
 ---
@@ -895,7 +877,7 @@ S1 与 S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AG
    「strict load 失败即在第一次前向炸」的保护——`normalize()` 首行的 finite 断言为此存在）。
 4. **抽取口径必须与 MotionJEPA 一致**：fp32、`torch.backends.cuda.matmul.allow_tf32 = False`、
    窗口 batch 恒 1。这三条是 finalize 语义 oracle 逐位可复现的前提，抽表阶段不得放开
-   （在线阶段可放开，见 3.7 与 S0）。
+   （在线阶段可放开，见 3.5 与 S0）。
 5. **新参数必须在所有现有模块之后创建**。`HistoryPi0.__init__` / `PerceptualMemory.__init__` 里
    `rngs` 的消耗序决定既有模块的初始化值（`datastore/README.md` 明记 `use_pos_emb` /
    `use_state_emb` 影响「`FeatureEncoder` 的参数树与 RNG 消耗序，禁改」）。运动路的两个新投影
@@ -1111,7 +1093,7 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
 - `MME_VLA_Policy._prepare_history`：补 `inputs["motion_emb"]` / `inputs["motion_mask"]`。
 - ⚠ 注释里那条红线仍然有效：**禁把 encode 与 pool 包进新的 `jax.jit`**（融合边界变了，
   bf16 累加序可能变位）。motion 编码走 PyTorch、在 jit 之外，天然不违反。
-- **尖峰处理**（3.7 细节 1）：第 20 步的 1.57 s 尖峰若不可接受，可提前一步预编——起点的可见
+- **尖峰处理**（3.5 细节 1）：第 20 步的 1.57 s 尖峰若不可接受，可提前一步预编——起点的可见
   时刻 `起点 + 32` 完全可预测，可在 `起点 + 32` 到来前的空闲步里后台编好。S3 决定是否需要。
 
 ## 四、对拍闸门总表
