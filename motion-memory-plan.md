@@ -38,7 +38,7 @@ prefix 记忆区 512 → **592**。运动特征来自 MotionJEPA 的两级链路
 4. **并列拼接**（512 + 80）。
 5. **缺失走 `motion_mask`**（与 `static_mask` 同款）。
 
-下文按 窗口（二节）→ 链路（三节）→ 对齐（四节）展开，再给 model 改动（五节）、实施步骤（六节）与影响面（七节）。
+下文按 窗口（二节）→ 链路（三节）→ 对齐（四节）展开，再给 model 改动（五节）、在线侧改动（六节）与实施步骤（七节）。
 
 ## 二、窗口：运动路怎么采样
 
@@ -314,7 +314,7 @@ N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历�
 3. **重活全在训练环外**：右列的 Wan VAE 与 `WanLatentMotionEncoder` 只在离线抽表 /
    在线评估时跑（在线按 2.2 的网格每 20 帧才增量编 1 个窗口，见 3.5）；训练时右列就是
    「seek 读几行 f32 + 两个小 `nnx.Linear`」，新可训练参数只有打 ★ 的两层（`motion_pos_proj`
-   256→768、`motion_encoder_static` 1536→2048），含 bias 合计 3.35 M（七节）。
+   256→768、`motion_encoder_static` 1536→2048），含 bias 合计 3.35 M（第二部分十节）。
 
 ### 3.2 `static_pos_emb` 与 `motion_pos` 的实现
 
@@ -799,7 +799,7 @@ MotionJEPA v8 全量抽取的**实测吞吐 0.635 chunk/s**（单 A40，fp32、*
    MotionJEPA `scripts/inference-example/README.md` 4.2 第一档表）；**在线不需要这个保证**，但提速空间要按实测口径看：
    VAE 段 cudnn TF32 改位 1.8e-3 相对（加速未测）、bf16 差 3.2%（README 4.2）；「bf16 快 1.35×、batch>1 零加速」为 2026-09-02
    crosscheck 会话记录实测、README 刻意未收录；encoder 段在 bf16 autocast 下 TF32 无作用、无提速空间。代价是与 fp32 离线表的
-   数值漂移，**启用前必须以上述数为先验实测漂移量（M1）**。⚠ 无论哪档精度，在线增量编码都**必须凑齐 33 帧一次喂** `vae.encode`，
+   数值漂移，**启用前必须以上述数为先验实测漂移量（A2）**。⚠ 无论哪档精度，在线增量编码都**必须凑齐 33 帧一次喂** `vae.encode`，
    不得按组分 9 次调（README 3.1：diffusers 每次 `encode` 开头清空跨组因果 cache，仅第一组例外）；sidecar 进程同样起手
    `check_env()` + `pin_numerics()`。
 
@@ -852,10 +852,10 @@ mkdir -p <lib>/oracle/wan-mj && PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES=<
 （`crosscheck.py` 无 `--device`，选卡只能靠 `CUDA_VISIBLE_DEVICES`；`--out_json` 不建父目录。）拿到 `CROSSCHECK=PASS` 后：oracle = **原版** `encode_chunk`，由 MotionJEPA `.venv/bin/python` 执行我方薄驱动 `scripts/dataset/wan/oracle_driver.py`，读我方 `wan-latents/metadata.json`、按同一起点从同一 h5 取 33 帧重编，落 `<lib>/oracle/wan-mj/`；`compare_wan.py` 逐窗 f32 原始字节 `np.array_equal`，全覆盖含每段 exec 尾窗。
 判定行：`WAN_BITEXACT=PASS compared=619 mismatches=0`（`num_chunks` 口径若变更，须同步第二部分四节 D2 行、六节、九节）。
 
-**motion encoder 对 inference-example（D5）。** oracle = 原版 `motion_token`（同一驱动、MotionJEPA `.venv`），被测 = 复制件 `motion_token`（`v1-store/venvs/wan`）；两侧输入都取我方 `wan-latents/*.bin`，同机同卡、共用 `v1-store/external/motionjepa/` 那份 ckpt。全部 619 窗 `np.array_equal`，另比两侧 77 张量 sha256 清单与 `provenance()` 白名单键。
+**motion encoder 对 inference-example（D3）。** oracle = 原版 `motion_token`（同一驱动、MotionJEPA `.venv`），被测 = 复制件 `motion_token`（`v1-store/venvs/wan`）；两侧输入都取我方 `wan-latents/*.bin`，同机同卡、共用 `v1-store/external/motionjepa/` 那份 ckpt。全部 619 窗 `np.array_equal`，另比两侧 77 张量 sha256 清单与 `provenance()` 白名单键。
 判定行：`ENCODER_BITEXACT=PASS compared=619 mismatches=0`。
 
-另有七条低成本附加检查——原始帧同源（D3）、清单一致（D4）、跨卡与双 venv 探针（D6、D7）、旧库 crossarch 旁证（D8）、v7 latent 旁证（D9）、字节数账（D10）——判据与失败处置见第二部分四节总表。
+另有七条低成本附加检查——原始帧同源（A5）、清单一致（A6）、跨卡与双 venv 探针（A3、A4）、旧库 crossarch 旁证（A11）、v7 latent 旁证（A12）、字节数账（A7）——判据与失败处置见第二部分四节表二。
 
 ### 4.4 改完后的数据集结构
 
@@ -871,7 +871,7 @@ v1-store/datasets/4task-motion-40ep/
 
 - **motion 表**：行 `(768,)` f32 3,072 B，619 行 = demo 87 + exec 532；行序按清单 `canonical_order`，每 episode 先 demo 后 exec，段内网格升序；`motion_index.json` 逐段记 `row_base` / `num_grid`。查表公式与 `motion_index.json` 全文见第二部分一节。
 - **字节数账**：每段 `.bin == num_grid × 589,824`（组优先 `(9,16,32,32)` f32）；`wan-latents/` 与 `oracle/wan-mj/` 各 365 MB；motion 表 1.9 MB；本轮共约 29 GB，/data 余 3.0 TB，起工前 `df` 复核。`wan-latents/metadata.json` 是唯一窗口清单（oracle 驱动、字节数账、索引映射检查都读它），字段契约见第二部分一节。
-- **训练侧读到什么**：`FrameSampDataset.__getitem__` 在 `static_*` 四键之外多出 `motion_emb`（80×768 f32）、`motion_pos`（80×256 f32）、`motion_mask`（80 bool）；表整表常驻 worker 内存，turbo 读盘 +0，每样本交付 +320 KiB（七节）。
+- **训练侧读到什么**：`FrameSampDataset.__getitem__` 在 `static_*` 四键之外多出 `motion_emb`（80×768 f32）、`motion_pos`（80×256 f32）、`motion_mask`（80 bool）；表整表常驻 worker 内存，turbo 读盘 +0，每样本交付 +320 KiB（第二部分十节）。
 - **不动的东西**：`v1-store/episode_manifest.json`（旧库仍引用并现场核 sha）与 `4task-gl*` 旧库一字不动；新清单落盘后冻结。留档目录 `docs/dataset-build-doc/4task-motion-40ep/{launch.md, result.md, records/}`。
 
 ### 4.5 改完后的 `scripts/dataset/` 结构
@@ -926,157 +926,47 @@ scripts/dataset/
 | 10 | `models/integration/history_pi0.py` | `HistoryPi0Config.inputs_spec` | 条件补三个 `jax.ShapeDtypeStruct`（从 config 键推导） | 不补，返回值与 HEAD 同构 | 补三项 |
 | 11 | 同上 | `HistoryPi0.embed_memory` | 三键传入 `PerceptualMemory.__call__`；tokens 沿 axis=1 concat；`input_mask` 拼 `motion_mask`；`ar_mask` / `na_mask` 各追加 `budget` 个 False | **三处一个元素都不追加**，四返回值逐位同 HEAD | 512 → 592 |
 | 12 | 同上 | `embed_prefix` / `compute_loss` / `sample_actions` | 不动（长度变化自动透传） | — | — |
-| 13 | `models/representation/percep_mem.py` | `PerceptualMemory.__init__` / `__call__` | **条件**新建两个 `nnx.Linear`（在 `feature_encoder` 之后）+ 运动路分支 + 与 `inputs_spec` 的一致性 `raise` | **两个 Linear 完全不创建**（5.2） | 建在 count 4–7 |
+| 13 | `models/representation/percep_mem.py` | `PerceptualMemory.__init__` / `__call__` | **条件**新建两个 `nnx.Linear`（在 `feature_encoder` 之后）+ 运动路分支 + 与 `inputs_spec` 的一致性 `raise` | **两个 Linear 完全不创建**（第二部分 2.9） | 建在 count 4–7 |
 | 14 | `models/representation/mem_encoder.py` | `FeatureEncoder` | 一字不动（复用会共享 `use_pos_emb` 分支与参数树） | — | — |
 | 15 | `datastore/motion_store.py`（新） | `LAYOUT` / `MotionStore` | 体例照 `framesamp_store.py`；整表 `np.fromfile` 进 worker；记 `owner_pid`、`__reduce__` 直接 raise、跨进程懒构造 | 不 import | 构造 |
 | 16 | `policies/framesamp_memory.py` | `FrameSampMemory` | S3 再做（第二部分三节） | — | — |
 | 17 | `policies/policy.py` | `MME_VLA_Policy._prepare_history` | S3 再做 | — | — |
-| 18 | 对拍工具链 5 处硬编码 | 5.4 | — | 多数不该变 | 部分必变 |
+| 18 | 对拍工具链 5 处硬编码 | 第二部分 2.8 | — | 多数不该变 | 部分必变 |
 
 新参数名不得含 `img`（freeze filter `PathRegex(".*img.*")` 会误冻结 + 强转 bf16）；`params_split` 的 `.*mem.*` 会把两个新参数收进 `memory_params`（路径含 `mem_encoder`）。
 
-### 5.2 「关闭态 == 现在的训练」怎么做到
+### 5.2 关闭态一致性：两条训练对拍都要跑
 
-**唯一原则：模块不是在 `__call__` 里跳过，而是在 `__init__` 里根本不创建。**
+`motion.enabled=false` 时训练必须与今天逐位相同。轻量检查（A13–A17）与单步梯度（A22）只是前置，收尾靠两条真实训练对拍，**缺一不可**：
 
-```python
-# percep_mem.py::PerceptualMemory.__init__ —— 紧跟在 self.feature_encoder 之后
-mcfg = getattr(config, "motion", None)                       # 旧 yaml 缺整节 → None
-self.motion_enabled = bool(mcfg is not None and mcfg.get("enabled", False))
-if self.motion_enabled:                                       # ← 条件在 __init__，不在 __call__
-    self.motion_pos_proj = nnx.Linear(
-        mcfg.pos_dim, config.memory_feature.pos.hidden_dim,    # 256 → 768
-        rngs=rngs, dtype=dtype, kernel_init=kernel_init)
-    self.motion_encoder_static = nnx.Linear(
-        mcfg.dim + config.memory_feature.pos.hidden_dim,       # 1536 → 2048
-        config.memory_token_dim,
-        rngs=rngs, dtype=dtype, kernel_init=kernel_init)
-```
+- **T1 旧库**：新代码（motion 关）在 `4task-gl` 上跑 1000 步 × batch 8，`scripts/training/g0/run_2gpu_epoch_bench.sh` → `g0/compare_baseline.py` 对 G0b r1 → `tests/g0_gate.py`。唯一成功行 `G0_EQ=PASS`，`scalars_hex.tsv` sha256 命中黄金锚点 `c799a0b299f243c1740f1594b62aec920cf7ad0033a29d37b851051d52105757`。证明的是代码等价。
+- **T2 新库**：`4task-motion-40ep` 上 HEAD 与新代码同场次各跑 200–300 步 × batch 8（`EPOCH_SAMPLES=11530`，单 epoch 内），两侧 `scalars_hex.tsv` sha256 相等、`STATE_DIGEST` 逐位。证明新库上仍等价。
 
-`__call__` 里对应地 `if not self.motion_enabled: return hidden_states, None, None`——与 HEAD 逐字相同的返回。
-先例就在同一条链上：`FeatureEncoder` 的 `use_state_emb=False` 时 `state_proj` 根本不建。
+前置两条：起工前先把 HEAD 代码原样复跑一次 G0b（A21，`G0_EQ=PASS`），否则 T1 挂了分不清是代码问题还是基线腐烂；引用基线前 `check_baseline_env.py` 输出 `BASELINE_ENV=PASS`（A1）。T1 或 T2 任一不过，不得宣称改动等价。
+开启态（`motion.enabled=true`）是新语义，不做等价对拍，只做形制、有效数分布、尺度三项检查（A18–A20）。关闭态为什么能逐位（条件创建、RNG 消耗序、三个数字）见第二部分 2.9。
 
-**为什么必须这样，而不是「建了但不用」——两颗地雷**：
+## 六、在线侧改动
 
-1. `scripts/training/train.py::train_step` 的 `param_norm = optax.global_norm(kernel_params)`，
-   `kernel_params = nnx.state(model, All(Param, Not(PathRegex(".*/(bias|scale|pos_embedding|input_embedding)")), ndim>1))`。
-   两个新 kernel 只要**存在**就入选，`param_norm` 立刻变 → `scalars_hex.tsv` 第六列变 → 文件 sha256 打不中锚点 `c799a0b2…` → `g0_gate.py` FAIL。
-2. `bench_train_steps.py::_checksum_full_state` 的 `n_leaves`：今天 **177** = params 55 + ema_params 55 + opt_state 66（mu 33 + nu 33）+ step 1。
-   建两个 Linear → params +4、ema +4、opt_state +8 = **193**，`state_digest` / `global_digest` 全变。
+在线推理用和离线表同一套规则增量编码：起点钉在段内绝对网格上，每 20 帧才新增一个窗口，摊薄约 0.079 s/步，第 20 步一次约 1.57 s 的尖峰（3.5）。
 
-**RNG 消耗序**（flax nnx 单条 default 流、共享计数器按调用顺序 `fold_in`，每个 `nnx.Linear` 消耗 2 次，`ToNNX.lazy_init` 与 `img.lazy_init` 不消耗）：
+1. **什么时候编、编什么**：`FrameSampMemory` 维护 `next_grid_start`（下一个待编起点，初值 0，编完一个 `+= motion.stride`）；每步 `add_buffer` 后检查 `next_grid_start + 32 ≤ 当前段内帧号`，成立就把这 33 帧凑齐一次喂 VAE（B=1），得到一个 motion token 存入 `_history_feats_motion[next_grid_start]`。尖峰若不可接受，可提前一步预编（起点何时可见完全可预测），S3 决定。
+2. **改哪些文件**：`src/mme_vla_suite/policies/framesamp_memory.py::FrameSampMemory`——注入 `motion_enc_fn`（同 `vision_enc_fn` 的范式）；新缓一份 256 域原始帧滚动缓冲（现有 `add_buffer` 把图缩到 224 后就丢了原图，而 Wan VAE 要 256 域；只留最近 33 帧与未编窗口）；新增 `_prepare_motion`，按第二部分一节的查表公式取合法起点、取最近 80 个、右填充加 mask，`motion_pos` 从 `pos_emb_4x4[frame, 0, :256]` 取（与训练侧同表同切片）；`_prepare_frame_sampling` 一字不动。`src/mme_vla_suite/policies/policy.py::MME_VLA_Policy._prepare_history` 补 `motion_emb` / `motion_pos` / `motion_mask` 三键。禁把 encode 包进新的 `jax.jit`——motion 编码走 PyTorch，在 jit 之外，天然不违反。
+3. **venv 墙**：policy server 跑主 venv（torch 2.7.1），Wan VAE 与 encoder 要 torch 2.9.0+cu128 / diffusers 0.39.0，无法同进程加载。S3 起工前先决策 sidecar 进程（用 `v1-store/venvs/wan` 起一个编码服务，policy 侧走 IPC）或其他方案。sidecar 同样用复制件 `encode_chunk` / `motion_token`，起手 `check_env()` + `pin_numerics()`，口径与离线表同源；若为了延迟改用 TF32 / bf16，先过 A2 漂移探针，并在 provenance 里与离线表分开登记。
+4. **对拍**：A23 在线 / 离线一致——同一起点的在线编码 vs 离线表余弦 ≥ A2 阈值；在线起点集合 == 离线；同一起点的在线 `motion_pos` 与 `store.pos_rows(f)[0, :256]` 逐位。
 
-| count | HEAD / 关闭态 | 开启态 |
-|---|---|---|
-| 0–1 | `mem_encoder.feature_encoder.pos_proj` | 同 |
-| 2–3 | `mem_encoder.feature_encoder.encoder_static` | 同 |
-| 4–5 | `action_in_proj` | **`mem_encoder.motion_pos_proj`** ★ |
-| 6–7 | `time_mlp_in` | **`mem_encoder.motion_encoder_static`** ★ |
-| 8–15 | — | `action_in_proj` / `time_mlp_in` / `time_mlp_out` / `action_out_proj` 整体右移 8 |
+逐项细节见第二部分三节。
 
-关闭态消耗序与 HEAD **逐位相同**。开启态右移 8，但被右移的四层全部由 `pi05_base` checkpoint 覆盖（`v1-store/models/openpi-assets/checkpoints/pi05_base/params` 的 51 个数组里，
-非 `PaliGemma.*` 的恰是 `action_in_proj` / `action_out_proj` / `time_mlp_in` / `time_mlp_out` 的 kernel+bias），而 `mem_encoder.*` 不在 checkpoint 里、其 count 0–3 不动——
-所以**开启态也不会改变帧路的初始化值**。这就是红线 5「新参数一律建在 `feature_encoder` 之后」的兑现方式（旁证见 5.3 的 L1′）。
-
-**关闭态三个数字的期望值**（全部 = HEAD 现值，一位都不许动）：
-
-| 数字 | 出处 | 关闭态期望 | 开启态 |
-|---|---|---|---|
-| `param_norm` | `scalars_hex.tsv` 第六列 | 逐位等于 G0b r1 每一步 | 必变 |
-| `n_leaves` | `param_checksums.jsonl` | **177**，且 177 个叶子 sha256 逐条命中 G0b step 0 | 193 |
-| `n_keys` | `batch_digests.jsonl` 首行 | **12**（三键 None → pytree 空节点，不计叶子） | 15 |
-
-两侧 `enabled` 必须同源：`FrameSampDataset` 与 `PerceptualMemory` 从同一份 `get_history_config` 加载的 DictConfig 推 `enabled`，不能一侧读 yaml 一侧读 env
-（数据侧给了、模型侧不消费 → `n_keys` 悄悄变 15 但训练照跑，静默破坏对拍）；`HistoryPi0.__init__` 里对 `inputs_spec` 与 `mem_encoder.motion_enabled` 做一次一致性 `raise`。
-
-### 5.3 对拍一致性阶梯（`AGENTS.md` 第 18 条）与对照怎么取
-
-**第一块：非训练轻量（全部零容差，逐位）**
-
-| 阶 | 用什么 | 对照物 | 判定 | 耗时 |
-|---|---|---|---|---|
-| L0 静态 | `git diff` + `grep` | — | `mem_encoder.py` 零改动；新参数名不含 `img`；三字段在四个 `static_*` 之后 | 分钟 |
-| L1 参数树 / RNG | `tests/single_step_grad.py` 的 `_verify_same_origin`（`DTYPE_BASELINE_CHECKSUMS=docs/training-doc/v1-grad-baseline-g0b/records/r1/param_checksums.jsonl`） | G0b r1 step 0 的 177 个 `per_leaf` sha256 | 脚本不 `SystemExit` 且 `n_leaves == 177`。**与数据集无关**——init state 只取决于 config + seed + `pi05_base`，新旧库都能直接对 | ~10 min |
-| L1′ 开启态旁证 | 同上，开 / 关两态各 init 一次 | 自身 | `mem_encoder.feature_encoder.*` 四个叶子 sha256 两态相同 | ~10 min |
-| L2 样本 / batch 位型 | `tests/dump_fixture_samples.py`（两侧各一次）+ **新写薄比对** | HEAD vs 新代码（motion off） | `__getitem__` **全键**与 collate 后 **batch 全键**的 raw sha256 / canonical sha256 / dtype / shape 逐键相同；键集合不变（三个 None 不产生数组叶子） | 20–40 min/侧 |
-| L3 index 序列 | `tests/dump_index_seq.py` | 两侧 | `INDEX_SEQ_EQ=PASS` | 分钟 |
-| L4 `embed_prefix` 逐位（M5 本体） | **新写薄脚本**（`JAX_PLATFORMS=cpu`，`nnx.Rngs(0)` 现场 init，喂 L2 落盘的 batch fixture） | HEAD vs 新代码 | `embed_memory` 四返回（`tokens (b,512,2048)`、`input_mask (b,512)`、`ar_mask`、`na_mask`）与 `embed_prefix` 四返回（`tokens (b,1088,2048)` …）`np.array_equal` on `.view(uint8)` | <10 min |
-
-⚠ `tests/compare_dtype_fix.py` **不能直接复用**：它的 `_EXPECTED_DTYPE` 写死的是「短样本 f64→bf16」这类**预期变化**清单，本轮预期是**零变化**，直接跑必 FAIL；
-需加 `--expect-identical` 档或另写薄比对，**不得改动既有清单**（它同时是 G2/G3 的判据）。
-
-**第二块：训练梯度（M9）**
-
-| 阶 | 用什么 | 判定 | 耗时 |
-|---|---|---|---|
-| L5 单步定点梯度 | `tests/single_step_grad.py`，三个定点 batch `mixed1` / `allshort` / `allfull` | 逐叶梯度 sha256 + loss `float.hex()` 两侧逐位相同；`allfull` 是阴性对照 | ~30 min/侧 |
-| L6 1000 步 G 链 | `g0/run_2gpu_epoch_bench.sh` → `g0/compare_baseline.py` → `tests/g0_gate.py` | 唯一成功行 **`G0_EQ=PASS`**（内含 `SCALARS 1000/5/0`、`STATE_DIGEST 12/0`、`BATCH_DIGEST_CANONICAL 14/0`、`CANON_CHECK=PASS/14`、`INDEX_SEQ=PASS n≥8072`、`scalars_hex.tsv` sha256 命中 `c799a0b299f243c1740f1594b62aec920cf7ad0033a29d37b851051d52105757`、`n_keys=12`、`BASELINE_ENV=PASS`） | ~1.5 h/侧 |
-
-确定性档必须注入 `XLA_FLAGS="--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"`。
-
-**数据集同时在换 → M9 的对照怎么取。** 黄金基线 G0b 是在 `4task-gl`（4env 400ep，`exec_samples = 395,289`）上跑的；换成 40 ep 新库
-（exec 样本 11,530，单 epoch 约束 `steps × batch < 11,530` → 1000 步 × batch 8 = 8,000 可行，`index_sequence` 实抽 8,072 也在内，步数上限 1,441）后，
-数据集 spot digest 与 `episode_manifest` sha 都变，指纹 preflight 必 FAIL。两个方案：
-
-- **(i) 旧库上 HEAD vs 新代码（motion off），直接对 G0b r1 固化产物。** 指纹 preflight 能过、`scalars_hex.tsv` 能**逐位命中黄金锚点**、`g0_gate.py` 的 `_EXPECT_*` 一个不用改、只跑一侧（1.5 h）。
-  证明的是「**代码**等价」。前置：`v1-store/datasets/4task-gl` 与 `4task-gl-framesamp` 仍在盘上（已核）。
-- **(ii) 新 40 ep 库上 HEAD 与新代码同场次各跑一遍。** 证明「新库上仍等价」，覆盖新库特有的形状 / 边界。没有黄金锚点只能 A/B 互比；要重设 `--expect-sha256`、`EPOCH_SAMPLES`（395,289 → 11,530）、
-  `_EXPECT_RAW_MISMATCH`（两侧同代码 dtype 一致 → 应为 0/0 而非 4/2）；跑两侧。
-
-**推荐先 (i) 后 (ii)，(ii) 降档到 200–300 步**（跨库差异只可能来自数据形状触发的新分支，200 步足以覆盖且远在单 epoch 内，~40 min/侧）。
-⚠ **起工前先做一次「HEAD 代码原样复跑 G0b」的自校**（不改任何代码，1.5 h）——否则「新代码 vs 基线」FAIL 时无法区分是代码问题还是基线腐烂 / 环境漂移。
-G0b r1 的 `run_meta.json` 记的入口是旧路径 `scripts/smoke-local/bench_train_steps.py`（已迁到 `scripts/training/g0/`）与 `--dataset-path v1-store/datasets/4task-gl`，复跑必须逐字复现同一 argv 与数据集路径。
-
-### 5.4 需要同步的硬编码
-
-| 位置 | 常量 | 关闭态 | 开启态 |
-|---|---|---|---|
-| `tests/_common.py` | `MEMORY_KEYS`（现四键） | **不变**（三键为 None，无数组本体可落） | 追加三键 → 7 键 |
-| `tests/g0_gate.py` | `n_keys == 12` | **不变** | 15 |
-| | `--expect-sha256 c799a0b2…` | 旧库**必须命中**；新库无锚点，需新建并登记 | 必变 |
-| | `_EXPECT_RAW_MISMATCH=4` / `_EXPECT_RAW_BAD_KEYS=2` | 旧库对 G0b 时不变；新库同场次 A/B 应为 0/0 | 同 |
-| | `_EXPECT_LINES=1001` / `_EXPECT_INDEX_N_MIN=8072` / `SCALARS keys=5` / `STATE_DIGEST rows=12` / `BATCH_DIGEST rows=14` | 全不变（由步数与记录步集决定） | 全不变 |
-| `g0/bench_train_steps.py` | `_checksum_full_state` 的 `n_leaves` | **177** | 193 |
-| `g0/run_2gpu_epoch_bench.sh` | `EPOCH_SAMPLES=395289` | 旧库不变；**新库须 11530** | 同 |
-| `g0/check_baseline_env.py` | `_EPOCH_SAMPLES=395289`、`default_dataset=v1-store/datasets/4task-gl` | 旧库不变；**新库须 11530 + 显式 `--dataset`**。建议改为从 `meta/store_meta.json` 现读并写进 `run_meta.json`——现在是静默失效的一颗雷（>1,441 步跨 epoch 后对拍无意义但 preflight 仍 PASS） | 同 |
-| `tests/_common.py` | `FIXTURE_SEED` / `build_fixture_indices` | 旧库不变；新库 manifest 换 → 定点集合整体变（两侧同源即可） | 同 |
-
-## 六、实施步骤（S0–S4）
+## 七、实施步骤（S0–S4）
 
 | 阶段 | 内容 | 判据 |
 |---|---|---|
-| **S0 先验与 oracle** | ① Ada 上 Wan-VAE 20 窗探针（ms/窗、`max_memory_allocated`；直接用复制件 `encode_chunk`）；② **在重构动手前**产出 SigLIP oracle O1/O2（4.3）+ 本机目标卡跑 MotionJEPA `crosscheck.py --vae_check`（4.3 命令，≈2 min）；③ 建 `scripts/dataset/wan` 子 venv（`v1-store/venvs/wan`）；④ HF 缓存拷入 `v1-store/cache/hf` 并核 VAE 指纹 `9980d252…`；⑤ 复制 `wan_motion_infer.py` + 写 `SOURCE_PIN.json` + 拷 run 的 `config.yaml`/ckpt 到 `v1-store/external/motionjepa/` 并核 sha256（第二部分 1.5） | 拿到 ms/窗实测；SigLIP oracle 落盘并记 commit；`CROSSCHECK=PASS`（json 归档）；D6 跨卡 / D7 双 venv 探针 max\|diff\|=0；复制件 sha256 == `SOURCE_PIN.source_sha256` |
-| **S1 数据集重抽** | `scripts/dataset/` 破坏性重构（4.5）+ 40 ep 全链路（4.2，tmux；含 `oracle_driver.py` 产 D2/D5 oracle，须与被测同机同型号卡）+ D1–D10 全过 + dataloader 微基准（第二部分 1.6）；留档 `docs/dataset-build-doc/4task-motion-40ep/` | `COMPARE_RESULT=bitexact PASS`；`FINALIZE_EXIT_CODE=0`；`VERIFY_PACK=PASS scanned=13756 mismatches=0`；`WAN_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；`ENCODER_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；motion 表 619 行 = 87 + 532 |
-| **S2 model 接线** | 五节：双路 memory + `motion.enabled` 条件建模块 + `RepackTransform` 登记 + 对拍硬编码同步 | L0–L4 全过；L5 逐叶逐位；L6 方案 (i) 旧库 `G0_EQ=PASS` 命中锚点 + 方案 (ii) 新库 200–300 步 A/B 逐位；开启态 M6/M7/M8 形制、分布、尺度检查 |
-| **S3 在线接线** | `FrameSampMemory` 绝对网格增量编码 + Wan VAE 常驻 + 尖峰处理；⚠ policy server 在主 venv（torch 2.7.1），Wan-VAE + encoder 无法同进程加载，需 sidecar 进程或另行决策（第二部分三节） | 在线 / 离线同一起点特征一致（M10）；端到端 ms/step 实测 |
+| **S0 先验与 oracle** | ① Ada 上 Wan-VAE 20 窗探针（ms/窗、`max_memory_allocated`；直接用复制件 `encode_chunk`）；② **在重构动手前**产出 SigLIP oracle O1/O2（4.3）+ 本机目标卡跑 MotionJEPA `crosscheck.py --vae_check`（4.3 命令，≈2 min）；③ 建 `scripts/dataset/wan` 子 venv（`v1-store/venvs/wan`）；④ HF 缓存拷入 `v1-store/cache/hf` 并核 VAE 指纹 `9980d252…`；⑤ 复制 `wan_motion_infer.py` + 写 `SOURCE_PIN.json` + 拷 run 的 `config.yaml`/ckpt 到 `v1-store/external/motionjepa/` 并核 sha256（第二部分 1.5） | 拿到 ms/窗实测；SigLIP oracle 落盘并记 commit；`CROSSCHECK=PASS`（json 归档）；A3 跨卡 / A4 双 venv 探针 max\|diff\|=0；复制件 sha256 == `SOURCE_PIN.source_sha256` |
+| **S1 数据集重抽** | `scripts/dataset/` 破坏性重构（4.5）+ 40 ep 全链路（4.2，tmux；含 `oracle_driver.py` 产 D2/D3 oracle，须与被测同机同型号卡）+ D1–D3 与 A5–A12 全过 + dataloader 微基准（第二部分 1.6）；留档 `docs/dataset-build-doc/4task-motion-40ep/` | `COMPARE_RESULT=bitexact PASS`；`FINALIZE_EXIT_CODE=0`；`VERIFY_PACK=PASS scanned=13756 mismatches=0`；`WAN_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；`ENCODER_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；motion 表 619 行 = 87 + 532 |
+| **S2 model 接线** | 五节 5.1 + 第二部分二节：双路 memory + `motion.enabled` 条件建模块 + `RepackTransform` 登记 + 对拍硬编码同步 | A13–A17 全过；A21 自校 `G0_EQ=PASS`；A22 逐叶逐位；T1 命中锚点 + T2 新库 A/B 逐位，两条都过；开启态 A18–A20 形制、分布、尺度检查 |
+| **S3 在线接线** | `FrameSampMemory` 绝对网格增量编码 + Wan VAE 常驻 + 尖峰处理；⚠ policy server 在主 venv（torch 2.7.1），Wan-VAE + encoder 无法同进程加载，需 sidecar 进程或另行决策（第二部分三节） | 在线 / 离线同一起点特征一致（A23）；端到端 ms/step 实测 |
 | **S4 消融** | ① 预算 N（80 / 64 / 48 / 32）+ demo 独立 stride（2.3「硬地板 51」） ② 叠加 adaRMS 调制 ③ 运动段放 img 之后 ④ `motion.stride`（网格表下每档重抽，40 ep 一档 8 min） ⑤ 冻结 vs JAX 移植微调 ⑥ 按有效数分桶的分层评估（2.4 后果 3） ⑦ **ep90–99 泄漏对照**（第二部分八节 6） ⑧ `motion_pos` 改传 `motion_start_frames` int32（第二部分 1.6） | 训练曲线 + 在线成功率 |
 
 S0 的 oracle 产出、S1、S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AGENTS.md` 第 12、17 条从 clean HEAD 起跑并留档。**全部在本机，不上集群**。
-
-## 七、影响面结论
-
-| 项 | 现在 | 之后 | 增幅 |
-|---|---|---|---|
-| memory 段 | 512 | **592**（512 帧路 + 80 运动路） | +15.63% |
-| prefix 总长 | 1088（mem 512 + img 2×256 + prompt 64） | 1168 | +7.35% |
-| 全序列（含 20 个 action token） | 1108 | 1188 | +7.22% |
-| attention 计算量（O(L²)） | 1108² | 1188² | **+14.96%** |
-| 每样本数据字节 | 3.52 MiB（`static_*` 四键） | +320 KiB（`motion_emb` 80×768 f32 = 240 KiB + `motion_pos` 80×256 f32 = 80 KiB） | +8.9% |
-| batch=64 每批额外 | — | +20 MiB（打在 worker→主进程 pickle 管道上 +7.8%，≈+38 ms/批） | — |
-| turbo 读盘 | 2.43 MB/样本 | 不变（motion 表常驻内存） | +0 |
-| 离线表 | — | 40 ep 1.9 MB（4env400ep 全量 61.4 MiB） | — |
-| 中间产物 | — | Wan latents 365 MB + oracle latents 365 MB + 两个散 npy oracle 库 + encoder ckpt/config 拷贝 0.92 GB + HF VAE 权重 578 MB | — |
-| 环境 | 主 venv | 主 venv 不动 + 子 venv `v1-store/venvs/wan`（torch 2.9.0+cu128） | — |
-| 新增训练参数（含 bias） | — | `motion_pos_proj = nnx.Linear(256→768)` 197,376 + `motion_encoder_static = nnx.Linear(1536→2048)` 3,147,776 = **3,345,152 ≈ 3.35 M**（仅开启态创建） | 可忽略 |
-
-- **训练语义**：`motion.enabled=false` 时零影响（逐位等价，L1–L6 判据；关闭态两个新模块根本不创建，`param_norm` / `n_leaves=177` / `n_keys=12` 不变）；
-  `true` 时 prefix 记忆区 512 → 592，其后所有 token 的 RoPE 位置整体右移 80。
-- **冻结**：两个新投影挂在 `HistoryPi0.mem_encoder`（`PerceptualMemory`）下，路径形如 `mem_encoder.motion_encoder_static`。
-  当前 `HistoryPi0Config.get_freeze_filter` 返回 `PathRegex(".*img.*")`（`paligemma_variant="gemma_2b"`，无 lora），不匹配 → **默认可训练**。
-  若日后启用 lora，filters 为 `Any(All(".*llm.*", Not(".*lora.*"), Not(".*mem.*")), ".*img.*")`，路径含 `mem` 恰被 `Not(".*mem.*")` 排除出冻结集 → **仍可训练**。两种情形都安全。
-- **数据**：新库 `v1-store/datasets/4task-motion-40ep/`（`v1-store/` 内，不进 git，符合第 14 条）；MotionJEPA 仓库零写入；`v1-store/episode_manifest.json` 与旧库不动。
-- **在线评估**：多背一个 Wan VAE（PyTorch 2.9）常驻，延迟见 3.5；venv 隔离问题见 S3。
-- **不影响**：正在跑的 `v1-prod-100k` 全量 run（本计划一行代码都还没动）。
 
 ---
 
@@ -1098,7 +988,7 @@ S0 的 oracle 产出、S1、S3 属「预计超过 5 分钟的全量数据构建 
    （torch 2.9.0+cu128 / cudnn 91002 / diffusers 0.39.0）、调用方无外层 autocast、入口连续布局、VAE 指纹 `9980d252…`、ckpt sha256。SigLIP：现链路口径——每次前向只喂 1 帧、`resize_with_pad(224,224)` LINEAR pad −1.0、不加任何 XLA determinism / TF32 flag、
    `nnx.Rngs(2)` 只用于 lazy_init。**两条 oracle 与被测都必须在本机同一张卡上产出**（跨架构不逐位）。在线阶段可放开（3.5 与 S0）。
 5. **新参数必须条件创建且在所有现有模块之后创建**。`motion.enabled=false` 时 `PerceptualMemory.__init__` 根本不建 `motion_pos_proj` / `motion_encoder_static`
-   （否则 `param_norm` 与 `n_leaves` 必变，五节 5.2）；`true` 时一律建在现有 `feature_encoder` **之后**（`rngs` 消耗序），否则帧路初始化值被连带改变。
+   （否则 `param_norm` 与 `n_leaves` 必变，第二部分 2.9）；`true` 时一律建在现有 `feature_encoder` **之后**（`rngs` 消耗序），否则帧路初始化值被连带改变。
 6. **禁止 `git clean -x` / `-X`**（`AGENTS.md` 第 19 条附则），会删掉 `v1-store/` 全部产物。
 7. **禁止引入两类已废弃设计**：① motion 与 framesample 采样帧一一对齐；② `missing_motion_emb` + 恒 True 的 `input_mask`。
 8. **容量类超参按 16 任务全集定标**。`motion.budget` 及一切随数据分布定的容量上限，一律以 `/data/hongzefu/robomme_data_h5`（16 任务 × 100 ep）的统计定标，
@@ -1187,7 +1077,7 @@ demo 段： for m in range(entries[g].demo.num_grid):
 
 ### 1.2 `wan-latents/metadata.json` 窗口清单契约
 
-唯一窗口清单：D2 的 oracle 驱动、D10 字节数账、M3 索引映射都读它，不重算网格。
+唯一窗口清单：D2 的 oracle 驱动、A7 字节数账、A9 索引映射都读它，不重算网格。
 
 ```json
 {"schema": 1, "grid_stride": 20, "window_frames": 33, "truncation_policy": "none",
@@ -1232,13 +1122,13 @@ demo 段： for m in range(entries[g].demo.num_grid):
 
 **SigLIP 侧（O1 / O2）。** 必须在重构动手之前、clean HEAD、本机同一张卡上产出：`AGENTS.md` 第 19 条禁在 worktree 快照内执行脚本，且快照无 `v1-store` / `.venv`；重构一落地旧脚本就没了。先建只含 4 个 h5 符号链接的目录 `$V1_STORE/raw-link-4task/`，建成后到对拍结束不得重建——`build_dataset.py` 用 `os.listdir` 遍历，目录序决定它的 `global_episode_idx`。O2 三条坑：`--raw_data_path` 默认是相对路径 `data/robomme_data_h5`，必须给绝对路径；输出目录已存在须 `--force` 且会 `rmtree`（红线 12）；`OPENPI_DATA_HOME` 未设会退到 `~/.cache/openpi` 找不到 `siglip_params.pkl`。比对时 bitexact 档下 `kept_indices` / `pkl` / `state_emb` / `pos_emb_*` / `image_emb_*` 全零容差，两库编号不同一律按物理身份 `(h5_file, raw_ep_idx, t)` 匹配；`FINALIZE_EXIT_CODE=0` 含 `--spot_check 256` 同卡复算 max|diff|=0。
 
-**Wan 侧（`wan/oracle_driver.py`）。** 由 MotionJEPA `.venv/bin/python` 执行（不用 `uv run`，避免 sync 写锁），`sys.path` 指向 `<MotionJEPA>/scripts/inference-example` 导入原版模块；起手 `check_env()` + `pin_numerics()`；`load_vae(cfg.wan.vae_id, expected_state_sha256="9980d252…")`；只依赖 stdlib + numpy + h5py + 原版模块，禁止 import `mme_vla_suite` / jax / openpi。窗口来源不重算网格：读我方 `wan-latents/metadata.json`（1.2），按同一起点从官方 h5 `front_rgb` 读 33 帧 → 原版 `encode_chunk` → `<lib>/oracle/wan-mj/<段>.bin`（与我方同构、同 chunk 序）；D5 用同一驱动对同一批 `.bin` 跑原版 `motion_token`。VAE 权重先从 `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/hf-cache/hub/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers` 拷入 `v1-store/cache/hf`（578 MB）并核指纹。
+**Wan 侧（`wan/oracle_driver.py`）。** 由 MotionJEPA `.venv/bin/python` 执行（不用 `uv run`，避免 sync 写锁），`sys.path` 指向 `<MotionJEPA>/scripts/inference-example` 导入原版模块；起手 `check_env()` + `pin_numerics()`；`load_vae(cfg.wan.vae_id, expected_state_sha256="9980d252…")`；只依赖 stdlib + numpy + h5py + 原版模块，禁止 import `mme_vla_suite` / jax / openpi。窗口来源不重算网格：读我方 `wan-latents/metadata.json`（1.2），按同一起点从官方 h5 `front_rgb` 读 33 帧 → 原版 `encode_chunk` → `<lib>/oracle/wan-mj/<段>.bin`（与我方同构、同 chunk 序）；D3 用同一驱动对同一批 `.bin` 跑原版 `motion_token`。VAE 权重先从 `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/hf-cache/hub/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers` 拷入 `v1-store/cache/hf`（578 MB）并核指纹。
 
 ### 1.5 复制件与子项目
 
 - `wan/wan_motion_infer.py` = MotionJEPA `scripts/inference-example/wan_motion_infer.py` 整文件逐字节复制（该文件在 `scripts/` 下、不在 `motion_jepa` 包内，git 依赖装不到），旁置 `SOURCE_PIN.json`：`{mj_repo_commit: "2a484ad960ed6155321dc34def9011eb119f857f", source_path, source_sha256, copied_at}`；`test_guards.py` 断言复制件 sha256 == `source_sha256`。`extract_wan.py` / `encode_motion.py` 只做「读输入 → 调 `encode_chunk` / `motion_token` → 落盘」，不得复写任何 🔒 数值语句。
 - `WanLatentMotionEncoder` 类以 git 依赖 `motion-jepa @ git+https://github.com/hongzefu/MotionJEPA@2a484ad960ed6155321dc34def9011eb119f857f` 接入子项目；若私有仓库拉取失败，退回「`sys.path` 指向本地检出 + 启动断言 `git rev-parse HEAD == 2a484ad` 且 porcelain 为空」。不做 path 依赖（setuptools 会往只读的 MotionJEPA 树里写 `build/`、`egg-info`）。
-- `load_encoder` 需要 `run_dir/config.yaml` + ckpt，而 MotionJEPA `runs/` 不进 git 且仓库只读：S0 把两份文件拷到 `v1-store/external/motionjepa/wan-v8-filter10-72ep-a/`（不放 `v1-store/models/`，避免与 `OPENPI_DATA_HOME` 下的 openpi 资产树混放），sha256 记入 `store_meta.provenance`，`load_encoder(..., expected_sha256=<sha>)` 起手断言；oracle 侧与被测侧共用这份拷贝（否则 D7 的 `run_dir` 键必不等）。
+- `load_encoder` 需要 `run_dir/config.yaml` + ckpt，而 MotionJEPA `runs/` 不进 git 且仓库只读：S0 把两份文件拷到 `v1-store/external/motionjepa/wan-v8-filter10-72ep-a/`（不放 `v1-store/models/`，避免与 `OPENPI_DATA_HOME` 下的 openpi 资产树混放），sha256 记入 `store_meta.provenance`，`load_encoder(..., expected_sha256=<sha>)` 起手断言；oracle 侧与被测侧共用这份拷贝（否则 A4 的 `run_dir` 键必不等）。
 - 为什么必须整份 `strict=True`：EMA 把 `latents_mean/std` 与 RoPE cache 这类常数 buffer 也凸组合过（与 VAE config 真值差 ~1e-5），重建模型再手填常数永远不逐位；三个 v8 run 均无 `checkpoint_best.pt`，评估侧恒读 `ckpt["encoder"]`。
 - `encode_motion.py` CLI：`--encoder-run-dir / --checkpoint / --expected-ckpt-sha256`，输出目录名带 ckpt 短 sha；不设 `--encoder-key`（主键恒 `encoder`）、`--tf32`（`pin_numerics()` 钉死且对 encoder 段无影响）、`--amp`（由 run 配置决定）。
 - provenance：`load_vae` / `load_encoder` 返回的 `info` 原样写进 `store_meta.provenance.vae` / `.encoder` + `SOURCE_PIN`（1.1 末段）。
@@ -1301,7 +1191,7 @@ motion:
 
 - `HistoryPi0Config.inputs_spec`：**仅当 `motion.enabled`** 时在 `with at.disable_typechecking():` 块内补三个 `jax.ShapeDtypeStruct`——
   `[batch_size, motion.budget, motion.dim] float32`、`[batch_size, motion.budget, motion.pos_dim] float32` 与 `[batch_size, motion.budget] bool_`。从 config 键推导，不写死字面量。关闭态返回值与 HEAD 同构。
-- `HistoryPi0.__init__`：对 `inputs_spec` 是否含 motion 键与 `self.mem_encoder.motion_enabled` 做一致性显式 `raise`（两侧 `enabled` 同源，五节 5.2）。
+- `HistoryPi0.__init__`：对 `inputs_spec` 是否含 motion 键与 `self.mem_encoder.motion_enabled` 做一致性显式 `raise`（两侧 `enabled` 同源，2.9）。
 - `HistoryPi0.embed_memory`：现签名返回 `(tokens, input_mask, ar_mask, na_mask)`，内部调 `self.mem_encoder(obs.static_image_emb, obs.static_pos_emb, obs.static_state_emb)`。
   改为把 `obs.motion_emb` / `obs.motion_pos` / `obs.motion_mask` 一并传入 `PerceptualMemory.__call__`；返回值三处拼接——`tokens` 沿 axis=1 concat、`input_mask` 变
   `jnp.concatenate([obs.static_mask, obs.motion_mask], axis=1)`、`ar_mask` 与 `na_mask` 各追加 `motion.budget` 个 `False`。
@@ -1366,12 +1256,73 @@ padding 位不做特殊处理（`motion_emb` 该位为 0），屏蔽完全交给
 `openpi/transforms.py::RepackTransform.__call__` 是 `jax.tree.map(lambda k: flat_item[k], self.structure)`——**输出只含 structure 里列出的键，未列出的键静默消失**。
 关闭态三键为 None 透传，jax pytree 把 None 当空节点，`batch_digests.jsonl` 的 `n_keys` 仍为 12。
 
-### 2.8 对拍工具链硬编码（第一部分五节 5.4）
+### 2.8 对拍工具链硬编码
 
-`scripts/training/tests/_common.py::MEMORY_KEYS`（关闭态不变；开启态 7 键）；`scripts/training/tests/g0_gate.py` 的 `n_keys == 12`（关闭态不变 / 开启态 15）、
-`--expect-sha256`（旧库必须命中 `c799a0b2…`；新库需新建锚点）、`_EXPECT_RAW_MISMATCH=4` / `_EXPECT_RAW_BAD_KEYS=2`（旧库对 G0b 不变；新库同场次 A/B 应 0/0）；
-`scripts/training/g0/bench_train_steps.py` 的 `n_leaves`（177 / 193）；`scripts/training/g0/run_2gpu_epoch_bench.sh` 与 `g0/check_baseline_env.py` 的 `EPOCH_SAMPLES=395289`
-（新库 11,530；建议改为从 `meta/store_meta.json` 现读并写进 `run_meta.json`）。
+| 位置 | 常量 | 关闭态 | 开启态 |
+|---|---|---|---|
+| `tests/_common.py` | `MEMORY_KEYS`（现四键） | **不变**（三键为 None，无数组本体可落） | 追加三键 → 7 键 |
+| `tests/g0_gate.py` | `n_keys == 12` | **不变** | 15 |
+| | `--expect-sha256 c799a0b2…` | 旧库**必须命中**；新库无锚点，需新建并登记 | 必变 |
+| | `_EXPECT_RAW_MISMATCH=4` / `_EXPECT_RAW_BAD_KEYS=2` | 旧库对 G0b 时不变；新库同场次 A/B 应为 0/0 | 同 |
+| | `_EXPECT_LINES=1001` / `_EXPECT_INDEX_N_MIN=8072` / `SCALARS keys=5` / `STATE_DIGEST rows=12` / `BATCH_DIGEST rows=14` | 全不变（由步数与记录步集决定） | 全不变 |
+| `g0/bench_train_steps.py` | `_checksum_full_state` 的 `n_leaves` | **177** | 193 |
+| `g0/run_2gpu_epoch_bench.sh` | `EPOCH_SAMPLES=395289` | 旧库不变；**新库须 11530** | 同 |
+| `g0/check_baseline_env.py` | `_EPOCH_SAMPLES=395289`、`default_dataset=v1-store/datasets/4task-gl` | 旧库不变；**新库须 11530 + 显式 `--dataset`**。建议改为从 `meta/store_meta.json` 现读并写进 `run_meta.json`——现在是静默失效的一颗雷（>1,441 步跨 epoch 后对拍无意义但 preflight 仍 PASS） | 同 |
+| `tests/_common.py` | `FIXTURE_SEED` / `build_fixture_indices` | 旧库不变；新库 manifest 换 → 定点集合整体变（两侧同源即可） | 同 |
+
+### 2.9 关闭态逐位的机制（原第一部分 5.2）
+
+**唯一原则：模块不是在 `__call__` 里跳过，而是在 `__init__` 里根本不创建。**
+
+```python
+# percep_mem.py::PerceptualMemory.__init__ —— 紧跟在 self.feature_encoder 之后
+mcfg = getattr(config, "motion", None)                       # 旧 yaml 缺整节 → None
+self.motion_enabled = bool(mcfg is not None and mcfg.get("enabled", False))
+if self.motion_enabled:                                       # ← 条件在 __init__，不在 __call__
+    self.motion_pos_proj = nnx.Linear(
+        mcfg.pos_dim, config.memory_feature.pos.hidden_dim,    # 256 → 768
+        rngs=rngs, dtype=dtype, kernel_init=kernel_init)
+    self.motion_encoder_static = nnx.Linear(
+        mcfg.dim + config.memory_feature.pos.hidden_dim,       # 1536 → 2048
+        config.memory_token_dim,
+        rngs=rngs, dtype=dtype, kernel_init=kernel_init)
+```
+
+`__call__` 里对应地 `if not self.motion_enabled: return hidden_states, None, None`——与 HEAD 逐字相同的返回。
+先例就在同一条链上：`FeatureEncoder` 的 `use_state_emb=False` 时 `state_proj` 根本不建。
+
+**为什么必须这样，而不是「建了但不用」——两颗地雷**：
+
+1. `scripts/training/train.py::train_step` 的 `param_norm = optax.global_norm(kernel_params)`，
+   `kernel_params = nnx.state(model, All(Param, Not(PathRegex(".*/(bias|scale|pos_embedding|input_embedding)")), ndim>1))`。
+   两个新 kernel 只要**存在**就入选，`param_norm` 立刻变 → `scalars_hex.tsv` 第六列变 → 文件 sha256 打不中锚点 `c799a0b2…` → `g0_gate.py` FAIL。
+2. `bench_train_steps.py::_checksum_full_state` 的 `n_leaves`：今天 **177** = params 55 + ema_params 55 + opt_state 66（mu 33 + nu 33）+ step 1。
+   建两个 Linear → params +4、ema +4、opt_state +8 = **193**，`state_digest` / `global_digest` 全变。
+
+**RNG 消耗序**（flax nnx 单条 default 流、共享计数器按调用顺序 `fold_in`，每个 `nnx.Linear` 消耗 2 次，`ToNNX.lazy_init` 与 `img.lazy_init` 不消耗）：
+
+| count | HEAD / 关闭态 | 开启态 |
+|---|---|---|
+| 0–1 | `mem_encoder.feature_encoder.pos_proj` | 同 |
+| 2–3 | `mem_encoder.feature_encoder.encoder_static` | 同 |
+| 4–5 | `action_in_proj` | **`mem_encoder.motion_pos_proj`** ★ |
+| 6–7 | `time_mlp_in` | **`mem_encoder.motion_encoder_static`** ★ |
+| 8–15 | — | `action_in_proj` / `time_mlp_in` / `time_mlp_out` / `action_out_proj` 整体右移 8 |
+
+关闭态消耗序与 HEAD **逐位相同**。开启态右移 8，但被右移的四层全部由 `pi05_base` checkpoint 覆盖（`v1-store/models/openpi-assets/checkpoints/pi05_base/params` 的 51 个数组里，
+非 `PaliGemma.*` 的恰是 `action_in_proj` / `action_out_proj` / `time_mlp_in` / `time_mlp_out` 的 kernel+bias），而 `mem_encoder.*` 不在 checkpoint 里、其 count 0–3 不动——
+所以**开启态也不会改变帧路的初始化值**。这就是红线 5「新参数一律建在 `feature_encoder` 之后」的兑现方式（旁证见 A14 的开启态旁证）。
+
+**关闭态三个数字的期望值**（全部 = HEAD 现值，一位都不许动）：
+
+| 数字 | 出处 | 关闭态期望 | 开启态 |
+|---|---|---|---|
+| `param_norm` | `scalars_hex.tsv` 第六列 | 逐位等于 G0b r1 每一步 | 必变 |
+| `n_leaves` | `param_checksums.jsonl` | **177**，且 177 个叶子 sha256 逐条命中 G0b step 0 | 193 |
+| `n_keys` | `batch_digests.jsonl` 首行 | **12**（三键 None → pytree 空节点，不计叶子） | 15 |
+
+两侧 `enabled` 必须同源：`FrameSampDataset` 与 `PerceptualMemory` 从同一份 `get_history_config` 加载的 DictConfig 推 `enabled`，不能一侧读 yaml 一侧读 env
+（数据侧给了、模型侧不消费 → `n_keys` 悄悄变 15 但训练照跑，静默破坏对拍）；`HistoryPi0.__init__` 里对 `inputs_spec` 与 `mem_encoder.motion_enabled` 做一次一致性 `raise`。
 
 ## 三、在线侧改动（S3）
 
@@ -1388,71 +1339,117 @@ padding 位不做特殊处理（`motion_emb` 该位为 0），屏蔽完全交给
 - `MME_VLA_Policy._prepare_history`：补 `inputs["motion_emb"]` / `inputs["motion_pos"]` / `inputs["motion_mask"]` 三键。
 - ⚠ 注释里那条红线仍然有效：**禁把 encode 与 pool 包进新的 `jax.jit`**。motion 编码走 PyTorch、在 jit 之外，天然不违反。
 - **尖峰处理**（3.5 细节 1）：第 20 步的 1.57 s 尖峰若不可接受，可提前一步预编——起点的可见时刻 `起点 + 32` 完全可预测。S3 决定是否需要。
-- **编码口径与离线表同源**：sidecar 里同样用复制件 `encode_chunk` + `motion_token`，起手 `check_env()` + `pin_numerics()`；每窗 **33 帧一次喂** `vae.encode`、B=1（diffusers 分 9 次调 `encode` 与一次喂 33 帧不等价；batch>1 改 encoder 输出最后一位）。若 S3 为了延迟改用 TF32 / bf16 VAE，须先过 M1 且在 provenance 里与离线表分开登记。
+- **编码口径与离线表同源**：sidecar 里同样用复制件 `encode_chunk` + `motion_token`，起手 `check_env()` + `pin_numerics()`；每窗 **33 帧一次喂** `vae.encode`、B=1（diffusers 分 9 次调 `encode` 与一次喂 33 帧不等价；batch>1 改 encoder 输出最后一位）。若 S3 为了延迟改用 TF32 / bf16 VAE，须先过 A2 且在 provenance 里与离线表分开登记。
 
 ## 四、对拍闸门总表
 
+编号只有两层：**用户关心的对拍** D1–D3、T1–T2（表一，第一部分 4.3 与 5.2 正文讲的就是这五条）；**附加检查** A1–A23（表二，按执行阶段排序，第一部分只按号引用）。
+
+**表一：用户关心的对拍**
+
 | 闸 | 阶段 | 判据 | 失败处置 |
 |---|---|---|---|
-| **M0** 环境指纹 | S0 前 | 引用既有基线 run 时先过指纹 preflight（`AGENTS.md` 第 18 条末款）；起工前 HEAD 原样复跑 G0b 自校 | 指纹不符即基线失效，重跑基线 |
-| **M1** 延迟与漂移 | S0 | Ada 20 窗探针 ms/窗；fp32/关TF32 与 TF32+bf16 两档输出余弦 ≥ 阈值（在线用）。先验：VAE 段 cudnn TF32 改位 1.8e-3 相对、bf16 差 3.2%（inference-example README 4.2）；encoder 段 TF32 无作用 | 漂移超阈值则在线也用 fp32/关TF32 |
 | **D1** SigLIP 逐位 | S0 产 oracle / S1 比 | `compare_datasets.py --mode bitexact --steps_per_episode 0` 对 O1（`--all_pkl`）与 O2（`--a_untouched_log`）：`COMPARE_RESULT=bitexact PASS`；`FINALIZE_EXIT_CODE=0`（`--spot_check 256`）；`VERIFY_PACK=PASS scanned=13756 mismatches=0` | `kept_indices` / pkl / `state_emb` 不逐位 → 代码 bug，立即停；`pos_emb_*` 不逐位 → 推翻「无归约 ⇒ 跨机逐位」对照论证，人工重判；只 `image_emb_*` 不逐位 → 查 jax/jaxlib 版本、物理卡、XLA flag |
 | **D2** Wan-VAE 逐位 | S0 `CROSSCHECK=PASS` 前置 / S1 产 oracle 并比 | 我方全部网格窗（复制件 `encode_chunk`）vs 原版 `wan_motion_infer.encode_chunk`（MotionJEPA `.venv`，`oracle_driver.py` 按 `metadata.json` 同起点重编），f32 原始字节 `np.array_equal`，含每段 exec 尾窗：`WAN_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`（不截尾口径下 = 619） | ① 两侧 33 帧 uint8 逐字节；② VAE 指纹 → 版本 → `pin_numerics` 读回 → 环境变量 → 外层 autocast → 输入布局 → 喂法 → permute 顺序 → driver/cuBLAS/cudnn（TF32 / seed 已实测无影响，不首查） |
-| **D3** 原始帧同源 | S1 | 40 ep `front_rgb` 与 4env400ep 同 ep 逐帧相等（13,756 帧）；我方内存帧 == 既有 MJ data-raw `video_exec.h5` 的 `frames`（截尾处以内；`video_demo.h5` 仅 Video* 两任务有，demo 段只在这 20 个 episode 上比）；本轮不新建 data-raw | 帧不同即数据源问题，停 |
-| **D4** 清单一致 | S1 | 新清单 `(num_timesteps, exec_start_idx)` 与 `v1-store/episode_manifest.json` 对应 40 条相同；Video* `exec_start_idx == MJ demo frames` | 停，查 `first_execution_step` |
-| **D5** encoder 双实现 | S1 | 我方 `encode_motion.py`（复制件）vs 原版 `wan_motion_infer.motion_token`，输入都取我方 `wan-latents/*.bin`，全部 Σ num_grid 窗 `np.array_equal`：`ENCODER_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；附加：77 张量 sha256 清单逐键相等、affine buffer finite 且与 ckpt 逐位同、`provenance()` 白名单逐键相等、ckpt sha256 == 记录值、`grep -n 'load_wan_latent_stats('` 无命中 | ckpt sha / 加载路径 → batch 形状（必须 1）→ 外层 autocast 与缓存 → 输入连续性 → `pin_numerics` 读回 → 环境变量 → 版本 → driver/cuBLAS/cudnn（TF32 / seed 不首查） |
-| **D6** 跨卡探针 | S0 | 同 64 窗 GPU0 vs GPU1 跑复制件 `encode_chunk` + `motion_token` max\|diff\|=0 | 不等则被测与 oracle 所有阶段单卡跑 |
-| **D7** 双 venv 探针 | S0 | MJ `.venv`（原版）vs `v1-store/venvs/wan`（复制件）同窗 max\|diff\|=0；两侧 `check_versions()` 硬断言 torch 2.9.0+cu128 / cudnn 91002 / diffusers 0.39.0；`provenance()` 白名单键逐键相等（`module_sha256 == SOURCE_PIN.source_sha256`），排除 `hostname` / `python` 补丁号 / 路径键 | 版本不符即重锁子项目；`module_sha256` 不符即复制件被改 |
-| **D8** 旧库 crossarch 旁证 | S1 | `--mode crossarch --b_manifest` 对 `4task-gl`：`min_cosine ≥ 1−1e-3`、`p5 ≥ 1−1e-4`、`err_floor_rel ≤ 0.05` | 只报不阻断 |
-| **D9** v7 latent 旁证 | S1 | 与 `/data/hongzefu/dataset-4env-v7/.../wan_chunk_latents/` 同窗逐位；唯一按 chunk 索引对齐 MotionJEPA 抽取器实抽产物的旁证 | 非阻断，FAIL 只作提示（v7 metadata 无 provenance；环境若已变则不逐位） |
-| **D10** 字节数账 | S1 | 每段 `.bin` == `num_grid × 589,824`；motion 表 == `rows × 3,072` | 不符即中间产物残缺 |
-| **M2** 抽表逐位 | S1 | 随机 100 个 `(段, 网格序号)`，在线跑 encoder（复制件 `motion_token`，B=1 硬约束）vs 表逐位相等（`np.array_equal`） | 任一不等即停 |
-| **M3** 索引映射 | S1 | 随机 500 个 `(g, t)`，按一节公式解出的起点集合 == 独立实现（直接遍历 `wan-latents/` 目录 + 清单现算）解出的集合；`row_base + m` 读出的行 == 直读该窗 latent 过 encoder | 不等即查 `motion_index.json` 定序 |
-| **M4** 行数账 | S1 | 表行数 == **619**；exec 532 + demo 87；逐段 `num_grid == len(range(0, max(0, seg_len−32), 20))` | 不符即清单与实际 `.bin` 不配套 |
-| **M5** 关闭态等价 | S2 | 五节 L0–L4：`n_leaves == 177`；`embed_prefix` 四返回张量与 HEAD 逐位相同 | 不等即红线 5 被违反 |
-| **M6** 开启态形制 | S2 | prefix 序列长 == 1168；`ar_mask` / `na_mask` 在运动段全 False；运动段 `input_mask` == `motion_mask`；`motion_pos` 形状 `(b,80,256)` 且 padding 行全 0；`n_leaves == 193`、`n_keys == 15` | — |
-| **M7** 有效数分布 | S2 | 逐 batch 统计 `motion_mask.sum(axis=1)`，分布须与**新 40 ep 清单上重跑 2.3 的统计**一致（ButtonUnmask / ButtonUnmaskSwap 无 demo 段，不得照抄 4env 全库的中位 7 / 均值 8.09） | 不一致即起点集合算错 |
-| **M8** 尺度 | S2 | `‖motion_tok‖₂ / ‖mem_tok‖₂`（只在 valid 位上算）的 batch 均值落在 [0.3, 3.0] | 越界则在 `motion_encoder_static` 后补 RMSNorm |
-| **M9** 梯度一致 | S2 收尾 | 五节 L5–L6：方案 (i) 旧库 `G0_EQ=PASS` 命中锚点 `c799a0b2…`；方案 (ii) 新库 200–300 步 A/B 逐位 | 不一致即 S2 不得宣称等价 |
-| **M10** 在线/离线一致 | S3 | 同一 `(g, 段, 网格序号)` 的在线编码 vs 离线表，余弦 ≥ M1 阈值；在线起点集合 == 离线；同一起点的在线 `motion_pos` vs `store.pos_rows(f)[0, :256]` 逐位（口径同 `compare_online_memory.py` 的 `POS_TABLE`） | — |
+| **D3** motion encoder 逐位 | S1 | 我方 `encode_motion.py`（复制件）vs 原版 `wan_motion_infer.motion_token`，输入都取我方 `wan-latents/*.bin`，全部 Σ num_grid 窗 `np.array_equal`：`ENCODER_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；附加：77 张量 sha256 清单逐键相等、affine buffer finite 且与 ckpt 逐位同、`provenance()` 白名单逐键相等、ckpt sha256 == 记录值、`grep -n 'load_wan_latent_stats('` 无命中 | ckpt sha / 加载路径 → batch 形状（必须 1）→ 外层 autocast 与缓存 → 输入连续性 → `pin_numerics` 读回 → 环境变量 → 版本 → driver/cuBLAS/cudnn（TF32 / seed 不首查） |
+| **T1** 关闭态训练等价（旧库） | S2 收尾 | 旧库 `4task-gl` 上新代码（motion 关）1000 步 × batch 8：`g0/run_2gpu_epoch_bench.sh` → `g0/compare_baseline.py` 对 G0b r1 → `tests/g0_gate.py`，唯一成功行 `G0_EQ=PASS`（内含 `SCALARS 1000/5/0`、`STATE_DIGEST 12/0`、`BATCH_DIGEST_CANONICAL 14/0`、`CANON_CHECK=PASS/14`、`INDEX_SEQ=PASS n≥8072`、`scalars_hex.tsv` sha256 命中 `c799a0b2…`、`n_keys=12`、`BASELINE_ENV=PASS`）；确定性档注入 `XLA_FLAGS="--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"` | 先看 A21 自校是否仍 PASS（基线腐烂 vs 代码问题），再按 A14 → A15 → A17 → A22 逐级定位 |
+| **T2** 关闭态训练等价（新库） | S2 收尾 | `4task-motion-40ep` 上 HEAD 与新代码同场次各跑 200–300 步 × batch 8，`EPOCH_SAMPLES=11530`（单 epoch 约束 `steps × batch < 11,530`），两侧 `scalars_hex.tsv` sha256 相等、`STATE_DIGEST` 逐位；`--expect-sha256` 换新锚点，`_EXPECT_RAW_MISMATCH` / `_EXPECT_RAW_BAD_KEYS` 应为 0/0 | 跨库差异只可能来自数据形状触发的新分支：按 A15（新库 fixture）→ A17 → A22 定位 |
+
+T1、T2 任一不过，不得宣称改动等价（`AGENTS.md` 第 18 条第二块）。
+
+**表二：附加检查（按执行阶段）**
+
+| 闸 | 阶段 | 判据 | 失败处置 |
+|---|---|---|---|
+| **A1** 环境指纹 | S0 前 | 引用既有基线 run 时先过指纹 preflight（`AGENTS.md` 第 18 条末款）；起工前 HEAD 原样复跑 G0b 自校 | 指纹不符即基线失效，重跑基线 |
+| **A2** 延迟与漂移 | S0 | Ada 20 窗探针 ms/窗；fp32/关TF32 与 TF32+bf16 两档输出余弦 ≥ 阈值（在线用）。先验：VAE 段 cudnn TF32 改位 1.8e-3 相对、bf16 差 3.2%（inference-example README 4.2）；encoder 段 TF32 无作用 | 漂移超阈值则在线也用 fp32/关TF32 |
+| **A3** 跨卡探针 | S0 | 同 64 窗 GPU0 vs GPU1 跑复制件 `encode_chunk` + `motion_token` max\|diff\|=0 | 不等则被测与 oracle 所有阶段单卡跑 |
+| **A4** 双 venv 探针 | S0 | MJ `.venv`（原版）vs `v1-store/venvs/wan`（复制件）同窗 max\|diff\|=0；两侧 `check_versions()` 硬断言 torch 2.9.0+cu128 / cudnn 91002 / diffusers 0.39.0；`provenance()` 白名单键逐键相等（`module_sha256 == SOURCE_PIN.source_sha256`），排除 `hostname` / `python` 补丁号 / 路径键 | 版本不符即重锁子项目；`module_sha256` 不符即复制件被改 |
+| **A5** 原始帧同源 | S1 | 40 ep `front_rgb` 与 4env400ep 同 ep 逐帧相等（13,756 帧）；我方内存帧 == 既有 MJ data-raw `video_exec.h5` 的 `frames`（截尾处以内；`video_demo.h5` 仅 Video* 两任务有，demo 段只在这 20 个 episode 上比）；本轮不新建 data-raw | 帧不同即数据源问题，停 |
+| **A6** 清单一致 | S1 | 新清单 `(num_timesteps, exec_start_idx)` 与 `v1-store/episode_manifest.json` 对应 40 条相同；Video* `exec_start_idx == MJ demo frames` | 停，查 `first_execution_step` |
+| **A7** 字节数账 | S1 | 每段 `.bin` == `num_grid × 589,824`；motion 表 == `rows × 3,072` | 不符即中间产物残缺 |
+| **A8** 抽表逐位 | S1 | 随机 100 个 `(段, 网格序号)`，在线跑 encoder（复制件 `motion_token`，B=1 硬约束）vs 表逐位相等（`np.array_equal`） | 任一不等即停 |
+| **A9** 索引映射 | S1 | 随机 500 个 `(g, t)`，按一节公式解出的起点集合 == 独立实现（直接遍历 `wan-latents/` 目录 + 清单现算）解出的集合；`row_base + m` 读出的行 == 直读该窗 latent 过 encoder | 不等即查 `motion_index.json` 定序 |
+| **A10** 行数账 | S1 | 表行数 == **619**；exec 532 + demo 87；逐段 `num_grid == len(range(0, max(0, seg_len−32), 20))` | 不符即清单与实际 `.bin` 不配套 |
+| **A11** 旧库 crossarch 旁证 | S1 | `--mode crossarch --b_manifest` 对 `4task-gl`：`min_cosine ≥ 1−1e-3`、`p5 ≥ 1−1e-4`、`err_floor_rel ≤ 0.05` | 只报不阻断 |
+| **A12** v7 latent 旁证 | S1 | 与 `/data/hongzefu/dataset-4env-v7/.../wan_chunk_latents/` 同窗逐位；唯一按 chunk 索引对齐 MotionJEPA 抽取器实抽产物的旁证 | 非阻断，FAIL 只作提示（v7 metadata 无 provenance；环境若已变则不逐位） |
+| **A13** 静态检查 | S2 | `git diff` + `grep`：`mem_encoder.py` 零改动；新参数名不含 `img`；三个新字段排在四个 `static_*` 之后 | 不符即改回 |
+| **A14** 参数树 / RNG | S2 | `tests/single_step_grad.py` 的 `_verify_same_origin` 对 G0b r1 step 0 的 177 个叶子 sha256，`n_leaves == 177`；开启态旁证：开 / 关两态各 init 一次，`mem_encoder.feature_encoder.*` 四个叶子 sha256 两态相同 | 不等即红线 5 被违反（未条件创建，或插在 `feature_encoder` 之前） |
+| **A15** 样本 / batch 位型 | S2 | `tests/dump_fixture_samples.py` 两侧各 dump 同一批 `idx`，新写薄比对逐键比 raw sha256 / dtype / shape；键集合不变，三个新键为 None | 不等即 `_NONE_KEYS` / `RepackTransform` / 右填充改坏 |
+| **A16** index 序列 | S2 | `tests/dump_index_seq.py`，`INDEX_SEQ_EQ=PASS` | 不等即采样器被改 |
+| **A17** 前向逐位 | S2 | 新写薄脚本，`JAX_PLATFORMS=cpu`、`nnx.Rngs(0)` 现场 init，喂 A15 落盘的 batch fixture，两侧各跑 `embed_memory` 与 `embed_prefix`，八个张量 `.view(uint8)` `np.array_equal` | 不等即红线 5 被违反 |
+| **A18** 开启态形制 | S2 | prefix 序列长 == 1168；`ar_mask` / `na_mask` 在运动段全 False；运动段 `input_mask` == `motion_mask`；`motion_pos` 形状 `(b,80,256)` 且 padding 行全 0；`n_leaves == 193`、`n_keys == 15` | — |
+| **A19** 有效数分布 | S2 | 逐 batch 统计 `motion_mask.sum(axis=1)`，分布须与**新 40 ep 清单上重跑 2.3 的统计**一致（ButtonUnmask / ButtonUnmaskSwap 无 demo 段，不得照抄 4env 全库的中位 7 / 均值 8.09） | 不一致即起点集合算错 |
+| **A20** 尺度 | S2 | `‖motion_tok‖₂ / ‖mem_tok‖₂`（只在 valid 位上算）的 batch 均值落在 [0.3, 3.0] | 越界则在 `motion_encoder_static` 后补 RMSNorm |
+| **A21** 基线自校 | S2 起工前 | HEAD 代码原样复跑 G0b（逐字复现 `run_meta.json` 的 argv，入口已迁到 `scripts/training/g0/bench_train_steps.py`，`--dataset-path v1-store/datasets/4task-gl`），`G0_EQ=PASS` | 不过即基线腐烂或环境漂移，先重跑基线再做 T1 |
+| **A22** 单步定点梯度 | S2 | `tests/single_step_grad.py` 三个定点 batch `mixed1` / `allshort` / `allfull`，逐叶梯度 sha256 + loss `float.hex()` 两侧逐位；`allfull` 为阴性对照 | 不等即停，先于 T1 定位 |
+| **A23** 在线/离线一致 | S3 | 同一 `(g, 段, 网格序号)` 的在线编码 vs 离线表，余弦 ≥ A2 阈值；在线起点集合 == 离线；同一起点的在线 `motion_pos` vs `store.pos_rows(f)[0, :256]` 逐位（口径同 `compare_online_memory.py` 的 `POS_TABLE`） | — |
 
 ## 五、第一块：非训练轻量对拍明细（`AGENTS.md` 第 18 条第一块）
 
 不启动训练，两组：
 
-**数据集侧（S1）**：D1–D10 + M2–M4（第二部分四节）。全部零容差逐位，只有 D8 是阈值旁证、D9 非阻断。
+**数据集侧（S1）**：D1–D3 + A5–A12（四节表二）。全部零容差逐位，只有 A11 是阈值旁证、A12 非阻断。
 
-**model 侧（S2）**：五节 5.3 的 L0–L4：
+**model 侧（S2）**：A13–A17，全部零容差逐位：
 
-1. **L1 参数树 / RNG**：`scripts/training/tests/single_step_grad.py` 的 `_verify_same_origin` 对 `docs/training-doc/v1-grad-baseline-g0b/records/r1/param_checksums.jsonl` step 0 的 177 个叶子；与数据集无关。
-2. **L2 逐样本 / 逐 batch 内容**：`scripts/training/tests/dump_fixture_samples.py` 改动前后各 dump 一次同一批 `idx`，新写薄比对逐键比 dtype / shape / 字节——
-   `motion.enabled=false` 时新增三键应为 `None`（走 `_NONE_KEYS`），其余键逐位不变；`compare_dtype_fix.py` 的 `_EXPECTED_DTYPE` 不得改。
-3. **L3 index 序列**：`scripts/training/tests/dump_index_seq.py`，`INDEX_SEQ_EQ=PASS`。
-4. **L4 M5 关闭态逐位**：新写薄脚本，`JAX_PLATFORMS=cpu`、`nnx.Rngs(0)` 现场 init，喂 L2 落盘的 batch fixture，改动前后各跑一次 `embed_memory` 与 `embed_prefix`，比八个张量的原始字节。
+| 阶 | 用什么 | 对照物 | 判定 | 耗时 |
+|---|---|---|---|---|
+| A13 静态 | `git diff` + `grep` | — | `mem_encoder.py` 零改动；新参数名不含 `img`；三字段在四个 `static_*` 之后 | 分钟 |
+| A14 参数树 / RNG | `tests/single_step_grad.py` 的 `_verify_same_origin`（`DTYPE_BASELINE_CHECKSUMS=docs/training-doc/v1-grad-baseline-g0b/records/r1/param_checksums.jsonl`） | G0b r1 step 0 的 177 个 `per_leaf` sha256 | 脚本不 `SystemExit` 且 `n_leaves == 177`。**与数据集无关**——init state 只取决于 config + seed + `pi05_base`，新旧库都能直接对 | ~10 min |
+| A14 开启态旁证 | 同上，开 / 关两态各 init 一次 | 自身 | `mem_encoder.feature_encoder.*` 四个叶子 sha256 两态相同 | ~10 min |
+| A15 样本 / batch 位型 | `tests/dump_fixture_samples.py`（两侧各一次）+ **新写薄比对** | HEAD vs 新代码（motion off） | `__getitem__` **全键**与 collate 后 **batch 全键**的 raw sha256 / canonical sha256 / dtype / shape 逐键相同；键集合不变（三个 None 不产生数组叶子） | 20–40 min/侧 |
+| A16 index 序列 | `tests/dump_index_seq.py` | 两侧 | `INDEX_SEQ_EQ=PASS` | 分钟 |
+| A17 `embed_prefix` 逐位 | **新写薄脚本**（`JAX_PLATFORMS=cpu`，`nnx.Rngs(0)` 现场 init，喂 A15 落盘的 batch fixture） | HEAD vs 新代码 | `embed_memory` 四返回（`tokens (b,512,2048)`、`input_mask (b,512)`、`ar_mask`、`na_mask`）与 `embed_prefix` 四返回（`tokens (b,1088,2048)` …）`np.array_equal` on `.view(uint8)` | <10 min |
+
+⚠ `tests/compare_dtype_fix.py` **不能直接复用**：它的 `_EXPECTED_DTYPE` 写死的是「短样本 f64→bf16」这类**预期变化**清单，本轮预期是**零变化**，直接跑必 FAIL；
+需加 `--expect-identical` 档或另写薄比对，**不得改动既有清单**（它同时是 G2/G3 的判据）。
 
 ## 六、第二块：本机训练梯度一致 runbook（`AGENTS.md` 第 18 条第二块）
 
-- **自校**：起工前用未改动的 HEAD 原样复跑 G0b（逐字复现 `run_meta.json` 的 argv：入口已迁到 `scripts/training/g0/bench_train_steps.py`，`--dataset-path v1-store/datasets/4task-gl`），`G0_EQ=PASS`。
-- **L5**：`scripts/training/tests/single_step_grad.py` 三个定点 batch，逐叶梯度 sha256 + loss hex 两侧逐位。
-- **L6 方案 (i)**：旧库上新代码（`motion.enabled=false`）跑 1000 步 × batch 8，`scripts/training/g0/run_2gpu_epoch_bench.sh` → `compare_baseline.py` 对 G0b r1 → `tests/g0_gate.py`，`G0_EQ=PASS`、sha256 命中锚点。
+| 阶 | 用什么 | 判定 | 耗时 |
+|---|---|---|---|
+| A22 单步定点梯度 | `tests/single_step_grad.py`，三个定点 batch `mixed1` / `allshort` / `allfull` | 逐叶梯度 sha256 + loss `float.hex()` 两侧逐位相同；`allfull` 是阴性对照 | ~30 min/侧 |
+| T1 1000 步 G 链 | `g0/run_2gpu_epoch_bench.sh` → `g0/compare_baseline.py` → `tests/g0_gate.py` | 唯一成功行 **`G0_EQ=PASS`**（内含 `SCALARS 1000/5/0`、`STATE_DIGEST 12/0`、`BATCH_DIGEST_CANONICAL 14/0`、`CANON_CHECK=PASS/14`、`INDEX_SEQ=PASS n≥8072`、`scalars_hex.tsv` sha256 命中 `c799a0b299f243c1740f1594b62aec920cf7ad0033a29d37b851051d52105757`、`n_keys=12`、`BASELINE_ENV=PASS`） | ~1.5 h/侧 |
+
+确定性档必须注入 `XLA_FLAGS="--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"`。
+
+**数据集同时在换 → T1 + T2 的对照怎么取。** 黄金基线 G0b 是在 `4task-gl`（4env 400ep，`exec_samples = 395,289`）上跑的；换成 40 ep 新库
+（exec 样本 11,530，单 epoch 约束 `steps × batch < 11,530` → 1000 步 × batch 8 = 8,000 可行，`index_sequence` 实抽 8,072 也在内，步数上限 1,441）后，
+数据集 spot digest 与 `episode_manifest` sha 都变，指纹 preflight 必 FAIL。两个方案：
+
+- **T1 = 方案 (i)：旧库上 HEAD vs 新代码（motion off），直接对 G0b r1 固化产物。** 指纹 preflight 能过、`scalars_hex.tsv` 能**逐位命中黄金锚点**、`g0_gate.py` 的 `_EXPECT_*` 一个不用改、只跑一侧（1.5 h）。
+  证明的是「**代码**等价」。前置：`v1-store/datasets/4task-gl` 与 `4task-gl-framesamp` 仍在盘上（已核）。
+- **T2 = 方案 (ii)：新 40 ep 库上 HEAD 与新代码同场次各跑一遍。** 证明「新库上仍等价」，覆盖新库特有的形状 / 边界。没有黄金锚点只能 A/B 互比；要重设 `--expect-sha256`、`EPOCH_SAMPLES`（395,289 → 11,530）、
+  `_EXPECT_RAW_MISMATCH`（两侧同代码 dtype 一致 → 应为 0/0 而非 4/2）；跑两侧。
+
+**先 T1 后 T2，T2 降档到 200–300 步**（跨库差异只可能来自数据形状触发的新分支，200 步足以覆盖且远在单 epoch 内，~40 min/侧）。
+⚠ **起工前先做一次「HEAD 代码原样复跑 G0b」的自校（A21）**（不改任何代码，1.5 h）——否则「新代码 vs 基线」FAIL 时无法区分是代码问题还是基线腐烂 / 环境漂移。
+G0b r1 的 `run_meta.json` 记的入口是旧路径 `scripts/smoke-local/bench_train_steps.py`（已迁到 `scripts/training/g0/`）与 `--dataset-path v1-store/datasets/4task-gl`，复跑必须逐字复现同一 argv 与数据集路径。
+
+**runbook**：
+
+- **A21 自校**：起工前用未改动的 HEAD 原样复跑 G0b（逐字复现 `run_meta.json` 的 argv：入口已迁到 `scripts/training/g0/bench_train_steps.py`，`--dataset-path v1-store/datasets/4task-gl`），`G0_EQ=PASS`。
+- **A22**：`scripts/training/tests/single_step_grad.py` 三个定点 batch，逐叶梯度 sha256 + loss hex 两侧逐位。
+- **T1（方案 (i)）**：旧库上新代码（`motion.enabled=false`）跑 1000 步 × batch 8，`scripts/training/g0/run_2gpu_epoch_bench.sh` → `compare_baseline.py` 对 G0b r1 → `tests/g0_gate.py`，`G0_EQ=PASS`、sha256 命中锚点。
   引用基线前必须 `check_baseline_env.py check` 输出 `BASELINE_ENV=PASS`，并在留档写明所引用基线的 `run_name`、commit 与指纹比对结论；指纹不符即基线失效，必须重跑基线后再对拍。
-- **L6 方案 (ii)**：新 40 ep 库上 HEAD 与新代码同场次各跑 200–300 步 × batch 8（单 epoch 约束 `steps × batch < 11,530`），`EPOCH_SAMPLES=11530`，两侧 `scalars_hex.tsv` sha256 相等、`STATE_DIGEST` 逐位。
-- 第二块不通过不得宣称改动等价（M9）。
-- `motion.enabled=true` 的梯度**不做等价对拍**——那是新语义，只做 M6/M7/M8 的形制、分布与尺度检查。
+- **T2（方案 (ii)）**：新 40 ep 库上 HEAD 与新代码同场次各跑 200–300 步 × batch 8（单 epoch 约束 `steps × batch < 11,530`），`EPOCH_SAMPLES=11530`，两侧 `scalars_hex.tsv` sha256 相等、`STATE_DIGEST` 逐位。
+- 第二块不通过不得宣称改动等价（T1 + T2）。
+- `motion.enabled=true` 的梯度**不做等价对拍**——那是新语义，只做 A18/A19/A20 的形制、分布与尺度检查。
 
 ## 七、风险登记
 
 | # | 风险 | 概率 | 影响 | 处置 |
 |---|---|---|---|---|
 | R1 | 在线延迟 | 低 | 低 | 绝对网格下摊薄 0.079 s/step；剩余的是第 20 步 1.57 s 尖峰，S3 可预编化解 |
-| R2 | **填充率仅 10.1%（4env）/ 19.1%（16env），运动路信号被 padding 稀释** | **高** | **中** | 已在 2.4 显式记账；M7 盯有效数分布；S4 增「按有效数分桶的分层评估」与预算 N 消融 |
+| R2 | **填充率仅 10.1%（4env）/ 19.1%（16env），运动路信号被 padding 稀释** | **高** | **中** | 已在 2.4 显式记账；A19 盯有效数分布；S4 增「按有效数分桶的分层评估」与预算 N 消融 |
 | R3 | 6.48% 样本运动路全空，模型可能学成「按有效数猜 episode 进度」的捷径 | 中 | 中 | S4 专项消融 |
-| R4 | TF32+bf16 在线口径与离线表漂移过大 | 中 | 低 | M1 定量；可退回 fp32/关TF32 |
-| R5 | 新参数插入位置错误改变 RNG 消耗序、或未条件创建改变 `param_norm` / `n_leaves` | 低 | 高 | 红线 5 明写；L1 / L4 / L6 是它的探测器 |
+| R4 | TF32+bf16 在线口径与离线表漂移过大 | 中 | 低 | A2 定量；可退回 fp32/关TF32 |
+| R5 | 新参数插入位置错误改变 RNG 消耗序、或未条件创建改变 `param_norm` / `n_leaves` | 低 | 高 | 红线 5 明写；A14 / A17 / T1 是它的探测器 |
 | R6 | MotionJEPA encoder 的已知缺陷（对 32×32 网格零权重共享、两种编码模式共用一个投影） | 已知 | 未知 | 沿用其 checkpoint，不修 |
 | R7 | 在线侧多背一个 Wan VAE 的显存 + **venv 墙**（主 venv torch 2.7.1 无法加载 torch 2.9 栈） | 高 | 中 | S3 先决策 sidecar 进程；显存实测 |
-| R8 | 窗口跨 demo/exec 边界被误判为合法 | 低 | 高 | M3 专项覆盖跨界样本；`motion_index.json` 按段独立记 `row_base` / `num_grid` |
-| R9 | SigLIP oracle 若在重构之后才跑、或 Wan oracle 与被测不同机 / 不同型号卡 / 不同 venv 版本 → 永远不逐位 | 中 | 高 | SigLIP oracle 在重构前产出；Wan oracle 与被测同机同型号卡，逐窗跨卡等价由 D6 前置保证（不过则两侧一律退单卡），同版本由 D7 保证；provenance 记 `gpu_uuid`（1.3 worker sidecar；模块 `provenance()` 只给 `gpu_name/compute_cap/sm_count/driver`） |
+| R8 | 窗口跨 demo/exec 边界被误判为合法 | 低 | 高 | A9 专项覆盖跨界样本；`motion_index.json` 按段独立记 `row_base` / `num_grid` |
+| R9 | SigLIP oracle 若在重构之后才跑、或 Wan oracle 与被测不同机 / 不同型号卡 / 不同 venv 版本 → 永远不逐位 | 中 | 高 | SigLIP oracle 在重构前产出；Wan oracle 与被测同机同型号卡，逐窗跨卡等价由 A3 前置保证（不过则两侧一律退单卡），同版本由 A4 保证；provenance 记 `gpu_uuid`（1.3 worker sidecar；模块 `provenance()` 只给 `gpu_name/compute_cap/sm_count/driver`） |
 | R10 | Ada 上 Wan 吞吐未知、GPU 被其他任务占用 | 中 | 低 | S0 20 窗探针；`--require-free-mib` 预检 |
 | R11 | **数据泄漏**：ep0–9 在 encoder 训练集内（holdout 90–99） | 已知 | 中 | 写入八节；S4 用 ep90–99 对照 |
 | R12 | latent 域偏移：encoder 训于 A40 latent，喂 Ada latent（1.24e-5，进 encoder 后只落 token 最后一位，cos 0.999995） | 低 | 低 | 写入八节；入口 affine 归一化后可忽略 |
@@ -1472,15 +1469,40 @@ padding 位不做特殊处理（`motion_emb` 该位为 0），屏蔽完全交给
 5. **未覆盖 `expert` / `modulation` 两种 integration_type**。
 6. **数据泄漏**：三个 v8 run 的 `holdout_episodes: 90-99`，本轮 ep0–9 全在 encoder 自监督训练集里，motion 路在这 40 ep 上的任何收益都可能被放大。
 7. **latent 域偏移**：encoder 在 A40 抽的 v8 latent 上训，我们喂 Ada 抽的 latent（差 1.24e-5，集中在 VAE `conv_out`、沿 group 累积），已实测到 token 级只落在最后一位（cos 0.999995），经入口 affine 归一化后可忽略。
-8. **与 MotionJEPA 抽取器实抽产物无直接的逐 chunk 对照**（用户拍板接受）：D2 的 oracle 是原版 `encode_chunk` 对同一 33 帧的重编，VAE 前向的逐位保证经 crosscheck [V1]（S0）传递；我方网格窗与 MotionJEPA chunk 索引的分段 / 索引一致性只由 D4（`exec_start_idx == MJ demo frames`）与非阻断 D9 间接覆盖，MotionJEPA finalize 四道守卫不再运行。
+8. **与 MotionJEPA 抽取器实抽产物无直接的逐 chunk 对照**（用户拍板接受）：D2 的 oracle 是原版 `encode_chunk` 对同一 33 帧的重编，VAE 前向的逐位保证经 crosscheck [V1]（S0）传递；我方网格窗与 MotionJEPA chunk 索引的分段 / 索引一致性只由 A6（`exec_start_idx == MJ demo frames`）与非阻断 A12 间接覆盖，MotionJEPA finalize 四道守卫不再运行。
 9. **40 ep 库的吞吐结论只是上界**：全在页缓存里，turbo 冷缓存行为测不到；本机吞吐按第 13 条不作最终结论。
 
 ## 九、留档与 commit 纪律
 
 - S0 的 oracle 产出与 S1 属正式数据集构建 → `docs/dataset-build-doc/4task-motion-40ep/{launch.md, result.md, records/}`（`AGENTS.md` 第 12 条）：
   记本仓库 commit、MotionJEPA HEAD `2a484ad`、命令、GPU 列表、四个 h5 的 sha256、encoder ckpt 与 sha256、`SOURCE_PIN.json`、`crosscheck.json`、两侧 `provenance` 表、77 项 state_dict sha256 清单、
-  D1–D10 与 M2–M4 判据结果原文（含 `CROSSCHECK=` / `WAN_BITEXACT=` / `ENCODER_BITEXACT=`）、Ada 实测耗时；不归档 encoder 权重与 latents。
+  D1–D3 与 A1–A12 判据结果原文（含 `CROSSCHECK=` / `WAN_BITEXACT=` / `ENCODER_BITEXACT=`）、Ada 实测耗时；不归档 encoder 权重与 latents。
 - S2 的等价对拍 run 若超 5 分钟 → 视作完整运行，`docs/training-doc/<run_name>/`（launch.md / result.md / records/，第 17 条）。
 - 正式 run 起跑前按第 6 条向用户确认全新 `run_name`；从 clean HEAD 起跑（第 12 条）。
 - 代码切片按 `commitV6.<小版本>` 编号，文档 / 修补用 `docs:` / `fix:`；逐文件 `git add`，禁 `git add .` / `-A` / `commit -a`；每次 commit 后立即 `git push` 同步 origin（第 11 条）。
 - 全部在本机，不再提交集群作业；`greatlakes.md` 与 Okta 流程本计划不再涉及。
+
+## 十、影响面结论（原第一部分七节）
+
+| 项 | 现在 | 之后 | 增幅 |
+|---|---|---|---|
+| memory 段 | 512 | **592**（512 帧路 + 80 运动路） | +15.63% |
+| prefix 总长 | 1088（mem 512 + img 2×256 + prompt 64） | 1168 | +7.35% |
+| 全序列（含 20 个 action token） | 1108 | 1188 | +7.22% |
+| attention 计算量（O(L²)） | 1108² | 1188² | **+14.96%** |
+| 每样本数据字节 | 3.52 MiB（`static_*` 四键） | +320 KiB（`motion_emb` 80×768 f32 = 240 KiB + `motion_pos` 80×256 f32 = 80 KiB） | +8.9% |
+| batch=64 每批额外 | — | +20 MiB（打在 worker→主进程 pickle 管道上 +7.8%，≈+38 ms/批） | — |
+| turbo 读盘 | 2.43 MB/样本 | 不变（motion 表常驻内存） | +0 |
+| 离线表 | — | 40 ep 1.9 MB（4env400ep 全量 61.4 MiB） | — |
+| 中间产物 | — | Wan latents 365 MB + oracle latents 365 MB + 两个散 npy oracle 库 + encoder ckpt/config 拷贝 0.92 GB + HF VAE 权重 578 MB | — |
+| 环境 | 主 venv | 主 venv 不动 + 子 venv `v1-store/venvs/wan`（torch 2.9.0+cu128） | — |
+| 新增训练参数（含 bias） | — | `motion_pos_proj = nnx.Linear(256→768)` 197,376 + `motion_encoder_static = nnx.Linear(1536→2048)` 3,147,776 = **3,345,152 ≈ 3.35 M**（仅开启态创建） | 可忽略 |
+
+- **训练语义**：`motion.enabled=false` 时零影响（逐位等价，A14–A17、A22、T1–T2 判据；关闭态两个新模块根本不创建，`param_norm` / `n_leaves=177` / `n_keys=12` 不变）；
+  `true` 时 prefix 记忆区 512 → 592，其后所有 token 的 RoPE 位置整体右移 80。
+- **冻结**：两个新投影挂在 `HistoryPi0.mem_encoder`（`PerceptualMemory`）下，路径形如 `mem_encoder.motion_encoder_static`。
+  当前 `HistoryPi0Config.get_freeze_filter` 返回 `PathRegex(".*img.*")`（`paligemma_variant="gemma_2b"`，无 lora），不匹配 → **默认可训练**。
+  若日后启用 lora，filters 为 `Any(All(".*llm.*", Not(".*lora.*"), Not(".*mem.*")), ".*img.*")`，路径含 `mem` 恰被 `Not(".*mem.*")` 排除出冻结集 → **仍可训练**。两种情形都安全。
+- **数据**：新库 `v1-store/datasets/4task-motion-40ep/`（`v1-store/` 内，不进 git，符合第 14 条）；MotionJEPA 仓库零写入；`v1-store/episode_manifest.json` 与旧库不动。
+- **在线评估**：多背一个 Wan VAE（PyTorch 2.9）常驻，延迟见 3.5；venv 隔离问题见 S3。
+- **不影响**：正在跑的 `v1-prod-100k` 全量 run（本计划一行代码都还没动）。
