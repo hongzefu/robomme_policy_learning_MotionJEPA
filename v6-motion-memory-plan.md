@@ -341,102 +341,15 @@ frame_mean` 因此是权宜（盲区清单第 3 条），列为 S4 可选消融�
 **投影互不共享**：帧路走 `pos_proj`、运动路走新建的 `motion_pos_proj`，参数树互不沾边；
 两路只共享 `pos_emb_4x4` 这张只读底表——这也是 `motion.enabled=false` 能逐位退回的前提。
 
-### 3.3 从 pi0 到 history_pi0：训练 / 推理计算与 mask 三条规则
+### 3.3 三条 mask 在 token 数轴上的取值与效果
 
-本节回答「mask 到底是怎么起作用的」之前的那个问题：pi0 本身一次训练、一次推理在算什么。
-分四层，每层只讲比上一层多出来的东西。一个之前没点明的细节要先说：history_pi0 在
-`context` 模式下把**第一个图像 token 的 `ar_mask` 设成了 True**，这让记忆自成一块。
+![三条 mask 在 token 数轴上的取值与效果](docs/v6-mask-axis.svg)
 
-**第一层：原版 pi0 的一次训练前向**
-
-模型由两个「专家」组成，共享一次注意力。一个是 PaliGemma（SigLIP 图像编码器 + Gemma 2B
-语言模型），处理图像和文本；另一个是小得多的 action expert（Gemma 300M 规格），处理动作。
-两者各有自己的权重，但在每一层的注意力里，query、key、value 沿序列维拼在一起，做**同一次**
-softmax。所以「动作 token 能不能看图像 token」这种事，完全由那张 mask 表决定。
-
-训练目标是 flow matching。`compute_loss`（`src/openpi/models/pi0.py`）做的事：
-
-1. 采一份高斯噪声 `noise` 和一个时间 `t ∈ (0,1)`，把真实动作和噪声按 `x_t = t·noise + (1−t)·actions`
-   混合，目标速度是 `u_t = noise − actions`。
-2. `embed_prefix`：两张相机图各过 SigLIP 得 256 个 token，共 512（SigLIP 每步现算、参数冻结）；
-   文本指令过 Gemma 的词嵌入得最多 64 个 token。每个 token 带 `input_mask`（图像来自
-   `image_masks`，缺相机则整段 False；文本来自 `tokenized_prompt_mask`，补齐位 False）和
-   `ar_mask`（全部 False）。
-3. `embed_suffix`：带噪动作 `x_t` 过一个线性层得 20 个 token；时间 `t` 过正弦编码和 MLP 变成
-   `adarms_cond`，通过 adaRMS 调制注入 action expert 的每一层（pi05 模式，不占 token，也没有
-   state token）。`input_mask` 全 True，`ar_mask = [True, False×19]`。
-4. 把 prefix 和 suffix 的 `input_mask`、`ar_mask` 各自首尾相接，调 `make_attn_mask` 得到
-   `(b, 596, 596)` 的表（512 + 64 + 20），`positions = cumsum(input_mask) − 1`。
-5. `PaliGemma.llm([prefix_tokens, suffix_tokens], mask, positions)` 一次前向，18 层，每层：
-   各专家用自己的权重算 q/k/v，拼接，RoPE，`q·k` 得分，用表把 False 格子替成 −2.38e38，
-   softmax，乘 v，各专家再用自己的输出投影。
-6. 取 suffix 输出的最后 20 个位置，过 `action_out_proj` 得预测速度 `v_t`，loss 是
-   `‖v_t − u_t‖²` 的均值。
-
-这张表长什么样。`ar_mask` 里只有动作第一个是 True，所以 prefix 全在第 0 块，动作全在第 1 块：
-
-| q 能看 k？ | k = 图像 | k = 文本 | k = 动作 |
-|---|---|---|---|
-| q = 图像 | 是 | 是 | 否 |
-| q = 文本 | 是 | 是 | 否 |
-| q = 动作 | 是 | 是 | 是 |
-
-再叠加 `input_mask` 的外积：补齐的文本位、缺失相机的图像位，整列整行 False。
-
-**第二层：原版 pi0 的一次推理**
-
-`sample_actions` 从纯噪声出发，用 Euler 法沿预测速度往回积分，默认 10 步。关键的省算法：
-prefix 在 10 步里不变，所以只算一次。
-
-1. **前缀 pass**：`embed_prefix` 得 576 个 token，`make_attn_mask` 得 `(b, 576, 576)` 表，跑一次
-   llm，把每一层算出的 k、v 存成 `kv_cache`，输出丢掉。
-2. **去噪循环**（`step`，重复 10 次）：`embed_suffix(x_t, t)` 得 20 个动作 token；这 20 个 query
-   的 mask 是 `(b, 20, 576 + 20)`，前 576 列直接拿 `prefix_mask` 复制 20 行（动作本来就能看所有
-   prefix，只需排除补齐位），后 20 列是动作自己的 `make_attn_mask`；跑 llm 时只传 suffix，
-   注意力里 k、v 是「缓存的 576 个 + 新的 20 个」；得 `v_t`，更新 `x_t ← x_t + dt·v_t`。
-3. 循环结束的 `x_t` 就是输出动作。
-
-训练和推理算的是同一个函数，只是训练一次算全序列，推理把 prefix 缓存后每步只算 20 个 query。
-
-**第三层：history_pi0 多了什么**
-
-多一段输入。dataloader 交来 `static_image_emb (b,512,2048)`、`static_pos_emb (b,512,768)`、
-`static_mask (b,512)`，是过去 32 帧每帧 16 个池化后的 SigLIP 特征加 3D 位置编码（这部分
-SigLIP 是离线算好存表的，与当前帧的在线 SigLIP 不同）。`embed_memory` 把它们过 `pos_proj`、
-拼接、`encoder_static` 变成 512 个 2048 维的记忆 token，返回四元组：token、
-`input_mask = static_mask`、`ar_mask` 全 False、`na_mask` 全 False。
-
-`embed_prefix` 在 `context` 模式下把记忆放在最前面，并改了两个 bit：
-
-- 第一个图像 token 的 `ar_mask` 从 False 改成 **True**。于是记忆是第 0 块，图像和文本是第 1 块，
-  动作是第 2 块。
-- 所有图像 token 的 `na_mask` 设成 True，其余全 False。
-
-`make_attn_mask`（`src/mme_vla_suite/models/integration/history_pi0.py`）多一条规则 C：
-`(na[q] 或 na[k]) 且 k 在第一个 na=True 之前`，即「q 是图像、k 在记忆区」的格子强制 False。
-设计意图是不让预训练好的视觉表征被记忆干扰，让记忆只通过文本和动作生效。
-
-三条规则叠加后的可见性：
-
-| q 能看 k？ | k = 记忆 | k = 图像 | k = 文本 | k = 动作 |
-|---|---|---|---|---|
-| q = 记忆 | 是 | 否（规则 A） | 否（A） | 否（A） |
-| q = 图像 | **否（规则 C）** | 是 | 是 | 否（A） |
-| q = 文本 | 是 | 是 | 是 | 否（A） |
-| q = 动作 | 是 | 是 | 是 | 是 |
-
-再叠加规则 B：`static_mask` 里 False 的记忆列整列封死。这就是 3.4 第六站的内容。
-
-其余一字未变。loss 还是同一个 flow matching，推理还是前缀 pass 加 10 步去噪，记忆 token 随
-prefix 进 `kv_cache`，每步动作 query 对记忆列的可见性来自 `prefix_mask` 复制。3.4 第七站的
-gemma 代码和原版 pi0 是同一段。
-
-**第四层：motion memory 接入多了什么**
-
-只有 `embed_memory` 的四元组变长：token 从 512 变 592，`input_mask` 变成 `static_mask` 接
-`motion_mask`，`ar_mask`、`na_mask` 各追加 80 个 False。运动 token 落在第 0 块、不是 na，所以在
-上面那张可见性表里它和「记忆」那一行一列的待遇完全相同。`make_attn_mask`、gemma、loss、
-推理循环都不知道多了这 80 个位置。
+- `input_mask` 是唯一随样本变化的一行。记忆段前 16k 位为 True，k 是有效帧数。运动段前 m 位为 True，m 是采到的真起点数。文本段前 L 位为 True，L 是指令 token 数。图像和动作全 True。
+- `ar_mask` 全序列只有两个 True，位置分别是第 592 位和第 1168 位，即图像段第一个 token 和动作段第一个 token。
+- 对 `ar_mask` 做累加得到块号：记忆和运动是块号 0，图像和文本是块号 1，动作是块号 2。
+- `na_mask` 只有图像段 512 位为 True。
+- 第一个 `na=True` 之前的范围是第 0 到 591 位，正好是记忆加运动两段。条件 C 只在 k 落在这一段时才可能删格子。
 
 ### 3.4 两路 padding 与 mask 的实现
 
