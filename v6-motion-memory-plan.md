@@ -211,7 +211,11 @@ N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历�
 ### 3.1 改动前后链路图（`AGENTS.md` 第 18 条）
 
 分两个子节：改动前全图（3.1.1）、改动后全图（3.1.2）。图中两处标注的 `static_pos_emb`
-/ `pos_f` 与 padding 分别在 3.2、3.4 单独展开。图中 `b` = batch size。
+/ `motion_pos` 与 padding 分别在 3.2、3.4 单独展开。图中 `b` = batch size。
+
+**带权重模块的统一写法**（全文图与正文照用）：`名字 = nnx.Linear(in→out)［W in×out, b out，可训练］`，
+每个这样写的名字都是一个可训练的 `nnx.Linear`，含权重矩阵 W 与偏置 b；激活 `nnx.silu` 无参数，
+单独占一行，不与 Linear 合写。
 
 #### 3.1.1 改动前：memory 单路（帧路）
 
@@ -235,14 +239,15 @@ N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历�
  static_image_emb         static_pos_emb                  static_state_emb   static_mask
  (b,512,2048) bf16        (b,512,768) f32                 (b,512,8)          (b,512) bool
    │                           │
-   │                           │ pos_proj: Linear(768→768) + silu
+   │                           │ pos_proj = nnx.Linear(768→768)［W 768×768, b 768，可训练］
+   │                           │ nnx.silu
    │                           ▼
    │                      (b,512,768)
    └───────────┬───────────────┘
                │ 最后一维 concat：2048 ⊕ 768 = 2816
                ▼
         (b, 512, 2816)
-               │ encoder_static: Linear(2816→2048)
+               │ encoder_static = nnx.Linear(2816→2048)［W 2816×2048, b 2048，可训练］
                ▼
       mem tokens (b, 512, 2048)      ar=F  na=F  input_mask = static_mask
                │
@@ -274,12 +279,15 @@ N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历�
               ▼                                                   ▼
   static_image_emb (b,512,2048)               motion_emb  (b,80,768) f32  padding 行填 0
   static_pos_emb   (b,512,768)                motion_mask (b,80) bool     padding 位 False
-  static_mask      (b,512)                    pos_f       (b,80,768) f32  padding 行填 0
-              │                               ↑ 起点帧 16 个 pos 的均值（3.2）
+  static_mask      (b,512)                    motion_pos  (b,80,256) f32  padding 行填 0
+              │                               ↑ 起点帧 PosEmb3D 时间码前 256 维（3.2）
               │                                                   │
-  pos_proj(768→768)+silu                      motion_pos_proj(768→768)+silu      ★新参数
+  pos_proj = nnx.Linear(768→768)              motion_pos_proj = nnx.Linear(256→768)      ★新参数
+    ［W 768×768, b 768，可训练］                 ［W 256×768, b 768，可训练］
+  nnx.silu                                    nnx.silu
   concat → (b,512,2816)                       concat → (b,80,1536)
-  encoder_static(2816→2048)                   motion_encoder_static(1536→2048)   ★新参数
+  encoder_static = nnx.Linear(2816→2048)      motion_encoder_static = nnx.Linear(1536→2048) ★新参数
+    ［W 2816×2048, b 2048，可训练］              ［W 1536×2048, b 2048，可训练］
               │                                                   │
               ▼                                                   ▼
   帧 tokens (b,512,2048)                      motion tokens (b,80,2048)
@@ -297,16 +305,17 @@ N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历�
 
 读图抓三条对应关系：
 
-1. **右列是左列的镜像**：都是「特征 ⊕ 位置编码 → silu 投影 → concat → 一个 Linear 压到
-   2048」。区别只在输入粒度——帧路一帧出 16 个外观 token，运动路一个 33 帧窗口只出
+1. **右列是左列的镜像**：都是「特征 ⊕ 位置编码 → `nnx.Linear` 投影 + `nnx.silu` → concat →
+   一个 `nnx.Linear` 压到 2048」。区别只在输入粒度——帧路一帧出 16 个外观 token，运动路一个 33 帧窗口只出
    1 个运动 token。
 2. **两列在 concat 之前互不相干**：采样各采各的（变长间隔 vs 绝对网格）、表各查各的、
    投影各用各的参数；唯一交汇点就是最后那次 `512 + 80` 的长度轴 concat。
 3. **重活全在训练环外**：右列的 Wan VAE 与 `WanLatentMotionEncoder` 只在离线抽表 /
    在线评估时跑（在线按 2.2 的网格每 20 帧才增量编 1 个窗口，见 3.5）；训练时右列就是
-   「seek 读几行 f32 + 两个小 Linear」，新可训练参数只有打 ★ 的两层，合计 3.74 M（六节）。
+   「seek 读几行 f32 + 两个小 `nnx.Linear`」，新可训练参数只有打 ★ 的两层（`motion_pos_proj`
+   256→768、`motion_encoder_static` 1536→2048），含 bias 合计 3.35 M（六节）。
 
-### 3.2 `static_pos_emb` 与 `pos_f` 的实现
+### 3.2 `static_pos_emb` 与 `motion_pos` 的实现
 
 **底表唯一**。`pos_emb_4x4.f32.bin` 按全 timestep 域逐帧存一行 `(16, 768)` f32，由
 `PosEmb3D(dim=768)` 对 `arange(全域帧数)` 一次性预计算（在线侧 `FrameSampMemory.__init__`
@@ -325,20 +334,27 @@ N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历�
 帧号调 `store.pos_rows(frames_arr)` → `(n,16,768)` → `_pad` 右填充 → `(32,16,768)` →
 `reshape(-1, 768)` → `(512, 768)`。逐 token 使用，每个向量都是某个真实网格点的合法编码。
 
-**运动路 `pos_f`**：每个合法起点先换算成全 timestep 域帧号（exec 段起点 `u` → `es + u`；
-demo 段起点 `s` → `s`），调同一个 `pos_rows` 查出该帧 `(16, 768)`，**沿 16 那个轴取均值**
-得 `(768,)`；80 个起点堆成 `(80, 768)`，padding 行填 0。均值的真实语义要说清楚：
+**运动路 `motion_pos`**：每个合法起点先换算成全 timestep 域帧号（exec 段起点 `u` → `es + u`；
+demo 段起点 `s` → `s`），调同一个 `pos_rows` 查出该帧 `(16, 768)`，**取第 0 行的前 256 维**
+（`store.pos_rows(np.asarray([f]))[0, 0, :256]`），即该帧的时间编码 `[时间 sin 128 | 时间 cos 128]`
+得 `(256,)`；80 个起点堆成 `(80, 256)`，padding 行填 0。这是纯切片、不做算术，逐位等于
+`PosEmb3D` 的时间码。运动路需要它的原因：motion token 只描述「窗口里发生了什么」，不含
+「发生在什么时候」；窗口长度固定 33，编了起点就编了整个窗口。
 
-- 前 256 维（时间）：16 行本来就相同，均值 = 原值，**无损保留**——这正是运动路需要 pos
-  的原因（motion token 只描述「窗口里发生了什么」，不含「发生在什么时候」）；
-- 后 512 维（空间）：4 个网格点 sin/cos 的平均**不等于任何位置的编码**（要在 128 个频率上
-  同时成立，做不到），且空间编码与帧号无关——这 512 维对所有起点、所有样本都是**同一个
-  常数向量**，零信息但无害（下游 `motion_pos_proj` 可学会忽略恒定输入）。
+**为什么不带 xy**（2026-09-01 对抗审计后定）：
 
-所以 `pos_f` 实际有效内容 = 起点帧时间编码 256 维 + 全局常数 512 维。`pos_source:
-frame_mean` 因此是权宜（盲区清单第 3 条），列为 S4 可选消融项。
+- 一个 motion token 描述整幅画面 33 帧的运动，本来就没有空间位置，xy 无物可编。
+- 曾考虑把起点帧 16 行沿 16 轴取均值凑成 768 维。均值的空间部分对每个频率 ω 等于中心
+  (8,8) 的位置码乘幅值 `a(ω) = (cos 2ω + cos 6ω) / 2`：ω=0.01 时 a≈0.999、ω=0.1 时 a≈0.90、
+  ω=0.5 时 a≈−0.23（反号）、ω=1.0 时 a≈0.27。128 档频率里约 40 档被打乱，向量不在单位圆上，
+  既不是任何合法位置码，也不是明确的「无位置」标记。均值在时间维也不保证逐位（逐行累加会
+  舍入）。
+- 运动路走独立的 `motion_pos_proj`，任何常数输入经 Linear 都等价于一个 bias；若保留 768 维
+  输入，`motion_pos_proj` 里对应 xy 的 512×768 = 393,216 个权重只见过同一个常数向量，整块退化
+  成冗余 bias。去掉 xy 后输入维 256，权重 197,376，全部有效。
 
-**投影互不共享**：帧路走 `pos_proj`、运动路走新建的 `motion_pos_proj`，参数树互不沾边；
+**投影互不共享**：帧路走 `pos_proj = nnx.Linear(768→768)`、运动路走新建的
+`motion_pos_proj = nnx.Linear(256→768)`，参数树互不沾边；
 两路只共享 `pos_emb_4x4` 这张只读底表——这也是 `motion.enabled=false` 能逐位退回的前提。
 
 ### 3.3 三条 mask 在 token 数轴上的取值与效果
@@ -409,9 +425,9 @@ main(config)
 │        └─ ★motion memory 接入：①′–③′ 运动路（同一个 __getitem__ 里另做一遍）
 │               ①′ 选起点：网格 0,20,40,… 里满足 f+32 ≤ t 的起点，取最近 ≤80 个。
 │                  例：t=200 → 0,20,…,160 共 9 个，缺 71；t=5 → 0 个。
-│               ②′ 查表：每个起点去 motion_token.f32.bin 读一行 (768,) f32；起点帧的 16 个
-│                  位置编码取均值得 pos_f (768,)。
-│               ③′ 补齐：另写的填充函数补到 80 行，motion_emb/pos_f 后 80−k 行填 0，
+│               ②′ 查表：每个起点去 motion_token.f32.bin 读一行 (768,) f32；起点帧 pos 行
+│                  前 256 维（时间码）得 motion_pos (256,)。
+│               ③′ 补齐：另写的填充函数补到 80 行，motion_emb/motion_pos 后 80−k 行填 0，
 │                  motion_mask (80,) 前 k 位 True。一个起点 = 一个 token，没有 ④ 那步摊平。
 │
 ├─ collate
@@ -430,11 +446,13 @@ main(config)
       │
       ├─ ⑤ embed_memory(obs)
       │      把 ④ 交来的 512 个位置的原始特征变成 512 个 2048 维「记忆 token」：
-      │      static_pos_emb 过 pos_proj(768→768)+silu，与 static_image_emb 拼成 2816 维，
-      │      过 encoder_static(2816→2048)。补齐的零行也照过这两层，出来是非零向量，
-      │      不做任何分支。static_mask 原样往下传。
-      │      ★motion memory 接入：运动路走独立的 motion_pos_proj / motion_encoder_static 得
-      │      (b,80,2048)，两路 token 长度轴接成 (b,592,2048)，mask 接成
+      │      static_pos_emb 过 pos_proj = nnx.Linear(768→768)［W 768×768, b 768，可训练］
+      │      再过 nnx.silu，与 static_image_emb 拼成 2816 维，过 encoder_static =
+      │      nnx.Linear(2816→2048)［W 2816×2048, b 2048，可训练］。补齐的零行也照过这两层，
+      │      出来是非零向量，不做任何分支。static_mask 原样往下传。
+      │      ★motion memory 接入：运动路走独立的 motion_pos_proj = nnx.Linear(256→768)
+      │      ［W 256×768, b 768，可训练］+ nnx.silu 与 motion_encoder_static = nnx.Linear(1536→2048)
+      │      ［W 1536×2048, b 2048，可训练］得 (b,80,2048)，两路 token 长度轴接成 (b,592,2048)，mask 接成
       │      [static_mask ⊕ motion_mask] (b,592)。
       │
       ├─ embed_prefix(obs)
@@ -463,7 +481,8 @@ main(config)
          │      out    = probs @ v                   补齐位的 value 乘 0，对输出零贡献
          │
          └─ suffix_out → action_out_proj → loss
-                主干输出里动作那 20 个位置的向量过线性层变回动作维度，与真实动作比较得 loss。
+                主干输出里动作那 20 个位置的向量过 action_out_proj = nnx.Linear(action expert
+                宽度→action_dim)［W, b，可训练；history_pi0.py］变回动作维度，与真实动作比较得 loss。
 ```
 
 ```
@@ -539,14 +558,14 @@ main(config)
  ① 选帧 even_sampling_indices(5, 32)              ① 选起点：网格 0,20,40,… 中满足 f+32 ≤ 200 者
     → 帧号 [0,1,2,3,4,5]，n=6，缺 26                  → f ∈ {0,20,…,160}，k=9，缺 71
           │                                                     │
- ② 查表 FrameSampStore                            ② 查表 motion_token.f32.bin + pos_rows 均值
-    img (6,16,2048) bf16                             motion 行 (9,768) f32
-    pos (6,16,768)  f32                              pos_f    (9,768) f32
+ ② 查表 FrameSampStore                            ② 查表 motion_token.f32.bin + pos_rows 切片
+    img (6,16,2048) bf16                             motion 行  (9,768) f32
+    pos (6,16,768)  f32                              motion_pos (9,256) f32
     stt (6,8)       f32
           │                                                     │
  ③ _pad(…, n=6)  目标长度 _max_frames=32          ③ 另写填充函数  目标长度 motion.budget=80
     img (32,16,2048)  第 6–31 帧 = 0                 motion_emb (80,768)  第 9–79 行 = 0
-    pos (32,16,768)   第 6–31 帧 = 0                 pos_f      (80,768)  第 9–79 行 = 0
+    pos (32,16,768)   第 6–31 帧 = 0                 motion_pos (80,256)  第 9–79 行 = 0
     mask (32,) bool   [T×6, F×26]  ← 帧级            motion_mask (80,) bool [T×9, F×71] ← 已是 token 级
           │                                                     │
  ④ reshape(-1, d) + np.repeat(mask, 16)           ④ （无此步：一个起点 = 一个 token）
@@ -557,8 +576,11 @@ main(config)
  ═════════╪═══════════ dataloader 结束 / collate 成 batch ═══════╪═════════════
           │                                                     │
  ⑤ embed_memory（padding 行照算，不分支）
-    pos_proj(768→768)+silu → concat 2816             motion_pos_proj(768→768)+silu → concat 1536
-    encoder_static(2816→2048)                        motion_encoder_static(1536→2048)
+    pos_proj = nnx.Linear(768→768)                   motion_pos_proj = nnx.Linear(256→768)
+      ［W 768×768, b 768，可训练］                      ［W 256×768, b 768，可训练］
+    nnx.silu → concat 2816                           nnx.silu → concat 1536
+    encoder_static = nnx.Linear(2816→2048)           motion_encoder_static = nnx.Linear(1536→2048)
+      ［W 2816×2048, b 2048，可训练］                   ［W 1536×2048, b 2048，可训练］
     → (b,512,2048)  第 96–511 行非零                 → (b,80,2048)  第 9–79 行非零
           └──────────────────┬──────────────────────────────────┘
                              │ 长度轴 concat
@@ -617,7 +639,7 @@ token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` �
 | 键 | 来源 | 形状 | dtype |
 |---|---|---|---|
 | motion 行 | `motion_token.f32.bin (20958, 768)`，按 `(段, 网格序号)` 定位行号，`seek(row × 3072)` 读 1 行 | 每起点 `(768,)`，堆成 `(9, 768)` | f32 |
-| pos_f | 同一张 `pos_rows`，取起点帧 `(16, 768)` 沿 16 轴均值（3.2） | 每起点 `(768,)`，堆成 `(9, 768)` | f32 |
+| motion_pos | 同一张 `pos_rows`，取起点帧行 `[0, :256]`（时间码，3.2） | 每起点 `(256,)`，堆成 `(9, 256)` | f32 |
 
 训练时 motion 行从离线表读，在线评估时现编（3.5）。
 
@@ -639,13 +661,13 @@ token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` �
 ——只换模块、不换数值路径」，`_pad` 是它在训练侧的等价预分配版。
 
 运动路另写一个填充函数，目标长度是配置项 `motion.budget = 80`，不复用 `_pad`（`_pad` 的目标
-长度是类内常量 `_max_frames`，签名是 img/pos/stt 三键，运动路只有 emb/pos_f 两键，长度语义与
+长度是类内常量 `_max_frames`，签名是 img/pos/stt 三键，运动路只有 motion_emb/motion_pos 两键，长度语义与
 签名都不同，第二部分 2.6 已定）。输出：
 
 | 键 | 形状 | dtype | 第 0–8 行 | 第 9–79 行 |
 |---|---|---|---|---|
 | motion_emb | `(80, 768)` | f32 | 9 个起点的 token，按时间序 | 全 0 |
-| pos_f | `(80, 768)` | f32 | 9 个起点帧的 pos 均值 | 全 0 |
+| motion_pos | `(80, 256)` | f32 | 9 个起点帧的时间码 | 全 0 |
 | motion_mask | `(80,)` | bool | True | False |
 
 填 0 的 dtype 不需要特判：bf16 与 f32 的 0 位型都是全零字节，新旧链路对拍可以逐字节比。填 0
@@ -665,14 +687,17 @@ token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` �
 运动路一个起点只对应 1 个 token，`(80,)` 的 `motion_mask` 天然就是 token 级，没有这一步。
 
 到这里 dataloader 结束。collate 后进模型的是 `static_image_emb (b,512,2048)`、
-`static_pos_emb (b,512,768)`、`static_mask (b,512)`、`motion_emb (b,80,768)`、`pos_f (b,80,768)`、
+`static_pos_emb (b,512,768)`、`static_mask (b,512)`、`motion_emb (b,80,768)`、`motion_pos (b,80,256)`、
 `motion_mask (b,80)`。关于 padding 的全部信息只有两条布尔向量。
 
-**第五站（JAX，jit 内）：帧路 img ⊕ pos 2816→2048、运动路 motion ⊕ pos_f 1536→2048，各自压成 2048 维记忆 token；再把各段 mask 接成一条**
+**第五站（JAX，jit 内）：帧路 img ⊕ pos 2816→2048、运动路 motion ⊕ motion_pos 1536→2048，各自压成 2048 维记忆 token；再把各段 mask 接成一条**
 
 模型主干只认 2048 维 token，所以这一站前半段是一次「翻译」：帧路每个位置把外观特征（2048）
-和位置编码（768）拼成 2816 维，过一个线性层压到 2048；运动路把 motion token（768）和 `pos_f`
-（768）拼成 1536 维，用另一组线性层扩到 2048。两者终点都是 2048，因为那是 gemma 的隐层宽度，
+和位置编码（768，先过 `pos_proj = nnx.Linear(768→768)` 与 `nnx.silu`）拼成 2816 维，过
+`encoder_static = nnx.Linear(2816→2048)` 压到 2048；运动路把 `motion_pos`（256）先过
+`motion_pos_proj = nnx.Linear(256→768)` 与 `nnx.silu` 变 768，再与 motion token（768）拼成
+1536 维，过 `motion_encoder_static = nnx.Linear(1536→2048)` 扩到 2048。四个名字都是带 W 与 b
+的可训练 `nnx.Linear`。两者终点都是 2048，因为那是 gemma 的隐层宽度，
 帧路恰好是压缩、运动路恰好是扩张，只是特征本体宽度不同，不是设计上的取舍。补齐的零行照样过
 这两层，出来是普通的非零向量，模型此刻分不出哪些是真的。后半段是「拼装」：记忆、图像、文本、
 动作各段自带的布尔向量按顺序首尾接成一条 1188 位的 `input_mask`，`motion_mask` 没有任何特殊
@@ -680,14 +705,15 @@ token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` �
 
 `embed_memory`（`history_pi0.py`）不对 padding 位做任何分支：
 
-- 帧路：`static_pos_emb` 过 `pos_proj: Linear(768→768) + silu` → `(b,512,768)`，与
-  `static_image_emb` 在最后一维 concat → `(b,512,2816)`，过 `encoder_static: Linear(2816→2048)`
-  → `(b,512,2048)`。第 96–511 行输入是零向量，输出是 bias 决定的**非零**向量。
-- 运动路：`pos_f` 过 `motion_pos_proj: Linear(768→768) + silu` → `(b,80,768)`，与 `motion_emb`
-  concat → `(b,80,1536)`，过 `motion_encoder_static: Linear(1536→2048)` → `(b,80,2048)`。
-  第 9–79 行同样是非零向量。`pos_f` 是起点帧 16 个位置编码沿 16 轴的均值（3.2）：前 256 维
-  时间编码 16 行本就相同，均值无损保留；后 512 维 xy 编码取平均后对所有起点、所有样本都是
-  同一个常数向量——**xy 那些维度还在，但不再携带信息**，下游 `motion_pos_proj` 会学会忽略它。
+- 帧路：`static_pos_emb` 过 `pos_proj = nnx.Linear(768→768)［W 768×768, b 768，可训练］` 与
+  `nnx.silu` → `(b,512,768)`，与 `static_image_emb` 在最后一维 concat → `(b,512,2816)`，过
+  `encoder_static = nnx.Linear(2816→2048)［W 2816×2048, b 2048，可训练］` → `(b,512,2048)`。
+  第 96–511 行输入是零向量，输出是 bias 决定的**非零**向量。
+- 运动路：`motion_pos` 过 `motion_pos_proj = nnx.Linear(256→768)［W 256×768, b 768，可训练］`
+  与 `nnx.silu` → `(b,80,768)`，与 `motion_emb` concat → `(b,80,1536)`，过
+  `motion_encoder_static = nnx.Linear(1536→2048)［W 1536×2048, b 2048，可训练］` → `(b,80,2048)`。
+  第 9–79 行同样是非零向量。`motion_pos` 只有起点帧的时间码（3.2），padding 行是零向量，
+  过 `nnx.Linear` 后同样是 bias 决定的非零向量。
 - 两段在长度轴 concat → memory `(b,592,2048)`；`input_mask = [static_mask ⊕ motion_mask]` →
   `(b,592)` bool。`motion_mask` 在这里没有任何特殊处理，只是接在后面。
 
@@ -840,10 +866,10 @@ S1 与 S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AG
 | prefix 总长 | 1088（mem 512 + img 2×256 + prompt 64） | 1168 | +7.35% |
 | 全序列（含 20 个 action token） | 1108 | 1188 | +7.22% |
 | attention 计算量（O(L²)） | 1108² | 1188² | **+14.96%** |
-| 每样本数据字节 | 3.52 MiB（`static_*` 四键） | +240 KiB（`motion_emb` 80×768 f32） | +6.7% |
-| batch=64 每批额外 | — | +15 MiB | — |
+| 每样本数据字节 | 3.52 MiB（`static_*` 四键） | +320 KiB（`motion_emb` 80×768 f32 = 240 KiB + `motion_pos` 80×256 f32 = 80 KiB） | +8.9% |
+| batch=64 每批额外 | — | +20 MiB | — |
 | 离线表 | — | 61.4 MiB | — |
-| 新增训练参数 | — | `motion_pos_proj` 589,824 + `motion_encoder_static` 3,145,728 = **3,735,552 ≈ 3.74 M** | 可忽略 |
+| 新增训练参数（含 bias） | — | `motion_pos_proj = nnx.Linear(256→768)` 197,376 + `motion_encoder_static = nnx.Linear(1536→2048)` 3,147,776 = **3,345,152 ≈ 3.35 M** | 可忽略 |
 
 - **训练语义**：`motion.enabled=false` 时零影响（逐位等价，M5 判据）；`true` 时 prefix 记忆区
   512 → 592，其后所有 token 的 RoPE 位置整体右移 80。
@@ -961,7 +987,7 @@ demo 段： for m in range(entries[g].demo.num_grid):
 `__reduce__` 直接 raise 禁 pickle、跨进程懒构造。
 
 **起点帧的 pos**：`pos_emb_4x4.f32.bin` 是按全 timestep 域 `t` 存的全表，任意起点帧都能直接查
-（`FrameSampStore.pos_rows` 现成）。`pos_f` 取该帧 16 个 4×4 pos 沿空间轴的均值。
+（`FrameSampStore.pos_rows` 现成）。`motion_pos` 取该帧 pos 行前 256 维（时间码），不含 xy（3.2）。
 
 ## 二、model 侧逐文件改动清单（S2）
 
@@ -985,7 +1011,7 @@ motion:
   grid_origin: segment_start  # demo / exec 各自从段起点起算，窗口不跨界
   store_path: v1-store/datasets/4task-gl-motion
   source_run: ???           # MotionJEPA run 名 + epoch，S1 锚定后填
-  pos_source: frame_mean    # 起点帧 16 个 4×4 pos 的均值
+  pos_dim: 256              # motion_pos 维数 = 起点帧 PosEmb3D 时间码（sin 128 + cos 128），不含 xy
 ```
 
 已核对：`scripts/training/g0/bench_train_steps.py` 与 `scripts/training/tests/dump_fixture_samples.py`
@@ -993,16 +1019,18 @@ motion:
 不校验内容；`FrameSampDataset.__init__` 的 `_req(...)` 形制断言只查既有键的值。**加节不触发
 任何现有断言**，但**必须新增对 `motion.*` 的同款 `_req` 断言**（显式 `raise`，禁 `assert`
 ——`PYTHONOPTIMIZE=1` 会剥离 `assert`，见该文件头部注释的 R6），至少覆盖：
-`motion.dim == 768`、`motion.budget == 80`、`motion.stride >= 1`、`motion.window_frames == 33`、
-`motion.window_direction == "forward"`、`motion.grid_origin == "segment_start"`。
+`motion.dim == 768`、`motion.budget == 80`、`motion.pos_dim == pos.input_dim // 3`（768 // 6 × 2 = 256）、
+`motion.stride >= 1`、`motion.window_frames == 33`、`motion.window_direction == "forward"`、
+`motion.grid_origin == "segment_start"`。
 
 ### 2.2 `src/mme_vla_suite/models/integration/history_observation.py`
 
-`HistAugObservation` 新增两字段（`@at.typecheck` + `@struct.dataclass` 下必须同步四处）：
+`HistAugObservation` 新增三字段（`@at.typecheck` + `@struct.dataclass` 下必须同步四处）：
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `motion_emb` | `at.Float[at.Array, "b l4 d4"] \| None` | `l4 = motion.budget = 80`，`d4 = 768` |
+| `motion_pos` | `at.Float[at.Array, "b l4 d5"] \| None` | `d5 = motion.pos_dim = 256`，起点帧时间码 |
 | `motion_mask` | `at.Bool[at.Array, "b l4"] \| None` | padding 位 False，语义与 `static_mask` 同款 |
 
 同步改动：`from_dict`（`data.get(..., None)`）、`to_dict`、`from_base_obs` 形参与传递、
@@ -1011,12 +1039,13 @@ motion:
 
 ### 2.3 `src/mme_vla_suite/models/integration/history_pi0.py`
 
-- `HistoryPi0Config.inputs_spec`：在 `with at.disable_typechecking():` 块内补两个
-  `jax.ShapeDtypeStruct`——`[batch_size, motion.budget, motion.dim] float32` 与
-  `[batch_size, motion.budget] bool_`。**从 config 键推导，不写死字面量。**
+- `HistoryPi0Config.inputs_spec`：在 `with at.disable_typechecking():` 块内补三个
+  `jax.ShapeDtypeStruct`——`[batch_size, motion.budget, motion.dim] float32`、
+  `[batch_size, motion.budget, motion.pos_dim] float32` 与 `[batch_size, motion.budget] bool_`。
+  **从 config 键推导，不写死字面量。**
 - `HistoryPi0.embed_memory`：现签名返回 `(tokens, input_mask, ar_mask, na_mask)`，内部调
   `self.mem_encoder(obs.static_image_emb, obs.static_pos_emb, obs.static_state_emb)`。
-  改为把 `obs.motion_emb` / `obs.motion_mask` 一并传入 `PerceptualMemory.__call__`；
+  改为把 `obs.motion_emb` / `obs.motion_pos` / `obs.motion_mask` 一并传入 `PerceptualMemory.__call__`；
   返回值三处拼接——`tokens` 沿 axis=1 concat、`input_mask` 变
   `jnp.concatenate([obs.static_mask, obs.motion_mask], axis=1)`、`ar_mask` 与 `na_mask` 各追加
   `motion.budget` 个 `False`。
@@ -1032,21 +1061,24 @@ motion:
 `PerceptualMemory.__init__` 在现有 `self.feature_encoder` **之后**（红线 5）新建两件：
 
 ```python
-self.motion_pos_proj       = nnx.Linear(pos.input_dim, pos.hidden_dim, rngs=rngs, dtype=dtype,
-                                        kernel_init=kernel_init)          # 768 → 768
+self.motion_pos_proj       = nnx.Linear(motion.pos_dim, pos.hidden_dim, rngs=rngs, dtype=dtype,
+                                        kernel_init=kernel_init)          # 256 → 768，W 256×768 + b 768
 self.motion_encoder_static = nnx.Linear(motion.dim + pos.hidden_dim, memory_token_dim,
                                         rngs=rngs, dtype=dtype,
-                                        kernel_init=kernel_init)          # 1536 → 2048
+                                        kernel_init=kernel_init)          # 1536 → 2048，W 1536×2048 + b 2048
 ```
 
 `PerceptualMemory.__call__` 现有 `assert static_image_emb.shape[1] == self.config.budget` 保留不动
 （帧路仍是 512）；新增运动路分支，形制断言同款显式 `raise`：
 
 ```
-motion_emb (b,80,768) ──────────────────────────────────────────┐
-pos_f      (b,80,768) ── silu(motion_pos_proj(pos_f)) ──────────┼→ concat(-1) → (b,80,1536)
-                                                                └→ motion_encoder_static → (b,80,2048)
+motion_emb (b,80,768) ──────────────────────────────────────────────────────┐
+motion_pos (b,80,256) ── motion_pos_proj = nnx.Linear(256→768) ── nnx.silu ──┼→ concat(-1) → (b,80,1536)
+                                                                            └→ motion_encoder_static = nnx.Linear(1536→2048) → (b,80,2048)
 ```
+
+形制断言（显式 `raise`）：`motion_emb` 须为 `(b, motion.budget, motion.dim)`、`motion_pos` 须为
+`(b, motion.budget, motion.pos_dim)`、`motion_mask` 须为 `(b, motion.budget)`。
 
 padding 位不做特殊处理（`motion_emb` 该位为 0），屏蔽完全交给 `input_mask` —— 与帧路对
 padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static_mask=False`）。
@@ -1059,9 +1091,10 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
 
 ### 2.5 `src/mme_vla_suite/policies/robomme_policy.py`
 
-`RoboMMEInputs.__call__` 的 `inputs` 字典补两键，写法与既有四个 `static_*` 键完全一致：
+`RoboMMEInputs.__call__` 的 `inputs` 字典补三键，写法与既有四个 `static_*` 键完全一致：
 ```python
 "motion_emb":  data.get("motion_emb", None),   # (80, 768)
+"motion_pos":  data.get("motion_pos", None),   # (80, 256)
 "motion_mask": data.get("motion_mask", None),  # (80,)
 ```
 
@@ -1070,8 +1103,10 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
 - `src/mme_vla_suite/training/framesamp_dataset.py`：`FrameSampDataset.__getitem__` 已有
   `g` 与 `step`，运动路查表**不复用** `frames`（两路独立采样，见 2.2）；起点集合按一节的公式
   现算（纯整数运算，`num_grid` 与 demo 段的合法集合可在 `__init__` 预计算）。
-  `_NONE_KEYS` 尾部补空键列表加 `motion_emb` / `motion_mask` 两项；运动路的右填充**另写**
-  （目标长度 `motion.budget`，不复用 `_pad`——后者的目标长度是 `_max_frames`，两者语义不同）。
+  `motion_pos` 取法：起点换算成全域帧号 `f` 后 `store.pos_rows(np.asarray([f]))[0, 0, :motion.pos_dim]`
+  （3.2，纯切片）。`_NONE_KEYS` 尾部补空键列表加 `motion_emb` / `motion_pos` / `motion_mask` 三项；
+  运动路的右填充**另写**（目标长度 `motion.budget`，签名是 motion_emb/motion_pos 两键，不复用
+  `_pad`——后者的目标长度是 `_max_frames`、签名是 img/pos/stt 三键，两者语义不同）。
 - `src/mme_vla_suite/training/dataloader.py`：`_create_framesamp_dataset` 的三闸
   （`require_no_pack_lock` / `StoreMeta.load` / `require_verified`）对 motion store 照做一遍。
 
@@ -1088,9 +1123,12 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
   `_history_feats_motion[next_grid_start]`，然后 `next_grid_start += stride`。
   **每 20 帧才触发一次**，其余步零开销。
 - `_prepare_frame_sampling` 之外**另加**一个 `_prepare_motion`：按一节的查表公式取合法起点、
-  取最近 `motion.budget` 个、右填充 + mask。**不塞进 `_prepare_frame_sampling`**——该函数的
+  取最近 `motion.budget` 个、右填充 + mask；同时按每个起点的全域帧号从
+  `FrameSampMemory.pos_emb_4x4[frame, 0, :motion.pos_dim]` 取 `motion_pos`——与训练侧
+  `store.pos_rows` 同表（同一 `PosEmb3D`、同一 `arange`）同切片。**不塞进 `_prepare_frame_sampling`**——该函数的
   数值路径（含 `right_padding_token_emb`）注释明记「只换模块、不换数值路径」，不得改动。
-- `MME_VLA_Policy._prepare_history`：补 `inputs["motion_emb"]` / `inputs["motion_mask"]`。
+- `MME_VLA_Policy._prepare_history`：补 `inputs["motion_emb"]` / `inputs["motion_pos"]` /
+  `inputs["motion_mask"]` 三键。
 - ⚠ 注释里那条红线仍然有效：**禁把 encode 与 pool 包进新的 `jax.jit`**（融合边界变了，
   bf16 累加序可能变位）。motion 编码走 PyTorch、在 jit 之外，天然不违反。
 - **尖峰处理**（3.5 细节 1）：第 20 步的 1.57 s 尖峰若不可接受，可提前一步预编——起点的可见
@@ -1106,11 +1144,11 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
 | **M3** 索引映射 | S1 | 随机 500 个 `(g, t)`，按一节公式解出的起点集合 == 独立实现（直接遍历 metadata）解出的集合；且 `row_base + m` 读出的行 == 按 episode 名直读 `.bin` 第 `20m` 个 chunk 过 encoder 的输出 | 不等即查 `motion_index.json` 定序 |
 | **M4** 行数账 | S1 | 表行数 == **20,958**；exec 17,514 + demo 3,444；逐段 `num_grid == len(range(0, num_chunks, 20))` | 不符即 metadata 与实际 `.bin` 不配套 |
 | **M5** 关闭态等价 | S2 | `motion.enabled=false`，`embed_prefix` 的四个返回张量与当前 HEAD **逐位相同**（同 rng、同输入 fixture） | 不等即红线 5 被违反（RNG 消耗序变了） |
-| **M6** 开启态形制 | S2 | prefix 序列长 == 1168；`ar_mask` / `na_mask` 在运动段全 False；运动段 `input_mask` == `motion_mask` | — |
+| **M6** 开启态形制 | S2 | prefix 序列长 == 1168；`ar_mask` / `na_mask` 在运动段全 False；运动段 `input_mask` == `motion_mask`；`motion_pos` 形状 `(b,80,256)` 且 padding 行全 0 | — |
 | **M7** 有效数分布 | S2 | 逐 batch 统计 `motion_mask.sum(axis=1)`，分布须与 2.3 的 4env 实测一致（中位 7、均值 8.09、6.48% 全零；若训练集换成 16env，应为中位 12、均值 15.31、4.72% 全零） | 不一致即起点集合算错 |
 | **M8** 尺度 | S2 | `‖motion_tok‖₂ / ‖mem_tok‖₂`（**只在 valid 位上算**）的 batch 均值落在 [0.3, 3.0] | 越界则在 `motion_encoder_static` 后补 RMSNorm |
 | **M9** 梯度一致 | S2 收尾 | `motion.enabled=false` 本机跑前 N 步，逐步 loss / grad-norm / 参数摘要与既有基线一致（N 起工前商定） | 不一致即 S2 不得宣称等价 |
-| **M10** 在线/离线一致 | S3 | 同一 `(g, 段, 网格序号)` 的在线编码 vs 离线表，余弦 ≥ M1 阈值；且在线解出的起点集合 == 离线解出的集合 | — |
+| **M10** 在线/离线一致 | S3 | 同一 `(g, 段, 网格序号)` 的在线编码 vs 离线表，余弦 ≥ M1 阈值；在线解出的起点集合 == 离线解出的集合；同一起点的在线 `motion_pos` vs 训练侧 `store.pos_rows(f)[0, :256]` 逐位相等（`np.array_equal`，口径同 `compare_online_memory.py` 的 `POS_TABLE` 三方逐位） | — |
 
 ## 五、第一块：非训练轻量对拍明细（`AGENTS.md` 第 18 条第一块）
 
@@ -1123,7 +1161,8 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
    集合**（一个走 `motion_index.json` 的预计算，一个直接遍历 MotionJEPA metadata 现算），
    互为对照。
 3. **逐样本内容对拍**：`FrameSampDataset.__getitem__` 改动前后，对同一批 `idx` 比全部键的
-   dtype / shape / 字节——`motion.enabled=false` 时新增两键应为 `None`（走 `_NONE_KEYS`），
+   dtype / shape / 字节——`motion.enabled=false` 时新增三键（`motion_emb` / `motion_pos` /
+   `motion_mask`）应为 `None`（走 `_NONE_KEYS`），
    其余键逐位不变。
 4. **index 序列对拍**：`scripts/training/tests/dump_index_seq.py` 同款，确认 shuffle 序不受影响。
 
@@ -1158,11 +1197,9 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
 2. **本方案用的是前视窗口**（起点往后 33 帧），与 encoder 训练时的语义完全一致（motion 描述
    「相对锚点 z0 之后发生的运动」）；但对 VLA 而言这些窗口全部位于历史，最靠前的窗口尾端
    离当前帧 8~27 帧——**当前时刻的运动始终缺席**（2.5，用户已知并拍板不补）。
-3. **`pos_source: frame_mean` 是权宜**。16 个 4×4 空间 pos 取均值得到的向量，在 `PosEmb3D`
-   的 sin/cos 结构里没有明确语义（均值不是某个网格点的编码）。列为 S4 可选项。
-4. **填充率 10.1%（4env）/ 19.1%（16env）的影响未经实验量化**，2.4 的三条后果都是推理不是实测。
-5. **消融覆盖不全**：S4 六项互相有交互，本计划不承诺跑满全矩阵。
-6. **未覆盖 `expert` / `modulation` 两种 integration_type**。
+3. **填充率 10.1%（4env）/ 19.1%（16env）的影响未经实验量化**，2.4 的三条后果都是推理不是实测。
+4. **消融覆盖不全**：S4 六项互相有交互，本计划不承诺跑满全矩阵。
+5. **未覆盖 `expert` / `modulation` 两种 integration_type**。
 
 ## 九、留档与 commit 纪律
 
