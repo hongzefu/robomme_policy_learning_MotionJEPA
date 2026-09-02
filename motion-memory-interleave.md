@@ -234,7 +234,7 @@ e 步的键定义兑现了三条口径：按时刻排即「按起点 f 插入」
 | 旋转 | q 切前后两半 x1、x2 各 (b,1188,8,128)；`[x1·cos − x2·sin, x2·cos + x1·sin]` 拼回；再乘 1/16 | (b,1188,8,256) |
 | k 同法 | | (b,1188,1,256) |
 
-旋转后 q_i · k_j 只取决于序号之差 `positions[i] − positions[j]`。所以交错只改「memory 内部两两之差」与「action 到各 memory token 之差」，image、文本、action 相互之差不变。
+旋转后 q_i · k_j 只取决于序号之差 `positions[i] − positions[j]`。所以交错只改三类序号之差：memory 内部两两之差、文本到各 memory token 之差、action 到各 memory token 之差（4.5 的块号规则里文本与 action 都能看记忆段，图像被 `na_mask` 挡住，看不到）；图像、文本、action 相互之差不变。
 
 **j. 打分、屏蔽、softmax、加权：q·k → 权重 (b,1,8,1188,1188) → 加权 v 得 (b,1188,8,256)**
 
