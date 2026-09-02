@@ -69,8 +69,8 @@ demo 段网格： s = 0, 20, 40, …        （s 是 demo 段内偏移；demo �
 ```
 
 （`num_chunks_*` = max(0, 段帧数 − 32)，由我方清单 `(num_timesteps, exec_start_idx)` 现算，口径见 4.1；
-起点如何换算成 motion 表的行号，见第二部分一节。⚠ **待定**：该口径（exec 段不截尾，比 MotionJEPA 多 4~12 个）
-需用户再次确认，未确认前阻塞 S1。）
+起点如何换算成 motion 表的行号，见第二部分一节。该口径（exec 段取 MME-VLA 全长、不截尾，比 MotionJEPA 多 4~12 个）
+已于 2026-09-02 经用户确认为最终口径。）
 
 ⚠ **demo / exec 两段各自成网格、互不延续，窗口一律不跨 demo/exec 边界**——用户拍板
 「独立的，也是一样采样不到 33 窗口都不补」（latent 分段抽，跨界窗口不存在）。
@@ -815,7 +815,7 @@ MotionJEPA v8 全量抽取的**实测吞吐 0.635 chunk/s**（单 A40，fp32、*
 | 数值代码零改动 | `DatasetProcessor._process_episode`、`MemoryBuffer.add_buffer`、`SigLipTokenizer`、`pool_tokens_to_size`、`PosEmb3D`、`atomic_write_json` 一字不动；SigLIP 每次前向仍只喂 1 帧、不加任何 XLA flag。重构只换编排（清单、调度、落盘目录）；散 npy 中间层与 pkl 仍按现格式产出 |
 | Wan-VAE 与 encoder 口径 | 整文件照抄 MotionJEPA（HEAD `2a484ad`）`scripts/inference-example/wan_motion_infer.py`，旁置 `SOURCE_PIN.json` 钉 sha256；我方脚本只调它的 `encode_chunk` / `motion_token`，不复写任何数值语句；B=1 是硬约束；起手 `check_env()` + `pin_numerics()` + `check_versions()` |
 | encoder ckpt | `runs/wan-v8-filter10-72ep-a/checkpoint_epoch_72.pt`，取 `ckpt["encoder"]`（EMA），整份 `strict=True` |
-| motion 表 | 只存网格起点，stride-20，前视 33 帧；**exec 段不截尾**，`num_chunks = max(0, 段帧数 − 32)`（demo 段帧数 = `exec_start_idx`，exec 段帧数 = `num_timesteps − exec_start_idx`）。⚠ **待定：该口径需用户再次确认，未确认前阻塞 S1**（与 2.2 括号句同一标记） |
+| motion 表 | 只存网格起点，stride-20，前视 33 帧；**exec 段不截尾**，`num_chunks = max(0, 段帧数 − 32)`（demo 段帧数 = `exec_start_idx`，exec 段帧数 = `num_timesteps − exec_start_idx`）。exec 段取 MME-VLA 全长，该口径已于 2026-09-02 经用户确认为最终口径 |
 | 两套 venv | 主 venv 不动；Wan-VAE 与 encoder 走 `scripts/dataset/wan/` 子项目（torch 2.9.0+cu128 / diffusers 0.39.0 / Python 3.11），venv 落 `v1-store/venvs/wan`。理由一句话：主 `uv.lock` 一动，G0b 黄金基线的环境指纹全 FAIL |
 | 运行方式 | 全部在本机多 GPU 跑（每 GPU 一常驻进程、动态领任务、`--gpus` 任选卡），不再提交集群；MotionJEPA 仓库只读；产物全部落 `v1-store/` |
 | oracle | 两条 oracle 都必须在本机同一张卡上产出（跨架构不逐位）；SigLIP oracle 必须在重构动手之前、clean HEAD 上产出（重构一落地旧脚本就没了） |
@@ -1045,7 +1045,7 @@ G0b r1 的 `run_meta.json` 记的入口是旧路径 `scripts/smoke-local/bench_t
 
 | 阶段 | 内容 | 判据 |
 |---|---|---|
-| **S0 先验与 oracle** | ① Ada 上 Wan-VAE 20 窗探针（ms/窗、`max_memory_allocated`；直接用复制件 `encode_chunk`）；② **在重构动手前**产出 SigLIP oracle O1/O2（4.3）+ 本机目标卡跑 MotionJEPA `crosscheck.py --vae_check`（4.3 命令，≈2 min）；③ 建 `scripts/dataset/wan` 子 venv（`v1-store/venvs/wan`）；④ HF 缓存拷入 `v1-store/cache/hf` 并核 VAE 指纹 `9980d252…`；⑤ 复制 `wan_motion_infer.py` + 写 `SOURCE_PIN.json` + 拷 run 的 `config.yaml`/ckpt 到 `v1-store/external/motionjepa/` 并核 sha256（第二部分 1.5）；⑥ 4.1 的 `num_chunks` 口径经用户再次确认 | 拿到 ms/窗实测；SigLIP oracle 落盘并记 commit；`CROSSCHECK=PASS`（json 归档）；D6 跨卡 / D7 双 venv 探针 max\|diff\|=0；复制件 sha256 == `SOURCE_PIN.source_sha256` |
+| **S0 先验与 oracle** | ① Ada 上 Wan-VAE 20 窗探针（ms/窗、`max_memory_allocated`；直接用复制件 `encode_chunk`）；② **在重构动手前**产出 SigLIP oracle O1/O2（4.3）+ 本机目标卡跑 MotionJEPA `crosscheck.py --vae_check`（4.3 命令，≈2 min）；③ 建 `scripts/dataset/wan` 子 venv（`v1-store/venvs/wan`）；④ HF 缓存拷入 `v1-store/cache/hf` 并核 VAE 指纹 `9980d252…`；⑤ 复制 `wan_motion_infer.py` + 写 `SOURCE_PIN.json` + 拷 run 的 `config.yaml`/ckpt 到 `v1-store/external/motionjepa/` 并核 sha256（第二部分 1.5） | 拿到 ms/窗实测；SigLIP oracle 落盘并记 commit；`CROSSCHECK=PASS`（json 归档）；D6 跨卡 / D7 双 venv 探针 max\|diff\|=0；复制件 sha256 == `SOURCE_PIN.source_sha256` |
 | **S1 数据集重抽** | `scripts/dataset/` 破坏性重构（4.5）+ 40 ep 全链路（4.2，tmux；含 `oracle_driver.py` 产 D2/D5 oracle，须与被测同机同型号卡）+ D1–D10 全过 + dataloader 微基准（第二部分 1.6）；留档 `docs/dataset-build-doc/4task-motion-40ep/` | `COMPARE_RESULT=bitexact PASS`；`FINALIZE_EXIT_CODE=0`；`VERIFY_PACK=PASS scanned=13756 mismatches=0`；`WAN_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；`ENCODER_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；motion 表 619 行 = 87 + 532 |
 | **S2 model 接线** | 五节：双路 memory + `motion.enabled` 条件建模块 + `RepackTransform` 登记 + 对拍硬编码同步 | L0–L4 全过；L5 逐叶逐位；L6 方案 (i) 旧库 `G0_EQ=PASS` 命中锚点 + 方案 (ii) 新库 200–300 步 A/B 逐位；开启态 M6/M7/M8 形制、分布、尺度检查 |
 | **S3 在线接线** | `FrameSampMemory` 绝对网格增量编码 + Wan VAE 常驻 + 尖峰处理；⚠ policy server 在主 venv（torch 2.7.1），Wan-VAE + encoder 无法同进程加载，需 sidecar 进程或另行决策（第二部分三节） | 在线 / 离线同一起点特征一致（M10）；端到端 ms/step 实测 |
@@ -1108,7 +1108,7 @@ S0 的 oracle 产出、S1、S3 属「预计超过 5 分钟的全量数据构建 
    抽取与训练分进程分 venv、不共享 `PYTHONPATH`；禁 `uv run --project <repo_root>` 拉新依赖。
 11. **缓存落 `v1-store/cache/`**：`HF_HOME=$V1_STORE/cache/hf`、`HF_HUB_OFFLINE=1`，禁覆盖 `HOME`（`AGENTS.md` 第 14 条）。VAE 权重 `state_dict` sha256 须等于 `9980d252230c265cc2869466a74f85f5ee45b01ea9521bbb31159f90b75fe6d0`。
 12. **`build_dataset.py --force` 会 `rmtree` 整个输出目录**：oracle 与新库的输出根一律绝对路径、先 `ls` 确认。
-13. **一项未落定事项未确认前不得起跑 S1**：`num_chunks` 口径（第一部分 4.1 与 2.2 括号句，用户要求再次确认）。encoder 前向口径已于 2026-09-02 落定（第一部分 4.1）。
+13. **两项曾待定的口径均已落定，S1 不再被本条阻塞**：`num_chunks = max(0, 段帧数 − 32)`、exec 段取 MME-VLA 全长（第一部分 4.1 与 2.2 括号句，用户 2026-09-02 确认）；encoder 前向口径 A（第一部分 4.1，2026-09-02 落定）。
 
 ## 一、数据集侧实现细节（S1）
 
@@ -1474,7 +1474,6 @@ padding 位不做特殊处理（`motion_emb` 该位为 0），屏蔽完全交给
 7. **latent 域偏移**：encoder 在 A40 抽的 v8 latent 上训，我们喂 Ada 抽的 latent（差 1.24e-5，集中在 VAE `conv_out`、沿 group 累积），已实测到 token 级只落在最后一位（cos 0.999995），经入口 affine 归一化后可忽略。
 8. **与 MotionJEPA 抽取器实抽产物无直接的逐 chunk 对照**（用户拍板接受）：D2 的 oracle 是原版 `encode_chunk` 对同一 33 帧的重编，VAE 前向的逐位保证经 crosscheck [V1]（S0）传递；我方网格窗与 MotionJEPA chunk 索引的分段 / 索引一致性只由 D4（`exec_start_idx == MJ demo frames`）与非阻断 D9 间接覆盖，MotionJEPA finalize 四道守卫不再运行。
 9. **40 ep 库的吞吐结论只是上界**：全在页缓存里，turbo 冷缓存行为测不到；本机吞吐按第 13 条不作最终结论。
-10. **`num_chunks` 口径尚未落定**（红线 13），落定前 D2 / D5 / M2 / M3 判据里的 `Σ num_grid` 取值不可执行；encoder 前向口径已落定（4.1）。
 
 ## 九、留档与 commit 纪律
 
