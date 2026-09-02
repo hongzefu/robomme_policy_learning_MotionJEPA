@@ -29,7 +29,7 @@ prefix 记忆区 512 → **592**。运动特征来自 MotionJEPA 的两级链路
 绝对网格每 20 帧取一个起点、每个起点往后 33 帧编一个运动向量、窗口尾端不得越过当前帧。
 训练读离线表，在线评估每 20 帧增量现编一次。
 
-五个已定死的口径（依据分别在 2.2、2.1、2.3–2.4、3.4、3.3）：
+五个已定死的口径（依据分别在 2.2、2.1、2.3–2.4、3.5、3.4）：
 
 1. **段内绝对网格**（起点 = 段起点 + 20m）。
 2. **前视窗口 + 尾端 ≤ 当前帧**（起点往后 33 帧）。
@@ -102,7 +102,7 @@ t = 206
                                       1.57 s ÷ 20 步 ≈ 0.079 s/step
 ```
 
-绝对网格的两项直接收益（实测口径见 2.3 与 3.6）：
+绝对网格的两项直接收益（实测口径见 2.3 与 3.7）：
 
 - **离线表小、在线增量少**：全数据集的网格窗口只有 **20,958 行 = 61.4 MiB**；在线每
   20 步只新编 1 个窗口，摊薄 **0.079 s/step**（实测 1.57 s/窗口）。
@@ -168,7 +168,7 @@ exec stride，那正是「间隔一个 action chunk」的本意所在。**本计
 | 平均填充率 | 25.3% | 16.9% | 12.6% | **10.1%** |
 
 **与 framesample 的对齐关系**：N=80 不等于帧路的 `_max_frames = 32`，「两路同预算」这一层对齐
-**不成立**；「尽可能和 framesample 对齐」只保留在 padding + mask 同款这一层（3.3、3.4）。用户的
+**不成立**；「尽可能和 framesample 对齐」只保留在 padding + mask 同款这一层（3.4、3.5）。用户的
 三条拍板为「尽可能不截断任何样本」「容量按全集定标」「padding / mask 与 framesample 同款」。
 
 ### 2.4 ⚠ 零截断的代价：4env 上平均只有 8 个、16env 上平均只有 15 个位置是真数据
@@ -190,7 +190,7 @@ N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历�
 
 **三个后果需要在实验中盯住**：
 1. attention 里 89.9%（4env）/ 80.9%（16env）的运动位置被 mask，计算恒定支出但无信息——形状
-   固定是 JAX jit 的硬约束，省不掉（详见 3.3）。
+   固定是 JAX jit 的硬约束，省不掉（详见 3.4）。
 2. 早期样本（`t` 小）与晚期样本（`t` 大）的运动路信息量差异极大（0 个 vs 69 个，4env 内
    0 个 vs 27 个），模型可能学成「按 motion 有效数判断 episode 进度」的捷径——S4 需要一个消融
    专门测这个。
@@ -204,14 +204,14 @@ N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历�
 **当前时刻的运动始终缺席**。
 
 **用户已拍板：不补**（「采样不到 33 窗口都不补」）。不加网格外的起点（例如紧贴当前帧的
-`t−32`），不做钳位回退。凑不齐完整 33 帧窗口的位置就是缺失，走 padding + mask（3.3）。
+`t−32`），不做钳位回退。凑不齐完整 33 帧窗口的位置就是缺失，走 padding + mask（3.4）。
 
 ## 三、链路：运动特征怎么送入模型
 
 ### 3.1 改动前后链路图（`AGENTS.md` 第 18 条）
 
 分两个子节：改动前全图（3.1.1）、改动后全图（3.1.2）。图中两处标注的 `static_pos_emb`
-/ `pos_f` 与 padding 分别在 3.2、3.3 单独展开。图中 `b` = batch size。
+/ `pos_f` 与 padding 分别在 3.2、3.4 单独展开。图中 `b` = batch size。
 
 #### 3.1.1 改动前：memory 单路（帧路）
 
@@ -229,7 +229,7 @@ N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历�
  (n,16,2048) bf16         (n,16,768) f32                    (n,8) f32
  每帧 16 个外观 token      每 token 一个 3D 位置编码         （use_state_emb=False，
    │                           │                             不进链路，只随行交付）
-   │        _pad 右填充到 32 帧 + 帧级 mask (32,)（3.3）      │
+   │        _pad 右填充到 32 帧 + 帧级 mask (32,)（3.4）      │
    │        reshape / repeat：32 帧 × 16 token = 512            │
    ▼                           ▼                                ▼
  static_image_emb         static_pos_emb                  static_state_emb   static_mask
@@ -303,7 +303,7 @@ N=16 时填充率 48.9%，但 8.88% 的样本被截断，丢的是最早的历�
 2. **两列在 concat 之前互不相干**：采样各采各的（变长间隔 vs 绝对网格）、表各查各的、
    投影各用各的参数；唯一交汇点就是最后那次 `512 + 80` 的长度轴 concat。
 3. **重活全在训练环外**：右列的 Wan VAE 与 `WanLatentMotionEncoder` 只在离线抽表 /
-   在线评估时跑（在线按 2.2 的网格每 20 帧才增量编 1 个窗口，见 3.6）；训练时右列就是
+   在线评估时跑（在线按 2.2 的网格每 20 帧才增量编 1 个窗口，见 3.7）；训练时右列就是
    「seek 读几行 f32 + 两个小 Linear」，新可训练参数只有打 ★ 的两层，合计 3.74 M（六节）。
 
 ### 3.2 `static_pos_emb` 与 `pos_f` 的实现
@@ -341,7 +341,104 @@ frame_mean` 因此是权宜（盲区清单第 3 条），列为 S4 可选消融�
 **投影互不共享**：帧路走 `pos_proj`、运动路走新建的 `motion_pos_proj`，参数树互不沾边；
 两路只共享 `pos_emb_4x4` 这张只读底表——这也是 `motion.enabled=false` 能逐位退回的前提。
 
-### 3.3 两路 padding 与 mask 的实现
+### 3.3 从 pi0 到 history_pi0：训练 / 推理计算与 mask 三条规则
+
+本节回答「mask 到底是怎么起作用的」之前的那个问题：pi0 本身一次训练、一次推理在算什么。
+分四层，每层只讲比上一层多出来的东西。一个之前没点明的细节要先说：history_pi0 在
+`context` 模式下把**第一个图像 token 的 `ar_mask` 设成了 True**，这让记忆自成一块。
+
+**第一层：原版 pi0 的一次训练前向**
+
+模型由两个「专家」组成，共享一次注意力。一个是 PaliGemma（SigLIP 图像编码器 + Gemma 2B
+语言模型），处理图像和文本；另一个是小得多的 action expert（Gemma 300M 规格），处理动作。
+两者各有自己的权重，但在每一层的注意力里，query、key、value 沿序列维拼在一起，做**同一次**
+softmax。所以「动作 token 能不能看图像 token」这种事，完全由那张 mask 表决定。
+
+训练目标是 flow matching。`compute_loss`（`src/openpi/models/pi0.py`）做的事：
+
+1. 采一份高斯噪声 `noise` 和一个时间 `t ∈ (0,1)`，把真实动作和噪声按 `x_t = t·noise + (1−t)·actions`
+   混合，目标速度是 `u_t = noise − actions`。
+2. `embed_prefix`：两张相机图各过 SigLIP 得 256 个 token，共 512（SigLIP 每步现算、参数冻结）；
+   文本指令过 Gemma 的词嵌入得最多 64 个 token。每个 token 带 `input_mask`（图像来自
+   `image_masks`，缺相机则整段 False；文本来自 `tokenized_prompt_mask`，补齐位 False）和
+   `ar_mask`（全部 False）。
+3. `embed_suffix`：带噪动作 `x_t` 过一个线性层得 20 个 token；时间 `t` 过正弦编码和 MLP 变成
+   `adarms_cond`，通过 adaRMS 调制注入 action expert 的每一层（pi05 模式，不占 token，也没有
+   state token）。`input_mask` 全 True，`ar_mask = [True, False×19]`。
+4. 把 prefix 和 suffix 的 `input_mask`、`ar_mask` 各自首尾相接，调 `make_attn_mask` 得到
+   `(b, 596, 596)` 的表（512 + 64 + 20），`positions = cumsum(input_mask) − 1`。
+5. `PaliGemma.llm([prefix_tokens, suffix_tokens], mask, positions)` 一次前向，18 层，每层：
+   各专家用自己的权重算 q/k/v，拼接，RoPE，`q·k` 得分，用表把 False 格子替成 −2.38e38，
+   softmax，乘 v，各专家再用自己的输出投影。
+6. 取 suffix 输出的最后 20 个位置，过 `action_out_proj` 得预测速度 `v_t`，loss 是
+   `‖v_t − u_t‖²` 的均值。
+
+这张表长什么样。`ar_mask` 里只有动作第一个是 True，所以 prefix 全在第 0 块，动作全在第 1 块：
+
+| q 能看 k？ | k = 图像 | k = 文本 | k = 动作 |
+|---|---|---|---|
+| q = 图像 | 是 | 是 | 否 |
+| q = 文本 | 是 | 是 | 否 |
+| q = 动作 | 是 | 是 | 是 |
+
+再叠加 `input_mask` 的外积：补齐的文本位、缺失相机的图像位，整列整行 False。
+
+**第二层：原版 pi0 的一次推理**
+
+`sample_actions` 从纯噪声出发，用 Euler 法沿预测速度往回积分，默认 10 步。关键的省算法：
+prefix 在 10 步里不变，所以只算一次。
+
+1. **前缀 pass**：`embed_prefix` 得 576 个 token，`make_attn_mask` 得 `(b, 576, 576)` 表，跑一次
+   llm，把每一层算出的 k、v 存成 `kv_cache`，输出丢掉。
+2. **去噪循环**（`step`，重复 10 次）：`embed_suffix(x_t, t)` 得 20 个动作 token；这 20 个 query
+   的 mask 是 `(b, 20, 576 + 20)`，前 576 列直接拿 `prefix_mask` 复制 20 行（动作本来就能看所有
+   prefix，只需排除补齐位），后 20 列是动作自己的 `make_attn_mask`；跑 llm 时只传 suffix，
+   注意力里 k、v 是「缓存的 576 个 + 新的 20 个」；得 `v_t`，更新 `x_t ← x_t + dt·v_t`。
+3. 循环结束的 `x_t` 就是输出动作。
+
+训练和推理算的是同一个函数，只是训练一次算全序列，推理把 prefix 缓存后每步只算 20 个 query。
+
+**第三层：history_pi0 多了什么**
+
+多一段输入。dataloader 交来 `static_image_emb (b,512,2048)`、`static_pos_emb (b,512,768)`、
+`static_mask (b,512)`，是过去 32 帧每帧 16 个池化后的 SigLIP 特征加 3D 位置编码（这部分
+SigLIP 是离线算好存表的，与当前帧的在线 SigLIP 不同）。`embed_memory` 把它们过 `pos_proj`、
+拼接、`encoder_static` 变成 512 个 2048 维的记忆 token，返回四元组：token、
+`input_mask = static_mask`、`ar_mask` 全 False、`na_mask` 全 False。
+
+`embed_prefix` 在 `context` 模式下把记忆放在最前面，并改了两个 bit：
+
+- 第一个图像 token 的 `ar_mask` 从 False 改成 **True**。于是记忆是第 0 块，图像和文本是第 1 块，
+  动作是第 2 块。
+- 所有图像 token 的 `na_mask` 设成 True，其余全 False。
+
+`make_attn_mask`（`src/mme_vla_suite/models/integration/history_pi0.py`）多一条规则 C：
+`(na[q] 或 na[k]) 且 k 在第一个 na=True 之前`，即「q 是图像、k 在记忆区」的格子强制 False。
+设计意图是不让预训练好的视觉表征被记忆干扰，让记忆只通过文本和动作生效。
+
+三条规则叠加后的可见性：
+
+| q 能看 k？ | k = 记忆 | k = 图像 | k = 文本 | k = 动作 |
+|---|---|---|---|---|
+| q = 记忆 | 是 | 否（规则 A） | 否（A） | 否（A） |
+| q = 图像 | **否（规则 C）** | 是 | 是 | 否（A） |
+| q = 文本 | 是 | 是 | 是 | 否（A） |
+| q = 动作 | 是 | 是 | 是 | 是 |
+
+再叠加规则 B：`static_mask` 里 False 的记忆列整列封死。这就是 3.4 第六站的内容。
+
+其余一字未变。loss 还是同一个 flow matching，推理还是前缀 pass 加 10 步去噪，记忆 token 随
+prefix 进 `kv_cache`，每步动作 query 对记忆列的可见性来自 `prefix_mask` 复制。3.4 第七站的
+gemma 代码和原版 pi0 是同一段。
+
+**第四层：motion memory 接入多了什么**
+
+只有 `embed_memory` 的四元组变长：token 从 512 变 592，`input_mask` 变成 `static_mask` 接
+`motion_mask`，`ar_mask`、`na_mask` 各追加 80 个 False。运动 token 落在第 0 块、不是 na，所以在
+上面那张可见性表里它和「记忆」那一行一列的待遇完全相同。`make_attn_mask`、gemma、loss、
+推理循环都不知道多了这 80 个位置。
+
+### 3.4 两路 padding 与 mask 的实现
 
 **这一节解决什么问题。** 模型走 JAX jit，每个输入张量的形状在编译期固定：帧路恒为 512 个
 memory 位置、运动路恒为 `motion.budget = 80` 个位置。但每个样本的真数据个数是变的：帧路在
@@ -468,7 +565,7 @@ main(config)
        内存字典 _history_feats[step]。这个字典就是推理时的「离线表」，一步步长出来。
        ★motion memory 接入：另存一份 256 域原图滚动缓冲（运动编码器要 256 域，视觉编码器用
        的是 224）。每当「下一个网格起点 + 32」这 33 帧全部到齐，把它们过运动编码器得一个
-       768 维 motion token，存 _history_feats_motion[f]。每 20 帧才触发一次（3.6）。
+       768 维 motion token，存 _history_feats_motion[f]。每 20 帧才触发一次（3.7）。
 
 阶段二（每步）：MME_VLA_Policy.infer(obs)
 │
@@ -609,7 +706,7 @@ token_budget=32)`（`shared/sampling.py`），`step < 32` 走 `range(step+1)` �
 | motion 行 | `motion_token.f32.bin (20958, 768)`，按 `(段, 网格序号)` 定位行号，`seek(row × 3072)` 读 1 行 | 每起点 `(768,)`，堆成 `(9, 768)` | f32 |
 | pos_f | 同一张 `pos_rows`，取起点帧 `(16, 768)` 沿 16 轴均值（3.2） | 每起点 `(768,)`，堆成 `(9, 768)` | f32 |
 
-训练时 motion 行从离线表读，在线评估时现编（3.6）。
+训练时 motion 行从离线表读，在线评估时现编（3.7）。
 
 **第三站（dataloader 侧）：拼成这一个时刻的完整 memory，不足补 0 并记下 mask**
 
@@ -698,7 +795,7 @@ na_mask)` 用三部分按位与得到它：
 
 1. 结构规则 `attn_mask = cumsum(ar_mask)[k] <= cumsum(ar_mask)[q]`，决定 prefix 双向、action
    因果，与 padding 无关；
-2. `mask_na` 的 where，决定 image 不看 memory（3.5），与 padding 无关；
+2. `mask_na` 的 where，决定 image 不看 memory（3.6），与 padding 无关；
 3. **`valid_mask = input_mask[:, None, :] * input_mask[:, :, None]`**，`(b,1188) → (b,1188,1188)`
    的外积：`(q,k)` 为 True 当且仅当第 `q` 位和第 `k` 位都是真数据。
 
@@ -743,7 +840,7 @@ out    = probs @ v                                 padding 列的 value 乘的�
   image / prompt / action 拿到的位置编号一样；`motion.enabled=false` 时全 False 的 80 位对
   positions 零贡献，这是逐位退回的又一个前提。
 - 两路在这条链上完全对称。从第三站填 0 到第七站权重为 0，帧路和运动路走的是同一条路，没有
-  任何一处按来源分支。3.4 说运动路 padding 与 `static_mask`「完全同款」，指的就是这个。
+  任何一处按来源分支。3.5 说运动路 padding 与 `static_mask`「完全同款」，指的就是这个。
 
 **推理时 padding 被封两次**
 
@@ -755,7 +852,7 @@ out    = probs @ v                                 padding 列的 value 乘的�
 `prefix_mask` 里 False 的位直接成了整列 False，所以 action token 在每一步都看不到 padding 列，
 不需要再算一次外积；`positions` 用 `sum(prefix_mask)` 起算，padding 位同样不占位置编号。
 
-### 3.4 并列拼接 + motion_mask
+### 3.5 并列拼接 + motion_mask
 
 运动路以**并列拼接**进入记忆序列：`[512 帧路] + [80 运动路]` = 592。运动路完全独立——
 独立采样、独立投影、独立 mask，`motion.enabled=false` 一键退回**逐位等价**的旧链路。
@@ -763,7 +860,7 @@ out    = probs @ v                                 padding 列的 value 乘的�
 **完全同款**——帧路在 `step<32` 时同样是 padding + mask，用户要求的「尽可能和 framesample
 对齐」也指向这一边。
 
-### 3.5 注入点与冻结边界
+### 3.6 注入点与冻结边界
 
 **运动段放在 img 之前**：`make_attn_mask` 的
 `mask_not_attend = (na[k] | na[q]) & (cumsum(na) <= 0)`，第一个 `na=True` 的位置是 image token。
@@ -773,7 +870,7 @@ out    = probs @ v                                 padding 列的 value 乘的�
 **两级冻结边界**：Wan VAE 与 `WanLatentMotionEncoder` 都在训练环外、无梯度回传；训练环内
 只有 `motion_pos_proj` 与 `motion_encoder_static` 两个新投影。
 
-### 3.6 在线推理：增量编码与延迟账
+### 3.7 在线推理：增量编码与延迟账
 
 MotionJEPA v8 全量抽取的**实测吞吐 0.635 chunk/s**（单 A40，fp32、**关 TF32**、窗口 batch 恒 1；
 `docs/dataset-build-doc/v8-400ep-full/README.md` 记 396,302 chunk ÷ 8 分片，sacct Elapsed
@@ -878,7 +975,7 @@ S1 与 S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AG
   若日后启用 lora，filters 为 `Any(All(".*llm.*", Not(".*lora.*"), Not(".*mem.*")), ".*img.*")`，
   路径含 `mem` 恰被 `Not(".*mem.*")` 排除出冻结集 → **仍可训练**。两种情形都安全。
 - **数据**：新增 61.4 MiB 离线表（`v1-store/` 内，不进 git，符合第 14 条）；不动 261 GB latent。
-- **在线评估**：多背一个 Wan VAE（PyTorch）常驻，延迟见 3.6。
+- **在线评估**：多背一个 Wan VAE（PyTorch）常驻，延迟见 3.7。
 - **不影响**：正在跑的 `v1-prod-60k` 全量 run（本计划一行代码都还没动）。
 
 ---
@@ -902,7 +999,7 @@ S1 与 S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AG
    「strict load 失败即在第一次前向炸」的保护——`normalize()` 首行的 finite 断言为此存在）。
 4. **抽取口径必须与 MotionJEPA 一致**：fp32、`torch.backends.cuda.matmul.allow_tf32 = False`、
    窗口 batch 恒 1。这三条是 finalize 语义 oracle 逐位可复现的前提，抽表阶段不得放开
-   （在线阶段可放开，见 3.6 与 S0）。
+   （在线阶段可放开，见 3.7 与 S0）。
 5. **新参数必须在所有现有模块之后创建**。`HistoryPi0.__init__` / `PerceptualMemory.__init__` 里
    `rngs` 的消耗序决定既有模块的初始化值（`datastore/README.md` 明记 `use_pos_emb` /
    `use_state_emb` 影响「`FeatureEncoder` 的参数树与 RNG 消耗序，禁改」）。运动路的两个新投影
@@ -1118,7 +1215,7 @@ padding 帧的处理逐字同构（`FrameSampDataset._pad` 也是填 0 + `static
 - `MME_VLA_Policy._prepare_history`：补 `inputs["motion_emb"]` / `inputs["motion_mask"]`。
 - ⚠ 注释里那条红线仍然有效：**禁把 encode 与 pool 包进新的 `jax.jit`**（融合边界变了，
   bf16 累加序可能变位）。motion 编码走 PyTorch、在 jit 之外，天然不违反。
-- **尖峰处理**（3.6 细节 1）：第 20 步的 1.57 s 尖峰若不可接受，可提前一步预编——起点的可见
+- **尖峰处理**（3.7 细节 1）：第 20 步的 1.57 s 尖峰若不可接受，可提前一步预编——起点的可见
   时刻 `起点 + 32` 完全可预测，可在 `起点 + 32` 到来前的空闲步里后台编好。S3 决定是否需要。
 
 ## 四、对拍闸门总表
