@@ -698,50 +698,21 @@ suffix 20 action], axis=1)` → `(b,1188)` bool（现状 1108）。`ar_mask`、`
 对 `t=5` 的帧路样本，这 1188 位里第 96–511 位 False；对 `t=200` 的运动路样本，第 521–591 位
 False。
 
-**第六站（JAX，jit 内）：`make_attn_mask` 把一条 1188 位向量变成 1188 × 1188「谁能看谁」表，补齐位整列封死**
+**第六站（JAX，jit 内）：`make_attn_mask` 把三条 1188 位向量变成 1188 × 1188「谁能看谁」表；接入 motion memory 后函数定义不变，只是三条 mask 输入有改变**
 
-这一站把「哪些位是补的」这条一维信息变成「谁不能看谁」的二维规则。
+`make_attn_mask(input_mask, ar_mask, na_mask)` 输出 `(b,1188,1188)` 布尔表，`(q,k)` 为 True 表示
+query q 允许看 key k。三条输入的取值与合成后的可读范围见 3.3 的数轴图，这里只讲图里没画的
+padding 一项：`valid_mask = input_mask[:, None, :] * input_mask[:, :, None]` 是 `input_mask` 与自己
+的外积，`(q,k)` 为 True 当且仅当第 q 位和第 k 位都是真数据，所以 padding 位整列 False（任何 query
+都看不到它）、整行 False（它自己也看不到别人，但其输出无人消费）。回到我们的样本：`t=5` 时第
+96–511 列、`t=200` 时第 521–591 列整列 False，不论块号规则怎么允许。
 
-attention 里每个 token（query，行 `q`）要决定看序列里每个 token（key，列 `k`）多少。控制这件事
-的是 `(b,1188,1188)` 的布尔表，`(q,k)` 为 True 表示允许。`make_attn_mask(input_mask, ar_mask,
-na_mask)` 用三部分按位与得到它：
+接入 motion memory 后，函数定义一字不改，有改变的只是三条 mask 输入：`input_mask` 追加
+`motion_mask` 80 位，`ar_mask` 与 `na_mask` 各追加 80 个 False；输出从 `(b,1108,1108)` 变为
+`(b,1188,1188)`。两个 `ar_mask=True`、第一个 `na_mask=True` 的位移和记忆区扩到第 0–591 位，3.3
+图内已逐行注明，不重复。
 
-1. 结构规则 `attn_mask = cumsum(ar_mask)[k] <= cumsum(ar_mask)[q]`，决定 prefix 双向、action
-   因果，与 padding 无关；
-2. `mask_na` 的 where，决定 image 不看 memory（3.6），与 padding 无关；
-3. **`valid_mask = input_mask[:, None, :] * input_mask[:, :, None]`**，`(b,1188) → (b,1188,1188)`
-   的外积：`(q,k)` 为 True 当且仅当第 `q` 位和第 `k` 位都是真数据。
-
-**接入 motion memory 后这一站改了什么：函数本身一字不改，三条输入向量各长 80 位。**
-
-- `input_mask`：记忆 512 位后接 `motion_mask` 80 位，前 m 位 True，其余 False。这是三条向量里
-  唯一由数据决定的新内容。
-- `ar_mask`：追加 80 个 False。两个 True 从第 512、1088 位后移到第 592、1168 位，相对位置不变，
-  仍是图像段与动作段的第一个 token；`cumsum` 之后运动段与记忆段同属块号 0。
-- `na_mask`：追加 80 个 False。第一个 True 仍是图像段第一个 token，从第 512 位后移到第 592 位；
-  `cumsum(na) <= 0` 的记忆区从第 0–511 位扩到第 0–591 位，运动段被包进去，因此上面第 2 项
-  「image 不看 memory」自动覆盖运动段。
-- 三条变长都发生在 `embed_memory` 的返回值里（第五站）。`make_attn_mask` 函数体一字不改，输出从
-  `(b,1108,1108)` 变为 `(b,1188,1188)`。3.3 那张图的下四行就是这个输出矩阵按 q 所在段分组后的行。
-
-第 3 项是 padding 屏蔽的全部。用 6 位迷你例子，`input_mask = [T,T,T,T,F,F]`：
-
-```
-valid_mask     k=0  k=1  k=2  k=3  k=4  k=5
-   q=0 真       T    T    T    T    F    F
-   q=1 真       T    T    T    T    F    F
-   q=2 真       T    T    T    T    F    F
-   q=3 真       T    T    T    T    F    F
-   q=4 补       F    F    F    F    F    F
-   q=5 补       F    F    F    F    F    F
-```
-
-第 4、5 **列**整列 False：不管谁当 query，都不允许看这两个位置，这就是「padding 对任何 query
-不可见」。第 4、5 **行**也整行 False：padding 自己谁也看不到，但 padding 位的输出无人消费，这
-一半无关紧要。回到我们的样本：`t=5` 时第 96–511 列、`t=200` 时第 521–591 列，在 1188 × 1188
-的表里整列 False，不论结构规则怎么允许。
-
-**第七站（JAX，jit 内，gemma）：False 格子在 softmax 里权重严格为 0，补齐位对任何输出零贡献**
+**第七站（JAX，jit 内，gemma）：False 格子在 softmax 里权重严格为 0，补齐位对任何输出零贡献；接入 motion memory 后这一站不改**
 
 这一站把第六站的「不能看」落实成数值上的 0。
 
@@ -753,11 +724,6 @@ masked = where(attn_mask, logits, −2.3819763e38)   False 格子换成 f32 最�
 probs  = softmax(masked, axis=-1)                  exp(−2.38e38) 精确为 0，不是很小的正数
 out    = probs @ v                                 padding 列的 value 乘的是 0
 ```
-
-**接入 motion memory 后这一站改了什么：没有。** gemma 的 `Attention.__call__` 收到的 mask 从
-`(b,1,1108,1108)` 变成 `(b,1,1188,1188)`，多出的 80 行 80 列由第六站产生，gemma 代码不区分来源；
-运动路 padding 列与帧路 padding 列在 `where` 里换成同一个 `−2.3819763e38`，softmax 后同为精确 0。
-loss、`sample_actions` 的前缀 pass 与去噪循环同样不改。
 
 所以整件事收口在这里：padding 位的零向量确实经过了 `motion_pos_proj` / `motion_encoder_static`，
 算出了非零的 key 和 value，但没有任何 query 能给它非零权重。模型的每一个输出，与这 26 帧、这
