@@ -85,3 +85,13 @@ warmup 计数，`train.py` 已 fail-loud 禁用 `--resume` / `--overwrite`。跨
 - log100 下慢步/非慢步分层不可算：按 `v1-prod-trend-10h` 同款降级口径留档说明
   （AGENTS 16 该分项，用户已拍板接受）。
 - 与 `v1-prod-60k` 前 60k 步曲线并排对照，核对语义前缀主张（loss / grad_norm 走势一致）。
+
+## 口径变更（2026-09-02，用户拍板）：第二次提交去掉 EXPECTED_GIT_HEAD 起跑闸
+
+第一次提交（job 59473806）排队约 5 小时后被起跑闸拦下：排队期间另一会话对
+`v6-motion-memory-plan.md` 的四次 docs 提交让 HEAD 从 `05c1faa` 漂到 `a9d13ca`
+（详见 `records/submit.md`）。训练代码自 commitV5.1 `baeaee7` 起零改动，闸拦下的只是文档
+commit。用户 2026-09-02 经 AskUserQuestion 选「去掉闸重提」：**第二次提交不传
+`EXPECTED_GIT_HEAD`**，sbatch 起跑闸整段跳过（HEAD 相等与工作区 clean 都不再断言）。
+provenance 不丢：`env.json` 起跑时仍自动记录实际 `git_head`，收官 result.md 以该值为准。
+除此之外提交串与第一次逐字相同。
