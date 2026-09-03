@@ -279,11 +279,17 @@ RC="${PIPESTATUS[0]}"
 set -e
 
 # 跑完（无论成败）清理 run 目录空壳；编译缓存按 KEEP_JAX_CACHE 处置（软链总是拆掉）
+# ⚠ BENCH_SAVE_FINAL_CKPT=1（T3 两侧 run）时 run 目录里有最终 checkpoint 999 与配置快照，必须保留、不得清理
+#   （2026-09-03 motion-t3-closed 跑到一半发现此处会连 999 一起 rm，临时以硬链接看门狗保出；本条修补对之后的 run 生效）
 if [[ -e "${CKPT_DIR}" ]]; then
-  case "${CKPT_DIR}" in
-    "${TRAIN_RUNS}/${RUN_TAG}/mme_vla_suite/${EXP_NAME}") rm -rf -- "${CKPT_BASE}" ;;
-    *) echo "错误: 拒绝清理非预期路径 ${CKPT_DIR}" >&2; exit 1 ;;
-  esac
+  if [[ "${BENCH_SAVE_FINAL_CKPT:-0}" == "1" ]]; then
+    echo "保留 run 目录（BENCH_SAVE_FINAL_CKPT=1，含最终 checkpoint）: ${CKPT_DIR}"
+  else
+    case "${CKPT_DIR}" in
+      "${TRAIN_RUNS}/${RUN_TAG}/mme_vla_suite/${EXP_NAME}") rm -rf -- "${CKPT_BASE}" ;;
+      *) echo "错误: 拒绝清理非预期路径 ${CKPT_DIR}" >&2; exit 1 ;;
+    esac
+  fi
 fi
 rm -f -- "${JAX_CACHE_LINK}"
 if [[ "${KEEP_JAX_CACHE}" != "1" ]]; then
