@@ -1302,7 +1302,11 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
 - **motion-t3-closed 完成**（HEAD `25e066c`，15:54–16:45，1000 步，`BENCH_PASS`）：loss 全有限（0.5920 → 0.0283，末 200 步均值 0.0316）、`n_keys=12` / `n_leaves=177`、
   `T3_INIT_MATCH=PASS`（177 叶命中 reference）、`T3_TRACE_PREFLIGHT=PASS samples=112 empty=8 k_ge2=104 video=True`；最终 EMA checkpoint 999 保存于
   `v1-store/train-runs/motion-t3-closed-final/`。意外：驱动脚本收尾无条件 `rm -rf` run 目录，靠看门狗硬链接保出 999，脚本已修（`702009c`）。留档 `docs/training-doc/motion-t3-closed/result.md`。
-- 进行中：`motion-t3-open`（HEAD `702009c`，16:49 起，1000 步）→ `t3verifyinit`（open）/ `t3trace` / `t3mechanism` / `t3phase` → `T3_EVAL_OBS`。`motion_gates_model.py` 旧入口 `main()` 先于扩展入口执行、拒掉 `--gate t3*`，已删旧入口（`fix:`）。
+- **motion-t3-open 完成**（HEAD `702009c`，16:48–17:41，1000 步，`BENCH_PASS`，run 目录含 checkpoint 999 已由修补后的驱动保留）：稳态 2.112 s/step（closed 1.991）。
+- **T3 硬闸（截至 t3trace）**：`T3_INIT_MATCH=PASS`（closed 177 / open 193 叶命中 reference）；`T3_SMOKE=PASS steps=1000 nan=0 motion_params_updated=4 n_keys=16/12 n_leaves=193/177`
+  （open 侧 4 个 motion params 叶及其 ema / opt 共 16 叶初末态 sha 均不同）；`T3_TOKEN_TRACE=PASS steps=14 samples=112 keys=4 mismatches=0`。
+- **T3_EFFECT_OBS**（描述性，单 seed，ep0–9 在 encoder 训练集内）：末 200 步 loss open 0.0304 / closed 0.0316（Δ −0.0012）；首步 0.5010 / 0.5920，末步 0.0300 / 0.0283。
+- 进行中：`t3mechanism`（GPU，选 step 0 batch）→ `t3phase`（run `motion-t3-phase`）→ `T3_EVAL_OBS`（`run_t3_eval_obs.sh`，两侧各四任务 × 50 集）。`motion_gates_model.py` 旧入口 `main()` 先于扩展入口执行、拒掉 `--gate t3*`，已删旧入口（`fix:`）。
 
 ### S3 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-p5-online/`，在线观察归 T3 两侧 run）
 
