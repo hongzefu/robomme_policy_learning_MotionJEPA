@@ -1289,7 +1289,11 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
 - **T1**：`motion-t1-closed`（HEAD `3b02f18`，2026-09-03 14:06–14:56，b8 1000 步）`G0_EQ=PASS`，`scalars_hex.tsv` sha256 命中锚点 `c799a0b2…`（第七份同值）；
   `SCALARS 1000/5/0`、`STATE_DIGEST 12/0`、`BATCH_DIGEST_CANONICAL 14/0`、`CANON_CHECK=PASS/14`、`INDEX_SEQ=PASS n=8072`、`n_keys=12`、`n_leaves=177`、`BASELINE_ENV=PASS`；
   留档 `docs/training-doc/motion-t1-closed/result.md`。
-- 进行中：T2 candidate `motion-t2-cand`（HEAD `7ff0a17`）→ A22 → T3。
+- **T2 candidate**：`motion-t2-cand`（HEAD `7ff0a17`，14:59–15:14，b8 300 步，40 ep 库）`T2_EQ=PASS steps=300 batch=8 record_steps=[0,100,200,299] digest_steps=[0,1,2,100,200,299]`，
+  scalars sha `3aee70eb…` 与 reference 相同，`BASELINE_ENV` 三次 check 全 PASS；`g0_gate.py` t2 分支漏定义 `_REPO_ROOT` 的 bug 顺手修复（`fix:`）。留档 `docs/training-doc/motion-t2-cand/result.md`。
+- **1.6 吞吐（dataloader-only b64，本机 NVMe、页缓存，只看差值）**：关闭态 w4c6 54.2 / w8c10 54.6 样本/s，开启态 w4c6 51.6 / w8c10 52.0 样本/s（开启态慢 4–5%），
+  每批 pickle 载荷 262.3 MB → 287.6 MB（+25.3 MB = 64 × (96×768 + 96×256) × 4 B + mask + mem_order）；Pipe 微基准随 `v1-store/reports/motion/dataloader_bench.json` 回填。
+- 进行中：合入 S3（`s2-dev`）→ P5 → A22 → T3。
 
 ### S3 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-p5-online/`，在线观察归 T3 两侧 run）
 

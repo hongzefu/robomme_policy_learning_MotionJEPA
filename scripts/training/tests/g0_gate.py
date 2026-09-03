@@ -38,7 +38,10 @@ import hashlib
 import json
 import pathlib
 import re
+import subprocess
 import sys
+
+_REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]   # <repo>/scripts/training/tests/g0_gate.py → 仓库根
 
 _EXPECT_HEADER = "step\tloss.hex\tgrad_norm.hex\tllm_grad_norm.hex\tmem_enc_norm.hex\tparam_norm.hex"
 _EXPECT_LINES = 1001          # 表头 1 行 + 步 0..999 各 1 行
