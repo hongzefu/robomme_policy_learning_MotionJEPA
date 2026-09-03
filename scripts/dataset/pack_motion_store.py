@@ -179,11 +179,12 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
     workers: dict[str, dict] = {}
     state_sha: dict | None = None
     same_keys_vae = ("vae_id", "vae_state_sha256", "vae_dtype", "latent_mode", "batch", "tf32", "amp",
-                     "torch", "cuda", "cudnn", "diffusers", "module_sha256", "encoder_src_sha256", "flags",
-                     "env", "gpu_name", "compute_cap", "driver")
+                     "torch", "cuda", "cudnn", "diffusers", "cublas_pkg", "cudnn_pkg", "module_sha256",
+                     "encoder_src_sha256", "flags", "env", "gpu_name", "compute_cap", "sm_count", "driver")
     same_keys_enc = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", "state_key", "precision",
-                     "amp", "tf32", "batch", "vae_id", "motion_dims", "torch", "cuda", "cudnn",
-                     "module_sha256", "encoder_src_sha256", "env", "gpu_name", "compute_cap", "driver")
+                     "amp", "tf32", "batch", "vae_id", "motion_dims", "torch", "cuda", "cudnn", "diffusers",
+                     "cublas_pkg", "cudnn_pkg", "module_sha256", "encoder_src_sha256", "env", "gpu_name",
+                     "compute_cap", "sm_count", "driver")
     for _e, _seg, key, _, _ng in iter_rows_in_order(entries):
         lm = _load_json(latents_root / f"{key}.metadata.json")
         tm = _load_json(tokens_root / f"{key}.metadata.json")

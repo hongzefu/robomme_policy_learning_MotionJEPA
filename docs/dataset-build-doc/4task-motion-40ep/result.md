@@ -56,3 +56,69 @@ torch 2.9.0+cu128 / cudnn 91002。VAE 段 8 窗：[V7] 指纹 `9980d252…` == �
 - 计划 1.3 预估 Wan 抽取按 1.64 s/窗；Ada 实测 0.85 s/窗（单卡 772 窗 ≈ 11 min，双卡 ≈ 5.5 min）。
 - `crosscheck.py` 起手 `[env]` 打印的 `cudnn.allow_tf32=True` 是进程初始默认值，随后 `pin_numerics()` 钉为 False（[10] 读回值全对），不是异常。
 - `uv run`（不带 `--no-sync`）在 `pyproject.toml` 改动后会重建 openpi editable 包，不改根 `uv.lock`；后续命令一律加 `--no-sync`。
+
+## S1 结果（2026-09-03）
+
+**起跑 HEAD**：`f677794c1d1fc027a8e1f5d2721da95c9ac96398`（commitV6.2 `30a9079` + 两个 `fix:` 修补 `2111ca6`、`f677794`，见「意外」）。
+全部判定行：
+
+```
+STAGE_DONE stage=siglip workers=2 items=40 elapsed=106s        （gpu0/gpu1 各 SHARD_DONE episodes=20，稳态 ≈104 step/s/卡）
+FINALIZE_EXIT_CODE=0                                            （四 h5 sha256 同源、pkl 11530/11530、sidecar=2 覆盖 40、残留 claim=0、抽检 256/256 max|diff|=0）
+PACK_DONE=1
+VERIFY_PACK=PASS scanned=13756 mismatches=0
+COMPARE_RESULT=bitexact PASS                                    （D1 O1：kept_indices 40、pkl 11530、image/pos ×3 档与 state 各 13756，全逐位）
+COMPARE_RESULT=bitexact PASS                                    （D1 O2：未改动 builder，listdir 序映射交叉验证通过；pkl 抽 320、image/pos 13756 逐位）
+STAGE_DONE stage=wan workers=2 items=60 elapsed=347s           （gpu0 393 窗 / gpu1 379 窗，≈0.84–0.95 s/窗，peak 1,439 MiB）
+STAGE_DONE stage=encode workers=1 items=60 elapsed=8s          （772 窗 5 s）
+PACK_MOTION_DONE=1
+VERIFY_MOTION=PASS scanned=772 mismatches=0
+A5_FRAMES=PASS compared_400ep=13756 mismatches_400ep=0 compared_mj_v7=13516 mismatches_mj_v7=0 mj_skipped=0
+A6_MANIFEST=PASS episodes=40 field_mismatches=0 manifest_sha_same=1 motion_index_sha256=313d454942d60dcc…
+A7_BYTES=PASS segments=60 mismatches=0 table_rows=772 table_ok=1
+A8_TABLE_BITEXACT=PASS sampled=128 mismatches=0 rows_total=772
+A9_INDEXSET=PASS samples=500 mismatches=0
+A9_ROWENC=PASS samples=500 rows=5071 unique_windows=687 mismatches=0
+A10_ROWS=PASS rows=772 exec=658 demo=114 formula_or_rowbase_mismatches=0
+V7_CROSSREF=PASS compared=757 skipped=15 mismatches=0 missing_segments=0   （A12 非阻断旁证）
+COMPARE_RESULT=crossarch PASS                                   （A11 旁证：A40 建的 4task-gl vs 本机 Ada 新库，image_emb min_cos 0.99959 / p5 0.99997 / err_floor 0.0215，pos/state/pkl/kept 逐位）
+ORACLE_VAE=DONE windows=772 frame_mismatches=0 metadata_mismatches=0 elapsed=689s
+ORACLE_ENCODER=DONE rows=772 elapsed=4s
+WAN_BITEXACT=PASS compared=772 frame_mismatches=0 latent_mismatches=0 metadata_mismatches=0 oracle_windows=772   （D2）
+ENCODER_BITEXACT=PASS compared=772 mismatches=0 order_ok=1 state_sha_ok=1 prov_ok=1 ckpt_ok=1 no_latent_stats_call=1 finite=1   （D3，第二次；首次 prov_ok=0 见「意外」）
+```
+
+### 库坐标
+
+| 项 | 值 |
+|---|---|
+| 清单 | `meta/episode_manifest.json` sha256 `fee2777f58bf0e83b20fc95fff98a6b5871bfb2de10f967da39aecfccba892b6`（40 ep / 13,756 timestep / 11,530 exec） |
+| 输入 | `meta/input_manifest.json`：四 h5 sha256（launch.md S1 节），finalize `--input_level sha256` 同源 |
+| `source/` | 13 GB；`meta/stats.json` = 11530 / 13756；`meta/provenance.json` 跨 worker 指纹唯一（jax 0.5.3、RTX 6000 Ada、commit `f677794`） |
+| `framesamp/` | 888 MB，`status=verified`，`num_rows=13756`、`num_exec_samples=11530`、`num_pos_rows=586`（pos 表 28,803,072 B、state 表 440,192 B）、22 个 image part；`store_meta.json` sha256 `022e3ba2af4b09b1…` |
+| `wan-latents/` | 436 MB，60 段 / 772 窗，每段 `.bin == num_grid × 589,824`；`metadata.json` schema 2 |
+| `motion-tokens/` | 3.4 MB，60 段 / 772 行 |
+| `motion/` | `status=verified`，772 行 = exec 658 + demo 114，表 2,371,584 B sha256 `708129f54fbe87de…`，`motion_index_sha256 313d454942d60dcc…`，LAYOUT `motion-768-grid16-v1` |
+| `oracle/` | 25 GB（两个 SigLIP oracle 库各 13 GB + wan-mj + probe） |
+
+### 与计划的偏差 / 意外
+
+- **SigLIP 阶段跑了三次**：第一次 `build_shard.py --worker-mode` 漏放开 `--shard_idx/--num_shards` 必填 → argparse 报错（`fix:` `2111ca6`）；
+  第二次两 worker 各做了 33/34 个 episode——`episode_is_complete` 的 `data/` 快照只扫一次，看不见另一 worker 后写的 pkl，
+  于是领到已完成的 episode 后 purge 重做（产物仍完整、字节相同，只是白干一倍；`fix:` `f677794` 让 worker 模式每次刷新快照并加守卫用例）；
+  第三次清空 `source/` 后从 `f677794` 重跑：20 + 20 个 episode、13,756 步、106 s。前两次日志保留为 `s1-siglip.attempt{1,2}-*.log`。
+- Wan 抽取双卡 347 s（计划 1.3 表按 1.64 s/窗预估 10.6 min）；encoder 772 窗仅 5 s（计划「秒级」）。
+- `grep -v '^warning' | tee` 管道使各子步骤日志在结束前不落盘（grep 块缓冲），只影响围观不影响判定；下次用 `--line-buffered`。
+- **D3 首次 `ENCODER_BITEXACT=FAIL prov_ok=0`**：772 行全部逐位、77 张量 sha 清单一致，只有 provenance 白名单键 `diffusers` 在
+  `store_meta.provenance.encoder` 里为 `None`——`pack_motion_store.gather_provenance` 的 encoder 键白名单漏抄了 `diffusers`（VAE 侧有）。
+  补齐（并加 `cublas_pkg / cudnn_pkg / sm_count`）后 `pack --resume` + `verify` 重写 meta（表字节与 sha256 `708129f5…`、`motion_index_sha256` 均不变），
+  第二次 `ENCODER_BITEXACT=PASS`。
+- 链 A / B 的 tmux 外层 `bash script | tee; echo EXIT_CODE=$?` 没开 `pipefail`，脚本内 `exit 1` 时尾行仍是 `EXIT_CODE=0`（链 B 首次 D3 失败即如此）；
+  判定以各判定行为准，尾行只证进程结束。
+- oracle VAE 段单卡 689 s（0.89 s/窗），与 A2 探针一致。
+
+### 结论
+
+40 ep 库交付：`framesamp/`（帧路，`status=verified`）与 `motion/`（运动路，`status=verified`）绑定同一清单 `fee2777f…`；
+D1（两条 SigLIP oracle）、D2（原版 `encode_chunk` 772 窗）、D3（原版 `motion_token` 772 行）全部逐位；A5–A12 全过。
+下一步：以本节收官 commit 为 `S2_BASE`，跑 A21（`motion-a21-g0b-replay`）与 T2 reference（`motion-t2-ref`），随后进入 S2。
