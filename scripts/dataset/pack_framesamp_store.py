@@ -42,7 +42,7 @@ import uuid
 
 import numpy as np
 
-_REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
+_REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
 sys.path.insert(0, str(_REPO_ROOT / "src"))
@@ -122,7 +122,7 @@ def _pin_slice_prefix(source_root: str, ep0: dict) -> bytes:
             or raw[fs.SOURCE_POS_OFFSET:fs.SOURCE_POS_OFFSET + fs.POS_ROW_BYTES] != pos_d
             or raw[fs.SOURCE_STATE_OFFSET:fs.SOURCE_STATE_OFFSET + fs.STATE_ROW_BYTES] != stt_d):
         raise ValueError("slice 偏移常量与首帧 decode 结果不符——数据格式已变，"
-                         "禁用 --reader slice 并复核 probe_layout.py")
+                         "禁用 --reader slice（布局探针 probe_layout.py 已随 pack/ 目录删除，见 git 历史）")
     return head
 
 

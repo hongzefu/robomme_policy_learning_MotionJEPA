@@ -17,8 +17,8 @@ ControlMaster 主连接;之后所有提交/查询都经系统 ssh 复用该连�
 
 用法:
   export GLPW='<pw>' GLOTP='<6位TOTP>'   # 仅当无 master 需新建时才必需;master 在则可不设
-  uv run --no-project --with pexpect python scripts/dataset/gl/gl_submit.py
-  uv run --no-project --with pexpect python scripts/dataset/gl/gl_submit.py "squeue -u hongzefu"
+  uv run --no-project --with pexpect python scripts/training/gl_submit.py
+  uv run --no-project --with pexpect python scripts/training/gl_submit.py "squeue -u hongzefu"
   unset GLPW GLOTP
 """
 import os

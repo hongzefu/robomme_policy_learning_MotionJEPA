@@ -1,12 +1,13 @@
-# datastore：framesamp packed 特征库格式层
+# datastore：framesamp packed 特征库 + motion 离线表 格式层
 
-对应 `v2-framesamp-restructure-plan.md`（A.1 布局契约、B.2 Store 行为）。本包是格式层
-**唯一实现**：打包工具（`scripts/dataset/pack/`）、`FrameSampDataset`、对拍工具
+对应 `v2-framesamp-restructure-plan.md`（A.1 布局契约、B.2 Store 行为）与 `motion-memory-plan.md`（第二部分一节 1.1 motion 表契约）。本包是格式层
+**唯一实现**：打包工具（`scripts/dataset/pack_framesamp_store.py`、`scripts/dataset/pack_motion_store.py`）、`FrameSampDataset`、对拍工具
 一律从这里 import，绝不复制；本包不 import 任何 training/model 模块（单向依赖，B.1）。
 
 | 文件 | 内容 |
 |---|---|
 | `manifest.py` | `load_manifest`（sha256 fail-loud）与 `manifest_sha256`（与建库侧 `scan_manifest.py` 同口径的独立实现——scripts 目录名含连字符无法跨目录 import） |
+| `motion_store.py` | motion 离线表布局常量（`motion-768-grid16-v1`、stride 16 / 窗 33 / 段起点网格 / 不截尾 / frame_size 256）、网格公式（`seg_num_chunks` / `seg_num_grid` / `visible_motion_rows` 三侧同式）、`build_index_entries` / `parse_index`（motion_index.json 行序契约）、`MotionMeta`（含 index sha256 现场重算）、`run_fast_checks` / `run_full_checks` / `require_verified` / `require_no_pack_lock` / `check_same_source`（双 store 同源闸）、只读整表 `MotionStore` |
 | `framesamp_store.py` | 布局常量（`framesamp-4x4-v1`、三张表形制、源 npy 偏移常量）、`row_of()` 行号公式（写读共用）、`build_exec_lookup()`（执行样本 idx → (g,t) 查表数组，必须带 `exec_start_idx`）、`StoreMeta`（store_meta.json 结构校验）、`run_fast_checks` / `run_full_checks` 两档校验、`require_verified` / `require_no_pack_lock`（packed 分派层守卫）、只读 `FrameSampStore` |
 
 ## 布局速览

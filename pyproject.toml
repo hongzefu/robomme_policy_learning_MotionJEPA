@@ -134,13 +134,14 @@ unfixable = [
 [tool.ruff.lint.per-file-ignores]
 # AGENTS.md 第 1 条要求仓库内新增注释与文档一律用简体中文，中文全角标点会被 RUF001/2/3
 # 判为「歧义 Unicode 字符」。这两个目录是本轮新增的中文注释密集区，按目录豁免这三条。
-"scripts/dataset/gl/*.py" = ["RUF001", "RUF002", "RUF003"]
+"scripts/dataset/*.py" = ["RUF001", "RUF002", "RUF003"]
+"scripts/dataset/wan/*.py" = ["RUF001", "RUF002", "RUF003"]
 "scripts/training/train.py" = ["RUF001", "RUF002", "RUF003"]
 "scripts/training/g0/*.py" = ["RUF001", "RUF002", "RUF003"]
 "scripts/training/util/*.py" = ["RUF001", "RUF002", "RUF003"]
 "scripts/training/tests/*.py" = ["RUF001", "RUF002", "RUF003"]
 # gl_submit.py 是从已验证仓库逐字复制的提交器，只改过 REPO 常量；不做风格改写以免引入回归。
-"scripts/dataset/gl/gl_submit.py" = ["RUF001", "RUF002", "RUF003", "PLW1510", "SIM108"]
+"scripts/training/gl_submit.py" = ["RUF001", "RUF002", "RUF003", "PLW1510", "SIM108"]
 
 [tool.ruff.lint.isort]
 force-single-line = true

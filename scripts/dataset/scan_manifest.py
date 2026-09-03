@@ -29,7 +29,7 @@ import time
 
 import h5py
 
-_REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
+_REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
 sys.path.insert(0, str(_REPO_ROOT / "src"))
@@ -40,22 +40,43 @@ from mme_vla_suite.dataset_builder.robomme_h5_utils import get_episode_indices  
 MANIFEST_VERSION = 1
 
 
-def canonical_h5_order(raw_dir: str) -> list[str]:
-    """规范序：文件名排序。刻意不用 os.listdir——它的顺序不确定，是错号的根源。"""
-    return sorted(f for f in os.listdir(raw_dir) if f.endswith(".h5"))
+def canonical_h5_order(raw_dir: str, tasks: list[str] | None = None) -> list[str]:
+    """规范序：文件名排序。刻意不用 os.listdir——它的顺序不确定，是错号的根源。
+
+    tasks 给定时只取 ``record_dataset_<Task>.h5`` 这几个文件（缺任一即 raise），仍按文件名排序；
+    v2-motionmem 起原始目录是 16 任务全集 ``/data/hongzefu/robomme_data_h5``，建库只取 4 个目标任务。
+    """
+    names = sorted(f for f in os.listdir(raw_dir) if f.endswith(".h5"))
+    if tasks is None:
+        return names
+    want = [f"record_dataset_{t}.h5" for t in tasks]
+    missing = [w for w in want if w not in names]
+    if missing:
+        raise SystemExit(f"原始目录 {raw_dir} 缺目标 h5: {missing}")
+    return sorted(want)
 
 
-def scan(raw_dir: str) -> list[dict]:
-    """按规范序遍历，逐 episode 记录形制并累加三个 ID 偏移。"""
+def scan(raw_dir: str, tasks: list[str] | None = None,
+         episodes_per_task: int | None = None) -> list[dict]:
+    """按规范序遍历，逐 episode 记录形制并累加三个 ID 偏移。
+
+    episodes_per_task 给定时每个 h5 只取 raw_ep_idx 升序的前 N 个（与未改动 builder 的
+    ``--max_episodes N`` 同一取法，两者可按物理身份逐条对应）。
+    """
     episodes: list[dict] = []
     exec_offset = 0
     total_offset = 0
     t0 = time.perf_counter()
 
-    for h5_name in canonical_h5_order(raw_dir):
+    for h5_name in canonical_h5_order(raw_dir, tasks):
         path = os.path.join(raw_dir, h5_name)
         with h5py.File(path, "r") as data:
-            for raw_ep_idx in get_episode_indices(data):
+            indices = get_episode_indices(data)
+            if episodes_per_task is not None:
+                if len(indices) < episodes_per_task:
+                    raise SystemExit(f"{h5_name} 只有 {len(indices)} 个 episode < --episodes-per-task {episodes_per_task}")
+                indices = indices[:episodes_per_task]
+            for raw_ep_idx in indices:
                 ep = data[f"episode_{raw_ep_idx}"]
                 num_timesteps = sum(1 for k in ep if k.startswith("timestep_"))
                 # 复用 builder 自己的实现，保证与 _process_episode 口径逐字一致
@@ -107,9 +128,10 @@ def manifest_sha256(payload: dict) -> str:
 
 def cmd_build(args: argparse.Namespace) -> None:
     print(f"[scan] 原始目录: {args.raw_dir}")
-    order = canonical_h5_order(args.raw_dir)
-    print(f"[scan] 规范序: {order}")
-    episodes = scan(args.raw_dir)
+    tasks = [t for t in args.tasks.split(",") if t] if args.tasks else None
+    order = canonical_h5_order(args.raw_dir, tasks)
+    print(f"[scan] 规范序: {order}" + (f"（tasks={tasks}, episodes_per_task={args.episodes_per_task}）" if tasks else ""))
+    episodes = scan(args.raw_dir, tasks, args.episodes_per_task)
     loads = assign_shards_lpt(episodes, args.num_shards)
 
     payload = {
@@ -212,6 +234,8 @@ def main() -> None:
     b.add_argument("--raw_dir", required=True)
     b.add_argument("--out", required=True)
     b.add_argument("--num_shards", type=int, default=8)
+    b.add_argument("--tasks", default="", help="逗号分隔的任务名，只扫 record_dataset_<Task>.h5（默认目录内全部 h5）")
+    b.add_argument("--episodes-per-task", type=int, default=None, help="每个 h5 只取 raw_ep_idx 升序前 N 个 episode")
     b.set_defaults(func=cmd_build)
 
     s = sub.add_parser("sample", help="从清单抽 episode 子集")

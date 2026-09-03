@@ -7,9 +7,12 @@
 
 跑法（禁止裸 python，见 AGENTS.md 第 3 条）：
   UV_LINK_MODE=copy JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES= \
-    uv run pytest scripts/dataset/gl/test_guards.py -q
+    uv run pytest scripts/dataset/test_guards.py -q
 
 `JAX_PLATFORMS=cpu` 是必需的：build_shard 的导入链会拉起 jax，不设它会去抢 GPU。
+
+v2-motionmem 起（集群链路删除后）新增：motion 表格式层与 wan 子项目公共件的常量 / 公式互证、
+复制件 SOURCE_PIN 哨兵、motion_index 行序与起点可见集合的边界用例、本机 worker 的 claim 协议。
 """
 
 from __future__ import annotations
@@ -24,7 +27,7 @@ import numpy as np
 import pytest
 
 _HERE = pathlib.Path(__file__).resolve().parent
-_REPO_ROOT = _HERE.parents[2]
+_REPO_ROOT = _HERE.parents[1]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
 sys.path.insert(0, str(_REPO_ROOT / "src"))
@@ -391,34 +394,6 @@ def test_aggregate_fingerprints_flags_unavailable() -> None:
     assert any("采集失败" in e for e in errs), errs
 
 
-# ── 配额判据：解析不出某维不能再默认放行 ──────────────────────────────────────
-def _run_check_quota(quota_text: str) -> "subprocess.CompletedProcess[str]":
-    import subprocess
-    return subprocess.run(
-        [sys.executable, str(_HERE / "check_quota.py"), "--quota_text", quota_text,
-         "--need_gpu", "8", "--need_cpu", "16", "--need_mem_gb", "192"],
-        capture_output=True, text=True, timeout=120,
-    )
-
-
-def test_check_quota_unparsed_dimension_fails() -> None:
-    """三维都解析不出时，旧实现会打「跳过该维校验」然后 exit 0（pre-flight 报 ✓）。"""
-    r = _run_check_quota("完全解析不出的内容\n---\n")
-    assert r.returncode != 0, r.stdout
-    assert "未能从集群输出解析出配额上限" in r.stdout
-
-
-def test_check_quota_sufficient_passes() -> None:
-    """余量充足时仍须通过——判据收紧不能把正常路径一起判死。"""
-    r = _run_check_quota("cpu=80,gres/gpu=20,mem=960G\n---\n")
-    assert r.returncode == 0, r.stdout
-
-
-def test_check_quota_insufficient_fails() -> None:
-    r = _run_check_quota("cpu=80,gres/gpu=4,mem=960G\n---\n")
-    assert r.returncode != 0, r.stdout
-
-
 # ── 建库域冻结副本 sha256 哨兵（commitV4.0 起冻结，防与训练侧「好心同步」发散）────
 # 常量在 V4.0 落地时固化：三个叶子文件与 shared/ 源逐字节相同，
 # mem_buffer.py 恰好改 3 行 import（shared.→dataset_builder.）。
@@ -460,3 +435,133 @@ def test_dataset_processor_refuses_existing_output_without_force(
         )
     # 拒绝路径必须零副作用：目录与内容原样保留
     assert sentinel.read_text() == "不可误删"
+
+
+# ── v2-motionmem：motion 表格式层与 wan 子项目公共件必须逐项同值 ─────────────────
+def _wan_common():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("wan_common", _HERE / "wan" / "wan_common.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_wan_common_constants_match_motion_store() -> None:
+    from mme_vla_suite.datastore import motion_store as ms
+    wc = _wan_common()
+    for k in ("GRID_STRIDE", "WINDOW_FRAMES", "GRID_ORIGIN", "WINDOW_DIRECTION", "TRUNCATION_POLICY", "FRAME_SIZE"):
+        assert getattr(wc, k) == getattr(ms, k), k
+    assert wc.TOKEN_BYTES == ms.MOTION_ROW_BYTES and wc.TOKEN_DIM == ms.MOTION_ROW_SHAPE[0]
+    for L in range(0, 1300):
+        assert wc.seg_num_chunks(L) == ms.seg_num_chunks(L), L
+        assert wc.seg_num_grid(L) == ms.seg_num_grid(L), L
+    # 计划 2.2 / 4.1 的实测锚点：VideoPlaceOrder ep4 demo 1118 + exec 293 → 68 + 17；exec 段不截尾
+    assert ms.seg_num_grid(1118) == 68 and ms.seg_num_grid(293) == 17
+    assert ms.seg_num_grid(32) == 0 and ms.seg_num_grid(33) == 1 and ms.seg_num_grid(48) == 1 and ms.seg_num_grid(49) == 2
+
+
+def test_source_pin_matches_copied_module() -> None:
+    import hashlib
+    pin = json.loads((_HERE / "wan" / "SOURCE_PIN.json").read_text(encoding="utf-8"))
+    got = hashlib.sha256((_HERE / "wan" / "wan_motion_infer.py").read_bytes()).hexdigest()
+    assert got == pin["source_sha256"], "复制件 wan_motion_infer.py 与 SOURCE_PIN.source_sha256 不符（复制件被改动）"
+    assert pin["mj_repo_commit"] == "2a484ad960ed6155321dc34def9011eb119f857f"
+
+
+def _mini_manifest_for_motion(specs):
+    """specs = [(num_timesteps, exec_start_idx), ...] → 带 sha256 的迷你清单。"""
+    from mme_vla_suite.datastore.manifest import manifest_sha256
+    eps, eo, to = [], 0, 0
+    for g, (nt, es) in enumerate(specs):
+        eps.append({"global_episode_idx": g, "h5_file": "record_dataset_T.h5", "raw_ep_idx": g,
+                    "num_timesteps": nt, "exec_start_idx": es, "exec_samples": nt - es,
+                    "exec_sample_offset": eo, "total_sample_offset": to, "shard_idx": 0})
+        eo += nt - es
+        to += nt
+    m = {"version": 1, "raw_dir": "/x", "canonical_order": ["record_dataset_T.h5"], "num_shards": 1,
+         "totals": {"episodes": len(eps), "timesteps": to, "exec_samples": eo},
+         "shard_load_timesteps": [to], "episodes": eps}
+    m["sha256"] = manifest_sha256(m)
+    return m
+
+
+def test_motion_index_roundtrip_and_totals() -> None:
+    from mme_vla_suite.datastore import motion_store as ms
+    m = _mini_manifest_for_motion([(291, 0), (338, 66), (586, 216), (40, 0), (32, 0)])
+    entries = ms.build_index_entries(m)
+    payload = ms.index_payload(m, entries, mj_repo_commit="abc")
+    back = ms.parse_index(payload)
+    assert [e for e in back] == [e for e in entries]
+    t = ms.index_totals(entries)
+    # 291 exec → 17；demo 66 → 3、exec 272 → 15；demo 216 → 12、exec 370 → 22；exec 40 → 1；exec 32 → 0
+    assert (t["exec_rows"], t["demo_rows"]) == (17 + 15 + 22 + 1, 3 + 12)
+    assert entries[0].demo.row_base is None and entries[0].exec.row_base == 0
+    assert entries[1].demo.row_base == 17 and entries[1].exec.row_base == 20
+    ms.check_index_against_manifest(entries, m)
+    # 篡改 row_base 必 raise
+    bad = json.loads(json.dumps(payload))
+    bad["entries"][1]["exec"]["row_base"] = 21
+    with pytest.raises(ValueError, match="row_base"):
+        ms.parse_index(bad)
+
+
+def test_visible_motion_rows_boundaries() -> None:
+    from mme_vla_suite.datastore import motion_store as ms
+    m = _mini_manifest_for_motion([(338, 66), (291, 0), (100, 33), (100, 32)])
+    e = ms.build_index_entries(m)
+    # demo 段 66 帧 → 起点 0,16,32（32+32=64 ≤ 65）；exec 段 t-es<32 时无 exec 起点
+    r, f = ms.visible_motion_rows(e[0], 66)
+    assert f.tolist() == [0, 16, 32] and r.tolist() == [0, 1, 2]
+    r, f = ms.visible_motion_rows(e[0], 66 + 31)
+    assert f.tolist() == [0, 16, 32]
+    r, f = ms.visible_motion_rows(e[0], 66 + 32)          # 第一个 exec 起点 u=0 恰好可见
+    assert f.tolist() == [0, 16, 32, 66] and r.tolist() == [0, 1, 2, 3]
+    r, f = ms.visible_motion_rows(e[0], 66 + 47)
+    assert f.tolist() == [0, 16, 32, 66]
+    r, f = ms.visible_motion_rows(e[0], 66 + 48)
+    assert f.tolist() == [0, 16, 32, 66, 82]
+    assert ms.max_visible_count(e[0]) == 3 + 15
+    # es=0：t=31 无起点，t=32 一个
+    assert ms.visible_motion_rows(e[1], 31)[0].size == 0
+    assert ms.visible_motion_rows(e[1], 32)[1].tolist() == [0]
+    # demo 恰好 33 帧 → 1 个 demo 起点；demo 32 帧 → 0 个
+    assert ms.visible_motion_rows(e[2], 33)[1].tolist() == [0]
+    assert ms.visible_motion_rows(e[3], 32)[1].size == 0
+    with pytest.raises(ValueError):
+        ms.visible_motion_rows(e[0], 65)                   # t 落在 demo 段不是 exec 样本
+
+
+def test_segment_key_and_task_parsing() -> None:
+    from mme_vla_suite.datastore import motion_store as ms
+    assert ms.segment_key("record_dataset_VideoUnmaskSwap.h5", 3, "exec") == "VideoUnmaskSwap_ep3_exec"
+    with pytest.raises(ValueError):
+        ms.task_of_h5("foo.h5")
+
+
+def test_worker_claim_is_exclusive(tmp_path: pathlib.Path) -> None:
+    from build_shard import release_claim_episode, try_claim_episode
+    assert try_claim_episode(str(tmp_path), 7, "gpu0") is True
+    assert try_claim_episode(str(tmp_path), 7, "gpu1") is False
+    release_claim_episode(str(tmp_path), 7)
+    assert try_claim_episode(str(tmp_path), 7, "gpu1") is True
+    wc = _wan_common()
+    claims = tmp_path / "_claims"
+    assert wc.try_claim(claims, "T_ep0_exec", "gpu0") and not wc.try_claim(claims, "T_ep0_exec", "gpu1")
+    wc.release_claim(claims, "T_ep0_exec")
+    assert wc.try_claim(claims, "T_ep0_exec", "gpu1")
+
+
+def test_wan_common_list_segments_matches_index() -> None:
+    from mme_vla_suite.datastore import motion_store as ms
+    wc = _wan_common()
+    m = _mini_manifest_for_motion([(291, 0), (338, 66), (586, 216), (32, 0)])
+    segs = wc.list_segments(m)
+    entries = ms.build_index_entries(m)
+    exp = []
+    for e in entries:
+        for seg in ms.SEGMENTS:
+            s = getattr(e, seg)
+            if s.num_grid:
+                exp.append((ms.segment_key(e.h5_file, e.raw_ep_idx, seg), s.num_grid, s.seg_len))
+    assert [(x["key"], x["num_grid"], x["seg_len"]) for x in segs] == exp
+    assert [x["key"] for x in wc.lpt_order(segs)][0] == "T_ep2_exec"

@@ -33,7 +33,7 @@ from mme_vla_suite.datastore.manifest import load_manifest
 
 logger = logging.getLogger(__name__)
 
-# ── 布局常量（数据格式常量；源 npy 布局由 probe_layout.py 可随时复核）──────────
+# ── 布局常量（数据格式常量；源 npy 布局的 SOURCE_* 偏移由 2026-08 探针实测固化，见 docs/dataset-build-doc/4task-gl-framesamp）──
 LAYOUT = "framesamp-4x4-v1"
 META_SCHEMA = 1
 

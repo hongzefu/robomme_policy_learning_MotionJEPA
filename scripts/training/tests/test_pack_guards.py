@@ -42,8 +42,8 @@ sys.path.insert(0, str(_REPO_ROOT / "src"))
 from mme_vla_suite.datastore import framesamp_store as fs  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location(
-    # 打包器在数据集域 scripts/dataset/pack/（commitV4.6 两域分立），按仓库根定位
-    "pack_framesamp_store", _REPO_ROOT / "scripts" / "dataset" / "pack" / "pack_framesamp_store.py")
+    # 打包器在数据集域 scripts/dataset/（v2-motionmem 起 pack/ 子目录上提平铺），按仓库根定位
+    "pack_framesamp_store", _REPO_ROOT / "scripts" / "dataset" / "pack_framesamp_store.py")
 packer = importlib.util.module_from_spec(_spec)
 sys.modules["pack_framesamp_store"] = packer   # Pool 按限定名 pickle worker 函数，必须登记
 _spec.loader.exec_module(packer)

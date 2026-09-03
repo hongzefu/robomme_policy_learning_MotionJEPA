@@ -47,7 +47,7 @@ import sys
 import numpy as np
 
 _HERE = pathlib.Path(__file__).resolve().parent
-_REPO_ROOT = _HERE.parents[2]
+_REPO_ROOT = _HERE.parents[1]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
 sys.path.insert(0, str(_REPO_ROOT / "src"))
@@ -302,7 +302,7 @@ def pick_steps(n: int, k: int) -> list[int]:
 
 
 def compare_episode(a_lib: str, b_lib: str, a: dict, b: dict, steps: list[int],
-                    aggs: dict[str, Agg], errs: list[str]) -> None:
+                    aggs: dict[str, Agg], errs: list[str], *, all_pkl: bool = False) -> None:
     ga, gb = a["local_g"], b["local_g"]
     ep = a["ep"]
     tag = f"{ep['h5_file']}#{ep['raw_ep_idx']}"
@@ -336,7 +336,8 @@ def compare_episode(a_lib: str, b_lib: str, a: dict, b: dict, steps: list[int],
 
     # pkl 按 (episode 身份, 该 episode 内第 j 个执行步) 定位，不按文件名
     n_exec = ep["exec_samples"]
-    for j in sorted({0, n_exec - 1} | set(pick_steps(n_exec, min(8, n_exec)))):
+    pkl_js = range(n_exec) if all_pkl else sorted({0, n_exec - 1} | set(pick_steps(n_exec, min(8, n_exec))))
+    for j in pkl_js:
         if j < 0 or j >= n_exec:
             continue
         pa = pathlib.Path(a_lib, "data", f"{a['exec_offset'] + j}.pkl")
@@ -520,6 +521,9 @@ def main() -> None:
     ap.add_argument("--a_max_episodes", type=int, default=0, help="未改动 builder 的 --max_episodes")
     ap.add_argument("--raw_dir", default="", help="恢复 listdir 顺序用")
     ap.add_argument("--subset", default="", help="限定比对的 episode（sample 产物）")
+    ap.add_argument("--b_manifest", default="",
+                    help="B 库自己的清单（与 --manifest 编号体系不同时给；按物理身份 (h5_file, raw_ep_idx) 匹配）")
+    ap.add_argument("--all_pkl", action="store_true", help="逐 episode 比对全部 exec pkl（默认抽 ≤10 个）")
     ap.add_argument("--steps_per_episode", type=int, default=0, help="0=全部 step")
     # ⚠ 曾有 --min_same_bit_frac / --max_ulp 两个参数，2026-08-23 判据重推后它们已不参与
     # 判定，却仍被接受、还被 step2_verify.sh 一直传着——使用者以为设了阈值，其实完全无效。
@@ -540,7 +544,8 @@ def main() -> None:
         untouched = map_untouched(manifest, args.raw_dir, args.a_max_episodes, args.a_untouched_log)
 
     a_idx = lib_index(args.a_lib, manifest, untouched)
-    b_idx = lib_index(args.b_lib, manifest, None)
+    b_manifest = load_manifest(args.b_manifest) if args.b_manifest else manifest
+    b_idx = lib_index(args.b_lib, b_manifest, None)
     keys = sorted(set(a_idx) & set(b_idx))
     if args.subset:
         want = set(json.loads(pathlib.Path(args.subset).read_text())["global_episode_idx"])
@@ -548,6 +553,11 @@ def main() -> None:
         keys = [k for k in keys if ident[k]["global_episode_idx"] in want]
     if not keys:
         raise SystemExit("两个库没有共同的 episode，无法比对")
+    for key in keys:
+        ea, eb = a_idx[key]["ep"], b_idx[key]["ep"]
+        for f in ("num_timesteps", "exec_start_idx", "exec_samples"):
+            if int(ea[f]) != int(eb[f]):
+                raise SystemExit(f"两清单对同一物理 episode {key} 的 {f} 不同: {ea[f]} vs {eb[f]}（清单不同源）")
 
     print(f"=== 比对 mode={args.mode}  共同 episode={len(keys)} ===")
     print(f"  A(参照)={args.a_lib}\n  B(被测)={args.b_lib}")
@@ -567,7 +577,7 @@ def main() -> None:
                                pick_steps(a["ep"]["num_timesteps"], min(8, a["ep"]["num_timesteps"])),
                                cfg, aggs, errs)
         else:
-            compare_episode(args.a_lib, args.b_lib, a, b, steps, aggs, errs)
+            compare_episode(args.a_lib, args.b_lib, a, b, steps, aggs, errs, all_pkl=args.all_pkl)
         if n % 5 == 0 or n == len(keys):
             print(f"  ...{n}/{len(keys)} episode", flush=True)
         if len(errs) > 100:

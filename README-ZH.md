@@ -64,7 +64,7 @@ ControlMaster socket、直接打断集群提交；改为逐项显式设置缓存
 
 ## 固定入口
 
-集群数据处理链路全部在 `scripts/dataset/gl/`，本地 G0 对拍量具在 `scripts/training/g0/`，GPU 利用率观测族在 `scripts/training/util/`。
+本机数据处理链路（SigLIP / Wan VAE / MotionJEPA encoder 三阶段）全部在 `scripts/dataset/`（集群链路已于 v2-motionmem 删除），本地 G0 对拍量具在 `scripts/training/g0/`，GPU 利用率观测族在 `scripts/training/util/`。
 逐段命令、续跑口径与全部实测数字见方案报告：
 
 - [`docs/v1-gl-dataset-consistency-report.md`](docs/v1-gl-dataset-consistency-report.md)

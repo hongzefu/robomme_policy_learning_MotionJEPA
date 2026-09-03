@@ -20,6 +20,11 @@
 用法（本地对照）：
   python build_shard.py --manifest ... --subset <sample 产物> --out <ref库> \
       --shard_idx 0 --num_shards 4
+用法（本机多 GPU 动态领任务，v2-motionmem；由 scripts/dataset/run_local.py --stage siglip 起，每卡一进程）：
+  CUDA_VISIBLE_DEVICES=<k> python build_shard.py --manifest ... --raw_dir ... --out <lib>/source \
+      --worker-mode --worker-label gpu<k> --worker-idx <i> --num-workers <n> --resume
+  工作项 = episode（按 num_timesteps LPT 降序），以 <out>/_claims/_claim_ep<g>（O_CREAT|O_EXCL）领一项、
+  完成即 unlink；sidecar 仍写 meta/_shard<i>of<n>.json（finalize 的 glob 与跨 worker 指纹断言不变）。
 """
 
 from __future__ import annotations
@@ -36,7 +41,7 @@ import time
 import h5py
 
 _HERE = pathlib.Path(__file__).resolve().parent
-_REPO_ROOT = _HERE.parents[2]
+_REPO_ROOT = _HERE.parents[1]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
 sys.path.insert(0, str(_REPO_ROOT / "src"))
@@ -212,6 +217,111 @@ class ShardProcessor(DatasetProcessor):
         }
 
 
+def _claim_path(out_dir: str, g: int) -> pathlib.Path:
+    return pathlib.Path(out_dir, "_claims", f"_claim_ep{g}")
+
+
+def try_claim_episode(out_dir: str, g: int, label: str) -> bool:
+    """os.open(O_CREAT|O_EXCL) 领一个 episode；已被领走返回 False。"""
+    p = _claim_path(out_dir, g)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(p, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644)
+    except FileExistsError:
+        return False
+    try:
+        os.write(fd, f"{label} pid={os.getpid()} {time.strftime('%Y-%m-%dT%H:%M:%S')}\n".encode())
+    finally:
+        os.close(fd)
+    return True
+
+
+def release_claim_episode(out_dir: str, g: int) -> None:
+    _claim_path(out_dir, g).unlink(missing_ok=True)
+
+
+class WorkerProcessor(ShardProcessor):
+    """动态领任务的本机 worker：与 ShardProcessor 只差「跑哪些 episode」——按 LPT 序逐个 claim。
+
+    `_process_episode` 与 run_shard 的计数口径原样继承；h5 句柄按文件懒开、整个 worker 复用。
+    """
+
+    def run_worker(self, episodes: list[dict], *, label: str, resume: bool, report_every: int) -> dict:
+        mem_buffer = MemoryBuffer(
+            num_views=1,
+            compute_token_drop_score=True,
+            token_drop_stride=self.execution_horizon // 2,
+            prepare_buffer=True,
+        )
+        done_steps = 0
+        skipped = 0
+        processed: list[int] = []
+        seen_complete: list[int] = []
+        t_start = time.perf_counter()
+        t_steady = None
+        steady_steps = 0
+        handles: dict[str, h5py.File] = {}
+        try:
+            for ep in sorted(episodes, key=lambda e: (-e["num_timesteps"], e["global_episode_idx"])):
+                g = ep["global_episode_idx"]
+                if resume and self.episode_is_complete(ep):
+                    skipped += 1
+                    seen_complete.append(g)
+                    continue
+                if not try_claim_episode(self.dataset_path, g, label):
+                    continue
+                try:
+                    if resume and self.episode_is_complete(ep):   # 领到后再核一次（另一 worker 刚完成）
+                        skipped += 1
+                        seen_complete.append(g)
+                        continue
+                    self.purge_episode(ep)
+                    h5_name = ep["h5_file"]
+                    if h5_name not in handles:
+                        handles[h5_name] = h5py.File(os.path.join(self.raw_data_path, h5_name), "r")
+                    t0 = time.perf_counter()
+                    self._process_episode(
+                        handles[h5_name], ep["raw_ep_idx"], g, mem_buffer,
+                        ep["exec_sample_offset"], ep["total_sample_offset"],
+                    )
+                    dt = time.perf_counter() - t0
+                    processed.append(g)
+                    done_steps += ep["num_timesteps"]
+                    if t_steady is None:
+                        t_steady = time.perf_counter()
+                    else:
+                        steady_steps += ep["num_timesteps"]
+                    elapsed = time.perf_counter() - t_start
+                    if report_every and (done_steps // max(1, report_every)) != (
+                        (done_steps - ep["num_timesteps"]) // max(1, report_every)
+                    ):
+                        print(f"PROGRESS steps={done_steps} elapsed={elapsed:.1f}s "
+                              f"rate={done_steps / elapsed:.3f} step/s", flush=True)
+                    print(f"EPISODE g={g} {h5_name}#{ep['raw_ep_idx']} steps={ep['num_timesteps']} "
+                          f"took={dt:.1f}s rate={ep['num_timesteps'] / dt:.3f} step/s worker={label}", flush=True)
+                finally:
+                    release_claim_episode(self.dataset_path, g)
+        finally:
+            for h in handles.values():
+                h.close()
+        now = time.perf_counter()
+        elapsed = max(1e-9, now - t_start)
+        steady_elapsed = max(1e-9, now - t_steady) if t_steady is not None else 0.0
+        return {
+            "episodes_done": len(processed),
+            "episodes_skipped": skipped,
+            "episodes_processed": sorted(processed),
+            "episodes_seen_complete": sorted(seen_complete),
+            "steps": done_steps,
+            "elapsed_s": elapsed,
+            "rate_step_per_s": done_steps / elapsed,
+            "startup_plus_first_ep_s": round(elapsed - steady_elapsed, 3) if t_steady else None,
+            "steady_steps": steady_steps,
+            "steady_elapsed_s": round(steady_elapsed, 3),
+            "rate_steady_step_per_s": (steady_steps / steady_elapsed) if steady_steps else None,
+        }
+
+
 def select_episodes(manifest: dict, args: argparse.Namespace) -> list[dict]:
     """先按 subset 过滤，再按 LPT 分片。
 
@@ -243,6 +353,24 @@ def select_episodes(manifest: dict, args: argparse.Namespace) -> list[dict]:
     return mine
 
 
+def _gpu_uuid() -> str:
+    """当前进程可见的第一张卡的 uuid（按 CUDA_VISIBLE_DEVICES 解析；查不到记 unknown）。"""
+    import subprocess
+    try:
+        out = subprocess.run(["nvidia-smi", "--query-gpu=index,uuid", "--format=csv,noheader"],
+                             capture_output=True, text=True, timeout=10, check=False).stdout.strip().splitlines()
+        vis = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+        if vis.strip():
+            first = vis.split(",")[0].strip()
+            for line in out:
+                i, u = [s.strip() for s in line.split(",")]
+                if first in (i, u):
+                    return u
+        return out[0].split(",")[1].strip() if out else "unknown"
+    except Exception:
+        return "unknown"
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--manifest", required=True)
@@ -254,7 +382,15 @@ def main() -> None:
     ap.add_argument("--resume", action="store_true", help="跳过已完整落盘的 episode")
     ap.add_argument("--require_empty_output", action="store_true", help="首次提交用：输出库必须为空")
     ap.add_argument("--report_every", type=int, default=2000, help="每多少 step 打一行 PROGRESS")
+    ap.add_argument("--worker-mode", action="store_true", help="本机动态领任务模式（run_local.py 起）")
+    ap.add_argument("--worker-label", default="", help="worker 标签（如 gpu0）")
+    ap.add_argument("--worker-idx", type=int, default=0)
+    ap.add_argument("--num-workers", type=int, default=1)
     args = ap.parse_args()
+    if args.worker_mode:
+        if not args.worker_label or args.num_workers < 1 or not 0 <= args.worker_idx < args.num_workers:
+            raise SystemExit("--worker-mode 需要 --worker-label 与合法的 --worker-idx/--num-workers")
+        args.shard_idx, args.num_shards = args.worker_idx, args.num_workers
 
     manifest = load_manifest(args.manifest)
     if manifest["totals"]["episodes"] == 0:
@@ -265,16 +401,29 @@ def main() -> None:
         if os.path.isdir(feat) and any(os.scandir(feat)):
             raise SystemExit(f"要求空输出库但已有内容: {feat}")
 
-    mine = select_episodes(manifest, args)
+    if args.worker_mode:
+        mine = [dict(e) for e in manifest["episodes"]]
+        if args.subset:
+            keep = set(json.loads(pathlib.Path(args.subset).read_text())["global_episode_idx"])
+            mine = [e for e in mine if e["global_episode_idx"] in keep]
+    else:
+        mine = select_episodes(manifest, args)
     steps = sum(e["num_timesteps"] for e in mine)
     print(
         f"[shard {args.shard_idx}/{args.num_shards}] episode={len(mine)} timestep={steps} "
-        f"raw_dir={args.raw_dir} out={args.out}",
+        f"raw_dir={args.raw_dir} out={args.out}" + (f" worker={args.worker_label}" if args.worker_mode else ""),
         flush=True,
     )
 
-    proc = ShardProcessor(args.raw_dir, args.out)
-    stats = proc.run_shard(mine, resume=args.resume, report_every=args.report_every)
+    if args.worker_mode:
+        proc = WorkerProcessor(args.raw_dir, args.out)
+        stats = proc.run_worker(mine, label=args.worker_label, resume=args.resume,
+                                report_every=args.report_every)
+        covered = sorted(set(stats.pop("episodes_processed")) | set(stats.pop("episodes_seen_complete")))
+    else:
+        proc = ShardProcessor(args.raw_dir, args.out)
+        stats = proc.run_shard(mine, resume=args.resume, report_every=args.report_every)
+        covered = [e["global_episode_idx"] for e in mine]
 
     # 硬件/软件指纹：交付口径承诺「metadata 逐条带硬件/软件 provenance，finalize 断言
     # 全体同源」，但此前 sidecar 里一个指纹字段都没有，finalize 只能记它自己那个节点的
@@ -288,19 +437,17 @@ def main() -> None:
         _jax, _jaxlib = jax.__version__, jaxlib.__version__
     except Exception as exc:  # 采集失败必须留痕，不能静默成空串——finalize 会据此判死
         _gpu = _jax = _jaxlib = f"unavailable: {exc}"
+    # v2-motionmem 起本机运行、不再有 SLURM 字段；指纹改记 worker 标签与所见 GPU（uuid 由 nvidia-smi 查）
     fingerprint = {
         "host": socket.gethostname(),
-        "slurm_job": os.environ.get("SLURM_JOB_ID", ""),
-        "slurm_array_job": os.environ.get("SLURM_ARRAY_JOB_ID", ""),
-        "slurm_array_task": os.environ.get("SLURM_ARRAY_TASK_ID", ""),
+        "worker": args.worker_label or f"shard{args.shard_idx}",
+        "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
+        "gpu_uuid": _gpu_uuid(),
         "gpu_device_kind": _gpu,
         "jax": _jax,
         "jaxlib": _jaxlib,
         "git_commit": git_commit(_REPO_ROOT),
-        "resource_tier": {
-            "cpus_per_task": os.environ.get("SLURM_CPUS_PER_TASK", ""),
-            "mem_per_node_mb": os.environ.get("SLURM_MEM_PER_NODE", ""),
-        },
+        "pid": os.getpid(),
     }
 
     pathlib.Path(args.out, "meta").mkdir(parents=True, exist_ok=True)
@@ -316,7 +463,8 @@ def main() -> None:
                 "num_shards": args.num_shards,
                 "manifest_sha256": manifest["sha256"],
                 "subset": args.subset or None,
-                "episodes": [e["global_episode_idx"] for e in mine],
+                "worker_mode": bool(args.worker_mode),
+                "episodes": covered,
                 "fingerprint": fingerprint,
                 **stats,
             },

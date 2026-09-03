@@ -115,3 +115,73 @@ $RUN_WAN $P compare --a $LIB/oracle/probe/a4-orig-mjvenv-gpu1.npz --b $LIB/oracl
 | A3 | `A3_CROSSGPU=PASS compared=64 latent_bitwise=64 token_bitwise=64 max_abs_diff=0.000e+00`；不过则 S1 全部单卡 |
 | A4 | `A4_DUALVENV=PASS compared=64 …`（含 provenance 白名单逐键相等，`module_sha256` 两侧 == `SOURCE_PIN.source_sha256`）；不过即重锁子项目或复制件被改 |
 | 复制件 | `sha256(scripts/dataset/wan/wan_motion_infer.py) == SOURCE_PIN.source_sha256` |
+
+## S1 起跑环境（2026-09-03，重构后建库）
+
+- **起跑 HEAD**：commitV6.2（`scripts/dataset/` 破坏性重构 + motion 表格式层 + wan 三 worker + 调度器；实际 sha 在 `result.md` S1 节回填）。
+  SigLIP 计算路径零改动：`DatasetProcessor._process_episode` / `MemoryBuffer` / `SigLipTokenizer` / `pool_tokens_to_size` / `PosEmb3D` / `atomic_write_json`
+  一字不动（`test_guards.py` 四条冻结 sha256 哨兵仍过），`build_shard.py` 只新增「动态领任务 worker 模式」（`WorkerProcessor.run_worker`
+  调用同一个 `_process_episode`，计数器仍由清单前缀和喂入）。
+- **重构清单**：删除 `scripts/dataset/gl/`（含 `legacy/`、两个 sbatch、`step*.sh`、`check_quota.py`、`stage_models.sh`、`paths.sh`、README）与
+  `scripts/dataset/pack/`（含 `probe_layout.py`、`run_pack.sh`、README）；`scan_manifest` / `build_shard` / `finalize_checks` / `compare_datasets` /
+  `test_guards` / `pack_framesamp_store` 上提到 `scripts/dataset/`（仓库根定位 `parents[N]` 各减一）；`gl_submit.py` 搬到 `scripts/training/`；
+  新增 `scripts/dataset/{paths.sh, run_local.py, pack_motion_store.py, README.md}`、`scripts/dataset/wan/{wan_common, extract_wan, encode_motion,
+  oracle_driver, compare_wan}.py`、`src/mme_vla_suite/datastore/motion_store.py`；`framesamp_store.py` 禁改（仅一行注释文案）。
+  仓库内旧路径引用同步：`scripts/training/tests/test_pack_guards.py`、`pyproject.toml` per-file-ignores、`greatlakes.md`（4 处，已 `cp` 到 `~/.claude`）、
+  `README-ZH.md`、`scripts/training/paths.sh` 头注释、`datastore/{manifest.py, README.md, __init__.py}`、`v5.1-prod-60k-wandb-plan.md`；
+  `docs/` 下历史留档不回改。
+- **清单（新 CLI）**：`scan_manifest.py build --raw_dir /data/hongzefu/robomme_data_h5 --tasks ButtonUnmask,ButtonUnmaskSwap,VideoUnmask,VideoUnmaskSwap
+  --episodes-per-task 10 --num_shards 1 --out <lib>/meta/episode_manifest.json` → 40 ep / 13,756 timestep / 11,530 exec，
+  sha256 `fee2777f58bf0e83b20fc95fff98a6b5871bfb2de10f967da39aecfccba892b6`；A6 前半：与 oracle 子集 40 条五字段逐条一致。
+- **输入 sha256**（`finalize_checks.py hash-inputs --raw_dir v1-store/raw-link-4task`，73 s）→ `<lib>/meta/input_manifest.json`：
+  ButtonUnmask `6b100414…`（17,751,535,444 B）、ButtonUnmaskSwap `7c044121…`（26,627,642,804 B）、VideoUnmask `05a653a8…`（14,445,442,112 B）、
+  VideoUnmaskSwap `4e83aca3…`（23,205,606,404 B）。
+- **GPU**：SigLIP 与 Wan 抽取各双卡（`--gpus 0,1`，两阶段不并发）；oracle 驱动与 encoder 编码单卡 GPU1（与 A3 结论一致：跨卡逐位，
+  故被测双卡 / oracle 单卡不影响 D2 / D3）。
+
+## S1 命令（`LIB=v1-store/datasets/4task-motion-40ep`，全部经 `uv run --no-sync`，长任务放 tmux）
+
+```bash
+cd /data/hongzefu/robomme_policy_learning_MotionJEPA; V1=$PWD/v1-store; LIB=$V1/datasets/4task-motion-40ep
+RAW=/data/hongzefu/robomme_data_h5; MJ=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA
+export UV_LINK_MODE=copy PYTHONUNBUFFERED=1
+# ① SigLIP（tmux motion-siglip）→ finalize → framesamp pack/verify（tmux motion-pack）
+uv run --no-sync python scripts/dataset/run_local.py --stage siglip --lib $LIB --gpus 0,1 --raw-dir $RAW
+OPENPI_DATA_HOME=$V1/models uv run --no-sync python scripts/dataset/finalize_checks.py check --manifest $LIB/meta/episode_manifest.json \
+    --out $LIB/source --raw_dir $RAW --input_manifest $LIB/meta/input_manifest.json --input_level sha256 --spot_check 256
+uv run --no-sync python scripts/dataset/pack_framesamp_store.py pack --source $LIB/source --manifest $LIB/meta/episode_manifest.json --out $LIB/framesamp --procs 16
+uv run --no-sync python scripts/dataset/pack_framesamp_store.py verify --store $LIB/framesamp --resume --procs 16
+# ② D1 SigLIP 对拍（O1 主 / O2 旁证）
+uv run --no-sync python scripts/dataset/compare_datasets.py --mode bitexact --manifest $LIB/oracle/manifest-4task-100ep.json \
+    --a_lib $LIB/oracle/siglip-shard1 --b_lib $LIB/source --b_manifest $LIB/meta/episode_manifest.json --steps_per_episode 0 --all_pkl --report $LIB/oracle/compare-o1.json
+uv run --no-sync python scripts/dataset/compare_datasets.py --mode bitexact --manifest $LIB/oracle/manifest-4task-100ep.json \
+    --a_lib $LIB/oracle/siglip-serial --a_untouched_log $LIB/oracle/siglip-serial.build.log --a_max_episodes 10 --raw_dir $V1/raw-link-4task \
+    --b_lib $LIB/source --b_manifest $LIB/meta/episode_manifest.json --steps_per_episode 0 --report $LIB/oracle/compare-o2.json
+# ③ Wan 抽取（tmux motion-wan-extract，双卡）→ encoder（tmux motion-encode）→ motion 表 pack/verify
+uv run --no-sync python scripts/dataset/run_local.py --stage wan --lib $LIB --gpus 0,1 --raw-dir $RAW
+uv run --no-sync python scripts/dataset/run_local.py --stage encode --lib $LIB --gpus 1
+uv run --no-sync python scripts/dataset/pack_motion_store.py pack --manifest $LIB/meta/episode_manifest.json --tokens $LIB/motion-tokens --latents $LIB/wan-latents --out $LIB/motion
+uv run --no-sync python scripts/dataset/pack_motion_store.py verify --store $LIB/motion --resume
+# ④ D2 / D3 oracle（tmux motion-wan-oracle，MotionJEPA uv 环境，GPU1）与比对
+PYTHONDONTWRITEBYTECODE=1 HF_HOME=$V1/cache/hf HF_HUB_OFFLINE=1 CUDA_VISIBLE_DEVICES=1 uv run --project $MJ --no-sync python scripts/dataset/wan/oracle_driver.py vae \
+    --manifest $LIB/meta/episode_manifest.json --raw-dir $RAW --latents $LIB/wan-latents --out $LIB/oracle/wan-mj
+PYTHONDONTWRITEBYTECODE=1 HF_HOME=$V1/cache/hf HF_HUB_OFFLINE=1 CUDA_VISIBLE_DEVICES=1 uv run --project $MJ --no-sync python scripts/dataset/wan/oracle_driver.py encoder \
+    --manifest $LIB/meta/episode_manifest.json --latents $LIB/wan-latents --out $LIB/oracle/wan-mj --expected-ckpt-sha256 bae960373041629e976a1f4a7d6d48ca3c51786c827146a3ee10bf7b034bc15a
+uv run --no-sync python scripts/dataset/wan/compare_wan.py latents --latents $LIB/wan-latents --oracle $LIB/oracle/wan-mj
+uv run --no-sync python scripts/dataset/wan/compare_wan.py tokens --store $LIB/motion --oracle $LIB/oracle/wan-mj
+```
+
+## S1 判据
+
+| 项 | 判定行 |
+|---|---|
+| SigLIP 阶段 | `STAGE_DONE stage=siglip workers=2 items=40 …`；两 worker `SHARD_DONE`；零残留 claim |
+| finalize | `FINALIZE_EXIT_CODE=0`（含 `--input_level sha256` 四 h5 同源、完整性、跨 worker 指纹唯一、`--spot_check 256` 同卡 max\|diff\|=0） |
+| framesamp pack / verify | `PACK_DONE=1`；`VERIFY_PACK=PASS scanned=13756 mismatches=0` |
+| D1 | O1 与 O2 两次 `COMPARE_RESULT=bitexact PASS`（kept_indices / pkl / state_emb / pos_emb_* / image_emb_* 全零容差；O1 侧 `--all_pkl` 11,530 个 pkl 全比） |
+| Wan 阶段 | `STAGE_DONE stage=wan workers=2 items=<段数> …`；`wan-latents/metadata.json` totals.windows = 772；A7 每段 `.bin == num_grid × 589,824` |
+| encoder 阶段 | `STAGE_DONE stage=encode …`；`motion-tokens/metadata.json` totals.windows = 772 |
+| motion 表 | `PACK_MOTION_DONE=1`；`VERIFY_MOTION=PASS scanned=772 mismatches=0`；A10 772 = 658 + 114、row_base 连续 |
+| D2 | `ORACLE_VAE=DONE windows=772 frame_mismatches=0 metadata_mismatches=0` → `WAN_BITEXACT=PASS compared=772 frame_mismatches=0 latent_mismatches=0` |
+| D3 | `ORACLE_ENCODER=DONE rows=772` → `ENCODER_BITEXACT=PASS compared=772 mismatches=0`（含 77 张量 sha 清单、provenance 白名单、`load_wan_latent_stats(` 零命中） |
+| A5 / A8 / A9 / A11 / A12 / 1.6 吞吐 | 随 S1 收尾另记（判据见计划第二部分四节表二） |

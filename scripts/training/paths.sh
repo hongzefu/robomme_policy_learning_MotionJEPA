@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 训练域（scripts/training/）的路径与环境源（commitV4.6 自建库域 paths.sh 派生，
 # 切断 g0/tests 驱动对建库域的跨域 source）。g0/ 与 tests/ 的驱动一律
-# source 本文件；建库域（scripts/dataset/gl/）自带同构的 paths.sh，两域互不引用。
+# source 本文件；建库域（scripts/dataset/）自带同构的 paths.sh，两域互不引用。
 #
 # 设计要点：
 #   1. **不覆盖 HOME**。上一版 common.sh 把 HOME 指向项目内目录，会让 ssh 找不到

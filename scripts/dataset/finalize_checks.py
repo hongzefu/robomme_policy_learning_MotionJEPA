@@ -47,7 +47,7 @@ import time
 import numpy as np
 
 _HERE = pathlib.Path(__file__).resolve().parent
-_REPO_ROOT = _HERE.parents[2]
+_REPO_ROOT = _HERE.parents[1]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
 sys.path.insert(0, str(_REPO_ROOT / "src"))
@@ -368,7 +368,7 @@ def cmd_check(args: argparse.Namespace) -> None:
         except Exception as exc:
             jax_ver = jaxlib_ver = gpu = f"unavailable: {exc}"
         prov = {
-            "produced_by": "scripts/dataset/gl/build_shard.py",
+            "produced_by": "scripts/dataset/build_shard.py",
             # ⚠ 语义分两层，别再搞混（2026-08-24 审查坐实过一次事实错误）：
             #   · 下面这组顶层字段描述的是**跑 finalize 的那个节点**，不是产出数据的
             #     8 个分片节点。历史上 step2 把这里的 resource_tier 当构建档位打印，
