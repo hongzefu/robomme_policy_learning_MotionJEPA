@@ -1121,6 +1121,16 @@ S2 内的执行顺序：A13–A17，然后 M1–M5，然后 A21 / A22，然后 T
 | **S2 model 接线** | 五节 5.1 + 第二部分二节：双路 memory + 交错重排 + `motion.enabled` 条件建模块 + `RepackTransform` 登记 + 对拍硬编码同步 | A13–A17 全过；A21 自校 `G0_EQ=PASS`；A22 逐叶逐位；T1 命中锚点 + T2 新库 A/B 逐位，两条都过；开启态 A18–A20 形制、分布、尺度检查；**M1–M5 全过**（5.3）；T3a `T3_SMOKE=PASS` + `T3_EFFECT`（开 / 关各 1000 步同场次对照，训练侧有效性初判） |
 | **S3 在线接线** | `FrameSampMemory` 绝对网格增量编码（while 补齐、demo/exec 双游标、段边界下传）+ Wan VAE 常驻 + 同步编码（2.6 已定：每次 infer 前固定 +1.57 s、开局 demo 窗同步编完，不预编不预热）；编码进程方案已定（六节第 3 条：子进程 + Unix socket + 握手核 provenance，默认独占另一张卡） | **P1–P5 全过**（六节第 4 条：P1–P4 用 stub 档、P5 用真编码器）；端到端 ms/step 实测（分记 `add_buffer_time_ms` / `infer_time_ms`，后者须先在计时段内加 `block_until_ready`）；T3b `T3_EVAL`：用 T3a 两侧 checkpoint 各跑一遍在线评估，成功率对照 |
 
+**S4 删除的直接后果：motion token 的设计与注入方式定死。** 原本要靠消融比较的变体全部不再存在，下面五条从此就是唯一口径（依据分别在 2.2、2.1、2.3–2.4、3.1 与 3.4、3.4）：
+
+1. **起点怎么选（2.2）**：起点钉死在段内绝对网格上，段起点加 16 的整数倍；demo 段和 exec 段各自从自己的段起点数起，窗口不跨段；当前帧只决定哪些起点已经看得见，起点本身不随当前帧平移。stride 16 已由红线 14 冻结。
+2. **窗口是什么（2.1）**：一个窗口就是从起点起连续 33 帧，往前看；训练时窗口尾端不能越过当前帧；exec 段不截尾；凑不齐 33 帧的位置不补、不钳位（2.5）。
+3. **预算多大（2.3–2.4）**：运动路固定 96 个位置，零截断，按 16 任务全集定标；由此带来的填充率和全空样本比例是接受的设计代价，不因此改预算、不做分桶评估。
+4. **怎么进模型（3.1 与 3.4）**：motion token 当作记忆区里的 token，和帧路按（全域时刻, 类型）交错排成一列拼进 context 前缀，记忆区 608 位、前缀 1184 位、全序列 1204 位；次序表由 dataloader 产出、模型侧只做重排；不做 adaRMS 调制、不并列、不放在图像之后；MotionJEPA 编码器留在模型外面（离线表或编码进程），不移植进 JAX、不微调。
+5. **运动路怎么编、补位怎么处理（3.4，时间码构成见 3.2）**：每个 motion token 配起点帧的 256 维时间码，时间码先过一层 256 到 768 的线性层加 silu，再和 768 维 motion token 拼成 1536 维，过一层 1536 到 2048 的线性层；这两层独立于帧路的两层、建在帧路之后；不足 96 个的右填充，补位行照算不分支，屏蔽只靠 mask。
+
+T3 只判断这一套有没有用，不比较变体；动任一条都算新计划，须重开审批（第二部分红线 15）。
+
 S0 的 oracle 产出、S1、S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AGENTS.md` 第 12、17 条从 clean HEAD 起跑并留档。**全部在本机，不上集群**。
 
 ---
@@ -1155,6 +1165,7 @@ S0 的 oracle 产出、S1、S3 属「预计超过 5 分钟的全量数据构建 
 12. **`build_dataset.py --force` 会 `rmtree` 整个输出目录**：oracle 与新库的输出根一律绝对路径、先 `ls` 确认。
 13. **两项曾待定的口径均已落定，S1 不再被本条阻塞**：`num_chunks = max(0, 段帧数 − 32)`、exec 段取 MME-VLA 全长（第一部分 4.1 与 2.2 括号句，用户 2026-09-02 确认）；encoder 前向口径 A（第一部分 4.1，2026-09-02 落定）。
 14. **`motion.stride = 16` 冻结**：用户 2026-09-03 约定**任何情况下不换 stride**——不做任何 stride 消融，demo 段不另设 stride（消融阶段已整体删除，用户同日放弃），`LAYOUT` 的 `grid16` 后缀与 `GRID_STRIDE = 16` 不再变更。红线 8 里「改 `motion.stride` 或窗口口径须先重跑全集统计」保留作一般规则，但本项已由本条冻结、不会触发。
+15. **设计定死**（S4 删除的直接后果，用户 2026-09-03）：第一部分七节列出的五条口径从此是唯一口径，配置键 / 函数版如下——① 起点集合：`motion.stride = 16`、`motion.grid_origin = segment_start`，起点 = 段起点 + 16m，demo / exec 各自起算、不跨段（2.2）；② 窗口：`motion.window_frames = 33`、`motion.window_direction = forward`，`f + 32 ≤ t`，exec 段不截尾 `num_chunks = max(0, 段帧数 − 32)`，不补不钳位（2.1、2.5）；③ 预算：`motion.budget = 96`，零截断、按 16 任务全集定标（2.3–2.4）；④ 注入：`integration_type = context`，`PerceptualMemory.__call__` 返回并列序 (b,608,2048)，`HistoryPi0.embed_memory` 对 token 与 `input_mask` 各做一次 `jnp.take_along_axis(…, obs.mem_order, axis=1)`，`ar_mask` / `na_mask` 记忆区恒 False，`mem_order` 由 `shared/sampling.py` 的排序函数在 dataloader / 在线两侧同一份产出；不做 adaRMS 调制、不并列、不放 img 之后；`WanLatentMotionEncoder` 不进 JAX 模型、不微调（3.1、3.4）；⑤ 运动路编码：`motion.dim = 768`、`motion.pos_dim = 256`，`motion_pos = store.pos_rows(np.asarray([f]))[0, 0, :256]`，`motion_pos_proj = nnx.Linear(256→768)` + `nnx.silu`，concat 后 `motion_encoder_static = nnx.Linear(1536→2048)`，两层条件创建于 `feature_encoder` 之后（红线 5），右填充到 96、padding 行不分支、屏蔽只靠 `input_mask`（3.4、3.2）。红线 7、8、14 是本条的子条款。改动任一条即为新计划，须重开审批，不得以消融或「顺手试一下」的名义做。
 
 ## 一、数据集侧实现细节（S1）
 
@@ -1714,7 +1725,7 @@ G0b r1 的 `run_meta.json` 记的入口是旧路径 `scripts/smoke-local/bench_t
 1. **motion token 的语义未经独立验证**。它是 MotionJEPA 为「从 z0 预测未来 8 段 latent」训练出来的，在 VLA 里当历史运动特征用属于跨任务迁移，本计划不含对该迁移有效性的先验证据。
 2. **本方案用的是前视窗口**（起点往后 33 帧），与 encoder 训练时的语义一致；但对 VLA 而言这些窗口全部位于历史，训练样本里最靠近当前帧的窗口尾端离当前帧 0–15 帧（gap = τ mod 16，τ 为段内偏移且 τ ≥ 32；τ < 32 时更远，全空样本无定义）——15/16 的相位上当前时刻的运动缺席，在线重推点上恒不缺席（2.5，用户已知并拍板不补）。
 3. **填充率 10.5%（4env）/ 19.8%（16env）的影响未经实验量化**，2.4 的三条后果都是推理不是实测。
-4. **不做消融**：用户 2026-09-03 放弃 S4 全部候选（预算 N / adaRMS / 冻结 vs 微调 / 分桶评估 / 泄漏对照），理由是每项都会改动已定设定；有效性只由 T3 的开 / 关同场次对照（训练 loss + 在线成功率，单 seed）判断，分层与泄漏两条影响不再单独量化。
+4. **不做消融**：用户 2026-09-03 放弃 S4 全部候选（预算 N / adaRMS / 冻结 vs 微调 / 分桶评估 / 泄漏对照），理由是每项都会改动已定设定；有效性只由 T3 的开 / 关同场次对照（训练 loss + 在线成功率，单 seed）判断，分层与泄漏两条影响不再单独量化。定死的五条口径见第一部分七节与红线 15。
 5. **未覆盖 `expert` / `modulation` 两种 integration_type**。
 6. **数据泄漏**：三个 v8 run 的 `holdout_episodes: 90-99`，本轮 ep0–9 全在 encoder 自监督训练集里，motion 路在这 40 ep 上的任何收益都可能被放大。
 7. **latent 域偏移**：encoder 在 A40 抽的 v8 latent 上训，我们喂 Ada 抽的 latent（差 1.24e-5，集中在 VAE `conv_out`、沿 group 累积），已实测到 token 级只落在最后一位（cos 0.999995），经入口 affine 归一化后可忽略。
