@@ -95,7 +95,7 @@
 <text x="40" y="560" font-size="12" fill="#5F5E5A">条件 C：q 或 k 是图像，且 k 落在这一段，则删掉</text>
 <text x="40" y="576" font-size="12" fill="#5F5E5A">接入 motion memory 后：记忆区从第 0–511 位扩到第 0–607 位，motion token 交错在帧 token 之间、整段落在记忆区内</text>
 <text x="40" y="592" font-size="12" fill="#5F5E5A">条件 C 的目的：保护预训练 VLM 的视觉-语言对齐，因此运动 token 放在图像之前、落进记忆区；</text>
-<text x="40" y="608" font-size="12" fill="#5F5E5A">放在图像之后则与所有 token 双向可见，只列为消融项，不做默认</text>
+<text x="40" y="608" font-size="12" fill="#5F5E5A">放在图像之后则与所有 token 双向可见，本计划不采用（只保留交错一种布局）</text>
 
 <line x1="340" y1="624" x2="340" y2="652" stroke="#2C2C2A" stroke-width="1.5" marker-end="url(#arrow)"/>
 <text x="340" y="672" font-size="14" font-weight="500" fill="#2C2C2A" text-anchor="middle">make_attn_mask(input_mask, ar_mask, na_mask) → attn_mask (b, 1204, 1204)</text>

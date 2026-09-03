@@ -1046,7 +1046,7 @@ scripts/dataset/
 | **S1 数据集重抽** | `scripts/dataset/` 破坏性重构（4.5）+ 40 ep 全链路（4.2，tmux；含 `oracle_driver.py` 产 D2/D3 oracle，须与被测同机同型号卡）+ D1–D3 与 A5–A12 全过 + dataloader 微基准（第二部分 1.6）；留档 `docs/dataset-build-doc/4task-motion-40ep/` | `COMPARE_RESULT=bitexact PASS`；`FINALIZE_EXIT_CODE=0`；`VERIFY_PACK=PASS scanned=13756 mismatches=0`；`WAN_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；`ENCODER_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；motion 表 772 行 = 114 + 658 |
 | **S2 model 接线** | 五节 5.1 + 第二部分二节：双路 memory + 交错重排 + `motion.enabled` 条件建模块 + `RepackTransform` 登记 + 对拍硬编码同步 | A13–A17 全过；A21 自校 `G0_EQ=PASS`；A22 逐叶逐位；T1 命中锚点 + T2 新库 A/B 逐位，两条都过；开启态 A18–A20 形制、分布、尺度检查 |
 | **S3 在线接线** | `FrameSampMemory` 绝对网格增量编码（while 补齐、demo/exec 双游标、段边界下传）+ Wan VAE 常驻 + 尖峰处置决策（3.5 细节 1 三选一、开局 demo 窗是否预热）；⚠ policy server 在主 venv（torch 2.7.1），Wan-VAE + encoder 无法同进程加载，需 sidecar 进程或另行决策（第二部分三节） | 在线 / 离线同一起点特征一致 + `mem_order` 逐位（A23）；端到端 ms/step 实测（分记 `add_buffer_time_ms` / `infer_time_ms`） |
-| **S4 消融** | ① 预算 N（96 / 80 / 64 / 48）+ demo 独立 stride（2.3「硬地板 64」） ② 叠加 adaRMS 调制 ③ 运动段放 img 之后（⚠ 只能在并列布局上跑：交错后记忆区没有连续运动段，把 motion 移出记忆区后 `mem_order` 退化为恒等；对照组须取「并列且不交错」档） ④ `motion.stride`（16 / 20 / 32 三档，各档固定 `motion.budget = 96`；网格表下每档重抽，40 ep 一档 ≈10 min 仅 Wan 抽取，另需重跑 encoder 与 pack\|verify；每档一张独立表 / 独立库，落点与 LAYOUT 命名在 S4 审批时定，推荐「一套数据一个库」`4task-motion-40ep-<消融名>/`；换档须按红线 8 重跑全集统计重定 budget） ⑤ 冻结 vs JAX 移植微调 ⑥ 按有效数分桶的分层评估（2.4 后果 3） ⑦ **ep90–99 泄漏对照**（第二部分八节 6） ⑧ `motion_pos` 改传 `motion_start_frames` int32（第二部分 1.6） ⑨ **并列 vs 交错**（关闭交错时 `mem_order = arange(608)`，`take_along_axis` 退化为恒等、与并列布局逐位相同；与 ③ 互斥）——交错的收益无先验证据（第二部分八节 10），用户已拍板以交错为默认，此档只作对照 | 训练曲线 + 在线成功率 |
+| **S4 消融** | 记忆布局只保留交错一种（用户 2026-09-02 拍板：不做「并列 vs 交错」对照，也不做「运动段放 img 之后」）。① 预算 N（96 / 80 / 64 / 48）+ demo 独立 stride（2.3「硬地板 64」） ② 叠加 adaRMS 调制 ③ `motion.stride`（16 / 20 / 32 三档，各档固定 `motion.budget = 96`；网格表下每档重抽，40 ep 一档 ≈10 min 仅 Wan 抽取，另需重跑 encoder 与 pack\|verify；每档一张独立表 / 独立库，落点与 LAYOUT 命名在 S4 审批时定，推荐「一套数据一个库」`4task-motion-40ep-<消融名>/`；换档须按红线 8 重跑全集统计重定 budget） ④ 冻结 vs JAX 移植微调 ⑤ 按有效数分桶的分层评估（2.4 后果 3） ⑥ **ep90–99 泄漏对照**（第二部分八节 6） ⑦ `motion_pos` 改传 `motion_start_frames` int32（第二部分 1.6） | 训练曲线 + 在线成功率 |
 
 S0 的 oracle 产出、S1、S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AGENTS.md` 第 12、17 条从 clean HEAD 起跑并留档。**全部在本机，不上集群**。
 
@@ -1594,7 +1594,7 @@ G0b r1 的 `run_meta.json` 记的入口是旧路径 `scripts/smoke-local/bench_t
 7. **latent 域偏移**：encoder 在 A40 抽的 v8 latent 上训，我们喂 Ada 抽的 latent（差 1.24e-5，集中在 VAE `conv_out`、沿 group 累积），已实测到 token 级只落在最后一位（cos 0.999995），经入口 affine 归一化后可忽略。
 8. **与 MotionJEPA 抽取器实抽产物无直接的逐 chunk 对照**（用户拍板接受）：D2 的 oracle 是原版 `encode_chunk` 对同一 33 帧的重编，VAE 前向的逐位保证经 crosscheck [V1]（S0）传递；我方网格窗与 MotionJEPA chunk 索引的分段 / 索引一致性只由 A6（`exec_start_idx == MJ demo frames`）与非阻断 A12 间接覆盖，MotionJEPA finalize 四道守卫不再运行。
 9. **40 ep 库的吞吐结论只是上界**：全在页缓存里，turbo 冷缓存行为测不到；本机吞吐按第 13 条不作最终结论。
-10. **交错拼接的收益未经验证**：与并列相比 token 内容 / 权重 / mask / 计算量全同，数学上唯一区别是记忆区 608 个 token 的 RoPE 位置号（token 内容里已带 PosEmb3D 时间码，交错只是把「时间相邻」额外写进 RoPE 距离）；本计划不含「按时间交错更优」的先验证据，差异只能由 S4 ⑨ 给出。
+10. **交错拼接的收益未经验证**：与并列相比 token 内容 / 权重 / mask / 计算量全同，数学上唯一区别是记忆区 608 个 token 的 RoPE 位置号（token 内容里已带 PosEmb3D 时间码，交错只是把「时间相邻」额外写进 RoPE 距离）；本计划不含「按时间交错更优」的先验证据，且用户已拍板只保留交错一种布局、不做并列对照，这一差异在本计划内不再验证。
 11. **记忆区内 RoPE 位置密度不均**：一个采样帧占 16 个连续序号、一个 motion 窗只占 1 个，尺度差 16 倍，其对注意力的影响未评估。
 
 ## 九、留档与 commit 纪律
