@@ -1,0 +1,227 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="1110" viewBox="0 0 680 1110" role="img" font-family="system-ui, -apple-system, 'Segoe UI', 'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', sans-serif"><title>stride 16 在线采样：每次 infer 时的记忆内容（平行数轴）</title><desc>上块 es = 0（无 demo 段）八条数轴，下块 es = 66（有 demo 段）五条数轴；每条对应一次 infer，画出帧路采样帧、已编运动窗口、本次新编窗口与尚未凑齐的窗口。按 even_sampling_indices 与网格判据 f+32 ≤ t 由脚本算出。</desc><rect x="0" y="0" width="680" height="1110" fill="#FFFFFF"/><line x1="40" y1="628" x2="640" y2="628" stroke="#D3D1C7" stroke-width="0.5" stroke-dasharray="3 3"/>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="40" y="40" dominant-baseline="central">es = 0（Button* 任务）：每次 infer 时的记忆内容</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="64" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="77" text-anchor="middle" dominant-baseline="central">第 0 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="93" text-anchor="middle" dominant-baseline="central">t = 0</text>
+<line x1="150.0" y1="78" x2="150.0" y2="78" stroke="#888780" stroke-width="1"/>
+<path d="M150.0 78v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 68v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="150.0" y1="66" x2="150.0" y2="86" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="150.0" y="85" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="510" y="64" width="130" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="575" y="77" text-anchor="middle" dominant-baseline="central">帧路 1 帧</text>
+<text font-size="12" fill="#5F5E5A" x="575" y="93" text-anchor="middle" dominant-baseline="central">运动 0 窗，无新编</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="126" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="139" text-anchor="middle" dominant-baseline="central">第 1 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="155" text-anchor="middle" dominant-baseline="central">t = 16</text>
+<line x1="150.0" y1="140" x2="198.0" y2="140" stroke="#888780" stroke-width="1"/>
+<path d="M150.0 140v4 M198.0 140v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 130v8 M153.0 130v8 M156.0 130v8 M159.0 130v8 M162.0 130v8 M165.0 130v8 M168.0 130v8 M171.0 130v8 M174.0 130v8 M177.0 130v8 M180.0 130v8 M183.0 130v8 M186.0 130v8 M189.0 130v8 M192.0 130v8 M195.0 130v8 M198.0 130v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="198.0" y1="128" x2="198.0" y2="148" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="150.0" y="147" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#F1EFE8" stroke="#888780" x="198.0" y="152" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="510" y="126" width="130" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="575" y="139" text-anchor="middle" dominant-baseline="central">帧路 17 帧</text>
+<text font-size="12" fill="#5F5E5A" x="575" y="155" text-anchor="middle" dominant-baseline="central">运动 0 窗，无新编</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="188" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="201" text-anchor="middle" dominant-baseline="central">第 2 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="217" text-anchor="middle" dominant-baseline="central">t = 32</text>
+<line x1="150.0" y1="202" x2="246.0" y2="202" stroke="#888780" stroke-width="1"/>
+<path d="M150.0 202v4 M198.0 202v4 M246.0 202v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 192v8 M153.0 192v8 M156.0 192v8 M159.0 192v8 M162.0 192v8 M165.0 192v8 M168.0 192v8 M171.0 192v8 M174.0 192v8 M177.0 192v8 M180.0 192v8 M183.0 192v8 M186.0 192v8 M189.0 192v8 M192.0 192v8 M195.0 192v8 M198.0 192v8 M201.0 192v8 M204.0 192v8 M207.0 192v8 M210.0 192v8 M213.0 192v8 M216.0 192v8 M219.0 192v8 M222.0 192v8 M225.0 192v8 M228.0 192v8 M231.0 192v8 M234.0 192v8 M237.0 192v8 M240.0 192v8 M246.0 192v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="246.0" y1="190" x2="246.0" y2="210" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="150.0" y="209" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="198.0" y="214" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#F1EFE8" stroke="#888780" x="246.0" y="219" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="510" y="188" width="130" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="575" y="201" text-anchor="middle" dominant-baseline="central">帧路 32 帧</text>
+<text font-size="12" fill="#5F5E5A" x="575" y="217" text-anchor="middle" dominant-baseline="central">运动 1 窗，新编 1</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="250" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="263" text-anchor="middle" dominant-baseline="central">第 3 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="279" text-anchor="middle" dominant-baseline="central">t = 48</text>
+<line x1="150.0" y1="264" x2="294.0" y2="264" stroke="#888780" stroke-width="1"/>
+<path d="M150.0 264v4 M198.0 264v4 M246.0 264v4 M294.0 264v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 254v8 M153.0 254v8 M159.0 254v8 M162.0 254v8 M168.0 254v8 M171.0 254v8 M177.0 254v8 M180.0 254v8 M186.0 254v8 M189.0 254v8 M195.0 254v8 M201.0 254v8 M204.0 254v8 M210.0 254v8 M213.0 254v8 M219.0 254v8 M222.0 254v8 M228.0 254v8 M231.0 254v8 M237.0 254v8 M240.0 254v8 M246.0 254v8 M252.0 254v8 M255.0 254v8 M261.0 254v8 M264.0 254v8 M270.0 254v8 M273.0 254v8 M279.0 254v8 M282.0 254v8 M288.0 254v8 M294.0 254v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="294.0" y1="252" x2="294.0" y2="272" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="150.0" y="271" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="198.0" y="276" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="246.0" y="281" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#F1EFE8" stroke="#888780" x="294.0" y="286" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="510" y="250" width="130" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="575" y="263" text-anchor="middle" dominant-baseline="central">帧路 32 帧</text>
+<text font-size="12" fill="#5F5E5A" x="575" y="279" text-anchor="middle" dominant-baseline="central">运动 2 窗，新编 1</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="312" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="325" text-anchor="middle" dominant-baseline="central">第 4 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="341" text-anchor="middle" dominant-baseline="central">t = 64</text>
+<line x1="150.0" y1="326" x2="342.0" y2="326" stroke="#888780" stroke-width="1"/>
+<path d="M150.0 326v4 M198.0 326v4 M246.0 326v4 M294.0 326v4 M342.0 326v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 316v8 M156.0 316v8 M162.0 316v8 M168.0 316v8 M174.0 316v8 M180.0 316v8 M186.0 316v8 M192.0 316v8 M198.0 316v8 M204.0 316v8 M210.0 316v8 M216.0 316v8 M222.0 316v8 M228.0 316v8 M234.0 316v8 M240.0 316v8 M249.0 316v8 M255.0 316v8 M261.0 316v8 M267.0 316v8 M273.0 316v8 M279.0 316v8 M285.0 316v8 M291.0 316v8 M297.0 316v8 M303.0 316v8 M309.0 316v8 M315.0 316v8 M321.0 316v8 M327.0 316v8 M333.0 316v8 M342.0 316v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="342.0" y1="314" x2="342.0" y2="334" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="150.0" y="333" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="198.0" y="338" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="246.0" y="343" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="294.0" y="348" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#F1EFE8" stroke="#888780" x="342.0" y="353" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="510" y="312" width="130" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="575" y="325" text-anchor="middle" dominant-baseline="central">帧路 32 帧</text>
+<text font-size="12" fill="#5F5E5A" x="575" y="341" text-anchor="middle" dominant-baseline="central">运动 3 窗，新编 1</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="374" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="387" text-anchor="middle" dominant-baseline="central">第 5 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="403" text-anchor="middle" dominant-baseline="central">t = 80</text>
+<line x1="150.0" y1="388" x2="390.0" y2="388" stroke="#888780" stroke-width="1"/>
+<path d="M150.0 388v4 M198.0 388v4 M246.0 388v4 M294.0 388v4 M342.0 388v4 M390.0 388v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 378v8 M156.0 378v8 M165.0 378v8 M171.0 378v8 M180.0 378v8 M186.0 378v8 M195.0 378v8 M204.0 378v8 M210.0 378v8 M219.0 378v8 M225.0 378v8 M234.0 378v8 M240.0 378v8 M249.0 378v8 M258.0 378v8 M264.0 378v8 M273.0 378v8 M279.0 378v8 M288.0 378v8 M297.0 378v8 M303.0 378v8 M312.0 378v8 M318.0 378v8 M327.0 378v8 M333.0 378v8 M342.0 378v8 M351.0 378v8 M357.0 378v8 M366.0 378v8 M372.0 378v8 M381.0 378v8 M390.0 378v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="390.0" y1="376" x2="390.0" y2="396" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="150.0" y="395" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="198.0" y="400" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="246.0" y="405" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="294.0" y="410" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="342.0" y="415" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#F1EFE8" stroke="#888780" x="390.0" y="420" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="510" y="374" width="130" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="575" y="387" text-anchor="middle" dominant-baseline="central">帧路 32 帧</text>
+<text font-size="12" fill="#5F5E5A" x="575" y="403" text-anchor="middle" dominant-baseline="central">运动 4 窗，新编 1</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="436" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="449" text-anchor="middle" dominant-baseline="central">第 6 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="465" text-anchor="middle" dominant-baseline="central">t = 96</text>
+<line x1="150.0" y1="450" x2="438.0" y2="450" stroke="#888780" stroke-width="1"/>
+<path d="M150.0 450v4 M198.0 450v4 M246.0 450v4 M294.0 450v4 M342.0 450v4 M390.0 450v4 M438.0 450v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 440v8 M159.0 440v8 M168.0 440v8 M177.0 440v8 M186.0 440v8 M195.0 440v8 M204.0 440v8 M213.0 440v8 M222.0 440v8 M231.0 440v8 M240.0 440v8 M252.0 440v8 M261.0 440v8 M270.0 440v8 M279.0 440v8 M288.0 440v8 M297.0 440v8 M306.0 440v8 M315.0 440v8 M324.0 440v8 M333.0 440v8 M345.0 440v8 M354.0 440v8 M363.0 440v8 M372.0 440v8 M381.0 440v8 M390.0 440v8 M399.0 440v8 M408.0 440v8 M417.0 440v8 M426.0 440v8 M438.0 440v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="438.0" y1="438" x2="438.0" y2="458" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="150.0" y="457" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="198.0" y="462" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="246.0" y="467" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="294.0" y="472" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="342.0" y="477" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="390.0" y="482" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#F1EFE8" stroke="#888780" x="438.0" y="487" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="510" y="436" width="130" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="575" y="449" text-anchor="middle" dominant-baseline="central">帧路 32 帧</text>
+<text font-size="12" fill="#5F5E5A" x="575" y="465" text-anchor="middle" dominant-baseline="central">运动 5 窗，新编 1</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="498" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="511" text-anchor="middle" dominant-baseline="central">第 7 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="527" text-anchor="middle" dominant-baseline="central">t = 112</text>
+<line x1="150.0" y1="512" x2="486.0" y2="512" stroke="#888780" stroke-width="1"/>
+<path d="M150.0 512v4 M198.0 512v4 M246.0 512v4 M294.0 512v4 M342.0 512v4 M390.0 512v4 M438.0 512v4 M486.0 512v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 502v8 M159.0 502v8 M171.0 502v8 M180.0 502v8 M192.0 502v8 M204.0 502v8 M213.0 502v8 M225.0 502v8 M234.0 502v8 M246.0 502v8 M258.0 502v8 M267.0 502v8 M279.0 502v8 M288.0 502v8 M300.0 502v8 M312.0 502v8 M321.0 502v8 M333.0 502v8 M345.0 502v8 M354.0 502v8 M366.0 502v8 M375.0 502v8 M387.0 502v8 M399.0 502v8 M408.0 502v8 M420.0 502v8 M429.0 502v8 M441.0 502v8 M453.0 502v8 M462.0 502v8 M474.0 502v8 M486.0 502v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="486.0" y1="500" x2="486.0" y2="520" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="150.0" y="519" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="198.0" y="524" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="246.0" y="529" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="294.0" y="534" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="342.0" y="539" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="390.0" y="544" width="96.0" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="438.0" y="549" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#F1EFE8" stroke="#888780" x="486.0" y="554" width="96.0" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="510" y="498" width="130" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="575" y="511" text-anchor="middle" dominant-baseline="central">帧路 32 帧</text>
+<text font-size="12" fill="#5F5E5A" x="575" y="527" text-anchor="middle" dominant-baseline="central">运动 6 窗，新编 1</text>
+<rect fill="#EEEDFE" stroke="#534AB7" x="40" y="566" width="14" height="6" rx="1" stroke-width="0.5"/>
+<text font-size="12" fill="#5F5E5A" x="58" y="569" dominant-baseline="central">帧路采样帧（32 个，均匀铺满 [0, t]）</text>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="253.12" y="566" width="14" height="6" rx="1" stroke-width="0.5"/>
+<text font-size="12" fill="#5F5E5A" x="271.12" y="569" dominant-baseline="central">已编好的运动窗口 [f, f+32]</text>
+<rect fill="#FAEEDA" stroke="#BA7517" x="429.03999999999996" y="566" width="14" height="6" rx="1" stroke-width="0.5"/>
+<text font-size="12" fill="#5F5E5A" x="447.03999999999996" y="569" dominant-baseline="central">本次新编的窗口（约 1.57 s）</text>
+<rect fill="#F1EFE8" stroke="#888780" x="40" y="584" width="14" height="6" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<text font-size="12" fill="#5F5E5A" x="58" y="587" dominant-baseline="central">起点已到货、33 帧尚未凑齐</text>
+<line x1="40" y1="606" x2="40" y2="614" stroke="#D85A30" stroke-width="1.5"/>
+<text font-size="12" fill="#5F5E5A" x="46" y="610" dominant-baseline="central">当前帧 t（本批最后一帧）；数轴下方小刻度 = 每 16 帧一批到货</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="40" y="674" dominant-baseline="central">es = 66（VideoUnmask）：demo 段窗口首批编完，exec 段每批新编一个</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="698" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="711" text-anchor="middle" dominant-baseline="central">第 0 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="727" text-anchor="middle" dominant-baseline="central">t = 66</text>
+<rect fill="#F1EFE8" stroke="#888780" x="150.0" y="709" width="178.2" height="6" rx="1" stroke-width="0.5"/>
+<line x1="150.0" y1="712" x2="328.2" y2="712" stroke="#888780" stroke-width="1"/>
+<path d="M328.2 712v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 702v8 M155.4 702v8 M160.8 702v8 M166.2 702v8 M171.6 702v8 M177.0 702v8 M182.4 702v8 M187.8 702v8 M195.9 702v8 M201.3 702v8 M206.7 702v8 M212.1 702v8 M217.5 702v8 M222.9 702v8 M228.3 702v8 M233.7 702v8 M241.8 702v8 M247.2 702v8 M252.6 702v8 M258.0 702v8 M263.4 702v8 M268.8 702v8 M274.2 702v8 M279.6 702v8 M287.7 702v8 M293.1 702v8 M298.5 702v8 M303.9 702v8 M309.3 702v8 M314.7 702v8 M320.1 702v8 M328.2 702v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="328.2" y1="700" x2="328.2" y2="720" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="150.0" y="719" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="193.2" y="724" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="236.4" y="729" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="328.2" y="734" width="86.4" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="515" y="698" width="125" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="578" y="711" text-anchor="middle" dominant-baseline="central">帧路 32 帧</text>
+<text font-size="12" fill="#5F5E5A" x="578" y="727" text-anchor="middle" dominant-baseline="central">运动 3 窗，新编 3</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="760" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="773" text-anchor="middle" dominant-baseline="central">第 1 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="789" text-anchor="middle" dominant-baseline="central">t = 82</text>
+<rect fill="#F1EFE8" stroke="#888780" x="150.0" y="771" width="178.2" height="6" rx="1" stroke-width="0.5"/>
+<line x1="150.0" y1="774" x2="371.4" y2="774" stroke="#888780" stroke-width="1"/>
+<path d="M328.2 774v4 M371.4 774v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 764v8 M155.4 764v8 M163.5 764v8 M168.9 764v8 M177.0 764v8 M185.1 764v8 M190.5 764v8 M198.6 764v8 M206.7 764v8 M212.1 764v8 M220.2 764v8 M228.3 764v8 M233.7 764v8 M241.8 764v8 M249.9 764v8 M255.3 764v8 M263.4 764v8 M268.8 764v8 M276.9 764v8 M285.0 764v8 M290.4 764v8 M298.5 764v8 M306.6 764v8 M312.0 764v8 M320.1 764v8 M328.2 764v8 M333.6 764v8 M341.7 764v8 M349.8 764v8 M355.2 764v8 M363.3 764v8 M371.4 764v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="371.4" y1="762" x2="371.4" y2="782" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="150.0" y="781" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="193.2" y="786" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="236.4" y="791" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="328.2" y="796" width="86.4" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#F1EFE8" stroke="#888780" x="371.4" y="801" width="86.4" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="515" y="760" width="125" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="578" y="773" text-anchor="middle" dominant-baseline="central">帧路 32 帧</text>
+<text font-size="12" fill="#5F5E5A" x="578" y="789" text-anchor="middle" dominant-baseline="central">运动 3 窗，无新编</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="822" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="835" text-anchor="middle" dominant-baseline="central">第 2 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="851" text-anchor="middle" dominant-baseline="central">t = 98</text>
+<rect fill="#F1EFE8" stroke="#888780" x="150.0" y="833" width="178.2" height="6" rx="1" stroke-width="0.5"/>
+<line x1="150.0" y1="836" x2="414.6" y2="836" stroke="#888780" stroke-width="1"/>
+<path d="M328.2 836v4 M371.4 836v4 M414.6 836v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 826v8 M158.1 826v8 M166.2 826v8 M174.3 826v8 M182.4 826v8 M190.5 826v8 M198.6 826v8 M209.4 826v8 M217.5 826v8 M225.6 826v8 M233.7 826v8 M241.8 826v8 M249.9 826v8 M260.7 826v8 M268.8 826v8 M276.9 826v8 M285.0 826v8 M293.1 826v8 M301.2 826v8 M312.0 826v8 M320.1 826v8 M328.2 826v8 M336.3 826v8 M344.4 826v8 M352.5 826v8 M363.3 826v8 M371.4 826v8 M379.5 826v8 M387.6 826v8 M395.7 826v8 M403.8 826v8 M414.6 826v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="414.6" y1="824" x2="414.6" y2="844" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="150.0" y="843" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="193.2" y="848" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="236.4" y="853" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="328.2" y="858" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="371.4" y="863" width="86.4" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#F1EFE8" stroke="#888780" x="414.6" y="868" width="86.4" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="515" y="822" width="125" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="578" y="835" text-anchor="middle" dominant-baseline="central">帧路 32 帧</text>
+<text font-size="12" fill="#5F5E5A" x="578" y="851" text-anchor="middle" dominant-baseline="central">运动 4 窗，新编 1</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="884" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="897" text-anchor="middle" dominant-baseline="central">第 3 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="913" text-anchor="middle" dominant-baseline="central">t = 114</text>
+<rect fill="#F1EFE8" stroke="#888780" x="150.0" y="895" width="178.2" height="6" rx="1" stroke-width="0.5"/>
+<line x1="150.0" y1="898" x2="457.8" y2="898" stroke="#888780" stroke-width="1"/>
+<path d="M328.2 898v4 M371.4 898v4 M414.6 898v4 M457.8 898v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 888v8 M158.1 888v8 M168.9 888v8 M179.7 888v8 M187.8 888v8 M198.6 888v8 M209.4 888v8 M217.5 888v8 M228.3 888v8 M239.1 888v8 M247.2 888v8 M258.0 888v8 M268.8 888v8 M276.9 888v8 M287.7 888v8 M298.5 888v8 M306.6 888v8 M317.4 888v8 M328.2 888v8 M336.3 888v8 M347.1 888v8 M357.9 888v8 M366.0 888v8 M376.8 888v8 M387.6 888v8 M395.7 888v8 M406.5 888v8 M417.3 888v8 M425.4 888v8 M436.2 888v8 M447.0 888v8 M457.8 888v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="457.8" y1="886" x2="457.8" y2="906" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="150.0" y="905" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="193.2" y="910" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="236.4" y="915" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="328.2" y="920" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="371.4" y="925" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="414.6" y="930" width="86.4" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#F1EFE8" stroke="#888780" x="457.8" y="935" width="86.4" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="515" y="884" width="125" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="578" y="897" text-anchor="middle" dominant-baseline="central">帧路 32 帧</text>
+<text font-size="12" fill="#5F5E5A" x="578" y="913" text-anchor="middle" dominant-baseline="central">运动 5 窗，新编 1</text>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="40" y="946" width="95" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="87" y="959" text-anchor="middle" dominant-baseline="central">第 4 次 infer</text>
+<text font-size="14" font-weight="500" fill="#2C2C2A" x="87" y="975" text-anchor="middle" dominant-baseline="central">t = 130</text>
+<rect fill="#F1EFE8" stroke="#888780" x="150.0" y="957" width="178.2" height="6" rx="1" stroke-width="0.5"/>
+<line x1="150.0" y1="960" x2="501.0" y2="960" stroke="#888780" stroke-width="1"/>
+<path d="M328.2 960v4 M371.4 960v4 M414.6 960v4 M457.8 960v4 M501.0 960v4" fill="none" stroke="#888780" stroke-width="0.5"/>
+<path d="M150.0 950v8 M160.8 950v8 M171.6 950v8 M182.4 950v8 M193.2 950v8 M204.0 950v8 M217.5 950v8 M228.3 950v8 M239.1 950v8 M249.9 950v8 M260.7 950v8 M274.2 950v8 M285.0 950v8 M295.8 950v8 M306.6 950v8 M317.4 950v8 M330.9 950v8 M341.7 950v8 M352.5 950v8 M363.3 950v8 M374.1 950v8 M387.6 950v8 M398.4 950v8 M409.2 950v8 M420.0 950v8 M430.8 950v8 M444.3 950v8 M455.1 950v8 M465.9 950v8 M476.7 950v8 M487.5 950v8 M501.0 950v8" fill="none" stroke="#7F77DD" stroke-width="1.5"/>
+<line x1="501.0" y1="948" x2="501.0" y2="968" stroke="#D85A30" stroke-width="1.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="150.0" y="967" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="193.2" y="972" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="236.4" y="977" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="328.2" y="982" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="371.4" y="987" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#FAEEDA" stroke="#BA7517" x="414.6" y="992" width="86.4" height="4" rx="1" stroke-width="0.5"/>
+<rect fill="#F1EFE8" stroke="#888780" x="457.8" y="997" width="86.4" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#F1EFE8" stroke="#888780" x="501.0" y="1002" width="86.4" height="4" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<rect fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5" x="515" y="946" width="125" height="40" rx="4"/>
+<text font-size="12" fill="#5F5E5A" x="578" y="959" text-anchor="middle" dominant-baseline="central">帧路 32 帧</text>
+<text font-size="12" fill="#5F5E5A" x="578" y="975" text-anchor="middle" dominant-baseline="central">运动 6 窗，新编 1</text>
+<rect fill="#EEEDFE" stroke="#534AB7" x="40" y="1014" width="14" height="6" rx="1" stroke-width="0.5"/>
+<text font-size="12" fill="#5F5E5A" x="58" y="1017" dominant-baseline="central">帧路采样帧（32 个，均匀铺满 [0, t]）</text>
+<rect fill="#E1F5EE" stroke="#0F6E56" x="253.12" y="1014" width="14" height="6" rx="1" stroke-width="0.5"/>
+<text font-size="12" fill="#5F5E5A" x="271.12" y="1017" dominant-baseline="central">已编好的运动窗口 [f, f+32]</text>
+<rect fill="#FAEEDA" stroke="#BA7517" x="429.03999999999996" y="1014" width="14" height="6" rx="1" stroke-width="0.5"/>
+<text font-size="12" fill="#5F5E5A" x="447.03999999999996" y="1017" dominant-baseline="central">本次新编的窗口（约 1.57 s）</text>
+<rect fill="#F1EFE8" stroke="#888780" x="40" y="1032" width="14" height="6" rx="1" stroke-width="0.5" stroke-dasharray="2 2" fill-opacity="0.35"/>
+<text font-size="12" fill="#5F5E5A" x="58" y="1035" dominant-baseline="central">起点已到货、33 帧尚未凑齐</text>
+<line x1="40" y1="1054" x2="40" y2="1062" stroke="#D85A30" stroke-width="1.5"/>
+<text font-size="12" fill="#5F5E5A" x="46" y="1058" dominant-baseline="central">当前帧 t（本批最后一帧）；数轴下方小刻度 = 每 16 帧一批到货</text>
+<rect fill="#F1EFE8" stroke="#888780" x="40" y="1072" width="14" height="6" rx="1" stroke-width="0.5"/>
+<text font-size="12" fill="#5F5E5A" x="58" y="1075" dominant-baseline="central">demo 段 [0, 66)，首批一次到货，其窗口在第 0 次 infer 前一次编完</text>
+</svg>

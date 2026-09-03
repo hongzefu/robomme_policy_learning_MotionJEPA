@@ -29,7 +29,7 @@ Wan VAE（离线冻结）→ `WanLatentMotionEncoder`；接入形态按用户拍
 `even_sampling_indices` 一字不动、变长间隔铺满全历史；运动路与帧路**采样完全独立**（两路各采各的，
 只在拼接时按 (时刻, 类型) 键交错成一段）：按段内绝对网格每 16 帧取一个起点、每个起点往后 33 帧编一个
 运动向量、窗口尾端不得越过当前帧。训练读离线表，在线评估每 16 步一批 `add_buffer`、稳态每批增量现编
-1 个窗口（与 `streaming_obs_horizon = 16` 对齐）。
+1 个窗口（16 = 推理阶段一个 action chunk 的执行长度，见 2.1）。
 
 五个已定死的口径（依据分别在 2.2、2.1、2.3–2.4、3.1 与 3.4、3.4）：
 
@@ -55,17 +55,18 @@ Wan VAE（离线冻结）→ `WanLatentMotionEncoder`；接入形态按用户拍
 起点的语义出自用户原话「以 VLA 训练时每个 action chunk 的开始作为 f」
 「间隔一个 action chunk 抽取一次」——这句话如何落成具体的起点集合，见 2.2。
 
-⚠ 这里的「一个 action chunk」本计划原先读作 `action_horizon = 20`；而在线真正的重推间隔是 **16 步**——
+⚠ **stride 16 的依据（用户 2026-09-02 定）：推理阶段对齐一个 action chunk。** 推理阶段一个 action chunk 实际执行 **16 步**——
 `examples/robomme/eval.py::get_action_chunk` 返回 `action_chunk[:exec_horizon]`，`exec_horizon = Args.obs_horizon = 16`
 （`examples/robomme/utils.py::check_args` 断言 `obs_horizon == 16`；`scripts/training/train.py` 在 `streaming_obs_horizon == 16`
-时断言 `action_horizon == 20`），即每次预测 20 步只执行前 16 步。本轮据此把 `motion.stride` 定为 16（用户 2026-09-02 指令
-「把 0, 20, 40 这个机制 delta 从 20 改为 16，注意其他的起点和其他逻辑都不要动」）；上面两句用户原话逐字保留，不替用户改写。
+时断言 `action_horizon == 20`），即模型每次预测 20 步、只执行前 16 步就重新推理；`action_horizon = 20` 是预测长度，不是 chunk 的执行长度。
+本计划原先把「一个 action chunk」读作 20，本轮按用户指令改为 16（原话「把 0, 20, 40 这个机制 delta 从 20 改为 16，注意其他的起点和其他逻辑都不要动」
+「stride 16 的依据改为推理阶段对齐一个 action chunk」）；上面两句用户原话逐字保留，不替用户改写。
 
 ### 2.2 起点集合：段内绝对网格
 
 起点**钉死在段内绝对位置** `0, 16, 32, …`（= 段起点 + 16m），不随当前帧平移；当前帧 `t`
 只决定网格上哪些起点「已经可见」。间隔 16 走**独立配置键 `motion.stride`**——默认值写 16
-（= 在线重推间隔 `streaming_obs_horizon = 16`；`action_horizon` 仍是 20，每次只执行前 16 个），但**不自动跟随**这两个超参。
+（= 推理阶段一个 action chunk 的执行长度，yaml 里对应 `streaming_obs_horizon: 16`；`action_horizon` 仍是 20 的预测长度，每次只执行前 16 个），但**不自动跟随**这两个超参。
 
 设当前样本的全 timestep 域帧号为 `t`，该 episode 的 `exec_start_idx = es`，起点集合为：
 
@@ -119,10 +120,10 @@ t = 206
 
 - **离线表小、在线增量少**：4env400ep 全量的网格窗口只有 **26,777 行 = 78.45 MiB**（不截尾口径；本轮 40 ep 库 772 行）；
   在线每 16 步只新编 1 个窗口，摊薄 **0.098 s/step**（实测 1.57 s/窗口）。
-- **训练与部署共用同一套网格，且与在线重推节奏对齐**：上线时 policy 每 **16** 步重推一次（`eval.py::Args.obs_horizon = 16`、
-  `utils.check_args` 断言、`train.py` 断言 `streaming_obs_horizon == 16` 且 `action_horizon == 20`，即 20 个预测动作只执行前 16 个）；
-  stride 16 与重推间隔同相位，重推点上最新合法窗口的尾端**恰为当前帧**（exec 段内偏移 τ = t − es ≥ 32 起 gap 恒 0；
-  前两次重推 exec 网格为空）。旧方案 stride 20 与 16 步边界持续错位，这条收益当时并不成立。
+- **训练与部署共用同一套网格，且与推理阶段的 action chunk 对齐**：上线时 policy 每执行一个 action chunk（**16** 步）重推一次
+  （`eval.py::Args.obs_horizon = 16`、`utils.check_args` 断言、`train.py` 断言 `streaming_obs_horizon == 16` 且 `action_horizon == 20`，
+  即 20 个预测动作只执行前 16 个）；stride 16 与 action chunk 同相位，每次重推时最新合法窗口的尾端**恰为当前帧**
+  （exec 段内偏移 τ = t − es ≥ 32 起 gap 恒 0；前两次重推 exec 网格为空）。旧方案 stride 20 与 16 步的 chunk 边界持续错位，这条收益当时并不成立。
 
 ### 2.3 预算 N=96：零截断，按 16 任务全集定标
 
@@ -172,7 +173,7 @@ exec 网格单独看 MAX = 64、P90 = 32。
 **硬地板 64**：若想压预算，demo 段单独放大 stride 到 32 可把零截断线从 85 降到 64，再放
 （48 / 64 / 80）不再下降——瓶颈换成 BinFill 1044 帧（ceil(1012/16) = 64）/ PickXtimes 1025 帧（63）的 exec 段（这两个任务
 没有 demo 段）。守住「exec 每 16 帧一采 + 零截断」两条，N 不可能低于 64；要再往下压只能动
-exec stride，那正是「间隔一次在线重推」的本意所在。**本计划不采用 demo 独立 stride**，
+exec stride，那正是「间隔推理阶段一个 action chunk」的本意所在。**本计划不采用 demo 独立 stride**，
 只把它列为 S4 消融备选。
 
 **当前 4 任务训练集在 N=96 下的实况**（395,289 个样本全量）：
@@ -209,7 +210,7 @@ exec stride，那正是「间隔一次在线重推」的本意所在。**本计�
 
 **为什么仍然接受**：这是「零截断 + 按全集定标」的直接代价。要提高填充率只能降预算（4env 上
 N=16 时填充率 57.3%，但 19.14% 的样本被截断，丢的是最早的历史；全集上零截断硬地板是 64，
-见 2.3），或改用变间隔采样（违背「间隔一次在线重推」的本意）。用户已明确选择零截断优先。
+见 2.3），或改用变间隔采样（违背「间隔推理阶段一个 action chunk」的本意）。用户已明确选择零截断优先。
 
 **三个后果需要在实验中盯住**：
 1. attention 里 89.5%（4env）/ 80.2%（16env）的运动位置被 mask，计算恒定支出但无信息——形状
@@ -227,11 +228,55 @@ N=16 时填充率 57.3%，但 19.14% 的样本被截断，丢的是最早的历�
 `u_max = 16·floor((τ − 32)/16)`，空白 `gap = (τ − 32) mod 16 = τ mod 16 ∈ [0, 15]`（因为 16 整除 32）。
 16 个相位在训练侧均匀出现，其中 1/16 的样本 gap = 0，最近窗口的尾端就是当前帧。τ < 32 时 exec 网格为空，
 最近的窗口落在 demo 段，`gap = τ + 1 + ((es − 33) mod 16)`，最大约 47 帧；demo 网格也空时该样本一个窗口都没有
-（16env 4.72% / 4env 6.48%）。在线每 16 步重推一次（`Args.obs_horizon = 16`），重推点 τ = 16k，从 k ≥ 2 起
+（16env 4.72% / 4env 6.48%）。在线每执行一个 action chunk（16 步，`Args.obs_horizon = 16`）重推一次，重推点 τ = 16k，从 k ≥ 2 起
 **gap 恒 0**、当前时刻的运动不缺席。
 
 **用户已拍板：不补**（「采样不到 33 窗口都不补」）。不加网格外的起点（例如紧贴当前帧的
 `t−32`），不做钳位回退。凑不齐完整 33 帧窗口的位置就是缺失，走 padding + mask（3.4）。
+
+### 2.6 在线采样节奏与固定延迟：每 16 步一批到货、每次 infer 前同步编 1 个窗口，接受固定 +1.57 s
+
+**在线怎么采样**——规则与训练（2.2）完全相同，只是帧不是从离线表读，而是边跑边攒：
+
+- 帧成批到货。`examples/robomme/eval.py::get_action_chunk` 每 `obs_horizon = 16` 个环境步调一次 `add_buffer` 再调一次 `infer`；
+  第一批推进来的是整段 pre_traj（demo `[0, es)` 加 exec 首帧 es），之后每批 16 帧。所以 infer 只发生在 exec 段内偏移 τ = t − es = 0, 16, 32, … 的时刻。
+- 帧路：每次 infer 用当前 t 调同一个 `even_sampling_indices(t, 32)`，32 帧均匀铺满 [0, t]。
+- 运动路：每批帧入库后，凡「33 帧已凑齐」的网格起点全部编掉——demo 段的起点在第一批就全部凑齐、一次编完；exec 段从 τ ≥ 32 起每批恰好新增一个起点 u = τ − 32。
+  infer 时按 2.2 同一公式取最近 96 个，再与帧路一起按 (全域时刻, 类型) 排序得 `mem_order`（3.4）。
+- 相位：infer 时刻 τ 是 16 的倍数，最新合法起点 u = τ − 32 的窗口尾端 u + 32 = τ 就是当前帧，所以在线的空白恒为 0；
+  训练侧的空白在 0 到 15 帧之间均匀分布（2.5），在线只落在 0 这一个相位上，仍在训练支持集内。
+
+把前几次 infer 排成平行数轴（es = 0 的任务；每格 4 帧，▬ 已编好的窗口 [f, f+32]，▭ 本次新编的窗口，┆ 起点已到货但 33 帧未凑齐，┤ 当前帧）：
+
+```
+第 0 次 infer  t=0     ┤                                 帧路 1 帧    运动 0 窗
+第 1 次 infer  t=16    ────┤                             帧路 17 帧   运动 0 窗（起点 0 的窗口要到 t=32 才凑齐）
+第 2 次 infer  t=32    ▭▭▭▭▭▭▭▭┤                         帧路 32 帧   运动 1 窗，本次新编起点 0
+第 3 次 infer  t=48    ▬▬▬▬▬▬▬▬                          帧路 32 帧   运动 2 窗，本次新编起点 16
+                           ▭▭▭▭▭▭▭▭┤
+第 4 次 infer  t=64    ▬▬▬▬▬▬▬▬                          帧路 32 帧   运动 3 窗，本次新编起点 32
+                           ▬▬▬▬▬▬▬▬
+                               ▭▭▭▭▭▭▭▭┤
+第 5 次 infer  t=80    ▬▬▬▬▬▬▬▬                          帧路 32 帧   运动 4 窗，本次新编起点 48
+                           ▬▬▬▬▬▬▬▬
+                               ▬▬▬▬▬▬▬▬
+                                   ▭▭▭▭▭▭▭▭┤
+  ……此后每次 infer 恰好多一条 ▭，且它的右端总是顶在当前帧 ┤ 上；起点 τ−16 与 τ 的两个窗口（┆）永远差几帧凑不齐
+```
+
+完整版（含帧路采样帧位置、有 demo 段的 VideoUnmask 例子）由脚本按同一公式算出，见下图：
+
+![stride 16 在线采样：每次 infer 时的记忆内容](docs/motion-memory-online-timeline.svg)
+
+**延迟账与决策**：
+
+- 一个窗口过 Wan VAE + encoder 约 1.57 s（A40 探针实测，3.5）。新窗口的最后一帧就是本批刚到货的当前帧，编码只能在 `add_buffer` 之后开始、`infer` 之前结束，
+  没有任何提前量；原计划「提前一步预编（起点可见性可预测）」在 stride 16 下不可能。
+- **用户 2026-09-02 拍板：接受每次 infer 前固定 +1.57 s**（原话「接受每次 infer 固定 +1.57 s，写进计划」）。不做延后一拍（那会让在线空白从 0 变 16、越出训练支持集一格），
+  不为压延迟改 TF32 / bf16（在线数值口径与离线表保持同源；A2 漂移探针仍做，只作记录）。仿真评估没有实时约束，代价只是 eval 墙钟变长：每 16 步多 1.57 s，摊薄 0.098 s/step。
+- **开局的 demo 段窗口同样在第一次 infer 前同步编完、接受一次性等待，不做后台预热**（用户原话「开局 demo 段的一次性开销也接受」）：Button* 两任务 0 窗；VideoUnmask 3 窗约 4.7 s；
+  VideoUnmaskSwap 6 到 12 窗约 9.4 到 18.8 s；16 任务全集最坏 VideoPlaceOrder ep90 70 窗约 110 s。
+- 计时口径：这两笔时间落在 `add_buffer_time_ms`（`websocket_policy_server.py` 已产出），不进 `infer_time_ms`；S3 的端到端实测须分记 `add_buffer_time_ms` / `infer_time_ms` / 每 16 步一轮的挂钟。
 
 ## 三、链路：运动特征怎么送入模型
 
@@ -852,7 +897,7 @@ v8 全量抽取（`docs/dataset-build-doc/v8-400ep-full/README.md` 记 396,302 c
 全部 `COMPLETED 0:0`）端到端反算为 0.609 chunk/s ≈ **1.64 s/窗**（含加载 / IO / 落盘），作离线批量的保守口径。
 在线尖峰按 1.57 s 记，离线耗时估算按 1.64 s 记。
 
-段内绝对网格下**每 16 帧才新增一个起点**，而 16 恰是在线重推间隔，所以稳态形态是：
+段内绝对网格下**每 16 帧才新增一个起点**，而 16 恰是推理阶段一个 action chunk 的执行长度，所以稳态形态是：
 
 ```
   1.57 s / 16 步 ≈ 0.098 s/step（摊薄）
@@ -871,9 +916,8 @@ Button* 两任务 es = 0，0 窗；VideoUnmask es = 66 恒 3 窗 ≈ 4.7 s；Vid
 两个仍需处理的细节：
 
 1. **尖峰而非均摊，且预编不可行**：每次重推前都要付一次 1.57 s。旧方案「提前一步预编（起点可见性可预测）」在 stride 16 下
-   在协议上不可能——新窗的第 33 帧就是本次 infer 刚到货的当前帧，slack 恒为 0。剩三条路由 S3 决定：(a) 接受每次 infer 固定 +1.57 s
-   （仿真评估无实时约束，只是 eval 墙钟变长）；(b) 异步或延后一拍（在线 gap 由 0 变 16，越出训练支持集一格，属语义改动）；
-   (c) TF32 / bf16 降本（上限约 1.57/1.35 ≈ 1.16 s，encoder 段无提速空间，待 S0 探针实测）。开局的 demo 段一次性开销是否需要后台预热，同样 S3 决定。
+   在协议上不可能——新窗的第 33 帧就是本次 infer 刚到货的当前帧，slack 恒为 0。**已定（2.6）：接受每次 infer 固定 +1.57 s，开局 demo 段窗口同步编完、不做后台预热**；
+   不做延后一拍（在线 gap 由 0 变 16，越出训练支持集一格），不为压延迟改精度档（bf16 上限也只到约 1.16 s，且与离线表有漂移）。
 2. **可选提速**：抽取时关 TF32、batch=1 是为了与 `wan_motion_infer.encode_chunk` 逐位（D2；`pin_numerics()` 把这两项钉死，
    MotionJEPA `scripts/inference-example/README.md` 4.2 第一档表）；**在线不需要这个保证**，但提速空间要按实测口径看：
    VAE 段 cudnn TF32 改位 1.8e-3 相对（加速未测）、bf16 差 3.2%（README 4.2）；「bf16 快 1.35×、batch>1 零加速」为 2026-09-02
@@ -1031,7 +1075,7 @@ scripts/dataset/
 
 在线推理用和离线表同一套规则增量编码：起点钉在段内绝对网格上，每 16 帧新增一个窗口，摊薄约 0.098 s/步，每次 infer 前固定付一次约 1.57 s 的编码；另有 episode 开局一次性 `num_grid(demo)` 窗的开销（3.5）。
 
-1. **什么时候编、编什么**：帧成批到货（首批整段 pre_traj，之后每批 16 帧）。每次 `add_buffer` 后用 `while` 循环把所有已合法的起点一次补齐：demo / exec 各持一个 `next_grid_start`（初值 0，编完一个 `+= motion.stride`）；demo 判据 `next + 32 ≤ es − 1`（与 t 无关，首批一次跑完），exec 判据 `next + 32 ≤ 本批最后一帧的段内帧号`；成立就把这 33 帧凑齐一次喂 VAE（B=1），得到一个 motion token 存入 `_history_feats_motion[f]`，键用**全域起点帧号**（段内偏移做键会让 demo s=0 与 exec u=0 撞键）。stride 16 下预编不可行，尖峰处置见 3.5 细节 1，S3 决定。
+1. **什么时候编、编什么**：帧成批到货（首批整段 pre_traj，之后每批 16 帧）。每次 `add_buffer` 后用 `while` 循环把所有已合法的起点一次补齐：demo / exec 各持一个 `next_grid_start`（初值 0，编完一个 `+= motion.stride`）；demo 判据 `next + 32 ≤ es − 1`（与 t 无关，首批一次跑完），exec 判据 `next + 32 ≤ 本批最后一帧的段内帧号`；成立就把这 33 帧凑齐一次喂 VAE（B=1），得到一个 motion token 存入 `_history_feats_motion[f]`，键用**全域起点帧号**（段内偏移做键会让 demo s=0 与 exec u=0 撞键）。stride 16 下预编不可行，按 2.6 已定：每次 infer 前同步编完、接受固定 +1.57 s，开局 demo 段窗口同样同步编完。
 2. **改哪些文件**：`src/mme_vla_suite/policies/framesamp_memory.py::FrameSampMemory`——注入 `motion_enc_fn`（同 `vision_enc_fn` 的范式）；新缓一份 256 域原始帧缓冲（现有 `add_buffer` 把图缩到 224 后就丢了原图，而 Wan VAE 要 256 域；保留自 `next_grid_start` 起到当前帧的全部帧）；新增 `_prepare_motion`，按第二部分一节的查表公式取合法起点、取最近 96 个、右填充加 mask，`motion_pos` 从 `pos_emb_4x4[frame, 0, :256]` 取（与训练侧同表同切片）；`_prepare_frame_sampling` 一字不动。`src/mme_vla_suite/policies/policy.py::MME_VLA_Policy._prepare_history` 补 `motion_emb` / `motion_pos` / `motion_mask` / `mem_order` 四键，其中 `mem_order` 由与训练侧同一份排序函数（`shared/sampling.py`）产出。**段边界必须下传**：`FrameSampMemory.add_buffer` 现签名没有段信息，`MME_VLA_Policy.add_buffer` 已持有 `self.exec_start_idx`，S3 须把它显式传给 `FrameSampMemory`，否则 Video* 任务会按 es = 0 建网格、整体错位。**模型常驻位置**：Wan VAE + encoder（或 sidecar 句柄）建在 `MME_VLA_Policy.__init__`、`_prepare_mem_buffer` 只注入引用——`FrameSampMemory` 每 episode 随 `reset()` 销毁重建，不得在其内部持模型（`vision_enc_fn` 就是这个范式）。禁把 encode 包进新的 `jax.jit`——motion 编码走 PyTorch，在 jit 之外，天然不违反。
 3. **venv 墙**：policy server 跑主 venv（torch 2.7.1），Wan VAE 与 encoder 要 torch 2.9.0+cu128 / diffusers 0.39.0，无法同进程加载。S3 起工前先决策 sidecar 进程（用 `v1-store/venvs/wan` 起一个编码服务，policy 侧走 IPC）或其他方案。sidecar 同样用复制件 `encode_chunk` / `motion_token`，起手 `check_env()` + `pin_numerics()`，口径与离线表同源；若为了延迟改用 TF32 / bf16，先过 A2 漂移探针，并在 provenance 里与离线表分开登记。
 4. **对拍**：A23 在线 / 离线一致——同一起点的在线编码 vs 离线表余弦 ≥ A2 阈值；在线起点集合 == 离线；同一起点的在线 `motion_pos` 与 `store.pos_rows(np.asarray([f]))[0, 0, :256]` 逐位；同一 (g, t) 的在线 `mem_order` 与训练侧逐位相同且为 0..607 的合法置换。
@@ -1045,7 +1089,7 @@ scripts/dataset/
 | **S0 先验与 oracle** | ① Ada 上 Wan-VAE 20 窗探针（ms/窗、`max_memory_allocated`；直接用复制件 `encode_chunk`）；② **在重构动手前**产出 SigLIP oracle O1/O2（4.3）+ 本机目标卡跑 MotionJEPA `crosscheck.py --vae_check`（4.3 命令，≈2 min）；③ 建 `scripts/dataset/wan` 子 venv（`v1-store/venvs/wan`）；④ HF 缓存拷入 `v1-store/cache/hf` 并核 VAE 指纹 `9980d252…`；⑤ 复制 `wan_motion_infer.py` + 写 `SOURCE_PIN.json` + 拷 run 的 `config.yaml`/ckpt 到 `v1-store/external/motionjepa/` 并核 sha256（第二部分 1.5） | 拿到 ms/窗实测；SigLIP oracle 落盘并记 commit；`CROSSCHECK=PASS`（json 归档）；A3 跨卡 / A4 双 venv 探针 max\|diff\|=0；复制件 sha256 == `SOURCE_PIN.source_sha256` |
 | **S1 数据集重抽** | `scripts/dataset/` 破坏性重构（4.5）+ 40 ep 全链路（4.2，tmux；含 `oracle_driver.py` 产 D2/D3 oracle，须与被测同机同型号卡）+ D1–D3 与 A5–A12 全过 + dataloader 微基准（第二部分 1.6）；留档 `docs/dataset-build-doc/4task-motion-40ep/` | `COMPARE_RESULT=bitexact PASS`；`FINALIZE_EXIT_CODE=0`；`VERIFY_PACK=PASS scanned=13756 mismatches=0`；`WAN_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；`ENCODER_BITEXACT=PASS compared=<Σ num_grid> mismatches=0`；motion 表 772 行 = 114 + 658 |
 | **S2 model 接线** | 五节 5.1 + 第二部分二节：双路 memory + 交错重排 + `motion.enabled` 条件建模块 + `RepackTransform` 登记 + 对拍硬编码同步 | A13–A17 全过；A21 自校 `G0_EQ=PASS`；A22 逐叶逐位；T1 命中锚点 + T2 新库 A/B 逐位，两条都过；开启态 A18–A20 形制、分布、尺度检查 |
-| **S3 在线接线** | `FrameSampMemory` 绝对网格增量编码（while 补齐、demo/exec 双游标、段边界下传）+ Wan VAE 常驻 + 尖峰处置决策（3.5 细节 1 三选一、开局 demo 窗是否预热）；⚠ policy server 在主 venv（torch 2.7.1），Wan-VAE + encoder 无法同进程加载，需 sidecar 进程或另行决策（第二部分三节） | 在线 / 离线同一起点特征一致 + `mem_order` 逐位（A23）；端到端 ms/step 实测（分记 `add_buffer_time_ms` / `infer_time_ms`） |
+| **S3 在线接线** | `FrameSampMemory` 绝对网格增量编码（while 补齐、demo/exec 双游标、段边界下传）+ Wan VAE 常驻 + 同步编码（2.6 已定：每次 infer 前固定 +1.57 s、开局 demo 窗同步编完，不预编不预热）；⚠ policy server 在主 venv（torch 2.7.1），Wan-VAE + encoder 无法同进程加载，需 sidecar 进程或另行决策（第二部分三节） | 在线 / 离线同一起点特征一致 + `mem_order` 逐位（A23）；端到端 ms/step 实测（分记 `add_buffer_time_ms` / `infer_time_ms`） |
 | **S4 消融** | 记忆布局只保留交错一种（用户 2026-09-02 拍板：不做「并列 vs 交错」对照，也不做「运动段放 img 之后」）。① 预算 N（96 / 80 / 64 / 48）+ demo 独立 stride（2.3「硬地板 64」） ② 叠加 adaRMS 调制 ③ `motion.stride`（16 / 20 / 32 三档，各档固定 `motion.budget = 96`；网格表下每档重抽，40 ep 一档 ≈10 min 仅 Wan 抽取，另需重跑 encoder 与 pack\|verify；每档一张独立表 / 独立库，落点与 LAYOUT 命名在 S4 审批时定，推荐「一套数据一个库」`4task-motion-40ep-<消融名>/`；换档须按红线 8 重跑全集统计重定 budget） ④ 冻结 vs JAX 移植微调 ⑤ 按有效数分桶的分层评估（2.4 后果 3） ⑥ **ep90–99 泄漏对照**（第二部分八节 6） ⑦ `motion_pos` 改传 `motion_start_frames` int32（第二部分 1.6） | 训练曲线 + 在线成功率 |
 
 S0 的 oracle 产出、S1、S3 属「预计超过 5 分钟的全量数据构建 / 评估」，按 `AGENTS.md` 第 12、17 条从 clean HEAD 起跑并留档。**全部在本机，不上集群**。
@@ -1244,8 +1288,8 @@ motion:
   budget: 96                # 运动路 memory 位置数。零截断；按 16 任务全集定标
                             #   （stride 16 下全集最大需 85、4env400ep 最大需 34；N=96 截断 0、填充率 19.8%），见红线 8
   stride: 16                # 段内绝对网格步长。⚠ 独立配置键：默认值取自本文件顶层
-                            #   streaming_obs_horizon: 16（= 每次重推实际执行的动作数；action_horizon = 20
-                            #   是预测长度，不是本键来源），但**不自动跟随**——改那两个键不改本键；
+                            #   streaming_obs_horizon: 16（= 推理阶段一个 action chunk 实际执行的步数；
+                            #   action_horizon = 20 是预测长度，不是本键来源），但**不自动跟随**——改那两个键不改本键；
                             #   加载时必须 == motion store 的 GRID_STRIDE
   window_frames: 33
   window_direction: forward # 前视：窗口 = [起点, 起点+32]，尾端 ≤ 当前帧
@@ -1457,7 +1501,7 @@ if self.motion_enabled:                                       # ← 条件在 __
 - **交错次序**：`mem_order` 在 `_prepare_motion` 之后于 `_prepare_history` 内计算——需要同时拿到帧路 32 个帧号与运动路 96 个全域起点；`prepare_frame_sampling` 不返回帧号，须再调一次 `get_frame_sampling_indices(step_idx, token_budget, token_per_image)`（纯函数、与内部那次同值），然后调 `shared/sampling.py` 里与训练侧**同一份**排序函数。两侧各写一份不会报错，只静默让在线看到与训练不同的次序（A23 兜底）。
 - `MME_VLA_Policy._prepare_history`：补 `inputs["motion_emb"]` / `inputs["motion_pos"]` / `inputs["motion_mask"]` / `inputs["mem_order"]` 四键。
 - ⚠ 注释里那条红线仍然有效：**禁把 encode 与 pool 包进新的 `jax.jit`**。motion 编码走 PyTorch、在 jit 之外，天然不违反。
-- **尖峰口径**（3.5 细节 1）：每次 infer 前都付一次 1.57 s；stride 16 下 slack 恒 0、预编不可行，三条可选项与开局 demo 窗是否预热由 S3 决定。
+- **尖峰口径**（2.6 已定）：每次 infer 前同步编完新窗口、固定 +1.57 s；stride 16 下 slack 恒 0、预编不可行；开局 demo 段窗口在首次 infer 前同步编完，不做后台预热；不延后一拍、不为延迟改精度档。
 - **编码口径与离线表同源**：sidecar 里同样用复制件 `encode_chunk` + `motion_token`，起手 `check_env()` + `pin_numerics()`；每窗 **33 帧一次喂** `vae.encode`、B=1（diffusers 分 9 次调 `encode` 与一次喂 33 帧不等价；batch>1 改 encoder 输出最后一位）。若 S3 为了延迟改用 TF32 / bf16 VAE，须先过 A2 且在 provenance 里与离线表分开登记。
 
 ## 四、对拍闸门总表
@@ -1562,7 +1606,7 @@ G0b r1 的 `run_meta.json` 记的入口是旧路径 `scripts/smoke-local/bench_t
 
 | # | 风险 | 概率 | 影响 | 处置 |
 |---|---|---|---|---|
-| R1 | 在线延迟 | 中 | 中 | stride 16 == 在线重推间隔，exec 段每次 `add_buffer` 恰新增 1 窗、**每次 infer 固定 +1.57 s**，摊薄 0.098 s/step；成本计在 `add_buffer_time_ms`、不进 `infer_time_ms`；episode 开局另有 `num_grid(demo)` 窗一次性开销（v1 最坏 ≈19 s、16env 最坏 ≈110 s）；**预编不可行**（slack 恒 0），剩余选项见 3.5 细节 1，S3 决定 |
+| R1 | 在线延迟 | 中 | 中 | stride 16 == 推理阶段一个 action chunk 的执行长度，exec 段每次 `add_buffer` 恰新增 1 窗、**每次 infer 固定 +1.57 s**，摊薄 0.098 s/step；成本计在 `add_buffer_time_ms`、不进 `infer_time_ms`；episode 开局另有 `num_grid(demo)` 窗一次性开销（v1 最坏 ≈19 s、16env 最坏 ≈110 s）；**预编不可行**（slack 恒 0）；已定接受（2.6），仿真评估只是墙钟变长，不改语义 |
 | R2 | **填充率仅 10.5%（4env）/ 19.8%（16env）/ 11.9%（40 ep 实训库），运动路信号被 padding 稀释** | **高** | **中** | 已在 2.4 显式记账；A19 盯有效数分布；S4 增「按有效数分桶的分层评估」与预算 N 消融 |
 | R3 | 5.55%（40 ep 实训库）/ 6.48%（4env400ep）/ 4.72%（16env）样本运动路全空（该比例与 stride 无关），模型可能学成「按有效数猜 episode 进度」的捷径 | 中 | 中 | S4 专项消融 |
 | R4 | TF32+bf16 在线口径与离线表漂移过大 | 中 | 低 | A2 定量；可退回 fp32/关TF32 |
