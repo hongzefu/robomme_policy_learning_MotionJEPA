@@ -141,14 +141,213 @@ def _check_run_dir(run_dir: pathlib.Path, fails: list[str]) -> None:
             fails.append(f"index_sequence 解析失败: {e}")
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# --profile t2：新库严格 A/B 闸（motion-memory-plan.md 5.2 / 2.8）——reference（S2_BASE，冻结 manifest）vs candidate
+# 直接读两侧 records，不经 compare_baseline.py（fail-closed：缺文件 / 缺 step / 缺键 / 空交集 / 任一计数不符均 FAIL）
+# ══════════════════════════════════════════════════════════════════════════════
+
+_T2_ARGV_VALUE_SKIP = {"--exp-name", "--checkpoint-base-dir"}     # run / output 路径白名单：只允许这两项不同
+
+
+def _t2_normalized_argv(argv: list[str]) -> list[str]:
+    out = []
+    skip = False
+    for i, a in enumerate(argv):
+        if i == 0:
+            continue                                  # 脚本路径（两侧目录可不同）
+        if skip:
+            skip = False
+            continue
+        if a in _T2_ARGV_VALUE_SKIP:
+            skip = True
+            continue
+        out.append(a)
+    return out
+
+
+def _t2_metrics(path: pathlib.Path) -> dict[int, dict[str, str]]:
+    rows = {}
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        r = json.loads(line)
+        rows[int(r["step"])] = {k: v["hex"] for k, v in r.items() if isinstance(v, dict) and "hex" in v}
+    return rows
+
+
+def _t2_jsonl(path: pathlib.Path) -> dict[int, dict]:
+    rows = {}
+    for line in path.read_text().splitlines():
+        if line.strip():
+            r = json.loads(line)
+            rows[int(r["step"])] = r
+    return rows
+
+
+def _t2_log_ok(log: pathlib.Path, fails: list[str], tag: str) -> None:
+    if not log.exists():
+        fails.append(f"{tag} 日志不存在: {log}")
+        return
+    lines = [ln for ln in log.read_text(errors="replace").splitlines() if ln.startswith("EXIT_CODE=")]
+    if len(lines) != 1 or lines[0] != "EXIT_CODE=0":
+        fails.append(f"{tag} 日志 EXIT_CODE 行不唯一或非 0: {lines}")
+
+
+def _t2_config_diff(ref_yaml_bytes: bytes, cand_yaml_path: pathlib.Path, fails: list[str]) -> None:
+    """reference 源 YAML（git show S2_BASE:<path> 恢复的原始字节）vs candidate 当前 YAML：解析后深比较，差异白名单只有新增规范 motion 节且 enabled=false。"""
+    from omegaconf import OmegaConf
+    a = OmegaConf.to_container(OmegaConf.create(ref_yaml_bytes.decode("utf-8")), resolve=True)
+    b = OmegaConf.to_container(OmegaConf.load(cand_yaml_path), resolve=True)
+    if "motion" in a:
+        fails.append("reference 源 YAML 已含 motion 节（应为 S2 改码前的 closed 文件）")
+    m = b.pop("motion", None)
+    if a != b:
+        fails.append(f"candidate YAML 除 motion 节外与 reference 不同: {sorted(set(a) ^ set(b))}")
+    need = {"enabled", "dim", "budget", "stride", "window_frames", "window_direction", "grid_origin", "store_path",
+            "source_run", "pos_dim", "frame_size", "online_gpu"}
+    if not isinstance(m, dict) or m.get("enabled") is not False or set(m) != need:
+        fails.append(f"candidate motion 节不是规范的 enabled:false 全键节: {m}")
+
+
+def _gate_t2(args) -> int:
+    import subprocess
+    fails: list[str] = []
+    ref = json.loads(pathlib.Path(args.reference_manifest).read_text(encoding="utf-8"))
+    A = pathlib.Path(ref["records_dir"]) if args.run_dir_a is None else args.run_dir_a
+    B = args.run_dir_b
+    steps, batch = int(args.steps), int(args.batch_size)
+    if int(ref.get("steps", -1)) != steps or int(ref.get("batch_size", -1)) != batch:
+        fails.append(f"reference manifest 的 steps/batch {ref.get('steps')}/{ref.get('batch_size')} != 本次声明 {steps}/{batch}")
+    record_steps = set(int(x) for x in ref["record_steps"])          # TrainState 摘要步集
+    digest_steps = set(int(x) for x in ref["digest_steps"])          # 输入摘要步集
+    # 1) 两侧日志唯一 EXIT_CODE=0
+    _t2_log_ok(pathlib.Path(ref["log_path"]) if args.log_a is None else args.log_a, fails, "reference")
+    _t2_log_ok(args.log_b, fails, "candidate")
+    # 2) 环境指纹相同（两侧 env.json 的 fingerprint 深比较）
+    try:
+        fa = json.loads((A / "env.json").read_text())["fingerprint"]
+        fb = json.loads((B / "env.json").read_text())["fingerprint"]
+        if fa != fb:
+            diff = [k for k in set(fa) | set(fb) if fa.get(k) != fb.get(k)]
+            fails.append(f"环境指纹不同: {diff}")
+    except (OSError, KeyError, json.JSONDecodeError) as e:
+        fails.append(f"env.json fingerprint 缺失: {e}")
+    # 3) 规范化 argv 除 run / output 路径与 commit 外逐项相同（run_meta.json 的真实 argv）
+    try:
+        ra = json.loads((A / "run_meta.json").read_text())["argv"]
+        rb = json.loads((B / "run_meta.json").read_text())["argv"]
+        na, nb = _t2_normalized_argv(ra), _t2_normalized_argv(rb)
+        if na != nb:
+            fails.append(f"规范化 argv 不同: {[x for x in na if x not in nb]} vs {[x for x in nb if x not in na]}")
+    except (OSError, KeyError, json.JSONDecodeError) as e:
+        fails.append(f"run_meta.json 缺失: {e}")
+    # 4) 配置：先核 reference 源 YAML sha，再与 candidate 解析比较（只允许新增 motion:false 节）
+    try:
+        raw = subprocess.run(["git", "-C", str(_REPO_ROOT), "show", f"{ref['S2_BASE']}:{ref['yaml_path']}"],
+                             capture_output=True, check=True).stdout
+        if hashlib.sha256(raw).hexdigest() != ref["yaml_sha256"]:
+            fails.append("git show S2_BASE:<yaml> 的 sha256 与 manifest 记录不符")
+        else:
+            _t2_config_diff(raw, _REPO_ROOT / ref["yaml_path"], fails)
+    except subprocess.CalledProcessError as e:
+        fails.append(f"git show 失败: {e}")
+    # 5) scalars：step 集与 scalar 键全集相同、逐步 hex 逐位；scalars_hex.tsv 表头 + steps 行、sha256 相等
+    try:
+        ma, mb = _t2_metrics(A / "metrics.jsonl"), _t2_metrics(B / "metrics.jsonl")
+        if set(ma) != set(range(steps)) or set(mb) != set(range(steps)):
+            fails.append(f"metrics step 集不是 0..{steps - 1}: A={len(ma)} B={len(mb)}")
+        else:
+            keys = set(ma[0])
+            if any(set(ma[s]) != keys or set(mb[s]) != keys for s in range(steps)) or len(keys) != 5:
+                fails.append("scalar 键全集不一致或不为 5 键")
+            bad = [s for s in range(steps) if ma[s] != mb[s]]
+            if bad:
+                fails.append(f"scalars hex 失配步 {len(bad)}（首个 {bad[0]}）")
+        sa, sb = (A / "scalars_hex.tsv").read_bytes(), (B / "scalars_hex.tsv").read_bytes()
+        for tag, raw in (("A", sa), ("B", sb)):
+            lines = raw.decode().splitlines()
+            if len(lines) != steps + 1 or lines[0] != _EXPECT_HEADER:
+                fails.append(f"{tag} scalars_hex.tsv 行数/表头不符（{len(lines)} 行）")
+        if hashlib.sha256(sa).hexdigest() != hashlib.sha256(sb).hexdigest():
+            fails.append("scalars_hex.tsv sha256 不等")
+        if ref.get("scalars_sha256") and hashlib.sha256(sa).hexdigest() != ref["scalars_sha256"]:
+            fails.append("reference scalars_hex.tsv sha256 与 manifest 记录不符（reference 腐烂）")
+    except OSError as e:
+        fails.append(f"scalars 缺失: {e}")
+    # 6) TrainState 摘要：行数 == 声明步集，逐步 state_digest 逐位，n_leaves == 177
+    try:
+        pa, pb = _t2_jsonl(A / "param_checksums.jsonl"), _t2_jsonl(B / "param_checksums.jsonl")
+        if set(pa) != record_steps or set(pb) != record_steps:
+            fails.append(f"param_checksums 步集 != 声明 {sorted(record_steps)}: A={sorted(pa)} B={sorted(pb)}")
+        else:
+            for s in sorted(record_steps):
+                if pa[s]["state_digest"] != pb[s]["state_digest"]:
+                    fails.append(f"STATE_DIGEST step {s} 不等"); break
+                if pa[s]["n_leaves"] != 177 or pb[s]["n_leaves"] != 177:
+                    fails.append(f"n_leaves != 177 at step {s}: {pa[s]['n_leaves']}/{pb[s]['n_leaves']}"); break
+    except OSError as e:
+        fails.append(f"param_checksums 缺失: {e}")
+    # 7) 输入摘要：步集 == 声明，逐步逐键 raw sha 逐位（同代码同 dtype，raw 应 0 失配），n_keys == 12
+    try:
+        ba, bb = _t2_jsonl(A / "batch_digests.jsonl"), _t2_jsonl(B / "batch_digests.jsonl")
+        if set(ba) != digest_steps or set(bb) != digest_steps:
+            fails.append(f"batch_digests 步集 != 声明 {sorted(digest_steps)}: A={sorted(ba)} B={sorted(bb)}")
+        else:
+            for s in sorted(digest_steps):
+                if ba[s].get("n_keys") != 12 or bb[s].get("n_keys") != 12:
+                    fails.append(f"n_keys != 12 at step {s}"); break
+                if ba[s].get("per_key") != bb[s].get("per_key") or ba[s].get("sample_indices") != bb[s].get("sample_indices"):
+                    fails.append(f"BATCH_DIGEST step {s} raw 不等"); break
+    except OSError as e:
+        fails.append(f"batch_digests 缺失: {e}")
+    # 8) index 序列：两侧 n ≥ steps×batch 且前缀逐项相同
+    try:
+        ia = json.loads((A / "index_sequence.json").read_text()); ib = json.loads((B / "index_sequence.json").read_text())
+        need = steps * batch
+        la, lb = ia.get("indices") or ia.get("sequence") or [], ib.get("indices") or ib.get("sequence") or []
+        if len(la) < need or len(lb) < need:
+            fails.append(f"index 序列不足 {need}: A={len(la)} B={len(lb)}")
+        elif la[:need] != lb[:need]:
+            fails.append("index 序列前缀不同")
+    except OSError as e:
+        fails.append(f"index_sequence 缺失: {e}")
+    if args.env_out is not None:
+        if not args.env_out.exists() or "BASELINE_ENV=PASS" not in args.env_out.read_text():
+            fails.append("env-out 中无 BASELINE_ENV=PASS")
+    if fails:
+        for r in fails:
+            print(f"T2_GATE_FAIL reason={r}")
+        print(f"T2_EQ=FAIL reasons={len(fails)}")
+        return 1
+    print(f"T2_EQ=PASS steps={steps} batch={batch} record_steps={sorted(record_steps)} digest_steps={sorted(digest_steps)}")
+    return 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--compare-out", required=True, type=pathlib.Path)
-    ap.add_argument("--run-dir", required=True, type=pathlib.Path)
-    ap.add_argument("--scalars", required=True, type=pathlib.Path)
-    ap.add_argument("--expect-sha256", required=True)
-    ap.add_argument("--env-out", required=True, type=pathlib.Path)
+    ap.add_argument("--profile", choices=["t1", "t2"], default="t1", help="t1：既有 1000 步黄金闸（默认，旧调用不变）；t2：新库严格 A/B 闸")
+    ap.add_argument("--compare-out", type=pathlib.Path)
+    ap.add_argument("--run-dir", type=pathlib.Path)
+    ap.add_argument("--scalars", type=pathlib.Path)
+    ap.add_argument("--expect-sha256")
+    ap.add_argument("--env-out", type=pathlib.Path)
+    # t2
+    ap.add_argument("--reference-manifest", type=pathlib.Path)
+    ap.add_argument("--run-dir-a", type=pathlib.Path, default=None)
+    ap.add_argument("--run-dir-b", type=pathlib.Path)
+    ap.add_argument("--log-a", type=pathlib.Path, default=None)
+    ap.add_argument("--log-b", type=pathlib.Path)
+    ap.add_argument("--steps", type=int, default=300)
+    ap.add_argument("--batch-size", type=int, default=8)
     args = ap.parse_args()
+    if args.profile == "t2":
+        for k in ("reference_manifest", "run_dir_b", "log_b"):
+            if getattr(args, k) is None:
+                ap.error(f"--profile t2 需要 --{k.replace('_', '-')}")
+        return _gate_t2(args)
+    for k in ("compare_out", "run_dir", "scalars", "expect_sha256", "env_out"):
+        if getattr(args, k) is None:
+            ap.error(f"--profile t1 需要 --{k.replace('_', '-')}")
 
     fails: list[str] = []
 

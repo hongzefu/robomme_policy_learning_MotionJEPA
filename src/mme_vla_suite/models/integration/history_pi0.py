@@ -71,6 +71,24 @@ def make_attn_mask(input_mask, mask_ar, mask_na=None):
         return jnp.logical_and(attn_mask, valid_mask)
 
 
+def _motion_enabled(history_config) -> bool:
+    """motion.enabled 的唯一判定式（dataset / PerceptualMemory / inputs_spec 三处同源）。"""
+    mcfg = getattr(history_config, "motion", None) if history_config is not None else None
+    return bool(mcfg is not None and mcfg.get("enabled", False))
+
+
+def _motion_specs(history_config, batch_size: int) -> dict:
+    if not _motion_enabled(history_config):
+        return {}
+    m = history_config.motion
+    return {
+        "motion_emb": jax.ShapeDtypeStruct([batch_size, int(m.budget), int(m.dim)], jnp.float32),
+        "motion_pos": jax.ShapeDtypeStruct([batch_size, int(m.budget), int(m.pos_dim)], jnp.float32),
+        "motion_mask": jax.ShapeDtypeStruct([batch_size, int(m.budget)], jnp.bool_),
+        "mem_order": jax.ShapeDtypeStruct([batch_size, int(history_config.budget) + int(m.budget)], jnp.int32),
+    }
+
+
 @dataclasses.dataclass(frozen=True)
 class HistoryPi0Config(Pi0Config):
     # paligemma_variant: _gemma.Variant = "gemma_2b_lora"
@@ -128,6 +146,9 @@ class HistoryPi0Config(Pi0Config):
                     ],
                     jnp.float32,
                 ),
+                # motion memory（motion-memory-plan.md 2.3）：仅当 motion.enabled 时补四个 spec，从 config 键推导；
+                # 关闭态返回值与 HEAD 同构
+                **_motion_specs(self.history_config, batch_size),
             )
 
         return observation_spec, action_spec
@@ -190,6 +211,12 @@ class HistoryPi0(BaseModel):
                 rngs=rngs,
                 dtype=config.dtype,
             )
+
+            # inputs_spec 与 mem_encoder.motion_enabled 一致性显式 raise（两侧 enabled 同源，plan 2.9）
+            if _motion_enabled(self.history_config) != bool(self.mem_encoder.motion_enabled):
+                raise ValueError("motion.enabled 在 inputs_spec 与 PerceptualMemory 之间不一致")
+            if self.mem_encoder.motion_enabled and self.integration_type != "context":
+                raise ValueError(f"motion memory 只接 integration_type=context（当前 {self.integration_type!r}）")
 
             print(
                 f"====== Using History, Representation Type: perceptual , Integration Type: {self.integration_type} ======"
@@ -298,9 +325,32 @@ class HistoryPi0(BaseModel):
     @at.typecheck
     def embed_memory(self, obs: HistAugObservation):
         tokens, _, _ = self.mem_encoder(
-            obs.static_image_emb, obs.static_pos_emb, obs.static_state_emb
+            obs.static_image_emb, obs.static_pos_emb, obs.static_state_emb,
+            motion_emb=obs.motion_emb, motion_pos=obs.motion_pos, motion_mask=obs.motion_mask,
         )
-        input_mask = obs.static_mask
+        if not self.mem_encoder.motion_enabled:
+            # 关闭态守卫：编译期 Python 分支 + 早返回，四处一个元素都不追加、不重排，返回值与 HEAD 逐位相同
+            input_mask = obs.static_mask
+            ar_mask = [False] * tokens.shape[1]
+            na_mask = [False] * tokens.shape[1]
+            return tokens, input_mask, ar_mask, na_mask
+
+        # ── 开启态（motion-memory-plan.md 2.3）：并列序 (b,608,2048) → 按 mem_order 重排 token 与 input_mask ──
+        # 非 None 闸：HistAugObservation.from_dict 缺键静默为 None，jaxtyping 在跨 jit 的 pytree 解包上被 disable，不能指望它兜底
+        if obs.motion_emb is None or obs.motion_pos is None or obs.motion_mask is None or obs.mem_order is None:
+            raise ValueError("motion.enabled=true 但 observation 缺 motion_emb / motion_pos / motion_mask / mem_order")
+        budget = int(self.mem_encoder.motion_budget)
+        if obs.motion_emb.shape[1] != budget:
+            raise ValueError(f"motion_emb.shape[1]={obs.motion_emb.shape[1]} != motion.budget {budget}")
+        input_mask = jnp.concatenate([obs.static_mask, obs.motion_mask], axis=1)
+        # 形状闸：长度写错时 take_along_axis 不报错，会静默把记忆段截成 mem_order 的长度；越界与非置换的守卫在 dataloader 侧
+        if not (obs.mem_order.shape[1] == tokens.shape[1] == input_mask.shape[1]):
+            raise ValueError(f"mem_order 长度 {obs.mem_order.shape[1]} != tokens {tokens.shape[1]} / input_mask {input_mask.shape[1]}")
+        if obs.mem_order.dtype != jnp.int32:
+            raise ValueError(f"mem_order dtype {obs.mem_order.dtype} != int32")
+        tokens = jnp.take_along_axis(tokens, obs.mem_order[:, :, None], axis=1)
+        input_mask = jnp.take_along_axis(input_mask, obs.mem_order, axis=1)
+        # ar_mask / na_mask 是无 batch 维的 (L,) 常量、记忆区恒 False，不重排；长度自动跟随 608
         ar_mask = [False] * tokens.shape[1]
         na_mask = [False] * tokens.shape[1]
         return tokens, input_mask, ar_mask, na_mask

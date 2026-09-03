@@ -52,7 +52,9 @@ from mme_vla_suite.training.dataloader import _create_framesamp_dataset  # noqa:
 from openpi.training.data_loader import _collate_fn  # noqa: E402
 from openpi.training.data_loader import transform_dataset  # noqa: E402
 
-_EXPECTED_HISTORY_CONFIG = "perceptual-framesamp-context.yaml"
+# 只接受 closed / open 两个精确文件名（motion-memory-plan.md 2.1）：T1 / T2 默认钉 closed，T3 open 侧显式钉 open
+_EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml")
+_EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 
 def _out_dir() -> pathlib.Path:
@@ -141,8 +143,8 @@ def _dump_batches(tds, plan: list[dict], out: pathlib.Path) -> int:
 
 def main() -> None:
     config = _config.cli()
-    if config.model.history_config != _EXPECTED_HISTORY_CONFIG:
-        raise SystemExit(f"本工具只支持 {_EXPECTED_HISTORY_CONFIG}（当前 {config.model.history_config}）")
+    if config.model.history_config not in _EXPECTED_HISTORY_CONFIGS:
+        raise SystemExit(f"本工具只支持 {_EXPECTED_HISTORY_CONFIGS}（当前 {config.model.history_config}）")
 
     out = _out_dir()
     mode = os.environ.get("DTYPE_DUMP_MODE", "both")

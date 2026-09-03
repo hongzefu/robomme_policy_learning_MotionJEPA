@@ -101,7 +101,9 @@ import openpi.training.data_loader as _openpi_dl  # noqa: E402
 import mme_vla_suite.training.config as _config  # noqa: E402
 
 _MAX_BENCH_STEPS = 1200  # G0b 基线升级为 1000 步（用户 2026-08-26 指定）；上限仍远低于正式训练量级
-_EXPECTED_HISTORY_CONFIG = "perceptual-framesamp-context.yaml"
+# 只接受 closed / open 两个精确文件名（motion-memory-plan.md 2.1）：T1 / T2 默认钉 closed，T3 open 侧显式钉 open
+_EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml")
+_EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 
 def _record_dir() -> pathlib.Path:
@@ -314,13 +316,25 @@ def _install_checksum_recorder(record_dir: pathlib.Path, enabled: bool, gate,
     自选；空调用零开销）。
     """
     checksums_path = record_dir / "param_checksums.jsonl"
+    orig_save_state = _train._checkpoints.save_state
+    save_final = os.environ.get("BENCH_SAVE_FINAL_CKPT", "0") == "1"
+    final_step = int(os.environ.get("BENCH_FINAL_STEP", "-1"))
 
     def checksum_state(checkpoint_manager, state, data_loader, step):
-        del checkpoint_manager, data_loader
         step = int(step)
         if enabled and gate(step):
             _checksum_full_state(checksums_path, state, step,
                                  dump_dir=dump_dir if step in dump_steps else None)
+        if save_final and step == final_step:
+            # motion-memory-plan.md 2.8：沿现有外层编号把最终 EMA checkpoint 放目录 999（orbax save 仍走原版
+            # save_state：params 项 = ema_params，assets 项 = norm_stats）；metadata 明记 checkpoint_id / state_step / param_kind
+            orig_save_state(checkpoint_manager, state, data_loader, 999)
+            checkpoint_manager.wait_until_finished()
+            meta = {"checkpoint_id": 999, "state_step": step + 1, "param_kind": "ema" if state.ema_params is not None else "raw",
+                    "record_kind": "final", "n_leaves_params": len(jax.tree_util.tree_leaves(state.params))}
+            with (record_dir / "final_checkpoint.json").open("w") as f:
+                json.dump(meta, f, indent=2, ensure_ascii=False)
+            print(f"\n[bench] step {step}: 最终 checkpoint 已落盘（目录 999，{meta['param_kind']}）")
 
     _train._checkpoints.save_state = checksum_state
 
@@ -560,8 +574,9 @@ def main() -> None:
         raise ValueError("bench 禁止 overwrite / resume——避免误清已有 run 目录")
     if not config.model.use_history:
         raise ValueError("bench 必须启用 --model.use-history")
-    if config.model.history_config != _EXPECTED_HISTORY_CONFIG:
-        raise ValueError(f"bench 的 history_config 必须是 {_EXPECTED_HISTORY_CONFIG}")
+    if config.model.history_config not in _EXPECTED_HISTORY_CONFIGS:
+        raise ValueError(f"bench 的 history_config 必须是 {_EXPECTED_HISTORY_CONFIGS} 之一（当前 {config.model.history_config!r}）")
+    _history_config_name = config.model.history_config   # train.main 会把它换成 DictConfig，这里先留文件名标签
     if config.batch_size % max(1, config.fsdp_devices):
         raise ValueError(
             f"batch_size {config.batch_size} 必须能被 fsdp_devices {config.fsdp_devices} 整除"
@@ -647,8 +662,25 @@ def main() -> None:
         if finalize_digests is not None:
             finalize_digests()
         # 真实 argv 与编译缓存事件计数——驱动脚本收官时并进 env.json
+        # motion-memory-plan.md 2.8：实际 epoch 样本数（数据集真值源）、batch、history config 文件名 / resolved sha 进 run_meta
+        _ds = pathlib.Path(config.dataset_path)
+        _es = {}
+        if (_ds / "meta" / "store_meta.json").is_file():
+            _es["store_meta"] = int(json.load(open(_ds / "meta" / "store_meta.json"))["num_exec_samples"])
+        if (_ds / "meta" / "stats.json").is_file():
+            _es["stats"] = int(json.load(open(_ds / "meta" / "stats.json"))["execution_samples"])
+        if not _es or len(set(_es.values())) != 1:
+            raise RuntimeError(f"epoch 样本数无法从 {_ds}/meta 唯一读出: {_es}")
+        _resolved = pathlib.Path(config.checkpoint_dir) / "history_config.resolved.sha256"
         meta = {
             "argv": list(sys.argv),
+            "epoch_samples": next(iter(_es.values())),
+            "batch_size": int(config.batch_size),
+            "history_config": (config.model.history_config if isinstance(config.model.history_config, str)
+                               else _history_config_name),
+            "history_config_resolved_sha256": _resolved.read_text().split()[0] if _resolved.is_file() else None,
+            "final_checkpoint": (json.load(open(record_dir / "final_checkpoint.json"))
+                                 if (record_dir / "final_checkpoint.json").is_file() else None),
             "monitoring_event_counts": cache_counter.counts,
             "bench_checksum_enabled": checksum_on,
             "bench_batch_digests_enabled": digests_on,

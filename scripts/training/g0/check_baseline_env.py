@@ -32,7 +32,21 @@ import sys
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
-_EPOCH_SAMPLES = 395289          # 4task-gl meta/stats.json 的 execution_samples
+def _epoch_samples(dataset: pathlib.Path) -> int:
+    """epoch 样本数真值源（motion-memory-plan.md 2.8 / R14）：packed 根读 store_meta.num_exec_samples，
+    旧 source 根读 stats.execution_samples；两者同时存在却不等、或都读不到即 raise。"""
+    vals = {}
+    sm = dataset / "meta" / "store_meta.json"
+    st = dataset / "meta" / "stats.json"
+    if sm.is_file():
+        vals["store_meta"] = int(json.load(open(sm))["num_exec_samples"])
+    if st.is_file():
+        vals["stats"] = int(json.load(open(st))["execution_samples"])
+    if not vals:
+        raise ValueError(f"epoch 样本数无法从 {dataset}/meta/{{store_meta,stats}}.json 读出")
+    if len(set(vals.values())) != 1:
+        raise ValueError(f"epoch 样本数两处不等: {vals}")
+    return next(iter(vals.values()))
 _SCHEMA = "baseline-env-fingerprint-v1"
 _MANIFEST_SCHEMA = "baseline-manifest-v1"
 _SPOT_N = 16                     # 数据集抽样文件数（IO 重构计划 source_spot_sha256 口径）
@@ -200,8 +214,9 @@ def cmd_check(args) -> int:
 
     if args.steps and args.batch_size:
         n = args.steps * args.batch_size
-        if n >= _EPOCH_SAMPLES:
-            fails.append(f"  单 epoch 约束违反: steps×batch = {n} ≥ {_EPOCH_SAMPLES}"
+        epoch_samples = _epoch_samples(pathlib.Path(args.dataset))
+        if n >= epoch_samples:
+            fails.append(f"  单 epoch 约束违反: steps×batch = {n} ≥ {epoch_samples}"
                          "（跨 epoch 后 index 序列与 num_workers 相关，对拍失去意义）")
 
     if fails:

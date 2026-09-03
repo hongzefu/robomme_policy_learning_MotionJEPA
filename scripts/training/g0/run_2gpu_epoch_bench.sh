@@ -63,7 +63,23 @@ EXTRA_DIGEST_STEPS="${EXTRA_DIGEST_STEPS:-}"   # 附加摘要步（逗号分隔�
 STATE_DUMP_STEPS="${STATE_DUMP_STEPS:-}"       # TrainState 数组落盘步（逗号分隔；P1b）
 KEEP_JAX_CACHE="${KEEP_JAX_CACHE:-0}"     # 1 = 保留编译缓存供下一轮共用
 WARMUP_STEPS="${WARMUP_STEPS:-50}"        # 稳态统计丢弃的头部步数（JIT 编译 + worker 起步）
-EPOCH_SAMPLES=395289                      # meta/stats.json 的 execution_samples，drop_last
+# epoch 样本数不再硬编码（motion-memory-plan.md 2.8 / R14）：packed 根读 meta/store_meta.json.num_exec_samples，
+# 旧 source 根读 meta/stats.json.execution_samples；两者同时存在却不等、或都读不到即报错
+_es_sm=""; _es_st=""
+[[ -f "${DATASET_PATH}/meta/store_meta.json" ]] && _es_sm="$(jq -r '.num_exec_samples' "${DATASET_PATH}/meta/store_meta.json")"
+[[ -f "${DATASET_PATH}/meta/stats.json" ]] && _es_st="$(jq -r '.execution_samples' "${DATASET_PATH}/meta/stats.json")"
+if [[ -n "${_es_sm}" && -n "${_es_st}" && "${_es_sm}" != "${_es_st}" ]]; then
+  echo "错误: epoch 样本数两处不等: store_meta=${_es_sm} stats=${_es_st}" >&2; exit 1
+fi
+EPOCH_SAMPLES="${_es_sm:-${_es_st}}"
+[[ "${EPOCH_SAMPLES}" =~ ^[0-9]+$ ]] || {
+  echo "错误: epoch 样本数无法从 ${DATASET_PATH}/meta/{store_meta,stats}.json 读出（得到: '${EPOCH_SAMPLES}'）" >&2; exit 1; }
+# history config 只接受 closed / open 两个精确文件名并原样写入记录（motion-memory-plan.md 2.1）
+HISTORY_CONFIG="${HISTORY_CONFIG:-perceptual-framesamp-context.yaml}"
+case "${HISTORY_CONFIG}" in
+  perceptual-framesamp-context.yaml|perceptual-framesamp-context-motion.yaml) ;;
+  *) echo "错误: HISTORY_CONFIG 必须是 perceptual-framesamp-context.yaml 或 perceptual-framesamp-context-motion.yaml, 当前 ${HISTORY_CONFIG}" >&2; exit 1 ;;
+esac
 NORM_STATS="${TRAIN_ASSETS}/mme_vla_suite/robomme/norm_stats.json"
 BENCH_ROOT="${V1_STORE}/bench/2gpu-epoch-bench"
 
@@ -81,6 +97,8 @@ BENCH_DUMP_IDX="${BENCH_DUMP_IDX:-0}"     # S0'：batch_sampler 层 index 记录
 # 全程验证通过（稳态 1.060 s/step）。改档位属超参变更：须按 AGENTS.md 第 10 条
 # 先与用户确认，且需重新实测显存，不提供环境变量覆盖。
 BATCH=8
+(( STEPS * BATCH < EPOCH_SAMPLES )) || {
+  echo "错误: 单 epoch 约束违反: STEPS×BATCH=$((STEPS * BATCH)) ≥ EPOCH_SAMPLES=${EPOCH_SAMPLES}" >&2; exit 1; }
 EXP_NAME="${EXP_NAME:-v1-2gpu-epoch-bench-b${BATCH}}"
 RUN_TAG="${RUN_TAG:-${EXP_NAME}}"
 CKPT_BASE="${TRAIN_RUNS}/${RUN_TAG}"      # 按 RUN_TAG 分目录：共用 EXP_NAME 的两轮不撞名
@@ -142,7 +160,7 @@ ARGS=(
   --dataset-path "${DATASET_PATH}"
   --weight-loader.params-path "${MODELS_DIR}/openpi-assets/checkpoints/pi05_base/params"
   --model.use-history
-  --model.history-config perceptual-framesamp-context.yaml
+  --model.history-config "${HISTORY_CONFIG}"
   --no-wandb-enabled
 )
 
@@ -164,7 +182,8 @@ d = {
     "state_dump_steps": "${STATE_DUMP_STEPS}",
     "keep_jax_cache": ${KEEP_JAX_CACHE},
     "seed": 42, "fsdp_devices": 2,
-    "history_config": "perceptual-framesamp-context.yaml",
+    "history_config": "${HISTORY_CONFIG}",
+    "epoch_samples": ${EPOCH_SAMPLES},
     "dataset_path": "${DATASET_PATH}",
     "jax_cache_dir": "${JAX_CACHE_DIR}",
     "git_head": subprocess.run(["git", "-C", "${REPO_ROOT}", "rev-parse", "HEAD"],

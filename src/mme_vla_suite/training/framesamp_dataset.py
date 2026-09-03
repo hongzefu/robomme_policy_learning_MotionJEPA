@@ -42,7 +42,8 @@ from mme_vla_suite.datastore import (
     run_fast_checks,
     run_full_checks,
 )
-from mme_vla_suite.shared.sampling import even_sampling_indices
+from mme_vla_suite.datastore import motion_store as ms
+from mme_vla_suite.shared.sampling import MEM_ORDER_SENTINEL, even_sampling_indices, memory_order, pad_times
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,11 @@ _NONE_KEYS = (
     "static_state_emb",
     "static_mask",
     "prompt",
+    # motion memory 四键（motion-memory-plan.md 2.6；关闭态恒 None，与 compute_norm_stats._NONE_KEYS 同 commit 同步）
+    "motion_emb",
+    "motion_pos",
+    "motion_mask",
+    "mem_order",
 )
 
 
@@ -68,6 +74,7 @@ class FrameSampDataset(Dataset):
         source_root: str | None = None,
         manifest_path: str | None = None,
         verify_level: str = "fast",
+        motion_root: str | None = None,
     ):
         # ―― 形制断言即文档（必须能挡住同形的 modul 配置，G13；显式 raise 不用 assert）――
         hc = history_config
@@ -93,6 +100,22 @@ class FrameSampDataset(Dataset):
         _req(int(hc.memory_feature.pos.input_dim) == 768,
              f"memory_feature.pos.input_dim={hc.memory_feature.pos.input_dim} != 768")
         _req(hc.use_state_emb is False, f"use_state_emb={hc.use_state_emb!r} 必须为 False")
+
+        # ── motion memory（motion-memory-plan.md 2.1 / 2.6）：关闭态只判 enabled、不判子键（旧 yaml 缺整节照跑）──
+        mcfg = getattr(hc, "motion", None)
+        self._motion_enabled = bool(mcfg is not None and mcfg.get("enabled", False))
+        if self._motion_enabled:
+            _req(int(mcfg.dim) == ms.MOTION_ROW_SHAPE[0], f"motion.dim={mcfg.dim} != {ms.MOTION_ROW_SHAPE[0]}")
+            _req(int(mcfg.budget) == 96, f"motion.budget={mcfg.budget} != 96")
+            _req(int(mcfg.pos_dim) == int(hc.memory_feature.pos.input_dim) // 3,
+                 f"motion.pos_dim={mcfg.pos_dim} != pos.input_dim // 3 = {int(hc.memory_feature.pos.input_dim) // 3}")
+            _req(int(mcfg.stride) >= 1, f"motion.stride={mcfg.stride} < 1")
+            _req(int(mcfg.stride) == ms.GRID_STRIDE, f"motion.stride={mcfg.stride} != motion store GRID_STRIDE {ms.GRID_STRIDE}")
+            _req(int(mcfg.window_frames) == ms.WINDOW_FRAMES, f"motion.window_frames={mcfg.window_frames} != {ms.WINDOW_FRAMES}")
+            _req(str(mcfg.window_direction) == ms.WINDOW_DIRECTION, f"motion.window_direction={mcfg.window_direction!r}")
+            _req(str(mcfg.grid_origin) == ms.GRID_ORIGIN, f"motion.grid_origin={mcfg.grid_origin!r}")
+            _req(int(mcfg.frame_size) == ms.FRAME_SIZE, f"motion.frame_size={mcfg.frame_size} != {ms.FRAME_SIZE}")
+            _req(motion_root is not None, "motion.enabled=true 但未给 motion_root")
 
         if verify_level not in ("fast", "full"):
             raise ValueError(f"verify_level 非法: {verify_level!r}（∈ fast|full）")
@@ -128,12 +151,52 @@ class FrameSampDataset(Dataset):
         self._store: FrameSampStore | None = None
         self._atexit_registered = False
 
+        # ── motion store（主进程只读 meta 与静态校验；整表 np.fromfile 在 worker 内懒构造）──
+        self._mstore = None
+        self._motion_root = None
+        self._motion_meta = None
+        self._motion_entries = None
+        if self._motion_enabled:
+            self._motion_root = pathlib.Path(motion_root)
+            self._motion_meta = ms.MotionMeta.load(self._motion_root)
+            ms.run_fast_checks(self._motion_meta, manifest_path=self._manifest_path)
+            # 双 store 同源硬闸：同一份清单 + 逐 episode 身份互校（R23）
+            ms.check_same_source(self._meta.manifest_sha256, self._motion_meta, manifest)
+            if num_eps is not None:
+                raise ValueError("motion memory 不支持 subset 迷你库（motion_index 覆盖全清单）")
+            self._motion_entries = self._motion_meta.entries
+            self._motion_budget = int(mcfg.budget)
+            self._motion_pos_dim = int(mcfg.pos_dim)
+            # 零截断契约的预检：每 episode 的最大合法起点数 ≤ 预算，超过即报 episode 身份（禁止静默裁剪）
+            for e in self._motion_entries:
+                mx = ms.max_visible_count(e)
+                if mx > self._motion_budget:
+                    raise ValueError(
+                        f"episode g={e.g} ({e.h5_file}#{e.raw_ep_idx}) 最大合法起点数 {mx} > motion.budget "
+                        f"{self._motion_budget}——零截断契约要求按全集重新定标，不做最近 N 裁剪")
+
     # ―― spawn 生命周期（B.2）――
     def __getstate__(self):
         d = dict(self.__dict__)
         d["_store"] = None              # 不携带任何 fd/小表进 spawn worker
+        d["_mstore"] = None             # motion 整表同样不跨进程携带
         d["_atexit_registered"] = False
         return d
+
+    def _ensure_motion_store(self):
+        pid = os.getpid()
+        s = self._mstore
+        if s is not None and s.owner_pid == pid:
+            return s
+        if s is not None:
+            s.close()
+            self._mstore = None
+        s = ms.MotionStore(self._motion_root, meta=self._motion_meta, manifest_path=self._manifest_path)
+        self._mstore = s
+        if not self._atexit_registered:
+            atexit.register(self.close)
+            self._atexit_registered = True
+        return s
 
     def _ensure_store(self) -> FrameSampStore:
         pid = os.getpid()
@@ -157,6 +220,10 @@ class FrameSampDataset(Dataset):
         self._store = None
         if s is not None:
             s.close()
+        m = self._mstore
+        self._mstore = None
+        if m is not None:
+            m.close()
 
     def __len__(self) -> int:
         return len(self._epis_of)
@@ -192,6 +259,24 @@ class FrameSampDataset(Dataset):
         mask = np.zeros(m, dtype=np.bool_)
         mask[:n] = True
         return out_img, out_pos, out_stt, mask
+
+    def _pad_motion(self, emb, pos, frames, k: int):
+        """运动路右填充（另写、不复用 _pad：目标长度是 motion.budget、签名是 emb/pos 两键并附带每行全域时刻）。
+
+        只负责 padding、绝不裁剪：k > 预算即 raise（__init__ 已按 index 预检，此处是防御性 overflow 闸）。
+        返回 (emb (B,768) f32, pos (B,256) f32, mask (B,) bool, times (B,) int64 padding 记哨兵)。
+        """
+        B = self._motion_budget
+        if k > B:
+            raise ValueError(f"合法 motion 起点数 {k} > motion.budget {B}（零截断契约被破坏）")
+        out_emb = np.zeros((B,) + emb.shape[1:], dtype=np.float32)
+        out_pos = np.zeros((B,) + pos.shape[1:], dtype=np.float32)
+        out_emb[:k] = emb
+        out_pos[:k] = pos
+        mask = np.zeros(B, dtype=np.bool_)
+        mask[:k] = True
+        times = pad_times(frames, B)
+        return out_emb, out_pos, mask, times
 
     def __getitem__(self, idx):
         idx = int(idx)
@@ -231,6 +316,27 @@ class FrameSampDataset(Dataset):
         data["static_state_emb"] = self._normalize_state(
             np.repeat(stt, self._tokens_per_frame, axis=0))
         data["static_mask"] = np.repeat(mask, self._tokens_per_frame)
+
+        if self._motion_enabled:
+            # ①′ 起点集合（段内绝对网格、前视 33 帧、尾端 ≤ 当前帧；三侧同式 visible_motion_rows）
+            entry = self._motion_entries[g]
+            rows_m, f_m = ms.visible_motion_rows(entry, step)
+            k = int(len(rows_m))
+            if k > self._motion_budget:
+                raise ValueError(
+                    f"样本 idx={idx} (g={g}, t={step}) 合法 motion 起点数 {k} > motion.budget {self._motion_budget}")
+            mstore = self._ensure_motion_store()
+            # ②′ 查表：motion 行 (k,768) f32；起点帧 pos 行第 0 行前 pos_dim 维（时间码，纯切片）
+            memb = mstore.rows(rows_m) if k else np.zeros((0, ms.MOTION_ROW_SHAPE[0]), np.float32)
+            mpos = (np.ascontiguousarray(store.pos_rows(f_m)[:, 0, : self._motion_pos_dim])
+                    if k else np.zeros((0, self._motion_pos_dim), np.float32))
+            # ③′ 右填充 + ④′ 两路按 (全域时刻, 类型) 交错
+            memb, mpos, mmask, mtimes = self._pad_motion(memb, mpos, f_m, k)
+            ftimes = pad_times(frames_arr, self._max_frames)
+            data["motion_emb"] = memb
+            data["motion_pos"] = mpos
+            data["motion_mask"] = mmask
+            data["mem_order"] = memory_order(ftimes, self._tokens_per_frame, mtimes)
 
         for key in _NONE_KEYS:                     # 与旧路径尾部补空键逐字一致
             if key not in data:

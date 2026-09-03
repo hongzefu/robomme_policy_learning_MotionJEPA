@@ -64,6 +64,8 @@ def main() -> None:
     ap.add_argument("--util-csv", type=pathlib.Path, default=None)
     ap.add_argument("--slow-factor", type=float, default=1.5, help="慢步阈值 = 该倍数 × 稳态中位")
     ap.add_argument("--report", type=pathlib.Path, default=None)
+    ap.add_argument("--epoch-samples", type=int, default=None, help="缺 run_meta.json 时必须显式给")
+    ap.add_argument("--batch-size", type=int, default=None, help="缺 run_meta.json 时必须显式给")
     args = ap.parse_args()
 
     rec = args.records_dir
@@ -90,6 +92,17 @@ def main() -> None:
     p10 = srt[int(0.10 * (len(srt) - 1))]
     p90 = srt[int(0.90 * (len(srt) - 1))]
 
+    # epoch 样本数与 batch 不再硬编码（motion-memory-plan.md 2.8 / R14）：优先读 run_meta.json，缺失则要求显式参数
+    epoch_samples, batch_size = args.epoch_samples, args.batch_size
+    rm = rec / "run_meta.json"
+    if rm.exists():
+        meta = json.loads(rm.read_text(encoding="utf-8"))
+        if epoch_samples is None:
+            epoch_samples = meta.get("epoch_samples")
+        if batch_size is None:
+            batch_size = meta.get("batch_size")
+    if epoch_samples is None or batch_size is None:
+        raise SystemExit("缺 epoch_samples / batch_size：run_meta.json 未记录且未显式给 --epoch-samples/--batch-size")
     out: dict = {
         "records_dir": str(rec),
         "steps": args.steps,
@@ -102,7 +115,8 @@ def main() -> None:
         "slow_steps": [s for s, _ in slow],
         "slow_mean_s": round(statistics.fmean([d for _, d in slow]), 4) if slow else None,
         "fast_mean_s": round(statistics.fmean([d for _, d in fast]), 4) if fast else None,
-        "epoch_hours": round(395289 / 8 * statistics.fmean(vals) / 3600, 3),
+        "epoch_hours": round(epoch_samples / batch_size * statistics.fmean(vals) / 3600, 3),
+        "epoch_samples": epoch_samples, "batch_size": batch_size,
     }
 
     util_csv = args.util_csv or (rec / "util-lms500.csv")

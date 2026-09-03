@@ -584,3 +584,63 @@ def test_worker_processor_refreshes_completeness_snapshot(tmp_path: pathlib.Path
     ep1 = {"global_episode_idx": 1, "num_timesteps": 1, "exec_sample_offset": 9, "exec_samples": 1}
     assert shard.episode_is_complete(ep1) is False, "分片模式快照语义保持不变"
     assert worker.episode_is_complete(ep1) is True, "worker 模式必须刷新快照"
+
+
+# ── v2-motionmem S2：MotionStore 的 spawn / pickle 契约（motion-memory-plan.md 2.8）────────────────
+def _real_lib() -> pathlib.Path | None:
+    lib = _REPO_ROOT / "v1-store" / "datasets" / "4task-motion-40ep"
+    alt = pathlib.Path(os.environ.get("MMEVLA_V1_STORE", "")) / "datasets" / "4task-motion-40ep" if os.environ.get("MMEVLA_V1_STORE") else None
+    for p in (lib, alt):
+        if p is not None and (p / "motion" / "meta" / "store_meta.json").is_file() and (p / "framesamp" / "meta" / "store_meta.json").is_file():
+            return p
+    return None
+
+
+def test_motion_store_pickle_refused_and_owner_pid() -> None:
+    from mme_vla_suite.datastore import motion_store as ms
+    lib = _real_lib()
+    if lib is None:
+        pytest.skip("缺 40 ep 真实库")
+    store = ms.MotionStore(lib / "motion")
+    assert store.owner_pid == os.getpid() and store.num_rows == 772 and store.table.shape == (772, 768)
+    with pytest.raises(TypeError, match="禁止 pickle"):
+        pickle.dumps(store)
+    store.close()
+
+
+def _worker_probe(lib_str: str, q) -> None:
+    """spawn worker：构造后取一个样本，回报 MotionStore owner_pid 与本进程 pid。"""
+    import os as _os
+    import sys as _sys
+    _sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src"))
+    from mme_vla_suite.training.dataloader import _create_framesamp_dataset
+    import json as _json, types as _types, numpy as _np, omegaconf
+    lib = pathlib.Path(lib_str)
+    v1 = pathlib.Path(_os.environ.get("MMEVLA_V1_STORE", str(pathlib.Path(__file__).resolve().parents[2] / "v1-store")))
+    ns = _json.load(open(v1 / "train-assets/mme_vla_suite/robomme/norm_stats.json"))["norm_stats"]["state"]
+    st = _types.SimpleNamespace(q01=_np.array(ns["q01"]), q99=_np.array(ns["q99"]), mean=_np.array(ns["mean"]), std=_np.array(ns["std"]))
+    _os.environ["MMEVLA_MOTION_STORE"] = str(lib / "motion")
+    hc = omegaconf.OmegaConf.load(pathlib.Path(__file__).resolve().parents[2] / "src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-motion.yaml")
+    ds = _create_framesamp_dataset(str(lib / "framesamp"), _types.SimpleNamespace(norm_stats={"state": st}, use_quantile_norm=True), hc, 20)
+    state = ds.__getstate__()
+    d = ds[100]
+    q.put({"pid": _os.getpid(), "owner_pid": ds._mstore.owner_pid, "getstate_mstore_none": state["_mstore"] is None,
+           "getstate_store_none": state["_store"] is None, "k": int(d["motion_mask"].sum())})
+
+
+def test_framesamp_dataset_motion_store_lazy_in_spawn_worker() -> None:
+    """dataset 主进程只读 meta；spawn worker 内懒构造 MotionStore（owner_pid == worker pid）；__getstate__ 剥离双 store。"""
+    import multiprocessing as mp
+    lib = _real_lib()
+    if lib is None:
+        pytest.skip("缺 40 ep 真实库")
+    ctx = mp.get_context("spawn")
+    q = ctx.Queue()
+    p = ctx.Process(target=_worker_probe, args=(str(lib), q))
+    p.start()
+    res = q.get(timeout=600)
+    p.join(timeout=60)
+    assert p.exitcode == 0
+    assert res["owner_pid"] == res["pid"] != os.getpid()
+    assert res["getstate_mstore_none"] and res["getstate_store_none"]
+    assert res["k"] == 5

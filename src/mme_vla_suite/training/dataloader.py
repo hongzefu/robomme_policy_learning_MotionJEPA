@@ -6,15 +6,61 @@ which can be 5-10x faster than LeRobot dataloader and can avoid memory explosion
 import jax
 import logging
 import os
+import pathlib
+import re
 from omegaconf import DictConfig
 from openpi.models import model as _model
 from openpi.training.data_loader import DataLoader, TorchDataLoader,transform_dataset
 import openpi.training.config as _config
 
-from mme_vla_suite.datastore import StoreMeta, require_no_pack_lock, require_verified
+from mme_vla_suite.datastore import StoreMeta, load_manifest, require_no_pack_lock, require_verified
+from mme_vla_suite.datastore import motion_store as ms
 from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
 from mme_vla_suite.models.integration.history_observation import HistAugObservation
 from mme_vla_suite.models.config.utils import get_history_config
+
+
+_REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
+
+
+def _parse_source_run(spec: str) -> dict:
+    """`<run_name>/<checkpoint_name>#<state_key>` → {run_name, checkpoint_name, epoch, state_key}（禁止只当注释串）。"""
+    if "#" not in spec or "/" not in spec:
+        raise ValueError(f"motion.source_run 格式须为 <run>/<ckpt>#<state_key>: {spec!r}")
+    path, state_key = spec.rsplit("#", 1)
+    run_name, ckpt = path.rsplit("/", 1)
+    m = re.fullmatch(r"checkpoint_epoch_(\d+)\.pt", ckpt)
+    if m is None:
+        raise ValueError(f"motion.source_run 的 checkpoint 名解析不出 epoch: {ckpt!r}")
+    return {"run_name": run_name, "checkpoint_name": ckpt, "epoch": int(m[1]), "state_key": state_key}
+
+
+def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
+    """motion.enabled=true 时的 fail-loud 闸：锁 / MotionMeta / verified / stride / 同源 / source_run 绑定；关闭态返回 None 且什么都不读。"""
+    mcfg = getattr(history_config, "motion", None) if history_config is not None else None
+    if not (mcfg is not None and mcfg.get("enabled", False)):
+        return None
+    root = os.environ.get("MMEVLA_MOTION_STORE") or str(mcfg.store_path)
+    motion_root = pathlib.Path(root)
+    if not motion_root.is_absolute():
+        motion_root = _REPO_ROOT / motion_root
+    ms.require_no_pack_lock(motion_root)
+    mmeta = ms.MotionMeta.load(motion_root)                # 不得拿 StoreMeta.load 解析 motion layout
+    ms.require_verified(mmeta)
+    if int(mcfg.stride) != ms.GRID_STRIDE:
+        raise ValueError(f"motion.stride={mcfg.stride} != motion store GRID_STRIDE {ms.GRID_STRIDE}")
+    manifest = load_manifest(os.environ.get("MMEVLA_FRAMESAMP_MANIFEST") or frame_meta.manifest_path)
+    ms.check_same_source(frame_meta.manifest_sha256, mmeta, manifest)
+    want = _parse_source_run(str(mcfg.source_run))
+    enc = mmeta.provenance.get("encoder", {})
+    got = {k: enc.get(k) for k in ("run_name", "checkpoint_name", "epoch", "state_key")}
+    if got != want:
+        raise ValueError(f"motion.source_run {want} != motion store provenance.encoder {got}")
+    m = re.fullmatch(r"checkpoint_epoch_(\d+)\.pt", str(enc.get("checkpoint_name", "")))
+    if m is None or int(m[1]) != int(enc.get("epoch", -1)):
+        raise ValueError("motion store provenance.encoder 的 checkpoint_name 解析出的 epoch 与显式 epoch 不符")
+    logging.info("motion memory 开启：store=%s rows=%d manifest=%s…", motion_root, mmeta.num_rows, mmeta.manifest_sha256[:16])
+    return str(motion_root)
 
 
 def _create_framesamp_dataset(dataset_path, data_config, history_config, action_horizon):
@@ -22,6 +68,7 @@ def _create_framesamp_dataset(dataset_path, data_config, history_config, action_
     require_no_pack_lock(dataset_path)                     # 打包/verify 进行中即拒
     meta = StoreMeta.load(dataset_path)                    # 缺失/损坏/契约不符即拒
     require_verified(meta)                                 # status != verified 即拒（G14）
+    motion_root = _motion_gates(history_config, meta)      # 关闭态不执行 motion 闸
     if meta.manifest_scope == "subset":
         # subset 迷你库禁止用于 S5 及以上任何判据（A.1）；S3 开发期矩阵须显式放行
         if os.environ.get("MMEVLA_FRAMESAMP_ALLOW_SUBSET") != "1":
@@ -39,6 +86,7 @@ def _create_framesamp_dataset(dataset_path, data_config, history_config, action_
         source_root=os.environ.get("MMEVLA_FRAMESAMP_SOURCE") or None,
         manifest_path=os.environ.get("MMEVLA_FRAMESAMP_MANIFEST") or None,
         verify_level=os.environ.get("MMEVLA_FRAMESAMP_VERIFY", "") or "fast",
+        motion_root=motion_root,
     )
 
 

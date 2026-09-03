@@ -64,6 +64,11 @@ class RoboMMEInputs(transforms.DataTransformFn):
             "static_pos_emb": data.get("static_pos_emb", None), # (budget, d2)
             "static_state_emb": data.get("static_state_emb", None), # (budget, d3)
             "static_mask": data.get("static_mask", None), # (budget)
+            # motion memory（与四个 static_* 同构写法；mem_order 语义不同：int32、长度 512 + motion.budget、整个记忆区的置换）
+            "motion_emb": data.get("motion_emb", None),   # (96, 768)
+            "motion_pos": data.get("motion_pos", None),   # (96, 256)
+            "motion_mask": data.get("motion_mask", None), # (96,)
+            "mem_order": data.get("mem_order", None),     # (608,) int32，0..607 的置换
         }
 
         # Pad actions to the model action dimension. Keep this for your own dataset.

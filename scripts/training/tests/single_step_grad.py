@@ -61,7 +61,9 @@ from openpi.training import sharding  # noqa: E402
 from openpi.training.data_loader import _collate_fn  # noqa: E402
 from openpi.training.data_loader import transform_dataset  # noqa: E402
 
-_EXPECTED_HISTORY_CONFIG = "perceptual-framesamp-context.yaml"
+# 只接受 closed / open 两个精确文件名（motion-memory-plan.md 2.1）：T1 / T2 默认钉 closed，T3 open 侧显式钉 open
+_EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml")
+_EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 # 三个定点 batch：每种组成取该组第一个（batch_id 由 BATCH_PLAN 顺序决定，两侧一致）
 _GRAD_BATCH_KINDS = ("mixed1", "allshort", "allfull")
@@ -178,8 +180,8 @@ def _build_batches(config, plan: list[dict], fixture_dir: pathlib.Path) -> dict[
 
 def main() -> None:
     config = _config.cli()
-    if config.model.history_config != _EXPECTED_HISTORY_CONFIG:
-        raise SystemExit(f"本工具只支持 {_EXPECTED_HISTORY_CONFIG}")
+    if config.model.history_config not in _EXPECTED_HISTORY_CONFIGS:
+        raise SystemExit(f"本工具只支持 {_EXPECTED_HISTORY_CONFIGS}")
     _guard_train_step_source()
 
     rec_dir = pathlib.Path(os.environ["DTYPE_GRAD_DIR"])

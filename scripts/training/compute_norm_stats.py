@@ -40,6 +40,10 @@ _NONE_KEYS = (
     "static_state_emb",
     "static_mask",
     "prompt",
+    "motion_emb",
+    "motion_pos",
+    "motion_mask",
+    "mem_order",
 )
 
 

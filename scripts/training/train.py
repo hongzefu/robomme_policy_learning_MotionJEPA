@@ -95,11 +95,55 @@ def init_wandb(
         # train.py 位于 scripts/training/，归档仓库根须上跳三层（V4.6 搬移修正）
         wandb.run.log_code(epath.Path(__file__).parent.parent.parent)
 
-def init_history_config(config: _config.TrainConfig):
-    # this is for evaluation config checking
-    if config.model.history_config is not None:
-        with open(config.checkpoint_dir / "history_config.txt", "w") as f:
-            f.write(config.model.history_config)
+def init_history_config(config: _config.TrainConfig, resolved_history_config=None, framesamp_root=None):
+    """run 根写三样（motion-memory-plan.md 2.1，红线 16）：
+    - history_config.txt：只作源文件名标签（旧口径，评估侧兼容路径仍读它）；
+    - history_config.resolved.yaml + .sha256：训练实际使用的完整解析结果与原始字节 sha256；
+    - motion_provenance.json：motion.enabled、framesamp manifest sha256；open run 另填 motion 侧 manifest / index sha / store meta sha /
+      VAE 与 encoder provenance，closed run 对这些 motion-only 字段写 null，禁止省键。
+    """
+    if config.model.history_config is None:
+        return
+    name = config.model.history_config
+    if not isinstance(name, str):
+        raise ValueError("init_history_config 须收到 CLI 字符串 history_config_name（DictConfig 请走 resolved_history_config）")
+    ckpt_root = config.checkpoint_dir
+    with open(ckpt_root / "history_config.txt", "w") as f:
+        f.write(name)
+    if resolved_history_config is None:
+        return
+    import hashlib
+    import json as _json
+    from omegaconf import OmegaConf
+    from mme_vla_suite.datastore import StoreMeta
+    from mme_vla_suite.datastore import motion_store as _ms
+    from mme_vla_suite.training.dataloader import _motion_gates
+    resolved_bytes = OmegaConf.to_yaml(resolved_history_config, resolve=True).encode("utf-8")
+    (ckpt_root / "history_config.resolved.yaml").write_bytes(resolved_bytes)
+    (ckpt_root / "history_config.resolved.sha256").write_text(hashlib.sha256(resolved_bytes).hexdigest() + "\n")
+    mcfg = getattr(resolved_history_config, "motion", None)
+    enabled = bool(mcfg is not None and mcfg.get("enabled", False))
+    prov = {"history_config_name": name, "motion_enabled": enabled,
+            "resolved_sha256": hashlib.sha256(resolved_bytes).hexdigest(),
+            "framesamp_root": str(framesamp_root) if framesamp_root else None,
+            "framesamp_manifest_sha256": None, "framesamp_store_meta_sha256": None,
+            "motion_root": None, "motion_manifest_sha256": None, "motion_index_sha256": None,
+            "motion_store_meta_sha256": None, "motion_table_sha256": None, "vae": None, "encoder": None}
+    if framesamp_root is not None:
+        fm = StoreMeta.load(framesamp_root)
+        prov["framesamp_manifest_sha256"] = fm.manifest_sha256
+        prov["framesamp_store_meta_sha256"] = hashlib.sha256((pathlib.Path(framesamp_root) / "meta" / "store_meta.json").read_bytes()).hexdigest()
+        if enabled:
+            motion_root = _motion_gates(resolved_history_config, fm)
+            mm = _ms.MotionMeta.load(motion_root)
+            prov.update({
+                "motion_root": str(motion_root), "motion_manifest_sha256": mm.manifest_sha256,
+                "motion_index_sha256": mm.motion_index_sha256,
+                "motion_store_meta_sha256": hashlib.sha256((pathlib.Path(motion_root) / "meta" / "store_meta.json").read_bytes()).hexdigest(),
+                "motion_table_sha256": mm.table_sha256,
+                "vae": mm.provenance.get("vae"), "encoder": mm.provenance.get("encoder"),
+            })
+    (ckpt_root / "motion_provenance.json").write_text(_json.dumps(prov, ensure_ascii=False, indent=1, default=str) + "\n")
 
 def _load_weights_and_validate(
     loader: _weight_loaders.WeightLoader, params_shape: at.Params
@@ -334,8 +378,14 @@ def main(config: _config.TrainConfig):
         resume=config.resume,
     )
     init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
-    init_history_config(config)
-    history_config = get_history_config(config.model.history_config)
+    # 两侧 enabled 同源（motion-memory-plan.md 2.1 / 2.9）：只按 CLI 文件名解析一次，同一个 DictConfig 对象装入
+    # model config 并直接传给 dataloader，禁止两侧再次按文件名重读（数据侧给了、模型侧不消费会让 n_keys 悄悄变而训练照跑）
+    history_config_name = config.model.history_config
+    resolved_history_config = get_history_config(history_config_name)
+    init_history_config(config, resolved_history_config, framesamp_root=config.dataset_path)
+    history_config = resolved_history_config
+    if history_config is not None:
+        config = dataclasses.replace(config, model=dataclasses.replace(config.model, history_config=resolved_history_config))
     
     if history_config:
         if history_config.streaming_obs_horizon == 16:
@@ -349,7 +399,7 @@ def main(config: _config.TrainConfig):
     data_loader = _data_loader.create_data_loader(
         config.dataset_path,
         data_config,
-        history_config=config.model.history_config,
+        history_config=resolved_history_config,
         sharding=data_sharding,
         shuffle=True,
         action_horizon=config.model.action_horizon,

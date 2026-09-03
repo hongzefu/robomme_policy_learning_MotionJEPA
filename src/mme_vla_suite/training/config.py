@@ -309,6 +309,12 @@ class RoboMMEDataConfig(DataConfigFactory):
                         "static_pos_emb": "static_pos_emb", # (b, l, d2)
                         "static_state_emb": "static_state_emb", # (b, l, d3)
                         "static_mask": "static_mask", # (b, l)
+                        # motion memory（motion-memory-plan.md 2.7）：未登记的键会被 RepackTransform 静默丢弃；
+                        # 关闭态四键为 None 透传（pytree 空节点，n_keys 仍 12）
+                        "motion_emb": "motion_emb",   # (b, 96, 768) f32
+                        "motion_pos": "motion_pos",   # (b, 96, 256) f32
+                        "motion_mask": "motion_mask", # (b, 96) bool
+                        "mem_order": "mem_order",     # (b, 608) int32，512 帧路位 + 96 运动路位的交错次序表
                     }
                 )
             ]

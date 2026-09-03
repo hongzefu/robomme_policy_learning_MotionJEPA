@@ -30,7 +30,8 @@ if not (REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {REPO_ROOT}（缺 pyproject.toml）")
 
 # 本 run 的 memory 交付键：dtype 修复的全部作用面都在这四个键上
-MEMORY_KEYS = ("static_image_emb", "static_pos_emb", "static_state_emb", "static_mask")
+MEMORY_KEYS = ("static_image_emb", "static_pos_emb", "static_state_emb", "static_mask",
+               "motion_emb", "motion_pos", "motion_mask", "mem_order")
 # perceptual 模式下恒为 None 的四个 recurrent 键（jax pytree 视其为空节点）
 RECUR_KEYS = ("recur_image_emb", "recur_pos_emb", "recur_state_emb", "recur_mask")
 
