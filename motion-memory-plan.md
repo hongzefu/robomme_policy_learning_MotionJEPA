@@ -1210,7 +1210,7 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
 
 逐项细节见第二部分三节。
 
-## 七、实施步骤（S-1、S0 已完成，S1 进行中；用户 2026-09-03 批准 S0–S3 连续实施）
+## 七、实施步骤（S-1、S0、S1 已完成，S2 进行中；用户 2026-09-03 批准 S0–S3 连续实施）
 
 | 阶段 | 内容 | 判据 |
 |---|---|---|
@@ -1242,6 +1242,29 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
   motion 表现算 772 = 658 + 114 行、单样本最大合法起点 34；四 h5 sha256 73 s 写入 `meta/input_manifest.json`。
 - **偏差**：Wan 抽取耗时预估须按 0.85 s/窗重算（单卡 772 窗 ≈ 11 min、双卡 ≈ 5.5 min，1.3 耗时表原按 1.64 s）；一次 cwd 残留导致子 venv 误建到
   `scripts/dataset/wan/v1-store`（7.5 GB，已删重建）。
+
+### S1 实测结果（2026-09-03，全部 PASS；留档 `docs/dataset-build-doc/4task-motion-40ep/{launch,result}.md`）
+
+- **重构落地**（commitV6.2 `30a9079` + `fix:` `2111ca6` / `f677794`）：4.5 目录树如实落地——删 `gl/`（含 `legacy/`）与 `pack/`，六个沿用件上提，
+  `gl_submit.py` 搬 `scripts/training/`；新增 `paths.sh`（16 任务目录口径）、`run_local.py`（每 GPU 一 worker、`_claims/` O_EXCL 领任务）、
+  `pack_motion_store.py`、`motion_checks.py`、`wan/{wan_common,extract_wan,encode_motion,oracle_driver,compare_wan,extra_checks}.py`、
+  `datastore/motion_store.py`；`framesamp_store.py` 只动一行注释；`test_guards.py` 45 passed。1.3 的引用同步清单逐项完成，`greatlakes.md` 已 `cp` 到 `~/.claude`。
+- **建库判定行**：`STAGE_DONE stage=siglip workers=2 items=40 elapsed=106s`；`FINALIZE_EXIT_CODE=0`（四 h5 sha256 同源、抽检 256 条 max|diff|=0）；
+  `VERIFY_PACK=PASS scanned=13756 mismatches=0`；`STAGE_DONE stage=wan workers=2 items=60 elapsed=347s`（≈0.84–0.95 s/窗）；
+  `STAGE_DONE stage=encode … elapsed=8s`；`VERIFY_MOTION=PASS scanned=772 mismatches=0`；motion 表 **772 = exec 658 + demo 114**，
+  `motion_index_sha256 313d4549…`、表 sha256 `708129f5…`，两库绑定同一清单 `fee2777f…`。
+- **D1**：O1（`build_shard.py` oracle，`--all_pkl` 11,530 个 pkl）与 O2（未改动 builder，listdir 序映射交叉验证通过）两次 `COMPARE_RESULT=bitexact PASS`，
+  image/pos 三档 × 13,756 帧、state、kept_indices 全逐位。
+- **D2**：`ORACLE_VAE=DONE windows=772 frame_mismatches=0 metadata_mismatches=0`（原版 `encode_chunk`，独立重算全部起点、逐窗核 33 帧 uint8 sha）→
+  `WAN_BITEXACT=PASS compared=772 frame_mismatches=0 latent_mismatches=0`。
+- **D3**：`ENCODER_BITEXACT=PASS compared=772 mismatches=0`（原版 `motion_token`，77 张量 sha 清单相等、provenance 白名单相等、`load_wan_latent_stats(` 零命中）。
+  首次因打包器 provenance 漏抄 `diffusers` 键判 FAIL，补键重写 meta（表字节不变）后 PASS。
+- **附加检查**：A5 `13756/13756` 帧对 4env400ep 逐帧相同、`13516` 帧对 MotionJEPA v7 raw 逐帧相同；A6 五字段逐条一致、三处 manifest sha 相同；
+  A7 字节数账 60 段全对；A8 128 抽表逐位；A9 500 样本起点集合与独立实现一致、5,071 行 `row_base+m` 与直编逐位；A10 行数账对；
+  A11 crossarch 旁证 PASS（min_cos 0.99959、p5 0.99997、err_floor 0.0215）；A12 `V7_CROSSREF=PASS compared=757 skipped=15 mismatches=0`。
+- **意外**：SigLIP 阶段跑了三次（worker 模式必填参数漏放开；`episode_is_complete` 的 `data/` 快照只扫一次导致两 worker 互相 purge 重做——
+  产物字节相同、白干一倍，修后重跑 20+20 个 episode）；链 B 首次 D3 因 provenance 键遗漏 FAIL。
+- **1.6 吞吐评估**留到 S2（dataloader 微基准需要带四个 motion 键的 `__getitem__`）。
 
 **S4 删除的直接后果：motion token 的设计与注入方式定死。** 原本要靠消融比较的变体全部不再存在，下面五条从此就是唯一口径（依据分别在 2.2、2.1、2.3–2.4、3.1 与 3.4、3.4）：
 
