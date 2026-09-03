@@ -23,7 +23,7 @@ tmux new-session -d -s motion-t3-closed "set -o pipefail; cd /data/hongzefu/robo
 
 ## 判读（`scripts/training/tests/motion_gates_model.py`）
 
-- 起跑前：`--gate t3common`（GPU，同进程初始化两态 TrainState）→ `T3_COMMON_INIT=PASS common_mismatches=0 open_only_params=4`，reference 写 `v1-store/reports/motion/t3_common_init_reference.json`。
+- 起跑前：`--gate t3common`（GPU，同进程初始化两态 TrainState；须显式 `JAX_PLATFORMS=cuda CUDA_VISIBLE_DEVICES=0,1`——脚本为 M 系列默认 `setdefault(JAX_PLATFORMS, cpu)`，不设则 fsdp=2 报 `Number of devices 1`）→ `T3_COMMON_INIT=PASS common_mismatches=0 open_only_params=4`，reference 写 `v1-store/reports/motion/t3_common_init_reference.json`。
 - 训练后：`--gate t3verifyinit`（step-0 记录命中 reference）；`T3_SMOKE`：1000 步 loss 全有限、四个新参数叶初/末态 sha 不同（open）、`n_keys=16/12`、`n_leaves=193/177`、
   8,000 个实际 index 的有效窗口数由 oracle 重算与训练记录逐项相同；`--gate t3trace`（open/closed records）；`--gate t3mechanism`（open records + reference，GPU）；
   两侧都完成后 `--gate t3phase --open-ckpt … --closed-ckpt …`（run `motion-t3-phase`）。

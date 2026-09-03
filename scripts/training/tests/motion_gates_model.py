@@ -799,8 +799,8 @@ def main():
     {"m1": cmd_m1, "m2": cmd_m2, "m3": cmd_m3, "m4": cmd_m4, "m5": cmd_m5}[args.gate](args)
 
 
-if __name__ == "__main__":
-    main()
+# 唯一入口在文件末尾（main = _t3_main，含 m1–m5 与 t3 五个闸门）。此处原有的 if __name__ == "__main__": main()
+# 会在模块执行到这里时先跑旧 parser、把 --gate t3* 拒掉（2026-09-03 t3common 首跑实测 EXIT_CODE=2），已删。
 
 
 # ══════════════════════════════════════════════════════════════════════════════

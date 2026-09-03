@@ -1293,7 +1293,10 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
   scalars sha `3aee70eb…` 与 reference 相同，`BASELINE_ENV` 三次 check 全 PASS；`g0_gate.py` t2 分支漏定义 `_REPO_ROOT` 的 bug 顺手修复（`fix:`）。留档 `docs/training-doc/motion-t2-cand/result.md`。
 - **1.6 吞吐（dataloader-only b64，本机 NVMe、页缓存，只看差值）**：关闭态 w4c6 54.2 / w8c10 54.6 样本/s，开启态 w4c6 51.6 / w8c10 52.0 样本/s（开启态慢 4–5%），
   每批 pickle 载荷 262.3 MB → 287.6 MB（+25.3 MB = 64 × (96×768 + 96×256) × 4 B + mask + mem_order）；Pipe 微基准随 `v1-store/reports/motion/dataloader_bench.json` 回填。
-- 进行中：A22（`motion-a22-grad`，`run_dtype_grad.sh` 三定点 batch，对 `v1-dtype-p5-grad` 的 grad_summary）→ T3。
+- **A22 PASS**（`motion-a22-grad`，HEAD `e48433e`，15:40–15:46）：`COMPARE_GRAD=PASS kinds=3 mismatches=0`——三个定点 batch `mixed1` / `allshort` / `allfull` 的 32 个梯度叶 sha256
+  与 `v1-dtype-p5-grad` 基线逐叶相等、loss hex 相等（`0x1.0d48f0p-1` / `0x1.0f0606p-2` / `0x1.37890ep-1`），初态与 G0b r1 同源（177 叶）。留档 `docs/training-doc/motion-a22-grad/`。
+  意外：`run_dtype_grad.sh` 默认 `GL_DATASET=4task-gl`（legacy）被 packed 模式拒绝，改传 `DATASET_PATH=4task-gl-framesamp`。
+- 进行中：T3（`t3common` → `motion-t3-closed` / `motion-t3-open` 各 1000 步 → 四层闸门 → `T3_EVAL_OBS`）。`motion_gates_model.py` 旧入口 `main()` 先于扩展入口执行、拒掉 `--gate t3*`，已删旧入口（`fix:`）。
 
 ### S3 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-p5-online/`，在线观察归 T3 两侧 run）
 
