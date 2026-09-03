@@ -1,3 +1,4 @@
+import json
 import logging
 import pathlib
 from typing import Any
@@ -71,6 +72,7 @@ def create_trained_policy(
     sample_kwargs: dict[str, Any] | None = None,
     default_prompt: str | None = None,
     norm_stats: dict[str, transforms.NormStats] | None = None,
+    motion_stub: bool = False,
 ) -> _policy.MME_VLA_Policy:
     
     repack_transforms = repack_transforms or transforms.Group()
@@ -127,6 +129,21 @@ def create_trained_policy(
     print("Training config: ", train_config)
     print("Data config: ", data_config)
 
+    # ── motion memory 在线编码句柄（S3）：开启态建 MotionEncoderClient（sidecar），provenance 与 run 内 motion_provenance.json 同源核对；
+    #    motion_stub=True 时用 stub 档（P1–P4 测试）；关闭态为 None
+    motion_enc_fn = None
+    mcfg = getattr(train_config.model.history_config, "motion", None) if not isinstance(train_config.model.history_config, str) else None
+    if mcfg is not None and mcfg.get("enabled", False):
+        from mme_vla_suite.policies.motion_client import MotionEncoderClient
+        prov_path = run_root / "motion_provenance.json"
+        prov = json.loads(prov_path.read_text(encoding="utf-8")) if prov_path.is_file() else {}
+        store_prov = {"vae": prov.get("vae"), "encoder": prov.get("encoder")}
+        if not motion_stub and (store_prov["vae"] is None or store_prov["encoder"] is None):
+            raise ValueError(f"开启态 run 缺 motion_provenance.json 的 vae / encoder 字段，无法核对 sidecar 同源: {run_root}")
+        motion_enc_fn = MotionEncoderClient(
+            online_gpu=mcfg.get("online_gpu", 1), stub=motion_stub, store_provenance=store_prov,
+            expected_ckpt_sha256=(store_prov["encoder"] or {}).get("checkpoint_sha256") if not motion_stub else None)
+
     return _policy.MME_VLA_Policy(
         model,
         seed=seed,
@@ -146,5 +163,6 @@ def create_trained_policy(
         sample_kwargs=sample_kwargs,
         metadata=train_config.policy_metadata,
         norm_stats=norm_stats,
-        use_quantiles=data_config.use_quantile_norm
+        use_quantiles=data_config.use_quantile_norm,
+        motion_enc_fn=motion_enc_fn,
     )
