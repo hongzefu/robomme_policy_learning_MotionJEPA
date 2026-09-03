@@ -1306,7 +1306,11 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
 - **T3 硬闸（截至 t3trace）**：`T3_INIT_MATCH=PASS`（closed 177 / open 193 叶命中 reference）；`T3_SMOKE=PASS steps=1000 nan=0 motion_params_updated=4 n_keys=16/12 n_leaves=193/177`
   （open 侧 4 个 motion params 叶及其 ema / opt 共 16 叶初末态 sha 均不同）；`T3_TOKEN_TRACE=PASS steps=14 samples=112 keys=4 mismatches=0`。
 - **T3_EFFECT_OBS**（描述性，单 seed，ep0–9 在 encoder 训练集内）：末 200 步 loss open 0.0304 / closed 0.0316（Δ −0.0012）；首步 0.5010 / 0.5920，末步 0.0300 / 0.0283。
-- 进行中：`t3mechanism`（GPU，选 step 0 batch）→ `t3phase`（run `motion-t3-phase`）→ `T3_EVAL_OBS`（`run_t3_eval_obs.sh`，两侧各四任务 × 50 集）。`motion_gates_model.py` 旧入口 `main()` 先于扩展入口执行、拒掉 `--gate t3*`，已删旧入口（`fix:`）。
+- **T3_MECHANISM PASS**（step 0 batch，双卡）：`T3_MOTION_CAUSAL=PASS pad_bitexact=1 emb_effect=1 pos_effect=1`、`T3_MECHANISM=PASS step=0 input_grad_ok=1 group_norms_ok=1`；
+  分组梯度范数 W2_content 4.21e+01 / W2_pos 5.07e+00 / W1 5.28e+00 / b1 4.59e-01 / b2 1.55e+00 / ∂loss/∂motion_emb 有效位 9.01e-01 / ∂loss/∂motion_pos 有效位 1.46e-01（padding 位逐位 0）。
+  两处修补（`b364789`）：① 脚本 OOM——初态校验后释放 ema / opt 与整树梯度；② 首次 `pad_bitexact=0` 经诊断为 SigLIP patch-embedding conv 的 wgrad 在 GPU 上不确定
+  （loss 逐位相同、三档垃圾尺度与「同一 obs 连算两次」都只此一叶变化），该叶训练中被 freeze_filter 冻结、从不求导——摘要改为只覆盖 `trainable_filter` 叶（36/59），与 `train_step` 同一过滤。
+- 进行中：`t3phase`（run `motion-t3-phase`，GPU0）与 closed 侧 `T3_EVAL_OBS`（GPU1，`run_t3_eval_obs.sh SIDE=closed`）并行 → open 侧 `T3_EVAL_OBS`。`motion_gates_model.py` 旧入口 `main()` 先于扩展入口执行、拒掉 `--gate t3*`，已删旧入口（`fix:`）。
 
 ### S3 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-p5-online/`，在线观察归 T3 两侧 run）
 

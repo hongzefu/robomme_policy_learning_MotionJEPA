@@ -45,7 +45,7 @@ for _ in $(seq 1 600); do
 done
 echo "server 端口就绪 $(date +%T)"
 # ── eval（前台，micromamba robomme 环境；仿真在 SIM_GPU）──
-( cd examples/robomme && CUDA_VISIBLE_DEVICES="${SIM_GPU}" "${ROBOMME_PY}" eval.py --args.port="${PORT}" --args.model_seed="${SEED}" \
+( cd examples/robomme && CUDA_VISIBLE_DEVICES="${SIM_GPU}" PYTHONUNBUFFERED=1 "${ROBOMME_PY}" eval.py --args.port="${PORT}" --args.model_seed="${SEED}" \
     --args.policy_name="${RUN}" --args.model_ckpt_id=999 --args.only_tasks="${TASKS}" --args.save_dir="${V1_STORE}/evaluation" ) 2>&1 | tee "${EVAL_LOG}"
 RC="${PIPESTATUS[0]}"
 echo "EVAL_RC=${RC}"
