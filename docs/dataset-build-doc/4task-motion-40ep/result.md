@@ -122,3 +122,17 @@ ENCODER_BITEXACT=PASS compared=772 mismatches=0 order_ok=1 state_sha_ok=1 prov_o
 40 ep 库交付：`framesamp/`（帧路，`status=verified`）与 `motion/`（运动路，`status=verified`）绑定同一清单 `fee2777f…`；
 D1（两条 SigLIP oracle）、D2（原版 `encode_chunk` 772 窗）、D3（原版 `motion_token` 772 行）全部逐位；A5–A12 全过。
 下一步：以本节收官 commit 为 `S2_BASE`，跑 A21（`motion-a21-g0b-replay`）与 T2 reference（`motion-t2-ref`），随后进入 S2。
+
+## 1.6 dataloader-only 吞吐微基准（S1 收尾项，2026-09-03 补测；`scripts/training/tests/dataloader_bench.py`，`records/dataloader_bench.json`）
+
+介质：本机 NVMe（工作副本 `v1-store`，40 ep 库 12.9 GB 全在页缓存），b64、warmup 5、measure 40 批；只走 FrameSampDataset + transform + torch DataLoader，不建模型。
+**两次测量都与一个双卡训练 run 并行**（第一次 14:57–15:05 与 `motion-t2-cand` 并行、第二次 16:05–16:13 与 `motion-t3-closed` 并行，各占 4 个 dataloader worker），绝对值只是参考，只看开 / 关差值：
+
+| 配置 | 关闭态 样本/s（第一次 / 第二次） | 开启态 样本/s（第一次 / 第二次） | 每批 pickle 载荷 |
+|---|---|---|---|
+| workers 4 / prefetch 6 | 54.2 / 54.9 | 51.6 / 52.5 | 262.3 MB → 287.6 MB |
+| workers 8 / prefetch 10 | 54.6 / 56.1 | 52.0 / 57.1 | 同上 |
+
+开启态相对关闭态 −4.7% / −4.4%（w4）与 −4.8% / +1.9%（w8），在两次测量的抖动幅度内；载荷增加 25.3 MB/批 = 64 × (96×768 + 96×256) × 4 B + mask + mem_order，与预期一致。
+`multiprocessing.Pipe` pickle 往返（30 s）：带四键 287.6 MB/批 618.6 ms/往返（465 MB/s 单向）、不带 262.3 MB/批 580.5 ms/往返（452 MB/s），每批多 38 ms（+6.6%）。
+意外：首版 `bench_pipe` 父进程未关闭子端句柄，子进程结束后父端 `recv` 永远等不到 EOF（卡 50 min，`records/dataloader_bench.attempt1.log` 只到第 4 行），改为父端 `c.close()` + 空消息哨兵后重跑。

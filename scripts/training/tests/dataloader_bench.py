@@ -79,30 +79,39 @@ def bench_loader(lib, yaml_name, workers, prefetch, batch, warmup, measure, seed
 
 
 def _pipe_child(conn, payload, seconds):
-    t_end = time.time() + seconds; n = 0
+    """子进程：在 seconds 内反复 send/recv 往返；结束时发空消息作哨兵后关闭连接。"""
+    t_end = time.time() + seconds
     while time.time() < t_end:
-        conn.send_bytes(payload); conn.recv_bytes(); n += 1
-    conn.send(n)
+        conn.send_bytes(payload); conn.recv_bytes()
+    conn.send_bytes(b"")
+    conn.close()
 
 
 def bench_pipe(batch_with, batch_without, seconds=30):
+    """父进程回声；以空消息 / EOF 为结束信号。⚠ 父进程必须关闭自己持有的子端句柄 c，否则子进程退出后
+    父端永远收不到 EOF、recv 阻塞（2026-09-03 首跑卡住 50 min 实测）。"""
     res = {}
     for tag, b in (("with_motion", batch_with), ("without_motion", batch_without)):
         payload = pickle.dumps(b, protocol=pickle.HIGHEST_PROTOCOL)
         ctx = mp.get_context("spawn")
         a, c = ctx.Pipe()
         p = ctx.Process(target=_pipe_child, args=(c, payload, seconds)); p.start()
+        c.close()
         n = 0
+        t0 = time.time()
         while True:
             try:
-                data = a.recv_bytes(); a.send_bytes(data); n += 1
-            except Exception:
+                data = a.recv_bytes()
+            except EOFError:
                 break
-            if not p.is_alive() and not a.poll():
+            if not data:
                 break
-        p.join()
-        res[tag] = {"bytes": len(payload), "roundtrips_in_%ds" % seconds: n, "ms_per_roundtrip": seconds * 1000 / max(1, n),
-                    "MBps_one_way": len(payload) * n / seconds / 1e6}
+            a.send_bytes(data); n += 1
+        elapsed = time.time() - t0
+        p.join(timeout=30)
+        a.close()
+        res[tag] = {"bytes": len(payload), "roundtrips": n, "seconds": round(elapsed, 3), "ms_per_roundtrip": elapsed * 1000 / max(1, n),
+                    "MBps_one_way": len(payload) * n / max(elapsed, 1e-9) / 1e6}
     return res
 
 

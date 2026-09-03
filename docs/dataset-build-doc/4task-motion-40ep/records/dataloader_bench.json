@@ -1,0 +1,69 @@
+{
+ "medium": "本机 NVMe（工作副本 v1-store，40 ep 库全在页缓存）",
+ "runs": [
+  {
+   "yaml": "perceptual-framesamp-context.yaml",
+   "workers": 4,
+   "prefetch": 6,
+   "batch": 64,
+   "warmup": 5,
+   "measure": 40,
+   "samples_per_s": 54.93379969001184,
+   "s_per_batch": 1.1650386530905963,
+   "startup_s": 10.023935690522194,
+   "batch_pickle_bytes": 262274336
+  },
+  {
+   "yaml": "perceptual-framesamp-context.yaml",
+   "workers": 8,
+   "prefetch": 10,
+   "batch": 64,
+   "warmup": 5,
+   "measure": 40,
+   "samples_per_s": 56.078759222974575,
+   "s_per_batch": 1.1412520691752435,
+   "startup_s": 8.960122108459473,
+   "batch_pickle_bytes": 262274336
+  },
+  {
+   "yaml": "perceptual-framesamp-context-motion.yaml",
+   "workers": 4,
+   "prefetch": 6,
+   "batch": 64,
+   "warmup": 5,
+   "measure": 40,
+   "samples_per_s": 52.47113811794684,
+   "s_per_batch": 1.2197181592695414,
+   "startup_s": 7.935587901622057,
+   "batch_pickle_bytes": 287602090
+  },
+  {
+   "yaml": "perceptual-framesamp-context-motion.yaml",
+   "workers": 8,
+   "prefetch": 10,
+   "batch": 64,
+   "warmup": 5,
+   "measure": 40,
+   "samples_per_s": 57.12112075601726,
+   "s_per_batch": 1.1204261953011154,
+   "startup_s": 9.144350241869688,
+   "batch_pickle_bytes": 287602090
+  }
+ ],
+ "pipe": {
+  "with_motion": {
+   "bytes": 287598287,
+   "roundtrips": 49,
+   "seconds": 30.311,
+   "ms_per_roundtrip": 618.5920481779137,
+   "MBps_one_way": 464.92399610879517
+  },
+  "without_motion": {
+   "bytes": 262270533,
+   "roundtrips": 52,
+   "seconds": 30.188,
+   "ms_per_roundtrip": 580.5446276297936,
+   "MBps_one_way": 451.7663595833787
+  }
+ }
+}
