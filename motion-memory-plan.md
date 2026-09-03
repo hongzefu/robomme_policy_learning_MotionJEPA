@@ -1288,6 +1288,24 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
 - **1.6 吞吐**：dataloader-only b64 微基准（本机 NVMe、40 ep 库全在页缓存，只看开 / 关差值）结果随 S2 收官回填。
 - 进行中：T1 `motion-t1-closed`（HEAD `3b02f18`）→ T2 candidate → A22 → T3。
 
+### S3 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-p5-online/`，在线观察归 T3 两侧 run）
+
+- **改码落点**：与 S2 同一 worktree `v1-store/worktrees/s2-dev`（主树跑 T1 期间），commitV6.6 `c9cd42e`（分支 `s2-dev`，T1 结束后合入 `v2-motionmem`）。
+  新增 `policies/motion_protocol.py`（只 stdlib，magic `MMEMOT01`、`recv_exact` 按 monotonic deadline 循环 `recv_into`、stub 帧编码）、`scripts/dataset/wan/motion_sidecar.py`
+  （`--fd` 收 socketpair 一端、握手回 provenance + 协议文件 sha、`--stub` 不 import torch）、`policies/motion_client.py`（Popen + `pass_fds`、argv 固定 `uv run --project scripts/dataset/wan --no-sync …`、
+  provenance 按打包器 `same_keys_*` 逐键比对、`threading.Lock` 一次一窗）；改 `framesamp_memory.py`（帧路 `_prepare_frame_sampling` 一字不动；256 域 `_raw_frames`、demo / exec 双游标 while 补齐、
+  `visible_motion_frames` 与训练侧 `visible_motion_rows` 同式、`_prepare_motion` 零截断 raise）、`policy.py`（`motion_enc_fn` 注入、`_motion_enabled` 同一判定式、`add_buffer` 段边界状态机、
+  `_prepare_history` 四键 + 同一份 `memory_order`、`infer` 计时段内 `block_until_ready`）、`policy_config.py`（开启态由 run 内 `motion_provenance.json` 建 `MotionEncoderClient`）。
+- **P1–P4 全 PASS（stub 档、CPU，`scripts/training/tests/motion_gates_online.py`）**：`P1_PROTOCOL=PASS`（真子进程 + socketpair，三窗逐位 `full(768, 起点)`，stub 往返 4.8–5.6 ms/窗，
+  错帧 → sidecar rc=4、客户端 `ProtocolError`，`close()` 后 rc=0）；`P2_MEMORY=PASS`（Video es=66 T=300 → 16 窗、es=114 T=420 → 24 窗、Button es=0 T=260 → 15 窗，每步起点集合 == `visible_motion_rows`、
+  每窗恰编一次、token == 起点、`motion_pos == pos_emb_4x4[f,0,:256]`、原始帧缓冲峰值 17 帧；缺 es / 224 域 / float 帧 / es 中途变化 / 重复 step 五种坏输入 raise；es=1600 → 98 窗 > 96 raise 不裁剪）；
+  `P3_ORDER=PASS`（32 个推理步 `mem_order` 与训练侧 `pad_times` + `memory_order` 公式逐位、合法置换、int32）；`P4_ES_STATE=PASS`（首批 66 / 后续 0 沿用 / 后续 66 合法 / 后续 80 raise；
+  sidecar 端到端 10 窗 8.8–11.7 ms/窗）。
+- **实施中修正**：`add_buffer` 运动路初版先记 `exec_start_idx` 再校验帧尺寸，坏批留下半截状态（P2 坏输入用例暴露）→ 改为先全部校验、后写状态。
+- **P5 脚本 stub 试跑发现的环境约束**：CPU jax 算的 `PosEmb3D` 4x4 表与库内 GPU 生成表 max abs 6.1e-5、22% 元素不等（`compare_online_memory.py` 的 `POS_TABLE` 三方逐位是在 GPU 上过的），
+  P5 正式跑主进程 jax 必须在 GPU（GPU0，`XLA_PYTHON_CLIENT_MEM_FRACTION=0.2`），sidecar 独占 GPU1；stub 试跑 3 条 episode `ONLINE_START_SET=PASS steps=55`。
+- 待做：P5 真编码器（T1 释放 GPU 后，`docs/training-doc/motion-p5-online/launch.md`）；`T3_EVAL_OBS`（T3 两侧 checkpoint 就绪后）。
+
 **S4 删除的直接后果：motion token 的设计与注入方式定死。** 原本要靠消融比较的变体全部不再存在，下面五条从此就是唯一口径（依据分别在 2.2、2.1、2.3–2.4、3.1 与 3.4、3.4）：
 
 1. **起点怎么选（2.2）**：起点钉死在段内绝对网格上，段起点加 16 的整数倍；demo 段和 exec 段各自从自己的段起点数起，窗口不跨段；当前帧只决定哪些起点已经看得见，起点本身不随当前帧平移。stride 16 已由红线 14 冻结。
