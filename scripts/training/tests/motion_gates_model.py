@@ -1234,17 +1234,27 @@ def cmd_t3phase(args):
                 return jnp.mean(m.compute_loss(key, obs, actions, train=False), axis=-1)   # (1,)
 
         base = jax.random.key(args.seed)
-        losses = np.zeros(n, np.float64)
-        t0 = time.time()
-        for i in range(n):
-            item = ds[i]
-            batch = jax.tree.map(lambda x: jnp.asarray(np.asarray(x))[None], item)
-            obs = HistAugObservation.from_dict(batch)
-            losses[i] = float(one(jax.random.fold_in(base, i), obs, batch["actions"])[0])
-            if (i + 1) % 1000 == 0:
-                print(f"  [{tag}] {i + 1}/{n} ({time.time() - t0:.0f}s)", flush=True)
+        cache = pathlib.Path(args.out).with_suffix(f".{tag}.losses.npy")   # 每侧逐样本 loss 落盘：另一侧崩了不必重扫（2026-09-03 closed 侧 25 min 因 ds.close 崩过一次）
+        if cache.is_file() and args.reuse_losses:
+            losses = np.load(cache)
+            if losses.shape != (n,):
+                raise SystemExit(f"{cache} 形状 {losses.shape} != ({n},)")
+            print(f"  [{tag}] 复用 {cache}", flush=True)
+        else:
+            losses = np.zeros(n, np.float64)
+            t0 = time.time()
+            for i in range(n):
+                item = ds[i]
+                batch = jax.tree.map(lambda x: jnp.asarray(np.asarray(x))[None], item)
+                obs = HistAugObservation.from_dict(batch)
+                losses[i] = float(one(jax.random.fold_in(base, i), obs, batch["actions"])[0])
+                if (i + 1) % 1000 == 0:
+                    print(f"  [{tag}] {i + 1}/{n} ({time.time() - t0:.0f}s)", flush=True)
+            np.save(cache, losses)
         sides[tag] = losses
-        ds.close()
+        inner = getattr(ds, "_dataset", ds)       # TransformedDataset 本身没有 close，关底层 FrameSampDataset 的 store
+        if hasattr(inner, "close"):
+            inner.close()
     # 标签由 oracle 按物理样本身份统一生成
     phase = np.zeros(n, np.int64); tau = np.zeros(n, np.int64); empty = np.zeros(n, np.bool_)
     for i in range(n):
@@ -1290,6 +1300,7 @@ def _t3_main():
     ap.add_argument("--closed-ckpt", default=None)
     ap.add_argument("--preflight", action="store_true")
     ap.add_argument("--index-json", default=None)
+    ap.add_argument("--reuse-losses", action="store_true", help="t3phase：已有 <out>.<side>.losses.npy 时直接复用")
     args = ap.parse_args()
     {"m1": cmd_m1, "m2": cmd_m2, "m3": cmd_m3, "m4": cmd_m4, "m5": cmd_m5, "t3common": cmd_t3common, "t3verifyinit": cmd_t3verifyinit,
      "t3trace": cmd_t3trace, "t3mechanism": cmd_t3mechanism, "t3phase": cmd_t3phase}[args.gate](args)
