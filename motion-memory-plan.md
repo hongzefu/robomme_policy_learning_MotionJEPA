@@ -1210,7 +1210,7 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
 
 逐项细节见第二部分三节。
 
-## 七、实施步骤（S-1 已完成，S0–S3 待批）
+## 七、实施步骤（S-1、S0 已完成，S1 进行中；用户 2026-09-03 批准 S0–S3 连续实施）
 
 | 阶段 | 内容 | 判据 |
 |---|---|---|
@@ -1219,6 +1219,29 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
 | **S1 数据集重抽** | `scripts/dataset/` 破坏性重构（4.5）+ 40 ep 全链路（4.2，tmux；含 `oracle_driver.py` 产 D2/D3 oracle，须与被测同机同型号卡）+ D1–D3 与 A5–A12 全过 + dataloader 微基准（第二部分 1.6）；留档 `docs/dataset-build-doc/4task-motion-40ep/` | `COMPARE_RESULT=bitexact PASS`；`FINALIZE_EXIT_CODE=0`；`VERIFY_PACK=PASS scanned=13756 mismatches=0`；`WAN_BITEXACT=PASS compared=772 frame_mismatches=0 latent_mismatches=0`；`ENCODER_BITEXACT=PASS compared=772 mismatches=0`；motion 表 772 行 = 114 + 658 |
 | **S2 model 接线** | 五节 5.1 + 第二部分二节：双路 memory + 交错重排 + `motion.enabled` 条件建模块 + `RepackTransform` 登记 + 严格 checkpoint 配置快照 / 恢复 + 对拍工具同步 | 起工前 A21 自校 `G0_EQ=PASS` 并冻结 T2 reference；A13–A20、A22 与 M1–M5 全过；T1 命中锚点、T2 candidate 经严格 profile 逐位；`T3_COMMON_INIT` → T3 训练 `T3_SMOKE=PASS` → `T3_TOKEN_TRACE=PASS` → `T3_MECHANISM=PASS` → `T3_PHASE_REPORT`，训练效果只记 `T3_EFFECT_OBS` |
 | **S3 在线接线** | `FrameSampMemory` 绝对网格增量编码（while 补齐、demo/exec 双游标、段边界下传）+ Wan VAE 常驻 + 同步编码（2.6 已定：每次 infer 前固定 +1.57 s、开局 demo 窗同步编完，不预编不预热）；编码进程方案已定（六节第 3 条：子进程 + Unix socket + 握手核 provenance，默认独占另一张卡） | **P1–P5 全过**；端到端 ms/step 实测（分记 `add_buffer_time_ms` / `infer_time_ms`，后者须先在计时段内加 `block_until_ready`）；用严格恢复的 T3 两侧 checkpoint 做同集在线观察，只记 `T3_EVAL_OBS` |
+
+### S0 实测结果（2026-09-03，全部 PASS；留档 `docs/dataset-build-doc/4task-motion-40ep/{launch,result}.md`）
+
+- **起跑 HEAD** `6176f09`（commitV6.1：wan 子项目骨架 + 复制件 + 探针脚本 + launch.md；代码锚点 `46ba954` 的 `src/` 与旧建库脚本零改动）。
+  目标卡 GPU1（用户答复两张卡都可用）；MotionJEPA 锚点 `2a484ad` clean。
+- **③④⑤ 资产**：复制件 sha256 `af67fdd9…` == 源，`SOURCE_PIN.json` 记 `2a484ad`；ckpt `bae96037…` / `config.yaml` `99548a6c…` / VAE blob `d6e524b3…`
+  两侧 sha256 相同；wan 子 venv `uv lock` 91 包 12.9 s（`motion-jepa` git 依赖经 gh 凭据直接拉取成功，未用 sys.path 回退）、
+  `uv sync` 88 包，`check_versions()` 通过（torch 2.9.0+cu128 / cudnn 91002 / diffusers 0.39.0），版本与 MotionJEPA 锁逐项同值。
+- **② SigLIP oracle**：O1 `SHARD_DONE shard=0 episodes=40 skipped=0 steps=13756 elapsed=248.4s rate=55.382 step/s steady_steps=13465 rate_steady=91.111 step/s`；
+  O2 `Time taken: 2.77 minutes`、`stats.json execution_samples=11530`；两库各 40 ep / 11,530 pkl / 13 GB。旧工具清单 400 ep sha `4de8a0fc…`，
+  前 10 ep 子集 40 ep / 13,756 timestep。
+- **② crosscheck**：`CROSSCHECK=PASS`——encoder 段 [0] 77 张量三方逐位、[1]–[5]/[8]/[9] 24/24 逐位、[6]/[7] 只报告（min_cos 0.99996245 / 0.99996634）、
+  [10] 环境变量未设；VAE 段 [V7] 指纹 `9980d252…` == 记录值、[V1]–[V6] 8/8 逐位。json 归档 `oracle/wan-mj/crosscheck.json`。
+- **① A2 探针**：`PROBE_BENCH=PASS windows=20 ms_per_window=850.7 peak_mib=1714 rerun_bitwise=20/20`——Ada 上 **0.85 s/窗**（VAE 845.6 ms + encoder 5.0 ms），
+  比 A40 先验 1.57 s 快 1.85×；2.6 节在线延迟账按此改为每次 infer 固定 +0.85 s（本机 Ada 口径；A40 仍按 1.57 s），摊薄 0.053 s/step。
+  漂移只记录：TF32（matmul+cudnn）token max|Δ| 3.125e-2（1 个 bf16 ULP）、min_cos 0.9999798、334.9 ms/窗；VAE bf16 autocast token max|Δ| 8.2e-2、
+  min_cos 0.99981、550.4 ms/窗；两档逐位均 0/20，生产 / 在线不启用。
+- **A3 跨卡**：`A3_CROSSGPU=PASS compared=64 latent_bitwise=64 token_bitwise=64 max_abs_diff=0.000e+00`（GPU1 vs GPU0）→ S1 被测可双卡、oracle 单卡。
+- **A4 双 venv**：`A4_DUALVENV=PASS compared=64 latent_bitwise=64 token_bitwise=64 max_abs_diff=0.000e+00`，provenance 白名单逐键相等。
+- **新清单**（S1 新 CLI）：40 ep / 13,756 timestep / 11,530 exec，sha256 `fee2777f…`；与 oracle 子集五字段逐条一致（A6 前半）；
+  motion 表现算 772 = 658 + 114 行、单样本最大合法起点 34；四 h5 sha256 73 s 写入 `meta/input_manifest.json`。
+- **偏差**：Wan 抽取耗时预估须按 0.85 s/窗重算（单卡 772 窗 ≈ 11 min、双卡 ≈ 5.5 min，1.3 耗时表原按 1.64 s）；一次 cwd 残留导致子 venv 误建到
+  `scripts/dataset/wan/v1-store`（7.5 GB，已删重建）。
 
 **S4 删除的直接后果：motion token 的设计与注入方式定死。** 原本要靠消融比较的变体全部不再存在，下面五条从此就是唯一口径（依据分别在 2.2、2.1、2.3–2.4、3.1 与 3.4、3.4）：
 
