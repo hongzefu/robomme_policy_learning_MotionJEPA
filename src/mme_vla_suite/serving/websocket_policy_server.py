@@ -66,10 +66,15 @@ class WebsocketPolicyServer:
                     tstart = time.monotonic()
                     self._policy.add_buffer(obs)
                     tend = time.monotonic() - tstart
+                    # 挂钟落日志（motion-memory-plan.md 3.5 计时口径：add_buffer 含帧路编码 + device_get + 运动路同步编码）
+                    logger.info("TIMING add_buffer_ms=%.1f frames=%d exec_start_idx=%s",
+                                tend * 1000, len(obs.get("images", [])), obs.get("exec_start_idx"))
                     await websocket.send(packer.pack(
                         {"add_buffer_finished": True, "add_buffer_time_ms": tend * 1000}))
                 else:
                     outputs = self._policy.infer(obs)
+                    # infer_time_ms 由 policy.infer 在计时段内 block_until_ready 后给出（S3）
+                    logger.info("TIMING infer_ms=%.1f", float(outputs.get("infer_time_ms", float("nan"))))
                     await websocket.send(packer.pack(outputs))
 
             except websockets.ConnectionClosed:
