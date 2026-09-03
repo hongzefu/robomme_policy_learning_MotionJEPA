@@ -1286,7 +1286,10 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
   低于 [0.3, 3.0]。根因：MotionJEPA motion token rms 1.06 vs SigLIP 4×4 特征 rms 3.93，且 768 维 vs 2048 维，线性层输出范数 ∝ √(维数×rms²)。
   用户选择不加缩放 / RMSNorm、参数树保持 193 叶；由 T3 的 `mem_enc_norm` 与 `T3_MECHANISM` 分路梯度观察运动路是否被消费。
 - **1.6 吞吐**：dataloader-only b64 微基准（本机 NVMe、40 ep 库全在页缓存，只看开 / 关差值）结果随 S2 收官回填。
-- 进行中：T1 `motion-t1-closed`（HEAD `3b02f18`）→ T2 candidate → A22 → T3。
+- **T1**：`motion-t1-closed`（HEAD `3b02f18`，2026-09-03 14:06–14:56，b8 1000 步）`G0_EQ=PASS`，`scalars_hex.tsv` sha256 命中锚点 `c799a0b2…`（第七份同值）；
+  `SCALARS 1000/5/0`、`STATE_DIGEST 12/0`、`BATCH_DIGEST_CANONICAL 14/0`、`CANON_CHECK=PASS/14`、`INDEX_SEQ=PASS n=8072`、`n_keys=12`、`n_leaves=177`、`BASELINE_ENV=PASS`；
+  留档 `docs/training-doc/motion-t1-closed/result.md`。
+- 进行中：T2 candidate `motion-t2-cand`（HEAD `7ff0a17`）→ A22 → T3。
 
 ### S3 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-p5-online/`，在线观察归 T3 两侧 run）
 
