@@ -43,9 +43,9 @@
 
 12. 正式训练或评估必须从 clean HEAD 启动，并在 `docs/training-doc/<run_name>/` 留档。正式全量数据集构建必须在 `docs/dataset-build-doc/<dataset_name>/` 留档。起跑前记录可复现的 commit、命令、配置、数据来源和输出路径；只归档 Git 无法还原的日志、指标和结果，不归档大模型权重。
 
-13. **仓库单副本位于 NFS turbo `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA`，本机不保留任何仓库副本。** 本机 `/data/hongzefu` 只保留最初的全局原始 H5；本机 GPU 只用于一致性验证的本地对照产物、资源档位实测和功能性 smoke run。本机结果不得作为 dataloader 最终吞吐结论；正式吞吐基准必须在 NFS 数据副本上运行，并记录存储位置、batch size、worker 数、warmup 和稳定态统计。
+13. **仓库工作副本位于本机 `/data/hongzefu/robomme_policy_learning_MotionJEPA`（2026-09-03 起，`v2-motionmem` 分支）；NFS turbo `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA` 那份保留为只读归档。** 一切代码改动、命令运行与新产物都落本机工作副本；不得在 turbo 归档上改代码或写入新产物。turbo 归档保存历史 run 产物与旧基线（`v1-prod-*` run、`4task-gl` / `4task-gl-framesamp` 数据集、`openpi-assets` 权重、`train-assets` 等），本机副本以**只读 symlink 逐项引用**它们、不复制第二份（引用清单与写保护纪律见第 14 条与 `motion-memory-plan.md` 红线 17）。本机 `/data/hongzefu` 的全局原始 H5 照旧永久保留；本机 GPU 承担一致性验证的对照产物、资源档位实测和功能性 smoke run。吞吐基准必须记录**底层存储介质**（本机 NVMe / turbo NFS）与 batch size、worker 数、warmup 和稳定态统计；两种介质的数字不得混比，跨介质对照必须在同一介质上重测。集群侧看不到本机 `/data`，从本机工作副本提交 Slurm 作业不可用（`scripts/dataset/gl/gl_submit.py` 的 `REPO` 仍指 turbo）。
 
-14. 除最初的全局原始 H5 外，派生数据、索引、缓存、模型、tokenizer、checkpoint、日志和 smoke 产物都必须放在本仓库目录内，且一律收敛到单一根 `v1-store/`（整体不进 git）。不得自行把新的外部目录作为长期依赖。**禁止覆盖 `HOME`** —— 覆盖会让 ssh 找不到 `~/.ssh/config` 与 ControlMaster socket、直接打断集群提交；改为逐项显式设置 `UV_CACHE_DIR` / `XDG_CACHE_HOME` / `WANDB_*` / `HF_HOME` 等缓存类环境变量指向 `v1-store/cache/`。
+14. 除最初的全局原始 H5 外，派生数据、索引、缓存、模型、tokenizer、checkpoint、日志和 smoke 产物都必须放在本仓库目录内，且一律收敛到单一根 `v1-store/`（整体不进 git）——该根随仓库走，现位于本机工作副本内 `/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/`。不得自行把新的外部目录作为长期依赖。**turbo 归档的旧产物只能以只读 symlink 引用**：symlink 逐项指向具体目录或文件、不整层链；禁止穿透 symlink 向 turbo 写入，凡带 `--force` 或输出根参数的命令起跑前先 `ls -ld <输出根>` 确认它是本机实体目录而非 symlink（`build_dataset.py --force` 会 `rmtree` 整个输出根）。**禁止覆盖 `HOME`** —— 覆盖会让 ssh 找不到 `~/.ssh/config` 与 ControlMaster socket、直接打断集群提交；改为逐项显式设置 `UV_CACHE_DIR` / `XDG_CACHE_HOME` / `WANDB_*` / `HF_HOME` 等缓存类环境变量指向 `v1-store/cache/`。
 
 15. 为集群作业而在 turbo 上暂存的原始 H5 副本属于**临时暂存**：必须与本机原件逐文件 sha256 核对同源，并在全流程验收通过后删除；本机 `/data` 的原件永久保留。
 

@@ -1,7 +1,8 @@
 # motion memory 接入计划——framesample 记忆双路化（帧路 + 运动路，按时刻交错）
 
 > **本文件是 motion memory 工作的权威计划**（2026-09-01 定稿，2026-09-02 四节重写并改口径：记忆段由并列拼接改为按时刻交错、`motion.stride` 20 → 16、`motion.budget` 80 → 96；2026-09-03 补齐实施硬闸与 T3 训练端到端对拍；只陈述当前定稿设计，历次修订见 git log）。
-> **锚点**：分支 `v1-dataloader-Restructure`，代码锚点 HEAD = `4503ea2`（此后仅文档提交，`src/` `scripts/` 零改动；工作区 clean）。
+> **锚点**：分支 `v2-motionmem`（2026-09-03 从 `v1-dataloader-Restructure` 的 `442a7b9` 切出并推 origin），代码锚点 HEAD = `4503ea2`（`442a7b9` 与它代码内容相同——其后仅文档提交，`src/` `scripts/` 零改动；工作区 clean）。
+> **工作副本**：本机 `/data/hongzefu/robomme_policy_learning_MotionJEPA`（2026-09-03 起一切改动与运行都在这里，本轮所有数据集与产物落其内 `v1-store/`）；turbo `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA` 转为只读归档，旧产物以只读 symlink 引用——见第二部分〇节红线 17 与 `AGENTS.md` 第 13、14 条。
 > **commit 编号**：代码切片 **commitV6.x**；本文件本身按 `docs:` 提交。
 > **外部依赖仓库**：MotionJEPA 单副本 `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA`
 > （HEAD 与 checkpoint 选型见第二部分〇节，**起工前须锚定并写死**）。
@@ -1209,10 +1210,11 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
 
 逐项细节见第二部分三节。
 
-## 七、实施步骤（S0–S3）
+## 七、实施步骤（S-1 已完成，S0–S3 待批）
 
 | 阶段 | 内容 | 判据 |
 |---|---|---|
+| **S-1 工作副本迁移**（2026-09-03 已完成） | turbo 侧从 `442a7b9` 切 `v2-motionmem` 并 `git push -u origin` → `git clone` 到本机 `/data/hongzefu/robomme_policy_learning_MotionJEPA` 并切到该分支 → 副本内建 `v1-store/` 骨架 + 9 条只读 symlink 指向 turbo 旧产物（红线 17）→ 放开 `scripts/training/paths.sh` 与 `scripts/dataset/gl/paths.sh` 的 turbo 前缀断言（新增 `LOCAL_WORK_PREFIX="/data/hongzefu/"`）→ `uv sync` 在副本内重建 `.venv` | 两侧 `git rev-parse HEAD` 相同；两个 `paths.sh` 在副本内 source 通过且 `V1_STORE` 指向副本内；symlink 逐条可读；`uv sync` 退出码 0；`check_baseline_env.py check --baseline docs/training-doc/v1-grad-baseline-g0b/records/r1` 得 `BASELINE_ENV=PASS`（已实测：`uv.lock` sha、包版本、GPU、`norm_stats` / tokenizer / `pi05_base` 树指纹 / `episode_manifest` sha / 数据集抽样全等——symlink 引用的是 turbo 同一份字节；须带基线的三个运行时环境变量 `CUDA_VISIBLE_DEVICES=0,1`、`XLA_FLAGS="--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"`、`XLA_PYTHON_CLIENT_MEM_FRACTION=0.95`，不带则只差这三项） |
 | **S0 先验与 oracle** | ① Ada 上 Wan-VAE 20 窗探针（ms/窗、`max_memory_allocated`；直接用复制件 `encode_chunk`）；② **在重构动手前**产出 SigLIP oracle O1/O2（4.3）+ 本机目标卡跑 MotionJEPA `crosscheck.py --vae_check`（4.3 命令，≈2 min）；③ 建 `scripts/dataset/wan` 子 venv（`v1-store/venvs/wan`）；④ HF 缓存拷入 `v1-store/cache/hf` 并核 VAE 指纹 `9980d252…`；⑤ 复制 `wan_motion_infer.py` + 写 `SOURCE_PIN.json` + 拷 run 的 `config.yaml`/ckpt 到 `v1-store/external/motionjepa/` 并核 sha256（第二部分 1.5） | 拿到 ms/窗实测；SigLIP oracle 落盘并记 commit；`CROSSCHECK=PASS`（json 归档）；A3 跨卡 / A4 双 venv 探针 max\|diff\|=0；复制件 sha256 == `SOURCE_PIN.source_sha256` |
 | **S1 数据集重抽** | `scripts/dataset/` 破坏性重构（4.5）+ 40 ep 全链路（4.2，tmux；含 `oracle_driver.py` 产 D2/D3 oracle，须与被测同机同型号卡）+ D1–D3 与 A5–A12 全过 + dataloader 微基准（第二部分 1.6）；留档 `docs/dataset-build-doc/4task-motion-40ep/` | `COMPARE_RESULT=bitexact PASS`；`FINALIZE_EXIT_CODE=0`；`VERIFY_PACK=PASS scanned=13756 mismatches=0`；`WAN_BITEXACT=PASS compared=772 frame_mismatches=0 latent_mismatches=0`；`ENCODER_BITEXACT=PASS compared=772 mismatches=0`；motion 表 772 行 = 114 + 658 |
 | **S2 model 接线** | 五节 5.1 + 第二部分二节：双路 memory + 交错重排 + `motion.enabled` 条件建模块 + `RepackTransform` 登记 + 严格 checkpoint 配置快照 / 恢复 + 对拍工具同步 | 起工前 A21 自校 `G0_EQ=PASS` 并冻结 T2 reference；A13–A20、A22 与 M1–M5 全过；T1 命中锚点、T2 candidate 经严格 profile 逐位；`T3_COMMON_INIT` → T3 训练 `T3_SMOKE=PASS` → `T3_TOKEN_TRACE=PASS` → `T3_MECHANISM=PASS` → `T3_PHASE_REPORT`，训练效果只记 `T3_EFFECT_OBS` |
@@ -1273,6 +1275,23 @@ S0 的 oracle 产出、S1、S3 属「预计超过 5 分钟的全量数据构建 
    `history_config.resolved.yaml`、对应 sha256 与 `motion_provenance.json`；评估只从 run 快照恢复并核 sha，所有带快照的新 run 都必须严格核完整参数树，
    禁止 `remove_extra_params=True` 把 checkpoint 内额外参数静默裁掉。旧的不含快照的非 motion checkpoint 可保留旧兼容路径；
    motion checkpoint 缺快照或 provenance 一律拒绝加载。
+17. **工作副本与产物落点（用户 2026-09-03 拍板，S-1 已落地）**。四条：
+    - **① 只在本机副本上工作**：工作副本 `/data/hongzefu/robomme_policy_learning_MotionJEPA`（分支 `v2-motionmem`，从 `442a7b9` 切出），
+      一切代码改动、命令运行、留档与 commit 都在这里；turbo `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA`
+      转为**只读归档**（存 `v1-prod-*` 等历史 run 与旧基线），不得在其上改代码或写入新产物（`AGENTS.md` 第 13 条改版）。
+    - **② 新产物一律落副本内 `v1-store/`**：本轮所有数据集、缓存、venv、run、checkpoint、日志都写工作副本内的单一根，
+      正文所有 `v1-store/...` 相对路径口径不变——例如 `v1-store/datasets/4task-motion-40ep` 即
+      `/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-40ep`；
+      `paths.sh` 的 `V1_STORE="${REPO_ROOT}/v1-store"` 自动跟随副本，无需改任何路径常量。
+    - **③ 旧产物只读 symlink、不复制第二份**（本机可直读 NFS；同一份字节还保证 `check_baseline_env.py` 的资产指纹与 G0b 基线天然全等）。
+      九条链接，均指向 turbo 同名路径：`v1-store/datasets/4task-gl`、`datasets/4task-gl-framesamp`、`models/openpi-assets`、
+      `models/big_vision`、`models/pi05_vision_encoder`、`train-assets/mme_vla_suite`、`episode_manifest.json`、
+      `input_manifest.json`、`input_manifest_local.json`。旧 run 权重（`train-runs/mme_vla_suite/v1-prod-*`）未链，
+      要在线评估旧 run 时再逐 run 加链。**写保护**：symlink 一律只读，禁止穿透写 turbo；凡带 `--force` 或输出根参数的命令
+      起跑前先 `ls -ld <输出根>` 确认它是本机实体目录而非 symlink（红线 12 的 `rmtree` 在 symlink 上会直接毁归档）。
+    - **④ 前缀断言已放开、集群链路不可用**：`scripts/training/paths.sh` 与 `scripts/dataset/gl/paths.sh` 新增
+      `LOCAL_WORK_PREFIX="/data/hongzefu/"`，两条前缀之外仍 fail-loud；`scripts/dataset/gl/gl_submit.py` 的 `REPO` 未改（仍指 turbo），
+      集群看不到本机 `/data`，故 `v2-motionmem` 上不走 Slurm——与七节「全部在本机，不上集群」一致。
 
 ## 一、数据集侧实现细节（S1）
 
@@ -1448,7 +1467,7 @@ uint8 sha256，再落 `<lib>/oracle/wan-mj/<段>.bin`（与我方同构、同 ch
 ### 1.6 吞吐评估（S1 收尾，不上集群）
 
 1. 算账（单位统一为十进制 MB）：表常驻内存 → turbo 读字节 +0；每样本交付 +395,648 B（`motion_emb` 96×768 f32 = 294,912 + `motion_pos` 96×256 f32 = 98,304 + `mem_order` 608 int32 = 2,432；`motion_mask` 96 B 未计），batch 64 → +25.32 MB（24.15 MiB），打在 257 MB 的批载荷上 = +9.9%，那条 worker→主进程 ~520 MB/s 的 pickle 管道每批多 ≈49 ms。对照 `docs/training-doc/v1-framesamp-dl/result.md` 的 w4c6 实测 97.7 样本/s vs 需求 12.8（7.6×），退化后仍 ≈6.9×。
-2. 本机 dataloader-only 基准：以 `<lib>/framesamp` 为 dataset root，b64 / warmup 5 / measure 40，w4c6 与 w8c10 各两档（motion 开 / 关）。历史 harness `scripts/bottleneck-bench/gl-dataloader/dataloader_bench.py` 已于 commitV4.1 删除，须重写最小版。`result.md` 必须写明局限：40 ep 库 12.9 GB 全在页缓存里，绝对值只是乐观上界，只有开 / 关差值有意义；本机吞吐不作最终结论（第 13 条）；每样本读盘字节按新清单 `mean_sampled_frames` 现算，不得沿用 2.43 MB。
+2. 本机 dataloader-only 基准：以 `<lib>/framesamp` 为 dataset root，b64 / warmup 5 / measure 40，w4c6 与 w8c10 各两档（motion 开 / 关）。历史 harness `scripts/bottleneck-bench/gl-dataloader/dataloader_bench.py` 已于 commitV4.1 删除，须重写最小版。`result.md` 必须写明局限：40 ep 库 12.9 GB 全在页缓存里，绝对值只是乐观上界，只有开 / 关差值有意义；库在本机 NVMe（工作副本内 `v1-store/`），数字与 turbo NFS 上的旧基准不可混比，`result.md` 须写明存储介质（`AGENTS.md` 第 13 条改版）；每样本读盘字节按新清单 `mean_sampled_frames` 现算，不得沿用 2.43 MB。
 3. 30 秒微基准：带 / 不带四个新增键（`motion_emb` / `motion_pos` / `motion_mask` / `mem_order`）的 batch dict 经 `multiprocessing.Pipe` pickle 往返计时。
 4. 常驻内存账：每 worker 整表 = 行数 × 3,072 B——40 ep 库 2.4 MB（w8 合计 19 MB，可忽略；同库 `FrameSampStore` 已常驻 pos + state 42.2 MiB/worker）；若换 4env400ep 全量库则 82 MB/worker、w8 约 658 MB，须与 dataloader 内存预算一起核。
 
@@ -1990,7 +2009,7 @@ G0b r1 的 `run_meta.json` 记的入口是旧路径 `scripts/smoke-local/bench_t
 6. **数据泄漏**：三个 v8 run 的 `holdout_episodes: 90-99`，本轮 ep0–9 全在 encoder 自监督训练集里，`T3_PHASE_REPORT` 与两个 `_OBS` 的任何收益都可能被放大。
 7. **latent 域偏移**：encoder 在 A40 抽的 v8 latent 上训，我们喂 Ada 抽的 latent（差 1.24e-5，集中在 VAE `conv_out`、沿 group 累积），已实测到 token 级只落在最后一位（cos 0.999995），经入口 affine 归一化后可忽略。
 8. **仍不直接复用 MotionJEPA 既有实抽产物**（用户拍板接受）：D2 已改为从我方 manifest 独立重算全部起点、逐窗核33帧uint8 sha，再用原版 `encode_chunk` 重编；这能挡住被测 metadata 同错同过，但 MotionJEPA 原建库 finalizer 的四道守卫仍不在本流程中，A12 旧产物对照继续只作非阻断旁证。
-9. **40 ep 库的吞吐结论只是上界**：全在页缓存里，turbo 冷缓存行为测不到；本机吞吐按第 13 条不作最终结论。
+9. **40 ep 库的吞吐结论只是上界**：全在页缓存里，冷缓存行为测不到；且新库落在本机 NVMe、旧基准跑在 turbo NFS，两者按 `AGENTS.md` 第 13 条改版不得混比，只有同介质的开 / 关差值有意义。
 10. **交错拼接的收益未经验证**：与并列相比 token 内容 / 权重 / mask / 计算量全同，数学上唯一区别是记忆区 608 个 token 的 RoPE 位置号（token 内容里已带 PosEmb3D 时间码，交错只是把「时间相邻」额外写进 RoPE 距离）；本计划不含「按时间交错更优」的先验证据，且用户已拍板只保留交错一种布局、不做并列对照，这一差异在本计划内不再验证。
 11. **记忆区内 RoPE 位置密度不均**：一个采样帧占 16 个连续序号、一个 motion 窗只占 1 个，尺度差 16 倍，其对注意力的影响未评估。
 
