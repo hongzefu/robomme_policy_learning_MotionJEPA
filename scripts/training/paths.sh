@@ -7,8 +7,10 @@
 #   1. **不覆盖 HOME**。上一版 common.sh 把 HOME 指向项目内目录，会让 ssh 找不到
 #      ~/.ssh/config 与 ControlMaster socket，直接打断 gl_submit.py 的集群提交。
 #      改为逐项显式设置缓存类环境变量指向 v1-store/cache/。
-#   2. 仓库位置 fail-loud：必须位于 turbo 前缀下，否则拒绝运行（防止把几百 GB
-#      产物写进本机盘）。校验的是前缀而非全路径，将来改目录名不必改代码。
+#   2. 仓库位置 fail-loud：必须位于本机工作副本前缀或 turbo 归档前缀下，否则拒绝
+#      运行（防止把几百 GB 产物写进随便一个位置）。2026-09-03 起工作副本迁到本机
+#      /data/hongzefu/robomme_policy_learning_MotionJEPA，turbo 那份转为只读归档
+#      （AGENTS.md 第 13 条改版）。校验的是前缀而非全路径，将来改目录名不必改代码。
 #   3. RAW_H5_DIR 默认指向 turbo 那份 H5，使本机与集群读**同一份字节**，
 #      一致性验证不被输入差异污染；确需本机原件（NVMe 更快）时用环境变量覆盖。
 
@@ -16,6 +18,9 @@ set -euo pipefail
 
 readonly GL_ROOT="/nfs/turbo/coe-chaijy-unreplicated/hongzefu"
 readonly TURBO_PREFIX="${GL_ROOT}/"
+# 本机工作副本前缀（AGENTS.md 第 13 条 2026-09-03 改版）：v2-motionmem 起一切改动与
+# 运行都在 /data/hongzefu/robomme_policy_learning_MotionJEPA，turbo 副本只读归档
+readonly LOCAL_WORK_PREFIX="/data/hongzefu/"
 
 V1_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly V1_SCRIPT_DIR
@@ -30,10 +35,11 @@ if [[ ! -f "${REPO_ROOT}/pyproject.toml" ]]; then
 fi
 
 case "${REPO_ROOT}/" in
+  "${LOCAL_WORK_PREFIX}"*) ;;
   "${TURBO_PREFIX}"*) ;;
   *)
-    echo "错误: 仓库必须位于 ${TURBO_PREFIX} 下, 当前为 ${REPO_ROOT}" >&2
-    echo "      本仓库单副本在 NFS turbo, 本机不保留副本(见 AGENTS.md 第 13 条)。" >&2
+    echo "错误: 仓库必须位于 ${LOCAL_WORK_PREFIX}(本机工作副本) 或 ${TURBO_PREFIX}(turbo 只读归档) 下, 当前为 ${REPO_ROOT}" >&2
+    echo "      产物根 v1-store/ 随仓库走, 不得落到这两处之外(见 AGENTS.md 第 13、14 条)。" >&2
     exit 1
     ;;
 esac
