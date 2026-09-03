@@ -1,0 +1,36 @@
+# scripts/dataset/wan —— Wan VAE + MotionJEPA encoder 侧的 torch 子项目。
+#
+# 为什么独立：主 venv 锁在 torch 2.7.1+cu126 / jax 0.5.3，而 MotionJEPA 的 Wan 链路要求
+# torch 2.9.0+cu128 / diffusers 0.39.0（wan_motion_infer.PINNED）。主 `pyproject.toml` 与根
+# `uv.lock` 禁动（motion-memory-plan.md 红线 10：根 lock 一动，G0b 黄金基线的环境指纹全 FAIL），
+# 所以 torch 侧全部走本子项目：独立 `uv.lock`（进 git）、独立 venv（`UV_PROJECT_ENVIRONMENT=$V1_STORE/venvs/wan`）。
+# 刻意不用 uv workspace（全局规则：workspace 成员共享根 lock，会把冲突依赖拉回主项目解析图）。
+#
+# 版本钉法：与 MotionJEPA `2a484ad` 的 uv.lock 逐项同值（torch 2.9.0 / diffusers 0.39.0 / numpy 2.4.4 /
+# h5py 3.16.0 / pyyaml 6.0.3 / einops 0.8.2），保证 A4 双 venv 探针的 `check_versions()` 与 provenance 逐键相等。
+# torch 2.9.0 的 PyPI Linux wheel 即 cu128 版（`torch.__version__ == "2.9.0+cu128"`），无需额外 index。
+#
+# 建环境（在仓库根执行；NFS 上须 UV_LINK_MODE=copy）：
+#   UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=v1-store/venvs/wan uv sync --project scripts/dataset/wan
+# 运行：
+#   UV_LINK_MODE=copy UV_PROJECT_ENVIRONMENT=v1-store/venvs/wan uv run --project scripts/dataset/wan --no-sync python <脚本>
+[project]
+name = "mme-vla-wan"
+version = "0.1.0"
+description = "MME-VLA motion memory：Wan VAE 抽取与 MotionJEPA encoder 编码的 torch 侧子项目（与主 venv 隔离）"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "torch==2.9.0",
+    "diffusers==0.39.0",
+    "numpy==2.4.4",
+    "h5py==3.16.0",
+    "pyyaml==6.0.3",
+    "einops==0.8.2",
+    # WanLatentMotionEncoder 类：以 git 依赖钉死 MotionJEPA 锚点 commit（红线 2）。
+    # 不做 path 依赖——setuptools 会往只读的 MotionJEPA 树里写 build/ 与 egg-info。
+    "motion-jepa @ git+https://github.com/hongzefu/MotionJEPA@2a484ad960ed6155321dc34def9011eb119f857f",
+]
+
+[tool.uv]
+# 本目录只是脚本集合，不打包成可安装项目
+package = false
