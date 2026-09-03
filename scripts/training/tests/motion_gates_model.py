@@ -1058,6 +1058,8 @@ def cmd_t3mechanism(args):
     actions = jnp.asarray(batch["actions"])
     graphdef = state.model_def
     params = state.params
+    # 显存：只保留 params；ema / opt_state（≈ 3 份参数体量）在初态校验后即释放——否则第二次 value_and_grad OOM（2026-09-03 实测 44 GB 双卡 fsdp=2 下 RESOURCE_EXHAUSTED）
+    del state
     train_rng = jax.random.fold_in(jax.random.key(config.seed), chosen_step)   # 固定
 
     def loss_fn(params, obs, actions):
@@ -1076,16 +1078,45 @@ def cmd_t3mechanism(args):
             return loss_fn(params, _dc.replace(obs, motion_emb=me, motion_pos=mp), actions)
         return jax.grad(f, argnums=(0, 1))(obs.motion_emb, obs.motion_pos)
 
+    # 梯度摘要只覆盖训练真正求导的叶（config.trainable_filter，与 train_step 的 nnx.DiffState 同一过滤）：
+    # 冻结叶（如 SigLIP patch-embedding conv 的 kernel）在训练里根本不算 wgrad，其 GPU 反向核在本脚本里被算出来且不确定
+    # （2026-09-03 实测：同一 obs 连算两次 / 三档 padding 垃圾都只让 ['PaliGemma']['img']['embedding']['kernel'] 一叶变化，loss 逐位相同）。
+    trainable_keys = {jax.tree_util.keystr(kp) for kp, _ in
+                      jax.tree_util.tree_flatten_with_path(params.filter(config.trainable_filter).to_pure_dict())[0]}
+    for mk in ("['mem_encoder']['motion_pos_proj']['kernel']", "['mem_encoder']['motion_encoder_static']['kernel']"):
+        if mk not in trainable_keys:
+            raise SystemExit(f"motion 叶 {mk} 不在 trainable_filter 内——与 T3_SMOKE motion_params_updated 矛盾")
+    print(f"[t3mechanism] 梯度摘要覆盖 trainable 叶 {len(trainable_keys)} 个（全参数叶 {len(jax.tree_util.tree_leaves(params.to_pure_dict()))}）")
+
     def grad_digest(grads):
         g = hashlib.sha256()
         for kp, v in jax.tree_util.tree_flatten_with_path(grads.to_pure_dict() if hasattr(grads, "to_pure_dict") else grads)[0]:
-            g.update((jax.tree_util.keystr(kp) + leaf_sha(np.asarray(jax.device_get(v)))).encode())
+            if jax.tree_util.keystr(kp) in trainable_keys:
+                g.update((jax.tree_util.keystr(kp) + leaf_sha(np.asarray(jax.device_get(v)))).encode())
         return g.hexdigest()
 
     fails = []
     base_loss, base_grads = loss_and_grads(params, obs, actions)
     base_loss = float(base_loss); base_dig = grad_digest(base_grads)
+    # (d) 所需的四个 motion 叶梯度立即取回 host，整树梯度随即释放（每次 value_and_grad 的全参数梯度与 params 同体量）
+    gp = {jax.tree_util.keystr(kp): np.asarray(jax.device_get(v)).astype(np.float64)
+          for kp, v in jax.tree_util.tree_flatten_with_path(base_grads.to_pure_dict())[0] if "motion" in jax.tree_util.keystr(kp)}
+    del base_grads
     print(f"[t3mechanism] base loss {base_loss:.6f}")
+
+    def leaf_shas(grads):
+        return {jax.tree_util.keystr(kp): leaf_sha(np.asarray(jax.device_get(v)))
+                for kp, v in jax.tree_util.tree_flatten_with_path(grads.to_pure_dict())[0] if jax.tree_util.keystr(kp) in trainable_keys}
+
+    def loss_digest(o, want_leaves=False):
+        """loss 标量 + 全梯度摘要（可选逐叶 sha），梯度树用完即释放。"""
+        l, g = loss_and_grads(params, o, actions)
+        d = grad_digest(g)
+        leaves = leaf_shas(g) if want_leaves else None
+        del g
+        return (float(l), d, leaves) if want_leaves else (float(l), d)
+
+    base_leaves = None
     # bf16 独立复算两层 + gather（并列序 → 重排）
     P = {jax.tree_util.keystr(kp): np.asarray(jax.device_get(v)) for kp, v in jax.tree_util.tree_flatten_with_path(params.to_pure_dict())[0]}
     W1 = P["['mem_encoder']['motion_pos_proj']['kernel']"]; b1 = P["['mem_encoder']['motion_pos_proj']['bias']"]
@@ -1108,26 +1139,40 @@ def cmd_t3mechanism(args):
     g = np.random.default_rng(3)
     me = np.array(np.asarray(obs.motion_emb)); mp = np.array(np.asarray(obs.motion_pos)); mm = np.asarray(obs.motion_mask)
     me[~mm] = g.normal(0, 1e3, me[~mm].shape); mp[~mm] = g.normal(0, 1e3, mp[~mm].shape)
-    l_pad, g_pad = loss_and_grads(params, _dc.replace(obs, motion_emb=jnp.asarray(me), motion_pos=jnp.asarray(mp)), actions)
-    pad_bitexact = float(l_pad) == base_loss and grad_digest(g_pad) == base_dig
+    l_pad, d_pad, pad_leaves = loss_digest(_dc.replace(obs, motion_emb=jnp.asarray(me), motion_pos=jnp.asarray(mp)), want_leaves=True)
+    pad_bitexact = l_pad == base_loss and d_pad == base_dig
+    if not pad_bitexact:
+        # 诊断输出：loss 是否变、哪些叶变；再用 N(0,1) 与 N(0,1e-3) 两档垃圾复测，区分「泄漏」与「大数溢出 / 精度」
+        _, _, base_leaves = loss_digest(obs, want_leaves=True)
+        _, _, base_leaves2 = loss_digest(obs, want_leaves=True)
+        nd = sorted(k for k in base_leaves if base_leaves[k] != base_leaves2.get(k))
+        print(f"  [pad-diag] 确定性探针：同一 obs 连算两次梯度，叶变化 {len(nd)}/{len(base_leaves)}：{[k[:90] for k in nd[:6]]}")
+        diff = sorted(k for k in base_leaves if base_leaves[k] != pad_leaves.get(k))
+        print(f"  [pad-diag] loss base={base_loss.hex()} pad(1e3)={l_pad.hex()} 同={l_pad == base_loss}；梯度叶变化 {len(diff)}/{len(base_leaves)}：{[k[:90] for k in diff[:8]]}")
+        for scale in (1.0, 1e-3):
+            g2 = np.random.default_rng(5)
+            me_s = np.array(np.asarray(obs.motion_emb)); mp_s = np.array(np.asarray(obs.motion_pos))
+            me_s[~mm] = g2.normal(0, scale, me_s[~mm].shape); mp_s[~mm] = g2.normal(0, scale, mp_s[~mm].shape)
+            l_s, d_s, lv_s = loss_digest(_dc.replace(obs, motion_emb=jnp.asarray(me_s), motion_pos=jnp.asarray(mp_s)), want_leaves=True)
+            diff_s = sorted(k for k in base_leaves if base_leaves[k] != lv_s.get(k))
+            print(f"  [pad-diag] 垃圾尺度 {scale:g}: loss 同={l_s == base_loss} 摘要同={d_s == base_dig} 叶变化 {len(diff_s)}：{[k[:90] for k in diff_s[:6]]}")
     # (b) 只在自身有效行内清零 / 打乱 motion_emb → loss 或梯度摘要必变；有效 pos 扰动 → 梯度摘要必变
     ks = mm.sum(axis=1); i_star = int(np.argmax(ks))
     me0 = np.array(np.asarray(obs.motion_emb)); me0[i_star, :ks[i_star]] = 0
-    l0, g0 = loss_and_grads(params, _dc.replace(obs, motion_emb=jnp.asarray(me0)), actions)
+    l0, d0 = loss_digest(_dc.replace(obs, motion_emb=jnp.asarray(me0)))
     perm = np.random.default_rng(4).permutation(int(ks[i_star]))
     me1 = np.array(np.asarray(obs.motion_emb)); me1[i_star, :ks[i_star]] = me1[i_star, :ks[i_star]][perm]
-    l1, g1 = loss_and_grads(params, _dc.replace(obs, motion_emb=jnp.asarray(me1)), actions)
-    emb_effect = (float(l0) != base_loss or grad_digest(g0) != base_dig) and (float(l1) != base_loss or grad_digest(g1) != base_dig)
+    l1, d1 = loss_digest(_dc.replace(obs, motion_emb=jnp.asarray(me1)))
+    emb_effect = (l0 != base_loss or d0 != base_dig) and (l1 != base_loss or d1 != base_dig)
     mp1 = np.array(np.asarray(obs.motion_pos)); mp1[i_star, :ks[i_star]] *= 1.5
-    l2, g2 = loss_and_grads(params, _dc.replace(obs, motion_pos=jnp.asarray(mp1)), actions)
-    pos_effect = grad_digest(g2) != base_dig
+    l2, d2 = loss_digest(_dc.replace(obs, motion_pos=jnp.asarray(mp1)))
+    pos_effect = d2 != base_dig
     # (c) 输入梯度：有效位 finite 且分组 L2 > 0，padding 位逐位 0
     gme, gmp = input_grads(params, obs, actions)
     gme = np.asarray(gme).astype(np.float64); gmp = np.asarray(gmp).astype(np.float64)
     in_ok = (np.isfinite(gme[mm]).all() and np.linalg.norm(gme[mm]) > 0 and np.all(gme[~mm] == 0)
              and np.isfinite(gmp[mm]).all() and np.linalg.norm(gmp[mm]) > 0 and np.all(gmp[~mm] == 0))
-    # (d) 参数梯度分组
-    gp = {jax.tree_util.keystr(kp): np.asarray(jax.device_get(v)).astype(np.float64) for kp, v in jax.tree_util.tree_flatten_with_path(base_grads.to_pure_dict())[0]}
+    # (d) 参数梯度分组（gp 已在 base 之后取回）
     gW2 = gp["['mem_encoder']['motion_encoder_static']['kernel']"]; gW1 = gp["['mem_encoder']['motion_pos_proj']['kernel']"]
     norms = {"W2_content[:768]": float(np.linalg.norm(gW2[:768])), "W2_pos[768:]": float(np.linalg.norm(gW2[768:])),
              "W1": float(np.linalg.norm(gW1)), "b1": float(np.linalg.norm(gp["['mem_encoder']['motion_pos_proj']['bias']"])),
