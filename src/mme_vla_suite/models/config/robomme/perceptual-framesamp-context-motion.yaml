@@ -1,0 +1,39 @@
+# motion memory 开启态（motion-memory-plan.md 第二部分 2.1）：与 perceptual-framesamp-context.yaml 的既有键逐项相同，
+# 唯一开关差异 motion.enabled: true。T3 open 侧固定传本文件名，禁止在同一文件上来回改开关（红线 16）。
+budget: 512
+num_views: 1
+token_per_image: 16
+streaming_obs_horizon: 16
+pool_type: mean
+use_pos_emb: true
+use_state_emb: false
+memory_feature:
+  img:
+    net: identity
+    input_dim: 2048
+  pos:
+    input_dim: 768
+    hidden_dim: 768
+  state:
+    input_dim: 8
+    hidden_dim: 512
+integration_type: context
+memory_token_dim: 2048
+representation_type: perceptual
+perceptual_memory:
+  type: frame_sampling
+motion:
+  enabled: true             # 总开关；关闭态文件为 false（两个新模块根本不创建）
+  dim: 768                  # = MotionJEPA config 的 motion.dim
+  budget: 96                # 运动路 memory 位置数。零截断；按 16 任务全集定标（stride 16 下全集最大需 85），见红线 8
+                            #   生产侧若合法数意外 >96 直接报错，不做最近 N 裁剪
+  stride: 16                # 段内绝对网格步长。独立配置键：默认取自 streaming_obs_horizon: 16（推理阶段一个 action chunk 的执行步数），
+                            #   但不自动跟随；加载时必须 == motion store 的 GRID_STRIDE
+  window_frames: 33
+  window_direction: forward # 前视：窗口 = [起点, 起点+32]，尾端 ≤ 当前帧
+  grid_origin: segment_start  # demo / exec 各自从段起点起算，窗口不跨界
+  store_path: v1-store/datasets/4task-motion-40ep/motion
+  source_run: wan-v8-filter10-72ep-a/checkpoint_epoch_72.pt#encoder   # 前向口径 = inference-example 口径 A，由复制件 + SOURCE_PIN.json 固定
+  pos_dim: 256              # motion_pos 维数 = 起点帧 PosEmb3D 时间码（sin 128 + cos 128），不含 xy
+  frame_size: 256           # 在线原始帧边长（h == w）；须 == motion store 的 FRAME_SIZE
+  online_gpu: 1             # 在线编码进程（sidecar）的 CUDA_VISIBLE_DEVICES；训练不读
