@@ -246,6 +246,13 @@ class WorkerProcessor(ShardProcessor):
     `_process_episode` 与 run_shard 的计数口径原样继承；h5 句柄按文件懒开、整个 worker 复用。
     """
 
+    def episode_is_complete(self, ep: dict) -> bool:
+        """worker 模式下另一 worker 会持续往 data/ 写 pkl，分片模式的一次性快照会把别人刚完成的
+        episode 判成「不完整」→ claim → purge → 重做一遍（2026-09-03 首跑实测两 worker 各做了 33 个）。
+        这里每次判定前丢弃快照重新 scandir（40 ep 库只有 1 万个 pkl，秒内）。"""
+        self._exec_ids_cache = None
+        return super().episode_is_complete(ep)
+
     def run_worker(self, episodes: list[dict], *, label: str, resume: bool, report_every: int) -> dict:
         mem_buffer = MemoryBuffer(
             num_views=1,

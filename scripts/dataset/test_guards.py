@@ -565,3 +565,22 @@ def test_wan_common_list_segments_matches_index() -> None:
                 exp.append((ms.segment_key(e.h5_file, e.raw_ep_idx, seg), s.num_grid, s.seg_len))
     assert [(x["key"], x["num_grid"], x["seg_len"]) for x in segs] == exp
     assert [x["key"] for x in wc.lpt_order(segs)][0] == "T_ep2_exec"
+
+
+def test_worker_processor_refreshes_completeness_snapshot(tmp_path: pathlib.Path) -> None:
+    """分片模式缓存一次 data/ 快照；worker 模式下另一 worker 后写的 pkl 必须被看见，否则会 purge 重做。"""
+    from build_shard import ShardProcessor, WorkerProcessor
+
+    ep = _mini_shard_lib(tmp_path, num_timesteps=3, exec_offset=5, exec_samples=2, kept_content="[[0,0,1]]")
+    shard = ShardProcessor(str(tmp_path / "raw"), str(tmp_path))
+    worker = WorkerProcessor(str(tmp_path / "raw"), str(tmp_path))
+    assert shard.episode_is_complete(ep) and worker.episode_is_complete(ep)
+    # 「另一 worker」此刻才写出 episode 1 的产物
+    d = tmp_path / "features" / "episode_1"
+    d.mkdir()
+    np.save(d / "token_emb_0.npy", np.zeros(2, dtype=np.float32))
+    (d / "kept_indices.json").write_text("[[0,0,1]]")
+    (tmp_path / "data" / "9.pkl").write_bytes(pickle.dumps({"epis_idx": 1}))
+    ep1 = {"global_episode_idx": 1, "num_timesteps": 1, "exec_sample_offset": 9, "exec_samples": 1}
+    assert shard.episode_is_complete(ep1) is False, "分片模式快照语义保持不变"
+    assert worker.episode_is_complete(ep1) is True, "worker 模式必须刷新快照"
