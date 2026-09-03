@@ -32,7 +32,7 @@ cd "${REPO_ROOT}"
 # ── policy server（后台；开启态由 create_trained_policy 自动起 sidecar，CUDA_VISIBLE_DEVICES 只作用于 policy 进程，sidecar 用 motion.online_gpu）──
 CUDA_VISIBLE_DEVICES="${POLICY_GPU}" XLA_PYTHON_CLIENT_MEM_FRACTION="${POLICY_MEM_FRACTION:-0.6}" UV_LINK_MODE=copy PYTHONUNBUFFERED=1 \
   uv run --no-sync python scripts/training/serve_policy.py --seed="${SEED}" --port="${PORT}" \
-    policy:checkpoint --policy.dir="${CKPT}" --policy.config=mme_vla_suite > "${SERVER_LOG}" 2>&1 &
+    policy:checkpoint --policy.dir="${CKPT}" --policy.config=mme_vla_suite >> "${SERVER_LOG}" 2>&1 &
 SERVER_PID=$!
 echo "server pid=${SERVER_PID} log=${SERVER_LOG}"
 cleanup() { if kill -0 "${SERVER_PID}" 2>/dev/null; then kill "${SERVER_PID}"; sleep 2; kill -9 "${SERVER_PID}" 2>/dev/null || true; fi; }
@@ -46,7 +46,7 @@ done
 echo "server 端口就绪 $(date +%T)"
 # ── eval（前台，micromamba robomme 环境；仿真在 SIM_GPU）──
 ( cd examples/robomme && CUDA_VISIBLE_DEVICES="${SIM_GPU}" PYTHONUNBUFFERED=1 "${ROBOMME_PY}" eval.py --args.port="${PORT}" --args.model_seed="${SEED}" \
-    --args.policy_name="${RUN}" --args.model_ckpt_id=999 --args.only_tasks="${TASKS}" --args.save_dir="${V1_STORE}/evaluation" ) 2>&1 | tee "${EVAL_LOG}"
+    --args.policy_name="${RUN}" --args.model_ckpt_id=999 --args.only_tasks="${TASKS}" --args.save_dir="${V1_STORE}/evaluation" ) 2>&1 | tee -a "${EVAL_LOG}"
 RC="${PIPESTATUS[0]}"
 echo "EVAL_RC=${RC}"
 # 汇总 TIMING
