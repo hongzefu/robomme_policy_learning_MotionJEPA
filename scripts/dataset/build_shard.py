@@ -376,8 +376,8 @@ def main() -> None:
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--raw_dir", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--shard_idx", type=int, required=True)
-    ap.add_argument("--num_shards", type=int, required=True)
+    ap.add_argument("--shard_idx", type=int, default=None, help="分片模式必填；--worker-mode 下由 --worker-idx 派生")
+    ap.add_argument("--num_shards", type=int, default=None, help="分片模式必填；--worker-mode 下由 --num-workers 派生")
     ap.add_argument("--subset", default="", help="scan_manifest.py sample 的产物；给了就只跑这批")
     ap.add_argument("--resume", action="store_true", help="跳过已完整落盘的 episode")
     ap.add_argument("--require_empty_output", action="store_true", help="首次提交用：输出库必须为空")
@@ -391,6 +391,8 @@ def main() -> None:
         if not args.worker_label or args.num_workers < 1 or not 0 <= args.worker_idx < args.num_workers:
             raise SystemExit("--worker-mode 需要 --worker-label 与合法的 --worker-idx/--num-workers")
         args.shard_idx, args.num_shards = args.worker_idx, args.num_workers
+    elif args.shard_idx is None or args.num_shards is None:
+        raise SystemExit("分片模式需要 --shard_idx 与 --num_shards（或改用 --worker-mode）")
 
     manifest = load_manifest(args.manifest)
     if manifest["totals"]["episodes"] == 0:
