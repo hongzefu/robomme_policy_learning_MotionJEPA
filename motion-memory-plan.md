@@ -1293,7 +1293,7 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
   scalars sha `3aee70eb…` 与 reference 相同，`BASELINE_ENV` 三次 check 全 PASS；`g0_gate.py` t2 分支漏定义 `_REPO_ROOT` 的 bug 顺手修复（`fix:`）。留档 `docs/training-doc/motion-t2-cand/result.md`。
 - **1.6 吞吐（dataloader-only b64，本机 NVMe、页缓存，只看差值）**：关闭态 w4c6 54.2 / w8c10 54.6 样本/s，开启态 w4c6 51.6 / w8c10 52.0 样本/s（开启态慢 4–5%），
   每批 pickle 载荷 262.3 MB → 287.6 MB（+25.3 MB = 64 × (96×768 + 96×256) × 4 B + mask + mem_order）；Pipe 微基准随 `v1-store/reports/motion/dataloader_bench.json` 回填。
-- 进行中：合入 S3（`s2-dev`）→ P5 → A22 → T3。
+- 进行中：A22（`motion-a22-grad`，`run_dtype_grad.sh` 三定点 batch，对 `v1-dtype-p5-grad` 的 grad_summary）→ T3。
 
 ### S3 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-p5-online/`，在线观察归 T3 两侧 run）
 
@@ -1311,7 +1311,11 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
 - **实施中修正**：`add_buffer` 运动路初版先记 `exec_start_idx` 再校验帧尺寸，坏批留下半截状态（P2 坏输入用例暴露）→ 改为先全部校验、后写状态。
 - **P5 脚本 stub 试跑发现的环境约束**：CPU jax 算的 `PosEmb3D` 4x4 表与库内 GPU 生成表 max abs 6.1e-5、22% 元素不等（`compare_online_memory.py` 的 `POS_TABLE` 三方逐位是在 GPU 上过的），
   P5 正式跑主进程 jax 必须在 GPU（GPU0，`XLA_PYTHON_CLIENT_MEM_FRACTION=0.2`），sidecar 独占 GPU1；stub 试跑 3 条 episode `ONLINE_START_SET=PASS steps=55`。
-- 待做：P5 真编码器（T1 释放 GPU 后，`docs/training-doc/motion-p5-online/launch.md`）；`T3_EVAL_OBS`（T3 两侧 checkpoint 就绪后）。
+- **合入**：`s2-dev` 以 `aef40c6` 合入 `v2-motionmem`，主树重跑 P1–P4 全 PASS。
+- **P5 PASS**（`motion-p5-online`，HEAD `aef40c6`，15:17–15:29，sidecar GPU1 / 主进程 jax GPU0）：`ONLINE_ENC_BITEXACT=PASS compared=772 mismatches=0 rows_total=772 covered=772`、
+  `ONLINE_START_SET=PASS steps=738`、`ONLINE_POS=PASS`、`ONLINE_ORDER=PASS steps=738`、`PROVENANCE=PASS`；每窗 880.7 ms（811–891）、首批 demo 3/6/9/12 窗 = 2.7/5.5/8.2/11.1 s、
+  后续每批 add_buffer 826 ms（帧路零特征，不含 SigLIP）；sidecar 就绪 7.0 s。留档 `docs/training-doc/motion-p5-online/result.md`。
+- 待做：`T3_EVAL_OBS`（T3 两侧 checkpoint 就绪后，server 端 `add_buffer_time_ms` / `infer_time_ms` 一并记）。
 
 **S4 删除的直接后果：motion token 的设计与注入方式定死。** 原本要靠消融比较的变体全部不再存在，下面五条从此就是唯一口径（依据分别在 2.2、2.1、2.3–2.4、3.1 与 3.4、3.4）：
 
