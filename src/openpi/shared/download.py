@@ -57,7 +57,10 @@ def maybe_download(url: str, *, force_download: bool = False, **kwargs) -> pathl
     cache_dir = get_cache_dir()
 
     local_path = cache_dir / parsed.netloc / parsed.path.strip("/")
-    local_path = local_path.resolve()
+    # ⚠ 不在这里 resolve()：v2-motionmem 起 OPENPI_DATA_HOME 下的 big_vision/ 等是指向 turbo 归档的只读 symlink，
+    # resolve() 会落到 symlink 目标（另一棵目录树），随后 _should_invalidate_cache 的 relative_to(cache_dir) 必炸
+    # （ValueError: is not in the subpath）。缓存失效判定用未解析的逻辑路径；返回值仍 resolve()，与原契约相同。
+    # 纯路径处理，不涉任何数值路径（2026-09-03 A21 起跑实测踩中）。
 
     # Check if the cache should be invalidated.
     invalidate_cache = False
@@ -65,7 +68,8 @@ def maybe_download(url: str, *, force_download: bool = False, **kwargs) -> pathl
         if force_download or _should_invalidate_cache(cache_dir, local_path):
             invalidate_cache = True
         else:
-            return local_path
+            return local_path.resolve()
+    local_path = local_path.resolve()
 
     try:
         lock_path = local_path.with_suffix(".lock")
