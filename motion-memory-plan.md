@@ -1299,7 +1299,10 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
   意外：`run_dtype_grad.sh` 默认 `GL_DATASET=4task-gl`（legacy）被 packed 模式拒绝，改传 `DATASET_PATH=4task-gl-framesamp`。
 - **T3_COMMON_INIT PASS**（15:51，GPU 双卡同进程初始化两态）：`T3_COMMON_INIT=PASS common_mismatches=0 open_only_params=4 open_only_ema=4 open_only_opt=8 closed_only=0 n_leaves_closed=177 n_leaves_open=193`，
   reference 冻结于 `v1-store/reports/motion/t3_common_init_reference.json`。
-- 进行中：`motion-t3-closed`（HEAD `25e066c`，15:53 起，1000 步）→ `motion-t3-open` → 四层闸门 → `T3_EVAL_OBS`。`motion_gates_model.py` 旧入口 `main()` 先于扩展入口执行、拒掉 `--gate t3*`，已删旧入口（`fix:`）。
+- **motion-t3-closed 完成**（HEAD `25e066c`，15:54–16:45，1000 步，`BENCH_PASS`）：loss 全有限（0.5920 → 0.0283，末 200 步均值 0.0316）、`n_keys=12` / `n_leaves=177`、
+  `T3_INIT_MATCH=PASS`（177 叶命中 reference）、`T3_TRACE_PREFLIGHT=PASS samples=112 empty=8 k_ge2=104 video=True`；最终 EMA checkpoint 999 保存于
+  `v1-store/train-runs/motion-t3-closed-final/`。意外：驱动脚本收尾无条件 `rm -rf` run 目录，靠看门狗硬链接保出 999，脚本已修（`702009c`）。留档 `docs/training-doc/motion-t3-closed/result.md`。
+- 进行中：`motion-t3-open`（HEAD `702009c`，16:49 起，1000 步）→ `t3verifyinit`（open）/ `t3trace` / `t3mechanism` / `t3phase` → `T3_EVAL_OBS`。`motion_gates_model.py` 旧入口 `main()` 先于扩展入口执行、拒掉 `--gate t3*`，已删旧入口（`fix:`）。
 
 ### S3 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-p5-online/`，在线观察归 T3 两侧 run）
 
