@@ -1266,6 +1266,28 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
   产物字节相同、白干一倍，修后重跑 20+20 个 episode）；链 B 首次 D3 因 provenance 键遗漏 FAIL。
 - **1.6 吞吐评估**留到 S2（dataloader 微基准需要带四个 motion 键的 `__getitem__`）。
 
+### S2 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-{a21-g0b-replay,t2-ref,t1-closed,t2-cand,t3-closed,t3-open}/`）
+
+- **S2_BASE = `c5925d9`**（commitV6.4）。改码在 git worktree `v1-store/worktrees/s2-dev`（分支 `s2-dev`）内进行，主树同时跑 A21 与 T2 reference；
+  合入为 commitV6.5 `06220c4`（5.1 一览表 21 项全部落地；`mem_encoder.py` 零改动、`even_sampling_indices` 函数体零改动）。
+- **A21**：`motion-a21-g0b-replay` `G0_EQ=PASS`，`scalars_hex.tsv` sha256 命中 `c799a0b2…`（第六份同值）；前两次起跑失败——vendored `download.maybe_download`
+  在 symlink 资产上 `resolve()` 后 `relative_to` 崩（`fix:` `7ec7e49`，纯路径处理）、脏树（未跟踪 open YAML）主动重起。
+  与计划文字一处偏差：`--dataset-path` 用 `4task-gl-framesamp`（commitV4.1 起 legacy 源根不可读，按 G3 先例）。
+- **T2 reference**：`motion-t2-ref` 300 步，记录步集 {0,100,200,299} / {0,1,2,100,200,299}，`n_leaves=177`、`n_keys=12`、index n=2472，
+  `scalars_sha256 3aee70eb…`，`t2_reference_manifest.json` + `BASELINE_MANIFEST.json`，`BASELINE_ENV=PASS`（第一次 check）。
+- **M1–M5 全 PASS（CPU）**：`MOTION_DELIVERY=PASS samples=11530 mismatches=0`（A19：中位 11 / 均值 11.46 / 最大 34 / 零起点 5.55% / 填充率 11.9%，与 2.3 的 40 ep 库口径一致）；
+  `MEM_ORDER=PASS cases=10000 mismatches=0 same_object=1 imports=['numpy']`；`MOTION_ENC=PASS bf16_ulp_max=0 frame_bitexact=1`、`MEM_GATHER=PASS perms=20 bad_order_raises=3`；
+  `MASK_INVARIANCE=PASS`、`GRAD_LEAK=PASS`、`ORDER_EFFECT=PASS max_abs_diff_parallel_vs_interleaved=5.636e-02`、`ZERO_MOTION_EQUIV=PASS max_abs_diff=0.000e+00`；
+  `MOTION_PLUMBING=PASS negatives=16`。
+- **A13 / A15 / A17 / A14 旁证**：`CLOSED_EQUIV=PASS samples=11 keys=15`（S2_BASE 树 vs 新代码树：样本全键与 collate batch 全键 raw sha 逐键相同，四个新键存在且为 None；
+  gemma dummy 变体 `nnx.Rngs(0)` init 下 `embed_memory` / `embed_prefix` 四返回逐位、全部参数叶初始化逐位、`feature_encoder` 四叶两态相同；`mem_encoder.py` 零改动、
+  `even_sampling_indices` 零改动、`sampling.py` import 面只有 numpy、四字段声明序正确、新参数名不含 img）。开启态比关闭态恰多 3,345,152 参数（4 叶）。
+- **A20 越界 → 观察项（用户 2026-09-03 拍板）**：生产 2048 维、随机 init 下 ‖motion_tok‖/‖mem_tok‖ 均值 **0.166**（60 个非空样本，0.148–0.184；帧路 163.6、运动路 27.1），
+  低于 [0.3, 3.0]。根因：MotionJEPA motion token rms 1.06 vs SigLIP 4×4 特征 rms 3.93，且 768 维 vs 2048 维，线性层输出范数 ∝ √(维数×rms²)。
+  用户选择不加缩放 / RMSNorm、参数树保持 193 叶；由 T3 的 `mem_enc_norm` 与 `T3_MECHANISM` 分路梯度观察运动路是否被消费。
+- **1.6 吞吐**：dataloader-only b64 微基准（本机 NVMe、40 ep 库全在页缓存，只看开 / 关差值）结果随 S2 收官回填。
+- 进行中：T1 `motion-t1-closed`（HEAD `3b02f18`）→ T2 candidate → A22 → T3。
+
 **S4 删除的直接后果：motion token 的设计与注入方式定死。** 原本要靠消融比较的变体全部不再存在，下面五条从此就是唯一口径（依据分别在 2.2、2.1、2.3–2.4、3.1 与 3.4、3.4）：
 
 1. **起点怎么选（2.2）**：起点钉死在段内绝对网格上，段起点加 16 的整数倍；demo 段和 exec 段各自从自己的段起点数起，窗口不跨段；当前帧只决定哪些起点已经看得见，起点本身不随当前帧平移。stride 16 已由红线 14 冻结。
