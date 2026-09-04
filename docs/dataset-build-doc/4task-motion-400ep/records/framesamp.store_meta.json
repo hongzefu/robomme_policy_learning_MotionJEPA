@@ -1,0 +1,603 @@
+{
+ "schema": 1,
+ "layout": "framesamp-4x4-v1",
+ "status": "verified",
+ "byte_order": "little",
+ "array_order": "C",
+ "bf16_encoding": "ml_dtypes.bfloat16 (1s+8e+7m)",
+ "tables": {
+  "image_emb_4x4": {
+   "row_shape": [
+    16,
+    2048
+   ],
+   "dtype": "bfloat16",
+   "row_bytes": 65536,
+   "num_rows": 123044,
+   "part_dir": "image_emb_4x4"
+  },
+  "pos_emb_4x4": {
+   "row_shape": [
+    16,
+    768
+   ],
+   "dtype": "float32",
+   "row_bytes": 49152,
+   "num_rows": 586,
+   "relpath": "pos_emb_4x4.f32.bin",
+   "byte_count": 28803072,
+   "sha256": "3176ac09d063295fcd520339a7c89d5d3cb02e9af48e01e3ad1e9df7982b9972"
+  },
+  "state_emb": {
+   "row_shape": [
+    8
+   ],
+   "dtype": "float32",
+   "row_bytes": 32,
+   "num_rows": 123044,
+   "relpath": "state_emb.f32.bin",
+   "byte_count": 3937408,
+   "sha256": "80ecd422252649171fd4d98845cb16cb7aa65008a9e48c4f7d1b255e17632a86"
+  }
+ },
+ "num_rows": 123044,
+ "num_exec_samples": 101066,
+ "num_pos_rows": 586,
+ "manifest_sha256": "92fa17e97fba9434ee75302de12556319d8ce6d3feeb3adb9a397e830f477223",
+ "manifest_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/meta/episode_manifest.json",
+ "source_dataset_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/source",
+ "source_provenance_sha256": "818b292c2d8e20694646b3af4a2e10fcbf84f4b1b54be430913732393a8960dd",
+ "source_spot_sha256": {
+  "scheme": "8-equidistant-npy+8-equidistant-pkl-headtail1MiB-blake2b128",
+  "entries": [
+   {
+    "relpath": "data/0.pkl",
+    "size": 395440,
+    "digest": "600ba083de96145719dd44e78991a9f9"
+   },
+   {
+    "relpath": "data/101065.pkl",
+    "size": 395627,
+    "digest": "beb534fed2a84cdade79c8a90658320a"
+   },
+   {
+    "relpath": "data/14437.pkl",
+    "size": 395504,
+    "digest": "d0c7679362dd8477d4317b8097ec36da"
+   },
+   {
+    "relpath": "data/28875.pkl",
+    "size": 395633,
+    "digest": "4cd6f2ddb7162eaa75c50bbccc027165"
+   },
+   {
+    "relpath": "data/43313.pkl",
+    "size": 395571,
+    "digest": "85b782cd4f69d1145f8629ab5db2ec1c"
+   },
+   {
+    "relpath": "data/57751.pkl",
+    "size": 395570,
+    "digest": "3d29d655d5a9f7f169c0ff17ac7f057a"
+   },
+   {
+    "relpath": "data/72189.pkl",
+    "size": 395621,
+    "digest": "d8c06d5d119dfa0539ea0c499ff79b3e"
+   },
+   {
+    "relpath": "data/86627.pkl",
+    "size": 395615,
+    "digest": "31512fa0eb27b51ac1954bfc7cb186a7"
+   },
+   {
+    "relpath": "features/episode_0/token_emb_0.npy",
+    "size": 602951,
+    "digest": "49191c6ff5d044498501c8c8526b6e10"
+   },
+   {
+    "relpath": "features/episode_120/token_emb_137.npy",
+    "size": 602951,
+    "digest": "18120b010ece4b55e04bbc172d05a96c"
+   },
+   {
+    "relpath": "features/episode_165/token_emb_167.npy",
+    "size": 602951,
+    "digest": "435f639aacca3179c52653bcfd3616f1"
+   },
+   {
+    "relpath": "features/episode_215/token_emb_262.npy",
+    "size": 602951,
+    "digest": "c3820a266cca311036e14c5a1203b22f"
+   },
+   {
+    "relpath": "features/episode_298/token_emb_131.npy",
+    "size": 602951,
+    "digest": "9a15572491a9b080e1b145a79b933205"
+   },
+   {
+    "relpath": "features/episode_350/token_emb_58.npy",
+    "size": 602951,
+    "digest": "b62bdf711c276afc7e0151b4c053d7ad"
+   },
+   {
+    "relpath": "features/episode_399/token_emb_428.npy",
+    "size": 602951,
+    "digest": "23a6277df7d151b6736ef742e1240c3d"
+   },
+   {
+    "relpath": "features/episode_65/token_emb_136.npy",
+    "size": 602951,
+    "digest": "edcd3418077721137e7d19bf3e9f282b"
+   }
+  ]
+ },
+ "manifest_scope": "full",
+ "parts": [
+  {
+   "index": 0,
+   "path": "image_emb_4x4/part_000.bf16.bin",
+   "start_row": 0,
+   "num_rows": 4035,
+   "bytes": 264437760,
+   "sha256": "f17a4f1f64007f8b8239e44fd6c59688929afbbcef40a8ccdf3e3a54cc1d1276",
+   "head_tail_digest": "71c71d828f071419509a9ae7cb9797e9",
+   "full_covered": false,
+   "episodes": [
+    0,
+    13
+   ]
+  },
+  {
+   "index": 1,
+   "path": "image_emb_4x4/part_001.bf16.bin",
+   "start_row": 4035,
+   "num_rows": 3950,
+   "bytes": 258867200,
+   "sha256": "8b35dbf0cac4c417cff9bd026980a9c610a7279eebba11b226e8b0efbc00cf28",
+   "head_tail_digest": "9181736bb4a750f086896bc63ae5688b",
+   "full_covered": false,
+   "episodes": [
+    14,
+    28
+   ]
+  },
+  {
+   "index": 2,
+   "path": "image_emb_4x4/part_002.bf16.bin",
+   "start_row": 7985,
+   "num_rows": 4016,
+   "bytes": 263192576,
+   "sha256": "02e879c52b82a80d78e6e06bd45d4f111ec5f9b05427957eb4ac55d3700d0fa3",
+   "head_tail_digest": "84cb910f297d436d30e74ac8d4011198",
+   "full_covered": false,
+   "episodes": [
+    29,
+    43
+   ]
+  },
+  {
+   "index": 3,
+   "path": "image_emb_4x4/part_003.bf16.bin",
+   "start_row": 12001,
+   "num_rows": 4171,
+   "bytes": 273350656,
+   "sha256": "cfd4361ada94a634e96e0868f5ef2fc594d83b16516a4605242952bf4a0e0888",
+   "head_tail_digest": "589383ebda6628b8bd46521520cb31a2",
+   "full_covered": false,
+   "episodes": [
+    44,
+    59
+   ]
+  },
+  {
+   "index": 4,
+   "path": "image_emb_4x4/part_004.bf16.bin",
+   "start_row": 16172,
+   "num_rows": 4173,
+   "bytes": 273481728,
+   "sha256": "faa8708ec6cb4f776dda8b68ad1ccf570ee64438d1758786cedeedc77ba0de27",
+   "head_tail_digest": "8403565054a006fc639c88fb6255a199",
+   "full_covered": false,
+   "episodes": [
+    60,
+    75
+   ]
+  },
+  {
+   "index": 5,
+   "path": "image_emb_4x4/part_005.bf16.bin",
+   "start_row": 20345,
+   "num_rows": 4158,
+   "bytes": 272498688,
+   "sha256": "c4af5cd0e5e497d80bcdad3448092f34828412a7320d69b223facdc7de555d7d",
+   "head_tail_digest": "0c2dbf3634e4c67b4a0c1b4c64d93808",
+   "full_covered": false,
+   "episodes": [
+    76,
+    91
+   ]
+  },
+  {
+   "index": 6,
+   "path": "image_emb_4x4/part_006.bf16.bin",
+   "start_row": 24503,
+   "num_rows": 4072,
+   "bytes": 266862592,
+   "sha256": "965d6bd88991728979dc2027de1999336b466f72ee919dbb572d360c9f8aadd3",
+   "head_tail_digest": "e6f37a4b6427dffb8d9e953d6b79f182",
+   "full_covered": false,
+   "episodes": [
+    92,
+    103
+   ]
+  },
+  {
+   "index": 7,
+   "path": "image_emb_4x4/part_007.bf16.bin",
+   "start_row": 28575,
+   "num_rows": 4115,
+   "bytes": 269680640,
+   "sha256": "73d27aca7f7ff7fb055fc827ef2737d14d6227511da5bb2af52512794f7c74a3",
+   "head_tail_digest": "e5feb057e181ed6cc31e2528627df1de",
+   "full_covered": false,
+   "episodes": [
+    104,
+    113
+   ]
+  },
+  {
+   "index": 8,
+   "path": "image_emb_4x4/part_008.bf16.bin",
+   "start_row": 32690,
+   "num_rows": 4011,
+   "bytes": 262864896,
+   "sha256": "8a280814aff91a27ce4bca3f26d27d97aa3fdb44a6d2319517f5476a99d9d8d7",
+   "head_tail_digest": "36d748d61174135625309822ec50e944",
+   "full_covered": false,
+   "episodes": [
+    114,
+    123
+   ]
+  },
+  {
+   "index": 9,
+   "path": "image_emb_4x4/part_009.bf16.bin",
+   "start_row": 36701,
+   "num_rows": 3858,
+   "bytes": 252837888,
+   "sha256": "225c27584243523676529f15f993f4a8c6cb7d0dc486f67f916e3bb338f9c3fa",
+   "head_tail_digest": "b9945011249321f587abc64112988ec7",
+   "full_covered": false,
+   "episodes": [
+    124,
+    134
+   ]
+  },
+  {
+   "index": 10,
+   "path": "image_emb_4x4/part_010.bf16.bin",
+   "start_row": 40559,
+   "num_rows": 3868,
+   "bytes": 253493248,
+   "sha256": "21d463a835f9b68ed77ea445c2ff7b4b4d1fa1cac526dccc7b4ff27572997c71",
+   "head_tail_digest": "cc97b1e1a555d0fb508eff4ce8db136c",
+   "full_covered": false,
+   "episodes": [
+    135,
+    144
+   ]
+  },
+  {
+   "index": 11,
+   "path": "image_emb_4x4/part_011.bf16.bin",
+   "start_row": 44427,
+   "num_rows": 3997,
+   "bytes": 261947392,
+   "sha256": "3435c5a830c9354892a9b6cb45763f23120b97295f47381265555488c44904b3",
+   "head_tail_digest": "c8bec302651d983ac917ae96b284ef77",
+   "full_covered": false,
+   "episodes": [
+    145,
+    154
+   ]
+  },
+  {
+   "index": 12,
+   "path": "image_emb_4x4/part_012.bf16.bin",
+   "start_row": 48424,
+   "num_rows": 4141,
+   "bytes": 271384576,
+   "sha256": "293ecaf74b8692a0eb4a591645f019300bb0621943dff87f19ae3822a4690a74",
+   "head_tail_digest": "94da2059fd5c36971c4da227f714d877",
+   "full_covered": false,
+   "episodes": [
+    155,
+    164
+   ]
+  },
+  {
+   "index": 13,
+   "path": "image_emb_4x4/part_013.bf16.bin",
+   "start_row": 52565,
+   "num_rows": 4093,
+   "bytes": 268238848,
+   "sha256": "7d7449a4d568a9f648833a47d9432865b2e85f5a8b716ed0b9bbb706da09a527",
+   "head_tail_digest": "5df1405b9eceeb14ff8d214bfae1c403",
+   "full_covered": false,
+   "episodes": [
+    165,
+    174
+   ]
+  },
+  {
+   "index": 14,
+   "path": "image_emb_4x4/part_014.bf16.bin",
+   "start_row": 56658,
+   "num_rows": 4207,
+   "bytes": 275709952,
+   "sha256": "0fc6a0eb2df243685ad4a5feaf753a40f88d7b153a6eb61e21af87c3074f7924",
+   "head_tail_digest": "a857b1a75cb75dfb0b5aed63608c4867",
+   "full_covered": false,
+   "episodes": [
+    175,
+    185
+   ]
+  },
+  {
+   "index": 15,
+   "path": "image_emb_4x4/part_015.bf16.bin",
+   "start_row": 60865,
+   "num_rows": 4020,
+   "bytes": 263454720,
+   "sha256": "286515a70b76d74ecc1223582d4e3b06097c0a9c484e66a3cebb9044874841db",
+   "head_tail_digest": "62f0a2d99af9ffe5e9d70a981181d2b4",
+   "full_covered": false,
+   "episodes": [
+    186,
+    195
+   ]
+  },
+  {
+   "index": 16,
+   "path": "image_emb_4x4/part_016.bf16.bin",
+   "start_row": 64885,
+   "num_rows": 3963,
+   "bytes": 259719168,
+   "sha256": "a0825b86d5252453154badcfda57951cbcb151f603223308ee83c5545d8bf6b3",
+   "head_tail_digest": "05ac30c00b790e03f3ef1bc8e707513d",
+   "full_covered": false,
+   "episodes": [
+    196,
+    208
+   ]
+  },
+  {
+   "index": 17,
+   "path": "image_emb_4x4/part_017.bf16.bin",
+   "start_row": 68848,
+   "num_rows": 4056,
+   "bytes": 265814016,
+   "sha256": "f166d7bf78bfbfd5911c3d43a23f65118432780ef3325d94dd44cce4ed5cb1b6",
+   "head_tail_digest": "d9a823c379794c7f5b30230ce461c762",
+   "full_covered": false,
+   "episodes": [
+    209,
+    227
+   ]
+  },
+  {
+   "index": 18,
+   "path": "image_emb_4x4/part_018.bf16.bin",
+   "start_row": 72904,
+   "num_rows": 3943,
+   "bytes": 258408448,
+   "sha256": "532eece0fae0092efbd8a17c29b71c0f87ed7cd8c347b824b2c2f15c52c423e8",
+   "head_tail_digest": "5bf9d813648b8d19306e24b45d4bffff",
+   "full_covered": false,
+   "episodes": [
+    228,
+    246
+   ]
+  },
+  {
+   "index": 19,
+   "path": "image_emb_4x4/part_019.bf16.bin",
+   "start_row": 76847,
+   "num_rows": 3902,
+   "bytes": 255721472,
+   "sha256": "78dca312eb33526ec7f8cf8bb394a8cdcb2133c1b1a3ede130c10669bbd1ca72",
+   "head_tail_digest": "39f917af116635cd00357ad0bac92e46",
+   "full_covered": false,
+   "episodes": [
+    247,
+    264
+   ]
+  },
+  {
+   "index": 20,
+   "path": "image_emb_4x4/part_020.bf16.bin",
+   "start_row": 80749,
+   "num_rows": 4052,
+   "bytes": 265551872,
+   "sha256": "ad740301c4d43ec6686dd0c5ba86f2c8f47685b9af64d03799de52dbb7b36dbd",
+   "head_tail_digest": "8845787ae995a9046cda56b87d002d99",
+   "full_covered": false,
+   "episodes": [
+    265,
+    283
+   ]
+  },
+  {
+   "index": 21,
+   "path": "image_emb_4x4/part_021.bf16.bin",
+   "start_row": 84801,
+   "num_rows": 4085,
+   "bytes": 267714560,
+   "sha256": "3eb61aa20f81b371d0fe0c8d7f8683b6b9e3192c0be51e5cafbf9e414177a44f",
+   "head_tail_digest": "92889f552f0ab6619dccb88f3f87ce6e",
+   "full_covered": false,
+   "episodes": [
+    284,
+    301
+   ]
+  },
+  {
+   "index": 22,
+   "path": "image_emb_4x4/part_022.bf16.bin",
+   "start_row": 88886,
+   "num_rows": 4149,
+   "bytes": 271908864,
+   "sha256": "e451d316a7c1852d2a0ec4247d2151819b389f729f584dab943484bdd756476a",
+   "head_tail_digest": "0ffec599c5c964394124cb2fa774eef3",
+   "full_covered": false,
+   "episodes": [
+    302,
+    312
+   ]
+  },
+  {
+   "index": 23,
+   "path": "image_emb_4x4/part_023.bf16.bin",
+   "start_row": 93035,
+   "num_rows": 4150,
+   "bytes": 271974400,
+   "sha256": "1ccea7f3727f156346202306da55581ef6f91794209b64bb418f0b9e6afb6f06",
+   "head_tail_digest": "143d841147e3e6a829f14424d3223f48",
+   "full_covered": false,
+   "episodes": [
+    313,
+    324
+   ]
+  },
+  {
+   "index": 24,
+   "path": "image_emb_4x4/part_024.bf16.bin",
+   "start_row": 97185,
+   "num_rows": 4104,
+   "bytes": 268959744,
+   "sha256": "1a80ea9f73902370a4765d29f3862204abafd910e9daa065a5c57b304a9eac31",
+   "head_tail_digest": "460401df42856b66fda03209e8928082",
+   "full_covered": false,
+   "episodes": [
+    325,
+    336
+   ]
+  },
+  {
+   "index": 25,
+   "path": "image_emb_4x4/part_025.bf16.bin",
+   "start_row": 101289,
+   "num_rows": 3889,
+   "bytes": 254869504,
+   "sha256": "26cbf72a7d140bfdf54cea0fc2a7ff4b7c3e353c73f3115baf1c39cfae0261bc",
+   "head_tail_digest": "50824ba34682814d43278b75e9d2d559",
+   "full_covered": false,
+   "episodes": [
+    337,
+    348
+   ]
+  },
+  {
+   "index": 26,
+   "path": "image_emb_4x4/part_026.bf16.bin",
+   "start_row": 105178,
+   "num_rows": 3874,
+   "bytes": 253886464,
+   "sha256": "46ae8ece0d474e197dd149f0d9bc719aeebee5ee2f36bb8dd0d894e47e14bb22",
+   "head_tail_digest": "eaf159c9b65ca41ee0a695626a0fdfc4",
+   "full_covered": false,
+   "episodes": [
+    349,
+    359
+   ]
+  },
+  {
+   "index": 27,
+   "path": "image_emb_4x4/part_027.bf16.bin",
+   "start_row": 109052,
+   "num_rows": 4130,
+   "bytes": 270663680,
+   "sha256": "e005f4da138fe84df389e0f21dfcec1fae6801ba0e2251222afda046b1dfad67",
+   "head_tail_digest": "38230bcfd3d536dbb4d728f90d903eca",
+   "full_covered": false,
+   "episodes": [
+    360,
+    371
+   ]
+  },
+  {
+   "index": 28,
+   "path": "image_emb_4x4/part_028.bf16.bin",
+   "start_row": 113182,
+   "num_rows": 3859,
+   "bytes": 252903424,
+   "sha256": "eb41cdc83219fb4db043333c44eb9ac07c014526d4b89bc87490a7c00f7481e4",
+   "head_tail_digest": "26e2fe257ac734d9d6021092bd53dfb4",
+   "full_covered": false,
+   "episodes": [
+    372,
+    382
+   ]
+  },
+  {
+   "index": 29,
+   "path": "image_emb_4x4/part_029.bf16.bin",
+   "start_row": 117041,
+   "num_rows": 4010,
+   "bytes": 262799360,
+   "sha256": "e476ab28c9d9b59bcb2ab7d206fbf7e9c865766e10c15bdc665d7901fc1bdf57",
+   "head_tail_digest": "302a023c329e4e87115f7c14a2bad0be",
+   "full_covered": false,
+   "episodes": [
+    383,
+    393
+   ]
+  },
+  {
+   "index": 30,
+   "path": "image_emb_4x4/part_030.bf16.bin",
+   "start_row": 121051,
+   "num_rows": 1993,
+   "bytes": 130613248,
+   "sha256": "3035a3028fdf26ca2b5a0ee76212c6e154b95e1c2ac9952a62fcb212c42577bd",
+   "head_tail_digest": "0381838979c09931f705192b78b52489",
+   "full_covered": false,
+   "episodes": [
+    394,
+    399
+   ]
+  }
+ ],
+ "packer": {
+  "build_uuid": "fa07370313a5445e8e287cad946e77ae",
+  "host": "ip-10-242-11-177.us-west-2.compute.internal",
+  "git_commit": "8093ebda23ec566533067e319bab506baaf80de5",
+  "python": "3.11.15",
+  "numpy": "1.26.4",
+  "ml_dtypes": "0.4.1",
+  "reader": "decode",
+  "procs": 48,
+  "started_at": "2026-09-04T06:59:13",
+  "finished_at": "2026-09-04T06:59:18"
+ },
+ "verify": {
+  "scanned": 123044,
+  "mismatches": 0,
+  "sample": null,
+  "seed": null,
+  "procs": 48,
+  "reader": "decode",
+  "started_at": "2026-09-04T06:59:18",
+  "finished_at": "2026-09-04T06:59:20",
+  "conclusion": "VERIFY_PACK=PASS scanned=123044 mismatches=0"
+ },
+ "row_digests": {
+  "relpath": "meta/row_digests.blake2b.bin",
+  "algo": "blake2b-128",
+  "covered_rows": 123044,
+  "coverage": "image‖pos‖state 三键原始位串拼接（store 侧字节）",
+  "byte_count": 1968704,
+  "sha256": "2f9b1c384dc97d903c1580c7549bc6dea9478dbfeab377e3d42f03a7f77921a5"
+ }
+}

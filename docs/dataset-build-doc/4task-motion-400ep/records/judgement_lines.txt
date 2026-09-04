@@ -1,0 +1,31 @@
+FINALIZE_EXIT_CODE=0
+PACK_DONE=1 （pack.lock 保留，verify 回填后才释放——A.2）
+[m1 real] samples=101066 mismatches=0 有效数分布 {"n": 101066, "k_median": 9.0, "k_mean": 10.314339144717314, "k_max": 34, "k_p25": 5.0, "k_p75": 15.0, "k_p90": 20.0, "k_p95": 23.0, "k_p99": 27.0, "zero_frac": 0.06332495596936655, "fill_rate": 0.10744103275747202}
+A19_VALID_DIST=FAIL median=9.0 mean=10.31 max=34 zero_frac=0.0633 fill_rate=0.107
+MOTION_DELIVERY=FAIL samples=101066 mismatches=0 helper_checked=1863
+ORACLE_VAE=DONE windows=6832 frame_mismatches=0 metadata_mismatches=0 elapsed=3566s shards=8
+ORACLE_AGGREGATE=DONE kinds=vae shards=8
+WAN_BITEXACT=PASS compared=6832 frame_mismatches=0 latent_mismatches=0 metadata_mismatches=0 oracle_windows=6832
+VERIFY_PACK=PASS scanned=123044 mismatches=0
+STAGE_DONE stage=wan workers=6 items=600 elapsed=1639s
+STAGE_DONE stage=siglip workers=3 items=400 elapsed=551s
+STAGE_DONE stage=encode workers=7 items=600 elapsed=127s
+PACK_MOTION_DONE=1 （pack.lock 保留，verify 回填后才释放）
+VERIFY_MOTION=PASS scanned=6832 mismatches=0
+ORACLE_ENCODER=DONE rows=6832 elapsed=109s
+ENCODER_BITEXACT=PASS compared=6832 mismatches=0 order_ok=1 state_sha_ok=1 prov_ok=1 ckpt_ok=1 no_latent_stats_call=1 finite=1
+totals rows=6832 exec=5707 demo=1125
+A6_MANIFEST=PASS episodes=40 field_mismatches=0 manifest_sha_same=1 motion_index_sha256=74185921690cd26c…
+A7_BYTES=PASS segments=600 mismatches=0 table_rows=6832 table_ok=1
+A9_INDEXSET=PASS samples=500 mismatches=0
+A10_ROWS=PASS rows=6832 exec=5707 demo=1125 formula_or_rowbase_mismatches=0 expect=6832=5707+1125
+A8_TABLE_BITEXACT=PASS sampled=128 mismatches=0 rows_total=6832 ckpt=bae960373041629e…
+A9_ROWENC=PASS samples=500 rows=4611 unique_windows=3129 mismatches=0
+ORACLE_VAE=DONE shard=2/8 windows=642 frame_mismatches=0 metadata_mismatches=0 elapsed=937s
+ORACLE_VAE=DONE shard=0/8 windows=722 frame_mismatches=0 metadata_mismatches=0 elapsed=1047s
+ORACLE_VAE=DONE shard=4/8 windows=721 frame_mismatches=0 metadata_mismatches=0 elapsed=1051s
+ORACLE_VAE=DONE shard=5/8 windows=729 frame_mismatches=0 metadata_mismatches=0 elapsed=1056s
+ORACLE_VAE=DONE shard=6/8 windows=725 frame_mismatches=0 metadata_mismatches=0 elapsed=1071s
+ORACLE_VAE=DONE shard=3/8 windows=1045 frame_mismatches=0 metadata_mismatches=0 elapsed=1510s
+ORACLE_VAE=DONE shard=7/8 windows=1374 frame_mismatches=0 metadata_mismatches=0 elapsed=2023s
+ORACLE_VAE=DONE shard=1/8 windows=874 frame_mismatches=0 metadata_mismatches=0 elapsed=3566s

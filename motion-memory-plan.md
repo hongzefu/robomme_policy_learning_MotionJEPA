@@ -2186,3 +2186,55 @@ G0b r1 的 `run_meta.json` 记的入口是旧路径 `scripts/smoke-local/bench_t
 - **数据**：新库 `v1-store/datasets/4task-motion-40ep/`（`v1-store/` 内，不进 git，符合第 14 条）；MotionJEPA 仓库零写入；`v1-store/episode_manifest.json` 与旧库不动。
 - **在线评估**：多背一个 Wan VAE（PyTorch 2.9）常驻，延迟见 3.5；venv 隔离问题见 S3。
 - **不影响**：正在跑的 `v1-prod-100k` 全量 run（本计划一行代码都还没动）。
+
+---
+
+# 环境 B 复刻（2026-09-04，AWS 单机 8×A100-SXM4-80GB）
+
+> 本节只记结论与指向留档，不改上文任何正文。上文全部 S0–S3 结果是环境 A（2×RTX 6000 Ada + turbo）的口径；本节是同一条链路在环境 B（`AGENTS.md`「运行环境判定」）
+> 从零复刻的结果：用户要求「重新跑测试（训练类 ≤100 步）+ 构造四任务 × 100 episode 完整库 + 尽量用满 8 卡」。计划文件 `~/.claude/plans/stateless-sparking-zephyr.md`（已批准）。
+
+## 一、前置与代码适配
+
+- 环境 B 没有环境 A 的任何固化产物（`4task-gl*`、生产 norm_stats、`v1-prod-*` / `v1-dtype-p5-grad` / `G0b` 基线、turbo 上的 MotionJEPA 副本），也没有本机 `/data/hongzefu` 原件。
+  原始 H5 从公开集 `Yinpei/robomme_data_h5` 只下 4 个目标任务；**四个 h5 的 sha256 前缀与字节数与环境 A 留档全部命中**（同源，A5 结论可传递）。
+- 代码适配 `commitV6.12`（`8093ebd`，不触碰训练语义）：两份 `paths.sh` 加 `AWS_WORK_PREFIX`、`RAW_H5_DIR` / `MJ_REPO` 分叉与覆盖；`run_local.py` siglip `--no-sync`；
+  `oracle_driver.py` 分片 + `aggregate`；`check_baseline_env.py` 清单缺省 `None`；`run_2gpu_epoch_bench.sh` 的 `BENCH_GPUS`；`motion_gates_model.py` t3trace 步集由 `env.json` 推导；
+  `fetch_assets.py` 补写 `refs/main`（异地首次踩中）；`single_step_grad.py` / `test_padding_dtype.py` 的 `DTYPE_MANIFEST`；新增 `t3_smoke.py`、`compare_grad_summaries.py`；
+  两条守卫。之后 `fix:`（`cbf24e9`）给 `run_t3_eval_obs.sh` / `summarize_t3_eval_obs.py` 加 `RUN_PREFIX` / `CKPT_*` 覆盖。
+- 永久失效、改口径的项（第一部分五节 / 四节表一的对应行）：T1 / A21 → **T2 式同机对拍**（S2_BASE 旧码 worktree vs HEAD）；A22 → **两侧互核**（`GRAD_EQ`）；A5 → h5 sha 同源；
+  A11 / A12 / `crosscheck.py --vae_check` → 不做（对照物在 `/data` / turbo）；T3 1000 步 / T2 300 步 → 100 步；`T3_SMOKE` 有了脚本 emitter。
+
+## 二、结果总表（判定行原文见各留档）
+
+| 组 | 判定 | 留档 |
+|---|---|---|
+| 40 ep 测试库（同链路重建） | A2/A3/A4 探针、D1 ×2、D2（8 片）、D3、A6–A10 **全 PASS**；清单内容与环境 A 逐字相同（sha 差异只来自 `raw_dir`） | `docs/dataset-build-doc/4task-motion-40ep-aws/` |
+| CPU 组 | pytest 90 passed / 1 skipped（skip = 需 400 ep 清单的 fixture 用例，后以 `DTYPE_MANIFEST` 跑通）、M1–M5、P1–P4、`CLOSED_EQUIV`、`PROJECT_SELFTEST` **全 PASS** | 同上 result.md 三节 |
+| P5 | `ONLINE_ENC_BITEXACT=PASS compared=772` 等五行 **全 PASS**（sidecar A100 ≈1.42 s/窗） | `docs/training-doc/aws-p5-online/` |
+| T2（关闭态等价） | ref（旧码 c5925d9）/ cand（HEAD）100 步 scalars sha `85b8fe37…` 同、5 次 TrainState / 7 次输入摘要 / index 逐位同；gate 首次因 `CUDA_VISIBLE_DEVICES` 指纹 FAIL，cand 在 GPU0,1 重跑后 **`T2_EQ=PASS`** | `docs/training-doc/aws-t2-{ref,cand}-s100/` |
+| A22 式 | **`GRAD_EQ=PASS kinds=3 leaves=32 mismatches=0`**（400 ep 库 fixture） | `docs/training-doc/aws-a22-grad/` |
+| T3 | `T3_COMMON_INIT` / `T3_INIT_MATCH` / `T3_SMOKE`（100 步）/ `T3_TRACE_PREFLIGHT` / `T3_TOKEN_TRACE`（7 步 56 样本）**PASS**；`T3_PHASE_REPORT` 完整性过；**`T3_MOTION_CAUSAL` / `T3_MECHANISM` FAIL**（见三节） | `docs/training-doc/aws-t3-{closed,open}-s100/` |
+| T3_EVAL_OBS（尽力） | robomme 仿真环境在 `/scratch/hongze/micromamba/envs/robomme` 装成、`simple_test.py` 过；两侧各两片 × 10 集/任务 — 见 open 侧 result.md 四节 | `docs/training-doc/aws-t3-open-s100/` |
+| 400 ep 完整库 | `framesamp/` 123,044 行 / 101,066 exec（`VERIFY_PACK=PASS`）+ `motion/` **6,832 行 = exec 5,707 + demo 1,125**（`VERIFY_MOTION=PASS`）；D2 全量 `WAN_BITEXACT=PASS compared=6832`、D3 全量 `ENCODER_BITEXACT=PASS compared=6832`、A7/A8/A9/A10 PASS；M1 逐样本 101,066 `mismatches=0` 但 `A19_VALID_DIST` 写死 40 ep 分布期望 → `MOTION_DELIVERY=FAIL`（需按库参数化，见留档三节）；norm_stats 交付 `750a8e9b…` | `docs/dataset-build-doc/4task-motion-400ep/` |
+
+## 三、需要用户裁决的一项：`T3_MOTION_CAUSAL=FAIL pad_bitexact=0`
+
+判据「padding 垫料 → loss 与 36 个 trainable 叶梯度摘要逐位不变」在 A100 上 FAIL，但脚本自带诊断显示：loss 三档垫料逐位同、36 叶中 35 叶逐位同，唯一变化的叶
+`['PaliGemma']['llm']['embedder']['input_embedding']` 在**同一 obs 不改输入连算两次**时也变（1/36）——即该叶梯度（embedding 反向 scatter-add）在本诊断脚本的
+`jax.jit(value_and_grad)` 里于 A100 + jax 0.5.3 + 确定性档下本身不确定；而训练路径（`train_step`，fsdp 2）里同一叶在三条独立 run 间 100 步 TrainState 逐位相同。
+与环境 A 同一闸门首次 FAIL 同构（Ada 上是冻结叶 `img.embedding.kernel`，当时以「不在 trainable_filter」为由收窄摘要后 PASS）；本机这一叶**在** trainable_filter 内，
+不能套用同一理由。按四节表一处置：不放宽、不裁剪、原始输出交用户。**候选修法**（未实施）：诊断脚本先做「同 obs 两次」探针，把两次都变的叶从 `pad_bitexact` 摘要中
+单列（判定行加 `nondeterministic_leaves=[…]`），其余判据不变。
+
+## 四、A100 数字（只记录；与 Ada / turbo 数字不混比）
+
+Wan VAE 1.41 s/窗（Ada 0.85）；SigLIP 40 ep 6 卡 88 s、400 ep 3 卡 551 s；训练 100 步 closed 稳态 1.510 s/step / open 1.681 s/step（确定性档、四条 run 并行，不作性能结论）；
+TrainState 摘要单次 ≈167 s（177 / 193 叶）；dataloader-only 关闭态 w4 75.8 样本/s（与训练并行）。
+
+## 五、事故与教训
+
+- 建库中 `finalize_checks.py check` 的 JAX 进程预分配 GPU0，`run_local --stage encode` 的 20 GB 空闲显存预检拒绝 → 串行或给 finalize 指定一张卡。
+- `pack_motion_store.gather_provenance` 要求 latents 与 tokens 两阶段 worker 的 `git_commit` 唯一：Wan 抽取与 encode 之间**不能有任何 commit**（哪怕只改文档）。400 ep 库为此重抽了两次 Wan。
+- 为清理评估会话误用 `tmux kill-server`，杀掉了机器上原有的用户 tmux 会话（`0` / `7` / `19` / `20` / `claude-private`）与一条在跑的 Wan 抽取——**只能 `tmux kill-session -t <名>`，永远不要 `kill-server`**。
+- t3common 的 reference 写在 `--out` 默认 `t3.json`，其它闸门读 `t3_common_init_reference.json`——起 t3common 时应显式 `--out` 到后者。
