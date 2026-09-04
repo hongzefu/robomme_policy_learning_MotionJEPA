@@ -343,7 +343,7 @@ test_padding_dtype.py（DTYPE_MANIFEST=400 ep 清单）14 passed
 
 ## 十、事故与教训
 
-1. **`tmux kill-server`（07:49）**：为清理四个评估会话误用 `tmux kill-server`，杀掉了机器上原有的用户 tmux 会话 `0`（08-10）、`7`（08-13）、`19`（08-28）、`20`（08-31）、`claude-private`（09-04）——**不可恢复**；同时杀掉一条在跑的 400 ep Wan 抽取。规则：只用 `tmux kill-session -t <自己起的会话名>`，`tmux ls` 里不认识的会话一律不动（已写入记忆 `never-tmux-kill-server`）。
+1. **`tmux kill-server`（07:49）**：为清理四个评估会话误用 `tmux kill-server`，杀掉了机器上原有的用户 tmux 会话 `0`（08-10）、`7`（08-13）、`19`（08-28）、`20`（08-31）、`claude-private`（09-04）——**不可恢复**；同时杀掉一条在跑的 400 ep Wan 抽取。事后已成仓库级红线：`AGENTS.md` 第 7 条「tmux 会话清理红线」（`ef87e40`）——任何情况下禁止 `kill-server` 及等效全局杀法，只允许 `tmux kill-session -t <确切会话名>` 一次一个、名字写全，自己起的会话带前缀并记清单，删前删后各跑一次 `tmux ls` 核对差集，有疑问先问用户（记忆 `never-tmux-kill-server` 同步指向该条）。
 2. **Wan → encode → pack 之间不得 commit**（八节）；`run_t3_eval_obs.sh` 同样要求 porcelain 为空——评估前先把文档提交掉（记忆 `no-commit-between-wan-and-pack`）。
 3. `finalize_checks.py check` 的 JAX 进程预分配 GPU0，`run_local --stage encode` 的 20 GB 预检拒绝 → 串行或给 finalize 指定一张不参与后续阶段的卡。
 4. `t3common` 起跑要显式 `--out v1-store/reports/motion/t3_common_init_reference.json`。
