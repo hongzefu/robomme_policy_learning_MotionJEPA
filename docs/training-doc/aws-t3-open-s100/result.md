@@ -56,7 +56,32 @@
 
 ## 四、T3_EVAL_OBS（尽力项）
 
-（待填：仿真环境已装成 `/scratch/hongze/micromamba/envs/robomme`，`simple_test.py` rc=0；评估在 400 ep 建库结束后错峰运行。）
+- **仿真环境**：`micromamba create -n robomme python=3.11` 于 `MAMBA_ROOT_PREFIX=/scratch/hongze/micromamba`，`pip install -r examples/robomme/requirements.txt`、`-e third_party/robomme_benchmark`
+  （submodule 未初始化，`git submodule update --init` 后第二次装成）、`-e packages/openpi-client`；`examples/robomme/simple_test.py` rc=0（GPU7）。
+- **执行**：`run_t3_eval_obs.sh`（`fix:` `cbf24e9` 加 `RUN_PREFIX=aws-t3-eval-obs CKPT_CLOSED/CKPT_OPEN` 覆盖），每侧按任务拆两片（`-a` ButtonUnmask+VideoUnmask / `-b` 两个 Swap），
+  `MAX_EPISODES=10 OVERWRITE=1 SEED=42`；closed 两片 policy 在 GPU0（`POLICY_MEM_FRACTION=0.38`）、仿真 GPU0；open 两片 policy 在 GPU1（0.2）、两个 sidecar 也在 GPU1（`motion.online_gpu=1`）、仿真 GPU1；
+  HEAD `c0e13aa`（clean）；07:51 → 09:55（closed 侧 ≈50 min，open 侧 ≈2 h）。**与 400 ep 建库（Wan 抽取 GPU2–7、D2 oracle 8 片含 GPU0/1）同机并行**，耗时只作量级。
+  前两次起跑失败（工作区有未提交文档 → 脚本 clean-HEAD 断言；tmux 命令拼接 `export` 少分号）日志留 `ev-*.attempt{1,2}-*.log`。
+- **判定行**（`records/eval/summary.txt`、`t3_eval_obs.json`、`progress.*.json`）：
+
+```
+T3_EVAL_OBS open=0.0 closed=0.0 episodes=40/40（单 seed，描述性；ep0–9 泄漏）
+  closed: 0/40 成功（error 0） | ButtonUnmask 0/10 | ButtonUnmaskSwap 0/10 | VideoUnmask 0/10 | VideoUnmaskSwap 0/10
+  open: 0/40 成功（error 0） | ButtonUnmask 0/10 | ButtonUnmaskSwap 0/10 | VideoUnmask 0/10 | VideoUnmaskSwap 0/10
+```
+
+  两侧 checkpoint 只训 100 步 × b8 = 800 样本，0% 是预期内的欠训练结果（环境 A 1000 步同为 0/40）；信息量在「在线链路（policy server + 开启态 sidecar + 仿真）在 A100 上对真实 ckpt 跑通 40 集无 error」。
+- **端到端耗时（server 端挂钟，四进程 + 两 sidecar + 四仿真 + 建库并行，只作量级）**：
+
+| 侧 / 分片 | add_buffer ≤16 帧 mean / median / p90 | 首批（整段 pre_traj）mean / max | infer（除首次）mean / median / p90 |
+|---|---|---|---|
+| closed-a | 66.9 / 60.3 / 80.0 ms | 730 / 5631 ms | 136.5 / 132.9 / 213.7 ms |
+| closed-b | 71.5 / 69.5 / 93.4 ms | 2227 / 7600 ms | 131.9 / 135.6 / 210.4 ms |
+| open-a | 3596 / 3235 / 4798 ms | 11294 / 14700 ms | 201.3 / 186.3 / 310.3 ms |
+| open-b | 3537 / 3235 / 4819 ms | 30139 / 55400 ms | 192.4 / 185.9 / 307.6 ms |
+
+  读法：open 侧每批 16 帧 add_buffer ≈3.5 s = 一次 sidecar 窗编码（P5 独占 GPU1 时 1.42 s/窗）在「两个 sidecar + D2 oracle 分片 + 两个仿真同挤 GPU1」下的争用值，
+  与环境 A 的 1.74 s（两 sidecar 共享一张 Ada）同性质；首批 = demo 段窗口数 × 单窗（Swap 任务 demo 更长）。closed 侧 infer 130 ms 量级、open 侧 190 ms（GPU1 争用更重）。
 
 ## 五、盲区诚实清单
 

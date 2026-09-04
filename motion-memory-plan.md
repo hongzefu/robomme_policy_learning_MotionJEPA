@@ -2215,7 +2215,7 @@ G0b r1 的 `run_meta.json` 记的入口是旧路径 `scripts/smoke-local/bench_t
 | T2（关闭态等价） | ref（旧码 c5925d9）/ cand（HEAD）100 步 scalars sha `85b8fe37…` 同、5 次 TrainState / 7 次输入摘要 / index 逐位同；gate 首次因 `CUDA_VISIBLE_DEVICES` 指纹 FAIL，cand 在 GPU0,1 重跑后 **`T2_EQ=PASS`** | `docs/training-doc/aws-t2-{ref,cand}-s100/` |
 | A22 式 | **`GRAD_EQ=PASS kinds=3 leaves=32 mismatches=0`**（400 ep 库 fixture） | `docs/training-doc/aws-a22-grad/` |
 | T3 | `T3_COMMON_INIT` / `T3_INIT_MATCH` / `T3_SMOKE`（100 步）/ `T3_TRACE_PREFLIGHT` / `T3_TOKEN_TRACE`（7 步 56 样本）**PASS**；`T3_PHASE_REPORT` 完整性过；**`T3_MOTION_CAUSAL` / `T3_MECHANISM` FAIL**（见三节） | `docs/training-doc/aws-t3-{closed,open}-s100/` |
-| T3_EVAL_OBS（尽力） | robomme 仿真环境在 `/scratch/hongze/micromamba/envs/robomme` 装成、`simple_test.py` 过；两侧各两片 × 10 集/任务 — 见 open 侧 result.md 四节 | `docs/training-doc/aws-t3-open-s100/` |
+| T3_EVAL_OBS（尽力） | robomme 仿真环境在 `/scratch/hongze/micromamba/envs/robomme` 装成、`simple_test.py` 过；**`T3_EVAL_OBS open=0.0 closed=0.0 episodes=40/40`**（100 步欠训练，预期内；链路跑通无 error；open 侧 add_buffer ≈3.5 s/批为 GPU1 争用值） | `docs/training-doc/aws-t3-open-s100/` |
 | 400 ep 完整库 | `framesamp/` 123,044 行 / 101,066 exec（`VERIFY_PACK=PASS`）+ `motion/` **6,832 行 = exec 5,707 + demo 1,125**（`VERIFY_MOTION=PASS`）；D2 全量 `WAN_BITEXACT=PASS compared=6832`、D3 全量 `ENCODER_BITEXACT=PASS compared=6832`、A7/A8/A9/A10 PASS；M1 逐样本 101,066 `mismatches=0` 但 `A19_VALID_DIST` 写死 40 ep 分布期望 → `MOTION_DELIVERY=FAIL`（需按库参数化，见留档三节）；norm_stats 交付 `750a8e9b…` | `docs/dataset-build-doc/4task-motion-400ep/` |
 
 ## 三、需要用户裁决的一项：`T3_MOTION_CAUSAL=FAIL pad_bitexact=0`

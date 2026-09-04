@@ -1,0 +1,7 @@
+T3_EVAL_OBS open=0.0 closed=0.0 episodes=40/40（单 seed，描述性；ep0–9 泄漏）
+  closed: 0/40 成功（error 0） | ButtonUnmask 0/10 | ButtonUnmaskSwap 0/10 | VideoUnmask 0/10 | VideoUnmaskSwap 0/10
+  open: 0/40 成功（error 0） | ButtonUnmask 0/10 | ButtonUnmaskSwap 0/10 | VideoUnmask 0/10 | VideoUnmaskSwap 0/10
+  TIMING closed-a: add_buffer(≤16帧) {'n': 1630, 'mean': 66.9, 'median': 60.3, 'p90': 80.0, 'max': 9257.2} | 首批(>16帧) {'n': 10, 'mean': 729.8, 'median': 177.9, 'p90': 229.5, 'max': 5630.6} | infer(除首次) {'n': 1639, 'mean': 136.5, 'median': 132.9, 'p90': 213.7, 'max': 251.2}
+  TIMING closed-b: add_buffer(≤16帧) {'n': 1630, 'mean': 71.5, 'median': 69.5, 'p90': 93.4, 'max': 9661.3} | 首批(>16帧) {'n': 10, 'mean': 2226.9, 'median': 433.5, 'p90': 6436.3, 'max': 7599.8} | infer(除首次) {'n': 1639, 'mean': 131.9, 'median': 135.6, 'p90': 210.4, 'max': 248.6}
+  TIMING open-a: add_buffer(≤16帧) {'n': 1630, 'mean': 3596.0, 'median': 3234.6, 'p90': 4797.5, 'max': 4899.3} | 首批(>16帧) {'n': 10, 'mean': 11293.8, 'median': 11098.1, 'p90': 13851.6, 'max': 14699.7} | infer(除首次) {'n': 1639, 'mean': 201.3, 'median': 186.3, 'p90': 310.3, 'max': 311.8}
+  TIMING open-b: add_buffer(≤16帧) {'n': 1630, 'mean': 3537.2, 'median': 3235.4, 'p90': 4819.1, 'max': 4894.4} | 首批(>16帧) {'n': 10, 'mean': 30139.1, 'median': 27448.7, 'p90': 41740.2, 'max': 55400.4} | infer(除首次) {'n': 1639, 'mean': 192.4, 'median': 185.9, 'p90': 307.6, 'max': 312.2}
