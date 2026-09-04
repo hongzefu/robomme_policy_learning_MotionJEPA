@@ -1,0 +1,24 @@
+# AGENTS 第 18 条 diff 边界闸（起跑 7040266 → 收官 HEAD）
+$ git diff --name-only 7040266..HEAD | grep -E '<训练输入链路前缀>' | wc -l
+0
+DIFF_SCOPE=PASS touched_train_path=0
+
+# 本轮改动的全部文件
+docs/dataset-build-doc/hf-export-motionjepa-encoder-v1/launch.md
+docs/dataset-build-doc/hf-export-motionjepa-encoder-v1/model-card.md
+docs/dataset-build-doc/hf-export-motionjepa-encoder-v1/records/SHA256SUMS.txt
+pyproject.toml
+scripts/assets/ASSETS_LOCK.json
+scripts/assets/assets_lock.py
+scripts/assets/fetch_assets.py
+scripts/assets/test_assets_lock.py
+scripts/dataset/hf_export/run_model_export.sh
+scripts/dataset/hf_export/verify_model_repo.py
+scripts/dataset/paths.sh
+scripts/dataset/run_local.py
+scripts/dataset/wan/extra_checks.py
+scripts/dataset/wan/motion_sidecar.py
+scripts/dataset/wan/oracle_driver.py
+scripts/dataset/wan/probe_wan.py
+scripts/training/paths.sh
+scripts/training/tests/run_t3_eval_obs.sh

@@ -1,0 +1,23 @@
+阶段0开始：预检
+  ✓ 源文件指纹与常量一致
+阶段0完成
+阶段1开始：搭 stage 树（ckpt 走硬链接，不复制 954 MB）
+阶段1完成
+阶段2开始：commit 1（小文件先行，--exclude '*.pt' 跨目录生效）
+阶段2完成
+阶段3开始：commit 2（954 MB ckpt）
+阶段3完成
+阶段4开始：打 tag wan-v8-filter10-72ep-a-e72
+阶段4完成
+阶段5开始：L1 元数据验收（不下载，内容寻址）
+HF_META=PASS files=6 lfs_mismatch=0 blob_mismatch=0
+HF_PRIVATE=True commit=749224110f91c82f5fc5d3007281d07a5d5c944e
+阶段5完成
+阶段6开始：L2 回读闭环（禁 xet + 全新空目录 + force-download）
+wan-v8-filter10-72ep-a/checkpoint_epoch_72.pt: OK
+wan-v8-filter10-72ep-a/config.yaml: OK
+RESULT=PASS
+阶段6完成
+阶段7开始：收尾断言（源文件未被 stage 硬链接连带改动）
+  ✓ 源 ckpt sha256 未变
+EXIT_CODE=0

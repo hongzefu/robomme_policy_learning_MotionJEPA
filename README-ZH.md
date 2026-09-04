@@ -62,6 +62,29 @@ v1-store/bench/                # CPU/mem 档位实测采样与对照表
 `v1-store/` 整体不进 git。**不覆盖 `HOME`**——覆盖会让 ssh 找不到 `~/.ssh/config` 与
 ControlMaster socket、直接打断集群提交；改为逐项显式设置缓存类环境变量。
 
+## 外部权重从哪拉
+
+五个外部模型资产（SigLIP、PaliGemma tokenizer、pi05_base、Wan2.1 VAE、MotionJEPA encoder+decoder）的身份
+钉死在 [`scripts/assets/ASSETS_LOCK.json`](scripts/assets/ASSETS_LOCK.json)（进 git，顶层自哈希防篡改）。
+异地机器一条命令取齐并校验：
+
+```bash
+export HF_TOKEN=hf_…                                     # 仅私有的 MotionJEPA 权重需要
+uv run python scripts/assets/fetch_assets.py plan        # 不联网，看缺什么
+uv run python scripts/assets/fetch_assets.py fetch       # 取回后自动全量复校
+uv run python scripts/assets/fetch_assets.py verify --level full   # 判定行 ASSETS=PASS
+```
+
+MotionJEPA 的 encoder + wan_decoder（run `wan-v8-filter10-72ep-a`、epoch 72）备份在 HuggingFace **private**
+model repo [`HongzeFu/MotionJEPA`](https://huggingface.co/HongzeFu/MotionJEPA)，其余四项都能从公开 HF/GCS 取回。
+模型本身的一切事实（结构、训练 commit、数据集、超参、数值合同、加载示例）以该 repo 的 model card 为准，
+仓库内正本是
+[`docs/dataset-build-doc/hf-export-motionjepa-encoder-v1/model-card.md`](docs/dataset-build-doc/hf-export-motionjepa-encoder-v1/model-card.md)；
+上传过程与验收记录见同目录 `launch.md` / `result.md`。
+
+ckpt sha256 必须是 `bae96037…c15a`，与本机 `v1-store/external/motionjepa/wan-v8-filter10-72ep-a/` 那份相同
+（后者是 `--encoder-run-dir` 的默认值，**不要用下载件覆盖它**）。
+
 ## 固定入口
 
 本机数据处理链路（SigLIP / Wan VAE / MotionJEPA encoder 三阶段）全部在 `scripts/dataset/`（集群链路已于 v2-motionmem 删除），本地 G0 对拍量具在 `scripts/training/g0/`，GPU 利用率观测族在 `scripts/training/util/`。
