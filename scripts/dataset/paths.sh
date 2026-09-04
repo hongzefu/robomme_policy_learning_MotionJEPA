@@ -108,11 +108,22 @@ v1_require_models() {
   local need_train="${1:-0}"
   local siglip="${MODELS_DIR}/pi05_vision_encoder/siglip_params.pkl"
   [[ -f "${siglip}" ]] || { echo "错误: 缺少项目内 SigLIP 权重: ${siglip}" >&2; exit 1; }
+  local names="siglip_params"
   if [[ "${need_train}" = "1" ]]; then
     local tok="${MODELS_DIR}/big_vision/paligemma_tokenizer.model"
     local pi05="${MODELS_DIR}/openpi-assets/checkpoints/pi05_base/params"
     [[ -f "${tok}" ]] || { echo "错误: 缺少项目内 PaliGemma tokenizer: ${tok}" >&2; exit 1; }
     [[ -f "${pi05}/commit_success.txt" ]] || { echo "错误: 缺少项目内 pi05_base: ${pi05}" >&2; exit 1; }
+    names="${names},paligemma_tokenizer,pi05_base"
+  fi
+  # 内容级校验：上面的 [[ -f ]] 只答「文件在不在」，这一段答「是不是 ASSETS_LOCK.json 钉死的那份」。
+  # cheap 档 = 逐文件字节数 + 首尾各 1 MiB 摘要（O(ms)）；它挡不住保持长度的中段字节篡改，
+  # 那一层由 fetch_assets.py verify --level full 与各重载点（load_encoder/load_vae）兜。
+  if [[ "${V1_SKIP_ASSET_VERIFY:-0}" = "1" ]]; then
+    echo "⚠ V1_SKIP_ASSET_VERIFY=1: 跳过资产内容校验(${names})，本次运行不保证用的是钉死的那份权重" >&2
+  else
+    UV_LINK_MODE=copy uv run --no-sync python "${REPO_ROOT}/scripts/assets/fetch_assets.py" \
+      verify --level cheap --assets "${names}" || exit 1
   fi
 }
 
@@ -123,6 +134,13 @@ v1_require_wan() {
     echo "错误: 缺少 encoder 资产: ${ENCODER_RUN_DIR}/{${ENCODER_CKPT},config.yaml}" >&2; exit 1; }
   [[ -d "${HF_HOME}/hub/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers" ]] || {
     echo "错误: 缺少 HF 缓存里的 Wan2.1 VAE: ${HF_HOME}/hub/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers" >&2; exit 1; }
+  # 同 v1_require_models：存在性之外再核内容（VAE snapshot revision + blob 字节、encoder ckpt 与 config）
+  if [[ "${V1_SKIP_ASSET_VERIFY:-0}" = "1" ]]; then
+    echo "⚠ V1_SKIP_ASSET_VERIFY=1: 跳过 wan 侧资产内容校验" >&2
+  else
+    UV_LINK_MODE=copy uv run --no-sync python "${REPO_ROOT}/scripts/assets/fetch_assets.py" \
+      verify --level cheap --assets wan_vae,motionjepa_ckpt,motionjepa_config || exit 1
+  fi
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

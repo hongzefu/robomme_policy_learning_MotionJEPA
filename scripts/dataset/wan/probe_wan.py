@@ -28,6 +28,7 @@ import importlib.util
 import json
 import os
 import pathlib
+import sys
 import time
 
 import h5py
@@ -37,11 +38,24 @@ _HERE = pathlib.Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parents[2]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
+sys.path.insert(0, str(_REPO_ROOT / "scripts" / "assets"))
+import assets_lock as al  # noqa: E402
 
 MJ_REPO_DEFAULT = "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA"
 VAE_ID = "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
 ENCODER_RUN_DIR_DEFAULT = str(_REPO_ROOT / "v1-store" / "external" / "motionjepa" / "wan-v8-filter10-72ep-a")
 CKPT_NAME = "checkpoint_epoch_72.pt"
+
+def _expected_ckpt(args):
+    """ckpt 期望值：默认取 ASSETS_LOCK.json 钉死的那份，显式传 SKIP 才跳过。
+
+    本文件是**探针 / 对拍工具**，探一个未入 lock 的 run_dir 是它的本职，所以保留 SKIP 出口；
+    生产路径（encode_motion.py 的 required=True、run_local.py、motion_sidecar.py）不提供 SKIP。
+    """
+    if args.expected_ckpt_sha256 == "SKIP":
+        return None
+    return args.expected_ckpt_sha256 or al.expected_sha256("motionjepa_ckpt")
+
 
 # A4 provenance 白名单：两侧必须逐键相等；刻意排除 hostname / python 补丁号 / 路径类键（计划 A4）
 PROV_SAME_KEYS = (
@@ -102,7 +116,7 @@ def setup(args):
     device = torch.device("cuda")
     vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=W.VAE_STATE_SHA256_EXPECTED)
     encoder, einfo, use_amp = W.load_encoder(args.encoder_run_dir, CKPT_NAME, device,
-                                             expected_sha256=args.expected_ckpt_sha256 or None)
+                                             expected_sha256=_expected_ckpt(args))
     print(f"[setup] module={args.module} path={mod_path} sha256={W.sha256_file(str(mod_path))[:16]}…", flush=True)
     print(f"[setup] torch={torch.__version__} cudnn={torch.backends.cudnn.version()} "
           f"gpu={torch.cuda.get_device_name(0)} use_amp={use_amp}", flush=True)
@@ -344,7 +358,8 @@ def main():
     ap.add_argument("--module", choices=["copy", "orig"], default="copy")
     ap.add_argument("--mj-repo", default=MJ_REPO_DEFAULT)
     ap.add_argument("--encoder-run-dir", default=ENCODER_RUN_DIR_DEFAULT)
-    ap.add_argument("--expected-ckpt-sha256", default="")
+    ap.add_argument("--expected-ckpt-sha256", default="",
+                    help="默认按 ASSETS_LOCK.json 校；探未入 lock 的 run_dir 时显式传 SKIP")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     common = argparse.ArgumentParser(add_help=False)

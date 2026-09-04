@@ -81,8 +81,17 @@ def main() -> int:
                 raise RuntimeError("sidecar 需要 CUDA")
             device = torch.device("cuda")
             vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=(args.expected_vae_sha256 or W.VAE_STATE_SHA256_EXPECTED))
+            # ckpt 期望值与 VAE 侧对称（此前 VAE 有兜底硬钉、ckpt 却 `or None` 静默跳过）。
+            # 调用方传的是数据集自报的 provenance.encoder.checkpoint_sha256；与仓库锁不符即说明该库是用
+            # 另一份 encoder 建的 —— 在线推理与离线建库不同源，必须当场拒绝而不是各校各的。
+            lock_mod = _load(_REPO_ROOT / "scripts" / "assets" / "assets_lock.py", "assets_lock")
+            lock_ckpt = lock_mod.expected_sha256("motionjepa_ckpt")
+            if args.expected_ckpt_sha256 and args.expected_ckpt_sha256 != lock_ckpt:
+                raise SystemExit(f"数据集 provenance 记的 ckpt {args.expected_ckpt_sha256} 与仓库 "
+                                 f"ASSETS_LOCK {lock_ckpt} 不符：该数据集是用另一份 encoder 建的，"
+                                 f"在线推理与离线建库不同源")
             encoder, einfo, use_amp = W.load_encoder(args.encoder_run_dir, args.checkpoint, device,
-                                                     expected_sha256=(args.expected_ckpt_sha256 or None))
+                                                     expected_sha256=(args.expected_ckpt_sha256 or lock_ckpt))
             info = {"stub": False, "protocol_sha256": P.protocol_sha256(), "protocol_path": str(_PROTO_PATH), "pid": os.getpid(),
                     "vae": vinfo, "encoder": einfo, "flags": flags, "source_pin": pin,
                     "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES")}

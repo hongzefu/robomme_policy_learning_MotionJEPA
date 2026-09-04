@@ -26,9 +26,22 @@ import numpy as np
 _HERE = pathlib.Path(__file__).resolve().parent
 _REPO_ROOT = _HERE.parents[2]
 sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_REPO_ROOT / "scripts" / "assets"))
+import assets_lock as al  # noqa: E402
 import wan_common as wc  # noqa: E402
 
 ENCODER_RUN_DIR_DEFAULT = str(_REPO_ROOT / "v1-store" / "external" / "motionjepa" / "wan-v8-filter10-72ep-a")
+
+def _expected_ckpt(args):
+    """ckpt 期望值：默认取 ASSETS_LOCK.json 钉死的那份，显式传 SKIP 才跳过。
+
+    本文件是**探针 / 对拍工具**，探一个未入 lock 的 run_dir 是它的本职，所以保留 SKIP 出口；
+    生产路径（encode_motion.py 的 required=True、run_local.py、motion_sidecar.py）不提供 SKIP。
+    """
+    if args.expected_ckpt_sha256 == "SKIP":
+        return None
+    return args.expected_ckpt_sha256 or al.expected_sha256("motionjepa_ckpt")
+
 
 
 def load_infer_module():
@@ -69,7 +82,7 @@ def setup_encoder(args):
     torch.manual_seed(0)
     device = torch.device("cuda")
     encoder, einfo, use_amp = W.load_encoder(args.encoder_run_dir, args.checkpoint, device,
-                                             expected_sha256=args.expected_ckpt_sha256 or None)
+                                             expected_sha256=_expected_ckpt(args))
     return W, torch, device, encoder, use_amp, einfo
 
 
@@ -171,7 +184,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--encoder-run-dir", default=ENCODER_RUN_DIR_DEFAULT)
     ap.add_argument("--checkpoint", default="checkpoint_epoch_72.pt")
-    ap.add_argument("--expected-ckpt-sha256", default="")
+    ap.add_argument("--expected-ckpt-sha256", default="",
+                    help="默认按 ASSETS_LOCK.json 校；探未入 lock 的 run_dir 时显式传 SKIP")
     sub = ap.add_subparsers(dest="cmd", required=True)
     for name, fn in (("a8", cmd_a8), ("a9enc", cmd_a9enc)):
         p = sub.add_parser(name)

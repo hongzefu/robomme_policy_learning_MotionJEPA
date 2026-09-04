@@ -248,3 +248,45 @@ def test_lock_cross_checks_motion_store_provenance() -> None:
 def test_env_does_not_override_home() -> None:
     """AGENTS.md 第 14 条：禁止覆盖 HOME（覆盖会让 ssh 找不到 ~/.ssh 与 ControlMaster socket）。"""
     assert os.environ.get("HOME"), "HOME 未设置"
+
+
+# ── 接入点的源码级防回归哨兵（C 步落地后生效）────────────────────────────────
+
+
+def test_run_local_no_longer_self_hashes() -> None:
+    """run_local.py 不得再现场哈希「即将被使用的那份 ckpt」当期望值（自证循环）。"""
+    t = (_REPO_ROOT / "scripts/dataset/run_local.py").read_text(encoding="utf-8")
+    assert "args.expected_ckpt_sha256 = sha256_file(" not in t, "自证循环回归了"
+    assert 'al.expected_sha256("motionjepa_ckpt")' in t
+
+
+@pytest.mark.parametrize("rel", ["scripts/dataset/wan/probe_wan.py",
+                                 "scripts/dataset/wan/oracle_driver.py",
+                                 "scripts/dataset/wan/extra_checks.py"])
+def test_probes_default_to_lock_not_none(rel: str) -> None:
+    """三个探针的默认不再是「静默跳过」；跳过必须显式写 SKIP。"""
+    t = (_REPO_ROOT / rel).read_text(encoding="utf-8")
+    assert "expected_sha256=args.expected_ckpt_sha256 or None" not in t
+    assert 'args.expected_ckpt_sha256 == "SKIP"' in t
+
+
+def test_motion_sidecar_ckpt_has_lock_fallback() -> None:
+    """sidecar 的 ckpt 兜底必须与 VAE 侧对称（此前 VAE 有兜底、ckpt 却 `or None`）。"""
+    t = (_REPO_ROOT / "scripts/dataset/wan/motion_sidecar.py").read_text(encoding="utf-8")
+    assert "expected_sha256=(args.expected_ckpt_sha256 or lock_ckpt)" in t
+    assert "expected_state_sha256=(args.expected_vae_sha256 or W.VAE_STATE_SHA256_EXPECTED)" in t
+
+
+def _require_models_body(path: pathlib.Path) -> str:
+    t = path.read_text(encoding="utf-8")
+    i = t.index("v1_require_models() {")
+    j = t.index("\n}\n", i)
+    return t[i:j]
+
+
+def test_two_paths_sh_require_models_identical() -> None:
+    """两个域的 v1_require_models 是刻意的逐字副本，防「好心同步」把两侧改发散。"""
+    a = _require_models_body(_REPO_ROOT / "scripts/dataset/paths.sh")
+    b = _require_models_body(_REPO_ROOT / "scripts/training/paths.sh")
+    assert a == b
+    assert "fetch_assets.py" in a, "v1_require_models 没有挂上资产内容校验"

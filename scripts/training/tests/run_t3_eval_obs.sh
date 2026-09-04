@@ -8,6 +8,9 @@
 # server 日志（含 TIMING add_buffer_ms / infer_ms 行）落 v1-store/logs/motion-t3-<SIDE>-eval.server.log；eval 日志落 …-eval.log。
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/paths.sh"
+# 本脚本要跑 policy（pi05_base + tokenizer）与 open 侧的 motion sidecar（encoder ckpt），
+# 此前 source 了 paths.sh 却没调任何前置；补上内容级资产校验（ASSETS_LOCK.json，cheap 档）
+v1_require_models 1
 : "${SIDE:?必须设置 SIDE=closed|open}"
 SEED="${SEED:-42}"
 PORT="${PORT:-8021}"

@@ -23,7 +23,6 @@ JAX_COMPILATION_CACHE_DIR / UV_LINK_MODE=copy；子 venv 另设 UV_PROJECT_ENVIR
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import pathlib
@@ -38,9 +37,15 @@ _REPO_ROOT = _HERE.parents[1]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
 sys.path.insert(0, str(_REPO_ROOT / "src"))
+sys.path.insert(0, str(_REPO_ROOT / "scripts" / "assets"))
 sys.path.insert(0, str(_HERE / "wan"))
 
+import assets_lock as al  # noqa: E402
+
 V1_STORE = _REPO_ROOT / "v1-store"
+# 每个 stage 起手要校的资产（ASSETS_LOCK.json 里的名字）
+STAGE_ASSETS = {"siglip": ["siglip_params"], "wan": ["wan_vae"],
+                "encode": ["wan_vae", "motionjepa_ckpt", "motionjepa_config"]}
 RAW_H5_DEFAULT = "/data/hongzefu/robomme_data_h5"
 ENCODER_RUN_DIR_DEFAULT = V1_STORE / "external" / "motionjepa" / "wan-v8-filter10-72ep-a"
 CKPT_DEFAULT = "checkpoint_epoch_72.pt"
@@ -69,14 +74,6 @@ def gpu_free_mib() -> dict[int, int]:
         i, m = [s.strip() for s in line.split(",")]
         res[int(i)] = int(m)
     return res
-
-
-def sha256_file(p: pathlib.Path) -> str:
-    h = hashlib.sha256()
-    with open(p, "rb") as f:
-        for c in iter(lambda: f.read(1 << 22), b""):
-            h.update(c)
-    return h.hexdigest()
 
 
 def worker_cmd(stage: str, gpu: int, k: int, n: int, args, env: dict) -> tuple[list[str], dict, pathlib.Path]:
@@ -171,6 +168,9 @@ def main() -> None:
     ap.add_argument("--expected-ckpt-sha256", default="")
     args = ap.parse_args()
 
+    # 建库域真正的资产前置：本文件是 Python、不 source paths.sh，那两个 v1_require_* 在本域零调用
+    al.require(STAGE_ASSETS[args.stage], level="cheap")
+
     lib = pathlib.Path(args.lib).resolve()
     if lib.is_symlink():
         raise SystemExit(f"库根是符号链接，拒绝写入: {lib}")
@@ -187,8 +187,10 @@ def main() -> None:
         if free[g] < args.require_free_mib:
             raise SystemExit(f"GPU {g} 空闲显存 {free[g]} MiB < 要求 {args.require_free_mib} MiB")
     if args.stage == "encode" and not args.expected_ckpt_sha256:
-        args.expected_ckpt_sha256 = sha256_file(pathlib.Path(args.encoder_run_dir) / args.checkpoint)
-        print(f"[run_local] ckpt sha256={args.expected_ckpt_sha256}", flush=True)
+        # 期望值取自仓库钉死的 ASSETS_LOCK.json。此处**刻意不**现场哈希「即将被使用的那份 ckpt」——
+        # 那是自证循环，只能证明 N 个 worker 用同一份字节，挡不住「这份文件本身就是错的」。
+        args.expected_ckpt_sha256 = al.expected_sha256("motionjepa_ckpt")
+        print(f"[run_local] ckpt sha256={args.expected_ckpt_sha256}（来源 ASSETS_LOCK.json）", flush=True)
     if shutil.which("uv") is None:
         raise SystemExit("缺 uv")
 
