@@ -56,6 +56,20 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 
 7. 预计超过 5 分钟的训练、抽取、评估或全量数据构建必须放入 detached tmux session。日志使用 `PYTHONUNBUFFERED=1`、`set -o pipefail` 和 `tee`，结束时写入 `EXIT_CODE=`。禁止使用裸 `pgrep -f` 判断进程存活；tmux 任务使用 `tmux has-session`，其他任务记录精确 PID。 盯日志的 Monitor/过滤管道里**每一级都必须行缓冲**：中间夹的 `tr`/`awk`/`sed` 对管道输出默认 4KB 块缓冲，任务结束后最后几行（RESULT/EXIT_CODE）会永远卡在缓冲区、监听端静默不报——`tr` 写成 `stdbuf -oL tr`、awk 加 `fflush()`、sed 加 `-u`，只给 `grep --line-buffered` 不够（2026-08-24 epoch 基准与冷缓存复测两次实测踩中）。
 
+   **tmux 会话清理红线（2026-09-04 事故后新增，最高优先级）**：**任何情况下禁止执行 `tmux kill-server`**，同样禁止一切等效的全局杀法——`tmux kill-session -a`（杀掉除当前外的全部会话）、`pkill -f tmux`、`killall tmux`，以及指定 socket 的变体 `tmux -L <name> kill-server` / `tmux -S <path> kill-server`。理由：tmux server 是全用户共享的**一个**进程，用户自己的工作现场、远程连接乃至 agent 会话本身都挂在同一个 server 上，销毁后不可恢复。2026-09-04 实测代价：为清理四个评估会话执行了一次 `tmux kill-server`，把用户原有会话 `0`、`7`、`19`、`20`、`claude-private` 与一条在跑的 400 ep Wan 抽取一并杀掉，全部无法恢复。这是硬禁令，**不因「已确认 `tmux ls` 里只有我的会话」而豁免**。落地纪律四条：
+   - **唯一允许的清理方式**是 `tmux kill-session -t <确切会话名>`，一次只杀一个、名字写全。禁止通配、禁止靠前缀模糊匹配、禁止 `xargs` 批量传入——`tmux -t` 本身做前缀匹配，`-t ev` 会命中所有以 `ev` 开头的会话。
+   - **起会话时就为清理做准备**：自己起的 tmux 会话必须带可辨识前缀（如 `ev-`、`p3-`、`wan-`），并在当轮回复或对应 `docs/training-doc/<run_name>/` 留档里记下本轮起过的会话名清单；清理时以这份清单为唯一依据。`tmux ls` 里不在清单内的会话**一律不动**，包括看起来空闲的、看起来是残留的、名字只是数字的（上面被误杀的 `0`、`7`、`19`、`20` 正是这一类）。
+   - **删前删后各查一次**，三步照抄：
+
+     ```bash
+     tmux ls                             # 删前：打印全部会话，逐个核对目标名字确在自己的清单里
+     tmux kill-session -t <确切会话名>
+     tmux ls                             # 删后：对比只少了目标会话，其余一个不少
+     ```
+
+     两次 `tmux ls` 的差集不等于「恰好只有目标会话」时立即停止，把两次原始输出交用户处置。
+   - **有疑问先问用户**：不确定某个会话是不是自己起的、名字对不上清单、清单丢失时，一律不删，先把 `tmux ls` 原文交用户裁决。
+
 8. 集群提交按环境分叉：
    - **环境 A**：向 GreatLakes 提交 Slurm 作业前必须遵守仓库根目录的 `greatlakes.md`。如果该文件尚不存在，必须先向用户确认集群 account、partition、资源上限和 NFS 路径，不得直接复制其他仓库的集群配置。
    - **环境 B（当前）**：无 GreatLakes 访问（无 `~/.ssh/config`、无 ControlMaster）。**禁止提交任何 Slurm 作业、禁止 ssh 集群、禁止运行 `scripts/training/gl_submit.py`**；训练、建库、评估一律在本机 8×A100 上跑。`greatlakes.md` 与 `docs/` 下引用集群的历史留档**保留为只读存档**，可读不可执行。确有集群需求时先问用户，不得自行尝试恢复连接。
