@@ -33,7 +33,7 @@ SERVER_LOG="${LOGS_DIR}/${RUN}${RUN_SUFFIX}-eval.server.log"
 EVAL_LOG="${LOGS_DIR}/${RUN}${RUN_SUFFIX}-eval.log"
 EXTRA_ARGS=()
 [[ "${MAX_EPISODES}" -gt 0 ]] && EXTRA_ARGS+=("--args.max_episodes=${MAX_EPISODES}")
-[[ "${OVERWRITE}" == "1" ]] && EXTRA_ARGS+=("--args.overwrite=True")
+[[ "${OVERWRITE}" == "1" ]] && EXTRA_ARGS+=("--args.overwrite")
 echo "=== T3_EVAL_OBS side=${SIDE} run=${RUN}${RUN_SUFFIX} HEAD=$(git -C "${REPO_ROOT}" rev-parse HEAD) ckpt=${CKPT} port=${PORT} seed=${SEED} tasks=${TASKS} max_episodes=${MAX_EPISODES} overwrite=${OVERWRITE} ==="
 cd "${REPO_ROOT}"
 # ── policy server（后台；开启态由 create_trained_policy 自动起 sidecar，CUDA_VISIBLE_DEVICES 只作用于 policy 进程，sidecar 用 motion.online_gpu）──
