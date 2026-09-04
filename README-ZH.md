@@ -85,6 +85,9 @@ model repo [`HongzeFu/MotionJEPA`](https://huggingface.co/HongzeFu/MotionJEPA)�
 ckpt sha256 必须是 `bae96037…c15a`，与本机 `v1-store/external/motionjepa/wan-v8-filter10-72ep-a/` 那份相同
 （后者是 `--encoder-run-dir` 的默认值，**不要用下载件覆盖它**）。
 
+资产锁的设计原理、链路六处接入的改前改后、以及异地无 NFS 机器从零复刻的完整步骤，见
+[`external-assets-lock.md`](external-assets-lock.md)。
+
 ## 固定入口
 
 本机数据处理链路（SigLIP / Wan VAE / MotionJEPA encoder 三阶段）全部在 `scripts/dataset/`（集群链路已于 v2-motionmem 删除），本地 G0 对拍量具在 `scripts/training/g0/`，GPU 利用率观测族在 `scripts/training/util/`。
