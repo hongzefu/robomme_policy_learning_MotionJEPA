@@ -1,0 +1,198 @@
+{
+ "sides": {
+  "closed": {
+   "per_task": {
+    "ButtonUnmask": {
+     "episodes": 10,
+     "success": 0,
+     "error": 0,
+     "rate": 0.0
+    },
+    "ButtonUnmaskSwap": {
+     "episodes": 10,
+     "success": 0,
+     "error": 0,
+     "rate": 0.0
+    },
+    "VideoUnmask": {
+     "episodes": 10,
+     "success": 0,
+     "error": 0,
+     "rate": 0.0
+    },
+    "VideoUnmaskSwap": {
+     "episodes": 10,
+     "success": 0,
+     "error": 0,
+     "rate": 0.0
+    }
+   },
+   "episodes": 40,
+   "success": 0,
+   "error": 0,
+   "rate": 0.0,
+   "timing": {
+    "-a": {
+     "log_json": true,
+     "add_buffer_le16": {
+      "n": 1514,
+      "mean": 99.9,
+      "median": 106.7,
+      "p90": 145.7,
+      "max": 2175.6
+     },
+     "add_buffer_first_gt16": {
+      "n": 10,
+      "mean": 447.2,
+      "median": 345.2,
+      "p90": 631.7,
+      "max": 1242.9
+     },
+     "infer_all": {
+      "n": 1524,
+      "mean": 293.4,
+      "median": 309.3,
+      "p90": 386.9,
+      "max": 2105.0
+     },
+     "infer_excl_first": {
+      "n": 1523,
+      "mean": 292.2,
+      "median": 309.3,
+      "p90": 386.9,
+      "max": 447.3
+     }
+    },
+    "-b": {
+     "log_json": true,
+     "add_buffer_le16": {
+      "n": 1630,
+      "mean": 98.3,
+      "median": 105.6,
+      "p90": 145.1,
+      "max": 1878.5
+     },
+     "add_buffer_first_gt16": {
+      "n": 10,
+      "mean": 3943.6,
+      "median": 1180.8,
+      "p90": 12120.9,
+      "max": 12555.9
+     },
+     "infer_all": {
+      "n": 1640,
+      "mean": 291.1,
+      "median": 303.5,
+      "p90": 387.0,
+      "max": 2042.7
+     },
+     "infer_excl_first": {
+      "n": 1639,
+      "mean": 290.1,
+      "median": 303.5,
+      "p90": 387.0,
+      "max": 413.7
+     }
+    }
+   }
+  },
+  "open": {
+   "per_task": {
+    "ButtonUnmask": {
+     "episodes": 10,
+     "success": 0,
+     "error": 0,
+     "rate": 0.0
+    },
+    "ButtonUnmaskSwap": {
+     "episodes": 10,
+     "success": 0,
+     "error": 0,
+     "rate": 0.0
+    },
+    "VideoUnmask": {
+     "episodes": 10,
+     "success": 0,
+     "error": 0,
+     "rate": 0.0
+    },
+    "VideoUnmaskSwap": {
+     "episodes": 10,
+     "success": 0,
+     "error": 0,
+     "rate": 0.0
+    }
+   },
+   "episodes": 40,
+   "success": 0,
+   "error": 0,
+   "rate": 0.0,
+   "timing": {
+    "-a": {
+     "log_json": true,
+     "add_buffer_le16": {
+      "n": 1630,
+      "mean": 1741.1,
+      "median": 1811.8,
+      "p90": 2390.9,
+      "max": 2864.5
+     },
+     "add_buffer_first_gt16": {
+      "n": 10,
+      "mean": 4595.2,
+      "median": 4499.4,
+      "p90": 4682.9,
+      "max": 5408.5
+     },
+     "infer_all": {
+      "n": 1640,
+      "mean": 98.8,
+      "median": 79.3,
+      "p90": 155.9,
+      "max": 1986.4
+     },
+     "infer_excl_first": {
+      "n": 1639,
+      "mean": 97.6,
+      "median": 79.3,
+      "p90": 155.8,
+      "max": 188.6
+     }
+    },
+    "-b": {
+     "log_json": true,
+     "add_buffer_le16": {
+      "n": 1630,
+      "mean": 1723.6,
+      "median": 1810.0,
+      "p90": 2387.0,
+      "max": 2856.0
+     },
+     "add_buffer_first_gt16": {
+      "n": 10,
+      "mean": 12385.1,
+      "median": 11383.3,
+      "p90": 18548.0,
+      "max": 18616.0
+     },
+     "infer_all": {
+      "n": 1640,
+      "mean": 98.9,
+      "median": 79.5,
+      "p90": 155.6,
+      "max": 2375.3
+     },
+     "infer_excl_first": {
+      "n": 1639,
+      "mean": 97.5,
+      "median": 79.5,
+      "p90": 155.3,
+      "max": 168.4
+     }
+    }
+   }
+  }
+ },
+ "note": "描述性观察，无 PASS/FAIL；单 seed；两侧 checkpoint 均为 1000 步 × b8 的 T3 run；ep0–9 在 encoder 训练集内",
+ "line": "T3_EVAL_OBS open=0.0 closed=0.0 episodes=40/40（单 seed，描述性；ep0–9 泄漏）"
+}

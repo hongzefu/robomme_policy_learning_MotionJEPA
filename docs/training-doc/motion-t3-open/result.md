@@ -33,4 +33,31 @@ base 梯度取回四个 motion 叶即释放；② 首次 `pad_bitexact=0`，诊�
   A20 观察项：open 首步 loss 低于 closed 是随机初始化的两个新层带来的初值差异，不作效果解读。
 - **T3_PHASE_REPORT 均值**（20 步 loss 均值，open / closed）：phase0 0.0781 / 0.0686（冷 τ<32：0.0734 / 0.0683，n=80；稳态：0.0786 / 0.0686，n=658）；other 0.0772 / 0.0706（n=10792）；
   空运动路 0.1044 / 0.1203（n=640）；非空 0.0757 / 0.0675（n=10890）。方向：除空运动路样本外 open 侧 eval-loss 均高于 closed（1000 步、单 seed，不作结论）。
-- **T3_EVAL_OBS**：（回填；两侧 checkpoint 均只训 1000 步 × b8 = 8,000 样本 < 1 epoch，成功率预期接近 0，观察只用于确认在线链路跑通与耗时口径）
+- **T3_EVAL_OBS open=0.0 closed=0.0 episodes=40/40**（用户 2026-09-03 改为每任务 10 集、共 40 集；`records/eval/t3_eval_obs.json`）。
+  逐任务（成功 / 集数）两侧均为 ButtonUnmask 0/10、VideoUnmask 0/10、ButtonUnmaskSwap 0/10、VideoUnmaskSwap 0/10，error 0。
+  两侧 checkpoint 均只训 1000 步 × b8 = 8,000 样本（< 1 epoch），0% 是预期内的欠训练结果；本观察的信息量在「在线链路在真实 checkpoint 上跑通」与「端到端耗时口径」，不在成功率。
+  执行方式：每侧按任务拆两片并行（`run_t3_eval_obs.sh` 的 `RUN_SUFFIX=-a/-b`，`MAX_EPISODES=10`，`OVERWRITE=1`），四个 policy server 同时起——closed 两片 policy 在 GPU1（各 0.38）、
+  open 两片 policy 在 GPU0（各 0.40）、两个 sidecar 在 GPU1、四个仿真在 GPU0（GPU0 39.8 GB / GPU1 42.0 GB，两卡均用满）；HEAD `2e1b328`，21:04–22:2x。
+  之前按 50 集/任务起的两侧评估（closed 已评 110 集、open 56 集，成功均 0）已停，日志留 `v1-store/logs/motion-t3-{closed,open}-eval.*.50ep-partial.log`，不计入。
+- **端到端耗时（server 端挂钟，`records/eval/timing-*.txt`；四进程并行、仿真与 sidecar 争用下的数字，只作量级）**：
+
+| 侧 / 分片 | add_buffer ≤16 帧（每次推理前固定开销）mean / median / p90 | 首批（整段 pre_traj）mean / max | infer（除首次 jit）mean / median / p90 |
+|---|---|---|---|
+| closed-a | 100 / 107 / 146 ms | 447 / 1243 ms | 292 / 309 / 387 ms |
+| closed-b | 98 / 106 / 145 ms | 3944 / 12556 ms | 290 / 304 / 387 ms |
+| open-a | 1741 / 1812 / 2391 ms | 4595 / 5408 ms | 98 / 79 / 156 ms |
+| open-b | 1724 / 1810 / 2387 ms | 12385 / 18616 ms | 98 / 80 / 155 ms |
+
+  读法：open 侧每批 16 帧的 add_buffer 比 closed 多约 1.64 s，即一次 sidecar 窗编码（P5 单 sidecar 独占 GPU1 时 0.88 s/窗；此处两个 sidecar 共享 GPU1、util 100%，约翻倍），
+  与计划 2.6「每次 infer 前固定 +1.57 s」同量级；首批多出的时间 = demo 段窗口数 × 单窗（Swap 任务 demo 更长）。closed 侧 infer 约 290 ms 高于 open 侧 98 ms，
+  是因为 closed 的两个 policy 与两个 sidecar 同在 GPU1 上争用（P5 期间无争用的单 policy infer 为 69 ms 量级），不是模型差异。
+
+## 四、盲区诚实清单（八节）
+
+- 单 seed、1000 步、b8：`T3_EFFECT_OBS` / `T3_PHASE_REPORT` / `T3_EVAL_OBS` 三个描述性数字都不能升级为「motion memory 有 / 无效」的结论；open 侧比 closed 多 3.3M 参数、
+  首步 loss 更低是初始化差异。
+- ep0–9 在 MotionJEPA encoder 的训练集内（holdout 90–99），40 ep 库与在线评估都含这些 episode。
+- 在线耗时口径受并行干扰：四进程 + 两 sidecar + 四仿真同机，绝对值只作量级；无争用口径见 P5（单窗 0.88 s）与 P5 期间的单 policy infer。
+- closed 侧最终 checkpoint 由看门狗硬链接保出（驱动脚本旧版会 rm）；文件内容与 orbax 落盘一致（params / assets / `_CHECKPOINT_METADATA` 齐全），但未与「未被 rm」的原目录做逐字节比对（原目录已不存在）。
+- `T3_MECHANISM` 的梯度摘要只覆盖 trainable 叶；冻结叶（SigLIP patch-embedding conv）的 wgrad 在 GPU 上不确定，这是脚本对全参数求导才暴露的现象，训练不求该叶梯度。
+- 帧路的在线一致性由 `compare_online_memory.py`（S2 之前）保证，P5 帧路用零特征，本轮未在开启态重跑帧路对拍。

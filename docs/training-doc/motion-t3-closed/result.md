@@ -13,3 +13,5 @@
   脚本修补 `702009c` 对之后的 run（含 `motion-t3-open`）生效。
 - **records/**：`metrics.jsonl`、`param_checksums.jsonl`、`batch_digests.jsonl`、`index_sequence.json`、`run_meta.json`、`env.json`、`final_checkpoint.json`、`driver_summary.log`。
 - 跨侧项（`T3_TOKEN_TRACE` / `T3_MECHANISM` / `T3_PHASE_REPORT` / `T3_EFFECT_OBS` / `T3_EVAL_OBS`）见 `motion-t3-open/result.md`。
+- **T3_EVAL_OBS（closed 侧自身，10 集/任务）**：0/40 成功（ButtonUnmask / VideoUnmask / ButtonUnmaskSwap / VideoUnmaskSwap 各 0/10，error 0）；
+  两片并行于 GPU1（各 0.38），add_buffer ≤16 帧 mean 100 / 98 ms、infer（除首次）mean 292 / 290 ms（与两个 sidecar 争用 GPU1）；`records/eval/`。跨侧对照与耗时表见 `motion-t3-open/result.md`。

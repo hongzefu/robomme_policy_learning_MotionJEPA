@@ -1,0 +1,5 @@
+=== T3_EVAL_OBS side=open run=motion-t3-open-b HEAD=2776880217a3d7f2e0edcd667850b63b50ba09b8 ckpt=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/train-runs/motion-t3-open/mme_vla_suite/motion-t3-open/999 port=8034 seed=42 tasks=ButtonUnmaskSwap,VideoUnmaskSwap max_episodes=10 overwrite=1 ===
+server 端口就绪 21:04:57
+EVAL_RC=0
+TIMING_SUMMARY add_buffer(<=16帧) n=1630 mean=1724 median=1810 p90=2387 max=2856 | add_buffer(首批>16帧) n=10 mean=12385 median=11383 p90=18548 max=18616 | infer n=1640 mean=99 median=80 p90=156 max=2375
+EXIT_CODE=0

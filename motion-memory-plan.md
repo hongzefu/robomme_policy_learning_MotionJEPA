@@ -1210,7 +1210,7 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
 
 逐项细节见第二部分三节。
 
-## 七、实施步骤（S-1、S0、S1 已完成，S2 进行中；用户 2026-09-03 批准 S0–S3 连续实施）
+## 七、实施步骤（S-1、S0–S3 全部完成于 2026-09-03；用户 2026-09-03 批准 S0–S3 连续实施）
 
 | 阶段 | 内容 | 判据 |
 |---|---|---|
@@ -1266,7 +1266,7 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
   产物字节相同、白干一倍，修后重跑 20+20 个 episode）；链 B 首次 D3 因 provenance 键遗漏 FAIL。
 - **1.6 吞吐评估**留到 S2（dataloader 微基准需要带四个 motion 键的 `__getitem__`）。
 
-### S2 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-{a21-g0b-replay,t2-ref,t1-closed,t2-cand,t3-closed,t3-open}/`）
+### S2 实测结果（2026-09-03 完成；留档 `docs/training-doc/motion-{a21-g0b-replay,t2-ref,t1-closed,t2-cand,t3-closed,t3-open}/`）
 
 - **S2_BASE = `c5925d9`**（commitV6.4）。改码在 git worktree `v1-store/worktrees/s2-dev`（分支 `s2-dev`）内进行，主树同时跑 A21 与 T2 reference；
   合入为 commitV6.5 `06220c4`（5.1 一览表 21 项全部落地；`mem_encoder.py` 零改动、`even_sampling_indices` 函数体零改动）。
@@ -1313,9 +1313,15 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
 - **T3_PHASE_REPORT 完成**（run `motion-t3-phase`，第三次、GPU1；前两次分别因 `TransformedDataset.close` 与共享 GPU0 OOM 失败，`8d9acf9` 修补）：
   `samples=11530 phase0_n=738 phase0_open=0.0781 phase0_closed=0.0686 cold(n=80) 0.0734/0.0683 steady(n=658) 0.0786/0.0686 other(n=10792) 0.0772/0.0706 empty(n=640) 0.1044/0.1203 nonempty(n=10890) 0.0757/0.0675`，
   完整性（分区计数闭合、加权均值闭合）全过；均值方向只报告：除空运动路样本外 open 高于 closed（单 seed、1000 步）。
-- 进行中：`T3_EVAL_OBS` 两侧（open 侧 GPU0 policy + GPU1 sidecar/sim 进行中；closed 侧续评于 GPU1）。`motion_gates_model.py` 旧入口 `main()` 先于扩展入口执行、拒掉 `--gate t3*`，已删旧入口（`fix:`）。
+- **T3_EVAL_OBS open=0.0 closed=0.0 episodes=40/40**（用户 2026-09-03 改为每任务 10 集共 40 集并要求用满两卡：每侧拆两片，四个 policy server + 两个 sidecar + 四个仿真同时跑，
+  GPU0 39.8 GB / GPU1 42.0 GB；HEAD `2e1b328`，21:04–22:2x）。逐任务两侧全 0/10，error 0——两侧 checkpoint 只训 1000 步 × b8，0% 属预期，信息量在链路跑通与耗时口径。
+  端到端耗时（server 挂钟，并行争用下）：add_buffer ≤16 帧 closed ≈ 100 ms / open ≈ 1.73 s（差 ≈ 1.64 s = 一次 sidecar 窗编码，两 sidecar 共享 GPU1；对应 2.6 的 +1.57 s 估计）；
+  首批 open 4.6 s（es=66，3 窗）～12.4 s（Swap 长 demo）；infer（除首次 jit）open 98 ms、closed 290 ms（closed policy 与 sidecar 同卡争用，非模型差异）。
+  留档 `docs/training-doc/motion-t3-open/result.md`（含盲区清单）与 `motion-t3-closed/result.md`，工具 `run_t3_eval_obs.sh` / `summarize_t3_eval_obs.py`、`eval.py --args.max_episodes`。
+- **S3 收官**：P1–P5、T3 全部硬闸 PASS，`T3_EFFECT_OBS` / `T3_PHASE_REPORT` / `T3_EVAL_OBS` 三项描述性观察已记；S0–S3 计划内工作全部完成。
+  后续若要让在线成功率对照有信息量，需另批更长的 T3 训练（新 run_name），不在本轮授权内。`motion_gates_model.py` 旧入口 `main()` 先于扩展入口执行、拒掉 `--gate t3*`，已删旧入口（`fix:`）。
 
-### S3 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-p5-online/`，在线观察归 T3 两侧 run）
+### S3 实测结果（2026-09-03 完成；留档 `docs/training-doc/motion-p5-online/`，在线观察归 T3 两侧 run）
 
 - **改码落点**：与 S2 同一 worktree `v1-store/worktrees/s2-dev`（主树跑 T1 期间），commitV6.6 `c9cd42e`（分支 `s2-dev`，T1 结束后合入 `v2-motionmem`）。
   新增 `policies/motion_protocol.py`（只 stdlib，magic `MMEMOT01`、`recv_exact` 按 monotonic deadline 循环 `recv_into`、stub 帧编码）、`scripts/dataset/wan/motion_sidecar.py`
