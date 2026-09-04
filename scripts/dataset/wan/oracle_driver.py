@@ -12,6 +12,11 @@
            ``input_frames_sha256`` 逐窗比较；落 ``<out>/<段>.bin``（同构、同 chunk 序）+ ``vae_report.json``
   encoder  对**我方** ``wan-latents/<段>.bin`` 跑原版 ``motion_token``，按行序契约落
            ``<out>/motion_token.f32.bin`` + ``encoder_report.json``（含 77 张量 sha256 清单与 provenance）
+  aggregate 多卡分片收拢：``vae`` / ``encoder`` 加 ``--shard-idx i --num-shards n`` 时按 ``expected_segments`` 稳定序
+           取 ``segs[i::n]``，各片只写自己的段文件与 ``*_report.shard<i>of<n>.json``（encoder 片另写
+           ``motion_token.shard<i>of<n>.f32.bin``）；``aggregate --manifest … --out …`` 核片数齐全、口径一致后合成
+           与单进程逐字节同构的 ``vae_report.json`` / ``motion_token.f32.bin`` + ``encoder_report.json``，
+           ``compare_wan.py`` 不感知分片。环境 B 8×A100 用 8 片（400 ep ≈ 6,700 窗单进程 ≈ 100 min → ≈ 13 min）。
 
 用法（MotionJEPA 项目只读，uv --no-sync）：
   PYTHONDONTWRITEBYTECODE=1 UV_LINK_MODE=copy HF_HOME=v1-store/cache/hf HF_HUB_OFFLINE=1 CUDA_VISIBLE_DEVICES=1 \\
@@ -38,7 +43,8 @@ sys.path.insert(0, str(_REPO_ROOT / "scripts" / "assets"))
 
 import assets_lock as al  # noqa: E402
 
-MJ_REPO_DEFAULT = "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA"
+# 环境 A 默认 turbo 只读副本；环境 B 用环境变量 MJ_REPO（paths.sh 同名）指向 /scratch/hongze/MotionJEPA
+MJ_REPO_DEFAULT = os.environ.get("MJ_REPO", "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA")
 ENCODER_RUN_DIR_DEFAULT = str(_REPO_ROOT / "v1-store" / "external" / "motionjepa" / "wan-v8-filter10-72ep-a")
 VAE_ID = "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
 
@@ -61,6 +67,7 @@ FRAME_SIZE = 256
 LAT_SHAPE = (9, 16, 32, 32)
 CHUNK_BYTES = 9 * 16 * 32 * 32 * 4
 TOKEN_DIM = 768
+TOKEN_BYTES = TOKEN_DIM * 4          # f32 一行
 
 for _name in ("mme_vla_suite", "jax", "openpi"):
     if _name in sys.modules:
@@ -168,9 +175,10 @@ def cmd_vae(args):
         raise SystemExit(f"段集合不符: 缺 {sorted(exp_keys - got_keys)[:5]} 多 {sorted(got_keys - exp_keys)[:5]}")
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
+    segs = _shard(segs, args)
     vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=W.VAE_STATE_SHA256_EXPECTED)
     print(f"[oracle-vae] 原版模块 {W.__file__} sha256={W.sha256_file(W.__file__)[:16]}… "
-          f"vae_state={vinfo['vae_state_sha256'][:16]}… segments={len(segs)}", flush=True)
+          f"vae_state={vinfo['vae_state_sha256'][:16]}… segments={len(segs)} shard={args.shard_idx}/{args.num_shards}", flush=True)
 
     frame_mismatches, meta_mismatches, n_windows = 0, 0, 0
     per_seg = {}
@@ -213,9 +221,17 @@ def cmd_vae(args):
               "tested_metadata_sha256": sha_file(lat_root / "metadata.json"),
               "elapsed_s": time.perf_counter() - t_all, "vae_provenance": vinfo,
               "orig_module_sha256": W.sha256_file(W.__file__), "mj_repo": os.path.abspath(args.mj_repo)}
-    (out / "vae_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str))
-    print(f"ORACLE_VAE=DONE windows={n_windows} frame_mismatches={frame_mismatches} "
-          f"metadata_mismatches={meta_mismatches} elapsed={report['elapsed_s']:.0f}s", flush=True)
+    if args.num_shards > 1:
+        report["shard"] = {"idx": args.shard_idx, "num": args.num_shards}
+        (out / _shard_name("vae_report", args, ".json")).write_text(
+            json.dumps(report, ensure_ascii=False, indent=1, default=str))
+        print(f"ORACLE_VAE=DONE shard={args.shard_idx}/{args.num_shards} windows={n_windows} "
+              f"frame_mismatches={frame_mismatches} metadata_mismatches={meta_mismatches} "
+              f"elapsed={report['elapsed_s']:.0f}s", flush=True)
+    else:
+        (out / "vae_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str))
+        print(f"ORACLE_VAE=DONE windows={n_windows} frame_mismatches={frame_mismatches} "
+              f"metadata_mismatches={meta_mismatches} elapsed={report['elapsed_s']:.0f}s", flush=True)
     if frame_mismatches or meta_mismatches:
         raise SystemExit(1)
 
@@ -231,7 +247,7 @@ def cmd_encoder(args):
     torch.manual_seed(0)
     device = torch.device("cuda")
     manifest = load_manifest(args.manifest)
-    segs = expected_segments(manifest)
+    segs = _shard(expected_segments(manifest), args)
     lat_root = pathlib.Path(args.latents)
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -261,12 +277,143 @@ def cmd_encoder(args):
             table += tok.astype(np.float32).tobytes()
             row_map.append({"row": n, "segment": s["key"], "m": m, "g": s["g"], "seg": s["seg"]})
             n += 1
+    if args.num_shards > 1:
+        tbl = out / _shard_name("motion_token", args, ".f32.bin")
+        atomic_write(tbl, bytes(table))
+        report = {"rows": n, "table_sha256": sha_file(tbl), "row_map": row_map,
+                  "encoder_provenance": einfo, "encoder_state_sha256": state_sha,
+                  "elapsed_s": time.perf_counter() - t_all, "orig_module_sha256": W.sha256_file(W.__file__),
+                  "shard": {"idx": args.shard_idx, "num": args.num_shards}}
+        (out / _shard_name("encoder_report", args, ".json")).write_text(
+            json.dumps(report, ensure_ascii=False, indent=1, default=str))
+        print(f"ORACLE_ENCODER=DONE shard={args.shard_idx}/{args.num_shards} rows={n} "
+              f"elapsed={report['elapsed_s']:.0f}s", flush=True)
+        return
     atomic_write(out / "motion_token.f32.bin", bytes(table))
     report = {"rows": n, "table_sha256": sha_file(out / "motion_token.f32.bin"), "row_map": row_map,
               "encoder_provenance": einfo, "encoder_state_sha256": state_sha,
               "elapsed_s": time.perf_counter() - t_all, "orig_module_sha256": W.sha256_file(W.__file__)}
     (out / "encoder_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str))
     print(f"ORACLE_ENCODER=DONE rows={n} elapsed={report['elapsed_s']:.0f}s", flush=True)
+
+
+# ---------------- 分片与收拢 ----------------
+
+def _shard(segs: list[dict], args) -> list[dict]:
+    """按 expected_segments 稳定序取模分片；num_shards=1 时原样返回（单进程口径不变）。"""
+    n, i = int(args.num_shards), int(args.shard_idx)
+    if n < 1 or not (0 <= i < n):
+        raise SystemExit(f"--shard-idx {i} / --num-shards {n} 非法")
+    return segs if n == 1 else segs[i::n]
+
+
+def _shard_name(stem: str, args, suffix: str) -> str:
+    return f"{stem}.shard{int(args.shard_idx)}of{int(args.num_shards)}{suffix}"
+
+
+def _load_shards(out: pathlib.Path, stem: str, n: int) -> list[dict]:
+    reps = []
+    for i in range(n):
+        p = out / f"{stem}.shard{i}of{n}.json"
+        if not p.is_file():
+            raise SystemExit(f"缺分片报告 {p}")
+        r = json.loads(p.read_text(encoding="utf-8"))
+        if r.get("shard") != {"idx": i, "num": n}:
+            raise SystemExit(f"{p} 的 shard 字段 {r.get('shard')} 与文件名不符")
+        reps.append(r)
+    return reps
+
+
+def _same_across(reps: list[dict], key: str, what: str):
+    vals = [json.dumps(r.get(key), sort_keys=True, default=str) for r in reps]
+    if len(set(vals)) != 1:
+        raise SystemExit(f"{what}: 各片 {key} 不一致")
+    return reps[0].get(key)
+
+
+def cmd_aggregate(args):
+    """把 n 片的报告 / 表合成与单进程逐字节同构的产物；任一片缺失、口径不一致或段集合与清单重算不符即 FAIL。"""
+    manifest = load_manifest(args.manifest)
+    segs = expected_segments(manifest)
+    out = pathlib.Path(args.out)
+    n = int(args.num_shards)
+    did = []
+    if args.kind in ("vae", "both"):
+        reps = _load_shards(out, "vae_report", n)
+        per_seg = {}
+        for r in reps:
+            dup = set(per_seg) & set(r["segments"])
+            if dup:
+                raise SystemExit(f"vae: 段 {sorted(dup)[:5]} 出现在多个分片")
+            per_seg.update(r["segments"])
+        exp_keys = {s["key"] for s in segs}
+        if set(per_seg) != exp_keys:
+            raise SystemExit(f"vae: 分片段集合 ≠ 清单重算: 缺 {sorted(exp_keys - set(per_seg))[:5]} 多 {sorted(set(per_seg) - exp_keys)[:5]}")
+        for s in segs:
+            if not (out / f"{s['key']}.bin").is_file() or not (out / f"{s['key']}.bin.sha256").is_file():
+                raise SystemExit(f"vae: 缺段文件 {s['key']}.bin(.sha256)")
+        report = {
+            "manifest_sha256": _same_across(reps, "manifest_sha256", "vae"),
+            "segments": {s["key"]: per_seg[s["key"]] for s in segs},
+            "windows": sum(int(r["windows"]) for r in reps),
+            "frame_mismatches": sum(int(r["frame_mismatches"]) for r in reps),
+            "metadata_mismatches": sum(int(r["metadata_mismatches"]) for r in reps),
+            "tested_metadata_sha256": _same_across(reps, "tested_metadata_sha256", "vae"),
+            "elapsed_s": max(float(r["elapsed_s"]) for r in reps),
+            "elapsed_s_sum": sum(float(r["elapsed_s"]) for r in reps),
+            "vae_provenance": _same_across(reps, "vae_provenance", "vae"),
+            "orig_module_sha256": _same_across(reps, "orig_module_sha256", "vae"),
+            "mj_repo": _same_across(reps, "mj_repo", "vae"),
+            "aggregated_from_shards": n,
+        }
+        if report["manifest_sha256"] != manifest["sha256"]:
+            raise SystemExit("vae: 分片报告的 manifest_sha256 与 --manifest 不同")
+        (out / "vae_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str))
+        print(f"ORACLE_VAE=DONE windows={report['windows']} frame_mismatches={report['frame_mismatches']} "
+              f"metadata_mismatches={report['metadata_mismatches']} elapsed={report['elapsed_s']:.0f}s shards={n}", flush=True)
+        did.append("vae")
+        if report["frame_mismatches"] or report["metadata_mismatches"]:
+            raise SystemExit(1)
+    if args.kind in ("encoder", "both"):
+        reps = _load_shards(out, "encoder_report", n)
+        # 各片的 (segment, m) → token 字节；按清单序 demo 先 exec 后重排回单进程行序
+        tok = {}
+        for i, r in enumerate(reps):
+            tbl = out / f"motion_token.shard{i}of{n}.f32.bin"
+            if not tbl.is_file() or sha_file(tbl) != r["table_sha256"]:
+                raise SystemExit(f"encoder: 片 {i} 表缺失或 sha256 与报告不符")
+            raw = tbl.read_bytes()
+            if len(raw) != int(r["rows"]) * TOKEN_BYTES or len(r["row_map"]) != int(r["rows"]):
+                raise SystemExit(f"encoder: 片 {i} 行数 {r['rows']} 与表字节 {len(raw)} / row_map 不符")
+            for j, rm in enumerate(r["row_map"]):
+                k = (rm["segment"], int(rm["m"]))
+                if k in tok:
+                    raise SystemExit(f"encoder: 行 {k} 出现在多个分片")
+                tok[k] = (raw[j * TOKEN_BYTES:(j + 1) * TOKEN_BYTES], rm)
+        table = bytearray()
+        row_map = []
+        for s in segs:
+            for m in range(len(s["starts"])):
+                k = (s["key"], m)
+                if k not in tok:
+                    raise SystemExit(f"encoder: 清单重算行 {k} 在各片中缺失")
+                b, rm = tok.pop(k)
+                table += b
+                row_map.append({"row": len(row_map), "segment": s["key"], "m": m, "g": int(rm["g"]), "seg": rm["seg"]})
+        if tok:
+            raise SystemExit(f"encoder: 各片多出 {len(tok)} 行不在清单重算内")
+        atomic_write(out / "motion_token.f32.bin", bytes(table))
+        report = {"rows": len(row_map), "table_sha256": sha_file(out / "motion_token.f32.bin"), "row_map": row_map,
+                  "encoder_provenance": _same_across(reps, "encoder_provenance", "encoder"),
+                  "encoder_state_sha256": _same_across(reps, "encoder_state_sha256", "encoder"),
+                  "elapsed_s": max(float(r["elapsed_s"]) for r in reps),
+                  "elapsed_s_sum": sum(float(r["elapsed_s"]) for r in reps),
+                  "orig_module_sha256": _same_across(reps, "orig_module_sha256", "encoder"),
+                  "aggregated_from_shards": n}
+        (out / "encoder_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str))
+        print(f"ORACLE_ENCODER=DONE rows={report['rows']} elapsed={report['elapsed_s']:.0f}s shards={n}", flush=True)
+        did.append("encoder")
+    print(f"ORACLE_AGGREGATE=DONE kinds={','.join(did)} shards={n}", flush=True)
 
 
 def main():
@@ -278,6 +425,8 @@ def main():
     p.add_argument("--raw-dir", required=True)
     p.add_argument("--latents", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--shard-idx", type=int, default=0)
+    p.add_argument("--num-shards", type=int, default=1)
     p.set_defaults(func=cmd_vae)
     p = sub.add_parser("encoder")
     p.add_argument("--manifest", required=True)
@@ -287,7 +436,15 @@ def main():
     p.add_argument("--checkpoint", default="checkpoint_epoch_72.pt")
     p.add_argument("--expected-ckpt-sha256", default="",
                    help="默认按 ASSETS_LOCK.json 校；探未入 lock 的 run_dir 时显式传 SKIP")
+    p.add_argument("--shard-idx", type=int, default=0)
+    p.add_argument("--num-shards", type=int, default=1)
     p.set_defaults(func=cmd_encoder)
+    p = sub.add_parser("aggregate", help="把 --num-shards 片的 vae / encoder 产物合成单进程同构产物")
+    p.add_argument("--manifest", required=True)
+    p.add_argument("--out", required=True)
+    p.add_argument("--num-shards", type=int, required=True)
+    p.add_argument("--kind", choices=["vae", "encoder", "both"], default="both")
+    p.set_defaults(func=cmd_aggregate)
     args = ap.parse_args()
     args.func(args)
 

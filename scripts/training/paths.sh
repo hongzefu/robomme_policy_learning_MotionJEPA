@@ -13,6 +13,10 @@
 #      （AGENTS.md 第 13 条改版）。校验的是前缀而非全路径，将来改目录名不必改代码。
 #   3. RAW_H5_DIR 默认指向 turbo 那份 H5，使本机与集群读**同一份字节**，
 #      一致性验证不被输入差异污染；确需本机原件（NVMe 更快）时用环境变量覆盖。
+#   4. 环境 B（AWS 单机，2026-09-04 起，AGENTS.md「运行环境判定」）：仓库在
+#      /scratch/hongze/robomme_policy_learning_MotionJEPA，前缀白名单加第三项 AWS_WORK_PREFIX。
+#      本文件的 RAW_H5_* / EXPECTED_* 是环境 A 旧口径（恰 4 个 h5 + sidecar + 400 ep），环境 B 下
+#      没有驱动调用 v1_validate_raw_h5，原样保留不改。
 
 set -euo pipefail
 
@@ -21,6 +25,7 @@ readonly TURBO_PREFIX="${GL_ROOT}/"
 # 本机工作副本前缀（AGENTS.md 第 13 条 2026-09-03 改版）：v2-motionmem 起一切改动与
 # 运行都在 /data/hongzefu/robomme_policy_learning_MotionJEPA，turbo 副本只读归档
 readonly LOCAL_WORK_PREFIX="/data/hongzefu/"
+readonly AWS_WORK_PREFIX="/scratch/hongze/"
 
 V1_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly V1_SCRIPT_DIR
@@ -37,9 +42,10 @@ fi
 case "${REPO_ROOT}/" in
   "${LOCAL_WORK_PREFIX}"*) ;;
   "${TURBO_PREFIX}"*) ;;
+  "${AWS_WORK_PREFIX}"*) ;;
   *)
-    echo "错误: 仓库必须位于 ${LOCAL_WORK_PREFIX}(本机工作副本) 或 ${TURBO_PREFIX}(turbo 只读归档) 下, 当前为 ${REPO_ROOT}" >&2
-    echo "      产物根 v1-store/ 随仓库走, 不得落到这两处之外(见 AGENTS.md 第 13、14 条)。" >&2
+    echo "错误: 仓库必须位于 ${LOCAL_WORK_PREFIX}(环境 A 本机工作副本)、${TURBO_PREFIX}(turbo 只读归档) 或 ${AWS_WORK_PREFIX}(环境 B AWS 单机) 下, 当前为 ${REPO_ROOT}" >&2
+    echo "      产物根 v1-store/ 随仓库走, 不得落到这三处之外(见 AGENTS.md 第 13、14 条)。" >&2
     exit 1
     ;;
 esac

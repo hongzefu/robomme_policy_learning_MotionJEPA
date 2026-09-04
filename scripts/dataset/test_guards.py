@@ -644,3 +644,40 @@ def test_framesamp_dataset_motion_store_lazy_in_spawn_worker() -> None:
     assert res["owner_pid"] == res["pid"] != os.getpid()
     assert res["getstate_mstore_none"] and res["getstate_store_none"]
     assert res["k"] == 5
+
+
+# ── 环境 B 适配（commitV6.12，2026-09-04）：两份 paths.sh 前缀白名单同值；run_local siglip 分支 --no-sync ─────────
+def _paths_sh_prefixes(path: pathlib.Path) -> dict:
+    """source 后取三个前缀的展开值（训练域 TURBO_PREFIX 经 ${GL_ROOT} 拼出，不能只看字面），并核 case 白名单含它们。"""
+    import subprocess
+    names = ("TURBO_PREFIX", "LOCAL_WORK_PREFIX", "AWS_WORK_PREFIX")
+    t = path.read_text(encoding="utf-8")
+    for name in names:
+        assert f"readonly {name}=" in t, f"{path} 缺 readonly {name}"
+        assert f'"${{{name}}}"*) ;;' in t, f"{path} 的 case 白名单没有 {name}"
+    r = subprocess.run(["bash", "-c", f'source "{path}" && printf "%s\n" "$TURBO_PREFIX" "$LOCAL_WORK_PREFIX" "$AWS_WORK_PREFIX"'],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    return dict(zip(names, r.stdout.splitlines()))
+
+
+def test_paths_sh_prefixes_identical() -> None:
+    """建库域与训练域的三个前缀常量（turbo / 环境 A 本机 / 环境 B AWS）必须逐字同值且都进 case 白名单。"""
+    a = _paths_sh_prefixes(_REPO_ROOT / "scripts/dataset/paths.sh")
+    b = _paths_sh_prefixes(_REPO_ROOT / "scripts/training/paths.sh")
+    assert a == b
+    assert a["AWS_WORK_PREFIX"] == "/scratch/hongze/"
+    for v in a.values():
+        assert v.startswith("/") and v.endswith("/"), v
+
+
+def test_run_local_siglip_uses_no_sync() -> None:
+    """run_local.py 三个 stage 的 uv run 都必须带 --no-sync（多 worker 并发触发 uv 同步会争锁）。"""
+    import re
+    t = (_REPO_ROOT / "scripts/dataset/run_local.py").read_text(encoding="utf-8")
+    body = t[t.index("def worker_cmd("):t.index("def pump(")]
+    # 每个以 ["uv", "run", … 开头的列表字面量里都必须有 "--no-sync"
+    lists = re.findall(r'\["uv",\s*"run",(.*?)\]', body, re.S)
+    assert len(lists) == 2, f"worker_cmd 里 uv run 列表数 {len(lists)} ≠ 2（siglip / wan+encode 各一）"
+    assert all('"--no-sync"' in x for x in lists), lists
+    assert '["uv", "run", "--no-sync", "python"' in body, "siglip 分支缺 --no-sync"

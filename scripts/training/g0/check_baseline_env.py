@@ -126,8 +126,10 @@ def collect_fingerprint(dataset: pathlib.Path) -> dict:
             models / "big_vision/paligemma_tokenizer.model"),
         "pi05_base": _tree_spot_digest(
             models / "openpi-assets/checkpoints/pi05_base/params"),
-        "episode_manifest_sha256_field": json.load(
-            open(v1_store / "episode_manifest.json"))["sha256"],
+        # legacy 顶层清单只在环境 A 存在（4task-gl 时代）；环境 B 的清单在各库 meta/ 下，缺失记 None、不加键
+        "episode_manifest_sha256_field": (
+            json.load(open(v1_store / "episode_manifest.json"))["sha256"]
+            if (v1_store / "episode_manifest.json").is_file() else None),
         "dataset_spot": _dataset_spot_digest(dataset),
     }
     fp["xla"] = {

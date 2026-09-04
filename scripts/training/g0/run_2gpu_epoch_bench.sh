@@ -29,6 +29,8 @@
 #   XLA_FLAGS       原样注入训练进程并留档 env.json（确定性档由调用方给定）
 #   BENCH_DUMP_IDX  1 = batch_sampler 层 index 记录（S0'，v2 计划 C.1 端到端旁证），
 #                   每 batch 追加写 <记录目录>/idx_seq.jsonl；默认 0（现行为不变）
+#   BENCH_GPUS      这条 run 用的两张卡（默认 0,1；必须恰好两张，与 --fsdp-devices 2 配套）。
+#                   只为在 8 卡机上并行多条 2 卡 run 互不抢显存，不改任何训练口径
 #
 # runner（P1b）：一律 UV_LINK_MODE=copy uv run（AGENTS 3；同一 .venv 解释器，
 # 计算行为不变——由 G0b 重跑 vs 旧 G0 前 300 步逐位对拍实证）。
@@ -60,6 +62,11 @@ if [[ -z "${BATCH_DIGESTS:-}" ]]; then    # P1b：未显式设置时联动 SAVE_
   fi
 fi
 EXTRA_DIGEST_STEPS="${EXTRA_DIGEST_STEPS:-}"   # 附加摘要步（逗号分隔；P1b）
+BENCH_GPUS="${BENCH_GPUS:-0,1}"                # 恰好两张卡（fsdp 2）；8 卡机上多条 run 并行时各给一对
+if [[ ! "${BENCH_GPUS}" =~ ^[0-9]+,[0-9]+$ ]]; then
+  echo "错误: BENCH_GPUS 必须是恰好两张卡的逗号分隔列表(如 0,1), 实为 '${BENCH_GPUS}'" >&2
+  exit 1
+fi
 STATE_DUMP_STEPS="${STATE_DUMP_STEPS:-}"       # TrainState 数组落盘步（逗号分隔；P1b）
 KEEP_JAX_CACHE="${KEEP_JAX_CACHE:-0}"     # 1 = 保留编译缓存供下一轮共用
 WARMUP_STEPS="${WARMUP_STEPS:-50}"        # 稳态统计丢弃的头部步数（JIT 编译 + worker 起步）
@@ -192,7 +199,7 @@ d = {
                                      capture_output=True, text=True).stdout.strip()),
     "XLA_FLAGS": "${XLA_FLAGS:-}",
     "XLA_PYTHON_CLIENT_MEM_FRACTION": "0.95",
-    "CUDA_VISIBLE_DEVICES": "0,1",
+    "CUDA_VISIBLE_DEVICES": "${BENCH_GPUS}",
     "hostname": platform.node(),
     "python": sys.version,
     "jax": jax.__version__,
@@ -248,7 +255,7 @@ PYEOF
 fi
 XLA_FLAGS="${XLA_FLAGS:-}" \
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
-CUDA_VISIBLE_DEVICES=0,1 \
+CUDA_VISIBLE_DEVICES="${BENCH_GPUS}" \
 "${UVPY[@]}" "${REPO_ROOT}/scripts/training/g0/check_baseline_env.py" dump \
   --record-dir "${RECORD_DIR}" --dataset "${DUMP_DATASET}"
 
@@ -268,7 +275,7 @@ set +e
   BENCH_STATE_DUMP_STEPS="${STATE_DUMP_STEPS}" \
   BENCH_STATE_DUMP_DIR="${STATE_DUMP_DIR}" \
   BENCH_DUMP_IDX="${BENCH_DUMP_IDX}" \
-  CUDA_VISIBLE_DEVICES=0,1 \
+  CUDA_VISIBLE_DEVICES="${BENCH_GPUS}" \
   XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 \
   XLA_FLAGS="${XLA_FLAGS:-}" \
   PYTHONUNBUFFERED=1 \

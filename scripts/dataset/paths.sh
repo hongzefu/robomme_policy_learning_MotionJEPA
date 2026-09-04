@@ -11,11 +11,18 @@
 #      旧版「恰好 4 个 h5 + 各带 _metadata.json sidecar + 400 ep」的校验不再适用（16 任务目录无 sidecar、各 100 ep），
 #      改为「4 个目标 h5 存在 + 各 ≥ N 个 episode + 逐文件 sha256 记入库内 meta/input_manifest.json」。
 #   4. 集群链路（gl/ 目录、Slurm 提交）已删除；本文件不再提供任何 turbo 暂存 / NFS venv 变量。
+#
+# 环境 B（AWS 单机，2026-09-04 起，AGENTS.md「运行环境判定」）：
+#   仓库工作副本在 /scratch/hongze/robomme_policy_learning_MotionJEPA，本机没有 /data/hongzefu 与 /nfs/turbo。
+#   前缀白名单加第三项 AWS_WORK_PREFIX；RAW_H5_DIR 默认值按仓库前缀分叉（AWS 下默认
+#   /scratch/hongze/robomme_data_h5——只含 4 个目标 h5 的目录）；MJ_REPO 允许环境变量覆盖（本机只读副本
+#   在 /scratch/hongze/MotionJEPA）。turbo / /data 两个前缀与其默认值原样保留给环境 A。
 
 set -euo pipefail
 
 readonly TURBO_PREFIX="/nfs/turbo/coe-chaijy-unreplicated/hongzefu/"
 readonly LOCAL_WORK_PREFIX="/data/hongzefu/"
+readonly AWS_WORK_PREFIX="/scratch/hongze/"
 
 V1_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly V1_SCRIPT_DIR
@@ -31,9 +38,10 @@ fi
 case "${REPO_ROOT}/" in
   "${LOCAL_WORK_PREFIX}"*) ;;
   "${TURBO_PREFIX}"*) ;;
+  "${AWS_WORK_PREFIX}"*) ;;
   *)
-    echo "错误: 仓库必须位于 ${LOCAL_WORK_PREFIX}(本机工作副本) 或 ${TURBO_PREFIX}(turbo 只读归档) 下, 当前为 ${REPO_ROOT}" >&2
-    echo "      产物根 v1-store/ 随仓库走, 不得落到这两处之外(见 AGENTS.md 第 13、14 条)。" >&2
+    echo "错误: 仓库必须位于 ${LOCAL_WORK_PREFIX}(环境 A 本机工作副本)、${TURBO_PREFIX}(turbo 只读归档) 或 ${AWS_WORK_PREFIX}(环境 B AWS 单机) 下, 当前为 ${REPO_ROOT}" >&2
+    echo "      产物根 v1-store/ 随仓库走, 不得落到这三处之外(见 AGENTS.md 第 13、14 条)。" >&2
     exit 1
     ;;
 esac
@@ -47,13 +55,21 @@ readonly LOGS_DIR="${V1_STORE}/logs"
 readonly EXTERNAL_DIR="${V1_STORE}/external"
 readonly WAN_VENV="${V1_STORE}/venvs/wan"
 
-# ── 原始 H5（16 任务全集，本机原件）与四个目标任务 ───────────────────────────────
-RAW_H5_DIR="${RAW_H5_DIR:-/data/hongzefu/robomme_data_h5}"
+# ── 原始 H5 与四个目标任务 ─────────────────────────────────────────────────────
+# 环境 A：16 任务全集 /data/hongzefu/robomme_data_h5（本机原件）；
+# 环境 B：/scratch/hongze/robomme_data_h5（从 Yinpei/robomme_data_h5 只下 4 个目标任务，见 external-assets-lock.md 第五节）
+case "${REPO_ROOT}/" in
+  "${AWS_WORK_PREFIX}"*) _raw_h5_default="/scratch/hongze/robomme_data_h5" ;;
+  *) _raw_h5_default="/data/hongzefu/robomme_data_h5" ;;
+esac
+RAW_H5_DIR="${RAW_H5_DIR:-${_raw_h5_default}}"
+unset _raw_h5_default
 readonly TARGET_TASKS=(ButtonUnmask ButtonUnmaskSwap VideoUnmask VideoUnmaskSwap)
 readonly TARGET_TASKS_CSV="ButtonUnmask,ButtonUnmaskSwap,VideoUnmask,VideoUnmaskSwap"
 
 # ── MotionJEPA 只读副本与 encoder 资产（motion-memory-plan.md 红线 2 / 9 / 10）───────
-readonly MJ_REPO="/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA"
+# 环境 A 默认 turbo 只读副本；环境 B 用环境变量 MJ_REPO 指向 /scratch/hongze/MotionJEPA（同一 commit）
+MJ_REPO="${MJ_REPO:-/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA}"
 readonly MJ_COMMIT="2a484ad960ed6155321dc34def9011eb119f857f"
 readonly ENCODER_RUN_DIR="${EXTERNAL_DIR}/motionjepa/wan-v8-filter10-72ep-a"
 readonly ENCODER_CKPT="checkpoint_epoch_72.pt"

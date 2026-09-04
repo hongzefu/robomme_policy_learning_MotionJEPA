@@ -26,6 +26,7 @@
     DTYPE_BATCH_FIXTURE_DIR=<batch fixture 目录> \\
     [DTYPE_GRAD_ARRAYS_DIR=<梯度数组目录，不设则只落摘要>] \\
     [DTYPE_BASELINE_CHECKSUMS=<G0b r1 param_checksums.jsonl>] \\
+    [DTYPE_MANIFEST=<episode_manifest.json；默认 v1-store/episode_manifest.json>] \\
     XLA_FLAGS="--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0" \\
     UV_LINK_MODE=copy uv run scripts/training/tests/single_step_grad.py mme_vla_suite ...
 """
@@ -196,7 +197,11 @@ def main() -> None:
         str(pathlib.Path(f"~/.cache/jax_{config.exp_name}").expanduser()),
     )
 
-    manifest = C.load_manifest(C.REPO_ROOT / "v1-store" / "episode_manifest.json")
+    # 默认 legacy 顶层清单（环境 A 的 4task-gl）；环境 B 没有它，由 DTYPE_MANIFEST 指向某个库的 meta/episode_manifest.json
+    # （字段 exec_sample_offset / exec_start_idx / num_timesteps / totals.exec_samples 同构；PER_STEP=200 要求 ≥200 个 Button 系 episode，
+    # 即只有 400 ep 库满足，40 ep 库结构性不足）
+    manifest = C.load_manifest(pathlib.Path(os.environ.get("DTYPE_MANIFEST")
+                                            or (C.REPO_ROOT / "v1-store" / "episode_manifest.json")))
     groups = C.build_fixture_indices(manifest)
     plan = C.build_fixture_batches(groups)
 

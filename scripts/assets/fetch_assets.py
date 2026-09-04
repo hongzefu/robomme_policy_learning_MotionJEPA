@@ -140,6 +140,17 @@ def _fetch_one(name: str, entry: dict, root: pathlib.Path, token: str | None) ->
             revision=src["revision"], allow_patterns=src.get("allow_patterns"),
             cache_dir=str(root / "v1-store" / "cache" / "hf" / "hub"), token=token)
         print(f"    snapshot 落点 {got}")
+        # revision 给的是 commit sha 时 huggingface_hub 不写 refs/main，而离线加载（HF_HUB_OFFLINE=1 按 repo_id 解析
+        # main）与 verify 的 hf_snapshot_subdir 分支都要它 == 钉死的 revision。环境 B 从零复刻时首次踩中（2026-09-04）。
+        # 缺则补写为钉死 revision；已存在且不同则响亮失败、不覆盖（那是另一份 main，不属本 lock）。
+        ref = root / entry["dest"] / "refs" / "main"
+        if not ref.is_file():
+            ref.parent.mkdir(parents=True, exist_ok=True)
+            ref.write_text(src["revision"])
+            print(f"    补写 refs/main = {src['revision'][:12]}…（钉 sha 的 snapshot_download 不写 ref）")
+        elif ref.read_text().strip() != src["revision"]:
+            raise SystemExit(f"错误: {ref} 现为 {ref.read_text().strip()[:12]}… != lock revision "
+                             f"{src['revision'][:12]}…，拒绝覆盖；请人工裁决这份 HF 缓存")
         return
 
     dest = root / entry["dest"]

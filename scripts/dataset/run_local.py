@@ -46,7 +46,8 @@ V1_STORE = _REPO_ROOT / "v1-store"
 # 每个 stage 起手要校的资产（ASSETS_LOCK.json 里的名字）
 STAGE_ASSETS = {"siglip": ["siglip_params"], "wan": ["wan_vae"],
                 "encode": ["wan_vae", "motionjepa_ckpt", "motionjepa_config"]}
-RAW_H5_DEFAULT = "/data/hongzefu/robomme_data_h5"
+# 环境 A 默认本机 16 任务全集；环境 B 由 paths.sh 导出的 RAW_H5_DIR 覆盖（/scratch/hongze/robomme_data_h5）
+RAW_H5_DEFAULT = os.environ.get("RAW_H5_DIR", "/data/hongzefu/robomme_data_h5")
 ENCODER_RUN_DIR_DEFAULT = V1_STORE / "external" / "motionjepa" / "wan-v8-filter10-72ep-a"
 CKPT_DEFAULT = "checkpoint_epoch_72.pt"
 
@@ -84,7 +85,8 @@ def worker_cmd(stage: str, gpu: int, k: int, n: int, args, env: dict) -> tuple[l
     manifest = str(lib / "meta" / "episode_manifest.json")
     if stage == "siglip":
         out = lib / "source"
-        cmd = ["uv", "run", "python", str(_HERE / "build_shard.py"), "--manifest", manifest,
+        # --no-sync：8 个 worker 同时起会争 uv 的同步锁（40 ep 留档结论：后续命令一律 --no-sync）
+        cmd = ["uv", "run", "--no-sync", "python", str(_HERE / "build_shard.py"), "--manifest", manifest,
                "--raw_dir", args.raw_dir, "--out", str(out), "--worker-mode", "--worker-label", label,
                "--worker-idx", str(k), "--num-workers", str(n), "--resume", "--report_every", "2000"]
     else:

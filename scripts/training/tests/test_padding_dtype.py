@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import pathlib
 import sys
 
@@ -128,7 +129,12 @@ def test_describe_leaf_handles_none_and_str() -> None:
 
 def test_fixture_indices_are_reproducible_and_on_boundary() -> None:
     """定点集必须可复现，且各档 step_idx 落在预期的 padding / 满长分支上。"""
-    manifest = C.load_manifest(C.REPO_ROOT / "v1-store" / "episode_manifest.json")
+    # 与 single_step_grad.py 同口径：默认 legacy 顶层清单（环境 A），DTYPE_MANIFEST 可指向某库的 meta/episode_manifest.json；
+    # 两者都没有（环境 B 尚未建 400 ep 库）时 skip 而不是 FileNotFoundError
+    mp = pathlib.Path(os.environ.get("DTYPE_MANIFEST") or (C.REPO_ROOT / "v1-store" / "episode_manifest.json"))
+    if not mp.is_file():
+        pytest.skip(f"缺清单 {mp}（环境 B 无 legacy 顶层清单；建好 400 ep 库后设 DTYPE_MANIFEST 再跑）")
+    manifest = C.load_manifest(mp)
     g1 = C.build_fixture_indices(manifest)
     g2 = C.build_fixture_indices(manifest)
     assert g1 == g2, "定点集不可复现"

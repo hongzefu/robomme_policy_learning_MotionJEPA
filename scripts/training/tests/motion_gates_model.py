@@ -932,13 +932,43 @@ def _t3_load_records(rec: pathlib.Path):
     return bd, idx
 
 
+# 1000 步 / SAVE_INTERVAL 100 / EXTRA_DIGEST_STEPS 299 口径下的输入摘要步集（motion-t3-* 留档）；
+# 现只作 _t3_expected_steps 的回归锚点，判定用的步集改为按两侧 env.json 推导（环境 B ≤100 步复刻需要）
 _T3_DIGEST_STEPS = {0, 1, 2, 100, 200, 299, 300, 400, 500, 600, 700, 800, 900, 999}
 _MOTION_KEYS = ("motion_emb", "motion_pos", "motion_mask", "mem_order")
 
 
+def _t3_expected_steps(env: dict) -> tuple[set, int]:
+    """由驱动脚本留档 env.json 推导输入摘要步集与 index 前缀长度。
+
+    bench_train_steps.py 的记录器口径：步 {0,1,2} 恒记；每 SAVE_INTERVAL 步记一次（0 < k·si < steps）；
+    EXTRA_DIGEST_STEPS 逐项加；末步 steps-1 恒记。index 前缀 = steps × batch。
+    1000 步 / si 100 / extra "299" / batch 8 必须推出 _T3_DIGEST_STEPS 与 8000（模块导入时断言，防口径漂移）。
+    """
+    steps = int(env["steps"]); batch = int(env["argv_batch"]); si = int(env["save_interval_requested"])
+    extra_raw = env.get("extra_digest_steps") or ""
+    extra = {int(x) for x in str(extra_raw).strip("[]").replace(" ", "").split(",") if x}
+    if si <= 0:
+        raise SystemExit(f"save_interval_requested={si}：禁摘要口径下没有输入摘要，t3trace 不成立")
+    digest = {0, 1, 2} | {k * si for k in range(1, (steps - 1) // si + 1)} | extra | {steps - 1}
+    return digest, steps * batch
+
+
+assert _t3_expected_steps({"steps": 1000, "argv_batch": 8, "save_interval_requested": 100,
+                           "extra_digest_steps": "299"}) == (_T3_DIGEST_STEPS, 8000), "_t3_expected_steps 与 1000 步口径不符"
+
+
+def _t3_load_env(rec: pathlib.Path) -> dict:
+    p = rec / "env.json"
+    if not p.is_file():
+        raise SystemExit(f"缺 {p}（t3trace 的步集由驱动脚本留档 env.json 推导）")
+    return json.loads(p.read_text())
+
+
 def cmd_t3trace(args):
-    """T3_TOKEN_TRACE：open 侧 14 条摘要的四个 motion 键由 M1 oracle 按 sample_indices 重建，raw / canonical sha 逐键相同；
-    open / closed 公共 12 叶逐键相同，open-only 恰为四叶；前 8,000 个 index 逐项相同。--preflight 只做 112 样本覆盖性检查。"""
+    """T3_TOKEN_TRACE：open 侧全部摘要步（由两侧 env.json 推导，1000 步口径 14 条 / 100 步口径 7 条）的四个 motion 键由
+    M1 oracle 按 sample_indices 重建，raw / canonical sha 逐键相同；open / closed 公共 12 叶逐键相同，open-only 恰为四叶；
+    前 steps×batch 个 index 逐项相同。--preflight 只做覆盖性检查（样本数 = 摘要步数 × batch）。"""
     leaf_sha, canon_sha = _bench_hashes()
     lib = pathlib.Path(args.lib)
     index, table, pos_table, manifest = load_lib_oracle(lib)
@@ -952,12 +982,17 @@ def cmd_t3trace(args):
 
     if args.preflight:
         idx = json.loads(pathlib.Path(args.index_json).read_text())["indices"]
-        chosen = [idx[s * 8:(s + 1) * 8] for s in sorted(_T3_DIGEST_STEPS)]
+        # preflight 只有一侧 index；步集按 --open-records 的 env.json 推导（没给时退回 1000 步口径常量）
+        if args.open_records:
+            digest_steps, _ = _t3_expected_steps(_t3_load_env(pathlib.Path(args.open_records)))
+        else:
+            digest_steps = set(_T3_DIGEST_STEPS)
+        chosen = [idx[s * 8:(s + 1) * 8] for s in sorted(digest_steps)]
         flat = [i for b in chosen for i in b]
         ks = [oracle_sample(index["entries"][sample_of(i)[0]], sample_of(i)[1], table, pos_table)["k"] for i in flat]
         has_empty = any(k == 0 for k in ks); has_2 = any(k >= 2 for k in ks)
         has_video = any(eps[sample_of(i)[0]]["exec_start_idx"] > 0 for i in flat)
-        ok = has_empty and has_2 and has_video and len(flat) == 112
+        ok = has_empty and has_2 and has_video and len(flat) == 8 * len(digest_steps)
         print(f"T3_TRACE_PREFLIGHT={'PASS' if ok else 'FAIL'} samples={len(flat)} empty={sum(k == 0 for k in ks)} k_ge2={sum(k >= 2 for k in ks)} video={has_video}")
         if not ok:
             raise SystemExit(1)
@@ -966,12 +1001,17 @@ def cmd_t3trace(args):
     bo, io = _t3_load_records(pathlib.Path(args.open_records))
     bc, ic = _t3_load_records(pathlib.Path(args.closed_records))
     fails = []
-    if set(bo) != _T3_DIGEST_STEPS or set(bc) != _T3_DIGEST_STEPS:
-        fails.append(f"摘要步集 != {sorted(_T3_DIGEST_STEPS)}: open={sorted(bo)} closed={sorted(bc)}")
-    if io[:8000] != ic[:8000] or len(io) < 8000 or len(ic) < 8000:
-        fails.append("前 8,000 个 index 不同或不足")
+    exp_o = _t3_expected_steps(_t3_load_env(pathlib.Path(args.open_records)))
+    exp_c = _t3_expected_steps(_t3_load_env(pathlib.Path(args.closed_records)))
+    if exp_o != exp_c:
+        fails.append(f"两侧 env.json 推导的步集/前缀不同: open={sorted(exp_o[0])},{exp_o[1]} closed={sorted(exp_c[0])},{exp_c[1]}")
+    digest_steps, n_prefix = exp_o
+    if set(bo) != digest_steps or set(bc) != digest_steps:
+        fails.append(f"摘要步集 != {sorted(digest_steps)}: open={sorted(bo)} closed={sorted(bc)}")
+    if io[:n_prefix] != ic[:n_prefix] or len(io) < n_prefix or len(ic) < n_prefix:
+        fails.append(f"前 {n_prefix:,} 个 index 不同或不足")
     mism = 0; n_samples = 0
-    for s in sorted(_T3_DIGEST_STEPS):
+    for s in sorted(digest_steps):
         if s not in bo or s not in bc:
             continue
         ro, rc = bo[s], bc[s]
@@ -1000,7 +1040,7 @@ def cmd_t3trace(args):
     ok = not fails and mism == 0
     for f in fails:
         print("  ✗", f)
-    print(f"T3_TOKEN_TRACE={'PASS' if ok else 'FAIL'} steps=14 samples={n_samples} keys=4 mismatches={mism + len(fails)}")
+    print(f"T3_TOKEN_TRACE={'PASS' if ok else 'FAIL'} steps={len(digest_steps)} samples={n_samples} keys=4 mismatches={mism + len(fails)}")
     if not ok:
         raise SystemExit(1)
 
