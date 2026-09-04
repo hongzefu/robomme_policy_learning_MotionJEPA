@@ -133,7 +133,8 @@ unfixable = [
 
 [tool.ruff.lint.per-file-ignores]
 # AGENTS.md 第 1 条要求仓库内新增注释与文档一律用简体中文，中文全角标点会被 RUF001/2/3
-# 判为「歧义 Unicode 字符」。这两个目录是本轮新增的中文注释密集区，按目录豁免这三条。
+# 判为「歧义 Unicode 字符」。下列目录是中文注释密集区，按目录豁免这三条。
+"scripts/assets/*.py" = ["RUF001", "RUF002", "RUF003"]
 "scripts/dataset/*.py" = ["RUF001", "RUF002", "RUF003"]
 "scripts/dataset/wan/*.py" = ["RUF001", "RUF002", "RUF003"]
 "scripts/training/train.py" = ["RUF001", "RUF002", "RUF003"]

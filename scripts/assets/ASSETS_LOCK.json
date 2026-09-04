@@ -1,0 +1,263 @@
+{
+  "schema": "assets-lock-v1",
+  "note": "外部模型资产身份锁。dest 为仓库根相对路径，落点一律在 v1-store/ 内（AGENTS.md 第 14 条）。顶层 sha256 是剔除该键后 canonical JSON 的 sha256，口径同 wan_common.manifest_sha256。本表取代此前散落在 docs/dataset-build-doc/4task-motion-40ep/launch.md、v1-store/external/motionjepa/wan-v8-filter10-72ep-a/SHA256SUMS.src-vs-copy.txt、docs/training-doc/v1-grad-baseline-g0b/records/r1/env.json 三处的锚点；后两者作为历史记录保留，不再是代码读取的真值来源。",
+  "assets": {
+    "siglip_params": {
+      "kind": "file",
+      "dest": "v1-store/models/pi05_vision_encoder/siglip_params.pkl",
+      "bytes": 1659216368,
+      "sha256": "f16e9312f24760e6426ab82e42b606e80542ffbf351c9b40736bfb341d07f293",
+      "headtail": "28395c7f9bb5f439a0b49c2ce1869fce",
+      "needs_token": false,
+      "source": {
+        "type": "hf_file",
+        "repo_id": "Yinpei/pi05_vision_encoder",
+        "repo_type": "model",
+        "revision": "59bd9ff4d58ea0638064bda851fd7d477ee9708c",
+        "filename": "siglip_params.pkl",
+        "private": false,
+        "note": "HF LFS oid 即文件 sha256，与本条 sha256 同值（已核）；来源见仓库 README.md 的 pi05_vision_encoder 一节"
+      },
+      "consumers": [
+        "src/mme_vla_suite/dataset_builder/siglip_tokenizer.py::SigLipTokenizer"
+      ]
+    },
+    "paligemma_tokenizer": {
+      "kind": "file",
+      "dest": "v1-store/models/big_vision/paligemma_tokenizer.model",
+      "bytes": 4264023,
+      "sha256": "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6",
+      "headtail": "e50fee9c89af36270d4fee086bc15812",
+      "needs_token": false,
+      "source": {
+        "type": "gs_file",
+        "uri": "gs://big_vision/paligemma_tokenizer.model",
+        "anon": true
+      },
+      "consumers": [
+        "src/openpi/models/tokenizer.py::PaligemmaTokenizer"
+      ]
+    },
+    "pi05_base": {
+      "kind": "dir",
+      "dest": "v1-store/models/openpi-assets/checkpoints/pi05_base/params",
+      "n_files": 20,
+      "total_bytes": 12441721931,
+      "needs_token": false,
+      "files": {
+        "_CHECKPOINT_METADATA": {
+          "bytes": 258,
+          "sha256": "7674d497b452e8336840e6d21eaa85725d68c53fc011a648121f2b29b1ce5a8a",
+          "headtail": "45bebe7b63b0b2c477c28a72854099d2"
+        },
+        "_METADATA": {
+          "bytes": 21402,
+          "sha256": "250d0ad0f6540a5e4bdd70442d6864cef729724f2d23e2dd2cc669563a668d70",
+          "headtail": "9a7d1dc2f390f873cfeb22629cd71fdc"
+        },
+        "_sharding": {
+          "bytes": 11420,
+          "sha256": "38efd4f20bfc656b138c3009fa6156b1199c29a3ccf020769e3726605f1c51ca",
+          "headtail": "2b4c8f070fbbe8bbc89e72711b08e30a"
+        },
+        "array_metadatas/process_0": {
+          "bytes": 8856,
+          "sha256": "e040d148bdfcb5f8060b212ee63993eaf01fed05088dd89cf491f456fade0ceb",
+          "headtail": "a7f8dc76976d95a0815105490efbbce5"
+        },
+        "commit_success.txt": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "headtail": "cae66941d9efbd404e4d88758ea67670"
+        },
+        "d/1c4302d2d2000b5f3eb4fa1350fdef9a": {
+          "bytes": 2132,
+          "sha256": "c5021863f3efdb49a332f4cae944de55651dcf8ce4e526a762ed053f195e5a34",
+          "headtail": "db0dd3a30c591f18cef136b0672889ff"
+        },
+        "manifest.ocdbt": {
+          "bytes": 117,
+          "sha256": "78b6898ea1f8897a0225022b0ab799455cff0e15158a9ca349d8efbbe044aa55",
+          "headtail": "857e9975a59181365f0468fd7045de72"
+        },
+        "ocdbt.process_0/d/0832cad6c37f82d4eedd897dcbb8da9d": {
+          "bytes": 2240590484,
+          "sha256": "b2c08d8f1d83ef842fcb2be1518fb2309648380b61202515f9a0678cf28ce751",
+          "headtail": "949b82daf5ef65aba10af27288fde521"
+        },
+        "ocdbt.process_0/d/247d4b7c814d8b1a23fa8a20f36a88f7": {
+          "bytes": 34945019,
+          "sha256": "c04c95d8b587705c36e45bfb74ffbca92f699e910cbb3da44bab99e8e37a5fed",
+          "headtail": "e8134aa2413e8f88b62afcaab21bad4f"
+        },
+        "ocdbt.process_0/d/35a545f74995e511808d4f94dfbef3b6": {
+          "bytes": 70041571,
+          "sha256": "a3fd9934c60f9bac41445d196a353a2ae8a7d9fafabee5496f24ed21fe11ab32",
+          "headtail": "24a96e3d8db2e4838ffdd8eb13817d78"
+        },
+        "ocdbt.process_0/d/73bbae8a4deba6498bf07d96b215a574": {
+          "bytes": 2935855,
+          "sha256": "ef0910f6e572ab84e8e6dd5f91bbc3d6fb35cd18d8c885fc524e7eb30c67d17f",
+          "headtail": "4c886c5e19e4ac8120df925ca40b4f43"
+        },
+        "ocdbt.process_0/d/7bc9d3296d23a6fb83a6b3778ac6e964": {
+          "bytes": 2240315383,
+          "sha256": "0be2d8e4bfb6c5bce4a05a442ce5bd6138ce4c036145d8fa792479198de105b8",
+          "headtail": "0f44e6501adc78408d53a7d8d0f67aa2"
+        },
+        "ocdbt.process_0/d/7d78f38c5d8be1eea31406644dde9bd6": {
+          "bytes": 133821,
+          "sha256": "4a84f8371fc9d951fb0448ed0c929d356d2cd4a81d13d0b82b251c59d3683151",
+          "headtail": "a3d9edc5776f8412d2903f68802274bc"
+        },
+        "ocdbt.process_0/d/828bee85475e37c61e1cc19e32d1c5ef": {
+          "bytes": 929,
+          "sha256": "ae242dcb83de657ef72e779e435ae3d75cf991f15d996807b9566562a2a47a6f",
+          "headtail": "987f54392a73fe6681a94135da7a6cd1"
+        },
+        "ocdbt.process_0/d/8c5d7070ea57bdce2f0a19f95b8a21b4": {
+          "bytes": 3077149148,
+          "sha256": "75799900494cb9bdbd12acafd86858add78fb95946be564d28a8401a5baee764",
+          "headtail": "dfb2482562512cb29fa45e10064c7cad"
+        },
+        "ocdbt.process_0/d/b4349aaadb7dfa45c3a53fc67c04b8f6": {
+          "bytes": 1120156687,
+          "sha256": "306be49ac582f312d901d3ec41a38bc06d582dfb1e6f2d0e8160b9f7d517e535",
+          "headtail": "94b805c415374299079c70e01517a44d"
+        },
+        "ocdbt.process_0/d/caf01a82962cbd4651563d2ac1063e0b": {
+          "bytes": 27445152,
+          "sha256": "f2a18128db3a56347f223f53a4ae85c658a3cf5f6bc5f01af53f5871185c08f7",
+          "headtail": "2721211af1b9dd57b05dcd2d44a07267"
+        },
+        "ocdbt.process_0/d/deefd3c43390a50472cbcd317b0fff58": {
+          "bytes": 2393670849,
+          "sha256": "9dfb1737f7640313fd74bcd9a9b0c858abe0a088313bd2d2782f562cccb5f069",
+          "headtail": "a7b73b01e3f092e62242e81defdb32b6"
+        },
+        "ocdbt.process_0/d/ec484cf8f02dcf59e1892180f0862e40": {
+          "bytes": 1234292390,
+          "sha256": "6fc7cdad578faaa7fcd7c6805216396416e3daac637304c0d57454f62719663c",
+          "headtail": "4d5a1bf56d70140cf0a36733048be9b2"
+        },
+        "ocdbt.process_0/manifest.ocdbt": {
+          "bytes": 458,
+          "sha256": "667bd6f7f89374732f6bfe10dd446218efa5cdc99eca2af1006ba40f95ee29d0",
+          "headtail": "821ce43d38c4604fd173268516fa0881"
+        }
+      },
+      "source": {
+        "type": "gs_dir",
+        "uri": "gs://openpi-assets/checkpoints/pi05_base",
+        "anon": true,
+        "note": "maybe_download 的落点是 OPENPI_DATA_HOME/openpi-assets/checkpoints/pi05_base，本条 dest 是其下的 params/"
+      },
+      "consumers": [
+        "src/openpi/training/weight_loaders.py::CheckpointWeightLoader"
+      ]
+    },
+    "wan_vae": {
+      "kind": "hf_snapshot_subdir",
+      "dest": "v1-store/cache/hf/hub/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers",
+      "snapshot_rel": "snapshots/0fad780a534b6463e45facd96134c9f345acfa5b/vae",
+      "needs_token": false,
+      "files": {
+        "diffusion_pytorch_model.safetensors": {
+          "bytes": 507591892,
+          "sha256": "d6e524b3fffede1787a74e81b30976dce5400c4439ba64222168e607ed19e793",
+          "headtail": "fdd9190164d43ac139bf90779308fcf0",
+          "blob_name_is_sha256": true
+        },
+        "config.json": {
+          "bytes": 724,
+          "sha256": "f0c1cc1d7decb5badc384f54691746a27a9aeff49f7ebca974e583389342d527",
+          "headtail": "d53c0578f9e13f73b46bb7f460790ea8",
+          "blob_name_is_sha256": false,
+          "git_blob_sha1": "fe988ee53511225fb2fd0a01004d6e19524df75f",
+          "note": "非 LFS 文件，HF 缓存 blob 名是 git blob sha1，不是 sha256；两者不可混用"
+        }
+      },
+      "source": {
+        "type": "hf_snapshot",
+        "repo_id": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers",
+        "repo_type": "model",
+        "revision": "0fad780a534b6463e45facd96134c9f345acfa5b",
+        "allow_patterns": [
+          "vae/*"
+        ],
+        "private": false
+      },
+      "secondary": [
+        {
+          "kind": "torch_state_dict_sha256",
+          "value": "9980d252230c265cc2869466a74f85f5ee45b01ea9521bbb31159f90b75fe6d0",
+          "computed_by": "scripts/dataset/wan/wan_motion_infer.py::vae_state_sha256",
+          "requires": "wan 子 venv + diffusers 0.39.0（加载后指纹，做不到轻量 preflight）",
+          "note": "与复制件常量 VAE_STATE_SHA256_EXPECTED 同值，由 test_assets_lock.py 断言；load_vae 每次起手会现场重算并 assert"
+        }
+      ],
+      "consumers": [
+        "scripts/dataset/wan/wan_motion_infer.py::load_vae"
+      ]
+    },
+    "motionjepa_ckpt": {
+      "kind": "file",
+      "dest": "v1-store/external/motionjepa/wan-v8-filter10-72ep-a/checkpoint_epoch_72.pt",
+      "bytes": 954853147,
+      "sha256": "bae960373041629e976a1f4a7d6d48ca3c51786c827146a3ee10bf7b034bc15a",
+      "headtail": "991d846f80036fa0855e44759dfcba3f",
+      "needs_token": true,
+      "source": {
+        "type": "hf_file",
+        "repo_id": "HongzeFu/MotionJEPA",
+        "repo_type": "model",
+        "revision": "749224110f91c82f5fc5d3007281d07a5d5c944e",
+        "tag": "wan-v8-filter10-72ep-a-e72",
+        "filename": "wan-v8-filter10-72ep-a/checkpoint_epoch_72.pt",
+        "private": true,
+        "token_env": "HF_TOKEN"
+      },
+      "related": {
+        "mj_repo_commit": "2a484ad960ed6155321dc34def9011eb119f857f",
+        "mj_train_commit": "7388a42",
+        "source_pin_ref": "scripts/dataset/wan/SOURCE_PIN.json",
+        "run_name": "wan-v8-filter10-72ep-a",
+        "epoch": 72,
+        "note": "mj_repo_commit 是推理侧钉版（SOURCE_PIN 同值）；mj_train_commit 是训练该 ckpt 的 commit，两者在 src/motion_jepa 与 scripts/train.py 上逐字节相同（已实测 git diff 为空）"
+      },
+      "consumers": [
+        "scripts/dataset/wan/wan_motion_infer.py::load_encoder"
+      ]
+    },
+    "motionjepa_config": {
+      "kind": "file",
+      "dest": "v1-store/external/motionjepa/wan-v8-filter10-72ep-a/config.yaml",
+      "bytes": 1927,
+      "sha256": "99548a6ca23522c235281e45819ae6d5e96a916709cb4b9c0b47142832c90946",
+      "headtail": "6a14a774cad735c6400edd30e97bd7fc",
+      "needs_token": true,
+      "source": {
+        "type": "hf_file",
+        "repo_id": "HongzeFu/MotionJEPA",
+        "repo_type": "model",
+        "revision": "749224110f91c82f5fc5d3007281d07a5d5c944e",
+        "tag": "wan-v8-filter10-72ep-a-e72",
+        "filename": "wan-v8-filter10-72ep-a/config.yaml",
+        "private": true,
+        "token_env": "HF_TOKEN"
+      },
+      "related": {
+        "mj_repo_commit": "2a484ad960ed6155321dc34def9011eb119f857f",
+        "mj_train_commit": "7388a42",
+        "source_pin_ref": "scripts/dataset/wan/SOURCE_PIN.json",
+        "run_name": "wan-v8-filter10-72ep-a",
+        "epoch": 72,
+        "note": "mj_repo_commit 是推理侧钉版（SOURCE_PIN 同值）；mj_train_commit 是训练该 ckpt 的 commit，两者在 src/motion_jepa 与 scripts/train.py 上逐字节相同（已实测 git diff 为空）"
+      },
+      "consumers": [
+        "scripts/dataset/wan/wan_motion_infer.py::load_encoder"
+      ]
+    }
+  },
+  "sha256": "b842732e4809812205891436b5659cd7e85a271ba2e3043faed34ae9dad7d4cb"
+}
