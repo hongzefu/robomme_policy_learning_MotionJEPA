@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # T3_EVAL_OBS 单侧驱动（motion-memory-plan.md 四节表二 / 七节 S3）：起 policy server（uv venv）→ 跑 examples/robomme/eval.py（micromamba robomme 环境）→ 收 server。
-# 用法：SIDE=closed|open [TASKS=…] [MAX_EPISODES=10] [RUN_SUFFIX=-a] [OVERWRITE=1] [PORT=…] [POLICY_GPU=…] [SIM_GPU=…] bash scripts/training/tests/run_t3_eval_obs.sh
+# 用法：SIDE=closed|open [TASKS=…] [MAX_EPISODES=10] [RUN_SUFFIX=-a] [OVERWRITE=1] [PORT=…] [POLICY_GPU=…] [SIM_GPU=…] [RUN_PREFIX=…] [CKPT_CLOSED=… CKPT_OPEN=…] bash scripts/training/tests/run_t3_eval_obs.sh
 #   分片并行：同一侧按 TASKS 拆成多个进程时给不同 RUN_SUFFIX（结果目录 v1-store/evaluation/<RUN><RUN_SUFFIX>/…）与 PORT，事后合并。
 #   closed：checkpoint v1-store/train-runs/motion-t3-closed-final/999（关闭态，不起 sidecar）
 #   open  ：checkpoint v1-store/train-runs/motion-t3-open/mme_vla_suite/motion-t3-open/999（开启态，policy 构造时自动起 sidecar 于 motion.online_gpu=1）
@@ -21,9 +21,12 @@ MAX_EPISODES="${MAX_EPISODES:-0}"
 RUN_SUFFIX="${RUN_SUFFIX:-}"
 OVERWRITE="${OVERWRITE:-0}"
 ROBOMME_PY="${ROBOMME_PY:-${HOME}/micromamba/envs/robomme/bin/python}"
+# RUN_PREFIX / CKPT_CLOSED / CKPT_OPEN（2026-09-04 环境 B 复刻加）：默认仍是环境 A 的 motion-t3-* run；换一对 checkpoint 时显式给
+# （结果目录 v1-store/evaluation/<RUN_PREFIX>-<SIDE><RUN_SUFFIX>/…，summarize_t3_eval_obs.py 用同名 --run-prefix 收）
+RUN_PREFIX="${RUN_PREFIX:-motion-t3}"
 case "${SIDE}" in
-  closed) RUN=motion-t3-closed; CKPT="${V1_STORE}/train-runs/motion-t3-closed-final/999" ;;
-  open)   RUN=motion-t3-open;   CKPT="${V1_STORE}/train-runs/motion-t3-open/mme_vla_suite/motion-t3-open/999" ;;
+  closed) RUN="${RUN_PREFIX}-closed"; CKPT="${CKPT_CLOSED:-${V1_STORE}/train-runs/motion-t3-closed-final/999}" ;;
+  open)   RUN="${RUN_PREFIX}-open";   CKPT="${CKPT_OPEN:-${V1_STORE}/train-runs/motion-t3-open/mme_vla_suite/motion-t3-open/999}" ;;
   *) echo "SIDE 只能是 closed|open" >&2; exit 2 ;;
 esac
 [[ -d "${CKPT}/params" ]] || { echo "错误: checkpoint 缺 params: ${CKPT}" >&2; exit 1; }

@@ -48,6 +48,7 @@ def timing(log: pathlib.Path) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--suffixes", default="-a,-b")
+    ap.add_argument("--run-prefix", default="motion-t3", help="与 run_t3_eval_obs.sh 的 RUN_PREFIX 同值（结果目录 <prefix>-<side><suffix>）")
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--out", default=str(_V1 / "reports/motion/t3_eval_obs.json"))
     args = ap.parse_args()
@@ -58,7 +59,7 @@ def main() -> int:
         per_task: dict[str, dict] = {}
         tim = {}
         for suf in suffixes:
-            d = _V1 / "evaluation" / f"motion-t3-{side}{suf}" / "ckpt999" / f"seed{args.seed}"
+            d = _V1 / "evaluation" / f"{args.run_prefix}-{side}{suf}" / "ckpt999" / f"seed{args.seed}"
             pj = d / "progress.json"
             if not pj.is_file():
                 print(f"  ✗ 缺 {pj}", file=sys.stderr)
@@ -66,7 +67,7 @@ def main() -> int:
             prog = json.loads(pj.read_text())
             for task, eps in prog.items():
                 per_task.setdefault(task, {}).update({str(k): v for k, v in eps.items()})
-            tim[suf] = {"log_json": (d / "log.json").is_file(), **timing(_V1 / "logs" / f"motion-t3-{side}{suf}-eval.server.log")}
+            tim[suf] = {"log_json": (d / "log.json").is_file(), **timing(_V1 / "logs" / f"{args.run_prefix}-{side}{suf}-eval.server.log")}
         rates = {}
         n_total = n_succ = n_err = 0
         for task, eps in sorted(per_task.items()):
