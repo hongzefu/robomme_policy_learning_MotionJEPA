@@ -1,0 +1,77 @@
+warning: `VIRTUAL_ENV=.venv` does not match the project environment path `v1-store/venvs/wan` and will be ignored; use `--active` to target the active environment instead
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+[sidecar pid=4040197] 模型就绪 warmup=3.51s vae=9980d252230c265c… ckpt=bae960373041629e…
+[p5] sidecar 就绪 19.9s stub=False warmup=3.511581074912101
+/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/wan_motion_infer.py:251: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:206.)
+  f = torch.from_numpy(frames_window).permute(0, 3, 1, 2).float().to(device)   # 🔒 (33,3,256,256) 0..255
+[sidecar pid=4040197] 窗 #1 起点 0 耗时 1423 ms（累计 11s）
+[p5] g= 0 es=  0 T=291 窗  17 行核  17 首批 697 ms 后续批均 1395 ms 每窗 1438 ms 失配累计 0
+[p5] g= 1 es=  0 T=294 窗  17 行核  17 首批 8 ms 后续批均 1371 ms 每窗 1435 ms 失配累计 0
+[p5] g= 2 es=  0 T=267 窗  15 行核  15 首批 3 ms 后续批均 1364 ms 每窗 1437 ms 失配累计 0
+[sidecar pid=4040197] 窗 #51 起点 16 耗时 1417 ms（累计 86s）
+[p5] g= 3 es=  0 T=452 窗  27 行核  27 首批 5 ms 后续批均 1391 ms 每窗 1427 ms 失配累计 0
+[p5] g= 4 es=  0 T=323 窗  19 行核  19 首批 5 ms 后续批均 1361 ms 每窗 1421 ms 失配累计 0
+[sidecar pid=4040197] 窗 #101 起点 80 耗时 1415 ms（累计 158s）
+[p5] g= 5 es=  0 T=299 窗  17 行核  17 首批 4 ms 后续批均 1354 ms 每窗 1422 ms 失配累计 0
+[p5] g= 6 es=  0 T=220 窗  12 行核  12 首批 4 ms 后续批均 1325 ms 每窗 1423 ms 失配累计 0
+[p5] g= 7 es=  0 T=377 窗  22 行核  22 首批 3 ms 后续批均 1374 ms 每窗 1424 ms 失配累计 0
+[sidecar pid=4040197] 窗 #151 起点 64 耗时 1415 ms（累计 232s）
+[p5] g= 8 es=  0 T=207 窗  11 行核  11 首批 5 ms 后续批均 1315 ms 每窗 1422 ms 失配累计 0
+[p5] g= 9 es=  0 T=219 窗  12 行核  12 首批 4 ms 后续批均 1326 ms 每窗 1423 ms 失配累计 0
+[p5] g=10 es=  0 T=514 窗  31 行核  31 首批 5 ms 后续批均 1390 ms 每窗 1422 ms 失配累计 0
+[sidecar pid=4040197] 窗 #201 起点 0 耗时 1415 ms（累计 305s）
+[p5] g=11 es=  0 T=519 窗  31 行核  31 首批 4 ms 后续批均 1386 ms 每窗 1419 ms 失配累计 0
+[sidecar pid=4040197] 窗 #251 起点 304 耗时 1413 ms（累计 377s）
+[p5] g=12 es=  0 T=361 窗  21 行核  21 首批 4 ms 后续批均 1365 ms 每窗 1419 ms 失配累计 0
+[p5] g=13 es=  0 T=555 窗  33 行核  33 首批 3 ms 后续批均 1391 ms 每窗 1421 ms 失配累计 0
+[sidecar pid=4040197] 窗 #301 起点 240 耗时 1415 ms（累计 450s）
+[p5] g=14 es=  0 T=532 窗  32 行核  32 首批 3 ms 后续批均 1387 ms 每窗 1419 ms 失配累计 0
+[p5] g=15 es=  0 T=387 窗  23 行核  23 首批 4 ms 后续批均 1371 ms 每窗 1419 ms 失配累计 0
+[sidecar pid=4040197] 窗 #351 起点 160 耗时 1418 ms（累计 522s）
+[p5] g=16 es=  0 T=303 窗  17 行核  17 首批 4 ms 后续批均 1353 ms 每窗 1420 ms 失配累计 0
+[p5] g=17 es=  0 T=451 窗  27 行核  27 首批 4 ms 后续批均 1380 ms 每窗 1420 ms 失配累计 0
+[sidecar pid=4040197] 窗 #401 起点 256 耗时 1415 ms（累计 595s）
+[p5] g=18 es=  0 T=470 窗  28 行核  28 首批 3 ms 后续批均 1381 ms 每窗 1420 ms 失配累计 0
+[p5] g=19 es=  0 T=440 窗  26 行核  26 首批 3 ms 后续批均 1377 ms 每窗 1419 ms 失配累计 0
+[p5] g=20 es= 66 T=239 窗  12 行核  12 首批 4667 ms 后续批均 1288 ms 每窗 1419 ms 失配累计 0
+[sidecar pid=4040197] 窗 #451 起点 0 耗时 1417 ms（累计 668s）
+[p5] g=21 es= 66 T=225 窗  11 行核  11 首批 4307 ms 后续批均 1272 ms 每窗 1419 ms 失配累计 0
+[p5] g=22 es= 66 T=228 窗  12 行核  12 首批 4302 ms 后续批均 1288 ms 每窗 1419 ms 失配累计 0
+[p5] g=23 es= 66 T=399 窗  22 行核  22 首批 4302 ms 后续批均 1360 ms 每窗 1420 ms 失配累计 0
+[sidecar pid=4040197] 窗 #501 起点 98 耗时 1414 ms（累计 741s）
+[p5] g=24 es= 66 T=263 窗  14 行核  14 首批 4304 ms 后续批均 1312 ms 每窗 1419 ms 失配累计 0
+[p5] g=25 es= 66 T=252 窗  13 行核  13 首批 4305 ms 后续批均 1301 ms 每窗 1419 ms 失配累计 0
+[p5] g=26 es= 66 T=173 窗   8 行核   8 首批 4304 ms 后续批均 1193 ms 每窗 1419 ms 失配累计 0
+[p5] g=27 es= 66 T=338 窗  18 行核  18 首批 4306 ms 后续批均 1341 ms 每窗 1420 ms 失配累计 0
+[sidecar pid=4040197] 窗 #551 起点 32 耗时 1416 ms（累计 814s）
+[p5] g=28 es= 66 T=165 窗   8 行核   8 首批 4303 ms 后续批均 1193 ms 每窗 1419 ms 失配累计 0
+[p5] g=29 es= 66 T=183 窗   9 行核   9 首批 4300 ms 后续批均 1227 ms 每窗 1419 ms 失配累计 0
+[p5] g=30 es=168 T=326 窗  17 行核  17 首批 13279 ms 后续批均 1272 ms 每窗 1419 ms 失配累计 0
+[p5] g=31 es=168 T=326 窗  17 行核  17 首批 12893 ms 后续批均 1273 ms 每窗 1419 ms 失配累计 0
+[sidecar pid=4040197] 窗 #601 起点 16 耗时 1415 ms（累计 888s）
+[p5] g=32 es=114 T=272 窗  14 行核  14 首批 8913 ms 后续批均 1273 ms 每窗 1420 ms 失配累计 0
+[p5] g=33 es=216 T=586 窗  34 行核  34 首批 17641 ms 后续批均 1369 ms 每窗 1420 ms 失配累计 0
+[sidecar pid=4040197] 窗 #651 起点 48 耗时 1417 ms（累计 961s）
+[p5] g=34 es=168 T=365 窗  20 行核  20 首批 12896 ms 后续批均 1313 ms 每窗 1420 ms 失配累计 0
+[p5] g=35 es=114 T=446 窗  25 行核  25 首批 8598 ms 后续批均 1359 ms 每窗 1419 ms 失配累计 0
+[sidecar pid=4040197] 窗 #701 起点 128 耗时 1417 ms（累计 1033s）
+[p5] g=36 es=168 T=278 窗  14 行核  14 首批 12900 ms 后续批均 1194 ms 每窗 1420 ms 失配累计 0
+[p5] g=37 es=168 T=421 窗  23 行核  23 首批 12890 ms 后续批均 1336 ms 每窗 1419 ms 失配累计 0
+[p5] g=38 es=114 T=370 窗  20 行核  20 首批 8592 ms 后续批均 1336 ms 每窗 1419 ms 失配累计 0
+[sidecar pid=4040197] 窗 #751 起点 16 耗时 1416 ms（累计 1106s）
+[p5] g=39 es=168 T=420 窗  23 行核  23 首批 12895 ms 后续批均 1336 ms 每窗 1420 ms 失配累计 0
+[sidecar pid=4040197] 收到关闭请求，已服务 772 窗，退出
+ONLINE_ENC_BITEXACT=PASS compared=772 mismatches=0 rows_total=772 covered=772
+ONLINE_START_SET=PASS steps=738
+ONLINE_POS=PASS
+ONLINE_ORDER=PASS steps=738
+PROVENANCE=PASS
+ENC_MS_PER_WINDOW mean=1421.5 FIRST_BATCH_MS max=17641 LATER_BATCH_MS mean=1329.8
+P5_ONLINE=PASS episodes=40 stub=False
+EXIT_CODE=0

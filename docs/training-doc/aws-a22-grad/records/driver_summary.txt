@@ -1,0 +1,26 @@
+=== A22 side=head tree=/scratch/hongze/robomme_policy_learning_MotionJEPA HEAD=cbf24e9da25ea50bf6e68735941c5975a15e0142 dirty=2 gpus=6,7
+[fixture] mixed1 batch 已构造并落盘（12 键）
+[fixture] allshort batch 已构造并落盘（12 键）
+[fixture] allfull batch 已构造并落盘（12 键）
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+[state] init_train_state 完成，用时 14.3s
+[grad] mixed1: loss=0.626972 叶子 32 用时 92.5s
+[grad] allshort: loss=0.250215 叶子 32 用时 64.0s
+[grad] allfull: loss=0.735208 叶子 32 用时 64.0s
+GRAD_DONE kinds=3 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/dtype-unify/aws-a22-grad-head
+SIDE_head_RC=0
+=== A22 side=base tree=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/s2-base HEAD=c5925d96305f771058e2206ae89461269af9d97c dirty=0 gpus=6,7
+[fixture] mixed1 batch 已构造并落盘（12 键）
+[fixture] allshort batch 已构造并落盘（12 键）
+[fixture] allfull batch 已构造并落盘（12 键）
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+[state] init_train_state 完成，用时 14.6s
+[grad] mixed1: loss=0.626972 叶子 32 用时 92.9s
+[grad] allshort: loss=0.250215 叶子 32 用时 64.2s
+[grad] allfull: loss=0.735208 叶子 32 用时 64.5s
+GRAD_DONE kinds=3 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/dtype-unify/aws-a22-grad-base
+SIDE_base_RC=0
+GRAD_EQ=PASS kinds=3 leaves=32 mismatches=0
+EXIT_CODE=0

@@ -1,7 +1,7 @@
 # aws-p5-online — 结果
 
 - **起跑**：2026-09-04 06:20:11 → 06:39:xx，HEAD `8093ebd`（clean），主进程 GPU0（`XLA_PYTHON_CLIENT_MEM_FRACTION=0.2`）+ sidecar GPU1（util 100%），与 t3common / 两条 T3 run 并行。
-- **判定行**（`records/p5_driver.log`；报告 `records/p5_online.json`）：
+- **判定行**（`records/p5_driver.txt`；报告 `records/p5_online.json`）：
 
 ```
 ONLINE_ENC_BITEXACT=PASS compared=772 mismatches=0 rows_total=772 covered=772
