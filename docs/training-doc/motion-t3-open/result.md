@@ -19,7 +19,7 @@
 | `T3_TOKEN_TRACE` | `T3_TOKEN_TRACE=PASS steps=14 samples=112 keys=4 mismatches=0` | open 四键由 M1 oracle 重建逐位；公共 12 叶两侧同；open-only 恰四叶；前 8,000 index 相同 |
 | `T3_MOTION_CAUSAL` | `T3_MOTION_CAUSAL=PASS pad_bitexact=1 emb_effect=1 pos_effect=1` | step 0 batch `[6556, 671, 8452, 3987, 10070, 3804, 8928, 2595]`，base loss 0.701339 |
 | `T3_MECHANISM` | `T3_MECHANISM=PASS step=0 input_grad_ok=1 group_norms_ok=1` | 分组梯度范数：W2_content 4.21e+01 / W2_pos 5.07e+00 / W1 5.28e+00 / b1 4.59e-01 / b2 1.55e+00 / ∂motion_emb 有效位 9.01e-01 / ∂motion_pos 有效位 1.46e-01；padding 位输入梯度逐位 0 |
-| `T3_PHASE_REPORT` | （回填） | run `motion-t3-phase` |
+| `T3_PHASE_REPORT` | `T3_PHASE_REPORT samples=11530 phase0_n=738 … empty_n=640 nonempty_n=10890`（完整性：phase0 = 冷 80 + 稳 658、phase0 + other = 11530、empty + nonempty = 11530、加权均值闭合，均过） | run `motion-t3-phase`（GPU1，两侧最终 EMA ckpt 严格恢复，全部 11,530 样本、`fold_in(20260903, idx)` 固定 RNG、`compute_loss(train=False)`；`records/t3_phase.json`） |
 
 **t3mechanism 的两处修补（`b364789`）**：① 双卡 fsdp=2 下第二次 `value_and_grad` OOM——脚本同时持有完整 TrainState 与整树梯度，改为初态校验后释放 ema / opt、
 base 梯度取回四个 motion 叶即释放；② 首次 `pad_bitexact=0`，诊断发现 loss 逐位相同、59 叶只有 `['PaliGemma']['img']['embedding']['kernel']` 一叶变化，
@@ -31,5 +31,6 @@ base 梯度取回四个 motion 叶即释放；② 首次 `pad_bitexact=0`，诊�
 
 - **T3_EFFECT_OBS**：末 200 步 loss open 0.0304 / closed 0.0316（Δ −0.0012）；首步 0.5010 / 0.5920；末步 0.0300 / 0.0283；末 200 步 `mem_enc_norm` 均值 open 0.457 / closed 0.519。
   A20 观察项：open 首步 loss 低于 closed 是随机初始化的两个新层带来的初值差异，不作效果解读。
-- **T3_PHASE_REPORT 均值**：（回填）
+- **T3_PHASE_REPORT 均值**（20 步 loss 均值，open / closed）：phase0 0.0781 / 0.0686（冷 τ<32：0.0734 / 0.0683，n=80；稳态：0.0786 / 0.0686，n=658）；other 0.0772 / 0.0706（n=10792）；
+  空运动路 0.1044 / 0.1203（n=640）；非空 0.0757 / 0.0675（n=10890）。方向：除空运动路样本外 open 侧 eval-loss 均高于 closed（1000 步、单 seed，不作结论）。
 - **T3_EVAL_OBS**：（回填；两侧 checkpoint 均只训 1000 步 × b8 = 8,000 样本 < 1 epoch，成功率预期接近 0，观察只用于确认在线链路跑通与耗时口径）

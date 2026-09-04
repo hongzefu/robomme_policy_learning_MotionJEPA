@@ -1310,7 +1310,10 @@ M1 的真实库层与整个 T3 都要等 S1 的 40 ep 库建好。
   分组梯度范数 W2_content 4.21e+01 / W2_pos 5.07e+00 / W1 5.28e+00 / b1 4.59e-01 / b2 1.55e+00 / ∂loss/∂motion_emb 有效位 9.01e-01 / ∂loss/∂motion_pos 有效位 1.46e-01（padding 位逐位 0）。
   两处修补（`b364789`）：① 脚本 OOM——初态校验后释放 ema / opt 与整树梯度；② 首次 `pad_bitexact=0` 经诊断为 SigLIP patch-embedding conv 的 wgrad 在 GPU 上不确定
   （loss 逐位相同、三档垃圾尺度与「同一 obs 连算两次」都只此一叶变化），该叶训练中被 freeze_filter 冻结、从不求导——摘要改为只覆盖 `trainable_filter` 叶（36/59），与 `train_step` 同一过滤。
-- 进行中：`t3phase`（run `motion-t3-phase`，GPU0）与 closed 侧 `T3_EVAL_OBS`（GPU1，`run_t3_eval_obs.sh SIDE=closed`）并行 → open 侧 `T3_EVAL_OBS`。`motion_gates_model.py` 旧入口 `main()` 先于扩展入口执行、拒掉 `--gate t3*`，已删旧入口（`fix:`）。
+- **T3_PHASE_REPORT 完成**（run `motion-t3-phase`，第三次、GPU1；前两次分别因 `TransformedDataset.close` 与共享 GPU0 OOM 失败，`8d9acf9` 修补）：
+  `samples=11530 phase0_n=738 phase0_open=0.0781 phase0_closed=0.0686 cold(n=80) 0.0734/0.0683 steady(n=658) 0.0786/0.0686 other(n=10792) 0.0772/0.0706 empty(n=640) 0.1044/0.1203 nonempty(n=10890) 0.0757/0.0675`，
+  完整性（分区计数闭合、加权均值闭合）全过；均值方向只报告：除空运动路样本外 open 高于 closed（单 seed、1000 步）。
+- 进行中：`T3_EVAL_OBS` 两侧（open 侧 GPU0 policy + GPU1 sidecar/sim 进行中；closed 侧续评于 GPU1）。`motion_gates_model.py` 旧入口 `main()` 先于扩展入口执行、拒掉 `--gate t3*`，已删旧入口（`fix:`）。
 
 ### S3 实测结果（进行中，2026-09-03；留档 `docs/training-doc/motion-p5-online/`，在线观察归 T3 两侧 run）
 
