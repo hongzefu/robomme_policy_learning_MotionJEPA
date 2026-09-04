@@ -2,6 +2,37 @@
 
 本文件规定 agent 在本仓库中的工作方式。所有仓库任务都必须先遵守本文件，再结合用户当前明确指令确定本轮范围。
 
+## 运行环境判定（每次开工第一步）
+
+本仓库存在两套互斥的运行环境，路径、集群可用性、数据来源与 GPU 型号完全不同，下面强制规则里的第 8、13、14、15 条与「项目 scope」段都按环境分叉。**每次会话开工前、执行任何带路径的命令之前，必须先跑一次判定，并把结论（环境 A 还是环境 B）写进当轮第一条回复**；判定未完成前不得执行任何带写入的命令。
+
+判定命令（只读，可整段贴）：
+
+```bash
+echo "repo=$(git rev-parse --show-toplevel)"
+for p in /nfs/turbo/coe-chaijy-unreplicated/hongzefu /data/hongzefu /scratch/hongze ~/.ssh/config; do
+  printf '%s: %s\n' "$p" "$([ -e "$p" ] && echo 存在 || echo 不存在)"
+done
+nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
+```
+
+判据表（同一行的两列互斥）：
+
+| 判据 | 环境 A：GreatLakes / turbo（历史，2026-09-03 口径） | 环境 B：AWS 单机（当前，2026-09-04 起） |
+|---|---|---|
+| 仓库根 | `/data/hongzefu/robomme_policy_learning_MotionJEPA` | `/scratch/hongze/robomme_policy_learning_MotionJEPA` |
+| `/nfs/turbo/coe-chaijy-unreplicated/hongzefu` | 存在 | 不存在 |
+| `/data/hongzefu` | 存在 | 不存在 |
+| `/scratch/hongze` | 不存在 | 存在（`/dev/md0`，6.9 T） |
+| `~/.ssh/config`（集群 ControlMaster） | 存在 | 不存在 |
+| GPU | A40 | 8 × `NVIDIA A100-SXM4-80GB` |
+| Slurm / GreatLakes 提交 | 可用 | 不可用 |
+| 原始 H5 | 本机 `/data/hongzefu/` 原件永久保留 | 本机没有，须另行获取（见第 15 条） |
+
+**冲突即停。** 判定输出与上表任一行不符，或两套判据互相矛盾（例如仓库根在 `/scratch/hongze` 却又能看见 `/nfs/turbo`），**一律停下来把原始输出交用户裁决，不得自行挑一套往下走，也不得按「多数判据像 A」推断**。遇到不属于这两列的第三套硬件同理——先问用户，不套用任何一列。
+
+**环境 B 的三条红线**（结论先行，细则在第 8、13、14 条）：一切持久化文件只落 `/scratch/hongze/` 下；不连 GreatLakes、不提交 Slurm；不访问 `/nfs/turbo`（含 symlink 穿透与新建外链）。
+
 ## 强制规则（最高优先级）
 
 1. 所有计划、提问、进度、解释和最终总结必须使用简体中文。代码、命令、路径、标识符、库名和 API 名保留原文。仓库内新增或修改的注释与文档也必须使用中文。
@@ -25,7 +56,9 @@
 
 7. 预计超过 5 分钟的训练、抽取、评估或全量数据构建必须放入 detached tmux session。日志使用 `PYTHONUNBUFFERED=1`、`set -o pipefail` 和 `tee`，结束时写入 `EXIT_CODE=`。禁止使用裸 `pgrep -f` 判断进程存活；tmux 任务使用 `tmux has-session`，其他任务记录精确 PID。 盯日志的 Monitor/过滤管道里**每一级都必须行缓冲**：中间夹的 `tr`/`awk`/`sed` 对管道输出默认 4KB 块缓冲，任务结束后最后几行（RESULT/EXIT_CODE）会永远卡在缓冲区、监听端静默不报——`tr` 写成 `stdbuf -oL tr`、awk 加 `fflush()`、sed 加 `-u`，只给 `grep --line-buffered` 不够（2026-08-24 epoch 基准与冷缓存复测两次实测踩中）。
 
-8. 向 GreatLakes 提交 Slurm 作业前必须遵守仓库根目录的 `greatlakes.md`。如果该文件尚不存在，必须先向用户确认集群 account、partition、资源上限和 NFS 路径，不得直接复制其他仓库的集群配置。
+8. 集群提交按环境分叉：
+   - **环境 A**：向 GreatLakes 提交 Slurm 作业前必须遵守仓库根目录的 `greatlakes.md`。如果该文件尚不存在，必须先向用户确认集群 account、partition、资源上限和 NFS 路径，不得直接复制其他仓库的集群配置。
+   - **环境 B（当前）**：无 GreatLakes 访问（无 `~/.ssh/config`、无 ControlMaster）。**禁止提交任何 Slurm 作业、禁止 ssh 集群、禁止运行 `scripts/training/gl_submit.py`**；训练、建库、评估一律在本机 8×A100 上跑。`greatlakes.md` 与 `docs/` 下引用集群的历史留档**保留为只读存档**，可读不可执行。确有集群需求时先问用户，不得自行尝试恢复连接。
 
 9. 仓库文档引用代码时禁止使用易漂移的硬编码行号。应使用函数名、类名、方法名、配置键或语义段落作为稳定锚点。
 
@@ -43,11 +76,18 @@
 
 12. 正式训练或评估必须从 clean HEAD 启动，并在 `docs/training-doc/<run_name>/` 留档。正式全量数据集构建必须在 `docs/dataset-build-doc/<dataset_name>/` 留档。起跑前记录可复现的 commit、命令、配置、数据来源和输出路径；只归档 Git 无法还原的日志、指标和结果，不归档大模型权重。
 
-13. **仓库工作副本位于本机 `/data/hongzefu/robomme_policy_learning_MotionJEPA`（2026-09-03 起，`v2-motionmem` 分支）；NFS turbo `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA` 那份保留为只读归档。** 一切代码改动、命令运行与新产物都落本机工作副本；不得在 turbo 归档上改代码或写入新产物。turbo 归档保存历史 run 产物与旧基线（`v1-prod-*` run、`4task-gl` / `4task-gl-framesamp` 数据集、`openpi-assets` 权重、`train-assets` 等），本机副本以**只读 symlink 逐项引用**它们、不复制第二份（引用清单与写保护纪律见第 14 条与 `motion-memory-plan.md` 红线 17）。本机 `/data/hongzefu` 的全局原始 H5 照旧永久保留；本机 GPU 承担一致性验证的对照产物、资源档位实测和功能性 smoke run。吞吐基准必须记录**底层存储介质**（本机 NVMe / turbo NFS）与 batch size、worker 数、warmup 和稳定态统计；两种介质的数字不得混比，跨介质对照必须在同一介质上重测。集群侧看不到本机 `/data`，从本机工作副本提交 Slurm 作业不可用（`scripts/dataset/gl/gl_submit.py` 的 `REPO` 仍指 turbo）。
+13. 工作副本位置与存储边界按环境分叉：
+    - **环境 A**：**仓库工作副本位于本机 `/data/hongzefu/robomme_policy_learning_MotionJEPA`（2026-09-03 起，`v2-motionmem` 分支）；NFS turbo `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA` 那份保留为只读归档。** 一切代码改动、命令运行与新产物都落本机工作副本；不得在 turbo 归档上改代码或写入新产物。turbo 归档保存历史 run 产物与旧基线（`v1-prod-*` run、`4task-gl` / `4task-gl-framesamp` 数据集、`openpi-assets` 权重、`train-assets` 等），本机副本以**只读 symlink 逐项引用**它们、不复制第二份（引用清单与写保护纪律见第 14 条与 `motion-memory-plan.md` 红线 17）。本机 `/data/hongzefu` 的全局原始 H5 照旧永久保留；本机 GPU 承担一致性验证的对照产物、资源档位实测和功能性 smoke run。吞吐基准必须记录**底层存储介质**（本机 NVMe / turbo NFS）与 batch size、worker 数、warmup 和稳定态统计；两种介质的数字不得混比，跨介质对照必须在同一介质上重测。集群侧看不到本机 `/data`，从本机工作副本提交 Slurm 作业不可用（`scripts/training/gl_submit.py` 的 `REPO` 仍指 turbo）。
+    - **环境 B（当前）**：**仓库工作副本位于 `/scratch/hongze/robomme_policy_learning_MotionJEPA`（本地 NVMe RAID `/dev/md0`，6.9 T）。所有持久化文件只能落 `/scratch/hongze/` 下**——原始数据、派生库、索引、缓存、模型权重、tokenizer、checkpoint、日志、run 产物、下载物，一个不例外；不得写 `$HOME`、`/` 或任何其他盘，只有真正的临时文件才用 scratchpad 或 `/tmp`。`/data/hongzefu` 与 `/nfs/turbo/...` 在本环境**不存在**：不得新建指向它们的 symlink，不得把它们写进任何新脚本的默认值；既有代码里的这些路径按各自任务单独立项修，**不静默改、不绕过**。**turbo 上的历史产物在本环境不可得**（`v1-prod-*` run、`4task-gl` / `4task-gl-framesamp` 数据集、`openpi-assets`、`train-assets`、各基线的 `env.json` 与固化梯度数组等），凡依赖它们的对拍、基线复用、第 18 条第二块的「复用既有基线固化产物」路径**一律视作失效**，必须重建基线或改口径，起跑前先问用户。吞吐基准仍必须记录**底层存储介质**（本环境写「AWS 本地 NVMe RAID（`/dev/md0`）」）与 batch size、worker 数、warmup 和稳定态统计；**与历史的 turbo NFS、旧本机 `/data` NVMe 数字不得混比**，跨环境对照必须在当前环境重测。本环境有 8 × A100-80GB，全量训练与建库都在这里跑（见「项目 scope」段），第 12、17 条的留档要求照旧。
 
-14. 除最初的全局原始 H5 外，派生数据、索引、缓存、模型、tokenizer、checkpoint、日志和 smoke 产物都必须放在本仓库目录内，且一律收敛到单一根 `v1-store/`（整体不进 git）——该根随仓库走，现位于本机工作副本内 `/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/`。不得自行把新的外部目录作为长期依赖。**turbo 归档的旧产物只能以只读 symlink 引用**：symlink 逐项指向具体目录或文件、不整层链；禁止穿透 symlink 向 turbo 写入，凡带 `--force` 或输出根参数的命令起跑前先 `ls -ld <输出根>` 确认它是本机实体目录而非 symlink（`build_dataset.py --force` 会 `rmtree` 整个输出根）。**禁止覆盖 `HOME`** —— 覆盖会让 ssh 找不到 `~/.ssh/config` 与 ControlMaster socket、直接打断集群提交；改为逐项显式设置 `UV_CACHE_DIR` / `XDG_CACHE_HOME` / `WANDB_*` / `HF_HOME` 等缓存类环境变量指向 `v1-store/cache/`。
+14. 除最初的全局原始 H5 外，派生数据、索引、缓存、模型、tokenizer、checkpoint、日志和 smoke 产物都必须放在本仓库目录内，且一律收敛到单一根 `v1-store/`（整体不进 git）——该根随仓库走：**环境 A** 位于 `/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/`，**环境 B** 位于 `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/`（当前尚不存在，首次跑 `paths.sh` 的 `v1_prepare_dirs` 时创建）。不得自行把新的外部目录作为长期依赖。
+    - **仅环境 A 适用**：**turbo 归档的旧产物只能以只读 symlink 引用**——symlink 逐项指向具体目录或文件、不整层链；禁止穿透 symlink 向 turbo 写入。
+    - **环境 B**：`v1-store/` 下**没有任何 symlink 外链，全部是实体目录**。
+    - 两个环境都适用：凡带 `--force` 或输出根参数的命令起跑前先 `ls -ld <输出根>` 确认它是本环境的实体目录（`build_dataset.py --force` 会 `rmtree` 整个输出根）。**禁止覆盖 `HOME`** —— 覆盖会打断 ssh 与一切按 `~` 定位的配置（环境 A 下直接打断集群提交）；改为逐项显式设置 `UV_CACHE_DIR` / `XDG_CACHE_HOME` / `WANDB_*` / `HF_HOME` 等缓存类环境变量指向 `v1-store/cache/`。
 
-15. 为集群作业而在 turbo 上暂存的原始 H5 副本属于**临时暂存**：必须与本机原件逐文件 sha256 核对同源，并在全流程验收通过后删除；本机 `/data` 的原件永久保留。
+15. 原始 H5 的来源与暂存按环境分叉：
+    - **仅环境 A 适用**：为集群作业而在 turbo 上暂存的原始 H5 副本属于**临时暂存**，必须与本机原件逐文件 sha256 核对同源，并在全流程验收通过后删除；本机 `/data` 的原件永久保留。
+    - **环境 B（当前）**：无 turbo，本机也**没有 H5 原件**。原始 16 任务 × 100 episode 的 H5 需从公开数据集 `Yinpei/robomme_data_h5` 获取（口径见根目录 `external-assets-lock.md` 第五节「异地无 NFS 机器从零复刻」），落点在 `/scratch/hongze/` 下，并逐文件记 sha256 入 `v1-store/` 的 input manifest。**获取前先与用户确认落点与 episode 口径，不得自行开始几百 GB 的下载。**
 
 16. GPU 利用率的测量与判读必须防止「中位数假象」：结论必须以稳态窗口内的 **util 均值、0% 采样占比、慢步/非慢步分层均值** 为准，禁止以中位数作为标题结论；采样间隔必须显著小于步时——步时数秒量级时用 `nvidia-smi -lms 500` 流式密集采样（500ms 即 NVML 有效密度上限，`utilization.gpu` 本身是其约 1/6~1 秒内部周期的均值），需要与旧数据对照时可并行保留 15 秒 legacy 采样通道。性能优化的首要判据是「GPU 是否吃满」，不得凭单一统计量宣称无瓶颈（2026-08-24 v1-e2e-b64 中位 100% 掩盖了均值仅 69-70% 的实测教训）。
 
@@ -88,8 +128,8 @@
 - 仓库总体目标：修改 MME-VLA 的 `perceptual-framesamp-context`，并在后续阶段接入 [MotionJEPA](https://github.com/hongzefu/MotionJEPA) motion token。
 - `v1-dataloader-Restructure` 分支只用于 dataloader 重构，目标是在不改变训练语义的前提下尽可能提升训练吞吐。
 - v1 只关注 `ButtonUnmask`、`VideoUnmask`、`ButtonUnmaskSwap`、`VideoUnmaskSwap` 四个任务。
-- 四任务全量数据处理在 GreatLakes 上以 8×1GPU job array 完成；本机只跑一致性验证的对照产物、资源档位实测与功能性 smoke run，本机吞吐不作为最终指标。
-- 除全局原始 H5 外，后续生成的文件和模型全部放在 turbo 仓库副本的 `v1-store/` 内。
+- （环境 A 历史口径）四任务全量数据处理在 GreatLakes 上以 8×1GPU job array 完成；本机只跑一致性验证的对照产物、资源档位实测与功能性 smoke run，本机吞吐不作为最终指标。**环境 B 下没有集群**，全量建库、训练与评估一律在本机 8×A100 上完成，本机数字即最终指标。
+- 除全局原始 H5 外，后续生成的文件和模型全部放在**当前环境工作副本**的 `v1-store/` 内（环境 A：`/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/`；环境 B：`/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/`）。
 - commit `d951aef` 的 `scripts/v1_dataloader_restructure/` 与 `scripts/smoke_train_once.py` 经判定不可靠，已删除弃用，勿从 git 历史里翻出重新采用。
 
 ## 规则来源

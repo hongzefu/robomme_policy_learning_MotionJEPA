@@ -9,6 +9,7 @@
 - `AGENTS.md` 是本仓库通用规则的唯一来源，覆盖语言、uv、改动后验证、tmux 长任务、greatlakes、稳定锚点、训练超参、git commit、训练/数据集留档、本机与 NFS 边界、产物项目内联等全部通用条目。上面的 `@AGENTS.md` 会把它的正文内联进上下文。
 - **即便该导入失效，动手前也必须先完整读一遍 `AGENTS.md`。** 实测 Claude Code 2.1.232 的 memory 发现列表只含 `CLAUDE.md` / `CLAUDE.local.md` / `.claude/rules`，**不含 `AGENTS.md`**——没有本文件的显式导入时，`AGENTS.md` 不会进入会话上下文。这一条是兜底，不可省略。
 - 本文件只补 `AGENTS.md` 覆盖不到的 Claude Code 独有机制，共四块：Workflow 与 Agent 模型、Monitor 工具、Skill 调用、plan mode 与计划文件。
+- **动手前必须先做运行环境判定**：除完整读一遍 `AGENTS.md` 外，还要执行其「运行环境判定（每次开工第一步）」一节的判定命令，并在当轮第一条回复里写明结论是环境 A（GreatLakes / turbo）还是环境 B（AWS 单机）。判据互相矛盾、或出现不属于这两列的第三套硬件时，按该节要求把原始输出交用户裁决，不得自行挑一套往下走。
 - **两份文件冲突时一律以 `AGENTS.md` 为准**，本文件仅在 `AGENTS.md` 未规定处生效。
 
 ## Workflow 与 Agent 模型（强制）
@@ -42,8 +43,9 @@
 
 ## Skill 调用
 
-- 查 chaijy2 账户占用（GPU / 内存 / CPU 配额余量、谁在用、我的 job、PENDING、spgpu 分区全局 A40 占用）**一律先调全局 skill `greatlakes-usage`**，不要手搓 `ssh` + `squeue` / `sacctmgr` 拼答案。
-- 提交作业、建 ControlMaster、Okta 验证方式等一切集群操作细节，按 `AGENTS.md` 第 8 条以仓库根目录 `greatlakes.md` 为权威源，本文件不复述，也不在此写脚本路径。
+- **仅环境 A**：查 chaijy2 账户占用（GPU / 内存 / CPU 配额余量、谁在用、我的 job、PENDING、spgpu 分区全局 A40 占用）**一律先调全局 skill `greatlakes-usage`**，不要手搓 `ssh` + `squeue` / `sacctmgr` 拼答案。
+- **环境 B（当前）**：没有集群账户可查，**禁止调用 `greatlakes-usage`**，同样禁止手搓 `ssh` + `squeue` / `sacctmgr` 去试探连接（`~/.ssh/config` 不存在，只会挂住或超时）。用户问到集群时先说明当前环境无 GreatLakes 访问。
+- 提交作业、建 ControlMaster、Okta 验证方式等一切集群操作细节，按 `AGENTS.md` 第 8 条以仓库根目录 `greatlakes.md` 为权威源，本文件不复述，也不在此写脚本路径；环境 B 下 `greatlakes.md` 只作历史存档，不作为可执行指引。
 
 ## plan mode 与计划文件
 
