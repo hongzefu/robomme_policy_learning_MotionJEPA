@@ -46,6 +46,7 @@ VAE_ID = "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
 ENCODER_RUN_DIR_DEFAULT = str(_REPO_ROOT / "v1-store" / "external" / "motionjepa" / "wan-v8-filter10-72ep-a")
 CKPT_NAME = "checkpoint_epoch_72.pt"
 
+
 def _expected_ckpt(args):
     """ckpt 期望值：默认取 ASSETS_LOCK.json 钉死的那份，显式传 SKIP 才跳过。
 

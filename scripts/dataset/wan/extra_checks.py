@@ -32,6 +32,7 @@ import wan_common as wc  # noqa: E402
 
 ENCODER_RUN_DIR_DEFAULT = str(_REPO_ROOT / "v1-store" / "external" / "motionjepa" / "wan-v8-filter10-72ep-a")
 
+
 def _expected_ckpt(args):
     """ckpt 期望值：默认取 ASSETS_LOCK.json 钉死的那份，显式传 SKIP 才跳过。
 
@@ -41,7 +42,6 @@ def _expected_ckpt(args):
     if args.expected_ckpt_sha256 == "SKIP":
         return None
     return args.expected_ckpt_sha256 or al.expected_sha256("motionjepa_ckpt")
-
 
 
 def load_infer_module():

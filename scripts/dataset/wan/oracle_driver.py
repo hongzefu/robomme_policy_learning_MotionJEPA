@@ -42,6 +42,7 @@ MJ_REPO_DEFAULT = "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA"
 ENCODER_RUN_DIR_DEFAULT = str(_REPO_ROOT / "v1-store" / "external" / "motionjepa" / "wan-v8-filter10-72ep-a")
 VAE_ID = "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
 
+
 def _expected_ckpt(args):
     """ckpt 期望值：默认取 ASSETS_LOCK.json 钉死的那份，显式传 SKIP 才跳过。
 
