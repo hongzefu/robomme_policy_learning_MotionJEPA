@@ -478,6 +478,57 @@ _CONFIGS = [
         ema_decay=0.999,
         fsdp_devices=4,
     ),
+    # 环境 B（AWS 8×A100-80GB）大 batch 档：与上面 mme_vla_suite（= 上游 ecf086c 官方口径）
+    # 的差异全部集中在本条目，官方条目一字不动，保留为干净参照。
+    #
+    # 影响训练语义的 5 项（官方 → 本档）：
+    #   batch_size            64      → 128     （global batch；per-device = batch_size / 可见卡数）
+    #   num_train_steps       80_000  → 40_000  （总样本量 5.12M 与官方 80k×64 相同，但更新次数减半）
+    #   lr warmup_steps       10_000  → 5_000   （按样本量等价：5k×128 == 10k×64）
+    #   lr peak_lr            5e-5    → 1e-4    （batch 翻倍，lr 线性缩放）
+    #   lr decay_lr           5e-5    → 1e-4    （必须与 peak 同步抬；官方 peak==decay 使 warmup 后
+    #                                            lr 恒定不衰减，只抬 peak 会把曲线变成真实余弦衰减）
+    # 不影响训练语义的 6 项：decay_steps（peak==decay 时 cosine 段为常数，改它只为自洽）、
+    #   save/keep 5_000（40k 步内存 8 次）、num_workers 8（吞吐档，batch 组成由 seed 决定）、
+    #   project_name（wandb 归属）、data.assets（400ep 的 norm_stats 不在 assets_base_dir/<name>
+    #   下，必须用 AssetsConfig.assets_dir 直接指定）。
+    TrainConfig(
+        name="mme_vla_suite_b128",
+        model=history_pi0.HistoryPi0Config(
+            pi05=True,
+            action_horizon=20,
+            use_history=True,
+            history_config=None,
+            discrete_state_input=False,
+        ),
+        data=RoboMMEDataConfig(
+            repo_id=f"robomme",
+            assets=AssetsConfig(
+                assets_dir="v1-store/train-assets/mme_vla_suite/robomme-400ep",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        batch_size=128,
+        lr_schedule=_optimizer.CosineDecaySchedule(
+            warmup_steps=5_000,
+            peak_lr=1e-4,
+            decay_steps=50_000,
+            decay_lr=1e-4,
+        ),
+        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
+        freeze_filter=history_pi0.HistoryPi0Config().get_freeze_filter(),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            os.path.join(OPENPI_DATA_HOME, "openpi-assets/checkpoints/pi05_base/params"),
+        ),
+        num_train_steps=40_000,
+        save_interval=5_000,
+        keep_period=5_000,
+        project_name="robomme-motion-prod",
+        num_workers=8,
+        ema_decay=0.999,
+        fsdp_devices=4,
+    ),
 ]
 
 if len({config.name for config in _CONFIGS}) != len(_CONFIGS):
