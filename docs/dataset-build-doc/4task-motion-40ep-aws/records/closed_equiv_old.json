@@ -1,0 +1,1534 @@
+{
+ "src_tree": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/s2-base",
+ "samples": {
+  "0": {
+   "actions": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     20,
+     8
+    ],
+    "sha256": "ddec891c8e0220c2a31403d353a78dfd4dd3428bae09335fbb4f10b2b4536efb"
+   },
+   "epis_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "exec_start_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "grounded_subgoal": {
+    "kind": "str",
+    "sha256": "9197c4f2c164beb2f6e4c8e03cd7d1f0e040e873711c55751e5462e32e9c7808"
+   },
+   "image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "83cdce2e546def7a55a6edf0a333e2ec1a4957f458701ea1e504e6d1d0e4b936"
+   },
+   "is_demo": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1
+    ],
+    "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+   },
+   "prompt": {
+    "kind": "str",
+    "sha256": "a10e1c56d02592c6499473a0355c496a4b8c2d576bf590fd0dc7117e20d5ffa9"
+   },
+   "simple_subgoal": {
+    "kind": "str",
+    "sha256": "afcded9e71f5da89353393ea763369809d6f283d51dc3a11e6b1c8c84ed187f2"
+   },
+   "state": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     8
+    ],
+    "sha256": "1618adc1c73ee0da44ec3c968736d2b7b0c8995a297654105c6d0f8c9f35514e"
+   },
+   "static_image_emb": {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     512,
+     2048
+    ],
+    "sha256": "f7b0460f917e7a29d30c80e30e5b73eba6a98439e3dd39d9a57e2acd7cd776eb"
+   },
+   "static_mask": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "3c80c73cd50afe6cf63829a65d1a5835baf6760f891be9e205327c44ceaad215"
+   },
+   "static_pos_emb": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     512,
+     768
+    ],
+    "sha256": "4ae3af84f7af9284b26fe3bd2e1849c5d8832369e6ca6a6f8ce5eb2e43e98d1d"
+   },
+   "static_state_emb": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     512,
+     8
+    ],
+    "sha256": "944284e4661151ed4cd159d1cc6fb6f6d5b01dad0d4029f7fa12b044f809c25f"
+   },
+   "step_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "wrist_image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "e1a5977fc625366c42141d154a0db6df6debabd58259ca5f467567c2b40fb46c"
+   }
+  },
+  "1": {
+   "actions": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     20,
+     8
+    ],
+    "sha256": "b205c9f24dc36a96e1f4e9e636115b3417b01db06ab761e6b0e91009f2b4e205"
+   },
+   "epis_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "exec_start_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "grounded_subgoal": {
+    "kind": "str",
+    "sha256": "9197c4f2c164beb2f6e4c8e03cd7d1f0e040e873711c55751e5462e32e9c7808"
+   },
+   "image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "83cdce2e546def7a55a6edf0a333e2ec1a4957f458701ea1e504e6d1d0e4b936"
+   },
+   "is_demo": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1
+    ],
+    "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+   },
+   "prompt": {
+    "kind": "str",
+    "sha256": "a10e1c56d02592c6499473a0355c496a4b8c2d576bf590fd0dc7117e20d5ffa9"
+   },
+   "simple_subgoal": {
+    "kind": "str",
+    "sha256": "afcded9e71f5da89353393ea763369809d6f283d51dc3a11e6b1c8c84ed187f2"
+   },
+   "state": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     8
+    ],
+    "sha256": "4e38704549e488b1c3387ba4d4911026625490b72596bbf0eb463f0e96ce21a5"
+   },
+   "static_image_emb": {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     512,
+     2048
+    ],
+    "sha256": "50838c4dc658ea6a138f4dd933a48022ac5a403fde80919b28bd3605dab4407a"
+   },
+   "static_mask": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "11c7ab22375418d1f08ee2697fefde401848c0ce59daae4eab136aee4283cf19"
+   },
+   "static_pos_emb": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     512,
+     768
+    ],
+    "sha256": "b8c9c5f3cada19fc65cf35ef470d93c77b70cee4092327c2b6af59ce56d890d3"
+   },
+   "static_state_emb": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     512,
+     8
+    ],
+    "sha256": "6ac9c9d6c249bf07805222596ad0eedf13df631732ccafee733476b18bf61fa3"
+   },
+   "step_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "67abdd721024f0ff4e0b3f4c2fc13bc5bad42d0b7851d456d88d203d15aaa450"
+   },
+   "wrist_image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "0af0352e4dbda01061c59d63581d0794c901c531906f4f1a88fa771dbb631e5f"
+   }
+  },
+  "2": {
+   "actions": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     20,
+     8
+    ],
+    "sha256": "2b516ee7bc91aad65ad9652f1f686ca5fd6cfc4b8e70210f4f0ccfbac132a0a3"
+   },
+   "epis_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "exec_start_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "grounded_subgoal": {
+    "kind": "str",
+    "sha256": "9197c4f2c164beb2f6e4c8e03cd7d1f0e040e873711c55751e5462e32e9c7808"
+   },
+   "image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "83cdce2e546def7a55a6edf0a333e2ec1a4957f458701ea1e504e6d1d0e4b936"
+   },
+   "is_demo": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1
+    ],
+    "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+   },
+   "prompt": {
+    "kind": "str",
+    "sha256": "a10e1c56d02592c6499473a0355c496a4b8c2d576bf590fd0dc7117e20d5ffa9"
+   },
+   "simple_subgoal": {
+    "kind": "str",
+    "sha256": "afcded9e71f5da89353393ea763369809d6f283d51dc3a11e6b1c8c84ed187f2"
+   },
+   "state": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     8
+    ],
+    "sha256": "84c35d61a5eeada7f6bb7cc97d61fb127818e8b9e181ef777a82d340bf5d03a8"
+   },
+   "static_image_emb": {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     512,
+     2048
+    ],
+    "sha256": "ae7f52eebc44be549b336d84c5dae03eef63be00c8dcd3626ecaadab42c1c790"
+   },
+   "static_mask": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "2d5b5e12b280bf1fd539a54f2ed1547722290f8c8e1b7cc10c35198a34aeff90"
+   },
+   "static_pos_emb": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     512,
+     768
+    ],
+    "sha256": "396f28714ddeb8368c174454fcc3f671010ce86ee3185c3c1bb64acea4e5c86c"
+   },
+   "static_state_emb": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     512,
+     8
+    ],
+    "sha256": "e54bf4a9c0e6af3683edb5202b6dfd2ee863147db7acaf73c5e4d06df2a2630a"
+   },
+   "step_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "26b25d457597a7b0463f9620f666dd10aa2c4373a505967c7c8d70922a2d6ece"
+   },
+   "wrist_image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "701bbe56ece199d29c278c8d6a6b45dd3141db7a543b5200bec53cf8b5f3c313"
+   }
+  },
+  "5": {
+   "actions": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     20,
+     8
+    ],
+    "sha256": "dd9ad9aad9a3788c8015f8cab28366133ea9828d5eab551e30c6e5cb00f44893"
+   },
+   "epis_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "exec_start_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "grounded_subgoal": {
+    "kind": "str",
+    "sha256": "9197c4f2c164beb2f6e4c8e03cd7d1f0e040e873711c55751e5462e32e9c7808"
+   },
+   "image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "83cdce2e546def7a55a6edf0a333e2ec1a4957f458701ea1e504e6d1d0e4b936"
+   },
+   "is_demo": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1
+    ],
+    "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+   },
+   "prompt": {
+    "kind": "str",
+    "sha256": "a10e1c56d02592c6499473a0355c496a4b8c2d576bf590fd0dc7117e20d5ffa9"
+   },
+   "simple_subgoal": {
+    "kind": "str",
+    "sha256": "afcded9e71f5da89353393ea763369809d6f283d51dc3a11e6b1c8c84ed187f2"
+   },
+   "state": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     8
+    ],
+    "sha256": "7eedcf878d7bf7b74a97a7f64b5404cb3d517acf4c82edecd18ad05dd668a45a"
+   },
+   "static_image_emb": {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     512,
+     2048
+    ],
+    "sha256": "817fc7a4ede550c5ec9f7b9b720c0a1c751883d1526a513b3edc7e561584ad68"
+   },
+   "static_mask": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "53ee18d23a75c859f0996b7a6cc0fe0d8f6daa4b99f9d4a262f11c23aa6fd7f7"
+   },
+   "static_pos_emb": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     512,
+     768
+    ],
+    "sha256": "b961bde392266e856ced4833e8a533e51bde38793a05294e4c2fce9190c3d67c"
+   },
+   "static_state_emb": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     512,
+     8
+    ],
+    "sha256": "73b2d4a28cb62e600bd01f36f27c4cf7361ebe9008af9ba91c1e4b02418cfcd0"
+   },
+   "step_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "2594b6a92ebfb1c3312deb7d01c015fb95e9fbe9bd7bc6b527af07813ec7b910"
+   },
+   "wrist_image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "fbaba78bc3b7c40acba3b6005dbdc957f1e559341f1a0d687442d069ade00df2"
+   }
+  },
+  "30": {
+   "actions": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     20,
+     8
+    ],
+    "sha256": "d7bea23b3b8666e530087990e907e514538207f4a68a3c2649b99e340916f3d1"
+   },
+   "epis_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "exec_start_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "grounded_subgoal": {
+    "kind": "str",
+    "sha256": "9197c4f2c164beb2f6e4c8e03cd7d1f0e040e873711c55751e5462e32e9c7808"
+   },
+   "image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "83cdce2e546def7a55a6edf0a333e2ec1a4957f458701ea1e504e6d1d0e4b936"
+   },
+   "is_demo": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1
+    ],
+    "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+   },
+   "prompt": {
+    "kind": "str",
+    "sha256": "a10e1c56d02592c6499473a0355c496a4b8c2d576bf590fd0dc7117e20d5ffa9"
+   },
+   "simple_subgoal": {
+    "kind": "str",
+    "sha256": "afcded9e71f5da89353393ea763369809d6f283d51dc3a11e6b1c8c84ed187f2"
+   },
+   "state": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     8
+    ],
+    "sha256": "6d7b5c729ae56ebf32129af20aa7424ee3895f12ab12280e98866be869060fd2"
+   },
+   "static_image_emb": {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     512,
+     2048
+    ],
+    "sha256": "02801ef2560a63e55e79a2e4496fe74ffcbc0eb6b41cd543391caa35084180b1"
+   },
+   "static_mask": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "cfb523ce89654e9f9b709e7fd4052143eaf2440b39e902f0d25d2be5a572db6d"
+   },
+   "static_pos_emb": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     512,
+     768
+    ],
+    "sha256": "ae77b5a92f3ae656a426326ce3e56ae4d421c28d6e5fb25753b4a936ace95725"
+   },
+   "static_state_emb": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     512,
+     8
+    ],
+    "sha256": "561695b0f7c41be10ca35770761d7804bf119d6bb60e1575d237e9a343def50b"
+   },
+   "step_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "4f5e1d312b4d1bb8ccaf069c18cddeca414ae78160fb3c793ffc730eef4e4f17"
+   },
+   "wrist_image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "2c50df6454e0fbb1226d7d2f1eb802a305607585b6d89128d60749f76f932804"
+   }
+  },
+  "31": {
+   "actions": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     20,
+     8
+    ],
+    "sha256": "12c8f482fb19b285d008b23047b19320720e6270c0ae373cafbfc5c97b255ded"
+   },
+   "epis_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "exec_start_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "grounded_subgoal": {
+    "kind": "str",
+    "sha256": "9197c4f2c164beb2f6e4c8e03cd7d1f0e040e873711c55751e5462e32e9c7808"
+   },
+   "image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "83cdce2e546def7a55a6edf0a333e2ec1a4957f458701ea1e504e6d1d0e4b936"
+   },
+   "is_demo": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1
+    ],
+    "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+   },
+   "prompt": {
+    "kind": "str",
+    "sha256": "a10e1c56d02592c6499473a0355c496a4b8c2d576bf590fd0dc7117e20d5ffa9"
+   },
+   "simple_subgoal": {
+    "kind": "str",
+    "sha256": "afcded9e71f5da89353393ea763369809d6f283d51dc3a11e6b1c8c84ed187f2"
+   },
+   "state": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     8
+    ],
+    "sha256": "864e8f8127d639f0d5d0cd754671b61e516d019a4c22f2c1c24fc208d6ff26db"
+   },
+   "static_image_emb": {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     512,
+     2048
+    ],
+    "sha256": "d14a315864600ae2a9233cbad8d0e3fd481c903425f7551864691e27893210bc"
+   },
+   "static_mask": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "6caf38d537984e261527b8caef5f990fb91415a1db917198821a79ed28997973"
+   },
+   "static_pos_emb": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     512,
+     768
+    ],
+    "sha256": "b3dbb465cf16b6222f65473ccde64a4acbdaed27358600543397cfb662531c83"
+   },
+   "static_state_emb": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     512,
+     8
+    ],
+    "sha256": "438cd3b30448722c312fa443770bc39083f93235cd6fd719db2e788207b254c3"
+   },
+   "step_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "efbe2f505a2756a0891b40d01d0a7135774bbd38cdc526def968d28a7e309452"
+   },
+   "wrist_image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "6afc744502af471b2dbdb4f7f13ec0565e17e27cf1e49259ced8668b54f11358"
+   }
+  },
+  "100": {
+   "actions": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     20,
+     8
+    ],
+    "sha256": "5b82abd05ceaf873a2172cad9e2eed4be18367e66f88b81cbedc8fcae6147f4d"
+   },
+   "epis_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "exec_start_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "grounded_subgoal": {
+    "kind": "str",
+    "sha256": "9197c4f2c164beb2f6e4c8e03cd7d1f0e040e873711c55751e5462e32e9c7808"
+   },
+   "image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "e025fac2ee6865106e7786edd6cfc769281724d02b12580da61986ccd643128e"
+   },
+   "is_demo": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1
+    ],
+    "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+   },
+   "prompt": {
+    "kind": "str",
+    "sha256": "a10e1c56d02592c6499473a0355c496a4b8c2d576bf590fd0dc7117e20d5ffa9"
+   },
+   "simple_subgoal": {
+    "kind": "str",
+    "sha256": "afcded9e71f5da89353393ea763369809d6f283d51dc3a11e6b1c8c84ed187f2"
+   },
+   "state": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     8
+    ],
+    "sha256": "0ea3f48c19752e2a48cc2fccd29df332c88a9306656579e8cb63dd44717339a6"
+   },
+   "static_image_emb": {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     512,
+     2048
+    ],
+    "sha256": "4408a4157d82ea939b6e9a6ea335c812ab35662c9da8e7b49e917a2768bc3f56"
+   },
+   "static_mask": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "6caf38d537984e261527b8caef5f990fb91415a1db917198821a79ed28997973"
+   },
+   "static_pos_emb": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     512,
+     768
+    ],
+    "sha256": "661666bebb9cd67a1c5115227824ffb306e819356bdea4451bcb15846c4e3e00"
+   },
+   "static_state_emb": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     512,
+     8
+    ],
+    "sha256": "951754e0c24b30efd598d289f22e4cae1136287be35ec08f5bd4300c2fa4d599"
+   },
+   "step_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "40e736c02a102a050e1555781b4171020a4279adaa7ed9ca3cc9633a0ade9c37"
+   },
+   "wrist_image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "eec89208d9d33a80e73e418e2894b7ef81e371a28cb981386f54cce4f5c08872"
+   }
+  },
+  "1000": {
+   "actions": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     20,
+     8
+    ],
+    "sha256": "a3385d4fcde8daa274c56e16e416d019ff8d7cbf0d1c79dfe3e2437013b12057"
+   },
+   "epis_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "9d9f290527a6be626a8f5985b26e19b237b44872b03631811df4416fc1713178"
+   },
+   "exec_start_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "grounded_subgoal": {
+    "kind": "str",
+    "sha256": "4e6936f2b229ed019ce9f6bd8f64ae7f725a3f705949d85ea0e17f727b217340"
+   },
+   "image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "89d786ce6948d426ea75ae3cf2c477dbf8bbacad8e9ad62fa98fa3a268b22415"
+   },
+   "is_demo": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1
+    ],
+    "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+   },
+   "prompt": {
+    "kind": "str",
+    "sha256": "7da7e249964e7d8386b68c9a73376e1e4222106042abdadea097b0e83f0113d1"
+   },
+   "simple_subgoal": {
+    "kind": "str",
+    "sha256": "6441b38be095884e3bfe487867b2966d0a92ab121aa2c551f5c8e30946260d21"
+   },
+   "state": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     8
+    ],
+    "sha256": "505d1c3a7252199a51100119661695fdfc3f0afe212d4969c927d0c4e0b7bf2b"
+   },
+   "static_image_emb": {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     512,
+     2048
+    ],
+    "sha256": "8c649351a71563432c29b9c4de6c493672d1ab2a6b0f7f53eb94da092d57f54c"
+   },
+   "static_mask": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "6caf38d537984e261527b8caef5f990fb91415a1db917198821a79ed28997973"
+   },
+   "static_pos_emb": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     512,
+     768
+    ],
+    "sha256": "b93e7c12a5a0107bfb92140081b508833581bd3ecd8d57fa608600afa0b6ab77"
+   },
+   "static_state_emb": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     512,
+     8
+    ],
+    "sha256": "2e99370a4a6bc44822f6f6fa17782b08c9b4b3a40e982a03e7b5a706d256d847"
+   },
+   "step_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "ca3f01b2c6041ca6a606a0030c559f468d0e1d68d8eb724a0b60c0ff3b11ce7a"
+   },
+   "wrist_image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "e309c53f7a9abcc3f2829e2ced097d84587f5839950d90515a9dc440f1b3b822"
+   }
+  },
+  "5000": {
+   "actions": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     20,
+     8
+    ],
+    "sha256": "df4215d81228e5284d40258f98006a087f20ffec3519e52fb03a74461c98d182"
+   },
+   "epis_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "01b4f6bd5d6a06a7b74a8565ceb4f845afe0ae96a0ac05cf5e86066bf7b538ec"
+   },
+   "exec_start_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+   },
+   "grounded_subgoal": {
+    "kind": "str",
+    "sha256": "d22a5e0cb3b4a1962b660a20e1ed92a5f45854a5ed9fad340724462d114bec95"
+   },
+   "image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "baebb072d81d5860fe31a068c0764621fa432ed8885c25fb9f1bc3b8fafef332"
+   },
+   "is_demo": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1
+    ],
+    "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+   },
+   "prompt": {
+    "kind": "str",
+    "sha256": "e10618afcfec3c41097af03524cd7922b3791f7d21c8709f632021cbdddcfd69"
+   },
+   "simple_subgoal": {
+    "kind": "str",
+    "sha256": "25662009903b43e0560a9eb7f8994b0a9ca29605e81bc07c7e28042a9bea0b6f"
+   },
+   "state": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     8
+    ],
+    "sha256": "bfc047ed3ac491959c705c021c3d27c0a8706f5bcb1c65a8d2256884c8dd33ee"
+   },
+   "static_image_emb": {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     512,
+     2048
+    ],
+    "sha256": "975ce9c406260efea66cdae2d3566279f37704012b578e4f8ba97dd3884375be"
+   },
+   "static_mask": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "6caf38d537984e261527b8caef5f990fb91415a1db917198821a79ed28997973"
+   },
+   "static_pos_emb": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     512,
+     768
+    ],
+    "sha256": "047a251a602123a2f1fb6a147516210409c6c83734c3d7eba1e50b4cacb8dc87"
+   },
+   "static_state_emb": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     512,
+     8
+    ],
+    "sha256": "3260b8e71d4b390a086df9d4e9e02c6df598b3e1daf51dc734099c0d0e733049"
+   },
+   "step_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "9ee4ee67ed95fa24c47309e8b15f04f252bd2a5e9b09415e360bf5fdfcb4009e"
+   },
+   "wrist_image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "dd2a4145011145b7af37ea1f085d4895783c21bc4f6d5eb80cb7b14c314b7751"
+   }
+  },
+  "9000": {
+   "actions": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     20,
+     8
+    ],
+    "sha256": "7315d213d5b8096c14a0b65b25b867ef6e6556d258a41d3153c7ac0929fe8802"
+   },
+   "epis_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "bb549140670e7cab3f174160e750d9ed261491b7feb8fb75ec32f0d788f0abce"
+   },
+   "exec_start_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "46f83e3a0dcc4f04f3eecc056ca777afc551ff50c61ae15f1486e3497cd51bfb"
+   },
+   "grounded_subgoal": {
+    "kind": "str",
+    "sha256": "f7eb5e963c28607880ff339dda330d7b206366598220cefc62bc6845a7a417ec"
+   },
+   "image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "46bf64e264447f2a14e1588fbd96dde920390fe64958630b59fed8dac790578f"
+   },
+   "is_demo": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1
+    ],
+    "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+   },
+   "prompt": {
+    "kind": "str",
+    "sha256": "682f99805fcaf1093edb9dd7af44659f0b5198c4e1cf979711a089a4d61a16f0"
+   },
+   "simple_subgoal": {
+    "kind": "str",
+    "sha256": "6441b38be095884e3bfe487867b2966d0a92ab121aa2c551f5c8e30946260d21"
+   },
+   "state": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     8
+    ],
+    "sha256": "b1e4ee24a49436c0f1d5a93e39d7ffdf048f1bab125fe4e46f5599698473aa54"
+   },
+   "static_image_emb": {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     512,
+     2048
+    ],
+    "sha256": "dfcb94a232d3f11c333f18b333e8920eee797e5845838031f26b7b9759b11903"
+   },
+   "static_mask": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "6caf38d537984e261527b8caef5f990fb91415a1db917198821a79ed28997973"
+   },
+   "static_pos_emb": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     512,
+     768
+    ],
+    "sha256": "955bc2a26f539fe57bd9235135ee8807715d0a718172e16ff13c29e01e36c1c9"
+   },
+   "static_state_emb": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     512,
+     8
+    ],
+    "sha256": "1779ddb540a400737fecfb3b1c47eb7264621e26831126f7d3870ea8a5935b71"
+   },
+   "step_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "70c5276b2c6970e5137c162c30cc8312296dc030a2f92de708d2f5e01da04cd3"
+   },
+   "wrist_image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "6615332a96f69b992e1b59bcadf2c1633b40ce5956b5cfca7b89015c70d54ca0"
+   }
+  },
+  "11529": {
+   "actions": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     20,
+     8
+    ],
+    "sha256": "fc21f8948a7c3c97b9d0ab5e75315a26b929143544a6324977198271eca91094"
+   },
+   "epis_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "977d1a863cf97921a76b1f8414af65c7463cdab40d64c174cead35ad54c4ddb3"
+   },
+   "exec_start_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "0750704287b7ada46d7010af7c2e4c49ea779d5d36274405e850d76b1e8bb597"
+   },
+   "grounded_subgoal": {
+    "kind": "str",
+    "sha256": "31db1c102a2bf2953e780151442044fa592ba54a629ab1a599a019bc7f25f938"
+   },
+   "image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "b5c432e26d4458a111b84cbfbdd73bb0387980daad27c643496087537a487418"
+   },
+   "is_demo": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1
+    ],
+    "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+   },
+   "prompt": {
+    "kind": "str",
+    "sha256": "40bfa6e86c98e6d4cd1082dbde541abd48b7266876122da6d6eba78acfd25d6d"
+   },
+   "simple_subgoal": {
+    "kind": "str",
+    "sha256": "9a60a99b2c7adff78a1458017a5fb00f6d52966f27fb0fb7d9fe6f5db41fb460"
+   },
+   "state": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     8
+    ],
+    "sha256": "791054a43c8c202ad5ee58ed4a622665e6ce4cf5c0368b8498b71351af0f0708"
+   },
+   "static_image_emb": {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     512,
+     2048
+    ],
+    "sha256": "e49b63491791b444f5dc226019765d17be139b575d4f7bc428754b290e17fc59"
+   },
+   "static_mask": {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "6caf38d537984e261527b8caef5f990fb91415a1db917198821a79ed28997973"
+   },
+   "static_pos_emb": {
+    "kind": "array",
+    "dtype": "float32",
+    "shape": [
+     512,
+     768
+    ],
+    "sha256": "95d33f1063e633d7e844355584c22b5e2afed243654235606e8e56683817832c"
+   },
+   "static_state_emb": {
+    "kind": "array",
+    "dtype": "float64",
+    "shape": [
+     512,
+     8
+    ],
+    "sha256": "4592625212e1a5f3652c7141b735034d04cd4dd03baceee1a72e8c648ae577f0"
+   },
+   "step_idx": {
+    "kind": "array",
+    "dtype": "int32",
+    "shape": [
+     1
+    ],
+    "sha256": "639c76a3317f81cd6137d8078d0711b0f3f8f45447b0f8c40c817a033e96bd4e"
+   },
+   "wrist_image": {
+    "kind": "array",
+    "dtype": "uint8",
+    "shape": [
+     256,
+     256,
+     3
+    ],
+    "sha256": "825c20427aeec9b72d669f9ad732a1a193d9fa6c3829865aea5bba669d30a0db"
+   }
+  }
+ },
+ "batch": {
+  "actions": {
+   "kind": "array",
+   "dtype": "float64",
+   "shape": [
+    8,
+    20,
+    8
+   ],
+   "sha256": "04a7f07c6a775810807d5cd1a6182db14aeb1c3a24f0ebad902da20334d8fdcd"
+  },
+  "epis_idx": {
+   "kind": "array",
+   "dtype": "int32",
+   "shape": [
+    8,
+    1
+   ],
+   "sha256": "f04a0eb6bd6eb52b0af20ae048029aa64b6b2abe58bf19ee165ac0ade3ee2dff"
+  },
+  "exec_start_idx": {
+   "kind": "array",
+   "dtype": "int32",
+   "shape": [
+    8,
+    1
+   ],
+   "sha256": "66687aadf862bd776c8fc18b8e9f8e20089714856ee233b3902a591d0d5f2925"
+  },
+  "grounded_subgoal": {
+   "kind": "other",
+   "sha256": "becc0fac3874fdfd4572ca6fa705b68d9dd2a38f2ac6999864e08056d10f8c78"
+  },
+  "image": {
+   "kind": "array",
+   "dtype": "uint8",
+   "shape": [
+    8,
+    256,
+    256,
+    3
+   ],
+   "sha256": "f4ef39960530c1f2173c6f989962f8c23d9c27614c66008a8dadd1df2df249d9"
+  },
+  "is_demo": {
+   "kind": "array",
+   "dtype": "bool",
+   "shape": [
+    8,
+    1
+   ],
+   "sha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+  },
+  "prompt": {
+   "kind": "other",
+   "sha256": "6d6fe23f1458b01e4b4a55158ef081e0b44346e6b512192746232cb832445b1b"
+  },
+  "simple_subgoal": {
+   "kind": "other",
+   "sha256": "c9bdac68d7ab41540423c72d77153087feda07287352322ffa978583aeae4e07"
+  },
+  "state": {
+   "kind": "array",
+   "dtype": "float32",
+   "shape": [
+    8,
+    8
+   ],
+   "sha256": "40a2e1e8e55a947dd930c2ba476963c935838c2c7e01be3a15881ceae9c4f335"
+  },
+  "static_image_emb": {
+   "kind": "array",
+   "dtype": "bfloat16",
+   "shape": [
+    8,
+    512,
+    2048
+   ],
+   "sha256": "6dacb8ac108fe853ab6cecdf7197295d31ad80cbd5f30007d63556ed731b20fc"
+  },
+  "static_mask": {
+   "kind": "array",
+   "dtype": "bool",
+   "shape": [
+    8,
+    512
+   ],
+   "sha256": "d77ba1f6877e1275fa2eb4419470180c54b3df20ac2ce6bd333d795fe4d4626e"
+  },
+  "static_pos_emb": {
+   "kind": "array",
+   "dtype": "float32",
+   "shape": [
+    8,
+    512,
+    768
+   ],
+   "sha256": "7f573373f1fa50173717414f9ef4238859eac8e2bfc0bcfef14e92dc60a40bcf"
+  },
+  "static_state_emb": {
+   "kind": "array",
+   "dtype": "float64",
+   "shape": [
+    8,
+    512,
+    8
+   ],
+   "sha256": "0249b8a465a23a65c9ac3059cdeb11ec5189667f50eb783c42a05f957ea78906"
+  },
+  "step_idx": {
+   "kind": "array",
+   "dtype": "int32",
+   "shape": [
+    8,
+    1
+   ],
+   "sha256": "2d4f32e3fb11521d8c0638222a771b6ed5aa0275cf2bcdbac78ac62bd00773a5"
+  },
+  "wrist_image": {
+   "kind": "array",
+   "dtype": "uint8",
+   "shape": [
+    8,
+    256,
+    256,
+    3
+   ],
+   "sha256": "44125032a2aeb94b4f9dd32013b20e6a48db00ee8b333865c9022cd3b89fd85e"
+  }
+ },
+ "model": {
+  "embed_memory": [
+   {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     4,
+     512,
+     64
+    ],
+    "sha256": "ada46c0277def8177405b7bc3117312d199f69006f4968a81f347d19f1c88f92"
+   },
+   {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     4,
+     512
+    ],
+    "sha256": "e69071ac9a4f560b1cb54a9eced854e7df6dbddd50ded0b91341f2c4fd1cb03c"
+   },
+   {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560"
+   },
+   {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     512
+    ],
+    "sha256": "076a27c79e5ace2a3d47f9dd2e83e4ff6ea8872b3c2218f66c92b89b55f36560"
+   }
+  ],
+  "embed_prefix": [
+   {
+    "kind": "array",
+    "dtype": "bfloat16",
+    "shape": [
+     4,
+     1088,
+     64
+    ],
+    "sha256": "4ae5ef3f2e2331363db036c3409e2edf5e5c774c5fc61d0a4b3dd9621e225afe"
+   },
+   {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     4,
+     1088
+    ],
+    "sha256": "617179b9d75cb2782b24acfdfba828601ba1d540b09c1a287b2a418eea1eefdc"
+   },
+   {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1088
+    ],
+    "sha256": "1284d45805d1c6c0095bad0bae42530d3f25331a15524696bbb6decc987814e2"
+   },
+   {
+    "kind": "array",
+    "dtype": "bool",
+    "shape": [
+     1088
+    ],
+    "sha256": "3aa394402e766186b76edd39cc0cace087e99d1e66d2f108344252c8c9ecb5d7"
+   }
+  ],
+  "n_leaves_params": 54,
+  "feature_encoder_leaves": {
+   "['mem_encoder']['feature_encoder']['encoder_static']['bias']": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1",
+   "['mem_encoder']['feature_encoder']['encoder_static']['kernel']": "771c7a6c3a8339b447c57c81eaef476cc816d1df78bd5b8eabd7b36fb6fcf398",
+   "['mem_encoder']['feature_encoder']['pos_proj']['bias']": "e80232b4d18d0bb7e794be263ba937626f383f9917d4b8a737ba893a8f752293",
+   "['mem_encoder']['feature_encoder']['pos_proj']['kernel']": "18af7356653287a8bdce7b94f4dcedbd5b32423d09306851adab95f14facb907"
+  },
+  "all_leaves_sha256": "7ee68119cb5acf2c5ec94d44e7e0e9bae70c392332874f3107f1d64a0a3f404f"
+ },
+ "sample_keys": [
+  "actions",
+  "epis_idx",
+  "exec_start_idx",
+  "grounded_subgoal",
+  "image",
+  "is_demo",
+  "prompt",
+  "simple_subgoal",
+  "state",
+  "static_image_emb",
+  "static_mask",
+  "static_pos_emb",
+  "static_state_emb",
+  "step_idx",
+  "wrist_image"
+ ]
+}

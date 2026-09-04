@@ -1,0 +1,38 @@
+A10_ROWS=PASS rows=772 exec=658 demo=114 formula_or_rowbase_mismatches=0 expect=772=658+114
+A19_VALID_DIST=PASS median=11.0 mean=11.46 max=34 zero_frac=0.0555 fill_rate=0.119
+A6_MANIFEST=PASS episodes=40 field_mismatches=0 manifest_sha_same=1 motion_index_sha256=4183a6e78297476a…
+A7_BYTES=PASS segments=60 mismatches=0 table_rows=772 table_ok=1
+A8_TABLE_BITEXACT=PASS sampled=128 mismatches=0 rows_total=772 ckpt=bae960373041629e…
+A9_INDEXSET=PASS samples=500 mismatches=0
+A9_ROWENC=PASS samples=500 rows=5071 unique_windows=687 mismatches=0
+CLOSED_EQUIV=PASS samples=11 keys=15
+COMPARE_RESULT=bitexact PASS
+DATALOADER_BENCH=DONE runs=4 → /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/motion/dataloader_bench_aws.json
+ENCODER_BITEXACT=PASS compared=772 mismatches=0 order_ok=1 state_sha_ok=1 prov_ok=1 ckpt_ok=1 no_latent_stats_call=1 finite=1
+FINALIZE_EXIT_CODE=0
+GRAD_LEAK=PASS
+MASK_INVARIANCE=PASS loss_bitexact=1 actions_bitexact=1
+MEM_GATHER=PASS perms=20 bad_order_raises=3
+MEM_ORDER=PASS cases=10000 mismatches=0 same_object=1 imports=['numpy'] sentinel_ok=1
+MOTION_DELIVERY=PASS samples=11530 mismatches=0 helper_checked=1863
+MOTION_ENC=PASS bf16_ulp_max=0 frame_bitexact=1
+MOTION_PLUMBING=PASS negatives=16
+ONLINE_GATES=PASS {'p1': True, 'p2': True, 'p3': True, 'p4': True}
+ORACLE_AGGREGATE=DONE kinds=vae shards=8
+ORACLE_ENCODER=DONE rows=772 elapsed=10s
+ORACLE_VAE=DONE windows=772 frame_mismatches=0 metadata_mismatches=0 elapsed=231s shards=8
+ORDER_EFFECT=PASS max_abs_diff_parallel_vs_interleaved=5.796e-02
+P1_PROTOCOL=PASS
+P2_MEMORY=PASS
+P3_ORDER=PASS
+P4_ES_STATE=PASS
+PACK_DONE=1 （pack.lock 保留，verify 回填后才释放——A.2）
+PACK_MOTION_DONE=1 （pack.lock 保留，verify 回填后才释放）
+SHARD_DONE shard=0 episodes=40 skipped=0 steps=13756 elapsed=303.7s rate=45.291 step/s steady_steps=13465 rate_steady=80.292 step/s
+STAGE_DONE stage=encode workers=8 items=60 elapsed=21s
+STAGE_DONE stage=siglip workers=6 items=40 elapsed=88s
+STAGE_DONE stage=wan workers=6 items=60 elapsed=199s
+VERIFY_MOTION=PASS scanned=772 mismatches=0
+VERIFY_PACK=PASS scanned=13756 mismatches=0
+WAN_BITEXACT=PASS compared=772 frame_mismatches=0 latent_mismatches=0 metadata_mismatches=0 oracle_windows=772
+ZERO_MOTION_EQUIV=PASS max_abs_diff=0.000e+00 tol=4.147e-04 order_diff=5.796e-02
