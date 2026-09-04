@@ -88,6 +88,9 @@ ckpt sha256 必须是 `bae96037…c15a`，与本机 `v1-store/external/motionjep
 资产锁的设计原理、链路六处接入的改前改后、以及异地无 NFS 机器从零复刻的完整步骤，见
 [`external-assets-lock.md`](external-assets-lock.md)。
 
+环境 B（AWS 8×A100，2026-09-04）从零复刻 motion-memory 全部测试（≤100 步）与 4 任务 × 100 ep 完整库的完整过程——代码适配、判定行原文、A100 数字、事故与待裁决项——见
+[`env-b-aws-replication.md`](env-b-aws-replication.md)。
+
 ## 固定入口
 
 本机数据处理链路（SigLIP / Wan VAE / MotionJEPA encoder 三阶段）全部在 `scripts/dataset/`（集群链路已于 v2-motionmem 删除），本地 G0 对拍量具在 `scripts/training/g0/`，GPU 利用率观测族在 `scripts/training/util/`。
