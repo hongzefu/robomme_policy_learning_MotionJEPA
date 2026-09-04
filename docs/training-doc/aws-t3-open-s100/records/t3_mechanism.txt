@@ -1,0 +1,29 @@
+[t3mechanism] 选 step 0 的 batch: [6556, 671, 8452, 3987, 10070, 3804, 8928, 2595]
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+[t3mechanism] 初态命中 reference 与 run init 记录
+max_token_len: 64
+[t3mechanism] 梯度摘要覆盖 trainable 叶 36 个（全参数叶 59）
+
+  %reduce-window.12 = s32[8,1204]{1,0} reduce-window(%broadcast.4844, %constant.2595), window={size=1x1204 pad=0_0x1203_0}, to_apply=%region_35.10288, metadata={op_name="jit(loss_and_grads)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+
+
+  %reduce-window.12 = s32[8,1204]{1,0} reduce-window(%broadcast.4844, %constant.2595), window={size=1x1204 pad=0_0x1203_0}, to_apply=%region_35.10288, metadata={op_name="jit(loss_and_grads)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+
+[t3mechanism] base loss 0.704831
+  [pad-diag] 确定性探针：同一 obs 连算两次梯度，叶变化 1/36：["['PaliGemma']['llm']['embedder']['input_embedding']"]
+  [pad-diag] loss base=0x1.68df900000000p-1 pad(1e3)=0x1.68df900000000p-1 同=True；梯度叶变化 1/36：["['PaliGemma']['llm']['embedder']['input_embedding']"]
+  [pad-diag] 垃圾尺度 1: loss 同=True 摘要同=False 叶变化 1：["['PaliGemma']['llm']['embedder']['input_embedding']"]
+  [pad-diag] 垃圾尺度 0.001: loss 同=True 摘要同=False 叶变化 1：["['PaliGemma']['llm']['embedder']['input_embedding']"]
+[t3mechanism] 分组梯度范数 {"W2_content[:768]": "4.2752e+01", "W2_pos[768:]": "5.1713e+00", "W1": "5.3917e+00", "b1": "4.7280e-01", "b2": "1.6001e+00", "motion_emb_valid": "9.0971e-01", "motion_pos_valid": "1.4757e-01"}
+T3_MOTION_CAUSAL=FAIL pad_bitexact=0 emb_effect=1 pos_effect=1
+T3_MECHANISM=FAIL step=0 input_grad_ok=1 group_norms_ok=1

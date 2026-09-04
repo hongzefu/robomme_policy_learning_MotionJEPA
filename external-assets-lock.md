@@ -107,9 +107,14 @@ uv run python scripts/assets/fetch_assets.py verify --level full       # 期望�
 MotionJEPA 的**模型代码**在私有 GitHub `hongzefu/MotionJEPA`，由 `scripts/dataset/wan/pyproject.toml`
 以 git 依赖钉死 commit 引入，所以 wan 子 venv 那步同样需要该仓库的访问权。
 
-**已知阻塞（本轮未解决）**：两个 `paths.sh` 都断言仓库必须位于 `/data/hongzefu/` 或 turbo 前缀下，
-否则 `source` 即 `exit 1`——异地机器必然不满足。这是防「几百 GB 产物写错位置」的现有 fail-loud，
-本轮按决定未动它；真要异地跑，需先拍板放松方式（加环境变量白名单，或改成与路径无关的判据）。
+**已知阻塞——已于 2026-09-04 解除（commitV6.12，环境 B / AWS 8×A100 实测复刻）**：两个 `paths.sh` 的前缀白名单加了第三项
+`AWS_WORK_PREFIX="/scratch/hongze/"`（用户拍板：加常量前缀，不改成与路径无关的判据），`RAW_H5_DIR` 默认按前缀分叉、`MJ_REPO` 可用环境变量覆盖。
+同一轮实测踩中并修掉的第二个阻塞：`snapshot_download(revision=<commit sha>)` **不写 `refs/main`**，而 `verify` 的 `hf_snapshot_subdir` 分支与
+`HF_HUB_OFFLINE=1` 下按 repo_id 的离线加载都要它 —— 首次 `verify --level full` 报 `wan_vae: 缺 refs/main` → `ASSETS=FAIL`；`fetch_assets.py` 现在在
+钉 sha 的 snapshot 落盘后补写 `refs/main = revision`（已存在且不同则响亮失败不覆盖），复跑 `fetch --force --assets wan_vae` 后 `ASSETS=PASS assets=6 mismatches=0`。
+完整复刻记录（环境判定、四个公开 h5 与环境 A sha256 对拍、40 ep 库 D1–D3 逐位、400 ep 完整库）见
+`docs/dataset-build-doc/4task-motion-40ep-aws/` 与 `docs/dataset-build-doc/4task-motion-400ep/`，以及 `motion-memory-plan.md`「环境 B 复刻」节。
+异地机器上 `paths.sh` 仍要求仓库位于三个前缀之一；换第四台机器需再加一项常量（有 `test_paths_sh_prefixes_identical` 盯两份同值）。
 
 **数据侧口径**：原始 16 任务 × 100 episode 的 H5 在公开数据集 `Yinpei/robomme_data_h5`；派生库
 （SigLIP 特征 / Wan latent / motion token / packed store）需在异地用 `scripts/dataset/` 重建，全程要 GPU。

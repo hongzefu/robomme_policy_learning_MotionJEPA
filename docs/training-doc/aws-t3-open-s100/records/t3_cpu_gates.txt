@@ -1,0 +1,15 @@
+### t3verifyinit
+  ✓ closed step-0 177 叶命中 reference
+  ✓ open step-0 193 叶命中 reference
+T3_INIT_MATCH=PASS
+RC_verifyinit=0
+### t3_smoke
+T3_SMOKE=PASS steps=100 nan=0 motion_params_updated=4 n_keys=16/12 n_leaves=193/177
+RC_smoke=0
+### t3trace preflight
+T3_TRACE_PREFLIGHT=PASS samples=56 empty=4 k_ge2=51 video=True
+RC_preflight=0
+### t3trace
+T3_TOKEN_TRACE=PASS steps=7 samples=56 keys=4 mismatches=0
+RC_trace=0
+EXIT_CODE=0
