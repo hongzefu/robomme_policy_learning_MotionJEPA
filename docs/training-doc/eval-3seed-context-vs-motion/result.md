@@ -2,35 +2,50 @@
 
 ## 一、结论先行
 
-**在本机同硬件下复刻，awsprod40k-b128-motion 相对官方 perceptual-framesamp-context 没有可辨别的优势；
-起因表中 28.0% vs 24.0% 的 4pp 领先没有复现。**
+**两组权重在本机同硬件、3 个 policy 采样 seed 下表现无可辨别差异；起因表中 28.0% vs 24.0% 的 4pp 领先不成立。**
 
-- 官方 context 跑满 3 个 policy 采样 seed（42 / 7 / 2024），四任务均值 **25.0% / 24.5% / 24.0%，
-  均值 24.5%、标准差 0.5pp**——总均值对采样噪声非常不敏感。
-- awsprod40k motion 只跑了 1 个 seed（42），四任务均值 **24.0%**，落在官方三个 seed 的区间 [24.0%, 25.0%] 之内，
-  与官方均值之差 0.5pp 恰与官方组自身的 seed 标准差同量级。
-- 同硬件、同 seed 42 的直接对比是 **官方 25.0% vs motion 24.0%**，差 1.0pp 且方向与起因表相反。
+| 组 | seed 42 | seed 7 | seed 2024 | 均值 | 标准差 |
+|---|---|---|---|---|---|
+| 官方 perceptual-framesamp-context | 25.0% | 24.5% | 24.0% | **24.5%** | 0.5pp |
+| awsprod40k-b128-motion | 24.0% | 25.5% | 23.0% | **24.2%** | 1.3pp |
 
-**但这个结论有一条硬性限制**：motion 组只有一个 seed，算不出它自己的 seed 方差，
-无法排除「motion 的 seed 波动比官方大、单点 24.0% 恰好偏低」。要下定论必须补 motion 的 seed 7 与 2024
-（单 seed 实测 52 分钟，两个约 1 小时 45 分）。
+两组均值相差 **0.3pp**，而 motion 组自身的 seed 标准差就有 **1.3pp**、官方组 0.5pp——组间差远小于组内噪声。
+两组的逐集稳定性也几乎相同：200 集中官方翻转 35 集、motion 翻转 32 集。
+
+逐任务（均值 ± 标准差，n=3）：
+
+| 任务 | 官方 context | awsprod40k motion | 差 |
+|---|---|---|---|
+| ButtonUnmask | 27.3% ± 2.3 | 26.0% ± 2.0 | −1.3pp（重叠） |
+| VideoUnmask | 30.7% ± 1.2 | 28.7% ± 1.2 | −2.0pp（接近但未超噪声） |
+| ButtonUnmaskSwap | 20.0% ± 2.0 | 17.3% ± 4.6 | −2.7pp（motion 波动最大，重叠） |
+| **VideoUnmaskSwap** | **20.0% ± 0.0** | **24.7% ± 1.2** | **+4.7pp（唯一稳定的差异）** |
+
+**唯一值得注意的单任务差异是 VideoUnmaskSwap**：官方三个 seed 全是 20.0%（零方差），motion 三个 seed
+24.0% / 24.0% / 26.0%，稳定高出约 4.7pp。这是本轮数据里 motion 唯一站得住的优势，但它是四个任务里
+挑出来的一个（多重比较）、且只有 3 个 seed，应作为**待验证线索**而非结论。
+
+反过来，起因表中 motion 领先最多的 ButtonUnmaskSwap（34% vs 8%，领先 26pp），在本机三 seed 下变成
+motion 17.3% vs 官方 20.0%——**方向完全反转**。
 
 ## 二、起因表为什么没复现：差异集中在一个不稳定的任务
 
 起因表（均在环境 B 的 A100 上产出）与本机三 seed / 一 seed 的逐任务对照：
 
-| 任务 | 官方 A100 | 官方本机(3 seed 均值) | motion A100 | motion 本机(seed42) |
+| 任务 | 官方 A100 | 官方本机(3 seed 均值) | motion A100 | motion 本机(3 seed 均值) |
 |---|---|---|---|---|
-| VideoUnmask | 34% | 30.7% | 28% | 28.0% |
-| ButtonUnmask | 34% | 27.3% | 26% | 24.0% |
-| VideoUnmaskSwap | 20% | 20.0% | 24% | 24.0% |
-| **ButtonUnmaskSwap** | **8%** | **20.0%** | **34%** | **20.0%** |
-| 四任务均值 | 24.0% | 24.5% | 28.0% | 24.0% |
+| VideoUnmask | 34% | 30.7% | 28% | 28.7% |
+| ButtonUnmask | 34% | 27.3% | 26% | 26.0% |
+| VideoUnmaskSwap | 20% | 20.0% | 24% | 24.7% |
+| **ButtonUnmaskSwap** | **8%** | **20.0%** | **34%** | **17.3%** |
+| 四任务均值 | 24.0% | 24.5% | 28.0% | 24.2% |
 
 起因表里 motion 的 4pp 总优势，几乎全部来自 ButtonUnmaskSwap 一项的 26pp 领先（34% vs 8%）。
-换到本机后，该任务两组朝相反方向移动——官方 8%→20%（+12pp），motion 34%→20%（−14pp）——优势随之消失。
+换到本机后，该任务两组朝相反方向移动——官方 8%→20.0%（+12pp），motion 34%→17.3%（−16.7pp）——优势随之消失并反转。
+其余三个任务的本机数字与 A100 都相当接近（差 0.7–7.3pp），可见问题集中在这一个任务上。
 
-而 ButtonUnmaskSwap 恰恰是四个任务里**最不稳定**的一个。官方组 200 集在三个 seed 下的逐集稳定性：
+而 ButtonUnmaskSwap 恰恰是四个任务里**最不稳定**的一个，且它也是 motion 组标准差最大的任务（±4.6pp）。
+官方组 200 集在三个 seed 下的逐集稳定性：
 
 | 任务 | 三 seed 全成 | 三 seed 全败 | 有翻转 | 翻转率 |
 |---|---|---|---|---|
@@ -39,6 +54,8 @@
 | VideoUnmask | 13 | 32 | 5 | 10.0% |
 | VideoUnmaskSwap | 8 | 38 | 4 | 8.0% |
 | **合计** | 33 | 132 | **35** | **17.5%** |
+
+motion 组同口径为全成 34 / 全败 134 / 翻转 **32**（16.0%），与官方组几乎一致——两组对采样噪声的敏感度相当。
 
 即：只换 policy 采样噪声，ButtonUnmaskSwap 有 30% 的 episode 会翻转结果。
 一个逐集这么不稳的任务，其单轮 50 集成功率不足以支撑「谁更好」的判断——这与起因留档
@@ -55,9 +72,9 @@
 | 组 / 任务 | A100 | 本机同 seed42 | 差 |
 |---|---|---|---|
 | 官方 ButtonUnmaskSwap | 4/50 | 9/50 | +5 集（+10pp） |
-| motion ButtonUnmaskSwap | 17/50 | 10/50 | −7 集（−14pp） |
+| motion ButtonUnmaskSwap | 17/50 | 10/50（seed42）/ 三 seed 均值 17.3% | −7 集（−14pp，三 seed 均值 −16.7pp） |
 | 官方四任务均值 | 24.0% | 25.0% | +1.0pp |
-| motion 四任务均值 | 28.0% | 24.0% | −4.0pp |
+| motion 四任务均值 | 28.0% | 24.0%（seed42）/ 24.2%（三 seed 均值） | −4.0pp / −3.8pp |
 
 **总均值层面跨硬件影响很小（官方 +1.0pp），单任务层面可达 ±14pp。**
 因此本轮所有数字只与本轮内部互比有效；与起因表的逐任务数字不得直接混比（AGENTS 13）。
@@ -90,14 +107,18 @@
 | 官方 seed 7 | 04:05:13 → 04:24:35 | **19 分 22 秒** | 4:51 / 3:50 / 6:11 / 4:30 |
 | motion seed 42 | 05:33:39 → 06:25:42 | **52 分 3 秒** | 14:11 / 8:30 / 16:51 / 12:31 |
 | 官方 seed 2024 | 08:02:07 → 08:21:49 | **19 分 42 秒** | 4:50 / 3:51 / 6:30 / 4:31 |
+| motion seed 7 | 09:29:50 → 10:20:53 | **51 分 3 秒** | 13:11 / 8:30 / 17:11 / 12:11 |
+| motion seed 2024 | 10:20:53 → 11:04:55 | **44 分 2 秒** | 12:10 / 8:31 / 13:50 / 9:31 |
 
 单次推理时序（官方组 w0，2 policy 同卡）：`add_buffer` median **26 ms**、`infer` median **70 ms**
 （起因表 A100 那轮为 37 ms / 69 ms，推理侧本机不慢）。
 motion sidecar 单窗 median **864 ms**（n=403），与本机 `motion-t3-open/result.md` 的「单 sidecar 独占 0.88 s/窗」吻合。
 
-**GPU 实际工作约 1 小时 50 分**（三轮官方 57:46 + motion 52:03 + 前置下载校验约 20 分）。
-会话总墙钟 4 小时 39 分（03:23 → 08:02 起最后一轮），差额是两次决策等待（provenance 闸约 1 小时、
-最后一段用途约 1.5 小时）与端口事故处置。
+**GPU 实际工作约 3 小时 45 分**：官方三轮 57:46（18:42 + 19:22 + 19:42）、
+motion 三轮 2:27:08（52:03 + 51:03 + 44:02）、前置下载与校验约 20 分。
+官方组单 seed 稳定在 19 分上下，motion 组 44–52 分（sidecar 每窗约 0.86 s 是主导项）。
+会话总墙钟跨度 03:23 → 11:05，差额为两次决策等待（provenance 闸约 1 小时、4 小时线用途约 1.5 小时）、
+端口事故处置，以及 motion 后两个 seed 是在首轮交付后按用户追加要求补跑的。
 
 ## 六、过程中的两个事故
 
@@ -141,7 +162,9 @@ w1/w3 分片目录只含 abort 残留的一条 `"error"`，整目录删除后重
 
 ## 七、盲区与下一步
 
-1. **motion 组只有 1 个 seed**，算不出其 seed 方差，第一节的结论受此限制。补 seed 7 与 2024 约需 1 小时 45 分。
+1. **每组 3 个 seed，样本量仍小**。以 n=3 判断组间差异，只能得出「差异未超噪声」这类否定性结论，
+   无法为「两者等价」给出强证据。VideoUnmaskSwap 上 motion 稳定高 4.7pp 这条线索，需要更多 seed
+   （或更多 episode）才能确认——它是从四个任务里挑出来的，存在多重比较问题。
 2. **单 checkpoint**：官方固定 79999、motion 固定 39999，未做 checkpoint 维度的对照。
 3. **环境布局固定**：3 个 seed 只改 policy 采样噪声，200 个环境实例始终是 test split 的同一批
    （每集 seed 固化在 benchmark 元数据）。换环境布局需改 split 或绕过元数据 seed，不在本轮范围。
@@ -157,9 +180,10 @@ w1/w3 分片目录只含 abort 残留的一条 `"error"`，整目录删除后重
 |---|---|
 | `dl-official-ctx` / `dl-awsprod40k` | 两套权重下载 |
 | `chk-motion-tree` / `prep-official` | 参数树自证、官方权重解压 + 自证 |
-| `sweep-official-s42` / `sweep-official-s7` / `sweep-official-s2024` / `sweep-motion-s42` | 四轮批次 driver |
+| `sweep-official-s42` / `sweep-official-s7` / `sweep-official-s2024` / `sweep-motion-s42` | 前四轮批次 driver |
+| `sweep-motion-rest` | motion seed 7 与 2024 的串行 driver（补跑轮） |
 | `evctx-s{42,7,2024}-{bu,vu,bus,vus}-w{0..3}` | 官方组分片（48 个） |
-| `evmot-s42-{bu,vu,bus,vus}-w{0,1}` | motion 组分片（8 个） |
+| `evmot-s{42,7,2024}-{bu,vu,bus,vus}-w{0,1}` | motion 组分片（24 个） |
 
 事故中被 kill 的三个：`sweep-official-s42`、`evctx-s42-bu-w0`、`evctx-s42-bu-w2`（端口事故后重跑）；
 `sweep-motion-s42` 的首次尝试因 provenance 闸自行失败退出。
@@ -174,5 +198,5 @@ w1/w3 分片目录只含 abort 残留的一条 `"error"`，整目录删除后重
 | 分片结果 | `v1-store/evaluation/{official-ctx,awsprod40k-motion}-s<seed>-<Task>-w<k>/ckpt<id>/seed<seed>/` |
 | 日志 | `v1-store/logs/{sweep-*,evctx-*,evmot-*,dl-*}.log` |
 
-汇总判定行：`SEED_AGG=INCOMPLETE groups=2 seeds=3 tasks=4 episodes=800/1200 errors=0`——
-`INCOMPLETE` 如实反映 motion 组缺 seed 7 与 2024 的 400 集；已跑的 800 集零 error、零缺集。
+汇总判定行：**`SEED_AGG=DONE groups=2 seeds=3 tasks=4 episodes=1200/1200 errors=0`**——
+两组 × 3 seed × 4 任务 × 50 集全部跑满，零 error、零缺集。
