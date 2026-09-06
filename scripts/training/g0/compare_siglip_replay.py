@@ -3,7 +3,7 @@
 
 五臂共用同一套预处理（`FrameSampMemory.add_buffer`：/255*2-1 → resize_with_pad(224) → enc → pool_tokens_to_size(16)）：
   S  = 训练库 framesamp store 的 image_emb_4x4 行（训练真值；离线建库 = 离线 f32 tokenizer 逐帧 batch=1 算出）
-  A1 = 离线 `jax.jit(SigLipTokenizer().__call__)`（f32 pkl 权重），**逐帧 batch=1 喂**——应与 S 逐位（复现建库）
+  A1 = 离线 `jax.jit(SigLipTokenizer().__call__)`（f32 pkl 权重），**逐帧 batch=1 喂**——应与 S 逐位（复现建库）；只走帧路，不参与装配/动作
   A  = 同一 f32 编码器，按 eval.py 节奏成批喂（首批 es+1 帧、之后每批 16）——与 S 之差 = 纯批形状效应（D-A2）
   B  = 在线 `policy._vision_encode`（checkpoint 内 bf16 `PaliGemma.img`），成批喂——生产推理用的；S vs B = 训练/推理真实差距
   C  = A 的权重 astype(bf16) 后成批喂——诊断臂：C == B 逐位 ⇒ A/B 之差完全由权重 dtype 解释
@@ -18,7 +18,7 @@
   MEM_A1_VS_STORE=PASS|FAIL frames mismatches      MEM_S_VS_TRAINSET=PASS|FAIL points key_mismatches
   MEM_C_VS_B=PASS|FAIL frames mismatches           MEM_A_VS_STORE_BITEXACT=<n>/<frames>（描述性）
   MEM_S_VS_B / MEM_S_VS_A / MEM_A_VS_B  frames max_abs mean_abs rel_fro cos_min cos_mean ulp_p50 ulp_p99 ulp_max frac_nonzero
-  ACT_S_VS_B / ACT_S_VS_A / ACT_A_VS_B  points rms_norm max_abs_norm rms_unnorm | NOISE_S … | ratio | act_std
+  ACT_S_VS_B / ACT_S_VS_A / ACT_A_VS_B  points rms_norm max_abs_norm rms_unnorm | NOISE_S … | ratio | act_std（A1 不参与动作）
   ACT_C_VS_B_BITEXACT / ACT_DETERMINISM / SIGLIP_AB_REPLAY=DONE
 
 用法（主进程 jax 必须在 GPU 上——P5 留档记过 CPU pos 表不逐位）：
@@ -49,9 +49,10 @@ import _common as C  # noqa: E402
 
 KEYS8 = ("static_image_emb", "static_pos_emb", "static_state_emb", "static_mask",
          "motion_emb", "motion_pos", "motion_mask", "mem_order")
-ARMS = ("S", "A1", "A", "B", "C")
+ARMS = ("S", "A", "B", "C")                       # 参与装配与动作对拍的臂
+FRAME_ARMS = ARMS + ("A1",)                         # A1 只走帧路（逐帧 batch=1 复现建库），不开运动路、不参与装配/动作
 MEM_PAIRS = (("S", "B"), ("S", "A"), ("A", "B"), ("S", "A1"), ("C", "B"))
-ACT_PAIRS = (("S", "B"), ("S", "A"), ("A", "B"), ("S", "A1"))
+ACT_PAIRS = (("S", "B"), ("S", "A"), ("A", "B"))
 
 
 def load_episode_full(raw_dir: pathlib.Path, h5_file: str, raw_ep_idx: int, T: int):
@@ -153,6 +154,7 @@ def main() -> int:
     from mme_vla_suite.datastore.framesamp_store import StoreMeta
     from mme_vla_suite.training.dataloader import _create_framesamp_dataset, _motion_gates
     from mme_vla_suite.dataset_builder.siglip_tokenizer import SigLipTokenizer
+    from mme_vla_suite.policies.framesamp_memory import FrameSampMemory
     from mme_vla_suite.models.integration.history_observation import HistAugObservation
 
     if jax.default_backend() != "gpu":
@@ -245,8 +247,12 @@ def main() -> int:
 
         def make_mem(enc):
             policy._vision_encode = enc; policy._motion_client = motion_lookup; policy._prepare_mem_buffer(); return policy.mem_buffer
-        mems = {"S": make_mem(enc_A), "A1": make_mem(enc_A), "A": make_mem(enc_A), "C": make_mem(enc_C), "B": make_mem(enc_B)}   # B 最后
+        mems = {"S": make_mem(enc_A), "A": make_mem(enc_A), "C": make_mem(enc_C), "B": make_mem(enc_B)}   # B 最后
         assert policy._vision_encode is enc_B
+        cfgm = policy.config
+        memA1 = FrameSampMemory(num_views=cfgm.num_views, img_emb_dim=cfgm.memory_feature.img.input_dim,
+                                pos_emb_dim=cfgm.memory_feature.pos.input_dim, state_emb_dim=cfgm.memory_feature.state.input_dim,
+                                vision_enc_fn=enc_A)                                   # 帧路与其余臂逐字同一 add_buffer，只是不开运动路
         policy.mem_buffer = mems["B"]; policy.step_idx = -1; policy.exec_start_idx = 0
 
         def feed(lo, hi):
@@ -257,7 +263,7 @@ def main() -> int:
             for name in ("A", "C", "S"):                                                                              # 成批
                 mems[name].add_buffer(frames[lo:hi], states[lo:hi], sl, exec_start_idx=esx)
             for i, s in enumerate(sl):                                                                                # A1 逐帧 batch=1（复现建库）
-                mems["A1"].add_buffer(frames[lo + i:lo + i + 1], states[lo + i:lo + i + 1], [s], exec_start_idx=esx)
+                memA1.add_buffer(frames[lo + i:lo + i + 1], states[lo + i:lo + i + 1], [s])
             rows = fstore.read_image_rows(np.asarray([row_base + s for s in sl], dtype=np.int64))                     # S 臂改写为训练库行
             for i, s in enumerate(sl):
                 mems["S"]._history_feats[s]["image_emb_4x4"] = np.ascontiguousarray(rows[i][None])
@@ -273,6 +279,7 @@ def main() -> int:
             fa = {p: DiffAcc() for p in MEM_PAIRS}
             for s in new_steps:
                 e = {n: np.asarray(mems[n]._history_feats[s]["image_emb_4x4"])[0] for n in ARMS}
+                e["A1"] = np.asarray(memA1._history_feats[s]["image_emb_4x4"])[0]
                 bit["A1_vs_store"][0] += 1; bit["A1_vs_store"][1] += 0 if _bytes_equal(e["A1"], e["S"]) else 1
                 bit["A_vs_store"][0] += 1; bit["A_vs_store"][1] += 0 if _bytes_equal(e["A"], e["S"]) else 1
                 bit["C_vs_B"][0] += 1; bit["C_vs_B"][1] += 0 if _bytes_equal(e["C"], e["B"]) else 1
@@ -372,7 +379,7 @@ def main() -> int:
         f"A_static_image_emb_vs_trainset_bitexact_points={trainset_points - a_trainset_img_mis}/{trainset_points}",
         acc[("S", "B")].line("MEM_S_VS_B"), acc[("S", "A")].line("MEM_S_VS_A"), acc[("A", "B")].line("MEM_A_VS_B"),
         acc[("S", "A1")].line("MEM_S_VS_A1"), acc[("C", "B")].line("MEM_C_VS_B_NUM"),
-        act_line(("S", "B")), act_line(("S", "A")), act_line(("A", "B")), act_line(("S", "A1")),
+        act_line(("S", "B")), act_line(("S", "A")), act_line(("A", "B")),
         f"ACT_C_VS_B_BITEXACT={'PASS' if cb_act_ok else 'FAIL'}",
         f"ACT_DETERMINISM={'PASS' if det_ok else 'FAIL'}",
         f"SIGLIP_AB_REPLAY=DONE episodes={len(per_episode)} points={n_points}",
