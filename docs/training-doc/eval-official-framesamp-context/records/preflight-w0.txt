@@ -1,0 +1,50 @@
+  ✓ siglip_params          level=cheap   0.00s
+  ✓ paligemma_tokenizer    level=cheap   0.00s
+  ✓ pi05_base              level=cheap   0.03s
+ASSETS=PASS assets=3 mismatches=0
+=== EVAL_SHARD shard=w0 HEAD=6b0aec46b699f8efd08644b6d4b1dc15dd561162 ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999 run_kind=legacy(history_config.txt=perceptual-framesamp-context.yaml) gpu=0 port=8051 seed=42 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap ep_start=0 ep_stride=8 ep_count=9 policy_name=official-framesamp-context-pre-w0 mem_fraction=0.4 start=2026-09-06 06:03:02 ===
+server pid=2163530 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/evoffctxpre-w0.server.log
+server 端口就绪 06:03:20
+[robomme] task ButtonUnmask: 2 episodes [0, 8]
+
+[robomme] env for task ButtonUnmask episode 0 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 8 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+[robomme] task VideoUnmask: 2 episodes [0, 8]
+
+[robomme] env for task VideoUnmask episode 0 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 8 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 66
+[robomme] task ButtonUnmaskSwap: 2 episodes [0, 8]
+
+[robomme] env for task ButtonUnmaskSwap episode 0 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 8 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube
+exec_start_idx: 0
+[robomme] task VideoUnmaskSwap: 2 episodes [0, 8]
+
+[robomme] env for task VideoUnmaskSwap episode 0 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 8 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+EVAL_RC=0 end=2026-09-06 06:08:36
+TIMING_SUMMARY add_buffer(<=16帧) n=101 mean=63 median=37 p90=37 max=1764 | add_buffer(首批>16帧) n=4 mean=941 median=1143 p90=nan max=1339 | infer n=105 mean=97 median=65 p90=66 max=3132
+EXIT_CODE=0
+ == You are using None, changing to perceptual-framesamp-context.yaml ==
+INFO:root:Norm stats not found in /scratch/hongze/robomme_policy_learning_MotionJEPA/runs/assets/mme_vla_suite/robomme, skipping.
+INFO:root:Loaded norm stats from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/assets/robomme
+sidecar 行: 0
