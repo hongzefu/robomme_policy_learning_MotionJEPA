@@ -323,6 +323,8 @@ def main() -> int:
             mask = assembled["S"]["static_mask"]
             rec["static_image_emb"] = {}
             for p in MEM_PAIRS:
+                if p[0] not in assembled or p[1] not in assembled:      # A1 只走帧路，不参与装配
+                    continue
                 ia = assembled[p[0]]["static_image_emb"].astype(np.float32)[mask]; ib = assembled[p[1]]["static_image_emb"].astype(np.float32)[mask]
                 rec["static_image_emb"][f"{p[0]}_vs_{p[1]}"] = {"tokens": int(mask.sum()), "max_abs": float(np.abs(ib - ia).max()),
                                                                  "rel_fro": float(np.linalg.norm(ib - ia) / (np.linalg.norm(ia) + 1e-30))}
