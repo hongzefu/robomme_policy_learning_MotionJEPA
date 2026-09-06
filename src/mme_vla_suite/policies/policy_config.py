@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import pathlib
 from typing import Any
 
@@ -140,8 +141,13 @@ def create_trained_policy(
         store_prov = {"vae": prov.get("vae"), "encoder": prov.get("encoder")}
         if not motion_stub and (store_prov["vae"] is None or store_prov["encoder"] is None):
             raise ValueError(f"开启态 run 缺 motion_provenance.json 的 vae / encoder 字段，无法核对 sidecar 同源: {run_root}")
+        # sidecar 落哪张卡：快照 motion.online_gpu 是训练时写死的部署值（快照有 sha256 校验不可改）；
+        # 多 policy 进程并行评估时用环境变量 MMEVLA_MOTION_ONLINE_GPU 逐进程覆盖，否则全部 sidecar 挤同一张卡
+        online_gpu = os.environ.get("MMEVLA_MOTION_ONLINE_GPU") or mcfg.get("online_gpu", 1)
+        logging.info("motion sidecar GPU=%s（快照 motion.online_gpu=%s，环境变量 MMEVLA_MOTION_ONLINE_GPU 可覆盖）",
+                     online_gpu, mcfg.get("online_gpu", 1))
         motion_enc_fn = MotionEncoderClient(
-            online_gpu=mcfg.get("online_gpu", 1), stub=motion_stub, store_provenance=store_prov,
+            online_gpu=online_gpu, stub=motion_stub, store_provenance=store_prov,
             expected_ckpt_sha256=(store_prov["encoder"] or {}).get("checkpoint_sha256") if not motion_stub else None)
 
     return _policy.MME_VLA_Policy(

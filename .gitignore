@@ -212,6 +212,8 @@ __marimo__/
 # 位于项目内但不进入 Git。旧的 /data /runs /artifacts /.openpi-data /.runtime-home 约定随
 # scripts/v1_dataloader_restructure/ 一并弃用，此处保留忽略规则仅为兜底防误提交。
 /v1-store/
+# Claude Code 后台会话的 worktree 隔离目录（harness 产物，非仓库内容）
+/.claude/worktrees/
 /data/
 /runs/
 /artifacts/
