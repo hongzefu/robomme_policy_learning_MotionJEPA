@@ -73,7 +73,8 @@ benchmark 元数据用 micromamba `robomme` env editable 装的那份
 |---|---|---|
 | 1 | `scripts/training/prod/eval_all_shards.sh` | 新增 `GPU_LIST`（默认 `0,1,…,7`，即历史的「worker 号 = 卡号」），`build_rows()` 的 stride 与 task 两个分支都按它取模分配卡号 |
 | 2 | 同上 | `ENVS=` 补转发 `POLICY_MEM_FRACTION` 与 `ROBOMME_PY`（仅显式设置时才带；tmux 会话不继承调用方环境，不转发则本机会用 `eval_shard.sh` 里环境 B 的默认解释器路径 `/scratch/hongze/...` 而直接报错退出） |
-| 3 | `scripts/training/prod/aggregate_seed_runs.py`（新增） | 跨 seed / 跨任务批次汇总：读各批分片 `progress.json` 与 `videos/` 文件名，出逐任务 × 逐 seed 成功率、均值/标准差、逐集跨 seed 稳定性与明细 |
+| 3 | `scripts/training/prod/eval_seed_sweep.sh`（新增） | 一个 (组, seed) 的批次 driver：按任务分 4 批串行，等本批会话全部结束并逐片核 `EXIT_CODE=0` 再起下一批 |
+| 4 | `scripts/training/prod/aggregate_seed_runs.py`（新增） | 跨 seed / 跨任务批次汇总：读各批分片 `progress.json` 与 `videos/` 文件名，出逐任务 × 逐 seed 成功率、均值/标准差、逐集跨 seed 稳定性与明细 |
 
 **逐 episode 成功率不需要改 `eval.py`**：`progress.json` 早就是 `{task: {ep: true|false|"error"}}` 逐集落盘，
 success/fail/timeout 三分从视频文件名反解（沿用 `merge_eval_shards.py` 的 `_VIDEO_RE`）。
@@ -125,7 +126,24 @@ success/fail/timeout 三分从视频文件名反解（沿用 `merge_eval_shards.
 
 ## 七、命令
 
-公共：`ROBOMME_PY=/home/hongzefu/micromamba/envs/robomme/bin/python`，`PORT_BASE` 每批 +8。
+实际起跑走 driver `scripts/training/prod/eval_seed_sweep.sh`（一个 (组, seed) 一次调用，内部把 4 个任务
+按批串行跑完：每批调 `eval_all_shards.sh` 起 N 个 worker 会话 → 用确切会话名 `tmux has-session -t "=<LP>-w<k>"`
+等本批全部结束 → 留 10 s 让 server 退出、显存释放 → 逐片核 `EXIT_CODE=0` → 再起下一批），
+结束写 `SWEEP_RESULT=PASS|FAIL` 与 `EXIT_CODE=`：
+
+```bash
+tmux new-session -d -s sweep-<GROUP>-s<SEED> \
+  "set -o pipefail; PYTHONUNBUFFERED=1 GROUP=<official|motion> SEED=<SEED> \
+   bash scripts/training/prod/eval_seed_sweep.sh 2>&1 | tee v1-store/logs/sweep-<GROUP>-s<SEED>.log"
+```
+
+driver 按 `GROUP` 自动选档位：`official` → `WORKERS=4 GPU_LIST=0,0,1,1 POLICY_MEM_FRACTION=0.40 CKPT_ID=79999`；
+`motion` → `WORKERS=2 GPU_LIST=0,1 POLICY_MEM_FRACTION=0.55 CKPT_ID=39999`。
+每批 `RUN_NAME=<前缀>-s<SEED>-<Task>`、`LOG_PREFIX=<evctx|evmot>-s<SEED>-<缩写>`、`PORT_BASE` 每批 +8。
+`DRY_RUN=1` 可只打印分片表不起会话（已用它核对过两组四批的卡号、端口与集号切分）。
+
+下面是 driver 内部实际发出的等价命令，手工补跑单批时照抄。公共：
+`ROBOMME_PY=/home/hongzefu/micromamba/envs/robomme/bin/python`，`PORT_BASE` 每批 +8。
 
 阶段 1 / 3（官方组，`<Task>` 遍历 ButtonUnmask / VideoUnmask / ButtonUnmaskSwap / VideoUnmaskSwap）：
 
@@ -190,7 +208,8 @@ UV_LINK_MODE=copy uv run --no-sync python scripts/training/prod/aggregate_seed_r
 |---|---|
 | `dl-official-ctx` | 官方 context 权重下载 |
 | `dl-awsprod40k` | awsprod40k 39999 checkpoint 下载 |
-| `evctx-s<SEED>-<task缩写>-w<k>` | 阶段 1 / 3 官方组评估分片 |
-| `evmot-s<SEED>-<task缩写>-w<k>` | 阶段 2 motion 组评估分片 |
+| `sweep-<GROUP>-s<SEED>` | 一个 (组, seed) 的批次 driver（外层） |
+| `evctx-s<SEED>-<task缩写>-w<k>` | 阶段 1 / 3 官方组评估分片，`<task缩写>` ∈ bu / vu / bus / vus |
+| `evmot-s<SEED>-<task缩写>-w<k>` | 阶段 2 motion 组评估分片，同上 |
 
 实际起过的完整会话名逐条记入 `result.md`。
