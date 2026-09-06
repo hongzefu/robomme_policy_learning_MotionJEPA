@@ -47,11 +47,15 @@
 
 ```
 HF_WHOAMI=HongzeFu
-LOCAL_FILES=171 LOCAL_BYTES=<n>
-PRE_LINES=170
-BUCKET_FILES=171 BUCKET_BYTES=<n>        # 与 LOCAL_* 逐字相等
+LOCAL_FILES=166 LOCAL_BYTES=<n>
+PRE_LINES=165
+BUCKET_FILES=166 BUCKET_BYTES=<n>        # 与 LOCAL_* 逐字相等
 SHA256_PRE_POST_DIFF=0                   # 上传前 / 上传后两份独立清单 diff 为空 ← 核心判据
 RESULT=PASS
 SRC_UNCHANGED=OK                         # 源侧第三遍 sha256 与上传前一致
 EXIT_CODE=0
 ```
+
+注：源目录共 **164 个文件**（8 个 step 的 OCDBT 块数不等——19/21/20/20/19/19/21/20——
+**已含** run 根 5 个元文件），stage 再加 `README.md` 与 `SHA256SUMS.pre.txt` 共 166 个。
+起跑前预估的 171/170 把那 5 个元文件重复计了一次，实测值以本节为准。

@@ -1,0 +1,49 @@
+=== 起跑 2026-09-06 06:44:45 commit=b978e77 ===
+阶段0开始：预检
+  whoami:   orgs: umich
+错误: 身份不是 HongzeFu（  orgs: umich）
+EXIT_CODE=1
+=== 起跑 2026-09-06 06:46:13 commit=b28f7d8 ===
+阶段0开始：预检
+  whoami: ✓ Logged in user: HongzeFu orgs: umich 
+HF_WHOAMI=HongzeFu
+  目标 bucket 现状: files=0 size=0
+阶段0完成
+阶段1开始：搭 stage 树（ckpt 走硬链接，不复制 87 GB）+ 上传前 sha256
+LOCAL_FILES=166 LOCAL_BYTES=92689314972
+PRE_LINES=165
+阶段1完成
+阶段2开始：上传 bucket（增量 sync，重试至多 3 次）
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-awsprod40k-b128-motion/stage -> hf://buckets/HongzeFu/robomme-motionjepa-vla-v1
+  Uploads: 166
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            
+Sync completed.
+阶段2完成
+阶段3开始：计数层核对（buckets REST API，异步滞后则复查一次）
+  首次不符（files=0 bytes=0），统计接口可能异步滞后，120s 后复查
+BUCKET_FILES=166 BUCKET_BYTES=92689314972
+阶段3完成
+阶段4开始：全量回读到 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-awsprod40k-b128-motion/verify（87 GB）
+Sync plan: hf://buckets/HongzeFu/robomme-motionjepa-vla-v1 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-awsprod40k-b128-motion/verify
+  Uploads: 0
+  Downloads: 166
+  Deletes: 0
+  Skips: 0
+Syncing...
+Sync completed.
+阶段4完成
+阶段5开始：上传后 sha256（POST）+ 与上传前逐行对照
+SHA256_PRE_POST_DIFF=0
+  sha256sum -c 校验行数: 165
+RESULT=PASS
+阶段5完成
+阶段6开始：收尾断言（源侧第三遍 sha256，证明硬链接未改动原件）
+SRC_UNCHANGED=OK
+阶段6完成
+全部完成
+EXIT_CODE=0
