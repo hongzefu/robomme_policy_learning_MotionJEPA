@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """合并 8 卡分片评估结果（eval_all_shards.sh / eval_shard.sh 口径；留档 docs/training-doc/eval-awsprod40k-b128-motion/）。
 
-输入：
-  <eval-root>/<run>-<task>-<k>/ckpt<id>/seed<seed>/{progress.json,log.json,videos/*.mp4}
-  <logs-dir>/<prefix>-<task>-<k>.log（EVAL_SHARD 起止行）与 <prefix>-<task>-<k>.server.log（TIMING add_buffer_ms / infer_ms 行）
+输入（--layout 两种分片布局，分片目录 / 日志名不同，其余同）：
+  task   ：<eval-root>/<run>-<task>-<k>/ckpt<id>/seed<seed>/{progress.json,log.json,videos/*.mp4}（每任务 --shards 片，旧口径）
+  stride ：<eval-root>/<run>-w<k>/ckpt<id>/seed<seed>/…（--shards 个 worker，每个跑全部任务、集号交错；留档 eval-official-framesamp-context/）
+  <logs-dir>/<prefix>-<分片名>.log（EVAL_SHARD 起止行）与 <prefix>-<分片名>.server.log（TIMING add_buffer_ms / infer_ms 行）
   <metadata-dir>/test/record_dataset_<task>_metadata.json（seed、难度）
 输出：
   合并 progress.json / log.json / shards.json → <eval-root>/<run>/ckpt<id>/seed<seed>/（与单进程 eval.py 布局一致；视频留各分片目录）
@@ -12,6 +13,7 @@
 逐集三分 success / fail / timeout 取自 eval.py 视频文件名 `<task>_ep<k>_<success_flag>_…mp4`。
 判定行：<TAG>=DONE|INCOMPLETE tasks=<t> episodes=<n>/<N> errors=<e> <task>=<succ>/<n> … mean_rate=<r> timeout=<k>/<n> fail=<k>/<n>
 用法：UV_LINK_MODE=copy uv run --no-sync python scripts/training/prod/merge_eval_shards.py --out-dir docs/training-doc/eval-awsprod40k-b128-motion/records [--allow-partial]
+      stride 布局：… --layout stride --shards 8 --run-name official-framesamp-context --ckpt-id 79999 --log-prefix evoffctx --tag EVAL_OFFICIAL_CTX --out-dir …
 """
 
 from __future__ import annotations
@@ -91,7 +93,9 @@ def main() -> int:
     ap.add_argument("--ckpt-id", type=int, default=39999)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--tasks", default=TASKS)
-    ap.add_argument("--shards", type=int, default=2, help="每任务分片数（eval_all_shards.sh 为 2）")
+    ap.add_argument("--layout", choices=("task", "stride"), default="task",
+                    help="task=旧布局 <run>-<task>-<k>（每任务 --shards 片）；stride=新布局 <run>-w<k>（--shards 即 worker 数）")
+    ap.add_argument("--shards", type=int, default=2, help="task 布局：每任务分片数（eval_all_shards.sh 为 2）；stride 布局：worker 数")
     ap.add_argument("--episodes-per-task", type=int, default=50)
     ap.add_argument("--log-prefix", default="ev40k")
     ap.add_argument("--tag", default="EVAL_40K_MOTION")
@@ -109,26 +113,29 @@ def main() -> int:
     flags: dict[tuple[str, int], str] = {}
     shard_of: dict[tuple[str, int], str] = {}
     shards: list[dict] = []
-    for task in tasks:
-        for k in range(args.shards):
-            name = f"{args.run_name}-{task}-{k}"
-            d = eval_root / name / f"ckpt{args.ckpt_id}" / f"seed{args.seed}"
-            pj = d / "progress.json"
-            info = {"shard": f"{task}-{k}", "dir": str(d), "has_progress": pj.is_file(), "finished": (d / "log.json").is_file(), "episodes": 0}
-            if pj.is_file():
-                prog = json.loads(pj.read_text(encoding="utf-8"))
-                for t, eps in prog.items():
-                    for e, v in eps.items():
-                        per_task.setdefault(t, {})[int(e)] = v
-                        shard_of[(t, int(e))] = f"{task}-{k}"
-                        info["episodes"] += 1
-                for mp4 in (d / "videos").glob("*.mp4") if (d / "videos").is_dir() else []:
-                    m = _VIDEO_RE.match(mp4.name)
-                    if m:
-                        flags[(m.group("task"), int(m.group("ep")))] = m.group("flag")
-            info["wall"] = shard_wall(logs_dir / f"{args.log_prefix}-{task}-{k}.log")
-            info["timing"] = timing(logs_dir / f"{args.log_prefix}-{task}-{k}.server.log")
-            shards.append(info)
+    # 分片单元表 (label, 结果目录名, 日志名去后缀)：task 布局按任务 × 片枚举，stride 布局按 worker 枚举；后续统计只认 progress.json 内容
+    if args.layout == "stride":
+        units = [(f"w{k}", f"{args.run_name}-w{k}", f"{args.log_prefix}-w{k}") for k in range(args.shards)]
+    else:
+        units = [(f"{t}-{k}", f"{args.run_name}-{t}-{k}", f"{args.log_prefix}-{t}-{k}") for t in tasks for k in range(args.shards)]
+    for label, dirname, logbase in units:
+        d = eval_root / dirname / f"ckpt{args.ckpt_id}" / f"seed{args.seed}"
+        pj = d / "progress.json"
+        info = {"shard": label, "dir": str(d), "has_progress": pj.is_file(), "finished": (d / "log.json").is_file(), "episodes": 0}
+        if pj.is_file():
+            prog = json.loads(pj.read_text(encoding="utf-8"))
+            for t, eps in prog.items():
+                for e, v in eps.items():
+                    per_task.setdefault(t, {})[int(e)] = v
+                    shard_of[(t, int(e))] = label
+                    info["episodes"] += 1
+            for mp4 in (d / "videos").glob("*.mp4") if (d / "videos").is_dir() else []:
+                m = _VIDEO_RE.match(mp4.name)
+                if m:
+                    flags[(m.group("task"), int(m.group("ep")))] = m.group("flag")
+        info["wall"] = shard_wall(logs_dir / f"{logbase}.log")
+        info["timing"] = timing(logs_dir / f"{logbase}.server.log")
+        shards.append(info)
 
     rates: dict[str, dict] = {}
     per_episode: list[dict] = []

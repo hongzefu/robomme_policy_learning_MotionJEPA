@@ -42,6 +42,7 @@ class Args:
     exclude_tasks: str = "" # tasks split by comma
     max_episodes: int = 0 # 每任务最多评几集（0 = 环境提供的全部；T3_EVAL_OBS 用 10）
     episode_start: int = 0 # 从第几集起评（分片并行：片 k 给 episode_start=k*n, max_episodes=n；默认 0 行为不变）
+    episode_stride: int = 1 # 集号步长（stride 交错分片：worker w 给 episode_start=w, episode_stride=8, max_episodes=0；默认 1 行为不变）
 
 
 
@@ -254,7 +255,9 @@ def evaluate(args: Args):
 
             if args.max_episodes > 0:
                 num_episodes = min(num_episodes, args.episode_start + args.max_episodes)
-            for episode_id in range(args.episode_start, num_episodes):
+            episode_ids = list(range(args.episode_start, num_episodes, args.episode_stride))
+            print(f"[robomme] task {task_name}: {len(episode_ids)} episodes {episode_ids}")
+            for episode_id in episode_ids:
                 if str(episode_id) in log_dict[task_name]:
                     print(f"[robomme] episode {episode_id} already evaluated, skipping...")
                     continue
