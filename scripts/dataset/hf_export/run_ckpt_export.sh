@@ -77,7 +77,9 @@ done
 [ -d "$SRC" ] || { echo "错误: 源目录不存在 $SRC"; exit 1; }
 mkdir -p "$STAGE" "$VERIFY" "$TMPD" "$EXPORT_ROOT/logs" "$HF_XET_CACHE"
 
-who="$(hf auth whoami 2>&1 | tail -1)"
+# 注意：whoami 的输出格式随是否有 tty 而变（非 tty 是单行 `user=X orgs=Y`，tty 下是多行
+# `user: X` / `  orgs: Y`）。tmux 里有 tty，**不能按行取字段**，须整体合并后再匹配。
+who="$(hf auth whoami 2>&1 | tr '\n' ' ' | tr -s ' ')"
 echo "  whoami: $who"
 case "$who" in *HongzeFu*) : ;; *) echo "错误: 身份不是 HongzeFu（$who）"; exit 1 ;; esac
 echo "HF_WHOAMI=HongzeFu"
