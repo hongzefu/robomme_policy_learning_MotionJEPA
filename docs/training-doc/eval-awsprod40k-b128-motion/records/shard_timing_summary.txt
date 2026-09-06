@@ -1,0 +1,16 @@
+=== EVAL_SHARD shard=VideoUnmask-1 gpu=3 port=8034 seed=42 episodes=[25,50) policy_name=awsprod40k-b128-motion-VideoUnmask-1 mem_fraction=0.4 start=2026-09-06 01:45:58 ===
+TIMING_SUMMARY add_buffer(<=16帧) n=150 mean=1231 median=1462 p90=1469 max=1491 | add_buffer(首批>16帧) n=25 mean=4476 median=4420 p90=4429 max=5797 | infer n=175 mean=83 median=69 p90=70 max=2492
+=== EVAL_SHARD shard=ButtonUnmaskSwap-1 gpu=5 port=8036 seed=42 episodes=[25,50) policy_name=awsprod40k-b128-motion-ButtonUnmaskSwap-1 mem_fraction=0.4 start=2026-09-06 01:45:58 ===
+TIMING_SUMMARY add_buffer(<=16帧) n=578 mean=1338 median=1458 p90=1463 max=1479 | add_buffer(首批>16帧) n=0 | infer n=578 mean=73 median=68 p90=69 max=2526
+=== EVAL_SHARD shard=ButtonUnmask-0 gpu=0 port=8031 seed=42 episodes=[0,25) policy_name=awsprod40k-b128-motion-ButtonUnmask-0 mem_fraction=0.4 start=2026-09-06 01:44:16 ===
+TIMING_SUMMARY add_buffer(<=16帧) n=387 mean=1289 median=1466 p90=1473 max=1901 | add_buffer(首批>16帧) n=0 | infer n=387 mean=76 median=69 p90=69 max=2596
+=== EVAL_SHARD shard=ButtonUnmaskSwap-0 gpu=4 port=8035 seed=42 episodes=[0,25) policy_name=awsprod40k-b128-motion-ButtonUnmaskSwap-0 mem_fraction=0.4 start=2026-09-06 01:45:58 ===
+TIMING_SUMMARY add_buffer(<=16帧) n=718 mean=1364 median=1460 p90=1467 max=1491 | add_buffer(首批>16帧) n=0 | infer n=718 mean=72 median=69 p90=69 max=2582
+=== EVAL_SHARD shard=VideoUnmaskSwap-1 gpu=7 port=8038 seed=42 episodes=[25,50) policy_name=awsprod40k-b128-motion-VideoUnmaskSwap-1 mem_fraction=0.4 start=2026-09-06 01:45:58 ===
+TIMING_SUMMARY add_buffer(<=16帧) n=196 mean=1288 median=1464 p90=1471 max=1485 | add_buffer(首批>16帧) n=25 mean=11766 median=13180 p90=14000 max=18830 | infer n=221 mean=80 median=69 p90=69 max=2524
+=== EVAL_SHARD shard=ButtonUnmask-1 gpu=1 port=8032 seed=42 episodes=[25,50) policy_name=awsprod40k-b128-motion-ButtonUnmask-1 mem_fraction=0.4 start=2026-09-06 01:45:58 ===
+TIMING_SUMMARY add_buffer(<=16帧) n=497 mean=1321 median=1460 p90=1467 max=1495 | add_buffer(首批>16帧) n=0 | infer n=497 mean=74 median=69 p90=69 max=2566
+=== EVAL_SHARD shard=VideoUnmaskSwap-0 gpu=6 port=8037 seed=42 episodes=[0,25) policy_name=awsprod40k-b128-motion-VideoUnmaskSwap-0 mem_fraction=0.4 start=2026-09-06 01:45:58 ===
+TIMING_SUMMARY add_buffer(<=16帧) n=169 mean=1257 median=1461 p90=1469 max=1482 | add_buffer(首批>16帧) n=25 mean=11906 median=8843 p90=17547 max=18474 | infer n=194 mean=82 median=69 p90=69 max=2544
+=== EVAL_SHARD shard=VideoUnmask-0 gpu=2 port=8033 seed=42 episodes=[0,25) policy_name=awsprod40k-b128-motion-VideoUnmask-0 mem_fraction=0.4 start=2026-09-06 01:45:58 ===
+TIMING_SUMMARY add_buffer(<=16帧) n=203 mean=1290 median=1460 p90=1467 max=1485 | add_buffer(首批>16帧) n=25 mean=4470 median=4418 p90=4433 max=5668 | infer n=228 mean=80 median=69 p90=69 max=2477

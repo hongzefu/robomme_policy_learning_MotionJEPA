@@ -1,0 +1,117 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  ✓ siglip_params          level=cheap   0.00s
+  ✓ paligemma_tokenizer    level=cheap   0.00s
+  ✓ pi05_base              level=cheap   0.03s
+ASSETS=PASS assets=3 mismatches=0
+=== EVAL_SHARD shard=VideoUnmaskSwap-0 HEAD=74d60d09433b65bc16d96e7650ec1c1f439ab744 ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999 gpu=6 port=8037 seed=42 episodes=[0,25) policy_name=awsprod40k-b128-motion-VideoUnmaskSwap-0 mem_fraction=0.4 start=2026-09-06 01:45:58 ===
+server pid=1947011 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ev40k-VideoUnmaskSwap-0.server.log
+server 端口就绪 01:46:36
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+
+[robomme] env for task VideoUnmaskSwap episode 0 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 1 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 168
+
+[robomme] env for task VideoUnmaskSwap episode 2 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 3 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 216
+
+[robomme] env for task VideoUnmaskSwap episode 4 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 5 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 6 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+
+[robomme] env for task VideoUnmaskSwap episode 7 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 216
+
+[robomme] env for task VideoUnmaskSwap episode 8 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+
+[robomme] env for task VideoUnmaskSwap episode 9 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 10 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 11 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 216
+
+[robomme] env for task VideoUnmaskSwap episode 12 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 13 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 14 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 15 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 216
+
+[robomme] env for task VideoUnmaskSwap episode 16 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 17 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 168
+
+[robomme] env for task VideoUnmaskSwap episode 18 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 19 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 216
+
+[robomme] env for task VideoUnmaskSwap episode 20 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 21 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 22 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 23 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 216
+
+[robomme] env for task VideoUnmaskSwap episode 24 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+EVAL_RC=0 end=2026-09-06 02:01:08
+TIMING_SUMMARY add_buffer(<=16帧) n=169 mean=1257 median=1461 p90=1469 max=1482 | add_buffer(首批>16帧) n=25 mean=11906 median=8843 p90=17547 max=18474 | infer n=194 mean=82 median=69 p90=69 max=2544
+EXIT_CODE=0

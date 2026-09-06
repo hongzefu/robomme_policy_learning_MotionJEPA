@@ -1,0 +1,221 @@
+EVAL_40K_MOTION=DONE tasks=4 episodes=200/200 errors=0 VideoUnmask=14/50 ButtonUnmask=13/50 VideoUnmaskSwap=12/50 ButtonUnmaskSwap=17/50 mean_rate=0.2800 timeout=2/200 fail=142/200
+
+| 任务 | 成功/集数 | 成功率 | timeout | fail | 按难度 成功/集数 | 缺集 | error |
+|---|---|---|---|---|---|---|---|
+| VideoUnmask | 14/50 | 28.00% | 0 | 36 | easy 8/26, hard 2/12, medium 4/12 | 0 | 0 |
+| ButtonUnmask | 13/50 | 26.00% | 1 | 36 | easy 10/26, hard 0/12, medium 3/12 | 0 | 0 |
+| VideoUnmaskSwap | 12/50 | 24.00% | 0 | 38 | easy 7/26, hard 0/12, medium 5/12 | 0 | 0 |
+| ButtonUnmaskSwap | 17/50 | 34.00% | 1 | 32 | easy 7/26, hard 3/12, medium 7/12 | 0 | 0 |
+
+| 分片 | 集数 | 完成 | 墙钟 | add_buffer≤16帧 ms（mean/median/p90） | 首批 ms（mean/max） | infer ms（除首次 mean/median/p90） |
+|---|---|---|---|---|---|---|
+| VideoUnmask-0 | 25 | 是 | 11.3 min | 1290.3/1460.1/1467.2 | 4470.1/5668.1 | 69.0/69.0/69.3 |
+| VideoUnmask-1 | 25 | 是 | 9.4 min | 1231.5/1461.7/1469.2 | 4476.3/5796.8 | 69.0/68.9/69.4 |
+| ButtonUnmask-0 | 25 | 是 | 15.5 min | 1288.5/1466.3/1472.8 | — | 69.0/68.9/69.4 |
+| ButtonUnmask-1 | 25 | 是 | 20.5 min | 1320.5/1459.6/1467.0 | — | 69.0/69.0/69.4 |
+| VideoUnmaskSwap-0 | 25 | 是 | 15.2 min | 1257.1/1461.3/1468.6 | 11905.9/18473.9 | 68.9/68.8/69.1 |
+| VideoUnmaskSwap-1 | 25 | 是 | 16.5 min | 1287.7/1464.2/1470.8 | 11765.7/18830.2 | 69.1/69.0/69.4 |
+| ButtonUnmaskSwap-0 | 25 | 是 | 36.4 min | 1363.8/1459.7/1467.0 | — | 68.9/68.8/69.2 |
+| ButtonUnmaskSwap-1 | 25 | 是 | 25.4 min | 1337.7/1457.5/1462.6 | — | 68.6/68.5/68.8 |
+
+逐集（task ep seed difficulty result flag shard）：
+  VideoUnmask  0 560000 easy False fail VideoUnmask-0
+  VideoUnmask  1 560100 easy False fail VideoUnmask-0
+  VideoUnmask  2 560200 medium False fail VideoUnmask-0
+  VideoUnmask  3 560300 hard True success VideoUnmask-0
+  VideoUnmask  4 560400 easy False fail VideoUnmask-0
+  VideoUnmask  5 560500 easy True success VideoUnmask-0
+  VideoUnmask  6 560600 medium False fail VideoUnmask-0
+  VideoUnmask  7 560700 hard True success VideoUnmask-0
+  VideoUnmask  8 560800 easy False fail VideoUnmask-0
+  VideoUnmask  9 560900 easy True success VideoUnmask-0
+  VideoUnmask 10 561000 medium False fail VideoUnmask-0
+  VideoUnmask 11 561100 hard False fail VideoUnmask-0
+  VideoUnmask 12 561200 easy False fail VideoUnmask-0
+  VideoUnmask 13 561300 easy False fail VideoUnmask-0
+  VideoUnmask 14 561400 medium False fail VideoUnmask-0
+  VideoUnmask 15 561500 hard False fail VideoUnmask-0
+  VideoUnmask 16 561600 easy True success VideoUnmask-0
+  VideoUnmask 17 561700 easy False fail VideoUnmask-0
+  VideoUnmask 18 561800 medium False fail VideoUnmask-0
+  VideoUnmask 19 561900 hard False fail VideoUnmask-0
+  VideoUnmask 20 562000 easy True success VideoUnmask-0
+  VideoUnmask 21 562100 easy True success VideoUnmask-0
+  VideoUnmask 22 562200 medium True success VideoUnmask-0
+  VideoUnmask 23 562300 hard False fail VideoUnmask-0
+  VideoUnmask 24 562400 easy False fail VideoUnmask-0
+  VideoUnmask 25 562500 easy True success VideoUnmask-1
+  VideoUnmask 26 562600 medium False fail VideoUnmask-1
+  VideoUnmask 27 562700 hard False fail VideoUnmask-1
+  VideoUnmask 28 562800 easy False fail VideoUnmask-1
+  VideoUnmask 29 562900 easy False fail VideoUnmask-1
+  VideoUnmask 30 563000 medium True success VideoUnmask-1
+  VideoUnmask 31 563100 hard False fail VideoUnmask-1
+  VideoUnmask 32 563200 easy False fail VideoUnmask-1
+  VideoUnmask 33 563300 easy False fail VideoUnmask-1
+  VideoUnmask 34 563400 medium True success VideoUnmask-1
+  VideoUnmask 35 563500 hard False fail VideoUnmask-1
+  VideoUnmask 36 563600 easy False fail VideoUnmask-1
+  VideoUnmask 37 563700 easy False fail VideoUnmask-1
+  VideoUnmask 38 563800 medium False fail VideoUnmask-1
+  VideoUnmask 39 563900 hard False fail VideoUnmask-1
+  VideoUnmask 40 564000 easy False fail VideoUnmask-1
+  VideoUnmask 41 564100 easy True success VideoUnmask-1
+  VideoUnmask 42 564200 medium False fail VideoUnmask-1
+  VideoUnmask 43 564300 hard False fail VideoUnmask-1
+  VideoUnmask 44 564400 easy False fail VideoUnmask-1
+  VideoUnmask 45 564500 easy True success VideoUnmask-1
+  VideoUnmask 46 564600 medium True success VideoUnmask-1
+  VideoUnmask 47 564700 hard False fail VideoUnmask-1
+  VideoUnmask 48 564800 easy False fail VideoUnmask-1
+  VideoUnmask 49 564900 easy False fail VideoUnmask-1
+  ButtonUnmask  0 580000 easy False fail ButtonUnmask-0
+  ButtonUnmask  1 580100 easy True success ButtonUnmask-0
+  ButtonUnmask  2 580201 medium True success ButtonUnmask-0
+  ButtonUnmask  3 580300 hard False fail ButtonUnmask-0
+  ButtonUnmask  4 580402 easy True success ButtonUnmask-0
+  ButtonUnmask  5 580500 easy False fail ButtonUnmask-0
+  ButtonUnmask  6 580600 medium False fail ButtonUnmask-0
+  ButtonUnmask  7 580700 hard False fail ButtonUnmask-0
+  ButtonUnmask  8 580800 easy False fail ButtonUnmask-0
+  ButtonUnmask  9 580900 easy True success ButtonUnmask-0
+  ButtonUnmask 10 581000 medium False fail ButtonUnmask-0
+  ButtonUnmask 11 581100 hard False fail ButtonUnmask-0
+  ButtonUnmask 12 581200 easy False fail ButtonUnmask-0
+  ButtonUnmask 13 581300 easy False fail ButtonUnmask-0
+  ButtonUnmask 14 581400 medium False fail ButtonUnmask-0
+  ButtonUnmask 15 581500 hard False fail ButtonUnmask-0
+  ButtonUnmask 16 581600 easy False fail ButtonUnmask-0
+  ButtonUnmask 17 581700 easy True success ButtonUnmask-0
+  ButtonUnmask 18 581800 medium True success ButtonUnmask-0
+  ButtonUnmask 19 581900 hard False fail ButtonUnmask-0
+  ButtonUnmask 20 582000 easy True success ButtonUnmask-0
+  ButtonUnmask 21 582100 easy False fail ButtonUnmask-0
+  ButtonUnmask 22 582200 medium False fail ButtonUnmask-0
+  ButtonUnmask 23 582300 hard False fail ButtonUnmask-0
+  ButtonUnmask 24 582400 easy False fail ButtonUnmask-0
+  ButtonUnmask 25 582500 easy True success ButtonUnmask-1
+  ButtonUnmask 26 582600 medium False fail ButtonUnmask-1
+  ButtonUnmask 27 582700 hard False fail ButtonUnmask-1
+  ButtonUnmask 28 582800 easy False fail ButtonUnmask-1
+  ButtonUnmask 29 582900 easy True success ButtonUnmask-1
+  ButtonUnmask 30 583000 medium True success ButtonUnmask-1
+  ButtonUnmask 31 583100 hard False fail ButtonUnmask-1
+  ButtonUnmask 32 583200 easy False fail ButtonUnmask-1
+  ButtonUnmask 33 583300 easy True success ButtonUnmask-1
+  ButtonUnmask 34 583400 medium False fail ButtonUnmask-1
+  ButtonUnmask 35 583500 hard False fail ButtonUnmask-1
+  ButtonUnmask 36 583600 easy False timeout ButtonUnmask-1
+  ButtonUnmask 37 583700 easy True success ButtonUnmask-1
+  ButtonUnmask 38 583800 medium False fail ButtonUnmask-1
+  ButtonUnmask 39 583900 hard False fail ButtonUnmask-1
+  ButtonUnmask 40 584000 easy False fail ButtonUnmask-1
+  ButtonUnmask 41 584100 easy False fail ButtonUnmask-1
+  ButtonUnmask 42 584200 medium False fail ButtonUnmask-1
+  ButtonUnmask 43 584300 hard False fail ButtonUnmask-1
+  ButtonUnmask 44 584400 easy False fail ButtonUnmask-1
+  ButtonUnmask 45 584500 easy True success ButtonUnmask-1
+  ButtonUnmask 46 584600 medium False fail ButtonUnmask-1
+  ButtonUnmask 47 584701 hard False fail ButtonUnmask-1
+  ButtonUnmask 48 584800 easy False fail ButtonUnmask-1
+  ButtonUnmask 49 584900 easy False fail ButtonUnmask-1
+  VideoUnmaskSwap  0 550000 easy False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap  1 550100 easy False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap  2 550200 medium False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap  3 550300 hard False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap  4 550400 easy False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap  5 550500 easy False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap  6 550600 medium True success VideoUnmaskSwap-0
+  VideoUnmaskSwap  7 550700 hard False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap  8 550800 easy True success VideoUnmaskSwap-0
+  VideoUnmaskSwap  9 550900 easy False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap 10 551000 medium True success VideoUnmaskSwap-0
+  VideoUnmaskSwap 11 551100 hard False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap 12 551200 easy False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap 13 551300 easy True success VideoUnmaskSwap-0
+  VideoUnmaskSwap 14 551400 medium False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap 15 551500 hard False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap 16 551600 easy False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap 17 551700 easy True success VideoUnmaskSwap-0
+  VideoUnmaskSwap 18 551800 medium True success VideoUnmaskSwap-0
+  VideoUnmaskSwap 19 551900 hard False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap 20 552000 easy False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap 21 552100 easy False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap 22 552200 medium False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap 23 552300 hard False fail VideoUnmaskSwap-0
+  VideoUnmaskSwap 24 552400 easy True success VideoUnmaskSwap-0
+  VideoUnmaskSwap 25 552500 easy False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 26 552600 medium False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 27 552700 hard False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 28 552800 easy True success VideoUnmaskSwap-1
+  VideoUnmaskSwap 29 552900 easy False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 30 553000 medium True success VideoUnmaskSwap-1
+  VideoUnmaskSwap 31 553100 hard False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 32 553200 easy False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 33 553300 easy True success VideoUnmaskSwap-1
+  VideoUnmaskSwap 34 553400 medium True success VideoUnmaskSwap-1
+  VideoUnmaskSwap 35 553500 hard False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 36 553600 easy False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 37 553700 easy False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 38 553800 medium False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 39 553900 hard False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 40 554000 easy False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 41 554100 easy True success VideoUnmaskSwap-1
+  VideoUnmaskSwap 42 554200 medium False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 43 554300 hard False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 44 554400 easy False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 45 554500 easy False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 46 554600 medium False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 47 554700 hard False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 48 554800 easy False fail VideoUnmaskSwap-1
+  VideoUnmaskSwap 49 554900 easy False fail VideoUnmaskSwap-1
+  ButtonUnmaskSwap  0 570000 easy False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap  1 570100 easy False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap  2 570200 medium False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap  3 570300 hard False timeout ButtonUnmaskSwap-0
+  ButtonUnmaskSwap  4 570400 easy False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap  5 570500 easy False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap  6 570600 medium True success ButtonUnmaskSwap-0
+  ButtonUnmaskSwap  7 570700 hard False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap  8 570800 easy False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap  9 570900 easy False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 10 571000 medium True success ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 11 571100 hard False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 12 571200 easy False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 13 571300 easy False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 14 571400 medium False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 15 571500 hard False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 16 571600 easy False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 17 571700 easy True success ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 18 571800 medium True success ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 19 571900 hard False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 20 572000 easy True success ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 21 572100 easy True success ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 22 572200 medium True success ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 23 572300 hard True success ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 24 572400 easy False fail ButtonUnmaskSwap-0
+  ButtonUnmaskSwap 25 572500 easy True success ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 26 572600 medium False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 27 572700 hard False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 28 572800 easy False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 29 572900 easy False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 30 573000 medium False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 31 573100 hard False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 32 573200 easy False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 33 573300 easy True success ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 34 573400 medium True success ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 35 573500 hard False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 36 573600 easy True success ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 37 573700 easy False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 38 573800 medium True success ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 39 573900 hard True success ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 40 574000 easy False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 41 574100 easy False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 42 574200 medium True success ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 43 574300 hard False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 44 574400 easy False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 45 574500 easy True success ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 46 574600 medium False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 47 574700 hard True success ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 48 574800 easy False fail ButtonUnmaskSwap-1
+  ButtonUnmaskSwap 49 574900 easy False fail ButtonUnmaskSwap-1

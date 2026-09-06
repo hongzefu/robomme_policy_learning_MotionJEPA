@@ -1,0 +1,117 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  ✓ siglip_params          level=cheap   0.00s
+  ✓ paligemma_tokenizer    level=cheap   0.00s
+  ✓ pi05_base              level=cheap   0.03s
+ASSETS=PASS assets=3 mismatches=0
+=== EVAL_SHARD shard=ButtonUnmask-1 HEAD=74d60d09433b65bc16d96e7650ec1c1f439ab744 ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999 gpu=1 port=8032 seed=42 episodes=[25,50) policy_name=awsprod40k-b128-motion-ButtonUnmask-1 mem_fraction=0.4 start=2026-09-06 01:45:58 ===
+server pid=1947008 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ev40k-ButtonUnmask-1.server.log
+server 端口就绪 01:46:36
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+
+[robomme] env for task ButtonUnmask episode 25 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 26 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 27 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 28 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 29 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 30 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 31 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 32 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 33 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 34 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 35 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 36 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 37 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 38 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 39 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 40 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 41 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 42 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 43 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 44 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 45 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 46 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 47 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 48 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 49 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+EVAL_RC=0 end=2026-09-06 02:06:29
+TIMING_SUMMARY add_buffer(<=16帧) n=497 mean=1321 median=1460 p90=1467 max=1495 | add_buffer(首批>16帧) n=0 | infer n=497 mean=74 median=69 p90=69 max=2566
+EXIT_CODE=0
