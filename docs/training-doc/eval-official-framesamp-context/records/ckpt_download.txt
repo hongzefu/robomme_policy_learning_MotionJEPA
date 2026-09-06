@@ -1,0 +1,56 @@
+# 官方 perceptual-framesamp-context checkpoint 下载 / 校验 / 解压记录（2026-09-06）
+
+## 下载日志 v1-store/logs/evoffctx-download.log（tmux 会话 evoffctx-dl，脚本 records/download.sh）
+DL_START=2026-09-06 05:55:18 dst=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla
+repo Yinpei/mme_vla_suite revision 5db4d53ddb98c7f80cab08792dd53d985d712ab1 {'perceptual-framesamp-context/79999.zip': 11574223742, 'perceptual-framesamp-context/history_config.txt': 33}
+got perceptual-framesamp-context/history_config.txt size=33 expected=33 in 0s
+got perceptual-framesamp-context/79999.zip size=11574223742 expected=11574223742 in 160s
+SHA256 perceptual-framesamp-context/79999.zip local=387d4bd500a29588d81c2675a83be351f84383b93bea4161b8f7fadbf91a8ae8 hf_lfs=387d4bd500a29588d81c2675a83be351f84383b93bea4161b8f7fadbf91a8ae8 pinned=387d4bd500a29588d81c2675a83be351f84383b93bea4161b8f7fadbf91a8ae8 match=True
+history_config.txt = 'perceptual-framesamp-context.yaml'
+DOWNLOAD=PASS
+DL_END=2026-09-06 05:58:26
+EXIT_CODE=0
+
+## 解压 scripts/training/unzip_ckpt.py v1-store/models/official-mme-vla/perceptual-framesamp-context（42 s）
+v1-store/models/official-mme-vla/perceptual-framesamp-context
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999.zip
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/_CHECKPOINT_METADATA
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/assets
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/assets/robomme
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/assets/robomme/norm_stats.json
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/params
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/params/_METADATA
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/params/_sharding
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/params/array_metadatas
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/params/array_metadatas/process_0
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/params/d
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/params/d/b87b1401a272437e225f3520fc69fdf7
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/params/manifest.ocdbt
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/params/ocdbt.process_0
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/params/ocdbt.process_0/d
+v1-store/models/official-mme-vla/perceptual-framesamp-context/79999/params/ocdbt.process_0/manifest.ocdbt
+v1-store/models/official-mme-vla/perceptual-framesamp-context/history_config.txt
+
+11G	v1-store/models/official-mme-vla/perceptual-framesamp-context/79999
+11G	v1-store/models/official-mme-vla/perceptual-framesamp-context/79999.zip
+
+## zip 内清单（unzip -l 摘要）
+11572461677                     25 files
+
+## HEAD perceptual-framesamp-context.yaml 相对官方 commit 89efeaab 的差异（只多 motion 块，enabled: false）
+HEAD yaml sha256: 38db33fa3c48ec8a1210d93a875eeb0dca86fd7de23f4fa081a9ff40fb4e7ad6
+22a23,35
+> motion:
+>   enabled: false            # 总开关；false 时链路逐位等价于关闭态 HEAD（两个新模块根本不创建）
+>   dim: 768                  # = MotionJEPA config 的 motion.dim
+>   budget: 96                # 运动路 memory 位置数。零截断；按 16 任务全集定标（stride 16 下全集最大需 85），见红线 8
+>   stride: 16                # 段内绝对网格步长。独立配置键（默认取自 streaming_obs_horizon: 16 但不自动跟随）；加载时须 == motion store 的 GRID_STRIDE
+>   window_frames: 33
+>   window_direction: forward # 前视：窗口 = [起点, 起点+32]，尾端 ≤ 当前帧
+>   grid_origin: segment_start  # demo / exec 各自从段起点起算，窗口不跨界
+>   store_path: v1-store/datasets/4task-motion-40ep/motion
+>   source_run: wan-v8-filter10-72ep-a/checkpoint_epoch_72.pt#encoder
+>   pos_dim: 256              # motion_pos 维数 = 起点帧 PosEmb3D 时间码（sin 128 + cos 128），不含 xy
+>   frame_size: 256           # 在线原始帧边长；须 == motion store 的 FRAME_SIZE
+>   online_gpu: 1             # 在线编码进程（sidecar）的 CUDA_VISIBLE_DEVICES；训练不读
