@@ -18,7 +18,9 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/paths.sh"
 : "${GROUP:?必须设置 GROUP=official|motion}"
 : "${SEED:?必须设置 SEED}"
 TASKS="${TASKS:-ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap}"
-PORT_BASE="${PORT_BASE:-8041}"
+# 默认端口段 9200+：本机 8042/8044/8045/8047-8050 有用户的长期服务在监听，8040 段不可用
+# （2026-09-06 实测：w1/w3 连上别人的服务后 eval.py 立刻 abort 但退出码仍是 0，静默跑了 0 集）。
+PORT_BASE="${PORT_BASE:-9200}"
 DRY_RUN="${DRY_RUN:-0}"
 ROBOMME_PY="${ROBOMME_PY:-$HOME/micromamba/envs/robomme/bin/python}"
 MODELS="${V1_STORE}/models"
@@ -56,6 +58,12 @@ for TASK in "${TASK_ARR[@]}"; do
   LP="${LOG_TAG}-s${SEED}-${AB}"
   PB=$((PORT_BASE + i * 8)); i=$((i + 1))
   echo "--- BATCH task=${TASK} log_prefix=${LP} port_base=${PB} start=$(date '+%T') ---"
+  # 本批要用 PB..PB+WORKERS-1，逐个确认无人监听（eval_shard.sh 里也有同样的守卫，这里提前拦下整批）
+  BUSY=""
+  for ((k = 0; k < WORKERS; k++)); do
+    if (exec 3<>"/dev/tcp/127.0.0.1/$((PB + k))") 2>/dev/null; then exec 3>&- 2>/dev/null || true; BUSY="${BUSY} $((PB + k))"; fi
+  done
+  if [[ -n "${BUSY}" ]]; then echo "错误: 端口被占用:${BUSY}，换 PORT_BASE 重跑" >&2; FAIL=1; break; fi
   if ! MODE=stride WORKERS="${WORKERS}" GPU_LIST="${GPU_LIST}" TASKS_ALL="${TASK}" \
        RUN_NAME="${RUN_PREFIX}-s${SEED}-${TASK}" CKPT_ID="${CKPT_ID}" CKPT_DIR="${CKPT_DIR}" \
        SEED="${SEED}" LOG_PREFIX="${LP}" PORT_BASE="${PB}" \
@@ -75,15 +83,26 @@ for TASK in "${TASK_ARR[@]}"; do
   done
   sleep 10        # 留出 server 进程退出与显存释放的余量，再起下一批
   # 逐片核退出码（EXIT_CODE= 由 eval_shard.sh 写在自己 stdout 的末尾；强杀不会写，故缺失也算失败）
+  DONE_EPS=0
   for ((k = 0; k < WORKERS; k++)); do
     L="${LOGS_DIR}/${LP}-w${k}.log"
     RC="$(grep -oE '^EXIT_CODE=[0-9]+' "${L}" 2>/dev/null | tail -1 | cut -d= -f2)"
-    if [[ "${RC}" == "0" ]]; then
-      echo "  ${LP}-w${k} EXIT_CODE=0"
+    PROG="${V1_STORE}/evaluation/${RUN_PREFIX}-s${SEED}-${TASK}-w${k}/ckpt${CKPT_ID}/seed${SEED}/progress.json"
+    NEP="$(python3 -c "import json,sys;print(len(json.load(open(sys.argv[1])).get(sys.argv[2],{})))" "${PROG}" "${TASK}" 2>/dev/null || echo 0)"
+    DONE_EPS=$((DONE_EPS + NEP))
+    if [[ "${RC}" == "0" && "${NEP}" -gt 0 ]]; then
+      echo "  ${LP}-w${k} EXIT_CODE=0 episodes=${NEP}"
     else
-      echo "  ${LP}-w${k} EXIT_CODE=${RC:-缺失} ← 失败"; FAIL=1
+      echo "  ${LP}-w${k} EXIT_CODE=${RC:-缺失} episodes=${NEP} ← 失败"; FAIL=1
     fi
   done
+  # 退出码为 0 不等于评了集：端口被别的服务占用时 eval.py 会 abort 但仍返回 0（见上面的守卫注释），
+  # 故这里再核本批实评集数必须等于该任务的 50 集。
+  if [[ "${DONE_EPS}" -ne 50 ]]; then
+    echo "  ${LP} 本批实评 ${DONE_EPS} 集 ≠ 50 ← 失败"; FAIL=1
+  else
+    echo "  ${LP} 本批实评 50/50 集"
+  fi
   echo "--- BATCH done task=${TASK} end=$(date '+%T') ---"
 done
 

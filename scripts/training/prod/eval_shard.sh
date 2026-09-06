@@ -69,6 +69,13 @@ fi
 mkdir -p "${LOGS_DIR}" "${V1_STORE}/evaluation"
 echo "=== EVAL_SHARD shard=${SHARD} HEAD=$(git -C "${REPO_ROOT}" rev-parse HEAD) ckpt=${CKPT_DIR} run_kind=${RUN_KIND} gpu=${GPU} port=${PORT} seed=${SEED} tasks=${TASKS} ep_start=${EP_START} ep_stride=${EP_STRIDE} ep_count=${EP_COUNT} policy_name=${POLICY_NAME} mem_fraction=${POLICY_MEM_FRACTION} start=$(date '+%F %T') ==="
 cd "${REPO_ROOT}"
+# 端口占用守卫：下面等就绪的循环只探「能不能连上 PORT」，本机若有别的服务占着该端口，会被误判为 server 就绪，
+# eval.py 随即连过去拿到非 policy 响应，报 "did not receive a valid HTTP response / API calling error, aborting"
+# 后仍以退出码 0 结束（0 集），静默产出空结果。2026-09-06 实测踩中：本机 8042/8044 等被用户服务占用。
+if (exec 3<>"/dev/tcp/127.0.0.1/${PORT}") 2>/dev/null; then
+  exec 3>&- 2>/dev/null || true
+  echo "错误: 端口 ${PORT} 起跑前已被占用（本机有其他服务在监听），换 PORT_BASE 重试" >&2; exit 1
+fi
 # ── policy server（后台）：CUDA_VISIBLE_DEVICES 只作用于 policy 进程；sidecar 子进程的卡号由 MMEVLA_MOTION_ONLINE_GPU 给（绝对卡号）──
 CUDA_VISIBLE_DEVICES="${GPU}" MMEVLA_MOTION_ONLINE_GPU="${GPU}" XLA_PYTHON_CLIENT_MEM_FRACTION="${POLICY_MEM_FRACTION}" UV_LINK_MODE=copy PYTHONUNBUFFERED=1 \
   uv run --no-sync python scripts/training/serve_policy.py --seed="${SEED}" --port="${PORT}" \
