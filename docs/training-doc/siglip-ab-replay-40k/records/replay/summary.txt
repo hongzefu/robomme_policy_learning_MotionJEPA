@@ -1,0 +1,15 @@
+MEM_A1_VS_STORE=PASS frames=227 mismatches=0
+MEM_S_VS_TRAINSET=PASS points=11 key_mismatches=none
+MEM_C_VS_B=PASS frames=227 mismatches=0
+MEM_A_VS_STORE_BITEXACT=0/227 A_static_image_emb_vs_trainset_bitexact_points=0/11
+MEM_S_VS_B frames=227 max_abs=1 mean_abs=0.007261 rel_fro=0.003358 cos_min=0.999988 cos_mean=0.999995 ulp_p50=2 ulp_p99=86 ulp_max=500 frac_nonzero=0.780
+MEM_S_VS_A frames=227 max_abs=1 mean_abs=0.006122 rel_fro=0.003011 cos_min=0.999988 cos_mean=0.999996 ulp_p50=1 ulp_p99=73.2 ulp_max=505 frac_nonzero=0.752
+MEM_A_VS_B frames=227 max_abs=1 mean_abs=0.007177 rel_fro=0.003188 cos_min=0.999986 cos_mean=0.999996 ulp_p50=2 ulp_p99=85 ulp_max=505 frac_nonzero=0.779
+MEM_S_VS_A1 frames=227 max_abs=0 mean_abs=0 rel_fro=0 cos_min=1.000000 cos_mean=1.000000 ulp_p50=0 ulp_p99=0 ulp_max=0 frac_nonzero=0.000
+MEM_C_VS_B_NUM frames=227 max_abs=0 mean_abs=0 rel_fro=0 cos_min=1.000000 cos_mean=1.000000 ulp_p50=0 ulp_p99=0 ulp_max=0 frac_nonzero=0.000
+ACT_S_VS_B points=11 rms_norm=0.0004307 max_abs_norm=0.003906 rms_unnorm=0.0003 | NOISE_S rms_norm=0.009616 rms_unnorm=0.01327 | ratio_norm=0.04479 ratio_unnorm=0.02261 | act_std_mean=0.2047 rms_unnorm/act_std=0.001466
+ACT_S_VS_A points=11 rms_norm=0.0004247 max_abs_norm=0.00293 rms_unnorm=0.0002942 | NOISE_S rms_norm=0.009616 rms_unnorm=0.01327 | ratio_norm=0.04416 ratio_unnorm=0.02217 | act_std_mean=0.2047 rms_unnorm/act_std=0.001437
+ACT_A_VS_B points=11 rms_norm=0.0004223 max_abs_norm=0.003906 rms_unnorm=0.0002873 | NOISE_S rms_norm=0.009616 rms_unnorm=0.01327 | ratio_norm=0.04391 ratio_unnorm=0.02165 | act_std_mean=0.2047 rms_unnorm/act_std=0.001403
+ACT_C_VS_B_BITEXACT=PASS
+ACT_DETERMINISM=PASS
+SIGLIP_AB_REPLAY=DONE episodes=1 points=11

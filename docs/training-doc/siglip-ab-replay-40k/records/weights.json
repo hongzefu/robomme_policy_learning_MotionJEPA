@@ -1,0 +1,402 @@
+{
+ "lines": [
+  "PARAM_SAME_ENC=PASS n_leaves=23 max_abs=0.000e+00",
+  "CKPT_IMG_FROZEN=PASS mismatched_leaves=0",
+  "PKL_VS_CKPT max_abs=5.948e-01 max_rel=3.891e-03 rel_le_2^-8=True",
+  "LEAF embedding/kernel: pkl_base_max_abs=0.000e+00 frozen_bf16=True pkl_ckpt_max_abs=8.598e-04 mean_abs=2.616e-05 |max|=2.993e-01",
+  "LEAF embedding/bias: pkl_base_max_abs=0.000e+00 frozen_bf16=True pkl_ckpt_max_abs=2.747e-03 mean_abs=2.109e-04 |max|=2.721e+00",
+  "LEAF pos_embedding: pkl_base_max_abs=0.000e+00 frozen_bf16=True pkl_ckpt_max_abs=5.948e-01 mean_abs=3.394e-04 |max|=2.834e+02"
+ ],
+ "leaves": [
+  {
+   "key": "Transformer/encoder_norm/bias",
+   "shape": [
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.007589817047119141,
+   "mean_abs_pkl_ckpt": 0.0004240145499352366,
+   "max_abs_value": 3.97124981880188
+  },
+  {
+   "key": "Transformer/encoder_norm/scale",
+   "shape": [
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.01024007797241211,
+   "mean_abs_pkl_ckpt": 0.002015003701671958,
+   "max_abs_value": 6.364759922027588
+  },
+  {
+   "key": "Transformer/encoderblock/LayerNorm_0/bias",
+   "shape": [
+    27,
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.03033161163330078,
+   "mean_abs_pkl_ckpt": 0.00018897680274676532,
+   "max_abs_value": 11.68193531036377
+  },
+  {
+   "key": "Transformer/encoderblock/LayerNorm_0/scale",
+   "shape": [
+    27,
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.007760763168334961,
+   "mean_abs_pkl_ckpt": 0.0013715923996642232,
+   "max_abs_value": 3.1727960109710693
+  },
+  {
+   "key": "Transformer/encoderblock/LayerNorm_1/bias",
+   "shape": [
+    27,
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.2272796630859375,
+   "mean_abs_pkl_ckpt": 0.001382061862386763,
+   "max_abs_value": 67.22727966308594
+  },
+  {
+   "key": "Transformer/encoderblock/LayerNorm_1/scale",
+   "shape": [
+    27,
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.061519622802734375,
+   "mean_abs_pkl_ckpt": 0.0040441458113491535,
+   "max_abs_value": 21.390235900878906
+  },
+  {
+   "key": "Transformer/encoderblock/MlpBlock_0/Dense_0/bias",
+   "shape": [
+    27,
+    4304
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.02916240692138672,
+   "mean_abs_pkl_ckpt": 0.0014192513190209866,
+   "max_abs_value": 8.279162406921387
+  },
+  {
+   "key": "Transformer/encoderblock/MlpBlock_0/Dense_0/kernel",
+   "shape": [
+    27,
+    1152,
+    4304
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.0019294023513793945,
+   "mean_abs_pkl_ckpt": 3.6433219065656886e-05,
+   "max_abs_value": 0.9030362367630005
+  },
+  {
+   "key": "Transformer/encoderblock/MlpBlock_0/Dense_1/bias",
+   "shape": [
+    27,
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.058017730712890625,
+   "mean_abs_pkl_ckpt": 0.00038112004403956234,
+   "max_abs_value": 26.31698226928711
+  },
+  {
+   "key": "Transformer/encoderblock/MlpBlock_0/Dense_1/kernel",
+   "shape": [
+    27,
+    4304,
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.0033124685287475586,
+   "mean_abs_pkl_ckpt": 3.615666719269939e-05,
+   "max_abs_value": 1.1336872577667236
+  },
+  {
+   "key": "Transformer/encoderblock/MultiHeadDotProductAttention_0/key/bias",
+   "shape": [
+    27,
+    16,
+    72
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.007633209228515625,
+   "mean_abs_pkl_ckpt": 0.0007397517911158502,
+   "max_abs_value": 2.878664016723633
+  },
+  {
+   "key": "Transformer/encoderblock/MultiHeadDotProductAttention_0/key/kernel",
+   "shape": [
+    27,
+    1152,
+    16,
+    72
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.0019491314888000488,
+   "mean_abs_pkl_ckpt": 3.5319179005455226e-05,
+   "max_abs_value": 0.8821554780006409
+  },
+  {
+   "key": "Transformer/encoderblock/MultiHeadDotProductAttention_0/out/bias",
+   "shape": [
+    27,
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.015500068664550781,
+   "mean_abs_pkl_ckpt": 0.00030385280842892826,
+   "max_abs_value": 6.306490898132324
+  },
+  {
+   "key": "Transformer/encoderblock/MultiHeadDotProductAttention_0/out/kernel",
+   "shape": [
+    27,
+    16,
+    72,
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.0018936991691589355,
+   "mean_abs_pkl_ckpt": 3.455762271187268e-05,
+   "max_abs_value": 0.9523217678070068
+  },
+  {
+   "key": "Transformer/encoderblock/MultiHeadDotProductAttention_0/query/bias",
+   "shape": [
+    27,
+    16,
+    72
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.030977249145507812,
+   "mean_abs_pkl_ckpt": 0.0004104534164071083,
+   "max_abs_value": 10.49675178527832
+  },
+  {
+   "key": "Transformer/encoderblock/MultiHeadDotProductAttention_0/query/kernel",
+   "shape": [
+    27,
+    1152,
+    16,
+    72
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.001824021339416504,
+   "mean_abs_pkl_ckpt": 3.51654234691523e-05,
+   "max_abs_value": 0.5696167349815369
+  },
+  {
+   "key": "Transformer/encoderblock/MultiHeadDotProductAttention_0/value/bias",
+   "shape": [
+    27,
+    16,
+    72
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.0046346187591552734,
+   "mean_abs_pkl_ckpt": 8.062755659921095e-05,
+   "max_abs_value": 2.4797403812408447
+  },
+  {
+   "key": "Transformer/encoderblock/MultiHeadDotProductAttention_0/value/kernel",
+   "shape": [
+    27,
+    1152,
+    16,
+    72
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.0009762346744537354,
+   "mean_abs_pkl_ckpt": 3.5397362807998434e-05,
+   "max_abs_value": 0.4460649788379669
+  },
+  {
+   "key": "embedding/bias",
+   "shape": [
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.0027472972869873047,
+   "mean_abs_pkl_ckpt": 0.00021092689712531865,
+   "max_abs_value": 2.721465826034546
+  },
+  {
+   "key": "embedding/kernel",
+   "shape": [
+    14,
+    14,
+    3,
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.0008597970008850098,
+   "mean_abs_pkl_ckpt": 2.615512494230643e-05,
+   "max_abs_value": 0.2992909252643585
+  },
+  {
+   "key": "head/bias",
+   "shape": [
+    2048
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.001530766487121582,
+   "mean_abs_pkl_ckpt": 3.1938030588207766e-05,
+   "max_abs_value": 1.0249682664871216
+  },
+  {
+   "key": "head/kernel",
+   "shape": [
+    1152,
+    2048
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.003626108169555664,
+   "mean_abs_pkl_ckpt": 2.7423164283391088e-05,
+   "max_abs_value": 1.1284904479980469
+  },
+  {
+   "key": "pos_embedding",
+   "shape": [
+    1,
+    256,
+    1152
+   ],
+   "pkl_dtype": "float32",
+   "base_dtype": "float32",
+   "ckpt_dtype": "bfloat16",
+   "max_abs_pkl_base": 0.0,
+   "pkl_base_bitexact": true,
+   "frozen_bf16_bitexact": true,
+   "max_abs_pkl_ckpt": 0.5948486328125,
+   "mean_abs_pkl_ckpt": 0.0003394485975150019,
+   "max_abs_value": 283.4051513671875
+  }
+ ],
+ "argv": [
+  "scripts/training/g0/compare_siglip_weights.py",
+  "--ckpt",
+  "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999/params",
+  "--out",
+  "/scratch/hongze/robomme_policy_learning_MotionJEPA/.claude/worktrees/sgab/docs/training-doc/siglip-ab-replay-40k/records/weights.json"
+ ],
+ "pkl": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/pi05_vision_encoder/siglip_params.pkl",
+ "base": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params",
+ "ckpt": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999/params"
+}

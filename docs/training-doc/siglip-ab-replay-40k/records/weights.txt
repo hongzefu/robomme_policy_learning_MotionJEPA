@@ -1,0 +1,11 @@
+RUN_START=2026-09-06 00:56:21 HEAD=c01e45d backend=cpu
+[w] pkl 叶 23 载入 0.9s dtypes=['float32']
+[w] pi05_base img 叶 23 载入 6.0s dtypes=['float32']
+[w] ckpt img 叶 23 载入 2.7s dtypes=['bfloat16']
+PARAM_SAME_ENC=PASS n_leaves=23 max_abs=0.000e+00
+CKPT_IMG_FROZEN=PASS mismatched_leaves=0
+PKL_VS_CKPT max_abs=5.948e-01 max_rel=3.891e-03 rel_le_2^-8=True
+LEAF embedding/kernel: pkl_base_max_abs=0.000e+00 frozen_bf16=True pkl_ckpt_max_abs=8.598e-04 mean_abs=2.616e-05 |max|=2.993e-01
+LEAF embedding/bias: pkl_base_max_abs=0.000e+00 frozen_bf16=True pkl_ckpt_max_abs=2.747e-03 mean_abs=2.109e-04 |max|=2.721e+00
+LEAF pos_embedding: pkl_base_max_abs=0.000e+00 frozen_bf16=True pkl_ckpt_max_abs=5.948e-01 mean_abs=3.394e-04 |max|=2.834e+02
+EXIT_CODE=0

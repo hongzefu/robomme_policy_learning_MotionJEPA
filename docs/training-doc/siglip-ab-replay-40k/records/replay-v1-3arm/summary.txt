@@ -1,0 +1,9 @@
+MEM_A_VS_STORE=FAIL frames=227 mismatches=227
+MEM_A_VS_TRAINSET=FAIL points=11 key_mismatches={'static_image_emb': 11}
+MEM_C_VS_B=PASS frames=227 mismatches=0
+MEM_A_VS_B frames=227 max_abs=1 mean_abs=0.007177 rel_fro=0.003188 cos_min=0.999986 cos_mean=0.999996 ulp_p50=2 ulp_p99=110 ulp_max=2.06e+38 frac_nonzero=0.779
+MEM_A_VS_C frames=227 max_abs=1 mean_abs=0.007177 rel_fro=0.003188 cos_min=0.999986 cos_mean=0.999996 ulp_p50=2 ulp_p99=110 ulp_max=2.06e+38 frac_nonzero=0.779
+ACT_A_VS_B points=11 rms_norm=0.0004457 max_abs_norm=0.003906 rms_unnorm=0.0003056 | NOISE_A rms_norm=0.009622 rms_unnorm=0.01328 | ratio_norm=0.04632 ratio_unnorm=0.02302 | act_std_mean=0.2047 ab_rms_unnorm/act_std=0.001493
+ACT_A_VS_C points=11 rms_norm=0.0004457 max_abs_norm=0.003906 rms_unnorm=0.0003056 C==B_bitexact_all=True
+ACT_DETERMINISM=PASS
+SIGLIP_AB_REPLAY=DONE episodes=1 points=11
