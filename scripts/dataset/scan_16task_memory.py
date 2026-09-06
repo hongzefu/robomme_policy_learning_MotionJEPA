@@ -58,6 +58,79 @@ def task_of(h5_file: str) -> str:
     return h5_file.replace("record_dataset_", "").replace(".h5", "")
 
 
+# ── subgoal 短标签：80 种原文压成「动作＋区分要素」的 2-4 字标签 ────────────────────
+# 只保留能把同一集内各段区分开的要素：动作、颜色、序数、方向、对象。全文仍在 text 字段里。
+_ORD = (("first", "1"), ("second", "2"), ("third", "3"), ("fourth", "4"), ("fifth", "5"))
+_COLOR = (("blue", "蓝"), ("green", "绿"), ("red", "红"))
+
+
+def short_label(text: str) -> str:
+    t = text.lower().strip()
+    if "static" in t:
+        return "静止"
+    if "completed" in t:
+        return "完成"
+
+    n = next((v for k, v in _ORD if k in t), "")
+    col = next((v for k, v in _COLOR if k in t), "")
+
+    if t.startswith("move"):
+        if "circling" in t:                      # 绕杆走：左右 + 顺逆
+            side = "右" if "right" in t else ("左" if "left" in t else "")
+            turn = "逆" if "counterclockwise" in t else "顺"
+            return f"绕{side}{turn}"
+        if "top of the" in t:                    # 移到某物正上方
+            if "button" in t:
+                return "移钮上"
+            side = "右" if "right" in t else ("左" if "left" in t else "")
+            return f"移{side}标{n}"
+        d = ("前" if "forward" in t else "") + ("后" if "backward" in t else "") \
+            + ("左" if "left" in t else "") + ("右" if "right" in t else "")
+        return f"移{d}" if d else "移动"
+
+    if "press" in t:
+        if "stop" in t:
+            return "按钮停"
+        if "finish" in t:
+            return "按钮末"
+        return f"按钮{n}"
+
+    if "insert" in t:
+        return "插销左" if "left" in t else "插销"
+    if "hook" in t:
+        return "钩块"
+
+    if "pick up" in t:
+        if "container" in t:
+            return f"抓罩{col}"
+        if "peg" in t:
+            return "抓销远" if "far end" in t else "抓销"
+        if "highlighted" in t:
+            return f"抓亮{col}{n}"
+        return f"抓{col or '块'}{n}"
+
+    if "into the bin" in t:
+        return "投箱"
+    if "onto target" in t or "onto the target" in t or "onto the correct target" in t:
+        return f"置{col}标"
+    if "onto table" in t or "onto the table" in t or "on the table" in t or "on table" in t:
+        return f"放{col}台"
+    if "put down" in t or t.startswith("put it down"):
+        return "放罩" if "container" in t else "放下"
+
+    return (text[:6] + "…") if len(text) > 6 else text     # 兜底：不静默丢信息
+
+
+def dedup_labels(segs: list[dict]) -> None:
+    """同一集内标签撞车时按出现次序补 ·2 ·3，保证「可区分」。"""
+    seen: dict[str, int] = {}
+    for g in segs:
+        lb = g["short"]
+        seen[lb] = seen.get(lb, 0) + 1
+        if seen[lb] > 1:
+            g["short"] = f"{lb}·{seen[lb]}"
+
+
 RAW_DIR: pathlib.Path | None = None
 _SUBGOAL_CACHE: dict = {}
 
@@ -82,8 +155,10 @@ def read_subgoals(h5_file: str, ep: int, num_timesteps: int, es: int) -> list[di
     segs = []
     for i, b in enumerate(bounds):
         end = bounds[i + 1] if i + 1 < len(bounds) else num_timesteps
+        tx = texts.get(b, "")
         segs.append({"start": b, "end": end, "len": end - b,
-                     "text": texts.get(b, ""), "is_demo": b < es})
+                     "text": tx, "short": short_label(tx), "is_demo": b < es})
+    dedup_labels(segs)
     _SUBGOAL_CACHE[key] = segs
     return segs
 

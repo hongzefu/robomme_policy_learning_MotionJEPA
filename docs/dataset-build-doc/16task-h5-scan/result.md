@@ -145,6 +145,12 @@ VideoPlaceOrder 的 32 个采样帧里还有 26 个落在 demo 段，真正看�
 | Behavior | RouteStick | 11 | 7 | 16.1 | 71.29 | 0 | **3** |
 | **合计** | 16 个中位集 | **133** | — | — | — | **0（0%）** | **27（20%）** |
 
+**段的含义**：`simple_subgoal` 原文由 `short_label()` 压成「动作＋颜色/序数/方向」的短标签
+（如 `pick up the container that hides the green cube` → `抓罩绿`、
+`move to the nearest right target by circling around the stick clockwise` → `绕右顺`），
+同一集内重名的按次序补 `·2 ·3`（PatternLock 这类反复同一动作的任务靠它区分）。
+四档中位集共 80 种原文 → 65 种标签，**兜底规则 0 次命中**，原文仍保留在 `text` 字段。
+
 **结论：32 帧一段不漏，8 帧漏掉五分之一。**
 hard 档 16 个中位集共 133 个 subgoal 段，32 帧预算下**每段至少采到 1 帧（漏 0 段）**；
 降到 8 帧后有 **27 段（20%）完全没有采样点**——该 subgoal 在视觉输入里没有任何证据。
