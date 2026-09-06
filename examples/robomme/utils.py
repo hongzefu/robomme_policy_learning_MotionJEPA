@@ -48,6 +48,8 @@ def pack_buffer(image_buffer, state_buffer, exec_start_idx=0):
 def check_args(args):
     assert args.obs_horizon == 16
     assert args.episode_stride >= 1, f"episode_stride 必须 ≥1，实为 {args.episode_stride}"
+    assert args.dataset_split in ("train", "val", "test"), \
+        f"dataset_split 只能是 train / val / test，实为 {args.dataset_split}"
 
 
 

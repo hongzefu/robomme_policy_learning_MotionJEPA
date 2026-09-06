@@ -43,6 +43,7 @@ class Args:
     max_episodes: int = 0 # 每任务最多评几集（0 = 环境提供的全部；T3_EVAL_OBS 用 10）
     episode_start: int = 0 # 从第几集起评（分片并行：片 k 给 episode_start=k*n, max_episodes=n；默认 0 行为不变）
     episode_stride: int = 1 # 集号步长（stride 交错分片：worker w 给 episode_start=w, episode_stride=8, max_episodes=0；默认 1 行为不变）
+    dataset_split: str = "test" # 环境 split：test / val / train（benchmark 官方划分，seed 互不相交）；默认 test 行为不变
 
 
 
@@ -248,7 +249,7 @@ def evaluate(args: Args):
             if task_name not in log_dict:
                 log_dict[task_name] = {}
 
-            env_runner = EnvRunner(task_name, video_save_dir, max_steps=args.max_steps)
+            env_runner = EnvRunner(task_name, video_save_dir, max_steps=args.max_steps, dataset=args.dataset_split)
             num_episodes = env_runner.num_episodes
 
             success_flag = "unknown"

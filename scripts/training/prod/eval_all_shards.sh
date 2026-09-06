@@ -5,11 +5,11 @@
 #   stride（负载均衡）  ：WORKERS 个 worker，每个跑全部 4 任务、每任务取 ep ∈ {k, k+WORKERS, …}（8 worker 下 w0/w1 各 28 集、其余 24 集），
 #                         分片名 w<k>，GPU=k，端口 PORT_BASE+k。任务级耗时差异被均摊（留档 eval-official-framesamp-context/）。
 # 用法：[MODE=task|stride] [WORKERS=8] [GPU_LIST=0,1,…] [ONLY=ButtonUnmask-0|w0] [EP_COUNT=…] [RUN_NAME=…] [CKPT_ID=…] [CKPT_DIR=…]
-#       [SEED=42] [LOG_PREFIX=ev40k] [PORT_BASE=8031] [POLICY_MEM_FRACTION=0.4] [ROBOMME_PY=…] [DRY_RUN=1]
+#       [SEED=42] [SPLIT=test|val|train] [LOG_PREFIX=ev40k] [PORT_BASE=8031] [POLICY_MEM_FRACTION=0.4] [ROBOMME_PY=…] [DRY_RUN=1]
 #       bash scripts/training/prod/eval_all_shards.sh
 #   GPU_LIST 决定 worker 号到实际卡号的映射（取模），默认 0..7 即历史的「worker 号 = 卡号」。少于 8 卡的机器必须显式给：
 #   如 2 卡机 GPU_LIST=0,0,1,1 配 WORKERS=4（每卡 2 个 worker），或 GPU_LIST=0,1 配 WORKERS=2（每卡 1 个）。
-#   POLICY_MEM_FRACTION / ROBOMME_PY 只在显式设置时才转发（tmux 会话不继承调用方环境），未设则用 eval_shard.sh 的默认值。
+#   POLICY_MEM_FRACTION / ROBOMME_PY / SPLIT 只在显式设置时才转发（tmux 会话不继承调用方环境），未设则用 eval_shard.sh 的默认值。
 #   RUN_NAME / CKPT_ID / CKPT_DIR / SEED / LOG_PREFIX / POLICY_MEM_FRACTION / ROBOMME_PY 原样转给 eval_shard.sh
 #   （tmux 会话不继承调用方环境，必须显式写进命令）。
 #   ONLY 只起一片（预检用）；已存在同名会话则跳过不重起。断点续评：重跑同一片即续（eval.py 按 progress.json 跳过已评集）。
@@ -73,6 +73,7 @@ while read -r SHARD GPU EXTRA; do
   [[ -n "${CKPT_DIR}" ]] && ENVS="${ENVS} CKPT_DIR=${CKPT_DIR}"
   [[ -n "${POLICY_MEM_FRACTION:-}" ]] && ENVS="${ENVS} POLICY_MEM_FRACTION=${POLICY_MEM_FRACTION}"
   [[ -n "${ROBOMME_PY:-}" ]] && ENVS="${ENVS} ROBOMME_PY=${ROBOMME_PY}"
+  [[ -n "${SPLIT:-}" ]] && ENVS="${ENVS} SPLIT=${SPLIT}"
   CMD="set -o pipefail; ${ENVS} bash scripts/training/prod/eval_shard.sh 2>&1 | tee -a ${LOG}; sleep 2"
   if [[ "${DRY_RUN}" == "1" ]]; then echo "DRY ${SESSION}: ${CMD}"; continue; fi
   tmux new-session -d -s "${SESSION}" -c "${REPO_ROOT}" "bash -c '${CMD}'"
