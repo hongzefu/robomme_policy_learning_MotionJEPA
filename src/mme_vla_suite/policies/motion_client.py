@@ -36,6 +36,12 @@ PROV_SAME_ENC = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", 
                  "amp", "tf32", "batch", "vae_id", "motion_dims", "torch", "cuda", "cudnn", "diffusers",
                  "cublas_pkg", "cudnn_pkg", "module_sha256", "encoder_src_sha256", "env", "gpu_name",
                  "compute_cap", "sm_count", "driver", "flags")
+# 物理 GPU 指纹：不一致只告警、不拦。离线 motion 库建在 A100（环境 B）上，异地机器（本机 2×RTX 6000 Ada）
+# 永远凑不出同一张卡，这四项若维持硬拦等于禁止任何跨机复算。权重 sha256、dtype/tf32/amp 数值口径与
+# torch/cuda/cudnn 软件栈仍在上面两个元组里逐项硬拦——那些才是「同一套模型、同一套数值语义」的实质保证；
+# 换卡带来的只是浮点级差异，与本轮官方组实测到的跨硬件差异（同 seed ButtonUnmaskSwap 8%→18%）同性质。
+# 用户 2026-09-06 拍板降级。告警走 stderr，会进 <LOG_PREFIX>-w<k>.server.log，须在 run 留档里如实记下。
+PROV_HW_KEYS = ("gpu_name", "compute_cap", "sm_count", "driver")
 
 
 class MotionEncoderClient:
@@ -94,12 +100,17 @@ class MotionEncoderClient:
         self.total_s = 0.0
 
     def check_provenance(self, store_prov: dict) -> None:
-        diffs = []
+        """核对 sidecar 与离线库同源：权重/数值口径/软件栈不一致即拒绝，物理 GPU 指纹不一致只告警。"""
+        diffs, hw_diffs = [], []
         for section, keys in (("vae", PROV_SAME_VAE), ("encoder", PROV_SAME_ENC)):
             a, b = self.provenance.get(section, {}), store_prov.get(section, {})
             for k in keys:
                 if a.get(k) != b.get(k):
-                    diffs.append(f"{section}.{k}: sidecar={a.get(k)!r} store={b.get(k)!r}")
+                    (hw_diffs if k in PROV_HW_KEYS else diffs).append(
+                        f"{section}.{k}: sidecar={a.get(k)!r} store={b.get(k)!r}")
+        if hw_diffs:
+            print("MOTION_PROV_HW_MISMATCH 物理 GPU 指纹与离线库不同（已降级为告警，权重与数值口径仍严格核过）:\n  "
+                  + "\n  ".join(hw_diffs), file=sys.stderr, flush=True)
         if diffs:
             self.close()
             raise RuntimeError("sidecar 与离线库 provenance 不同源:\n  " + "\n  ".join(diffs))
