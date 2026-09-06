@@ -5,8 +5,10 @@
 #   stride（负载均衡）  ：WORKERS 个 worker，每个跑全部 4 任务、每任务取 ep ∈ {k, k+WORKERS, …}（8 worker 下 w0/w1 各 28 集、其余 24 集），
 #                         分片名 w<k>，GPU=k，端口 PORT_BASE+k。任务级耗时差异被均摊（留档 eval-official-framesamp-context/）。
 # 用法：[MODE=task|stride] [WORKERS=8] [ONLY=ButtonUnmask-0|w0] [EP_COUNT=…] [RUN_NAME=…] [CKPT_ID=…] [CKPT_DIR=…] [SEED=42]
-#       [LOG_PREFIX=ev40k] [PORT_BASE=8031] [DRY_RUN=1] bash scripts/training/prod/eval_all_shards.sh
-#   RUN_NAME / CKPT_ID / CKPT_DIR / SEED / LOG_PREFIX 原样转给 eval_shard.sh（tmux 会话不继承调用方环境，必须显式写进命令）。
+#       [DATASET=test|val] [LOG_PREFIX=ev40k] [PORT_BASE=8031] [DRY_RUN=1] bash scripts/training/prod/eval_all_shards.sh
+#   RUN_NAME / CKPT_ID / CKPT_DIR / SEED / DATASET / LOG_PREFIX 原样转给 eval_shard.sh（tmux 会话不继承调用方环境，必须显式写进命令）。
+#   多轮（换 SEED 或换 DATASET）必须同时换 LOG_PREFIX 与 PORT_BASE：会话名 / 日志名 / server.log 只含 LOG_PREFIX 与分片名，
+#   沿用同一个会让驱动日志 tee -a 追加成一份、merge 的墙钟与 TIMING 串轮。
 #   ONLY 只起一片（预检用）；已存在同名会话则跳过不重起。断点续评：重跑同一片即续（eval.py 按 progress.json 跳过已评集）。
 #   DRY_RUN=1 只打印将要起的会话与命令，不起 tmux（验证分片表用）。
 #   清理只允许 tmux kill-session -t <确切会话名>（AGENTS 7）；本轮会话清单见对应留档 launch.md。
@@ -22,6 +24,7 @@ RUN_NAME="${RUN_NAME:-awsprod40k-b128-motion}"
 CKPT_ID="${CKPT_ID:-39999}"
 CKPT_DIR="${CKPT_DIR:-}"
 SEED="${SEED:-42}"
+DATASET="${DATASET:-test}"           # benchmark split：test（默认，历史行为）/ val / train；原样转给 eval_shard.sh
 LOG_PREFIX="${LOG_PREFIX:-ev40k}"
 PORT_BASE="${PORT_BASE:-8031}"
 # task 口径分片表：TASK K GPU（一片一卡；端口 = PORT_BASE + 行号）
@@ -59,11 +62,11 @@ while read -r SHARD GPU EXTRA; do
   if [[ -n "${ONLY}" && "${ONLY}" != "${SHARD}" ]]; then continue; fi
   if tmux has-session -t "=${SESSION}" 2>/dev/null; then echo "跳过 ${SESSION}（会话已存在）"; continue; fi
   LOG="${LOGS_DIR}/${LOG_PREFIX}-${SHARD}.log"
-  ENVS="${EXTRA} GPU=${GPU} PORT=${PORT} RUN_NAME=${RUN_NAME} CKPT_ID=${CKPT_ID} SEED=${SEED} LOG_PREFIX=${LOG_PREFIX}"
+  ENVS="${EXTRA} GPU=${GPU} PORT=${PORT} RUN_NAME=${RUN_NAME} CKPT_ID=${CKPT_ID} SEED=${SEED} DATASET=${DATASET} LOG_PREFIX=${LOG_PREFIX}"
   [[ -n "${CKPT_DIR}" ]] && ENVS="${ENVS} CKPT_DIR=${CKPT_DIR}"
   CMD="set -o pipefail; ${ENVS} bash scripts/training/prod/eval_shard.sh 2>&1 | tee -a ${LOG}; sleep 2"
   if [[ "${DRY_RUN}" == "1" ]]; then echo "DRY ${SESSION}: ${CMD}"; continue; fi
   tmux new-session -d -s "${SESSION}" -c "${REPO_ROOT}" "bash -c '${CMD}'"
-  echo "起 ${SESSION}: shard=${SHARD} gpu=${GPU} port=${PORT} ${EXTRA} run=${RUN_NAME} ckpt=${CKPT_DIR:-<默认>/${CKPT_ID}} log=${LOG}"
+  echo "起 ${SESSION}: shard=${SHARD} gpu=${GPU} port=${PORT} ${EXTRA} run=${RUN_NAME} seed=${SEED} dataset=${DATASET} ckpt=${CKPT_DIR:-<默认>/${CKPT_ID}} log=${LOG}"
 done < <(build_rows)
 tmux ls 2>/dev/null | grep "^${LOG_PREFIX}-" || true

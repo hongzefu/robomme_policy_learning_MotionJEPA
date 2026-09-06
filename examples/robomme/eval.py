@@ -35,6 +35,7 @@ class Args:
     policy_name: str = "dummy_test"
     model_seed: int = 42
     model_ckpt_id: int = 80000
+    dataset: str = "test" # benchmark split：test / val / train，对应 env_metadata/<split>/；非 test 时结果目录另开一段，不覆盖 test
 
     # task control
     re_eval_tasks: str = "" # tasks split by comma
@@ -171,11 +172,14 @@ class EpisodeEvaluator:
 
 def setup_save_directory(args: Args) -> Path:
     """Set up and validate save directories."""
+    # split 段：test 保持历史路径逐字节不变（已有 seed42 结果不受影响）；val / train 另开 <split>-seed<n>，
+    # 否则会写进同一目录、并被 setup_log_dict 的续评逻辑当成「已评过」整体跳过
+    seed_seg = f"seed{args.model_seed}" if args.dataset == "test" else f"{args.dataset}-seed{args.model_seed}"
     save_dir = (
         Path(args.save_dir)
         / args.policy_name
         / f"ckpt{args.model_ckpt_id}"
-        / f"seed{args.model_seed}"
+        / seed_seg
     )
 
     if save_dir.exists():
@@ -248,7 +252,7 @@ def evaluate(args: Args):
             if task_name not in log_dict:
                 log_dict[task_name] = {}
 
-            env_runner = EnvRunner(task_name, video_save_dir, max_steps=args.max_steps)
+            env_runner = EnvRunner(task_name, video_save_dir, max_steps=args.max_steps, dataset=args.dataset)
             num_episodes = env_runner.num_episodes
 
             success_flag = "unknown"

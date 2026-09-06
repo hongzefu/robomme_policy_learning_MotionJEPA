@@ -12,9 +12,11 @@
 # （create_trained_policy 的旧兼容路径，非严格恢复），两者任一存在即可。
 # 用法：TASK=ButtonUnmask K=0 GPU=0 PORT=8031 [EP_COUNT=25] [EP_START=K*EP_COUNT] [RUN_NAME=awsprod40k-b128-motion] [CKPT_ID=39999]
 #       stride 口径改为 TASKS=<a,b,c,d> SHARD_ID=w<K> K=<K> EP_STRIDE=<worker 数> [EP_START=K] [EP_COUNT=0]（其余同）
-#       [CKPT_DIR=$TRAIN_RUNS/mme_vla_suite_b128/$RUN_NAME/$CKPT_ID] [SEED=42] [LOG_PREFIX=ev40k] [POLICY_MEM_FRACTION=0.4] [ROBOMME_PY=…]
+#       [CKPT_DIR=$TRAIN_RUNS/mme_vla_suite_b128/$RUN_NAME/$CKPT_ID] [SEED=42] [DATASET=test|val] [LOG_PREFIX=ev40k] [POLICY_MEM_FRACTION=0.4] [ROBOMME_PY=…]
 #       bash scripts/training/prod/eval_shard.sh
 #   结果   v1-store/evaluation/<RUN_NAME>-<SHARD>/ckpt<CKPT_ID>/seed<SEED>/{progress.json,log.json,videos/}（SHARD = <TASK>-<K> 或 w<K>）
+#          DATASET≠test 时 seed 段改为 <DATASET>-seed<SEED>（eval.py::setup_save_directory），与 test 结果分家、互不覆盖。
+#          每集在驱动日志留一行 EVAL_EPISODE split=… task=… ep=… env_seed=… difficulty=…，自证跑的确实是该 split。
 #   server v1-store/logs/<LOG_PREFIX>-<SHARD>.server.log（含 TIMING add_buffer_ms / infer_ms 行）
 #   本脚本 stdout 由 eval_all_shards.sh 经 tee 落 v1-store/logs/<LOG_PREFIX>-<SHARD>.log，结束写 EXIT_CODE=。
 #   断点续评：eval.py 按 progress.json 跳过已评集，同参数重跑即续。
@@ -38,6 +40,7 @@ RUN_NAME="${RUN_NAME:-awsprod40k-b128-motion}"
 CKPT_ID="${CKPT_ID:-39999}"
 CKPT_DIR="${CKPT_DIR:-${TRAIN_RUNS}/mme_vla_suite_b128/${RUN_NAME}/${CKPT_ID}}"
 SEED="${SEED:-42}"
+DATASET="${DATASET:-test}"           # benchmark split：test（默认，历史行为）/ val / train
 LOG_PREFIX="${LOG_PREFIX:-ev40k}"
 POLICY_MEM_FRACTION="${POLICY_MEM_FRACTION:-0.4}"
 # 环境 B 的 robomme 仿真环境（run_t3_eval_obs.sh 默认的 $HOME/micromamba 在本机不存在）
@@ -67,7 +70,7 @@ if [[ -n "$(git -C "${REPO_ROOT}" status --porcelain | head -c 1)" ]]; then
   echo "错误: 工作区不干净——正式评估必须从 clean HEAD 起（AGENTS 12）" >&2; exit 1
 fi
 mkdir -p "${LOGS_DIR}" "${V1_STORE}/evaluation"
-echo "=== EVAL_SHARD shard=${SHARD} HEAD=$(git -C "${REPO_ROOT}" rev-parse HEAD) ckpt=${CKPT_DIR} run_kind=${RUN_KIND} gpu=${GPU} port=${PORT} seed=${SEED} tasks=${TASKS} ep_start=${EP_START} ep_stride=${EP_STRIDE} ep_count=${EP_COUNT} policy_name=${POLICY_NAME} mem_fraction=${POLICY_MEM_FRACTION} start=$(date '+%F %T') ==="
+echo "=== EVAL_SHARD shard=${SHARD} HEAD=$(git -C "${REPO_ROOT}" rev-parse HEAD) ckpt=${CKPT_DIR} run_kind=${RUN_KIND} gpu=${GPU} port=${PORT} seed=${SEED} dataset=${DATASET} tasks=${TASKS} ep_start=${EP_START} ep_stride=${EP_STRIDE} ep_count=${EP_COUNT} policy_name=${POLICY_NAME} mem_fraction=${POLICY_MEM_FRACTION} start=$(date '+%F %T') ==="
 cd "${REPO_ROOT}"
 # ── policy server（后台）：CUDA_VISIBLE_DEVICES 只作用于 policy 进程；sidecar 子进程的卡号由 MMEVLA_MOTION_ONLINE_GPU 给（绝对卡号）──
 CUDA_VISIBLE_DEVICES="${GPU}" MMEVLA_MOTION_ONLINE_GPU="${GPU}" XLA_PYTHON_CLIENT_MEM_FRACTION="${POLICY_MEM_FRACTION}" UV_LINK_MODE=copy PYTHONUNBUFFERED=1 \
@@ -88,7 +91,8 @@ echo "server 端口就绪 $(date +%T)"
 RC=0
 ( cd examples/robomme && CUDA_VISIBLE_DEVICES="${GPU}" PYTHONUNBUFFERED=1 "${ROBOMME_PY}" eval.py --args.port="${PORT}" --args.model_seed="${SEED}" \
     --args.policy_name="${POLICY_NAME}" --args.model_ckpt_id="${CKPT_ID}" --args.only_tasks="${TASKS}" \
-    --args.episode_start="${EP_START}" --args.max_episodes="${EP_COUNT}" --args.episode_stride="${EP_STRIDE}" --args.save_dir="${V1_STORE}/evaluation" ) 2>&1 || RC=$?
+    --args.episode_start="${EP_START}" --args.max_episodes="${EP_COUNT}" --args.episode_stride="${EP_STRIDE}" \
+    --args.dataset="${DATASET}" --args.save_dir="${V1_STORE}/evaluation" ) 2>&1 || RC=$?
 echo "EVAL_RC=${RC} end=$(date '+%F %T')"
 # 汇总 TIMING（同 run_t3_eval_obs.sh）
 UV_LINK_MODE=copy uv run --no-sync python - "${SERVER_LOG}" <<'PYEOF' 2>&1 | grep -v "dev-dependencies" || true

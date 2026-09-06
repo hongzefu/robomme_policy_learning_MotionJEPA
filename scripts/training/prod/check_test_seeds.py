@@ -5,9 +5,10 @@
 episode_config_resolver.py 读 env_metadata/test/record_dataset_<task>_metadata.json 的 records[].{episode,seed,difficulty}，
 每集按该 seed 建环境（resolve_episode）；训练数据 = 原始 H5 episode_*/setup/seed（4task-motion-400ep 库由这 4 个 H5 建成）。
 判定行：
-  TEST_SEED_DISJOINT=PASS|FAIL test=<n>x<任务数> train_h5=<n>x<任务数> overlap=<k>   test seed 与训练 H5 seed 的交集（须 0）且 test 集 0..n-1 连续
+  <SPLIT>_SEED_DISJOINT=PASS|FAIL <split>=<n>x<任务数> train_h5=<n>x<任务数> overlap=<k>   被核 split 的 seed 与训练 H5 seed 的交集（须 0）且集号 0..n-1 连续
+                                                                                    （--split test 默认，输出与历史逐字节一致；--split val 核 env_metadata/val）
   TRAIN_H5_IN_TRAIN_SPLIT=PASS|FAIL missing=<k>                                    训练 H5 seed 是否全部落在 env_metadata/train 内
-用法：UV_LINK_MODE=copy uv run --no-sync python scripts/training/prod/check_test_seeds.py --out <records>/test_seeds.json
+用法：UV_LINK_MODE=copy uv run --no-sync python scripts/training/prod/check_test_seeds.py [--split test|val] --out <records>/test_seeds.json
 """
 
 from __future__ import annotations
@@ -32,6 +33,8 @@ def load_split(meta_dir: pathlib.Path, split: str, task: str) -> list[dict]:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--metadata-dir", default=str(_REPO_ROOT / "third_party/robomme_benchmark/src/robomme/env_metadata"))
+    ap.add_argument("--split", choices=("val", "test"), default="test",
+                    help="被核对的评估 split（判定行 tag 随之变为 TEST_/VAL_SEED_DISJOINT）")
     ap.add_argument("--h5-dir", default="/scratch/hongze/robomme_data_h5")
     ap.add_argument("--tasks", default=TASKS)
     ap.add_argument("--expect-test", type=int, default=50, help="每任务 test 集数（eval.py 现行 50）")
@@ -43,7 +46,7 @@ def main() -> int:
     overlap_total = missing_total = 0
     shape_ok_all = True
     for task in tasks:
-        test = load_split(meta, "test", task)
+        test = load_split(meta, args.split, task)
         train_split = {r["seed"] for r in load_split(meta, "train", task)}
         with h5py.File(h5dir / f"record_dataset_{task}.h5", "r") as f:
             h5_seeds = {k: int(f[k]["setup"]["seed"][()]) for k in f.keys() if k.startswith("episode_")}
@@ -66,8 +69,10 @@ def main() -> int:
               f" | overlap={len(overlap)} missing_in_train_split={len(missing)}")
     n_test = "/".join(map(str, sorted({v["test_count"] for v in rep.values()})))
     n_h5 = "/".join(map(str, sorted({v["train_h5_episodes"] for v in rep.values()})))
-    l1 = (f"TEST_SEED_DISJOINT={'PASS' if overlap_total == 0 and shape_ok_all else 'FAIL'} test={n_test}x{len(tasks)}"
-          f" train_h5={n_h5}x{len(tasks)} overlap={overlap_total} test_episodes_contiguous={shape_ok_all}")
+    # tag 随 split 变：--split test 时逐字节维持历史输出 TEST_SEED_DISJOINT=… test=50x4 …
+    tag, key = args.split.upper(), args.split
+    l1 = (f"{tag}_SEED_DISJOINT={'PASS' if overlap_total == 0 and shape_ok_all else 'FAIL'} {key}={n_test}x{len(tasks)}"
+          f" train_h5={n_h5}x{len(tasks)} overlap={overlap_total} {key}_episodes_contiguous={shape_ok_all}")
     l2 = f"TRAIN_H5_IN_TRAIN_SPLIT={'PASS' if missing_total == 0 else 'FAIL'} missing={missing_total}"
     print(l1)
     print(l2)

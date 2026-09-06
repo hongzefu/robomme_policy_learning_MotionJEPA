@@ -5,13 +5,16 @@
   task   ：<eval-root>/<run>-<task>-<k>/ckpt<id>/seed<seed>/{progress.json,log.json,videos/*.mp4}（每任务 --shards 片，旧口径）
   stride ：<eval-root>/<run>-w<k>/ckpt<id>/seed<seed>/…（--shards 个 worker，每个跑全部任务、集号交错；留档 eval-official-framesamp-context/）
   <logs-dir>/<prefix>-<分片名>.log（EVAL_SHARD 起止行）与 <prefix>-<分片名>.server.log（TIMING add_buffer_ms / infer_ms 行）
-  <metadata-dir>/test/record_dataset_<task>_metadata.json（seed、难度）
+  <metadata-dir>/<split>/record_dataset_<task>_metadata.json（seed、难度；--split test|val|train，默认 test）
 输出：
   合并 progress.json / log.json / shards.json → <eval-root>/<run>/ckpt<id>/seed<seed>/（与单进程 eval.py 布局一致；视频留各分片目录）
   summary.txt / per_episode.json → --out-dir
 成功率公式与 eval.py::evaluate 相同：任务成功率 = 成功集数 / 该任务集数；总成功率 = 各任务成功率的算术平均。
 逐集三分 success / fail / timeout 取自 eval.py 视频文件名 `<task>_ep<k>_<success_flag>_…mp4`。
 判定行：<TAG>=DONE|INCOMPLETE tasks=<t> episodes=<n>/<N> errors=<e> <task>=<succ>/<n> … mean_rate=<r> timeout=<k>/<n> fail=<k>/<n>
+        SPLIT_SEED_MATCH=PASS|FAIL|SKIP split=<s> n=<k> mismatch=<m> unlogged=<u>
+          逐集自证跑的确实是 --split 那个 split：比对驱动日志 EVAL_EPISODE 行里真正写进 gym.make 的 env_seed
+          与 <metadata-dir>/<split>/ 的 records[].seed。SKIP = 日志里没有 EVAL_EPISODE 行（该行 commitV5.6 起才有）。
 用法：UV_LINK_MODE=copy uv run --no-sync python scripts/training/prod/merge_eval_shards.py --out-dir docs/training-doc/eval-awsprod40k-b128-motion/records [--allow-partial]
       stride 布局：… --layout stride --shards 8 --run-name official-framesamp-context --ckpt-id 79999 --log-prefix evoffctx --tag EVAL_OFFICIAL_CTX --out-dir …
 """
@@ -31,6 +34,8 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 _V1 = pathlib.Path(os.environ.get("MMEVLA_V1_STORE", str(_REPO_ROOT / "v1-store")))
 TASKS = "ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap"
 _VIDEO_RE = re.compile(r"^(?P<task>[A-Za-z]+)_ep(?P<ep>\d+)_(?P<flag>[a-z]+)_")
+_EPISODE_RE = re.compile(r"EVAL_EPISODE split=(?P<split>\S+) task=(?P<task>\S+) ep=(?P<ep>\d+) "
+                         r"env_seed=(?P<seed>\S+) difficulty=(?P<diff>\S+)")
 _TS = "%Y-%m-%d %H:%M:%S"
 
 
@@ -79,8 +84,22 @@ def shard_wall(log: pathlib.Path) -> dict:
     return {"start": start, "end": end, "wall_s": wall, "eval_rc": rc, "exit_code": exit_code}
 
 
-def load_test_meta(meta_dir: pathlib.Path, task: str) -> dict[int, dict]:
-    p = meta_dir / "test" / f"record_dataset_{task}_metadata.json"
+def logged_episodes(log: pathlib.Path) -> dict[tuple[str, int], dict]:
+    """驱动日志里 env_runner.py::make_env 打的 EVAL_EPISODE 行：真正写进 gym.make 的 split / env_seed / difficulty。
+    续评会让同一 (task, ep) 出现两次（崩溃前一次、续评一次），值相同，后写覆盖即可。"""
+    out: dict[tuple[str, int], dict] = {}
+    if not log.is_file():
+        return out
+    for line in open(log, encoding="utf-8", errors="replace"):
+        m = _EPISODE_RE.search(line)
+        if m:
+            out[(m.group("task"), int(m.group("ep")))] = {
+                "split": m.group("split"), "env_seed": m.group("seed"), "difficulty": m.group("diff")}
+    return out
+
+
+def load_test_meta(meta_dir: pathlib.Path, task: str, split: str = "test") -> dict[int, dict]:
+    p = meta_dir / split / f"record_dataset_{task}_metadata.json"
     if not p.is_file():
         return {}
     payload = json.loads(p.read_text(encoding="utf-8"))
@@ -92,6 +111,8 @@ def main() -> int:
     ap.add_argument("--run-name", default="awsprod40k-b128-motion")
     ap.add_argument("--ckpt-id", type=int, default=39999)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--split", choices=("train", "val", "test"), default="test",
+                    help="benchmark split；非 test 时分片 / 合并目录的 seed 段为 <split>-seed<n>（同 eval.py::setup_save_directory）")
     ap.add_argument("--tasks", default=TASKS)
     ap.add_argument("--layout", choices=("task", "stride"), default="task",
                     help="task=旧布局 <run>-<task>-<k>（每任务 --shards 片）；stride=新布局 <run>-w<k>（--shards 即 worker 数）")
@@ -108,10 +129,13 @@ def main() -> int:
     tasks = args.tasks.split(",")
     eval_root, logs_dir, meta_dir = pathlib.Path(args.eval_root), pathlib.Path(args.logs_dir), pathlib.Path(args.metadata_dir)
     N = args.episodes_per_task
+    # 与 eval.py::setup_save_directory 同一拼法：test 保持历史路径不变，其余 split 另开一段
+    seed_seg = f"seed{args.seed}" if args.split == "test" else f"{args.split}-seed{args.seed}"
 
     per_task: dict[str, dict[int, object]] = {t: {} for t in tasks}
     flags: dict[tuple[str, int], str] = {}
     shard_of: dict[tuple[str, int], str] = {}
+    logged: dict[tuple[str, int], dict] = {}   # (task, ep) -> EVAL_EPISODE 行内容（split / env_seed / difficulty）
     shards: list[dict] = []
     # 分片单元表 (label, 结果目录名, 日志名去后缀)：task 布局按任务 × 片枚举，stride 布局按 worker 枚举；后续统计只认 progress.json 内容
     if args.layout == "stride":
@@ -119,7 +143,7 @@ def main() -> int:
     else:
         units = [(f"{t}-{k}", f"{args.run_name}-{t}-{k}", f"{args.log_prefix}-{t}-{k}") for t in tasks for k in range(args.shards)]
     for label, dirname, logbase in units:
-        d = eval_root / dirname / f"ckpt{args.ckpt_id}" / f"seed{args.seed}"
+        d = eval_root / dirname / f"ckpt{args.ckpt_id}" / seed_seg
         pj = d / "progress.json"
         info = {"shard": label, "dir": str(d), "has_progress": pj.is_file(), "finished": (d / "log.json").is_file(), "episodes": 0}
         if pj.is_file():
@@ -135,14 +159,17 @@ def main() -> int:
                     flags[(m.group("task"), int(m.group("ep")))] = m.group("flag")
         info["wall"] = shard_wall(logs_dir / f"{logbase}.log")
         info["timing"] = timing(logs_dir / f"{logbase}.server.log")
+        logged.update(logged_episodes(logs_dir / f"{logbase}.log"))
         shards.append(info)
 
     rates: dict[str, dict] = {}
     per_episode: list[dict] = []
     n_total = n_succ = n_err = n_timeout = n_fail = 0
+    n_logged = n_mismatch = n_unlogged = 0
+    mismatches: list[str] = []
     complete = all(s["finished"] for s in shards)
     for task in tasks:
-        meta = load_test_meta(meta_dir, task)
+        meta = load_test_meta(meta_dir, task, args.split)
         eps = per_task.get(task, {})
         missing = sorted(set(range(N)) - set(eps))
         extra = sorted(set(eps) - set(range(N)))
@@ -160,8 +187,19 @@ def main() -> int:
                 n_timeout += 1
             elif v is False:
                 n_fail += 1
+            lg = logged.get((task, e))
+            if lg is None:
+                n_unlogged += 1
+            else:
+                n_logged += 1
+                meta_seed = meta.get(e, {}).get("seed")
+                if lg["split"] != args.split or meta_seed is None or str(meta_seed) != lg["env_seed"]:
+                    n_mismatch += 1
+                    mismatches.append(f"{task} ep{e}: 日志 split={lg['split']} env_seed={lg['env_seed']} "
+                                      f"vs 期望 split={args.split} seed={meta_seed}")
             per_episode.append({"task": task, "episode": e, "seed": meta.get(e, {}).get("seed"), "difficulty": diff,
-                                "success": v, "flag": flag, "shard": shard_of.get((task, e))})
+                                "success": v, "flag": flag, "shard": shard_of.get((task, e)),
+                                "env_seed_logged": (lg or {}).get("env_seed"), "split_logged": (lg or {}).get("split")})
         n = len(eps)
         rate = (succ / n) if n else None
         rates[task] = {"episodes": n, "success": succ, "error": len(errs), "rate": rate, "missing": missing, "extra": extra,
@@ -181,7 +219,12 @@ def main() -> int:
             + f" mean_rate={mean_rate:.4f} timeout={n_timeout}/{n_total} fail={n_fail}/{n_total}" if mean_rate is not None else
             f"{args.tag}={status} tasks={len(tasks)} episodes=0/{N * len(tasks)} errors=0 mean_rate=NA")
 
-    lines = [head, ""]
+    split_status = "SKIP" if n_logged == 0 else ("PASS" if n_mismatch == 0 else "FAIL")
+    split_line = (f"SPLIT_SEED_MATCH={split_status} split={args.split} n={n_logged} "
+                  f"mismatch={n_mismatch} unlogged={n_unlogged}")
+    lines = [head, split_line]
+    lines += ["  " + m for m in mismatches[:20]]
+    lines += [""]
     lines.append("| 任务 | 成功/集数 | 成功率 | timeout | fail | 按难度 成功/集数 | 缺集 | error |")
     lines.append("|---|---|---|---|---|---|---|---|")
     for t in tasks:
@@ -206,9 +249,10 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "summary.txt").write_text(summary, encoding="utf-8")
     (out_dir / "per_episode.json").write_text(json.dumps(
-        {"line": head, "rates": rates, "mean_rate": mean_rate, "shards": shards, "episodes": per_episode}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        {"line": head, "split_seed_match": split_line, "split": args.split, "split_mismatches": mismatches,
+         "rates": rates, "mean_rate": mean_rate, "shards": shards, "episodes": per_episode}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     if complete:
-        merged = eval_root / args.run_name / f"ckpt{args.ckpt_id}" / f"seed{args.seed}"
+        merged = eval_root / args.run_name / f"ckpt{args.ckpt_id}" / seed_seg
         merged.mkdir(parents=True, exist_ok=True)
         (merged / "progress.json").write_text(json.dumps({t: {str(e): per_task[t][e] for e in sorted(per_task[t])} for t in tasks}, indent=2) + "\n", encoding="utf-8")
         (merged / "log.json").write_text(json.dumps({"success_rate": {t: rates[t]["rate"] for t in tasks}, "total_success_rate": mean_rate}, indent=2) + "\n", encoding="utf-8")
