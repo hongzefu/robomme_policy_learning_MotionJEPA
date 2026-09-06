@@ -118,6 +118,46 @@ VideoPlaceOrder 的 32 个采样帧里还有 26 个落在 demo 段，真正看�
 - **采样间隔在 hard 档整体变疏**：BinFill 20.0 → 28.0 帧、PickXtimes 17.6 → 26.2 帧。
   帧路预算固定 32，难度越高时间分辨率越差，正是最需要看清的时候。
 
+## 帧路预算 32 vs 8，与 dataset 的 subgoal 覆盖
+
+数据集每帧带 `info/is_subgoal_boundary` 与 `simple_subgoal`，据此把一集切成 subgoal 段
+（demo 段的 subgoal 恒为 `static`；实测 demo/exec 边界本身也是一个 subgoal 边界）。
+把现行 **32 帧**预算（`budget 512 // (16 × 1)`）与 **8 帧**预算（`128 // (16 × 1)`）的采样点
+分别落到这些段上，看每段能不能被看到。下表为 hard 档中位集：
+
+| 组 | 任务 | subgoal 段数 | 最短段 | Δ32 | Δ8 | 32 帧漏段 | 8 帧漏段 |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Counting | BinFill | 10 | 42 | 27.97 | 123.86 | 0 | **2** |
+| Counting | PickXtimes | 12 | 36 | 26.16 | 115.86 | 0 | **4** |
+| Counting | SwingXtimes | 10 | 29 | 15.71 | 69.57 | 0 | **3** |
+| Counting | StopCube | 6 | 27 | 9.94 | 44.0 | 0 | 0 |
+| Persistent | ButtonUnmask | 5 | 11 | 12.0 | 53.14 | 0 | **1** |
+| Persistent | VideoUnmask | 5 | 8 | 10.58 | 46.86 | 0 | 0 |
+| Persistent | VideoUnmaskSwap | 5 | 10 | 14.71 | 65.14 | 0 | 0 |
+| Persistent | ButtonUnmaskSwap | 6 | 12 | 14.84 | 65.71 | 0 | 0 |
+| Referential | PickHighlight | 7 | 15 | 17.35 | 76.86 | 0 | 0 |
+| Referential | VideoRepick | 8 | 36 | 17.48 | 77.43 | 0 | **1** |
+| Referential | VideoPlaceButton | 12 | 18 | 30.97 | 137.14 | 0 | **4** |
+| Referential | VideoPlaceOrder | 14 | 13 | 35.94 | 159.14 | 0 | **6** |
+| Behavior | MoveCube | 6 | 12 | 13.39 | 59.29 | 0 | 0 |
+| Behavior | InsertPeg | 5 | 12 | 14.94 | 66.14 | 0 | 0 |
+| Behavior | PatternLock | 11 | 10 | 10.42 | 46.14 | 0 | **3** |
+| Behavior | RouteStick | 11 | 7 | 16.1 | 71.29 | 0 | **3** |
+| **合计** | 16 个中位集 | **133** | — | — | — | **0（0%）** | **27（20%）** |
+
+**结论：32 帧一段不漏，8 帧漏掉五分之一。**
+hard 档 16 个中位集共 133 个 subgoal 段，32 帧预算下**每段至少采到 1 帧（漏 0 段）**；
+降到 8 帧后有 **27 段（20%）完全没有采样点**——该 subgoal 在视觉输入里没有任何证据。
+
+原因是量级不匹配：8 帧的采样间隔 Δ = t/7 落在 44–159 帧，而 subgoal 段长中位只有几十帧。
+最严重的是 VideoPlaceOrder（14 段漏 6 段，Δ8 = 159.1 帧）、PickXtimes 与 VideoPlaceButton（各漏 4 段）。
+PatternLock 与 RouteStick 的段长本身就短（最短 10 / 7 帧、RouteStick 每段恒 50 帧），
+Δ8 分别是 46.1 / 71.3 帧，平均要跨过 1–1.4 个完整 subgoal 才采一帧。
+
+反过来看 32 帧预算的余量并不大：PatternLock 的 Δ32 = 10.4 帧对最短段 10 帧，
+VideoPlaceOrder 的 Δ32 = 35.9 帧对最短段 13 帧——后者已经是"靠运气正好落进去"，
+再压预算就会开始漏段。
+
 ## 与在线 rollout 口径的差异（不可混比）
 
 | 任务 | 数据集示范（本轮） | eval rollout（`eval-official-framesamp-context`） |

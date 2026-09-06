@@ -26,6 +26,8 @@ import pathlib
 import statistics
 import sys
 
+import h5py
+
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
@@ -35,6 +37,7 @@ from mme_vla_suite.datastore import motion_store as ms          # noqa: E402
 from mme_vla_suite.shared.sampling import even_sampling_indices  # noqa: E402
 
 FRAME_BUDGET = 32          # = budget 512 // (token_per_image 16 × num_views 1)，与在线/训练同值
+FRAME_BUDGETS = (32, 8)    # 另算一档 8 帧（= budget 128）作对照：帧路预算直接决定采样间隔 Δ = t/(B-1)
 MOTION_BUDGET = 96         # motion.budget，零截断契约上限
 
 # 官方四组分类（scripts/training/compute_results.py::TASK_SUITES）
@@ -55,6 +58,36 @@ def task_of(h5_file: str) -> str:
     return h5_file.replace("record_dataset_", "").replace(".h5", "")
 
 
+RAW_DIR: pathlib.Path | None = None
+_SUBGOAL_CACHE: dict = {}
+
+
+def read_subgoals(h5_file: str, ep: int, num_timesteps: int, es: int) -> list[dict]:
+    """逐帧读 ``info/is_subgoal_boundary`` 切出 subgoal 分段，段文本取 ``simple_subgoal``。
+
+    demo 段的 subgoal 恒为 ``static``；实测 demo/exec 边界本身也是一个 subgoal 边界。
+    """
+    key = (h5_file, ep)
+    if key in _SUBGOAL_CACHE:
+        return _SUBGOAL_CACHE[key]
+    bounds, texts = [], {}
+    with h5py.File(RAW_DIR / h5_file, "r") as f:
+        g = f[f"episode_{ep}"]
+        for t in range(num_timesteps):
+            info = g[f"timestep_{t}"]["info"]
+            if bool(info["is_subgoal_boundary"][()]):
+                bounds.append(t)
+                v = info["simple_subgoal"][()]
+                texts[t] = v.decode() if isinstance(v, bytes) else str(v)
+    segs = []
+    for i, b in enumerate(bounds):
+        end = bounds[i + 1] if i + 1 < len(bounds) else num_timesteps
+        segs.append({"start": b, "end": end, "len": end - b,
+                     "text": texts.get(b, ""), "is_demo": b < es})
+    _SUBGOAL_CACHE[key] = segs
+    return segs
+
+
 def dist(xs: list[int]) -> dict:
     s = sorted(xs)
     return {"min": s[0], "p25": s[len(s) // 4], "median": statistics.median_high(s),
@@ -65,9 +98,14 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--raw-dir", default="",
+                    help="原始 H5 目录；给了才读 subgoal 分段（只对每个中位集读，不全扫）")
     ap.add_argument("--difficulty-map", default="",
                     help="{'<h5>|<raw_ep_idx>': 'easy|medium|hard'} 的 json；给了才分难度档")
     args = ap.parse_args()
+
+    global RAW_DIR
+    RAW_DIR = pathlib.Path(args.raw_dir) if args.raw_dir else None
 
     manifest = json.loads(pathlib.Path(args.manifest).read_text())
     entries = ms.build_index_entries(manifest)      # 段基址与每段 num_grid 全部由它算
@@ -89,6 +127,18 @@ def main() -> None:
         n_demo = ms.seg_num_grid(med.demo.seg_len)
         n_exec_vis = len(ms.visible_motion_rows(med, t)[0]) - n_demo
         total_vis = ms.max_visible_count(med)
+        paths = {}
+        for B in FRAME_BUDGETS:
+            fi = even_sampling_indices(t, B)
+            gp = [b - a for a, b in zip(fi, fi[1:])]
+            paths[str(B)] = {
+                "frame_samples": len(fi),
+                "delta_mean": round(t / (B - 1), 2) if t >= B else None,
+                "delta_min": min(gp) if gp else None,
+                "delta_max": max(gp) if gp else None,
+                "frames_in_demo": sum(1 for f in fi if f < med.exec_start_idx),
+                "indices": fi if B <= 8 else None,   # 8 帧档把采样点原样带上，画图直接用
+            }
         fidx = even_sampling_indices(t, FRAME_BUDGET)
         gaps = [b - a for a, b in zip(fidx, fidx[1:])]
         return {
@@ -109,6 +159,9 @@ def main() -> None:
                 "delta_min": min(gaps) if gaps else None,
                 "delta_max": max(gaps) if gaps else None,
                 "frames_in_demo": sum(1 for f in fidx if f < med.exec_start_idx),
+                "frame_paths": paths,
+                "subgoals": read_subgoals(med.h5_file, med.raw_ep_idx, med.num_timesteps,
+                                          med.exec_start_idx) if RAW_DIR else [],
             },
             "num_timesteps": dist(nts),
             "exec_start_idx": dist([e.exec_start_idx for e in eps]),
@@ -140,6 +193,7 @@ def main() -> None:
         "source_manifest": args.manifest,
         "split": "train",
         "frame_budget": FRAME_BUDGET,
+        "frame_budgets": list(FRAME_BUDGETS),
         "motion_budget": MOTION_BUDGET,
         "grid": {"stride": ms.GRID_STRIDE, "window_frames": ms.WINDOW_FRAMES,
                  "origin": ms.GRID_ORIGIN, "direction": ms.WINDOW_DIRECTION},

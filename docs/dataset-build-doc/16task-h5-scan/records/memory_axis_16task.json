@@ -2,6 +2,10 @@
   "source_manifest": "v1-store/datasets/16task-scan/episode_manifest.json",
   "split": "train",
   "frame_budget": 32,
+  "frame_budgets": [
+    32,
+    8
+  ],
   "motion_budget": 96,
   "grid": {
     "stride": 16,
@@ -70,7 +74,92 @@
         "delta_mean": 20.03,
         "delta_min": 20,
         "delta_max": 21,
-        "frames_in_demo": 0
+        "frames_in_demo": 0,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 20.03,
+            "delta_min": 20,
+            "delta_max": 21,
+            "frames_in_demo": 0,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 88.71,
+            "delta_min": 88,
+            "delta_max": 89,
+            "frames_in_demo": 0,
+            "indices": [
+              0,
+              88,
+              177,
+              266,
+              354,
+              443,
+              532,
+              621
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 109,
+            "len": 109,
+            "text": "pick up the first blue cube",
+            "is_demo": false
+          },
+          {
+            "start": 109,
+            "end": 167,
+            "len": 58,
+            "text": "put it into the bin",
+            "is_demo": false
+          },
+          {
+            "start": 167,
+            "end": 287,
+            "len": 120,
+            "text": "pick up the second blue cube",
+            "is_demo": false
+          },
+          {
+            "start": 287,
+            "end": 354,
+            "len": 67,
+            "text": "put it into the bin",
+            "is_demo": false
+          },
+          {
+            "start": 354,
+            "end": 457,
+            "len": 103,
+            "text": "pick up the third blue cube",
+            "is_demo": false
+          },
+          {
+            "start": 457,
+            "end": 516,
+            "len": 59,
+            "text": "put it into the bin",
+            "is_demo": false
+          },
+          {
+            "start": 516,
+            "end": 579,
+            "len": 63,
+            "text": "press the button",
+            "is_demo": false
+          },
+          {
+            "start": 579,
+            "end": 622,
+            "len": 43,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 266,
@@ -118,7 +207,57 @@
         "delta_mean": 7.39,
         "delta_min": 7,
         "delta_max": 8,
-        "frames_in_demo": 0
+        "frames_in_demo": 0,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 7.39,
+            "delta_min": 7,
+            "delta_max": 8,
+            "frames_in_demo": 0,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 32.71,
+            "delta_min": 32,
+            "delta_max": 33,
+            "frames_in_demo": 0,
+            "indices": [
+              0,
+              32,
+              65,
+              98,
+              130,
+              163,
+              196,
+              229
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 111,
+            "len": 111,
+            "text": "press the button",
+            "is_demo": false
+          },
+          {
+            "start": 111,
+            "end": 218,
+            "len": 107,
+            "text": "pick up the container that hides the green cube",
+            "is_demo": false
+          },
+          {
+            "start": 218,
+            "end": 230,
+            "len": 12,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 198,
@@ -166,7 +305,78 @@
         "delta_mean": 14.32,
         "delta_min": 14,
         "delta_max": 15,
-        "frames_in_demo": 0
+        "frames_in_demo": 0,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 14.32,
+            "delta_min": 14,
+            "delta_max": 15,
+            "frames_in_demo": 0,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 63.43,
+            "delta_min": 63,
+            "delta_max": 64,
+            "frames_in_demo": 0,
+            "indices": [
+              0,
+              63,
+              126,
+              190,
+              253,
+              317,
+              380,
+              444
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 115,
+            "len": 115,
+            "text": "press the first button",
+            "is_demo": false
+          },
+          {
+            "start": 115,
+            "end": 208,
+            "len": 93,
+            "text": "press the second button",
+            "is_demo": false
+          },
+          {
+            "start": 208,
+            "end": 304,
+            "len": 96,
+            "text": "pick up the container that hides the green cube",
+            "is_demo": false
+          },
+          {
+            "start": 304,
+            "end": 354,
+            "len": 50,
+            "text": "put down the container",
+            "is_demo": false
+          },
+          {
+            "start": 354,
+            "end": 436,
+            "len": 82,
+            "text": "pick up the container that hides the red cube",
+            "is_demo": false
+          },
+          {
+            "start": 436,
+            "end": 445,
+            "len": 9,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 297,
@@ -214,7 +424,71 @@
         "delta_mean": 15.35,
         "delta_min": 15,
         "delta_max": 16,
-        "frames_in_demo": 16
+        "frames_in_demo": 16,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 15.35,
+            "delta_min": 15,
+            "delta_max": 16,
+            "frames_in_demo": 16,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 68.0,
+            "delta_min": 68,
+            "delta_max": 68,
+            "frames_in_demo": 4,
+            "indices": [
+              0,
+              68,
+              136,
+              204,
+              272,
+              340,
+              408,
+              476
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 124,
+            "len": 124,
+            "text": "Pick up the peg by grasping the far end",
+            "is_demo": true
+          },
+          {
+            "start": 124,
+            "end": 240,
+            "len": 116,
+            "text": "Insert the peg from the left side of the box",
+            "is_demo": true
+          },
+          {
+            "start": 240,
+            "end": 364,
+            "len": 124,
+            "text": "Pick up the peg by grasping the far end",
+            "is_demo": false
+          },
+          {
+            "start": 364,
+            "end": 465,
+            "len": 101,
+            "text": "Insert the peg from the left side",
+            "is_demo": false
+          },
+          {
+            "start": 465,
+            "end": 477,
+            "len": 12,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 406,
@@ -262,7 +536,78 @@
         "delta_mean": 14.19,
         "delta_min": 14,
         "delta_max": 15,
-        "frames_in_demo": 19
+        "frames_in_demo": 19,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 14.19,
+            "delta_min": 14,
+            "delta_max": 15,
+            "frames_in_demo": 19,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 62.86,
+            "delta_min": 62,
+            "delta_max": 63,
+            "frames_in_demo": 5,
+            "indices": [
+              0,
+              62,
+              125,
+              188,
+              251,
+              314,
+              377,
+              440
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 114,
+            "len": 114,
+            "text": "Pick up the cube",
+            "is_demo": true
+          },
+          {
+            "start": 114,
+            "end": 198,
+            "len": 84,
+            "text": "place the cube onto the target",
+            "is_demo": true
+          },
+          {
+            "start": 198,
+            "end": 258,
+            "len": 60,
+            "text": "static",
+            "is_demo": true
+          },
+          {
+            "start": 258,
+            "end": 364,
+            "len": 106,
+            "text": "Pick up the cube",
+            "is_demo": false
+          },
+          {
+            "start": 364,
+            "end": 424,
+            "len": 60,
+            "text": "place the cube onto the target",
+            "is_demo": false
+          },
+          {
+            "start": 424,
+            "end": 441,
+            "len": 17,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 247,
@@ -310,7 +655,85 @@
         "delta_mean": 6.16,
         "delta_min": 6,
         "delta_max": 7,
-        "frames_in_demo": 16
+        "frames_in_demo": 16,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 6.16,
+            "delta_min": 6,
+            "delta_max": 7,
+            "frames_in_demo": 16,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 27.29,
+            "delta_min": 27,
+            "delta_max": 28,
+            "frames_in_demo": 4,
+            "indices": [
+              0,
+              27,
+              54,
+              81,
+              109,
+              136,
+              163,
+              191
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 25,
+            "len": 25,
+            "text": "move right",
+            "is_demo": true
+          },
+          {
+            "start": 25,
+            "end": 63,
+            "len": 38,
+            "text": "move backward-left",
+            "is_demo": true
+          },
+          {
+            "start": 63,
+            "end": 96,
+            "len": 33,
+            "text": "move right",
+            "is_demo": true
+          },
+          {
+            "start": 96,
+            "end": 121,
+            "len": 25,
+            "text": "move right",
+            "is_demo": false
+          },
+          {
+            "start": 121,
+            "end": 159,
+            "len": 38,
+            "text": "move backward-left",
+            "is_demo": false
+          },
+          {
+            "start": 159,
+            "end": 178,
+            "len": 19,
+            "text": "move right",
+            "is_demo": false
+          },
+          {
+            "start": 178,
+            "end": 192,
+            "len": 14,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 48,
@@ -358,7 +781,71 @@
         "delta_mean": 11.03,
         "delta_min": 11,
         "delta_max": 12,
-        "frames_in_demo": 0
+        "frames_in_demo": 0,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 11.03,
+            "delta_min": 11,
+            "delta_max": 12,
+            "frames_in_demo": 0,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 48.86,
+            "delta_min": 48,
+            "delta_max": 49,
+            "frames_in_demo": 0,
+            "indices": [
+              0,
+              48,
+              97,
+              146,
+              195,
+              244,
+              293,
+              342
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 117,
+            "len": 117,
+            "text": "press the button",
+            "is_demo": false
+          },
+          {
+            "start": 117,
+            "end": 212,
+            "len": 95,
+            "text": "pick up the first highlighted cube, which is blue",
+            "is_demo": false
+          },
+          {
+            "start": 212,
+            "end": 262,
+            "len": 50,
+            "text": "place the cube onto the table",
+            "is_demo": false
+          },
+          {
+            "start": 262,
+            "end": 329,
+            "len": 67,
+            "text": "pick up the second highlighted cube, which is red",
+            "is_demo": false
+          },
+          {
+            "start": 329,
+            "end": 343,
+            "len": 14,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 199,
@@ -406,7 +893,92 @@
         "delta_mean": 17.58,
         "delta_min": 17,
         "delta_max": 18,
-        "frames_in_demo": 0
+        "frames_in_demo": 0,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 17.58,
+            "delta_min": 17,
+            "delta_max": 18,
+            "frames_in_demo": 0,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 77.86,
+            "delta_min": 77,
+            "delta_max": 78,
+            "frames_in_demo": 0,
+            "indices": [
+              0,
+              77,
+              155,
+              233,
+              311,
+              389,
+              467,
+              545
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 103,
+            "len": 103,
+            "text": "pick up the blue cube for the first time",
+            "is_demo": false
+          },
+          {
+            "start": 103,
+            "end": 191,
+            "len": 88,
+            "text": "place the blue cube onto the target",
+            "is_demo": false
+          },
+          {
+            "start": 191,
+            "end": 261,
+            "len": 70,
+            "text": "pick up the blue cube for the second time",
+            "is_demo": false
+          },
+          {
+            "start": 261,
+            "end": 317,
+            "len": 56,
+            "text": "place the blue cube onto the target",
+            "is_demo": false
+          },
+          {
+            "start": 317,
+            "end": 387,
+            "len": 70,
+            "text": "pick up the blue cube for the third time",
+            "is_demo": false
+          },
+          {
+            "start": 387,
+            "end": 454,
+            "len": 67,
+            "text": "place the blue cube onto the target",
+            "is_demo": false
+          },
+          {
+            "start": 454,
+            "end": 512,
+            "len": 58,
+            "text": "press the button to stop",
+            "is_demo": false
+          },
+          {
+            "start": 512,
+            "end": 546,
+            "len": 34,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 266,
@@ -454,7 +1026,99 @@
         "delta_mean": 12.87,
         "delta_min": 12,
         "delta_max": 13,
-        "frames_in_demo": 16
+        "frames_in_demo": 16,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 12.87,
+            "delta_min": 12,
+            "delta_max": 13,
+            "frames_in_demo": 16,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 57.0,
+            "delta_min": 57,
+            "delta_max": 57,
+            "frames_in_demo": 4,
+            "indices": [
+              0,
+              57,
+              114,
+              171,
+              228,
+              285,
+              342,
+              399
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 50,
+            "len": 50,
+            "text": "move to the nearest left target by circling around the stick counterclockwise",
+            "is_demo": true
+          },
+          {
+            "start": 50,
+            "end": 100,
+            "len": 50,
+            "text": "move to the nearest left target by circling around the stick clockwise",
+            "is_demo": true
+          },
+          {
+            "start": 100,
+            "end": 150,
+            "len": 50,
+            "text": "move to the nearest right target by circling around the stick counterclockwise",
+            "is_demo": true
+          },
+          {
+            "start": 150,
+            "end": 200,
+            "len": 50,
+            "text": "move to the nearest right target by circling around the stick clockwise",
+            "is_demo": true
+          },
+          {
+            "start": 200,
+            "end": 250,
+            "len": 50,
+            "text": "move to the nearest left target by circling around the stick counterclockwise",
+            "is_demo": false
+          },
+          {
+            "start": 250,
+            "end": 300,
+            "len": 50,
+            "text": "move to the nearest left target by circling around the stick clockwise",
+            "is_demo": false
+          },
+          {
+            "start": 300,
+            "end": 350,
+            "len": 50,
+            "text": "move to the nearest right target by circling around the stick counterclockwise",
+            "is_demo": false
+          },
+          {
+            "start": 350,
+            "end": 393,
+            "len": 43,
+            "text": "move to the nearest right target by circling around the stick clockwise",
+            "is_demo": false
+          },
+          {
+            "start": 393,
+            "end": 400,
+            "len": 7,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 200,
@@ -502,7 +1166,78 @@
         "delta_mean": 10.0,
         "delta_min": 10,
         "delta_max": 10,
-        "frames_in_demo": 0
+        "frames_in_demo": 0,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 10.0,
+            "delta_min": 10,
+            "delta_max": 10,
+            "frames_in_demo": 0,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 44.29,
+            "delta_min": 44,
+            "delta_max": 45,
+            "frames_in_demo": 0,
+            "indices": [
+              0,
+              44,
+              88,
+              132,
+              177,
+              221,
+              265,
+              310
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 57,
+            "len": 57,
+            "text": "move to the top of the button to prepare",
+            "is_demo": false
+          },
+          {
+            "start": 57,
+            "end": 105,
+            "len": 48,
+            "text": "remain static",
+            "is_demo": false
+          },
+          {
+            "start": 105,
+            "end": 201,
+            "len": 96,
+            "text": "remain static",
+            "is_demo": false
+          },
+          {
+            "start": 201,
+            "end": 243,
+            "len": 42,
+            "text": "remain static",
+            "is_demo": false
+          },
+          {
+            "start": 243,
+            "end": 273,
+            "len": 30,
+            "text": "press the button to stop the cube on the target",
+            "is_demo": false
+          },
+          {
+            "start": 273,
+            "end": 311,
+            "len": 38,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 121,
@@ -550,7 +1285,106 @@
         "delta_mean": 14.32,
         "delta_min": 14,
         "delta_max": 15,
-        "frames_in_demo": 0
+        "frames_in_demo": 0,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 14.32,
+            "delta_min": 14,
+            "delta_max": 15,
+            "frames_in_demo": 0,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 63.43,
+            "delta_min": 63,
+            "delta_max": 64,
+            "frames_in_demo": 0,
+            "indices": [
+              0,
+              63,
+              126,
+              190,
+              253,
+              317,
+              380,
+              444
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 116,
+            "len": 116,
+            "text": "pick up the blue cube",
+            "is_demo": false
+          },
+          {
+            "start": 116,
+            "end": 142,
+            "len": 26,
+            "text": "move to the top of the right-side target for the first time",
+            "is_demo": false
+          },
+          {
+            "start": 142,
+            "end": 178,
+            "len": 36,
+            "text": "move to the top of the left-side target for the first time",
+            "is_demo": false
+          },
+          {
+            "start": 178,
+            "end": 214,
+            "len": 36,
+            "text": "move to the top of the right-side target for the second time",
+            "is_demo": false
+          },
+          {
+            "start": 214,
+            "end": 250,
+            "len": 36,
+            "text": "move to the top of the left-side target for the second time",
+            "is_demo": false
+          },
+          {
+            "start": 250,
+            "end": 286,
+            "len": 36,
+            "text": "move to the top of the right-side target for the third time",
+            "is_demo": false
+          },
+          {
+            "start": 286,
+            "end": 322,
+            "len": 36,
+            "text": "move to the top of the left-side target for the third time",
+            "is_demo": false
+          },
+          {
+            "start": 322,
+            "end": 357,
+            "len": 35,
+            "text": "put the blue cube on the table",
+            "is_demo": false
+          },
+          {
+            "start": 357,
+            "end": 410,
+            "len": 53,
+            "text": "press the button",
+            "is_demo": false
+          },
+          {
+            "start": 410,
+            "end": 445,
+            "len": 35,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 296,
@@ -598,7 +1432,120 @@
         "delta_mean": 30.94,
         "delta_min": 30,
         "delta_max": 31,
-        "frames_in_demo": 25
+        "frames_in_demo": 25,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 30.94,
+            "delta_min": 30,
+            "delta_max": 31,
+            "frames_in_demo": 25,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 137.0,
+            "delta_min": 137,
+            "delta_max": 137,
+            "frames_in_demo": 6,
+            "indices": [
+              0,
+              137,
+              274,
+              411,
+              548,
+              685,
+              822,
+              959
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 105,
+            "len": 105,
+            "text": "pick up the cube",
+            "is_demo": true
+          },
+          {
+            "start": 105,
+            "end": 194,
+            "len": 89,
+            "text": "drop the cube onto target",
+            "is_demo": true
+          },
+          {
+            "start": 194,
+            "end": 290,
+            "len": 96,
+            "text": "press the button",
+            "is_demo": true
+          },
+          {
+            "start": 290,
+            "end": 410,
+            "len": 120,
+            "text": "pick up the cube",
+            "is_demo": true
+          },
+          {
+            "start": 410,
+            "end": 496,
+            "len": 86,
+            "text": "drop the cube onto target",
+            "is_demo": true
+          },
+          {
+            "start": 496,
+            "end": 573,
+            "len": 77,
+            "text": "pick up the cube",
+            "is_demo": true
+          },
+          {
+            "start": 573,
+            "end": 652,
+            "len": 79,
+            "text": "drop the cube onto table",
+            "is_demo": true
+          },
+          {
+            "start": 652,
+            "end": 705,
+            "len": 53,
+            "text": "static",
+            "is_demo": true
+          },
+          {
+            "start": 705,
+            "end": 765,
+            "len": 60,
+            "text": "static",
+            "is_demo": true
+          },
+          {
+            "start": 765,
+            "end": 879,
+            "len": 114,
+            "text": "pick up the cube",
+            "is_demo": false
+          },
+          {
+            "start": 879,
+            "end": 944,
+            "len": 65,
+            "text": "place the cube onto the correct target",
+            "is_demo": false
+          },
+          {
+            "start": 944,
+            "end": 960,
+            "len": 16,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 900,
@@ -646,7 +1593,134 @@
         "delta_mean": 36.39,
         "delta_min": 36,
         "delta_max": 37,
-        "frames_in_demo": 26
+        "frames_in_demo": 26,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 36.39,
+            "delta_min": 36,
+            "delta_max": 37,
+            "frames_in_demo": 26,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 161.14,
+            "delta_min": 161,
+            "delta_max": 162,
+            "frames_in_demo": 6,
+            "indices": [
+              0,
+              161,
+              322,
+              483,
+              644,
+              805,
+              966,
+              1128
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 112,
+            "len": 112,
+            "text": "pick up the cube",
+            "is_demo": true
+          },
+          {
+            "start": 112,
+            "end": 203,
+            "len": 91,
+            "text": "drop the cube onto target",
+            "is_demo": true
+          },
+          {
+            "start": 203,
+            "end": 277,
+            "len": 74,
+            "text": "pick up the cube",
+            "is_demo": true
+          },
+          {
+            "start": 277,
+            "end": 364,
+            "len": 87,
+            "text": "drop the cube onto target",
+            "is_demo": true
+          },
+          {
+            "start": 364,
+            "end": 441,
+            "len": 77,
+            "text": "pick up the cube",
+            "is_demo": true
+          },
+          {
+            "start": 441,
+            "end": 534,
+            "len": 93,
+            "text": "drop the cube onto target",
+            "is_demo": true
+          },
+          {
+            "start": 534,
+            "end": 623,
+            "len": 89,
+            "text": "press the button",
+            "is_demo": true
+          },
+          {
+            "start": 623,
+            "end": 724,
+            "len": 101,
+            "text": "pick up the cube",
+            "is_demo": true
+          },
+          {
+            "start": 724,
+            "end": 805,
+            "len": 81,
+            "text": "drop the cube onto table",
+            "is_demo": true
+          },
+          {
+            "start": 805,
+            "end": 861,
+            "len": 56,
+            "text": "static",
+            "is_demo": true
+          },
+          {
+            "start": 861,
+            "end": 921,
+            "len": 60,
+            "text": "static",
+            "is_demo": true
+          },
+          {
+            "start": 921,
+            "end": 1036,
+            "len": 115,
+            "text": "pick up the cube",
+            "is_demo": false
+          },
+          {
+            "start": 1036,
+            "end": 1110,
+            "len": 74,
+            "text": "place the cube onto the correct target",
+            "is_demo": false
+          },
+          {
+            "start": 1110,
+            "end": 1129,
+            "len": 19,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 909,
@@ -694,7 +1768,113 @@
         "delta_mean": 22.1,
         "delta_min": 22,
         "delta_max": 23,
-        "frames_in_demo": 15
+        "frames_in_demo": 15,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 22.1,
+            "delta_min": 22,
+            "delta_max": 23,
+            "frames_in_demo": 15,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 97.86,
+            "delta_min": 97,
+            "delta_max": 98,
+            "frames_in_demo": 4,
+            "indices": [
+              0,
+              97,
+              195,
+              293,
+              391,
+              489,
+              587,
+              685
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 105,
+            "len": 105,
+            "text": "pick up the cube",
+            "is_demo": true
+          },
+          {
+            "start": 105,
+            "end": 149,
+            "len": 44,
+            "text": "drop the cube on the table",
+            "is_demo": true
+          },
+          {
+            "start": 149,
+            "end": 206,
+            "len": 57,
+            "text": "static",
+            "is_demo": true
+          },
+          {
+            "start": 206,
+            "end": 260,
+            "len": 54,
+            "text": "static",
+            "is_demo": true
+          },
+          {
+            "start": 260,
+            "end": 314,
+            "len": 54,
+            "text": "static",
+            "is_demo": true
+          },
+          {
+            "start": 314,
+            "end": 421,
+            "len": 107,
+            "text": "pick up the correct cube for the first time",
+            "is_demo": false
+          },
+          {
+            "start": 421,
+            "end": 471,
+            "len": 50,
+            "text": "put it down",
+            "is_demo": false
+          },
+          {
+            "start": 471,
+            "end": 541,
+            "len": 70,
+            "text": "pick up the correct cube for the second time",
+            "is_demo": false
+          },
+          {
+            "start": 541,
+            "end": 591,
+            "len": 50,
+            "text": "put it down",
+            "is_demo": false
+          },
+          {
+            "start": 591,
+            "end": 651,
+            "len": 60,
+            "text": "press the button to finish",
+            "is_demo": false
+          },
+          {
+            "start": 651,
+            "end": 686,
+            "len": 35,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 405,
@@ -742,7 +1922,57 @@
         "delta_mean": 5.71,
         "delta_min": 5,
         "delta_max": 6,
-        "frames_in_demo": 12
+        "frames_in_demo": 12,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 5.71,
+            "delta_min": 5,
+            "delta_max": 6,
+            "frames_in_demo": 12,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 25.29,
+            "delta_min": 25,
+            "delta_max": 26,
+            "frames_in_demo": 3,
+            "indices": [
+              0,
+              25,
+              50,
+              75,
+              101,
+              126,
+              151,
+              177
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 66,
+            "len": 66,
+            "text": "static",
+            "is_demo": true
+          },
+          {
+            "start": 66,
+            "end": 167,
+            "len": 101,
+            "text": "pick up the container that hides the green cube",
+            "is_demo": false
+          },
+          {
+            "start": 167,
+            "end": 178,
+            "len": 11,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 163,
@@ -790,7 +2020,71 @@
         "delta_mean": 11.9,
         "delta_min": 11,
         "delta_max": 12,
-        "frames_in_demo": 10
+        "frames_in_demo": 10,
+        "frame_paths": {
+          "32": {
+            "frame_samples": 32,
+            "delta_mean": 11.9,
+            "delta_min": 11,
+            "delta_max": 12,
+            "frames_in_demo": 10,
+            "indices": null
+          },
+          "8": {
+            "frame_samples": 8,
+            "delta_mean": 52.71,
+            "delta_min": 52,
+            "delta_max": 53,
+            "frames_in_demo": 3,
+            "indices": [
+              0,
+              52,
+              105,
+              158,
+              210,
+              263,
+              316,
+              369
+            ]
+          }
+        },
+        "subgoals": [
+          {
+            "start": 0,
+            "end": 114,
+            "len": 114,
+            "text": "static",
+            "is_demo": true
+          },
+          {
+            "start": 114,
+            "end": 216,
+            "len": 102,
+            "text": "pick up the container that hides the green cube",
+            "is_demo": false
+          },
+          {
+            "start": 216,
+            "end": 268,
+            "len": 52,
+            "text": "put down the container",
+            "is_demo": false
+          },
+          {
+            "start": 268,
+            "end": 362,
+            "len": 94,
+            "text": "pick up the container that hides the blue cube",
+            "is_demo": false
+          },
+          {
+            "start": 362,
+            "end": 370,
+            "len": 8,
+            "text": "All tasks completed",
+            "is_demo": false
+          }
+        ]
       },
       "num_timesteps": {
         "min": 213,
@@ -841,7 +2135,92 @@
           "delta_mean": 20.03,
           "delta_min": 20,
           "delta_max": 21,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 20.03,
+              "delta_min": 20,
+              "delta_max": 21,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 88.71,
+              "delta_min": 88,
+              "delta_max": 89,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                88,
+                177,
+                266,
+                354,
+                443,
+                532,
+                621
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 109,
+              "len": 109,
+              "text": "pick up the first blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 109,
+              "end": 167,
+              "len": 58,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 167,
+              "end": 287,
+              "len": 120,
+              "text": "pick up the second blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 287,
+              "end": 354,
+              "len": 67,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 354,
+              "end": 457,
+              "len": 103,
+              "text": "pick up the third blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 457,
+              "end": 516,
+              "len": 59,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 516,
+              "end": 579,
+              "len": 63,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 579,
+              "end": 622,
+              "len": 43,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 266,
@@ -889,7 +2268,57 @@
           "delta_mean": 7.39,
           "delta_min": 7,
           "delta_max": 8,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 7.39,
+              "delta_min": 7,
+              "delta_max": 8,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 32.71,
+              "delta_min": 32,
+              "delta_max": 33,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                32,
+                65,
+                98,
+                130,
+                163,
+                196,
+                229
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 111,
+              "len": 111,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 111,
+              "end": 218,
+              "len": 107,
+              "text": "pick up the container that hides the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 218,
+              "end": 230,
+              "len": 12,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 198,
@@ -937,7 +2366,78 @@
           "delta_mean": 14.32,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.32,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 63.43,
+              "delta_min": 63,
+              "delta_max": 64,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                63,
+                126,
+                190,
+                253,
+                317,
+                380,
+                444
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 115,
+              "len": 115,
+              "text": "press the first button",
+              "is_demo": false
+            },
+            {
+              "start": 115,
+              "end": 208,
+              "len": 93,
+              "text": "press the second button",
+              "is_demo": false
+            },
+            {
+              "start": 208,
+              "end": 304,
+              "len": 96,
+              "text": "pick up the container that hides the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 304,
+              "end": 354,
+              "len": 50,
+              "text": "put down the container",
+              "is_demo": false
+            },
+            {
+              "start": 354,
+              "end": 436,
+              "len": 82,
+              "text": "pick up the container that hides the red cube",
+              "is_demo": false
+            },
+            {
+              "start": 436,
+              "end": 445,
+              "len": 9,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 297,
@@ -985,7 +2485,71 @@
           "delta_mean": 15.35,
           "delta_min": 15,
           "delta_max": 16,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 15.35,
+              "delta_min": 15,
+              "delta_max": 16,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 68.0,
+              "delta_min": 68,
+              "delta_max": 68,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                68,
+                136,
+                204,
+                272,
+                340,
+                408,
+                476
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 124,
+              "len": 124,
+              "text": "Pick up the peg by grasping the far end",
+              "is_demo": true
+            },
+            {
+              "start": 124,
+              "end": 240,
+              "len": 116,
+              "text": "Insert the peg from the left side of the box",
+              "is_demo": true
+            },
+            {
+              "start": 240,
+              "end": 364,
+              "len": 124,
+              "text": "Pick up the peg by grasping the far end",
+              "is_demo": false
+            },
+            {
+              "start": 364,
+              "end": 465,
+              "len": 101,
+              "text": "Insert the peg from the left side",
+              "is_demo": false
+            },
+            {
+              "start": 465,
+              "end": 477,
+              "len": 12,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 406,
@@ -1033,7 +2597,78 @@
           "delta_mean": 14.19,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 19
+          "frames_in_demo": 19,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.19,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 19,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 62.86,
+              "delta_min": 62,
+              "delta_max": 63,
+              "frames_in_demo": 5,
+              "indices": [
+                0,
+                62,
+                125,
+                188,
+                251,
+                314,
+                377,
+                440
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 114,
+              "len": 114,
+              "text": "Pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 114,
+              "end": 198,
+              "len": 84,
+              "text": "place the cube onto the target",
+              "is_demo": true
+            },
+            {
+              "start": 198,
+              "end": 258,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 258,
+              "end": 364,
+              "len": 106,
+              "text": "Pick up the cube",
+              "is_demo": false
+            },
+            {
+              "start": 364,
+              "end": 424,
+              "len": 60,
+              "text": "place the cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 424,
+              "end": 441,
+              "len": 17,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 247,
@@ -1081,7 +2716,85 @@
           "delta_mean": 6.16,
           "delta_min": 6,
           "delta_max": 7,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 6.16,
+              "delta_min": 6,
+              "delta_max": 7,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 27.29,
+              "delta_min": 27,
+              "delta_max": 28,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                27,
+                54,
+                81,
+                109,
+                136,
+                163,
+                191
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 25,
+              "len": 25,
+              "text": "move right",
+              "is_demo": true
+            },
+            {
+              "start": 25,
+              "end": 63,
+              "len": 38,
+              "text": "move backward-left",
+              "is_demo": true
+            },
+            {
+              "start": 63,
+              "end": 96,
+              "len": 33,
+              "text": "move right",
+              "is_demo": true
+            },
+            {
+              "start": 96,
+              "end": 121,
+              "len": 25,
+              "text": "move right",
+              "is_demo": false
+            },
+            {
+              "start": 121,
+              "end": 159,
+              "len": 38,
+              "text": "move backward-left",
+              "is_demo": false
+            },
+            {
+              "start": 159,
+              "end": 178,
+              "len": 19,
+              "text": "move right",
+              "is_demo": false
+            },
+            {
+              "start": 178,
+              "end": 192,
+              "len": 14,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 48,
@@ -1129,7 +2842,71 @@
           "delta_mean": 11.03,
           "delta_min": 11,
           "delta_max": 12,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 11.03,
+              "delta_min": 11,
+              "delta_max": 12,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 48.86,
+              "delta_min": 48,
+              "delta_max": 49,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                48,
+                97,
+                146,
+                195,
+                244,
+                293,
+                342
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 117,
+              "len": 117,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 117,
+              "end": 212,
+              "len": 95,
+              "text": "pick up the first highlighted cube, which is blue",
+              "is_demo": false
+            },
+            {
+              "start": 212,
+              "end": 262,
+              "len": 50,
+              "text": "place the cube onto the table",
+              "is_demo": false
+            },
+            {
+              "start": 262,
+              "end": 329,
+              "len": 67,
+              "text": "pick up the second highlighted cube, which is red",
+              "is_demo": false
+            },
+            {
+              "start": 329,
+              "end": 343,
+              "len": 14,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 199,
@@ -1177,7 +2954,92 @@
           "delta_mean": 17.58,
           "delta_min": 17,
           "delta_max": 18,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 17.58,
+              "delta_min": 17,
+              "delta_max": 18,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 77.86,
+              "delta_min": 77,
+              "delta_max": 78,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                77,
+                155,
+                233,
+                311,
+                389,
+                467,
+                545
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 103,
+              "len": 103,
+              "text": "pick up the blue cube for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 103,
+              "end": 191,
+              "len": 88,
+              "text": "place the blue cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 191,
+              "end": 261,
+              "len": 70,
+              "text": "pick up the blue cube for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 261,
+              "end": 317,
+              "len": 56,
+              "text": "place the blue cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 317,
+              "end": 387,
+              "len": 70,
+              "text": "pick up the blue cube for the third time",
+              "is_demo": false
+            },
+            {
+              "start": 387,
+              "end": 454,
+              "len": 67,
+              "text": "place the blue cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 454,
+              "end": 512,
+              "len": 58,
+              "text": "press the button to stop",
+              "is_demo": false
+            },
+            {
+              "start": 512,
+              "end": 546,
+              "len": 34,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 266,
@@ -1225,7 +3087,99 @@
           "delta_mean": 12.87,
           "delta_min": 12,
           "delta_max": 13,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 12.87,
+              "delta_min": 12,
+              "delta_max": 13,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 57.0,
+              "delta_min": 57,
+              "delta_max": 57,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                57,
+                114,
+                171,
+                228,
+                285,
+                342,
+                399
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 50,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick counterclockwise",
+              "is_demo": true
+            },
+            {
+              "start": 50,
+              "end": 100,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick clockwise",
+              "is_demo": true
+            },
+            {
+              "start": 100,
+              "end": 150,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick counterclockwise",
+              "is_demo": true
+            },
+            {
+              "start": 150,
+              "end": 200,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": true
+            },
+            {
+              "start": 200,
+              "end": 250,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick counterclockwise",
+              "is_demo": false
+            },
+            {
+              "start": 250,
+              "end": 300,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick clockwise",
+              "is_demo": false
+            },
+            {
+              "start": 300,
+              "end": 350,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick counterclockwise",
+              "is_demo": false
+            },
+            {
+              "start": 350,
+              "end": 393,
+              "len": 43,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": false
+            },
+            {
+              "start": 393,
+              "end": 400,
+              "len": 7,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 200,
@@ -1273,7 +3227,78 @@
           "delta_mean": 10.0,
           "delta_min": 10,
           "delta_max": 10,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 10.0,
+              "delta_min": 10,
+              "delta_max": 10,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 44.29,
+              "delta_min": 44,
+              "delta_max": 45,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                44,
+                88,
+                132,
+                177,
+                221,
+                265,
+                310
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 57,
+              "len": 57,
+              "text": "move to the top of the button to prepare",
+              "is_demo": false
+            },
+            {
+              "start": 57,
+              "end": 105,
+              "len": 48,
+              "text": "remain static",
+              "is_demo": false
+            },
+            {
+              "start": 105,
+              "end": 201,
+              "len": 96,
+              "text": "remain static",
+              "is_demo": false
+            },
+            {
+              "start": 201,
+              "end": 243,
+              "len": 42,
+              "text": "remain static",
+              "is_demo": false
+            },
+            {
+              "start": 243,
+              "end": 273,
+              "len": 30,
+              "text": "press the button to stop the cube on the target",
+              "is_demo": false
+            },
+            {
+              "start": 273,
+              "end": 311,
+              "len": 38,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 121,
@@ -1321,7 +3346,106 @@
           "delta_mean": 14.32,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.32,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 63.43,
+              "delta_min": 63,
+              "delta_max": 64,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                63,
+                126,
+                190,
+                253,
+                317,
+                380,
+                444
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 116,
+              "len": 116,
+              "text": "pick up the blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 116,
+              "end": 142,
+              "len": 26,
+              "text": "move to the top of the right-side target for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 142,
+              "end": 178,
+              "len": 36,
+              "text": "move to the top of the left-side target for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 178,
+              "end": 214,
+              "len": 36,
+              "text": "move to the top of the right-side target for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 214,
+              "end": 250,
+              "len": 36,
+              "text": "move to the top of the left-side target for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 250,
+              "end": 286,
+              "len": 36,
+              "text": "move to the top of the right-side target for the third time",
+              "is_demo": false
+            },
+            {
+              "start": 286,
+              "end": 322,
+              "len": 36,
+              "text": "move to the top of the left-side target for the third time",
+              "is_demo": false
+            },
+            {
+              "start": 322,
+              "end": 357,
+              "len": 35,
+              "text": "put the blue cube on the table",
+              "is_demo": false
+            },
+            {
+              "start": 357,
+              "end": 410,
+              "len": 53,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 410,
+              "end": 445,
+              "len": 35,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 296,
@@ -1369,7 +3493,120 @@
           "delta_mean": 30.94,
           "delta_min": 30,
           "delta_max": 31,
-          "frames_in_demo": 25
+          "frames_in_demo": 25,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 30.94,
+              "delta_min": 30,
+              "delta_max": 31,
+              "frames_in_demo": 25,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 137.0,
+              "delta_min": 137,
+              "delta_max": 137,
+              "frames_in_demo": 6,
+              "indices": [
+                0,
+                137,
+                274,
+                411,
+                548,
+                685,
+                822,
+                959
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 105,
+              "len": 105,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 105,
+              "end": 194,
+              "len": 89,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 194,
+              "end": 290,
+              "len": 96,
+              "text": "press the button",
+              "is_demo": true
+            },
+            {
+              "start": 290,
+              "end": 410,
+              "len": 120,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 410,
+              "end": 496,
+              "len": 86,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 496,
+              "end": 573,
+              "len": 77,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 573,
+              "end": 652,
+              "len": 79,
+              "text": "drop the cube onto table",
+              "is_demo": true
+            },
+            {
+              "start": 652,
+              "end": 705,
+              "len": 53,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 705,
+              "end": 765,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 765,
+              "end": 879,
+              "len": 114,
+              "text": "pick up the cube",
+              "is_demo": false
+            },
+            {
+              "start": 879,
+              "end": 944,
+              "len": 65,
+              "text": "place the cube onto the correct target",
+              "is_demo": false
+            },
+            {
+              "start": 944,
+              "end": 960,
+              "len": 16,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 900,
@@ -1417,7 +3654,134 @@
           "delta_mean": 36.39,
           "delta_min": 36,
           "delta_max": 37,
-          "frames_in_demo": 26
+          "frames_in_demo": 26,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 36.39,
+              "delta_min": 36,
+              "delta_max": 37,
+              "frames_in_demo": 26,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 161.14,
+              "delta_min": 161,
+              "delta_max": 162,
+              "frames_in_demo": 6,
+              "indices": [
+                0,
+                161,
+                322,
+                483,
+                644,
+                805,
+                966,
+                1128
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 112,
+              "len": 112,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 112,
+              "end": 203,
+              "len": 91,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 203,
+              "end": 277,
+              "len": 74,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 277,
+              "end": 364,
+              "len": 87,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 364,
+              "end": 441,
+              "len": 77,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 441,
+              "end": 534,
+              "len": 93,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 534,
+              "end": 623,
+              "len": 89,
+              "text": "press the button",
+              "is_demo": true
+            },
+            {
+              "start": 623,
+              "end": 724,
+              "len": 101,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 724,
+              "end": 805,
+              "len": 81,
+              "text": "drop the cube onto table",
+              "is_demo": true
+            },
+            {
+              "start": 805,
+              "end": 861,
+              "len": 56,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 861,
+              "end": 921,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 921,
+              "end": 1036,
+              "len": 115,
+              "text": "pick up the cube",
+              "is_demo": false
+            },
+            {
+              "start": 1036,
+              "end": 1110,
+              "len": 74,
+              "text": "place the cube onto the correct target",
+              "is_demo": false
+            },
+            {
+              "start": 1110,
+              "end": 1129,
+              "len": 19,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 909,
@@ -1465,7 +3829,113 @@
           "delta_mean": 22.1,
           "delta_min": 22,
           "delta_max": 23,
-          "frames_in_demo": 15
+          "frames_in_demo": 15,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 22.1,
+              "delta_min": 22,
+              "delta_max": 23,
+              "frames_in_demo": 15,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 97.86,
+              "delta_min": 97,
+              "delta_max": 98,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                97,
+                195,
+                293,
+                391,
+                489,
+                587,
+                685
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 105,
+              "len": 105,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 105,
+              "end": 149,
+              "len": 44,
+              "text": "drop the cube on the table",
+              "is_demo": true
+            },
+            {
+              "start": 149,
+              "end": 206,
+              "len": 57,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 206,
+              "end": 260,
+              "len": 54,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 260,
+              "end": 314,
+              "len": 54,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 314,
+              "end": 421,
+              "len": 107,
+              "text": "pick up the correct cube for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 421,
+              "end": 471,
+              "len": 50,
+              "text": "put it down",
+              "is_demo": false
+            },
+            {
+              "start": 471,
+              "end": 541,
+              "len": 70,
+              "text": "pick up the correct cube for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 541,
+              "end": 591,
+              "len": 50,
+              "text": "put it down",
+              "is_demo": false
+            },
+            {
+              "start": 591,
+              "end": 651,
+              "len": 60,
+              "text": "press the button to finish",
+              "is_demo": false
+            },
+            {
+              "start": 651,
+              "end": 686,
+              "len": 35,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 405,
@@ -1513,7 +3983,57 @@
           "delta_mean": 5.71,
           "delta_min": 5,
           "delta_max": 6,
-          "frames_in_demo": 12
+          "frames_in_demo": 12,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 5.71,
+              "delta_min": 5,
+              "delta_max": 6,
+              "frames_in_demo": 12,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 25.29,
+              "delta_min": 25,
+              "delta_max": 26,
+              "frames_in_demo": 3,
+              "indices": [
+                0,
+                25,
+                50,
+                75,
+                101,
+                126,
+                151,
+                177
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 66,
+              "len": 66,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 66,
+              "end": 167,
+              "len": 101,
+              "text": "pick up the container that hides the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 167,
+              "end": 178,
+              "len": 11,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 163,
@@ -1561,7 +4081,71 @@
           "delta_mean": 11.9,
           "delta_min": 11,
           "delta_max": 12,
-          "frames_in_demo": 10
+          "frames_in_demo": 10,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 11.9,
+              "delta_min": 11,
+              "delta_max": 12,
+              "frames_in_demo": 10,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 52.71,
+              "delta_min": 52,
+              "delta_max": 53,
+              "frames_in_demo": 3,
+              "indices": [
+                0,
+                52,
+                105,
+                158,
+                210,
+                263,
+                316,
+                369
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 114,
+              "len": 114,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 114,
+              "end": 216,
+              "len": 102,
+              "text": "pick up the container that hides the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 216,
+              "end": 268,
+              "len": 52,
+              "text": "put down the container",
+              "is_demo": false
+            },
+            {
+              "start": 268,
+              "end": 362,
+              "len": 94,
+              "text": "pick up the container that hides the blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 362,
+              "end": 370,
+              "len": 8,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 213,
@@ -1611,7 +4195,78 @@
           "delta_mean": 14.61,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.61,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 64.71,
+              "delta_min": 64,
+              "delta_max": 65,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                64,
+                129,
+                194,
+                258,
+                323,
+                388,
+                453
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 118,
+              "len": 118,
+              "text": "pick up the first green cube",
+              "is_demo": false
+            },
+            {
+              "start": 118,
+              "end": 187,
+              "len": 69,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 187,
+              "end": 298,
+              "len": 111,
+              "text": "pick up the second green cube",
+              "is_demo": false
+            },
+            {
+              "start": 298,
+              "end": 371,
+              "len": 73,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 371,
+              "end": 422,
+              "len": 51,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 422,
+              "end": 454,
+              "len": 32,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 266,
@@ -1659,7 +4314,57 @@
           "delta_mean": 7.23,
           "delta_min": 7,
           "delta_max": 8,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 7.23,
+              "delta_min": 7,
+              "delta_max": 8,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 32.0,
+              "delta_min": 32,
+              "delta_max": 32,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                32,
+                64,
+                96,
+                128,
+                160,
+                192,
+                224
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 111,
+              "len": 111,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 111,
+              "end": 215,
+              "len": 104,
+              "text": "pick up the container that hides the blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 215,
+              "end": 225,
+              "len": 10,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 198,
@@ -1707,7 +4412,78 @@
           "delta_mean": 14.35,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.35,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 63.57,
+              "delta_min": 63,
+              "delta_max": 64,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                63,
+                127,
+                190,
+                254,
+                317,
+                381,
+                445
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 118,
+              "len": 118,
+              "text": "press the first button",
+              "is_demo": false
+            },
+            {
+              "start": 118,
+              "end": 207,
+              "len": 89,
+              "text": "press the second button",
+              "is_demo": false
+            },
+            {
+              "start": 207,
+              "end": 316,
+              "len": 109,
+              "text": "pick up the container that hides the red cube",
+              "is_demo": false
+            },
+            {
+              "start": 316,
+              "end": 363,
+              "len": 47,
+              "text": "put down the container",
+              "is_demo": false
+            },
+            {
+              "start": 363,
+              "end": 439,
+              "len": 76,
+              "text": "pick up the container that hides the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 439,
+              "end": 446,
+              "len": 7,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 300,
@@ -1755,7 +4531,71 @@
           "delta_mean": 15.48,
           "delta_min": 15,
           "delta_max": 16,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 15.48,
+              "delta_min": 15,
+              "delta_max": 16,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 68.57,
+              "delta_min": 68,
+              "delta_max": 69,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                68,
+                137,
+                205,
+                274,
+                342,
+                411,
+                480
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 115,
+              "len": 115,
+              "text": "Pick up the peg by grasping the far end",
+              "is_demo": true
+            },
+            {
+              "start": 115,
+              "end": 241,
+              "len": 126,
+              "text": "Insert the peg from the left side of the box",
+              "is_demo": true
+            },
+            {
+              "start": 241,
+              "end": 356,
+              "len": 115,
+              "text": "Pick up the peg by grasping the far end",
+              "is_demo": false
+            },
+            {
+              "start": 356,
+              "end": 470,
+              "len": 114,
+              "text": "Insert the peg from the left side",
+              "is_demo": false
+            },
+            {
+              "start": 470,
+              "end": 481,
+              "len": 11,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 406,
@@ -1803,7 +4643,78 @@
           "delta_mean": 14.23,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 18
+          "frames_in_demo": 18,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.23,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 18,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 63.0,
+              "delta_min": 63,
+              "delta_max": 63,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                63,
+                126,
+                189,
+                252,
+                315,
+                378,
+                441
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 110,
+              "len": 110,
+              "text": "Pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 110,
+              "end": 183,
+              "len": 73,
+              "text": "place the cube onto the target",
+              "is_demo": true
+            },
+            {
+              "start": 183,
+              "end": 243,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 243,
+              "end": 360,
+              "len": 117,
+              "text": "Pick up the cube",
+              "is_demo": false
+            },
+            {
+              "start": 360,
+              "end": 430,
+              "len": 70,
+              "text": "place the cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 430,
+              "end": 442,
+              "len": 12,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 250,
@@ -1851,7 +4762,71 @@
           "delta_mean": 4.48,
           "delta_min": 4,
           "delta_max": 5,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 4.48,
+              "delta_min": 4,
+              "delta_max": 5,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 19.86,
+              "delta_min": 19,
+              "delta_max": 20,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                19,
+                39,
+                59,
+                79,
+                99,
+                119,
+                139
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 37,
+              "len": 37,
+              "text": "move backward-right",
+              "is_demo": true
+            },
+            {
+              "start": 37,
+              "end": 70,
+              "len": 33,
+              "text": "move left",
+              "is_demo": true
+            },
+            {
+              "start": 70,
+              "end": 107,
+              "len": 37,
+              "text": "move backward-right",
+              "is_demo": false
+            },
+            {
+              "start": 107,
+              "end": 126,
+              "len": 19,
+              "text": "move left",
+              "is_demo": false
+            },
+            {
+              "start": 126,
+              "end": 140,
+              "len": 14,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 48,
@@ -1899,7 +4874,57 @@
           "delta_mean": 7.19,
           "delta_min": 7,
           "delta_max": 8,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 7.19,
+              "delta_min": 7,
+              "delta_max": 8,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 31.86,
+              "delta_min": 31,
+              "delta_max": 32,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                31,
+                63,
+                95,
+                127,
+                159,
+                191,
+                223
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 116,
+              "len": 116,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 116,
+              "end": 210,
+              "len": 94,
+              "text": "pick up the highlighted cube, which is red",
+              "is_demo": false
+            },
+            {
+              "start": 210,
+              "end": 224,
+              "len": 14,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 199,
@@ -1947,7 +4972,78 @@
           "delta_mean": 14.48,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.48,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 64.14,
+              "delta_min": 64,
+              "delta_max": 65,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                64,
+                128,
+                192,
+                256,
+                320,
+                384,
+                449
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 121,
+              "len": 121,
+              "text": "pick up the blue cube for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 121,
+              "end": 213,
+              "len": 92,
+              "text": "place the blue cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 213,
+              "end": 289,
+              "len": 76,
+              "text": "pick up the blue cube for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 289,
+              "end": 343,
+              "len": 54,
+              "text": "place the blue cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 343,
+              "end": 414,
+              "len": 71,
+              "text": "press the button to stop",
+              "is_demo": false
+            },
+            {
+              "start": 414,
+              "end": 450,
+              "len": 36,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 266,
@@ -1995,7 +5091,71 @@
           "delta_mean": 6.42,
           "delta_min": 6,
           "delta_max": 7,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 6.42,
+              "delta_min": 6,
+              "delta_max": 7,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 28.43,
+              "delta_min": 28,
+              "delta_max": 29,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                28,
+                56,
+                85,
+                113,
+                142,
+                170,
+                199
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 50,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": true
+            },
+            {
+              "start": 50,
+              "end": 100,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": true
+            },
+            {
+              "start": 100,
+              "end": 150,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": false
+            },
+            {
+              "start": 150,
+              "end": 193,
+              "len": 43,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": false
+            },
+            {
+              "start": 193,
+              "end": 200,
+              "len": 7,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 200,
@@ -2043,7 +5203,78 @@
           "delta_mean": 10.29,
           "delta_min": 10,
           "delta_max": 11,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 10.29,
+              "delta_min": 10,
+              "delta_max": 11,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 45.57,
+              "delta_min": 45,
+              "delta_max": 46,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                45,
+                91,
+                136,
+                182,
+                227,
+                273,
+                319
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 56,
+              "len": 56,
+              "text": "move to the top of the button to prepare",
+              "is_demo": false
+            },
+            {
+              "start": 56,
+              "end": 104,
+              "len": 48,
+              "text": "remain static",
+              "is_demo": false
+            },
+            {
+              "start": 104,
+              "end": 200,
+              "len": 96,
+              "text": "remain static",
+              "is_demo": false
+            },
+            {
+              "start": 200,
+              "end": 254,
+              "len": 54,
+              "text": "remain static",
+              "is_demo": false
+            },
+            {
+              "start": 254,
+              "end": 283,
+              "len": 29,
+              "text": "press the button to stop the cube on the target",
+              "is_demo": false
+            },
+            {
+              "start": 283,
+              "end": 320,
+              "len": 37,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 127,
@@ -2091,7 +5322,106 @@
           "delta_mean": 13.94,
           "delta_min": 13,
           "delta_max": 14,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 13.94,
+              "delta_min": 13,
+              "delta_max": 14,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 61.71,
+              "delta_min": 61,
+              "delta_max": 62,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                61,
+                123,
+                185,
+                246,
+                308,
+                370,
+                432
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 110,
+              "len": 110,
+              "text": "pick up the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 110,
+              "end": 147,
+              "len": 37,
+              "text": "move to the top of the right-side target for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 147,
+              "end": 179,
+              "len": 32,
+              "text": "move to the top of the left-side target for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 179,
+              "end": 211,
+              "len": 32,
+              "text": "move to the top of the right-side target for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 211,
+              "end": 243,
+              "len": 32,
+              "text": "move to the top of the left-side target for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 243,
+              "end": 275,
+              "len": 32,
+              "text": "move to the top of the right-side target for the third time",
+              "is_demo": false
+            },
+            {
+              "start": 275,
+              "end": 307,
+              "len": 32,
+              "text": "move to the top of the left-side target for the third time",
+              "is_demo": false
+            },
+            {
+              "start": 307,
+              "end": 342,
+              "len": 35,
+              "text": "put the green cube on the table",
+              "is_demo": false
+            },
+            {
+              "start": 342,
+              "end": 395,
+              "len": 53,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 395,
+              "end": 433,
+              "len": 38,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 296,
@@ -2139,7 +5469,120 @@
           "delta_mean": 31.0,
           "delta_min": 31,
           "delta_max": 31,
-          "frames_in_demo": 25
+          "frames_in_demo": 25,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 31.0,
+              "delta_min": 31,
+              "delta_max": 31,
+              "frames_in_demo": 25,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 137.29,
+              "delta_min": 137,
+              "delta_max": 138,
+              "frames_in_demo": 6,
+              "indices": [
+                0,
+                137,
+                274,
+                411,
+                549,
+                686,
+                823,
+                961
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 107,
+              "len": 107,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 107,
+              "end": 196,
+              "len": 89,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 196,
+              "end": 287,
+              "len": 91,
+              "text": "press the button",
+              "is_demo": true
+            },
+            {
+              "start": 287,
+              "end": 381,
+              "len": 94,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 381,
+              "end": 462,
+              "len": 81,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 462,
+              "end": 537,
+              "len": 75,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 537,
+              "end": 627,
+              "len": 90,
+              "text": "drop the cube onto table",
+              "is_demo": true
+            },
+            {
+              "start": 627,
+              "end": 690,
+              "len": 63,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 690,
+              "end": 750,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 750,
+              "end": 865,
+              "len": 115,
+              "text": "pick up the cube",
+              "is_demo": false
+            },
+            {
+              "start": 865,
+              "end": 942,
+              "len": 77,
+              "text": "place the cube onto the correct target",
+              "is_demo": false
+            },
+            {
+              "start": 942,
+              "end": 962,
+              "len": 20,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 910,
@@ -2187,7 +5630,134 @@
           "delta_mean": 36.48,
           "delta_min": 36,
           "delta_max": 37,
-          "frames_in_demo": 26
+          "frames_in_demo": 26,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 36.48,
+              "delta_min": 36,
+              "delta_max": 37,
+              "frames_in_demo": 26,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 161.57,
+              "delta_min": 161,
+              "delta_max": 162,
+              "frames_in_demo": 6,
+              "indices": [
+                0,
+                161,
+                323,
+                484,
+                646,
+                807,
+                969,
+                1131
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 118,
+              "len": 118,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 118,
+              "end": 226,
+              "len": 108,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 226,
+              "end": 313,
+              "len": 87,
+              "text": "press the button",
+              "is_demo": true
+            },
+            {
+              "start": 313,
+              "end": 405,
+              "len": 92,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 405,
+              "end": 495,
+              "len": 90,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 495,
+              "end": 565,
+              "len": 70,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 565,
+              "end": 661,
+              "len": 96,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 661,
+              "end": 737,
+              "len": 76,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 737,
+              "end": 819,
+              "len": 82,
+              "text": "drop the cube onto table",
+              "is_demo": true
+            },
+            {
+              "start": 819,
+              "end": 875,
+              "len": 56,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 875,
+              "end": 935,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 935,
+              "end": 1049,
+              "len": 114,
+              "text": "pick up the cube",
+              "is_demo": false
+            },
+            {
+              "start": 1049,
+              "end": 1115,
+              "len": 66,
+              "text": "place the cube onto the correct target",
+              "is_demo": false
+            },
+            {
+              "start": 1115,
+              "end": 1132,
+              "len": 17,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 909,
@@ -2235,7 +5805,113 @@
           "delta_mean": 23.32,
           "delta_min": 23,
           "delta_max": 24,
-          "frames_in_demo": 14
+          "frames_in_demo": 14,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 23.32,
+              "delta_min": 23,
+              "delta_max": 24,
+              "frames_in_demo": 14,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 103.29,
+              "delta_min": 103,
+              "delta_max": 104,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                103,
+                206,
+                309,
+                413,
+                516,
+                619,
+                723
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 111,
+              "len": 111,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 111,
+              "end": 161,
+              "len": 50,
+              "text": "drop the cube on the table",
+              "is_demo": true
+            },
+            {
+              "start": 161,
+              "end": 209,
+              "len": 48,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 209,
+              "end": 263,
+              "len": 54,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 263,
+              "end": 317,
+              "len": 54,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 317,
+              "end": 426,
+              "len": 109,
+              "text": "pick up the correct cube for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 426,
+              "end": 483,
+              "len": 57,
+              "text": "put it down",
+              "is_demo": false
+            },
+            {
+              "start": 483,
+              "end": 552,
+              "len": 69,
+              "text": "pick up the correct cube for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 552,
+              "end": 614,
+              "len": 62,
+              "text": "put it down",
+              "is_demo": false
+            },
+            {
+              "start": 614,
+              "end": 681,
+              "len": 67,
+              "text": "press the button to finish",
+              "is_demo": false
+            },
+            {
+              "start": 681,
+              "end": 724,
+              "len": 43,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 533,
@@ -2283,7 +5959,57 @@
           "delta_mean": 5.65,
           "delta_min": 5,
           "delta_max": 6,
-          "frames_in_demo": 12
+          "frames_in_demo": 12,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 5.65,
+              "delta_min": 5,
+              "delta_max": 6,
+              "frames_in_demo": 12,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 25.0,
+              "delta_min": 25,
+              "delta_max": 25,
+              "frames_in_demo": 3,
+              "indices": [
+                0,
+                25,
+                50,
+                75,
+                100,
+                125,
+                150,
+                175
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 66,
+              "len": 66,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 66,
+              "end": 164,
+              "len": 98,
+              "text": "pick up the container that hides the red cube",
+              "is_demo": false
+            },
+            {
+              "start": 164,
+              "end": 176,
+              "len": 12,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 163,
@@ -2331,7 +6057,71 @@
           "delta_mean": 11.9,
           "delta_min": 11,
           "delta_max": 12,
-          "frames_in_demo": 10
+          "frames_in_demo": 10,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 11.9,
+              "delta_min": 11,
+              "delta_max": 12,
+              "frames_in_demo": 10,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 52.71,
+              "delta_min": 52,
+              "delta_max": 53,
+              "frames_in_demo": 3,
+              "indices": [
+                0,
+                52,
+                105,
+                158,
+                210,
+                263,
+                316,
+                369
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 114,
+              "len": 114,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 114,
+              "end": 216,
+              "len": 102,
+              "text": "pick up the container that hides the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 216,
+              "end": 268,
+              "len": 52,
+              "text": "put down the container",
+              "is_demo": false
+            },
+            {
+              "start": 268,
+              "end": 362,
+              "len": 94,
+              "text": "pick up the container that hides the blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 362,
+              "end": 370,
+              "len": 8,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 213,
@@ -2381,7 +6171,92 @@
           "delta_mean": 21.1,
           "delta_min": 21,
           "delta_max": 22,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 21.1,
+              "delta_min": 21,
+              "delta_max": 22,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 93.43,
+              "delta_min": 93,
+              "delta_max": 94,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                93,
+                186,
+                280,
+                373,
+                467,
+                560,
+                654
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 150,
+              "len": 150,
+              "text": "pick up the first red cube",
+              "is_demo": false
+            },
+            {
+              "start": 150,
+              "end": 218,
+              "len": 68,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 218,
+              "end": 320,
+              "len": 102,
+              "text": "pick up the second red cube",
+              "is_demo": false
+            },
+            {
+              "start": 320,
+              "end": 388,
+              "len": 68,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 388,
+              "end": 482,
+              "len": 94,
+              "text": "pick up the third red cube",
+              "is_demo": false
+            },
+            {
+              "start": 482,
+              "end": 545,
+              "len": 63,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 545,
+              "end": 618,
+              "len": 73,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 618,
+              "end": 655,
+              "len": 37,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 421,
@@ -2429,7 +6304,57 @@
           "delta_mean": 7.19,
           "delta_min": 7,
           "delta_max": 8,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 7.19,
+              "delta_min": 7,
+              "delta_max": 8,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 31.86,
+              "delta_min": 31,
+              "delta_max": 32,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                31,
+                63,
+                95,
+                127,
+                159,
+                191,
+                223
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 111,
+              "len": 111,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 111,
+              "end": 214,
+              "len": 103,
+              "text": "pick up the container that hides the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 214,
+              "end": 224,
+              "len": 10,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 206,
@@ -2477,7 +6402,64 @@
           "delta_mean": 10.23,
           "delta_min": 10,
           "delta_max": 11,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 10.23,
+              "delta_min": 10,
+              "delta_max": 11,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 45.29,
+              "delta_min": 45,
+              "delta_max": 46,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                45,
+                90,
+                135,
+                181,
+                226,
+                271,
+                317
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 110,
+              "len": 110,
+              "text": "press the first button",
+              "is_demo": false
+            },
+            {
+              "start": 110,
+              "end": 209,
+              "len": 99,
+              "text": "press the second button",
+              "is_demo": false
+            },
+            {
+              "start": 209,
+              "end": 312,
+              "len": 103,
+              "text": "pick up the container that hides the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 312,
+              "end": 318,
+              "len": 6,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 297,
@@ -2525,7 +6507,71 @@
           "delta_mean": 15.32,
           "delta_min": 15,
           "delta_max": 16,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 15.32,
+              "delta_min": 15,
+              "delta_max": 16,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 67.86,
+              "delta_min": 67,
+              "delta_max": 68,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                67,
+                135,
+                203,
+                271,
+                339,
+                407,
+                475
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 119,
+              "len": 119,
+              "text": "Pick up the peg by grasping the far end",
+              "is_demo": true
+            },
+            {
+              "start": 119,
+              "end": 238,
+              "len": 119,
+              "text": "Insert the peg from the left side of the box",
+              "is_demo": true
+            },
+            {
+              "start": 238,
+              "end": 357,
+              "len": 119,
+              "text": "Pick up the peg by grasping the far end",
+              "is_demo": false
+            },
+            {
+              "start": 357,
+              "end": 461,
+              "len": 104,
+              "text": "Insert the peg from the left side",
+              "is_demo": false
+            },
+            {
+              "start": 461,
+              "end": 476,
+              "len": 15,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 413,
@@ -2573,7 +6619,78 @@
           "delta_mean": 14.35,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.35,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 63.57,
+              "delta_min": 63,
+              "delta_max": 64,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                63,
+                127,
+                190,
+                254,
+                317,
+                381,
+                445
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 120,
+              "len": 120,
+              "text": "Pick up the peg",
+              "is_demo": true
+            },
+            {
+              "start": 120,
+              "end": 198,
+              "len": 78,
+              "text": "Hook the cube to the target with the peg",
+              "is_demo": true
+            },
+            {
+              "start": 198,
+              "end": 228,
+              "len": 30,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 228,
+              "end": 348,
+              "len": 120,
+              "text": "Pick up the peg",
+              "is_demo": false
+            },
+            {
+              "start": 348,
+              "end": 440,
+              "len": 92,
+              "text": "Hook the cube to the target with the peg",
+              "is_demo": false
+            },
+            {
+              "start": 440,
+              "end": 446,
+              "len": 6,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 252,
@@ -2621,7 +6738,85 @@
           "delta_mean": 6.55,
           "delta_min": 6,
           "delta_max": 7,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 6.55,
+              "delta_min": 6,
+              "delta_max": 7,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 29.0,
+              "delta_min": 29,
+              "delta_max": 29,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                29,
+                58,
+                87,
+                116,
+                145,
+                174,
+                203
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 34,
+              "len": 34,
+              "text": "move forward",
+              "is_demo": true
+            },
+            {
+              "start": 34,
+              "end": 73,
+              "len": 39,
+              "text": "move backward-left",
+              "is_demo": true
+            },
+            {
+              "start": 73,
+              "end": 102,
+              "len": 29,
+              "text": "move backward-right",
+              "is_demo": true
+            },
+            {
+              "start": 102,
+              "end": 136,
+              "len": 34,
+              "text": "move forward",
+              "is_demo": false
+            },
+            {
+              "start": 136,
+              "end": 175,
+              "len": 39,
+              "text": "move backward-left",
+              "is_demo": false
+            },
+            {
+              "start": 175,
+              "end": 198,
+              "len": 23,
+              "text": "move backward-right",
+              "is_demo": false
+            },
+            {
+              "start": 198,
+              "end": 204,
+              "len": 6,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 114,
@@ -2669,7 +6864,71 @@
           "delta_mean": 12.35,
           "delta_min": 12,
           "delta_max": 13,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 12.35,
+              "delta_min": 12,
+              "delta_max": 13,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 54.71,
+              "delta_min": 54,
+              "delta_max": 55,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                54,
+                109,
+                164,
+                218,
+                273,
+                328,
+                383
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 109,
+              "len": 109,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 109,
+              "end": 216,
+              "len": 107,
+              "text": "pick up the first highlighted cube, which is blue",
+              "is_demo": false
+            },
+            {
+              "start": 216,
+              "end": 267,
+              "len": 51,
+              "text": "place the cube onto the table",
+              "is_demo": false
+            },
+            {
+              "start": 267,
+              "end": 366,
+              "len": 99,
+              "text": "pick up the second highlighted cube, which is red",
+              "is_demo": false
+            },
+            {
+              "start": 366,
+              "end": 384,
+              "len": 18,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 343,
@@ -2717,7 +6976,78 @@
           "delta_mean": 14.13,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.13,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 62.57,
+              "delta_min": 62,
+              "delta_max": 63,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                62,
+                125,
+                187,
+                250,
+                312,
+                375,
+                438
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 121,
+              "len": 121,
+              "text": "pick up the red cube for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 121,
+              "end": 209,
+              "len": 88,
+              "text": "place the red cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 209,
+              "end": 280,
+              "len": 71,
+              "text": "pick up the red cube for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 280,
+              "end": 342,
+              "len": 62,
+              "text": "place the red cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 342,
+              "end": 402,
+              "len": 60,
+              "text": "press the button to stop",
+              "is_demo": false
+            },
+            {
+              "start": 402,
+              "end": 439,
+              "len": 37,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 275,
@@ -2765,7 +7095,99 @@
           "delta_mean": 12.87,
           "delta_min": 12,
           "delta_max": 13,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 12.87,
+              "delta_min": 12,
+              "delta_max": 13,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 57.0,
+              "delta_min": 57,
+              "delta_max": 57,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                57,
+                114,
+                171,
+                228,
+                285,
+                342,
+                399
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 50,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick counterclockwise",
+              "is_demo": true
+            },
+            {
+              "start": 50,
+              "end": 100,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick clockwise",
+              "is_demo": true
+            },
+            {
+              "start": 100,
+              "end": 150,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick counterclockwise",
+              "is_demo": true
+            },
+            {
+              "start": 150,
+              "end": 200,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": true
+            },
+            {
+              "start": 200,
+              "end": 250,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick counterclockwise",
+              "is_demo": false
+            },
+            {
+              "start": 250,
+              "end": 300,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick clockwise",
+              "is_demo": false
+            },
+            {
+              "start": 300,
+              "end": 350,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick counterclockwise",
+              "is_demo": false
+            },
+            {
+              "start": 350,
+              "end": 393,
+              "len": 43,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": false
+            },
+            {
+              "start": 393,
+              "end": 400,
+              "len": 7,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 400,
@@ -2813,7 +7235,71 @@
           "delta_mean": 8.0,
           "delta_min": 8,
           "delta_max": 8,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 8.0,
+              "delta_min": 8,
+              "delta_max": 8,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 35.43,
+              "delta_min": 35,
+              "delta_max": 36,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                35,
+                70,
+                106,
+                141,
+                177,
+                212,
+                248
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 61,
+              "len": 61,
+              "text": "move to the top of the button to prepare",
+              "is_demo": false
+            },
+            {
+              "start": 61,
+              "end": 103,
+              "len": 42,
+              "text": "remain static",
+              "is_demo": false
+            },
+            {
+              "start": 103,
+              "end": 181,
+              "len": 78,
+              "text": "remain static",
+              "is_demo": false
+            },
+            {
+              "start": 181,
+              "end": 210,
+              "len": 29,
+              "text": "press the button to stop the cube on the target",
+              "is_demo": false
+            },
+            {
+              "start": 210,
+              "end": 249,
+              "len": 39,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 121,
@@ -2861,7 +7347,92 @@
           "delta_mean": 12.61,
           "delta_min": 12,
           "delta_max": 13,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 12.61,
+              "delta_min": 12,
+              "delta_max": 13,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 55.86,
+              "delta_min": 55,
+              "delta_max": 56,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                55,
+                111,
+                167,
+                223,
+                279,
+                335,
+                391
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 109,
+              "len": 109,
+              "text": "pick up the red cube",
+              "is_demo": false
+            },
+            {
+              "start": 109,
+              "end": 155,
+              "len": 46,
+              "text": "move to the top of the right-side target for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 155,
+              "end": 191,
+              "len": 36,
+              "text": "move to the top of the left-side target for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 191,
+              "end": 225,
+              "len": 34,
+              "text": "move to the top of the right-side target for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 225,
+              "end": 260,
+              "len": 35,
+              "text": "move to the top of the left-side target for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 260,
+              "end": 295,
+              "len": 35,
+              "text": "put the red cube on the table",
+              "is_demo": false
+            },
+            {
+              "start": 295,
+              "end": 355,
+              "len": 60,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 355,
+              "end": 392,
+              "len": 37,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 307,
@@ -2909,7 +7480,120 @@
           "delta_mean": 30.87,
           "delta_min": 30,
           "delta_max": 31,
-          "frames_in_demo": 25
+          "frames_in_demo": 25,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 30.87,
+              "delta_min": 30,
+              "delta_max": 31,
+              "frames_in_demo": 25,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 136.71,
+              "delta_min": 136,
+              "delta_max": 137,
+              "frames_in_demo": 6,
+              "indices": [
+                0,
+                136,
+                273,
+                410,
+                546,
+                683,
+                820,
+                957
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 125,
+              "len": 125,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 125,
+              "end": 211,
+              "len": 86,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 211,
+              "end": 295,
+              "len": 84,
+              "text": "press the button",
+              "is_demo": true
+            },
+            {
+              "start": 295,
+              "end": 383,
+              "len": 88,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 383,
+              "end": 481,
+              "len": 98,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 481,
+              "end": 554,
+              "len": 73,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 554,
+              "end": 636,
+              "len": 82,
+              "text": "drop the cube onto table",
+              "is_demo": true
+            },
+            {
+              "start": 636,
+              "end": 694,
+              "len": 58,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 694,
+              "end": 754,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 754,
+              "end": 868,
+              "len": 114,
+              "text": "pick up the cube",
+              "is_demo": false
+            },
+            {
+              "start": 868,
+              "end": 939,
+              "len": 71,
+              "text": "place the cube onto the correct target",
+              "is_demo": false
+            },
+            {
+              "start": 939,
+              "end": 958,
+              "len": 19,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 921,
@@ -2957,7 +7641,134 @@
           "delta_mean": 36.94,
           "delta_min": 36,
           "delta_max": 37,
-          "frames_in_demo": 26
+          "frames_in_demo": 26,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 36.94,
+              "delta_min": 36,
+              "delta_max": 37,
+              "frames_in_demo": 26,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 163.57,
+              "delta_min": 163,
+              "delta_max": 164,
+              "frames_in_demo": 6,
+              "indices": [
+                0,
+                163,
+                327,
+                490,
+                654,
+                817,
+                981,
+                1145
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 105,
+              "len": 105,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 105,
+              "end": 209,
+              "len": 104,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 209,
+              "end": 304,
+              "len": 95,
+              "text": "press the button",
+              "is_demo": true
+            },
+            {
+              "start": 304,
+              "end": 408,
+              "len": 104,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 408,
+              "end": 509,
+              "len": 101,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 509,
+              "end": 578,
+              "len": 69,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 578,
+              "end": 647,
+              "len": 69,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 647,
+              "end": 720,
+              "len": 73,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 720,
+              "end": 826,
+              "len": 106,
+              "text": "drop the cube onto table",
+              "is_demo": true
+            },
+            {
+              "start": 826,
+              "end": 882,
+              "len": 56,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 882,
+              "end": 942,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 942,
+              "end": 1057,
+              "len": 115,
+              "text": "pick up the cube",
+              "is_demo": false
+            },
+            {
+              "start": 1057,
+              "end": 1128,
+              "len": 71,
+              "text": "place the cube onto the correct target",
+              "is_demo": false
+            },
+            {
+              "start": 1128,
+              "end": 1146,
+              "len": 18,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 917,
@@ -3005,7 +7816,120 @@
           "delta_mean": 24.06,
           "delta_min": 24,
           "delta_max": 25,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 24.06,
+              "delta_min": 24,
+              "delta_max": 25,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 106.57,
+              "delta_min": 106,
+              "delta_max": 107,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                106,
+                213,
+                319,
+                426,
+                532,
+                639,
+                746
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 112,
+              "len": 112,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 112,
+              "end": 157,
+              "len": 45,
+              "text": "drop the cube on the table",
+              "is_demo": true
+            },
+            {
+              "start": 157,
+              "end": 217,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 217,
+              "end": 271,
+              "len": 54,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 271,
+              "end": 325,
+              "len": 54,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 325,
+              "end": 379,
+              "len": 54,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 379,
+              "end": 480,
+              "len": 101,
+              "text": "pick up the correct cube for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 480,
+              "end": 530,
+              "len": 50,
+              "text": "put it down",
+              "is_demo": false
+            },
+            {
+              "start": 530,
+              "end": 600,
+              "len": 70,
+              "text": "pick up the correct cube for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 600,
+              "end": 650,
+              "len": 50,
+              "text": "put it down",
+              "is_demo": false
+            },
+            {
+              "start": 650,
+              "end": 711,
+              "len": 61,
+              "text": "press the button to finish",
+              "is_demo": false
+            },
+            {
+              "start": 711,
+              "end": 747,
+              "len": 36,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 572,
@@ -3053,7 +7977,57 @@
           "delta_mean": 5.61,
           "delta_min": 5,
           "delta_max": 6,
-          "frames_in_demo": 12
+          "frames_in_demo": 12,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 5.61,
+              "delta_min": 5,
+              "delta_max": 6,
+              "frames_in_demo": 12,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 24.86,
+              "delta_min": 24,
+              "delta_max": 25,
+              "frames_in_demo": 3,
+              "indices": [
+                0,
+                24,
+                49,
+                74,
+                99,
+                124,
+                149,
+                174
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 66,
+              "len": 66,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 66,
+              "end": 163,
+              "len": 97,
+              "text": "pick up the container that hides the red cube",
+              "is_demo": false
+            },
+            {
+              "start": 163,
+              "end": 175,
+              "len": 12,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 164,
@@ -3101,7 +8075,57 @@
           "delta_mean": 8.61,
           "delta_min": 8,
           "delta_max": 9,
-          "frames_in_demo": 20
+          "frames_in_demo": 20,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 8.61,
+              "delta_min": 8,
+              "delta_max": 9,
+              "frames_in_demo": 20,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 38.14,
+              "delta_min": 38,
+              "delta_max": 39,
+              "frames_in_demo": 5,
+              "indices": [
+                0,
+                38,
+                76,
+                114,
+                152,
+                190,
+                228,
+                267
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 168,
+              "len": 168,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 168,
+              "end": 262,
+              "len": 94,
+              "text": "pick up the container that hides the blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 262,
+              "end": 268,
+              "len": 6,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 213,
@@ -3151,7 +8175,106 @@
           "delta_mean": 27.97,
           "delta_min": 27,
           "delta_max": 28,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 27.97,
+              "delta_min": 27,
+              "delta_max": 28,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 123.86,
+              "delta_min": 123,
+              "delta_max": 124,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                123,
+                247,
+                371,
+                495,
+                619,
+                743,
+                867
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 115,
+              "len": 115,
+              "text": "pick up the first blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 115,
+              "end": 191,
+              "len": 76,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 191,
+              "end": 315,
+              "len": 124,
+              "text": "pick up the second blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 315,
+              "end": 407,
+              "len": 92,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 407,
+              "end": 488,
+              "len": 81,
+              "text": "pick up the third blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 488,
+              "end": 555,
+              "len": 67,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 555,
+              "end": 665,
+              "len": 110,
+              "text": "pick up the fourth blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 665,
+              "end": 753,
+              "len": 88,
+              "text": "put it into the bin",
+              "is_demo": false
+            },
+            {
+              "start": 753,
+              "end": 826,
+              "len": 73,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 826,
+              "end": 868,
+              "len": 42,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 584,
@@ -3199,7 +8322,71 @@
           "delta_mean": 12.0,
           "delta_min": 12,
           "delta_max": 12,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 12.0,
+              "delta_min": 12,
+              "delta_max": 12,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 53.14,
+              "delta_min": 53,
+              "delta_max": 54,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                53,
+                106,
+                159,
+                212,
+                265,
+                318,
+                372
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 117,
+              "len": 117,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 117,
+              "end": 219,
+              "len": 102,
+              "text": "pick up the container that hides the blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 219,
+              "end": 266,
+              "len": 47,
+              "text": "put down the container",
+              "is_demo": false
+            },
+            {
+              "start": 266,
+              "end": 362,
+              "len": 96,
+              "text": "pick up the container that hides the red cube",
+              "is_demo": false
+            },
+            {
+              "start": 362,
+              "end": 373,
+              "len": 11,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 353,
@@ -3247,7 +8434,78 @@
           "delta_mean": 14.84,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.84,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 65.71,
+              "delta_min": 65,
+              "delta_max": 66,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                65,
+                131,
+                197,
+                262,
+                328,
+                394,
+                460
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 109,
+              "len": 109,
+              "text": "press the first button",
+              "is_demo": false
+            },
+            {
+              "start": 109,
+              "end": 203,
+              "len": 94,
+              "text": "press the second button",
+              "is_demo": false
+            },
+            {
+              "start": 203,
+              "end": 302,
+              "len": 99,
+              "text": "pick up the container that hides the red cube",
+              "is_demo": false
+            },
+            {
+              "start": 302,
+              "end": 352,
+              "len": 50,
+              "text": "put down the container",
+              "is_demo": false
+            },
+            {
+              "start": 352,
+              "end": 449,
+              "len": 97,
+              "text": "pick up the container that hides the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 449,
+              "end": 461,
+              "len": 12,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 443,
@@ -3295,7 +8553,71 @@
           "delta_mean": 14.94,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.94,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 66.14,
+              "delta_min": 66,
+              "delta_max": 67,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                66,
+                132,
+                198,
+                264,
+                330,
+                396,
+                463
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 115,
+              "len": 115,
+              "text": "Pick up the peg by grasping the far end",
+              "is_demo": true
+            },
+            {
+              "start": 115,
+              "end": 232,
+              "len": 117,
+              "text": "Insert the peg from the left side of the box",
+              "is_demo": true
+            },
+            {
+              "start": 232,
+              "end": 347,
+              "len": 115,
+              "text": "Pick up the peg by grasping the far end",
+              "is_demo": false
+            },
+            {
+              "start": 347,
+              "end": 452,
+              "len": 105,
+              "text": "Insert the peg from the left side",
+              "is_demo": false
+            },
+            {
+              "start": 452,
+              "end": 464,
+              "len": 12,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 414,
@@ -3343,7 +8665,78 @@
           "delta_mean": 13.39,
           "delta_min": 13,
           "delta_max": 14,
-          "frames_in_demo": 18
+          "frames_in_demo": 18,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 13.39,
+              "delta_min": 13,
+              "delta_max": 14,
+              "frames_in_demo": 18,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 59.29,
+              "delta_min": 59,
+              "delta_max": 60,
+              "frames_in_demo": 5,
+              "indices": [
+                0,
+                59,
+                118,
+                177,
+                237,
+                296,
+                355,
+                415
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 107,
+              "len": 107,
+              "text": "Pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 107,
+              "end": 178,
+              "len": 71,
+              "text": "place the cube onto the target",
+              "is_demo": true
+            },
+            {
+              "start": 178,
+              "end": 238,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 238,
+              "end": 341,
+              "len": 103,
+              "text": "Pick up the cube",
+              "is_demo": false
+            },
+            {
+              "start": 341,
+              "end": 404,
+              "len": 63,
+              "text": "place the cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 404,
+              "end": 416,
+              "len": 12,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 247,
@@ -3391,7 +8784,113 @@
           "delta_mean": 10.42,
           "delta_min": 10,
           "delta_max": 11,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 10.42,
+              "delta_min": 10,
+              "delta_max": 11,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 46.14,
+              "delta_min": 46,
+              "delta_max": 47,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                46,
+                92,
+                138,
+                184,
+                230,
+                276,
+                323
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 30,
+              "len": 30,
+              "text": "move right",
+              "is_demo": true
+            },
+            {
+              "start": 30,
+              "end": 58,
+              "len": 28,
+              "text": "move right",
+              "is_demo": true
+            },
+            {
+              "start": 58,
+              "end": 93,
+              "len": 35,
+              "text": "move forward-right",
+              "is_demo": true
+            },
+            {
+              "start": 93,
+              "end": 125,
+              "len": 32,
+              "text": "move left",
+              "is_demo": true
+            },
+            {
+              "start": 125,
+              "end": 162,
+              "len": 37,
+              "text": "move forward-left",
+              "is_demo": true
+            },
+            {
+              "start": 162,
+              "end": 192,
+              "len": 30,
+              "text": "move right",
+              "is_demo": false
+            },
+            {
+              "start": 192,
+              "end": 220,
+              "len": 28,
+              "text": "move right",
+              "is_demo": false
+            },
+            {
+              "start": 220,
+              "end": 255,
+              "len": 35,
+              "text": "move forward-right",
+              "is_demo": false
+            },
+            {
+              "start": 255,
+              "end": 287,
+              "len": 32,
+              "text": "move left",
+              "is_demo": false
+            },
+            {
+              "start": 287,
+              "end": 314,
+              "len": 27,
+              "text": "move forward-left",
+              "is_demo": false
+            },
+            {
+              "start": 314,
+              "end": 324,
+              "len": 10,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 186,
@@ -3439,7 +8938,85 @@
           "delta_mean": 17.35,
           "delta_min": 17,
           "delta_max": 18,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 17.35,
+              "delta_min": 17,
+              "delta_max": 18,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 76.86,
+              "delta_min": 76,
+              "delta_max": 77,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                76,
+                153,
+                230,
+                307,
+                384,
+                461,
+                538
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 112,
+              "len": 112,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 112,
+              "end": 212,
+              "len": 100,
+              "text": "pick up the first highlighted cube, which is blue",
+              "is_demo": false
+            },
+            {
+              "start": 212,
+              "end": 274,
+              "len": 62,
+              "text": "place the cube onto the table",
+              "is_demo": false
+            },
+            {
+              "start": 274,
+              "end": 379,
+              "len": 105,
+              "text": "pick up the second highlighted cube, which is red",
+              "is_demo": false
+            },
+            {
+              "start": 379,
+              "end": 429,
+              "len": 50,
+              "text": "place the cube onto the table",
+              "is_demo": false
+            },
+            {
+              "start": 429,
+              "end": 524,
+              "len": 95,
+              "text": "pick up the third highlighted cube, which is red",
+              "is_demo": false
+            },
+            {
+              "start": 524,
+              "end": 539,
+              "len": 15,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 492,
@@ -3487,7 +9064,120 @@
           "delta_mean": 26.16,
           "delta_min": 26,
           "delta_max": 27,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 26.16,
+              "delta_min": 26,
+              "delta_max": 27,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 115.86,
+              "delta_min": 115,
+              "delta_max": 116,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                115,
+                231,
+                347,
+                463,
+                579,
+                695,
+                811
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 112,
+              "len": 112,
+              "text": "pick up the green cube for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 112,
+              "end": 188,
+              "len": 76,
+              "text": "place the green cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 188,
+              "end": 264,
+              "len": 76,
+              "text": "pick up the green cube for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 264,
+              "end": 316,
+              "len": 52,
+              "text": "place the green cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 316,
+              "end": 392,
+              "len": 76,
+              "text": "pick up the green cube for the third time",
+              "is_demo": false
+            },
+            {
+              "start": 392,
+              "end": 446,
+              "len": 54,
+              "text": "place the green cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 446,
+              "end": 522,
+              "len": 76,
+              "text": "pick up the green cube for the fourth time",
+              "is_demo": false
+            },
+            {
+              "start": 522,
+              "end": 576,
+              "len": 54,
+              "text": "place the green cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 576,
+              "end": 652,
+              "len": 76,
+              "text": "pick up the green cube for the fifth time",
+              "is_demo": false
+            },
+            {
+              "start": 652,
+              "end": 706,
+              "len": 54,
+              "text": "place the green cube onto the target",
+              "is_demo": false
+            },
+            {
+              "start": 706,
+              "end": 776,
+              "len": 70,
+              "text": "press the button to stop",
+              "is_demo": false
+            },
+            {
+              "start": 776,
+              "end": 812,
+              "len": 36,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 686,
@@ -3535,7 +9225,113 @@
           "delta_mean": 16.1,
           "delta_min": 16,
           "delta_max": 17,
-          "frames_in_demo": 16
+          "frames_in_demo": 16,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 16.1,
+              "delta_min": 16,
+              "delta_max": 17,
+              "frames_in_demo": 16,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 71.29,
+              "delta_min": 71,
+              "delta_max": 72,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                71,
+                142,
+                213,
+                285,
+                356,
+                427,
+                499
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 50,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick counterclockwise",
+              "is_demo": true
+            },
+            {
+              "start": 50,
+              "end": 100,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick clockwise",
+              "is_demo": true
+            },
+            {
+              "start": 100,
+              "end": 150,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": true
+            },
+            {
+              "start": 150,
+              "end": 200,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick clockwise",
+              "is_demo": true
+            },
+            {
+              "start": 200,
+              "end": 250,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": true
+            },
+            {
+              "start": 250,
+              "end": 300,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick counterclockwise",
+              "is_demo": false
+            },
+            {
+              "start": 300,
+              "end": 350,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick clockwise",
+              "is_demo": false
+            },
+            {
+              "start": 350,
+              "end": 400,
+              "len": 50,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": false
+            },
+            {
+              "start": 400,
+              "end": 450,
+              "len": 50,
+              "text": "move to the nearest left target by circling around the stick clockwise",
+              "is_demo": false
+            },
+            {
+              "start": 450,
+              "end": 493,
+              "len": 43,
+              "text": "move to the nearest right target by circling around the stick clockwise",
+              "is_demo": false
+            },
+            {
+              "start": 493,
+              "end": 500,
+              "len": 7,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 400,
@@ -3583,7 +9379,78 @@
           "delta_mean": 9.94,
           "delta_min": 9,
           "delta_max": 10,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 9.94,
+              "delta_min": 9,
+              "delta_max": 10,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 44.0,
+              "delta_min": 44,
+              "delta_max": 44,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                44,
+                88,
+                132,
+                176,
+                220,
+                264,
+                308
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 58,
+              "len": 58,
+              "text": "move to the top of the button to prepare",
+              "is_demo": false
+            },
+            {
+              "start": 58,
+              "end": 100,
+              "len": 42,
+              "text": "remain static",
+              "is_demo": false
+            },
+            {
+              "start": 100,
+              "end": 202,
+              "len": 102,
+              "text": "remain static",
+              "is_demo": false
+            },
+            {
+              "start": 202,
+              "end": 250,
+              "len": 48,
+              "text": "remain static",
+              "is_demo": false
+            },
+            {
+              "start": 250,
+              "end": 277,
+              "len": 27,
+              "text": "press the button to stop the cube on the target",
+              "is_demo": false
+            },
+            {
+              "start": 277,
+              "end": 309,
+              "len": 32,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 122,
@@ -3631,7 +9498,106 @@
           "delta_mean": 15.71,
           "delta_min": 15,
           "delta_max": 16,
-          "frames_in_demo": 0
+          "frames_in_demo": 0,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 15.71,
+              "delta_min": 15,
+              "delta_max": 16,
+              "frames_in_demo": 0,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 69.57,
+              "delta_min": 69,
+              "delta_max": 70,
+              "frames_in_demo": 0,
+              "indices": [
+                0,
+                69,
+                139,
+                208,
+                278,
+                347,
+                417,
+                487
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 120,
+              "len": 120,
+              "text": "pick up the blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 120,
+              "end": 149,
+              "len": 29,
+              "text": "move to the top of the right-side target for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 149,
+              "end": 192,
+              "len": 43,
+              "text": "move to the top of the left-side target for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 192,
+              "end": 232,
+              "len": 40,
+              "text": "move to the top of the right-side target for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 232,
+              "end": 273,
+              "len": 41,
+              "text": "move to the top of the left-side target for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 273,
+              "end": 312,
+              "len": 39,
+              "text": "move to the top of the right-side target for the third time",
+              "is_demo": false
+            },
+            {
+              "start": 312,
+              "end": 353,
+              "len": 41,
+              "text": "move to the top of the left-side target for the third time",
+              "is_demo": false
+            },
+            {
+              "start": 353,
+              "end": 393,
+              "len": 40,
+              "text": "put the blue cube on the table",
+              "is_demo": false
+            },
+            {
+              "start": 393,
+              "end": 447,
+              "len": 54,
+              "text": "press the button",
+              "is_demo": false
+            },
+            {
+              "start": 447,
+              "end": 488,
+              "len": 41,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 449,
@@ -3679,7 +9645,120 @@
           "delta_mean": 30.97,
           "delta_min": 30,
           "delta_max": 31,
-          "frames_in_demo": 25
+          "frames_in_demo": 25,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 30.97,
+              "delta_min": 30,
+              "delta_max": 31,
+              "frames_in_demo": 25,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 137.14,
+              "delta_min": 137,
+              "delta_max": 138,
+              "frames_in_demo": 6,
+              "indices": [
+                0,
+                137,
+                274,
+                411,
+                548,
+                685,
+                822,
+                960
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 114,
+              "len": 114,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 114,
+              "end": 216,
+              "len": 102,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 216,
+              "end": 299,
+              "len": 83,
+              "text": "press the button",
+              "is_demo": true
+            },
+            {
+              "start": 299,
+              "end": 387,
+              "len": 88,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 387,
+              "end": 487,
+              "len": 100,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 487,
+              "end": 558,
+              "len": 71,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 558,
+              "end": 640,
+              "len": 82,
+              "text": "drop the cube onto table",
+              "is_demo": true
+            },
+            {
+              "start": 640,
+              "end": 697,
+              "len": 57,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 697,
+              "end": 757,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 757,
+              "end": 870,
+              "len": 113,
+              "text": "pick up the cube",
+              "is_demo": false
+            },
+            {
+              "start": 870,
+              "end": 943,
+              "len": 73,
+              "text": "place the cube onto the correct target",
+              "is_demo": false
+            },
+            {
+              "start": 943,
+              "end": 961,
+              "len": 18,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 900,
@@ -3727,7 +9806,134 @@
           "delta_mean": 35.94,
           "delta_min": 35,
           "delta_max": 36,
-          "frames_in_demo": 26
+          "frames_in_demo": 26,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 35.94,
+              "delta_min": 35,
+              "delta_max": 36,
+              "frames_in_demo": 26,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 159.14,
+              "delta_min": 159,
+              "delta_max": 160,
+              "frames_in_demo": 6,
+              "indices": [
+                0,
+                159,
+                318,
+                477,
+                636,
+                795,
+                954,
+                1114
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 124,
+              "len": 124,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 124,
+              "end": 222,
+              "len": 98,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 222,
+              "end": 290,
+              "len": 68,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 290,
+              "end": 378,
+              "len": 88,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 378,
+              "end": 452,
+              "len": 74,
+              "text": "press the button",
+              "is_demo": true
+            },
+            {
+              "start": 452,
+              "end": 534,
+              "len": 82,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 534,
+              "end": 627,
+              "len": 93,
+              "text": "drop the cube onto target",
+              "is_demo": true
+            },
+            {
+              "start": 627,
+              "end": 700,
+              "len": 73,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 700,
+              "end": 807,
+              "len": 107,
+              "text": "drop the cube onto table",
+              "is_demo": true
+            },
+            {
+              "start": 807,
+              "end": 863,
+              "len": 56,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 863,
+              "end": 923,
+              "len": 60,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 923,
+              "end": 1036,
+              "len": 113,
+              "text": "pick up the cube",
+              "is_demo": false
+            },
+            {
+              "start": 1036,
+              "end": 1102,
+              "len": 66,
+              "text": "place the cube onto the correct target",
+              "is_demo": false
+            },
+            {
+              "start": 1102,
+              "end": 1115,
+              "len": 13,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 921,
@@ -3775,7 +9981,92 @@
           "delta_mean": 17.48,
           "delta_min": 17,
           "delta_max": 18,
-          "frames_in_demo": 10
+          "frames_in_demo": 10,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 17.48,
+              "delta_min": 17,
+              "delta_max": 18,
+              "frames_in_demo": 10,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 77.43,
+              "delta_min": 77,
+              "delta_max": 78,
+              "frames_in_demo": 3,
+              "indices": [
+                0,
+                77,
+                154,
+                232,
+                309,
+                387,
+                464,
+                542
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 111,
+              "len": 111,
+              "text": "pick up the cube",
+              "is_demo": true
+            },
+            {
+              "start": 111,
+              "end": 169,
+              "len": 58,
+              "text": "drop the cube on the table",
+              "is_demo": true
+            },
+            {
+              "start": 169,
+              "end": 279,
+              "len": 110,
+              "text": "pick up the correct cube for the first time",
+              "is_demo": false
+            },
+            {
+              "start": 279,
+              "end": 333,
+              "len": 54,
+              "text": "put it down",
+              "is_demo": false
+            },
+            {
+              "start": 333,
+              "end": 406,
+              "len": 73,
+              "text": "pick up the correct cube for the second time",
+              "is_demo": false
+            },
+            {
+              "start": 406,
+              "end": 460,
+              "len": 54,
+              "text": "put it down",
+              "is_demo": false
+            },
+            {
+              "start": 460,
+              "end": 507,
+              "len": 47,
+              "text": "press the button to finish",
+              "is_demo": false
+            },
+            {
+              "start": 507,
+              "end": 543,
+              "len": 36,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 405,
@@ -3823,7 +10114,71 @@
           "delta_mean": 10.58,
           "delta_min": 10,
           "delta_max": 11,
-          "frames_in_demo": 7
+          "frames_in_demo": 7,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 10.58,
+              "delta_min": 10,
+              "delta_max": 11,
+              "frames_in_demo": 7,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 46.86,
+              "delta_min": 46,
+              "delta_max": 47,
+              "frames_in_demo": 2,
+              "indices": [
+                0,
+                46,
+                93,
+                140,
+                187,
+                234,
+                281,
+                328
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 66,
+              "len": 66,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 66,
+              "end": 172,
+              "len": 106,
+              "text": "pick up the container that hides the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 172,
+              "end": 220,
+              "len": 48,
+              "text": "put down the container",
+              "is_demo": false
+            },
+            {
+              "start": 220,
+              "end": 321,
+              "len": 101,
+              "text": "pick up the container that hides the blue cube",
+              "is_demo": false
+            },
+            {
+              "start": 321,
+              "end": 329,
+              "len": 8,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 309,
@@ -3871,7 +10226,71 @@
           "delta_mean": 14.71,
           "delta_min": 14,
           "delta_max": 15,
-          "frames_in_demo": 15
+          "frames_in_demo": 15,
+          "frame_paths": {
+            "32": {
+              "frame_samples": 32,
+              "delta_mean": 14.71,
+              "delta_min": 14,
+              "delta_max": 15,
+              "frames_in_demo": 15,
+              "indices": null
+            },
+            "8": {
+              "frame_samples": 8,
+              "delta_mean": 65.14,
+              "delta_min": 65,
+              "delta_max": 66,
+              "frames_in_demo": 4,
+              "indices": [
+                0,
+                65,
+                130,
+                195,
+                260,
+                325,
+                390,
+                456
+              ]
+            }
+          },
+          "subgoals": [
+            {
+              "start": 0,
+              "end": 216,
+              "len": 216,
+              "text": "static",
+              "is_demo": true
+            },
+            {
+              "start": 216,
+              "end": 322,
+              "len": 106,
+              "text": "pick up the container that hides the red cube",
+              "is_demo": false
+            },
+            {
+              "start": 322,
+              "end": 369,
+              "len": 47,
+              "text": "put down the container",
+              "is_demo": false
+            },
+            {
+              "start": 369,
+              "end": 447,
+              "len": 78,
+              "text": "pick up the container that hides the green cube",
+              "is_demo": false
+            },
+            {
+              "start": 447,
+              "end": 457,
+              "len": 10,
+              "text": "All tasks completed",
+              "is_demo": false
+            }
+          ]
         },
         "num_timesteps": {
           "min": 407,
