@@ -9,6 +9,10 @@
 ``datastore.motion_store`` 的 ``build_index_entries`` / ``max_visible_count`` /
 ``segment_grid_starts``，以及 ``shared.sampling.even_sampling_indices``。
 
+给 ``--difficulty-map`` 时按 ``setup/difficulty`` 再分出 easy / medium / hard 三档
+（官方每任务 easy 50 / medium 25 / hard 25），四档一起写进 ``variants``——
+难度直接决定轨迹长度，因而决定采样间隔与窗口数。
+
 「中位集」取 ``statistics.median_high``（100 集时 = 按 num_timesteps 排序的第 51 小），
 用该集**真实的 (num_timesteps, exec_start_idx) 配对**，而不是分别取中位数——后者会造出
 数据集里不存在的组合。t 取该集最后一帧 ``num_timesteps - 1``。
@@ -61,6 +65,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--difficulty-map", default="",
+                    help="{'<h5>|<raw_ep_idx>': 'easy|medium|hard'} 的 json；给了才分难度档")
     args = ap.parse_args()
 
     manifest = json.loads(pathlib.Path(args.manifest).read_text())
@@ -70,23 +76,22 @@ def main() -> None:
     for e in entries:
         by_task.setdefault(task_of(e.h5_file), []).append(e)
 
-    tasks_out = {}
-    for task, eps in sorted(by_task.items()):
-        # 中位集：按 num_timesteps 排序取 median_high 那一集，保留真实的 (nt, es) 配对
+    diff_map = {}
+    if args.difficulty_map:
+        diff_map = json.loads(pathlib.Path(args.difficulty_map).read_text())
+
+    def summarize(eps: list) -> dict:
+        """一组 episode（同任务、同难度档）→ 中位集快照 + 分布。"""
         nts = [e.num_timesteps for e in eps]
         med_nt = statistics.median_high(nts)
         med = sorted([e for e in eps if e.num_timesteps == med_nt], key=lambda e: e.raw_ep_idx)[0]
-
         t = med.num_timesteps - 1
         n_demo = ms.seg_num_grid(med.demo.seg_len)
         n_exec_vis = len(ms.visible_motion_rows(med, t)[0]) - n_demo
         total_vis = ms.max_visible_count(med)
         fidx = even_sampling_indices(t, FRAME_BUDGET)
         gaps = [b - a for a, b in zip(fidx, fidx[1:])]
-
-        tasks_out[task] = {
-            "suite": next(k for k, v in TASK_SUITES.items() if task in v),
-            "has_demo": task in TASK_WITH_VIDEO_DEMO,
+        return {
             "episodes": len(eps),
             "median_episode": {
                 "raw_ep_idx": med.raw_ep_idx,
@@ -104,7 +109,6 @@ def main() -> None:
                 "delta_min": min(gaps) if gaps else None,
                 "delta_max": max(gaps) if gaps else None,
                 "frames_in_demo": sum(1 for f in fidx if f < med.exec_start_idx),
-                "demo_grid_starts": ms.segment_grid_starts(med.demo.seg_len)[:4],
             },
             "num_timesteps": dist(nts),
             "exec_start_idx": dist([e.exec_start_idx for e in eps]),
@@ -112,6 +116,24 @@ def main() -> None:
             "total_timesteps": sum(nts),
             "total_exec_samples": sum(e.num_timesteps - e.exec_start_idx for e in eps),
         }
+
+    variants = {}
+    for level in ("all", "easy", "medium", "hard"):
+        if level != "all" and not diff_map:
+            continue
+        vt = {}
+        for task, eps in sorted(by_task.items()):
+            sel = eps if level == "all" else [
+                e for e in eps if diff_map.get(f"{e.h5_file}|{e.raw_ep_idx}") == level]
+            if not sel:
+                continue
+            vt[task] = {
+                "suite": next(k for k, v in TASK_SUITES.items() if task in v),
+                "has_demo": task in TASK_WITH_VIDEO_DEMO,
+                **summarize(sel),
+            }
+        variants[level] = vt
+    tasks_out = variants["all"]
 
     totals = ms.index_totals(entries)
     out = {
@@ -129,7 +151,9 @@ def main() -> None:
             **totals,
         },
         "suites": TASK_SUITES,
+        "difficulties": sorted(variants),
         "tasks": tasks_out,
+        "variants": variants,
     }
     pathlib.Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     pathlib.Path(args.out).write_text(json.dumps(out, indent=2, ensure_ascii=False) + "\n")
@@ -144,7 +168,17 @@ def main() -> None:
         print(f"{task:<18}{d['suite']:<12}{'有' if d['has_demo'] else '无':>5}"
               f"{m['num_timesteps']:>10}{m['exec_start_idx']:>6}{m['motion_tokens']:>7}"
               f"{m['delta_mean'] or 0:>7.1f}{m['frames_in_demo']:>11}{d['motion_tokens']['max']:>14}")
-    print(f"清单已写 {args.out}")
+    for level in ("easy", "medium", "hard"):
+        if level not in variants:
+            continue
+        rows = variants[level]
+        print(f"\n[{level}] {len(rows)} 任务，每任务 {next(iter(rows.values()))['episodes']} 集")
+        for task, d in sorted(rows.items(), key=lambda kv: (kv[1]["suite"], kv[0])):
+            m = d["median_episode"]
+            print(f"  {task:<18}{d['suite']:<12}中位集 {m['num_timesteps']:>5} 帧  es={m['exec_start_idx']:>4}  "
+                  f"token {m['motion_tokens']:>3}/{MOTION_BUDGET}  Δ {m['delta_mean'] or 0:>5.1f}  "
+                  f"32帧落demo {m['frames_in_demo']:>2}")
+    print(f"\n清单已写 {args.out}")
 
 
 if __name__ == "__main__":

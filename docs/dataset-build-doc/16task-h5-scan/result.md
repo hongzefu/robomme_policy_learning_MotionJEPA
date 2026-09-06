@@ -28,24 +28,24 @@
 
 ## 16 任务中位集（按 `num_timesteps` 排序取中位那一集，t = 该集最后一帧）
 
-| 组 | 任务 | demo | 中位集帧数 | es | motion token | budget | Δ 采样间隔 | 32 帧落 demo | 全集单集最大 token |
+| 组 | 任务 | demo | 中位集帧数 | es | motion token | budget | Δ 采样间隔 | 32 帧落 demo | 该档单集最大 |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|
-| Counting | BinFill | 无 | 622 | 0 | 37 | 38.5% | 20.0 | 0 | 64 |
-| Counting | PickXtimes | 无 | 546 | 0 | 33 | 34.4% | 17.6 | 0 | 63 |
-| Counting | SwingXtimes | 无 | 445 | 0 | 26 | 27.1% | 14.3 | 0 | 36 |
+| Counting | BinFill | 无 | 622 | 0 | 37 | 38.5% | 20.03 | 0 | 64 |
+| Counting | PickXtimes | 无 | 546 | 0 | 33 | 34.4% | 17.58 | 0 | 63 |
+| Counting | SwingXtimes | 无 | 445 | 0 | 26 | 27.1% | 14.32 | 0 | 36 |
 | Counting | StopCube | 无 | 311 | 0 | 18 | 18.8% | 10.0 | 0 | 35 |
-| Persistent | ButtonUnmask | 无 | 230 | 0 | 13 | 13.5% | 7.4 | 0 | 27 |
-| Persistent | VideoUnmask | 有 | 178 | 66 | 8 | 8.3% | 5.7 | 12 | 22 |
+| Persistent | ButtonUnmask | 无 | 230 | 0 | 13 | 13.5% | 7.39 | 0 | 27 |
+| Persistent | VideoUnmask | 有 | 178 | 66 | 8 | 8.3% | 5.71 | 12 | 22 |
 | Persistent | VideoUnmaskSwap | 有 | 370 | 114 | 20 | 20.8% | 11.9 | 10 | 34 |
-| Persistent | ButtonUnmaskSwap | 无 | 445 | 0 | 26 | 27.1% | 14.3 | 0 | 33 |
-| Referential | PickHighlight | 无 | 343 | 0 | 20 | 20.8% | 11.0 | 0 | 39 |
+| Persistent | ButtonUnmaskSwap | 无 | 445 | 0 | 26 | 27.1% | 14.32 | 0 | 33 |
+| Referential | PickHighlight | 无 | 343 | 0 | 20 | 20.8% | 11.03 | 0 | 39 |
 | Referential | VideoRepick | 有 | 686 | 314 | 40 | 41.7% | 22.1 | 15 | 61 |
-| Referential | VideoPlaceButton | 有 | 960 | 765 | 57 | 59.4% | 30.9 | 25 | 65 |
-| Referential | VideoPlaceOrder | 有 | 1129 | 921 | 67 | 69.8% | 36.4 | 26 | 85 |
-| Behavior | MoveCube | 有 | 441 | 258 | 25 | 26.0% | 14.2 | 19 | 30 |
-| Behavior | InsertPeg | 有 | 477 | 240 | 26 | 27.1% | 15.3 | 16 | 34 |
-| Behavior | PatternLock | 有 | 192 | 96 | 8 | 8.3% | 6.2 | 16 | 32 |
-| Behavior | RouteStick | 有 | 400 | 200 | 22 | 22.9% | 12.9 | 16 | 40 |
+| Referential | VideoPlaceButton | 有 | 960 | 765 | 57 | 59.4% | 30.94 | 25 | 65 |
+| Referential | VideoPlaceOrder | 有 | 1129 | 921 | 67 | 69.8% | 36.39 | 26 | 85 |
+| Behavior | MoveCube | 有 | 441 | 258 | 25 | 26.0% | 14.19 | 19 | 30 |
+| Behavior | InsertPeg | 有 | 477 | 240 | 26 | 27.1% | 15.35 | 16 | 34 |
+| Behavior | PatternLock | 有 | 192 | 96 | 8 | 8.3% | 6.16 | 16 | 32 |
+| Behavior | RouteStick | 有 | 400 | 200 | 22 | 22.9% | 12.87 | 16 | 40 |
 
 ## 四条结论
 
@@ -63,6 +63,60 @@ VideoPlaceOrder 的 32 个采样帧里还有 26 个落在 demo 段，真正看�
 **④ 两条路的稀疏方向相反。** 运动路 stride 固定 16、任务越长窗口越多（覆盖不掉队）；
 帧路预算固定 32、任务越长采样越稀（覆盖在退化）。所以运动记忆的相对价值在长任务上最高，
 而长任务恰是帧路最看不清的地方。
+
+## hard 难度档（每任务 25 集）
+
+官方每任务 100 集固定切成 **easy 50 / medium 25 / hard 25**（读 `episode_<i>/setup/difficulty`，
+全集 800 / 400 / 400）。难度直接决定轨迹长度，因而决定采样间隔与窗口数。
+
+| 组 | 任务 | demo | 中位集帧数 | es | motion token | budget | Δ 采样间隔 | 32 帧落 demo | 该档单集最大 |
+|---|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Counting | BinFill | 无 | 868 | 0 | 53 | 55.2% | 27.97 | 0 | 64 |
+| Counting | PickXtimes | 无 | 812 | 0 | 49 | 51.0% | 26.16 | 0 | 63 |
+| Counting | SwingXtimes | 无 | 488 | 0 | 29 | 30.2% | 15.71 | 0 | 34 |
+| Counting | StopCube | 无 | 309 | 0 | 18 | 18.8% | 9.94 | 0 | 27 |
+| Persistent | ButtonUnmask | 无 | 373 | 0 | 22 | 22.9% | 12.0 | 0 | 27 |
+| Persistent | VideoUnmask | 有 | 329 | 66 | 18 | 18.8% | 10.58 | 7 | 22 |
+| Persistent | VideoUnmaskSwap | 有 | 457 | 216 | 26 | 27.1% | 14.71 | 15 | 34 |
+| Persistent | ButtonUnmaskSwap | 无 | 461 | 0 | 27 | 28.1% | 14.84 | 0 | 33 |
+| Referential | PickHighlight | 无 | 539 | 0 | 32 | 33.3% | 17.35 | 0 | 39 |
+| Referential | VideoRepick | 有 | 543 | 169 | 31 | 32.3% | 17.48 | 10 | 61 |
+| Referential | VideoPlaceButton | 有 | 961 | 757 | 57 | 59.4% | 30.97 | 25 | 62 |
+| Referential | VideoPlaceOrder | 有 | 1115 | 923 | 66 | 68.8% | 35.94 | 26 | 85 |
+| Behavior | MoveCube | 有 | 416 | 238 | 23 | 24.0% | 13.39 | 18 | 29 |
+| Behavior | InsertPeg | 有 | 464 | 232 | 26 | 27.1% | 14.94 | 16 | 32 |
+| Behavior | PatternLock | 有 | 324 | 162 | 18 | 18.8% | 10.42 | 16 | 32 |
+| Behavior | RouteStick | 有 | 500 | 250 | 28 | 29.2% | 16.1 | 16 | 40 |
+
+**hard 与全集中位的对照**：
+
+| 任务 | 全部 100 集中位帧数 | hard 25 集中位帧数 | 变化 | token(all→hard) | Δ(all→hard) |
+|---|---:|---:|---:|---:|---:|
+| BinFill | 622 | 868 | +40% | 37 → 53 | 20.03 → 27.97 |
+| PickXtimes | 546 | 812 | +49% | 33 → 49 | 17.58 → 26.16 |
+| SwingXtimes | 445 | 488 | +10% | 26 → 29 | 14.32 → 15.71 |
+| StopCube | 311 | 309 | -1% | 18 → 18 | 10.0 → 9.94 |
+| ButtonUnmask | 230 | 373 | +62% | 13 → 22 | 7.39 → 12.0 |
+| VideoUnmask | 178 | 329 | +85% | 8 → 18 | 5.71 → 10.58 |
+| VideoUnmaskSwap | 370 | 457 | +24% | 20 → 26 | 11.9 → 14.71 |
+| ButtonUnmaskSwap | 445 | 461 | +4% | 26 → 27 | 14.32 → 14.84 |
+| PickHighlight | 343 | 539 | +57% | 20 → 32 | 11.03 → 17.35 |
+| VideoRepick | 686 | 543 | -21% | 40 → 31 | 22.1 → 17.48 |
+| VideoPlaceButton | 960 | 961 | +0% | 57 → 57 | 30.94 → 30.97 |
+| VideoPlaceOrder | 1129 | 1115 | -1% | 67 → 66 | 36.39 → 35.94 |
+| MoveCube | 441 | 416 | -6% | 25 → 23 | 14.19 → 13.39 |
+| InsertPeg | 477 | 464 | -3% | 26 → 26 | 15.35 → 14.94 |
+| PatternLock | 192 | 324 | +69% | 8 → 18 | 6.16 → 10.42 |
+| RouteStick | 400 | 500 | +25% | 22 → 28 | 12.87 → 16.1 |
+
+三点：
+
+- **hard 普遍更长，但不是全部。** 涨幅最大的是 VideoUnmask（178 → 329，+85%）与 PatternLock（192 → 324，+69%）；
+  而 VideoPlaceOrder 反而略降（1129 → 1115），因为它的长度主要由 demo 段决定、demo 不随难度线性变长。
+- **hard 档 budget 占用上限 85/96**（VideoPlaceOrder），仍未触顶，但 BinFill 中位集就已到 53 窗（55.2%）——
+  全集口径下它的中位只有 37 窗。
+- **采样间隔在 hard 档整体变疏**：BinFill 20.0 → 28.0 帧、PickXtimes 17.6 → 26.2 帧。
+  帧路预算固定 32，难度越高时间分辨率越差，正是最需要看清的时候。
 
 ## 与在线 rollout 口径的差异（不可混比）
 
@@ -82,6 +136,7 @@ VideoPlaceOrder 的 32 个采样帧里还有 26 个落在 demo 段，真正看�
 - `v1-store/datasets/16task-scan/episode_manifest.json` — 1600 集逐集 `(num_timesteps, exec_start_idx)`
 - `v1-store/datasets/16task-scan/memory_axis_16task.json` — 16 任务记忆指标（中位集 + 分布）
 - `v1-store/datasets/16task-scan/input_manifest.json` — 16 个 H5 的 size + sha256
+- `v1-store/datasets/16task-scan/difficulty.json` — 1600 集的 easy/medium/hard 标签（读自 `setup/difficulty`）
 - 上述前两份的副本在本目录 `records/`
 - 时序数轴页面：<https://claude.ai/code/artifact/f512d233-6c6c-41b9-96f2-41f222401d50>
   （4 任务 rollout 口径的旧图仍在 <https://claude.ai/code/artifact/d48feefc-20e0-4365-b6ed-afd9b5d70916>）

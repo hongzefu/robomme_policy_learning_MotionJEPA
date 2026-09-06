@@ -44,6 +44,12 @@
       "RouteStick"
     ]
   },
+  "difficulties": [
+    "all",
+    "easy",
+    "hard",
+    "medium"
+  ],
   "tasks": {
     "BinFill": {
       "suite": "Counting",
@@ -64,8 +70,7 @@
         "delta_mean": 20.03,
         "delta_min": 20,
         "delta_max": 21,
-        "frames_in_demo": 0,
-        "demo_grid_starts": []
+        "frames_in_demo": 0
       },
       "num_timesteps": {
         "min": 266,
@@ -113,8 +118,7 @@
         "delta_mean": 7.39,
         "delta_min": 7,
         "delta_max": 8,
-        "frames_in_demo": 0,
-        "demo_grid_starts": []
+        "frames_in_demo": 0
       },
       "num_timesteps": {
         "min": 198,
@@ -162,8 +166,7 @@
         "delta_mean": 14.32,
         "delta_min": 14,
         "delta_max": 15,
-        "frames_in_demo": 0,
-        "demo_grid_starts": []
+        "frames_in_demo": 0
       },
       "num_timesteps": {
         "min": 297,
@@ -211,13 +214,7 @@
         "delta_mean": 15.35,
         "delta_min": 15,
         "delta_max": 16,
-        "frames_in_demo": 16,
-        "demo_grid_starts": [
-          0,
-          16,
-          32,
-          48
-        ]
+        "frames_in_demo": 16
       },
       "num_timesteps": {
         "min": 406,
@@ -265,13 +262,7 @@
         "delta_mean": 14.19,
         "delta_min": 14,
         "delta_max": 15,
-        "frames_in_demo": 19,
-        "demo_grid_starts": [
-          0,
-          16,
-          32,
-          48
-        ]
+        "frames_in_demo": 19
       },
       "num_timesteps": {
         "min": 247,
@@ -319,13 +310,7 @@
         "delta_mean": 6.16,
         "delta_min": 6,
         "delta_max": 7,
-        "frames_in_demo": 16,
-        "demo_grid_starts": [
-          0,
-          16,
-          32,
-          48
-        ]
+        "frames_in_demo": 16
       },
       "num_timesteps": {
         "min": 48,
@@ -373,8 +358,7 @@
         "delta_mean": 11.03,
         "delta_min": 11,
         "delta_max": 12,
-        "frames_in_demo": 0,
-        "demo_grid_starts": []
+        "frames_in_demo": 0
       },
       "num_timesteps": {
         "min": 199,
@@ -422,8 +406,7 @@
         "delta_mean": 17.58,
         "delta_min": 17,
         "delta_max": 18,
-        "frames_in_demo": 0,
-        "demo_grid_starts": []
+        "frames_in_demo": 0
       },
       "num_timesteps": {
         "min": 266,
@@ -471,13 +454,7 @@
         "delta_mean": 12.87,
         "delta_min": 12,
         "delta_max": 13,
-        "frames_in_demo": 16,
-        "demo_grid_starts": [
-          0,
-          16,
-          32,
-          48
-        ]
+        "frames_in_demo": 16
       },
       "num_timesteps": {
         "min": 200,
@@ -525,8 +502,7 @@
         "delta_mean": 10.0,
         "delta_min": 10,
         "delta_max": 10,
-        "frames_in_demo": 0,
-        "demo_grid_starts": []
+        "frames_in_demo": 0
       },
       "num_timesteps": {
         "min": 121,
@@ -574,8 +550,7 @@
         "delta_mean": 14.32,
         "delta_min": 14,
         "delta_max": 15,
-        "frames_in_demo": 0,
-        "demo_grid_starts": []
+        "frames_in_demo": 0
       },
       "num_timesteps": {
         "min": 296,
@@ -623,13 +598,7 @@
         "delta_mean": 30.94,
         "delta_min": 30,
         "delta_max": 31,
-        "frames_in_demo": 25,
-        "demo_grid_starts": [
-          0,
-          16,
-          32,
-          48
-        ]
+        "frames_in_demo": 25
       },
       "num_timesteps": {
         "min": 900,
@@ -677,13 +646,7 @@
         "delta_mean": 36.39,
         "delta_min": 36,
         "delta_max": 37,
-        "frames_in_demo": 26,
-        "demo_grid_starts": [
-          0,
-          16,
-          32,
-          48
-        ]
+        "frames_in_demo": 26
       },
       "num_timesteps": {
         "min": 909,
@@ -731,13 +694,7 @@
         "delta_mean": 22.1,
         "delta_min": 22,
         "delta_max": 23,
-        "frames_in_demo": 15,
-        "demo_grid_starts": [
-          0,
-          16,
-          32,
-          48
-        ]
+        "frames_in_demo": 15
       },
       "num_timesteps": {
         "min": 405,
@@ -785,12 +742,7 @@
         "delta_mean": 5.71,
         "delta_min": 5,
         "delta_max": 6,
-        "frames_in_demo": 12,
-        "demo_grid_starts": [
-          0,
-          16,
-          32
-        ]
+        "frames_in_demo": 12
       },
       "num_timesteps": {
         "min": 163,
@@ -838,13 +790,7 @@
         "delta_mean": 11.9,
         "delta_min": 11,
         "delta_max": 12,
-        "frames_in_demo": 10,
-        "demo_grid_starts": [
-          0,
-          16,
-          32,
-          48
-        ]
+        "frames_in_demo": 10
       },
       "num_timesteps": {
         "min": 213,
@@ -872,6 +818,3088 @@
       },
       "total_timesteps": 34810,
       "total_exec_samples": 19432
+    }
+  },
+  "variants": {
+    "all": {
+      "BinFill": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 6,
+          "num_timesteps": 622,
+          "exec_start_idx": 0,
+          "t": 621,
+          "demo_seg_len": 0,
+          "exec_seg_len": 622,
+          "demo_windows": 0,
+          "exec_windows": 37,
+          "motion_tokens": 37,
+          "budget_pct": 38.5,
+          "frame_samples": 32,
+          "delta_mean": 20.03,
+          "delta_min": 20,
+          "delta_max": 21,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 266,
+          "p25": 432,
+          "median": 622,
+          "p75": 789,
+          "max": 1044,
+          "mean": 602.82
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 15,
+          "p25": 25,
+          "median": 37,
+          "p75": 48,
+          "max": 64,
+          "mean": 36.15
+        },
+        "total_timesteps": 60282,
+        "total_exec_samples": 60282
+      },
+      "ButtonUnmask": {
+        "suite": "Persistent",
+        "has_demo": false,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 18,
+          "num_timesteps": 230,
+          "exec_start_idx": 0,
+          "t": 229,
+          "demo_seg_len": 0,
+          "exec_seg_len": 230,
+          "demo_windows": 0,
+          "exec_windows": 13,
+          "motion_tokens": 13,
+          "budget_pct": 13.5,
+          "frame_samples": 32,
+          "delta_mean": 7.39,
+          "delta_min": 7,
+          "delta_max": 8,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 198,
+          "p25": 221,
+          "median": 230,
+          "p75": 353,
+          "max": 452,
+          "mean": 266.26
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 11,
+          "p25": 12,
+          "median": 13,
+          "p75": 21,
+          "max": 27,
+          "mean": 15.08
+        },
+        "total_timesteps": 26626,
+        "total_exec_samples": 26626
+      },
+      "ButtonUnmaskSwap": {
+        "suite": "Persistent",
+        "has_demo": false,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 96,
+          "num_timesteps": 445,
+          "exec_start_idx": 0,
+          "t": 444,
+          "demo_seg_len": 0,
+          "exec_seg_len": 445,
+          "demo_windows": 0,
+          "exec_windows": 26,
+          "motion_tokens": 26,
+          "budget_pct": 27.1,
+          "frame_samples": 32,
+          "delta_mean": 14.32,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 297,
+          "p25": 319,
+          "median": 445,
+          "p75": 461,
+          "max": 555,
+          "mean": 399.4
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 17,
+          "p25": 18,
+          "median": 26,
+          "p75": 27,
+          "max": 33,
+          "mean": 23.45
+        },
+        "total_timesteps": 39940,
+        "total_exec_samples": 39940
+      },
+      "InsertPeg": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 24,
+          "num_timesteps": 477,
+          "exec_start_idx": 240,
+          "t": 476,
+          "demo_seg_len": 240,
+          "exec_seg_len": 237,
+          "demo_windows": 13,
+          "exec_windows": 13,
+          "motion_tokens": 26,
+          "budget_pct": 27.1,
+          "frame_samples": 32,
+          "delta_mean": 15.35,
+          "delta_min": 15,
+          "delta_max": 16,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 406,
+          "p25": 456,
+          "median": 477,
+          "p75": 492,
+          "max": 586,
+          "mean": 477.03
+        },
+        "exec_start_idx": {
+          "min": 203,
+          "p25": 227,
+          "median": 239,
+          "p75": 246,
+          "max": 293,
+          "mean": 238.37
+        },
+        "motion_tokens": {
+          "min": 22,
+          "p25": 26,
+          "median": 26,
+          "p75": 28,
+          "max": 34,
+          "mean": 26.83
+        },
+        "total_timesteps": 47703,
+        "total_exec_samples": 23866
+      },
+      "MoveCube": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 1,
+          "num_timesteps": 441,
+          "exec_start_idx": 258,
+          "t": 440,
+          "demo_seg_len": 258,
+          "exec_seg_len": 183,
+          "demo_windows": 15,
+          "exec_windows": 10,
+          "motion_tokens": 25,
+          "budget_pct": 26.0,
+          "frame_samples": 32,
+          "delta_mean": 14.19,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 19
+        },
+        "num_timesteps": {
+          "min": 247,
+          "p25": 275,
+          "median": 441,
+          "p75": 460,
+          "max": 525,
+          "mean": 393.88
+        },
+        "exec_start_idx": {
+          "min": 148,
+          "p25": 168,
+          "median": 239,
+          "p75": 256,
+          "max": 299,
+          "mean": 220.57
+        },
+        "motion_tokens": {
+          "min": 13,
+          "p25": 14,
+          "median": 25,
+          "p75": 26,
+          "max": 30,
+          "mean": 21.59
+        },
+        "total_timesteps": 39388,
+        "total_exec_samples": 17331
+      },
+      "PatternLock": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 12,
+          "num_timesteps": 192,
+          "exec_start_idx": 96,
+          "t": 191,
+          "demo_seg_len": 96,
+          "exec_seg_len": 96,
+          "demo_windows": 4,
+          "exec_windows": 4,
+          "motion_tokens": 8,
+          "budget_pct": 8.3,
+          "frame_samples": 32,
+          "delta_mean": 6.16,
+          "delta_min": 6,
+          "delta_max": 7,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 48,
+          "p25": 132,
+          "median": 192,
+          "p75": 264,
+          "max": 568,
+          "mean": 207.82
+        },
+        "exec_start_idx": {
+          "min": 24,
+          "p25": 66,
+          "median": 96,
+          "p75": 132,
+          "max": 284,
+          "mean": 103.91
+        },
+        "motion_tokens": {
+          "min": 0,
+          "p25": 6,
+          "median": 8,
+          "p75": 14,
+          "max": 32,
+          "mean": 9.98
+        },
+        "total_timesteps": 20782,
+        "total_exec_samples": 10391
+      },
+      "PickHighlight": {
+        "suite": "Referential",
+        "has_demo": false,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 90,
+          "num_timesteps": 343,
+          "exec_start_idx": 0,
+          "t": 342,
+          "demo_seg_len": 0,
+          "exec_seg_len": 343,
+          "demo_windows": 0,
+          "exec_windows": 20,
+          "motion_tokens": 20,
+          "budget_pct": 20.8,
+          "frame_samples": 32,
+          "delta_mean": 11.03,
+          "delta_min": 11,
+          "delta_max": 12,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 199,
+          "p25": 224,
+          "median": 343,
+          "p75": 492,
+          "max": 652,
+          "mean": 345.6
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 11,
+          "p25": 12,
+          "median": 20,
+          "p75": 29,
+          "max": 39,
+          "mean": 20.03
+        },
+        "total_timesteps": 34560,
+        "total_exec_samples": 34560
+      },
+      "PickXtimes": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 74,
+          "num_timesteps": 546,
+          "exec_start_idx": 0,
+          "t": 545,
+          "demo_seg_len": 0,
+          "exec_seg_len": 546,
+          "demo_windows": 0,
+          "exec_windows": 33,
+          "motion_tokens": 33,
+          "budget_pct": 34.4,
+          "frame_samples": 32,
+          "delta_mean": 17.58,
+          "delta_min": 17,
+          "delta_max": 18,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 266,
+          "p25": 418,
+          "median": 546,
+          "p75": 686,
+          "max": 1025,
+          "mean": 537.2
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 15,
+          "p25": 25,
+          "median": 33,
+          "p75": 41,
+          "max": 63,
+          "mean": 32.05
+        },
+        "total_timesteps": 53720,
+        "total_exec_samples": 53720
+      },
+      "RouteStick": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 6,
+          "num_timesteps": 400,
+          "exec_start_idx": 200,
+          "t": 399,
+          "demo_seg_len": 200,
+          "exec_seg_len": 200,
+          "demo_windows": 11,
+          "exec_windows": 11,
+          "motion_tokens": 22,
+          "budget_pct": 22.9,
+          "frame_samples": 32,
+          "delta_mean": 12.87,
+          "delta_min": 12,
+          "delta_max": 13,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 200,
+          "p25": 200,
+          "median": 400,
+          "p75": 500,
+          "max": 700,
+          "mean": 369.0
+        },
+        "exec_start_idx": {
+          "min": 100,
+          "p25": 100,
+          "median": 200,
+          "p75": 250,
+          "max": 350,
+          "mean": 184.5
+        },
+        "motion_tokens": {
+          "min": 10,
+          "p25": 10,
+          "median": 22,
+          "p75": 28,
+          "max": 40,
+          "mean": 20.14
+        },
+        "total_timesteps": 36900,
+        "total_exec_samples": 18450
+      },
+      "StopCube": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 23,
+          "num_timesteps": 311,
+          "exec_start_idx": 0,
+          "t": 310,
+          "demo_seg_len": 0,
+          "exec_seg_len": 311,
+          "demo_windows": 0,
+          "exec_windows": 18,
+          "motion_tokens": 18,
+          "budget_pct": 18.8,
+          "frame_samples": 32,
+          "delta_mean": 10.0,
+          "delta_min": 10,
+          "delta_max": 10,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 121,
+          "p25": 218,
+          "median": 311,
+          "p75": 401,
+          "max": 582,
+          "mean": 316.14
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 6,
+          "p25": 12,
+          "median": 18,
+          "p75": 24,
+          "max": 35,
+          "mean": 18.24
+        },
+        "total_timesteps": 31614,
+        "total_exec_samples": 31614
+      },
+      "SwingXtimes": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 88,
+          "num_timesteps": 445,
+          "exec_start_idx": 0,
+          "t": 444,
+          "demo_seg_len": 0,
+          "exec_seg_len": 445,
+          "demo_windows": 0,
+          "exec_windows": 26,
+          "motion_tokens": 26,
+          "budget_pct": 27.1,
+          "frame_samples": 32,
+          "delta_mean": 14.32,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 296,
+          "p25": 390,
+          "median": 445,
+          "p75": 490,
+          "max": 608,
+          "mean": 434.19
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 17,
+          "p25": 23,
+          "median": 26,
+          "p75": 29,
+          "max": 36,
+          "mean": 25.62
+        },
+        "total_timesteps": 43419,
+        "total_exec_samples": 43419
+      },
+      "VideoPlaceButton": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 34,
+          "num_timesteps": 960,
+          "exec_start_idx": 765,
+          "t": 959,
+          "demo_seg_len": 765,
+          "exec_seg_len": 195,
+          "demo_windows": 46,
+          "exec_windows": 11,
+          "motion_tokens": 57,
+          "budget_pct": 59.4,
+          "frame_samples": 32,
+          "delta_mean": 30.94,
+          "delta_min": 30,
+          "delta_max": 31,
+          "frames_in_demo": 25
+        },
+        "num_timesteps": {
+          "min": 900,
+          "p25": 945,
+          "median": 960,
+          "p75": 985,
+          "max": 1089,
+          "mean": 965.1
+        },
+        "exec_start_idx": {
+          "min": 703,
+          "p25": 744,
+          "median": 758,
+          "p75": 776,
+          "max": 818,
+          "mean": 759.52
+        },
+        "motion_tokens": {
+          "min": 53,
+          "p25": 56,
+          "median": 57,
+          "p75": 59,
+          "max": 65,
+          "mean": 57.31
+        },
+        "total_timesteps": 96510,
+        "total_exec_samples": 20558
+      },
+      "VideoPlaceOrder": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 77,
+          "num_timesteps": 1129,
+          "exec_start_idx": 921,
+          "t": 1128,
+          "demo_seg_len": 921,
+          "exec_seg_len": 208,
+          "demo_windows": 56,
+          "exec_windows": 11,
+          "motion_tokens": 67,
+          "budget_pct": 69.8,
+          "frame_samples": 32,
+          "delta_mean": 36.39,
+          "delta_min": 36,
+          "delta_max": 37,
+          "frames_in_demo": 26
+        },
+        "num_timesteps": {
+          "min": 909,
+          "p25": 984,
+          "median": 1129,
+          "p75": 1270,
+          "max": 1411,
+          "mean": 1123.92
+        },
+        "exec_start_idx": {
+          "min": 702,
+          "p25": 776,
+          "median": 925,
+          "p75": 1065,
+          "max": 1145,
+          "mean": 917.13
+        },
+        "motion_tokens": {
+          "min": 53,
+          "p25": 58,
+          "median": 67,
+          "p75": 76,
+          "max": 85,
+          "mean": 67.24
+        },
+        "total_timesteps": 112392,
+        "total_exec_samples": 20679
+      },
+      "VideoRepick": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 73,
+          "num_timesteps": 686,
+          "exec_start_idx": 314,
+          "t": 685,
+          "demo_seg_len": 314,
+          "exec_seg_len": 372,
+          "demo_windows": 18,
+          "exec_windows": 22,
+          "motion_tokens": 40,
+          "budget_pct": 41.7,
+          "frame_samples": 32,
+          "delta_mean": 22.1,
+          "delta_min": 22,
+          "delta_max": 23,
+          "frames_in_demo": 15
+        },
+        "num_timesteps": {
+          "min": 405,
+          "p25": 575,
+          "median": 686,
+          "p75": 814,
+          "max": 1027,
+          "mean": 685.83
+        },
+        "exec_start_idx": {
+          "min": 147,
+          "p25": 255,
+          "median": 312,
+          "p75": 321,
+          "max": 385,
+          "mean": 276.62
+        },
+        "motion_tokens": {
+          "min": 22,
+          "p25": 33,
+          "median": 40,
+          "p75": 48,
+          "max": 61,
+          "mean": 39.78
+        },
+        "total_timesteps": 68583,
+        "total_exec_samples": 40921
+      },
+      "VideoUnmask": {
+        "suite": "Persistent",
+        "has_demo": true,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 13,
+          "num_timesteps": 178,
+          "exec_start_idx": 66,
+          "t": 177,
+          "demo_seg_len": 66,
+          "exec_seg_len": 112,
+          "demo_windows": 3,
+          "exec_windows": 5,
+          "motion_tokens": 8,
+          "budget_pct": 8.3,
+          "frame_samples": 32,
+          "delta_mean": 5.71,
+          "delta_min": 5,
+          "delta_max": 6,
+          "frames_in_demo": 12
+        },
+        "num_timesteps": {
+          "min": 163,
+          "p25": 170,
+          "median": 178,
+          "p75": 309,
+          "max": 399,
+          "mean": 216.68
+        },
+        "exec_start_idx": {
+          "min": 66,
+          "p25": 66,
+          "median": 66,
+          "p75": 66,
+          "max": 66,
+          "mean": 66.0
+        },
+        "motion_tokens": {
+          "min": 8,
+          "p25": 8,
+          "median": 8,
+          "p75": 17,
+          "max": 22,
+          "mean": 10.91
+        },
+        "total_timesteps": 21668,
+        "total_exec_samples": 15068
+      },
+      "VideoUnmaskSwap": {
+        "suite": "Persistent",
+        "has_demo": true,
+        "episodes": 100,
+        "median_episode": {
+          "raw_ep_idx": 8,
+          "num_timesteps": 370,
+          "exec_start_idx": 114,
+          "t": 369,
+          "demo_seg_len": 114,
+          "exec_seg_len": 256,
+          "demo_windows": 6,
+          "exec_windows": 14,
+          "motion_tokens": 20,
+          "budget_pct": 20.8,
+          "frame_samples": 32,
+          "delta_mean": 11.9,
+          "delta_min": 11,
+          "delta_max": 12,
+          "frames_in_demo": 10
+        },
+        "num_timesteps": {
+          "min": 213,
+          "p25": 268,
+          "median": 370,
+          "p75": 433,
+          "max": 586,
+          "mean": 348.1
+        },
+        "exec_start_idx": {
+          "min": 114,
+          "p25": 114,
+          "median": 168,
+          "p75": 168,
+          "max": 216,
+          "mean": 153.78
+        },
+        "motion_tokens": {
+          "min": 11,
+          "p25": 14,
+          "median": 20,
+          "p75": 24,
+          "max": 34,
+          "mean": 18.88
+        },
+        "total_timesteps": 34810,
+        "total_exec_samples": 19432
+      }
+    },
+    "easy": {
+      "BinFill": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 65,
+          "num_timesteps": 454,
+          "exec_start_idx": 0,
+          "t": 453,
+          "demo_seg_len": 0,
+          "exec_seg_len": 454,
+          "demo_windows": 0,
+          "exec_windows": 27,
+          "motion_tokens": 27,
+          "budget_pct": 28.1,
+          "frame_samples": 32,
+          "delta_mean": 14.61,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 266,
+          "p25": 288,
+          "median": 454,
+          "p75": 607,
+          "max": 711,
+          "mean": 448.22
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 15,
+          "p25": 16,
+          "median": 27,
+          "p75": 36,
+          "max": 43,
+          "mean": 26.48
+        },
+        "total_timesteps": 22411,
+        "total_exec_samples": 22411
+      },
+      "ButtonUnmask": {
+        "suite": "Persistent",
+        "has_demo": false,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 36,
+          "num_timesteps": 225,
+          "exec_start_idx": 0,
+          "t": 224,
+          "demo_seg_len": 0,
+          "exec_seg_len": 225,
+          "demo_windows": 0,
+          "exec_windows": 13,
+          "motion_tokens": 13,
+          "budget_pct": 13.5,
+          "frame_samples": 32,
+          "delta_mean": 7.23,
+          "delta_min": 7,
+          "delta_max": 8,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 198,
+          "p25": 220,
+          "median": 225,
+          "p75": 237,
+          "max": 323,
+          "mean": 231.12
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 11,
+          "p25": 12,
+          "median": 13,
+          "p75": 13,
+          "max": 19,
+          "mean": 12.88
+        },
+        "total_timesteps": 11556,
+        "total_exec_samples": 11556
+      },
+      "ButtonUnmaskSwap": {
+        "suite": "Persistent",
+        "has_demo": false,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 49,
+          "num_timesteps": 446,
+          "exec_start_idx": 0,
+          "t": 445,
+          "demo_seg_len": 0,
+          "exec_seg_len": 446,
+          "demo_windows": 0,
+          "exec_windows": 26,
+          "motion_tokens": 26,
+          "budget_pct": 27.1,
+          "frame_samples": 32,
+          "delta_mean": 14.35,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 300,
+          "p25": 319,
+          "median": 446,
+          "p75": 460,
+          "max": 532,
+          "mean": 407.02
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 17,
+          "p25": 18,
+          "median": 26,
+          "p75": 27,
+          "max": 32,
+          "mean": 23.92
+        },
+        "total_timesteps": 20351,
+        "total_exec_samples": 20351
+      },
+      "InsertPeg": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 33,
+          "num_timesteps": 481,
+          "exec_start_idx": 241,
+          "t": 480,
+          "demo_seg_len": 241,
+          "exec_seg_len": 240,
+          "demo_windows": 14,
+          "exec_windows": 13,
+          "motion_tokens": 27,
+          "budget_pct": 28.1,
+          "frame_samples": 32,
+          "delta_mean": 15.48,
+          "delta_min": 15,
+          "delta_max": 16,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 406,
+          "p25": 464,
+          "median": 481,
+          "p75": 492,
+          "max": 586,
+          "mean": 482.84
+        },
+        "exec_start_idx": {
+          "min": 203,
+          "p25": 232,
+          "median": 241,
+          "p75": 246,
+          "max": 293,
+          "mean": 241.4
+        },
+        "motion_tokens": {
+          "min": 22,
+          "p25": 26,
+          "median": 27,
+          "p75": 28,
+          "max": 34,
+          "mean": 27.24
+        },
+        "total_timesteps": 24142,
+        "total_exec_samples": 12072
+      },
+      "MoveCube": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 65,
+          "num_timesteps": 442,
+          "exec_start_idx": 243,
+          "t": 441,
+          "demo_seg_len": 243,
+          "exec_seg_len": 199,
+          "demo_windows": 14,
+          "exec_windows": 11,
+          "motion_tokens": 25,
+          "budget_pct": 26.0,
+          "frame_samples": 32,
+          "delta_mean": 14.23,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 18
+        },
+        "num_timesteps": {
+          "min": 250,
+          "p25": 279,
+          "median": 442,
+          "p75": 454,
+          "max": 517,
+          "mean": 398.42
+        },
+        "exec_start_idx": {
+          "min": 148,
+          "p25": 172,
+          "median": 243,
+          "p75": 256,
+          "max": 273,
+          "mean": 223.34
+        },
+        "motion_tokens": {
+          "min": 13,
+          "p25": 14,
+          "median": 25,
+          "p75": 26,
+          "max": 30,
+          "mean": 21.94
+        },
+        "total_timesteps": 19921,
+        "total_exec_samples": 8754
+      },
+      "PatternLock": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 13,
+          "num_timesteps": 140,
+          "exec_start_idx": 70,
+          "t": 139,
+          "demo_seg_len": 70,
+          "exec_seg_len": 70,
+          "demo_windows": 3,
+          "exec_windows": 3,
+          "motion_tokens": 6,
+          "budget_pct": 6.2,
+          "frame_samples": 32,
+          "delta_mean": 4.48,
+          "delta_min": 4,
+          "delta_max": 5,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 48,
+          "p25": 112,
+          "median": 140,
+          "p75": 192,
+          "max": 220,
+          "mean": 138.6
+        },
+        "exec_start_idx": {
+          "min": 24,
+          "p25": 56,
+          "median": 70,
+          "p75": 96,
+          "max": 110,
+          "mean": 69.3
+        },
+        "motion_tokens": {
+          "min": 0,
+          "p25": 4,
+          "median": 6,
+          "p75": 8,
+          "max": 10,
+          "mean": 5.68
+        },
+        "total_timesteps": 6930,
+        "total_exec_samples": 3465
+      },
+      "PickHighlight": {
+        "suite": "Referential",
+        "has_demo": false,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 29,
+          "num_timesteps": 224,
+          "exec_start_idx": 0,
+          "t": 223,
+          "demo_seg_len": 0,
+          "exec_seg_len": 224,
+          "demo_windows": 0,
+          "exec_windows": 12,
+          "motion_tokens": 12,
+          "budget_pct": 12.5,
+          "frame_samples": 32,
+          "delta_mean": 7.19,
+          "delta_min": 7,
+          "delta_max": 8,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 199,
+          "p25": 217,
+          "median": 224,
+          "p75": 232,
+          "max": 320,
+          "mean": 228.76
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 11,
+          "p25": 12,
+          "median": 12,
+          "p75": 13,
+          "max": 18,
+          "mean": 12.76
+        },
+        "total_timesteps": 11438,
+        "total_exec_samples": 11438
+      },
+      "PickXtimes": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 92,
+          "num_timesteps": 450,
+          "exec_start_idx": 0,
+          "t": 449,
+          "demo_seg_len": 0,
+          "exec_seg_len": 450,
+          "demo_windows": 0,
+          "exec_windows": 27,
+          "motion_tokens": 27,
+          "budget_pct": 28.1,
+          "frame_samples": 32,
+          "delta_mean": 14.48,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 266,
+          "p25": 332,
+          "median": 450,
+          "p75": 568,
+          "max": 645,
+          "mean": 460.72
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 15,
+          "p25": 19,
+          "median": 27,
+          "p75": 34,
+          "max": 39,
+          "mean": 27.26
+        },
+        "total_timesteps": 23036,
+        "total_exec_samples": 23036
+      },
+      "RouteStick": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 0,
+          "num_timesteps": 200,
+          "exec_start_idx": 100,
+          "t": 199,
+          "demo_seg_len": 100,
+          "exec_seg_len": 100,
+          "demo_windows": 5,
+          "exec_windows": 5,
+          "motion_tokens": 10,
+          "budget_pct": 10.4,
+          "frame_samples": 32,
+          "delta_mean": 6.42,
+          "delta_min": 6,
+          "delta_max": 7,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 200,
+          "p25": 200,
+          "median": 200,
+          "p75": 300,
+          "max": 300,
+          "mean": 246.0
+        },
+        "exec_start_idx": {
+          "min": 100,
+          "p25": 100,
+          "median": 100,
+          "p75": 150,
+          "max": 150,
+          "mean": 123.0
+        },
+        "motion_tokens": {
+          "min": 10,
+          "p25": 10,
+          "median": 10,
+          "p75": 16,
+          "max": 16,
+          "mean": 12.76
+        },
+        "total_timesteps": 12300,
+        "total_exec_samples": 6150
+      },
+      "StopCube": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 12,
+          "num_timesteps": 320,
+          "exec_start_idx": 0,
+          "t": 319,
+          "demo_seg_len": 0,
+          "exec_seg_len": 320,
+          "demo_windows": 0,
+          "exec_windows": 18,
+          "motion_tokens": 18,
+          "budget_pct": 18.8,
+          "frame_samples": 32,
+          "delta_mean": 10.29,
+          "delta_min": 10,
+          "delta_max": 11,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 127,
+          "p25": 221,
+          "median": 320,
+          "p75": 399,
+          "max": 581,
+          "mean": 328.54
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 6,
+          "p25": 12,
+          "median": 18,
+          "p75": 23,
+          "max": 35,
+          "mean": 18.98
+        },
+        "total_timesteps": 16427,
+        "total_exec_samples": 16427
+      },
+      "SwingXtimes": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 65,
+          "num_timesteps": 433,
+          "exec_start_idx": 0,
+          "t": 432,
+          "demo_seg_len": 0,
+          "exec_seg_len": 433,
+          "demo_windows": 0,
+          "exec_windows": 26,
+          "motion_tokens": 26,
+          "budget_pct": 27.1,
+          "frame_samples": 32,
+          "delta_mean": 13.94,
+          "delta_min": 13,
+          "delta_max": 14,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 296,
+          "p25": 379,
+          "median": 433,
+          "p75": 490,
+          "max": 608,
+          "mean": 433.38
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 17,
+          "p25": 22,
+          "median": 26,
+          "p75": 29,
+          "max": 36,
+          "mean": 25.56
+        },
+        "total_timesteps": 21669,
+        "total_exec_samples": 21669
+      },
+      "VideoPlaceButton": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 40,
+          "num_timesteps": 962,
+          "exec_start_idx": 750,
+          "t": 961,
+          "demo_seg_len": 750,
+          "exec_seg_len": 212,
+          "demo_windows": 45,
+          "exec_windows": 12,
+          "motion_tokens": 57,
+          "budget_pct": 59.4,
+          "frame_samples": 32,
+          "delta_mean": 31.0,
+          "delta_min": 31,
+          "delta_max": 31,
+          "frames_in_demo": 25
+        },
+        "num_timesteps": {
+          "min": 910,
+          "p25": 939,
+          "median": 962,
+          "p75": 985,
+          "max": 1089,
+          "mean": 966.1
+        },
+        "exec_start_idx": {
+          "min": 715,
+          "p25": 743,
+          "median": 759,
+          "p75": 776,
+          "max": 811,
+          "mean": 758.44
+        },
+        "motion_tokens": {
+          "min": 53,
+          "p25": 56,
+          "median": 57,
+          "p75": 59,
+          "max": 65,
+          "mean": 57.32
+        },
+        "total_timesteps": 48305,
+        "total_exec_samples": 10383
+      },
+      "VideoPlaceOrder": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 88,
+          "num_timesteps": 1132,
+          "exec_start_idx": 935,
+          "t": 1131,
+          "demo_seg_len": 935,
+          "exec_seg_len": 197,
+          "demo_windows": 57,
+          "exec_windows": 11,
+          "motion_tokens": 68,
+          "budget_pct": 70.8,
+          "frame_samples": 32,
+          "delta_mean": 36.48,
+          "delta_min": 36,
+          "delta_max": 37,
+          "frames_in_demo": 26
+        },
+        "num_timesteps": {
+          "min": 909,
+          "p25": 997,
+          "median": 1132,
+          "p75": 1259,
+          "max": 1411,
+          "mean": 1126.0
+        },
+        "exec_start_idx": {
+          "min": 702,
+          "p25": 789,
+          "median": 928,
+          "p75": 1058,
+          "max": 1118,
+          "mean": 917.5
+        },
+        "motion_tokens": {
+          "min": 53,
+          "p25": 59,
+          "median": 68,
+          "p75": 76,
+          "max": 85,
+          "mean": 67.44
+        },
+        "total_timesteps": 56300,
+        "total_exec_samples": 10425
+      },
+      "VideoRepick": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 41,
+          "num_timesteps": 724,
+          "exec_start_idx": 317,
+          "t": 723,
+          "demo_seg_len": 317,
+          "exec_seg_len": 407,
+          "demo_windows": 18,
+          "exec_windows": 24,
+          "motion_tokens": 42,
+          "budget_pct": 43.8,
+          "frame_samples": 32,
+          "delta_mean": 23.32,
+          "delta_min": 23,
+          "delta_max": 24,
+          "frames_in_demo": 14
+        },
+        "num_timesteps": {
+          "min": 533,
+          "p25": 647,
+          "median": 724,
+          "p75": 822,
+          "max": 933,
+          "mean": 725.24
+        },
+        "exec_start_idx": {
+          "min": 255,
+          "p25": 272,
+          "median": 313,
+          "p75": 317,
+          "max": 343,
+          "mean": 300.7
+        },
+        "motion_tokens": {
+          "min": 30,
+          "p25": 37,
+          "median": 42,
+          "p75": 48,
+          "max": 55,
+          "mean": 42.26
+        },
+        "total_timesteps": 36262,
+        "total_exec_samples": 21227
+      },
+      "VideoUnmask": {
+        "suite": "Persistent",
+        "has_demo": true,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 25,
+          "num_timesteps": 176,
+          "exec_start_idx": 66,
+          "t": 175,
+          "demo_seg_len": 66,
+          "exec_seg_len": 110,
+          "demo_windows": 3,
+          "exec_windows": 5,
+          "motion_tokens": 8,
+          "budget_pct": 8.3,
+          "frame_samples": 32,
+          "delta_mean": 5.65,
+          "delta_min": 5,
+          "delta_max": 6,
+          "frames_in_demo": 12
+        },
+        "num_timesteps": {
+          "min": 163,
+          "p25": 167,
+          "median": 176,
+          "p75": 183,
+          "max": 263,
+          "mean": 179.78
+        },
+        "exec_start_idx": {
+          "min": 66,
+          "p25": 66,
+          "median": 66,
+          "p75": 66,
+          "max": 66,
+          "mean": 66.0
+        },
+        "motion_tokens": {
+          "min": 8,
+          "p25": 8,
+          "median": 8,
+          "p75": 9,
+          "max": 14,
+          "mean": 8.64
+        },
+        "total_timesteps": 8989,
+        "total_exec_samples": 5689
+      },
+      "VideoUnmaskSwap": {
+        "suite": "Persistent",
+        "has_demo": true,
+        "episodes": 50,
+        "median_episode": {
+          "raw_ep_idx": 8,
+          "num_timesteps": 370,
+          "exec_start_idx": 114,
+          "t": 369,
+          "demo_seg_len": 114,
+          "exec_seg_len": 256,
+          "demo_windows": 6,
+          "exec_windows": 14,
+          "motion_tokens": 20,
+          "budget_pct": 20.8,
+          "frame_samples": 32,
+          "delta_mean": 11.9,
+          "delta_min": 11,
+          "delta_max": 12,
+          "frames_in_demo": 10
+        },
+        "num_timesteps": {
+          "min": 213,
+          "p25": 230,
+          "median": 370,
+          "p75": 420,
+          "max": 461,
+          "mean": 342.8
+        },
+        "exec_start_idx": {
+          "min": 114,
+          "p25": 114,
+          "median": 168,
+          "p75": 168,
+          "max": 168,
+          "mean": 141.0
+        },
+        "motion_tokens": {
+          "min": 11,
+          "p25": 12,
+          "median": 20,
+          "p75": 23,
+          "max": 26,
+          "mean": 18.56
+        },
+        "total_timesteps": 17140,
+        "total_exec_samples": 10090
+      }
+    },
+    "medium": {
+      "BinFill": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 58,
+          "num_timesteps": 655,
+          "exec_start_idx": 0,
+          "t": 654,
+          "demo_seg_len": 0,
+          "exec_seg_len": 655,
+          "demo_windows": 0,
+          "exec_windows": 39,
+          "motion_tokens": 39,
+          "budget_pct": 40.6,
+          "frame_samples": 32,
+          "delta_mean": 21.1,
+          "delta_min": 21,
+          "delta_max": 22,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 421,
+          "p25": 503,
+          "median": 655,
+          "p75": 811,
+          "max": 926,
+          "mean": 663.04
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 25,
+          "p25": 30,
+          "median": 39,
+          "p75": 49,
+          "max": 56,
+          "mean": 39.8
+        },
+        "total_timesteps": 16576,
+        "total_exec_samples": 16576
+      },
+      "ButtonUnmask": {
+        "suite": "Persistent",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 14,
+          "num_timesteps": 224,
+          "exec_start_idx": 0,
+          "t": 223,
+          "demo_seg_len": 0,
+          "exec_seg_len": 224,
+          "demo_windows": 0,
+          "exec_windows": 12,
+          "motion_tokens": 12,
+          "budget_pct": 12.5,
+          "frame_samples": 32,
+          "delta_mean": 7.19,
+          "delta_min": 7,
+          "delta_max": 8,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 206,
+          "p25": 217,
+          "median": 224,
+          "p75": 230,
+          "max": 267,
+          "mean": 224.56
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 11,
+          "p25": 12,
+          "median": 12,
+          "p75": 13,
+          "max": 15,
+          "mean": 12.4
+        },
+        "total_timesteps": 5614,
+        "total_exec_samples": 5614
+      },
+      "ButtonUnmaskSwap": {
+        "suite": "Persistent",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 74,
+          "num_timesteps": 318,
+          "exec_start_idx": 0,
+          "t": 317,
+          "demo_seg_len": 0,
+          "exec_seg_len": 318,
+          "demo_windows": 0,
+          "exec_windows": 18,
+          "motion_tokens": 18,
+          "budget_pct": 18.8,
+          "frame_samples": 32,
+          "delta_mean": 10.23,
+          "delta_min": 10,
+          "delta_max": 11,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 297,
+          "p25": 309,
+          "median": 318,
+          "p75": 322,
+          "max": 361,
+          "mean": 317.84
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 17,
+          "p25": 18,
+          "median": 18,
+          "p75": 19,
+          "max": 21,
+          "mean": 18.4
+        },
+        "total_timesteps": 7946,
+        "total_exec_samples": 7946
+      },
+      "InsertPeg": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 18,
+          "num_timesteps": 476,
+          "exec_start_idx": 238,
+          "t": 475,
+          "demo_seg_len": 238,
+          "exec_seg_len": 238,
+          "demo_windows": 13,
+          "exec_windows": 13,
+          "motion_tokens": 26,
+          "budget_pct": 27.1,
+          "frame_samples": 32,
+          "delta_mean": 15.32,
+          "delta_min": 15,
+          "delta_max": 16,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 413,
+          "p25": 444,
+          "median": 476,
+          "p75": 490,
+          "max": 530,
+          "mean": 471.52
+        },
+        "exec_start_idx": {
+          "min": 207,
+          "p25": 222,
+          "median": 238,
+          "p75": 243,
+          "max": 265,
+          "mean": 235.52
+        },
+        "motion_tokens": {
+          "min": 22,
+          "p25": 24,
+          "median": 26,
+          "p75": 28,
+          "max": 30,
+          "mean": 26.36
+        },
+        "total_timesteps": 11788,
+        "total_exec_samples": 5900
+      },
+      "MoveCube": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 38,
+          "num_timesteps": 446,
+          "exec_start_idx": 228,
+          "t": 445,
+          "demo_seg_len": 228,
+          "exec_seg_len": 218,
+          "demo_windows": 13,
+          "exec_windows": 12,
+          "motion_tokens": 25,
+          "budget_pct": 26.0,
+          "frame_samples": 32,
+          "delta_mean": 14.35,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 252,
+          "p25": 282,
+          "median": 446,
+          "p75": 470,
+          "max": 525,
+          "mean": 408.08
+        },
+        "exec_start_idx": {
+          "min": 152,
+          "p25": 171,
+          "median": 240,
+          "p75": 258,
+          "max": 299,
+          "mean": 225.92
+        },
+        "motion_tokens": {
+          "min": 13,
+          "p25": 14,
+          "median": 25,
+          "p75": 26,
+          "max": 30,
+          "mean": 22.32
+        },
+        "total_timesteps": 10202,
+        "total_exec_samples": 4554
+      },
+      "PatternLock": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 30,
+          "num_timesteps": 204,
+          "exec_start_idx": 102,
+          "t": 203,
+          "demo_seg_len": 102,
+          "exec_seg_len": 102,
+          "demo_windows": 5,
+          "exec_windows": 5,
+          "motion_tokens": 10,
+          "budget_pct": 10.4,
+          "frame_samples": 32,
+          "delta_mean": 6.55,
+          "delta_min": 6,
+          "delta_max": 7,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 114,
+          "p25": 134,
+          "median": 204,
+          "p75": 260,
+          "max": 312,
+          "mean": 204.08
+        },
+        "exec_start_idx": {
+          "min": 57,
+          "p25": 67,
+          "median": 102,
+          "p75": 130,
+          "max": 156,
+          "mean": 102.04
+        },
+        "motion_tokens": {
+          "min": 4,
+          "p25": 6,
+          "median": 10,
+          "p75": 14,
+          "max": 16,
+          "mean": 9.76
+        },
+        "total_timesteps": 5102,
+        "total_exec_samples": 2551
+      },
+      "PickHighlight": {
+        "suite": "Referential",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 22,
+          "num_timesteps": 384,
+          "exec_start_idx": 0,
+          "t": 383,
+          "demo_seg_len": 0,
+          "exec_seg_len": 384,
+          "demo_windows": 0,
+          "exec_windows": 22,
+          "motion_tokens": 22,
+          "budget_pct": 22.9,
+          "frame_samples": 32,
+          "delta_mean": 12.35,
+          "delta_min": 12,
+          "delta_max": 13,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 343,
+          "p25": 371,
+          "median": 384,
+          "p75": 394,
+          "max": 435,
+          "mean": 384.88
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 20,
+          "p25": 22,
+          "median": 22,
+          "p75": 23,
+          "max": 26,
+          "mean": 22.52
+        },
+        "total_timesteps": 9622,
+        "total_exec_samples": 9622
+      },
+      "PickXtimes": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 46,
+          "num_timesteps": 439,
+          "exec_start_idx": 0,
+          "t": 438,
+          "demo_seg_len": 0,
+          "exec_seg_len": 439,
+          "demo_windows": 0,
+          "exec_windows": 26,
+          "motion_tokens": 26,
+          "budget_pct": 27.1,
+          "frame_samples": 32,
+          "delta_mean": 14.13,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 275,
+          "p25": 309,
+          "median": 439,
+          "p75": 554,
+          "max": 593,
+          "mean": 431.12
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 16,
+          "p25": 18,
+          "median": 26,
+          "p75": 33,
+          "max": 36,
+          "mean": 25.44
+        },
+        "total_timesteps": 10778,
+        "total_exec_samples": 10778
+      },
+      "RouteStick": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 6,
+          "num_timesteps": 400,
+          "exec_start_idx": 200,
+          "t": 399,
+          "demo_seg_len": 200,
+          "exec_seg_len": 200,
+          "demo_windows": 11,
+          "exec_windows": 11,
+          "motion_tokens": 22,
+          "budget_pct": 22.9,
+          "frame_samples": 32,
+          "delta_mean": 12.87,
+          "delta_min": 12,
+          "delta_max": 13,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 400,
+          "p25": 400,
+          "median": 400,
+          "p75": 500,
+          "max": 500,
+          "mean": 432.0
+        },
+        "exec_start_idx": {
+          "min": 200,
+          "p25": 200,
+          "median": 200,
+          "p75": 250,
+          "max": 250,
+          "mean": 216.0
+        },
+        "motion_tokens": {
+          "min": 22,
+          "p25": 22,
+          "median": 22,
+          "p75": 28,
+          "max": 28,
+          "mean": 23.92
+        },
+        "total_timesteps": 10800,
+        "total_exec_samples": 5400
+      },
+      "StopCube": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 86,
+          "num_timesteps": 249,
+          "exec_start_idx": 0,
+          "t": 248,
+          "demo_seg_len": 0,
+          "exec_seg_len": 249,
+          "demo_windows": 0,
+          "exec_windows": 14,
+          "motion_tokens": 14,
+          "budget_pct": 14.6,
+          "frame_samples": 32,
+          "delta_mean": 8.0,
+          "delta_min": 8,
+          "delta_max": 8,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 121,
+          "p25": 217,
+          "median": 249,
+          "p75": 402,
+          "max": 582,
+          "mean": 320.72
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 6,
+          "p25": 12,
+          "median": 14,
+          "p75": 24,
+          "max": 35,
+          "mean": 18.6
+        },
+        "total_timesteps": 8018,
+        "total_exec_samples": 8018
+      },
+      "SwingXtimes": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 6,
+          "num_timesteps": 392,
+          "exec_start_idx": 0,
+          "t": 391,
+          "demo_seg_len": 0,
+          "exec_seg_len": 392,
+          "demo_windows": 0,
+          "exec_windows": 23,
+          "motion_tokens": 23,
+          "budget_pct": 24.0,
+          "frame_samples": 32,
+          "delta_mean": 12.61,
+          "delta_min": 12,
+          "delta_max": 13,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 307,
+          "p25": 345,
+          "median": 392,
+          "p75": 403,
+          "max": 471,
+          "mean": 379.76
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 18,
+          "p25": 20,
+          "median": 23,
+          "p75": 24,
+          "max": 28,
+          "mean": 22.24
+        },
+        "total_timesteps": 9494,
+        "total_exec_samples": 9494
+      },
+      "VideoPlaceButton": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 66,
+          "num_timesteps": 958,
+          "exec_start_idx": 754,
+          "t": 957,
+          "demo_seg_len": 754,
+          "exec_seg_len": 204,
+          "demo_windows": 46,
+          "exec_windows": 11,
+          "motion_tokens": 57,
+          "budget_pct": 59.4,
+          "frame_samples": 32,
+          "delta_mean": 30.87,
+          "delta_min": 30,
+          "delta_max": 31,
+          "frames_in_demo": 25
+        },
+        "num_timesteps": {
+          "min": 921,
+          "p25": 948,
+          "median": 958,
+          "p75": 971,
+          "max": 1037,
+          "mean": 962.0
+        },
+        "exec_start_idx": {
+          "min": 728,
+          "p25": 746,
+          "median": 758,
+          "p75": 768,
+          "max": 818,
+          "mean": 761.16
+        },
+        "motion_tokens": {
+          "min": 55,
+          "p25": 56,
+          "median": 57,
+          "p75": 58,
+          "max": 62,
+          "mean": 57.16
+        },
+        "total_timesteps": 24050,
+        "total_exec_samples": 5021
+      },
+      "VideoPlaceOrder": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 66,
+          "num_timesteps": 1146,
+          "exec_start_idx": 942,
+          "t": 1145,
+          "demo_seg_len": 942,
+          "exec_seg_len": 204,
+          "demo_windows": 57,
+          "exec_windows": 11,
+          "motion_tokens": 68,
+          "budget_pct": 70.8,
+          "frame_samples": 32,
+          "delta_mean": 36.94,
+          "delta_min": 36,
+          "delta_max": 37,
+          "frames_in_demo": 26
+        },
+        "num_timesteps": {
+          "min": 917,
+          "p25": 984,
+          "median": 1146,
+          "p75": 1289,
+          "max": 1343,
+          "mean": 1131.84
+        },
+        "exec_start_idx": {
+          "min": 715,
+          "p25": 780,
+          "median": 942,
+          "p75": 1077,
+          "max": 1145,
+          "mean": 925.52
+        },
+        "motion_tokens": {
+          "min": 54,
+          "p25": 58,
+          "median": 68,
+          "p75": 78,
+          "max": 81,
+          "mean": 67.56
+        },
+        "total_timesteps": 28296,
+        "total_exec_samples": 5158
+      },
+      "VideoRepick": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 22,
+          "num_timesteps": 747,
+          "exec_start_idx": 379,
+          "t": 746,
+          "demo_seg_len": 379,
+          "exec_seg_len": 368,
+          "demo_windows": 22,
+          "exec_windows": 21,
+          "motion_tokens": 43,
+          "budget_pct": 44.8,
+          "frame_samples": 32,
+          "delta_mean": 24.06,
+          "delta_min": 24,
+          "delta_max": 25,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 572,
+          "p25": 621,
+          "median": 747,
+          "p75": 819,
+          "max": 887,
+          "mean": 730.08
+        },
+        "exec_start_idx": {
+          "min": 308,
+          "p25": 316,
+          "median": 323,
+          "p75": 365,
+          "max": 385,
+          "mean": 338.2
+        },
+        "motion_tokens": {
+          "min": 32,
+          "p25": 36,
+          "median": 43,
+          "p75": 48,
+          "max": 52,
+          "mean": 42.6
+        },
+        "total_timesteps": 18252,
+        "total_exec_samples": 9797
+      },
+      "VideoUnmask": {
+        "suite": "Persistent",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 22,
+          "num_timesteps": 175,
+          "exec_start_idx": 66,
+          "t": 174,
+          "demo_seg_len": 66,
+          "exec_seg_len": 109,
+          "demo_windows": 3,
+          "exec_windows": 5,
+          "motion_tokens": 8,
+          "budget_pct": 8.3,
+          "frame_samples": 32,
+          "delta_mean": 5.61,
+          "delta_min": 5,
+          "delta_max": 6,
+          "frames_in_demo": 12
+        },
+        "num_timesteps": {
+          "min": 164,
+          "p25": 169,
+          "median": 175,
+          "p75": 177,
+          "max": 228,
+          "mean": 176.12
+        },
+        "exec_start_idx": {
+          "min": 66,
+          "p25": 66,
+          "median": 66,
+          "p75": 66,
+          "max": 66,
+          "mean": 66.0
+        },
+        "motion_tokens": {
+          "min": 8,
+          "p25": 8,
+          "median": 8,
+          "p75": 8,
+          "max": 12,
+          "mean": 8.32
+        },
+        "total_timesteps": 4403,
+        "total_exec_samples": 2753
+      },
+      "VideoUnmaskSwap": {
+        "suite": "Persistent",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 22,
+          "num_timesteps": 268,
+          "exec_start_idx": 168,
+          "t": 267,
+          "demo_seg_len": 168,
+          "exec_seg_len": 100,
+          "demo_windows": 9,
+          "exec_windows": 5,
+          "motion_tokens": 14,
+          "budget_pct": 14.6,
+          "frame_samples": 32,
+          "delta_mean": 8.61,
+          "delta_min": 8,
+          "delta_max": 9,
+          "frames_in_demo": 20
+        },
+        "num_timesteps": {
+          "min": 213,
+          "p25": 221,
+          "median": 268,
+          "p75": 276,
+          "max": 289,
+          "mean": 251.0
+        },
+        "exec_start_idx": {
+          "min": 114,
+          "p25": 114,
+          "median": 168,
+          "p75": 168,
+          "max": 168,
+          "mean": 142.08
+        },
+        "motion_tokens": {
+          "min": 11,
+          "p25": 11,
+          "median": 14,
+          "p75": 14,
+          "max": 15,
+          "mean": 12.84
+        },
+        "total_timesteps": 6275,
+        "total_exec_samples": 2723
+      }
+    },
+    "hard": {
+      "BinFill": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 51,
+          "num_timesteps": 868,
+          "exec_start_idx": 0,
+          "t": 867,
+          "demo_seg_len": 0,
+          "exec_seg_len": 868,
+          "demo_windows": 0,
+          "exec_windows": 53,
+          "motion_tokens": 53,
+          "budget_pct": 55.2,
+          "frame_samples": 32,
+          "delta_mean": 27.97,
+          "delta_min": 27,
+          "delta_max": 28,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 584,
+          "p25": 785,
+          "median": 868,
+          "p75": 963,
+          "max": 1044,
+          "mean": 851.8
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 35,
+          "p25": 48,
+          "median": 53,
+          "p75": 59,
+          "max": 64,
+          "mean": 51.84
+        },
+        "total_timesteps": 21295,
+        "total_exec_samples": 21295
+      },
+      "ButtonUnmask": {
+        "suite": "Persistent",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 23,
+          "num_timesteps": 373,
+          "exec_start_idx": 0,
+          "t": 372,
+          "demo_seg_len": 0,
+          "exec_seg_len": 373,
+          "demo_windows": 0,
+          "exec_windows": 22,
+          "motion_tokens": 22,
+          "budget_pct": 22.9,
+          "frame_samples": 32,
+          "delta_mean": 12.0,
+          "delta_min": 12,
+          "delta_max": 12,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 353,
+          "p25": 368,
+          "median": 373,
+          "p75": 378,
+          "max": 452,
+          "mean": 378.24
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 21,
+          "p25": 21,
+          "median": 22,
+          "p75": 22,
+          "max": 27,
+          "mean": 22.16
+        },
+        "total_timesteps": 9456,
+        "total_exec_samples": 9456
+      },
+      "ButtonUnmaskSwap": {
+        "suite": "Persistent",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 75,
+          "num_timesteps": 461,
+          "exec_start_idx": 0,
+          "t": 460,
+          "demo_seg_len": 0,
+          "exec_seg_len": 461,
+          "demo_windows": 0,
+          "exec_windows": 27,
+          "motion_tokens": 27,
+          "budget_pct": 28.1,
+          "frame_samples": 32,
+          "delta_mean": 14.84,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 443,
+          "p25": 453,
+          "median": 461,
+          "p75": 472,
+          "max": 555,
+          "mean": 465.72
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 26,
+          "p25": 27,
+          "median": 27,
+          "p75": 28,
+          "max": 33,
+          "mean": 27.56
+        },
+        "total_timesteps": 11643,
+        "total_exec_samples": 11643
+      },
+      "InsertPeg": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 71,
+          "num_timesteps": 464,
+          "exec_start_idx": 232,
+          "t": 463,
+          "demo_seg_len": 232,
+          "exec_seg_len": 232,
+          "demo_windows": 13,
+          "exec_windows": 13,
+          "motion_tokens": 26,
+          "budget_pct": 27.1,
+          "frame_samples": 32,
+          "delta_mean": 14.94,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 414,
+          "p25": 450,
+          "median": 464,
+          "p75": 488,
+          "max": 560,
+          "mean": 470.92
+        },
+        "exec_start_idx": {
+          "min": 207,
+          "p25": 225,
+          "median": 232,
+          "p75": 242,
+          "max": 280,
+          "mean": 235.16
+        },
+        "motion_tokens": {
+          "min": 22,
+          "p25": 26,
+          "median": 26,
+          "p75": 28,
+          "max": 32,
+          "mean": 26.48
+        },
+        "total_timesteps": 11773,
+        "total_exec_samples": 5894
+      },
+      "MoveCube": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 99,
+          "num_timesteps": 416,
+          "exec_start_idx": 238,
+          "t": 415,
+          "demo_seg_len": 238,
+          "exec_seg_len": 178,
+          "demo_windows": 13,
+          "exec_windows": 10,
+          "motion_tokens": 23,
+          "budget_pct": 24.0,
+          "frame_samples": 32,
+          "delta_mean": 13.39,
+          "delta_min": 13,
+          "delta_max": 14,
+          "frames_in_demo": 18
+        },
+        "num_timesteps": {
+          "min": 247,
+          "p25": 267,
+          "median": 416,
+          "p75": 469,
+          "max": 513,
+          "mean": 370.6
+        },
+        "exec_start_idx": {
+          "min": 161,
+          "p25": 163,
+          "median": 228,
+          "p75": 253,
+          "max": 280,
+          "mean": 209.68
+        },
+        "motion_tokens": {
+          "min": 13,
+          "p25": 14,
+          "median": 23,
+          "p75": 26,
+          "max": 29,
+          "mean": 20.16
+        },
+        "total_timesteps": 9265,
+        "total_exec_samples": 4023
+      },
+      "PatternLock": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 43,
+          "num_timesteps": 324,
+          "exec_start_idx": 162,
+          "t": 323,
+          "demo_seg_len": 162,
+          "exec_seg_len": 162,
+          "demo_windows": 9,
+          "exec_windows": 9,
+          "motion_tokens": 18,
+          "budget_pct": 18.8,
+          "frame_samples": 32,
+          "delta_mean": 10.42,
+          "delta_min": 10,
+          "delta_max": 11,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 186,
+          "p25": 274,
+          "median": 324,
+          "p75": 414,
+          "max": 568,
+          "mean": 350.0
+        },
+        "exec_start_idx": {
+          "min": 93,
+          "p25": 137,
+          "median": 162,
+          "p75": 207,
+          "max": 284,
+          "mean": 175.0
+        },
+        "motion_tokens": {
+          "min": 8,
+          "p25": 14,
+          "median": 18,
+          "p75": 22,
+          "max": 32,
+          "mean": 18.8
+        },
+        "total_timesteps": 8750,
+        "total_exec_samples": 4375
+      },
+      "PickHighlight": {
+        "suite": "Referential",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 55,
+          "num_timesteps": 539,
+          "exec_start_idx": 0,
+          "t": 538,
+          "demo_seg_len": 0,
+          "exec_seg_len": 539,
+          "demo_windows": 0,
+          "exec_windows": 32,
+          "motion_tokens": 32,
+          "budget_pct": 33.3,
+          "frame_samples": 32,
+          "delta_mean": 17.35,
+          "delta_min": 17,
+          "delta_max": 18,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 492,
+          "p25": 518,
+          "median": 539,
+          "p75": 556,
+          "max": 652,
+          "mean": 540.0
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 29,
+          "p25": 31,
+          "median": 32,
+          "p75": 33,
+          "max": 39,
+          "mean": 32.08
+        },
+        "total_timesteps": 13500,
+        "total_exec_samples": 13500
+      },
+      "PickXtimes": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 39,
+          "num_timesteps": 812,
+          "exec_start_idx": 0,
+          "t": 811,
+          "demo_seg_len": 0,
+          "exec_seg_len": 812,
+          "demo_windows": 0,
+          "exec_windows": 49,
+          "motion_tokens": 49,
+          "budget_pct": 51.0,
+          "frame_samples": 32,
+          "delta_mean": 26.16,
+          "delta_min": 26,
+          "delta_max": 27,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 686,
+          "p25": 715,
+          "median": 812,
+          "p75": 841,
+          "max": 1025,
+          "mean": 796.24
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 41,
+          "p25": 43,
+          "median": 49,
+          "p75": 51,
+          "max": 63,
+          "mean": 48.24
+        },
+        "total_timesteps": 19906,
+        "total_exec_samples": 19906
+      },
+      "RouteStick": {
+        "suite": "Behavior",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 3,
+          "num_timesteps": 500,
+          "exec_start_idx": 250,
+          "t": 499,
+          "demo_seg_len": 250,
+          "exec_seg_len": 250,
+          "demo_windows": 14,
+          "exec_windows": 14,
+          "motion_tokens": 28,
+          "budget_pct": 29.2,
+          "frame_samples": 32,
+          "delta_mean": 16.1,
+          "delta_min": 16,
+          "delta_max": 17,
+          "frames_in_demo": 16
+        },
+        "num_timesteps": {
+          "min": 400,
+          "p25": 500,
+          "median": 500,
+          "p75": 700,
+          "max": 700,
+          "mean": 552.0
+        },
+        "exec_start_idx": {
+          "min": 200,
+          "p25": 250,
+          "median": 250,
+          "p75": 350,
+          "max": 350,
+          "mean": 276.0
+        },
+        "motion_tokens": {
+          "min": 22,
+          "p25": 28,
+          "median": 28,
+          "p75": 40,
+          "max": 40,
+          "mean": 31.12
+        },
+        "total_timesteps": 13800,
+        "total_exec_samples": 6900
+      },
+      "StopCube": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 31,
+          "num_timesteps": 309,
+          "exec_start_idx": 0,
+          "t": 308,
+          "demo_seg_len": 0,
+          "exec_seg_len": 309,
+          "demo_windows": 0,
+          "exec_windows": 18,
+          "motion_tokens": 18,
+          "budget_pct": 18.8,
+          "frame_samples": 32,
+          "delta_mean": 9.94,
+          "delta_min": 9,
+          "delta_max": 10,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 122,
+          "p25": 217,
+          "median": 309,
+          "p75": 338,
+          "max": 459,
+          "mean": 286.76
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 6,
+          "p25": 12,
+          "median": 18,
+          "p75": 20,
+          "max": 27,
+          "mean": 16.4
+        },
+        "total_timesteps": 7169,
+        "total_exec_samples": 7169
+      },
+      "SwingXtimes": {
+        "suite": "Counting",
+        "has_demo": false,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 59,
+          "num_timesteps": 488,
+          "exec_start_idx": 0,
+          "t": 487,
+          "demo_seg_len": 0,
+          "exec_seg_len": 488,
+          "demo_windows": 0,
+          "exec_windows": 29,
+          "motion_tokens": 29,
+          "budget_pct": 30.2,
+          "frame_samples": 32,
+          "delta_mean": 15.71,
+          "delta_min": 15,
+          "delta_max": 16,
+          "frames_in_demo": 0
+        },
+        "num_timesteps": {
+          "min": 449,
+          "p25": 464,
+          "median": 488,
+          "p75": 499,
+          "max": 570,
+          "mean": 490.24
+        },
+        "exec_start_idx": {
+          "min": 0,
+          "p25": 0,
+          "median": 0,
+          "p75": 0,
+          "max": 0,
+          "mean": 0.0
+        },
+        "motion_tokens": {
+          "min": 27,
+          "p25": 27,
+          "median": 29,
+          "p75": 30,
+          "max": 34,
+          "mean": 29.12
+        },
+        "total_timesteps": 12256,
+        "total_exec_samples": 12256
+      },
+      "VideoPlaceButton": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 55,
+          "num_timesteps": 961,
+          "exec_start_idx": 757,
+          "t": 960,
+          "demo_seg_len": 757,
+          "exec_seg_len": 204,
+          "demo_windows": 46,
+          "exec_windows": 11,
+          "motion_tokens": 57,
+          "budget_pct": 59.4,
+          "frame_samples": 32,
+          "delta_mean": 30.97,
+          "delta_min": 30,
+          "delta_max": 31,
+          "frames_in_demo": 25
+        },
+        "num_timesteps": {
+          "min": 900,
+          "p25": 951,
+          "median": 961,
+          "p75": 987,
+          "max": 1041,
+          "mean": 966.2
+        },
+        "exec_start_idx": {
+          "min": 703,
+          "p25": 743,
+          "median": 757,
+          "p75": 778,
+          "max": 818,
+          "mean": 760.04
+        },
+        "motion_tokens": {
+          "min": 53,
+          "p25": 56,
+          "median": 57,
+          "p75": 59,
+          "max": 62,
+          "mean": 57.44
+        },
+        "total_timesteps": 24155,
+        "total_exec_samples": 5154
+      },
+      "VideoPlaceOrder": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 67,
+          "num_timesteps": 1115,
+          "exec_start_idx": 923,
+          "t": 1114,
+          "demo_seg_len": 923,
+          "exec_seg_len": 192,
+          "demo_windows": 56,
+          "exec_windows": 10,
+          "motion_tokens": 66,
+          "budget_pct": 68.8,
+          "frame_samples": 32,
+          "delta_mean": 35.94,
+          "delta_min": 35,
+          "delta_max": 36,
+          "frames_in_demo": 26
+        },
+        "num_timesteps": {
+          "min": 921,
+          "p25": 957,
+          "median": 1115,
+          "p75": 1258,
+          "max": 1408,
+          "mean": 1111.84
+        },
+        "exec_start_idx": {
+          "min": 724,
+          "p25": 757,
+          "median": 917,
+          "p75": 1059,
+          "max": 1135,
+          "mean": 908.0
+        },
+        "motion_tokens": {
+          "min": 54,
+          "p25": 57,
+          "median": 67,
+          "p75": 76,
+          "max": 85,
+          "mean": 66.52
+        },
+        "total_timesteps": 27796,
+        "total_exec_samples": 5096
+      },
+      "VideoRepick": {
+        "suite": "Referential",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 71,
+          "num_timesteps": 543,
+          "exec_start_idx": 169,
+          "t": 542,
+          "demo_seg_len": 169,
+          "exec_seg_len": 374,
+          "demo_windows": 9,
+          "exec_windows": 22,
+          "motion_tokens": 31,
+          "budget_pct": 32.3,
+          "frame_samples": 32,
+          "delta_mean": 17.48,
+          "delta_min": 17,
+          "delta_max": 18,
+          "frames_in_demo": 10
+        },
+        "num_timesteps": {
+          "min": 405,
+          "p25": 445,
+          "median": 543,
+          "p75": 581,
+          "max": 1027,
+          "mean": 562.76
+        },
+        "exec_start_idx": {
+          "min": 147,
+          "p25": 157,
+          "median": 162,
+          "p75": 170,
+          "max": 214,
+          "mean": 166.88
+        },
+        "motion_tokens": {
+          "min": 22,
+          "p25": 25,
+          "median": 31,
+          "p75": 33,
+          "max": 61,
+          "mean": 32.0
+        },
+        "total_timesteps": 14069,
+        "total_exec_samples": 9897
+      },
+      "VideoUnmask": {
+        "suite": "Persistent",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 35,
+          "num_timesteps": 329,
+          "exec_start_idx": 66,
+          "t": 328,
+          "demo_seg_len": 66,
+          "exec_seg_len": 263,
+          "demo_windows": 3,
+          "exec_windows": 15,
+          "motion_tokens": 18,
+          "budget_pct": 18.8,
+          "frame_samples": 32,
+          "delta_mean": 10.58,
+          "delta_min": 10,
+          "delta_max": 11,
+          "frames_in_demo": 7
+        },
+        "num_timesteps": {
+          "min": 309,
+          "p25": 324,
+          "median": 329,
+          "p75": 336,
+          "max": 399,
+          "mean": 331.04
+        },
+        "exec_start_idx": {
+          "min": 66,
+          "p25": 66,
+          "median": 66,
+          "p75": 66,
+          "max": 66,
+          "mean": 66.0
+        },
+        "motion_tokens": {
+          "min": 17,
+          "p25": 18,
+          "median": 18,
+          "p75": 18,
+          "max": 22,
+          "mean": 18.04
+        },
+        "total_timesteps": 8276,
+        "total_exec_samples": 6626
+      },
+      "VideoUnmaskSwap": {
+        "suite": "Persistent",
+        "has_demo": true,
+        "episodes": 25,
+        "median_episode": {
+          "raw_ep_idx": 27,
+          "num_timesteps": 457,
+          "exec_start_idx": 216,
+          "t": 456,
+          "demo_seg_len": 216,
+          "exec_seg_len": 241,
+          "demo_windows": 12,
+          "exec_windows": 14,
+          "motion_tokens": 26,
+          "budget_pct": 27.1,
+          "frame_samples": 32,
+          "delta_mean": 14.71,
+          "delta_min": 14,
+          "delta_max": 15,
+          "frames_in_demo": 15
+        },
+        "num_timesteps": {
+          "min": 407,
+          "p25": 428,
+          "median": 457,
+          "p75": 477,
+          "max": 586,
+          "mean": 455.8
+        },
+        "exec_start_idx": {
+          "min": 168,
+          "p25": 168,
+          "median": 168,
+          "p75": 216,
+          "max": 216,
+          "mean": 191.04
+        },
+        "motion_tokens": {
+          "min": 22,
+          "p25": 24,
+          "median": 26,
+          "p75": 27,
+          "max": 34,
+          "mean": 25.56
+        },
+        "total_timesteps": 11395,
+        "total_exec_samples": 6619
+      }
     }
   }
 }
