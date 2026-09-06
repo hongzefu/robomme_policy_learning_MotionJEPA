@@ -1,6 +1,6 @@
 # eval-awsprod40k-b128-motion — 起跑记录
 
-**环境 B（AWS 单机 8×A100-SXM4-80GB， 本地 NVMe RAID）**。正式评估，按 AGENTS 12 留档。
+**环境 B（AWS 单机 8×A100-SXM4-80GB，`/dev/md0` 本地 NVMe RAID）**。正式评估，按 AGENTS 12 留档。
 
 起跑时间：2026-09-06 01:43（训练于 00:46 落 `39999`、`EXIT_CODE=0`）
 起跑 commit：代码 `7867dcd`（commitV5.3）；本留档在起跑前提交，工作区 clean（`eval_shard.sh` 断言 `git status --porcelain` 为空）
