@@ -25,7 +25,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 | `/data/hongzefu` | 存在 | 不存在 |
 | `/scratch/hongze` | 不存在 | 存在（`/dev/md0`，6.9 T） |
 | `~/.ssh/config`（集群 ControlMaster） | 存在 | 不存在 |
-| GPU | A40 | 8 × `NVIDIA A100-SXM4-80GB` |
+| GPU | 2 × `NVIDIA RTX 6000 Ada Generation`（本机；GreatLakes spgpu 侧才是 A40） | 8 × `NVIDIA A100-SXM4-80GB` |
 | Slurm / GreatLakes 提交 | 可用 | 不可用 |
 | 原始 H5 | 本机 `/data/hongzefu/` 原件永久保留 | 本机没有，须另行获取（见第 15 条） |
 
