@@ -61,7 +61,7 @@ for TASK in "${TASK_ARR[@]}"; do
   # 本批要用 PB..PB+WORKERS-1，逐个确认无人监听（eval_shard.sh 里也有同样的守卫，这里提前拦下整批）
   BUSY=""
   for ((k = 0; k < WORKERS; k++)); do
-    if (exec 3<>"/dev/tcp/127.0.0.1/$((PB + k))") 2>/dev/null; then exec 3>&- 2>/dev/null || true; BUSY="${BUSY} $((PB + k))"; fi
+    if (exec 3<>"/dev/tcp/127.0.0.1/$((PB + k))") 2>/dev/null; then exec 3>&-; BUSY="${BUSY} $((PB + k))"; fi
   done
   if [[ -n "${BUSY}" ]]; then echo "错误: 端口被占用:${BUSY}，换 PORT_BASE 重跑" >&2; FAIL=1; break; fi
   if ! MODE=stride WORKERS="${WORKERS}" GPU_LIST="${GPU_LIST}" TASKS_ALL="${TASK}" \

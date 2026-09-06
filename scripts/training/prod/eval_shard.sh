@@ -73,7 +73,7 @@ cd "${REPO_ROOT}"
 # eval.py 随即连过去拿到非 policy 响应，报 "did not receive a valid HTTP response / API calling error, aborting"
 # 后仍以退出码 0 结束（0 集），静默产出空结果。2026-09-06 实测踩中：本机 8042/8044 等被用户服务占用。
 if (exec 3<>"/dev/tcp/127.0.0.1/${PORT}") 2>/dev/null; then
-  exec 3>&- 2>/dev/null || true
+  exec 3>&-                       # 注意：不能写成 exec 3>&- 2>/dev/null——exec 不带命令时该重定向会永久吞掉本 shell 的 stderr
   echo "错误: 端口 ${PORT} 起跑前已被占用（本机有其他服务在监听），换 PORT_BASE 重试" >&2; exit 1
 fi
 # ── policy server（后台）：CUDA_VISIBLE_DEVICES 只作用于 policy 进程；sidecar 子进程的卡号由 MMEVLA_MOTION_ONLINE_GPU 给（绝对卡号）──
