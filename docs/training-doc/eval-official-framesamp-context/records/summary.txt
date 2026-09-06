@@ -1,0 +1,221 @@
+EVAL_OFFICIAL_CTX=DONE tasks=4 episodes=200/200 errors=0 ButtonUnmask=17/50 VideoUnmask=17/50 ButtonUnmaskSwap=4/50 VideoUnmaskSwap=10/50 mean_rate=0.2400 timeout=0/200 fail=152/200
+
+| 任务 | 成功/集数 | 成功率 | timeout | fail | 按难度 成功/集数 | 缺集 | error |
+|---|---|---|---|---|---|---|---|
+| ButtonUnmask | 17/50 | 34.00% | 0 | 33 | easy 11/26, hard 0/12, medium 6/12 | 0 | 0 |
+| VideoUnmask | 17/50 | 34.00% | 0 | 33 | easy 10/26, hard 3/12, medium 4/12 | 0 | 0 |
+| ButtonUnmaskSwap | 4/50 | 8.00% | 0 | 46 | easy 2/26, hard 1/12, medium 1/12 | 0 | 0 |
+| VideoUnmaskSwap | 10/50 | 20.00% | 0 | 40 | easy 4/26, hard 0/12, medium 6/12 | 0 | 0 |
+
+| 分片 | 集数 | 完成 | 墙钟 | add_buffer≤16帧 ms（mean/median/p90） | 首批 ms（mean/max） | infer ms（除首次 mean/median/p90） |
+|---|---|---|---|---|---|---|
+| w0 | 28 | 是 | 1.1 min | 44.1/37.1/39.2 | 486.4/1588.7 | 75.1/65.8/66.2 |
+| w1 | 28 | 是 | 1.1 min | 43.4/36.1/38.7 | 586.9/2631.4 | 73.1/66.0/66.4 |
+| w2 | 24 | 是 | 5.0 min | 43.3/37.2/38.9 | 391.4/1582.7 | 65.8/65.7/66.1 |
+| w3 | 24 | 是 | 6.4 min | 41.5/36.2/38.3 | 515.3/1375.2 | 65.7/65.7/66.0 |
+| w4 | 24 | 是 | 5.0 min | 42.8/37.2/38.8 | 452.3/1415.9 | 66.1/66.0/66.5 |
+| w5 | 24 | 是 | 5.0 min | 43.0/37.1/39.3 | 461.6/1546.0 | 65.5/65.5/65.9 |
+| w6 | 24 | 是 | 5.0 min | 41.8/35.5/37.8 | 451.2/1172.5 | 65.7/65.7/66.1 |
+| w7 | 24 | 是 | 6.6 min | 41.8/37.9/39.6 | 521.0/1456.3 | 65.5/65.4/65.9 |
+
+逐集（task ep seed difficulty result flag shard）：
+  ButtonUnmask  0 580000 easy False fail w0
+  ButtonUnmask  1 580100 easy False fail w1
+  ButtonUnmask  2 580201 medium True success w2
+  ButtonUnmask  3 580300 hard False fail w3
+  ButtonUnmask  4 580402 easy False fail w4
+  ButtonUnmask  5 580500 easy True success w5
+  ButtonUnmask  6 580600 medium True success w6
+  ButtonUnmask  7 580700 hard False fail w7
+  ButtonUnmask  8 580800 easy False fail w0
+  ButtonUnmask  9 580900 easy False fail w1
+  ButtonUnmask 10 581000 medium False fail w2
+  ButtonUnmask 11 581100 hard False fail w3
+  ButtonUnmask 12 581200 easy False fail w4
+  ButtonUnmask 13 581300 easy True success w5
+  ButtonUnmask 14 581400 medium True success w6
+  ButtonUnmask 15 581500 hard False fail w7
+  ButtonUnmask 16 581600 easy True success w0
+  ButtonUnmask 17 581700 easy False fail w1
+  ButtonUnmask 18 581800 medium True success w2
+  ButtonUnmask 19 581900 hard False fail w3
+  ButtonUnmask 20 582000 easy True success w4
+  ButtonUnmask 21 582100 easy False fail w5
+  ButtonUnmask 22 582200 medium False fail w6
+  ButtonUnmask 23 582300 hard False fail w7
+  ButtonUnmask 24 582400 easy True success w0
+  ButtonUnmask 25 582500 easy False fail w1
+  ButtonUnmask 26 582600 medium False fail w2
+  ButtonUnmask 27 582700 hard False fail w3
+  ButtonUnmask 28 582800 easy True success w4
+  ButtonUnmask 29 582900 easy True success w5
+  ButtonUnmask 30 583000 medium True success w6
+  ButtonUnmask 31 583100 hard False fail w7
+  ButtonUnmask 32 583200 easy False fail w0
+  ButtonUnmask 33 583300 easy True success w1
+  ButtonUnmask 34 583400 medium False fail w2
+  ButtonUnmask 35 583500 hard False fail w3
+  ButtonUnmask 36 583600 easy True success w4
+  ButtonUnmask 37 583700 easy True success w5
+  ButtonUnmask 38 583800 medium False fail w6
+  ButtonUnmask 39 583900 hard False fail w7
+  ButtonUnmask 40 584000 easy True success w0
+  ButtonUnmask 41 584100 easy False fail w1
+  ButtonUnmask 42 584200 medium True success w2
+  ButtonUnmask 43 584300 hard False fail w3
+  ButtonUnmask 44 584400 easy False fail w4
+  ButtonUnmask 45 584500 easy False fail w5
+  ButtonUnmask 46 584600 medium False fail w6
+  ButtonUnmask 47 584701 hard False fail w7
+  ButtonUnmask 48 584800 easy False fail w0
+  ButtonUnmask 49 584900 easy False fail w1
+  VideoUnmask  0 560000 easy False fail w0
+  VideoUnmask  1 560100 easy False fail w1
+  VideoUnmask  2 560200 medium False fail w2
+  VideoUnmask  3 560300 hard True success w3
+  VideoUnmask  4 560400 easy True success w4
+  VideoUnmask  5 560500 easy True success w5
+  VideoUnmask  6 560600 medium True success w6
+  VideoUnmask  7 560700 hard False fail w7
+  VideoUnmask  8 560800 easy False fail w0
+  VideoUnmask  9 560900 easy True success w1
+  VideoUnmask 10 561000 medium False fail w2
+  VideoUnmask 11 561100 hard False fail w3
+  VideoUnmask 12 561200 easy False fail w4
+  VideoUnmask 13 561300 easy False fail w5
+  VideoUnmask 14 561400 medium False fail w6
+  VideoUnmask 15 561500 hard True success w7
+  VideoUnmask 16 561600 easy True success w0
+  VideoUnmask 17 561700 easy False fail w1
+  VideoUnmask 18 561800 medium False fail w2
+  VideoUnmask 19 561900 hard True success w3
+  VideoUnmask 20 562000 easy True success w4
+  VideoUnmask 21 562100 easy True success w5
+  VideoUnmask 22 562200 medium True success w6
+  VideoUnmask 23 562300 hard False fail w7
+  VideoUnmask 24 562400 easy False fail w0
+  VideoUnmask 25 562500 easy True success w1
+  VideoUnmask 26 562600 medium False fail w2
+  VideoUnmask 27 562700 hard False fail w3
+  VideoUnmask 28 562800 easy False fail w4
+  VideoUnmask 29 562900 easy True success w5
+  VideoUnmask 30 563000 medium True success w6
+  VideoUnmask 31 563100 hard False fail w7
+  VideoUnmask 32 563200 easy False fail w0
+  VideoUnmask 33 563300 easy False fail w1
+  VideoUnmask 34 563400 medium True success w2
+  VideoUnmask 35 563500 hard False fail w3
+  VideoUnmask 36 563600 easy False fail w4
+  VideoUnmask 37 563700 easy True success w5
+  VideoUnmask 38 563800 medium False fail w6
+  VideoUnmask 39 563900 hard False fail w7
+  VideoUnmask 40 564000 easy False fail w0
+  VideoUnmask 41 564100 easy False fail w1
+  VideoUnmask 42 564200 medium False fail w2
+  VideoUnmask 43 564300 hard False fail w3
+  VideoUnmask 44 564400 easy False fail w4
+  VideoUnmask 45 564500 easy True success w5
+  VideoUnmask 46 564600 medium False fail w6
+  VideoUnmask 47 564700 hard False fail w7
+  VideoUnmask 48 564800 easy False fail w0
+  VideoUnmask 49 564900 easy False fail w1
+  ButtonUnmaskSwap  0 570000 easy False fail w0
+  ButtonUnmaskSwap  1 570100 easy False fail w1
+  ButtonUnmaskSwap  2 570200 medium False fail w2
+  ButtonUnmaskSwap  3 570300 hard False fail w3
+  ButtonUnmaskSwap  4 570400 easy False fail w4
+  ButtonUnmaskSwap  5 570500 easy False fail w5
+  ButtonUnmaskSwap  6 570600 medium False fail w6
+  ButtonUnmaskSwap  7 570700 hard False fail w7
+  ButtonUnmaskSwap  8 570800 easy True success w0
+  ButtonUnmaskSwap  9 570900 easy False fail w1
+  ButtonUnmaskSwap 10 571000 medium False fail w2
+  ButtonUnmaskSwap 11 571100 hard False fail w3
+  ButtonUnmaskSwap 12 571200 easy True success w4
+  ButtonUnmaskSwap 13 571300 easy False fail w5
+  ButtonUnmaskSwap 14 571400 medium False fail w6
+  ButtonUnmaskSwap 15 571500 hard False fail w7
+  ButtonUnmaskSwap 16 571600 easy False fail w0
+  ButtonUnmaskSwap 17 571700 easy False fail w1
+  ButtonUnmaskSwap 18 571800 medium True success w2
+  ButtonUnmaskSwap 19 571900 hard False fail w3
+  ButtonUnmaskSwap 20 572000 easy False fail w4
+  ButtonUnmaskSwap 21 572100 easy False fail w5
+  ButtonUnmaskSwap 22 572200 medium False fail w6
+  ButtonUnmaskSwap 23 572300 hard False fail w7
+  ButtonUnmaskSwap 24 572400 easy False fail w0
+  ButtonUnmaskSwap 25 572500 easy False fail w1
+  ButtonUnmaskSwap 26 572600 medium False fail w2
+  ButtonUnmaskSwap 27 572700 hard False fail w3
+  ButtonUnmaskSwap 28 572800 easy False fail w4
+  ButtonUnmaskSwap 29 572900 easy False fail w5
+  ButtonUnmaskSwap 30 573000 medium False fail w6
+  ButtonUnmaskSwap 31 573100 hard False fail w7
+  ButtonUnmaskSwap 32 573200 easy False fail w0
+  ButtonUnmaskSwap 33 573300 easy False fail w1
+  ButtonUnmaskSwap 34 573400 medium False fail w2
+  ButtonUnmaskSwap 35 573500 hard False fail w3
+  ButtonUnmaskSwap 36 573600 easy False fail w4
+  ButtonUnmaskSwap 37 573700 easy False fail w5
+  ButtonUnmaskSwap 38 573800 medium False fail w6
+  ButtonUnmaskSwap 39 573900 hard False fail w7
+  ButtonUnmaskSwap 40 574000 easy False fail w0
+  ButtonUnmaskSwap 41 574100 easy False fail w1
+  ButtonUnmaskSwap 42 574200 medium False fail w2
+  ButtonUnmaskSwap 43 574300 hard False fail w3
+  ButtonUnmaskSwap 44 574400 easy False fail w4
+  ButtonUnmaskSwap 45 574500 easy False fail w5
+  ButtonUnmaskSwap 46 574600 medium False fail w6
+  ButtonUnmaskSwap 47 574700 hard True success w7
+  ButtonUnmaskSwap 48 574800 easy False fail w0
+  ButtonUnmaskSwap 49 574900 easy False fail w1
+  VideoUnmaskSwap  0 550000 easy False fail w0
+  VideoUnmaskSwap  1 550100 easy False fail w1
+  VideoUnmaskSwap  2 550200 medium False fail w2
+  VideoUnmaskSwap  3 550300 hard False fail w3
+  VideoUnmaskSwap  4 550400 easy False fail w4
+  VideoUnmaskSwap  5 550500 easy False fail w5
+  VideoUnmaskSwap  6 550600 medium True success w6
+  VideoUnmaskSwap  7 550700 hard False fail w7
+  VideoUnmaskSwap  8 550800 easy True success w0
+  VideoUnmaskSwap  9 550900 easy False fail w1
+  VideoUnmaskSwap 10 551000 medium True success w2
+  VideoUnmaskSwap 11 551100 hard False fail w3
+  VideoUnmaskSwap 12 551200 easy True success w4
+  VideoUnmaskSwap 13 551300 easy True success w5
+  VideoUnmaskSwap 14 551400 medium False fail w6
+  VideoUnmaskSwap 15 551500 hard False fail w7
+  VideoUnmaskSwap 16 551600 easy False fail w0
+  VideoUnmaskSwap 17 551700 easy False fail w1
+  VideoUnmaskSwap 18 551800 medium False fail w2
+  VideoUnmaskSwap 19 551900 hard False fail w3
+  VideoUnmaskSwap 20 552000 easy False fail w4
+  VideoUnmaskSwap 21 552100 easy False fail w5
+  VideoUnmaskSwap 22 552200 medium False fail w6
+  VideoUnmaskSwap 23 552300 hard False fail w7
+  VideoUnmaskSwap 24 552400 easy False fail w0
+  VideoUnmaskSwap 25 552500 easy False fail w1
+  VideoUnmaskSwap 26 552600 medium True success w2
+  VideoUnmaskSwap 27 552700 hard False fail w3
+  VideoUnmaskSwap 28 552800 easy True success w4
+  VideoUnmaskSwap 29 552900 easy False fail w5
+  VideoUnmaskSwap 30 553000 medium True success w6
+  VideoUnmaskSwap 31 553100 hard False fail w7
+  VideoUnmaskSwap 32 553200 easy False fail w0
+  VideoUnmaskSwap 33 553300 easy False fail w1
+  VideoUnmaskSwap 34 553400 medium True success w2
+  VideoUnmaskSwap 35 553500 hard False fail w3
+  VideoUnmaskSwap 36 553600 easy False fail w4
+  VideoUnmaskSwap 37 553700 easy False fail w5
+  VideoUnmaskSwap 38 553800 medium False fail w6
+  VideoUnmaskSwap 39 553900 hard False fail w7
+  VideoUnmaskSwap 40 554000 easy False fail w0
+  VideoUnmaskSwap 41 554100 easy False fail w1
+  VideoUnmaskSwap 42 554200 medium False fail w2
+  VideoUnmaskSwap 43 554300 hard False fail w3
+  VideoUnmaskSwap 44 554400 easy False fail w4
+  VideoUnmaskSwap 45 554500 easy False fail w5
+  VideoUnmaskSwap 46 554600 medium True success w6
+  VideoUnmaskSwap 47 554700 hard False fail w7
+  VideoUnmaskSwap 48 554800 easy False fail w0
+  VideoUnmaskSwap 49 554900 easy False fail w1

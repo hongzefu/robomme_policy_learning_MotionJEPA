@@ -1,0 +1,110 @@
+  ✓ siglip_params          level=cheap   0.00s
+  ✓ paligemma_tokenizer    level=cheap   0.00s
+  ✓ pi05_base              level=cheap   0.03s
+ASSETS=PASS assets=3 mismatches=0
+=== EVAL_SHARD shard=w7 HEAD=ce2635e5af3a4ef82212e628b3c8904d1a53e675 ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999 run_kind=legacy(history_config.txt=perceptual-framesamp-context.yaml) gpu=7 port=8048 seed=42 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap ep_start=7 ep_stride=8 ep_count=0 policy_name=official-framesamp-context-w7 mem_fraction=0.4 start=2026-09-06 06:09:08 ===
+server pid=2169965 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/evoffctx-w7.server.log
+server 端口就绪 06:09:28
+[robomme] task ButtonUnmask: 6 episodes [7, 15, 23, 31, 39, 47]
+
+[robomme] env for task ButtonUnmask episode 7 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 15 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 23 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 31 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 39 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 47 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 0
+[robomme] task VideoUnmask: 6 episodes [7, 15, 23, 31, 39, 47]
+
+[robomme] env for task VideoUnmask episode 7 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 15 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 23 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 31 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 39 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 47 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 66
+[robomme] task ButtonUnmaskSwap: 6 episodes [7, 15, 23, 31, 39, 47]
+
+[robomme] env for task ButtonUnmaskSwap episode 7 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 15 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 23 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 31 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 39 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 47 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 0
+[robomme] task VideoUnmaskSwap: 6 episodes [7, 15, 23, 31, 39, 47]
+
+[robomme] env for task VideoUnmaskSwap episode 7 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 216
+
+[robomme] env for task VideoUnmaskSwap episode 15 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 216
+
+[robomme] env for task VideoUnmaskSwap episode 23 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 216
+
+[robomme] env for task VideoUnmaskSwap episode 31 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 168
+
+[robomme] env for task VideoUnmaskSwap episode 39 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 216
+
+[robomme] env for task VideoUnmaskSwap episode 47 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 216
+EVAL_RC=0 end=2026-09-06 06:15:44
+TIMING_SUMMARY add_buffer(<=16帧) n=375 mean=42 median=38 p90=40 max=981 | add_buffer(首批>16帧) n=12 mean=521 median=455 p90=1079 max=1456 | infer n=387 mean=73 median=65 p90=66 max=2806
+EXIT_CODE=0

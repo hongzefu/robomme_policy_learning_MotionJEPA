@@ -73,6 +73,8 @@ UV_LINK_MODE=copy uv run --no-sync python scripts/training/prod/merge_eval_shard
 ```
 
 盯盘项：驱动日志 `v1-store/logs/evoffctx-w<k>.log` 出现 `Error saving final results`（`eval.py` 收尾对含 `"error"` 值的 `sum()` 会 TypeError 并重跑整个 worker）即人工介入；`EXIT_CODE=0` 为完成。
+**实测新增（见 result.md）**：单个 eval.py 进程连续建 27 个仿真环境后第 28 次 `make_env` 必抛 `vk::createInstanceUnique: ErrorIncompatibleDriver`，w0/w1（28 集）均中招；
+处置是 `ONLY=w<k>` 重跑同 worker 续评。后续分片每进程 ≤27 集。
 
 ## tmux 会话清单（清理时的唯一依据）
 
@@ -87,4 +89,9 @@ UV_LINK_MODE=copy uv run --no-sync python scripts/training/prod/merge_eval_shard
 
 ## 时间线
 
-（预检与正式起跑后补）
+- 05:55:18 → 05:58:26 下载（tmux `evoffctx-dl`，`DOWNLOAD=PASS`）；05:59 解压 42 s；06:00 参数树核对 `PARAM_TREE_EXACT=PASS`。
+- 06:03:02 → 06:08:36 预检 `evoffctxpre-w0`（8 集，`EXIT_CODE=0`，`records/preflight-w0.txt`）。
+- 06:09:08 正式 8 worker 起跑，06:09:36 八个端口全部就绪。
+- 06:14:08–06:15:44 w2/w4/w5/w6/w3/w7 依次 `EXIT_CODE=0`；06:15:23 / 06:15:55 w0 / w1 在第 28 集建环境时 Vulkan 崩溃（`EVAL_RC=1`，进度 27 集、0 error）。
+- 06:16:10 / 06:16:22 `ONLY=w0` / `ONLY=w1` 续评重起；06:17:17 / 06:17:29 各补 1 集 `EXIT_CODE=0`。
+- 06:18 合并 `EVAL_OFFICIAL_CTX=DONE … mean_rate=0.2400`。

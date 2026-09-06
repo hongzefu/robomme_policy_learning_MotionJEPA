@@ -1,0 +1,204 @@
+  ✓ siglip_params          level=cheap   0.00s
+  ✓ paligemma_tokenizer    level=cheap   0.00s
+  ✓ pi05_base              level=cheap   0.03s
+ASSETS=PASS assets=3 mismatches=0
+=== EVAL_SHARD shard=w0 HEAD=ce2635e5af3a4ef82212e628b3c8904d1a53e675 ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999 run_kind=legacy(history_config.txt=perceptual-framesamp-context.yaml) gpu=0 port=8041 seed=42 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap ep_start=0 ep_stride=8 ep_count=0 policy_name=official-framesamp-context-w0 mem_fraction=0.4 start=2026-09-06 06:09:08 ===
+server pid=2169893 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/evoffctx-w0.server.log
+server 端口就绪 06:09:32
+[robomme] task ButtonUnmask: 7 episodes [0, 8, 16, 24, 32, 40, 48]
+
+[robomme] env for task ButtonUnmask episode 0 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 8 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 16 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 24 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 32 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 40 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 48 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+[robomme] task VideoUnmask: 7 episodes [0, 8, 16, 24, 32, 40, 48]
+
+[robomme] env for task VideoUnmask episode 0 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 8 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 16 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 24 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 32 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 40 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 48 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 66
+[robomme] task ButtonUnmaskSwap: 7 episodes [0, 8, 16, 24, 32, 40, 48]
+
+[robomme] env for task ButtonUnmaskSwap episode 0 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 8 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 16 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 24 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 32 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 40 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 48 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the blue cube
+exec_start_idx: 0
+[robomme] task VideoUnmaskSwap: 7 episodes [0, 8, 16, 24, 32, 40, 48]
+
+[robomme] env for task VideoUnmaskSwap episode 0 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 8 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+
+[robomme] env for task VideoUnmaskSwap episode 16 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 24 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+
+[robomme] env for task VideoUnmaskSwap episode 32 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 40 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 114
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/examples/robomme/eval.py", line 307, in <module>
+    tyro.cli(evaluate)
+  File "/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/tyro/_cli.py", line 328, in cli
+    out = run_with_args_from_cli()
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/examples/robomme/eval.py", line 265, in evaluate
+    env_runner.make_env(episode_id)
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/examples/robomme/env_runner.py", line 51, in make_env
+    self.env = self.env_builder.make_env_for_episode(episode_id)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark/src/robomme/env_record_wrapper/episode_config_resolver.py", line 207, in make_env_for_episode
+    env = gym.make(self.env_id, **env_kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/gymnasium/envs/registration.py", line 802, in make
+    env = env_creator(**env_spec_kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/mani_skill/utils/registration.py", line 182, in make
+    env = env_spec.make(**kwargs)
+          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/mani_skill/utils/registration.py", line 79, in make
+    return self.cls(**_kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark/src/robomme/robomme_env/VideoUnmaskSwap.py", line 152, in __init__
+    super().__init__(*args, robot_uids=robot_uids, **kwargs)
+  File "/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/mani_skill/envs/sapien_env.py", line 327, in __init__
+    obs, _ = self.reset(seed=[2022 + i for i in range(self.num_envs)], options=dict(reconfigure=True))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/mani_skill/envs/sapien_env.py", line 909, in reset
+    self._reconfigure(options)
+  File "/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/mani_skill/envs/sapien_env.py", line 739, in _reconfigure
+    self._setup_scene()
+  File "/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/mani_skill/envs/sapien_env.py", line 1208, in _setup_scene
+    systems.append(sapien.render.RenderSystem(self._render_device))
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: vk::createInstanceUnique: ErrorIncompatibleDriver
+EVAL_RC=1 end=2026-09-06 06:15:23
+TIMING_SUMMARY add_buffer(<=16帧) n=354 mean=42 median=37 p90=39 max=1104 | add_buffer(首批>16帧) n=13 mean=402 median=235 p90=1036 max=1200 | infer n=367 mean=74 median=66 p90=66 max=2888
+EXIT_CODE=1
+  ✓ siglip_params          level=cheap   0.00s
+  ✓ paligemma_tokenizer    level=cheap   0.00s
+  ✓ pi05_base              level=cheap   0.03s
+ASSETS=PASS assets=3 mismatches=0
+=== EVAL_SHARD shard=w0 HEAD=ce2635e5af3a4ef82212e628b3c8904d1a53e675 ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-context/79999 run_kind=legacy(history_config.txt=perceptual-framesamp-context.yaml) gpu=0 port=8041 seed=42 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap ep_start=0 ep_stride=8 ep_count=0 policy_name=official-framesamp-context-w0 mem_fraction=0.4 start=2026-09-06 06:16:11 ===
+server pid=2212682 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/evoffctx-w0.server.log
+server 端口就绪 06:16:29
+we will resume the evaluation
+[robomme] task ButtonUnmask: 7 episodes [0, 8, 16, 24, 32, 40, 48]
+[robomme] episode 0 already evaluated, skipping...
+[robomme] episode 8 already evaluated, skipping...
+[robomme] episode 16 already evaluated, skipping...
+[robomme] episode 24 already evaluated, skipping...
+[robomme] episode 32 already evaluated, skipping...
+[robomme] episode 40 already evaluated, skipping...
+[robomme] episode 48 already evaluated, skipping...
+[robomme] task VideoUnmask: 7 episodes [0, 8, 16, 24, 32, 40, 48]
+[robomme] episode 0 already evaluated, skipping...
+[robomme] episode 8 already evaluated, skipping...
+[robomme] episode 16 already evaluated, skipping...
+[robomme] episode 24 already evaluated, skipping...
+[robomme] episode 32 already evaluated, skipping...
+[robomme] episode 40 already evaluated, skipping...
+[robomme] episode 48 already evaluated, skipping...
+[robomme] task ButtonUnmaskSwap: 7 episodes [0, 8, 16, 24, 32, 40, 48]
+[robomme] episode 0 already evaluated, skipping...
+[robomme] episode 8 already evaluated, skipping...
+[robomme] episode 16 already evaluated, skipping...
+[robomme] episode 24 already evaluated, skipping...
+[robomme] episode 32 already evaluated, skipping...
+[robomme] episode 40 already evaluated, skipping...
+[robomme] episode 48 already evaluated, skipping...
+[robomme] task VideoUnmaskSwap: 7 episodes [0, 8, 16, 24, 32, 40, 48]
+[robomme] episode 0 already evaluated, skipping...
+[robomme] episode 8 already evaluated, skipping...
+[robomme] episode 16 already evaluated, skipping...
+[robomme] episode 24 already evaluated, skipping...
+[robomme] episode 32 already evaluated, skipping...
+[robomme] episode 40 already evaluated, skipping...
+
+[robomme] env for task VideoUnmaskSwap episode 48 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 114
+EVAL_RC=0 end=2026-09-06 06:17:17
+TIMING_SUMMARY add_buffer(<=16帧) n=360 mean=44 median=37 p90=39 max=1104 | add_buffer(首批>16帧) n=14 mean=486 median=236 p90=1058 max=1589 | infer n=374 mean=83 median=66 p90=66 max=3427
+EXIT_CODE=0
