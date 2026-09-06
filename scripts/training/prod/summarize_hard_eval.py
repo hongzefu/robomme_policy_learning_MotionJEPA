@@ -13,7 +13,7 @@
 输出：
   summary.txt / per_episode.json → --out-dir
 判定行：
-  HARD_ONLY=PASS|FAIL   所有实评集的难度均为 hard（难度取自视频文件名，是 env.unwrapped.difficulty 的回读值）
+  DIFFICULTY_ONLY=PASS|FAIL  所有实评集的难度均等于 --expect-difficulty（取自视频文件名，是 env.unwrapped.difficulty 的回读值）
   EP_SET=PASS|FAIL      每个 unit 的实评集号恰为 --expect-episodes
   SPLIT_SEED=PASS|FAIL  split 确实生效（见 verdict_split_seed）
   HARD_EVAL=DONE|INCOMPLETE units=<n> episodes=<n>/<N> … <task>-<split>=<succ>/<n> … mean_rate=<r>
@@ -40,7 +40,7 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 _V1 = pathlib.Path(os.environ.get("MMEVLA_V1_STORE", str(_REPO_ROOT / "v1-store")))
 # eval.py 的视频名：<task>_ep<k>_<flag>_<task_goal>_<difficulty>.mp4；task_goal 可能含下划线，故难度取最后一段。
 _VIDEO_HEAD = re.compile(r"^(?P<task>[A-Za-z]+)_ep(?P<ep>\d+)_(?P<flag>[a-z]+)_")
-_HARD = "hard"
+_DEFAULT_DIFFICULTY = "hard"
 
 
 def parse_unit(spec: str) -> dict:
@@ -97,9 +97,10 @@ def read_log(log: pathlib.Path) -> dict:
     return info
 
 
-def verdict_hard_only(units: list[dict]) -> tuple[bool, str]:
-    """HARD_ONLY：所有实评集的难度必须是 hard。难度取自视频名（env 回读值），故本判据也实测覆盖了
-    RouteStick.py 难度 fallback 里那行无条件 `self.difficulty = "easy"` 的硬覆盖。"""
+def verdict_difficulty_only(units: list[dict], expect: str) -> tuple[bool, str]:
+    """DIFFICULTY_ONLY：所有实评集的难度必须等于 expect（hard / medium / easy）。
+    难度取自视频名，是 env.unwrapped.difficulty 的回读值（env 实际生效值，非传入的期望值），
+    故本判据也实测覆盖了 RouteStick.py 难度 fallback 里那行无条件 `self.difficulty = "easy"` 的硬覆盖。"""
     bad, n_checked, n_missing = [], 0, 0
     for u in units:
         for ep in sorted(u["episodes"]):
@@ -108,12 +109,12 @@ def verdict_hard_only(units: list[dict]) -> tuple[bool, str]:
                 n_missing += 1
                 continue
             n_checked += 1
-            if v["difficulty"] != _HARD:
+            if v["difficulty"] != expect:
                 bad.append(f"{u['task']}-{u['split']}-ep{ep}={v['difficulty']}")
     ok = not bad and n_missing == 0 and n_checked > 0
-    detail = f"checked={n_checked} non_hard={len(bad)} no_video={n_missing}"
+    detail = f"expect={expect} checked={n_checked} mismatched={len(bad)} no_video={n_missing}"
     if bad:
-        detail += " 非 hard: " + ",".join(bad[:10])
+        detail += f" 非 {expect}: " + ",".join(bad[:10])
     return ok, detail
 
 
@@ -215,7 +216,10 @@ def main() -> int:
     ap.add_argument("--ckpt-id", type=int, default=79999)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--log-prefix", default="", help="留空则用各 unit 的 run_name")
-    ap.add_argument("--expect-episodes", default="3,7,11,15,19,23,27,31,35,39,43,47")
+    ap.add_argument("--expect-episodes", default="3,7,11,15,19,23,27,31,35,39,43,47",
+                    help="期望集号；hard=3,7,…,47（ONLY=w3）、medium=2,6,…,46（ONLY=w2）、easy 见 README")
+    ap.add_argument("--expect-difficulty", default=_DEFAULT_DIFFICULTY, choices=("easy", "medium", "hard"),
+                    help="期望难度档，须与 --expect-episodes 对应")
     ap.add_argument("--eval-root", default=str(_V1 / "evaluation"))
     ap.add_argument("--logs-dir", default=str(_V1 / "logs"))
     ap.add_argument("--metadata-dir", required=True,
@@ -247,7 +251,7 @@ def main() -> int:
         })
         units.append(u)
 
-    ok_hard, d_hard = verdict_hard_only(units)
+    ok_hard, d_hard = verdict_difficulty_only(units, args.expect_difficulty)
     ok_eps, d_eps = verdict_ep_set(units, expect)
     ok_split, d_split = verdict_split_seed(units)
 
@@ -277,7 +281,7 @@ def main() -> int:
     complete = all(u["finished"] for u in units) and ok_eps
     mean_rate = (sum(rates) / len(rates)) if rates else 0.0
     n_expect = len(expect) * len(units)
-    verdicts = [f"HARD_ONLY={'PASS' if ok_hard else 'FAIL'} {d_hard}",
+    verdicts = [f"DIFFICULTY_ONLY={'PASS' if ok_hard else 'FAIL'} {d_hard}",
                 f"EP_SET={'PASS' if ok_eps else 'FAIL'} {d_eps}",
                 f"SPLIT_SEED={'PASS' if ok_split else 'FAIL'} {d_split}"]
     head = (f"HARD_EVAL={'DONE' if complete else 'INCOMPLETE'} units={len(units)} "
