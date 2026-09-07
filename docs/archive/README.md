@@ -67,4 +67,4 @@
 - motion 接入依据：`docs/training-doc/motion-*/` 8 项与 `docs/dataset-build-doc/4task-motion-40ep/`、`4task-gl-framesamp/`——`docs/motion-memory.md` 的实测数字出处。
 - 环境 A 评估：`docs/training-doc/eval-3seed-context-vs-motion/` 等——三 seed 成功率对照的唯一来源，正文标注环境。
 
-完整索引见 `docs/README.md` 与 `docs/training-doc/README.md`（本轮 S4 新增）。
+完整索引见 [`docs/README.md`](../README.md) 与 [`docs/training-doc/README.md`](../training-doc/README.md)。

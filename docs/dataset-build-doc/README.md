@@ -3,8 +3,8 @@
 > 环境 B（AWS 单机 8×A100，2026-09-04 起）现行。环境 A（GreatLakes / turbo）时期的两份档案已于 2026-09-07 迁入
 > [`docs/archive/dataset-build-doc/`](../archive/dataset-build-doc/)（见 [`docs/archive/README.md`](../archive/README.md)）。
 > 库本体一律在 `v1-store/datasets/<name>/`（不进 git）；本目录只放 launch / result / records。
-> 数据集格式与建库链路的正文见 `docs/motion-memory.md`（motion 表，本轮 S4 新增）与
-> `docs/dataloader-restructure.md`（framesamp 三表，本轮 S4 新增）。
+> 数据集格式与建库链路的正文见 [`docs/motion-memory.md`](../motion-memory.md)（motion 表）与
+> [`docs/dataloader-restructure.md`](../dataloader-restructure.md)（framesamp 三表）。
 
 ## 环境 B 现行库（训练 / 对拍实际使用）
 
