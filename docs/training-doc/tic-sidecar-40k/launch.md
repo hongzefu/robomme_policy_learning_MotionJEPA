@@ -2,7 +2,7 @@
 
 > 目的：第 1–5 关再跑一遍，motion 换真 sidecar（`MotionEncoderClient(online_gpu=1)`）现算，多比一条 `MOTION_S_VS_SIDECAR`（现算 vs 表逐位）；其余判据与 `tic-obs-model-40k` 同。
 > 计划：`~/.claude-personal/plans/hashed-petting-garden.md`（训练/推理一致性验证，Codex 审计修订版）第二部分 2.4 与 S3 组 C；正本文档 `docs/train-infer-consistency.md`（S4 补写）。
-> 起跑 commit：`9b3b95f`（clean HEAD，含 commitV7.1 的对拍工具）。起跑日期 2026-09-07。
+> 起跑 commit：`fbdaf25`（clean HEAD，工具版本 commitV7.1 a8cfa17；组 B 起跑于 9b3b95f）。起跑日期 2026-09-07。
 
 ## 环境与介质
 
