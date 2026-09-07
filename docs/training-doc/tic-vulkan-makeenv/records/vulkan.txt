@@ -1,0 +1,138 @@
+[start] 2026-09-07T21:05:25+00:00 HEAD=9b3b95f04aaee2dfeb8b1501bb578c0167aab562
+### [F1] baseline 复现（预期第 28 轮崩）
+=== PROBE tag=tic-baseline rounds=35 task=ButtonUnmask episode=0 reset=False gc=False renderer_release=False reuse_env=False subprocess=False vk_loader_debug=False CUDA_VISIBLE_DEVICES=7 pid=3989017 ===
+=== PRE {"fd": 4, "fd_nvidia": 0, "vk_maps": 0, "vk_so_files": 0, "devnv_maps": 0, "maps_total": 127, "threads": 1, "vmsize_mb": 231.7, "rss_mb": 15.1, "gpu_mem_mb": 0.0, "sapien_objs": 0, "vk_create": -1, "vk_destroy": -1, "sapien_detail": {}} ===
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+ROUND 1 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2611 threads=137 vmsize_mb=18967.4 rss_mb=1602.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=17.69s
+ROUND 2 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19179.8 rss_mb=1832.1 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.52s
+ROUND 3 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19179.8 rss_mb=1840.7 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=7.06s
+ROUND 4 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19179.8 rss_mb=1915.1 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.90s
+ROUND 5 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19179.8 rss_mb=1938.1 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.94s
+ROUND 6 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19179.8 rss_mb=1928.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.90s
+ROUND 7 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2618 threads=137 vmsize_mb=19179.8 rss_mb=1950.1 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.88s
+ROUND 8 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2627 threads=137 vmsize_mb=19371.8 rss_mb=2165.0 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.86s
+ROUND 9 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19179.8 rss_mb=1960.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.87s
+ROUND 10 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2623 threads=137 vmsize_mb=19307.8 rss_mb=2073.6 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.89s
+ROUND 11 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19179.8 rss_mb=1958.4 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.85s
+ROUND 12 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2624 threads=137 vmsize_mb=19307.8 rss_mb=2058.0 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.90s
+ROUND 13 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19179.8 rss_mb=1926.6 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.03s
+ROUND 14 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19179.8 rss_mb=1908.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.91s
+ROUND 15 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2625 threads=137 vmsize_mb=19371.8 rss_mb=2132.7 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.37s
+ROUND 16 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2618 threads=137 vmsize_mb=19179.8 rss_mb=1904.6 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.87s
+ROUND 17 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19179.8 rss_mb=1971.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.86s
+ROUND 18 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19180.8 rss_mb=1917.8 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.89s
+ROUND 19 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19180.8 rss_mb=1969.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.89s
+ROUND 20 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19180.8 rss_mb=1973.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.93s
+ROUND 21 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19244.8 rss_mb=2062.0 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.97s
+ROUND 22 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19180.8 rss_mb=1979.7 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.89s
+ROUND 23 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19180.8 rss_mb=1953.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.90s
+ROUND 24 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2625 threads=137 vmsize_mb=19308.8 rss_mb=2063.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.89s
+ROUND 25 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19180.8 rss_mb=1960.8 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.86s
+ROUND 26 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19180.8 rss_mb=1933.7 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.90s
+ROUND 27 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2613 threads=137 vmsize_mb=19308.4 rss_mb=2058.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.89s
+[2026-09-07 21:08:43.996] [svulkan2] [error] Extension VK_KHR_external_memory_capabilities is not available. Interop with external library is disabled.
+[2026-09-07 21:08:43.996] [svulkan2] [error] Extension VK_KHR_external_semaphore_capabilities is not available. Interop with external library is disabled.
+[2026-09-07 21:08:44.003] [svulkan2] [error] Your GPU driver does not support Vulkan. You may not use the renderer for rendering.
+ROUND 28 fd=69 fd_nvidia=51 vk_maps=5 vk_so_files=1 devnv_maps=30 maps_total=2275 threads=130 vmsize_mb=18429.4 rss_mb=1533.2 gpu_mem_mb=492.0 sapien_objs=11 vk_create=-1 vk_destroy=-1 dt=2.24s
+CRASH at round=28 err=RuntimeError: vk::createInstanceUnique: ErrorIncompatibleDriver
+=== PROBE_RESULT tag=tic-baseline rounds_done=28 crash_round=28 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/tic-vulkan/probe-tic-baseline.json ===
+F1_RC=0
+### [F2] 修法 1：钉住 RenderSystem
+=== PROBE tag=tic-pin rounds=35 task=ButtonUnmask episode=0 reset=False gc=False renderer_release=False reuse_env=False subprocess=False vk_loader_debug=False CUDA_VISIBLE_DEVICES=7 pid=3996497 ===
+=== PRE {"fd": 4, "fd_nvidia": 0, "vk_maps": 0, "vk_so_files": 0, "devnv_maps": 0, "maps_total": 127, "threads": 1, "vmsize_mb": 231.7, "rss_mb": 15.1, "gpu_mem_mb": 0.0, "sapien_objs": 0, "vk_create": -1, "vk_destroy": -1, "sapien_detail": {}} ===
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+  [pin-renderer] pinned RenderSystem on cuda:0
+=== POST_PIN {"fd": 101, "fd_nvidia": 84, "vk_maps": 80, "vk_so_files": 14, "devnv_maps": 89, "maps_total": 1083, "threads": 72, "vmsize_mb": 8497.9, "rss_mb": 300.2, "gpu_mem_mb": 44.0, "sapien_objs": 11, "vk_create": -1, "vk_destroy": -1, "sapien_detail": {"sapien.utils.viewer.path_window.PathWindow": 1, "sapien.utils.viewer.contact_window.ContactWindow": 1, "sapien.utils.viewer.setting_window.SettingWindow": 1, "sapien.utils.viewer.transform_window.TransformWindow": 1, "sapien.utils.viewer.render_window.RenderOptionsWindow": 1, "sapien.utils.viewer.control_window.ControlWindow": 1, "sapien.utils.viewer.camera_control.FPSCameraController": 1, "sapien.utils.viewer.camera_control.ArcRotateCameraController": 1}} ===
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+ROUND 1 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2617 threads=137 vmsize_mb=18967.6 rss_mb=1588.0 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.59s
+ROUND 2 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.4 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.15s
+ROUND 3 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.4 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.17s
+ROUND 4 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.4 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.16s
+ROUND 5 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=2.20s
+ROUND 6 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.14s
+ROUND 7 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 8 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+ROUND 9 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 10 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 11 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.8 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 12 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.8 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+ROUND 13 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.8 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 14 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 15 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 16 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 17 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.11s
+ROUND 18 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 19 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 20 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 21 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=2.25s
+ROUND 22 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.14s
+ROUND 23 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+ROUND 24 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.16s
+ROUND 25 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+ROUND 26 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=18987.6 rss_mb=1588.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+ROUND 27 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=122 maps_total=2622 threads=137 vmsize_mb=18991.6 rss_mb=1592.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+ROUND 28 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=122 maps_total=2622 threads=137 vmsize_mb=18991.6 rss_mb=1592.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+ROUND 29 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=119 maps_total=2619 threads=137 vmsize_mb=18991.2 rss_mb=1592.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.12s
+ROUND 30 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=119 maps_total=2619 threads=137 vmsize_mb=18991.2 rss_mb=1592.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+ROUND 31 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=119 maps_total=2619 threads=137 vmsize_mb=18991.2 rss_mb=1592.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.14s
+ROUND 32 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=119 maps_total=2619 threads=137 vmsize_mb=18991.2 rss_mb=1592.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+ROUND 33 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=119 maps_total=2619 threads=137 vmsize_mb=18991.2 rss_mb=1592.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+ROUND 34 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=119 maps_total=2619 threads=137 vmsize_mb=18991.2 rss_mb=1592.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+ROUND 35 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=119 maps_total=2619 threads=137 vmsize_mb=18991.2 rss_mb=1592.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=1.13s
+=== PROBE_RESULT tag=tic-pin rounds_done=35 crash_round=-1 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/tic-vulkan/probe-tic-pin.json ===
+### [F3] 修法 2：GLIBC_TUNABLES 抬 TLS
+=== PROBE tag=tic-tls8192 rounds=35 task=ButtonUnmask episode=0 reset=False gc=False renderer_release=False reuse_env=False subprocess=False vk_loader_debug=False CUDA_VISIBLE_DEVICES=7 pid=3998132 ===
+=== PRE {"fd": 4, "fd_nvidia": 0, "vk_maps": 0, "vk_so_files": 0, "devnv_maps": 0, "maps_total": 127, "threads": 1, "vmsize_mb": 231.7, "rss_mb": 15.2, "gpu_mem_mb": 0.0, "sapien_objs": 0, "vk_create": -1, "vk_destroy": -1, "sapien_detail": {}} ===
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+ROUND 1 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2612 threads=137 vmsize_mb=18967.3 rss_mb=1589.8 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=19.55s
+ROUND 2 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19179.4 rss_mb=1816.9 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.95s
+ROUND 3 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19179.4 rss_mb=1849.2 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=7.12s
+ROUND 4 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19179.4 rss_mb=1913.4 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.97s
+ROUND 5 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19179.4 rss_mb=1931.1 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.90s
+ROUND 6 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2626 threads=137 vmsize_mb=19371.4 rss_mb=2112.7 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.96s
+ROUND 7 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19179.4 rss_mb=1955.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.88s
+ROUND 8 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2627 threads=137 vmsize_mb=19371.4 rss_mb=2117.8 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.94s
+ROUND 9 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19179.4 rss_mb=1958.0 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.94s
+ROUND 10 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19179.4 rss_mb=1957.8 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.95s
+ROUND 11 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19179.4 rss_mb=2021.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=7.07s
+ROUND 12 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19179.4 rss_mb=1922.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=7.05s
+ROUND 13 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2611 threads=137 vmsize_mb=19060.8 rss_mb=1832.0 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=7.00s
+ROUND 14 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19179.7 rss_mb=1907.7 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=7.03s
+ROUND 15 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2622 threads=137 vmsize_mb=19243.7 rss_mb=1968.1 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.94s
+ROUND 16 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2629 threads=137 vmsize_mb=19435.7 rss_mb=2211.4 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.96s
+ROUND 17 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2625 threads=137 vmsize_mb=19308.7 rss_mb=2067.0 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.96s
+ROUND 18 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19180.7 rss_mb=1942.0 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=7.02s
+ROUND 19 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19180.7 rss_mb=1967.3 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.95s
+ROUND 20 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2626 threads=137 vmsize_mb=19436.7 rss_mb=2131.6 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.89s
+ROUND 21 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2625 threads=137 vmsize_mb=19308.7 rss_mb=2105.4 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.88s
+ROUND 22 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2624 threads=137 vmsize_mb=19308.7 rss_mb=2074.4 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=5.85s
+ROUND 23 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19180.7 rss_mb=1925.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.92s
+ROUND 24 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19180.7 rss_mb=1957.0 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.98s
+ROUND 25 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19180.7 rss_mb=1964.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.92s
+ROUND 26 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19180.7 rss_mb=1947.4 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.92s
+ROUND 27 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2619 threads=137 vmsize_mb=19180.7 rss_mb=1963.2 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.92s
+ROUND 28 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19180.7 rss_mb=1967.2 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=7.04s
+ROUND 29 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2620 threads=137 vmsize_mb=19180.7 rss_mb=1946.2 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.98s
+ROUND 30 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2625 threads=137 vmsize_mb=19308.7 rss_mb=2058.4 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=7.00s
+ROUND 31 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2618 threads=137 vmsize_mb=19180.7 rss_mb=1896.1 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.92s
+ROUND 32 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2625 threads=137 vmsize_mb=19308.7 rss_mb=2070.1 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.99s
+ROUND 33 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19244.7 rss_mb=2000.2 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.96s
+ROUND 34 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2621 threads=137 vmsize_mb=19180.7 rss_mb=1946.0 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=6.92s
+ROUND 35 fd=155 fd_nvidia=130 vk_maps=85 vk_so_files=15 devnv_maps=121 maps_total=2627 threads=137 vmsize_mb=19372.7 rss_mb=2109.5 gpu_mem_mb=774.0 sapien_objs=12 vk_create=-1 vk_destroy=-1 dt=7.00s
+=== PROBE_RESULT tag=tic-tls8192 rounds_done=35 crash_round=-1 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/tic-vulkan/probe-tic-tls8192.json ===
+### [F] all done
+EXIT_CODE=0

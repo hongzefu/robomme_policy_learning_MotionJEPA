@@ -1,0 +1,46 @@
+--- a/scripts/training/legacy-eval/robomme-local/env_runner.py
++++ b/scripts/training/legacy-eval/robomme-local/env_runner.py
+@@
+ from robomme.robomme_env import *  # noqa: F401, F403 - env registration
+ from robomme.env_record_wrapper import BenchmarkEnvBuilder
+ 
+ from utils import TASK_NAME_LIST
+ 
+ np.set_printoptions(precision=4, suppress=True)
+ 
++# ── 全局钉住一个 SAPIEN 渲染系统，避免每集重建 Vulkan Context ────────────────────
++# ManiSkill 的 BaseEnv._clear()（env.close() 调用它）会把 scene 与 RenderSystem 一并释放，
++# svulkan2 全局渲染 Context 的引用计数归零即析构（vkDestroyInstance），下一次 make_env 重新
++# vkCreateInstance。NVIDIA Vulkan ICD 每经历一轮 create→destroy 净泄漏 64 字节 glibc surplus
++# static TLS，默认 optional_static_tls=512 时第 27~28 次 vkCreateInstance 必返回
++# VK_ERROR_INCOMPATIBLE_DRIVER(-9) → `vk::createInstanceUnique: ErrorIncompatibleDriver`。
++# 这里在进程内长期持有一个 RenderSystem，让 Context 引用计数永不归零：整个进程只建一个
++# VkInstance，既根除该崩溃，也省掉每集重建 Context + 重编译 shader 的开销
++# （实测 make_env 由约 10 s 降到约 1 s）。实测见 v1-store/reports/tic-vulkan/。
++_PINNED_RENDER_SYSTEM = None
++
++
++def _pin_render_context() -> None:
++    """建一个 RenderSystem 并挂在模块级变量上，长期持有 svulkan2 全局 Context。"""
++    global _PINNED_RENDER_SYSTEM
++    if _PINNED_RENDER_SYSTEM is not None:
++        return
++    try:
++        import sapien
++        import sapien.render as sapien_render
++
++        _PINNED_RENDER_SYSTEM = sapien_render.RenderSystem(sapien.Device("cuda"))
++    except Exception as exc:  # noqa: BLE001 - 钉不住只是退回旧行为，不应让评估直接失败
++        print(f"[env_runner] 警告: 未能钉住 SAPIEN 渲染 Context: {type(exc).__name__}: {exc}", flush=True)
++
+ 
+ def pack_state(joint_state: np.ndarray, gripper_state: np.ndarray) -> np.ndarray:
+     # pack into 8-dim state, same as the joint action space
+     return np.concatenate([joint_state, gripper_state[:1]], axis=0, dtype=np.float32)
+@@ class EnvRunner:
+     def __init__(self, env_id: str, video_save_dir: str, max_steps: int = 1300) -> None:
+         if env_id not in TASK_NAME_LIST:
+             raise ValueError(f"Environment ID {env_id} not in {TASK_NAME_LIST}")
++        _pin_render_context()
+         self.env_id = env_id
+         self.video_save_dir = video_save_dir

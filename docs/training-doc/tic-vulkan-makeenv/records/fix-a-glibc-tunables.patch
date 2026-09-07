@@ -1,0 +1,29 @@
+--- a/scripts/training/legacy-eval/eval_shard.local.sh
++++ b/scripts/training/legacy-eval/eval_shard.local.sh
+@@
+ # ── eval（前台，micromamba robomme 环境；ManiSkill 渲染卡 = sapien.Device("cuda") = 可见集第 0 张，即 GPU）──
++# GLIBC_TUNABLES：SAPIEN 每次 make_env 都会重建 svulkan2 渲染 Context（一次 vkCreateInstance），
++# close 时再销毁（vkDestroyInstance）。NVIDIA Vulkan ICD 每经历一轮 create→destroy 就净泄漏
++# 64 字节 glibc surplus static TLS，默认 optional_static_tls=512 时第 27~28 次 vkCreateInstance
++# 必返回 VK_ERROR_INCOMPATIBLE_DRIVER(-9)，svulkan2 抛
++# `RuntimeError: vk::createInstanceUnique: ErrorIncompatibleDriver`（实测见
++# v1-store/reports/tic-vulkan/）。把 surplus 提到 8192 字节可支撑 ≥128 轮，覆盖单进程 50 集。
+ RC=0
+-( cd examples/robomme && CUDA_VISIBLE_DEVICES="${GPU}" PYTHONUNBUFFERED=1 "${ROBOMME_PY}" eval.py --args.port="${PORT}" --args.model_seed="${SEED}" \
++( cd examples/robomme && CUDA_VISIBLE_DEVICES="${GPU}" PYTHONUNBUFFERED=1 \
++    GLIBC_TUNABLES="${GLIBC_TUNABLES:-glibc.rtld.optional_static_tls=8192}" "${ROBOMME_PY}" eval.py --args.port="${PORT}" --args.model_seed="${SEED}" \
+     --args.policy_name="${POLICY_NAME}" --args.model_ckpt_id="${CKPT_ID}" --args.only_tasks="${TASKS}" \
+     --args.episode_start="${EP_START}" --args.max_episodes="${EP_COUNT}" --args.episode_stride="${EP_STRIDE}" \
+     --args.dataset="${DATASET}" --args.save_dir="${V1_STORE}/evaluation" ) 2>&1 || RC=$?
+--- a/scripts/training/legacy-eval/eval_shard.remote.sh
++++ b/scripts/training/legacy-eval/eval_shard.remote.sh
+@@
+ # ── eval（前台，micromamba robomme 环境；ManiSkill 渲染卡 = sapien.Device("cuda") = 可见集第 0 张，即 GPU）──
++# GLIBC_TUNABLES 的原因同 eval_shard.local.sh：绕开 NVIDIA Vulkan ICD 的 static TLS 泄漏，
++# 否则单进程第 28 次 make_env 必抛 ErrorIncompatibleDriver。
+ RC=0
+-( cd examples/robomme && CUDA_VISIBLE_DEVICES="${GPU}" PYTHONUNBUFFERED=1 "${ROBOMME_PY}" eval.py --args.port="${PORT}" --args.model_seed="${SEED}" \
++( cd examples/robomme && CUDA_VISIBLE_DEVICES="${GPU}" PYTHONUNBUFFERED=1 \
++    GLIBC_TUNABLES="${GLIBC_TUNABLES:-glibc.rtld.optional_static_tls=8192}" "${ROBOMME_PY}" eval.py --args.port="${PORT}" --args.model_seed="${SEED}" \
+     --args.policy_name="${POLICY_NAME}" --args.model_ckpt_id="${CKPT_ID}" --args.only_tasks="${TASKS}" \
+     --args.episode_start="${EP_START}" --args.max_episodes="${EP_COUNT}" --args.episode_stride="${EP_STRIDE}" --args.dataset_split="${SPLIT}" --args.save_dir="${V1_STORE}/evaluation" ) 2>&1 || RC=$?
