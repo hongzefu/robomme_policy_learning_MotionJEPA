@@ -4,7 +4,7 @@
 
 > **适用环境**：本文正文默认**环境 B**（AWS 单机 8 × A100-SXM4-80GB，仓库工作副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，存储介质 AWS 本地 NVMe RAID `/dev/md0`；判定口径见 [`../AGENTS.md`](../AGENTS.md) 「运行环境判定」）。凡引用环境 A（GreatLakes / turbo + 2 × RTX 6000 Ada）的数字，句子里一律显式标注「环境 A 历史」，且**不与环境 B 数字放同一张表**。
 > **代码锚点写法**：全文引用代码只写 `文件::类/函数/配置键`，不写行号（`AGENTS.md` 第 9 条）。
-> **占位符**：`【待填：…】` 是正式实跑尚未收工的位置，收工后逐处回填。
+> 六个 run（A/B/C/D/E/F）的正式实跑结果已全部回填（2026-09-07）。
 
 ## 目录
 
