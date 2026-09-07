@@ -1,0 +1,128 @@
+[start] 2026-09-07T21:38:56+00:00 HEAD=936eee730577727da4cce57e1a0a3104c30661b3
+### [E1] 起探针 policy server（GPU 0，sidecar 按快照落 GPU 1）
+server_pid=4023245
+server 端口就绪 21:39:32
+PROBE_ENV backend=gpu devices=cuda:0 pos_rows=586 pos_table_sha=74ced98dfb55728177abeafcc5ba80c27fd668b1febec9599095a5310eec2972 store_pos_sha=74ced98dfb55728177abeafcc5ba80c27fd668b1febec9599095a5310eec2972 pos_table_full_sha=f8a302ff9a76daaa7fa1ff61dad9710c56385cd2e4d8c3d333562a97e04b8896 pos_tabl
+### [E2] 主线 eval.py 24 集单次（4 任务 × 6 集，test split，不续评）
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+
+[robomme] env for task ButtonUnmask episode 0 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 1 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 2 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 3 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 4 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmask episode 5 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+
+[robomme] env for task VideoUnmask episode 0 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 1 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 2 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 3 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 4 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 66
+
+[robomme] env for task VideoUnmask episode 5 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 66
+
+[robomme] env for task ButtonUnmaskSwap episode 0 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 1 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 2 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 3 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 4 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube
+exec_start_idx: 0
+
+[robomme] env for task ButtonUnmaskSwap episode 5 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 0
+
+[robomme] env for task VideoUnmaskSwap episode 0 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 1 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 168
+
+[robomme] env for task VideoUnmaskSwap episode 2 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 3 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 216
+
+[robomme] env for task VideoUnmaskSwap episode 4 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for task VideoUnmaskSwap episode 5 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+EVAL_RC=0
+### [E3] 收 server（只 kill 自己起的 PID）
+### [E4] 汇总
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+EVAL_EPISODE_MAP=PASS resets=24 tasks=4 per_task=6 log_episodes=24 progress_entries=24 one_to_one=1 es_match=24/24 goal_match=24/24 seq_contiguous=1 resumed_skips=0 expect_episodes=24 expect_tasks=4
+EVAL_TAU_K=PASS episodes=24 infer_points=359 tau_max=576 k_max=35 budget=96 headroom=61 es_values=0,66,114,168,216 tau_mismatches=0 k_over_budget=0 k_len_mismatch=0
+EVAL_K_FORMULA=PASS points=359 mismatches=0 frames_sampled_mismatches=0 window=33 stride=16 max_frames=32
+EVAL_ORDER_LEGAL=PASS points=359 nonperm=0 dtype_int32=1 len608=1 expected_order_mismatches=0 static_mask_bad=0 motion_mask_bad=0
+EVAL_BACKEND=PASS backend=gpu pos_rows=586 pos_table_sha=74ced98dfb557281… store_pos_sha=74ced98dfb557281… equal=1 motion_enabled=1 motion_gpu_override=none devices=cuda:0
+EVAL_PROMPT=FAIL tasks=4 episodes=24 distinct_prompt_text=16 train_distinct_prompt=26 train_distinct_tok=26 tok_in_trainset=345/359 text_in_trainset=345/359 discrete_state_input=0 tokenizer=PaligemmaTokenizer(max_len=64,strip,underscore,newline;no_lower)
+  ✗ 在线 prompt 不在训练集 token 集合: {'episode_seq': 4, 'infer_seq': 1, 'prompt_text': 'first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube', 'tok_ids_head': [2, 4878, 3379, 573, 6086, 235269, 1492, 4788, 908, 573, 11254, 33120]}
+  ✗ 在线 prompt 不在训练集 token 集合: {'episode_seq': 4, 'infer_seq': 2, 'prompt_text': 'first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube', 'tok_ids_head': [2, 4878, 3379, 573, 6086, 235269, 1492, 4788, 908, 573, 11254, 33120]}
+  ✗ 在线 prompt 不在训练集 token 集合: {'episode_seq': 4, 'infer_seq': 3, 'prompt_text': 'first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube', 'tok_ids_head': [2, 4878, 3379, 573, 6086, 235269, 1492, 4788, 908, 573, 11254, 33120]}
+EVAL_NO_RAISE=PASS episodes=24 errors=0 timeouts=0 unknown=0 log_error_lines=0 api_abort=0 server_tracebacks=0 handshake_noise=3 expect_timeout_infers=82 timeout_video_cross=0/0 videos_seen=24
+EVAL_DIST_OBS online_k_median=9 mean=9.99 max=35 | train_k_median=9.0 mean=10.31 max=34 train_samples=101066 | online_tau_max=576 train_tau_max=585
+TIC_EVAL=FAIL episodes=24 tasks=4 infer_points=359 blocking=6/7 observe=1
+  FAIL 项: EVAL_PROMPT
+报告落 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/tic/E/eval_probe_summary.json
+SUMMARY_RC=1
+EXIT_CODE=1

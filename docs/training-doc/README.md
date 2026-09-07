@@ -10,12 +10,12 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| `tic-l0-rhythm-40k/` | 第 0 关配置与库同源（`check_config_provenance.py`）+ 评估真节奏 CPU 复刻（`eval_rhythm_gates.py`）+ A19 按库重算后在 400 ep 库重跑 M1 | 见 result.md |
-| `tic-obs-model-40k/` | 第 1–5 关：输入键 → 预处理后 → 模型内部 → 整段前向 vs 缓存分步 → 最终动作，motion 从库查表（`compare_train_infer_obs.py --motion store`） | 见 result.md |
-| `tic-t3-causal-40k/` | `T3_MOTION_CAUSAL` 按收窄口径（单列不确定叶）在 40 ep 库原记录上重跑 | 见 result.md |
-| `tic-sidecar-40k/` | 第 1–5 关再跑一遍，motion 换真 sidecar 现算（`--motion sidecar`） | 见 result.md |
-| `tic-eval-probe-40k/` | 第 6 关：探针版 policy server + 主线 `eval.py` 24 集单次仿真，汇总器核不变量 | 见 result.md |
-| `tic-vulkan-makeenv/` | 单进程第 28 次 `make_env` 必崩（Vulkan）的根因排查与修法验证 | 见 result.md |
+| [`tic-l0-rhythm-40k/`](tic-l0-rhythm-40k/result.md) | 第 0 关配置与库同源（`check_config_provenance.py`）+ 评估真节奏 CPU 复刻（`eval_rhythm_gates.py`）+ A19 按库重算后在 400 ep 库重跑 M1 | PASS（`TIC_L0` / `TIC_RHYTHM` / 400 ep `A19_VALID_DIST`、`MOTION_DELIVERY` 全 PASS） |
+| [`tic-obs-model-40k/`](tic-obs-model-40k/result.md) | 第 1–5 关：输入键 → 预处理后 → 模型内部 → 整段前向 vs 缓存分步 → 最终动作，motion 从库查表（`compare_train_infer_obs.py --motion store`） | 12/13 阻断 PASS；`VT_FULL_VS_CACHED` 超事先阈值待裁决（纯数值来源） |
+| [`tic-t3-causal-40k/`](tic-t3-causal-40k/result.md) | `T3_MOTION_CAUSAL` 按收窄口径（单列不确定叶）在 40 ep 库原记录上重跑 | PASS（`covered=36/36 excluded=0`） |
+| [`tic-sidecar-40k/`](tic-sidecar-40k/result.md) | 第 1–5 关再跑一遍，motion 换真 sidecar 现算（`--motion sidecar`） | 13/14 阻断 PASS；`MOTION_S_VS_SIDECAR` 140 窗逐位同；`VT_FULL_VS_CACHED` 同上 |
+| [`tic-eval-probe-40k/`](tic-eval-probe-40k/result.md) | 第 6 关：探针版 policy server + 主线 `eval.py` 24 集单次仿真，汇总器核不变量 | 6/7 阻断 PASS；`EVAL_PROMPT=FAIL`（1/24 集 goal 组合训练未见，数据覆盖缺口） |
+| [`tic-vulkan-makeenv/`](tic-vulkan-makeenv/result.md) | 单进程第 28 次 `make_env` 必崩（Vulkan）的根因排查与修法验证 | PASS（复现第 28 轮；两修法 35 轮不崩） |
 
 方案、判据总表与结论见 [`../train-infer-consistency.md`](../train-infer-consistency.md)。
 

@@ -42,7 +42,7 @@ A19_VALID_DIST=PASS  /  MOTION_DELIVERY=PASS      （400 ep 库，samples=101066
 组 C（`tic-sidecar-40k`）：`TIC_SIDECAR=FAIL episodes=5 points=120 motion=sidecar windows=140 blocking=13/14 observe=7`——14 条阻断 13 条 PASS，`MOTION_S_VS_SIDECAR=PASS windows=140 mismatches=0`，唯一 FAIL 同上
 组 D（`tic-t3-causal-40k`，PASS）：`T3_MOTION_CAUSAL=PASS pad_bitexact=1 loss_bitexact=1 emb_effect=1 pos_effect=1 det_probes=3 nondeterministic_leaves=[] excluded=0 covered=36/36 excluded_diag=[]`、`T3_MECHANISM=PASS step=0 input_grad_ok=1 group_norms_ok=1`
 组 F（`tic-vulkan-makeenv`，PASS）：基线 `CRASH at round=28`；`tic-pin rounds_done=35 crash_round=-1`；`tic-tls8192 rounds_done=35 crash_round=-1`
-组 E（`tic-eval-probe-40k`）：【待填：TIC_EVAL 实跑判定行（运行中）】
+组 E（`tic-eval-probe-40k`）：`TIC_EVAL=FAIL episodes=24 tasks=4 infer_points=359 blocking=6/7 observe=1`——7 条阻断 6 条 PASS，`EVAL_PROMPT=FAIL`（1/24 集的 goal 组合「red → green」不在 400 ep 训练集的 26 种 prompt 里，是数据覆盖缺口而非链路不一致，见第十章 10.9）
 ```
 
 **已知的两处不逐位，均已定位到数值来源、非语义错误**：
@@ -217,14 +217,14 @@ T9 v_t_full        ──── L5 ACT_T_VS_I（10 步去噪逐位）───�
 | 30 | `ACT_T_VS_I` | B/C | 阻断 | `PASS points=10 seeds=1 mismatches=0 determinism_rerun=PASS` | B/C 同：`points=120 seeds=3 mismatches=0 determinism_rerun=PASS` |
 | 31 | `ACT_S_VS_B` / `NOISE_S` | B/C | 观察 | `rms_norm=0.0004529 max_abs_norm=0.001953 rms_unnorm=0.0003123 act_std_mean=0.2047`（dev 跑单 seed，`NOISE_S=n/a`） | B：`points=120 rms_norm=0.0004596 max_abs_norm=0.004395 rms_unnorm=0.0003057 \| NOISE_S seeds=3 rms_norm=0.008318 rms_unnorm=0.009596 \| ratio_norm=0.05525 \| act_std_mean=0.2047 rms_unnorm/act_std=0.0014…` |
 | 32 | `ACT_CKPT_DTYPE` | B | 观察 | `points=1 ckpt_dtypes=['bfloat16','float32'] rms_norm=0.0008164 max_abs_norm=0.004301 act_std_mean=0.2047` | `points=1 ckpt_dtypes=['bfloat16', 'float32'] rms_norm=0.0006769 max_abs_norm=0.004085 noise_rms_norm=0.008318 ratio=0.08138 act_std_mean=0.2047 wall_s=25.4` |
-| 33 | `EVAL_EPISODE_MAP` | E | 阻断 | 2 集 smoke：`FAIL … resets=2 … one_to_one=1 es_match=2/2 goal_match=2/2 expect_episodes=24`（只因样本 2≠24 而 FAIL，映射本身全对） | 【待填】 |
-| 34 | `EVAL_TAU_K` | E | 阻断 | `PASS episodes=2 infer_points=8 tau_max=114 k_max=5 budget=96 headroom=91 tau_mismatches=0 k_over_budget=0` | 【待填】 |
-| 35 | `EVAL_K_FORMULA` | E | 阻断 | `PASS points=8 mismatches=0 frames_sampled_mismatches=0 window=33 stride=16 max_frames=32` | 【待填】 |
-| 36 | `EVAL_ORDER_LEGAL` | E | 阻断 | `PASS points=8 nonperm=0 dtype_int32=1 len608=1 expected_order_mismatches=0 static_mask_bad=0 motion_mask_bad=0` | 【待填】 |
-| 37 | `EVAL_BACKEND` | E | 阻断 | `PASS backend=gpu pos_rows=586 pos_table_sha=74ced98d… store_pos_sha=74ced98d… equal=1` | 【待填】 |
-| 38 | `EVAL_PROMPT` | E | 阻断 | `PASS tasks=4 episodes=2 train_distinct_prompt=26 tok_in_trainset=8/8 text_in_trainset=8/8` | 【待填】 |
-| 39 | `EVAL_NO_RAISE` | E | 阻断 | `PASS episodes=2 errors=0 timeouts=0 unknown=0 log_error_lines=0 server_tracebacks=0` | 【待填】 |
-| 40 | `EVAL_DIST_OBS` | E | 观察 | `online_k_median=2.5 mean=2.25 max=5 \| train_k_median=9.0 mean=10.31 max=34 train_samples=101066 \| online_tau_max=114 train_tau_max=585` | 【待填】 |
+| 33 | `EVAL_EPISODE_MAP` | E | 阻断 | 2 集 smoke：`FAIL … resets=2 … one_to_one=1 es_match=2/2 goal_match=2/2 expect_episodes=24`（只因样本 2≠24 而 FAIL，映射本身全对） | `resets=24 tasks=4 per_task=6 log_episodes=24 progress_entries=24 one_to_one=1 es_match=24/24 goal_match=24/24 seq_contiguous=1 resumed_skips=0 expect_episodes=24 expect_tasks=4` |
+| 34 | `EVAL_TAU_K` | E | 阻断 | `PASS episodes=2 infer_points=8 tau_max=114 k_max=5 budget=96 headroom=91 tau_mismatches=0 k_over_budget=0` | `episodes=24 infer_points=359 tau_max=576 k_max=35 budget=96 headroom=61 es_values=0,66,114,168,216 tau_mismatches=0 k_over_budget=0 k_len_mismatch=0` |
+| 35 | `EVAL_K_FORMULA` | E | 阻断 | `PASS points=8 mismatches=0 frames_sampled_mismatches=0 window=33 stride=16 max_frames=32` | `points=359 mismatches=0 frames_sampled_mismatches=0 window=33 stride=16 max_frames=32` |
+| 36 | `EVAL_ORDER_LEGAL` | E | 阻断 | `PASS points=8 nonperm=0 dtype_int32=1 len608=1 expected_order_mismatches=0 static_mask_bad=0 motion_mask_bad=0` | `points=359 nonperm=0 dtype_int32=1 len608=1 expected_order_mismatches=0 static_mask_bad=0 motion_mask_bad=0` |
+| 37 | `EVAL_BACKEND` | E | 阻断 | `PASS backend=gpu pos_rows=586 pos_table_sha=74ced98d… store_pos_sha=74ced98d… equal=1` | `backend=gpu pos_rows=586 pos_table_sha=74ced98dfb557281… store_pos_sha=74ced98dfb557281… equal=1 motion_enabled=1 motion_gpu_override=none devices=cuda:0` |
+| 38 | `EVAL_PROMPT` | E | 阻断 | `PASS tasks=4 episodes=2 train_distinct_prompt=26 tok_in_trainset=8/8 text_in_trainset=8/8` | **FAIL** `tasks=4 episodes=24 distinct_prompt_text=16 train_distinct_prompt=26 train_distinct_tok=26 tok_in_trainset=345/359 text_in_trainset=345/359 discrete_state_input=0 tokenizer=PaligemmaTokenizer(max_len=…`——唯一失配 prompt 为 ButtonUnmask 测试集 ep3「red → green」，训练 400 集无此组合（10.9） |
+| 39 | `EVAL_NO_RAISE` | E | 阻断 | `PASS episodes=2 errors=0 timeouts=0 unknown=0 log_error_lines=0 server_tracebacks=0` | `episodes=24 errors=0 timeouts=0 unknown=0 log_error_lines=0 api_abort=0 server_tracebacks=0 handshake_noise=3 expect_timeout_infers=82 timeout_video_cross=0/0 videos_seen=24` |
+| 40 | `EVAL_DIST_OBS` | E | 观察 | `online_k_median=2.5 mean=2.25 max=5 \| train_k_median=9.0 mean=10.31 max=34 train_samples=101066 \| online_tau_max=114 train_tau_max=585` | `online_k_median=9 mean=9.99 max=35 \| train_k_median=9.0 mean=10.31 max=34 train_samples=101066 \| online_tau_max=576 train_tau_max=585` |
 | F1 | `VULKAN_REPRO`（基线 35 轮） | F | 复现判据 | `CRASH at round=28 err=RuntimeError: vk::createInstanceUnique: ErrorIncompatibleDriver`（`baseline-noreset.log`） | `CRASH at round=28 err=RuntimeError: vk::createInstanceUnique: ErrorIncompatibleDriver`；`PROBE_RESULT tag=tic-baseline rounds_done=28 crash_round=28` |
 | F2 | `VULKAN_FIX_PIN`（钉住 RenderSystem） | F | 修法判据 | `rounds_done=35 crash_round=-1`（`pin-renderer.log`） | `PROBE_RESULT tag=tic-pin rounds_done=35 crash_round=-1`（`make_env` 均耗时 6.83 s → 1.19 s） |
 | F3 | `VULKAN_FIX_TLS8192`（`GLIBC_TUNABLES`） | F | 修法判据 | `rounds_done=35 crash_round=-1`（`tls8192.log`） | `PROBE_RESULT tag=tic-tls8192 rounds_done=35 crash_round=-1` |
@@ -638,6 +638,12 @@ ACT_CKPT_DTYPE points=1 ckpt_dtypes=['bfloat16','float32'] rms_norm=0.0008164
 > 本项按审计第 8 条从原计划的「EMA vs 训练 params 对比」改来——后者做不了：`checkpoints.py::_split_params` 在有 EMA 时只把 EMA 存进 `params`，实测 39999 / 35000 / 10000 / 5000 目录都只有 `_CHECKPOINT_METADATA` / `assets` / `params`。
 
 ---
+
+### 10.9 `EVAL_PROMPT=FAIL`：测试集出现训练未见的 goal 组合（数据覆盖缺口，非链路不一致）
+
+正式闭环（`docs/training-doc/tic-eval-probe-40k/`）24 集 359 个决策点中 14 个点（恰为一集：`ButtonUnmask` 测试集 episode 3）的 prompt
+`first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube`
+不在 400 ep 训练集的 26 种 prompt 集合里——ButtonUnmask 3 色 × 9 种目标组合在 100 集训练样本里只出现 8 种，唯独缺「red → green」。两侧原文本就全小写、tokenizer 同一份、`lower().strip()` 后仍不匹配，且组 B/C 在训练集 5 集上 `OBS_PROMPT=PASS`（120 点 token 全等）——链路没有改 prompt。**定性为 benchmark 测试集相对训练数据的目标组合覆盖缺口，不属于本文要查的 (b) 类「推理喂进模型的东西与训练不同」**；按计划仍是阻断判据、保持 FAIL 记录，处置（评估口径注明 / 补数据重建库）交用户。
 
 ## 十一、明确不做与以后可立项
 

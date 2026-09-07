@@ -1,0 +1,390 @@
+{
+ "lines": [
+  "EVAL_EPISODE_MAP=PASS resets=24 tasks=4 per_task=6 log_episodes=24 progress_entries=24 one_to_one=1 es_match=24/24 goal_match=24/24 seq_contiguous=1 resumed_skips=0 expect_episodes=24 expect_tasks=4",
+  "EVAL_TAU_K=PASS episodes=24 infer_points=359 tau_max=576 k_max=35 budget=96 headroom=61 es_values=0,66,114,168,216 tau_mismatches=0 k_over_budget=0 k_len_mismatch=0",
+  "EVAL_K_FORMULA=PASS points=359 mismatches=0 frames_sampled_mismatches=0 window=33 stride=16 max_frames=32",
+  "EVAL_ORDER_LEGAL=PASS points=359 nonperm=0 dtype_int32=1 len608=1 expected_order_mismatches=0 static_mask_bad=0 motion_mask_bad=0",
+  "EVAL_BACKEND=PASS backend=gpu pos_rows=586 pos_table_sha=74ced98dfb557281… store_pos_sha=74ced98dfb557281… equal=1 motion_enabled=1 motion_gpu_override=none devices=cuda:0",
+  "EVAL_PROMPT=FAIL tasks=4 episodes=24 distinct_prompt_text=16 train_distinct_prompt=26 train_distinct_tok=26 tok_in_trainset=345/359 text_in_trainset=345/359 discrete_state_input=0 tokenizer=PaligemmaTokenizer(max_len=64,strip,underscore,newline;no_lower)",
+  "EVAL_NO_RAISE=PASS episodes=24 errors=0 timeouts=0 unknown=0 log_error_lines=0 api_abort=0 server_tracebacks=0 handshake_noise=3 expect_timeout_infers=82 timeout_video_cross=0/0 videos_seen=24",
+  "EVAL_DIST_OBS online_k_median=9 mean=9.99 max=35 | train_k_median=9.0 mean=10.31 max=34 train_samples=101066 | online_tau_max=576 train_tau_max=585",
+  "TIC_EVAL=FAIL episodes=24 tasks=4 infer_points=359 blocking=6/7 observe=1"
+ ],
+ "blocking": {
+  "EVAL_EPISODE_MAP": true,
+  "EVAL_TAU_K": true,
+  "EVAL_K_FORMULA": true,
+  "EVAL_ORDER_LEGAL": true,
+  "EVAL_BACKEND": true,
+  "EVAL_PROMPT": false,
+  "EVAL_NO_RAISE": true
+ },
+ "observe": {},
+ "episode_map": [
+  {
+   "episode_seq": 1,
+   "task": "ButtonUnmask",
+   "ep": 0,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 2,
+   "task": "ButtonUnmask",
+   "ep": 1,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 3,
+   "task": "ButtonUnmask",
+   "ep": 2,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 4,
+   "task": "ButtonUnmask",
+   "ep": 3,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 5,
+   "task": "ButtonUnmask",
+   "ep": 4,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 6,
+   "task": "ButtonUnmask",
+   "ep": 5,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 7,
+   "task": "VideoUnmask",
+   "ep": 0,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 8,
+   "task": "VideoUnmask",
+   "ep": 1,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 9,
+   "task": "VideoUnmask",
+   "ep": 2,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 10,
+   "task": "VideoUnmask",
+   "ep": 3,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 11,
+   "task": "VideoUnmask",
+   "ep": 4,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 12,
+   "task": "VideoUnmask",
+   "ep": 5,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 13,
+   "task": "ButtonUnmaskSwap",
+   "ep": 0,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 14,
+   "task": "ButtonUnmaskSwap",
+   "ep": 1,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 15,
+   "task": "ButtonUnmaskSwap",
+   "ep": 2,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 16,
+   "task": "ButtonUnmaskSwap",
+   "ep": 3,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 17,
+   "task": "ButtonUnmaskSwap",
+   "ep": 4,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 18,
+   "task": "ButtonUnmaskSwap",
+   "ep": 5,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 19,
+   "task": "VideoUnmaskSwap",
+   "ep": 0,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 20,
+   "task": "VideoUnmaskSwap",
+   "ep": 1,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 21,
+   "task": "VideoUnmaskSwap",
+   "ep": 2,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 22,
+   "task": "VideoUnmaskSwap",
+   "ep": 3,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 23,
+   "task": "VideoUnmaskSwap",
+   "ep": 4,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  },
+  {
+   "episode_seq": 24,
+   "task": "VideoUnmaskSwap",
+   "ep": 5,
+   "es_ok": true,
+   "goal_ok": true,
+   "in_progress": true
+  }
+ ],
+ "prompt_bad_examples": [
+  {
+   "episode_seq": 4,
+   "infer_seq": 1,
+   "prompt_text": "first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube",
+   "tok_ids_head": [
+    2,
+    4878,
+    3379,
+    573,
+    6086,
+    235269,
+    1492,
+    4788,
+    908,
+    573,
+    11254,
+    33120
+   ]
+  },
+  {
+   "episode_seq": 4,
+   "infer_seq": 2,
+   "prompt_text": "first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube",
+   "tok_ids_head": [
+    2,
+    4878,
+    3379,
+    573,
+    6086,
+    235269,
+    1492,
+    4788,
+    908,
+    573,
+    11254,
+    33120
+   ]
+  },
+  {
+   "episode_seq": 4,
+   "infer_seq": 3,
+   "prompt_text": "first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube",
+   "tok_ids_head": [
+    2,
+    4878,
+    3379,
+    573,
+    6086,
+    235269,
+    1492,
+    4788,
+    908,
+    573,
+    11254,
+    33120
+   ]
+  }
+ ],
+ "probe_env": {
+  "backend": "gpu",
+  "devices": "cuda:0",
+  "pos_rows": "586",
+  "pos_table_sha": "74ced98dfb55728177abeafcc5ba80c27fd668b1febec9599095a5310eec2972",
+  "store_pos_sha": "74ced98dfb55728177abeafcc5ba80c27fd668b1febec9599095a5310eec2972",
+  "pos_table_full_sha": "f8a302ff9a76daaa7fa1ff61dad9710c56385cd2e4d8c3d333562a97e04b8896",
+  "pos_table_full_rows": "4096",
+  "motion_enabled": "1",
+  "motion_gpu_override": "none",
+  "budget": "512",
+  "token_per_image": "16",
+  "num_views": "1",
+  "motion_budget": "96",
+  "max_token_len": "64",
+  "discrete_state_input": "0",
+  "state_dim": "8",
+  "config": "mme_vla_suite_b128",
+  "ckpt": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999",
+  "lib": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep",
+  "probe_out": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/tic/E/probe.jsonl",
+  "seed": "42"
+ },
+ "online_prompts": [
+  "first press both buttons on the table, then pick up the container hiding the blue cube",
+  "first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube",
+  "first press both buttons on the table, then pick up the container hiding the green cube",
+  "first press both buttons on the table, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube",
+  "first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube",
+  "first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the green cube",
+  "first press the button, then pick up the container hiding the blue cube",
+  "first press the button, then pick up the container hiding the green cube",
+  "first press the button, then pick up the container hiding the red cube",
+  "first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube",
+  "watch the video carefully, then pick up the container hiding the blue cube",
+  "watch the video carefully, then pick up the container hiding the green cube",
+  "watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube",
+  "watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube",
+  "watch the video carefully, then pick up the container hiding the red cube",
+  "watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube"
+ ],
+ "train_prompts": {
+  "ButtonUnmask": [
+   "first press the button, then pick up the container hiding the blue cube",
+   "first press the button, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube",
+   "first press the button, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube",
+   "first press the button, then pick up the container hiding the green cube",
+   "first press the button, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube",
+   "first press the button, then pick up the container hiding the green cube, finally pick up another container hiding the red cube",
+   "first press the button, then pick up the container hiding the red cube",
+   "first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube"
+  ],
+  "ButtonUnmaskSwap": [
+   "first press both buttons on the table, then pick up the container hiding the blue cube",
+   "first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube",
+   "first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube",
+   "first press both buttons on the table, then pick up the container hiding the green cube",
+   "first press both buttons on the table, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube",
+   "first press both buttons on the table, then pick up the container hiding the green cube, finally pick up another container hiding the red cube",
+   "first press both buttons on the table, then pick up the container hiding the red cube",
+   "first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube",
+   "first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the green cube"
+  ],
+  "VideoUnmask": [
+   "watch the video carefully, then pick up the container hiding the blue cube",
+   "watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube",
+   "watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube",
+   "watch the video carefully, then pick up the container hiding the green cube",
+   "watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube",
+   "watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube",
+   "watch the video carefully, then pick up the container hiding the red cube",
+   "watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube",
+   "watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube"
+  ],
+  "VideoUnmaskSwap": [
+   "watch the video carefully, then pick up the container hiding the blue cube",
+   "watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube",
+   "watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube",
+   "watch the video carefully, then pick up the container hiding the green cube",
+   "watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube",
+   "watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube",
+   "watch the video carefully, then pick up the container hiding the red cube",
+   "watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube",
+   "watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube"
+  ]
+ },
+ "all_train_texts": [
+  "first press both buttons on the table, then pick up the container hiding the blue cube",
+  "first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube",
+  "first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube",
+  "first press both buttons on the table, then pick up the container hiding the green cube",
+  "first press both buttons on the table, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube",
+  "first press both buttons on the table, then pick up the container hiding the green cube, finally pick up another container hiding the red cube",
+  "first press both buttons on the table, then pick up the container hiding the red cube",
+  "first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube",
+  "first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the green cube",
+  "first press the button, then pick up the container hiding the blue cube",
+  "first press the button, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube",
+  "first press the button, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube",
+  "first press the button, then pick up the container hiding the green cube",
+  "first press the button, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube",
+  "first press the button, then pick up the container hiding the green cube, finally pick up another container hiding the red cube",
+  "first press the button, then pick up the container hiding the red cube",
+  "first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube",
+  "watch the video carefully, then pick up the container hiding the blue cube",
+  "watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube",
+  "watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube",
+  "watch the video carefully, then pick up the container hiding the green cube",
+  "watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube",
+  "watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube",
+  "watch the video carefully, then pick up the container hiding the red cube",
+  "watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube",
+  "watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube"
+ ]
+}
