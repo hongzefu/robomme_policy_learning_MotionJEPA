@@ -34,9 +34,11 @@ VULKAN_ROOTCAUSE=glibc_surplus_static_TLS_exhausted_by_svulkan2_Context_recreate
 
 **定量铁证**（C 层最小复现 `records/vk_device_limit.c`，每轮 create + destroy，不跑任何工作负载）：崩溃轮数与 TLS 余量严格线性，六档零误差落在 **崩溃轮 = 19 + optional_static_tls / 64**：
 
-| `glibc.rtld.optional_static_tls` | 0 | 128 | 256 | 512（默认） | 1024 | 2048 | 8192 |
-|---|---|---|---|---|---|---|---|
-| `vkCreateInstance` 失败于第几次 | 19 | 21 | 23 | **27** | 35 | 51 | 60 次全过 |
+| `glibc.rtld.optional_static_tls` | 0 | 128 | 256 | 512（默认） | 1024 | 2048 |
+|---|---|---|---|---|---|---|
+| `vkCreateInstance` 失败于第几次（`records/tls_scan.txt`） | 19 | 21 | 23 | **27** | 35 | 51 |
+
+8192 档未进 C 层扫描表；其落盘证据是 Python 层 `tic-tls8192` 35 轮不崩（本 run F3），按 `19 + 8192/64 = 147` 只是外推值。
 
 环境：NVIDIA 驱动 595.71.05（open kernel module）、glibc 2.34、SAPIEN 3.0.3、Vulkan loader 1.3.224（sapien 自带 `libvulkan.so.1.3.224`，ICD 走 sapien 自带 `nvidia_icd.json` → `libGLX_nvidia.so.0`）。
 
