@@ -1,0 +1,42 @@
+[start] 2026-09-07T21:05:25+00:00 HEAD=9b3b95f04aaee2dfeb8b1501bb578c0167aab562
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[t3mechanism] 选 step 0 的 batch: [6556, 671, 8452, 3987, 10070, 3804, 8928, 2595]
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+[t3mechanism] 初态命中 reference 与 run init 记录
+max_token_len: 64
+[t3mechanism] 梯度摘要覆盖 trainable 叶 36 个（全参数叶 59）
+2026-09-07 21:09:13.881104: E external/xla/xla/service/slow_operation_alarm.cc:73] Constant folding an instruction is taking > 1s:
+
+  %reduce-window.12 = s32[8,1204]{1,0} reduce-window(%broadcast.4844, %constant.2595), window={size=1x1204 pad=0_0x1203_0}, to_apply=%region_35.10288, metadata={op_name="jit(loss_and_grads)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2026-09-07 21:09:14.341046: E external/xla/xla/service/slow_operation_alarm.cc:140] The operation took 1.460093869s
+Constant folding an instruction is taking > 1s:
+
+  %reduce-window.12 = s32[8,1204]{1,0} reduce-window(%broadcast.4844, %constant.2595), window={size=1x1204 pad=0_0x1203_0}, to_apply=%region_35.10288, metadata={op_name="jit(loss_and_grads)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+[t3mechanism] 确定性探针 R=3：loss 逐位同=True（['0x1.698aea0000000p-1', '0x1.698aea0000000p-1', '0x1.698aea0000000p-1']）；不确定叶 0/36：[]
+[t3mechanism] 排除不确定叶 0 个后，梯度摘要覆盖 36/36 叶
+[t3mechanism] base loss 0.706138
+  [pad] loss base=0x1.698aea0000000p-1 pad(1e3)=0x1.698aea0000000p-1 同=True；覆盖叶变化 0/36：[]
+  [pad] 垫料尺度 1: loss 同=True 摘要同=True 覆盖叶变化 0：[]
+  [pad] 垫料尺度 0.001: loss 同=True 摘要同=True 覆盖叶变化 0：[]
+[t3mechanism] 分组梯度范数 {"W2_content[:768]": "4.3906e+01", "W2_pos[768:]": "5.2996e+00", "W1": "5.5220e+00", "b1": "4.8132e-01", "b2": "1.6320e+00", "motion_emb_valid": "9.4053e-01", "motion_pos_valid": "1.5253e-01"}
+T3_MOTION_CAUSAL=PASS pad_bitexact=1 loss_bitexact=1 emb_effect=1 pos_effect=1 det_probes=3 nondeterministic_leaves=[] excluded=0 covered=36/36 excluded_diag=[]
+T3_MECHANISM=PASS step=0 input_grad_ok=1 group_norms_ok=1
+EXIT_CODE=0
