@@ -3,7 +3,7 @@
 
 **为什么需要**：`gl_e2e_fix.sbatch` 的 dense 通道是 `nvidia-smi -lms 500` 流式采样，
 4 卡 × 2 Hz ≈ 1.2 MB/h。600 步的 bench 只有约 1 MB，现有留档一律**逐字节原样进 git**
-（`docs/training-doc/v1-framesamp-e2e/records/README.md` 明写「逐字节拷贝」，实测字节数
+（`docs/archive/training-doc/v1-framesamp-e2e/records/README.md` 明写「逐字节拷贝」，实测字节数
 完全相同）。但一次 10 小时的正式训练会产出约 12 MB / 29 万行，80k 步的完整训练更是 5–8 GB
 ——原样进 git 不可持续（AGENTS 14 要求大产物留在不进 git 的 `v1-store/`）。
 

@@ -1,5 +1,7 @@
 # v1 集群作业 CPU / mem 档位实测
 
+> **环境 A 产物（GreatLakes / turbo + 本机 2×RTX 6000 Ada），只读历史存档。** 文中吞吐、步时、util 与存储介质数字均属环境 A，按 `AGENTS.md` 第 13 条不得与环境 B（AWS 8×A100，本地 NVMe RAID）数字混比；引用的 `/data/hongzefu`、`/nfs/turbo` 路径与 `v1-store` 产物在环境 B 不存在。所引 run 留档部分已于 2026-09-07 迁入 `docs/archive/`（清单见 `docs/archive/README.md`）。
+
 > 状态：**已完成**（2026-08-23）。本机九档扫描、集群四档探针、全量 8 分片复核的实测数据均已回填。
 > 选定档位 **2 CPU / 24 G**，实测依据见第七节，全量复核与三条教训见第八节。
 > 目标：在**不掉 GPU 利用率**的前提下，把 8 个 1-GPU job 的 CPU 与内存申请压到尽可能低，

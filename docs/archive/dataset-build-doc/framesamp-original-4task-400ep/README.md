@@ -21,8 +21,8 @@
 四任务全量数据处理已改为在 GreatLakes 上以 8×1GPU job array 完成，路径布局全部重新定义。
 现行方案、逐段流程与全部实测数字见：
 
-- 方案与实测报告：[`docs/v1-gl-dataset-consistency-report.md`](../../v1-gl-dataset-consistency-report.md)
-- 集群链路实现：`scripts/data-preprocess-GL/`
+- 方案与实测报告：[`docs/v1-gl-dataset-consistency-report.md`](../../../v1-gl-dataset-consistency-report.md)
+- 集群链路实现：`scripts/dataset/gl/`（原 `scripts/data-preprocess-GL/`，commitV4.6 `b30be80` 迁为 `scripts/dataset/gl/`，再于 commitV6.2 `30a9079` 随 GreatLakes 链路整体删除；实现只存于 git 历史）
 - 构建档案：[`docs/dataset-build-doc/4task-gl-400ep/`](../4task-gl-400ep/README.md)
 
 ## 保留原因

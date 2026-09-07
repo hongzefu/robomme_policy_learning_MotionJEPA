@@ -1,5 +1,7 @@
 # 第二阶段报告：dtype 统一修复（framesample+context 双 dtype 路径消除）
 
+> **环境 A 产物（GreatLakes / turbo + 本机 2×RTX 6000 Ada），只读历史存档。** 文中吞吐、步时、util 与存储介质数字均属环境 A，按 `AGENTS.md` 第 13 条不得与环境 B（AWS 8×A100，本地 NVMe RAID）数字混比；引用的 `/data/hongzefu`、`/nfs/turbo` 路径与 `v1-store` 产物在环境 B 不存在。所引 run 留档部分已于 2026-09-07 迁入 `docs/archive/`（清单见 `docs/archive/README.md`）。
+
 > **范围**：v1 dataloader 重构链条的第二阶段——把旧训练链路里「dtype 随 batch 组成摆动」的双路径原地修掉，
 > 并用两块验证证明修复前后训练完全等价。本阶段是 IO 重构（第三阶段）的前置。
 > 本报告只保留人类审阅需要的内容与实测结论；实现级细节（代码改动逐行、工具参数、落盘格式定义、
@@ -248,7 +250,7 @@ replica/native 机器恢复的形态。
 
 - 源计划与实现级细节（代码改动逐行、工具参数、位型容器格式定义、commit 拓扑、红线、审计修正记录）：
   [`v1-dtype-unify-plan.md`](../v1-dtype-unify-plan.md) 第二部分
-- 逐步留档：`docs/training-doc/v1-dtype-p3-dump-pre/`、`v1-dtype-p4-cmp/`、`v1-dtype-p5-grad/`、
-  `v1-dtype-ab-post-r1/`、`v1-g1-speed/`
+- 逐步留档：`docs/archive/training-doc/v1-dtype-p3-dump-pre/`、`docs/archive/training-doc/v1-dtype-p4-cmp/`、`docs/training-doc/v1-dtype-p5-grad/`（原地保留）、
+  `docs/archive/training-doc/v1-dtype-ab-post-r1/`、`docs/archive/training-doc/v1-g1-speed/`（前四项与 g1-speed 已于 2026-09-07 归档，见 `docs/archive/README.md`）
 - 工具与判据说明：`scripts/dtype-unify/README.md`
 - 前置的确定性定档与黄金基线：[`v1-phase1-gradient-baseline-report.md`](v1-phase1-gradient-baseline-report.md)

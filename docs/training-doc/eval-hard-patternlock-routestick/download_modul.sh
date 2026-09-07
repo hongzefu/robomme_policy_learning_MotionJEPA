@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 官方 MME-VLA perceptual-framesamp-modul 权重下载（本机 / 环境 A 口径）。
-# 源同 docs/training-doc/eval-official-framesamp-modul/download.sh：HF 公开仓 Yinpei/perceptual-framesamp-modul，
+# 源同 docs/archive/training-doc/eval-official-framesamp-modul/download.sh：HF 公开仓 Yinpei/perceptual-framesamp-modul，
 # 钉 commit c0f565dd…；与那份的唯一差别是 MAIN 由环境 B 的 /scratch/hongze 改为本机 /data/hongzefu，并显式传 HF_TOKEN
 # （HF_HOME 改指 v1-store/cache/hf 后默认 token 不再自动可见，仓库虽公开但统一口径带上）。
 # 落 v1-store/models/official-mme-vla/perceptual-framesamp-modul/{79999.zip,history_config.txt,README.md}，zip 按 HF LFS sha256 核对。

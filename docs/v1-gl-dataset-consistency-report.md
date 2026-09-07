@@ -1,5 +1,7 @@
 # v1 四任务数据集：GreatLakes 构建与一致性验证报告
 
+> **环境 A 产物（GreatLakes / turbo + 本机 2×RTX 6000 Ada），只读历史存档。** 文中吞吐、步时、util 与存储介质数字均属环境 A，按 `AGENTS.md` 第 13 条不得与环境 B（AWS 8×A100，本地 NVMe RAID）数字混比；引用的 `/data/hongzefu`、`/nfs/turbo` 路径与 `v1-store` 产物在环境 B 不存在。所引 run 留档部分已于 2026-09-07 迁入 `docs/archive/`（清单见 `docs/archive/README.md`）。
+
 > 状态：**进行中**。一～四节（事实、环境、设计、方案）已由实测与实现落定；
 > 五～七节（档位实测、验证结果、复现命令）随流水线推进回填，每跑完一段就补，
 > 不等全部结束才动笔。档位实测另有独立文档
@@ -9,7 +11,7 @@
 > provenance 的事实更正，以及「已交付数据集不需重跑」的证据链。
 > 一～七节保持原样未改动，与第八节冲突处以第八节为准。
 
-本报告是这条链路的唯一权威留档。实现见 [`scripts/data-preprocess-GL/`](../scripts/data-preprocess-GL/README.md)。
+本报告是这条链路的唯一权威留档。实现见 `scripts/data-preprocess-GL/`（已删除：commitV4.6 迁为 `scripts/dataset/gl/`，commitV6.2 `30a9079` 删除，只存于 git 历史）。
 
 ---
 
@@ -646,7 +648,7 @@ Step 0..11 共 12 步，loss ∈ [0.4340, 0.8644]，末值 0.6362，全部有限
 > `scripts/data-preprocess-GL/legacy/`；清单生成一步上移为 `step0_setup_turbo.sh manifest`；
 > 入口脚本已统一编号：`step_submit.sh` → `step1_submit.sh`、`step_verify.sh` → `step2_verify.sh`。
 > 本节按当时实跑原样留档，路径不回改；现行活跃流程见
-> [`scripts/data-preprocess-GL/README.md`](../scripts/data-preprocess-GL/README.md)。
+> `scripts/data-preprocess-GL/README.md`（已删除，见 git 历史 `git show 30a9079~:scripts/dataset/gl/README.md`）。
 
 ```bash
 cd /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA
@@ -692,7 +694,7 @@ bash scripts/smoke-local/run_gl_dataset_training_smoke.sh   # → LAYER4_PASS
 
 ### 7.2 续跑与故障处理
 
-见 [`scripts/data-preprocess-GL/README.md`](../scripts/data-preprocess-GL/README.md)
+见 `scripts/data-preprocess-GL/README.md`（已删除，见 git 历史 `git show 30a9079~:scripts/dataset/gl/README.md`）
 的「续跑与故障处理」一节。要点：分片失败会让 `afterok` 的 finalize 被
 `kill_invalid_depend` **自动 CANCELLED 且不生成日志**，判死只能靠 `sacct`；
 重提必须「删 claim → 重提分片 → 用 `--dependency=afterok:<原AID>:<新JOBID>` 连 finalize 一起重提」。

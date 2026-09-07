@@ -103,7 +103,7 @@ ckpt sha256 必须是 `bae96037…c15a`，与本机 `v1-store/external/motionjep
 commit `d951aef` 引入的 `scripts/v1_dataloader_restructure/` 与 `scripts/smoke_train_once.py`
 **经判定不可靠，已删除**（从未实际运行过）。其定义的路径约定与固定入口一并作废，
 勿从 git 历史里翻出重新采用。说明见
-[`docs/dataset-build-doc/framesamp-original-4task-400ep/README.md`](docs/dataset-build-doc/framesamp-original-4task-400ep/README.md)。
+[`docs/archive/dataset-build-doc/framesamp-original-4task-400ep/README.md`](docs/archive/dataset-build-doc/framesamp-original-4task-400ep/README.md)。
 
 ## 本地与 NFS
 

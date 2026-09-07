@@ -1,5 +1,7 @@
 # 第一阶段报告：训练确定性定档与梯度对拍黄金基线
 
+> **环境 A 产物（GreatLakes / turbo + 本机 2×RTX 6000 Ada），只读历史存档。** 文中吞吐、步时、util 与存储介质数字均属环境 A，按 `AGENTS.md` 第 13 条不得与环境 B（AWS 8×A100，本地 NVMe RAID）数字混比；引用的 `/data/hongzefu`、`/nfs/turbo` 路径与 `v1-store` 产物在环境 B 不存在。所引 run 留档部分已于 2026-09-07 迁入 `docs/archive/`（清单见 `docs/archive/README.md`）。
+
 > **范围**：v1 dataloader 重构链条的第一阶段——把「同配置重跑两次结果完全一样」做成可证伪的前提，
 > 并跑出一条**一次跑定、产物固化进 git**的黄金基线，供后续所有改动离线对拍。
 > 本报告只保留人类审阅需要的内容与实测结论；实现级细节（断言实现、脚本职责、参数表、commit 切分、
@@ -225,7 +227,7 @@ commit，在白名单内、训练语义零影响，该轮与 r1 对拍仍 bitwis
 2. **正确性族 run 的固定确定性档**：`XLA_FLAGS="--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"`——
    基线及后续一切正确性 A/B 一律注入；基线的编译缓存目录允许清理（留 sha256 清单作证据）。
 3. **性能族不注入上述 flags**：确定性档的 kernel 选择不代表生产性能口径。
-4. **D0 两轮产物固化留档**（`docs/training-doc/v1-det-d0-r{1,2}/`），标注「非判据基线，只作噪声底与口径对照」。
+4. **D0 两轮产物固化留档**（`docs/archive/training-doc/v1-det-d0-r{1,2}/`），标注「非判据基线，只作噪声底与口径对照」。
 5. 同 seed 下 dataloader 输入交付逐位确定，后续对拍中若见输入摘要分歧即直接指向数据侧改动而非计算噪声。
 
 ---
@@ -257,12 +259,12 @@ commit，在白名单内、训练语义零影响，该轮与 r1 对拍仍 bitwis
 
 | 链节 | run_name | commit | 判据 | 结论 | 产物 |
 |---|---|---|---|---|---|
-| D0（非判据） | `v1-det-d0-r{1,2}` | `d9e509e` | 两轮重跑噪声底 | FAIL（预期）：loss rel median 2.7e-3 / max 4.6e-2，全表见九节 | `docs/training-doc/v1-det-d0-r{1,2}/` |
-| D1 / D2 / D2-cold | `v1-det-d{1,2}-r{1,2}`、`v1-det-d2cold-r{1,2}` | `d9e509e` | 两轮逐步 hex + 状态摘要 + 输入摘要 diff 为空 | D1 FAIL（ULP 级，atomics）；D2 PASS；**D2-cold PASS（授权闸开）** | `docs/training-doc/v1-det-*/` |
+| D0（非判据） | `v1-det-d0-r{1,2}` | `d9e509e` | 两轮重跑噪声底 | FAIL（预期）：loss rel median 2.7e-3 / max 4.6e-2，全表见九节 | `docs/archive/training-doc/v1-det-d0-r{1,2}/` |
+| D1 / D2 / D2-cold | `v1-det-d{1,2}-r{1,2}`、`v1-det-d2cold-r{1,2}` | `d9e509e` | 两轮逐步 hex + 状态摘要 + 输入摘要 diff 为空 | D1 FAIL（ULP 级，atomics）；D2 PASS；**D2-cold PASS（授权闸开）** | `docs/archive/training-doc/v1-det-*/` |
 | G0（300 步旧版，已退役） | `v1-grad-baseline-g0` | `624d417` | 两轮逐位自证 | PASS；**records 已于 2026-08-27 删除**（新旧前缀对拍通过后按用户裁定），launch/result.md 留存作证 | `docs/training-doc/v1-grad-baseline-g0/`（仅 md） |
 | **G0b（现行链头）** | `v1-grad-baseline-g0b-r{1,2}` | `570287f` | 白名单断言 + preflight + 千步两轮自证 + 前 300 步 vs 旧版前缀对拍 | **PASS**：1000 步标量 hex / 12×状态摘要 / 14×输入摘要（raw + canonical）/ index 序列 8072 项全逐位一致；`scalars_hex.tsv` sha256 `c799a0b2…`；前缀对拍逐位一致（即 P1b 量具改造的等价性实证）；摘要步 TrainState 数组迁存本机、sha 清单进 git | `docs/training-doc/v1-grad-baseline-g0b/` |
-| G0-speed（旧锚，已退役） | `v1-g0-speed` | `624d417` | 300 步历史锚点 | 稳态中位 1.117 s/step（n=249）、util 均值 86.3%、0% 采样 5.3%、epoch 外推 15.33 h | `docs/training-doc/v1-g0-speed/` |
-| **G0-speed-r2（现行锚点）** | `v1-g0-speed-r2` | `570287f` | 1000 步 speed 链锚点 | 稳态中位 **1.152 s/step**（n=949，p10 1.097 / p90 1.276）、均值 1.186、util 均值 **86.5%**、0% 采样 4.9%、慢步 3（分层 1.959 vs 1.184 s）、epoch 外推 15.82 h。vs 旧锚 +3.1%，主因 1000 步窗稀释了 page cache 的乐观偏差 | `docs/training-doc/v1-g0-speed-r2/` |
+| G0-speed（旧锚，已退役） | `v1-g0-speed` | `624d417` | 300 步历史锚点 | 稳态中位 1.117 s/step（n=249）、util 均值 86.3%、0% 采样 5.3%、epoch 外推 15.33 h | `docs/archive/training-doc/v1-g0-speed/` |
+| **G0-speed-r2（现行锚点）** | `v1-g0-speed-r2` | `570287f` | 1000 步 speed 链锚点 | 稳态中位 **1.152 s/step**（n=949，p10 1.097 / p90 1.276）、均值 1.186、util 均值 **86.5%**、0% 采样 4.9%、慢步 3（分层 1.959 vs 1.184 s）、epoch 外推 15.82 h。vs 旧锚 +3.1%，主因 1000 步窗稀释了 page cache 的乐观偏差 | `docs/archive/training-doc/v1-g0-speed-r2/` |
 
 > 第二阶段的 G1 与 G1-speed 两行见 [`v1-phase2-dtype-unify-report.md`](v1-phase2-dtype-unify-report.md)；
 > 登记簿的现行权威版本在 [`v2-framesamp-restructure-plan.md`](../v2-framesamp-restructure-plan.md)。
@@ -312,8 +314,8 @@ run_name 一律带 `-r<N>`（或语义后缀），确定性实验的 `v1-det-*-r
 
 - 源计划与实现级细节（断言实现、脚本职责、参数表、preflight 断言清单、commit 切分、红线、审计修正记录）：
   [`v1-gradient-baseline.md`](../v1-gradient-baseline.md) 第二部分
-- 逐轮留档：`docs/training-doc/v1-det-*/`、`docs/training-doc/v1-grad-baseline-g0{,b}/`、
-  `docs/training-doc/v1-g0-speed{,-r2}/`
+- 逐轮留档：`docs/archive/training-doc/v1-det-*/`、`docs/training-doc/v1-grad-baseline-g0{,b}/`、
+  `docs/archive/training-doc/v1-g0-speed{,-r2}/`
 - 量具与判据说明：`scripts/smoke-local/README.md`；工具 `bench_train_steps.py`、`check_baseline_env.py`、
   `compare_baseline.py`
 - 登记簿的现行权威版本：[`v2-framesamp-restructure-plan.md`](../v2-framesamp-restructure-plan.md)

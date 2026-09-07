@@ -1,5 +1,7 @@
 # 4 卡 batch 64 的 NFS 瓶颈判定——四实验汇总 + v2 修复验证（2026-08-24/25）
 
+> **环境 A 产物（GreatLakes / turbo + 本机 2×RTX 6000 Ada），只读历史存档。** 文中吞吐、步时、util 与存储介质数字均属环境 A，按 `AGENTS.md` 第 13 条不得与环境 B（AWS 8×A100，本地 NVMe RAID）数字混比；引用的 `/data/hongzefu`、`/nfs/turbo` 路径与 `v1-store` 产物在环境 B 不存在。所引 run 留档部分已于 2026-09-07 迁入 `docs/archive/`（清单见 `docs/archive/README.md`）。
+
 **结论（经 v2 三档实测修订）：NFS turbo 存储侧对 4×A40、全局 batch 64 的官方口径训练没有瓶颈——供给（398-628 MB/s）是需求（251 MB/s）的 1.6-2.5 倍。端到端的真瓶颈之一是 job 内 CPU 配比：`--cpus-per-task` 8→16 后步时中位 6.93→5.30 s、epoch 11.9→9.1 h（v2 三档实测）。但 CPU/worker/RAM 侧修复到此为止：GPU util 均值仍只有 ~67-71%、约 1/3 墙钟耗在与 worker 数无关的整段长停顿上，epoch 没有回到 8.2-8.9 h 的预期区间——残余瓶颈不在启动参数层，见下方 v2 一节。**
 
 ## 判据链与四个实验
@@ -53,4 +55,4 @@ e2e 实测 6.93 s/step，期间 NFS 仅 122 MB/s           ← 实验 4（4×A40
 
 ## 溯源
 
-各实验的起跑/结果/记录归档：`docs/training-doc/{v1-gl-dlbench, v1-coldcache-b8, v1-computeonly-b64, v1-e2e-b64, v1-e2efix-w8c16, v1-e2efix-w12c16, v1-e2efix-w16c16}/`；脚本与判据说明：`scripts/bottleneck-bench/README.md`（v1 四实验）与 `scripts/bottleneck-bench-v2/README.md`（v2 三档修复验证）；工作副本记录：`v1-store/bench/bottleneck/`。
+各实验的起跑/结果/记录归档：`docs/archive/training-doc/{v1-gl-dlbench, v1-coldcache-b8, v1-computeonly-b64, v1-e2e-b64, v1-e2efix-w8c16, v1-e2efix-w12c16, v1-e2efix-w16c16}/`（2026-09-07 归档）；脚本与判据说明：`scripts/bottleneck-bench/README.md`（v1 四实验）与 `scripts/bottleneck-bench-v2/README.md`（v2 三档修复验证）；工作副本记录：`v1-store/bench/bottleneck/`。
