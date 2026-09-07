@@ -32,6 +32,10 @@ class EnvRunner:
         # （episode_config_resolver.py 的 _ALLOWED_DATASETS）；默认 test，行为与历史一致
         self.dataset = dataset
 
+        # dataset 即 benchmark 官方 split（train / val / test），决定每集的环境初始状态 seed 与难度：
+        # 读 <env_metadata>/<dataset>/record_dataset_<env_id>_metadata.json 的 records[].{seed,difficulty}。
+        # 三个 split 的 seed 互不相交（同一 episode 号在不同 split 下是完全不同的环境实例）。
+        # 默认 "test" 与历史行为一致——本参数加入前此处为硬编码 "test"。
         self.env_builder = BenchmarkEnvBuilder(
             env_id=env_id,
             dataset=dataset,

@@ -1,0 +1,10 @@
+HARD_EVAL=DONE units=4 episodes=48/48 BinFill-test=1/12 BinFill-val=0/12 PickXtimes-test=11/12 PickXtimes-val=9/12 mean_rate=0.4375
+DIFFICULTY_ONLY=PASS expect=hard checked=48 mismatched=0 no_video=0
+EP_SET=PASS units=4 expect=12集
+SPLIT_SEED=PASS 日志自证 4/4 相符; 跨 split seed 比对 2 对/100 集全不同; 同名视频 0 个(观察项)
+
+任务-split | 成功/实评 | 成功率 | 分片状态
+BinFill-test | 1/12 | 8.33% | finished=True exit=0 log_split=test
+BinFill-val  | 0/12 | 0.00% | finished=True exit=0 log_split=val
+PickXtimes-test | 11/12 | 91.67% | finished=True exit=0 log_split=test
+PickXtimes-val  | 9/12 | 75.00% | finished=True exit=0 log_split=val

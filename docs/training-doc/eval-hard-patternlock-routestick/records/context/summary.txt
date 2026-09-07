@@ -1,0 +1,10 @@
+HARD_EVAL=DONE units=4 episodes=48/48 PatternLock-test=0/12 PatternLock-val=0/12 RouteStick-test=0/12 RouteStick-val=0/12 mean_rate=0.0000
+HARD_ONLY=PASS checked=48 non_hard=0 no_video=0
+EP_SET=PASS units=4 expect=12集
+SPLIT_SEED=PASS 日志自证 4/4 相符; 跨 split seed 比对 2 对/100 集全不同; 同名视频 24 个(观察项)
+
+任务-split | 成功/实评 | 成功率 | 分片状态
+PatternLock-test | 0/12 | 0.00% | finished=True exit=0 log_split=test
+PatternLock-val  | 0/12 | 0.00% | finished=True exit=0 log_split=val
+RouteStick-test | 0/12 | 0.00% | finished=True exit=0 log_split=test
+RouteStick-val  | 0/12 | 0.00% | finished=True exit=0 log_split=val
