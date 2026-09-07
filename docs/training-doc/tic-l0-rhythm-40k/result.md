@@ -1,7 +1,7 @@
 # tic-l0-rhythm-40k —— 结果
 
 > 起跑 commit `9b3b95f`（clean HEAD；工具版本 commitV7.1 `a8cfa17`）。2026-09-07 21:05:25 → 21:09:47（4 min 22 s），环境 B，CPU（`JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES=`），tmux `tic-l0rhythm`（结束自行退出）。
-> 原始日志 `records/l0-rhythm-m1.log`，明细 `records/l0.json`、`records/rhythm.json`。**三段全部 PASS，`EXIT_CODE=0`。**
+> 原始日志 `records/l0-rhythm-m1.txt`，明细 `records/l0.json`、`records/rhythm.json`。**三段全部 PASS，`EXIT_CODE=0`。**
 
 ## 一、判定行原文
 

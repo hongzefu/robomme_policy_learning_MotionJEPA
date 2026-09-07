@@ -1,0 +1,98 @@
+[start] 2026-09-07T21:05:25+00:00 HEAD=9b3b95f04aaee2dfeb8b1501bb578c0167aab562
+### [A1] check_config_provenance
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+NORM_STATS_SAME=PASS sha=41ff90e4bfacc158 train_src=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json infer_src=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999/assets/robomme/norm_stats.json keys=[actions,state] arrays=8
+LIB_PROVENANCE_MATCH=PASS framesamp_manifest_sha256=92fa17e97fba9434 motion_manifest_sha256=92fa17e97fba9434 framesamp_store_meta_sha256=dffdd47b09aad281 motion_index_sha256=74185921690cd26c motion_store_meta_sha256=e19fb5fdb45829d8 motion_table_sha256=6e70604da518c156 all_equal=1
+MOTION_STORE_PATH=PASS snapshot=v1-store/datasets/4task-motion-40ep/motion provenance=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/motion effective=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/motion override=MMEVLA_MOTION_STORE guard=raise infer_reads_store=0 same_manifest=1 snapshot_default=raise
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+CKPT_PARAM_TREE=PASS missing=0 extra=0 leaves=59 model_leaves=59 ckpt_has_motion=1
+CKPT_DTYPE_PROFILE f32_leaves=36 bf16_leaves=23 img_all_bf16=1 trainable_all_f32=1 by_dtype={'bfloat16': 23, 'float32': 36} img_dtypes=['bfloat16']
+明细写入 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/tic/A/l0.json
+TIC_L0=PASS
+### [A2] eval_rhythm_gates
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+真实样本（每个 demo 段长度取最长一条）: es=0 T=555 g103-ButtonUnmaskSwap es=66 T=399 g203-VideoUnmask es=114 T=446 g305-VideoUnmaskSwap es=168 T=461 g331-VideoUnmaskSwap es=216 T=586 g303-VideoUnmaskSwap
+== RHYTHM_EQ ==
+  g103-ButtonUnmaskSwap: es=0 T=555 点数 eval/_drive/独立生成 = 35/35/35 τ_max=544 k_max=33 终止=env_done C=554 C%16=10
+  g203-VideoUnmask: es=66 T=399 点数 eval/_drive/独立生成 = 21/21/21 τ_max=386 k_max=22 终止=env_done C=332 C%16=12
+  g305-VideoUnmaskSwap: es=114 T=446 点数 eval/_drive/独立生成 = 21/21/21 τ_max=434 k_max=25 终止=env_done C=331 C%16=11
+  g331-VideoUnmaskSwap: es=168 T=461 点数 eval/_drive/独立生成 = 19/19/19 τ_max=456 k_max=26 终止=env_done C=292 C%16=4
+  g303-VideoUnmaskSwap: es=216 T=586 点数 eval/_drive/独立生成 = 24/24/24 τ_max=584 k_max=34 终止=env_done C=369 C%16=1
+RHYTHM_EQ=PASS episodes=5 points=120 tau_mismatches=0 es_mismatches=0 k_mismatches=0 order_sha_mismatches=0 driver=examples/robomme/utils.py:EpisodeState
+== EVAL_TERMINATION ==
+  env_done g103-ButtonUnmaskSwap: es=0 T=555 C=554 infer=35 （公式 35 / 独立生成 35）终止=env_done
+  env_done g203-VideoUnmask: es=66 T=399 C=332 infer=21 （公式 21 / 独立生成 21）终止=env_done
+  env_done g305-VideoUnmaskSwap: es=114 T=446 C=331 infer=21 （公式 21 / 独立生成 21）终止=env_done
+  env_done g331-VideoUnmaskSwap: es=168 T=461 C=292 infer=19 （公式 19 / 独立生成 19）终止=env_done
+  env_done g303-VideoUnmaskSwap: es=216 T=586 C=369 infer=24 （公式 24 / 独立生成 24）终止=env_done
+EVAL_TERMINATION=PASS max_steps=1300 infer_calls=82 first_batch_included=1 tau_max=es+1296 last_partial_batch_dropped=1 residual_frames=4 termination=count_guard env_done_cases=5
+== TAU_LONG ==
+TAU_LONG=PASS cases=2 es=0 tau=1296 k=80 raise=0 order_legal=1 | es=216 tau=1512 k=92 raise=0 order_legal=1 budget=96 headroom_min=4
+== ES_BOUNDARY ==
+  完整驱动：es=288 raise=0 点数=82 k_last=96 | es=289 raise=1 @τ=1585 点数=81
+  真实 es → 最晚决策时刻 k: 0:80 66:83 114:86 168:89 216:92
+ES_BOUNDARY=PASS scanned=[200,320) first_raise_es=289 predicted=289 k_at_288=96 k_at_289=97 real_es_values=[0,66,114,168,216] real_max_k=92 margin_windows=4
+明细写入 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/tic/A/rhythm.json
+TIC_RHYTHM=PASS
+### [A3] m1 on 400ep
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[m1 helper] checked=1863 mismatches=0
+  [m1] 2000/101066 (4s)
+  [m1] 4000/101066 (9s)
+  [m1] 6000/101066 (13s)
+  [m1] 8000/101066 (17s)
+  [m1] 10000/101066 (21s)
+  [m1] 12000/101066 (25s)
+  [m1] 14000/101066 (29s)
+  [m1] 16000/101066 (33s)
+  [m1] 18000/101066 (37s)
+  [m1] 20000/101066 (41s)
+  [m1] 22000/101066 (45s)
+  [m1] 24000/101066 (49s)
+  [m1] 26000/101066 (54s)
+  [m1] 28000/101066 (58s)
+  [m1] 30000/101066 (63s)
+  [m1] 32000/101066 (67s)
+  [m1] 34000/101066 (72s)
+  [m1] 36000/101066 (76s)
+  [m1] 38000/101066 (80s)
+  [m1] 40000/101066 (85s)
+  [m1] 42000/101066 (90s)
+  [m1] 44000/101066 (94s)
+  [m1] 46000/101066 (97s)
+  [m1] 48000/101066 (101s)
+  [m1] 50000/101066 (104s)
+  [m1] 52000/101066 (108s)
+  [m1] 54000/101066 (112s)
+  [m1] 56000/101066 (116s)
+  [m1] 58000/101066 (120s)
+  [m1] 60000/101066 (124s)
+  [m1] 62000/101066 (128s)
+  [m1] 64000/101066 (132s)
+  [m1] 66000/101066 (136s)
+  [m1] 68000/101066 (139s)
+  [m1] 70000/101066 (142s)
+  [m1] 72000/101066 (146s)
+  [m1] 74000/101066 (149s)
+  [m1] 76000/101066 (153s)
+  [m1] 78000/101066 (156s)
+  [m1] 80000/101066 (160s)
+  [m1] 82000/101066 (163s)
+  [m1] 84000/101066 (167s)
+  [m1] 86000/101066 (170s)
+  [m1] 88000/101066 (174s)
+  [m1] 90000/101066 (178s)
+  [m1] 92000/101066 (181s)
+  [m1] 94000/101066 (185s)
+  [m1] 96000/101066 (188s)
+  [m1] 98000/101066 (192s)
+  [m1] 100000/101066 (196s)
+[m1 real] samples=101066 mismatches=0 有效数分布 {"n": 101066, "k_median": 9.0, "k_mean": 10.314339144717314, "k_max": 34, "k_p25": 5.0, "k_p75": 15.0, "k_p90": 20.0, "k_p95": 23.0, "k_p99": 27.0, "zero_frac": 0.06332495596936655, "fill_rate": 0.10744103275747202}
+A19_VALID_DIST=PASS source=manifest samples=101066 median=9.0 mean=10.31 max=34 p25/p75/p90/p95/p99=5.0/15.0/20.0/23.0/27.0 zero_frac=0.0633 fill_rate=0.107 expect_mismatches=0 measured_from=dataset_motion_mask
+MOTION_DELIVERY=PASS samples=101066 mismatches=0 helper_checked=1863
+### [A] all done
+EXIT_CODE=0
