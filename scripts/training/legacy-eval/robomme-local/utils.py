@@ -47,6 +47,9 @@ def pack_buffer(image_buffer, state_buffer, exec_start_idx=0):
     
 def check_args(args):
     assert args.obs_horizon == 16
+    assert args.episode_stride >= 1, f"episode_stride 必须 ≥1，实为 {args.episode_stride}"
+    # 提前失败：BenchmarkEnvBuilder 也会拒非法值，但要等到第一次建 env（起完 server 数分钟后）
+    assert args.dataset in ("train", "val", "test"), f"dataset 只能是 train/val/test，实为 {args.dataset}"
 
 
 

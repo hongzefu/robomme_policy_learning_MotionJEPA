@@ -35,12 +35,15 @@ class Args:
     policy_name: str = "dummy_test"
     model_seed: int = 42
     model_ckpt_id: int = 80000
+    dataset: str = "test" # benchmark split：test / val / train，对应 env_metadata/<split>/；非 test 时结果目录另开一段，不覆盖 test
 
     # task control
     re_eval_tasks: str = "" # tasks split by comma
     only_tasks: str = "" # tasks split by comma
     exclude_tasks: str = "" # tasks split by comma
     max_episodes: int = 0 # 每任务最多评几集（0 = 环境提供的全部；T3_EVAL_OBS 用 10）
+    episode_start: int = 0 # 从第几集起评（分片并行：片 k 给 episode_start=k*n, max_episodes=n；默认 0 行为不变）
+    episode_stride: int = 1 # 集号步长（stride 交错分片：worker w 给 episode_start=w, episode_stride=8, max_episodes=0；默认 1 行为不变）
 
 
 
@@ -169,11 +172,14 @@ class EpisodeEvaluator:
 
 def setup_save_directory(args: Args) -> Path:
     """Set up and validate save directories."""
+    # split 段：test 保持历史路径逐字节不变（已有 seed42 结果不受影响）；val / train 另开 <split>-seed<n>，
+    # 否则会写进同一目录、并被 setup_log_dict 的续评逻辑当成「已评过」整体跳过
+    seed_seg = f"seed{args.model_seed}" if args.dataset == "test" else f"{args.dataset}-seed{args.model_seed}"
     save_dir = (
         Path(args.save_dir)
         / args.policy_name
         / f"ckpt{args.model_ckpt_id}"
-        / f"seed{args.model_seed}"
+        / seed_seg
     )
 
     if save_dir.exists():
@@ -246,14 +252,16 @@ def evaluate(args: Args):
             if task_name not in log_dict:
                 log_dict[task_name] = {}
 
-            env_runner = EnvRunner(task_name, video_save_dir, max_steps=args.max_steps)
+            env_runner = EnvRunner(task_name, video_save_dir, max_steps=args.max_steps, dataset=args.dataset)
             num_episodes = env_runner.num_episodes
 
             success_flag = "unknown"
 
             if args.max_episodes > 0:
-                num_episodes = min(num_episodes, args.max_episodes)
-            for episode_id in range(num_episodes):
+                num_episodes = min(num_episodes, args.episode_start + args.max_episodes)
+            episode_ids = list(range(args.episode_start, num_episodes, args.episode_stride))
+            print(f"[robomme] task {task_name}: {len(episode_ids)} episodes {episode_ids}")
+            for episode_id in episode_ids:
                 if str(episode_id) in log_dict[task_name]:
                     print(f"[robomme] episode {episode_id} already evaluated, skipping...")
                     continue
