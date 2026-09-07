@@ -5,7 +5,7 @@
 #   stride（负载均衡）  ：WORKERS 个 worker，每个跑全部 4 任务、每任务取 ep ∈ {k, k+WORKERS, …}（8 worker 下 w0/w1 各 28 集、其余 24 集），
 #                         分片名 w<k>，GPU=k，端口 PORT_BASE+k。任务级耗时差异被均摊（留档 eval-official-framesamp-context/）。
 # 用法：[MODE=task|stride] [WORKERS=8] [ONLY=ButtonUnmask-0|w0] [EP_COUNT=…] [RUN_NAME=…] [CKPT_ID=…] [CKPT_DIR=…] [SEED=42]
-#       [DATASET=test|val] [LOG_PREFIX=ev40k] [PORT_BASE=8031] [DRY_RUN=1] bash scripts/training/prod/eval_all_shards.sh
+#       [DATASET=test|val] [LOG_PREFIX=ev40k] [PORT_BASE=8031] [DRY_RUN=1] bash scripts/training/legacy-eval/eval_all_shards.local.sh
 #   RUN_NAME / CKPT_ID / CKPT_DIR / SEED / DATASET / LOG_PREFIX 原样转给 eval_shard.sh（tmux 会话不继承调用方环境，必须显式写进命令）。
 #   多轮（换 SEED 或换 DATASET）必须同时换 LOG_PREFIX 与 PORT_BASE：会话名 / 日志名 / server.log 只含 LOG_PREFIX 与分片名，
 #   沿用同一个会让驱动日志 tee -a 追加成一份、merge 的墙钟与 TIMING 串轮。
@@ -64,7 +64,7 @@ while read -r SHARD GPU EXTRA; do
   LOG="${LOGS_DIR}/${LOG_PREFIX}-${SHARD}.log"
   ENVS="${EXTRA} GPU=${GPU} PORT=${PORT} RUN_NAME=${RUN_NAME} CKPT_ID=${CKPT_ID} SEED=${SEED} DATASET=${DATASET} LOG_PREFIX=${LOG_PREFIX}"
   [[ -n "${CKPT_DIR}" ]] && ENVS="${ENVS} CKPT_DIR=${CKPT_DIR}"
-  CMD="set -o pipefail; ${ENVS} bash scripts/training/prod/eval_shard.sh 2>&1 | tee -a ${LOG}; sleep 2"
+  CMD="set -o pipefail; ${ENVS} bash scripts/training/legacy-eval/eval_shard.local.sh 2>&1 | tee -a ${LOG}; sleep 2"
   if [[ "${DRY_RUN}" == "1" ]]; then echo "DRY ${SESSION}: ${CMD}"; continue; fi
   tmux new-session -d -s "${SESSION}" -c "${REPO_ROOT}" "bash -c '${CMD}'"
   echo "起 ${SESSION}: shard=${SHARD} gpu=${GPU} port=${PORT} ${EXTRA} run=${RUN_NAME} seed=${SEED} dataset=${DATASET} ckpt=${CKPT_DIR:-<默认>/${CKPT_ID}} log=${LOG}"

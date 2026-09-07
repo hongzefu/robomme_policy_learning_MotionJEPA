@@ -8,7 +8,7 @@ episode_config_resolver.py 读 env_metadata/test/record_dataset_<task>_metadata.
   <SPLIT>_SEED_DISJOINT=PASS|FAIL <split>=<n>x<任务数> train_h5=<n>x<任务数> overlap=<k>   被核 split 的 seed 与训练 H5 seed 的交集（须 0）且集号 0..n-1 连续
                                                                                     （--split test 默认，输出与历史逐字节一致；--split val 核 env_metadata/val）
   TRAIN_H5_IN_TRAIN_SPLIT=PASS|FAIL missing=<k>                                    训练 H5 seed 是否全部落在 env_metadata/train 内
-用法：UV_LINK_MODE=copy uv run --no-sync python scripts/training/prod/check_test_seeds.py [--split test|val] --out <records>/test_seeds.json
+用法：UV_LINK_MODE=copy uv run --no-sync python scripts/training/legacy-eval/check_test_seeds.py [--split test|val] --out <records>/test_seeds.json
 """
 
 from __future__ import annotations

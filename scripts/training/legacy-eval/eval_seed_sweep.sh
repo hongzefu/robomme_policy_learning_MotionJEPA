@@ -8,7 +8,7 @@
 # 为什么每批换 RUN_NAME：eval.py 跑完集号区间即写 log.json，外层 while not exists(log.json) 见到它就直接退出；
 # 若 4 个批次共用一个 RUN_NAME，第二批起来会空转退出（eval-official-framesamp-context/launch.md 踩过）。
 #
-# 用法：GROUP=official|motion SEED=42 [TASKS=…] [PORT_BASE=8041] [DRY_RUN=1] bash scripts/training/prod/eval_seed_sweep.sh
+# 用法：GROUP=official|motion SEED=42 [TASKS=…] [PORT_BASE=8041] [DRY_RUN=1] bash scripts/training/legacy-eval/eval_seed_sweep.sh
 #   GROUP=official  官方 perceptual-framesamp-context ckpt79999，无 sidecar，WORKERS=4 GPU_LIST=0,0,1,1（每卡 2 worker）
 #   GROUP=motion    awsprod40k-b128-motion ckpt39999，带 motion sidecar，WORKERS=2 GPU_LIST=0,1（每卡 1 worker，sidecar 独占）
 # 日志：本 driver 由调用方 tee 落 v1-store/logs/sweep-<GROUP>-s<SEED>.log；分片日志照旧 v1-store/logs/<LOG_PREFIX>-w<k>.log
@@ -68,7 +68,7 @@ for TASK in "${TASK_ARR[@]}"; do
        RUN_NAME="${RUN_PREFIX}-s${SEED}-${TASK}" CKPT_ID="${CKPT_ID}" CKPT_DIR="${CKPT_DIR}" \
        SEED="${SEED}" LOG_PREFIX="${LP}" PORT_BASE="${PB}" \
        POLICY_MEM_FRACTION="${MEMF}" ROBOMME_PY="${ROBOMME_PY}" DRY_RUN="${DRY_RUN}" \
-       bash "$(dirname "${BASH_SOURCE[0]}")/eval_all_shards.sh"; then
+       bash "$(dirname "${BASH_SOURCE[0]}")/eval_all_shards.remote.sh"; then
     echo "错误: 起批失败 task=${TASK}" >&2; FAIL=1; break
   fi
   [[ "${DRY_RUN}" == "1" ]] && continue

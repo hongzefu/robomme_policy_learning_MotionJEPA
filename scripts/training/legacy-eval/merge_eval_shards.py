@@ -15,7 +15,7 @@
         SPLIT_SEED_MATCH=PASS|FAIL|SKIP split=<s> n=<k> mismatch=<m> unlogged=<u>
           逐集自证跑的确实是 --split 那个 split：比对驱动日志 EVAL_EPISODE 行里真正写进 gym.make 的 env_seed
           与 <metadata-dir>/<split>/ 的 records[].seed。SKIP = 日志里没有 EVAL_EPISODE 行（该行 commitV5.6 起才有）。
-用法：UV_LINK_MODE=copy uv run --no-sync python scripts/training/prod/merge_eval_shards.py --out-dir docs/training-doc/eval-awsprod40k-b128-motion/records [--allow-partial]
+用法：UV_LINK_MODE=copy uv run --no-sync python scripts/training/legacy-eval/merge_eval_shards.py --out-dir docs/training-doc/eval-awsprod40k-b128-motion/records [--allow-partial]
       stride 布局：… --layout stride --shards 8 --run-name official-framesamp-context --ckpt-id 79999 --log-prefix evoffctx --tag EVAL_OFFICIAL_CTX --out-dir …
 """
 

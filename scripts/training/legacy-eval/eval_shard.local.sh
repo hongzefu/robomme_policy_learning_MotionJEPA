@@ -13,7 +13,7 @@
 # 用法：TASK=ButtonUnmask K=0 GPU=0 PORT=8031 [EP_COUNT=25] [EP_START=K*EP_COUNT] [RUN_NAME=awsprod40k-b128-motion] [CKPT_ID=39999]
 #       stride 口径改为 TASKS=<a,b,c,d> SHARD_ID=w<K> K=<K> EP_STRIDE=<worker 数> [EP_START=K] [EP_COUNT=0]（其余同）
 #       [CKPT_DIR=$TRAIN_RUNS/mme_vla_suite_b128/$RUN_NAME/$CKPT_ID] [SEED=42] [DATASET=test|val] [LOG_PREFIX=ev40k] [POLICY_MEM_FRACTION=0.4] [ROBOMME_PY=…]
-#       bash scripts/training/prod/eval_shard.sh
+#       bash scripts/training/legacy-eval/eval_shard.local.sh
 #   结果   v1-store/evaluation/<RUN_NAME>-<SHARD>/ckpt<CKPT_ID>/seed<SEED>/{progress.json,log.json,videos/}（SHARD = <TASK>-<K> 或 w<K>）
 #          DATASET≠test 时 seed 段改为 <DATASET>-seed<SEED>（eval.py::setup_save_directory），与 test 结果分家、互不覆盖。
 #          每集在驱动日志留一行 EVAL_EPISODE split=… task=… ep=… env_seed=… difficulty=…，自证跑的确实是该 split。

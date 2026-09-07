@@ -18,7 +18,7 @@
   SPLIT_SEED=PASS|FAIL  split 确实生效（见 verdict_split_seed）
   HARD_EVAL=DONE|INCOMPLETE units=<n> episodes=<n>/<N> … <task>-<split>=<succ>/<n> … mean_rate=<r>
 用法：
-  UV_LINK_MODE=copy uv run --no-sync python scripts/training/prod/summarize_hard_eval.py \
+  UV_LINK_MODE=copy uv run --no-sync python scripts/training/legacy-eval/summarize_hard_eval.py \
     --units evhard-pl-test:PatternLock:test --units evhard-pl-val:PatternLock:val \
     --units evhard-rs-test:RouteStick:test --units evhard-rs-val:RouteStick:val \
     --ckpt-id 79999 --seed 42 \

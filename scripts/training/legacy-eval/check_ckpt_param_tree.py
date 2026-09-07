@@ -6,7 +6,7 @@ remove_extra_params=True，checkpoint 多出的参数会被静默 intersect 掉�
 （JAX_PLATFORMS=cpu）把 checkpoint params 与 HEAD 按 history_config.txt 所指 yaml 建出的模型逐路径比 missing / extra / shape，
 并调用 policy_config._assert_param_tree_exact 复核。必须在仓库根运行（get_history_config 按 cwd 相对路径读 yaml）。
 判定行：PARAM_TREE_EXACT=PASS|FAIL config=<c> history_config=<hc> yaml_sha256=<16位> n_model=<a> n_ckpt=<b> missing=<m> extra=<e> shape_mismatch=<s>
-用法：JAX_PLATFORMS=cpu UV_LINK_MODE=copy uv run --no-sync python scripts/training/prod/check_ckpt_param_tree.py \\
+用法：JAX_PLATFORMS=cpu UV_LINK_MODE=copy uv run --no-sync python scripts/training/legacy-eval/check_ckpt_param_tree.py \\
         --ckpt-dir v1-store/models/official-mme-vla/perceptual-framesamp-context/79999 --out <records>/param_tree.json
 """
 

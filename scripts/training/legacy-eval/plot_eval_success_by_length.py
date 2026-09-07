@@ -15,7 +15,7 @@
   （官方 H5 数据集 train split 口径，demo+exec 全长；eval 跑的是 test split，
    逐集实际执行步数未逐集留档，故长度轴用数据集口径的中位值作代理）
 
-用法：uv run python scripts/analysis/plot_eval_success_by_length.py [--ref origin/v2-motionmem]
+用法：uv run python scripts/training/legacy-eval/plot_eval_success_by_length.py [--ref origin/v2-motionmem]
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
 
-REPO = Path(__file__).resolve().parents[2]
+REPO = Path(__file__).resolve().parents[3]   # 本文件原在 scripts/analysis/ 下（parents[2] 即仓库根）；迁到 scripts/training/legacy-eval/ 后深度 +1
 BY_SEED_REL = "docs/training-doc/eval-3seed-context-vs-motion/records/per_episode_by_seed.json"
 AXIS_JSON = REPO / "docs/dataset-build-doc/16task-h5-scan/records/memory_axis_16task.json"
 OUT_PNG = REPO / "docs/eval-success-by-task-length.png"

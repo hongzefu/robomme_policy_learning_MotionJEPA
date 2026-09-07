@@ -14,7 +14,7 @@ success/fail/timeout 三分只能从 videos/<task>_ep<N>_<flag>_..mp4 的文件�
 （沿用 merge_eval_shards.py 的 _VIDEO_RE）；每集的环境 seed 与难度取自 benchmark 元数据。
 
 用法：
-  uv run --no-sync python scripts/training/prod/aggregate_seed_runs.py \
+  uv run --no-sync python scripts/training/legacy-eval/aggregate_seed_runs.py \
     --group official:official-ctx:79999:4 --group motion:awsprod40k-motion:39999:2 \
     --seeds 42,7,2024 --tasks ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap \
     --metadata-dir <robomme env_metadata 目录> --out-dir <留档 records 目录>
