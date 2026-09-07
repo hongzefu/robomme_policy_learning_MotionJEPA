@@ -1,0 +1,261 @@
+{
+  "schema": "tic-rhythm-v1",
+  "lib": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep",
+  "real_cases": [
+    {
+      "es": 0,
+      "t_env": 555,
+      "tag": "g103-ButtonUnmaskSwap"
+    },
+    {
+      "es": 66,
+      "t_env": 399,
+      "tag": "g203-VideoUnmask"
+    },
+    {
+      "es": 114,
+      "t_env": 446,
+      "tag": "g305-VideoUnmaskSwap"
+    },
+    {
+      "es": 168,
+      "t_env": 461,
+      "tag": "g331-VideoUnmaskSwap"
+    },
+    {
+      "es": 216,
+      "t_env": 586,
+      "tag": "g303-VideoUnmaskSwap"
+    }
+  ],
+  "rhythm": {
+    "episodes": 5,
+    "points": 120,
+    "details": [
+      {
+        "tag": "g103-ButtonUnmaskSwap",
+        "es": 0,
+        "t_env": 555,
+        "points_eval": 35,
+        "points_drive": 35,
+        "points_expected": 35,
+        "tau_max": 544,
+        "k_max": 33,
+        "termination": "env_done",
+        "c_env": 554,
+        "c_env_mod16": 10
+      },
+      {
+        "tag": "g203-VideoUnmask",
+        "es": 66,
+        "t_env": 399,
+        "points_eval": 21,
+        "points_drive": 21,
+        "points_expected": 21,
+        "tau_max": 386,
+        "k_max": 22,
+        "termination": "env_done",
+        "c_env": 332,
+        "c_env_mod16": 12
+      },
+      {
+        "tag": "g305-VideoUnmaskSwap",
+        "es": 114,
+        "t_env": 446,
+        "points_eval": 21,
+        "points_drive": 21,
+        "points_expected": 21,
+        "tau_max": 434,
+        "k_max": 25,
+        "termination": "env_done",
+        "c_env": 331,
+        "c_env_mod16": 11
+      },
+      {
+        "tag": "g331-VideoUnmaskSwap",
+        "es": 168,
+        "t_env": 461,
+        "points_eval": 19,
+        "points_drive": 19,
+        "points_expected": 19,
+        "tau_max": 456,
+        "k_max": 26,
+        "termination": "env_done",
+        "c_env": 292,
+        "c_env_mod16": 4
+      },
+      {
+        "tag": "g303-VideoUnmaskSwap",
+        "es": 216,
+        "t_env": 586,
+        "points_eval": 24,
+        "points_drive": 24,
+        "points_expected": 24,
+        "tau_max": 584,
+        "k_max": 34,
+        "termination": "env_done",
+        "c_env": 369,
+        "c_env_mod16": 1
+      }
+    ],
+    "tau_mismatches": 0,
+    "es_mismatches": 0,
+    "k_mismatches": 0,
+    "order_sha_mismatches": 0
+  },
+  "termination": {
+    "case_count_guard": {
+      "es": 0,
+      "t_env": 1700,
+      "infer_calls": 82,
+      "tau_max": 1296,
+      "count": 1301,
+      "residual_frames": 4,
+      "termination": "count_guard"
+    },
+    "cases_env_done": [
+      {
+        "tag": "g103-ButtonUnmaskSwap",
+        "es": 0,
+        "t_env": 555,
+        "termination": "env_done",
+        "infer_calls": 35,
+        "formula": 35,
+        "simulated": 35,
+        "count": 554,
+        "residual_frames": 10
+      },
+      {
+        "tag": "g203-VideoUnmask",
+        "es": 66,
+        "t_env": 399,
+        "termination": "env_done",
+        "infer_calls": 21,
+        "formula": 21,
+        "simulated": 21,
+        "count": 332,
+        "residual_frames": 12
+      },
+      {
+        "tag": "g305-VideoUnmaskSwap",
+        "es": 114,
+        "t_env": 446,
+        "termination": "env_done",
+        "infer_calls": 21,
+        "formula": 21,
+        "simulated": 21,
+        "count": 331,
+        "residual_frames": 11
+      },
+      {
+        "tag": "g331-VideoUnmaskSwap",
+        "es": 168,
+        "t_env": 461,
+        "termination": "env_done",
+        "infer_calls": 19,
+        "formula": 19,
+        "simulated": 19,
+        "count": 292,
+        "residual_frames": 4
+      },
+      {
+        "tag": "g303-VideoUnmaskSwap",
+        "es": 216,
+        "t_env": 586,
+        "termination": "env_done",
+        "infer_calls": 24,
+        "formula": 24,
+        "simulated": 24,
+        "count": 369,
+        "residual_frames": 1
+      }
+    ],
+    "fails": []
+  },
+  "tau_long": {
+    "cases": [
+      {
+        "es": 0,
+        "tau": 1296,
+        "k": 80,
+        "k_ref": 80,
+        "raise": 0,
+        "order_legal": 1,
+        "headroom": 16
+      },
+      {
+        "es": 216,
+        "tau": 1512,
+        "k": 92,
+        "k_ref": 92,
+        "raise": 0,
+        "order_legal": 1,
+        "headroom": 4
+      }
+    ],
+    "budget": 96,
+    "headroom_min": 4,
+    "fails": []
+  },
+  "es_boundary": {
+    "scanned": [
+      200,
+      320
+    ],
+    "first_raise_es": 289,
+    "predicted": 289,
+    "k_at_288": 96,
+    "k_at_289": 97,
+    "full_drive": [
+      {
+        "es": 288,
+        "raise": 0,
+        "raise_at_tau": null,
+        "points": 82,
+        "k_last": 96,
+        "msg": ""
+      },
+      {
+        "es": 289,
+        "raise": 1,
+        "raise_at_tau": 1585,
+        "points": 81,
+        "k_last": 96,
+        "msg": "step 1585 合法 motion 起点数 97 > motion.budget 96（零截断契约，禁止裁剪）"
+      }
+    ],
+    "real": [
+      {
+        "es": 0,
+        "k": 80
+      },
+      {
+        "es": 66,
+        "k": 83
+      },
+      {
+        "es": 114,
+        "k": 86
+      },
+      {
+        "es": 168,
+        "k": 89
+      },
+      {
+        "es": 216,
+        "k": 92
+      }
+    ],
+    "real_max_k": 92,
+    "margin_windows": 4,
+    "budget": 96,
+    "fails": []
+  },
+  "lines": [
+    "RHYTHM_EQ=PASS episodes=5 points=120 tau_mismatches=0 es_mismatches=0 k_mismatches=0 order_sha_mismatches=0 driver=examples/robomme/utils.py:EpisodeState",
+    "EVAL_TERMINATION=PASS max_steps=1300 infer_calls=82 first_batch_included=1 tau_max=es+1296 last_partial_batch_dropped=1 residual_frames=4 termination=count_guard env_done_cases=5",
+    "TAU_LONG=PASS cases=2 es=0 tau=1296 k=80 raise=0 order_legal=1 | es=216 tau=1512 k=92 raise=0 order_legal=1 budget=96 headroom_min=4",
+    "ES_BOUNDARY=PASS scanned=[200,320) first_raise_es=289 predicted=289 k_at_288=96 k_at_289=97 real_es_values=[0,66,114,168,216] real_max_k=92 margin_windows=4"
+  ],
+  "pass": true
+}

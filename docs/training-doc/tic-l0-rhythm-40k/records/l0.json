@@ -1,0 +1,115 @@
+{
+  "schema": "tic-l0-v1",
+  "args": {
+    "ckpt": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999",
+    "lib": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep",
+    "train_config": "mme_vla_suite_b128",
+    "provenance": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/motion_provenance.json",
+    "neg_lib": "v1-store/datasets/4task-motion-40ep",
+    "out": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/tic/A/l0.json"
+  },
+  "norm_stats": {
+    "train_src": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "infer_src": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999/assets/robomme/norm_stats.json",
+    "asset_id": "robomme",
+    "keys": [
+      "actions",
+      "state"
+    ],
+    "arrays": 8,
+    "agg_sha256": "41ff90e4bfacc158a6dd0e3c664d3f010a56bbf66b60590e819048cc9de6973c",
+    "diffs": []
+  },
+  "lib_provenance": {
+    "lib": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep",
+    "provenance": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/motion_provenance.json",
+    "fields": {
+      "framesamp_manifest_sha256": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/meta/episode_manifest.json",
+        "scheme": "manifest",
+        "current": "92fa17e97fba9434ee75302de12556319d8ce6d3feeb3adb9a397e830f477223",
+        "provenance": "92fa17e97fba9434ee75302de12556319d8ce6d3feeb3adb9a397e830f477223",
+        "equal": true
+      },
+      "motion_manifest_sha256": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/meta/episode_manifest.json",
+        "scheme": "manifest",
+        "current": "92fa17e97fba9434ee75302de12556319d8ce6d3feeb3adb9a397e830f477223",
+        "provenance": "92fa17e97fba9434ee75302de12556319d8ce6d3feeb3adb9a397e830f477223",
+        "equal": true
+      },
+      "framesamp_store_meta_sha256": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/framesamp/meta/store_meta.json",
+        "scheme": "file",
+        "current": "dffdd47b09aad2812bc46201231e49cd120a4498828d836c9d2695311a815642",
+        "provenance": "dffdd47b09aad2812bc46201231e49cd120a4498828d836c9d2695311a815642",
+        "equal": true
+      },
+      "motion_index_sha256": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/motion/meta/motion_index.json",
+        "scheme": "file",
+        "current": "74185921690cd26cfd78d309b2d5f89c71c56c0a0ab43cd92b57534d4f8390f6",
+        "provenance": "74185921690cd26cfd78d309b2d5f89c71c56c0a0ab43cd92b57534d4f8390f6",
+        "equal": true
+      },
+      "motion_store_meta_sha256": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/motion/meta/store_meta.json",
+        "scheme": "file",
+        "current": "e19fb5fdb45829d8ef7d48be5ac3ccddac47d32fb4d28edfb7f319375beb6078",
+        "provenance": "e19fb5fdb45829d8ef7d48be5ac3ccddac47d32fb4d28edfb7f319375beb6078",
+        "equal": true
+      },
+      "motion_table_sha256": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/motion/motion_token.f32.bin",
+        "scheme": "file",
+        "current": "6e70604da518c15647d69b5ecafdd74c16b20dad315290ba2a4f3b105c75e30f",
+        "provenance": "6e70604da518c15647d69b5ecafdd74c16b20dad315290ba2a4f3b105c75e30f",
+        "equal": true
+      }
+    }
+  },
+  "motion_store_path": {
+    "snapshot_store_path": "v1-store/datasets/4task-motion-40ep/motion",
+    "provenance_motion_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/motion",
+    "effective": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/motion",
+    "snapshot_default": "raise",
+    "snapshot_default_msg": "framesamp 库与 motion 库绑定的清单不同: 92fa17e97fba9434… != d7cfb137b6ba01c4…（两个各自 verified 的库被串配）",
+    "neg_lib": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-40ep/motion",
+    "guard": "raise",
+    "guard_msg": "framesamp 库与 motion 库绑定的清单不同: 92fa17e97fba9434… != d7cfb137b6ba01c4…（两个各自 verified 的库被串配）",
+    "infer_reads_store": 0,
+    "same_manifest": true,
+    "fails": []
+  },
+  "ckpt_param_tree": {
+    "missing": [],
+    "n_missing": 0,
+    "extra": [],
+    "n_extra": 0,
+    "leaves": 59,
+    "model_leaves": 59,
+    "ckpt_has_motion": true,
+    "raise_msg": ""
+  },
+  "ckpt_dtype_profile": {
+    "by_dtype": {
+      "bfloat16": 23,
+      "float32": 36
+    },
+    "img_dtypes": [
+      "bfloat16"
+    ],
+    "trainable_dtypes": [
+      "float32"
+    ],
+    "n_frozen_paths": 23
+  },
+  "lines": [
+    "NORM_STATS_SAME=PASS sha=41ff90e4bfacc158 train_src=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json infer_src=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999/assets/robomme/norm_stats.json keys=[actions,state] arrays=8",
+    "LIB_PROVENANCE_MATCH=PASS framesamp_manifest_sha256=92fa17e97fba9434 motion_manifest_sha256=92fa17e97fba9434 framesamp_store_meta_sha256=dffdd47b09aad281 motion_index_sha256=74185921690cd26c motion_store_meta_sha256=e19fb5fdb45829d8 motion_table_sha256=6e70604da518c156 all_equal=1",
+    "MOTION_STORE_PATH=PASS snapshot=v1-store/datasets/4task-motion-40ep/motion provenance=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/motion effective=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/motion override=MMEVLA_MOTION_STORE guard=raise infer_reads_store=0 same_manifest=1 snapshot_default=raise",
+    "CKPT_PARAM_TREE=PASS missing=0 extra=0 leaves=59 model_leaves=59 ckpt_has_motion=1",
+    "CKPT_DTYPE_PROFILE f32_leaves=36 bf16_leaves=23 img_all_bf16=1 trainable_all_f32=1 by_dtype={'bfloat16': 23, 'float32': 36} img_dtypes=['bfloat16']"
+  ],
+  "pass": true
+}
