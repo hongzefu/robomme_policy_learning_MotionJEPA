@@ -6,7 +6,9 @@
   --gate m1   数据端交付：脚本内独立 oracle（直读 motion_index.json / motion 表 / pos 表 / 清单，不 import 被测 dataset / store / sampling
               的公式）按公式重算每个样本的 motion_emb / motion_pos / motion_mask / mem_order，与 FrameSampDataset.__getitem__ 逐位；
               三层：helper 合成网格（预算 4，合法数 0–4，第 5 个必 raise）/ 迷你库（合成 motion store + 迷你 framesamp）/ 40 ep 真实库全部 11,530 样本。
-              判定行 MOTION_DELIVERY=PASS samples=<n> mismatches=0
+              A19 分布判据：实测侧取 dataset 交付的 motion_mask.sum()，期望侧默认由同一 --lib 的 meta/episode_manifest.json
+              按 oracle 公式独立重算（--expect-source args + --expect-* 可改为显式期望值，--expect-tol 默认 0）。
+              判定行 A19_VALID_DIST=PASS …、MOTION_DELIVERY=PASS samples=<n> mismatches=0
   --gate m2   排队函数：10,000 组随机输入对 Python sorted 三元组键逐位 + 五条性质 + 两侧同一函数对象 + import 面只有 numpy。
               判定行 MEM_ORDER=PASS cases=10000 mismatches=0
   --gate m3   新层与重排：帧路输出两态逐位；运动路两层按生产 bf16 语义用独立 jax.lax.dot_general 复算逐位（另报 ULP）；
@@ -133,6 +135,46 @@ def load_lib_oracle(lib: pathlib.Path):
     return index, table, pos_table, manifest
 
 
+def manifest_expected_k(lib: pathlib.Path, stride: int = 16, window: int = 33) -> np.ndarray:
+    """A19 期望侧：只读 `meta/episode_manifest.json`，按 oracle 同一公式对每个 exec 样本独立算合法起点数 k。
+
+    与实测侧完全解耦——不 import 被测 dataset / motion store，也不读 motion 表或 motion 索引里的
+    `num_grid`；网格数由清单的 `num_timesteps` / `exec_start_idx` 用 `_synthetic_entry` 现推
+    （`num_chunks = max(0, seg_len - (window - 1))`、`num_grid = len(range(0, num_chunks, stride))`），
+    再套 `oracle_visible` 的可见条件。返回按 `exec_sample_offset` 顺序拼接的 k 数组（长度 = 全库 exec 样本数）。
+
+    只从 motion 索引读 `grid_stride` / `window_frames` 两个标量做口径护栏：库若换了网格口径，
+    期望侧必须跟着换，不能静默按 16/33 算出一份错的期望。
+    """
+    manifest = json.loads((lib / "meta" / "episode_manifest.json").read_text(encoding="utf-8"))
+    idx_meta = json.loads((lib / "motion" / "meta" / "motion_index.json").read_text(encoding="utf-8"))
+    if int(idx_meta["grid_stride"]) != stride or int(idx_meta["window_frames"]) != window:
+        raise SystemExit(f"库网格口径 stride={idx_meta['grid_stride']} window={idx_meta['window_frames']} "
+                         f"与期望侧 {stride}/{window} 不符")
+    ks: list[int] = []
+    cursor = 0
+    for g, e in enumerate(manifest["episodes"]):
+        nt = int(e["num_timesteps"]); es = int(e["exec_start_idx"]); ns = int(e["exec_samples"])
+        if int(e["exec_sample_offset"]) != cursor:
+            raise SystemExit(f"清单 episode {g} 的 exec_sample_offset={e['exec_sample_offset']} 与前缀和 {cursor} 不符")
+        if es + ns != nt:
+            raise SystemExit(f"清单 episode {g}: exec_start_idx+exec_samples={es + ns} != num_timesteps={nt}")
+        entry, _ = _synthetic_entry(g, nt, es, 0, stride, window)
+        for t in range(es, nt):
+            ks.append(len(oracle_visible(entry, t, stride, window)))
+        cursor += ns
+    return np.array(ks, np.int64)
+
+
+def k_stats(ks: np.ndarray) -> dict:
+    """合法起点数 k 的分布统计（期望侧与实测侧共用同一公式，避免两侧统计口径漂移）。"""
+    ks = np.asarray(ks)
+    return {"n": int(ks.size), "k_median": float(np.median(ks)), "k_mean": float(ks.mean()), "k_max": int(ks.max()),
+            "k_p25": float(np.percentile(ks, 25)), "k_p75": float(np.percentile(ks, 75)), "k_p90": float(np.percentile(ks, 90)),
+            "k_p95": float(np.percentile(ks, 95)), "k_p99": float(np.percentile(ks, 99)),
+            "zero_frac": float((ks == 0).mean()), "fill_rate": float(ks.mean() / MOTION_BUDGET)}
+
+
 def _fake_data_config():
     ns = json.load(open(_V1 / "train-assets/mme_vla_suite/robomme/norm_stats.json"))["norm_stats"]["state"]
     st = types.SimpleNamespace(q01=np.array(ns["q01"]), q99=np.array(ns["q99"]), mean=np.array(ns["mean"]), std=np.array(ns["std"]))
@@ -221,7 +263,7 @@ def m1_real_layer(lib: pathlib.Path, limit: int | None) -> tuple[int, int, dict]
     eps = manifest["episodes"]
     starts = np.array([e["exec_sample_offset"] for e in eps], np.int64)
     bad = 0
-    kstat = []
+    kstat = []   # 实测侧：FrameSampDataset 真实交付的 motion_mask.sum()，不是 oracle 的 o["k"]
     t0 = time.time()
     for idx in range(n):
         g = int(np.searchsorted(starts, idx, side="right") - 1)
@@ -233,28 +275,72 @@ def m1_real_layer(lib: pathlib.Path, limit: int | None) -> tuple[int, int, dict]
                 bad += 1
                 if bad <= 10:
                     print(f"  ✗ idx={idx} g={g} t={t} key={k}")
-        kstat.append(o["k"])
+        kstat.append(int(np.asarray(d["motion_mask"]).sum()))
         if (idx + 1) % 2000 == 0:
             print(f"  [m1] {idx + 1}/{n} ({time.time() - t0:.0f}s)", flush=True)
-    ks = np.array(kstat)
-    stats = {"n": n, "k_median": float(np.median(ks)), "k_mean": float(ks.mean()), "k_max": int(ks.max()),
-             "k_p25": float(np.percentile(ks, 25)), "k_p75": float(np.percentile(ks, 75)), "k_p90": float(np.percentile(ks, 90)),
-             "k_p95": float(np.percentile(ks, 95)), "k_p99": float(np.percentile(ks, 99)),
-             "zero_frac": float((ks == 0).mean()), "fill_rate": float(ks.mean() / MOTION_BUDGET)}
+    ks = np.array(kstat, np.int64)
+    stats = k_stats(ks)
     ds.close()
-    return n, bad, stats
+    return n, bad, stats, ks
+
+
+_A19_EXPECT_ARGS = (("k_median", "expect_median"), ("k_mean", "expect_mean"), ("k_max", "expect_max"),
+                    ("k_p25", "expect_p25"), ("k_p75", "expect_p75"), ("k_p90", "expect_p90"),
+                    ("k_p95", "expect_p95"), ("k_p99", "expect_p99"),
+                    ("zero_frac", "expect_zero_frac"), ("fill_rate", "expect_fill_rate"))
+
+
+def _add_m1_expect_args(ap):
+    """A19 期望侧参数：默认由当前 --lib 的清单重算，不写死任何一个库的数字。"""
+    ap.add_argument("--expect-source", choices=["manifest", "args"], default="manifest",
+                    help="m1 的 A19 期望侧来源：manifest=按 oracle 公式重算当前库清单（默认，含逐样本比对）；args=只用 --expect-* 给的值")
+    ap.add_argument("--expect-tol", type=float, default=0.0, help="A19 分布逐值比对的绝对容差（默认 0，即逐值相等）")
+    for stat, dest in _A19_EXPECT_ARGS:
+        ap.add_argument("--" + dest.replace("_", "-"), type=float, default=None,
+                        help=f"覆盖 A19 期望侧的 {stat}")
 
 
 def cmd_m1(args):
     c1, b1 = m1_helper_layer()
     print(f"[m1 helper] checked={c1} mismatches={b1}")
-    n, b3, stats = m1_real_layer(pathlib.Path(args.lib), args.limit)
+    lib = pathlib.Path(args.lib)
+    n, b3, stats, measured_ks = m1_real_layer(lib, args.limit)
     print(f"[m1 real] samples={n} mismatches={b3} 有效数分布 {json.dumps(stats)}")
-    # A19：有效数分布须与清单统计一致（40 ep 库：中位 11 / 均值 11.46 / 最大 34 / 零起点 5.55%）
-    a19 = (abs(stats["k_mean"] - 11.46) < 0.05 and stats["k_max"] == 34 and abs(stats["zero_frac"] - 0.0555) < 0.001
-           and stats["k_median"] == 11.0) if args.limit is None else True
-    print(f"A19_VALID_DIST={'PASS' if a19 else 'FAIL'} median={stats['k_median']} mean={stats['k_mean']:.2f} max={stats['k_max']} "
-          f"zero_frac={stats['zero_frac']:.4f} fill_rate={stats['fill_rate']:.3f}")
+    # A19：实测侧取 FrameSampDataset 交付的 motion_mask.sum()；期望侧默认由当前库清单按 oracle 公式独立重算，
+    # 先逐样本相等，再逐个分布统计量比对（--expect-tol 默认 0）。--expect-* 可覆盖任一统计量。
+    expect_mismatches = 0
+    if args.expect_source == "manifest":
+        exp_ks = manifest_expected_k(lib)
+        if exp_ks.size < n:
+            raise SystemExit(f"清单重算样本数 {exp_ks.size} < 实测样本数 {n}")
+        if args.limit is None and exp_ks.size != n:
+            raise SystemExit(f"清单重算样本数 {exp_ks.size} != 全库样本数 {n}")
+        exp_ks = exp_ks[:n]
+        neq = np.flatnonzero(exp_ks != measured_ks)
+        for i in neq[:10]:
+            print(f"  ✗ A19 逐样本 idx={int(i)} expect_k={int(exp_ks[i])} measured_k={int(measured_ks[i])}")
+        expect_mismatches += int(neq.size)
+        expected = k_stats(exp_ks)
+    else:
+        expected = {}
+    for stat, dest in _A19_EXPECT_ARGS:
+        v = getattr(args, dest, None)
+        if v is not None:
+            expected[stat] = float(v)
+    if not expected:
+        raise SystemExit("--expect-source args 时必须至少给一个 --expect-* 期望值")
+    for stat, _dest in _A19_EXPECT_ARGS:
+        if stat not in expected:
+            continue
+        if abs(float(stats[stat]) - float(expected[stat])) > args.expect_tol:
+            expect_mismatches += 1
+            print(f"  ✗ A19 分布 {stat} measured={stats[stat]} expect={expected[stat]} tol={args.expect_tol}")
+    a19 = expect_mismatches == 0
+    print(f"A19_VALID_DIST={'PASS' if a19 else 'FAIL'} source={args.expect_source} samples={n} "
+          f"median={stats['k_median']} mean={stats['k_mean']:.2f} max={stats['k_max']} "
+          f"p25/p75/p90/p95/p99={stats['k_p25']}/{stats['k_p75']}/{stats['k_p90']}/{stats['k_p95']}/{stats['k_p99']} "
+          f"zero_frac={stats['zero_frac']:.4f} fill_rate={stats['fill_rate']:.3f} "
+          f"expect_mismatches={expect_mismatches} measured_from=dataset_motion_mask")
     ok = b1 == 0 and b3 == 0 and a19
     print(f"MOTION_DELIVERY={'PASS' if ok else 'FAIL'} samples={n} mismatches={b1 + b3} helper_checked={c1}")
     if not ok:
@@ -795,6 +881,7 @@ def main():
     ap.add_argument("--limit", type=int, default=None, help="m1 真实库层只跑前 N 个样本（调试用；正式判定不设）")
     ap.add_argument("--seed", type=int, default=20260903)
     ap.add_argument("--tmp", default=None)
+    _add_m1_expect_args(ap)
     args = ap.parse_args()
     {"m1": cmd_m1, "m2": cmd_m2, "m3": cmd_m3, "m4": cmd_m4, "m5": cmd_m5}[args.gate](args)
 
@@ -1048,7 +1135,11 @@ def cmd_t3trace(args):
 def cmd_t3mechanism(args):
     """T3_MOTION_CAUSAL + T3_MECHANISM：真实 batch、重新初始化的 TrainState（须命中 t3common reference 与 run 的 init 记录），
     固定 RNG / actions；bf16 独立复算两层与 gather；padding 垃圾 → loss / 全梯度摘要逐位不变；有效 emb 清零 / 打乱与有效 pos 扰动 → 梯度摘要必变；
-    ∂loss/∂motion_emb 有效位 finite 且分组 L2 > 0、padding 位 0；W2[:768] / W2[768:] / W1 / bias 梯度分组范数。"""
+    ∂loss/∂motion_emb 有效位 finite 且分组 L2 > 0、padding 位 0；W2[:768] / W2[768:] / W1 / bias 梯度分组范数。
+
+    2026-09-07 起：无条件先跑 `--det-probes`（默认 3）次同 obs 确定性探针，叶级 sha 不全同者列入
+    `nondeterministic_leaves` 并从梯度摘要中排除；loss 必须 R 次逐位相同，不确定叶里出现 mem_encoder / motion 叶即 FAIL。
+    `loss_bitexact` / `emb_effect` / `pos_effect` 不因排除而豁免；被排除叶另报 base–base 与 base–padding 的 max_abs。"""
     import dataclasses as _dc
     import jax
     import jax.numpy as jnp
@@ -1126,7 +1217,8 @@ def cmd_t3mechanism(args):
     for mk in ("['mem_encoder']['motion_pos_proj']['kernel']", "['mem_encoder']['motion_encoder_static']['kernel']"):
         if mk not in trainable_keys:
             raise SystemExit(f"motion 叶 {mk} 不在 trainable_filter 内——与 T3_SMOKE motion_params_updated 矛盾")
-    print(f"[t3mechanism] 梯度摘要覆盖 trainable 叶 {len(trainable_keys)} 个（全参数叶 {len(jax.tree_util.tree_leaves(params.to_pure_dict()))}）")
+    all_trainable = len(trainable_keys)
+    print(f"[t3mechanism] 梯度摘要覆盖 trainable 叶 {all_trainable} 个（全参数叶 {len(jax.tree_util.tree_leaves(params.to_pure_dict()))}）")
 
     def grad_digest(grads):
         g = hashlib.sha256()
@@ -1135,28 +1227,81 @@ def cmd_t3mechanism(args):
                 g.update((jax.tree_util.keystr(kp) + leaf_sha(np.asarray(jax.device_get(v)))).encode())
         return g.hexdigest()
 
+    def leaf_shas(grads):
+        return {jax.tree_util.keystr(kp): leaf_sha(np.asarray(jax.device_get(v)))
+                for kp, v in jax.tree_util.tree_flatten_with_path(grads.to_pure_dict())[0] if jax.tree_util.keystr(kp) in trainable_keys}
+
+    def leaf_arrays(grads, keys):
+        """只把指定叶的梯度取回 host（保持原 dtype，不升 f64——被排除叶可能有 GB 量级，升位会翻倍占用）。"""
+        return {jax.tree_util.keystr(kp): np.array(np.asarray(jax.device_get(v)))
+                for kp, v in jax.tree_util.tree_flatten_with_path(grads.to_pure_dict())[0] if jax.tree_util.keystr(kp) in keys}
+
+    def leaf_maxabs_vs(grads, ref):
+        """逐叶 max|grad − ref[叶]|，算完即弃（不保留第二份大数组）。"""
+        out = {}
+        for kp, v in jax.tree_util.tree_flatten_with_path(grads.to_pure_dict())[0]:
+            ks = jax.tree_util.keystr(kp)
+            if ks in ref:
+                out[ks] = float(np.abs(np.asarray(jax.device_get(v)) - ref[ks]).max())
+        return out
+
+    def loss_digest(o, want_leaves=False, diff_ref=None):
+        """loss 标量 + 全梯度摘要（可选逐叶 sha / 对 diff_ref 的逐叶 max_abs），梯度树用完即释放。"""
+        l, g = loss_and_grads(params, o, actions)
+        d = grad_digest(g)
+        leaves = leaf_shas(g) if want_leaves else None
+        diffs = leaf_maxabs_vs(g, diff_ref) if diff_ref is not None else None
+        del g
+        if diff_ref is not None:
+            return float(l), d, leaves, diffs
+        return (float(l), d, leaves) if want_leaves else (float(l), d)
+
+    # ── 确定性探针（无条件先跑，2026-09-07 起）──────────────────────────────────
+    # 同一 obs、同一 RNG、同一 params 连算 R 次梯度：叶级 sha 不全同者说明该叶的反向核在本机本编译路径下
+    # 自身不确定（与 motion 垫料无关），列入 nondeterministic_leaves 并从后续梯度摘要中排除。
+    # 硬闸三条：loss 必须 R 次逐位相同；不确定叶里不得出现 mem_encoder / motion 叶；被排除叶数与覆盖比例必须报出。
+    R = int(args.det_probes)
+    if R < 2:
+        raise SystemExit(f"--det-probes={R}：确定性探针至少 2 次")
+    probe_losses, probe_leaves = [], []
+    for _r in range(R):
+        l_r, _d_r, lv_r = loss_digest(obs, want_leaves=True)
+        probe_losses.append(l_r); probe_leaves.append(lv_r)
+    loss_det = all(l == probe_losses[0] for l in probe_losses)
+    nondet = sorted(k for k in probe_leaves[0] if any(pl.get(k) != probe_leaves[0][k] for pl in probe_leaves[1:]))
+    motion_nondet = [k for k in nondet if "mem_encoder" in k or "motion" in k]
+    print(f"[t3mechanism] 确定性探针 R={R}：loss 逐位同={loss_det}（{[l.hex() for l in probe_losses]}）；"
+          f"不确定叶 {len(nondet)}/{all_trainable}：{[k[:90] for k in nondet]}")
+    if not loss_det or motion_nondet:
+        if motion_nondet:
+            print(f"  ✗ 不确定叶里出现 motion 相关叶：{motion_nondet}")
+        print(f"T3_MOTION_CAUSAL=FAIL pad_bitexact=0 loss_bitexact=0 emb_effect=0 pos_effect=0 det_probes={R} "
+              f"nondeterministic_leaves={json.dumps(nondet)} excluded=0 covered=0/{all_trainable} excluded_diag=[]")
+        print(f"T3_MECHANISM=FAIL step={chosen_step} 确定性探针未通过（loss_det={int(loss_det)} motion_nondet={len(motion_nondet)}）")
+        pathlib.Path(args.out).write_text(json.dumps(
+            {"chosen_step": chosen_step, "batch_idx": batch_idx, "det_probes": R, "loss_det": bool(loss_det),
+             "nondeterministic_leaves": nondet, "motion_nondeterministic_leaves": motion_nondet,
+             "all_trainable": all_trainable, "verdict": "FAIL"}, indent=1))
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise SystemExit(1)
+    excluded = list(nondet)
+    trainable_keys = trainable_keys - set(excluded)   # 收窄后 grad_digest / leaf_shas 闭包同步生效
+    covered = len(trainable_keys)
+    base_leaves = {k: v for k, v in probe_leaves[0].items() if k in trainable_keys}
+    print(f"[t3mechanism] 排除不确定叶 {len(excluded)} 个后，梯度摘要覆盖 {covered}/{all_trainable} 叶")
+
     fails = []
     base_loss, base_grads = loss_and_grads(params, obs, actions)
     base_loss = float(base_loss); base_dig = grad_digest(base_grads)
     # (d) 所需的四个 motion 叶梯度立即取回 host，整树梯度随即释放（每次 value_and_grad 的全参数梯度与 params 同体量）
     gp = {jax.tree_util.keystr(kp): np.asarray(jax.device_get(v)).astype(np.float64)
           for kp, v in jax.tree_util.tree_flatten_with_path(base_grads.to_pure_dict())[0] if "motion" in jax.tree_util.keystr(kp)}
+    nd_base = leaf_arrays(base_grads, excluded)   # 被排除叶的数值诊断基准
     del base_grads
     print(f"[t3mechanism] base loss {base_loss:.6f}")
-
-    def leaf_shas(grads):
-        return {jax.tree_util.keystr(kp): leaf_sha(np.asarray(jax.device_get(v)))
-                for kp, v in jax.tree_util.tree_flatten_with_path(grads.to_pure_dict())[0] if jax.tree_util.keystr(kp) in trainable_keys}
-
-    def loss_digest(o, want_leaves=False):
-        """loss 标量 + 全梯度摘要（可选逐叶 sha），梯度树用完即释放。"""
-        l, g = loss_and_grads(params, o, actions)
-        d = grad_digest(g)
-        leaves = leaf_shas(g) if want_leaves else None
-        del g
-        return (float(l), d, leaves) if want_leaves else (float(l), d)
-
-    base_leaves = None
+    # 被排除叶的 base–base 数值差（同一 obs 再算一次），用来说明「排除的是噪声量级、不是泄漏」
+    _lb, _db, _lvb, base_base_maxabs = loss_digest(obs, diff_ref=nd_base)
+    base_pad_maxabs = {k: 0.0 for k in excluded}
     # bf16 独立复算两层 + gather（并列序 → 重排）
     P = {jax.tree_util.keystr(kp): np.asarray(jax.device_get(v)) for kp, v in jax.tree_util.tree_flatten_with_path(params.to_pure_dict())[0]}
     W1 = P["['mem_encoder']['motion_pos_proj']['kernel']"]; b1 = P["['mem_encoder']['motion_pos_proj']['bias']"]
@@ -1179,23 +1324,29 @@ def cmd_t3mechanism(args):
     g = np.random.default_rng(3)
     me = np.array(np.asarray(obs.motion_emb)); mp = np.array(np.asarray(obs.motion_pos)); mm = np.asarray(obs.motion_mask)
     me[~mm] = g.normal(0, 1e3, me[~mm].shape); mp[~mm] = g.normal(0, 1e3, mp[~mm].shape)
-    l_pad, d_pad, pad_leaves = loss_digest(_dc.replace(obs, motion_emb=jnp.asarray(me), motion_pos=jnp.asarray(mp)), want_leaves=True)
-    pad_bitexact = l_pad == base_loss and d_pad == base_dig
-    if not pad_bitexact:
-        # 诊断输出：loss 是否变、哪些叶变；再用 N(0,1) 与 N(0,1e-3) 两档垃圾复测，区分「泄漏」与「大数溢出 / 精度」
-        _, _, base_leaves = loss_digest(obs, want_leaves=True)
-        _, _, base_leaves2 = loss_digest(obs, want_leaves=True)
-        nd = sorted(k for k in base_leaves if base_leaves[k] != base_leaves2.get(k))
-        print(f"  [pad-diag] 确定性探针：同一 obs 连算两次梯度，叶变化 {len(nd)}/{len(base_leaves)}：{[k[:90] for k in nd[:6]]}")
-        diff = sorted(k for k in base_leaves if base_leaves[k] != pad_leaves.get(k))
-        print(f"  [pad-diag] loss base={base_loss.hex()} pad(1e3)={l_pad.hex()} 同={l_pad == base_loss}；梯度叶变化 {len(diff)}/{len(base_leaves)}：{[k[:90] for k in diff[:8]]}")
-        for scale in (1.0, 1e-3):
-            g2 = np.random.default_rng(5)
-            me_s = np.array(np.asarray(obs.motion_emb)); mp_s = np.array(np.asarray(obs.motion_pos))
-            me_s[~mm] = g2.normal(0, scale, me_s[~mm].shape); mp_s[~mm] = g2.normal(0, scale, mp_s[~mm].shape)
-            l_s, d_s, lv_s = loss_digest(_dc.replace(obs, motion_emb=jnp.asarray(me_s), motion_pos=jnp.asarray(mp_s)), want_leaves=True)
-            diff_s = sorted(k for k in base_leaves if base_leaves[k] != lv_s.get(k))
-            print(f"  [pad-diag] 垃圾尺度 {scale:g}: loss 同={l_s == base_loss} 摘要同={d_s == base_dig} 叶变化 {len(diff_s)}：{[k[:90] for k in diff_s[:6]]}")
+    l_pad, d_pad, pad_leaves, pad_maxabs = loss_digest(
+        _dc.replace(obs, motion_emb=jnp.asarray(me), motion_pos=jnp.asarray(mp)), want_leaves=True, diff_ref=nd_base)
+    loss_bitexact = l_pad == base_loss          # loss 逐位不变，不因排除叶而豁免
+    pad_bitexact = d_pad == base_dig            # 排除叶之外的全部 trainable 叶梯度摘要逐位不变
+    for k, v in pad_maxabs.items():
+        base_pad_maxabs[k] = max(base_pad_maxabs[k], v)
+    diff = sorted(k for k in base_leaves if base_leaves[k] != pad_leaves.get(k))
+    print(f"  [pad] loss base={base_loss.hex()} pad(1e3)={l_pad.hex()} 同={loss_bitexact}；"
+          f"覆盖叶变化 {len(diff)}/{covered}：{[k[:90] for k in diff[:8]]}")
+    # N(0,1) 与 N(0,1e-3) 两档垫料复测：判据仍只取 1e3 档（与改动前一致），这两档只作「泄漏 vs 大数溢出」的诊断，
+    # 并给被排除叶补齐三档里最大的 base–padding 数值差
+    for scale in (1.0, 1e-3):
+        g2 = np.random.default_rng(5)
+        me_s = np.array(np.asarray(obs.motion_emb)); mp_s = np.array(np.asarray(obs.motion_pos))
+        me_s[~mm] = g2.normal(0, scale, me_s[~mm].shape); mp_s[~mm] = g2.normal(0, scale, mp_s[~mm].shape)
+        l_s, d_s, lv_s, ma_s = loss_digest(_dc.replace(obs, motion_emb=jnp.asarray(me_s), motion_pos=jnp.asarray(mp_s)),
+                                           want_leaves=True, diff_ref=nd_base)
+        for k, v in ma_s.items():
+            base_pad_maxabs[k] = max(base_pad_maxabs[k], v)
+        diff_s = sorted(k for k in base_leaves if base_leaves[k] != lv_s.get(k))
+        print(f"  [pad] 垫料尺度 {scale:g}: loss 同={l_s == base_loss} 摘要同={d_s == base_dig} "
+              f"覆盖叶变化 {len(diff_s)}：{[k[:90] for k in diff_s[:6]]}")
+    del nd_base
     # (b) 只在自身有效行内清零 / 打乱 motion_emb → loss 或梯度摘要必变；有效 pos 扰动 → 梯度摘要必变
     ks = mm.sum(axis=1); i_star = int(np.argmax(ks))
     me0 = np.array(np.asarray(obs.motion_emb)); me0[i_star, :ks[i_star]] = 0
@@ -1220,13 +1371,23 @@ def cmd_t3mechanism(args):
              "motion_emb_valid": float(np.linalg.norm(gme[mm])), "motion_pos_valid": float(np.linalg.norm(gmp[mm]))}
     grp_ok = norms["W2_content[:768]"] > 0 and norms["W2_pos[768:]"] > 0 and norms["W1"] > 0
     print(f"[t3mechanism] 分组梯度范数 {json.dumps({k: f'{v:.4e}' for k, v in norms.items()})}")
-    print(f"T3_MOTION_CAUSAL={'PASS' if (pad_bitexact and emb_effect and pos_effect) else 'FAIL'} pad_bitexact={int(pad_bitexact)} emb_effect={int(emb_effect)} pos_effect={int(pos_effect)}")
-    ok = pad_bitexact and emb_effect and pos_effect and in_ok and grp_ok and not fails
+    excluded_diag = [{"leaf": k, "base_base_max_abs": base_base_maxabs.get(k, float("nan")),
+                      "base_pad_max_abs": base_pad_maxabs.get(k, float("nan"))} for k in excluded]
+    causal = pad_bitexact and loss_bitexact and emb_effect and pos_effect
+    # PASS 的含义已收窄为「排除叶之外的全部 trainable 叶逐位一致」，covered=<n>/<N> 即覆盖比例
+    print(f"T3_MOTION_CAUSAL={'PASS' if causal else 'FAIL'} pad_bitexact={int(pad_bitexact)} loss_bitexact={int(loss_bitexact)} "
+          f"emb_effect={int(emb_effect)} pos_effect={int(pos_effect)} det_probes={R} "
+          f"nondeterministic_leaves={json.dumps(nondet)} excluded={len(excluded)} covered={covered}/{all_trainable} "
+          f"excluded_diag={json.dumps(excluded_diag)}")
+    ok = causal and in_ok and grp_ok and not fails
     for f in fails:
         print("  ✗", f)
     print(f"T3_MECHANISM={'PASS' if ok else 'FAIL'} step={chosen_step} input_grad_ok={int(in_ok)} group_norms_ok={int(grp_ok)}")
     out = {"chosen_step": chosen_step, "batch_idx": batch_idx, "base_loss": base_loss, "norms": norms, "pad_bitexact": pad_bitexact,
-           "emb_effect": emb_effect, "pos_effect": pos_effect, "input_grad_ok": bool(in_ok), "verdict": "PASS" if ok else "FAIL"}
+           "loss_bitexact": loss_bitexact, "emb_effect": emb_effect, "pos_effect": pos_effect, "input_grad_ok": bool(in_ok),
+           "det_probes": R, "loss_det": bool(loss_det), "nondeterministic_leaves": nondet, "excluded": len(excluded),
+           "covered": covered, "all_trainable": all_trainable, "excluded_diag": excluded_diag,
+           "verdict": "PASS" if ok else "FAIL"}
     pathlib.Path(args.out).write_text(json.dumps(out, indent=1))
     shutil.rmtree(tmp, ignore_errors=True)
     if not ok:
@@ -1341,6 +1502,9 @@ def _t3_main():
     ap.add_argument("--preflight", action="store_true")
     ap.add_argument("--index-json", default=None)
     ap.add_argument("--reuse-losses", action="store_true", help="t3phase：已有 <out>.<side>.losses.npy 时直接复用")
+    ap.add_argument("--det-probes", type=int, default=3,
+                    help="t3mechanism：同一 obs 连算几次梯度做确定性探针（默认 3，最少 2）")
+    _add_m1_expect_args(ap)
     args = ap.parse_args()
     {"m1": cmd_m1, "m2": cmd_m2, "m3": cmd_m3, "m4": cmd_m4, "m5": cmd_m5, "t3common": cmd_t3common, "t3verifyinit": cmd_t3verifyinit,
      "t3trace": cmd_t3trace, "t3mechanism": cmd_t3mechanism, "t3phase": cmd_t3phase}[args.gate](args)
