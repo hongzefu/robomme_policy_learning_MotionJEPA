@@ -231,22 +231,36 @@ upload_batch() {  # $1 = stage 下的子目录（同时也是 bucket 内前缀�
   local sub="$1"; shift
   local args=() pat
   for pat in "$@"; do args+=(--include "$pat"); done
+  # 重试 8 次而不是 3 次：实测这个 commit 超时是**间歇性**的，不是确定性失败——
+  # features-0000* 第 2 次就过了，features-0001* 一次过，而 features-0002* 连挂 3 次。
+  # 待传字节在重试间不再收敛（稳定 3.26 GB），说明数据早在服务端，纯粹是 commit 请求
+  # 反复超时。这种情况下多试几次的期望收益远高于放弃整轮。
   local ok=0 attempt
-  for attempt in 1 2 3; do
+  for attempt in 1 2 3 4 5 6 7 8; do
     if hf sync "$STAGE/$sub" "$BUCKET/$sub" "${args[@]}"; then ok=1; break; fi
     echo "  批 [$sub ${*:-全部}] 第 $attempt 次中断，60s 后重试续传"; sleep 60
   done
-  [ "$ok" = 1 ] || { echo "错误: 批 [$sub ${*:-全部}] 三次仍失败"; exit 1; }
+  [ "$ok" = 1 ] || { echo "错误: 批 [$sub ${*:-全部}] 八次仍失败"; exit 1; }
   echo "  批完成: $sub ${*:-全部}"
 }
+
+# 标记「本轮已开始往这个 bucket 写」。阶段 2 的非空断言靠它区分首次跑与续跑：
+# 首次跑时 marker 不存在，bucket 必须为空；续跑时 marker 存在，允许 bucket 已有内容。
+touch "$EXPORT_ROOT/logs/uploaded.marker"
 
 upload_batch source/data_tars 'data-0000*.tar'
 upload_batch source/data_tars 'data-0001*.tar'
 upload_batch source/data_tars 'data-0002*.tar'
-upload_batch source/features_tars 'features-0000*.tar'
-upload_batch source/features_tars 'features-0001*.tar'
-upload_batch source/features_tars 'features-0002*.tar'
-upload_batch source/features_tars 'features-0003*.tar'
+# features 分片单个约 2 GB（data 分片 1.62 GB），10 个一批的 commit 明显更重——
+# data 三批全部一次过，features 三批里两批要重试、一批连挂三次。故细分到每批 5 个。
+upload_batch source/features_tars 'features-0000[0-4].tar'
+upload_batch source/features_tars 'features-0000[5-9].tar'
+upload_batch source/features_tars 'features-0001[0-4].tar'
+upload_batch source/features_tars 'features-0001[5-9].tar'
+upload_batch source/features_tars 'features-0002[0-4].tar'
+upload_batch source/features_tars 'features-0002[5-9].tar'
+upload_batch source/features_tars 'features-0003[0-4].tar'
+upload_batch source/features_tars 'features-0003[5-9].tar'
 upload_batch framesamp 'image_emb_4x4/part_00*.bf16.bin'
 upload_batch framesamp 'image_emb_4x4/part_01*.bf16.bin'
 upload_batch framesamp 'image_emb_4x4/part_02*.bf16.bin'
@@ -265,13 +279,12 @@ upload_batch manifest
 # bucket 根下的两个平文件：sync 的源必须是目录，这两个用 cp 单传
 for f in README.md SHA256SUMS.pre.txt; do
   ok=0
-  for attempt in 1 2 3; do
+  for attempt in 1 2 3 4 5 6 7 8; do
     if hf buckets cp "$STAGE/$f" "$BUCKET/$f"; then ok=1; break; fi
     echo "  $f 第 $attempt 次中断，60s 后重试"; sleep 60
   done
-  [ "$ok" = 1 ] || { echo "错误: $f 三次仍失败"; exit 1; }
+  [ "$ok" = 1 ] || { echo "错误: $f 八次仍失败"; exit 1; }
 done
-touch "$EXPORT_ROOT/logs/uploaded.marker"
 echo "阶段5完成"
 
 # ---------------------------------------------------------------- 阶段 6：计数层
