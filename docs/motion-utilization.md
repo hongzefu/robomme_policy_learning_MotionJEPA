@@ -3,7 +3,7 @@
 > 环境 B（AWS 单机 8×A100，2026-09-08 起）。工具在 `scripts/motion-variance/`（目录 README 有文件清单与完整跑法）；留档 `training-doc/mv-openloop-40k/`（阶段 0+1）与 `training-doc/mv-matrix-40k/`（阶段 2）；图在 `motion-utilization/figures/`。
 > 计划稿经 Codex 2026-09-08 审计修订（10 条），修订对照见第十一节。本页的数字一律现读留档 `records/`。
 
-![fig1](motion-utilization/figures/fig1-design.png)
+<img src="motion-utilization/figures/fig1-design.png" alt="fig1" width="850">
 
 ## 一、结论摘要
 
@@ -70,14 +70,14 @@ motion token = `motion_encoder_static(concat(motion_emb, silu(motion_pos_proj(mo
 
 结果（149 点 × 5 noise seed，`mv-openloop-40k/result.md`）：mask/noise **9.88（中位 7.52）**，swap/noise 6.36（中位 4.34）；反归一化 = 动作 std 的 73% / 43%。按 k：k=0 → 0.000（逐位，`OL_ZEROK_NULL=PASS`）、1–4 → 2.4 / 2.3、5–12 → 9.5 / 6.3、>12 → 11.1 / 7.0；cold 3.4 / 1.0，steady 10.3 / 6.7；四任务 mask 8.5–11.0，swap 2.7（ButtonUnmask）/ 6.5–7.9。→ 预注册第一行（敏感性较低）排除。
 
-![fig4](motion-utilization/figures/fig4-noise-facet.png)
+<img src="motion-utilization/figures/fig4-noise-facet.png" alt="fig4" width="850">
 *fig4：x = 有效 motion 窗数 k，y = 动作差 / noise 标尺；149 点、5 noise seed；虚线 1.0 = 噪声标尺，点线 0.25 = 预注册低敏感阈；来源 `mv-openloop-40k/records/open_loop.json`。*
 
 ## 七、阶段 1：18 层机制
 
 每集 cold / early / mid / late 4 点、6 集（含 ButtonUnmask）。(i) `LAYER_ATTN`：去噪 action query 的 motion 份额 / 逐 query 合法-key 均匀基准（剔除 padding query）；(ii) `LAYER_ACT_DELTA`：`step_only(l)` / `both(l)` / `kv_vzero(l)` / `kv_donor(l)` 四种逐层干预的完整 10 步最终动作差，donor K/V 来自接收方同 obs 换内容后重新 prefill；(iii) `LAYER_GRAD`：固定 `(obs, x_t, t, u_t)` 的 loss 对第 l 层入口隐状态的梯度，t ∈ {0.1, 0.5, 0.9}。结果（24 点）：(i) action query 富集度第 0–14 层全 < 1，**第 15 层 6.2、第 16 层 4.1**，第 17 层 0.18；第 15 层单 head 份额 0.31；prefill 侧 frame query 第 0/1 层富集 36/34，文本第 1 层 39。(ii) `both(l)`：第 1 层 2.9×、第 0 层 1.2× 噪声，其余 ≤ 0.26；`step_only(l)`：第 16 层 0.25；`kv_donor(l)`：**第 10 层 0.32**；18 层全挡 7.5×（与阶段 0 一致）。(iii) 梯度逐 token 比 motion/frame：第 0 层 68–137×、第 16 层 20–23×、其余 2–6×。→ 主通路是第 0–1 层被帧/文本 token 吸收后间接传播；action 直读 15–16 层；内容敏感读取点第 10 层。
 
-![fig5](motion-utilization/figures/fig5-layers.png)
+<img src="motion-utilization/figures/fig5-layers.png" alt="fig5" width="850">
 *fig5：(a) 去噪 action query 的 motion 份额 / 逐 query 均匀基准；(a') 逐 head；(b) 只动第 l 层的最终动作差 / 噪声；(c) 第 l 层入口隐状态的逐 token 梯度 RMS（log10）。24 点 = 6 集 × cold/early/mid/late。*
 
 ## 八、阶段 2：闭环矩阵与 pooled 400 配对统计
@@ -100,17 +100,17 @@ motion token = `motion_encoder_static(concat(motion_emb, silu(motion_pos_proj(mo
 
 分层：`normal−mask` 在 VideoUnmask +4.0、ButtonUnmaskSwap +9.75、VideoUnmaskSwap +6.75（均 POSITIVE），ButtonUnmask −0.5（ND）；easy +6.0 / hard +6.5（POSITIVE）、medium +1.3；steps Q4 +9.95（集越长收益越大）。`mask−swap` 在 ButtonUnmaskSwap −6.5（NEGATIVE：异集内容好于屏蔽）。
 
-![fig2](motion-utilization/figures/fig2-rates.png)
+<img src="motion-utilization/figures/fig2-rates.png" alt="fig2" width="850">
 *fig2：成功率，柱 = 4 seed 均值，棒 = min–max，点 = 各 seed；每格 n=50/seed（合计 200/seed）。*
 
-![fig3](motion-utilization/figures/fig3-forest.png)
+<img src="motion-utilization/figures/fig3-forest.png" alt="fig3" width="850">
 *fig3：配对差森林图，细线 = t 区间（df=3），粗线 = 按 split×task 分层的 bootstrap 95%（10000 次，条件与 seed 共享索引），灰带 = ±2pp 等价界。*
 
 ## 九、donor bank 与覆盖率
 
 主 donor = `hash(split|task|recv_ep)` 在同任务 100 集里固定选（四 seed 共用）；偏移超出主 donor → 沿同任务 exec 窗数降序的兜底链取精确偏移（fallback）；超全库上限（BU 27 / BUS 33 / VU 19 / VUS 22 窗）→ 循环（cycle）。最坏估计（接收方 t=es+1300）`DONOR_COVER_EST exact 20.9% / fallback 13.1% / cycle 66.1%`；实际（756,823 次窗口查表）`DONOR_COVER_ACTUAL exact 55.8% / fallback 15.9% / cycle 28.3% / cross_seg 0`；开环 exact 79%。阻断只有 `self_loops=0`、`cross_seg=0`。donor 档分层：`normal−swap` exact +1.0（ND, n=280）、fallback +12.3（POS, n=59）、cycle −0.4；`mask−swap` cycle −5.7（NEGATIVE）。
 
-![fig6](motion-utilization/figures/fig6-donor.png)
+<img src="motion-utilization/figures/fig6-donor.png" alt="fig6" width="850">
 *fig6：(a) swap 条件按实际推理次数的 donor 覆盖占比；(b) 库中 donor exec 窗数分布。*
 
 ## 十、威胁到结论的因素与已做的否证
