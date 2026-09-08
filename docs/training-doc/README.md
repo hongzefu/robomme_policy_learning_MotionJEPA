@@ -16,6 +16,7 @@
 | [`tic-sidecar-40k/`](tic-sidecar-40k/result.md) | 第 1–5 关再跑一遍，motion 换真 sidecar 现算（`--motion sidecar`） | 13/14 阻断 PASS；`MOTION_S_VS_SIDECAR` 140 窗逐位同；`VT_FULL_VS_CACHED` 同上 |
 | [`tic-eval-probe-40k/`](tic-eval-probe-40k/result.md) | 第 6 关：探针版 policy server + 主线 `eval.py` 24 集单次仿真，汇总器核不变量 | 6/7 阻断 PASS；`EVAL_PROMPT=FAIL`（1/24 集 goal 组合训练未见，数据覆盖缺口） |
 | [`tic-vulkan-makeenv/`](tic-vulkan-makeenv/result.md) | 单进程第 28 次 `make_env` 必崩（Vulkan）的根因排查与修法验证 | PASS（复现第 28 轮；两修法 35 轮不崩） |
+| [`vulkan-fix-30ep/`](vulkan-fix-30ep/result.md) | commitV7.2 修法（`GLIBC_TUNABLES`）在真实评估上的验证：单进程连评 30 集 | PASS（第 28 次不再崩，30/30） |
 
 方案、判据总表与结论见 [`../train-infer-consistency.md`](../train-infer-consistency.md)。
 

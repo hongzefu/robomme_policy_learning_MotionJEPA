@@ -1,0 +1,1093 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+INFO:root:Checking history config
+INFO:2026-09-08 01:01:28,961:jax._src.xla_bridge:925: Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+INFO:jax._src.xla_bridge:Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+INFO:2026-09-08 01:01:28,963:jax._src.xla_bridge:925: Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+INFO:jax._src.xla_bridge:Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+INFO:absl:orbax-checkpoint version: 0.11.13
+INFO:absl:Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x7fe5f1f026d0>
+INFO:absl:Restoring checkpoint from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999/params.
+INFO:absl:[thread=MainThread] Failed to get flag value for EXPERIMENTAL_ORBAX_USE_DISTRIBUTED_PROCESS_ID.
+INFO:absl:[process=0] /jax/checkpoint/read/bytes_per_sec: 1.7 GiB/s (total bytes: 6.3 GiB) (time elapsed: 3 seconds) (per-host)
+INFO:absl:Finished restoring checkpoint in 3.70 seconds from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999/params.
+INFO:root:Loading model...
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+max_token_len: 64
+INFO:root:Norm stats not found in /scratch/hongze/robomme_policy_learning_MotionJEPA/runs/assets/mme_vla_suite/robomme, skipping.
+INFO:root:Loaded norm stats from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999/assets/robomme
+Training config:  TrainConfig(name='mme_vla_suite', project_name='openpi', exp_name=<PropagatingMissingType id='140627194041232'>, model=HistoryPi0Config(action_dim=32, action_horizon=20, max_token_len=64, dtype='bfloat16', paligemma_variant='gemma_2b', action_expert_variant='gemma_300m', pi05=True, discrete_state_input=False, memory_expert_variant='gemma_150m', use_history=True, history_config={'budget': 512, 'num_views': 1, 'token_per_image': 16, 'streaming_obs_horizon': 16, 'pool_type': 'mean', 'use_pos_emb': True, 'use_state_emb': False, 'memory_feature': {'img': {'net': 'identity', 'input_dim': 2048}, 'pos': {'input_dim': 768, 'hidden_dim': 768}, 'state': {'input_dim': 8, 'hidden_dim': 512}}, 'integration_type': 'context', 'memory_token_dim': 2048, 'representation_type': 'perceptual', 'perceptual_memory': {'type': 'frame_sampling'}, 'motion': {'enabled': True, 'dim': 768, 'budget': 96, 'stride': 16, 'window_frames': 33, 'window_direction': 'forward', 'grid_origin': 'segment_start', 'store_path': 'v1-store/datasets/4task-motion-40ep/motion', 'source_run': 'wan-v8-filter10-72ep-a/checkpoint_epoch_72.pt#encoder', 'pos_dim': 256, 'frame_size': 256, 'online_gpu': 1}}), weight_loader=CheckpointWeightLoader(params_path='~/.cache/openpi/openpi-assets/checkpoints/pi05_base/params'), pytorch_weight_path=None, pytorch_training_precision='bfloat16', lr_schedule=CosineDecaySchedule(warmup_steps=10000, peak_lr=5e-05, decay_steps=100000, decay_lr=5e-05), optimizer=AdamW(b1=0.9, b2=0.95, eps=1e-08, weight_decay=1e-10, clip_gradient_norm=1.0), ema_decay=0.999, freeze_filter=PathRegex(pattern=re.compile('.*img.*'), sep='/'), data=RoboMMEDataConfig(repo_id='robomme', assets=AssetsConfig(assets_dir=None, asset_id=None), base_config=DataConfig(repo_id=None, asset_id=None, norm_stats=None, repack_transforms=Group(inputs=(), outputs=()), data_transforms=Group(inputs=(), outputs=()), model_transforms=Group(inputs=(), outputs=()), use_quantile_norm=False, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)), assets_base_dir='runs/assets', checkpoint_base_dir='runs/ckpts', seed=42, batch_size=64, num_workers=4, num_train_steps=80000, log_interval=100, save_interval=10000, keep_period=10000, overwrite=False, resume=False, wandb_enabled=True, policy_metadata=None, fsdp_devices=4, resum_ckpt_id=None, dataset_path='data/robomme')
+Data config:  DataConfig(repo_id='robomme', asset_id='robomme', norm_stats=None, repack_transforms=Group(inputs=[RepackTransform(structure={'observation/image': 'image', 'observation/wrist_image': 'wrist_image', 'observation/state': 'state', 'actions': 'actions', 'prompt': 'prompt', 'static_image_emb': 'static_image_emb', 'static_pos_emb': 'static_pos_emb', 'static_state_emb': 'static_state_emb', 'static_mask': 'static_mask', 'motion_emb': 'motion_emb', 'motion_pos': 'motion_pos', 'motion_mask': 'motion_mask', 'mem_order': 'mem_order'})], outputs=()), data_transforms=Group(inputs=(RoboMMEInputs(model_type=<ModelType.PI05: 'pi05'>), DeltaActions(mask=(True, True, True, True, True, True, True, False))), outputs=(AbsoluteActions(mask=(True, True, True, True, True, True, True, False)), RoboMMEOutputs())), model_transforms=Group(inputs=[InjectDefaultPrompt(prompt=None), ResizeImages(height=224, width=224), TokenizePromptWithState(tokenizer=<mme_vla_suite.training.config.PaligemmaTokenizer object at 0x7fe3706a6050>, discrete_state_input=False), PadStatesAndActions(model_action_dim=32)], outputs=()), use_quantile_norm=True, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)
+warning: `VIRTUAL_ENV=.venv` does not match the project environment path `v1-store/venvs/wan` and will be ignored; use `--active` to target the active environment instead
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+[sidecar pid=4173894] 模型就绪 warmup=3.10s vae=9980d252230c265c… ckpt=bae960373041629e…
+INFO:root:Creating server (host: ip-10-242-11-177.us-west-2.compute.internal, ip: 10.242.11.177)
+INFO:websockets.server:server listening on 0.0.0.0:8124
+ERROR:websockets.server:opening handshake failed
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/websockets/http11.py", line 138, in parse
+    request_line = yield from parse_line(read_line)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/websockets/http11.py", line 309, in parse_line
+    line = yield from read_line(MAX_LINE_LENGTH)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/websockets/streams.py", line 46, in read_line
+    raise EOFError(f"stream ends after {p} bytes, before end of line")
+EOFError: stream ends after 0 bytes, before end of line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/websockets/server.py", line 545, in parse
+    request = yield from Request.parse(
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/websockets/http11.py", line 140, in parse
+    raise EOFError("connection closed while reading HTTP request line") from exc
+EOFError: connection closed while reading HTTP request line
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/websockets/asyncio/server.py", line 356, in conn_handler
+    await connection.handshake(
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/websockets/asyncio/server.py", line 207, in handshake
+    raise self.protocol.handshake_exc
+websockets.exceptions.InvalidMessage: did not receive a valid HTTP request
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 35054) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6306.8 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=17870.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=7489.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=116.5
+/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/wan_motion_infer.py:251: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:206.)
+  f = torch.from_numpy(frames_window).permute(0, 3, 1, 2).float().to(device)   # 🔒 (33,3,256,256) 0..255
+[sidecar pid=4173894] 窗 #1 起点 0 耗时 1420 ms（累计 57s）
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1471.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1471.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 34176) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=7.8 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=40.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1469.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1479.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 48114) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.9 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=37.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1469.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 51994) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.3 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=35.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.9
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 34210) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=7.4 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=35.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.3 frames=16 exec_start_idx=0
+[sidecar pid=4173894] 窗 #51 起点 32 耗时 1422 ms（累计 217s）
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1481.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1477.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1468.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1470.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1523.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1508.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.7
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 35764) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=7.9 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=35.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1470.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1502.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1466.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 35656) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.2 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=35.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1473.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1471.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1497.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1469.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1468.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 49488) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=8.4 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=35.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1478.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+[sidecar pid=4173894] 窗 #101 起点 160 耗时 1415 ms（累计 332s）
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 36866) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=19.5 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=36.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=77.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1511.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1508.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 60252) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=20.1 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=40.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1475.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1532.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1505.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 34650) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.7 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=35.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1466.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1471.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.6
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1510.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.6
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 49026) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.0 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1497.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.9
+[sidecar pid=4173894] 窗 #151 起点 64 耗时 1463 ms（累计 440s）
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1531.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.6
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1523.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1527.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1466.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.7
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 58090) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.7 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=37.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=70.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1502.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.6
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1509.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 46560) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=9.5 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=42.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1528.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1520.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+[sidecar pid=4173894] 窗 #201 起点 160 耗时 1417 ms（累计 535s）
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 46852) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.8 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=37.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 57796) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.3 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=37.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 41984) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.1 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1481.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 37096) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.1 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1453.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+[sidecar pid=4173894] 窗 #251 起点 176 耗时 1417 ms（累计 632s）
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 40204) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.6 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 58992) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.7 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 59850) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.2 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 34900) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.1 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1461.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+[sidecar pid=4173894] 窗 #301 起点 176 耗时 1415 ms（累计 730s）
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 33926) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.7 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=74.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1531.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 47338) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.5 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1459.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 33688) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=8.3 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1453.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 53000) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.1 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1453.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+[sidecar pid=4173894] 窗 #351 起点 192 耗时 1417 ms（累计 829s）
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 37714) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.1 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=35.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1453.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 58540) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.7 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=35.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1453.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1454.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 55380) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.8 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.6
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=35.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 42940) opened
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=6.0 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=34.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1457.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+[sidecar pid=4173894] 窗 #401 起点 128 耗时 1416 ms（累计 926s）
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1458.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1456.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1455.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=67.9
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 42940) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 55380) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 58540) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 37714) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 53000) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 33688) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 47338) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 33926) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 34900) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 59850) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 58992) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 40204) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 37096) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 41984) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 57796) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 46852) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 46560) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 58090) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 49026) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 34650) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 60252) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 36866) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 49488) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 35656) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 35764) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 34210) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 51994) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 48114) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 34176) closed
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 35054) closed
+[sidecar pid=4173894] 请求接收失败，退出: 对端 EOF：已收 0/12 字节

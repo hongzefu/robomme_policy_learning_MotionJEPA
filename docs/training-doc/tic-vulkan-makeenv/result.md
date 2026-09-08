@@ -1,5 +1,7 @@
 # tic-vulkan-makeenv —— 结果
 
+> **2026-09-08 已修**：用户选修法 2（`GLIBC_TUNABLES=glibc.rtld.optional_static_tls=8192`），commitV7.2 `8c20c78` 落到全部四个 `eval.py` 启动点；真实评估单进程 30 集验证通过（`docs/training-doc/vulkan-fix-30ep/`，`VULKAN_FIX_30EP=PASS`）。「每进程 ≤ 27 集」红线解除。修法 1（钉住 RenderSystem）未采用，patch 仍留 `records/` 供以后提速立项。
+
 > 起跑 commit `9b3b95f`（clean HEAD；脚本版本 commitV7.1 `a8cfa17`）。2026-09-07 21:05:25 → 21:14:04（8 min 39 s），环境 B，GPU 7，micromamba `robomme` 环境，tmux `tic-vulkan`（结束自行退出）。
 > 原始日志 `records/vulkan.txt`；逐轮指标 `records/probe-tic-{baseline,pin,tls8192}.json`；排查阶段（同脚本未提交版本，同日同卡）的六档 TLS 扫描 `records/tls_scan.txt`、结论行 `records/rootcause.txt`、C 层最小复现三份 `.c`、两份 patch。**三段全部按预期：基线第 28 轮崩、两种修法各 35 轮不崩，`EXIT_CODE=0`。**
 
