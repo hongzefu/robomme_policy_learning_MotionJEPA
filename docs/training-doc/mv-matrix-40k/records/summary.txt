@@ -1,0 +1,97 @@
+MV_GRID=DONE cells=32/32 episodes=6400/6400 errors=0 missing=0 workers=8
+SPLIT_SEED_MATCH=PASS split=test n=3200 mismatch=0 unlogged=0
+SPLIT_SEED_MATCH=PASS split=val n=3200 mismatch=0 unlogged=0
+MV_PAIRING=PASS cells=32 episodes=400 missing_pairs=0
+MV_STRUCT_IDENTICAL=PASS split=test seed=42 episodes=200 first_infer_sha_match=200/200 keys=['motion_mask', 'motion_pos_sha', 'mem_order_sha', 'motion_cols_sha'] conds=['normal', 'mask', 'swap'] swap_emb_differs_or_k0=200/200 note=第二个 infer 起轨迹发散，只核首步；motion_emb 的 sha 三臂必然不同（这正是干预本身）
+MV_STRUCT_IDENTICAL=PASS split=test seed=7 episodes=200 first_infer_sha_match=200/200 keys=['motion_mask', 'motion_pos_sha', 'mem_order_sha', 'motion_cols_sha'] conds=['normal', 'mask', 'swap'] swap_emb_differs_or_k0=200/200 note=第二个 infer 起轨迹发散，只核首步；motion_emb 的 sha 三臂必然不同（这正是干预本身）
+MV_STRUCT_IDENTICAL=PASS split=test seed=2024 episodes=200 first_infer_sha_match=200/200 keys=['motion_mask', 'motion_pos_sha', 'mem_order_sha', 'motion_cols_sha'] conds=['normal', 'mask', 'swap'] swap_emb_differs_or_k0=200/200 note=第二个 infer 起轨迹发散，只核首步；motion_emb 的 sha 三臂必然不同（这正是干预本身）
+MV_STRUCT_IDENTICAL=PASS split=test seed=17 episodes=200 first_infer_sha_match=200/200 keys=['motion_mask', 'motion_pos_sha', 'mem_order_sha', 'motion_cols_sha'] conds=['normal', 'mask', 'swap'] swap_emb_differs_or_k0=200/200 note=第二个 infer 起轨迹发散，只核首步；motion_emb 的 sha 三臂必然不同（这正是干预本身）
+MV_STRUCT_IDENTICAL=PASS split=val seed=42 episodes=200 first_infer_sha_match=200/200 keys=['motion_mask', 'motion_pos_sha', 'mem_order_sha', 'motion_cols_sha'] conds=['normal', 'mask', 'swap'] swap_emb_differs_or_k0=200/200 note=第二个 infer 起轨迹发散，只核首步；motion_emb 的 sha 三臂必然不同（这正是干预本身）
+MV_STRUCT_IDENTICAL=PASS split=val seed=7 episodes=200 first_infer_sha_match=200/200 keys=['motion_mask', 'motion_pos_sha', 'mem_order_sha', 'motion_cols_sha'] conds=['normal', 'mask', 'swap'] swap_emb_differs_or_k0=200/200 note=第二个 infer 起轨迹发散，只核首步；motion_emb 的 sha 三臂必然不同（这正是干预本身）
+MV_STRUCT_IDENTICAL=PASS split=val seed=2024 episodes=200 first_infer_sha_match=200/200 keys=['motion_mask', 'motion_pos_sha', 'mem_order_sha', 'motion_cols_sha'] conds=['normal', 'mask', 'swap'] swap_emb_differs_or_k0=200/200 note=第二个 infer 起轨迹发散，只核首步；motion_emb 的 sha 三臂必然不同（这正是干预本身）
+MV_STRUCT_IDENTICAL=PASS split=val seed=17 episodes=200 first_infer_sha_match=200/200 keys=['motion_mask', 'motion_pos_sha', 'mem_order_sha', 'motion_cols_sha'] conds=['normal', 'mask', 'swap'] swap_emb_differs_or_k0=200/200 note=第二个 infer 起轨迹发散，只核首步；motion_emb 的 sha 三臂必然不同（这正是干预本身）
+DONOR_COVER_ACTUAL windows=756823 exact=422396/756823(55.8%) fallback=119967/756823(15.9%) cycle=214460/756823(28.3%) cross_seg=0/756823(0.0%) by_task=[ButtonUnmask: ex=100065/fa=39910/cy=74051/cr=0, VideoUnmask: ex=20294/fa=4048/cy=2745/cr=0, ButtonUnmaskSwap: ex=235411/fa=56608/cy=108126/cr=0, VideoUnmaskSwap: ex=66626/fa=19401/cy=29538/cr=0] episodes_all_exact=226/400
+DONOR_CROSS_SEG=PASS cross_seg=0
+MV_PAIRED pool=pool400 pair=normal-mask cell=overall n_ep=400 n_seed=4 rate_a=0.2444 rate_b=0.1944 dmean=+5.00pp t_ci=[+3.44,+6.56] boot_ci=[+2.31,+7.62] bonf_t=[+2.36,+7.64] p_gt0=1.000 mcnemar_b=155 c=75 p_by_seed=[0.0019, 0.0026, 0.0599, 0.0247] verdict=POSITIVE
+MV_PAIRED pool=pool400 pair=normal-mask cell=task=ButtonUnmask n_ep=100 dmean=-0.50pp t_ci=[-9.73,+8.73] boot_ci=[-6.50,+5.50] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-mask cell=task=VideoUnmask n_ep=100 dmean=+4.00pp t_ci=[+2.16,+5.84] boot_ci=[+0.75,+8.00] verdict=POSITIVE
+MV_PAIRED pool=pool400 pair=normal-mask cell=task=ButtonUnmaskSwap n_ep=100 dmean=+9.75pp t_ci=[+3.61,+15.89] boot_ci=[+4.25,+15.75] verdict=POSITIVE
+MV_PAIRED pool=pool400 pair=normal-mask cell=task=VideoUnmaskSwap n_ep=100 dmean=+6.75pp t_ci=[+1.49,+12.01] boot_ci=[+1.50,+12.50] verdict=POSITIVE
+MV_PAIRED pool=pool400 pair=normal-mask cell=difficulty=easy n_ep=208 dmean=+6.01pp t_ci=[+3.18,+8.84] boot_ci=[+2.04,+9.74] verdict=POSITIVE
+MV_PAIRED pool=pool400 pair=normal-mask cell=difficulty=medium n_ep=96 dmean=+1.30pp t_ci=[-1.84,+4.44] boot_ci=[-4.43,+7.03] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-mask cell=difficulty=hard n_ep=96 dmean=+6.51pp t_ci=[+3.68,+9.34] boot_ci=[+3.39,+10.42] verdict=POSITIVE
+MV_PAIRED pool=pool400 pair=normal-mask cell=start_k=k=0 n_ep=200 dmean=+4.62pp t_ci=[-1.62,+10.87] boot_ci=[+0.50,+8.75] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-mask cell=start_k=k>0 n_ep=200 dmean=+5.38pp t_ci=[+1.85,+8.90] boot_ci=[+2.25,+8.75] verdict=POSITIVE
+MV_PAIRED pool=pool400 pair=normal-mask cell=steps_bin=Q1 n_ep=108 dmean=+1.85pp t_ci=[-2.48,+6.19] boot_ci=[-0.93,+4.86] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-mask cell=steps_bin=Q2 n_ep=92 dmean=+2.45pp t_ci=[+0.79,+4.10] boot_ci=[-1.36,+7.34] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-mask cell=steps_bin=Q3 n_ep=102 dmean=+5.88pp t_ci=[-0.74,+12.50] boot_ci=[-1.96,+11.52] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-mask cell=steps_bin=Q4 n_ep=98 dmean=+9.95pp t_ci=[+2.64,+17.25] boot_ci=[+4.85,+15.05] verdict=POSITIVE
+MV_PAIRED pool=pool400 pair=normal-swap cell=overall n_ep=400 n_seed=4 rate_a=0.2444 rate_b=0.2200 dmean=+2.44pp t_ci=[+0.16,+4.72] boot_ci=[-0.62,+5.62] bonf_t=[-1.43,+6.30] p_gt0=0.933 mcnemar_b=156 c=117 p_by_seed=[0.3211, 0.0505, 0.6305, 0.45] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=task=ButtonUnmask n_ep=100 dmean=+1.50pp t_ci=[-6.77,+9.77] boot_ci=[-5.51,+8.75] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=task=VideoUnmask n_ep=100 dmean=+2.00pp t_ci=[-0.90,+4.90] boot_ci=[-3.25,+7.50] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=task=ButtonUnmaskSwap n_ep=100 dmean=+3.25pp t_ci=[-2.16,+8.66] boot_ci=[-2.75,+9.50] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=task=VideoUnmaskSwap n_ep=100 dmean=+3.00pp t_ci=[-2.36,+8.36] boot_ci=[-3.75,+10.25] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=difficulty=easy n_ep=208 dmean=+4.93pp t_ci=[+3.02,+6.84] boot_ci=[+0.12,+9.86] verdict=POSITIVE
+MV_PAIRED pool=pool400 pair=normal-swap cell=difficulty=medium n_ep=96 dmean=-4.17pp t_ci=[-7.75,-0.59] boot_ci=[-10.68,+1.30] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=difficulty=hard n_ep=96 dmean=+3.65pp t_ci=[-0.74,+8.03] boot_ci=[+0.00,+8.33] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=start_k=k=0 n_ep=200 dmean=+2.38pp t_ci=[-3.93,+8.68] boot_ci=[-2.25,+7.00] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=start_k=k>0 n_ep=200 dmean=+2.50pp t_ci=[-1.12,+6.12] boot_ci=[-1.75,+6.88] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=donor=exact n_ep=280 dmean=+0.98pp t_ci=[-1.06,+3.02] boot_ci=[-2.05,+5.09] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=donor=fallback n_ep=59 dmean=+12.29pp t_ci=[+3.38,+21.20] boot_ci=[+3.39,+22.03] verdict=POSITIVE
+MV_PAIRED pool=pool400 pair=normal-swap cell=donor=cycle n_ep=61 dmean=-0.41pp t_ci=[-17.09,+16.27] boot_ci=[-8.20,+6.56] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=steps_bin=Q1 n_ep=108 dmean=+2.78pp t_ci=[-1.03,+6.58] boot_ci=[-1.39,+7.41] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=steps_bin=Q2 n_ep=92 dmean=+0.00pp t_ci=[-2.82,+2.82] boot_ci=[-6.25,+6.25] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=steps_bin=Q3 n_ep=102 dmean=+0.49pp t_ci=[-7.31,+8.29] boot_ci=[-4.66,+10.54] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-swap cell=steps_bin=Q4 n_ep=98 dmean=+6.38pp t_ci=[-1.05,+13.80] boot_ci=[+0.00,+11.48] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=overall n_ep=400 n_seed=4 rate_a=0.1944 rate_b=0.2200 dmean=-2.56pp t_ci=[-3.44,-1.68] boot_ci=[-5.56,+0.38] bonf_t=[-4.06,-1.07] p_gt0=0.042 mcnemar_b=99 c=140 p_by_seed=[0.1409, 0.4188, 0.2351, 0.1849] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=task=ButtonUnmask n_ep=100 dmean=+2.00pp t_ci=[+0.70,+3.30] boot_ci=[-5.75,+9.50] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=task=VideoUnmask n_ep=100 dmean=-2.00pp t_ci=[-3.30,-0.70] boot_ci=[-5.75,+1.50] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=task=ButtonUnmaskSwap n_ep=100 dmean=-6.50pp t_ci=[-9.26,-3.74] boot_ci=[-11.50,-1.50] verdict=NEGATIVE
+MV_PAIRED pool=pool400 pair=mask-swap cell=task=VideoUnmaskSwap n_ep=100 dmean=-3.75pp t_ci=[-7.73,+0.23] boot_ci=[-10.00,+2.50] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=difficulty=easy n_ep=208 dmean=-1.08pp t_ci=[-2.04,-0.12] boot_ci=[-5.29,+3.73] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=difficulty=medium n_ep=96 dmean=-5.47pp t_ci=[-9.38,-1.55] boot_ci=[-12.24,+0.78] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=difficulty=hard n_ep=96 dmean=-2.86pp t_ci=[-5.69,-0.03] boot_ci=[-4.95,-1.04] verdict=NEGATIVE
+MV_PAIRED pool=pool400 pair=mask-swap cell=start_k=k=0 n_ep=200 dmean=-2.25pp t_ci=[-3.28,-1.22] boot_ci=[-7.00,+2.25] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=start_k=k>0 n_ep=200 dmean=-2.88pp t_ci=[-4.64,-1.11] boot_ci=[-6.50,+0.75] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=donor=exact n_ep=280 dmean=-1.25pp t_ci=[-2.75,+0.25] boot_ci=[-4.38,+2.68] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=donor=fallback n_ep=59 dmean=-5.51pp t_ci=[-11.49,+0.47] boot_ci=[-11.86,+1.27] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=donor=cycle n_ep=61 dmean=-5.74pp t_ci=[-9.10,-2.37] boot_ci=[-11.48,-0.41] verdict=NEGATIVE
+MV_PAIRED pool=pool400 pair=mask-swap cell=steps_bin=Q1 n_ep=108 dmean=+0.93pp t_ci=[-0.28,+2.13] boot_ci=[-3.01,+5.32] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=steps_bin=Q2 n_ep=92 dmean=-2.45pp t_ci=[-4.10,-0.79] boot_ci=[-8.70,+3.26] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=steps_bin=Q3 n_ep=102 dmean=-5.39pp t_ci=[-8.09,-2.69] boot_ci=[-9.07,+5.64] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=mask-swap cell=steps_bin=Q4 n_ep=98 dmean=-3.57pp t_ci=[-5.19,-1.95] boot_ci=[-8.67,+0.51] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=overall n_ep=400 n_seed=4 rate_a=0.2444 rate_b=0.2525 dmean=-0.81pp t_ci=[-2.63,+1.01] boot_ci=[-4.31,+2.69] bonf_t=[-3.89,+2.27] p_gt0=0.317 mcnemar_b=167 c=180 p_by_seed=[0.4397, 0.6063, 1.0, 0.9161] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=task=ButtonUnmask n_ep=100 dmean=-2.25pp t_ci=[-4.64,+0.14] boot_ci=[-9.25,+4.50] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=task=VideoUnmask n_ep=100 dmean=+1.75pp t_ci=[-0.97,+4.47] boot_ci=[-5.50,+8.75] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=task=ButtonUnmaskSwap n_ep=100 dmean=-2.00pp t_ci=[-5.44,+1.44] boot_ci=[-9.00,+5.00] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=task=VideoUnmaskSwap n_ep=100 dmean=-0.75pp t_ci=[-9.60,+8.10] boot_ci=[-8.00,+6.25] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=difficulty=easy n_ep=208 dmean=+1.44pp t_ci=[-0.09,+2.97] boot_ci=[-3.97,+6.73] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=difficulty=medium n_ep=96 dmean=-4.17pp t_ci=[-14.02,+5.68] boot_ci=[-12.24,+3.12] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=difficulty=hard n_ep=96 dmean=-2.34pp t_ci=[-7.47,+2.79] boot_ci=[-5.99,+1.56] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=start_k=k=0 n_ep=200 dmean=-2.12pp t_ci=[-4.50,+0.25] boot_ci=[-7.00,+2.75] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=start_k=k>0 n_ep=200 dmean=+0.50pp t_ci=[-5.01,+6.01] boot_ci=[-4.62,+5.38] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=steps_bin=Q1 n_ep=108 dmean=-1.85pp t_ci=[-8.10,+4.40] boot_ci=[-7.87,+4.17] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=steps_bin=Q2 n_ep=92 dmean=+0.27pp t_ci=[-4.49,+5.03] boot_ci=[-7.07,+7.88] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=steps_bin=Q3 n_ep=102 dmean=+1.47pp t_ci=[-3.38,+6.32] boot_ci=[-4.66,+8.33] verdict=NOT_DETECTED
+MV_PAIRED pool=pool400 pair=normal-official cell=steps_bin=Q4 n_ep=98 dmean=-3.06pp t_ci=[-8.20,+2.07] boot_ci=[-9.69,+3.32] verdict=NOT_DETECTED
+MV_PAIRED pool=split=test pair=normal-mask cell=overall n_ep=200 n_seed=4 rate_a=0.2487 rate_b=0.2062 dmean=+4.25pp t_ci=[+2.36,+6.14] boot_ci=[+0.50,+8.12] bonf_t=[+1.04,+7.46] p_gt0=0.985 mcnemar_b=78 c=44 p_by_seed=[0.21, 0.0652, 0.3105, 0.1849] verdict=POSITIVE
+MV_PAIRED pool=split=test pair=normal-swap cell=overall n_ep=200 n_seed=4 rate_a=0.2487 rate_b=0.2238 dmean=+2.50pp t_ci=[-0.68,+5.68] boot_ci=[-1.50,+6.50] bonf_t=[-2.89,+7.89] p_gt0=0.886 mcnemar_b=72 c=52 p_by_seed=[0.7201, 0.0895, 0.7201, 0.7011] verdict=NOT_DETECTED
+MV_PAIRED pool=split=test pair=mask-swap cell=overall n_ep=200 n_seed=4 rate_a=0.2062 rate_b=0.2238 dmean=-1.75pp t_ci=[-3.13,-0.37] boot_ci=[-5.75,+2.12] bonf_t=[-4.08,+0.58] p_gt0=0.181 mcnemar_b=53 c=67 p_by_seed=[0.5716, 1.0, 0.6177, 0.4583] verdict=NOT_DETECTED
+MV_PAIRED pool=split=test pair=normal-official cell=overall n_ep=200 n_seed=4 rate_a=0.2487 rate_b=0.2337 dmean=+1.50pp t_ci=[-1.02,+4.02] boot_ci=[-3.50,+6.50] bonf_t=[-2.76,+5.76] p_gt0=0.721 mcnemar_b=93 c=81 p_by_seed=[1.0, 1.0, 0.6271, 0.3817] verdict=NOT_DETECTED
+MV_PAIRED pool=split=val pair=normal-mask cell=overall n_ep=200 n_seed=4 rate_a=0.2400 rate_b=0.1825 dmean=+5.75pp t_ci=[+3.86,+7.64] boot_ci=[+2.25,+9.38] bonf_t=[+2.54,+8.96] p_gt0=1.000 mcnemar_b=77 c=31 p_by_seed=[0.0026, 0.0241, 0.136, 0.0987] verdict=POSITIVE
+MV_PAIRED pool=split=val pair=normal-swap cell=overall n_ep=200 n_seed=4 rate_a=0.2400 rate_b=0.2162 dmean=+2.38pp t_ci=[+0.61,+4.14] boot_ci=[-2.50,+7.50] bonf_t=[-0.61,+5.36] p_gt0=0.825 mcnemar_b=84 c=65 p_by_seed=[0.3915, 0.3489, 0.8714, 0.6177] verdict=NOT_DETECTED
+MV_PAIRED pool=split=val pair=mask-swap cell=overall n_ep=200 n_seed=4 rate_a=0.1825 rate_b=0.2162 dmean=-3.38pp t_ci=[-4.14,-2.61] boot_ci=[-7.75,+1.00] bonf_t=[-4.67,-2.08] p_gt0=0.061 mcnemar_b=46 c=73 p_by_seed=[0.1849, 0.3449, 0.3105, 0.3449] verdict=NOT_DETECTED
+MV_PAIRED pool=split=val pair=normal-official cell=overall n_ep=200 n_seed=4 rate_a=0.2400 rate_b=0.2712 dmean=-3.12pp t_ci=[-4.32,-1.93] boot_ci=[-8.12,+1.75] bonf_t=[-5.15,-1.10] p_gt0=0.107 mcnemar_b=74 c=99 p_by_seed=[0.2682, 0.3817, 0.5424, 0.5424] verdict=NOT_DETECTED
+MV_RATE cond=official pool=pool400 mean=0.2525 sd=0.0110 by_seed=[0.2575, 0.265, 0.2475, 0.24]
+MV_RATE cond=official pool=split=test mean=0.2337 sd=0.0184 by_seed=[0.235, 0.255, 0.235, 0.21]
+MV_RATE cond=official pool=split=val mean=0.2712 sd=0.0085 by_seed=[0.28, 0.275, 0.26, 0.27]
+MV_RATE cond=normal pool=pool400 mean=0.2444 sd=0.0052 by_seed=[0.2375, 0.25, 0.245, 0.245]
+MV_RATE cond=normal pool=split=test mean=0.2487 sd=0.0111 by_seed=[0.235, 0.26, 0.255, 0.245]
+MV_RATE cond=normal pool=split=val mean=0.2400 sd=0.0041 by_seed=[0.24, 0.24, 0.235, 0.245]
+MV_RATE cond=mask pool=pool400 mean=0.1944 sd=0.0097 by_seed=[0.185, 0.1875, 0.205, 0.2]
+MV_RATE cond=mask pool=split=test mean=0.2062 sd=0.0095 by_seed=[0.2, 0.2, 0.22, 0.205]
+MV_RATE cond=mask pool=split=val mean=0.1825 sd=0.0119 by_seed=[0.17, 0.175, 0.19, 0.195]
+MV_RATE cond=swap pool=pool400 mean=0.2200 sd=0.0124 by_seed=[0.215, 0.205, 0.2325, 0.2275]
+MV_RATE cond=swap pool=split=test mean=0.2238 sd=0.0149 by_seed=[0.22, 0.205, 0.24, 0.23]
+MV_RATE cond=swap pool=split=val mean=0.2162 sd=0.0103 by_seed=[0.21, 0.205, 0.225, 0.225]
+MV_SUMMARY=PASS cells=32 stat_seeds=[42, 7, 2024, 17] pairs=4 rope_pp=2.0 t_q=3.182 t_q_bonf=5.392 blocking=13/13 observe=83

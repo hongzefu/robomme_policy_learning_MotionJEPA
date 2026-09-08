@@ -1,13 +1,20 @@
 # motion memory 利用率评估（motion-variance）
 
 > 环境 B（AWS 单机 8×A100，2026-09-08 起）。工具在 `scripts/motion-variance/`（目录 README 有文件清单与完整跑法）；留档 `training-doc/mv-openloop-40k/`（阶段 0+1）与 `training-doc/mv-matrix-40k/`（阶段 2）；图在 `motion-utilization/figures/`。
-> 计划稿经 Codex 2026-09-08 审计修订（10 条），修订对照见第十一节。本页的数字一律现读留档 `records/`，未产出的段落标「待测」。
+> 计划稿经 Codex 2026-09-08 审计修订（10 条），修订对照见第十一节。本页的数字一律现读留档 `records/`。
+
+![fig1](motion-utilization/figures/fig1-design.png)
 
 ## 一、结论摘要
 
-待测——阶段 2 矩阵跑完后按第六节预注册措辞填写：一句话结论 + 三个数（pooled 400 集 `normal−mask` 配对差与区间、`mask−swap`、阶段 0 `mask/noise`）。
+**motion token 通路被模型读取并带来成功率收益；收益主要来自通路存在 / 位置信号，正确内容相对异集内容的增量尚未分辨；自训模型与官方 baseline 尚未检出差异。**（2026-09-08，`training-doc/mv-openloop-40k/`、`mv-matrix-40k/`）
 
-阶段 0 smoke（12 点，2 noise seed，`open_loop.smoke.log`）已给出方向性信号：Video 类任务决策点上屏蔽 motion 通路的动作差是 noise 标尺的 3.5–23 倍，换异集内容为 1–7 倍；Button 类前两点 `k=0` 处严格为 0（`OL_ZEROK_NULL=PASS`）。正式数字以 `mv-openloop-40k/result.md` 为准。
+三个数：
+- pooled 400 集 `normal − mask` = **+5.00pp**，t 区间 [+3.44, +6.56]、bootstrap [+2.31, +7.62]、Bonferroni [+2.36, +7.64]，四 seed 各 +5.25 / +6.25 / +3.25 / +5.25 → **POSITIVE**；屏蔽通路还使 27% 的集 timeout（normal 1.6%）。
+- `mask − swap` = −2.56pp（异集内容略好于屏蔽），t [−3.44, −1.68] 全负但 bootstrap [−5.56, +0.38] 含 0 → NOT_DETECTED；`normal − swap` = +2.44 → NOT_DETECTED。
+- 阶段 0 开环：屏蔽通路的动作差 = noise 标尺的 **9.9 倍**（动作 std 的 73%），换异集内容 6.4 倍；机制上 action 直读富集在第 15–16 层，主通路是第 0–1 层被帧/文本 token 吸收后间接传播，内容敏感点在第 10 层。
+
+`normal − official` = −0.81pp，t [−2.63, +1.01]（下界跨出 ±2pp，不判等价）→ NOT_DETECTED。
 
 ## 二、问题与既有证据缺口
 
@@ -45,7 +52,7 @@ motion token = `motion_encoder_static(concat(motion_emb, silu(motion_pos_proj(mo
 | `MV_PAD_INVARIANT` | padding 槽灌 0 / N(0,10) / ±1e4，动作逐位不变 | PASS 12/12 |
 | `MV_MASK_CONTENT_NULL` | `mask_all` 下有效槽内容换 0 / 随机，动作逐位不变 | PASS 12/12 |
 | `UNROLL_VS_SCAN_BF16`（观察） | 18 层展开 vs `nn.scan`，bf16 | 不逐位：`rel_fro≈3.4e-3`，与仓库已知 `VT_FULL_VS_CACHED`（两份 XLA 编译产物）同性质 |
-| `UNROLL_VS_SCAN_F32` / `LAYER_SELFCHECK_F32` | 参数与 `embed_dtype` 升 f32、`matmul_precision=highest`，`rel_fro ≤ 1e-5` | 待测（计划原定 bf16 逐位阻断，实测不成立后改为 f32 语义闸——对计划验收判据的一处偏离） |
+| `UNROLL_VS_SCAN_F32` / `LAYER_SELFCHECK_F32` | 参数与 `embed_dtype` 升 f32、`matmul_precision=highest`，`rel_fro ≤ 1e-5` | **PASS，rel_fro = 0（逐位相同）**（计划原定 bf16 逐位阻断，实测不成立后改为 f32 语义闸——对计划验收判据的一处偏离） |
 | `ATTN_UNIFORM_SELFCHECK` | 合法 mask 均匀分布走同一归约，share == 逐 query 均匀基准 | PASS |
 | `GRAD_SELFCHECK` | 18 层梯度有限、padding 位梯度严格 0 | PASS |
 
@@ -61,25 +68,56 @@ motion token = `motion_encoder_static(concat(motion_emb, silu(motion_pos_proj(mo
 | 任意 | `normal ≈ mask`，`swap < mask` | 「异集内容有害」，不得写成「正确 motion 有收益」 |
 | 任意 | 全在 0 以下 | 「motion token 通路造成损失」 |
 
-结果：待测（`OL_ACT_DELTA` / `OL_ZEROK_NULL`，按 k 档、任务、cold/steady 分层；图 `figures/fig4-noise-facet.png`）。
+结果（149 点 × 5 noise seed，`mv-openloop-40k/result.md`）：mask/noise **9.88（中位 7.52）**，swap/noise 6.36（中位 4.34）；反归一化 = 动作 std 的 73% / 43%。按 k：k=0 → 0.000（逐位，`OL_ZEROK_NULL=PASS`）、1–4 → 2.4 / 2.3、5–12 → 9.5 / 6.3、>12 → 11.1 / 7.0；cold 3.4 / 1.0，steady 10.3 / 6.7；四任务 mask 8.5–11.0，swap 2.7（ButtonUnmask）/ 6.5–7.9。→ 预注册第一行（敏感性较低）排除。
+
+![fig4](motion-utilization/figures/fig4-noise-facet.png)
+*fig4：x = 有效 motion 窗数 k，y = 动作差 / noise 标尺；149 点、5 noise seed；虚线 1.0 = 噪声标尺，点线 0.25 = 预注册低敏感阈；来源 `mv-openloop-40k/records/open_loop.json`。*
 
 ## 七、阶段 1：18 层机制
 
-每集 cold / early / mid / late 4 点、6 集（含 ButtonUnmask）。(i) `LAYER_ATTN`：去噪 action query 的 motion 份额 / 逐 query 合法-key 均匀基准（剔除 padding query）；(ii) `LAYER_ACT_DELTA`：`step_only(l)` / `both(l)` / `kv_vzero(l)` / `kv_donor(l)` 四种逐层干预的完整 10 步最终动作差，donor K/V 来自接收方同 obs 换内容后重新 prefill；(iii) `LAYER_GRAD`：固定 `(obs, x_t, t, u_t)` 的 loss 对第 l 层入口隐状态的梯度，t ∈ {0.1, 0.5, 0.9}。结果：待测（图 `figures/fig5-layers.png`）。
+每集 cold / early / mid / late 4 点、6 集（含 ButtonUnmask）。(i) `LAYER_ATTN`：去噪 action query 的 motion 份额 / 逐 query 合法-key 均匀基准（剔除 padding query）；(ii) `LAYER_ACT_DELTA`：`step_only(l)` / `both(l)` / `kv_vzero(l)` / `kv_donor(l)` 四种逐层干预的完整 10 步最终动作差，donor K/V 来自接收方同 obs 换内容后重新 prefill；(iii) `LAYER_GRAD`：固定 `(obs, x_t, t, u_t)` 的 loss 对第 l 层入口隐状态的梯度，t ∈ {0.1, 0.5, 0.9}。结果（24 点）：(i) action query 富集度第 0–14 层全 < 1，**第 15 层 6.2、第 16 层 4.1**，第 17 层 0.18；第 15 层单 head 份额 0.31；prefill 侧 frame query 第 0/1 层富集 36/34，文本第 1 层 39。(ii) `both(l)`：第 1 层 2.9×、第 0 层 1.2× 噪声，其余 ≤ 0.26；`step_only(l)`：第 16 层 0.25；`kv_donor(l)`：**第 10 层 0.32**；18 层全挡 7.5×（与阶段 0 一致）。(iii) 梯度逐 token 比 motion/frame：第 0 层 68–137×、第 16 层 20–23×、其余 2–6×。→ 主通路是第 0–1 层被帧/文本 token 吸收后间接传播；action 直读 15–16 层；内容敏感读取点第 10 层。
+
+![fig5](motion-utilization/figures/fig5-layers.png)
+*fig5：(a) 去噪 action query 的 motion 份额 / 逐 query 均匀基准；(a') 逐 head；(b) 只动第 l 层的最终动作差 / 噪声；(c) 第 l 层入口隐状态的逐 token 梯度 RMS（log10）。24 点 = 6 集 × cold/early/mid/late。*
 
 ## 八、阶段 2：闭环矩阵与 pooled 400 配对统计
 
-4 条件 × 4 seed（42/7/2024/17）× (test 200 + val 200) = 6400 集，32 批 seed-major，8 worker stride 分片（每片 28/28/24×6 集，worker k 固定 GPU k）。统计（`summarize_mv.py`）：逐 seed 配对差 `mean ± 3.182·sd/√4`；episode bootstrap 10000 次按 split×task 分层、所有条件与 seed 共享索引；McNemar b/c 与精确二项 p；等价判定 = t 与 bootstrap 区间都落在 ±2pp 内；分层 task / difficulty / 启动时空窗（首步 k=0）/ donor 覆盖档 / steps 四分位（取 normal seed 42 的 steps，描述性）。结果：待测（`mv-matrix-40k/records/{summary.txt,paired_stats.json}`，图 fig2 / fig3）。
+4 条件 × 4 seed（42/7/2024/17）× (test 200 + val 200) = 6400 集，32 批 seed-major，8 worker stride 分片（每片 28/28/24×6 集，worker k 固定 GPU k）。统计（`summarize_mv.py`）：逐 seed 配对差 `mean ± 3.182·sd/√4`；episode bootstrap 10000 次按 split×task 分层、所有条件与 seed 共享索引；McNemar b/c 与精确二项 p；等价判定 = t 与 bootstrap 区间都落在 ±2pp 内；分层 task / difficulty / 启动时空窗（首步 k=0）/ donor 覆盖档 / steps 四分位（取 normal seed 42 的 steps，描述性）。结果（`mv-matrix-40k/result.md`；32 格 6400 集 0 error，`MV_STRUCT_IDENTICAL` 八格 200/200）：
+
+| 条件 | pooled 400（4 seed 均值 ± sd） | test | val | timeout |
+|---|---|---|---|---|
+| official | 25.25 ± 1.10 | 23.37 | 27.12 | 0.4% |
+| normal | 24.44 ± 0.52 | 24.87 | 24.00 | 1.6% |
+| mask | **19.44 ± 0.97** | 20.62 | 18.25 | **27.0%** |
+| swap | 22.00 ± 1.24 | 22.38 | 21.62 | 10.1% |
+
+| 配对 | Δ（pp） | t 区间 df=3 | bootstrap | verdict |
+|---|---|---|---|---|
+| normal − mask | **+5.00** | [+3.44, +6.56] | [+2.31, +7.62] | **POSITIVE** |
+| normal − swap | +2.44 | [+0.16, +4.72] | [−0.62, +5.62] | NOT_DETECTED |
+| mask − swap | −2.56 | [−3.44, −1.68] | [−5.56, +0.38] | NOT_DETECTED |
+| normal − official | −0.81 | [−2.63, +1.01] | [−4.31, +2.69] | NOT_DETECTED |
+
+分层：`normal−mask` 在 VideoUnmask +4.0、ButtonUnmaskSwap +9.75、VideoUnmaskSwap +6.75（均 POSITIVE），ButtonUnmask −0.5（ND）；easy +6.0 / hard +6.5（POSITIVE）、medium +1.3；steps Q4 +9.95（集越长收益越大）。`mask−swap` 在 ButtonUnmaskSwap −6.5（NEGATIVE：异集内容好于屏蔽）。
+
+![fig2](motion-utilization/figures/fig2-rates.png)
+*fig2：成功率，柱 = 4 seed 均值，棒 = min–max，点 = 各 seed；每格 n=50/seed（合计 200/seed）。*
+
+![fig3](motion-utilization/figures/fig3-forest.png)
+*fig3：配对差森林图，细线 = t 区间（df=3），粗线 = 按 split×task 分层的 bootstrap 95%（10000 次，条件与 seed 共享索引），灰带 = ±2pp 等价界。*
 
 ## 九、donor bank 与覆盖率
 
-主 donor = `hash(split|task|recv_ep)` 在同任务 100 集里固定选（四 seed 共用）；偏移超出主 donor → 沿同任务 exec 窗数降序的兜底链取精确偏移（fallback）；超全库上限（BU 27 / BUS 33 / VU 19 / VUS 22 窗）→ 循环（cycle）。最坏估计（接收方 t=es+1300）`DONOR_COVER_EST exact 20.9% / fallback 13.1% / cycle 66.1%`；实际比例按推理次数 `DONOR_COVER_ACTUAL` 重算（待测）。阻断只有 `self_loops=0`、`cross_seg=0`。
+主 donor = `hash(split|task|recv_ep)` 在同任务 100 集里固定选（四 seed 共用）；偏移超出主 donor → 沿同任务 exec 窗数降序的兜底链取精确偏移（fallback）；超全库上限（BU 27 / BUS 33 / VU 19 / VUS 22 窗）→ 循环（cycle）。最坏估计（接收方 t=es+1300）`DONOR_COVER_EST exact 20.9% / fallback 13.1% / cycle 66.1%`；实际（756,823 次窗口查表）`DONOR_COVER_ACTUAL exact 55.8% / fallback 15.9% / cycle 28.3% / cross_seg 0`；开环 exact 79%。阻断只有 `self_loops=0`、`cross_seg=0`。donor 档分层：`normal−swap` exact +1.0（ND, n=280）、fallback +12.3（POS, n=59）、cycle −0.4；`mask−swap` cycle −5.7（NEGATIVE）。
+
+![fig6](motion-utilization/figures/fig6-donor.png)
+*fig6：(a) swap 条件按实际推理次数的 donor 覆盖占比；(b) 库中 donor exec 窗数分布。*
 
 ## 十、威胁到结论的因素与已做的否证
 
-- k=0 的点屏蔽/替换逐位无影响（`OL_ZEROK_NULL`）；padding 扰动无影响（`MV_PAD_INVARIANT`）；三臂首步结构 sha 全等（`MV_STRUCT_IDENTICAL`，待测）。
+- k=0 的点屏蔽/替换逐位无影响（`OL_ZEROK_NULL=PASS`）；padding 扰动无影响（`MV_PAD_INVARIANT=PASS`）；三臂首步结构 sha 八格全等（`MV_STRUCT_IDENTICAL=PASS 200/200`）。
 - donor 是专家演示 motion、接收方是策略 rollout（分布差异）——`swap` 固定称「异集专家 motion」，与 `mask` 并列报。
-- 跨卡：不同型号（A100 vs Ada）已实测不一致（单任务 ±14pp）；同型号 8 卡本轮做 8 集校验 `MV_XGPU`（待测）；矩阵固定映射使跨卡差异不进主比较。
+- 跨卡：不同型号（A100 vs Ada）已实测不一致（单任务 ±14pp）；同型号 A100 本轮 4 集校验 **`MV_XGPU=BITEXACT`**（GPU 0 vs 3，125/125 次推理动作 sha 一致）；矩阵固定映射使跨卡差异不进主比较。
 - 本轮不能替代「带/不带 motion 训练」的因果对照；审计 D-A1 / B-A2 原样保留；test ep 0–9 在 encoder 训练集内。
 
 ## 十一、复现命令、判定行与计划修订对照

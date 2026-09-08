@@ -1,0 +1,635 @@
+MV_MATRIX_START HEAD=49f68c7bcb7c4acc312c99cb7b25cc50bb7b5f48 branch=v2-motionmem bank_sha=6e70604da518c156 seeds=42,7,2024,17 splits=test,val conds=official,normal,mask,swap batches=32 workers=8 skip_done=1 start=2026-09-08 05:04:11
+--- BATCH 1/32 cond=official split=test seed=42 port_base=9300 start=2026-09-08 05:04:11 ---
+=== MV_BATCH_START cond=official split=test seed=42 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9300 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t42-official start=2026-09-08 05:04:11 ===
+起 mv-t42-official-w0: gpu=0 port=9300 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-official-w0.log
+起 mv-t42-official-w1: gpu=1 port=9301 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-official-w1.log
+起 mv-t42-official-w2: gpu=2 port=9302 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-official-w2.log
+起 mv-t42-official-w3: gpu=3 port=9303 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-official-w3.log
+起 mv-t42-official-w4: gpu=4 port=9304 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-official-w4.log
+起 mv-t42-official-w5: gpu=5 port=9305 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-official-w5.log
+起 mv-t42-official-w6: gpu=6 port=9306 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-official-w6.log
+起 mv-t42-official-w7: gpu=7 port=9307 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-official-w7.log
+  mv-t42-official-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t42-official-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t42-official-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t42-official-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t42-official-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t42-official-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t42-official-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t42-official-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=official split=test seed=42 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 05:11:42
+EXIT_CODE=0
+MV_BATCH=PASS cond=official split=test seed=42 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 05:11:42
+跳过已完成批 cond=normal split=test seed=42
+跳过已完成批 cond=mask split=test seed=42
+--- BATCH 4/32 cond=swap split=test seed=42 port_base=9324 start=2026-09-08 05:11:42 ---
+=== MV_BATCH_START cond=swap split=test seed=42 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9324 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t42-swap start=2026-09-08 05:11:42 ===
+起 mv-t42-swap-w0: gpu=0 port=9324 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-swap-w0.log
+起 mv-t42-swap-w1: gpu=1 port=9325 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-swap-w1.log
+起 mv-t42-swap-w2: gpu=2 port=9326 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-swap-w2.log
+起 mv-t42-swap-w3: gpu=3 port=9327 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-swap-w3.log
+起 mv-t42-swap-w4: gpu=4 port=9328 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-swap-w4.log
+起 mv-t42-swap-w5: gpu=5 port=9329 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-swap-w5.log
+起 mv-t42-swap-w6: gpu=6 port=9330 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-swap-w6.log
+起 mv-t42-swap-w7: gpu=7 port=9331 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-swap-w7.log
+  mv-t42-swap-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t42-swap-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t42-swap-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t42-swap-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t42-swap-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t42-swap-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t42-swap-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t42-swap-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=swap split=test seed=42 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 05:21:53
+EXIT_CODE=0
+MV_BATCH=PASS cond=swap split=test seed=42 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 05:21:53
+--- BATCH 5/32 cond=official split=val seed=42 port_base=9332 start=2026-09-08 05:21:53 ---
+=== MV_BATCH_START cond=official split=val seed=42 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9332 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v42-official start=2026-09-08 05:21:53 ===
+起 mv-v42-official-w0: gpu=0 port=9332 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-official-w0.log
+起 mv-v42-official-w1: gpu=1 port=9333 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-official-w1.log
+起 mv-v42-official-w2: gpu=2 port=9334 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-official-w2.log
+起 mv-v42-official-w3: gpu=3 port=9335 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-official-w3.log
+起 mv-v42-official-w4: gpu=4 port=9336 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-official-w4.log
+起 mv-v42-official-w5: gpu=5 port=9337 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-official-w5.log
+起 mv-v42-official-w6: gpu=6 port=9338 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-official-w6.log
+起 mv-v42-official-w7: gpu=7 port=9339 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-official-w7.log
+  mv-v42-official-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v42-official-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v42-official-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v42-official-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v42-official-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v42-official-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v42-official-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v42-official-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=official split=val seed=42 episodes=200/200 workers=8/8 wall_min=9 sidecar=off cross_seg=0 suffix= end=2026-09-08 05:31:24
+EXIT_CODE=0
+MV_BATCH=PASS cond=official split=val seed=42 episodes=200/200 workers=8/8 wall_min=9 sidecar=off cross_seg=0 suffix= end=2026-09-08 05:31:24
+--- BATCH 6/32 cond=normal split=val seed=42 port_base=9340 start=2026-09-08 05:31:24 ---
+=== MV_BATCH_START cond=normal split=val seed=42 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9340 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v42-normal start=2026-09-08 05:31:24 ===
+起 mv-v42-normal-w0: gpu=0 port=9340 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-normal-w0.log
+起 mv-v42-normal-w1: gpu=1 port=9341 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-normal-w1.log
+起 mv-v42-normal-w2: gpu=2 port=9342 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-normal-w2.log
+起 mv-v42-normal-w3: gpu=3 port=9343 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-normal-w3.log
+起 mv-v42-normal-w4: gpu=4 port=9344 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-normal-w4.log
+起 mv-v42-normal-w5: gpu=5 port=9345 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-normal-w5.log
+起 mv-v42-normal-w6: gpu=6 port=9346 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-normal-w6.log
+起 mv-v42-normal-w7: gpu=7 port=9347 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-normal-w7.log
+  mv-v42-normal-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v42-normal-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v42-normal-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-normal-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-normal-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-normal-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-normal-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-normal-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=normal split=val seed=42 episodes=200/200 workers=8/8 wall_min=20 sidecar=on cross_seg=0 suffix= end=2026-09-08 05:51:55
+EXIT_CODE=0
+MV_BATCH=PASS cond=normal split=val seed=42 episodes=200/200 workers=8/8 wall_min=20 sidecar=on cross_seg=0 suffix= end=2026-09-08 05:51:55
+--- BATCH 7/32 cond=mask split=val seed=42 port_base=9348 start=2026-09-08 05:51:55 ---
+=== MV_BATCH_START cond=mask split=val seed=42 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9348 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v42-mask start=2026-09-08 05:51:55 ===
+起 mv-v42-mask-w0: gpu=0 port=9348 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-mask-w0.log
+起 mv-v42-mask-w1: gpu=1 port=9349 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-mask-w1.log
+起 mv-v42-mask-w2: gpu=2 port=9350 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-mask-w2.log
+起 mv-v42-mask-w3: gpu=3 port=9351 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-mask-w3.log
+起 mv-v42-mask-w4: gpu=4 port=9352 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-mask-w4.log
+起 mv-v42-mask-w5: gpu=5 port=9353 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-mask-w5.log
+起 mv-v42-mask-w6: gpu=6 port=9354 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-mask-w6.log
+起 mv-v42-mask-w7: gpu=7 port=9355 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-mask-w7.log
+  mv-v42-mask-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v42-mask-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v42-mask-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-mask-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-mask-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-mask-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-mask-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-mask-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=mask split=val seed=42 episodes=200/200 workers=8/8 wall_min=19 sidecar=off cross_seg=0 suffix= end=2026-09-08 06:11:47
+EXIT_CODE=0
+MV_BATCH=PASS cond=mask split=val seed=42 episodes=200/200 workers=8/8 wall_min=19 sidecar=off cross_seg=0 suffix= end=2026-09-08 06:11:47
+--- BATCH 8/32 cond=swap split=val seed=42 port_base=9356 start=2026-09-08 06:11:47 ---
+=== MV_BATCH_START cond=swap split=val seed=42 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9356 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v42-swap start=2026-09-08 06:11:47 ===
+起 mv-v42-swap-w0: gpu=0 port=9356 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-swap-w0.log
+起 mv-v42-swap-w1: gpu=1 port=9357 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-swap-w1.log
+起 mv-v42-swap-w2: gpu=2 port=9358 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-swap-w2.log
+起 mv-v42-swap-w3: gpu=3 port=9359 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-swap-w3.log
+起 mv-v42-swap-w4: gpu=4 port=9360 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-swap-w4.log
+起 mv-v42-swap-w5: gpu=5 port=9361 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-swap-w5.log
+起 mv-v42-swap-w6: gpu=6 port=9362 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-swap-w6.log
+起 mv-v42-swap-w7: gpu=7 port=9363 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v42-swap-w7.log
+  mv-v42-swap-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v42-swap-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v42-swap-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-swap-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-swap-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-swap-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-swap-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v42-swap-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=swap split=val seed=42 episodes=200/200 workers=8/8 wall_min=12 sidecar=off cross_seg=0 suffix= end=2026-09-08 06:24:18
+EXIT_CODE=0
+MV_BATCH=PASS cond=swap split=val seed=42 episodes=200/200 workers=8/8 wall_min=12 sidecar=off cross_seg=0 suffix= end=2026-09-08 06:24:18
+--- BATCH 9/32 cond=official split=test seed=7 port_base=9364 start=2026-09-08 06:24:18 ---
+=== MV_BATCH_START cond=official split=test seed=7 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9364 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t7-official start=2026-09-08 06:24:18 ===
+起 mv-t7-official-w0: gpu=0 port=9364 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-official-w0.log
+起 mv-t7-official-w1: gpu=1 port=9365 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-official-w1.log
+起 mv-t7-official-w2: gpu=2 port=9366 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-official-w2.log
+起 mv-t7-official-w3: gpu=3 port=9367 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-official-w3.log
+起 mv-t7-official-w4: gpu=4 port=9368 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-official-w4.log
+起 mv-t7-official-w5: gpu=5 port=9369 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-official-w5.log
+起 mv-t7-official-w6: gpu=6 port=9370 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-official-w6.log
+起 mv-t7-official-w7: gpu=7 port=9371 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-official-w7.log
+  mv-t7-official-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t7-official-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t7-official-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t7-official-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t7-official-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t7-official-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t7-official-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t7-official-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=official split=test seed=7 episodes=200/200 workers=8/8 wall_min=8 sidecar=off cross_seg=0 suffix= end=2026-09-08 06:32:29
+EXIT_CODE=0
+MV_BATCH=PASS cond=official split=test seed=7 episodes=200/200 workers=8/8 wall_min=8 sidecar=off cross_seg=0 suffix= end=2026-09-08 06:32:29
+--- BATCH 10/32 cond=normal split=test seed=7 port_base=9372 start=2026-09-08 06:32:29 ---
+=== MV_BATCH_START cond=normal split=test seed=7 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9372 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t7-normal start=2026-09-08 06:32:29 ===
+起 mv-t7-normal-w0: gpu=0 port=9372 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-normal-w0.log
+起 mv-t7-normal-w1: gpu=1 port=9373 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-normal-w1.log
+起 mv-t7-normal-w2: gpu=2 port=9374 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-normal-w2.log
+起 mv-t7-normal-w3: gpu=3 port=9375 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-normal-w3.log
+起 mv-t7-normal-w4: gpu=4 port=9376 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-normal-w4.log
+起 mv-t7-normal-w5: gpu=5 port=9377 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-normal-w5.log
+起 mv-t7-normal-w6: gpu=6 port=9378 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-normal-w6.log
+起 mv-t7-normal-w7: gpu=7 port=9379 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-normal-w7.log
+  mv-t7-normal-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t7-normal-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t7-normal-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-normal-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-normal-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-normal-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-normal-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-normal-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=normal split=test seed=7 episodes=200/200 workers=8/8 wall_min=20 sidecar=on cross_seg=0 suffix= end=2026-09-08 06:53:21
+EXIT_CODE=0
+MV_BATCH=PASS cond=normal split=test seed=7 episodes=200/200 workers=8/8 wall_min=20 sidecar=on cross_seg=0 suffix= end=2026-09-08 06:53:21
+--- BATCH 11/32 cond=mask split=test seed=7 port_base=9380 start=2026-09-08 06:53:21 ---
+=== MV_BATCH_START cond=mask split=test seed=7 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9380 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t7-mask start=2026-09-08 06:53:21 ===
+起 mv-t7-mask-w0: gpu=0 port=9380 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-mask-w0.log
+起 mv-t7-mask-w1: gpu=1 port=9381 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-mask-w1.log
+起 mv-t7-mask-w2: gpu=2 port=9382 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-mask-w2.log
+起 mv-t7-mask-w3: gpu=3 port=9383 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-mask-w3.log
+起 mv-t7-mask-w4: gpu=4 port=9384 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-mask-w4.log
+起 mv-t7-mask-w5: gpu=5 port=9385 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-mask-w5.log
+起 mv-t7-mask-w6: gpu=6 port=9386 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-mask-w6.log
+起 mv-t7-mask-w7: gpu=7 port=9387 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-mask-w7.log
+  mv-t7-mask-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t7-mask-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t7-mask-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-mask-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-mask-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-mask-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-mask-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-mask-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=mask split=test seed=7 episodes=200/200 workers=8/8 wall_min=20 sidecar=off cross_seg=0 suffix= end=2026-09-08 07:13:53
+EXIT_CODE=0
+MV_BATCH=PASS cond=mask split=test seed=7 episodes=200/200 workers=8/8 wall_min=20 sidecar=off cross_seg=0 suffix= end=2026-09-08 07:13:53
+--- BATCH 12/32 cond=swap split=test seed=7 port_base=9388 start=2026-09-08 07:13:53 ---
+=== MV_BATCH_START cond=swap split=test seed=7 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9388 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t7-swap start=2026-09-08 07:13:53 ===
+起 mv-t7-swap-w0: gpu=0 port=9388 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-swap-w0.log
+起 mv-t7-swap-w1: gpu=1 port=9389 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-swap-w1.log
+起 mv-t7-swap-w2: gpu=2 port=9390 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-swap-w2.log
+起 mv-t7-swap-w3: gpu=3 port=9391 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-swap-w3.log
+起 mv-t7-swap-w4: gpu=4 port=9392 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-swap-w4.log
+起 mv-t7-swap-w5: gpu=5 port=9393 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-swap-w5.log
+起 mv-t7-swap-w6: gpu=6 port=9394 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-swap-w6.log
+起 mv-t7-swap-w7: gpu=7 port=9395 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t7-swap-w7.log
+  mv-t7-swap-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t7-swap-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t7-swap-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-swap-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-swap-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-swap-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-swap-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t7-swap-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=swap split=test seed=7 episodes=200/200 workers=8/8 wall_min=8 sidecar=off cross_seg=0 suffix= end=2026-09-08 07:22:04
+EXIT_CODE=0
+MV_BATCH=PASS cond=swap split=test seed=7 episodes=200/200 workers=8/8 wall_min=8 sidecar=off cross_seg=0 suffix= end=2026-09-08 07:22:04
+--- BATCH 13/32 cond=official split=val seed=7 port_base=9396 start=2026-09-08 07:22:04 ---
+=== MV_BATCH_START cond=official split=val seed=7 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9396 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v7-official start=2026-09-08 07:22:04 ===
+起 mv-v7-official-w0: gpu=0 port=9396 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-official-w0.log
+起 mv-v7-official-w1: gpu=1 port=9397 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-official-w1.log
+起 mv-v7-official-w2: gpu=2 port=9398 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-official-w2.log
+起 mv-v7-official-w3: gpu=3 port=9399 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-official-w3.log
+起 mv-v7-official-w4: gpu=4 port=9400 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-official-w4.log
+起 mv-v7-official-w5: gpu=5 port=9401 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-official-w5.log
+起 mv-v7-official-w6: gpu=6 port=9402 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-official-w6.log
+起 mv-v7-official-w7: gpu=7 port=9403 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-official-w7.log
+  mv-v7-official-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v7-official-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v7-official-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v7-official-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v7-official-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v7-official-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v7-official-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v7-official-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=official split=val seed=7 episodes=200/200 workers=8/8 wall_min=8 sidecar=off cross_seg=0 suffix= end=2026-09-08 07:30:15
+EXIT_CODE=0
+MV_BATCH=PASS cond=official split=val seed=7 episodes=200/200 workers=8/8 wall_min=8 sidecar=off cross_seg=0 suffix= end=2026-09-08 07:30:15
+--- BATCH 14/32 cond=normal split=val seed=7 port_base=9404 start=2026-09-08 07:30:15 ---
+=== MV_BATCH_START cond=normal split=val seed=7 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9404 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v7-normal start=2026-09-08 07:30:15 ===
+起 mv-v7-normal-w0: gpu=0 port=9404 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-normal-w0.log
+起 mv-v7-normal-w1: gpu=1 port=9405 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-normal-w1.log
+起 mv-v7-normal-w2: gpu=2 port=9406 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-normal-w2.log
+起 mv-v7-normal-w3: gpu=3 port=9407 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-normal-w3.log
+起 mv-v7-normal-w4: gpu=4 port=9408 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-normal-w4.log
+起 mv-v7-normal-w5: gpu=5 port=9409 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-normal-w5.log
+起 mv-v7-normal-w6: gpu=6 port=9410 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-normal-w6.log
+起 mv-v7-normal-w7: gpu=7 port=9411 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-normal-w7.log
+  mv-v7-normal-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v7-normal-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v7-normal-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-normal-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-normal-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-normal-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-normal-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-normal-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=normal split=val seed=7 episodes=200/200 workers=8/8 wall_min=19 sidecar=on cross_seg=0 suffix= end=2026-09-08 07:49:26
+EXIT_CODE=0
+MV_BATCH=PASS cond=normal split=val seed=7 episodes=200/200 workers=8/8 wall_min=19 sidecar=on cross_seg=0 suffix= end=2026-09-08 07:49:26
+--- BATCH 15/32 cond=mask split=val seed=7 port_base=9412 start=2026-09-08 07:49:26 ---
+=== MV_BATCH_START cond=mask split=val seed=7 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9412 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v7-mask start=2026-09-08 07:49:26 ===
+起 mv-v7-mask-w0: gpu=0 port=9412 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-mask-w0.log
+起 mv-v7-mask-w1: gpu=1 port=9413 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-mask-w1.log
+起 mv-v7-mask-w2: gpu=2 port=9414 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-mask-w2.log
+起 mv-v7-mask-w3: gpu=3 port=9415 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-mask-w3.log
+起 mv-v7-mask-w4: gpu=4 port=9416 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-mask-w4.log
+起 mv-v7-mask-w5: gpu=5 port=9417 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-mask-w5.log
+起 mv-v7-mask-w6: gpu=6 port=9418 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-mask-w6.log
+起 mv-v7-mask-w7: gpu=7 port=9419 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-mask-w7.log
+  mv-v7-mask-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v7-mask-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v7-mask-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-mask-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-mask-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-mask-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-mask-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-mask-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=mask split=val seed=7 episodes=200/200 workers=8/8 wall_min=13 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:02:58
+EXIT_CODE=0
+MV_BATCH=PASS cond=mask split=val seed=7 episodes=200/200 workers=8/8 wall_min=13 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:02:58
+--- BATCH 16/32 cond=swap split=val seed=7 port_base=9420 start=2026-09-08 08:02:58 ---
+=== MV_BATCH_START cond=swap split=val seed=7 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9420 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v7-swap start=2026-09-08 08:02:58 ===
+起 mv-v7-swap-w0: gpu=0 port=9420 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-swap-w0.log
+起 mv-v7-swap-w1: gpu=1 port=9421 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-swap-w1.log
+起 mv-v7-swap-w2: gpu=2 port=9422 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-swap-w2.log
+起 mv-v7-swap-w3: gpu=3 port=9423 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-swap-w3.log
+起 mv-v7-swap-w4: gpu=4 port=9424 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-swap-w4.log
+起 mv-v7-swap-w5: gpu=5 port=9425 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-swap-w5.log
+起 mv-v7-swap-w6: gpu=6 port=9426 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-swap-w6.log
+起 mv-v7-swap-w7: gpu=7 port=9427 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v7-swap-w7.log
+  mv-v7-swap-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v7-swap-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v7-swap-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-swap-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-swap-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-swap-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-swap-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v7-swap-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=swap split=val seed=7 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:10:49
+EXIT_CODE=0
+MV_BATCH=PASS cond=swap split=val seed=7 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:10:49
+--- BATCH 17/32 cond=official split=test seed=2024 port_base=9300 start=2026-09-08 08:10:49 ---
+=== MV_BATCH_START cond=official split=test seed=2024 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9300 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t2024-official start=2026-09-08 08:10:49 ===
+起 mv-t2024-official-w0: gpu=0 port=9300 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-official-w0.log
+起 mv-t2024-official-w1: gpu=1 port=9301 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-official-w1.log
+起 mv-t2024-official-w2: gpu=2 port=9302 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-official-w2.log
+起 mv-t2024-official-w3: gpu=3 port=9303 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-official-w3.log
+起 mv-t2024-official-w4: gpu=4 port=9304 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-official-w4.log
+起 mv-t2024-official-w5: gpu=5 port=9305 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-official-w5.log
+起 mv-t2024-official-w6: gpu=6 port=9306 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-official-w6.log
+起 mv-t2024-official-w7: gpu=7 port=9307 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-official-w7.log
+  mv-t2024-official-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t2024-official-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t2024-official-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t2024-official-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t2024-official-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t2024-official-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t2024-official-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t2024-official-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=official split=test seed=2024 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:16:19
+EXIT_CODE=0
+MV_BATCH=PASS cond=official split=test seed=2024 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:16:19
+--- BATCH 18/32 cond=normal split=test seed=2024 port_base=9308 start=2026-09-08 08:16:19 ---
+=== MV_BATCH_START cond=normal split=test seed=2024 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9308 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t2024-normal start=2026-09-08 08:16:19 ===
+起 mv-t2024-normal-w0: gpu=0 port=9308 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-normal-w0.log
+起 mv-t2024-normal-w1: gpu=1 port=9309 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-normal-w1.log
+起 mv-t2024-normal-w2: gpu=2 port=9310 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-normal-w2.log
+起 mv-t2024-normal-w3: gpu=3 port=9311 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-normal-w3.log
+起 mv-t2024-normal-w4: gpu=4 port=9312 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-normal-w4.log
+起 mv-t2024-normal-w5: gpu=5 port=9313 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-normal-w5.log
+起 mv-t2024-normal-w6: gpu=6 port=9314 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-normal-w6.log
+起 mv-t2024-normal-w7: gpu=7 port=9315 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-normal-w7.log
+  mv-t2024-normal-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t2024-normal-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t2024-normal-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-normal-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-normal-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-normal-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-normal-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-normal-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=normal split=test seed=2024 episodes=200/200 workers=8/8 wall_min=16 sidecar=on cross_seg=0 suffix= end=2026-09-08 08:32:31
+EXIT_CODE=0
+MV_BATCH=PASS cond=normal split=test seed=2024 episodes=200/200 workers=8/8 wall_min=16 sidecar=on cross_seg=0 suffix= end=2026-09-08 08:32:31
+--- BATCH 19/32 cond=mask split=test seed=2024 port_base=9316 start=2026-09-08 08:32:31 ---
+=== MV_BATCH_START cond=mask split=test seed=2024 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9316 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t2024-mask start=2026-09-08 08:32:31 ===
+起 mv-t2024-mask-w0: gpu=0 port=9316 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-mask-w0.log
+起 mv-t2024-mask-w1: gpu=1 port=9317 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-mask-w1.log
+起 mv-t2024-mask-w2: gpu=2 port=9318 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-mask-w2.log
+起 mv-t2024-mask-w3: gpu=3 port=9319 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-mask-w3.log
+起 mv-t2024-mask-w4: gpu=4 port=9320 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-mask-w4.log
+起 mv-t2024-mask-w5: gpu=5 port=9321 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-mask-w5.log
+起 mv-t2024-mask-w6: gpu=6 port=9322 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-mask-w6.log
+起 mv-t2024-mask-w7: gpu=7 port=9323 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-mask-w7.log
+  mv-t2024-mask-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t2024-mask-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t2024-mask-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-mask-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-mask-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-mask-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-mask-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-mask-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=mask split=test seed=2024 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:43:22
+EXIT_CODE=0
+MV_BATCH=PASS cond=mask split=test seed=2024 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:43:22
+--- BATCH 20/32 cond=swap split=test seed=2024 port_base=9324 start=2026-09-08 08:43:22 ---
+=== MV_BATCH_START cond=swap split=test seed=2024 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9324 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t2024-swap start=2026-09-08 08:43:22 ===
+起 mv-t2024-swap-w0: gpu=0 port=9324 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-swap-w0.log
+起 mv-t2024-swap-w1: gpu=1 port=9325 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-swap-w1.log
+起 mv-t2024-swap-w2: gpu=2 port=9326 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-swap-w2.log
+起 mv-t2024-swap-w3: gpu=3 port=9327 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-swap-w3.log
+起 mv-t2024-swap-w4: gpu=4 port=9328 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-swap-w4.log
+起 mv-t2024-swap-w5: gpu=5 port=9329 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-swap-w5.log
+起 mv-t2024-swap-w6: gpu=6 port=9330 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-swap-w6.log
+起 mv-t2024-swap-w7: gpu=7 port=9331 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t2024-swap-w7.log
+  mv-t2024-swap-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t2024-swap-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t2024-swap-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-swap-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-swap-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-swap-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-swap-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t2024-swap-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=swap split=test seed=2024 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:50:33
+EXIT_CODE=0
+MV_BATCH=PASS cond=swap split=test seed=2024 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:50:33
+--- BATCH 21/32 cond=official split=val seed=2024 port_base=9332 start=2026-09-08 08:50:33 ---
+=== MV_BATCH_START cond=official split=val seed=2024 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9332 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v2024-official start=2026-09-08 08:50:33 ===
+起 mv-v2024-official-w0: gpu=0 port=9332 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-official-w0.log
+起 mv-v2024-official-w1: gpu=1 port=9333 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-official-w1.log
+起 mv-v2024-official-w2: gpu=2 port=9334 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-official-w2.log
+起 mv-v2024-official-w3: gpu=3 port=9335 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-official-w3.log
+起 mv-v2024-official-w4: gpu=4 port=9336 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-official-w4.log
+起 mv-v2024-official-w5: gpu=5 port=9337 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-official-w5.log
+起 mv-v2024-official-w6: gpu=6 port=9338 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-official-w6.log
+起 mv-v2024-official-w7: gpu=7 port=9339 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-official-w7.log
+  mv-v2024-official-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v2024-official-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v2024-official-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v2024-official-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v2024-official-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v2024-official-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v2024-official-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v2024-official-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=official split=val seed=2024 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:56:04
+EXIT_CODE=0
+MV_BATCH=PASS cond=official split=val seed=2024 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:56:04
+--- BATCH 22/32 cond=normal split=val seed=2024 port_base=9340 start=2026-09-08 08:56:04 ---
+=== MV_BATCH_START cond=normal split=val seed=2024 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9340 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v2024-normal start=2026-09-08 08:56:04 ===
+起 mv-v2024-normal-w0: gpu=0 port=9340 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-normal-w0.log
+起 mv-v2024-normal-w1: gpu=1 port=9341 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-normal-w1.log
+起 mv-v2024-normal-w2: gpu=2 port=9342 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-normal-w2.log
+起 mv-v2024-normal-w3: gpu=3 port=9343 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-normal-w3.log
+起 mv-v2024-normal-w4: gpu=4 port=9344 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-normal-w4.log
+起 mv-v2024-normal-w5: gpu=5 port=9345 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-normal-w5.log
+起 mv-v2024-normal-w6: gpu=6 port=9346 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-normal-w6.log
+起 mv-v2024-normal-w7: gpu=7 port=9347 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-normal-w7.log
+  mv-v2024-normal-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v2024-normal-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v2024-normal-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-normal-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-normal-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-normal-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-normal-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-normal-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=normal split=val seed=2024 episodes=200/200 workers=8/8 wall_min=16 sidecar=on cross_seg=0 suffix= end=2026-09-08 09:12:15
+EXIT_CODE=0
+MV_BATCH=PASS cond=normal split=val seed=2024 episodes=200/200 workers=8/8 wall_min=16 sidecar=on cross_seg=0 suffix= end=2026-09-08 09:12:15
+--- BATCH 23/32 cond=mask split=val seed=2024 port_base=9348 start=2026-09-08 09:12:15 ---
+=== MV_BATCH_START cond=mask split=val seed=2024 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9348 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v2024-mask start=2026-09-08 09:12:15 ===
+起 mv-v2024-mask-w0: gpu=0 port=9348 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-mask-w0.log
+起 mv-v2024-mask-w1: gpu=1 port=9349 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-mask-w1.log
+起 mv-v2024-mask-w2: gpu=2 port=9350 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-mask-w2.log
+起 mv-v2024-mask-w3: gpu=3 port=9351 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-mask-w3.log
+起 mv-v2024-mask-w4: gpu=4 port=9352 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-mask-w4.log
+起 mv-v2024-mask-w5: gpu=5 port=9353 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-mask-w5.log
+起 mv-v2024-mask-w6: gpu=6 port=9354 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-mask-w6.log
+起 mv-v2024-mask-w7: gpu=7 port=9355 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-mask-w7.log
+  mv-v2024-mask-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v2024-mask-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v2024-mask-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-mask-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-mask-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-mask-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-mask-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-mask-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=mask split=val seed=2024 episodes=200/200 workers=8/8 wall_min=9 sidecar=off cross_seg=0 suffix= end=2026-09-08 09:22:06
+EXIT_CODE=0
+MV_BATCH=PASS cond=mask split=val seed=2024 episodes=200/200 workers=8/8 wall_min=9 sidecar=off cross_seg=0 suffix= end=2026-09-08 09:22:06
+--- BATCH 24/32 cond=swap split=val seed=2024 port_base=9356 start=2026-09-08 09:22:06 ---
+=== MV_BATCH_START cond=swap split=val seed=2024 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9356 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v2024-swap start=2026-09-08 09:22:06 ===
+起 mv-v2024-swap-w0: gpu=0 port=9356 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-swap-w0.log
+起 mv-v2024-swap-w1: gpu=1 port=9357 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-swap-w1.log
+起 mv-v2024-swap-w2: gpu=2 port=9358 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-swap-w2.log
+起 mv-v2024-swap-w3: gpu=3 port=9359 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-swap-w3.log
+起 mv-v2024-swap-w4: gpu=4 port=9360 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-swap-w4.log
+起 mv-v2024-swap-w5: gpu=5 port=9361 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-swap-w5.log
+起 mv-v2024-swap-w6: gpu=6 port=9362 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-swap-w6.log
+起 mv-v2024-swap-w7: gpu=7 port=9363 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v2024-swap-w7.log
+  mv-v2024-swap-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v2024-swap-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v2024-swap-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-swap-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-swap-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-swap-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-swap-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v2024-swap-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=swap split=val seed=2024 episodes=200/200 workers=8/8 wall_min=6 sidecar=off cross_seg=0 suffix= end=2026-09-08 09:28:37
+EXIT_CODE=0
+MV_BATCH=PASS cond=swap split=val seed=2024 episodes=200/200 workers=8/8 wall_min=6 sidecar=off cross_seg=0 suffix= end=2026-09-08 09:28:37
+--- BATCH 25/32 cond=official split=test seed=17 port_base=9364 start=2026-09-08 09:28:37 ---
+=== MV_BATCH_START cond=official split=test seed=17 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9364 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t17-official start=2026-09-08 09:28:37 ===
+起 mv-t17-official-w0: gpu=0 port=9364 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-official-w0.log
+起 mv-t17-official-w1: gpu=1 port=9365 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-official-w1.log
+起 mv-t17-official-w2: gpu=2 port=9366 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-official-w2.log
+起 mv-t17-official-w3: gpu=3 port=9367 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-official-w3.log
+起 mv-t17-official-w4: gpu=4 port=9368 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-official-w4.log
+起 mv-t17-official-w5: gpu=5 port=9369 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-official-w5.log
+起 mv-t17-official-w6: gpu=6 port=9370 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-official-w6.log
+起 mv-t17-official-w7: gpu=7 port=9371 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-official-w7.log
+  mv-t17-official-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t17-official-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t17-official-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t17-official-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t17-official-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t17-official-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t17-official-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-t17-official-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=official split=test seed=17 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 09:34:08
+EXIT_CODE=0
+MV_BATCH=PASS cond=official split=test seed=17 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 09:34:08
+--- BATCH 26/32 cond=normal split=test seed=17 port_base=9372 start=2026-09-08 09:34:08 ---
+=== MV_BATCH_START cond=normal split=test seed=17 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9372 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t17-normal start=2026-09-08 09:34:08 ===
+起 mv-t17-normal-w0: gpu=0 port=9372 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-normal-w0.log
+起 mv-t17-normal-w1: gpu=1 port=9373 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-normal-w1.log
+起 mv-t17-normal-w2: gpu=2 port=9374 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-normal-w2.log
+起 mv-t17-normal-w3: gpu=3 port=9375 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-normal-w3.log
+起 mv-t17-normal-w4: gpu=4 port=9376 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-normal-w4.log
+起 mv-t17-normal-w5: gpu=5 port=9377 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-normal-w5.log
+起 mv-t17-normal-w6: gpu=6 port=9378 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-normal-w6.log
+起 mv-t17-normal-w7: gpu=7 port=9379 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-normal-w7.log
+  mv-t17-normal-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t17-normal-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t17-normal-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-normal-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-normal-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-normal-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-normal-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-normal-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=normal split=test seed=17 episodes=200/200 workers=8/8 wall_min=15 sidecar=on cross_seg=0 suffix= end=2026-09-08 09:49:59
+EXIT_CODE=0
+MV_BATCH=PASS cond=normal split=test seed=17 episodes=200/200 workers=8/8 wall_min=15 sidecar=on cross_seg=0 suffix= end=2026-09-08 09:49:59
+--- BATCH 27/32 cond=mask split=test seed=17 port_base=9380 start=2026-09-08 09:49:59 ---
+=== MV_BATCH_START cond=mask split=test seed=17 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9380 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t17-mask start=2026-09-08 09:49:59 ===
+起 mv-t17-mask-w0: gpu=0 port=9380 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-mask-w0.log
+起 mv-t17-mask-w1: gpu=1 port=9381 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-mask-w1.log
+起 mv-t17-mask-w2: gpu=2 port=9382 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-mask-w2.log
+起 mv-t17-mask-w3: gpu=3 port=9383 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-mask-w3.log
+起 mv-t17-mask-w4: gpu=4 port=9384 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-mask-w4.log
+起 mv-t17-mask-w5: gpu=5 port=9385 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-mask-w5.log
+起 mv-t17-mask-w6: gpu=6 port=9386 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-mask-w6.log
+起 mv-t17-mask-w7: gpu=7 port=9387 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-mask-w7.log
+  mv-t17-mask-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t17-mask-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t17-mask-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-mask-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-mask-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-mask-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-mask-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-mask-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=mask split=test seed=17 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:00:50
+EXIT_CODE=0
+MV_BATCH=PASS cond=mask split=test seed=17 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:00:50
+--- BATCH 28/32 cond=swap split=test seed=17 port_base=9388 start=2026-09-08 10:00:50 ---
+=== MV_BATCH_START cond=swap split=test seed=17 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9388 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t17-swap start=2026-09-08 10:00:50 ===
+起 mv-t17-swap-w0: gpu=0 port=9388 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-swap-w0.log
+起 mv-t17-swap-w1: gpu=1 port=9389 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-swap-w1.log
+起 mv-t17-swap-w2: gpu=2 port=9390 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-swap-w2.log
+起 mv-t17-swap-w3: gpu=3 port=9391 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-swap-w3.log
+起 mv-t17-swap-w4: gpu=4 port=9392 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-swap-w4.log
+起 mv-t17-swap-w5: gpu=5 port=9393 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-swap-w5.log
+起 mv-t17-swap-w6: gpu=6 port=9394 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-swap-w6.log
+起 mv-t17-swap-w7: gpu=7 port=9395 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t17-swap-w7.log
+  mv-t17-swap-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t17-swap-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-t17-swap-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-swap-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-swap-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-swap-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-swap-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-t17-swap-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=swap split=test seed=17 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:08:21
+EXIT_CODE=0
+MV_BATCH=PASS cond=swap split=test seed=17 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:08:21
+--- BATCH 29/32 cond=official split=val seed=17 port_base=9396 start=2026-09-08 10:08:21 ---
+=== MV_BATCH_START cond=official split=val seed=17 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9396 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v17-official start=2026-09-08 10:08:21 ===
+起 mv-v17-official-w0: gpu=0 port=9396 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-official-w0.log
+起 mv-v17-official-w1: gpu=1 port=9397 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-official-w1.log
+起 mv-v17-official-w2: gpu=2 port=9398 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-official-w2.log
+起 mv-v17-official-w3: gpu=3 port=9399 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-official-w3.log
+起 mv-v17-official-w4: gpu=4 port=9400 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-official-w4.log
+起 mv-v17-official-w5: gpu=5 port=9401 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-official-w5.log
+起 mv-v17-official-w6: gpu=6 port=9402 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-official-w6.log
+起 mv-v17-official-w7: gpu=7 port=9403 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-official-w7.log
+  mv-v17-official-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v17-official-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v17-official-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v17-official-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v17-official-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v17-official-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v17-official-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+  mv-v17-official-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=n/a traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=official split=val seed=17 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:13:52
+EXIT_CODE=0
+MV_BATCH=PASS cond=official split=val seed=17 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:13:52
+--- BATCH 30/32 cond=normal split=val seed=17 port_base=9404 start=2026-09-08 10:13:52 ---
+=== MV_BATCH_START cond=normal split=val seed=17 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9404 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v17-normal start=2026-09-08 10:13:52 ===
+起 mv-v17-normal-w0: gpu=0 port=9404 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-normal-w0.log
+起 mv-v17-normal-w1: gpu=1 port=9405 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-normal-w1.log
+起 mv-v17-normal-w2: gpu=2 port=9406 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-normal-w2.log
+起 mv-v17-normal-w3: gpu=3 port=9407 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-normal-w3.log
+起 mv-v17-normal-w4: gpu=4 port=9408 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-normal-w4.log
+起 mv-v17-normal-w5: gpu=5 port=9409 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-normal-w5.log
+起 mv-v17-normal-w6: gpu=6 port=9410 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-normal-w6.log
+起 mv-v17-normal-w7: gpu=7 port=9411 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-normal-w7.log
+  mv-v17-normal-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v17-normal-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v17-normal-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-normal-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-normal-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-normal-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-normal-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-normal-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=normal split=val seed=17 episodes=200/200 workers=8/8 wall_min=16 sidecar=on cross_seg=0 suffix= end=2026-09-08 10:30:03
+EXIT_CODE=0
+MV_BATCH=PASS cond=normal split=val seed=17 episodes=200/200 workers=8/8 wall_min=16 sidecar=on cross_seg=0 suffix= end=2026-09-08 10:30:03
+--- BATCH 31/32 cond=mask split=val seed=17 port_base=9412 start=2026-09-08 10:30:03 ---
+=== MV_BATCH_START cond=mask split=val seed=17 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9412 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v17-mask start=2026-09-08 10:30:03 ===
+起 mv-v17-mask-w0: gpu=0 port=9412 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-mask-w0.log
+起 mv-v17-mask-w1: gpu=1 port=9413 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-mask-w1.log
+起 mv-v17-mask-w2: gpu=2 port=9414 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-mask-w2.log
+起 mv-v17-mask-w3: gpu=3 port=9415 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-mask-w3.log
+起 mv-v17-mask-w4: gpu=4 port=9416 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-mask-w4.log
+起 mv-v17-mask-w5: gpu=5 port=9417 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-mask-w5.log
+起 mv-v17-mask-w6: gpu=6 port=9418 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-mask-w6.log
+起 mv-v17-mask-w7: gpu=7 port=9419 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-mask-w7.log
+  mv-v17-mask-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v17-mask-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v17-mask-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-mask-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-mask-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-mask-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-mask-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-mask-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=mask split=val seed=17 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:40:14
+EXIT_CODE=0
+MV_BATCH=PASS cond=mask split=val seed=17 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:40:14
+--- BATCH 32/32 cond=swap split=val seed=17 port_base=9420 start=2026-09-08 10:40:14 ---
+=== MV_BATCH_START cond=swap split=val seed=17 workers=8 gpu_list=0,1,2,3,4,5,6,7 port_base=9420 ep_count=0 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-v17-swap start=2026-09-08 10:40:14 ===
+起 mv-v17-swap-w0: gpu=0 port=9420 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-swap-w0.log
+起 mv-v17-swap-w1: gpu=1 port=9421 expected=28 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-swap-w1.log
+起 mv-v17-swap-w2: gpu=2 port=9422 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-swap-w2.log
+起 mv-v17-swap-w3: gpu=3 port=9423 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-swap-w3.log
+起 mv-v17-swap-w4: gpu=4 port=9424 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-swap-w4.log
+起 mv-v17-swap-w5: gpu=5 port=9425 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-swap-w5.log
+起 mv-v17-swap-w6: gpu=6 port=9426 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-swap-w6.log
+起 mv-v17-swap-w7: gpu=7 port=9427 expected=24 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-v17-swap-w7.log
+  mv-v17-swap-w0 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v17-swap-w1 EXIT_CODE=0 expected=28 progress=28 ep_done=28 errors=0 episode_begin=28 traceback=0 cross_seg=0 ok
+  mv-v17-swap-w2 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-swap-w3 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-swap-w4 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-swap-w5 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-swap-w6 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+  mv-v17-swap-w7 EXIT_CODE=0 expected=24 progress=24 ep_done=24 errors=0 episode_begin=24 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=swap split=val seed=17 episodes=200/200 workers=8/8 wall_min=6 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:47:05
+EXIT_CODE=0
+MV_BATCH=PASS cond=swap split=val seed=17 episodes=200/200 workers=8/8 wall_min=6 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:47:05
+MV_MATRIX=PASS batches=32/32 done_now=30 skipped=2 wall_h=5.71 end=2026-09-08 10:47:05
+EXIT_CODE=0

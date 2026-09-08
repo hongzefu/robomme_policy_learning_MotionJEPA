@@ -1,0 +1,64 @@
+MV_BATCH=PASS cond=normal split=test seed=42 episodes=200/200 workers=8/8 wall_min=21 sidecar=on cross_seg=0 suffix= end=2026-09-08 04:29:35
+MV_BATCH=PASS cond=mask split=test seed=42 episodes=200/200 workers=8/8 wall_min=28 sidecar=off cross_seg=0 suffix= end=2026-09-08 04:58:27
+MV_MATRIX_START HEAD=49f68c7bcb7c4acc312c99cb7b25cc50bb7b5f48 branch=v2-motionmem bank_sha=6e70604da518c156 seeds=42,7,2024,17 splits=test,val conds=official,normal,mask,swap batches=32 workers=8 skip_done=1 start=2026-09-08 05:04:11
+--- BATCH 1/32 cond=official split=test seed=42 port_base=9300 start=2026-09-08 05:04:11 ---
+MV_BATCH=PASS cond=official split=test seed=42 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 05:11:42
+--- BATCH 4/32 cond=swap split=test seed=42 port_base=9324 start=2026-09-08 05:11:42 ---
+MV_BATCH=PASS cond=swap split=test seed=42 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 05:21:53
+--- BATCH 5/32 cond=official split=val seed=42 port_base=9332 start=2026-09-08 05:21:53 ---
+MV_BATCH=PASS cond=official split=val seed=42 episodes=200/200 workers=8/8 wall_min=9 sidecar=off cross_seg=0 suffix= end=2026-09-08 05:31:24
+--- BATCH 6/32 cond=normal split=val seed=42 port_base=9340 start=2026-09-08 05:31:24 ---
+MV_BATCH=PASS cond=normal split=val seed=42 episodes=200/200 workers=8/8 wall_min=20 sidecar=on cross_seg=0 suffix= end=2026-09-08 05:51:55
+--- BATCH 7/32 cond=mask split=val seed=42 port_base=9348 start=2026-09-08 05:51:55 ---
+MV_BATCH=PASS cond=mask split=val seed=42 episodes=200/200 workers=8/8 wall_min=19 sidecar=off cross_seg=0 suffix= end=2026-09-08 06:11:47
+--- BATCH 8/32 cond=swap split=val seed=42 port_base=9356 start=2026-09-08 06:11:47 ---
+MV_BATCH=PASS cond=swap split=val seed=42 episodes=200/200 workers=8/8 wall_min=12 sidecar=off cross_seg=0 suffix= end=2026-09-08 06:24:18
+--- BATCH 9/32 cond=official split=test seed=7 port_base=9364 start=2026-09-08 06:24:18 ---
+MV_BATCH=PASS cond=official split=test seed=7 episodes=200/200 workers=8/8 wall_min=8 sidecar=off cross_seg=0 suffix= end=2026-09-08 06:32:29
+--- BATCH 10/32 cond=normal split=test seed=7 port_base=9372 start=2026-09-08 06:32:29 ---
+MV_BATCH=PASS cond=normal split=test seed=7 episodes=200/200 workers=8/8 wall_min=20 sidecar=on cross_seg=0 suffix= end=2026-09-08 06:53:21
+--- BATCH 11/32 cond=mask split=test seed=7 port_base=9380 start=2026-09-08 06:53:21 ---
+MV_BATCH=PASS cond=mask split=test seed=7 episodes=200/200 workers=8/8 wall_min=20 sidecar=off cross_seg=0 suffix= end=2026-09-08 07:13:53
+--- BATCH 12/32 cond=swap split=test seed=7 port_base=9388 start=2026-09-08 07:13:53 ---
+MV_BATCH=PASS cond=swap split=test seed=7 episodes=200/200 workers=8/8 wall_min=8 sidecar=off cross_seg=0 suffix= end=2026-09-08 07:22:04
+--- BATCH 13/32 cond=official split=val seed=7 port_base=9396 start=2026-09-08 07:22:04 ---
+MV_BATCH=PASS cond=official split=val seed=7 episodes=200/200 workers=8/8 wall_min=8 sidecar=off cross_seg=0 suffix= end=2026-09-08 07:30:15
+--- BATCH 14/32 cond=normal split=val seed=7 port_base=9404 start=2026-09-08 07:30:15 ---
+MV_BATCH=PASS cond=normal split=val seed=7 episodes=200/200 workers=8/8 wall_min=19 sidecar=on cross_seg=0 suffix= end=2026-09-08 07:49:26
+--- BATCH 15/32 cond=mask split=val seed=7 port_base=9412 start=2026-09-08 07:49:26 ---
+MV_BATCH=PASS cond=mask split=val seed=7 episodes=200/200 workers=8/8 wall_min=13 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:02:58
+--- BATCH 16/32 cond=swap split=val seed=7 port_base=9420 start=2026-09-08 08:02:58 ---
+MV_BATCH=PASS cond=swap split=val seed=7 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:10:49
+--- BATCH 17/32 cond=official split=test seed=2024 port_base=9300 start=2026-09-08 08:10:49 ---
+MV_BATCH=PASS cond=official split=test seed=2024 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:16:19
+--- BATCH 18/32 cond=normal split=test seed=2024 port_base=9308 start=2026-09-08 08:16:19 ---
+MV_BATCH=PASS cond=normal split=test seed=2024 episodes=200/200 workers=8/8 wall_min=16 sidecar=on cross_seg=0 suffix= end=2026-09-08 08:32:31
+--- BATCH 19/32 cond=mask split=test seed=2024 port_base=9316 start=2026-09-08 08:32:31 ---
+MV_BATCH=PASS cond=mask split=test seed=2024 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:43:22
+--- BATCH 20/32 cond=swap split=test seed=2024 port_base=9324 start=2026-09-08 08:43:22 ---
+MV_BATCH=PASS cond=swap split=test seed=2024 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:50:33
+--- BATCH 21/32 cond=official split=val seed=2024 port_base=9332 start=2026-09-08 08:50:33 ---
+MV_BATCH=PASS cond=official split=val seed=2024 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 08:56:04
+--- BATCH 22/32 cond=normal split=val seed=2024 port_base=9340 start=2026-09-08 08:56:04 ---
+MV_BATCH=PASS cond=normal split=val seed=2024 episodes=200/200 workers=8/8 wall_min=16 sidecar=on cross_seg=0 suffix= end=2026-09-08 09:12:15
+--- BATCH 23/32 cond=mask split=val seed=2024 port_base=9348 start=2026-09-08 09:12:15 ---
+MV_BATCH=PASS cond=mask split=val seed=2024 episodes=200/200 workers=8/8 wall_min=9 sidecar=off cross_seg=0 suffix= end=2026-09-08 09:22:06
+--- BATCH 24/32 cond=swap split=val seed=2024 port_base=9356 start=2026-09-08 09:22:06 ---
+MV_BATCH=PASS cond=swap split=val seed=2024 episodes=200/200 workers=8/8 wall_min=6 sidecar=off cross_seg=0 suffix= end=2026-09-08 09:28:37
+--- BATCH 25/32 cond=official split=test seed=17 port_base=9364 start=2026-09-08 09:28:37 ---
+MV_BATCH=PASS cond=official split=test seed=17 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 09:34:08
+--- BATCH 26/32 cond=normal split=test seed=17 port_base=9372 start=2026-09-08 09:34:08 ---
+MV_BATCH=PASS cond=normal split=test seed=17 episodes=200/200 workers=8/8 wall_min=15 sidecar=on cross_seg=0 suffix= end=2026-09-08 09:49:59
+--- BATCH 27/32 cond=mask split=test seed=17 port_base=9380 start=2026-09-08 09:49:59 ---
+MV_BATCH=PASS cond=mask split=test seed=17 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:00:50
+--- BATCH 28/32 cond=swap split=test seed=17 port_base=9388 start=2026-09-08 10:00:50 ---
+MV_BATCH=PASS cond=swap split=test seed=17 episodes=200/200 workers=8/8 wall_min=7 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:08:21
+--- BATCH 29/32 cond=official split=val seed=17 port_base=9396 start=2026-09-08 10:08:21 ---
+MV_BATCH=PASS cond=official split=val seed=17 episodes=200/200 workers=8/8 wall_min=5 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:13:52
+--- BATCH 30/32 cond=normal split=val seed=17 port_base=9404 start=2026-09-08 10:13:52 ---
+MV_BATCH=PASS cond=normal split=val seed=17 episodes=200/200 workers=8/8 wall_min=16 sidecar=on cross_seg=0 suffix= end=2026-09-08 10:30:03
+--- BATCH 31/32 cond=mask split=val seed=17 port_base=9412 start=2026-09-08 10:30:03 ---
+MV_BATCH=PASS cond=mask split=val seed=17 episodes=200/200 workers=8/8 wall_min=10 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:40:14
+--- BATCH 32/32 cond=swap split=val seed=17 port_base=9420 start=2026-09-08 10:40:14 ---
+MV_BATCH=PASS cond=swap split=val seed=17 episodes=200/200 workers=8/8 wall_min=6 sidecar=off cross_seg=0 suffix= end=2026-09-08 10:47:05
+MV_MATRIX=PASS batches=32/32 done_now=30 skipped=2 wall_h=5.71 end=2026-09-08 10:47:05
