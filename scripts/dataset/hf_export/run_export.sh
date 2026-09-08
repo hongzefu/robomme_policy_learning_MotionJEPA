@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 # driver：打包 → 上传 bucket → 全量回读 → sha256 校验。在 detached tmux 里跑。
 # 每步幂等，可中断后整脚本重跑续传。
+#
+# **环境 A（GreatLakes / turbo）专用**：下面的 /data/hongzefu 暂存根与 4task-gl* 两个库
+# 在环境 B（AWS 单机）都不存在，本脚本在环境 B 下跑必挂。保留它是因为它是 480 GB 那次导出
+# 的唯一执行记录，根目录 HF-EXPORT-robomme-vla-motionjepa-v1.md 正文直接引用其命令行。
+# 环境 B 的数据集导出走同目录 run_dataset400ep_export.sh。
+#
+# 注意：pack_and_hash.py 原来把这三个路径藏在模块级常量里（SRC_PACKED / SRC_SOURCE /
+# DEFAULT_STAGE_ROOT）。现已改为必填 CLI 参数——AGENTS 第 13 条规定环境 A 的路径不得写进
+# 新脚本的默认值，而两条链路共用同一个 pack_and_hash.py。所以「用哪个库、落到哪」由各自的
+# driver 显式声明，读者在本文件里一眼可见环境 A 用的是什么。
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -16,7 +26,11 @@ done
 
 echo "阶段1开始：打包+哈希（NFS 单遍读 → $EXPORT_ROOT/stage）"
 cd "$REPO"
-uv run scripts/dataset/hf_export/pack_and_hash.py --workers 8
+uv run scripts/dataset/hf_export/pack_and_hash.py --workers 8 --layout gl-v1 \
+  --lib v1-store/datasets/4task-gl \
+  --packed-lib v1-store/datasets/4task-gl-framesamp \
+  --stage-root "$EXPORT_ROOT" \
+  --bucket "$BUCKET"
 cp scripts/dataset/hf_export/bucket_README.md "$EXPORT_ROOT/stage/README.md"
 echo "阶段1完成"
 

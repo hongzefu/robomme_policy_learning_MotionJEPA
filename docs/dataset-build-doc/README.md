@@ -28,6 +28,7 @@
 | [`hf-export-awsprod40k-ckpt-v1/`](hf-export-awsprod40k-ckpt-v1/launch.md) | `awsprod40k-b128-motion/39999` checkpoint 上传 |
 | [`hf-export-motionjepa-encoder-v1/`](hf-export-motionjepa-encoder-v1/launch.md) | MotionJEPA encoder + decoder 上传（含 [model card](hf-export-motionjepa-encoder-v1/model-card.md)） |
 | [`hf-export-robomme-vla-motionjepa-v1/`](hf-export-robomme-vla-motionjepa-v1/launch.md) | 整体 VLA + motion 发布仓；实录在根目录 `HF-EXPORT-robomme-vla-motionjepa-v1.md` |
+| [`hf-export-4task-motion-400ep-20260904-v1/`](hf-export-4task-motion-400ep-20260904-v1/launch.md) | `4task-motion-400ep` 全库（130 GB / 22.9 万文件）上传到**公开** bucket；含公开前体检闸门与裁决账本 |
 
 ## 已归档（环境 A，`docs/archive/dataset-build-doc/`）
 
