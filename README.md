@@ -59,7 +59,7 @@ We use separate environments for VLA training/inference and the RoboMME simulato
 ### 🐳 Install with Docker
 After [downloading the data](#download) in the `data` directory and setting up `runs` in the following [structure](#repository-structure). 
 Update the RoboMME submodule with `git submodule update --init`.
-Then build the Docker image following [this](docs/docker_installation.md).
+Then build the Docker image following [this](docs/archive/docker_installation.md).
 
 ## ⚡ QuickStart
 ### Evaluation
@@ -224,7 +224,7 @@ bash scripts/training/finetune_mme_vla_suite.sh
 ```
 Set `MME_VLA_TYPE` to train a specific model variant. You can also change `--exp-name` to suit your own experiment naming.
 
-We provide a sample training-curve description in [`docs/training_curve_sample.md`](docs/training_curve_sample.md).
+We provide a sample training-curve description in [`docs/training_curve_sample.md`](docs/archive/training_curve_sample.md).
 
 ### 🧭 Train VLM subgoal predictor
 [robomme_preprocessed_data](https://huggingface.co/datasets/Yinpei/robomme_preprocessed_data) already contains VLM subgoal prediction data, but you can also generate it with:
@@ -255,7 +255,7 @@ Running `eval.sh` automatically starts two tmux windows: one for the policy serv
 
 
 ### ✍️ Manual evaluation (per model)
-Details are provided [here](docs/manual_evaluation.md).
+Details are provided [here](docs/archive/manual_evaluation.md).
 
 
 ## 🏆 RoboMME Challenge Example

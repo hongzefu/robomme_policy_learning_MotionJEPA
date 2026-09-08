@@ -32,7 +32,7 @@
 | `eval_all_shards.local.sh` / `eval_all_shards.remote.sh` | 各一份 | 多分片总起（`MODE=task\|stride`），一片一个 detached tmux 会话 |
 | `merge_eval_shards.py` | local | 合并分片结果，出 `summary.txt` / `per_episode.json` 与 `SPLIT_SEED_MATCH` 判定行 |
 | `check_test_seeds.py` | local | 核 test/val split 的 seed 与训练 H5 seed 不相交 |
-| `plot_eval_success_by_length.py` | local | 四任务成功率 × 任务长度对照图，出 `docs/eval-success-by-task-length.png` |
+| `plot_eval_success_by_length.py` | local | 四任务成功率 × 任务长度对照图，出 `docs/archive/eval-success-by-task-length.png` |
 | `eval_seed_sweep.sh` | remote | 一个 (组, seed) 四任务按批串行跑完，逐片核 `EXIT_CODE=0` |
 | `aggregate_seed_runs.py` | remote | 跨 seed / 跨任务批次汇总（`merge_eval_shards.py` 只处理单 run 单 seed） |
 | `summarize_hard_eval.py` | remote | 难度档（hard / medium）专用汇总与 Fisher 检验 |

@@ -9,8 +9,8 @@
 
 ## 正文在别处，本档案只放索引与不可由 Git 还原的结果
 
-- **方案与实测报告**：[`docs/v1-gl-dataset-consistency-report.md`](../../../v1-gl-dataset-consistency-report.md)
-- **CPU/mem 档位实测**：[`docs/v1-gl-resource-tier-bench.md`](../../../v1-gl-resource-tier-bench.md)
+- **方案与实测报告**：[`docs/v1-gl-dataset-consistency-report.md`](../../v1-gl-dataset-consistency-report.md)
+- **CPU/mem 档位实测**：[`docs/v1-gl-resource-tier-bench.md`](../../v1-gl-resource-tier-bench.md)
 - **实现**：`scripts/dataset/gl/`（原 `scripts/data-preprocess-GL/`，commitV4.6 `b30be80` 迁为 `scripts/dataset/gl/`，再于 commitV6.2 `30a9079` 随 GreatLakes 链路整体删除；实现只存于 git 历史）
 
 ## 关键坐标

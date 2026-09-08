@@ -110,7 +110,7 @@ ckpt sha256 必须是 `bae96037…c15a`，与本机 `v1-store/external/motionjep
 - **GPU 利用率观测**：`scripts/training/util/`。
 
 集群链路（`scripts/dataset/gl/`）已于 commitV6.2 删除，环境 A 的建库方案报告
-[`docs/v1-gl-dataset-consistency-report.md`](docs/v1-gl-dataset-consistency-report.md) 保留为只读历史。
+[`docs/archive/v1-gl-dataset-consistency-report.md`](docs/archive/v1-gl-dataset-consistency-report.md) 保留为只读历史。
 
 ## 已弃用
 

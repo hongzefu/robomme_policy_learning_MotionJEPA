@@ -61,9 +61,28 @@
 - **E 未完成空壳（环境 B 例外）**（1 项）：环境 B 目录，但只有 `download.sh`、无 launch/result，从未跑成留档；作为空壳归档，若日后补跑请在 `docs/training-doc/` 下新建 run 目录。
 - **F 数据集构建档案（环境 A）**（2 项）：`4task-gl-400ep`——GreatLakes 8×1GPU 产出的 678 GB 原版 PKL+NPY 库（`v1-store/datasets/4task-gl`），环境 B 不可得；正文报告 `docs/v1-gl-dataset-consistency-report.md` 原地保留；`framesamp-original-4task-400ep`——2026-08-23 已弃用档案（commit `d951aef` 脚本从未运行），仅作「此路不通」记录。
 
+## 2026-09-08 追加：docs/ 顶层的上游原文、图与环境 A 报告（12 项）
+
+| 原路径 | 新路径 | 组 | 说明 |
+|---|---|---|---|
+| `docs/docker_installation.md` | `docs/archive/docker_installation.md` | G | 上游 MME-VLA 原文，未改 |
+| `docs/manual_evaluation.md` | `docs/archive/manual_evaluation.md` | G | 上游原文，未改 |
+| `docs/training_curve_sample.md` | `docs/archive/training_curve_sample.md` | G | 上游原文，未改（引用同目录 `wandb.png`） |
+| `docs/wandb.png` | `docs/archive/wandb.png` | G | 上游示例图 |
+| `docs/motion-memory-mask-axis.svg` | `docs/archive/motion-memory-mask-axis.svg` | H | 正本 `docs/motion-memory.md` 仍引用，链接已改指 archive |
+| `docs/motion-memory-online-timeline.svg` | `docs/archive/motion-memory-online-timeline.svg` | H | 同上 |
+| `docs/eval-success-by-task-length.png` | `docs/archive/eval-success-by-task-length.png` | H | 三 seed 成功率对照图（环境 A）；`plot_eval_success_by_length.py` 输出路径同步改 |
+| `docs/v1-phase1-gradient-baseline-report.md` | `docs/archive/v1-phase1-gradient-baseline-report.md` | I | 环境 A 报告，只读；结论仍是梯度对拍链依据 |
+| `docs/v1-phase2-dtype-unify-report.md` | `docs/archive/v1-phase2-dtype-unify-report.md` | I | 环境 A 报告，只读 |
+| `docs/v1-nfs-bottleneck-analysis.md` | `docs/archive/v1-nfs-bottleneck-analysis.md` | I | 环境 A 报告，只读 |
+| `docs/v1-gl-dataset-consistency-report.md` | `docs/archive/v1-gl-dataset-consistency-report.md` | I | 环境 A 报告，只读 |
+| `docs/v1-gl-resource-tier-bench.md` | `docs/archive/v1-gl-resource-tier-bench.md` | I | 环境 A 报告，只读 |
+
+搬迁后 `docs/` 顶层只剩 `README.md`、`motion-memory.md`、`dataloader-restructure.md`、`train-infer-consistency.md` 四个文件。被搬报告内指向仓库根的相对链接深度已 +1；根目录 `README.md`、`README-ZH.md`、`v1-gradient-baseline.md`、`v1-dtype-unify-plan.md` 中指向这些报告的 Markdown 链接只改了路径。
+
 ## 原地保留的环境 A 留档（对照用，不归档）
 
-- 梯度 / 对拍判据锚：`docs/training-doc/v1-grad-baseline-g0/`、`v1-grad-baseline-g0b/`、`v1-dtype-p5-grad/`、`v1-framesamp-g2/`、`v1-postclean-g3/`、`v1-singlerun-g0/`、`v1-l0-gauge/`——被 `docs/v1-phase1-gradient-baseline-report.md` / `docs/v1-phase2-dtype-unify-report.md` 与 `scripts/training/g0/` 直接引用。
+- 梯度 / 对拍判据锚：`docs/training-doc/v1-grad-baseline-g0/`、`v1-grad-baseline-g0b/`、`v1-dtype-p5-grad/`、`v1-framesamp-g2/`、`v1-postclean-g3/`、`v1-singlerun-g0/`、`v1-l0-gauge/`——被 `docs/archive/v1-phase1-gradient-baseline-report.md` / `docs/archive/v1-phase2-dtype-unify-report.md` 与 `scripts/training/g0/` 直接引用。
 - motion 接入依据：`docs/training-doc/motion-*/` 8 项与 `docs/dataset-build-doc/4task-motion-40ep/`、`4task-gl-framesamp/`——`docs/motion-memory.md` 的实测数字出处。
 - 环境 A 评估：`docs/training-doc/eval-3seed-context-vs-motion/` 等——三 seed 成功率对照的唯一来源，正文标注环境。
 

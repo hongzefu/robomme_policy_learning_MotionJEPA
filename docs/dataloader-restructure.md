@@ -17,12 +17,12 @@
 
 | 阶段 | 主题 | 落地 commit | 权威计划 | 一句话 |
 |---|---|---|---|---|
-| 阶段 1 | **dtype 统一** | `commitV2.4a`（验证工具）、`commitV2.4b`（三行修复） | [`v1-dtype-unify-plan.md`](../v1-dtype-unify-plan.md) | `right_padding_token_emb` 的三个 `np.zeros` 各加一个 `dtype=` 参数，消灭「dtype 随 batch 组成摆动」的双路径；报告见 [`v1-phase2-dtype-unify-report.md`](v1-phase2-dtype-unify-report.md) |
+| 阶段 1 | **dtype 统一** | `commitV2.4a`（验证工具）、`commitV2.4b`（三行修复） | [`v1-dtype-unify-plan.md`](../v1-dtype-unify-plan.md) | `right_padding_token_emb` 的三个 `np.zeros` 各加一个 `dtype=` 参数，消灭「dtype 随 batch 组成摆动」的双路径；报告见 [`v1-phase2-dtype-unify-report.md`](archive/v1-phase2-dtype-unify-report.md) |
 | 阶段 2 | **IO 重构（packed 三表）** | `commitV3.0`–`commitV3.4`（S0'→S6 收官），后续 `V3.5`–`V3.7` 为验收资产 | [`v2-framesamp-restructure-plan.md`](../v2-framesamp-restructure-plan.md) | 把每帧一个 `token_emb_{t}.npy` 的散小文件压成三张连续大表，训练时常驻 fd `preadv` 直读，`FrameSampStore` + `FrameSampDataset` 成为新链路 |
 | 阶段 3 | **破坏性单一化** | `commitV4.0`–`commitV4.6` | [`v3-destructive-restructure-plan.md`](../v3-destructive-restructure-plan.md) | 删 legacy 数据链与 `MMEVLA_DATA_BACKEND` 三态、删 recurrent/symbolic 分支、建库域自包含隔离、`scripts/` 收敛成 `training/` + `dataset/` 两域 |
 | 阶段 4 | **训练入口单跑** | `commitV5.0` | [`v5.0-train-entry-restructure-plan.md`](../v5.0-train-entry-restructure-plan.md) | `train.py` 官方 `__main__` 由「tentative 预热 + 正式」两次 `main()` 改为单跑，加两条 fail-loud 护栏与可选 `TRAIN_RECORD_DIR` 记录器 |
 
-四阶段之前还有一个前置：**G0 黄金基线**（`commitV2.1`–`commitV2.3.1`），把「同配置重跑逐位一致」做成可证伪的前提并固化一轮 1000 步产物，供后续每一阶段离线对拍——报告见 [`v1-phase1-gradient-baseline-report.md`](v1-phase1-gradient-baseline-report.md)。
+四阶段之前还有一个前置：**G0 黄金基线**（`commitV2.1`–`commitV2.3.1`），把「同配置重跑逐位一致」做成可证伪的前提并固化一轮 1000 步产物，供后续每一阶段离线对拍——报告见 [`v1-phase1-gradient-baseline-report.md`](archive/v1-phase1-gradient-baseline-report.md)。
 
 ### 1.2 训练语义不变的证明链：一句话
 
@@ -134,8 +134,8 @@ episode_manifest.json ——「唯一真值源」
 
 「瓶颈在 dataloader worker 的 CPU/文件层、不在 NFS 带宽、且靠调 workers 参数解决不了」这一判定的完整论证与实据，全部在**环境 A 的只读报告**里，本文不复述：
 
-- [`docs/v1-nfs-bottleneck-analysis.md`](v1-nfs-bottleneck-analysis.md)——NFS 带宽与 IOPS 侧的排除论证。
-- [`docs/v1-gl-resource-tier-bench.md`](v1-gl-resource-tier-bench.md)——资源档位实测。
+- [`docs/v1-nfs-bottleneck-analysis.md`](archive/v1-nfs-bottleneck-analysis.md)——NFS 带宽与 IOPS 侧的排除论证。
+- [`docs/v1-gl-resource-tier-bench.md`](archive/v1-gl-resource-tier-bench.md)——资源档位实测。
 - [`docs/archive/training-doc/v1-e2e-b64/`](archive/training-doc/v1-e2e-b64/)——端到端 util 均值 69.7%（中位 100% 是假象，`AGENTS.md` 第 16 条的原始教训案例）。
 - [`docs/archive/training-doc/v1-e2efix-w8c16/`](archive/training-doc/v1-e2efix-w8c16/)、[`w12c16`](archive/training-doc/v1-e2efix-w12c16/)、[`w16c16`](archive/training-doc/v1-e2efix-w16c16/)——workers 8/12/16 三档曲线完全平坦（5.301 / 5.319 / 5.327 s，util 71.2% / 70.6% / 67.1%），坐实纯参数调整无效、必须代码级重构。
 
@@ -482,7 +482,7 @@ __getitem__(idx):
 
 ## 七、dtype 统一摘要（阶段 1）
 
-> 完整报告 [`docs/v1-phase2-dtype-unify-report.md`](v1-phase2-dtype-unify-report.md)（**环境 A 产物，只读历史存档**）；源计划 [`v1-dtype-unify-plan.md`](../v1-dtype-unify-plan.md)。本节只做摘要与指针，不复述其验证明细与性能数字。
+> 完整报告 [`docs/v1-phase2-dtype-unify-report.md`](archive/v1-phase2-dtype-unify-report.md)（**环境 A 产物，只读历史存档**）；源计划 [`v1-dtype-unify-plan.md`](../v1-dtype-unify-plan.md)。本节只做摘要与指针，不复述其验证明细与性能数字。
 
 **问题**：旧链路的 `right_padding_token_emb` 里，三段 padding 用的是不带 `dtype` 的 `np.zeros`（默认 f64）。满长样本（`step ≥ 31`）走纯切片分支、交付 bf16/f32；短样本走 padding 分支、`np.concatenate` 把整块提升成 f64。于是**同一个键的 dtype 随 batch 里有没有短样本而摆动**，XLA 因此要编译两份产物，host 侧还多一次降精度搬运。
 
@@ -785,9 +785,9 @@ B1 档需求 = 3.831 s/step × 128 = 33.4 样本/s，供给对需求约 2.4× �
 
 **本文不列环境 A 的吞吐数字**（`AGENTS.md` 第 13 条：turbo NFS / RTX 6000 Ada / A40 的数字与环境 B 不可混比，且所引 `v1-store` 产物在环境 B 不存在）。需要时见归档报告：
 
-- [`docs/v1-nfs-bottleneck-analysis.md`](v1-nfs-bottleneck-analysis.md)、[`docs/v1-gl-resource-tier-bench.md`](v1-gl-resource-tier-bench.md)（原地保留）；
+- [`docs/v1-nfs-bottleneck-analysis.md`](archive/v1-nfs-bottleneck-analysis.md)、[`docs/v1-gl-resource-tier-bench.md`](archive/v1-gl-resource-tier-bench.md)（原地保留）；
 - [`docs/archive/training-doc/`](archive/README.md) 下的 A 组 15 项（`v1-e2e-b64`、`v1-e2efix-w{8,12,16}c16`、`v1-g0-speed-r2`、`v1-g1-speed`、`v1-framesamp-{dl,e2e,cmp}`、`v1-gl-dlbench`、`v1-2gpu-epoch-bench-b8`、`v1-coldcache-b8`、`v1-computeonly-b64`、`v1-prod-trend-10h` 等）；
-- 两份阶段报告的性能节：[`v1-phase1-gradient-baseline-report.md`](v1-phase1-gradient-baseline-report.md)、[`v1-phase2-dtype-unify-report.md`](v1-phase2-dtype-unify-report.md)。
+- 两份阶段报告的性能节：[`v1-phase1-gradient-baseline-report.md`](archive/v1-phase1-gradient-baseline-report.md)、[`v1-phase2-dtype-unify-report.md`](archive/v1-phase2-dtype-unify-report.md)。
 
 ### 11.5 已裁定不立项的三个加速项
 
@@ -841,7 +841,7 @@ B1 档需求 = 3.831 s/step × 128 = 33.4 样本/s，供给对需求约 2.4× �
 | 环境 A 吞吐 / 确定性 / dtype 中间留档 | `docs/archive/training-doc/`（清单与归档理由见 [`docs/archive/README.md`](archive/README.md)） |
 | 打包库构建留档 | 环境 A：[`docs/dataset-build-doc/4task-gl-framesamp/`](dataset-build-doc/4task-gl-framesamp/README.md)；环境 B：[`docs/dataset-build-doc/4task-motion-400ep/`](dataset-build-doc/4task-motion-400ep/result.md) |
 | 环境 B 吞吐 | [`docs/training-doc/bench-b128-util/`](training-doc/bench-b128-util/result.md)、[`docs/training-doc/repro-4a100-fsdp4/`](training-doc/repro-4a100-fsdp4/result.md) |
-| 阶段报告（环境 A，只读） | [`docs/v1-phase1-gradient-baseline-report.md`](v1-phase1-gradient-baseline-report.md)、[`docs/v1-phase2-dtype-unify-report.md`](v1-phase2-dtype-unify-report.md) |
+| 阶段报告（环境 A，只读） | [`docs/v1-phase1-gradient-baseline-report.md`](archive/v1-phase1-gradient-baseline-report.md)、[`docs/v1-phase2-dtype-unify-report.md`](archive/v1-phase2-dtype-unify-report.md) |
 | motion 正本 | [`docs/motion-memory.md`](motion-memory.md) |
 
 ### 12.4 已知边界（如实声明）

@@ -5,7 +5,7 @@
 > **范围**：v1 dataloader 重构链条的第二阶段——把旧训练链路里「dtype 随 batch 组成摆动」的双路径原地修掉，
 > 并用两块验证证明修复前后训练完全等价。本阶段是 IO 重构（第三阶段）的前置。
 > 本报告只保留人类审阅需要的内容与实测结论；实现级细节（代码改动逐行、工具参数、落盘格式定义、
-> commit 拓扑、红线自检、审计修正记录）留在源计划文件 [`v1-dtype-unify-plan.md`](../v1-dtype-unify-plan.md) 第二部分。
+> commit 拓扑、红线自检、审计修正记录）留在源计划文件 [`v1-dtype-unify-plan.md`](../../v1-dtype-unify-plan.md) 第二部分。
 > 前置的确定性定档与黄金基线见 [`v1-phase1-gradient-baseline-report.md`](v1-phase1-gradient-baseline-report.md)。
 >
 > **状态：全部执行完毕**（2026-08-26 立项 → 2026-08-27 收官）。两块正确性验收全过、性能对比已产出。
@@ -52,7 +52,7 @@ XLA 编译产物 2 份合 1 份、worker 在途内存约降 2/3。
 
 ## 三、改动内容（唯一一处，三行）
 
-[`src/mme_vla_suite/shared/data_utils.py`](../src/mme_vla_suite/shared/data_utils.py) 的
+[`src/mme_vla_suite/shared/data_utils.py`](../../src/mme_vla_suite/shared/data_utils.py) 的
 `right_padding_token_emb`：三个 `np.zeros`（img / pos / state 的 padding 段）各自加 `dtype=对应输入.dtype`。
 mask 的 padding 已显式 `dtype=np.bool_`，不动；满长分支（纯切片）不动。
 
@@ -242,14 +242,14 @@ replica/native 机器恢复的形态。
 
 因此后续 IO 重构的 A/B 两侧 dtype 天然相同、变为单变量对比；其 speed 链节点也不再合并承载 dtype 效果，
 性能归因干净。IO 重构的现行权威计划见
-[`v2-framesamp-restructure-plan.md`](../v2-framesamp-restructure-plan.md)。
+[`v2-framesamp-restructure-plan.md`](../../v2-framesamp-restructure-plan.md)。
 
 ---
 
 ## 十、溯源
 
 - 源计划与实现级细节（代码改动逐行、工具参数、位型容器格式定义、commit 拓扑、红线、审计修正记录）：
-  [`v1-dtype-unify-plan.md`](../v1-dtype-unify-plan.md) 第二部分
+  [`v1-dtype-unify-plan.md`](../../v1-dtype-unify-plan.md) 第二部分
 - 逐步留档：`docs/archive/training-doc/v1-dtype-p3-dump-pre/`、`docs/archive/training-doc/v1-dtype-p4-cmp/`、`docs/training-doc/v1-dtype-p5-grad/`（原地保留）、
   `docs/archive/training-doc/v1-dtype-ab-post-r1/`、`docs/archive/training-doc/v1-g1-speed/`（前四项与 g1-speed 已于 2026-09-07 归档，见 `docs/archive/README.md`）
 - 工具与判据说明：`scripts/dtype-unify/README.md`

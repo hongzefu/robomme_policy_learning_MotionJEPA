@@ -210,7 +210,7 @@ exec 段那一半是常数 80（`len(range(0, 1296−32, 16)) = 80`），所以 
 
 ### 3.4 mask 轴
 
-![三条 mask 在 token 数轴上的取值与效果](motion-memory-mask-axis.svg)
+![三条 mask 在 token 数轴上的取值与效果](archive/motion-memory-mask-axis.svg)
 
 全序列 1204 位上三条 mask 的取值：
 
@@ -461,7 +461,7 @@ out    = probs @ v                                 padding 位的 value 乘 0，
 
 推理没有离线特征库，记忆是边跑边攒的。帧**成批到货**：episode 开局第一批是整段 pre_traj（demo `[0, es)` 加 exec 首帧 `es`），之后每 16 个环境步一批（`examples/robomme/eval.py::get_action_chunk` 每 `obs_horizon = 16` 步调一次 `add_buffer` 再调一次 `infer`）。所以 **infer 只发生在 `τ = t − es = 0, 16, 32, …` 的时刻**。
 
-![stride 16 在线采样：每次 infer 时的记忆内容](motion-memory-online-timeline.svg)
+![stride 16 在线采样：每次 infer 时的记忆内容](archive/motion-memory-online-timeline.svg)
 
 ### 6.1 阶段一：`MME_VLA_Policy.add_buffer` → `FrameSampMemory.add_buffer`
 
@@ -811,7 +811,7 @@ PARAM_TREE_EXACT=PASS config=mme_vla_suite history_config=perceptual-framesamp-c
 
 按任务长度排开的同一份数据：
 
-![四任务成功率对照：motion vs 官方 framesamp+context（三 seed）](eval-success-by-task-length.png)
+![四任务成功率对照：motion vs 官方 framesamp+context（三 seed）](archive/eval-success-by-task-length.png)
 
 **结论：两组权重在同硬件、3 个 policy 采样 seed 下无可辨别差异。** 两组四任务均值相差 **0.3 个百分点**，而 motion 组自身的 seed 标准差就有 1.3 个百分点、官方组 0.5 个百分点。9.2 表里那个 28.0% vs 24.0% 的 4pp 领先**不成立**（commit `c5280e4`：「成功率对照图改用三 seed 数据——单 seed 版的长任务优势不成立」）。
 
@@ -903,4 +903,4 @@ PARAM_TREE_EXACT=PASS config=mme_vla_suite history_config=perceptual-framesamp-c
 
 - `motion-memory-plan.md`（仓库根，2,240 行）：权威计划的过程档案。第一部分讲窗口 / 链路 / 对齐 / model 改动 / 在线侧，第二部分是实现细节与「对拍闸门总表」（D1–D3 / T1–T3 / M1–M5 / P1–P5 与 A1–A23 的判据原文），末尾「环境 B 复刻」节记 2026-09-04 的结果。**其正文数字多为环境 A 口径**（含 `/data/hongzefu`、`/nfs/turbo` 路径与「4env400ep 26,777 行」这类环境 A 历史私有数据集的数字），引用前先按本文第七章 7.4 的说明分辨。
 - `motion-memory-interleave.md`（仓库根，434 行）：交错方案从 dataloader 到 gemma 内部的逐函数数值推导（576 → 1088 → 1184 → 1204 三层链，每一跳的形状与 dtype）。其示例数字按 stride 20 / 预算 80 写的部分已随主计划换档，以本文为准。
-- 图与产物：[`motion-memory-mask-axis.svg`](motion-memory-mask-axis.svg)、[`motion-memory-online-timeline.svg`](motion-memory-online-timeline.svg)、[`eval-success-by-task-length.png`](eval-success-by-task-length.png)。
+- 图与产物：[`motion-memory-mask-axis.svg`](archive/motion-memory-mask-axis.svg)、[`motion-memory-online-timeline.svg`](archive/motion-memory-online-timeline.svg)、[`eval-success-by-task-length.png`](archive/eval-success-by-task-length.png)。

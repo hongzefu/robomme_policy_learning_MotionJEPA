@@ -5,7 +5,7 @@
 > **范围**：v1 dataloader 重构链条的第一阶段——把「同配置重跑两次结果完全一样」做成可证伪的前提，
 > 并跑出一条**一次跑定、产物固化进 git**的黄金基线，供后续所有改动离线对拍。
 > 本报告只保留人类审阅需要的内容与实测结论；实现级细节（断言实现、脚本职责、参数表、commit 切分、
-> 红线自检、审计修正逐条记录）留在源计划文件 [`v1-gradient-baseline.md`](../v1-gradient-baseline.md) 第二部分。
+> 红线自检、审计修正逐条记录）留在源计划文件 [`v1-gradient-baseline.md`](../../v1-gradient-baseline.md) 第二部分。
 > 第二阶段见 [`v1-phase2-dtype-unify-report.md`](v1-phase2-dtype-unify-report.md)。
 >
 > **状态：全部执行完毕**（2026-08-26 立项 → 2026-08-27 收官）。确定性定档 D2/D2-cold 双 PASS，
@@ -267,7 +267,7 @@ commit，在白名单内、训练语义零影响，该轮与 r1 对拍仍 bitwis
 | **G0-speed-r2（现行锚点）** | `v1-g0-speed-r2` | `570287f` | 1000 步 speed 链锚点 | 稳态中位 **1.152 s/step**（n=949，p10 1.097 / p90 1.276）、均值 1.186、util 均值 **86.5%**、0% 采样 4.9%、慢步 3（分层 1.959 vs 1.184 s）、epoch 外推 15.82 h。vs 旧锚 +3.1%，主因 1000 步窗稀释了 page cache 的乐观偏差 | `docs/archive/training-doc/v1-g0-speed-r2/` |
 
 > 第二阶段的 G1 与 G1-speed 两行见 [`v1-phase2-dtype-unify-report.md`](v1-phase2-dtype-unify-report.md)；
-> 登记簿的现行权威版本在 [`v2-framesamp-restructure-plan.md`](../v2-framesamp-restructure-plan.md)。
+> 登记簿的现行权威版本在 [`v2-framesamp-restructure-plan.md`](../../v2-framesamp-restructure-plan.md)。
 
 ### 10.3 run_name 轮次规约
 
@@ -313,9 +313,9 @@ run_name 一律带 `-r<N>`（或语义后缀），确定性实验的 `v1-det-*-r
 ## 十二、溯源
 
 - 源计划与实现级细节（断言实现、脚本职责、参数表、preflight 断言清单、commit 切分、红线、审计修正记录）：
-  [`v1-gradient-baseline.md`](../v1-gradient-baseline.md) 第二部分
+  [`v1-gradient-baseline.md`](../../v1-gradient-baseline.md) 第二部分
 - 逐轮留档：`docs/archive/training-doc/v1-det-*/`、`docs/training-doc/v1-grad-baseline-g0{,b}/`、
   `docs/archive/training-doc/v1-g0-speed{,-r2}/`
 - 量具与判据说明：`scripts/smoke-local/README.md`；工具 `bench_train_steps.py`、`check_baseline_env.py`、
   `compare_baseline.py`
-- 登记簿的现行权威版本：[`v2-framesamp-restructure-plan.md`](../v2-framesamp-restructure-plan.md)
+- 登记簿的现行权威版本：[`v2-framesamp-restructure-plan.md`](../../v2-framesamp-restructure-plan.md)

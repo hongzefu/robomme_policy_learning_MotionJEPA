@@ -35,7 +35,7 @@ from matplotlib import font_manager
 REPO = Path(__file__).resolve().parents[3]   # 本文件原在 scripts/analysis/ 下（parents[2] 即仓库根）；迁到 scripts/training/legacy-eval/ 后深度 +1
 BY_SEED_REL = "docs/training-doc/eval-3seed-context-vs-motion/records/per_episode_by_seed.json"
 AXIS_JSON = REPO / "docs/dataset-build-doc/16task-h5-scan/records/memory_axis_16task.json"
-OUT_PNG = REPO / "docs/eval-success-by-task-length.png"
+OUT_PNG = REPO / "docs/archive/eval-success-by-task-length.png"
 
 TASKS = ["VideoUnmask", "ButtonUnmask", "VideoUnmaskSwap", "ButtonUnmaskSwap"]
 DIFFS = ["easy", "medium", "hard"]

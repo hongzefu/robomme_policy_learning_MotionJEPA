@@ -279,7 +279,7 @@ dense 训练覆盖 16 个相位；单条长 exec 段内各相位计数至多相�
 
 完整版（含帧路采样帧位置、有 demo 段的 VideoUnmask 例子）由脚本按同一公式算出，见下图：
 
-![stride 16 在线采样：每次 infer 时的记忆内容](docs/motion-memory-online-timeline.svg)
+![stride 16 在线采样：每次 infer 时的记忆内容](docs/archive/motion-memory-online-timeline.svg)
 
 **延迟账与决策**：
 
@@ -451,7 +451,7 @@ demo 段起点 `s` → `s`），调同一个 `pos_rows` 查出该帧 `(16, 768)`
 
 ### 3.3 三条 mask 在 token 数轴上的取值与效果
 
-![三条 mask 在 token 数轴上的取值与效果](docs/motion-memory-mask-axis.svg)
+![三条 mask 在 token 数轴上的取值与效果](docs/archive/motion-memory-mask-axis.svg)
 
 - `input_mask` 是唯一随样本变化的一行。记忆区 608 位经 `mem_order` 重排后，前 16k+m 位为 True（k 是有效帧数、m 是采到的真起点数），其后 608−16k−m 位为 False——不再有「帧路 padding 卡在段中间」。文本段前 L 位为 True，L 是指令 token 数。图像和动作全 True。
 - `ar_mask` 全序列只有两个 True，位置分别是第 608 位和第 1184 位，即图像段第一个 token 和动作段第一个 token；记忆区 608 位全 False，不参与重排。

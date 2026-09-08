@@ -33,5 +33,5 @@
 
 | 档案 | 处置 |
 |---|---|
-| [`4task-gl-400ep/`](../archive/dataset-build-doc/4task-gl-400ep/README.md) | GreatLakes 8×1GPU 产出的 678 GB 原版库，环境 B 不可得；正文报告 [`docs/v1-gl-dataset-consistency-report.md`](../v1-gl-dataset-consistency-report.md) 原地保留 |
+| [`4task-gl-400ep/`](../archive/dataset-build-doc/4task-gl-400ep/README.md) | GreatLakes 8×1GPU 产出的 678 GB 原版库，环境 B 不可得；正文报告 [`docs/v1-gl-dataset-consistency-report.md`](../archive/v1-gl-dataset-consistency-report.md) 原地保留 |
 | [`framesamp-original-4task-400ep/`](../archive/dataset-build-doc/framesamp-original-4task-400ep/README.md) | 2026-08-23 已弃用档案，仅作「此路不通」记录 |

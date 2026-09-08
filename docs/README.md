@@ -1,6 +1,6 @@
 # docs/ 索引
 
-> 环境 B（AWS 单机 8×A100，2026-09-04 起）现行。本目录分「正本」「上游原文」「图与产物」「环境 A 只读报告」「留档目录」「归档」六类；
+> 环境 B（AWS 单机 8×A100，2026-09-04 起）现行。本目录顶层只剩三份正本与本索引；上游原文、图、环境 A 只读报告与历史 run 留档全部在 `archive/`；
 > 根目录的各 `*-plan.md` 是过程档案，与本目录正本冲突时以正本为准（对照表见末节）。
 
 ## 一、正式正本（先读这三份）
@@ -11,25 +11,22 @@
 | [`dataloader-restructure.md`](dataloader-restructure.md) | dataloader 四阶段重构的现行正本：三张连续大表、`store_meta.json` 契约、index 派生与读路径、dtype 统一、破坏性单一化、`train.py` 单跑、对拍体系与吞吐分环境 |
 | [`train-infer-consistency.md`](train-infer-consistency.md) | 训练 / 推理一致性对拍：六关方案、判据总表与实跑结果、SigLIP 编码器精度差异独立章、Vulkan 第 28 次建环境崩溃根因、收窄后的结论措辞 |
 
-## 二、上游原文（MME-VLA 自带，未改）
+## 二、已归档的上游原文与图（`archive/`，2026-09-08 迁入）
 
-- [`docker_installation.md`](docker_installation.md)、[`manual_evaluation.md`](manual_evaluation.md)、[`training_curve_sample.md`](training_curve_sample.md)、`wandb.png`。
+- 上游 MME-VLA 自带、未改：[`archive/docker_installation.md`](archive/docker_installation.md)、[`archive/manual_evaluation.md`](archive/manual_evaluation.md)、[`archive/training_curve_sample.md`](archive/training_curve_sample.md)、`archive/wandb.png`。
+- 图（正本仍引用，链接已指向 archive）：[`archive/motion-memory-mask-axis.svg`](archive/motion-memory-mask-axis.svg)（记忆区 608 位 mask 轴与交错示意）、[`archive/motion-memory-online-timeline.svg`](archive/motion-memory-online-timeline.svg)（在线推理每批 16 帧的时刻线与 motion 窗）、[`archive/eval-success-by-task-length.png`](archive/eval-success-by-task-length.png)（四任务成功率对照图，三 seed，环境 A；由 `scripts/training/legacy-eval/plot_eval_success_by_length.py` 生成）。
 
-## 三、图与产物
-
-- [`motion-memory-mask-axis.svg`](motion-memory-mask-axis.svg)：记忆区 608 位 mask 轴与交错示意。
-- [`motion-memory-online-timeline.svg`](motion-memory-online-timeline.svg)：在线推理每批 16 帧的时刻线与 motion 窗。
-- [`eval-success-by-task-length.png`](eval-success-by-task-length.png)：四任务成功率对照图（三 seed，环境 A）。
-
-## 四、环境 A 只读报告（数字不与环境 B 混比）
+## 三、已归档的环境 A 只读报告（`archive/`，数字不与环境 B 混比）
 
 | 文件 | 内容 | 状态 |
 |---|---|---|
-| [`v1-phase1-gradient-baseline-report.md`](v1-phase1-gradient-baseline-report.md) | 训练确定性定档与梯度对拍黄金基线（G0 / G0b） | 只读，结论仍是对拍链依据 |
-| [`v1-phase2-dtype-unify-report.md`](v1-phase2-dtype-unify-report.md) | dtype 统一修复与两块验证 | 只读，结论仍有效 |
-| [`v1-nfs-bottleneck-analysis.md`](v1-nfs-bottleneck-analysis.md) | 4 卡 b64 的 NFS 瓶颈判定 | 只读历史（turbo 已退役） |
-| [`v1-gl-dataset-consistency-report.md`](v1-gl-dataset-consistency-report.md) | GreatLakes 四任务建库与一致性验证 | 只读历史（链路已删） |
-| [`v1-gl-resource-tier-bench.md`](v1-gl-resource-tier-bench.md) | 集群作业 CPU / mem 档位实测 | 只读历史 |
+| [`archive/v1-phase1-gradient-baseline-report.md`](archive/v1-phase1-gradient-baseline-report.md) | 训练确定性定档与梯度对拍黄金基线（G0 / G0b） | 只读，结论仍是对拍链依据 |
+| [`archive/v1-phase2-dtype-unify-report.md`](archive/v1-phase2-dtype-unify-report.md) | dtype 统一修复与两块验证 | 只读，结论仍有效 |
+| [`archive/v1-nfs-bottleneck-analysis.md`](archive/v1-nfs-bottleneck-analysis.md) | 4 卡 b64 的 NFS 瓶颈判定 | 只读历史（turbo 已退役） |
+| [`archive/v1-gl-dataset-consistency-report.md`](archive/v1-gl-dataset-consistency-report.md) | GreatLakes 四任务建库与一致性验证 | 只读历史（链路已删） |
+| [`archive/v1-gl-resource-tier-bench.md`](archive/v1-gl-resource-tier-bench.md) | 集群作业 CPU / mem 档位实测 | 只读历史 |
+
+## 四、（并入第二、三节）
 
 ## 五、留档目录
 
@@ -87,7 +84,7 @@
 | `motion-memory-plan.md`、`motion-memory-interleave.md` | motion 接入计划与交错设计（过程档案，冻结） | [`motion-memory.md`](motion-memory.md) |
 | `v2-framesamp-restructure-plan.md`、`v3-destructive-restructure-plan.md`、`v5.0-train-entry-restructure-plan.md` | dataloader 三阶段计划（过程档案，冻结） | [`dataloader-restructure.md`](dataloader-restructure.md) |
 | `v1-framesamp-restructure-plan.md`、`v1-framesamp-restructure-adversarial-review.md`、`v1-post-restructure-roadmap.md` | 已被 v2 取代的首版计划、对抗审查与 roadmap（三个加速项不立项） | 历史，只读 |
-| `v1-gradient-baseline.md`、`v1-dtype-unify-plan.md`、`v1-95util.md` | 第一 / 二阶段与 util 计划（环境 A） | 报告见第四节 |
+| `v1-gradient-baseline.md`、`v1-dtype-unify-plan.md`、`v1-95util.md` | 第一 / 二阶段与 util 计划（环境 A） | 报告见第三节（已归档） |
 | `v5.1-prod-60k-wandb-plan.md` | GreatLakes 60k 正式训练计划（环境 A） | 留档已归档：`archive/training-doc/v1-prod-60k/` |
 | `greatlakes.md` | 集群操作指引 | 环境 B 下只读存档（AGENTS 第 8 条） |
 | `env-b-aws-replication.md` | 环境 B 从零复刻实录 | 现行，与本目录正本互补 |
