@@ -104,6 +104,20 @@ store_meta / episode_manifest 的整文件 sha256 是训练 provenance 门与建
 - 匿名可读实证：`env -u HF_TOKEN -u HUGGING_FACE_HUB_TOKEN` 起子 shell 拉 `README.md`
   成功且非空 → `PUBLIC_ANON_READ=OK`。**清 token 是必需的**——带着自己的凭据拉下来
   证明不了任何「公开」的事。
+- **异地视角复核（验收后补做）**：用 `env -u HF_TOKEN -u HUGGING_FACE_HUB_TOKEN` 且
+  `HF_HOME` / `HF_XET_CACHE` 指向全新空目录（排除本地缓存命中），匿名拉
+  `motion/*` + `checksums/*` + `SHA256SUMS.pre.txt` 共 9 个对象（`Downloads: 9 Skips: 0`），
+  再用**下载下来的清单**校验**下载下来的数据**：
+
+  ```
+  motion/meta/motion_index.json: OK
+  motion/meta/pack_progress.jsonl: OK
+  motion/meta/row_digests.blake2b.bin: OK
+  motion/meta/store_meta.json: OK
+  motion/motion_token.f32.bin: OK          （20,987,904 B）
+  ```
+
+  这条链路完全不依赖本机源库与凭据，等价于一个陌生人拿到 bucket 地址后的完整取用流程。
 
 ## 六、插曲：122 个对象一次性 batch commit 超时（本轮主要成本）
 
@@ -178,8 +192,10 @@ Xet 内容寻址让服务端已有的块不必重传）但 commit 负担不变�
    （成员命名或清单错位），那种错误在任何一个分片上都会暴露。
 3. **计数层曾是已知的弱判据**：buckets REST 统计历史上两次异步滞后。本轮首查即吻合、
    未触发 120 s 复查，但这不改变「计数层不单独作判据」的口径。
-4. **匿名可读只验证了 `README.md` 一个文件**。它证明 bucket 的访问控制确实是公开的，
-   但没有对全部 122 个对象逐个做匿名拉取验证。
+4. **匿名拉取覆盖 9 / 122 个对象**（driver 阶段 10 的 `README.md`，加验收后补做的
+   `motion/*` + `checksums/*`，见第五节）。已证明访问控制确实是公开的、且匿名取回的字节
+   与清单相符；但未对全部 122 个对象逐个做匿名拉取——其余对象的字节正确性由回读层
+   （`SHA256_PRE_POST_DIFF=0`，带 token 的全量取回）覆盖。
 5. **公开体检是模式匹配，不是语义理解**。P1–P11 覆盖的是已知的泄露形态（凭据、内部路径、
    主机名、非公开仓库名）。库里若存在这些模式之外的敏感信息，扫描器看不见。
 6. 本库全部逐位结论都在 A100-SXM4-80GB 上得出，**跨 GPU 架构不保证逐位一致**。
