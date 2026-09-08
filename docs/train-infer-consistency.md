@@ -35,7 +35,7 @@
 
 1. **建库**（离线，跑一次）。`scripts/dataset/build_dataset.py` 读原始 h5，把每帧图像和 `setup/task_goal`（转小写）写成 pkl；`scripts/dataset/pack_framesamp_store.py` 用离线 f32 权重的 `dataset_builder/siglip_tokenizer.py::SigLipTokenizer` **逐帧、batch=1** 编成 (16,1152) 的帧特征，连同位置编码表、状态一起打成三张连续大表；`scripts/dataset/wan/` 抽 Wan latent，MotionJEPA 编码器把每个 33 帧窗编成 (768,) 的运动 token，`scripts/dataset/pack_motion_store.py` 打成 motion 表。四张表的 sha256 记在 run 的 `motion_provenance.json` 里。
 2. **读样本**。`training/framesamp_dataset.py::FrameSampDataset.__getitem__` 按样本的 (episode, 时刻 t) 从表里取：用 `shared/sampling.py::even_sampling_indices(t, 32)` 选 32 帧、读它们的特征行；按 `visible_motion_frames` 公式选出到时刻 t 为止合法的运动窗（≤96），读 motion 表；用 `shared/sampling.py::memory_order` 按「2·时刻 + 类型」稳定排序生成 608 位次序表 `mem_order`；右侧补零并给出 `static_mask`、`motion_mask`。交付 8 个记忆数组加当前图、状态、prompt、动作。
-3. **变换链**。`training/config.py::RoboMMEDataConfig.create` 组的链：`RepackTransform` 丢掉 8 个不进模型的键（`epis_idx`、`exec_start_idx`、`is_demo`、`step_idx` 等）→ `RoboMMEInputs` 归一化状态与动作 → `TokenizePromptWithState` 用 `PaligemmaTokenizer` 把 prompt 编成 64 个 token（不做小写转换）。
+3. **变换链**。训练侧的加工链由 `training/config.py::RoboMMEDataConfig.create` 拼成，顺序是：`RepackTransform` 丢掉 8 个只用于建库和调试、不进模型的键（episode 编号、demo 起点、子目标文本等）→ 归一化状态与动作（`RoboMMEInputs` + `Normalize`）→ 把 prompt 编成 64 个 token（`TokenizePromptWithState`，底层是 `PaligemmaTokenizer`，不做小写转换）。
 4. **前向**。`openpi/models/model.py::preprocess_observation(train=True)` 做图像增广（记忆 token 不动）；`history_pi0.py::HistoryPi0.embed_prefix` 把 608 记忆 + 512 图像 + 64 文本投影成 1184 个前缀 token；`compute_loss` 再拼上 20 个带噪动作 token 成 1204 位，`make_attn_mask` 造一张 1204×1204 的 mask、位置号 = mask 累计和减一，`llm([prefix, suffix], mask, positions)` **一次算完**，`action_out_proj` 取最后 20 位得速度场，与真值算 loss。
 
 ### 推理侧：从仿真观测到动作
@@ -44,7 +44,7 @@
 2. **现算帧特征**。`policies/policy.py::MME_VLA_Policy.add_buffer` 调 `history_pi0.py::HistoryPi0.vision_encode`，用 checkpoint 里的 bf16 `PaliGemma.img` **整批**（首批 es+1 帧、之后 16 帧）编帧特征，存进 `policies/framesamp_memory.py::FrameSampMemory`；位置编码表由 `PosEmb3D` 在 GPU 上现算 4096 行。
 3. **现算运动特征**。每凑齐一个 33 帧窗，`policies/motion_protocol.py::MotionEncoderClient` 把帧发给旁路进程（sidecar，Wan VAE + MotionJEPA 编码器，权重与建库同一份 sha256），拿回 (768,) 的 token。
 4. **拼记忆**。`MME_VLA_Policy._prepare_history` 用与训练侧**同一个** `even_sampling_indices` 选 32 帧、同一个 `visible_motion_frames` 规则选运动窗、同一个 `memory_order` 排序，拼出与训练完全同形状的 8 个数组。
-5. **变换链**。`policies/policy_config.py::create_trained_policy` 组的链：`InjectDefaultPrompt`（obs 已带 prompt，实际不做事）→ 与训练侧**同一批** `RoboMMEInputs` / `TokenizePromptWithState` 对象。
+5. **变换链**。推理侧的加工链由 `policies/policy_config.py::create_trained_policy` 拼成，顺序是：`InjectDefaultPrompt`（只在数据里没有 `prompt` 键时塞一个默认值；评估时每步都带着任务描述，所以这一步从不生效）→ 归一化状态（`RoboMMEInputs` + `Normalize`）→ 把 prompt 编成 64 个 token（`TokenizePromptWithState`）。后两步和训练侧用的是同一个配置生成的同一批变换对象；推理侧没有训练侧那一步丢键的 `RepackTransform`，因为在线数据本来就没有那 8 个多余的键。
 6. **前向**。`preprocess_observation(train=False)` 不增广；同一个 `embed_prefix` 得 1184 个前缀 token；`HistoryPi0.sample_actions` 先 `llm([prefix, None], mask, positions)` 算一遍前缀、存下 18 层 KV 缓存，再从纯噪声出发去噪 10 步，每步只算 20 个动作 token：`llm([None, suffix], mask, positions, kv_cache)`，位置号 = 前缀长度 + 动作段累计和减一；最后 `MME_VLA_Policy.infer` 反归一化成关节动作。
 
 两条链结构上只差两处：训练多一个丢键的 `RepackTransform`、推理多一个空操作的 `InjectDefaultPrompt`，实测都不改任何数。真正会产生数值差的只有两跳：帧特征编码器（f32 逐帧 vs bf16 整批）与 LLM 前向（1204 行一次算 vs 1184 行前缀 + 20 行分步）。
