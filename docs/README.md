@@ -8,7 +8,7 @@
 | 文件 | 内容 |
 |---|---|
 | [`motion-memory.md`](motion-memory.md) | MotionJEPA motion token 接入 HistoryPi0 的现行正本：窗口口径、交错次序、三层代码、训练 / 推理链路逐跳、离线表与建库、闸门体系、生产 run 与评估、已知未知 |
-| [`dataloader-restructure.md`](dataloader-restructure.md) | dataloader 四阶段重构的现行正本：三张连续大表、`store_meta.json` 契约、index 派生与读路径、dtype 统一、破坏性单一化、`train.py` 单跑、对拍体系与吞吐分环境 |
+| [`dataloader-restructure.md`](dataloader-restructure.md) | 训练特征库从每帧一个小文件改成三张连续大表：改前改后的文件结构、生成链路（清单 → SigLIP 建库 → 打包 → verify）、改前改后一致的证明（轻量对拍 + 1000 步梯度链六份 sha256 同值）；细节见文件 git 历史 `3f4afb5` 版本 |
 | [`train-infer-consistency.md`](train-infer-consistency.md) | 训练 / 推理一致性验证：结论（输入链闭合、五处非逐位来源、能推出什么）与待拍板项、两侧调用链、七关结果、第 5 关与第 6 关各单独一节、五个发现、Codex 2026-09-08 审计补验一节；Vulkan 第 28 次建环境崩溃的根因与修法见 `training-doc/tic-vulkan-makeenv/` |
 | [`motion-utilization.md`](motion-utilization.md) | motion memory 利用率评估（2026-09-08）：屏蔽 / 换内容 / 正常 / 官方四种条件下的闭环成功率（6400 集）、开环动作差、逐层机制、结论边界；工具 `scripts/motion-variance/`，图 `motion-utilization/figures/` |
 
