@@ -1,15 +1,16 @@
 # docs/ 索引
 
-> 环境 B（AWS 单机 8×A100，2026-09-04 起）现行。本目录顶层只剩三份正本与本索引；上游原文、图、环境 A 只读报告与历史 run 留档全部在 `archive/`；
+> 环境 B（AWS 单机 8×A100，2026-09-04 起）现行。本目录顶层只剩四份正本与本索引；上游原文、图、环境 A 只读报告与历史 run 留档全部在 `archive/`；
 > 根目录的各 `*-plan.md` 是过程档案，与本目录正本冲突时以正本为准（对照表见末节）。
 
-## 一、正式正本（先读这三份）
+## 一、正式正本（先读这四份）
 
 | 文件 | 内容 |
 |---|---|
 | [`motion-memory.md`](motion-memory.md) | MotionJEPA motion token 接入 HistoryPi0 的现行正本：窗口口径、交错次序、三层代码、训练 / 推理链路逐跳、离线表与建库、闸门体系、生产 run 与评估、已知未知 |
 | [`dataloader-restructure.md`](dataloader-restructure.md) | dataloader 四阶段重构的现行正本：三张连续大表、`store_meta.json` 契约、index 派生与读路径、dtype 统一、破坏性单一化、`train.py` 单跑、对拍体系与吞吐分环境 |
 | [`train-infer-consistency.md`](train-infer-consistency.md) | 训练 / 推理一致性验证：结论（输入链闭合、五处非逐位来源、能推出什么）与待拍板项、两侧调用链、七关结果、第 5 关与第 6 关各单独一节、五个发现、Codex 2026-09-08 审计补验一节；Vulkan 第 28 次建环境崩溃的根因与修法见 `training-doc/tic-vulkan-makeenv/` |
+| [`motion-utilization.md`](motion-utilization.md) | motion memory 利用率评估（motion-variance，2026-09-08 起）：四条件（official / normal / mask / swap）定义与比较语义、三条空干预验收、阶段 0 开环动作差与预注册解读、阶段 1 18 层机制、阶段 2 4×4×2 闭环矩阵的 pooled 400 配对统计、donor 覆盖、威胁与否证；工具 `scripts/motion-variance/`，图 `motion-utilization/figures/` |
 
 ## 二、已归档的上游原文与图（`archive/`，2026-09-08 迁入）
 

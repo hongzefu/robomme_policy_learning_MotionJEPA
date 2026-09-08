@@ -107,6 +107,7 @@ ckpt sha256 必须是 `bae96037…c15a`，与本机 `v1-store/external/motionjep
 - **训练**：`scripts/training/train.py`（配置 `mme_vla_suite_b128`），生产命令见 `docs/training-doc/awsprod40k-b128-motion/launch.md`。
 - **闸门与对拍**：`scripts/training/tests/motion_gates_model.py` / `motion_gates_online.py`（M/P/T 系闸门）、`scripts/training/g0/`（G0 梯度对拍、SigLIP 重放、训练/推理一致性对拍 `compare_train_infer_obs.py` 等）；对拍体系说明见 [`docs/train-infer-consistency.md`](docs/train-infer-consistency.md)。
 - **评估**：主线不再维护评估链路，评估脚本在 `scripts/training/legacy-eval/`（含 `.local` / `.remote` 两套，见其 README）；主线 `examples/robomme/eval.py` 保持 4b7a710 版。单进程建第 28 个仿真环境必崩（Vulkan）的根因见 `docs/training-doc/tic-vulkan-makeenv/result.md`，commitV7.2 起评估启动已加 `GLIBC_TUNABLES` 修法。
+- **motion 利用率评估**：`scripts/motion-variance/`（四条件闭环矩阵、开环逐层分析、donor bank、汇总出图；正本 [`docs/motion-utilization.md`](docs/motion-utilization.md)）。
 - **GPU 利用率观测**：`scripts/training/util/`。
 
 集群链路（`scripts/dataset/gl/`）已于 commitV6.2 删除，环境 A 的建库方案报告

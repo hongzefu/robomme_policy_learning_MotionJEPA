@@ -1,0 +1,335 @@
+"""motion-variance 评估客户端（scripts/training/legacy-eval/robomme-local/eval.py 的副本，改点仅下列四处；主线 examples/robomme 与 legacy 副本均不受影响）：
+  1. infer 的 element 多带 mv_task / mv_episode（serve_policy_mv.py 的 swap 查表与 ep_seq 交叉核对需要；RoboMMEInputs 不消费这两个键）；
+  2. 逐集打 MV_EP_START / MV_EP_DONE（补上「每集步数 / 推理次数 / 耗时」——progress.json 与视频名只有 success/fail/timeout）；
+  3. 续评守卫：progress.json 已存在且非空又未给 --args.overwrite 时拒跑（矩阵禁止续评，serve 端 ep_seq→(task,ep) 核对依赖完整遍历序）；
+  4. 本 docstring。
+"""
+import dataclasses
+import json
+import os
+import shutil
+import time
+from pathlib import Path
+from typing import Optional, Any, Tuple
+
+import numpy as np
+
+from openpi_client import websocket_client_policy as _websocket_client_policy
+from utils import (
+    pack_buffer,
+    check_args,
+    TASK_NAME_LIST,
+    TASK_WITH_VIDEO_DEMO,
+    EpisodeState,
+)
+from utils import RolloutRecorder
+from env_runner import EnvRunner
+
+
+
+@dataclasses.dataclass
+class Args:
+    host: str = "0.0.0.0"
+    port: int = 8011
+
+    obs_horizon: int = 16
+    max_steps: int = 1300
+    save_dir: str = "v1-store/evaluation"
+    overwrite: bool = False
+
+    use_history: bool = True
+    policy_name: str = "dummy_test"
+    model_seed: int = 42
+    model_ckpt_id: int = 80000
+    dataset: str = "test" # benchmark split：test / val / train，对应 env_metadata/<split>/；非 test 时结果目录另开一段，不覆盖 test
+
+    # task control
+    re_eval_tasks: str = "" # tasks split by comma
+    only_tasks: str = "" # tasks split by comma
+    exclude_tasks: str = "" # tasks split by comma
+    max_episodes: int = 0 # 每任务最多评几集（0 = 环境提供的全部；T3_EVAL_OBS 用 10）
+    episode_start: int = 0 # 从第几集起评（分片并行：片 k 给 episode_start=k*n, max_episodes=n；默认 0 行为不变）
+    episode_stride: int = 1 # 集号步长（stride 交错分片：worker w 给 episode_start=w, episode_stride=8, max_episodes=0；默认 1 行为不变）
+
+
+
+class EpisodeEvaluator:
+    def __init__(self, args: Args, save_dir: Path):
+        self.args = args
+        self.save_dir = save_dir
+
+    def eval_each_episode(
+        self,
+        env_runner: EnvRunner,
+        video_save_dir: Path,
+    ) -> str:
+        client = _websocket_client_policy.MMEVLAWebsocketClientPolicy(
+            self.args.host, self.args.port
+        )
+        resp = client.reset()
+        while not resp.get("reset_finished", False):
+            time.sleep(0.1)
+
+        epstate = EpisodeState()
+        self._n_infer = 0
+        _t0 = time.monotonic()
+        task_goal, recorder = self.init_episode(env_runner, epstate, video_save_dir)
+        _es0 = int(epstate.exec_start_idx)
+        print(f"MV_EP_START split={self.args.dataset} task={env_runner.env_id} ep={env_runner.episode_id} "
+              f"exec_start_idx={_es0} start={time.strftime('%F %T')}", flush=True)
+
+        img, wrist_img, robot_state = epstate.get_current_obs()
+        prompt = task_goal
+        success_flag = "unknown"
+
+        while True:
+            if not epstate.action_plan:
+                action_chunk = self.get_action_chunk(
+                    client, epstate, img, wrist_img, robot_state, prompt,
+                    exec_horizon=self.args.obs_horizon,
+                    task=env_runner.env_id, episode_id=env_runner.episode_id,
+                )
+
+                epstate.action_plan.extend(action_chunk)
+                epstate.clear_buffers()
+
+            action = epstate.action_plan.popleft()
+            obs, stop_flag, success_flag = env_runner.step(action)
+            epstate.count += 1
+
+            if epstate.count > self.args.max_steps:
+                success_flag = "timeout"
+                break
+
+            img, wrist_img, robot_state = obs
+
+            epstate.add_observation(img, wrist_img, robot_state)
+            recorder.record(
+                image=img.copy(),
+                wrist_image=wrist_img.copy(),
+                state=robot_state.copy(),
+                action=action.copy(),
+            )
+
+            if stop_flag:
+                break
+
+        print(f"MV_EP_DONE split={self.args.dataset} task={env_runner.env_id} ep={env_runner.episode_id} "
+              f"flag={success_flag} steps={epstate.count} infers={self._n_infer} exec_start_idx={_es0} "
+              f"wall_s={time.monotonic() - _t0:.1f} difficulty={env_runner.difficulty}", flush=True)
+        if success_flag == "unknown":
+            return "unknown"
+
+        video_filename = f"{env_runner.env_id}_ep{env_runner.episode_id}_{success_flag}_{task_goal}_{env_runner.difficulty}.mp4"
+        recorder.save_video(video_filename)
+
+        return success_flag
+
+
+    def init_episode(
+        self,
+        env_runner: EnvRunner,
+        epstate: EpisodeState,
+        video_save_dir: Path,
+    ) -> Tuple[str, RolloutRecorder]:
+        pre_traj = env_runner.get_init_obs()
+        task_goal = pre_traj["task_goal"]
+
+        recorder = RolloutRecorder(video_save_dir, task_goal, fps=30)
+
+        print(f"task_goal: {task_goal}")
+
+        epstate.image_buffer.extend(pre_traj["images"])
+        epstate.wrist_image_buffer.extend(pre_traj["wrist_images"])
+        epstate.state_buffer.extend(pre_traj["states"])
+
+        for i in range(len(pre_traj["images"])):
+            recorder.record(
+                image=pre_traj["images"][i].copy(),
+                wrist_image=pre_traj["wrist_images"][i].copy(),
+                state=pre_traj["states"][i].copy(),
+                is_video_demo=env_runner.env_id in TASK_WITH_VIDEO_DEMO and i < len(pre_traj["images"]) - 1,
+            )
+
+        epstate.exec_start_idx = len(epstate.image_buffer) - 1
+        print(f"exec_start_idx: {epstate.exec_start_idx}")
+        return task_goal, recorder
+
+    def get_action_chunk(
+        self,
+        client,
+        state: EpisodeState,
+        img: np.ndarray,
+        wrist_img: np.ndarray,
+        robot_state: np.ndarray,
+        prompt: str,
+        exec_horizon: int,
+        task: str = "",
+        episode_id: int = -1,
+    ) -> list:
+        if self.args.use_history:
+            resp = client.add_buffer(pack_buffer(
+                state.image_buffer,
+                state.state_buffer,
+                state.exec_start_idx,
+            ))
+            while not resp.get("add_buffer_finished", False):
+                time.sleep(0.1)
+
+        element = {
+            "observation/image": img,
+            "observation/wrist_image": wrist_img,
+            "observation/state": robot_state,
+            "prompt": prompt,
+            "mv_task": task,                 # motion-variance：身份键，serve 端 swap 查表 / ep_seq 核对用
+            "mv_episode": int(episode_id),
+        }
+        self._n_infer += 1
+
+        action_chunk = client.infer(element)["actions"]
+        return action_chunk[:exec_horizon]
+
+
+def setup_save_directory(args: Args) -> Path:
+    """Set up and validate save directories."""
+    # split 段：test 保持历史路径逐字节不变（已有 seed42 结果不受影响）；val / train 另开 <split>-seed<n>，
+    # 否则会写进同一目录、并被 setup_log_dict 的续评逻辑当成「已评过」整体跳过
+    seed_seg = f"seed{args.model_seed}" if args.dataset == "test" else f"{args.dataset}-seed{args.model_seed}"
+    save_dir = (
+        Path(args.save_dir)
+        / args.policy_name
+        / f"ckpt{args.model_ckpt_id}"
+        / seed_seg
+    )
+
+    if save_dir.exists():
+        if args.overwrite:
+            shutil.rmtree(save_dir)
+            print(f"we will overwrite the evaluation at {save_dir}")
+        else:
+            pj = save_dir / "progress.json"
+            if pj.is_file() and pj.stat().st_size > 2:
+                raise SystemExit(f"motion-variance 矩阵禁止续评（会打乱 serve 端 ep_seq 与 episode_plan 的配对）: {pj} 已有内容；"
+                                 f"换 policy_name 或加 --args.overwrite 整片重跑")
+            print("we will resume the evaluation")
+
+    save_dir.mkdir(parents=True, exist_ok=True)
+    return save_dir
+
+
+def setup_log_dict(save_dir: Path, args: Args) -> dict:
+    if os.path.exists(save_dir / "progress.json"):
+        with open(save_dir / "progress.json", "r") as f:
+            log_dict = json.load(f)
+
+    elif os.path.exists(save_dir / "log.json"):
+        with open(save_dir / "log.json", "r") as f:
+            log_dict = json.load(f)
+        log_dict.pop("success_rate", None)
+        log_dict.pop("total_success_rate", None)
+    else:
+        log_dict = {}
+
+    for task_name in log_dict:
+        error_list = []
+        for k, v in log_dict[task_name].items():
+            if v == "error":
+                error_list.append(k)
+        for k in error_list:
+            log_dict[task_name].pop(k)
+
+    if args.re_eval_tasks:
+        for task_name in args.re_eval_tasks.split(","):
+            if task_name in log_dict:
+                del log_dict[task_name]
+                os.system(f"rm -f {save_dir / 'videos' / f'{task_name}_ep*.mp4'}")
+
+    with open(save_dir / "progress.json", "w") as f:
+        json.dump(log_dict, f, indent=2)
+
+    return log_dict
+
+
+def evaluate(args: Args):
+    """Main evaluation function."""
+    check_args(args)
+
+    save_dir = setup_save_directory(args)
+    video_save_dir = save_dir / "videos"
+
+    log_dict = setup_log_dict(save_dir, args)
+
+    if args.only_tasks:
+        task_names = args.only_tasks.split(",")
+    else:
+        task_names = TASK_NAME_LIST
+
+    if args.exclude_tasks:
+        task_names = [task_name for task_name in task_names if task_name not in args.exclude_tasks.split(",")]
+        for task in args.exclude_tasks.split(","):
+            log_dict[task] = {str(i): False for i in range(50)}
+
+    evaluator = EpisodeEvaluator(args, save_dir)
+
+    while not os.path.exists(save_dir / "log.json"):
+        for task_name in task_names:
+            if task_name not in log_dict:
+                log_dict[task_name] = {}
+
+            env_runner = EnvRunner(task_name, video_save_dir, max_steps=args.max_steps, dataset=args.dataset)
+            num_episodes = env_runner.num_episodes
+
+            success_flag = "unknown"
+
+            if args.max_episodes > 0:
+                num_episodes = min(num_episodes, args.episode_start + args.max_episodes)
+            episode_ids = list(range(args.episode_start, num_episodes, args.episode_stride))
+            print(f"[robomme] task {task_name}: {len(episode_ids)} episodes {episode_ids}")
+            for episode_id in episode_ids:
+                if str(episode_id) in log_dict[task_name]:
+                    print(f"[robomme] episode {episode_id} already evaluated, skipping...")
+                    continue
+
+                env_runner.make_env(episode_id)
+                print(f"\n[robomme] env for task {task_name} episode {episode_id} setup finished")
+
+                try:
+                    success_flag = evaluator.eval_each_episode(env_runner, video_save_dir)
+                    if success_flag == "unknown":
+                        log_dict[task_name][episode_id] = "error"
+                    else:
+                        log_dict[task_name][episode_id] = success_flag == "success"
+                except Exception as e:
+                    print(f"Error evaluating episode {episode_id} for task {task_name}: {e}")
+                    log_dict[task_name][episode_id] = "error"
+
+                env_runner.close_env()
+                with open(save_dir / "progress.json", "w") as f:
+                    json.dump(log_dict, f, indent=2)
+
+                if success_flag == "unknown":
+                    print("API calling error, aborting...")
+                    return
+
+            del env_runner
+            time.sleep(1)
+
+        try:
+            final_results = {}
+            final_results["success_rate"] = {
+                task_name: sum(log_dict[task_name].values()) / len(log_dict[task_name].values())
+                for task_name in log_dict.keys()
+            }
+            final_results["total_success_rate"] = (
+                sum(final_results["success_rate"].values()) / len(final_results["success_rate"].values())
+            )
+            with open(save_dir / "log.json", "w") as f:
+                json.dump(final_results, f, indent=2)
+        except Exception as e:
+            print(f"Error saving final results: {e}")
+            time.sleep(1)
+
+
+if __name__ == "__main__":
+    import tyro
+    tyro.cli(evaluate)
