@@ -24,7 +24,7 @@
 
 本仓库以 MME-VLA 的 `perceptual-framesamp-context` 为起点，修改其训练数据链路并接入
 [MotionJEPA](https://github.com/hongzefu/MotionJEPA) 生成的 motion token。两步都已落地（见「当前状态」）；
-后续 scope（预算消融、SigLIP 编码器精度闭合、8 卡 200 集评估扩展）见 `docs/train-infer-consistency.md`「明确不做」与「以后立项」两节，
+后续 scope（预算消融、SigLIP 编码器精度闭合、8 卡 200 集评估扩展）见 `docs/train-infer-consistency.md`「没做的事」一节，
 **不代表当前实施授权**。
 
 ## v1 计划范围（历史）

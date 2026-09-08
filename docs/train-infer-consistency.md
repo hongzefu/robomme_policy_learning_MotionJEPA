@@ -1,30 +1,28 @@
 # 训练 / 推理一致性验证
 
 本文是现行正本，自足可读：结论、调用链、每一关查了什么与结果、待拍板的事都在本文内。判定行逐字原文在五个 run 的 `docs/training-doc/tic-*/result.md` 里，本文不再复述。
-环境 B（AWS 单机 8×A100，仓库 `/scratch/hongze/robomme_policy_learning_MotionJEPA`）；对象是生产 checkpoint `v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999` 与它训练时用的 400 ep 库 `v1-store/datasets/4task-motion-400ep`。2026-09-07 全部跑完。
+环境 B（AWS 单机 8×A100，仓库 `/scratch/hongze/robomme_policy_learning_MotionJEPA`）；对象是生产 checkpoint `v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999` 与它训练时用的 400 ep 库 `v1-store/datasets/4task-motion-400ep`。2026-09-07 全部跑完；2026-09-08 经 Codex 对抗审计（第八节）后按审计意见修订。
 
 ## 一、结论
 
-**推理时喂给模型的东西，和训练时从表里读出来的，是同一份。** 在这个 checkpoint、5 条训练集 episode 的 120 个决策时刻、以及 24 集真仿真上：推理端现拼出来的记忆（608 个 token 与它们的次序表）、当前两张图、机器人状态、任务描述的 token，与训练端逐字节相同；进模型之后，1184 个前缀 token、attention mask、位置号、18 层 KV 缓存逐位相同；同一噪声下去噪 10 步得到的 20 步动作逐位相同。真 sidecar 现算的 140 个运动窗与离线表逐字节相同。
+**推理时喂给模型的输入链，和训练时从表里读出来的输入链，没有发现逻辑错配。** 分三层说：
 
-只有两处天然不逐位，都已量化、都是数值精度问题而不是逻辑错误：
-- 历史帧特征编码器：训练建表用 f32 权重逐帧编，推理用 checkpoint 内 bf16 权重整批编，记忆 token 相对差 0.33%，传到动作上只有采样噪声的 5.5%。用户 9 月 6 日拍板不改。
-- 训练的「整段一次前向」和推理的「前缀缓存 + 分步去噪」两条路，同一输入下速度场相对差 0.19%～0.30%；把精度升到真 f32 后差异归零，证明只是 bf16 kernel 归约序不同。
+- **输入链闭合。** 在这个 checkpoint、5 条训练集 episode 的 120 个决策时刻上：推理端现拼出来的记忆（608 个 token 与它们的次序表）、当前两张图、机器人状态、任务描述的 token，与训练表逐字节相同（第 1、2 关）；进模型之后，1184 个前缀 token、attention mask、位置号、18 层 KV 缓存逐位相同（第 3 关）；两侧 observation 经**同一个** `sample_actions` 路径去噪 10 步后的 20 步动作逐位相同（第 5 关，两侧同一算法，不比较训练算法，见第五节）。真 sidecar 现算的 140 个运动窗与离线表逐字节相同。Codex 审计把覆盖扩到 400 集 101,066 个样本 × 8 数组零差、真实 DataLoader 8,192 次叶比较零差、240 个运动窗逐字节一致（第八节）。
+- **五处已知不逐位，都是数值精度或预期机制，不是逻辑错误。** (1) 帧特征编码器：训练建表用 f32 权重逐帧编，推理用 checkpoint 内 bf16 权重整批编，记忆 token 相对差 0.33%（第七节 1）。(2) `compute_loss` 整段一次前向 vs `sample_actions` 前缀缓存 + 分步去噪：bf16 速度场差随噪声时间 time 变化，time=0.5 为 0.27%、time=0.001 为 9.98%；真 f32/highest 下 ≤ 8e-6；传到 10 步去噪后的动作上 bf16 差 4.47e-4、f32 差 2.17e-8（第五节、第七节 2）。(3) 训练 `preprocess_observation(train=True)` 有图像增广，推理没有（第七节 4）。(4) checkpoint 盘上 f32/bf16 混合、生产全部按 bf16 加载（第七节 5）。(5) 整段前向的 batch 形状：同一样本 batch 1 vs 2/8/16，bf16 速度场差 0.37% / 0.43% / 0.41%（第七节 2）。
+- **能推出什么、不能推出什么。** 三 seed 评估 motion 组与官方组无差别（24.2% ± 1.3 vs 24.5% ± 0.5，环境 A 历史数字）**不能归咎于所测输入链喂错**。但本轮没有做消除精度差后的配对闭环、没有量化模型各层对 motion 的利用、没有 nomotion 训练对照，所以**不能据此排除** motion 通路未被学到、训练收益为零、或数值差经轨迹放大等原因。旧三 seed 报告自身记录了同权重同 seed 跨 GPU 后 ButtonUnmaskSwap 从 17/50 变为 10/50，评估噪声量级本身就大于两组均值差。这些未做的事列在第十节。
 
-措辞按审计收窄：**在指定 checkpoint、指定样本、上述两项隔离之下，所覆盖路径未发现额外的训练 / 推理不一致。** 不说「已排除全部不一致」，因为样本只有 5 集 + 24 集，且真仿真那一关没有训练真值、只验不变量。
-
-由此，三 seed 评估 motion 组与官方组无差别（24.2% ± 1.3 vs 24.5% ± 0.5，环境 A 历史数字）**不能**归咎于「推理喂错了东西」；剩下的解释只有 motion token 本身作用有限、或评估噪声。
+措辞按审计收窄：**在指定 checkpoint、指定样本、上述五项隔离之下，所覆盖路径未发现额外的训练 / 推理不一致。** 不说「已排除全部不一致」，因为样本只有 5 集 + 24 集 + Codex 补的 4 集，且真仿真那一关没有训练真值、只验不变量。
 
 ### 待你拍板的两件事
 
 | 事 | 是什么 | 选项 |
 |---|---|---|
-| `VT_FULL_VS_CACHED` 阈值 | 整段前向 vs 缓存分步的速度场差，实测 rel_fro 1.9e-3～3.0e-3、bf16 ulp_p99 10～22，超过计划事先定死的 1e-3 / 4。已证明是纯数值来源（第五节 2）。脚本没放宽，判定行保持 FAIL | (a) 按实测重定阈值，按四次跑约 1.6 倍波动带留裕量；(b) 改成「f32 档逐位 + bf16 档只观察」；(c) 维持 FAIL 记录 |
-| 测试集出现训练未见的 goal | ButtonUnmask 测试集第 3 集的目标「先按按钮，拿红方块的容器，再拿绿方块的容器」在 400 集训练数据里没出现过（第五节 3） | (a) 评估口径里注明该集「训练未见 goal」；(b) 补数据重建库 |
+| `VT_FULL_VS_CACHED` 阈值 | 整段前向 vs 缓存分步的速度场差。time=0.5 下实测 rel_fro 1.9e-3～3.4e-3、bf16 ulp_p99 10～29，超过计划事先定死的 1e-3 / 4；随 time 减小单调上升，time=0.001 为 9.98%（第七节 2）。已证明是纯数值来源；真 f32 下速度场与最终动作也**不逐位**，只是小到 1e-7 / 1e-8 量级。脚本没放宽，判定行保持 FAIL | (a) 按 time 分档重定阈值——推理只访问 time ∈ {1.0, 0.9, …, 0.1}，可只对该区间定阈；不能只按四次跑的 1.6 倍波动定；(b) 维持 FAIL 记录 |
+| 测试集出现训练未见的 goal | ButtonUnmask 测试集第 3、7、19、23 集的目标「先按按钮，拿红方块的容器，再拿绿方块的容器」在 400 集训练数据里没出现过，共 4/50 集；其他三任务没有这类缺口（Codex 扩查 200 集测试集，第七节 3） | (a) 评估口径里注明这 4 集「训练未见 goal」；(b) 补数据重建库 |
 
 ## 二、在查什么
 
-三 seed 评估里 motion 组与官方 `framesamp+context` 组没有可辨别差异。三类解释：(a) motion token 本身没用；(b) 训练学到了，但推理时喂进模型的记忆与训练时不是一回事；(c) 评估噪声。本轮只查 (b)。
+三 seed 评估里 motion 组与官方 `framesamp+context` 组没有可辨别差异。三类解释：(a) motion token 本身没用；(b) 训练学到了，但推理时喂进模型的记忆与训练时不是一回事；(c) 评估噪声。本轮只查 (b)；(a) 与 (c) 的量化未做，见第十节。
 
 「记忆」是模型每走一步除当前观测外还要看的一块输入：过去 32 张历史帧的特征（每帧 16 个 token，共 512 个）、过去若干段运动的特征（每 33 帧一段、每 16 帧起一段，最多 96 个 token）、以及一张把这 608 个 token 按时间排好的次序表。训练时这些是建库阶段提前算好存在硬盘表里的，训练程序按行读；推理时没有表，机器人边跑边现算。两边算的是不是同一份，此前只比到「8 个数组逐位相同」这一层，往下（预处理之后、模型内部、最终动作、真实评估节奏）一处都没比过。
 
@@ -32,9 +30,9 @@
 
 ### 训练侧：从 h5 到 loss
 
-1. **建库**（离线，跑一次）。`scripts/dataset/build_dataset.py` 读原始 h5，把每帧图像和 `setup/task_goal`（转小写）写成 pkl；`scripts/dataset/pack_framesamp_store.py` 用离线 f32 权重的 `dataset_builder/siglip_tokenizer.py::SigLipTokenizer` **逐帧、batch=1** 编成 (16,1152) 的帧特征，连同位置编码表、状态一起打成三张连续大表；`scripts/dataset/wan/` 抽 Wan latent，MotionJEPA 编码器把每个 33 帧窗编成 (768,) 的运动 token，`scripts/dataset/pack_motion_store.py` 打成 motion 表。四张表的 sha256 记在 run 的 `motion_provenance.json` 里。
-2. **读样本**。`training/framesamp_dataset.py::FrameSampDataset.__getitem__` 按样本的 (episode, 时刻 t) 从表里取：用 `shared/sampling.py::even_sampling_indices(t, 32)` 选 32 帧、读它们的特征行；按 `visible_motion_frames` 公式选出到时刻 t 为止合法的运动窗（≤96），读 motion 表；用 `shared/sampling.py::memory_order` 按「2·时刻 + 类型」稳定排序生成 608 位次序表 `mem_order`；右侧补零并给出 `static_mask`、`motion_mask`。交付 8 个记忆数组加当前图、状态、prompt、动作。
-3. **变换链**。训练侧的加工链由 `training/config.py::RoboMMEDataConfig.create` 拼成，顺序是：`RepackTransform` 丢掉 8 个只用于建库和调试、不进模型的键（episode 编号、demo 起点、子目标文本等）→ 归一化状态与动作（`RoboMMEInputs` + `Normalize`）→ 把 prompt 编成 64 个 token（`TokenizePromptWithState`，底层是 `PaligemmaTokenizer`，不做小写转换）。
+1. **建库**（离线，跑一次）。`scripts/dataset/build_dataset.py` 读原始 h5，把每帧图像和 `setup/task_goal`（转小写）写成 pkl；建库阶段 `scripts/dataset/build_shard.py` 用离线 f32 权重的 `dataset_builder/siglip_tokenizer.py::SigLipTokenizer` **逐帧、batch=1** 编成 (16,2048) 的帧特征、写成每帧 npy；`scripts/dataset/pack_framesamp_store.py` 只把既有 npy 连同位置编码表、状态一起打成三张连续大表（`image_emb_4x4/part_*.bf16.bin (rows,16,2048)`、`pos_emb_4x4.f32.bin`、`state_emb.f32.bin`），不做编码；`scripts/dataset/wan/` 抽 Wan latent，MotionJEPA 编码器把每个 33 帧窗编成 (768,) 的运动 token，`scripts/dataset/pack_motion_store.py` 打成 motion 表。四张表的指纹记在 run 的 `motion_provenance.json` 里（其中只有 motion 表是全文哈希，见第四节第 0 关）。
+2. **读样本**。`training/framesamp_dataset.py::FrameSampDataset.__getitem__` 按样本的 (episode, 时刻 t) 从表里取：用 `shared/sampling.py::even_sampling_indices(t, 32)` 选 32 帧、读它们的特征行；按 `visible_motion_frames` 公式选出到时刻 t 为止合法的运动窗（≤96），读 motion 表；用 `shared/sampling.py::memory_order` 按「2·时刻 + 类型」稳定排序生成 608 位次序表 `mem_order`；右侧补零并给出 `static_mask`、`motion_mask`。交付前先 `pop` 掉 `simple_subgoal_online`、`grounded_subgoal_online` 两个键，交付 8 个记忆数组加当前图、状态、prompt、动作。
+3. **变换链**。训练侧的加工链由 `training/config.py::RoboMMEDataConfig.create` 拼成，顺序是：`RepackTransform` 丢掉余下 6 个只用于建库和调试、不进模型的键（`epis_idx`、`exec_start_idx`、`grounded_subgoal`、`is_demo`、`simple_subgoal`、`step_idx`）→ 归一化状态与动作（`RoboMMEInputs` + `Normalize`）→ 把 prompt 编成 64 个 token（`TokenizePromptWithState`，底层是 `PaligemmaTokenizer`，不做小写转换）。
 4. **前向**。`openpi/models/model.py::preprocess_observation(train=True)` 做图像增广（记忆 token 不动）；`history_pi0.py::HistoryPi0.embed_prefix` 把 608 记忆 + 512 图像 + 64 文本投影成 1184 个前缀 token；`compute_loss` 再拼上 20 个带噪动作 token 成 1204 位，`make_attn_mask` 造一张 1204×1204 的 mask、位置号 = mask 累计和减一，`llm([prefix, suffix], mask, positions)` **一次算完**，`action_out_proj` 取最后 20 位得速度场，与真值算 loss。
 
 ### 推理侧：从仿真观测到动作
@@ -43,10 +41,10 @@
 2. **现算帧特征**。`policies/policy.py::MME_VLA_Policy.add_buffer` 调 `history_pi0.py::HistoryPi0.vision_encode`，用 checkpoint 里的 bf16 `PaliGemma.img` **整批**（首批 es+1 帧、之后 16 帧）编帧特征，存进 `policies/framesamp_memory.py::FrameSampMemory`；位置编码表由 `PosEmb3D` 在 GPU 上现算 4096 行。
 3. **现算运动特征**。每凑齐一个 33 帧窗，`policies/motion_protocol.py::MotionEncoderClient` 把帧发给旁路进程（sidecar，Wan VAE + MotionJEPA 编码器，权重与建库同一份 sha256），拿回 (768,) 的 token。
 4. **拼记忆**。`MME_VLA_Policy._prepare_history` 用与训练侧**同一个** `even_sampling_indices` 选 32 帧、同一个 `visible_motion_frames` 规则选运动窗、同一个 `memory_order` 排序，拼出与训练完全同形状的 8 个数组。
-5. **变换链**。推理侧的加工链由 `policies/policy_config.py::create_trained_policy` 拼成，顺序是：`InjectDefaultPrompt`（只在数据里没有 `prompt` 键时塞一个默认值；评估时每步都带着任务描述，所以这一步从不生效）→ 归一化状态（`RoboMMEInputs` + `Normalize`）→ 把 prompt 编成 64 个 token（`TokenizePromptWithState`）。后两步和训练侧用的是同一个配置生成的同一批变换对象；推理侧没有训练侧那一步丢键的 `RepackTransform`，因为在线数据本来就没有那 8 个多余的键。
+5. **变换链**。推理侧的加工链由 `policies/policy_config.py::create_trained_policy` 拼成，顺序是：`InjectDefaultPrompt`（只在数据里没有 `prompt` 键时塞一个默认值；评估时每步都带着任务描述，所以这一步从不生效）→ 归一化状态（`RoboMMEInputs` + `Normalize`）→ 把 prompt 编成 64 个 token（`TokenizePromptWithState`）。后两步和训练侧用的是同一个配置生成的同一批变换对象；推理侧没有训练侧那一步丢键，因为在线数据本来就没有那 8 个多余的键。
 6. **前向**。`preprocess_observation(train=False)` 不增广；同一个 `embed_prefix` 得 1184 个前缀 token；`HistoryPi0.sample_actions` 先 `llm([prefix, None], mask, positions)` 算一遍前缀、存下 18 层 KV 缓存，再从纯噪声出发去噪 10 步，每步只算 20 个动作 token：`llm([None, suffix], mask, positions, kv_cache)`，位置号 = 前缀长度 + 动作段累计和减一；最后 `MME_VLA_Policy.infer` 反归一化成关节动作。
 
-两条链结构上只差两处：训练多一个丢键的 `RepackTransform`、推理多一个空操作的 `InjectDefaultPrompt`，实测都不改任何数。真正会产生数值差的只有两跳：帧特征编码器（f32 逐帧 vs bf16 整批）与 LLM 前向（1204 行一次算 vs 1184 行前缀 + 20 行分步）。
+两条链在变换层只差两处：训练侧 Dataset `pop` 两键 + `RepackTransform` 丢六键、推理侧一个空操作的 `InjectDefaultPrompt`，实测都不改任何数。在模型层会产生数值差的是第一节列的五处，其中结构性的两跳是帧特征编码器（f32 逐帧 vs bf16 整批）与 LLM 前向（1204 行一次算 vs 1184 行前缀 + 20 行分步）。
 
 ## 四、怎么查、查到什么
 
@@ -54,62 +52,143 @@
 
 | 关 | 比什么 | 查了多少 | 结果 |
 |---|---|---|---|
-| 0 配置与库同源 | 归一化统计量、checkpoint 参数树、当前库四张表的指纹 vs 训练 run 记录的指纹、motion 库路径 | norm stats 8 个数组、6 个 sha256、59 个参数叶 | 全部相同。本轮对拍用的库就是训练时那张 |
+| 0 配置与库同源 | 归一化统计量、checkpoint 参数树、当前库四张表的指纹 vs 训练 run 记录的指纹、motion 库路径 | norm stats 8 个数组、6 个 sha256、59 个参数叶。6 个 sha256 中只有 motion 表是全文哈希，三张 framesamp 表只核清单与元数据；三表全文哈希由 Codex 审计补齐（第八节） | 全部相同。本轮对拍用的库就是训练时那张 |
 | 评估节奏 | 用 `eval.py` 自己的 `EpisodeState` 在 CPU 上复刻决策时刻 | 5 集 120 个时刻，三种算法互核 | 全一致。每集最多 82 次推理；demo 段 ≥ 289 帧时运动窗会到 97 个、超预算 96（当前最长 216，余量 4 窗） |
 | 1 输入键 | 8 个记忆数组、当前两张图、状态、prompt 原文；运动 token「sidecar 现算 vs 表」 | 120 点；140 窗 | 全部逐字节相同 |
 | 2 预处理后 | 两侧各过完自己那串变换后的全部键，含 prompt 的 64 个 token | 120 点 | 全部相同；两侧多出来的步骤都不改数 |
 | 3 模型内部 | 1184 个前缀 token、attention mask、位置号、18 层 K/V；次序表能否原样还原 | 120 点 | 全部逐位相同 |
-| 4 整段 vs 缓存 | 同权重同输入同噪声：训练路一次算完 vs 推理路前缀缓存 + 一步 | 120 点 | mask 前缀子块、动作行、动作段位置号 120/120 全等；数值差超事先阈值，见第五节 2 |
-| 5 最终动作 | 同一噪声去噪 10 步的 20 步动作 | 120 点 × 3 组噪声 | 全部逐位相同，重跑确定 |
-| 6 真仿真 | 24 集在线不变量：运动窗数是否等于公式值、次序表是否合法排列（汇总器独立重算）、prompt token 是否训练见过、位置表是否与库表相同、24 集与探针记录一一对应、有无抛错 | 24 集 359 次推理 | 6 条过，零 error 零 timeout；1 集 prompt 训练未见，见第五节 3 |
+| 4 整段 vs 缓存 | 同权重同输入同噪声：训练路一次算完 vs 推理路前缀缓存 + 一步（原脚本固定 time=0.5） | 120 点 | mask 前缀子块、动作行、动作段位置号 120/120 全等；数值差超事先阈值，见第七节 2 |
+| 5 最终动作 | 两侧 observation 各经**同一个** `policy._sample_actions` 去噪 10 步的 20 步动作 | 120 点 × 3 组噪声 | 全部逐位相同，重跑确定。它证明两侧 observation 等价，不比较训练算法，详见第五节 |
+| 6 真仿真 | 24 集在线不变量：运动窗数是否等于公式值、次序表是否合法排列（汇总器独立重算）、prompt token 是否训练见过、位置表是否与库表相同、24 集与探针记录一一对应、有无抛错 | 24 集 359 次推理 | 6 条过，零 error 零 timeout；1 集 prompt 训练未见，见第七节 3。三条判据存在漏检，详见第六节 |
 
 两项此前 FAIL 的闸门本轮闭合：
 - `A19_VALID_DIST`：原判据把 40 ep 库的四个分布数写死在脚本里，400 ep 库必 FAIL。改为期望按当前库清单重算、实测取真实交付的 `motion_mask.sum()`，400 ep 库 101,066 个样本逐样本全等；40 ep 库重算出的期望与旧数字一致，没有改松。
-- `T3_MOTION_CAUSAL`：9 月 4 日在同一 obs 连算两次时 LLM 词表 embedding 叶的梯度会变，导致「垫料不改梯度」判 FAIL。改为先无条件跑 3 次确定性探针、把不确定叶单列排除（含 motion 叶即 FAIL），PASS 语义收窄为「排除叶之外逐位一致」并报覆盖率。重跑时不确定性没有复现，36/36 叶全部逐位一致。
+- `T3_MOTION_CAUSAL`：9 月 4 日在同一 obs 连算两次时 LLM 词表 embedding 叶的梯度会变，导致「垫料不改梯度」判 FAIL。改为先无条件跑 3 次确定性探针、把不确定叶单列排除（含 motion 叶即 FAIL），PASS 语义收窄为「排除叶之外逐位一致」并报覆盖率。重跑时不确定性没有复现，36/36 叶全部逐位一致。该 run 用 40 ep 库与 `aws-t3-open-s100` 的共同初态（step 0），**不是生产 checkpoint 的因果验证**；生产 39999 的输入梯度因果见第八节。
 
-## 五、三个值得单独讲的发现
+## 五、第 5 关单独讲：它比了什么、没比什么
+
+**两条算法路径。** 训练用 `HistoryPi0.compute_loss`：1184 个前缀 token 加 20 个带噪动作 token 拼成 1204 位，调一次 `self.PaliGemma.llm([prefix, suffix], mask, positions)`，输出速度场，与真值算 loss。训练只做这一次前向，不做去噪采样。推理用 `HistoryPi0.sample_actions`：先调 `self.PaliGemma.llm([prefix, None], ...)` 只算 1184 位前缀，存下 18 层 KV 缓存；然后从纯噪声出发循环 10 次，每次只算 20 个动作 token：`self.PaliGemma.llm([None, suffix], mask, positions, kv_cache)`。两条路径数学上等价，但 XLA 对 1204 行的矩阵和 1184 行 + 20 行的矩阵选了不同的分块与归约顺序，bf16 下结果有差。
+
+**第 5 关的代码。** `scripts/training/g0/compare_train_infer_obs.py` 第 5 关两侧各调一次同一个函数：
+
+```python
+# T 侧：obs 从 FrameSampDataset 读出，经训练侧变换链
+a  = policy._sample_actions(jax.random.key(0), ob_T, noise=NOISE[sd], **policy._sample_kwargs)
+# I 侧：obs 由 MME_VLA_Policy._prepare_history 在线拼出，经推理侧变换链
+a2 = policy._sample_actions(jax.random.key(0), ob_I, noise=NOISE[sd], **policy._sample_kwargs)
+```
+
+两侧的区别只在 `ob_T` 和 `ob_I` 的来源。结果 120 点 × 3 组噪声全部逐位相同。**这证明的是：训练表里读出的 observation 和在线拼出的 observation，经过同一条推理路径后动作一致，所以两个 observation 等价。它没有调过 `compute_loss`，不证明「训练路径算出的动作和推理路径算出的动作一致」。** 第一节此前把它写成「同一噪声下去噪 10 步得到的 20 步动作逐位相同」并放在「喂的是同一份」下面，读者会误读成后者，本次修订已改。
+
+**两条算法路径本身的差。** 第 4 关只比到速度场，且固定 time=0.5。Codex 审计补比了最终动作：先独立重构整段前向，与 `compute_loss(train=True)` 核对，三种精度合计 36/36 个 loss 逐位一致（`loss_train_vs_manual equal=true`，探针实现正确）；再用整段前向反复执行 10 步去噪，与 `sample_actions` 的缓存分步比最终动作。bf16 下 36/36 点不逐位，归一化 32 维动作 RMS 差 4.4699e-4，七个关节的差 1.6562e-4 rad；真 f32 下 36/36 仍不逐位，RMS 差 2.1738e-8。来源 `v1-store/reports/codex-tic-audit-20260908/model/bf16.log`、`model/f32.log`。
+
+**判读。** 训练不执行 10 步去噪，「用训练算法跑 10 步去噪」是反事实测试，没有真值可以说谁对谁错。差异来源已在第七节 2 定性为 bf16 归约顺序。这一节改的是措辞，不是发现 bug。
+
+## 六、第 6 关单独讲：在线不变量与三处漏检
+
+**它是什么。** 24 集 test split 真仿真里没有训练侧 observation 可以对比，因为测试集 episode 不在训练表里。所以 `scripts/training/g0/summarize_eval_probe.py` 只检查在线记录的自洽性：
+
+- 每次推理时 `motion_mask.sum()` 是否等于 `visible_motion_frames` 公式算出的窗数；
+- `mem_order` 是否是合法排列，汇总器用 `memory_order` 独立重算一遍；
+- prompt 的 token 是否属于训练集 26 种 prompt 的 token 集合；
+- 在线 GPU 现算的位置编码表前 586 行是否与库表 sha256 相同；
+- 24 集与探针记录一一对应；
+- 有没有集被记成 `"error"`、有没有 timeout。
+
+原 359 次推理 6 条过。它不比训练与推理的任何数值，只验在线链路没有跑飞。
+
+**三处漏检。** Codex 用改过的日志副本做负控（`v1-store/reports/codex-tic-audit-20260908/eval/adversarial_summary.log`）：
+
+- `EVAL_PROMPT` 只查在线 tokens 是否属于训练 prompt 集合（`train_prompts` 收集训练 pkl 的 prompt，`in_set` 判定），不查是否对应本集真实 prompt，也不查文本 mask。把 359 点的 tokens 全换成同一个已见 goal（实际造成 326 点错误），汇总器仍输出 7/7 PASS、退出码 0；再把所有文本 mask 清零，仍全 PASS。
+- 一一对应：把日志里的 episode 1 改成 episode 0，形成重复与遗漏，汇总器仍报告 `one_to_one=1`。
+- timeout 判据是「该集推理次数 ≥ ⌈(max_steps+1)/16⌉ = 82」。直接执行真实 `eval.py` 控制流：第 1297～1300 步正常成功结束的集同样产生 82 次推理，会被判成 timeout；实际控制流到第 1301 步才判 timeout。视频文件名交叉核只打印，没有成为约束。
+
+**本轮结论是否受影响：不受。** Codex 逐条重新编码原 359 点以及本次新补 4 任务各 1 集的 49 点，`id_mismatch 0 mask_mismatch 0`；原 24 集与新 4 集经独立核对确实没有 timeout、集号 24/24 唯一。漏洞在判据的证明力：这三条判据以后不能直接推广使用，修判据另立任务（第十节）。
+
+## 七、五个值得单独讲的发现
 
 ### 1. 帧特征编码器：训练 f32 离线表 vs 推理 bf16 checkpoint
 
-同一份 SigLIP 编码器，训练建表用离线 f32 权重逐帧编，推理用 checkpoint 内 bf16 权重整批编。两份权重逐值相同（23 叶 max_abs = 0，训练全程冻结），差异只来自精度和批形状，两者各贡献约 0.3%。实测 2409 帧记忆 token 相对差 0.33%、余弦最小 0.99998；传到动作上 RMS 3.1e-4 弧度，是采样噪声的 5.5%、动作 std 的 0.15%。
+同一份 SigLIP 编码器，训练建表用离线 f32 权重逐帧编，推理用 checkpoint 内 bf16 权重整批编。离线 f32 权重与基础模型 23 叶 max_abs = 0（训练全程冻结）；生产 checkpoint 里的 bf16 权重是它的 bf16 舍入，最大差 0.5948 出现在 `pos_embedding`（数值量级 283），相对差 ≤ 2^-8（来源 `v1-store/reports/codex-tic-audit-20260908/weights.json` 的 `PARAM_SAME_ENC` / `PKL_VS_CKPT`）。差异只来自精度和批形状，两者各贡献约 0.3%。实测 2409 帧记忆 token 相对差 0.33%、余弦最小 0.99998；传到动作上：归一化 32 维空间 RMS 差 4.37e-4、是采样噪声的 5.26%；反归一化后 8 维输出 RMS 2.98e-4（含夹爪一维，不能全标弧度），同口径比例约 3.3%；是动作 std 的 0.15%。
 
-不改的理由：在线改 f32 也闭不上批形状差，要真闭合必须在线逐帧 batch=1，推理延迟随帧数线性涨；离线改 bf16 要重建整个 400 ep 库并与官方 framesamp 表脱钩。这个量级也解释不了三 seed 24.2% vs 24.5% 的差。
+不改的理由：在线改 f32 也闭不上批形状差，要真闭合必须在线逐帧 batch=1，推理延迟随帧数线性涨；离线改 bf16 要重建整个 400 ep 库并与官方 framesamp 表脱钩。用户 9 月 6 日拍板不改。
 
 ### 2. 整段前向 vs 缓存分步：数值差从哪来
 
-两条路 mask、位置号、可见性结构 120/120 全等，逻辑没错。差异在前缀那一步就出现：`llm([prefix, suffix])` 的 query 有 1204 行、`llm([prefix, None])` 只有 1184 行，XLA 选了不同的分块与归约顺序，同一份前缀 token 算出的 K/V 就差了 0.4%～0.6%，18 层累积到速度场 0.19%～0.30%。四次独立跑数字不同，还含 autotune 的非确定性。
+两条路 mask、位置号、可见性结构 120/120 全等，逻辑没错。差异在前缀那一步就出现：`llm([prefix, suffix])` 的 query 有 1204 行、`llm([prefix, None])` 只有 1184 行，XLA 选了不同的分块与归约顺序，同一份前缀 token 算出的 K/V 就差了 0.4%～0.6%，18 层累积到速度场。四次独立跑数字不同，还含 autotune 的非确定性。
 
-把参数和激活都升到 f32、matmul 精度设 highest 后重跑同一输入：前缀 KV 逐位相同（差为 0），速度场只剩 1.35e-7。只升 f32 但 matmul 仍走 TF32 时差为 4.9e-4。三档单调下降，坐实是纯数值来源。计划把阈值定在 rel_fro ≤ 1e-3、ulp_p99 ≤ 4，是假设「18 层每层 ≤ 1 ULP」，事后看这条假设不成立；脚本没有放宽，判定行保持 FAIL 并带 `threshold_pending_user_review` 标记。
+原脚本固定 time=0.5，得到 0.19%～0.34%。Codex 扫了训练会采到的噪声时间（12 个样本 × 6 个 time，`v1-store/reports/codex-tic-audit-20260908/model/summary.json`）：
+
+| time | bf16 聚合 rel_fro | 真 f32 / highest 聚合 rel_fro |
+|---|---|---|
+| 0.001 | 9.979%（单点最高 13.155%） | 7.99e-6 |
+| 0.01 | 1.297% | 1.01e-6 |
+| 0.1 | 0.328% | 1.82e-7 |
+| 0.5 | 0.271% | 1.31e-7 |
+| 0.9 | 0.252% | — |
+| 1.0 | 0.237% | — |
+
+推理 10 步只访问 time ∈ {1.0, 0.9, …, 0.1}，所以线上动作不受小 time 影响；但训练的 time 分布会采到小 time，「0.19%～0.30%」只代表 time=0.5 一档。整段前向的 batch 形状也是一个来源：同一样本、batch 从 1 改成 2/8/16，bf16 速度场分别差 0.370% / 0.433% / 0.409%，同一 batch 内各副本逐位一致。
+
+精度三档：bf16 生产口径如上；只升 f32 但 matmul 仍走 TF32 时 time=0.5 差 4.9e-4；参数和激活都升 f32、matmul 精度 highest 时前缀 KV 逐位相同（差为 0），速度场只剩 1.35e-7，10 步去噪后动作 RMS 差 2.17e-8。三档单调下降，坐实是纯数值来源；**只有前缀 KV 归零，速度场与最终动作在 f32 下也不逐位。** 计划把阈值定在 rel_fro ≤ 1e-3、ulp_p99 ≤ 4，是假设「18 层每层 ≤ 1 ULP」，事后看这条假设不成立；脚本没有放宽，判定行保持 FAIL 并带 `threshold_pending_user_review` 标记。
 
 ### 3. 测试集出现训练未见的 goal 组合
 
-24 集里 ButtonUnmask 测试集第 3 集的 prompt「first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube」不在 400 集训练数据的 26 种 prompt 里：该任务 3 色 × 9 种目标组合，100 集训练样本只出现 8 种，唯独缺「red → green」。两侧文本本就全小写、tokenizer 同一份、去大小写和空白后仍不匹配；训练集 5 集上 prompt token 120 点全等。所以这是训练数据对测试目标的覆盖缺口，不是链路改了 prompt。按计划它仍是阻断判据，保持 FAIL。
+24 集里 ButtonUnmask 测试集第 3 集的 prompt「first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube」不在 400 集训练数据的 26 种 prompt 里：该任务 3 色 × 9 种目标组合，100 集训练样本只出现 8 种，唯独缺「red → green」。两侧文本本就全小写、tokenizer 同一份、去大小写和空白后仍不匹配；训练集 5 集上 prompt token 120 点全等。所以这是训练数据对测试目标的覆盖缺口，不是链路改了 prompt。Codex 扩查完整 200 集测试集：同一缺口涉及 ButtonUnmask 第 3、7、19、23 集，共 4/50 集；其他三任务没有这类缺口。按计划它仍是阻断判据，保持 FAIL。
 
-## 六、顺带查实的事
+### 4. 图像增广：训练有、推理没有
+
+`preprocess_observation(train=True)` 只动图像，记忆 token 逐位透传（`AUG_EFFECT_OBS mem_tokens_unchanged=1`，120 点）；对动作的影响 `act_rms_norm=0.0054`，Codex 逐点 `action_aug_vs_noaug` rel_fro 0.26%～2.6%。这是训练与推理之间预期的、有意的差别，不是错误；此前结论里没有把它计入「不逐位」来源。
+
+### 5. 参数加载 dtype：盘上混合、生产全 bf16
+
+checkpoint 盘上是 f32/bf16 混合，生产按 bf16 加载全部叶，这一步对动作的影响是动作 std 的 0.4%。训练时的参数 dtype 与生产加载不同，是「不逐位」的第五个来源。观察项。
+
+## 八、Codex 审计补验（2026-09-08）
+
+Codex 对本文做对抗审计，锚定 `499ff8f`，收官 HEAD `c5551e5`，用 6 张空闲 A100，没有修改源码或文档。原始日志、数值结果与临时复现脚本在 `v1-store/reports/codex-tic-audit-20260908/`（不进 git）。扩大覆盖的结果：
+
+| 验证 | 覆盖与结果 | 来源（相对该目录） |
+|---|---|---|
+| 数据同源 | 4 份原始 H5 约 82 GB、31 个帧特征分片、position/state 表全文哈希全部正确 | `input/raw-hashes.json`、`input/l0.json` |
+| 原 H5 → 当前观测 | 400 集 101,066 个执行样本，两张图、状态、prompt 逐字节一致 | `input/raw-all.json` |
+| 训练记忆数组 | 101,066 样本 × 8 数组，与独立选帧 / 窗口 / 排序实现比较，零差 | `input/full-inputs.json` |
+| 在线装配与变换 | 400 集的 3,600 个边界 / 中间点全部一致 | 同上 |
+| 真实 DataLoader | batch=128、8 workers、512 样本，8,192 次叶比较零差 | `input/loader-delivery.json` |
+| 真实 motion 编码 | 原 140 窗重跑 + 100 条新 episode 各 1 窗，240 个不同窗逐字节一致；另 5 次重复编码一致 | `extra-motion.json`、`sidecar.json` |
+| 原 120 点完整对拍重跑 | `TIC_SIDECAR=FAIL blocking=13/14`，唯一 FAIL 仍是 `VT_FULL_VS_CACHED`（rel_fro 0.003388、ulp_p99 29） | `sidecar.summary.txt` |
+| 真实闭环补测 | 4 任务各 1 集、49 次推理，零异常零 timeout，输入不变量全过；4 集均为普通任务失败 | `eval/live/` |
+
+- **L0 负控。** 在临时库副本中保持文件尺寸和首尾内容、将内部清零，`LIB_PROVENANCE_MATCH`、快速检查以及真实 Dataset 加载均没有报错；交付样本中有 786,420 个 image 特征值、258,048 个 position 值和 256 个 motion position 值错误，只有全文校验才正确拒绝（`input/provenance-negative.json`）。当前库全文哈希已补齐、没有损坏证据；但原闸门的证明力被本文此前高估。
+- **生产 39999 的 motion 输入梯度因果**（`model/causal_ckpt.json`）。7 个末期样本：有限 padding 扰动对 loss、motion 输入梯度、动作均 7/7 逐位无影响；有效 motion 清零、打乱或位置打乱则 7/7 改变三者。**清零后 loss 的变化幅度分化明显**：3 个样本上升 14.7×、82.9×、164.2×，另外 4 个样本在 0.8×～1.1× 之间。这证明生产模型对 motion 输入有梯度依赖、本次有限 padding 屏蔽正确；不证明 motion 提高了闭环成功率，并提示依赖程度按样本差异很大，这正是第十节「量化各层对 motion 的利用」要回答的问题。本项是输入梯度，不替代原 T3 的 36 叶参数梯度测试。
+- **预算边界复现。** es=288 时最多 96 窗，es=289 会达到 97 窗；当前测试集最大 es=216，满程尚有 4 窗余量。
+
+## 九、顺带查实的事
 
 - 训练 run 快照里 motion 库路径记成了 40 ep，训练时靠 `MMEVLA_MOTION_STORE` 覆盖到 400 ep。不覆盖时 `check_same_source` 直接 raise，不会静默用错库；推理侧根本不读离线表。记录瑕疵，不修。
 - 在线 GPU 现算的位置编码表与库表前 586 行 sha256 相同；这张表在 CPU 上算会静默偏离，所以 policy server 必须在 GPU 上跑。
 - 撞运动预算的后果是静默失败：`_prepare_motion` raise → 评估把该集记成 `"error"` → 续评时被重评覆盖 → 汇总求和遇字符串抛错又被吞掉。边界是 demo 段 ≥ 289 帧，当前最长 216。
 - 运动 token 与帧 token 的数值尺度比 0.083，训练前是 0.166，低于观察带 [0.3, 3.0]。只记录，不解读。
-- checkpoint 盘上是 f32/bf16 混合，生产按 bf16 加载全部叶，这一步对动作的影响是动作 std 的 0.4%。观察项。
 - 旧驱动 `motion_gates_online._drive` 在环境步数恰为 16 的倍数时会比真实 `eval.py` 多一个决策点，本轮 5 集未触发；对拍脚本已改用与 `eval.py` 同一公式。
-- eval 日志没有逐集结果行，`progress.json` 分不清 timeout 与普通失败；汇总器改按「顺序 + exec_start_idx + task_goal」三重对应，timeout 按「该集推理 82 次」判并与视频文件名交叉核。评估必须单次运行不续评，续评会把 error 条目删掉重评。
+- eval 日志没有逐集结果行，`progress.json` 分不清 timeout 与普通失败；汇总器改按「顺序 + exec_start_idx + task_goal」三重对应，timeout 判据按「该集推理 82 次」判，已知会把 1297～1300 步正常结束的集误判（第六节）。评估必须单次运行不续评，续评会把 error 条目删掉重评。
 - 组 D 的 step-0 base loss 为 0.706138，9 月 4 日同批同初态记录为 0.704831，相差 0.18%；两个 HEAD 之间无数值代码改动，差异来自 GPU 对或编译层面，如实并列未追查。
 
-## 七、没做的事
+## 十、没做的事
 
 不修帧特征编码器精度差；不放宽 `VT_FULL_VS_CACHED` 阈值；不给 `visible_motion_frames` 加上界；不修快照路径记录瑕疵；不做 EMA vs 训练参数对比（做不了，checkpoint 只存 EMA）；不改主线 `src/mme_vla_suite/policies/` 与 `examples/robomme/`（探针全部靠实例属性遮蔽）；不扩大样本、不做预算消融、不重跑三 seed。
 
-## 八、留档与工具
+按审计补列的缺口：未比较 `compute_loss` 与 `sample_actions` 两条路径的最终动作（Codex 已补，第五节）；未做消除精度差后的配对闭环干预；未量化模型各层对 motion 的利用率；未做 nomotion 训练对照或推理时屏蔽 motion 的成功率；未修 `summarize_eval_probe.py` 三处判据与 `check_config_provenance.py` 的 framesamp 三表全文哈希；未把 `VT_FULL_VS_CACHED` 阈值按 time 分档。因此第一节的「不能归咎于输入链喂错」之后，motion 无收益的原因仍未定位。
+
+## 十一、留档与工具
 
 | run | 内容 | 结果 |
 |---|---|---|
 | `docs/training-doc/tic-l0-rhythm-40k/` | 第 0 关 + 评估节奏 + 400 ep 库 A19 | 全 PASS |
 | `docs/training-doc/tic-obs-model-40k/` | 第 1–5 关，运动 token 查表 | 12/13 阻断 PASS，`VT_FULL_VS_CACHED` 待裁决 |
 | `docs/training-doc/tic-sidecar-40k/` | 第 1–5 关，运动 token 真 sidecar 现算 | 13/14 阻断 PASS，同上 |
-| `docs/training-doc/tic-t3-causal-40k/` | `T3_MOTION_CAUSAL` 新口径重跑 | PASS，36/36 叶 |
+| `docs/training-doc/tic-t3-causal-40k/` | `T3_MOTION_CAUSAL` 新口径重跑（40 ep 库、step 0 共同初态，非生产 checkpoint） | PASS，36/36 叶 |
 | `docs/training-doc/tic-eval-probe-40k/` | 24 集真仿真闭环 | 6/7 阻断 PASS，`EVAL_PROMPT` 待裁决 |
 
-工具（`scripts/training/`）：`g0/check_config_provenance.py`（第 0 关）、`tests/eval_rhythm_gates.py`（评估节奏）、`g0/compare_train_infer_obs.py`（第 1–5 关，`--motion store|sidecar`）、`g0/serve_policy_probe.py` + `g0/summarize_eval_probe.py`（第 6 关）、`tests/motion_gates_model.py`（A19 / T3 新口径）。原始日志在 `v1-store/reports/tic/`、`tic-dev/`（不进 git）。
+工具（`scripts/training/`）：`g0/check_config_provenance.py`（第 0 关）、`tests/eval_rhythm_gates.py`（评估节奏）、`g0/compare_train_infer_obs.py`（第 1–5 关，`--motion store|sidecar`）、`g0/serve_policy_probe.py` + `g0/summarize_eval_probe.py`（第 6 关）、`tests/motion_gates_model.py`（A19 / T3 新口径）。原始日志在 `v1-store/reports/tic/`、`tic-dev/`（不进 git）。Codex 审计（2026-09-08）的原始日志、数值结果与临时复现脚本在 `v1-store/reports/codex-tic-audit-20260908/`（不进 git），锚定 `499ff8f`，收官 HEAD `c5551e5`。
 
-commit：`892f73e` docs 归档、`a8cfa17` 对拍工具（commitV7.1）、`9b3b95f` 起跑预提交。既有依据：`siglip-ab-replay-40k`（编码器差异首次量化）、`aws-t3-open-s100`（9 月 4 日 T3 记录）、`eval-3seed-context-vs-motion`（三 seed 数字，环境 A）。兄弟正本：`motion-memory.md`、`dataloader-restructure.md`。
+commit：`892f73e` docs 归档、`a8cfa17` 对拍工具（commitV7.1）、`9b3b95f` 起跑预提交；本次按审计修订的 `docs:` commit 见 `git log -- docs/train-infer-consistency.md`。既有依据：`siglip-ab-replay-40k`（编码器差异首次量化）、`aws-t3-open-s100`（9 月 4 日 T3 记录）、`eval-3seed-context-vs-motion`（三 seed 数字，环境 A）。兄弟正本：`motion-memory.md`、`dataloader-restructure.md`。
