@@ -23,9 +23,9 @@
 
 | 步 | 命令 | 记录 |
 |---|---|---|
-| 校准 normal | `COND=normal SPLIT=test SEED=42 bash scripts/motion-variance/run_batch_mv.sh`（端口 9300） | wall_min=<CAL_NORMAL> |
-| 校准 mask | `COND=mask SPLIT=test SEED=42 PORT_BASE=9308 bash scripts/motion-variance/run_batch_mv.sh` | wall_min=<CAL_MASK> |
-| 跨卡 | `COND=mask SPLIT=test SEED=42 K=0 GPU=0 PORT=9390 EP_COUNT=2 WORKERS=8 RUN_SUFFIX=-xgpu0 LOG_PREFIX=mv-xgpu0 bash scripts/motion-variance/eval_shard_mv.sh` 与 `GPU=3 PORT=9391 RUN_SUFFIX=-xgpu3 LOG_PREFIX=mv-xgpu3`（4 任务 × ep {0,8} = 8 集）；`summarize_mv.py --xgpu mv-mask-s42-test-xgpu0 mv-mask-s42-test-xgpu3 mv-xgpu0 mv-xgpu3 0 3` | `MV_XGPU=<XGPU>` |
+| 校准 normal | `COND=normal SPLIT=test SEED=42 bash scripts/motion-variance/run_batch_mv.sh`（端口 9300） | wall_min=21（200/200，timeout 4，成功 47） |
+| 校准 mask | `COND=mask SPLIT=test SEED=42 PORT_BASE=9308 bash scripts/motion-variance/run_batch_mv.sh` | wall_min=28（w7 与开环共卡；排除后约 20–24；200/200，timeout 54，成功 40） |
+| 跨卡 | `COND=mask SPLIT=test SEED=42 K=0 GPU=0 PORT=9390 EP_COUNT=2 WORKERS=8 RUN_SUFFIX=-xgpu0 LOG_PREFIX=mv-xgpu0 bash scripts/motion-variance/eval_shard_mv.sh` 与 `GPU=3 PORT=9391 RUN_SUFFIX=-xgpu3 LOG_PREFIX=mv-xgpu3`（4 任务 × ep 0 = 4 集）；`summarize_mv.py --xgpu mv-mask-s42-test-xgpu0 mv-mask-s42-test-xgpu3 mv-xgpu0 mv-xgpu3 0 3` | `MV_XGPU=BITEXACT episodes=4 infers=125 act_sha_match=125/125 outcome_match=4/4`（`EP_COUNT=2` 在 stride 8 下每任务只取 ep 0，实为 4 集而非计划的 8 集） |
 
 校准批结果直接计入矩阵（`run_matrix_mv.sh SKIP_DONE=1` 按 `mv-matrix.log` 跳过）。
 
