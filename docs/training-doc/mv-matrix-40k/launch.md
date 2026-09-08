@@ -2,7 +2,7 @@
 
 **环境 B（AWS 单机 8×A100-SXM4-80GB，`/dev/md0` 本地 NVMe RAID）**。正式评估（AGENTS 12），motion 利用率评估阶段 2：4 条件 × 4 policy seed × (test 200 + val 200) = 6400 集闭环矩阵 + 校准批 + 跨卡校验。正本 `docs/motion-utilization.md`，工具 `scripts/motion-variance/`（commitV8.0）。
 
-起跑时间：2026-09-08 04:07:20（校准批起跑；矩阵起跑时间见 result.md）
+起跑时间：校准批 2026-09-08 04:08:23（HEAD `26ff2b4`），矩阵 05:04:11（HEAD `49f68c7`），结束 10:47:05
 起跑 commit：代码 `5620f662968ff68d278add6339a818c0be443490`（commitV8.0）；本留档在起跑前提交，工作区 clean（`git status --porcelain` 为空）
 被评对象：
 - motion：`v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999`（`PARAM_TREE_EXACT=PASS n_model=59 n_ckpt=59`，`records/param_tree_motion.json`）
