@@ -2,7 +2,7 @@
 
 **环境 B（AWS 单机 8×A100-SXM4-80GB）**。诊断 run（AGENTS 17），motion 利用率评估阶段 0 + 阶段 1（零 rollout）。正本 `docs/motion-utilization.md`，工具 `scripts/motion-variance/`（commitV8.0）。
 
-起跑时间：<START_TIME>（矩阵后起跑，result.md 记实际时间）
+起跑时间：2026-09-08 04:34:28（与 mask 校准批的 w7 共用 GPU 7，显存 0.3 份额；确定性 XLA flag 下结果与共卡无关，只影响墙钟）
 起跑 commit：代码 `5620f662968ff68d278add6339a818c0be443490`（commitV8.0）；本留档在起跑前提交，工作区 clean
 被评对象：`v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999`（bf16 加载，生产口径 `create_trained_policy`）
 数据来源：训练库 `v1-store/datasets/4task-motion-400ep`（帧特征 / motion 表 / 真值动作）+ 原始 H5 `/scratch/hongze/robomme_data_h5`（前 n 帧原图，按真实评估节奏喂）；donor bank `v1-store/reports/motion-variance/bank-lib`（开环映射 `ol<seed>|task|recv_g`，排除自身）
@@ -19,7 +19,7 @@
 ```bash
 cd /scratch/hongze/robomme_policy_learning_MotionJEPA
 tmux new-session -d -s mv-openloop -c "$PWD" \
-  "set -o pipefail; CUDA_VISIBLE_DEVICES=<GPU> XLA_PYTHON_CLIENT_MEM_FRACTION=0.7 XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0' \
+  "set -o pipefail; CUDA_VISIBLE_DEVICES=7 XLA_PYTHON_CLIENT_MEM_FRACTION=0.3 XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0' \
    UV_LINK_MODE=copy PYTHONUNBUFFERED=1 uv run --no-sync python scripts/motion-variance/run_open_loop.py --stage 0,1 \
    --out v1-store/reports/motion-variance/open_loop.json 2>&1 | tee v1-store/logs/mv-openloop.log; echo EXIT_CODE=\$?"
 ```

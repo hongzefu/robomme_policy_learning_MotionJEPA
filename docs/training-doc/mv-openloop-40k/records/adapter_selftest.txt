@@ -1,0 +1,36 @@
+[1m[33mwarning[39m[0m[1m:[0m [1mThe `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead[0m
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+max_token_len: 64
+        5.09165053e-04,  2.39044905e+00,  7.91704059e-01,  2.64126267e-02]), std=array([0.10681286, 0.31786537, 0.07478532, 0.48271781, 0.04616816,
+       0.34543198, 0.40309104, 0.01649354]), q01=array([-0.2115381 , -0.21799494, -0.15527991, -2.81375072, -0.13752411,
+        1.57079637, -0.17353815,  0.        ]), q99=array([ 0.26063799,  1.015885  ,  0.16945301, -1.03784064,  0.12187375,
+        3.03210984,  1.80900472,  0.039992  ])), 'actions': NormStats(mean=array([ 8.22788454e-04,  2.01418120e-02, -2.85705464e-05, -8.36590212e-03,
+       -1.12210531e-04,  2.80541796e-02,  8.23505805e-04,  6.54151067e-02]), std=array([0.03591497, 0.13662103, 0.03267474, 0.15376154, 0.02708418,
+       0.15998593, 0.09374132, 0.99785817]), q01=array([-0.13796722, -0.31632186, -0.12670147, -0.59128337, -0.10148964,
+       -0.31253482, -0.34689998, -1.        ]), q99=array([0.12307586, 0.40273976, 0.0954464 , 0.52908852, 0.0959089 ,
+       0.53904308, 0.34748609, 0.9996    ]))}, repack_transforms=Group(inputs=[RepackTransform(structure={'observation/image': 'image', 'observation/wrist_image': 'wrist_image', 'observation/state': 'state', 'actions': 'actions', 'prompt': 'prompt', 'static_image_emb': 'static_image_emb', 'static_pos_emb': 'static_pos_emb', 'static_state_emb': 'static_state_emb', 'static_mask': 'static_mask', 'motion_emb': 'motion_emb', 'motion_pos': 'motion_pos', 'motion_mask': 'motion_mask', 'mem_order': 'mem_order'})], outputs=()), data_transforms=Group(inputs=(RoboMMEInputs(model_type=<ModelType.PI05: 'pi05'>), DeltaActions(mask=(True, True, True, True, True, True, True, False))), outputs=(AbsoluteActions(mask=(True, True, True, True, True, True, True, False)), RoboMMEOutputs())), model_transforms=Group(inputs=[InjectDefaultPrompt(prompt=None), ResizeImages(height=224, width=224), TokenizePromptWithState(tokenizer=<mme_vla_suite.training.config.PaligemmaTokenizer object at 0x7fdb0c721590>, discrete_state_input=False), PadStatesAndActions(model_action_dim=32)], outputs=()), use_quantile_norm=True, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)
+[mv_points] policy 构造 11.4s ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999
+max_token_len: 64
+POINTS episodes=5 points=5 ButtonUnmaskSwap:3(g=103,es=0,T=555,pts=1) VideoUnmask:3(g=203,es=66,T=399,pts=1) VideoUnmaskSwap:5(g=305,es=114,T=446,pts=1) VideoUnmaskSwap:31(g=331,es=168,T=461,pts=1) VideoUnmaskSwap:3(g=303,es=216,T=586,pts=1)
+[mv] point 1 task=ButtonUnmaskSwap g=103 t=0 k=0 done 136s
+[mv] point 2 task=VideoUnmask g=203 t=66 k=3 done 144s
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+UNROLL_VS_SCAN_NUMERIC point=1 n=1 max_abs=0.00293 rel_fro=0.003271 ulp_p50=64 ulp_p99=372 ulp_max=480 frac_nonzero=0.727
+GRAD_PROBE point=1 k=0 loss_unrolled=2.68114e-05 loss_prod=3.752e-05 motion_col_norm_l0=0 g_motion_emb_valid_rms=0
+UNROLL_VS_SCAN_NUMERIC point=2 n=1 max_abs=0.002441 rel_fro=0.003328 ulp_p50=57.2 ulp_p99=348 ulp_max=424 frac_nonzero=0.725
+GRAD_PROBE point=2 k=3 loss_unrolled=6.5154e-05 loss_prod=6.81094e-05 motion_col_norm_l0=6.274e-08 g_motion_emb_valid_rms=1.531e-07
+MV_NOOP_BITEXACT=PASS points=4 ref_vs_prod=4/4 mv_vs_ref=4/4 num_steps=10 note=同一 obs/同一 noise
+MV_PAD_INVARIANT=PASS points=4 variants=3 bitexact=12/12
+MV_MASK_CONTENT_NULL=PASS points=4 variants=3 bitexact=12/12 masked_cols=96
+UNROLL_VS_SCAN_BF16 points=2 x0_bitexact=0/2 kv_bitexact=0/2 all_mask_x0_bitexact=0/2 layers=18 note=bf16 下展开与 nn.scan 是两份 XLA 编译产物，逐位不保证（与仓库 VT_FULL_VS_CACHED 3e-3 同性质）；语义等价由下面 f32 闸判定
+ATTN_UNIFORM_SELFCHECK=PASS points=2 ok=2/2 atol=1e-6
+UNROLL_VS_SCAN_F32=PASS points=2 x0_rel_fro=0 x0_max_abs=0 kv_rel_fro=0 thr_rel_fro=1e-05 dtype=f32(params+embed_dtype) matmul_precision=highest bf16_ref_rel_fro=0.00334
+LAYER_SELFCHECK_F32=PASS points=2 all_layers_prefill+step_mask_vs_stage0_mask_rel_fro=0 max_abs=0 thr_rel_fro=1e-05
+GRAD_SELFCHECK=PASS points=2 finite=2/2 pad_zero=2/2 layers=18
+MV_ADAPTER_SELFTEST=PASS points=2 seeds=2 blocking=7/7 observe=5

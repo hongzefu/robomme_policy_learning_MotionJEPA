@@ -10,7 +10,7 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`mv-openloop-40k/`](mv-openloop-40k/launch.md) | 阶段 0 开环动作差（none / mask / swap，noise 标尺）+ 阶段 1 18 层机制（attention 富集、逐层门控/KV 干预最终动作差、固定-loss 逐层梯度）；adapter 自检 | 待测 |
+| [`mv-openloop-40k/`](mv-openloop-40k/result.md) | 阶段 0 开环动作差（none / mask / swap，noise 标尺）+ 阶段 1 18 层机制（attention 富集、逐层门控/KV 干预最终动作差、固定-loss 逐层梯度）；adapter 自检 | PASS（149 点：mask/noise 9.9、swap/noise 6.4；直读集中 15–16 层，主通路第 0–1 层间接） |
 | [`mv-matrix-40k/`](mv-matrix-40k/launch.md) | 阶段 2 闭环矩阵：official / normal / mask / swap × 4 seed × (test+val) 400 集，pooled 配对统计；校准批与跨卡校验 | 待测 |
 
 ### 训练 / 推理一致性对拍（2026-09-07，commitV7.1 起）
