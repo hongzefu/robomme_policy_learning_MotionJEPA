@@ -55,7 +55,9 @@ if [ $? != 0 ]; then
     # 评估客户端跑在独立的 micromamba robomme 环境（RoboMME 仿真器依赖装在该环境、
     # 不在仓库 uv venv），故此处保留该环境的 python、不换 uv run——非 uv 管理环境，
     # 不适用「禁裸 python」（2026-08-30 用户拍板）
-    tmux send-keys -t $session_name:eval "CUDA_VISIBLE_DEVICES=$GPU_ID_client python examples/robomme/eval.py --args.model_seed=$SEED --args.port=$PORT --args.policy_name=$MODEL_TYPE --args.model_ckpt_id=$CKPT_ID ${EXTRA_ARGS}; tmux wait-for -S eval-done" Enter
+    # GLIBC_TUNABLES：绕开 NVIDIA Vulkan ICD 反复 dlopen/dlclose 的 static TLS 泄漏，否则单进程第 28 次 make_env 必崩
+    #（根因见 docs/training-doc/tic-vulkan-makeenv/result.md）
+    tmux send-keys -t $session_name:eval "CUDA_VISIBLE_DEVICES=$GPU_ID_client GLIBC_TUNABLES=glibc.rtld.optional_static_tls=8192 python examples/robomme/eval.py --args.model_seed=$SEED --args.port=$PORT --args.policy_name=$MODEL_TYPE --args.model_ckpt_id=$CKPT_ID ${EXTRA_ARGS}; tmux wait-for -S eval-done" Enter
 
     # Wait for eval to complete, or exit if tmux session is killed
     tmux wait-for eval-done &

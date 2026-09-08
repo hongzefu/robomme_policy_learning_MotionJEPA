@@ -95,8 +95,13 @@ for _ in $(seq 1 600); do
 done
 echo "server 端口就绪 $(date +%T)"
 # ── eval（前台，micromamba robomme 环境；ManiSkill 渲染卡 = sapien.Device("cuda") = 可见集第 0 张，即 GPU）──
+# GLIBC_TUNABLES：SAPIEN 每次 make_env 都重建 svulkan2 渲染 Context（vkCreateInstance），close 时销毁（vkDestroyInstance），
+# 每轮 NVIDIA Vulkan ICD 的 dlopen/dlclose 净泄漏 64 字节 glibc surplus static TLS；默认 optional_static_tls=512 时第 28 次
+# make_env 必抛 `vk::createInstanceUnique: ErrorIncompatibleDriver`。抬到 8192 字节可支撑约 147 轮，覆盖单进程 50 集。
+# 根因与实测见 docs/training-doc/tic-vulkan-makeenv/result.md。
 RC=0
-( cd examples/robomme && CUDA_VISIBLE_DEVICES="${GPU}" PYTHONUNBUFFERED=1 "${ROBOMME_PY}" eval.py --args.port="${PORT}" --args.model_seed="${SEED}" \
+( cd examples/robomme && CUDA_VISIBLE_DEVICES="${GPU}" PYTHONUNBUFFERED=1 \
+    GLIBC_TUNABLES="${GLIBC_TUNABLES:-glibc.rtld.optional_static_tls=8192}" "${ROBOMME_PY}" eval.py --args.port="${PORT}" --args.model_seed="${SEED}" \
     --args.policy_name="${POLICY_NAME}" --args.model_ckpt_id="${CKPT_ID}" --args.only_tasks="${TASKS}" \
     --args.episode_start="${EP_START}" --args.max_episodes="${EP_COUNT}" --args.episode_stride="${EP_STRIDE}" --args.dataset_split="${SPLIT}" --args.save_dir="${V1_STORE}/evaluation" ) 2>&1 || RC=$?
 echo "EVAL_RC=${RC} end=$(date '+%F %T')"
