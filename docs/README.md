@@ -9,7 +9,7 @@
 |---|---|
 | [`motion-memory.md`](motion-memory.md) | MotionJEPA motion token 接入 HistoryPi0 的现行正本：窗口口径、交错次序、三层代码、训练 / 推理链路逐跳、离线表与建库、闸门体系、生产 run 与评估、已知未知 |
 | [`dataloader-restructure.md`](dataloader-restructure.md) | dataloader 四阶段重构的现行正本：三张连续大表、`store_meta.json` 契约、index 派生与读路径、dtype 统一、破坏性单一化、`train.py` 单跑、对拍体系与吞吐分环境 |
-| [`train-infer-consistency.md`](train-infer-consistency.md) | 训练 / 推理一致性对拍：六关方案、判据总表与实跑结果、SigLIP 编码器精度差异独立章、Vulkan 第 28 次建环境崩溃根因、收窄后的结论措辞 |
+| [`train-infer-consistency.md`](train-infer-consistency.md) | 训练 / 推理一致性验证：结论与待拍板项、两侧调用链、六关结果、三个发现（编码器精度差、整段 vs 缓存数值差、测试集 prompt 训练未见）；Vulkan 第 28 次建环境崩溃的根因与修法见 `training-doc/tic-vulkan-makeenv/` |
 
 ## 二、已归档的上游原文与图（`archive/`，2026-09-08 迁入）
 

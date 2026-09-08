@@ -1,6 +1,6 @@
 # 训练 / 推理一致性验证
 
-本文是现行正本，自足可读：结论、调用链、每一关查了什么与结果、待拍板的事都在本文内。判定行逐字原文与逐轮数据在六个 run 的 `docs/training-doc/tic-*/result.md` 里，本文不再复述。
+本文是现行正本，自足可读：结论、调用链、每一关查了什么与结果、待拍板的事都在本文内。判定行逐字原文在五个 run 的 `docs/training-doc/tic-*/result.md` 里，本文不再复述。
 环境 B（AWS 单机 8×A100，仓库 `/scratch/hongze/robomme_policy_learning_MotionJEPA`）；对象是生产 checkpoint `v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999` 与它训练时用的 400 ep 库 `v1-store/datasets/4task-motion-400ep`。2026-09-07 全部跑完。
 
 ## 一、结论
@@ -15,13 +15,12 @@
 
 由此，三 seed 评估 motion 组与官方组无差别（24.2% ± 1.3 vs 24.5% ± 0.5，环境 A 历史数字）**不能**归咎于「推理喂错了东西」；剩下的解释只有 motion token 本身作用有限、或评估噪声。
 
-### 待你拍板的三件事
+### 待你拍板的两件事
 
 | 事 | 是什么 | 选项 |
 |---|---|---|
 | `VT_FULL_VS_CACHED` 阈值 | 整段前向 vs 缓存分步的速度场差，实测 rel_fro 1.9e-3～3.0e-3、bf16 ulp_p99 10～22，超过计划事先定死的 1e-3 / 4。已证明是纯数值来源（第五节 2）。脚本没放宽，判定行保持 FAIL | (a) 按实测重定阈值，按四次跑约 1.6 倍波动带留裕量；(b) 改成「f32 档逐位 + bf16 档只观察」；(c) 维持 FAIL 记录 |
 | 测试集出现训练未见的 goal | ButtonUnmask 测试集第 3 集的目标「先按按钮，拿红方块的容器，再拿绿方块的容器」在 400 集训练数据里没出现过（第五节 3） | (a) 评估口径里注明该集「训练未见 goal」；(b) 补数据重建库 |
-| 单进程第 28 次建仿真环境必崩 | 根因已查清，两种修法各实测 35 轮不崩，patch 已写好未应用（第五节 4） | (a) 钉住 RenderSystem，顺带建环境从 6.8 s 压到 1.2 s，但改了渲染 Context 生命周期，建议先做一轮同 seed 对拍；(b) `GLIBC_TUNABLES=glibc.rtld.optional_static_tls=8192`，零代码最保守。两者都落 `scripts/training/legacy-eval/`，主线不动 |
 
 ## 二、在查什么
 
@@ -68,7 +67,7 @@
 - `A19_VALID_DIST`：原判据把 40 ep 库的四个分布数写死在脚本里，400 ep 库必 FAIL。改为期望按当前库清单重算、实测取真实交付的 `motion_mask.sum()`，400 ep 库 101,066 个样本逐样本全等；40 ep 库重算出的期望与旧数字一致，没有改松。
 - `T3_MOTION_CAUSAL`：9 月 4 日在同一 obs 连算两次时 LLM 词表 embedding 叶的梯度会变，导致「垫料不改梯度」判 FAIL。改为先无条件跑 3 次确定性探针、把不确定叶单列排除（含 motion 叶即 FAIL），PASS 语义收窄为「排除叶之外逐位一致」并报覆盖率。重跑时不确定性没有复现，36/36 叶全部逐位一致。
 
-## 五、四个值得单独讲的发现
+## 五、三个值得单独讲的发现
 
 ### 1. 帧特征编码器：训练 f32 离线表 vs 推理 bf16 checkpoint
 
@@ -86,16 +85,6 @@
 
 24 集里 ButtonUnmask 测试集第 3 集的 prompt「first press the button, then pick up the container hiding the red cube, finally pick up another container hiding the green cube」不在 400 集训练数据的 26 种 prompt 里：该任务 3 色 × 9 种目标组合，100 集训练样本只出现 8 种，唯独缺「red → green」。两侧文本本就全小写、tokenizer 同一份、去大小写和空白后仍不匹配；训练集 5 集上 prompt token 120 点全等。所以这是训练数据对测试目标的覆盖缺口，不是链路改了 prompt。按计划它仍是阻断判据，保持 FAIL。
 
-### 4. 单进程第 28 次建仿真环境必崩
-
-现象：`eval.py` 同一进程第 28 次 `EnvRunner.make_env` 抛 `vk::createInstanceUnique: ErrorIncompatibleDriver`，前 27 次正常，此前只能划「每进程 ≤ 27 集」红线。
-
-根因：每次 `make_env` 时 ManiSkill 新建 SAPIEN 渲染系统，svulkan2 全局渲染 Context 重建一次，即一次 `vkCreateInstance` 加一次加载 NVIDIA Vulkan 驱动（dlopen `libGLX_nvidia.so.0`）；每次 `close_env` 时 Context 引用计数归零析构，驱动被 dlclose。NVIDIA 驱动用 initial-exec TLS，dlclose 后 glibc 的静态 TLS 余量每轮净漏 64 字节；glibc 2.34 默认余量 512 字节撑到第 27 次，第 28 次加载驱动失败，Vulkan 返回 `INCOMPATIBLE_DRIVER`。fd、显存、内存、库映射前 27 轮全部平坦，泄漏藏在 ld.so 记账里，`/proc` 看不见。
-
-决定性证据：C 层最小复现里把 TLS 余量调成 0 / 128 / 256 / 512 / 1024 / 2048 字节，崩溃轮分别是 19 / 21 / 23 / 27 / 35 / 51，六档零误差落在「崩溃轮 = 19 + 余量/64」上。只建不销毁连建 64 个 instance 反而不崩，说明是销毁-重建循环致命，而不是实例累积；fd 上限、显存、Python 对象未释放（`gc.collect()` + 显式释放渲染器仍第 28 轮崩）都已证伪。
-
-修法：钉住一个 `sapien.render.RenderSystem` 让 Context 永不归零（35 轮不崩，建环境 6.8 s → 1.2 s）；或起 `eval.py` 时设 `GLIBC_TUNABLES=glibc.rtld.optional_static_tls=8192`（35 轮不崩，每轮仍重建）。两份 patch 在 `docs/training-doc/tic-vulkan-makeenv/records/`，未应用；应用前「每进程 ≤ 27 集」继续有效，本轮 24 集评估正是按它设计的。环境：驱动 595.71.05、glibc 2.34、SAPIEN 3.0.3、Vulkan loader 1.3.224。
-
 ## 六、顺带查实的事
 
 - 训练 run 快照里 motion 库路径记成了 40 ep，训练时靠 `MMEVLA_MOTION_STORE` 覆盖到 400 ep。不覆盖时 `check_same_source` 直接 raise，不会静默用错库；推理侧根本不读离线表。记录瑕疵，不修。
@@ -109,7 +98,7 @@
 
 ## 七、没做的事
 
-不修帧特征编码器精度差；不放宽 `VT_FULL_VS_CACHED` 阈值；不应用两份 Vulkan patch；不给 `visible_motion_frames` 加上界；不修快照路径记录瑕疵；不做 EMA vs 训练参数对比（做不了，checkpoint 只存 EMA）；不改主线 `src/mme_vla_suite/policies/` 与 `examples/robomme/`（探针全部靠实例属性遮蔽）；不扩大样本、不做预算消融、不重跑三 seed。
+不修帧特征编码器精度差；不放宽 `VT_FULL_VS_CACHED` 阈值；不给 `visible_motion_frames` 加上界；不修快照路径记录瑕疵；不做 EMA vs 训练参数对比（做不了，checkpoint 只存 EMA）；不改主线 `src/mme_vla_suite/policies/` 与 `examples/robomme/`（探针全部靠实例属性遮蔽）；不扩大样本、不做预算消融、不重跑三 seed。
 
 ## 八、留档与工具
 
@@ -120,8 +109,7 @@
 | `docs/training-doc/tic-sidecar-40k/` | 第 1–5 关，运动 token 真 sidecar 现算 | 13/14 阻断 PASS，同上 |
 | `docs/training-doc/tic-t3-causal-40k/` | `T3_MOTION_CAUSAL` 新口径重跑 | PASS，36/36 叶 |
 | `docs/training-doc/tic-eval-probe-40k/` | 24 集真仿真闭环 | 6/7 阻断 PASS，`EVAL_PROMPT` 待裁决 |
-| `docs/training-doc/tic-vulkan-makeenv/` | Vulkan 崩溃复现与两种修法 | 复现第 28 轮，两修法 35 轮不崩 |
 
-工具（`scripts/training/`）：`g0/check_config_provenance.py`（第 0 关）、`tests/eval_rhythm_gates.py`（评估节奏）、`g0/compare_train_infer_obs.py`（第 1–5 关，`--motion store|sidecar`）、`g0/serve_policy_probe.py` + `g0/summarize_eval_probe.py`（第 6 关）、`tests/motion_gates_model.py`（A19 / T3 新口径）、`legacy-eval/probe_vulkan_makeenv.py`（Vulkan 复现）。原始日志在 `v1-store/reports/tic/`、`tic-dev/`、`tic-vulkan/`（不进 git）。
+工具（`scripts/training/`）：`g0/check_config_provenance.py`（第 0 关）、`tests/eval_rhythm_gates.py`（评估节奏）、`g0/compare_train_infer_obs.py`（第 1–5 关，`--motion store|sidecar`）、`g0/serve_policy_probe.py` + `g0/summarize_eval_probe.py`（第 6 关）、`tests/motion_gates_model.py`（A19 / T3 新口径）。原始日志在 `v1-store/reports/tic/`、`tic-dev/`（不进 git）。
 
-commit：`892f73e` docs 归档、`a8cfa17` 对拍工具（commitV7.1）、`9b3b95f` 起跑预提交。既有依据：`siglip-ab-replay-40k`（编码器差异首次量化）、`aws-t3-open-s100`（9 月 4 日 T3 记录）、`eval-official-framesamp-context`（首次记录第 28 次崩溃）、`eval-3seed-context-vs-motion`（三 seed 数字，环境 A）。兄弟正本：`motion-memory.md`、`dataloader-restructure.md`。
+commit：`892f73e` docs 归档、`a8cfa17` 对拍工具（commitV7.1）、`9b3b95f` 起跑预提交。既有依据：`siglip-ab-replay-40k`（编码器差异首次量化）、`aws-t3-open-s100`（9 月 4 日 T3 记录）、`eval-3seed-context-vs-motion`（三 seed 数字，环境 A）。兄弟正本：`motion-memory.md`、`dataloader-restructure.md`。

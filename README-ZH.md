@@ -106,7 +106,7 @@ ckpt sha256 必须是 `bae96037…c15a`，与本机 `v1-store/external/motionjep
 - **建库**：`scripts/dataset/`（SigLIP framesamp 三表打包 `pack_framesamp_store.py`、Wan latent 抽取 `wan/`、motion 表打包 `pack_motion_store.py`、本机多 GPU 调度 `run_local.py`）；逐段命令与判据见 [`docs/motion-memory.md`](docs/motion-memory.md) 第七章与 `docs/dataset-build-doc/4task-motion-400ep/launch.md`。
 - **训练**：`scripts/training/train.py`（配置 `mme_vla_suite_b128`），生产命令见 `docs/training-doc/awsprod40k-b128-motion/launch.md`。
 - **闸门与对拍**：`scripts/training/tests/motion_gates_model.py` / `motion_gates_online.py`（M/P/T 系闸门）、`scripts/training/g0/`（G0 梯度对拍、SigLIP 重放、训练/推理一致性对拍 `compare_train_infer_obs.py` 等）；对拍体系说明见 [`docs/train-infer-consistency.md`](docs/train-infer-consistency.md)。
-- **评估**：主线不再维护评估链路，评估脚本在 `scripts/training/legacy-eval/`（含 `.local` / `.remote` 两套，见其 README）；主线 `examples/robomme/eval.py` 保持 4b7a710 版。单进程建第 28 个仿真环境必崩（Vulkan）的根因与修法见 `docs/train-infer-consistency.md`。
+- **评估**：主线不再维护评估链路，评估脚本在 `scripts/training/legacy-eval/`（含 `.local` / `.remote` 两套，见其 README）；主线 `examples/robomme/eval.py` 保持 4b7a710 版。单进程建第 28 个仿真环境必崩（Vulkan）的根因见 `docs/training-doc/tic-vulkan-makeenv/result.md`，commitV7.2 起评估启动已加 `GLIBC_TUNABLES` 修法。
 - **GPU 利用率观测**：`scripts/training/util/`。
 
 集群链路（`scripts/dataset/gl/`）已于 commitV6.2 删除，环境 A 的建库方案报告
