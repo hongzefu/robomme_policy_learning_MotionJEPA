@@ -218,13 +218,59 @@ echo "PRE_LINES=$PRE_LINES"
 echo "阶段4完成"
 
 # ---------------------------------------------------------------- 阶段 5：上传
-echo "阶段5开始：上传 bucket（增量 sync，重试至多 3 次）"
-ok=0
-for attempt in 1 2 3; do
-  if hf sync "$STAGE" "$BUCKET"; then ok=1; break; fi
-  echo "上传第 $attempt 次中断，60s 后重试续传"; sleep 60
+echo "阶段5开始：分批上传 bucket"
+# **为什么分批**（2026-09-08 实测）：一次 `hf sync "$STAGE" "$BUCKET"` 提交全部 122 个对象时，
+# 字节全部传完（第 1 次 New Data Upload 79.0 GB 走到 100%）却在最后一步
+# `_batch_bucket_files → session.new_upload_commit` 上抛
+# `TimeoutError: Timeout: Request error: error decoding response body, domain: no-url`，
+# 三次重试同因失败、bucket 始终 files=0。传输速率实测 546 MB/s，瓶颈不在带宽，
+# 而在服务端一次性提交 122 个 Xet 对象的 batch commit。
+# 对策是把一次 commit 拆成每批约 10 个对象。已传的字节不会浪费——Xet 是内容寻址的，
+# 重跑时相同的块服务端已有（第 2 次待传量就从 79 GB 掉到 18.6 GB）。
+upload_batch() {  # $1 = stage 下的子目录（同时也是 bucket 内前缀）；$2.. = 可选 --include 模式
+  local sub="$1"; shift
+  local args=() pat
+  for pat in "$@"; do args+=(--include "$pat"); done
+  local ok=0 attempt
+  for attempt in 1 2 3; do
+    if hf sync "$STAGE/$sub" "$BUCKET/$sub" "${args[@]}"; then ok=1; break; fi
+    echo "  批 [$sub ${*:-全部}] 第 $attempt 次中断，60s 后重试续传"; sleep 60
+  done
+  [ "$ok" = 1 ] || { echo "错误: 批 [$sub ${*:-全部}] 三次仍失败"; exit 1; }
+  echo "  批完成: $sub ${*:-全部}"
+}
+
+upload_batch source/data_tars 'data-0000*.tar'
+upload_batch source/data_tars 'data-0001*.tar'
+upload_batch source/data_tars 'data-0002*.tar'
+upload_batch source/features_tars 'features-0000*.tar'
+upload_batch source/features_tars 'features-0001*.tar'
+upload_batch source/features_tars 'features-0002*.tar'
+upload_batch source/features_tars 'features-0003*.tar'
+upload_batch framesamp 'image_emb_4x4/part_00*.bf16.bin'
+upload_batch framesamp 'image_emb_4x4/part_01*.bf16.bin'
+upload_batch framesamp 'image_emb_4x4/part_02*.bf16.bin'
+upload_batch framesamp 'image_emb_4x4/part_03*.bf16.bin'
+upload_batch framesamp 'pos_emb_4x4.f32.bin' 'state_emb.f32.bin' 'meta/*'
+upload_batch wan-latents_tars
+upload_batch oracle_tars
+upload_batch motion-tokens_tars
+upload_batch motion
+upload_batch meta
+upload_batch source/meta
+upload_batch assets
+upload_batch checksums
+upload_batch manifest
+
+# bucket 根下的两个平文件：sync 的源必须是目录，这两个用 cp 单传
+for f in README.md SHA256SUMS.pre.txt; do
+  ok=0
+  for attempt in 1 2 3; do
+    if hf buckets cp "$STAGE/$f" "$BUCKET/$f"; then ok=1; break; fi
+    echo "  $f 第 $attempt 次中断，60s 后重试"; sleep 60
+  done
+  [ "$ok" = 1 ] || { echo "错误: $f 三次仍失败"; exit 1; }
 done
-[ "$ok" = 1 ] || { echo "上传三次仍失败"; exit 1; }
 touch "$EXPORT_ROOT/logs/uploaded.marker"
 echo "阶段5完成"
 
