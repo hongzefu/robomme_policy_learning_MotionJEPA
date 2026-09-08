@@ -2,7 +2,7 @@
 
 > 目的：验证 commitV7.2 的修法——评估启动加 `GLIBC_TUNABLES=glibc.rtld.optional_static_tls=8192`——在**真实评估路径**上让单进程连评超过 27 集不崩。用生产 policy server（`scripts/training/serve_policy.py`，`mme_vla_suite` 配置，sidecar 自动拉起）+ 主线 `examples/robomme/eval.py` 单进程连评 ButtonUnmask test split 30 集。
 > 根因与排查：`docs/training-doc/tic-vulkan-makeenv/result.md`（每集 make_env 重建渲染 Context，NVIDIA Vulkan ICD 反复 dlopen/dlclose 每轮净漏 64 B 静态 TLS，默认 512 B 撑到第 27 集）。
-> 起跑 commit：`8c20c78`（commitV7.2，clean HEAD）。2026-09-08。
+> 起跑 commit：`cfe2f75`（launch 预提交后的 clean HEAD；修法在 commitV7.2 8c20c78）。2026-09-08。
 
 ## 环境与介质
 
