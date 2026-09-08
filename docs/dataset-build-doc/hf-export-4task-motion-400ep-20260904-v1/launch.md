@@ -139,7 +139,8 @@ settings --help}` 原样 tee 进日志，实测结果补进 result.md。
 阶段  2  hf buckets create（公开）+ settings --public + totalFiles=0 断言
 阶段  3  打包 122.3 GB（pack_progress.jsonl 断点续跑）
 阶段  4  README + 符号链接断言 + stage 侧体检 + SHA256SUMS.pre
-阶段  5  上传（3 次重试 + 60s 退避）
+阶段  5  上传（3 次重试 + 60s 退避）  ← 起跑时口径；实际执行中改为 25 批分批上传
+         + 每批 8 次重试，原因见 result.md 第六节「122 个对象一次性 batch commit 超时」
 阶段  6  计数层核对（首次不符 sleep 120 复查）
 阶段  7  全量回读 130.5 GB
 阶段  8  内容层验收：pre/post diff + sha256sum -c + tar 成员抽样
@@ -149,6 +150,13 @@ settings --help}` 原样 tee 进日志，实测结果补进 result.md。
 
 全部阶段幂等可重跑：阶段 3 靠 `pack_progress.jsonl` + `*_plan.json`（分组不漂移），
 阶段 5/7 靠 `hf sync` 增量语义。
+
+> **起跑后的两处修正**（本文件保留起跑时的原始口径，实际执行以 [`result.md`](result.md) 为准）：
+> ① 阶段 5 由「一次 sync 全部 122 个对象、3 次重试」改为「按子目录 + `--include` 分 25 批、
+> 每批 5–10 个对象、每批 8 次重试」——一次性提交 122 个 Xet 对象的 batch commit 会超时，
+> 三次重试同因失败；改分批后 25 批全部完成、0 次重试。
+> ② `uploaded.marker` 由阶段 5 末尾前移到开头，使阶段 2 的「bucket 非空即停」断言能区分
+> 首次跑与续跑，不再误伤中途失败后的重跑。
 
 ## smoke 结果（起跑前已通过）
 

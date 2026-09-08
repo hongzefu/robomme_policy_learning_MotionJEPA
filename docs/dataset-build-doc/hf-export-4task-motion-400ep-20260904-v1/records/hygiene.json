@@ -1,0 +1,296 @@
+{
+ "root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep",
+ "scope": "source",
+ "files_scanned": 3425,
+ "files_excluded": 19,
+ "excluded_globs": [
+  "logs/*"
+ ],
+ "total_hits": 4897,
+ "ungated": [],
+ "ungated_total": 0,
+ "count_mismatch": [],
+ "by_pattern": {
+  "P5": 0,
+  "P1": 1,
+  "P2": 1,
+  "P3": 0,
+  "P4": 0,
+  "P6": 0,
+  "P10": 10,
+  "P11": 0,
+  "P7": 2441,
+  "P8": 1224,
+  "P9": 1220
+ },
+ "by_pattern_dir": {
+  "P9|framesamp": 2,
+  "P7|framesamp": 1,
+  "P9|meta": 2,
+  "P9|motion": 3,
+  "P1|motion": 1,
+  "P2|motion": 1,
+  "P10|motion": 1,
+  "P8|motion": 9,
+  "P7|motion": 10,
+  "P9|motion-tokens": 1201,
+  "P7|motion-tokens": 1203,
+  "P8|motion-tokens": 603,
+  "P9|oracle": 10,
+  "P7|oracle": 10,
+  "P10|oracle": 9,
+  "P7|source": 11,
+  "P8|source": 6,
+  "P9|source": 1,
+  "P8|wan-latents": 606,
+  "P7|wan-latents": 1206,
+  "P9|wan-latents": 1
+ },
+ "accept_entries": [
+  {
+   "pattern": "P1",
+   "path_glob": "motion/meta/store_meta.json",
+   "expected_count": 1,
+   "decision": "accept",
+   "reason": "provenance.source_pin.mj_repo_path = /nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA。用户 2026-09-08 拍板原样保留 + README 披露。路径不含凭据、对外不可达，coe-chaijy 是公开可查的院系组名；真正起绑定作用的是同段 source_sha256 af67fdd9…。改这个文件会断掉 motion_store_meta_sha256 这道训练门。",
+   "scope": "source",
+   "got": 1
+  },
+  {
+   "pattern": "P2",
+   "path_glob": "motion/meta/store_meta.json",
+   "expected_count": 1,
+   "decision": "accept",
+   "reason": "与 P1 同一行同一处，裁决同上。",
+   "scope": "source",
+   "got": 1
+  },
+  {
+   "pattern": "P10",
+   "path_glob": "motion/meta/store_meta.json",
+   "expected_count": 1,
+   "decision": "accept",
+   "reason": "与 P1 同一行同一处，裁决同上。",
+   "scope": "source",
+   "got": 1
+  },
+  {
+   "pattern": "P10",
+   "path_glob": "oracle/*",
+   "expected_count": 9,
+   "decision": "accept",
+   "reason": "vae_report.json 与 8 个 shard 的 \"mj_repo\": \"/scratch/hongze/MotionJEPA\"，是本机路径、不含 NFS 层级，与上面那条同性质（暴露存在一个叫 MotionJEPA 的非公开仓库）。这些 report 是 D2/D3 逐位对拍的基准，改字节等于毁掉 WAN_BITEXACT / ENCODER_BITEXACT 的可复核性。按同一裁决 accept + README 一并披露。",
+   "scope": "source",
+   "got": 9
+  },
+  {
+   "pattern": "P7",
+   "path_glob": "wan-latents/*",
+   "expected_count": 1206,
+   "decision": "accept",
+   "reason": "600 个 .metadata.json 的构建机主机名 ip-10-242-11-177.us-west-2.compute.internal。这是 RFC1918 派生的 EC2 私有 DNS，不可路由、不指向任何可访问资源。这 600 个文件全部参与 D2 逐位对拍（metadata_mismatches=0），动它们等于毁掉 WAN_BITEXACT=PASS 的可复核性。",
+   "scope": "source",
+   "got": 1206
+  },
+  {
+   "pattern": "P7",
+   "path_glob": "motion-tokens/*",
+   "expected_count": 1203,
+   "decision": "accept",
+   "reason": "同上，600 个 token 侧 metadata.json。",
+   "scope": "source",
+   "got": 1203
+  },
+  {
+   "pattern": "P7",
+   "path_glob": "source/*",
+   "expected_count": 11,
+   "decision": "accept",
+   "reason": "source/meta/ 的 provenance.json 与三个 _shard*of3.json 的建库节点主机名，属构建指纹。",
+   "scope": "source",
+   "got": 11
+  },
+  {
+   "pattern": "P7",
+   "path_glob": "oracle/*",
+   "expected_count": 10,
+   "decision": "accept",
+   "reason": "10 个 oracle report 的构建机主机名，属对拍基准的构建指纹。",
+   "scope": "source",
+   "got": 10
+  },
+  {
+   "pattern": "P7",
+   "path_glob": "motion/*",
+   "expected_count": 10,
+   "decision": "accept",
+   "reason": "motion store_meta / motion_index 的 packer.host 等构建指纹。",
+   "scope": "source",
+   "got": 10
+  },
+  {
+   "pattern": "P7",
+   "path_glob": "framesamp/*",
+   "expected_count": 1,
+   "decision": "accept",
+   "reason": "framesamp store_meta 的 packer.host。",
+   "scope": "source",
+   "got": 1
+  },
+  {
+   "pattern": "P8",
+   "path_glob": "wan-latents/*",
+   "expected_count": 606,
+   "decision": "accept",
+   "reason": "GPU UUID（GPU-d7e00ff3-…）与驱动版本，是硬件指纹、无凭据价值，且同样在 D2 逐位对拍范围内。",
+   "scope": "source",
+   "got": 606
+  },
+  {
+   "pattern": "P8",
+   "path_glob": "motion-tokens/*",
+   "expected_count": 603,
+   "decision": "accept",
+   "reason": "同上，token 侧。",
+   "scope": "source",
+   "got": 603
+  },
+  {
+   "pattern": "P8",
+   "path_glob": "motion/*",
+   "expected_count": 9,
+   "decision": "accept",
+   "reason": "同上，motion 表 provenance 里的 VAE / encoder 段硬件指纹。",
+   "scope": "source",
+   "got": 9
+  },
+  {
+   "pattern": "P8",
+   "path_glob": "source/*",
+   "expected_count": 6,
+   "decision": "accept",
+   "reason": "同上，SigLIP 段 provenance。",
+   "scope": "source",
+   "got": 6
+  },
+  {
+   "pattern": "P9",
+   "path_glob": "motion-tokens/*",
+   "expected_count": 1201,
+   "decision": "accept",
+   "reason": "构建机绝对路径 /scratch/hongze/... 与仓库名。这些字段进了各 store_meta 的 manifest_sha256 92fa17e9… 哈希范围，改一个字符会同时断掉三处绑定。异地使用不需要这些路径可达：README 说明用 MMEVLA_FRAMESAMP_SOURCE / --raw-dir 覆盖即可。",
+   "scope": "source",
+   "got": 1201
+  },
+  {
+   "pattern": "P9",
+   "path_glob": "wan-latents/*",
+   "expected_count": 1,
+   "decision": "accept",
+   "reason": "同上。",
+   "scope": "source",
+   "got": 1
+  },
+  {
+   "pattern": "P9",
+   "path_glob": "oracle/*",
+   "expected_count": 10,
+   "decision": "accept",
+   "reason": "同上，oracle report 的 run_dir / latents_root。",
+   "scope": "source",
+   "got": 10
+  },
+  {
+   "pattern": "P9",
+   "path_glob": "motion/*",
+   "expected_count": 3,
+   "decision": "accept",
+   "reason": "同上，motion store_meta 的 manifest_path / latents_root / tokens_root。",
+   "scope": "source",
+   "got": 3
+  },
+  {
+   "pattern": "P9",
+   "path_glob": "framesamp/*",
+   "expected_count": 2,
+   "decision": "accept",
+   "reason": "同上，framesamp store_meta 的 manifest_path / source_dataset_root。",
+   "scope": "source",
+   "got": 2
+  },
+  {
+   "pattern": "P9",
+   "path_glob": "meta/*",
+   "expected_count": 2,
+   "decision": "accept",
+   "reason": "episode_manifest.json 与 input_manifest.json 的 raw_dir=/scratch/hongze/robomme_data_h5。此字段在 manifest_sha256 的哈希范围内（建库留档实测：raw_dir 换成环境 A 路径后 sha 即等于环境 A 的 4de8a0fc…），不可改。",
+   "scope": "source",
+   "got": 2
+  },
+  {
+   "pattern": "P9",
+   "path_glob": "source/*",
+   "expected_count": 1,
+   "decision": "accept",
+   "reason": "同上，source/meta/provenance.json 的 raw_dir。",
+   "scope": "source",
+   "got": 1
+  },
+  {
+   "pattern": "P10",
+   "path_glob": "README.md",
+   "scope": "stage",
+   "decision": "accept",
+   "reason": "bucket README 的『已知事项』段刻意提到 MotionJEPA encoder 的来源与权重指纹——这是用户拍板的『原样保留 + README 显式披露』方案里『披露』的那一半，是本轮要的结果，不是泄露。不设 expected_count：README 措辞可能随版本微调，真正的闸门是这条裁决存在。",
+   "got": 0
+  },
+  {
+   "pattern": "P9",
+   "path_glob": "README.md",
+   "scope": "stage",
+   "decision": "accept",
+   "reason": "同上，README 若提到仓库内脚本路径。",
+   "got": 0
+  },
+  {
+   "pattern": "P9",
+   "path_glob": "manifest/upload_manifest.json",
+   "scope": "stage",
+   "decision": "accept",
+   "reason": "created_from.lib 写的是仓库相对路径 v1-store/datasets/4task-motion-400ep（pack_and_hash.py 已改为 relative_to(REPO)，不再写构建机绝对路径）。留这条是为了万一将来有人改回绝对路径时，命中会落在这条已裁决条目上而不是静默通过——所以复核时要看报告里这条的实际命中内容。",
+   "got": 0
+  },
+  {
+   "pattern": "P7",
+   "path_glob": "README.md",
+   "scope": "stage",
+   "decision": "accept",
+   "reason": "README『已知事项』第 1 条在解释「各 provenance 字段含构建机指纹」时，把 ip-….compute.internal 作为示例形态写了出来，被 P7 抓到。这是对格式的说明文字，不是真实主机名——真实主机名在库内 metadata json 里，由源库侧的 P7 条目裁决。不设 expected_count：README 措辞可能微调。",
+   "got": 0
+  },
+  {
+   "pattern": "P8",
+   "path_glob": "README.md",
+   "scope": "stage",
+   "decision": "accept",
+   "reason": "同上，README 若以同样方式举例 GPU UUID 的形态。",
+   "got": 0
+  },
+  {
+   "pattern": "P1",
+   "path_glob": "README.md",
+   "scope": "stage",
+   "decision": "accept",
+   "reason": "同上，README 若在披露段提到该路径形态。",
+   "got": 0
+  },
+  {
+   "pattern": "P2",
+   "path_glob": "README.md",
+   "scope": "stage",
+   "decision": "accept",
+   "reason": "同上。",
+   "got": 0
+  }
+ ]
+}

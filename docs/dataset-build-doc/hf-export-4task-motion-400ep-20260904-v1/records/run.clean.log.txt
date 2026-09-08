@@ -1,0 +1,539 @@
+=== 起跑 2026-09-08T04:23:49+00:00 commit=1c5b387 ===
+阶段0开始：预检（此时 bucket 尚未创建）
+--- hf buckets --help ---
+Usage: hf buckets [OPTIONS] COMMAND [ARGS]...
+  Commands to interact with buckets.
+Options:
+  -h, --help  Show this message and exit.
+Main commands:
+  cp        Copy files between local paths, repositories, and buckets.
+  create    Create a new bucket.
+  delete    Delete a bucket.
+  info      Get info about a bucket.
+  list      List buckets or files in a bucket. [alias: ls]
+  move      Move (rename) a bucket to a new name or namespace.
+  remove    Remove files from a bucket. [alias: rm]
+  settings  Update bucket settings (visibility).
+  sync      Sync files between local directory and a bucket.
+Examples
+  $ hf buckets cp hf://buckets/username/my-bucket/config.json config.json
+  $ hf buckets create my-bucket
+  $ hf buckets delete user/my-bucket
+  $ hf buckets info user/my-bucket
+  $ hf buckets list
+  $ hf buckets move user/old-bucket user/new-bucket
+  $ hf buckets remove user/my-bucket/file.txt
+  $ hf buckets settings user/my-bucket --private
+  $ hf buckets sync ./data hf://buckets/user/my-bucket
+Learn more
+  Use `hf <command> --help` for more information about a command.
+  Read the documentation at
+  https://huggingface.co/docs/huggingface_hub/en/guides/cli
+--- hf buckets create --help ---
+Usage: hf buckets create [OPTIONS] BUCKET_ID
+  Create a new bucket.
+Arguments:
+  BUCKET_ID  Bucket ID: bucket_name, namespace/bucket_name, or
+             hf://buckets/namespace/bucket_name  [required]
+Options:
+  --private         Create a private bucket.
+  --region [us|eu]  Cloud region in which to create the bucket. Can be one of
+                    'us' or 'eu'. Requires Team plan or above.
+  --exist-ok        Do not raise an error if the bucket already exists.
+  --token TEXT      A User Access Token generated from
+                    https://huggingface.co/settings/tokens.
+  -h, --help        Show this message and exit.
+Formatting options:
+  --format [auto|human|agent|json|quiet]
+                                  Output format. Defaults to 'auto' which
+                                  picks 'agent' or 'human' based on the
+                                  terminal.
+  --json                          JSON output. Equivalent to '--format json'.
+  -q, --quiet                     Quiet output (one ID per line). Equivalent
+                                  to '--format quiet'.
+  --no-truncate                   Do not truncate scalar values in human
+                                  tables (list/dict columns stay shortened).
+Examples
+  $ hf buckets create my-bucket
+  $ hf buckets create user/my-bucket
+  $ hf buckets create hf://buckets/user/my-bucket
+  $ hf buckets create user/my-bucket --private
+  $ hf buckets create user/my-bucket --exist-ok
+  $ hf buckets create user/my-bucket --region us
+Learn more
+  Use `hf <command> --help` for more information about a command.
+  Read the documentation at
+  https://huggingface.co/docs/huggingface_hub/en/guides/cli
+--- hf buckets settings --help ---
+Usage: hf buckets settings [OPTIONS] BUCKET_ID
+  Update bucket settings (visibility).
+Arguments:
+  BUCKET_ID  Bucket ID: namespace/bucket_name or
+             hf://buckets/namespace/bucket_name  [required]
+Options:
+  --private     Make the bucket private.
+  --public      Make the bucket public.
+  --token TEXT  A User Access Token generated from
+                https://huggingface.co/settings/tokens.
+  -h, --help    Show this message and exit.
+Formatting options:
+  --format [auto|human|agent|json|quiet]
+                                  Output format. Defaults to 'auto' which
+                                  picks 'agent' or 'human' based on the
+                                  terminal.
+  --json                          JSON output. Equivalent to '--format json'.
+  -q, --quiet                     Quiet output (one ID per line). Equivalent
+                                  to '--format quiet'.
+  --no-truncate                   Do not truncate scalar values in human
+                                  tables (list/dict columns stay shortened).
+Examples
+  $ hf buckets settings user/my-bucket --private
+  $ hf buckets settings user/my-bucket --public
+  $ hf buckets settings hf://buckets/user/my-bucket --private
+Learn more
+  Use `hf <command> --help` for more information about a command.
+  Read the documentation at
+  https://huggingface.co/docs/huggingface_hub/en/guides/cli
+  whoami: [32m✓ Logged in[0m user: HongzeFu orgs: umich 
+HF_WHOAMI=HongzeFu
+阶段0完成
+阶段1开始：公开性体检（★ 闸门：不过不建库）
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  扫描 3425 个文本文件，排除 19 个（['logs/*']）
+  P1 集群 NFS 绝对路径: 1 处命中
+  P2 实验室 NFS 组织层级: 1 处命中
+  P10 非公开仓库名（独立引用）: 10 处命中
+  P7 构建机内部主机名: 2441 处命中
+  P8 GPU UUID: 1224 处命中
+  P9 构建机绝对路径 / 仓库名: 1220 处命中
+HYGIENE=PASS scanned=3425 hits=4897 ungated=0
+阶段1完成
+阶段2开始：创建公开 bucket HongzeFu/robomme-4task-motion-400ep-20260904-v1
+  bucket 已存在，跳过创建（幂等重跑）
+[32m✓ Bucket settings updated[0m
+  bucket_id: HongzeFu/robomme-4task-motion-400ep-20260904-v1
+  private: False
+[90mHint: Run `hf buckets info HongzeFu/robomme-4task-motion-400ep-20260904-v1` to view bucket details.[0m
+BUCKET_CREATED=HongzeFu/robomme-4task-motion-400ep-20260904-v1 PRIVATE=False
+BUCKET_FILES_AT_START=45 BUCKET_BYTES_AT_START=80515471360
+  bucket 非空但本地有上传记录，按续传处理
+阶段2完成
+阶段3开始：打包 → /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage（断点续跑，已完成分片自动跳过）
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[04:23:57] 核对 data/ 目录条目（期望 101066 个 pkl）……
+[04:23:57] 跳过（已完成）meta/episode_manifest.json
+[04:23:57] 跳过（已完成）meta/input_manifest.json
+[04:23:57] 跳过（已完成）source/meta/_shard1of3.json
+[04:23:57] 跳过（已完成）source/meta/_shard0of3.json
+[04:23:57] 跳过（已完成）source/meta/_shard2of3.json
+[04:23:57] 跳过（已完成）source/meta/provenance.json
+[04:23:57] 跳过（已完成）source/meta/stats.json
+[04:23:57] 跳过（已完成）motion/motion_token.f32.bin
+[04:23:57] 跳过（已完成）motion/meta/motion_index.json
+[04:23:57] 跳过（已完成）motion/meta/pack_progress.jsonl
+[04:23:57] 跳过（已完成）motion/meta/store_meta.json
+[04:23:57] 跳过（已完成）motion/meta/row_digests.blake2b.bin
+[04:23:57] 跳过（已完成）framesamp/pos_emb_4x4.f32.bin
+[04:23:57] 跳过（已完成）framesamp/state_emb.f32.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_000.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_001.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_004.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_002.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_003.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_005.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_006.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_007.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_008.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_010.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_009.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_011.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_013.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_012.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_014.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_015.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_016.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_017.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_019.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_018.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_020.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_021.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_022.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_023.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_025.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_024.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_026.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_027.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_028.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_029.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/image_emb_4x4/part_030.bf16.bin
+[04:23:57] 跳过（已完成）framesamp/meta/pack_progress.jsonl
+[04:23:57] 跳过（已完成）framesamp/meta/row_digests.blake2b.bin
+[04:23:57] 跳过（已完成）framesamp/meta/store_meta.json
+[04:23:57] 跳过（已完成）assets/robomme/norm_stats.json
+[04:23:57] 跳过（已完成）source/data_tars/data-00000.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00001.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00002.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00003.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00004.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00005.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00006.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00007.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00008.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00010.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00009.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00011.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00012.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00013.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00014.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00015.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00016.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00017.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00018.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00019.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00020.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00021.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00022.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00023.tar
+[04:23:57] 跳过（已完成）source/data_tars/data-00024.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00000.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00001.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00002.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00003.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00004.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00005.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00006.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00007.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00008.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00009.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00010.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00011.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00013.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00012.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00014.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00015.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00016.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00017.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00018.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00019.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00020.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00021.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00022.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00023.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00024.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00025.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00026.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00027.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00028.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00029.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00030.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00031.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00032.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00033.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00034.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00035.tar
+[04:23:57] 跳过（已完成）source/features_tars/features-00036.tar
+[04:23:57] 跳过（已完成）wan-latents_tars/wan-latents-00000.tar
+[04:23:57] 跳过（已完成）wan-latents_tars/wan-latents-00001.tar
+[04:23:57] 跳过（已完成）oracle_tars/oracle-wan-mj-00000.tar
+[04:23:57] 跳过（已完成）oracle_tars/oracle-wan-mj-00001.tar
+[04:23:57] 跳过（已完成）motion-tokens_tars/motion-tokens-00000.tar
+[04:23:57] ANCHOR_OK=3
+[04:23:57] PACK_DONE shards=67 plain=49 members=229323 bytes=130567459201
+[04:23:57] 全部完成：67 个 tar 分片 + 49 个平文件，共 130.6 GB / tar 内成员 229323 个，耗时 0.0 分钟
+阶段3完成
+阶段4开始：README + 符号链接断言 + 上传前 sha256 + stage 侧第二遍体检
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  扫描 19 个文本文件，排除 0 个（['logs/*']）
+  P1 集群 NFS 绝对路径: 1 处命中
+  P2 实验室 NFS 组织层级: 1 处命中
+  P10 非公开仓库名（独立引用）: 2 处命中
+  P7 构建机内部主机名: 23 处命中
+  P8 GPU UUID: 15 处命中
+  P9 构建机绝对路径 / 仓库名: 8 处命中
+HYGIENE=PASS scanned=19 hits=50 ungated=0
+LOCAL_FILES=122 LOCAL_BYTES=130589124350
+PRE_LINES=121
+阶段4完成
+阶段5开始：分批上传 bucket
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/data_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/data_tars
+  Uploads: 0
+  Downloads: 0
+  Deletes: 0
+  Skips: 10
+Nothing to sync.
+  批完成: source/data_tars data-0000*.tar
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/data_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/data_tars
+  Uploads: 0
+  Downloads: 0
+  Deletes: 0
+  Skips: 10
+Nothing to sync.
+  批完成: source/data_tars data-0001*.tar
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/data_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/data_tars
+  Uploads: 0
+  Downloads: 0
+  Deletes: 0
+  Skips: 5
+Nothing to sync.
+  批完成: source/data_tars data-0002*.tar
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/features_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/features_tars
+  Uploads: 0
+  Downloads: 0
+  Deletes: 0
+  Skips: 5
+Nothing to sync.
+  批完成: source/features_tars features-0000[0-4].tar
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/features_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/features_tars
+  Uploads: 0
+  Downloads: 0
+  Deletes: 0
+  Skips: 5
+Nothing to sync.
+  批完成: source/features_tars features-0000[5-9].tar
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/features_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/features_tars
+  Uploads: 0
+  Downloads: 0
+  Deletes: 0
+  Skips: 5
+Nothing to sync.
+  批完成: source/features_tars features-0001[0-4].tar
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/features_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/features_tars
+  Uploads: 0
+  Downloads: 0
+  Deletes: 0
+  Skips: 5
+Nothing to sync.
+  批完成: source/features_tars features-0001[5-9].tar
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/features_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/features_tars
+  Uploads: 5
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: source/features_tars features-0002[0-4].tar
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/features_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/features_tars
+  Uploads: 5
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: source/features_tars features-0002[5-9].tar
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/features_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/features_tars
+  Uploads: 5
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: source/features_tars features-0003[0-4].tar
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/features_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/features_tars
+  Uploads: 2
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: source/features_tars features-0003[5-9].tar
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/framesamp -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/framesamp
+  Uploads: 10
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: framesamp image_emb_4x4/part_00*.bf16.bin
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/framesamp -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/framesamp
+  Uploads: 10
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: framesamp image_emb_4x4/part_01*.bf16.bin
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/framesamp -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/framesamp
+  Uploads: 10
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: framesamp image_emb_4x4/part_02*.bf16.bin
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/framesamp -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/framesamp
+  Uploads: 1
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: framesamp image_emb_4x4/part_03*.bf16.bin
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/framesamp -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/framesamp
+  Uploads: 5
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: framesamp pos_emb_4x4.f32.bin state_emb.f32.bin meta/*
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/wan-latents_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/wan-latents_tars
+  Uploads: 2
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan-latents_tars 全部
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/oracle_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/oracle_tars
+  Uploads: 2
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: oracle_tars 全部
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/motion-tokens_tars -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/motion-tokens_tars
+  Uploads: 1
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: motion-tokens_tars 全部
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/motion -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/motion
+  Uploads: 5
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: motion 全部
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/meta -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/meta
+  Uploads: 2
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: meta 全部
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/source/meta -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/source/meta
+  Uploads: 5
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: source/meta 全部
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/assets -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/assets
+  Uploads: 1
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: assets 全部
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/checksums -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/checksums
+  Uploads: 3
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: checksums 全部
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/manifest -> hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/manifest
+  Uploads: 1
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: manifest 全部
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/README.md
+  dst: hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/README.md
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/stage/SHA256SUMS.pre.txt
+  dst: hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1/SHA256SUMS.pre.txt
+阶段5完成
+阶段6开始：计数层核对（buckets REST API，异步滞后则复查一次）
+  首次不符（files=120 bytes=130589102525），统计接口可能异步滞后，120s 后复查
+BUCKET_FILES=122 BUCKET_BYTES=130589124350
+阶段6完成
+阶段7开始：全量回读到 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/verify（130 GB）
+Sync plan: hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/verify
+  Uploads: 0
+  Downloads: 122
+  Deletes: 0
+  Skips: 0
+Syncing...
+Sync completed.
+阶段7完成
+阶段8开始：上传后 sha256（POST）+ 与上传前逐行对照 + tar 成员抽样
+SHA256_PRE_POST_DIFF=0
+  sha256sum -c 校验行数: 121
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  清单载入 229323 行
+  motion-tokens_tars/motion-tokens-00000.tar: 1801 个成员已复算
+  oracle_tars/oracle-wan-mj-00000.tar: 372 个成员已复算
+  source/data_tars/data-00007.tar: 4096 个成员已复算
+  source/features_tars/features-00012.tar: 3570 个成员已复算
+MEMBERS_SPOT=PASS tars=4 members=9839 mismatches=0
+RESULT=PASS
+阶段8完成
+阶段9开始：收尾断言（源侧第三遍 sha256，证明硬链接未改动原件）
+  直传件核对行数: 49
+SRC_UNCHANGED=OK
+阶段9完成
+阶段10开始：公开性确认
+BUCKET_PUBLIC=True
+Sync plan: hf://buckets/HongzeFu/robomme-4task-motion-400ep-20260904-v1 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-dataset-4task-motion-400ep/tmp/anon
+  Uploads: 0
+  Downloads: 1
+  Deletes: 0
+  Skips: 0
+Syncing...
+Sync completed.
+PUBLIC_ANON_READ=OK
+阶段10完成
+全部完成
+EXIT_CODE=0
