@@ -21,6 +21,50 @@
 - **规模**：400ep 新库约 30 GiB，40ep 约 3.4 GiB，磁盘余量 4.1 T，不成问题。
 - **不改旧库、不改旧格式、不动源库。** 新库落在各自库目录下的新子目录 `framesamp-8x8/`，与旧 `framesamp/` 并列。
 
+#### 完整数据链路与本轮新增的调用
+
+现有链路一共跑 9 个脚本、12 次调用（`LIB=v1-store/datasets/4task-motion-400ep`，全部 `uv run --no-sync`，出处 `docs/dataset-build-doc/4task-motion-400ep/launch.md`「命令序列」）：
+
+```bash
+source scripts/dataset/paths.sh; v1_prepare_dirs
+# 1 清单 + 输入 sha
+scan_manifest.py build --raw_dir $RAW --tasks … --episodes-per-task 100 --out $LIB/meta/episode_manifest.json
+finalize_checks.py hash-inputs --raw_dir $RAW --out $LIB/meta/input_manifest.json
+# 2 SigLIP 建源库（写 7 键 npy + pkl）
+run_local.py --stage siglip --lib $LIB --gpus 2,3,7 --raw-dir $RAW
+finalize_checks.py check --manifest … --out $LIB/source --spot_check 1024
+# 3 视觉 packed 库
+pack_framesamp_store.py pack   --source $LIB/source --manifest … --out $LIB/framesamp --procs 48
+pack_framesamp_store.py verify --store $LIB/framesamp --resume --procs 48
+# 4 norm_stats
+compute_norm_stats.py --dataset-path $LIB/source --output-dir v1-store/train-assets/mme_vla_suite/robomme-400ep
+# 5 motion 支路
+run_local.py --stage wan    --lib $LIB --gpus 2..7          # 切 33 帧窗 → Wan VAE → wan-latents/
+run_local.py --stage encode --lib $LIB --gpus 0..7          # MotionJEPA encoder → motion-tokens/
+pack_motion_store.py pack   --manifest … --tokens $LIB/motion-tokens --latents $LIB/wan-latents --out $LIB/motion
+pack_motion_store.py verify --store $LIB/motion --resume
+# 6 motion 旁证
+oracle_driver.py vae / aggregate / encoder  →  compare_wan.py latents / tokens
+```
+
+训练时 `train.py --dataset-path $LIB/framesamp` 加 `MMEVLA_MOTION_STORE=$LIB/motion`，`FrameSampDataset` 把第 3 步和第 5 步的两张表拼起来。
+
+**改完之后，这 12 次调用一次都不重跑。** 8×8 库只在第 3 步旁边多跑两条：
+
+```bash
+# 3' 新增：同一个脚本、同一个源库，换键打一份新表
+pack_framesamp_store.py pack   --layout framesamp-8x8-v1 --reader decode --source $LIB/source --manifest … --out $LIB/framesamp-8x8 --procs 32
+pack_framesamp_store.py verify --store $LIB/framesamp-8x8 --resume --procs 32
+# 3'' 新增：汇合点检查，8×8 与 4×4 两张 pos 表的 patch 0 时间码逐位相同
+xgrid_pos_check.py --store-4x4 $LIB/framesamp --store-8x8 $LIB/framesamp-8x8 --source $LIB/source
+```
+
+训练时只换 `--dataset-path $LIB/framesamp-8x8`，`MMEVLA_MOTION_STORE` 还是指原来的 `$LIB/motion`。
+
+代码上加的东西对应这两条命令：`pack_framesamp_store.py` 加 `--layout` 参数并让 decode 守卫、verify、空间预检按规格表走；`framesamp_store.py` 加规格表让 `StoreMeta.load` 和 reader 认 `framesamp-8x8-v1`；`framesamp_dataset.py` 放开白名单并核对库规格；`xgrid_pos_check.py` 是新脚本。第 1、2、4、5、6 步的脚本一行不改。
+
+40ep 开发库同样的两条命令先跑一遍，`--out` 换成 `4task-motion-40ep/framesamp-8x8`。
+
 #### 源数据长什么样
 
 400ep 库 `v1-store/datasets/4task-motion-400ep/source/`，40ep 库同构：
