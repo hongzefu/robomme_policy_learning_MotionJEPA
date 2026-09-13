@@ -1,6 +1,6 @@
 # 8 帧 × 8×8 训练支持与前后对拍计划（细化版）
 
-本文是 2026-09-08 版计划的细化，2026-09-13 按 `AGENTS.md` 第 2 条改成两部分结构：**第一部分给人看**，分「数据预处理」「训练」两块；**第二部分供 agent 追踪**，列文件、函数、命令与判定行。细化依据是对 HEAD `82c2ccef509d34800a397f547d7144e151cb8d4a` 的只读静态核实（未执行任何仓库脚本、未训练；唯一一次动态动作是用 `.venv/bin/python` 只读 `np.load` 打开了三个源 npy 核对键名）。环境判定为 B：仓库 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，8 × A100-SXM4-80GB，无 turbo、无 GreatLakes，`/scratch` 余量 4.1 T。
+本文是 2026-09-08 版计划的细化，2026-09-13 按 `AGENTS.md` 第 2 条改成两部分结构：**第一部分给人看**，分「数据预处理」「训练」「推理」三块（推理块 2026-09-13 按用户要求补入：没有训练收敛的 8×8 模型，checkpoint 只能用第二块 1000 步测试 run 的产物，成功率不作指标）；**第二部分供 agent 追踪**，列文件、函数、命令与判定行。细化依据是对 HEAD `82c2ccef509d34800a397f547d7144e151cb8d4a` 的只读静态核实（未执行任何仓库脚本、未训练；唯一一次动态动作是用 `.venv/bin/python` 只读 `np.load` 打开了三个源 npy 核对键名）。环境判定为 B：仓库 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，8 × A100-SXM4-80GB，无 turbo、无 GreatLakes，`/scratch` 余量 4.1 T。
 
 **授权状态不变**：当前只授权本文件。代码修改、建库、测试、训练一样都没开始，每一步都要另行授权。用户已定死的口径：最终真实训练对拍每侧 **1000 次参数更新**，不能用短测代替。
 
@@ -10,7 +10,7 @@
 
 ### 一句话
 
-现在的训练把历史压成「最多 32 帧，每帧 4×4 = 16 个视觉 token」。本轮新增一种并列配置「最多 8 帧，每帧 8×8 = 64 个 token」。两种都是 512 个 token，模型一个参数不加、一条计算式不改，改动全在数据侧：**打一份新库**（第一块）、**让 Dataset 和训练入口认得这份新库并证明没改坏**（第二块）。
+现在的训练把历史压成「最多 32 帧，每帧 4×4 = 16 个视觉 token」。本轮新增一种并列配置「最多 8 帧，每帧 8×8 = 64 个 token」。两种都是 512 个 token，模型一个参数不加、一条计算式不改，改动全在数据侧：**打一份新库**（第一块）、**让 Dataset 和训练入口认得这份新库并证明没改坏**（第二块）、**让在线记忆构造认得 8×8 并证明推理侧与训练侧交付一致**（第三块）。
 
 ### 第一块：数据预处理——把 8×8 特征打成一份新的 packed 库
 
@@ -254,8 +254,78 @@ v1-store/datasets/4task-motion-400ep/framesamp-8x8/    正式库，后建
 
 - 只有第一块与第二块**全部**通过，才宣称对应 profile 的训练交付等价；第二块未通过只能报告已通过的输入检查。
 - 交付报告分开写四件事：旧能力回归（C32/M32）、新 8 帧训练支持（C8/M8）、motion 接口保护、实际资源表现（吞吐与显存在数值验收之外独立报告，用 `nvidia-smi -lms 500` 的均值 / 0% 占比 / 分层均值，不以中位数下结论，不承诺性能收益）。
-- **在线推理不在范围内**：`policies/framesamp_memory.py::FrameSampMemory` 只造 4×4 位置表（`pos_embedder(ranges, 4)`）、只池化到 16 token（`pool_tokens_to_size(output_emb, 16)`）、缓冲里只有 `image_emb_4x4` 键，`token_per_image=64` 会 KeyError。训练验收通过不等于 8×8 能部署，报告必须保留这一边界。
+- 在线推理放在第三块：训练验收通过不等于 8×8 能部署，第三块单独验。
 - motion 只做回归保护：不重抽 Wan、不重训 MotionJEPA、不做预算或结构消融。
+
+### 第三块：推理——让在线记忆构造认得 8×8，并证明推理侧与训练侧交付一致
+
+#### 结论先行
+
+- **模型侧、motion sidecar、IPC 协议、评估驱动脚本都不用改。** 评估侧没有 yaml 文件名白名单，`policies/policy_config.py::create_trained_policy` 只按 run 根的 `history_config.resolved.yaml` + `.sha256` + `motion_provenance.json` 建策略；`train.py::init_history_config` 会把这三样写进 run 根，8×8 的 run 自动被认。
+- **要改的只有 `policies/framesamp_memory.py::FrameSampMemory` 一个文件的三处字面量**，外加 5 个只读引用它的工具脚本。
+- **没有训练收敛的 8×8 模型。** checkpoint 只能用第二块候选 B run（`t8-c8-b`、`t8-m8-b`）1000 步后的 EMA 参数（bench 的 `BENCH_SAVE_FINAL_CKPT=1` 存到目录 `999`）。这样的模型不会完成任务，闭环成功率**不作任何指标**；第三块交付的是「在线链路跑通」与「推理侧 obs 与训练侧 obs 逐字节一致」两件事。这与 2026-09-04 `aws-t3-eval-obs` 用 100 步 ckpt 跑 40 集、0% 成功、只证链路的做法同口径。
+- **在线 4×4 不能被改坏。** `FrameSampMemory` 改成网格驱动后，先用现成的真模型（`awsprod40k-b128-motion/39999`）证明 4×4 在线行为逐位不变，再验 8×8。
+
+#### 现在的推理测试怎么做
+
+闭环评估是三个进程共一张卡、八张卡并行：
+
+- **policy server**：`uv run scripts/training/serve_policy.py policy:checkpoint --policy.dir=<ckpt>`。视觉记忆由 `FrameSampMemory` 在线造：每步当前帧过 SigLIP（`HistoryPi0.vision_encode`，bf16 权重，输出 256 个 patch），`pool_tokens_to_size(output_emb, 16)` 池成 4×4，存进缓冲键 `image_emb_4x4`；位置表 `pos_embedder(ranges, 4)` 只算 4×4 一档，`(4096,16,768)` f32 = 192 MiB。推理时 `even_sampling_indices(step, 32)` 选帧，交付与训练同形的四键；motion 开启时 `_prepare_motion` 取 `pos_emb_4x4[f, 0, :256]` 当时间码，`mem_order` 与训练侧同一个 `memory_order`。
+- **motion sidecar**：`policies/motion_client.py::MotionEncoderClient` 在策略构造时 `subprocess.Popen` 起常驻子进程 `scripts/dataset/wan/motion_sidecar.py`（跑在 `v1-store/venvs/wan`），Unix socketpair 通信，协议 `MMEMOT01`：父发 33 帧 256×256×3 uint8（6,488,064 B）加起点帧号，子回 768 维 f32（3,072 B），单窗约 1.4 s。握手时逐键比对 provenance 与离线 motion store，不等即 raise。
+- **仿真客户端**：`examples/robomme/eval.py` 在 `/scratch/hongze/micromamba/envs/robomme/bin/python` 下跑，带 `GLIBC_TUNABLES=glibc.rtld.optional_static_tls=8192`。
+- **驱动脚本**：`scripts/training/legacy-eval/eval_shard.{local,remote}.sh`（`.local` 八卡固定映射、`.remote` 少卡取模，用前要把副本拷回主线并 commit），或 `scripts/motion-variance/eval_shard_mv.sh`（自带 robomme 副本，无需拷回，最近一次正式评估 `mv-matrix-40k` 用的就是它）。
+
+上一次 40k motion 模型的正式评估（`docs/training-doc/eval-awsprod40k-b128-motion/`）：200 集 38 min，成功率 28%，policy 单次 `infer` 69 ms，每卡显存约 37 GB（policy 32.9 + sidecar 3.3 + 仿真 0.8）。
+
+#### 改什么
+
+`FrameSampMemory` 里与 4×4 绑死的三处，改成从 `history_config.token_per_image` 推网格边长 `g = int(sqrt(token_per_image))`（要求 g² == token_per_image，否则构造时报错）：
+
+| 位置 | 现在 | 改成 |
+|---|---|---|
+| `__init__` | `self.pos_emb_4x4 = np.array(pos_embedder(ranges, 4))`，192 MiB | `self.pos_emb = np.array(pos_embedder(ranges, g))`；g=8 时 `(4096,64,768)` f32 = 768 MiB host 内存，8 个 policy 进程共 6 GiB |
+| `add_buffer` | `pool_tokens_to_size(output_emb, 16)` | `pool_tokens_to_size(output_emb, token_per_image)`；g=8 时 `pool_size = sqrt(256 // 64) = 2`，即 2×2 平均池化，与建库侧 `mem_buffer.py` 池 8×8 的算式同一个函数 |
+| `add_buffer` 写缓冲 | 键名写死 `"image_emb_4x4"` / `"pos_emb_4x4"` | 键名 `f"image_emb_{g}x{g}"` / `f"pos_emb_{g}x{g}"`，与 `_prepare_frame_sampling` 已有的 `spatial_key` 推导对上 |
+| `_prepare_motion` | `self.pos_emb_4x4[f, 0, :256]` | `self.pos_emb[f, 0, :256]`；取值不变，因为 `PosEmb3D` 的时间段跨 patch 复制，patch 0 前 256 维与网格无关（第一块 `MOTION_POS_XGRID` 验的就是这一点） |
+| 类 docstring 与行内注释 | 「只算 4x4 一档 … 192 MiB」；`# (t, v, 64, 2048)` | 论证按网格改写；那条注释本身就是错的（SigLIP 输出 256 patch，不是 64），顺手纠正 |
+
+`policy.py::_prepare_history` 不用改：`max_frames = budget // (token_per_image * num_views)` 自动变 8，`memory_order(frame_times, 64, motion_times)` 仍是 608 位置换。
+
+引用 `pos_emb_4x4` 或 `image_emb_4x4` 的 5 个工具要认新属性名与键名：`scripts/training/g0/serve_policy_probe.py`、`compare_online_memory.py`、`compare_train_infer_obs.py`、`compare_siglip_replay.py`、`scripts/training/tests/motion_gates_online.py`（后者还写死 `(512, 16, 1)` 与 `MAX_FRAMES=32`，改成按 yaml 推）。`scripts/motion-variance/mv_common.py` 的 `608/512/96` 在 8×8 下数值不变，只改注释口径。
+
+#### 第三块验收
+
+分三步，前一步不过不进下一步。
+
+**第一步：4×4 在线回归（用真模型，不需要 8×8 checkpoint，代码改完即可跑）。** 目标是证明网格驱动的 `FrameSampMemory` 在 `token_per_image=16` 下与改前逐位相同。
+
+- 三方对拍：同一个 jitted SigLIP、同一批真实帧，分别喂改前（`REF` worktree）与改后的 `FrameSampMemory`，`get_history_feats` 全键 `leaf_sha256` 逐位相同；判定行 `ONLINE_MEM_REGRESS=PASS frames=<n> keys=3 mismatches=0`。
+- 在 `awsprod40k-b128-motion/39999` 上重跑 `scripts/training/g0/compare_train_infer_obs.py` 的 S 臂（帧特征灌训练库真值行），13 条阻断判据与 `docs/training-doc/tic-obs-model-40k/result.md` 逐条同值（12 PASS + `VT_FULL_VS_CACHED` 维持已知 FAIL，其阈值待用户裁决，本轮不动）。
+- 用 `scripts/training/g0/compare_online_motion.py` 重跑 40ep 库 772 窗：`ONLINE_ENC_BITEXACT=PASS compared=772 mismatches=0`，`ONLINE_START_SET / ONLINE_POS / ONLINE_ORDER / PROVENANCE` 全 PASS。
+
+**第二步：8×8 推理侧 obs 与训练侧 obs 对拍（用 `t8-c8-b` / `t8-m8-b` 的 999 目录）。** 把 `compare_train_infer_obs.py` 的七关在 8×8 上跑一遍，`--dataset` 指 `framesamp-8x8/`，S 臂读 8×8 库真值行：
+
+| 关 | 比什么 | 8×8 下的要求 |
+|---|---|---|
+| 0 配置与库同源 | norm stats、参数树叶、四张表指纹 vs run 记录 | 全同；`n_leaves` 与第二块 B run 一致 |
+| 1 输入键 | 在线 `_prepare_history` 八键 vs `FrameSampDataset` 八键；sidecar 现算 motion vs 表 | S 臂逐字节相同。这一关直接检验在线 2×2 池化出的 64 token 与建库时池出的那份是否同一份 |
+| 2 预处理后 | 两侧过完变换链的全部键 | 逐字节相同 |
+| 3 模型内部 | 1184 前缀 token、attn mask、positions、18 层 K/V、`mem_order` 可逆 | 逐位相同 |
+| 4 整段 vs 缓存 | `compute_loss` 整段前向 vs 前缀缓存单步 | 结构三项全等；数值项沿用现行 `THR_REL_FRO=1e-3 / THR_ULP_P99=4`，超阈值按现行口径记 FAIL 并标注「与 4×4 同一已知来源」，不现场放宽 |
+| 5 最终动作 | 两侧 obs 经同一 `_sample_actions` 去噪 | 逐位相同 |
+| 6 真仿真 | 在线不变量：窗数=公式值、`mem_order` 合法排列、prompt token 属训练集、pos 表 sha 同库表、一一对应、无抛错 | 全过；pos 表 sha 对的是 8×8 库的 `pos_emb_8x8.f32.bin` |
+
+B 臂（在线 bf16 SigLIP vs 训练 f32 表）照旧只作观察项记 `rel_fro`，不作阻断；4×4 下实测 0.33%。
+
+**第三步：闭环冒烟（证明链路跑通，不看成功率）。** 每个 profile（C8、M8）跑 4 任务 × 10 集 = 40 集，一片一卡，M8 带 sidecar。判定只有四条：`errors=0`、每集推理次数 ≤ 82（评估节奏上限）、`mem_order` 逐步合法、M8 的 sidecar 窗数与公式值一致；成功率照实记但明确标「1000 步测试模型，无意义」。显存与 host 内存（pos 表 768 MiB/进程）在结果里报。
+
+驱动推荐用 `scripts/motion-variance/eval_shard_mv.sh` 的 `normal` 条件加 `--ckpt`（自带 robomme 副本，不必拷回 legacy-eval 副本再 commit）；若其 `serve_policy_mv.py` 对 40k 快照有硬假设，改用 `legacy-eval/eval_shard.local.sh` 并按其 README 拷回副本、commit 后起跑。
+
+#### 顺序、耗时与边界
+
+- 第一步在阶段 2 代码改完后立刻做（不依赖第二块），是第三块的准入。第二、三步排在第二块之后，因为要等 `t8-c8-b` / `t8-m8-b` 跑完。
+- 第二步的 `compare_train_infer_obs.py` 主进程 jax 必须在 GPU 上（CPU 上 PosEmb3D 表不逐位），一张卡即可；第三步 40 集按 8 卡并行约 10 min 量级（200 集 38 min 外推）。
+- 边界：第三块证明的是「8×8 在线链路可跑、推理侧与训练侧交付一致」，**不证明** 8×8 模型能完成任务；那需要一次正式训练，另立 run_name 另行授权。
 
 ---
 
@@ -282,6 +352,11 @@ v1-store/datasets/4task-motion-400ep/framesamp-8x8/    正式库，后建
 | `scripts/training/tests/test_pack_guards.py` | `REF_SHARD` / `MANIFEST` 改为 env `MMEVLA_TEST_SOURCE` / `MMEVLA_TEST_MANIFEST`（指向 40ep 库 `source/` 与 `meta/episode_manifest.json`），session fixture 对两档 layout 各打一份前缀 [0..2] 迷你库；新增用例：8×8 meta 配 4×4 目录名、`token_per_image=64` 配 4×4 库、`=16` 配 8×8 库、未知 layout 均 raise | 既有 G1–G14 用例逻辑 |
 | `scripts/training/tests/spawn_matrix.py`、`dump_index_seq.py` | 不改代码；前者 `--store/--source/--manifest` 已是必填；后者默认 `4task-gl` 路径在环境 B 不存在，调用时显式传参 | |
 | `scripts/dataset/xgrid_pos_check.py`（新建） | 读两个库的 pos 表（`np.fromfile` 后按各自 spec reshape），对 t ∈ [0,586) 比 `[t,0,:256].tobytes()`；另对源 npy 抽 64 帧比 `pos_emb_4x4[0,0,:256]` 与 `pos_emb_8x8[0,0,:256]`；判定行 `MOTION_POS_XGRID=PASS t=586 npy=64 mismatches=0` | |
+| `src/mme_vla_suite/policies/framesamp_memory.py::FrameSampMemory` | `__init__` 从 `history_config.token_per_image` 推 `g`（`g*g == token_per_image` 否则 raise），`self.pos_emb = pos_embedder(ranges, g)`；`add_buffer` 池到 `token_per_image`、缓冲键 `image_emb_{g}x{g}` / `pos_emb_{g}x{g}`；`_prepare_motion` 改读 `self.pos_emb`；docstring 与 `# (t, v, 64, 2048)` 注释改正 | `_prepare_frame_sampling`、`get_frame_sampling_indices`、`_encode_ready_windows`、`visible_motion_frames`、motion 客户端调用 |
+| `scripts/training/g0/serve_policy_probe.py`、`compare_online_memory.py`、`compare_train_infer_obs.py`、`compare_siglip_replay.py` | `pos_emb_4x4` → `pos_emb`；`"image_emb_4x4"` / `ENC_KEYS` 按 policy 的 `history_config.token_per_image` 推键名；`compare_train_infer_obs.py` 的 S 臂按 store spec 读行 | 七关判据、`THR_REL_FRO=1e-3`、`THR_ULP_P99=4.0` 不动 |
+| `scripts/training/tests/motion_gates_online.py` | `HIST_BUDGET, TOKEN_PER_IMAGE, NUM_VIEWS` 与 `MAX_FRAMES` 改为从 `--yaml` 读；`mem.pos_emb_4x4[…]` → `mem.pos_emb[…]` | 闸门逻辑 |
+| `scripts/motion-variance/mv_common.py` | 只改 `MEM_LEN, FRAME_SLOTS, MOTION_SLOTS = 608, 512, 96` 旁的注释口径 | 数值不变 |
+| `scripts/training/tests/online_mem_regress.py`（新建） | 三方对拍：`REF` worktree 的 `FrameSampMemory` vs 主树的，同 jitted SigLIP、同帧，`get_history_feats` 全键 `leaf_sha256`；判定行 `ONLINE_MEM_REGRESS=PASS frames=<n> keys=3 mismatches=0` | |
 
 ### 2. 规格表（代码级草案）
 
@@ -410,6 +485,38 @@ M8 组把 yaml 换成 `-motion.yaml` 并加 `MMEVLA_MOTION_STORE=$L/motion`、`B
 
 单步全梯度对拍（每 profile 三种 batch）：`single_step_grad.py` 走同样的 `DTYPE_MANIFEST` / impl 开关，判定行 `GRAD_EQ=PASS kinds=3 leaves=<n> mismatches=0`。
 
+**阶段 6：第三块（推理）**
+
+第一步（阶段 2 之后即可，GPU 任一张）：
+
+```bash
+CUDA_VISIBLE_DEVICES=7 XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0' \
+uv run --no-sync python scripts/training/tests/online_mem_regress.py --ref-worktree v1-store/worktrees/ref-8x8 --frames-from $L/source --n-frames 256
+# 真模型 S 臂回归：命令照抄 docs/training-doc/tic-obs-model-40k/launch.md，只换代码版本，13 条判据逐条与该留档同值
+CUDA_VISIBLE_DEVICES=7 uv run --no-sync python scripts/training/g0/compare_online_motion.py --yaml perceptual-framesamp-context-motion.yaml --lib v1-store/datasets/4task-motion-40ep --ckpt v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999
+```
+
+第二步（`t8-c8-b` / `t8-m8-b` 跑完之后；bench 侧起跑时带 `BENCH_SAVE_FINAL_CKPT=1`，checkpoint 落 `$V1/train-runs/t8-m8-b/999`）：
+
+```bash
+CK=$V1/train-runs/t8-m8-b/999   # run 根 $V1/train-runs/t8-m8-b 须含 history_config.resolved.yaml/.sha256 与 motion_provenance.json
+ls $(dirname $CK)/history_config.resolved.yaml $(dirname $CK)/motion_provenance.json
+CUDA_VISIBLE_DEVICES=7 MMEVLA_MOTION_STORE=$L/motion \
+uv run --no-sync python scripts/training/g0/compare_train_infer_obs.py --ckpt $CK --dataset $L/framesamp-8x8 --source $L/source --manifest $L/meta/episode_manifest.json --episodes 5 --out v1-store/reports/t8-infer-m8   # 其余参数照 tic-obs-model-40k launch.md
+# C8 同法，--ckpt $V1/train-runs/t8-c8-b/999，不带 MMEVLA_MOTION_STORE
+```
+
+第三步（闭环冒烟，8 卡并行，tmux 前缀 `t8-ev-`）：
+
+```bash
+# 推荐：motion-variance 链路，normal 条件，--ckpt 换成测试 run；每任务 10 集
+for k in 0..7: eval_shard_mv.sh 按 run_batch_mv.sh 的分片规则起 8 片，COND=normal CKPT_DIR=$V1/train-runs/t8-m8-b/999 EP_COUNT=10
+# 备选：legacy-eval/eval_shard.local.sh（先按其 README 拷回副本并 commit）
+uv run --no-sync python scripts/training/g0/summarize_eval_probe.py --max-frames 8 --tokens-per-frame 64 …
+```
+
+判定只看 `errors=0`、每集推理次数 ≤ 82、`mem_order` 合法、M8 窗数与公式一致；成功率照实记但标「测试模型，不作指标」。
+
 ### 4. 判定行清单（最终留档必须逐条出现，禁止一条笼统 PASS）
 
 | 判定行 | 出处 | 通过条件 |
@@ -428,6 +535,11 @@ M8 组把 yaml 换成 `-motion.yaml` 并加 `MMEVLA_MOTION_STORE=$L/motion`、`B
 | `FINAL_STATE_EXACT=PASS profile=<p> state_steps=11` | gate_8x8（摘要步全树） | 四个 profile |
 | `GRAD_EQ=PASS kinds=3 leaves=<n> mismatches=0` | single_step_grad 对拍 | 四个 profile |
 | `GATE_8X8=PASS profile=<p> steps=1000 batch=8 …` | gate_8x8 总行 | 四个 profile |
+| `ONLINE_MEM_REGRESS=PASS frames=<n> keys=3 mismatches=0` | online_mem_regress（4×4，真模型 SigLIP） | 第三块准入 |
+| `tic-obs-model-40k` 的 13 条阻断判据逐条同值 | compare_train_infer_obs S 臂，`awsprod40k-b128-motion/39999` | 4×4 在线回归 |
+| `ONLINE_ENC_BITEXACT=PASS compared=772 mismatches=0` 等五条 | compare_online_motion，40ep 库 | 4×4 在线回归 |
+| 七关判定行（关 0–6），`--dataset framesamp-8x8` | compare_train_infer_obs，`t8-{c8,m8}-b/999` | C8、M8 各一套；关 4 数值项按现行阈值如实记 |
+| `EVAL_SMOKE=DONE profile=<p> episodes=40/40 errors=0 max_infer<=82 mem_order_ok=1` | 闭环冒烟汇总 | C8、M8 各一条；成功率不作指标 |
 
 ### 5. 前后链路图（实施时按实测数字更新后落档）
 
@@ -478,7 +590,8 @@ framesamp-8x8/ (framesamp-8x8-v1)：image 行 (64,2048) bf16；pos 表 586 行 (
 - 阶段 1、2 各自 `commitV<大>.<小>: …` 提交并 `git push`；阶段 1 结束 HEAD 记为 `REF`，阶段 2 结束记为 `CAND`，两者都写进每份 launch.md。
 - 建库留档 `docs/dataset-build-doc/4task-motion-{40ep,400ep}-framesamp-8x8/{launch.md,result.md,records/}`，records 收 `store_meta.json`、`report` 输出、判定行、日志尾部。
 - 训练留档 `docs/training-doc/t8-<profile>-{a1,a2,b}/`，每条轨迹 `launch.md`（commit、完整命令、env、GPU 对、数据路径）、`result.md`（判定行、耗时、吞吐、显存）、`records/`（`scalars_hex.tsv`、`param_checksums.jsonl`、`batch_digests.jsonl`、`index_sequence.json`、`env.json`、`run_meta.json`）。不归档 checkpoint。
-- 收官：`docs/dataloader-restructure.md` 加一节「8 帧 × 8×8 档」引用上面留档；本文降为过程档案。
+- 推理留档 `docs/training-doc/t8-infer-regress-4x4/`（第一步）、`t8-infer-{c8,m8}/`（第二、三步），各含 `launch.md`（代码 commit、checkpoint 路径与其来源 run、完整命令、GPU）、`result.md`（七关判定行、冒烟四条判定、显存与 host 内存、成功率并标注不作指标）、`records/`（对拍报告 json、eval 汇总）。
+- 收官：`docs/dataloader-restructure.md` 加一节「8 帧 × 8×8 档」引用上面留档；`docs/train-infer-consistency.md` 加一节「8×8 档（测试模型）」；本文降为过程档案。
 
 ### 7. 需用户拍板的项（实施前）
 
@@ -487,6 +600,8 @@ framesamp-8x8/ (framesamp-8x8-v1)：image 行 (64,2048) bf16；pos 表 586 行 (
 3. **参考链注入方式**：本文推荐通过 `bench_train_steps.py` 的 `BENCH_DATASET_IMPL` 只读 monkeypatch，不改生产 `dataloader.py`；若用户要求生产侧开关，需另议。
 4. **jax 缓存落点**：本文推荐入口读 `MMEVLA_JAX_CACHE_DIR`；`~/.cache/` 下已有的 6 个越界目录另立清理任务。
 5. **磁盘**：400ep 8×8 库约 30 GiB，确认落 `v1-store/datasets/4task-motion-400ep/framesamp-8x8/`。
+6. **推理用 checkpoint**：用第二块 `t8-c8-b` / `t8-m8-b` 1000 步后的 999 目录（本文推荐，唯一现成来源）；bench 起跑时须带 `BENCH_SAVE_FINAL_CKPT=1`。
+7. **闭环冒烟规模与驱动**：每 profile 4 任务 × 10 集 = 40 集；驱动用 motion-variance 链路还是 legacy-eval `.local`（后者要拷回副本并 commit）。
 
 ### 8. 本次文档改动的验证与提交
 
