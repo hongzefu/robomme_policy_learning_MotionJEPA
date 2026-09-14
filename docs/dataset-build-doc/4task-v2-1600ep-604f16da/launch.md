@@ -12,6 +12,14 @@
 
 独立吞吐监听以 `tail --pid=1045286 -F` 等待训练 JSONL 的新增行；只对 epoch 56 起的新增记录执行阈值检查。低于阈值时，先验证 `/proc/1045286/cmdline` 含本轮唯一会话名且 PGID 等于该 PID，再对该进程组发送 `SIGSTOP`。它不向训练进程发信号。监视记录保存在对应 `.train-guard.jsonl`，启动读到的 epoch 55 标为 BASELINE。
 
+当前已创建并正常结束的正式会话如下，均有 `EXIT_CODE=0`。后续新增会话继续按完整名称记录；不会按前缀清理，也不操作其他任务的会话。
+
+| 阶段 | 完整会话名 | 启动提交 | 起跑 UTC |
+|---|---|---|---|
+| 1/2 前检与合并 | `v2b-merge-20260914T174147Z` | `3f6c8be3ed65ae27d923ef6828751c71a5e49404` | 2026-09-14 17:50:56 |
+| 3/4 full 验真与清单 | `v2b-verify-20260914T174147Z` | `eb25f839c836de584f3a982c790df292304ba25a` | 2026-09-14 18:15:24 |
+| 5 输入指纹 | `v2b-hash-20260914T174147Z` | `e193c6dc1b4a8cbd6779dbfb2b1f6aa077686c6d` | 2026-09-14 18:46:07 |
+
 ## 数据来源与排序
 
 源根 `/scratch/hongze/robomme-4task-h5-20260912-v2`；来源 `HongzeFu/robomme-4task-h5-20260912-v2`，revision `604f16da36d6b6d175884df8fb687dc08e0a36eb`，MANIFEST sha256 `df992cdf5a768ae0f368e520b0d7be28a68ed4ce6ca6201967cf5d6654cf2bb9`。按任务分组，再按 easy、medium、hard、xhard 与原 episode 编号排序，编为每任务 `episode_0..399`。原 episode 号和 seed 不能单独作为全局身份；每行 map 保留难度、member、src_group 和原始身份。
@@ -42,6 +50,8 @@
 AWS 8×A100-SXM4-80GB，存储为 `/dev/md0` XFS 本地 NVMe RAID，开工可用约 4.19 TB。本轮 GPU 限 4–7；合并 4 进程、verify 与打包 48 进程。CPU 阶段用 `CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu` 隔离，尤其 norm_stats。所有缓存逐项放 `v1-store/cache/`，不覆盖 HOME。
 
 GPU 0–3 的训练参考吞吐 874.0 samples/s；观察到新 epoch 低于 865.26 时暂停本轮活动阶段。此处只评价资源共处，不据训练侧相对 loss 判断模型质量。日志保存新 epoch 吞吐与阶段时间，空间按实际产物增长复核。
+
+正式 SigLIP 阶段额外以 `nvidia-smi --query-gpu=timestamp,index,utilization.gpu,memory.used --format=csv,noheader,nounits -lms 500` 记录八张卡的时间、利用率与显存，文件为对应阶段的 `.gpu.csv`。采样进程由本轮保存的精确 PID 管理，阶段退出时只停止该采样器；GPU 计算仍仅发生在 4–7。采样值用于还原运行环境，是否满足共处要求仍按训练 epoch 吞吐阈值判断。
 
 ## 命令与配置还原
 
