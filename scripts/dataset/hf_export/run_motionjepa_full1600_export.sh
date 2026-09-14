@@ -81,6 +81,9 @@ mkdir -p "$STAGE" "$VERIFY" "$TMPD" "$EXPORT_ROOT/logs" "$HF_XET_CACHE"
 
 # ---------------------------------------------------------------- 阶段 0：凭据
 echo "阶段0开始：凭据与身份"
+# 显式断言 uvx 可用：tmux server 的 PATH 可能不含 ~/.local/bin，而下面 whoami 的 2>/dev/null
+# 会把 "command not found" 一起吞掉，只剩一个没有上下文的 exit 1。
+command -v uvx >/dev/null || { echo "错误: PATH 里找不到 uvx。PATH=$PATH"; exit 1; }
 WHO="$(hf auth whoami 2>/dev/null | tr ' ' '\n' | grep '^user=' | head -1)"
 echo "HF_WHOAMI=${WHO#user=}"
 [ "$WHO" = "user=HongzeFu" ] || { echo "错误: whoami 不是 HongzeFu（$WHO），凭据注入失败"; exit 1; }
