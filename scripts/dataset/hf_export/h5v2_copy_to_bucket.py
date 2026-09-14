@@ -165,7 +165,10 @@ def cmd_copy(args) -> int:
         print(f"  COPY_OK [{k}/{len(batches)}] {bid} files={len(files)}")
 
     # 79 个普通 git blob（22 MB）：没有 xetHash，只能下载再上传
-    plain = [p for p in man["plain"] if p != ".gitattributes"]   # LFS 追踪规则，bucket 无意义
+    # 不排除 .gitattributes：本轮的保证是「bucket 里有 repo 的全部 2057 个文件、逐位相同」，
+    # 少一个就得在校验里开一个例外，而这个 bucket 建成之后原 repo 要被删除——例外越少，
+    # 「删掉的东西在 bucket 里一件不缺」这句话就越站得住。
+    plain = list(man["plain"])
     if plain:
         from huggingface_hub import hf_hub_download
         dl = args.workdir / "plain"
