@@ -6,7 +6,9 @@
 
 checkpoint为 `v1-store/train-runs/t8-{c8,m8}-b/mme_vla_suite/t8-{c8,m8}-b/999`，分别来自1000更新，保存EMA参数；原训练主树为 `38f0db46db19a3b645613e04fba3f6e635b47054`，源代码CAND。原始输入是400ep库，使用其已全量verify的 `framesamp-8x8/`。norm_stats明确取400ep原文件，其SHA为 `750a8e9bd6e1e5a3cf5c294864c44564153309ef92492eb083fa361096d470d2`，并核训练/推理真实解析数组摘要。位置表与真实SigLIP三方池化已在[早期检查](../t8-infer-m8/result.md)通过，共用帧路径不重复跑。
 
-按profile串行执行三个阶段，均从clean HEAD启动：`gates`为关0及关1–5，`probe`为一集仿真及关6，`batch`为48集完整闭环。关0只用CPU；关1–5及探针用物理GPU7；批量闭环用4、5、6、7四卡。全部位于AWS本地NVMe RAID `/dev/md0`，不与其他GPU任务混用资源。结果分别落 `v1-store/reports/t8-infer-<profile>/<phase>/`，日志 `v1-store/logs/t8-infer-<profile>-<phase>.log`。对应外层tmux会话同日志名去掉扩展名；批量另创建 `mv-t42-normal-t8c8-w0..3` 或 `mv-t42-normal-t8m8-w0..3`。
+每个profile内部按三个阶段执行，均从clean HEAD启动：`gates`为关0及关1–5，`probe`为一集仿真及关6，`batch`为48集完整闭环。关0只用CPU；开环与探针的C8用物理GPU7、M8用物理GPU6，两组独立并行，每组内部始终同卡比较，探针端口分别为9378/9379。批量闭环仍按M8→C8顺序，每批使用4、5、6、7四卡，必须等两组开环和探针都结束才启动。全部位于AWS本地NVMe RAID `/dev/md0`。结果分别落 `v1-store/reports/t8-infer-<profile>/<phase>/`，日志 `v1-store/logs/t8-infer-<profile>-<phase>.log`。对应外层tmux会话同日志名去掉扩展名；批量另创建 `mv-t42-normal-t8c8-w0..3` 或 `mv-t42-normal-t8m8-w0..3`。
+
+C8开环已从clean `a0cdf58a1f633d317f79595c7fbb31b7760a6cc0` 在GPU7起跑。当时版本中的公共脚本对两profile都写GPU7；确认GPU6空闲后，将尚未开始的M8开环与探针安排到GPU6并使用独立端口，以减少串行等待。只调整已授权GPU4–7内的调度，不改变数据、样本、数值判据或模型代码。C8首次启动命令可用该提交还原；后续阶段记录各自真实启动HEAD。
 
 关1–5沿用默认5集、120决策点，M8真sidecar140窗，禁止max-points裁剪；bf16整段/缓存差保留为观察项，真f32/highest的15点重跑要求rel_fro≤1e-6且prefix KV逐位相同。探针为默认首任务ButtonUnmask的test episode0，seed42、max_steps1300、1集1任务；它验证在线不变量，不覆盖全部测试目标。旧400ep训练缺少ButtonUnmask test3、7、19、23的目标组合，本轮没有修改数据或放宽prompt门。48集保持驱动原始stride划分，包含3、7，不能为避开缺口删集。每种开关要求48/48、errors0、单集推理≤82、mem_order合法，M8真编码次数等于公式窗数；成功率记录但不作测试模型能力指标。
 
@@ -20,7 +22,8 @@ checkpoint为 `v1-store/train-runs/t8-{c8,m8}-b/mme_vla_suite/t8-{c8,m8}-b/999`�
 source scripts/training/paths.sh
 export UV_CACHE_DIR=/scratch/hongze/.cache/uv PYTHONUNBUFFERED=1
 export XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'
-export CUDA_VISIBLE_DEVICES=7 JAX_PLATFORMS=cuda
+if [[ "$PROFILE" == c8 ]]; then export CUDA_VISIBLE_DEVICES=7; else export CUDA_VISIBLE_DEVICES=6; fi
+export JAX_PLATFORMS=cuda
 test -z "$(git status --porcelain)"
 uv run --no-sync python - "$PROFILE" "$PHASE" <<'T8_INFER_PY'
 import asyncio, contextlib, datetime, json, os, pathlib, signal, socket, sys, time
@@ -37,9 +40,10 @@ NORM = V1 / "train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json"
 OUT = V1 / f"reports/t8-infer-{PROFILE}" / PHASE
 OUT.mkdir(parents=True, exist_ok=False)
 assert (CKPT / "params").is_dir()
-PORT = 9378
+GPU = "7" if PROFILE == "c8" else "6"
+PORT = 9378 if PROFILE == "c8" else 9379
 POLICY = f"t8-probe-{PROFILE}"
-ENV = dict(os.environ, CUDA_VISIBLE_DEVICES="7", JAX_PLATFORMS="cuda",
+ENV = dict(os.environ, CUDA_VISIBLE_DEVICES=GPU, JAX_PLATFORMS="cuda",
            XLA_PYTHON_CLIENT_MEM_FRACTION="0.55", PYTHONUNBUFFERED="1",
            MMEVLA_JAX_CACHE_DIR=str(V1 / f"cache/jax/t8-infer-{PROFILE}-{PHASE}"))
 if MOTION:
@@ -135,7 +139,7 @@ async def stop_owned(pair):
     print(f"SERVER_CONTROLLED_STOP pid={p.pid} rc={p.returncode}", flush=True)
 
 async def main():
-    gpu_ids = "4,5,6,7" if PHASE == "batch" else "7"
+    gpu_ids = "4,5,6,7" if PHASE == "batch" else GPU
     gpu_file = (OUT / "gpu-500ms.csv").open("w")
     gpu = await asyncio.create_subprocess_exec("nvidia-smi", "-i", gpu_ids,
         "--query-gpu=timestamp,index,uuid,utilization.gpu,memory.used,memory.total",
@@ -148,7 +152,7 @@ async def main():
             cpu_env = dict(ENV, CUDA_VISIBLE_DEVICES="", JAX_PLATFORMS="cpu")
             await finish("gate0", await start("gate0", [PY, G0 / "check_config_provenance.py", *common,
                 "--neg-lib", V1 / "datasets/4task-motion-40ep", "--out", OUT / "provenance.json"], cpu_env))
-            extra = ["--motion", "sidecar", "--motion-gpu", "7"] if MOTION else ["--motion", "store"]
+            extra = ["--motion", "sidecar", "--motion-gpu", GPU] if MOTION else ["--motion", "store"]
             await finish("gates1-5", await start("gates1-5", [PY, G0 / "compare_train_infer_obs.py",
                 *common, *extra, "--f32-diag-points-per-episode", "3", "--out", OUT / "tic.json"]))
         elif PHASE == "probe":
@@ -156,7 +160,7 @@ async def main():
             with socket.socket() as sock:
                 assert sock.connect_ex(("127.0.0.1", PORT)) != 0, "探针端口已占用"
             ready = asyncio.Event()
-            extra = ["--motion-gpu", "7"] if MOTION else []
+            extra = ["--motion-gpu", GPU] if MOTION else []
             server = await start("server", [PY, G0 / "serve_policy_probe.py", "--ckpt", CKPT,
                 "--lib", LIB, "--store-subdir", "framesamp-8x8", "--config", "mme_vla_suite",
                 "--port", PORT, "--host", "127.0.0.1", "--seed", "42",
@@ -210,7 +214,7 @@ asyncio.run(main())
 T8_INFER_PY
 ```
 
-完整执行顺序为C8的gates、probe与M8的gates、probe，然后M8及C8各一批48集；长任务按GPU空闲情况依次启动。全梯度任务完成并释放相应GPU后才使用这些设备。关0 CPU检查也保留在其所属可复现会话内。
+完整执行顺序为C8的gates→probe与M8的gates→probe两组并行；两组均通过后，M8→C8各一批48集顺序执行。全梯度任务完成并释放相应GPU后才使用这些设备。关0 CPU检查也保留在其所属可复现会话内。
 
 ## 当前状态
 
