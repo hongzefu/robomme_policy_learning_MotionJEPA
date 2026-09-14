@@ -215,4 +215,3 @@ T8_INFER_PY
 ## 当前状态
 
 此文件为起跑前记录；实测结果分别回写[C8](../t8-infer-c8/result.md)与[M8](../t8-infer-m8/result.md)，不能把这里的目标数字当作已通过。
-
