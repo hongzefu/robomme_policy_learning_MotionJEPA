@@ -80,6 +80,35 @@ SOURCE_STATE_OFFSET = 602906          # state_emb    (8,)        f32  数据段�
 _HEADTAIL = 1 << 20                   # head_tail_digest 覆盖首尾各 1 MiB
 
 
+@dataclasses.dataclass(frozen=True)
+class StoreSpec:
+    """每档布局的唯一规格；旧模块常量保留为 4×4 的兼容接口。"""
+
+    layout: str
+    grid: int
+    tokens_per_frame: int
+    image_key: str
+    pos_key: str
+    image_row_shape: tuple[int, int]
+    pos_row_shape: tuple[int, int]
+    image_row_bytes: int
+    pos_row_bytes: int
+    image_part_dir: str
+    pos_table_relpath: str
+    source_image_offset: int
+    source_pos_offset: int
+
+
+SPECS = {
+    LAYOUT: StoreSpec(LAYOUT, 4, 16, IMAGE_KEY, POS_KEY, IMAGE_ROW_SHAPE, POS_ROW_SHAPE,
+                      IMAGE_ROW_BYTES, POS_ROW_BYTES, IMAGE_PART_DIR, POS_TABLE_RELPATH,
+                      SOURCE_IMAGE_OFFSET, SOURCE_POS_OFFSET),
+    "framesamp-8x8-v1": StoreSpec("framesamp-8x8-v1", 8, 64, "image_emb_8x8", "pos_emb_8x8",
+                                 (64, 2048), (64, 768), 64 * 2048 * 2, 64 * 768 * 4,
+                                 "image_emb_8x8", "pos_emb_8x8.f32.bin", 387, 344682),
+}
+
+
 def row_of(total_sample_offset: int, t: int) -> int:
     """全局行号公式（写读共用；t 为全 timestep 域帧号，含 demo 前缀）。"""
     return int(total_sample_offset) + int(t)
@@ -203,6 +232,7 @@ class StoreMeta:
 
     root: pathlib.Path
     raw: dict
+    spec: StoreSpec
     status: str
     num_rows: int
     num_exec_samples: int
@@ -231,8 +261,9 @@ class StoreMeta:
                 raise ValueError(f"store_meta.json 缺字段 {key!r}: {meta_path}")
             return raw[key]
 
-        if need("layout") != LAYOUT:
-            raise ValueError(f"layout 不符: {raw['layout']!r} != {LAYOUT!r}")
+        if need("layout") not in SPECS:
+            raise ValueError(f"layout 不符: {raw['layout']!r}")
+        spec = SPECS[raw["layout"]]
         if need("byte_order") != BYTE_ORDER or need("array_order") != ARRAY_ORDER:
             raise ValueError("byte_order/array_order 与格式常量不符")
         if need("bf16_encoding") != BF16_ENCODING:
@@ -252,8 +283,8 @@ class StoreMeta:
                     f"subset_episodes 必须是 global_episode_idx 连续前缀 [0..k]: {subset[:8]}…")
         tables = need("tables")
         for key, row_shape, dtype_name, row_bytes in (
-                (IMAGE_KEY, IMAGE_ROW_SHAPE, "bfloat16", IMAGE_ROW_BYTES),
-                (POS_KEY, POS_ROW_SHAPE, "float32", POS_ROW_BYTES),
+                (spec.image_key, spec.image_row_shape, "bfloat16", spec.image_row_bytes),
+                (spec.pos_key, spec.pos_row_shape, "float32", spec.pos_row_bytes),
                 (STATE_KEY, STATE_ROW_SHAPE, "float32", STATE_ROW_BYTES)):
             t = tables.get(key)
             if t is None:
@@ -261,6 +292,10 @@ class StoreMeta:
             if tuple(t["row_shape"]) != row_shape or t["dtype"] != dtype_name \
                     or t["row_bytes"] != row_bytes:
                 raise ValueError(f"tables[{key}] 形制与格式常量不符: {t}")
+        if set(tables) != {spec.image_key, spec.pos_key, STATE_KEY}:
+            raise ValueError("tables 键集与布局不符")
+        if tables[spec.image_key]["part_dir"] != spec.image_part_dir or tables[spec.pos_key]["relpath"] != spec.pos_table_relpath:
+            raise ValueError("tables 目录或文件名与布局不符")
         num_rows = int(need("num_rows"))
         num_pos_rows = int(need("num_pos_rows"))
         parts_raw = need("parts")
@@ -272,8 +307,10 @@ class StoreMeta:
             if p["start_row"] != cursor:
                 raise ValueError(
                     f"parts 行区间不连续: part {i} start_row={p['start_row']} != 累计 {cursor}")
-            if p["bytes"] != p["num_rows"] * IMAGE_ROW_BYTES:
+            if p["bytes"] != p["num_rows"] * spec.image_row_bytes:
                 raise ValueError(f"part {i} bytes 与 num_rows×row_bytes 不符")
+            if p["path"] != f"{spec.image_part_dir}/part_{i:03d}.bf16.bin":
+                raise ValueError(f"part {i} 目录或文件名与布局不符")
             parts.append(PartInfo(
                 index=i, path=p["path"], start_row=int(p["start_row"]),
                 num_rows=int(p["num_rows"]), bytes=int(p["bytes"]),
@@ -284,7 +321,7 @@ class StoreMeta:
             raise ValueError(f"parts 覆盖行数 {cursor} != num_rows {num_rows}"
                              "（未连续覆盖声明行区间）")
         return cls(
-            root=root, raw=raw, status=status, num_rows=num_rows,
+            root=root, raw=raw, spec=spec, status=status, num_rows=num_rows,
             num_exec_samples=int(need("num_exec_samples")),
             num_pos_rows=num_pos_rows,
             manifest_sha256=need("manifest_sha256"),
@@ -324,7 +361,7 @@ def run_fast_checks(meta: StoreMeta, *, manifest_path: str | None = None,
         if st != p.bytes:
             raise ValueError(f"part 大小不符: {f}: st_size={st} != meta {p.bytes}")
     for rel, shape, dtype_bytes in (
-            (POS_TABLE_RELPATH, (meta.num_pos_rows,) + POS_ROW_SHAPE, 4),
+            (meta.spec.pos_table_relpath, (meta.num_pos_rows,) + meta.spec.pos_row_shape, 4),
             (STATE_TABLE_RELPATH, (meta.num_rows,) + STATE_ROW_SHAPE, 4)):
         f = meta.root / rel
         expect = int(np.prod(shape)) * dtype_bytes
@@ -359,7 +396,7 @@ def run_full_checks(meta: StoreMeta) -> None:
         got = sha256_file(meta.root / p.path)
         if got != p.sha256:
             raise ValueError(f"part sha256 不符（full 档）: {p.path}: {got[:16]}…")
-    for key, rel in ((POS_KEY, POS_TABLE_RELPATH), (STATE_KEY, STATE_TABLE_RELPATH)):
+    for key, rel in ((meta.spec.pos_key, meta.spec.pos_table_relpath), (STATE_KEY, STATE_TABLE_RELPATH)):
         want = meta.raw["tables"][key].get("sha256")
         got = sha256_file(meta.root / rel)
         if got != want:
@@ -435,8 +472,8 @@ class FrameSampStore:
             raise
         # 就地设 shape（不走 reshape 视图）：保证 .base is None——小表是进程内
         # 拥有内存的副本、非映射非视图（B.2/G10 契约）
-        self._pos_table = np.fromfile(self._root / POS_TABLE_RELPATH, dtype=POS_DTYPE)
-        self._pos_table.shape = (self._meta.num_pos_rows,) + POS_ROW_SHAPE
+        self._pos_table = np.fromfile(self._root / self._meta.spec.pos_table_relpath, dtype=POS_DTYPE)
+        self._pos_table.shape = (self._meta.num_pos_rows,) + self._meta.spec.pos_row_shape
         self._state_table = np.fromfile(self._root / STATE_TABLE_RELPATH, dtype=STATE_DTYPE)
         self._state_table.shape = (self._meta.num_rows,) + STATE_ROW_SHAPE
         self._owner_pid = os.getpid()
@@ -509,7 +546,8 @@ class FrameSampStore:
             filled += nread
 
     def read_image_rows(self, rows, out: np.ndarray | None = None) -> np.ndarray:
-        """按全局行号读 image_emb_4x4，返回 (n,16,2048) bf16（0 open、0 pickle）。"""
+        """按全局行号读指定布局的 image，返回 (n,tokens,2048) bf16。"""
+        spec = self._meta.spec
         rows = np.asarray(rows, dtype=np.int64)
         if rows.ndim != 1:
             raise ValueError(f"rows 须一维: shape={rows.shape}")
@@ -518,17 +556,17 @@ class FrameSampStore:
             raise IndexError(
                 f"行号越界: [{rows.min()}, {rows.max()}] ∉ [0, {self._meta.num_rows})")
         if out is None:
-            raw = np.empty(n * IMAGE_ROW_BYTES, np.uint8)
+            raw = np.empty(n * spec.image_row_bytes, np.uint8)
         else:
-            if out.dtype != np.uint8 or out.nbytes != n * IMAGE_ROW_BYTES:
+            if out.dtype != np.uint8 or out.nbytes != n * spec.image_row_bytes:
                 raise ValueError("out 须是 n×row_bytes 的 uint8 一维缓冲")
             raw = out
         segs = self._runs_of(rows)
         if self._fadvise_ok:
             for _, row0, cnt, pi in segs:
-                off = (row0 - int(self._part_start[pi])) * IMAGE_ROW_BYTES
+                off = (row0 - int(self._part_start[pi])) * spec.image_row_bytes
                 try:
-                    os.posix_fadvise(self._fds[pi], off, cnt * IMAGE_ROW_BYTES,
+                    os.posix_fadvise(self._fds[pi], off, cnt * spec.image_row_bytes,
                                      os.POSIX_FADV_WILLNEED)
                 except OSError as e:
                     logger.warning("posix_fadvise 不可用（%s），本进程永久跳过预读提示", e)
@@ -536,14 +574,14 @@ class FrameSampStore:
                     break
         mv = memoryview(raw)
         for out_i, row0, cnt, pi in segs:
-            off = (row0 - int(self._part_start[pi])) * IMAGE_ROW_BYTES
-            b0 = out_i * IMAGE_ROW_BYTES
-            self._pread_exact(self._fds[pi], mv[b0:b0 + cnt * IMAGE_ROW_BYTES], off,
+            off = (row0 - int(self._part_start[pi])) * spec.image_row_bytes
+            b0 = out_i * spec.image_row_bytes
+            self._pread_exact(self._fds[pi], mv[b0:b0 + cnt * spec.image_row_bytes], off,
                               ctx=self._meta.parts[pi].path)
-        return raw.view(IMAGE_DTYPE).reshape((n,) + IMAGE_ROW_SHAPE)
+        return raw.view(IMAGE_DTYPE).reshape((n,) + spec.image_row_shape)
 
     def pos_rows(self, frames) -> np.ndarray:
-        """按帧号 t 查 pos 小表，返回 (n,16,768) f32（进程内副本，无 NFS 缺页）。"""
+        """按帧号 t 查 pos 小表，返回 (n,tokens,768) f32（进程内副本）。"""
         f = np.asarray(frames, dtype=np.int64)
         if len(f) and (int(f.min()) < 0 or int(f.max()) >= self._meta.num_pos_rows):
             raise IndexError(f"pos 帧号越界: [{f.min()}, {f.max()}] ∉ [0, {self._meta.num_pos_rows})")

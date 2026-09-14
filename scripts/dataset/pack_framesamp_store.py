@@ -63,14 +63,15 @@ def _src_npy(source_root: str, g: int, t: int) -> str:
     return os.path.join(source_root, "features", f"episode_{g}", f"token_emb_{t}.npy")
 
 
-def read_frame_decode(path: str) -> tuple[bytes, bytes, bytes]:
+def read_frame_decode(path: str, spec=None) -> tuple[bytes, bytes, bytes]:
     """全量反序列化（首跑默认，零布局假设），返回三键原始字节。"""
+    spec = spec or fs.SPECS[fs.LAYOUT]
     with open(path, "rb") as f:
         d = np.load(f, allow_pickle=True).item()
-    img, pos, stt = d[fs.IMAGE_KEY], d[fs.POS_KEY], d[fs.STATE_KEY]
-    if img.shape != (1,) + fs.IMAGE_ROW_SHAPE or img.dtype != fs.IMAGE_DTYPE:
+    img, pos, stt = d[spec.image_key], d[spec.pos_key], d[fs.STATE_KEY]
+    if img.shape != (1,) + spec.image_row_shape or img.dtype != fs.IMAGE_DTYPE:
         raise ValueError(f"源帧 {path} image 形制不符: {img.shape} {img.dtype}")
-    if pos.shape != (1,) + fs.POS_ROW_SHAPE or pos.dtype != np.float32:
+    if pos.shape != (1,) + spec.pos_row_shape or pos.dtype != np.float32:
         raise ValueError(f"源帧 {path} pos 形制不符: {pos.shape} {pos.dtype}")
     if stt.shape != fs.STATE_ROW_SHAPE or stt.dtype != np.float32:
         raise ValueError(f"源帧 {path} state 形制不符: {stt.shape} {stt.dtype}")
@@ -84,6 +85,7 @@ def read_frame_slice(path: str) -> tuple[bytes, bytes, bytes]:
     由主进程用 decode 档自证后钉死）；逐帧 pos 窗口 100% memcmp 由写侧校验①承担。
     """
     prefix = _G["slice_prefix"]
+    spec = _G["spec"]
     fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC)
     try:
         st = os.fstat(fd)
@@ -93,10 +95,10 @@ def read_frame_slice(path: str) -> tuple[bytes, bytes, bytes]:
         head = os.pread(fd, 64, 0)
         if head != prefix:
             raise ValueError(f"源帧 {path} 前 64 B 与参考前缀不符，slice 档前提被破坏")
-        img = os.pread(fd, fs.IMAGE_ROW_BYTES, fs.SOURCE_IMAGE_OFFSET)
-        pos = os.pread(fd, fs.POS_ROW_BYTES, fs.SOURCE_POS_OFFSET)
+        img = os.pread(fd, spec.image_row_bytes, spec.source_image_offset)
+        pos = os.pread(fd, spec.pos_row_bytes, spec.source_pos_offset)
         stt = os.pread(fd, fs.STATE_ROW_BYTES, fs.SOURCE_STATE_OFFSET)
-        if len(img) != fs.IMAGE_ROW_BYTES or len(pos) != fs.POS_ROW_BYTES \
+        if len(img) != spec.image_row_bytes or len(pos) != spec.pos_row_bytes \
                 or len(stt) != fs.STATE_ROW_BYTES:
             raise ValueError(f"源帧 {path} slice 窗口短读")
         return img, pos, stt
@@ -108,18 +110,19 @@ def _read_frame(g: int, t: int) -> tuple[bytes, bytes, bytes]:
     path = _src_npy(_G["source_root"], g, t)
     if _G["reader"] == "slice":
         return read_frame_slice(path)
-    return read_frame_decode(path)
+    return read_frame_decode(path, _G["spec"])
 
 
 def _pin_slice_prefix(source_root: str, ep0: dict) -> bytes:
     """slice 档参考前缀：取首 episode 首帧，decode 与 slice 窗口互证后钉死前 64 B。"""
+    spec = _G["spec"]
     path = _src_npy(source_root, ep0["global_episode_idx"], 0)
     with open(path, "rb") as f:
         head = f.read(64)
-    img_d, pos_d, stt_d = read_frame_decode(path)
+    img_d, pos_d, stt_d = read_frame_decode(path, spec)
     raw = pathlib.Path(path).read_bytes()
-    if (raw[fs.SOURCE_IMAGE_OFFSET:fs.SOURCE_IMAGE_OFFSET + fs.IMAGE_ROW_BYTES] != img_d
-            or raw[fs.SOURCE_POS_OFFSET:fs.SOURCE_POS_OFFSET + fs.POS_ROW_BYTES] != pos_d
+    if (raw[spec.source_image_offset:spec.source_image_offset + spec.image_row_bytes] != img_d
+            or raw[spec.source_pos_offset:spec.source_pos_offset + spec.pos_row_bytes] != pos_d
             or raw[fs.SOURCE_STATE_OFFSET:fs.SOURCE_STATE_OFFSET + fs.STATE_ROW_BYTES] != stt_d):
         raise ValueError("slice 偏移常量与首帧 decode 结果不符——数据格式已变，"
                          "禁用 --reader slice（布局探针 probe_layout.py 已随 pack/ 目录删除，见 git 历史）")
@@ -327,13 +330,14 @@ def build_small_tables(episodes: list[dict], procs: int) -> tuple[bytes, bytes, 
     源帧的 state 键，主进程按行拼装（谁写全局表归属唯一）。
     """
     num_pos_rows = max(ep["num_timesteps"] for ep in episodes)
+    spec = _G["spec"]
     donor = max(episodes, key=lambda e: e["num_timesteps"])
     g = donor["global_episode_idx"]
     print(f"[pack] pos 表：episode_{g}（{num_pos_rows} 帧）逐位抽取拼装", flush=True)
-    pos = bytearray(num_pos_rows * fs.POS_ROW_BYTES)
+    pos = bytearray(num_pos_rows * spec.pos_row_bytes)
     for t in range(num_pos_rows):
         _, p, _ = _read_frame(g, t)
-        pos[t * fs.POS_ROW_BYTES:(t + 1) * fs.POS_ROW_BYTES] = p
+        pos[t * spec.pos_row_bytes:(t + 1) * spec.pos_row_bytes] = p
 
     row0 = episodes[0]["total_sample_offset"]
     num_rows = sum(ep["num_timesteps"] for ep in episodes)
@@ -365,9 +369,10 @@ def _pack_part_worker(task: dict) -> dict:
     + sha256 + os.replace。返回 progress 记录。"""
     t0 = time.perf_counter()
     part_idx = task["index"]
+    spec = _G["spec"]
     eps = task["episodes"]
     store_root = pathlib.Path(_G["store_root"])
-    final = store_root / fs.IMAGE_PART_DIR / f"part_{part_idx:03d}.bf16.bin"
+    final = store_root / spec.image_part_dir / f"part_{part_idx:03d}.bf16.bin"
     tmp = final.with_name(final.name + ".tmp")
     pos_table: bytes = _G["pos_table"]
     state_table: bytes = _G["state_table"]
@@ -378,19 +383,19 @@ def _pack_part_worker(task: dict) -> dict:
         fd = f.fileno()
         for ep in eps:
             g, nt = ep["global_episode_idx"], ep["num_timesteps"]
-            blob = bytearray(nt * fs.IMAGE_ROW_BYTES)
+            blob = bytearray(nt * spec.image_row_bytes)
             for t in range(nt):
                 img, pos, stt = _read_frame(g, t)
                 # ① pos memcmp 钉死 t 与「pos 只依赖 t」（不钉 g——数学上分不出同 t 调包，
                 #    g 级身份唯一凭据是 verify 全量对拍，F.1）
-                if pos != pos_table[t * fs.POS_ROW_BYTES:(t + 1) * fs.POS_ROW_BYTES]:
+                if pos != pos_table[t * spec.pos_row_bytes:(t + 1) * spec.pos_row_bytes]:
                     raise RuntimeError(f"写侧校验①失败: episode_{g} t={t} pos ≠ pos_table[t]")
                 # ② state memcmp 同源自证（防行内错乱）
                 row_rel = ep["total_sample_offset"] - row0_global + t
                 if stt != state_table[row_rel * fs.STATE_ROW_BYTES:
                                       (row_rel + 1) * fs.STATE_ROW_BYTES]:
                     raise RuntimeError(f"写侧校验②失败: episode_{g} t={t} state ≠ state 表同行")
-                blob[t * fs.IMAGE_ROW_BYTES:(t + 1) * fs.IMAGE_ROW_BYTES] = img
+                blob[t * spec.image_row_bytes:(t + 1) * spec.image_row_bytes] = img
             f.write(blob)
             f.flush()
             # ③ read-after-write：slab 落盘后 pread 读回 memcmp
@@ -410,9 +415,9 @@ def _pack_part_worker(task: dict) -> dict:
     finally:
         os.close(dfd)
     return {"index": part_idx,
-            "path": f"{fs.IMAGE_PART_DIR}/{final.name}",
+            "path": f"{spec.image_part_dir}/{final.name}",
             "start_row": eps[0]["total_sample_offset"] - row0_global,
-            "num_rows": offset // fs.IMAGE_ROW_BYTES,
+            "num_rows": offset // spec.image_row_bytes,
             "bytes": offset,
             "sha256": sha.hexdigest(),
             "head_tail_digest": ht,
@@ -473,7 +478,7 @@ def _verify_part_worker(task: dict) -> dict:
         stt_rows = store.state_rows(rows)               # 真实读 API③
         for t in range(nt):
             src_img, src_pos, src_stt = read_frame_decode(
-                _src_npy(_G["source_root"], g, t))
+                _src_npy(_G["source_root"], g, t), store.meta.spec)
             st_img = img_rows[t].tobytes()
             st_pos = pos_rows[t].tobytes()
             st_stt = stt_rows[t].tobytes()
@@ -499,7 +504,7 @@ def _verify_sample_worker(args: tuple) -> tuple[int, list[tuple[int, str]]]:
     row, g, t = args
     store: fs.FrameSampStore = _G["vstore"]
     row0_global = _G["row0_global"]
-    src_img, src_pos, src_stt = read_frame_decode(_src_npy(_G["source_root"], g, t))
+    src_img, src_pos, src_stt = read_frame_decode(_src_npy(_G["source_root"], g, t), store.meta.spec)
     bad = []
     if store.read_image_rows([row - row0_global])[0].tobytes() != src_img:
         bad.append((row, "image"))
@@ -514,6 +519,7 @@ def _verify_sample_worker(args: tuple) -> tuple[int, list[tuple[int, str]]]:
 
 
 def cmd_plan(args) -> None:
+    spec = fs.SPECS[getattr(args, "layout", fs.LAYOUT)]
     manifest = load_manifest(args.manifest)
     episodes = _pick_episodes(manifest, args.subset_prefix)
     groups = plan_parts(episodes)
@@ -524,15 +530,20 @@ def cmd_plan(args) -> None:
         rows = sum(ep["num_timesteps"] for ep in g)
         print(f"  part_{i:03d}: episodes[{g[0]['global_episode_idx']}.."
               f"{g[-1]['global_episode_idx']}] rows={rows} "
-              f"bytes={rows * fs.IMAGE_ROW_BYTES:,}")
+              f"bytes={rows * spec.image_row_bytes:,}")
 
 
 def cmd_pack(args) -> None:
+    spec = fs.SPECS[getattr(args, "layout", fs.LAYOUT)]
     t_all = time.perf_counter()
     manifest = load_manifest(args.manifest)
     episodes = _pick_episodes(manifest, args.subset_prefix)
     source_root = pathlib.Path(args.source).resolve()
     store_root = pathlib.Path(args.out).resolve()
+    if args.resume and (store_root / fs.META_RELPATH).exists():
+        previous = fs.StoreMeta.load(store_root)
+        if previous.spec.layout != spec.layout:
+            raise ValueError("resume 的布局与现有库不符，拒绝在写盘前混用两档")
     row0_global = episodes[0]["total_sample_offset"]   # 前缀子集恒 0（A.1）
     if row0_global != 0:
         raise RuntimeError(f"前缀子集 total_sample_offset[0] 必须为 0，实为 {row0_global}")
@@ -542,7 +553,7 @@ def cmd_pack(args) -> None:
     procs = args.procs
 
     store_root.mkdir(parents=True, exist_ok=True)
-    (store_root / fs.IMAGE_PART_DIR).mkdir(exist_ok=True)
+    (store_root / spec.image_part_dir).mkdir(exist_ok=True)
     meta_path = store_root / fs.META_RELPATH
 
     lock = acquire_lock(store_root, resume=args.resume,
@@ -552,14 +563,14 @@ def cmd_pack(args) -> None:
             raise RuntimeError(f"store_meta.json 已存在: {meta_path}；重打包须显式 --resume")
 
         # df 预检（A.2：全量 ≥ 40 GB；子集按估算的 2 倍）
-        need = num_rows * fs.IMAGE_ROW_BYTES + num_rows * fs.STATE_ROW_BYTES \
-            + max(ep["num_timesteps"] for ep in episodes) * fs.POS_ROW_BYTES
-        floor = 40 * 10**9 if args.subset_prefix is None else 2 * need + 256 * 10**6
+        need = num_rows * spec.image_row_bytes + num_rows * fs.STATE_ROW_BYTES \
+            + max(ep["num_timesteps"] for ep in episodes) * spec.pos_row_bytes
+        floor = max(40 * 10**9, math.ceil(1.25 * need)) if args.subset_prefix is None else 2 * need + 256 * 10**6
         free = shutil.disk_usage(store_root).free
         if free < floor:
             raise RuntimeError(f"磁盘余量不足: free={free / 1e9:.1f} GB < 需 {floor / 1e9:.1f} GB")
 
-        _G.update(source_root=str(source_root), reader=args.reader,
+        _G.update(source_root=str(source_root), reader=args.reader, spec=spec,
                   store_root=str(store_root), row0_global=row0_global)
         if args.reader == "slice":
             _G["slice_prefix"] = _pin_slice_prefix(str(source_root), episodes[0])
@@ -567,7 +578,7 @@ def cmd_pack(args) -> None:
         # ―― 小表先行、主进程独写（A.2）――
         pos_blob, state_blob, num_pos_rows = build_small_tables(episodes, procs)
         _G["pos_table"], _G["state_table"] = pos_blob, state_blob
-        atomic_write_bytes(store_root / fs.POS_TABLE_RELPATH, pos_blob)
+        atomic_write_bytes(store_root / spec.pos_table_relpath, pos_blob)
         atomic_write_bytes(store_root / fs.STATE_TABLE_RELPATH, state_blob)
         pos_sha = hashlib.sha256(pos_blob).hexdigest()
         state_sha = hashlib.sha256(state_blob).hexdigest()
@@ -585,7 +596,7 @@ def cmd_pack(args) -> None:
                 and fs.sha256_file(f) == rec["sha256"]
             if not ok:
                 done.pop(rec["index"])
-        for tmpf in (store_root / fs.IMAGE_PART_DIR).glob("*.tmp"):
+        for tmpf in (store_root / spec.image_part_dir).glob("*.tmp"):
             tmpf.unlink()   # .tmp 残留一律清除重做
         tasks = []
         for i, g in enumerate(groups):
@@ -619,18 +630,18 @@ def cmd_pack(args) -> None:
         prov_p = source_root / "meta" / "provenance.json"
         meta = {
             "schema": fs.META_SCHEMA,
-            "layout": fs.LAYOUT,
+            "layout": spec.layout,
             "status": "packed",
             "byte_order": fs.BYTE_ORDER,
             "array_order": fs.ARRAY_ORDER,
             "bf16_encoding": fs.BF16_ENCODING,
             "tables": {
-                fs.IMAGE_KEY: {"row_shape": list(fs.IMAGE_ROW_SHAPE), "dtype": "bfloat16",
-                               "row_bytes": fs.IMAGE_ROW_BYTES, "num_rows": num_rows,
-                               "part_dir": fs.IMAGE_PART_DIR},
-                fs.POS_KEY: {"row_shape": list(fs.POS_ROW_SHAPE), "dtype": "float32",
-                             "row_bytes": fs.POS_ROW_BYTES, "num_rows": num_pos_rows,
-                             "relpath": fs.POS_TABLE_RELPATH,
+                spec.image_key: {"row_shape": list(spec.image_row_shape), "dtype": "bfloat16",
+                               "row_bytes": spec.image_row_bytes, "num_rows": num_rows,
+                               "part_dir": spec.image_part_dir},
+                spec.pos_key: {"row_shape": list(spec.pos_row_shape), "dtype": "float32",
+                             "row_bytes": spec.pos_row_bytes, "num_rows": num_pos_rows,
+                             "relpath": spec.pos_table_relpath,
                              "byte_count": len(pos_blob), "sha256": pos_sha},
                 fs.STATE_KEY: {"row_shape": list(fs.STATE_ROW_SHAPE), "dtype": "float32",
                                "row_bytes": fs.STATE_ROW_BYTES, "num_rows": num_rows,
@@ -695,7 +706,7 @@ def cmd_verify(args) -> None:
     else:
         acquire_lock(store_root, resume=False, force_break=False, phase="verify")
 
-    _G.update(source_root=source_root, reader="decode",
+    _G.update(source_root=source_root, reader="decode", spec=meta.spec,
               store_root=str(store_root), row0_global=row0_global)
     init = (str(store_root), manifest_path, source_root)
 
@@ -802,12 +813,14 @@ def main() -> None:
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("plan", help="只算贪心切分并打印 part 表")
+    p.add_argument("--layout", choices=tuple(fs.SPECS), default=fs.LAYOUT)
     p.add_argument("--manifest", required=True)
     p.add_argument("--subset-prefix", type=int, default=None,
                    help="迷你库：只打包 global_episode_idx 连续前缀 [0..K]")
     p.set_defaults(func=cmd_plan)
 
     p = sub.add_parser("pack", help="构建三张表（写侧逐帧校验 + 原子落盘）")
+    p.add_argument("--layout", choices=tuple(fs.SPECS), default=fs.LAYOUT)
     p.add_argument("--source", required=True, help="4task-gl 源库根")
     p.add_argument("--manifest", required=True)
     p.add_argument("--out", required=True, help="打包库根")

@@ -76,16 +76,22 @@ def _warmup_spawn() -> None:
     q.join_thread()
 
 
-def run_one(store, source, manifest, workers: int, epochs: int, batch: int) -> dict:
+def run_one(store, source, manifest, workers: int, epochs: int, batch: int,
+            yaml="perceptual-framesamp-context.yaml", impl="packed") -> dict:
     import torch
     from mme_vla_suite.models.config.utils import get_history_config
     from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
 
     fd_base = _fd_count()
-    ds = FrameSampDataset(
-        str(store), data_config=_fake_data_config(),
-        history_config=get_history_config("perceptual-framesamp-context.yaml"),
-        action_horizon=20, source_root=str(source), manifest_path=str(manifest))
+    hc = get_history_config(yaml)
+    if impl == "refnpy":
+        from ref_npy_dataset import RefNpyFrameSampDataset
+        ds = RefNpyFrameSampDataset(source, manifest, _fake_data_config(), hc, 20,
+                                    os.environ.get("MMEVLA_MOTION_STORE"))
+    else:
+        ds = FrameSampDataset(str(store), data_config=_fake_data_config(), history_config=hc,
+                             action_horizon=20, source_root=str(source), manifest_path=str(manifest),
+                             motion_root=os.environ.get("MMEVLA_MOTION_STORE"))
     g = torch.Generator()
     g.manual_seed(42)
     mp_ctx = "spawn" if workers > 0 else None
@@ -124,13 +130,15 @@ def main() -> None:
     ap.add_argument("--workers", default="0,1,4,16")
     ap.add_argument("--epochs", type=int, default=2)
     ap.add_argument("--batch", type=int, default=8)
+    ap.add_argument("--yaml", default="perceptual-framesamp-context.yaml")
+    ap.add_argument("--impl", choices=("packed", "refnpy"), default="packed")
     args = ap.parse_args()
 
     workers = [int(w) for w in args.workers.split(",")]
     _warmup_spawn()
     rows = []
     for w in workers:
-        r = run_one(args.store, args.source, args.manifest, w, args.epochs, args.batch)
+        r = run_one(args.store, args.source, args.manifest, w, args.epochs, args.batch, args.yaml, args.impl)
         rows.append(r)
         print(f"[matrix] w{w}: batches={r['batches']} elapsed={r['elapsed']}s "
               f"fd {r['fd_base']}→{r['fd_after']} (leak={r['leak']})", flush=True)

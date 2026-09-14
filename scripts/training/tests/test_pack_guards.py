@@ -48,8 +48,8 @@ packer = importlib.util.module_from_spec(_spec)
 sys.modules["pack_framesamp_store"] = packer   # Pool 按限定名 pickle worker 函数，必须登记
 _spec.loader.exec_module(packer)
 
-REF_SHARD = _REPO_ROOT / "v1-store" / "datasets" / "ref-shard"
-MANIFEST = _REPO_ROOT / "v1-store" / "episode_manifest.json"
+REF_SHARD = pathlib.Path(os.environ.get("MMEVLA_TEST_SOURCE") or (_REPO_ROOT / "v1-store/datasets/ref-shard"))
+MANIFEST = pathlib.Path(os.environ.get("MMEVLA_TEST_MANIFEST") or (_REPO_ROOT / "v1-store/episode_manifest.json"))
 PREFIX_K = 2          # 前缀 [0..2]
 PROCS = 4
 
@@ -83,12 +83,28 @@ def _src_frame(g: int, t: int) -> tuple[bytes, bytes, bytes]:
 
 
 @pytest.fixture(scope="session")
-def mini_store(tmp_path_factory) -> pathlib.Path:
-    """打包 ref-shard 前缀 [0..2] 迷你库并全量 verify（G1 的全流程本体）。"""
-    out = tmp_path_factory.mktemp("mini") / "store"
-    packer.cmd_pack(_pack_args(out))
-    packer.cmd_verify(_verify_args(out))
-    return out
+def mini_stores(tmp_path_factory):
+    """在导入 JAX 前一次构建两档，避免第二档 fork 继承 JAX 线程。"""
+    stores = {}
+    for layout in fs.SPECS:
+        out = tmp_path_factory.mktemp("mini") / layout
+        packer.cmd_pack(_pack_args(out, layout=layout))
+        packer.cmd_verify(_verify_args(out))
+        stores[layout] = out
+    return stores
+
+
+@pytest.fixture(scope="session")
+def mini_store(mini_stores):
+    return mini_stores["framesamp-4x4-v1"]
+
+
+@pytest.fixture(scope="session", autouse=True)
+def report_reject_inputs(request):
+    yield
+    if request.session.testsfailed == 0:
+        reporter = request.config.pluginmanager.getplugin("terminalreporter")
+        reporter.write_line(f"REJECT_INPUTS=PASS cases={request.session.testscollected}")
 
 
 def _copy_store(mini_store: pathlib.Path, tmp_path: pathlib.Path) -> pathlib.Path:
@@ -338,7 +354,7 @@ def test_g6a_exec_lookup_formula():
     """换算公式单测：直接用全量清单构造查表数组（不构造 Dataset、不碰 store）。"""
     manifest = fs.load_manifest(MANIFEST)
     epis_of, step_of, row_base = fs.build_exec_lookup(manifest)
-    assert len(epis_of) == 395289
+    assert len(epis_of) == manifest["totals"]["exec_samples"]
     for h5 in ("record_dataset_VideoUnmask.h5", "record_dataset_VideoUnmaskSwap.h5"):
         ep = next(e for e in manifest["episodes"] if e["h5_file"] == h5)
         idx = ep["exec_sample_offset"]
@@ -511,3 +527,63 @@ def test_dispatch_packed_gates(mini_store, tmp_path, monkeypatch):
 def test_g7_pos_table_generation_refuses_cpu():
     with pytest.raises(RuntimeError, match="GPU 后端"):
         packer.generate_pos_table_posemb3d(586)
+
+
+def test_8x8_real_rows_and_padding(mini_stores):
+    root = mini_stores["framesamp-8x8-v1"]
+    meta = fs.StoreMeta.load(root)
+    assert meta.spec.tokens_per_frame == 64
+    fs.run_full_checks(meta)
+    with _open_store(root) as store:
+        for g, t in ((0, 0), (0, 8), (1, 33), (2, 100)):
+            ep = fs.load_manifest(MANIFEST)["episodes"][g]
+            row = ep["total_sample_offset"] + t
+            raw = np.load(REF_SHARD / "features" / f"episode_{g}" / f"token_emb_{t}.npy", allow_pickle=True).item()
+            assert store.read_image_rows([row])[0].tobytes() == raw["image_emb_8x8"][0].tobytes()
+            assert store.pos_rows([t])[0].tobytes() == raw["pos_emb_8x8"][0].tobytes()
+    ds = _make_dataset(root, "perceptual-framesamp-context-8frame-8x8.yaml")
+    try:
+        for step in (0, 6, 7, 8, 9, 33):
+            item = ds[step]
+            assert item["static_image_emb"].shape == (512, 2048)
+            assert str(item["static_image_emb"].dtype) == "bfloat16"
+            assert int(item["static_mask"].sum()) == min(step + 1, 8) * 64
+    finally:
+        ds.close()
+
+
+@pytest.mark.parametrize("layout,yaml", [
+    ("framesamp-4x4-v1", "perceptual-framesamp-context-8frame-8x8.yaml"),
+    ("framesamp-8x8-v1", "perceptual-framesamp-context.yaml"),
+])
+def test_config_layout_mismatch(mini_stores, layout, yaml):
+    with pytest.raises(ValueError, match="与库布局"):
+        _make_dataset(mini_stores[layout], yaml)
+
+
+@pytest.mark.parametrize("fault", ["layout", "part_dir", "part_bytes", "part_path", "pos_relpath"])
+def test_8x8_meta_mismatch_rejected(mini_stores, tmp_path, fault):
+    root = _copy_store(mini_stores["framesamp-8x8-v1"], tmp_path)
+    def tamper(meta):
+        if fault == "layout":
+            meta["layout"] = "unknown"
+        elif fault == "part_dir":
+            meta["tables"]["image_emb_8x8"]["part_dir"] = "image_emb_4x4"
+        elif fault == "part_bytes":
+            meta["parts"][0]["bytes"] //= 4
+        elif fault == "part_path":
+            meta["parts"][0]["path"] = "image_emb_4x4/part_000.bf16.bin"
+        else:
+            meta["tables"]["pos_emb_8x8"]["relpath"] = "pos_emb_4x4.f32.bin"
+    _patch_meta(root, tamper)
+    with pytest.raises(ValueError):
+        fs.StoreMeta.load(root)
+
+
+def test_resume_layout_mismatch_rejected_before_write(mini_store, tmp_path):
+    root = _copy_store(mini_store, tmp_path)
+    before = (root / fs.META_RELPATH).read_bytes()
+    with pytest.raises(ValueError, match="resume 的布局"):
+        packer.cmd_pack(_pack_args(root, layout="framesamp-8x8-v1", resume=True))
+    assert (root / fs.META_RELPATH).read_bytes() == before
+    assert not (root / "image_emb_8x8").exists()

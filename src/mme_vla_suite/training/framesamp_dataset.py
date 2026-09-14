@@ -92,9 +92,9 @@ class FrameSampDataset(Dataset):
              f"integration_type={hc.integration_type!r} != 'context'")
         _req(int(hc.memory_token_dim) == 2048,
              f"memory_token_dim={hc.memory_token_dim} != 2048")
-        _req((int(hc.budget), int(hc.token_per_image), int(hc.num_views)) == (512, 16, 1),
+        _req((int(hc.budget), int(hc.token_per_image), int(hc.num_views)) in {(512, 16, 1), (512, 64, 1)},
              f"(budget,token_per_image,num_views)=({hc.budget},{hc.token_per_image},"
-             f"{hc.num_views}) != (512,16,1)")
+             f"{hc.num_views}) 不在支持的 (512,16,1)/(512,64,1) 档位中")
         _req(int(hc.memory_feature.img.input_dim) == 2048,
              f"memory_feature.img.input_dim={hc.memory_feature.img.input_dim} != 2048")
         _req(int(hc.memory_feature.pos.input_dim) == 768,
@@ -123,6 +123,8 @@ class FrameSampDataset(Dataset):
         # ―― 主进程静态校验（fast 档；不开任何 fd/mmap，B.2）――
         self._root = pathlib.Path(dataset_path)
         self._meta = StoreMeta.load(self._root)
+        _req(self._meta.spec.tokens_per_frame == int(hc.token_per_image) * int(hc.num_views),
+             f"配置 token_per_image={hc.token_per_image} 与库布局 {self._meta.spec.layout} 不符")
         self._manifest_path = str(manifest_path or self._meta.manifest_path)
         self._source_root = str(source_root or self._meta.source_dataset_root)
         run_fast_checks(self._meta, manifest_path=self._manifest_path,
@@ -242,7 +244,7 @@ class FrameSampDataset(Dataset):
 
         交付 dtype 与旧路径 right_padding_token_emb 逐键一致（image bf16 / pos f32 /
         stt f32——填充零的 bf16/f32 位型同为全零字节）；n = 实际帧数，目标长度
-        _max_frames(32) 是内部常量。
+        _max_frames 由配置的总预算与每帧 token 数推导。
         """
         m = self._max_frames
         if n > m:
@@ -303,14 +305,14 @@ class FrameSampDataset(Dataset):
         frames = even_sampling_indices(step, self._max_frames)     # 同一函数 import（R4）
         frames_arr = np.asarray(frames, dtype=np.int64)
         rows = self._row_base[g] + frames_arr
-        img = store.read_image_rows(rows)          # (n,16,2048) bf16——0 open、0 线程池
-        pos = store.pos_rows(frames_arr)           # (n,16,768) f32，进程内小表
+        img = store.read_image_rows(rows)          # (n,tokens_per_frame,2048) bf16
+        pos = store.pos_rows(frames_arr)           # (n,tokens_per_frame,768) f32
         stt = store.state_rows(rows)               # (n,8) f32
         n = len(frames)
         img, pos, stt, mask = self._pad(img, pos, stt, n)
 
         # 与旧路径 _prepare_frame_sampling 的 reshape/repeat 逐字对齐：
-        # (32,16,2048)→(512,2048) 与旧 (32,1,16,2048)→(512,2048) 字节相同（C-order）
+        # (max_frames,tokens_per_frame,2048)→(512,2048)，C-order 保留原始字节。
         data["static_image_emb"] = img.reshape(-1, img.shape[-1])
         data["static_pos_emb"] = pos.reshape(-1, pos.shape[-1])
         data["static_state_emb"] = self._normalize_state(
