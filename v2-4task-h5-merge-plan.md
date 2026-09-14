@@ -80,7 +80,7 @@ TASKS=BinFill,RouteStick,VideoUnmaskSwap,VideoRepick
 | 7 | 守卫 | `CUDA_VISIBLE_DEVICES=7 finalize_checks.py check --manifest … --out $LIB/source --raw_dir $RAW --input_manifest … --input_level sha256 --spot_check 1024` | GPU 7，约 10 min | `FINALIZE_EXIT_CODE=0` | **做** |
 | 8 | framesamp 4×4 | `pack_framesamp_store.py pack --source $LIB/source --manifest … --out $LIB/framesamp --procs 48`；`verify --store $LIB/framesamp --resume --procs 48` | CPU 48 进程，分钟级 | `framesamp/`（约 75 GB），`VERIFY_PACK=PASS … mismatches=0` | **做** |
 | 9 | norm_stats | `compute_norm_stats.py --output-dir $V1_STORE/train-assets/mme_vla_suite/<LIB名> --config-name mme_vla_suite --repo-id robomme --dataset-path $LIB/source` | CPU，约 10 min | `train-assets/mme_vla_suite/<LIB名>/robomme/norm_stats.json` | **做** |
-| 10 | framesamp 8×8 | `CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu pack_framesamp_store.py pack --layout framesamp-8x8-v1 --reader decode --source $LIB/source --manifest … --out $LIB/framesamp-8x8 --procs 48`；`verify`；`report`；`xgrid_pos_check.py --store-4x4 $LIB/framesamp --store-8x8 $LIB/framesamp-8x8 --source $LIB/source --image-spot 512` | CPU，约 300 GB | `framesamp-8x8/` | **待拍板**（可选） |
+| 10 | framesamp 8×8 | `CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu pack_framesamp_store.py pack --layout framesamp-8x8-v1 --reader decode --source $LIB/source --manifest … --out $LIB/framesamp-8x8 --procs 48`；`verify`；`report`；`xgrid_pos_check.py --store-4x4 $LIB/framesamp --store-8x8 $LIB/framesamp-8x8 --source $LIB/source --image-spot 512` | CPU 48 进程，约 300 GB | `framesamp-8x8/`，`VERIFY_PACK=PASS`、xgrid 独立校验通过 | **做**（2026-09-14 用户拍板） |
 | 11 | Wan 抽取 | `run_local.py --stage wan --lib $LIB --gpus … --raw-dir $RAW`（需 `v1_require_wan`） | GPU，按 400ep 每卡 1.43 s/窗推约 10 倍窗数 | `wan-latents/` | **先不做** |
 | 12 | motion encoder | `run_local.py --stage encode --lib $LIB --gpus …` | GPU，分钟级 | `motion-tokens/` | **先不做** |
 | 13 | motion 表 | `pack_motion_store.py pack --manifest … --tokens $LIB/motion-tokens --latents $LIB/wan-latents --out $LIB/motion`；`verify --store $LIB/motion --resume` | CPU | `motion/` | **先不做** |
@@ -99,8 +99,8 @@ TASKS=BinFill,RouteStick,VideoUnmaskSwap,VideoRepick
 | 合并 h5（`$RAW`） | 793.8 GB | MANIFEST `h5_bytes` 汇总 |
 | `source/` 特征 + pkl | 约 1.0 TB | 400ep 为 107 GB / 123,044 步，按 9.7 倍步数推 |
 | `framesamp/` 4×4 | 约 75 GB | 400ep 为 7.6 GB |
-| `framesamp-8x8/`（可选） | 约 300 GB | 400ep 为 31 GB |
-| 合计（不含 8×8） | 约 1.9 TB | 当前 `/scratch` 余 3.9 TB，建完余约 2 TB |
+| `framesamp-8x8/` | 约 300 GB | 400ep 为 31 GB |
+| 合计 | 约 2.2 TB | 当前 `/scratch` 余 3.9 TB，建完余约 1.7 TB |
 | 合并 + 校验墙钟 | 1–1.5 h | 单流 242 MB/s 实测 |
 | SigLIP 墙钟 | 约 70 min（4 卡） | 400ep：3 卡 551 s / 123,044 步 |
 
@@ -110,9 +110,10 @@ TASKS=BinFill,RouteStick,VideoUnmaskSwap,VideoRepick
 
 1. **库名**：建议 `4task-v2-1600ep`（对应 `v1-store/datasets/4task-v2-1600ep/`、`train-assets/mme_vla_suite/4task-v2-1600ep/`）。
 2. **episode 范围**：建议全部 1600 条 primary、全部难度；`spare` / `smoke` 不收。若只要子集，给每任务×难度的 N，`plan` 子命令加 `--per-group N`。
-3. **是否同时建 `framesamp-8x8`**（阶段 10）：多约 300 GB、纯 CPU；建议先只建 4×4。
-4. **合并后是否删除 `extracted/`**：默认保留。
-5. **GPU 范围**：默认只用 4–7。
+3. **合并后是否删除 `extracted/`**：默认保留。
+4. **GPU 范围**：默认只用 4–7。
+
+已拍板：**`framesamp-8x8` 本轮一并建**（2026-09-14），阶段 10 与阶段 8 一样是正式交付件，留档同一份 result.md。
 
 ---
 
@@ -155,13 +156,13 @@ $LIB/source → $LIB/framesamp → train-assets/.../norm_stats.json
 ### 验证（每步 ≤ 5 分钟，改动后必跑）
 
 1. **脚本自测**：`scripts/dataset/test_guards.py` 现有用例照跑；给 `merge_v2_h5.py` 加最小用例——用 `h5py` 在临时目录造 2 任务 × 3 条假 episode（各 2 步、含 NaN 浮点）跑 `plan → merge → verify --level full`，断言 `MERGE_VERIFY=PASS` 且改动任一字节后 `FAIL`。
-2. **真实 smoke**：`plan --per-group 1` 得 14 条（每组合 1 集）→ `merge` 到 `v1-store/raw-h5/4task-20260912-v2-smoke/`（约 10 GB，秒到分钟级）→ `verify --level full` → 阶段 4–8 在 `v1-store/datasets/4task-v2-smoke14/` 上跑通（SigLIP 单卡 GPU7，约 1 万步、2–3 分钟）→ `FINALIZE_EXIT_CODE=0`、`VERIFY_PACK=PASS`。用 smoke 的合并墙钟外推正式合并耗时。验收完成后删除 smoke 的两个目录（第 6 条临时 run 清理）。
+2. **真实 smoke**：`plan --per-group 1` 得 14 条（每组合 1 集）→ `merge` 到 `v1-store/raw-h5/4task-20260912-v2-smoke/`（约 10 GB，秒到分钟级）→ `verify --level full` → 阶段 4–8 与阶段 10 在 `v1-store/datasets/4task-v2-smoke14/` 上跑通（SigLIP 单卡 GPU7，约 1 万步、2–3 分钟）→ `FINALIZE_EXIT_CODE=0`、`VERIFY_PACK=PASS`。用 smoke 的合并墙钟外推正式合并耗时。验收完成后删除 smoke 的两个目录（第 6 条临时 run 清理）。
 3. **训练可读性**（正式库建完后）：`perceptual-framesamp-context.yaml` 起 `--dataset-path $LIB/framesamp` 跑 20 步，确认 dataloader 出 batch、`motion_*` 键为 None，跑完删 run。
 
 ### 留档与 commit
 
 - 代码：`commitV9.3: 新增新版单 episode H5 合并预处理脚本 merge_v2_h5.py`（只 `git add scripts/dataset/merge_v2_h5.py` 与其测试），commit 后立即 `git push`。
-- 建库留档：`docs/dataset-build-doc/<LIB名>/{launch.md,result.md,records/}`——launch 记起跑 HEAD、本节命令原文、`source_pin.json`；result 记 `MERGE_VERIFY` / `STAGE_DONE` / `FINALIZE_EXIT_CODE` / `VERIFY_PACK` 判定行原文、各阶段墙钟与 GPU、产物体积、`input_manifest.json` 与 `framesamp.store_meta.json` 副本、norm_stats sha256；`docs/dataset-build-doc/README.md` 表加一行。提交为 `docs: <LIB名> 建库留档`。
+- 建库留档：`docs/dataset-build-doc/<LIB名>/{launch.md,result.md,records/}`——launch 记起跑 HEAD、本节命令原文、`source_pin.json`；result 记 `MERGE_VERIFY` / `STAGE_DONE` / `FINALIZE_EXIT_CODE` / `VERIFY_PACK`（4×4 与 8×8 各一行）/ `xgrid_pos_check` 判定行原文、各阶段墙钟与 GPU、产物体积、`input_manifest.json` 与 `framesamp.store_meta.json` 副本、norm_stats sha256；`docs/dataset-build-doc/README.md` 表加一行。提交为 `docs: <LIB名> 建库留档`。
 - 本轮起过的 tmux 会话名（`v2b-merge`、`v2b-verify`、`v2b-hash`、`v2b-siglip`、`v2b-finalize`）记入 launch.md，清理只按此清单逐个 `tmux kill-session -t <名>`。
 
 ### 明确不动的文件
