@@ -1,0 +1,99 @@
+=== 起跑 2026-09-14T17:45:29+00:00 commit=8e94d7ca583e58e730b08dcc04e9c978e89c5791 ===
+阶段0开始：凭据与身份
+  whoami: user=HongzeFu orgs=umich 
+HF_WHOAMI=HongzeFu
+阶段0完成
+阶段1开始：源 repo 元数据留档 → /scratch/hongze/robomme_policy_learning_MotionJEPA/docs/dataset-build-doc/hf-export-h5v2-rehost-20260914/records
+  已存在，跳过（幂等）
+阶段1完成
+阶段2开始：取全部文件的 xetHash
+  清单已存在，读盘复用
+PROBE_FILES=2057 XET=1978 PLAIN=79
+阶段2完成
+阶段3开始：smoke（临时 bucket，验服务端复制 + 最长文件名）
+  smoke 已通过过，跳过（幂等）
+阶段3完成
+阶段4开始：创建公开 bucket HongzeFu/robomme-4task-h5-20260912-v2（与 dataset repo 同名）
+[32m✓ Bucket created[0m
+  uri: hf://buckets/HongzeFu/robomme-4task-h5-20260912-v2
+  url: https://huggingface.co/buckets/HongzeFu/robomme-4task-h5-20260912-v2
+[32m✓ Bucket settings updated[0m
+  bucket_id: HongzeFu/robomme-4task-h5-20260912-v2
+  private: False
+[90mHint: Run `hf buckets info HongzeFu/robomme-4task-h5-20260912-v2` to view bucket details.[0m
+BUCKET_CREATED=HongzeFu/robomme-4task-h5-20260912-v2 PRIVATE=False
+BUCKET_FILES_AT_START=0
+阶段4完成
+阶段5开始：服务端复制 1978 件 + 客户端中转 79 件
+COPY_BATCHES=18 XET_FILES=1978
+  COPY_OK [1/18] <root>-00 files=14
+  COPY_OK [2/18] smoke-00 files=1
+  COPY_OK [3/18] smoke_videos_RouteStick_easy-00 files=1
+  COPY_OK [4/18] spare-00 files=14
+  COPY_OK [5/18] videos_BinFill_easy-00 files=156
+  COPY_OK [6/18] videos_BinFill_hard-00 files=166
+  COPY_OK [7/18] videos_BinFill_medium-00 files=156
+  COPY_OK [8/18] videos_RouteStick_easy-00 files=115
+  COPY_OK [9/18] videos_RouteStick_hard-00 files=115
+  COPY_OK [10/18] videos_RouteStick_medium-00 files=115
+  COPY_OK [11/18] videos_RouteStick_xhard-00 files=115
+  COPY_OK [12/18] videos_VideoRepick_easy-00 files=184
+  COPY_OK [13/18] videos_VideoRepick_medium-00 files=172
+  COPY_OK [14/18] videos_VideoRepick_xhard-00 files=173
+  COPY_OK [15/18] videos_VideoUnmaskSwap_easy-00 files=120
+  COPY_OK [16/18] videos_VideoUnmaskSwap_hard-00 files=121
+  COPY_OK [17/18] videos_VideoUnmaskSwap_medium-00 files=115
+  COPY_OK [18/18] videos_VideoUnmaskSwap_xhard-00 files=125
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+  PLAIN_OK batch=0 files=40
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+  PLAIN_OK batch=1 files=39
+COPY_DONE xet=1978 plain=79 total=2057
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-h5v2-rehost/tmp/MIGRATION.md
+  dst: hf://buckets/HongzeFu/robomme-4task-h5-20260912-v2/MIGRATION.md
+阶段5完成
+阶段6开始：L1 清单层（bucket 文件清单 ⟷ repo 文件清单，逐条路径与字节）
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+INVENTORY_DIFF=0 BUCKET_FILES=2058 REPO_FILES=2057 MISSING=0 BADSIZE=0 EXTRA=['MIGRATION.md']
+阶段6完成
+阶段7开始：L2 XetHash 层（服务端内容寻址同一性，零字节）
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+XETHASH_MATCH=1978 EXPECTED=1978 NOT_REPORTED=0 MISMATCH=0
+阶段7完成
+阶段8开始：L3 全量回读 126.6 GB → /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-h5v2-rehost/verify
+Sync plan: hf://buckets/HongzeFu/robomme-4task-h5-20260912-v2 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-h5v2-rehost/verify
+  Uploads: 0
+  Downloads: 2058
+  Deletes: 0
+  Skips: 0
+Syncing...
+Sync completed.
+VERIFY_FILES=2058 VERIFY_BYTES=126610404806
+阶段8完成
+阶段9开始：L4 账本层（repo 自带的两份独立账本对回读侧重算结果）
+SHA256SUMS_OK=2055
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+MANIFEST_ARCH_OK=29/29 MANIFEST_VIDEO_OK=1949/1949
+阶段9完成
+阶段10开始：L5 与本地独立副本逐字节对拍
+SNAPSHOT_IDENTICAL=14 DIFFERENT=0
+阶段10完成
+阶段11开始：L6 公开性 + 匿名读（清 token、用全新空缓存）
+BUCKET_PUBLIC=True
+Sync plan: hf://buckets/HongzeFu/robomme-4task-h5-20260912-v2 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-h5v2-rehost/tmp/anon
+  Uploads: 0
+  Downloads: 2
+  Deletes: 0
+  Skips: 0
+Syncing...
+Sync completed.
+PUBLIC_ANON_READ=OK anon_files=2
+REHOST_RESULT=PASS
+阶段11完成
+全部完成
+EXIT_CODE=0

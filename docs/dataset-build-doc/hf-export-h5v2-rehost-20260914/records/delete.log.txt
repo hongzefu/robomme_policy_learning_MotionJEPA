@@ -1,0 +1,17 @@
+=== 前置断言 ===
+  dataset repo HTTP=200
+  bucket files=2058 bytes=126610404806 private=False
+  元数据留档齐备: README.raw.md commits.json croissant.json discussions.json gitattributes.raw.txt paths_info.json revision.json summary.json tree.json 
+  匿名读 bucket: OK（2055 行 SHA256SUMS）
+DELETE_PRECHECK=PASS
+
+=== 执行删除（不可逆）===
+  目标: dataset repo HongzeFu/robomme-4task-h5-20260912-v2 （--repo-type dataset 显式写死）
+repo_id=HongzeFu/robomme-4task-h5-20260912-v2
+=== 后置断言 ===
+  dataset repo HTTP=404 （期望 404 或 401）
+  bucket files=2058 bytes=126610404806 private=False
+DATASET_DELETED=OK
+BUCKET_INTACT=2058 PRIVATE=False
+POST_DELETE_ANON_READ=OK
+DELETE_RESULT=PASS

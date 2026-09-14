@@ -14,7 +14,7 @@ SigLIP、PaliGemma tokenizer、pi05_base 三项本地权重的 `cheap` 内容检
 
 ## 来源与路径
 
-源为 `/scratch/hongze/robomme-4task-h5-20260912-v2`，仓库 `HongzeFu/robomme-4task-h5-20260912-v2`，revision `604f16da36d6b6d175884df8fb687dc08e0a36eb`，manifest sha256 `df992cdf5a768ae0f368e520b0d7be28a68ed4ce6ca6201967cf5d6654cf2bb9`。这是私有 sim 录制集，不是公开 RoboMME 数据的重新打包。这里只验证建库，不执行现有官方 sim 评估。
+源为 `/scratch/hongze/robomme-4task-h5-20260912-v2`，仓库 `HongzeFu/robomme-4task-h5-20260912-v2`，revision `604f16da36d6b6d175884df8fb687dc08e0a36eb`（**本留档记录起跑当时的事实；该 dataset repo 已于 2026-09-14 搬为同名 bucket 并删除，内容逐位不变、不再有 revision，见 [`../hf-export-h5v2-rehost-20260914/result.md`](../hf-export-h5v2-rehost-20260914/result.md)**），manifest sha256 `df992cdf5a768ae0f368e520b0d7be28a68ed4ce6ca6201967cf5d6654cf2bb9`。这是私有 sim 录制集，不是公开 RoboMME 数据的重新打包。这里只验证建库，不执行现有官方 sim 评估。
 
 合并根 `v1-store/raw-h5/4task-20260912-v2-smoke`、派生库 `v1-store/datasets/4task-v2-smoke28` 均为本轮全新目录。源 `extracted/` 保留。BinFill/RouteStick/VideoRepick/VideoUnmaskSwap 分别选中 6/8/6/8 条。生产完整源检查仍要求每任务 400 条，总计 1600 条，不以 smoke 缩小源全集完整性要求。
 
