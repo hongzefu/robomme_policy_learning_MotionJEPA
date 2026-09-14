@@ -4,6 +4,8 @@
 
 **授权状态不变**：当前只授权本文件。代码修改、建库、测试、训练一样都没开始，每一步都要另行授权。用户已定死的口径：最终真实训练对拍每侧 **1000 次参数更新**，不能用短测代替。
 
+**GPU 约束（2026-09-14 用户新增，最高优先级）**：本计划一切用 GPU 的命令**只能用 GPU 4、5、6、7**，GPU 0–3 一律不碰。落地三条：每条起 GPU 进程的命令都显式写 `CUDA_VISIBLE_DEVICES`，取值只能是 `{4,5,6,7}` 的子集，禁止不设而继承默认全卡；motion sidecar 的卡号**不跟随** `CUDA_VISIBLE_DEVICES`——主线 `policies/policy_config.py::create_trained_policy` 直接读 yaml 快照的 `motion.online_gpu`（现值 1，绝对卡号）且无环境变量覆盖，所以凡起 sidecar 的路径必须走带显式卡号参数的入口（`scripts/motion-variance/serve_policy_mv.py --motion-gpu`、`compare_train_infer_obs.py --motion-gpu`、`compare_online_motion.py --gpu`，或 legacy-eval 副本的 `MMEVLA_MOTION_ONLINE_GPU`），并把新 8×8 motion yaml 的 `online_gpu` 写成 4 作兜底；第二块 12 条轨迹只有两对卡可用，分两波跑（见第二块）。
+
 ---
 
 ## 第一部分（给人看）
@@ -190,7 +192,7 @@ v1-store/datasets/4task-motion-400ep/framesamp-8x8/    正式库，后建
 | 文件 | 相对旧文件的差异 |
 |---|---|
 | `perceptual-framesamp-context-8frame-8x8.yaml` | `token_per_image: 16` → `64`，其余（含 `motion.enabled: false`）照抄 `perceptual-framesamp-context.yaml` |
-| `perceptual-framesamp-context-8frame-8x8-motion.yaml` | 同上，照抄 `perceptual-framesamp-context-motion.yaml`（`motion.enabled: true`） |
+| `perceptual-framesamp-context-8frame-8x8-motion.yaml` | 同上，照抄 `perceptual-framesamp-context-motion.yaml`（`motion.enabled: true`），另把 `motion.online_gpu: 1` 改为 `4`（GPU 约束兜底；训练不读此键，评估驱动仍须逐片显式给卡号） |
 
 帧数在 yaml 里没有键，是派生量：`FrameSampDataset.__init__` 里 `_max_frames = budget // (token_per_image * num_views)` = 512 // 64 = **8**，`_tokens_per_frame` = 64。`streaming_obs_horizon: 16`、`action_horizon=20`（在 `training/config.py` 的 `_CONFIGS` 条目里，不在 yaml）不动，`train.py::main` 的交叉断言照常通过。motion 子键（`budget: 96`、`stride: 16`、`window_frames: 33`、`pos_dim: 256`、`store_path`）一个不改。
 
@@ -230,10 +232,10 @@ v1-store/datasets/4task-motion-400ep/framesamp-8x8/    正式库，后建
 
 | 配置 | motion | run 1（A1，参考） | run 2（A2，参考重跑） | run 3（B，候选） | 跑在哪对卡 |
 |---|---|---|---|---|---|
-| C32 | 关 | 旧代码 + 旧 4×4 库 | 同 A1 再跑一遍 | 新代码 + 旧 4×4 库 | GPU 0,1 |
-| M32 | 开 | 旧代码 + 旧 4×4 库 | 同 A1 再跑一遍 | 新代码 + 旧 4×4 库 | GPU 2,3 |
-| C8 | 关 | 新代码 + 直读源 npy 的验证用 Dataset | 同 A1 再跑一遍 | 新代码 + 新 8×8 库 | GPU 4,5 |
-| M8 | 开 | 新代码 + 直读源 npy 的验证用 Dataset | 同 A1 再跑一遍 | 新代码 + 新 8×8 库 | GPU 6,7 |
+| C32 | 关 | 旧代码 + 旧 4×4 库 | 同 A1 再跑一遍 | 新代码 + 旧 4×4 库 | GPU 4,5（第一波） |
+| M32 | 开 | 旧代码 + 旧 4×4 库 | 同 A1 再跑一遍 | 新代码 + 旧 4×4 库 | GPU 6,7（第一波） |
+| C8 | 关 | 新代码 + 直读源 npy 的验证用 Dataset | 同 A1 再跑一遍 | 新代码 + 新 8×8 库 | GPU 4,5（第二波） |
+| M8 | 开 | 新代码 + 直读源 npy 的验证用 Dataset | 同 A1 再跑一遍 | 新代码 + 新 8×8 库 | GPU 6,7（第二波） |
 
 「旧代码」是阶段 1 结束时冻结的参考 commit `REF`（量具、yaml、缓存落点已加，但库格式与 Dataset 还没改）；「新代码」是阶段 2 结束的候选 commit `CAND`。每条都是 1000 步、batch 8、seed 42、2 卡。
 
@@ -268,7 +270,7 @@ v1-store/datasets/4task-motion-400ep/framesamp-8x8/    正式库，后建
 
 **为什么要确定性 flag。** `XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'` 关掉 GPU 上的非确定性归约与自动调优，同样的输入两次跑出来才逐位相同。生产训练默认档做不到这一点，所以对拍必须开。
 
-**卡怎么排、要多久。** 同一个配置的三条必须在同一对卡上顺序跑，因为不同卡对可能有极小的数值差异；四个配置分到四对卡同时跑，总墙钟约等于三条的时间，不是十二条。单条耗时以先跑的 100 步排错 run 外推；环境 A 2×Ada 上 1000 步约 2.5 h 只作量级参考，不混比。正式跑之前每个配置先跑一次 100 步短版本（run_name 加 `-s100`）排错、估时，跑完清理，不算数。
+**卡怎么排、要多久。** 同一个配置的三条必须在同一对卡上顺序跑，因为不同卡对可能有极小的数值差异。只允许用 GPU 4–7，即两对卡：第一波 C32 在 4,5、M32 在 6,7 同时跑；第一波两组都跑完后第二波 C8 在 4,5、M8 在 6,7。每对卡上顺序跑 6 条，总墙钟约等于 6 条 1000 步轨迹的时间。单条耗时以先跑的 100 步排错 run 外推；环境 A 2×Ada 上 1000 步约 2.5 h 只作量级参考，不混比。正式跑之前每个配置先跑一次 100 步短版本（run_name 加 `-s100`）排错、估时，跑完清理，不算数。
 
 **环境指纹。** 起跑前用 `scripts/training/g0/check_baseline_env.py` 的指纹做 preflight，硬一致项包括 `uv.lock` sha、jax 0.5.3 / jaxlib 0.5.3 / flax 0.10.2 / optax 0.2.4 / numpy 1.26.4 / ml_dtypes 0.4.1 / torch 2.7.1、GPU 型号与驱动、`XLA_FLAGS`、x64 与 matmul precision、norm_stats sha（400ep 交付件 `v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json`，sha `750a8e9b…`）、tokenizer、pi05 底座权重抽样、源库抽样、**本库 manifest sha 与 motion store meta sha**。现有指纹只看根 `v1-store/episode_manifest.json`（环境 B 不存在，恒记 None），norm_stats 路径写死 `robomme/` 而非 `robomme-400ep/`，这两处要改。允许差异只有 `--exp-name`、`--checkpoint-base-dir`、C8/M8 的 `--dataset-path`、参考/候选 commit、`BENCH_DATASET_IMPL` 与 `BENCH_RECORD_DIR`，逐字段白名单。
 
@@ -341,15 +343,32 @@ v1-store/datasets/4task-motion-400ep/framesamp-8x8/    正式库，后建
 
 B 臂（在线 bf16 SigLIP vs 训练 f32 表）照旧只作观察项记 `rel_fro`，不作阻断；4×4 下实测 0.33%。
 
-**第三步：闭环冒烟（证明链路跑通，不看成功率）。** 每个 profile（C8、M8）跑 4 任务 × 10 集 = 40 集，一片一卡，M8 带 sidecar。判定只有四条：`errors=0`、每集推理次数 ≤ 82（评估节奏上限）、`mem_order` 逐步合法、M8 的 sidecar 窗数与公式值一致；成功率照实记但明确标「1000 步测试模型，无意义」。显存与 host 内存（pos 表 768 MiB/进程）在结果里报。
+**第三步：闭环冒烟（证明链路跑通，不看成功率）。** 每个 profile（C8、M8）跑 4 任务 × 10 集 = 40 集，4 片 4 卡（GPU 4–7 每任务一片一卡），M8 带 sidecar，sidecar 与其 policy 同卡。判定只有四条：`errors=0`、每集推理次数 ≤ 82（评估节奏上限）、`mem_order` 逐步合法、M8 的 sidecar 窗数与公式值一致；成功率照实记但明确标「1000 步测试模型，无意义」。显存与 host 内存（pos 表 768 MiB/进程）在结果里报。
 
-驱动推荐用 `scripts/motion-variance/eval_shard_mv.sh` 的 `normal` 条件加 `--ckpt`（自带 robomme 副本，不必拷回 legacy-eval 副本再 commit）；若其 `serve_policy_mv.py` 对 40k 快照有硬假设，改用 `legacy-eval/eval_shard.local.sh` 并按其 README 拷回副本、commit 后起跑。
+驱动用 `scripts/motion-variance/run_batch_mv.sh`（`COND=normal WORKERS=4 GPU_LIST=4,5,6,7 EP_COUNT=10`），它自带 robomme 副本、不必拷回 legacy-eval 副本，且 `eval_shard_mv.sh` 会把片的卡号经 `--motion-gpu` 传给 `serve_policy_mv.py`，sidecar 不会落到 yaml 快照写死的 GPU 1。若其对 40k 快照有硬假设跑不通，备选只能是 `legacy-eval/eval_shard.remote.sh`（支持 `GPU_LIST` 取模映射并设 `MMEVLA_MOTION_ONLINE_GPU`，须按其 README 拷回副本、commit 后起跑）；`.local` 那套固定 8 卡映射会碰 GPU 0–3，禁用。
 
 #### 顺序、耗时与边界
 
 - 第一步在阶段 2 代码改完后立刻做（不依赖第二块），是第三块的准入。第二、三步排在第二块之后，因为要等 `t8-c8-b` / `t8-m8-b` 跑完。
-- 第二步的 `compare_train_infer_obs.py` 主进程 jax 必须在 GPU 上（CPU 上 PosEmb3D 表不逐位），一张卡即可；第三步 40 集按 8 卡并行约 10 min 量级（200 集 38 min 外推）。
+- 第二步的 `compare_train_infer_obs.py` 主进程 jax 必须在 GPU 上（CPU 上 PosEmb3D 表不逐位），用 GPU 7 一张卡，motion 侧 `--motion-gpu 7`；第三步 40 集按 4 卡并行约 10–20 min 量级（8 卡 200 集 38 min 外推）。
 - 边界：第三块证明的是「8×8 在线链路可跑、推理侧与训练侧交付一致」，**不证明** 8×8 模型能完成任务；那需要一次正式训练，另立 run_name 另行授权。
+
+### 执行阶段与 commit 节奏
+
+按时间顺序 8 个阶段。规则三条：每个阶段结束一个功能 commit（`commitV<大>.<小>`）或文档 commit（`docs:`），commit 后立即 `git push`；所有正式 run 从 clean HEAD 起；**阶段 5 的 12 条轨迹期间主树冻结不 commit**（A 侧从 `REF` worktree 跑、B 侧从 `CAND` 主树跑，中途任何 commit 都会让后起的 B 与先起的 B 不同 HEAD），留档在 12 条全部跑完后一次提交。
+
+| 阶段 | 做什么 | GPU | 产出 | commit |
+|---|---|---|---|---|
+| 0 preflight | 只读核对源库、旧库 meta、motion store、norm_stats、权重、tokenizer、磁盘、环境变量干净 | 无 | 核对记录写进阶段 1 的 launch.md | 无 |
+| 1 量具与参考 | 改 `train.py` / `single_step_grad.py` 缓存落点、`bench_train_steps.py` 开关与白名单、`check_baseline_env.py` 指纹、`_common.py` / `dump_fixture_samples.py` 配额与路径、新建 `gate_8x8.py` / `compare_fixture_dumps.py` / `ref_npy_dataset.py` / `xgrid_pos_check.py` / `online_mem_regress.py`、两份 8×8 yaml；量具自检；C32 旧库 100 步冒烟与 `aws-t2-ref-s100` 的 scalars sha 比对 | 冒烟用 GPU 4,5 | 参考侧全部工具 | `commitV<x>.1`，push 后 `git rev-parse HEAD` 记为 **`REF`**，随后 `git worktree add --detach v1-store/worktrees/ref-8x8 $REF` |
+| 2 两档格式与 Dataset | `framesamp_store.py` 规格表、`pack_framesamp_store.py --layout`、`framesamp_dataset.py` 白名单与 spec 匹配、`test_pack_guards.py` 两档用例；`FrameSampMemory` 网格驱动 + 5 个工具 + `motion_gates_online.py` | pytest 走 `JAX_PLATFORMS=cpu`；第三块第一步的 4×4 在线回归用 GPU 7 | 候选侧代码 | 两个 commit：`commitV<x>.2`（库格式 + Dataset）、`commitV<x>.3`（在线记忆 + 工具）；阶段末 HEAD 记为 **`CAND`** |
+| 3 建库 | 40ep 先：pack → verify → report → `xgrid_pos_check`；再 400ep 同四步 | 无（纯 CPU，`--procs 32`） | `framesamp-8x8/` 两份，`VERIFY_PACK=PASS` 两条，`MOTION_POS_XGRID=PASS` 两条 | `docs:` 建库留档 `docs/dataset-build-doc/4task-motion-{40ep,400ep}-framesamp-8x8/` |
+| 4 第一块验收 | 四个 profile 的 fixture dump（refnpy 与 packed）与比较、`spawn_matrix`、错配拒绝用例 | dump 走 CPU；超 5 分钟项进 tmux（前缀 `p8-fx-`） | `SAMPLE_RAW_EXACT` / `BATCH_RAW_EXACT` / `MATRIX` / `REJECT_INPUTS` 判定行 | `docs:` 留档 `docs/training-doc/t8-fixture/` |
+| 5 第二块 | 先 4 条 100 步排错 run（每对卡一次跑两个 profile 的 `-s100`，估时后清理）；再两波 12 条正式轨迹；每 profile 跑完立即 `gate_8x8` | 第一波 C32 在 4,5、M32 在 6,7；第二波 C8 在 4,5、M8 在 6,7 | 12 份 records、4 条 `GATE_8X8=PASS` | 期间**不 commit**；全部跑完后一次 `docs:` 留档 `docs/training-doc/t8-<profile>-{a1,a2,b}/` |
+| 6 第三块 | 第一步（4×4 在线回归）已在阶段 2 末做完；第二步 `compare_train_infer_obs.py` 在 `t8-{c8,m8}-b/999` 上跑七关；第三步 40 集闭环冒烟 | 第二步 GPU 7；第三步 4 片 GPU 4–7 | 七关判定行两套、`EVAL_SMOKE=DONE` 两条 | `docs:` 留档 `docs/training-doc/t8-infer-regress-4x4/`、`t8-infer-{c8,m8}/` |
+| 7 收官 | `docs/dataloader-restructure.md` 加「8 帧 × 8×8 档」节、`docs/train-infer-consistency.md` 加「8×8 档（测试模型）」节、按实测更新前后链路图；本文降为过程档案；删除 `ref-8x8` worktree 与 `-s100` 临时 run | 无 | 正本更新 | `docs:` 收官 |
+
+阶段 1 与 2 之间、2 与 3 之间可以穿插文档 commit（不影响 `REF` / `CAND` 的定义，两者各按阶段末 HEAD 记）；阶段 5 内不行。任何阶段的判定行不过即停在该阶段，把原始输出交用户，不改判据、不进下一阶段。
 
 ---
 
@@ -484,7 +503,7 @@ JAX_PLATFORMS=cpu uv run --no-sync python scripts/training/tests/spawn_matrix.py
 
 **阶段 5：第二块（12 条轨迹）**
 
-四组并行、组内串行；下面以 C8 组（GPU 4,5）为例，A1/A2 在 `v1-store/worktrees/ref-8x8`（`git worktree add --detach … REF`，`.venv` 走 `UV_PROJECT_ENVIRONMENT=<主树>/.venv`），B 在主树 `CAND`：
+两波、每波两组并行、组内串行（GPU 约束只允许 4–7）；下面以 C8 组（第二波，GPU 4,5）为例，A1/A2 在 `v1-store/worktrees/ref-8x8`（`git worktree add --detach … REF`，`.venv` 走 `UV_PROJECT_ENVIRONMENT=<主树>/.venv`），B 在主树 `CAND`：
 
 ```bash
 V1=$PWD/v1-store; L=$V1/datasets/4task-motion-400ep; RUN=t8-c8-a1   # 全新 run_name，起跑前与用户确认
@@ -501,11 +520,11 @@ uv run --no-sync python scripts/training/g0/bench_train_steps.py mme_vla_suite -
   --weight-loader.params-path $V1/models/openpi-assets/checkpoints/pi05_base/params \
   --model.use-history --model.history-config perceptual-framesamp-context-8frame-8x8.yaml --no-wandb-enabled
 # A2：RUN=t8-c8-a2，其余逐字相同。B：RUN=t8-c8-b，在主树跑，去掉 BENCH_DATASET_IMPL/BENCH_REF_*，--dataset-path $L/framesamp-8x8
-# C32/M32 三条都用 --dataset-path $L/framesamp 与旧 yaml，A 侧在 REF worktree、B 侧在主树，无 refnpy
+# C32/M32 三条都用 --dataset-path $L/framesamp 与旧 yaml，A 侧在 REF worktree、B 侧在主树，无 refnpy；C32 用 CUDA_VISIBLE_DEVICES=4,5、M32 用 6,7（第一波）
 uv run --no-sync python scripts/training/tests/gate_8x8.py --profile c8 --run-a1 $V1/bench/8x8/t8-c8-a1 --run-a2 …/t8-c8-a2 --run-b …/t8-c8-b --log-a1 v1-store/logs/t8-c8-a1.log … --steps 1000 --batch-size 8
 ```
 
-M8 组把 yaml 换成 `-motion.yaml` 并加 `MMEVLA_MOTION_STORE=$L/motion`、`BENCH_REF_MOTION=$L/motion`。每条轨迹放 detached tmux（会话名 = run_name，前缀 `t8-`），日志 `v1-store/logs/<run_name>.log`。先各跑一次 100 步（`--num-train-steps 100`，run_name 后缀 `-s100`）排错与估时，跑完清理；100 步不作通过证据。
+M8 组用 `CUDA_VISIBLE_DEVICES=6,7`，yaml 换成 `-motion.yaml` 并加 `MMEVLA_MOTION_STORE=$L/motion`、`BENCH_REF_MOTION=$L/motion`。每条轨迹放 detached tmux（会话名 = run_name，前缀 `t8-`），日志 `v1-store/logs/<run_name>.log`。先各跑一次 100 步（`--num-train-steps 100`，run_name 后缀 `-s100`）排错与估时，跑完清理；100 步不作通过证据。
 
 单步全梯度对拍（每 profile 三种 batch）：`single_step_grad.py` 走同样的 `DTYPE_MANIFEST` / impl 开关，判定行 `GRAD_EQ=PASS kinds=3 leaves=<n> mismatches=0`。
 
@@ -517,7 +536,7 @@ M8 组把 yaml 换成 `-motion.yaml` 并加 `MMEVLA_MOTION_STORE=$L/motion`、`B
 CUDA_VISIBLE_DEVICES=7 XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0' \
 uv run --no-sync python scripts/training/tests/online_mem_regress.py --ref-worktree v1-store/worktrees/ref-8x8 --frames-from $L/source --n-frames 256
 # 真模型 S 臂回归：命令照抄 docs/training-doc/tic-obs-model-40k/launch.md，只换代码版本，13 条判据逐条与该留档同值
-CUDA_VISIBLE_DEVICES=7 uv run --no-sync python scripts/training/g0/compare_online_motion.py --yaml perceptual-framesamp-context-motion.yaml --lib v1-store/datasets/4task-motion-40ep --ckpt v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999
+CUDA_VISIBLE_DEVICES=7 uv run --no-sync python scripts/training/g0/compare_online_motion.py --gpu 7 --yaml perceptual-framesamp-context-motion.yaml --lib v1-store/datasets/4task-motion-40ep --ckpt v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999
 ```
 
 第二步（`t8-c8-b` / `t8-m8-b` 跑完之后；bench 侧起跑时带 `BENCH_SAVE_FINAL_CKPT=1`，checkpoint 落 `$V1/train-runs/t8-m8-b/999`）：
@@ -526,16 +545,17 @@ CUDA_VISIBLE_DEVICES=7 uv run --no-sync python scripts/training/g0/compare_onlin
 CK=$V1/train-runs/t8-m8-b/999   # run 根 $V1/train-runs/t8-m8-b 须含 history_config.resolved.yaml/.sha256 与 motion_provenance.json
 ls $(dirname $CK)/history_config.resolved.yaml $(dirname $CK)/motion_provenance.json
 CUDA_VISIBLE_DEVICES=7 MMEVLA_MOTION_STORE=$L/motion \
-uv run --no-sync python scripts/training/g0/compare_train_infer_obs.py --ckpt $CK --dataset $L/framesamp-8x8 --source $L/source --manifest $L/meta/episode_manifest.json --episodes 5 --out v1-store/reports/t8-infer-m8   # 其余参数照 tic-obs-model-40k launch.md
+uv run --no-sync python scripts/training/g0/compare_train_infer_obs.py --ckpt $CK --motion-gpu 7 --dataset $L/framesamp-8x8 --source $L/source --manifest $L/meta/episode_manifest.json --episodes 5 --out v1-store/reports/t8-infer-m8   # 其余参数照 tic-obs-model-40k launch.md
 # C8 同法，--ckpt $V1/train-runs/t8-c8-b/999，不带 MMEVLA_MOTION_STORE
 ```
 
-第三步（闭环冒烟，8 卡并行，tmux 前缀 `t8-ev-`）：
+第三步（闭环冒烟，4 片 4 卡，tmux 会话由 `run_batch_mv.sh` 起、前缀 `mv-`）：
 
 ```bash
-# 推荐：motion-variance 链路，normal 条件，--ckpt 换成测试 run；每任务 10 集
-for k in 0..7: eval_shard_mv.sh 按 run_batch_mv.sh 的分片规则起 8 片，COND=normal CKPT_DIR=$V1/train-runs/t8-m8-b/999 EP_COUNT=10
-# 备选：legacy-eval/eval_shard.local.sh（先按其 README 拷回副本并 commit）
+# motion-variance 链路，normal 条件，--ckpt 换成测试 run；4 任务 × 10 集，每任务一片一卡，sidecar 经 --motion-gpu 与 policy 同卡
+COND=normal SPLIT=test SEED=42 WORKERS=4 GPU_LIST=4,5,6,7 EP_COUNT=10 CKPT_DIR=$V1/train-runs/t8-m8-b/999 bash scripts/motion-variance/run_batch_mv.sh
+# C8 同法 CKPT_DIR=$V1/train-runs/t8-c8-b/999（关闭态不起 sidecar）
+# 备选：legacy-eval/eval_shard.remote.sh + GPU_LIST=4,5,6,7（先按其 README 拷回副本并 commit）；.local 固定 8 卡映射禁用
 uv run --no-sync python scripts/training/g0/summarize_eval_probe.py --max-frames 8 --tokens-per-frame 64 …
 ```
 
@@ -625,7 +645,8 @@ framesamp-8x8/ (framesamp-8x8-v1)：image 行 (64,2048) bf16；pos 表 586 行 (
 4. **jax 缓存落点**：本文推荐入口读 `MMEVLA_JAX_CACHE_DIR`；`~/.cache/` 下已有的 6 个越界目录另立清理任务。
 5. **磁盘**：400ep 8×8 库约 30 GiB，确认落 `v1-store/datasets/4task-motion-400ep/framesamp-8x8/`。
 6. **推理用 checkpoint**：用第二块 `t8-c8-b` / `t8-m8-b` 1000 步后的 999 目录（本文推荐，唯一现成来源）；bench 起跑时须带 `BENCH_SAVE_FINAL_CKPT=1`。
-7. **闭环冒烟规模与驱动**：每 profile 4 任务 × 10 集 = 40 集；驱动用 motion-variance 链路还是 legacy-eval `.local`（后者要拷回副本并 commit）。
+7. **闭环冒烟规模**：每 profile 4 任务 × 10 集 = 40 集，4 片 GPU 4–7；驱动已由 GPU 约束定为 motion-variance 链路（`run_batch_mv.sh`），备选 `.remote`。
+8. **两波顺序**：第一波 C32/M32、第二波 C8/M8（本文推荐，先证旧能力再验新配置）；或反过来先出 8 帧结果。
 
 ### 8. 本次文档改动的验证与提交
 
