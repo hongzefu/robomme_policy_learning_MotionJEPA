@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
@@ -100,6 +101,7 @@ def check_inputs(manifest: dict, raw_dir: str, input_manifest: str,
     """
     errs: list[str] = []
     ref = json.loads(pathlib.Path(input_manifest).read_text())["files"]
+    pending = []
     for name in manifest["canonical_order"]:
         p = os.path.join(raw_dir, name)
         if not os.path.isfile(p):
@@ -115,11 +117,15 @@ def check_inputs(manifest: dict, raw_dir: str, input_manifest: str,
         if level != "sha256":
             print(f"  ✓ {name} 字节数一致（level=size）", flush=True)
             continue
-        got = sha256_file(p)
-        if got != ref[name]["sha256"]:
-            errs.append(f"{name} sha256 不符: {got} != {ref[name]['sha256']}")
-        else:
-            print(f"  ✓ {name} sha256 同源", flush=True)
+        pending.append((name, p))
+    # 每个任务独立流式读取；最多四文件并行，校验强度与输出顺序保持不变。
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        digests = pool.map(sha256_file, (p for _, p in pending))
+        for (name, _), got in zip(pending, digests, strict=True):
+            if got != ref[name]["sha256"]:
+                errs.append(f"{name} sha256 不符: {got} != {ref[name]['sha256']}")
+            else:
+                print(f"  ✓ {name} sha256 同源", flush=True)
     return errs
 
 
