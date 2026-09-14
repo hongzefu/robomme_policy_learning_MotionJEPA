@@ -1,0 +1,68 @@
+START_HEAD=eb25f839c836de584f3a982c790df292304ba25a
+Filesystem         1B-blocks          Used     Available Use% Mounted on
+/dev/md0       7516777873408 4248806973440 3267970899968  57% /scratch
+V2_STAGE=verify UTC=2026-09-14T18:15:24Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+VERIFY_SHARD task=VideoUnmaskSwap lo=136 hi=170 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=102 hi=136 mismatches=0
+VERIFY_SHARD task=RouteStick lo=0 hi=34 mismatches=0
+VERIFY_SHARD task=RouteStick lo=68 hi=102 mismatches=0
+VERIFY_SHARD task=RouteStick lo=34 hi=68 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=170 hi=204 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=34 hi=68 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=68 hi=102 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=0 hi=34 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=374 hi=400 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=204 hi=238 mismatches=0
+VERIFY_SHARD task=RouteStick lo=170 hi=204 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=238 hi=272 mismatches=0
+VERIFY_SHARD task=RouteStick lo=136 hi=170 mismatches=0
+VERIFY_SHARD task=RouteStick lo=102 hi=136 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=272 hi=306 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=306 hi=340 mismatches=0
+VERIFY_SHARD task=RouteStick lo=204 hi=238 mismatches=0
+VERIFY_SHARD task=RouteStick lo=238 hi=272 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=340 hi=374 mismatches=0
+VERIFY_SHARD task=RouteStick lo=272 hi=306 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=374 hi=400 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=34 hi=68 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=102 hi=136 mismatches=0
+VERIFY_SHARD task=RouteStick lo=374 hi=400 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=0 hi=34 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=68 hi=102 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=204 hi=238 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=136 hi=170 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=170 hi=204 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=238 hi=272 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=340 hi=374 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=272 hi=306 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=306 hi=340 mismatches=0
+VERIFY_SHARD task=RouteStick lo=306 hi=340 mismatches=0
+VERIFY_SHARD task=RouteStick lo=340 hi=374 mismatches=0
+VERIFY_SHARD task=BinFill lo=0 hi=34 mismatches=0
+VERIFY_SHARD task=BinFill lo=68 hi=102 mismatches=0
+VERIFY_SHARD task=BinFill lo=34 hi=68 mismatches=0
+VERIFY_SHARD task=BinFill lo=102 hi=136 mismatches=0
+VERIFY_SHARD task=BinFill lo=374 hi=400 mismatches=0
+VERIFY_SHARD task=BinFill lo=170 hi=204 mismatches=0
+VERIFY_SHARD task=BinFill lo=204 hi=238 mismatches=0
+VERIFY_SHARD task=BinFill lo=136 hi=170 mismatches=0
+VERIFY_SHARD task=BinFill lo=238 hi=272 mismatches=0
+VERIFY_SHARD task=BinFill lo=306 hi=340 mismatches=0
+VERIFY_SHARD task=BinFill lo=272 hi=306 mismatches=0
+VERIFY_SHARD task=BinFill lo=340 hi=374 mismatches=0
+MERGE_VERIFY=PASS level=full tasks=4 episodes=1600 timesteps=1192918 role=primary:1600 mismatches=0
+V2_STAGE=scan UTC=2026-09-14T18:40:55Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[scan] 原始目录: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2
+[scan] 规范序: ['record_dataset_BinFill.h5', 'record_dataset_RouteStick.h5', 'record_dataset_VideoRepick.h5', 'record_dataset_VideoUnmaskSwap.h5']（tasks=['BinFill', 'RouteStick', 'VideoUnmaskSwap', 'VideoRepick'], episodes_per_task=400）
+  扫完 record_dataset_BinFill.h5: 累计 400 episode, 513858 timestep, 256929 执行样本 (69.1s)
+  扫完 record_dataset_RouteStick.h5: 累计 800 episode, 728758 timestep, 364379 执行样本 (106.9s)
+  扫完 record_dataset_VideoRepick.h5: 累计 1200 episode, 1033211 timestep, 522404 执行样本 (160.9s)
+  扫完 record_dataset_VideoUnmaskSwap.h5: 累计 1600 episode, 1192918 timestep, 605611 执行样本 (188.0s)
+[scan] 写出 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/meta/episode_manifest.json
+  episode=1600  timestep=1192918  执行样本=605611
+  分片负载(timestep)=[1192918]  极差=0.00%
+  sha256=4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918
+END_UTC=2026-09-14T18:44:03Z
+EXIT_CODE=0

@@ -10,7 +10,7 @@
 
 | 档案 | 库 | 内容 | 状态 |
 |---|---|---|---|
-| [`4task-v2-1600ep-604f16da/`](4task-v2-1600ep-604f16da/launch.md) | `v1-store/datasets/4task-v2-1600ep-604f16da` | 私有新版四任务全部 1600 primary；合并 H5、SigLIP、两档 framesamp 和独立 norm_stats | 冒烟通过，正式阶段待启动 |
+| [`4task-v2-1600ep-604f16da/`](4task-v2-1600ep-604f16da/launch.md) | `v1-store/datasets/4task-v2-1600ep-604f16da` | 私有新版四任务全部 1600 primary；合并 H5、SigLIP、两档 framesamp 和独立 norm_stats | 合并/full 验真通过，正式建库进行中（[result](4task-v2-1600ep-604f16da/result.md)） |
 | [`4task-v2-smoke28/`](4task-v2-smoke28/launch.md) | `v1-store/datasets/4task-v2-smoke28` | 新版四任务 H5 合并、SigLIP 与两档 framesamp 的 28 集冒烟 | 全部通过；临时数据按计划清理（[result](4task-v2-smoke28/result.md)） |
 | [`h5-acquire-4task-20260912-v2/`](h5-acquire-4task-20260912-v2/launch.md) | `/scratch/hongze/robomme-4task-h5-20260912-v2` | 既有私有数据获取的来源、原始结果与条数分布补档 | 原获取记录 PASS；本轮完整前检通过（[result](h5-acquire-4task-20260912-v2/result.md)） |
 | [`4task-motion-40ep-framesamp-8x8/`](4task-motion-40ep-framesamp-8x8/launch.md) | `v1-store/datasets/4task-motion-40ep/framesamp-8x8` | 从原source新增8×8视觉库；复用原motion与norm_stats | 已完成，全量13756行及独立xgrid通过（[result](4task-motion-40ep-framesamp-8x8/result.md)） |
