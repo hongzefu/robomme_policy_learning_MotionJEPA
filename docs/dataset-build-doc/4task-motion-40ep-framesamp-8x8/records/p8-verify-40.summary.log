@@ -1,0 +1,41 @@
+START_HEAD=d61c47ba4e9d6c53c8079ada6a8c78e83140e87f
+START_UTC=2026-09-14T03:26:51Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[verify] part_012 扫 464 行, 失配 0, 进度 1/22 (1s)
+[verify] part_011 扫 440 行, 失配 0, 进度 2/22 (1s)
+[verify] part_007 扫 532 行, 失配 0, 进度 3/22 (1s)
+[verify] part_010 扫 470 行, 失配 0, 进度 4/22 (1s)
+[verify] part_018 扫 586 行, 失配 0, 进度 5/22 (1s)
+[verify] part_014 扫 515 行, 失配 0, 进度 6/22 (1s)
+[verify] part_017 扫 598 行, 失配 0, 进度 7/22 (1s)
+[verify] part_013 扫 627 行, 失配 0, 进度 8/22 (1s)
+[verify] part_005 扫 519 行, 失配 0, 进度 9/22 (1s)
+[verify] part_009 扫 451 行, 失配 0, 进度 10/22 (1s)
+[verify] part_015 扫 511 行, 失配 0, 进度 11/22 (1s)
+[verify] part_000 扫 585 行, 失配 0, 进度 12/22 (1s)
+[verify] part_008 扫 690 行, 失配 0, 进度 13/22 (1s)
+[verify] part_003 扫 597 行, 失配 0, 进度 14/22 (1s)
+[verify] part_020 扫 699 行, 失配 0, 进度 15/22 (1s)
+[verify] part_002 扫 622 行, 失配 0, 进度 16/22 (1s)
+[verify] part_016 扫 674 行, 失配 0, 进度 17/22 (1s)
+[verify] part_001 扫 719 行, 失配 0, 进度 18/22 (1s)
+[verify] part_006 扫 916 行, 失配 0, 进度 19/22 (1s)
+[verify] part_021 扫 790 行, 失配 0, 进度 20/22 (1s)
+[verify] part_019 扫 811 行, 失配 0, 进度 21/22 (1s)
+[verify] part_004 扫 940 行, 失配 0, 进度 22/22 (1s)
+[verify] meta 回填（status=verified）+ row_digests 落盘, 总耗时 1s
+VERIFY_PACK=PASS scanned=13756 mismatches=0
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+layout=framesamp-8x8-v1 status=verified scope=full
+num_rows=13756 num_exec_samples=11530 num_pos_rows=586 parts=22
+manifest=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-40ep/meta/episode_manifest.json
+  sha256=d7cfb137b6ba01c42894e2d6d421a8c3f87dc1afeef1ac650563609bd7501d05
+source=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-40ep/source
+packer={'build_uuid': '4c72dd8371104e84ba2c46936bbabdc0', 'host': 'ip-10-242-11-177.us-west-2.compute.internal', 'git_commit': 'd61c47ba4e9d6c53c8079ada6a8c78e83140e87f', 'python': '3.11.15', 'numpy': '1.26.4', 'ml_dtypes': '0.4.1', 'reader': 'decode', 'procs': 48, 'started_at': '2026-09-14T03:26:38', 'finished_at': '2026-09-14T03:26:42'}
+verify={'scanned': 13756, 'mismatches': 0, 'sample': None, 'seed': None, 'procs': 48, 'reader': 'decode', 'started_at': '2026-09-14T03:26:52', 'finished_at': '2026-09-14T03:26:53', 'conclusion': 'VERIFY_PACK=PASS scanned=13756 mismatches=0'}
+row_digests={'relpath': 'meta/row_digests.blake2b.bin', 'algo': 'blake2b-128', 'covered_rows': 13756, 'coverage': 'image‖pos‖state 三键原始位串拼接（store 侧字节）', 'byte_count': 220096, 'sha256': 'bbe897306e41797bc7af6fea6220ffaf31e51de5177e2ee7882bb9bc69b8c46b'}
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+IMAGE_NPY_SPOT=PASS frames=512 mismatches=0
+MOTION_POS_XGRID=PASS t=586 npy=64 mismatches=0
+END_UTC=2026-09-14T03:26:54Z
+EXIT_CODE=0
