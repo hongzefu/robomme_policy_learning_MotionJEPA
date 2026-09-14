@@ -1,0 +1,21 @@
+START_HEAD=3b2864f7441a965250bbf18de7a6f00a63b08ab7
+Filesystem         1B-blocks          Used     Available Use% Mounted on
+/dev/md0       7516777873408 5771121696768 1745656176640  77% /scratch
+V2_STAGE=norm UTC=2026-09-14T20:55:08Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+Dataset length: 605611, batch size: 128
+
+norm_stats: {'state': NormStats(mean=array([ 0.00544689,  0.3440238 , -0.00671877, -2.1137307 ,  0.00322757,
+        2.455633  ,  0.78381395,  0.02388305], dtype=float32), std=array([0.16478151, 0.26347092, 0.11289434, 0.4032949 , 0.07155797,
+       0.28879926, 0.52658856, 0.01676663], dtype=float32), q01=array([-0.37184694, -0.16709099, -0.30414039, -2.83378435, -0.17129615,
+        1.57079637, -0.55371888,  0.        ]), q99=array([ 0.39931992,  0.95670372,  0.25378957, -1.19168596,  0.20282241,
+        3.04267762,  2.12228779,  0.039992  ])), 'actions': NormStats(mean=array([ 1.3789759e-04,  2.3744965e-03, -2.6892847e-04, -1.8142389e-02,
+       -1.7501769e-05,  2.0304183e-02,  1.7307310e-04, -6.7203499e-02],
+      dtype=float32), std=array([0.04495756, 0.1347107 , 0.03318233, 0.14564596, 0.03407279,
+       0.12839898, 0.10178235, 0.9977393 ], dtype=float32), q01=array([-0.14138138, -0.31630597, -0.11067081, -0.46341702, -0.1069543 ,
+       -0.28236278, -0.35101238, -1.        ]), q99=array([0.14234874, 0.35805632, 0.10676843, 0.43390816, 0.10698911,
+       0.44373546, 0.35252609, 0.9996    ]))}
+Writing stats to: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme
+END_UTC=2026-09-14T21:00:32Z
+EXIT_CODE=0

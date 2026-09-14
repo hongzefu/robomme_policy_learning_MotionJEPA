@@ -1,0 +1,31 @@
+{
+  "layout": "framesamp-8x8-v1",
+  "batch_size": 64,
+  "state_shape": [
+    64,
+    32
+  ],
+  "state_dtype": "float32",
+  "actions_shape": [
+    64,
+    20,
+    32
+  ],
+  "actions_dtype": "float32",
+  "static_image_shape": [
+    64,
+    512,
+    2048
+  ],
+  "static_image_dtype": "bfloat16",
+  "motion_none": {
+    "motion_emb": true,
+    "motion_pos": true,
+    "motion_mask": true,
+    "mem_order": true
+  },
+  "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+  "worker_count_for_input_check": 0,
+  "seed": 42,
+  "finite": true
+}

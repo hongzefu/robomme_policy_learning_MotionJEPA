@@ -1,6 +1,6 @@
 # 1600 集正式建库进行中
 
-当前已完成物理合并、full 验真、独立输入指纹、正式 SigLIP 及 finalize：1600 条 primary，1,192,918 个源时步，605,611 个执行样本。四个合并 H5 合计 791,769,480,668 B；源摘要、全部 H5 数值/结构对拍、输出摘要及再次输入核验均通过。SigLIP 四 worker 成功，finalize 的完整性、版本一致性及 1024 条零容差抽检通过。两档 framesamp、norm_stats 和训练可读性仍待完成；本文件不将阶段性通过写成最终交付通过。
+数据产物已全部构建并验收：1600 条 primary，1,192,918 个源时步，605,611 个执行样本。合并 H5、源摘要、全部 H5 数值/结构对拍、独立输入指纹、SigLIP、finalize、两档 framesamp 全量验证和跨网格检查均通过，新 norm_stats 已生成并核验有限。两档真实 batch 也通过，20 步训练可读性仍待执行；最终结论将在该项完成后补齐。
 
 ## 合并实测
 
@@ -98,4 +98,41 @@ GPU 记录请求间隔 500 ms，实际平均约 0.50087 秒；以启动后 120 �
 
 ## 已归档与待补
 
-records 已包含来源 pin、选取计划、全部四份 map、任务目标变体、`merge.measurements.json`、MERGE_DONE、正式 episode/input manifest、source stats/provenance、四片元数据、截至 finalize 的清洗日志与吞吐监视、SigLIP GPU 原始采样及汇总、版本检查事件。完整日志保留在 v1-store，清洗日志保留所有完成与退出判定行。后续追加两档 store_meta、norm_stats 摘要、各阶段日志及 20 步可读性结果，并更新本文件为最终结论。
+records 已包含来源 pin、选取计划、全部四份 map、任务目标变体、`merge.measurements.json`、MERGE_DONE、正式 episode/input manifest、source stats/provenance、四片元数据、两档 store_meta、norm_stats 摘要、全部建库阶段的清洗日志与吞吐监视、SigLIP GPU 原始采样及汇总、版本检查事件。完整日志保留在 v1-store，清洗日志保留所有完成与退出判定行。20 步可读性结果另见 [训练检查档案](../../training-doc/v2b-read20-20260914T174147Z/launch.md)，完成后回写本文件。
+
+## 两档 packed 与独立统计量
+
+三个阶段均从 `3b2864f7441a965250bbf18de7a6f00a63b08ab7` 的干净工作区启动，使用原有入口和 CPU 隔离环境，退出码均为 0。
+
+| 阶段 | 起跑 UTC | 结束 UTC | 墙钟秒 | 结果 |
+|---|---|---|---:|---|
+| 4×4 pack + verify | 2026-09-14 20:49:33 | 20:53:02.724 | 209.72 | 32 个 part，全 1,192,918 行零差异 |
+| norm_stats | 2026-09-14 20:55:08 | 21:00:32.208 | 324.21 | 4731 个 batch 完成，统计量有限 |
+| 8×8 pack + verify + xgrid | 2026-09-14 21:01:13 | 21:05:16.610 | 243.61 | 32 个 part，全行及独立跨网格检查通过 |
+
+```text
+VERIFY_PACK=PASS scanned=1192918 mismatches=0
+VERIFY_PACK=PASS scanned=1192918 mismatches=0
+IMAGE_NPY_SPOT=PASS frames=512 mismatches=0
+MOTION_POS_XGRID=PASS t=2304 npy=64 mismatches=0
+```
+
+两行 VERIFY_PACK 依次对应 4×4 和 8×8；两份 store_meta 均为 `status=verified`，pack 锁均已释放，manifest 为 `4cd5a170…`。8×8 使用 `--layout framesamp-8x8-v1 --reader decode`；512 帧源 NPY 对拍不依赖 packer 的规格表，时间码同时覆盖两档完整位置表。
+
+统计量位置为 `v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json`，SHA256 `856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173`。state/actions 的原始统计维度均为 8，mean/std/q01/q99 全有限，std 非负且 q01 不大于 q99。原脚本按 batch 128 和 `len(dataset)//batch_size` 迭代 4731 个完整批次，实际纳入 605568 个样本，末尾不足批次的 43 个样本未纳入这次统计；训练数据仍保留全部 605611 个执行样本，未改脚本口径。
+
+epoch 69 的吞吐为 869.0484657440462 samples/s、878.1282403469086 秒，较参考低约 0.57%，未触发暂停；其窗口覆盖 packed、统计量及相邻阶段，不单独归因于某一步。
+
+## 产物体积与真实 batch
+
+以下为实测 `du -sb`，含各目录内元数据，未把日志/Git 计入主要数据体积。
+
+| 产物 | 字节 |
+|---|---:|
+| 合并 RAW 目录 | 791770288140 |
+| source | 958903249848 |
+| framesamp 4×4 | 78349610344 |
+| framesamp 8×8 | 313226571153 |
+| 新统计量目录 | 2143 |
+
+两档分别使用对应 history 配置，经真实 dataloader 加载新统计量取得 batch 64。state `(64,32)`、actions `(64,20,32)` 均为 float32 且有限；static_image_emb 为 `(64,512,2048)` bfloat16；`motion_emb/motion_pos/motion_mask/mem_order` 均为 None。CPU 输入检查使用 worker 0、seed 42，20 步真实训练仍按计划使用默认 worker 4。证据保存在训练检查档案的 `records/batch4.json` 与 `records/batch8.json`。
