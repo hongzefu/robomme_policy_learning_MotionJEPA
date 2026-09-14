@@ -1,0 +1,256 @@
+START_HEAD=304e2225a3d82530edb8b7aef43bc215acaf407e
+START_UTC=2026-09-14T03:27:36Z
+FIXTURE_START profile=c32 side=ref impl=packed head=99faacb1319adfc63c0cf9a15187e24c34e38fd1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+[samples] 100 个已 dump，用时 8.7s
+[samples] 200 个已 dump，用时 17.4s
+[samples] 300 个已 dump，用时 25.8s
+[samples] 400 个已 dump，用时 34.4s
+[samples] 500 个已 dump，用时 43.1s
+[samples] 600 个已 dump，用时 51.8s
+[samples] 700 个已 dump，用时 60.3s
+[samples] 800 个已 dump，用时 68.9s
+[samples] 900 个已 dump，用时 77.6s
+[samples] 1000 个已 dump，用时 86.4s
+[samples] 1100 个已 dump，用时 95.0s
+[samples] 1200 个已 dump，用时 103.7s
+[samples] 完成 1200 个，用时 103.7s
+[batches] 20 个已 dump，用时 5.2s
+[batches] 40 个已 dump，用时 10.4s
+[batches] 60 个已 dump，用时 15.6s
+[batches] 80 个已 dump，用时 20.8s
+[batches] 100 个已 dump，用时 26.0s
+[batches] 120 个已 dump，用时 31.1s
+[batches] 140 个已 dump，用时 36.3s
+[batches] 160 个已 dump，用时 41.6s
+[batches] 180 个已 dump，用时 46.8s
+[batches] 200 个已 dump，用时 52.1s
+[batches] 完成 200 个，用时 52.1s
+DUMP_DONE samples=1200 batches=200 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/fixtures/8x8/40ep/ref-c32
+FIXTURE_START profile=c32 side=cand impl=packed head=304e2225a3d82530edb8b7aef43bc215acaf407e
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+[samples] 100 个已 dump，用时 8.1s
+[samples] 200 个已 dump，用时 16.2s
+[samples] 300 个已 dump，用时 24.4s
+[samples] 400 个已 dump，用时 32.5s
+[samples] 500 个已 dump，用时 40.7s
+[samples] 600 个已 dump，用时 48.9s
+[samples] 700 个已 dump，用时 57.0s
+[samples] 800 个已 dump，用时 65.2s
+[samples] 900 个已 dump，用时 73.4s
+[samples] 1000 个已 dump，用时 81.5s
+[samples] 1100 个已 dump，用时 89.7s
+[samples] 1200 个已 dump，用时 97.8s
+[samples] 完成 1200 个，用时 97.8s
+[batches] 20 个已 dump，用时 5.2s
+[batches] 40 个已 dump，用时 10.3s
+[batches] 60 个已 dump，用时 15.3s
+[batches] 80 个已 dump，用时 20.5s
+[batches] 100 个已 dump，用时 25.6s
+[batches] 120 个已 dump，用时 30.7s
+[batches] 140 个已 dump，用时 35.8s
+[batches] 160 个已 dump，用时 41.0s
+[batches] 180 个已 dump，用时 46.2s
+[batches] 200 个已 dump，用时 51.4s
+[batches] 完成 200 个，用时 51.4s
+DUMP_DONE samples=1200 batches=200 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/fixtures/8x8/40ep/cand-c32
+FIXTURE_COMPARE profile=c32
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SOURCE_IDENTITY=PASS episodes=40 samples=11530
+FRAME_INDEX_EXACT=PASS steps=13756 max_frames=32
+SAMPLE_RAW_EXACT=PASS samples=1200 per_step=20 mismatches=0
+BATCH_RAW_EXACT=PASS batches=200 mismatches=0
+FIXTURE_START profile=m32 side=ref impl=packed head=99faacb1319adfc63c0cf9a15187e24c34e38fd1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+[samples] 100 个已 dump，用时 9.5s
+[samples] 200 个已 dump，用时 19.0s
+[samples] 300 个已 dump，用时 28.7s
+[samples] 400 个已 dump，用时 38.5s
+[samples] 500 个已 dump，用时 48.2s
+[samples] 600 个已 dump，用时 57.7s
+[samples] 700 个已 dump，用时 67.1s
+[samples] 800 个已 dump，用时 76.2s
+[samples] 900 个已 dump，用时 85.2s
+[samples] 1000 个已 dump，用时 94.2s
+[samples] 1100 个已 dump，用时 103.1s
+[samples] 1200 个已 dump，用时 112.0s
+[samples] 完成 1200 个，用时 112.0s
+[batches] 20 个已 dump，用时 5.6s
+[batches] 40 个已 dump，用时 11.1s
+[batches] 60 个已 dump，用时 16.7s
+[batches] 80 个已 dump，用时 22.2s
+[batches] 100 个已 dump，用时 27.6s
+[batches] 120 个已 dump，用时 33.1s
+[batches] 140 个已 dump，用时 38.7s
+[batches] 160 个已 dump，用时 44.2s
+[batches] 180 个已 dump，用时 49.8s
+[batches] 200 个已 dump，用时 55.4s
+[batches] 完成 200 个，用时 55.4s
+DUMP_DONE samples=1200 batches=200 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/fixtures/8x8/40ep/ref-m32
+FIXTURE_START profile=m32 side=cand impl=packed head=c8aba47eef6c31266df985ff5c7a675418522df1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+[samples] 100 个已 dump，用时 9.6s
+[samples] 200 个已 dump，用时 18.8s
+[samples] 300 个已 dump，用时 28.3s
+[samples] 400 个已 dump，用时 37.8s
+[samples] 500 个已 dump，用时 47.2s
+[samples] 600 个已 dump，用时 56.5s
+[samples] 700 个已 dump，用时 65.9s
+[samples] 800 个已 dump，用时 75.3s
+[samples] 900 个已 dump，用时 84.7s
+[samples] 1000 个已 dump，用时 94.0s
+[samples] 1100 个已 dump，用时 103.4s
+[samples] 1200 个已 dump，用时 112.7s
+[samples] 完成 1200 个，用时 112.7s
+[batches] 20 个已 dump，用时 5.6s
+[batches] 40 个已 dump，用时 11.1s
+[batches] 60 个已 dump，用时 17.0s
+[batches] 80 个已 dump，用时 22.8s
+[batches] 100 个已 dump，用时 28.5s
+[batches] 120 个已 dump，用时 34.3s
+[batches] 140 个已 dump，用时 40.1s
+[batches] 160 个已 dump，用时 45.9s
+[batches] 180 个已 dump，用时 51.6s
+[batches] 200 个已 dump，用时 57.4s
+[batches] 完成 200 个，用时 57.4s
+DUMP_DONE samples=1200 batches=200 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/fixtures/8x8/40ep/cand-m32
+FIXTURE_COMPARE profile=m32
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SOURCE_IDENTITY=PASS episodes=40 samples=11530
+FRAME_INDEX_EXACT=PASS steps=13756 max_frames=32
+SAMPLE_RAW_EXACT=PASS samples=1200 per_step=20 mismatches=0
+BATCH_RAW_EXACT=PASS batches=200 mismatches=0
+FIXTURE_START profile=c8 side=ref impl=refnpy head=99faacb1319adfc63c0cf9a15187e24c34e38fd1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+[samples] 100 个已 dump，用时 9.1s
+[samples] 200 个已 dump，用时 18.2s
+[samples] 300 个已 dump，用时 27.3s
+[samples] 400 个已 dump，用时 36.5s
+[samples] 500 个已 dump，用时 45.6s
+[samples] 600 个已 dump，用时 54.7s
+[samples] 700 个已 dump，用时 63.8s
+[samples] 800 个已 dump，用时 72.9s
+[samples] 900 个已 dump，用时 81.9s
+[samples] 1000 个已 dump，用时 90.7s
+[samples] 1100 个已 dump，用时 99.9s
+[samples] 1200 个已 dump，用时 109.1s
+[samples] 完成 1220 个，用时 111.0s
+[batches] 20 个已 dump，用时 6.0s
+[batches] 40 个已 dump，用时 11.5s
+[batches] 60 个已 dump，用时 16.9s
+[batches] 80 个已 dump，用时 22.3s
+[batches] 100 个已 dump，用时 27.7s
+[batches] 120 个已 dump，用时 33.3s
+[batches] 140 个已 dump，用时 38.9s
+[batches] 160 个已 dump，用时 44.5s
+[batches] 180 个已 dump，用时 50.0s
+[batches] 200 个已 dump，用时 55.5s
+[batches] 完成 200 个，用时 55.5s
+DUMP_DONE samples=1220 batches=200 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/fixtures/8x8/40ep/ref-c8
+FIXTURE_START profile=c8 side=cand impl=packed head=39ed631f80351be5ef39d82eb914ae0b18d15b8d
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+[samples] 100 个已 dump，用时 8.9s
+[samples] 200 个已 dump，用时 18.2s
+[samples] 300 个已 dump，用时 27.5s
+[samples] 400 个已 dump，用时 36.7s
+[samples] 500 个已 dump，用时 45.7s
+[samples] 600 个已 dump，用时 54.3s
+[samples] 700 个已 dump，用时 62.8s
+[samples] 800 个已 dump，用时 71.8s
+[samples] 900 个已 dump，用时 81.1s
+[samples] 1000 个已 dump，用时 90.3s
+[samples] 1100 个已 dump，用时 99.6s
+[samples] 1200 个已 dump，用时 108.8s
+[samples] 完成 1220 个，用时 110.6s
+[batches] 20 个已 dump，用时 5.3s
+[batches] 40 个已 dump，用时 10.8s
+[batches] 60 个已 dump，用时 16.1s
+[batches] 80 个已 dump，用时 21.5s
+[batches] 100 个已 dump，用时 26.8s
+[batches] 120 个已 dump，用时 32.9s
+[batches] 140 个已 dump，用时 38.5s
+[batches] 160 个已 dump，用时 43.9s
+[batches] 180 个已 dump，用时 49.6s
+[batches] 200 个已 dump，用时 54.9s
+[batches] 完成 200 个，用时 54.9s
+DUMP_DONE samples=1220 batches=200 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/fixtures/8x8/40ep/cand-c8
+FIXTURE_COMPARE profile=c8
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SOURCE_IDENTITY=PASS episodes=40 samples=11530
+FRAME_INDEX_EXACT=PASS steps=13756 max_frames=8
+SAMPLE_RAW_EXACT=PASS samples=1220 per_step=20 mismatches=0
+BATCH_RAW_EXACT=PASS batches=200 mismatches=0
+FIXTURE_START profile=m8 side=ref impl=refnpy head=99faacb1319adfc63c0cf9a15187e24c34e38fd1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+[samples] 100 个已 dump，用时 9.0s
+[samples] 200 个已 dump，用时 18.0s
+[samples] 300 个已 dump，用时 27.1s
+[samples] 400 个已 dump，用时 36.3s
+[samples] 500 个已 dump，用时 45.6s
+[samples] 600 个已 dump，用时 54.8s
+[samples] 700 个已 dump，用时 64.0s
+[samples] 800 个已 dump，用时 73.2s
+[samples] 900 个已 dump，用时 82.4s
+[samples] 1000 个已 dump，用时 91.6s
+[samples] 1100 个已 dump，用时 100.8s
+[samples] 1200 个已 dump，用时 110.0s
+[samples] 完成 1220 个，用时 111.8s
+[batches] 20 个已 dump，用时 5.8s
+[batches] 40 个已 dump，用时 11.6s
+[batches] 60 个已 dump，用时 17.2s
+[batches] 80 个已 dump，用时 22.8s
+[batches] 100 个已 dump，用时 28.4s
+[batches] 120 个已 dump，用时 34.1s
+[batches] 140 个已 dump，用时 39.8s
+[batches] 160 个已 dump，用时 45.7s
+[batches] 180 个已 dump，用时 51.8s
+[batches] 200 个已 dump，用时 58.0s
+[batches] 完成 200 个，用时 58.0s
+DUMP_DONE samples=1220 batches=200 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/fixtures/8x8/40ep/ref-m8
+FIXTURE_START profile=m8 side=cand impl=packed head=39ed631f80351be5ef39d82eb914ae0b18d15b8d
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+[samples] 100 个已 dump，用时 8.8s
+[samples] 200 个已 dump，用时 17.6s
+[samples] 300 个已 dump，用时 26.5s
+[samples] 400 个已 dump，用时 35.3s
+[samples] 500 个已 dump，用时 43.9s
+[samples] 600 个已 dump，用时 52.4s
+[samples] 700 个已 dump，用时 60.9s
+[samples] 800 个已 dump，用时 69.5s
+[samples] 900 个已 dump，用时 78.0s
+[samples] 1000 个已 dump，用时 86.5s
+[samples] 1100 个已 dump，用时 94.9s
+[samples] 1200 个已 dump，用时 103.5s
+[samples] 完成 1220 个，用时 105.2s
+[batches] 20 个已 dump，用时 5.5s
+[batches] 40 个已 dump，用时 11.1s
+[batches] 60 个已 dump，用时 16.6s
+[batches] 80 个已 dump，用时 22.1s
+[batches] 100 个已 dump，用时 27.6s
+[batches] 120 个已 dump，用时 33.1s
+[batches] 140 个已 dump，用时 38.6s
+[batches] 160 个已 dump，用时 44.3s
+[batches] 180 个已 dump，用时 50.0s
+[batches] 200 个已 dump，用时 55.8s
+[batches] 完成 200 个，用时 55.8s
+DUMP_DONE samples=1220 batches=200 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/fixtures/8x8/40ep/cand-m8
+FIXTURE_COMPARE profile=m8
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SOURCE_IDENTITY=PASS episodes=40 samples=11530
+FRAME_INDEX_EXACT=PASS steps=13756 max_frames=8
+SAMPLE_RAW_EXACT=PASS samples=1220 per_step=20 mismatches=0
+BATCH_RAW_EXACT=PASS batches=200 mismatches=0
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+HAND_CALC_8FRAME=PASS samples=27 mismatches=0 profile=c8
+HAND_CALC_8FRAME=PASS samples=27 mismatches=0 profile=m8
+FIXTURE_40=DONE
+END_UTC=2026-09-14T03:50:44Z
+EXIT_CODE=0

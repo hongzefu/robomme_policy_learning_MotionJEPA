@@ -1,0 +1,18 @@
+START_HEAD=304e2225a3d82530edb8b7aef43bc215acaf407e
+START_UTC=2026-09-14T03:27:36Z
+MATRIX_START impl=packed
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[matrix] w0: batches=2882 elapsed=59.3s fd 5→5 (leak=0)
+[matrix] w1: batches=2882 elapsed=181.5s fd 5→5 (leak=0)
+[matrix] w4: batches=2882 elapsed=138.6s fd 5→5 (leak=0)
+[matrix] w16: batches=2882 elapsed=128.1s fd 5→5 (leak=0)
+MATRIX=PASS workers=0,1,4,16 epochs=2 batches_per_run=2882
+MATRIX_START impl=refnpy
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[matrix] w0: batches=2882 elapsed=88.5s fd 5→5 (leak=0)
+[matrix] w1: batches=2882 elapsed=155.7s fd 5→5 (leak=0)
+[matrix] w4: batches=2882 elapsed=138.1s fd 5→5 (leak=0)
+[matrix] w16: batches=2882 elapsed=120.4s fd 5→5 (leak=0)
+MATRIX=PASS workers=0,1,4,16 epochs=2 batches_per_run=2882
+END_UTC=2026-09-14T03:44:48Z
+EXIT_CODE=0
