@@ -8,7 +8,7 @@
 
 ### 8帧×8×8支持与逐位验收（2026-09-14）
 
-仅使用物理GPU4–7。正式训练轨迹已全部完成；全梯度和真实checkpoint推理继续按计划执行，详见[总览](t8-training/result.md)与[用户决定](t8-training/decisions.md)。
+仅使用物理GPU4–7。正式训练轨迹与四组全梯度已全部通过；真实checkpoint推理继续按计划执行，详见[总览](t8-training/result.md)与[用户决定](t8-training/decisions.md)。
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
@@ -17,19 +17,19 @@
 | [`t8-infer-regress-4x4/`](t8-infer-regress-4x4/result.md) | 旧4×4在线完整回归 | PASS，772窗逐位一致 |
 | [`t8-infer-m8/`](t8-infer-m8/result.md) | 真实8×8在线池化及后续M8 checkpoint验收 | 池化/位置/装配PASS，其余待执行 |
 | [`t8-infer-c8/`](t8-infer-c8/result.md) | C8 checkpoint七关及48集闭环 | 已提交共同启动口径，待执行 |
-| [`t8-gradient/`](t8-gradient/launch.md) | 四profile的三类batch全梯度对拍 | 已记录启动口径，待执行 |
-| [`t8-c32-a1/`](t8-c32-a1/result.md) | C32 A1：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步逐位gate PASS；全梯度另行补验 |
-| [`t8-c32-a2/`](t8-c32-a2/result.md) | C32 A2：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步逐位gate PASS；全梯度另行补验 |
-| [`t8-c32-b/`](t8-c32-b/result.md) | C32 B：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步逐位gate PASS；全梯度另行补验 |
-| [`t8-m32-a1/`](t8-m32-a1/result.md) | M32 A1：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步逐位gate PASS；全梯度另行补验 |
-| [`t8-m32-a2/`](t8-m32-a2/result.md) | M32 A2：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步逐位gate PASS；全梯度另行补验 |
-| [`t8-m32-b/`](t8-m32-b/result.md) | M32 B：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步逐位gate PASS；全梯度另行补验 |
-| [`t8-c8-a1/`](t8-c8-a1/result.md) | C8 A1：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步逐位gate PASS；全梯度另行补验 |
-| [`t8-c8-a2/`](t8-c8-a2/result.md) | C8 A2：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步逐位gate PASS；全梯度另行补验 |
-| [`t8-c8-b/`](t8-c8-b/result.md) | C8 B：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步逐位gate PASS；全梯度另行补验 |
-| [`t8-m8-a1/`](t8-m8-a1/result.md) | M8 A1：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步逐位gate PASS；全梯度另行补验 |
-| [`t8-m8-a2/`](t8-m8-a2/result.md) | M8 A2：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步逐位gate PASS；全梯度另行补验 |
-| [`t8-m8-b/`](t8-m8-b/result.md) | M8 B：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步逐位gate PASS；全梯度另行补验 |
+| [`t8-gradient/`](t8-gradient/result.md) | 四profile的三类batch全梯度对拍 | PASS，全部32/36叶逐位同且有限 |
+| [`t8-c32-a1/`](t8-c32-a1/result.md) | C32 A1：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步与三batch全梯度均PASS |
+| [`t8-c32-a2/`](t8-c32-a2/result.md) | C32 A2：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步与三batch全梯度均PASS |
+| [`t8-c32-b/`](t8-c32-b/result.md) | C32 B：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步与三batch全梯度均PASS |
+| [`t8-m32-a1/`](t8-m32-a1/result.md) | M32 A1：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步与三batch全梯度均PASS |
+| [`t8-m32-a2/`](t8-m32-a2/result.md) | M32 A2：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步与三batch全梯度均PASS |
+| [`t8-m32-b/`](t8-m32-b/result.md) | M32 B：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步与三batch全梯度均PASS |
+| [`t8-c8-a1/`](t8-c8-a1/result.md) | C8 A1：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步与三batch全梯度均PASS |
+| [`t8-c8-a2/`](t8-c8-a2/result.md) | C8 A2：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步与三batch全梯度均PASS |
+| [`t8-c8-b/`](t8-c8-b/result.md) | C8 B：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步与三batch全梯度均PASS |
+| [`t8-m8-a1/`](t8-m8-a1/result.md) | M8 A1：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步与三batch全梯度均PASS |
+| [`t8-m8-a2/`](t8-m8-a2/result.md) | M8 A2：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步与三batch全梯度均PASS |
+| [`t8-m8-b/`](t8-m8-b/result.md) | M8 B：1000更新、batch8、fsdp2、GPU6,7 | 本组1000步与三batch全梯度均PASS |
 
 ### motion 利用率评估（2026-09-08，commitV8.0 起；正本 `docs/motion-utilization.md`）
 

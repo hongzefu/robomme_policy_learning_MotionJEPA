@@ -1,0 +1,538 @@
+{
+  "c32": {
+    "start_utc": "2026-09-14T11:29:04Z",
+    "end_utc": "2026-09-14T12:01:11Z",
+    "wall_s": 1927.0,
+    "start_head": "9006d4a49cd99dd4d99ab376d8053341ff99e3ba",
+    "side_origins": [
+      "profile=c32 side=a head=99faacb1319adfc63c0cf9a15187e24c34e38fd1 impl=packed",
+      "profile=c32 side=b head=ec6a43dc30e3cc6d8f3baaf2799a02441cd18e8b impl=packed"
+    ],
+    "gate": "GRAD_EQ=PASS kinds=3 leaves=32 mismatches=0",
+    "sides": {
+      "a": {
+        "same_origin": {
+          "n_leaves": 177,
+          "baseline": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/8x8/t8-c32-a1/param_checksums.jsonl",
+          "verdict": "PASS"
+        },
+        "results": {
+          "mixed1": {
+            "batch_id": 0,
+            "indices": [
+              41533,
+              56690,
+              41535,
+              3606,
+              21639,
+              48139,
+              18517,
+              22474
+            ],
+            "loss_hex": "0x1.4497a00000000p-1",
+            "loss": 0.6339693069458008,
+            "n_leaves": 32,
+            "seconds": 455.76
+          },
+          "allshort": {
+            "batch_id": 50,
+            "indices": [
+              17694,
+              32692,
+              17666,
+              45214,
+              6929,
+              8758,
+              28575,
+              54341
+            ],
+            "loss_hex": "0x1.0e06920000000p-2",
+            "loss": 0.26369693875312805,
+            "n_leaves": 32,
+            "seconds": 286.21
+          },
+          "allfull": {
+            "batch_id": 100,
+            "indices": [
+              2764,
+              46925,
+              3825,
+              23511,
+              25009,
+              5911,
+              887,
+              60446
+            ],
+            "loss_hex": "0x1.1e853e0000000p-1",
+            "loss": 0.5596103072166443,
+            "n_leaves": 32,
+            "seconds": 72.36
+          }
+        }
+      },
+      "b": {
+        "same_origin": {
+          "n_leaves": 177,
+          "baseline": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/8x8/t8-c32-b/param_checksums.jsonl",
+          "verdict": "PASS"
+        },
+        "results": {
+          "mixed1": {
+            "batch_id": 0,
+            "indices": [
+              41533,
+              56690,
+              41535,
+              3606,
+              21639,
+              48139,
+              18517,
+              22474
+            ],
+            "loss_hex": "0x1.4497a00000000p-1",
+            "loss": 0.6339693069458008,
+            "n_leaves": 32,
+            "seconds": 96.92
+          },
+          "allshort": {
+            "batch_id": 50,
+            "indices": [
+              17694,
+              32692,
+              17666,
+              45214,
+              6929,
+              8758,
+              28575,
+              54341
+            ],
+            "loss_hex": "0x1.0e06920000000p-2",
+            "loss": 0.26369693875312805,
+            "n_leaves": 32,
+            "seconds": 66.47
+          },
+          "allfull": {
+            "batch_id": 100,
+            "indices": [
+              2764,
+              46925,
+              3825,
+              23511,
+              25009,
+              5911,
+              887,
+              60446
+            ],
+            "loss_hex": "0x1.1e853e0000000p-1",
+            "loss": 0.5596103072166443,
+            "n_leaves": 32,
+            "seconds": 67.12
+          }
+        }
+      }
+    },
+    "input_exact": "PASS"
+  },
+  "m32": {
+    "start_utc": "2026-09-14T11:29:04Z",
+    "end_utc": "2026-09-14T12:01:26Z",
+    "wall_s": 1942.0,
+    "start_head": "9006d4a49cd99dd4d99ab376d8053341ff99e3ba",
+    "side_origins": [
+      "profile=m32 side=a head=99faacb1319adfc63c0cf9a15187e24c34e38fd1 impl=packed",
+      "profile=m32 side=b head=ec6a43dc30e3cc6d8f3baaf2799a02441cd18e8b impl=packed"
+    ],
+    "gate": "GRAD_EQ=PASS kinds=3 leaves=36 mismatches=0",
+    "sides": {
+      "a": {
+        "same_origin": {
+          "n_leaves": 193,
+          "baseline": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/8x8/t8-m32-a1/param_checksums.jsonl",
+          "verdict": "PASS"
+        },
+        "results": {
+          "mixed1": {
+            "batch_id": 0,
+            "indices": [
+              41533,
+              56690,
+              41535,
+              3606,
+              21639,
+              48139,
+              18517,
+              22474
+            ],
+            "loss_hex": "0x1.3cf5480000000p-1",
+            "loss": 0.6190588474273682,
+            "n_leaves": 36,
+            "seconds": 630.38
+          },
+          "allshort": {
+            "batch_id": 50,
+            "indices": [
+              17694,
+              32692,
+              17666,
+              45214,
+              6929,
+              8758,
+              28575,
+              54341
+            ],
+            "loss_hex": "0x1.0e06920000000p-2",
+            "loss": 0.26369693875312805,
+            "n_leaves": 36,
+            "seconds": 259.94
+          },
+          "allfull": {
+            "batch_id": 100,
+            "indices": [
+              2764,
+              46925,
+              3825,
+              23511,
+              25009,
+              5911,
+              887,
+              60446
+            ],
+            "loss_hex": "0x1.22a6060000000p-1",
+            "loss": 0.5676729083061218,
+            "n_leaves": 36,
+            "seconds": 283.09
+          }
+        }
+      },
+      "b": {
+        "same_origin": {
+          "n_leaves": 193,
+          "baseline": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/8x8/t8-m32-b/param_checksums.jsonl",
+          "verdict": "PASS"
+        },
+        "results": {
+          "mixed1": {
+            "batch_id": 0,
+            "indices": [
+              41533,
+              56690,
+              41535,
+              3606,
+              21639,
+              48139,
+              18517,
+              22474
+            ],
+            "loss_hex": "0x1.3cf5480000000p-1",
+            "loss": 0.6190588474273682,
+            "n_leaves": 36,
+            "seconds": 120.87
+          },
+          "allshort": {
+            "batch_id": 50,
+            "indices": [
+              17694,
+              32692,
+              17666,
+              45214,
+              6929,
+              8758,
+              28575,
+              54341
+            ],
+            "loss_hex": "0x1.0e06920000000p-2",
+            "loss": 0.26369693875312805,
+            "n_leaves": 36,
+            "seconds": 69.02
+          },
+          "allfull": {
+            "batch_id": 100,
+            "indices": [
+              2764,
+              46925,
+              3825,
+              23511,
+              25009,
+              5911,
+              887,
+              60446
+            ],
+            "loss_hex": "0x1.22a6060000000p-1",
+            "loss": 0.5676729083061218,
+            "n_leaves": 36,
+            "seconds": 66.83
+          }
+        }
+      }
+    },
+    "input_exact": "PASS"
+  },
+  "c8": {
+    "start_utc": "2026-09-14T12:01:49Z",
+    "end_utc": "2026-09-14T12:16:20Z",
+    "wall_s": 871.0,
+    "start_head": "ec6a43dc30e3cc6d8f3baaf2799a02441cd18e8b",
+    "side_origins": [
+      "profile=c8 side=a head=99faacb1319adfc63c0cf9a15187e24c34e38fd1 impl=refnpy",
+      "profile=c8 side=b head=ec6a43dc30e3cc6d8f3baaf2799a02441cd18e8b impl=packed"
+    ],
+    "gate": "GRAD_EQ=PASS kinds=3 leaves=32 mismatches=0",
+    "sides": {
+      "a": {
+        "same_origin": {
+          "n_leaves": 177,
+          "baseline": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/8x8/t8-c8-a1/param_checksums.jsonl",
+          "verdict": "PASS"
+        },
+        "results": {
+          "mixed1": {
+            "batch_id": 0,
+            "indices": [
+              41509,
+              46614,
+              20025,
+              6936,
+              51469,
+              42289,
+              57481,
+              14333
+            ],
+            "loss_hex": "0x1.391a840000000p-1",
+            "loss": 0.6115304231643677,
+            "n_leaves": 32,
+            "seconds": 96.19
+          },
+          "allshort": {
+            "batch_id": 50,
+            "indices": [
+              10535,
+              18485,
+              16173,
+              33463,
+              53351,
+              8758,
+              51466,
+              9225
+            ],
+            "loss_hex": "0x1.688f060000000p-1",
+            "loss": 0.7042161822319031,
+            "n_leaves": 32,
+            "seconds": 67.4
+          },
+          "allfull": {
+            "batch_id": 100,
+            "indices": [
+              20817,
+              3183,
+              35478,
+              35939,
+              25203,
+              620,
+              61650,
+              40286
+            ],
+            "loss_hex": "0x1.293c3e0000000p-1",
+            "loss": 0.580537736415863,
+            "n_leaves": 32,
+            "seconds": 66.51
+          }
+        }
+      },
+      "b": {
+        "same_origin": {
+          "n_leaves": 177,
+          "baseline": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/8x8/t8-c8-b/param_checksums.jsonl",
+          "verdict": "PASS"
+        },
+        "results": {
+          "mixed1": {
+            "batch_id": 0,
+            "indices": [
+              41509,
+              46614,
+              20025,
+              6936,
+              51469,
+              42289,
+              57481,
+              14333
+            ],
+            "loss_hex": "0x1.391a840000000p-1",
+            "loss": 0.6115304231643677,
+            "n_leaves": 32,
+            "seconds": 97.83
+          },
+          "allshort": {
+            "batch_id": 50,
+            "indices": [
+              10535,
+              18485,
+              16173,
+              33463,
+              53351,
+              8758,
+              51466,
+              9225
+            ],
+            "loss_hex": "0x1.688f060000000p-1",
+            "loss": 0.7042161822319031,
+            "n_leaves": 32,
+            "seconds": 66.72
+          },
+          "allfull": {
+            "batch_id": 100,
+            "indices": [
+              20817,
+              3183,
+              35478,
+              35939,
+              25203,
+              620,
+              61650,
+              40286
+            ],
+            "loss_hex": "0x1.293c3e0000000p-1",
+            "loss": 0.580537736415863,
+            "n_leaves": 32,
+            "seconds": 67.38
+          }
+        }
+      }
+    },
+    "input_exact": "PASS"
+  },
+  "m8": {
+    "start_utc": "2026-09-14T12:01:51Z",
+    "end_utc": "2026-09-14T12:18:22Z",
+    "wall_s": 991.0,
+    "start_head": "ec6a43dc30e3cc6d8f3baaf2799a02441cd18e8b",
+    "side_origins": [
+      "profile=m8 side=a head=99faacb1319adfc63c0cf9a15187e24c34e38fd1 impl=refnpy",
+      "profile=m8 side=b head=ec6a43dc30e3cc6d8f3baaf2799a02441cd18e8b impl=packed"
+    ],
+    "gate": "GRAD_EQ=PASS kinds=3 leaves=36 mismatches=0",
+    "sides": {
+      "a": {
+        "same_origin": {
+          "n_leaves": 193,
+          "baseline": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/8x8/t8-m8-a1/param_checksums.jsonl",
+          "verdict": "PASS"
+        },
+        "results": {
+          "mixed1": {
+            "batch_id": 0,
+            "indices": [
+              41509,
+              46614,
+              20025,
+              6936,
+              51469,
+              42289,
+              57481,
+              14333
+            ],
+            "loss_hex": "0x1.3d85b20000000p-1",
+            "loss": 0.6201606392860413,
+            "n_leaves": 36,
+            "seconds": 124.76
+          },
+          "allshort": {
+            "batch_id": 50,
+            "indices": [
+              10535,
+              18485,
+              16173,
+              33463,
+              53351,
+              8758,
+              51466,
+              9225
+            ],
+            "loss_hex": "0x1.688f060000000p-1",
+            "loss": 0.7042161822319031,
+            "n_leaves": 36,
+            "seconds": 66.92
+          },
+          "allfull": {
+            "batch_id": 100,
+            "indices": [
+              20817,
+              3183,
+              35478,
+              35939,
+              25203,
+              620,
+              61650,
+              40286
+            ],
+            "loss_hex": "0x1.320d060000000p-1",
+            "loss": 0.5977556109428406,
+            "n_leaves": 36,
+            "seconds": 67.71
+          }
+        }
+      },
+      "b": {
+        "same_origin": {
+          "n_leaves": 193,
+          "baseline": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/8x8/t8-m8-b/param_checksums.jsonl",
+          "verdict": "PASS"
+        },
+        "results": {
+          "mixed1": {
+            "batch_id": 0,
+            "indices": [
+              41509,
+              46614,
+              20025,
+              6936,
+              51469,
+              42289,
+              57481,
+              14333
+            ],
+            "loss_hex": "0x1.3d85b20000000p-1",
+            "loss": 0.6201606392860413,
+            "n_leaves": 36,
+            "seconds": 110.75
+          },
+          "allshort": {
+            "batch_id": 50,
+            "indices": [
+              10535,
+              18485,
+              16173,
+              33463,
+              53351,
+              8758,
+              51466,
+              9225
+            ],
+            "loss_hex": "0x1.688f060000000p-1",
+            "loss": 0.7042161822319031,
+            "n_leaves": 36,
+            "seconds": 69.89
+          },
+          "allfull": {
+            "batch_id": 100,
+            "indices": [
+              20817,
+              3183,
+              35478,
+              35939,
+              25203,
+              620,
+              61650,
+              40286
+            ],
+            "loss_hex": "0x1.320d060000000p-1",
+            "loss": 0.5977556109428406,
+            "n_leaves": 36,
+            "seconds": 69.52
+          }
+        }
+      }
+    },
+    "input_exact": "PASS"
+  }
+}
