@@ -1,0 +1,162 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "cr": "http://mlcommons.org/croissant/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataBiases": "cr:dataBiases",
+    "dataCollection": "cr:dataCollection",
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "personalSensitiveInformation": "cr:personalSensitiveInformation",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform"
+  },
+  "@type": "sc:Dataset",
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "repo",
+      "name": "repo",
+      "description": "The Hugging Face git repository.",
+      "contentUrl": "https://huggingface.co/datasets/HongzeFu/robomme-4task-h5-20260912-v2/tree/refs%2Fconvert%2Fparquet",
+      "encodingFormat": "git+https",
+      "sha256": "https://github.com/mlcommons/croissant/issues/80"
+    },
+    {
+      "@type": "cr:FileSet",
+      "@id": "parquet-files-for-config-default",
+      "containedIn": {
+        "@id": "repo"
+      },
+      "encodingFormat": "application/x-parquet",
+      "includes": "default/*/*.parquet"
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "dataType": "cr:Split",
+      "key": {
+        "@id": "default_splits/split_name"
+      },
+      "@id": "default_splits",
+      "name": "default_splits",
+      "description": "Splits for the default config.",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "default_splits/split_name",
+          "dataType": "sc:Text"
+        }
+      ],
+      "data": [
+        {
+          "default_splits/split_name": "train"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "default",
+      "description": "HongzeFu/robomme-4task-h5-20260912-v2 - 'default' subset",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "default/split",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "parquet-files-for-config-default"
+            },
+            "extract": {
+              "fileProperty": "fullpath"
+            },
+            "transform": {
+              "regex": "default/(?:partial-)?(train)/.+parquet$"
+            }
+          },
+          "references": {
+            "field": {
+              "@id": "default_splits/split_name"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "default/video",
+          "dataType": "sc:VideoObject",
+          "source": {
+            "fileSet": {
+              "@id": "parquet-files-for-config-default"
+            },
+            "extract": {
+              "column": "video"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "robomme-4task-h5-20260912-v2",
+  "description": "\n\t\n\t\t\n\t\n\t\n\t\tRoboMME 四任务 h5 数据集（运行 20260912-contract-v3-10）\n\t\n\n本仓库发布 RoboMME 新值注入专项运行 20260912-contract-v3-10 的 h5 轨迹与配套录像。\n四个任务 BinFill / RouteStick / VideoUnmaskSwap / VideoRepick，每个任务 400 条正式 h5，\n共 1600 条 primary、196 条 spare 备件、\n1 条 smoke 样例，另带 1949 个 mp4 录像。\n\n\t\n\t\t\n\t\n\t\n\t\t⚠️ 与官方 Yinpei/robomme_data_h5 的形状差别（务必先读）\n\t\n\n官方 Yinpei/robomme_data_h5 每个包内是一个合并后的大 h5（多条 episode 合在一个文件里）。\n本仓库不是：这里是逐条 h5，每个 .h5 文件里只有 episode_0 一条轨迹，\n文件名形如 <任务>_ep<号>_seed<seed>.h5。下游若按官方形状写了「一个 h5 多条 episode」的读法，… See the full description on the dataset page: https://huggingface.co/datasets/HongzeFu/robomme-4task-h5-20260912-v2.",
+  "alternateName": [
+    "HongzeFu/robomme-4task-h5-20260912-v2",
+    "RoboMME 4-task h5 (20260912-contract-v3-10)"
+  ],
+  "creator": {
+    "@type": "Person",
+    "name": "Hongze Fu",
+    "url": "https://huggingface.co/HongzeFu"
+  },
+  "keywords": [
+    "robotics",
+    "apache-2.0",
+    "1K - 10K",
+    "Video",
+    "Datasets",
+    "Croissant",
+    "🇺🇸 Region: US",
+    "robotics",
+    "manipulation",
+    "maniskill",
+    "robomme",
+    "hdf5"
+  ],
+  "license": "https://choosealicense.com/licenses/apache-2.0/",
+  "url": "https://huggingface.co/datasets/HongzeFu/robomme-4task-h5-20260912-v2"
+}
