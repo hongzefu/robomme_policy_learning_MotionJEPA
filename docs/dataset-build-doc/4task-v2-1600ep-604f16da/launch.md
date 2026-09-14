@@ -19,6 +19,8 @@
 | 1/2 前检与合并 | `v2b-merge-20260914T174147Z` | `3f6c8be3ed65ae27d923ef6828751c71a5e49404` | 2026-09-14 17:50:56 |
 | 3/4 full 验真与清单 | `v2b-verify-20260914T174147Z` | `eb25f839c836de584f3a982c790df292304ba25a` | 2026-09-14 18:15:24 |
 | 5 输入指纹 | `v2b-hash-20260914T174147Z` | `e193c6dc1b4a8cbd6779dbfb2b1f6aa077686c6d` | 2026-09-14 18:46:07 |
+| 6 SigLIP | `v2b-siglip-20260914T174147Z` | `cd99ce44872e8730b9383cca5add8c4b0a2dac88` | 2026-09-14 19:22:45 |
+| 7 finalize | `v2b-finalize-20260914T174147Z` | `0233f17b1f91a875b0005f66189b0757f1e530db` | 2026-09-14 20:29:38 |
 
 ## 数据来源与排序
 
@@ -72,7 +74,7 @@ uv run --no-sync python scripts/dataset/merge_v2_h5.py merge --out "$RAW" --extr
 uv run --no-sync python scripts/dataset/merge_v2_h5.py verify --out "$RAW" --extracted "$SRC/extracted" --level full --procs 48
 uv run --no-sync python scripts/dataset/scan_manifest.py build --raw_dir "$RAW" --tasks "$TASKS" --episodes-per-task 400 --num_shards 1 --out "$MANI"
 uv run --no-sync python scripts/dataset/finalize_checks.py hash-inputs --raw_dir "$RAW" --out "$INMANI"
-uv run --no-sync python scripts/dataset/run_local.py --stage siglip --lib "$LIB" --gpus 4,5,6,7 --raw-dir "$RAW"
+CUDA_VISIBLE_DEVICES=4,5,6,7 uv run --no-sync python scripts/dataset/run_local.py --stage siglip --lib "$LIB" --gpus 4,5,6,7 --raw-dir "$RAW" --require-free-mib 70000
 CUDA_VISIBLE_DEVICES=7 uv run --no-sync python scripts/dataset/finalize_checks.py check --manifest "$MANI" --out "$LIB/source" --raw_dir "$RAW" --input_manifest "$INMANI" --input_level sha256 --spot_check 1024
 CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/dataset/pack_framesamp_store.py pack --source "$LIB/source" --manifest "$MANI" --out "$LIB/framesamp" --procs 48
 CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/dataset/pack_framesamp_store.py verify --store "$LIB/framesamp" --resume --procs 48

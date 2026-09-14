@@ -1,0 +1,33 @@
+START_HEAD=0233f17b1f91a875b0005f66189b0757f1e530db
+Filesystem         1B-blocks          Used     Available Use% Mounted on
+/dev/md0       7516777873408 5692293156864 1824484716544  76% /scratch
+V2_STAGE=finalize UTC=2026-09-14T20:29:38Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+=== [1/5] 输入 H5 同源核验（level=sha256）===
+  ✓ record_dataset_BinFill.h5 sha256 同源
+  ✓ record_dataset_RouteStick.h5 sha256 同源
+  ✓ record_dataset_VideoRepick.h5 sha256 同源
+  ✓ record_dataset_VideoUnmaskSwap.h5 sha256 同源
+=== [2/5] 产物完整性核验 ===
+  ...已核 200/1600 个 episode (0s)
+  ...已核 400/1600 个 episode (1s)
+  ...已核 600/1600 个 episode (1s)
+  ...已核 800/1600 个 episode (1s)
+  ...已核 1000/1600 个 episode (1s)
+  ...已核 1200/1600 个 episode (1s)
+  ...已核 1400/1600 个 episode (1s)
+  ...已核 1600/1600 个 episode (1s)
+  feature 目录缺失=0  pkl 实得=605611 期望=605611
+=== [3/5] 分片 sidecar 汇总 ===
+  sidecar=4 覆盖 episode=1600 残留 claim=0
+=== [4/5] 同架构零容差抽检（1024 条）===
+  抽检 1024/1024 条，全体 max|diff|=0.000e+00
+  ✓ 同架构复算全部逐位一致 PASS（1024 条）
+=== [5/5] 写 stats.json 与 provenance.json ===
+  stats={'execution_samples': 605611, 'total_samples': 1192918}
+  provenance(finalize 节点): host=ip-10-242-11-177.us-west-2.compute.internal gpu=NVIDIA A100-SXM4-80GB jax=0.5.3
+  provenance(构建分片): gpu=NVIDIA A100-SXM4-80GB jax=0.5.3 commit=0233f17b1f91 节点=4 个 全体同源 ✓
+全部检查通过 PASS
+FINALIZE_EXIT_CODE=0
+END_UTC=2026-09-14T20:44:48Z
+EXIT_CODE=0

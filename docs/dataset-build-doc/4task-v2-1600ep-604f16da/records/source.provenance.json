@@ -1,0 +1,135 @@
+{
+  "produced_by": "scripts/dataset/build_shard.py",
+  "finalize_host": "ip-10-242-11-177.us-west-2.compute.internal",
+  "host": "ip-10-242-11-177.us-west-2.compute.internal",
+  "slurm_job": "",
+  "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+  "jax": "0.5.3",
+  "jaxlib": "0.5.3",
+  "git_commit": "0233f17b1f91a875b0005f66189b0757f1e530db",
+  "manifest_sha256": "4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918",
+  "raw_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2",
+  "resource_tier": {
+    "cpus_per_task": "",
+    "mem_per_node_mb": ""
+  },
+  "shard_fingerprints": {
+    "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+    "jax": "0.5.3",
+    "jaxlib": "0.5.3",
+    "git_commit": "0233f17b1f91a875b0005f66189b0757f1e530db",
+    "hosts": [
+      "ip-10-242-11-177.us-west-2.compute.internal",
+      "ip-10-242-11-177.us-west-2.compute.internal",
+      "ip-10-242-11-177.us-west-2.compute.internal",
+      "ip-10-242-11-177.us-west-2.compute.internal"
+    ],
+    "slurm_jobs": [
+      "",
+      "",
+      "",
+      ""
+    ],
+    "resource_tiers": [
+      {},
+      {},
+      {},
+      {}
+    ],
+    "shards_with_fingerprint": 4
+  },
+  "shards": [
+    {
+      "schema_version": 2,
+      "shard_idx": 0,
+      "num_shards": 4,
+      "episodes_done": 399,
+      "episodes_skipped": 17,
+      "steps": 297278,
+      "elapsed_s": 3944.205101643689,
+      "rate_step_per_s": 75.37082690657081,
+      "rate_steady_step_per_s": 76.21193837843227,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu4",
+        "cuda_visible_devices": "4",
+        "gpu_uuid": "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "0233f17b1f91a875b0005f66189b0757f1e530db",
+        "pid": 1110442
+      }
+    },
+    {
+      "schema_version": 2,
+      "shard_idx": 1,
+      "num_shards": 4,
+      "episodes_done": 404,
+      "episodes_skipped": 2,
+      "steps": 301141,
+      "elapsed_s": 3944.606337813195,
+      "rate_step_per_s": 76.3424722799959,
+      "rate_steady_step_per_s": 77.15913853336238,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu5",
+        "cuda_visible_devices": "5",
+        "gpu_uuid": "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "0233f17b1f91a875b0005f66189b0757f1e530db",
+        "pid": 1110438
+      }
+    },
+    {
+      "schema_version": 2,
+      "shard_idx": 2,
+      "num_shards": 4,
+      "episodes_done": 397,
+      "episodes_skipped": 22,
+      "steps": 296791,
+      "elapsed_s": 3942.704717766028,
+      "rate_step_per_s": 75.27598976982594,
+      "rate_steady_step_per_s": 76.05928376935755,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu6",
+        "cuda_visible_devices": "6",
+        "gpu_uuid": "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "0233f17b1f91a875b0005f66189b0757f1e530db",
+        "pid": 1110439
+      }
+    },
+    {
+      "schema_version": 2,
+      "shard_idx": 3,
+      "num_shards": 4,
+      "episodes_done": 400,
+      "episodes_skipped": 11,
+      "steps": 297708,
+      "elapsed_s": 3942.906611879822,
+      "rate_step_per_s": 75.50470485479356,
+      "rate_steady_step_per_s": 76.30789624328615,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu7",
+        "cuda_visible_devices": "7",
+        "gpu_uuid": "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "0233f17b1f91a875b0005f66189b0757f1e530db",
+        "pid": 1110440
+      }
+    }
+  ],
+  "stats": {
+    "execution_samples": 605611,
+    "total_samples": 1192918
+  }
+}

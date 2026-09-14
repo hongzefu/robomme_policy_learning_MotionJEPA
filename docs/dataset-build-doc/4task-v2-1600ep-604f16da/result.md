@@ -1,6 +1,6 @@
 # 1600 集正式建库进行中
 
-当前已完成物理合并、full 验真及独立输入指纹：1600 条 primary 的本地源 SHA256 全部与固定 MANIFEST 相符，四任务各 400 条，源 timestep 合计 1,192,918。四个合并 H5 合计 791,769,480,668 B；48 个分片的全部数值与结构对拍零差异，MERGE_DONE 与随后独立计算的 input_manifest 四文件摘要全部一致。正式清单确认 605,611 个执行样本。SigLIP、framesamp、norm_stats 和训练可读性尚未执行；本文件不将阶段性通过写成最终交付通过。
+当前已完成物理合并、full 验真、独立输入指纹、正式 SigLIP 及 finalize：1600 条 primary，1,192,918 个源时步，605,611 个执行样本。四个合并 H5 合计 791,769,480,668 B；源摘要、全部 H5 数值/结构对拍、输出摘要及再次输入核验均通过。SigLIP 四 worker 成功，finalize 的完整性、版本一致性及 1024 条零容差抽检通过。两档 framesamp、norm_stats 和训练可读性仍待完成；本文件不将阶段性通过写成最终交付通过。
 
 ## 合并实测
 
@@ -61,6 +61,41 @@ MERGE_DONE 的 level、source_pin、四份 map 的当前 SHA256、选取参数�
 
 本轮新增合并脚本与测试，并按用户“允许最小改动，实现四文件并行”修改 `finalize_checks.check_inputs` 的摘要调度。没有修改 builder、dataloader、训练模型或全局超参。计划记载的 `is_completed` 后缀沿用上一帧 subgoal 属既有行为，本轮不改；计划中的 37,219 步统计不是本轮重新统计的结果。
 
+## 正式 SigLIP 与 finalize
+
+SigLIP 于 `2026-09-14T19:22:45Z` 从 `cd99ce44872e8730b9383cca5add8c4b0a2dac88` 起跑，工作区干净，会话 `v2b-siglip-20260914T174147Z`，pane PID/PGID `1110303`，采样器 PID `1110324`。GPU 固定 4–7，启动使用现有 `--require-free-mib 70000` 参数核实空闲显存。于 `20:28:50.691321Z` 正常结束，3965.69 秒（约 66 分 6 秒），sampler 由本轮精确 PID 清理。四片实际处理 episode 数为 399/404/397/400，总和 1600；源时步总和 1,192,918。
+
+```text
+STAGE_DONE stage=siglip workers=4 items=1600 elapsed=3965s
+feature 目录缺失=0  pkl 实得=605611 期望=605611
+sidecar=4 覆盖 episode=1600 残留 claim=0
+FINALIZE_EXIT_CODE=0
+EXIT_CODE=0
+```
+
+finalize 会话为 `v2b-finalize-20260914T174147Z`，从 `0233f17b1f91a875b0005f66189b0757f1e530db` 于 `20:29:38Z` 启动，pane PID/PGID `1217259`。保留 `--input_level sha256 --spot_check 1024`，仅重算抽检时使用 GPU 7。五项检查全部通过，于 `20:44:48.679535Z` 退出 0，耗时 910.68 秒；`source.stats` 最终为 `execution_samples=605611`、`total_samples=1192918`。
+
+### 版本并行事件与检查口径
+
+本轮遵守 SigLIP 至 finalize 之间不提交。HF 任务在此期间产生 `73928536b3c0f22e0d74184070e1e777562c8a30` 和 `0233f17b1f91a875b0005f66189b0757f1e530db`；diff 仅涉及 HF 导出脚本与其档案，实际消费代码和依赖无差异。`build_shard.main` 在结束处采集 Git HEAD，因此四个 worker 均记录 `0233f17b…`，与启动 `cd99ce4…` 的采集时刻不同。
+
+代理的一次附加检查错误地要求“结束 HEAD 等于启动 HEAD”，触发 `AssertionError`。随后核对四片结束版本唯一、处理数与覆盖数正确、实际代码未变；原 finalize 的跨片一致性和全部数据守卫均通过。没有修改生产守卫，也没有改写 worker 记录。事件详情保存在 `version-precheck-event.json`，起跑原始记录保存在 `siglip.start.json`。
+
+### 吞吐共处与采样
+
+SigLIP 启动时已有的 epoch 62 只作为基线：原始监视首行虽标 PASS，其时间窗口早于本阶段，不能用于证明共处。真正的新 epoch 63/64/65/66 吞吐依次为 872.5478001944947、871.8584157365709、871.7257345026377、872.1236876850226 samples/s，均未低于 865.26；finalize 阶段 epoch 67 为 872.7780757243082，同样通过。整个阶段没有发送暂停信号。
+
+GPU 记录请求间隔 500 ms，实际平均约 0.50087 秒；以启动后 120 秒为预热区间，稳态窗口为 `19:24:45.471Z` 至约 `20:28:50.157Z`，每卡 7677 条读数。下表为时间加权利用率均值、0% 读数占比与显存峰值；相邻 NVML 读数可能来自同一内部窗口，不视为独立证据。本轮未采逐步耗时，不据这些量给出慢步/其他步分层或瓶颈结论。
+
+| GPU | 利用率均值 | 0% 读数占比 | 显存峰值 MiB |
+|---|---:|---:|---:|
+| 4 | 37.40% | 1.211% | 62907 |
+| 5 | 37.95% | 1.016% | 62907 |
+| 6 | 37.42% | 1.172% | 62907 |
+| 7 | 37.58% | 1.042% | 62907 |
+
+`_shard*.json` 中源时步的稳态处理速率为每 worker 76.06–77.16 step/s，初次 episode 已由原脚本统计口径排除。这些是当前 AWS 本地 NVMe RAID、四 worker、现有 SigLIP 入口的实测，不与旧 NFS 数字混比。
+
 ## 已归档与待补
 
-records 已包含来源 pin、选取计划、全部四份 map、任务目标变体、`merge.measurements.json`、MERGE_DONE、正式 episode/input manifest、合并/full 验真/输入指纹清洗日志和相应吞吐监视记录。完整日志保留在 v1-store，清洗日志保留所有完成与退出判定行。后续追加两档 store_meta、norm_stats 摘要、各阶段日志及 20 步可读性结果，并更新本文件为最终结论。
+records 已包含来源 pin、选取计划、全部四份 map、任务目标变体、`merge.measurements.json`、MERGE_DONE、正式 episode/input manifest、source stats/provenance、四片元数据、截至 finalize 的清洗日志与吞吐监视、SigLIP GPU 原始采样及汇总、版本检查事件。完整日志保留在 v1-store，清洗日志保留所有完成与退出判定行。后续追加两档 store_meta、norm_stats 摘要、各阶段日志及 20 步可读性结果，并更新本文件为最终结论。

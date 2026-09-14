@@ -1,0 +1,19 @@
+{
+  "stage": "siglip",
+  "start_utc": "2026-09-14T19:22:45Z",
+  "start_head": "cd99ce44872e8730b9383cca5add8c4b0a2dac88",
+  "session": "v2b-siglip-20260914T174147Z",
+  "pane_pid": 1110303,
+  "pgid": 1110303,
+  "sampler_pid": 1110324,
+  "gpus": [
+    4,
+    5,
+    6,
+    7
+  ],
+  "require_free_mib": 70000,
+  "initial_existing_epoch": 62,
+  "first_in_stage_completed_epoch": 63,
+  "note": "守卫启动时读到的 epoch 62 已在本阶段开始前完成，虽然原始工具行标作 PASS，这里只作为已有基线，不作为 SigLIP 共处证据。已核验所有 worker 与 uv 进程均属于本轮 PGID。"
+}
