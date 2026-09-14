@@ -1,0 +1,53 @@
+{
+  "date": "2026-09-14",
+  "source": "v1-store/fixtures/8x8/40ep/cand-c8/samples/arrays/0",
+  "jax_enable_x64": false,
+  "backend": "cpu",
+  "batch_size": 8,
+  "fields": {
+    "static_image_emb": {
+      "sample_shape": [
+        512,
+        2048
+      ],
+      "host_dtype": "bfloat16",
+      "device_dtype": "bfloat16",
+      "sample_bytes": 2097152,
+      "batch_host_bytes": 16777216,
+      "batch_device_bytes": 16777216
+    },
+    "static_pos_emb": {
+      "sample_shape": [
+        512,
+        768
+      ],
+      "host_dtype": "float32",
+      "device_dtype": "float32",
+      "sample_bytes": 1572864,
+      "batch_host_bytes": 12582912,
+      "batch_device_bytes": 12582912
+    },
+    "static_state_emb": {
+      "sample_shape": [
+        512,
+        8
+      ],
+      "host_dtype": "float64",
+      "device_dtype": "float32",
+      "sample_bytes": 32768,
+      "batch_host_bytes": 262144,
+      "batch_device_bytes": 131072
+    },
+    "static_mask": {
+      "sample_shape": [
+        512
+      ],
+      "host_dtype": "bool",
+      "device_dtype": "bool",
+      "sample_bytes": 512,
+      "batch_host_bytes": 4096,
+      "batch_device_bytes": 4096
+    }
+  },
+  "method": "从40ep已取证C8数组读取四个static键，np.stack为batch8，再调用jax.make_array_from_process_local_data；不修改训练精度。"
+}
