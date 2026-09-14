@@ -224,31 +224,55 @@ v1-store/datasets/4task-motion-400ep/framesamp-8x8/    正式库，后建
 
 #### 第二块验收：同机真实训练 1000 次更新
 
-**两组等价关系**，每组各在 motion 开/关两态下做，共四个 profile：
+**这一节在干什么。** 第一块只证明了「喂进模型的数据一样」，但数据一样不等于训练一样，中间还有 transforms、collate、JAX 交付、前向、反向、优化器一整串。最稳的办法是真的训一遍，把每一步的数字拿出来逐位比。所以这里要跑 12 条正式 run，每条 1000 次参数更新，两两比对。
 
-| profile | 参考 A（A1、A2 各跑一次） | 候选 B | 证明什么 |
-|---|---|---|---|
-| C32 / M32 | 参考 commit 的代码 + 旧 4×4 库 | 候选 commit 的代码 + 同一旧 4×4 库 | 旧能力没被改坏 |
-| C8 / M8 | 参考 commit 的代码 + 参考链 `RefNpyFrameSampDataset` 直读源 npy | 候选 commit 的代码 + 新 8×8 库 | 新库 + 新 Dataset 交付与直读源数据等价 |
+**总共跑几组。** 四个配置，每个配置三条，共 12 条：
+
+| 配置 | motion | run 1（A1，参考） | run 2（A2，参考重跑） | run 3（B，候选） | 跑在哪对卡 |
+|---|---|---|---|---|---|
+| C32 | 关 | 旧代码 + 旧 4×4 库 | 同 A1 再跑一遍 | 新代码 + 旧 4×4 库 | GPU 0,1 |
+| M32 | 开 | 旧代码 + 旧 4×4 库 | 同 A1 再跑一遍 | 新代码 + 旧 4×4 库 | GPU 2,3 |
+| C8 | 关 | 新代码 + 直读源 npy 的验证用 Dataset | 同 A1 再跑一遍 | 新代码 + 新 8×8 库 | GPU 4,5 |
+| M8 | 开 | 新代码 + 直读源 npy 的验证用 Dataset | 同 A1 再跑一遍 | 新代码 + 新 8×8 库 | GPU 6,7 |
+
+「旧代码」是阶段 1 结束时冻结的参考 commit `REF`（量具、yaml、缓存落点已加，但库格式与 Dataset 还没改）；「新代码」是阶段 2 结束的候选 commit `CAND`。每条都是 1000 步、batch 8、seed 42、2 卡。
+
+**比法。** 每一行里先比 run 1 和 run 2：这两条代码、数据、seed 全一样，如果它们自己都对不上，说明管线有随机抖动，后面的比较没有意义。run 1 == run 2 成立后，再比 run 1 和 run 3，这才是「改动没改数」的证据。行与行之间不比：32 帧和 8 帧本来就该不一样，motion 开和关也不该一样。
+
+**「直读源 npy 的验证用 Dataset」和「新 8×8 库」是什么、有什么区别。** 数据是同一份，读法不同：
+
+- **新 8×8 库**是第一块打出来的三张大表 `framesamp-8x8/`，训练时 `FrameSampDataset` 按行号从大表里读 8 帧。这是生产链路，以后正式训练走的就是它。它是本轮新写的代码加新打的库，两样都是待验证的东西。
+- **直读源 npy 的验证用 Dataset**（`scripts/training/tests/ref_npy_dataset.py::RefNpyFrameSampDataset`）不经过大表，直接打开源库里每帧的 `token_emb_{t}.npy`，把 8 帧的 `image_emb_8x8 / pos_emb_8x8 / state_emb` 拼起来。它绕开了「打包」和「新 Dataset」这两个本轮改动的环节，只用改动前就存在的函数：选帧 `even_sampling_indices`、补零 `right_padding_token_emb`、同一条归一化公式。所以它是正确答案，慢、不进生产、只为对拍存在。
+
+打个比方：新库是把原始账本誊抄成表格，验证用 Dataset 是直接翻原始账本。两边训出来逐位一样，才能说誊抄没抄错。32 帧配置不需要这个，因为改动前的代码跑旧库本身就是正确答案。
 
 参考侧的 8 帧 Dataset 通过 `bench_train_steps.py` 的测试专用开关 `BENCH_DATASET_IMPL=refnpy` 注入（bench 已经在 monkeypatch `train.wandb`、`_checkpoints.save_state`、`init_train_state`、`TorchDataLoader.__iter__`，再替换 `dataloader._create_framesamp_dataset` 是同一类只读注入），生产 loader 不加任何 fallback。
 
-**档位**（沿用 2026-09-04 `aws-t2-ref-s100` / `aws-t2-cand-s100` 的写法，只把步数从 100 提到 1000）：global batch 8、seed 42、4 worker、2 卡 `--fsdp-devices 2`、`XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'`、`XLA_PYTHON_CLIENT_MEM_FRACTION=0.95`、`WANDB_MODE=disabled`、数据用 400ep 库（1000 × 8 = 8000 < 101,066，单 epoch 内）。这些是本次启动覆盖参数，不改全局默认值，起跑前确认。
+**每一步比什么。** 训练用现成的 `bench_train_steps.py` 起，它不改训练逻辑，只在旁边记录四样东西，两条轨迹逐位比：
 
-**GPU 分配**：同一 profile 的 A1、A2、B 必须在同一对卡上顺序跑；不同 profile 用不同卡对并行——C32 用 GPU 0,1、M32 用 2,3、C8 用 4,5、M8 用 6,7。三轮串行 × 四组并行，总墙钟约等于一条 1000 步轨迹的 3 倍。单条耗时以先跑的 100 步排错 run 外推；环境 A 2×Ada 上 1000 步约 2.5 h 只作量级参考，不混比。
+1. 每一步的 `loss`、`grad_norm`、`llm_grad_norm`、`mem_enc_norm`、`param_norm` 五个标量，记的是浮点数的 `float.hex()`，不是四位小数。
+2. 在第 0、1、2、25、50、100、200、400、600、800、1000 次更新时，把完整 TrainState（params + AdamW 动量 + EMA + step）逐叶 `sha256(dtype‖shape‖bytes)`。「第 k 次更新」按更新次数 `state_step` 定义：0 是 `init_train_state` 之后的初态，正整数 k 对应循环步 `loop_step = k-1` 更新之后。现有 bench 的 `param_checksums.step=0` 是初态、其他标签 s 是第 s 次循环后（已更新 s+1 次），两份记录的 step 字段不是同一时刻，量具要显式记 `phase` 与 `state_step`。
+3. 每个记录步喂进模型的那个 batch（collate 后 host 侧 numpy）逐键 raw sha，外加它用了哪些样本编号 `sample_indices`。
+4. 全程主进程抽取的 index 序列。
 
-**逐步比什么**：bench 每步记 `loss`、`grad_norm`、`llm_grad_norm`、`mem_enc_norm`、`param_norm` 五个标量的 `float.hex()`；摘要步记完整 TrainState（params + AdamW 动量 + EMA + step）逐叶 `sha256(dtype‖shape‖bytes)`；记录步记 collate 后 host 侧 batch 逐键 raw sha 与 `sample_indices`；全程记主进程抽取的 index 序列。判据一律逐位：
+任何一跳改了一个字节，都会在标量或哈希里露出来。判据一律逐位：
 
 - `SCALARS steps=1000 keys=5 hex_mismatch_steps=0`，并另核 `scalars_hex.tsv` 表头恰为六列（现有比较器对缺键静默 `continue` 仍打 `keys=5`，必须人工补位）。
-- `STATE_DIGEST` 在摘要步集合上 `mismatch=0`。摘要点按**更新次数** `state_step ∈ {0,1,2,25,50,100,200,400,600,800,1000}` 定义：0 是 `init_train_state` 之后的初态，正整数 k 对应循环步 `loop_step = k-1` 更新之后。现有 bench 的 `param_checksums.step=0` 是初态、其他标签 s 是第 s 次循环后（已更新 s+1 次），两份记录的 step 字段不是同一时刻，量具要显式记 `phase` 与 `state_step`。
+- `STATE_DIGEST` 在上面 11 个摘要点上 `mismatch=0`。
 - `BATCH_DIGEST` raw 口径在记录步集合上 `mismatch=0`，`sample_indices` 逐位相同，键集完整（12 键，motion 关闭态四键记为 None 而不是缺键）。
 - `INDEX_SEQ` 前 8000 个 index 逐项相同，且两侧 `n ≥ 8000`（现有比较器只比最短公共前缀，必须人工补位）。
-- 每个 profile 先 `A1 == A2`，再 `A1 == B`；基线自己不重复就不能放宽阈值宣称等价。
 - 参数叶数 `n_leaves` 要求 A1 = A2 = B，不再写死 177 / 193（那是下游 gate 的历史常量，模型没变所以数值应该不变，但判据不靠猜）。
+- 基线自己不重复（A1 ≠ A2）就不能放宽阈值宣称等价。
 
-**环境指纹**：起跑前用 `scripts/training/g0/check_baseline_env.py` 的指纹做 preflight，硬一致项包括 `uv.lock` sha、jax 0.5.3 / jaxlib 0.5.3 / flax 0.10.2 / optax 0.2.4 / numpy 1.26.4 / ml_dtypes 0.4.1 / torch 2.7.1、GPU 型号与驱动、`XLA_FLAGS`、x64 与 matmul precision、norm_stats sha（400ep 交付件 `v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json`，sha `750a8e9b…`）、tokenizer、pi05 底座权重抽样、源库抽样、**本库 manifest sha 与 motion store meta sha**。现有指纹只看根 `v1-store/episode_manifest.json`（环境 B 不存在，恒记 None），norm_stats 路径写死 `robomme/` 而非 `robomme-400ep/`，这两处要改。允许差异只有 `--exp-name`、`--checkpoint-base-dir`、C8/M8 的 `--dataset-path`、参考/候选 commit、`BENCH_DATASET_IMPL` 与 `BENCH_RECORD_DIR`，逐字段白名单。
+**为什么是 1000 步、batch 8、2 卡。** 1000 步是用户定死的口径，100 步短测只用来排错和估时。batch 8 与 2 卡沿用 2026-09-04 `aws-t2-ref-s100` / `aws-t2-cand-s100` 的档位：小到四组能并行，大到覆盖 FSDP 分片（`--fsdp-devices 2`）。1000 × 8 = 8000 个样本不到 400ep 库一个 epoch（101,066），避开 epoch 边界的抽样分叉。其余启动参数：seed 42、4 worker、`XLA_PYTHON_CLIENT_MEM_FRACTION=0.95`、`WANDB_MODE=disabled`。这些是本次启动覆盖参数，不改全局默认值，起跑前确认。
 
-**补充单步全梯度对拍**：全短、全满、混合三种真实 batch 各一个，用 `single_step_grad.py` 记完整梯度树逐叶 sha，定位可能被梯度范数掩盖的差异；同配置两侧逐位相等。
+**为什么要确定性 flag。** `XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'` 关掉 GPU 上的非确定性归约与自动调优，同样的输入两次跑出来才逐位相同。生产训练默认档做不到这一点，所以对拍必须开。
+
+**卡怎么排、要多久。** 同一个配置的三条必须在同一对卡上顺序跑，因为不同卡对可能有极小的数值差异；四个配置分到四对卡同时跑，总墙钟约等于三条的时间，不是十二条。单条耗时以先跑的 100 步排错 run 外推；环境 A 2×Ada 上 1000 步约 2.5 h 只作量级参考，不混比。正式跑之前每个配置先跑一次 100 步短版本（run_name 加 `-s100`）排错、估时，跑完清理，不算数。
+
+**环境指纹。** 起跑前用 `scripts/training/g0/check_baseline_env.py` 的指纹做 preflight，硬一致项包括 `uv.lock` sha、jax 0.5.3 / jaxlib 0.5.3 / flax 0.10.2 / optax 0.2.4 / numpy 1.26.4 / ml_dtypes 0.4.1 / torch 2.7.1、GPU 型号与驱动、`XLA_FLAGS`、x64 与 matmul precision、norm_stats sha（400ep 交付件 `v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json`，sha `750a8e9b…`）、tokenizer、pi05 底座权重抽样、源库抽样、**本库 manifest sha 与 motion store meta sha**。现有指纹只看根 `v1-store/episode_manifest.json`（环境 B 不存在，恒记 None），norm_stats 路径写死 `robomme/` 而非 `robomme-400ep/`，这两处要改。允许差异只有 `--exp-name`、`--checkpoint-base-dir`、C8/M8 的 `--dataset-path`、参考/候选 commit、`BENCH_DATASET_IMPL` 与 `BENCH_RECORD_DIR`，逐字段白名单。
+
+**补充单步全梯度对拍。** 全短、全满、混合三种真实 batch 各一个，用 `single_step_grad.py` 记完整梯度树逐叶 sha，定位可能被梯度范数掩盖的差异；同配置两侧逐位相等。
 
 #### 交付判定与边界
 
