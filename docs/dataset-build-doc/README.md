@@ -32,6 +32,8 @@
 | [`hf-export-motionjepa-encoder-v1/`](hf-export-motionjepa-encoder-v1/launch.md) | MotionJEPA encoder + decoder 上传（含 [model card](hf-export-motionjepa-encoder-v1/model-card.md)） |
 | [`hf-export-robomme-vla-motionjepa-v1/`](hf-export-robomme-vla-motionjepa-v1/launch.md) | 整体 VLA + motion 发布仓；实录在根目录 `HF-EXPORT-robomme-vla-motionjepa-v1.md` |
 | [`hf-export-4task-motion-400ep-20260904-v1/`](hf-export-4task-motion-400ep-20260904-v1/launch.md) | `4task-motion-400ep` 全库（130 GB / 22.9 万文件）上传到**公开** bucket；含公开前体检闸门与裁决账本 |
+| [`hf-export-motionjepa-full1600-20260914-v1/`](hf-export-motionjepa-full1600-20260914-v1/launch.md) | MotionJEPA full1600 产物（2804 件 / 479.5 GB 的 Wan chunk latent + motion 表 + `control/` 溯源）上传到**公开** bucket；多一层「`PUBLISHED.json` 自带清单」校验，分批按字节预算装箱 |
+| [`hf-export-h5v2-rehost-20260914/`](hf-export-h5v2-rehost-20260914/launch.md) | 四任务 h5（2057 件 / 126.6 GB）由 dataset repo **搬迁**为同名公开 bucket 并删除原 repo；1978 件走服务端零字节复制，六层校验 + 删除前元数据快照 |
 
 ## 已归档（环境 A，`docs/archive/dataset-build-doc/`）
 
