@@ -1,0 +1,757 @@
+=== 起跑 2026-09-14T17:41:58+00:00 commit=04d9ac421cb7793737acd08128c83b680a28b077 ===
+阶段0开始：凭据与身份
+  whoami: user=HongzeFu orgs=umich 
+HF_WHOAMI=HongzeFu
+阶段0完成
+阶段1开始：组装 stage（硬链接，零拷贝）
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+STAGE_PUBLISHED files=2804 linked=0 skipped=2804
+STAGE_CONTROL_PLAIN linked=0 skipped=183
+STAGE_CONTROL_TAR content_hashes members=2800 (已存在，跳过)
+STAGE_DONE files=2991 bytes=479545649918
+STAGE_SIDECARS=0
+阶段1完成
+阶段2开始：上传前 sha256 + 对 PUBLISHED.json 自带清单逐条核对
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+PUBLISHED_SHA_MATCH=2804 expected=2804 missing=0 mismatches=0
+LOCAL_FILES=2991 LOCAL_BYTES=479545649918
+PRE_LINES=2990
+阶段2完成
+阶段3开始：公开前体检（扫 stage，在 create 之前）
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  扫描 175 个文本文件，排除 0 个（[]）
+  P10 非公开仓库名（独立引用）: 5 处命中
+  P7 构建机内部主机名: 2801 处命中
+  P9 构建机绝对路径 / 仓库名: 25380 处命中
+HYGIENE=PASS scanned=175 hits=28186 ungated=0
+阶段3完成
+阶段4开始：创建公开 bucket HongzeFu/robomme-4task-motion-full1600-20260914-v1
+[32m✓ Bucket created[0m
+  uri: hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1
+  url: https://huggingface.co/buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1
+[32m✓ Bucket settings updated[0m
+  bucket_id: HongzeFu/robomme-4task-motion-full1600-20260914-v1
+  private: False
+[90mHint: Run `hf buckets info HongzeFu/robomme-4task-motion-full1600-20260914-v1` to view bucket details.[0m
+BUCKET_CREATED=HongzeFu/robomme-4task-motion-full1600-20260914-v1 PRIVATE=False
+BUCKET_FILES_AT_START=0 BUCKET_BYTES_AT_START=0
+阶段4完成
+阶段5开始：上传计划 dry-run（不写字节）
+SYNC_PLAN_LINES=2992 SYNC_PLAN_DELETES=0
+阶段5完成
+阶段6开始：分批上传
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+PLAN_BATCHES=58 PLAN_FILES=2991 PLAN_BYTES=479545649918 ROOT_FILES=6 MAX_BATCH_BYTES=8588427264 MAX_BATCH_FILES=184 PLAN_SHA=0d81533db32e6d4f
+  control: 184 件 → 1 批
+  wan_chunk_latents: 2801 件 → 57 批
+PLAN_BATCHES=58 PLAN_FILES=2991 PLAN_BYTES=479545649918 MAX_BATCH_BYTES=8588427264
+  [1/58] control-0000  184 件 / 65782845 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/control -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/control
+  Uploads: 184
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: control (184 项)
+  [2/58] wan_chunk_latents-0000  35 件 / 8419737600 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 35
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (35 项)
+  [3/58] wan_chunk_latents-0001  25 件 / 8416788480 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 25
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (25 项)
+  [4/58] wan_chunk_latents-0002  27 件 / 8235122688 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 27
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (27 项)
+  [5/58] wan_chunk_latents-0003  25 件 / 8200323072 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 25
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (25 项)
+  [6/58] wan_chunk_latents-0004  26 件 / 8373141504 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 26
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (26 项)
+  [7/58] wan_chunk_latents-0005  26 件 / 8392605696 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 26
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (26 项)
+  [8/58] wan_chunk_latents-0006  23 件 / 8195604480 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 23
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (23 项)
+  [9/58] wan_chunk_latents-0007  20 件 / 8392605696 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (20 项)
+  [10/58] wan_chunk_latents-0008  20 件 / 8399683584 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (20 项)
+  [11/58] wan_chunk_latents-0009  21 件 / 8362524672 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 21
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (21 项)
+  [12/58] wan_chunk_latents-0010  20 件 / 8405581824 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (20 项)
+  [13/58] wan_chunk_latents-0011  18 件 / 8255766528 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 18
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (18 项)
+  [14/58] wan_chunk_latents-0012  20 件 / 8328904704 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (20 项)
+  [15/58] wan_chunk_latents-0013  20 件 / 8412659712 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (20 项)
+  [16/58] wan_chunk_latents-0014  32 件 / 8561295360 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 32
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (32 项)
+  [17/58] wan_chunk_latents-0015  36 件 / 8561295360 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 36
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (36 项)
+  [18/58] wan_chunk_latents-0016  72 件 / 8566013952 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 72
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (72 项)
+  [19/58] wan_chunk_latents-0017  80 件 / 8517058560 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 80
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (80 项)
+  [20/58] wan_chunk_latents-0018  81 件 / 8498184192 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 81
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (81 项)
+  [21/58] wan_chunk_latents-0019  63 件 / 8566603776 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 63
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (63 项)
+  [22/58] wan_chunk_latents-0020  63 件 / 8481079296 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 63
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (63 项)
+  [23/58] wan_chunk_latents-0021  64 件 / 8577220608 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 64
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (64 项)
+  [24/58] wan_chunk_latents-0022  51 件 / 8515878912 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 51
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (51 项)
+  [25/58] wan_chunk_latents-0023  36 件 / 8350728192 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 36
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (36 项)
+  [26/58] wan_chunk_latents-0024  37 件 / 8331853824 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 37
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (37 项)
+  [27/58] wan_chunk_latents-0025  37 件 / 8328904704 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 37
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (37 项)
+  [28/58] wan_chunk_latents-0026  36 件 / 8350728192 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 36
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (36 项)
+  [29/58] wan_chunk_latents-0027  37 件 / 8567783424 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 37
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (37 项)
+  [30/58] wan_chunk_latents-0028  117 件 / 8588427264 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 117
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (117 项)
+  [31/58] wan_chunk_latents-0029  71 件 / 8457486336 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 71
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (71 项)
+  [32/58] wan_chunk_latents-0030  47 件 / 8563654656 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 47
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (47 项)
+  [33/58] wan_chunk_latents-0031  46 件 / 8583708672 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 46
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (46 项)
+  [34/58] wan_chunk_latents-0032  45 件 / 8509390848 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 45
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (45 项)
+  [35/58] wan_chunk_latents-0033  45 件 / 8577220608 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 45
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (45 项)
+  [36/58] wan_chunk_latents-0034  45 件 / 8442740736 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 45
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (45 项)
+  [37/58] wan_chunk_latents-0035  45 件 / 8489926656 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 45
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (45 项)
+  [38/58] wan_chunk_latents-0036  46 件 / 8580169728 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 46
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (46 项)
+  [39/58] wan_chunk_latents-0037  39 件 / 8349548544 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 39
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (39 项)
+  [40/58] wan_chunk_latents-0038  40 件 / 8517648384 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 40
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (40 项)
+  [41/58] wan_chunk_latents-0039  39 件 / 8341291008 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 39
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (39 项)
+  [42/58] wan_chunk_latents-0040  39 件 / 8556576768 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 39
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (39 项)
+  [43/58] wan_chunk_latents-0041  38 件 / 8488747008 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 38
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (38 项)
+  [44/58] wan_chunk_latents-0042  40 件 / 8505262080 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 40
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (40 项)
+  [45/58] wan_chunk_latents-0043  39 件 / 8409120768 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 39
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (39 项)
+  [46/58] wan_chunk_latents-0044  41 件 / 8438022144 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 41
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (41 项)
+  [47/58] wan_chunk_latents-0045  51 件 / 8552448000 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 51
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (51 项)
+  [48/58] wan_chunk_latents-0046  48 件 / 8451588096 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 48
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (48 项)
+  [49/58] wan_chunk_latents-0047  96 件 / 8547729408 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 96
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (96 项)
+  [50/58] wan_chunk_latents-0048  155 件 / 8528265216 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 155
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (155 项)
+  [51/58] wan_chunk_latents-0049  76 件 / 8550678528 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 76
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (76 项)
+  [52/58] wan_chunk_latents-0050  79 件 / 8566603776 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 79
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (79 项)
+  [53/58] wan_chunk_latents-0051  75 件 / 8531214336 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 75
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (75 项)
+  [54/58] wan_chunk_latents-0052  59 件 / 8538882048 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 59
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (59 项)
+  [55/58] wan_chunk_latents-0053  62 件 / 8505851904 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 62
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (62 项)
+  [56/58] wan_chunk_latents-0054  64 件 / 8560705536 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 64
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (64 项)
+  [57/58] wan_chunk_latents-0055  90 件 / 8525316096 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 90
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (90 项)
+  [58/58] wan_chunk_latents-0056  73 件 / 5336156784 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/wan_chunk_latents -> hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/wan_chunk_latents
+  Uploads: 73
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: wan_chunk_latents (73 项)
+UPLOAD_DONE batches=58
+  根下平文件 6 个（sync 的源必须是目录，这些走 cp）
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/DATASET_NOTES.json
+  dst: hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/DATASET_NOTES.json
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/FINALIZE_DONE.json
+  dst: hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/FINALIZE_DONE.json
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/PUBLISHED.json
+  dst: hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/PUBLISHED.json
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/README.md
+  dst: hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/README.md
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/SHA256SUMS.pre.txt
+  dst: hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/SHA256SUMS.pre.txt
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+New Data Upload               : |          |  0.00B /  0.00B            [A
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage/chunk_motion.npz
+  dst: hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1/chunk_motion.npz
+阶段6完成
+阶段7开始：计数层核对（REST API，异步滞后则复查一次）
+  首次不符（files=2990 bytes=479227199106），统计接口可能异步滞后，120s 后复查
+BUCKET_FILES=2991 BUCKET_BYTES=479545649918
+阶段7完成
+阶段8开始：全量回读到 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/verify（479.5 GB）
+Sync plan: hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/verify
+  Uploads: 0
+  Downloads: 2991
+  Deletes: 0
+  Skips: 0
+Syncing...
+Sync completed.
+阶段8完成
+阶段9开始：上传后 sha256（POST）+ 与上传前逐行对照
+SHA256_PRE_POST_DIFF=0
+  sha256sum -c 校验行数: 2990
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+MEMBERS_SPOT=PASS tar_members=2800 checked=200 mismatches=0
+RESULT=PASS
+阶段9完成
+阶段10开始：源侧第三遍 sha256（证明硬链接未改动原件）
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SRC_UNCHANGED=OK checked=2804 mismatches=0
+阶段10完成
+阶段11开始：公开性确认
+BUCKET_PUBLIC=True
+Sync plan: hf://buckets/HongzeFu/robomme-4task-motion-full1600-20260914-v1 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/tmp/anon
+  Uploads: 0
+  Downloads: 1
+  Deletes: 0
+  Skips: 0
+Syncing...
+Sync completed.
+PUBLIC_ANON_READ=OK
+阶段11完成
+全部完成
+EXIT_CODE=0

@@ -1,0 +1,98 @@
+{
+ "root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-motionjepa-full1600/stage",
+ "scope": "source",
+ "files_scanned": 175,
+ "files_excluded": 0,
+ "excluded_globs": [],
+ "total_hits": 28186,
+ "ungated": [],
+ "ungated_total": 0,
+ "count_mismatch": [],
+ "by_pattern": {
+  "P5": 0,
+  "P1": 0,
+  "P2": 0,
+  "P3": 0,
+  "P4": 0,
+  "P6": 0,
+  "P10": 5,
+  "P11": 0,
+  "P7": 2801,
+  "P8": 0,
+  "P9": 25380
+ },
+ "by_pattern_dir": {
+  "P9|FINALIZE_DONE.json": 18,
+  "P7|README.md": 1,
+  "P10|README.md": 2,
+  "P10|control": 3,
+  "P9|control": 22562,
+  "P7|wan_chunk_latents": 2800,
+  "P9|wan_chunk_latents": 2800
+ },
+ "accept_entries": [
+  {
+   "pattern": "P9",
+   "path_glob": "control/*",
+   "expected_count": 22562,
+   "decision": "accept",
+   "scope": "source",
+   "reason": "control/ 下溯源 JSON 保留建库当时的本机绝对路径（scope.json 与 preview*.json 占绝大多数，另有 run_manifest.json、launch.json、extract_attempt.json、timings.json 等，以及 policies/*/logs/ 下 4 个策略决策日志）。路径对外不可达、不含凭据，而 control/ 的全部价值就是溯源——抹掉路径等于抹掉它要记录的东西。这些 JSON 还参与 policy 与 identity 的哈希绑定，改一字即断链。用户 2026-09-14 拍板原样保留 + bucket README 披露。",
+   "got": 22562
+  },
+  {
+   "pattern": "P10",
+   "path_glob": "control/*",
+   "expected_count": 3,
+   "decision": "accept",
+   "scope": "source",
+   "reason": "environment.json 的解释器路径与 policies/ 下 2 处出现 MotionJEPA 这个仓库名。该仓库匿名访问 404（私有），但其名字与完整 GitHub 链接在已公开的 robomme_policy_learning_MotionJEPA 仓库的 AGENTS.md 正文里本就写着，泄露增量为零。用户 2026-09-14 拍板原样保留 + README 披露。",
+   "got": 3
+  },
+  {
+   "pattern": "P7",
+   "path_glob": "wan_chunk_latents/*",
+   "expected_count": 2800,
+   "decision": "accept",
+   "scope": "source",
+   "reason": "wan_chunk_latents/metadata.json 每条记录带 hostname 字段，值为构建机的 AWS VPC 内部 DNS 名 ip-10-242-11-177.us-west-2.compute.internal（2800 条记录同一台机器）。它记录『这段 latent 在哪台机器上算出』，属可复现性信息；10.x 是 RFC 1918 私有地址，对外不可路由、不是凭据、无可达攻击面。该文件是发布清单必需件——下游靠它读每段 latent 的 shape/dtype/偏移，排除它等于让 2800 个 .bin 无法使用；而改字节会让 PUBLISHED.json 的 sha256 校验链整体失配。用户 2026-09-14 在被明确告知该字段含私有 IP 与 region 后拍板『原样传 + README 披露』。",
+   "got": 2800
+  },
+  {
+   "pattern": "P9",
+   "path_glob": "wan_chunk_latents/*",
+   "expected_count": 2800,
+   "decision": "accept",
+   "scope": "source",
+   "reason": "同一份 metadata.json 的同 2800 条记录里还记着每段 latent 的源 h5 本机绝对路径（data-raw/<Task>_ep<N>/video_{demo,exec}.h5）。裁决同上：不可达、非凭据、属可复现性信息、且不能改字节。",
+   "got": 2800
+  },
+  {
+   "pattern": "P9",
+   "path_glob": "FINALIZE_DONE.json",
+   "expected_count": 18,
+   "decision": "accept",
+   "scope": "source",
+   "reason": "收尾统计里 18 处建库输出根的本机绝对路径。与 control/ 同理，且该文件的 sha256 在 PUBLISHED.json 清单内，不可改。",
+   "got": 18
+  },
+  {
+   "pattern": "P10",
+   "path_glob": "README.md",
+   "expected_count": 2,
+   "decision": "accept",
+   "scope": "source",
+   "reason": "bucket README 的『已知事项』段为了披露上面那条 P10 裁决，必须写出 MotionJEPA 这个名字。披露文本自身命中被披露的模式，是预期行为。",
+   "got": 2
+  },
+  {
+   "pattern": "P7",
+   "path_glob": "README.md",
+   "expected_count": 1,
+   "decision": "accept",
+   "scope": "source",
+   "reason": "bucket README 的『已知事项』段为了披露 metadata.json 里的主机名，原样写出了 ip-10-242-11-177.us-west-2.compute.internal 作为示例。同上，披露文本命中被披露的模式是预期行为。",
+   "got": 1
+  }
+ ]
+}
