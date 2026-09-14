@@ -8,6 +8,10 @@
 
 实现提交 `a0cdfe751fcd5bd4ce9fc7e4d5037dee03a4246e`（V9.4）包含新脚本、测试及用户批准的 `finalize_checks.check_inputs` 四文件并行 sha256。其余建库入口和训练链路未改。74 项测试、Ruff、diff 检查及一条真实 200 步 H5 对拍通过。各阶段日志先打印完整 `START_HEAD` 和 `git status --porcelain`；HF 在途工作按用户“继续工作 忽略huggingface的任务 但是要注意git”排除，并核查实际消费代码不变。SigLIP 到 finalize 期间本轮不提交。
 
+阶段 1/2 已于 `2026-09-14T17:50:56Z` 从 `3f6c8be3ed65ae27d923ef6828751c71a5e49404` 启动，当时 `git status --porcelain` 为空；tmux 为 `v2b-merge-20260914T174147Z`，pane PID/进程组为 `1045286`。日志为 `v1-store/logs/v2b-merge-20260914T174147Z.log`。前检 9 秒完成，`PLAN_OK tasks=4 selected=1600 role=primary:1600 max_timesteps=2304 prechecks=PASS`，合并从 `17:51:05Z` 开始。运行前后通过限定路径的 `git diff --quiet a0cdfe751fcd5bd4ce9fc7e4d5037dee03a4246e -- scripts/dataset ':(exclude)scripts/dataset/hf_export/**' src pyproject.toml uv.lock` 核对实际消费代码，避免 HF 提交被误当作链路改动。
+
+独立吞吐监听以 `tail --pid=1045286 -F` 等待训练 JSONL 的新增行；只对 epoch 56 起的新增记录执行阈值检查。低于阈值时，先验证 `/proc/1045286/cmdline` 含本轮唯一会话名且 PGID 等于该 PID，再对该进程组发送 `SIGSTOP`。它不向训练进程发信号。监视记录保存在对应 `.train-guard.jsonl`，启动读到的 epoch 55 标为 BASELINE。
+
 ## 数据来源与排序
 
 源根 `/scratch/hongze/robomme-4task-h5-20260912-v2`；来源 `HongzeFu/robomme-4task-h5-20260912-v2`，revision `604f16da36d6b6d175884df8fb687dc08e0a36eb`，MANIFEST sha256 `df992cdf5a768ae0f368e520b0d7be28a68ed4ce6ca6201967cf5d6654cf2bb9`。按任务分组，再按 easy、medium、hard、xhard 与原 episode 编号排序，编为每任务 `episode_0..399`。原 episode 号和 seed 不能单独作为全局身份；每行 map 保留难度、member、src_group 和原始身份。
@@ -80,3 +84,31 @@ CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/datase
 ## 归档与验收
 
 归档四份 episode map、source pin、MERGE_DONE、input_manifest、两档 store_meta、norm_stats SHA256 和清洗阶段日志，不归档 H5、权重、features 或配置脚本拷贝。结果需逐项列出真实判定行、阶段耗时、产物字节量、来源 manifest 摘要、canonical_order 和训练可读性结果；未执行项不标通过。
+
+## 计划中的 20 步训练可读性检查
+
+必须在正式库和新 norm_stats 全部完成之后执行，当前尚未起跑。唯一临时 run 名为 `v2b-read20-20260914T174147Z`。使用正式 `scripts/training/train.py` 与默认 `mme_vla_suite` 的 batch 64、worker 4、FSDP 4、seed 42 和学习率；只在 CLI 覆盖为 20 步，日志逐步记录。训练前额外经真实 dataloader 取一批，断言 `motion_emb/motion_pos/motion_mask/mem_order` 全部为 None。运行使用 detached tmux，完成后保留日志和指标，删除核实属于本轮的临时 checkpoint run。
+
+以下补充于各阶段共用基础环境；使用四张获准 GPU，不改全局配置。WANDB 关闭，JAX 和 WANDB 缓存均明确留在 v1-store。
+
+```bash
+export CUDA_VISIBLE_DEVICES=4,5,6,7
+unset JAX_PLATFORMS
+export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
+export MMEVLA_JAX_CACHE_DIR="$V1_STORE/cache/jax/v2b-read20-20260914T174147Z"
+export WANDB_DIR="$V1_STORE/logs/wandb"
+export WANDB_CACHE_DIR="$V1_STORE/cache/wandb"
+export WANDB_CONFIG_DIR="$V1_STORE/cache/wandb-config"
+export WANDB_MODE=disabled
+export TRAIN_RECORD_DIR="$V1_STORE/bench/v2b-read20-20260914T174147Z"
+uv run --no-sync python scripts/training/train.py mme_vla_suite \
+  --exp-name v2b-read20-20260914T174147Z \
+  --num-train-steps 20 --log-interval 1 \
+  --assets-base-dir "$V1_STORE/train-assets" \
+  --data.assets.assets-dir "$V1_STORE/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da" \
+  --data.assets.asset-id robomme \
+  --checkpoint-base-dir "$V1_STORE/train-runs" \
+  --dataset-path "$LIB/framesamp" \
+  --model.history-config perceptual-framesamp-context.yaml \
+  --no-wandb-enabled
+```
