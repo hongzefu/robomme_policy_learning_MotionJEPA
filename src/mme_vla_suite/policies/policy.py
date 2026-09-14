@@ -70,6 +70,7 @@ class MME_VLA_Policy:
             pos_emb_dim=self.config.memory_feature.pos.input_dim,
             state_emb_dim=self.config.memory_feature.state.input_dim,
             vision_enc_fn=self._vision_encode,
+            token_per_image=int(self.config.token_per_image),
             motion_enc_fn=self._motion_client if self.motion_enabled else None,
             motion_cfg=self._motion_cfg if self.motion_enabled else None,
         )

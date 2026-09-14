@@ -51,6 +51,7 @@ def main() -> int:
     ap.add_argument("--ep-stride", type=int, required=True)
     ap.add_argument("--ep-count", type=int, default=0)
     ap.add_argument("--motion-gpu", default=None, help="cond=normal：真 sidecar 的绝对卡号")
+    ap.add_argument("--motion-off", action="store_true", help="明确要求 checkpoint 的 motion 关闭态")
     ap.add_argument("--swap-bank", default=None, help="cond=swap：donor bank 目录")
     ap.add_argument("--probe-out", default=None)
     ap.add_argument("--dump-obs-dir", default=None)
@@ -75,12 +76,16 @@ def main() -> int:
         bank = DonorBank(pathlib.Path(args.swap_bank))
         if bank.source != "library":
             raise SystemExit(f"错误: bank source={bank.source}，本轮只接受 library")
-    if args.cond == "normal" and args.motion_gpu is None:
+    if args.motion_off and (args.cond != "normal" or args.motion_gpu is not None):
+        raise SystemExit("错误: --motion-off 只支持 normal，且不能同时给 --motion-gpu")
+    if args.cond == "normal" and not args.motion_off and args.motion_gpu is None:
         raise SystemExit("错误: cond=normal 必须给 --motion-gpu")
 
     real_client = mc_mod.MotionEncoderClient
 
     def motion_factory(**kw):
+        if args.motion_off:
+            return ZeroMotion()
         if args.cond == "normal":
             return real_client(online_gpu=args.motion_gpu, stub=False, store_provenance=kw.get("store_provenance"),
                                expected_ckpt_sha256=kw.get("expected_ckpt_sha256"))
@@ -89,15 +94,18 @@ def main() -> int:
     t0 = time.perf_counter()
     train_config = _config.get_config(args.config)
     policy = build_policy(train_config, ckpt_dir, seed=args.seed, motion_factory=motion_factory)
-    if not policy.motion_enabled:
-        raise SystemExit("错误: 被评 checkpoint 不是 motion 开启态")
+    if bool(policy.motion_enabled) == args.motion_off:
+        raise SystemExit("错误: checkpoint 的 motion 开关与 --motion-off 不符")
     adapter = MVAdapter(policy)
+    # 关闭态前缀没有 96 个运动 token；只设置实例长度，保持 adapter 的采样实现。
+    adapter.P = int(policy.config.budget) + (int(policy.config.motion.budget) if policy.motion_enabled else 0) + C.IMG_LEN + C.TXT_LEN
     fns = adapter.make_sample_fns()
     inner_sample = fns["mask"] if args.cond == "mask" else fns["none"]
     gate_name = "mask_all" if args.cond == "mask" else "none"
     head = subprocess.run(["git", "-C", str(C.REPO_ROOT), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     print(f"MV_SERVE_ENV cond={args.cond} split={args.split} seed={args.seed} ckpt={ckpt_dir} HEAD={head} "
-          f"sidecar={'on' if args.cond == 'normal' else 'off'} motion_gpu={args.motion_gpu} "
+          f"sidecar={'on' if args.cond == 'normal' and policy.motion_enabled else 'off'} motion_gpu={args.motion_gpu} "
+          f"motion={'on' if policy.motion_enabled else 'off'} token_per_image={policy.config.token_per_image} "
           f"bank_sha={bank.sha256[:16] if bank else 'none'} bank_source={bank.source if bank else 'none'} "
           f"xla_flags={os.environ.get('XLA_FLAGS', '')!r} backend={jax.default_backend()} "
           f"tasks={args.tasks} ep_start={args.ep_start} ep_stride={args.ep_stride} ep_count={args.ep_count} plan_len={len(plan)} "
@@ -141,11 +149,12 @@ def main() -> int:
         out = _orig_prepare(inputs)
         t = int(policy.step_idx)
         es = int(policy.exec_start_idx)
-        frames = [int(x) for x in policy.mem_buffer.visible_motion_frames(t)]
+        frames = [int(x) for x in policy.mem_buffer.visible_motion_frames(t)] if policy.motion_enabled else []
         k = len(frames)
         cover = {"exact": 0, "fallback": 0, "cycle": 0, "cross_seg": 0}
         donor = None
-        pos_sha, mask_sha, order_sha = (C.leaf_sha256(np.asarray(out[key])) for key in ("motion_pos", "motion_mask", "mem_order"))
+        pos_sha, mask_sha, order_sha = ((C.leaf_sha256(np.asarray(out[key])) for key in ("motion_pos", "motion_mask", "mem_order"))
+                                        if policy.motion_enabled else ("", "", ""))
         if args.cond == "swap":
             emb = np.array(out["motion_emb"], dtype=np.float32, copy=True)
             for i, f in enumerate(frames):
@@ -158,20 +167,38 @@ def main() -> int:
             for key, sha in (("motion_pos", pos_sha), ("motion_mask", mask_sha), ("mem_order", order_sha)):
                 if C.leaf_sha256(np.asarray(out[key])) != sha:
                     raise RuntimeError(f"swap 只准改 motion_emb，{key} 变了")
-        mo = np.asarray(out["mem_order"])
+        mo = np.asarray(out["mem_order"]) if policy.motion_enabled else np.zeros(0, np.int32)
+        frame_slots = int(policy.config.budget)
+        n_slots = frame_slots + int(policy.config.motion.budget) if policy.motion_enabled else 0
+        order_ok = mo.dtype == np.int32 and mo.shape == (n_slots,) and np.array_equal(np.sort(mo), np.arange(n_slots))
+        expected = ([f for f in range(0, es, 16) if f + 32 < es] +
+                    [f for f in range(es, t + 1, 16) if f + 32 <= t]) if policy.motion_enabled else []
+        formula_ok = frames == expected
+        calls = int(policy.mem_buffer.motion_encode_calls) if policy.motion_enabled else 0
+        if not order_ok or not formula_ok or calls != k:
+            raise RuntimeError(f"在线不变量失败: order={order_ok} formula={formula_ok} calls={calls} k={k}")
+        if not policy.motion_enabled and any(out.get(key) is not None for key in ("motion_emb", "motion_pos", "motion_mask", "mem_order")):
+            raise RuntimeError("关闭态出现运动交付")
+        sampled = policy.mem_buffer.get_frame_sampling_indices(t, frame_slots, int(policy.config.token_per_image))
+        max_frames = frame_slots // (int(policy.config.token_per_image) * int(policy.config.num_views))
+        if len(sampled) != min(t + 1, max_frames):
+            raise RuntimeError("帧预算不符")
         st["infer_seq"] += 1
         st["ep_infers"] += 1
         st["ep_windows"] = max(st["ep_windows"], k)
         st["pending"] = {
             "cond": args.cond, "split": args.split, "seed": args.seed, "task": task, "ep": ep,
             "ep_seq": st["ep_seq"], "infer_seq": st["infer_seq"], "t": t, "es": es, "k": k, "motion_frames": frames,
-            "motion_emb_sha": C.leaf_sha256(np.asarray(out["motion_emb"])),
-            "motion_pos_sha": pos_sha, "motion_mask": C.mask_bits(out["motion_mask"]), "mem_order_sha": order_sha,
-            "motion_cols_sha": C.leaf_sha256(C.motion_col_mask_np(mo)),
+            "motion_emb_sha": C.leaf_sha256(np.asarray(out["motion_emb"])) if policy.motion_enabled else "",
+            "motion_pos_sha": pos_sha, "motion_mask": C.mask_bits(out["motion_mask"]) if policy.motion_enabled else "", "mem_order_sha": order_sha,
+            "motion_cols_sha": C.leaf_sha256(C.motion_col_mask_np(mo)) if policy.motion_enabled else "",
+            "mem_order_ok": bool(order_ok), "motion_formula_ok": bool(formula_ok), "motion_calls": calls,
+            "frames_sampled": list(map(int, sampled)), "token_per_image": int(policy.config.token_per_image),
+            "motion_enabled": bool(policy.motion_enabled),
             "static_mask_sha": C.leaf_sha256(np.asarray(out["static_mask"])),
             "donor": donor, "cover": cover, "gate": gate_name, "num_steps": 10, "prompt": inputs.get("prompt")}
         if dump_dir and args.dump_obs_every > 0 and st["infer_seq"] % args.dump_obs_every == 0 and st["dumped"] < args.dump_obs_max:
-            arrs = {key: np.asarray(out[key]) for key in C.KEYS8}
+            arrs = {key: np.asarray(out[key]) for key in C.KEYS8 if out.get(key) is not None}
             arrs.update({"image": np.asarray(inputs["observation/image"]), "wrist_image": np.asarray(inputs["observation/wrist_image"]),
                          "state": np.asarray(inputs["observation/state"]), "t": np.int64(t), "es": np.int64(es), "k": np.int64(k),
                          "frames": np.asarray(frames, np.int64), "prompt": np.array(str(inputs.get("prompt")))})
@@ -219,7 +246,8 @@ def main() -> int:
     finally:
         if fh:
             fh.close()
-        policy._motion_client.close()
+        if policy._motion_client is not None:
+            policy._motion_client.close()
     return 0
 
 

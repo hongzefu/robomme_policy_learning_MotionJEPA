@@ -87,7 +87,7 @@ DEF_LIB = "v1-store/datasets/4task-motion-400ep"
 
 
 def _new_mem() -> FrameSampMemory:
-    return FrameSampMemory(vision_enc_fn=G._dummy_vision_enc, motion_enc_fn=G._stub_enc_local,
+    return FrameSampMemory(token_per_image=G.TOKEN_PER_IMAGE, vision_enc_fn=G._dummy_vision_enc, motion_enc_fn=G._stub_enc_local,
                            motion_cfg=G.MOTION_CFG)
 
 

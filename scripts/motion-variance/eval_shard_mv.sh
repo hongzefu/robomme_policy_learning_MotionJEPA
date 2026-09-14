@@ -11,12 +11,13 @@
 #   MV_ALLOW_DIRTY=1 只供 smoke：跳过 clean-HEAD 闸并在头行打 DIRTY_TREE=1（run_matrix_mv.sh 一律拒绝）。
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../training" && pwd)/paths.sh"
-v1_require_models 1
 : "${COND:?必须设置 COND=official|normal|mask|swap}"
 : "${SPLIT:?必须设置 SPLIT=test|val}"
 : "${SEED:?必须设置 SEED}"
 : "${K:?必须设置 K}"
 : "${GPU:?必须设置 GPU}"
+export CUDA_VISIBLE_DEVICES="${GPU}"
+v1_require_models 1
 : "${PORT:?必须设置 PORT}"
 WORKERS="${WORKERS:-8}"
 EP_STRIDE="${EP_STRIDE:-${WORKERS}}"
@@ -28,6 +29,9 @@ SWAP_BANK="${SWAP_BANK:-${V1_STORE}/reports/motion-variance/bank-lib}"
 MV_ALLOW_DIRTY="${MV_ALLOW_DIRTY:-0}"
 DUMP_OBS_EVERY="${DUMP_OBS_EVERY:-0}"
 RUN_SUFFIX="${RUN_SUFFIX:-}"
+CKPT_OVERRIDE="${CKPT_OVERRIDE:-}"
+MV_MOTION_OFF="${MV_MOTION_OFF:-0}"
+[[ "${MV_MOTION_OFF}" == "0" || "${MV_MOTION_OFF}" == "1" ]] || { echo "错误: MV_MOTION_OFF 须为 0 或 1" >&2; exit 2; }
 MV_DIR="${REPO_ROOT}/scripts/motion-variance"
 case "${SPLIT}" in test) SP=t; SEED_SEG="seed${SEED}" ;; val) SP=v; SEED_SEG="val-seed${SEED}" ;; *) echo "错误: SPLIT=${SPLIT}" >&2; exit 2 ;; esac
 case "${COND}" in
@@ -36,6 +40,7 @@ case "${COND}" in
   mask|swap) CKPT_DIR="${TRAIN_RUNS}/mme_vla_suite_b128/awsprod40k-b128-motion/39999"; CKPT_ID=39999; MEMF_DEFAULT=0.40 ;;
   *) echo "错误: COND=${COND}" >&2; exit 2 ;;
 esac
+if [[ -n "${CKPT_OVERRIDE}" ]]; then CKPT_DIR="${CKPT_OVERRIDE}"; CKPT_ID="$(basename "${CKPT_DIR}")"; fi
 POLICY_MEM_FRACTION="${POLICY_MEM_FRACTION:-${MEMF_DEFAULT}}"
 RUN_NAME="mv-${COND}-s${SEED}-${SPLIT}"
 POLICY_NAME="${RUN_NAME}${RUN_SUFFIX}-w${K}"
@@ -46,7 +51,7 @@ PROBE_OUT="${LOGS_DIR}/${LOG_PREFIX}-w${K}.probe.jsonl"
 DUMP_DIR="${V1_STORE}/reports/motion-variance/obs-dump/${POLICY_NAME}"
 [[ -d "${CKPT_DIR}/params" ]] || { echo "错误: checkpoint 缺 params: ${CKPT_DIR}" >&2; exit 1; }
 [[ -x "${ROBOMME_PY}" ]] || { echo "错误: robomme 环境 python 不存在: ${ROBOMME_PY}" >&2; exit 1; }
-if [[ "${COND}" == "normal" ]]; then
+if [[ "${COND}" == "normal" && "${MV_MOTION_OFF}" != "1" ]]; then
   [[ -x "${V1_STORE}/venvs/wan/bin/python" ]] || { echo "错误: sidecar venv 不存在: ${V1_STORE}/venvs/wan" >&2; exit 1; }
   [[ -f "${V1_STORE}/external/motionjepa/wan-v8-filter10-72ep-a/checkpoint_epoch_72.pt" ]] || { echo "错误: sidecar encoder checkpoint 不存在" >&2; exit 1; }
 fi
@@ -79,7 +84,7 @@ if [[ "${COND}" == "official" ]]; then
       policy:checkpoint --policy.dir="${CKPT_DIR}" --policy.config=mme_vla_suite > "${SERVER_LOG}" 2>&1 &
 else
   EXTRA=()
-  [[ "${COND}" == "normal" ]] && EXTRA+=(--motion-gpu="${GPU}")
+  if [[ "${MV_MOTION_OFF}" == "1" ]]; then EXTRA+=(--motion-off); elif [[ "${COND}" == "normal" ]]; then EXTRA+=(--motion-gpu="${GPU}"); fi
   [[ "${COND}" == "swap" ]] && EXTRA+=(--swap-bank="${SWAP_BANK}")
   [[ "${DUMP_OBS_EVERY}" -gt 0 ]] && EXTRA+=(--dump-obs-dir="${DUMP_DIR}" --dump-obs-every="${DUMP_OBS_EVERY}")
   CUDA_VISIBLE_DEVICES="${GPU}" XLA_PYTHON_CLIENT_MEM_FRACTION="${POLICY_MEM_FRACTION}" UV_LINK_MODE=copy PYTHONUNBUFFERED=1 \
@@ -124,7 +129,7 @@ N_DONE=$(grep -c '^MV_EP_DONE ' "${EVAL_LOG}" 2>/dev/null || true); N_DONE=${N_D
 N_INF=$(grep -c '^MV_INFER ' "${SERVER_LOG}" 2>/dev/null || true); N_INF=${N_INF:-0}
 N_BEGIN=$(grep -c '^MV_EPISODE_BEGIN ' "${SERVER_LOG}" 2>/dev/null || true); N_BEGIN=${N_BEGIN:-0}
 PROG="${V1_STORE}/evaluation/${POLICY_NAME}/ckpt${CKPT_ID}/${SEED_SEG}/progress.json"
-N_PROG=$(python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print(sum(len(v) for v in d.values()))" "${PROG}" 2>/dev/null || echo 0)
+N_PROG=$(uv run --no-sync python -c "import json,sys;d=json.load(open(sys.argv[1]));print(sum(len(v) for v in d.values()))" "${PROG}" 2>/dev/null || echo 0)
 echo "MV_SHARD_SUMMARY shard=w${K} cond=${COND} split=${SPLIT} seed=${SEED} expected=${EXPECTED} progress=${N_PROG} ep_done=${N_DONE} episode_begin=${N_BEGIN} infers=${N_INF} eval_rc=${RC} dirty=${DIRTY} progress_json=${PROG}"
 echo "EXIT_CODE=${RC}"
 exit "${RC}"

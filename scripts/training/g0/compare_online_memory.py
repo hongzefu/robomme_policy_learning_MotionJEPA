@@ -47,7 +47,6 @@ COPY_BASE = "732fae3b13e2ff5f485d7014473b99ed577de387"
 # 30（恰 1 行填充）、31（恰填满零填充）、32（首进 linspace 含重复索引）、
 # 33/34、100/291、585
 STEP_GRID = (0, 1, 2, 15, 16, 30, 31, 32, 33, 34, 100, 291, 585)
-ENC_KEYS = ("image_emb_4x4", "pos_emb_4x4", "state_emb")
 MAX_STEPS = 4096
 
 
@@ -94,9 +93,14 @@ def load_real_frames(h5_path: str, needed: list[int]):
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--h5", default="/data/hongzefu/robomme_data_h5_v2_4env400ep/record_dataset_ButtonUnmask.h5")
+    ap.add_argument("--h5", default="/scratch/hongze/robomme_data_h5/record_dataset_ButtonUnmask.h5")
+    ap.add_argument("--token-per-image", type=int, choices=(16, 64), default=16)
     ap.add_argument("--out", required=True, help="判定行与逐步摘要落盘目录")
     args = ap.parse_args()
+    spatial_key = "8x8" if args.token_per_image == 64 else "4x4"
+    enc_keys = (f"image_emb_{spatial_key}", f"pos_emb_{spatial_key}", "state_emb")
+    max_frames = 512 // args.token_per_image
+    step_grid = tuple(sorted(set(STEP_GRID) | {6, 7, 8, 9})) if args.token_per_image == 64 else STEP_GRID
 
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -121,7 +125,7 @@ def main() -> None:
     dims = dict(num_views=1, img_emb_dim=2048, pos_emb_dim=768, state_emb_dim=8)
     a = LegacyMemoryBuffer(**dims, prepare_buffer=True, vision_enc_fn=enc)
     b = BuilderMemoryBuffer(**dims, prepare_buffer=True, vision_enc_fn=enc)
-    c = FrameSampMemory(**dims, vision_enc_fn=enc)
+    c = FrameSampMemory(**dims, vision_enc_fn=enc, token_per_image=args.token_per_image)
 
     lines = []
 
@@ -130,14 +134,14 @@ def main() -> None:
         lines.append(line)
 
     # ── POS_TABLE：4x4 pos 表全表三方逐位 ───────────────────────────────────
-    sha_a = C.leaf_sha256(a.pos_emb_dict["4x4"])
-    sha_b = C.leaf_sha256(b.pos_emb_dict["4x4"])
-    sha_c = C.leaf_sha256(c.pos_emb_4x4)
+    sha_a = C.leaf_sha256(a.pos_emb_dict[spatial_key])
+    sha_b = C.leaf_sha256(b.pos_emb_dict[spatial_key])
+    sha_c = C.leaf_sha256(c.pos_emb)
     pos_ok = sha_a == sha_b == sha_c
     emit(f"POS_TABLE={'PASS' if pos_ok else 'FAIL'} rows={MAX_STEPS} a==b={sha_a==sha_b} a==c={sha_a==sha_c}")
 
     # ── 喂帧：并集覆盖每个网格步的 even_sampling_indices(step, 32) ─────────
-    needed = sorted({i for s in STEP_GRID for i in even_sampling_indices(s, 32)})
+    needed = sorted({i for s in step_grid for i in even_sampling_indices(s, max_frames)})
     frames, states = load_real_frames(args.h5, needed)
     for k, step in enumerate(needed):
         img = frames[k][None, None, ...]   # (1,1,h,w,3) u8
@@ -145,14 +149,14 @@ def main() -> None:
         a.add_buffer(img, st, [step])
         b.add_buffer(img, st, [step])
         c.add_buffer(img, st, [step])
-    emit(f"FED steps={len(needed)} grid={len(STEP_GRID)}")
+    emit(f"FED steps={len(needed)} grid={len(step_grid)}")
 
     # ── ENC_LAYER：逐网格步逐键三方逐位 ────────────────────────────────────
     enc_mismatch = 0
     per_step = {}
-    for s in STEP_GRID:
+    for s in step_grid:
         row = {}
-        for key in ENC_KEYS:
+        for key in enc_keys:
             ka = C.leaf_sha256(np.asarray(a._history_feats[s][key]))
             kb = C.leaf_sha256(np.asarray(b._history_feats[s][key]))
             kc = C.leaf_sha256(np.asarray(c._history_feats[s][key]))
@@ -161,21 +165,22 @@ def main() -> None:
             if not ok:
                 enc_mismatch += 1
         per_step[s] = row
-    emit(f"ENC_LAYER={'PASS' if enc_mismatch == 0 else 'FAIL'} steps={len(STEP_GRID)} keys={len(ENC_KEYS)} mismatch={enc_mismatch}")
+    enc_tag = "ENC_LAYER_8X8" if args.token_per_image == 64 else "ENC_LAYER"
+    emit(f"{enc_tag}={'PASS' if enc_mismatch == 0 else 'FAIL'} steps={len(step_grid)} keys={len(enc_keys)} mismatch={enc_mismatch}")
 
     # ── ASSEMBLY：逐网格步 prepare_frame_sampling 四元组三方逐位 ───────────
     asm_mismatch = 0
     asm = {}
-    for s in STEP_GRID:
+    for s in step_grid:
         outs = []
         for side in (a, b, c):
-            four = side.prepare_frame_sampling(s, 512, 16, side.default_history_feats_gather_fn)
+            four = side.prepare_frame_sampling(s, 512, args.token_per_image, side.default_history_feats_gather_fn)
             outs.append(tuple(C.leaf_sha256(np.asarray(x)) for x in four))
         ok = outs[0] == outs[1] == outs[2]
         asm[s] = {"ok": ok, "a": [h[:16] for h in outs[0]], "c": [h[:16] for h in outs[2]]}
         if not ok:
             asm_mismatch += 1
-    emit(f"ASSEMBLY={'PASS' if asm_mismatch == 0 else 'FAIL'} steps={len(STEP_GRID)} mismatch={asm_mismatch}")
+    emit(f"ASSEMBLY={'PASS' if asm_mismatch == 0 else 'FAIL'} steps={len(step_grid)} mismatch={asm_mismatch}")
 
     # ── OOB_PROBE：step 4096 三方都必须响亮失败（禁依赖 numpy 切片行为）────
     probe_img = frames[0][None, None, ...]
@@ -184,7 +189,7 @@ def main() -> None:
     for name, side in (("a", a), ("b", b)):
         # 旧实现不 raise：切片静默返回空 pos——由探针自己判「存了坏数据即失败」
         side.add_buffer(probe_img, probe_st, [MAX_STEPS])
-        stored = side._history_feats[MAX_STEPS]["pos_emb_4x4"]
+        stored = side._history_feats[MAX_STEPS][f"pos_emb_{spatial_key}"]
         results[name] = "empty-slice-detected" if stored.shape[0] == 0 else "SILENT-BAD-DATA"
     try:
         c.add_buffer(probe_img, probe_st, [MAX_STEPS])
@@ -196,9 +201,9 @@ def main() -> None:
 
     # ── 合成极值帧不炸（非判据）────────────────────────────────────────────
     extreme = np.full_like(frames[0], 255)[None, None, ...]
-    c2 = FrameSampMemory(**dims, vision_enc_fn=enc)
+    c2 = FrameSampMemory(**dims, vision_enc_fn=enc, token_per_image=args.token_per_image)
     c2.add_buffer(extreme, probe_st, [0])
-    _ = c2.prepare_frame_sampling(0, 512, 16, c2.default_history_feats_gather_fn)
+    _ = c2.prepare_frame_sampling(0, 512, args.token_per_image, c2.default_history_feats_gather_fn)
     emit("EXTREME_FRAME=OK (非判据)")
 
     verdict = pos_ok and enc_mismatch == 0 and asm_mismatch == 0 and oob_ok

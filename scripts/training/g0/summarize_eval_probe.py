@@ -279,6 +279,13 @@ def main() -> int:
     recs = read_probe(pathlib.Path(args.probe))
     elog = read_eval_log(pathlib.Path(args.eval_log))
     penv = read_probe_env(pathlib.Path(args.server_log))
+    motion_enabled = penv.get("motion_enabled") == "1"
+    if penv.get("motion_enabled") not in ("0", "1"):
+        raise ValueError("PROBE_ENV 缺 motion_enabled")
+    if int(penv["budget"]) != args.max_frames * args.tokens_per_frame or int(penv["token_per_image"]) * int(penv["num_views"]) != args.tokens_per_frame:
+        raise ValueError("命令行帧预算与真实策略配置不符")
+    if not motion_enabled:
+        args.budget = 0
     prog = json.loads(progress_path.read_text(encoding="utf-8"))
     vflags = read_video_flags(videos_dir)
     server_tracebacks, handshake_noise, tb_heads = count_tracebacks(pathlib.Path(args.server_log))
@@ -361,14 +368,14 @@ def main() -> int:
          f"headroom={args.budget - k_max} es_values={','.join(str(x) for x in es_values)} "
          f"tau_mismatches={len(tau_bad)} "
          f"k_over_budget={len(k_over)} k_len_mismatch={len(k_len_bad)}")
-    if args.budget - k_max == 0:
+    if motion_enabled and args.budget - k_max == 0:
         print("  ⚠ headroom=0：再长一帧就会触发 FrameSampMemory._prepare_motion 的零截断 raise", flush=True)
 
     # ── 3. EVAL_K_FORMULA ──────────────────────────────────────────────────
     kf_mis = 0
     fs_mis = 0
     for r in recs:
-        want = motion_frames_formula(int(r["es"]), int(r["t"]))
+        want = motion_frames_formula(int(r["es"]), int(r["t"])) if motion_enabled else []
         if [int(x) for x in r["motion_frames"]] != want:
             kf_mis += 1
         want_fs = frames_sampled_formula(int(r["t"]), args.max_frames)
@@ -379,7 +386,8 @@ def main() -> int:
          f"window={MOTION_WINDOW} stride={MOTION_STRIDE} max_frames={args.max_frames}")
 
     # ── 4. EVAL_ORDER_LEGAL ────────────────────────────────────────────────
-    n_slots = args.max_frames * args.tokens_per_frame + args.budget
+    frame_slots = args.max_frames * args.tokens_per_frame
+    n_slots = frame_slots + args.budget if motion_enabled else 0
     nonperm = 0
     dtype_bad = 0
     len_bad = 0
@@ -395,13 +403,13 @@ def main() -> int:
             continue
         if not np.array_equal(np.sort(order), np.arange(n_slots, dtype=np.int64)):
             nonperm += 1
-        want = memory_order_formula(r["frames_sampled"], r["motion_frames"], args.max_frames,
-                                    args.tokens_per_frame, args.budget)
+        want = (memory_order_formula(r["frames_sampled"], r["motion_frames"], args.max_frames,
+                                     args.tokens_per_frame, args.budget) if motion_enabled else np.zeros(0, np.int32))
         if not np.array_equal(order.astype(np.int32), want):
             order_mis += 1
         sm = str(r["static_mask"])
         n_true = len(r["frames_sampled"]) * args.tokens_per_frame
-        if len(sm) != n_slots - args.budget or sm != "1" * n_true + "0" * (len(sm) - n_true):
+        if len(sm) != frame_slots or sm != "1" * n_true + "0" * (len(sm) - n_true):
             smask_bad += 1
         mm = str(r["motion_mask"])
         k = int(r["k"])
@@ -506,7 +514,7 @@ def main() -> int:
         T = int(ep["num_timesteps"])
         train_tau_max = max(train_tau_max, T - 1)
         for t in range(es, T):
-            train_ks.append(len(motion_frames_formula(es, t)))
+            train_ks.append(len(motion_frames_formula(es, t)) if motion_enabled else 0)
     emit("EVAL_DIST_OBS", None,
          f"online_k_median={stat.median(ks)} mean={stat.mean(ks):.2f} max={max(ks)} | "
          f"train_k_median={stat.median(train_ks)} mean={stat.mean(train_ks):.2f} max={max(train_ks)} "

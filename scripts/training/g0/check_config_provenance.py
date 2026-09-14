@@ -89,6 +89,17 @@ def _sha256_file(p: pathlib.Path) -> str:
     return h.hexdigest()
 
 
+def _configured_train(args):
+    import dataclasses
+    from mme_vla_suite.training import config
+    tc = config.get_config(args.train_config)
+    if getattr(args, "norm_stats", None):
+        p = args.norm_stats.resolve()
+        tc = dataclasses.replace(tc, data=dataclasses.replace(tc.data,
+            assets=dataclasses.replace(tc.data.assets, assets_dir=str(p.parent.parent), asset_id=p.parent.name)))
+    return tc
+
+
 # ── 判定 1：归一化统计量同源 ───────────────────────────────────────────────────
 
 def gate_norm_stats(args, rec: dict) -> tuple[str, bool]:
@@ -97,7 +108,7 @@ def gate_norm_stats(args, rec: dict) -> tuple[str, bool]:
     from openpi.training import checkpoints as _checkpoints
     import mme_vla_suite.training.config as _mconfig
 
-    train_config = _mconfig.get_config(args.train_config)
+    train_config = _configured_train(args)
     data_config = train_config.data.create(train_config.assets_dirs, train_config.model)
     train_ns = data_config.norm_stats
     asset_id = data_config.asset_id
@@ -157,6 +168,14 @@ def gate_lib_provenance(args, rec: dict) -> tuple[str, bool]:
     fields: dict[str, dict] = {}
     diffs: list[str] = []
     for field, rel, scheme in PROV_FIELDS:
+        if not prov["motion_enabled"] and field.startswith("motion_"):
+            ok = prov.get(field) is None
+            fields[field] = {"path": None, "scheme": scheme, "current": None, "provenance": prov.get(field), "equal": ok}
+            if not ok:
+                diffs.append(f"关闭态的 {field} 必须为 null")
+            continue
+        if field == "framesamp_store_meta_sha256":
+            rel = args.store_subdir + "/meta/store_meta.json"
         p = lib / rel
         if not p.is_file():
             diffs.append(f"{field}: 库内文件缺失 {p}")
@@ -193,6 +212,17 @@ def gate_motion_store_path(args, rec: dict) -> tuple[str, bool]:
     prov = json.loads(_abs(args.provenance).read_text(encoding="utf-8"))
     fails: list[str] = []
 
+    history_config, snapshot_enabled = _load_resolved_snapshot(run_root)
+    frame_meta = StoreMeta.load(lib / args.store_subdir)
+    if frame_meta.spec.tokens_per_frame != int(history_config.token_per_image) * int(history_config.num_views):
+        raise ValueError("checkpoint 配置与 framesamp 库网格不符")
+    if not snapshot_enabled:
+        fields = ("motion_root", "motion_manifest_sha256", "motion_index_sha256",
+                  "motion_store_meta_sha256", "motion_table_sha256", "vae", "encoder")
+        ok = all(prov.get(k) is None for k in fields) and _motion_gates(history_config, frame_meta) is None
+        rec["motion_store_path"] = {"enabled": False, "null_fields": fields, "equal": ok}
+        return f"MOTION_STORE_PATH={'PASS' if ok else 'FAIL'} motion_enabled=0 motion_store_unused=1", ok
+
     # (a) provenance 内两库绑定的清单摘要相同
     same_manifest = prov.get("framesamp_manifest_sha256") == prov.get("motion_manifest_sha256")
     if not same_manifest:
@@ -202,7 +232,7 @@ def gate_motion_store_path(args, rec: dict) -> tuple[str, bool]:
     if not snapshot_enabled:
         fails.append(f"run 快照 motion.enabled=false，与本关前提（motion 开启态 run）不符: {run_root}")
     snapshot_store = str(getattr(history_config, "motion", {}).get("store_path", ""))
-    frame_meta = StoreMeta.load(lib / "framesamp")
+    frame_meta = StoreMeta.load(lib / args.store_subdir)
     saved = os.environ.get("MMEVLA_MOTION_STORE")
 
     def _gates_with(root: str | None):
@@ -297,7 +327,7 @@ def gate_ckpt_param_tree(args, rec: dict):
 
     ckpt = _abs(args.ckpt)
     run_root = ckpt.parent
-    train_config = _mconfig.get_config(args.train_config)
+    train_config = _configured_train(args)
     history_config, snapshot_enabled = _load_resolved_snapshot(run_root)
 
     # 生产口径：create_trained_policy 的 strict 分支（bf16 恢复 + 快照 history_config + use_history=True）
@@ -369,6 +399,8 @@ def main() -> int:
     ap.add_argument("--ckpt", default=DEF_CKPT, help="checkpoint 步目录（默认生产口径 39999）")
     ap.add_argument("--lib", default=DEF_LIB, help="对拍所用数据库根")
     ap.add_argument("--train-config", default=DEF_TRAIN_CONFIG, help="训练配置名")
+    ap.add_argument("--store-subdir", choices=("framesamp", "framesamp-8x8"), default="framesamp")
+    ap.add_argument("--norm-stats", type=pathlib.Path, help="训练启动时显式使用的统计文件")
     ap.add_argument("--provenance", default="", help="训练 run 的 motion_provenance.json（默认 <run>/motion_provenance.json）")
     ap.add_argument("--neg-lib", default=NEG_LIB, help="负向臂用的另一份库（清单必须与 --lib 不同）")
     ap.add_argument("--out", default="", help="判定明细 JSON 落点（可选）")

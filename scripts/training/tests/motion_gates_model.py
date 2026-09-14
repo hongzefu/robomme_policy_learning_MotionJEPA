@@ -57,6 +57,7 @@ _V1 = pathlib.Path(os.environ.get("MMEVLA_V1_STORE", str(_REPO_ROOT / "v1-store"
 CLOSED_YAML = "perceptual-framesamp-context.yaml"
 OPEN_YAML = "perceptual-framesamp-context-motion.yaml"
 SENTINEL = np.iinfo(np.int32).max
+STORE_SUBDIR = "framesamp"
 TOKENS_PER_FRAME = 16
 FRAME_BUDGET = 32
 MOTION_BUDGET = 96
@@ -90,8 +91,9 @@ def oracle_visible(entry: dict, t: int, stride: int = 16, window: int = 33) -> l
     return sorted(out, key=lambda r: r[1])
 
 
-def oracle_mem_order(frame_times: list[int], motion_times: list[int], tokens_per_frame: int = TOKENS_PER_FRAME) -> np.ndarray:
+def oracle_mem_order(frame_times: list[int], motion_times: list[int], tokens_per_frame: int | None = None) -> np.ndarray:
     """Python sorted 三元组键 (时刻, 类型, 原位) 的稳定排序（与被测 np.argsort 实现独立）。"""
+    tokens_per_frame = TOKENS_PER_FRAME if tokens_per_frame is None else tokens_per_frame
     items = []
     pos = 0
     for f in frame_times:
@@ -124,11 +126,15 @@ def oracle_sample(entry: dict, t: int, table: np.ndarray, pos_table: np.ndarray,
             "mem_order": oracle_mem_order(ftimes, mtimes), "k": k}
 
 
-def load_lib_oracle(lib: pathlib.Path):
+def load_lib_oracle(lib: pathlib.Path, store_subdir=None):
     index = json.loads((lib / "motion" / "meta" / "motion_index.json").read_text(encoding="utf-8"))
     table = np.fromfile(lib / "motion" / "motion_token.f32.bin", dtype=np.float32).reshape(-1, 768)
-    sm = json.loads((lib / "framesamp" / "meta" / "store_meta.json").read_text(encoding="utf-8"))
-    pos_table = np.fromfile(lib / "framesamp" / "pos_emb_4x4.f32.bin", dtype=np.float32).reshape(-1, 16, 768)
+    from mme_vla_suite.datastore.framesamp_store import StoreMeta
+    root = lib / (store_subdir or STORE_SUBDIR)
+    meta = StoreMeta.load(root)
+    sm = meta.raw
+    pos_table = np.fromfile(root / meta.spec.pos_table_relpath, dtype=np.float32).reshape(
+        (-1,) + meta.spec.pos_row_shape)
     manifest = json.loads((lib / "meta" / "episode_manifest.json").read_text(encoding="utf-8"))
     assert index["totals"]["rows"] == table.shape[0]
     assert sm["num_pos_rows"] == pos_table.shape[0]
@@ -186,10 +192,10 @@ def _load_yaml(name: str):
     return omegaconf.OmegaConf.load(_REPO_ROOT / "src/mme_vla_suite/models/config/robomme" / name)
 
 
-def _make_dataset(lib: pathlib.Path, yaml_name: str):
+def _make_dataset(lib: pathlib.Path, yaml_name: str, store_subdir=None):
     from mme_vla_suite.training.dataloader import _create_framesamp_dataset
     os.environ["MMEVLA_MOTION_STORE"] = str(lib / "motion")
-    return _create_framesamp_dataset(str(lib / "framesamp"), _fake_data_config(), _load_yaml(yaml_name), 20)
+    return _create_framesamp_dataset(str(lib / (store_subdir or STORE_SUBDIR)), _fake_data_config(), _load_yaml(yaml_name), 20)
 
 
 def _bytes_equal(a, b) -> bool:
@@ -248,7 +254,7 @@ def m1_helper_layer() -> tuple[int, int]:
         ft = sorted(rng.sample(range(0, 600), n)) + [SENTINEL] * (32 - n)
         mt = sorted(rng.sample(range(0, 600), m)) + [SENTINEL] * (96 - m)
         checked += 1
-        if not np.array_equal(memory_order(np.array(ft), 16, np.array(mt)), oracle_mem_order(ft, mt)):
+        if not np.array_equal(memory_order(np.array(ft), TOKENS_PER_FRAME, np.array(mt)), oracle_mem_order(ft, mt)):
             bad += 1
     # 非法置换必 raise：直接调用被测校验（构造不可能的 keys 无法触发，改用 embed_memory 侧在 M3 覆盖）；此处验哨兵不与真实时刻相交
     assert SENTINEL > 2 * 4096
@@ -783,7 +789,7 @@ def cmd_m5(args):
                                           "observation/state": np.zeros(8), **{k: s[k] for k in ("motion_emb", "motion_pos", "motion_mask", "mem_order")}})
     if any(out.get(k) is None for k in ("motion_emb", "motion_pos", "motion_mask", "mem_order")):
         fails.append("RoboMMEInputs 未透传四键")
-    fm = StoreMeta.load(lib / "framesamp")
+    fm = StoreMeta.load(lib / STORE_SUBDIR)
     _motion_gates(cfg_open, fm)
     # 负向：坏 mem_order（非置换）在 dataset 侧
     from mme_vla_suite.shared.sampling import memory_order
@@ -804,7 +810,7 @@ def cmd_m5(args):
     for key, val in (("stride", 20), ("window_frames", 32), ("window_direction", "backward"), ("grid_origin", "global"), ("frame_size", 224),
                      ("budget", 64), ("dim", 512), ("pos_dim", 768)):
         cfg = copy.deepcopy(cfg_open); cfg.motion[key] = val
-        expect_raise(f"motion.{key}={val}", lambda cfg=cfg: _make_dataset(lib, None) if False else _create_framesamp_dataset(str(lib / "framesamp"), _fake_data_config(), cfg, 20))
+        expect_raise(f"motion.{key}={val}", lambda cfg=cfg: _make_dataset(lib, None) if False else _create_framesamp_dataset(str(lib / STORE_SUBDIR), _fake_data_config(), cfg, 20))
     # 未 verified / 换入另一合法 store / 只篡改 index / 串库 manifest
     tmp = pathlib.Path(args.tmp or (lib / "oracle" / "m5-tmp")); shutil.rmtree(tmp, ignore_errors=True); tmp.mkdir(parents=True)
     def clone(name):
@@ -1181,7 +1187,7 @@ def cmd_t3mechanism(args):
     from mme_vla_suite.training.dataloader import _create_framesamp_dataset
     os.environ["MMEVLA_MOTION_STORE"] = str(lib / "motion")
     data_config = config.data.create(config.assets_dirs, config.model)
-    ds = transform_dataset(_create_framesamp_dataset(str(lib / "framesamp"), data_config, config.model.history_config, config.model.action_horizon),
+    ds = transform_dataset(_create_framesamp_dataset(str(lib / STORE_SUBDIR), data_config, config.model.history_config, config.model.action_horizon),
                            data_config, skip_norm_stats=False)
     items = [ds[i] for i in batch_idx]
     batch = jax.tree.map(lambda *xs: np.stack(xs), *items)
@@ -1424,7 +1430,7 @@ def cmd_t3phase(args):
             raise SystemExit(f"{tag} checkpoint 的 motion 参数存在性与侧别不符")
         model.eval()
         data_config = config.data.create(config.assets_dirs, config.model)
-        ds = transform_dataset(_create_framesamp_dataset(str(lib / "framesamp"), data_config, config.model.history_config, config.model.action_horizon),
+        ds = transform_dataset(_create_framesamp_dataset(str(lib / STORE_SUBDIR), data_config, config.model.history_config, config.model.action_horizon),
                                data_config, skip_norm_stats=False)
         graphdef, state = nnx.split(model)
 
@@ -1488,7 +1494,8 @@ def _t3_main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--gate", choices=["m1", "m2", "m3", "m4", "m5", "t3common", "t3verifyinit", "t3trace", "t3mechanism", "t3phase"], required=True)
     ap.add_argument("--lib", default=str(_V1 / "datasets/4task-motion-40ep"))
-    ap.add_argument("--dataset", default=str(_V1 / "datasets/4task-motion-40ep/framesamp"))
+    ap.add_argument("--dataset", default=None)
+    ap.add_argument("--store-subdir", choices=("framesamp", "framesamp-8x8"), default="framesamp")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--seed", type=int, default=20260903)
     ap.add_argument("--tmp", default=None)
@@ -1506,6 +1513,14 @@ def _t3_main():
                     help="t3mechanism：同一 obs 连算几次梯度做确定性探针（默认 3，最少 2）")
     _add_m1_expect_args(ap)
     args = ap.parse_args()
+    global STORE_SUBDIR, TOKENS_PER_FRAME, FRAME_BUDGET, OPEN_YAML, CLOSED_YAML
+    from mme_vla_suite.datastore.framesamp_store import StoreMeta
+    STORE_SUBDIR = args.store_subdir
+    spec = StoreMeta.load(pathlib.Path(args.lib) / STORE_SUBDIR).spec
+    TOKENS_PER_FRAME, FRAME_BUDGET = spec.tokens_per_frame, 512 // spec.tokens_per_frame
+    stem = "perceptual-framesamp-context" + ("-8frame-8x8" if spec.tokens_per_frame == 64 else "")
+    CLOSED_YAML, OPEN_YAML = stem + ".yaml", stem + "-motion.yaml"
+    args.dataset = args.dataset or str(pathlib.Path(args.lib) / STORE_SUBDIR)
     {"m1": cmd_m1, "m2": cmd_m2, "m3": cmd_m3, "m4": cmd_m4, "m5": cmd_m5, "t3common": cmd_t3common, "t3verifyinit": cmd_t3verifyinit,
      "t3trace": cmd_t3trace, "t3mechanism": cmd_t3mechanism, "t3phase": cmd_t3phase}[args.gate](args)
 

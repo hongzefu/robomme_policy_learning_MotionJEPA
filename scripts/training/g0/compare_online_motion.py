@@ -79,6 +79,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--lib", default=str(_V1 / "datasets/4task-motion-40ep"))
     ap.add_argument("--yaml", default="perceptual-framesamp-context-motion.yaml")
+    ap.add_argument("--store-subdir", choices=("framesamp", "framesamp-8x8"), default="framesamp")
     ap.add_argument("--gpu", default="1", help="sidecar 的 CUDA_VISIBLE_DEVICES")
     ap.add_argument("--episodes", type=int, default=0, help="只跑前 N 条（0 = 全部）")
     ap.add_argument("--stub", action="store_true")
@@ -89,10 +90,11 @@ def main() -> int:
     from mme_vla_suite.training.dataloader import _motion_gates
     lib = pathlib.Path(args.lib)
     hc = _load_yaml(args.yaml)
+    _Cfg.budget, _Cfg.token_per_image, _Cfg.num_views = int(hc.budget), int(hc.token_per_image), int(hc.num_views)
     mcfg = hc.motion
     motion_cfg = {k: mcfg[k] for k in ("stride", "window_frames", "budget", "frame_size", "pos_dim", "dim", "window_direction", "grid_origin")}
-    ds = _make_dataset(lib, args.yaml)
-    fmeta = StoreMeta.load(str(lib / "framesamp"))
+    ds = _make_dataset(lib, args.yaml, store_subdir=args.store_subdir)
+    fmeta = StoreMeta.load(str(lib / args.store_subdir))
     motion_root = _motion_gates(hc, fmeta)
     mmeta = ms.MotionMeta.load(motion_root)
     mstore = ms.MotionStore(motion_root, meta=mmeta)
@@ -132,7 +134,7 @@ def main() -> int:
                 # stub 档：帧换成把全域帧号写进像素的合成帧（sidecar --stub 解码校验连续性），状态与节奏保持真实
                 from mme_vla_suite.policies import motion_protocol as P
                 frames = np.stack([P.stub_frame(t) for t in range(T)])[:, None]
-            mem = FrameSampMemory(vision_enc_fn=vision_enc, motion_enc_fn=client, motion_cfg=motion_cfg)
+            mem = FrameSampMemory(token_per_image=int(hc.token_per_image), vision_enc_fn=vision_enc, motion_enc_fn=client, motion_cfg=motion_cfg)
             pol = _bare_policy(mem, motion_cfg, norm)
             calls0, enc_s0 = client.n_calls, client.total_s
             batch_ms = []

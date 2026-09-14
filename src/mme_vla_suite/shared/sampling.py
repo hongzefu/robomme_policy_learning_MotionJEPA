@@ -40,7 +40,7 @@ def memory_order(frame_times, tokens_per_frame: int, motion_times) -> np.ndarray
 
     frame_times：(F,) int64，帧路每帧的全域帧号（padding 帧记 MEM_ORDER_SENTINEL），每帧占 tokens_per_frame 个连续位；
     motion_times：(M,) int64，运动路每个起点的全域帧号（padding 记哨兵）。
-    键 = 时刻 × 2 + 类型（帧 0、motion 1）：同刻帧在 motion 前、同帧 16 位保持内部次序、两路 padding 一并落尾且帧路 padding 在前
+    键 = 时刻 × 2 + 类型（帧 0、motion 1）：同刻帧在 motion 前、同帧 tokens_per_frame 位保持内部次序、两路 padding 一并落尾且帧路 padding 在前
     （拼接顺序 [帧路 | 运动路] + kind="stable" 共同保证）。产出后显式 raise 校验是合法置换——
     jnp.take_along_axis 默认 mode="fill"：float 侧越界填 NaN、bool 侧越界填 True、负索引静默回绕，「界内但非置换」只有这道校验能拦。
     """

@@ -17,9 +17,13 @@ TASKS_ALL="${TASKS_ALL:-ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwa
 DRY_RUN="${DRY_RUN:-0}"
 MV_ALLOW_DIRTY="${MV_ALLOW_DIRTY:-0}"
 RUN_SUFFIX="${RUN_SUFFIX:-}"
+CKPT_OVERRIDE="${CKPT_OVERRIDE:-}"
+MV_MOTION_OFF="${MV_MOTION_OFF:-0}"
+[[ "${MV_MOTION_OFF}" == "0" || "${MV_MOTION_OFF}" == "1" ]] || { echo "错误: MV_MOTION_OFF 须为 0 或 1" >&2; exit 2; }
 MV_DIR="${REPO_ROOT}/scripts/motion-variance"
 case "${SPLIT}" in test) SP=t; SEED_SEG="seed${SEED}" ;; val) SP=v; SEED_SEG="val-seed${SEED}" ;; *) echo "错误: SPLIT=${SPLIT}" >&2; exit 2 ;; esac
 case "${COND}" in official) CKPT_ID=79999 ;; normal|mask|swap) CKPT_ID=39999 ;; *) echo "错误: COND=${COND}" >&2; exit 2 ;; esac
+if [[ -n "${CKPT_OVERRIDE}" ]]; then CKPT_ID="$(basename "${CKPT_OVERRIDE}")"; fi
 LP="mv-${SP}${SEED}-${COND}${RUN_SUFFIX}"
 IFS=',' read -r -a GPUS <<<"${GPU_LIST}"
 [[ "${#GPUS[@]}" -ge "${WORKERS}" ]] || { echo "错误: GPU_LIST 只有 ${#GPUS[@]} 张 < WORKERS=${WORKERS}" >&2; exit 2; }
@@ -42,10 +46,17 @@ for ((k = 0; k < WORKERS; k++)); do
   SESSION="${LP}-w${k}"
   if tmux has-session -t "=${SESSION}" 2>/dev/null; then echo "错误: 会话 ${SESSION} 已存在，拒绝重起（先按名清理）" >&2; echo "MV_BATCH=FAIL reason=session_exists"; echo "EXIT_CODE=1"; exit 1; fi
   LOG="${LOGS_DIR}/${SESSION}.log"
-  ENVS="COND=${COND} SPLIT=${SPLIT} SEED=${SEED} K=${k} GPU=${GPUS[$k]} PORT=$((PORT_BASE + k)) WORKERS=${WORKERS} EP_COUNT=${EP_COUNT} TASKS_ALL=${TASKS_ALL} LOG_PREFIX=${LP} MV_ALLOW_DIRTY=${MV_ALLOW_DIRTY} RUN_SUFFIX=${RUN_SUFFIX}"
-  CMD="set -o pipefail; ${ENVS} bash ${MV_DIR}/eval_shard_mv.sh 2>&1 | tee ${LOG}; sleep 2"
+  ENV_ARGS=("COND=${COND}" "SPLIT=${SPLIT}" "SEED=${SEED}" "K=${k}" "GPU=${GPUS[$k]}" "CUDA_VISIBLE_DEVICES=${GPUS[$k]}"
+            "PORT=$((PORT_BASE + k))" "WORKERS=${WORKERS}" "EP_COUNT=${EP_COUNT}"
+            "TASKS_ALL=${TASKS_ALL}" "LOG_PREFIX=${LP}" "MV_ALLOW_DIRTY=${MV_ALLOW_DIRTY}"
+            "RUN_SUFFIX=${RUN_SUFFIX}" "CKPT_OVERRIDE=${CKPT_OVERRIDE}" "MV_MOTION_OFF=${MV_MOTION_OFF}"
+            "UV_CACHE_DIR=${UV_CACHE_DIR:-/scratch/hongze/.cache/uv}")
+  printf -v ENVS '%q ' env "${ENV_ARGS[@]}" bash "${MV_DIR}/eval_shard_mv.sh"
+  printf -v LOG_Q '%q' "${LOG}"
+  CMD="set -o pipefail; ${ENVS} 2>&1 | tee ${LOG_Q}; rc=\${PIPESTATUS[0]}; printf 'EXIT_CODE=%s\\n' \"\$rc\" | tee -a ${LOG_Q}; exit \"\$rc\""
   if [[ "${DRY_RUN}" == "1" ]]; then echo "DRY ${SESSION}: ${CMD}"; continue; fi
-  tmux new-session -d -s "${SESSION}" -c "${REPO_ROOT}" "bash -c '${CMD}'"
+  printf -v SHELL_CMD 'bash -c %q' "${CMD}"
+  tmux new-session -d -s "${SESSION}" -c "${REPO_ROOT}" "${SHELL_CMD}"
   echo "起 ${SESSION}: gpu=${GPUS[$k]} port=$((PORT_BASE + k)) expected=$(expected_of "$k") log=${LOG}"
 done
 [[ "${DRY_RUN}" == "1" ]] && { echo "MV_BATCH=DRY cond=${COND} split=${SPLIT} seed=${SEED}"; exit 0; }
@@ -62,7 +73,7 @@ for ((k = 0; k < WORKERS; k++)); do
   RC="$(grep -oE '^EXIT_CODE=[0-9]+' "${L}" 2>/dev/null | tail -1 | cut -d= -f2)"
   EXP=$(expected_of "$k")
   PROG="${V1_STORE}/evaluation/mv-${COND}-s${SEED}-${SPLIT}${RUN_SUFFIX}-w${k}/ckpt${CKPT_ID}/${SEED_SEG}/progress.json"
-  NEP="$(python3 -c "import json,sys;d=json.load(open(sys.argv[1]));print(sum(len(v) for v in d.values()))" "${PROG}" 2>/dev/null || echo 0)"
+  NEP="$(uv run --no-sync python -c "import json,sys;d=json.load(open(sys.argv[1]));print(sum(len(v) for v in d.values()))" "${PROG}" 2>/dev/null || echo 0)"
   NDONE=$(grep -c '^MV_EP_DONE ' "${EL}" 2>/dev/null || true); NDONE=${NDONE:-0}
   NERR=$(grep -c '"error"' "${PROG}" 2>/dev/null || true); NERR=${NERR:-0}
   TB=0; NBEGIN="n/a"; CS=0
@@ -82,7 +93,37 @@ for ((k = 0; k < WORKERS; k++)); do
 done
 [[ "${CROSS}" -eq 0 ]] || FAIL=1
 WALL_MIN=$(( ($(date +%s) - T_START) / 60 ))
-SIDECAR=off; [[ "${COND}" == "normal" ]] && SIDECAR=on
+SIDECAR=off; [[ "${COND}" == "normal" && "${MV_MOTION_OFF}" != "1" ]] && SIDECAR=on
 echo "MV_BATCH=$([[ ${FAIL} -eq 0 ]] && echo PASS || echo FAIL) cond=${COND} split=${SPLIT} seed=${SEED} episodes=${TOTAL}/${TOTAL_EXP} workers=${WORKERS}/${WORKERS} wall_min=${WALL_MIN} sidecar=${SIDECAR} cross_seg=${CROSS} suffix=${RUN_SUFFIX} end=$(date '+%F %T')"
+if [[ "${FAIL}" -eq 0 && -n "${CKPT_OVERRIDE}" && "${RUN_SUFFIX}" == -t8* ]]; then
+  set +e
+  uv run --no-sync python - "${LOGS_DIR}" "${LP}" "${WORKERS}" "${TOTAL}" "${MV_MOTION_OFF}" <<'T8_SMOKE_PY'
+import json
+import pathlib
+import sys
+logs, prefix, workers, episodes, off = pathlib.Path(sys.argv[1]), sys.argv[2], int(sys.argv[3]), int(sys.argv[4]), sys.argv[5] == "1"
+maximum = 0
+seen = 0
+for worker in range(workers):
+    rows = [json.loads(s) for s in (logs / f"{prefix}-w{worker}.probe.jsonl").read_text().splitlines() if s.strip()]
+    if not rows:
+        raise SystemExit("EVAL_SMOKE=FAIL 缺逐次推理记录")
+    per_ep = {}
+    for row in rows:
+        if row["token_per_image"] != 64 or row["motion_enabled"] == off:
+            raise SystemExit("EVAL_SMOKE=FAIL 网格或 motion 开关不符")
+        if not row["mem_order_ok"] or not row["motion_formula_ok"] or row["motion_calls"] != row["k"]:
+            raise SystemExit("EVAL_SMOKE=FAIL 在线不变量不符")
+        per_ep[row["ep_seq"]] = max(per_ep.get(row["ep_seq"], 0), row["infer_seq"])
+    maximum = max(maximum, max(per_ep.values()))
+    seen += len(per_ep)
+if seen != episodes or episodes != 48 or maximum > 82:
+    raise SystemExit(f"EVAL_SMOKE=FAIL episodes={seen}/{episodes} max_infer={maximum}")
+print(f"EVAL_SMOKE=DONE profile={'c8' if off else 'm8'} episodes=48/48 errors=0 max_infer={maximum} mem_order_ok=1 success_rate=测试模型不作指标")
+T8_SMOKE_PY
+  SMOKE_RC=$?
+  set -e
+  [[ "${SMOKE_RC}" -eq 0 ]] || FAIL=1
+fi
 echo "EXIT_CODE=${FAIL}"
 exit "${FAIL}"

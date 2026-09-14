@@ -4,12 +4,11 @@
 import mem_buffer（建库域留有冻结副本 `dataset_builder/mem_buffer.py`）。
 
 与旧实现的三处合法差异（均有不可观测性论证，其余逐跳同式）：
-① pos 表与池化只算 4x4 一档（frame_sampling 唯一消费档；PosEmb3D 是无 RNG、无参数
-   的纯函数，各档独立，只算一档不改变该档的任何字节——表本体 1.01 GiB → 192 MiB）；
+① pos 表与池化只算配置指定的一档（PosEmb3D 是无 RNG、无参数的纯函数；
+   4×4 表为 192 MiB，8×8 表为 768 MiB，各档独立计算，不改变原档数值）；
 ② `jax.device_get` 提到循环外一次（旧实现每步对同一 device 数组重复 get，
    取回的字节相同）；
-③ 不存 image_pixels 与 8x8/2x2 档位（image_pixels 的唯一消费者是 token_drop 打分
-   与死码可视化，装配只读 image_emb_4x4/pos_emb_4x4/state_emb 三键）。
+③ 不存 image_pixels 或配置之外的网格，装配只读当前网格的 image/pos 与 state 三键。
 
 ⚠ 禁把 encode 与 pool 包进新的 jax.jit（R18）：融合边界变了，bf16 累加序可能变位。
 本实现保持 encode（注入的 vision_enc_fn，本身已 jit）与 pool 分离调用，同旧实现。
@@ -22,7 +21,7 @@ import mem_buffer（建库域留有冻结副本 `dataset_builder/mem_buffer.py`�
   每次 add_buffer 后用 **while** 循环把所有已合法起点编完（demo 判据 `next+32 ≤ es−1`、exec 判据 `next+32 ≤ 本批末帧段内帧号`），
   存 `_history_feats_motion[f]`（键 = 全域起点帧号）；编完一窗后删除 `< next_grid_start` 的原始帧；
 - `_prepare_motion(step_idx)`：按训练侧同一公式取全部合法起点（>budget 立即报错、不裁剪），右填充 + mask，
-  `motion_pos = pos_emb_4x4[f, 0, :pos_dim]`（与训练侧 `store.pos_rows` 同表同切片），并返回每行全域时刻（padding 记哨兵）供交错排序。
+  `motion_pos = pos_emb[f, 0, :pos_dim]`（与训练侧 `store.pos_rows` 同表同切片），并返回每行全域时刻（padding 记哨兵）供交错排序。
 """
 
 import math
@@ -49,22 +48,29 @@ class FrameSampMemory:
         max_steps: int = 4096,
         *,
         vision_enc_fn: Callable,
+        token_per_image: int,
         motion_enc_fn: Callable | None = None,
         motion_cfg: dict | None = None,
     ):
         if vision_enc_fn is None:
             raise ValueError("FrameSampMemory 必须注入 vision_enc_fn（模型侧编码器）")
         self.num_views = num_views
+        grid = math.isqrt(token_per_image)
+        if grid * grid != token_per_image or grid not in (2, 4, 8):
+            raise ValueError(f"不支持的 token_per_image={token_per_image}，须为 4、16 或 64")
+        self.token_per_image = token_per_image
+        self.image_key = f"image_emb_{grid}x{grid}"
+        self.pos_key = f"pos_emb_{grid}x{grid}"
         self.img_emb_dim = img_emb_dim
         self.pos_emb_dim = pos_emb_dim
         self.state_emb_dim = state_emb_dim
         self.max_steps = max_steps
 
         self.vision_enc = vision_enc_fn
-        # 与旧实现同一 PosEmb3D、同一 arange 输入——4x4 表逐位同旧表 "4x4" 档
+        # 同一 PosEmb3D、同一 arange 输入，只按配置选择空间网格。
         pos_embedder = PosEmb3D(dim=pos_emb_dim)
         ranges = jnp.arange(max_steps)
-        self.pos_emb_4x4 = np.array(pos_embedder(ranges, 4))
+        self.pos_emb = np.array(pos_embedder(ranges, grid))
 
         self._history_feats = {}
 
@@ -147,19 +153,19 @@ class FrameSampMemory:
         image_jnp = einops.rearrange(image_jnp, "t v h w c -> (t v) h w c")
         image_jnp = image_tools.resize_with_pad(image_jnp, 224, 224)
         image_jnp = einops.rearrange(image_jnp, "(t v) h w c -> t v h w c", t=t, v=v)
-        output_emb = self.vision_enc(image_jnp)  # (t, v, 64, 2048)
+        output_emb = self.vision_enc(image_jnp)  # 真实 SigLIP 输出 (t,v,256,2048)
 
-        pooled_emb_4x4 = pool_tokens_to_size(output_emb, 16)  # (t, v, 16, 2048)
-        pooled_host = jax.device_get(pooled_emb_4x4)  # 循环外一次（合法差异②）
+        pooled_emb = pool_tokens_to_size(output_emb, self.token_per_image)
+        pooled_host = jax.device_get(pooled_emb)  # 循环外一次（合法差异②）
 
         for i, step_idx in enumerate(step_idx_list):
-            image_emb_4x4 = pooled_host[i]  # (v, 16, 2048)
-            pos_emb_4x4 = self.pos_emb_4x4[
-                step_idx*self.num_views : (step_idx+1)*self.num_views]  # (v, 16, 768)
+            image_emb = pooled_host[i]  # (v,token_per_image,2048)
+            pos_emb = self.pos_emb[
+                step_idx*self.num_views : (step_idx+1)*self.num_views]
 
             self._history_feats[step_idx] = {
-                "image_emb_4x4": image_emb_4x4,  # bf16
-                "pos_emb_4x4": pos_emb_4x4,      # fp32
+                self.image_key: image_emb,        # bf16
+                self.pos_key: pos_emb,            # fp32
                 "state_emb": states[i],          # fp32
             }
 
@@ -222,7 +228,7 @@ class FrameSampMemory:
         return out
 
     def _prepare_motion(self, step_idx: int):
-        """运动路装配：全部合法起点（>budget 报错、不裁剪）→ 右填充 + mask；motion_pos = pos_emb_4x4[f, 0, :pos_dim]。
+        """运动路装配：全部合法起点（>budget 报错、不裁剪）→ 右填充 + mask；motion_pos = pos_emb[f, 0, :pos_dim]。
         返回 (motion_emb (B,768) f32, motion_pos (B,pos_dim) f32, motion_mask (B,) bool, times (B,) int64)。"""
         if self.exec_start_idx is None:
             raise RuntimeError("尚未 add_buffer（exec_start_idx 未知）")
@@ -237,7 +243,7 @@ class FrameSampMemory:
             if f not in self._history_feats_motion:
                 raise RuntimeError(f"起点 {f} 应已编码但缓冲中没有（增量编码落后）")
             emb[i] = self._history_feats_motion[f]
-            pos[i] = self.pos_emb_4x4[f, 0, : self.motion_pos_dim]
+            pos[i] = self.pos_emb[f, 0, : self.motion_pos_dim]
         mask = np.zeros(B, np.bool_)
         mask[:k] = True
         return emb, pos, mask, pad_times(frames, B)
@@ -258,7 +264,7 @@ class FrameSampMemory:
         sampled_state_emb = self._load_emb(history_feats, indices_to_load, "state_emb")
         mask = np.ones((sampled_img_emb.shape[0]), dtype=np.bool_)
 
-        # we use right padding to the perceptual memory
+        # 视觉记忆使用右侧补零。
         # （必须复用 right_padding_token_emb——只换模块、不换数值路径，禁改写预分配版）
         sampled_img_emb, sampled_pos_emb, sampled_state_emb, mask = right_padding_token_emb(
             sampled_img_emb, sampled_pos_emb, sampled_state_emb, mask, max_size

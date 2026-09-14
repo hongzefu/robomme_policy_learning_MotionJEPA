@@ -40,7 +40,7 @@ CONDS = ("official", "normal", "mask", "swap")
 EPISODES_PER_TASK = 50            # benchmark test / val 每任务集数（env_metadata/<split>/）
 MAX_STEPS = 1300                  # robomme/eval.py::Args.max_steps
 
-# ── 模型形制（awsprod40k-b128-motion 快照：budget 512 / token_per_image 16 / motion.budget 96 / 文本 64）──
+# ── motion 开启态形制：两种网格的帧路预算均为 512，运动预算 96、文本 64；关闭态前缀由服务端按配置计算 ──
 MEM_LEN, FRAME_SLOTS, MOTION_SLOTS = 608, 512, 96
 IMG_LEN, TXT_LEN = 512, 64
 PREFIX_LEN = MEM_LEN + IMG_LEN + TXT_LEN        # 1184

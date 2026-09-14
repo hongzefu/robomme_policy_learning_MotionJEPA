@@ -19,7 +19,7 @@
 次序表与 k 公式并逐元素比对（EVAL_K_FORMULA / EVAL_ORDER_LEGAL）。只记 sha 无法核排列合法性、长度与 dtype。
 
 启动时打一行 `PROBE_ENV`，给出 jax 后端与两张位置编码表的指纹：
-  - `pos_table_sha`  = 在线 `policy.mem_buffer.pos_emb_4x4` 前 `pos_rows` 行（`FrameSampMemory.__init__` 里
+  - `pos_table_sha`  = 在线 `policy.mem_buffer.pos_emb` 前 `pos_rows` 行（`FrameSampMemory.__init__` 里
                        `PosEmb3D(dim)(arange(4096), 4)` 现算，GPU 上算与 CPU 上算不逐位，见 P5 留档）；
   - `store_pos_sha`  = 训练库 `FrameSampStore.pos_rows(arange(pos_rows))`（离线建库那张表）。
   `pos_rows` 取库侧 `store_meta.num_pos_rows`（400ep 库为 586 = 最长 episode 帧数），在线表 4096 行只能比这个前缀；
@@ -67,6 +67,7 @@ def _mask_bits(arr) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ckpt", required=True, help="checkpoint 目录（含 params/ 与 assets/，如 .../39999）")
+    ap.add_argument("--store-subdir", choices=("framesamp", "framesamp-8x8"), default="framesamp")
     ap.add_argument("--lib", default=str(_V1 / "datasets/4task-motion-400ep"),
                     help="训练库根（取 framesamp/ 的 pos 小表算 store_pos_sha）")
     ap.add_argument("--port", type=int, default=8041)
@@ -107,7 +108,13 @@ def main() -> int:
         # 换卡路径（沿用 compare_siglip_replay.py 的既有做法）：先用 stub 过构造（stub 子进程随即关闭），
         # 再按同一份 run provenance 自建真 sidecar 客户端落到 --motion-gpu，换进去后重建 mem_buffer。
         from mme_vla_suite.policies.motion_client import MotionEncoderClient
-        policy = _policy_config.create_trained_policy(train_config, ckpt_dir, seed=args.seed, motion_stub=True)
+        from unittest import mock
+        from mme_vla_suite.policies import motion_client as mc
+        original = mc.MotionEncoderClient
+        def cpu_stub(**kw):
+            return original(**(kw | {"online_gpu": ""}))
+        with mock.patch.object(mc, "MotionEncoderClient", cpu_stub):
+            policy = _policy_config.create_trained_policy(train_config, ckpt_dir, seed=args.seed, motion_stub=True)
         if not policy.motion_enabled:
             raise SystemExit("错误: --motion-gpu 只对 motion 开启态的 run 有意义")
         policy._motion_client.close()
@@ -121,11 +128,11 @@ def main() -> int:
         policy.reset()          # 重建 FrameSampMemory，注入换卡后的编码句柄
 
     # ── 两张 pos 表指纹（在线现算 vs 训练库离线表）────────────────────────────────
-    fmeta = StoreMeta.load(lib / "framesamp")
-    store = FrameSampStore(lib / "framesamp", meta=fmeta)
+    fmeta = StoreMeta.load(lib / args.store_subdir)
+    store = FrameSampStore(lib / args.store_subdir, meta=fmeta)
     try:
         n_pos = int(fmeta.num_pos_rows)
-        pos_online = np.ascontiguousarray(np.asarray(policy.mem_buffer.pos_emb_4x4))
+        pos_online = np.ascontiguousarray(np.asarray(policy.mem_buffer.pos_emb))
         if pos_online.shape[0] < n_pos:
             raise SystemExit(f"错误: 在线 pos 表只有 {pos_online.shape[0]} 行 < 库 {n_pos} 行")
         pos_store = np.ascontiguousarray(store.pos_rows(np.arange(n_pos, dtype=np.int64)))

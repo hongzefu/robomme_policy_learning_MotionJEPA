@@ -137,6 +137,7 @@ def _rms(x) -> float:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--lib", default=str(_V1 / "datasets/4task-motion-400ep"))
+    ap.add_argument("--store-subdir", choices=("framesamp", "framesamp-8x8"), default="framesamp")
     ap.add_argument("--ckpt", required=True, help="checkpoint 目录（含 params/ 与 assets/，如 .../39999）")
     ap.add_argument("--config", default="mme_vla_suite", help="推理侧 config 条目（生产 serve_policy 用 mme_vla_suite）")
     ap.add_argument("--episodes", default="VideoUnmask:0", help="逗号分隔的 <task>:<raw_ep_idx>")
@@ -169,7 +170,13 @@ def main() -> int:
     # ── 生产口径的 policy（B 臂编码器 + transforms + norm_stats 全部来自 checkpoint）；motion 先用 stub 过构造，随后换成查表 ──
     t0 = time.perf_counter()
     train_config = _config.get_config(args.config)
-    policy = _policy_config.create_trained_policy(train_config, ckpt_dir, motion_stub=True)
+    from unittest import mock
+    from mme_vla_suite.policies import motion_client as mc
+    original = mc.MotionEncoderClient
+    def cpu_stub(**kw):
+        return original(**(kw | {"online_gpu": ""}))
+    with mock.patch.object(mc, "MotionEncoderClient", cpu_stub):
+        policy = _policy_config.create_trained_policy(train_config, ckpt_dir, motion_stub=True)
     stub = policy._motion_client
     stub.close()
     enc_B = policy._vision_encode
@@ -201,8 +208,8 @@ def main() -> int:
     os.environ["MMEVLA_MOTION_STORE"] = str(lib / "motion")
     hc = omegaconf.OmegaConf.load(run_root / "history_config.resolved.yaml")
     data_config = types.SimpleNamespace(norm_stats={"state": policy.state_norm_stats}, use_quantile_norm=policy.use_quantiles)
-    ds = _create_framesamp_dataset(str(lib / "framesamp"), data_config, hc, int(policy._model.action_horizon))
-    fmeta = StoreMeta.load(str(lib / "framesamp"))
+    ds = _create_framesamp_dataset(str(lib / args.store_subdir), data_config, hc, int(policy._model.action_horizon))
+    fmeta = StoreMeta.load(str(lib / args.store_subdir))
     motion_root = _motion_gates(hc, fmeta)
     mmeta = ms.MotionMeta.load(motion_root)
     mstore = ms.MotionStore(motion_root, meta=mmeta)
@@ -250,7 +257,7 @@ def main() -> int:
         mems = {"S": make_mem(enc_A), "A": make_mem(enc_A), "C": make_mem(enc_C), "B": make_mem(enc_B)}   # B 最后
         assert policy._vision_encode is enc_B
         cfgm = policy.config
-        memA1 = FrameSampMemory(num_views=cfgm.num_views, img_emb_dim=cfgm.memory_feature.img.input_dim,
+        memA1 = FrameSampMemory(token_per_image=int(cfgm.token_per_image), num_views=cfgm.num_views, img_emb_dim=cfgm.memory_feature.img.input_dim,
                                 pos_emb_dim=cfgm.memory_feature.pos.input_dim, state_emb_dim=cfgm.memory_feature.state.input_dim,
                                 vision_enc_fn=enc_A)                                   # 帧路与其余臂逐字同一 add_buffer，只是不开运动路
         policy.mem_buffer = mems["B"]; policy.step_idx = -1; policy.exec_start_idx = 0
@@ -266,7 +273,7 @@ def main() -> int:
                 memA1.add_buffer(frames[lo + i:lo + i + 1], states[lo + i:lo + i + 1], [s])
             rows = fstore.read_image_rows(np.asarray([row_base + s for s in sl], dtype=np.int64))                     # S 臂改写为训练库行
             for i, s in enumerate(sl):
-                mems["S"]._history_feats[s]["image_emb_4x4"] = np.ascontiguousarray(rows[i][None])
+                mems["S"]._history_feats[s][fmeta.spec.image_key] = np.ascontiguousarray(rows[i][None])
             return sl
 
         ep_points = 0
@@ -278,8 +285,8 @@ def main() -> int:
             # 帧级
             fa = {p: DiffAcc() for p in MEM_PAIRS}
             for s in new_steps:
-                e = {n: np.asarray(mems[n]._history_feats[s]["image_emb_4x4"])[0] for n in ARMS}
-                e["A1"] = np.asarray(memA1._history_feats[s]["image_emb_4x4"])[0]
+                e = {n: np.asarray(mems[n]._history_feats[s][fmeta.spec.image_key])[0] for n in ARMS}
+                e["A1"] = np.asarray(memA1._history_feats[s][fmeta.spec.image_key])[0]
                 bit["A1_vs_store"][0] += 1; bit["A1_vs_store"][1] += 0 if _bytes_equal(e["A1"], e["S"]) else 1
                 bit["A_vs_store"][0] += 1; bit["A_vs_store"][1] += 0 if _bytes_equal(e["A"], e["S"]) else 1
                 bit["C_vs_B"][0] += 1; bit["C_vs_B"][1] += 0 if _bytes_equal(e["C"], e["B"]) else 1

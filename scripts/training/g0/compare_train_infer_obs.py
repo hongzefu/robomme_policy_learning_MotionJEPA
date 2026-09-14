@@ -16,16 +16,11 @@
   A = 离线 f32 `SigLipTokenizer` 成批现算（只出帧级观察行）
   B = 在线 bf16 `policy._vision_encode` 现算（生产推理真身；只出帧级与动作级观察行）
 
-L4 的两条判定行说明（2026-09-07 实测，阈值未改）：
-  `VT_FULL_VS_CACHED` 的阈值 `rel_fro ≤ 1e-3` / `ulp_p99 ≤ 4` 由计划事先定死（假设「18 层每层 ≤1 ULP」）。
-  生产 bf16 档实测 rel_fro ≈ 3.0e-3、ulp_p99 22–31、max_abs 0.0156（vt_rms ≈ 1.0），且前缀 KV 自身
-  rel_fro 就已是 0.36–0.60%、`prefix_kv_bitexact=0/N`——差异在 `llm([prefix, suffix], …)` 与
-  `llm([prefix, None], …)` 的前缀 pass 就已产生，与 suffix 段无关；结构三项（mask 子块 / suffix 行 /
-  positions）全等，故不是语义错误。两次独立跑数字还不同（2.83e-3 / 3.04e-3），含 XLA autotune 的
-  非确定性。**「阈值是否按实测重定」属放宽判据，须用户裁决，本脚本不自行改阈值、不改阻断性质。**
-  `VT_FULL_VS_CACHED_F32` 是为该裁决提供依据的**观察行**：把参数树与 `embed_dtype` 一起升到 f32
-  后在同一 obs / x_t / time 上重跑两路。f32 下差异若掉到 1e-5 量级，则 bf16 档的 3e-3 就是
-  kernel 选择与归约序的数值来源；若 f32 下仍是 3e-3 量级，那是真问题。
+L4 判定口径（用户 2026-09-14 已裁决）：
+  `VT_FULL_VS_CACHED` 保留 `rel_fro ≤ 1e-3` / `ulp_p99 ≤ 4` 的报告阈值，作为 bf16 观察项。
+  `VT_FULL_VS_CACHED_F32` 升为阻断项：参数与 embed_dtype 一起升 f32，matmul_precision=highest，
+  要求有效前缀 KV 逐位相同且输出 rel_fro ≤ 1e-6；缺失 f32 重跑证据直接失败。
+  正式 8×8 验收显式传 `--f32-diag-points-per-episode 3`，两条数值路径使用同一 obs / x_t / time。
 
 判定行分「阻断」与「观察」两类；任一阻断 FAIL 非零退出，但**所有已算出的判定行先全部打印**。
 `OBS_PROMPT` 是唯一的「FAIL 即停后续层」项——两侧 prompt token 不等时 L3–L5 没有比较意义，
@@ -306,15 +301,17 @@ def main() -> int:
     ap.add_argument("--lib", default=str(_V1 / "datasets/4task-motion-400ep"), help="对拍用的库根（含 framesamp/ 与 motion/）")
     ap.add_argument("--ckpt", default=str(_V1 / "train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999"),
                     help="checkpoint 目录（含 params/ 与 assets/）")
-    ap.add_argument("--train-config", default="mme_vla_suite_b128", help="生产训练配置条目（两侧同用）")
+    ap.add_argument("--train-config", default="mme_vla_suite", help="生产训练配置条目（两侧同用）")
+    ap.add_argument("--store-subdir", choices=("framesamp", "framesamp-8x8"), default="framesamp")
+    ap.add_argument("--norm-stats", type=pathlib.Path, help="训练启动时显式指定的 norm_stats 文件")
     ap.add_argument("--episodes", default=DEFAULT_EPISODES, help="逗号分隔的 <task>:<raw_ep_idx>，需覆盖 5 个 es 取值")
     ap.add_argument("--motion", choices=("store", "sidecar"), default="store",
                     help="运动路来源：store=从 MotionStore 查表；sidecar=S 臂用真 MotionEncoderClient 现算")
-    ap.add_argument("--motion-gpu", default="1", help="sidecar 子进程的 CUDA_VISIBLE_DEVICES（物理卡号）")
+    ap.add_argument("--motion-gpu", default=None, help="sidecar 子进程的 CUDA_VISIBLE_DEVICES（物理卡号，必须显式指定）")
     ap.add_argument("--noise-seeds", default="0,1,2")
     ap.add_argument("--max-points", type=int, default=0, help="开发用：每集只跑前 N 个决策时刻（0 = 全部）")
     ap.add_argument("--f32-diag-points-per-episode", type=int, default=1,
-                    help="VT_FULL_VS_CACHED_F32 观察行：每集取前 N 个决策点做 f32 重跑（0 = 关闭）")
+                    help="每集取前 N 个决策点做 f32 阻断验证；正式验收传 3，0 会因缺证据失败")
     ap.add_argument("--out", default=str(_V1 / "reports/tic/compare_train_infer_obs.json"), help="输出 json 路径")
     args = ap.parse_args()
 
@@ -353,9 +350,23 @@ def main() -> int:
     # ── 生产口径 policy（B 臂编码器 + transforms + norm_stats 全部来自 checkpoint）──────────────────
     t0 = time.perf_counter()
     train_config = _config.get_config(args.train_config)
-    policy = _policy_config.create_trained_policy(train_config, ckpt_dir, motion_stub=True)
+    if args.norm_stats:
+        train_config = dataclasses.replace(train_config, data=dataclasses.replace(
+            train_config.data, assets=dataclasses.replace(train_config.data.assets,
+                assets_dir=str(args.norm_stats.resolve().parent.parent), asset_id=args.norm_stats.parent.name)))
+    # 构造期 stub 禁止看到任何 GPU，真 sidecar 在后文显式指定物理卡号。
+    from unittest import mock
+    from mme_vla_suite.policies import motion_client as mc
+    real_client = mc.MotionEncoderClient
+    def cpu_stub(**kw):
+        return real_client(**(kw | {"online_gpu": ""}))
+    with mock.patch.object(mc, "MotionEncoderClient", cpu_stub):
+        policy = _policy_config.create_trained_policy(train_config, ckpt_dir, motion_stub=True)
+    motion_enabled = bool(policy.motion_enabled)
+    memory_keys = KEYS8 if motion_enabled else KEYS8[:4]
     stub_client = policy._motion_client
-    stub_client.close()                                     # 只借它过构造，随后按档位换成查表闭包或真 sidecar
+    if stub_client is not None:
+        stub_client.close()                                     # 只借它过构造，随后按档位换成查表闭包或真 sidecar
     enc_B = policy._vision_encode
     model = policy._model
     print(f"[tic] policy 构造 {time.perf_counter() - t0:.1f}s config={args.train_config} ckpt={ckpt_dir} "
@@ -364,12 +375,12 @@ def main() -> int:
     # ── 训练侧真口径 dataset：data_config 由生产配置 create，raw / transformed 两层都建 ────────────
     data_config = train_config.data.create(train_config.assets_dirs, train_config.model)
     hc = omegaconf.OmegaConf.load(run_root / "history_config.resolved.yaml")
-    ds_raw = _create_framesamp_dataset(str(lib / "framesamp"), data_config, hc, int(model.action_horizon))
+    ds_raw = _create_framesamp_dataset(str(lib / args.store_subdir), data_config, hc, int(model.action_horizon))
     ds_tf = transform_dataset(ds_raw, data_config)
-    fmeta = StoreMeta.load(str(lib / "framesamp"))
+    fmeta = StoreMeta.load(str(lib / args.store_subdir))
     motion_root = _motion_gates(hc, fmeta)
-    mmeta = ms.MotionMeta.load(motion_root)
-    mstore = ms.MotionStore(motion_root, meta=mmeta)
+    mmeta = ms.MotionMeta.load(motion_root) if motion_enabled else None
+    mstore = ms.MotionStore(motion_root, meta=mmeta) if motion_enabled else None
     fstore = ds_raw._ensure_store()
     manifest = json.load(open(lib / "meta" / "episode_manifest.json", encoding="utf-8"))
     raw_dir = pathlib.Path(manifest["raw_dir"])
@@ -390,8 +401,9 @@ def main() -> int:
     entries = ds_raw._motion_entries
     n_windows = 0
     for e in eps:
-        rows_last, _ = ms.visible_motion_rows(entries[e["g"]], e["taus"][-1])
-        n_windows += int(len(rows_last))
+        if motion_enabled:
+            rows_last, _ = ms.visible_motion_rows(entries[e["g"]], e["taus"][-1])
+            n_windows += int(len(rows_last))
         for t in e["taus"]:
             hit = np.flatnonzero((ds_raw._epis_of == e["g"]) & (ds_raw._step_of == t))
             if len(hit) != 1:
@@ -421,7 +433,7 @@ def main() -> int:
         _, kv = m.PaliGemma.llm([tok, None], mask=attn, positions=pos)
         par_tok, _, _ = m.mem_encoder(o.static_image_emb, o.static_pos_emb, o.static_state_emb,
                                       motion_emb=o.motion_emb, motion_pos=o.motion_pos, motion_mask=o.motion_mask)
-        par_mask = jnp.concatenate([o.static_mask, o.motion_mask], axis=1)
+        par_mask = jnp.concatenate([o.static_mask, o.motion_mask], axis=1) if motion_enabled else o.static_mask
         mem_tok, mem_mask, _, _ = m.embed_memory(o)
         return {"tokens": tok, "mask": mask, "ar": ar, "na": na, "attn": attn, "pos": pos,
                 "k": kv[0], "v": kv[1], "par_tok": par_tok, "par_mask": par_mask,
@@ -507,7 +519,9 @@ def main() -> int:
 
     # ── 运动路句柄：store 档三臂都查表；sidecar 档 S 臂用真 MotionEncoderClient，A/B 仍查表（省 3 倍编码）──
     client = None
-    if args.motion == "sidecar":
+    if motion_enabled and args.motion == "sidecar":
+        if args.motion_gpu is None:
+            raise ValueError("sidecar 模式必须显式给 --motion-gpu")
         from mme_vla_suite.policies.motion_client import MotionEncoderClient
         t0 = time.perf_counter()
         client = MotionEncoderClient(online_gpu=args.motion_gpu,
@@ -522,7 +536,7 @@ def main() -> int:
 
     # ── 累加器 ─────────────────────────────────────────────────────────────────────────────────
     raw_mis = {"image": 0, "wrist_image": 0, "state": 0, "prompt_text": 0}
-    trainset_key_mis = {k: 0 for k in KEYS8}
+    trainset_key_mis = {k: 0 for k in memory_keys}
     obs_key_mis: dict[str, int] = {}
     obs_train_only: set[str] = set()
     obs_infer_only: set[str] = set()
@@ -573,9 +587,12 @@ def main() -> int:
         for ep in eps:
             g, es, T, row_base = ep["g"], ep["es"], ep["T"], ep["row_base"]
             taus = ep["taus"]
-            entry = entries[g]
-            rows_all, f_all = ms.visible_motion_rows(entry, T - 1)
-            f2row = {int(f): int(r) for r, f in zip(rows_all.tolist(), f_all.tolist())}
+            if motion_enabled:
+                entry = entries[g]
+                rows_all, f_all = ms.visible_motion_rows(entry, T - 1)
+                f2row = {int(f): int(r) for r, f in zip(rows_all.tolist(), f_all.tolist())}
+            else:
+                f2row = {}
 
             def motion_lookup(window, start_frame, _f2row=f2row):
                 return np.asarray(mstore.rows(np.asarray([_f2row[int(start_frame)]], dtype=np.int64))[0],
@@ -613,7 +630,7 @@ def main() -> int:
                     mems[name].add_buffer(frames[lo:hi], states[lo:hi], sl, exec_start_idx=esx)
                 rows = fstore.read_image_rows(np.asarray([row_base + s for s in sl], dtype=np.int64))
                 for i, s in enumerate(sl):                                       # S 臂帧特征改写为训练库真值行
-                    mems["S"]._history_feats[s]["image_emb_4x4"] = np.ascontiguousarray(rows[i][None])
+                    mems["S"]._history_feats[s][fmeta.spec.image_key] = np.ascontiguousarray(rows[i][None])
                 return sl
 
             def check(t: int, new_steps: list[int], is_last: bool, ep_pt_idx: int):
@@ -644,7 +661,7 @@ def main() -> int:
 
                 # ── L1b 帧级三臂数值差（观察）+ S 臂运动路 vs 表（sidecar 档阻断）─────────────
                 for s in new_steps:
-                    e_arm = {n: np.asarray(mems[n]._history_feats[s]["image_emb_4x4"])[0] for n in FRAME_ARMS}
+                    e_arm = {n: np.asarray(mems[n]._history_feats[s][fmeta.spec.image_key])[0] for n in FRAME_ARMS}
                     for p in MEM_PAIRS:
                         frame_acc[p].add(e_arm[p[0]], e_arm[p[1]])
                 if client is not None:
@@ -665,7 +682,7 @@ def main() -> int:
                 assembled_S = policy._prepare_history(dict(element))
                 sample_raw = ds_raw[idx]
                 key_ok = {}
-                for k in KEYS8:
+                for k in memory_keys:
                     ok = _bytes_equal(assembled_S[k], np.asarray(sample_raw[k]))
                     key_ok[k] = ok
                     if not ok:
@@ -739,7 +756,7 @@ def main() -> int:
                 txt_len = int(oI["txt_len"])
                 img_len = total_len - mem_len - txt_len
                 n_img = len(infer_inputs["image"])
-                want_mem = int(hc.budget) + int(hc.motion.budget)
+                want_mem = int(hc.budget) + (int(hc.motion.budget) if motion_enabled else 0)
                 shape_ok = (mem_len == want_mem and txt_len == int(model.config.max_token_len)
                             and img_len > 0 and img_len % n_img == 0)
                 if not shape_ok:
@@ -762,7 +779,7 @@ def main() -> int:
                 kv_layers = int(oI["k"].shape[0])
 
                 # MEM_INVPERM：并列序 →(mem_order)→ 重排序，逆置换应原样还原
-                order = np.asarray(assembled_S["mem_order"], np.int64)
+                order = np.asarray(assembled_S["mem_order"], np.int64) if motion_enabled else np.arange(mem_len, dtype=np.int64)
                 if order.shape != (mem_len,) or not np.array_equal(np.sort(order), np.arange(mem_len)):
                     invperm_bad += 1
                 else:
@@ -779,7 +796,7 @@ def main() -> int:
                 # MEM_SCALE_OBS（A20 口径：取数点在 take_along_axis 之前的并列序上）
                 par_tok = oI["par_tok"][0].astype(np.float32)
                 sm_mask = np.asarray(assembled_S["static_mask"], bool)
-                mo_mask = np.asarray(assembled_S["motion_mask"], bool)
+                mo_mask = np.asarray(assembled_S["motion_mask"], bool) if motion_enabled else np.zeros(0, dtype=bool)
                 nf = int(sm_mask.sum())
                 nm = int(mo_mask.sum())
                 if nf and nm:
@@ -846,7 +863,7 @@ def main() -> int:
                 # AUG_EFFECT_OBS：preprocess(train=True) 的增广只应动图像、记忆键必须原样透传
                 aug = jax.block_until_ready(f_aug(obs_I, jax.random.key(0)))
                 aug_points += 1
-                for k in KEYS8:
+                for k in memory_keys:
                     a = getattr(aug, k)
                     b = getattr(obs_I, k)
                     if a is None or b is None or not _bytes_equal(np.asarray(a), np.asarray(b)):
@@ -874,9 +891,7 @@ def main() -> int:
                                 "wall_s": time.perf_counter() - tb})
             print(f"[tic] episode g={g} 完成 points={len(taus)} 用时 {per_episode[-1]['wall_s']:.1f}s")
 
-        # ── VT_FULL_VS_CACHED_F32（观察）：参数树与 embed_dtype 一起升 f32 后在同一输入上重跑两路 ──
-        # 目的是给「VT_FULL_VS_CACHED 阈值是否按实测重定」提供依据：f32 下差异掉到 1e-5 量级
-        # ⇒ bf16 档的 3e-3 是 kernel 选择与归约序的数值来源；仍是 3e-3 量级 ⇒ 是真问题。
+        # ── f32 阻断验证：参数树与 embed_dtype 一起升 f32 后，在同一输入上重跑两路 ──
         # 注意必须同时把 embed_dtype 升 f32——只换参数树不够，`history_gemma.Module.__call__` 会把
         # embedded 一律 astype(self.embed_dtype)，激活留在 bf16 就测不出权重精度以外的东西。
         if f32_cache and not prompt_fail:
@@ -915,7 +930,8 @@ def main() -> int:
             rr = np.concatenate(rel_parts) if rel_parts else np.zeros(1)
             s32 = acc_vt32.summary()
             kv_rel32 = float(np.sqrt(acc_kv32["sum_d2"] / max(acc_kv32["sum_a2"], 1e-30)))
-            f32_line = (f"VT_FULL_VS_CACHED_F32 points={len(f32_cache)} rel_fro={s32['rel_fro']:.4g} "
+            f32_ok = s32["rel_fro"] <= 1e-6 and acc_kv32["max_abs"] == 0 and len(f32_cache) > 0
+            f32_line = (f"VT_FULL_VS_CACHED_F32={'PASS' if f32_ok else 'FAIL'} points={len(f32_cache)} rel_fro={s32['rel_fro']:.4g} "
                         f"max_abs={s32['max_abs']:.4g} vt_rms={_mean_str(vt_rms32)} "
                         f"max_rel_p99={float(np.percentile(rr, 99)):.4g} max_rel_max={float(rr.max()):.4g} "
                         f"prefix_kv_rel_fro={kv_rel32:.4g} prefix_kv_max_abs={acc_kv32['max_abs']:.4g} "
@@ -961,7 +977,8 @@ def main() -> int:
     finally:
         if client is not None:
             client.close()
-        mstore.close()
+        if mstore is not None:
+            mstore.close()
         ds_raw.close()
 
     # ── 判定行 ────────────────────────────────────────────────────────────────────────────────
@@ -972,7 +989,7 @@ def main() -> int:
             f"prompt_text_mismatch={raw_mis['prompt_text']}")
     key_mis = {k: v for k, v in trainset_key_mis.items() if v}
     V.block(not key_mis, f"MEM_S_VS_TRAINSET={'PASS' if not key_mis else 'FAIL'} points={n_done} "
-                         f"keys={len(KEYS8)} key_mismatches={key_mis or 'none'}")
+                         f"keys={len(memory_keys)} key_mismatches={key_mis or 'none'}")
     for p in MEM_PAIRS:
         V.observe(frame_acc[p].line(f"MEM_{p[0]}_VS_{p[1]}"))
     if client is not None:
@@ -998,10 +1015,10 @@ def main() -> int:
                    f"repack_dropped_keys={sorted(repack_dropped)} repack_dropped_reach_model={repack_reach_model}")
     if prompt_fail:
         for name in ("PREFIX_SHAPE", "PREFIX_T_VS_I", "PREFIX_POSITIONS", "MEM_INVPERM", "KV_T_VS_I",
-                     "FULL_VS_CACHED_STRUCT", "VT_FULL_VS_CACHED", "ACT_T_VS_I"):
+                     "FULL_VS_CACHED_STRUCT", "VT_FULL_VS_CACHED_F32", "ACT_T_VS_I"):
             V.block(False, f"{name}=SKIP(OBS_PROMPT_FAIL)")
         V.observe("MEM_SCALE_OBS=SKIP(OBS_PROMPT_FAIL)")
-        V.observe("VT_FULL_VS_CACHED_F32=SKIP(OBS_PROMPT_FAIL)")
+        V.observe("VT_FULL_VS_CACHED=SKIP(OBS_PROMPT_FAIL)")
         V.observe("ACT_S_VS_B=SKIP(OBS_PROMPT_FAIL)")
         V.observe("AUG_EFFECT_OBS=SKIP(OBS_PROMPT_FAIL)")
     else:
@@ -1035,15 +1052,16 @@ def main() -> int:
                        f"prefix_kv_pad_positions_excluded={l4_struct['prefix_kv_pad']}")
         s4 = l4_vt.summary()
         vt_ok = n4 > 0 and s4["rel_fro"] <= THR_REL_FRO and s4["ulp_p99"] <= THR_ULP_P99
-        V.block(vt_ok, f"VT_FULL_VS_CACHED={'PASS' if vt_ok else 'FAIL'} points={n4} rel_fro={s4['rel_fro']:.4g} "
+        V.observe(f"VT_FULL_VS_CACHED={'PASS' if vt_ok else 'FAIL'} points={n4} rel_fro={s4['rel_fro']:.4g} "
                        f"max_abs={s4['max_abs']:.4g} vt_rms={_mean_str(l4_vt_rms)} "
                        f"ulp_p99={s4['ulp_p99']:.3g} ulp_max={s4['ulp_max']:.3g} "
                        f"thr_rel_fro={THR_REL_FRO} thr_ulp_p99={THR_ULP_P99} | prefix_kv {_num_line(l4_kv)} "
                        f"(prefix_kv 只统计 prefix_mask=True 的位) "
-                       f"| note=threshold_pending_user_review(阈值为计划事先定死，实测超出属待裁决项，"
-                       f"本脚本不自行放宽；结构三项全等，差异自前缀 pass 起，见 VT_FULL_VS_CACHED_F32)")
+                       f"| note=用户已裁决为bf16观察项；阻断条件见VT_FULL_VS_CACHED_F32")
         if f32_line is not None:
-            V.observe(f32_line)
+            V.block(f32_ok, f32_line)
+        else:
+            V.block(False, "VT_FULL_VS_CACHED_F32=FAIL 缺f32重跑证据")
         a_ok = act_ti_mis == 0 and act_det_ok
         V.block(a_ok, f"ACT_T_VS_I={'PASS' if a_ok else 'FAIL'} points={n_done} seeds={len(noise_seeds)} "
                       f"mismatches={act_ti_mis} determinism_rerun={'PASS' if act_det_ok else 'FAIL'}")
