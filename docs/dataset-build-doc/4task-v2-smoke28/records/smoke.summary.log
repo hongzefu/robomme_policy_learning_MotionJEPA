@@ -1,0 +1,368 @@
+START_HEAD=73d8748370e94e7eb4671739a0247b881a1d185a
+ M scripts/dataset/hf_export/h5v2_copy_to_bucket.py
+?? scripts/dataset/hf_export/archive_h5v2_metadata.py
+V2_STAGE=plan UTC=2026-09-14T17:43:02Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+PLAN_OK tasks=4 selected=28 role=primary:28 max_timesteps=2304 prechecks=PASS
+V2_STAGE=merge UTC=2026-09-14T17:43:11Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+MERGE_EP task=RouteStick idx=0 member=record_dataset_RouteStick_easy/hdf5_files/RouteStick_ep0_seed16000.h5 secs=0.811
+MERGE_EP task=VideoUnmaskSwap idx=0 member=record_dataset_VideoUnmaskSwap_easy/hdf5_files/VideoUnmaskSwap_ep0_seed5000.h5 secs=0.864
+MERGE_EP task=RouteStick idx=1 member=record_dataset_RouteStick_easy/hdf5_files/RouteStick_ep1_seed16100.h5 secs=0.527
+MERGE_EP task=VideoRepick idx=0 member=record_dataset_VideoRepick_easy/hdf5_files/VideoRepick_ep1_seed9100.h5 secs=2.005
+MERGE_EP task=VideoUnmaskSwap idx=1 member=record_dataset_VideoUnmaskSwap_easy/hdf5_files/VideoUnmaskSwap_ep1_seed5100.h5 secs=1.295
+MERGE_EP task=RouteStick idx=2 member=record_dataset_RouteStick_medium/hdf5_files/RouteStick_ep0_seed16000.h5 secs=1.289
+MERGE_EP task=VideoUnmaskSwap idx=2 member=record_dataset_VideoUnmaskSwap_medium/hdf5_files/VideoUnmaskSwap_ep0_seed5000.h5 secs=0.812
+MERGE_EP task=BinFill idx=0 member=record_dataset_BinFill_easy/hdf5_files/BinFill_ep0_seed4000.h5 secs=3.444
+MERGE_EP task=VideoUnmaskSwap idx=3 member=record_dataset_VideoUnmaskSwap_medium/hdf5_files/VideoUnmaskSwap_ep1_seed5100.h5 secs=0.786
+MERGE_EP task=RouteStick idx=3 member=record_dataset_RouteStick_medium/hdf5_files/RouteStick_ep1_seed16100.h5 secs=1.330
+MERGE_EP task=VideoRepick idx=1 member=record_dataset_VideoRepick_easy/hdf5_files/VideoRepick_ep2_seed9200.h5 secs=2.118
+MERGE_EP task=RouteStick idx=4 member=record_dataset_RouteStick_hard/hdf5_files/RouteStick_ep0_seed16000.h5 secs=1.052
+MERGE_EP task=VideoUnmaskSwap idx=4 member=record_dataset_VideoUnmaskSwap_hard/hdf5_files/VideoUnmaskSwap_ep0_seed5000.h5 secs=1.500
+MERGE_EP task=BinFill idx=1 member=record_dataset_BinFill_easy/hdf5_files/BinFill_ep1_seed4100.h5 secs=1.893
+MERGE_EP task=RouteStick idx=5 member=record_dataset_RouteStick_hard/hdf5_files/RouteStick_ep1_seed16100.h5 secs=1.554
+MERGE_EP task=VideoRepick idx=2 member=record_dataset_VideoRepick_medium/hdf5_files/VideoRepick_ep0_seed9000.h5 secs=2.518
+MERGE_EP task=VideoUnmaskSwap idx=5 member=record_dataset_VideoUnmaskSwap_hard/hdf5_files/VideoUnmaskSwap_ep1_seed5100.h5 secs=1.420
+MERGE_EP task=BinFill idx=2 member=record_dataset_BinFill_medium/hdf5_files/BinFill_ep0_seed4000.h5 secs=2.738
+MERGE_EP task=VideoUnmaskSwap idx=6 member=record_dataset_VideoUnmaskSwap_xhard/hdf5_files/VideoUnmaskSwap_ep0_seed5000.h5 secs=1.761
+MERGE_EP task=VideoRepick idx=3 member=record_dataset_VideoRepick_medium/hdf5_files/VideoRepick_ep1_seed9100.h5 secs=2.010
+MERGE_EP task=RouteStick idx=6 member=record_dataset_RouteStick_xhard/hdf5_files/RouteStick_ep0_seed16000.h5 secs=2.605
+MERGE_EP task=VideoUnmaskSwap idx=7 member=record_dataset_VideoUnmaskSwap_xhard/hdf5_files/VideoUnmaskSwap_ep1_seed5100.h5 secs=1.645
+MERGE_TASK=PASS task=VideoUnmaskSwap episodes=8
+MERGE_EP task=VideoRepick idx=4 member=record_dataset_VideoRepick_xhard/hdf5_files/VideoRepick_ep0_seed9000.h5 secs=1.950
+MERGE_EP task=RouteStick idx=7 member=record_dataset_RouteStick_xhard/hdf5_files/RouteStick_ep1_seed16100.h5 secs=2.082
+MERGE_TASK=PASS task=RouteStick episodes=8
+MERGE_EP task=BinFill idx=3 member=record_dataset_BinFill_medium/hdf5_files/BinFill_ep1_seed4100.h5 secs=3.633
+MERGE_EP task=VideoRepick idx=5 member=record_dataset_VideoRepick_xhard/hdf5_files/VideoRepick_ep1_seed9100.h5 secs=2.290
+MERGE_TASK=PASS task=VideoRepick episodes=6
+MERGE_EP task=BinFill idx=4 member=record_dataset_BinFill_hard/hdf5_files/BinFill_ep0_seed4000.h5 secs=4.056
+MERGE_EP task=BinFill idx=5 member=record_dataset_BinFill_hard/hdf5_files/BinFill_ep1_seed4100.h5 secs=5.341
+MERGE_TASK=PASS task=BinFill episodes=6
+V2_STAGE=verify UTC=2026-09-14T17:43:32Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+VERIFY_SHARD task=RouteStick lo=1 hi=2 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=2 hi=3 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=3 hi=4 mismatches=0
+VERIFY_SHARD task=RouteStick lo=0 hi=1 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=0 hi=1 mismatches=0
+VERIFY_SHARD task=RouteStick lo=4 hi=5 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=1 hi=2 mismatches=0
+VERIFY_SHARD task=RouteStick lo=3 hi=4 mismatches=0
+VERIFY_SHARD task=RouteStick lo=2 hi=3 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=5 hi=6 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=4 hi=5 mismatches=0
+VERIFY_SHARD task=RouteStick lo=5 hi=6 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=7 hi=8 mismatches=0
+VERIFY_SHARD task=VideoUnmaskSwap lo=6 hi=7 mismatches=0
+VERIFY_SHARD task=BinFill lo=1 hi=2 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=4 hi=5 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=0 hi=1 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=1 hi=2 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=3 hi=4 mismatches=0
+VERIFY_SHARD task=RouteStick lo=7 hi=8 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=5 hi=6 mismatches=0
+VERIFY_SHARD task=VideoRepick lo=2 hi=3 mismatches=0
+VERIFY_SHARD task=RouteStick lo=6 hi=7 mismatches=0
+VERIFY_SHARD task=BinFill lo=2 hi=3 mismatches=0
+VERIFY_SHARD task=BinFill lo=0 hi=1 mismatches=0
+VERIFY_SHARD task=BinFill lo=3 hi=4 mismatches=0
+VERIFY_SHARD task=BinFill lo=4 hi=5 mismatches=0
+VERIFY_SHARD task=BinFill lo=5 hi=6 mismatches=0
+MERGE_VERIFY=PASS level=full tasks=4 episodes=28 timesteps=21071 role=primary:28 mismatches=0
+V2_STAGE=scan UTC=2026-09-14T17:44:09Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[scan] 原始目录: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2-smoke
+[scan] 规范序: ['record_dataset_BinFill.h5', 'record_dataset_RouteStick.h5', 'record_dataset_VideoRepick.h5', 'record_dataset_VideoUnmaskSwap.h5']（tasks=['BinFill', 'RouteStick', 'VideoUnmaskSwap', 'VideoRepick'], episodes_per_task=None）
+  扫完 record_dataset_BinFill.h5: 累计 6 episode, 8284 timestep, 4142 执行样本 (0.9s)
+  扫完 record_dataset_RouteStick.h5: 累计 14 episode, 12584 timestep, 6292 执行样本 (1.4s)
+  扫完 record_dataset_VideoRepick.h5: 累计 20 episode, 17450 timestep, 8965 执行样本 (1.8s)
+  扫完 record_dataset_VideoUnmaskSwap.h5: 累计 28 episode, 21071 timestep, 11110 执行样本 (2.1s)
+[scan] 写出 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/meta/episode_manifest.json
+  episode=28  timestep=21071  执行样本=11110
+  分片负载(timestep)=[21071]  极差=0.00%
+  sha256=4d4468fd85a91ded763edb3a631887c33503c48ef75a14b0d62e3ae5cc01a8e9
+V2_STAGE=hash UTC=2026-09-14T17:44:12Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  record_dataset_BinFill.h5 size=5498079764 sha256=396a83cdf27f80a1dbaf37bb2d8ea4a4d1adcb8ebb5fda6c3db37c495e88e91d (13s)
+  record_dataset_RouteStick.h5 size=2854703592 sha256=cf80d39e2a488ef8928215bb2c0ee48316c0a839913044a98bcebea2ac7f2d7d (20s)
+  record_dataset_VideoRepick.h5 size=3229517844 sha256=5a84d7ad26656cff50dbcda13dbb909c4dc03362c8235b13b8858318b88a4dc3 (27s)
+  record_dataset_VideoUnmaskSwap.h5 size=2403244380 sha256=bff3f898d1cd80a7b964ec0bd6c7c313e1dc4f62d70f5d30051f91fd6a628621 (33s)
+[hash-inputs] 4 个 H5 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/meta/input_manifest.json
+V2_STAGE=siglip UTC=2026-09-14T17:44:45Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[run_local] 起 worker gpu4: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2-smoke --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/source --worker-mode --worker-label gpu4 --worker-idx 0 --num-workers 4 --resume --report_every 2000
+[run_local] 起 worker gpu5: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2-smoke --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/source --worker-mode --worker-label gpu5 --worker-idx 1 --num-workers 4 --resume --report_every 2000
+[run_local] 起 worker gpu6: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2-smoke --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/source --worker-mode --worker-label gpu6 --worker-idx 2 --num-workers 4 --resume --report_every 2000
+[run_local] 起 worker gpu7: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2-smoke --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/source --worker-mode --worker-label gpu7 --worker-idx 3 --num-workers 4 --resume --report_every 2000
+[gpu7] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu5] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu4] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu6] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu7] [shard 3/4] episode=28 timestep=21071 raw_dir=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2-smoke out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/source worker=gpu7
+[gpu5] [shard 1/4] episode=28 timestep=21071 raw_dir=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2-smoke out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/source worker=gpu5
+[gpu4] [shard 0/4] episode=28 timestep=21071 raw_dir=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2-smoke out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/source worker=gpu4
+[gpu6] [shard 2/4] episode=28 timestep=21071 raw_dir=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/4task-20260912-v2-smoke out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/source worker=gpu6
+[gpu5] Episode 0: timesteps=1356, exec_start=678, kept_indices=1418, task_goal='put three blue cubes into the bin, then press the button to stop'
+[gpu5] EPISODE g=0 record_dataset_BinFill.h5#0 steps=1356 took=54.4s rate=24.944 step/s worker=gpu5
+[gpu4] Episode 3: timesteps=1388, exec_start=694, kept_indices=1324, task_goal='put two blue cubes and one green cube into the bin, then press the button to stop'
+[gpu4] EPISODE g=3 record_dataset_BinFill.h5#3 steps=1388 took=57.3s rate=24.220 step/s worker=gpu4
+[gpu6] Episode 4: timesteps=1688, exec_start=844, kept_indices=2044, task_goal='put two red cubes and two green cubes into the bin, then press the button to stop'
+[gpu6] EPISODE g=4 record_dataset_BinFill.h5#4 steps=1688 took=60.5s rate=27.886 step/s worker=gpu6
+[gpu7] Episode 5: timesteps=2078, exec_start=1039, kept_indices=2048, task_goal='put two red cubes, two blue cubes and one green cube into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=2078 elapsed=65.0s rate=31.970 step/s
+[gpu7] EPISODE g=5 record_dataset_BinFill.h5#5 steps=2078 took=65.0s rate=31.972 step/s worker=gpu7
+[gpu5] Episode 2: timesteps=1050, exec_start=525, kept_indices=1090, task_goal='put two green cubes into the bin, then press the button to stop'
+[gpu5] PROGRESS steps=2406 elapsed=67.6s rate=35.609 step/s
+[gpu5] EPISODE g=2 record_dataset_BinFill.h5#2 steps=1050 took=13.2s rate=79.554 step/s worker=gpu5
+[gpu4] Episode 12: timesteps=1000, exec_start=500, kept_indices=1499, task_goal='watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+[gpu4] PROGRESS steps=2388 elapsed=70.4s rate=33.920 step/s
+[gpu4] EPISODE g=12 record_dataset_RouteStick.h5#6 steps=1000 took=13.1s rate=76.445 step/s worker=gpu4
+[gpu6] Episode 16: timesteps=968, exec_start=398, kept_indices=1079, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop'
+[gpu6] PROGRESS steps=2656 elapsed=72.7s rate=36.543 step/s
+[gpu6] EPISODE g=16 record_dataset_VideoRepick.h5#2 steps=968 took=12.1s rate=79.795 step/s worker=gpu6
+[gpu7] Episode 19: timesteps=865, exec_start=421, kept_indices=1082, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop'
+[gpu7] EPISODE g=19 record_dataset_VideoRepick.h5#5 steps=865 took=10.4s rate=82.919 step/s worker=gpu7
+[gpu5] Episode 13: timesteps=800, exec_start=400, kept_indices=1067, task_goal='watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+[gpu5] EPISODE g=13 record_dataset_RouteStick.h5#7 steps=800 took=9.9s rate=80.739 step/s worker=gpu5
+[gpu4] Episode 17: timesteps=777, exec_start=323, kept_indices=1037, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop'
+[gpu4] EPISODE g=17 record_dataset_VideoRepick.h5#3 steps=777 took=10.1s rate=76.571 step/s worker=gpu4
+[gpu6] Episode 15: timesteps=776, exec_start=327, kept_indices=737, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop'
+[gpu6] EPISODE g=15 record_dataset_VideoRepick.h5#1 steps=776 took=9.8s rate=79.313 step/s worker=gpu6
+[gpu7] Episode 14: timesteps=740, exec_start=299, kept_indices=908, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop'
+[gpu7] EPISODE g=14 record_dataset_VideoRepick.h5#0 steps=740 took=8.9s rate=82.927 step/s worker=gpu7
+[gpu5] Episode 18: timesteps=740, exec_start=425, kept_indices=748, task_goal='watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop'
+[gpu5] EPISODE g=18 record_dataset_VideoRepick.h5#4 steps=740 took=9.4s rate=78.692 step/s worker=gpu5
+[gpu4] Episode 1: timesteps=724, exec_start=362, kept_indices=557, task_goal='put one red cube into the bin, then press the button to stop'
+[gpu4] EPISODE g=1 record_dataset_BinFill.h5#1 steps=724 took=9.3s rate=78.254 step/s worker=gpu4
+[gpu6] Episode 26: timesteps=646, exec_start=318, kept_indices=617, task_goal='watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube'
+[gpu6] PROGRESS steps=4078 elapsed=90.5s rate=45.082 step/s
+[gpu6] EPISODE g=26 record_dataset_VideoUnmaskSwap.h5#6 steps=646 took=8.0s rate=80.926 step/s worker=gpu6
+[gpu7] Episode 11: timesteps=600, exec_start=300, kept_indices=805, task_goal='watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+[gpu7] PROGRESS steps=4283 elapsed=91.8s rate=46.644 step/s
+[gpu7] EPISODE g=11 record_dataset_RouteStick.h5#5 steps=600 took=7.4s rate=80.616 step/s worker=gpu7
+[gpu5] Episode 27: timesteps=573, exec_start=264, kept_indices=767, task_goal='watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube'
+[gpu5] PROGRESS steps=4519 elapsed=94.0s rate=48.063 step/s
+[gpu5] EPISODE g=27 record_dataset_VideoUnmaskSwap.h5#7 steps=573 took=7.1s rate=80.330 step/s worker=gpu5
+[gpu6] Episode 25: timesteps=507, exec_start=168, kept_indices=544, task_goal='watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube'
+[gpu6] EPISODE g=25 record_dataset_VideoUnmaskSwap.h5#5 steps=507 took=6.2s rate=82.201 step/s worker=gpu6
+[gpu4] Episode 24: timesteps=542, exec_start=216, kept_indices=640, task_goal='watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube'
+[gpu4] PROGRESS steps=4431 elapsed=96.7s rate=45.829 step/s
+[gpu4] EPISODE g=24 record_dataset_VideoUnmaskSwap.h5#4 steps=542 took=6.9s rate=78.865 step/s worker=gpu4
+[gpu7] Episode 8: timesteps=500, exec_start=250, kept_indices=685, task_goal='watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+[gpu7] EPISODE g=8 record_dataset_RouteStick.h5#2 steps=500 took=6.3s rate=79.902 step/s worker=gpu7
+[gpu5] Episode 9: timesteps=500, exec_start=250, kept_indices=648, task_goal='watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+[gpu5] EPISODE g=9 record_dataset_RouteStick.h5#3 steps=500 took=6.2s rate=80.410 step/s worker=gpu5
+[gpu4] Episode 10: timesteps=400, exec_start=200, kept_indices=578, task_goal='watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+[gpu4] EPISODE g=10 record_dataset_RouteStick.h5#4 steps=400 took=5.1s rate=77.951 step/s worker=gpu4
+[gpu7] Episode 20: timesteps=335, exec_start=168, kept_indices=427, task_goal='watch the video carefully, then pick up the container hiding the red cube'
+[gpu7] EPISODE g=20 record_dataset_VideoUnmaskSwap.h5#0 steps=335 took=4.0s rate=83.780 step/s worker=gpu7
+[gpu6] Episode 21: timesteps=446, exec_start=114, kept_indices=417, task_goal='watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube'
+[gpu6] EPISODE g=21 record_dataset_VideoUnmaskSwap.h5#1 steps=446 took=5.4s rate=82.447 step/s worker=gpu6
+[gpu5] Episode 6: timesteps=300, exec_start=150, kept_indices=411, task_goal='watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+[gpu5] EPISODE g=6 record_dataset_RouteStick.h5#0 steps=300 took=3.8s rate=78.674 step/s worker=gpu5
+[gpu6] Episode 7: timesteps=200, exec_start=100, kept_indices=276, task_goal='watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+[gpu6] EPISODE g=7 record_dataset_RouteStick.h5#1 steps=200 took=2.5s rate=80.320 step/s worker=gpu6
+[gpu5] SHARD_DONE shard=1 episodes=7 skipped=0 steps=5319 elapsed=104.1s rate=51.079 step/s steady_steps=3963 rate_steady=79.631 step/s
+[gpu6] SHARD_DONE shard=2 episodes=7 skipped=4 steps=5231 elapsed=104.6s rate=49.993 step/s steady_steps=3543 rate_steady=80.344 step/s
+[gpu7] Episode 22: timesteps=285, exec_start=114, kept_indices=295, task_goal='watch the video carefully, then pick up the container hiding the green cube'
+[gpu7] EPISODE g=22 record_dataset_VideoUnmaskSwap.h5#2 steps=285 took=3.5s rate=82.379 step/s worker=gpu7
+[gpu4] Episode 23: timesteps=287, exec_start=114, kept_indices=419, task_goal='watch the video carefully, then pick up the container hiding the green cube'
+[gpu4] EPISODE g=23 record_dataset_VideoUnmaskSwap.h5#3 steps=287 took=3.8s rate=76.289 step/s worker=gpu4
+[gpu7] SHARD_DONE shard=3 episodes=7 skipped=4 steps=5403 elapsed=105.6s rate=51.142 step/s steady_steps=3325 rate_steady=81.799 step/s
+[gpu4] SHARD_DONE shard=0 episodes=7 skipped=4 steps=5118 elapsed=105.7s rate=48.428 step/s steady_steps=3730 rate_steady=77.113 step/s
+STAGE_DONE stage=siglip workers=4 items=28 elapsed=123s
+V2_STAGE=finalize UTC=2026-09-14T17:46:48Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+=== [1/5] 输入 H5 同源核验（level=sha256）===
+  ✓ record_dataset_BinFill.h5 sha256 同源
+  ✓ record_dataset_RouteStick.h5 sha256 同源
+  ✓ record_dataset_VideoRepick.h5 sha256 同源
+  ✓ record_dataset_VideoUnmaskSwap.h5 sha256 同源
+=== [2/5] 产物完整性核验 ===
+  feature 目录缺失=0  pkl 实得=11110 期望=11110
+=== [3/5] 分片 sidecar 汇总 ===
+  sidecar=4 覆盖 episode=28 残留 claim=0
+=== [4/5] 同架构零容差抽检（1024 条）===
+  抽检 1024/1024 条，全体 max|diff|=0.000e+00
+  ✓ 同架构复算全部逐位一致 PASS（1024 条）
+=== [5/5] 写 stats.json 与 provenance.json ===
+  stats={'execution_samples': 11110, 'total_samples': 21071}
+  provenance(finalize 节点): host=ip-10-242-11-177.us-west-2.compute.internal gpu=NVIDIA A100-SXM4-80GB jax=0.5.3
+  provenance(构建分片): gpu=NVIDIA A100-SXM4-80GB jax=0.5.3 commit=d9e1f5d9cb89 节点=4 个 全体同源 ✓
+全部检查通过 PASS
+FINALIZE_EXIT_CODE=0
+V2_STAGE=pack4 UTC=2026-09-14T17:48:07Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[pack] pos 表：episode_5（2078 帧）逐位抽取拼装
+[pack] state 表：48 进程 decode 28 episode / 21071 帧
+[pack] state 表进度 1/28 episode (0s)
+[pack] state 表进度 2/28 episode (0s)
+[pack] state 表进度 3/28 episode (0s)
+[pack] state 表进度 4/28 episode (0s)
+[pack] state 表进度 5/28 episode (0s)
+[pack] state 表进度 6/28 episode (0s)
+[pack] state 表进度 7/28 episode (0s)
+[pack] state 表进度 8/28 episode (0s)
+[pack] state 表进度 9/28 episode (0s)
+[pack] state 表进度 10/28 episode (0s)
+[pack] state 表进度 11/28 episode (0s)
+[pack] state 表进度 12/28 episode (0s)
+[pack] state 表进度 13/28 episode (0s)
+[pack] state 表进度 14/28 episode (0s)
+[pack] state 表进度 15/28 episode (0s)
+[pack] state 表进度 16/28 episode (0s)
+[pack] state 表进度 17/28 episode (0s)
+[pack] state 表进度 18/28 episode (0s)
+[pack] state 表进度 19/28 episode (0s)
+[pack] state 表进度 20/28 episode (0s)
+[pack] state 表进度 21/28 episode (0s)
+[pack] state 表进度 22/28 episode (0s)
+[pack] state 表进度 23/28 episode (0s)
+[pack] state 表进度 24/28 episode (0s)
+[pack] state 表进度 25/28 episode (0s)
+[pack] state 表进度 26/28 episode (0s)
+[pack] state 表进度 27/28 episode (0s)
+[pack] state 表进度 28/28 episode (1s)
+[pack] 小表落盘: pos 102,137,856 B / state 674,272 B
+[pack] image part: 共 20 个, 跳过已完好 0 个, 本轮 20 个 × 48 进程
+[pack] part_019 完成 rows=573 (0.3s), 进度 1/20
+[pack] part_001 完成 rows=724 (0.4s), 进度 2/20
+[pack] part_014 完成 rows=740 (0.4s), 进度 3/20
+[pack] part_011 完成 rows=776 (0.4s), 进度 4/20
+[pack] part_013 完成 rows=777 (0.5s), 进度 5/20
+[pack] part_010 完成 rows=740 (0.5s), 进度 6/20
+[pack] part_016 完成 rows=781 (0.5s), 进度 7/20
+[pack] part_009 完成 rows=800 (0.5s), 进度 8/20
+[pack] part_015 完成 rows=865 (0.5s), 进度 9/20
+[pack] part_012 完成 rows=968 (0.6s), 进度 10/20
+[pack] part_006 完成 rows=1000 (0.6s), 进度 11/20
+[pack] part_007 完成 rows=900 (0.6s), 进度 12/20
+[pack] part_002 完成 rows=1050 (0.6s), 进度 13/20
+[pack] part_017 完成 rows=1114 (0.7s), 进度 14/20
+[pack] part_018 完成 rows=1153 (0.7s), 进度 15/20
+[pack] part_000 完成 rows=1356 (0.8s), 进度 16/20
+[pack] part_003 完成 rows=1388 (0.9s), 进度 17/20
+[pack] part_008 完成 rows=1600 (0.9s), 进度 18/20
+[pack] part_004 完成 rows=1688 (1.0s), 进度 19/20
+[pack] part_005 完成 rows=2078 (1.1s), 进度 20/20
+[pack] meta 阶段1 落盘（status=packed）; 总耗时 3s
+PACK_DONE=1 （pack.lock 保留，verify 回填后才释放——A.2）
+V2_STAGE=verify4 UTC=2026-09-14T17:48:10Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[verify] part_010 扫 740 行, 失配 0, 进度 1/20 (0s)
+[verify] part_001 扫 724 行, 失配 0, 进度 2/20 (0s)
+[verify] part_013 扫 777 行, 失配 0, 进度 3/20 (0s)
+[verify] part_014 扫 740 行, 失配 0, 进度 4/20 (0s)
+[verify] part_011 扫 776 行, 失配 0, 进度 5/20 (0s)
+[verify] part_019 扫 573 行, 失配 0, 进度 6/20 (0s)
+[verify] part_012 扫 968 行, 失配 0, 进度 7/20 (1s)
+[verify] part_009 扫 800 行, 失配 0, 进度 8/20 (1s)
+[verify] part_016 扫 781 行, 失配 0, 进度 9/20 (1s)
+[verify] part_007 扫 900 行, 失配 0, 进度 10/20 (1s)
+[verify] part_015 扫 865 行, 失配 0, 进度 11/20 (1s)
+[verify] part_006 扫 1000 行, 失配 0, 进度 12/20 (1s)
+[verify] part_002 扫 1050 行, 失配 0, 进度 13/20 (1s)
+[verify] part_018 扫 1153 行, 失配 0, 进度 14/20 (1s)
+[verify] part_017 扫 1114 行, 失配 0, 进度 15/20 (1s)
+[verify] part_003 扫 1388 行, 失配 0, 进度 16/20 (1s)
+[verify] part_000 扫 1356 行, 失配 0, 进度 17/20 (1s)
+[verify] part_004 扫 1688 行, 失配 0, 进度 18/20 (1s)
+[verify] part_008 扫 1600 行, 失配 0, 进度 19/20 (1s)
+[verify] part_005 扫 2078 行, 失配 0, 进度 20/20 (1s)
+[verify] meta 回填（status=verified）+ row_digests 落盘, 总耗时 1s
+VERIFY_PACK=PASS scanned=21071 mismatches=0
+V2_STAGE=pack8 UTC=2026-09-14T17:48:11Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[pack] pos 表：episode_5（2078 帧）逐位抽取拼装
+[pack] state 表：48 进程 decode 28 episode / 21071 帧
+[pack] state 表进度 1/28 episode (0s)
+[pack] state 表进度 2/28 episode (0s)
+[pack] state 表进度 3/28 episode (0s)
+[pack] state 表进度 4/28 episode (0s)
+[pack] state 表进度 5/28 episode (0s)
+[pack] state 表进度 6/28 episode (0s)
+[pack] state 表进度 7/28 episode (0s)
+[pack] state 表进度 8/28 episode (0s)
+[pack] state 表进度 9/28 episode (0s)
+[pack] state 表进度 10/28 episode (0s)
+[pack] state 表进度 11/28 episode (0s)
+[pack] state 表进度 12/28 episode (0s)
+[pack] state 表进度 13/28 episode (0s)
+[pack] state 表进度 14/28 episode (0s)
+[pack] state 表进度 15/28 episode (0s)
+[pack] state 表进度 16/28 episode (0s)
+[pack] state 表进度 17/28 episode (0s)
+[pack] state 表进度 18/28 episode (0s)
+[pack] state 表进度 19/28 episode (0s)
+[pack] state 表进度 20/28 episode (0s)
+[pack] state 表进度 21/28 episode (0s)
+[pack] state 表进度 22/28 episode (0s)
+[pack] state 表进度 23/28 episode (0s)
+[pack] state 表进度 24/28 episode (0s)
+[pack] state 表进度 25/28 episode (1s)
+[pack] state 表进度 26/28 episode (1s)
+[pack] state 表进度 27/28 episode (1s)
+[pack] state 表进度 28/28 episode (1s)
+[pack] 小表落盘: pos 408,551,424 B / state 674,272 B
+[pack] image part: 共 20 个, 跳过已完好 0 个, 本轮 20 个 × 48 进程
+[pack] part_019 完成 rows=573 (1.2s), 进度 1/20
+[pack] part_001 完成 rows=724 (1.3s), 进度 2/20
+[pack] part_010 完成 rows=740 (1.4s), 进度 3/20
+[pack] part_014 完成 rows=740 (1.4s), 进度 4/20
+[pack] part_016 完成 rows=781 (1.4s), 进度 5/20
+[pack] part_009 完成 rows=800 (1.5s), 进度 6/20
+[pack] part_015 完成 rows=865 (1.6s), 进度 7/20
+[pack] part_013 完成 rows=777 (1.6s), 进度 8/20
+[pack] part_011 完成 rows=776 (1.6s), 进度 9/20
+[pack] part_007 完成 rows=900 (1.6s), 进度 10/20
+[pack] part_012 完成 rows=968 (1.8s), 进度 11/20
+[pack] part_002 完成 rows=1050 (1.9s), 进度 12/20
+[pack] part_006 完成 rows=1000 (2.0s), 进度 13/20
+[pack] part_017 完成 rows=1114 (2.0s), 进度 14/20
+[pack] part_018 完成 rows=1153 (2.1s), 进度 15/20
+[pack] part_000 完成 rows=1356 (2.4s), 进度 16/20
+[pack] part_003 完成 rows=1388 (2.5s), 进度 17/20
+[pack] part_004 完成 rows=1688 (2.9s), 进度 18/20
+[pack] part_008 完成 rows=1600 (3.1s), 进度 19/20
+[pack] part_005 完成 rows=2078 (3.6s), 进度 20/20
+[pack] meta 阶段1 落盘（status=packed）; 总耗时 7s
+PACK_DONE=1 （pack.lock 保留，verify 回填后才释放——A.2）
+V2_STAGE=verify8 UTC=2026-09-14T17:48:18Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[verify] part_001 扫 724 行, 失配 0, 进度 1/20 (1s)
+[verify] part_019 扫 573 行, 失配 0, 进度 2/20 (1s)
+[verify] part_014 扫 740 行, 失配 0, 进度 3/20 (1s)
+[verify] part_013 扫 777 行, 失配 0, 进度 4/20 (2s)
+[verify] part_011 扫 776 行, 失配 0, 进度 5/20 (2s)
+[verify] part_009 扫 800 行, 失配 0, 进度 6/20 (2s)
+[verify] part_016 扫 781 行, 失配 0, 进度 7/20 (2s)
+[verify] part_007 扫 900 行, 失配 0, 进度 8/20 (2s)
+[verify] part_010 扫 740 行, 失配 0, 进度 9/20 (2s)
+[verify] part_015 扫 865 行, 失配 0, 进度 10/20 (2s)
+[verify] part_012 扫 968 行, 失配 0, 进度 11/20 (2s)
+[verify] part_006 扫 1000 行, 失配 0, 进度 12/20 (2s)
+[verify] part_002 扫 1050 行, 失配 0, 进度 13/20 (2s)
+[verify] part_018 扫 1153 行, 失配 0, 进度 14/20 (2s)
+[verify] part_017 扫 1114 行, 失配 0, 进度 15/20 (2s)
+[verify] part_000 扫 1356 行, 失配 0, 进度 16/20 (2s)
+[verify] part_003 扫 1388 行, 失配 0, 进度 17/20 (2s)
+[verify] part_004 扫 1688 行, 失配 0, 进度 18/20 (2s)
+[verify] part_008 扫 1600 行, 失配 0, 进度 19/20 (3s)
+[verify] part_005 扫 2078 行, 失配 0, 进度 20/20 (3s)
+[verify] meta 回填（status=verified）+ row_digests 落盘, 总耗时 3s
+VERIFY_PACK=PASS scanned=21071 mismatches=0
+V2_STAGE=report8 UTC=2026-09-14T17:48:21Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+layout=framesamp-8x8-v1 status=verified scope=full
+num_rows=21071 num_exec_samples=11110 num_pos_rows=2078 parts=20
+manifest=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/meta/episode_manifest.json
+  sha256=4d4468fd85a91ded763edb3a631887c33503c48ef75a14b0d62e3ae5cc01a8e9
+source=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-smoke28/source
+packer={'build_uuid': '21bc5d79837448d598c6a1c38dbed7ea', 'host': 'ip-10-242-11-177.us-west-2.compute.internal', 'git_commit': '0630a36d1ffc0bc10ca47ea0ac32ec0df645248f', 'python': '3.11.15', 'numpy': '1.26.4', 'ml_dtypes': '0.4.1', 'reader': 'decode', 'procs': 48, 'started_at': '2026-09-14T17:48:11', 'finished_at': '2026-09-14T17:48:18'}
+verify={'scanned': 21071, 'mismatches': 0, 'sample': None, 'seed': None, 'procs': 48, 'reader': 'decode', 'started_at': '2026-09-14T17:48:18', 'finished_at': '2026-09-14T17:48:21', 'conclusion': 'VERIFY_PACK=PASS scanned=21071 mismatches=0'}
+row_digests={'relpath': 'meta/row_digests.blake2b.bin', 'algo': 'blake2b-128', 'covered_rows': 21071, 'coverage': 'image‖pos‖state 三键原始位串拼接（store 侧字节）', 'byte_count': 337136, 'sha256': 'dcbf2716a8b1a18e1a7b597c64da7002bc6f7ac3aaf2fbe1d3fbf0cb86223ddd'}
+V2_STAGE=xgrid UTC=2026-09-14T17:48:22Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+IMAGE_NPY_SPOT=PASS frames=512 mismatches=0
+MOTION_POS_XGRID=PASS t=2078 npy=64 mismatches=0
+EXIT_CODE=0
