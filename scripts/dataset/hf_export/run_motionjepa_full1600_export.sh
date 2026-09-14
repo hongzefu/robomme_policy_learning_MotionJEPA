@@ -84,9 +84,15 @@ echo "阶段0开始：凭据与身份"
 # 显式断言 uvx 可用：tmux server 的 PATH 可能不含 ~/.local/bin，而下面 whoami 的 2>/dev/null
 # 会把 "command not found" 一起吞掉，只剩一个没有上下文的 exit 1。
 command -v uvx >/dev/null || { echo "错误: PATH 里找不到 uvx。PATH=$PATH"; exit 1; }
-WHO="$(hf auth whoami 2>/dev/null | tr ' ' '\n' | grep '^user=' | head -1)"
-echo "HF_WHOAMI=${WHO#user=}"
-[ "$WHO" = "user=HongzeFu" ] || { echo "错误: whoami 不是 HongzeFu（$WHO），凭据注入失败"; exit 1; }
+# whoami 的输出格式随**是否有 tty** 而变：非 tty 是单行 `user=X orgs=Y`，tty 下是多行的
+# `✓ Logged in` / `  user: X` / `  orgs: Y`。tmux 里有 tty——run_dataset400ep_export.sh 的
+# 第 140 行就记着这条，本脚本一度改写成按行 grep '^user=' 又踩了一遍（起跑即挂在阶段 0，
+# 且因为 2>/dev/null 连错误都看不到）。两道保险：显式 --format agent 钉死格式，再整体
+# 合并后做子串匹配，不依赖行结构。
+WHO="$(hf auth whoami --format agent 2>&1 | tr '\n' ' ' | tr -s ' ')"
+echo "  whoami: $WHO"
+case "$WHO" in *HongzeFu*) : ;; *) echo "错误: 身份不是 HongzeFu（$WHO），凭据注入失败"; exit 1 ;; esac
+echo "HF_WHOAMI=HongzeFu"
 echo "阶段0完成"
 
 # ---------------------------------------------------------------- 阶段 1：组装 stage
