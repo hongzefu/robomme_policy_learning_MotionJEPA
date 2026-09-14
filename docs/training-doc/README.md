@@ -16,6 +16,7 @@
 | [`t8-fixture/`](t8-fixture/result.md) | 两库四profile完整输入、worker矩阵、独立手算与错配拒绝 | PASS |
 | [`t8-infer-regress-4x4/`](t8-infer-regress-4x4/result.md) | 旧4×4在线完整回归 | PASS，772窗逐位一致 |
 | [`t8-infer-m8/`](t8-infer-m8/result.md) | 真实8×8在线池化及后续M8 checkpoint验收 | 池化/位置/装配PASS，其余待执行 |
+| [`t8-infer-c8/`](t8-infer-c8/result.md) | C8 checkpoint七关及48集闭环 | 已提交共同启动口径，待执行 |
 | [`t8-gradient/`](t8-gradient/launch.md) | 四profile的三类batch全梯度对拍 | 已记录启动口径，待执行 |
 | [`t8-c32-a1/`](t8-c32-a1/result.md) | C32 A1：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步逐位gate PASS；全梯度另行补验 |
 | [`t8-c32-a2/`](t8-c32-a2/result.md) | C32 A2：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步逐位gate PASS；全梯度另行补验 |
