@@ -1,6 +1,6 @@
-# 1600 集正式建库进行中
+# 1600 集正式建库与训练可读性验收通过
 
-数据产物已全部构建并验收：1600 条 primary，1,192,918 个源时步，605,611 个执行样本。合并 H5、源摘要、全部 H5 数值/结构对拍、独立输入指纹、SigLIP、finalize、两档 framesamp 全量验证和跨网格检查均通过，新 norm_stats 已生成并核验有限。两档真实 batch 也通过，20 步训练可读性仍待执行；最终结论将在该项完成后补齐。
+本轮计划全部交付并验收：1600 条 primary，1,192,918 个源时步，605,611 个执行样本。合并 H5、源摘要、全部 H5 数值/结构对拍、独立输入指纹、SigLIP、finalize、两档 framesamp 全量验证和跨网格检查均通过，新 norm_stats 已生成并核验有限。两档真实 batch 及 20 步真实训练也已通过，checkpoint 收尾成功，临时测试 run 已清理。
 
 ## 合并实测
 
@@ -96,9 +96,9 @@ GPU 记录请求间隔 500 ms，实际平均约 0.50087 秒；以启动后 120 �
 
 `_shard*.json` 中源时步的稳态处理速率为每 worker 76.06–77.16 step/s，初次 episode 已由原脚本统计口径排除。这些是当前 AWS 本地 NVMe RAID、四 worker、现有 SigLIP 入口的实测，不与旧 NFS 数字混比。
 
-## 已归档与待补
+## 归档文件与恢复指引
 
-records 已包含来源 pin、选取计划、全部四份 map、任务目标变体、`merge.measurements.json`、MERGE_DONE、正式 episode/input manifest、source stats/provenance、四片元数据、两档 store_meta、norm_stats 摘要、全部建库阶段的清洗日志与吞吐监视、SigLIP GPU 原始采样及汇总、版本检查事件。完整日志保留在 v1-store，清洗日志保留所有完成与退出判定行。20 步可读性结果另见 [训练检查档案](../../training-doc/v2b-read20-20260914T174147Z/launch.md)，完成后回写本文件。
+records 已包含来源 pin、选取计划、全部四份 map、任务目标变体、`merge.measurements.json`、MERGE_DONE、正式 episode/input manifest、source stats/provenance、四片元数据、两档 store_meta、norm_stats 摘要、全部建库阶段的清洗日志与吞吐监视、SigLIP GPU 原始采样及汇总、版本检查事件。完整日志保留在 v1-store，清洗日志保留所有完成与退出判定行。20 步可读性结果见 [训练检查档案](../../training-doc/v2b-read20-20260914T174147Z/result.md)。
 
 ## 两档 packed 与独立统计量
 
@@ -123,6 +123,8 @@ MOTION_POS_XGRID=PASS t=2304 npy=64 mismatches=0
 
 epoch 69 的吞吐为 869.0484657440462 samples/s、878.1282403469086 秒，较参考低约 0.57%，未触发暂停；其窗口覆盖 packed、统计量及相邻阶段，不单独归因于某一步。
 
+最终复核另从原训练日志读取到 epoch 70，吞吐为 870.7770815382041 samples/s，较参考低约 0.37%，仍高于暂停线。该窗口覆盖 20 步检查与相邻时间段，不将变化单独归因于短测。完整性能字段保存在 `coexistence.train-perf.json`。
+
 ## 产物体积与真实 batch
 
 以下为实测 `du -sb`，含各目录内元数据，未把日志/Git 计入主要数据体积。
@@ -135,4 +137,46 @@ epoch 69 的吞吐为 869.0484657440462 samples/s、878.1282403469086 秒，较�
 | framesamp 8×8 | 313226571153 |
 | 新统计量目录 | 2143 |
 
-两档分别使用对应 history 配置，经真实 dataloader 加载新统计量取得 batch 64。state `(64,32)`、actions `(64,20,32)` 均为 float32 且有限；static_image_emb 为 `(64,512,2048)` bfloat16；`motion_emb/motion_pos/motion_mask/mem_order` 均为 None。CPU 输入检查使用 worker 0、seed 42，20 步真实训练仍按计划使用默认 worker 4。证据保存在训练检查档案的 `records/batch4.json` 与 `records/batch8.json`。
+两档分别使用对应 history 配置，经真实 dataloader 加载新统计量取得 batch 64。state `(64,32)`、actions `(64,20,32)` 均为 float32 且有限；static_image_emb 为 `(64,512,2048)` bfloat16；`motion_emb/motion_pos/motion_mask/mem_order` 均为 None。CPU 输入检查使用 worker 0、seed 42；20 步真实训练使用默认 worker 4 并已通过。证据保存在训练检查档案的 `records/batch4.json` 与 `records/batch8.json`。
+
+## 20 步训练与最终状态
+
+从干净 HEAD `81a6c7580507f82a4ad19cf4c651ccd8a3c80336` 于 `2026-09-14T21:11:15Z` 启动，使用 GPU 4–7、默认 batch 64 / worker 4 / FSDP 4 / seed 42、关闭 motion 的 4×4 history 配置和本轮新统计量。20 个 step（0–19）全部完成，逐步 loss/梯度记录有限，checkpoint 19 保存收尾成功，`21:14:36.544738Z` 退出 0，耗时 201.54 秒。checkpoint 内统计量 SHA256 与输入文件一致。
+
+本检查用于验证可读取和可训练，不据 20 步结果判断策略质量。数据集、RAW、源 extracted、新统计量及日志保留；28 集冒烟的两个数据目录、20 步检查的 checkpoint/bench 临时目录均已在身份核对和归档后清理。没有清理其他任务的会话或产物。
+
+用户已决定本轮先不做 motion 阶段，私有 sim 的评估适配另案处理；本档案的完成范围为计划明确的阶段 1–10、来源补档、冒烟及训练可读性验证。
+
+## JSON 档案身份索引
+
+下表给出每份 JSON 与本轮库的关联。源清单是原始 MANIFEST（前缀 df992cdf），库清单是 episode_manifest（前缀 4cd5a170）；并非每份文件都内嵌这两个字段，关联由本轮启动记录与校验建立。GPU 和原训练性能文件只表示本轮资源监视关联，不属于训练样本。
+
+| 文件 | 关联库 | 清单前缀 |
+|---|---|---|
+| [MERGE_DONE.json](records/MERGE_DONE.json) | 4task-v2-1600ep-604f16da | 源 df992cdf… |
+| [_shard0of4.json](records/_shard0of4.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [_shard1of4.json](records/_shard1of4.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [_shard2of4.json](records/_shard2of4.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [_shard3of4.json](records/_shard3of4.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [coexistence.train-perf.json](records/coexistence.train-perf.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [episode_manifest.json](records/episode_manifest.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [final-check.json](records/final-check.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [framesamp-8x8.store_meta.json](records/framesamp-8x8.store_meta.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [framesamp.store_meta.json](records/framesamp.store_meta.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [input_manifest.json](records/input_manifest.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [merge.measurements.json](records/merge.measurements.json) | 4task-v2-1600ep-604f16da | 源 df992cdf… |
+| [merge_plan.json](records/merge_plan.json) | 4task-v2-1600ep-604f16da | 源 df992cdf… |
+| [norm_stats.sha256.json](records/norm_stats.sha256.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [record_dataset_BinFill_episode_map.json](records/record_dataset_BinFill_episode_map.json) | 4task-v2-1600ep-604f16da | 源 df992cdf… |
+| [record_dataset_RouteStick_episode_map.json](records/record_dataset_RouteStick_episode_map.json) | 4task-v2-1600ep-604f16da | 源 df992cdf… |
+| [record_dataset_VideoRepick_episode_map.json](records/record_dataset_VideoRepick_episode_map.json) | 4task-v2-1600ep-604f16da | 源 df992cdf… |
+| [record_dataset_VideoUnmaskSwap_episode_map.json](records/record_dataset_VideoUnmaskSwap_episode_map.json) | 4task-v2-1600ep-604f16da | 源 df992cdf… |
+| [siglip.gpu-summary.json](records/siglip.gpu-summary.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [siglip.start.json](records/siglip.start.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [source.provenance.json](records/source.provenance.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [source.stats.json](records/source.stats.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+| [source_pin.json](records/source_pin.json) | 4task-v2-1600ep-604f16da | 源 df992cdf… |
+| [task_goal_variants.json](records/task_goal_variants.json) | 4task-v2-1600ep-604f16da | 源 df992cdf… |
+| [version-precheck-event.json](records/version-precheck-event.json) | 4task-v2-1600ep-604f16da | 库 4cd5a170… |
+
+JSONL 的阶段吞吐监视、SigLIP GPU CSV 和各阶段清洗日志同属本轮库；训练检查的 JSON/JSONL 记录位于独立训练档案，并明确绑定同一 4cd5a170 库清单与 856c75ea 统计量摘要。

@@ -24,6 +24,7 @@
 | 8 4×4 packed | `v2b-pack4x4-20260914T174147Z` | `3b2864f7441a965250bbf18de7a6f00a63b08ab7` | 2026-09-14 20:49:33 |
 | 9 norm_stats | `v2b-norm-20260914T174147Z` | `3b2864f7441a965250bbf18de7a6f00a63b08ab7` | 2026-09-14 20:55:08 |
 | 10 8×8 packed 与跨网格 | `v2b-pack8x8-20260914T174147Z` | `3b2864f7441a965250bbf18de7a6f00a63b08ab7` | 2026-09-14 21:01:13 |
+| 20 步训练可读性 | `v2b-read20-20260914T174147Z` | `81a6c7580507f82a4ad19cf4c651ccd8a3c80336` | 2026-09-14 21:11:15 |
 
 ## 数据来源与排序
 
@@ -100,9 +101,9 @@ CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/datase
 
 归档四份 episode map、source pin、MERGE_DONE、input_manifest、两档 store_meta、norm_stats SHA256 和清洗阶段日志，不归档 H5、权重、features 或配置脚本拷贝。结果需逐项列出真实判定行、阶段耗时、产物字节量、来源 manifest 摘要、canonical_order 和训练可读性结果；未执行项不标通过。
 
-## 计划中的 20 步训练可读性检查
+## 20 步训练可读性检查
 
-必须在正式库和新 norm_stats 全部完成之后执行，当前尚未起跑。唯一临时 run 名为 `v2b-read20-20260914T174147Z`。使用正式 `scripts/training/train.py` 与默认 `mme_vla_suite` 的 batch 64、worker 4、FSDP 4、seed 42 和学习率；只在 CLI 覆盖为 20 步，日志逐步记录。训练前额外经真实 dataloader 取一批，断言 `motion_emb/motion_pos/motion_mask/mem_order` 全部为 None。运行使用 detached tmux，完成后保留日志和指标，删除核实属于本轮的临时 checkpoint run。
+本检查在正式库和新 norm_stats 全部完成之后执行，已通过。唯一临时 run 名为 `v2b-read20-20260914T174147Z`。使用正式 `scripts/training/train.py` 与默认 `mme_vla_suite` 的 batch 64、worker 4、FSDP 4、seed 42 和学习率；只在 CLI 覆盖为 20 步，日志逐步记录。训练前两档真实 dataloader 均取得 batch 并确认 `motion_emb/motion_pos/motion_mask/mem_order` 全部为 None。运行使用 detached tmux；完成归档后已清理本轮临时 checkpoint 和 bench，详见训练检查档案。
 
 以下补充于各阶段共用基础环境；使用四张获准 GPU，不改全局配置。WANDB 关闭，JAX 和 WANDB 缓存均明确留在 v1-store。
 
@@ -116,6 +117,8 @@ export WANDB_CACHE_DIR="$V1_STORE/cache/wandb"
 export WANDB_CONFIG_DIR="$V1_STORE/cache/wandb-config"
 export WANDB_MODE=disabled
 export TRAIN_RECORD_DIR="$V1_STORE/bench/v2b-read20-20260914T174147Z"
+export MMEVLA_FRAMESAMP_SOURCE="$LIB/source"
+export MMEVLA_FRAMESAMP_MANIFEST="$MANI"
 uv run --no-sync python scripts/training/train.py mme_vla_suite \
   --exp-name v2b-read20-20260914T174147Z \
   --num-train-steps 20 --log-interval 1 \

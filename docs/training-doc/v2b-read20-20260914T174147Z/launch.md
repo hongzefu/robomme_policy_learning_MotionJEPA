@@ -2,7 +2,7 @@
 
 ## 范围与当前状态
 
-本检查属于用户要求实施的 `v2-4task-h5-merge-plan.md`，只验证新库能被现有训练链路读取并完成 20 次更新，不用于判断策略效果，也不进行 sim 评估。用户补充“继续工作 忽略huggingface的任务 但是要注意git”。当前尚未起跑，前置条件是正式 SigLIP、两档 framesamp 和新 norm_stats 全部通过。
+本检查属于用户要求实施的 `v2-4task-h5-merge-plan.md`，只验证新库能被现有训练链路读取并完成 20 次更新，不用于判断策略效果，也不进行 sim 评估。用户补充“继续工作 忽略huggingface的任务 但是要注意git”。正式 SigLIP、两档 framesamp 和新 norm_stats 全部通过后，本检查于 `2026-09-14T21:11:15Z` 从干净 HEAD `81a6c7580507f82a4ad19cf4c651ccd8a3c80336` 启动并完成；结果见 [result.md](result.md)。
 
 前置建库现已全部通过。新 norm_stats SHA256 为 `856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173`；两档真实 CPU batch 检查均通过，记录见 `records/batch4.json`、`records/batch8.json`。state/actions 分别为 `(64,32)` / `(64,20,32)` float32 且有限，静态图像特征为 `(64,512,2048)` bfloat16，四个 motion 字段全为 None。输入检查使用 worker 0；下面的真实训练保持默认 worker 4。
 
@@ -33,6 +33,8 @@ export WANDB_CACHE_DIR="$V1_STORE/cache/wandb"
 export WANDB_CONFIG_DIR="$V1_STORE/cache/wandb-config"
 export WANDB_MODE=disabled
 export TRAIN_RECORD_DIR="$V1_STORE/bench/v2b-read20-20260914T174147Z"
+export MMEVLA_FRAMESAMP_SOURCE="$V1_STORE/datasets/4task-v2-1600ep-604f16da/source"
+export MMEVLA_FRAMESAMP_MANIFEST="$V1_STORE/datasets/4task-v2-1600ep-604f16da/meta/episode_manifest.json"
 uv run --no-sync python scripts/training/train.py mme_vla_suite \
   --exp-name v2b-read20-20260914T174147Z \
   --num-train-steps 20 --log-interval 1 \
@@ -49,4 +51,4 @@ uv run --no-sync python scripts/training/train.py mme_vla_suite \
 
 训练前通过真实 dataloader 取 batch，核对 shape/dtype 非空，以及 `motion_emb/motion_pos/motion_mask/mem_order` 全为 None。正式检查须完成 20 步、记录逐步 loss/梯度等标量且全部有限、正常完成 checkpoint 收尾并退出 0；记录统计量文件 SHA256 和实际运行时间。不用这 20 步声称学习有效，也不声称与旧数据训练轨迹等价。
 
-指标与清洗日志写入 records，实际启动状态和结果补入 result.md。只在验证和归档后清理本轮确切 checkpoint 目录 `v1-store/train-runs/mme_vla_suite/v2b-read20-20260914T174147Z`，不清理其他 run，也不删除正式数据集或统计量。
+指标、清洗日志、实际启动状态和结果已写入 records 与 result.md。验证和归档后已清理本轮确切 checkpoint 目录 `v1-store/train-runs/mme_vla_suite/v2b-read20-20260914T174147Z` 及对应 bench 目录，正式数据集和统计量保留。
