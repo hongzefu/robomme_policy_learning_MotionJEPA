@@ -71,7 +71,8 @@ def main() -> int:
     # tree 分页取全
     tree, cursor = [], None
     while True:
-        url = f"{API}/datasets/{R}/tree/{REV}?recursive=true&expand=true&limit=1000"
+        # expand=true 时 limit 上限是 100（配 limit=1000 直接 HTTP 400，实测）
+        url = f"{API}/datasets/{R}/tree/{REV}?recursive=true&expand=true&limit=100"
         if cursor:
             url += f"&cursor={cursor}"
         req = urllib.request.Request(url, headers={"Authorization": f"Bearer {os.environ['HF_TOKEN']}"})
