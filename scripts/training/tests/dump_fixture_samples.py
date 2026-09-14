@@ -35,8 +35,10 @@ memory 四键额外落数组本体（位型容器），供失配时给出元素�
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import pathlib
+import pickle
 import sys
 import time
 
@@ -48,12 +50,13 @@ import numpy as np  # noqa: E402
 
 from mme_vla_suite.models.config.utils import get_history_config  # noqa: E402
 import mme_vla_suite.training.config as _config  # noqa: E402
-from mme_vla_suite.training.dataloader import _create_framesamp_dataset  # noqa: E402
+from ref_npy_dataset import create_fixture_dataset, fixture_manifest_path  # noqa: E402
 from openpi.training.data_loader import _collate_fn  # noqa: E402
 from openpi.training.data_loader import transform_dataset  # noqa: E402
 
 # 只接受 closed / open 两个精确文件名（motion-memory-plan.md 2.1）：T1 / T2 默认钉 closed，T3 open 侧显式钉 open
-_EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml")
+_EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml",
+                             "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml")
 _EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 
@@ -83,7 +86,7 @@ def _check_manifest_same_source(manifest_path: pathlib.Path, dataset_path: pathl
     return manifest
 
 
-def _dump_samples(ds, manifest: dict, groups: dict, out: pathlib.Path, with_arrays: bool) -> int:
+def _dump_samples(ds, tds, manifest: dict, groups: dict, out: pathlib.Path, with_arrays: bool) -> int:
     sdir = out / "samples"
     sdir.mkdir(parents=True, exist_ok=True)
     rows = sdir / "summary.jsonl"
@@ -110,7 +113,8 @@ def _dump_samples(ds, manifest: dict, groups: dict, out: pathlib.Path, with_arra
                             C.save_array(adir, k, np.asarray(item[C.base_name(k)]))
                 f.write(json.dumps({
                     "index": idx, "group": gname, "epis_idx": epis, "step_idx": step,
-                    "is_short": step <= 30, "keys": keys,
+                    "is_short": step < ds._max_frames - 1, "keys": keys,
+                    "transformed_keys": C.describe_tree(tds[idx]),
                 }, ensure_ascii=False) + "\n")
                 n += 1
                 if n % 100 == 0:
@@ -151,11 +155,13 @@ def main() -> None:
     with_arrays = os.environ.get("DTYPE_DUMP_ARRAYS", "1") != "0"
 
     dataset_path = pathlib.Path(config.dataset_path)
-    manifest_path = C.REPO_ROOT / "v1-store" / "episode_manifest.json"
+    manifest_path = fixture_manifest_path(dataset_path)
     manifest = _check_manifest_same_source(manifest_path, dataset_path)
 
-    groups = C.build_fixture_indices(manifest)
-    plan = C.build_fixture_batches(groups)
+    history_config = get_history_config(config.model.history_config)
+    max_frames = int(history_config.budget) // (int(history_config.token_per_image) * int(history_config.num_views))
+    groups = C.build_fixture_indices(manifest, max_frames)
+    plan = C.build_fixture_batches(groups, max_frames)
     # 冒烟开关：每组只取前 N 个样本、每种组成只取前 N 个 batch。正式取证不设它。
     # 两侧只要 limit 相同，裁剪后的定点集就仍然逐项一致，对拍的 plan 断言照常成立。
     limit = int(os.environ.get("DTYPE_DUMP_LIMIT", "0") or 0)
@@ -170,23 +176,51 @@ def main() -> None:
     (out / "fixture_plan.json").write_text(json.dumps({
         "seed": C.FIXTURE_SEED, "limit": limit, "groups": groups, "batches": plan,
         "manifest_sha256": manifest.get("sha256"),
+        "max_frames": max_frames, "tokens_per_frame": int(history_config.token_per_image),
+        "per_step": C.fixture_per_step(manifest),
     }, ensure_ascii=False), encoding="utf-8")
 
-    history_config = get_history_config(config.model.history_config)
     data_config = config.data.create(config.assets_dirs, config.model)
-    ds = _create_framesamp_dataset(
+    ds = create_fixture_dataset(
         dataset_path=str(dataset_path),
         data_config=data_config,
         history_config=history_config,
         action_horizon=config.model.action_horizon,
     )
+    tds = transform_dataset(ds, data_config)
+    # 全清单身份互校与全部合法帧的采样摘要；独立手算语义另由 hand_calc_8frame 验证。
+    from mme_vla_suite.shared.sampling import even_sampling_indices
+    identity, frames_digest = hashlib.sha256(), hashlib.sha256()
+    if len(ds) != manifest["totals"]["exec_samples"] or ds._max_frames != max_frames:
+        raise ValueError("Dataset 样本数或帧预算与清单、配置不符")
+    steps = 0
+    for ep in manifest["episodes"]:
+        g = ep["global_episode_idx"]
+        for step in range(ep["num_timesteps"]):
+            chosen = even_sampling_indices(step, max_frames)
+            frames_digest.update(json.dumps([g, step, chosen]).encode())
+            steps += 1
+        for step in range(ep["exec_start_idx"], ep["num_timesteps"]):
+            idx = C.index_of(ep, step)
+            with (pathlib.Path(ds._source_root) / "data" / f"{idx}.pkl").open("rb") as f:
+                item = pickle.load(f)
+            if (int(item["epis_idx"].item()), int(item["step_idx"].item()),
+                int(ds._epis_of[idx]), int(ds._step_of[idx])) != (g, step, g, step):
+                raise ValueError(f"全量身份互校失败: index={idx}")
+            identity.update(json.dumps([idx, g, step]).encode())
+    (out / "identity.json").write_text(json.dumps({
+        "episodes": len(manifest["episodes"]), "samples": len(ds), "steps": steps,
+        "identity_sha256": identity.hexdigest(), "frames_sha256": frames_digest.hexdigest(),
+        "max_frames": max_frames, "tokens_per_frame": ds._tokens_per_frame,
+        "manifest_sha256": manifest["sha256"],
+    }))
 
     n_samples = n_batches = 0
     if mode in ("samples", "both"):
-        n_samples = _dump_samples(ds, manifest, groups, out, with_arrays)
+        n_samples = _dump_samples(ds, tds, manifest, groups, out, with_arrays)
     if mode in ("batches", "both"):
-        tds = transform_dataset(ds, data_config)
         n_batches = _dump_batches(tds, plan, out)
+    ds.close()
 
     C.write_manifest(out, extra={
         "git_head": os.environ.get("DTYPE_DUMP_GIT_HEAD", ""),

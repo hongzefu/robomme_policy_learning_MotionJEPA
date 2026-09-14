@@ -57,13 +57,14 @@ import train as _train  # noqa: E402
 from mme_vla_suite.models.config.utils import get_history_config  # noqa: E402
 from mme_vla_suite.models.integration.history_observation import HistAugObservation  # noqa: E402
 import mme_vla_suite.training.config as _config  # noqa: E402
-from mme_vla_suite.training.dataloader import _create_framesamp_dataset  # noqa: E402
+from ref_npy_dataset import create_fixture_dataset, fixture_manifest_path  # noqa: E402
 from openpi.training import sharding  # noqa: E402
 from openpi.training.data_loader import _collate_fn  # noqa: E402
 from openpi.training.data_loader import transform_dataset  # noqa: E402
 
 # 只接受 closed / open 两个精确文件名（motion-memory-plan.md 2.1）：T1 / T2 默认钉 closed，T3 open 侧显式钉 open
-_EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml")
+_EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml",
+                             "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml")
 _EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 # 三个定点 batch：每种组成取该组第一个（batch_id 由 BATCH_PLAN 顺序决定，两侧一致）
@@ -149,7 +150,7 @@ def _build_batches(config, plan: list[dict], fixture_dir: pathlib.Path) -> dict[
     """按定点计划构造三个 batch（走完整 transform 链），并落 fixture 位型容器。"""
     history_config = get_history_config(config.model.history_config)
     data_config = config.data.create(config.assets_dirs, config.model)
-    ds = _create_framesamp_dataset(
+    ds = create_fixture_dataset(
         dataset_path=str(config.dataset_path),
         data_config=data_config,
         history_config=history_config,
@@ -194,16 +195,14 @@ def main() -> None:
 
     jax.config.update(
         "jax_compilation_cache_dir",
-        str(pathlib.Path(f"~/.cache/jax_{config.exp_name}").expanduser()),
+        str(pathlib.Path(os.environ.get("MMEVLA_JAX_CACHE_DIR") or f"~/.cache/jax_{config.exp_name}").expanduser()),
     )
 
-    # 默认 legacy 顶层清单（环境 A 的 4task-gl）；环境 B 没有它，由 DTYPE_MANIFEST 指向某个库的 meta/episode_manifest.json
-    # （字段 exec_sample_offset / exec_start_idx / num_timesteps / totals.exec_samples 同构；PER_STEP=200 要求 ≥200 个 Button 系 episode，
-    # 即只有 400 ep 库满足，40 ep 库结构性不足）
-    manifest = C.load_manifest(pathlib.Path(os.environ.get("DTYPE_MANIFEST")
-                                            or (C.REPO_ROOT / "v1-store" / "episode_manifest.json")))
-    groups = C.build_fixture_indices(manifest)
-    plan = C.build_fixture_batches(groups)
+    manifest = C.load_manifest(fixture_manifest_path(config.dataset_path))
+    hc = get_history_config(config.model.history_config)
+    max_frames = int(hc.budget) // (int(hc.token_per_image) * int(hc.num_views))
+    groups = C.build_fixture_indices(manifest, max_frames)
+    plan = C.build_fixture_batches(groups, max_frames)
 
     batches = _build_batches(config, plan, fixture_dir)
 

@@ -138,9 +138,9 @@ def test_fixture_indices_are_reproducible_and_on_boundary() -> None:
     g1 = C.build_fixture_indices(manifest)
     g2 = C.build_fixture_indices(manifest)
     assert g1 == g2, "定点集不可复现"
-    for step in (*C.SHORT_STEPS, *C.FULL_STEPS):
+    for step in dict.fromkeys(s for group in C.fixture_steps() for s in group):
         idxs = g1[f"step{step}"]
-        assert len(idxs) == C.PER_STEP
+        assert len(idxs) == C.fixture_per_step(manifest)
         for i in idxs[:20]:
             _epis, got_step = C.resolve_index(manifest, i)
             assert got_step == step, f"index {i} 反查 step_idx={got_step}，应为 {step}"

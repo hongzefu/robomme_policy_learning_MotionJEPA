@@ -113,7 +113,7 @@ def describe_tree(tree) -> dict:
     """
     import jax
 
-    flat, _ = jax.tree_util.tree_flatten_with_path(tree)
+    flat, _ = jax.tree_util.tree_flatten_with_path(tree, is_leaf=lambda x: x is None)
     return {jax.tree_util.keystr(path): describe_leaf(jax.tree_util.keystr(path), leaf)
             for path, leaf in flat}
 
@@ -189,9 +189,21 @@ def load_array(out_dir: pathlib.Path, key: str) -> np.ndarray:
 # --------------------------------------------------------------------------
 # 定点样本集构造（由 episode_manifest.json 精确算出，不依赖 shuffle）
 # --------------------------------------------------------------------------
-SHORT_STEPS = (0, 1, 2, 29, 30)      # padding 分支（step_idx <= 30）
-FULL_STEPS = (31, 32, 33)            # 满长切片分支
-PER_STEP = 200
+def fixture_steps(max_frames: int = 32):
+    """覆盖补零、采样分支切换和首个可见运动窗口。"""
+    if max_frames not in (8, 32):
+        raise ValueError(f"不支持的帧预算: {max_frames}")
+    return (0, 1, 2, max_frames - 3, max_frames - 2), (max_frames - 1, max_frames, max_frames + 1), (33, 34, 35)
+
+
+def fixture_per_step(manifest: dict) -> int:
+    """每档配额取实际可覆盖短样本的 episode 数，上限 200。"""
+    n = min(200, sum(ep["exec_start_idx"] == 0 for ep in manifest["episodes"]))
+    if n == 0:
+        raise ValueError("清单没有 exec_start_idx=0 的 episode，无法覆盖补零分支")
+    return n
+
+
 N_RANDOM = 1000
 FIXTURE_SEED = 20260827
 
@@ -209,7 +221,7 @@ def index_of(ep: dict, step_idx: int) -> int:
     return ep["exec_sample_offset"] + (step_idx - ep["exec_start_idx"])
 
 
-def build_fixture_indices(manifest: dict) -> dict:
+def build_fixture_indices(manifest: dict, max_frames: int = 32) -> dict:
     """构造 ~2600 个定点样本 index。
 
     短样本档（step_idx <= 30）只能取自 exec_start_idx == 0 的 800 个 Button 系
@@ -219,18 +231,21 @@ def build_fixture_indices(manifest: dict) -> dict:
     eps = manifest["episodes"]
     total = manifest["totals"]["exec_samples"]
     groups: dict[str, list[int]] = {}
-    for step_idx in (*SHORT_STEPS, *FULL_STEPS):
+    per_step = fixture_per_step(manifest)
+    for step_idx in dict.fromkeys(s for group in fixture_steps(max_frames) for s in group):
         cand = [
             index_of(ep, step_idx)
             for ep in eps
             if ep["exec_start_idx"] <= step_idx < ep["num_timesteps"]
         ]
-        if len(cand) < PER_STEP:
-            raise SystemExit(f"step_idx={step_idx} 的候选只有 {len(cand)} 个，不足 {PER_STEP}")
-        groups[f"step{step_idx}"] = sorted(cand)[:PER_STEP]
+        if len(cand) < per_step:
+            raise SystemExit(f"step_idx={step_idx} 的候选只有 {len(cand)} 个，不足 {per_step}")
+        groups[f"step{step_idx}"] = sorted(cand)[:per_step]
 
     rng = random.Random(FIXTURE_SEED)
     fixed = {i for g in groups.values() for i in g}
+    if total - len(fixed) < N_RANDOM:
+        raise ValueError("清单剩余样本不足随机档 1000 个，拒绝不完整取证")
     rand: list[int] = []
     seen = set(fixed)
     while len(rand) < N_RANDOM:
@@ -264,10 +279,10 @@ BATCH_PLAN = (
 )
 
 
-def build_fixture_batches(groups: dict) -> list[dict]:
+def build_fixture_batches(groups: dict, max_frames: int = 32) -> list[dict]:
     """按 BATCH_PLAN 组出 200 个定点 batch（每个 8 个样本 index）。"""
-    short_pool = [i for k, g in groups.items() if k.startswith("step") and int(k[4:]) <= 30 for i in g]
-    full_pool = [i for k, g in groups.items() if k.startswith("step") and int(k[4:]) >= 31 for i in g]
+    short_pool = [i for k, g in groups.items() if k.startswith("step") and int(k[4:]) <= max_frames - 2 for i in g]
+    full_pool = [i for k, g in groups.items() if k.startswith("step") and int(k[4:]) >= max_frames - 1 for i in g]
     rand_pool = groups["random"]
     rng = random.Random(FIXTURE_SEED + 1)
     out: list[dict] = []

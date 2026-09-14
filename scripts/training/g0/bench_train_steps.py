@@ -78,10 +78,12 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import inspect
 import json
 import os
 import pathlib
+import subprocess
 import sys
 import time
 
@@ -102,7 +104,8 @@ import mme_vla_suite.training.config as _config  # noqa: E402
 
 _MAX_BENCH_STEPS = 1200  # G0b 基线升级为 1000 步（用户 2026-08-26 指定）；上限仍远低于正式训练量级
 # 只接受 closed / open 两个精确文件名（motion-memory-plan.md 2.1）：T1 / T2 默认钉 closed，T3 open 侧显式钉 open
-_EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml")
+_EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml",
+                             "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml")
 _EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 
@@ -248,6 +251,7 @@ def _checksum_full_state(checksums_path: pathlib.Path, state, step: int,
     """
     t0 = time.time()
     per_leaf: dict[str, str] = {}
+    per_leaf_finite: dict[str, bool] = {}
     dump_meta: dict[str, dict] = {}
     dump_f = None
     dump_offset = 0
@@ -268,6 +272,7 @@ def _checksum_full_state(checksums_path: pathlib.Path, state, step: int,
             key = tree_name + jax.tree_util.keystr(path)
             arr = np.asarray(jax.device_get(leaf))
             per_leaf[key] = _leaf_sha256(arr)
+            per_leaf_finite[key] = bool(np.isfinite(arr).all())
             if dump_f is not None:
                 data = arr.tobytes()
                 dump_f.write(data)
@@ -291,12 +296,16 @@ def _checksum_full_state(checksums_path: pathlib.Path, state, step: int,
             g.update(line)
     row = {
         "step": int(step),
+        "phase": "init" if int(np.asarray(jax.device_get(state.step))) == 0 else "post_update",
+        "loop_step": None if int(np.asarray(jax.device_get(state.step))) == 0 else int(step),
+        "state_step": int(np.asarray(jax.device_get(state.step))),
         "wall_time": time.time(),
         "checksum_seconds": round(time.time() - t0, 3),
         "n_leaves": len(per_leaf),
         "global_digest": g.hexdigest(),
         "state_digest": s.hexdigest(),
         "per_leaf": per_leaf,
+        "per_leaf_finite": per_leaf_finite,
     }
     with checksums_path.open("a") as f:
         f.write(json.dumps(row) + "\n")
@@ -398,13 +407,17 @@ def _install_batch_digest_recorder(record_dir: pathlib.Path, interval: int,
 
     def record(idx: int, batch) -> None:
         t0 = time.time()
-        flat, _ = jax.tree_util.tree_flatten_with_path(batch)
+        flat, _ = jax.tree_util.tree_flatten_with_path(batch, is_leaf=lambda x: x is None)
         per_key = {}
         per_key_canonical = {}
         batch_size = None
         for path, leaf in flat:
-            arr = np.asarray(leaf)
             key = jax.tree_util.keystr(path)
+            if leaf is None:
+                per_key[key] = None
+                per_key_canonical[key] = None
+                continue
+            arr = np.asarray(leaf)
             per_key[key] = _leaf_sha256(arr)
             per_key_canonical[key] = _canonical_sha256(arr)
             if batch_size is None and arr.ndim > 0:
@@ -561,6 +574,67 @@ class _CacheEventCounter:
         self.counts[event] = self.counts.get(event, 0) + 1
 
 
+def _install_reference_dataset():
+    """仅 bench 注入源 npy 链，并绕过生产 provenance 的 packed 前置读取。"""
+    impl = os.environ.get("BENCH_DATASET_IMPL", "packed")
+    if impl == "packed":
+        return
+    if impl != "refnpy":
+        raise ValueError(f"未知 BENCH_DATASET_IMPL={impl}")
+    sys.path.insert(0, str(_REPO_ROOT / "scripts/training/tests"))
+    from ref_npy_dataset import RefNpyFrameSampDataset
+    import mme_vla_suite.training.dataloader as dl
+    source = pathlib.Path(os.environ["BENCH_REF_SOURCE"]).resolve()
+    manifest = pathlib.Path(os.environ["BENCH_REF_MANIFEST"]).resolve()
+
+    def create(dataset_path, data_config, history_config, action_horizon):
+        if pathlib.Path(dataset_path).resolve() != source:
+            raise ValueError("refnpy 的 dataset_path 与 BENCH_REF_SOURCE 不符")
+        return RefNpyFrameSampDataset(source, manifest, data_config, history_config, action_horizon,
+                                     os.environ.get("BENCH_REF_MOTION") or os.environ.get("MMEVLA_MOTION_STORE"))
+
+    dl._create_framesamp_dataset = create
+    original = _train.init_history_config
+
+    def init(config, resolved_history_config=None, framesamp_root=None):
+        original(config, resolved_history_config=resolved_history_config, framesamp_root=None)
+        prov_path = pathlib.Path(config.checkpoint_dir) / "motion_provenance.json"
+        if prov_path.is_file():
+            prov = json.loads(prov_path.read_text())
+            prov.update(framesamp="refnpy", reference_source=str(source), reference_manifest=str(manifest),
+                        reference_manifest_file_sha256=hashlib.sha256(manifest.read_bytes()).hexdigest(),
+                        framesamp_manifest_sha256=json.loads(manifest.read_text())["sha256"])
+            prov_path.write_text(json.dumps(prov, indent=2, ensure_ascii=False) + "\n")
+
+    _train.init_history_config = init
+
+
+def _import_origins():
+    import mme_vla_suite.training.framesamp_dataset as dataset
+    import mme_vla_suite.datastore.framesamp_store as store
+    return {"mme_vla_suite": importlib.util.find_spec("mme_vla_suite").origin,
+            "train": _train.__file__, "framesamp_dataset": dataset.__file__, "framesamp_store": store.__file__}
+
+
+def _install_norm_recorder(config):
+    """在真实 loader 接收 data_config 时取证，不能用另建配置冒充实际值。"""
+    from check_baseline_env import norm_stats_digest
+    from openpi.shared.normalize import deserialize_json
+    recorded = {}
+    original = _train._data_loader.create_data_loader
+
+    def create(dataset_path, data_config, *args, **kwargs):
+        path = pathlib.Path(config.data.assets.assets_dir or config.assets_dirs) / data_config.asset_id / "norm_stats.json"
+        raw = path.read_bytes()
+        recorded.update(norm_stats_path=str(path.resolve()), norm_stats_file_sha256=hashlib.sha256(raw).hexdigest(),
+                        norm_stats_actual=norm_stats_digest(data_config.norm_stats),
+                        norm_stats_expected=norm_stats_digest(deserialize_json(raw.decode())))
+        return original(dataset_path, data_config, *args, **kwargs)
+
+    _train._data_loader.create_data_loader = create
+    return recorded
+
+
 def main() -> None:
     config = _config.cli()
     if config.num_train_steps > _MAX_BENCH_STEPS:
@@ -638,6 +712,12 @@ def main() -> None:
                              f"会被静默跳过；请经驱动脚本 EXTRA_DIGEST_STEPS 路径启用")
 
     record_dir = _record_dir()
+    origins = _import_origins()
+    print("[bench] import_origins=" + json.dumps(origins), flush=True)
+    start_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=_REPO_ROOT, text=True).strip()
+    start_status = subprocess.check_output(["git", "status", "--porcelain"], cwd=_REPO_ROOT, text=True)
+    _install_reference_dataset()
+    norm_record = _install_norm_recorder(config)
     cache_counter = _CacheEventCounter()
     _install_metrics_recorder(record_dir)
     _install_checksum_recorder(record_dir, enabled=checksum_on, gate=gate,
@@ -665,6 +745,8 @@ def main() -> None:
         # motion-memory-plan.md 2.8：实际 epoch 样本数（数据集真值源）、batch、history config 文件名 / resolved sha 进 run_meta
         _ds = pathlib.Path(config.dataset_path)
         _es = {}
+        if os.environ.get("BENCH_DATASET_IMPL", "packed") == "refnpy":
+            _es["reference_manifest"] = int(json.loads(pathlib.Path(os.environ["BENCH_REF_MANIFEST"]).read_text())["totals"]["exec_samples"])
         if (_ds / "meta" / "store_meta.json").is_file():
             _es["store_meta"] = int(json.load(open(_ds / "meta" / "store_meta.json"))["num_exec_samples"])
         if (_ds / "meta" / "stats.json").is_file():
@@ -673,7 +755,18 @@ def main() -> None:
             raise RuntimeError(f"epoch 样本数无法从 {_ds}/meta 唯一读出: {_es}")
         _resolved = pathlib.Path(config.checkpoint_dir) / "history_config.resolved.sha256"
         meta = {
+            **norm_record,
             "argv": list(sys.argv),
+            "import_origins": origins,
+            "start_head": start_head,
+            "start_status": start_status,
+            "reference_commit": os.environ.get("BENCH_REF_COMMIT"),
+            "candidate_commit": os.environ.get("BENCH_CAND_COMMIT"),
+            "dataset_impl": os.environ.get("BENCH_DATASET_IMPL", "packed"),
+            "environment": {k: os.environ.get(k) for k in (
+                "CUDA_VISIBLE_DEVICES", "XLA_FLAGS", "XLA_PYTHON_CLIENT_MEM_FRACTION", "PYTHONPATH",
+                "MMEVLA_JAX_CACHE_DIR", "MMEVLA_MOTION_STORE", "BENCH_REF_SOURCE", "BENCH_REF_MANIFEST",
+                "BENCH_REF_MOTION", "BENCH_RECORD_DIR")},
             "epoch_samples": next(iter(_es.values())),
             "batch_size": int(config.batch_size),
             "history_config": (config.model.history_config if isinstance(config.model.history_config, str)

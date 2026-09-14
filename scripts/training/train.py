@@ -358,7 +358,7 @@ def main(config: _config.TrainConfig):
 
     jax.config.update(
         "jax_compilation_cache_dir",
-        str(epath.Path(f"~/.cache/jax_{config.exp_name}").expanduser()),
+        str(epath.Path(os.environ.get("MMEVLA_JAX_CACHE_DIR") or f"~/.cache/jax_{config.exp_name}").expanduser()),
     )
 
     rng = jax.random.key(config.seed)

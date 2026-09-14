@@ -61,6 +61,27 @@ def _sha256_file(p: pathlib.Path) -> str:
     return h.hexdigest()
 
 
+def norm_stats_digest(stats) -> dict:
+    """数组摘要与 JSON 文件摘要分开记录，防止混比两种哈希域。"""
+    import numpy as np
+    result = {}
+    if set(stats) != {"state", "actions"}:
+        raise ValueError(f"norm_stats 键集不符: {set(stats)}")
+    for name in sorted(stats):
+        for key in ("mean", "std", "q01", "q99"):
+            value = getattr(stats[name], key)
+            if value is None:
+                result[f"{name}.{key}"] = None
+            else:
+                arr = np.asarray(value)
+                h = hashlib.sha256()
+                h.update(str(arr.dtype).encode())
+                h.update(str(arr.shape).encode())
+                h.update(arr.tobytes())
+                result[f"{name}.{key}"] = h.hexdigest()
+    return result
+
+
 def _headtail_digest(p: pathlib.Path) -> tuple[int, str]:
     """(字节数, 首尾各 1 MiB 的 blake2b-128)；小于 2 MiB 覆盖全文件。"""
     size = p.stat().st_size
@@ -106,22 +127,26 @@ def _dataset_spot_digest(dataset: pathlib.Path) -> dict:
             "n_data_files": len(names), "digest": g.hexdigest()}
 
 
-def collect_fingerprint(dataset: pathlib.Path) -> dict:
+def collect_fingerprint(dataset: pathlib.Path, *, v1_store=None, source=None, manifest=None, norm_stats=None) -> dict:
     import importlib.metadata as md
-    v1_store = _REPO_ROOT / "v1-store"
+    v1_store = pathlib.Path(v1_store or (_REPO_ROOT / "v1-store"))
+    sm = dataset / "meta/store_meta.json"
+    store_meta = json.loads(sm.read_text()) if sm.is_file() else {}
+    source = pathlib.Path(source or store_meta.get("source_dataset_root") or dataset)
+    manifest = pathlib.Path(manifest or store_meta["manifest_path"]) if manifest or store_meta else None
+    norm_stats = pathlib.Path(norm_stats or (v1_store / "train-assets/mme_vla_suite/robomme/norm_stats.json"))
     models = v1_store / "models"
     fp: dict = {"schema": _SCHEMA}
     fp["uv_lock_sha256"] = _sha256_file(_REPO_ROOT / "uv.lock")
     fp["packages"] = {name: md.version(name)
-                     for name in ("torch", "jax", "jaxlib", "numpy", "ml_dtypes")}
+                     for name in ("torch", "jax", "jaxlib", "numpy", "ml_dtypes", "flax", "optax")}
     smi = subprocess.run(
         ["nvidia-smi", "--query-gpu=name,driver_version", "--format=csv,noheader"],
         capture_output=True, text=True)
     fp["gpu"] = {"nvidia_smi": smi.stdout.strip().splitlines(),
                  "CUDA_VISIBLE_DEVICES": os.environ.get("CUDA_VISIBLE_DEVICES", "")}
     fp["assets"] = {
-        "norm_stats_sha256": _sha256_file(
-            v1_store / "train-assets/mme_vla_suite/robomme/norm_stats.json"),
+        "norm_stats_sha256": _sha256_file(norm_stats),
         "tokenizer_sha256": _sha256_file(
             models / "big_vision/paligemma_tokenizer.model"),
         "pi05_base": _tree_spot_digest(
@@ -130,8 +155,15 @@ def collect_fingerprint(dataset: pathlib.Path) -> dict:
         "episode_manifest_sha256_field": (
             json.load(open(v1_store / "episode_manifest.json"))["sha256"]
             if (v1_store / "episode_manifest.json").is_file() else None),
-        "dataset_spot": _dataset_spot_digest(dataset),
+        "dataset_spot": _dataset_spot_digest(source),
     }
+    from openpi.shared.normalize import deserialize_json
+    fp["assets"]["norm_stats_arrays"] = norm_stats_digest(deserialize_json(norm_stats.read_text()))
+    fp["dataset"] = {"store_meta_sha256": _sha256_file(sm) if sm.is_file() else None,
+                     "manifest_sha256": json.loads(manifest.read_text())["sha256"] if manifest else None,
+                     "source_stats_sha256": _sha256_file(source / "meta/stats.json")}
+    motion = os.environ.get("MMEVLA_MOTION_STORE") or os.environ.get("BENCH_REF_MOTION")
+    fp["motion"] = {"store_meta_sha256": _sha256_file(pathlib.Path(motion) / "meta/store_meta.json") if motion else None}
     fp["xla"] = {
         "XLA_FLAGS": os.environ.get("XLA_FLAGS", ""),
         "XLA_PYTHON_CLIENT_MEM_FRACTION":
@@ -157,7 +189,7 @@ def _diff(a, b, prefix="fingerprint"):
 
 
 def cmd_dump(args) -> int:
-    fp = collect_fingerprint(pathlib.Path(args.dataset))
+    fp = _collect_args(args)
     d = pathlib.Path(args.record_dir)
     env_path = d / "env.json"
     if env_path.exists():
@@ -167,8 +199,8 @@ def cmd_dump(args) -> int:
         print(f"OK 指纹并入 {env_path}")
     else:
         d.mkdir(parents=True, exist_ok=True)
-        json.dump(fp, open(d / "fingerprint.json", "w"), indent=2, ensure_ascii=False)
-        print(f"OK 指纹写入 {d / 'fingerprint.json'}")
+        json.dump({"fingerprint": fp}, open(env_path, "w"), indent=2, ensure_ascii=False)
+        print(f"OK 指纹写入 {env_path}")
     return 0
 
 
@@ -199,8 +231,11 @@ def cmd_check(args) -> int:
     if baseline_fp is None:
         fails.append(f"  基线 {env_path} 缺 fingerprint 键（基线本身留档不完整）")
     else:
-        cur = collect_fingerprint(pathlib.Path(args.dataset))
-        fails += _diff(baseline_fp, cur)
+        cur = (json.loads((pathlib.Path(args.record_dir) / "env.json").read_text())["fingerprint"]
+               if args.record_dir else _collect_args(args))
+        diffs = _diff(baseline_fp, cur)
+        allowed = set(args.allow_difference)
+        fails += [line for line in diffs if line.strip().split(":", 1)[0].removeprefix("fingerprint.") not in allowed]
 
     man_path = base / "BASELINE_MANIFEST.json"
     if not man_path.exists():
@@ -229,18 +264,26 @@ def cmd_check(args) -> int:
     return 0
 
 
+def _collect_args(args):
+    return collect_fingerprint(pathlib.Path(args.dataset or args.source), v1_store=args.v1_store,
+                               source=args.source, manifest=args.manifest, norm_stats=args.norm_stats)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    default_dataset = str(_REPO_ROOT / "v1-store/datasets/4task-gl")
-
     p = sub.add_parser("dump")
     p.add_argument("--record-dir", required=True)
-    p.add_argument("--dataset", default=default_dataset)
+    for name in ("dataset", "source", "manifest", "norm-stats", "v1-store"):
+        p.add_argument("--" + name)
 
     p = sub.add_parser("check")
-    p.add_argument("--baseline", required=True)
-    p.add_argument("--dataset", default=default_dataset)
+    p.add_argument("--baseline", "--base", dest="baseline", required=True)
+    p.add_argument("--record-dir")
+    for name in ("dataset", "source", "manifest", "norm-stats", "v1-store"):
+        p.add_argument("--" + name)
+    p.add_argument("--allow-difference", action="append", default=[],
+                   choices=("dataset.store_meta_sha256", "gpu.CUDA_VISIBLE_DEVICES"))
     p.add_argument("--steps", type=int, default=0)
     p.add_argument("--batch-size", type=int, default=0)
 
