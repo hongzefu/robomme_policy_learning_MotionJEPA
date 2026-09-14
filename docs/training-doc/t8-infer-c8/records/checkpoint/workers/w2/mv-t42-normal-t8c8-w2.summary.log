@@ -1,0 +1,107 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  ✓ siglip_params          level=cheap   0.00s
+  ✓ paligemma_tokenizer    level=cheap   0.00s
+  ✓ pi05_base              level=cheap   0.03s
+ASSETS=PASS assets=3 mismatches=0
+=== MV_SHARD shard=w2 cond=normal split=test seed=42 HEAD=a0db6bf53fb5b46b0cb3f0dcbbbe53c670866496 DIRTY_TREE=0 ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-c8-b/mme_vla_suite/t8-c8-b/999 gpu=6 port=9372 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap ep_start=2 ep_stride=4 ep_count=10 expected=12 policy_name=mv-normal-s42-test-t8c8-w2 mem_fraction=0.55 xla_flags='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0' start=2026-09-14 13:37:31 ===
+server pid=883816 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-normal-t8c8-w2.server.log
+server 端口就绪 13:37:49
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+[robomme] task ButtonUnmask: 3 episodes [2, 6, 10]
+EVAL_EPISODE split=test task=ButtonUnmask ep=2 env_seed=580201 difficulty=medium
+
+[robomme] env for task ButtonUnmask episode 2 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmask ep=2 exec_start_idx=0 start=2026-09-14 13:37:56
+MV_EP_DONE split=test task=ButtonUnmask ep=2 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=40.0 difficulty=medium
+EVAL_EPISODE split=test task=ButtonUnmask ep=6 env_seed=580600 difficulty=medium
+
+[robomme] env for task ButtonUnmask episode 6 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmask ep=6 exec_start_idx=0 start=2026-09-14 13:38:41
+MV_EP_DONE split=test task=ButtonUnmask ep=6 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=29.0 difficulty=medium
+EVAL_EPISODE split=test task=ButtonUnmask ep=10 env_seed=581000 difficulty=medium
+
+[robomme] env for task ButtonUnmask episode 10 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmask ep=10 exec_start_idx=0 start=2026-09-14 13:39:15
+MV_EP_DONE split=test task=ButtonUnmask ep=10 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=28.2 difficulty=medium
+[robomme] task VideoUnmask: 3 episodes [2, 6, 10]
+EVAL_EPISODE split=test task=VideoUnmask ep=2 env_seed=560200 difficulty=medium
+
+[robomme] env for task VideoUnmask episode 2 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 66
+MV_EP_START split=test task=VideoUnmask ep=2 exec_start_idx=66 start=2026-09-14 13:39:51
+MV_EP_DONE split=test task=VideoUnmask ep=2 flag=timeout steps=1301 infers=82 exec_start_idx=66 wall_s=30.2 difficulty=medium
+EVAL_EPISODE split=test task=VideoUnmask ep=6 env_seed=560600 difficulty=medium
+
+[robomme] env for task VideoUnmask episode 6 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 66
+MV_EP_START split=test task=VideoUnmask ep=6 exec_start_idx=66 start=2026-09-14 13:40:26
+MV_EP_DONE split=test task=VideoUnmask ep=6 flag=timeout steps=1301 infers=82 exec_start_idx=66 wall_s=29.2 difficulty=medium
+EVAL_EPISODE split=test task=VideoUnmask ep=10 env_seed=561000 difficulty=medium
+
+[robomme] env for task VideoUnmask episode 10 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 66
+MV_EP_START split=test task=VideoUnmask ep=10 exec_start_idx=66 start=2026-09-14 13:41:01
+MV_EP_DONE split=test task=VideoUnmask ep=10 flag=timeout steps=1301 infers=82 exec_start_idx=66 wall_s=29.2 difficulty=medium
+[robomme] task ButtonUnmaskSwap: 3 episodes [2, 6, 10]
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=2 env_seed=570200 difficulty=medium
+
+[robomme] env for task ButtonUnmaskSwap episode 2 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the blue cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmaskSwap ep=2 exec_start_idx=0 start=2026-09-14 13:41:36
+MV_EP_DONE split=test task=ButtonUnmaskSwap ep=2 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=27.9 difficulty=medium
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=6 env_seed=570600 difficulty=medium
+
+[robomme] env for task ButtonUnmaskSwap episode 6 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the red cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmaskSwap ep=6 exec_start_idx=0 start=2026-09-14 13:42:09
+MV_EP_DONE split=test task=ButtonUnmaskSwap ep=6 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=28.2 difficulty=medium
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=10 env_seed=571000 difficulty=medium
+
+[robomme] env for task ButtonUnmaskSwap episode 10 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmaskSwap ep=10 exec_start_idx=0 start=2026-09-14 13:42:43
+MV_EP_DONE split=test task=ButtonUnmaskSwap ep=10 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=27.5 difficulty=medium
+[robomme] task VideoUnmaskSwap: 3 episodes [2, 6, 10]
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=2 env_seed=550200 difficulty=medium
+
+[robomme] env for task VideoUnmaskSwap episode 2 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+MV_EP_START split=test task=VideoUnmaskSwap ep=2 exec_start_idx=114 start=2026-09-14 13:43:19
+MV_EP_DONE split=test task=VideoUnmaskSwap ep=2 flag=timeout steps=1301 infers=82 exec_start_idx=114 wall_s=30.7 difficulty=medium
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=6 env_seed=550600 difficulty=medium
+
+[robomme] env for task VideoUnmaskSwap episode 6 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+MV_EP_START split=test task=VideoUnmaskSwap ep=6 exec_start_idx=168 start=2026-09-14 13:43:56
+MV_EP_DONE split=test task=VideoUnmaskSwap ep=6 flag=timeout steps=1301 infers=82 exec_start_idx=168 wall_s=31.9 difficulty=medium
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=10 env_seed=551000 difficulty=medium
+
+[robomme] env for task VideoUnmaskSwap episode 10 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 114
+MV_EP_START split=test task=VideoUnmaskSwap ep=10 exec_start_idx=114 start=2026-09-14 13:44:33
+MV_EP_DONE split=test task=VideoUnmaskSwap ep=10 flag=fail steps=181 infers=12 exec_start_idx=114 wall_s=6.0 difficulty=medium
+EVAL_RC=0 end=2026-09-14 13:44:40
+TIMING_SUMMARY add_buffer(<=16帧) n=908 mean=40 median=37 p90=39 max=1030 | add_buffer(首批>16帧) n=6 mean=743 median=667 p90=nan max=1584 | infer n=914 mean=78 median=67 p90=67 max=9776
+MV_SHARD_SUMMARY shard=w2 cond=normal split=test seed=42 expected=12 progress=12 ep_done=12 episode_begin=12 infers=914 eval_rc=0 dirty=0 progress_json=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/mv-normal-s42-test-t8c8-w2/ckpt999/seed42/progress.json
+EXIT_CODE=0
+EXIT_CODE=0

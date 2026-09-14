@@ -1,6 +1,6 @@
 # 训练特征库：从每帧一个小文件改成三张连续大表
 
-> 训练时模型每一步要读 32 帧图像的 SigLIP 特征。原来每帧存一个小文件，一个样本要开三十几个文件、每个文件还要整包反序列化；现在改成三张连续大表，一个样本只开一个文件、按行直接读。本页只讲三件事：改之前和改之后的文件结构、这些文件怎么生成、怎么证明改前改后训练结果一模一样。
+> 默认训练最多读取32帧、每帧4×4的SigLIP特征；现也支持最多8帧、每帧8×8，见第七节。原来每帧存一个小文件，一个样本要开三十几个文件、每个文件还要整包反序列化；现在改成三张连续大表，一个样本只开一个文件、按行直接读。本页只讲三件事：改之前和改之后的文件结构、这些文件怎么生成、怎么证明改前改后训练结果一模一样。
 >
 > 数字分两个环境、不混表：**环境 A**（GreatLakes 4×A40 + turbo NFS、本机 2×RTX 6000 Ada，2026-09-03 及以前）是历史；**环境 B**（AWS 单机 8×A100-80GB，本地 NVMe RAID，2026-09-04 起）是现行。根目录四份计划文件（`v1-`/`v2-framesamp-restructure-plan.md`、`v3-destructive-restructure-plan.md`、`v5.0-train-entry-restructure-plan.md`）保留为过程档案，冲突以本页为准。更细的 `store_meta.json` 逐字段表、锁协议、删旧链路的七次提交顺序、吞吐档位扫描，见本文件 git 历史 `3f4afb5` 版本。
 
@@ -127,7 +127,7 @@
 
 **边界，如实说。**
 
-- 这条链全部产于环境 A。环境 B 没有这些固化产物（A100 与 Ada 的 bf16 归约不逐位），环境 B 的等价性只能「同机两侧各跑一次」再比。
+- 本节上方的旧版1000步证据全部产于环境 A；第七节另记本轮AWS实测。环境 B 没有这些固化产物（A100 与 Ada 的 bf16 归约不逐位），环境 B 的等价性只能「同机两侧各跑一次」再比。
 - 1000 步 × b8 = 8,000 个样本只覆盖粗错：行号错位、选帧错误几十步内就会撞穿。「万分之一错帧」这种细错靠定点样本对拍与 verify 全量比对兜底。
 - raw 口径的 batch 摘要有 4 步预期失配（`static_image_emb` / `static_pos_emb` 两键，改 padding dtype 前后补零段位型不同）。这是已知口径差，每轮对拍都必须与它逐字吻合，不吻合才是信号；判定用的是逐键升到 f32 再比位串的口径。
 
@@ -144,3 +144,73 @@
 | 建库留档 | 环境 A `dataset-build-doc/4task-gl-framesamp/`；环境 B `dataset-build-doc/4task-motion-400ep/` |
 | 环境 B 吞吐留档 | `training-doc/bench-b128-util/` |
 | 第四张表 motion | `motion-memory.md` |
+
+## 七、8帧×8×8档（2026-09-14）
+
+现行读取器同时支持32帧×4×4和8帧×8×8，两档的帧记忆预算都是512 token。入口分别为原来的两份YAML和新增的 [perceptual-framesamp-context-8frame-8x8.yaml](../src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-8frame-8x8.yaml)、[perceptual-framesamp-context-8frame-8x8-motion.yaml](../src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-8frame-8x8-motion.yaml)；模型、采样函数、归一化公式和动作路径共用。8帧档让单帧空间格数从16变64、最多历史帧从32变8，因此它与32帧档的输入内容有意不同。等价性比较是在每档内部，比较参考读取与连续表读取；不要求不同档的loss相同。
+
+`src/mme_vla_suite/datastore/framesamp_store.py::StoreSpec`将图像键、位置键、行形状、字节数、part目录与布局绑定。新布局 `framesamp-8x8-v1`使用image行(64,2048) bf16、pos行(64,768) f32；state仍是(8,) f32。`pack_framesamp_store.py`按布局打包并全量verify，`FrameSampDataset`只接受与布局匹配的帧数/token数/预算组合，错配直接拒绝。两个旧库、新库、源npy和motion库均保留，新增库不覆盖旧库。
+
+### 数据源到模型：改动前
+
+下面是原32帧×4×4配置的完整链路。B为字节，图中大小均按单样本；运动开关只影响最后一组可选数组。
+
+```text
+source/features/episode_g/token_emb_t.npy（整包602,951 B）+ source/data/idx.pkl
+  取image_emb_4x4 (1,16,2048) bf16：65,536 B/帧
+  取pos_emb_4x4 (1,16,768) f32：49,152 B/帧；state_emb (8,) f32：32 B/帧
+  ↓ pack decode → framesamp/三表；逐字节搬运，不改数
+FrameSampDataset：even_sampling_indices(step,32)，按清单映射全局行
+  ↓ preadv image + pos/state查表；最多32帧；按原dtype右补零
+  ↓ reshape/repeat不改数；_normalize_state按原公式改数（包含补零位置）
+static_image_emb (512,2048) bf16：2,097,152 B
+static_pos_emb   (512,768)  f32：1,572,864 B
+static_state_emb (512,8)    f64：32,768 B；static_mask (512,) bool：512 B
+  可选motion：emb (96,768) f32：294,912 B；pos (96,256) f32：98,304 B
+             mask (96,) bool：96 B；mem_order (608,) int32：2,432 B
+  ↓ RepackTransform → RoboMMEInputs → DeltaActions → Normalize
+    只对指定state/actions改数，不改变历史静态数组
+  ↓ 默认prompt/ResizeImages(224)/tokenize/PadStatesAndActions
+    图像尺寸、任务token及动作填充按既有模型变换
+  ↓ collate np.stack（加batch轴，None透传）→ JAX进程本地数组交付
+    jax_enable_x64=False：static_state_emb f64→f32；其余上述dtype保持
+HistoryPi0：512帧token，motion开启再加96；其余模型路径共用
+```
+
+### 数据源到模型：改动后
+
+8帧参考实现直接解码同一源npy中的8×8键；候选实现读新连续表。下面两条读取支路在装配后汇合，后续变换完全共用。
+
+```text
+同一source/features/episode_g/token_emb_t.npy + source/data/idx.pkl
+  取image_emb_8x8 (1,64,2048) bf16：262,144 B/帧
+  取pos_emb_8x8 (1,64,768) f32：196,608 B/帧；state_emb (8,) f32：32 B/帧
+  ├─参考refnpy：逐帧decode，even_sampling_indices(step,8)
+  └─候选：pack decode → framesamp-8x8/；不改数
+           image行(64,2048) bf16；pos行(64,768) f32；state行(8,) f32
+           FrameSampDataset同样选8帧，再按全局行preadv/查表
+  ↓ 两支均最多8帧，按原dtype右补零，reshape/repeat；归一化公式保持
+static_image_emb (512,2048) bf16：2,097,152 B
+static_pos_emb   (512,768)  f32：1,572,864 B
+static_state_emb (512,8)    f64：32,768 B；static_mask (512,) bool：512 B
+  可选motion与上图同形状、同dtype、同字节数，使用原motion库
+  ↓ 同一Repack/RoboMMEInputs/DeltaActions/Normalize/模型变换
+  ↓ 同一collate → JAX交付；static_state_emb仍按既有行为f64→f32
+HistoryPi0：仍为512帧token；C8前缀1088，M8前缀1184
+```
+
+这次没有把host侧static_state_emb改为f32。实际取fixture数组再经JAX交付验证：batch8时image为16,777,216 B、pos为12,582,912 B，dtype分别保持bf16/f32；static_state从host 262,144 B变为device 131,072 B（f64→f32），mask保持4,096 B。这个精度转换在两侧相同，完整训练又从实际输入验证到全状态。不能仅凭CPU raw dtype推断模型收到f64。
+
+### 不训练的输入证据
+
+两库均从已有源npy以decode模式新建，未重复提取SigLIP。40ep共13,756行、11,530执行样本、22个part；400ep共123,044行、101,066执行样本、31个part。两库各全量verify零差，各抽512帧image零差；586行位置表和64个源npy的跨网格检查零差。新image表大小分别3,606,052,864 B和32,255,246,336 B，恰为各自4×4表四倍；state全文SHA与旧库一致。详细实测与命令见[40ep建库](dataset-build-doc/4task-motion-40ep-framesamp-8x8/result.md)和[400ep建库](dataset-build-doc/4task-motion-400ep-framesamp-8x8/result.md)。
+
+四profile在两库上逐一比较参考与候选的全量身份/选帧索引、raw与变换后数组及200个真实batch。40ep样本数为C32/M32各1200、C8/M8各1220；400ep各3000/3200，dtype、shape、None和值均逐位一致。40ep的packed与refnpy各完成worker0/1/4/16×2完整epoch，文件句柄5→5，无泄漏。C8/M8在两库上各27个独立手算样本通过；29项错配拒绝通过。[完整输入验收](training-doc/t8-fixture/result.md)保留逐项原始证据。
+
+### 本机真实训练与梯度证据
+
+REF为 `99faacb1319adfc63c0cf9a15187e24c34e38fd1`，候选代码为 `c08ec2060a544af1869c1e24f755e536150569ca`。参考侧在独立worktree显式设置PYTHONPATH，候选侧在主树，每侧实际导入来源与环境指纹都留档。C32/M32比较原packed读取在改动前后是否不变；C8/M8比较REF里的refnpy与候选packed是否相同。全部在同一AWS A100主机、同一400ep数据上重建基线，未复用历史Ada/NFS数值。
+
+每profile先跑A1/A2重复性，再与B比较，共12条1000更新；batch8、workers4、seed42、fsdp2均是本轮启动覆盖，未改全局默认。每条实际更新8000样本，预取索引记录共8072项。四组五标量逐步hex、11个完整TrainState点、11个batch摘要、有限性与活性全部PASS；norm_stats既检查文件SHA750a8e9b…，又逐项核真实loader收到的8数组与文件解析摘要。四个100步排错仅用于提前排错，按用户决定关闭完整状态摘要后已清理，不作为正式证据。[十二轨迹总览](training-doc/t8-training/result.md)列出每条完整版本、命令、耗时与指标；[全梯度档案](training-doc/t8-gradient/result.md)另列三种真实batch的逐叶对拍。
+
+这组结果证明既定两档的数据交付及所测训练路径等价，不是8帧模型比32帧模型更好，也不是收敛结论。稳态步时仅作本机运行记录；完整状态摘要的停顿已单独分层，不能用摘要关闭前后的总墙钟比较吞吐收益。新checkpoint的推理与闭环覆盖见[训练/推理一致性](train-infer-consistency.md)的8×8测试模型一节。

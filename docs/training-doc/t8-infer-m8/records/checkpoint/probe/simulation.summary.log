@@ -1,0 +1,16 @@
+warning: The `tool.uv.dev-dependencies` field (used in `/scratch/hongze/robomme_policy_learning_MotionJEPA/packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+warning: `--no-sync` has no effect when used alongside `--no-project`
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+[robomme] task ButtonUnmask: 1 episodes [0]
+EVAL_EPISODE split=test task=ButtonUnmask ep=0 env_seed=580000 difficulty=easy
+
+[robomme] env for task ButtonUnmask episode 0 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmask ep=0 exec_start_idx=0 start=2026-09-14 12:59:15
+MV_EP_DONE split=test task=ButtonUnmask ep=0 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=162.0 difficulty=easy

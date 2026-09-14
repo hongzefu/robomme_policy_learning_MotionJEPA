@@ -18,10 +18,10 @@ A在REF `99faacb1319adfc63c0cf9a15187e24c34e38fd1`，显式PYTHONPATH指向REF/s
 
 | profile | 物理GPU | A→B墙钟 | 每kind梯度叶数 | mixed1 / allshort / allfull loss（两侧同值） | 证据 |
 |---|---|---:|---:|---|---|
-| C32 | 4,5 | 32分7秒 | 32 | 0.633969307 / 0.263696939 / 0.559610307 | [完整日志](records/c32/gradient.summary.log) |
-| M32 | 6,7 | 32分22秒 | 36 | 0.619058847 / 0.263696939 / 0.567672908 | [完整日志](records/m32/gradient.summary.log) |
-| C8 | 4,5 | 14分31秒 | 32 | 0.611530423 / 0.704216182 / 0.580537736 | [完整日志](records/c8/gradient.summary.log) |
-| M8 | 6,7 | 16分31秒 | 36 | 0.620160639 / 0.704216182 / 0.597755611 | [完整日志](records/m8/gradient.summary.log) |
+| C32 | 4,5 | 32分7秒 | 32 | 0.633969307 / 0.263696939 / 0.559610307 | [完整日志](records/c32/gradient.summary.log) / [A摘要](records/c32/a/grad_summary.json) / [B摘要](records/c32/b/grad_summary.json) |
+| M32 | 6,7 | 32分22秒 | 36 | 0.619058847 / 0.263696939 / 0.567672908 | [完整日志](records/m32/gradient.summary.log) / [A摘要](records/m32/a/grad_summary.json) / [B摘要](records/m32/b/grad_summary.json) |
+| C8 | 4,5 | 14分31秒 | 32 | 0.611530423 / 0.704216182 / 0.580537736 | [完整日志](records/c8/gradient.summary.log) / [A摘要](records/c8/a/grad_summary.json) / [B摘要](records/c8/b/grad_summary.json) |
+| M8 | 6,7 | 16分31秒 | 36 | 0.620160639 / 0.704216182 / 0.597755611 | [完整日志](records/m8/gradient.summary.log) / [A摘要](records/m8/a/grad_summary.json) / [B摘要](records/m8/b/grad_summary.json) |
 
 四个profile分别产生以下判定行；完整原文在各自日志中，不能将一组PASS替代其他组：
 
@@ -34,7 +34,7 @@ GRAD_FINITE=PASS profile=<上述各profile> kinds=3
 GRAD_INPUT_EXACT=PASS profile=<上述各profile> kinds=3
 ```
 
-loss表只方便阅读，实际判定使用[原始hex与逐叶摘要](records/summary.json)，没有用表中四舍五入的小数。32帧与8帧的fixture索引与内容有意不同，不做跨档loss相等断言。
+loss表只方便阅读，实际判定使用表内各侧grad_summary.json的loss_hex和per_leaf；[汇总](records/summary.json)保留版本、索引和loss hex，没有用表中四舍五入的小数。32帧与8帧的fixture索引与内容有意不同，不做跨档loss相等断言。
 
 ## 资源、耗时和计划外事件
 

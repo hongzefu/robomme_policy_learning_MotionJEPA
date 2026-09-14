@@ -1,8 +1,10 @@
-# 8 帧 × 8×8 训练支持与前后对拍计划（2026-09-14 修订版）
+# 8 帧 × 8×8 训练支持与前后对拍（实施过程档案）
 
-本文是 2026-09-13 细化版经对抗验证后的修订版。对抗验证锚定 HEAD `9c344fa1bf615847c0233be012420d21d8a7841b`（7 个只读审计 agent 与 Codex 独立审稿交叉核对，全部结论以代码原文为证；本次修订未执行任何仓库脚本、未训练）。结构仍按 `AGENTS.md` 第 2 条分两部分：**第一部分给人看**，分「数据预处理」「训练」「推理」三块；**第二部分供 agent 追踪**，列文件、函数、命令与判定行。环境判定为 B：仓库 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，8 × A100-SXM4-80GB，无 turbo、无 GreatLakes，`/scratch` 余量 4.1 T（实测 `df -h /scratch` = 6.9T / 2.9T 已用 / 4.1T 可用）。
+> 本轮实施和验收已完成。现行数据接口与前后链路见[数据链路正本](docs/dataloader-restructure.md)，实际推理覆盖与边界见[训练/推理一致性正本](docs/train-infer-consistency.md)。下方保留实施前计划的组织与命令口径，完成结果以各run档案为准。
 
-**授权状态不变**：当前只授权本文件。代码修改、建库、测试、训练一样都没开始，每一步都要另行授权。用户已定死的口径：最终真实训练对拍每侧 **1000 次参数更新**，不能用短测代替。
+本文是 2026-09-13 细化版经对抗验证后的修订版。对抗验证锚定 HEAD `9c344fa1bf615847c0233be012420d21d8a7841b`（7 个只读审计 agent 与 Codex 独立审稿交叉核对，全部结论以代码原文为证；当时的计划修订未执行仓库脚本或训练，后续实施结果见文首链接）。结构仍按 `AGENTS.md` 第 2 条分两部分：**第一部分给人看**，分「数据预处理」「训练」「推理」三块；**第二部分供 agent 追踪**，列文件、函数、命令与判定行。环境判定为 B：仓库 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，8 × A100-SXM4-80GB，无 turbo、无 GreatLakes，`/scratch` 余量 4.1 T（实测 `df -h /scratch` = 6.9T / 2.9T 已用 / 4.1T 可用）。
+
+**授权与完成状态**：用户随后明确要求“开始实现”“一口气全做完”，本轮代码、两库构建、完整输入、12条1000次更新轨迹、四profile三batch全梯度，以及C8/M8七关和各48集闭环已完成。只使用物理GPU4–7；1000次参数更新没有用短测代替。详细结果见[训练总览](docs/training-doc/t8-training/result.md)、[全梯度](docs/training-doc/t8-gradient/result.md)、[C8推理](docs/training-doc/t8-infer-c8/result.md)和[M8推理](docs/training-doc/t8-infer-m8/result.md)。
 
 **GPU 约束（2026-09-14 用户新增，最高优先级）**：本计划一切用 GPU 的命令**只能用 GPU 4、5、6、7**，GPU 0–3 一律不碰。落地三条：每条起 GPU 进程的命令都显式写 `CUDA_VISIBLE_DEVICES`，取值只能是 `{4,5,6,7}` 的子集，禁止不设而继承默认全卡，也禁止「照抄历史留档命令」（`tic-obs-model-40k/launch.md` 等历史命令写的是 `CUDA_VISIBLE_DEVICES=0`，照抄即违规）；motion sidecar 的卡号**不跟随** `CUDA_VISIBLE_DEVICES`——主线 `policies/policy_config.py::create_trained_policy` 直接读 yaml 快照的 `motion.online_gpu`（现值 1，绝对物理卡号）且无环境变量覆盖，`motion_client.py` 把它整体写进子进程的 `CUDA_VISIBLE_DEVICES`，所以凡起 sidecar 的路径必须走带显式卡号参数的入口（`scripts/motion-variance/serve_policy_mv.py --motion-gpu`、`compare_train_infer_obs.py --motion-gpu`、`compare_online_motion.py --gpu`），并把新 8×8 motion yaml 的 `online_gpu` 写成 4 作兜底；第二块 12 条轨迹只有两对卡可用，分两波跑（见第二块）。
 
@@ -19,6 +21,9 @@
 | 7 | commit 版本 | `commitV9.0`（阶段 1）、`commitV9.1`、`commitV9.2`（阶段 2） |
 | 8 | `-s100` 排错 run | **用户明确豁免第 17 条留档**：跑完清理、不留档、不作证据（本条为用户 2026-09-14 显式授权的例外） |
 | 9 | C8/M8 结论范围 | **补独立手算边界样本**作为 8 帧语义证据（`hand_calc_8frame.py`），不接受缩水口径 |
+| 10 | norm_stats验收修正 | 用户采用“文件 SHA＋解析后数组摘要双重检查”；文件SHA与数组摘要不跨域比较 |
+| 11 | C8闭环前缀 | 用户同意“让评估脚本读取 checkpoint 保存的配置，自动算出正确长度”；serve_policy_mv按记忆预算和motion开关设置adapter.P，C8=1088、M8=1184 |
+| 12 | 四个-s100的取证成本 | 用户采用“排错关闭完整状态摘要（推荐）”，只对这四个排错设置BENCH_CHECKSUM=0；100次更新、逐步标量及输入摘要保留，正式12条全部11份完整状态摘要保留 |
 
 ---
 
@@ -240,7 +245,7 @@ v1-store/datasets/4task-motion-400ep/framesamp-8x8/    正式库，后建
 
 `scripts/training/train.py::main` 与 `scripts/training/tests/single_step_grad.py::main` 都硬编码 `jax.config.update("jax_compilation_cache_dir", "~/.cache/jax_<exp_name>")`。实测 `~/.cache/` 下已有 **8 个** `jax_*` 目录（`jax_awsprod40k-b128-motion`、`jax_bench-b1-motion`、`jax_bench-b2-w16`、`jax_bench-b3-w12`、`jax_bench-b4-8gpu-w16`、`jax_bench-b5-8gpu-w32`、`jax_repro-4a100-fsdp4-40gsim`、`jax_repro-4a100-fsdp4-80g`），违反第 13 条环境 B 红线；本轮不清理它们（另立任务），但本轮所有 run 不得再往里写。做法：两处入口改成 `os.environ.get("MMEVLA_JAX_CACHE_DIR") or "~/.cache/jax_<exp_name>"`，设了就用、没设保持旧行为。`bench_train_steps.py` 调的是 `train.main`，自动继承。启动时统一 `source scripts/training/paths.sh`（它设 `XDG_CACHE_HOME`、`HF_HOME`、`WANDB_*` 到 `v1-store/cache/`，不动 HOME；它是 `set -euo pipefail` 且大量 `readonly`，**同一 shell 只 source 一次，source 之后的「期望不存在」检查必须写成 `[ ! -e … ] || exit 1` 而不是裸 `ls`**），再显式 `export UV_CACHE_DIR=/scratch/hongze/.cache/uv MMEVLA_JAX_CACHE_DIR=$V1/cache/jax/<run_name>`（`V1` 一律取主树绝对路径，见阶段 5 命令）。`UV_CACHE_DIR` 落点按用户裁决第 5 项取全局约定。
 
-**norm_stats 必须显式指 400ep（用户裁决第 1 项）。** 训练用的配置条目 `mme_vla_suite` 没有 `AssetsConfig`，默认会读 `train-assets/mme_vla_suite/robomme/norm_stats.json`（sha `f332bbd3…`，40ep 口径）；400ep 交付件是 `train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json`（sha `750a8e9b…`），两文件大小与内容都不同。生产 40k run 用的是 `mme_vla_suite_b128` 条目，它把 400ep 路径写进了 `AssetsConfig`。本轮 12 条轨迹与全部 fixture / 单步梯度命令一律加 tyro 覆盖 `--data.assets.assets-dir v1-store/train-assets/mme_vla_suite/robomme-400ep --data.assets.asset-id robomme`（`DataConfigFactory.assets: AssetsConfig` 是 dataclass 字段，tyro 展开为该嵌套 flag；阶段 1 量具自检时先用 `--help` 核对拼写，若 tyro 不接受则改为在 `_CONFIGS` 新增 `mme_vla_suite_400ep` 条目、照抄 `mme_vla_suite` 只加 assets）。bench 在 `run_meta.json` 里记录**实际加载的** `data_config.norm_stats` 的 sha（对 `state`/`actions` 各键 `tobytes()` 后哈希），gate 要求它与指纹里的文件 sha 一致，杜绝「指纹记一份、训练读另一份」。
+**norm_stats 必须显式指 400ep（用户裁决第 1 项）。** 训练用的配置条目 `mme_vla_suite` 没有 `AssetsConfig`，默认会读 `train-assets/mme_vla_suite/robomme/norm_stats.json`（sha `f332bbd3…`，40ep 口径）；400ep 交付件是 `train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json`（sha `750a8e9b…`），两文件大小与内容都不同。生产 40k run 用的是 `mme_vla_suite_b128` 条目，它把 400ep 路径写进了 `AssetsConfig`。本轮 12 条轨迹与全部 fixture / 单步梯度命令一律加 tyro 覆盖 `--data.assets.assets-dir v1-store/train-assets/mme_vla_suite/robomme-400ep --data.assets.asset-id robomme`（`DataConfigFactory.assets: AssetsConfig` 是 dataclass 字段，tyro 展开为该嵌套 flag；阶段 1 量具自检时先用 `--help` 核对拼写，若 tyro 不接受则改为在 `_CONFIGS` 新增 `mme_vla_suite_400ep` 条目、照抄 `mme_vla_suite` 只加 assets）。bench在 `run_meta.json` 里记录 `norm_stats_file_sha256`、`norm_stats_actual` 和 `norm_stats_expected`。gate要求文件SHA为750a8e9b…，且实际loader数组摘要 == 从该文件解析的数组摘要 == 指纹中的 `assets.norm_stats_arrays`，字典必须含8项；每个数组的dtype、shape和原始字节共同参与该项SHA。文件SHA和数组摘要属于不同哈希域，按用户确认不直接比较它们。
 
 训练本身的 CLI 是 tyro 从 `TrainConfig` 生成的：位置参数选条目（`mme_vla_suite` 4 worker / b64，`mme_vla_suite_b128` 8 worker / b128），`--model.history-config=<yaml 文件名>` 按仓库根相对路径解析（`get_history_config` 用 cwd 相对路径，cwd 必须是仓库根或 worktree 根），`--dataset-path` 指 packed 库根。checkpoint 与 run 根的真实落点是 `checkpoint_base_dir / <配置条目名> / <exp_name>`（`TrainConfig.checkpoint_dir`），即 **`$V1/train-runs/<run>/mme_vla_suite/<run>/`**，`history_config.resolved.yaml` 等三件套与 `999/` 都在这一层。8 帧训练只需把 `--dataset-path` 指到 `framesamp-8x8/`、yaml 换成新文件名，没有别的开关。
 
@@ -287,7 +292,7 @@ v1-store/datasets/4task-motion-400ep/framesamp-8x8/    正式库，后建
 - **有限性**：五个标量全程 `isfinite`，全部摘要叶 `isfinite`（NaN 的 `float.hex()` 两侧恒等，没有这条 NaN 训练会全项 PASS）。
 - **活性**：`loss` 首末不等且末值小于首值、`param_norm` 首末不等、`mem_enc_norm > 0`、state_step 0 与 1000 的 params 摘要不等。
 - `IMPORT_ORIGIN`：A 侧四个 `__file__` 在 REF worktree、B 侧在主树。
-- `NORM_STATS_ACTUAL`：`run_meta.json` 记的实际 norm_stats sha == 指纹文件 sha == `750a8e9b…`。
+- `NORM_STATS_ACTUAL`：实际资产文件SHA == 指纹文件SHA == `750a8e9b…`；另逐项比较 `norm_stats_actual == norm_stats_expected == fingerprint.assets.norm_stats_arrays`，共8个数组摘要。
 - 基线自己不重复（A1 ≠ A2）就不能放宽阈值宣称等价。
 
 **为什么是 1000 步、batch 8、2 卡。** 1000 步是用户定死的口径。batch 8 与 2 卡沿用 2026-09-04 `aws-t2-ref-s100` / `aws-t2-cand-s100` 的档位：小到两组能并行，大到覆盖 FSDP 分片（`--fsdp-devices 2`）。1009 × 8 = 8072 个样本不到 400ep 库一个 epoch（101,066），避开 epoch 边界的抽样分叉。确定性前提逐项核过：index 抽样在主进程（`_LoggingSampler` 包 `bs.sampler`），`worker_init_fn` 不播种、Dataset 与 transforms 无随机源，模型内 rng 由 `fold_in(seed, step)` 派生，dropout 为 0；环境 B 上有 100 步三对物理卡逐位相同的实测（`aws-t2-cand-s100`），1000 步尚无先例，第一波 A1 ≠ A2 即停。
@@ -303,7 +308,7 @@ v1-store/datasets/4task-motion-400ep/framesamp-8x8/    正式库，后建
 #### 交付判定与边界
 
 - 只有第一块与第二块**全部**通过，才宣称对应 profile 的训练交付等价；第二块未通过只能报告已通过的输入检查。
-- 交付报告分开写五件事：旧能力回归（C32/M32）、新 8 帧数据搬运等价（C8/M8 的 `GATE_8X8`）、**8 帧语义正确性**（`HAND_CALC_8FRAME` + 第三块在线一致）、motion 接口保护、实际资源表现（吞吐与显存在数值验收之外独立报告，用 `nvidia-smi -lms 500` 的稳态窗口均值 / 0% 占比 / 分层均值，排除 warmup，记录存储介质「AWS 本地 NVMe RAID（`/dev/md0`）」、batch、worker，不以中位数下结论，不承诺性能收益）。1000 步 × 8 = 8072 个样本对 123,044 行的覆盖远低于 50%，`TRAIN_1000_EXACT` 只抓粗错，细错靠第一块 `VERIFY_PACK` 全量档兜底，留档写明。
+- 交付报告分开写五件事：旧能力回归（C32/M32）、新 8 帧数据搬运等价（C8/M8 的 `GATE_8X8`）、**8 帧语义正确性**（`HAND_CALC_8FRAME` + 第三块在线一致）、motion 接口保护、实际资源表现（吞吐与显存在数值验收之外独立报告，用 `nvidia-smi -lms 500` 的稳态窗口均值 / 0% 占比 / 分层均值，排除 warmup，记录存储介质「AWS 本地 NVMe RAID（`/dev/md0`）」、batch、worker，不以中位数下结论，不承诺性能收益）。1000步×8=8000个实际更新样本，采样记录包含预取共8072项，对123,044行的覆盖远低于50%，`TRAIN_1000_EXACT` 只抓粗错，细错靠第一块 `VERIFY_PACK` 全量档兜底，留档写明。
 - 在线推理放在第三块：训练验收通过不等于 8×8 能部署。
 - motion 只做回归保护：不重抽 Wan、不重训 MotionJEPA、不做预算或结构消融。注意 M8 下帧路只剩 8 个时刻而 motion 窗数不变，`mem_order` 交错结构与 motion/frame 尺度必然与 M32 不同，属设计内，本轮不评价。
 
@@ -415,7 +420,7 @@ motion-variance 三个驱动脚本（用户裁决第 2 项）：
 | `scripts/training/train.py::main`、`scripts/training/tests/single_step_grad.py::main` | `jax_compilation_cache_dir` 取 `os.environ.get("MMEVLA_JAX_CACHE_DIR") or 旧值` | 其余一行不动（`bench_train_steps.py` 的 `inspect.getsource` 护栏要求 `train.main` 仍含 `wandb.log(reduced_info`、`_checkpoints.save_state(`、`init_train_state(`、`create_data_loader(` 四个片段，`TorchDataLoader.__iter__` 仍含 `make_array_from_process_local_data` / `num_items` / `StopIteration`） |
 | `scripts/training/tests/ref_npy_dataset.py`（新建） | `RefNpyFrameSampDataset(source_root, manifest_path, data_config, history_config, action_horizon, motion_root)`：装配逻辑见第一部分第一块「第二层」；接口与 `FrameSampDataset` 同；实现 `__getstate__` spawn 契约；只 import `shared/` 下的 `even_sampling_indices` / `right_padding_token_emb` / `memory_order` / `pad_times` | 不进 `src/`，不被生产代码 import |
 | `scripts/training/tests/hand_calc_8frame.py`（新建） | 脚本内手写选帧 / `mem_order` / 可见窗公式（不 import `shared/sampling.py` 与 `motion_store.py`），对边界样本集与候选 Dataset 输出逐项比；判定行 `HAND_CALC_8FRAME=PASS samples=<n> mismatches=0` | |
-| `scripts/training/g0/bench_train_steps.py` | `_EXPECTED_HISTORY_CONFIGS` 加两个新文件名；新增 env `BENCH_DATASET_IMPL={packed,refnpy}`（默认 packed）、`BENCH_REF_SOURCE`、`BENCH_REF_MANIFEST`、`BENCH_REF_MOTION`，refnpy 时 monkeypatch `dataloader._create_framesamp_dataset` 返回参考 Dataset、包 `train.init_history_config` 传 `framesamp_root=None`、epoch 样本数改从 `BENCH_REF_MANIFEST` 读；摘要记录写 `phase / loop_step / state_step` 三字段；`batch_digests` 对 None 键显式记 `null`；`run_meta.json` 新增 `import_origins`（四个 `__file__`）与 `norm_stats_actual_sha256`；有限性与活性在记录侧不判、由 gate 判 | 哈希口径 `_leaf_sha256` / `_canonical_sha256`、`_WandbProxy` 行 schema、`index_sequence` 记法、`_make_digest_gate` 语义、`BENCH_SAVE_FINAL_CKPT` + `BENCH_FINAL_STEP` 语义、`_MAX_BENCH_STEPS=1200` |
+| `scripts/training/g0/bench_train_steps.py` | `_EXPECTED_HISTORY_CONFIGS` 加两个新文件名；新增 env `BENCH_DATASET_IMPL={packed,refnpy}`（默认 packed）、`BENCH_REF_SOURCE`、`BENCH_REF_MANIFEST`、`BENCH_REF_MOTION`，refnpy 时 monkeypatch `dataloader._create_framesamp_dataset` 返回参考 Dataset、包 `train.init_history_config` 传 `framesamp_root=None`、epoch 样本数改从 `BENCH_REF_MANIFEST` 读；摘要记录写 `phase / loop_step / state_step` 三字段；`batch_digests` 对 None 键显式记 `null`；`run_meta.json` 新增 `import_origins`（四个 `__file__`）与 `norm_stats_file_sha256`、`norm_stats_actual`、`norm_stats_expected`；有限性与活性在记录侧不判、由 gate 判 | 哈希口径 `_leaf_sha256` / `_canonical_sha256`、`_WandbProxy` 行 schema、`index_sequence` 记法、`_make_digest_gate` 语义、`BENCH_SAVE_FINAL_CKPT` + `BENCH_FINAL_STEP` 语义、`_MAX_BENCH_STEPS=1200` |
 | `scripts/training/tests/gate_8x8.py`（新建） | 参考 `g0_gate.py::_gate_t2` 八步重写为配置驱动：`--profile {c32,m32,c8,m8}`、`--run-a1 --run-a2 --run-b --log-a1 --log-a2 --log-b --env-a1 --env-a2 --env-b`（全部必填）、`--steps 1000 --batch-size 8`；argv 白名单与 env 白名单见第一部分；键名集合按 profile 钉死；`n_leaves` 三侧相等且按 profile 软核 177/193；摘要步按 `state_step` 对齐；表头六列与 `n ≥ 8072` 内建；有限性、活性、`IMPORT_ORIGIN`、`NORM_STATS_ACTUAL`、`git diff --stat CAND..起跑HEAD` 只含 `docs/`；`--self-test` 构造负例 fixture 逐个确认 FAIL；成功行 `GATE_8X8=PASS profile=<p> steps=1000 batch=8 state_steps=[…] digest_steps=[…]` | `g0_gate.py` 的 T1/T2 常量（`_EXPECT_RAW_MISMATCH=4` 等）一字不动 |
 | `scripts/training/g0/check_baseline_env.py::collect_fingerprint` | `assets.norm_stats_sha256` 改为 CLI `--norm-stats` 显式路径；`packages` 加 `flax`、`optax`；新增 `dataset.store_meta_sha256`（`<dataset>/meta/store_meta.json`，不存在记 None）、`dataset.manifest_sha256`（store meta 或 `--manifest` 显式）、`motion.store_meta_sha256`；`dataset_spot` 改对 `source_dataset_root` 或 `--source` 抽样；tokenizer / pi05 路径改从 `--v1-store` 显式取，不再按脚本所在代码根推 | `uv_lock_sha256`、`gpu`、`xla`、`jax_config`、`_diff` 深比较、`dump / manifest / check` 三步与 `BASELINE_ENV=PASS/FAIL` 判定行 |
 | `scripts/training/tests/_common.py` | `SHORT_STEPS / FULL_STEPS` 改为 `fixture_steps(max_frames)` 返回 `((0,1,2,mf-3,mf-2), (mf-1,mf,mf+1), (33,34,35))`（第三组为 motion 档，两档共用）；`PER_STEP` 改为按库内 `exec_start_idx==0` 的 episode 数取 `min(200, 该数)` 并在判定行打出；`build_fixture_batches` 的短/满分档改按 `max_frames`（短 = step ≤ mf-2，满 = step ≥ mf-1）；`test_padding_dtype.py` 随之改引用 | `MEMORY_KEYS`、`leaf_sha256`、`canonical_sha256`、位型容器格式 |
@@ -578,7 +583,7 @@ uv run --no-sync python scripts/training/g0/check_baseline_env.py manifest $REC 
 uv run --no-sync python scripts/training/tests/gate_8x8.py --profile c8 --run-a1 $V1/bench/8x8/t8-c8-a1 --run-a2 …/t8-c8-a2 --run-b …/t8-c8-b --log-a1 v1-store/logs/t8-c8-a1.log … --env-a1 … --steps 1000 --batch-size 8
 ```
 
-M8 组用 `CUDA_VISIBLE_DEVICES=6,7`，yaml 换成 `-motion.yaml`。每条轨迹放 detached tmux（会话名 = run_name，前缀 `t8-`），日志 `v1-store/logs/<run_name>.log`。`-s100`：`--num-train-steps 100`、run_name 后缀 `-s100`、`BENCH_EXTRA_DIGEST_STEPS=1,2,24,49`、不带 `BENCH_SAVE_FINAL_CKPT`，跑完 `rm -rf` 其 records 与 run 根，不留档（用户裁决第 8 项）。
+M8 组用 `CUDA_VISIBLE_DEVICES=6,7`，yaml 换成 `-motion.yaml`。每条轨迹放 detached tmux（会话名 = run_name，前缀 `t8-`），日志 `v1-store/logs/<run_name>.log`。`-s100`：`--num-train-steps 100`、run_name后缀 `-s100`、`BENCH_EXTRA_DIGEST_STEPS=1,2,24,49`、不带 `BENCH_SAVE_FINAL_CKPT`。实施时按用户追加决定，仅这四个排错设置 `BENCH_CHECKSUM=0`，保留100次更新、逐步标量和输入摘要；结束后已逐个核实归属并清理records、run根和日志，缓存保留，不作正式证据。阶段1与历史100步基线的完整回归记录不在此豁免中。
 
 单步全梯度对拍（每 profile 三种 batch）：`single_step_grad.py` 走 `DTYPE_MANIFEST` / `DTYPE_DUMP_IMPL` 与同一 `$ASSETS`，两侧摘要经 `compare_grad_summaries.py`，判定行 `GRAD_EQ=PASS kinds=3 leaves=<n> mismatches=0`。
 
@@ -697,6 +702,13 @@ framesamp-8x8/ (framesamp-8x8-v1)：image 行 (64,2048) bf16；pos 表 586 行 (
 
 数据口径 400ep + 显式 norm_stats；第三块驱动改 mv 三脚本、禁 legacy、48 集；两波串行 fsdp 2；关 4 bf16 观察 / f32 阻断；`UV_CACHE_DIR=/scratch/hongze/.cache/uv`；12 个 run_name 与启动覆盖参数；`commitV9.0/9.1/9.2`；`-s100` 豁免留档；C8/M8 补手算边界证据。**实施前不再有待拍板项**；实施中若阶段 0 的 `--help` 核出 tyro 不接受 `--data.assets.*` 嵌套 flag，按第一部分所述改为新增 `_CONFIGS` 条目，属既定备选，不另请示。
 
-### 8. 本次修订的验证与提交
+### 8. 计划修订时的验证与提交（历史）
 
-本轮只改根目录 `8frame-8x8-training-plan.md` 一个文件。验证：`git diff --check`、核对无尾随空白与末尾换行、表格与代码围栏配对、引用的文件路径在 HEAD 上存在（新建文件已标「新建」）。提交主题 `docs: 8帧8×8计划按对抗验证结论与用户 9 项裁决修订`，逐文件 `git add`，commit 后 `git push` 到既有 upstream，`git status -sb` 无 ahead。
+2026-09-14的计划修订轮仅改根目录 `8frame-8x8-training-plan.md`；随后用户已授权并完成上述实施。这段保留计划修订时的验证记录：`git diff --check`、核对无尾随空白与末尾换行、表格与代码围栏配对、引用的文件路径在 HEAD 上存在（新建文件已标「新建」）。提交主题 `docs: 8帧8×8计划按对抗验证结论与用户 9 项裁决修订`，逐文件 `git add`，commit 后 `git push` 到既有 upstream，`git status -sb` 无 ahead。
+
+
+### 9. 实施落点与最终证据
+
+源码分三次落地：REF `99faacb1319adfc63c0cf9a15187e24c34e38fd1`（commitV9.0），双布局 `236765fdb7b35f8fc96fb7d71133870b70b76271`（commitV9.1），在线与评估候选 `c08ec2060a544af1869c1e24f755e536150569ca`（commitV9.2）。具体run从各自启动档案中的clean HEAD执行，不能把候选功能提交误当成每次实际启动HEAD。
+
+两库的全量行校验、512帧抽样和586行跨网格位置检查见[40ep](docs/dataset-build-doc/4task-motion-40ep-framesamp-8x8/result.md)与[400ep](docs/dataset-build-doc/4task-motion-400ep-framesamp-8x8/result.md)。输入、worker矩阵、29项拒绝和独立手算见[fixture档案](docs/training-doc/t8-fixture/result.md)。四组1000更新全部11状态点和三batch全梯度均逐位通过；推理按bf16观察/f32阻断的已确认口径验收。实际数值、命令、硬件、耗时及限制均在文首链接的结果档案中。开环与探针实际按C8用GPU7、M8用GPU6并行，各组内部始终同卡比较；48集仍按M8→C8顺序使用GPU4–7四卡，实际命令以各run启动档案为准。长期链路图明确标出host static_state_emb为f64、JAX x64关闭后交付f32的既有转换。

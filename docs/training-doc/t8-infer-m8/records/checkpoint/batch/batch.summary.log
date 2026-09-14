@@ -1,0 +1,13 @@
+=== MV_BATCH_START cond=normal split=test seed=42 workers=4 gpu_list=4,5,6,7 port_base=9370 ep_count=10 tasks=ButtonUnmask,VideoUnmask,ButtonUnmaskSwap,VideoUnmaskSwap log_prefix=mv-t42-normal-t8m8 start=2026-09-14 13:04:33 ===
+起 mv-t42-normal-t8m8-w0: gpu=4 port=9370 expected=12 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-normal-t8m8-w0.log
+起 mv-t42-normal-t8m8-w1: gpu=5 port=9371 expected=12 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-normal-t8m8-w1.log
+起 mv-t42-normal-t8m8-w2: gpu=6 port=9372 expected=12 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-normal-t8m8-w2.log
+起 mv-t42-normal-t8m8-w3: gpu=7 port=9373 expected=12 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mv-t42-normal-t8m8-w3.log
+  mv-t42-normal-t8m8-w0 EXIT_CODE=0 expected=12 progress=12 ep_done=12 errors=0 episode_begin=12 traceback=0 cross_seg=0 ok
+  mv-t42-normal-t8m8-w1 EXIT_CODE=0 expected=12 progress=12 ep_done=12 errors=0 episode_begin=12 traceback=0 cross_seg=0 ok
+  mv-t42-normal-t8m8-w2 EXIT_CODE=0 expected=12 progress=12 ep_done=12 errors=0 episode_begin=12 traceback=0 cross_seg=0 ok
+  mv-t42-normal-t8m8-w3 EXIT_CODE=0 expected=12 progress=12 ep_done=12 errors=0 episode_begin=12 traceback=0 cross_seg=0 ok
+MV_BATCH=PASS cond=normal split=test seed=42 episodes=48/48 workers=4/4 wall_min=32 sidecar=on cross_seg=0 suffix=-t8m8 end=2026-09-14 13:37:05
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+EVAL_SMOKE=DONE profile=m8 episodes=48/48 errors=0 max_infer=82 mem_order_ok=1 success_rate=测试模型不作指标
+EXIT_CODE=0

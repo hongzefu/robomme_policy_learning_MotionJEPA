@@ -1,0 +1,58 @@
+{
+  "profile": "m8",
+  "verdict": "PASS",
+  "episodes": 1,
+  "infer_points": 82,
+  "steps": 1301,
+  "task_flag": "timeout",
+  "k_max": 80,
+  "tau_max": 1296,
+  "blocking": {
+    "EVAL_EPISODE_MAP": true,
+    "EVAL_TAU_K": true,
+    "EVAL_K_FORMULA": true,
+    "EVAL_ORDER_LEGAL": true,
+    "EVAL_BACKEND": true,
+    "EVAL_PROMPT": true,
+    "EVAL_NO_RAISE": true
+  },
+  "progress": {
+    "ButtonUnmask": {
+      "0": false
+    }
+  },
+  "probe_env": {
+    "backend": "gpu",
+    "devices": "cuda:0",
+    "pos_rows": "586",
+    "pos_table_sha": "8ff424a7fc097ef2ff63412be96e756302e7b0cb78327e199d6618e7410fa6b1",
+    "store_pos_sha": "8ff424a7fc097ef2ff63412be96e756302e7b0cb78327e199d6618e7410fa6b1",
+    "pos_table_full_sha": "f501b84960ed96b862b207f60c86f3568f3f4ee9eb2323d5e781ba9f446ea559",
+    "pos_table_full_rows": "4096",
+    "motion_enabled": "1",
+    "motion_gpu_override": "6",
+    "budget": "512",
+    "token_per_image": "64",
+    "num_views": "1",
+    "motion_budget": "96",
+    "max_token_len": "64",
+    "discrete_state_input": "0",
+    "state_dim": "8",
+    "config": "mme_vla_suite",
+    "ckpt": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-m8-b/mme_vla_suite/t8-m8-b/999",
+    "lib": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep",
+    "probe_out": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/t8-infer-m8/probe/probe.jsonl",
+    "seed": "42"
+  },
+  "lines": [
+    "EVAL_EPISODE_MAP=PASS resets=1 tasks=1 per_task=1 log_episodes=1 progress_entries=1 one_to_one=1 es_match=1/1 goal_match=1/1 seq_contiguous=1 resumed_skips=0 expect_episodes=1 expect_tasks=1",
+    "EVAL_TAU_K=PASS episodes=1 infer_points=82 tau_max=1296 k_max=80 budget=96 headroom=16 es_values=0 tau_mismatches=0 k_over_budget=0 k_len_mismatch=0",
+    "EVAL_K_FORMULA=PASS points=82 mismatches=0 frames_sampled_mismatches=0 window=33 stride=16 max_frames=8",
+    "EVAL_ORDER_LEGAL=PASS points=82 nonperm=0 dtype_int32=1 len608=1 expected_order_mismatches=0 static_mask_bad=0 motion_mask_bad=0",
+    "EVAL_BACKEND=PASS backend=gpu pos_rows=586 pos_table_sha=8ff424a7fc097ef2… store_pos_sha=8ff424a7fc097ef2… equal=1 motion_enabled=1 motion_gpu_override=6 devices=cuda:0",
+    "EVAL_PROMPT=PASS tasks=4 episodes=1 distinct_prompt_text=1 train_distinct_prompt=26 train_distinct_tok=26 tok_in_trainset=82/82 text_in_trainset=82/82 discrete_state_input=0 tokenizer=PaligemmaTokenizer(max_len=64,strip,underscore,newline;no_lower)",
+    "EVAL_NO_RAISE=PASS episodes=1 errors=0 timeouts=1 unknown=0 log_error_lines=0 api_abort=0 server_tracebacks=0 handshake_noise=0 expect_timeout_infers=82 timeout_video_cross=1/1 videos_seen=1",
+    "EVAL_DIST_OBS online_k_median=39.5 mean=39.51 max=80 | train_k_median=9.0 mean=10.31 max=34 train_samples=101066 | online_tau_max=1296 train_tau_max=585",
+    "TIC_EVAL=PASS episodes=1 tasks=1 infer_points=82 blocking=7/7 observe=1"
+  ]
+}

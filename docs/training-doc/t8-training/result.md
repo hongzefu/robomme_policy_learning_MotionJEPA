@@ -1,6 +1,6 @@
 # 8帧8×8训练验收总览
 
-12条正式轨迹全部完成，C32、M32、C8、M8四组完整1000步gate均PASS。每组先证明A1/A2可逐位重复，再证明参考A1与候选B逐位一致；五项标量、全部11份完整TrainState、11份输入摘要、前8000个样本索引、有限性、活性、导入来源及真实norm_stats检查全部通过。训练轨迹与四profile三batch全梯度均已通过；真实checkpoint推理仍待后续完成。
+12条正式轨迹全部完成，C32、M32、C8、M8四组完整1000步gate均PASS。每组先证明A1/A2可逐位重复，再证明参考A1与候选B逐位一致；五项标量、全部11份完整TrainState、11份输入摘要、前8000个样本索引、有限性、活性、导入来源及真实norm_stats检查全部通过。训练轨迹、四profile三batch全梯度，以及C8/M8七关与各48集闭环均已完成；所有阻断验收通过，bf16整段/缓存差异按用户决定保留观察。
 
 ## 版本与执行边界
 
@@ -35,8 +35,10 @@ REF为 `99faacb1319adfc63c0cf9a15187e24c34e38fd1`，CAND为 `c08ec2060a544af1869
 
 库层与输入层另见[t8-fixture](../t8-fixture/result.md)：40ep和400ep全量verify、独立xgrid、四profile完整fixture、worker矩阵、29项拒绝与独立手算均已完成。训练只覆盖一个epoch中的前8000个随机索引，不能替代123044行的全量库核验。
 
-C8/M8的999目录已保存1000更新后的EMA参数，属于本轮测试模型。[四profile全梯度](../t8-gradient/result.md)已完成且全部逐位通过，后续仍需完成C8/M8的七关与各48集闭环；闭环成功率按计划不作为模型能力指标。真实8×8在线池化已提前通过，见[M8推理分阶段记录](../t8-infer-m8/result.md)。
+C8/M8的999目录已保存1000更新后的EMA参数，属于本轮测试模型。[四profile全梯度](../t8-gradient/result.md)已完成且全部逐位通过，[C8](../t8-infer-c8/result.md)和[M8](../t8-infer-m8/result.md)七关与各48集闭环也均已通过；闭环成功率按计划不作为模型能力指标。真实8×8在线池化已提前通过，见[M8推理分阶段记录](../t8-infer-m8/result.md)。
 
 ## 归档
 
 各run的records保留Git无法重建的完整指标与清洗日志，BASELINE_MANIFEST按源文件SHA核对。中央records汇总四组gate、自重复检查、运行表与一次共享主机环境观测。不复制配置或启动脚本，不归档权重。配置与命令由各launch及上述提交还原。
+
+参考worktree已在所有训练和全梯度完成后按完整路径移除，其他工作树保留，REF提交仍可解析；清理前后记录见[清理证据](records/ref-worktree-cleanup.json)。复现时按根计划重新建立该REF工作树。

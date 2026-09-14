@@ -1,7 +1,7 @@
 # 训练 / 推理一致性验证
 
-本文是现行正本，自足可读：结论、调用链、每一关查了什么与结果、待拍板的事都在本文内。判定行逐字原文在五个 run 的 `docs/training-doc/tic-*/result.md` 里，本文不再复述。
-环境 B（AWS 单机 8×A100，仓库 `/scratch/hongze/robomme_policy_learning_MotionJEPA`）；对象是生产 checkpoint `v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999` 与它训练时用的 400 ep 库 `v1-store/datasets/4task-motion-400ep`。2026-09-07 全部跑完；2026-09-08 经 Codex 对抗审计（第八节）后按审计意见修订。
+本文汇总现行输入链路与各轮验证记录。前十一节保留生产40k checkpoint的旧轮结果，第十二节记录2026-09-14完成的8×8测试模型验收；各轮的样本、精度与结论范围分开说明。
+前十一节的旧轮环境与对象：环境 B（AWS 单机 8×A100，仓库 `/scratch/hongze/robomme_policy_learning_MotionJEPA`）；对象是生产 checkpoint `v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/39999` 与它训练时用的 400 ep 库 `v1-store/datasets/4task-motion-400ep`。2026-09-07 全部跑完；2026-09-08 经 Codex 对抗审计（第八节）后按审计意见修订。
 
 ## 一、结论
 
@@ -13,12 +13,12 @@
 
 措辞按审计收窄：**在指定 checkpoint、指定样本、上述五项隔离之下，所覆盖路径未发现额外的训练 / 推理不一致。** 不说「已排除全部不一致」，因为样本只有 5 集 + 24 集 + Codex 补的 4 集，且真仿真那一关没有训练真值、只验不变量。
 
-### 待你拍板的两件事
+### 旧轮遗留问题与本轮处理
 
-| 事 | 是什么 | 选项 |
+| 事 | 是什么 | 当前处理 |
 |---|---|---|
-| `VT_FULL_VS_CACHED` 阈值 | 整段前向 vs 缓存分步的速度场差。time=0.5 下实测 rel_fro 1.9e-3～3.4e-3、bf16 ulp_p99 10～29，超过计划事先定死的 1e-3 / 4；随 time 减小单调上升，time=0.001 为 9.98%（第七节 2）。已证明是纯数值来源；真 f32 下速度场与最终动作也**不逐位**，只是小到 1e-7 / 1e-8 量级。脚本没放宽，判定行保持 FAIL | (a) 按 time 分档重定阈值——推理只访问 time ∈ {1.0, 0.9, …, 0.1}，可只对该区间定阈；不能只按四次跑的 1.6 倍波动定；(b) 维持 FAIL 记录 |
-| 测试集出现训练未见的 goal | ButtonUnmask 测试集第 3、7、19、23 集的目标「先按按钮，拿红方块的容器，再拿绿方块的容器」在 400 集训练数据里没出现过，共 4/50 集；其他三任务没有这类缺口（Codex 扩查 200 集测试集，第七节 3） | (a) 评估口径里注明这 4 集「训练未见 goal」；(b) 补数据重建库 |
+| `VT_FULL_VS_CACHED` 阈值 | 整段前向 vs 缓存分步的速度场差。time=0.5 下实测 rel_fro 1.9e-3～3.4e-3、bf16 ulp_p99 10～29，超过计划事先定死的 1e-3 / 4；随 time 减小单调上升，time=0.001 为 9.98%（第七节 2）。已证明是纯数值来源；真 f32 下速度场与最终动作也**不逐位**，只是小到 1e-7 / 1e-8 量级。脚本没放宽，判定行保持 FAIL | 2026-09-14本轮已采用bf16观察、f32阻断：保留bf16原阈值与FAIL数值，真实f32每checkpoint15点要求rel_fro≤1e-6且有效prefix KV差为0；见第十二节，不追认旧轮所有time上的结果 |
+| 测试集出现训练未见的 goal | ButtonUnmask 测试集第 3、7、19、23 集的目标「先按按钮，拿红方块的容器，再拿绿方块的容器」在 400 集训练数据里没出现过，共 4/50 集；其他三任务没有这类缺口（Codex 扩查 200 集测试集，第七节 3） | 本轮保留并注明数据覆盖缺口，未补数据；48集包含第3、7集，成功率不作能力指标。未来是否补数据仍属后续事项 |
 
 ## 二、在查什么
 
@@ -192,3 +192,52 @@ Codex 对本文做对抗审计，锚定 `499ff8f`，收官 HEAD `c5551e5`，用 
 工具（`scripts/training/`）：`g0/check_config_provenance.py`（第 0 关）、`tests/eval_rhythm_gates.py`（评估节奏）、`g0/compare_train_infer_obs.py`（第 1–5 关，`--motion store|sidecar`）、`g0/serve_policy_probe.py` + `g0/summarize_eval_probe.py`（第 6 关）、`tests/motion_gates_model.py`（A19 / T3 新口径）。原始日志在 `v1-store/reports/tic/`、`tic-dev/`（不进 git）。Codex 审计（2026-09-08）的原始日志、数值结果与临时复现脚本在 `v1-store/reports/codex-tic-audit-20260908/`（不进 git），锚定 `499ff8f`，收官 HEAD `c5551e5`。
 
 commit：`892f73e` docs 归档、`a8cfa17` 对拍工具（commitV7.1）、`9b3b95f` 起跑预提交；本次按审计修订的 `docs:` commit 见 `git log -- docs/train-infer-consistency.md`。既有依据：`siglip-ab-replay-40k`（编码器差异首次量化）、`aws-t3-open-s100`（9 月 4 日 T3 记录）、`eval-3seed-context-vs-motion`（三 seed 数字，环境 A）。兄弟正本：`motion-memory.md`、`dataloader-restructure.md`。
+
+## 十二、8×8档（测试模型，2026-09-14）
+
+8帧×8×8的C8、M8两份1000更新EMA checkpoint已完成本轮阻断验收。两库、完整输入、12条1000更新轨迹及四profile三batch全梯度均已逐位通过，见[数据链路正本](dataloader-restructure.md)与[训练总览](training-doc/t8-training/result.md)。这里的结论覆盖数据装配和所测推理路径，不用于判断8帧优于32帧、motion是否带来收益或模型是否收敛。
+
+权重分别来自v1-store/train-runs/t8-c8-b/mme_vla_suite/t8-c8-b/999和t8-m8-b同构路径，均为1000次真实更新后的EMA。训练生产代码CAND为c08ec2060a544af1869c1e24f755e536150569ca，实际各阶段启动HEAD、命令及输出见[C8档案](training-doc/t8-infer-c8/result.md)、[M8档案](training-doc/t8-infer-m8/result.md)及[共同启动口径](training-doc/t8-infer/launch.md)。只使用物理GPU4–7；开环与探针C8用GPU7、M8用GPU6，各自内部同卡比较；48集闭环四卡分片。
+
+### checkpoint配置与前缀长度
+
+两种配置都是512个历史帧token：8帧×64，而默认旧档为32帧×16。policy_config.create_trained_policy读取checkpoint保存的history_config.resolved.yaml；MME_VLA_Policy.reset据此构造FrameSampMemory，传入token_per_image并建立8×8位置表和池化。motion开关同样来自该快照。serve_policy_mv.py::main仅据该实例配置设置adapter.P，保留MVAdapter原采样实现。前缀计算为512个历史帧token＋512个当前图像token＋64个文本token，C8为1088；M8再加96个运动token，为1184。
+
+C8的motion_emb、motion_pos、motion_mask、mem_order按关闭态保持None；M8按原608槽次序表装配历史帧与运动。两种开关使用同一采样路径，实际prefix、mask、positions和18层KV的核验见下表。归一化同时检查原400ep文件SHA750a8e9bd6e1e5a3cf5c294864c44564153309ef92492eb083fa361096d470d2与实际解析的8数组；不把数组摘要直接与JSON文件SHA比较。
+
+### 验收覆盖与实际结果
+
+| 模型 | 关0 | 关1–5 | 前缀长度 | f32点数/rel_fro | 关6 |
+|---|---|---|---:|---|---|
+| C8 | PASS | 13/13 PASS，120点 | 1088 | 15点，2.81818792e-07 | 7/7 PASS，82次推理 |
+| M8 | PASS | 14/14 PASS，120点 | 1184 | 15点，3.21997613e-07 | 7/7 PASS，82次推理 |
+
+强一致比较采用S臂：以训练库值替换在线历史帧的图像特征，保留真实装配和预处理；真实bf16帧编码的B臂差异单列观察。M8运动分支仍由真实sidecar计算并与离线表逐位比较。
+
+关1–5沿用五集120个决策点，覆盖es=0、66、114、168、216。M8的140个运动窗由真sidecar现算并对离线表逐位核对。真实SigLIP的8×8三方池化、4096行位置表、17个边界装配时刻已独立通过，详见[M8的先行池化记录](training-doc/t8-infer-m8/result.md)，该共用帧路径覆盖C8/M8。
+
+按用户裁决，bf16整段/缓存速度场差保留为观察FAIL：C8 rel_fro=0.00473607854，M8为0.00491094983。真实f32参数、embed_dtype与highest精度下，C8为2.81818792e-07，M8为3.21997613e-07，均低于1e-6；每个checkpoint各15点、每集3点，有效前缀KV最大差均为0。整段/缓存KV对照沿用原有padding排除口径；普通120点C8排除4903个padding位置，M8排除14428个。T/I两份observation之间的18层KV则全量逐位相同。
+
+第5关两侧仍调用同一sample_actions路径，它证明两份observation在相同噪声下给出相同动作；不能据此说训练的整段前向与推理缓存算法在bf16下逐位相同。在线真实帧编码使用checkpoint bf16参数，离线表使用建库f32参数，两者的编码差异仍作为观察项保留。
+
+### 真仿真与资源边界
+
+每种checkpoint先在ButtonUnmask test episode0跑一集独立探针，按8帧、每帧64 token的参数复核位置表、窗口公式、次序表、prompt及推理节奏；随后用motion-variance原驱动各跑48集，即四任务各0..11共12集。两种模型都要求48/48、errors0、每集推理次数≤82、mem_order合法；M8实际编码次数须逐次等于窗口公式。完整48集包含ButtonUnmask test3、7，未删除训练未见目标组合。
+
+| 模型 | 闭环集数 | errors | 最大推理次数 | 最大运动窗 | 成功率（只作记录） |
+|---|---:|---:|---:|---:|---:|
+| C8 | 48/48 | 0 | 82 | 0 | 0/48（0.00%） |
+| M8 | 48/48 | 0 | 82 | 92 | 0/48（0.00%） |
+
+一集探针通过不代表48集的prompt全在训练集合中：旧400ep缺少ButtonUnmask test3、7、19、23对应目标组合，这次不补数据；48集链路检查也没有把训练prompt成员关系作为门槛。成功率照实记在表中，按用户计划属于测试模型记录，不作模型能力指标。
+
+| 模型/阶段 | 500ms采样GPU峰值 | 进程树RSS峰值 |
+|---|---|---:|
+| C8/关0–5 | GPU7: 46695 MiB | 55.17 GiB |
+| C8/一集探针 | GPU7: 45883 MiB | 17.54 GiB |
+| C8/48集 | GPU4: 45883 MiB；GPU5: 45883 MiB；GPU6: 45883 MiB；GPU7: 45883 MiB | 66.06 GiB |
+| M8/关0–5 | GPU6: 49983 MiB | 52.81 GiB |
+| M8/一集探针 | GPU6: 49175 MiB | 20.80 GiB |
+| M8/48集 | GPU4: 49175 MiB；GPU5: 49175 MiB；GPU6: 49175 MiB；GPU7: 49175 MiB | 63.96 GiB |
+
+在线8×8的4096行f32位置表理论大小为768MiB。上面的显存包含JAX预分配、模型、sidecar与仿真；host值是本轮进程树RSS之和，共享页可能重复计数。两者均为实际500ms采样记录，不将其当作仅位置表的内存增量，也不由本轮验证墙钟推出吞吐收益。

@@ -1,0 +1,539 @@
+{
+  "profile": "m8",
+  "verdict": "PASS",
+  "episodes": 48,
+  "errors": 0,
+  "max_infer": 82,
+  "max_steps": 1301,
+  "max_motion_windows": 92,
+  "total_infers": 3936,
+  "flags": {
+    "timeout": 48
+  },
+  "tasks": {
+    "ButtonUnmask": {
+      "success": 0,
+      "episodes": 12
+    },
+    "VideoUnmask": {
+      "success": 0,
+      "episodes": 12
+    },
+    "ButtonUnmaskSwap": {
+      "success": 0,
+      "episodes": 12
+    },
+    "VideoUnmaskSwap": {
+      "success": 0,
+      "episodes": 12
+    }
+  },
+  "workers": [
+    {
+      "worker": 0,
+      "gpu": 4,
+      "episodes": 12,
+      "infer_points": 984,
+      "progress": {
+        "ButtonUnmask": {
+          "0": false,
+          "4": false,
+          "8": false
+        },
+        "VideoUnmask": {
+          "0": false,
+          "4": false,
+          "8": false
+        },
+        "ButtonUnmaskSwap": {
+          "0": false,
+          "4": false,
+          "8": false
+        },
+        "VideoUnmaskSwap": {
+          "0": false,
+          "4": false,
+          "8": false
+        }
+      },
+      "episode_done": [
+        {
+          "task": "ButtonUnmask",
+          "ep": 0,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 147.3
+        },
+        {
+          "task": "ButtonUnmask",
+          "ep": 4,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 143.0
+        },
+        {
+          "task": "ButtonUnmask",
+          "ep": 8,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 142.0
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 0,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 148.3
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 4,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 147.2
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 8,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 146.6
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 0,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 143.1
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 4,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 144.1
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 8,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 143.0
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 0,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 153.7
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 4,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 153.4
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 8,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 158.2
+        }
+      ]
+    },
+    {
+      "worker": 1,
+      "gpu": 5,
+      "episodes": 12,
+      "infer_points": 984,
+      "progress": {
+        "ButtonUnmask": {
+          "1": false,
+          "5": false,
+          "9": false
+        },
+        "VideoUnmask": {
+          "1": false,
+          "5": false,
+          "9": false
+        },
+        "ButtonUnmaskSwap": {
+          "1": false,
+          "5": false,
+          "9": false
+        },
+        "VideoUnmaskSwap": {
+          "1": false,
+          "5": false,
+          "9": false
+        }
+      },
+      "episode_done": [
+        {
+          "task": "ButtonUnmask",
+          "ep": 1,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 146.6
+        },
+        {
+          "task": "ButtonUnmask",
+          "ep": 5,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 143.7
+        },
+        {
+          "task": "ButtonUnmask",
+          "ep": 9,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 143.4
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 1,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 149.9
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 5,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 148.5
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 9,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 147.1
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 1,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 143.1
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 5,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 144.1
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 9,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 143.6
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 1,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 160.0
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 5,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 154.3
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 9,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 153.6
+        }
+      ]
+    },
+    {
+      "worker": 2,
+      "gpu": 6,
+      "episodes": 12,
+      "infer_points": 984,
+      "progress": {
+        "ButtonUnmask": {
+          "2": false,
+          "6": false,
+          "10": false
+        },
+        "VideoUnmask": {
+          "2": false,
+          "6": false,
+          "10": false
+        },
+        "ButtonUnmaskSwap": {
+          "2": false,
+          "6": false,
+          "10": false
+        },
+        "VideoUnmaskSwap": {
+          "2": false,
+          "6": false,
+          "10": false
+        }
+      },
+      "episode_done": [
+        {
+          "task": "ButtonUnmask",
+          "ep": 2,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 148.4
+        },
+        {
+          "task": "ButtonUnmask",
+          "ep": 6,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 143.7
+        },
+        {
+          "task": "ButtonUnmask",
+          "ep": 10,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 142.6
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 2,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 150.1
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 6,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 148.8
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 10,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 147.2
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 2,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 145.0
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 6,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 145.9
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 10,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 144.8
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 2,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 155.4
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 6,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 160.7
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 10,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 154.1
+        }
+      ]
+    },
+    {
+      "worker": 3,
+      "gpu": 7,
+      "episodes": 12,
+      "infer_points": 984,
+      "progress": {
+        "ButtonUnmask": {
+          "3": false,
+          "7": false,
+          "11": false
+        },
+        "VideoUnmask": {
+          "3": false,
+          "7": false,
+          "11": false
+        },
+        "ButtonUnmaskSwap": {
+          "3": false,
+          "7": false,
+          "11": false
+        },
+        "VideoUnmaskSwap": {
+          "3": false,
+          "7": false,
+          "11": false
+        }
+      },
+      "episode_done": [
+        {
+          "task": "ButtonUnmask",
+          "ep": 3,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 148.8
+        },
+        {
+          "task": "ButtonUnmask",
+          "ep": 7,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 143.3
+        },
+        {
+          "task": "ButtonUnmask",
+          "ep": 11,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 144.2
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 3,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 150.3
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 7,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 149.5
+        },
+        {
+          "task": "VideoUnmask",
+          "ep": 11,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 149.3
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 3,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 143.7
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 7,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 145.2
+        },
+        {
+          "task": "ButtonUnmaskSwap",
+          "ep": 11,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 145.0
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 3,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 165.9
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 7,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 165.8
+        },
+        {
+          "task": "VideoUnmaskSwap",
+          "ep": 11,
+          "flag": "timeout",
+          "steps": 1301,
+          "infers": 82,
+          "wall_s": 167.5
+        }
+      ]
+    }
+  ],
+  "success": 0,
+  "success_rate_record_only": 0.0
+}

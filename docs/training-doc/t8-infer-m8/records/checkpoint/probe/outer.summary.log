@@ -1,0 +1,241 @@
+START_HEAD=a0db6bf53fb5b46b0cb3f0dcbbbe53c670866496
+START_UTC=2026-09-14T12:58:25Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+STAGE_START role=server utc=2026-09-14T12:58:26.110271+00:00 argv=["/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python3", "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/g0/serve_policy_probe.py", "--ckpt", "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-m8-b/mme_vla_suite/t8-m8-b/999", "--lib", "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep", "--store-subdir", "framesamp-8x8", "--config", "mme_vla_suite", "--port", "9379", "--host", "127.0.0.1", "--seed", "42", "--probe-out", "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/t8-infer-m8/probe/probe.jsonl", "--motion-gpu", "6"]
+INFO:root:Checking history config
+INFO:absl:orbax-checkpoint version: 0.11.13
+INFO:absl:Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x7f2c8776d990>
+INFO:absl:Restoring checkpoint from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-m8-b/mme_vla_suite/t8-m8-b/999/params.
+INFO:absl:[thread=MainThread] Failed to get flag value for EXPERIMENTAL_ORBAX_USE_DISTRIBUTED_PROCESS_ID.
+INFO:absl:[process=0] /jax/checkpoint/read/bytes_per_sec: 1.2 GiB/s (total bytes: 6.3 GiB) (time elapsed: 5 seconds) (per-host)
+INFO:absl:Finished restoring checkpoint in 5.21 seconds from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-m8-b/mme_vla_suite/t8-m8-b/999/params.
+INFO:root:Loading model...
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+max_token_len: 64
+INFO:root:Norm stats not found in /scratch/hongze/robomme_policy_learning_MotionJEPA/runs/assets/mme_vla_suite/robomme, skipping.
+INFO:root:Loaded norm stats from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-m8-b/mme_vla_suite/t8-m8-b/999/assets/robomme
+Training config:  TrainConfig(name='mme_vla_suite', project_name='openpi', exp_name=<PropagatingMissingType id='139822066509264'>, model=HistoryPi0Config(action_dim=32, action_horizon=20, max_token_len=64, dtype='bfloat16', paligemma_variant='gemma_2b', action_expert_variant='gemma_300m', pi05=True, discrete_state_input=False, memory_expert_variant='gemma_150m', use_history=True, history_config={'budget': 512, 'num_views': 1, 'token_per_image': 64, 'streaming_obs_horizon': 16, 'pool_type': 'mean', 'use_pos_emb': True, 'use_state_emb': False, 'memory_feature': {'img': {'net': 'identity', 'input_dim': 2048}, 'pos': {'input_dim': 768, 'hidden_dim': 768}, 'state': {'input_dim': 8, 'hidden_dim': 512}}, 'integration_type': 'context', 'memory_token_dim': 2048, 'representation_type': 'perceptual', 'perceptual_memory': {'type': 'frame_sampling'}, 'motion': {'enabled': True, 'dim': 768, 'budget': 96, 'stride': 16, 'window_frames': 33, 'window_direction': 'forward', 'grid_origin': 'segment_start', 'store_path': 'v1-store/datasets/4task-motion-40ep/motion', 'source_run': 'wan-v8-filter10-72ep-a/checkpoint_epoch_72.pt#encoder', 'pos_dim': 256, 'frame_size': 256, 'online_gpu': 4}}), weight_loader=CheckpointWeightLoader(params_path='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params'), pytorch_weight_path=None, pytorch_training_precision='bfloat16', lr_schedule=CosineDecaySchedule(warmup_steps=10000, peak_lr=5e-05, decay_steps=100000, decay_lr=5e-05), optimizer=AdamW(b1=0.9, b2=0.95, eps=1e-08, weight_decay=1e-10, clip_gradient_norm=1.0), ema_decay=0.999, freeze_filter=PathRegex(pattern=re.compile('.*img.*'), sep='/'), data=RoboMMEDataConfig(repo_id='robomme', assets=AssetsConfig(assets_dir=None, asset_id=None), base_config=DataConfig(repo_id=None, asset_id=None, norm_stats=None, repack_transforms=Group(inputs=(), outputs=()), data_transforms=Group(inputs=(), outputs=()), model_transforms=Group(inputs=(), outputs=()), use_quantile_norm=False, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)), assets_base_dir='runs/assets', checkpoint_base_dir='runs/ckpts', seed=42, batch_size=64, num_workers=4, num_train_steps=80000, log_interval=100, save_interval=10000, keep_period=10000, overwrite=False, resume=False, wandb_enabled=True, policy_metadata=None, fsdp_devices=4, resum_ckpt_id=None, dataset_path='data/robomme')
+Data config:  DataConfig(repo_id='robomme', asset_id='robomme', norm_stats=None, repack_transforms=Group(inputs=[RepackTransform(structure={'observation/image': 'image', 'observation/wrist_image': 'wrist_image', 'observation/state': 'state', 'actions': 'actions', 'prompt': 'prompt', 'static_image_emb': 'static_image_emb', 'static_pos_emb': 'static_pos_emb', 'static_state_emb': 'static_state_emb', 'static_mask': 'static_mask', 'motion_emb': 'motion_emb', 'motion_pos': 'motion_pos', 'motion_mask': 'motion_mask', 'mem_order': 'mem_order'})], outputs=()), data_transforms=Group(inputs=(RoboMMEInputs(model_type=<ModelType.PI05: 'pi05'>), DeltaActions(mask=(True, True, True, True, True, True, True, False))), outputs=(AbsoluteActions(mask=(True, True, True, True, True, True, True, False)), RoboMMEOutputs())), model_transforms=Group(inputs=[InjectDefaultPrompt(prompt=None), ResizeImages(height=224, width=224), TokenizePromptWithState(tokenizer=<mme_vla_suite.training.config.PaligemmaTokenizer object at 0x7f2ab41f6550>, discrete_state_input=False), PadStatesAndActions(model_action_dim=32)], outputs=()), use_quantile_norm=True, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)
+warning: `VIRTUAL_ENV=.venv` does not match the project environment path `v1-store/venvs/wan` and will be ignored; use `--active` to target the active environment instead
+[sidecar pid=824423] 收到关闭请求，已服务 0 窗，退出
+warning: `VIRTUAL_ENV=.venv` does not match the project environment path `v1-store/venvs/wan` and will be ignored; use `--active` to target the active environment instead
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+[sidecar pid=824581] 模型就绪 warmup=2.78s vae=9980d252230c265c… ckpt=bae960373041629e…
+PROBE_ENV backend=gpu devices=cuda:0 pos_rows=586 pos_table_sha=8ff424a7fc097ef2ff63412be96e756302e7b0cb78327e199d6618e7410fa6b1 store_pos_sha=8ff424a7fc097ef2ff63412be96e756302e7b0cb78327e199d6618e7410fa6b1 pos_table_full_sha=f501b84960ed96b862b207f60c86f3568f3f4ee9eb2323d5e781ba9f446ea559 pos_table_full_rows=4096 motion_enabled=1 motion_gpu_override=6 budget=512 token_per_image=64 num_views=1 motion_budget=96 max_token_len=64 discrete_state_input=0 state_dim=8 config=mme_vla_suite ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-m8-b/mme_vla_suite/t8-m8-b/999 lib=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep probe_out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/t8-infer-m8/probe/probe.jsonl seed=42
+INFO:root:Creating probe server (host: ip-10-242-11-177.us-west-2.compute.internal, ip: 10.242.11.177)
+INFO:websockets.server:server listening on 127.0.0.1:9379
+STAGE_START role=simulation utc=2026-09-14T12:59:01.768435+00:00 argv=["uv", "run", "--no-project", "--no-sync", "/scratch/hongze/micromamba/envs/robomme/bin/python", "eval.py", "--args.port=9379", "--args.host=127.0.0.1", "--args.model_seed=42", "--args.policy_name=t8-probe-m8", "--args.model_ckpt_id=999", "--args.only_tasks=ButtonUnmask", "--args.episode_start=0", "--args.max_episodes=1", "--args.episode_stride=1", "--args.max_steps=1300", "--args.dataset=test", "--args.save_dir=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation"]
+warning: The `tool.uv.dev-dependencies` field (used in `/scratch/hongze/robomme_policy_learning_MotionJEPA/packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+warning: `--no-sync` has no effect when used alongside `--no-project`
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+[robomme] task ButtonUnmask: 1 episodes [0]
+EVAL_EPISODE split=test task=ButtonUnmask ep=0 env_seed=580000 difficulty=easy
+
+[robomme] env for task ButtonUnmask episode 0 setup finished
+INFO:websockets.server:connection open
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 42770) opened
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmask ep=0 exec_start_idx=0 start=2026-09-14 12:59:15
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1202.0 frames=1 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=8326.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=942.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=70.0
+/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/wan_motion_infer.py:251: UserWarning: The given NumPy array is not writable, and PyTorch does not support non-writable tensors. This means writing to this tensor will result in undefined behavior. You may want to copy the array to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_numpy.cpp:206.)
+  f = torch.from_numpy(frames_window).permute(0, 3, 1, 2).float().to(device)   # 🔒 (33,3,256,256) 0..255
+[sidecar pid=824581] 窗 #1 起点 0 耗时 1422 ms（累计 32s）
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1474.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1473.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1470.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1471.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1469.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1471.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1470.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1468.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1478.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1468.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1469.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1475.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1473.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1474.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.8
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1475.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1472.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1471.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1473.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1470.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1472.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1478.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1471.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1478.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1466.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1475.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1466.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1468.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1468.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1472.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1524.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1469.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1460.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1468.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1485.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1660.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+[sidecar pid=824581] 窗 #51 起点 800 耗时 1419 ms（累计 126s）
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1471.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1462.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1468.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.7
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1473.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.6
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1466.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1473.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1466.4 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=68.9
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1475.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1466.8 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1464.7 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1467.3 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1463.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1472.0 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.5
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1469.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.2 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.1
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.3
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1465.9 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.2
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1504.5 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1476.1 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.4
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING add_buffer_ms=1472.6 frames=16 exec_start_idx=0
+INFO:mme_vla_suite.serving.websocket_policy_server:TIMING infer_ms=69.3
+MV_EP_DONE split=test task=ButtonUnmask ep=0 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=162.0 difficulty=easy
+INFO:mme_vla_suite.serving.websocket_policy_server:Connection from ('127.0.0.1', 42770) closed
+STAGE_EXIT role=simulation rc=0 utc=2026-09-14T13:02:02.380119+00:00
+SERVER_CONTROLLED_STOP pid=823963 rc=-15
+STAGE_START role=gate6 utc=2026-09-14T13:02:03.473801+00:00 argv=["/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python3", "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/g0/summarize_eval_probe.py", "--probe", "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/t8-infer-m8/probe/probe.jsonl", "--progress", "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/t8-probe-m8/ckpt999/seed42/progress.json", "--eval-log", "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/t8-infer-m8/probe/simulation.log", "--server-log", "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/t8-infer-m8/probe/server.log", "--lib", "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep", "--max-frames", "8", "--tokens-per-frame", "64", "--expect-episodes", "1", "--expect-tasks", "1", "--max-steps", "1300", "--out", "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/t8-infer-m8/probe/probe-summary.json"]
+EVAL_EPISODE_MAP=PASS resets=1 tasks=1 per_task=1 log_episodes=1 progress_entries=1 one_to_one=1 es_match=1/1 goal_match=1/1 seq_contiguous=1 resumed_skips=0 expect_episodes=1 expect_tasks=1
+EVAL_TAU_K=PASS episodes=1 infer_points=82 tau_max=1296 k_max=80 budget=96 headroom=16 es_values=0 tau_mismatches=0 k_over_budget=0 k_len_mismatch=0
+EVAL_K_FORMULA=PASS points=82 mismatches=0 frames_sampled_mismatches=0 window=33 stride=16 max_frames=8
+EVAL_ORDER_LEGAL=PASS points=82 nonperm=0 dtype_int32=1 len608=1 expected_order_mismatches=0 static_mask_bad=0 motion_mask_bad=0
+EVAL_BACKEND=PASS backend=gpu pos_rows=586 pos_table_sha=8ff424a7fc097ef2… store_pos_sha=8ff424a7fc097ef2… equal=1 motion_enabled=1 motion_gpu_override=6 devices=cuda:0
+EVAL_PROMPT=PASS tasks=4 episodes=1 distinct_prompt_text=1 train_distinct_prompt=26 train_distinct_tok=26 tok_in_trainset=82/82 text_in_trainset=82/82 discrete_state_input=0 tokenizer=PaligemmaTokenizer(max_len=64,strip,underscore,newline;no_lower)
+EVAL_NO_RAISE=PASS episodes=1 errors=0 timeouts=1 unknown=0 log_error_lines=0 api_abort=0 server_tracebacks=0 handshake_noise=0 expect_timeout_infers=82 timeout_video_cross=1/1 videos_seen=1
+EVAL_DIST_OBS online_k_median=39.5 mean=39.51 max=80 | train_k_median=9.0 mean=10.31 max=34 train_samples=101066 | online_tau_max=1296 train_tau_max=585
+TIC_EVAL=PASS episodes=1 tasks=1 infer_points=82 blocking=7/7 observe=1
+报告落 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/t8-infer-m8/probe/probe-summary.json
+STAGE_EXIT role=gate6 rc=0 utc=2026-09-14T13:02:10.034121+00:00
+INFER_PHASE=PASS profile=m8 phase=probe utc=2026-09-14T13:02:11.405624+00:00
+END_UTC=2026-09-14T13:02:11Z
+END_UTC=2026-09-14T13:02:11Z
+EXIT_CODE=0

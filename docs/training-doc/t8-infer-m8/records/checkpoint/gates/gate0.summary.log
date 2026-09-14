@@ -1,0 +1,12 @@
+max_token_len: 64
+NORM_STATS_SAME=PASS sha=41ff90e4bfacc158 train_src=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json infer_src=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-m8-b/mme_vla_suite/t8-m8-b/999/assets/robomme/norm_stats.json keys=[actions,state] arrays=8
+LIB_PROVENANCE_MATCH=PASS framesamp_manifest_sha256=92fa17e97fba9434 motion_manifest_sha256=92fa17e97fba9434 framesamp_store_meta_sha256=31a6c2a4fc3807bd motion_index_sha256=74185921690cd26c motion_store_meta_sha256=e19fb5fdb45829d8 motion_table_sha256=6e70604da518c156 all_equal=1
+MOTION_STORE_PATH=PASS snapshot=v1-store/datasets/4task-motion-40ep/motion provenance=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/motion effective=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/motion override=MMEVLA_MOTION_STORE guard=raise infer_reads_store=0 same_manifest=1 snapshot_default=raise
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+CKPT_PARAM_TREE=PASS missing=0 extra=0 leaves=59 model_leaves=59 ckpt_has_motion=1
+CKPT_DTYPE_PROFILE f32_leaves=36 bf16_leaves=23 img_all_bf16=1 trainable_all_f32=1 by_dtype={'bfloat16': 23, 'float32': 36} img_dtypes=['bfloat16']
+明细写入 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/t8-infer-m8/gates/provenance.json
+TIC_L0=PASS

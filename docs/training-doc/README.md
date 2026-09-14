@@ -8,15 +8,15 @@
 
 ### 8帧×8×8支持与逐位验收（2026-09-14）
 
-仅使用物理GPU4–7。正式训练轨迹与四组全梯度已全部通过；真实checkpoint推理继续按计划执行，详见[总览](t8-training/result.md)与[用户决定](t8-training/decisions.md)。
+仅使用物理GPU4–7。正式训练轨迹、四组全梯度、两模型七关及各48集闭环均已完成并通过，详见[总览](t8-training/result.md)与[用户决定](t8-training/decisions.md)。
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
 | [`t8-reference-tools/`](t8-reference-tools/result.md) | 参考量具与既有100步轨迹逐位回归 | PASS，REF固定为99faacb |
 | [`t8-fixture/`](t8-fixture/result.md) | 两库四profile完整输入、worker矩阵、独立手算与错配拒绝 | PASS |
 | [`t8-infer-regress-4x4/`](t8-infer-regress-4x4/result.md) | 旧4×4在线完整回归 | PASS，772窗逐位一致 |
-| [`t8-infer-m8/`](t8-infer-m8/result.md) | 真实8×8在线池化及后续M8 checkpoint验收 | 池化/位置/装配PASS，其余待执行 |
-| [`t8-infer-c8/`](t8-infer-c8/result.md) | C8 checkpoint七关及48集闭环 | 已提交共同启动口径，待执行 |
+| [`t8-infer-m8/`](t8-infer-m8/result.md) | 真实8×8在线池化、M8七关及48集闭环 | PASS：14/14、7/7、48/48 |
+| [`t8-infer-c8/`](t8-infer-c8/result.md) | C8 checkpoint七关及48集闭环 | PASS：13/13、7/7、48/48 |
 | [`t8-gradient/`](t8-gradient/result.md) | 四profile的三类batch全梯度对拍 | PASS，全部32/36叶逐位同且有限 |
 | [`t8-c32-a1/`](t8-c32-a1/result.md) | C32 A1：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步与三batch全梯度均PASS |
 | [`t8-c32-a2/`](t8-c32-a2/result.md) | C32 A2：1000更新、batch8、fsdp2、GPU4,5 | 本组1000步与三batch全梯度均PASS |

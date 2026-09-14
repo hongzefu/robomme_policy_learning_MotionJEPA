@@ -1,0 +1,94 @@
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+[robomme] task ButtonUnmask: 3 episodes [0, 4, 8]
+EVAL_EPISODE split=test task=ButtonUnmask ep=0 env_seed=580000 difficulty=easy
+
+[robomme] env for task ButtonUnmask episode 0 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmask ep=0 exec_start_idx=0 start=2026-09-14 13:05:17
+MV_EP_DONE split=test task=ButtonUnmask ep=0 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=147.3 difficulty=easy
+EVAL_EPISODE split=test task=ButtonUnmask ep=4 env_seed=580402 difficulty=easy
+
+[robomme] env for task ButtonUnmask episode 4 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmask ep=4 exec_start_idx=0 start=2026-09-14 13:07:49
+MV_EP_DONE split=test task=ButtonUnmask ep=4 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=143.0 difficulty=easy
+EVAL_EPISODE split=test task=ButtonUnmask ep=8 env_seed=580800 difficulty=easy
+
+[robomme] env for task ButtonUnmask episode 8 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmask ep=8 exec_start_idx=0 start=2026-09-14 13:10:18
+MV_EP_DONE split=test task=ButtonUnmask ep=8 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=142.0 difficulty=easy
+[robomme] task VideoUnmask: 3 episodes [0, 4, 8]
+EVAL_EPISODE split=test task=VideoUnmask ep=0 env_seed=560000 difficulty=easy
+
+[robomme] env for task VideoUnmask episode 0 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 66
+MV_EP_START split=test task=VideoUnmask ep=0 exec_start_idx=66 start=2026-09-14 13:12:48
+MV_EP_DONE split=test task=VideoUnmask ep=0 flag=timeout steps=1301 infers=82 exec_start_idx=66 wall_s=148.3 difficulty=easy
+EVAL_EPISODE split=test task=VideoUnmask ep=4 env_seed=560400 difficulty=easy
+
+[robomme] env for task VideoUnmask episode 4 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 66
+MV_EP_START split=test task=VideoUnmask ep=4 exec_start_idx=66 start=2026-09-14 13:15:21
+MV_EP_DONE split=test task=VideoUnmask ep=4 flag=timeout steps=1301 infers=82 exec_start_idx=66 wall_s=147.2 difficulty=easy
+EVAL_EPISODE split=test task=VideoUnmask ep=8 env_seed=560800 difficulty=easy
+
+[robomme] env for task VideoUnmask episode 8 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 66
+MV_EP_START split=test task=VideoUnmask ep=8 exec_start_idx=66 start=2026-09-14 13:17:54
+MV_EP_DONE split=test task=VideoUnmask ep=8 flag=timeout steps=1301 infers=82 exec_start_idx=66 wall_s=146.6 difficulty=easy
+[robomme] task ButtonUnmaskSwap: 3 episodes [0, 4, 8]
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=0 env_seed=570000 difficulty=easy
+
+[robomme] env for task ButtonUnmaskSwap episode 0 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmaskSwap ep=0 exec_start_idx=0 start=2026-09-14 13:20:27
+MV_EP_DONE split=test task=ButtonUnmaskSwap ep=0 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=143.1 difficulty=easy
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=4 env_seed=570400 difficulty=easy
+
+[robomme] env for task ButtonUnmaskSwap episode 4 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmaskSwap ep=4 exec_start_idx=0 start=2026-09-14 13:22:55
+MV_EP_DONE split=test task=ButtonUnmaskSwap ep=4 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=144.1 difficulty=easy
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=8 env_seed=570800 difficulty=easy
+
+[robomme] env for task ButtonUnmaskSwap episode 8 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube
+exec_start_idx: 0
+MV_EP_START split=test task=ButtonUnmaskSwap ep=8 exec_start_idx=0 start=2026-09-14 13:25:25
+MV_EP_DONE split=test task=ButtonUnmaskSwap ep=8 flag=timeout steps=1301 infers=82 exec_start_idx=0 wall_s=143.0 difficulty=easy
+[robomme] task VideoUnmaskSwap: 3 episodes [0, 4, 8]
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=0 env_seed=550000 difficulty=easy
+
+[robomme] env for task VideoUnmaskSwap episode 0 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 114
+MV_EP_START split=test task=VideoUnmaskSwap ep=0 exec_start_idx=114 start=2026-09-14 13:27:55
+MV_EP_DONE split=test task=VideoUnmaskSwap ep=0 flag=timeout steps=1301 infers=82 exec_start_idx=114 wall_s=153.7 difficulty=easy
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=4 env_seed=550400 difficulty=easy
+
+[robomme] env for task VideoUnmaskSwap episode 4 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 114
+MV_EP_START split=test task=VideoUnmaskSwap ep=4 exec_start_idx=114 start=2026-09-14 13:30:34
+MV_EP_DONE split=test task=VideoUnmaskSwap ep=4 flag=timeout steps=1301 infers=82 exec_start_idx=114 wall_s=153.4 difficulty=easy
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=8 env_seed=550800 difficulty=easy
+
+[robomme] env for task VideoUnmaskSwap episode 8 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+MV_EP_START split=test task=VideoUnmaskSwap ep=8 exec_start_idx=168 start=2026-09-14 13:33:13
+MV_EP_DONE split=test task=VideoUnmaskSwap ep=8 flag=timeout steps=1301 infers=82 exec_start_idx=168 wall_s=158.2 difficulty=easy
