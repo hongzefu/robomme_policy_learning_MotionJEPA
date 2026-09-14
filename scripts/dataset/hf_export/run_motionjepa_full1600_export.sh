@@ -344,25 +344,23 @@ echo "阶段9完成"
 
 # ---------------------------------------------------------------- 阶段 10：源侧第三遍
 echo "阶段10开始：源侧第三遍 sha256（证明硬链接未改动原件）"
-# 只核发布清单那 2804 个（它们是硬链接到 dataset-token 的原件）。control 的直传件同理，
-# 但 content_hashes.tar 是本轮新造的、没有单一源文件，由上面的成员抽样覆盖。
-uv run --no-sync python - "$SRC" "$STAGE" <<'PY'
-import hashlib, json, sys
-from pathlib import Path
-src, stage = Path(sys.argv[1]), Path(sys.argv[2])
-want = json.loads((stage / "PUBLISHED.json").read_text())["files"]
-bad = []
-for rel, digest in want.items():
-    h = hashlib.sha256()
-    with open(src / "dataset-token" / rel, "rb") as f:
-        for chunk in iter(lambda: f.read(8 << 20), b""):
-            h.update(chunk)
-    if h.hexdigest() != digest:
-        bad.append(rel)
-print(f"SRC_UNCHANGED={'OK' if not bad else 'FAIL'} checked={len(want)} mismatches={len(bad)}")
-if bad:
-    print("变动的源文件:", bad[:10]); sys.exit(1)
-PY
+# **必须并行。** 这段一度写成单进程 Python 逐文件 hashlib，实测只有 38 MB/s——479.5 GB 要跑
+# 3.5 小时，而阶段 2 用 `xargs -P 16 sha256sum` 算同样的 479.5 GB 只花 74 秒（约 6.5 GB/s）。
+# 慢 170 倍换不到任何信息增量，2026-09-14 那轮实测后改为复用 hash_tree。
+#
+# 为什么重算 stage 就等于重算源：stage 里每一项都是源文件的**硬链接**（同 inode），读 stage
+# 就是读源文件本身。而且这样覆盖 2990 项（含 control/ 与 README），比只核发布清单的 2804 项更宽。
+# 判据是与阶段 2 落盘的 pre 清单逐行相同——pre 是上传前算的、已固化，两者相等即证明原件在
+# 整个上传与回读过程中一字未动。
+hash_tree "$STAGE" "$TMPD/SHA256SUMS.src-after.txt"
+cp "$TMPD/SHA256SUMS.src-after.txt" "$EXPORT_ROOT/SHA256SUMS.src-after.txt"
+SRC_LINES=$(wc -l < "$TMPD/SHA256SUMS.src-after.txt")
+if diff "$STAGE/SHA256SUMS.pre.txt" "$TMPD/SHA256SUMS.src-after.txt" > "$TMPD/src-diff.txt" 2>&1; then
+  echo "SRC_UNCHANGED=OK checked=$SRC_LINES"
+else
+  echo "错误: 源侧 sha256 与上传前不一致（硬链接指向的原件被改动过）"
+  head -10 "$TMPD/src-diff.txt"; exit 1
+fi
 echo "阶段10完成"
 
 # ---------------------------------------------------------------- 阶段 11：公开性确认
