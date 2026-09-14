@@ -1,0 +1,1418 @@
+[
+  {
+    "run": "t8-c32-a1",
+    "profile": "c32",
+    "role": "a1",
+    "start_head": "99faacb1319adfc63c0cf9a15187e24c34e38fd1",
+    "start_utc": "2026-09-14T04:41:00Z",
+    "end_utc": "2026-09-14T05:49:06Z",
+    "wall_seconds": 4086.0,
+    "history_config": "perceptual-framesamp-context.yaml",
+    "dataset_impl": "packed",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/framesamp",
+    "gpus": "4,5",
+    "first_loss": 0.6490623354911804,
+    "last_loss": 0.02847016416490078,
+    "first_param_norm": 1803.0919189453125,
+    "last_param_norm": 1803.0966796875,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 177,
+    "scalars_sha256": "e23fc4e45fe50622853d132a82c73c87c916033dceebcd6bfc17a33f9a21acb8",
+    "final_state_digest": "843e354c46395dc67e8ed33ecc98a2634e9e8d392e83d44c2af5944f3b9f07a5",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.5554570745049254,
+      "samples_per_second": 5.143182753883619,
+      "slow_threshold_s": 2.3349770307540894,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 5830,
+          "mean_pct": 96.257461406518,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 96.22161234991424,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.29331046312178,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 5830,
+          "mean_pct": 96.257461406518,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 96.22161234991424,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.29331046312178,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "4": 78639.0,
+        "5": 78639.0
+      },
+      "checksum_seconds": 2433.3579999999997,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3178.3654186725616
+    },
+    "checkpoint": null
+  },
+  {
+    "run": "t8-c32-a2",
+    "profile": "c32",
+    "role": "a2",
+    "start_head": "99faacb1319adfc63c0cf9a15187e24c34e38fd1",
+    "start_utc": "2026-09-14T05:50:18Z",
+    "end_utc": "2026-09-14T06:51:54Z",
+    "wall_seconds": 3696.0,
+    "history_config": "perceptual-framesamp-context.yaml",
+    "dataset_impl": "packed",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/framesamp",
+    "gpus": "4,5",
+    "first_loss": 0.6490623354911804,
+    "last_loss": 0.02847016416490078,
+    "first_param_norm": 1803.0919189453125,
+    "last_param_norm": 1803.0966796875,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 177,
+    "scalars_sha256": "e23fc4e45fe50622853d132a82c73c87c916033dceebcd6bfc17a33f9a21acb8",
+    "final_state_digest": "843e354c46395dc67e8ed33ecc98a2634e9e8d392e83d44c2af5944f3b9f07a5",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.5553934154734175,
+      "samples_per_second": 5.143393253702972,
+      "slow_threshold_s": 2.3001624941825867,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 5830,
+          "mean_pct": 96.31749571183533,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 96.36981132075472,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.26518010291595,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 5830,
+          "mean_pct": 96.31749571183533,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 96.36981132075472,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.26518010291595,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "4": 78639.0,
+        "5": 78639.0
+      },
+      "checksum_seconds": 2042.3780000000002,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3208.5631334781647
+    },
+    "checkpoint": null
+  },
+  {
+    "run": "t8-c32-b",
+    "profile": "c32",
+    "role": "b",
+    "start_head": "38f0db46db19a3b645613e04fba3f6e635b47054",
+    "start_utc": "2026-09-14T06:55:58Z",
+    "end_utc": "2026-09-14T07:56:48Z",
+    "wall_seconds": 3650.0,
+    "history_config": "perceptual-framesamp-context.yaml",
+    "dataset_impl": "packed",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/framesamp",
+    "gpus": "4,5",
+    "first_loss": 0.6490623354911804,
+    "last_loss": 0.02847016416490078,
+    "first_param_norm": 1803.0919189453125,
+    "last_param_norm": 1803.0966796875,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 177,
+    "scalars_sha256": "e23fc4e45fe50622853d132a82c73c87c916033dceebcd6bfc17a33f9a21acb8",
+    "final_state_digest": "843e354c46395dc67e8ed33ecc98a2634e9e8d392e83d44c2af5944f3b9f07a5",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.555281272320859,
+      "samples_per_second": 5.143764116738864,
+      "slow_threshold_s": 2.3360517024993896,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 5830,
+          "mean_pct": 96.34322469982847,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 96.41543739279588,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.27101200686106,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 5830,
+          "mean_pct": 96.34322469982847,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 96.41543739279588,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.27101200686106,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "4": 78639.0,
+        "5": 78639.0
+      },
+      "checksum_seconds": 1994.2079999999996,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3157.748628139496
+    },
+    "checkpoint": null
+  },
+  {
+    "run": "t8-m32-a1",
+    "profile": "m32",
+    "role": "a1",
+    "start_head": "99faacb1319adfc63c0cf9a15187e24c34e38fd1",
+    "start_utc": "2026-09-14T04:41:00Z",
+    "end_utc": "2026-09-14T05:52:33Z",
+    "wall_seconds": 4293.0,
+    "history_config": "perceptual-framesamp-context-motion.yaml",
+    "dataset_impl": "packed",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/framesamp",
+    "gpus": "6,7",
+    "first_loss": 0.5687503218650818,
+    "last_loss": 0.0296617578715086,
+    "first_param_norm": 1803.462890625,
+    "last_param_norm": 1803.46923828125,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 193,
+    "scalars_sha256": "6f14f809288aef347b84067c7a9360a9a0e045ced7d45c45970422496ff7c992",
+    "final_state_digest": "18eb5087724c411e5e806c5cdf42066ec87abae0c39dd2e44a41faa4510ba776",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.686562974569894,
+      "samples_per_second": 4.743374614896994,
+      "slow_threshold_s": 2.5297540426254272,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 6322,
+          "mean_pct": 96.33897500790889,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.39133185700727,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.2866181588105,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 6322,
+          "mean_pct": 96.33897500790889,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.39133185700727,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.2866181588105,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "6": 78641.0,
+        "7": 78641.0
+      },
+      "checksum_seconds": 2502.988,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3308.1344158649445
+    },
+    "checkpoint": null
+  },
+  {
+    "run": "t8-m32-a2",
+    "profile": "m32",
+    "role": "a2",
+    "start_head": "99faacb1319adfc63c0cf9a15187e24c34e38fd1",
+    "start_utc": "2026-09-14T05:53:23Z",
+    "end_utc": "2026-09-14T06:56:10Z",
+    "wall_seconds": 3767.0,
+    "history_config": "perceptual-framesamp-context-motion.yaml",
+    "dataset_impl": "packed",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/framesamp",
+    "gpus": "6,7",
+    "first_loss": 0.5687503218650818,
+    "last_loss": 0.0296617578715086,
+    "first_param_norm": 1803.462890625,
+    "last_param_norm": 1803.46923828125,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 193,
+    "scalars_sha256": "6f14f809288aef347b84067c7a9360a9a0e045ced7d45c45970422496ff7c992",
+    "final_state_digest": "18eb5087724c411e5e806c5cdf42066ec87abae0c39dd2e44a41faa4510ba776",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.6861071131631,
+      "samples_per_second": 4.744657049095876,
+      "slow_threshold_s": 2.5284066796302795,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 6318,
+          "mean_pct": 96.52136752136752,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.56885090218424,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.47388414055081,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 6318,
+          "mean_pct": 96.52136752136752,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.56885090218424,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.47388414055081,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "6": 78641.0,
+        "7": 78641.0
+      },
+      "checksum_seconds": 1978.9889999999998,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3301.310095310211
+    },
+    "checkpoint": null
+  },
+  {
+    "run": "t8-m32-b",
+    "profile": "m32",
+    "role": "b",
+    "start_head": "38f0db46db19a3b645613e04fba3f6e635b47054",
+    "start_utc": "2026-09-14T06:58:02Z",
+    "end_utc": "2026-09-14T08:00:45Z",
+    "wall_seconds": 3763.0,
+    "history_config": "perceptual-framesamp-context-motion.yaml",
+    "dataset_impl": "packed",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/framesamp",
+    "gpus": "6,7",
+    "first_loss": 0.5687503218650818,
+    "last_loss": 0.0296617578715086,
+    "first_param_norm": 1803.462890625,
+    "last_param_norm": 1803.46923828125,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 193,
+    "scalars_sha256": "6f14f809288aef347b84067c7a9360a9a0e045ced7d45c45970422496ff7c992",
+    "final_state_digest": "18eb5087724c411e5e806c5cdf42066ec87abae0c39dd2e44a41faa4510ba776",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.686280686209705,
+      "samples_per_second": 4.7441686697970775,
+      "slow_threshold_s": 2.495616316795349,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 6318,
+          "mean_pct": 96.38002532446977,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.27223805001583,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.48781259892371,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 6318,
+          "mean_pct": 96.38002532446977,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.27223805001583,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.48781259892371,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "6": 78641.0,
+        "7": 78641.0
+      },
+      "checksum_seconds": 1973.3669999999997,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3291.5962681770325
+    },
+    "checkpoint": null
+  },
+  {
+    "run": "t8-c8-a1",
+    "profile": "c8",
+    "role": "a1",
+    "start_head": "99faacb1319adfc63c0cf9a15187e24c34e38fd1",
+    "start_utc": "2026-09-14T08:02:14Z",
+    "end_utc": "2026-09-14T09:06:52Z",
+    "wall_seconds": 3878.0,
+    "history_config": "perceptual-framesamp-context-8frame-8x8.yaml",
+    "dataset_impl": "refnpy",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/source",
+    "gpus": "4,5",
+    "first_loss": 0.5477063059806824,
+    "last_loss": 0.0318128764629364,
+    "first_param_norm": 1803.0919189453125,
+    "last_param_norm": 1803.096435546875,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 177,
+    "scalars_sha256": "7ca21f0881f875a3e0afda2ab3330dab9e76d61af829b8580367bb1d4e4c6030",
+    "final_state_digest": "3381cd87cd671b9cd5897d0b92729c5f507820da000170fbf6d968e11957e371",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.554960026669858,
+      "samples_per_second": 5.144826788334234,
+      "slow_threshold_s": 2.3309812545776367,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 5830,
+          "mean_pct": 96.39433962264151,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 96.38867924528302,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.4,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 5830,
+          "mean_pct": 96.39433962264151,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 96.38867924528302,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.4,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "4": 78639.0,
+        "5": 78639.0
+      },
+      "checksum_seconds": 2222.5330000000004,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3205.7511188983917
+    },
+    "checkpoint": null
+  },
+  {
+    "run": "t8-c8-a2",
+    "profile": "c8",
+    "role": "a2",
+    "start_head": "99faacb1319adfc63c0cf9a15187e24c34e38fd1",
+    "start_utc": "2026-09-14T09:07:50Z",
+    "end_utc": "2026-09-14T10:11:21Z",
+    "wall_seconds": 3811.0,
+    "history_config": "perceptual-framesamp-context-8frame-8x8.yaml",
+    "dataset_impl": "refnpy",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/source",
+    "gpus": "4,5",
+    "first_loss": 0.5477063059806824,
+    "last_loss": 0.0318128764629364,
+    "first_param_norm": 1803.0919189453125,
+    "last_param_norm": 1803.096435546875,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 177,
+    "scalars_sha256": "7ca21f0881f875a3e0afda2ab3330dab9e76d61af829b8580367bb1d4e4c6030",
+    "final_state_digest": "3381cd87cd671b9cd5897d0b92729c5f507820da000170fbf6d968e11957e371",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.5555437518589532,
+      "samples_per_second": 5.142896167619584,
+      "slow_threshold_s": 2.3367438912391663,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 5828,
+          "mean_pct": 96.43445435827041,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 96.46499656829101,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.40391214824983,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 5828,
+          "mean_pct": 96.43445435827041,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 96.46499656829101,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.40391214824983,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "4": 78639.0,
+        "5": 78639.0
+      },
+      "checksum_seconds": 2159.8800000000006,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3358.9624655246735
+    },
+    "checkpoint": null
+  },
+  {
+    "run": "t8-c8-b",
+    "profile": "c8",
+    "role": "b",
+    "start_head": "38f0db46db19a3b645613e04fba3f6e635b47054",
+    "start_utc": "2026-09-14T10:12:56Z",
+    "end_utc": "2026-09-14T11:16:11Z",
+    "wall_seconds": 3795.0,
+    "history_config": "perceptual-framesamp-context-8frame-8x8.yaml",
+    "dataset_impl": "packed",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/framesamp-8x8",
+    "gpus": "4,5",
+    "first_loss": 0.5477063059806824,
+    "last_loss": 0.0318128764629364,
+    "first_param_norm": 1803.0919189453125,
+    "last_param_norm": 1803.096435546875,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 177,
+    "scalars_sha256": "7ca21f0881f875a3e0afda2ab3330dab9e76d61af829b8580367bb1d4e4c6030",
+    "final_state_digest": "3381cd87cd671b9cd5897d0b92729c5f507820da000170fbf6d968e11957e371",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.5577345418015014,
+      "samples_per_second": 5.135663224587737,
+      "slow_threshold_s": 2.33540940284729,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 5838,
+          "mean_pct": 96.0866735183282,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 95.9917780061665,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.1815690304899,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 5838,
+          "mean_pct": 96.0866735183282,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "4": {
+              "mean_pct": 95.9917780061665,
+              "zero_pct_share": 0.0
+            },
+            "5": {
+              "mean_pct": 96.1815690304899,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "4": 78639.0,
+        "5": 78639.0
+      },
+      "checksum_seconds": 2133.585,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3305.007519006729
+    },
+    "checkpoint": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-c8-b/mme_vla_suite/t8-c8-b/999"
+  },
+  {
+    "run": "t8-m8-a1",
+    "profile": "m8",
+    "role": "a1",
+    "start_head": "99faacb1319adfc63c0cf9a15187e24c34e38fd1",
+    "start_utc": "2026-09-14T08:02:14Z",
+    "end_utc": "2026-09-14T09:10:19Z",
+    "wall_seconds": 4085.0,
+    "history_config": "perceptual-framesamp-context-8frame-8x8-motion.yaml",
+    "dataset_impl": "refnpy",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/source",
+    "gpus": "6,7",
+    "first_loss": 0.5342200994491577,
+    "last_loss": 0.031015543267130852,
+    "first_param_norm": 1803.462890625,
+    "last_param_norm": 1803.4686279296875,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 193,
+    "scalars_sha256": "472e7c3798b5f2dcacbff72d58980a3a7cbb34fbe479bd91110dddde75da787a",
+    "final_state_digest": "a60a2ffd11148aaee188b68fc3ea2c4b3582e92e737830b2a8eba9486c83a893",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.6862436972701473,
+      "samples_per_second": 4.744272736468143,
+      "slow_threshold_s": 2.5297810435295105,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 6322,
+          "mean_pct": 96.51107244542867,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.58304334071497,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.43910155014235,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 6322,
+          "mean_pct": 96.51107244542867,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.58304334071497,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.43910155014235,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "6": 78641.0,
+        "7": 78641.0
+      },
+      "checksum_seconds": 2295.0799999999995,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3366.0239260196686
+    },
+    "checkpoint": null
+  },
+  {
+    "run": "t8-m8-a2",
+    "profile": "m8",
+    "role": "a2",
+    "start_head": "99faacb1319adfc63c0cf9a15187e24c34e38fd1",
+    "start_utc": "2026-09-14T09:10:49Z",
+    "end_utc": "2026-09-14T10:18:26Z",
+    "wall_seconds": 4057.0,
+    "history_config": "perceptual-framesamp-context-8frame-8x8-motion.yaml",
+    "dataset_impl": "refnpy",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/source",
+    "gpus": "6,7",
+    "first_loss": 0.5342200994491577,
+    "last_loss": 0.031015543267130852,
+    "first_param_norm": 1803.462890625,
+    "last_param_norm": 1803.4686279296875,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 193,
+    "scalars_sha256": "472e7c3798b5f2dcacbff72d58980a3a7cbb34fbe479bd91110dddde75da787a",
+    "final_state_digest": "a60a2ffd11148aaee188b68fc3ea2c4b3582e92e737830b2a8eba9486c83a893",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.691414447481444,
+      "samples_per_second": 4.729769224752803,
+      "slow_threshold_s": 2.537998616695404,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 6338,
+          "mean_pct": 96.36241716629851,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.32376143893973,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.4010728936573,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 6338,
+          "mean_pct": 96.36241716629851,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.32376143893973,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.4010728936573,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "6": 78641.0,
+        "7": 78641.0
+      },
+      "checksum_seconds": 2262.5889999999995,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3403.773611307144
+    },
+    "checkpoint": null
+  },
+  {
+    "run": "t8-m8-b",
+    "profile": "m8",
+    "role": "b",
+    "start_head": "38f0db46db19a3b645613e04fba3f6e635b47054",
+    "start_utc": "2026-09-14T10:19:10Z",
+    "end_utc": "2026-09-14T11:24:14Z",
+    "wall_seconds": 3904.0,
+    "history_config": "perceptual-framesamp-context-8frame-8x8-motion.yaml",
+    "dataset_impl": "packed",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/framesamp-8x8",
+    "gpus": "6,7",
+    "first_loss": 0.5342200994491577,
+    "last_loss": 0.031015543267130852,
+    "first_param_norm": 1803.462890625,
+    "last_param_norm": 1803.4686279296875,
+    "state_steps": [
+      0,
+      2,
+      3,
+      25,
+      50,
+      100,
+      200,
+      400,
+      600,
+      800,
+      1000
+    ],
+    "n_leaves": 193,
+    "scalars_sha256": "472e7c3798b5f2dcacbff72d58980a3a7cbb34fbe479bd91110dddde75da787a",
+    "final_state_digest": "a60a2ffd11148aaee188b68fc3ea2c4b3582e92e737830b2a8eba9486c83a893",
+    "norm_stats_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme/norm_stats.json",
+    "performance": {
+      "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+      "batch_size": 8,
+      "num_workers": 4,
+      "warmup_steps": 50,
+      "steady_step_range": [
+        50,
+        999
+      ],
+      "excluded_digest_and_next": [
+        0,
+        1,
+        2,
+        3,
+        24,
+        25,
+        49,
+        50,
+        99,
+        100,
+        199,
+        200,
+        399,
+        400,
+        599,
+        600,
+        799,
+        800,
+        999,
+        1000
+      ],
+      "sampling_ms": 500,
+      "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+      "steady_steps": 938,
+      "step_mean_s": 1.6862795047922683,
+      "samples_per_second": 4.744171993589826,
+      "slow_threshold_s": 2.52825003862381,
+      "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+      "util": {
+        "all": {
+          "n": 6312,
+          "mean_pct": 96.59489860583017,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.22750316856781,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.96229404309253,
+              "zero_pct_share": 0.0
+            }
+          }
+        },
+        "slow": {
+          "n": 0,
+          "mean_pct": null,
+          "zero_pct_share": null
+        },
+        "other": {
+          "n": 6312,
+          "mean_pct": 96.59489860583017,
+          "zero_pct_share": 0.0,
+          "per_gpu": {
+            "6": {
+              "mean_pct": 96.22750316856781,
+              "zero_pct_share": 0.0
+            },
+            "7": {
+              "mean_pct": 96.96229404309253,
+              "zero_pct_share": 0.0
+            }
+          }
+        }
+      },
+      "peak_gpu_memory_mib": {
+        "6": 78641.0,
+        "7": 78641.0
+      },
+      "checksum_seconds": 2105.5350000000003,
+      "checksum_count": 11,
+      "observed_first_to_last_metric_s": 3363.366604089737
+    },
+    "checkpoint": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-m8-b/mme_vla_suite/t8-m8-b/999"
+  }
+]

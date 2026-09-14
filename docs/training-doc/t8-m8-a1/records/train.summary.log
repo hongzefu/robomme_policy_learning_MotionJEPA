@@ -1,0 +1,3285 @@
+START_HEAD=99faacb1319adfc63c0cf9a15187e24c34e38fd1
+START_UTC=2026-09-14T08:02:14Z
+RUN=t8-m8-a1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+OK 指纹写入 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/8x8/t8-m8-a1/env.json
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+OK BASELINE_MANIFEST.json: 1 个产物
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+BASELINE_ENV=PASS
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[bench] import_origins={"mme_vla_suite": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/ref-8x8/src/mme_vla_suite/__init__.py", "train": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/ref-8x8/scripts/training/train.py", "framesamp_dataset": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/ref-8x8/src/mme_vla_suite/training/framesamp_dataset.py", "framesamp_store": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/ref-8x8/src/mme_vla_suite/datastore/framesamp_store.py"}
+08:02:23.249 [I] Running on: ip-10-242-11-177.us-west-2.compute.internal                          (421180:train.py:340)
+08:02:23.249 [I] TrainConfig: TrainConfig(name='mme_vla_suite', project_name='openpi', exp_name='t8-m8-a1', model=HistoryPi0Config(action_dim=32, action_horizon=20, max_token_len=64, dtype='bfloat16', paligemma_variant='gemma_2b', action_expert_variant='gemma_300m', pi05=True, discrete_state_input=False, memory_expert_variant='gemma_150m', use_history=True, history_config='perceptual-framesamp-context-8frame-8x8-motion.yaml'), weight_loader=CheckpointWeightLoader(params_path='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params'), pytorch_weight_path=None, pytorch_training_precision='bfloat16', lr_schedule=CosineDecaySchedule(warmup_steps=10000, peak_lr=5e-05, decay_steps=100000, decay_lr=5e-05), optimizer=AdamW(b1=0.9, b2=0.95, eps=1e-08, weight_decay=1e-10, clip_gradient_norm=1.0), ema_decay=0.999, freeze_filter=PathRegex(pattern=re.compile('.*img.*'), sep='/'), data=RoboMMEDataConfig(repo_id='robomme', assets=AssetsConfig(assets_dir='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep', asset_id='robomme'), base_config=DataConfig(repo_id=None, asset_id=None, norm_stats=None, repack_transforms=Group(inputs=(), outputs=()), data_transforms=Group(inputs=(), outputs=()), model_transforms=Group(inputs=(), outputs=()), use_quantile_norm=False, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)), assets_base_dir='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets', checkpoint_base_dir='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-m8-a1', seed=42, batch_size=8, num_workers=4, num_train_steps=1000, log_interval=1, save_interval=1, keep_period=10000, overwrite=False, resume=False, wandb_enabled=False, policy_metadata=None, fsdp_devices=2, resum_ckpt_id=None, dataset_path='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-400ep/source') (421180:train.py:341)
+INFO:2026-09-14 08:02:25,692:jax._src.xla_bridge:925: Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+08:02:25.692 [I] Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig' (421180:xla_bridge.py:925)
+INFO:2026-09-14 08:02:25,693:jax._src.xla_bridge:925: Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+08:02:25.693 [I] Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory (421180:xla_bridge.py:925)
+08:02:27.320 [I] Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x7f278113d490> (421180:base_pytree_checkpoint_handler.py:334)
+08:02:27.320 [I] [thread=MainThread] Failed to get flag value for EXPERIMENTAL_ORBAX_USE_DISTRIBUTED_PROCESS_ID. (421180:multihost.py:390)
+08:02:27.321 [I] [process=0][thread=MainThread] CheckpointManager init: checkpointers=None, item_names=None, item_handlers={'assets': <openpi.training.checkpoints.CallbackHandler object at 0x7f26bb9f8110>, 'params': <orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f26bb968110>}, handler_registry=None (421180:checkpoint_manager.py:620)
+08:02:27.321 [I] Deferred registration for item: "assets". Adding handler `<openpi.training.checkpoints.CallbackHandler object at 0x7f26bb9f8110>` for item "assets" and save args `<class 'openpi.training.checkpoints.CallbackSave'>` and restore args `<class 'openpi.training.checkpoints.CallbackRestore'>` to `_handler_registry`. (421180:composite_checkpoint_handler.py:234)
+08:02:27.321 [I] Deferred registration for item: "params". Adding handler `<orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f26bb968110>` for item "params" and save args `<class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeSaveArgs'>` and restore args `<class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeRestoreArgs'>` to `_handler_registry`. (421180:composite_checkpoint_handler.py:234)
+08:02:27.321 [I] Deferred registration for item: "metrics". Adding handler `<orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonCheckpointHandler object at 0x7f26bb968ed0>` for item "metrics" and save args `<class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonSaveArgs'>` and restore args `<class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonRestoreArgs'>` to `_handler_registry`. (421180:composite_checkpoint_handler.py:234)
+08:02:27.322 [I] Initialized registry DefaultCheckpointHandlerRegistry({('assets', <class 'openpi.training.checkpoints.CallbackSave'>): <openpi.training.checkpoints.CallbackHandler object at 0x7f26bb9f8110>, ('assets', <class 'openpi.training.checkpoints.CallbackRestore'>): <openpi.training.checkpoints.CallbackHandler object at 0x7f26bb9f8110>, ('params', <class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeSaveArgs'>): <orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f26bb968110>, ('params', <class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeRestoreArgs'>): <orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f26bb968110>, ('metrics', <class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonSaveArgs'>): <orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonCheckpointHandler object at 0x7f26bb968ed0>, ('metrics', <class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonRestoreArgs'>): <orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonCheckpointHandler object at 0x7f26bb968ed0>}). (421180:composite_checkpoint_handler.py:502)
+08:02:27.322 [I] orbax-checkpoint version: 0.11.13                                                (421180:abstract_checkpointer.py:35)
+08:02:27.322 [I] [process=0][thread=MainThread] Using barrier_sync_fn: <function get_barrier_sync_fn.<locals>.<lambda> at 0x7f26bb622fc0> timeout: 7200 secs and primary_host=0 for async checkpoint writes (421180:async_checkpointer.py:170)
+08:02:27.322 [I] Found 0 checkpoint steps in /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-m8-a1/mme_vla_suite/t8-m8-a1 (421180:checkpoint_manager.py:1701)
+08:02:27.322 [I] [process=0][thread=MainThread] CheckpointManager created,  primary_host=0, CheckpointManagerOptions=CheckpointManagerOptions(save_interval_steps=1, max_to_keep=1, keep_time_interval=None, keep_period=10000, should_keep_fn=None, best_fn=None, best_mode='max', keep_checkpoints_without_metrics=True, step_prefix=None, step_format_fixed_length=None, step_name_format=None, create=False, cleanup_tmp_directories=False, save_on_steps=frozenset(), single_host_load_and_broadcast=False, todelete_subdir=None, enable_background_delete=False, read_only=False, enable_async_checkpointing=True, async_options=AsyncOptions(timeout_secs=7200, barrier_sync_fn=None, post_finalization_callback=None, create_directories_asynchronously=True), multiprocessing_options=MultiprocessingOptions(primary_host=0, active_processes=None, barrier_sync_key_prefix=None), should_save_fn=None, file_options=FileOptions(path_permission_mode=None), save_root_metadata=True, temporary_path_class=None, save_decision_policy=None, prevent_write_metrics=False), root_directory=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/t8-m8-a1/mme_vla_suite/t8-m8-a1: <orbax.checkpoint.checkpoint_manager.CheckpointManager object at 0x7f26bba8b0d0> (421180:checkpoint_manager.py:801)
+max_token_len: 64
+08:02:27.552 [I] Loaded norm stats from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme-400ep/robomme (421180:config.py:275)
+08:02:27.554 [I] data_config: DataConfig(repo_id='robomme', asset_id='robomme', norm_stats={'state': NormStats(mean=array([ 4.14213212e-03,  2.95316875e-01,  2.81171501e-03, -2.09527302e+00,
+        5.09165053e-04,  2.39044905e+00,  7.91704059e-01,  2.64126267e-02]), std=array([0.10681286, 0.31786537, 0.07478532, 0.48271781, 0.04616816,
+       0.34543198, 0.40309104, 0.01649354]), q01=array([-0.2115381 , -0.21799494, -0.15527991, -2.81375072, -0.13752411,
+        1.57079637, -0.17353815,  0.        ]), q99=array([ 0.26063799,  1.015885  ,  0.16945301, -1.03784064,  0.12187375,
+        3.03210984,  1.80900472,  0.039992  ])), 'actions': NormStats(mean=array([ 8.22788454e-04,  2.01418120e-02, -2.85705464e-05, -8.36590212e-03,
+       -1.12210531e-04,  2.80541796e-02,  8.23505805e-04,  6.54151067e-02]), std=array([0.03591497, 0.13662103, 0.03267474, 0.15376154, 0.02708418,
+       0.15998593, 0.09374132, 0.99785817]), q01=array([-0.13796722, -0.31632186, -0.12670147, -0.59128337, -0.10148964,
+       -0.31253482, -0.34689998, -1.        ]), q99=array([0.12307586, 0.40273976, 0.0954464 , 0.52908852, 0.0959089 ,
+       0.53904308, 0.34748609, 0.9996    ]))}, repack_transforms=Group(inputs=[RepackTransform(structure={'observation/image': 'image', 'observation/wrist_image': 'wrist_image', 'observation/state': 'state', 'actions': 'actions', 'prompt': 'prompt', 'static_image_emb': 'static_image_emb', 'static_pos_emb': 'static_pos_emb', 'static_state_emb': 'static_state_emb', 'static_mask': 'static_mask', 'motion_emb': 'motion_emb', 'motion_pos': 'motion_pos', 'motion_mask': 'motion_mask', 'mem_order': 'mem_order'})], outputs=()), data_transforms=Group(inputs=(RoboMMEInputs(model_type=<ModelType.PI05: 'pi05'>), DeltaActions(mask=(True, True, True, True, True, True, True, False))), outputs=(AbsoluteActions(mask=(True, True, True, True, True, True, True, False)), RoboMMEOutputs())), model_transforms=Group(inputs=[InjectDefaultPrompt(prompt=None), ResizeImages(height=224, width=224), TokenizePromptWithState(tokenizer=<mme_vla_suite.training.config.PaligemmaTokenizer object at 0x7f26bb95f1d0>, discrete_state_input=False), PadStatesAndActions(model_action_dim=32)], outputs=()), use_quantile_norm=True, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None) (421180:train.py:397)
+08:02:27.575 [I] local_batch_size: 8                                                              (421180:dataloader.py:134)
+08:02:52.433 [I] Initialized data loader:
+[0].images['base_0_rgb']: (8, 224, 224, 3)@float32
+[0].images['left_wrist_0_rgb']: (8, 224, 224, 3)@float32
+[0].image_masks['base_0_rgb']: (8,)@bool
+[0].image_masks['left_wrist_0_rgb']: (8,)@bool
+[0].state: (8, 32)@float32
+[0].tokenized_prompt: (8, 64)@int32
+[0].tokenized_prompt_mask: (8, 64)@bool
+[0].static_image_emb: (8, 512, 2048)@bfloat16
+[0].static_mask: (8, 512)@bool
+[0].static_pos_emb: (8, 512, 768)@float32
+[0].static_state_emb: (8, 512, 8)@float32
+[0].motion_emb: (8, 96, 768)@float32
+[0].motion_pos: (8, 96, 256)@float32
+[0].motion_mask: (8, 96)@bool
+[0].mem_order: (8, 608)@int32
+[1]: (8, 20, 32)@float32 (421180:train.py:412)
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+08:02:53.948 [I] Total Model Size: 3207.339126586914 MB                                           (421180:train.py:210)
+08:02:53.949 [I] Trainable Model Size: 2811.751495361328 MB                                       (421180:train.py:213)
+08:02:53.950 [I] Memory-related  Size: 9.25537109375 MB                                           (421180:train.py:218)
+08:02:53.950 [I] Non-Memory Size: 2802.496124267578 MB                                            (421180:train.py:221)
+08:02:53.982 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['kernel'].value of shape (27, 1152, 4304) (255.34 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.982 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['kernel'].value of shape (27, 4304, 1152) (255.34 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.982 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.983 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['kernel'].value of shape (27, 16, 72, 1152) (68.34 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.983 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.983 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.983 [I] Sharding .params['PaliGemma']['img']['head']['kernel'].value of shape (1152, 2048) (4.50 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.983 [I] Sharding .params['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (421180:sharding.py:89)
+08:02:53.983 [I] Sharding .params['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.983 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.983 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.983 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.983 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.984 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.984 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.984 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.984 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.984 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.984 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.984 [I] Sharding .params['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.984 [I] Sharding .params['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.984 [I] Sharding .params['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 2048) (22.00 MiB) along axis 0 (421180:sharding.py:89)
+08:02:53.985 [I] Sharding .params['mem_encoder']['motion_encoder_static']['kernel'].value of shape (1536, 2048) (12.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.985 [I] Sharding .params['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.985 [I] Sharding .params['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.985 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (421180:sharding.py:89)
+08:02:53.985 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.985 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.985 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.985 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.985 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.985 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.985 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.986 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.986 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.986 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.986 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.986 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.986 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.986 [I] Sharding .opt_state[1][0].mu['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 2048) (22.00 MiB) along axis 0 (421180:sharding.py:89)
+08:02:53.986 [I] Sharding .opt_state[1][0].mu['mem_encoder']['motion_encoder_static']['kernel'].value of shape (1536, 2048) (12.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.986 [I] Sharding .opt_state[1][0].mu['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.987 [I] Sharding .opt_state[1][0].mu['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.987 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (421180:sharding.py:89)
+08:02:53.987 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.987 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.987 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.987 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.987 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.987 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.987 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.987 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.987 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.988 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.988 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.988 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.988 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.988 [I] Sharding .opt_state[1][0].nu['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 2048) (22.00 MiB) along axis 0 (421180:sharding.py:89)
+08:02:53.988 [I] Sharding .opt_state[1][0].nu['mem_encoder']['motion_encoder_static']['kernel'].value of shape (1536, 2048) (12.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.988 [I] Sharding .opt_state[1][0].nu['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.989 [I] Sharding .opt_state[1][0].nu['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.989 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['kernel'].value of shape (27, 1152, 4304) (255.34 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.989 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['kernel'].value of shape (27, 4304, 1152) (255.34 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.989 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.989 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['kernel'].value of shape (27, 16, 72, 1152) (68.34 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.989 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.989 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.989 [I] Sharding .ema_params['PaliGemma']['img']['head']['kernel'].value of shape (1152, 2048) (4.50 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.989 [I] Sharding .ema_params['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.990 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.991 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (421180:sharding.py:89)
+08:02:53.991 [I] Sharding .ema_params['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 2048) (22.00 MiB) along axis 0 (421180:sharding.py:89)
+08:02:53.991 [I] Sharding .ema_params['mem_encoder']['motion_encoder_static']['kernel'].value of shape (1536, 2048) (12.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.991 [I] Sharding .ema_params['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.991 [I] Sharding .ema_params['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (421180:sharding.py:89)
+08:02:53.993 [I] Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x7f278113d490> (421180:base_pytree_checkpoint_handler.py:334)
+08:02:54.018 [I] Restoring checkpoint from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params. (421180:checkpointer.py:298)
+08:03:00.001 [I] [process=0] /jax/checkpoint/read/bytes_per_sec: 2.1 GiB/s (total bytes: 12.5 GiB) (time elapsed: 5 seconds) (per-host) (421180:base_pytree_checkpoint_handler.py:114)
+08:03:00.002 [I] Finished restoring checkpoint in 5.98 seconds from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params. (421180:checkpointer.py:309)
+08:03:00.529 [I] Merging missing weight: mem_encoder/motion_pos_proj/bias, shape: (768,), dtype: float32 (421180:weight_loaders.py:103)
+08:03:00.529 [I] Merging missing weight: mem_encoder/feature_encoder/pos_proj/bias, shape: (768,), dtype: float32 (421180:weight_loaders.py:103)
+08:03:00.529 [I] Merging missing weight: mem_encoder/motion_encoder_static/bias, shape: (2048,), dtype: float32 (421180:weight_loaders.py:103)
+08:03:00.529 [I] Merging missing weight: mem_encoder/motion_pos_proj/kernel, shape: (256, 768), dtype: float32 (421180:weight_loaders.py:103)
+08:03:00.529 [I] Merging missing weight: mem_encoder/feature_encoder/pos_proj/kernel, shape: (768, 768), dtype: float32 (421180:weight_loaders.py:103)
+08:03:00.529 [I] Merging missing weight: mem_encoder/motion_encoder_static/kernel, shape: (1536, 2048), dtype: float32 (421180:weight_loaders.py:103)
+08:03:00.529 [I] Merging missing weight: mem_encoder/feature_encoder/encoder_static/kernel, shape: (2816, 2048), dtype: float32 (421180:weight_loaders.py:103)
+08:03:00.530 [I] Merging missing weight: mem_encoder/feature_encoder/encoder_static/bias, shape: (2048,), dtype: float32 (421180:weight_loaders.py:103)
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: context ======
+Perceptual Memory using frame_sampling type
+
+08:03:00.904 [I] Total Model Size: 3207.339126586914 MB                                           (421180:train.py:210)
+08:03:00.906 [I] Trainable Model Size: 2811.751495361328 MB                                       (421180:train.py:213)
+08:03:00.907 [I] Memory-related  Size: 9.25537109375 MB                                           (421180:train.py:218)
+08:03:00.907 [I] Non-Memory Size: 2802.496124267578 MB                                            (421180:train.py:221)
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+
+[bench] step 0: TrainState 摘要 state=589e768a6cfc89d9… params+ema=fdada262b8ef5aeb… (193 叶子, 耗时 437.42s)
+08:10:26.012 [I] Initialized train state:
+['PaliGemma']['img']['Transformer']['encoder_norm']['bias'].value: (1152,)@bfloat16
+['PaliGemma']['img']['Transformer']['encoder_norm']['scale'].value: (1152,)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_0']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_0']['scale'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_1']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_1']['scale'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['bias'].value: (27, 4304)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['kernel'].value: (27, 1152, 4304)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['kernel'].value: (27, 4304, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['kernel'].value: (27, 16, 72, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['embedding']['bias'].value: (1152,)@bfloat16
+['PaliGemma']['img']['embedding']['kernel'].value: (14, 14, 3, 1152)@bfloat16
+['PaliGemma']['img']['head']['bias'].value: (2048,)@bfloat16
+['PaliGemma']['img']['head']['kernel'].value: (1152, 2048)@bfloat16
+['PaliGemma']['img']['pos_embedding'].value: (1, 256, 1152)@bfloat16
+['PaliGemma']['llm']['embedder']['input_embedding'].value: (257152, 2048)@float32
+['PaliGemma']['llm']['final_norm']['scale'].value: (2048,)@float32
+['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias'].value: (3072,)@float32
+['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value: (1024, 3072)@float32
+['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value: (18, 8, 256, 2048)@float32
+['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value: (18, 8, 256, 1024)@float32
+['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value: (18, 2, 1, 2048, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value: (18, 2, 1, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value: (18, 8, 2048, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value: (18, 8, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value: (18, 2, 2048, 16384)@float32
+['PaliGemma']['llm']['layers']['mlp']['linear'].value: (18, 16384, 2048)@float32
+['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value: (18, 2, 1024, 4096)@float32
+['PaliGemma']['llm']['layers']['mlp_1']['linear'].value: (18, 4096, 1024)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm']['scale'].value: (18, 2048)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias'].value: (18, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value: (18, 1024, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale'].value: (18, 2048)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias'].value: (18, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value: (18, 1024, 3072)@float32
+['action_in_proj']['bias'].value: (1024,)@float32
+['action_in_proj']['kernel'].value: (32, 1024)@float32
+['action_out_proj']['bias'].value: (32,)@float32
+['action_out_proj']['kernel'].value: (1024, 32)@float32
+['mem_encoder']['feature_encoder']['encoder_static']['bias'].value: (2048,)@float32
+['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value: (2816, 2048)@float32
+['mem_encoder']['feature_encoder']['pos_proj']['bias'].value: (768,)@float32
+['mem_encoder']['feature_encoder']['pos_proj']['kernel'].value: (768, 768)@float32
+['mem_encoder']['motion_encoder_static']['bias'].value: (2048,)@float32
+['mem_encoder']['motion_encoder_static']['kernel'].value: (1536, 2048)@float32
+['mem_encoder']['motion_pos_proj']['bias'].value: (768,)@float32
+['mem_encoder']['motion_pos_proj']['kernel'].value: (256, 768)@float32
+['time_mlp_in']['bias'].value: (1024,)@float32
+['time_mlp_in']['kernel'].value: (1024, 1024)@float32
+['time_mlp_out']['bias'].value: (1024,)@float32
+['time_mlp_out']['kernel'].value: (1024, 1024)@float32 (421180:train.py:431)
+2026-09-14 08:10:30.292518: E external/xla/xla/service/slow_operation_alarm.cc:73] Constant folding an instruction is taking > 1s:
+
+  %reduce-window.12 = s32[8,1204]{1,0} reduce-window(%broadcast.4788, %constant.2780), window={size=1x1204 pad=0_0x1203_0}, to_apply=%region_35.11012, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/ref-8x8/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2026-09-14 08:10:30.625268: E external/xla/xla/service/slow_operation_alarm.cc:140] The operation took 1.332885545s
+Constant folding an instruction is taking > 1s:
+
+  %reduce-window.12 = s32[8,1204]{1,0} reduce-window(%broadcast.4788, %constant.2780), window={size=1x1204 pad=0_0x1203_0}, to_apply=%region_35.11012, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/ref-8x8/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+
+
+Step 0: grad_norm=48.2443, llm_grad_norm=35.1141, loss=0.5342, mem_enc_norm=32.8774, param_norm=1803.4629
+
+
+Step 1: grad_norm=67.2175, llm_grad_norm=46.1988, loss=0.5883, mem_enc_norm=48.7177, param_norm=1803.4629
+
+[bench] step 1: TrainState 摘要 state=4cd6220b14a172a7… params+ema=609bd67486e6c95c… (193 叶子, 耗时 178.168s)
+
+
+Step 2: grad_norm=46.1085, llm_grad_norm=34.3584, loss=0.6326, mem_enc_norm=30.4693, param_norm=1803.4629
+
+[bench] step 2: TrainState 摘要 state=a922b19df43be4d9… params+ema=edbde76e2ed87c37… (193 叶子, 耗时 196.358s)
+
+
+Step 3: grad_norm=111.9599, llm_grad_norm=81.3500, loss=0.4342, mem_enc_norm=76.8661, param_norm=1803.4629
+
+
+Step 4: grad_norm=46.7077, llm_grad_norm=33.7804, loss=0.7161, mem_enc_norm=31.8344, param_norm=1803.4629
+
+
+Step 5: grad_norm=83.5506, llm_grad_norm=63.2182, loss=0.5213, mem_enc_norm=54.5300, param_norm=1803.4629
+
+
+Step 6: grad_norm=49.2146, llm_grad_norm=33.5204, loss=0.5168, mem_enc_norm=35.9589, param_norm=1803.4629
+
+
+Step 7: grad_norm=25.6000, llm_grad_norm=20.0778, loss=0.4309, mem_enc_norm=15.5605, param_norm=1803.4629
+
+
+Step 8: grad_norm=98.9204, llm_grad_norm=71.5840, loss=0.6787, mem_enc_norm=68.1592, param_norm=1803.4629
+
+
+Step 9: grad_norm=38.7582, llm_grad_norm=28.0131, loss=0.5466, mem_enc_norm=26.4539, param_norm=1803.4629
+
+
+Step 10: grad_norm=58.5420, llm_grad_norm=39.5816, loss=0.5133, mem_enc_norm=43.0519, param_norm=1803.4629
+
+
+Step 11: grad_norm=31.5097, llm_grad_norm=23.4009, loss=0.3956, mem_enc_norm=20.8937, param_norm=1803.4629
+
+
+Step 12: grad_norm=39.9894, llm_grad_norm=28.9069, loss=0.4217, mem_enc_norm=27.3471, param_norm=1803.4629
+
+
+Step 13: grad_norm=79.6708, llm_grad_norm=61.1326, loss=0.3870, mem_enc_norm=50.8158, param_norm=1803.4629
+
+
+Step 14: grad_norm=58.3708, llm_grad_norm=39.0447, loss=0.5555, mem_enc_norm=43.1739, param_norm=1803.4629
+
+
+Step 15: grad_norm=24.5358, llm_grad_norm=17.3778, loss=0.4812, mem_enc_norm=17.0899, param_norm=1803.4629
+
+
+Step 16: grad_norm=34.6401, llm_grad_norm=23.0021, loss=0.4691, mem_enc_norm=25.7780, param_norm=1803.4629
+
+
+Step 17: grad_norm=29.4229, llm_grad_norm=21.3726, loss=0.4293, mem_enc_norm=20.0304, param_norm=1803.4629
+
+
+Step 18: grad_norm=80.8060, llm_grad_norm=60.9310, loss=0.5491, mem_enc_norm=52.7888, param_norm=1803.4629
+
+
+Step 19: grad_norm=31.8915, llm_grad_norm=22.9898, loss=0.4894, mem_enc_norm=21.7723, param_norm=1803.4629
+
+
+Step 20: grad_norm=47.8279, llm_grad_norm=33.4355, loss=0.4668, mem_enc_norm=33.9910, param_norm=1803.4629
+
+
+Step 21: grad_norm=45.9196, llm_grad_norm=31.2548, loss=0.3731, mem_enc_norm=33.5086, param_norm=1803.4629
+
+
+Step 22: grad_norm=20.9570, llm_grad_norm=15.4991, loss=0.3652, mem_enc_norm=13.8073, param_norm=1803.4629
+
+
+Step 23: grad_norm=32.5513, llm_grad_norm=23.1145, loss=0.4153, mem_enc_norm=22.7479, param_norm=1803.4629
+
+
+Step 24: grad_norm=31.2672, llm_grad_norm=22.2275, loss=0.5288, mem_enc_norm=21.7667, param_norm=1803.4629
+
+[bench] step 24: TrainState 摘要 state=2e73e6407fb7193a… params+ema=3acc81226adfb186… (193 叶子, 耗时 197.443s)
+
+
+Step 25: grad_norm=33.3116, llm_grad_norm=23.8366, loss=0.5630, mem_enc_norm=23.0877, param_norm=1803.4629
+
+
+Step 26: grad_norm=67.8062, llm_grad_norm=51.1599, loss=0.4290, mem_enc_norm=44.4082, param_norm=1803.4629
+
+
+Step 27: grad_norm=38.9147, llm_grad_norm=26.5271, loss=0.4454, mem_enc_norm=28.2884, param_norm=1803.4629
+
+
+Step 28: grad_norm=46.0549, llm_grad_norm=31.3960, loss=0.4937, mem_enc_norm=33.5623, param_norm=1803.4629
+
+
+Step 29: grad_norm=38.6202, llm_grad_norm=29.8782, loss=0.4112, mem_enc_norm=24.3941, param_norm=1803.4629
+
+
+Step 30: grad_norm=48.2613, llm_grad_norm=35.9671, loss=0.3463, mem_enc_norm=32.0822, param_norm=1803.4629
+
+
+Step 31: grad_norm=52.4548, llm_grad_norm=33.3207, loss=0.3195, mem_enc_norm=40.3886, param_norm=1803.4629
+
+
+Step 32: grad_norm=24.8454, llm_grad_norm=17.5216, loss=0.2731, mem_enc_norm=17.3833, param_norm=1803.4629
+
+
+Step 33: grad_norm=19.8853, llm_grad_norm=14.7752, loss=0.3129, mem_enc_norm=13.0742, param_norm=1803.4629
+
+
+Step 34: grad_norm=25.8481, llm_grad_norm=19.4686, loss=0.4442, mem_enc_norm=16.6491, param_norm=1803.4629
+
+
+Step 35: grad_norm=16.4299, llm_grad_norm=11.8424, loss=0.3082, mem_enc_norm=11.0159, param_norm=1803.4629
+
+
+Step 36: grad_norm=42.4002, llm_grad_norm=29.8487, loss=0.4232, mem_enc_norm=30.0333, param_norm=1803.4629
+
+
+Step 37: grad_norm=12.7544, llm_grad_norm=9.3051, loss=0.2483, mem_enc_norm=8.5736, param_norm=1803.4629
+
+
+Step 38: grad_norm=41.7876, llm_grad_norm=30.1351, loss=0.3122, mem_enc_norm=28.8987, param_norm=1803.4631
+
+
+Step 39: grad_norm=44.8373, llm_grad_norm=33.7596, loss=0.3402, mem_enc_norm=29.4172, param_norm=1803.4629
+
+
+Step 40: grad_norm=26.2518, llm_grad_norm=19.3773, loss=0.3505, mem_enc_norm=17.6158, param_norm=1803.4629
+
+
+Step 41: grad_norm=35.8007, llm_grad_norm=26.4851, loss=0.4640, mem_enc_norm=23.9583, param_norm=1803.4629
+
+
+Step 42: grad_norm=11.8087, llm_grad_norm=8.8527, loss=0.3354, mem_enc_norm=7.6078, param_norm=1803.4629
+
+
+Step 43: grad_norm=29.7732, llm_grad_norm=20.3651, loss=0.3537, mem_enc_norm=21.6279, param_norm=1803.4629
+
+
+Step 44: grad_norm=15.4036, llm_grad_norm=10.9057, loss=0.2614, mem_enc_norm=10.7576, param_norm=1803.4631
+
+
+Step 45: grad_norm=157.2701, llm_grad_norm=115.8295, loss=0.3667, mem_enc_norm=106.3588, param_norm=1803.4631
+
+
+Step 46: grad_norm=48.2877, llm_grad_norm=35.2881, loss=0.2762, mem_enc_norm=32.7674, param_norm=1803.4629
+
+
+Step 47: grad_norm=27.9698, llm_grad_norm=18.4628, loss=0.4958, mem_enc_norm=20.7219, param_norm=1803.4631
+
+
+Step 48: grad_norm=12.2458, llm_grad_norm=9.6678, loss=0.2509, mem_enc_norm=7.3645, param_norm=1803.4631
+
+
+Step 49: grad_norm=15.8000, llm_grad_norm=10.5359, loss=0.2372, mem_enc_norm=11.6719, param_norm=1803.4629
+
+[bench] step 49: TrainState 摘要 state=59ed7d69d3407abe… params+ema=45da2dbe2fa92be6… (193 叶子, 耗时 218.343s)
+
+
+Step 50: grad_norm=43.0634, llm_grad_norm=30.7295, loss=0.4340, mem_enc_norm=29.9980, param_norm=1803.4629
+
+
+Step 51: grad_norm=21.7332, llm_grad_norm=14.0274, loss=0.2294, mem_enc_norm=16.4974, param_norm=1803.4631
+
+
+Step 52: grad_norm=14.8066, llm_grad_norm=10.7262, loss=0.2931, mem_enc_norm=10.0565, param_norm=1803.4631
+
+
+Step 53: grad_norm=29.3775, llm_grad_norm=21.8537, loss=0.2513, mem_enc_norm=19.5549, param_norm=1803.4631
+
+
+Step 54: grad_norm=24.1658, llm_grad_norm=16.2966, loss=0.2494, mem_enc_norm=17.7750, param_norm=1803.4631
+
+
+Step 55: grad_norm=44.5011, llm_grad_norm=32.6692, loss=0.2800, mem_enc_norm=30.0930, param_norm=1803.4631
+
+
+Step 56: grad_norm=48.6661, llm_grad_norm=35.4346, loss=0.2559, mem_enc_norm=33.3247, param_norm=1803.4631
+
+
+Step 57: grad_norm=21.6063, llm_grad_norm=15.3714, loss=0.2599, mem_enc_norm=15.0960, param_norm=1803.4631
+
+
+Step 58: grad_norm=50.5754, llm_grad_norm=33.3676, loss=0.3777, mem_enc_norm=37.9199, param_norm=1803.4631
+
+
+Step 59: grad_norm=50.6044, llm_grad_norm=35.2201, loss=0.3029, mem_enc_norm=36.3160, param_norm=1803.4631
+
+
+Step 60: grad_norm=7.4205, llm_grad_norm=5.4000, loss=0.1790, mem_enc_norm=4.9812, param_norm=1803.4631
+
+
+Step 61: grad_norm=5.2857, llm_grad_norm=3.9081, loss=0.1479, mem_enc_norm=3.4640, param_norm=1803.4631
+
+
+Step 62: grad_norm=5.2061, llm_grad_norm=3.7345, loss=0.1700, mem_enc_norm=3.5393, param_norm=1803.4631
+
+
+Step 63: grad_norm=17.1340, llm_grad_norm=12.5086, loss=0.2928, mem_enc_norm=11.6171, param_norm=1803.4631
+
+
+Step 64: grad_norm=80.0843, llm_grad_norm=60.9600, loss=0.1769, mem_enc_norm=51.9257, param_norm=1803.4631
+
+
+Step 65: grad_norm=14.9159, llm_grad_norm=11.1829, loss=0.3307, mem_enc_norm=9.6323, param_norm=1803.4631
+
+
+Step 66: grad_norm=13.9349, llm_grad_norm=9.9949, loss=0.2264, mem_enc_norm=9.6266, param_norm=1803.4631
+
+
+Step 67: grad_norm=14.5529, llm_grad_norm=10.7323, loss=0.2044, mem_enc_norm=9.7691, param_norm=1803.4631
+
+
+Step 68: grad_norm=20.6520, llm_grad_norm=16.5851, loss=0.2351, mem_enc_norm=12.2644, param_norm=1803.4631
+
+
+Step 69: grad_norm=32.7728, llm_grad_norm=22.7281, loss=0.2134, mem_enc_norm=23.5350, param_norm=1803.4631
+
+
+Step 70: grad_norm=18.7013, llm_grad_norm=11.4725, loss=0.2663, mem_enc_norm=14.7139, param_norm=1803.4631
+
+
+Step 71: grad_norm=34.8137, llm_grad_norm=24.6224, loss=0.2154, mem_enc_norm=24.5713, param_norm=1803.4631
+
+
+Step 72: grad_norm=124.6792, llm_grad_norm=87.7320, loss=0.2534, mem_enc_norm=88.5435, param_norm=1803.4631
+
+
+Step 73: grad_norm=23.6110, llm_grad_norm=17.4914, loss=0.1872, mem_enc_norm=15.8363, param_norm=1803.4631
+
+
+Step 74: grad_norm=17.8396, llm_grad_norm=12.6804, loss=0.2320, mem_enc_norm=12.4817, param_norm=1803.4631
+
+
+Step 75: grad_norm=21.5049, llm_grad_norm=15.8232, loss=0.3155, mem_enc_norm=14.5317, param_norm=1803.4631
+
+
+Step 76: grad_norm=72.9786, llm_grad_norm=54.0266, loss=0.2823, mem_enc_norm=49.0398, param_norm=1803.4631
+
+
+Step 77: grad_norm=12.0530, llm_grad_norm=8.7125, loss=0.1317, mem_enc_norm=8.2658, param_norm=1803.4631
+
+
+Step 78: grad_norm=9.8574, llm_grad_norm=6.5447, loss=0.1566, mem_enc_norm=7.3232, param_norm=1803.4631
+
+
+Step 79: grad_norm=9.7940, llm_grad_norm=7.3329, loss=0.1607, mem_enc_norm=6.4251, param_norm=1803.4631
+
+
+Step 80: grad_norm=6.2783, llm_grad_norm=4.6237, loss=0.1896, mem_enc_norm=3.9494, param_norm=1803.4631
+
+
+Step 81: grad_norm=120.0402, llm_grad_norm=89.4306, loss=0.2041, mem_enc_norm=80.0697, param_norm=1803.4631
+
+
+Step 82: grad_norm=8.0608, llm_grad_norm=6.2250, loss=0.1527, mem_enc_norm=5.0666, param_norm=1803.4631
+
+
+Step 83: grad_norm=10.8479, llm_grad_norm=7.8990, loss=0.1729, mem_enc_norm=7.4010, param_norm=1803.4631
+
+
+Step 84: grad_norm=69.9446, llm_grad_norm=46.5842, loss=0.1524, mem_enc_norm=52.1601, param_norm=1803.4631
+
+
+Step 85: grad_norm=18.6745, llm_grad_norm=13.2001, loss=0.2168, mem_enc_norm=13.1804, param_norm=1803.4631
+
+
+Step 86: grad_norm=43.6855, llm_grad_norm=31.7318, loss=0.2210, mem_enc_norm=29.9902, param_norm=1803.4633
+
+
+Step 87: grad_norm=35.8476, llm_grad_norm=25.6242, loss=0.2057, mem_enc_norm=25.0588, param_norm=1803.4633
+
+
+Step 88: grad_norm=5.9187, llm_grad_norm=4.1501, loss=0.1472, mem_enc_norm=4.1645, param_norm=1803.4633
+
+
+Step 89: grad_norm=43.2990, llm_grad_norm=31.5491, loss=0.1729, mem_enc_norm=29.6473, param_norm=1803.4633
+
+
+Step 90: grad_norm=3.0726, llm_grad_norm=2.3053, loss=0.1486, mem_enc_norm=1.9416, param_norm=1803.4633
+
+
+Step 91: grad_norm=4.7072, llm_grad_norm=3.0385, loss=0.1364, mem_enc_norm=3.5282, param_norm=1803.4633
+
+
+Step 92: grad_norm=5.2765, llm_grad_norm=3.9310, loss=0.1339, mem_enc_norm=3.4694, param_norm=1803.4633
+
+
+Step 93: grad_norm=8.5938, llm_grad_norm=6.0898, loss=0.1967, mem_enc_norm=5.9882, param_norm=1803.4633
+
+
+Step 94: grad_norm=13.7963, llm_grad_norm=8.9403, loss=0.2370, mem_enc_norm=10.3390, param_norm=1803.4633
+
+
+Step 95: grad_norm=60.1784, llm_grad_norm=39.7296, loss=0.2300, mem_enc_norm=45.1843, param_norm=1803.4633
+
+
+Step 96: grad_norm=7.5323, llm_grad_norm=5.7244, loss=0.1236, mem_enc_norm=4.8333, param_norm=1803.4633
+
+
+Step 97: grad_norm=38.7533, llm_grad_norm=27.3572, loss=0.1426, mem_enc_norm=27.4356, param_norm=1803.4633
+
+
+Step 98: grad_norm=118.4913, llm_grad_norm=87.2464, loss=0.1761, mem_enc_norm=80.1704, param_norm=1803.4633
+
+
+Step 99: grad_norm=22.1495, llm_grad_norm=15.0157, loss=0.2052, mem_enc_norm=16.2561, param_norm=1803.4633
+
+[bench] step 99: TrainState 摘要 state=a34e7eb1ac2d6d84… params+ema=8cad8cdd4a0d0764… (193 叶子, 耗时 179.225s)
+
+
+Step 100: grad_norm=27.0457, llm_grad_norm=21.9726, loss=0.1879, mem_enc_norm=15.7396, param_norm=1803.4633
+
+
+Step 101: grad_norm=21.3374, llm_grad_norm=15.5914, loss=0.1722, mem_enc_norm=14.5379, param_norm=1803.4633
+
+
+Step 102: grad_norm=42.7769, llm_grad_norm=30.8489, loss=0.1411, mem_enc_norm=29.6202, param_norm=1803.4633
+
+
+Step 103: grad_norm=13.2533, llm_grad_norm=9.7453, loss=0.1747, mem_enc_norm=8.9405, param_norm=1803.4633
+
+
+Step 104: grad_norm=7.3777, llm_grad_norm=4.8834, loss=0.1565, mem_enc_norm=5.4498, param_norm=1803.4633
+
+
+Step 105: grad_norm=38.0691, llm_grad_norm=31.8595, loss=0.2839, mem_enc_norm=20.6393, param_norm=1803.4633
+
+
+Step 106: grad_norm=2.9928, llm_grad_norm=2.2473, loss=0.1219, mem_enc_norm=1.8965, param_norm=1803.4633
+
+
+Step 107: grad_norm=14.7993, llm_grad_norm=11.3780, loss=0.2686, mem_enc_norm=9.2999, param_norm=1803.4633
+
+
+Step 108: grad_norm=34.9210, llm_grad_norm=24.7394, loss=0.1980, mem_enc_norm=24.6292, param_norm=1803.4633
+
+
+Step 109: grad_norm=16.9726, llm_grad_norm=11.5889, loss=0.1491, mem_enc_norm=12.3729, param_norm=1803.4633
+
+
+Step 110: grad_norm=11.7370, llm_grad_norm=8.8502, loss=0.1227, mem_enc_norm=7.6464, param_norm=1803.4633
+
+
+Step 111: grad_norm=5.7067, llm_grad_norm=4.4832, loss=0.1710, mem_enc_norm=3.3329, param_norm=1803.4633
+
+
+Step 112: grad_norm=12.1621, llm_grad_norm=9.0525, loss=0.1037, mem_enc_norm=8.0955, param_norm=1803.4633
+
+
+Step 113: grad_norm=18.6086, llm_grad_norm=14.2464, loss=0.2063, mem_enc_norm=11.9045, param_norm=1803.4633
+
+
+Step 114: grad_norm=7.8247, llm_grad_norm=5.5706, loss=0.1404, mem_enc_norm=5.4280, param_norm=1803.4633
+
+
+Step 115: grad_norm=15.7244, llm_grad_norm=9.5303, loss=0.1647, mem_enc_norm=12.4891, param_norm=1803.4633
+
+
+Step 116: grad_norm=5.0029, llm_grad_norm=3.7481, loss=0.1367, mem_enc_norm=3.2567, param_norm=1803.4633
+
+
+Step 117: grad_norm=4.7733, llm_grad_norm=3.6074, loss=0.1376, mem_enc_norm=3.0574, param_norm=1803.4633
+
+
+Step 118: grad_norm=25.1362, llm_grad_norm=18.3272, loss=0.1863, mem_enc_norm=17.1458, param_norm=1803.4633
+
+
+Step 119: grad_norm=6.9482, llm_grad_norm=5.1881, loss=0.1242, mem_enc_norm=4.5539, param_norm=1803.4633
+
+
+Step 120: grad_norm=9.8021, llm_grad_norm=7.3298, loss=0.1560, mem_enc_norm=6.4731, param_norm=1803.4633
+
+
+Step 121: grad_norm=23.6158, llm_grad_norm=16.4562, loss=0.1907, mem_enc_norm=16.8941, param_norm=1803.4633
+
+
+Step 122: grad_norm=5.8960, llm_grad_norm=4.5793, loss=0.1369, mem_enc_norm=3.6694, param_norm=1803.4633
+
+
+Step 123: grad_norm=5.3491, llm_grad_norm=3.6296, loss=0.1006, mem_enc_norm=3.8805, param_norm=1803.4633
+
+
+Step 124: grad_norm=113.2285, llm_grad_norm=82.9795, loss=0.2419, mem_enc_norm=76.9942, param_norm=1803.4633
+
+
+Step 125: grad_norm=38.4194, llm_grad_norm=28.7902, loss=0.1771, mem_enc_norm=25.4284, param_norm=1803.4634
+
+
+Step 126: grad_norm=5.8076, llm_grad_norm=4.2670, loss=0.1323, mem_enc_norm=3.9105, param_norm=1803.4634
+
+
+Step 127: grad_norm=11.0508, llm_grad_norm=7.8710, loss=0.1080, mem_enc_norm=7.7411, param_norm=1803.4634
+
+
+Step 128: grad_norm=5.5965, llm_grad_norm=4.3169, loss=0.1112, mem_enc_norm=3.5089, param_norm=1803.4634
+
+
+Step 129: grad_norm=93.5584, llm_grad_norm=68.9292, loss=0.1664, mem_enc_norm=63.2495, param_norm=1803.4634
+
+
+Step 130: grad_norm=56.5027, llm_grad_norm=40.9624, loss=0.1832, mem_enc_norm=38.9033, param_norm=1803.4634
+
+
+Step 131: grad_norm=10.7606, llm_grad_norm=7.7803, loss=0.1519, mem_enc_norm=7.3842, param_norm=1803.4634
+
+
+Step 132: grad_norm=8.9500, llm_grad_norm=6.4847, loss=0.1461, mem_enc_norm=6.1438, param_norm=1803.4634
+
+
+Step 133: grad_norm=7.0331, llm_grad_norm=5.2410, loss=0.1578, mem_enc_norm=4.5653, param_norm=1803.4634
+
+
+Step 134: grad_norm=22.3864, llm_grad_norm=15.9583, loss=0.1317, mem_enc_norm=15.6814, param_norm=1803.4634
+
+
+Step 135: grad_norm=6.7460, llm_grad_norm=4.9537, loss=0.1126, mem_enc_norm=4.5483, param_norm=1803.4634
+
+
+Step 136: grad_norm=6.6030, llm_grad_norm=5.0672, loss=0.1257, mem_enc_norm=4.1904, param_norm=1803.4634
+
+
+Step 137: grad_norm=11.4722, llm_grad_norm=7.7898, loss=0.1146, mem_enc_norm=8.3678, param_norm=1803.4634
+
+
+Step 138: grad_norm=6.9477, llm_grad_norm=5.2506, loss=0.1016, mem_enc_norm=4.5072, param_norm=1803.4634
+
+
+Step 139: grad_norm=8.2094, llm_grad_norm=6.2809, loss=0.0824, mem_enc_norm=5.2628, param_norm=1803.4634
+
+
+Step 140: grad_norm=6.1002, llm_grad_norm=5.0064, loss=0.1095, mem_enc_norm=3.4471, param_norm=1803.4634
+
+
+Step 141: grad_norm=4.3669, llm_grad_norm=3.1906, loss=0.1108, mem_enc_norm=2.9289, param_norm=1803.4634
+
+
+Step 142: grad_norm=4.4448, llm_grad_norm=3.3514, loss=0.1288, mem_enc_norm=2.8831, param_norm=1803.4634
+
+
+Step 143: grad_norm=7.1810, llm_grad_norm=4.6840, loss=0.1176, mem_enc_norm=5.4139, param_norm=1803.4634
+
+
+Step 144: grad_norm=168.1191, llm_grad_norm=122.5731, loss=0.1483, mem_enc_norm=115.0590, param_norm=1803.4634
+
+
+Step 145: grad_norm=4.8908, llm_grad_norm=3.6473, loss=0.0997, mem_enc_norm=3.2158, param_norm=1803.4634
+
+
+Step 146: grad_norm=6.5469, llm_grad_norm=4.9409, loss=0.1075, mem_enc_norm=4.2655, param_norm=1803.4633
+
+
+Step 147: grad_norm=52.5649, llm_grad_norm=40.2972, loss=0.1498, mem_enc_norm=33.7378, param_norm=1803.4633
+
+
+Step 148: grad_norm=4.2830, llm_grad_norm=3.3094, loss=0.1185, mem_enc_norm=2.6530, param_norm=1803.4634
+
+
+Step 149: grad_norm=4.7241, llm_grad_norm=3.4353, loss=0.1126, mem_enc_norm=3.2160, param_norm=1803.4634
+
+
+Step 150: grad_norm=28.1200, llm_grad_norm=19.9712, loss=0.1345, mem_enc_norm=19.7878, param_norm=1803.4634
+
+
+Step 151: grad_norm=3.1949, llm_grad_norm=2.2843, loss=0.0863, mem_enc_norm=2.1907, param_norm=1803.4634
+
+
+Step 152: grad_norm=19.5506, llm_grad_norm=14.1702, loss=0.1136, mem_enc_norm=13.4595, param_norm=1803.4634
+
+
+Step 153: grad_norm=29.0082, llm_grad_norm=21.7957, loss=0.1230, mem_enc_norm=19.1334, param_norm=1803.4634
+
+
+Step 154: grad_norm=48.0415, llm_grad_norm=35.9010, loss=0.1716, mem_enc_norm=31.9087, param_norm=1803.4634
+
+
+Step 155: grad_norm=5.3278, llm_grad_norm=3.3941, loss=0.1036, mem_enc_norm=4.0680, param_norm=1803.4634
+
+
+Step 156: grad_norm=7.0248, llm_grad_norm=4.6660, loss=0.1398, mem_enc_norm=5.2288, param_norm=1803.4634
+
+
+Step 157: grad_norm=50.0136, llm_grad_norm=37.9302, loss=0.2788, mem_enc_norm=32.5399, param_norm=1803.4634
+
+
+Step 158: grad_norm=233.6975, llm_grad_norm=177.2451, loss=0.2417, mem_enc_norm=152.2870, param_norm=1803.4634
+
+
+Step 159: grad_norm=58.7673, llm_grad_norm=45.5202, loss=0.2014, mem_enc_norm=37.1346, param_norm=1803.4634
+
+
+Step 160: grad_norm=35.8349, llm_grad_norm=26.3810, loss=0.1767, mem_enc_norm=24.2289, param_norm=1803.4634
+
+
+Step 161: grad_norm=13.3272, llm_grad_norm=10.5488, loss=0.1182, mem_enc_norm=8.1331, param_norm=1803.4635
+
+
+Step 162: grad_norm=33.2080, llm_grad_norm=25.0195, loss=0.1475, mem_enc_norm=21.8152, param_norm=1803.4635
+
+
+Step 163: grad_norm=58.1720, llm_grad_norm=43.0729, loss=0.1510, mem_enc_norm=39.0904, param_norm=1803.4635
+
+
+Step 164: grad_norm=21.4557, llm_grad_norm=16.0368, loss=0.1274, mem_enc_norm=14.2330, param_norm=1803.4635
+
+
+Step 165: grad_norm=21.7104, llm_grad_norm=16.4277, loss=0.1698, mem_enc_norm=14.1469, param_norm=1803.4634
+
+
+Step 166: grad_norm=78.5364, llm_grad_norm=58.3239, loss=0.1237, mem_enc_norm=52.5810, param_norm=1803.4635
+
+
+Step 167: grad_norm=19.1002, llm_grad_norm=14.4777, loss=0.1677, mem_enc_norm=12.4278, param_norm=1803.4635
+
+
+Step 168: grad_norm=21.8171, llm_grad_norm=17.2884, loss=0.1579, mem_enc_norm=13.2807, param_norm=1803.4635
+
+
+Step 169: grad_norm=98.6728, llm_grad_norm=80.0410, loss=0.1815, mem_enc_norm=57.6809, param_norm=1803.4635
+
+
+Step 170: grad_norm=53.4984, llm_grad_norm=40.2779, loss=0.0914, mem_enc_norm=35.2004, param_norm=1803.4635
+
+
+Step 171: grad_norm=12.2342, llm_grad_norm=9.2609, loss=0.0989, mem_enc_norm=7.9806, param_norm=1803.4635
+
+
+Step 172: grad_norm=16.3824, llm_grad_norm=12.6274, loss=0.1235, mem_enc_norm=10.4067, param_norm=1803.4635
+
+
+Step 173: grad_norm=127.8548, llm_grad_norm=99.6766, loss=0.1527, mem_enc_norm=80.0677, param_norm=1803.4635
+
+
+Step 174: grad_norm=232.7260, llm_grad_norm=169.8265, loss=0.1824, mem_enc_norm=159.0974, param_norm=1803.4635
+
+
+Step 175: grad_norm=5.3667, llm_grad_norm=3.9096, loss=0.0872, mem_enc_norm=3.6589, param_norm=1803.4635
+
+
+Step 176: grad_norm=2.8940, llm_grad_norm=2.1039, loss=0.0830, mem_enc_norm=1.9573, param_norm=1803.4635
+
+
+Step 177: grad_norm=29.9542, llm_grad_norm=22.5406, loss=0.0914, mem_enc_norm=19.7227, param_norm=1803.4635
+
+
+Step 178: grad_norm=15.2131, llm_grad_norm=11.3539, loss=0.1808, mem_enc_norm=10.0303, param_norm=1803.4635
+
+
+Step 179: grad_norm=6.0701, llm_grad_norm=4.5610, loss=0.0904, mem_enc_norm=3.9856, param_norm=1803.4635
+
+
+Step 180: grad_norm=5.3809, llm_grad_norm=4.1689, loss=0.1075, mem_enc_norm=3.3728, param_norm=1803.4635
+
+
+Step 181: grad_norm=72.8333, llm_grad_norm=50.6863, loss=0.0984, mem_enc_norm=52.2957, param_norm=1803.4635
+
+
+Step 182: grad_norm=3.8720, llm_grad_norm=2.9713, loss=0.0878, mem_enc_norm=2.4475, param_norm=1803.4635
+
+
+Step 183: grad_norm=3.6528, llm_grad_norm=2.8312, loss=0.1000, mem_enc_norm=2.2596, param_norm=1803.4635
+
+
+Step 184: grad_norm=4.4386, llm_grad_norm=3.3554, loss=0.1333, mem_enc_norm=2.7990, param_norm=1803.4635
+
+
+Step 185: grad_norm=14.8906, llm_grad_norm=11.3711, loss=0.0920, mem_enc_norm=9.6097, param_norm=1803.4635
+
+
+Step 186: grad_norm=2.3734, llm_grad_norm=1.8730, loss=0.0834, mem_enc_norm=1.3852, param_norm=1803.4636
+
+
+Step 187: grad_norm=8.4145, llm_grad_norm=6.3747, loss=0.1218, mem_enc_norm=5.4364, param_norm=1803.4636
+
+
+Step 188: grad_norm=3.8125, llm_grad_norm=2.7060, loss=0.0843, mem_enc_norm=2.6555, param_norm=1803.4636
+
+
+Step 189: grad_norm=3.2409, llm_grad_norm=2.3091, loss=0.0905, mem_enc_norm=2.2134, param_norm=1803.4636
+
+
+Step 190: grad_norm=8.6780, llm_grad_norm=6.3459, loss=0.1667, mem_enc_norm=5.7579, param_norm=1803.4636
+
+
+Step 191: grad_norm=33.3211, llm_grad_norm=24.2551, loss=0.1322, mem_enc_norm=22.8345, param_norm=1803.4636
+
+
+Step 192: grad_norm=15.4876, llm_grad_norm=12.2538, loss=0.1139, mem_enc_norm=9.4156, param_norm=1803.4636
+
+
+Step 193: grad_norm=14.1841, llm_grad_norm=10.2271, loss=0.1296, mem_enc_norm=9.7906, param_norm=1803.4636
+
+
+Step 194: grad_norm=6.4441, llm_grad_norm=4.2299, loss=0.0972, mem_enc_norm=4.8342, param_norm=1803.4636
+
+
+Step 195: grad_norm=2.4217, llm_grad_norm=1.8696, loss=0.0788, mem_enc_norm=1.4745, param_norm=1803.4636
+
+
+Step 196: grad_norm=24.0055, llm_grad_norm=16.8269, loss=0.1409, mem_enc_norm=17.1058, param_norm=1803.4636
+
+
+Step 197: grad_norm=3.7677, llm_grad_norm=2.8892, loss=0.1033, mem_enc_norm=2.3552, param_norm=1803.4636
+
+
+Step 198: grad_norm=25.7663, llm_grad_norm=18.5455, loss=0.1042, mem_enc_norm=17.8683, param_norm=1803.4636
+
+
+Step 199: grad_norm=1.9865, llm_grad_norm=1.5503, loss=0.0783, mem_enc_norm=1.1666, param_norm=1803.4636
+
+[bench] step 199: TrainState 摘要 state=99abce664afbb71c… params+ema=28f9d14fabd065eb… (193 叶子, 耗时 177.153s)
+
+
+Step 200: grad_norm=5.5466, llm_grad_norm=4.2084, loss=0.1010, mem_enc_norm=3.5771, param_norm=1803.4636
+
+
+Step 201: grad_norm=2.3421, llm_grad_norm=1.8094, loss=0.0670, mem_enc_norm=1.4096, param_norm=1803.4636
+
+
+Step 202: grad_norm=2.2392, llm_grad_norm=1.6871, loss=0.0642, mem_enc_norm=1.4457, param_norm=1803.4636
+
+
+Step 203: grad_norm=2.1261, llm_grad_norm=1.6151, loss=0.0827, mem_enc_norm=1.3024, param_norm=1803.4636
+
+
+Step 204: grad_norm=2.5452, llm_grad_norm=1.9330, loss=0.0878, mem_enc_norm=1.5904, param_norm=1803.4636
+
+
+Step 205: grad_norm=5.2674, llm_grad_norm=3.8715, loss=0.0762, mem_enc_norm=3.5518, param_norm=1803.4637
+
+
+Step 206: grad_norm=4.4231, llm_grad_norm=3.1035, loss=0.0986, mem_enc_norm=3.1230, param_norm=1803.4637
+
+
+Step 207: grad_norm=13.1982, llm_grad_norm=9.3598, loss=0.1084, mem_enc_norm=9.2869, param_norm=1803.4637
+
+
+Step 208: grad_norm=2.1645, llm_grad_norm=1.5822, loss=0.0571, mem_enc_norm=1.4438, param_norm=1803.4637
+
+
+Step 209: grad_norm=5.0771, llm_grad_norm=3.8298, loss=0.1459, mem_enc_norm=3.2193, param_norm=1803.4637
+
+
+Step 210: grad_norm=2.5003, llm_grad_norm=1.8636, loss=0.0855, mem_enc_norm=1.6232, param_norm=1803.4639
+
+
+Step 211: grad_norm=2.6419, llm_grad_norm=1.9249, loss=0.0933, mem_enc_norm=1.7578, param_norm=1803.4639
+
+
+Step 212: grad_norm=5.5607, llm_grad_norm=4.0678, loss=0.0926, mem_enc_norm=3.7642, param_norm=1803.4639
+
+
+Step 213: grad_norm=3.2647, llm_grad_norm=2.5860, loss=0.0757, mem_enc_norm=1.9572, param_norm=1803.4639
+
+
+Step 214: grad_norm=154.1667, llm_grad_norm=113.1368, loss=0.1007, mem_enc_norm=104.7179, param_norm=1803.4639
+
+
+Step 215: grad_norm=32.8423, llm_grad_norm=23.1680, loss=0.0634, mem_enc_norm=23.2618, param_norm=1803.4639
+
+
+Step 216: grad_norm=2.0954, llm_grad_norm=1.6287, loss=0.0666, mem_enc_norm=1.2815, param_norm=1803.4639
+
+
+Step 217: grad_norm=3.4333, llm_grad_norm=2.7612, loss=0.0789, mem_enc_norm=1.9759, param_norm=1803.4639
+
+
+Step 218: grad_norm=53.0718, llm_grad_norm=39.7208, loss=0.0910, mem_enc_norm=35.1891, param_norm=1803.4639
+
+
+Step 219: grad_norm=10.7032, llm_grad_norm=7.7650, loss=0.0491, mem_enc_norm=7.3572, param_norm=1803.4639
+
+
+Step 220: grad_norm=54.6818, llm_grad_norm=41.2632, loss=0.1059, mem_enc_norm=35.8712, param_norm=1803.4639
+
+
+Step 221: grad_norm=92.5774, llm_grad_norm=68.0007, loss=0.1279, mem_enc_norm=62.7948, param_norm=1803.4639
+
+
+Step 222: grad_norm=38.4632, llm_grad_norm=27.0937, loss=0.1117, mem_enc_norm=27.2920, param_norm=1803.4639
+
+
+Step 223: grad_norm=10.1577, llm_grad_norm=8.0214, loss=0.1064, mem_enc_norm=6.1986, param_norm=1803.4639
+
+
+Step 224: grad_norm=4.6179, llm_grad_norm=3.5717, loss=0.0985, mem_enc_norm=2.8999, param_norm=1803.4639
+
+
+Step 225: grad_norm=7.4509, llm_grad_norm=5.7660, loss=0.1093, mem_enc_norm=4.6720, param_norm=1803.4639
+
+
+Step 226: grad_norm=3.9267, llm_grad_norm=2.9968, loss=0.0580, mem_enc_norm=2.5247, param_norm=1803.4639
+
+
+Step 227: grad_norm=1.5958, llm_grad_norm=1.2355, loss=0.0518, mem_enc_norm=0.9826, param_norm=1803.4639
+
+
+Step 228: grad_norm=2.1626, llm_grad_norm=1.6873, loss=0.0835, mem_enc_norm=1.2880, param_norm=1803.4639
+
+
+Step 229: grad_norm=4.0318, llm_grad_norm=3.2711, loss=0.0817, mem_enc_norm=2.3232, param_norm=1803.4639
+
+
+Step 230: grad_norm=4.3456, llm_grad_norm=3.1655, loss=0.0692, mem_enc_norm=2.9549, param_norm=1803.4639
+
+
+Step 231: grad_norm=56.9135, llm_grad_norm=42.8192, loss=0.0692, mem_enc_norm=37.4866, param_norm=1803.4639
+
+
+Step 232: grad_norm=2.2484, llm_grad_norm=1.7725, loss=0.0510, mem_enc_norm=1.3653, param_norm=1803.4639
+
+
+Step 233: grad_norm=2.0745, llm_grad_norm=1.6917, loss=0.0900, mem_enc_norm=1.1478, param_norm=1803.4639
+
+
+Step 234: grad_norm=10.1096, llm_grad_norm=7.4801, loss=0.0971, mem_enc_norm=6.7808, param_norm=1803.4639
+
+
+Step 235: grad_norm=3.7721, llm_grad_norm=3.2894, loss=0.1359, mem_enc_norm=1.6056, param_norm=1803.4639
+
+
+Step 236: grad_norm=28.1276, llm_grad_norm=19.6076, loss=0.0903, mem_enc_norm=20.1509, param_norm=1803.4639
+
+
+Step 237: grad_norm=32.5937, llm_grad_norm=23.5434, loss=0.1481, mem_enc_norm=22.5173, param_norm=1803.4639
+
+
+Step 238: grad_norm=2.7568, llm_grad_norm=2.1255, loss=0.0673, mem_enc_norm=1.7231, param_norm=1803.4639
+
+
+Step 239: grad_norm=1.9905, llm_grad_norm=1.6143, loss=0.0686, mem_enc_norm=1.1111, param_norm=1803.4639
+
+
+Step 240: grad_norm=2.1930, llm_grad_norm=1.7904, loss=0.0778, mem_enc_norm=1.2119, param_norm=1803.4639
+
+
+Step 241: grad_norm=6.9445, llm_grad_norm=4.9201, loss=0.1277, mem_enc_norm=4.8600, param_norm=1803.4639
+
+
+Step 242: grad_norm=0.8851, llm_grad_norm=0.6893, loss=0.0532, mem_enc_norm=0.4942, param_norm=1803.4639
+
+
+Step 243: grad_norm=3.8854, llm_grad_norm=3.0917, loss=0.0759, mem_enc_norm=2.3029, param_norm=1803.4639
+
+
+Step 244: grad_norm=3.9691, llm_grad_norm=3.0834, loss=0.0580, mem_enc_norm=2.4777, param_norm=1803.4639
+
+
+Step 245: grad_norm=2.6134, llm_grad_norm=1.9736, loss=0.0905, mem_enc_norm=1.6528, param_norm=1803.4639
+
+
+Step 246: grad_norm=5.1279, llm_grad_norm=4.0400, loss=0.0792, mem_enc_norm=2.9768, param_norm=1803.4639
+
+
+Step 247: grad_norm=4.4388, llm_grad_norm=2.9986, loss=0.0763, mem_enc_norm=3.2448, param_norm=1803.4639
+
+
+Step 248: grad_norm=4.5262, llm_grad_norm=3.2836, loss=0.0730, mem_enc_norm=3.0786, param_norm=1803.4639
+
+
+Step 249: grad_norm=4.3115, llm_grad_norm=2.9088, loss=0.0642, mem_enc_norm=3.1601, param_norm=1803.4639
+
+
+Step 250: grad_norm=3.4480, llm_grad_norm=2.6698, loss=0.0661, mem_enc_norm=2.1367, param_norm=1803.4639
+
+
+Step 251: grad_norm=1.5130, llm_grad_norm=1.2251, loss=0.0671, mem_enc_norm=0.8421, param_norm=1803.4639
+
+
+Step 252: grad_norm=1.8430, llm_grad_norm=1.3849, loss=0.0863, mem_enc_norm=1.1475, param_norm=1803.4639
+
+
+Step 253: grad_norm=1.7952, llm_grad_norm=1.3151, loss=0.0645, mem_enc_norm=1.1719, param_norm=1803.4639
+
+
+Step 254: grad_norm=11.7932, llm_grad_norm=9.3804, loss=0.0846, mem_enc_norm=7.0904, param_norm=1803.4639
+
+
+Step 255: grad_norm=2.4040, llm_grad_norm=1.8986, loss=0.0591, mem_enc_norm=1.4341, param_norm=1803.4639
+
+
+Step 256: grad_norm=3.8981, llm_grad_norm=3.2176, loss=0.0717, mem_enc_norm=2.1652, param_norm=1803.4639
+
+
+Step 257: grad_norm=2.2514, llm_grad_norm=1.7261, loss=0.0841, mem_enc_norm=1.3306, param_norm=1803.4639
+
+
+Step 258: grad_norm=5.0525, llm_grad_norm=3.6191, loss=0.0804, mem_enc_norm=3.4882, param_norm=1803.4639
+
+
+Step 259: grad_norm=7.9866, llm_grad_norm=6.3452, loss=0.0834, mem_enc_norm=4.8350, param_norm=1803.4639
+
+
+Step 260: grad_norm=2.4102, llm_grad_norm=1.9181, loss=0.0509, mem_enc_norm=1.3649, param_norm=1803.4640
+
+
+Step 261: grad_norm=17.5993, llm_grad_norm=13.7735, loss=0.1198, mem_enc_norm=10.9406, param_norm=1803.4640
+
+
+Step 262: grad_norm=2.6502, llm_grad_norm=2.1645, loss=0.0620, mem_enc_norm=1.4865, param_norm=1803.4641
+
+
+Step 263: grad_norm=2.4940, llm_grad_norm=2.0738, loss=0.0724, mem_enc_norm=1.3432, param_norm=1803.4641
+
+
+Step 264: grad_norm=3.1154, llm_grad_norm=2.4111, loss=0.0601, mem_enc_norm=1.9461, param_norm=1803.4641
+
+
+Step 265: grad_norm=2.9076, llm_grad_norm=2.1650, loss=0.0863, mem_enc_norm=1.8781, param_norm=1803.4641
+
+
+Step 266: grad_norm=6.7398, llm_grad_norm=4.9121, loss=0.0570, mem_enc_norm=4.5934, param_norm=1803.4641
+
+
+Step 267: grad_norm=23.1690, llm_grad_norm=17.2232, loss=0.0700, mem_enc_norm=15.4787, param_norm=1803.4641
+
+
+Step 268: grad_norm=2.5442, llm_grad_norm=2.0725, loss=0.0628, mem_enc_norm=1.4299, param_norm=1803.4641
+
+
+Step 269: grad_norm=2.5898, llm_grad_norm=2.1755, loss=0.0541, mem_enc_norm=1.3718, param_norm=1803.4641
+
+
+Step 270: grad_norm=1.3343, llm_grad_norm=1.1084, loss=0.0617, mem_enc_norm=0.6578, param_norm=1803.4641
+
+
+Step 271: grad_norm=3.8414, llm_grad_norm=2.8616, loss=0.0801, mem_enc_norm=2.5349, param_norm=1803.4641
+
+
+Step 272: grad_norm=2.2094, llm_grad_norm=1.8304, loss=0.0559, mem_enc_norm=1.2051, param_norm=1803.4641
+
+
+Step 273: grad_norm=52.6032, llm_grad_norm=40.4226, loss=0.1049, mem_enc_norm=33.6313, param_norm=1803.4641
+
+
+Step 274: grad_norm=2.3034, llm_grad_norm=1.8456, loss=0.0504, mem_enc_norm=1.3630, param_norm=1803.4641
+
+
+Step 275: grad_norm=4.6556, llm_grad_norm=3.4589, loss=0.0454, mem_enc_norm=3.0901, param_norm=1803.4641
+
+
+Step 276: grad_norm=3.6315, llm_grad_norm=2.9790, loss=0.0574, mem_enc_norm=2.0208, param_norm=1803.4641
+
+
+Step 277: grad_norm=2.1760, llm_grad_norm=1.7074, loss=0.0998, mem_enc_norm=1.2265, param_norm=1803.4641
+
+
+Step 278: grad_norm=2.7028, llm_grad_norm=2.0700, loss=0.0743, mem_enc_norm=1.6940, param_norm=1803.4641
+
+
+Step 279: grad_norm=2.6121, llm_grad_norm=2.2292, loss=0.0494, mem_enc_norm=1.3265, param_norm=1803.4641
+
+
+Step 280: grad_norm=1.8676, llm_grad_norm=1.5580, loss=0.0468, mem_enc_norm=0.9759, param_norm=1803.4641
+
+
+Step 281: grad_norm=2.5939, llm_grad_norm=2.0680, loss=0.0580, mem_enc_norm=1.5371, param_norm=1803.4641
+
+
+Step 282: grad_norm=2.3349, llm_grad_norm=1.9525, loss=0.0807, mem_enc_norm=1.1941, param_norm=1803.4642
+
+
+Step 283: grad_norm=1.8970, llm_grad_norm=1.2931, loss=0.0819, mem_enc_norm=1.3194, param_norm=1803.4642
+
+
+Step 284: grad_norm=2.5831, llm_grad_norm=2.2315, loss=0.0564, mem_enc_norm=1.2621, param_norm=1803.4642
+
+
+Step 285: grad_norm=5.1901, llm_grad_norm=4.1373, loss=0.0666, mem_enc_norm=3.1010, param_norm=1803.4642
+
+
+Step 286: grad_norm=76.5973, llm_grad_norm=57.9983, loss=0.0602, mem_enc_norm=50.0166, param_norm=1803.4642
+
+
+Step 287: grad_norm=3.0204, llm_grad_norm=2.4316, loss=0.1090, mem_enc_norm=1.5129, param_norm=1803.4642
+
+
+Step 288: grad_norm=8.3768, llm_grad_norm=6.4760, loss=0.1000, mem_enc_norm=5.2717, param_norm=1803.4641
+
+
+Step 289: grad_norm=1.4683, llm_grad_norm=1.1821, loss=0.0337, mem_enc_norm=0.8210, param_norm=1803.4642
+
+
+Step 290: grad_norm=23.8694, llm_grad_norm=15.0824, loss=0.0523, mem_enc_norm=18.4962, param_norm=1803.4642
+
+
+Step 291: grad_norm=2.0959, llm_grad_norm=1.7295, loss=0.0443, mem_enc_norm=1.1377, param_norm=1803.4642
+
+
+Step 292: grad_norm=1.3935, llm_grad_norm=1.0950, loss=0.0482, mem_enc_norm=0.8231, param_norm=1803.4642
+
+
+Step 293: grad_norm=1.6746, llm_grad_norm=1.3743, loss=0.0858, mem_enc_norm=0.8680, param_norm=1803.4642
+
+
+Step 294: grad_norm=2.4470, llm_grad_norm=1.8587, loss=0.0427, mem_enc_norm=1.5492, param_norm=1803.4642
+
+
+Step 295: grad_norm=1.8567, llm_grad_norm=1.4865, loss=0.0368, mem_enc_norm=1.0907, param_norm=1803.4642
+
+
+Step 296: grad_norm=2.5373, llm_grad_norm=2.0566, loss=0.0503, mem_enc_norm=1.4441, param_norm=1803.4642
+
+
+Step 297: grad_norm=1.2062, llm_grad_norm=0.9740, loss=0.0438, mem_enc_norm=0.6493, param_norm=1803.4642
+
+
+Step 298: grad_norm=1.6780, llm_grad_norm=1.3936, loss=0.0654, mem_enc_norm=0.8419, param_norm=1803.4642
+
+
+Step 299: grad_norm=2.4981, llm_grad_norm=1.9915, loss=0.0643, mem_enc_norm=1.4792, param_norm=1803.4642
+
+
+Step 300: grad_norm=2.7986, llm_grad_norm=2.1375, loss=0.0606, mem_enc_norm=1.7640, param_norm=1803.4642
+
+
+Step 301: grad_norm=2.3757, llm_grad_norm=1.9603, loss=0.0839, mem_enc_norm=1.2540, param_norm=1803.4642
+
+
+Step 302: grad_norm=3.1358, llm_grad_norm=2.5624, loss=0.0502, mem_enc_norm=1.7608, param_norm=1803.4642
+
+
+Step 303: grad_norm=2.5783, llm_grad_norm=2.0055, loss=0.0644, mem_enc_norm=1.5738, param_norm=1803.4642
+
+
+Step 304: grad_norm=2.1638, llm_grad_norm=1.7094, loss=0.0535, mem_enc_norm=1.2957, param_norm=1803.4642
+
+
+Step 305: grad_norm=2.2119, llm_grad_norm=1.7963, loss=0.0607, mem_enc_norm=1.2648, param_norm=1803.4642
+
+
+Step 306: grad_norm=69.7421, llm_grad_norm=54.8445, loss=0.0742, mem_enc_norm=43.0536, param_norm=1803.4642
+
+
+Step 307: grad_norm=1.5889, llm_grad_norm=1.3190, loss=0.0352, mem_enc_norm=0.8465, param_norm=1803.4642
+
+
+Step 308: grad_norm=1.2179, llm_grad_norm=1.0207, loss=0.0554, mem_enc_norm=0.5802, param_norm=1803.4642
+
+
+Step 309: grad_norm=1.5896, llm_grad_norm=1.3255, loss=0.0633, mem_enc_norm=0.7463, param_norm=1803.4642
+
+
+Step 310: grad_norm=1.9574, llm_grad_norm=1.6764, loss=0.0585, mem_enc_norm=0.9467, param_norm=1803.4642
+
+
+Step 311: grad_norm=1.6467, llm_grad_norm=1.3675, loss=0.0274, mem_enc_norm=0.8805, param_norm=1803.4644
+
+
+Step 312: grad_norm=1.9228, llm_grad_norm=1.5211, loss=0.0553, mem_enc_norm=1.1280, param_norm=1803.4644
+
+
+Step 313: grad_norm=1.9463, llm_grad_norm=1.6686, loss=0.0538, mem_enc_norm=0.9441, param_norm=1803.4644
+
+
+Step 314: grad_norm=1.8221, llm_grad_norm=1.3672, loss=0.0492, mem_enc_norm=1.1506, param_norm=1803.4644
+
+
+Step 315: grad_norm=5.6426, llm_grad_norm=4.6144, loss=0.0580, mem_enc_norm=3.1790, param_norm=1803.4644
+
+
+Step 316: grad_norm=1.3703, llm_grad_norm=1.0852, loss=0.0528, mem_enc_norm=0.8058, param_norm=1803.4644
+
+
+Step 317: grad_norm=2.5175, llm_grad_norm=2.0526, loss=0.0595, mem_enc_norm=1.4228, param_norm=1803.4644
+
+
+Step 318: grad_norm=1.3435, llm_grad_norm=1.0427, loss=0.0405, mem_enc_norm=0.8062, param_norm=1803.4644
+
+
+Step 319: grad_norm=1.7393, llm_grad_norm=1.4736, loss=0.0458, mem_enc_norm=0.8560, param_norm=1803.4644
+
+
+Step 320: grad_norm=1.4095, llm_grad_norm=1.1481, loss=0.0519, mem_enc_norm=0.7476, param_norm=1803.4644
+
+
+Step 321: grad_norm=8.6600, llm_grad_norm=6.5629, loss=0.1353, mem_enc_norm=5.5693, param_norm=1803.4644
+
+
+Step 322: grad_norm=2.0896, llm_grad_norm=1.6703, loss=0.0581, mem_enc_norm=1.2224, param_norm=1803.4644
+
+
+Step 323: grad_norm=1.8827, llm_grad_norm=1.5921, loss=0.0325, mem_enc_norm=0.9427, param_norm=1803.4644
+
+
+Step 324: grad_norm=1.4944, llm_grad_norm=1.2477, loss=0.0444, mem_enc_norm=0.7711, param_norm=1803.4645
+
+
+Step 325: grad_norm=1.3929, llm_grad_norm=1.1363, loss=0.0577, mem_enc_norm=0.7562, param_norm=1803.4645
+
+
+Step 326: grad_norm=2.8962, llm_grad_norm=2.4206, loss=0.0428, mem_enc_norm=1.5534, param_norm=1803.4644
+
+
+Step 327: grad_norm=1.3982, llm_grad_norm=1.2026, loss=0.0647, mem_enc_norm=0.6608, param_norm=1803.4644
+
+
+Step 328: grad_norm=1.4296, llm_grad_norm=1.1494, loss=0.0448, mem_enc_norm=0.8183, param_norm=1803.4644
+
+
+Step 329: grad_norm=1.1226, llm_grad_norm=0.9547, loss=0.0387, mem_enc_norm=0.5220, param_norm=1803.4644
+
+
+Step 330: grad_norm=0.8880, llm_grad_norm=0.7471, loss=0.0394, mem_enc_norm=0.4080, param_norm=1803.4644
+
+
+Step 331: grad_norm=1.2214, llm_grad_norm=0.9949, loss=0.0363, mem_enc_norm=0.6691, param_norm=1803.4644
+
+
+Step 332: grad_norm=2.1027, llm_grad_norm=1.6759, loss=0.0545, mem_enc_norm=1.2414, param_norm=1803.4645
+
+
+Step 333: grad_norm=1.9696, llm_grad_norm=1.6630, loss=0.0501, mem_enc_norm=1.0033, param_norm=1803.4645
+
+
+Step 334: grad_norm=2.0501, llm_grad_norm=1.5126, loss=0.0381, mem_enc_norm=1.3546, param_norm=1803.4645
+
+
+Step 335: grad_norm=3.4942, llm_grad_norm=3.0746, loss=0.0652, mem_enc_norm=1.6005, param_norm=1803.4645
+
+
+Step 336: grad_norm=4.6361, llm_grad_norm=3.4470, loss=0.0586, mem_enc_norm=3.0763, param_norm=1803.4645
+
+
+Step 337: grad_norm=2.7430, llm_grad_norm=2.3164, loss=0.0517, mem_enc_norm=1.4400, param_norm=1803.4645
+
+
+Step 338: grad_norm=1.3810, llm_grad_norm=1.0831, loss=0.0481, mem_enc_norm=0.7856, param_norm=1803.4645
+
+
+Step 339: grad_norm=2.1022, llm_grad_norm=1.7155, loss=0.0479, mem_enc_norm=1.1787, param_norm=1803.4645
+
+
+Step 340: grad_norm=2.1943, llm_grad_norm=1.8255, loss=0.0738, mem_enc_norm=1.1721, param_norm=1803.4645
+
+
+Step 341: grad_norm=2.4625, llm_grad_norm=2.0250, loss=0.0565, mem_enc_norm=1.3487, param_norm=1803.4646
+
+
+Step 342: grad_norm=1.6159, llm_grad_norm=1.3355, loss=0.0334, mem_enc_norm=0.8852, param_norm=1803.4646
+
+
+Step 343: grad_norm=3.0696, llm_grad_norm=2.3957, loss=0.0637, mem_enc_norm=1.8821, param_norm=1803.4646
+
+
+Step 344: grad_norm=1.2031, llm_grad_norm=0.9818, loss=0.0418, mem_enc_norm=0.6366, param_norm=1803.4646
+
+
+Step 345: grad_norm=2.1987, llm_grad_norm=1.8136, loss=0.0407, mem_enc_norm=1.2181, param_norm=1803.4646
+
+
+Step 346: grad_norm=2.7859, llm_grad_norm=2.1343, loss=0.0650, mem_enc_norm=1.7598, param_norm=1803.4646
+
+
+Step 347: grad_norm=2.3244, llm_grad_norm=1.8381, loss=0.0715, mem_enc_norm=1.3346, param_norm=1803.4646
+
+
+Step 348: grad_norm=1.7944, llm_grad_norm=1.4088, loss=0.0380, mem_enc_norm=1.0865, param_norm=1803.4646
+
+
+Step 349: grad_norm=2.9919, llm_grad_norm=1.9045, loss=0.0533, mem_enc_norm=2.2914, param_norm=1803.4646
+
+
+Step 350: grad_norm=1.3843, llm_grad_norm=1.1259, loss=0.0439, mem_enc_norm=0.7142, param_norm=1803.4646
+
+
+Step 351: grad_norm=1.6992, llm_grad_norm=1.4566, loss=0.0362, mem_enc_norm=0.8388, param_norm=1803.4646
+
+
+Step 352: grad_norm=0.5909, llm_grad_norm=0.5055, loss=0.0261, mem_enc_norm=0.2304, param_norm=1803.4646
+
+
+Step 353: grad_norm=1.9418, llm_grad_norm=1.3595, loss=0.0328, mem_enc_norm=1.3577, param_norm=1803.4646
+
+
+Step 354: grad_norm=1.0565, llm_grad_norm=0.8878, loss=0.0367, mem_enc_norm=0.5108, param_norm=1803.4646
+
+
+Step 355: grad_norm=1.2009, llm_grad_norm=1.0086, loss=0.0551, mem_enc_norm=0.5714, param_norm=1803.4646
+
+
+Step 356: grad_norm=1.0661, llm_grad_norm=0.8931, loss=0.0372, mem_enc_norm=0.5430, param_norm=1803.4646
+
+
+Step 357: grad_norm=1.3252, llm_grad_norm=1.0900, loss=0.0313, mem_enc_norm=0.7172, param_norm=1803.4646
+
+
+Step 358: grad_norm=3.7716, llm_grad_norm=3.1358, loss=0.0585, mem_enc_norm=2.0453, param_norm=1803.4646
+
+
+Step 359: grad_norm=1.2290, llm_grad_norm=1.0099, loss=0.0328, mem_enc_norm=0.6715, param_norm=1803.4646
+
+
+Step 360: grad_norm=17.3634, llm_grad_norm=12.8384, loss=0.0723, mem_enc_norm=11.6194, param_norm=1803.4646
+
+
+Step 361: grad_norm=1.3858, llm_grad_norm=1.1319, loss=0.0544, mem_enc_norm=0.7563, param_norm=1803.4646
+
+
+Step 362: grad_norm=1.5234, llm_grad_norm=1.1848, loss=0.0591, mem_enc_norm=0.9108, param_norm=1803.4646
+
+
+Step 363: grad_norm=1.6591, llm_grad_norm=1.4435, loss=0.0440, mem_enc_norm=0.7592, param_norm=1803.4646
+
+
+Step 364: grad_norm=4.0750, llm_grad_norm=3.2002, loss=0.0469, mem_enc_norm=2.4807, param_norm=1803.4646
+
+
+Step 365: grad_norm=1.9363, llm_grad_norm=1.7191, loss=0.0663, mem_enc_norm=0.7871, param_norm=1803.4646
+
+
+Step 366: grad_norm=0.9544, llm_grad_norm=0.7786, loss=0.0321, mem_enc_norm=0.4820, param_norm=1803.4646
+
+
+Step 367: grad_norm=1.4573, llm_grad_norm=1.2207, loss=0.0469, mem_enc_norm=0.7676, param_norm=1803.4646
+
+
+Step 368: grad_norm=1.0582, llm_grad_norm=0.9068, loss=0.0478, mem_enc_norm=0.4143, param_norm=1803.4646
+
+
+Step 369: grad_norm=1.3702, llm_grad_norm=1.1580, loss=0.0596, mem_enc_norm=0.6473, param_norm=1803.4646
+
+
+Step 370: grad_norm=1.2191, llm_grad_norm=0.9928, loss=0.0323, mem_enc_norm=0.6612, param_norm=1803.4646
+
+
+Step 371: grad_norm=2.3785, llm_grad_norm=2.0074, loss=0.0526, mem_enc_norm=1.1889, param_norm=1803.4646
+
+
+Step 372: grad_norm=1.0135, llm_grad_norm=0.8697, loss=0.0346, mem_enc_norm=0.4545, param_norm=1803.4646
+
+
+Step 373: grad_norm=0.9715, llm_grad_norm=0.8169, loss=0.0422, mem_enc_norm=0.4809, param_norm=1803.4646
+
+
+Step 374: grad_norm=1.8138, llm_grad_norm=1.5466, loss=0.0478, mem_enc_norm=0.8917, param_norm=1803.4646
+
+
+Step 375: grad_norm=1.9789, llm_grad_norm=1.4621, loss=0.0387, mem_enc_norm=1.3007, param_norm=1803.4646
+
+
+Step 376: grad_norm=0.9352, llm_grad_norm=0.7688, loss=0.0349, mem_enc_norm=0.4731, param_norm=1803.4646
+
+
+Step 377: grad_norm=2.1587, llm_grad_norm=1.8607, loss=0.0600, mem_enc_norm=1.0286, param_norm=1803.4646
+
+
+Step 378: grad_norm=0.7488, llm_grad_norm=0.6453, loss=0.0296, mem_enc_norm=0.3464, param_norm=1803.4647
+
+
+Step 379: grad_norm=3.1893, llm_grad_norm=2.4373, loss=0.0617, mem_enc_norm=2.0314, param_norm=1803.4646
+
+
+Step 380: grad_norm=2.2604, llm_grad_norm=1.9494, loss=0.0458, mem_enc_norm=1.0869, param_norm=1803.4646
+
+
+Step 381: grad_norm=1.1166, llm_grad_norm=0.9222, loss=0.0434, mem_enc_norm=0.5479, param_norm=1803.4646
+
+
+Step 382: grad_norm=1.3229, llm_grad_norm=0.9886, loss=0.0414, mem_enc_norm=0.8492, param_norm=1803.4646
+
+
+Step 383: grad_norm=1.1353, llm_grad_norm=0.9765, loss=0.0356, mem_enc_norm=0.5184, param_norm=1803.4647
+
+
+Step 384: grad_norm=1.7414, llm_grad_norm=1.4658, loss=0.0488, mem_enc_norm=0.9085, param_norm=1803.4647
+
+
+Step 385: grad_norm=7.8756, llm_grad_norm=6.3030, loss=0.0482, mem_enc_norm=4.6793, param_norm=1803.4647
+
+
+Step 386: grad_norm=0.9527, llm_grad_norm=0.8045, loss=0.0497, mem_enc_norm=0.4447, param_norm=1803.4647
+
+
+Step 387: grad_norm=1.6332, llm_grad_norm=1.3986, loss=0.0436, mem_enc_norm=0.8203, param_norm=1803.4647
+
+
+Step 388: grad_norm=1.3725, llm_grad_norm=1.1191, loss=0.0305, mem_enc_norm=0.7559, param_norm=1803.4647
+
+
+Step 389: grad_norm=1.8020, llm_grad_norm=1.4730, loss=0.0320, mem_enc_norm=1.0001, param_norm=1803.4648
+
+
+Step 390: grad_norm=0.7064, llm_grad_norm=0.5964, loss=0.0275, mem_enc_norm=0.3247, param_norm=1803.4648
+
+
+Step 391: grad_norm=1.7063, llm_grad_norm=1.3323, loss=0.0551, mem_enc_norm=1.0332, param_norm=1803.4648
+
+
+Step 392: grad_norm=0.9014, llm_grad_norm=0.7514, loss=0.0425, mem_enc_norm=0.4334, param_norm=1803.4648
+
+
+Step 393: grad_norm=1.4330, llm_grad_norm=1.2112, loss=0.0298, mem_enc_norm=0.7317, param_norm=1803.4648
+
+
+Step 394: grad_norm=1.1594, llm_grad_norm=0.9469, loss=0.0503, mem_enc_norm=0.5714, param_norm=1803.4648
+
+
+Step 395: grad_norm=1.3818, llm_grad_norm=1.1745, loss=0.0284, mem_enc_norm=0.6945, param_norm=1803.4647
+
+
+Step 396: grad_norm=1.4483, llm_grad_norm=1.2198, loss=0.0330, mem_enc_norm=0.7411, param_norm=1803.4647
+
+
+Step 397: grad_norm=1.1255, llm_grad_norm=0.9496, loss=0.0381, mem_enc_norm=0.5373, param_norm=1803.4647
+
+
+Step 398: grad_norm=1.7202, llm_grad_norm=1.4671, loss=0.0386, mem_enc_norm=0.8542, param_norm=1803.4647
+
+
+Step 399: grad_norm=2.0946, llm_grad_norm=1.7642, loss=0.0349, mem_enc_norm=1.1060, param_norm=1803.4647
+
+[bench] step 399: TrainState 摘要 state=2f96ec04160aabca… params+ema=db99ce9630c9f683… (193 叶子, 耗时 176.848s)
+
+
+Step 400: grad_norm=1.1661, llm_grad_norm=0.9598, loss=0.0430, mem_enc_norm=0.6035, param_norm=1803.4647
+
+
+Step 401: grad_norm=2.2879, llm_grad_norm=1.9899, loss=0.0368, mem_enc_norm=1.0901, param_norm=1803.4647
+
+
+Step 402: grad_norm=1.6466, llm_grad_norm=1.4301, loss=0.0370, mem_enc_norm=0.7670, param_norm=1803.4647
+
+
+Step 403: grad_norm=1.3863, llm_grad_norm=1.2101, loss=0.0606, mem_enc_norm=0.6001, param_norm=1803.4647
+
+
+Step 404: grad_norm=1.5802, llm_grad_norm=1.3656, loss=0.0625, mem_enc_norm=0.7379, param_norm=1803.4647
+
+
+Step 405: grad_norm=2.0534, llm_grad_norm=1.6845, loss=0.0636, mem_enc_norm=0.9412, param_norm=1803.4648
+
+
+Step 406: grad_norm=1.7006, llm_grad_norm=1.4800, loss=0.0450, mem_enc_norm=0.8133, param_norm=1803.4648
+
+
+Step 407: grad_norm=2.1184, llm_grad_norm=1.7939, loss=0.0435, mem_enc_norm=1.0973, param_norm=1803.4648
+
+
+Step 408: grad_norm=1.6265, llm_grad_norm=1.3904, loss=0.0333, mem_enc_norm=0.7999, param_norm=1803.4648
+
+
+Step 409: grad_norm=1.9834, llm_grad_norm=1.6718, loss=0.0704, mem_enc_norm=0.9388, param_norm=1803.4648
+
+
+Step 410: grad_norm=0.7734, llm_grad_norm=0.6247, loss=0.0345, mem_enc_norm=0.2829, param_norm=1803.4648
+
+
+Step 411: grad_norm=1.1915, llm_grad_norm=0.9720, loss=0.0349, mem_enc_norm=0.6338, param_norm=1803.4648
+
+
+Step 412: grad_norm=2.2437, llm_grad_norm=1.8628, loss=0.0545, mem_enc_norm=0.9407, param_norm=1803.4648
+
+
+Step 413: grad_norm=1.1555, llm_grad_norm=0.9564, loss=0.0325, mem_enc_norm=0.6179, param_norm=1803.4648
+
+
+Step 414: grad_norm=1.7775, llm_grad_norm=1.4298, loss=0.0492, mem_enc_norm=1.0107, param_norm=1803.4648
+
+
+Step 415: grad_norm=1.8856, llm_grad_norm=1.5631, loss=0.0341, mem_enc_norm=1.0213, param_norm=1803.4648
+
+
+Step 416: grad_norm=2.4378, llm_grad_norm=2.1217, loss=0.0584, mem_enc_norm=1.0913, param_norm=1803.4648
+
+
+Step 417: grad_norm=3.2253, llm_grad_norm=2.4949, loss=0.0408, mem_enc_norm=1.9811, param_norm=1803.4648
+
+
+Step 418: grad_norm=1.1006, llm_grad_norm=0.8733, loss=0.0428, mem_enc_norm=0.6150, param_norm=1803.4648
+
+
+Step 419: grad_norm=1.1034, llm_grad_norm=0.9370, loss=0.0320, mem_enc_norm=0.5365, param_norm=1803.4648
+
+
+Step 420: grad_norm=1.1776, llm_grad_norm=1.0383, loss=0.0394, mem_enc_norm=0.4504, param_norm=1803.4648
+
+
+Step 421: grad_norm=1.3466, llm_grad_norm=1.1302, loss=0.0367, mem_enc_norm=0.6840, param_norm=1803.4648
+
+
+Step 422: grad_norm=1.2312, llm_grad_norm=1.0717, loss=0.0447, mem_enc_norm=0.4090, param_norm=1803.4648
+
+
+Step 423: grad_norm=1.2733, llm_grad_norm=1.0923, loss=0.0366, mem_enc_norm=0.6205, param_norm=1803.4650
+
+
+Step 424: grad_norm=0.9978, llm_grad_norm=0.7817, loss=0.0373, mem_enc_norm=0.5866, param_norm=1803.4650
+
+
+Step 425: grad_norm=1.1774, llm_grad_norm=0.9950, loss=0.0492, mem_enc_norm=0.5183, param_norm=1803.4650
+
+
+Step 426: grad_norm=1.3348, llm_grad_norm=1.1062, loss=0.0403, mem_enc_norm=0.6834, param_norm=1803.4650
+
+
+Step 427: grad_norm=2.0719, llm_grad_norm=1.6479, loss=0.0397, mem_enc_norm=1.2199, param_norm=1803.4650
+
+
+Step 428: grad_norm=0.9746, llm_grad_norm=0.8690, loss=0.0557, mem_enc_norm=0.3609, param_norm=1803.4650
+
+
+Step 429: grad_norm=3.2542, llm_grad_norm=2.4075, loss=0.0413, mem_enc_norm=2.1194, param_norm=1803.4650
+
+
+Step 430: grad_norm=1.4812, llm_grad_norm=1.1955, loss=0.0490, mem_enc_norm=0.7973, param_norm=1803.4650
+
+
+Step 431: grad_norm=2.1874, llm_grad_norm=1.8352, loss=0.0637, mem_enc_norm=0.9815, param_norm=1803.4648
+
+
+Step 432: grad_norm=2.4467, llm_grad_norm=2.0419, loss=0.0564, mem_enc_norm=1.2827, param_norm=1803.4650
+
+
+Step 433: grad_norm=22.8415, llm_grad_norm=18.4311, loss=0.0331, mem_enc_norm=13.4842, param_norm=1803.4648
+
+
+Step 434: grad_norm=1.2457, llm_grad_norm=0.9420, loss=0.0364, mem_enc_norm=0.7826, param_norm=1803.4650
+
+
+Step 435: grad_norm=1.0555, llm_grad_norm=0.8875, loss=0.0470, mem_enc_norm=0.5249, param_norm=1803.4651
+
+
+Step 436: grad_norm=2.0405, llm_grad_norm=1.6568, loss=0.0496, mem_enc_norm=1.1470, param_norm=1803.4650
+
+
+Step 437: grad_norm=2.4590, llm_grad_norm=2.0533, loss=0.0514, mem_enc_norm=1.2926, param_norm=1803.4650
+
+
+Step 438: grad_norm=1.2369, llm_grad_norm=0.9857, loss=0.0570, mem_enc_norm=0.6688, param_norm=1803.4650
+
+
+Step 439: grad_norm=1.7360, llm_grad_norm=1.4229, loss=0.0566, mem_enc_norm=0.9253, param_norm=1803.4650
+
+
+Step 440: grad_norm=1.3723, llm_grad_norm=1.1625, loss=0.0453, mem_enc_norm=0.6971, param_norm=1803.4651
+
+
+Step 441: grad_norm=1.2159, llm_grad_norm=1.0671, loss=0.0406, mem_enc_norm=0.5121, param_norm=1803.4650
+
+
+Step 442: grad_norm=1.3038, llm_grad_norm=1.1027, loss=0.0420, mem_enc_norm=0.5829, param_norm=1803.4650
+
+
+Step 443: grad_norm=3.4719, llm_grad_norm=3.0030, loss=0.1150, mem_enc_norm=1.6006, param_norm=1803.4650
+
+
+Step 444: grad_norm=1.0872, llm_grad_norm=0.9286, loss=0.0276, mem_enc_norm=0.5073, param_norm=1803.4650
+
+
+Step 445: grad_norm=0.8150, llm_grad_norm=0.6685, loss=0.0321, mem_enc_norm=0.4090, param_norm=1803.4650
+
+
+Step 446: grad_norm=1.1893, llm_grad_norm=1.0125, loss=0.0325, mem_enc_norm=0.5604, param_norm=1803.4650
+
+
+Step 447: grad_norm=0.9910, llm_grad_norm=0.8175, loss=0.0293, mem_enc_norm=0.4987, param_norm=1803.4650
+
+
+Step 448: grad_norm=1.7909, llm_grad_norm=1.5464, loss=0.0587, mem_enc_norm=0.8267, param_norm=1803.4651
+
+
+Step 449: grad_norm=1.9227, llm_grad_norm=1.5122, loss=0.0570, mem_enc_norm=1.0810, param_norm=1803.4651
+
+
+Step 450: grad_norm=1.4125, llm_grad_norm=1.1440, loss=0.0499, mem_enc_norm=0.7829, param_norm=1803.4651
+
+
+Step 451: grad_norm=1.2466, llm_grad_norm=1.0977, loss=0.0348, mem_enc_norm=0.4991, param_norm=1803.4651
+
+
+Step 452: grad_norm=1.4992, llm_grad_norm=1.3299, loss=0.0462, mem_enc_norm=0.6111, param_norm=1803.4651
+
+
+Step 453: grad_norm=1.4640, llm_grad_norm=1.2813, loss=0.0515, mem_enc_norm=0.6480, param_norm=1803.4651
+
+
+Step 454: grad_norm=0.9219, llm_grad_norm=0.7786, loss=0.0332, mem_enc_norm=0.4214, param_norm=1803.4651
+
+
+Step 455: grad_norm=1.1952, llm_grad_norm=1.0049, loss=0.0474, mem_enc_norm=0.5250, param_norm=1803.4651
+
+
+Step 456: grad_norm=1.2272, llm_grad_norm=1.0867, loss=0.0308, mem_enc_norm=0.5249, param_norm=1803.4651
+
+
+Step 457: grad_norm=0.7530, llm_grad_norm=0.6376, loss=0.0245, mem_enc_norm=0.3573, param_norm=1803.4650
+
+
+Step 458: grad_norm=2.3071, llm_grad_norm=1.9341, loss=0.0675, mem_enc_norm=1.2100, param_norm=1803.4651
+
+
+Step 459: grad_norm=1.0922, llm_grad_norm=0.9375, loss=0.0414, mem_enc_norm=0.5044, param_norm=1803.4650
+
+
+Step 460: grad_norm=0.8281, llm_grad_norm=0.7396, loss=0.0351, mem_enc_norm=0.3308, param_norm=1803.4650
+
+
+Step 461: grad_norm=1.2056, llm_grad_norm=1.0100, loss=0.0285, mem_enc_norm=0.6086, param_norm=1803.4651
+
+
+Step 462: grad_norm=1.2359, llm_grad_norm=1.0591, loss=0.0335, mem_enc_norm=0.5741, param_norm=1803.4651
+
+
+Step 463: grad_norm=1.1002, llm_grad_norm=0.9064, loss=0.0328, mem_enc_norm=0.5519, param_norm=1803.4651
+
+
+Step 464: grad_norm=0.7295, llm_grad_norm=0.6368, loss=0.0420, mem_enc_norm=0.2775, param_norm=1803.4651
+
+
+Step 465: grad_norm=2.3506, llm_grad_norm=2.0572, loss=0.0380, mem_enc_norm=1.0966, param_norm=1803.4651
+
+
+Step 466: grad_norm=2.1974, llm_grad_norm=1.9641, loss=0.0296, mem_enc_norm=0.9487, param_norm=1803.4651
+
+
+Step 467: grad_norm=1.8027, llm_grad_norm=1.5666, loss=0.0277, mem_enc_norm=0.8539, param_norm=1803.4651
+
+
+Step 468: grad_norm=2.0892, llm_grad_norm=1.8019, loss=0.0492, mem_enc_norm=1.0248, param_norm=1803.4651
+
+
+Step 469: grad_norm=1.1375, llm_grad_norm=0.9617, loss=0.0433, mem_enc_norm=0.5525, param_norm=1803.4651
+
+
+Step 470: grad_norm=1.8044, llm_grad_norm=1.5438, loss=0.0480, mem_enc_norm=0.8874, param_norm=1803.4651
+
+
+Step 471: grad_norm=0.9336, llm_grad_norm=0.7854, loss=0.0452, mem_enc_norm=0.3840, param_norm=1803.4651
+
+
+Step 472: grad_norm=2.7116, llm_grad_norm=2.2457, loss=0.0656, mem_enc_norm=1.4393, param_norm=1803.4651
+
+
+Step 473: grad_norm=0.7028, llm_grad_norm=0.5689, loss=0.0267, mem_enc_norm=0.3497, param_norm=1803.4650
+
+
+Step 474: grad_norm=1.2676, llm_grad_norm=1.0129, loss=0.0285, mem_enc_norm=0.6040, param_norm=1803.4651
+
+
+Step 475: grad_norm=0.6374, llm_grad_norm=0.5359, loss=0.0193, mem_enc_norm=0.2897, param_norm=1803.4651
+
+
+Step 476: grad_norm=1.1067, llm_grad_norm=0.9384, loss=0.0310, mem_enc_norm=0.5217, param_norm=1803.4651
+
+
+Step 477: grad_norm=0.8335, llm_grad_norm=0.7290, loss=0.0206, mem_enc_norm=0.3369, param_norm=1803.4651
+
+
+Step 478: grad_norm=2.5784, llm_grad_norm=2.3385, loss=0.0486, mem_enc_norm=1.0508, param_norm=1803.4651
+
+
+Step 479: grad_norm=2.3579, llm_grad_norm=2.0262, loss=0.0453, mem_enc_norm=1.1825, param_norm=1803.4651
+
+
+Step 480: grad_norm=0.8712, llm_grad_norm=0.7628, loss=0.0346, mem_enc_norm=0.3456, param_norm=1803.4651
+
+
+Step 481: grad_norm=1.4764, llm_grad_norm=1.1859, loss=0.0445, mem_enc_norm=0.8400, param_norm=1803.4651
+
+
+Step 482: grad_norm=0.8526, llm_grad_norm=0.6924, loss=0.0323, mem_enc_norm=0.4060, param_norm=1803.4651
+
+
+Step 483: grad_norm=0.7901, llm_grad_norm=0.6790, loss=0.0243, mem_enc_norm=0.3352, param_norm=1803.4651
+
+
+Step 484: grad_norm=1.7737, llm_grad_norm=1.4180, loss=0.0623, mem_enc_norm=1.0136, param_norm=1803.4651
+
+
+Step 485: grad_norm=0.8761, llm_grad_norm=0.7149, loss=0.0296, mem_enc_norm=0.4402, param_norm=1803.4651
+
+
+Step 486: grad_norm=1.0320, llm_grad_norm=0.8639, loss=0.0364, mem_enc_norm=0.4777, param_norm=1803.4651
+
+
+Step 487: grad_norm=0.5460, llm_grad_norm=0.4652, loss=0.0203, mem_enc_norm=0.2247, param_norm=1803.4651
+
+
+Step 488: grad_norm=2.0441, llm_grad_norm=1.6924, loss=0.0556, mem_enc_norm=0.8748, param_norm=1803.4651
+
+
+Step 489: grad_norm=1.0060, llm_grad_norm=0.8937, loss=0.0217, mem_enc_norm=0.4342, param_norm=1803.4651
+
+
+Step 490: grad_norm=1.0659, llm_grad_norm=0.8968, loss=0.0412, mem_enc_norm=0.5097, param_norm=1803.4652
+
+
+Step 491: grad_norm=0.9678, llm_grad_norm=0.8165, loss=0.0288, mem_enc_norm=0.4367, param_norm=1803.4651
+
+
+Step 492: grad_norm=1.5795, llm_grad_norm=1.3747, loss=0.0413, mem_enc_norm=0.6737, param_norm=1803.4652
+
+
+Step 493: grad_norm=1.5128, llm_grad_norm=1.3124, loss=0.0240, mem_enc_norm=0.6959, param_norm=1803.4651
+
+
+Step 494: grad_norm=1.2804, llm_grad_norm=1.0939, loss=0.0269, mem_enc_norm=0.6378, param_norm=1803.4651
+
+
+Step 495: grad_norm=0.9561, llm_grad_norm=0.7951, loss=0.0290, mem_enc_norm=0.4778, param_norm=1803.4651
+
+
+Step 496: grad_norm=1.9015, llm_grad_norm=1.6734, loss=0.0373, mem_enc_norm=0.8690, param_norm=1803.4651
+
+
+Step 497: grad_norm=1.0233, llm_grad_norm=0.8587, loss=0.0162, mem_enc_norm=0.5327, param_norm=1803.4652
+
+
+Step 498: grad_norm=1.0157, llm_grad_norm=0.8799, loss=0.0372, mem_enc_norm=0.4331, param_norm=1803.4652
+
+
+Step 499: grad_norm=1.0433, llm_grad_norm=0.8543, loss=0.0261, mem_enc_norm=0.5677, param_norm=1803.4652
+
+
+Step 500: grad_norm=1.0193, llm_grad_norm=0.8735, loss=0.0435, mem_enc_norm=0.3786, param_norm=1803.4652
+
+
+Step 501: grad_norm=1.6628, llm_grad_norm=1.4457, loss=0.0444, mem_enc_norm=0.6498, param_norm=1803.4652
+
+
+Step 502: grad_norm=2.0522, llm_grad_norm=1.7222, loss=0.0430, mem_enc_norm=0.9746, param_norm=1803.4652
+
+
+Step 503: grad_norm=1.4738, llm_grad_norm=1.2105, loss=0.0224, mem_enc_norm=0.8052, param_norm=1803.4652
+
+
+Step 504: grad_norm=1.1959, llm_grad_norm=0.9619, loss=0.0351, mem_enc_norm=0.6446, param_norm=1803.4652
+
+
+Step 505: grad_norm=2.1936, llm_grad_norm=1.9210, loss=0.0551, mem_enc_norm=0.9223, param_norm=1803.4652
+
+
+Step 506: grad_norm=1.0608, llm_grad_norm=0.9111, loss=0.0512, mem_enc_norm=0.4854, param_norm=1803.4652
+
+
+Step 507: grad_norm=1.5568, llm_grad_norm=1.1820, loss=0.0380, mem_enc_norm=0.9806, param_norm=1803.4652
+
+
+Step 508: grad_norm=0.6698, llm_grad_norm=0.5621, loss=0.0220, mem_enc_norm=0.2903, param_norm=1803.4652
+
+
+Step 509: grad_norm=0.8810, llm_grad_norm=0.7429, loss=0.0293, mem_enc_norm=0.4170, param_norm=1803.4652
+
+
+Step 510: grad_norm=1.5337, llm_grad_norm=1.3443, loss=0.0469, mem_enc_norm=0.7075, param_norm=1803.4652
+
+
+Step 511: grad_norm=2.2146, llm_grad_norm=1.9031, loss=0.0516, mem_enc_norm=1.1130, param_norm=1803.4652
+
+
+Step 512: grad_norm=1.0767, llm_grad_norm=0.9227, loss=0.0356, mem_enc_norm=0.4895, param_norm=1803.4652
+
+
+Step 513: grad_norm=0.8493, llm_grad_norm=0.7393, loss=0.0340, mem_enc_norm=0.3524, param_norm=1803.4652
+
+
+Step 514: grad_norm=1.8202, llm_grad_norm=1.5234, loss=0.0488, mem_enc_norm=0.9277, param_norm=1803.4652
+
+
+Step 515: grad_norm=0.9733, llm_grad_norm=0.8409, loss=0.0322, mem_enc_norm=0.3970, param_norm=1803.4652
+
+
+Step 516: grad_norm=1.0321, llm_grad_norm=0.8518, loss=0.0368, mem_enc_norm=0.5207, param_norm=1803.4653
+
+
+Step 517: grad_norm=1.3976, llm_grad_norm=1.2110, loss=0.0296, mem_enc_norm=0.6730, param_norm=1803.4653
+
+
+Step 518: grad_norm=1.2477, llm_grad_norm=1.0532, loss=0.0419, mem_enc_norm=0.5927, param_norm=1803.4653
+
+
+Step 519: grad_norm=1.8310, llm_grad_norm=1.5653, loss=0.0284, mem_enc_norm=0.9172, param_norm=1803.4653
+
+
+Step 520: grad_norm=1.0138, llm_grad_norm=0.8612, loss=0.0237, mem_enc_norm=0.4894, param_norm=1803.4653
+
+
+Step 521: grad_norm=0.8863, llm_grad_norm=0.7769, loss=0.0248, mem_enc_norm=0.3829, param_norm=1803.4653
+
+
+Step 522: grad_norm=1.2937, llm_grad_norm=1.1129, loss=0.0709, mem_enc_norm=0.5431, param_norm=1803.4653
+
+
+Step 523: grad_norm=1.3880, llm_grad_norm=1.1724, loss=0.0336, mem_enc_norm=0.7140, param_norm=1803.4653
+
+
+Step 524: grad_norm=1.0878, llm_grad_norm=0.9522, loss=0.0370, mem_enc_norm=0.4940, param_norm=1803.4653
+
+
+Step 525: grad_norm=0.9046, llm_grad_norm=0.7723, loss=0.0219, mem_enc_norm=0.4330, param_norm=1803.4653
+
+
+Step 526: grad_norm=1.3205, llm_grad_norm=1.0284, loss=0.0406, mem_enc_norm=0.8111, param_norm=1803.4653
+
+
+Step 527: grad_norm=2.0305, llm_grad_norm=1.7392, loss=0.0310, mem_enc_norm=1.0286, param_norm=1803.4653
+
+
+Step 528: grad_norm=1.1374, llm_grad_norm=0.9652, loss=0.0297, mem_enc_norm=0.5718, param_norm=1803.4653
+
+
+Step 529: grad_norm=1.2417, llm_grad_norm=1.0340, loss=0.0403, mem_enc_norm=0.6424, param_norm=1803.4653
+
+
+Step 530: grad_norm=1.4275, llm_grad_norm=1.1985, loss=0.0560, mem_enc_norm=0.6235, param_norm=1803.4653
+
+
+Step 531: grad_norm=1.7184, llm_grad_norm=1.4686, loss=0.0432, mem_enc_norm=0.8258, param_norm=1803.4653
+
+
+Step 532: grad_norm=0.8710, llm_grad_norm=0.7096, loss=0.0296, mem_enc_norm=0.4536, param_norm=1803.4653
+
+
+Step 533: grad_norm=1.6442, llm_grad_norm=1.4124, loss=0.0347, mem_enc_norm=0.8018, param_norm=1803.4653
+
+
+Step 534: grad_norm=1.2156, llm_grad_norm=1.0095, loss=0.0271, mem_enc_norm=0.6514, param_norm=1803.4653
+
+
+Step 535: grad_norm=1.8231, llm_grad_norm=1.5944, loss=0.0400, mem_enc_norm=0.8146, param_norm=1803.4653
+
+
+Step 536: grad_norm=2.0013, llm_grad_norm=1.7157, loss=0.0422, mem_enc_norm=0.9328, param_norm=1803.4653
+
+
+Step 537: grad_norm=2.2152, llm_grad_norm=1.9125, loss=0.0305, mem_enc_norm=1.0918, param_norm=1803.4653
+
+
+Step 538: grad_norm=1.8595, llm_grad_norm=1.6004, loss=0.0330, mem_enc_norm=0.9133, param_norm=1803.4653
+
+
+Step 539: grad_norm=0.9618, llm_grad_norm=0.8216, loss=0.0481, mem_enc_norm=0.3966, param_norm=1803.4653
+
+
+Step 540: grad_norm=0.9684, llm_grad_norm=0.8331, loss=0.0372, mem_enc_norm=0.4089, param_norm=1803.4653
+
+
+Step 541: grad_norm=1.1248, llm_grad_norm=0.9635, loss=0.0353, mem_enc_norm=0.4817, param_norm=1803.4653
+
+
+Step 542: grad_norm=1.2284, llm_grad_norm=1.0581, loss=0.0400, mem_enc_norm=0.5463, param_norm=1803.4653
+
+
+Step 543: grad_norm=0.7634, llm_grad_norm=0.6624, loss=0.0286, mem_enc_norm=0.3242, param_norm=1803.4653
+
+
+Step 544: grad_norm=0.5988, llm_grad_norm=0.5001, loss=0.0260, mem_enc_norm=0.2536, param_norm=1803.4653
+
+
+Step 545: grad_norm=0.9675, llm_grad_norm=0.8552, loss=0.0356, mem_enc_norm=0.3995, param_norm=1803.4653
+
+
+Step 546: grad_norm=1.2998, llm_grad_norm=1.1146, loss=0.0358, mem_enc_norm=0.6071, param_norm=1803.4653
+
+
+Step 547: grad_norm=1.8858, llm_grad_norm=1.5935, loss=0.0552, mem_enc_norm=0.9386, param_norm=1803.4653
+
+
+Step 548: grad_norm=1.1251, llm_grad_norm=0.9688, loss=0.0271, mem_enc_norm=0.5289, param_norm=1803.4653
+
+
+Step 549: grad_norm=1.2022, llm_grad_norm=1.0067, loss=0.0289, mem_enc_norm=0.5955, param_norm=1803.4653
+
+
+Step 550: grad_norm=1.0915, llm_grad_norm=0.9391, loss=0.0314, mem_enc_norm=0.5088, param_norm=1803.4653
+
+
+Step 551: grad_norm=1.1378, llm_grad_norm=0.9538, loss=0.0258, mem_enc_norm=0.5516, param_norm=1803.4653
+
+
+Step 552: grad_norm=1.5924, llm_grad_norm=1.3544, loss=0.0350, mem_enc_norm=0.8058, param_norm=1803.4653
+
+
+Step 553: grad_norm=1.3733, llm_grad_norm=1.1915, loss=0.0216, mem_enc_norm=0.6515, param_norm=1803.4653
+
+
+Step 554: grad_norm=0.9273, llm_grad_norm=0.7567, loss=0.0163, mem_enc_norm=0.5083, param_norm=1803.4655
+
+
+Step 555: grad_norm=2.3420, llm_grad_norm=2.0206, loss=0.0376, mem_enc_norm=1.1597, param_norm=1803.4653
+
+
+Step 556: grad_norm=0.9047, llm_grad_norm=0.7397, loss=0.0260, mem_enc_norm=0.4780, param_norm=1803.4653
+
+
+Step 557: grad_norm=1.1685, llm_grad_norm=1.0298, loss=0.0355, mem_enc_norm=0.4727, param_norm=1803.4653
+
+
+Step 558: grad_norm=1.5761, llm_grad_norm=1.3274, loss=0.0527, mem_enc_norm=0.7394, param_norm=1803.4653
+
+
+Step 559: grad_norm=2.4302, llm_grad_norm=1.9132, loss=0.0655, mem_enc_norm=1.4520, param_norm=1803.4653
+
+
+Step 560: grad_norm=1.1123, llm_grad_norm=0.9152, loss=0.0514, mem_enc_norm=0.5655, param_norm=1803.4653
+
+
+Step 561: grad_norm=1.4268, llm_grad_norm=1.2325, loss=0.0499, mem_enc_norm=0.6750, param_norm=1803.4653
+
+
+Step 562: grad_norm=1.1313, llm_grad_norm=0.9465, loss=0.0321, mem_enc_norm=0.5882, param_norm=1803.4653
+
+
+Step 563: grad_norm=1.2276, llm_grad_norm=0.9578, loss=0.0393, mem_enc_norm=0.7408, param_norm=1803.4655
+
+
+Step 564: grad_norm=0.7766, llm_grad_norm=0.6482, loss=0.0251, mem_enc_norm=0.3661, param_norm=1803.4655
+
+
+Step 565: grad_norm=0.7932, llm_grad_norm=0.6605, loss=0.0273, mem_enc_norm=0.3624, param_norm=1803.4653
+
+
+Step 566: grad_norm=2.6897, llm_grad_norm=2.3194, loss=0.0665, mem_enc_norm=1.0651, param_norm=1803.4655
+
+
+Step 567: grad_norm=1.3543, llm_grad_norm=1.1779, loss=0.0291, mem_enc_norm=0.6040, param_norm=1803.4655
+
+
+Step 568: grad_norm=1.1307, llm_grad_norm=0.9812, loss=0.0219, mem_enc_norm=0.5298, param_norm=1803.4655
+
+
+Step 569: grad_norm=1.7818, llm_grad_norm=1.3867, loss=0.0384, mem_enc_norm=1.0688, param_norm=1803.4655
+
+
+Step 570: grad_norm=0.9186, llm_grad_norm=0.8173, loss=0.0261, mem_enc_norm=0.3625, param_norm=1803.4653
+
+
+Step 571: grad_norm=0.9281, llm_grad_norm=0.8082, loss=0.0483, mem_enc_norm=0.3931, param_norm=1803.4655
+
+
+Step 572: grad_norm=2.4046, llm_grad_norm=1.6254, loss=0.0532, mem_enc_norm=1.7458, param_norm=1803.4655
+
+
+Step 573: grad_norm=1.3765, llm_grad_norm=1.1947, loss=0.0564, mem_enc_norm=0.6280, param_norm=1803.4655
+
+
+Step 574: grad_norm=1.2298, llm_grad_norm=1.0564, loss=0.0324, mem_enc_norm=0.5869, param_norm=1803.4655
+
+
+Step 575: grad_norm=2.2158, llm_grad_norm=1.7490, loss=0.0369, mem_enc_norm=1.3196, param_norm=1803.4655
+
+
+Step 576: grad_norm=0.8728, llm_grad_norm=0.7751, loss=0.0270, mem_enc_norm=0.3192, param_norm=1803.4655
+
+
+Step 577: grad_norm=1.7773, llm_grad_norm=1.5733, loss=0.0451, mem_enc_norm=0.7530, param_norm=1803.4656
+
+
+Step 578: grad_norm=0.7896, llm_grad_norm=0.6809, loss=0.0414, mem_enc_norm=0.2861, param_norm=1803.4655
+
+
+Step 579: grad_norm=1.0125, llm_grad_norm=0.8665, loss=0.0378, mem_enc_norm=0.4772, param_norm=1803.4655
+
+
+Step 580: grad_norm=1.5054, llm_grad_norm=1.3523, loss=0.0414, mem_enc_norm=0.6262, param_norm=1803.4655
+
+
+Step 581: grad_norm=1.5120, llm_grad_norm=1.3194, loss=0.0372, mem_enc_norm=0.6859, param_norm=1803.4655
+
+
+Step 582: grad_norm=1.4304, llm_grad_norm=1.2033, loss=0.0328, mem_enc_norm=0.7385, param_norm=1803.4655
+
+
+Step 583: grad_norm=2.1044, llm_grad_norm=1.7928, loss=0.0386, mem_enc_norm=1.0579, param_norm=1803.4656
+
+
+Step 584: grad_norm=1.1745, llm_grad_norm=1.0213, loss=0.0259, mem_enc_norm=0.5550, param_norm=1803.4656
+
+
+Step 585: grad_norm=0.6604, llm_grad_norm=0.5693, loss=0.0188, mem_enc_norm=0.2909, param_norm=1803.4656
+
+
+Step 586: grad_norm=0.7311, llm_grad_norm=0.6169, loss=0.0203, mem_enc_norm=0.2954, param_norm=1803.4656
+
+
+Step 587: grad_norm=3.1120, llm_grad_norm=2.7332, loss=0.0472, mem_enc_norm=1.4609, param_norm=1803.4656
+
+
+Step 588: grad_norm=1.4937, llm_grad_norm=1.2934, loss=0.0357, mem_enc_norm=0.6927, param_norm=1803.4656
+
+
+Step 589: grad_norm=0.6342, llm_grad_norm=0.5111, loss=0.0172, mem_enc_norm=0.3112, param_norm=1803.4656
+
+
+Step 590: grad_norm=2.8004, llm_grad_norm=2.4592, loss=0.0538, mem_enc_norm=1.2986, param_norm=1803.4656
+
+
+Step 591: grad_norm=1.1884, llm_grad_norm=1.0521, loss=0.0586, mem_enc_norm=0.4337, param_norm=1803.4656
+
+
+Step 592: grad_norm=1.9564, llm_grad_norm=1.6696, loss=0.0599, mem_enc_norm=0.9763, param_norm=1803.4656
+
+
+Step 593: grad_norm=1.2607, llm_grad_norm=1.0895, loss=0.0390, mem_enc_norm=0.5479, param_norm=1803.4656
+
+
+Step 594: grad_norm=0.6182, llm_grad_norm=0.5167, loss=0.0326, mem_enc_norm=0.2508, param_norm=1803.4656
+
+
+Step 595: grad_norm=0.8414, llm_grad_norm=0.7409, loss=0.0345, mem_enc_norm=0.3260, param_norm=1803.4656
+
+
+Step 596: grad_norm=1.1809, llm_grad_norm=1.0031, loss=0.0306, mem_enc_norm=0.5801, param_norm=1803.4656
+
+
+Step 597: grad_norm=1.3202, llm_grad_norm=1.1417, loss=0.0320, mem_enc_norm=0.5921, param_norm=1803.4656
+
+
+Step 598: grad_norm=1.5249, llm_grad_norm=1.3307, loss=0.0534, mem_enc_norm=0.6464, param_norm=1803.4656
+
+
+Step 599: grad_norm=1.1041, llm_grad_norm=0.8869, loss=0.0512, mem_enc_norm=0.6222, param_norm=1803.4656
+
+[bench] step 599: TrainState 摘要 state=e817830439ef5234… params+ema=b8537d92a2f84401… (193 叶子, 耗时 177.434s)
+
+
+Step 600: grad_norm=1.3639, llm_grad_norm=1.0974, loss=0.0282, mem_enc_norm=0.7770, param_norm=1803.4656
+
+
+Step 601: grad_norm=0.8409, llm_grad_norm=0.6851, loss=0.0383, mem_enc_norm=0.4044, param_norm=1803.4656
+
+
+Step 602: grad_norm=1.0217, llm_grad_norm=0.8657, loss=0.0315, mem_enc_norm=0.5089, param_norm=1803.4656
+
+
+Step 603: grad_norm=5.6659, llm_grad_norm=3.5232, loss=0.0392, mem_enc_norm=4.4249, param_norm=1803.4656
+
+
+Step 604: grad_norm=2.1116, llm_grad_norm=1.8933, loss=0.0381, mem_enc_norm=0.8523, param_norm=1803.4657
+
+
+Step 605: grad_norm=1.3363, llm_grad_norm=1.1222, loss=0.0423, mem_enc_norm=0.6211, param_norm=1803.4657
+
+
+Step 606: grad_norm=0.8792, llm_grad_norm=0.7847, loss=0.0427, mem_enc_norm=0.3382, param_norm=1803.4657
+
+
+Step 607: grad_norm=0.6847, llm_grad_norm=0.5940, loss=0.0249, mem_enc_norm=0.2914, param_norm=1803.4657
+
+
+Step 608: grad_norm=1.2554, llm_grad_norm=1.1175, loss=0.0294, mem_enc_norm=0.5115, param_norm=1803.4657
+
+
+Step 609: grad_norm=0.8510, llm_grad_norm=0.6652, loss=0.0238, mem_enc_norm=0.4930, param_norm=1803.4657
+
+
+Step 610: grad_norm=1.2284, llm_grad_norm=1.0307, loss=0.0287, mem_enc_norm=0.6122, param_norm=1803.4657
+
+
+Step 611: grad_norm=1.1728, llm_grad_norm=1.0305, loss=0.0360, mem_enc_norm=0.4539, param_norm=1803.4657
+
+
+Step 612: grad_norm=2.3004, llm_grad_norm=2.0579, loss=0.0579, mem_enc_norm=0.9237, param_norm=1803.4657
+
+
+Step 613: grad_norm=3.6800, llm_grad_norm=3.1973, loss=0.0295, mem_enc_norm=1.7787, param_norm=1803.4657
+
+
+Step 614: grad_norm=2.2809, llm_grad_norm=1.9810, loss=0.0430, mem_enc_norm=1.0704, param_norm=1803.4657
+
+
+Step 615: grad_norm=1.1378, llm_grad_norm=0.9934, loss=0.0352, mem_enc_norm=0.5100, param_norm=1803.4657
+
+
+Step 616: grad_norm=1.3037, llm_grad_norm=1.1150, loss=0.0440, mem_enc_norm=0.6187, param_norm=1803.4657
+
+
+Step 617: grad_norm=0.9532, llm_grad_norm=0.8068, loss=0.0291, mem_enc_norm=0.4475, param_norm=1803.4657
+
+
+Step 618: grad_norm=1.8283, llm_grad_norm=1.4893, loss=0.0350, mem_enc_norm=0.9907, param_norm=1803.4657
+
+
+Step 619: grad_norm=1.1926, llm_grad_norm=1.0529, loss=0.0376, mem_enc_norm=0.4648, param_norm=1803.4657
+
+
+Step 620: grad_norm=1.6343, llm_grad_norm=1.4227, loss=0.0373, mem_enc_norm=0.7441, param_norm=1803.4657
+
+
+Step 621: grad_norm=1.4364, llm_grad_norm=1.2231, loss=0.0205, mem_enc_norm=0.7351, param_norm=1803.4657
+
+
+Step 622: grad_norm=0.8656, llm_grad_norm=0.7586, loss=0.0309, mem_enc_norm=0.3416, param_norm=1803.4658
+
+
+Step 623: grad_norm=0.9322, llm_grad_norm=0.8129, loss=0.0210, mem_enc_norm=0.4269, param_norm=1803.4658
+
+
+Step 624: grad_norm=1.1650, llm_grad_norm=1.0039, loss=0.0267, mem_enc_norm=0.5496, param_norm=1803.4658
+
+
+Step 625: grad_norm=0.8390, llm_grad_norm=0.7158, loss=0.0382, mem_enc_norm=0.3906, param_norm=1803.4658
+
+
+Step 626: grad_norm=1.0354, llm_grad_norm=0.8924, loss=0.0486, mem_enc_norm=0.4708, param_norm=1803.4658
+
+
+Step 627: grad_norm=1.3464, llm_grad_norm=1.1840, loss=0.0268, mem_enc_norm=0.5692, param_norm=1803.4659
+
+
+Step 628: grad_norm=3.9762, llm_grad_norm=2.9013, loss=0.1072, mem_enc_norm=2.6516, param_norm=1803.4658
+
+
+Step 629: grad_norm=1.1072, llm_grad_norm=0.9542, loss=0.0374, mem_enc_norm=0.4137, param_norm=1803.4658
+
+
+Step 630: grad_norm=0.9219, llm_grad_norm=0.8091, loss=0.0286, mem_enc_norm=0.3731, param_norm=1803.4659
+
+
+Step 631: grad_norm=1.2058, llm_grad_norm=1.0755, loss=0.0354, mem_enc_norm=0.5287, param_norm=1803.4658
+
+
+Step 632: grad_norm=0.7707, llm_grad_norm=0.6393, loss=0.0279, mem_enc_norm=0.3799, param_norm=1803.4658
+
+
+Step 633: grad_norm=1.1142, llm_grad_norm=0.9566, loss=0.0536, mem_enc_norm=0.4880, param_norm=1803.4658
+
+
+Step 634: grad_norm=0.7409, llm_grad_norm=0.6151, loss=0.0224, mem_enc_norm=0.3475, param_norm=1803.4659
+
+
+Step 635: grad_norm=0.8334, llm_grad_norm=0.7413, loss=0.0260, mem_enc_norm=0.3383, param_norm=1803.4658
+
+
+Step 636: grad_norm=1.2319, llm_grad_norm=1.1032, loss=0.0349, mem_enc_norm=0.4939, param_norm=1803.4658
+
+
+Step 637: grad_norm=1.1490, llm_grad_norm=0.9950, loss=0.0315, mem_enc_norm=0.5474, param_norm=1803.4658
+
+
+Step 638: grad_norm=1.7484, llm_grad_norm=1.5227, loss=0.0296, mem_enc_norm=0.7403, param_norm=1803.4658
+
+
+Step 639: grad_norm=0.7172, llm_grad_norm=0.6187, loss=0.0275, mem_enc_norm=0.3110, param_norm=1803.4658
+
+
+Step 640: grad_norm=0.9102, llm_grad_norm=0.7903, loss=0.0275, mem_enc_norm=0.4017, param_norm=1803.4658
+
+
+Step 641: grad_norm=1.3622, llm_grad_norm=1.2178, loss=0.0535, mem_enc_norm=0.5507, param_norm=1803.4658
+
+
+Step 642: grad_norm=1.0774, llm_grad_norm=0.9375, loss=0.0204, mem_enc_norm=0.4972, param_norm=1803.4658
+
+
+Step 643: grad_norm=1.0282, llm_grad_norm=0.8361, loss=0.0339, mem_enc_norm=0.5763, param_norm=1803.4658
+
+
+Step 644: grad_norm=1.2520, llm_grad_norm=1.1151, loss=0.0266, mem_enc_norm=0.5274, param_norm=1803.4658
+
+
+Step 645: grad_norm=1.1459, llm_grad_norm=0.9737, loss=0.0320, mem_enc_norm=0.5649, param_norm=1803.4658
+
+
+Step 646: grad_norm=3.1200, llm_grad_norm=2.7772, loss=0.0565, mem_enc_norm=1.3266, param_norm=1803.4658
+
+
+Step 647: grad_norm=1.7720, llm_grad_norm=1.4694, loss=0.0375, mem_enc_norm=0.9514, param_norm=1803.4658
+
+
+Step 648: grad_norm=1.1783, llm_grad_norm=1.0420, loss=0.0310, mem_enc_norm=0.5225, param_norm=1803.4658
+
+
+Step 649: grad_norm=0.8824, llm_grad_norm=0.7705, loss=0.0222, mem_enc_norm=0.3599, param_norm=1803.4658
+
+
+Step 650: grad_norm=0.8838, llm_grad_norm=0.7683, loss=0.0251, mem_enc_norm=0.3867, param_norm=1803.4659
+
+
+Step 651: grad_norm=1.6127, llm_grad_norm=1.3980, loss=0.0435, mem_enc_norm=0.7413, param_norm=1803.4658
+
+
+Step 652: grad_norm=0.5219, llm_grad_norm=0.4593, loss=0.0163, mem_enc_norm=0.2163, param_norm=1803.4659
+
+
+Step 653: grad_norm=0.9270, llm_grad_norm=0.8207, loss=0.0452, mem_enc_norm=0.3595, param_norm=1803.4659
+
+
+Step 654: grad_norm=1.1593, llm_grad_norm=0.9371, loss=0.0408, mem_enc_norm=0.4817, param_norm=1803.4659
+
+
+Step 655: grad_norm=1.1869, llm_grad_norm=1.0317, loss=0.0416, mem_enc_norm=0.5393, param_norm=1803.4659
+
+
+Step 656: grad_norm=1.9321, llm_grad_norm=1.7803, loss=0.0426, mem_enc_norm=0.7053, param_norm=1803.4659
+
+
+Step 657: grad_norm=0.9925, llm_grad_norm=0.8672, loss=0.0243, mem_enc_norm=0.4122, param_norm=1803.4659
+
+
+Step 658: grad_norm=0.9968, llm_grad_norm=0.8388, loss=0.0305, mem_enc_norm=0.4425, param_norm=1803.4659
+
+
+Step 659: grad_norm=1.3336, llm_grad_norm=1.1653, loss=0.0333, mem_enc_norm=0.5761, param_norm=1803.4659
+
+
+Step 660: grad_norm=0.8053, llm_grad_norm=0.7038, loss=0.0241, mem_enc_norm=0.3423, param_norm=1803.4659
+
+
+Step 661: grad_norm=1.1600, llm_grad_norm=1.0321, loss=0.0387, mem_enc_norm=0.4747, param_norm=1803.4659
+
+
+Step 662: grad_norm=1.1268, llm_grad_norm=0.9743, loss=0.0390, mem_enc_norm=0.4928, param_norm=1803.4659
+
+
+Step 663: grad_norm=0.5919, llm_grad_norm=0.5181, loss=0.0288, mem_enc_norm=0.2275, param_norm=1803.4659
+
+
+Step 664: grad_norm=0.7805, llm_grad_norm=0.6822, loss=0.0209, mem_enc_norm=0.3132, param_norm=1803.4659
+
+
+Step 665: grad_norm=2.4647, llm_grad_norm=2.2093, loss=0.0215, mem_enc_norm=1.0741, param_norm=1803.4659
+
+
+Step 666: grad_norm=1.1007, llm_grad_norm=0.9670, loss=0.0158, mem_enc_norm=0.4888, param_norm=1803.4659
+
+
+Step 667: grad_norm=1.1320, llm_grad_norm=1.0098, loss=0.0314, mem_enc_norm=0.4547, param_norm=1803.4659
+
+
+Step 668: grad_norm=0.9388, llm_grad_norm=0.8476, loss=0.0351, mem_enc_norm=0.3126, param_norm=1803.4659
+
+
+Step 669: grad_norm=0.7121, llm_grad_norm=0.5909, loss=0.0305, mem_enc_norm=0.3673, param_norm=1803.4659
+
+
+Step 670: grad_norm=1.0016, llm_grad_norm=0.8402, loss=0.0255, mem_enc_norm=0.4973, param_norm=1803.4659
+
+
+Step 671: grad_norm=0.8967, llm_grad_norm=0.7840, loss=0.0277, mem_enc_norm=0.3441, param_norm=1803.4659
+
+
+Step 672: grad_norm=1.4127, llm_grad_norm=1.2093, loss=0.0393, mem_enc_norm=0.6549, param_norm=1803.4659
+
+
+Step 673: grad_norm=1.3724, llm_grad_norm=1.2241, loss=0.0293, mem_enc_norm=0.5934, param_norm=1803.4659
+
+
+Step 674: grad_norm=0.8241, llm_grad_norm=0.7245, loss=0.0305, mem_enc_norm=0.3355, param_norm=1803.4659
+
+
+Step 675: grad_norm=0.8112, llm_grad_norm=0.7187, loss=0.0368, mem_enc_norm=0.2788, param_norm=1803.4659
+
+
+Step 676: grad_norm=0.7912, llm_grad_norm=0.6481, loss=0.0448, mem_enc_norm=0.3334, param_norm=1803.4659
+
+
+Step 677: grad_norm=1.0455, llm_grad_norm=0.8611, loss=0.0371, mem_enc_norm=0.5451, param_norm=1803.4659
+
+
+Step 678: grad_norm=0.8648, llm_grad_norm=0.7682, loss=0.0330, mem_enc_norm=0.3483, param_norm=1803.4659
+
+
+Step 679: grad_norm=0.9577, llm_grad_norm=0.7944, loss=0.0286, mem_enc_norm=0.4807, param_norm=1803.4659
+
+
+Step 680: grad_norm=0.7635, llm_grad_norm=0.6702, loss=0.0236, mem_enc_norm=0.2847, param_norm=1803.4659
+
+
+Step 681: grad_norm=1.8290, llm_grad_norm=1.6171, loss=0.0636, mem_enc_norm=0.7772, param_norm=1803.4659
+
+
+Step 682: grad_norm=0.8412, llm_grad_norm=0.7033, loss=0.0222, mem_enc_norm=0.4134, param_norm=1803.4659
+
+
+Step 683: grad_norm=0.7810, llm_grad_norm=0.6567, loss=0.0152, mem_enc_norm=0.3707, param_norm=1803.4661
+
+
+Step 684: grad_norm=1.2234, llm_grad_norm=1.0712, loss=0.0371, mem_enc_norm=0.5476, param_norm=1803.4659
+
+
+Step 685: grad_norm=0.9160, llm_grad_norm=0.7913, loss=0.0342, mem_enc_norm=0.4078, param_norm=1803.4661
+
+
+Step 686: grad_norm=0.9941, llm_grad_norm=0.7735, loss=0.0267, mem_enc_norm=0.5901, param_norm=1803.4661
+
+
+Step 687: grad_norm=0.8576, llm_grad_norm=0.7073, loss=0.0273, mem_enc_norm=0.4453, param_norm=1803.4661
+
+
+Step 688: grad_norm=0.6913, llm_grad_norm=0.5899, loss=0.0254, mem_enc_norm=0.2768, param_norm=1803.4661
+
+
+Step 689: grad_norm=1.0183, llm_grad_norm=0.8439, loss=0.0177, mem_enc_norm=0.5512, param_norm=1803.4661
+
+
+Step 690: grad_norm=0.7681, llm_grad_norm=0.6648, loss=0.0308, mem_enc_norm=0.3286, param_norm=1803.4661
+
+
+Step 691: grad_norm=1.2976, llm_grad_norm=1.1729, loss=0.0350, mem_enc_norm=0.4993, param_norm=1803.4661
+
+
+Step 692: grad_norm=0.9033, llm_grad_norm=0.8139, loss=0.0372, mem_enc_norm=0.3410, param_norm=1803.4661
+
+
+Step 693: grad_norm=0.8124, llm_grad_norm=0.6964, loss=0.0274, mem_enc_norm=0.3651, param_norm=1803.4661
+
+
+Step 694: grad_norm=0.7906, llm_grad_norm=0.7008, loss=0.0243, mem_enc_norm=0.3295, param_norm=1803.4662
+
+
+Step 695: grad_norm=1.2955, llm_grad_norm=1.0376, loss=0.0352, mem_enc_norm=0.7353, param_norm=1803.4662
+
+
+Step 696: grad_norm=0.8107, llm_grad_norm=0.7066, loss=0.0252, mem_enc_norm=0.3140, param_norm=1803.4661
+
+
+Step 697: grad_norm=0.6861, llm_grad_norm=0.5684, loss=0.0299, mem_enc_norm=0.3198, param_norm=1803.4662
+
+
+Step 698: grad_norm=0.8741, llm_grad_norm=0.7526, loss=0.0237, mem_enc_norm=0.3902, param_norm=1803.4662
+
+
+Step 699: grad_norm=0.7439, llm_grad_norm=0.6502, loss=0.0257, mem_enc_norm=0.3016, param_norm=1803.4662
+
+
+Step 700: grad_norm=0.8282, llm_grad_norm=0.7158, loss=0.0411, mem_enc_norm=0.2943, param_norm=1803.4662
+
+
+Step 701: grad_norm=0.8250, llm_grad_norm=0.6786, loss=0.0224, mem_enc_norm=0.4094, param_norm=1803.4662
+
+
+Step 702: grad_norm=0.7303, llm_grad_norm=0.6055, loss=0.0225, mem_enc_norm=0.3187, param_norm=1803.4659
+
+
+Step 703: grad_norm=1.0397, llm_grad_norm=0.9173, loss=0.0370, mem_enc_norm=0.4042, param_norm=1803.4659
+
+
+Step 704: grad_norm=0.7698, llm_grad_norm=0.6623, loss=0.0202, mem_enc_norm=0.3336, param_norm=1803.4661
+
+
+Step 705: grad_norm=1.7143, llm_grad_norm=1.2868, loss=0.0269, mem_enc_norm=1.1133, param_norm=1803.4661
+
+
+Step 706: grad_norm=1.6362, llm_grad_norm=1.4382, loss=0.0428, mem_enc_norm=0.6837, param_norm=1803.4661
+
+
+Step 707: grad_norm=1.3779, llm_grad_norm=1.1342, loss=0.0319, mem_enc_norm=0.7452, param_norm=1803.4661
+
+
+Step 708: grad_norm=0.6283, llm_grad_norm=0.5380, loss=0.0267, mem_enc_norm=0.2563, param_norm=1803.4661
+
+
+Step 709: grad_norm=0.8664, llm_grad_norm=0.6694, loss=0.0243, mem_enc_norm=0.5220, param_norm=1803.4663
+
+
+Step 710: grad_norm=1.3542, llm_grad_norm=1.1544, loss=0.0318, mem_enc_norm=0.6643, param_norm=1803.4663
+
+
+Step 711: grad_norm=0.8048, llm_grad_norm=0.6845, loss=0.0325, mem_enc_norm=0.3341, param_norm=1803.4663
+
+
+Step 712: grad_norm=1.2890, llm_grad_norm=1.1221, loss=0.0317, mem_enc_norm=0.5851, param_norm=1803.4663
+
+
+Step 713: grad_norm=0.6043, llm_grad_norm=0.5262, loss=0.0271, mem_enc_norm=0.2344, param_norm=1803.4663
+
+
+Step 714: grad_norm=1.3437, llm_grad_norm=1.1729, loss=0.0287, mem_enc_norm=0.6161, param_norm=1803.4663
+
+
+Step 715: grad_norm=1.1715, llm_grad_norm=1.0641, loss=0.0337, mem_enc_norm=0.4428, param_norm=1803.4663
+
+
+Step 716: grad_norm=0.9343, llm_grad_norm=0.8173, loss=0.0136, mem_enc_norm=0.4195, param_norm=1803.4663
+
+
+Step 717: grad_norm=1.9860, llm_grad_norm=1.6738, loss=0.0190, mem_enc_norm=1.0513, param_norm=1803.4663
+
+
+Step 718: grad_norm=1.2653, llm_grad_norm=1.0901, loss=0.0150, mem_enc_norm=0.6219, param_norm=1803.4663
+
+
+Step 719: grad_norm=1.0838, llm_grad_norm=0.9050, loss=0.0246, mem_enc_norm=0.5605, param_norm=1803.4663
+
+
+Step 720: grad_norm=1.2489, llm_grad_norm=1.0791, loss=0.0289, mem_enc_norm=0.5803, param_norm=1803.4663
+
+
+Step 721: grad_norm=1.2452, llm_grad_norm=1.0937, loss=0.0326, mem_enc_norm=0.5074, param_norm=1803.4663
+
+
+Step 722: grad_norm=1.6486, llm_grad_norm=1.5182, loss=0.0587, mem_enc_norm=0.5231, param_norm=1803.4663
+
+
+Step 723: grad_norm=0.9037, llm_grad_norm=0.8017, loss=0.0340, mem_enc_norm=0.3602, param_norm=1803.4663
+
+
+Step 724: grad_norm=1.9799, llm_grad_norm=1.7569, loss=0.0571, mem_enc_norm=0.8341, param_norm=1803.4663
+
+
+Step 725: grad_norm=1.5155, llm_grad_norm=1.3613, loss=0.0374, mem_enc_norm=0.6047, param_norm=1803.4663
+
+
+Step 726: grad_norm=0.8348, llm_grad_norm=0.7088, loss=0.0290, mem_enc_norm=0.3733, param_norm=1803.4663
+
+
+Step 727: grad_norm=0.8793, llm_grad_norm=0.7628, loss=0.0318, mem_enc_norm=0.3548, param_norm=1803.4663
+
+
+Step 728: grad_norm=0.8246, llm_grad_norm=0.7084, loss=0.0208, mem_enc_norm=0.3578, param_norm=1803.4663
+
+
+Step 729: grad_norm=1.0532, llm_grad_norm=0.8802, loss=0.0302, mem_enc_norm=0.5033, param_norm=1803.4663
+
+
+Step 730: grad_norm=1.4947, llm_grad_norm=1.2433, loss=0.0381, mem_enc_norm=0.7946, param_norm=1803.4663
+
+
+Step 731: grad_norm=1.1143, llm_grad_norm=0.9026, loss=0.0316, mem_enc_norm=0.2886, param_norm=1803.4663
+
+
+Step 732: grad_norm=0.9294, llm_grad_norm=0.8012, loss=0.0247, mem_enc_norm=0.4254, param_norm=1803.4663
+
+
+Step 733: grad_norm=0.5662, llm_grad_norm=0.4857, loss=0.0292, mem_enc_norm=0.1918, param_norm=1803.4663
+
+
+Step 734: grad_norm=0.8079, llm_grad_norm=0.7070, loss=0.0328, mem_enc_norm=0.2864, param_norm=1803.4663
+
+
+Step 735: grad_norm=0.6288, llm_grad_norm=0.5074, loss=0.0283, mem_enc_norm=0.3386, param_norm=1803.4663
+
+
+Step 736: grad_norm=0.8083, llm_grad_norm=0.6815, loss=0.0145, mem_enc_norm=0.4057, param_norm=1803.4664
+
+
+Step 737: grad_norm=0.5861, llm_grad_norm=0.5041, loss=0.0226, mem_enc_norm=0.2109, param_norm=1803.4664
+
+
+Step 738: grad_norm=1.4396, llm_grad_norm=1.2952, loss=0.0258, mem_enc_norm=0.5931, param_norm=1803.4664
+
+
+Step 739: grad_norm=1.4995, llm_grad_norm=1.3451, loss=0.0412, mem_enc_norm=0.5928, param_norm=1803.4664
+
+
+Step 740: grad_norm=1.3038, llm_grad_norm=1.1282, loss=0.0397, mem_enc_norm=0.5949, param_norm=1803.4664
+
+
+Step 741: grad_norm=0.8193, llm_grad_norm=0.7245, loss=0.0249, mem_enc_norm=0.2874, param_norm=1803.4664
+
+
+Step 742: grad_norm=1.1055, llm_grad_norm=0.9959, loss=0.0431, mem_enc_norm=0.4405, param_norm=1803.4664
+
+
+Step 743: grad_norm=0.8263, llm_grad_norm=0.7279, loss=0.0340, mem_enc_norm=0.3214, param_norm=1803.4664
+
+
+Step 744: grad_norm=0.6098, llm_grad_norm=0.5256, loss=0.0165, mem_enc_norm=0.2371, param_norm=1803.4664
+
+
+Step 745: grad_norm=0.9382, llm_grad_norm=0.8116, loss=0.0184, mem_enc_norm=0.4388, param_norm=1803.4664
+
+
+Step 746: grad_norm=1.4030, llm_grad_norm=1.2777, loss=0.0334, mem_enc_norm=0.5278, param_norm=1803.4664
+
+
+Step 747: grad_norm=1.8615, llm_grad_norm=1.6191, loss=0.0323, mem_enc_norm=0.8977, param_norm=1803.4664
+
+
+Step 748: grad_norm=0.8763, llm_grad_norm=0.7614, loss=0.0170, mem_enc_norm=0.3989, param_norm=1803.4664
+
+
+Step 749: grad_norm=0.8618, llm_grad_norm=0.7586, loss=0.0299, mem_enc_norm=0.3236, param_norm=1803.4664
+
+
+Step 750: grad_norm=0.6751, llm_grad_norm=0.5785, loss=0.0302, mem_enc_norm=0.2311, param_norm=1803.4664
+
+
+Step 751: grad_norm=1.0535, llm_grad_norm=0.9079, loss=0.0176, mem_enc_norm=0.4911, param_norm=1803.4664
+
+
+Step 752: grad_norm=2.0924, llm_grad_norm=1.8982, loss=0.0536, mem_enc_norm=0.6874, param_norm=1803.4664
+
+
+Step 753: grad_norm=1.1650, llm_grad_norm=1.0032, loss=0.0341, mem_enc_norm=0.5109, param_norm=1803.4664
+
+
+Step 754: grad_norm=1.0706, llm_grad_norm=0.9280, loss=0.0489, mem_enc_norm=0.4025, param_norm=1803.4664
+
+
+Step 755: grad_norm=1.1949, llm_grad_norm=1.0440, loss=0.0357, mem_enc_norm=0.4721, param_norm=1803.4664
+
+
+Step 756: grad_norm=1.1134, llm_grad_norm=0.9712, loss=0.0259, mem_enc_norm=0.4568, param_norm=1803.4664
+
+
+Step 757: grad_norm=0.8928, llm_grad_norm=0.7564, loss=0.0278, mem_enc_norm=0.4262, param_norm=1803.4664
+
+
+Step 758: grad_norm=0.7165, llm_grad_norm=0.6328, loss=0.0268, mem_enc_norm=0.2705, param_norm=1803.4664
+
+
+Step 759: grad_norm=1.0269, llm_grad_norm=0.9010, loss=0.0288, mem_enc_norm=0.4412, param_norm=1803.4664
+
+
+Step 760: grad_norm=1.2065, llm_grad_norm=1.0797, loss=0.0313, mem_enc_norm=0.4624, param_norm=1803.4666
+
+
+Step 761: grad_norm=1.0716, llm_grad_norm=0.9328, loss=0.0353, mem_enc_norm=0.4622, param_norm=1803.4666
+
+
+Step 762: grad_norm=1.7387, llm_grad_norm=1.5200, loss=0.0407, mem_enc_norm=0.7739, param_norm=1803.4666
+
+
+Step 763: grad_norm=1.2564, llm_grad_norm=1.0574, loss=0.0263, mem_enc_norm=0.6444, param_norm=1803.4666
+
+
+Step 764: grad_norm=1.6970, llm_grad_norm=1.4908, loss=0.0365, mem_enc_norm=0.7469, param_norm=1803.4666
+
+
+Step 765: grad_norm=1.2884, llm_grad_norm=1.1010, loss=0.0418, mem_enc_norm=0.6020, param_norm=1803.4666
+
+
+Step 766: grad_norm=0.7825, llm_grad_norm=0.6869, loss=0.0213, mem_enc_norm=0.3354, param_norm=1803.4666
+
+
+Step 767: grad_norm=0.8470, llm_grad_norm=0.7640, loss=0.0260, mem_enc_norm=0.2933, param_norm=1803.4666
+
+
+Step 768: grad_norm=0.8250, llm_grad_norm=0.6987, loss=0.0295, mem_enc_norm=0.3908, param_norm=1803.4666
+
+
+Step 769: grad_norm=1.7053, llm_grad_norm=1.3327, loss=0.0407, mem_enc_norm=0.9444, param_norm=1803.4666
+
+
+Step 770: grad_norm=0.4678, llm_grad_norm=0.4037, loss=0.0138, mem_enc_norm=0.1715, param_norm=1803.4666
+
+
+Step 771: grad_norm=1.0386, llm_grad_norm=0.8806, loss=0.0250, mem_enc_norm=0.5173, param_norm=1803.4666
+
+
+Step 772: grad_norm=1.0981, llm_grad_norm=0.9597, loss=0.0442, mem_enc_norm=0.4703, param_norm=1803.4666
+
+
+Step 773: grad_norm=0.6878, llm_grad_norm=0.6013, loss=0.0249, mem_enc_norm=0.2640, param_norm=1803.4666
+
+
+Step 774: grad_norm=0.8040, llm_grad_norm=0.7092, loss=0.0283, mem_enc_norm=0.3555, param_norm=1803.4667
+
+
+Step 775: grad_norm=1.9689, llm_grad_norm=1.5047, loss=0.0387, mem_enc_norm=1.2562, param_norm=1803.4666
+
+
+Step 776: grad_norm=0.8631, llm_grad_norm=0.7217, loss=0.0286, mem_enc_norm=0.4231, param_norm=1803.4667
+
+
+Step 777: grad_norm=0.9974, llm_grad_norm=0.8391, loss=0.0272, mem_enc_norm=0.5019, param_norm=1803.4667
+
+
+Step 778: grad_norm=0.5541, llm_grad_norm=0.4714, loss=0.0188, mem_enc_norm=0.2253, param_norm=1803.4668
+
+
+Step 779: grad_norm=2.1360, llm_grad_norm=1.5832, loss=0.0234, mem_enc_norm=1.4158, param_norm=1803.4668
+
+
+Step 780: grad_norm=0.3922, llm_grad_norm=0.3459, loss=0.0131, mem_enc_norm=0.1363, param_norm=1803.4668
+
+
+Step 781: grad_norm=0.9957, llm_grad_norm=0.8929, loss=0.0288, mem_enc_norm=0.3853, param_norm=1803.4668
+
+
+Step 782: grad_norm=0.5740, llm_grad_norm=0.5063, loss=0.0155, mem_enc_norm=0.2080, param_norm=1803.4668
+
+
+Step 783: grad_norm=1.5227, llm_grad_norm=1.2759, loss=0.0437, mem_enc_norm=0.8052, param_norm=1803.4668
+
+
+Step 784: grad_norm=0.5693, llm_grad_norm=0.4931, loss=0.0161, mem_enc_norm=0.2285, param_norm=1803.4668
+
+
+Step 785: grad_norm=1.0988, llm_grad_norm=0.9516, loss=0.0329, mem_enc_norm=0.5144, param_norm=1803.4668
+
+
+Step 786: grad_norm=1.4686, llm_grad_norm=1.3015, loss=0.0441, mem_enc_norm=0.6239, param_norm=1803.4668
+
+
+Step 787: grad_norm=1.2462, llm_grad_norm=1.0658, loss=0.0475, mem_enc_norm=0.5760, param_norm=1803.4667
+
+
+Step 788: grad_norm=1.4072, llm_grad_norm=1.2218, loss=0.0365, mem_enc_norm=0.6668, param_norm=1803.4667
+
+
+Step 789: grad_norm=2.6918, llm_grad_norm=2.1337, loss=0.0339, mem_enc_norm=1.6301, param_norm=1803.4667
+
+
+Step 790: grad_norm=1.3462, llm_grad_norm=1.1738, loss=0.0287, mem_enc_norm=0.5919, param_norm=1803.4667
+
+
+Step 791: grad_norm=1.0567, llm_grad_norm=0.8925, loss=0.0356, mem_enc_norm=0.5179, param_norm=1803.4667
+
+
+Step 792: grad_norm=0.7779, llm_grad_norm=0.6321, loss=0.0233, mem_enc_norm=0.4010, param_norm=1803.4667
+
+
+Step 793: grad_norm=0.9113, llm_grad_norm=0.7575, loss=0.0210, mem_enc_norm=0.4650, param_norm=1803.4668
+
+
+Step 794: grad_norm=0.8504, llm_grad_norm=0.7413, loss=0.0200, mem_enc_norm=0.3449, param_norm=1803.4668
+
+
+Step 795: grad_norm=0.9838, llm_grad_norm=0.8322, loss=0.0268, mem_enc_norm=0.4589, param_norm=1803.4668
+
+
+Step 796: grad_norm=1.1991, llm_grad_norm=1.0695, loss=0.0269, mem_enc_norm=0.4885, param_norm=1803.4668
+
+
+Step 797: grad_norm=0.7895, llm_grad_norm=0.7067, loss=0.0192, mem_enc_norm=0.2961, param_norm=1803.4668
+
+
+Step 798: grad_norm=1.3705, llm_grad_norm=1.2129, loss=0.0270, mem_enc_norm=0.5930, param_norm=1803.4668
+
+
+Step 799: grad_norm=2.7489, llm_grad_norm=2.3306, loss=0.0363, mem_enc_norm=1.4352, param_norm=1803.4668
+
+[bench] step 799: TrainState 摘要 state=8f30394a4ddb21c1… params+ema=84de69ead90819f9… (193 叶子, 耗时 178.113s)
+
+
+Step 800: grad_norm=1.1699, llm_grad_norm=1.0231, loss=0.0246, mem_enc_norm=0.5390, param_norm=1803.4668
+
+
+Step 801: grad_norm=0.5453, llm_grad_norm=0.4512, loss=0.0198, mem_enc_norm=0.2285, param_norm=1803.4668
+
+
+Step 802: grad_norm=0.8661, llm_grad_norm=0.7493, loss=0.0192, mem_enc_norm=0.3806, param_norm=1803.4668
+
+
+Step 803: grad_norm=1.9626, llm_grad_norm=1.7682, loss=0.0492, mem_enc_norm=0.7809, param_norm=1803.4668
+
+
+Step 804: grad_norm=0.7755, llm_grad_norm=0.6655, loss=0.0240, mem_enc_norm=0.3633, param_norm=1803.4668
+
+
+Step 805: grad_norm=0.6613, llm_grad_norm=0.5351, loss=0.0215, mem_enc_norm=0.3538, param_norm=1803.4668
+
+
+Step 806: grad_norm=1.3077, llm_grad_norm=1.2156, loss=0.0241, mem_enc_norm=0.3345, param_norm=1803.4668
+
+
+Step 807: grad_norm=1.1381, llm_grad_norm=0.9994, loss=0.0327, mem_enc_norm=0.4326, param_norm=1803.4668
+
+
+Step 808: grad_norm=1.1585, llm_grad_norm=0.9876, loss=0.0247, mem_enc_norm=0.5320, param_norm=1803.4668
+
+
+Step 809: grad_norm=0.6864, llm_grad_norm=0.6094, loss=0.0229, mem_enc_norm=0.2550, param_norm=1803.4668
+
+
+Step 810: grad_norm=0.6416, llm_grad_norm=0.5468, loss=0.0192, mem_enc_norm=0.2412, param_norm=1803.4668
+
+
+Step 811: grad_norm=1.3376, llm_grad_norm=1.1612, loss=0.0366, mem_enc_norm=0.6201, param_norm=1803.4669
+
+
+Step 812: grad_norm=1.0993, llm_grad_norm=0.9524, loss=0.0291, mem_enc_norm=0.5048, param_norm=1803.4668
+
+
+Step 813: grad_norm=0.7945, llm_grad_norm=0.7092, loss=0.0214, mem_enc_norm=0.3036, param_norm=1803.4669
+
+
+Step 814: grad_norm=0.9298, llm_grad_norm=0.8169, loss=0.0367, mem_enc_norm=0.3553, param_norm=1803.4669
+
+
+Step 815: grad_norm=1.0293, llm_grad_norm=0.9160, loss=0.0315, mem_enc_norm=0.3738, param_norm=1803.4669
+
+
+Step 816: grad_norm=0.7627, llm_grad_norm=0.6054, loss=0.0213, mem_enc_norm=0.4025, param_norm=1803.4669
+
+
+Step 817: grad_norm=1.3655, llm_grad_norm=1.2306, loss=0.0275, mem_enc_norm=0.5362, param_norm=1803.4669
+
+
+Step 818: grad_norm=1.5100, llm_grad_norm=1.3439, loss=0.0408, mem_enc_norm=0.6252, param_norm=1803.4669
+
+
+Step 819: grad_norm=0.4541, llm_grad_norm=0.3901, loss=0.0163, mem_enc_norm=0.1859, param_norm=1803.4669
+
+
+Step 820: grad_norm=0.8387, llm_grad_norm=0.7383, loss=0.0356, mem_enc_norm=0.3163, param_norm=1803.4669
+
+
+Step 821: grad_norm=1.4083, llm_grad_norm=1.2082, loss=0.0312, mem_enc_norm=0.6824, param_norm=1803.4669
+
+
+Step 822: grad_norm=1.2239, llm_grad_norm=1.1163, loss=0.0350, mem_enc_norm=0.4505, param_norm=1803.4669
+
+
+Step 823: grad_norm=1.1108, llm_grad_norm=0.9890, loss=0.0523, mem_enc_norm=0.4157, param_norm=1803.4669
+
+
+Step 824: grad_norm=1.1499, llm_grad_norm=1.0169, loss=0.0258, mem_enc_norm=0.4715, param_norm=1803.4669
+
+
+Step 825: grad_norm=0.5713, llm_grad_norm=0.4924, loss=0.0183, mem_enc_norm=0.2317, param_norm=1803.4669
+
+
+Step 826: grad_norm=1.3869, llm_grad_norm=1.2147, loss=0.0403, mem_enc_norm=0.5705, param_norm=1803.4669
+
+
+Step 827: grad_norm=0.4702, llm_grad_norm=0.4174, loss=0.0100, mem_enc_norm=0.1627, param_norm=1803.4669
+
+
+Step 828: grad_norm=1.1125, llm_grad_norm=0.9602, loss=0.0394, mem_enc_norm=0.4920, param_norm=1803.4669
+
+
+Step 829: grad_norm=0.8140, llm_grad_norm=0.7145, loss=0.0189, mem_enc_norm=0.3301, param_norm=1803.4669
+
+
+Step 830: grad_norm=0.7670, llm_grad_norm=0.6764, loss=0.0339, mem_enc_norm=0.3374, param_norm=1803.4669
+
+
+Step 831: grad_norm=1.9710, llm_grad_norm=1.7389, loss=0.0409, mem_enc_norm=0.7456, param_norm=1803.4669
+
+
+Step 832: grad_norm=0.8970, llm_grad_norm=0.7926, loss=0.0254, mem_enc_norm=0.3553, param_norm=1803.4669
+
+
+Step 833: grad_norm=0.6920, llm_grad_norm=0.5644, loss=0.0400, mem_enc_norm=0.2901, param_norm=1803.4669
+
+
+Step 834: grad_norm=1.0754, llm_grad_norm=0.9380, loss=0.0268, mem_enc_norm=0.4766, param_norm=1803.4669
+
+
+Step 835: grad_norm=0.9225, llm_grad_norm=0.8001, loss=0.0470, mem_enc_norm=0.3815, param_norm=1803.4670
+
+
+Step 836: grad_norm=0.6702, llm_grad_norm=0.6039, loss=0.0348, mem_enc_norm=0.2364, param_norm=1803.4672
+
+
+Step 837: grad_norm=1.3549, llm_grad_norm=1.1070, loss=0.0235, mem_enc_norm=0.7166, param_norm=1803.4672
+
+
+Step 838: grad_norm=0.8122, llm_grad_norm=0.6583, loss=0.0209, mem_enc_norm=0.4031, param_norm=1803.4672
+
+
+Step 839: grad_norm=0.6358, llm_grad_norm=0.4982, loss=0.0157, mem_enc_norm=0.3459, param_norm=1803.4673
+
+
+Step 840: grad_norm=0.9690, llm_grad_norm=0.7769, loss=0.0326, mem_enc_norm=0.5003, param_norm=1803.4673
+
+
+Step 841: grad_norm=0.9493, llm_grad_norm=0.7808, loss=0.0448, mem_enc_norm=0.3890, param_norm=1803.4673
+
+
+Step 842: grad_norm=1.1507, llm_grad_norm=1.0073, loss=0.0182, mem_enc_norm=0.5107, param_norm=1803.4673
+
+
+Step 843: grad_norm=0.8755, llm_grad_norm=0.7546, loss=0.0369, mem_enc_norm=0.3733, param_norm=1803.4673
+
+
+Step 844: grad_norm=1.3977, llm_grad_norm=1.2227, loss=0.0382, mem_enc_norm=0.6229, param_norm=1803.4673
+
+
+Step 845: grad_norm=1.1887, llm_grad_norm=1.0483, loss=0.0378, mem_enc_norm=0.5182, param_norm=1803.4673
+
+
+Step 846: grad_norm=0.6710, llm_grad_norm=0.5876, loss=0.0237, mem_enc_norm=0.2749, param_norm=1803.4673
+
+
+Step 847: grad_norm=0.8370, llm_grad_norm=0.7293, loss=0.0308, mem_enc_norm=0.3465, param_norm=1803.4672
+
+
+Step 848: grad_norm=0.7976, llm_grad_norm=0.7024, loss=0.0282, mem_enc_norm=0.3045, param_norm=1803.4672
+
+
+Step 849: grad_norm=1.2159, llm_grad_norm=1.0525, loss=0.0243, mem_enc_norm=0.5577, param_norm=1803.4673
+
+
+Step 850: grad_norm=0.7936, llm_grad_norm=0.6915, loss=0.0272, mem_enc_norm=0.3078, param_norm=1803.4673
+
+
+Step 851: grad_norm=0.8891, llm_grad_norm=0.7756, loss=0.0249, mem_enc_norm=0.3953, param_norm=1803.4673
+
+
+Step 852: grad_norm=1.8822, llm_grad_norm=1.6489, loss=0.0432, mem_enc_norm=0.5702, param_norm=1803.4673
+
+
+Step 853: grad_norm=0.6048, llm_grad_norm=0.5227, loss=0.0225, mem_enc_norm=0.2630, param_norm=1803.4673
+
+
+Step 854: grad_norm=0.9026, llm_grad_norm=0.8121, loss=0.0475, mem_enc_norm=0.2572, param_norm=1803.4673
+
+
+Step 855: grad_norm=1.1382, llm_grad_norm=1.0099, loss=0.0389, mem_enc_norm=0.4566, param_norm=1803.4673
+
+
+Step 856: grad_norm=1.3534, llm_grad_norm=1.1703, loss=0.0312, mem_enc_norm=0.6525, param_norm=1803.4673
+
+
+Step 857: grad_norm=0.8268, llm_grad_norm=0.7347, loss=0.0272, mem_enc_norm=0.3336, param_norm=1803.4673
+
+
+Step 858: grad_norm=0.9031, llm_grad_norm=0.7978, loss=0.0333, mem_enc_norm=0.3348, param_norm=1803.4673
+
+
+Step 859: grad_norm=0.9247, llm_grad_norm=0.7918, loss=0.0216, mem_enc_norm=0.4352, param_norm=1803.4673
+
+
+Step 860: grad_norm=1.8063, llm_grad_norm=1.5605, loss=0.0519, mem_enc_norm=0.8650, param_norm=1803.4673
+
+
+Step 861: grad_norm=1.5491, llm_grad_norm=1.3427, loss=0.0363, mem_enc_norm=0.6511, param_norm=1803.4673
+
+
+Step 862: grad_norm=0.7264, llm_grad_norm=0.5667, loss=0.0351, mem_enc_norm=0.3941, param_norm=1803.4673
+
+
+Step 863: grad_norm=0.4791, llm_grad_norm=0.4163, loss=0.0210, mem_enc_norm=0.1906, param_norm=1803.4673
+
+
+Step 864: grad_norm=0.6738, llm_grad_norm=0.5862, loss=0.0276, mem_enc_norm=0.2805, param_norm=1803.4672
+
+
+Step 865: grad_norm=1.7347, llm_grad_norm=1.5507, loss=0.0343, mem_enc_norm=0.7052, param_norm=1803.4672
+
+
+Step 866: grad_norm=1.0815, llm_grad_norm=0.9571, loss=0.0282, mem_enc_norm=0.4795, param_norm=1803.4673
+
+
+Step 867: grad_norm=1.6573, llm_grad_norm=1.4360, loss=0.0494, mem_enc_norm=0.7403, param_norm=1803.4672
+
+
+Step 868: grad_norm=1.3704, llm_grad_norm=1.2111, loss=0.0389, mem_enc_norm=0.4697, param_norm=1803.4673
+
+
+Step 869: grad_norm=1.3656, llm_grad_norm=1.1613, loss=0.0401, mem_enc_norm=0.6881, param_norm=1803.4673
+
+
+Step 870: grad_norm=0.6769, llm_grad_norm=0.5856, loss=0.0360, mem_enc_norm=0.2512, param_norm=1803.4673
+
+
+Step 871: grad_norm=0.6303, llm_grad_norm=0.5511, loss=0.0179, mem_enc_norm=0.2397, param_norm=1803.4673
+
+
+Step 872: grad_norm=0.4727, llm_grad_norm=0.3981, loss=0.0262, mem_enc_norm=0.2102, param_norm=1803.4673
+
+
+Step 873: grad_norm=0.9378, llm_grad_norm=0.8308, loss=0.0356, mem_enc_norm=0.3249, param_norm=1803.4674
+
+
+Step 874: grad_norm=0.5963, llm_grad_norm=0.5218, loss=0.0224, mem_enc_norm=0.2245, param_norm=1803.4674
+
+
+Step 875: grad_norm=0.6787, llm_grad_norm=0.5872, loss=0.0306, mem_enc_norm=0.2460, param_norm=1803.4674
+
+
+Step 876: grad_norm=0.8216, llm_grad_norm=0.7308, loss=0.0172, mem_enc_norm=0.2888, param_norm=1803.4674
+
+
+Step 877: grad_norm=1.4718, llm_grad_norm=1.2851, loss=0.0426, mem_enc_norm=0.6319, param_norm=1803.4674
+
+
+Step 878: grad_norm=0.5927, llm_grad_norm=0.5263, loss=0.0170, mem_enc_norm=0.2259, param_norm=1803.4674
+
+
+Step 879: grad_norm=1.5460, llm_grad_norm=1.3537, loss=0.0317, mem_enc_norm=0.6751, param_norm=1803.4674
+
+
+Step 880: grad_norm=0.9713, llm_grad_norm=0.8484, loss=0.0239, mem_enc_norm=0.3753, param_norm=1803.4674
+
+
+Step 881: grad_norm=0.9566, llm_grad_norm=0.8580, loss=0.0354, mem_enc_norm=0.3453, param_norm=1803.4674
+
+
+Step 882: grad_norm=1.1189, llm_grad_norm=0.9198, loss=0.0326, mem_enc_norm=0.5825, param_norm=1803.4675
+
+
+Step 883: grad_norm=0.7200, llm_grad_norm=0.6102, loss=0.0236, mem_enc_norm=0.3087, param_norm=1803.4675
+
+
+Step 884: grad_norm=0.6851, llm_grad_norm=0.6029, loss=0.0304, mem_enc_norm=0.2826, param_norm=1803.4675
+
+
+Step 885: grad_norm=0.8043, llm_grad_norm=0.7085, loss=0.0260, mem_enc_norm=0.3375, param_norm=1803.4675
+
+
+Step 886: grad_norm=0.4588, llm_grad_norm=0.4053, loss=0.0246, mem_enc_norm=0.1481, param_norm=1803.4675
+
+
+Step 887: grad_norm=0.9997, llm_grad_norm=0.8668, loss=0.0211, mem_enc_norm=0.4581, param_norm=1803.4674
+
+
+Step 888: grad_norm=0.7364, llm_grad_norm=0.6303, loss=0.0369, mem_enc_norm=0.2953, param_norm=1803.4677
+
+
+Step 889: grad_norm=0.8246, llm_grad_norm=0.6663, loss=0.0354, mem_enc_norm=0.4063, param_norm=1803.4677
+
+
+Step 890: grad_norm=0.2859, llm_grad_norm=0.2412, loss=0.0064, mem_enc_norm=0.1173, param_norm=1803.4677
+
+
+Step 891: grad_norm=0.8027, llm_grad_norm=0.7124, loss=0.0280, mem_enc_norm=0.2910, param_norm=1803.4677
+
+
+Step 892: grad_norm=0.6108, llm_grad_norm=0.5410, loss=0.0254, mem_enc_norm=0.2400, param_norm=1803.4677
+
+
+Step 893: grad_norm=0.9288, llm_grad_norm=0.8172, loss=0.0362, mem_enc_norm=0.3455, param_norm=1803.4677
+
+
+Step 894: grad_norm=1.7525, llm_grad_norm=1.5301, loss=0.0396, mem_enc_norm=0.8034, param_norm=1803.4677
+
+
+Step 895: grad_norm=0.6545, llm_grad_norm=0.5672, loss=0.0164, mem_enc_norm=0.2787, param_norm=1803.4677
+
+
+Step 896: grad_norm=1.1608, llm_grad_norm=1.0164, loss=0.0403, mem_enc_norm=0.4102, param_norm=1803.4677
+
+
+Step 897: grad_norm=0.4976, llm_grad_norm=0.4325, loss=0.0202, mem_enc_norm=0.2033, param_norm=1803.4677
+
+
+Step 898: grad_norm=0.5832, llm_grad_norm=0.4968, loss=0.0183, mem_enc_norm=0.2527, param_norm=1803.4678
+
+
+Step 899: grad_norm=0.9034, llm_grad_norm=0.7760, loss=0.0485, mem_enc_norm=0.3571, param_norm=1803.4678
+
+
+Step 900: grad_norm=0.8350, llm_grad_norm=0.7278, loss=0.0287, mem_enc_norm=0.3714, param_norm=1803.4678
+
+
+Step 901: grad_norm=0.7240, llm_grad_norm=0.5990, loss=0.0373, mem_enc_norm=0.2890, param_norm=1803.4678
+
+
+Step 902: grad_norm=0.6367, llm_grad_norm=0.5514, loss=0.0221, mem_enc_norm=0.2494, param_norm=1803.4678
+
+
+Step 903: grad_norm=1.5661, llm_grad_norm=1.4202, loss=0.0321, mem_enc_norm=0.5581, param_norm=1803.4678
+
+
+Step 904: grad_norm=0.3726, llm_grad_norm=0.3189, loss=0.0104, mem_enc_norm=0.1492, param_norm=1803.4678
+
+
+Step 905: grad_norm=1.5190, llm_grad_norm=1.3839, loss=0.0511, mem_enc_norm=0.5571, param_norm=1803.4678
+
+
+Step 906: grad_norm=0.9538, llm_grad_norm=0.8264, loss=0.0425, mem_enc_norm=0.3724, param_norm=1803.4678
+
+
+Step 907: grad_norm=0.6068, llm_grad_norm=0.4959, loss=0.0285, mem_enc_norm=0.2825, param_norm=1803.4678
+
+
+Step 908: grad_norm=0.9603, llm_grad_norm=0.8690, loss=0.0271, mem_enc_norm=0.3092, param_norm=1803.4678
+
+
+Step 909: grad_norm=1.8159, llm_grad_norm=1.6180, loss=0.0459, mem_enc_norm=0.7621, param_norm=1803.4678
+
+
+Step 910: grad_norm=1.4117, llm_grad_norm=1.2350, loss=0.0223, mem_enc_norm=0.6489, param_norm=1803.4678
+
+
+Step 911: grad_norm=0.7367, llm_grad_norm=0.6480, loss=0.0242, mem_enc_norm=0.2825, param_norm=1803.4678
+
+
+Step 912: grad_norm=0.6430, llm_grad_norm=0.5524, loss=0.0329, mem_enc_norm=0.2496, param_norm=1803.4678
+
+
+Step 913: grad_norm=0.9477, llm_grad_norm=0.8136, loss=0.0183, mem_enc_norm=0.4467, param_norm=1803.4678
+
+
+Step 914: grad_norm=0.9464, llm_grad_norm=0.7757, loss=0.0148, mem_enc_norm=0.5220, param_norm=1803.4678
+
+
+Step 915: grad_norm=1.2739, llm_grad_norm=0.9912, loss=0.0210, mem_enc_norm=0.7867, param_norm=1803.4678
+
+
+Step 916: grad_norm=1.6597, llm_grad_norm=1.4734, loss=0.0260, mem_enc_norm=0.6721, param_norm=1803.4679
+
+
+Step 917: grad_norm=1.1353, llm_grad_norm=0.9921, loss=0.0288, mem_enc_norm=0.4682, param_norm=1803.4679
+
+
+Step 918: grad_norm=1.4407, llm_grad_norm=1.2480, loss=0.0401, mem_enc_norm=0.6478, param_norm=1803.4679
+
+
+Step 919: grad_norm=0.8390, llm_grad_norm=0.7152, loss=0.0320, mem_enc_norm=0.3287, param_norm=1803.4679
+
+
+Step 920: grad_norm=1.1101, llm_grad_norm=0.9714, loss=0.0257, mem_enc_norm=0.4407, param_norm=1803.4679
+
+
+Step 921: grad_norm=0.6429, llm_grad_norm=0.5544, loss=0.0223, mem_enc_norm=0.2841, param_norm=1803.4679
+
+
+Step 922: grad_norm=0.5929, llm_grad_norm=0.5126, loss=0.0142, mem_enc_norm=0.2433, param_norm=1803.4679
+
+
+Step 923: grad_norm=1.0917, llm_grad_norm=0.9574, loss=0.0309, mem_enc_norm=0.4921, param_norm=1803.4679
+
+
+Step 924: grad_norm=0.7698, llm_grad_norm=0.6564, loss=0.0278, mem_enc_norm=0.3458, param_norm=1803.4679
+
+
+Step 925: grad_norm=1.6902, llm_grad_norm=1.4738, loss=0.0318, mem_enc_norm=0.8067, param_norm=1803.4679
+
+
+Step 926: grad_norm=1.9018, llm_grad_norm=1.5783, loss=0.0394, mem_enc_norm=1.0380, param_norm=1803.4679
+
+
+Step 927: grad_norm=0.5419, llm_grad_norm=0.4514, loss=0.0156, mem_enc_norm=0.2674, param_norm=1803.4679
+
+
+Step 928: grad_norm=0.5884, llm_grad_norm=0.4784, loss=0.0294, mem_enc_norm=0.2584, param_norm=1803.4679
+
+
+Step 929: grad_norm=0.6058, llm_grad_norm=0.5025, loss=0.0173, mem_enc_norm=0.2606, param_norm=1803.4679
+
+
+Step 930: grad_norm=1.0698, llm_grad_norm=0.8042, loss=0.0444, mem_enc_norm=0.6075, param_norm=1803.4679
+
+
+Step 931: grad_norm=1.0525, llm_grad_norm=0.9314, loss=0.0287, mem_enc_norm=0.4064, param_norm=1803.4679
+
+
+Step 932: grad_norm=0.9455, llm_grad_norm=0.8375, loss=0.0352, mem_enc_norm=0.3210, param_norm=1803.4679
+
+
+Step 933: grad_norm=0.9213, llm_grad_norm=0.7964, loss=0.0401, mem_enc_norm=0.3888, param_norm=1803.4679
+
+
+Step 934: grad_norm=0.6077, llm_grad_norm=0.5213, loss=0.0181, mem_enc_norm=0.2716, param_norm=1803.4680
+
+
+Step 935: grad_norm=0.8825, llm_grad_norm=0.7844, loss=0.0344, mem_enc_norm=0.3320, param_norm=1803.4679
+
+
+Step 936: grad_norm=0.5099, llm_grad_norm=0.4412, loss=0.0227, mem_enc_norm=0.1870, param_norm=1803.4679
+
+
+Step 937: grad_norm=0.4556, llm_grad_norm=0.3964, loss=0.0119, mem_enc_norm=0.1752, param_norm=1803.4679
+
+
+Step 938: grad_norm=0.6734, llm_grad_norm=0.5775, loss=0.0189, mem_enc_norm=0.3041, param_norm=1803.4679
+
+
+Step 939: grad_norm=1.2492, llm_grad_norm=1.0780, loss=0.0568, mem_enc_norm=0.5150, param_norm=1803.4679
+
+
+Step 940: grad_norm=0.5171, llm_grad_norm=0.4502, loss=0.0183, mem_enc_norm=0.2094, param_norm=1803.4680
+
+
+Step 941: grad_norm=0.8057, llm_grad_norm=0.7029, loss=0.0287, mem_enc_norm=0.3255, param_norm=1803.4680
+
+
+Step 942: grad_norm=0.8884, llm_grad_norm=0.7847, loss=0.0274, mem_enc_norm=0.3306, param_norm=1803.4680
+
+
+Step 943: grad_norm=0.9793, llm_grad_norm=0.7544, loss=0.0176, mem_enc_norm=0.6003, param_norm=1803.4680
+
+
+Step 944: grad_norm=0.6904, llm_grad_norm=0.6057, loss=0.0236, mem_enc_norm=0.2544, param_norm=1803.4680
+
+
+Step 945: grad_norm=0.6157, llm_grad_norm=0.5170, loss=0.0204, mem_enc_norm=0.2720, param_norm=1803.4680
+
+
+Step 946: grad_norm=1.4970, llm_grad_norm=1.2879, loss=0.0390, mem_enc_norm=0.6000, param_norm=1803.4680
+
+
+Step 947: grad_norm=0.6812, llm_grad_norm=0.5690, loss=0.0433, mem_enc_norm=0.2563, param_norm=1803.4680
+
+
+Step 948: grad_norm=0.9163, llm_grad_norm=0.8029, loss=0.0294, mem_enc_norm=0.3544, param_norm=1803.4680
+
+
+Step 949: grad_norm=0.8155, llm_grad_norm=0.7341, loss=0.0182, mem_enc_norm=0.2678, param_norm=1803.4680
+
+
+Step 950: grad_norm=0.8729, llm_grad_norm=0.7502, loss=0.0272, mem_enc_norm=0.3644, param_norm=1803.4680
+
+
+Step 951: grad_norm=1.6951, llm_grad_norm=1.5476, loss=0.0761, mem_enc_norm=0.5939, param_norm=1803.4680
+
+
+Step 952: grad_norm=1.2513, llm_grad_norm=1.0339, loss=0.0373, mem_enc_norm=0.6555, param_norm=1803.4680
+
+
+Step 953: grad_norm=1.1331, llm_grad_norm=0.9693, loss=0.0416, mem_enc_norm=0.4905, param_norm=1803.4680
+
+
+Step 954: grad_norm=0.4891, llm_grad_norm=0.4151, loss=0.0196, mem_enc_norm=0.1935, param_norm=1803.4680
+
+
+Step 955: grad_norm=0.7483, llm_grad_norm=0.6148, loss=0.0424, mem_enc_norm=0.2522, param_norm=1803.4680
+
+
+Step 956: grad_norm=1.3958, llm_grad_norm=1.2720, loss=0.0439, mem_enc_norm=0.4593, param_norm=1803.4680
+
+
+Step 957: grad_norm=1.0467, llm_grad_norm=0.9248, loss=0.0647, mem_enc_norm=0.3432, param_norm=1803.4681
+
+
+Step 958: grad_norm=0.9295, llm_grad_norm=0.8192, loss=0.0235, mem_enc_norm=0.3817, param_norm=1803.4680
+
+
+Step 959: grad_norm=0.5023, llm_grad_norm=0.4415, loss=0.0286, mem_enc_norm=0.1650, param_norm=1803.4681
+
+
+Step 960: grad_norm=1.0388, llm_grad_norm=0.8304, loss=0.0464, mem_enc_norm=0.5028, param_norm=1803.4683
+
+
+Step 961: grad_norm=1.3901, llm_grad_norm=1.2195, loss=0.0380, mem_enc_norm=0.5858, param_norm=1803.4683
+
+
+Step 962: grad_norm=1.4316, llm_grad_norm=1.2994, loss=0.0326, mem_enc_norm=0.5279, param_norm=1803.4683
+
+
+Step 963: grad_norm=0.6172, llm_grad_norm=0.5338, loss=0.0276, mem_enc_norm=0.2136, param_norm=1803.4683
+
+
+Step 964: grad_norm=0.5813, llm_grad_norm=0.4741, loss=0.0450, mem_enc_norm=0.2078, param_norm=1803.4683
+
+
+Step 965: grad_norm=0.6709, llm_grad_norm=0.5846, loss=0.0217, mem_enc_norm=0.2345, param_norm=1803.4684
+
+
+Step 966: grad_norm=1.3484, llm_grad_norm=1.1607, loss=0.0339, mem_enc_norm=0.3979, param_norm=1803.4684
+
+
+Step 967: grad_norm=1.0643, llm_grad_norm=0.9192, loss=0.0188, mem_enc_norm=0.5018, param_norm=1803.4684
+
+
+Step 968: grad_norm=0.7316, llm_grad_norm=0.6588, loss=0.0179, mem_enc_norm=0.2467, param_norm=1803.4685
+
+
+Step 969: grad_norm=1.5303, llm_grad_norm=1.3410, loss=0.0331, mem_enc_norm=0.6884, param_norm=1803.4684
+
+
+Step 970: grad_norm=1.6985, llm_grad_norm=1.4941, loss=0.0509, mem_enc_norm=0.7407, param_norm=1803.4684
+
+
+Step 971: grad_norm=0.8752, llm_grad_norm=0.7836, loss=0.0170, mem_enc_norm=0.3349, param_norm=1803.4685
+
+
+Step 972: grad_norm=0.9986, llm_grad_norm=0.8170, loss=0.0286, mem_enc_norm=0.5219, param_norm=1803.4684
+
+
+Step 973: grad_norm=0.7845, llm_grad_norm=0.6994, loss=0.0295, mem_enc_norm=0.2686, param_norm=1803.4684
+
+
+Step 974: grad_norm=1.1252, llm_grad_norm=0.9864, loss=0.0273, mem_enc_norm=0.4733, param_norm=1803.4685
+
+
+Step 975: grad_norm=0.6183, llm_grad_norm=0.5199, loss=0.0345, mem_enc_norm=0.2442, param_norm=1803.4685
+
+
+Step 976: grad_norm=0.8887, llm_grad_norm=0.7950, loss=0.0212, mem_enc_norm=0.3321, param_norm=1803.4685
+
+
+Step 977: grad_norm=1.1149, llm_grad_norm=0.9659, loss=0.0379, mem_enc_norm=0.4380, param_norm=1803.4685
+
+
+Step 978: grad_norm=0.5908, llm_grad_norm=0.5223, loss=0.0265, mem_enc_norm=0.2244, param_norm=1803.4684
+
+
+Step 979: grad_norm=0.6376, llm_grad_norm=0.5402, loss=0.0302, mem_enc_norm=0.2361, param_norm=1803.4684
+
+
+Step 980: grad_norm=0.3513, llm_grad_norm=0.2939, loss=0.0101, mem_enc_norm=0.1180, param_norm=1803.4684
+
+
+Step 981: grad_norm=0.5995, llm_grad_norm=0.5263, loss=0.0164, mem_enc_norm=0.1986, param_norm=1803.4685
+
+
+Step 982: grad_norm=1.6306, llm_grad_norm=1.4706, loss=0.0280, mem_enc_norm=0.6566, param_norm=1803.4685
+
+
+Step 983: grad_norm=1.9927, llm_grad_norm=1.8270, loss=0.0439, mem_enc_norm=0.6295, param_norm=1803.4685
+
+
+Step 984: grad_norm=0.5671, llm_grad_norm=0.5012, loss=0.0219, mem_enc_norm=0.1865, param_norm=1803.4685
+
+
+Step 985: grad_norm=1.0559, llm_grad_norm=0.9300, loss=0.0308, mem_enc_norm=0.3535, param_norm=1803.4685
+
+
+Step 986: grad_norm=0.6364, llm_grad_norm=0.5358, loss=0.0392, mem_enc_norm=0.2007, param_norm=1803.4685
+
+
+Step 987: grad_norm=1.1088, llm_grad_norm=0.9523, loss=0.0341, mem_enc_norm=0.4612, param_norm=1803.4685
+
+
+Step 988: grad_norm=0.8107, llm_grad_norm=0.6973, loss=0.0349, mem_enc_norm=0.2829, param_norm=1803.4685
+
+
+Step 989: grad_norm=0.9765, llm_grad_norm=0.8722, loss=0.0306, mem_enc_norm=0.3496, param_norm=1803.4685
+
+
+Step 990: grad_norm=0.7530, llm_grad_norm=0.6465, loss=0.0231, mem_enc_norm=0.3048, param_norm=1803.4685
+
+
+Step 991: grad_norm=0.5932, llm_grad_norm=0.5140, loss=0.0316, mem_enc_norm=0.1996, param_norm=1803.4686
+
+
+Step 992: grad_norm=1.1277, llm_grad_norm=1.0031, loss=0.0355, mem_enc_norm=0.3911, param_norm=1803.4688
+
+
+Step 993: grad_norm=0.4825, llm_grad_norm=0.4112, loss=0.0161, mem_enc_norm=0.1760, param_norm=1803.4685
+
+
+Step 994: grad_norm=1.5915, llm_grad_norm=1.4027, loss=0.0369, mem_enc_norm=0.5612, param_norm=1803.4685
+
+
+Step 995: grad_norm=0.7955, llm_grad_norm=0.6891, loss=0.0277, mem_enc_norm=0.2796, param_norm=1803.4688
+
+
+Step 996: grad_norm=0.8101, llm_grad_norm=0.7267, loss=0.0197, mem_enc_norm=0.2692, param_norm=1803.4688
+
+
+Step 997: grad_norm=0.5778, llm_grad_norm=0.4636, loss=0.0232, mem_enc_norm=0.2904, param_norm=1803.4688
+
+
+Step 998: grad_norm=0.7578, llm_grad_norm=0.6799, loss=0.0325, mem_enc_norm=0.2648, param_norm=1803.4688
+
+
+Step 999: grad_norm=0.9286, llm_grad_norm=0.8114, loss=0.0310, mem_enc_norm=0.3690, param_norm=1803.4686
+
+[bench] step 999: TrainState 摘要 state=a60a2ffd11148aae… params+ema=a0693ea7193e9c35… (193 叶子, 耗时 178.575s)
+09:10:13.361 [I] Waiting for checkpoint manager to finish                                         (421180:train.py:475)
+09:10:13.361 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (421180:checkpoint_manager.py:1987)
+[bench] index 序列 8072 个已写 index_sequence.json (sha256 cd66c4f310242601…)
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+PROJECTED rows=1000 sha256=472e7c3798b5f2dcacbff72d58980a3a7cbb34fbe479bd91110dddde75da787a -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/8x8/t8-m8-a1/scalars_hex.tsv
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+PERFORMANCE_DONE mean_step_s=1.6862436972701473 samples_s=4.744272736468143 util_mean=96.51107244542867 zero_share=0.0
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+OK BASELINE_MANIFEST.json: 9 个产物
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+BASELINE_ENV=PASS
+TRAJECTORY_DONE run=t8-m8-a1 steps=1000
+END_UTC=2026-09-14T09:10:19Z
+EXIT_CODE=0

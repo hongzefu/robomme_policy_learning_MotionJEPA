@@ -1,0 +1,83 @@
+{
+  "storage": "AWS 本地 NVMe RAID /dev/md0 XFS",
+  "batch_size": 8,
+  "num_workers": 4,
+  "warmup_steps": 50,
+  "steady_step_range": [
+    50,
+    999
+  ],
+  "excluded_digest_and_next": [
+    0,
+    1,
+    2,
+    3,
+    24,
+    25,
+    49,
+    50,
+    99,
+    100,
+    199,
+    200,
+    399,
+    400,
+    599,
+    600,
+    799,
+    800,
+    999,
+    1000
+  ],
+  "sampling_ms": 500,
+  "nvml_note": "按500ms采样，利用率本身为设备内部周期均值，相同读数不作为更高时间分辨率",
+  "steady_steps": 938,
+  "step_mean_s": 1.554960026669858,
+  "samples_per_second": 5.144826788334234,
+  "slow_threshold_s": 2.3309812545776367,
+  "slow_definition": "超过稳态步时中位数的1.5倍；中位数只用于分层阈值",
+  "util": {
+    "all": {
+      "n": 5830,
+      "mean_pct": 96.39433962264151,
+      "zero_pct_share": 0.0,
+      "per_gpu": {
+        "4": {
+          "mean_pct": 96.38867924528302,
+          "zero_pct_share": 0.0
+        },
+        "5": {
+          "mean_pct": 96.4,
+          "zero_pct_share": 0.0
+        }
+      }
+    },
+    "slow": {
+      "n": 0,
+      "mean_pct": null,
+      "zero_pct_share": null
+    },
+    "other": {
+      "n": 5830,
+      "mean_pct": 96.39433962264151,
+      "zero_pct_share": 0.0,
+      "per_gpu": {
+        "4": {
+          "mean_pct": 96.38867924528302,
+          "zero_pct_share": 0.0
+        },
+        "5": {
+          "mean_pct": 96.4,
+          "zero_pct_share": 0.0
+        }
+      }
+    }
+  },
+  "peak_gpu_memory_mib": {
+    "4": 78639.0,
+    "5": 78639.0
+  },
+  "checksum_seconds": 2222.5330000000004,
+  "checksum_count": 11,
+  "observed_first_to_last_metric_s": 3205.7511188983917
+}

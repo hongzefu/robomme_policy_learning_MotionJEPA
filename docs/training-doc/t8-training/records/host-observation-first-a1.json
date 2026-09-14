@@ -1,0 +1,108 @@
+{
+  "observed_utc": "2026-09-14T04:50:04.935194+00:00",
+  "main_head": "38f0db46db19a3b645613e04fba3f6e635b47054",
+  "phase": "A1运行期间的单次环境观测，不是启动时刻快照",
+  "cpu_logical_count": 96,
+  "storage": "/dev/md0 XFS 本地NVMe RAID",
+  "gpu": [
+    {
+      "index": 0,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "total_mib": 81920,
+      "used_mib": 75887
+    },
+    {
+      "index": 1,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "total_mib": 81920,
+      "used_mib": 75887
+    },
+    {
+      "index": 2,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "total_mib": 81920,
+      "used_mib": 75887
+    },
+    {
+      "index": 3,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "total_mib": 81920,
+      "used_mib": 75887
+    },
+    {
+      "index": 4,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "total_mib": 81920,
+      "used_mib": 78189
+    },
+    {
+      "index": 5,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "total_mib": 81920,
+      "used_mib": 78185
+    },
+    {
+      "index": 6,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "total_mib": 81920,
+      "used_mib": 78189
+    },
+    {
+      "index": 7,
+      "name": "NVIDIA A100-SXM4-80GB",
+      "total_mib": 81920,
+      "used_mib": 78185
+    }
+  ],
+  "compute_processes": [
+    {
+      "gpu": 0,
+      "pid": 96671,
+      "used_mib": 75876,
+      "scope": "其他计算进程"
+    },
+    {
+      "gpu": 1,
+      "pid": 96672,
+      "used_mib": 75876,
+      "scope": "其他计算进程"
+    },
+    {
+      "gpu": 2,
+      "pid": 96673,
+      "used_mib": 75876,
+      "scope": "其他计算进程"
+    },
+    {
+      "gpu": 3,
+      "pid": 96674,
+      "used_mib": 75876,
+      "scope": "其他计算进程"
+    },
+    {
+      "gpu": 4,
+      "pid": 138352,
+      "used_mib": 78170,
+      "scope": "本轮A1"
+    },
+    {
+      "gpu": 5,
+      "pid": 138352,
+      "used_mib": 78166,
+      "scope": "本轮A1"
+    },
+    {
+      "gpu": 6,
+      "pid": 138344,
+      "used_mib": 78170,
+      "scope": "本轮A1"
+    },
+    {
+      "gpu": 7,
+      "pid": 138344,
+      "used_mib": 78166,
+      "scope": "本轮A1"
+    }
+  ],
+  "note": "仅本轮进程在物理GPU4–7；其他计算进程仅只读观测，不由本轮管理。性能数字来自共享主机环境。"
+}

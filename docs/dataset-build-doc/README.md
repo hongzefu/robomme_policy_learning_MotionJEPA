@@ -10,6 +10,8 @@
 
 | 档案 | 库 | 内容 | 状态 |
 |---|---|---|---|
+| [`4task-motion-40ep-framesamp-8x8/`](4task-motion-40ep-framesamp-8x8/launch.md) | `v1-store/datasets/4task-motion-40ep/framesamp-8x8` | 从原source新增8×8视觉库；复用原motion与norm_stats | 已完成，全量13756行及独立xgrid通过（[result](4task-motion-40ep-framesamp-8x8/result.md)） |
+| [`4task-motion-400ep-framesamp-8x8/`](4task-motion-400ep-framesamp-8x8/launch.md) | `v1-store/datasets/4task-motion-400ep/framesamp-8x8` | 从原source新增8×8视觉库；31个part边界与旧库相同 | 已完成，全量123044行及独立xgrid通过（[result](4task-motion-400ep-framesamp-8x8/result.md)） |
 | [`4task-motion-400ep/`](4task-motion-400ep/launch.md) | `v1-store/datasets/4task-motion-400ep` | 四任务 × 100 episode 全量：SigLIP framesamp 三表 + Wan latent + motion token 表；生产 run `awsprod40k-b128-motion` 与本轮 `tic-*` 对拍所用 | 已完成（[result](4task-motion-400ep/result.md)） |
 | [`4task-motion-40ep-aws/`](4task-motion-40ep-aws/launch.md) | `v1-store/datasets/4task-motion-40ep` | 40 ep 测试库在环境 B 的从零复刻，测试脚本默认路径；M1–M5 / T3 等闸门在此库跑 | 已完成（[result](4task-motion-40ep-aws/result.md)） |
 | [`16task-h5-scan/`](16task-h5-scan/launch.md) | `/scratch/hongze/robomme_data_h5/` | 公开集 `Yinpei/robomme_data_h5` 16 任务 H5 的下载与扫描（episode 数、帧数、sha256 清单） | 已完成（[result](16task-h5-scan/result.md)） |

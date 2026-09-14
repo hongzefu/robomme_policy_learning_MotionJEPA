@@ -1,0 +1,9 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+BASELINE_REPEAT_EXACT=PASS profile=c32
+TRAIN_1000_EXACT=PASS profile=c32
+FINITE_ALIVE=PASS profile=c32
+IMPORT_ORIGIN=PASS profile=c32
+FINAL_STATE_EXACT=PASS profile=c32 state_steps=11
+NORM_STATS_ACTUAL=PASS sha=750a8e9bd6e1e5a3cf5c294864c44564153309ef92492eb083fa361096d470d2
+GATE_8X8=PASS profile=c32 steps=1000 batch=8 state_steps=[0, 2, 3, 25, 50, 100, 200, 400, 600, 800, 1000] digest_steps=[0, 1, 2, 24, 49, 99, 199, 399, 599, 799, 999]
+CHECK_EXIT_CODE=0
