@@ -14,23 +14,39 @@
 
 ## 第一部分（给人看）
 
-### Context：为什么做这件事
+### 这轮做什么
 
-上一条生产 run `awsprod40k-b128-motion`（2026-09-04→06）用旧 400 ep 四任务库、32 帧 × 4×4、context + motion。2026-09-14 新库 `4task-v2-1600ep-604f16da`（BinFill / RouteStick / VideoRepick / VideoUnmaskSwap 各 400 集，605,611 执行样本）建成并通过 20 步可读性验收；同日 8 帧 × 8×8 布局（`framesamp-8x8` 库，292 G，`VERIFY_PACK=PASS`）完成逐位验收。本轮在新库上训练第一条 **8 帧 × 8×8 + modulation + 无 motion** 的正式模型，作为后续对照基线。lr 取比线性缩放保守一档、步数从 40k 延长到 60k，以补偿更小步长。
+在 2026-09-14 建成的 1600 集新库上，训练第一条 **8 帧 × 8×8 + modulation + 无 motion** 的模型。它是后续所有对照的基线 —— 上一条生产 run `awsprod40k-b128-motion` 用的是旧 400 集库、32 帧 × 4×4、context + motion，两条**不逐项可比**。
 
-### 结论先行：两处配置改动 + 两处代码改动；先对拍与 smoke，再起正式 run
+### 拍板的参数
 
-**1. 配置改动两个文件（本节），代码改动两处** —— F 节的 dataset 守卫白名单、第 8 点的 `preflight_train_launch.py` 自检脚本。
-- 新 YAML `src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8.yaml`：以 `perceptual-framesamp-modul.yaml` 为底只把 `token_per_image` 16 → 64。现有 modul.yaml 是 32 帧 × 4×4，context-8frame-8x8.yaml 是 8×8 但 context，各差一两行。
-- 新条目 `mme_vla_suite_b128_60k`（`src/mme_vla_suite/training/config.py`）：复制 `mme_vla_suite_b128`，改 `num_train_steps 60_000`、`peak_lr = decay_lr = 5e-5`、`decay_steps 60_000`（peak == decay 时余弦段为常数，改它只为自洽）、`data.assets.assets_dir` 指到新库 norm_stats 目录。`mme_vla_suite`（官方参照）与 `mme_vla_suite_b128`（上次生产口径）一字不动。
+| 项 | 值 | 备注 |
+|---|---|---|
+| GPU / batch | 4,5,6,7 四卡 / 128 | per-device 32，fsdp4 |
+| 步数 / lr | 60k / peak = decay 5e-5 | warmup 5k。b128 下不做线性缩放，等效步长是 1e-4 的一半，用延长步数补偿 |
+| 与官方对照 | 官方是 b64 / 80k / 5e-5 / warmup 10k | 曲线形状相同（线性升后恒定）。本 run 总样本 7.68M ≈ 新库 12.7 epoch，官方 5.12M |
+| 配置条目 | 新增 `mme_vla_suite_b128_60k` | 既有两个条目一字不动 |
+| 预计 | **约 64.5 h（2.7 天）** | 稳态 3.831 s/step（`bench-b128-util` 实测，util 均值 94.75%） |
+| 产出 | 12 个 checkpoint ≈ **144 G** | 单个 12 G 实测；磁盘余 1.3 T |
+| wandb | 开 | project `robomme-framesamp` |
 
-代码侧已就位：dataset `_req` 接受 `(512, 64, 1)` 档并核 `store_meta.spec.tokens_per_frame == 64`，`_max_frames = 8`；`PerceptualMemory` 只断言 `budget == 512`；`MemoryAttention` 对 token 数无假设；motion 节整节缺省即关闭态。
+run_name **`v2-1600ep-m8x8-modul-b128-60k`**（起跑前按 AGENTS 第 6 条再确认一次）。
 
-**2. 学习率口径（与官方对照）。** 官方 b64：warmup 10k、peak = decay 5e-5、80k 步。本 run b128：warmup 5k（= 640k 样本，与官方 warmup 样本数相同）、peak = decay 5e-5、60k 步。曲线形状相同（线性升、然后恒定不衰减）。batch 翻倍而 lr 不变，等效步长是线性缩放（1e-4）的一半；总样本 60k × 128 = 7.68M，是官方 5.12M 的 1.5 倍，对新库约 **12.7 epoch**。更新次数 60k，官方 80k。
+### 要改的东西：两个配置文件 + 两处代码
 
-**3. 为什么必须先 smoke。** modulation 分支在本仓库从未训练过（`v1-postclean-g3` 登记 UNVERIFIED，只有环境 A 用官方 modul 权重评估过）；t8 那轮 12 条轨迹只覆盖 context（C8）与 context+motion（M8）。smoke 用真实 b128、真实 4 卡 fsdp4 跑 20 步，回答两件事：modulation × 8×8 能否编译并出有限数；per-device 32 在 modulation 下是否 OOM（旁证：`bench-b128-util` 在 context+motion、608 位进 prefix 的更重口径下 4 卡 b128 300 步无 OOM；modulation 记忆不进 prefix，激活只会更小）。≤ 5 分钟，临时 run 跑完即删。
+- **配置**：新 YAML `perceptual-framesamp-modul-8frame-8x8.yaml`（以 modul.yaml 为底，只把 `token_per_image` 16 → 64）、新条目 `mme_vla_suite_b128_60k`。（A 节）
+- **代码一**：dataloader 的形制守卫要放宽 —— 现在它硬性只收 `context` / `2048`，会把 modul 配置挡在构造期。改成成对白名单 `(context,2048)` / `(modulation,1024)`。（F 节）
+- **代码二**：新增起跑前自检脚本 `preflight_train_launch.py`。（G 节）
 
-**4. 预期。** 4 卡 b128 稳态 3.831 s/step（`bench-b128-util`，util 均值 94.75%）；60k ≈ 63.9 h，加编译与 12 次存盘约 **64.5 h（2.7 天）**。checkpoint **12 × 12 G ≈ 144 G**（按 modulation run `repro-4a100-fsdp4-80g/19` 实测单个 12 G 计；context+motion 的 `awsprod40k-b128-motion/5000` 是 11 G，不可混用），磁盘余 1.3 T，仍充裕；但同期 GPU 0 上的评估也在产出，起跑前再 `df -h /scratch` 复核一次。起跑后以前 300 步稳态复核 ETA。
+### 三件需要你知道的事
+
+**① 守卫放宽要配两块验证。** 那两条守卫只在构造时拒配置，后面的取样、填充、store 读取一行都不读这两个键 —— 但它毕竟是 dataloader 改动，按 AGENTS 第 18 条要证明「不改数」，所以配了 V3（轻量对拍）和 V4（真实训练梯度一致）。**顺序是先 commit 再验**，因为 AGENTS 12/17 要求 clean HEAD 起跑；V4 不过就 `git revert`。细节见 F 节。
+
+**② motion 接入不影响这条不用 motion 的 run。** 逐层核过源码：motion 的新参数在关闭态**根本不创建**，`embed_memory` 是编译期早返回，cross-attention 本体零改动，还有两道显式闸挡住误配。**源码级成立**，完整论证见 H 节。运行时实测由 V6 补齐 —— 拿 `07702f0`（2026-08-29）和现在的代码各跑一次，比 loss 和逐叶梯度，**一次覆盖整条演进链**。
+
+**③ 训练期间主副本锁死只读，开发搬到 `-temp` 副本。** 训练跑 65 小时，而 Python 在 dataloader worker 重建、存 checkpoint 时会**重新 import 源文件** —— 主副本被改就可能把新代码带进正在跑的训练。所以起跑后 `chmod -R a-w src scripts packages`，开发全在 `git clone` 出来的 `-temp` 里做（它有自己的 `.venv`，`v1-store` 是指向主副本的 symlink）。细节与三条红线见 G 节。
+
+### 与上次生产 run 的差异
 
 **5. 与上次生产 run 的差异表**（引用结果须带此声明，两条不逐项可比）
 
@@ -45,71 +61,9 @@
 | norm_stats | `robomme-400ep` | `4task-v2-1600ep-604f16da`（`856c75ea…`） |
 | 新增可训练参数 | motion 两层 3.35 M | `MemoryAttention`（q/kv/out einsum）+ 每层 `MemoryRMSNorm` modulation Dense；`encoder_static` 2816→1024 |
 
-**6. 一处 dataloader 守卫要放宽，因此多跑两块验证。** modul 配置的 smoke 会在 `FrameSampDataset.__init__`（`src/mme_vla_suite/training/framesamp_dataset.py`）被一条有意加的守卫挡下：`integration_type='modulation' != 'context'`。这条和它下一行 `memory_token_dim == 2048` 是 commitV3.1（`6ee7494`，2026-08-27）按 Codex 审计 G13 加的，目的是拒绝「同形的 modul 配置」；它们只在构造时拒绝配置，后面的取样、填充、store 读取一行都不读这两个键。
+### 起跑前要过十道验证
 
-**训练主链路（`train.py`）上没有别的 context 专属守卫** —— `training/`、`train.py`、`compute_norm_stats.py`、`policies/` 全部 grep 过，只此两行；模型侧 `history_pi0.py` 本来就接受 modulation。**但 `g0/` 与 `tests/` 不在此列**：`scripts/training/g0/bench_train_steps.py` 的 `_EXPECTED_HISTORY_CONFIGS` 是一份只含四个 **context** YAML 的白名单，命中不上即 `raise ValueError`；同一份白名单在 `tests/dump_fixture_samples.py`、`tests/single_step_grad.py`、`tests/motion_gates_model.py` 各有一份，`tests/closed_equiv.py` 的 `CLOSED_YAML` 与 `tests/ref_npy_dataset.py`（非 context 直接 raise）同理。本轮 smoke 与正式 run 走 `train.py`（无此白名单），F3 走 `bench_train_steps.py` 但用的正是 context 8×8 YAML，**所以本计划不受阻**；然而任何 modulation 侧的吞吐 bench 或固定 batch 取证都会被挡，需要时另立任务逐个放宽。
-
-处理方式是把两条守卫合成一条**成对白名单**：只允许 `(context, 2048)` 或 `(modulation, 1024)`，expert 与错配对（例如 modulation 配 2048）照样拒。这是对 dataloader 文件的改动，按 AGENTS 第 18 条要证明「不改数」，因此有下面两块验证：
-
-- **G13 测试改写**（`scripts/training/tests/test_pack_guards.py`）：原测试断言 modul.yaml 必拒，改成「modul.yaml 通过、expert.yaml 拒、错配对拒」三条。该 pytest 依赖 `v1-store/datasets/ref-shard` 迷你库，本环境没有，跑不了；三条断言改在 1600ep 库上用一次性脚本执行，留档写明「本环境未执行 pytest」。
-- **第一块（轻量对拍，CPU 约 3–5 分钟）**：用 `perceptual-framesamp-modul-8frame-8x8.yaml` 和 `perceptual-framesamp-context-8frame-8x8.yaml` 在同一 `framesamp-8x8` 库上各构造一个 Dataset，对同一组 256 个索引逐样本逐键比 dtype、shape、raw sha256，判定行 `DS_EQUIV=PASS samples=<n> keys=<k> mismatches=0`。**注意这两份 YAML 的差异不止 `integration_type` / `memory_token_dim` 两个键**：context 版还多出整节 `motion:`（`enabled: false` 等），modul 版整节缺省，而 `framesamp_dataset.py` 与 `dataloader.py::_motion_gates` 都用 `getattr(hc, "motion", None)` 读这一节。所以 `DS_EQUIV=PASS` 证明的是这两组差异的**合集**不影响交付——对第 7 点反而更有利（顺带实测了「整节缺省 ≡ `enabled: false`」的数据侧等价），但不能把结论单独归因给 `integration_type`。
-- **第二块（真实训练梯度一致，GPU 4,5 约 30–35 分钟）**：复用 09-14 已固化的 `t8-c8-b` 轨迹（400ep 库、context 8×8、batch 8、fsdp 2、seed 42、确定性 XLA），在**已提交** `commitV9.6` 的 clean HEAD 上跑前 100 步（**不是照抄 t8-c8-b 命令**，六处差异见 F3），先过 `check_baseline_env.py check` 指纹 preflight（`BASELINE_ENV=PASS`），再用 `compare_baseline.py` 一次性产出全部判定行。主判据是 100/100 步全覆盖的五标量 hex 与 `index_sequence.json` 的 800 个样本索引；`BENCH_CHECKSUM=1`（用户 2026-09-15 拍板）另拿六份完整 TrainState 逐叶摘要对照，代价是六步 checksum 实测合计约 1182 s。这证明 context 链在守卫改动前后逐位相同。
-- **commit 顺序（用户 2026-09-15 拍板）**：F2 通过后**先**提交 `commitV9.6`（守卫 + 测试改写）并 push，F3 再从 clean HEAD 起跑；F3 FAIL 则 `git revert` 该 commit（AGENTS 11 自带 `revert:` 通道，不改写历史、不用 force），把 FAIL 判定行写进 `result.md` 后停下交你处置，不放宽判据。理由：AGENTS 12/17 要求 clean HEAD 起跑，而 `bench_train_steps.py` 会把 `git status --porcelain` 原文写进 `run_meta.json` 的 `start_status`——脏树跑出的产物自带脏树记录，拿它当正式等价证据属自证不合规。
-
-**7. 审计结论：motion 接入不影响「无 motion 的 modulation」——源码级成立；运行时证据原本只覆盖 context，由第 9 点的 V6 补齐 modulation 侧。** 按 motion 接入 commit `06220c4`（commitV6.5）的 diff 原文逐层核：
-- **模型侧参数树不变**：`PerceptualMemory.__init__` 的两层新参数 `motion_pos_proj`、`motion_encoder_static` 只在 `motion.enabled` 为真时创建，且建在 `feature_encoder` 之后（nnx 默认 RNG 流按调用顺序 fold_in，帧路初始化值不变）。modul-8x8 YAML 没有 `motion` 节，`_motion_enabled` 为 False。
-- **`embed_memory` 关闭态是编译期早返回，执行路径与接入前逐位等价**：函数签名逐字未变（两版都是 `def embed_memory(self, obs: HistAugObservation)`），唯一改动是 `self.mem_encoder(...)` 调用点多传三个关键字实参 `motion_emb / motion_pos / motion_mask`——这三个值在关闭态恒为 `None`（`FrameSampDataset` 的 `_NONE_KEYS` 补键 → `from_dict` 的 `data.get(key, None)`），且 `PerceptualMemory.__call__` 在 `if not self.motion_enabled: return hidden_states, None, None` 之前一条语句都不读它们，传给 `feature_encoder.encode_perceptual_memory` 的三个实参与接入前逐字相同。随后 `if not self.mem_encoder.motion_enabled` 是 Python 编译期分支，早返回分支内的四行（`input_mask = obs.static_mask`、两个全 False 列表、`return`）与接入前的后四行逐字相同。合起来：关闭态执行的运算与返回的四个值与 `06220c4~1` 逐位一致。**注意不能笼统说「函数体与接入前逐字相同」** —— `mem_encoder` 调用在早返回之前，函数体也多了 `if` 与整段开启态代码；成立的是「关闭态执行路径逐位等价」这个更精确的表述。modulation 分支在 `compute_loss` / `sample_actions` 里只取前两个返回值 `mem_seq, mem_mask` 喂 `PaliGemma.llm(..., mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])`。
-- **modulation 的 prefix 不含记忆区**：`embed_prefix` 只在 `integration_type == "context"` 时才把记忆 token 拼进 prefix；modulation 的 prefix 是两路视角各 256 位共 512 图像 token + prompt（**这是训练侧口径**；推理侧 `robomme_policy.py` 只喂 `base_0_rgb` 一路 = 256，引用到评估语境时须注明），RoPE 的 `positions = jnp.cumsum(input_mask, axis=1) - 1` 因此不含记忆位次。**注意力掩码上两条路径口径不同但结果相同**：推理 `sample_actions` 的 modulation 分支把 `na_mask` 丢进 `_`、走 `make_attn_mask` 两参数版；训练 `compute_loss` 在 `use_history=True` 时统一走三参数版（modulation 也不例外），但 modulation 的 `na_mask` 首位就是图像 token 的 `True`（`embed_prefix` 里 `na_mask += [True] * image_tokens.shape[1]`），于是 `make_attn_mask` 内 `jnp.cumsum(mask_na, axis=1) <= 0` 恒为全 False、`mask_not_attend` 恒空，三参数版与两参数版逐位相同——记忆屏蔽项在 modulation 下恒不生效。**只写推理那半句会让人误以为训练也走两参数版，引用时须带上训练侧口径。**
-- **608 位交错 / `take_along_axis` 为何对 modulation 不可达**（**注意不能把它挂在上一条「prefix 不含记忆区」名下，那个推理不成立**）：modulation 恰恰是通过 `embed_memory` 的返回值 `mem_seq` 拿到记忆并走 cross-attention 的（`compute_loss` 与 `sample_actions` 的 modulation 分支），开启态产出的 608 位重排序列**会**直达 modulation。真正的不可达性来自两处：关闭态的编译期早返回（上上条），以及下一条的两道显式闸。三项里只有「RoPE 位次变化不可达」是真由 prefix 组成推出的。
-- **cross-attention 本体零改动**：接入前后 `history_gemma.py`（`MemoryAttention` / `MemoryRMSNorm`）、`integration/utils.py`、`openpi/models/gemma.py`、`representation/mem_encoder.py` 四文件 `git diff` 为空。
-- **两道显式闸**：`HistoryPi0.__init__` 里 `motion_enabled and integration_type != "context"` 即 raise；`inputs_spec` 与 `PerceptualMemory` 的 `motion_enabled` 不一致即 raise。开启态混进 modulation 会在建模型时报错。
-- **数据侧交付不读 `integration_type`——但只对 `__getitem__` 成立**：`FrameSampDataset.__getitem__` 的 motion 代码全在 `if self._motion_enabled` 内，关闭态只在样本末尾按 `_NONE_KEYS` 追加四个 None（与旧路径「尾部补空键」逐字一致），`HistAugObservation.from_dict` 用 `data.get(key, None)` 接住，None 在 jax pytree 里是空节点、不进数值图。context 与 modulation 拿到同一份 batch。**`__init__` 则会直接拒掉 modul-8x8**（就是 F 节要放宽的那两条守卫），这句摘抄进 `launch.md` 时必须补半句「`__init__` 的形制守卫另由 F 节放宽，见 `commitV9.6`」，否则会让人误以为数据侧零改动。
-- **证据边界**：运行时逐位证据只在 context 关闭态取过（环境 A `motion-t1-closed` 对 G0b 逐位同、`motion-t2-ref/cand`；环境 B `aws-t3-closed-s100`、t8 C8/C32）。modulation 关闭态没有单独跑过对拍，`v1-postclean-g3` 登记的 UNVERIFIED 状态未变。F 节第一块把「两份配置在**当前源码**下数据侧交付一致」从论证变成实测——**它不比较接入前源码**，接入前/接入后的数据侧逐位证据仍只有 context 关闭态那几次。
-- **模型侧的运行时证据由 J 节的追溯对拍补齐**：锚点取 `07702f0`（2026-08-29，commitV4.3，零适配分界 —— 它之前 `compute_loss` 返回二元组），一次对拍覆盖 `07702f0..HEAD` 整条链。该区间内 `src/mme_vla_suite/models/**/*.py` 只被 `06220c4` 一个 commit 触碰，**动了数值路径的改动为零**。不再往前推的理由：`git diff bc3ab59 07702f0^ --stat -- src/mme_vla_suite/models/` 只有 3 个文件各 1 行，且都与 framesamp modulation 无关、都在 `07702f0` 被删除 —— models 侧 2026-02-20 到 2026-08-29 半年冻结，往前推换不来新信息（`history_gemma.py` 这套 modulation 本体更是自 `602d0d5`、2026-02-06 起逐字未变）。做法见 J 节：绕开 Dataset、把现成的定点 batch 直接喂两版模型比 loss 与逐叶梯度 hex。
-
-**8. 隔离：训练留在主副本并锁死只读，开发转到 `-temp` 开发副本。** 训练要跑 65 小时，而 Python 会在 dataloader worker 重建、checkpoint 保存等时刻**重新 import 源文件** —— 主副本被改就可能把新代码带进正在跑的训练，结果不可复现。
-
-**为什么是「锁训练侧」而不是「把训练挪进 worktree 快照」。** 两种做法都要让「跑代码的那一侧」接回 `v1-store`（实测 3.9 T，不可能复制第二份）与 `.venv`（7.1 G）—— 复杂度不会消失，只会转移。但**风险不对称**：
-
-| 复杂度落在哪一侧 | 接错的后果 |
-|---|---|
-| 训练侧（把训练挪进快照） | 65 h 白跑或结果被污染，且「忘 `cd`」「`PYTHONPATH` 漏 openpi-client」两类错误**完全静默、零症状** |
-| 开发侧（本方案） | 开发时当场报错，重试成本几分钟 |
-
-把复杂度挪到可以试错的一侧。附带好处：训练命令保持历史跑通的简单形态（cwd = 主副本，条目里的相对路径本来就解析得对），也不需要把起跑 commit 提前冻结再粘字面量 —— 训练就跑在主副本上，起跑前一刻记下 HEAD 即可。
-
-**训练侧（主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`）**：cwd = 主副本；不设 `PYTHONPATH`（靠主副本 `.venv` 的 editable 安装）；`UV_PROJECT_ENVIRONMENT` 无需设置；`source` 主副本的 `paths.sh`。起跑后立即 `chmod -R a-w src scripts packages` 锁死只读，训练结束后 `chmod -R u+w` 恢复 —— 把「不改主副本」从纪律变成技术闸。
-
-**开发侧（`/scratch/hongze/robomme_policy_learning_MotionJEPA-temp`）**：`git clone` 主副本建立（不用 `git worktree`，clone 出来完全独立，主副本 `.git` 一个字节都不会被写）；`ln -s <主副本>/v1-store v1-store`；`uv sync` 建**自己的** `.venv`。
-
-**三条红线（`AGENTS.md` 第 14 条已同步修订，加了开发副本例外条款）**：
-1. `-temp/v1-store` 是**可写**的 symlink（与环境 A 的只读 turbo 链性质不同）—— 在开发副本里写 `v1-store/` **等同于直接写主副本数据**。
-2. **开发副本里禁止执行任何带 `--force` 或输出根参数的破坏性命令** —— `build_dataset.py --force` 会 `rmtree` 整个输出根，穿透 symlink 即删主副本数据。确需执行时回到主副本。
-3. 开发副本**必须有自己的 `.venv`**，不得共用主副本的 —— 共用时 `uv sync` / `uv add` 会换掉正被训练进程使用的包文件。
-
-**起跑前自检 `scripts/training/preflight_train_launch.py`**（新增，纯 stdlib、零副作用，非零退出即中止）。最要紧的一类误操作是**在开发副本里误起正式训练** —— 两边源码高度相似，跑起来不会有任何症状，但训练读的是随时在改的开发代码。五条从不同角度堵它：
-
-| 检查 | 判据 |
-|---|---|
-| `CHECK_CWD` | cwd 必须等于主副本路径（路径直比，与内容无关） |
-| `CHECK_PKG_*` | `mme_vla_suite` / `openpi` / `openpi_client` 三个包的 origin 都在主副本下 |
-| `CHECK_SYS_PREFIX` | 解释器就是主副本的 `.venv` |
-| `CHECK_V1_STORE_REAL` | `<repo>/v1-store` 是**实体目录** —— 开发副本那份是 symlink，天然可分 |
-| `CHECK_NOT_DEV_COPY` | 仓库根目录名不以 `-temp` 结尾 |
-
-其余检查覆盖：YAML 路径与 sha256、`norm_stats.json` 的存在与 sha256（**在训练启动前就查**，不等 dataloader 抛 `TypeError`）、数据集与两个 `MMEVLA_FRAMESAMP_*` 环境变量、主副本 HEAD == `TRAIN_HEAD` 且 clean、run 根不存在，以及**把交给 `train.py` 的参数数组同时喂给 preflight 逐字校验**四个关键 flag。共 23 项，已实测：正向 22/23 PASS（唯一 FAIL 是脚本自身未提交导致的 `REPO_CLEAN`），负向漏传 `--data.assets.assets-dir` 被准确抓出并归因到「数据参数」。
-
-**两条容易误判的事实**：
-1. **`openpi-client` 确实在训练链路上**（`openpi/transforms.py` 顶层 `from openpi_client import image_tools`，`ResizeImages` 每样本调两次）—— 但新方案不需要手工设 `PYTHONPATH`，它靠主副本 `.venv` 的 editable 安装天然从主副本加载。preflight 仍查它的 origin，用来抓「`PYTHONPATH` 被污染指向 `-temp`」。
-2. **norm_stats 的 `assets_dir` 是 cwd 相对路径** —— cwd = 主副本时本来就解析得对，所以传不传绝对路径都跑得起来。但命令仍显式传：消除对 cwd 的隐式依赖，且让 preflight 的 `CLI_ASSETS_DIR` 有东西可校验。顺带记住 `--assets-base-dir` 对本条目是**死参数**（回退目标 `train-assets/mme_vla_suite_b128_60k` 不存在），别把它当保险。
-
-**仍然防不住的**（写进 `launch.md`）：
-- **【高】两份 argv 不同源** —— preflight 的保证建立在「它校验的 argv 与 `train.py` 真收到的是同一个 bash 数组」上。分别手写两份，这层保护就回到零。无技术兜底，靠 runner 写法 + 纪律。
-- **【中】训练期间在主副本跑 `uv sync` / `uv add` / `uv pip`** —— 会换掉正被训练使用的包文件。写进禁令表；开发副本有自己的 `.venv` 正是为此。
-- **【中】`chmod` 之后仍可能被 root 或 `chmod u+w` 绕过** —— 跑完复查 `git status --porcelain` 仍为空 + 关键文件 sha 与起跑时一致，写进 `result.md`。
-- **【低】失败重试要先清残骸** —— 任何在 `initialize_checkpoint_dir` 之后的失败都会留下半截 run 根与一个 wandb run，而正式 run 名字固定（不像 smoke 带时间戳），重试前必须手工删掉 run 根、`TRAIN_RECORD_DIR` 与那个 wandb run。
-
-**9. 本轮全部验证一览：每项分别证明什么。** 十项，分属四组目的。判据行全部要摘进 `launch.md`；任一 FAIL 即停、把原文交用户处置，不放宽判据。
+判据行全部摘进 `launch.md`；任一 FAIL 即停、把原文交用户处置，不放宽判据。
 
 | # | 验证 | 步骤 | 证明什么 | 判据行 | 耗时 / 资源 |
 |---|---|---|---|---|---|
@@ -124,19 +78,7 @@
 | V9 | 起跑前自检 | 7、9 | **训练从对的地方、用对的环境、拿对的数据起跑**：23 项，含五条专防「在 `-temp` 开发副本里误起训练」 | `PREFLIGHT=PASS n=23` | 5 s / CPU |
 | V10 | 只读复查 | 11 | **训练期间主副本代码一个字节都没变** | `git status --porcelain` 为空 + 三个关键文件 `sha256sum -c` 全对 | 1 min / CPU |
 
-**四组目的，别混为一谈：**
-
-- **V2–V4 服务于「守卫放宽这一处代码改动」**，是 `AGENTS.md` 第 18 条要求的两块：V3 是第一块（非训练轻量对拍，证明交付内容一致），V4 是第二块（真实训练梯度一致，最后检验）。**V4 不通过不得宣称守卫改动等价。**
-- **V5–V6 服务于「motion 接入不影响无 motion 的 modulation」这个结论**（第 7 点），把它从源码级论证提升为运行时实测。V5 必须先做：历史上所有逐位 PASS 都只覆盖 context，modulation 路径的 bit 级确定性从未验证过（`MemoryAttention` 新增了 `jnp.einsum(..., preferred_element_type=jnp.float32)` + softmax 归约）；不先建噪声底，一旦 V6 失配就无法区分「接入改了数」与「modulation 自身不确定」，整轮白跑。
-- **V7–V8 服务于「这条 run 本身跑得对」**，是起正式 run 前的功能性确认，不是等价性证明。
-- **V9–V10 服务于「训练读的代码确实是起跑那一刻的代码」**，一头一尾各一次。
-
-**覆盖边界（明确写出来，避免过度解读）：**
-- V3 只证明**当前源码下**两份配置交付一致，**不比较接入前源码**；覆盖的是 `integration_type` / `memory_token_dim` **外加 context 版多出的整节 `motion:`** 这一组差异的合集，不能把结论单独归因给 `integration_type`。
-- V4 的主判据是 100/100 步全覆盖的五标量与 800 个样本索引；`batch_digest_rows=6` 是**基线既有的取证密度**（`t8-c8-b` 在 step 0..99 只固化了 `{0,1,2,24,49,99}` 六份），不是本轮覆盖不足 —— 判定行必须带 `rows=` 量词，不得写成无条件的 `mismatches=0`。
-- V6 只覆盖**模型侧**，数据侧由 V3 覆盖；用的是 400 集库的定点 batch，**不覆盖 1600 集库的读数路径**（那属于 8×8 支持那次改动，已由 `t8-gradient` C8 单独验过）；也**不覆盖 `07702f0` 之前的历史** —— 但 models 侧在 2026-02-20 至 2026-08-29 之间半年冻结，往前推无信息可得（J1）。
-- V8 的 `PARAM_TREE_EXACT=PASS` 已**蕴含**六个 modulation 专属叶子存在（双向精确比对，缺了会进 `missing`）；`MEM_PARAMS` 那条 grep 是正面冗余确认，不是必需。
-- V6 的归因是唯一的：`07702f0..HEAD` 区间内 `src/mme_vla_suite/models/**/*.py` 只被 `06220c4` **一个** commit 触碰过，且改动全属「纯新增、关闭态不可达」或「新增守卫、关闭态不触发」两类，**动了数值路径的改动为零**。所以一次对拍即可，不必分段；真 FAIL 时责任 commit 也唯一。
+**分属四组目的，别混为一谈**：V2–V4 管「守卫改动等价」（AGENTS 18 的两块），V5–V6 管「motion 接入等价」，V7–V8 管「这条 run 本身跑得对」（功能性确认，不是等价性证明），V9–V10 管「训练读的代码确实是起跑那一刻的」。覆盖边界与每项细节见第二部分对应节。
 
 ### 执行顺序（十一步，全文以本表为准）
 
@@ -679,7 +621,38 @@ tmux ls; tmux kill-session -t m8-guard; tmux ls
 
 ### G. 隔离机制：训练锁主副本 + `-temp` 开发副本（步骤 8 建、步骤 9–10 用、步骤 11 收）
 
-结论与理由见第一部分第 8 点。本节只给操作。
+第一部分第 3 条给了结论，本节给完整机制与操作。
+
+**训练侧（主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`）**：cwd = 主副本；不设 `PYTHONPATH`（靠主副本 `.venv` 的 editable 安装）；`UV_PROJECT_ENVIRONMENT` 无需设置；`source` 主副本的 `paths.sh`。起跑后立即 `chmod -R a-w src scripts packages` 锁死只读，训练结束后 `chmod -R u+w` 恢复 —— 把「不改主副本」从纪律变成技术闸。
+
+**开发侧（`/scratch/hongze/robomme_policy_learning_MotionJEPA-temp`）**：`git clone` 主副本建立（不用 `git worktree`，clone 出来完全独立，主副本 `.git` 一个字节都不会被写）；`ln -s <主副本>/v1-store v1-store`；`uv sync` 建**自己的** `.venv`。
+
+**三条红线（`AGENTS.md` 第 14 条已同步修订，加了开发副本例外条款）**：
+1. `-temp/v1-store` 是**可写**的 symlink（与环境 A 的只读 turbo 链性质不同）—— 在开发副本里写 `v1-store/` **等同于直接写主副本数据**。
+2. **开发副本里禁止执行任何带 `--force` 或输出根参数的破坏性命令** —— `build_dataset.py --force` 会 `rmtree` 整个输出根，穿透 symlink 即删主副本数据。确需执行时回到主副本。
+3. 开发副本**必须有自己的 `.venv`**，不得共用主副本的 —— 共用时 `uv sync` / `uv add` 会换掉正被训练进程使用的包文件。
+
+**起跑前自检 `scripts/training/preflight_train_launch.py`**（新增，纯 stdlib、零副作用，非零退出即中止）。最要紧的一类误操作是**在开发副本里误起正式训练** —— 两边源码高度相似，跑起来不会有任何症状，但训练读的是随时在改的开发代码。五条从不同角度堵它：
+
+| 检查 | 判据 |
+|---|---|
+| `CHECK_CWD` | cwd 必须等于主副本路径（路径直比，与内容无关） |
+| `CHECK_PKG_*` | `mme_vla_suite` / `openpi` / `openpi_client` 三个包的 origin 都在主副本下 |
+| `CHECK_SYS_PREFIX` | 解释器就是主副本的 `.venv` |
+| `CHECK_V1_STORE_REAL` | `<repo>/v1-store` 是**实体目录** —— 开发副本那份是 symlink，天然可分 |
+| `CHECK_NOT_DEV_COPY` | 仓库根目录名不以 `-temp` 结尾 |
+
+其余检查覆盖：YAML 路径与 sha256、`norm_stats.json` 的存在与 sha256（**在训练启动前就查**，不等 dataloader 抛 `TypeError`）、数据集与两个 `MMEVLA_FRAMESAMP_*` 环境变量、主副本 HEAD == `TRAIN_HEAD` 且 clean、run 根不存在，以及**把交给 `train.py` 的参数数组同时喂给 preflight 逐字校验**四个关键 flag。共 23 项，已实测：正向 22/23 PASS（唯一 FAIL 是脚本自身未提交导致的 `REPO_CLEAN`），负向漏传 `--data.assets.assets-dir` 被准确抓出并归因到「数据参数」。
+
+**两条容易误判的事实**：
+1. **`openpi-client` 确实在训练链路上**（`openpi/transforms.py` 顶层 `from openpi_client import image_tools`，`ResizeImages` 每样本调两次）—— 但新方案不需要手工设 `PYTHONPATH`，它靠主副本 `.venv` 的 editable 安装天然从主副本加载。preflight 仍查它的 origin，用来抓「`PYTHONPATH` 被污染指向 `-temp`」。
+2. **norm_stats 的 `assets_dir` 是 cwd 相对路径** —— cwd = 主副本时本来就解析得对，所以传不传绝对路径都跑得起来。但命令仍显式传：消除对 cwd 的隐式依赖，且让 preflight 的 `CLI_ASSETS_DIR` 有东西可校验。顺带记住 `--assets-base-dir` 对本条目是**死参数**（回退目标 `train-assets/mme_vla_suite_b128_60k` 不存在），别把它当保险。
+
+**仍然防不住的**（写进 `launch.md`）：
+- **【高】两份 argv 不同源** —— preflight 的保证建立在「它校验的 argv 与 `train.py` 真收到的是同一个 bash 数组」上。分别手写两份，这层保护就回到零。无技术兜底，靠 runner 写法 + 纪律。
+- **【中】训练期间在主副本跑 `uv sync` / `uv add` / `uv pip`** —— 会换掉正被训练使用的包文件。写进禁令表；开发副本有自己的 `.venv` 正是为此。
+- **【中】`chmod` 之后仍可能被 root 或 `chmod u+w` 绕过** —— 跑完复查 `git status --porcelain` 仍为空 + 关键文件 sha 与起跑时一致，写进 `result.md`。
+- **【低】失败重试要先清残骸** —— 任何在 `initialize_checkpoint_dir` 之后的失败都会留下半截 run 根与一个 wandb run，而正式 run 名字固定（不像 smoke 带时间戳），重试前必须手工删掉 run 根、`TRAIN_RECORD_DIR` 与那个 wandb run。
 
 **建开发副本**（步骤 8，`docs:` commit push 之后、主副本 clean、记下 `TRAIN_HEAD` 之后）：
 ```bash
@@ -722,9 +695,21 @@ sha256sum -c v1-store/bench/$RUN/lock_sha256.txt  # 三个文件的 sha 必须�
 
 **注意 `git worktree list` 当前实有五条**（主副本、`.claude/worktrees/b128cfg`、`.claude/worktrees/sgab`、`v1-store/reports/tic-adversarial-20260908/source`、`v1-store/worktrees/official-89efeaab`）。本方案**不新增 worktree**，也不动这五条。
 
-### H. 审计结论固化（第一部分第 7 点的落点）
+### H. 审计结论：motion 接入不影响「无 motion 的 modulation」
 
-结论正文见第一部分第 7 点。固化位置：根目录计划文件（I 节）第一部分同款一节；`launch.md`「与官方 / 上次 run 的关系」一节引用该节并写明「modulation 关闭态无运行时对拍，本 run 不据此宣称与接入前逐位等价」。不改 `docs/motion-memory.md` 等正本（评审性结论，非链路事实；正本改动另立）。
+**结论：源码级成立**（下面九条逐层核过 motion 接入 commit `06220c4` 的 diff 原文）；**运行时实测由 J 节的追溯对拍（V6）补齐**。
+
+- **模型侧参数树不变**：`PerceptualMemory.__init__` 的两层新参数 `motion_pos_proj`、`motion_encoder_static` 只在 `motion.enabled` 为真时创建，且建在 `feature_encoder` 之后（nnx 默认 RNG 流按调用顺序 fold_in，帧路初始化值不变）。modul-8x8 YAML 没有 `motion` 节，`_motion_enabled` 为 False。
+- **`embed_memory` 关闭态是编译期早返回，执行路径与接入前逐位等价**：函数签名逐字未变（两版都是 `def embed_memory(self, obs: HistAugObservation)`），唯一改动是 `self.mem_encoder(...)` 调用点多传三个关键字实参 `motion_emb / motion_pos / motion_mask`——这三个值在关闭态恒为 `None`（`FrameSampDataset` 的 `_NONE_KEYS` 补键 → `from_dict` 的 `data.get(key, None)`），且 `PerceptualMemory.__call__` 在 `if not self.motion_enabled: return hidden_states, None, None` 之前一条语句都不读它们，传给 `feature_encoder.encode_perceptual_memory` 的三个实参与接入前逐字相同。随后 `if not self.mem_encoder.motion_enabled` 是 Python 编译期分支，早返回分支内的四行（`input_mask = obs.static_mask`、两个全 False 列表、`return`）与接入前的后四行逐字相同。合起来：关闭态执行的运算与返回的四个值与 `06220c4~1` 逐位一致。**注意不能笼统说「函数体与接入前逐字相同」** —— `mem_encoder` 调用在早返回之前，函数体也多了 `if` 与整段开启态代码；成立的是「关闭态执行路径逐位等价」这个更精确的表述。modulation 分支在 `compute_loss` / `sample_actions` 里只取前两个返回值 `mem_seq, mem_mask` 喂 `PaliGemma.llm(..., mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])`。
+- **modulation 的 prefix 不含记忆区**：`embed_prefix` 只在 `integration_type == "context"` 时才把记忆 token 拼进 prefix；modulation 的 prefix 是两路视角各 256 位共 512 图像 token + prompt（**这是训练侧口径**；推理侧 `robomme_policy.py` 只喂 `base_0_rgb` 一路 = 256，引用到评估语境时须注明），RoPE 的 `positions = jnp.cumsum(input_mask, axis=1) - 1` 因此不含记忆位次。**注意力掩码上两条路径口径不同但结果相同**：推理 `sample_actions` 的 modulation 分支把 `na_mask` 丢进 `_`、走 `make_attn_mask` 两参数版；训练 `compute_loss` 在 `use_history=True` 时统一走三参数版（modulation 也不例外），但 modulation 的 `na_mask` 首位就是图像 token 的 `True`（`embed_prefix` 里 `na_mask += [True] * image_tokens.shape[1]`），于是 `make_attn_mask` 内 `jnp.cumsum(mask_na, axis=1) <= 0` 恒为全 False、`mask_not_attend` 恒空，三参数版与两参数版逐位相同——记忆屏蔽项在 modulation 下恒不生效。**只写推理那半句会让人误以为训练也走两参数版，引用时须带上训练侧口径。**
+- **608 位交错 / `take_along_axis` 为何对 modulation 不可达**（**注意不能把它挂在上一条「prefix 不含记忆区」名下，那个推理不成立**）：modulation 恰恰是通过 `embed_memory` 的返回值 `mem_seq` 拿到记忆并走 cross-attention 的（`compute_loss` 与 `sample_actions` 的 modulation 分支），开启态产出的 608 位重排序列**会**直达 modulation。真正的不可达性来自两处：关闭态的编译期早返回（上上条），以及下一条的两道显式闸。三项里只有「RoPE 位次变化不可达」是真由 prefix 组成推出的。
+- **cross-attention 本体零改动**：接入前后 `history_gemma.py`（`MemoryAttention` / `MemoryRMSNorm`）、`integration/utils.py`、`openpi/models/gemma.py`、`representation/mem_encoder.py` 四文件 `git diff` 为空。
+- **两道显式闸**：`HistoryPi0.__init__` 里 `motion_enabled and integration_type != "context"` 即 raise；`inputs_spec` 与 `PerceptualMemory` 的 `motion_enabled` 不一致即 raise。开启态混进 modulation 会在建模型时报错。
+- **数据侧交付不读 `integration_type`——但只对 `__getitem__` 成立**：`FrameSampDataset.__getitem__` 的 motion 代码全在 `if self._motion_enabled` 内，关闭态只在样本末尾按 `_NONE_KEYS` 追加四个 None（与旧路径「尾部补空键」逐字一致），`HistAugObservation.from_dict` 用 `data.get(key, None)` 接住，None 在 jax pytree 里是空节点、不进数值图。context 与 modulation 拿到同一份 batch。**`__init__` 则会直接拒掉 modul-8x8**（就是 F 节要放宽的那两条守卫），这句摘抄进 `launch.md` 时必须补半句「`__init__` 的形制守卫另由 F 节放宽，见 `commitV9.6`」，否则会让人误以为数据侧零改动。
+- **证据边界**：运行时逐位证据只在 context 关闭态取过（环境 A `motion-t1-closed` 对 G0b 逐位同、`motion-t2-ref/cand`；环境 B `aws-t3-closed-s100`、t8 C8/C32）。modulation 关闭态没有单独跑过对拍，`v1-postclean-g3` 登记的 UNVERIFIED 状态未变。F 节第一块把「两份配置在**当前源码**下数据侧交付一致」从论证变成实测——**它不比较接入前源码**，接入前/接入后的数据侧逐位证据仍只有 context 关闭态那几次。
+- **模型侧的运行时证据由 J 节的追溯对拍补齐**：锚点取 `07702f0`（2026-08-29，commitV4.3，零适配分界 —— 它之前 `compute_loss` 返回二元组），一次对拍覆盖 `07702f0..HEAD` 整条链。该区间内 `src/mme_vla_suite/models/**/*.py` 只被 `06220c4` 一个 commit 触碰，**动了数值路径的改动为零**。不再往前推的理由：`git diff bc3ab59 07702f0^ --stat -- src/mme_vla_suite/models/` 只有 3 个文件各 1 行，且都与 framesamp modulation 无关、都在 `07702f0` 被删除 —— models 侧 2026-02-20 到 2026-08-29 半年冻结，往前推换不来新信息（`history_gemma.py` 这套 modulation 本体更是自 `602d0d5`、2026-02-06 起逐字未变）。做法见 J 节：绕开 Dataset、把现成的定点 batch 直接喂两版模型比 loss 与逐叶梯度 hex。
+
+**固化位置**：`launch.md`「与官方 / 上次 run 的关系」一节引用本节。V6 未通过之前，不得据本节宣称「与接入前逐位等价」—— 源码级论证与运行时证据是两回事。不改 `docs/motion-memory.md` 等正本（评审性结论，非链路事实；正本改动另立）。
 
 ### I. 计划固化到仓库根目录（步骤 6）
 
