@@ -1,0 +1,24 @@
+# 8 帧 × 8×8（token_per_image 64 × 8 帧 = 512 位）+ modulation 接入，无 motion 节（关闭态）。
+# 以 perceptual-framesamp-modul.yaml 为底，唯一差异 token_per_image: 16 → 64；对应库布局 framesamp-8x8-v1。
+budget: 512
+num_views: 1
+token_per_image: 64
+streaming_obs_horizon: 16
+pool_type: mean
+use_pos_emb: true
+use_state_emb: false
+memory_feature:
+  img:
+    net: identity
+    input_dim: 2048
+  pos:
+    input_dim: 768
+    hidden_dim: 768
+  state:
+    input_dim: 8
+    hidden_dim: 512
+integration_type: modulation
+memory_token_dim: 1024
+representation_type: perceptual
+perceptual_memory:
+  type: frame_sampling

@@ -529,6 +529,47 @@ _CONFIGS = [
         ema_decay=0.999,
         fsdp_devices=4,
     ),
+    # 环境 B 新库 1600ep 档（2026-09-15，用户拍板）：与 mme_vla_suite_b128 的差异只有四项——
+    #   num_train_steps 40_000 → 60_000；peak_lr / decay_lr 1e-4 → 5e-5（b128 下不做线性缩放，等效为官方
+    #   5e-5@b64 的一半，用延长步数补偿）；decay_steps 50_000 → 60_000（peak==decay 时余弦段为常数，只为自洽）；
+    #   data.assets 指到 1600ep 新库的 norm_stats。warmup 5_000 不变（= 640k 样本，与官方 10k×64 同）。
+    TrainConfig(
+        name="mme_vla_suite_b128_60k",
+        model=history_pi0.HistoryPi0Config(
+            pi05=True,
+            action_horizon=20,
+            use_history=True,
+            history_config=None,
+            discrete_state_input=False,
+        ),
+        data=RoboMMEDataConfig(
+            repo_id=f"robomme",
+            assets=AssetsConfig(
+                assets_dir="v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        batch_size=128,
+        lr_schedule=_optimizer.CosineDecaySchedule(
+            warmup_steps=5_000,
+            peak_lr=5e-5,
+            decay_steps=60_000,
+            decay_lr=5e-5,
+        ),
+        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
+        freeze_filter=history_pi0.HistoryPi0Config().get_freeze_filter(),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            os.path.join(OPENPI_DATA_HOME, "openpi-assets/checkpoints/pi05_base/params"),
+        ),
+        num_train_steps=60_000,
+        save_interval=5_000,
+        keep_period=5_000,
+        project_name="robomme-framesamp",
+        num_workers=8,
+        ema_decay=0.999,
+        fsdp_devices=4,
+    ),
 ]
 
 if len({config.name for config in _CONFIGS}) != len(_CONFIGS):
