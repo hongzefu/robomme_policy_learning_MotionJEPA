@@ -445,10 +445,22 @@ def test_g9_use_state_emb_pinned(mini_store):
                          source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
 
 
-def test_g13_modul_config_rejected(mini_store):
-    """喂同形的 modul 配置（integration_type=modulation、memory_token_dim=1024）必拒。"""
+def test_g13_integration_dim_pairs(mini_store):
+    """成对白名单放行 modulation/1024，拒绝 expert 与 modulation/2048。"""
+    from omegaconf import OmegaConf
+    from mme_vla_suite.models.config.utils import get_history_config
+    from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+
+    ds = _make_dataset(mini_store, hc_name="perceptual-framesamp-modul.yaml")
+    ds.close()
     with pytest.raises(ValueError, match="形制断言失败"):
-        _make_dataset(mini_store, hc_name="perceptual-framesamp-modul.yaml")
+        _make_dataset(mini_store, hc_name="perceptual-framesamp-expert.yaml")
+    hc = OmegaConf.merge(get_history_config("perceptual-framesamp-modul.yaml"),
+                         {"memory_token_dim": 2048})
+    with pytest.raises(ValueError, match="形制断言失败"):
+        FrameSampDataset(str(mini_store), data_config=_fake_data_config(),
+                         history_config=hc, action_horizon=20,
+                         source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
 
 
 def _g10_child(ds, expect_pos_nbytes, expect_state_nbytes, q):

@@ -3,7 +3,7 @@
 （本文件注释中的「旧路径」均指已删除的 legacy 数据链 RoboMMEDataset +
 散 npy + MemoryBuffer——commitV4.1 删除，见 git 历史；对齐结论在删除前逐字核对固化。）
 
-单一路径、无分支、只服务 `perceptual-framesamp-context` 一种 run：
+共享装配路径，支持成对的 context/2048 与 modulation/1024 配置：
 ① 清单查表得 (g, step)（O(1) 数组，含 exec_start_idx 换算，不读目录）；
 ② pickle.load 源库 data/{idx}.pkl（与旧路径同源同字节）＋ pkl 内身份互校
    （不符显式 raise——行号错位的最后一道闸，禁 assert，R6）；
@@ -76,7 +76,7 @@ class FrameSampDataset(Dataset):
         verify_level: str = "fast",
         motion_root: str | None = None,
     ):
-        # ―― 形制断言即文档（必须能挡住同形的 modul 配置，G13；显式 raise 不用 assert）――
+        # ―― 形制断言即文档（G13 成对白名单，拒绝 expert 与错配；显式 raise 不用 assert）――
         hc = history_config
 
         def _req(cond: bool, msg: str) -> None:
@@ -88,10 +88,9 @@ class FrameSampDataset(Dataset):
              f"representation_type={hc.representation_type!r} != 'perceptual'")
         _req(hc.perceptual_memory.type == "frame_sampling",
              f"perceptual_memory.type={hc.perceptual_memory.type!r} != 'frame_sampling'")
-        _req(hc.integration_type == "context",
-             f"integration_type={hc.integration_type!r} != 'context'")
-        _req(int(hc.memory_token_dim) == 2048,
-             f"memory_token_dim={hc.memory_token_dim} != 2048")
+        _req((str(hc.integration_type), int(hc.memory_token_dim)) in {("context", 2048), ("modulation", 1024)},
+             f"(integration_type, memory_token_dim)=({hc.integration_type!r}, {hc.memory_token_dim}) "
+             f"不在支持的 (context,2048)/(modulation,1024) 档位中")
         _req((int(hc.budget), int(hc.token_per_image), int(hc.num_views)) in {(512, 16, 1), (512, 64, 1)},
              f"(budget,token_per_image,num_views)=({hc.budget},{hc.token_per_image},"
              f"{hc.num_views}) 不在支持的 (512,16,1)/(512,64,1) 档位中")
