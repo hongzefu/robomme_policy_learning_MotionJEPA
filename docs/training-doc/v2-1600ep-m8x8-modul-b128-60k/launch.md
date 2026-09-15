@@ -80,6 +80,8 @@ MEM_PARAMS=PASS n=6
 
 实际已完成：开发环境以 `uv sync --frozen --python <主副本>/.venv/bin/python` 建立，`sys.prefix` 和 `mme_vla_suite`、`openpi`、`openpi_client`、JAX 的导入路径均属于开发副本；两份 `.venv` 是不同实体目录。克隆的 `.git/info/exclude` 增加 `/v1-store`，只忽略本克隆中的符号链接。主副本 `.venv` 未同步或修改。
 
+开发副本的仓库级 Git 配置还需显式沿用主副本的 SSH 身份：在开发副本执行 `git config core.sshCommand 'ssh -i ~/.ssh/id_ed25519_hongzefu -o IdentitiesOnly=yes'`。本次 clone 未继承该配置，首次推送被 GitHub 按默认 `yinpei-tri` 身份拒绝；按 AGENTS 第 11 条停止，用户确认后补设配置，留档提交 `739aca3` 已于 2026-09-15 成功推送。该配置只用于 GitHub 同步。
+
 正式训练稳定起步后记录 `framesamp_dataset.py`、`train.py`、`history_pi0.py` 的 SHA256，并执行 `chmod -R a-w src scripts packages`。此后代码、留档编辑和环境安装均在开发副本进行，主副本不改文件、不 pull、不运行 uv sync/add/pip。开发副本禁止对共享数据执行带 `--force` 或破坏性输出根的命令。
 
 训练连续推进超过 25 步后已执行只读锁定，目录权限为 `dr-xr-xr-x`，主副本 Git 状态仍干净；锁定摘要见 [records/lock_sha256.txt](records/lock_sha256.txt)。这证明起跑时的隔离已生效，训练结束后的 V10 复查仍待执行。
