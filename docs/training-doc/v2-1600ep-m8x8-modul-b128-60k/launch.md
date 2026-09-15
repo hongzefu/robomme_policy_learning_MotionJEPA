@@ -45,6 +45,16 @@ GUARD_GRAD_100=PASS scalars_steps=100 index_n=800 batch_digest_rows=6 state_dige
 
 V5–V6 的最终判定引用 [modulation 追溯对拍](../m8-modul-retro/result.md)，必须两档 A/A 与 A/B 均通过后才能启动正式 run。V7–V8 的 smoke 判定在启动正式训练前补齐：20 步有限、退出 0、新库 norm_stats 随 checkpoint 保存、motion 关闭、参数树双向精确匹配 61/61，以及六条 modulation 专属参数路径全部存在。V9 逐字保留 25 条 preflight 结果；V10 在训练结束后检查代码未变。
 
+2026-09-15 实施结果：V5–V6 两档四组比较均通过，`MODUL_RETRO=PASS profiles=2 comparisons=4 init_leaves=61 grad_leaves=38`。V7–V8 的 [smoke 验收](../smoke-m8x8-modul-20260915T054007Z/result.md) 也全部通过，实际运行 5 分 18 秒；本次已按完整 run 留档。smoke 的 25 条 preflight 原文与 20 条 Step 行在其 `records/train.log`，正式起跑时再次检查最终 HEAD。
+
+```text
+GRAD_EQ=PASS kinds=3 leaves=38 mismatches=0
+PREFLIGHT=PASS n=25
+SMOKE20=PASS steps=20 finite=1 exit_code=0
+PARAM_TREE_EXACT=PASS config=mme_vla_suite_b128_60k history_config=perceptual-framesamp-modul-8frame-8x8.yaml yaml_sha256=5b5ac2f85302d4d8 n_model=61 n_ckpt=61 missing=0 extra=0 shape_mismatch=0
+MEM_PARAMS=PASS n=6
+```
+
 ## 与官方及上次 run 的关系
 
 官方口径为 b64、80k、lr 5e-5、warmup 10k；本 run 为 b128、60k、lr 5e-5、warmup 5k，总样本数 7.68M，约新库 12.7 epoch。学习率按用户决定保持，不以 batch 翻倍推导新的覆盖值。
