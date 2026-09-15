@@ -863,7 +863,26 @@ B 侧（HEAD）：cd 主副本，unset PYTHONPATH
 
 **worktree 与 tmux 纪律**：老树放 `v1-store/worktrees/`（`ref-8x8` 同级，既有约定）；**本节的 worktree 是本对拍专用的临时快照，与 G 节的训练隔离无关**（训练本身不用 worktree）；对拍结束即 `git worktree remove` + `prune`。tmux 会话名带 `tr-` 前缀，清理只能 `tmux kill-session -t <确切会话名>`。
 
-**这个对拍不覆盖什么**：数据侧（由 V3 覆盖）、1600 集库的读数路径（见 J4）、以及 `07702f0` 之前的历史（见 J1，那半年 models 侧冻结，无信息可得）。
+#### J8. 这个对拍不覆盖什么
+
+**① 分帧语义与整套装配，全部不在覆盖内。** 这是最容易被误读的一条。8 帧 / 32 帧之分**只存在于 dataloader 侧**，源头是 YAML 里的一个参数：
+
+```
+4×4:  token_per_image: 16  ->  _max_frames = 512 // (16×1) = 32 帧
+8×8:  token_per_image: 64  ->  _max_frames = 512 // (64×1) =  8 帧
+```
+
+`FrameSampDataset.__getitem__` 拿它做三件事：`even_sampling_indices(step, self._max_frames)` 采帧号 → `store.read_image_rows(rows)` / `store.pos_rows(frames_arr)` 按帧号查表 → `reshape(-1, ...)` 压成 `[512, ...]`（`static_state_emb` 与 `static_mask` 则是 `np.repeat(..., tokens_per_frame)`，把每帧一个的值摊到该帧每个 token）。另有一道守卫 `_req(self._meta.spec.tokens_per_frame == token_per_image * num_views, ...)` 防止拿 8×8 配置去读 4×4 库。
+
+**模型侧一个「帧」字都没有** —— 时序与位置信息全部经 `static_pos_emb` 注入（pos 表按帧号索引，同一帧的 64 或 16 个 token 拿同一行内容），模型只做 `silu(Linear(pos))` 再 concat，逐 token。
+
+**所以：若帧采样或查表本身错了（采错帧号、pos 对错行），V6 照样 PASS** —— 两侧吃的是同一份错输入。这一段的正确性由三层兜：库表本身靠 store_meta 的 sha256（8×8 的 `pos_emb_8x8.f32.bin` 是 `709a52a9…`，2304 行 × `[64,768]`；4×4 的是 `3176ac09…`，586 行 × `[16,768]`）加建库 `VERIFY_PACK=PASS`；查表与装配靠 **V3**（逐样本逐键比 raw sha）与 **V4**（走真实 Dataset 跑 100 步比梯度）—— **V4 是唯一同时覆盖「装配 + 模型计算」的验证**，代价是只在 context 8×8 上跑。
+
+**② 1600 集库的读数路径**（见 J4，用的是 400 集库的定点 batch；那属于 8×8 支持那次改动，已由 `t8-gradient` C8 单独验过）。
+
+**③ `07702f0` 之前的历史**（见 J1，那半年 models 侧冻结，无信息可得）。
+
+**反过来，V6 内部「两侧输入同源」不是假设而是有证据链**：两侧从同一份文件读同一份字节，`batch_meta.json` 记了每个键的 `raw` sha256（`c32-b` 的 `static_pos_emb` 是 `6aedccac…`，`c8-b` 是 `639dc1a3…`），`load_array` 读回有 `nbytes` 校验，对拍器另比两侧 `batch_keys` 摘要。
 
 ### E. 红线与不做的事
 
