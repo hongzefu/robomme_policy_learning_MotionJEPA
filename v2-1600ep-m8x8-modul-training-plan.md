@@ -65,7 +65,7 @@
 - **两道显式闸**：`HistoryPi0.__init__` 里 `motion_enabled and integration_type != "context"` 即 raise；`inputs_spec` 与 `PerceptualMemory` 的 `motion_enabled` 不一致即 raise。开启态混进 modulation 会在建模型时报错。
 - **数据侧交付不读 `integration_type`——但只对 `__getitem__` 成立**：`FrameSampDataset.__getitem__` 的 motion 代码全在 `if self._motion_enabled` 内，关闭态只在样本末尾按 `_NONE_KEYS` 追加四个 None（与旧路径「尾部补空键」逐字一致），`HistAugObservation.from_dict` 用 `data.get(key, None)` 接住，None 在 jax pytree 里是空节点、不进数值图。context 与 modulation 拿到同一份 batch。**`__init__` 则会直接拒掉 modul-8x8**（就是 F 节要放宽的那两条守卫），这句摘抄进 `launch.md` 时必须补半句「`__init__` 的形制守卫另由 F 节放宽，见 `commitV9.6`」，否则会让人误以为数据侧零改动。
 - **证据边界**：运行时逐位证据只在 context 关闭态取过（环境 A `motion-t1-closed` 对 G0b 逐位同、`motion-t2-ref/cand`；环境 B `aws-t3-closed-s100`、t8 C8/C32）。modulation 关闭态没有单独跑过对拍，`v1-postclean-g3` 登记的 UNVERIFIED 状态未变。F 节第一块把「两份配置在**当前源码**下数据侧交付一致」从论证变成实测——**它不比较接入前源码**，接入前/接入后的数据侧逐位证据仍只有 context 关闭态那几次。
-- **模型侧仍是源码级；若要实测，对照只能是「接入前代码 vs 接入后代码的两版模型」，但照官方 modul.yaml 直接起训练起不来。** `06220c4~1`（= `c5925d9`，commitV6.4）的 `FrameSampDataset.__init__` 里那两条 G13 守卫（commitV3.1 `6ee7494` 于 2026-08-27 加入，**比 motion 接入 `06220c4`（2026-09-03）早七天**）会在构造期直接 raise；换 400ep 4×4 库也一样被拒——4×4 只过得了 `(budget, token_per_image, num_views) == (512,16,1)` 那条，过不了 `integration_type == "context"` 与 `memory_token_dim == 2048` 这两条。另立任务时有两条可行路径，二选一：**(a)** 把 F1 的同一条成对白名单原样搬到 `06220c4~1` 与 `06220c4` 两个 detached worktree 上再各起训练——该守卫是纯构造期 `raise`-or-noop、交付路径一行不读，改它不可能改数，两侧同补即可；**(b)** 完全绕开 Dataset：用 context YAML（过守卫）取一份固定 batch 落盘，再把同一份 batch 分别喂给两版模型的 modulation 分支比 loss / 梯度逐叶 hex。注意 modulation 的记忆只经 cross-attention 进 LLM，**没有 `embed_prefix` 那种便宜的中间产物**，(b) 必须跑完整前向，宜复用 `single_step_grad.py` 的固定 state + 固定 batch 口径；且 `closed_equiv.py`、`ref_npy_dataset.py`、`motion_gates_model.py`、`dump_fixture_samples.py`、`single_step_grad.py`、`g0/bench_train_steps.py` 全部把 context 写死，覆盖 modulation 需逐个放宽（估约 150–250 行新代码），**(b) 省的是 GPU 时间不是工作量**。另：「接入前 HEAD 不认 8×8」只是 Dataset 侧的 `(512,16,1)` 断言，模型侧 `PerceptualMemory.__call__` 仅断言 `static_image_emb.shape[1] == budget`（512），(b) 路径下可直接用 8×8。**若目的是把差异归因到 motion 接入本身，对照应取 `06220c4~1` vs `06220c4` 这对相邻 commit，而不是 vs 当前 HEAD**——后者之间还隔着 V9.0–V9.5 的 8×8 支持、新 config 条目与 `train.py` 改动。两条路径都属另立任务，不在本计划内。
+- **模型侧的运行时证据由 J 节的追溯对拍补齐**：锚点取 `07702f0`（2026-08-29，commitV4.3，零适配分界 —— 它之前 `compute_loss` 返回二元组），一次对拍覆盖 `07702f0..HEAD` 整条链。该区间内 `src/mme_vla_suite/models/**/*.py` 只被 `06220c4` 一个 commit 触碰，**动了数值路径的改动为零**。不再往前推的理由：`git diff bc3ab59 07702f0^ --stat -- src/mme_vla_suite/models/` 只有 3 个文件各 1 行，且都与 framesamp modulation 无关、都在 `07702f0` 被删除 —— models 侧 2026-02-20 到 2026-08-29 半年冻结，往前推换不来新信息（`history_gemma.py` 这套 modulation 本体更是自 `602d0d5`、2026-02-06 起逐字未变）。做法见 J 节：绕开 Dataset、把现成的定点 batch 直接喂两版模型比 loss 与逐叶梯度 hex。
 
 **8. 隔离：训练留在主副本并锁死只读，开发转到 `-temp` 开发副本。** 训练要跑 65 小时，而 Python 会在 dataloader worker 重建、checkpoint 保存等时刻**重新 import 源文件** —— 主副本被改就可能把新代码带进正在跑的训练，结果不可复现。
 
@@ -117,8 +117,8 @@
 | V2 | 守卫三条断言 | 3 | 放宽后的成对白名单确实只放行 `(context,2048)` 与 `(modulation,1024)`，expert 与错配对仍拒 | 三条断言各自 PASS | 含在 V3 内 |
 | V3 | Dataset 轻量对拍 | 3 | **守卫改动不改交付内容**：modul-8x8 与 context-8x8 两份配置在同一库、同一组 256 个索引上，逐样本逐键的 dtype / shape / raw sha256 全等 | `DS_EQUIV=PASS samples=<n> keys=<k> mismatches=0` | 3–5 min / CPU |
 | V4 | 守卫梯度一致 | 4 | **守卫改动不改训练数值**：在 `t8-c8-b` 固化轨迹上重跑前 100 步，逐步五标量 hex、样本索引序列、输入摘要、TrainState 逐叶摘要与基线全等 | `GUARD_GRAD_100=PASS scalars_steps=100 index_n=800 batch_digest_rows=6 state_digest_rows=6` | 30–35 min / GPU 4,5 |
-| V5 | modulation 噪声底 | 5（V6 前置） | **modulation 路径本身是否 bit 级可复现** —— 同一侧连跑两次比逐叶梯度 | 两次逐叶全等 | 含在 V6 内 |
-| V6 | motion 接入对拍 | 5 | **motion 接入不改 modulation 关闭态的数值**：同一份固定 batch、同一初态，接入前后两版代码的 loss 与全部可训练叶梯度逐位相同。8×8 与 4×4 两档各做一次 | `GRAD_EQ=PASS kinds=3 leaves=<n> mismatches=0` + `init_leaves` 逐叶相同 | 15–20 min / 4×A100 |
+| V5 | modulation A/A 自复现 | 5（V6 前置） | **modulation 路径本身是否 bit 级可复现** —— 同一棵树同一命令连跑两次比逐叶梯度。仓库全部逐位对拍清一色是 context，这条路径从未在确定性档下验过 | `GRAD_EQ=PASS`（A1 vs A2） | 20–35 min / 2 卡 |
+| V6 | 追溯梯度对拍 | 5 | **从 `07702f0`（2026-08-29）到 HEAD，modulation 关闭态的数值一字未变** —— 同一份固定 batch、同一初态，两版代码的 loss 与全部可训练叶梯度逐位相同。一次覆盖整条演进链（motion 接入 `06220c4` 只是其中一个 commit）。8×8 与 4×4 两档各做一次 | 两侧初态逐叶 sha 相同 + `GRAD_EQ=PASS kinds=3 leaves=<n> mismatches=0` | 20–35 min / 2 卡 |
 | V7 | smoke 20 步 | 7 | **这个配置能不能真跑起来**：modulation × 8×8 能编译、出有限数、per-device 32 不 OOM；norm_stats 正确加载并随 checkpoint 落盘 | `EXIT_CODE=0` + `Integration Type: modulation` + 20 步有限 + norm_stats sha `856c75ea…` | ≤5 min / GPU 4–7 |
 | V8 | 参数树核对 | 7 | **存下来的确实是 modulation 模型**：checkpoint 与 modulation 配置构造出的模型参数树双向精确匹配，六个 modulation 专属叶子都在 | `PARAM_TREE_EXACT=PASS … n_model=61 n_ckpt=61 missing=0 extra=0` + `MEM_PARAMS=PASS n=6` | 1 min / CPU |
 | V9 | 起跑前自检 | 7、9 | **训练从对的地方、用对的环境、拿对的数据起跑**：23 项，含五条专防「在 `-temp` 开发副本里误起训练」 | `PREFLIGHT=PASS n=23` | 5 s / CPU |
@@ -134,9 +134,9 @@
 **覆盖边界（明确写出来，避免过度解读）：**
 - V3 只证明**当前源码下**两份配置交付一致，**不比较接入前源码**；覆盖的是 `integration_type` / `memory_token_dim` **外加 context 版多出的整节 `motion:`** 这一组差异的合集，不能把结论单独归因给 `integration_type`。
 - V4 的主判据是 100/100 步全覆盖的五标量与 800 个样本索引；`batch_digest_rows=6` 是**基线既有的取证密度**（`t8-c8-b` 在 step 0..99 只固化了 `{0,1,2,24,49,99}` 六份），不是本轮覆盖不足 —— 判定行必须带 `rows=` 量词，不得写成无条件的 `mismatches=0`。
-- V6 只覆盖**模型侧**（也正是 `06220c4` 唯一改动的地方），数据侧由 V3 覆盖；用的是 400 集库的定点 batch，**不覆盖 1600 集库的读数路径**（那属于 8×8 支持那次改动，已由 `t8-gradient` C8 单独验过）。
+- V6 只覆盖**模型侧**，数据侧由 V3 覆盖；用的是 400 集库的定点 batch，**不覆盖 1600 集库的读数路径**（那属于 8×8 支持那次改动，已由 `t8-gradient` C8 单独验过）；也**不覆盖 `07702f0` 之前的历史** —— 但 models 侧在 2026-02-20 至 2026-08-29 之间半年冻结，往前推无信息可得（J1）。
 - V8 的 `PARAM_TREE_EXACT=PASS` 已**蕴含**六个 modulation 专属叶子存在（双向精确比对，缺了会进 `missing`）；`MEM_PARAMS` 那条 grep 是正面冗余确认，不是必需。
-- **V6 的归因粒度待定**：当前写法 B 侧用主副本 HEAD，而 HEAD 与 `06220c4` 之间还隔着 8×8 支持、新 config 条目与 `train.py` 改动。若要严格归因到 `06220c4` 这**一个** commit，B 侧应另建 `06220c4` 的 worktree 再跑一次。起跑前请用户确认取哪种粒度。
+- V6 的归因是唯一的：`07702f0..HEAD` 区间内 `src/mme_vla_suite/models/**/*.py` 只被 `06220c4` **一个** commit 触碰过，且改动全属「纯新增、关闭态不可达」或「新增守卫、关闭态不触发」两类，**动了数值路径的改动为零**。所以一次对拍即可，不必分段；真 FAIL 时责任 commit 也唯一。
 
 ### 执行顺序（十一步，全文以本表为准）
 
@@ -144,7 +144,7 @@
 2. **F1/F1b**：重新写入守卫成对白名单 + G13 测试改写（只改工作区，不提交）。
 3. **F2**：CPU 轻量对拍 + 三条守卫断言（3–5 分钟，≤5 分钟不触发 AGENTS 17）→ `DS_EQUIV=PASS`。
 4. **F2.5 → F3**：先 `commitV9.6` + push，工作区回到 clean；再从该 clean HEAD 起跑 `t8-c8-guard-s100`（tmux `m8-guard`，30–35 分钟，`BENCH_CHECKSUM=1`）→ `GUARD_GRAD_100=PASS` → 建 `docs/training-doc/t8-c8-guard-s100/` 三件套 + README 加行 → `docs:` commit → push。**FAIL 则 `git revert` commitV9.6 + push，停下交用户处置。**
-5. **motion 接入前后的 modulation 梯度对拍**（用户 2026-09-15 拍板：放在正式 run 起跑前做）。两档都做：8 帧 8×8 与 32 帧 4×4。走「固定 batch 喂两版模型」，**不走**「两棵源码树各起训练」—— 后者对 8×8 要把 `StoreSpec` 重构 backport 进接入前 HEAD，那次改动动了 8 处热读路径（pread offset、缓冲字节数、`posix_fadvise` 区间、memoryview 切片、`.reshape()`、pos 小表路径与 shape），属「可能改数」，会让对照基础塌掉。详见 J 节。
+5. **modulation 关闭态的追溯梯度对拍**（用户 2026-09-15 拍板：放在正式 run 起跑前做）。锚点 `07702f0`（2026-08-29）对 HEAD，**一次覆盖整条演进链**（motion 接入 `06220c4` 只是其中一个 commit）；两档都做：32 帧 4×4 与 8 帧 8×8。走「固定 batch 喂两版模型」，**不走**「两棵源码树各起训练」。**先跑 A/A 自复现**（V5）确认 modulation 路径 bit 级可复现，不过即停、请示后再决定判据是否降级。详见 J 节。
 6. 本计划固化为根目录 `v2-1600ep-m8x8-modul-training-plan.md` + `docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md` 初稿 + `docs/training-doc/README.md` 加行 → `docs:` commit → push。（I 节）
 7. 从**主副本**起 smoke（tmux `m8-smoke`）→ 核判据（含 `PREFLIGHT=PASS`）→ 删临时产物。（B 节）
 8. `launch.md` 补 smoke 与步骤 3/4/5 的判定行摘录 → `docs:` commit → push → **此刻记 `TRAIN_HEAD` = 主副本 HEAD**（抄进 launch.md）→ `git clone` 建开发副本 `-temp` + symlink v1-store + `uv sync`。（G 节）
@@ -532,7 +532,7 @@ tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/v
 - 路径源：`scripts/training/paths.sh`。
 - 参数树核对：`scripts/training/legacy-eval/check_ckpt_param_tree.py`（只输出计数与 missing/extra/shape_mismatch，PASS 时后三者恒为空列表；modulation 的正面签名是 `n_model=61`）。
 - 起跑前自检：`scripts/training/preflight_train_launch.py`（纯 stdlib、零副作用、23 项检查；`--repo` 传主副本根，trailing `--` 之后传与 `train.py` 逐字相同的 argv 数组）。
-- 梯度对拍（J 节）：`scripts/training/tests/single_step_grad.py`、`scripts/training/tests/compare_grad_summaries.py`、定点 batch `v1-store/fixtures/8x8/grad/{c8-b,c32-b}`。
+- 追溯梯度对拍（J 节）：以 `scripts/training/tests/single_step_grad.py` 为底改出 `single_step_grad_fixed.py`（删 `ref_npy_dataset` 顶层 import —— 它 import 了 `06220c4` 才新增的 `motion_store` 与 `sampling.memory_order`，老树没有会 `ImportError`；`_EXPECTED_HISTORY_CONFIGS` 加两个 modul YAML；`_build_batches` 换成磁盘 loader）；`scripts/training/tests/_common.py` 的 `load_array`（bfloat16 走 `.bin` + 旁置 JSON，逐位无损）；对拍器参考 `compare_fixture_dumps.py` / `compare_grad_summaries.py`；定点 batch `v1-store/fixtures/8x8/grad/{c8-b,c32-b}`（现成，不重新生成）。
 - F3 对拍：`scripts/training/g0/check_baseline_env.py`（dump / check）、`scripts/training/g0/compare_baseline.py`（只比交集并打印 `rows=`）、`scripts/training/tests/project_scalars.py`（`_HEADER` 强制写表头，故 TSV 行数 = 1 + 步数）、`scripts/training/g0/bench_train_steps.py::_make_digest_gate`（`BENCH_EXTRA_DIGEST_STEPS` 越界即 raise）。
 - 留档样板：`docs/training-doc/awsprod40k-b128-motion/{launch,result}.md`、`docs/training-doc/v2b-read20-20260914T174147Z/`。
 
@@ -730,53 +730,94 @@ sha256sum -c v1-store/bench/$RUN/lock_sha256.txt  # 三个文件的 sha 必须�
 
 本文件已在仓库根目录（与 `8frame-8x8-training-plan.md` 同级、同体例），文首带状态说明。步骤 6 只需与 `launch.md` 初稿、`docs/training-doc/README.md` 加行一起 `git add`，subject `docs: v2-1600ep-m8x8-modul-b128-60k 计划固化与起跑留档初稿`，push。之后再记 `TRAIN_HEAD`（保证起跑 commit 含这份计划）。验证：`git diff --check`；Markdown 链接 `docs/training-doc/README.md` → 新 run 目录可解析。
 
-### J. motion 接入前后的 modulation 梯度对拍（执行顺序步骤 5）
+### J. modulation 关闭态的追溯梯度对拍（`07702f0` → HEAD，执行顺序步骤 5）
 
-**目的**：把第一部分第 7 点的结论从**源码级论证**提升为**运行时实测** —— 在完全相同的输入张量与完全相同的初态上，接入前代码（`06220c4~1` = `c5925d9`）与接入后代码（当前 HEAD）对 modulation 配置给出逐位相同的 loss 与全部可训练叶梯度。两档都做：**8 帧 8×8** 与 **32 帧 4×4**。
+**命题**：在**完全相同的输入张量**与**完全相同的初态权重**上，`07702f0`（2026-08-29，commitV4.3）与当前 HEAD 两份代码，对 **modulation 关闭态**跑一次前向+反向，得到的 loss 与全部可训练叶梯度**逐位相同**。两档都做：**32 帧 4×4** 与 **8 帧 8×8**。
 
-**为什么走「固定 batch 喂两版模型」而不是「两棵源码树各起训练」。** 接入前 HEAD 有四道独立硬拒读不了 8×8 库：`framesamp_store.py` 的 `LAYOUT = "framesamp-4x4-v1"` 常量校验、表名 `image_emb_4x4` / `pos_emb_4x4` 与 `row_shape [16,2048]` 校验、文件名 `pos_emb_4x4.f32.bin` / `image_emb_4x4/`、以及 Dataset 的 `_req(... == (512,16,1))`。要让它认，必须把 commitV9.1 `236765f` 的 `StoreSpec` 参数化改动整块 backport，而那次改动动了 **8 处热读路径**（pread 的 offset、输出缓冲字节数、`posix_fadvise` 区间、memoryview 切片、`.reshape()`、pos 小表 `np.fromfile` 路径与 `.shape`、两处 `run_*_checks`）。它对 4×4 逐值等价，但**落在「可能改数」这一类** —— 搬进接入前那棵树，那棵树的数据路径就不再是历史代码，对照基础当场塌掉。4×4 档虽只需放宽一条断言，但要在两棵树里各打掉 `test_g13_modul_config_rejected` 这条生产安全闸测试。
+这比「只比 motion 接入前后（`c5925d9` vs `06220c4`）」强一档 —— **一次覆盖整条演进链**，motion 接入只是其中一个 commit。
 
-**为什么固定 batch 对两档都成立。** 模型链路里除 `budget`（512）外**不存在任何一处依赖帧数或每帧 token 数** —— `token_per_image` / `num_views` / `max_frames` / `tokens_per_frame` 在整个 `src/mme_vla_suite/models/` 里零命中；`PerceptualMemory.__call__` 只有一条 `assert static_image_emb.shape[1] == self.config.budget`；`FeatureEncoder` 是逐 token 的 pointwise 运算，pos_emb 不是"表"、没有行数概念；`MemoryAttention` 只读 `mem_seq.shape[1]`，且该文件在 `06220c4~1..HEAD` 区间零改动。两种布局喂进模型的四个张量**逐维、逐 dtype 完全相同**（实测自两份归档 batch 摘要 `docs/training-doc/t8-gradient/records/{c8,c32}/b/allfull.batch_meta.json`）：
+#### J1. 为什么锚点取 `07702f0`，而不是推到更早
 
-| 键 | 8 帧 8×8 | 32 帧 4×4 |
-|---|---|---|
-| `static_image_emb` | `(8,512,2048)` bfloat16 | 同 |
-| `static_pos_emb` | `(8,512,768)` float32 | 同 |
-| `static_state_emb` | `(8,512,8)` float64 | 同 |
-| `static_mask` | `(8,512)` bool | 同 |
+| 层级 | commit | 日期 | 代价 |
+|---|---|---|---|
+| **采用** | **`07702f0`** | 2026-08-29 | 三处工具侧适配，**`src/` 零改动** |
+| 可选 | `6ee7494` | 2026-08-27 | 还要适配 `compute_loss` 二返回 |
+| 理论极限 | `bc3ab59` | 2026-02-20 | 再往前 YAML 用 `perceptual_memory.budget` 口径，与 HEAD 不同源，**不可推** |
 
-**所以接入前那棵树根本不需要认识 8×8 库 —— 它只要能吃下一个 `[8,512,2048]` 的张量。**
+**往前推换不来新信息**：`git diff bc3ab59 07702f0^ --stat -- src/mme_vla_suite/models/` 只有 3 个文件各 1 行（`config/base.yaml`、`representation/recur_mem.py`、`representation/rmt.py`），三者都与 framesamp modulation 无关，且都在 `07702f0` 被删除 —— **models 侧从 2026-02-20 到 2026-08-29 半年冻结**。旁证：`history_gemma.py`（`MemoryAttention` / `MemoryRMSNorm` 全套，modulation 本体）自 `602d0d5`（2026-02-06）起**逐字未变**；`openpi/models/gemma.py` 与 `pi0.py` 的 `git log` 都只有 first commit 一条。
 
-**定点 batch 已经现成，不用重新生成**：`v1-store/fixtures/8x8/grad/c8-b/`（8 帧 8×8）与 `c32-b/`（32 帧 4×4），各 92 MB，`mixed1` / `allshort` / `allfull` 三档齐全，2026-09-14 由 t8-gradient 用主副本 + context YAML + `4task-motion-400ep` 库产出；数据侧代码自那以后零改动。
+`07702f0` 是**零适配分界**：它之前 `compute_loss` 返回 `(loss, stats)` 二元组，HEAD 版工具按单返回写，会硬失败。
 
-**一个反直觉的约束：1600 集新库不能用作 fixture 来源。** `4task-v2-1600ep-604f16da` 的 `exec_start_idx` 最小值是 **100**（0 出现 0 次），而 `_common.fixture_per_step` 要求存在 `exec_start_idx=0` 的 episode，否则直接 raise；且所有样本 `step ≥ 100 > max_frames`，`allshort` / `mixed1` 两档结构性不存在。必须用 400 集库 —— 现成 fixture 正是从它产出的。代价是**本对拍不覆盖 1600 集库的读数路径**，但那属于 `236765f` 的 8×8 支持，已由 t8-gradient C8 单独验过，不是本次要归因的东西。
+#### J2. 改动分类：C 类为零，因此一次对拍即可，不分段
 
-**前置：必须先建 modulation 的噪声底。** 历史上所有逐位 PASS 都只覆盖 context，`MemoryAttention` 新增了 `jnp.einsum(..., preferred_element_type=jnp.float32)` + softmax 归约，**modulation 路径的 bit 级确定性从未验证过**。若不先在同一侧连跑两次建噪声底，一旦出现失配就无法区分「接入改了数」与「modulation 自身不确定」，整个对拍白做。这是本方案最大的未知。
+`07702f0..HEAD` 区间内，`src/mme_vla_suite/models/**/*.py` 只被 **`06220c4` 一个 commit** 触碰：
 
-**改动清单（≈45 行，两个工具文件，`src/` 零改动）**：
-- `single_step_grad.py` 的 `_EXPECTED_HISTORY_CONFIGS` 追加两个 modul YAML（+2）；
-- 新增 `_load_batches(fixture_dir, kinds)`：读 `<kind>/batch_meta.json` 还原两层嵌套 dict（实测只有 `image` / `image_mask` 两个嵌套子树），`kind=="array"` → `C.load_array`、`"none"` → `None`、`"str"` → 原值（+22）；
-- 新增 `DTYPE_GRAD_BATCH_IN` 环境变量入口，跳过 fixture 构造整段（+6）；
-- 拆出 `_state_leaf_shas(state)`，无条件把初态逐叶 sha 写进 `grad_summary.json` 的新键 `init_leaves`（+8）；
-- `compare_grad_summaries.py` 增加「两侧 `init_leaves` 与 `batch_keys` 必须相同」（+7）。
+- **A 类（纯新增、关闭态不可达）**：`percep_mem.py` 的 `motion_pos_proj` / `motion_encoder_static` 两个 `nnx.Linear` —— modul.yaml 无 `motion:` 节 → `motion_enabled=False` → **两个 Linear 根本不创建**，参数树与 nnx RNG 消耗序不变；`__call__` 的 `if not self.motion_enabled: return hidden_states, None, None` 早返回与改前逐字相同；`embed_memory` 早返回四行与改前逐字相同；`history_observation.py` 新增四字段默认 `None`；`_motion_specs()` 关闭态返回 `{}`。
+- **B 类（放宽断言 / 新增守卫，数值路径不变）**：两条新 `raise` 在关闭态一条为假、一条被 `and` 短路，都不触发；`framesamp_dataset.py` 的形制断言放宽（Dataset 侧，本方案绕开）。
+- **C 类（动了数值路径）**：**无。** `src/openpi/` 在区间内唯一改动是 `shared/download.py`（+6/−2），与数值无关。
 
-「不改数」的证明在这里是**平凡的**：没有任何改动落在 `src/`，两棵树跑各自原封不动的历史代码；工具侧新增的只是「从磁盘读回一个已落盘的 batch」与「多落一份摘要」，且 `C.save_array` 自带 round-trip 字节守卫、`C.load_array` 自带 `nbytes` 校验。
+责任 commit 唯一，没有可二分的对象，**一次对拍即可**。若真 FAIL 再补分段也来得及（分段点取 `07702f0` → `c5925d9` → `06220c4` → HEAD，四锚点约 45–70 分钟）。
 
-**执行形态**（两档各一条，可并行；每侧 ≈4 分钟，单次墙钟 15–20 分钟，冷编译放宽到 30 分钟，占 4 张 A100）：
+#### J3. 为什么走「固定 batch 喂两版模型」而不是「两棵源码树各起训练」
+
+后者对 8×8 走不通：`07702f0` 的 `framesamp_store.py` 有四道硬拒读不了 8×8 库（`LAYOUT = "framesamp-4x4-v1"` 常量校验、表名 `image_emb_4x4` 与 `row_shape [16,2048]`、文件名 `pos_emb_4x4.f32.bin`、Dataset 的 `_req(... == (512,16,1))`）。要让它认，必须把 commitV9.1 `236765f` 的 `StoreSpec` 参数化改动整块 backport，而那次改动动了 **8 处热读路径**（pread offset、输出缓冲字节数、`posix_fadvise` 区间、memoryview 切片、`.reshape()`、pos 小表 `np.fromfile` 路径与 shape、两处 `run_*_checks`）—— 属「可能改数」，搬进对照侧就让基础塌掉。4×4 档虽只需放宽一条断言，但要在两棵树里各打掉 `test_g13_modul_config_rejected` 这条生产安全闸测试。
+
+**固定 batch 对两档都成立**：模型侧除 `budget`（都是 512）外**不依赖帧数或每帧 token 数** —— `token_per_image` / `num_views` / `max_frames` / `tokens_per_frame` 在整个 `src/mme_vla_suite/models/` 里零命中；`PerceptualMemory.__call__` 只有一条 `assert static_image_emb.shape[1] == budget`；`FeatureEncoder` 是逐 token 的 pointwise 运算，`pos_emb` 不是查找表、没有行数概念；`MemoryAttention` 只读 `mem_seq.shape[1]`。两档喂进模型的四个张量**逐维逐 dtype 完全相同**（实测自 `docs/training-doc/t8-gradient/records/{c8,c32}/b/allfull.batch_meta.json`）：`static_image_emb (8,512,2048) bfloat16`、`static_pos_emb (8,512,768) float32`、`static_state_emb (8,512,8) float64`、`static_mask (8,512) bool`。**所以对照侧根本不需要认识 8×8 库，只要能吃下 `[8,512,2048]`。**
+
+#### J4. 定点 batch：现成，且键集天然兼容
+
+`v1-store/fixtures/8x8/grad/c32-b/`（32 帧 4×4）与 `c8-b/`（8 帧 8×8），各 92 MB，三档 `allfull` / `allshort` / `mixed1`，2026-09-14 由 t8-gradient 产出，数据侧代码自那以后零改动。
+
+`batch_meta.json` 共 16 个键，其中 `motion_emb` / `motion_pos` / `motion_mask` / `mem_order` 四个是 `kind:"none"`，**连 `.bin` 都没落盘**（`ls c32-b/allfull/` 只有 12 对 `.bin`/`.json`）。重建 batch 时按 `kind=="array"` 取那 12 个键即可，四个 motion 键自然不存在，**不必 pop、不必改输入，两侧完全同源**。（即便留着也无妨：老树 `HistAugObservation.from_dict` 是 `data.get(key, None)` 逐键显式取，多余键静默忽略；父类 `Observation.from_dict` 唯一的严格检查是 `tokenized_prompt` 与 `tokenized_prompt_mask` 必须成对，定点 batch 两者都在。）
+
+**1600 集新库不能用作 fixture 来源**：`exec_start_idx` 最小值是 100（0 出现 0 次），而 `_common.fixture_per_step` 要求存在 `exec_start_idx=0` 的 episode，否则直接 raise；且所有样本 `step ≥ 100 > max_frames`，`allshort` / `mixed1` 两档结构性不存在。必须用 400 集库 —— 现成 fixture 正是从它产出的。代价是**本对拍不覆盖 1600 集库的读数路径**（那属于 `236765f` 的 8×8 支持，已由 t8-gradient C8 单独验过）。
+
+#### J5. 两个必须先做的前置
+
+**① A/A 自复现（最高优先级）。** 仓库全部逐位梯度对拍（`t8-gradient` 四档、`v1-grad-baseline-g0b`）**清一色是 context**，`MemoryAttention` 里 `kv_einsum("BSD,2KDH->2BSKH", mem_seq)` 这条路径的 XLA 归约顺序**从未在确定性档下验证过可复现**。必须先在 `07702f0` 上**同一棵树、同一命令跑两次**（A1/A2）确认 `GRAD_EQ=PASS`。A/A 不过即说明 modulation 在当前 XLA 档下不可逐位复现，判据须从「逐位」降级为「数值阈值」，**先停下请示用户**。必带 `XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'` 与独立的 `MMEVLA_JAX_CACHE_DIR`。这条纪律沿用 `docs/training-doc/t8-c32-b/launch.md` 的「A1→A2→B，A1/A2 完整重复性先通过再起 B」。
+
+**② 初态同源性自证。** 仓库**没有 modulation 的黄金基线**（`DTYPE_BASELINE_CHECKSUMS` 那套全是 context / motion 侧），该变量必须省略。改为在对拍脚本里自己落一份 `init_train_state` 之后 `state.params` 的逐叶 sha256，**先断言两侧初态逐位相同，再比梯度** —— 不做这步，FAIL 时无法区分「初值不同」与「数值路径不同」。注意 modulation 的参数叶数比 context 多（多出 `MemoryAttention` 的 kernel），**不会是 context 档记录的 32**，别照抄那个数字当判据。
+
+#### J6. 三处工具侧适配（`src/` 零改动）
+
+**先澄清一个前提**：HEAD 版 `scripts/training/tests/single_step_grad.py` **不从磁盘读 batch，它是现场造 batch 并落盘** —— `c32-b` / `c8-b` 正是它的输出。所以必须新写 loader 替换 `_build_batches`，这是主要代码量来源。
+
+1. **删掉 `ref_npy_dataset` 的顶层 import**（`single_step_grad.py` 第 60 行）。`ref_npy_dataset.py` 顶层 import 了 `motion_store`（`06220c4` 新增的 528 行新文件）与 `sampling.memory_order`（同 commit 新增），**老树都没有，会当场 `ImportError`**。本方案绕开 Dataset，删掉即可。
+2. **`_EXPECTED_HISTORY_CONFIGS` 加两个 modul YAML**（第 66–68 行现只列四个 context 系文件名）。
+3. **`_build_batches` 换成磁盘 loader**：按 `batch_meta.json["keys"]` 里 `kind=="array"` 的 12 个 keystr，用 `_common.load_array` 读回并按 keystr 重建嵌套 dict（实测只有 `['image'][*]` / `['image_mask'][*]` 两层）。`_common.py` 写盘时有 round-trip 字节守卫、读回有 `nbytes` 校验，bfloat16 走 `.bin` + 旁置 JSON（躲开 `np.save` 把 `ml_dtypes.bfloat16` 写成 `V2` 的坑），逐位无损。
+
+**「不改数」的证明在这里是平凡的**：没有任何改动落在 `src/`，两棵树跑各自原封不动的历史代码；工具侧新增的只是「从磁盘读回已落盘的 batch」与「多落一份初态摘要」。
+
+另注：必须用条目 `mme_vla_suite`（`07702f0` 版 `config.py` 只有这一条，`_b128` / `_b128_60k` 是后加的）；`_guard_train_step_source()` 检查的是**主副本 HEAD 版** `train.py`，与锚点无关，两侧同时成立。
+
+#### J7. 执行形态与成本
+
 ```
-A 侧：git worktree add --detach v1-store/worktrees/s2-base c5925d9；PYTHONPATH=$PWD/src；UV_PROJECT_ENVIRONMENT=<主副本>/.venv
-B 侧：主副本，unset PYTHONPATH
-两侧共用：HEAD 版的 scripts/ 工具、同一个 DTYPE_GRAD_BATCH_IN、seed 42、fsdp 2、
-         XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'、同一对物理 GPU
-档 1（4×4）：--model.history-config perceptual-framesamp-modul.yaml            DTYPE_GRAD_BATCH_IN=v1-store/fixtures/8x8/grad/c32-b
-档 2（8×8）：--model.history-config perceptual-framesamp-modul-8frame-8x8.yaml DTYPE_GRAD_BATCH_IN=v1-store/fixtures/8x8/grad/c8-b
-判定：compare_grad_summaries.py → GRAD_EQ=PASS kinds=3 leaves=<n> mismatches=0，外加 init_leaves 逐叶相同
+A 侧（锚点）：git worktree add --detach v1-store/worktrees/s2-base 07702f0
+              cd <该树>；PYTHONPATH=$PWD/src；UV_PROJECT_ENVIRONMENT=<主副本>/.venv
+B 侧（HEAD）：cd 主副本，unset PYTHONPATH
+两侧共用：主副本 HEAD 版的 scripts/ 工具（cd 老树后显式跑 /主副本/scripts/training/tests/<新工具>.py）、
+         同一份定点 batch、seed 42、fsdp 2、同一对物理 GPU、
+         XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'
+档 1（4×4）：--model.history-config perceptual-framesamp-modul.yaml            batch=v1-store/fixtures/8x8/grad/c32-b
+档 2（8×8）：--model.history-config perceptual-framesamp-modul-8frame-8x8.yaml batch=v1-store/fixtures/8x8/grad/c8-b
+判定：GRAD_EQ=PASS kinds=3 leaves=<n> mismatches=0，外加两侧初态逐叶 sha 相同
 ```
-注意 `get_history_config` 按 cwd 拼 YAML 路径，而 `c5925d9` 树里没有 modul-8x8 YAML —— **把两个 modul YAML 复制进该 worktree 即可**（未跟踪文件，不进 git；这是配置数据不是代码，且两侧读同一份字节，launch.md 里记两份 sha256 并在两侧各自打印核对）。`aws-a22-grad` 已用过同类手法。
 
-**梯度叶数会变**：modulation 因 `mem_mods=[False, True]` 在 action expert 里多出 `q_einsum_mem` / `kv_einsum_mem` / `mem_rms_norm` 等叶，`leaves=` 不会是 context 的 32，判定行数字与历史 run 不可直接比对。
+`07702f0` 树里没有 modul-8x8 的 YAML（它是后加的）—— **把该 YAML 复制进 worktree**（未跟踪文件、不进 git；这是配置数据不是代码，两侧读同一份字节，`launch.md` 记两份 sha256 并在两侧各自打印核对）。`docs/training-doc/aws-a22-grad/launch.md` 用过同类手法。`perceptual-framesamp-modul.yaml` 本身两侧都有且 `git diff bc3ab59 HEAD` 为空，不必复制。
 
-**留档**：按 AGENTS 12/17 建 `docs/training-doc/<run_name>/`（launch.md + result.md + `records/grad_summary.{a,b}.json` + compare 判定行）。**本节的 worktree `v1-store/worktrees/s2-base` 是本对拍专用的临时快照，与 G 节的训练隔离无关**（训练本身不用 worktree）；对拍结束即 `git worktree remove` + `prune`。
+| 项 | 量 |
+|---|---|
+| 新代码 | **200–250 行**，全部落 `scripts/training/tests/`，`src/` 零改动（loader ~50、`single_step_grad_fixed.py` ~150、对拍器 ~30） |
+| 定点 batch 生成 | **0**（复用现成） |
+| GPU | 一次对拍两侧 **20–35 分钟 / 2 卡**（实测取自 `t8-gradient` 的 `grad_summary.json` 的 `seconds`：热缓存 c32 三 kind 共 ~230 s，冷缓存 ~815 s；modulation 的 HLO 与 context 不同，两侧缓存都是冷的，取上界）。加 A/A 自复现再算一轮 |
+| 留档 | 按 AGENTS 12/17 建 `docs/training-doc/<run_name>/`（launch.md + result.md + `records/grad_summary.*.json` + 判定行） |
+
+**环境两条**：必须 `source scripts/training/paths.sh` 或显式 `export OPENPI_DATA_HOME=<主副本>/v1-store/models`（默认 `~/.cache/openpi` 下只有 `big_vision/`，没有 `pi05_base`），或用 `--weight-loader.params-path` 覆盖；`uv.lock` **自 2026-03-20 至今一字未变**，覆盖全部候选锚点，jax / flax / ml_dtypes 版本两侧一致，老树包版本无风险（仍须 `UV_PROJECT_ENVIRONMENT` + `--no-sync`，防 uv 在老树另建 venv）。
+
+**worktree 与 tmux 纪律**：老树放 `v1-store/worktrees/`（`ref-8x8` 同级，既有约定）；**本节的 worktree 是本对拍专用的临时快照，与 G 节的训练隔离无关**（训练本身不用 worktree）；对拍结束即 `git worktree remove` + `prune`。tmux 会话名带 `tr-` 前缀，清理只能 `tmux kill-session -t <确切会话名>`。
+
+**这个对拍不覆盖什么**：数据侧（由 V3 覆盖）、1600 集库的读数路径（见 J4）、以及 `07702f0` 之前的历史（见 J1，那半年 models 侧冻结，无信息可得）。
 
 ### E. 红线与不做的事
 
