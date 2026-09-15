@@ -1,16 +1,14 @@
 # 1600 集新库 · 8 帧 8×8 · modulation · 无 motion · b128 60k · lr 5e-5 正式训练计划
 
-> **实施过程档案**（2026-09-15 第七稿，用户批准）。结果以 [`docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/`](docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md) 为准；本文按 `AGENTS.md` 第 2 条分两部分，另含 F（守卫放宽与增补验证）、G（训练锁主副本 + `-temp` 开发副本）、H（审计结论）、I（本文固化）、J（motion 接入前后的 modulation 梯度对拍）五节。
+> **实施过程档案**（2026-09-15，用户批准）。结果以 [`docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/`](docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md) 为准；本文按 `AGENTS.md` 第 2 条分两部分，另含 F（守卫放宽与增补验证）、G（训练锁主副本 + `-temp` 开发副本）、H（审计结论）、I（本文固化）、J（motion 接入前后的 modulation 梯度对拍）五节。
 >
-> **修订史**：第一稿 b64 80k（官方口径）；第二稿 b128 40k lr 1e-4；第三稿 b128 60k lr 5e-5（用户「lr 等效比官方低一倍、40k 延长到 60k」）；第四稿加 F 节（smoke 被 dataset G13 守卫挡下）；第五稿加 H（motion 接入不影响无 motion 的 modulation 的审计结论）、G（不在主工作副本起训练，改从 detached worktree 快照起跑）、I（本文固化到根目录）；**第六稿**按 Codex 审计（`AUDIT_BASE=b625f48`）八条意见 + 逐条对抗验证的结论重修（B/C 启动命令重写为 runner 内外分层、F 节 commit 顺序倒置并给 F3 独立留档、第 7 点两处论证措辞纠正）；**第七稿**（用户 2026-09-15 拍板三项）把隔离方案整个反转——训练留主副本并 `chmod` 锁只读、开发转 `-temp` 副本（`AGENTS.md` 第 13/14 条已同步修订），新增 `scripts/training/preflight_train_launch.py` 起跑前自检，并把 motion 接入前后的 modulation 梯度对拍（8×8 与 4×4 两档）立为正式 run 前的必经步骤（J 节）。
->
-> **进度**：步骤 1 已完成（`commitV9.5` = `e0bcb45`，后续又有 `b625f48`）。**注意：第五稿写的「守卫白名单已改在工作区」已失真** —— `b625f48` 工作区 `git status --porcelain` 为空，`framesamp_dataset.py` 的 `_req(hc.integration_type == "context", ...)` 与 `_req(int(hc.memory_token_dim) == 2048, ...)` 仍是原守卫（现位于 `_req` 断言组内，紧接 `perceptual_memory.type` 那条之后）。**执行步骤 2 前必须重新写入 F1 的白名单**，不得以为已改而直接跑 F2。smoke 临时产物已清理；其余步骤待用户指令后执行。
+> **进度**：执行顺序步骤 1 已完成（`commitV9.5` = `e0bcb45`）。**步骤 2 的守卫白名单尚未写入工作区** —— `framesamp_dataset.py` 里仍是原来那两条 `_req(hc.integration_type == "context", ...)` 与 `_req(int(hc.memory_token_dim) == 2048, ...)`（位于 `_req` 断言组内、紧接 `perceptual_memory.type` 那条之后），动手前先确认，不得以为已改而直接跑 F2。smoke 临时产物已清理；其余步骤待用户指令后执行。
 
-环境判定：**环境 B（AWS 单机）**。仓库 `/scratch/hongze/robomme_policy_learning_MotionJEPA`（HEAD `b625f48`，clean），8 × A100-SXM4-80GB。无 turbo、无 GreatLakes。
+环境判定：**环境 B（AWS 单机）**。仓库主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，8 × A100-SXM4-80GB。无 turbo、无 GreatLakes。起跑 commit 见 `TRAIN_HEAD`（执行顺序步骤 8 记下）。
 
-**起跑前实况（2026-09-15 核对，第五稿的「当前全空 / 余 1.4 T」已失真）**：GPU 4–7 空闲（`memory.used` 均为 0 MiB），但 **GPU 0 正在被另一个任务占用**（util 100%、3867 MiB），对应 tmux 会话 `eval-vla0914-full1600-best-a`（2026-09-15 02:50 起）。本轮只用 4–7，不受影响，但 **E 节的 tmux 清单必须把这个会话计入「不得触碰」**。`/scratch` 余 **1.3 T**（`/dev/md0` 6.9 T，已用 5.6 T）。
+**起跑前实况（2026-09-15 核对）**：GPU 4–7 空闲（`memory.used` 均为 0 MiB），但 **GPU 0 正在被另一个任务占用**（util 100%、3867 MiB），对应 tmux 会话 `eval-vla0914-full1600-best-a`（2026-09-15 02:50 起）。本轮只用 4–7，不受影响，但 **E 节的 tmux 清单必须把这个会话计入「不得触碰」**。`/scratch` 余 **1.3 T**（`/dev/md0` 6.9 T，已用 5.6 T）。
 
-用户已拍板（2026-09-15）：GPU **4,5,6,7**；wandb **开启**；batch **128**；步数 **60k**；**lr peak = decay = 5e-5**（b128 下等效为官方 5e-5@b64 的一半，不做线性缩放）；改动落在**新配置条目 `mme_vla_suite_b128_60k`**。run_name 随步数改为 **`v2-1600ep-m8x8-modul-b128-60k`**（原拍板 `…-40k` 已不适用，起跑前再确认一次）。
+用户已拍板（2026-09-15）：GPU **4,5,6,7**；wandb **开启**；batch **128**；步数 **60k**；**lr peak = decay = 5e-5**（b128 下等效为官方 5e-5@b64 的一半，不做线性缩放）；改动落在**新配置条目 `mme_vla_suite_b128_60k`**。run_name **`v2-1600ep-m8x8-modul-b128-60k`**（起跑前按 AGENTS 第 6 条再确认一次）。
 
 ---
 
@@ -22,7 +20,7 @@
 
 ### 结论先行：两处配置改动 + 两处代码改动；先对拍与 smoke，再起正式 run
 
-**1. 配置改动两个文件（本节），代码改动两处（F 节的 dataset 守卫白名单、第 8 点的 preflight 自检脚本）。第五稿写的「零代码改动」自第四稿加 F 节起已不成立，第七稿再加一个脚本。**
+**1. 配置改动两个文件（本节），代码改动两处** —— F 节的 dataset 守卫白名单、第 8 点的 `preflight_train_launch.py` 自检脚本。
 - 新 YAML `src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8.yaml`：以 `perceptual-framesamp-modul.yaml` 为底只把 `token_per_image` 16 → 64。现有 modul.yaml 是 32 帧 × 4×4，context-8frame-8x8.yaml 是 8×8 但 context，各差一两行。
 - 新条目 `mme_vla_suite_b128_60k`（`src/mme_vla_suite/training/config.py`）：复制 `mme_vla_suite_b128`，改 `num_train_steps 60_000`、`peak_lr = decay_lr = 5e-5`、`decay_steps 60_000`（peak == decay 时余弦段为常数，改它只为自洽）、`data.assets.assets_dir` 指到新库 norm_stats 目录。`mme_vla_suite`（官方参照）与 `mme_vla_suite_b128`（上次生产口径）一字不动。
 
@@ -32,7 +30,7 @@
 
 **3. 为什么必须先 smoke。** modulation 分支在本仓库从未训练过（`v1-postclean-g3` 登记 UNVERIFIED，只有环境 A 用官方 modul 权重评估过）；t8 那轮 12 条轨迹只覆盖 context（C8）与 context+motion（M8）。smoke 用真实 b128、真实 4 卡 fsdp4 跑 20 步，回答两件事：modulation × 8×8 能否编译并出有限数；per-device 32 在 modulation 下是否 OOM（旁证：`bench-b128-util` 在 context+motion、608 位进 prefix 的更重口径下 4 卡 b128 300 步无 OOM；modulation 记忆不进 prefix，激活只会更小）。≤ 5 分钟，临时 run 跑完即删。
 
-**4. 预期。** 4 卡 b128 稳态 3.831 s/step（`bench-b128-util`，util 均值 94.75%）；60k ≈ 63.9 h，加编译与 12 次存盘约 **64.5 h（2.7 天）**。checkpoint **12 × 12 G ≈ 144 G**（按 modulation run `repro-4a100-fsdp4-80g/19` 实测单个 12 G 计；context+motion 的 `awsprod40k-b128-motion/5000` 才是 11 G，第五稿按 11 G 估的 132 G 偏低），磁盘余 1.3 T，仍充裕；但同期 GPU 0 上的评估也在产出，起跑前再 `df -h /scratch` 复核一次。起跑后以前 300 步稳态复核 ETA。
+**4. 预期。** 4 卡 b128 稳态 3.831 s/step（`bench-b128-util`，util 均值 94.75%）；60k ≈ 63.9 h，加编译与 12 次存盘约 **64.5 h（2.7 天）**。checkpoint **12 × 12 G ≈ 144 G**（按 modulation run `repro-4a100-fsdp4-80g/19` 实测单个 12 G 计；context+motion 的 `awsprod40k-b128-motion/5000` 是 11 G，不可混用），磁盘余 1.3 T，仍充裕；但同期 GPU 0 上的评估也在产出，起跑前再 `df -h /scratch` 复核一次。起跑后以前 300 步稳态复核 ETA。
 
 **5. 与上次生产 run 的差异表**（引用结果须带此声明，两条不逐项可比）
 
@@ -47,22 +45,22 @@
 | norm_stats | `robomme-400ep` | `4task-v2-1600ep-604f16da`（`856c75ea…`） |
 | 新增可训练参数 | motion 两层 3.35 M | `MemoryAttention`（q/kv/out einsum）+ 每层 `MemoryRMSNorm` modulation Dense；`encoder_static` 2816→1024 |
 
-**6. 第四稿新增：一处 dataloader 守卫要放宽，因此多跑三项验证。** 第三稿的 smoke 起跑后在 `FrameSampDataset.__init__`（`src/mme_vla_suite/training/framesamp_dataset.py`）被一条有意加的守卫挡下：`integration_type='modulation' != 'context'`。这条和它下一行 `memory_token_dim == 2048` 是 commitV3.1（`6ee7494`，2026-08-27）按 Codex 审计 G13 加的，目的是拒绝「同形的 modul 配置」；它们只在构造时拒绝配置，后面的取样、填充、store 读取一行都不读这两个键。
+**6. 一处 dataloader 守卫要放宽，因此多跑两块验证。** modul 配置的 smoke 会在 `FrameSampDataset.__init__`（`src/mme_vla_suite/training/framesamp_dataset.py`）被一条有意加的守卫挡下：`integration_type='modulation' != 'context'`。这条和它下一行 `memory_token_dim == 2048` 是 commitV3.1（`6ee7494`，2026-08-27）按 Codex 审计 G13 加的，目的是拒绝「同形的 modul 配置」；它们只在构造时拒绝配置，后面的取样、填充、store 读取一行都不读这两个键。
 
-**训练主链路（`train.py`）上没有别的 context 专属守卫**——`training/`、`train.py`、`compute_norm_stats.py`、`policies/` 全部 grep 过，只此两行；模型侧 `history_pi0.py` 本来就接受 modulation。但第五稿把 `g0/` 一并写进「grep 过、只此两行」是**错的**：`scripts/training/g0/bench_train_steps.py` 的 `_EXPECTED_HISTORY_CONFIGS` 是一份只含四个 **context** YAML 的白名单，命中不上即 `raise ValueError`；同一份白名单在 `tests/dump_fixture_samples.py`、`tests/single_step_grad.py`、`tests/motion_gates_model.py` 各有一份，`tests/closed_equiv.py` 的 `CLOSED_YAML` 与 `tests/ref_npy_dataset.py`（非 context 直接 raise）同理。本轮 smoke 与正式 run 走 `train.py`（无此白名单），F3 走 `bench_train_steps.py` 但用的正是 context 8×8 YAML，**所以本计划不受阻**；然而任何 modulation 侧的吞吐 bench 或固定 batch 取证都会被挡，需要时另立任务逐个放宽。
+**训练主链路（`train.py`）上没有别的 context 专属守卫** —— `training/`、`train.py`、`compute_norm_stats.py`、`policies/` 全部 grep 过，只此两行；模型侧 `history_pi0.py` 本来就接受 modulation。**但 `g0/` 与 `tests/` 不在此列**：`scripts/training/g0/bench_train_steps.py` 的 `_EXPECTED_HISTORY_CONFIGS` 是一份只含四个 **context** YAML 的白名单，命中不上即 `raise ValueError`；同一份白名单在 `tests/dump_fixture_samples.py`、`tests/single_step_grad.py`、`tests/motion_gates_model.py` 各有一份，`tests/closed_equiv.py` 的 `CLOSED_YAML` 与 `tests/ref_npy_dataset.py`（非 context 直接 raise）同理。本轮 smoke 与正式 run 走 `train.py`（无此白名单），F3 走 `bench_train_steps.py` 但用的正是 context 8×8 YAML，**所以本计划不受阻**；然而任何 modulation 侧的吞吐 bench 或固定 batch 取证都会被挡，需要时另立任务逐个放宽。
 
-处理方式是把两条守卫合成一条**成对白名单**：只允许 `(context, 2048)` 或 `(modulation, 1024)`，expert 与错配对（例如 modulation 配 2048）照样拒。这是对 dataloader 文件的改动，按 AGENTS 第 18 条要证明「不改数」，所以比第三稿多跑三项，总共约 20–25 分钟：
+处理方式是把两条守卫合成一条**成对白名单**：只允许 `(context, 2048)` 或 `(modulation, 1024)`，expert 与错配对（例如 modulation 配 2048）照样拒。这是对 dataloader 文件的改动，按 AGENTS 第 18 条要证明「不改数」，因此有下面两块验证：
 
 - **G13 测试改写**（`scripts/training/tests/test_pack_guards.py`）：原测试断言 modul.yaml 必拒，改成「modul.yaml 通过、expert.yaml 拒、错配对拒」三条。该 pytest 依赖 `v1-store/datasets/ref-shard` 迷你库，本环境没有，跑不了；三条断言改在 1600ep 库上用一次性脚本执行，留档写明「本环境未执行 pytest」。
 - **第一块（轻量对拍，CPU 约 3–5 分钟）**：用 `perceptual-framesamp-modul-8frame-8x8.yaml` 和 `perceptual-framesamp-context-8frame-8x8.yaml` 在同一 `framesamp-8x8` 库上各构造一个 Dataset，对同一组 256 个索引逐样本逐键比 dtype、shape、raw sha256，判定行 `DS_EQUIV=PASS samples=<n> keys=<k> mismatches=0`。**注意这两份 YAML 的差异不止 `integration_type` / `memory_token_dim` 两个键**：context 版还多出整节 `motion:`（`enabled: false` 等），modul 版整节缺省，而 `framesamp_dataset.py` 与 `dataloader.py::_motion_gates` 都用 `getattr(hc, "motion", None)` 读这一节。所以 `DS_EQUIV=PASS` 证明的是这两组差异的**合集**不影响交付——对第 7 点反而更有利（顺带实测了「整节缺省 ≡ `enabled: false`」的数据侧等价），但不能把结论单独归因给 `integration_type`。
 - **第二块（真实训练梯度一致，GPU 4,5 约 30–35 分钟）**：复用 09-14 已固化的 `t8-c8-b` 轨迹（400ep 库、context 8×8、batch 8、fsdp 2、seed 42、确定性 XLA），在**已提交** `commitV9.6` 的 clean HEAD 上跑前 100 步（**不是照抄 t8-c8-b 命令**，六处差异见 F3），先过 `check_baseline_env.py check` 指纹 preflight（`BASELINE_ENV=PASS`），再用 `compare_baseline.py` 一次性产出全部判定行。主判据是 100/100 步全覆盖的五标量 hex 与 `index_sequence.json` 的 800 个样本索引；`BENCH_CHECKSUM=1`（用户 2026-09-15 拍板）另拿六份完整 TrainState 逐叶摘要对照，代价是六步 checksum 实测合计约 1182 s。这证明 context 链在守卫改动前后逐位相同。
-- **commit 顺序（用户 2026-09-15 拍板，与第五稿相反）**：F2 通过后**先**提交 `commitV9.6`（守卫 + 测试改写）并 push，F3 再从 clean HEAD 起跑；F3 FAIL 则 `git revert` 该 commit（AGENTS 11 自带 `revert:` 通道，不改写历史、不用 force），把 FAIL 判定行写进 `result.md` 后停下交你处置，不放宽判据。理由：AGENTS 12/17 要求 clean HEAD 起跑，而 `bench_train_steps.py` 会把 `git status --porcelain` 原文写进 `run_meta.json` 的 `start_status`——脏树跑出的产物自带脏树记录，拿它当正式等价证据属自证不合规。
+- **commit 顺序（用户 2026-09-15 拍板）**：F2 通过后**先**提交 `commitV9.6`（守卫 + 测试改写）并 push，F3 再从 clean HEAD 起跑；F3 FAIL 则 `git revert` 该 commit（AGENTS 11 自带 `revert:` 通道，不改写历史、不用 force），把 FAIL 判定行写进 `result.md` 后停下交你处置，不放宽判据。理由：AGENTS 12/17 要求 clean HEAD 起跑，而 `bench_train_steps.py` 会把 `git status --porcelain` 原文写进 `run_meta.json` 的 `start_status`——脏树跑出的产物自带脏树记录，拿它当正式等价证据属自证不合规。
 
 **7. 审计结论：motion 接入不影响「无 motion 的 modulation」——源码级成立，运行时证据只覆盖 context。** 按 motion 接入 commit `06220c4`（commitV6.5）的 diff 原文逐层核：
 - **模型侧参数树不变**：`PerceptualMemory.__init__` 的两层新参数 `motion_pos_proj`、`motion_encoder_static` 只在 `motion.enabled` 为真时创建，且建在 `feature_encoder` 之后（nnx 默认 RNG 流按调用顺序 fold_in，帧路初始化值不变）。modul-8x8 YAML 没有 `motion` 节，`_motion_enabled` 为 False。
-- **`embed_memory` 关闭态是编译期早返回，执行路径与接入前逐位等价**：函数签名逐字未变（两版都是 `def embed_memory(self, obs: HistAugObservation)`），唯一改动是 `self.mem_encoder(...)` 调用点多传三个关键字实参 `motion_emb / motion_pos / motion_mask`——这三个值在关闭态恒为 `None`（`FrameSampDataset` 的 `_NONE_KEYS` 补键 → `from_dict` 的 `data.get(key, None)`），且 `PerceptualMemory.__call__` 在 `if not self.motion_enabled: return hidden_states, None, None` 之前一条语句都不读它们，传给 `feature_encoder.encode_perceptual_memory` 的三个实参与接入前逐字相同。随后 `if not self.mem_encoder.motion_enabled` 是 Python 编译期分支，早返回分支内的四行（`input_mask = obs.static_mask`、两个全 False 列表、`return`）与接入前的后四行逐字相同。合起来：关闭态执行的运算与返回的四个值与 `06220c4~1` 逐位一致。（第五稿写的「函数体与接入前逐字相同」字面不成立——`mem_encoder` 调用在早返回之前，且函数体多了 `if` 与整段开启态代码。）modulation 分支在 `compute_loss` / `sample_actions` 里只取前两个返回值 `mem_seq, mem_mask` 喂 `PaliGemma.llm(..., mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])`。
-- **modulation 的 prefix 不含记忆区**：`embed_prefix` 只在 `integration_type == "context"` 时才把记忆 token 拼进 prefix；modulation 的 prefix 是两路视角各 256 位共 512 图像 token + prompt（**这是训练侧口径**；推理侧 `robomme_policy.py` 只喂 `base_0_rgb` 一路 = 256，引用到评估语境时须注明），RoPE 的 `positions = jnp.cumsum(input_mask, axis=1) - 1` 因此不含记忆位次。**注意力掩码上两条路径口径不同但结果相同**：推理 `sample_actions` 的 modulation 分支把 `na_mask` 丢进 `_`、走 `make_attn_mask` 两参数版；训练 `compute_loss` 在 `use_history=True` 时统一走三参数版（modulation 也不例外），但 modulation 的 `na_mask` 首位就是图像 token 的 `True`（`embed_prefix` 里 `na_mask += [True] * image_tokens.shape[1]`），于是 `make_attn_mask` 内 `jnp.cumsum(mask_na, axis=1) <= 0` 恒为全 False、`mask_not_attend` 恒空，三参数版与两参数版逐位相同——记忆屏蔽项在 modulation 下恒不生效。（第五稿只写了推理那半句，独立读会误以为训练也走两参数版。）
-- **608 位交错 / `take_along_axis` 为何对 modulation 不可达**（第五稿把它挂在上一条名下，**推理不成立**，此处更正）：modulation 恰恰是通过 `embed_memory` 的返回值 `mem_seq` 拿到记忆并走 cross-attention 的（`compute_loss` 与 `sample_actions` 的 modulation 分支），开启态产出的 608 位重排序列**会**直达 modulation。真正的不可达性来自两处：关闭态的编译期早返回（上上条），以及下一条的两道显式闸。三项里只有「RoPE 位次变化不可达」是真由 prefix 组成推出的。
+- **`embed_memory` 关闭态是编译期早返回，执行路径与接入前逐位等价**：函数签名逐字未变（两版都是 `def embed_memory(self, obs: HistAugObservation)`），唯一改动是 `self.mem_encoder(...)` 调用点多传三个关键字实参 `motion_emb / motion_pos / motion_mask`——这三个值在关闭态恒为 `None`（`FrameSampDataset` 的 `_NONE_KEYS` 补键 → `from_dict` 的 `data.get(key, None)`），且 `PerceptualMemory.__call__` 在 `if not self.motion_enabled: return hidden_states, None, None` 之前一条语句都不读它们，传给 `feature_encoder.encode_perceptual_memory` 的三个实参与接入前逐字相同。随后 `if not self.mem_encoder.motion_enabled` 是 Python 编译期分支，早返回分支内的四行（`input_mask = obs.static_mask`、两个全 False 列表、`return`）与接入前的后四行逐字相同。合起来：关闭态执行的运算与返回的四个值与 `06220c4~1` 逐位一致。**注意不能笼统说「函数体与接入前逐字相同」** —— `mem_encoder` 调用在早返回之前，函数体也多了 `if` 与整段开启态代码；成立的是「关闭态执行路径逐位等价」这个更精确的表述。modulation 分支在 `compute_loss` / `sample_actions` 里只取前两个返回值 `mem_seq, mem_mask` 喂 `PaliGemma.llm(..., mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])`。
+- **modulation 的 prefix 不含记忆区**：`embed_prefix` 只在 `integration_type == "context"` 时才把记忆 token 拼进 prefix；modulation 的 prefix 是两路视角各 256 位共 512 图像 token + prompt（**这是训练侧口径**；推理侧 `robomme_policy.py` 只喂 `base_0_rgb` 一路 = 256，引用到评估语境时须注明），RoPE 的 `positions = jnp.cumsum(input_mask, axis=1) - 1` 因此不含记忆位次。**注意力掩码上两条路径口径不同但结果相同**：推理 `sample_actions` 的 modulation 分支把 `na_mask` 丢进 `_`、走 `make_attn_mask` 两参数版；训练 `compute_loss` 在 `use_history=True` 时统一走三参数版（modulation 也不例外），但 modulation 的 `na_mask` 首位就是图像 token 的 `True`（`embed_prefix` 里 `na_mask += [True] * image_tokens.shape[1]`），于是 `make_attn_mask` 内 `jnp.cumsum(mask_na, axis=1) <= 0` 恒为全 False、`mask_not_attend` 恒空，三参数版与两参数版逐位相同——记忆屏蔽项在 modulation 下恒不生效。**只写推理那半句会让人误以为训练也走两参数版，引用时须带上训练侧口径。**
+- **608 位交错 / `take_along_axis` 为何对 modulation 不可达**（**注意不能把它挂在上一条「prefix 不含记忆区」名下，那个推理不成立**）：modulation 恰恰是通过 `embed_memory` 的返回值 `mem_seq` 拿到记忆并走 cross-attention 的（`compute_loss` 与 `sample_actions` 的 modulation 分支），开启态产出的 608 位重排序列**会**直达 modulation。真正的不可达性来自两处：关闭态的编译期早返回（上上条），以及下一条的两道显式闸。三项里只有「RoPE 位次变化不可达」是真由 prefix 组成推出的。
 - **cross-attention 本体零改动**：接入前后 `history_gemma.py`（`MemoryAttention` / `MemoryRMSNorm`）、`integration/utils.py`、`openpi/models/gemma.py`、`representation/mem_encoder.py` 四文件 `git diff` 为空。
 - **两道显式闸**：`HistoryPi0.__init__` 里 `motion_enabled and integration_type != "context"` 即 raise；`inputs_spec` 与 `PerceptualMemory` 的 `motion_enabled` 不一致即 raise。开启态混进 modulation 会在建模型时报错。
 - **数据侧交付不读 `integration_type`——但只对 `__getitem__` 成立**：`FrameSampDataset.__getitem__` 的 motion 代码全在 `if self._motion_enabled` 内，关闭态只在样本末尾按 `_NONE_KEYS` 追加四个 None（与旧路径「尾部补空键」逐字一致），`HistAugObservation.from_dict` 用 `data.get(key, None)` 接住，None 在 jax pytree 里是空节点、不进数值图。context 与 modulation 拿到同一份 batch。**`__init__` 则会直接拒掉 modul-8x8**（就是 F 节要放宽的那两条守卫），这句摘抄进 `launch.md` 时必须补半句「`__init__` 的形制守卫另由 F 节放宽，见 `commitV9.6`」，否则会让人误以为数据侧零改动。
@@ -71,16 +69,14 @@
 
 **8. 隔离：训练留在主副本并锁死只读，开发转到 `-temp` 开发副本。** 训练要跑 65 小时，而 Python 会在 dataloader worker 重建、checkpoint 保存等时刻**重新 import 源文件** —— 主副本被改就可能把新代码带进正在跑的训练，结果不可复现。
 
-**第七稿（2026-09-15 用户拍板）把第五/六稿的做法反了过来。** 原做法是把训练挪进 detached worktree 快照、主副本照常开发；新做法是**训练留在主副本不动，开发挪去 `-temp`**。
-
-**为什么反过来更好。** 两种做法都要让「跑代码的那一侧」接回 `v1-store`（3.9 T，实测，不可能复制第二份）与 `.venv`（7.1 G）—— 复杂度不会消失，只会转移。但**风险不对称**：
+**为什么是「锁训练侧」而不是「把训练挪进 worktree 快照」。** 两种做法都要让「跑代码的那一侧」接回 `v1-store`（实测 3.9 T，不可能复制第二份）与 `.venv`（7.1 G）—— 复杂度不会消失，只会转移。但**风险不对称**：
 
 | 复杂度落在哪一侧 | 接错的后果 |
 |---|---|
-| 训练侧（worktree 方案） | 65 h 白跑或结果被污染，且「忘 `cd`」「`PYTHONPATH` 漏 openpi-client」两类错误**完全静默、零症状** |
+| 训练侧（把训练挪进快照） | 65 h 白跑或结果被污染，且「忘 `cd`」「`PYTHONPATH` 漏 openpi-client」两类错误**完全静默、零症状** |
 | 开发侧（本方案） | 开发时当场报错，重试成本几分钟 |
 
-把复杂度挪到可以试错的一侧，是实质性的改进。附带好处：训练命令回到历史跑通的简单形态（cwd = 主副本，条目里的相对路径本来就解析得对），worktree 方案那「四件事缺一不可」连同大半 preflight 检查一起消失。
+把复杂度挪到可以试错的一侧。附带好处：训练命令保持历史跑通的简单形态（cwd = 主副本，条目里的相对路径本来就解析得对），也不需要把起跑 commit 提前冻结再粘字面量 —— 训练就跑在主副本上，起跑前一刻记下 HEAD 即可。
 
 **训练侧（主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`）**：cwd = 主副本；不设 `PYTHONPATH`（靠主副本 `.venv` 的 editable 安装）；`UV_PROJECT_ENVIRONMENT` 无需设置；`source` 主副本的 `paths.sh`。起跑后立即 `chmod -R a-w src scripts packages` 锁死只读，训练结束后 `chmod -R u+w` 恢复 —— 把「不改主副本」从纪律变成技术闸。
 
@@ -103,9 +99,9 @@
 
 其余检查覆盖：YAML 路径与 sha256、`norm_stats.json` 的存在与 sha256（**在训练启动前就查**，不等 dataloader 抛 `TypeError`）、数据集与两个 `MMEVLA_FRAMESAMP_*` 环境变量、主副本 HEAD == `TRAIN_HEAD` 且 clean、run 根不存在，以及**把交给 `train.py` 的参数数组同时喂给 preflight 逐字校验**四个关键 flag。共 23 项，已实测：正向 22/23 PASS（唯一 FAIL 是脚本自身未提交导致的 `REPO_CLEAN`），负向漏传 `--data.assets.assets-dir` 被准确抓出并归因到「数据参数」。
 
-**第六稿审计发现的两条，在新方案下的处置**：
+**两条容易误判的事实**：
 1. **`openpi-client` 确实在训练链路上**（`openpi/transforms.py` 顶层 `from openpi_client import image_tools`，`ResizeImages` 每样本调两次）—— 但新方案不需要手工设 `PYTHONPATH`，它靠主副本 `.venv` 的 editable 安装天然从主副本加载。preflight 仍查它的 origin，用来抓「`PYTHONPATH` 被污染指向 `-temp`」。
-2. **norm_stats 的 `assets_dir` 是 cwd 相对路径** —— cwd = 主副本时本来就解析得对，不再是必须。但命令仍显式传绝对路径：消除对 cwd 的隐式依赖，且让 preflight 的 `CLI_ASSETS_DIR` 有东西可校验。顺带记住 `--assets-base-dir` 对本条目是**死参数**（回退目标 `train-assets/mme_vla_suite_b128_60k` 不存在），别把它当保险。
+2. **norm_stats 的 `assets_dir` 是 cwd 相对路径** —— cwd = 主副本时本来就解析得对，所以传不传绝对路径都跑得起来。但命令仍显式传：消除对 cwd 的隐式依赖，且让 preflight 的 `CLI_ASSETS_DIR` 有东西可校验。顺带记住 `--assets-base-dir` 对本条目是**死参数**（回退目标 `train-assets/mme_vla_suite_b128_60k` 不存在），别把它当保险。
 
 **仍然防不住的**（写进 `launch.md`）：
 - **【高】两份 argv 不同源** —— preflight 的保证建立在「它校验的 argv 与 `train.py` 真收到的是同一个 bash 数组」上。分别手写两份，这层保护就回到零。无技术兜底，靠 runner 写法 + 纪律。
@@ -113,23 +109,19 @@
 - **【中】`chmod` 之后仍可能被 root 或 `chmod u+w` 绕过** —— 跑完复查 `git status --porcelain` 仍为空 + 关键文件 sha 与起跑时一致，写进 `result.md`。
 - **【低】失败重试要先清残骸** —— 任何在 `initialize_checkpoint_dir` 之后的失败都会留下半截 run 根与一个 wandb run，而正式 run 名字固定（不像 smoke 带时间戳），重试前必须手工删掉 run 根、`TRAIN_RECORD_DIR` 与那个 wandb run。
 
-**当前状态**：`commitV9.5` 已 push（其后又有 `b625f48`）；**守卫白名单不在工作区**（工作区 clean，第五稿此处失真），步骤 2 要重新写入；smoke 临时产物与 tmux `m8-smoke` 已清理；GPU 4–7 空闲，GPU 0 有他轮评估在跑（tmux `eval-vla0914-full1600-best-a`，不得触碰）。
-
-### 执行顺序（第七稿，十一步；第五稿的六步编号与第六稿的八步编号均作废，全文以本表为准）
+### 执行顺序（十一步，全文以本表为准）
 
 1. 新 YAML + 新条目 → 验证 → `commitV9.5` → push。**（已完成，`e0bcb45`）**
 2. **F1/F1b**：重新写入守卫成对白名单 + G13 测试改写（只改工作区，不提交）。
 3. **F2**：CPU 轻量对拍 + 三条守卫断言（3–5 分钟，≤5 分钟不触发 AGENTS 17）→ `DS_EQUIV=PASS`。
 4. **F2.5 → F3**：先 `commitV9.6` + push，工作区回到 clean；再从该 clean HEAD 起跑 `t8-c8-guard-s100`（tmux `m8-guard`，30–35 分钟，`BENCH_CHECKSUM=1`）→ `GUARD_GRAD_100=PASS` → 建 `docs/training-doc/t8-c8-guard-s100/` 三件套 + README 加行 → `docs:` commit → push。**FAIL 则 `git revert` commitV9.6 + push，停下交用户处置。**
-5. **【第七稿新增】motion 接入前后的 modulation 梯度对拍**（用户 2026-09-15 拍板：放在正式 run 起跑前做）。两档都做：8 帧 8×8 与 32 帧 4×4。走「固定 batch 喂两版模型」，**不走**「两棵源码树各起训练」—— 后者对 8×8 要把 `StoreSpec` 重构 backport 进接入前 HEAD，那次改动动了 8 处热读路径（pread offset、缓冲字节数、`posix_fadvise` 区间、memoryview 切片、`.reshape()`、pos 小表路径与 shape），属「可能改数」，会让对照基础塌掉。详见 J 节。
+5. **motion 接入前后的 modulation 梯度对拍**（用户 2026-09-15 拍板：放在正式 run 起跑前做）。两档都做：8 帧 8×8 与 32 帧 4×4。走「固定 batch 喂两版模型」，**不走**「两棵源码树各起训练」—— 后者对 8×8 要把 `StoreSpec` 重构 backport 进接入前 HEAD，那次改动动了 8 处热读路径（pread offset、缓冲字节数、`posix_fadvise` 区间、memoryview 切片、`.reshape()`、pos 小表路径与 shape），属「可能改数」，会让对照基础塌掉。详见 J 节。
 6. 本计划固化为根目录 `v2-1600ep-m8x8-modul-training-plan.md` + `docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md` 初稿 + `docs/training-doc/README.md` 加行 → `docs:` commit → push。（I 节）
 7. 从**主副本**起 smoke（tmux `m8-smoke`）→ 核判据（含 `PREFLIGHT=PASS`）→ 删临时产物。（B 节）
 8. `launch.md` 补 smoke 与步骤 3/4/5 的判定行摘录 → `docs:` commit → push → **此刻记 `TRAIN_HEAD` = 主副本 HEAD**（抄进 launch.md）→ `git clone` 建开发副本 `-temp` + symlink v1-store + `uv sync`。（G 节）
 9. 从**主副本**起正式 run（tmux `m8-prod`）→ `PREFLIGHT=PASS` 且训练确认进入稳态后，立即 `chmod -R a-w src scripts packages` 锁死只读 → 挂 Monitor。（C 节）
 10. 训练期间（约 65 h）：**一切开发、验证与留档编辑都在 `-temp` 里做**，主副本只读不写；禁止在主副本跑 `uv sync` / `uv add` / `uv pip`。
 11. 跑完：`chmod -R u+w src scripts packages` 解除只读 → 复查 `git status --porcelain` 仍为空且关键文件 sha 与起跑时一致（写进 `result.md`）→ `result.md` + `records/` → `docs:` commit → push → 视情况删除 `-temp`。评估另立任务。
-
-> **与第六稿的关键差别**：`TRAIN_HEAD` 不再需要提前冻结再粘字面量 —— 训练就跑在主副本上，起跑前一刻记下 HEAD 即可，preflight 用它做断言。worktree 方案里「主树会在步骤 7 又多一个 commit，所以不能重算 `TRAIN_HEAD`」那个坑随方案一起消失。
 
 ---
 
@@ -222,16 +214,16 @@ commit：`git add` 仅这两个文件；subject `commitV9.5: 新增 modulation 8
 
 ### B. smoke（20 步、真实 b128 / 4 卡、临时 run，跑完删）
 
-run_name `smoke-m8x8-modul-$(date -u +%Y%m%dT%H%M%SZ)`，tmux `m8-smoke`，日志 `v1-store/logs/m8-smoke.log`。**从主副本起跑**（第七稿方案，G 节），此时尚未锁只读。
+run_name `smoke-m8x8-modul-$(date -u +%Y%m%dT%H%M%SZ)`，tmux `m8-smoke`，日志 `v1-store/logs/m8-smoke.log`。**从主副本起跑**（G 节），此时尚未锁只读。
 
-**为什么命令是这个形状（第六稿的四条实测教训仍然适用）。** 第五稿的命令块照原样粘贴**一步都跑不起来**，且有一种死法会写出假成功：
+**为什么命令是这个形状。** 四条实测教训，写法直接粘贴到别处时容易踩中，其中一条会写出假成功：
 
 1. 块内从未给 `RUN` / `LOG` 赋值，而 `paths.sh` 开头是 `set -euo pipefail` —— `set -u` 下第一次展开 `$RUN` 就 `unbound variable` 退出。
 2. `set -e` 会持续作用于调用方 shell，于是 `uv run ... | tee -a "$LOG"` 失败后 shell **当场退出**，后面那行 `echo "EXIT_CODE=${PIPESTATUS[0]}"` 永远执行不到。
 3. 最"自然"的修法 `cmd | tee log || true` **绝不可用**：实测 `|| true` 会把 `PIPESTATUS` 冲成 `(0)`，`EXIT_CODE=` 稳定打印 0，把失败 run 记成成功。
 4. `nvidia-smi ... > csv &` 只重定向了 stdout，stderr 仍挂在 body 的管道上；采样器未被杀时 `tee` 因写端未全关而不退出，`EXIT_CODE=` 同样写不进日志。
 
-解法照抄 `docs/training-doc/t8-c8-b/launch.md` 已跑通的**内外分层**：`set -e` 活在 `body()` 里（保住断言硬闸），`tee` + `EXIT_CODE` 活在 body 外（保住必落盘），`trap ... EXIT` 收采样器。命令落成 runner 脚本再交给 tmux，而不是内联进 `tmux new-session "..."` 字符串。把 `source` 关进 `body()`（管道 → 子 shell）还顺带免疫了 `paths.sh` 那片 `readonly` 导致的「重跑时 `REPO_ROOT: readonly variable` 报错退出、错误信息与真实问题毫无关系」。
+所以采用 `docs/training-doc/t8-c8-b/launch.md` 已跑通的**内外分层**：`set -e` 活在 `body()` 里（保住断言硬闸），`tee` + `EXIT_CODE` 活在 body 外（保住必落盘），`trap ... EXIT` 收采样器。命令落成 runner 脚本再交给 tmux，而不是内联进 `tmux new-session "..."` 字符串。把 `source` 关进 `body()`（管道 → 子 shell）还顺带免疫了 `paths.sh` 那片 `readonly` 导致的「重跑时 `REPO_ROOT: readonly variable` 报错退出、错误信息与真实问题毫无关系」。
 
 > 注：`docs/training-doc/awsprod40k-b128-motion/launch.md` 那份历史留档**带同款缺陷**（`$LOG` 未赋值 + `set -e` 下 `EC=${PIPESTATUS[0]}` 拿不到），它留下 `EXIT_CODE=0` 纯粹因为那次训练成功了。**不要拿它当模板。**
 
@@ -344,18 +336,18 @@ tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m
 - 日志含 `Integration Type: modulation`；`EXIT_CODE=0`；`Step 0`…`Step 19` 的 loss / grad_norm / mem_enc_norm 全部有限，无 `RESOURCE_EXHAUSTED`。
 - run 根 `history_config.resolved.yaml` 含 `token_per_image: 64`、`integration_type: modulation`；`motion_provenance.json` 的 `motion_enabled=false`、`framesamp_manifest_sha256` = `4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918`（该值取自 `framesamp-8x8/meta/store_meta.json` 的 `manifest_sha256` 字段，**不是** `episode_manifest.json` 文件的裸 sha256，后者为 `df0ec8ed…`，两个口径别混）。
 - checkpoint 19 的 `assets/robomme/norm_stats.json` sha256 == `856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173`（证明上面那个绝对路径 flag 生效并随 checkpoint 落盘；**注意 `save_assets` 在 `norm_stats is None` 时静默什么都不写**，所以这条空了就说明 flag 没生效）。
-- **参数树（两步；第五稿那条判据自相矛盾，第六稿改写）**：
+- **参数树（两步）**：
   1. `JAX_PLATFORMS=cpu uv run --no-sync python scripts/training/legacy-eval/check_ckpt_param_tree.py --config mme_vla_suite_b128_60k --ckpt-dir <run根>/19 --out <scratchpad>/param_tree.json`（在 `$WT` 快照那份脚本上跑：它 `os.chdir(_REPO_ROOT)`，而 `get_history_config` 按 cwd 读 YAML），判定行须逐字为
      `PARAM_TREE_EXACT=PASS config=mme_vla_suite_b128_60k history_config=perceptual-framesamp-modul-8frame-8x8.yaml yaml_sha256=5b5ac2f85302d4d8 n_model=61 n_ckpt=61 missing=0 extra=0 shape_mismatch=0`。
      其中 **`n_model=61` 就是 modulation 的正面签名**（context 为 55、context+motion 为 59，见 `docs/training-doc/eval-official-framesamp-context/records/param_tree.json` 与 `eval-hard-patternlock-routestick/records/modul/param_tree.json`）；`missing=extra=0` 是双向精确比对，故 PASS 已**蕴含**六个 modulation 专属叶子存在于 checkpoint。
-     **不得再要求 json 中出现参数路径**——`missing` / `extra` / `shape_mismatch` 只在 FAIL 时才列路径，PASS 时三者恒为空列表，两个要求互斥（第五稿正是这么写的）。
+     **不得要求 json 中出现参数路径**——`missing` / `extra` / `shape_mismatch` 只在 FAIL 时才列路径，PASS 时三者恒为空列表，「PASS 且 json 里有路径」是一对互斥条件，写进判据就是一条永远不可能通过的验收。
   2. 正面列出六条 modulation 专属参数路径（只读 orbax `_METADATA`，纯 grep，不进 JAX）：
      ```bash
      M=<run根>/19/params/_METADATA
      N=$(grep -o "q_einsum_mem', 'w'\|kv_einsum_mem', 'w'\|out_einsum_mem', 'w'\|mem_rms_norm', 'scale'\|mem_rms_norm_ffn', 'Dense_0', 'kernel'\|mem_rms_norm_ffn', 'Dense_0', 'bias'" "$M" | sort -u | wc -l)
      echo "MEM_PARAMS=$([ "$N" = 6 ] && echo PASS || echo FAIL) n=$N"
      ```
-     期望 `MEM_PARAMS=PASS n=6`。**第五稿只列了四个名字、漏了 `mem_rms_norm_ffn`（2 叶）**——而它才是 modulation 真正的作用点（`history_gemma.py` 里 `MemoryRMSNorm(name="mem_rms_norm_ffn")(x, mem_mod_vec)` 的 `Dense_0` 才产出 scale/shift）；且 `mem_rms_norm` 是 `mem_rms_norm_ffn` 的**子串**，所以上面每条都带 `', '<字段名>'` 定界。负对照已实测：同一 grep 在 `awsprod40k-b128-motion/5000`（context+motion）上命中数为 0。
+     期望 `MEM_PARAMS=PASS n=6`。**六条里 `mem_rms_norm_ffn`（2 叶）不能漏** —— 它才是 modulation 真正的作用点（`history_gemma.py` 里 `MemoryRMSNorm(name="mem_rms_norm_ffn")(x, mem_mod_vec)` 的 `Dense_0` 才产出 scale/shift），而 `mem_attn` 内的 `mem_rms_norm` 只是一个无条件 norm；且 `mem_rms_norm` 是 `mem_rms_norm_ffn` 的**子串**，所以上面每条都带 `', '<字段名>'` 定界。负对照已实测：同一 grep 在 `awsprod40k-b128-motion/5000`（context+motion）上命中数为 0。
 - 显存以「20 步跑完、退出 0」为 OOM 判据；`nvidia-smi` 数字只记录不判读。
 
 清理（**全绝对路径 + `${RUN:?}` 防空变量**；`MMEVLA_JAX_CACHE_DIR` 已改成固定的 `m8-smoke` 目录，故不随 run 删）：
@@ -510,16 +502,16 @@ tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/v
 - 训练入口：`scripts/training/train.py`（`init_history_config` 写 provenance）；环境变量解析 `src/mme_vla_suite/training/dataloader.py::_create_framesamp_dataset`。
 - 路径源：`scripts/training/paths.sh`。
 - 参数树核对：`scripts/training/legacy-eval/check_ckpt_param_tree.py`（只输出计数与 missing/extra/shape_mismatch，PASS 时后三者恒为空列表；modulation 的正面签名是 `n_model=61`）。
-- 起跑前自检：`scripts/training/preflight_train_launch.py`（第七稿新增，纯 stdlib、零副作用、23 项检查；`--repo` 传主副本根，trailing `--` 之后传与 `train.py` 逐字相同的 argv 数组）。
+- 起跑前自检：`scripts/training/preflight_train_launch.py`（纯 stdlib、零副作用、23 项检查；`--repo` 传主副本根，trailing `--` 之后传与 `train.py` 逐字相同的 argv 数组）。
 - 梯度对拍（J 节）：`scripts/training/tests/single_step_grad.py`、`scripts/training/tests/compare_grad_summaries.py`、定点 batch `v1-store/fixtures/8x8/grad/{c8-b,c32-b}`。
 - F3 对拍：`scripts/training/g0/check_baseline_env.py`（dump / check）、`scripts/training/g0/compare_baseline.py`（只比交集并打印 `rows=`）、`scripts/training/tests/project_scalars.py`（`_HEADER` 强制写表头，故 TSV 行数 = 1 + 步数）、`scripts/training/g0/bench_train_steps.py::_make_digest_gate`（`BENCH_EXTRA_DIGEST_STEPS` 越界即 raise）。
 - 留档样板：`docs/training-doc/awsprod40k-b128-motion/{launch,result}.md`、`docs/training-doc/v2b-read20-20260914T174147Z/`。
 
-### F. 守卫放宽与增补验证（第四稿新增，第六稿重排顺序；对应执行顺序步骤 2–4）
+### F. 守卫放宽与增补验证（对应执行顺序步骤 2–4）
 
 **为什么要多跑。** `framesamp_dataset.py::FrameSampDataset.__init__` 的 `_req` 里有两条 commitV3.1（`6ee7494`，2026-08-27）按 Codex 审计 G13 加的守卫：`integration_type == "context"`、`memory_token_dim == 2048`，目的是挡住「同形的 modul 配置」。它们只在 `__init__` 拒绝配置，后续交付路径（`__getitem__`、`_pad`、store 读取）不读这两个键。放宽它们是对 dataloader 文件的改动，按 AGENTS 第 18 条要证明不改数，所以多跑 F2、F3 两块验证。`train.py` 主链路上没有其他 context 专属守卫；`g0/bench_train_steps.py` 与 `tests/` 下四个取证工具各有一份 context-only 白名单，本轮不经过（见第一部分第 6 点）。
 
-**F1. 守卫改成成对白名单**（**第六稿注意：`b625f48` 的工作区里没有这段改动，必须重新写入**）：
+**F1. 守卫改成成对白名单**（**当前工作区里没有这段改动，动手时先写入**）：
 
 ```python
         _req((str(hc.integration_type), int(hc.memory_token_dim)) in {("context", 2048), ("modulation", 1024)},
@@ -533,9 +525,9 @@ tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/v
 **F2. 第一块：轻量对拍 + 三条守卫断言（CPU，约 3–5 分钟，≤5 分钟不触发 AGENTS 17）。** 一次性脚本放 scratchpad、`JAX_PLATFORMS=cpu uv run --no-sync`，cwd 仓库根：
 - 守卫：`get_history_config` 分别加载 modul-8frame-8x8（期望通过）、expert（期望 `ValueError` 含「形制断言失败」）、modul-8frame-8x8 且 `memory_token_dim` 改 2048（期望拒）；另在 4×4 库 `framesamp/` 上加载 `perceptual-framesamp-modul.yaml`（期望通过）。
 - 对拍：`_create_framesamp_dataset`（`src/mme_vla_suite/training/dataloader.py`）分别用 `perceptual-framesamp-modul-8frame-8x8.yaml` 与 `perceptual-framesamp-context-8frame-8x8.yaml` 在 `framesamp-8x8` 库上构造 Dataset（`MMEVLA_FRAMESAMP_SOURCE/MANIFEST` 同正式 run），取 256 个索引（`np.random.default_rng(20260915).choice(605611, 256)` 并加 0、605610 与每个 episode 边界附近各 1 个），逐样本逐键比 `dtype / shape / raw sha256`。判定行 `DS_EQUIV=PASS samples=<n> keys=<k> mismatches=0`；任一不等即停。
-- **判据声称范围（第六稿收窄）**：这证明的是「**在当前源码下**，两份配置在所选 256 个索引上交付的原始 Dataset 输出逐字节相同」。差异是 `integration_type` / `memory_token_dim` **外加 context 版多出的整节 `motion:`** 的合集（见第一部分第 6 点）。Dataset 之后不另做对拍，理由是源码级封闭：`transform_dataset` 只收 `data_config`，`RoboMMEDataConfig.create` 里 `RepackTransform` 的键表写死、`ModelTransformFactory` 只读 `model_config.model_type / max_token_len / action_dim / discrete_state_input`，`TorchDataLoader` 的 collate 与 `HistAugObservation.from_dict` 都不接收 `history_config`；全仓库这两个键除 `framesamp_dataset.py` 那两条守卫外只出现在 `src/mme_vla_suite/models/`，**`src/openpi/` 零出现**。两侧 `data_config` 与 `model_config` 其余字段完全相同，因此 Dataset 输出相同即最终进模型的 batch 相同。它**不比较接入前源码**。
+- **判据声称范围**：这证明的是「**在当前源码下**，两份配置在所选 256 个索引上交付的原始 Dataset 输出逐字节相同」。差异是 `integration_type` / `memory_token_dim` **外加 context 版多出的整节 `motion:`** 的合集（见第一部分第 6 点）。Dataset 之后不另做对拍，理由是源码级封闭：`transform_dataset` 只收 `data_config`，`RoboMMEDataConfig.create` 里 `RepackTransform` 的键表写死、`ModelTransformFactory` 只读 `model_config.model_type / max_token_len / action_dim / discrete_state_input`，`TorchDataLoader` 的 collate 与 `HistAugObservation.from_dict` 都不接收 `history_config`；全仓库这两个键除 `framesamp_dataset.py` 那两条守卫外只出现在 `src/mme_vla_suite/models/`，**`src/openpi/` 零出现**。两侧 `data_config` 与 `model_config` 其余字段完全相同，因此 Dataset 输出相同即最终进模型的 batch 相同。它**不比较接入前源码**。
 
-**F2.5. 先 commit 再验（用户 2026-09-15 拍板，与第五稿顺序相反）。** F2 全 PASS 后立即：
+**F2.5. 先 commit 再验（用户 2026-09-15 拍板）。** F2 全 PASS 后立即：
 ```bash
 git add src/mme_vla_suite/training/framesamp_dataset.py scripts/training/tests/test_pack_guards.py
 git commit    # subject: commitV9.6: dataset 形制守卫放宽为 (integration_type, memory_token_dim) 成对白名单
@@ -547,7 +539,7 @@ git status --porcelain     # 必须为空，F3 要从这个 clean HEAD 起跑
 
 **F3. 第二块：复用 t8-c8-b 固化轨迹前 100 步（GPU 4,5，约 30–35 分钟，tmux `m8-guard`）。**
 
-**第六稿不再说「照抄 t8-c8-b 命令只改四项」** —— 照抄会在启动阶段直接抛 `ValueError: BENCH_EXTRA_DIGEST_STEPS 越界（须在 0..99）: [199, 399, 599, 799]`（`bench_train_steps.py::_make_digest_gate` 按 `config.num_train_steps` 做范围校验，且该 gate 在 `checksum_on` 之后**无条件**构造，`BENCH_CHECKSUM` 碰不到它）。更糟的是 t8-c8-b 的命令体只有 `set -o pipefail`、**没有 `set -e`**：bench 退出 1 之后 shell 会继续跑完后处理并无条件 `printf 'TRAJECTORY_DONE …'`，`EXIT_CODE=${PIPESTATUS[0]}` 取到 printf 的 0 —— **日志尾行写 `EXIT_CODE=0` 而训练一步没跑**。所以 F3 写成独立完整命令，相对 t8-c8-b 共**六处**差异（第五稿只列了四处）。
+**不要照抄 t8-c8-b 的命令。** 照抄会在启动阶段直接抛 `ValueError: BENCH_EXTRA_DIGEST_STEPS 越界（须在 0..99）: [199, 399, 599, 799]`（`bench_train_steps.py::_make_digest_gate` 按 `config.num_train_steps` 做范围校验，且该 gate 在 `checksum_on` 之后**无条件**构造，`BENCH_CHECKSUM` 碰不到它）。更糟的是 t8-c8-b 的命令体只有 `set -o pipefail`、**没有 `set -e`**：bench 退出 1 之后 shell 会继续跑完后处理并无条件 `printf 'TRAJECTORY_DONE …'`，`EXIT_CODE=${PIPESTATUS[0]}` 取到 printf 的 0 —— **日志尾行写 `EXIT_CODE=0` 而训练一步没跑**。所以 F3 写成独立完整命令，相对 t8-c8-b 共**六处**差异。
 
 摘要步集必须正好是 `1,2,24,49`：gate 自动含 step 0 与 `last_step=99`，得 `{0,1,2,24,49,99}`，**恰是基线在 0..99 区间的完整子集**；改成 `BENCH_DIGEST_INTERVAL=1` 写满 100 份没有意义（基线侧 2026-09-14 已冻结，多出的 94 份没有对照物）。`BENCH_DIGEST_INTERVAL=1000` 必须保留——`extra` 非空而 interval 未设是另一条 raise。
 
@@ -578,7 +570,7 @@ body() {
   export BENCH_EXTRA_DIGEST_STEPS=1,2,24,49          # ★差异1：删 99,199,399,599,799（99 自动入集，>99 越界即 raise）
                                                       # ★差异2：不设 BENCH_SAVE_FINAL_CKPT / BENCH_FINAL_STEP
 
-  test -z "$(git -C "$MAIN" status --porcelain)"      # ★差异3：F2.5 已 commit，这条现在为真（第五稿顺序下它恒假）
+  test -z "$(git -C "$MAIN" status --porcelain)"      # ★差异3：F2.5 已 commit，故这条为真（若把 commit 排在 F3 之后，它恒假）
   test ! -e "$BENCH_RECORD_DIR"
   test ! -e "$V1_STORE/train-runs/$RUN"
   printf 'RUN=%s\nHEAD=%s\nSTART_UTC=%s\n' "$RUN" "$(git -C "$MAIN" rev-parse HEAD)" "$(date -u +%FT%TZ)"
@@ -626,7 +618,7 @@ tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/t
   | grep --line-buffered -E "BASELINE_ENV=|SCALARS |INDEX_SEQ|BATCH_DIGEST|STATE_DIGEST|DET_CHECK|EXIT_CODE=|Error|Traceback|越界|unbound variable"
 ```
 
-**判据（第六稿：全部带量词，不再写无条件的 `mismatches=0`）**：
+**判据（全部带量词，不写无条件的 `mismatches=0`）**：
 - `BASELINE_ENV=PASS` —— 指纹 preflight（jax 0.5.3、A100 驱动 595.71.05、norm_stats `750a8e9b…`、pi05_base 与库摘要逐项同）。**注意 `env.json.fingerprint` 不含任何 commit/代码 sha**，所以 F1 改了 `framesamp_dataset.py` 不会让它 FAIL——它保的是环境不是代码。基线 `v1-store/bench/8x8/t8-c8-b/` 的 `BASELINE_MANIFEST.json` 所列 10 个产物已逐个核过 sha，10/10 未腐烂。
 - `SCALARS steps=100 keys=5 hex_mismatch_steps=0` —— **主判据**，100/100 步全覆盖（五标量位于 batch 下游，batch 变了 loss 必变）。
 - `INDEX_SEQ=PASS n=800` —— 100 步 × 8 个样本索引逐个一致。
@@ -634,9 +626,9 @@ tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/t
 - `STATE_DIGEST rows=6 mismatch=0` —— `BENCH_CHECKSUM=1`（用户拍板）下六份完整 TrainState 逐叶摘要对照。若将来改回 `0`，`compare_baseline.py` 对不存在的 `param_checksums.jsonl` 返回空 dict、会打印 `rows=0 mismatch=0` 并汇入 `DET_CHECK=PASS`，那是**结构性空判**，必须显式标注。
 - `CANON_CHECK=PASS steps=6`。
 - 汇总判定行：`GUARD_GRAD_100=PASS scalars_steps=100 index_n=800 batch_digest_rows=6 state_digest_rows=6`。
-- 旁证（可选）：`cmp <(head -n 101 docs/training-doc/t8-c8-b/records/scalars_hex.tsv) "$BENCH_RECORD_DIR/scalars_hex.tsv"` —— **101 = 1 行表头 + step 0–99**，候选文件恰好 101 行，整文件对比。第五稿写的「前 100 行」会静默漏掉 step 99（该 TSV 实测 1001 行 = 表头 + 1000 步，表头由 `project_scalars.py` 的 `_HEADER` 强制写入）。
+- 旁证（可选）：`cmp <(head -n 101 docs/training-doc/t8-c8-b/records/scalars_hex.tsv) "$BENCH_RECORD_DIR/scalars_hex.tsv"` —— **101 = 1 行表头 + step 0–99**，候选文件恰好 101 行，整文件对比。**不能写成「前 100 行」** —— 该 TSV 实测 1001 行 = 表头 + 1000 步（表头由 `project_scalars.py` 的 `_HEADER` 强制写入），按「前 100 行」比会静默漏掉 step 99。
 
-**F3 留档（用户 2026-09-15 拍板；第五稿的「≤15 分钟不建独立留档」作废）**：F3 实际 30–35 分钟 > AGENTS 17 的 5 分钟阈值，且它的定位正是 AGENTS 18 第二块的**正式等价证据**，不能借用 09-14 那条明写「不作正式等价证据」的排错例外。仓库里四个同类先例（`aws-t2-cand-s100`、`aws-t2-ref-s100`、`aws-t3-closed-s100`、`aws-t3-open-s100`）都是三件套齐全——留档才是惯例。建 `docs/training-doc/t8-c8-guard-s100/`：
+**F3 留档（用户 2026-09-15 拍板）**：F3 实际 30–35 分钟 > AGENTS 17 的 5 分钟阈值，且它的定位正是 AGENTS 18 第二块的**正式等价证据**，不能借用 09-14 那条明写「不作正式等价证据」的排错例外。仓库里四个同类先例（`aws-t2-cand-s100`、`aws-t2-ref-s100`、`aws-t3-closed-s100`、`aws-t3-open-s100`）都是三件套齐全——留档才是惯例。建 `docs/training-doc/t8-c8-guard-s100/`：
 - `launch.md`：起跑 commit（= `commitV9.6`）、完整命令、与 t8-c8-b 的六处差异、`BASELINE_ENV` 输出原文；
 - `result.md`：`compare_baseline.py` 全部判定行原文、墙钟、结论；
 - `records/`：`metrics.jsonl`、`scalars_hex.tsv`、`batch_digests.jsonl`、`param_checksums.jsonl`、`index_sequence.json`、`env.json`、`run_meta.json`（约 0.5 MB）；
@@ -707,9 +699,9 @@ sha256sum -c v1-store/bench/$RUN/lock_sha256.txt  # 三个文件的 sha 必须�
 
 ### I. 计划固化到仓库根目录（步骤 6）
 
-新建 `v2-1600ep-m8x8-modul-training-plan.md`（与 `8frame-8x8-training-plan.md` 同级、同体例）：内容 = 本计划文件全文（去掉 harness 版本注，保留第一 / 第二部分与 F、G、H 节），文首加一行状态说明「实施过程档案；结果以 `docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/` 为准」。与 `launch.md` 初稿、`docs/training-doc/README.md` 加行一起 `git add` 三个文件，subject `docs: v2-1600ep-m8x8-modul-b128-60k 计划固化与起跑留档初稿`，push。之后再记 `TRAIN_HEAD`（保证快照里含这份计划）。验证：`git diff --check`；Markdown 链接 `docs/training-doc/README.md` → 新 run 目录可解析。
+本文件已在仓库根目录（与 `8frame-8x8-training-plan.md` 同级、同体例），文首带状态说明。步骤 6 只需与 `launch.md` 初稿、`docs/training-doc/README.md` 加行一起 `git add`，subject `docs: v2-1600ep-m8x8-modul-b128-60k 计划固化与起跑留档初稿`，push。之后再记 `TRAIN_HEAD`（保证起跑 commit 含这份计划）。验证：`git diff --check`；Markdown 链接 `docs/training-doc/README.md` → 新 run 目录可解析。
 
-### J. motion 接入前后的 modulation 梯度对拍（第七稿新增，执行顺序步骤 5）
+### J. motion 接入前后的 modulation 梯度对拍（执行顺序步骤 5）
 
 **目的**：把第一部分第 7 点的结论从**源码级论证**提升为**运行时实测** —— 在完全相同的输入张量与完全相同的初态上，接入前代码（`06220c4~1` = `c5925d9`）与接入后代码（当前 HEAD）对 modulation 配置给出逐位相同的 loss 与全部可训练叶梯度。两档都做：**8 帧 8×8** 与 **32 帧 4×4**。
 
@@ -755,12 +747,12 @@ B 侧：主副本，unset PYTHONPATH
 
 **梯度叶数会变**：modulation 因 `mem_mods=[False, True]` 在 action expert 里多出 `q_einsum_mem` / `kv_einsum_mem` / `mem_rms_norm` 等叶，`leaves=` 不会是 context 的 32，判定行数字与历史 run 不可直接比对。
 
-**留档**：按 AGENTS 12/17 建 `docs/training-doc/<run_name>/`（launch.md + result.md + `records/grad_summary.{a,b}.json` + compare 判定行）。**本节的 worktree `v1-store/worktrees/s2-base` 是本对拍专用的临时快照，与 G 节的训练隔离无关**（第七稿的训练不再用 worktree）；对拍结束即 `git worktree remove` + `prune`。
+**留档**：按 AGENTS 12/17 建 `docs/training-doc/<run_name>/`（launch.md + result.md + `records/grad_summary.{a,b}.json` + compare 判定行）。**本节的 worktree `v1-store/worktrees/s2-base` 是本对拍专用的临时快照，与 G 节的训练隔离无关**（训练本身不用 worktree）；对拍结束即 `git worktree remove` + `prune`。
 
 ### E. 红线与不做的事
 
 - 不改模型代码；不动既有两个训练条目（`mme_vla_suite` / `mme_vla_suite_b128`）。dataloader 的守卫白名单是本轮唯一的 `src/` 改动，按 AGENTS 18 走 F2/F3 两块验证。
 - 训练在**主副本**跑并 `chmod -R a-w` 锁只读（G 节）；训练期间一切开发与留档编辑在 `-temp` 开发副本里做，主副本不改文件、不 `git pull`、不跑 `uv sync` / `uv add` / `uv pip`，不建库、不起第二个 GPU 大任务。
 - **开发副本红线**：`-temp/v1-store` 是可写 symlink，写它等同于写主副本数据；`-temp` 里禁止任何带 `--force` 或输出根参数的破坏性命令；`-temp` 必须用自己的 `.venv`。（`AGENTS.md` 第 14 条环境 B 段的例外条款。）
-- tmux 只按确切名 kill，本轮起过的会话清单是 **`m8-guard`（F3）、`m8-smoke`（B）、`m8-prod` / `m8-prod-dense`（C）** 四个，清理时以这份清单为唯一依据，删前删后各一次 `tmux ls`。**不在清单内的一律不动**，含用户会话 `0`、`1`、`claude-private`、`codex`、`codex-repo`，以及他轮评估会话 **`eval-vla0914-full1600-best-a`**（2026-09-15 02:50 起，正占用 GPU 0，第五稿的清单漏了它）。禁 `tmux kill-server` 及一切全局杀法（AGENTS 7 红线）。
+- tmux 只按确切名 kill，本轮起过的会话清单是 **`m8-guard`（F3）、`m8-smoke`（B）、`m8-prod` / `m8-prod-dense`（C）** 四个，清理时以这份清单为唯一依据，删前删后各一次 `tmux ls`。**不在清单内的一律不动**，含用户会话 `0`、`1`、`claude-private`、`codex`、`codex-repo`，以及他轮评估会话 **`eval-vla0914-full1600-best-a`**（2026-09-15 02:50 起，正占用 GPU 0）。禁 `tmux kill-server` 及一切全局杀法（AGENTS 7 红线）。
 - 评估（legacy-eval / motion-variance 对 modulation + 8×8 的 prefix 长度、VideoRepick 驱动）不在本轮范围。
