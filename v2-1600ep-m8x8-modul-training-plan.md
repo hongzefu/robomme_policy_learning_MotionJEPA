@@ -58,6 +58,18 @@ run_name **`v2-1600ep-m8x8-modul-b128-60k`**（起跑前按 AGENTS 第 6 条再�
 
 好消息是这份 batch **现成**（2026-09-14 存的，两档各 92 M，一直在盘上），不用重新生成。
 
+**那为什么 2026-08-29 的老代码也能做 8×8 那一档？**（8×8 支持是 2026-09-14 才加的，老代码比它早半个月）—— 因为它**根本不需要「支持 8×8」**。两档 fixture 的张量实测如下：
+
+| 键 | 32 帧 4×4 | 8 帧 8×8 |
+|---|---|---|
+| `static_image_emb` | `[8,512,2048]` bfloat16 | **完全相同** |
+| `static_pos_emb` | `[8,512,768]` float32 | **完全相同** |
+| `static_mask` | `[8,512]` bool，sha `906b1856…` | **连 sha256 都逐位相同** |
+
+形状、dtype 全同，掩码甚至一模一样（两档都是 512 位全有效）；**只有 `static_image_emb` / `static_pos_emb` 的内容不同**。老代码那条断言从 2026-02-20 起一直是「总数必须等于 512」，**从不检查这 512 个 token 是怎么分帧的** —— 分帧只是取数据时的事，而那一步被我们跳过了。
+
+**由此有一个要诚实说明的推论**：两档在模型侧走的是**同一段代码**，不是两条不同路径。所以做两档的价值是「用两组不同的真实数值各验一遍」（万一某处对特定数值敏感 —— 溢出、NaN、极端量级 —— 多一层保险），而**不是**「覆盖了两条代码路径」。严格说，**一档就足以证明代码等价**。时间紧时可以只做 32 帧 4×4 那档：它是历史原生布局，与老代码同源，风险最低。
+
 #### 锚点 `07702f0` 是什么，它卡在哪两个改动之间
 
 本来只打算比 motion 接入前后那两个版本（`c5925d9` vs `06220c4`）。核实之后发现可以把对照侧一直往前推到 **`07702f0`（2026-08-29，commitV4.3「模型侧单一化」）**。
@@ -794,7 +806,9 @@ sha256sum -c v1-store/bench/$RUN/lock_sha256.txt  # 三个文件的 sha 必须�
 
 后者对 8×8 走不通：`07702f0` 的 `framesamp_store.py` 有四道硬拒读不了 8×8 库（`LAYOUT = "framesamp-4x4-v1"` 常量校验、表名 `image_emb_4x4` 与 `row_shape [16,2048]`、文件名 `pos_emb_4x4.f32.bin`、Dataset 的 `_req(... == (512,16,1))`）。要让它认，必须把 commitV9.1 `236765f` 的 `StoreSpec` 参数化改动整块 backport，而那次改动动了 **8 处热读路径**（pread offset、输出缓冲字节数、`posix_fadvise` 区间、memoryview 切片、`.reshape()`、pos 小表 `np.fromfile` 路径与 shape、两处 `run_*_checks`）—— 属「可能改数」，搬进对照侧就让基础塌掉。4×4 档虽只需放宽一条断言，但要在两棵树里各打掉 `test_g13_modul_config_rejected` 这条生产安全闸测试。
 
-**固定 batch 对两档都成立**：模型侧除 `budget`（都是 512）外**不依赖帧数或每帧 token 数** —— `token_per_image` / `num_views` / `max_frames` / `tokens_per_frame` 在整个 `src/mme_vla_suite/models/` 里零命中；`PerceptualMemory.__call__` 只有一条 `assert static_image_emb.shape[1] == budget`；`FeatureEncoder` 是逐 token 的 pointwise 运算，`pos_emb` 不是查找表、没有行数概念；`MemoryAttention` 只读 `mem_seq.shape[1]`。两档喂进模型的四个张量**逐维逐 dtype 完全相同**（实测自 `docs/training-doc/t8-gradient/records/{c8,c32}/b/allfull.batch_meta.json`）：`static_image_emb (8,512,2048) bfloat16`、`static_pos_emb (8,512,768) float32`、`static_state_emb (8,512,8) float64`、`static_mask (8,512) bool`。**所以对照侧根本不需要认识 8×8 库，只要能吃下 `[8,512,2048]`。**
+**固定 batch 对两档都成立**：模型侧除 `budget`（都是 512）外**不依赖帧数或每帧 token 数** —— `token_per_image` / `num_views` / `max_frames` / `tokens_per_frame` 在整个 `src/mme_vla_suite/models/` 里零命中；`PerceptualMemory.__call__` 只有一条 `assert static_image_emb.shape[1] == budget`；`FeatureEncoder` 是逐 token 的 pointwise 运算，`pos_emb` 不是查找表、没有行数概念；`MemoryAttention` 只读 `mem_seq.shape[1]`。两档喂进模型的四个张量**逐维逐 dtype 完全相同**（实测自 `docs/training-doc/t8-gradient/records/{c8,c32}/b/allfull.batch_meta.json`）：`static_image_emb (8,512,2048) bfloat16`、`static_pos_emb (8,512,768) float32`、`static_state_emb (8,512,8) float64`、`static_mask (8,512) bool`。**所以对照侧根本不需要认识 8×8 库，只要能吃下 `[8,512,2048]`。** 实测两档 fixture 的 `static_mask` 连 sha256 都逐位相同（`906b1856…`，两档都是 512 位全有效），`static_image_emb` / `static_pos_emb` 形状 dtype 全同、只有内容不同。
+
+**推论（判据解读时必须带上）**：两档在模型侧走**同一段代码**，不是两条路径 —— 做两档等于「用两组不同的真实数值各验一遍」，多的是数值覆盖面（溢出 / NaN / 极端量级）不是代码覆盖面。**一档即足以证明代码等价**；若要压缩墙钟，优先保 32 帧 4×4（历史原生布局，与锚点代码同源）。
 
 #### J4. 定点 batch：现成，且键集天然兼容
 
