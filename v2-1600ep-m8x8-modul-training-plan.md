@@ -56,7 +56,7 @@
 - **第二块（真实训练梯度一致，GPU 4,5 约 30–35 分钟）**：复用 09-14 已固化的 `t8-c8-b` 轨迹（400ep 库、context 8×8、batch 8、fsdp 2、seed 42、确定性 XLA），在**已提交** `commitV9.6` 的 clean HEAD 上跑前 100 步（**不是照抄 t8-c8-b 命令**，六处差异见 F3），先过 `check_baseline_env.py check` 指纹 preflight（`BASELINE_ENV=PASS`），再用 `compare_baseline.py` 一次性产出全部判定行。主判据是 100/100 步全覆盖的五标量 hex 与 `index_sequence.json` 的 800 个样本索引；`BENCH_CHECKSUM=1`（用户 2026-09-15 拍板）另拿六份完整 TrainState 逐叶摘要对照，代价是六步 checksum 实测合计约 1182 s。这证明 context 链在守卫改动前后逐位相同。
 - **commit 顺序（用户 2026-09-15 拍板）**：F2 通过后**先**提交 `commitV9.6`（守卫 + 测试改写）并 push，F3 再从 clean HEAD 起跑；F3 FAIL 则 `git revert` 该 commit（AGENTS 11 自带 `revert:` 通道，不改写历史、不用 force），把 FAIL 判定行写进 `result.md` 后停下交你处置，不放宽判据。理由：AGENTS 12/17 要求 clean HEAD 起跑，而 `bench_train_steps.py` 会把 `git status --porcelain` 原文写进 `run_meta.json` 的 `start_status`——脏树跑出的产物自带脏树记录，拿它当正式等价证据属自证不合规。
 
-**7. 审计结论：motion 接入不影响「无 motion 的 modulation」——源码级成立，运行时证据只覆盖 context。** 按 motion 接入 commit `06220c4`（commitV6.5）的 diff 原文逐层核：
+**7. 审计结论：motion 接入不影响「无 motion 的 modulation」——源码级成立；运行时证据原本只覆盖 context，由第 9 点的 V6 补齐 modulation 侧。** 按 motion 接入 commit `06220c4`（commitV6.5）的 diff 原文逐层核：
 - **模型侧参数树不变**：`PerceptualMemory.__init__` 的两层新参数 `motion_pos_proj`、`motion_encoder_static` 只在 `motion.enabled` 为真时创建，且建在 `feature_encoder` 之后（nnx 默认 RNG 流按调用顺序 fold_in，帧路初始化值不变）。modul-8x8 YAML 没有 `motion` 节，`_motion_enabled` 为 False。
 - **`embed_memory` 关闭态是编译期早返回，执行路径与接入前逐位等价**：函数签名逐字未变（两版都是 `def embed_memory(self, obs: HistAugObservation)`），唯一改动是 `self.mem_encoder(...)` 调用点多传三个关键字实参 `motion_emb / motion_pos / motion_mask`——这三个值在关闭态恒为 `None`（`FrameSampDataset` 的 `_NONE_KEYS` 补键 → `from_dict` 的 `data.get(key, None)`），且 `PerceptualMemory.__call__` 在 `if not self.motion_enabled: return hidden_states, None, None` 之前一条语句都不读它们，传给 `feature_encoder.encode_perceptual_memory` 的三个实参与接入前逐字相同。随后 `if not self.mem_encoder.motion_enabled` 是 Python 编译期分支，早返回分支内的四行（`input_mask = obs.static_mask`、两个全 False 列表、`return`）与接入前的后四行逐字相同。合起来：关闭态执行的运算与返回的四个值与 `06220c4~1` 逐位一致。**注意不能笼统说「函数体与接入前逐字相同」** —— `mem_encoder` 调用在早返回之前，函数体也多了 `if` 与整段开启态代码；成立的是「关闭态执行路径逐位等价」这个更精确的表述。modulation 分支在 `compute_loss` / `sample_actions` 里只取前两个返回值 `mem_seq, mem_mask` 喂 `PaliGemma.llm(..., mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])`。
 - **modulation 的 prefix 不含记忆区**：`embed_prefix` 只在 `integration_type == "context"` 时才把记忆 token 拼进 prefix；modulation 的 prefix 是两路视角各 256 位共 512 图像 token + prompt（**这是训练侧口径**；推理侧 `robomme_policy.py` 只喂 `base_0_rgb` 一路 = 256，引用到评估语境时须注明），RoPE 的 `positions = jnp.cumsum(input_mask, axis=1) - 1` 因此不含记忆位次。**注意力掩码上两条路径口径不同但结果相同**：推理 `sample_actions` 的 modulation 分支把 `na_mask` 丢进 `_`、走 `make_attn_mask` 两参数版；训练 `compute_loss` 在 `use_history=True` 时统一走三参数版（modulation 也不例外），但 modulation 的 `na_mask` 首位就是图像 token 的 `True`（`embed_prefix` 里 `na_mask += [True] * image_tokens.shape[1]`），于是 `make_attn_mask` 内 `jnp.cumsum(mask_na, axis=1) <= 0` 恒为全 False、`mask_not_attend` 恒空，三参数版与两参数版逐位相同——记忆屏蔽项在 modulation 下恒不生效。**只写推理那半句会让人误以为训练也走两参数版，引用时须带上训练侧口径。**
@@ -108,6 +108,35 @@
 - **【中】训练期间在主副本跑 `uv sync` / `uv add` / `uv pip`** —— 会换掉正被训练使用的包文件。写进禁令表；开发副本有自己的 `.venv` 正是为此。
 - **【中】`chmod` 之后仍可能被 root 或 `chmod u+w` 绕过** —— 跑完复查 `git status --porcelain` 仍为空 + 关键文件 sha 与起跑时一致，写进 `result.md`。
 - **【低】失败重试要先清残骸** —— 任何在 `initialize_checkpoint_dir` 之后的失败都会留下半截 run 根与一个 wandb run，而正式 run 名字固定（不像 smoke 带时间戳），重试前必须手工删掉 run 根、`TRAIN_RECORD_DIR` 与那个 wandb run。
+
+**9. 本轮全部验证一览：每项分别证明什么。** 十项，分属四组目的。判据行全部要摘进 `launch.md`；任一 FAIL 即停、把原文交用户处置，不放宽判据。
+
+| # | 验证 | 步骤 | 证明什么 | 判据行 | 耗时 / 资源 |
+|---|---|---|---|---|---|
+| V1 | 配置自检 | 1（已完成） | 新 YAML 与新条目的键值正确、lr 曲线形状对、既有两个条目未被碰 | `CONFIG_OK` | 2 min / CPU |
+| V2 | 守卫三条断言 | 3 | 放宽后的成对白名单确实只放行 `(context,2048)` 与 `(modulation,1024)`，expert 与错配对仍拒 | 三条断言各自 PASS | 含在 V3 内 |
+| V3 | Dataset 轻量对拍 | 3 | **守卫改动不改交付内容**：modul-8x8 与 context-8x8 两份配置在同一库、同一组 256 个索引上，逐样本逐键的 dtype / shape / raw sha256 全等 | `DS_EQUIV=PASS samples=<n> keys=<k> mismatches=0` | 3–5 min / CPU |
+| V4 | 守卫梯度一致 | 4 | **守卫改动不改训练数值**：在 `t8-c8-b` 固化轨迹上重跑前 100 步，逐步五标量 hex、样本索引序列、输入摘要、TrainState 逐叶摘要与基线全等 | `GUARD_GRAD_100=PASS scalars_steps=100 index_n=800 batch_digest_rows=6 state_digest_rows=6` | 30–35 min / GPU 4,5 |
+| V5 | modulation 噪声底 | 5（V6 前置） | **modulation 路径本身是否 bit 级可复现** —— 同一侧连跑两次比逐叶梯度 | 两次逐叶全等 | 含在 V6 内 |
+| V6 | motion 接入对拍 | 5 | **motion 接入不改 modulation 关闭态的数值**：同一份固定 batch、同一初态，接入前后两版代码的 loss 与全部可训练叶梯度逐位相同。8×8 与 4×4 两档各做一次 | `GRAD_EQ=PASS kinds=3 leaves=<n> mismatches=0` + `init_leaves` 逐叶相同 | 15–20 min / 4×A100 |
+| V7 | smoke 20 步 | 7 | **这个配置能不能真跑起来**：modulation × 8×8 能编译、出有限数、per-device 32 不 OOM；norm_stats 正确加载并随 checkpoint 落盘 | `EXIT_CODE=0` + `Integration Type: modulation` + 20 步有限 + norm_stats sha `856c75ea…` | ≤5 min / GPU 4–7 |
+| V8 | 参数树核对 | 7 | **存下来的确实是 modulation 模型**：checkpoint 与 modulation 配置构造出的模型参数树双向精确匹配，六个 modulation 专属叶子都在 | `PARAM_TREE_EXACT=PASS … n_model=61 n_ckpt=61 missing=0 extra=0` + `MEM_PARAMS=PASS n=6` | 1 min / CPU |
+| V9 | 起跑前自检 | 7、9 | **训练从对的地方、用对的环境、拿对的数据起跑**：23 项，含五条专防「在 `-temp` 开发副本里误起训练」 | `PREFLIGHT=PASS n=23` | 5 s / CPU |
+| V10 | 只读复查 | 11 | **训练期间主副本代码一个字节都没变** | `git status --porcelain` 为空 + 三个关键文件 `sha256sum -c` 全对 | 1 min / CPU |
+
+**四组目的，别混为一谈：**
+
+- **V2–V4 服务于「守卫放宽这一处代码改动」**，是 `AGENTS.md` 第 18 条要求的两块：V3 是第一块（非训练轻量对拍，证明交付内容一致），V4 是第二块（真实训练梯度一致，最后检验）。**V4 不通过不得宣称守卫改动等价。**
+- **V5–V6 服务于「motion 接入不影响无 motion 的 modulation」这个结论**（第 7 点），把它从源码级论证提升为运行时实测。V5 必须先做：历史上所有逐位 PASS 都只覆盖 context，modulation 路径的 bit 级确定性从未验证过（`MemoryAttention` 新增了 `jnp.einsum(..., preferred_element_type=jnp.float32)` + softmax 归约）；不先建噪声底，一旦 V6 失配就无法区分「接入改了数」与「modulation 自身不确定」，整轮白跑。
+- **V7–V8 服务于「这条 run 本身跑得对」**，是起正式 run 前的功能性确认，不是等价性证明。
+- **V9–V10 服务于「训练读的代码确实是起跑那一刻的代码」**，一头一尾各一次。
+
+**覆盖边界（明确写出来，避免过度解读）：**
+- V3 只证明**当前源码下**两份配置交付一致，**不比较接入前源码**；覆盖的是 `integration_type` / `memory_token_dim` **外加 context 版多出的整节 `motion:`** 这一组差异的合集，不能把结论单独归因给 `integration_type`。
+- V4 的主判据是 100/100 步全覆盖的五标量与 800 个样本索引；`batch_digest_rows=6` 是**基线既有的取证密度**（`t8-c8-b` 在 step 0..99 只固化了 `{0,1,2,24,49,99}` 六份），不是本轮覆盖不足 —— 判定行必须带 `rows=` 量词，不得写成无条件的 `mismatches=0`。
+- V6 只覆盖**模型侧**（也正是 `06220c4` 唯一改动的地方），数据侧由 V3 覆盖；用的是 400 集库的定点 batch，**不覆盖 1600 集库的读数路径**（那属于 8×8 支持那次改动，已由 `t8-gradient` C8 单独验过）。
+- V8 的 `PARAM_TREE_EXACT=PASS` 已**蕴含**六个 modulation 专属叶子存在（双向精确比对，缺了会进 `missing`）；`MEM_PARAMS` 那条 grep 是正面冗余确认，不是必需。
+- **V6 的归因粒度待定**：当前写法 B 侧用主副本 HEAD，而 HEAD 与 `06220c4` 之间还隔着 8×8 支持、新 config 条目与 `train.py` 改动。若要严格归因到 `06220c4` 这**一个** commit，B 侧应另建 `06220c4` 的 worktree 再跑一次。起跑前请用户确认取哪种粒度。
 
 ### 执行顺序（十一步，全文以本表为准）
 
