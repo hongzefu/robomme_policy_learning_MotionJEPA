@@ -1,8 +1,8 @@
 # 1600 集新库 · 8 帧 8×8 · modulation · 无 motion · b128 60k · lr 5e-5 正式训练计划
 
-> **实施过程档案**（2026-09-15 第六稿，用户批准）。结果以 [`docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/`](docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md) 为准；本文按 `AGENTS.md` 第 2 条分两部分，另含 F（守卫放宽与增补验证）、G（worktree 隔离）、H（审计结论）、I（本文固化）四节。
+> **实施过程档案**（2026-09-15 第七稿，用户批准）。结果以 [`docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/`](docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md) 为准；本文按 `AGENTS.md` 第 2 条分两部分，另含 F（守卫放宽与增补验证）、G（训练锁主副本 + `-temp` 开发副本）、H（审计结论）、I（本文固化）、J（motion 接入前后的 modulation 梯度对拍）五节。
 >
-> **修订史**：第一稿 b64 80k（官方口径）；第二稿 b128 40k lr 1e-4；第三稿 b128 60k lr 5e-5（用户「lr 等效比官方低一倍、40k 延长到 60k」）；第四稿加 F 节（smoke 被 dataset G13 守卫挡下）；第五稿加 H（motion 接入不影响无 motion 的 modulation 的审计结论）、G（不在主工作副本起训练，改从 detached worktree 快照起跑）、I（本文固化到根目录）；**第六稿**按 Codex 审计（`AUDIT_BASE=b625f48`）八条意见 + 逐条对抗验证的结论重修，改动集中在四处：B/C 两节启动命令重写为 runner 内外分层、F 节 commit 顺序倒置并给 F3 独立留档、第 7 点两处论证措辞纠正、G 节隔离补 `openpi_client` 与 norm_stats 绝对路径。
+> **修订史**：第一稿 b64 80k（官方口径）；第二稿 b128 40k lr 1e-4；第三稿 b128 60k lr 5e-5（用户「lr 等效比官方低一倍、40k 延长到 60k」）；第四稿加 F 节（smoke 被 dataset G13 守卫挡下）；第五稿加 H（motion 接入不影响无 motion 的 modulation 的审计结论）、G（不在主工作副本起训练，改从 detached worktree 快照起跑）、I（本文固化到根目录）；**第六稿**按 Codex 审计（`AUDIT_BASE=b625f48`）八条意见 + 逐条对抗验证的结论重修（B/C 启动命令重写为 runner 内外分层、F 节 commit 顺序倒置并给 F3 独立留档、第 7 点两处论证措辞纠正）；**第七稿**（用户 2026-09-15 拍板三项）把隔离方案整个反转——训练留主副本并 `chmod` 锁只读、开发转 `-temp` 副本（`AGENTS.md` 第 13/14 条已同步修订），新增 `scripts/training/preflight_train_launch.py` 起跑前自检，并把 motion 接入前后的 modulation 梯度对拍（8×8 与 4×4 两档）立为正式 run 前的必经步骤（J 节）。
 >
 > **进度**：步骤 1 已完成（`commitV9.5` = `e0bcb45`，后续又有 `b625f48`）。**注意：第五稿写的「守卫白名单已改在工作区」已失真** —— `b625f48` 工作区 `git status --porcelain` 为空，`framesamp_dataset.py` 的 `_req(hc.integration_type == "context", ...)` 与 `_req(int(hc.memory_token_dim) == 2048, ...)` 仍是原守卫（现位于 `_req` 断言组内，紧接 `perceptual_memory.type` 那条之后）。**执行步骤 2 前必须重新写入 F1 的白名单**，不得以为已改而直接跑 F2。smoke 临时产物已清理；其余步骤待用户指令后执行。
 
@@ -20,9 +20,9 @@
 
 上一条生产 run `awsprod40k-b128-motion`（2026-09-04→06）用旧 400 ep 四任务库、32 帧 × 4×4、context + motion。2026-09-14 新库 `4task-v2-1600ep-604f16da`（BinFill / RouteStick / VideoRepick / VideoUnmaskSwap 各 400 集，605,611 执行样本）建成并通过 20 步可读性验收；同日 8 帧 × 8×8 布局（`framesamp-8x8` 库，292 G，`VERIFY_PACK=PASS`）完成逐位验收。本轮在新库上训练第一条 **8 帧 × 8×8 + modulation + 无 motion** 的正式模型，作为后续对照基线。lr 取比线性缩放保守一档、步数从 40k 延长到 60k，以补偿更小步长。
 
-### 结论先行：两处配置改动、零代码改动；先 20 步 smoke 再起正式 run
+### 结论先行：两处配置改动 + 两处代码改动；先对拍与 smoke，再起正式 run
 
-**1. 改动只有两个配置文件。**
+**1. 配置改动两个文件（本节），代码改动两处（F 节的 dataset 守卫白名单、第 8 点的 preflight 自检脚本）。第五稿写的「零代码改动」自第四稿加 F 节起已不成立，第七稿再加一个脚本。**
 - 新 YAML `src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8.yaml`：以 `perceptual-framesamp-modul.yaml` 为底只把 `token_per_image` 16 → 64。现有 modul.yaml 是 32 帧 × 4×4，context-8frame-8x8.yaml 是 8×8 但 context，各差一两行。
 - 新条目 `mme_vla_suite_b128_60k`（`src/mme_vla_suite/training/config.py`）：复制 `mme_vla_suite_b128`，改 `num_train_steps 60_000`、`peak_lr = decay_lr = 5e-5`、`decay_steps 60_000`（peak == decay 时余弦段为常数，改它只为自洽）、`data.assets.assets_dir` 指到新库 norm_stats 目录。`mme_vla_suite`（官方参照）与 `mme_vla_suite_b128`（上次生产口径）一字不动。
 
@@ -69,33 +69,67 @@
 - **证据边界**：运行时逐位证据只在 context 关闭态取过（环境 A `motion-t1-closed` 对 G0b 逐位同、`motion-t2-ref/cand`；环境 B `aws-t3-closed-s100`、t8 C8/C32）。modulation 关闭态没有单独跑过对拍，`v1-postclean-g3` 登记的 UNVERIFIED 状态未变。F 节第一块把「两份配置在**当前源码**下数据侧交付一致」从论证变成实测——**它不比较接入前源码**，接入前/接入后的数据侧逐位证据仍只有 context 关闭态那几次。
 - **模型侧仍是源码级；若要实测，对照只能是「接入前代码 vs 接入后代码的两版模型」，但照官方 modul.yaml 直接起训练起不来。** `06220c4~1`（= `c5925d9`，commitV6.4）的 `FrameSampDataset.__init__` 里那两条 G13 守卫（commitV3.1 `6ee7494` 于 2026-08-27 加入，**比 motion 接入 `06220c4`（2026-09-03）早七天**）会在构造期直接 raise；换 400ep 4×4 库也一样被拒——4×4 只过得了 `(budget, token_per_image, num_views) == (512,16,1)` 那条，过不了 `integration_type == "context"` 与 `memory_token_dim == 2048` 这两条。另立任务时有两条可行路径，二选一：**(a)** 把 F1 的同一条成对白名单原样搬到 `06220c4~1` 与 `06220c4` 两个 detached worktree 上再各起训练——该守卫是纯构造期 `raise`-or-noop、交付路径一行不读，改它不可能改数，两侧同补即可；**(b)** 完全绕开 Dataset：用 context YAML（过守卫）取一份固定 batch 落盘，再把同一份 batch 分别喂给两版模型的 modulation 分支比 loss / 梯度逐叶 hex。注意 modulation 的记忆只经 cross-attention 进 LLM，**没有 `embed_prefix` 那种便宜的中间产物**，(b) 必须跑完整前向，宜复用 `single_step_grad.py` 的固定 state + 固定 batch 口径；且 `closed_equiv.py`、`ref_npy_dataset.py`、`motion_gates_model.py`、`dump_fixture_samples.py`、`single_step_grad.py`、`g0/bench_train_steps.py` 全部把 context 写死，覆盖 modulation 需逐个放宽（估约 150–250 行新代码），**(b) 省的是 GPU 时间不是工作量**。另：「接入前 HEAD 不认 8×8」只是 Dataset 侧的 `(512,16,1)` 断言，模型侧 `PerceptualMemory.__call__` 仅断言 `static_image_emb.shape[1] == budget`（512），(b) 路径下可直接用 8×8。**若目的是把差异归因到 motion 接入本身，对照应取 `06220c4~1` vs `06220c4` 这对相邻 commit，而不是 vs 当前 HEAD**——后者之间还隔着 V9.0–V9.5 的 8×8 支持、新 config 条目与 `train.py` 改动。两条路径都属另立任务，不在本计划内。
 
-**8. 隔离：训练不从主工作副本起跑，而从 detached worktree 快照起跑。** 主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA` 在 65 小时训练期间随时可能有新 commit（留档、评估、其他任务）；Python 在 dataloader worker 重建、checkpoint 保存等时刻会重新 import 源文件，主树被改就可能把新代码带进正在跑的训练。做法沿用 t8 那轮 REF worktree 的既有口径：起跑 commit 记为 `TRAIN_HEAD`，`git worktree add --detach v1-store/worktrees/train-v2-1600ep-m8x8-modul-b128-60k $TRAIN_HEAD` 建只读快照；训练命令 `cd` 到快照根、`PYTHONPATH=<快照>/src:<快照>/packages/openpi-client/src`（压过主树 `.venv` 里 editable 安装的绝对路径 `.pth`；**必须含 openpi-client**，见下）、`UV_PROJECT_ENVIRONMENT=<主树>/.venv`（快照里没有 venv，复用主树的）、`uv run --no-sync`；`source` 的是**主树**的 `scripts/training/paths.sh`（它按自身位置解析 `REPO_ROOT`，所以 `V1_STORE` / `OPENPI_DATA_HOME` 仍指主树 `v1-store`），数据、权重、checkpoint、日志全部走主树 `v1-store` 绝对路径；`get_history_config` 按 cwd 相对路径读 YAML，cwd 是快照，读到的是快照里的 YAML。起跑前一行 preflight 打印并断言 **`mme_vla_suite`、`openpi`、`openpi_client` 三个包**的 `find_spec().origin` 与 `train.py` 路径都落在快照内，写进日志与 `launch.md`。smoke 也从快照跑，同时验证隔离机制本身。训练结束、`result.md` 提交后再 `git worktree remove` 快照。
+**8. 隔离：训练留在主副本并锁死只读，开发转到 `-temp` 开发副本。** 训练要跑 65 小时，而 Python 会在 dataloader worker 重建、checkpoint 保存等时刻**重新 import 源文件** —— 主副本被改就可能把新代码带进正在跑的训练，结果不可复现。
 
-**第五稿此处有两个错，第六稿更正：**
+**第七稿（2026-09-15 用户拍板）把第五/六稿的做法反了过来。** 原做法是把训练挪进 detached worktree 快照、主副本照常开发；新做法是**训练留在主副本不动，开发挪去 `-temp`**。
 
-1. **「`openpi-client` 训练不 import」是错的。** `src/openpi/transforms.py` 顶层 `from openpi_client import image_tools` 无条件执行，而 `train.py` → `mme_vla_suite/training/config.py` 顶层 `import openpi.transforms`，一跳不落；且自建 dataloader 只替换了 Dataset 本体，`dataloader.py` 仍调 openpi 的 `transform_dataset`，transform 链里 `ResizeImages(224,224)` **每个样本调两次** `resize_with_pad`（两路视角）——历史 run 启动日志 `docs/training-doc/awsprod40k-b128-motion/records/run.txt` 的 Data config 行逐字印证。所以 `PYTHONPATH` 必须同时含快照的 `packages/openpi-client/src`（它是仓库跟踪的普通目录，不是 submodule，快照里必然存在；`.gitmodules` 只有 `third_party/robomme_benchmark` 一条）。严重度实为 P2 而非 P1：该包自建库以来只有 1 个 commit，训练期被改的概率极低——但修复成本只是一个环境变量。
-2. **norm_stats 必须传绝对路径 flag。** 新条目里的 `data.assets.assets_dir` 是**仓库相对路径**，而 `config.py` 的取值是 `self.assets.assets_dir or assets_dirs` ——短路，条目非 None 就永远走条目；`maybe_download` 对无 scheme 的路径直接 `pathlib.Path(url)`，纯 **cwd 相对**，全链路无 repo-root 锚定。`cd $WT` 后会去找 `$WT/v1-store/train-assets/...`，而快照里没有 `v1-store`，加载返回 None，随即在 `framesamp_dataset.py` 取 `data_config.norm_stats["state"]` 时抛 `TypeError`。**所以 B/C 两节都必须显式传 `--data.assets.assets-dir "$V1_STORE/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da"`**（该 flag 真实存在，`v2b-read20-20260914T174147Z` 等十余份 launch.md 都这么写）。顺带：`--assets-base-dir "$V1_STORE/train-assets"` 对本条目其实是**死参数**——回退目标是 `train-assets/<config.name>` = `.../mme_vla_suite_b128_60k`，而该目录下只有 `mme_vla_suite/`；它在历史 run 里"看着有用"只因那些 run 的 config 名恰好是 `mme_vla_suite`。保留无害，但别把它当保险。
+**为什么反过来更好。** 两种做法都要让「跑代码的那一侧」接回 `v1-store`（3.9 T，实测，不可能复制第二份）与 `.venv`（7.1 G）—— 复杂度不会消失，只会转移。但**风险不对称**：
 
-**注意不能用「cwd 留主树」来绕开第 2 点**：`get_history_config` 同样是 cwd 相对读 YAML，改 cwd 会读到主树 YAML、破坏隔离本身。传绝对 flag 是唯一正确解。
+| 复杂度落在哪一侧 | 接错的后果 |
+|---|---|
+| 训练侧（worktree 方案） | 65 h 白跑或结果被污染，且「忘 `cd`」「`PYTHONPATH` 漏 openpi-client」两类错误**完全静默、零症状** |
+| 开发侧（本方案） | 开发时当场报错，重试成本几分钟 |
 
-**隔离机制本身已实测有效**：主树 `.venv` 里是两个**纯路径 `.pth`**（`_editable_impl_openpi.pth` / `_editable_impl_openpi_client.pth`），不是 `__editable___*_finder.py` 那种 MetaPathFinder，且三个包都有 `__init__.py`（regular package）。`.pth` 的路径由 `site.addsitedir` **append** 到 `sys.path` 尾部，而 `PYTHONPATH` 在解释器初始化时就在前段——所以 `PYTHONPATH` 确实压得过。这两点是 G 节成立的前提，`launch.md` 里要把 `cat` 两个 `.pth` 的输出与「site-packages 内无 `__editable___*_finder.py`」一并记下；将来若 `uv sync` 重装换成 finder 风格的 editable，整个机制会静默失效（届时 `IMPORT_ORIGIN` 断言会抓住它）。
+把复杂度挪到可以试错的一侧，是实质性的改进。附带好处：训练命令回到历史跑通的简单形态（cwd = 主副本，条目里的相对路径本来就解析得对），worktree 方案那「四件事缺一不可」连同大半 preflight 检查一起消失。
 
-**已知残余**：`third_party/` 子模块快照里未初始化，训练链路不 import（已 grep 确认）；`scripts/training/paths.sh` 用主树那份（按 `BASH_SOURCE` 解析 `REPO_ROOT`，只导出路径变量、不 mkdir、不含训练逻辑）。两者写进 launch.md。
+**训练侧（主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`）**：cwd = 主副本；不设 `PYTHONPATH`（靠主副本 `.venv` 的 editable 安装）；`UV_PROJECT_ENVIRONMENT` 无需设置；`source` 主副本的 `paths.sh`。起跑后立即 `chmod -R a-w src scripts packages` 锁死只读，训练结束后 `chmod -R u+w` 恢复 —— 把「不改主副本」从纪律变成技术闸。
+
+**开发侧（`/scratch/hongze/robomme_policy_learning_MotionJEPA-temp`）**：`git clone` 主副本建立（不用 `git worktree`，clone 出来完全独立，主副本 `.git` 一个字节都不会被写）；`ln -s <主副本>/v1-store v1-store`；`uv sync` 建**自己的** `.venv`。
+
+**三条红线（`AGENTS.md` 第 14 条已同步修订，加了开发副本例外条款）**：
+1. `-temp/v1-store` 是**可写**的 symlink（与环境 A 的只读 turbo 链性质不同）—— 在开发副本里写 `v1-store/` **等同于直接写主副本数据**。
+2. **开发副本里禁止执行任何带 `--force` 或输出根参数的破坏性命令** —— `build_dataset.py --force` 会 `rmtree` 整个输出根，穿透 symlink 即删主副本数据。确需执行时回到主副本。
+3. 开发副本**必须有自己的 `.venv`**，不得共用主副本的 —— 共用时 `uv sync` / `uv add` 会换掉正被训练进程使用的包文件。
+
+**起跑前自检 `scripts/training/preflight_train_launch.py`**（新增，纯 stdlib、零副作用，非零退出即中止）。最要紧的一类误操作是**在开发副本里误起正式训练** —— 两边源码高度相似，跑起来不会有任何症状，但训练读的是随时在改的开发代码。五条从不同角度堵它：
+
+| 检查 | 判据 |
+|---|---|
+| `CHECK_CWD` | cwd 必须等于主副本路径（路径直比，与内容无关） |
+| `CHECK_PKG_*` | `mme_vla_suite` / `openpi` / `openpi_client` 三个包的 origin 都在主副本下 |
+| `CHECK_SYS_PREFIX` | 解释器就是主副本的 `.venv` |
+| `CHECK_V1_STORE_REAL` | `<repo>/v1-store` 是**实体目录** —— 开发副本那份是 symlink，天然可分 |
+| `CHECK_NOT_DEV_COPY` | 仓库根目录名不以 `-temp` 结尾 |
+
+其余检查覆盖：YAML 路径与 sha256、`norm_stats.json` 的存在与 sha256（**在训练启动前就查**，不等 dataloader 抛 `TypeError`）、数据集与两个 `MMEVLA_FRAMESAMP_*` 环境变量、主副本 HEAD == `TRAIN_HEAD` 且 clean、run 根不存在，以及**把交给 `train.py` 的参数数组同时喂给 preflight 逐字校验**四个关键 flag。共 23 项，已实测：正向 22/23 PASS（唯一 FAIL 是脚本自身未提交导致的 `REPO_CLEAN`），负向漏传 `--data.assets.assets-dir` 被准确抓出并归因到「数据参数」。
+
+**第六稿审计发现的两条，在新方案下的处置**：
+1. **`openpi-client` 确实在训练链路上**（`openpi/transforms.py` 顶层 `from openpi_client import image_tools`，`ResizeImages` 每样本调两次）—— 但新方案不需要手工设 `PYTHONPATH`，它靠主副本 `.venv` 的 editable 安装天然从主副本加载。preflight 仍查它的 origin，用来抓「`PYTHONPATH` 被污染指向 `-temp`」。
+2. **norm_stats 的 `assets_dir` 是 cwd 相对路径** —— cwd = 主副本时本来就解析得对，不再是必须。但命令仍显式传绝对路径：消除对 cwd 的隐式依赖，且让 preflight 的 `CLI_ASSETS_DIR` 有东西可校验。顺带记住 `--assets-base-dir` 对本条目是**死参数**（回退目标 `train-assets/mme_vla_suite_b128_60k` 不存在），别把它当保险。
+
+**仍然防不住的**（写进 `launch.md`）：
+- **【高】两份 argv 不同源** —— preflight 的保证建立在「它校验的 argv 与 `train.py` 真收到的是同一个 bash 数组」上。分别手写两份，这层保护就回到零。无技术兜底，靠 runner 写法 + 纪律。
+- **【中】训练期间在主副本跑 `uv sync` / `uv add` / `uv pip`** —— 会换掉正被训练使用的包文件。写进禁令表；开发副本有自己的 `.venv` 正是为此。
+- **【中】`chmod` 之后仍可能被 root 或 `chmod u+w` 绕过** —— 跑完复查 `git status --porcelain` 仍为空 + 关键文件 sha 与起跑时一致，写进 `result.md`。
+- **【低】失败重试要先清残骸** —— 任何在 `initialize_checkpoint_dir` 之后的失败都会留下半截 run 根与一个 wandb run，而正式 run 名字固定（不像 smoke 带时间戳），重试前必须手工删掉 run 根、`TRAIN_RECORD_DIR` 与那个 wandb run。
 
 **当前状态**：`commitV9.5` 已 push（其后又有 `b625f48`）；**守卫白名单不在工作区**（工作区 clean，第五稿此处失真），步骤 2 要重新写入；smoke 临时产物与 tmux `m8-smoke` 已清理；GPU 4–7 空闲，GPU 0 有他轮评估在跑（tmux `eval-vla0914-full1600-best-a`，不得触碰）。
 
-### 执行顺序（第六稿，八步；第五稿的六步编号在 F 节末尾还残留着第四稿的旧编号，此处统一，全文以本表为准）
+### 执行顺序（第七稿，十一步；第五稿的六步编号与第六稿的八步编号均作废，全文以本表为准）
 
 1. 新 YAML + 新条目 → 验证 → `commitV9.5` → push。**（已完成，`e0bcb45`）**
-2. **F1/F1b**：重新写入守卫成对白名单 + G13 测试改写（都只改工作区，不提交）。
+2. **F1/F1b**：重新写入守卫成对白名单 + G13 测试改写（只改工作区，不提交）。
 3. **F2**：CPU 轻量对拍 + 三条守卫断言（3–5 分钟，≤5 分钟不触发 AGENTS 17）→ `DS_EQUIV=PASS`。
-4. **F2.5 → F3**：先 `commitV9.6`（守卫 + 测试改写）+ push，工作区回到 clean；再从该 clean HEAD 起跑 `t8-c8-guard-s100`（tmux `m8-guard`，30–35 分钟，`BENCH_CHECKSUM=1`）→ `GUARD_GRAD_100=PASS` → 建 `docs/training-doc/t8-c8-guard-s100/` 三件套 + README 加行 → `docs:` commit → push。**FAIL 则 `git revert` commitV9.6 + push，停下交用户处置。**
-5. 本计划固化为根目录 `v2-1600ep-m8x8-modul-training-plan.md` + `docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md` 初稿 + `docs/training-doc/README.md` 加行 → `docs:` commit → push → **记 `TRAIN_HEAD`（40 位 sha，抄进 launch.md，后续命令一律粘字面量）** → 建 worktree 快照。（G、I 节）
-6. 从快照起 smoke（tmux `m8-smoke`）→ 核判据（含 `IMPORT_ORIGIN=PASS`）→ 删临时产物。（B 节）
-7. `launch.md` 补 smoke 与步骤 3/4 的判定行摘录 → `docs:` commit → push（主树；快照仍停在 `TRAIN_HEAD`，训练代码不受影响）→ 从快照起正式 run（tmux `m8-prod`）→ 挂 Monitor。（C 节）
-8. 跑完（约 65 h 后）：`result.md` + `records/` → `docs:` commit → push → `git worktree remove` 快照。评估另立任务。
+4. **F2.5 → F3**：先 `commitV9.6` + push，工作区回到 clean；再从该 clean HEAD 起跑 `t8-c8-guard-s100`（tmux `m8-guard`，30–35 分钟，`BENCH_CHECKSUM=1`）→ `GUARD_GRAD_100=PASS` → 建 `docs/training-doc/t8-c8-guard-s100/` 三件套 + README 加行 → `docs:` commit → push。**FAIL 则 `git revert` commitV9.6 + push，停下交用户处置。**
+5. **【第七稿新增】motion 接入前后的 modulation 梯度对拍**（用户 2026-09-15 拍板：放在正式 run 起跑前做）。两档都做：8 帧 8×8 与 32 帧 4×4。走「固定 batch 喂两版模型」，**不走**「两棵源码树各起训练」—— 后者对 8×8 要把 `StoreSpec` 重构 backport 进接入前 HEAD，那次改动动了 8 处热读路径（pread offset、缓冲字节数、`posix_fadvise` 区间、memoryview 切片、`.reshape()`、pos 小表路径与 shape），属「可能改数」，会让对照基础塌掉。详见 J 节。
+6. 本计划固化为根目录 `v2-1600ep-m8x8-modul-training-plan.md` + `docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md` 初稿 + `docs/training-doc/README.md` 加行 → `docs:` commit → push。（I 节）
+7. 从**主副本**起 smoke（tmux `m8-smoke`）→ 核判据（含 `PREFLIGHT=PASS`）→ 删临时产物。（B 节）
+8. `launch.md` 补 smoke 与步骤 3/4/5 的判定行摘录 → `docs:` commit → push → **此刻记 `TRAIN_HEAD` = 主副本 HEAD**（抄进 launch.md）→ `git clone` 建开发副本 `-temp` + symlink v1-store + `uv sync`。（G 节）
+9. 从**主副本**起正式 run（tmux `m8-prod`）→ `PREFLIGHT=PASS` 且训练确认进入稳态后，立即 `chmod -R a-w src scripts packages` 锁死只读 → 挂 Monitor。（C 节）
+10. 训练期间（约 65 h）：**一切开发、验证与留档编辑都在 `-temp` 里做**，主副本只读不写；禁止在主副本跑 `uv sync` / `uv add` / `uv pip`。
+11. 跑完：`chmod -R u+w src scripts packages` 解除只读 → 复查 `git status --porcelain` 仍为空且关键文件 sha 与起跑时一致（写进 `result.md`）→ `result.md` + `records/` → `docs:` commit → push → 视情况删除 `-temp`。评估另立任务。
 
-> **步骤 7 正是 `TRAIN_HEAD` 不能重算的原因**：它要求起正式 run 之前先给 `launch.md` 补 smoke 判定行并 commit + push，所以 C 节起跑时主树 HEAD **一定已不等于** `TRAIN_HEAD`。命令里若写 `$(git rev-parse HEAD)`，那条断言会 100% 失败。
+> **与第六稿的关键差别**：`TRAIN_HEAD` 不再需要提前冻结再粘字面量 —— 训练就跑在主副本上，起跑前一刻记下 HEAD 即可，preflight 用它做断言。worktree 方案里「主树会在步骤 7 又多一个 commit，所以不能重算 `TRAIN_HEAD`」那个坑随方案一起消失。
 
 ---
 
@@ -188,22 +222,22 @@ commit：`git add` 仅这两个文件；subject `commitV9.5: 新增 modulation 8
 
 ### B. smoke（20 步、真实 b128 / 4 卡、临时 run，跑完删）
 
-run_name `smoke-m8x8-modul-$(date -u +%Y%m%dT%H%M%SZ)`，tmux `m8-smoke`，日志 `v1-store/logs/m8-smoke.log`。**从 worktree 快照起跑（G 节），不在主树跑。**
+run_name `smoke-m8x8-modul-$(date -u +%Y%m%dT%H%M%SZ)`，tmux `m8-smoke`，日志 `v1-store/logs/m8-smoke.log`。**从主副本起跑**（第七稿方案，G 节），此时尚未锁只读。
 
-**第六稿为什么整段重写命令。** 第五稿的命令块照原样粘贴**一步都跑不起来**，且有一种死法会写出假成功，四条实测：
+**为什么命令是这个形状（第六稿的四条实测教训仍然适用）。** 第五稿的命令块照原样粘贴**一步都跑不起来**，且有一种死法会写出假成功：
 
-1. 块内从未给 `RUN` / `LOG` / `TRAIN_HEAD` 赋值，而 `paths.sh` 开头是 `set -euo pipefail`——`set -u` 下第一次展开 `$RUN` 就 `unbound variable` 退出。
-2. `set -e` 会持续作用于调用方 shell，于是 `uv run ... | tee -a "$LOG"` 失败后 shell **当场退出**，后面那行 `echo "EXIT_CODE=${PIPESTATUS[0]}"` 永远执行不到（AGENTS 7 要求的结束标记丢失）。
+1. 块内从未给 `RUN` / `LOG` 赋值，而 `paths.sh` 开头是 `set -euo pipefail` —— `set -u` 下第一次展开 `$RUN` 就 `unbound variable` 退出。
+2. `set -e` 会持续作用于调用方 shell，于是 `uv run ... | tee -a "$LOG"` 失败后 shell **当场退出**，后面那行 `echo "EXIT_CODE=${PIPESTATUS[0]}"` 永远执行不到。
 3. 最"自然"的修法 `cmd | tee log || true` **绝不可用**：实测 `|| true` 会把 `PIPESTATUS` 冲成 `(0)`，`EXIT_CODE=` 稳定打印 0，把失败 run 记成成功。
-4. `nvidia-smi ... > csv &` 只重定向了 stdout，stderr 仍挂在 body 的管道上；训练结束后若采样器未被杀，`tee` 因写端未全关而不退出，`EXIT_CODE=` 同样写不进日志。
+4. `nvidia-smi ... > csv &` 只重定向了 stdout，stderr 仍挂在 body 的管道上；采样器未被杀时 `tee` 因写端未全关而不退出，`EXIT_CODE=` 同样写不进日志。
 
-解法照抄 `docs/training-doc/t8-c8-b/launch.md` 已跑通的**内外分层**：`set -e` 活在 `body()` 里（保住「不满足就不起跑」的断言硬闸），`tee` + `EXIT_CODE` 活在 body 外（保住必落盘），`trap ... EXIT` 收采样器。命令落成 runner 脚本再交给 tmux，而不是内联进 `tmux new-session "..."` 字符串——块内有 `<<'PY'` heredoc 与 `${PIPESTATUS[0]}`，内联要做三层转义。顺带解决另一个坑：`paths.sh` 有一整片 `readonly`，把 `source` 关进 `body()`（管道 → 子 shell）后，重跑 runner 不会被「`REPO_ROOT: readonly variable`」打死。
+解法照抄 `docs/training-doc/t8-c8-b/launch.md` 已跑通的**内外分层**：`set -e` 活在 `body()` 里（保住断言硬闸），`tee` + `EXIT_CODE` 活在 body 外（保住必落盘），`trap ... EXIT` 收采样器。命令落成 runner 脚本再交给 tmux，而不是内联进 `tmux new-session "..."` 字符串。把 `source` 关进 `body()`（管道 → 子 shell）还顺带免疫了 `paths.sh` 那片 `readonly` 导致的「重跑时 `REPO_ROOT: readonly variable` 报错退出、错误信息与真实问题毫无关系」。
 
-> 注：`docs/training-doc/awsprod40k-b128-motion/launch.md` 那份历史留档**带同款缺陷**（`$LOG` 未赋值 + `set -e` 下 `EC=${PIPESTATUS[0]}` 拿不到），它留下 `EXIT_CODE=0` 纯粹因为那次训练成功了、没走失败路径。**不要拿它当模板。**
+> 注：`docs/training-doc/awsprod40k-b128-motion/launch.md` 那份历史留档**带同款缺陷**（`$LOG` 未赋值 + `set -e` 下 `EC=${PIPESTATUS[0]}` 拿不到），它留下 `EXIT_CODE=0` 纯粹因为那次训练成功了。**不要拿它当模板。**
 
-**前置**：主树 `git status --porcelain` 空且 HEAD 含 `commitV9.6`；快照存在且 `git -C <快照> rev-parse HEAD == TRAIN_HEAD`；`nvidia-smi --id=4,5,6,7` 显存 0；run 根不存在。这些都写成 `body()` 里的 `test`，由 `set -e` 兜底。
+**前置**：主副本 clean 且 HEAD 含 `commitV9.6`；GPU 4–7 显存 0；run 根不存在。除 GPU 外全部由 preflight 断言，GPU 那条写成 `body()` 里的 `test`。
 
-**B-0. 生成 runner（在主树用普通 Bash 执行，不进 tmux）**
+**B-0. 生成 runner（在主副本用普通 Bash 执行，不进 tmux）**
 
 ```bash
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
@@ -213,64 +247,62 @@ cat > "$MAIN/v1-store/logs/m8-smoke-runner.sh" <<'RUNNER'
 # 外层：故意不开 -e，保证 EXIT_CODE 在任何死法下都落盘（t8-c8-b「外层 tee + EXIT_CODE」口径）
 set -o pipefail
 
-RUN="${1:?用法: m8-smoke-runner.sh <RUN> <TRAIN_HEAD>}"
-TRAIN_HEAD="${2:?用法: m8-smoke-runner.sh <RUN> <TRAIN_HEAD>}"
+RUN="${1:?用法: m8-smoke-runner.sh <RUN> <TRAIN_HEAD> <HC_SHA256>}"
+TRAIN_HEAD="${2:?}"
+HC_SHA="${3:?}"
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
-WT="$MAIN/v1-store/worktrees/train-v2-1600ep-m8x8-modul-b128-60k"
 LOG="$MAIN/v1-store/logs/m8-smoke.log"
 DS="$MAIN/v1-store/datasets/4task-v2-1600ep-604f16da"
 mkdir -p "$(dirname "$LOG")"
 
 body() {
   # 内层：-euo pipefail 就位，下面每条 test 都是「不满足就不起跑」的硬闸
-  source "$MAIN/scripts/training/paths.sh"   # 只导出路径变量；不 mkdir；按 BASH_SOURCE 解析 REPO_ROOT=$MAIN
+  cd "$MAIN"                                 # 训练就跑在主副本上，不再有 worktree
+  source "$MAIN/scripts/training/paths.sh"   # 只导出路径变量；不 mkdir；按 BASH_SOURCE 解析 REPO_ROOT
 
-  printf 'RUN=%s\nTRAIN_HEAD=%s\nWORKTREE=%s\nV1_STORE=%s\nSTART_UTC=%s\n' \
-    "$RUN" "$TRAIN_HEAD" "$WT" "$V1_STORE" "$(date -u +%FT%TZ)"
+  printf 'RUN=%s\nTRAIN_HEAD=%s\nREPO=%s\nV1_STORE=%s\nSTART_UTC=%s\n' \
+    "$RUN" "$TRAIN_HEAD" "$MAIN" "$V1_STORE" "$(date -u +%FT%TZ)"
 
-  cd "$WT"                                   # cwd = 快照：get_history_config 按 cwd 相对路径读快照 YAML
-  export PYTHONPATH="$WT/src:$WT/packages/openpi-client/src"
-  export UV_PROJECT_ENVIRONMENT="$MAIN/.venv"
+  unset PYTHONPATH                           # 靠主副本 .venv 的 editable 安装；设了会被 preflight 拦
   export UV_CACHE_DIR=/scratch/hongze/.cache/uv PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
   export CUDA_VISIBLE_DEVICES=4,5,6,7
   unset JAX_PLATFORMS MMEVLA_MOTION_STORE
   export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
-  export MMEVLA_JAX_CACHE_DIR="$V1_STORE/cache/jax/m8-smoke"   # 固定目录：避免每轮 smoke 都从零编译
+  export MMEVLA_JAX_CACHE_DIR="$V1_STORE/cache/jax/m8-smoke"   # 固定目录：避免每轮 smoke 从零编译
   export TRAIN_RECORD_DIR="$V1_STORE/bench/$RUN"
   export MMEVLA_FRAMESAMP_SOURCE="$DS/source"
   export MMEVLA_FRAMESAMP_MANIFEST="$DS/meta/episode_manifest.json"
   export WANDB_MODE=disabled
 
-  test -z "$(git -C "$MAIN" status --porcelain)"
-  test "$(git -C "$WT" rev-parse HEAD)" = "$TRAIN_HEAD"
-  test -z "$(git -C "$WT" status --porcelain)"
-  test ! -e "$V1_STORE/train-runs/mme_vla_suite_b128_60k/$RUN"
-  test ! -e "$TRAIN_RECORD_DIR"
+  # GPU 空闲（preflight 不查硬件）
+  test "$(nvidia-smi --id=4,5,6,7 --query-gpu=memory.used --format=csv,noheader,nounits | paste -sd+ | bc)" = "0"
 
-  # 导入来源断言（四项：三个包 + train.py，全部须在 $WT 下）；输出经外层 tee 落日志
-  JAX_PLATFORMS=cpu uv run --no-sync python - "$WT" <<'PY'
-import importlib.util, pathlib, sys
-wt = pathlib.Path(sys.argv[1]).resolve()
-o = {n: pathlib.Path(importlib.util.find_spec(n).origin).resolve()
-     for n in ("mme_vla_suite", "openpi", "openpi_client")}
-tp = pathlib.Path("scripts/training/train.py").resolve()
-assert tp.is_file(), f"train.py 不存在: {tp}"
-o["train.py"] = tp
-bad = {k: str(v) for k, v in o.items() if wt not in v.parents}
-print("IMPORT_ORIGIN=" + ("PASS" if not bad else "FAIL") + " "
-      + " ".join(f"{k}={v}" for k, v in o.items()), flush=True)
-sys.exit(1 if bad else 0)
-PY
+  ASSETS_DIR="$V1_STORE/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da"
+  HC=perceptual-framesamp-modul-8frame-8x8.yaml
 
-  uv run --no-sync python scripts/training/train.py mme_vla_suite_b128_60k \
-    --exp-name "$RUN" --num-train-steps 20 --log-interval 1 \
-    --assets-base-dir "$V1_STORE/train-assets" \
-    --data.assets.assets-dir "$V1_STORE/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da" \
-    --data.assets.asset-id robomme \
-    --checkpoint-base-dir "$V1_STORE/train-runs" \
+  # 唯一真源：preflight 校验的 argv 与 train.py 真收到的 argv 是同一个数组
+  TRAIN_ARGS=(
+    mme_vla_suite_b128_60k
+    --exp-name "$RUN"
+    --num-train-steps 20 --log-interval 1 --no-wandb-enabled
+    --assets-base-dir "$V1_STORE/train-assets"
+    --data.assets.assets-dir "$ASSETS_DIR"
+    --data.assets.asset-id robomme
+    --checkpoint-base-dir "$V1_STORE/train-runs"
+    --dataset-path "$DS/framesamp-8x8"
+    --model.history-config "$HC"
+  )
+
+  JAX_PLATFORMS=cpu uv run --no-sync python scripts/training/preflight_train_launch.py \
+    --repo "$MAIN" --train-head "$TRAIN_HEAD" \
+    --history-config "$HC" --history-config-sha256 "$HC_SHA" \
+    --assets-dir "$ASSETS_DIR" --asset-id robomme \
+    --norm-stats-sha256 856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173 \
     --dataset-path "$DS/framesamp-8x8" \
-    --model.history-config perceptual-framesamp-modul-8frame-8x8.yaml \
-    --no-wandb-enabled
+    --run-root "$V1_STORE/train-runs/mme_vla_suite_b128_60k/$RUN" \
+    -- "${TRAIN_ARGS[@]}"
+
+  uv run --no-sync python scripts/training/train.py "${TRAIN_ARGS[@]}"
 }
 
 body 2>&1 | tee -a "$LOG"
@@ -281,31 +313,33 @@ RUNNER
 chmod +x "$MAIN/v1-store/logs/m8-smoke-runner.sh"
 ```
 
-**B-1. 起跑（`RUN` 与 `TRAIN_HEAD` 在这里显式赋值并作为参数传进 tmux）**
+**B-1. 起跑**
 
 ```bash
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
+cd "$MAIN"
 RUN="smoke-m8x8-modul-$(date -u +%Y%m%dT%H%M%SZ)"
-TRAIN_HEAD=<把步骤 5 打印的 40 位 sha 原样粘在这里，不得写 $(git rev-parse HEAD)>
-echo "RUN=$RUN"; echo "TRAIN_HEAD=$TRAIN_HEAD"      # 两行抄进 launch.md
+TRAIN_HEAD=$(git rev-parse HEAD)     # smoke 阶段主副本就是训练树，可直接取；正式 run 见 C 节
+HC_SHA=$(sha256sum src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8.yaml | cut -d' ' -f1)
+echo "RUN=$RUN"; echo "TRAIN_HEAD=$TRAIN_HEAD"; echo "HC_SHA=$HC_SHA"   # 三行抄进 launch.md
 tmux ls                                             # 起前快照，确认没有同名 m8-smoke
 tmux new-session -d -s m8-smoke \
-  "bash $MAIN/v1-store/logs/m8-smoke-runner.sh '$RUN' '$TRAIN_HEAD'"
+  "bash $MAIN/v1-store/logs/m8-smoke-runner.sh '$RUN' '$TRAIN_HEAD' '$HC_SHA'"
 tmux has-session -t m8-smoke && echo "SESSION_UP=m8-smoke"
 ```
 
-（`--num-train-steps 20 --log-interval 1 --no-wandb-enabled` 为 smoke 专用覆盖，正式 run 不带。用 `bash <runner>` 而非 `bash -lc`：`-l` 会重载登录 profile，可能覆盖 `PATH` / 代理 / conda 初始化，让快照隔离失去确定性。）
+（`--num-train-steps 20 --log-interval 1 --no-wandb-enabled` 为 smoke 专用覆盖，正式 run 不带。用 `bash <runner>` 而非 `bash -lc`：`-l` 会重载登录 profile，可能覆盖 `PATH` / 代理 / conda 初始化。）
 
 Monitor（**绝对路径**；Monitor 与后续 Bash 工具跑在主工作目录，与 tmux pane 里的 `cd $WT` 无关，但写绝对路径免歧义）：
 ```bash
 tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8-smoke.log \
   | stdbuf -oL tr '\r' '\n' \
-  | grep --line-buffered -E "IMPORT_ORIGIN=|Loaded norm stats|Norm stats not found|Integration Type|Step 19:|EXIT_CODE=|Error|Traceback|RESOURCE_EXHAUSTED|out of memory|unbound variable"
+  | grep --line-buffered -E "PREFLIGHT=|CHECK_.*FAIL|Loaded norm stats|Norm stats not found|Integration Type|Step 19:|EXIT_CODE=|Error|Traceback|RESOURCE_EXHAUSTED|out of memory|unbound variable"
 ```
-（比第五稿多三条：`IMPORT_ORIGIN=` 把 preflight 判定行主动送到监听端；`Norm stats not found` 抓 norm_stats 静默降级——`_load_norm_stats` 失败只打 `logging.info`，不告警；`unbound variable` 让变量漏赋值这类死法立刻可见。）
+（`PREFLIGHT=` 与 `CHECK_.*FAIL` 把自检结果主动送到监听端；`Norm stats not found` 抓 norm_stats 静默降级——`_load_norm_stats` 失败只打 `logging.info`，不告警；`unbound variable` 让变量漏赋值这类死法立刻可见。）
 
 判据（全部满足才进入 C）：
-- `IMPORT_ORIGIN=PASS`，且四个路径逐个目视确认都在 `$WT` 下。
+- `PREFLIGHT=PASS n=23`，且 23 行 `CHECK_*` 逐行目视确认（尤其 `CHECK_CWD` / `CHECK_V1_STORE_REAL` / `CHECK_NOT_DEV_COPY` 三条，它们防的是「在 `-temp` 开发副本里误起训练」）。
 - 日志含 `Loaded norm stats from $V1_STORE/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme`，且**不含** `Norm stats not found in`。
 - 日志含 `Integration Type: modulation`；`EXIT_CODE=0`；`Step 0`…`Step 19` 的 loss / grad_norm / mem_enc_norm 全部有限，无 `RESOURCE_EXHAUSTED`。
 - run 根 `history_config.resolved.yaml` 含 `token_per_image: 64`、`integration_type: modulation`；`motion_provenance.json` 的 `motion_enabled=false`、`framesamp_manifest_sha256` = `4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918`（该值取自 `framesamp-8x8/meta/store_meta.json` 的 `manifest_sha256` 字段，**不是** `episode_manifest.json` 文件的裸 sha256，后者为 `df0ec8ed…`，两个口径别混）。
@@ -339,7 +373,7 @@ tmux ls                                   # 删后：差集必须恰好只少 m8
 
 ### C. 正式 run：`v2-1600ep-m8x8-modul-b128-60k`
 
-**起跑前**：写 `docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md`（起跑 commit、`TRAIN_HEAD`、`WORKTREE`、四条 `IMPORT_ORIGIN` 原文、两个 `.pth` 的 `cat` 输出、差异表、lr 口径说明、完整命令、数据三件套 sha、输出路径、判据、smoke 摘录、F2/F3 判定行摘录、tmux 清单 `m8-prod` / `m8-prod-dense`）；`docs/training-doc/README.md` 表格加一行；`git add` 两文件 → `docs: v2-1600ep-m8x8-modul-b128-60k 起跑留档` → push。起跑 HEAD clean 且含该 commit。
+**起跑前**（步骤 8）：写 `docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md`（起跑 commit = `TRAIN_HEAD`、23 行 `CHECK_*` 原文、差异表、lr 口径说明、完整命令、数据三件套 sha、输出路径、判据、smoke 摘录、F2/F3/梯度对拍的判定行摘录、开发副本 `-temp` 的建立命令与三条红线、tmux 清单 `m8-prod` / `m8-prod-dense`、「仍然防不住的」四条、失败重试要先清哪些残骸）；`docs/training-doc/README.md` 表格加一行；`git add` 两文件 → `docs: v2-1600ep-m8x8-modul-b128-60k 起跑留档` → push。**此刻记 `TRAIN_HEAD` = 主副本 HEAD**，然后建开发副本（G 节）。
 
 **C-0. 生成 runner**（同 B 节分层口径；差别只在 wandb 开、不带 smoke 覆盖、多一个 GPU 采样器）
 
@@ -350,53 +384,59 @@ cat > "$MAIN/v1-store/logs/m8-prod-runner.sh" <<'RUNNER'
 #!/usr/bin/env bash
 set -o pipefail                     # 外层不开 -e：EXIT_CODE 必落盘
 
-TRAIN_HEAD="${1:?用法: m8-prod-runner.sh <TRAIN_HEAD>}"
+TRAIN_HEAD="${1:?用法: m8-prod-runner.sh <TRAIN_HEAD> <HC_SHA256>}"
+HC_SHA="${2:?}"
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
 RUN=v2-1600ep-m8x8-modul-b128-60k
-WT="$MAIN/v1-store/worktrees/train-$RUN"
 LOG="$MAIN/v1-store/logs/$RUN.log"
 DS="$MAIN/v1-store/datasets/4task-v2-1600ep-604f16da"
 REC="$MAIN/v1-store/bench/$RUN"
 mkdir -p "$(dirname "$LOG")" "$REC"
 
 body() {
+  cd "$MAIN"
   source "$MAIN/scripts/training/paths.sh"
   set -a; . "$MAIN/v1-store/secrets/wandb.env"; set +a   # WANDB_API_KEY / WANDB_ENTITY，不进日志
 
-  cd "$WT"
-  export PYTHONPATH="$WT/src:$WT/packages/openpi-client/src"
-  export UV_PROJECT_ENVIRONMENT="$MAIN/.venv"
+  unset PYTHONPATH
   export UV_CACHE_DIR=/scratch/hongze/.cache/uv PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
   export CUDA_VISIBLE_DEVICES=4,5,6,7
   unset JAX_PLATFORMS MMEVLA_MOTION_STORE WANDB_MODE
   export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
-  export MMEVLA_JAX_CACHE_DIR="$V1_STORE/cache/jax/$RUN"   # 正式 run 保持按 $RUN 独立
+  export MMEVLA_JAX_CACHE_DIR="$V1_STORE/cache/jax/$RUN"
   export TRAIN_RECORD_DIR="$REC"
   export MMEVLA_FRAMESAMP_SOURCE="$DS/source"
   export MMEVLA_FRAMESAMP_MANIFEST="$DS/meta/episode_manifest.json"
 
-  test "$(git -C "$WT" rev-parse HEAD)" = "$TRAIN_HEAD"
-  test -z "$(git -C "$WT" status --porcelain)"
-  test ! -e "$V1_STORE/train-runs/mme_vla_suite_b128_60k/$RUN"
+  test "$(nvidia-smi --id=4,5,6,7 --query-gpu=memory.used --format=csv,noheader,nounits | paste -sd+ | bc)" = "0"
 
-  printf 'RUN=%s\nTRAIN_HEAD=%s\nWORKTREE=%s\nV1_STORE=%s\nSTART_UTC=%s\n' \
-    "$RUN" "$TRAIN_HEAD" "$WT" "$V1_STORE" "$(date -u +%FT%TZ)"
+  printf 'RUN=%s\nTRAIN_HEAD=%s\nREPO=%s\nV1_STORE=%s\nSTART_UTC=%s\n' \
+    "$RUN" "$TRAIN_HEAD" "$MAIN" "$V1_STORE" "$(date -u +%FT%TZ)"
 
-  JAX_PLATFORMS=cpu uv run --no-sync python - "$WT" <<'PY'
-import importlib.util, pathlib, sys
-wt = pathlib.Path(sys.argv[1]).resolve()
-o = {n: pathlib.Path(importlib.util.find_spec(n).origin).resolve()
-     for n in ("mme_vla_suite", "openpi", "openpi_client")}
-tp = pathlib.Path("scripts/training/train.py").resolve()
-assert tp.is_file(), f"train.py 不存在: {tp}"
-o["train.py"] = tp
-bad = {k: str(v) for k, v in o.items() if wt not in v.parents}
-print("IMPORT_ORIGIN=" + ("PASS" if not bad else "FAIL") + " "
-      + " ".join(f"{k}={v}" for k, v in o.items()), flush=True)
-sys.exit(1 if bad else 0)
-PY
+  ASSETS_DIR="$V1_STORE/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da"
+  HC=perceptual-framesamp-modul-8frame-8x8.yaml
 
-  # 全程 15 s GPU 采样：stdout 与 stderr 都重定向到文件，绝不留在 tee 管道上（否则 tee 不退出，EXIT_CODE 写不进）
+  TRAIN_ARGS=(
+    mme_vla_suite_b128_60k
+    --exp-name "$RUN"
+    --assets-base-dir "$V1_STORE/train-assets"
+    --data.assets.assets-dir "$ASSETS_DIR"
+    --data.assets.asset-id robomme
+    --checkpoint-base-dir "$V1_STORE/train-runs"
+    --dataset-path "$DS/framesamp-8x8"
+    --model.history-config "$HC"
+  )
+
+  JAX_PLATFORMS=cpu uv run --no-sync python scripts/training/preflight_train_launch.py \
+    --repo "$MAIN" --train-head "$TRAIN_HEAD" \
+    --history-config "$HC" --history-config-sha256 "$HC_SHA" \
+    --assets-dir "$ASSETS_DIR" --asset-id robomme \
+    --norm-stats-sha256 856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173 \
+    --dataset-path "$DS/framesamp-8x8" \
+    --run-root "$V1_STORE/train-runs/mme_vla_suite_b128_60k/$RUN" \
+    -- "${TRAIN_ARGS[@]}"
+
+  # 全程 15 s GPU 采样：stdout 与 stderr 都重定向到文件，绝不留在 tee 管道上（否则 tee 不退出）
   nvidia-smi --id=4,5,6,7 \
     --query-gpu=timestamp,index,utilization.gpu,memory.used \
     --format=csv,noheader,nounits -l 15 \
@@ -405,14 +445,7 @@ PY
   echo "GPU_SAMPLER_PID=$sampler_pid"
   trap 'kill "$sampler_pid" 2>/dev/null || true; wait "$sampler_pid" 2>/dev/null || true' EXIT
 
-  uv run --no-sync python scripts/training/train.py mme_vla_suite_b128_60k \
-    --exp-name "$RUN" \
-    --assets-base-dir "$V1_STORE/train-assets" \
-    --data.assets.assets-dir "$V1_STORE/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da" \
-    --data.assets.asset-id robomme \
-    --checkpoint-base-dir "$V1_STORE/train-runs" \
-    --dataset-path "$DS/framesamp-8x8" \
-    --model.history-config perceptual-framesamp-modul-8frame-8x8.yaml
+  uv run --no-sync python scripts/training/train.py "${TRAIN_ARGS[@]}"
 }
 
 body 2>&1 | tee -a "$LOG"
@@ -427,13 +460,27 @@ chmod +x "$MAIN/v1-store/logs/m8-prod-runner.sh"
 
 ```bash
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
-TRAIN_HEAD=<粘贴步骤 5 记录的 40 位 sha；此刻主树 HEAD 已不等于它，绝不可重算>
+cd "$MAIN"
+TRAIN_HEAD=$(git rev-parse HEAD)     # 此刻 HEAD 即起跑 commit；与 launch.md 里记的那个必须一致
+HC_SHA=$(sha256sum src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8.yaml | cut -d' ' -f1)
+echo "TRAIN_HEAD=$TRAIN_HEAD"; echo "HC_SHA=$HC_SHA"
 tmux ls
-tmux new-session -d -s m8-prod "bash $MAIN/v1-store/logs/m8-prod-runner.sh '$TRAIN_HEAD'"
+tmux new-session -d -s m8-prod "bash $MAIN/v1-store/logs/m8-prod-runner.sh '$TRAIN_HEAD' '$HC_SHA'"
 tmux has-session -t m8-prod && echo "SESSION_UP=m8-prod"
 ```
 
-**C-2. 前 30 min 密采**（AGENTS 16；另起会话，不与训练日志共壳）
+**C-2. 确认进入稳态后立即锁只读**（G 节；等日志出现若干条 `Step` 行、确认不是起跑即挂之后）
+
+```bash
+cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+RUN=v2-1600ep-m8x8-modul-b128-60k
+sha256sum src/mme_vla_suite/training/framesamp_dataset.py scripts/training/train.py \
+          src/mme_vla_suite/models/integration/history_pi0.py > "v1-store/bench/$RUN/lock_sha256.txt"
+chmod -R a-w src scripts packages
+ls -ld src scripts packages          # 确认 w 位已去掉
+```
+
+**C-3. 前 30 min 密采**（AGENTS 16；另起会话，不与训练日志共壳）
 
 ```bash
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
@@ -449,7 +496,7 @@ Monitor（绝对路径，一份日志一个 Monitor）：
 ```bash
 tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/v2-1600ep-m8x8-modul-b128-60k.log \
   | stdbuf -oL tr '\r' '\n' \
-  | grep --line-buffered -E "IMPORT_ORIGIN=|Norm stats not found|Step [0-9]*00:|Finished asynchronous save|EXIT_CODE=|Error|Traceback|RESOURCE_EXHAUSTED|nan|unbound variable"
+  | grep --line-buffered -E "PREFLIGHT=|CHECK_.*FAIL|Norm stats not found|Step [0-9]*00:|Finished asynchronous save|EXIT_CODE=|Error|Traceback|RESOURCE_EXHAUSTED|nan|unbound variable"
 ```
 存活判断用 `tmux has-session -t m8-prod && echo ALIVE || echo GONE`（AGENTS 7 禁裸 `pgrep -f`）。起跑后 300 步复核稳态 s/step（tqdm `Progress on` 行时间戳差分，同 `bench-b128-util` 口径），在 launch.md 补 ETA。
 
@@ -463,6 +510,8 @@ tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/v
 - 训练入口：`scripts/training/train.py`（`init_history_config` 写 provenance）；环境变量解析 `src/mme_vla_suite/training/dataloader.py::_create_framesamp_dataset`。
 - 路径源：`scripts/training/paths.sh`。
 - 参数树核对：`scripts/training/legacy-eval/check_ckpt_param_tree.py`（只输出计数与 missing/extra/shape_mismatch，PASS 时后三者恒为空列表；modulation 的正面签名是 `n_model=61`）。
+- 起跑前自检：`scripts/training/preflight_train_launch.py`（第七稿新增，纯 stdlib、零副作用、23 项检查；`--repo` 传主副本根，trailing `--` 之后传与 `train.py` 逐字相同的 argv 数组）。
+- 梯度对拍（J 节）：`scripts/training/tests/single_step_grad.py`、`scripts/training/tests/compare_grad_summaries.py`、定点 batch `v1-store/fixtures/8x8/grad/{c8-b,c32-b}`。
 - F3 对拍：`scripts/training/g0/check_baseline_env.py`（dump / check）、`scripts/training/g0/compare_baseline.py`（只比交集并打印 `rows=`）、`scripts/training/tests/project_scalars.py`（`_HEADER` 强制写表头，故 TSV 行数 = 1 + 步数）、`scripts/training/g0/bench_train_steps.py::_make_digest_gate`（`BENCH_EXTRA_DIGEST_STEPS` 越界即 raise）。
 - 留档样板：`docs/training-doc/awsprod40k-b128-motion/{launch,result}.md`、`docs/training-doc/v2b-read20-20260914T174147Z/`。
 
@@ -494,7 +543,7 @@ git commit    # subject: commitV9.6: dataset 形制守卫放宽为 (integration_
 git push
 git status --porcelain     # 必须为空，F3 要从这个 clean HEAD 起跑
 ```
-理由见第一部分第 6 点第三条。**这个 commit 必须早于步骤 5 建 worktree 快照**，否则快照里还是旧守卫，正式 run 会被 `_req` 拒掉 modul 配置。
+理由见第一部分第 6 点第三条。**这个 commit 必须早于步骤 7 的 smoke**，否则 smoke 会被 `_req` 拒掉 modul 配置。
 
 **F3. 第二块：复用 t8-c8-b 固化轨迹前 100 步（GPU 4,5，约 30–35 分钟，tmux `m8-guard`）。**
 
@@ -514,7 +563,7 @@ LOG="$MAIN/v1-store/logs/$RUN.log"
 D8="$MAIN/v1-store/datasets/4task-motion-400ep"
 
 body() {
-  cd "$MAIN"                    # F3 验的是主树 HEAD 的守卫改动，不走 worktree
+  cd "$MAIN"                    # F3 验的是主副本 HEAD 的守卫改动
   source "$MAIN/scripts/training/paths.sh"
   export UV_CACHE_DIR=/scratch/hongze/.cache/uv CUDA_VISIBLE_DEVICES=4,5 PYTHONUNBUFFERED=1
   export UV_PROJECT_ENVIRONMENT="$MAIN/.venv"
@@ -607,47 +656,111 @@ tmux ls; tmux kill-session -t m8-guard; tmux ls
 **F4. 留档 commit**：`git add` 留档三件套 + README 加行 → `docs: t8-c8-guard-s100 守卫等价验证留档` → push。
 **F3 FAIL 的处置**：立即 `git revert` commitV9.6（subject `revert: 撤销 commitV9.6 守卫放宽（GUARD_GRAD_100 FAIL）`）+ push，把 FAIL 判定行写进 `t8-c8-guard-s100/result.md`，停下交用户处置，**不放宽判据**。
 
-### G. 隔离机制：detached worktree 快照（步骤 5 建、步骤 6/7 用、步骤 8 删）
+### G. 隔离机制：训练锁主副本 + `-temp` 开发副本（步骤 8 建、步骤 9–10 用、步骤 11 收）
 
-**建**（步骤 5，`docs:` commit push 之后、主树 clean；`TRAIN_HEAD` 必须已包含 `commitV9.6`）：
+结论与理由见第一部分第 8 点。本节只给操作。
+
+**建开发副本**（步骤 8，`docs:` commit push 之后、主副本 clean、记下 `TRAIN_HEAD` 之后）：
+```bash
+MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
+DEV=${MAIN}-temp
+test -z "$(git -C "$MAIN" status --porcelain)"
+TRAIN_HEAD=$(git -C "$MAIN" rev-parse HEAD); echo "TRAIN_HEAD=$TRAIN_HEAD"   # 抄进 launch.md
+test ! -e "$DEV"                                   # 已存在则先问用户，不覆盖
+git clone "$MAIN" "$DEV"                           # 不用 git worktree：clone 完全独立，主副本 .git 不被写
+ln -s "$MAIN/v1-store" "$DEV/v1-store"             # 可写 symlink，见下红线
+ls -ld "$DEV/v1-store"                             # 确认是 symlink 且指向主副本
+cd "$DEV" && UV_CACHE_DIR=/scratch/hongze/.cache/uv uv sync   # 自己的 .venv，约 7.1 G
+uv run --no-sync python -c "import jax,sys;print('DEV_VENV=',sys.prefix)"   # 必须是 $DEV/.venv
+```
+
+**用**（步骤 9–10）：训练只在主副本跑，命令是历史跑通形态 —— cwd = 主副本、不设 `PYTHONPATH`、不设 `UV_PROJECT_ENVIRONMENT`、`source` 主副本 `paths.sh`。起跑并确认进入稳态后立即锁只读：
 ```bash
 cd /scratch/hongze/robomme_policy_learning_MotionJEPA
-test -z "$(git status --porcelain)"
-TRAIN_HEAD=$(git rev-parse HEAD); echo "TRAIN_HEAD=$TRAIN_HEAD"       # 写进 launch.md
-git worktree add --detach v1-store/worktrees/train-v2-1600ep-m8x8-modul-b128-60k "$TRAIN_HEAD"
-git worktree list                                                      # 确认新行且为 detached
+sha256sum src/mme_vla_suite/training/framesamp_dataset.py scripts/training/train.py \
+          src/mme_vla_suite/models/integration/history_pi0.py > v1-store/bench/$RUN/lock_sha256.txt
+chmod -R a-w src scripts packages
+ls -ld src scripts packages                       # 确认 w 位已去掉
 ```
-`v1-store/worktrees/` 已有先例（`official-89efeaab`），整体不进 git。快照里没有 `v1-store/`、`.venv`、`third_party/` 子模块（数据 / 权重 / checkpoint 全走主树 `V1_STORE` 绝对路径，venv 由 `UV_PROJECT_ENVIRONMENT` 指主树，`third_party` 训练链路不 import）。**但快照里有 `packages/openpi-client/src`**（仓库跟踪的普通目录，不是 submodule），它必须进 `PYTHONPATH`——见下。
+训练期间一切开发、验证、留档编辑都在 `$DEV` 里做。
 
-**注意 `git worktree list` 当前实有五条**（主树、`.claude/worktrees/b128cfg`、`.claude/worktrees/sgab`、`v1-store/reports/tic-adversarial-20260908/source`、`v1-store/worktrees/official-89efeaab`），不是第五稿以为的一条。删除时只 `remove` 本轮这一个，`prune` 不得波及其余。
+**红线**（`AGENTS.md` 第 14 条已同步修订）：
+- `$DEV/v1-store` 是**可写**的 symlink，在开发副本里写 `v1-store/` **等同于直接写主副本数据**；
+- **开发副本里禁止任何带 `--force` 或输出根参数的破坏性命令**（`build_dataset.py --force` 会 `rmtree` 整个输出根，穿透 symlink 即删主副本数据）；确需执行时回到主副本并先 `ls -ld <输出根>`；
+- 开发副本**必须用自己的 `.venv`**；**训练期间禁止在主副本跑 `uv sync` / `uv add` / `uv pip`**（会换掉正被训练进程使用的包文件，worker 重建时读到新文件）；
+- 不在主副本改任何文件、不 `git pull`；`git clean -x` / `-X` 全仓禁止（AGENTS 19 附）。
 
-**用**（B、C 节命令已改）：**四件事缺一不可**（第五稿只列了三件，漏了第 3 件，第 2 件也不完整）——
-1. `cd $WT`（`get_history_config` 按 cwd 相对路径读快照 YAML）；
-2. `PYTHONPATH=$WT/src:$WT/packages/openpi-client/src`（`mme_vla_suite`、`openpi`、**`openpi_client`** 三个包都从快照 import，压过主树 `.venv` 里 `_editable_impl_openpi.pth` 与 `_editable_impl_openpi_client.pth` 的绝对路径）；
-3. `--data.assets.assets-dir "$V1_STORE/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da"`（条目里是仓库相对路径，按 cwd 解析，`cd $WT` 后会落空并在 `norm_stats["state"]` 抛 `TypeError`）；
-4. `UV_PROJECT_ENVIRONMENT=$MAIN/.venv` + `uv run --no-sync`（不让 uv 在快照里另建 venv）。
+**收**（步骤 11，训练结束、`tmux has-session -t m8-prod` 已不存在之后）：
+```bash
+cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+chmod -R u+w src scripts packages
+git status --porcelain                            # 必须仍为空
+sha256sum -c v1-store/bench/$RUN/lock_sha256.txt  # 三个文件的 sha 必须与起跑时一致
+```
+两条结果写进 `result.md`。`$DEV` 视情况保留或删除（它是临时工作区，不跨长训练周期保留；删前确认其中的 commit 已 push）。
 
-起跑前 `IMPORT_ORIGIN=PASS` 断言**四个路径**（三个包 origin + `train.py`）都在 `$WT` 下——第五稿那段脚本只查两个包，且 `train.py` 那项因 cwd 已是 `$WT` 而恒真、提供零信息，第六稿加了 `assert tp.is_file()` 让它至少验证存在。`launch.md` 记 `TRAIN_HEAD`、`WORKTREE`、四个 origin 原文、两个 `.pth` 的 `cat` 输出。主树期间可以照常 commit / push 文档，快照始终停在 `TRAIN_HEAD`——**也正因如此，B/C 命令里的 `TRAIN_HEAD` 只能粘 40 位 sha 字面量，写 `$(git rev-parse HEAD)` 会让断言 100% 失败**。
-
-**禁**：训练期间不 `git worktree remove` / `prune`、不在快照里改文件、不 `git checkout` 快照；`git clean -x` 全仓禁止（AGENTS 19 附）。
-
-**删**（步骤 8，`result.md` 提交之后）：`git worktree remove v1-store/worktrees/train-v2-1600ep-m8x8-modul-b128-60k && git worktree prune && git worktree list`。删前 `tmux has-session -t m8-prod` 必须已不存在。
-
-**已知残余**：`scripts/training/paths.sh` 用的是主树那份（按 `BASH_SOURCE` 解析 `REPO_ROOT`，只导出路径变量、不 mkdir、不含训练逻辑）；`third_party/` 子模块快照里未初始化，训练链路不 import（已 grep 确认）。两者写进 launch.md。（第五稿把 `openpi-client` 列在这里并称「训练不 import」，**是错的**，已改为进 `PYTHONPATH`，见第一部分第 8 点。）
-
-**两条 shell 陷阱**（`paths.sh` 第 21 行是 `set -euo pipefail`，`source` 后持续作用于调用方 shell）：一是 `set -e` 会让训练失败时 shell 当场退出、`EXIT_CODE=` 写不进日志，故 B/C/F3 一律采用 runner 的内外分层；二是 `paths.sh` 有一整片 `readonly`（`V1_STORE` 等），同一个 shell 里二次 `source` 会以「`REPO_ROOT: readonly variable`」报错退出、且错误信息与真实问题毫无关系，把 `source` 关进 `body()`（管道 → 子 shell）即可免疫。另：`V1_STORE` 等是 `readonly` 但**未 export**，只在当前 shell 展开有效；将来把训练命令拆到子脚本里再引用会拿到空串 + `set -u` 报错，届时一律用 `$MAIN/v1-store/...` 绝对路径或重新 source。
+**注意 `git worktree list` 当前实有五条**（主副本、`.claude/worktrees/b128cfg`、`.claude/worktrees/sgab`、`v1-store/reports/tic-adversarial-20260908/source`、`v1-store/worktrees/official-89efeaab`）。本方案**不新增 worktree**，也不动这五条。
 
 ### H. 审计结论固化（第一部分第 7 点的落点）
 
 结论正文见第一部分第 7 点。固化位置：根目录计划文件（I 节）第一部分同款一节；`launch.md`「与官方 / 上次 run 的关系」一节引用该节并写明「modulation 关闭态无运行时对拍，本 run 不据此宣称与接入前逐位等价」。不改 `docs/motion-memory.md` 等正本（评审性结论，非链路事实；正本改动另立）。
 
-### I. 计划固化到仓库根目录（步骤 5）
+### I. 计划固化到仓库根目录（步骤 6）
 
 新建 `v2-1600ep-m8x8-modul-training-plan.md`（与 `8frame-8x8-training-plan.md` 同级、同体例）：内容 = 本计划文件全文（去掉 harness 版本注，保留第一 / 第二部分与 F、G、H 节），文首加一行状态说明「实施过程档案；结果以 `docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/` 为准」。与 `launch.md` 初稿、`docs/training-doc/README.md` 加行一起 `git add` 三个文件，subject `docs: v2-1600ep-m8x8-modul-b128-60k 计划固化与起跑留档初稿`，push。之后再记 `TRAIN_HEAD`（保证快照里含这份计划）。验证：`git diff --check`；Markdown 链接 `docs/training-doc/README.md` → 新 run 目录可解析。
 
+### J. motion 接入前后的 modulation 梯度对拍（第七稿新增，执行顺序步骤 5）
+
+**目的**：把第一部分第 7 点的结论从**源码级论证**提升为**运行时实测** —— 在完全相同的输入张量与完全相同的初态上，接入前代码（`06220c4~1` = `c5925d9`）与接入后代码（当前 HEAD）对 modulation 配置给出逐位相同的 loss 与全部可训练叶梯度。两档都做：**8 帧 8×8** 与 **32 帧 4×4**。
+
+**为什么走「固定 batch 喂两版模型」而不是「两棵源码树各起训练」。** 接入前 HEAD 有四道独立硬拒读不了 8×8 库：`framesamp_store.py` 的 `LAYOUT = "framesamp-4x4-v1"` 常量校验、表名 `image_emb_4x4` / `pos_emb_4x4` 与 `row_shape [16,2048]` 校验、文件名 `pos_emb_4x4.f32.bin` / `image_emb_4x4/`、以及 Dataset 的 `_req(... == (512,16,1))`。要让它认，必须把 commitV9.1 `236765f` 的 `StoreSpec` 参数化改动整块 backport，而那次改动动了 **8 处热读路径**（pread 的 offset、输出缓冲字节数、`posix_fadvise` 区间、memoryview 切片、`.reshape()`、pos 小表 `np.fromfile` 路径与 `.shape`、两处 `run_*_checks`）。它对 4×4 逐值等价，但**落在「可能改数」这一类** —— 搬进接入前那棵树，那棵树的数据路径就不再是历史代码，对照基础当场塌掉。4×4 档虽只需放宽一条断言，但要在两棵树里各打掉 `test_g13_modul_config_rejected` 这条生产安全闸测试。
+
+**为什么固定 batch 对两档都成立。** 模型链路里除 `budget`（512）外**不存在任何一处依赖帧数或每帧 token 数** —— `token_per_image` / `num_views` / `max_frames` / `tokens_per_frame` 在整个 `src/mme_vla_suite/models/` 里零命中；`PerceptualMemory.__call__` 只有一条 `assert static_image_emb.shape[1] == self.config.budget`；`FeatureEncoder` 是逐 token 的 pointwise 运算，pos_emb 不是"表"、没有行数概念；`MemoryAttention` 只读 `mem_seq.shape[1]`，且该文件在 `06220c4~1..HEAD` 区间零改动。两种布局喂进模型的四个张量**逐维、逐 dtype 完全相同**（实测自两份归档 batch 摘要 `docs/training-doc/t8-gradient/records/{c8,c32}/b/allfull.batch_meta.json`）：
+
+| 键 | 8 帧 8×8 | 32 帧 4×4 |
+|---|---|---|
+| `static_image_emb` | `(8,512,2048)` bfloat16 | 同 |
+| `static_pos_emb` | `(8,512,768)` float32 | 同 |
+| `static_state_emb` | `(8,512,8)` float64 | 同 |
+| `static_mask` | `(8,512)` bool | 同 |
+
+**所以接入前那棵树根本不需要认识 8×8 库 —— 它只要能吃下一个 `[8,512,2048]` 的张量。**
+
+**定点 batch 已经现成，不用重新生成**：`v1-store/fixtures/8x8/grad/c8-b/`（8 帧 8×8）与 `c32-b/`（32 帧 4×4），各 92 MB，`mixed1` / `allshort` / `allfull` 三档齐全，2026-09-14 由 t8-gradient 用主副本 + context YAML + `4task-motion-400ep` 库产出；数据侧代码自那以后零改动。
+
+**一个反直觉的约束：1600 集新库不能用作 fixture 来源。** `4task-v2-1600ep-604f16da` 的 `exec_start_idx` 最小值是 **100**（0 出现 0 次），而 `_common.fixture_per_step` 要求存在 `exec_start_idx=0` 的 episode，否则直接 raise；且所有样本 `step ≥ 100 > max_frames`，`allshort` / `mixed1` 两档结构性不存在。必须用 400 集库 —— 现成 fixture 正是从它产出的。代价是**本对拍不覆盖 1600 集库的读数路径**，但那属于 `236765f` 的 8×8 支持，已由 t8-gradient C8 单独验过，不是本次要归因的东西。
+
+**前置：必须先建 modulation 的噪声底。** 历史上所有逐位 PASS 都只覆盖 context，`MemoryAttention` 新增了 `jnp.einsum(..., preferred_element_type=jnp.float32)` + softmax 归约，**modulation 路径的 bit 级确定性从未验证过**。若不先在同一侧连跑两次建噪声底，一旦出现失配就无法区分「接入改了数」与「modulation 自身不确定」，整个对拍白做。这是本方案最大的未知。
+
+**改动清单（≈45 行，两个工具文件，`src/` 零改动）**：
+- `single_step_grad.py` 的 `_EXPECTED_HISTORY_CONFIGS` 追加两个 modul YAML（+2）；
+- 新增 `_load_batches(fixture_dir, kinds)`：读 `<kind>/batch_meta.json` 还原两层嵌套 dict（实测只有 `image` / `image_mask` 两个嵌套子树），`kind=="array"` → `C.load_array`、`"none"` → `None`、`"str"` → 原值（+22）；
+- 新增 `DTYPE_GRAD_BATCH_IN` 环境变量入口，跳过 fixture 构造整段（+6）；
+- 拆出 `_state_leaf_shas(state)`，无条件把初态逐叶 sha 写进 `grad_summary.json` 的新键 `init_leaves`（+8）；
+- `compare_grad_summaries.py` 增加「两侧 `init_leaves` 与 `batch_keys` 必须相同」（+7）。
+
+「不改数」的证明在这里是**平凡的**：没有任何改动落在 `src/`，两棵树跑各自原封不动的历史代码；工具侧新增的只是「从磁盘读回一个已落盘的 batch」与「多落一份摘要」，且 `C.save_array` 自带 round-trip 字节守卫、`C.load_array` 自带 `nbytes` 校验。
+
+**执行形态**（两档各一条，可并行；每侧 ≈4 分钟，单次墙钟 15–20 分钟，冷编译放宽到 30 分钟，占 4 张 A100）：
+```
+A 侧：git worktree add --detach v1-store/worktrees/s2-base c5925d9；PYTHONPATH=$PWD/src；UV_PROJECT_ENVIRONMENT=<主副本>/.venv
+B 侧：主副本，unset PYTHONPATH
+两侧共用：HEAD 版的 scripts/ 工具、同一个 DTYPE_GRAD_BATCH_IN、seed 42、fsdp 2、
+         XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'、同一对物理 GPU
+档 1（4×4）：--model.history-config perceptual-framesamp-modul.yaml            DTYPE_GRAD_BATCH_IN=v1-store/fixtures/8x8/grad/c32-b
+档 2（8×8）：--model.history-config perceptual-framesamp-modul-8frame-8x8.yaml DTYPE_GRAD_BATCH_IN=v1-store/fixtures/8x8/grad/c8-b
+判定：compare_grad_summaries.py → GRAD_EQ=PASS kinds=3 leaves=<n> mismatches=0，外加 init_leaves 逐叶相同
+```
+注意 `get_history_config` 按 cwd 拼 YAML 路径，而 `c5925d9` 树里没有 modul-8x8 YAML —— **把两个 modul YAML 复制进该 worktree 即可**（未跟踪文件，不进 git；这是配置数据不是代码，且两侧读同一份字节，launch.md 里记两份 sha256 并在两侧各自打印核对）。`aws-a22-grad` 已用过同类手法。
+
+**梯度叶数会变**：modulation 因 `mem_mods=[False, True]` 在 action expert 里多出 `q_einsum_mem` / `kv_einsum_mem` / `mem_rms_norm` 等叶，`leaves=` 不会是 context 的 32，判定行数字与历史 run 不可直接比对。
+
+**留档**：按 AGENTS 12/17 建 `docs/training-doc/<run_name>/`（launch.md + result.md + `records/grad_summary.{a,b}.json` + compare 判定行）。**本节的 worktree `v1-store/worktrees/s2-base` 是本对拍专用的临时快照，与 G 节的训练隔离无关**（第七稿的训练不再用 worktree）；对拍结束即 `git worktree remove` + `prune`。
+
 ### E. 红线与不做的事
 
-- 不改 dataloader / 模型代码（AGENTS 18 不触发）；不动既有两个条目。
-- 训练从 worktree 快照起跑（G 节），主树期间的 commit 不影响在跑训练；但仍不在快照里改任何文件，不建库、不起第二个 GPU 大任务。
+- 不改模型代码；不动既有两个训练条目（`mme_vla_suite` / `mme_vla_suite_b128`）。dataloader 的守卫白名单是本轮唯一的 `src/` 改动，按 AGENTS 18 走 F2/F3 两块验证。
+- 训练在**主副本**跑并 `chmod -R a-w` 锁只读（G 节）；训练期间一切开发与留档编辑在 `-temp` 开发副本里做，主副本不改文件、不 `git pull`、不跑 `uv sync` / `uv add` / `uv pip`，不建库、不起第二个 GPU 大任务。
+- **开发副本红线**：`-temp/v1-store` 是可写 symlink，写它等同于写主副本数据；`-temp` 里禁止任何带 `--force` 或输出根参数的破坏性命令；`-temp` 必须用自己的 `.venv`。（`AGENTS.md` 第 14 条环境 B 段的例外条款。）
 - tmux 只按确切名 kill，本轮起过的会话清单是 **`m8-guard`（F3）、`m8-smoke`（B）、`m8-prod` / `m8-prod-dense`（C）** 四个，清理时以这份清单为唯一依据，删前删后各一次 `tmux ls`。**不在清单内的一律不动**，含用户会话 `0`、`1`、`claude-private`、`codex`、`codex-repo`，以及他轮评估会话 **`eval-vla0914-full1600-best-a`**（2026-09-15 02:50 起，正占用 GPU 0，第五稿的清单漏了它）。禁 `tmux kill-server` 及一切全局杀法（AGENTS 7 红线）。
 - 评估（legacy-eval / motion-variance 对 modulation + 8×8 的 prefix 长度、VideoRepick 驱动）不在本轮范围。
