@@ -1,0 +1,63 @@
+{
+  "run": "v2-1600ep-m8x8-modul-b128-60k",
+  "train_head": "dd07f18fc385b01eb52db7563fe5f202997b9706",
+  "storage": "AWS 本地 NVMe RAID（/dev/md0）",
+  "batch_size": 128,
+  "num_workers": 8,
+  "fsdp_devices": 4,
+  "warmup_steps": 100,
+  "steady_step_range": [
+    102,
+    302
+  ],
+  "steady_wall_seconds": 484.1840000152588,
+  "step_mean_s": 2.420920000076294,
+  "samples_per_second": 52.87246170710563,
+  "sampling_ms": 500,
+  "n_intervals": 38,
+  "slow_interval_threshold_s": 3.589928575924465,
+  "stratification": "按 tqdm 相邻进度区间的平均步时分层；超过区间步时中位数的 1.5 倍为慢区间，不能声称逐个训练步分层。",
+  "slow_intervals": 13,
+  "util": {
+    "all": {
+      "n": 3872,
+      "mean_pct": 70.14436983471074,
+      "zero_pct_share": 27.298553719008265
+    },
+    "slow": {
+      "n": 1176,
+      "mean_pct": 52.3078231292517,
+      "zero_pct_share": 44.47278911564626
+    },
+    "other": {
+      "n": 2696,
+      "mean_pct": 77.92470326409496,
+      "zero_pct_share": 19.80712166172107
+    }
+  },
+  "per_gpu": {
+    "4": {
+      "n": 968,
+      "mean_pct": 70.06714876033058,
+      "zero_pct_share": 27.272727272727273
+    },
+    "5": {
+      "n": 968,
+      "mean_pct": 70.2004132231405,
+      "zero_pct_share": 27.376033057851238
+    },
+    "6": {
+      "n": 968,
+      "mean_pct": 70.05785123966942,
+      "zero_pct_share": 27.169421487603305
+    },
+    "7": {
+      "n": 968,
+      "mean_pct": 70.25206611570248,
+      "zero_pct_share": 27.376033057851238
+    }
+  },
+  "estimated_total_compute_hours": 40.34866666793823,
+  "estimated_finish_utc": "2026-09-16T22:13:31.992165+00:00",
+  "eta_note": "仅按起跑稳态外推，不含后续 checkpoint 开销、epoch 边界和资源争用变化。"
+}

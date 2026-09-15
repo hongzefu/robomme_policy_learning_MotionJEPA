@@ -1,0 +1,44 @@
+{
+  "run_name": "v2-1600ep-m8x8-modul-b128-60k",
+  "train_head": "dd07f18fc385b01eb52db7563fe5f202997b9706",
+  "start_utc": "2026-09-15T05:48:27Z",
+  "wandb_url": "https://wandb.ai/hongzefu-university-of-michigan/robomme-framesamp/runs/6ubtaf9l",
+  "tmux_sessions": [
+    "m8-prod",
+    "m8-prod-dense"
+  ],
+  "train_pid": 1701901,
+  "sampler_15s_pid": 1701896,
+  "gpu_ids": [
+    4,
+    5,
+    6,
+    7
+  ],
+  "batch_size": 128,
+  "num_train_steps": 60000,
+  "num_workers": 8,
+  "fsdp_devices": 4,
+  "main_code_readonly": true,
+  "main_clean_at_lock": true,
+  "dev_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp",
+  "dev_venv": "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/.venv",
+  "dev_origins": {
+    "mme_vla_suite": "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/src/mme_vla_suite/__init__.py",
+    "openpi": "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/src/openpi/__init__.py",
+    "openpi_client": "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/packages/openpi-client/src/openpi_client/__init__.py",
+    "jax": "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/.venv/lib/python3.11/site-packages/jax/__init__.py"
+  },
+  "dev_setup": "uv sync --frozen --python /scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python",
+  "dev_local_exclude": "/v1-store 已加入开发克隆 .git/info/exclude，未修改版本化忽略规则",
+  "launch_command": "env CUDA_CACHE_PATH=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda WANDB_DATA_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb-data XDG_DATA_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/xdg-data bash /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8-prod-runner.sh dd07f18fc385b01eb52db7563fe5f202997b9706 5b5ac2f85302d4d87cf102c71e02729d0caad74162df0afc9b2d4380e450caec",
+  "dense_sampling": "timeout 1800 nvidia-smi --id=4,5,6,7 --query-gpu=timestamp,index,utilization.gpu,memory.used --format=csv,noheader,nounits -lms 500；正常达到时限时 status 文件记录 124",
+  "packages": {
+    "jax": "0.5.3",
+    "jaxlib": "0.5.3",
+    "flax": "0.10.2",
+    "numpy": "1.26.4",
+    "ml_dtypes": "0.4.1",
+    "torch": "2.7.1"
+  }
+}

@@ -1,5 +1,7 @@
 # 1600 集新库 modulation 8×8 正式训练
 
+> **已启动，训练进行中。** 起跑时间 `2026-09-15T05:48:27Z`，训练 HEAD 为 `dd07f18fc385b01eb52db7563fe5f202997b9706`。主副本代码已锁只读，运行状态见 [result.md](result.md)，实际启动和隔离记录见 [records/launch.actual.json](records/launch.actual.json)。[wandb 运行](https://wandb.ai/hongzefu-university-of-michigan/robomme-framesamp/runs/6ubtaf9l) 已在线同步。
+
 正式 run_name 为 `v2-1600ep-m8x8-modul-b128-60k`，用户已在本轮再次明确确认。使用物理 GPU 4,5,6,7、batch 128、worker 8、fsdp 4、60k 步、warmup 5k、peak/decay lr 均为 5e-5、EMA 0.999、seed 42；wandb 开启，project 为 `robomme-framesamp`。超参来自新条目 `mme_vla_suite_b128_60k`，不修改既有默认条目，不做学习率线性缩放。
 
 ## 起跑版本与命令
@@ -7,6 +9,8 @@
 训练从主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA` 的 clean HEAD 启动。功能源码含配置 `e0bcb45`、守卫 `81ba002` 和取证工具 `63858f5`。最终 `TRAIN_HEAD` 为提交全部起跑证据之后、建立开发副本之前的 HEAD；准确值由正式 runner 的 `TRAIN_HEAD=`、preflight 的 `CHECK_REPO_HEAD` 和运行记录固化。起跑前留档不嵌入自身提交 SHA，避免补写 SHA 后又改变 HEAD。
 
 完整 shell 命令见 `records/prod-runner.sh`，smoke 命令见 `records/smoke-runner.sh`。两者均从主副本 `source scripts/training/paths.sh`，缓存位于 `v1-store/cache/`，只使用现有 `.venv` 的 `uv run --no-sync`。preflight 与训练共用同一个 `TRAIN_ARGS` 数组，显式传入绝对 Dataset/assets/checkpoint 路径。
+
+实际启动额外在 runner 外层显式设置 `CUDA_CACHE_PATH`、`WANDB_DATA_DIR`、`XDG_DATA_HOME` 到主副本 `v1-store/cache/`，完整值已记录在 `launch.actual.json`，确保这些缓存也位于存储边界内。正式 preflight 的 25 条原文见 [records/preflight.log](records/preflight.log)，全部通过。
 
 ```bash
 cd /scratch/hongze/robomme_policy_learning_MotionJEPA
@@ -74,9 +78,15 @@ MEM_PARAMS=PASS n=6
 
 启动前从 clean `TRAIN_HEAD` 以 `git clone` 建立 `/scratch/hongze/robomme_policy_learning_MotionJEPA-temp`；其 origin 指向同一 GitHub SSH 地址，沿用用户本轮批准的凭据方式。开发副本必须有自己的 `.venv`，`v1-store` 是指向主副本的可写 symlink。若开发副本已存在先问用户，不覆盖。
 
+实际已完成：开发环境以 `uv sync --frozen --python <主副本>/.venv/bin/python` 建立，`sys.prefix` 和 `mme_vla_suite`、`openpi`、`openpi_client`、JAX 的导入路径均属于开发副本；两份 `.venv` 是不同实体目录。克隆的 `.git/info/exclude` 增加 `/v1-store`，只忽略本克隆中的符号链接。主副本 `.venv` 未同步或修改。
+
 正式训练稳定起步后记录 `framesamp_dataset.py`、`train.py`、`history_pi0.py` 的 SHA256，并执行 `chmod -R a-w src scripts packages`。此后代码、留档编辑和环境安装均在开发副本进行，主副本不改文件、不 pull、不运行 uv sync/add/pip。开发副本禁止对共享数据执行带 `--force` 或破坏性输出根的命令。
 
+训练连续推进超过 25 步后已执行只读锁定，目录权限为 `dr-xr-xr-x`，主副本 Git 状态仍干净；锁定摘要见 [records/lock_sha256.txt](records/lock_sha256.txt)。这证明起跑时的隔离已生效，训练结束后的 V10 复查仍待执行。
+
 本次正式运行的 tmux 清单是 `m8-prod` 与 `m8-prod-dense`，smoke 使用 `m8-smoke`；不操作其他会话。训练有精确 PID 的 15 秒采样器并由 EXIT trap 回收；另用 500ms 密采记录前 30 分钟。每一级日志过滤均行缓冲，存活以 `tmux has-session` 判断。300 步后按实际稳定段重新估算 ETA；计划的约 65 小时仅为旧档位外推。利用率结论使用均值、0% 占比及慢步/非慢步分层，不以中位数作结论。
+
+500ms 采样单独由 `timeout 1800` 管理；正常达到 30 分钟时，其专属 `.status` 文件会记录 `EXIT_CODE=124`，与正式训练日志的退出码是两个对象。训练 PID 和 15 秒采样器 PID 均已记录在 `launch.actual.json`。
 
 保护边界：preflight 与 train 必须使用同一 argv 数组；chmod 不能阻止 root 或主动恢复写权限；环境保护依赖禁止主副本 uv 操作；失败可能留下半截 run 根与 wandb run。任何正式失败不自动覆盖、清空或复用名称，先把原因及残留交用户决定。
 
