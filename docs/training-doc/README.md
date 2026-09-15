@@ -11,7 +11,7 @@
 | 目录 | 内容 | 判定 |
 |---|---|---|
 | [`t8-c8-guard-s100/`](t8-c8-guard-s100/result.md) | Dataset 成对白名单放宽；3454 样本轻量对拍及既有 context 8×8 的前 100 步梯度对照 | PASS：100 步五标量、800 个训练索引、6 份输入与完整状态均逐位一致 |
-| [`m8-modul-retro/`](m8-modul-retro/launch.md) | modulation 关闭态两档固定 batch；历史锚点 `07702f0` 的 A/A 自复现及对当前源码的逐叶梯度比较 | 工具轻量验证通过；GPU 对拍待跑 |
+| [`m8-modul-retro/`](m8-modul-retro/result.md) | modulation 关闭态两档固定 batch；历史锚点 `07702f0` 的 A/A 自复现及对当前源码的逐叶梯度比较 | PASS：四组比较，61 个初态叶子、三类 loss 与 38 个梯度叶子逐位一致 |
 
 ### 新版四任务建库可读性验证
 

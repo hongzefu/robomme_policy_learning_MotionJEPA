@@ -1,0 +1,140 @@
+RUN=m8-modul-retro
+BASE=07702f0076e640724e9516e911983d7810b423d3
+CAND=63858f5fa39db26b3c587e9bf7df433b5be5bed4
+START_UTC=2026-09-15T05:03:11Z
+GRAD_START profile=c32 side=a1 UTC=2026-09-15T05:03:11Z
+823c3948e75a9335ace3f250d0255e6a8618e8ecf0bb77c65af65077349d199a  src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul.yaml
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+FIXTURE=PASS kind=mixed1 keys=12 batch=8
+FIXTURE=PASS kind=allshort keys=12 batch=8
+FIXTURE=PASS kind=allfull keys=12 batch=8
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+INIT_PARAMS=PASS leaves=61 seconds=134.0
+GRAD_KIND=PASS kind=mixed1 loss=0.109719232 leaves=38 seconds=88.4
+GRAD_KIND=PASS kind=allshort loss=0.0959764048 leaves=38 seconds=52.4
+GRAD_KIND=PASS kind=allfull loss=0.125658542 leaves=38 seconds=53.1
+GRAD_DONE kinds=3 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/m8-modul-retro/c32-a1
+GRAD_START profile=c32 side=a2 UTC=2026-09-15T05:08:55Z
+823c3948e75a9335ace3f250d0255e6a8618e8ecf0bb77c65af65077349d199a  src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul.yaml
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+FIXTURE=PASS kind=mixed1 keys=12 batch=8
+FIXTURE=PASS kind=allshort keys=12 batch=8
+FIXTURE=PASS kind=allfull keys=12 batch=8
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+INIT_PARAMS=PASS leaves=61 seconds=128.4
+GRAD_KIND=PASS kind=mixed1 loss=0.109719232 leaves=38 seconds=102.5
+GRAD_KIND=PASS kind=allshort loss=0.0959764048 leaves=38 seconds=51.1
+GRAD_KIND=PASS kind=allfull loss=0.125658542 leaves=38 seconds=64.6
+GRAD_DONE kinds=3 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/m8-modul-retro/c32-a2
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+INIT_EQ=PASS leaves=61 mismatches=0
+GRAD_EQ=PASS kinds=3 leaves=38 mismatches=0
+GRAD_START profile=c32 side=b UTC=2026-09-15T05:15:02Z
+823c3948e75a9335ace3f250d0255e6a8618e8ecf0bb77c65af65077349d199a  src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul.yaml
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+FIXTURE=PASS kind=mixed1 keys=12 batch=8
+FIXTURE=PASS kind=allshort keys=12 batch=8
+FIXTURE=PASS kind=allfull keys=12 batch=8
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+INIT_PARAMS=PASS leaves=61 seconds=131.0
+GRAD_KIND=PASS kind=mixed1 loss=0.109719232 leaves=38 seconds=105.0
+GRAD_KIND=PASS kind=allshort loss=0.0959764048 leaves=38 seconds=62.1
+GRAD_KIND=PASS kind=allfull loss=0.125658542 leaves=38 seconds=63.4
+GRAD_DONE kinds=3 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/m8-modul-retro/c32-b
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+INIT_EQ=PASS leaves=61 mismatches=0
+GRAD_EQ=PASS kinds=3 leaves=38 mismatches=0
+RETRO_PROFILE=PASS profile=c32
+GRAD_START profile=c8 side=a1 UTC=2026-09-15T05:21:24Z
+5b5ac2f85302d4d87cf102c71e02729d0caad74162df0afc9b2d4380e450caec  src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8.yaml
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+FIXTURE=PASS kind=mixed1 keys=12 batch=8
+FIXTURE=PASS kind=allshort keys=12 batch=8
+FIXTURE=PASS kind=allfull keys=12 batch=8
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+INIT_PARAMS=PASS leaves=61 seconds=124.1
+GRAD_KIND=PASS kind=mixed1 loss=0.131137341 leaves=38 seconds=90.5
+GRAD_KIND=PASS kind=allshort loss=0.093950741 leaves=38 seconds=53.1
+GRAD_KIND=PASS kind=allfull loss=0.127008989 leaves=38 seconds=53.0
+GRAD_DONE kinds=3 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/m8-modul-retro/c8-a1
+GRAD_START profile=c8 side=a2 UTC=2026-09-15T05:27:05Z
+5b5ac2f85302d4d87cf102c71e02729d0caad74162df0afc9b2d4380e450caec  src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8.yaml
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+FIXTURE=PASS kind=mixed1 keys=12 batch=8
+FIXTURE=PASS kind=allshort keys=12 batch=8
+FIXTURE=PASS kind=allfull keys=12 batch=8
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+INIT_PARAMS=PASS leaves=61 seconds=126.1
+GRAD_KIND=PASS kind=mixed1 loss=0.131137341 leaves=38 seconds=103.9
+GRAD_KIND=PASS kind=allshort loss=0.093950741 leaves=38 seconds=61.8
+GRAD_KIND=PASS kind=allfull loss=0.127008989 leaves=38 seconds=52.4
+GRAD_DONE kinds=3 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/m8-modul-retro/c8-a2
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+INIT_EQ=PASS leaves=61 mismatches=0
+GRAD_EQ=PASS kinds=3 leaves=38 mismatches=0
+GRAD_START profile=c8 side=b UTC=2026-09-15T05:33:10Z
+5b5ac2f85302d4d87cf102c71e02729d0caad74162df0afc9b2d4380e450caec  src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8.yaml
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+FIXTURE=PASS kind=mixed1 keys=12 batch=8
+FIXTURE=PASS kind=allshort keys=12 batch=8
+FIXTURE=PASS kind=allfull keys=12 batch=8
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+INIT_PARAMS=PASS leaves=61 seconds=127.4
+GRAD_KIND=PASS kind=mixed1 loss=0.131137341 leaves=38 seconds=88.7
+GRAD_KIND=PASS kind=allshort loss=0.093950741 leaves=38 seconds=52.7
+GRAD_KIND=PASS kind=allfull loss=0.127008989 leaves=38 seconds=52.3
+GRAD_DONE kinds=3 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/m8-modul-retro/c8-b
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+INIT_EQ=PASS leaves=61 mismatches=0
+GRAD_EQ=PASS kinds=3 leaves=38 mismatches=0
+RETRO_PROFILE=PASS profile=c8
+END_UTC=2026-09-15T05:38:52Z
+EXIT_CODE=0

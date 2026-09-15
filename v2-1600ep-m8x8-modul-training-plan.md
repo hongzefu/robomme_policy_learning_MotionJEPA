@@ -2,7 +2,7 @@
 
 > **实施过程档案**（2026-09-15，用户批准）。结果以 [`docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/`](docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md) 为准；本文按 `AGENTS.md` 第 2 条分两部分，另含 F（守卫放宽与增补验证）、G（训练锁主副本 + `-temp` 开发副本）、H（审计结论）、I（本文固化）、J（motion 接入前后的 modulation 梯度对拍）五节。
 >
-> **进度**：执行顺序步骤 1–4 已完成：配置 `e0bcb45`，成对白名单与 G13 测试 `81ba002`；F2 的 3454 样本/19 键零差异，F3 从 clean HEAD `75fb1d3` 完成 100 步五标量、800 个训练索引、6 份输入与完整状态的逐位验证，详见 [`t8-c8-guard-s100`](docs/training-doc/t8-c8-guard-s100/result.md)。下一步执行 J 节 modulation 追溯对拍。用户已在本轮再次确认正式 run_name，并批准沿用 GitHub SSH 推送。
+> **进度**：执行顺序步骤 1–5 已完成：配置 `e0bcb45`，成对白名单与 G13 测试 `81ba002`；F2/F3 全部通过，详见 [`t8-c8-guard-s100`](docs/training-doc/t8-c8-guard-s100/result.md)。J 节从 clean HEAD `63858f5` 完成两档 A/A 与 A/B 共四组逐位验证，61 个初态叶子、三类 loss 和全部 38 个梯度叶子一致，详见 [`m8-modul-retro`](docs/training-doc/m8-modul-retro/result.md)。下一步为正式留档与 20 步 smoke。用户已在本轮再次确认正式 run_name，并批准沿用 GitHub SSH 推送。
 
 环境判定：**环境 B（AWS 单机）**。仓库主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，8 × A100-SXM4-80GB。无 turbo、无 GreatLakes。起跑 commit 见 `TRAIN_HEAD`（执行顺序步骤 8 记下）。
 
