@@ -1,0 +1,296 @@
+{
+ "f8w8": {
+  "run": "bench-m8x8-8gpu-f8-w8",
+  "num_workers": 8,
+  "fsdp_devices": 8,
+  "mesh": [
+   1,
+   8
+  ],
+  "gpus": "0-7",
+  "batch_size": 128,
+  "per_device_batch": 16,
+  "storage": "AWS 本地 NVMe RAID（/dev/md0）",
+  "steady_step_range": [
+   100,
+   290
+  ],
+  "steady_wall_seconds": 350.847,
+  "step_mean_s": 1.8466,
+  "samples_per_second": 69.32,
+  "step_median_s": 1.6481,
+  "n_intervals": 19,
+  "slow_intervals": 0,
+  "first100_wall_seconds": 179.6,
+  "util_all": {
+   "n": 5584,
+   "mean_pct": 51.02,
+   "zero_pct_share": 45.47
+  },
+  "util_slow": null,
+  "util_other": {
+   "n": 5584,
+   "mean_pct": 51.02,
+   "zero_pct_share": 45.47
+  },
+  "util_per_gpu": {
+   "0": {
+    "n": 698,
+    "mean_pct": 51.47,
+    "zero_pct_share": 44.99
+   },
+   "1": {
+    "n": 698,
+    "mean_pct": 50.47,
+    "zero_pct_share": 44.84
+   },
+   "2": {
+    "n": 698,
+    "mean_pct": 51.32,
+    "zero_pct_share": 45.56
+   },
+   "3": {
+    "n": 698,
+    "mean_pct": 50.9,
+    "zero_pct_share": 44.99
+   },
+   "4": {
+    "n": 698,
+    "mean_pct": 51.16,
+    "zero_pct_share": 44.84
+   },
+   "5": {
+    "n": 698,
+    "mean_pct": 50.89,
+    "zero_pct_share": 45.7
+   },
+   "6": {
+    "n": 698,
+    "mean_pct": 50.94,
+    "zero_pct_share": 46.56
+   },
+   "7": {
+    "n": 698,
+    "mean_pct": 51.01,
+    "zero_pct_share": 46.28
+   }
+  },
+  "mem_peak_mib": {
+   "0": 81009.0,
+   "1": 80989.0,
+   "2": 80989.0,
+   "3": 80989.0,
+   "4": 80989.0,
+   "5": 80989.0,
+   "6": 80989.0,
+   "7": 80989.0
+  },
+  "loss_first_last": [
+   [
+    0,
+    0.0893784761428833
+   ],
+   [
+    290,
+    0.023200487717986107
+   ]
+  ],
+  "eta_80k_hours": 41.03
+ },
+ "f8w16": {
+  "run": "bench-m8x8-8gpu-f8-w16",
+  "num_workers": 16,
+  "fsdp_devices": 8,
+  "mesh": [
+   1,
+   8
+  ],
+  "gpus": "0-7",
+  "batch_size": 128,
+  "per_device_batch": 16,
+  "storage": "AWS 本地 NVMe RAID（/dev/md0）",
+  "steady_step_range": [
+   100,
+   290
+  ],
+  "steady_wall_seconds": 345.331,
+  "step_mean_s": 1.8175,
+  "samples_per_second": 70.43,
+  "step_median_s": 2.1139,
+  "n_intervals": 19,
+  "slow_intervals": 0,
+  "first100_wall_seconds": 178.8,
+  "util_all": {
+   "n": 5488,
+   "mean_pct": 51.64,
+   "zero_pct_share": 43.49
+  },
+  "util_slow": null,
+  "util_other": {
+   "n": 5488,
+   "mean_pct": 51.64,
+   "zero_pct_share": 43.49
+  },
+  "util_per_gpu": {
+   "0": {
+    "n": 686,
+    "mean_pct": 51.28,
+    "zero_pct_share": 43.88
+   },
+   "1": {
+    "n": 686,
+    "mean_pct": 51.81,
+    "zero_pct_share": 43.44
+   },
+   "2": {
+    "n": 686,
+    "mean_pct": 51.4,
+    "zero_pct_share": 43.88
+   },
+   "3": {
+    "n": 686,
+    "mean_pct": 51.3,
+    "zero_pct_share": 43.0
+   },
+   "4": {
+    "n": 686,
+    "mean_pct": 51.81,
+    "zero_pct_share": 43.44
+   },
+   "5": {
+    "n": 686,
+    "mean_pct": 51.54,
+    "zero_pct_share": 43.15
+   },
+   "6": {
+    "n": 686,
+    "mean_pct": 51.93,
+    "zero_pct_share": 43.44
+   },
+   "7": {
+    "n": 686,
+    "mean_pct": 52.02,
+    "zero_pct_share": 43.73
+   }
+  },
+  "mem_peak_mib": {
+   "0": 80989.0,
+   "1": 80989.0,
+   "2": 80989.0,
+   "3": 80989.0,
+   "4": 80989.0,
+   "5": 80989.0,
+   "6": 80989.0,
+   "7": 80989.0
+  },
+  "loss_first_last": [
+   [
+    0,
+    0.0893784761428833
+   ],
+   [
+    290,
+    0.023163754492998123
+   ]
+  ],
+  "eta_80k_hours": 40.39
+ },
+ "f4w16": {
+  "run": "bench-m8x8-8gpu-f4-w16",
+  "num_workers": 16,
+  "fsdp_devices": 4,
+  "mesh": [
+   2,
+   4
+  ],
+  "gpus": "0-7",
+  "batch_size": 128,
+  "per_device_batch": 16,
+  "storage": "AWS 本地 NVMe RAID（/dev/md0）",
+  "steady_step_range": [
+   100,
+   290
+  ],
+  "steady_wall_seconds": 348.285,
+  "step_mean_s": 1.8331,
+  "samples_per_second": 69.83,
+  "step_median_s": 2.2736,
+  "n_intervals": 19,
+  "slow_intervals": 0,
+  "first100_wall_seconds": 179.9,
+  "util_all": {
+   "n": 5544,
+   "mean_pct": 52.55,
+   "zero_pct_share": 43.61
+  },
+  "util_slow": null,
+  "util_other": {
+   "n": 5544,
+   "mean_pct": 52.55,
+   "zero_pct_share": 43.61
+  },
+  "util_per_gpu": {
+   "0": {
+    "n": 693,
+    "mean_pct": 52.99,
+    "zero_pct_share": 43.29
+   },
+   "1": {
+    "n": 693,
+    "mean_pct": 52.7,
+    "zero_pct_share": 43.43
+   },
+   "2": {
+    "n": 693,
+    "mean_pct": 52.68,
+    "zero_pct_share": 44.01
+   },
+   "3": {
+    "n": 693,
+    "mean_pct": 52.2,
+    "zero_pct_share": 43.29
+   },
+   "4": {
+    "n": 693,
+    "mean_pct": 52.35,
+    "zero_pct_share": 44.01
+   },
+   "5": {
+    "n": 693,
+    "mean_pct": 52.34,
+    "zero_pct_share": 43.43
+   },
+   "6": {
+    "n": 693,
+    "mean_pct": 52.68,
+    "zero_pct_share": 43.58
+   },
+   "7": {
+    "n": 693,
+    "mean_pct": 52.43,
+    "zero_pct_share": 43.87
+   }
+  },
+  "mem_peak_mib": {
+   "0": 80163.0,
+   "1": 80003.0,
+   "2": 80003.0,
+   "3": 80147.0,
+   "4": 80147.0,
+   "5": 80003.0,
+   "6": 80003.0,
+   "7": 80147.0
+  },
+  "loss_first_last": [
+   [
+    0,
+    0.08937054127454758
+   ],
+   [
+    290,
+    0.023188462480902672
+   ]
+  ],
+  "eta_80k_hours": 40.74
+ }
+}

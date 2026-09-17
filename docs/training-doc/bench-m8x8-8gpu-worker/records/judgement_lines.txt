@@ -1,0 +1,18 @@
+BENCH_8GPU mesh=[1, 8] fsdp=8 workers=8 step_mean_s=1.8466 samples_per_s=69.32 util_mean=51.02 zero_share=45.47 slow_util=None other_util=51.02 eta_80k_h=41.03
+BENCH_8GPU mesh=[1, 8] fsdp=8 workers=16 step_mean_s=1.8175 samples_per_s=70.43 util_mean=51.64 zero_share=43.49 slow_util=None other_util=51.64 eta_80k_h=40.39
+BENCH_8GPU mesh=[2, 4] fsdp=4 workers=16 step_mean_s=1.8331 samples_per_s=69.83 util_mean=52.55 zero_share=43.61 slow_util=None other_util=52.55 eta_80k_h=40.74
+DRIVER_RUN mesh=2x4 fsdp_devices=4 workers=16 start=2026-09-17T07:19:13Z
+GPU_IDLE gpus=0-7 used_mib=0
+PREFLIGHT=PASS n=25
+EXIT_CODE=0
+DRIVER_DONE workers=16 rc=0 end=2026-09-17T07:33:00Z
+DRIVER_RUN mesh=1x8 fsdp_devices=8 workers=8 start=2026-09-17T06:53:37Z
+GPU_IDLE gpus=0-7 used_mib=0
+PREFLIGHT=PASS n=25
+EXIT_CODE=0
+DRIVER_DONE workers=8 rc=0 end=2026-09-17T07:06:42Z
+DRIVER_RUN mesh=1x8 fsdp_devices=8 workers=16 start=2026-09-17T07:06:47Z
+GPU_IDLE gpus=0-7 used_mib=0
+PREFLIGHT=PASS n=25
+EXIT_CODE=0
+DRIVER_DONE workers=16 rc=0 end=2026-09-17T07:18:44Z
