@@ -1,6 +1,8 @@
 # bench-m8x8-8gpu-worker — 结果
 
-三档全部 `PREFLIGHT=PASS n=25`、`EXIT_CODE=0`、300 步跑完、无 OOM。起跑 commit `9cbb94e`。判定行与原始数据在 `records/`（`judgement_lines.txt`、`analysis.json`、各档 `metrics.jsonl` / `gpu_util_lms500.csv` / `train.log.gz`）。
+三档全部 `PREFLIGHT=PASS n=25`、`EXIT_CODE=0`、300 步跑完、无 OOM。起跑 commit `9cbb94e`。按用户要求本目录只保留结果：`records/` 里是判定行（`judgement_lines.txt`）、汇总（`analysis.json`）与三档 `metrics.jsonl`；起跑记录（launch.md）、runner / 驱动脚本、训练日志、500 ms 密采 csv 已从留档移除，需要时看 git 历史 commit `f2c9dc7`（其 `docs/training-doc/bench-m8x8-8gpu-worker/` 为完整版；驱动 `.log` 本就被 `.gitignore` 的 `*.log` 挡在 git 外，原件在 `v1-store/logs/`）。
+
+起跑口径摘要：环境 B，8 × A100-80GB，AWS 本地 NVMe RAID；config `mme_vla_suite_b128_60k` + `perceptual-framesamp-modul-8frame-8x8.yaml`（关闭态，sha `5b5ac2f8…`），新库 `4task-v2-1600ep-604f16da/framesamp-8x8`，`CUDA_VISIBLE_DEVICES=0–7`，命令行覆盖 `--num-train-steps 300 --log-interval 10 --no-wandb-enabled --num-workers {8,16} --fsdp-devices {8,4}`，三档串行、8 卡独占；tmux 会话 `bw-8gpu`（(2,4) w8 首次尝试，用户改口径后中止）、`bw-8gpu-f8`、`bw-8gpu-f4`，均随驱动自然退出。
 
 ## 结果表（稳态 = `metrics.jsonl` 的 step 100 → 290，共 190 步；util 为 500 ms 密采在该窗口内的统计）
 
@@ -38,4 +40,4 @@
 
 ## 清理
 
-三档 run 产物（各 12 G 末步 ckpt）与 `v1-store/bench/bench-m8x8-8gpu-*` 已删除；tmux 会话 `bw-8gpu`、`bw-8gpu-f8`、`bw-8gpu-f4` 均随驱动退出自然结束（未执行 kill）；runner / 驱动脚本留在 `v1-store/logs/`（副本在 `records/`）。
+三档 run 产物（各 12 G 末步 ckpt）与 `v1-store/bench/bench-m8x8-8gpu-*` 已删除；tmux 会话均随驱动退出自然结束（未执行 kill）；runner / 驱动脚本与原始日志留在 `v1-store/logs/bw-8gpu-*`（不进 git）。
