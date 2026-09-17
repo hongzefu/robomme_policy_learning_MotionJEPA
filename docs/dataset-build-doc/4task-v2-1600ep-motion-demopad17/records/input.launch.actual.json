@@ -1,0 +1,25 @@
+{
+  "build_head": "df6fdcc4f9424f00901a107a66d98e19e679a7ba",
+  "start_status": "",
+  "utc": "2026-09-17T21:26:55.623201+00:00",
+  "protected_files": {
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/source/meta/provenance.json": "72b297922adaddddb02fd02099ce53d7c8b2319ebd81ba44c4ce83f407870178",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8/meta/store_meta.json": "f7677e69e5c473ab2962a5ac05a5909348c2f96736152b7217b77f0d2eb4231a",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173"
+  },
+  "phases": [
+    "input",
+    "wan",
+    "encode",
+    "oracle",
+    "pack"
+  ],
+  "tmux_sessions": [
+    "mv2-input",
+    "mv2-wan",
+    "mv2-encode",
+    "mv2-oracle",
+    "mv2-pack"
+  ],
+  "command": "bash v1-store/logs/mv2-build-runner.sh <stage> df6fdcc4f9424f00901a107a66d98e19e679a7ba"
+}

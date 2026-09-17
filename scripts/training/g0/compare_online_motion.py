@@ -12,7 +12,9 @@
   ONLINE_ORDER=PASS steps=N                            `mem_order`（含 motion_emb/pos/mask 四键）== 训练侧 `FrameSampDataset.__getitem__` 逐位，且为合法置换
   PROVENANCE=PASS                                      sidecar 握手 provenance 与 store_meta.provenance 逐键相等（客户端构造时已 raise 兜底）
   耗时：每窗（客户端夹 send/recv）、首批 demo（首次 add_buffer 挂钟）、每次推理前固定开销（后续每批 add_buffer 挂钟，含帧路 SigLIP 编码）
-`--stub` 档：帧换成编号合成帧、只验起点集合 / pos / order 三条（token 判据标 SKIP），供 CPU 上先验证脚本本身。
+`--stub` 档：帧换成编号合成帧、验起点集合 / pos / order；错误 stub token 仍须拒绝。
+CPU 的非装配档必须显式传 --gpu-posemb-cache：GPU 预生成的生产 PosEmb3D 输出已经与
+整张离线表逐位核对；这里复核来源与字节后，只在验证对象中注入该组件输出。
 
 用法（主树）：
   UV_LINK_MODE=copy uv run --no-sync python scripts/training/g0/compare_online_motion.py --gpu 1 --out v1-store/reports/motion/p5_online.json
@@ -152,12 +154,12 @@ def aggregate(argv) -> int:
     required = {"mode","shard_idx","num_shards","episode_ids","rows_seen","real_rows","padded_covered",
                 "start_ok","pos_ok","order_ok","n_compared","n_steps","assembly_checked","compared_real",
                 "expected_rows","expected_real_rows","mismatch_total","manifest_sha256","yaml_sha256",
-                "metadata_sha256","source_head","source_status","selected_full_episodes","lib"}
+                "metadata_sha256","source_head","source_status","selected_full_episodes","lib","position_cache"}
     if len(reports) != args.num_shards or any(required-set(r) for r in reports):
         raise ValueError("分片数量不符或缺少结构化字段")
     if {r["shard_idx"] for r in reports} != set(range(args.num_shards)):
         raise ValueError("分片索引集合不完整")
-    for key in ("mode","num_shards","manifest_sha256","yaml_sha256","metadata_sha256","source_head","selected_full_episodes","lib"):
+    for key in ("mode","num_shards","manifest_sha256","yaml_sha256","metadata_sha256","source_head","selected_full_episodes","lib","position_cache"):
         if len({json.dumps(r[key], sort_keys=True) for r in reports}) != 1:
             raise ValueError(f"各片 {key} 不一致")
     first = reports[0]
@@ -226,7 +228,7 @@ def aggregate(argv) -> int:
         print("ONLINE_START_SET=PASS\nONLINE_POS=PASS\nONLINE_ORDER=PASS")
     print(f"P5_ONLINE=PASS episodes={len(all_eps)} windows={len(all_rows)} assembly_checked={assembly_checked} "
           f"compared_real={len(real_rows)} padded_covered={len(padded)} stub={mode == 'stub'}")
-    result = {k:first[k] for k in ("mode","manifest_sha256","yaml_sha256","metadata_sha256","source_head","selected_full_episodes")}
+    result = {k:first[k] for k in ("mode","manifest_sha256","yaml_sha256","metadata_sha256","source_head","selected_full_episodes","position_cache")}
     result.update(passed=True, episodes=len(all_eps), windows=len(all_rows), assembly_checked=assembly_checked,
                   compared_real=len(real_rows), padded_covered=len(padded), shard_reports=args.reports)
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -243,6 +245,7 @@ def main() -> int:
     ap.add_argument("--yaml", default="perceptual-framesamp-context-motion.yaml")
     ap.add_argument("--store-subdir", choices=("framesamp","framesamp-8x8"), default="framesamp")
     ap.add_argument("--gpu", default="1")
+    ap.add_argument("--gpu-posemb-cache", type=pathlib.Path)
     ap.add_argument("--episodes", type=int, default=0)
     group = ap.add_mutually_exclusive_group()
     group.add_argument("--stub", action="store_true")
@@ -295,6 +298,16 @@ def main() -> int:
     if not args.real_strata:
         expected_real = expected_rows
     mode = "assembly" if args.assembly_hash else ("stub" if args.stub else ("real_strata" if args.real_strata else "real"))
+    import jax
+    position_table = position_cache = None
+    if mode != "assembly":
+        if args.gpu_posemb_cache:
+            from verified_gpu_posemb import load_verified_table
+            position_table, position_cache = load_verified_table(
+                args.gpu_posemb_cache, lib / args.store_subdir, int(hc.token_per_image))
+            print(f"GPU_POSEMB_CACHE=PASS sha256={position_cache['binary_sha256']}", flush=True)
+        elif jax.default_backend() == "cpu":
+            raise ValueError("CPU 在线验证必须传 --gpu-posemb-cache，不能直接用 CPU PosEmb3D 冒充 GPU 逐位结果")
     source_head = subprocess.check_output(["git","rev-parse","HEAD"], text=True).strip()
     source_status = subprocess.check_output(["git","status","--porcelain"], text=True)
     yaml_path = _REPO_ROOT / "src/mme_vla_suite/models/config/robomme" / args.yaml
@@ -380,7 +393,12 @@ def main() -> int:
                 mem._encode_ready_windows(total-1)
             else:
                 mem = FrameSampMemory(token_per_image=int(hc.token_per_image),vision_enc_fn=vision_enc,
+                                      max_steps=1 if position_table is not None else 4096,
                                       motion_enc_fn=encode,motion_cfg=motion_cfg)
+                if position_table is not None:
+                    # 只替换已独立验证的组件输出；避免每集在 CPU 再算一张不会使用的位置表。
+                    mem.pos_emb = position_table
+                    mem.max_steps = position_table.shape[0]
                 pol = _bare_policy(mem,motion_cfg,ds.state_norm_stats)
                 def feed(lo, hi):
                     pol.add_buffer({"images":frames[lo:hi],"state":states[lo:hi],"exec_start_idx":es if lo == 0 else 0})
@@ -429,7 +447,8 @@ def main() -> int:
                   assembly_checked=assembly_checked,compared_real=len(real_rows),mismatch_total=mismatch_total,
                   mismatches=mismatches,manifest_sha256=manifest["sha256"],yaml_sha256=ms.sha256_file(yaml_path),
                   metadata_sha256=ms.sha256_file(metadata_path),source_head=source_head,source_status=source_status,
-                  selected_full_episodes=sorted(selected),provenance=None if client is None else client.provenance,argv=sys.argv)
+                  selected_full_episodes=sorted(selected),position_cache=position_cache,
+                  provenance=None if client is None else client.provenance,argv=sys.argv)
     passed = report_passed(report)
     report["passed"] = passed
     out.parent.mkdir(parents=True,exist_ok=True)

@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "passed": true,
+  "source_sha256": "65e232935010b0dfebb46288c74da7ce0ce638cc8db508cd56cfb84e72caba0b",
+  "exporter_sha256": "f32a28daef56cb03c6759f9ff9d14ef874f4df547e8e5ffdf7586bb50b0461dd",
+  "store": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-40ep/framesamp",
+  "store_meta_sha256": "56c4faf71213228624618874ee39a7905d5827b8746d73dabde9bf86a34f29f2",
+  "offline_sha256": "3176ac09d063295fcd520339a7c89d5d3cb02e9af48e01e3ad1e9df7982b9972",
+  "offline_shape": [
+    586,
+    16,
+    768
+  ],
+  "binary": "mv2-posemb-old-probe.f32.bin",
+  "binary_sha256": "4f0c717d972415daef00d73ed89c276087603d3cb668993cf9a3f3eecdf4af84",
+  "shape": [
+    4096,
+    16,
+    768
+  ],
+  "dtype": "float32",
+  "grid": 4,
+  "temporal_base": 10000,
+  "spatial_base": 1000,
+  "devices": [
+    "cuda:0"
+  ],
+  "versions": {
+    "jax": "0.5.3",
+    "jaxlib": "0.5.3",
+    "numpy": "1.26.4"
+  },
+  "source_head": "df6fdcc4f9424f00901a107a66d98e19e679a7ba",
+  "source_status": " M scripts/training/g0/compare_online_motion.py\n M scripts/training/tests/motion_gates_model.py\n?? scripts/training/g0/verified_gpu_posemb.py\n?? scripts/training/tests/compatible_pi05_weights.py\n?? scripts/training/tests/test_compatible_pi05_weights.py\n"
+}

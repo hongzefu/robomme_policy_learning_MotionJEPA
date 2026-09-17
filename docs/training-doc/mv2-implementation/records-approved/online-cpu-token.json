@@ -1,0 +1,110 @@
+{
+ "schema": 2,
+ "mode": "stub",
+ "lib": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-40ep",
+ "shard_idx": 0,
+ "num_shards": 1,
+ "episode_ids": [
+  0
+ ],
+ "rows_seen": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11,
+  12,
+  13,
+  14,
+  15,
+  16
+ ],
+ "real_rows": [],
+ "padded_covered": [],
+ "expected_rows": 17,
+ "expected_real_rows": 17,
+ "start_ok": true,
+ "pos_ok": true,
+ "order_ok": true,
+ "n_compared": 17,
+ "n_steps": 19,
+ "assembly_checked": 0,
+ "compared_real": 0,
+ "mismatch_total": 1,
+ "mismatches": [
+  {
+   "kind": "stub_token",
+   "g": 0,
+   "start": 0
+  }
+ ],
+ "manifest_sha256": "d7cfb137b6ba01c42894e2d6d421a8c3f87dc1afeef1ac650563609bd7501d05",
+ "yaml_sha256": "b87c9b6f6e22d2621f7aa42edebe4b81148c8afbcce10c2fb4e512d7ca19fd99",
+ "metadata_sha256": "ddd1c3df4e6fa746a5230f31263fae84d2c0090623d47d592a899cae0c0adece",
+ "source_head": "df6fdcc4f9424f00901a107a66d98e19e679a7ba",
+ "source_status": " M scripts/training/g0/compare_online_motion.py\n M scripts/training/tests/motion_gates_model.py\n?? scripts/training/g0/verified_gpu_posemb.py\n?? scripts/training/tests/compatible_pi05_weights.py\n?? scripts/training/tests/test_compatible_pi05_weights.py\n",
+ "selected_full_episodes": [],
+ "position_cache": {
+  "report_sha256": "87ee8519aa52cdd5691883f5986dd3d3a42b867580191a65140bbc307d770b0e",
+  "schema": 1,
+  "passed": true,
+  "source_sha256": "65e232935010b0dfebb46288c74da7ce0ce638cc8db508cd56cfb84e72caba0b",
+  "exporter_sha256": "f32a28daef56cb03c6759f9ff9d14ef874f4df547e8e5ffdf7586bb50b0461dd",
+  "store": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-40ep/framesamp",
+  "store_meta_sha256": "56c4faf71213228624618874ee39a7905d5827b8746d73dabde9bf86a34f29f2",
+  "offline_sha256": "3176ac09d063295fcd520339a7c89d5d3cb02e9af48e01e3ad1e9df7982b9972",
+  "offline_shape": [
+   586,
+   16,
+   768
+  ],
+  "binary": "mv2-posemb-old-probe.f32.bin",
+  "binary_sha256": "4f0c717d972415daef00d73ed89c276087603d3cb668993cf9a3f3eecdf4af84",
+  "shape": [
+   4096,
+   16,
+   768
+  ],
+  "dtype": "float32",
+  "grid": 4,
+  "temporal_base": 10000,
+  "spatial_base": 1000,
+  "devices": [
+   "cuda:0"
+  ],
+  "versions": {
+   "jax": "0.5.3",
+   "jaxlib": "0.5.3",
+   "numpy": "1.26.4"
+  },
+  "source_head": "df6fdcc4f9424f00901a107a66d98e19e679a7ba",
+  "source_status": " M scripts/training/g0/compare_online_motion.py\n M scripts/training/tests/motion_gates_model.py\n?? scripts/training/g0/verified_gpu_posemb.py\n?? scripts/training/tests/compatible_pi05_weights.py\n?? scripts/training/tests/test_compatible_pi05_weights.py\n"
+ },
+ "provenance": {
+  "stub": true,
+  "protocol_sha256": "ad423c98dc2fadacb4aacd5571d8fb7951e7e0dbfe35d505bc960dbfa616a6bd",
+  "protocol_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/motion_protocol.py",
+  "pid": 12318
+ },
+ "argv": [
+  "scripts/training/g0/compare_online_motion.py",
+  "--lib",
+  "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-40ep",
+  "--stub",
+  "--episodes",
+  "1",
+  "--gpu-posemb-cache",
+  "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/motion/mv2-posemb-old-probe.json",
+  "--out",
+  "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/motion/mv2-online-cpu-cache-token.json",
+  "--inject-stub-token-error"
+ ],
+ "passed": false
+}

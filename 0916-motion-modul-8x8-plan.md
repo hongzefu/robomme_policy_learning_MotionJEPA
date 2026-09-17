@@ -1,6 +1,6 @@
 # 新库 motion 表构建 + modulation 8×8 接入 motion 计划（v2-motion）
 
-> **状态：实施中：步骤 2d 关闭态前后逐位对拍全部通过，run_name 已确认；三项开启态验证执行方式待用户裁决。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
+> **状态：实施中：步骤 2d 关闭态前后逐位对拍全部通过，run_name 已确认；三项开启态验证方式已获用户确认，输入完整 SHA 重锚通过。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
 >
 > **第一部分只讲做什么、为什么、哪些不变**；命令、判定行、代码锚点、推导与数字出处全部在第二部分（A–H 按模块，I 节收第一部分精简时移出的细节）。正本 `docs/motion-memory.md` 是 context 口径，本文只写与其不同的部分，实施后另立 `docs:` 更新正本。
 
@@ -45,11 +45,11 @@
 
 **最新进度（步骤 2d 完成）**：生产提交 `bec052e5ac76e338cfbe283bf7c3c434f05112b7`，候选提交 `c0be292c40c4a971161e7233540f4dc5c0c1c7cc`，均已推送。V1 3,200 样本/200 batch、V2 1,200 样本/200 batch、V6 61 初态叶及三类各 38 梯度叶、V7 100 步/5 状态/7 输入摘要全部逐位相同；V7 记录索引 872 个，前 800 个训练索引逐项相同，所有退出码为 0。结论见 [V7 候选归档](docs/training-doc/mv2-v7-guard-cand/result.md)。下一步切换资产并建库，不需要撤销生产提交。
 
-**第三项待裁决**：V5 的合成 GPU 单步预检发现，随机初始化的真实 pi05 AdaRMS 门为零，导致 motion 非零梯度检查不能通过；生产实际先加载 pi05_base。已询问“保留 gemma_150m 替身并加载形状兼容的预训练参数”或“使用完整生产模型与权重”。不修改生产门值，也不把测试初态问题当作关闭态回归失败。以下两项位置编码/渲染问题同样仍待答复。
+**V5 初始化裁决已确认**：用户原话「采用兼容权重加载，保留 gemma_150m 替身」。`motion_gates_model.py::_make_models` 对 modulation 测试加载 `pi05_base` 中名称与形状均兼容的参数；`compatible_pi05_weights.py::merge_compatible` 独立要求动作专家及六个 AdaRMS 参数齐全，检查 18 层门不全零，报告保留随机的参数名单。生产初始化和门值不改。此前随机零门导致的失败是测试初态问题，不属于关闭态回归失败。
 
 **实施进度（09-17）**：步骤 2b 的生产及验证代码已完成首轮实现，87 项 CPU 自动测试通过；CPU 初态真调用 `init_train_state` 完成 61 个公共参数叶逐位比较，仅增加 4 个 motion 叶，耗时 116.4 秒。新旧布局读取、真实 H5 补帧、独立抽样删行负例、跨集 reset、GPU 计时及比较器错误 token/符号零负例均已验证。详见 [实施短测记录](docs/training-doc/mv2-implementation/result.md)。接下来分别提交生产链路与验证工具，再从 clean CAND 取 V1/V2/V6/V7 候选证据。
 
-**两项新增待裁决事项**：CPU `PosEmb3D` 与离线 GPU 表存在真实浮点差异，GPU 则对新旧两张整表逐位相同；因此 V-online 的 CPU 位置编码口径需用户选择“预生成并校验 GPU 表后供 CPU 使用”或“主进程也使用 GPU”。此外，真实 EnvRunner 的 RGB reset 使用 GPU 渲染，仿真运行环境是已在位的 robomme 环境，已询问单卡渲染与逐任务隔离执行。两项都不降低判据，未把未答复当作同意；不影响先完成关闭态候选对拍。
+**位置表与仿真环境裁决已确认**：用户原话「采用预生成并校验的 GPU 位置表，CPU 验证装配与次序」与「采用现有仿真环境和单卡渲染，保留 200 次真实 reset」。`verified_gpu_posemb.py` 在 GPU 运行原 `PosEmb3D`，逐位核对整张离线位置表并记录源码、配置、表字节 SHA；`compare_online_motion.py --gpu-posemb-cache` 在 CPU 复核这些证据后注入已验证组件输出，继续严格比较装配和次序。仿真由 uv 调用 `/scratch/hongze/micromamba/envs/robomme/bin/python`，GPU 7 渲染，设置 `GLIBC_TUNABLES=glibc.rtld.optional_static_tls=8192`，四任务各独立进程完成 50 次真实 reset，不加载策略模型。输入 SHA 重锚以 `df6fdcc4f9424f00901a107a66d98e19e679a7ba` 完成后，先提交这次验证修补，再用新的 clean BUILD_HEAD 启动 Wan；Wan 与 encode 之间仍为零 commit。
 
 ### 这轮做什么
 
@@ -160,7 +160,7 @@ demo 帧号   0        16       32       48       64       80       96  99 │10
 **由此新增什么**：
 - `INIT_COMMON`（秒级 CPU）：6 条 modulation 叶 + 4 条 motion 叶与基线是否同初值，现有验证没有一项能核到。
 - `ROPE_LEN_EFFECT`（秒级 CPU）：第三轮引用的五个「位置平移效应」数字没有留档来源，重取后再写进正本。
-- `EVAL_ES_BOUND`（起跑前，无 GPU）：把「评估集 es 不可预知」变成实测，见第七节。
+- `EVAL_ES_BOUND`（起跑前，单卡渲染）：把「评估集 es 不可预知」变成实测，见第七节。
 - **motion 全遮消融评估**（用户拍板）：训完在同一 ckpt 上把 motion 全遮再评一次，同权重、同长度、只是看不到 motion 内容，Δ 即 motion 内容净贡献——没有它，新 run 与基线的差分不清是「motion 有用」还是「记忆区 512→672 改了位置编码」。本轮承诺的是实现等价，不是因果归因。
 
 **由此改口的表述**：两处「帧 token 彼此的 RoPE 相对距离改变」不成立（记忆 token 之间没有 attention），改为「每个记忆 token 的绝对位置改变」；「唯一 width=1024 的是 `gemma_300m`」是计数错（有三个）；「唯一拦得住 budget 的是快照 sha 核对」归因错（真正的结构性保证是评估侧只认 run 内快照）；`scripts/motion-variance` 的 +5.00pp 结论是 context 口径，结构性不适用、不得引用。差异矩阵（含代码锚点）、三条新验证的判据、措辞纠错表与正本待改段落清单见 I.1–I.3。
@@ -726,7 +726,7 @@ MME_VLA_Policy.infer ──► _prepare_history ──► _prepare_motion（k > 
 
 - **`INIT_COMMON`（2b CPU 单测，秒级）**：开启态下 6 条 modulation 叶（`mem_attn/{mem_rms_norm/scale, kv_einsum_mem/w, q_einsum_mem/w, out_einsum_mem/w}` + `mem_rms_norm_ffn/Dense_0/{kernel, bias}`，18 层堆叠约 85 M 参数，全部只能来自随机初始化——基线 `records/startup.log` 实测 6 条 `Merging missing weight`）与基线是否同一初值，现有 V 表**没有任何一项能核到**：V6 的 `INIT_EQ` 比的是「同一 YAML 改前 vs 改后」，V8 是同侧 A/A。`percep_mem.py` 自写「flax nnx 单条 default RNG 流按调用顺序 fold_in，插在前面会改变帧路的初始化值」，而两个 motion `nnx.Linear` 正建在 llm 之前；`0901` 计划的「RNG 消耗序」表与其闸门 `T3_COMMON_INIT` 是在 context（`mem_mods=[False, False]`，llm 内无随机初始化叶）下建立的，**不能默认沿用**。判据：同 `seed=42`、`JAX_PLATFORMS=cpu`，分别用关闭态与新 motion YAML 只做 `init_train_state(..., resume=False)`，按叶名比 6 条 modulation 叶与 4 条 motion 叶的 sha256，`INIT_COMMON=PASS common_mismatches=0 open_only=4`；不相同则先量差异再定处置。
 - **`ROPE_LEN_EFFECT`（2b CPU 探针，几十行）**：I.4 引用的五个数字（144→160 总变差 0.33 / 相对 L2 0.76；512→672 为 0.87；gap 非 0 时总变差饱和 ≈ 0.4；改成不占号或去 RoPE 后 1e-17）在仓库里**没有任何可追溯的脚本或留档**（全仓 grep 零命中）。机制本身可核且成立（`src/openpi/models/gemma.py::_apply_rope` 是标准 RoPE；`shared/sampling.py::pad_times` 用 `MEM_ORDER_SENTINEL` 把 padding 排到尾部 ⇒ 真实 key 位置不随 budget 变、只有 query 整体平移），但数字必须重取：固定 token 内容、只改 `mem_len`，直接构造 `MemoryAttention` 或复算 `_apply_rope` + masked softmax，输出 `ROPE_LEN_EFFECT=PASS tv_144_160=… relL2_144_160=… tv_512_672=… pad_content_diff=0`，json 落 `v1-store/reports/motion/`，写入正本前用它替换五个数字。
-- **`EVAL_ES_BOUND`（起跑前，无 GPU）**：见第七节。
+- **`EVAL_ES_BOUND`（起跑前，单卡渲染）**：见第七节。
 - **motion 全遮消融评估（用户已拍板加入）**：80k 训完后在同一 ckpt 上把 `motion_mask` 整列置 False 再评一次。`MemoryAttention` 的 `masked_logits = jnp.where(attn_mask, logits, -2.3819763e38)` 保证被 mask 的 K 位 softmax 概率恰为 0，故该臂是「同权重、同 `mem_len=672`、同 q 位置，只是看不到 motion 内容」，Δ 即 motion 内容净贡献（帧路 `static_mask` 恒有 True，不存在全 mask 导致 softmax 退化的边界）。成本一次评估；训练侧对照（budget=160 且全库 mask 恒 False 的 80k run）另需约 **21.6 h**（8 卡下界口径，I.9），**本轮不做**。第八节据此明确：**本轮承诺的是实现等价，不是因果归因**；归因由消融臂承担。
 
 
@@ -772,7 +772,7 @@ MME_VLA_Policy.infer ──► _prepare_history ──► _prepare_motion（k > 
 
 - budget 160 在 1300 步下零截断的**充要条件是评估 `es ≤ 1296`**；
 - 训练集实测上界 1152，裕度 144 帧（12.5%），唯一风险线是 BinFill hard（训练 es 578–1152）；
-- **新增预检 `EVAL_ES_BOUND`（起跑前、无 GPU）**：遍历 4 任务 × 全部 test 集，只做 `EnvRunner.make_env(i)` + `get_init_obs()`（无策略、无 GPU，共 200 次 `env.reset()`），收集 es 分布，判定行 `EVAL_ES_BOUND=PASS tasks=4 episodes=<n> es_max=<m> budget=160 headroom=<160 − k_eval_max>`；把「es 不可预知」从赌变成测，`headroom < 0` 即回到本节重定 budget。
+- **新增预检 `EVAL_ES_BOUND`（起跑前、单卡渲染）**：遍历 4 任务 × 全部 test 集，只做 `EnvRunner.make_env(i)` + `get_init_obs()`（无策略、单卡 GPU 渲染，共 200 次 `env.reset()`），收集 es 分布，判定行 `EVAL_ES_BOUND=PASS tasks=4 episodes=<n> es_max=<m> budget=160 headroom=<160 − k_eval_max>`；把「es 不可预知」从赌变成测，`headroom < 0` 即回到本节重定 budget。
 - **`es ≥ 1297` 的真实后果（第四轮订正，比第三轮写的「该集记 error」严重得多）**：raise 点唯一，在 `FrameSampMemory._prepare_motion`（`_encode_ready_windows` **不做上限检查**，超限的集会先白编一堆窗再在第一次 infer 时炸）；服务端 `websocket_policy_server._handler` 发回 traceback、关连接后 raise，server 进程存活；但 `examples/robomme/eval.py::evaluate` 的控制流是——episode 异常只写 `"error"` 后 `if success_flag == "unknown": … return` 整轮提前返回；只要 progress 里出现过一个 `"error"`，收尾的 `success_rate = sum(...)` 混入字符串抛 `TypeError` 被吞、`log.json` 永不落盘、外层 `while not os.path.exists(...)` 把全部任务重跑一遍，且续评跳过判据用 `str(episode_id)` 而运行中写的是 int 键 ⇒ 重跑一集也不跳。代价是几十 GPU·小时白跑且拿不到成功率。评估计划另起时须先修 `success_flag` 作用域与 `success_rate` 对 `"error"` 的处理，或把超 budget 的集显式降级；`EVAL_ES_BOUND` 是它的前置门。
 - 评估口径或任务集变更时须按第二部分 C 节的式子重核。
 
@@ -898,7 +898,7 @@ motion 全遮消融评估（I.2，用户拍板加入）+ 基线 `59999` 评估�
 | 4 | 建库顺序（tmux `mv2-wan` → `mv2-encode` → `mv2-oracle` 重算及汇总 → `mv2-pack` 打包及数值 compare；**Wan 与 encode 之间零 commit**）+ 账目五项；`--raw-dir` 三方断言在 `run_local.py` / `oracle_driver vae` **读完清单后立即做**，pack 再核三方（A6，不等 5 h GPU 跑完） | — |
 | 5 | 建库留档 `docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/` | `docs:` |
 | **6** | 开启态验证，**串行子步、标卡号、每档结束 `tmux ls` + `nvidia-smi` 确认前一档进程已退**（第四轮 P0：第三轮五项并列在一格、V-online 要 8 卡与表头「用 4–7」冲突）：**6a** V4（CPU，tmux `mv2-v4`）‖ V5（GPU 4，tmux `mv2-m4`）→ **6b** V8（GPU 4,5，tmux `mv2-aa`）→ **6c** V-online ①②（零 GPU，tmux `mv2-vonl-a` / `mv2-vonl-b`）→ **6d** V-online ③（**独占 GPU 0–7**，tmux `mv2-vonl-c`，约 7 min）→ **6e** smoke（**独占 GPU 0–7**，smoke runner 卡号同改，tmux `mv2-smoke`，run_name `smoke-m8x8-modul-motion-<UTC>`，一律完整留档）。第五轮起表头已统一为 8 卡，上面括注里「V-online 要 8 卡与表头『用 4–7』冲突」的那处历史冲突随之消失。本步所有工具改动已在 2c 入库 | `docs:` 守卫留档 |
-| 7 | 起跑留档 `docs/training-doc/<run_name>/launch.md`（沿用「起跑前留档不嵌入自身提交 SHA」）；此刻记 `TRAIN_HEAD` 写进 launch.md 正文；同步做 `EVAL_ES_BOUND`（无 GPU，第七节） | `docs:` |
+| 7 | 起跑留档 `docs/training-doc/<run_name>/launch.md`（沿用「起跑前留档不嵌入自身提交 SHA」）；此刻记 `TRAIN_HEAD` 写进 launch.md 正文；同步做 `EVAL_ES_BOUND`（单卡渲染，第七节） | `docs:` |
 | 8 | 生成 runner 落 **`v1-store/logs/mv2-prod-runner.sh`（不进 git）**：照抄基线 runner + `launch.actual.json` 的 `env` 前缀，只改第三节那 **11** 处（其中卡号相关 6 处的逐行清单见 G 节；`fsdp_devices` / `num_workers` 不在 runner 里覆盖、由新具名配置承载） → **独立占卡闸**（不依赖 runner 内的 `test`——两个基线 runner 的 `body()` 内没有 `set -e`，第 33 行 `test "$(nvidia-smi …)" = "0"` 失败后照样往下走）：`nvidia-smi --id=0,1,2,3,4,5,6,7 --query-gpu=memory.used --format=csv,noheader,nounits` 求和为 0 且 `tmux ls` 中本轮会话只剩待起的 `mv2-prod`，判定行 `GPU_IDLE=PASS gpus=0,1,2,3,4,5,6,7 used_mib=0 sessions=<清单>` 写进 launch 留档 → tmux `mv2-prod` → preflight `PREFLIGHT=PASS n=30` → 训练；Monitor 盯日志；**300 步处按第 16 条口径重估 ETA 并回报**，分记 dataloader 等待占步时比例与 step compute | — |
 | **8b** | **起跑后归档**（第四轮补，第 12 条要求的 commit / 命令 / 配置 / 输出路径此前只留在终端与 v1-store）：`records/launch.actual.json`（`train_head` / `launch_command` / `tmux_sessions` / `train_pid`）+ `records/preflight.log` + `records/prod-runner.sh` 副本 | `docs:` |
 | 9 | 训完：motion 全遮消融评估 + 基线 `59999` 评估（评估口径另起计划，第三节末交接约束） | 另起计划 |

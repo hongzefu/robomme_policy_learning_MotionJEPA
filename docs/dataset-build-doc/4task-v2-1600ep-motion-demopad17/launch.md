@@ -4,7 +4,7 @@
 
 ## 版本与输入
 
-起跑版本由外壳参数 BUILD_HEAD 的完整 SHA 固定，并在每个阶段起止核对 HEAD 与空 porcelain。实际 SHA、时间和命令写入阶段日志，绝不把事后文档提交冒充启动版本。从输入重锚到所有建库检查完成保持同一提交，尤其 Wan 与 encode 之间零 commit。
+起跑版本由外壳参数 BUILD_HEAD 的完整 SHA 固定，并在每个阶段起止核对 HEAD 与空 porcelain。实际 SHA、时间和命令写入阶段日志，绝不把事后文档提交冒充启动版本。输入重锚已在 df6fdcc4f9424f00901a107a66d98e19e679a7ba 完成，2026-09-17 21:26:55–21:40:20 UTC，805 秒，四个文件 SHA 同源、EXIT_CODE=0；来源、帧表元数据和 norm_stats 三个受保护文件摘要未变。用户在此期间确认了位置表缓存、现有单卡仿真环境及 V5 兼容权重初始化三项验证方案，因此先提交验证工具修补，再从新 clean BUILD_HEAD 启动 Wan。Wan 至 pack/compare 保持同一提交，Wan 与 encode 之间零 commit。
 
 代码数值入口为 scripts/dataset/wan/wan_motion_infer.py 的钉版复制件，SHA256 为 af67fdd913543aee416a9fe5df797f707ff159165c468d687fcf8e7347941b34；SOURCE_PIN 推理提交为 2a484ad960ed6155321dc34def9011eb119f857f。独立 oracle 使用 /scratch/hongze/MotionJEPA 的原版入口，脚本 SHA 与复制件相同。encoder 的训练提交则为 660cee10a86d02ae03a73db95fac6f0b8dbd28a6，两种提交含义不能混同。
 
@@ -48,7 +48,7 @@ Wan/encode 各占 GPU 0–7；D3 使用 GPU 7；D2 八片分别使用 GPU 0–7�
 
 ```bash
 #!/usr/bin/env bash
-# 完整建库阶段外壳；输入重锚到打包/对拍期间保持同一 clean BUILD_HEAD。
+# 完整建库阶段外壳；每阶段自证锚点，Wan 到打包/对拍保持同一 clean BUILD_HEAD。
 set -uo pipefail
 cd /scratch/hongze/robomme_policy_learning_MotionJEPA || exit 1
 STAGE="${1:?必须指定阶段}"

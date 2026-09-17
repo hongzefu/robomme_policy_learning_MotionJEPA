@@ -1,0 +1,29 @@
+{
+  "task": "BinFill",
+  "complete": false,
+  "episodes": [
+    {
+      "episode": 0,
+      "es": 0,
+      "k_eval": 80,
+      "difficulty": "easy",
+      "goal": "put one red cube into the bin, then press the button to stop",
+      "render_device": "cuda:0",
+      "seconds": 16.24960105214268
+    }
+  ],
+  "budget": 160,
+  "max_steps": 1300,
+  "metadata_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark/src/robomme/env_metadata/test/record_dataset_BinFill_metadata.json",
+  "metadata_sha256": "eb5899cba506534b697c00f7be6991bd48126612db0ea09683048da2d8d85fdc",
+  "python": "/scratch/hongze/micromamba/envs/robomme/bin/python",
+  "packages": {
+    "sapien": "3.0.3",
+    "mani_skill": "3.0.0b21",
+    "robomme": "0.1.0",
+    "numpy": "1.26.4",
+    "torch": "2.9.1"
+  },
+  "robomme_commit": "856bc3a189d4172f3f47dbee4424d585f8d78db3",
+  "env_runner_sha256": "ce64155d6b8730bde66a0fd65b68a3c692dfd92ced0c7408578d53ae94f0d4eb"
+}

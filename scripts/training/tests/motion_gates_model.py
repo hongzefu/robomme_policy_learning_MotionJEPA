@@ -3,7 +3,8 @@
 
 数据与公式档可在 CPU 跑；context M3/M4 保留 dummy 对照。modulation M3/M4 须显式设
 `JAX_PLATFORMS=cuda`，采用真实 pi05 配置、1024 维 memory 与 18 层 action expert，
-仅 VLM 主干替换为用户确认的 gemma_150m；不加载训练 checkpoint。
+仅 VLM 主干替换为用户确认的 gemma_150m；加载 pi05_base 中名称与形状兼容的参数，
+动作专家预训练参数必须齐全，其他保留随机初始化的参数逐项记入报告。
 
   --gate m1   数据端交付：脚本内独立 oracle（直读 motion_index.json / motion 表 / pos 表 / 清单，不 import 被测 dataset / store / sampling
               的公式）按公式重算每个样本的 motion_emb / motion_pos / motion_mask / mem_order，与 FrameSampDataset.__getitem__ 逐位；
@@ -65,6 +66,7 @@ MOTION_BUDGET = 96
 DEMO_MIN_REAL = 33
 PALIGEMMA_VARIANT = "gemma_150m"
 ACTION_EXPERT_VARIANT = "gemma_300m"
+PRETRAINED_REPORTS = {}
 POS_DIM = 256
 
 
@@ -443,7 +445,28 @@ def _make_models(seed: int = 0):
                                 paligemma_variant=PALIGEMMA_VARIANT if modulation else "dummy",
                                 action_expert_variant=ACTION_EXPERT_VARIANT if modulation else "dummy")
     c_open, c_closed = cfg(OPEN_YAML), cfg(CLOSED_YAML)
-    return c_open, c_open.create(jax.random.key(seed)), c_closed, c_closed.create(jax.random.key(seed))
+    model_open, model_closed = c_open.create(jax.random.key(seed)), c_closed.create(jax.random.key(seed))
+    PRETRAINED_REPORTS.clear()
+    if c_open.history_config.integration_type == "modulation":
+        from flax import nnx
+        from openpi.models.model import restore_params
+        from compatible_pi05_weights import merge_compatible
+        sys.path.insert(0, str(_REPO_ROOT / "scripts/assets"))
+        import assets_lock
+        lock = assets_lock.load_lock()
+        assets_lock.require(["pi05_base"], level="full", lock=lock)
+        path = _V1 / "models/openpi-assets/checkpoints/pi05_base/params"
+        pretrained = restore_params(path, restore_type=np.ndarray)
+        for side, model in (("open", model_open), ("closed", model_closed)):
+            state = nnx.state(model, nnx.Param)
+            merged, report = merge_compatible(state.to_pure_dict(), pretrained)
+            state.replace_by_pure_dict(jax.tree.map(jax.numpy.asarray, merged))
+            nnx.update(model, state)
+            report.update(path=str(path.resolve()), asset=assets_lock.asset("pi05_base", lock))
+            PRETRAINED_REPORTS[side] = report
+            print(f"V5_PRETRAINED=PASS side={side} loaded={len(report['loaded'])} random={len(report['random'])} action={len(report['required_action'])}", flush=True)
+        del pretrained
+    return c_open, model_open, c_closed, model_closed
 
 
 def _fixture_batch(lib: pathlib.Path, ds, specs):
@@ -789,7 +812,8 @@ def cmd_m4(args):
                    "base_base_max_abs": base_base, "base_pad_max_abs": base_pad,
                    "base_loss_hex": base_loss, "pad_loss_hex": pad_loss,
                    "paligemma_variant": c_open.paligemma_variant, "action_expert_variant": c_open.action_expert_variant,
-                   "pi05": c_open.pi05, "budget": MOTION_BUDGET}, f, ensure_ascii=False, indent=2)
+                   "pi05": c_open.pi05, "budget": MOTION_BUDGET,
+                   "pretrained": PRETRAINED_REPORTS}, f, ensure_ascii=False, indent=2)
     if not all(checks.values()):
         raise SystemExit(1)
 
