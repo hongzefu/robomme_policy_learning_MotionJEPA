@@ -27,7 +27,13 @@
 | `fsdp_devices=8` 落点 | 写进新具名配置 `mme_vla_suite_b128_80k`，**不走 runner CLI 覆盖**（第 10 条要求先定落点） | 09-17 |
 | `num_workers` | 8 → **16**（0917 那次 0.972660 s/步 实测档位即 w16），同样写进新具名配置 | 09-17 |
 | 与基线成对可比 | **接受降级、不重跑 8 卡基线**；主比较锚点仍是 80k run 的 `60000` vs 基线 `59999` | 09-17 |
-| `run_name` | 待确认（建议 `v2-1600ep-m8x8-modul-motion-b128-80k`） | — |
+| `run_name` | `v2-1600ep-m8x8-modul-motion-b128-80k`（本轮用户确认采用） | 09-17 |
+
+**09-17 实施记录（优先于上方方案固化时的状态）**：用户指令原话「开始实施 有问题尽早问用户」；正式名称确认原话「采用 v2-1600ep-m8x8-modul-motion-b128-80k」。已开始步骤 0–1，起始提交为 `f9f668920923c58e5d7b721c2827da17b6afa865`，主副本工作区干净；环境 B，本地 `/dev/md0` XFS，8 × A100-SXM4-80GB，显存占用均为 0，磁盘剩余约 1.1 TB，`/dev/shm` 剩余 561 GiB。数据目录在位，内容核验尚未执行，所有验证与训练结果均待实测。
+
+用户另确认「采用建议顺序，保留三方强校验」：建库顺序修正为 **Wan → encode → oracle 重算及汇总 → pack/verify → compare → 五项账目**。原因是 pack 要读取 oracle 生成的 `vae_report.json`，必须先生成该报告；oracle 重算只依赖清单与 latent，不依赖 motion 整表。Wan 与 encode 之间零 commit，三个来源的 `raw_dir` 校验继续保留。
+
+步骤 1b 同时纳入基线驱动缓存落点修补，用户原话「一并修补，在修补后的同一驱动上取前后基线」：`run_2gpu_epoch_bench.sh` 去除 `$HOME/.cache` 软链接的创建与删除，改向训练入口传入 `MMEVLA_JAX_CACHE_DIR`，仍指向 `v1-store/cache/jax/<EXP_NAME>`。前后基线均显式设 `KEEP_JAX_CACHE=1`，保留相同缓存。生产训练代码与超参不因该修补改变；BASE 在这次修补提交后取得。
 
 ---
 
@@ -98,7 +104,7 @@ demo 帧号   0        16       32       48       64       80       96  99 │10
 | 具名配置 | `mme_vla_suite_b128_60k` | `mme_vla_suite_b128_80k`（改 `num_train_steps`、`decay_steps`、`fsdp_devices`、`num_workers` **四项**，第二部分 C 节） |
 | history YAML | `perceptual-framesamp-modul-8frame-8x8.yaml` | 同名加 `-motion`（= 基线 + 一个 `motion` 节） |
 | `--history-config-sha256` | 基线 YAML 的 sha | 新 YAML 的 sha |
-| `run_name` | 基线名 | 待确认 |
+| `run_name` | 基线名 | `v2-1600ep-m8x8-modul-motion-b128-80k` |
 | `--run-root` 子目录 | `…/mme_vla_suite_b128_60k/<RUN>` | `…/mme_vla_suite_b128_80k/<RUN>`（随配置名派生） |
 | tmux 会话 | `m8-prod` / `m8-prod-dense` | `mv2-prod` / `mv2-dense` |
 | `LOG` / `TRAIN_RECORD_DIR` / `MMEVLA_JAX_CACHE_DIR` | 随 `$RUN` 派生 | 同式，照抄 runner 即生效 |
@@ -427,16 +433,17 @@ uv run --no-sync python scripts/dataset/run_local.py --stage wan --lib $LIB --gp
 # 第 3 步 encode（tmux mv2-encode）——与 wan 之间零 commit
 uv run --no-sync python scripts/dataset/run_local.py --stage encode --lib $LIB --gpus 0,1,2,3,4,5,6,7 \
   --encoder-run-dir $ENC --expected-ckpt-sha256 $SHA
-# 第 4 步 pack / verify（tmux mv2-pack）
-uv run --no-sync python scripts/dataset/pack_motion_store.py pack   --manifest $LIB/meta/episode_manifest.json --tokens $LIB/motion-tokens --latents $LIB/wan-latents --out $LIB/motion --encoder-run-dir $ENC --raw-dir $RAW
-uv run --no-sync python scripts/dataset/pack_motion_store.py verify --store $LIB/motion --resume
-# 第 5 步 oracle（MotionJEPA venv，--mj-repo $MJ 是顶层参数、必须在子命令之前；tmux mv2-oracle）
+# 第 4 步 oracle 重算及汇总（MotionJEPA venv，--mj-repo $MJ 是顶层参数、必须在子命令之前；tmux mv2-oracle）
 #   三个子命令都必须显式传口径（--demo-min-real / --exec-min-real 无默认值，漏传即报错）
 CUDA_VISIBLE_DEVICES=7 … oracle_driver.py --mj-repo $MJ encoder --manifest $LIB/meta/episode_manifest.json --latents $LIB/wan-latents --out $LIB/oracle/wan-mj \
   --encoder-run-dir $ENC --expected-ckpt-sha256 $SHA --demo-min-real 17 --exec-min-real 33
 for i in 0..7: CUDA_VISIBLE_DEVICES=$i … oracle_driver.py --mj-repo $MJ vae --manifest … --raw-dir $RAW --latents $LIB/wan-latents --out $LIB/oracle/wan-mj \
   --shard-idx $i --num-shards 8 --demo-min-real 17 --exec-min-real 33 --sample-spec "padded:all,rest:0.10,seed:0"
 … oracle_driver.py aggregate --manifest … --out $LIB/oracle/wan-mj --num-shards 8 --kind vae --demo-min-real 17 --exec-min-real 33
+# 第 5 步 pack / verify（tmux mv2-pack；此时 vae_report.json 已生成，三方 raw_dir 校验不能跳过）
+uv run --no-sync python scripts/dataset/pack_motion_store.py pack   --manifest $LIB/meta/episode_manifest.json --tokens $LIB/motion-tokens --latents $LIB/wan-latents --out $LIB/motion --encoder-run-dir $ENC --raw-dir $RAW
+uv run --no-sync python scripts/dataset/pack_motion_store.py verify --store $LIB/motion --resume
+# 最后做数值 compare，输入来自已完成的 oracle 与 pack。
 uv run --no-sync python scripts/dataset/wan/compare_wan.py latents --latents $LIB/wan-latents --oracle $LIB/oracle/wan-mj --sampled $LIB/oracle/wan-mj/sampled_windows.json --sample-spec "padded:all,rest:0.10,seed:0"
 uv run --no-sync python scripts/dataset/wan/compare_wan.py tokens  --store $LIB/motion --oracle $LIB/oracle/wan-mj
 # 账目 a6set / a7 / a9set / a10 / a11（a10 的 --expect-* 写死，不取 motion_index.json）
@@ -876,7 +883,7 @@ motion 全遮消融评估（I.2，用户拍板加入）+ 基线 `59999` 评估�
 | **2c** | **两个 commit**（第四轮拆分，让回滚只碰生产改动）：`commitV10.0: demo 段补帧网格、modulation 接入 motion 与 80k 配置`（A–E 生产链路）→ `commitV10.1: 第四轮验证工具与 CPU 单测`（F 节工具）→ push；记 `CAND=$(git rev-parse HEAD)`；**`git status --porcelain` 必须为空才能进 2d** | `commitV10.0` + `commitV10.1` |
 | **2d** | 取「改后」证并对拍（`DTYPE_SOURCE_COMMIT=$CAND`，卡号仍 4,5）：V1 / V2② compare、V6 compare、V7 `check --base` + bench + `project_scalars` + `compare_baseline`（tmux `mv2-bench-cand`）、V2① / V2③ 秒级。对拍前 `jq` 断言两侧源码身份（I.7 开头）。**FAIL 分流**：harness 失配（`reason=运行口径不同…`、目录已存在、白名单 raise）先排查；数值项失配 → `git revert --no-commit <commitV10.0 sha>` + 手写 subject `revert: 撤销 commitV10.0（2d 对拍 <判定行> FAIL）` + push（裸 `git revert` 产出英文无前缀 commit，违反第 11 条；**只 revert V10.0、保留 V10.1 工具**），停下交用户。第二轮规则：`DTYPE_SOURCE_COMMIT` 取 revert 后新 commit、产物目录 / `RUN_TAG` 加 `-r2`；基线证在 `uv.lock` / `packages` / `CUDA_VISIBLE_DEVICES` / GPU 列表不变时可跨轮复用（`compare_fixed_grad.py` 不比 `source["head"]`，但 `environment` 任一变化即 raise） | — |
 | 3 | encoder 换型落盘 + `ASSETS_LOCK.json` 更新 + `test_assets_lock.py` 通过 + 输入重锚（`INPUT_REANCHOR=PASS files=4`） | `fix:`（资产锚点） |
-| 4 | 建库四步（tmux `mv2-wan` → `mv2-encode` → `mv2-pack` → `mv2-oracle`；**Wan 与 encode 之间零 commit**）+ 账目五项；`--raw-dir` 三方断言在 `run_local.py` / `oracle_driver vae` **读完清单后立即做**（A6，不等 5 h GPU 跑完） | — |
+| 4 | 建库顺序（tmux `mv2-wan` → `mv2-encode` → `mv2-oracle` 重算及汇总 → `mv2-pack` 打包及数值 compare；**Wan 与 encode 之间零 commit**）+ 账目五项；`--raw-dir` 三方断言在 `run_local.py` / `oracle_driver vae` **读完清单后立即做**，pack 再核三方（A6，不等 5 h GPU 跑完） | — |
 | 5 | 建库留档 `docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/` | `docs:` |
 | **6** | 开启态验证，**串行子步、标卡号、每档结束 `tmux ls` + `nvidia-smi` 确认前一档进程已退**（第四轮 P0：第三轮五项并列在一格、V-online 要 8 卡与表头「用 4–7」冲突）：**6a** V4（CPU，tmux `mv2-v4`）‖ V5（GPU 4，tmux `mv2-m4`）→ **6b** V8（GPU 4,5，tmux `mv2-aa`）→ **6c** V-online ①②（零 GPU，tmux `mv2-vonl-a` / `mv2-vonl-b`）→ **6d** V-online ③（**独占 GPU 0–7**，tmux `mv2-vonl-c`，约 7 min）→ **6e** smoke（**独占 GPU 0–7**，smoke runner 卡号同改，tmux `mv2-smoke`，run_name `smoke-m8x8-modul-motion-<UTC>`，一律完整留档）。第五轮起表头已统一为 8 卡，上面括注里「V-online 要 8 卡与表头『用 4–7』冲突」的那处历史冲突随之消失。本步所有工具改动已在 2c 入库 | `docs:` 守卫留档 |
 | 7 | 起跑留档 `docs/training-doc/<run_name>/launch.md`（沿用「起跑前留档不嵌入自身提交 SHA」）；此刻记 `TRAIN_HEAD` 写进 launch.md 正文；同步做 `EVAL_ES_BOUND`（无 GPU，第七节） | `docs:` |
