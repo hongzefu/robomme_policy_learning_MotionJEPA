@@ -91,3 +91,56 @@ UV_CACHE_DIR="$PWD/v1-store/cache/uv" uv run --no-sync python docs/training-doc/
 ```
 
 全程 15 秒采样间隔大于步时，只提供离散采样均值与 0% 占比，不推导逐步 GPU 等待；慢区间/其他区间的结论只来自上文起跑 500ms 密采。完整前 30 分钟密采归档为 [records/gpu_util_lms500_first30min.csv](records/gpu_util_lms500_first30min.csv)。本轮保留全部 checkpoint，策略评估、性能优化和 motion 实施均另立任务。
+
+## HF bucket 异地备份（2026-09-17）
+
+**12 个 checkpoint 已全量备份到 HF private bucket，两遍独立 sha256 逐行对照验收通过。** 此前 39 小时训练的产物只存在于本机 `/dev/md0` 一块盘上（本文档上文「权重仅保存在 `v1-store`」），本次消除该单点风险。
+
+| 项 | 值 |
+|---|---|
+| bucket | `HongzeFu/robomme-vla-modul-60k-v1`（`private: true`，创建于 `2026-09-17T15:54:04Z`） |
+| 内容 | 12 个 orbax checkpoint + 4 份 config/provenance + `wandb_id.txt` + `README.md` + `SHA256SUMS.pre.txt` |
+| 规模 | 274 对象 / 142,545,105,487 B（132.77 GiB） |
+| 上传链路 | `scripts/dataset/hf_export/run_modul60k_ckpt_export.sh`（bucket README 源文件 `modul60k_bucket_README.md`） |
+| 起跑 commit | `e4dc733`（clean HEAD） |
+| 会话 / 日志 | tmux `hf-modul60k-export`（跑完自然退出）；`v1-store/exports/hf-ckpt-v2-1600ep-m8x8-modul-b128-60k/logs/export.log` |
+| 耗时 | 约 26.5 分钟（15:54:01 → 16:20:30 本地时间） |
+
+### 验收判定行（逐条实测，全部一次通过）
+
+```text
+HF_WHOAMI=HongzeFu
+目标 bucket 现状: files=0 size=0          # 空库断言，防 repo_id 打错污染别的库
+LOCAL_FILES=274 LOCAL_BYTES=142545105487  # 274 = 272 源文件 + README.md + SHA256SUMS.pre.txt
+PRE_LINES=273                             # 清单含 README.md、不含清单自身
+UPLOAD_DONE batches=12
+BUCKET_FILES=274 BUCKET_BYTES=142545105487
+SHA256_PRE_POST_DIFF=0
+sha256sum -c 校验行数: 273
+RESULT=PASS
+SRC_UNCHANGED=OK
+EXIT_CODE=0
+```
+
+**主判据是 `SHA256_PRE_POST_DIFF=0` 与 `RESULT=PASS`**：把整个 bucket 全量回读到 `verify/`（真下载 132.77 GiB），在回读侧**独立重算** sha256 得到 post 清单，与上传前的 `SHA256SUMS.pre.txt` 逐行 `diff` 为空，再补一遍 `sha256sum -c --strict`（273 行全 OK）。计数层的 `BUCKET_FILES` / `BUCKET_BYTES` 只作早停信号——该 REST 接口已知异步滞后，本次一次即吻合、未触发 120 秒复查。
+
+`SRC_UNCHANGED=OK` 是收尾断言：stage 树用硬链接搭建（与源同在 `/dev/md0`，额外占盘为 0，不复制第二份 132.77 GiB），故必须在源目录上算第三遍 sha256，证明原始 checkpoint 未被连带改动。
+
+### 两处与上一条 run 的差异
+
+1. **分批粒度**：按 step 目录切 12 批，每批 11.06 GiB。2026-09-08 实测的失败模式是服务端 `new_upload_commit` 随**批内字节量**超时（1.62 GB×10=16.2 GB 过、2 GB×5=10 GB 稳、2 GB×10=20 GB 挂），11.06 GiB 落在已验证会过的量级；本次 12 批**零重试**。orbax 的 step 目录是稳定的天然边界，不需要 `run_motionjepa_full1600_export.sh` 那套贪心装箱与 `upload_plan.json` 落盘（那是为 2991 个重尾 `.bin` 准备的，分组漂移会让 `--include` 失配）。
+2. **实验条件**：本 run 的 `motion_provenance.json` 里 `motion_enabled: false`，`motion_root` / `vae` / `encoder` 均为 `null`——这是 `integration_type: modulation` + framesamp-8x8、**motion 通道关闭**的口径，与 bucket `HongzeFu/robomme-motionjepa-vla-v1` 存放的 `awsprod40k-b128-motion`（motion 开启）是不同实验条件，两者不可混作一组对照读。bucket README 已写明该声明。
+
+### 未清理产物
+
+`v1-store/exports/hf-ckpt-v2-1600ep-m8x8-modul-b128-60k/verify/`（回读副本，132.77 GiB 实占）按既有惯例保留（上一条 run 的 `hf-ckpt-awsprod40k-b128-motion/` 同样在盘上）。确认不再需要复核时可回收该空间；`stage/` 是硬链接，删除不释放空间也不影响源文件。
+
+### 恢复方式
+
+```bash
+hf sync hf://buckets/HongzeFu/robomme-vla-modul-60k-v1 ./robomme-vla-modul-60k-v1
+cd robomme-vla-modul-60k-v1 && sha256sum -c --strict SHA256SUMS.pre.txt
+# 只取末步：hf sync hf://buckets/HongzeFu/robomme-vla-modul-60k-v1 ./ckpt-59999 --include '59999/*'
+```
+
+step 目录保持 orbax 原结构，下载即可 `ocp.PyTreeCheckpointer().restore(".../59999/params")`，无需解包。bucket CLI 须用 `uvx --python 3.11 --from "huggingface_hub[cli]==1.30.0" hf`（项目 `.venv` 的 0.32.3 无 bucket 子命令），凭据用 `v1-store/secrets/hf.env` 覆盖环境里那个 yinpei-tri 的 `HF_TOKEN`。
