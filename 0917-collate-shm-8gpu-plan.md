@@ -23,14 +23,14 @@
 | # | 事项 | 用户答复 | 落地 |
 |---|---|---|---|
 | 1 | 改后副本分支名 `v2-motionmem-collate-shm`、路径 `/scratch/hongze/robomme_policy_learning_MotionJEPA-temp` | **同意** | 第 4 节第 2 步 |
-| 2 | 主副本源码锁只读，直到第 9 步解锁 | **同意**（第一版口径） | 第二版里主副本不再是运行侧（第 7 项），且另一 agent 正在主副本上工作（`1f69d5c`）——锁主副本会挡住他们、又保护不了对比。改为**锁改前副本 `-base`**（第 9 项，待确认） |
+| 2 | 主副本源码锁只读，直到第 9 步解锁 | **同意**（第一版口径） | 第二版里主副本不再是运行侧（第 7 项），且另一 agent 正在主副本上工作（`1f69d5c`）——锁主副本会挡住他们、又保护不了对比。改为**锁改前副本 `-base`**（第 9 项，已同意） |
 | 3 | 8 卡独占约 60 分钟（冒烟 25 + 梯度对拍约 30），现在就开 | **同意** | 第 7、8 步不必再问 |
 | 4 | `scripts/dataset/hf_export/` 下两个在途未跟踪文件（另有 tmux 会话 `hf-modul60k-export` 在跑） | **不用管** | 已由另一 agent 以 `1f69d5c` 提交，主副本 porcelain 现为空、该会话已结束。事实虽变，第 7 项仍成立：主副本随时可能再出现别人的在途改动 |
 | 5 | 第 8 步改前两次若不逐位一致，是否自动退回量化判据 | 未答复 | **第二版取消量化退路**（审计第 4 条）：改前两次不逐位一致即停下，把原始判定行交用户裁决，不出任何 PASS |
 | 6 | 第 9 步 push 新分支 / 并回 / 删副本 | 届时再问 | — |
-| 7 | **（第二版新增，待确认）** 改前副本改为独立干净 worktree `/scratch/hongze/robomme_policy_learning_MotionJEPA-base`（detached 在 `A_HEAD`，`v1-store` symlink，自己的 `.venv`），主副本不再作为运行侧 | 待确认，默认按此执行 | 审计第 2 条：主副本被另一 agent 并行使用（修订期间已出现在途文件与外来 commit），porcelain 随时可能非空而过不了 `REPO_CLEAN`，又不能动别人的东西；独立 worktree 有自己的 index，不受影响。先例：`m8-modul-retro` 的改前侧也是独立 worktree `v1-store/worktrees/s2-base` |
-| 8 | **（第二版新增，待确认）** commit 从 3 个变 4 个：新增 `C0 commitV9.9` 基准工具（preflight 副本模式、bench 白名单加 modul、bench 记源码副本 HEAD、guard 完整性守卫），数据路改动顺延为 `C1 commitV9.10` | 待确认，默认按此执行 | 审计第 1、3、5 条都要改工具；工具与被测改动分开提交，`git diff C0 C1` 只含数据路改动，审计时一眼可核 |
-| 9 | **（第二版新增，待确认）** 只读锁改锁**改前副本 `-base`**（`chmod -R a-w src scripts packages`，三份关键文件 sha256 记入 lock 文件），**主副本不锁** | 待确认，默认按此执行 | 主副本不再运行任何东西，锁它保护不了对比、只会挡住并行在主副本工作的 agent；改前副本才是要保证「一个字节不变」的那份 |
+| 7 | **（第二版新增）** 改前副本改为独立干净 worktree `/scratch/hongze/robomme_policy_learning_MotionJEPA-base`（detached 在 `A_HEAD`，`v1-store` symlink，自己的 `.venv`），主副本不再作为运行侧 | **同意**（09-17） | 审计第 2 条：主副本被另一 agent 并行使用（修订期间已出现在途文件与外来 commit），porcelain 随时可能非空而过不了 `REPO_CLEAN`，又不能动别人的东西；独立 worktree 有自己的 index，不受影响。先例：`m8-modul-retro` 的改前侧也是独立 worktree `v1-store/worktrees/s2-base` |
+| 8 | **（第二版新增）** commit 从 3 个变 4 个：新增 `C0 commitV9.9` 基准工具（preflight 副本模式、bench 白名单加 modul、bench 记源码副本 HEAD、guard 完整性守卫），数据路改动顺延为 `C1 commitV9.10` | **同意**（09-17） | 审计第 1、3、5 条都要改工具；工具与被测改动分开提交，`git diff C0 C1` 只含数据路改动，审计时一眼可核 |
+| 9 | **（第二版新增）** 只读锁改锁**改前副本 `-base`**（`chmod -R a-w src scripts packages`，三份关键文件 sha256 记入 lock 文件），**主副本不锁** | **同意**（09-17） | 主副本不再运行任何东西，锁它保护不了对比、只会挡住并行在主副本工作的 agent；改前副本才是要保证「一个字节不变」的那份 |
 
 **执行状态**：用户 09-17 指示「不要开始」，本计划**尚未执行**。此前已做的只有第 1 步的**只读核验**（在 HEAD `96b86b5` 上）：源码与 `e4dc733` 零差异、工作区只含第 4 项两个文件、8 卡显存全 0、tmux 现有会话 `0`、`1`、`claude-private`、`codex`、`codex-repo`、`codex2`、`hf-modul60k-export`（均非本计划的，一律不动）。没有建分支、没有改权限、没有改任何仓库文件。正式开始时第 1 步需重做一次核验并以当时 HEAD 为 `A_HEAD`。
 
@@ -119,6 +119,19 @@ F3 判定同时证明「抽样顺序相同」：两侧独立构造、同一 seed
 | `.venv` | 现有的，不动 | 自己一份（`uv sync --frozen`） | 自己一份（`uv sync --frozen`） |
 | 为什么需要 | 权威仓库与唯一一份数据在这里；别的 agent 并行在此工作，porcelain 随时可能非空 | 干净、只读、可被 preflight 接受的「改前」 | 干净、可被 preflight 接受的「改后」 |
 | 角色 | 不运行 | 跑冒烟 A 档、梯度对拍 a1/a2 | 改代码、跑冒烟 B 档、梯度对拍 b、写留档 |
+
+主副本原地不动、不 worktree 出去；两个副本都是**从主副本切出来的 worktree**，跑完、用户决定合并后都删掉，主副本仍是唯一那份仓库：
+
+```
+/scratch/hongze/robomme_policy_learning_MotionJEPA          主副本：原地不动、不锁、不运行
+  ├─ .git                                                   （别的 agent 照常在这里工作、提交）
+  ├─ v1-store/                                              唯一一份实体数据
+  │
+  ├─ git worktree add --detach  ──▶  …_MotionJEPA-base       改前副本：A_HEAD、只读锁、跑 A 侧
+  │                                    └─ v1-store → 主副本 v1-store（symlink）
+  └─ git worktree add -b …      ──▶  …_MotionJEPA-temp       改后副本：新分支、改代码、跑 B 侧
+                                       └─ v1-store → 主副本 v1-store（symlink）
+```
 
 **九步，每步一句话**（命令、参数、判定行原文见第二部分对应小节）：
 
