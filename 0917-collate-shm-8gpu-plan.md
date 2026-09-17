@@ -17,6 +17,21 @@
 - **预期**：8 卡步时从 1.82 s 回到计算主导的约 1.2–1.3 s，80k 步约 41 h → 约 27–29 h。这是推算，以第 4 节冒烟对比的实测为准。
 - **后续流程（用户 09-17 定）**：本计划获准后按第 4 节的九步走：切独立分支到 `-temp` 开发副本、主副本源码锁只读 → 在分支上落改动并过第一块对拍（`commitV9.8`）→ 起跑留档（`docs:`）→ 8 卡 300 步冒烟 A/B 对比速度 → 8 卡 100 步确定性梯度对拍（第二块）→ 结果留档（`docs:`）→ push 分支、并回 `v2-motionmem` 与解锁均由用户裁决。
 
+### 0.1 用户决策记录（2026-09-17）
+
+计划中需要用户拍板的事项及答复：
+
+| # | 事项 | 用户答复 | 落地 |
+|---|---|---|---|
+| 1 | 分支名 `v2-motionmem-collate-shm`、改后副本路径 `/scratch/hongze/robomme_policy_learning_MotionJEPA-temp` | **同意** | 第 4 节第 2 步按此执行 |
+| 2 | 第 3 步起把改前副本源码锁只读，直到第 9 步解锁 | **同意** | 期间改前副本不改代码、不 `uv sync` |
+| 3 | 8 卡独占约 50 分钟（冒烟 25 + 梯度对拍 25），现在就开 | **同意** | 第 6、7 步不必再问 |
+| 4 | `scripts/dataset/hf_export/` 下两个在途未跟踪文件（另有 tmux 会话 `hf-modul60k-export` 在跑）| **不用管** | 不 add、不动、不等它结束；冒烟留档注明它同期占 CPU/IO |
+| 5 | 第 7 步改前两次若不逐位一致，是否自动退回量化判据 | 未答复 | 按计划默认：自动退回 `QUANT_EQUIV` 并在留档注明 |
+| 6 | 第 9 步 push 新分支 / 并回 / 解锁 | 届时再问 | — |
+
+**执行状态**：用户 09-17 指示「不要开始」，本计划**尚未执行**。此前已做的只有第 1 步的**只读核验**（在 HEAD `96b86b5` 上）：源码与 `e4dc733` 零差异、工作区只含第 4 项两个文件、8 卡显存全 0、tmux 现有会话 `0`、`1`、`claude-private`、`codex`、`codex-repo`、`codex2`、`hf-modul60k-export`（均非本计划的，一律不动）。没有建分支、没有改权限、没有改任何仓库文件。正式开始时第 1 步需重做一次核验并以当时 HEAD 为 `A_HEAD`。改后副本的 `.venv` 建法照 `v2-1600ep-m8x8-modul-b128-60k` 先例：`uv sync --frozen --python <改前副本>/.venv/bin/python`（主 venv 无 extra；`dev` group 含 pytest，第 4 步的 pytest 需要它，故 `--frozen` 不加 `--no-dev`）。
+
 ### 1. Context：为什么做这件事
 
 `0916-motion-modul-8x8-plan.md` 的正式 80k run 拟用 8 卡。`bench-m8x8-8gpu-worker`（起跑 commit `9cbb94e`，配置 `mme_vla_suite_b128_60k` + `perceptual-framesamp-modul-8frame-8x8.yaml` 关闭态，新库 `4task-v2-1600ep-604f16da/framesamp-8x8`，各 300 步）三档实测：
