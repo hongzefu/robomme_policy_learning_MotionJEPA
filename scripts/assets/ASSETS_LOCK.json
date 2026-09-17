@@ -202,10 +202,10 @@
     },
     "motionjepa_ckpt": {
       "kind": "file",
-      "dest": "v1-store/external/motionjepa/wan-v8-filter10-72ep-a/checkpoint_epoch_72.pt",
-      "bytes": 954853147,
-      "sha256": "bae960373041629e976a1f4a7d6d48ca3c51786c827146a3ee10bf7b034bc15a",
-      "headtail": "991d846f80036fa0855e44759dfcba3f",
+      "dest": "v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt",
+      "bytes": 477432433,
+      "sha256": "0c1986297ccc0ab1913910f33a09ec74ba4c208844d0f5d72dd7ba59e0d9e3ca",
+      "headtail": "91834dfbaf50c90cb0c32bf9332c8f12",
       "needs_token": true,
       "source": {
         "type": "hf_file",
@@ -213,17 +213,19 @@
         "repo_type": "model",
         "revision": "749224110f91c82f5fc5d3007281d07a5d5c944e",
         "tag": "wan-v8-filter10-72ep-a-e72",
-        "filename": "wan-v8-filter10-72ep-a/checkpoint_epoch_72.pt",
+        "filename": "wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt",
         "private": true,
-        "token_env": "HF_TOKEN"
+        "token_env": "HF_TOKEN",
+        "pending_upload": true,
+        "note": "新资产尚未上传；revision/tag 仍为历史定位，不可据此复刻新文件。本轮只使用已核验的本地原件，上传另行处理。"
       },
       "related": {
         "mj_repo_commit": "2a484ad960ed6155321dc34def9011eb119f857f",
-        "mj_train_commit": "7388a42",
+        "mj_train_commit": "660cee10a86d02ae03a73db95fac6f0b8dbd28a6",
         "source_pin_ref": "scripts/dataset/wan/SOURCE_PIN.json",
-        "run_name": "wan-v8-filter10-72ep-a",
+        "run_name": "wan-full1600-filter2-b176x4-72ep-a",
         "epoch": 72,
-        "note": "mj_repo_commit 是推理侧钉版（SOURCE_PIN 同值）；mj_train_commit 是训练该 ckpt 的 commit，两者在 src/motion_jepa 与 scripts/train.py 上逐字节相同（已实测 git diff 为空）"
+        "note": "mj_repo_commit 钉住推理复制件；mj_train_commit 是新 encoder 的训练 Beta。推理脚本 SHA 保持不变，不声称两次训练代码完全相同。"
       },
       "consumers": [
         "scripts/dataset/wan/wan_motion_infer.py::load_encoder"
@@ -231,10 +233,10 @@
     },
     "motionjepa_config": {
       "kind": "file",
-      "dest": "v1-store/external/motionjepa/wan-v8-filter10-72ep-a/config.yaml",
-      "bytes": 1927,
-      "sha256": "99548a6ca23522c235281e45819ae6d5e96a916709cb4b9c0b47142832c90946",
-      "headtail": "6a14a774cad735c6400edd30e97bd7fc",
+      "dest": "v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a/config.yaml",
+      "bytes": 2008,
+      "sha256": "4a505440b7c5ff0f1b0d7ec4680800e9296f5ede1df622767be3d5c3aee4c9b4",
+      "headtail": "9235775eafec313b22b6dc258a633188",
       "needs_token": true,
       "source": {
         "type": "hf_file",
@@ -242,22 +244,24 @@
         "repo_type": "model",
         "revision": "749224110f91c82f5fc5d3007281d07a5d5c944e",
         "tag": "wan-v8-filter10-72ep-a-e72",
-        "filename": "wan-v8-filter10-72ep-a/config.yaml",
+        "filename": "wan-full1600-filter2-b176x4-72ep-a/config.yaml",
         "private": true,
-        "token_env": "HF_TOKEN"
+        "token_env": "HF_TOKEN",
+        "pending_upload": true,
+        "note": "新资产尚未上传；revision/tag 仍为历史定位，不可据此复刻新文件。本轮只使用已核验的本地原件，上传另行处理。"
       },
       "related": {
         "mj_repo_commit": "2a484ad960ed6155321dc34def9011eb119f857f",
-        "mj_train_commit": "7388a42",
+        "mj_train_commit": "660cee10a86d02ae03a73db95fac6f0b8dbd28a6",
         "source_pin_ref": "scripts/dataset/wan/SOURCE_PIN.json",
-        "run_name": "wan-v8-filter10-72ep-a",
+        "run_name": "wan-full1600-filter2-b176x4-72ep-a",
         "epoch": 72,
-        "note": "mj_repo_commit 是推理侧钉版（SOURCE_PIN 同值）；mj_train_commit 是训练该 ckpt 的 commit，两者在 src/motion_jepa 与 scripts/train.py 上逐字节相同（已实测 git diff 为空）"
+        "note": "mj_repo_commit 钉住推理复制件；mj_train_commit 是新 encoder 的训练 Beta。推理脚本 SHA 保持不变，不声称两次训练代码完全相同。"
       },
       "consumers": [
         "scripts/dataset/wan/wan_motion_infer.py::load_encoder"
       ]
     }
   },
-  "sha256": "b842732e4809812205891436b5659cd7e85a271ba2e3043faed34ae9dad7d4cb"
+  "sha256": "0a654077426d65a23d8e47c4ac98434bf47b34653c071e2d4768a332d245b27c"
 }

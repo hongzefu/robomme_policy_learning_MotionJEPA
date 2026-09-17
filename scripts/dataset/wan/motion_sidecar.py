@@ -47,7 +47,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--fd", type=int, required=True, help="父进程经 pass_fds 传入的 socket fd")
     ap.add_argument("--stub", action="store_true")
-    ap.add_argument("--encoder-run-dir", default=str(_REPO_ROOT / "v1-store/external/motionjepa/wan-v8-filter10-72ep-a"))
+    ap.add_argument("--encoder-run-dir", default=str(_REPO_ROOT / "v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a"))
     ap.add_argument("--checkpoint", default="checkpoint_epoch_72.pt")
     ap.add_argument("--expected-ckpt-sha256", default="")
     ap.add_argument("--expected-vae-sha256", default="")

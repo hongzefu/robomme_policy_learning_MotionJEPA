@@ -71,7 +71,7 @@ readonly TARGET_TASKS_CSV="ButtonUnmask,ButtonUnmaskSwap,VideoUnmask,VideoUnmask
 # 环境 A 默认 turbo 只读副本；环境 B 用环境变量 MJ_REPO 指向 /scratch/hongze/MotionJEPA（同一 commit）
 MJ_REPO="${MJ_REPO:-/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA}"
 readonly MJ_COMMIT="2a484ad960ed6155321dc34def9011eb119f857f"
-readonly ENCODER_RUN_DIR="${EXTERNAL_DIR}/motionjepa/wan-v8-filter10-72ep-a"
+readonly ENCODER_RUN_DIR="${EXTERNAL_DIR}/motionjepa/wan-full1600-filter2-b176x4-72ep-a"
 readonly ENCODER_CKPT="checkpoint_epoch_72.pt"
 
 # ── 环境变量：显式逐项指向 v1-store/cache，**不动 HOME** ────────────────────────

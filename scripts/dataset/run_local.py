@@ -49,7 +49,7 @@ STAGE_ASSETS = {"siglip": ["siglip_params"], "wan": ["wan_vae"],
                 "encode": ["wan_vae", "motionjepa_ckpt", "motionjepa_config"]}
 # 环境 A 默认本机 16 任务全集；环境 B 由 paths.sh 导出的 RAW_H5_DIR 覆盖（/scratch/hongze/robomme_data_h5）
 RAW_H5_DEFAULT = os.environ.get("RAW_H5_DIR", "/data/hongzefu/robomme_data_h5")
-ENCODER_RUN_DIR_DEFAULT = V1_STORE / "external" / "motionjepa" / "wan-v8-filter10-72ep-a"
+ENCODER_RUN_DIR_DEFAULT = V1_STORE / "external" / "motionjepa" / "wan-full1600-filter2-b176x4-72ep-a"
 CKPT_DEFAULT = "checkpoint_epoch_72.pt"
 
 

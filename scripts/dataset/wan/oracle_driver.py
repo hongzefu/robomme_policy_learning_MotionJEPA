@@ -47,7 +47,7 @@ import assets_lock as al  # noqa: E402
 
 # 环境 A 默认 turbo 只读副本；环境 B 用环境变量 MJ_REPO（paths.sh 同名）指向 /scratch/hongze/MotionJEPA
 MJ_REPO_DEFAULT = os.environ.get("MJ_REPO", "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA")
-ENCODER_RUN_DIR_DEFAULT = str(_REPO_ROOT / "v1-store" / "external" / "motionjepa" / "wan-v8-filter10-72ep-a")
+ENCODER_RUN_DIR_DEFAULT = str(_REPO_ROOT / "v1-store" / "external" / "motionjepa" / "wan-full1600-filter2-b176x4-72ep-a")
 VAE_ID = "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
 
 

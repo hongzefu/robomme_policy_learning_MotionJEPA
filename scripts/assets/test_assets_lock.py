@@ -241,7 +241,12 @@ def test_lock_cross_checks_motion_store_provenance() -> None:
     meta = json.loads((al.REPO_ROOT / "v1-store/datasets/4task-motion-40ep/motion/meta/store_meta.json")
                       .read_text(encoding="utf-8"))
     prov = meta["provenance"]
-    assert prov["encoder"]["checkpoint_sha256"] == al.expected_sha256("motionjepa_ckpt", LOCK)
+    # 历史库仍绑定原 encoder；切换当前资产不能改写旧库 provenance。
+    run = prov["encoder"]["run_name"]
+    current = LOCK["assets"]["motionjepa_ckpt"]["related"]["run_name"]
+    legacy = {"wan-v8-filter10-72ep-a": "bae960373041629e976a1f4a7d6d48ca3c51786c827146a3ee10bf7b034bc15a"}
+    expected = al.expected_sha256("motionjepa_ckpt", LOCK) if run == current else legacy[run]
+    assert prov["encoder"]["checkpoint_sha256"] == expected
     assert prov["vae"]["vae_state_sha256"] == LOCK["assets"]["wan_vae"]["secondary"][0]["value"]
 
 
