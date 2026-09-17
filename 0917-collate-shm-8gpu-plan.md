@@ -1,9 +1,9 @@
 # 0917 计划：collate 改走共享内存，吃满 8 卡（基准：8 帧 × 8×8 modulation 关闭态）
 
-> 创建日期 2026-09-17（America/New_York）。计划首次入库 commit `5b2e7ba`，之后只有 docs commit 修订本文件。**「改前」源码 = `v2-motionmem` 上 `e4dc733` 的源码**（`e4dc733` 之后全是 docs commit，`git diff --stat e4dc733 HEAD -- src scripts packages pyproject.toml uv.lock` 为空）；起跑时主副本的 clean HEAD 记作 `A_HEAD`，具体 SHA 在第 4 节第 1 步记录，本文件不钉死它。
+> 创建日期 2026-09-17（America/New_York）。计划首次入库 commit `5b2e7ba`，之后只有 docs commit 修订本文件。**「改前」训练源码 = `v2-motionmem` 上 `e4dc733` 的训练源码**（判定范围 `src/`、`scripts/training/`、`packages/`、`pyproject.toml`、`uv.lock`：`git diff --stat e4dc733 HEAD -- src scripts/training packages pyproject.toml uv.lock` 为空；`e4dc733` 之后的 `1f69d5c` 只加了 `scripts/dataset/hf_export/` 导出脚本与留档，不在训练路径上）；起跑时主副本的 clean HEAD 记作 `A_HEAD`，具体 SHA 在第 4 节第 1 步记录，本文件不钉死它。
 > 本计划只覆盖 dataloader 交付路径的一处改动、它的一致性检验与 8 卡速度对比；不碰 motion、不碰模型、不碰超参。
 > 可行性验证（不启动训练）已在写本计划前完成，结果内联于第一部分第 3 节；产物固化在 `v1-store/bench/collate-shm-feasibility/`（不进 git）。
-> **2026-09-17 第二版**：按 Codex 静态审计（锚定 `96b86b5`）的五条意见修订，逐条处置见第 0.2 节。
+> **2026-09-17 第二版**：按 Codex 静态审计（锚定 `96b86b5`）的五条意见修订，逐条处置见第 0.2 节。计划修订期间另一 agent 向 `v2-motionmem` 提交了 `1f69d5c`（`commitV9.8`，HF 导出链路），本计划的功能 commit 编号因此顺延为 `commitV9.9` / `commitV9.10`。
 
 ---
 
@@ -16,20 +16,21 @@
 - **最简修法**：collate 末尾把 numpy 转成 **torch tensor**（`torch.from_numpy`，零拷贝），torch `DataLoader` 对 tensor 走**共享内存**、主进程只收句柄；`TorchDataLoader.__iter__` 收到后 `.numpy()` 转回（共享内存上的零拷贝视图），后续 `jax.make_array_from_process_local_data` 一字不动。bf16 键（`static_image_emb`，numpy 侧是 `ml_dtypes.bfloat16`）先 `.view(np.uint16)` 再 `.view(torch.bfloat16)`，回程反向，位模式不变。数据路改动集中在 `data_loader.py` 一个文件、两处，约 20 行；`_collate_fn` 本身保持 numpy 语义不动，所有引用它的取证工具不受影响。
 - **可行性验证结论（已完成，不启动训练）**：bf16 视图往返逐位一致；合成传输隔离下主进程每批等待 0.816 s → 0.061 s；**真实数据集** b128 w16 下 0.983 s → 0.073 s，且 20 批 × 12 个数组键逐键 sha256(dtype‖shape‖bytes) **全部一致、0 处不匹配**（`F3_COLLATE_EQUIV=PASS batches=20 keys=12 none_keys=4 mismatches=0`）。这些是 CPU 侧数据路的数字，不是训练步时。
 - **预期**：若假设成立，8 卡步时从 1.82 s 回到计算主导的约 1.2–1.3 s，80k 步约 41 h → 约 27–29 h。以第 7 步实测为准。
-- **后续流程（用户 09-17 定，第二版按审计改）**：切一个**干净的改前副本**（主副本有别人的在途文件，过不了 preflight 的 `REPO_CLEAN`）和一个**改后副本**，主副本锁只读只当权威仓库 → 先提交**基准工具**（preflight 副本模式、bench 白名单、完整性守卫，`C0`）→ 再提交**数据路改动**并过第一块对拍（`C1`）→ 起跑留档（`C2`）→ 8 卡 300 步冒烟 A/B → 8 卡 100 步确定性梯度对拍（改前两次 + 改后一次，**不设量化退路**，改前两次不逐位即停下问用户）→ 结果留档（`C3`）→ push、并回、解锁由用户裁决。
+- **后续流程（用户 09-17 定，第二版按审计改）**：切一个**干净的改前副本**和一个**改后副本**（主副本上有别的 agent 并行提交，随时可能不干净、过不了 preflight 的 `REPO_CLEAN`，所以两侧都用独立 worktree），主副本只当权威仓库、不运行 → 先提交**基准工具**（preflight 副本模式、bench 白名单、完整性守卫，`C0`）→ 再提交**数据路改动**并过第一块对拍（`C1`）→ 起跑留档（`C2`）→ 8 卡 300 步冒烟 A/B → 8 卡 100 步确定性梯度对拍（改前两次 + 改后一次，**不设量化退路**，改前两次不逐位即停下问用户）→ 结果留档（`C3`）→ push、并回、解锁由用户裁决。
 
 ### 0.1 用户决策记录（2026-09-17）
 
 | # | 事项 | 用户答复 | 落地 |
 |---|---|---|---|
 | 1 | 改后副本分支名 `v2-motionmem-collate-shm`、路径 `/scratch/hongze/robomme_policy_learning_MotionJEPA-temp` | **同意** | 第 4 节第 2 步 |
-| 2 | 主副本源码锁只读，直到第 9 步解锁 | **同意** | 第二版里主副本不再是运行侧（见第 7 项），锁只读仍执行：它是权威仓库与实体 `v1-store` 的所在地，锁住防止对比期间被误改 |
+| 2 | 主副本源码锁只读，直到第 9 步解锁 | **同意**（第一版口径） | 第二版里主副本不再是运行侧（第 7 项），且另一 agent 正在主副本上工作（`1f69d5c`）——锁主副本会挡住他们、又保护不了对比。改为**锁改前副本 `-base`**（第 9 项，待确认） |
 | 3 | 8 卡独占约 60 分钟（冒烟 25 + 梯度对拍约 30），现在就开 | **同意** | 第 7、8 步不必再问 |
-| 4 | `scripts/dataset/hf_export/` 下两个在途未跟踪文件（另有 tmux 会话 `hf-modul60k-export` 在跑） | **不用管** | 不 add、不动、不等它结束；但它们让主副本过不了 `REPO_CLEAN`，这是第 7 项的直接原因；冒烟留档注明它同期占 CPU/IO |
+| 4 | `scripts/dataset/hf_export/` 下两个在途未跟踪文件（另有 tmux 会话 `hf-modul60k-export` 在跑） | **不用管** | 已由另一 agent 以 `1f69d5c` 提交，主副本 porcelain 现为空、该会话已结束。事实虽变，第 7 项仍成立：主副本随时可能再出现别人的在途改动 |
 | 5 | 第 8 步改前两次若不逐位一致，是否自动退回量化判据 | 未答复 | **第二版取消量化退路**（审计第 4 条）：改前两次不逐位一致即停下，把原始判定行交用户裁决，不出任何 PASS |
-| 6 | 第 9 步 push 新分支 / 并回 / 解锁 | 届时再问 | — |
-| 7 | **（第二版新增，待确认）** 改前副本改为独立干净 worktree `/scratch/hongze/robomme_policy_learning_MotionJEPA-base`（detached 在 `A_HEAD`，`v1-store` symlink，自己的 `.venv`），主副本不再作为运行侧 | 待确认，默认按此执行 | 审计第 2 条：主副本 porcelain 非空过不了 preflight；又不能动别人的在途文件。先例：`m8-modul-retro` 的改前侧也是独立 worktree `v1-store/worktrees/s2-base` |
-| 8 | **（第二版新增，待确认）** commit 从 3 个变 4 个：新增 `C0 commitV9.8` 基准工具（preflight 副本模式、bench 白名单加 modul、bench 记源码副本 HEAD、guard 完整性守卫），数据路改动顺延为 `C1 commitV9.9` | 待确认，默认按此执行 | 审计第 1、3、5 条都要改工具；工具与被测改动分开提交，`git diff C0 C1` 只含数据路改动，审计时一眼可核 |
+| 6 | 第 9 步 push 新分支 / 并回 / 删副本 | 届时再问 | — |
+| 7 | **（第二版新增，待确认）** 改前副本改为独立干净 worktree `/scratch/hongze/robomme_policy_learning_MotionJEPA-base`（detached 在 `A_HEAD`，`v1-store` symlink，自己的 `.venv`），主副本不再作为运行侧 | 待确认，默认按此执行 | 审计第 2 条：主副本被另一 agent 并行使用（修订期间已出现在途文件与外来 commit），porcelain 随时可能非空而过不了 `REPO_CLEAN`，又不能动别人的东西；独立 worktree 有自己的 index，不受影响。先例：`m8-modul-retro` 的改前侧也是独立 worktree `v1-store/worktrees/s2-base` |
+| 8 | **（第二版新增，待确认）** commit 从 3 个变 4 个：新增 `C0 commitV9.9` 基准工具（preflight 副本模式、bench 白名单加 modul、bench 记源码副本 HEAD、guard 完整性守卫），数据路改动顺延为 `C1 commitV9.10` | 待确认，默认按此执行 | 审计第 1、3、5 条都要改工具；工具与被测改动分开提交，`git diff C0 C1` 只含数据路改动，审计时一眼可核 |
+| 9 | **（第二版新增，待确认）** 只读锁改锁**改前副本 `-base`**（`chmod -R a-w src scripts packages`，三份关键文件 sha256 记入 lock 文件），**主副本不锁** | 待确认，默认按此执行 | 主副本不再运行任何东西，锁它保护不了对比、只会挡住并行在主副本工作的 agent；改前副本才是要保证「一个字节不变」的那份 |
 
 **执行状态**：用户 09-17 指示「不要开始」，本计划**尚未执行**。此前已做的只有第 1 步的**只读核验**（在 HEAD `96b86b5` 上）：源码与 `e4dc733` 零差异、工作区只含第 4 项两个文件、8 卡显存全 0、tmux 现有会话 `0`、`1`、`claude-private`、`codex`、`codex-repo`、`codex2`、`hf-modul60k-export`（均非本计划的，一律不动）。没有建分支、没有改权限、没有改任何仓库文件。正式开始时第 1 步需重做一次核验并以当时 HEAD 为 `A_HEAD`。
 
@@ -38,7 +39,7 @@
 | # | 审计意见 | 核实 | 处置 |
 |---|---|---|---|
 | 1 | 改后副本必被 preflight 拒绝：`V1_STORE_REAL` 要求 `v1-store` 是实体目录、`NOT_DEV_COPY` 拒绝目录名以 `-temp` 结尾 | 属实（`scripts/training/preflight_train_launch.py` 「起跑位置」段） | C0 给 preflight 加显式 `--bench-copy --v1-store-realpath <主副本>/v1-store` 模式：这两条换成 `V1_STORE_LINK_TARGET`（`v1-store` 必须是 symlink 且 realpath 等于给定主副本实体目录）与 `BENCH_COPY_IS_WORKTREE`（该目录出现在主副本 `git worktree list --porcelain` 里）；其余 24 条（`CWD`、`TRAIN_PY`、`YAML_*`、`PYTHONPATH`、`PKG_*`、`SYS_PREFIX`、`REPO_HEAD`、`REPO_CLEAN`、数据与 CLI 各条）**一条不放宽**，`wt` 仍取 `--repo`。不带 `--bench-copy` 时行为与现在逐字节相同 |
-| 2 | 改前侧「允许两个未跟踪文件」与 `REPO_CLEAN`（porcelain 必须为空）冲突，主副本无法起跑 | 属实 | 改前侧改为独立干净 worktree `-base`（决策第 7 项）；worktree 有自己的 index，主副本的未跟踪文件不出现在它的 porcelain 里；`v1-store`、`.venv` 均已 gitignore（`.gitignore` 第 214、140 行），symlink 与 venv 不弄脏它。两侧都是 worktree、都走同一个 `--bench-copy` preflight，对称 |
+| 2 | 改前侧「允许两个未跟踪文件」与 `REPO_CLEAN`（porcelain 必须为空）冲突，主副本无法起跑 | 属实（审计时主副本 porcelain 含两个 `??`；现已被 `1f69d5c` 转正，但并行工作的风险不变） | 改前侧改为独立干净 worktree `-base`（决策第 7 项）；worktree 有自己的 index，主副本上别人的在途文件不出现在它的 porcelain 里；`v1-store`、`.venv` 均已 gitignore（`.gitignore` 第 214、140 行），symlink 与 venv 不弄脏它。两侧都是 worktree、都走同一个 `--bench-copy` preflight，对称 |
 | 3 | 100 步梯度对拍入口 `bench_train_steps.py` 的 `_EXPECTED_HISTORY_CONFIGS` 只有四个 context 配置，modulation YAML 直接 `ValueError` | 属实（第 107 行附近） | C0 白名单加 `perceptual-framesamp-modul-8frame-8x8.yaml`（只加本次要用的这一个精确文件名）。三侧都用 C0/C1 的工具跑各自副本的源码：工具从改后副本取，源码由各副本自己的 `.venv`（editable 指向该副本 `src/`）决定；C0 再加 `BENCH_SOURCE_ROOT` 环境变量，run_meta 同时记 `tool_head`（工具副本）与 `source_head`（源码副本），并 fail-loud 断言 `openpi.training.data_loader.__file__` 在 `BENCH_SOURCE_ROOT` 下——防止「以为在跑改前、实际 import 了改后」 |
 | 4 | 量化退路没接通（未传 `--null-pair`、状态数组未落盘），且 `compare_baseline.py::leaf_numeric_stats` 只打印逐叶误差、无阈值裁决，退出码只跟确定性判定 | 属实 | **本轮取消量化退路**。第 7 步判据只有逐位：A1/A2 与 A1/B 都要 `DET_CHECK=PASS`。A1/A2 自身不逐位 ⇒ 停下，把两份 `SCALARS` / `STATE_DIGEST` 原文交用户，不出 PASS、不降级 |
 | 5 | 汇总 PASS 缺完整性守卫：比较器只比共同步集合、索引只比最短公共前缀且失败不影响退出码，退出 0 不保证覆盖 100 步 / 12800 个索引 / 六个摘要步；先例另用了 `finish_check.py` | 属实 | C0 把 `docs/training-doc/t8-c8-guard-s100/records/finish_check.py` 移植为参数化的 `scripts/training/g0/guard_finish_check.py`：对 a1、a2、b **逐侧**断言 `metrics.jsonl` 步集合 == `range(100)`、`param_checksums.jsonl` 与 `batch_digests.jsonl` 步集合 == `[0,1,2,24,49,99]`、`index_sequence.json` 长度 ≥ 12800 且三侧前 12800 个逐个相等、两份比较日志各含全部判定行且 `DET_CHECK=PASS`；全部成立才打 `COLLATE_SHM_GUARD=PASS …`，否则非零退出 |
@@ -113,25 +114,25 @@ F3 判定同时证明「抽样顺序相同」：两侧独立构造、同一 seed
 |---|---|---|---|
 | 目录 | `/scratch/hongze/robomme_policy_learning_MotionJEPA` | `/scratch/hongze/robomme_policy_learning_MotionJEPA-base` | `/scratch/hongze/robomme_policy_learning_MotionJEPA-temp` |
 | git | 分支 `v2-motionmem`，HEAD 记作 `A_HEAD` | `git worktree add --detach … A_HEAD`，detached，clean | `git worktree add -b v2-motionmem-collate-shm … A_HEAD`，加 4 个 commit |
-| 源码 | 第 3 步起锁只读，全程不加 commit | 与 `A_HEAD` 逐字节相同，全程不动 | C0 工具 + C1 数据路改动 |
+| 源码 | 不动、不锁（别的 agent 可能并行提交，与本计划无关） | 与 `A_HEAD` 逐字节相同，第 3 步起锁只读 | C0 工具 + C1 数据路改动 |
 | `v1-store` | 实体目录（唯一一份数据） | symlink → 主副本 `v1-store` | symlink → 主副本 `v1-store` |
 | `.venv` | 现有的，不动 | 自己一份（`uv sync --frozen`） | 自己一份（`uv sync --frozen`） |
-| 为什么需要 | 别人的两个在途文件在这里，porcelain 非空过不了 `REPO_CLEAN`，又不能动它们 | 干净、可被 preflight 接受的「改前」 | 干净、可被 preflight 接受的「改后」 |
+| 为什么需要 | 权威仓库与唯一一份数据在这里；别的 agent 并行在此工作，porcelain 随时可能非空 | 干净、只读、可被 preflight 接受的「改前」 | 干净、可被 preflight 接受的「改后」 |
 | 角色 | 不运行 | 跑冒烟 A 档、梯度对拍 a1/a2 | 改代码、跑冒烟 B 档、梯度对拍 b、写留档 |
 
 **九步，每步一句话**（命令、参数、判定行原文见第二部分对应小节）：
 
 | # | 在哪个副本 | 做什么 | 为什么 | 产出 commit | 通过条件 |
 |---|---|---|---|---|---|
-| 1 | 主副本 | 确认起点：HEAD 与 `e4dc733` 源码一致、除那两个在途文件外无其他改动、8 卡空闲、记下 tmux 会话清单；记下 `A_HEAD` | 后面所有「改前」都以这个 HEAD 为准 | 无 | 不符就停下来问你 |
+| 1 | 主副本 | 确认起点：HEAD 的训练源码与 `e4dc733` 一致、porcelain 为空（若又出现别人的在途文件：记录、不动，改前副本不受影响）、8 卡空闲、记下 tmux 会话清单；记下 `A_HEAD` | 后面所有「改前」都以这个 HEAD 为准 | 无 | 不符就停下来问你 |
 | 2 | 主副本 → 建两个副本 | 从 `A_HEAD` 切出改前副本 `-base`（detached）和改后副本 `-temp`（新分支）；两边 `v1-store` 用 symlink 共享，各装自己的 `.venv` | 两侧物理隔离、都干净、数据不复制第二份 | 无 | 两边 HEAD 都等于 `A_HEAD`、porcelain 都为空 |
-| 3 | 主副本 | 把主副本源码目录设成只读，记下三份关键文件的 sha256 与 `A_HEAD` | 权威仓库在对比期间不被误改 | 无 | 目录权限变成只读 |
-| 4 | 改后副本 | 提交**基准工具**：preflight 加 `--bench-copy` 模式、bench 白名单加 modul、bench 记 `BENCH_SOURCE_ROOT`、新增 `guard_finish_check.py`；跑工具自检 | 审计第 1、3、5 条；工具与被测改动分开提交 | **C0 `commitV9.8`** | preflight 默认模式对主副本只挂 `REPO_CLEAN` 一条、对 `-base`/`-temp` 带 `--bench-copy` 全过；bench 以 modul YAML `--num-train-steps 1` 能起 |
-| 5 | 改后副本 | 落那 20 行数据路改动，加两个小测试；在 CPU 上跑「改前副本 vs 改后副本」逐键字节对拍 | 先不碰 GPU 就证明喂进模型的数据完全一样（第 18 条第一块） | **C1 `commitV9.9`** | 对拍 0 处不匹配，测试全绿；否则不提交 |
+| 3 | 改前副本 | 把改前副本的源码目录设成只读，记下四份关键文件的 sha256 与 `A_HEAD` | 「改前」在对比期间一个字节都不变 | 无 | `-base` 的 `src`/`scripts`/`packages` 权限变成只读；主副本不动 |
+| 4 | 改后副本 | 提交**基准工具**：preflight 加 `--bench-copy` 模式、bench 白名单加 modul、bench 记 `BENCH_SOURCE_ROOT`、新增 `guard_finish_check.py`；跑工具自检 | 审计第 1、3、5 条；工具与被测改动分开提交 | **C0 `commitV9.9`** | preflight 默认模式对主副本只挂 `REPO_CLEAN` 一条、对 `-base`/`-temp` 带 `--bench-copy` 全过；bench 以 modul YAML `--num-train-steps 1` 能起 |
+| 5 | 改后副本 | 落那 20 行数据路改动，加两个小测试；在 CPU 上跑「改前副本 vs 改后副本」逐键字节对拍 | 先不碰 GPU 就证明喂进模型的数据完全一样（第 18 条第一块） | **C1 `commitV9.10`** | 对拍 0 处不匹配，测试全绿；否则不提交 |
 | 6 | 改后副本 | 写起跑留档 | 记下两侧 commit、命令、配置，满足 preflight 的 clean HEAD 要求 | **C2 `docs:`** | 改后副本工作区干净 |
 | 7 | 两个副本各起一次，8 卡独占 | 先从改前副本起 300 步，跑完再从改后副本起 300 步，同配置，比步时和 GPU 利用率 | 这是你要的速度对比，也是对第 2 节假设的裁决；改前那档还要复现上次的 1.82 s 作校验 | 无 | 两档 `PREFLIGHT=PASS`、正常退出；得到 old / new 步时与提速倍数 |
 | 8 | 两个副本各起，8 卡独占 | 改前副本起两次、改后副本起一次，各 100 步、确定性模式，逐步比 loss / 梯度范数 / 参数摘要 / 输入摘要 / 样本索引，再跑完整性守卫 | 证明训练本身没被改变（第 18 条第二块）；改前跑两次是为了知道「同代码重跑」本身是否逐位一致 | 无 | 两组比较都逐位一致且守卫通过；**改前两次自身不逐位 ⇒ 停下问你，不降级** |
-| 9 | 改后副本 → 你 | 写结果留档，收原始记录，删临时 run 产物；然后问你三件事：推不推新分支到远端、合不合并回 `v2-motionmem`、解不解锁主副本并删两个副本 | 第 12、17 条要求；新分支没有 upstream、合并与解锁都是你的决定 | **C3 `docs:`** | 分支上依次是 C0、C1、C2、C3；你答复前主副本保持只读、分支留在本地 |
+| 9 | 改后副本 → 你 | 写结果留档，收原始记录，删临时 run 产物；然后问你三件事：推不推新分支到远端、合不合并回 `v2-motionmem`、删不删两个副本 | 第 12、17 条要求；新分支没有 upstream、合并与解锁都是你的决定 | **C3 `docs:`** | 分支上依次是 C0、C1、C2、C3；你答复前两个副本原样保留、分支留在本地 |
 
 **三条规则**：
 - 改前侧永远是改前副本的 `A_HEAD`，改后侧永远是改后副本的 C2（C2 与 C1 源码相同，只多一份起跑留档）；三个目录全程并存，直到第 9 步你决定后才删两个副本。
@@ -170,7 +171,7 @@ F3 判定同时证明「抽样顺序相同」：两侧独立构造、同一 seed
 - **不改训练语义**：collate 的 `np.stack` 顺序、dtype、shape、抽样 generator 全部不动；不改超参、不改 config 默认值。
 - **工具与源码来自不同副本**：a1/a2 与冒烟 A 档用改后副本的 preflight / bench 工具跑改前副本的源码。防呆两道：preflight `PKG_*`/`SYS_PREFIX`/`TRAIN_PY` 按 `--repo` 判、bench 断言 `data_loader.__file__` 在 `BENCH_SOURCE_ROOT` 下；run_meta 同时记 `tool_head` 与 `source_head`。先例：`m8-modul-retro` 改前侧即此形制。
 - **`--force` 红线**：两个副本的 `v1-store` 都是指向主副本的可写 symlink（AGENTS.md 第 14 条例外），本计划所有命令都不带 `--force`、不传输出根参数；run 产物只写 `v1-store/train-runs/mme_vla_suite_b128_60k/{bench-collate-shm-*,cs-guard-*}` 与 `v1-store/bench/{bench-collate-shm-*,8x8/cs-guard-*}`。
-- **两个在途未跟踪文件**与 `.claude/worktrees/b128cfg`、`sgab`、`v1-store/worktrees/official-89efeaab` 等别的 worktree 一律不动；`git worktree add` 不影响它们。
+- **主副本上别的 agent 的工作**（在途文件、外来 commit）与 `.claude/worktrees/b128cfg`、`sgab`、`v1-store/worktrees/official-89efeaab` 等别的 worktree 一律不动；`git worktree add` 不影响它们；主副本不锁。
 - **F2 里看到的 `terminate called without an active exception`**：torch persistent worker 在解释器退出时的收尾噪声，退出码 0；冒烟日志里若出现同样文本，判定以 `EXIT_CODE=` 为准。
 - **共享内存策略**：默认 `file_descriptor`；若出现 `Too many open files`，改 `torch.multiprocessing.set_sharing_strategy("file_system")`，作为记录在案的备选而非默认。
 - **同期 `hf-modul60k-export`** 占 CPU/IO，可能让两档步时都略高；A/B 同期跑、影响对称，留档注明。
@@ -187,8 +188,8 @@ MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
 BASE=/scratch/hongze/robomme_policy_learning_MotionJEPA-base
 TEMP=/scratch/hongze/robomme_policy_learning_MotionJEPA-temp
 cd "$MAIN"
-git status --porcelain            # 仅允许 scripts/dataset/hf_export/ 下两个 ??，其余非空即停
-git diff --stat e4dc733 HEAD -- src scripts packages pyproject.toml uv.lock   # 须为空
+git status --porcelain            # 期望为空；非空则原样记录、不动，不影响后续（改前副本是独立 worktree）
+git diff --stat e4dc733 HEAD -- src scripts/training packages pyproject.toml uv.lock   # 训练源码零差异，须为空
 A_HEAD=$(git rev-parse HEAD); echo "$A_HEAD"
 test ! -e "$BASE" && test ! -e "$TEMP"
 git worktree add --detach "$BASE" "$A_HEAD"
@@ -199,11 +200,12 @@ for d in "$BASE" "$TEMP"; do
   ( cd "$d" && test "$(git rev-parse HEAD)" = "$A_HEAD" && test -z "$(git status --porcelain)" && .venv/bin/python -c "import openpi,sys;print(openpi.__file__, sys.prefix)" )
 done
 git worktree list                 # 两个新条目 + 既有的 b128cfg / sgab / tic / official 不变
-# 主副本锁只读
-sha256sum src/openpi/training/data_loader.py scripts/training/g0/bench_train_steps.py scripts/training/preflight_train_launch.py scripts/training/train.py > v1-store/bench/collate-shm-feasibility/lock_sha256.txt
-echo "$A_HEAD" > v1-store/bench/collate-shm-feasibility/A_HEAD.txt
+# 改前副本锁只读（主副本不锁，决策第 9 项）
+cd "$BASE"
+sha256sum src/openpi/training/data_loader.py scripts/training/g0/bench_train_steps.py scripts/training/preflight_train_launch.py scripts/training/train.py > "$MAIN/v1-store/bench/collate-shm-feasibility/lock_sha256.txt"
+echo "$A_HEAD" > "$MAIN/v1-store/bench/collate-shm-feasibility/A_HEAD.txt"
 chmod -R a-w src scripts packages
-ls -ld src scripts packages       # dr-xr-xr-x
+ls -ld src scripts packages       # dr-xr-xr-x（-base 内）
 ```
 
 `uv sync` 约 2–3 min/副本，各占约 7 G（`/scratch` 余 1.1 T）。两个副本的 `openpi.__file__` 必须分别在各自 `src/` 下。
@@ -217,7 +219,7 @@ ls -ld src scripts packages       # dr-xr-xr-x
 2. `scripts/training/g0/bench_train_steps.py`：`_EXPECTED_HISTORY_CONFIGS` 追加 `"perceptual-framesamp-modul-8frame-8x8.yaml"`；新增环境变量 `BENCH_SOURCE_ROOT`（默认 `_REPO_ROOT`）：启动时 `import openpi.training.data_loader as m; assert pathlib.Path(m.__file__).resolve().is_relative_to(BENCH_SOURCE_ROOT)`，否则 `SystemExit`；`run_meta.json` 记 `tool_head`（`_REPO_ROOT` 的 HEAD）、`source_head`（`BENCH_SOURCE_ROOT` 的 HEAD 与 porcelain）。原 `start_head` 字段保留为 `tool_head` 的别名不删。
 3. `scripts/training/g0/guard_finish_check.py`（新增，参数化移植 `docs/training-doc/t8-c8-guard-s100/records/finish_check.py`）：`--sides a1=<dir> a2=<dir> b=<dir> --compare-logs <a1a2.log> <a1b.log> --steps 100 --batch-size 128 --digest-steps 0,1,2,24,49,99 --summary-prefix COLLATE_SHM_GUARD`。逐侧断言见第 0.2 节第 5 条；任一断言失败以非零退出并打 `COLLATE_SHM_GUARD=FAIL reason=…`。
 4. 自检不动 GPU：`bench_train_steps.py` 用 modul YAML、`JAX_PLATFORMS=cpu`、`--num-train-steps 1 --batch-size 2 --num-workers 0` 起一步即退（只证白名单与 `BENCH_SOURCE_ROOT` 断言生效）。
-5. **C0 `commitV9.8: 基准工具——preflight 副本模式、bench 白名单加 modul 与源码副本断言、guard 完整性守卫`**，逐文件 add 上述三个文件。`git diff A_HEAD C0 -- src/` 必须为空（C0 不含数据路改动）。
+5. **C0 `commitV9.9: 基准工具——preflight 副本模式、bench 白名单加 modul 与源码副本断言、guard 完整性守卫`**，逐文件 add 上述三个文件。`git diff A_HEAD C0 -- src/` 必须为空（C0 不含数据路改动）。
 
 ### C. C1 数据路改动与第一块工具（第 5 步，改后副本）
 
@@ -270,7 +272,7 @@ def _collate_fn_shm(items):
   ```
 - `scripts/training/tests/test_collate_shm.py`（pytest，< 1 min）：合成 dict 七种叶子经 2 个 spawn worker 的新 collate 与单进程 `_collate_fn` 逐键 `tobytes()` 相等；bf16 往返逐位；None 键保留。`( cd "$TEMP" && uv run --no-sync pytest scripts/training/tests/test_collate_shm.py -q )`。
 
-**C1 `commitV9.9: collate 交付改走 torch 共享内存，主进程数据路等待 0.98 s→0.07 s`**，逐文件 add：`src/openpi/training/data_loader.py`、`scripts/training/g0/bench_train_steps.py`、`scripts/training/tests/compare_collate_paths.py`、`scripts/training/tests/test_collate_shm.py`。`git diff C0 C1 -- src/` 只含 `data_loader.py`。
+**C1 `commitV9.10: collate 交付改走 torch 共享内存，主进程数据路等待 0.98 s→0.07 s`**，逐文件 add：`src/openpi/training/data_loader.py`、`scripts/training/g0/bench_train_steps.py`、`scripts/training/tests/compare_collate_paths.py`、`scripts/training/tests/test_collate_shm.py`。`git diff C0 C1 -- src/` 只含 `data_loader.py`。
 
 ### D. 冒烟 runner（第 7 步，8 卡、300 步）
 
@@ -311,8 +313,8 @@ guard_finish_check.py --sides a1="$A1" a2="$A2" b="$B" --compare-logs "$REC/comp
 ### F. 留档、提交、清理（第 6、9 步）
 
 - `docs/training-doc/bench-collate-shm-8gpu/`：`launch.md`（`A_HEAD`、C0/C1/C2 SHA、三个目录、命令、会话清单 `cs-8gpu`、`cs-guard`，C2 提交）；`result.md`（速度表、util 分层、第一块与第二块判定行、链路图、`hf-modul60k-export` 同期说明）；`records/`（`metrics.jsonl` × 5、`judgement_lines.txt`、`analysis.json`、对拍 jsonl、`compare-*.log`、`guard_finish.log`、三个 runner 副本），C3 提交。
-- 四个 commit 全在 `v2-motionmem-collate-shm`，逐文件 `git add`，不碰两个在途 `??` 文件。push 需先问用户（新分支无 upstream）。
-- 并回 `v2-motionmem` 与否由用户决定（四 commit 线性、可 `--ff-only`）；并回前主副本解锁 `chmod -R u+w src scripts packages`，先 `sha256sum -c v1-store/bench/collate-shm-feasibility/lock_sha256.txt` 四份文件全 OK、`git status --porcelain` 仍只含那两个在途文件；`-base`、`-temp` 用 `git worktree remove` 删除（先确认里面没有未提交内容；`v1-store` symlink 随目录删，主副本数据不受影响）。
+- 四个 commit 全在 `v2-motionmem-collate-shm`，逐文件 `git add`。push 需先问用户（新分支无 upstream）。
+- 并回 `v2-motionmem` 与否由用户决定（四 commit 线性、可 `--ff-only`；若主副本期间又有外来 commit 则不再是快进，届时交用户选 rebase 或 merge）。删副本前在 `-base` 内 `sha256sum -c $MAIN/v1-store/bench/collate-shm-feasibility/lock_sha256.txt` 四份文件全 OK，再 `chmod -R u+w src scripts packages` 后 `git worktree remove`（先确认两个副本内没有未提交内容；`v1-store` symlink 随目录删，主副本数据不受影响）。
 - 清理：`v1-store/train-runs/mme_vla_suite_b128_60k/{bench-collate-shm-old,bench-collate-shm-new,cs-guard-a1,cs-guard-a2,cs-guard-b}`；`v1-store/bench/bench-collate-shm-*`、`v1-store/bench/8x8/cs-guard-*` 拷入 records 后删；tmux 会话随驱动自然退出，如需手动只允许 `tmux kill-session -t cs-8gpu` / `-t cs-guard`，删前删后各 `tmux ls`。
 
 ### G. 验证清单（完成判据）
@@ -321,4 +323,4 @@ guard_finish_check.py --sides a1="$A1" a2="$A2" b="$B" --compare-logs "$REC/comp
 2. C1：`COLLATE_EQUIV=PASS batches=20 keys=12 none_keys=4 mismatches=0`（改前副本 vs 改后副本）+ pytest 全绿；`git diff C0 C1 -- src/` 只含 `data_loader.py`。
 3. 冒烟：两侧 `PREFLIGHT=PASS`、`EXIT_CODE=0`；old 步时与 f8-w16 的 1.818 s 相差 ≤ 5%；new 步时、util 均值、0% 占比三项同时给出；`COLLATE_SHM_SPEED old=… new=… speedup=…`。
 4. 第二块：a1/a2 与 a1/b 两组 `DET_CHECK=PASS` + 两组 `BASELINE_ENV=PASS` + `COLLATE_SHM_GUARD=PASS scalars_steps=100 index_n=12800 batch_digest_rows=6 state_digest_rows=6 sides=3 pairs=2`。a1/a2 不逐位 ⇒ 无 PASS，交用户。
-5. 解锁前 `lock_sha256.txt` 四份文件 sha256 不变、主副本 `git status --porcelain` 只含那两个在途文件、`git worktree list` 里两个副本条目干净。
+5. 删副本前 `-base` 内 `lock_sha256.txt` 四份文件 sha256 不变、`git worktree list` 里两个副本条目干净。
