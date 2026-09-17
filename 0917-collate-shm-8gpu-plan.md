@@ -74,27 +74,32 @@
 
 F3 判定同时证明「抽样顺序相同」：两侧独立构造、同一 seed 42 的 `torch.Generator`，20 批摘要逐批一致，顺序若不同摘要不可能相等。
 
-### 4. 完整步骤流程与 commit 清单（从 `A_HEAD` 起，顺序固定）
+### 4. 完整步骤流程与 commit 清单
 
-约定：**主副本** = `/scratch/hongze/robomme_policy_learning_MotionJEPA`（分支 `v2-motionmem`，A 侧 / 改前）；**开发副本** = `/scratch/hongze/robomme_policy_learning_MotionJEPA-temp`（分支 `v2-motionmem-collate-shm`，B 侧 / 改后）。本计划共产出 **3 个 commit**，全部落在 `v2-motionmem-collate-shm` 分支；`v2-motionmem` 在整个过程中**不再新增 commit**，直到用户裁决并回。
+**一句话说整个流程**：把代码复制一份出来改，原来那份锁住当「改前」对照；改完先在 CPU 上证明喂进模型的数据和改前一模一样；再在 8 卡上改前、改后各跑 300 步比速度；再各跑 100 步证明 loss 和梯度也一模一样；最后留档，由你决定要不要合并回主线。
 
-| # | 在哪里 | 做什么 | 产出 commit | 判定行 / 通过条件 |
-|---|---|---|---|---|
-| 1 | 主副本 | 起点核验：`git rev-parse HEAD` 记为 `A_HEAD`（须是 `v2-motionmem` 上 `e4dc733` 之后的 docs commit，`git diff --stat e4dc733 HEAD -- src scripts packages` 为空）；`git status --porcelain` 只含 `scripts/dataset/hf_export/` 下两个在途 `??` 文件；8 卡显存全 0；`tmux ls` 记录现有会话清单 | 无 | 任一不符即停，把原始输出交用户 |
-| 2 | 主副本 → 开发副本 | `git worktree add -b v2-motionmem-collate-shm <开发副本路径> HEAD`；开发副本内 `ln -s <主副本>/v1-store v1-store`（可写链，第 14 条例外）；`uv sync --frozen` 建独立 `.venv`（`UV_CACHE_DIR` 指 `v1-store/cache/uv`） | 无 | `git -C <开发副本> rev-parse HEAD` = `A_HEAD`；`ls -ld v1-store` 是 symlink；`.venv/bin/python` 存在且不是主副本的 |
-| 3 | 主副本 | 锁只读：`sha256sum src/openpi/training/data_loader.py scripts/training/g0/bench_train_steps.py scripts/training/train.py > v1-store/bench/collate-shm-feasibility/lock_sha256.txt`，并把 `A_HEAD` 写入同目录 `A_HEAD.txt`；`chmod -R a-w src scripts packages` | 无 | `ls -ld src scripts packages` 为 `dr-xr-xr-x`；此后主副本不改文件、不 pull、不跑 `uv sync/add` |
-| 4 | 开发副本 | 落代码（第二部分 B 节）：`data_loader.py` 新增 `_to_shared_torch` / `_from_shared_torch` / `_collate_fn_shm`、`__init__` 换 collate、`__iter__` 加转回一行；`bench_train_steps.py::iter_with_digest` 加同一行。新增第一块工具 `scripts/training/tests/test_collate_shm.py`、`scripts/training/tests/compare_collate_paths.py`（第二部分 C 节）。跑 `uv run --no-sync pytest scripts/training/tests/test_collate_shm.py -q` 与 `compare_collate_paths.py --batches 20 --workers 16`（CPU，约 3 min） | **C1 `commitV9.8: collate 交付改走 torch 共享内存，主进程数据路等待 0.98 s→0.07 s`**，逐文件 add 四个文件：`src/openpi/training/data_loader.py`、`scripts/training/g0/bench_train_steps.py`、`scripts/training/tests/test_collate_shm.py`、`scripts/training/tests/compare_collate_paths.py` | pytest 全绿；`COLLATE_EQUIV=PASS batches=20 keys=12 none_keys=4 mismatches=0`；不通过则不提交、回报用户 |
-| 5 | 开发副本 | 写 `docs/training-doc/bench-collate-shm-8gpu/launch.md`（两侧 commit：A = `A_HEAD`，B = C1；命令、配置 sha、会话清单 `cs-8gpu`、`cs-guard`）；把 `cs-8gpu-runner.sh` / `cs-8gpu-driver.sh` / `cs-guard-runner.sh` 落 `v1-store/logs/`（不进 git，副本随第 8 步进 `records/`） | **C2 `docs: bench-collate-shm-8gpu 起跑留档`**，只 add `launch.md` | C2 之后开发副本 `git status --porcelain` 为空（preflight 的 `CHECK_REPO_CLEAN` 要求 B 侧 clean HEAD = C2） |
-| 6 | 两侧，8 卡独占 | 冒烟速度 A/B（第 5 节）：`tmux new-session -d -s cs-8gpu "bash <主副本>/v1-store/logs/cs-8gpu-driver.sh"`，驱动串行跑 A（主副本 `A_HEAD`，run `bench-collate-shm-old`）→ B（开发副本 C2，run `bench-collate-shm-new`），各 300 步 (1,8) w16 b128；Monitor 挂驱动日志 | 无 | 每档 `PREFLIGHT=PASS n=25`、`EXIT_CODE=0`；`DRIVER_ALL_DONE`；分析 `BENCH_8GPU workers=16 step_mean_s=…`×2 与 `COLLATE_SHM_SPEED old=… new=… speedup=…`；old 与 f8-w16 的 1.818 s 相差 ≤ 5% |
-| 7 | 两侧，8 卡独占 | 第二块梯度对拍（第 6 节）：`tmux new-session -d -s cs-guard "bash <主副本>/v1-store/logs/cs-guard-runner.sh"`，串行 a1、a2（主副本）、b（开发副本），各 100 步确定性 XLA、`BENCH_CHECKSUM=1 BENCH_BATCH_DIGESTS=1`；`compare_baseline.py a1 a2`、`compare_baseline.py a1 b` | 无 | A1/A2 与 A1/B 均 `SCALARS steps=100 keys=5 hex_mismatch_steps=0`、`INDEX_SEQ=PASS`、`BATCH_DIGEST rows=6 mismatch=0`、`STATE_DIGEST rows=6 mismatch=0`；汇总 `COLLATE_SHM_GUARD=PASS`。A1/A2 自身不逐位则退回 `QUANT_EQUIV`（零假设 A/A、margin 2.0）并在留档注明 |
-| 8 | 开发副本 | 写 `result.md`（速度表、util 分层、两块判定行、链路图）；`records/` 收 `metrics.jsonl`（old/new/a1/a2/b）、`judgement_lines.txt`、`analysis.json`、对拍 jsonl、`comparisons.log`、三个 runner 副本；清理 `v1-store/train-runs/mme_vla_suite_b128_60k/{bench-collate-shm-old,bench-collate-shm-new,cs-guard-a1,cs-guard-a2,cs-guard-b}`、`v1-store/bench/bench-collate-shm-*`、`v1-store/bench/8x8/cs-guard-*` | **C3 `docs: bench-collate-shm-8gpu 结果——…`**，add `result.md` + `records/` 逐文件 | 提交后 `git log --oneline -3` 为 C3 / C2 / C1，其下是 `A_HEAD` |
-| 9 | 主副本 + 用户 | 三件事都**先问用户**：(a) `git push -u origin v2-motionmem-collate-shm`（新分支无 upstream，第 11 条禁止自行 `-u`）；(b) 是否 `git merge --ff-only v2-motionmem-collate-shm` 并回 `v2-motionmem`（三 commit 线性、可快进）；(c) 解锁主副本 `chmod -R u+w src scripts packages`——解锁前先 `sha256sum -c v1-store/bench/collate-shm-feasibility/lock_sha256.txt` 三份文件全 OK、`git status --porcelain` 仍只含那两个在途文件 | 无新 commit | 用户答复前主副本保持只读、分支保持本地 |
+**两份代码、两个分支**：
+- **主副本**（`/scratch/hongze/robomme_policy_learning_MotionJEPA`，分支 `v2-motionmem`）= **改前**。整个过程中源码锁只读、不加任何 commit，只负责当对照。起跑时它的 HEAD 记作 `A_HEAD`。
+- **开发副本**（`/scratch/hongze/robomme_policy_learning_MotionJEPA-temp`，新分支 `v2-motionmem-collate-shm`）= **改后**。所有改动和留档都在这里，共 **3 个 commit**：C1 代码、C2 起跑留档、C3 结果留档。
 
-三点补充：
+**九步，每步一句话**（命令、参数、判定行原文见第二部分对应小节）：
 
-- **改前 / 改后两侧的 commit 固定为 `A_HEAD` / C2**，冒烟与第二块都用这两个；C1 与 C2 源码相同（C2 只加 `launch.md`），留档写 C2 是因为 preflight 要求 clean HEAD。
-- **每次 `git commit` 后照第 11 条应立即 push**，但本分支远端不存在，`git push` 会因无 upstream 失败，这是第 11 条明文要求先问用户的情形；因此三个 commit 先留本地，在第 9 步一次性请示。
-- **中途任一判定失败**：停在该步，不跳步、不改判据、不放宽阈值，把原始判定行交用户；第 4 步失败不提交 C1；第 6 或 7 步失败照样写 `result.md` 留档（C3 记失败原因）。
+| # | 在哪里 | 做什么 | 为什么 | 产出 commit | 通过条件 |
+|---|---|---|---|---|---|
+| 1 | 主副本 | 确认起点干净：HEAD 与 `e4dc733` 源码一致、没有别人的在途改动被卷进来、8 卡空闲 | 后面所有「改前」数字都以这个 HEAD 为准 | 无 | 不干净就停下来问你 |
+| 2 | 主副本 → 开发副本 | 从主副本切出新分支，放到 `-temp` 目录，共享同一个 `v1-store`，装自己的 `.venv` | 改动与对照物理隔离，数据不复制第二份 | 无 | 开发副本 HEAD 等于 `A_HEAD` |
+| 3 | 主副本 | 把主副本源码目录设成只读，记下三份关键文件的 sha256 | 保证「改前」在整个对比期间一个字节都没变 | 无 | 目录权限变成只读 |
+| 4 | 开发副本 | 落那 20 行改动，加两个小测试；在 CPU 上跑「改前 vs 改后」逐键字节对拍 | 先不碰 GPU 就证明喂进模型的数据完全一样（第 18 条第一块） | **C1 `commitV9.8`** | 对拍 0 处不匹配，测试全绿；否则不提交 |
+| 5 | 开发副本 | 写起跑留档 | 记下两侧 commit、命令、配置，满足 preflight 的 clean HEAD 要求 | **C2 `docs:`** | 开发副本工作区干净 |
+| 6 | 两侧，8 卡独占 | 改前、改后各跑 300 步，同配置、串行，比步时和 GPU 利用率 | 这是你要的速度对比；改前那档还要复现上次的 1.82 s 作校验 | 无 | 两档都正常退出；得到 old / new 步时与提速倍数 |
+| 7 | 两侧，8 卡独占 | 改前跑两次、改后跑一次，各 100 步、确定性模式，逐步比 loss / 梯度范数 / 参数摘要 | 证明训练本身没被改变（第 18 条第二块）；改前跑两次是为了知道「同代码重跑」本身是否逐位一致 | 无 | 改前 vs 改后与改前 vs 改前一样逐位一致 |
+| 8 | 开发副本 | 写结果留档，收原始记录，删临时 run 产物 | 第 12、17 条要求；结果不留在 tmux 里 | **C3 `docs:`** | 分支上依次是 C1、C2、C3 |
+| 9 | 主副本 + 你 | 问你三件事：推不推新分支到远端、合不合并回 `v2-motionmem`、解不解锁主副本 | 新分支没有 upstream、合并与解锁都是你的决定 | 无 | 你答复前主副本保持只读、分支留在本地 |
+
+**三条规则**：
+- 改前侧永远是 `A_HEAD`，改后侧永远是 C2（C2 和 C1 源码相同，只多一份起跑留档）。
+- 三个 commit 先留本地，第 9 步一次性请示 push（新分支没有 upstream，按第 11 条不能自行 `-u`）。
+- 任一步的通过条件不满足就停在那一步，不跳步、不放宽判据，把原始判定行给你；第 6、7 步失败也照样写结果留档。
 
 ### 5. 冒烟速度对比（8 卡、300 步、同会话 A/B）
 
@@ -149,6 +154,7 @@ UV_CACHE_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/u
 # 主副本源码锁只读（照抄 v2-1600ep-m8x8-modul-b128-60k 形制）
 cd /scratch/hongze/robomme_policy_learning_MotionJEPA
 sha256sum src/openpi/training/data_loader.py scripts/training/g0/bench_train_steps.py scripts/training/train.py > v1-store/bench/collate-shm-feasibility/lock_sha256.txt
+git rev-parse HEAD > v1-store/bench/collate-shm-feasibility/A_HEAD.txt
 chmod -R a-w src scripts packages
 ls -ld src scripts packages       # 应为 dr-xr-xr-x
 ```
