@@ -35,6 +35,10 @@
 
 步骤 1b 同时纳入基线驱动缓存落点修补，用户原话「一并修补，在修补后的同一驱动上取前后基线」：`run_2gpu_epoch_bench.sh` 去除 `$HOME/.cache` 软链接的创建与删除，改向训练入口传入 `MMEVLA_JAX_CACHE_DIR`，仍指向 `v1-store/cache/jax/<EXP_NAME>`。前后基线均显式设 `KEEP_JAX_CACHE=1`，保留相同缓存。生产训练代码与超参不因该修补改变；BASE 在这次修补提交后取得。
 
+**实施补充裁决（执行时优先于下方原计划表述）**：① 用户原话「纳入修补，确保所有起跑检查失败即停」，新 smoke / 正式 runner 的任务主体使用启用 `set -euo pipefail` 的子 shell，外层继续写 EXIT_CODE；内外日志使用不同路径。② 用户原话「采用真实 skipped 计数及完整性验收」，取消首次建库 `skipped=0` 的预设，汇总真实 skipped，另记起跑前完成段数；以 3,200 段、完整窗口集合与无重复处理验收。③ 用户原话「纳入计时与 trace，按计划提供实测分解」，增加默认关闭的主线程计时与 JAX 设备 trace，本轮 smoke / 正式 run 取前 300 步（smoke 取实际 20 步），不增加逐步设备同步；仅在 trace 收尾等待一次，单独区分主线程取 batch 等待、异步提交和设备 kernel 时间。
+
+**步骤 2a 完成**：BASE=`2126b1b1c436166662ff89a629985ecd4524fc42`；V1 为 3,200 样本 / 200 batch，V2 为 1,200 样本 / 200 batch，V6 为 61 初态叶 / 三类各 38 梯度叶，V7 为 100 步 / 5 状态摘要 / 7 输入摘要 / 872 索引，均退出码 0。详情见 [V1](docs/training-doc/mv2-v1-dump/result.md)、[V2](docs/training-doc/mv2-v2-legacy/result.md)、[V6](docs/training-doc/mv2-v6-grad/result.md)、[V7](docs/training-doc/mv2-v7-guard-base/result.md)。生产代码尚未修改；下一步实施 2b。
+
 ---
 
 ## 第一部分（给人看）

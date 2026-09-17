@@ -1,0 +1,25 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+BASE_SOURCE=PASS stage=v6 head=2126b1b1c436166662ff89a629985ecd4524fc42 clean=1 pid=4110824
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+FIXTURE=PASS kind=mixed1 keys=12 batch=8
+FIXTURE=PASS kind=allshort keys=12 batch=8
+FIXTURE=PASS kind=allfull keys=12 batch=8
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+INIT_PARAMS=PASS leaves=61 seconds=120.2
+GRAD_KIND=PASS kind=mixed1 loss=0.131137341 leaves=38 seconds=101.1
+GRAD_KIND=PASS kind=allshort loss=0.093950741 leaves=38 seconds=55.0
+GRAD_KIND=PASS kind=allfull loss=0.127008989 leaves=38 seconds=54.6
+GRAD_DONE kinds=3 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/mv2/v6-base
+BASE_STAGE_DONE=v6 head=2126b1b1c436166662ff89a629985ecd4524fc42
+END_UTC=2026-09-17T19:33:33Z
+EXIT_CODE=0

@@ -1,0 +1,408 @@
+
+[bench] step 0: TrainState 摘要 state=85a829759b07d809… params+ema=5424f2a18d2c811d… (201 叶子, 耗时 179.61s)
+19:37:47.439 [I] Initialized train state:
+['PaliGemma']['img']['Transformer']['encoder_norm']['bias'].value: (1152,)@bfloat16
+['PaliGemma']['img']['Transformer']['encoder_norm']['scale'].value: (1152,)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_0']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_0']['scale'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_1']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_1']['scale'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['bias'].value: (27, 4304)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['kernel'].value: (27, 1152, 4304)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['kernel'].value: (27, 4304, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['kernel'].value: (27, 16, 72, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['embedding']['bias'].value: (1152,)@bfloat16
+['PaliGemma']['img']['embedding']['kernel'].value: (14, 14, 3, 1152)@bfloat16
+['PaliGemma']['img']['head']['bias'].value: (2048,)@bfloat16
+['PaliGemma']['img']['head']['kernel'].value: (1152, 2048)@bfloat16
+['PaliGemma']['img']['pos_embedding'].value: (1, 256, 1152)@bfloat16
+['PaliGemma']['llm']['embedder']['input_embedding'].value: (257152, 2048)@float32
+['PaliGemma']['llm']['final_norm']['scale'].value: (2048,)@float32
+['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias'].value: (3072,)@float32
+['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value: (1024, 3072)@float32
+['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value: (18, 8, 256, 2048)@float32
+['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value: (18, 8, 256, 1024)@float32
+['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value: (18, 2, 1, 2048, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value: (18, 2, 1, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value: (18, 8, 2048, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value: (18, 8, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w'].value: (18, 2, 1, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['mem_attn']['mem_rms_norm']['scale'].value: (18, 1024)@float32
+['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w'].value: (18, 4, 256, 1024)@float32
+['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w'].value: (18, 4, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['bias'].value: (18, 2048)@float32
+['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel'].value: (18, 1024, 2048)@float32
+['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value: (18, 2, 2048, 16384)@float32
+['PaliGemma']['llm']['layers']['mlp']['linear'].value: (18, 16384, 2048)@float32
+['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value: (18, 2, 1024, 4096)@float32
+['PaliGemma']['llm']['layers']['mlp_1']['linear'].value: (18, 4096, 1024)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm']['scale'].value: (18, 2048)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias'].value: (18, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value: (18, 1024, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale'].value: (18, 2048)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias'].value: (18, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value: (18, 1024, 3072)@float32
+['action_in_proj']['bias'].value: (1024,)@float32
+['action_in_proj']['kernel'].value: (32, 1024)@float32
+['action_out_proj']['bias'].value: (32,)@float32
+['action_out_proj']['kernel'].value: (1024, 32)@float32
+['mem_encoder']['feature_encoder']['encoder_static']['bias'].value: (1024,)@float32
+['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value: (2816, 1024)@float32
+['mem_encoder']['feature_encoder']['pos_proj']['bias'].value: (768,)@float32
+['mem_encoder']['feature_encoder']['pos_proj']['kernel'].value: (768, 768)@float32
+['time_mlp_in']['bias'].value: (1024,)@float32
+['time_mlp_in']['kernel'].value: (1024, 1024)@float32
+['time_mlp_out']['bias'].value: (1024,)@float32
+['time_mlp_out']['kernel'].value: (1024, 1024)@float32 (4117320:train.py:431)
+19:37:47.451 [I] Progress on: -/100 rate:- remaining:? elapsed:00:00 postfix:-                    (4117320:tqdm_logging.py:145)
+
+
+Step 0: grad_norm=1.8430, llm_grad_norm=1.8188, loss=0.1105, mem_enc_norm=0.1539, param_norm=1815.5465
+19:38:27.421 [I] Progress on: -/100 rate:- remaining:? elapsed:00:39 postfix:-                    (4117320:tqdm_logging.py:145)
+
+
+Step 1: grad_norm=1.5648, llm_grad_norm=1.5412, loss=0.0730, mem_enc_norm=0.1365, param_norm=1815.5465
+
+
+Step 2: grad_norm=1.6782, llm_grad_norm=1.6521, loss=0.0862, mem_enc_norm=0.1423, param_norm=1815.5465
+
+
+Step 3: grad_norm=1.2190, llm_grad_norm=1.1993, loss=0.0762, mem_enc_norm=0.0993, param_norm=1815.5465
+
+
+Step 4: grad_norm=1.3414, llm_grad_norm=1.3071, loss=0.0923, mem_enc_norm=0.1133, param_norm=1815.5465
+
+
+Step 5: grad_norm=1.4398, llm_grad_norm=1.4181, loss=0.0998, mem_enc_norm=0.1204, param_norm=1815.5465
+
+
+Step 6: grad_norm=1.3611, llm_grad_norm=1.3386, loss=0.0871, mem_enc_norm=0.1082, param_norm=1815.5465
+
+
+Step 7: grad_norm=1.2721, llm_grad_norm=1.2564, loss=0.0715, mem_enc_norm=0.0955, param_norm=1815.5465
+
+
+Step 8: grad_norm=1.2560, llm_grad_norm=1.2351, loss=0.0956, mem_enc_norm=0.1013, param_norm=1815.5465
+
+
+Step 9: grad_norm=1.4432, llm_grad_norm=1.4190, loss=0.0994, mem_enc_norm=0.1160, param_norm=1815.5465
+
+
+Step 10: grad_norm=1.3556, llm_grad_norm=1.3335, loss=0.0913, mem_enc_norm=0.1065, param_norm=1815.5465
+
+
+Step 11: grad_norm=1.6380, llm_grad_norm=1.6190, loss=0.0820, mem_enc_norm=0.1325, param_norm=1815.5465
+19:38:37.645 [I] Progress on: 11.0it/100it rate:1.2s/it remaining:01:50 elapsed:00:50 postfix:-   (4117320:tqdm_logging.py:145)
+
+
+Step 12: grad_norm=1.4855, llm_grad_norm=1.4658, loss=0.0883, mem_enc_norm=0.1217, param_norm=1815.5465
+
+
+Step 13: grad_norm=1.2358, llm_grad_norm=1.2166, loss=0.0848, mem_enc_norm=0.0990, param_norm=1815.5465
+
+
+Step 14: grad_norm=1.8439, llm_grad_norm=1.8141, loss=0.1209, mem_enc_norm=0.1510, param_norm=1815.5465
+
+
+Step 15: grad_norm=1.5267, llm_grad_norm=1.5030, loss=0.0915, mem_enc_norm=0.1270, param_norm=1815.5465
+
+
+Step 16: grad_norm=1.2514, llm_grad_norm=1.2284, loss=0.0920, mem_enc_norm=0.1043, param_norm=1815.5465
+
+
+Step 17: grad_norm=1.6704, llm_grad_norm=1.6460, loss=0.0836, mem_enc_norm=0.1322, param_norm=1815.5465
+
+
+Step 18: grad_norm=0.9970, llm_grad_norm=0.9794, loss=0.0865, mem_enc_norm=0.0817, param_norm=1815.5465
+
+
+Step 19: grad_norm=1.5081, llm_grad_norm=1.4791, loss=0.0517, mem_enc_norm=0.1341, param_norm=1815.5465
+
+
+Step 20: grad_norm=1.3209, llm_grad_norm=1.3053, loss=0.0802, mem_enc_norm=0.1060, param_norm=1815.5465
+
+
+Step 21: grad_norm=1.6078, llm_grad_norm=1.5868, loss=0.0773, mem_enc_norm=0.1378, param_norm=1815.5465
+
+
+Step 22: grad_norm=1.1391, llm_grad_norm=1.1174, loss=0.0763, mem_enc_norm=0.0914, param_norm=1815.5465
+
+
+Step 23: grad_norm=1.2082, llm_grad_norm=1.1889, loss=0.0696, mem_enc_norm=0.0977, param_norm=1815.5465
+19:38:48.360 [I] Progress on: 23.0it/100it rate:1.1it/s remaining:01:09 elapsed:01:00 postfix:-   (4117320:tqdm_logging.py:145)
+
+
+Step 24: grad_norm=1.2012, llm_grad_norm=1.1719, loss=0.0686, mem_enc_norm=0.1057, param_norm=1815.5465
+
+
+Step 25: grad_norm=1.8052, llm_grad_norm=1.7844, loss=0.0996, mem_enc_norm=0.1413, param_norm=1815.5465
+
+[bench] step 25: TrainState 摘要 state=e8a9b1fd776188e7… params+ema=8a1db6e179d8cb7b… (201 叶子, 耗时 180.008s)
+19:41:50.375 [I] Progress on: 26.0it/100it rate:54.9s/it remaining:1:07:45 elapsed:04:02 postfix:- (4117320:tqdm_logging.py:145)
+
+
+Step 26: grad_norm=1.4927, llm_grad_norm=1.4725, loss=0.0910, mem_enc_norm=0.1227, param_norm=1815.5465
+
+
+Step 27: grad_norm=0.8947, llm_grad_norm=0.8773, loss=0.0617, mem_enc_norm=0.0742, param_norm=1815.5465
+
+
+Step 28: grad_norm=1.8571, llm_grad_norm=1.8351, loss=0.0821, mem_enc_norm=0.1494, param_norm=1815.5465
+
+
+Step 29: grad_norm=1.1387, llm_grad_norm=1.1191, loss=0.0682, mem_enc_norm=0.0912, param_norm=1815.5465
+
+
+Step 30: grad_norm=1.1915, llm_grad_norm=1.1739, loss=0.0687, mem_enc_norm=0.0968, param_norm=1815.5465
+
+
+Step 31: grad_norm=0.9293, llm_grad_norm=0.9119, loss=0.0671, mem_enc_norm=0.0712, param_norm=1815.5465
+
+
+Step 32: grad_norm=1.4330, llm_grad_norm=1.4133, loss=0.0983, mem_enc_norm=0.1153, param_norm=1815.5465
+
+
+Step 33: grad_norm=1.1659, llm_grad_norm=1.1471, loss=0.0851, mem_enc_norm=0.0919, param_norm=1815.5465
+
+
+Step 34: grad_norm=1.6192, llm_grad_norm=1.5875, loss=0.0899, mem_enc_norm=0.1260, param_norm=1815.5465
+
+
+Step 35: grad_norm=1.1654, llm_grad_norm=1.1461, loss=0.1174, mem_enc_norm=0.0831, param_norm=1815.5465
+
+
+Step 36: grad_norm=1.3882, llm_grad_norm=1.3692, loss=0.0747, mem_enc_norm=0.1133, param_norm=1815.5465
+
+
+Step 37: grad_norm=1.5440, llm_grad_norm=1.5263, loss=0.0745, mem_enc_norm=0.1251, param_norm=1815.5465
+19:42:01.048 [I] Progress on: 37.0it/100it rate:2.0s/it remaining:02:03 elapsed:04:13 postfix:-   (4117320:tqdm_logging.py:145)
+
+
+Step 38: grad_norm=0.8723, llm_grad_norm=0.8573, loss=0.0616, mem_enc_norm=0.0687, param_norm=1815.5465
+
+
+Step 39: grad_norm=1.1133, llm_grad_norm=1.0881, loss=0.0976, mem_enc_norm=0.0919, param_norm=1815.5465
+
+
+Step 40: grad_norm=1.0004, llm_grad_norm=0.9792, loss=0.0737, mem_enc_norm=0.0854, param_norm=1815.5465
+
+
+Step 41: grad_norm=0.8509, llm_grad_norm=0.8269, loss=0.0562, mem_enc_norm=0.0761, param_norm=1815.5465
+
+
+Step 42: grad_norm=0.9156, llm_grad_norm=0.8967, loss=0.0579, mem_enc_norm=0.0733, param_norm=1815.5465
+
+
+Step 43: grad_norm=1.4066, llm_grad_norm=1.3870, loss=0.0897, mem_enc_norm=0.1201, param_norm=1815.5465
+
+
+Step 44: grad_norm=0.9815, llm_grad_norm=0.9641, loss=0.0789, mem_enc_norm=0.0779, param_norm=1815.5465
+
+
+Step 45: grad_norm=1.0449, llm_grad_norm=1.0206, loss=0.0646, mem_enc_norm=0.0804, param_norm=1815.5465
+
+
+Step 46: grad_norm=0.7740, llm_grad_norm=0.7541, loss=0.0720, mem_enc_norm=0.0594, param_norm=1815.5465
+
+
+Step 47: grad_norm=2.7463, llm_grad_norm=2.6457, loss=0.1167, mem_enc_norm=0.2414, param_norm=1815.5465
+
+
+Step 48: grad_norm=1.5191, llm_grad_norm=1.4989, loss=0.0620, mem_enc_norm=0.1188, param_norm=1815.5465
+
+
+Step 49: grad_norm=0.5944, llm_grad_norm=0.5779, loss=0.0585, mem_enc_norm=0.0471, param_norm=1815.5465
+19:42:11.722 [I] Progress on: 49.0it/100it rate:1.1it/s remaining:00:46 elapsed:04:24 postfix:-   (4117320:tqdm_logging.py:145)
+
+
+Step 50: grad_norm=1.8153, llm_grad_norm=1.7922, loss=0.0687, mem_enc_norm=0.1578, param_norm=1815.5465
+
+[bench] step 50: TrainState 摘要 state=9263ba84bb6eaf75… params+ema=8450d040ebf1153f… (201 叶子, 耗时 179.453s)
+19:45:12.292 [I] Progress on: 51.0it/100it rate:54.8s/it remaining:44:44 elapsed:07:24 postfix:-  (4117320:tqdm_logging.py:145)
+
+
+Step 51: grad_norm=0.7638, llm_grad_norm=0.7489, loss=0.0656, mem_enc_norm=0.0565, param_norm=1815.5465
+
+
+Step 52: grad_norm=0.7817, llm_grad_norm=0.7606, loss=0.0657, mem_enc_norm=0.0620, param_norm=1815.5465
+
+
+Step 53: grad_norm=1.0626, llm_grad_norm=1.0447, loss=0.0659, mem_enc_norm=0.0809, param_norm=1815.5465
+
+
+Step 54: grad_norm=0.7170, llm_grad_norm=0.7036, loss=0.0541, mem_enc_norm=0.0578, param_norm=1815.5465
+
+
+Step 55: grad_norm=1.0036, llm_grad_norm=0.9869, loss=0.0591, mem_enc_norm=0.0859, param_norm=1815.5465
+
+
+Step 56: grad_norm=0.7870, llm_grad_norm=0.7634, loss=0.0714, mem_enc_norm=0.0566, param_norm=1815.5465
+
+
+Step 57: grad_norm=1.0806, llm_grad_norm=1.0427, loss=0.0637, mem_enc_norm=0.0808, param_norm=1815.5465
+
+
+Step 58: grad_norm=0.7554, llm_grad_norm=0.7340, loss=0.0651, mem_enc_norm=0.0645, param_norm=1815.5465
+
+
+Step 59: grad_norm=0.7781, llm_grad_norm=0.7621, loss=0.0641, mem_enc_norm=0.0586, param_norm=1815.5465
+
+
+Step 60: grad_norm=0.7235, llm_grad_norm=0.7055, loss=0.0546, mem_enc_norm=0.0536, param_norm=1815.5465
+
+
+Step 61: grad_norm=1.0882, llm_grad_norm=1.0753, loss=0.0507, mem_enc_norm=0.0918, param_norm=1815.5465
+
+
+Step 62: grad_norm=0.8342, llm_grad_norm=0.8168, loss=0.0765, mem_enc_norm=0.0612, param_norm=1815.5465
+19:45:22.957 [I] Progress on: 62.0it/100it rate:2.0s/it remaining:01:14 elapsed:07:35 postfix:-   (4117320:tqdm_logging.py:145)
+
+
+Step 63: grad_norm=0.9820, llm_grad_norm=0.9650, loss=0.0547, mem_enc_norm=0.0771, param_norm=1815.5465
+
+
+Step 64: grad_norm=0.5556, llm_grad_norm=0.5420, loss=0.0522, mem_enc_norm=0.0403, param_norm=1815.5465
+
+
+Step 65: grad_norm=1.1451, llm_grad_norm=1.1151, loss=0.1025, mem_enc_norm=0.0949, param_norm=1815.5465
+
+
+Step 66: grad_norm=0.9593, llm_grad_norm=0.9356, loss=0.0782, mem_enc_norm=0.0796, param_norm=1815.5465
+
+
+Step 67: grad_norm=0.8109, llm_grad_norm=0.7977, loss=0.0604, mem_enc_norm=0.0555, param_norm=1815.5465
+
+
+Step 68: grad_norm=0.6508, llm_grad_norm=0.6314, loss=0.0748, mem_enc_norm=0.0511, param_norm=1815.5464
+
+
+Step 69: grad_norm=0.7824, llm_grad_norm=0.7610, loss=0.0711, mem_enc_norm=0.0610, param_norm=1815.5464
+
+
+Step 70: grad_norm=0.7327, llm_grad_norm=0.7145, loss=0.0728, mem_enc_norm=0.0606, param_norm=1815.5464
+
+
+Step 71: grad_norm=0.8890, llm_grad_norm=0.8749, loss=0.0587, mem_enc_norm=0.0637, param_norm=1815.5464
+
+
+Step 72: grad_norm=0.7054, llm_grad_norm=0.6914, loss=0.0457, mem_enc_norm=0.0589, param_norm=1815.5464
+
+
+Step 73: grad_norm=0.7276, llm_grad_norm=0.7128, loss=0.0431, mem_enc_norm=0.0546, param_norm=1815.5464
+
+
+Step 74: grad_norm=0.8403, llm_grad_norm=0.8211, loss=0.0852, mem_enc_norm=0.0620, param_norm=1815.5464
+19:45:33.645 [I] Progress on: 74.0it/100it rate:1.1it/s remaining:00:23 elapsed:07:46 postfix:-   (4117320:tqdm_logging.py:145)
+
+
+Step 75: grad_norm=0.7402, llm_grad_norm=0.7186, loss=0.0727, mem_enc_norm=0.0596, param_norm=1815.5464
+
+[bench] step 75: TrainState 摘要 state=5fca06707a949117… params+ema=d8c81f8b1982d494… (201 叶子, 耗时 181.222s)
+19:48:35.987 [I] Progress on: 76.0it/100it rate:55.3s/it remaining:22:07 elapsed:10:48 postfix:-  (4117320:tqdm_logging.py:145)
+
+
+Step 76: grad_norm=0.6712, llm_grad_norm=0.6541, loss=0.0495, mem_enc_norm=0.0565, param_norm=1815.5464
+
+
+Step 77: grad_norm=0.5697, llm_grad_norm=0.5562, loss=0.0416, mem_enc_norm=0.0440, param_norm=1815.5465
+
+
+Step 78: grad_norm=0.5075, llm_grad_norm=0.4956, loss=0.0447, mem_enc_norm=0.0390, param_norm=1815.5464
+
+
+Step 79: grad_norm=0.8329, llm_grad_norm=0.8191, loss=0.0418, mem_enc_norm=0.0690, param_norm=1815.5464
+
+
+Step 80: grad_norm=1.1199, llm_grad_norm=1.1064, loss=0.0451, mem_enc_norm=0.0887, param_norm=1815.5464
+
+
+Step 81: grad_norm=0.7903, llm_grad_norm=0.7688, loss=0.0606, mem_enc_norm=0.0565, param_norm=1815.5464
+
+
+Step 82: grad_norm=0.8334, llm_grad_norm=0.8180, loss=0.0521, mem_enc_norm=0.0605, param_norm=1815.5464
+
+
+Step 83: grad_norm=0.6030, llm_grad_norm=0.5873, loss=0.0400, mem_enc_norm=0.0524, param_norm=1815.5464
+
+
+Step 84: grad_norm=0.6927, llm_grad_norm=0.6779, loss=0.0515, mem_enc_norm=0.0555, param_norm=1815.5464
+
+
+Step 85: grad_norm=0.5800, llm_grad_norm=0.5651, loss=0.0547, mem_enc_norm=0.0445, param_norm=1815.5464
+
+
+Step 86: grad_norm=0.6038, llm_grad_norm=0.5872, loss=0.0628, mem_enc_norm=0.0473, param_norm=1815.5465
+
+
+Step 87: grad_norm=0.7863, llm_grad_norm=0.7745, loss=0.0362, mem_enc_norm=0.0669, param_norm=1815.5464
+19:48:46.655 [I] Progress on: 87.0it/100it rate:2.0s/it remaining:00:25 elapsed:10:59 postfix:-   (4117320:tqdm_logging.py:145)
+
+
+Step 88: grad_norm=0.8684, llm_grad_norm=0.8470, loss=0.0709, mem_enc_norm=0.0622, param_norm=1815.5464
+
+
+Step 89: grad_norm=1.1484, llm_grad_norm=1.1357, loss=0.0485, mem_enc_norm=0.0873, param_norm=1815.5464
+
+
+Step 90: grad_norm=0.8850, llm_grad_norm=0.8692, loss=0.0536, mem_enc_norm=0.0716, param_norm=1815.5465
+
+
+Step 91: grad_norm=0.7493, llm_grad_norm=0.7366, loss=0.0429, mem_enc_norm=0.0582, param_norm=1815.5465
+
+
+Step 92: grad_norm=0.6585, llm_grad_norm=0.6440, loss=0.0589, mem_enc_norm=0.0514, param_norm=1815.5465
+
+
+Step 93: grad_norm=0.8077, llm_grad_norm=0.7915, loss=0.0772, mem_enc_norm=0.0634, param_norm=1815.5465
+
+
+Step 94: grad_norm=1.2163, llm_grad_norm=1.1963, loss=0.0532, mem_enc_norm=0.1056, param_norm=1815.5465
+
+
+Step 95: grad_norm=0.8255, llm_grad_norm=0.8022, loss=0.0509, mem_enc_norm=0.0652, param_norm=1815.5465
+
+
+Step 96: grad_norm=0.5512, llm_grad_norm=0.5369, loss=0.0372, mem_enc_norm=0.0404, param_norm=1815.5465
+
+
+Step 97: grad_norm=0.5630, llm_grad_norm=0.5505, loss=0.0389, mem_enc_norm=0.0420, param_norm=1815.5465
+
+
+Step 98: grad_norm=1.1619, llm_grad_norm=1.1492, loss=0.0628, mem_enc_norm=0.0867, param_norm=1815.5465
+19:48:56.674 [I] Progress on: 99.0it/100it rate:1.0it/s remaining:00:00 elapsed:11:09 postfix:-   (4117320:tqdm_logging.py:145)
+
+
+Step 99: grad_norm=0.5508, llm_grad_norm=0.5378, loss=0.0377, mem_enc_norm=0.0434, param_norm=1815.5465
+
+[bench] step 99: TrainState 摘要 state=5798f8f27d10c4da… params+ema=c2e18ec028b8d4a7… (201 叶子, 耗时 180.296s)
+19:51:57.862 [I] Progress on: 100it/100it rate:55.0s/it remaining:00:00 elapsed:14:10 postfix:-   (4117320:tqdm_logging.py:145)
+19:51:57.862 [I] Progress on: 100it/100it rate:55.0s/it remaining:00:00 elapsed:14:10 postfix:-   (4117320:tqdm_logging.py:145)
+19:51:57.862 [I] Waiting for checkpoint manager to finish                                         (4117320:train.py:475)
+19:51:57.862 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (4117320:checkpoint_manager.py:1987)
+[bench] index 序列 872 个已写 index_sequence.json (sha256 5823ff783fbc43c4…)
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+OK run_meta 并入 env.json, 缓存事件: {'/jax/compilation_cache/tasks_using_cache': 1, '/jax/compilation_cache/compile_requests_use_cache': 14, '/jax/compilation_cache/cache_misses': 2}
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+OK TrainState 摘要 5 次 @steps=[0, 25, 50, 75, 99], 末值 state=5798f8f27d10c4da…, 单次耗时中位 180.0s
+OK 输入摘要 7 次 @steps=[0, 1, 2, 25, 50, 75, 99], raw 末值 a143dea63cbbbd8d…, canonical 末值 353f98328a56c81b…, index 序列 872 个 sha=5823ff783fbc43c4…
+OK loss n=100 min=0.0362 max=0.1209 末值=0.0377
+RESULT batch=8 稳态=0.890s/step (n=72, p10=0.889, p90=0.892)
+RESULT steps_per_epoch=12633  epoch估算=11244s ≈ 3.12 小时
+记录文件保留在: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/2gpu-epoch-bench/mv2-v7-base
+EXIT_CODE=0
+BENCH_PASS 基准完成
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+PROJECTED rows=100 sha256=2642fa0985bc37c03781b506de35ff221d5a525575745139ff311e1afc9fe3eb -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/2gpu-epoch-bench/mv2-v7-base/scalars_hex.tsv
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+OK BASELINE_MANIFEST.json: 7 个产物
+BASE_STAGE_DONE=v7 head=2126b1b1c436166662ff89a629985ecd4524fc42
+END_UTC=2026-09-17T19:52:07Z
+EXIT_CODE=0
