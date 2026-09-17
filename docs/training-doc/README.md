@@ -10,7 +10,7 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`bench-collate-shm-8gpu/`](bench-collate-shm-8gpu/launch.md) | collate 共享内存：20 批真实输入对拍、8 卡速度与 100 步三侧确定性验证 | 输入逐位 PASS；训练验证待执行 |
+| [`bench-collate-shm-8gpu/`](bench-collate-shm-8gpu/result.md) | collate 共享内存：20 批真实输入对拍、8 卡速度与 100 步三侧确定性验证 | 全部逐位 PASS；步时 1.773→0.973s（1.82×），GPU 利用率 53.32%→97.87% |
 | [`t8-c8-guard-s100/`](t8-c8-guard-s100/result.md) | Dataset 成对白名单放宽；3454 样本轻量对拍及既有 context 8×8 的前 100 步梯度对照 | PASS：100 步五标量、800 个训练索引、6 份输入与完整状态均逐位一致 |
 | [`m8-modul-retro/`](m8-modul-retro/result.md) | modulation 关闭态两档固定 batch；历史锚点 `07702f0` 的 A/A 自复现及对当前源码的逐叶梯度比较 | PASS：四组比较，61 个初态叶子、三类 loss 与 38 个梯度叶子逐位一致 |
 

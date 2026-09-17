@@ -1,0 +1,13 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/scripts/training/tests/compare_collate_paths.py", line 144, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/scripts/training/tests/compare_collate_paths.py", line 140, in main
+    return dump(args) if args.command == "dump" else compare(args)
+           ^^^^^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/scripts/training/tests/compare_collate_paths.py", line 45, in dump
+    store = Path(os.environ["V1_STORE"])
+                 ~~~~~~~~~~^^^^^^^^^^^^
+  File "<frozen os>", line 679, in __getitem__
+KeyError: 'V1_STORE'

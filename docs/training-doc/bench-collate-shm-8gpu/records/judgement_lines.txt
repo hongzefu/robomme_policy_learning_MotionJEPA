@@ -1,0 +1,48 @@
+cs-8gpu-old.log: PREFLIGHT=PASS n=25
+cs-8gpu-old.log: EXIT_CODE=0
+cs-8gpu-new.log: PREFLIGHT=PASS n=25
+cs-8gpu-new.log: EXIT_CODE=0
+cs-8gpu-driver.log: PREFLIGHT=PASS n=25
+cs-8gpu-driver.log: EXIT_CODE=0
+cs-8gpu-driver.log: PREFLIGHT=PASS n=25
+cs-8gpu-driver.log: EXIT_CODE=0
+cs-8gpu-driver.log: BENCH_8GPU side=old workers=16 step_mean_s=1.772729 samples_per_s=72.205 util_mean=53.317 zero_share=42.418 slow_util=None other_util={'n': 5368, 'mean_pct': 53.31687779433681, 'zero_pct_share': 42.41803278688525}
+cs-8gpu-driver.log: BENCH_8GPU side=new workers=16 step_mean_s=0.972660 samples_per_s=131.598 util_mean=97.875 zero_share=0.000 slow_util=None other_util={'n': 2952, 'mean_pct': 97.87466124661246, 'zero_pct_share': 0.0}
+cs-8gpu-driver.log: COLLATE_SHM_SPEED old=1.772729 new=0.972660 speedup=1.822558
+cs-8gpu-driver.log: OLD_REPRO=PASS relative_deviation=0.024902
+cs-8gpu-driver.log: DRIVER_ALL_DONE
+cs-8gpu-driver.log: EXIT_CODE=0
+cs-guard-a1.log: PREFLIGHT=PASS n=25
+cs-guard-a1.log: SIDE=a1 EXIT_CODE=0
+cs-guard-a2.log: PREFLIGHT=PASS n=25
+cs-guard-a2.log: BASELINE_ENV=PASS
+cs-guard-a2.log: SIDE=a2 EXIT_CODE=0
+cs-guard-b.log: PREFLIGHT=PASS n=25
+cs-guard-b.log: BASELINE_ENV=PASS
+cs-guard-b.log: SIDE=b EXIT_CODE=0
+cs-guard.log: PREFLIGHT=PASS n=25
+cs-guard.log: SIDE=a1 EXIT_CODE=0
+cs-guard.log: PREFLIGHT=PASS n=25
+cs-guard.log: BASELINE_ENV=PASS
+cs-guard.log: SIDE=a2 EXIT_CODE=0
+cs-guard.log: SCALARS steps=100 keys=5 hex_mismatch_steps=0 first_mismatch_step=None
+cs-guard.log: STATE_DIGEST rows=6 mismatch=0
+cs-guard.log: BATCH_DIGEST rows=6 mismatch=0
+cs-guard.log: CANON_CHECK=PASS steps=6
+cs-guard.log: INDEX_SEQ=PASS n=17024（共同前缀逐个一致, steps≈100）
+cs-guard.log: DET_CHECK=PASS tier=cs-a1a2 steps=100 scalar_hex_diff=0 state_digest_diff=0 batch_digest_diff=0
+cs-guard.log: PREFLIGHT=PASS n=25
+cs-guard.log: BASELINE_ENV=PASS
+cs-guard.log: SIDE=b EXIT_CODE=0
+cs-guard.log: SCALARS steps=100 keys=5 hex_mismatch_steps=0 first_mismatch_step=None
+cs-guard.log: STATE_DIGEST rows=6 mismatch=0
+cs-guard.log: BATCH_DIGEST rows=6 mismatch=0
+cs-guard.log: CANON_CHECK=PASS steps=6
+cs-guard.log: INDEX_SEQ=PASS n=17024（共同前缀逐个一致, steps≈100）
+cs-guard.log: DET_CHECK=PASS tier=cs-a1b steps=100 scalar_hex_diff=0 state_digest_diff=0 batch_digest_diff=0
+cs-guard.log: COLLATE_SHM_GUARD=PASS scalars_steps=100 index_n=12800 batch_digest_rows=6 state_digest_rows=6 sides=3 pairs=2
+cs-guard.log: GUARD_ALL_DONE
+cs-guard.log: EXIT_CODE=0
+c1_compare.log: COLLATE_EQUIV=PASS batches=20 keys=12 none_keys=4 mismatches=0
+c1_compare.log: INDEX_SEQ=PASS n=2560
+c1_compare.log: COLLATE_WAIT old=0.783745 new=0.002647

@@ -1,0 +1,26 @@
+CHECK_CWD=PASS 件=起跑位置 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA
+CHECK_TRAIN_PY=PASS 件=起跑位置 期望=存在且在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/train.py is_file=True
+CHECK_YAML_PATH=PASS 件=起跑位置 期望=存在且在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8.yaml is_file=True
+CHECK_YAML_SHA256=PASS 件=起跑位置 期望=5b5ac2f85302d4d87cf102c71e02729d0caad74162df0afc9b2d4380e450caec 实际=5b5ac2f85302d4d87cf102c71e02729d0caad74162df0afc9b2d4380e450caec
+CHECK_PYTHONPATH=PASS 件=起跑位置 期望=未设置，或每一项都在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=<未设置>
+CHECK_PKG_MME_VLA_SUITE=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/__init__.py
+CHECK_PKG_OPENPI=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/__init__.py
+CHECK_PKG_OPENPI_CLIENT=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/__init__.py
+CHECK_ASSETS_DIR_ABS=PASS 件=数据参数 期望=绝对路径 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da
+CHECK_NORM_STATS_FILE=PASS 件=数据参数 期望=存在 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json 实际=存在
+CHECK_NORM_STATS_SHA256=PASS 件=数据参数 期望=856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173 实际=856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173
+CHECK_CLI_ASSETS_DIR=PASS 件=数据参数 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da
+CHECK_CLI_ASSET_ID=PASS 件=数据参数 期望=robomme 实际=robomme
+CHECK_CLI_HISTORY_CONFIG=PASS 件=起跑位置 期望=perceptual-framesamp-modul-8frame-8x8.yaml 实际=perceptual-framesamp-modul-8frame-8x8.yaml
+CHECK_CLI_DATASET_PATH=PASS 件=数据 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8
+CHECK_SYS_PREFIX=PASS 件=起跑位置 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv
+CHECK_V1_STORE_REAL=PASS 件=起跑位置 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store 是实体目录（开发副本那份是 symlink） 实际=实体目录
+CHECK_NOT_DEV_COPY=PASS 件=起跑位置 期望=仓库根不是 -temp 开发副本 实际=robomme_policy_learning_MotionJEPA
+CHECK_PKG_JAX_IN_VENV=PASS 件=起跑位置 期望=origin 在 /scratch/hongze/robomme_policy_learning_MotionJEPA/.venv 下 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/__init__.py
+CHECK_REPO_HEAD=PASS 件=仓库状态 期望=7a681e2cf3f21bdab3f0b27ea44d19b0adfd0ee7 实际=7a681e2cf3f21bdab3f0b27ea44d19b0adfd0ee7
+CHECK_REPO_CLEAN=PASS 件=仓库状态 期望=git status --porcelain 为空 实际=空
+CHECK_DATASET_STORE_META=PASS 件=数据 期望=存在 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8/meta/store_meta.json 实际=存在
+CHECK_FRAMESAMP_SOURCE=PASS 件=数据 期望=MMEVLA_FRAMESAMP_SOURCE 指向已存在目录 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/source
+CHECK_FRAMESAMP_MANIFEST=PASS 件=数据 期望=MMEVLA_FRAMESAMP_MANIFEST 指向已存在文件 实际=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/meta/episode_manifest.json
+CHECK_RUN_ROOT_ABSENT=PASS 件=留档 期望=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_60k/cs-c0-unused 不存在 实际=不存在
+PREFLIGHT=PASS n=25
