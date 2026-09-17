@@ -1,6 +1,6 @@
 # 0917 计划：collate 改走共享内存，吃满 8 卡（基准：8 帧 × 8×8 modulation 关闭态）
 
-> 创建日期 2026-09-17（America/New_York）。基线 HEAD `e4dc733`（`v2-motionmem`，clean）。
+> 创建日期 2026-09-17（America/New_York）。计划入库 commit `5b2e7ba`（`v2-motionmem`，clean；源码与 `e4dc733` 完全相同，`5b2e7ba` 只多本计划文件）。后续所有「改前 / A 侧」一律指 `5b2e7ba`。
 > 本计划只覆盖 dataloader 交付路径的一处改动、它的一致性检验与 8 卡速度对比；不碰 motion、不碰模型、不碰超参。
 > 可行性验证（不启动训练）已在写本计划前完成，结果内联于第一部分第 3 节；产物固化在 `v1-store/bench/collate-shm-feasibility/`（不进 git）。
 
@@ -15,7 +15,7 @@
 - **最简修法**：collate 末尾把 numpy 转成 **torch tensor**（`torch.from_numpy`，零拷贝），torch `DataLoader` 对 tensor 走**共享内存**、主进程只收句柄；`TorchDataLoader.__iter__` 收到后 `.numpy()` 转回（共享内存上的零拷贝视图），后续 `jax.make_array_from_process_local_data` 一字不动。bf16 键（`static_image_emb`，numpy 侧是 `ml_dtypes.bfloat16`）先 `.view(np.uint16)` 再 `.view(torch.bfloat16)`，回程反向，位模式不变。改动集中在 `data_loader.py` 一个文件、两处，约 20 行；`_collate_fn` 本身保持 numpy 语义不动，所有引用它的取证工具不受影响。
 - **可行性验证结论（已完成，不启动训练）**：bf16 视图往返逐位一致；合成传输隔离下主进程每批等待 0.816 s → 0.061 s（13.3×）；**真实数据集** b128 w16 下 0.983 s → 0.073 s（13.4×），且 20 批 × 12 个数组键逐键 sha256(dtype‖shape‖bytes) **全部一致、0 处不匹配**（`F3_COLLATE_EQUIV=PASS batches=20 keys=12 none_keys=4 mismatches=0`）。
 - **预期**：8 卡步时从 1.82 s 回到计算主导的约 1.2–1.3 s，80k 步约 41 h → 约 27–29 h。这是推算，以第 4 节冒烟对比的实测为准。
-- **后续流程（用户 09-17 定）**：本计划获准后 → 切独立分支到 `-temp` 开发副本、主副本源码锁只读 → 在分支上落改动 → 8 卡 300 步冒烟 A/B 对比速度 → 按 AGENTS.md 第 18 条补两块一致性检验 → 留档、commit、由用户决定是否并回 `v2-motionmem`。
+- **后续流程（用户 09-17 定）**：本计划获准后按第 4 节的九步走：切独立分支到 `-temp` 开发副本、主副本源码锁只读 → 在分支上落改动并过第一块对拍（`commitV9.8`）→ 起跑留档（`docs:`）→ 8 卡 300 步冒烟 A/B 对比速度 → 8 卡 100 步确定性梯度对拍（第二块）→ 结果留档（`docs:`）→ push 分支、并回 `v2-motionmem` 与解锁均由用户裁决。
 
 ### 1. Context：为什么做这件事
 
@@ -74,19 +74,41 @@
 
 F3 判定同时证明「抽样顺序相同」：两侧独立构造、同一 seed 42 的 `torch.Generator`，20 批摘要逐批一致，顺序若不同摘要不可能相等。
 
-### 4. 冒烟速度对比（8 卡、300 步、同会话 A/B）
+### 4. 完整步骤流程与 commit 清单（从 HEAD `5b2e7ba` 起，顺序固定）
+
+约定：**主副本** = `/scratch/hongze/robomme_policy_learning_MotionJEPA`（分支 `v2-motionmem`，A 侧 / 改前）；**开发副本** = `/scratch/hongze/robomme_policy_learning_MotionJEPA-temp`（分支 `v2-motionmem-collate-shm`，B 侧 / 改后）。本计划共产出 **3 个 commit**，全部落在 `v2-motionmem-collate-shm` 分支；`v2-motionmem` 在整个过程中**不再新增 commit**，直到用户裁决并回。
+
+| # | 在哪里 | 做什么 | 产出 commit | 判定行 / 通过条件 |
+|---|---|---|---|---|
+| 1 | 主副本 | 起点核验：`git rev-parse HEAD` = `5b2e7ba`；`git status --porcelain` 只含 `scripts/dataset/hf_export/` 下两个在途 `??` 文件；8 卡显存全 0；`tmux ls` 记录现有会话清单 | 无 | 任一不符即停，把原始输出交用户 |
+| 2 | 主副本 → 开发副本 | `git worktree add -b v2-motionmem-collate-shm <开发副本路径> HEAD`；开发副本内 `ln -s <主副本>/v1-store v1-store`（可写链，第 14 条例外）；`uv sync --frozen` 建独立 `.venv`（`UV_CACHE_DIR` 指 `v1-store/cache/uv`） | 无 | `git -C <开发副本> rev-parse HEAD` = `5b2e7ba`；`ls -ld v1-store` 是 symlink；`.venv/bin/python` 存在且不是主副本的 |
+| 3 | 主副本 | 锁只读：`sha256sum src/openpi/training/data_loader.py scripts/training/g0/bench_train_steps.py scripts/training/train.py > v1-store/bench/collate-shm-feasibility/lock_sha256.txt`；`chmod -R a-w src scripts packages` | 无 | `ls -ld src scripts packages` 为 `dr-xr-xr-x`；此后主副本不改文件、不 pull、不跑 `uv sync/add` |
+| 4 | 开发副本 | 落代码（第二部分 B 节）：`data_loader.py` 新增 `_to_shared_torch` / `_from_shared_torch` / `_collate_fn_shm`、`__init__` 换 collate、`__iter__` 加转回一行；`bench_train_steps.py::iter_with_digest` 加同一行。新增第一块工具 `scripts/training/tests/test_collate_shm.py`、`scripts/training/tests/compare_collate_paths.py`（第二部分 C 节）。跑 `uv run --no-sync pytest scripts/training/tests/test_collate_shm.py -q` 与 `compare_collate_paths.py --batches 20 --workers 16`（CPU，约 3 min） | **C1 `commitV9.8: collate 交付改走 torch 共享内存，主进程数据路等待 0.98 s→0.07 s`**，逐文件 add 四个文件：`src/openpi/training/data_loader.py`、`scripts/training/g0/bench_train_steps.py`、`scripts/training/tests/test_collate_shm.py`、`scripts/training/tests/compare_collate_paths.py` | pytest 全绿；`COLLATE_EQUIV=PASS batches=20 keys=12 none_keys=4 mismatches=0`；不通过则不提交、回报用户 |
+| 5 | 开发副本 | 写 `docs/training-doc/bench-collate-shm-8gpu/launch.md`（两侧 commit：A = `5b2e7ba`，B = C1；命令、配置 sha、会话清单 `cs-8gpu`、`cs-guard`）；把 `cs-8gpu-runner.sh` / `cs-8gpu-driver.sh` / `cs-guard-runner.sh` 落 `v1-store/logs/`（不进 git，副本随第 8 步进 `records/`） | **C2 `docs: bench-collate-shm-8gpu 起跑留档`**，只 add `launch.md` | C2 之后开发副本 `git status --porcelain` 为空（preflight 的 `CHECK_REPO_CLEAN` 要求 B 侧 clean HEAD = C2） |
+| 6 | 两侧，8 卡独占 | 冒烟速度 A/B（第 5 节）：`tmux new-session -d -s cs-8gpu "bash <主副本>/v1-store/logs/cs-8gpu-driver.sh"`，驱动串行跑 A（主副本 `5b2e7ba`，run `bench-collate-shm-old`）→ B（开发副本 C2，run `bench-collate-shm-new`），各 300 步 (1,8) w16 b128；Monitor 挂驱动日志 | 无 | 每档 `PREFLIGHT=PASS n=25`、`EXIT_CODE=0`；`DRIVER_ALL_DONE`；分析 `BENCH_8GPU workers=16 step_mean_s=…`×2 与 `COLLATE_SHM_SPEED old=… new=… speedup=…`；old 与 f8-w16 的 1.818 s 相差 ≤ 5% |
+| 7 | 两侧，8 卡独占 | 第二块梯度对拍（第 6 节）：`tmux new-session -d -s cs-guard "bash <主副本>/v1-store/logs/cs-guard-runner.sh"`，串行 a1、a2（主副本）、b（开发副本），各 100 步确定性 XLA、`BENCH_CHECKSUM=1 BENCH_BATCH_DIGESTS=1`；`compare_baseline.py a1 a2`、`compare_baseline.py a1 b` | 无 | A1/A2 与 A1/B 均 `SCALARS steps=100 keys=5 hex_mismatch_steps=0`、`INDEX_SEQ=PASS`、`BATCH_DIGEST rows=6 mismatch=0`、`STATE_DIGEST rows=6 mismatch=0`；汇总 `COLLATE_SHM_GUARD=PASS`。A1/A2 自身不逐位则退回 `QUANT_EQUIV`（零假设 A/A、margin 2.0）并在留档注明 |
+| 8 | 开发副本 | 写 `result.md`（速度表、util 分层、两块判定行、链路图）；`records/` 收 `metrics.jsonl`（old/new/a1/a2/b）、`judgement_lines.txt`、`analysis.json`、对拍 jsonl、`comparisons.log`、三个 runner 副本；清理 `v1-store/train-runs/mme_vla_suite_b128_60k/{bench-collate-shm-old,bench-collate-shm-new,cs-guard-a1,cs-guard-a2,cs-guard-b}`、`v1-store/bench/bench-collate-shm-*`、`v1-store/bench/8x8/cs-guard-*` | **C3 `docs: bench-collate-shm-8gpu 结果——…`**，add `result.md` + `records/` 逐文件 | 提交后 `git log --oneline -3` 为 C3 / C2 / C1，其下是 `5b2e7ba` |
+| 9 | 主副本 + 用户 | 三件事都**先问用户**：(a) `git push -u origin v2-motionmem-collate-shm`（新分支无 upstream，第 11 条禁止自行 `-u`）；(b) 是否 `git merge --ff-only v2-motionmem-collate-shm` 并回 `v2-motionmem`（三 commit 线性、可快进）；(c) 解锁主副本 `chmod -R u+w src scripts packages`——解锁前先 `sha256sum -c v1-store/bench/collate-shm-feasibility/lock_sha256.txt` 三份文件全 OK、`git status --porcelain` 仍只含那两个在途文件 | 无新 commit | 用户答复前主副本保持只读、分支保持本地 |
+
+三点补充：
+
+- **改前 / 改后两侧的 commit 固定为 `5b2e7ba` / C2**，冒烟与第二块都用这两个；C1 与 C2 源码相同（C2 只加 `launch.md`），留档写 C2 是因为 preflight 要求 clean HEAD。
+- **每次 `git commit` 后照第 11 条应立即 push**，但本分支远端不存在，`git push` 会因无 upstream 失败，这是第 11 条明文要求先问用户的情形；因此三个 commit 先留本地，在第 9 步一次性请示。
+- **中途任一判定失败**：停在该步，不跳步、不改判据、不放宽阈值，把原始判定行交用户；第 4 步失败不提交 C1；第 6 或 7 步失败照样写 `result.md` 留档（C3 记失败原因）。
+
+### 5. 冒烟速度对比（8 卡、300 步、同会话 A/B）
 
 照抄 `bench-m8x8-8gpu-worker` 的 runner 形制（`v1-store/logs/bw-8gpu-runner.sh`），只改 run 名与代码副本：
 
 - **配置**：`mme_vla_suite_b128_60k` + `perceptual-framesamp-modul-8frame-8x8.yaml`（sha256 `5b5ac2f8…`，关闭态）、新库 `4task-v2-1600ep-604f16da/framesamp-8x8`、norm_stats `856c75ea…`、`CUDA_VISIBLE_DEVICES=0-7`、`--fsdp-devices 8`（mesh (1,8)）、`--num-workers 16`、`--num-train-steps 300 --log-interval 10 --no-wandb-enabled`、500 ms 密采。与 f8-w16 档完全同口径。
-- **A 侧（改前）**：主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，HEAD `e4dc733`（源码已锁只读，只读不妨碍运行）；run 名 `bench-collate-shm-old`。
-- **B 侧（改后）**：开发副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA-temp`，分支 `v2-motionmem-collate-shm` 的 clean HEAD；run 名 `bench-collate-shm-new`。
+- **A 侧（改前）**：主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，HEAD `5b2e7ba`（源码已锁只读，只读不妨碍运行）；run 名 `bench-collate-shm-old`。
+- **B 侧（改后）**：开发副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA-temp`，分支 `v2-motionmem-collate-shm` 的 clean HEAD（= C2）；run 名 `bench-collate-shm-new`。
 - **顺序**：A → B 串行、8 卡独占（bench-b128-util 实测并行互扰 +11–13%）。
 - **判读**：稳态窗口 step 100→290；步时均值为主判据；util 按 AGENTS.md 第 16 条给均值、0% 占比、慢步/非慢步分层均值，禁止以中位数作结论。A 侧应复现 1.82 s ± 噪声（与 f8-w16 互为校验）。
 - **判定行**：每档 `PREFLIGHT=PASS n=25`、`EXIT_CODE=0`；分析输出 `BENCH_8GPU workers=16 step_mean_s=… util_mean=… zero_share=…`；汇总 `COLLATE_SHM_SPEED old=… new=… speedup=…`。
 - **留档**：两档各约 12 min（3 min 编译 + 300 步），超过 5 min，按第 17 条在 `docs/training-doc/bench-collate-shm-8gpu/` 留档；末步 ckpt 与 `v1-store/bench/bench-collate-shm-*` 验收后删除。
 
-### 5. 一致性检验（AGENTS.md 第 18 条两块）
+### 6. 一致性检验（AGENTS.md 第 18 条两块）
 
 **链路图（改前 → 改后）**，每跳标「有没有改数」：
 
@@ -101,7 +123,7 @@ F3 判定同时证明「抽样顺序相同」：两侧独立构造、同一 seed
 - **第一块（非训练轻量对拍）**：把 F3 脚本正式化为 `scripts/training/tests/compare_collate_paths.py`（在分支上新增），对拍口径不变：同库同 seed、b128 w16、N=20 批、逐键 `sha256(dtype‖shape‖bytes)` 与抽样序列；再加一份 pytest `scripts/training/tests/test_collate_shm.py`：合成 dict（bf16/f32/f64/uint8/int64/bool/None 各一）经 2 个 spawn worker 的 `DataLoader` 走新 collate，与单进程 `_collate_fn` 逐键 `tobytes()` 相等。判据逐位。
 - **第二块（8 卡真实训练梯度一致，收尾检验）**：`scripts/training/g0/bench_train_steps.py` 起 100 步，`--fsdp-devices 8 --batch-size 128 --num-workers 16 --seed 42 --log-interval 1 --save-interval 1`，`XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'`，`BENCH_CHECKSUM=1 BENCH_BATCH_DIGESTS=1 BENCH_DIGEST_INTERVAL=1000 BENCH_EXTRA_DIGEST_STEPS=1,2,24,49`。三侧同会话串行：A1、A2（主副本改前，A/A 零假设）、B（开发副本改后）。`scripts/training/g0/compare_baseline.py` 判 A1/A2 与 A1/B：`SCALARS steps=100 keys=5 hex_mismatch_steps=0`、`INDEX_SEQ=PASS`、`BATCH_DIGEST rows=6 mismatch=0`、`STATE_DIGEST rows=6 mismatch=0`。8 卡 (1,8) 从未做过确定性 A/A，若 A1/A2 自身不逐位（FSDP 归约次序），退回 `QUANT_EQUIV` 量化判据（以 A/A 为零假设、margin 2.0），并在留档写明。第二块不通过不得宣称等价。
 
-### 6. 风险与边界
+### 7. 风险与边界
 
 - **不改训练语义**：collate 的 `np.stack` 顺序、dtype、shape、抽样 generator 全部不动；不改超参、不改 config 默认值。
 - **`--force` 红线**：开发副本的 `v1-store` 是指向主副本的可写 symlink（AGENTS.md 第 14 条例外），本计划所有命令都不带 `--force`、不传输出根参数；run 产物只写 `v1-store/train-runs/mme_vla_suite_b128_60k/bench-collate-shm-*` 与 `v1-store/bench/bench-collate-shm-*`。
@@ -119,7 +141,7 @@ F3 判定同时证明「抽样顺序相同」：两侧独立构造、同一 seed
 ```bash
 cd /scratch/hongze/robomme_policy_learning_MotionJEPA
 git status --porcelain            # 仅允许出现上面两个在途 ?? 文件，其余非空即停
-git rev-parse HEAD                # 须为 e4dc733…
+git rev-parse HEAD                # 须为 5b2e7ba…
 git worktree add -b v2-motionmem-collate-shm /scratch/hongze/robomme_policy_learning_MotionJEPA-temp HEAD
 cd /scratch/hongze/robomme_policy_learning_MotionJEPA-temp
 ln -s /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store v1-store     # 可写链，第 14 条例外
@@ -201,7 +223,7 @@ tmux has-session -t cs-8gpu
 ### F. 留档、提交、清理
 
 - `docs/training-doc/bench-collate-shm-8gpu/`：`launch.md`（起跑 commit 两侧、命令、会话清单）、`result.md`（速度表、util 分层、第一块与第二块判定行、链路图）、`records/`（`metrics.jsonl` 两侧、`judgement_lines.txt`、`analysis.json`、对拍 jsonl、`comparisons.log`）。
-- commit 在 `v2-motionmem-collate-shm`：代码 `commitV<下一版本>: collate 交付改走 torch 共享内存，主进程数据路等待 0.98 s→0.07 s`；留档 `docs:`。逐文件 `git add`，不碰两个在途 `??` 文件。push 需先问用户（新分支无 upstream）。
+- commit 在 `v2-motionmem-collate-shm`：C1 `commitV9.8: collate 交付改走 torch 共享内存，主进程数据路等待 0.98 s→0.07 s`（四个文件）、C2 `docs: bench-collate-shm-8gpu 起跑留档`、C3 `docs: bench-collate-shm-8gpu 结果——…`；对应第一部分第 4 节第 4、5、8 步。逐文件 `git add`，不碰两个在途 `??` 文件。push 需先问用户（新分支无 upstream）。
 - 并回 `v2-motionmem` 与否由用户决定；并回前主副本解锁 `chmod -R u+w src scripts packages` 并核对 `lock_sha256.txt` 三份文件未变。
 - 清理：`v1-store/train-runs/mme_vla_suite_b128_60k/bench-collate-shm-*`、`cs-guard-*` 末步 ckpt；`v1-store/bench/bench-collate-shm-*` 拷入 records 后删；tmux 会话随驱动自然退出，如需手动只允许 `tmux kill-session -t cs-8gpu` / `-t cs-guard`，删前删后各 `tmux ls`。
 
