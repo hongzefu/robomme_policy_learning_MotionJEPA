@@ -1,6 +1,6 @@
 # 新库 motion 表构建 + modulation 8×8 接入 motion 计划（v2-motion）
 
-> **状态：实施中：步骤 2b 已落地并完成工作区短测，run_name 已确认；两项验证执行方式待用户裁决。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
+> **状态：实施中：步骤 2d 关闭态前后逐位对拍全部通过，run_name 已确认；三项开启态验证执行方式待用户裁决。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
 >
 > **第一部分只讲做什么、为什么、哪些不变**；命令、判定行、代码锚点、推导与数字出处全部在第二部分（A–H 按模块，I 节收第一部分精简时移出的细节）。正本 `docs/motion-memory.md` 是 context 口径，本文只写与其不同的部分，实施后另立 `docs:` 更新正本。
 
@@ -42,6 +42,10 @@
 ---
 
 ## 第一部分（给人看）
+
+**最新进度（步骤 2d 完成）**：生产提交 `bec052e5ac76e338cfbe283bf7c3c434f05112b7`，候选提交 `c0be292c40c4a971161e7233540f4dc5c0c1c7cc`，均已推送。V1 3,200 样本/200 batch、V2 1,200 样本/200 batch、V6 61 初态叶及三类各 38 梯度叶、V7 100 步/5 状态/7 输入摘要全部逐位相同；V7 记录索引 872 个，前 800 个训练索引逐项相同，所有退出码为 0。结论见 [V7 候选归档](docs/training-doc/mv2-v7-guard-cand/result.md)。下一步切换资产并建库，不需要撤销生产提交。
+
+**第三项待裁决**：V5 的合成 GPU 单步预检发现，随机初始化的真实 pi05 AdaRMS 门为零，导致 motion 非零梯度检查不能通过；生产实际先加载 pi05_base。已询问“保留 gemma_150m 替身并加载形状兼容的预训练参数”或“使用完整生产模型与权重”。不修改生产门值，也不把测试初态问题当作关闭态回归失败。以下两项位置编码/渲染问题同样仍待答复。
 
 **实施进度（09-17）**：步骤 2b 的生产及验证代码已完成首轮实现，87 项 CPU 自动测试通过；CPU 初态真调用 `init_train_state` 完成 61 个公共参数叶逐位比较，仅增加 4 个 motion 叶，耗时 116.4 秒。新旧布局读取、真实 H5 补帧、独立抽样删行负例、跨集 reset、GPU 计时及比较器错误 token/符号零负例均已验证。详见 [实施短测记录](docs/training-doc/mv2-implementation/result.md)。接下来分别提交生产链路与验证工具，再从 clean CAND 取 V1/V2/V6/V7 候选证据。
 

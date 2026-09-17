@@ -1,6 +1,6 @@
-# 关闭态固定输入梯度基线：改前取证完成
+# 关闭态固定输入梯度基线：改前与改后逐位对拍通过
 
-本项已正常结束，外层日志记录 `EXIT_CODE=0`。这里只完成改前证据采集，**尚未证明生产改动等价**；改后必须按同一口径逐位比较。
+改前取证与候选对拍均已正常结束，退出码均为 0。本项已在下述固定口径证明逐位相同；开启态与生产八卡档位由各自验证覆盖。
 
 ## 版本与运行
 
@@ -19,5 +19,7 @@
 后续候选侧维持同一依赖、数据、GPU 和数值配置；V6/V7 固定 GPU 4、5，缓存保留供前后对照使用。未进入建库或正式训练。
 
 ## 归档
+
+候选提交为 `c0be292c40c4a971161e7233540f4dc5c0c1c7cc`，起止工作区干净；机器已确认其不同于 BASE。候选耗时 321.5 秒。61 个初态参数叶、三类固定输入各 38 个梯度叶全部逐位一致，INIT_EQ 与 GRAD_EQ 均为 PASS。 候选证据见 [records-candidate](records-candidate/archive_manifest.json)，完整命令见 [launch-candidate.md](launch-candidate.md)。
 
 [records/archive_manifest.json](records/archive_manifest.json) 记录归档指标及摘要的 SHA256。样本、batch 的逐键摘要采用无损 gzip 留档，解压内容已与原始 JSONL 逐字节核对；大数组留在 `v1-store/bench/mv2/`，不入 Git。V7 的完整状态摘要、索引、环境与标量保留在 records 中，原始完整产物留在 `v1-store/bench/2gpu-epoch-bench/mv2-v7-base/`。

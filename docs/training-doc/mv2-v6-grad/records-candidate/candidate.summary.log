@@ -1,0 +1,28 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+CAND_SOURCE=PASS stage=v6 head=c0be292c40c4a971161e7233540f4dc5c0c1c7cc clean=1 pid=4179686
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+FIXTURE=PASS kind=mixed1 keys=12 batch=8
+FIXTURE=PASS kind=allshort keys=12 batch=8
+FIXTURE=PASS kind=allfull keys=12 batch=8
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+INIT_PARAMS=PASS leaves=61 seconds=126.0
+GRAD_KIND=PASS kind=mixed1 loss=0.131137341 leaves=38 seconds=66.6
+GRAD_KIND=PASS kind=allshort loss=0.093950741 leaves=38 seconds=53.5
+GRAD_KIND=PASS kind=allfull loss=0.127008989 leaves=38 seconds=55.2
+GRAD_DONE kinds=3 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/mv2/v6-cand
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SOURCE_PAIR=PASS stage=v6 base=2126b1b1c436166662ff89a629985ecd4524fc42 candidate=c0be292c40c4a971161e7233540f4dc5c0c1c7cc
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+INIT_EQ=PASS leaves=61 mismatches=0
+GRAD_EQ=PASS kinds=3 leaves=38 mismatches=0
+CAND_STAGE_DONE=v6 head=c0be292c40c4a971161e7233540f4dc5c0c1c7cc
+END_UTC=2026-09-17T21:02:15Z
+EXIT_CODE=0
