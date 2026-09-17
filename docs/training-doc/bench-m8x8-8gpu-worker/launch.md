@@ -7,7 +7,7 @@
 1. **8 卡 mesh (1,8) 在本布局（8 帧 × 8×8、modulation、1600ep 新库）上的真实步时**。仓库既有 8 卡数字只有旧布局（32 帧 context、400ep）的 `bench-b128-util` B4/B5 与 `awsprod40k-b128-motion`，本布局从未在 8 卡上起过。
 2. **`num_workers` 取 8 还是 16**。bench-b128-util 实测 8 卡时供给成瓶颈，但只测过 8 卡 w16 / w32，从未测过 8 卡 w8；4 卡基线 `v2-1600ep-m8x8-modul-b128-60k` 用 w8（2.34 s/步、util 均值 72%）。
 
-两档都用**改动前的关闭态配置**（无 motion 节），所以绝对步时是开启态的下界（开启态每样本多交付 658 KB、worker 多常驻 219 MB motion 表）；w8 与 w16 的相对排序可借用。
+用户在 (1,8) 两档跑完后追加一组 **mesh (2,4) 对照**（`fsdp_devices=4`、取 (1,8) 里最快的 w16），共三档。三档都用**改动前的关闭态配置**（无 motion 节），所以绝对步时是开启态的下界（开启态每样本多交付 658 KB、worker 多常驻 219 MB motion 表）；w8 与 w16 的相对排序可借用。
 
 ## 环境
 
@@ -17,11 +17,11 @@
 
 ## commit
 
-起跑 commit：`b4397d5c374c87f536a32a8cdffd2a97c6ea3d68`（clean HEAD，`CHECK_REPO_HEAD` / `CHECK_REPO_CLEAN` 由 preflight 实测 PASS）。本轮无代码改动，runner 与驱动脚本落 `v1-store/logs/`（副本见 `records/`）。
+起跑 commit：`9cbb94e3779cd904fff051a3fa38f156c5b8c47c`（= 本 launch.md 入库的 docs commit；clean HEAD，`CHECK_REPO_HEAD` / `CHECK_REPO_CLEAN` 由 preflight 实测 PASS）。第一次以 `b4397d5` 起跑时 launch.md 尚未入库，被 `CHECK_REPO_CLEAN` 拦下（`records/driver.f8.repoclean-fail.log`），随后入库重起。本轮无代码改动，runner 与驱动脚本落 `v1-store/logs/`（副本见 `records/`）。
 
 ## 配置档位
 
-config 条目 `mme_vla_suite_b128_60k`（与 4 卡基线同一条目），命令行覆盖：`--num-train-steps 300 --log-interval 10 --no-wandb-enabled --num-workers {8,16} --fsdp-devices 8`。
+config 条目 `mme_vla_suite_b128_60k`（与 4 卡基线同一条目），命令行覆盖：`--num-train-steps 300 --log-interval 10 --no-wandb-enabled --num-workers {8,16} --fsdp-devices {8,4}`（fsdp 值是 runner 第 4 个参数，默认 8）。
 
 - history config：`perceptual-framesamp-modul-8frame-8x8.yaml`（sha256 `5b5ac2f8…`，基线同一份，motion 关闭）
 - `CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7`，`--fsdp-devices 8` ⇒ `sharding.make_mesh` 给 mesh (1,8)（纯 FSDP，参数与优化器状态每卡持 1/8）；global batch 128、per-device 16
@@ -32,11 +32,12 @@ config 条目 `mme_vla_suite_b128_60k`（与 4 卡基线同一条目），命令
 
 ## 命令
 
-tmux 会话 `bw-8gpu-f8`（本轮起过的会话清单：`bw-8gpu`（(2,4) 首次尝试，已中止）、`bw-8gpu-f8`。用户自有会话 `0`、`1`、`claude-private`、`codex`、`codex-repo`、`codex2` 一律不动）。
+tmux 会话 `bw-8gpu-f8`（(1,8) w8→w16 串行）与 `bw-8gpu-f4`（(2,4) w16 对照）。本轮起过的会话清单：`bw-8gpu`（(2,4) w8 首次尝试，已中止）、`bw-8gpu-f8`、`bw-8gpu-f4`，三者都随驱动脚本自然退出，未执行任何 kill。用户自有会话 `0`、`1`、`claude-private`、`codex`、`codex-repo`、`codex2` 一律不动）。
 
 ```bash
 tmux new-session -d -s bw-8gpu-f8 "bash v1-store/logs/bw-8gpu-driver.sh"
-# 驱动：for W in 8 16 → bash v1-store/logs/bw-8gpu-runner.sh $W b4397d5c374c87f536a32a8cdffd2a97c6ea3d68 5b5ac2f8…
+# 驱动：for W in 8 16 → bash v1-store/logs/bw-8gpu-runner.sh $W 9cbb94e3779cd904fff051a3fa38f156c5b8c47c 5b5ac2f8… 8
+# 对照：tmux new-session -d -s bw-8gpu-f4 "bash v1-store/logs/bw-8gpu-f4-driver.sh 16"  → runner 第 4 参数 4（mesh (2,4)）
 # runner：GPU_IDLE（8 卡 memory.used 求和为 0）→ preflight_train_launch.py（与 train 共用同一 TRAIN_ARGS）
 #        → nvidia-smi --id=0..7 -lms 500 密采 → train.py；日志 v1-store/logs/bw-8gpu-f8-w<N>.log，收尾 EXIT_CODE=
 ```
@@ -47,7 +48,7 @@ tmux new-session -d -s bw-8gpu-f8 "bash v1-store/logs/bw-8gpu-driver.sh"
 
 ## 清理
 
-两档跑完后删除 run 产物 `v1-store/train-runs/mme_vla_suite_b128_60k/bench-m8x8-8gpu-f8-w{8,16}/`（末步 ckpt）；`v1-store/bench/bench-m8x8-8gpu-f8-w{8,16}/` 的 `metrics.jsonl` 与密采 csv 拷入 `records/` 后删除；`tmux kill-session -t bw-8gpu-f8`（删前删后各 `tmux ls`）。
+两档跑完后删除 run 产物 `v1-store/train-runs/mme_vla_suite_b128_60k/bench-m8x8-8gpu-f{8-w8,8-w16,4-w16}/`（末步 ckpt）；`v1-store/bench/bench-m8x8-8gpu-f{8-w8,8-w16,4-w16}/` 的 `metrics.jsonl` 与密采 csv 拷入 `records/` 后删除；tmux 会话随驱动退出自然结束，无需 kill。
 
 ## 首次尝试（mesh (2,4)，已中止）
 
