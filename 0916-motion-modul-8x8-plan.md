@@ -1,42 +1,41 @@
 # 新库 motion 表构建 + modulation 8×8 接入 motion 计划（v2-motion）
 
-> **状态：方案已固化，八项口径经用户拍板，第四轮新增三项拍板，`run_name` 待确认；未实施。** 2026-09-16 起草；2026-09-17 重写第一部分；**2026-09-17 第二轮**：九路独立核验一份 32 条外部审计清单后整体修订；**2026-09-17 第三轮**：对修订版再派三路对抗审查（建库侧 / 训练验证侧 / 修订忠实度），共 52 条 finding，按结论二次修订；**2026-09-17 第四轮**：对验证体系（原第七节 + F/H 节）再派 9 路对抗审计（每路 opus 审查 → sonnet 逐条反驳 → opus 综合，19 agent，锚定 `AUDIT_BASE=530e841`），共 108 条 finding、**0 条被推翻**、P0 3 条 / P1 57 条 / P2 41 条，按结论第三次修订——新增第一部分第四节（context 改 modulation 的影响与等价性）、第八节验证重写为单一分类表并补齐代码级锚点、V-online 改为分层解耦（用户拍板选方案 B）、三处「照计划执行在 2d 必 FAIL」的内部矛盾修正（schema 升版 / `store_meta` 三新键 / 在线侧 fail-loud 与旧配置兼容）、V4 补逐位判据、V5 补确定性探针、步 6 串行化与步 8 独立占卡闸、2a 前插入 1b 工具 commit。审计报告存 `v1-store/reports/audit/0916-sec7-audit-report.md`（不进 git）。环境判定：**环境 B（AWS 单机 8×A100-SXM4-80GB）**，主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`。基线 `v2-1600ep-m8x8-modul-b128-60k` 已于 `2026-09-16T20:53:31Z` 以 `EXIT_CODE=0` 跑完，主副本已解锁、开发副本 `-temp` 已删除（`5432ba2`），**8 卡全空**。无 turbo、无 GreatLakes。
+> **状态：方案已固化，全部口径经用户拍板，`run_name` 待确认；未实施。** 2026-09-16 起草，09-17 经四轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
 >
-> 本文按 `AGENTS.md` 第 2 条分两部分。正本 `docs/motion-memory.md` 写的是 context + 32 帧 4×4 + 旧四任务口径，本文只写**与其不同**的部分；实施后正本另立 `docs:` 更新（待改段落清单见第四节末）。
+> **第一部分只讲做什么、为什么、哪些不变**；命令、判定行、代码锚点、推导与数字出处全部在第二部分（A–H 按模块，I 节收第一部分精简时移出的细节）。正本 `docs/motion-memory.md` 是 context 口径，本文只写与其不同的部分，实施后另立 `docs:` 更新正本。
 
 **用户已拍板**
 
 | 项 | 决定 | 日期 |
 |---|---|---|
-| 接入目标 | **modulation 8×8**，与已跑完的基线 `v2-1600ep-m8x8-modul-b128-60k` 同 YAML、只多 `motion` 节 | 09-16 |
-| demo 段窗口 | **全覆盖 + 真实帧 ≥ 17**：起点 `s ∈ range(0, es, 16)` 且 `es − s ≥ 17`；窗口越过 `es − 1` 的部分用第 `es − 1` 帧重复填充凑满 33 帧 | 09-16 |
-| exec 段窗口 | **不变**：尾端 ≤ 当前帧的完整 33 帧窗，不补帧 | 09-16 |
-| 新库 motion 表 | **单独构建**（1600 集新库当前没有 motion 表） | 09-16 |
-| 正式 run 步数 | **80k 步**（用户原话「一路做到开始 80k 训练」） | 09-17 |
-| 80k 落点 | **新具名配置条目 `mme_vla_suite_b128_80k`**（`AGENTS.md` 第 10 条要求的落点确认）；`mme_vla_suite_b128_60k` 与官方条目一字不动 | 09-17 |
-| `motion.budget` | **160**（训练零截断实证；1300 步评估口径下训练集外推最大 151 ≤ 160，**评估集本身不可预知，见「七、budget」**；起跑前用 `EVAL_ES_BOUND` 把「不可预知」变成实测，见第七节） | 09-17 |
-| **encoder** | **换用 `wan-full1600-filter2-b176x4-72ep-a` 的 `checkpoint_epoch_72.pt`**（在本批 1600 集全库上训成），替换计划初稿的 `wan-v8-filter10-72ep-a` | 09-17 |
-| **V-online 口径** | **第四轮改口：方案 B「分层解耦」**（替换第三轮的「按 episode 抽 10% + 8 卡分片」——那版的成本前提「全量需单卡 30 h」用错了口径，8 卡全量只需 3.5–4 h，且抽样实算漏掉 k 最大与全部 `es ≥ 1000` 的集）：① 在线装配的 33 帧算 sha256 与离线 `wan-latents/*.metadata.json` 每行已有的 `input_frames_sha256` 逐窗比，**零 GPU、全部 71,316 窗**；② stub 档跑满 1,600 集比起点集合 / `motion_pos` / `mem_order`；③ 真 encoder 只跑全部 1,600 个补帧窗 + 必含集。承诺口径原话见第八节 | 09-17 |
-| **motion 全遮消融评估** | **加入**：80k 训完后在同一 ckpt 上把 `motion_mask` 整列置 False 再评一次（同权重、同 `mem_len=672`、同 query 位置，只是看不到 motion 内容），用来把「motion 内容」与「记忆区 512→672 带来的位置编码变化」两个因子分开；只做评估侧，**不加**训练侧对照 run（另需约 52 h） | 09-17 |
-| encode 续跑 bug | **本轮顺带修 + 加单测**（既有 bug，完成性判断恒 False，400ep 实测约 7.5× 冗余） | 09-17 |
-| D2 抽样边界 | **只抽样 VAE 前向；段集合/行数/逐行 m·offset/帧 sha 四道检查保持全量** | 09-17 |
-| 旧配置兼容 | **reader 侧默认值兼容**：两键同缺 → 按历史契约 `(33, "none")`；只缺一键 → raise；两键齐备 → 必须与表 spec 逐值相等。**第四轮补充**：这条同时约束训练侧 `FrameSampDataset` 与在线侧 `FrameSampMemory`——在线守卫必须放行 `(33, "none")` 这一对，否则 V2 第三条必 FAIL（见 E 节） | 09-17 |
-| 主比较锚点 | **80k run 的 `60000` vs 基线终点 `59999`**（相差 1 次优化步，报告须标明）。**第四轮补两条硬事实**：基线 `v2-1600ep-m8x8-modul-b128-60k` **从未做过策略评估**，其 ckpt 集合 `{5000, …, 55000, 59999}` 里**没有 60000**——基线评估属下一轮必做项，见第三节末 | 09-17 |
-| **V5 测试模型** | 09-17 第一次拍板「在 GPU 上用真实配置跑」；**第四轮改口（用户 09-17 拍板「使用乙」）：VLM 主干换 `gemma_150m` 替身**（同 1024 宽 / 同 18 层）+ `action_expert_variant=gemma_300m` + 真 `memory_token_dim=1024` / 真 YAML / 真库 / 真 budget=160——modulation 的记忆路只经 action expert 流，与 VLM 主干（`gemma_2b`，2048 宽、约 2.6 B 参数）无关，`MemoryAttention` 的 4 头 / 256 头维 / 1024 宽 / 18 层全部为真；省 2.5 B 参数与显存，留档写明「主干用替身」。细节见 F 表 V5 段 | 09-17 |
-| `run_name` | **待确认**（本文建议 `v2-1600ep-m8x8-modul-motion-b128-80k`，起跑前按 `AGENTS.md` 第 6 条确认） | — |
+| 接入目标 | modulation 8×8，与基线 `v2-1600ep-m8x8-modul-b128-60k` 同 YAML、只多 `motion` 节 | 09-16 |
+| demo 段窗口 | 全覆盖 + 真实帧 ≥ 17；越过段尾的部分用 demo 最后一帧重复填满 33 帧 | 09-16 |
+| exec 段窗口 | 不变 | 09-16 |
+| 新库 motion 表 | 单独构建 | 09-16 |
+| 正式 run 步数 | 80k | 09-17 |
+| 80k 落点 | 新具名配置 `mme_vla_suite_b128_80k`；60k 与官方条目一字不动 | 09-17 |
+| `motion.budget` | 160 | 09-17 |
+| encoder | 换 `wan-full1600-filter2-b176x4-72ep-a` 的 `checkpoint_epoch_72.pt` | 09-17 |
+| V-online 口径 | 方案 B「分层解耦」（替换第三轮的「抽 10% 集」） | 09-17 |
+| motion 全遮消融评估 | 加入（只做评估侧，不加训练对照 run） | 09-17 |
+| encode 续跑 bug | 本轮顺带修 + 加单测 | 09-17 |
+| D2 抽样边界 | 只抽 VAE 前向，四道元数据检查全量 | 09-17 |
+| 旧配置兼容 | reader 侧默认值：两键同缺按 `(33, "none")`；训练侧与在线侧同口径 | 09-17 |
+| 主比较锚点 | 80k run 的 `60000` vs 基线终点 `59999` | 09-17 |
+| V5 测试模型 | GPU 上跑，VLM 主干用 `gemma_150m` 替身（乙） | 09-17 |
+| `run_name` | 待确认（建议 `v2-1600ep-m8x8-modul-motion-b128-80k`） | — |
 
 ---
+
 ## 第一部分（给人看）
 
 ### 这轮做什么
 
-给 1600 集新库（BinFill / RouteStick / VideoRepick / VideoUnmaskSwap，605,611 个执行样本）建一张 motion token 表，然后用已跑完的 modulation 8×8 基线配置**只加一个 `motion` 节**，训练一条 80k 步的「+motion」模型，与基线成对可比。全文顺序：① demo 段补帧规则 → ② 建表七步 → ③ 新 run 与基线的逐项差异 → ④ **context 改 modulation：改了什么、哪里等价哪里不等价**（第四轮新增）→ ⑤ 训练链路哪些不动、哪些改 → ⑥ 推理侧 → ⑦ budget → ⑧ 验证 → ⑨ commit 与执行顺序。代码级细节全部在第二部分。
+给 1600 集新库（BinFill / RouteStick / VideoRepick / VideoUnmaskSwap，605,611 个执行样本）建一张 motion token 表，然后用已跑完的 modulation 8×8 基线配置**只加一个 `motion` 节**，训练一条 80k 步的「+motion」模型，与基线成对可比。顺序：① demo 段补帧规则 → ② 建表七步 → ③ 新 run 与基线的差异 → ④ context 改 modulation 意味着什么 → ⑤ 训练链路改什么 → ⑥ 推理侧改什么 → ⑦ budget → ⑧ 怎么证明没改坏 → ⑨ 执行顺序。
 
 ### 一、demo 段怎么补：数轴
 
-一个 motion 窗口 = 连续 33 帧，喂给冻结的 MotionJEPA encoder 得一个 token。起点钉在段内网格 0, 16, 32, … 上，demo 段和 exec 段各自算网格、不跨段。
-
-**现行规则的问题只在 demo 段尾部**：整窗放不下就不编，demo 最后 0–15 帧的运动没有任何窗覆盖。以 RouteStick 一集 `es = 100`（demo 帧 0–99）为例：
+**做什么**：一个 motion 窗口 = 连续 33 帧，喂给冻结的 MotionJEPA encoder 得一个 token。起点钉在段内网格 0, 16, 32, … 上，demo 段和 exec 段各自算网格、不跨段。现行规则 demo 尾部整窗放不下就不编，demo 最后 0–15 帧的运动没有任何窗覆盖。以 RouteStick 一集 `es = 100`（demo 帧 0–99）为例：
 
 ```
 demo 帧号   0        16       32       48       64       80       96  99 │100 exec →
@@ -50,7 +49,7 @@ demo 帧号   0        16       32       48       64       80       96  99 │10
                                                             → 帧 97–99 的运动没有任何窗覆盖
 ```
 
-**新规则：起点只要还剩 ≥ 17 帧真实帧就编一窗，越过段尾的部分用 demo 最后一帧重复填满**：
+新规则：起点只要还剩 ≥ 17 帧真实帧就编一窗，越过段尾的部分用 demo 最后一帧重复填满：
 
 ```
 demo 帧号   0        16       32       48       64       80       96  99 │100 exec →
@@ -60,192 +59,116 @@ demo 帧号   0        16       32       48       64       80       96  99 │10
                                                                   ✗ s=96: 真实帧只剩 4 < 17，不编
 ```
 
-补的是静止帧。**这是对 encoder 输入的事实描述——「前 20 帧真实运动、后 13 帧定格在第 99 帧」；本文不断言 encoder 会把它编码成「动作结束」这一语义，那需要另行验证。**
+**为什么**：补的是静止帧，这是对 encoder 输入的事实描述——「前 20 帧真实运动、后 13 帧定格在第 99 帧」；本文不断言 encoder 会把它编码成「动作结束」，那需要另行验证。`es ≥ 17` 的集恰好多 1 窗、且补帧窗永远是 demo 段最后一个窗（可由段长直接推出，不必查表）——这条性质被建库账目与在线对拍反复依赖。
 
-**`es ≥ 17` 的集恰好多 1 窗，且 demo 尾帧一定被盖住**：旧规则接受 `s ≤ es − 33`，新规则接受 `s ≤ es − 17`，多出的区间宽 16 = 一个网格步，里面有且只有一个网格点；这个新窗右端 ≥ es，必然覆盖到最后一帧。解析证明：令 `es − 17 = 16q + r`（`0 ≤ r < 16`），末窗起点 `s_max = 16q`、真实帧数 `= 17 + r ∈ [17, 32] < 33` 必为补帧窗，倒数第二窗真实帧数 `= 33 + r ≥ 33` 必为满窗（`q ≥ 1` 即 `es ≥ 33` 时成立；`17 ≤ es ≤ 32` 时 demo 段只有一个窗、即补帧窗本身，A8 边界表的 es=17/32 两档正是这种情形）。**由此还得到一条被下游反复依赖的性质：补帧窗永远是 demo 段的最后一个 `m`，可由 `seg_len` 直接推出、不必查表。** `es ≤ 16` 的集新旧规则都不编 demo 窗、增量为 0，本库 `es` 最小 100、不存在该情形，但账目检查须把「`es ≥ 17` 的集数 == 1600」一并断言，防止换库时静默失配。
+**哪些不变**：exec 段一字不改（当前帧之后的帧根本不存在，没有段尾可补）。
 
-**exec 段一字不改**：窗口尾端不能超过当前帧，当前帧之后的帧根本不存在，没有段尾可补。
-
-新库实算：demo 窗 34,313 → **35,913**，exec 35,403 不变，总行 **71,316**，补帧窗恰 **1,600**（= 集数）。**注意这是整表重建、不是增量补行**：demo 每段多 1 窗会把该 episode 的 exec `row_base` 以及其后所有 episode 的行号整体平移，旧表的任何一行都不能复用。
-
-同一个网格公式在代码里被**独立重写了 8 遍**（训练侧契约 `motion_store`、Wan 抽取器 `wan_common`、oracle `oracle_driver::expected_segments`、在线 `framesamp_memory`、账目 `motion_checks::_independent_visible`、`extra_checks::visible`、模型测试 `motion_gates_model::oracle_visible`、评估探针 `summarize_eval_probe::motion_frames_formula`，另加手算参照 `hand_calc_8frame::expected_motion` 与节奏闸 `eval_rhythm_gates::predict_k`），**逐处裁决见第二部分 A1 的清单**；而**公式的调用点**更多——`visible_motion_rows` 全仓 ≥25 处、`max_visible_count` 5 处、`seg_num_grid` / `seg_num_chunks` 十余处，散在 **15 个文件**里。
+**规模**：新库 demo 窗 34,313 → 35,913，exec 35,403 不变，总行 71,316，补帧窗恰 1,600（= 集数）。这是整表重建、不是增量补行——demo 每段多 1 窗会平移其后所有行号，旧表任何一行都不能复用。同一个网格公式在代码里被独立重写了 10 遍、调用点散在 15 个文件，逐处裁决见 A1。
 
 ### 二、建表：七步（0–6），哪步没做
 
-建表链路照抄 400ep 库，**链路本身不改，只换口径与规模**，另加两步本轮新增的前置工作（第 0、1 步），共七步。现状：新库只有帧特征库，motion 相关的五样（latent、token、整表、oracle、留档）一样都没有；原始 H5、wan 子 venv 在位。
+**做什么**：建表链路照抄 400ep 库，链路本身不改，只换口径与规模；另加两步前置（encoder 换型、输入重锚）。现状：新库只有帧特征库，motion 相关的五样（latent、token、整表、oracle、留档）一样都没有；原始 H5、wan 子 venv 在位。
 
 | 步 | 模块 | 改不改 | 状态 | 预计耗时（8 卡） |
 |---|---|---|---|---|
-| 0 | **encoder 换型** | 新 encoder 落 `v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a/`，`ASSETS_LOCK.json` 换锚点，**全仓 7 处写死旧 run 名/目录逐项裁决**（见 A9） | **未做** | 分钟级（本地复制） |
-| 1 | **输入重锚** | 建 motion 前重核四个 H5 的内容 sha256 == 帧库 finalize 时的 `input_manifest.json` | **未做** | ≈ 15 min（791.8 GB） |
-| 2 | **改代码** | 见第二部分 A1–A9 | **未做** | CPU 单测 < 5 min |
-| 3 | **Wan 抽取** | 逻辑不改，只是切出来的 demo 尾窗多了补帧 | **未跑** | ≈ 3.6 h（≈ 39 GiB latent） |
-| 4 | **encode** | 数值核心不改；**只修续跑完成性判断的路径 bug** | **未跑** | 修复后理论 ≈ 3 min（400ep 实测 17.7 ms/窗，8 卡真并行 71,316/8 × 17.7 ms ≈ 158 s）；**按实测回填** |
-| 5 | **pack / verify** | 拼表逻辑不改，只多写新布局名与新契约键 | **未跑** | 分钟级 |
-| 6 | **oracle 与账目** | MotionJEPA 仓库自己的 VAE / encoder 独立重算逐位比：encoder 全量，VAE 抽样（补帧窗全部 + 其余 10%，**只抽 VAE 前向**）；账目五项 | **未跑** | ≈ 1.2 h |
+| 0 | encoder 换型 | 新 encoder 落盘、资产锚点换新；全仓 7 处写死旧 run 名逐项裁决（A9） | 未做 | 分钟级 |
+| 1 | 输入重锚 | 建 motion 前重核四个 H5 的内容 sha256 == 帧库 finalize 时的清单 | 未做 | ≈ 15 min |
+| 2 | 改代码 | 见第二部分 A1–A9 | 未做 | CPU 单测 < 5 min |
+| 3 | Wan 抽取 | 逻辑不改，只是切出来的 demo 尾窗多了补帧 | 未跑 | ≈ 3.6 h |
+| 4 | encode | 数值核心不改；只修续跑完成性判断的路径 bug | 未跑 | ≈ 3 min（按实测回填） |
+| 5 | pack / verify | 拼表逻辑不改，只多写新布局名与新契约键 | 未跑 | 分钟级 |
+| 6 | oracle 与账目 | MotionJEPA 仓库自己的 VAE / encoder 独立重算逐位比：encoder 全量，VAE 抽样（补帧窗全部 + 其余 10%）；账目五项 | 未跑 | ≈ 1.2 h |
 
-**Wan 抽取与 encode 之间不能 commit**——`gather_provenance` 对两侧 worker metadata 合并后要求 `git_commit` 唯一（400ep 曾因此重抽全量）；pack 自身的 `packer.git_commit` 无此约束。新表布局名换成带 `demopad17` 的新名，训练侧按布局名查规格表，**40ep / 400ep 旧表照旧可读**。全部命令与判定行见第二部分 B 节。
+**为什么 encoder 要换**：新 encoder 在本批 1600 集全库上训成；架构与旧 ckpt 一致、可直接加载。真正的坑是全仓 7 处写死了旧 run 名或目录，4 处在本轮必经路径上——最致命的是打包器把 run 名硬编码成旧值，不改的话训练侧核对 provenance 时必 raise，而且要等到建库全绿、留档写完之后才炸。逐项裁决见 A9。
 
-**encoder 换型的连带面比初稿写的大得多**（第三轮审查的核心发现）。ckpt 本身完全兼容：新旧**架构一致**（`motion.dim 768` / encoder `depth 8, heads 12, dim_head 64` / dit `depth 4` / latent `16ch×32`、`patchify 2` / 同一 Wan2.1 VAE），差异只在训练超参与数据源（filter 阈值 `0.02711` vs `0.045993`、batch 176 vs 88、lr 6e-4 vs 3e-4、holdout 集不同、`save_live false` vs `true`）；已实测新 ckpt `arch = "wan-latent-v7"` 与 `ARCH_TAG` 相符、主键 `encoder`（EMA）含 77 个张量、affine buffer 有限，`load_encoder` 三条断言全过；477 MB vs 954 MB 的差异来自 `save_live=false`，不影响加载。**真正的坑是全仓 7 处写死了旧 run 名或旧 run 目录，其中 4 处在本轮必经路径上**——最致命的是 `pack_motion_store::gather_provenance` 把 `run_name` 硬编码成 `"wan-v8-filter10-72ep-a"`，不改的话新表 provenance 会带旧 run 名，而 `dataloader::_motion_gates` 拿它与新 YAML 的 `source_run` 逐字段比对 ⇒ **训练起跑必 raise，且会在建库全绿、留档写完、preflight 过后才炸**。逐项裁决见 A9。
+**哪些不变**：Wan VAE、encoder 推理脚本（钉版）、pack / verify 的拼表逻辑、oracle 的独立重算链路。Wan 抽取与 encode 之间不能 commit（provenance 要求两阶段同一 commit，400ep 曾因此重抽全量）。新表布局换带 `demopad17` 的新名，旧 40ep / 400ep 表照旧可读。
 
 ### 三、新 run 与刚跑完的基线：逐项差异
 
-基线 `v2-1600ep-m8x8-modul-b128-60k` 是 **modulation 8×8、motion 关闭**的 60k run。新 run 是同一条链路**只开 motion + 步数改 80k**。基线值全部取自 `docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/records/prod-runner.sh`、`records/launch.actual.json` 与 `config.py` 的 `mme_vla_suite_b128_60k` 实体，不是推算。
+**做什么**：基线是 modulation 8×8、motion 关闭的 60k run；新 run 是同一条链路只开 motion + 步数改 80k。
 
-**只有这 9 行不同**（第四轮由 8 改 9：第 9 行是 preflight 新增的 motion 期望值参数；初稿写「5 处」并漏了 sha 与三条派生路径，已订正）；其中 `LOG` / `TRAIN_RECORD_DIR` / `MMEVLA_JAX_CACHE_DIR` 三条路径随 `$RUN` 派生、`--run-root` 子目录随配置名派生：
+**只有这 9 行不同**：
 
-| 项 | 基线（已跑完） | 新 run | 说明 |
-|---|---|---|---|
-| 具名配置 | `mme_vla_suite_b128_60k` | `mme_vla_suite_b128_80k` | 新条目复制 60k，**只改** `num_train_steps` 与 `decay_steps` 60,000 → 80,000 |
-| history YAML | `perceptual-framesamp-modul-8frame-8x8.yaml` | `perceptual-framesamp-modul-8frame-8x8-motion.yaml` | 基线 YAML 一字不动，新 YAML = 基线 + 一个 `motion` 节 |
-| `--history-config-sha256` | `5b5ac2f8…`（runner 第 2 个位置参数） | 新 YAML 的 sha | preflight 用；`store_path` 参与该 sha，改路径即改 sha |
-| `run_name` / `--exp-name` | `v2-1600ep-m8x8-modul-b128-60k` | 待确认（建议 `v2-1600ep-m8x8-modul-motion-b128-80k`） | 第 6 条 |
-| `--run-root` 子目录 | `…/train-runs/mme_vla_suite_b128_60k/<RUN>` | `…/train-runs/mme_vla_suite_b128_80k/<RUN>` | 随配置名 |
-| tmux 会话 | `m8-prod` / `m8-prod-dense` | `mv2-prod` / **`mv2-dense`** | 后者故意不叫 `mv2-prod-dense`：tmux 先精确名再前缀匹配，目标会话已结束时 `-t mv2-prod` 的前缀匹配会命中它；清理一律 `tmux kill-session -t =<全名>`（第 7 条红线） |
-| preflight 的 motion 期望值参数 | 无 | `--motion-store` / `--motion-store-meta-sha256` / `--motion-layout` / `--motion-rows`（值来自建库留档，runner 显式传） | **第 9 行（第四轮新增）**：preflight 只 import 标准库、无 YAML 解析器，5 项 motion 检查的期望值只能由 runner 传参；`CHECK_MOTION_ENV_UNSET` 无参 |
-| `LOG` / `TRAIN_RECORD_DIR` | `v1-store/logs/$RUN.log` / `v1-store/bench/$RUN` | 同式 | **随 `$RUN` 自动派生**，照抄 runner 即生效；此处列出以免被误判为「一字不动」 |
-| `MMEVLA_JAX_CACHE_DIR` | `$V1_STORE/cache/jax/$RUN` | 同式 | 同上；新 run = 冷编译缓存，与下面「步时必须重测」相关 |
-
-**启动环境变量不在 runner 里，「照抄 runner」会漏三个**：基线的实际启动命令（`records/launch.actual.json::launch_command`）是 `env CUDA_CACHE_PATH=…/v1-store/cache/cuda WANDB_DATA_DIR=…/v1-store/cache/wandb-data XDG_DATA_HOME=…/v1-store/cache/xdg-data bash <runner> <TRAIN_HEAD> <HC_SHA>`，这三个 `env` 都**不在** `prod-runner.sh` 内（runner 里只有 `UV_CACHE_DIR`）。漏掉会让 CUDA JIT 缓存与 wandb 数据落到 `$HOME`，违反 `AGENTS.md` 第 14 条与环境 B 第一条红线。新 runner 要么照抄这个 `env` 前缀，要么把三个 `export` 并进 `body()`。
-
-**其余一字不动**（逐项核对）：`batch_size=128`、`fsdp_devices=4`、`CUDA_VISIBLE_DEVICES=4,5,6,7`、`num_workers=8`、`ema_decay=0.999`、`optimizer=AdamW(clip_gradient_norm=1.0)`、`freeze_filter`、`weight_loader=pi05_base`、`save_interval=5_000`、`keep_period=5_000`、`project_name="robomme-framesamp"`、`seed=42`、`lr_schedule` 的 `warmup_steps=5_000 / peak_lr=5e-5 / decay_lr=5e-5`、`--assets-base-dir`、`--data.assets.assets-dir`（同一 `4task-v2-1600ep-604f16da`）、`--dataset-path .../framesamp-8x8`、`norm_stats` sha256 `856c75ea…`、`XLA_PYTHON_CLIENT_MEM_FRACTION=0.95`、`OMP_NUM_THREADS=1`、`OPENBLAS_NUM_THREADS=1`、`UV_CACHE_DIR`、`MMEVLA_FRAMESAMP_SOURCE` / `MMEVLA_FRAMESAMP_MANIFEST`、`MMEVLA_MOTION_STORE` 保持 unset、runner 外壳（`set -o pipefail` + `tee` + `PIPESTATUS` + `EXIT_CODE=`）与 15 s GPU 采样。
-
-**lr 逐步完全相同，比初稿说的更强**：`peak_lr == decay_lr == 5e-5` ⇒ optax 的 `alpha = end/peak = 1` ⇒ 余弦段恒等于 5e-5，`decay_steps` 之后 clamp 也是 5e-5。所以 `decay_steps` 60k→80k **不改变任何一步的 lr**，不只是「前 60k 相同」。F 表用一条 `GUARD_LR` 逐步比两条 schedule 直接证明。
-
-**数据顺序与 `num_train_steps` 无关**：`train.py` 调 `create_data_loader` 时不传 `num_batches`，索引序列只由 `seed=42`、`batch_size=128` 与数据集长度 605,611 决定；motion 开启只让 `__getitem__` 多返回 4 个键，不改索引序列。
-
-**开 motion 带来的模型/数据差异**（这是本轮要测的东西本身，不是配置差异）：
-
-| 维度 | 基线 | 新 run |
+| 项 | 基线 | 新 run |
 |---|---|---|
-| 参数叶数 | 61 | **65**（多 `motion_pos_proj` kernel/bias + `motion_encoder_static` kernel/bias） |
-| 新增参数量 | — | `256×768+768 + 1536×1024+1024 = 1,771,264` ≈ 1.77 M |
-| MemoryAttention 的 `mem_len` | 512 | **672** = 512 + budget 160 |
-| 每样本多交付的键 | 四键恒 `None` | `motion_emb (160,768) f32`、`motion_pos (160,256) f32`、`motion_mask (160,) bool`、`mem_order (672,) int32` ≈ **658 KB/样本**，b128 ≈ **84 MB/batch** |
-| dataloader 常驻 | — | motion 表 `motion_token.f32.bin` 219 MB × 8 worker ≈ **1.75 GB** |
+| 具名配置 | `mme_vla_suite_b128_60k` | `mme_vla_suite_b128_80k`（只改 `num_train_steps` 与 `decay_steps`） |
+| history YAML | `perceptual-framesamp-modul-8frame-8x8.yaml` | 同名加 `-motion`（= 基线 + 一个 `motion` 节） |
+| `--history-config-sha256` | 基线 YAML 的 sha | 新 YAML 的 sha |
+| `run_name` | 基线名 | 待确认 |
+| `--run-root` 子目录 | `…/mme_vla_suite_b128_60k/<RUN>` | `…/mme_vla_suite_b128_80k/<RUN>`（随配置名派生） |
+| tmux 会话 | `m8-prod` / `m8-prod-dense` | `mv2-prod` / `mv2-dense` |
+| `LOG` / `TRAIN_RECORD_DIR` / `MMEVLA_JAX_CACHE_DIR` | 随 `$RUN` 派生 | 同式，照抄 runner 即生效 |
+| preflight 的 motion 期望值参数 | 无 | 新增 4 个参数（第四轮新增的第 9 行） |
 
-**步时必须重测，52 h 只是下界**：基线 4 卡 2.34033 s/步（`result.md` 的 step 100→59900 实测），80,000 × 2.34 s = **52.0 h**。但基线本身已是数据受限——全程 15 s 采样四卡 util 均值 **72.39%**、0% 采样占比 **25.39%**，起跑 500 ms 密采均值 70.14%。三个增量按量级排序（第四轮订正，第三轮并列写法不成比例）：**数据路**的 84 MB/batch 与 8 worker 常驻 1.75 GB 最大 ≫ 每样本一次 672 长稳定排序（numpy，微秒级）≫ `MemoryAttention` 在 18 层里每层对整条 mem_seq 做 K/V 投影（512→672 即 +31%，remat 策略 `nothing_saveable` 反向还要重算，但按第四节 4.3 推算折合毫秒级）。步时若上升，先看数据路。执行顺序表为此设了硬节点：推进到 300 步后按 `AGENTS.md` 第 16 条口径（稳态窗口均值 + 0% 占比 + 慢/非慢分层，**禁用中位数**）重估 ETA 并回报；步时较基线上升 > 15% 时先停下评估 `num_workers` 是否要上调（属第 10 条超参，须另行确认落点）。
+**为什么是「只多这些」**：lr 逐步完全相同（`peak_lr == decay_lr`，改 `decay_steps` 不改任何一步的 lr，V0 直接证明）；数据顺序与步数无关（索引序列只由 seed、batch size、数据集长度决定）；启动时的三个 `env` 变量不在 runner 里、要照抄基线的 `launch.actual.json`，否则缓存落到 `$HOME`。
 
-**为什么仍用 4 卡而不是 8 卡**：成对可比要求的是**卡数**（`fsdp_devices=4`、可见 4 张 → per-device batch 32）与 mesh 形状，物理卡号不影响任何数值（基线当初用 4–7 只因 0–3 在跑 MotionJEPA 训练，现在 8 卡全空）。改 8 卡会让 per-device batch 从 32 变 16、fsdp mesh 改变，与基线不再逐位可比——代价是另外 4 张 A100 闲置约 52 h。**若愿意牺牲成对可比换速度，这一条可以改，需用户明确。**
+**其余一字不动**：batch 128、4 卡 fsdp、`CUDA_VISIBLE_DEVICES=4,5,6,7`、8 worker、EMA 0.999、AdamW 裁剪 1.0、冻结过滤、`pi05_base` 权重、每 5k 保存、seed 42、warmup 5k / lr 5e-5、assets 与数据集路径、`norm_stats`（沿用基线 sha，**不为开启态重算**）、XLA 内存比例、线程数、runner 外壳与 GPU 采样。
 
-**评估侧成对可比的三条交接约束（第四轮补，评估口径本身另起计划）**：
-1. **基线 `v2-1600ep-m8x8-modul-b128-60k` 从未做过策略评估**（其 `result.md` 明写「策略评估……均另立任务」，`docs/training-doc/` 下无对应 `eval-*` 目录），且其 ckpt 集合 `{5000, …, 55000, 59999}` 里**没有 60000**——基线评估属下一轮必做项，工作量（4 任务 × 50 集 × 1300 步 + 每集 ≤ 151 窗 sidecar 编码）从未被计入任何计划。
-2. 新 run 必须评 `60000`、基线必须评 `59999`；同 seed、同 `max_steps=1300`、同 test split、同 `--policy.config`；若只评各自末点（80k vs 60k），报告必须标注「+motion 与 +20k 步混淆」，不得写成 motion 的效果。
-3. 评估前先过 `EVAL_ES_BOUND`（第七节）；评估脚本对 `es ≥ 1297` 的处理见第七节（现行控制流是整轮中止而非单集降级）。
+**开 motion 带来的差异**（这是要测的东西，不是配置差异）：参数叶 61 → 65（多 1.77 M）；记忆区长度 512 → 672；每样本多交付四个键约 658 KB（b128 约 84 MB/batch）；dataloader 多常驻 219 MB × 8 worker 的 motion 表。
+
+**步时**：基线 4 卡 2.34 s/步，80k 步 = 52 h 只是下界；基线已是数据受限（util 均值 72%），新增负担里数据路远大于模型侧，步时若上升先看数据路；300 步处按 `AGENTS.md` 第 16 条口径重估 ETA。**仍用 4 卡**：成对可比要求卡数与 mesh 相同；愿意牺牲可比换速度需用户明确。细节见 I.9。
+
+**评估侧交接**（评估口径另起计划）：基线从未做过策略评估、且没有 60000 ckpt（末点 59999）——基线评估是下一轮必做项；新 run 评 60000、基线评 59999，同 seed / 同 1300 步 / 同 test split；评估前先做 `EVAL_ES_BOUND`（第七节）。
 
 ### 四、context 改 modulation：改了什么、哪里等价、哪里不等价
 
-**结论先行**：motion memory 最早只在 `integration_type=context` 上实现（正本 `docs/motion-memory.md` 全文是 context 口径；`history_pi0.py::HistoryPi0.__init__` 现在仍 `raise` 拒绝 motion + modulation）。改到 modulation 上，**数据侧一个字节都没变，模型怎么用这份 motion 彻底换了一套——两者不等价**；最要紧的副作用是 `motion.budget` 由此从「缓冲区大小」变成**模型语义参数**。本节把「哪些层等价、哪些层不等价」逐层钉死，后面第五、六节只写改动清单，不再重复机制。
+**结论**：motion memory 最早只在 context 上实现，正本全文是 context 口径。改到 modulation 上，数据侧一个字节没变，模型怎么用这份 motion 彻底换了一套——两者**不等价**；最要紧的副作用是 `motion.budget` 从「缓冲区大小」变成了**模型语义参数**。
 
-#### 4.1 六层等价（全部有代码锚点）
+**哪些一样（六层）**：关闭态逐位相同；离线表、切窗、起点集合、补帧规则、四键交付在训练与在线是同一份代码；在线装配代码里没有一行按 integration 分支；sidecar 协议不变。所以在线链路可以直接复用，由 V-online 证明。
 
-1. **关闭态逐位**：`percep_mem.py::PerceptualMemory.__init__` 的 `if self.motion_enabled:` 只在开启时创建两层投影，`__call__` 关闭态早返回；`history_pi0.py::HistoryPi0.embed_memory` 关闭态是「编译期 Python 分支 + 早返回，四处一个元素都不追加、不重排」；`framesamp_dataset.py` 的 `_NONE_KEYS` 四键恒 `None`。关闭态模型与基线完全相同，这是第八节 V1/V6/V7 的前提。
-2. **数据交付层**：`shared/sampling.py::memory_order` / `pad_times`、`motion_store.py::visible_motion_rows` 是 context / modulation / 训练 / 在线共用的同一份函数，四键（`motion_emb` / `motion_pos` / `motion_mask` / `mem_order`）的构造与 context 版逐字相同；唯一随 integration 变的是 `mem_order` 长度（context 32 帧档 608 → 本轮 512 + 160 = 672）。
-3. **在线装配层**：`src/mme_vla_suite/policies/` 目录下 grep `integration_type` **零命中**；`policy.py::_prepare_history` 的 motion 分支只看 `if self.motion_enabled:`。在线链路可以直接复用，由 V-online 证明。
-4. **切窗与起点集合**：在线 `framesamp_memory.py::visible_motion_frames` 与训练侧 `visible_motion_rows` 同式。
-5. **sidecar 线协议**：`(33,256,256,3) uint8 → (768,) f32`，与 integration 无关。
-6. **补帧规则训推同源**：离线按 `entry.spec` 取行、在线按同一 `min(f+32, es−1)` 补帧（E 节改动后）。
+**哪些不一样（模型侧）**：
+- 注入点：以前 motion token 和帧 token 一起排进主干序列最前面，和图像 / 文字 / 动作 token 在 18 层里互相看；现在主干里没有记忆区（长度和基线一样），记忆单独算一次，每一层让 20 个动作 token 做一次 cross-attention 去读它，读出来的向量拿去调制 FFN 前的归一化。
+- 谁看得到：以前文字和动作都看得到 motion；现在图像和文字完全看不到，只有动作 token 看。
+- 记忆是否被逐层加工：以前走 18 层残差流；现在同一份记忆广播给 18 层，记忆 token 之间没有 attention。
+- 位置编码：以前 padding 不占号；现在 padding 占号，记忆区一变长，所有 query 的位置整体平移。
+- 宽度：2048 → 1024，新参数 3.35 M → 1.77 M。
+- 训练动力学：motion 梯度只来自 20 个动作 token，通道又被一个近零初值的门挡着——能不能学出来不能靠「接线对了」推断。
+- 推理：主干 kv_cache 不含记忆、形状不随 motion 变；cross-attention 每个去噪步每层重算、没有缓存，但折合每集只有约 +9 ms，评估耗时的大头仍是 sidecar 逐窗编码。
+- 一条不要误修的：modulation 下 `mask_na` 恒等空操作，训练与推理传不传都等价，不构成训推不一致。
 
-#### 4.2 九项不等价（训练侧）
+**为什么 budget 变成模型参数**：padding 占号 ⇒ 动作 token 到最后一个真实 motion token 的 RoPE 距离恒等于 `budget − k`（本库 19..154），是一个与内容无关、逐样本跳动的旁路信号。把 budget 从 96 改到 160 不是「多留余量」，是换了一个模型；训练 / 评估 / 在线三侧必须逐值相同，且参数树校验看不出来（motion 四个参数叶的形状与 budget 无关）。
 
-| # | 维度 | context（正本口径） | modulation（本轮） | 代码锚点 |
-|---|---|---|---|---|
-| a | 注入点 | 记忆区 concat 进主干 prefix，走 18 层 self-attention | 每层对最后一条 expert 流（action expert）在 FFN 前做一次 cross-attention，输出作为 `MemoryRMSNorm` 的 cond 产生 scale / shift | `history_pi0.py::embed_prefix` 的 `if self.integration_type == "context":`；`history_gemma.py::HistoryBlock.__call__` 的 `if i == len(xs) - 1 and self.integration_type == "modulation": mem_mod_vec = mem_attn(x, mem_seq[-1], mem_mask[-1]); x = MemoryRMSNorm(name="mem_rms_norm_ffn")(x, mem_mod_vec)` |
-| b | 谁看得到记忆 | 文本与动作 token 能 attend 记忆区，图像被 `na_mask` 挡住 | 图像 / 文本 / 整条主干完全接触不到；只有 `action_horizon=20` 个 action token 经 cross-attn **单向**读取 | 同上；正本 3.4 |
-| c | 记忆是否被逐层加工 | 记忆 token 走 18 层残差流（「记忆只看记忆」） | `embed_memory` 算一次的同一条 `mem_seq` 原样广播给 18 层，只出 K/V；**记忆 token 之间没有 attention** | `history_gemma.py::Module.setup` 的 `nn.scan(..., in_axes=(0, nn.broadcast, …))`，`mem_seq` / `mem_mask` 走 `nn.broadcast` |
-| d | 位置编码 | `positions = cumsum(input_mask) − 1`，padding 不占号 | `k_positions = arange(mem_len)`、`q_positions = arange(mem_len, mem_len + x_len)`，**padding 占号**、query 位置随 `mem_len` 整体平移 | `history_gemma.py::MemoryAttention.__call__` |
-| e | mask 语义 | `make_attn_mask(input_mask, ar_mask, na_mask)` 三项 | 只有一维 K 侧屏蔽 `attn_mask = mem_mask[:, None, None, None, :]`；`compute_loss` 的 modulation 分支把 `embed_memory` 返回的 `ar_mask` / `na_mask` 直接丢弃（`mem_seq, mem_mask, _, _ = self.embed_memory(observation)`） | 同上；`history_pi0.py::compute_loss` |
-| f | 出口维与参数量 | `memory_token_dim: 2048` ⇒ `motion_encoder_static` 1536→2048，新增 3,345,152 参数 | `1024` ⇒ 1536→1024，新增 `256×768+768 + 1536×1024+1024 = 1,771,264`，motion 表征宽度减半 | 两份 YAML；`percep_mem.py::PerceptualMemory.__init__` |
-| g | 梯度来源与初始门 | motion 四叶从整条 prefix 的全部 query 收梯度 | 只从 20 个 action query 收梯度；整条记忆通道被 `MemoryRMSNorm` 里 `nn.Dense(x.shape[-1] * 2, kernel_init=kernel_init_out_proj)` 门住，`kernel_init_out_proj = nnx.initializers.normal(stddev=0.002)` ⇒ **初始贡献近零** | `representation/utils.py::kernel_init_out_proj`；`history_gemma.py::MemoryRMSNorm` |
-| h | 主干序列长度 | 开 motion 后记忆区 608、prefix 1184、全序列 1204（正本 5.4） | 主干 = 2 视角 × 256 + 文本 64（prefix 576）+ 动作 20 = **596**，与基线完全相同；记忆（672）不进主干 | `robomme_policy.py::RoboMMEInputs`；`HistoryPi0Config.max_token_len = 64` |
-| i | RMSNorm 共用 | — | `rms_norm = MemoryRMSNorm(name="mem_rms_norm")` 先作用于 `x` 再作用于 `mem_seq`，同一 `scale` 被 action-expert 隐状态与记忆序列共用 | `MemoryAttention.__call__` |
+**由此新增什么**：
+- `INIT_COMMON`（秒级 CPU）：6 条 modulation 叶 + 4 条 motion 叶与基线是否同初值，现有验证没有一项能核到。
+- `ROPE_LEN_EFFECT`（秒级 CPU）：第三轮引用的五个「位置平移效应」数字没有留档来源，重取后再写进正本。
+- `EVAL_ES_BOUND`（起跑前，无 GPU）：把「评估集 es 不可预知」变成实测，见第七节。
+- **motion 全遮消融评估**（用户拍板）：训完在同一 ckpt 上把 motion 全遮再评一次，同权重、同长度、只是看不到 motion 内容，Δ 即 motion 内容净贡献——没有它，新 run 与基线的差分不清是「motion 有用」还是「记忆区 512→672 改了位置编码」。本轮承诺的是实现等价，不是因果归因。
 
-**两条训练动力学后果**（由 g 直接推出，不是猜测）：motion 梯度只来自 20 个 action query；记忆表征在 18 层之间不更新。motion 能否被学到，要靠第八节 V8 的 `MOTION_PARAMS_UPDATED` 与训完后的全遮消融来回答，不能靠「接线对了」推断。
-
-#### 4.3 推理侧差异
-
-| # | 维度 | context | modulation |
-|---|---|---|---|
-| j | 在线数据装配 | — | **完全不敏感**：`policies/` 零 `integration_type` 分支（4.1 第 3 条） |
-| k | `embed_memory` 本身 | 同一份代码 | 同一份代码（含同一次 `take_along_axis` 重排），唯一差别是返回值去了哪里与出口宽度 |
-| l | 消费与缓存 | 记忆 K/V 一次烙进 kv_cache，10 步去噪不再碰 motion | `embed_memory` 在去噪循环**外**只算一次，但 `mem_seq=[None, mem_seq]` **每步**传入，`MemoryAttention` 每步每层重算 `mem_rms_norm(mem_seq)` 与 `kv_einsum_mem`（18 × 10 = 180 次 / infer），**无 K/V 缓存** |
-| m | kv_cache 长度 | 随 motion 变长（记忆区进前缀） | **完全不变**（前缀只有 image + language） |
-| n | `mask_na` | 让 vision 看不到记忆区，是实质机制 | **恒等空操作**：`embed_prefix` 在 modulation 下 `na_mask` 首元素即图像的 `True` ⇒ `cumsum(mask_na) <= 0` 全 False；`compute_loss` 传 na_mask、`sample_actions` 不传，两者等价，**不构成训推不一致，不要当 bug 去「修」** |
-| o | 推理频次与算量 | — | `eval.py::eval_each_episode` 每 16 环境步调一次 `get_action_chunk` ⇒ `max_steps=1300` 下每集 ⌊1296/16⌋ + 1 = **82** 次 infer；S=672 时 `MemoryAttention` 每层每步约 421.8 MMAC（K/V 投影占 83.5%）× 18 × 10 = 75.9 GMAC / 次，S=512 为 59.7 GMAC ⇒ motion 带来 **+16.3 GMAC / 次（+27%）**、每集 +1.34 TMAC ≈ **+9 ms / 集**（按 A100 fp32 峰值推算，未实测）；同期 sidecar 每集最多 151 窗 × 1421.5 ms ≈ **215 s / 集**，比模型侧增量大四个数量级，新 demo 规则只让每集多 1 窗（+1.4 s） |
-
-#### 4.4 一句话给用户
-
-最早只在 context 上实现的 motion，改到 modulation 上意味着——数据侧什么都没变（离线表、切窗、sidecar 协议、补帧规则、四键交付全部逐位同源，在线装配一行 `integration_type` 分支都没有），但模型怎么用这份 motion 彻底换了一套：记忆不再进主干、不再被 18 层上下文化、图像和文本再也接触不到它，只剩 20 个 action token 在每层 FFN 前通过一次 cross-attn 单向读取一份层间静态的 K/V，而且这条通道被一个 `stddev=0.002` 的 Dense 门在近零初值起步、每步去噪都要重算而没有 K/V 缓存；出口宽度从 2048 减半到 1024。**`budget` 因此变成模型语义参数**：modulation 的记忆位置号用 `arange(mem_len)`，padding 照样占号，于是 query 到最后一个真实 motion token 的 RoPE 间距恒为 `rope_gap = budget − k`（本库 `k ∈ [6, 141]` ⇒ 19..154），这是一个与 motion 内容无关、却逐样本跳动的旁路信号——把 budget 从 96 改到 160 不是「多留点余量」，而是换了一个模型，训练 / 评估 / 在线三侧必须逐值相同，且参数树校验对它完全失明（motion 四叶形状与 budget 无关）。这也意味着 80k 新 run 与 60k 基线的差里天然混着「有没有 motion」和「`mem_len` 512→672」两个因子（外加可能不同的 mem 叶初值，见 4.5），要把结论归到 motion 身上，需要用户已拍板加入的全遮消融评估。
-
-> 名称说明：本文的 `rope_gap` 与正本 6.4「稳态 gap 恒 0」的 `gap` 不是同一个量——后者是在线 τ 与 k 的时间滞后（稳态恒 0），前者是 RoPE 位置差（恒 ≥ 19），数值域互斥。正本同步时须改名。
-
-#### 4.5 由此新增的三条验证与一条评估臂
-
-- **`INIT_COMMON`（2b CPU 单测，秒级）**：开启态下 6 条 modulation 叶（`mem_attn/{mem_rms_norm/scale, kv_einsum_mem/w, q_einsum_mem/w, out_einsum_mem/w}` + `mem_rms_norm_ffn/Dense_0/{kernel, bias}`，18 层堆叠约 85 M 参数，全部只能来自随机初始化——基线 `records/startup.log` 实测 6 条 `Merging missing weight`）与基线是否同一初值，现有 V 表**没有任何一项能核到**：V6 的 `INIT_EQ` 比的是「同一 YAML 改前 vs 改后」，V8 是同侧 A/A。`percep_mem.py` 自写「flax nnx 单条 default RNG 流按调用顺序 fold_in，插在前面会改变帧路的初始化值」，而两个 motion `nnx.Linear` 正建在 llm 之前；`0901` 计划的「RNG 消耗序」表与其闸门 `T3_COMMON_INIT` 是在 context（`mem_mods=[False, False]`，llm 内无随机初始化叶）下建立的，**不能默认沿用**。判据：同 `seed=42`、`JAX_PLATFORMS=cpu`，分别用关闭态与新 motion YAML 只做 `init_train_state(..., resume=False)`，按叶名比 6 条 modulation 叶与 4 条 motion 叶的 sha256，`INIT_COMMON=PASS common_mismatches=0 open_only=4`；不相同则先量差异再定处置。
-- **`ROPE_LEN_EFFECT`（2b CPU 探针，几十行）**：第五节引用的五个数字（144→160 总变差 0.33 / 相对 L2 0.76；512→672 为 0.87；gap 非 0 时总变差饱和 ≈ 0.4；改成不占号或去 RoPE 后 1e-17）在仓库里**没有任何可追溯的脚本或留档**（全仓 grep 零命中）。机制本身可核且成立（`src/openpi/models/gemma.py::_apply_rope` 是标准 RoPE；`shared/sampling.py::pad_times` 用 `MEM_ORDER_SENTINEL` 把 padding 排到尾部 ⇒ 真实 key 位置不随 budget 变、只有 query 整体平移），但数字必须重取：固定 token 内容、只改 `mem_len`，直接构造 `MemoryAttention` 或复算 `_apply_rope` + masked softmax，输出 `ROPE_LEN_EFFECT=PASS tv_144_160=… relL2_144_160=… tv_512_672=… pad_content_diff=0`，json 落 `v1-store/reports/motion/`，写入正本前用它替换五个数字。
-- **`EVAL_ES_BOUND`（起跑前，无 GPU）**：见第七节。
-- **motion 全遮消融评估（用户已拍板加入）**：80k 训完后在同一 ckpt 上把 `motion_mask` 整列置 False 再评一次。`MemoryAttention` 的 `masked_logits = jnp.where(attn_mask, logits, -2.3819763e38)` 保证被 mask 的 K 位 softmax 概率恰为 0，故该臂是「同权重、同 `mem_len=672`、同 q 位置，只是看不到 motion 内容」，Δ 即 motion 内容净贡献（帧路 `static_mask` 恒有 True，不存在全 mask 导致 softmax 退化的边界）。成本一次评估；训练侧对照（budget=160 且全库 mask 恒 False 的 80k run）另需约 52 h，**本轮不做**。第八节据此明确：**本轮承诺的是实现等价，不是因果归因**；归因由消融臂承担。
-
-#### 4.6 本轮据此改口的措辞（第五节 / H 节 / 正本）
-
-| 原表述 | 问题 | 改为 |
-|---|---|---|
-| 「`mem_order` 交错 ⇒ 帧 token 彼此的 RoPE 相对距离改变」（原第四节与 H 节两处） | modulation 下记忆 token 只作 key/value，彼此之间没有 attention，它们的相对距离不进入任何计算 | 「`mem_order` 改变的是每个记忆 token 的绝对 `k_position`（`arange(mem_len)`），从而改变它到全部 query 的 RoPE 相对距离」；`ORDER_EFFECT` 在 modulation 下只证「次序经 `k_position` 改变 cross-attn logits」，是比 context 弱的承诺 |
-| 「唯一 width=1024 的是 `gemma_300m`」 | 变体表里 width=1024 / depth=18 的有三个：`gemma_300m`、`gemma_300m_lora`、`gemma_150m` | 「没有浅层 width-1024 变体，CPU dummy（宽 64）仍撞 `assert mem_width == x_width == width`；但 VLM 主干可换 `gemma_150m` 替身」——V5 已拍板用乙（`gemma_150m` 替身） |
-| 「唯一拦得住的是 `_load_resolved_snapshot` 的快照 sha 三方核对」+ 「训练、resume、评估、在线四侧」 | 三方 sha 全在同一 run 根、由 `init_history_config` 一次写出，只能查该目录被篡改；真正使评估侧不可能用错 budget 的是 `create_trained_policy` 直接丢弃传入的 history_config、整体换成 run 内快照；`train.py` 硬禁 `--resume`，不存在 resume 侧 | 两层表述：生产评估由快照替换**结构性保证**；sha 三方核对只防事后编辑；真实暴露面是按仓库 YAML 文件名建模型的 `check_ckpt_param_tree.py` 与一切 `--yaml` 驱动的工具 + 「参数树对 budget 失明」的组合 |
-| `scripts/motion-variance/*` 只当「写死 96 / 608」的字面量处理 | 结构性不适用：`mv_common.py` 的 `PREFIX_LEN  # 1184`、两处 `integration_type="context"` 硬编码 | 本轮不改，**且不得引用其结论（`docs/motion-utilization.md` 的 normal−mask +5.00pp）作为新 run 的 motion 利用率证据** |
-| 正本第十章第 12 条「未覆盖 expert / modulation」 | 实施后过时 | 改成「已覆盖 modulation（本文），expert 仍未覆盖」，不整条删除 |
-
-**正本 `docs/motion-memory.md` 待改段落清单**（实施后另立 `docs:`）：3.1 / 3.4 / 3.5（交错口径只对 context 成立，补 modulation 的 `k_position` 段）、4.2（模型层）、5.3 / 5.4（608 / 1184 / 1204 是 context 32 帧档数字）、6.4（`gap` 改名以区分 `rope_gap`）、第八章两项 FAIL 的适用性、第十章第 12 条。
+**由此改口的表述**：两处「帧 token 彼此的 RoPE 相对距离改变」不成立（记忆 token 之间没有 attention），改为「每个记忆 token 的绝对位置改变」；「唯一 width=1024 的是 `gemma_300m`」是计数错（有三个）；「唯一拦得住 budget 的是快照 sha 核对」归因错（真正的结构性保证是评估侧只认 run 内快照）；`scripts/motion-variance` 的 +5.00pp 结论是 context 口径，结构性不适用、不得引用。差异矩阵（含代码锚点）、三条新验证的判据、措辞纠错表与正本待改段落清单见 I.1–I.3。
 
 ### 五、训练链路：哪些不动，哪些改
 
-机制差异已在第四节钉死，本节只列改动。
+**不动的**：帧路的数据交付（基线 batch 的帧路内容逐字节不变）；dataloader 的 motion 取样逻辑（公式在契约层）；模型的两层 motion 投影与 `embed_memory`（context 版已写好，modulation 复用；参数只在开启时创建，关闭态模型与基线完全相同；逻辑不动但注释要改）；modulation 的消费路径（出口维正好 1024，不用动）；基线 YAML、60k 配置、官方配置、Wan VAE、变体表；`norm_stats`（与 motion 解耦，沿用基线，不得为开启态重算）。
 
-**不动的（及为什么）**
-- **帧路的数据交付**（SigLIP 8×8 帧特征库 → 512 位记忆）：与 motion 无关，**基线 batch 的帧路内容逐字节不变**。这句话只在**数据交付层**成立——进了模型之后，`mem_order` 会把 motion token 按时刻插进帧 token 之间，改变的是每个记忆 token 的绝对 `k_position`（第四节 4.2 d/c 行），帧路在 cross-attn 里的有效注意力随之改变。
-- **dataloader 的 motion 取样逻辑**（查哪些行、右填充、与帧路交错）：公式在契约层，取样代码只是调用它。
-- **模型的两层 motion 投影与 `embed_memory`**：context 版已经写好，modulation 复用；参数只在 `motion.enabled` 时创建（1.77 M），关闭态模型与基线完全相同。**逻辑不动、注释要改**（见 D 节的注释清单：`percep_mem.py` 的「1536 → 2048」「(b, 512+96, 2048)」与 `history_pi0.py::embed_memory` 的「(b,608,2048)」「长度自动跟随 608」都是 context 32 帧档数字）。
-- **modulation 的消费路径**：`compute_loss` / `sample_actions` 的 modulation 分支早已写着「取 memory 序列交给 MemoryAttention」，出口维正好是 1024，不用动。
-- **基线 YAML、60k 配置、官方配置、Wan VAE、`utils.get_config` 的变体表**：一字不动，基线可复现。
-- **`norm_stats`**：`compute_norm_stats.py::_NONE_KEYS` 已含四个 motion 键，norm_stats 与 motion 完全解耦，沿用 `856c75ea…`；**不得为开启态重算**，否则破坏成对可比。
+**要改的**：
+- motion 表契约：加规格表，让「demo 最少真帧数 / 尾部补帧方式」成为布局的属性，挂在数据对象上而不是改函数签名（25+ 个调用点零改动、自动对每张表用对口径）；新旧表共存；表 schema 不升版（升了旧表在回归里必 FAIL）。
+- dataloader 守卫：budget 从写死 96 放开为 16 的倍数；加两键三态核对（同缺 → 历史契约；缺一 → raise；齐备 → 与表逐值相等），位置必须在表加载之后。
+- 参考侧 `ref_npy_dataset.py`：除 budget 守卫外还有一条「必须是 context」的形制闸，放开 modulation。
+- 模型闸：`HistoryPi0.__init__` 现在 motion 只放行 context，改成也放行 modulation，全仓就这一处。
+- 新 YAML = 基线 YAML + `motion` 节；新具名配置 = 复制 60k 条目只改步数。
 
-**要改的（及加什么）**
-- **motion 表契约**（`motion_store.py`）：加规格表，让「demo 最少真帧数 / 尾部补帧方式」成为布局的属性；**`spec` 挂在 `IndexEntry` 与 `MotionMeta` 上**而不是加进各函数签名（见 A1，这样 25+ 个调用点零改动且自动对每张表用对口径）；新旧表共存。**第四轮改口**：`INDEX_SCHEMA` / `META_SCHEMA` **不升版**（reader 是严格等值且先于 layout 检查，升版即让两张旧表在 V2 必 FAIL；升版理由「旧解析器读新表只错读」也不成立——旧解析器会先在 layout 等值处 raise）；`store_meta` 三新键**按 layout 分档读取**，旧 layout 允许缺失并按 `(33, 33, "none")` 兜底，不塞进现有 `need()` 常量循环。
-- **dataloader 守卫**（`FrameSampDataset`）：把写死的 `budget == 96` 放开为 16 的倍数；新增两条三态核对（YAML 两键与表 spec 的关系，缺键按历史契约兜底）。**注意这段必须放在 `MotionMeta.load` 之后**，不能并进现有的 `_req` 块（那时 `self._motion_meta` 还是 `None`）。
-- **参考侧 `ref_npy_dataset.py`**：除 budget 守卫外，还有一条**在它之前、无条件执行**的形制闸 `(representation_type, integration_type, perceptual_memory.type) != ("perceptual", "context", "frame_sampling") → raise ValueError("参考链形制不符")`（第三轮清单漏了）。放开为 `integration_type in ("context", "modulation")`，其余两项照旧严格；8 帧档历史上确有「refnpy 作参考侧」的既定方法论（`gate_8x8.py` 的 `expected_impl = "refnpy" if profile.endswith("8")`），V1 / V8 显式设 `DTYPE_DUMP_IMPL=refnpy` / `BENCH_DATASET_IMPL=refnpy` 时会撞它。
-- **模型闸**（`HistoryPi0.__init__`）：现在 motion 只放行 context，改成也放行 modulation。就这一处（全仓 grep 确认唯一）。
-- **新 YAML**：基线 YAML + `motion` 节（`budget: 160`、补帧口径两键、新表路径、新 `source_run`）。
-- **新具名配置 `mme_vla_suite_b128_80k`**：复制 60k 条目，只把 `num_train_steps` 与 `decay_steps` 改 80k。
-
-**一条必须写进正本、且初稿写错了的语义（第四轮再次订正）**：modulation 的 `MemoryAttention` 用 `q_positions = arange(mem_len, mem_len + x_len)`、`k_positions = arange(mem_len)`，而 `_apply_rope` 是**纯相对位置**旋转。padding 全在尾部、真实 key 位置不随 budget 变，但 **`mem_len = 512 + budget` 一变，所有 query 的位置整体平移，query 到每个真实 key 的相对距离全部 +160**。同一 budget 下只把 padding 位塞垃圾，差异严格为 0（`masked_logits = where(mem_mask, logits, -2.38e38)` 保证 padding 位 softmax 概率恰为 0）。第三轮引用的五个数值实验数字（0.33 / 0.76 / 0.87 / ≈0.4 / 1e-17）**无留档来源**，本轮以 2b 的 `ROPE_LEN_EFFECT` 探针重取后再写入正本（第四节 4.5）。
-
-结论：**`motion.budget` 是模型语义参数，不是纯容量上限。** 训练、评估、在线三侧必须逐值相同（`train.py` 硬禁 `--resume`，不存在 resume 侧），任何一侧改 budget 都等同换模型。这条**不受参数树保护**——motion 四个参数叶的形状只依赖 `pos_dim/dim/pos.hidden_dim/memory_token_dim`，与 budget 无关，拿 budget=96 的 YAML 去加载 budget=160 训的 checkpoint，`PARAM_TREE_EXACT` 会照样 PASS 而语义已静默改变。生产评估侧由 `create_trained_policy` 直接丢弃传入的 history_config、整体换成 run 内快照**结构性保证**用对 budget；`_load_resolved_snapshot` 的 sha 三方核对只防 run 目录被事后编辑。真实暴露面是按仓库 YAML 文件名建模型的 `check_ckpt_param_tree.py` 这类 `--yaml` 驱动工具，所以第八节 V9 的 `BUDGET_CONSISTENT` 改成**跨源**比对（run 内快照 vs 仓库新 YAML vs 160）。
+**为什么**：这些改动全部是「让新表 / 新 budget / modulation 能被读到」，不改任何数值路径——关闭态逐位不变由第八节 A 组证明。budget 作为模型语义参数的一致性由 V9 的跨源比对与在线前置门守住；RoPE 语义的技术表述见 I.4，代码级改法见 A–D 节。
 
 ### 六、推理侧：哪些不动，哪些改
 
-**先画一条界线**：在线装配层对 `integration_type` 完全不敏感（第四节 4.1 第 3 条），本节所有改动都在装配层；模型消费层的差异（每步每层重算 cross-attn、kv_cache 不含记忆区、`mask_na` 恒等空操作）在第四节 4.3，本轮不改、也不要「修」。
+**先画界线**：在线装配层对 integration 完全不敏感，本节改动全在装配层；模型消费层的差异在第四节，本轮不改也不要「修」。
 
-**不动的**：sidecar 进程本身、线协议（仍是 33 帧一包）、客户端、exec 段增量编码逻辑、policy 的记忆装配。理由：补帧发生在「凑齐 33 帧」这一步之前，sidecar 收到的永远是 33 帧。
+**不动的**：sidecar 进程、线协议（仍是 33 帧一包）、客户端、exec 段增量编码、policy 的记忆装配。补帧发生在「凑齐 33 帧」之前，sidecar 收到的永远是 33 帧。
 
-**要改的**
-- **`FrameSampMemory`**：它是唯一知道 demo 段在哪里的地方。demo 判据从「整窗放得下」改成「还剩 ≥ 17 帧」，并在凑窗时用 demo 最后一帧补齐。**这个谓词在该文件里出现 4 次（不是初稿写的 3 处）**，其中两次是同一条件写两遍，极易只改前者，见 E 节。
-- **policy 层**：把 YAML 里的两个补帧口径键透传下去，并按「reader 侧默认值兼容」处理缺键。
-- **encoder 目录的传递（初稿写「encoder 权重的加载方式不动」是错的）**：`motion_client.py` 的 sidecar 默认 encoder 目录写死旧 run，而两个构造点（`compare_online_motion.py` 与 `policy_config.py`）都只传 `expected_ckpt_sha256`（取自新表 provenance = 新 ckpt 的 sha）、**不传 `encoder_run_dir`** ⇒ 换 encoder 后 sidecar 必然握手失败，V-online 与将来所有 eval 都起不来。处置见 A9。
-- **两处 stub 的帧号校验**（`motion_gates_online.py` 与 `motion_sidecar.py`）：它们硬要求 33 帧编号严格连续，而 `stub_decode` 把帧号写进像素，合法补帧窗的尾部会解出重复帧号 ⇒ 必被判协议错。**这是「sidecar 不改」的唯一例外。第四轮订正：这一改动不触及 `protocol_sha256`**（它只哈希 `motion_protocol.py` 自身，两处被改文件都不是它），既有 provenance 记录一字不动；细则见 E 节。
-- **在线侧的 fail-loud 校验**：训练侧的两键核对在 `FrameSampDataset.__init__`，而 eval 根本不构造 dataset。若不在 `FrameSampMemory.__init__` 也加一道 raise，YAML 写错口径时会变成「训练 raise、在线照跑」，训推不一致而无人发现。**第四轮订正：这道闸必须与「旧配置兼容」拍板同口径、按对放行**——允许 `(33, "none")` 与 `(17, "repeat_last")` 两种组合，其余 raise；被哈希冻结的历史 run 快照 `awsprod40k-b128-motion` 的 `motion:` 节实测无两新键，只能走 `(33, "none")` 分支，硬等值 `repeat_last` 会让 V2 第三条必 FAIL，且让所有旧 context motion run 永久无法起在线评估。
+**要改的**：
+- `FrameSampMemory`：demo 判据从「整窗放得下」改成「还剩 ≥ 17 帧」，凑窗时用 demo 最后一帧补齐；该谓词在文件里出现 4 次、两次是同一条件写两遍，极易只改前者。
+- policy 层：透传两个补帧口径键，缺键按历史默认。
+- encoder 目录传递：sidecar 默认目录写死旧 run，两个构造点都不传目录，换 encoder 后握手必失败——必须传。
+- 两处 stub 帧号校验放宽（sidecar 不改的唯一例外）：合法补帧窗的尾部是重复帧号，现行严格连续校验会误判；这一改动不触及协议 sha，既有 provenance 记录一字不动。
+- 在线侧 fail-loud：eval 不构造 dataset，训练侧的两键核对拦不住在线；在 `FrameSampMemory` 也加一道，且必须与「旧配置兼容」同口径按对放行，否则历史快照回归必 FAIL。
 
-**推理侧算量（第四节 4.3 o 行的结论）**：主干 kv_cache 不随 motion 变长；`MemoryAttention` 每步每层重算，S 512→672 约 +27%，折合每集约 +9 ms（推算未实测）；评估耗时的主导项是 sidecar 逐窗编码（每集 ≤ 151 窗 × 1421.5 ms ≈ 215 s），本轮新 demo 规则只让每集多 1 窗。「评估会被 modulation 拖垮」这个担心不成立。
+**怎么证明同源（方案 B）**：本轮唯一新增的机制是 demo 段 min_real 33→17 + 补帧，风险落在「输入 33 帧是否装配正确」；encoder 的「同输入 ⇒ 同输出」已被数值钉版、握手 provenance、跨卡逐位实测反复确认。所以用零 GPU 手段（在线装配的 33 帧算 sha 与离线表已有的 sha 逐窗比）100% 覆盖全部 71,316 窗，真 encoder 只跑全部 1,600 个补帧窗与必含集（8 卡约 7 min）。第三轮「抽 10% 集」的前提用错了单卡口径（8 卡全量其实只要 3.5–4 h），且实算漏掉 k 最大与全部 `es ≥ 1000` 的集。三段判据见第八节 V-online，证据与成本出处见 I.5。
 
-**怎么证明同源**：既有的在线对拍工具按 eval 节奏驱动 `FrameSampMemory` + 真 sidecar，逐窗与离线表比逐位。**成本口径第四轮订正**：1421.5 ms/窗 出自 `v1-store/reports/motion/p5_online.json` 的 `ENC_MS_PER_WINDOW mean`（40ep 库、旧 ckpt、A100 独占一卡、含 6.3 MB IPC；离线探针 A2 为 1413.5 ms），全量 71,316 窗 × 1.4215 s ÷ 8 卡 = **3.52 h**（不是第三轮写的「单卡 30–32 h 不可承受」），与 Wan 抽取的 8 卡 3.6 h 同量级；40ep 那次全部非编码开销 ≤ 71 s，h5 读取不是瓶颈。用户据此拍板改为**方案 B「分层解耦」**：本轮唯一新增的机制是 demo 段 `min_real` 33→17 + `np.repeat` 补帧，风险落在「输入 33 帧是否装配正确」，而 encoder 的「同输入 ⇒ 同输出」已被 `wan_motion_infer.pin_numerics()`（`cudnn.benchmark=False` / `allow_tf32=False` / `float32_matmul_precision=highest`）、`check_versions(strict=True)`、`motion_client` 握手 provenance 逐键比对（含 `gpu_name` / `compute_cap` / `sm_count` / `driver` / `flags` / `module_sha256`）、`0901` 计划记的 `A3_CROSSGPU=PASS compared=64 latent_bitwise=64 token_bitwise=64 max_abs_diff=0.000e+00` 与正本记的 40ep「772 窗逐位相同」反复确认——所以用零 GPU 手段 100% 覆盖「输入是否相同」，用最贵手段只覆盖新代码路径的全部补帧窗。三段判据与承诺口径见第八节 V-online 行；换新 ckpt 后「同输入 ⇒ 同输出」只需重取一次小样本确认，不需要全量。
-
-新任务的策略评估口径（仿真步数、episode 集合）本轮不定，另起计划；但成对可比的三条交接约束已在第三节末钉死。
+新任务的策略评估口径本轮不定，另起计划；成对可比的交接约束在第三节末。
 
 ### 七、budget：已拍板 160
 
-按 ≥ 17 规则逐样本实算合法窗数（605,611 个）：均值 **43.9**，中位 39，P90 80，P95 93，P99 115，最大 **141**（BinFill ep367，es 1152，nt 2304 → demo 71 + exec 70）。第四轮反驳者用 `episode_manifest.json` 独立复算：total_samples=605611、mean k=43.906481、kmax=141（g=367）、k≥140 恰 32、`t==es` 恰 1600、`δ==32` 恰 1600、over96=24366 / over112=7817 / over128=488 / over144=0、涉及 episode 112 / 43 / 6 / 0、中位 39、P90/95/99 = 80/93/115、填充率 27.442%——与本节与第八节 V4 期望值逐项吻合。
-
-> **填充率定义**：`mean(min(k, budget)) / budget`（截断后实际占位）。初稿未写定义且整张表用了一个在 `δ < 32` 时多算一窗的 exec 公式（`len(range(0, max(0, δ−32)+1, 16))` 在 `δ<32` 时返回 1，正确值是 0），导致均值与填充率系统性偏高。正确 exec 可见窗数：`E(δ) = 0 if δ < 32 else (δ − 32)//16 + 1`，`δ = t − es`。受影响的恰是每集 exec 段前 32 个样本共 51,200 个，`51,200/605,611 = 0.08454` 与两版均值差 `43.99102 − 43.90648 = 0.08454` 吻合。**截断数、截断 episode 数、中位、P90/P95/P99、最大值不受影响。**
+**做什么**：按 ≥ 17 规则逐样本实算合法窗数（605,611 个）：均值 43.9、中位 39、P90 80、P95 93、P99 115、最大 141（BinFill ep367，es 1152）。budget 超限从不截断、一律 raise，所以 budget 必须 ≥ 141；160 是 16 的倍数里第一个留有裕度的。
 
 | budget | 超限样本 | 占比 | 超限 episode | 平均填充率 | 1300 步评估口径下末段 raise 的 episode |
 |---:|---:|---:|---:|---:|---:|
@@ -255,145 +178,59 @@ demo 帧号   0        16       32       48       64       80       96  99 │10
 | 144 | 0 | 0 | 0 | 30.5% | 6 |
 | **160** | 0 | 0 | 0 | **27.4%** | **0** |
 
-> 列名用「超限」而非「截断」：代码里 budget 超限**从不截断，一律 raise**（`FrameSampDataset.__init__` 的零截断契约预检、`__getitem__`、右填充三处各一道）。budget=96 时这个数据集根本构造不出来，不是「4.02% 的样本被截断」。
+**为什么不是 176**：budget 不是免费的——它是模型语义参数（第四节），越大 `rope_gap` 的均值与方差越大；K/V 计算量的增加反而是次要的（毫秒级）。
 
-**最后一列度量的是训练集，不是评估集。** 它按 `k_eval = demo_num_grid(es) + E(τ_max − es)` 外推，`τ_max = es + 16·⌊max_steps/16⌋`（`max_steps=1300` → exec 项恒 80），训练集 `es` 最大 1152 ⇒ `k_eval` 最大 **151**；按正本红线在 16 任务全集口径复核，同为 **151**（`VideoPlaceOrder` ep10，es=1140）。
-
-> 初稿 C 节写的 `τ_max = es + 16·⌊(max_steps − 4)/16⌋` 里那个「−4」不成立：`⌊(M−4)/16⌋ = ⌊M/16⌋` 当且仅当 `M mod 16 ≥ 4`，而 `1300 mod 16 = 4` 恰好卡在边界。反例：M=1296 正确 1296、该式给 1280；M=1312 正确 1312、该式给 1296；M=800 正确 800、该式给 784。代码里 `eval_rhythm_gates.py` 本来用的就是 `es + 1296`，与修正式一致。
-
-**评估集不可预知 → 起跑前测出来（第四轮）**：评估将走**新的 seed**，仅「1300 步」这一条固定。当前 `examples/robomme/env_runner.py` 硬编码 `dataset="test"`，`es` 由 `DemonstrationWrapper.reset` 现场 rollout 生成、`examples/robomme/eval.py` 现取，训练 manifest 约束不到它；现有 test split（4 任务 × 50 集，seed 540000+）与训练库 seed 4000–18500 完全不相交，且训练集里 `VideoRepick` 只有 easy/medium/xhard、没有 test split 里的 hard 档。因此：
-
-- budget 160 在 1300 步下零截断的**充要条件是评估 `es ≤ 1296`**；
-- 训练集实测上界 1152，裕度 144 帧（12.5%），唯一风险线是 BinFill hard（训练 es 578–1152）；
-- **新增预检 `EVAL_ES_BOUND`（起跑前、无 GPU）**：遍历 4 任务 × 全部 test 集，只做 `EnvRunner.make_env(i)` + `get_init_obs()`（无策略、无 GPU，共 200 次 `env.reset()`），收集 es 分布，判定行 `EVAL_ES_BOUND=PASS tasks=4 episodes=<n> es_max=<m> budget=160 headroom=<160 − k_eval_max>`；把「es 不可预知」从赌变成测，`headroom < 0` 即回到本节重定 budget。
-- **`es ≥ 1297` 的真实后果（第四轮订正，比第三轮写的「该集记 error」严重得多）**：raise 点唯一，在 `FrameSampMemory._prepare_motion`（`_encode_ready_windows` **不做上限检查**，超限的集会先白编一堆窗再在第一次 infer 时炸）；服务端 `websocket_policy_server._handler` 发回 traceback、关连接后 raise，server 进程存活；但 `examples/robomme/eval.py::evaluate` 的控制流是——episode 异常只写 `"error"` 后 `if success_flag == "unknown": … return` 整轮提前返回；只要 progress 里出现过一个 `"error"`，收尾的 `success_rate = sum(...)` 混入字符串抛 `TypeError` 被吞、`log.json` 永不落盘、外层 `while not os.path.exists(...)` 把全部任务重跑一遍，且续评跳过判据用 `str(episode_id)` 而运行中写的是 int 键 ⇒ 重跑一集也不跳。代价是几十 GPU·小时白跑且拿不到成功率。评估计划另起时须先修 `success_flag` 作用域与 `success_rate` 对 `"error"` 的处理，或把超 budget 的集显式降级；`EVAL_ES_BOUND` 是它的前置门。
-- 评估口径或任务集变更时须按第二部分 C 节的式子重核。
-
-**代价栏**（初稿写的「只是多 16 个被 mask 的 K/V 位」是错的，已删）：K/V 长度 512 → 672（+31%），`MemoryAttention` 在 18 层里每层都对整条 mem_seq 做 K/V 投影、`sample_actions` 每个去噪步再算一遍，且 remat 策略是 `nothing_saveable`（反向要重算）——但按第四节 4.3 o 行推算，这一项折合每集只有约 +9 ms，训练步时里也是毫秒级，**瓶颈在数据路**（第三节）。真正的代价是语义上的：query 与最后一个真实 token 的 RoPE 间距 `rope_gap = budget − k` 会逐样本在 **19..154** 间跳动（本库 `k` 最小 6、最大 141；第三轮称「gap 只要非 0 分布总变差就已饱和在 ≈ 0.4」，该数字待 `ROPE_LEN_EFFECT` 重取），这是一个与内容无关的旁路信号，**budget 取得越大该 `rope_gap` 的均值与方差越大**——所以 176 并非免费保险。
+**评估集**：最后一列度量的是训练集外推（1300 步下最大 151 ≤ 160），评估集走新 seed、es 不受训练 manifest 约束。零截断的充要条件是评估 `es ≤ 1296`；训练集上界 1152、裕度 12.5%，唯一风险线是 BinFill hard。**起跑前用 `EVAL_ES_BOUND` 实测**（200 次 `env.reset()`，无 GPU），把赌变成测。`es ≥ 1297` 的真实后果不是「该集记 error」而是整轮评估中止并触发全量重跑，评估计划另起时须先修评估脚本的错误处理。推导备注（填充率定义、τ_max 修正、评估脚本控制流）见 I.6。
 
 ### 八、怎么证明没改坏
 
-**先说口径，再说每一项**。本节按「A 关闭态不能变 / B 旧东西还能用 / C 新表对不对 / D 开启态对不对 / E 秒级 CPU 单测 / F 跑完后」六组、12 个 V 项一个不漏，每项五层：证什么 → 怎么证（命令、夹具、档位内联）→ 判定行（标「实测」= 既有工具原样输出并给产出者，或「新写」= 本轮定义、须先落地自测）→ 耗时 / GPU / 留档 → 不过怎么办。`AGENTS.md` 第 18 条的两块划分放在本节末尾单独说，不再与六组分类叠着写。命令级细节在 F 表，本节内联的是读者不翻代码就能核对的那部分。
+**六组、12 项，每项一句话讲证什么、为什么；命令与判定行全在 F 表（每行标「实测」或「新写」），每项五层叙述在 I.7。** 本轮承诺的是实现等价与可复现，不是因果归因；「motion 有没有用」由消融臂回答。
 
-**两条贯穿全节的纪律**
-- **两侧源码身份必须机器核对**（第四轮 P1）：V1 / V6 / V7 三个比较器**都不比 `git_head`**（`compare_fixture_dumps.py::compare` 不读 `DUMP_MANIFEST.json` 的 `git_head`；`compare_fixed_grad.py::compare` 只比 `schema / seed / fsdp_devices / xla_flags / environment` 与 `history_config_sha256`，不比 `source["head"]`；`compare_baseline.py` 同），两侧误跑在同一 commit 时三项全绿。所以 2a / 2d 各记 `git rev-parse HEAD` 与 `git status --porcelain` 入留档，对拍前统一 `jq` 断言两侧 `.git_head` / `.source.head` / `.start_head` 等于预期 SHA、`start_status` 为空，并显式断言 `$BASE != $CAND`。
-- **FAIL 先分流再处置**：`reason=运行口径不同：…`、白名单 raise、目录已存在这类 harness 失配先排查；只有 `SAMPLE_RAW_EXACT` / `INIT_EQ` / `GRAD_EQ` / `STATE_DIGEST` 这类**数值项**失配才走第九节 2d 的 revert，不得先改判据。
+**A. 关闭态：改前 vs 改后一个比特都不能变**（三项都在旧库小档位上证，生产档位属推论——关闭态下本轮改的代码大多根本不执行）
+- V1 dataset 交付逐位：同一批 3,200 样本改前改后逐字节比，排除交付层被波及。
+- V6 定点梯度逐位：同一固定 batch 的单步梯度逐叶逐字节比，排除数值路径被波及。
+- V7 100 步守卫：真训练 100 步逐步 loss / 参数摘要 / 输入摘要逐字节比，排除累积差异。这是 `AGENTS.md` 第 18 条第二块唯一一项。
+- 两侧源码身份三个比较器都不核对，必须人工断言；FAIL 先分辨是 harness 失配还是数值失配，数值失配才回滚。
 
-#### A. 关闭态：改前 vs 改后一个比特都不能变
+**B. 旧东西还能用**（V2 三条）：旧表能读并解析出历史契约；旧 YAML + 旧表的交付改前改后逐位不变；历史 run 快照真走一遍 policy 构造（起 stub sidecar、不占 GPU）。三条能过的前提是第五节的 schema 不升版、三新键按 layout 兜底、在线守卫按对放行。
 
-**口径行（第四轮补，之前读起来像「在生产配置上证明了」）**：三项都在旧库小档位上证——V1 用 400ep 旧库 8×8 档、V6 用 8 帧夹具 `c8-b` 2 卡 b8 fsdp2、V7 用 2 卡 b8；**生产 4 卡 b128 + 1600ep 新库上的关闭态等价属推论、不是实测**。推论成立的理由：关闭态下本轮改的代码（`MotionMeta.load` / `parse_index` 的 layout 查表、`FrameSampDataset.__init__` 的三态判定、`ref_npy_dataset` 守卫）大多根本不执行（`MotionMeta.load` 只在 motion 开启时调），能执行到的只有 `motion_store` 模块级 import 守卫与 `_NONE_KEYS`。所以这三项证的是「模块可 import + 关闭态交付 / 初态 / 梯度 / 前 100 步逐位不变 + 四键恒 None」；本轮新逻辑的覆盖来源逐项点名：旧表读取 = V2①②③、网格公式与边界 = E 组的 A8 离线边界用例表、新表交付 = V3 + V4。
+**C. 新表本身对不对**（V3，建库侧）：输入重锚 → Wan → encode → pack / verify → oracle 独立重算（encoder 全量逐位、VAE 抽样只缩前向）→ 账目五项。本轮 D1 不跑，其「像素同源」位由输入重锚顶替。
 
-**V1 关闭态 dataset 交付逐位**
-- 证什么：同一 3,200 个样本 / 200 个 batch 的 dataset 交付改前 vs 改后逐字节相同，排除交付层被波及。
-- 怎么证：`dump_fixture_samples.py` 2a / 2d 各一次 + `compare_fixture_dumps.py`。库 `4task-motion-400ep/framesamp-8x8`（新库 `exec_start_idx` 全 ≥ 100，`fixture_per_step` 找不到 `es=0` 的 episode 必 raise）；环境 `DTYPE_DUMP_DIR`（两侧各一空目录）/ `DTYPE_DUMP_GIT_HEAD` / `DTYPE_DUMP_MODE=both` / `DTYPE_DUMP_ARRAYS=1` / **不设** `DTYPE_DUMP_LIMIT` / `JAX_PLATFORMS=cpu`；YAML `perceptual-framesamp-modul-8frame-8x8.yaml`（白名单已在 1b 放行）。
-- 判定行（实测，产出者 `compare_fixture_dumps.py`）：单侧 `DUMP_DONE samples=3200 batches=200 out=<dir>`；对拍 `SOURCE_IDENTITY=PASS episodes=400 samples=101066` / `FRAME_INDEX_EXACT=PASS … max_frames=8` / `SAMPLE_RAW_EXACT=PASS samples=3200 per_step=200 mismatches=0` / `BATCH_RAW_EXACT=PASS batches=200 mismatches=0`。失败是抛异常 + 退出码 1，无 FAIL 行。
-- 耗时 / GPU / 留档：CPU；> 5 min，tmux `mv2-v1`，留档 `docs/training-doc/mv2-v1-dump/`。
-- 不过：按开头分流；`SAMPLE_RAW_EXACT` / `BATCH_RAW_EXACT` 失配才 revert。
+**D. 开启态新东西对不对**
+- V4 交付逐位：dataloader 交付的 motion 行与表字节逐位比（复用现成的 `hand_calc_8frame.py`），样本集写死——1,600 冷启动、1,600 首 exec 窗、32 个 k≥140、16 个补帧档。第三轮只有计数、没有比较谓词，是 P0。
+- V5 接线正确：padding 塞垃圾不影响 loss 与全部可训练参数梯度、motion 内容变了 loss 必变、4 叶有梯度、次序有效；带确定性探针（仓库有过同类叶不确定的实测）；VLM 主干用 `gemma_150m` 替身。
+- V8 开启态 A/A：同一命令跑两次 100 步逐位可复现（含四键摘要），并确认 4 条 motion 叶 100 步内确有更新。开启态没有旧链路，第 18 条第二块不适用，登记为盲区。
+- V-online 三段（方案 B）：① 在线装配 33 帧 sha vs 离线表 sha，全部 71,316 窗零 GPU；② stub 档全 1,600 集比起点集合 / 时间码 / 次序；③ 真 encoder 只跑全部 1,600 补帧窗 + 必含集。承诺口径原话在 F 表。
+- V9 4 卡 20 步 smoke：跑通、参数树 65 叶精确匹配、真实 ckpt 走生产口径加载、budget 跨源一致、norm_stats 未变。
+- V10 起跑 preflight：30 项，其中 5 项 motion 检查的期望值由 runner 显式传参。
 
-**V6 关闭态定点梯度逐位（单步、固定夹具、不启动训练）**
-- 证什么：同一固定 batch 的单步梯度改前 vs 改后逐叶逐位相同，排除公式参数化改动波及关闭态数值。
-- 怎么证：`single_step_grad_fixed.py` ×2 + `compare_fixed_grad.py`。夹具 `DTYPE_BATCH_FIXTURE_DIR=v1-store/fixtures/8x8/grad/c8-b`（8 帧档、12 个数组键 + 4 个 `none` motion 键，满足工具「必须恰好 12 数组键」的断言；`m8-*` 是 16 键会 raise）；`--batch-size 8 --fsdp-devices 2 --seed 42 --model.history-config perceptual-framesamp-modul-8frame-8x8.yaml`；`XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'`；`DTYPE_GRAD_DIR` 预先不存在；`unset DTYPE_BASELINE_CHECKSUMS`；`DTYPE_SOURCE_COMMIT=$BASE` / `$CAND` + porcelain 为空。**硬约束（第四轮）**：比较器对 `environment` **整体等值、无白名单**（含 `cuda_visible_devices` 与 `uv_lock_sha256`），故两侧必须 `export CUDA_VISIBLE_DEVICES=4,5`、2b 禁止 `uv add`（`uv.lock` sha 三处各记一次入留档）；确需换卡须重跑 2a 而非放宽比较器（`0908` 计划记 2026-09-04 实际发生过跨卡 gate FAIL）。该工具把关的是 `_CONFIGS` 与 `main()` 的 `raise ValueError("只接受 modulation 关闭态两档配置")`（不是 `_EXPECTED_HISTORY_CONFIGS`），modul YAML 已在其中、无需改。
-- 判定行（实测，产出者 `single_step_grad_fixed.py` / `compare_fixed_grad.py`）：单侧 `FIXTURE=PASS kind=… keys=12 batch=8`（×3）/ `INIT_PARAMS=PASS leaves=<N>` / `GRAD_KIND=PASS kind=…`（×3）/ `GRAD_DONE kinds=3`；对拍 `INIT_EQ=PASS leaves=<N> mismatches=0` / `GRAD_EQ=PASS kinds=3 leaves=<N> mismatches=0`。
-- 耗时 / GPU / 留档：约 15 min，GPU 4,5；留档 `docs/training-doc/mv2-v6-grad/`。
-- 不过：`reason=运行口径不同：environment` 是 harness 失配先排查；`INIT_EQ` / `GRAD_EQ` 数值失配才 revert。
+**E. 秒级 CPU 单测**：V0 lr 逐步相同、`INIT_COMMON`、`ROPE_LEN_EFFECT`、A8 离线边界用例表（驱动全部 10 处独立实现）、`EVAL_ES_BOUND`。
 
-**V7 关闭态 100 步守卫（第 18 条第二块，唯一一项）**
-- 证什么：真训练前 100 步，逐步 loss / 参数摘要 / 输入摘要改前 vs 改后逐位相同，排除多步累积差异。
-- 怎么证（第四轮补全，第三轮只写了 `bench_train_steps.py` 一步、照写跑不起来）：驱动 `scripts/training/g0/run_2gpu_epoch_bench.sh`，一行式照 `docs/training-doc/aws-t3-closed-s100/launch.md`，显式给 `STEPS=100 SAVE_INTERVAL=25 EXTRA_DIGEST_STEPS=99 WORKERS=4 HISTORY_CONFIG=perceptual-framesamp-modul-8frame-8x8.yaml EXP_NAME=<run> RUN_TAG=<tag> BENCH_GPUS=4,5 DATASET_PATH=v1-store/datasets/4task-motion-400ep/framesamp-8x8 XLA_FLAGS='…'`（驱动默认 `DATASET_PATH=${GL_DATASET}=4task-gl` 本环境不存在；`BENCH_ROOT` 写死 `v1-store/bench/2gpu-epoch-bench`，产物落 `<BENCH_ROOT>/<RUN_TAG>`；驱动自带第三处 history config `case` 白名单，1b 一并放行；驱动的 `SAVE_INTERVAL` / `EXTRA_DIGEST_STEPS` 会转成工具读的 `BENCH_DIGEST_INTERVAL` / `BENCH_EXTRA_DIGEST_STEPS`）。完整链路：`check_baseline_env.py dump`（两侧）→ `manifest`（2a 侧，产 `BASELINE_MANIFEST.json`，**缺它 `BASELINE_ENV` 恒 FAIL**）→ `check --base … --steps 100 --batch-size 8`（2d 侧）→ bench（两侧）→ `project_scalars.py`（两侧，产 `scalars_hex.tsv`）→ `compare_baseline.py`。摘要步 `{0,25,50,75,99}`、输入摘要步 `{0,1,2,25,50,75,99}`：state 族 = 步 0 强记 + save 调度经 gate 过滤，batch 族恒含 `{0,1,2}` 与末步（第三轮说「`[0,1,2,24,49,99]` + rows=6 任何参数下都产不出」是误判——那正是 `t8-c8-guard-s100` 用 `BENCH_DIGEST_INTERVAL=1000` + `EXTRA=1,2,24,49` + `--save-interval 1` 的实际产出）。
-- 判定行（实测，产出者 `compare_baseline.py` / `check_baseline_env.py`）：`BASELINE_ENV=PASS` / `SCALARS steps=100 keys=5 hex_mismatch_steps=0` / `INDEX_SEQ=PASS n=<共同前缀长度>（≥ 800，含 prefetch 余量；同档位历史实测 872，不是常量）` / `STATE_DIGEST rows=5 mismatch=0` / `BATCH_DIGEST rows=7 mismatch=0` / `BATCH_DIGEST_CANONICAL rows=7 mismatch=0` / `CANON_CHECK=PASS steps=7` / `DET_CHECK=…`。汇总（新写，`finish_check.py` 本轮定义）：`INDEX_TRAIN=PASS n=800 recorded_n=<n>`（`base_indices[:800] == cand_indices[:800]`）与 `GUARD_GRAD_100=PASS scalars_steps=100 index_n=800 batch_digest_rows=7 state_digest_rows=5`。**两个 800 来自不同工具、含义不同，不可统一成一个数。**
-- 耗时 / GPU / 留档：30–35 min × 2，GPU 4,5，tmux `mv2-bench-base` / `mv2-bench-cand`；留档 `docs/training-doc/mv2-v7-guard-base/` 与 `mv2-v7-guard-cand/`（先把 `metrics.jsonl` / `*digests.jsonl` / `param_checksums.jsonl` / `env.json` 拷入 `records/` 再删 run 产物，第 6 条）。
-- 不过：同 V6 分流。
+**F. 跑完后**：motion 全遮消融评估 + 基线 59999 评估（下一轮）。
 
-#### B. 旧东西还能用（V2，三条）
-
-- **V2① 旧表可读**：`MotionMeta.load` 两张旧表（40ep rows=772、400ep rows=6832，实测 `schema=1`、`layout="motion-768-grid16-v1"`、无三新键）且解析出 `LayoutSpec(demo_min_real=33, exec_min_real=33, demo_tail_pad="none")`。**能过的前提是第四轮两处修正**：`INDEX_SCHEMA` / `META_SCHEMA` 不升版（A1）、`store_meta` 三新键按 layout 分档兜底（A1）。判定行（新写，`legacy_regress.py`）`LEGACY_LAYOUT=PASS tables=2 rows=772/6832 spec=(33,33,none)`。秒级。
-- **V2② 旧 YAML + 旧表交付逐位**：**改成 2a 与 2d 各跑一次 `dump_fixture_samples.py` + `compare_fixture_dumps.py`**（第三轮写「2d 跑新写的 `legacy_regress.py`」，改前对照物不存在）：`_EXPECTED_HISTORY_CONFIGS` 已含 `perceptual-framesamp-context-motion.yaml`，40ep 库同时有 `framesamp` / `motion` 两套产物且清单含 `exec_start_idx == 0` 的集；N 沿用 V1（`per_step=200` + 默认 `N_RANDOM`）。判定行（实测）同 V1 四行；汇总（新写）`LEGACY_YAML=PASS`。这条是唯一覆盖「旧 YAML 两键同缺 → `(33,"none")` 兜底 → 旧表 spec 相等」分支的交付层判据。> 5 min，tmux `mv2-v2`，留档 `docs/training-doc/mv2-v2-legacy/`。
-- **V2③ 历史 run 快照真走 policy 构造**：`v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/5000` 走 `create_trained_policy(..., motion_stub=True)`。**表述订正**：`motion_stub=True` 仍会 `Popen` 一个 stub sidecar 子进程（`uv run --project scripts/dataset/wan --no-sync python motion_sidecar.py --stub`）并走握手，只是不加载 encoder、不占 GPU；前置 `ls v1-store/venvs/wan/bin/python`。该快照 `history_config.resolved.yaml` 的 `motion:` 节实测无两新键 ⇒ 只能走 `(33,"none")` 分支，**在线守卫必须放行这一对**（E 节；第三轮的硬等值 `repeat_last` 会让这条必 FAIL）。该目录不得改动任何文件。判定行（新写）`LEGACY_POLICY=PASS spec=(33,none) stub=1`。秒级。
-
-#### C. 新表本身对不对（V3，建库侧，第九节步 3 / 4）
-
-链路与判定行全在 B 节，这里只给读者一条线：输入重锚 `INPUT_REANCHOR=PASS files=4`（4 个 H5 内容 sha256 == 帧库 finalize 时的 `input_manifest.json`）→ Wan `STAGE_DONE stage=wan workers=8 items=3200 skipped=0` → encode（同式）→ pack / verify `PACK_MOTION_DONE=1` / `VERIFY_MOTION=PASS scanned=71316 mismatches=0` → oracle：D3 encoder **全量** `ENCODER_BITEXACT=PASS compared=71316 mismatches=0`；D2 VAE **抽样只缩前向**（补帧窗全部 + 其余 10%，段集合 / 行数 / 逐行 m·offset / 帧 sha 四道检查全量）`ORACLE_VAE=DONE metadata_rows=71316 windows=<抽样数> …` / `WAN_BITEXACT=PASS compared=<抽样数> padded_covered=1600 frame_mismatches=0 latent_mismatches=0`——**比较器必须带与 oracle 逐字相同的 `--sample-spec`**，自算抽样集合与 `sampled_windows.json` 双向差集为 0、`compared == len(自算集合)`（A7；第三轮 B 节命令漏了这个参数，比较器只能退回照单比对）→ 账目**五项**（第三轮写「六项」是计数错）：`A6_SAMESOURCE=PASS` / `A7_BYTES=PASS` / `A9_INDEXSET=PASS samples=2100 cold=1600 mismatches=0`（**只在步 4 跑一次**，D 组 V4 引用其判定行、不重跑）/ `A10_ROWS=PASS rows=71316 exec=35403 demo=35913 episodes=1600`（`--expect-*` 写死、不取 `motion_index.json`；第四轮反驳者用 manifest 独立复算 demo 35,913 + exec 35,403 = 71,316，按任务 BinFill 31,308 / VideoRepick 18,205 / RouteStick 12,626 / VideoUnmaskSwap 9,177，与本文吻合）/ `A11_PAD=PASS segs=3200 rows=71316 padded=1600 set_diff=0`。本轮 **D1 不跑**（帧库不重建），其「像素同源」位由 `INPUT_REANCHOR` 顶替；`D1–D3` 与 `a*` 代号的出处是正本 `docs/motion-memory.md` 7.5 节与第八章。
-
-#### D. 开启态新东西对不对（第九节步 6）
-
-**V4 开启态 dataloader 交付逐位（第四轮从「只有计数」改成逐位判据，P0）**
-- 证什么：dataloader 交付的 `motion_emb` 每一有效行与 `motion_token.f32.bin` 对应行逐字节相同、`motion_pos` 取对列、`motion_mask` == `arange(budget) < k`、`mem_order` 与独立手算置换相同、填充区全零。第三轮的 `V4_COVER` 全是计数字段，取行偏移错一行 / pos 切错列 / `_pad_motion` 错位 / `mem_order` 置换错向都照样 PASS。
-- 怎么证：**复用并参数化 `scripts/training/tests/hand_calc_8frame.py`**（它就是「交付 vs 表字节 + `mem_order` 手算」：`f.seek(row*768*4)` + `item["motion_emb"][i].tobytes() != f.read(768*4)` → raise，再比 `motion_mask` 与 `mem_order != expected_order(...)`；第三轮把它列成「必改但本轮不跑」并另新写工具重造同一判据）。三处必改：`for es in (0, 66, 114)` 在新库 StopIteration（es 最小 100、es=66 零集）→ 按 `(es−17) mod 16` 残差分层现挑；YAML stem 写死 context → 参数化到 modul-motion；两处 `96` 字面量 → `budget`。样本集**写死**：冷启动 `t==es` 全取 1,600、首 exec 窗 `t==es+32` 全取 1,600、`k≥140` 的 32 个全取、16 个残差档各取 ≥ 2（分布 r=0..15：55/186/49/136/49/112/54/365/52/126/55/86/34/129/39/73）。
-- 判定行：`HAND_CALC_8FRAME=PASS samples=<n> mismatches=0`（实测，既有）+ 新写 `V4_COVER=PASS cold=1600 first_exec=1600 kmax=141 kge140=32 pad_r=16/16`——四个数做**等值断言**（第三轮留成 `<n>` 占位符，任何 n 含 0 都 PASS）；`pad_r` 是覆盖统计、不构成交付判别，补帧正确性举证在 C 组的 `A11_PAD` 与 D2 / D3。
-- 耗时 / 留档：CPU，> 5 min，tmux `mv2-v4`，留档 `docs/training-doc/mv2-v4-deliver/`。
-
-**V5 模型侧接线正确性（modulation）**
-- 证什么：同一 budget 下 padding 内容（有限值，1e3 量级正态）不影响 loss 与**全部可训练参数**的梯度；真实 motion 内容改变必改变 loss；4 条 motion 叶在有 motion 时梯度非零；`mem_order` 次序经 `k_position` 改变 cross-attn logits（`ORDER_EFFECT` 在 modulation 下只证这一点，比 context 弱）；行置换不变性。`ZERO_MOTION_EQUIV`（全 mask ⇒ 等价关闭态）在 modulation 下**不适用**——比的是 `mem_len=672` 与 `512` 两个模型，标 `LEN_EQUIV_NA` 并写明 RoPE 原因（第四节）。
-- 怎么证：`motion_gates_model.py` 六层适配见 F 表。**模型档已拍板用乙**（用户 09-17）：`paligemma_variant="gemma_150m"` + `action_expert_variant="gemma_300m"`——modulation 记忆路只经 action expert 流，`MemoryAttention` 的 4 头 / 256 头维 / 1024 宽 / 18 层、真 YAML、真库、真 budget=160 全为真；不用甲档（`gemma_2b` 主干约 2.6 B 参数、fp32 约 10 GB + 编译，记忆路一个字节都不经过它）；留档写明「VLM 主干用 `gemma_150m` 替身」。**确定性纪律（第四轮 P0）**：照抄 `cmd_t3mechanism` 已验证的四项——R≥3 同 obs 探针、不确定叶单列并排除（硬闸保留「loss R 次逐位相同」与「不确定叶含 `mem_encoder` / motion 叶即 FAIL」）、比较集合取 `get_freeze_filter()` 的补集（非 lora 档 `PathRegex(".*img.*")`）、挂与 V6 同一组 `XLA_FLAGS`；正本 8.3 记 A100 上 `['PaliGemma']['llm']['embedder']['input_embedding']` 叶曾不确定（09-07 后未复现，属间歇），不加探针会在与 padding 无关的叶上误报 FAIL。**显存纪律**：逐叶比较改流式（每叶算 sha / max_abs 后立即释放，禁止同时持有两棵完整梯度树；同文件已有「ema / opt_state 在初态校验后即释放，否则第二次 `value_and_grad` OOM——2026-09-03 实测 44 GB」先例）。样本 spec 分两类：库内可得 `m` 中位与 `m=max=141`（写死 `BinFill ep367, es=1152`）；必须合成 `m=0`（照 `obs_empty`）与 `m=160`（`ds[i]` 返回后改字典）——新库真实 `m ∈ [6, 141]`，0 与 160 只能合成（第三轮写「四个 spec 都按数据集真实交付挑」，按字面 `_fixture_batch` 必 `SystemExit`）。
-- 判定行（全部新写或改口径）：`MASK_INVARIANCE=PASS` / `GRAD_LEAK=PASS` / `ORDER_EFFECT=PASS` / `ROW_PERM_INVARIANCE=PASS max_abs_diff=…`（代码里现只 `fails.append`、无 `=PASS/FAIL` 打印，须加）/ `PAD_CONTENT_INVARIANCE=PASS det_probes=3 nondeterministic_leaves=[] excluded=0 covered=<n>/<m>` / `LEN_EQUIV_NA`。「20 步内 4 叶参数值确有更新」这条**从 V5 移到 V8**（V5 只走 `jax.grad`、不落优化器；第三轮写了承诺没写产出者）。
-- 耗时 / GPU / 留档：1 张 GPU（4），tmux `mv2-m4`；> 5 min 留档 `docs/training-doc/mv2-v5-gates/`。
-
-**V8 开启态 A/A 可复现 + motion 叶确有更新**
-- 证什么：同一侧同一命令跑两次 100 步逐位可复现（含四键的 batch 摘要），且 4 条 motion 叶 100 步内参数值确有变化。V8 是 A/A，不能支持「新旧等价」——开启态没有旧链路。
-- 怎么证：V7 同一驱动 ×2；YAML `perceptual-framesamp-modul-8frame-8x8-motion.yaml`（三处白名单已放行）；`DATASET_PATH` 指新库 `4task-v2-1600ep-604f16da/framesamp-8x8`，`MMEVLA_MOTION_STORE` unset（表路径唯一来源是 YAML `store_path`）；GPU 4,5；`bench_train_steps.py` 本就写 `param_checksums.jsonl`。
-- 判定行（实测，产出者同 V7）：`SCALARS steps=100 keys=5 hex_mismatch_steps=0` / `INDEX_SEQ=PASS n=<…>` / `STATE_DIGEST rows=5 mismatch=0` / `BATCH_DIGEST rows=7 mismatch=0` / `BATCH_DIGEST_CANONICAL rows=7 mismatch=0` / `CANON_CHECK=PASS steps=7`（第三轮漏了后三行——`_install_batch_digest_recorder` 的 `per_key` 对每键落哈希，开启态下正是四键的真实字节摘要）。新写汇总 `AA_100=PASS scalars_steps=100 index_n=800 batch_digest_rows=7 state_digest_rows=5`（字段集与 `GUARD_GRAD_100` 相同），汇总器另断言两侧 `batch_digests.jsonl` 里 `motion_emb` / `motion_pos` / `motion_mask` / `mem_order` 的 `per_key` 逐步相等且**均非 null**（关闭态四键为 null，同时反证 YAML 真开了 motion）；新写 `MOTION_PARAMS_UPDATED=PASS n=4 first_step=0 last_step=99`（从 `param_checksums.jsonl` 比 4 叶 sha 是否随步变化；`t3_smoke.py` 的同类判据写死 `_EXPECT_N_LEAVES=(193,177)` / `_EXPECT_N_KEYS=(16,12)` 是 32 帧 context 口径，不复用）。
-- 耗时 / GPU / 留档：30–35 min × 2，tmux `mv2-aa`，留档 `docs/training-doc/mv2-v8-aa/`。
-
-**V-online 在线 vs 表（方案 B「分层解耦」，用户拍板；三段）**
-- 证什么：① 在线侧对**全部 71,316 窗**装配出的 33 帧与离线逐位一致（含 1,600 个补帧窗的补帧数与补帧源帧 `es−1`）；② **全 1,600 集**的起点集合 / `motion_pos` / `mem_order` 与 dataset 四键逐位一致；③ 真 encoder token 对**全部 1,600 个补帧窗 + 必含集**逐位一致。为什么这样拆：本轮唯一新增的机制是 demo 段 `min_real` 33→17 + `np.repeat` 补帧，风险落在「输入 33 帧是否装配正确」；encoder 的「同输入 ⇒ 同输出」已被反复确认（第六节列了五条证据），换 ckpt 后只需小样本重取。第三轮的「按 episode 抽 10%」实算（seed=0、`% 10 == 0`）漏掉 k 最大的 g=367 与全部 24 个 `es ≥ 1000` 的集，且判定行写死 `episodes=160` 与取模规则不相容（恰中 160 概率约 3.3%）。
-- 怎么证：`compare_online_motion.py` 三档，全部前置：a11 与 oracle 四道全量检查已 PASS（① 以离线 metadata 为真值）、E 节的 stub 帧号校验放宽已落地（②）。
-  - ① `--assembly-hash $LIB/wan-latents`：在线 `_encode_window` 产出的 `np.ascontiguousarray(np.stack(frames))` 算 `hashlib.sha256(arr.tobytes())`，与离线 `wan-latents/*.metadata.json` 每行已有的 `input_frames_sha256`（同一 `wan_common.sha256_bytes` 口径；A3 保证补帧窗也对最终 33 帧算）逐窗比；同时断言「离线 `pad_frames>0` 的行集合」== 「在线按 es 独立推出的补帧窗集合」。**零 GPU**；h5 读 1,192,918 帧 + 71,316 次 6.3 MB sha，8 片（切分写死 `g % 8`，连续切块实测把挂钟拉到 2.08 倍）约 15–20 min。
-  - ② `--stub`：sidecar stub 档（不加载模型、不 import torch、帧号写进像素解回），全 1,600 集，token 判据 SKIP、只验起点集合 / pos / order；零 GPU。
-  - ③ 真 encoder：给 `motion_enc_fn` 外包一层路由——选中窗 → 真 sidecar，未选中 → 直接返回离线表行（`framesamp_memory.py` 的 `motion_enc_fn` 是 `__init__` 形参、`_prepare_motion` 只查 `f in self._history_feats_motion` 不关心来源），装配与次序检查不受影响（第三轮说「窗级抽样一秒也省不下来」只是现行工具把真 sidecar 直接当 `motion_enc_fn` 传进去的后果，不是链路性质）；选中集合 = 全部 1,600 个补帧窗（每集恰一个、由 `seg_len` 直接推）+ 必含整集（g=367；`es ≥ 1000` 的 24 集里 ≥ 3 条；16 个 `(es−17) mod 16` 档各 ≥ 1 条；四任务各 ≥ 1 条）。8 卡 `g % 8` 分片各起一个 sidecar，`--out v1-store/reports/motion/p5_online_v2_1600ep.shard<i>of8.json`（默认路径已有 40ep 历史结果），主进程显式 `export JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES=`，**必须传 `encoder_run_dir`**（A9）；每片约 200 个补帧窗 × 1421.5 ms ≈ 284 s + 必含集，**8 卡约 7 min**。报告把 `compared_real` 与 `assembly_checked` 分列，注入行不计入 token 判据。
-  - 比较器加固（第三轮五条保留 + 第四轮三条）：任何模式下已检测到的失配必须清零、`SKIP` 只准出现在打印不进 verdict；四处 `np.array_equal` 改先核 dtype / shape 再按 `uint8` 视图比字节（抄 `motion_gates_model._bytes_equal`）；两个反向用例（stub token 改错常数、`+0.0` 换 `-0.0`）确认非零退出；秒级 CPU 前置门（真 YAML → `get_history_config` → 真 `MME_VLA_Policy.__init__` 注入 stub `motion_enc_fn`，断言 `_motion_cfg` 键集合与值（含 `budget == 160`，即在线侧 budget 的落点），连跑两条 es 不同的集、中间真 `pol.reset()`，断言新 `mem_buffer` 是新对象、补帧窗数正确）；`unset MMEVLA_MOTION_STORE` 用真 YAML 解析路径断言 `realpath == $LIB/motion`。第四轮新增：**shard 输出加结构化字段** `rows_seen`（排序列表或其 sha256 + 计数）/ `start_ok` / `pos_ok` / `order_ok` / `n_compared` / `n_steps` / `padded_covered` / `mismatch_total`（不截断；现行只落 `lines` 文本与前 200 条 mismatches），`aggregate` 只消费这些字段、禁止解析 `lines`，任一字段缺失即 FAIL 不按 True 兜底；**期望侧独立**：窗数期望用打包器写进 `motion_index` 的 `SegmentInfo.num_grid` 求和（不从在线遍历现算，否则等号两侧同源），`padded_covered` 两侧各算一遍（在线按 es 推、离线取 `pad_frames>0` 的行）断言集合相等；**分片完整性** `SHARD_SET`。
-- 判定行（全部新写或改口径）：① `ONLINE_INPUT_SHA=PASS windows=71316 padded=1600 mismatches=0`；② `ONLINE_START_SET=PASS` / `ONLINE_POS=PASS` / `ONLINE_ORDER=PASS`（stub 档、全 1,600 集）；③ 各片 `ONLINE_ENC_BITEXACT=PASS compared_real=<n> mismatches=0`、`PROVENANCE=PASS`、`YAML_STORE_PATH=PASS`、aggregate 后 `ONLINE_STRATA=PASS padded=1600/1600 kmax_ep=367 es_ge1000=<n≥3> pad_r=16/16 per_task_min=<n≥1>`、`SHARD_SET=PASS shards=8 eps=1600 disjoint=1`；汇总 `P5_ONLINE=PASS episodes=1600 windows=71316 assembly_checked=71316 compared_real=<n> padded_covered=1600 stub=False`。
-- **承诺口径原话（原样写进留档）**：「在线侧 33 帧装配对全部 71,316 窗与离线逐位一致；起点集合 / 时间码 / 交错次序对全部 1,600 集逐位一致；真编码器 token 对全部 1,600 个补帧窗与 <N> 个整集共 <M> 窗逐位一致，其余行由离线表注入、不计入 token 判据。」
-- 耗时 / GPU / 留档：①② 零 GPU 约 20 min（tmux `mv2-vonl-a` / `mv2-vonl-b`）；③ **独占 8 卡**约 7 min（tmux `mv2-vonl-c`，第九节步 6d 单独一档）；留档 `docs/training-doc/mv2-v-online/`。
-
-**V9 4 卡 b128 20 步 smoke（开启态）**
-- 证什么：开启态生产档位跑通且有限；参数树 61 → 65 叶精确匹配（多 `mem_encoder/motion_pos_proj/{kernel (256,768), bias (768,)}` + `mem_encoder/motion_encoder_static/{kernel (1536,1024), bias (1024,)}`）；真实 checkpoint → policy 加载走生产口径；budget 跨源一致；norm_stats 未变。
-- 怎么证：基线 `records/smoke-runner.sh` 同法换 YAML / 配置名 `mme_vla_suite_b128_80k`，tmux `mv2-smoke`，run_name `smoke-m8x8-modul-motion-<UTC>`，GPU 4–7；基线同档实测 5 分 18 秒 > 5 min，按第 17 条完整留档、验完删 run 产物。`check_config_provenance.py` **逐个显式传** `--ckpt <smoke run>/19 --lib v1-store/datasets/4task-v2-1600ep-604f16da --train-config mme_vla_suite_b128_80k --store-subdir framesamp-8x8 --neg-lib v1-store/datasets/4task-motion-400ep --norm-stats <新库 norm_stats.json>`（默认值全指旧库旧 run）；负例臂 `MOTION_STORE_PATH` 判的是报错内容含「绑定的清单不同」，依赖「旧 layout 的表仍能 load 到 `check_same_source` 那一步」——schema 不升版即满足。**新验收器必须新写**，不得沿用 `smoke-m8x8-modul-20260915T054007Z/records/finish_check.py`（硬编码 `motion_enabled is False`、`n_model=n_ckpt=61`、`PREFLIGHT=PASS n=25` / `== 25`、`mme_vla_suite_b128_60k`）。
-- 判定行：`SMOKE20=PASS steps=20 finite=1 exit_code=0`（新写）/ `PREFLIGHT=PASS n=30`（实测）/ `PARAM_TREE_EXACT=PASS … n_model=65 n_ckpt=65 missing=0 extra=0 shape_mismatch=0`（实测）/ `MEM_PARAMS=PASS n=10`（6 modulation 叶 + 4 motion 叶；新写）/ `check_config_provenance.py` **全部五条**（实测；第三轮只列了一条）`NORM_STATS_SAME=PASS` / `LIB_PROVENANCE_MATCH … all_equal=1` / `MOTION_STORE_PATH … guard=raise infer_reads_store=0 same_manifest=1` / `CKPT_PARAM_TREE=PASS … leaves=65 ckpt_has_motion=1` / 观察行 `CKPT_DTYPE_PROFILE` / 汇总 `TIC_L0=PASS`（任一 FAIL 整脚本非零退出）/ `BUDGET_CONSISTENT=PASS snapshot=160 repo_yaml=160 expected=160`（新写、**跨源**：run 内 `history_config.resolved.yaml` vs 仓库新 YAML vs 160。第三轮写的「快照 == dataloader 实际值 == 在线 `_motion_cfg`」三侧在代码里同源自一个 DictConfig、恒等不可能 FAIL，且 smoke 不构造 policy；在线侧 budget 归 V-online 的 CPU 前置门）/ `NORM_STATS=PASS sha256=856c75ea…`（新写）。
-- 耗时 / GPU / 留档：约 6 min + 验收，GPU 4–7，留档 `docs/training-doc/smoke-m8x8-modul-motion-<UTC>/`。
-
-**V10 起跑 preflight**
-- `preflight_train_launch.py`（runner 内，与 train 共用同一 `TRAIN_ARGS`）；`n=25` 的前提是 runner 传 `--run-root`。新增 5 项 motion 检查——**期望值全部由 runner 显式传参**（preflight 只 import 标准库、无 YAML 解析器，第三轮没写期望值从哪来）：`--motion-store` / `--motion-store-meta-sha256` / `--motion-layout`（== `motion-768-grid16-demopad17-v1`）/ `--motion-rows`（== 71316，值来自建库留档、**不从被测 store 现算**，否则等号两侧同源）+ `CHECK_MOTION_ENV_UNSET`（无参，`MMEVLA_MOTION_STORE` 为 unset）。由此 runner 与基线的差异从 8 处变 **9 处**（第三节）。建议再加 `CHECK_MOTION_SOURCE_RUN`（provenance `run_name` 与 YAML `source_run` 一致），把 A6 那条「起跑必 raise」提前到 preflight。
-- 判定行 `PREFLIGHT=PASS n=30`（实测口径，5 项无条件计入）。
-
-#### E. 秒级 CPU 单测（第九节 2b，全部新写）
-
-`GUARD_LR=PASS steps=80000 mismatches=0`（`config.lr_schedule.create()` 在 `range(0, 80_000)` 逐步比 60k 与 80k 两条配置）；`INIT_COMMON=PASS common_mismatches=0 open_only=4`（第四节 4.5）；`ROPE_LEN_EFFECT=PASS tv_144_160=… relL2_144_160=… tv_512_672=… pad_content_diff=0`（第四节 4.5）；A8 离线边界用例表驱动全部 10 处独立实现（`test_guards.py` 新旧两组 + `for mr in (17, 33)`，负例含「旧 layout 带新键 / 新 layout 缺新键 / 三方不同值」）；`EVAL_ES_BOUND=PASS tasks=4 episodes=<n> es_max=<m> budget=160 headroom=<…>`（第七节，起跑前）。
-
-#### F. 跑完后
-
-motion 全遮消融评估（第四节 4.5，用户拍板加入）+ 基线 `59999` 评估（第三节末交接约束，下一轮）。
-
-#### 归因唯一化与两块划分
-
-**归因**：V1 排除交付层、V6 排除单步数值、V7 排除 100 步累积——三项同过的唯一解释是关闭态语义未变；V2 排除旧物被改坏；V3 排除新表本身错；V4 + V-online ① 排除交付与装配错；V5 排除接线错；V8 排除不可复现与 motion 叶不更新。**本轮承诺的是实现等价与可复现，不是因果归因**；「motion 有没有用」由消融臂回答。
-
-**`AGENTS.md` 第 18 条两块划分（第四轮重划）**：第一块（非训练轻量对拍）= V1 / V2 / V4 / V-online；第二块（本机训练梯度一致）= **只有 V7**；V6 单列「单步数值对拍（固定夹具、不启动训练）」；V8 是 A/A 可复现性基线，开启态没有旧链路，**第 18 条第二块对开启态不适用**，本轮以 V8 + V9 + V-online 替代并如实登记为盲区；V0 / V3 / V5 / V9 / V10 不属两块（分别是配置守卫 / 建库对拍 / 模型接线 / 冒烟 / 起跑闸）。**第二块不通过不得宣称改动等价。** 两张链路图（外加第四轮补的在线图）见 H 节。
-
-**判定行标注约定**：F 表每条判定行标「实测」或「新写」。在 `AUDIT_BASE=530e841` 下 grep 零命中、本轮新定义的判定行名：`GUARD_LR`、`INIT_COMMON`、`ROPE_LEN_EFFECT`、`EVAL_ES_BOUND`、`INDEX_TRAIN`、`GUARD_GRAD_100`、`AA_100`、`MOTION_PARAMS_UPDATED`、`LEGACY_LAYOUT` / `LEGACY_YAML` / `LEGACY_POLICY`、`V4_COVER`、`PAD_CONTENT_INVARIANCE`、`LEN_EQUIV_NA`、`ONLINE_INPUT_SHA`、`ONLINE_STRATA`、`SHARD_SET`、`YAML_STORE_PATH`、`A11_PAD`、`A6_SAMESOURCE`、`INPUT_REANCHOR`、`BUDGET_CONSISTENT`、`SMOKE20`、`MEM_PARAMS`、`NORM_STATS`、5 条 `CHECK_MOTION_*`、`GPU_IDLE`。第三轮那句「每一行都已与工具实际输出对表两轮」**只对标「实测」的行成立**。
+**两块划分**：第一块（非训练轻量对拍）= V1 / V2 / V4 / V-online；第二块 = 只有 V7；V6 单列单步对拍；V8 登记盲区；其余不属两块。第二块不通过不得宣称改动等价。链路图见 H 节。
 
 ### 九、commit 与执行顺序：从现在到 80k 起跑
 
-主副本上顺序执行，每个 commit 后立即 push。建库 8 卡全开；**除 V-online ③ 独占 8 卡外**，对拍、smoke、正式 run 用 GPU 4–7（V6 / V7 / V8 钉死 4,5）。
+主副本上顺序执行，每个 commit 后立即 push。建库 8 卡全开；除 V-online ③ 独占 8 卡外，对拍、smoke、正式 run 用 GPU 4–7。tmux 会话名清单、清理纪律、每步的工具链与参数见 G 节与 I.8。
 
-**本轮 tmux 会话名清单**（第 7 条要求先记清单、清理时只按全名逐个 kill；两两之间无前缀关系）：`mv2-wan`、`mv2-encode`、`mv2-pack`、`mv2-oracle`、`mv2-v1`、`mv2-v2`、`mv2-v4`、`mv2-vonl-a`、`mv2-vonl-b`、`mv2-vonl-c`、`mv2-bench-base`、`mv2-bench-cand`、`mv2-aa`、`mv2-m4`、`mv2-smoke`、`mv2-prod`、`mv2-dense`。**清理命令统一写 `tmux kill-session -t =<全名>`**（`=` 强制精确匹配）。第三轮说「`tmux -t` 做前缀匹配，`mv2-prod` 会误杀 `mv2-prod-dense`」把顺序说反了：tmux 先精确名再前缀，**目标会话已结束时**前缀匹配才会命中同前缀的其他会话——所以仍不叫 `mv2-prod-dense`，且一律用 `=`。
-
-| 步 | 做什么 | commit |
-|---|---|---|
-| 0 | 用户确认 `run_name`（V5 模型档已拍板用乙）；`df -h /scratch` ≥ 400 G 才起跑 | — |
-| 1 | 本文入库 | `docs:` |
-| **1b** | **只改验证工具白名单、不触生产链路**（第四轮新增，解 2a 与 2b 的互斥）：`dump_fixture_samples.py` 与 `bench_train_steps.py` 的 `_EXPECTED_HISTORY_CONFIGS` 各加 `perceptual-framesamp-modul-8frame-8x8.yaml` 与 `perceptual-framesamp-modul-8frame-8x8-motion.yaml`；`run_2gpu_epoch_bench.sh` 的 `case "${HISTORY_CONFIG}"` 白名单同加；`ref_npy_dataset.py` 形制闸放开 `integration_type in ("context", "modulation")`。commit + push 后 **`BASE=$(git rev-parse HEAD)`（不写死 sha）**。第三轮把 2a 写成「clean HEAD 跑 V1+V6+V7」物理上不成立：白名单不改 V1/V7 起手 raise，改了 V6 的 porcelain 清洁闸又不过 | `fix:`（取证工具白名单） |
-| **2a** | **在 1b 之后的 clean BASE 取「改前」证**，`DTYPE_SOURCE_COMMIT=$BASE`：V1 dump、V2② dump（`perceptual-framesamp-context-motion.yaml` + 40ep 库）、V6 定点梯度、V7（`dump` + `manifest` + bench + `project_scalars`）；卡号钉 `CUDA_VISIBLE_DEVICES=4,5`；记 `git rev-parse HEAD` 与 porcelain 入留档；产物落 `v1-store/bench/2gpu-epoch-bench/<RUN_TAG>-base/`（V7）与各自 `DTYPE_*_DIR`。留档目录 `docs/training-doc/mv2-v1-dump/`、`mv2-v2-legacy/`、`mv2-v6-grad/`、`mv2-v7-guard-base/`；V7 真起训练进程，run 名记入清单、**先把 metrics / digests / env.json 拷入 `records/` 再删 run 产物**（第 6 / 17 条） | — |
-| **2b** | 实施第二部分 A–E 全部生产代码 + F 节全部验证工具（`legacy_regress.py`、`hand_calc_8frame.py` 参数化、`motion_gates_model.py` 六层适配、`compare_online_motion.py` 三档与 aggregate、`finish_check.py`、preflight 5 项、`eval_rhythm_gates.py` 区间与 `--yaml`）+ CPU 单测（`GUARD_LR` / `INIT_COMMON` / `ROPE_LEN_EFFECT` / A8 边界表 / `test_guards.py` 新旧两组）；此阶段工作区 dirty，**不跑任何带 clean-source 校验的工具**；**禁止 `uv add`**（V6 比较器比 `uv_lock_sha256`） | — |
-| **2c** | **两个 commit**（第四轮拆分，让回滚只碰生产改动）：`commitV10.0: demo 段补帧网格、modulation 接入 motion 与 80k 配置`（A–E 生产链路）→ `commitV10.1: 第四轮验证工具与 CPU 单测`（F 节工具）→ push；记 `CAND=$(git rev-parse HEAD)`；**`git status --porcelain` 必须为空才能进 2d** | `commitV10.0` + `commitV10.1` |
-| **2d** | 取「改后」证并对拍（`DTYPE_SOURCE_COMMIT=$CAND`，卡号仍 4,5）：V1 / V2② compare、V6 compare、V7 `check --base` + bench + `project_scalars` + `compare_baseline`（tmux `mv2-bench-cand`）、V2① / V2③ 秒级。对拍前 `jq` 断言两侧源码身份（第八节开头）。**FAIL 分流**：harness 失配（`reason=运行口径不同…`、目录已存在、白名单 raise）先排查；数值项失配 → `git revert --no-commit <commitV10.0 sha>` + 手写 subject `revert: 撤销 commitV10.0（2d 对拍 <判定行> FAIL）` + push（裸 `git revert` 产出英文无前缀 commit，违反第 11 条；**只 revert V10.0、保留 V10.1 工具**），停下交用户。第二轮规则：`DTYPE_SOURCE_COMMIT` 取 revert 后新 commit、产物目录 / `RUN_TAG` 加 `-r2`；基线证在 `uv.lock` / `packages` / `CUDA_VISIBLE_DEVICES` / GPU 列表不变时可跨轮复用（`compare_fixed_grad.py` 不比 `source["head"]`，但 `environment` 任一变化即 raise） | — |
-| 3 | encoder 换型落盘 + `ASSETS_LOCK.json` 更新 + `test_assets_lock.py` 通过 + 输入重锚（`INPUT_REANCHOR=PASS files=4`） | `fix:`（资产锚点） |
-| 4 | 建库四步（tmux `mv2-wan` → `mv2-encode` → `mv2-pack` → `mv2-oracle`；**Wan 与 encode 之间零 commit**）+ 账目五项；`--raw-dir` 三方断言在 `run_local.py` / `oracle_driver vae` **读完清单后立即做**（A6，不等 5 h GPU 跑完） | — |
-| 5 | 建库留档 `docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/` | `docs:` |
-| **6** | 开启态验证，**串行子步、标卡号、每档结束 `tmux ls` + `nvidia-smi` 确认前一档进程已退**（第四轮 P0：第三轮五项并列在一格、V-online 要 8 卡与表头「用 4–7」冲突）：**6a** V4（CPU，tmux `mv2-v4`）‖ V5（GPU 4，tmux `mv2-m4`）→ **6b** V8（GPU 4,5，tmux `mv2-aa`）→ **6c** V-online ①②（零 GPU，tmux `mv2-vonl-a` / `mv2-vonl-b`）→ **6d** V-online ③（**独占 GPU 0–7**，tmux `mv2-vonl-c`，约 7 min）→ **6e** smoke（GPU 4–7，tmux `mv2-smoke`，run_name `smoke-m8x8-modul-motion-<UTC>`，> 5 min 完整留档）。本步所有工具改动已在 2c 入库 | `docs:` 守卫留档 |
-| 7 | 起跑留档 `docs/training-doc/<run_name>/launch.md`（沿用「起跑前留档不嵌入自身提交 SHA」）；此刻记 `TRAIN_HEAD` 写进 launch.md 正文；同步做 `EVAL_ES_BOUND`（无 GPU，第七节） | `docs:` |
-| 8 | 生成 runner 落 **`v1-store/logs/mv2-prod-runner.sh`（不进 git）**：照抄基线 runner + `launch.actual.json` 的 `env` 前缀，只改第三节那 **9** 处 → **独立占卡闸**（不依赖 runner 内的 `test`——两个基线 runner 的 `body()` 内没有 `set -e`，第 33 行 `test "$(nvidia-smi …)" = "0"` 失败后照样往下走）：`nvidia-smi --id=4,5,6,7 --query-gpu=memory.used --format=csv,noheader,nounits` 求和为 0 且 `tmux ls` 中本轮会话只剩待起的 `mv2-prod`，判定行 `GPU_IDLE=PASS gpus=4,5,6,7 used_mib=0 sessions=<清单>` 写进 launch 留档 → tmux `mv2-prod` → preflight `PREFLIGHT=PASS n=30` → 训练；Monitor 盯日志；**300 步处按第 16 条口径重估 ETA 并回报**，分记 dataloader 等待占步时比例与 step compute | — |
-| **8b** | **起跑后归档**（第四轮补，第 12 条要求的 commit / 命令 / 配置 / 输出路径此前只留在终端与 v1-store）：`records/launch.actual.json`（`train_head` / `launch_command` / `tmux_sessions` / `train_pid`）+ `records/preflight.log` + `records/prod-runner.sh` 副本 | `docs:` |
-| 9 | 训完：motion 全遮消融评估 + 基线 `59999` 评估（评估口径另起计划，第三节末交接约束） | 另起计划 |
+| 步 | 做什么 | 为什么 | commit |
+|---|---|---|---|
+| 0 | 确认 `run_name`；磁盘 ≥ 400 G | 第 6 条 | — |
+| 1 | 本文入库 | — | `docs:` |
+| 1b | 只改验证工具白名单与形制闸，不触生产链路；之后取 `BASE` | 不先入库，取「改前」证时白名单与 clean-source 校验互斥 | `fix:` |
+| 2a | 在 clean BASE 取「改前」证：V1、V2②、V6、V7 | 关闭态等价的基线侧证据；卡号钉死 4,5 | — |
+| 2b | 实施 A–E 生产代码 + F 节验证工具 + CPU 单测 | 工作区 dirty，不跑带校验的工具，禁 `uv add` | — |
+| 2c | 两个 commit：生产改动 + 验证工具 | 回滚只碰生产改动 | `commitV10.0` + `commitV10.1` |
+| 2d | 取「改后」证并对拍 V1 / V2 / V6 / V7 | 任一数值项 FAIL → 只 revert V10.0，停下交用户；harness 失配先排查 | — |
+| 3 | encoder 换型 + 资产锚点 + 输入重锚 | — | `fix:` |
+| 4 | 建库四步 + 账目五项 | Wan 与 encode 之间零 commit | — |
+| 5 | 建库留档 | — | `docs:` |
+| 6 | 开启态验证，串行标卡号：6a V4 ‖ V5 → 6b V8 → 6c V-online ①② → 6d V-online ③（独占 8 卡）→ 6e smoke | 每档结束确认前一档进程已退，避免残留占卡 | `docs:` |
+| 7 | 起跑留档 + `EVAL_ES_BOUND` | — | `docs:` |
+| 8 | 生成 runner → 独立占卡闸 `GPU_IDLE` → preflight → 训练；300 步重估 ETA | runner 内的显存检查是无效闸 | — |
+| 8b | 起跑后归档 | 第 12 条 | `docs:` |
+| 9 | 训完：消融评估 + 基线评估 | 归因 | 另起计划 |
 
 ## 第二部分（技术细节，供 agent 追踪）
 
@@ -643,7 +480,7 @@ Monitor 过滤管道（每级行缓冲）：`tail -n +1 -F <日志> | stdbuf -oL
 - **`history_pi0.py::HistoryPi0.__init__`**：`if self.mem_encoder.motion_enabled and self.integration_type not in ("context", "modulation"): raise`。全仓 grep 确认这是 `integration_type` 与 `motion_enabled` 联用的**唯一**断言，「就这一处」成立。另一条相关守卫 `framesamp_dataset` 里已同时允许 `("modulation", 1024)`，无需改。
 - `history_observation.py`、`percep_mem.py`、`robomme_policy.py` 只改注释。**特别点名**：`percep_mem.py` 里 `motion_encoder_static` 的中文注释写的是「1536 → 2048，W 1536×2048 + b 2048」——那是 context 版（`memory_token_dim: 2048`）的数字，modulation 下是 **1024**，本轮必须改。另三处（`percep_mem.py::__call__` 的「(b, 512+96, 2048)」、`__init__` 的「177 → 193」、`history_pi0.py::embed_memory` 的「(b,608,2048)」「长度自动跟随 608」）见 C 节「纯注释」补记。
 - **motion 四个参数叶**（从模块定义推算，供 V9 断言）：`mem_encoder/motion_pos_proj/kernel (256,768)` + `bias (768,)`、`mem_encoder/motion_encoder_static/kernel (1536,1024)` + `bias (1024,)`，合计 `1,771,264`。基线实测 61 叶 + 4 = **65**。6 条 modulation 叶的来源已定位：`MemoryAttention` 的 `q_einsum_mem` / `kv_einsum_mem` / `out_einsum_mem` / `mem_rms_norm.scale` 共 4 条，加 `HistoryBlock` 里 `MemoryRMSNorm(name="mem_rms_norm_ffn")` 带 cond 分支产生的 `Dense(2*width)` kernel+bias 2 条 ⇒ `MEM_PARAMS` 从 `n=6` 变 `n=10`。
-- **6 条 modulation 叶与基线初值是否同源，现有 V 表核不到**（第四轮）：基线 `records/startup.log` 实测 6 条 `Merging missing weight: …mem_attn/{mem_rms_norm/scale, kv_einsum_mem/w, q_einsum_mem/w, out_einsum_mem/w}`、`…mem_rms_norm_ffn/Dense_0/{kernel, bias}`（`weight_loaders.py::_merge_params` 对 checkpoint 缺失键保留随机初值）；两个 motion `nnx.Linear` 建在 llm 之前，若 `ToNNX.lazy_init` 在 `mem_mods=[False, True]` 下从共享 RNG 计数器取键，新 run 的约 85 M mem 参数与基线从不同随机抽样起步。处置：2b 的 `INIT_COMMON` CPU 单测（第四节 4.5、F 表）。
+- **6 条 modulation 叶与基线初值是否同源，现有 V 表核不到**（第四轮）：基线 `records/startup.log` 实测 6 条 `Merging missing weight: …mem_attn/{mem_rms_norm/scale, kv_einsum_mem/w, q_einsum_mem/w, out_einsum_mem/w}`、`…mem_rms_norm_ffn/Dense_0/{kernel, bias}`（`weight_loaders.py::_merge_params` 对 checkpoint 缺失键保留随机初值）；两个 motion `nnx.Linear` 建在 llm 之前，若 `ToNNX.lazy_init` 在 `mem_mods=[False, True]` 下从共享 RNG 计数器取键，新 run 的约 85 M mem 参数与基线从不同随机抽样起步。处置：2b 的 `INIT_COMMON` CPU 单测（I.2、F 表）。
 - `scripts/training/train.py::init_history_config`：`motion_provenance.json` 的字段按 `enabled` 填、与 integration 无关，**预期无需改**（已核无 modulation 专属漏写）。
 - **两个参数树工具的开关名不同，别抄串**：`scripts/training/legacy-eval/check_ckpt_param_tree.py` 用 `--config`（默认 `mme_vla_suite`，须显式带 `mme_vla_suite_b128_80k`），只产出 `PARAM_TREE_EXACT`，且读的是**仓库** YAML、用文件名字符串建模型，完全绕开 run 内 `history_config.resolved.yaml` 快照 ⇒ 它证明不了「部署加载已验证」。走生产口径的是 `scripts/training/g0/check_config_provenance.py::gate_ckpt_param_tree`（用 `_load_resolved_snapshot` + `model.load(remove_extra_params=False)` + `_assert_param_tree_exact`），开关名是 **`--train-config`**，判定行 `CKPT_PARAM_TREE=PASS missing=0 extra=0 leaves=<n> model_leaves=<n> ckpt_has_motion=1`。**它的 `--ckpt/--lib/--train-config/--store-subdir/--neg-lib` 默认值全部指向旧库旧 run，V9 必须逐个显式传**（见 F 表）。
 - **budget 不进参数树，参数树校验对 budget 完全失明**：四个 motion 叶的形状只依赖 `pos_dim/dim/pos.hidden_dim/memory_token_dim`，与 budget 无关 ⇒ 拿 budget=96 的 YAML 加载 budget=160 训的 ckpt，`PARAM_TREE_EXACT` 与 `_assert_param_tree_exact` 都会 PASS 而语义已静默改变。**V9 必须显式加一条 `BUDGET_CONSISTENT`**：从 `history_config.resolved.yaml` 读出的 `motion.budget` == 160。**必须跨源**（第四轮修正：第三轮写的「快照 == dataloader 实际值 == 在线 `_motion_cfg`」三侧在代码里同源自一个 DictConfig——`train.py` 只按 CLI 文件名解析一次、同一对象装入 model config 并直传 dataloader；`policy.py` 的 `_motion_cfg` 取自 `create_trained_policy` 换进来的同一份快照——恒等不可能 FAIL，且 smoke 不构造 policy）：判定行 `BUDGET_CONSISTENT=PASS snapshot=160 repo_yaml=160 expected=160`，比 run 内 `history_config.resolved.yaml` 的 `motion.budget`、仓库新 YAML 的 `budget`、常量 160；在线侧 budget 归 V-online 的 CPU 前置门。生产评估侧由 `create_trained_policy` 丢弃传入 history_config、整体换成 run 内快照**结构性保证**；sha 三方核对（三方同目录、由 `init_history_config` 一次写出）只防 run 目录被事后编辑；`train.py` 硬禁 `--resume`。真实暴露面是 `check_ckpt_param_tree.py` 这类按仓库 YAML 文件名建模型的 `--yaml` 驱动工具。
@@ -666,13 +503,13 @@ Monitor 过滤管道（每级行缓冲）：`tail -n +1 -F <日志> | stdbuf -oL
 
 ### F. 验证与判定行
 
-> **判定行标注约定（第四轮）**：第 4 列每条判定行标「实测」（既有工具原样输出，并给出产出者）或「新写」（本轮定义、须先落地自测）。初稿有 7 个判定行名在代码里根本不存在，第二轮已换用工具真实输出（`SAMPLE_RAW_EXACT` / `MASK_INVARIANCE` / `A10_ROWS` / `A9_INDEXSET` / `ONLINE_POS`）；第三轮那句「每一行都已与工具实际输出对表两轮」**只对标「实测」的行成立**，本轮新定义的判定行名清单在第八节末。**第 18 条两块划分**：第一块 = V1 / V2 / V4 / V-online；第二块 = **只有 V7**；V6 单列单步数值对拍；V8 是 A/A 可复现基线、开启态无旧链路、第二块不适用并登记为盲区。每项的「证什么 / 不过怎么办」在第八节，本表只写命令级细节。
+> **判定行标注约定（第四轮）**：第 4 列每条判定行标「实测」（既有工具原样输出，并给出产出者）或「新写」（本轮定义、须先落地自测）。初稿有 7 个判定行名在代码里根本不存在，第二轮已换用工具真实输出（`SAMPLE_RAW_EXACT` / `MASK_INVARIANCE` / `A10_ROWS` / `A9_INDEXSET` / `ONLINE_POS`）；第三轮那句「每一行都已与工具实际输出对表两轮」**只对标「实测」的行成立**，本轮新定义的判定行名清单在I.7 末。**第 18 条两块划分**：第一块 = V1 / V2 / V4 / V-online；第二块 = **只有 V7**；V6 单列单步数值对拍；V8 是 A/A 可复现基线、开启态无旧链路、第二块不适用并登记为盲区。每项的「证什么 / 不过怎么办」在 I.7，本表只写命令级细节。
 
 | 编号 | 内容 | 工具与关键参数 | 判定行 | 顺序步 |
 |---|---|---|---|---|
 | V0 | lr 曲线逐步相同 | 新写数行 `uv run python -c`：`config.lr_schedule.create()` 在 `range(0, 80_000)` 上逐步比 60k 与 80k 两条配置（`peak_lr == decay_lr == 5e-5` ⇒ optax `alpha = 1`，余弦段恒等、`decay_steps` 之后 clamp 也相等；warmup 段两配置同 5,000 步） | 新写 `GUARD_LR=PASS steps=80000 mismatches=0` | 2b |
-| `INIT_COMMON` | 6 条 modulation 叶 + 4 条 motion 叶与基线初值同源 | 同 `seed=42`、`JAX_PLATFORMS=cpu`，分别用关闭态与新 motion YAML 只做 `init_train_state(..., resume=False)`，按叶名比 sha256（第四节 4.5） | 新写 `INIT_COMMON=PASS common_mismatches=0 open_only=4` | 2b |
-| `ROPE_LEN_EFFECT` | 替换第五节五个无留档数字 | 固定 token 内容、只改 `mem_len`，直接构造 `MemoryAttention` 或复算 `_apply_rope` + masked softmax；json 落 `v1-store/reports/motion/rope_len_effect.json` | 新写 `ROPE_LEN_EFFECT=PASS tv_144_160=… relL2_144_160=… tv_512_672=… pad_content_diff=0` | 2b |
+| `INIT_COMMON` | 6 条 modulation 叶 + 4 条 motion 叶与基线初值同源 | 同 `seed=42`、`JAX_PLATFORMS=cpu`，分别用关闭态与新 motion YAML 只做 `init_train_state(..., resume=False)`，按叶名比 sha256（I.2） | 新写 `INIT_COMMON=PASS common_mismatches=0 open_only=4` | 2b |
+| `ROPE_LEN_EFFECT` | 替换I.4 五个无留档数字 | 固定 token 内容、只改 `mem_len`，直接构造 `MemoryAttention` 或复算 `_apply_rope` + masked softmax；json 落 `v1-store/reports/motion/rope_len_effect.json` | 新写 `ROPE_LEN_EFFECT=PASS tv_144_160=… relL2_144_160=… tv_512_672=… pad_content_diff=0` | 2b |
 | V1 | 关闭态 dataset 交付逐位（改前 vs 改后） | `dump_fixture_samples.py` ×2 + `compare_fixture_dumps.py`；**数据集必须用 `4task-motion-400ep/framesamp-8x8`**（新库 `exec_start_idx` 全 ≥100，`fixture_per_step` 找不到 `es=0` 的 episode 必 raise）；环境 `DTYPE_DUMP_DIR`（两侧各一空目录）/`DTYPE_DUMP_GIT_HEAD`/`DTYPE_DUMP_MODE=both`/`DTYPE_DUMP_ARRAYS=1`/**不设** `DTYPE_DUMP_LIMIT`/`JAX_PLATFORMS=cpu`；白名单见下；**该比较器不比较两侧 `DUMP_MANIFEST.json` 的 `git_head`**，对拍前 `jq -r .git_head` 断言两侧等于 `$BASE` / `$CAND` | 实测（`dump_fixture_samples.py` / `compare_fixture_dumps.py`）：单侧 `DUMP_DONE samples=3200 batches=200 out=<dir>`；对拍 `SOURCE_IDENTITY=PASS episodes=400 samples=101066` / `FRAME_INDEX_EXACT=PASS … max_frames=8` / `SAMPLE_RAW_EXACT=PASS samples=3200 per_step=200 mismatches=0` / `BATCH_RAW_EXACT=PASS batches=200 mismatches=0`。失败是抛异常 + 退出码 1，无 FAIL 行 | 2a/2d |
 | V2 | 旧表 + 旧 YAML + 历史快照三重回归 | ① **新写 `scripts/training/tests/legacy_regress.py`**：`MotionMeta.load` 两张旧表（40ep rows=772、400ep rows=6832，`schema=1`、无三新键）解析出 `LayoutSpec(33, 33, "none")`——前提 A1 的 schema 不升版与三新键按 layout 兜底；② **2a 与 2d 各跑一次** `dump_fixture_samples.py` + `compare_fixture_dumps.py`：**未经修改的** `perceptual-framesamp-context-motion.yaml`（已在 `_EXPECTED_HISTORY_CONFIGS`）+ 40ep 库（含 `exec_start_idx == 0` 的集），N 同 V1；③ `legacy_regress.py` 用历史快照 `v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/5000` 走 `create_trained_policy(..., **motion_stub=True**)`（仍 `Popen` 一个 stub sidecar 并握手、不加载 encoder、不占 GPU；前置 `ls v1-store/venvs/wan/bin/python`；不加该参数会真去拉 sidecar、占 GPU、加载 40ep encoder；该目录**不得改动任何文件**；快照 `motion:` 节无两新键 ⇒ 走 `(33,"none")`，E 节在线守卫必须放行） | 新写 `LEGACY_LAYOUT=PASS tables=2 rows=772/6832 spec=(33,33,none)`；② 实测同 V1 四行 + 新写汇总 `LEGACY_YAML=PASS`；新写 `LEGACY_POLICY=PASS spec=(33,none) stub=1` | ① ③ 2d；② 2a/2d |
 | V6 | 关闭态定点梯度（改前 vs 改后） | `single_step_grad_fixed.py` ×2 + `compare_fixed_grad.py`；**`DTYPE_BATCH_FIXTURE_DIR=v1-store/fixtures/8x8/grad/c8-b`**（8 帧档、12 个数组键 + 4 个 `none` motion 键，满足工具「必须恰好 12 数组键」的断言；`m8-*` 是 16 键会 raise）；`--batch-size 8 --fsdp-devices 2 --seed 42 --model.history-config perceptual-framesamp-modul-8frame-8x8.yaml`；`XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'`；`DTYPE_GRAD_DIR` 预先不存在；`unset DTYPE_BASELINE_CHECKSUMS`；`DTYPE_SOURCE_COMMIT=$BASE` / `$CAND` + porcelain 为空。**该工具把关的是 `_CONFIGS` 与 `main()` 的 `raise ValueError("只接受 modulation 关闭态两档配置")`，modul YAML 已在其中、无需改**。**硬约束**：比较器对 `environment` 整体等值（含 `cuda_visible_devices`、`uv_lock_sha256`），两侧 `export CUDA_VISIBLE_DEVICES=4,5`，2b 禁 `uv add` | 实测：单侧 `FIXTURE=PASS kind=… keys=12 batch=8`（×3）/ `INIT_PARAMS=PASS leaves=<N>` / `GRAD_KIND=PASS kind=…`（×3）/ `GRAD_DONE kinds=3`；对拍 `INIT_EQ=PASS leaves=<N> mismatches=0` / `GRAD_EQ=PASS kinds=3 leaves=<N> mismatches=0` | 2a/2d |
@@ -721,7 +558,7 @@ Monitor 过滤管道（每级行缓冲）：`tail -n +1 -F <日志> | stdbuf -oL
 
 ### G. commit 约束
 
-- 第一部分第九节的表是唯一执行顺序；每个 commit 后立即 `git push`；只 `git add` 本轮明确文件，禁 `git add .` / `-A` / `-a`。
+- 第一部分第九节的表是唯一执行顺序（步级细节见 I.8）；每个 commit 后立即 `git push`；只 `git add` 本轮明确文件，禁 `git add .` / `-A` / `-a`。
 - **「改→验→commit」的顺序硬闸**：`single_step_grad_fixed.py` 要求 `git rev-parse HEAD` 逐字等于 `DTYPE_SOURCE_COMMIT` 且 `git status --porcelain` 为空（唯一例外是一条为历史树写死的单行 `??`，**不得拿来放行本轮改动**）。故拆成 1b（只改验证工具白名单与形制闸，`fix:` commit）→ 2a（在 1b 之后的 clean BASE 取基线证，`BASE=$(git rev-parse HEAD)` **不写死 sha**）→ 2b（改码 + 验证工具 + CPU 单测，dirty，不跑带校验的工具，禁 `uv add`）→ 2c（`commitV10.0` 生产改动 + `commitV10.1` 验证工具，push，porcelain 为空）→ 2d（取候选证 + 对拍；FAIL 先分流，数值项失配才 `git revert --no-commit` + 中文 `revert:` subject、只 revert V10.0）。第三轮把 2a 写成「clean HEAD 跑 V1+V6+V7」物理上不成立：白名单不改 V1/V7 起手 raise，改了 V6 的 porcelain 清洁闸又不过。**绝不允许临时放宽 clean-source 校验。**
 - ★ **三个比较器都不核对两侧源码身份**（第四轮订正，第三轮只点了 V1、还把 V6 说成有覆盖）：`compare_fixture_dumps.py` 不读 `DUMP_MANIFEST.json` 的 `git_head`；`compare_fixed_grad.py` 只比 `schema / seed / fsdp_devices / xla_flags / environment` 与 `history_config_sha256`、不比 `source["head"]`（`single_step_grad_fixed.py::_source_record` 在 `DTYPE_SOURCE_COMMIT=$BASE` 写法下恒真，有效的是紧随的 porcelain 清洁闸）；`compare_baseline.py` 同。两侧误跑在同一 commit 时三项全绿。处置：2a / 2d 各记 `git rev-parse HEAD` 与 porcelain 入留档；对拍前统一 `jq` 断言两侧 `.git_head` / `.source.head` / `.start_head` 等于预期 SHA、`start_status` 为空，并显式断言 `$BASE != $CAND`。
 - 步骤 4 的 Wan → encode 之间零 commit；步骤 2c 结束后到步骤 4 起跑前 `git status --porcelain` 必须为空；步骤 7 的 `TRAIN_HEAD` 记在 docs commit 之后、runner 生成之前，写进 launch.md 正文；步骤 8b 起跑后归档 `records/launch.actual.json` / `records/preflight.log` / `records/prod-runner.sh` 副本另起 `docs:` commit。
@@ -798,4 +635,235 @@ MME_VLA_Policy.infer ──► _prepare_history ──► _prepare_motion（k > 
   每 16 环境步一次 infer ⇒ 1300 步下每集 82 次
 ```
 
-**每一跳有没有改数**：取行、右填充、`memory_order` 置换、`RepackTransform`、`take_along_axis`、在线切窗与补帧全是搬运与重排，**不改数值**；唯一改数的是两层 Linear 投影与 `MemoryAttention` 本身（含其 `mem_rms_norm`）。帧路在**数据交付层**逐字节不变，但在**模型内**因 `mem_order` 改变每个记忆 token 的绝对 `k_position`、且 `mem_len` 512→672 使 query 位置整体平移而不再等价——这正是本轮要测的东西，不是回归；与 context 版「交错改变主干 RoPE 位次」是两套不同的机制（第四节 4.2 c/d 行）。
+**每一跳有没有改数**：取行、右填充、`memory_order` 置换、`RepackTransform`、`take_along_axis`、在线切窗与补帧全是搬运与重排，**不改数值**；唯一改数的是两层 Linear 投影与 `MemoryAttention` 本身（含其 `mem_rms_norm`）。帧路在**数据交付层**逐字节不变，但在**模型内**因 `mem_order` 改变每个记忆 token 的绝对 `k_position`、且 `mem_len` 512→672 使 query 位置整体平移而不再等价——这正是本轮要测的东西，不是回归；与 context 版「交错改变主干 RoPE 位次」是两套不同的机制（I.1 的 4.2 c/d 行）。
+
+### I. 第一部分精简时移入的技术细节（第四轮）
+
+> 第一部分只保留「做什么 / 为什么 / 哪些不变」，本节按原节顺序收纳被移出的差异矩阵、判据细节、推导备注与步级叙述，供 agent 追踪；与 A–H 节互为补充，冲突以 A–H 与 F 表的命令级描述为准。
+
+#### I.1 context vs modulation 差异矩阵（含六层等价的代码锚点）
+
+
+1. **关闭态逐位**：`percep_mem.py::PerceptualMemory.__init__` 的 `if self.motion_enabled:` 只在开启时创建两层投影，`__call__` 关闭态早返回；`history_pi0.py::HistoryPi0.embed_memory` 关闭态是「编译期 Python 分支 + 早返回，四处一个元素都不追加、不重排」；`framesamp_dataset.py` 的 `_NONE_KEYS` 四键恒 `None`。关闭态模型与基线完全相同，这是I.7 A 组 V1/V6/V7 的前提。
+2. **数据交付层**：`shared/sampling.py::memory_order` / `pad_times`、`motion_store.py::visible_motion_rows` 是 context / modulation / 训练 / 在线共用的同一份函数，四键（`motion_emb` / `motion_pos` / `motion_mask` / `mem_order`）的构造与 context 版逐字相同；唯一随 integration 变的是 `mem_order` 长度（context 32 帧档 608 → 本轮 512 + 160 = 672）。
+3. **在线装配层**：`src/mme_vla_suite/policies/` 目录下 grep `integration_type` **零命中**；`policy.py::_prepare_history` 的 motion 分支只看 `if self.motion_enabled:`。在线链路可以直接复用，由 V-online 证明。
+4. **切窗与起点集合**：在线 `framesamp_memory.py::visible_motion_frames` 与训练侧 `visible_motion_rows` 同式。
+5. **sidecar 线协议**：`(33,256,256,3) uint8 → (768,) f32`，与 integration 无关。
+6. **补帧规则训推同源**：离线按 `entry.spec` 取行、在线按同一 `min(f+32, es−1)` 补帧（E 节改动后）。
+
+**4.2 九项不等价（训练侧）**
+
+| # | 维度 | context（正本口径） | modulation（本轮） | 代码锚点 |
+|---|---|---|---|---|
+| a | 注入点 | 记忆区 concat 进主干 prefix，走 18 层 self-attention | 每层对最后一条 expert 流（action expert）在 FFN 前做一次 cross-attention，输出作为 `MemoryRMSNorm` 的 cond 产生 scale / shift | `history_pi0.py::embed_prefix` 的 `if self.integration_type == "context":`；`history_gemma.py::HistoryBlock.__call__` 的 `if i == len(xs) - 1 and self.integration_type == "modulation": mem_mod_vec = mem_attn(x, mem_seq[-1], mem_mask[-1]); x = MemoryRMSNorm(name="mem_rms_norm_ffn")(x, mem_mod_vec)` |
+| b | 谁看得到记忆 | 文本与动作 token 能 attend 记忆区，图像被 `na_mask` 挡住 | 图像 / 文本 / 整条主干完全接触不到；只有 `action_horizon=20` 个 action token 经 cross-attn **单向**读取 | 同上；正本 3.4 |
+| c | 记忆是否被逐层加工 | 记忆 token 走 18 层残差流（「记忆只看记忆」） | `embed_memory` 算一次的同一条 `mem_seq` 原样广播给 18 层，只出 K/V；**记忆 token 之间没有 attention** | `history_gemma.py::Module.setup` 的 `nn.scan(..., in_axes=(0, nn.broadcast, …))`，`mem_seq` / `mem_mask` 走 `nn.broadcast` |
+| d | 位置编码 | `positions = cumsum(input_mask) − 1`，padding 不占号 | `k_positions = arange(mem_len)`、`q_positions = arange(mem_len, mem_len + x_len)`，**padding 占号**、query 位置随 `mem_len` 整体平移 | `history_gemma.py::MemoryAttention.__call__` |
+| e | mask 语义 | `make_attn_mask(input_mask, ar_mask, na_mask)` 三项 | 只有一维 K 侧屏蔽 `attn_mask = mem_mask[:, None, None, None, :]`；`compute_loss` 的 modulation 分支把 `embed_memory` 返回的 `ar_mask` / `na_mask` 直接丢弃（`mem_seq, mem_mask, _, _ = self.embed_memory(observation)`） | 同上；`history_pi0.py::compute_loss` |
+| f | 出口维与参数量 | `memory_token_dim: 2048` ⇒ `motion_encoder_static` 1536→2048，新增 3,345,152 参数 | `1024` ⇒ 1536→1024，新增 `256×768+768 + 1536×1024+1024 = 1,771,264`，motion 表征宽度减半 | 两份 YAML；`percep_mem.py::PerceptualMemory.__init__` |
+| g | 梯度来源与初始门 | motion 四叶从整条 prefix 的全部 query 收梯度 | 只从 20 个 action query 收梯度；整条记忆通道被 `MemoryRMSNorm` 里 `nn.Dense(x.shape[-1] * 2, kernel_init=kernel_init_out_proj)` 门住，`kernel_init_out_proj = nnx.initializers.normal(stddev=0.002)` ⇒ **初始贡献近零** | `representation/utils.py::kernel_init_out_proj`；`history_gemma.py::MemoryRMSNorm` |
+| h | 主干序列长度 | 开 motion 后记忆区 608、prefix 1184、全序列 1204（正本 5.4） | 主干 = 2 视角 × 256 + 文本 64（prefix 576）+ 动作 20 = **596**，与基线完全相同；记忆（672）不进主干 | `robomme_policy.py::RoboMMEInputs`；`HistoryPi0Config.max_token_len = 64` |
+| i | RMSNorm 共用 | — | `rms_norm = MemoryRMSNorm(name="mem_rms_norm")` 先作用于 `x` 再作用于 `mem_seq`，同一 `scale` 被 action-expert 隐状态与记忆序列共用 | `MemoryAttention.__call__` |
+
+**两条训练动力学后果**（由 g 直接推出，不是猜测）：motion 梯度只来自 20 个 action query；记忆表征在 18 层之间不更新。motion 能否被学到，要靠F 表 V8 的 `MOTION_PARAMS_UPDATED` 与训完后的全遮消融来回答，不能靠「接线对了」推断。
+
+**4.3 推理侧差异**
+
+| # | 维度 | context | modulation |
+|---|---|---|---|
+| j | 在线数据装配 | — | **完全不敏感**：`policies/` 零 `integration_type` 分支（4.1 第 3 条） |
+| k | `embed_memory` 本身 | 同一份代码 | 同一份代码（含同一次 `take_along_axis` 重排），唯一差别是返回值去了哪里与出口宽度 |
+| l | 消费与缓存 | 记忆 K/V 一次烙进 kv_cache，10 步去噪不再碰 motion | `embed_memory` 在去噪循环**外**只算一次，但 `mem_seq=[None, mem_seq]` **每步**传入，`MemoryAttention` 每步每层重算 `mem_rms_norm(mem_seq)` 与 `kv_einsum_mem`（18 × 10 = 180 次 / infer），**无 K/V 缓存** |
+| m | kv_cache 长度 | 随 motion 变长（记忆区进前缀） | **完全不变**（前缀只有 image + language） |
+| n | `mask_na` | 让 vision 看不到记忆区，是实质机制 | **恒等空操作**：`embed_prefix` 在 modulation 下 `na_mask` 首元素即图像的 `True` ⇒ `cumsum(mask_na) <= 0` 全 False；`compute_loss` 传 na_mask、`sample_actions` 不传，两者等价，**不构成训推不一致，不要当 bug 去「修」** |
+| o | 推理频次与算量 | — | `eval.py::eval_each_episode` 每 16 环境步调一次 `get_action_chunk` ⇒ `max_steps=1300` 下每集 ⌊1296/16⌋ + 1 = **82** 次 infer；S=672 时 `MemoryAttention` 每层每步约 421.8 MMAC（K/V 投影占 83.5%）× 18 × 10 = 75.9 GMAC / 次，S=512 为 59.7 GMAC ⇒ motion 带来 **+16.3 GMAC / 次（+27%）**、每集 +1.34 TMAC ≈ **+9 ms / 集**（按 A100 fp32 峰值推算，未实测）；同期 sidecar 每集最多 151 窗 × 1421.5 ms ≈ **215 s / 集**，比模型侧增量大四个数量级，新 demo 规则只让每集多 1 窗（+1.4 s） |
+
+
+#### I.2 由此新增的三条验证与消融臂（判据细节）
+
+
+- **`INIT_COMMON`（2b CPU 单测，秒级）**：开启态下 6 条 modulation 叶（`mem_attn/{mem_rms_norm/scale, kv_einsum_mem/w, q_einsum_mem/w, out_einsum_mem/w}` + `mem_rms_norm_ffn/Dense_0/{kernel, bias}`，18 层堆叠约 85 M 参数，全部只能来自随机初始化——基线 `records/startup.log` 实测 6 条 `Merging missing weight`）与基线是否同一初值，现有 V 表**没有任何一项能核到**：V6 的 `INIT_EQ` 比的是「同一 YAML 改前 vs 改后」，V8 是同侧 A/A。`percep_mem.py` 自写「flax nnx 单条 default RNG 流按调用顺序 fold_in，插在前面会改变帧路的初始化值」，而两个 motion `nnx.Linear` 正建在 llm 之前；`0901` 计划的「RNG 消耗序」表与其闸门 `T3_COMMON_INIT` 是在 context（`mem_mods=[False, False]`，llm 内无随机初始化叶）下建立的，**不能默认沿用**。判据：同 `seed=42`、`JAX_PLATFORMS=cpu`，分别用关闭态与新 motion YAML 只做 `init_train_state(..., resume=False)`，按叶名比 6 条 modulation 叶与 4 条 motion 叶的 sha256，`INIT_COMMON=PASS common_mismatches=0 open_only=4`；不相同则先量差异再定处置。
+- **`ROPE_LEN_EFFECT`（2b CPU 探针，几十行）**：I.4 引用的五个数字（144→160 总变差 0.33 / 相对 L2 0.76；512→672 为 0.87；gap 非 0 时总变差饱和 ≈ 0.4；改成不占号或去 RoPE 后 1e-17）在仓库里**没有任何可追溯的脚本或留档**（全仓 grep 零命中）。机制本身可核且成立（`src/openpi/models/gemma.py::_apply_rope` 是标准 RoPE；`shared/sampling.py::pad_times` 用 `MEM_ORDER_SENTINEL` 把 padding 排到尾部 ⇒ 真实 key 位置不随 budget 变、只有 query 整体平移），但数字必须重取：固定 token 内容、只改 `mem_len`，直接构造 `MemoryAttention` 或复算 `_apply_rope` + masked softmax，输出 `ROPE_LEN_EFFECT=PASS tv_144_160=… relL2_144_160=… tv_512_672=… pad_content_diff=0`，json 落 `v1-store/reports/motion/`，写入正本前用它替换五个数字。
+- **`EVAL_ES_BOUND`（起跑前，无 GPU）**：见第七节。
+- **motion 全遮消融评估（用户已拍板加入）**：80k 训完后在同一 ckpt 上把 `motion_mask` 整列置 False 再评一次。`MemoryAttention` 的 `masked_logits = jnp.where(attn_mask, logits, -2.3819763e38)` 保证被 mask 的 K 位 softmax 概率恰为 0，故该臂是「同权重、同 `mem_len=672`、同 q 位置，只是看不到 motion 内容」，Δ 即 motion 内容净贡献（帧路 `static_mask` 恒有 True，不存在全 mask 导致 softmax 退化的边界）。成本一次评估；训练侧对照（budget=160 且全库 mask 恒 False 的 80k run）另需约 52 h，**本轮不做**。第八节据此明确：**本轮承诺的是实现等价，不是因果归因**；归因由消融臂承担。
+
+
+#### I.3 措辞纠错表与正本待改段落清单
+
+
+| 原表述 | 问题 | 改为 |
+|---|---|---|
+| 「`mem_order` 交错 ⇒ 帧 token 彼此的 RoPE 相对距离改变」（I.4 与 H 节两处） | modulation 下记忆 token 只作 key/value，彼此之间没有 attention，它们的相对距离不进入任何计算 | 「`mem_order` 改变的是每个记忆 token 的绝对 `k_position`（`arange(mem_len)`），从而改变它到全部 query 的 RoPE 相对距离」；`ORDER_EFFECT` 在 modulation 下只证「次序经 `k_position` 改变 cross-attn logits」，是比 context 弱的承诺 |
+| 「唯一 width=1024 的是 `gemma_300m`」 | 变体表里 width=1024 / depth=18 的有三个：`gemma_300m`、`gemma_300m_lora`、`gemma_150m` | 「没有浅层 width-1024 变体，CPU dummy（宽 64）仍撞 `assert mem_width == x_width == width`；但 VLM 主干可换 `gemma_150m` 替身」——V5 已拍板用乙（`gemma_150m` 替身） |
+| 「唯一拦得住的是 `_load_resolved_snapshot` 的快照 sha 三方核对」+ 「训练、resume、评估、在线四侧」 | 三方 sha 全在同一 run 根、由 `init_history_config` 一次写出，只能查该目录被篡改；真正使评估侧不可能用错 budget 的是 `create_trained_policy` 直接丢弃传入的 history_config、整体换成 run 内快照；`train.py` 硬禁 `--resume`，不存在 resume 侧 | 两层表述：生产评估由快照替换**结构性保证**；sha 三方核对只防事后编辑；真实暴露面是按仓库 YAML 文件名建模型的 `check_ckpt_param_tree.py` 与一切 `--yaml` 驱动的工具 + 「参数树对 budget 失明」的组合 |
+| `scripts/motion-variance/*` 只当「写死 96 / 608」的字面量处理 | 结构性不适用：`mv_common.py` 的 `PREFIX_LEN  # 1184`、两处 `integration_type="context"` 硬编码 | 本轮不改，**且不得引用其结论（`docs/motion-utilization.md` 的 normal−mask +5.00pp）作为新 run 的 motion 利用率证据** |
+| 正本第十章第 12 条「未覆盖 expert / modulation」 | 实施后过时 | 改成「已覆盖 modulation（本文），expert 仍未覆盖」，不整条删除 |
+
+**正本 `docs/motion-memory.md` 待改段落清单**（实施后另立 `docs:`）：3.1 / 3.4 / 3.5（交错口径只对 context 成立，补 modulation 的 `k_position` 段）、4.2（模型层）、5.3 / 5.4（608 / 1184 / 1204 是 context 32 帧档数字）、6.4（`gap` 改名以区分 `rope_gap`）、第八章两项 FAIL 的适用性、第十章第 12 条。
+
+
+#### I.4 训练链路：budget 成为模型语义参数的技术表述
+
+**一条必须写进正本、且初稿写错了的语义（第四轮再次订正）**：modulation 的 `MemoryAttention` 用 `q_positions = arange(mem_len, mem_len + x_len)`、`k_positions = arange(mem_len)`，而 `_apply_rope` 是**纯相对位置**旋转。padding 全在尾部、真实 key 位置不随 budget 变，但 **`mem_len = 512 + budget` 一变，所有 query 的位置整体平移，query 到每个真实 key 的相对距离全部 +160**。同一 budget 下只把 padding 位塞垃圾，差异严格为 0（`masked_logits = where(mem_mask, logits, -2.38e38)` 保证 padding 位 softmax 概率恰为 0）。第三轮引用的五个数值实验数字（0.33 / 0.76 / 0.87 / ≈0.4 / 1e-17）**无留档来源**，本轮以 2b 的 `ROPE_LEN_EFFECT` 探针重取后再写入正本（I.2）。
+
+结论：**`motion.budget` 是模型语义参数，不是纯容量上限。** 训练、评估、在线三侧必须逐值相同（`train.py` 硬禁 `--resume`，不存在 resume 侧），任何一侧改 budget 都等同换模型。这条**不受参数树保护**——motion 四个参数叶的形状只依赖 `pos_dim/dim/pos.hidden_dim/memory_token_dim`，与 budget 无关，拿 budget=96 的 YAML 去加载 budget=160 训的 checkpoint，`PARAM_TREE_EXACT` 会照样 PASS 而语义已静默改变。生产评估侧由 `create_trained_policy` 直接丢弃传入的 history_config、整体换成 run 内快照**结构性保证**用对 budget；`_load_resolved_snapshot` 的 sha 三方核对只防 run 目录被事后编辑。真实暴露面是按仓库 YAML 文件名建模型的 `check_ckpt_param_tree.py` 这类 `--yaml` 驱动工具，所以F 表 V9 的 `BUDGET_CONSISTENT` 改成**跨源**比对（run 内快照 vs 仓库新 YAML vs 160）。
+
+#### I.5 推理侧算量、「同输入 ⇒ 同输出」证据与 V-online 成本口径
+
+**推理侧算量（I.1 的 4.3 o 行的结论）**：主干 kv_cache 不随 motion 变长；`MemoryAttention` 每步每层重算，S 512→672 约 +27%，折合每集约 +9 ms（推算未实测）；评估耗时的主导项是 sidecar 逐窗编码（每集 ≤ 151 窗 × 1421.5 ms ≈ 215 s），本轮新 demo 规则只让每集多 1 窗。「评估会被 modulation 拖垮」这个担心不成立。
+
+**怎么证明同源**：既有的在线对拍工具按 eval 节奏驱动 `FrameSampMemory` + 真 sidecar，逐窗与离线表比逐位。**成本口径第四轮订正**：1421.5 ms/窗 出自 `v1-store/reports/motion/p5_online.json` 的 `ENC_MS_PER_WINDOW mean`（40ep 库、旧 ckpt、A100 独占一卡、含 6.3 MB IPC；离线探针 A2 为 1413.5 ms），全量 71,316 窗 × 1.4215 s ÷ 8 卡 = **3.52 h**（不是第三轮写的「单卡 30–32 h 不可承受」），与 Wan 抽取的 8 卡 3.6 h 同量级；40ep 那次全部非编码开销 ≤ 71 s，h5 读取不是瓶颈。用户据此拍板改为**方案 B「分层解耦」**：本轮唯一新增的机制是 demo 段 `min_real` 33→17 + `np.repeat` 补帧，风险落在「输入 33 帧是否装配正确」，而 encoder 的「同输入 ⇒ 同输出」已被 `wan_motion_infer.pin_numerics()`（`cudnn.benchmark=False` / `allow_tf32=False` / `float32_matmul_precision=highest`）、`check_versions(strict=True)`、`motion_client` 握手 provenance 逐键比对（含 `gpu_name` / `compute_cap` / `sm_count` / `driver` / `flags` / `module_sha256`）、`0901` 计划记的 `A3_CROSSGPU=PASS compared=64 latent_bitwise=64 token_bitwise=64 max_abs_diff=0.000e+00` 与正本记的 40ep「772 窗逐位相同」反复确认——所以用零 GPU 手段 100% 覆盖「输入是否相同」，用最贵手段只覆盖新代码路径的全部补帧窗。三段判据与承诺口径见F 表 V-online 行；换新 ckpt 后「同输入 ⇒ 同输出」只需重取一次小样本确认，不需要全量。
+
+#### I.6 budget 推导备注
+
+按 ≥ 17 规则逐样本实算合法窗数（605,611 个）：均值 **43.9**，中位 39，P90 80，P95 93，P99 115，最大 **141**（BinFill ep367，es 1152，nt 2304 → demo 71 + exec 70）。第四轮反驳者用 `episode_manifest.json` 独立复算：total_samples=605611、mean k=43.906481、kmax=141（g=367）、k≥140 恰 32、`t==es` 恰 1600、`δ==32` 恰 1600、over96=24366 / over112=7817 / over128=488 / over144=0、涉及 episode 112 / 43 / 6 / 0、中位 39、P90/95/99 = 80/93/115、填充率 27.442%——与本节与I.7 V4 期望值逐项吻合。
+
+> **填充率定义**：`mean(min(k, budget)) / budget`（截断后实际占位）。初稿未写定义且整张表用了一个在 `δ < 32` 时多算一窗的 exec 公式（`len(range(0, max(0, δ−32)+1, 16))` 在 `δ<32` 时返回 1，正确值是 0），导致均值与填充率系统性偏高。正确 exec 可见窗数：`E(δ) = 0 if δ < 32 else (δ − 32)//16 + 1`，`δ = t − es`。受影响的恰是每集 exec 段前 32 个样本共 51,200 个，`51,200/605,611 = 0.08454` 与两版均值差 `43.99102 − 43.90648 = 0.08454` 吻合。**截断数、截断 episode 数、中位、P90/P95/P99、最大值不受影响。**
+
+> 列名用「超限」而非「截断」：代码里 budget 超限**从不截断，一律 raise**（`FrameSampDataset.__init__` 的零截断契约预检、`__getitem__`、右填充三处各一道）。budget=96 时这个数据集根本构造不出来，不是「4.02% 的样本被截断」。
+
+**最后一列度量的是训练集，不是评估集。** 它按 `k_eval = demo_num_grid(es) + E(τ_max − es)` 外推，`τ_max = es + 16·⌊max_steps/16⌋`（`max_steps=1300` → exec 项恒 80），训练集 `es` 最大 1152 ⇒ `k_eval` 最大 **151**；按正本红线在 16 任务全集口径复核，同为 **151**（`VideoPlaceOrder` ep10，es=1140）。
+
+> 初稿 C 节写的 `τ_max = es + 16·⌊(max_steps − 4)/16⌋` 里那个「−4」不成立：`⌊(M−4)/16⌋ = ⌊M/16⌋` 当且仅当 `M mod 16 ≥ 4`，而 `1300 mod 16 = 4` 恰好卡在边界。反例：M=1296 正确 1296、该式给 1280；M=1312 正确 1312、该式给 1296；M=800 正确 800、该式给 784。代码里 `eval_rhythm_gates.py` 本来用的就是 `es + 1296`，与修正式一致。
+
+**评估集不可预知 → 起跑前测出来（第四轮）**：评估将走**新的 seed**，仅「1300 步」这一条固定。当前 `examples/robomme/env_runner.py` 硬编码 `dataset="test"`，`es` 由 `DemonstrationWrapper.reset` 现场 rollout 生成、`examples/robomme/eval.py` 现取，训练 manifest 约束不到它；现有 test split（4 任务 × 50 集，seed 540000+）与训练库 seed 4000–18500 完全不相交，且训练集里 `VideoRepick` 只有 easy/medium/xhard、没有 test split 里的 hard 档。因此：
+
+- budget 160 在 1300 步下零截断的**充要条件是评估 `es ≤ 1296`**；
+- 训练集实测上界 1152，裕度 144 帧（12.5%），唯一风险线是 BinFill hard（训练 es 578–1152）；
+- **新增预检 `EVAL_ES_BOUND`（起跑前、无 GPU）**：遍历 4 任务 × 全部 test 集，只做 `EnvRunner.make_env(i)` + `get_init_obs()`（无策略、无 GPU，共 200 次 `env.reset()`），收集 es 分布，判定行 `EVAL_ES_BOUND=PASS tasks=4 episodes=<n> es_max=<m> budget=160 headroom=<160 − k_eval_max>`；把「es 不可预知」从赌变成测，`headroom < 0` 即回到本节重定 budget。
+- **`es ≥ 1297` 的真实后果（第四轮订正，比第三轮写的「该集记 error」严重得多）**：raise 点唯一，在 `FrameSampMemory._prepare_motion`（`_encode_ready_windows` **不做上限检查**，超限的集会先白编一堆窗再在第一次 infer 时炸）；服务端 `websocket_policy_server._handler` 发回 traceback、关连接后 raise，server 进程存活；但 `examples/robomme/eval.py::evaluate` 的控制流是——episode 异常只写 `"error"` 后 `if success_flag == "unknown": … return` 整轮提前返回；只要 progress 里出现过一个 `"error"`，收尾的 `success_rate = sum(...)` 混入字符串抛 `TypeError` 被吞、`log.json` 永不落盘、外层 `while not os.path.exists(...)` 把全部任务重跑一遍，且续评跳过判据用 `str(episode_id)` 而运行中写的是 int 键 ⇒ 重跑一集也不跳。代价是几十 GPU·小时白跑且拿不到成功率。评估计划另起时须先修 `success_flag` 作用域与 `success_rate` 对 `"error"` 的处理，或把超 budget 的集显式降级；`EVAL_ES_BOUND` 是它的前置门。
+- 评估口径或任务集变更时须按第二部分 C 节的式子重核。
+
+**代价栏**（初稿写的「只是多 16 个被 mask 的 K/V 位」是错的，已删）：K/V 长度 512 → 672（+31%），`MemoryAttention` 在 18 层里每层都对整条 mem_seq 做 K/V 投影、`sample_actions` 每个去噪步再算一遍，且 remat 策略是 `nothing_saveable`（反向要重算）——但按I.1 的 4.3 o 行推算，这一项折合每集只有约 +9 ms，训练步时里也是毫秒级，**瓶颈在数据路**（第三节）。真正的代价是语义上的：query 与最后一个真实 token 的 RoPE 间距 `rope_gap = budget − k` 会逐样本在 **19..154** 间跳动（本库 `k` 最小 6、最大 141；第三轮称「gap 只要非 0 分布总变差就已饱和在 ≈ 0.4」，该数字待 `ROPE_LEN_EFFECT` 重取），这是一个与内容无关的旁路信号，**budget 取得越大该 `rope_gap` 的均值与方差越大**——所以 176 并非免费保险。
+
+#### I.7 验证体系每项五层叙述（原第八节全文，与 F 表互为补充：F 是命令级，本节是每项「证什么 / 怎么证 / 判定行 / 耗时 / 不过怎么办」）
+
+**先说口径，再说每一项**。本节按「A 关闭态不能变 / B 旧东西还能用 / C 新表对不对 / D 开启态对不对 / E 秒级 CPU 单测 / F 跑完后」六组、12 个 V 项一个不漏，每项五层：证什么 → 怎么证（命令、夹具、档位内联）→ 判定行（标「实测」= 既有工具原样输出并给产出者，或「新写」= 本轮定义、须先落地自测）→ 耗时 / GPU / 留档 → 不过怎么办。`AGENTS.md` 第 18 条的两块划分放在本节末尾单独说，不再与六组分类叠着写。命令级细节在 F 表，本节内联的是读者不翻代码就能核对的那部分。
+
+**两条贯穿全节的纪律**
+- **两侧源码身份必须机器核对**（第四轮 P1）：V1 / V6 / V7 三个比较器**都不比 `git_head`**（`compare_fixture_dumps.py::compare` 不读 `DUMP_MANIFEST.json` 的 `git_head`；`compare_fixed_grad.py::compare` 只比 `schema / seed / fsdp_devices / xla_flags / environment` 与 `history_config_sha256`，不比 `source["head"]`；`compare_baseline.py` 同），两侧误跑在同一 commit 时三项全绿。所以 2a / 2d 各记 `git rev-parse HEAD` 与 `git status --porcelain` 入留档，对拍前统一 `jq` 断言两侧 `.git_head` / `.source.head` / `.start_head` 等于预期 SHA、`start_status` 为空，并显式断言 `$BASE != $CAND`。
+- **FAIL 先分流再处置**：`reason=运行口径不同：…`、白名单 raise、目录已存在这类 harness 失配先排查；只有 `SAMPLE_RAW_EXACT` / `INIT_EQ` / `GRAD_EQ` / `STATE_DIGEST` 这类**数值项**失配才走第九节 2d 的 revert，不得先改判据。
+
+##### A. 关闭态：改前 vs 改后一个比特都不能变
+
+**口径行（第四轮补，之前读起来像「在生产配置上证明了」）**：三项都在旧库小档位上证——V1 用 400ep 旧库 8×8 档、V6 用 8 帧夹具 `c8-b` 2 卡 b8 fsdp2、V7 用 2 卡 b8；**生产 4 卡 b128 + 1600ep 新库上的关闭态等价属推论、不是实测**。推论成立的理由：关闭态下本轮改的代码（`MotionMeta.load` / `parse_index` 的 layout 查表、`FrameSampDataset.__init__` 的三态判定、`ref_npy_dataset` 守卫）大多根本不执行（`MotionMeta.load` 只在 motion 开启时调），能执行到的只有 `motion_store` 模块级 import 守卫与 `_NONE_KEYS`。所以这三项证的是「模块可 import + 关闭态交付 / 初态 / 梯度 / 前 100 步逐位不变 + 四键恒 None」；本轮新逻辑的覆盖来源逐项点名：旧表读取 = V2①②③、网格公式与边界 = E 组的 A8 离线边界用例表、新表交付 = V3 + V4。
+
+**V1 关闭态 dataset 交付逐位**
+- 证什么：同一 3,200 个样本 / 200 个 batch 的 dataset 交付改前 vs 改后逐字节相同，排除交付层被波及。
+- 怎么证：`dump_fixture_samples.py` 2a / 2d 各一次 + `compare_fixture_dumps.py`。库 `4task-motion-400ep/framesamp-8x8`（新库 `exec_start_idx` 全 ≥ 100，`fixture_per_step` 找不到 `es=0` 的 episode 必 raise）；环境 `DTYPE_DUMP_DIR`（两侧各一空目录）/ `DTYPE_DUMP_GIT_HEAD` / `DTYPE_DUMP_MODE=both` / `DTYPE_DUMP_ARRAYS=1` / **不设** `DTYPE_DUMP_LIMIT` / `JAX_PLATFORMS=cpu`；YAML `perceptual-framesamp-modul-8frame-8x8.yaml`（白名单已在 1b 放行）。
+- 判定行（实测，产出者 `compare_fixture_dumps.py`）：单侧 `DUMP_DONE samples=3200 batches=200 out=<dir>`；对拍 `SOURCE_IDENTITY=PASS episodes=400 samples=101066` / `FRAME_INDEX_EXACT=PASS … max_frames=8` / `SAMPLE_RAW_EXACT=PASS samples=3200 per_step=200 mismatches=0` / `BATCH_RAW_EXACT=PASS batches=200 mismatches=0`。失败是抛异常 + 退出码 1，无 FAIL 行。
+- 耗时 / GPU / 留档：CPU；> 5 min，tmux `mv2-v1`，留档 `docs/training-doc/mv2-v1-dump/`。
+- 不过：按开头分流；`SAMPLE_RAW_EXACT` / `BATCH_RAW_EXACT` 失配才 revert。
+
+**V6 关闭态定点梯度逐位（单步、固定夹具、不启动训练）**
+- 证什么：同一固定 batch 的单步梯度改前 vs 改后逐叶逐位相同，排除公式参数化改动波及关闭态数值。
+- 怎么证：`single_step_grad_fixed.py` ×2 + `compare_fixed_grad.py`。夹具 `DTYPE_BATCH_FIXTURE_DIR=v1-store/fixtures/8x8/grad/c8-b`（8 帧档、12 个数组键 + 4 个 `none` motion 键，满足工具「必须恰好 12 数组键」的断言；`m8-*` 是 16 键会 raise）；`--batch-size 8 --fsdp-devices 2 --seed 42 --model.history-config perceptual-framesamp-modul-8frame-8x8.yaml`；`XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'`；`DTYPE_GRAD_DIR` 预先不存在；`unset DTYPE_BASELINE_CHECKSUMS`；`DTYPE_SOURCE_COMMIT=$BASE` / `$CAND` + porcelain 为空。**硬约束（第四轮）**：比较器对 `environment` **整体等值、无白名单**（含 `cuda_visible_devices` 与 `uv_lock_sha256`），故两侧必须 `export CUDA_VISIBLE_DEVICES=4,5`、2b 禁止 `uv add`（`uv.lock` sha 三处各记一次入留档）；确需换卡须重跑 2a 而非放宽比较器（`0908` 计划记 2026-09-04 实际发生过跨卡 gate FAIL）。该工具把关的是 `_CONFIGS` 与 `main()` 的 `raise ValueError("只接受 modulation 关闭态两档配置")`（不是 `_EXPECTED_HISTORY_CONFIGS`），modul YAML 已在其中、无需改。
+- 判定行（实测，产出者 `single_step_grad_fixed.py` / `compare_fixed_grad.py`）：单侧 `FIXTURE=PASS kind=… keys=12 batch=8`（×3）/ `INIT_PARAMS=PASS leaves=<N>` / `GRAD_KIND=PASS kind=…`（×3）/ `GRAD_DONE kinds=3`；对拍 `INIT_EQ=PASS leaves=<N> mismatches=0` / `GRAD_EQ=PASS kinds=3 leaves=<N> mismatches=0`。
+- 耗时 / GPU / 留档：约 15 min，GPU 4,5；留档 `docs/training-doc/mv2-v6-grad/`。
+- 不过：`reason=运行口径不同：environment` 是 harness 失配先排查；`INIT_EQ` / `GRAD_EQ` 数值失配才 revert。
+
+**V7 关闭态 100 步守卫（第 18 条第二块，唯一一项）**
+- 证什么：真训练前 100 步，逐步 loss / 参数摘要 / 输入摘要改前 vs 改后逐位相同，排除多步累积差异。
+- 怎么证（第四轮补全，第三轮只写了 `bench_train_steps.py` 一步、照写跑不起来）：驱动 `scripts/training/g0/run_2gpu_epoch_bench.sh`，一行式照 `docs/training-doc/aws-t3-closed-s100/launch.md`，显式给 `STEPS=100 SAVE_INTERVAL=25 EXTRA_DIGEST_STEPS=99 WORKERS=4 HISTORY_CONFIG=perceptual-framesamp-modul-8frame-8x8.yaml EXP_NAME=<run> RUN_TAG=<tag> BENCH_GPUS=4,5 DATASET_PATH=v1-store/datasets/4task-motion-400ep/framesamp-8x8 XLA_FLAGS='…'`（驱动默认 `DATASET_PATH=${GL_DATASET}=4task-gl` 本环境不存在；`BENCH_ROOT` 写死 `v1-store/bench/2gpu-epoch-bench`，产物落 `<BENCH_ROOT>/<RUN_TAG>`；驱动自带第三处 history config `case` 白名单，1b 一并放行；驱动的 `SAVE_INTERVAL` / `EXTRA_DIGEST_STEPS` 会转成工具读的 `BENCH_DIGEST_INTERVAL` / `BENCH_EXTRA_DIGEST_STEPS`）。完整链路：`check_baseline_env.py dump`（两侧）→ `manifest`（2a 侧，产 `BASELINE_MANIFEST.json`，**缺它 `BASELINE_ENV` 恒 FAIL**）→ `check --base … --steps 100 --batch-size 8`（2d 侧）→ bench（两侧）→ `project_scalars.py`（两侧，产 `scalars_hex.tsv`）→ `compare_baseline.py`。摘要步 `{0,25,50,75,99}`、输入摘要步 `{0,1,2,25,50,75,99}`：state 族 = 步 0 强记 + save 调度经 gate 过滤，batch 族恒含 `{0,1,2}` 与末步（第三轮说「`[0,1,2,24,49,99]` + rows=6 任何参数下都产不出」是误判——那正是 `t8-c8-guard-s100` 用 `BENCH_DIGEST_INTERVAL=1000` + `EXTRA=1,2,24,49` + `--save-interval 1` 的实际产出）。
+- 判定行（实测，产出者 `compare_baseline.py` / `check_baseline_env.py`）：`BASELINE_ENV=PASS` / `SCALARS steps=100 keys=5 hex_mismatch_steps=0` / `INDEX_SEQ=PASS n=<共同前缀长度>（≥ 800，含 prefetch 余量；同档位历史实测 872，不是常量）` / `STATE_DIGEST rows=5 mismatch=0` / `BATCH_DIGEST rows=7 mismatch=0` / `BATCH_DIGEST_CANONICAL rows=7 mismatch=0` / `CANON_CHECK=PASS steps=7` / `DET_CHECK=…`。汇总（新写，`finish_check.py` 本轮定义）：`INDEX_TRAIN=PASS n=800 recorded_n=<n>`（`base_indices[:800] == cand_indices[:800]`）与 `GUARD_GRAD_100=PASS scalars_steps=100 index_n=800 batch_digest_rows=7 state_digest_rows=5`。**两个 800 来自不同工具、含义不同，不可统一成一个数。**
+- 耗时 / GPU / 留档：30–35 min × 2，GPU 4,5，tmux `mv2-bench-base` / `mv2-bench-cand`；留档 `docs/training-doc/mv2-v7-guard-base/` 与 `mv2-v7-guard-cand/`（先把 `metrics.jsonl` / `*digests.jsonl` / `param_checksums.jsonl` / `env.json` 拷入 `records/` 再删 run 产物，第 6 条）。
+- 不过：同 V6 分流。
+
+##### B. 旧东西还能用（V2，三条）
+
+- **V2① 旧表可读**：`MotionMeta.load` 两张旧表（40ep rows=772、400ep rows=6832，实测 `schema=1`、`layout="motion-768-grid16-v1"`、无三新键）且解析出 `LayoutSpec(demo_min_real=33, exec_min_real=33, demo_tail_pad="none")`。**能过的前提是第四轮两处修正**：`INDEX_SCHEMA` / `META_SCHEMA` 不升版（A1）、`store_meta` 三新键按 layout 分档兜底（A1）。判定行（新写，`legacy_regress.py`）`LEGACY_LAYOUT=PASS tables=2 rows=772/6832 spec=(33,33,none)`。秒级。
+- **V2② 旧 YAML + 旧表交付逐位**：**改成 2a 与 2d 各跑一次 `dump_fixture_samples.py` + `compare_fixture_dumps.py`**（第三轮写「2d 跑新写的 `legacy_regress.py`」，改前对照物不存在）：`_EXPECTED_HISTORY_CONFIGS` 已含 `perceptual-framesamp-context-motion.yaml`，40ep 库同时有 `framesamp` / `motion` 两套产物且清单含 `exec_start_idx == 0` 的集；N 沿用 V1（`per_step=200` + 默认 `N_RANDOM`）。判定行（实测）同 V1 四行；汇总（新写）`LEGACY_YAML=PASS`。这条是唯一覆盖「旧 YAML 两键同缺 → `(33,"none")` 兜底 → 旧表 spec 相等」分支的交付层判据。> 5 min，tmux `mv2-v2`，留档 `docs/training-doc/mv2-v2-legacy/`。
+- **V2③ 历史 run 快照真走 policy 构造**：`v1-store/train-runs/mme_vla_suite_b128/awsprod40k-b128-motion/5000` 走 `create_trained_policy(..., motion_stub=True)`。**表述订正**：`motion_stub=True` 仍会 `Popen` 一个 stub sidecar 子进程（`uv run --project scripts/dataset/wan --no-sync python motion_sidecar.py --stub`）并走握手，只是不加载 encoder、不占 GPU；前置 `ls v1-store/venvs/wan/bin/python`。该快照 `history_config.resolved.yaml` 的 `motion:` 节实测无两新键 ⇒ 只能走 `(33,"none")` 分支，**在线守卫必须放行这一对**（E 节；第三轮的硬等值 `repeat_last` 会让这条必 FAIL）。该目录不得改动任何文件。判定行（新写）`LEGACY_POLICY=PASS spec=(33,none) stub=1`。秒级。
+
+##### C. 新表本身对不对（V3，建库侧，第九节步 3 / 4）
+
+链路与判定行全在 B 节，这里只给读者一条线：输入重锚 `INPUT_REANCHOR=PASS files=4`（4 个 H5 内容 sha256 == 帧库 finalize 时的 `input_manifest.json`）→ Wan `STAGE_DONE stage=wan workers=8 items=3200 skipped=0` → encode（同式）→ pack / verify `PACK_MOTION_DONE=1` / `VERIFY_MOTION=PASS scanned=71316 mismatches=0` → oracle：D3 encoder **全量** `ENCODER_BITEXACT=PASS compared=71316 mismatches=0`；D2 VAE **抽样只缩前向**（补帧窗全部 + 其余 10%，段集合 / 行数 / 逐行 m·offset / 帧 sha 四道检查全量）`ORACLE_VAE=DONE metadata_rows=71316 windows=<抽样数> …` / `WAN_BITEXACT=PASS compared=<抽样数> padded_covered=1600 frame_mismatches=0 latent_mismatches=0`——**比较器必须带与 oracle 逐字相同的 `--sample-spec`**，自算抽样集合与 `sampled_windows.json` 双向差集为 0、`compared == len(自算集合)`（A7；第三轮 B 节命令漏了这个参数，比较器只能退回照单比对）→ 账目**五项**（第三轮写「六项」是计数错）：`A6_SAMESOURCE=PASS` / `A7_BYTES=PASS` / `A9_INDEXSET=PASS samples=2100 cold=1600 mismatches=0`（**只在步 4 跑一次**，D 组 V4 引用其判定行、不重跑）/ `A10_ROWS=PASS rows=71316 exec=35403 demo=35913 episodes=1600`（`--expect-*` 写死、不取 `motion_index.json`；第四轮反驳者用 manifest 独立复算 demo 35,913 + exec 35,403 = 71,316，按任务 BinFill 31,308 / VideoRepick 18,205 / RouteStick 12,626 / VideoUnmaskSwap 9,177，与本文吻合）/ `A11_PAD=PASS segs=3200 rows=71316 padded=1600 set_diff=0`。本轮 **D1 不跑**（帧库不重建），其「像素同源」位由 `INPUT_REANCHOR` 顶替；`D1–D3` 与 `a*` 代号的出处是正本 `docs/motion-memory.md` 7.5 节与第八章。
+
+##### D. 开启态新东西对不对（第九节步 6）
+
+**V4 开启态 dataloader 交付逐位（第四轮从「只有计数」改成逐位判据，P0）**
+- 证什么：dataloader 交付的 `motion_emb` 每一有效行与 `motion_token.f32.bin` 对应行逐字节相同、`motion_pos` 取对列、`motion_mask` == `arange(budget) < k`、`mem_order` 与独立手算置换相同、填充区全零。第三轮的 `V4_COVER` 全是计数字段，取行偏移错一行 / pos 切错列 / `_pad_motion` 错位 / `mem_order` 置换错向都照样 PASS。
+- 怎么证：**复用并参数化 `scripts/training/tests/hand_calc_8frame.py`**（它就是「交付 vs 表字节 + `mem_order` 手算」：`f.seek(row*768*4)` + `item["motion_emb"][i].tobytes() != f.read(768*4)` → raise，再比 `motion_mask` 与 `mem_order != expected_order(...)`；第三轮把它列成「必改但本轮不跑」并另新写工具重造同一判据）。三处必改：`for es in (0, 66, 114)` 在新库 StopIteration（es 最小 100、es=66 零集）→ 按 `(es−17) mod 16` 残差分层现挑；YAML stem 写死 context → 参数化到 modul-motion；两处 `96` 字面量 → `budget`。样本集**写死**：冷启动 `t==es` 全取 1,600、首 exec 窗 `t==es+32` 全取 1,600、`k≥140` 的 32 个全取、16 个残差档各取 ≥ 2（分布 r=0..15：55/186/49/136/49/112/54/365/52/126/55/86/34/129/39/73）。
+- 判定行：`HAND_CALC_8FRAME=PASS samples=<n> mismatches=0`（实测，既有）+ 新写 `V4_COVER=PASS cold=1600 first_exec=1600 kmax=141 kge140=32 pad_r=16/16`——四个数做**等值断言**（第三轮留成 `<n>` 占位符，任何 n 含 0 都 PASS）；`pad_r` 是覆盖统计、不构成交付判别，补帧正确性举证在 C 组的 `A11_PAD` 与 D2 / D3。
+- 耗时 / 留档：CPU，> 5 min，tmux `mv2-v4`，留档 `docs/training-doc/mv2-v4-deliver/`。
+
+**V5 模型侧接线正确性（modulation）**
+- 证什么：同一 budget 下 padding 内容（有限值，1e3 量级正态）不影响 loss 与**全部可训练参数**的梯度；真实 motion 内容改变必改变 loss；4 条 motion 叶在有 motion 时梯度非零；`mem_order` 次序经 `k_position` 改变 cross-attn logits（`ORDER_EFFECT` 在 modulation 下只证这一点，比 context 弱）；行置换不变性。`ZERO_MOTION_EQUIV`（全 mask ⇒ 等价关闭态）在 modulation 下**不适用**——比的是 `mem_len=672` 与 `512` 两个模型，标 `LEN_EQUIV_NA` 并写明 RoPE 原因（I.4）。
+- 怎么证：`motion_gates_model.py` 六层适配见 F 表。**模型档已拍板用乙**（用户 09-17）：`paligemma_variant="gemma_150m"` + `action_expert_variant="gemma_300m"`——modulation 记忆路只经 action expert 流，`MemoryAttention` 的 4 头 / 256 头维 / 1024 宽 / 18 层、真 YAML、真库、真 budget=160 全为真；不用甲档（`gemma_2b` 主干约 2.6 B 参数、fp32 约 10 GB + 编译，记忆路一个字节都不经过它）；留档写明「VLM 主干用 `gemma_150m` 替身」。**确定性纪律（第四轮 P0）**：照抄 `cmd_t3mechanism` 已验证的四项——R≥3 同 obs 探针、不确定叶单列并排除（硬闸保留「loss R 次逐位相同」与「不确定叶含 `mem_encoder` / motion 叶即 FAIL」）、比较集合取 `get_freeze_filter()` 的补集（非 lora 档 `PathRegex(".*img.*")`）、挂与 V6 同一组 `XLA_FLAGS`；正本 8.3 记 A100 上 `['PaliGemma']['llm']['embedder']['input_embedding']` 叶曾不确定（09-07 后未复现，属间歇），不加探针会在与 padding 无关的叶上误报 FAIL。**显存纪律**：逐叶比较改流式（每叶算 sha / max_abs 后立即释放，禁止同时持有两棵完整梯度树；同文件已有「ema / opt_state 在初态校验后即释放，否则第二次 `value_and_grad` OOM——2026-09-03 实测 44 GB」先例）。样本 spec 分两类：库内可得 `m` 中位与 `m=max=141`（写死 `BinFill ep367, es=1152`）；必须合成 `m=0`（照 `obs_empty`）与 `m=160`（`ds[i]` 返回后改字典）——新库真实 `m ∈ [6, 141]`，0 与 160 只能合成（第三轮写「四个 spec 都按数据集真实交付挑」，按字面 `_fixture_batch` 必 `SystemExit`）。
+- 判定行（全部新写或改口径）：`MASK_INVARIANCE=PASS` / `GRAD_LEAK=PASS` / `ORDER_EFFECT=PASS` / `ROW_PERM_INVARIANCE=PASS max_abs_diff=…`（代码里现只 `fails.append`、无 `=PASS/FAIL` 打印，须加）/ `PAD_CONTENT_INVARIANCE=PASS det_probes=3 nondeterministic_leaves=[] excluded=0 covered=<n>/<m>` / `LEN_EQUIV_NA`。「20 步内 4 叶参数值确有更新」这条**从 V5 移到 V8**（V5 只走 `jax.grad`、不落优化器；第三轮写了承诺没写产出者）。
+- 耗时 / GPU / 留档：1 张 GPU（4），tmux `mv2-m4`；> 5 min 留档 `docs/training-doc/mv2-v5-gates/`。
+
+**V8 开启态 A/A 可复现 + motion 叶确有更新**
+- 证什么：同一侧同一命令跑两次 100 步逐位可复现（含四键的 batch 摘要），且 4 条 motion 叶 100 步内参数值确有变化。V8 是 A/A，不能支持「新旧等价」——开启态没有旧链路。
+- 怎么证：V7 同一驱动 ×2；YAML `perceptual-framesamp-modul-8frame-8x8-motion.yaml`（三处白名单已放行）；`DATASET_PATH` 指新库 `4task-v2-1600ep-604f16da/framesamp-8x8`，`MMEVLA_MOTION_STORE` unset（表路径唯一来源是 YAML `store_path`）；GPU 4,5；`bench_train_steps.py` 本就写 `param_checksums.jsonl`。
+- 判定行（实测，产出者同 V7）：`SCALARS steps=100 keys=5 hex_mismatch_steps=0` / `INDEX_SEQ=PASS n=<…>` / `STATE_DIGEST rows=5 mismatch=0` / `BATCH_DIGEST rows=7 mismatch=0` / `BATCH_DIGEST_CANONICAL rows=7 mismatch=0` / `CANON_CHECK=PASS steps=7`（第三轮漏了后三行——`_install_batch_digest_recorder` 的 `per_key` 对每键落哈希，开启态下正是四键的真实字节摘要）。新写汇总 `AA_100=PASS scalars_steps=100 index_n=800 batch_digest_rows=7 state_digest_rows=5`（字段集与 `GUARD_GRAD_100` 相同），汇总器另断言两侧 `batch_digests.jsonl` 里 `motion_emb` / `motion_pos` / `motion_mask` / `mem_order` 的 `per_key` 逐步相等且**均非 null**（关闭态四键为 null，同时反证 YAML 真开了 motion）；新写 `MOTION_PARAMS_UPDATED=PASS n=4 first_step=0 last_step=99`（从 `param_checksums.jsonl` 比 4 叶 sha 是否随步变化；`t3_smoke.py` 的同类判据写死 `_EXPECT_N_LEAVES=(193,177)` / `_EXPECT_N_KEYS=(16,12)` 是 32 帧 context 口径，不复用）。
+- 耗时 / GPU / 留档：30–35 min × 2，tmux `mv2-aa`，留档 `docs/training-doc/mv2-v8-aa/`。
+
+**V-online 在线 vs 表（方案 B「分层解耦」，用户拍板；三段）**
+- 证什么：① 在线侧对**全部 71,316 窗**装配出的 33 帧与离线逐位一致（含 1,600 个补帧窗的补帧数与补帧源帧 `es−1`）；② **全 1,600 集**的起点集合 / `motion_pos` / `mem_order` 与 dataset 四键逐位一致；③ 真 encoder token 对**全部 1,600 个补帧窗 + 必含集**逐位一致。为什么这样拆：本轮唯一新增的机制是 demo 段 `min_real` 33→17 + `np.repeat` 补帧，风险落在「输入 33 帧是否装配正确」；encoder 的「同输入 ⇒ 同输出」已被反复确认（I.5 列了五条证据），换 ckpt 后只需小样本重取。第三轮的「按 episode 抽 10%」实算（seed=0、`% 10 == 0`）漏掉 k 最大的 g=367 与全部 24 个 `es ≥ 1000` 的集，且判定行写死 `episodes=160` 与取模规则不相容（恰中 160 概率约 3.3%）。
+- 怎么证：`compare_online_motion.py` 三档，全部前置：a11 与 oracle 四道全量检查已 PASS（① 以离线 metadata 为真值）、E 节的 stub 帧号校验放宽已落地（②）。
+  - ① `--assembly-hash $LIB/wan-latents`：在线 `_encode_window` 产出的 `np.ascontiguousarray(np.stack(frames))` 算 `hashlib.sha256(arr.tobytes())`，与离线 `wan-latents/*.metadata.json` 每行已有的 `input_frames_sha256`（同一 `wan_common.sha256_bytes` 口径；A3 保证补帧窗也对最终 33 帧算）逐窗比；同时断言「离线 `pad_frames>0` 的行集合」== 「在线按 es 独立推出的补帧窗集合」。**零 GPU**；h5 读 1,192,918 帧 + 71,316 次 6.3 MB sha，8 片（切分写死 `g % 8`，连续切块实测把挂钟拉到 2.08 倍）约 15–20 min。
+  - ② `--stub`：sidecar stub 档（不加载模型、不 import torch、帧号写进像素解回），全 1,600 集，token 判据 SKIP、只验起点集合 / pos / order；零 GPU。
+  - ③ 真 encoder：给 `motion_enc_fn` 外包一层路由——选中窗 → 真 sidecar，未选中 → 直接返回离线表行（`framesamp_memory.py` 的 `motion_enc_fn` 是 `__init__` 形参、`_prepare_motion` 只查 `f in self._history_feats_motion` 不关心来源），装配与次序检查不受影响（第三轮说「窗级抽样一秒也省不下来」只是现行工具把真 sidecar 直接当 `motion_enc_fn` 传进去的后果，不是链路性质）；选中集合 = 全部 1,600 个补帧窗（每集恰一个、由 `seg_len` 直接推）+ 必含整集（g=367；`es ≥ 1000` 的 24 集里 ≥ 3 条；16 个 `(es−17) mod 16` 档各 ≥ 1 条；四任务各 ≥ 1 条）。8 卡 `g % 8` 分片各起一个 sidecar，`--out v1-store/reports/motion/p5_online_v2_1600ep.shard<i>of8.json`（默认路径已有 40ep 历史结果），主进程显式 `export JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES=`，**必须传 `encoder_run_dir`**（A9）；每片约 200 个补帧窗 × 1421.5 ms ≈ 284 s + 必含集，**8 卡约 7 min**。报告把 `compared_real` 与 `assembly_checked` 分列，注入行不计入 token 判据。
+  - 比较器加固（第三轮五条保留 + 第四轮三条）：任何模式下已检测到的失配必须清零、`SKIP` 只准出现在打印不进 verdict；四处 `np.array_equal` 改先核 dtype / shape 再按 `uint8` 视图比字节（抄 `motion_gates_model._bytes_equal`）；两个反向用例（stub token 改错常数、`+0.0` 换 `-0.0`）确认非零退出；秒级 CPU 前置门（真 YAML → `get_history_config` → 真 `MME_VLA_Policy.__init__` 注入 stub `motion_enc_fn`，断言 `_motion_cfg` 键集合与值（含 `budget == 160`，即在线侧 budget 的落点），连跑两条 es 不同的集、中间真 `pol.reset()`，断言新 `mem_buffer` 是新对象、补帧窗数正确）；`unset MMEVLA_MOTION_STORE` 用真 YAML 解析路径断言 `realpath == $LIB/motion`。第四轮新增：**shard 输出加结构化字段** `rows_seen`（排序列表或其 sha256 + 计数）/ `start_ok` / `pos_ok` / `order_ok` / `n_compared` / `n_steps` / `padded_covered` / `mismatch_total`（不截断；现行只落 `lines` 文本与前 200 条 mismatches），`aggregate` 只消费这些字段、禁止解析 `lines`，任一字段缺失即 FAIL 不按 True 兜底；**期望侧独立**：窗数期望用打包器写进 `motion_index` 的 `SegmentInfo.num_grid` 求和（不从在线遍历现算，否则等号两侧同源），`padded_covered` 两侧各算一遍（在线按 es 推、离线取 `pad_frames>0` 的行）断言集合相等；**分片完整性** `SHARD_SET`。
+- 判定行（全部新写或改口径）：① `ONLINE_INPUT_SHA=PASS windows=71316 padded=1600 mismatches=0`；② `ONLINE_START_SET=PASS` / `ONLINE_POS=PASS` / `ONLINE_ORDER=PASS`（stub 档、全 1,600 集）；③ 各片 `ONLINE_ENC_BITEXACT=PASS compared_real=<n> mismatches=0`、`PROVENANCE=PASS`、`YAML_STORE_PATH=PASS`、aggregate 后 `ONLINE_STRATA=PASS padded=1600/1600 kmax_ep=367 es_ge1000=<n≥3> pad_r=16/16 per_task_min=<n≥1>`、`SHARD_SET=PASS shards=8 eps=1600 disjoint=1`；汇总 `P5_ONLINE=PASS episodes=1600 windows=71316 assembly_checked=71316 compared_real=<n> padded_covered=1600 stub=False`。
+- **承诺口径原话（原样写进留档）**：「在线侧 33 帧装配对全部 71,316 窗与离线逐位一致；起点集合 / 时间码 / 交错次序对全部 1,600 集逐位一致；真编码器 token 对全部 1,600 个补帧窗与 <N> 个整集共 <M> 窗逐位一致，其余行由离线表注入、不计入 token 判据。」
+- 耗时 / GPU / 留档：①② 零 GPU 约 20 min（tmux `mv2-vonl-a` / `mv2-vonl-b`）；③ **独占 8 卡**约 7 min（tmux `mv2-vonl-c`，第九节步 6d 单独一档）；留档 `docs/training-doc/mv2-v-online/`。
+
+**V9 4 卡 b128 20 步 smoke（开启态）**
+- 证什么：开启态生产档位跑通且有限；参数树 61 → 65 叶精确匹配（多 `mem_encoder/motion_pos_proj/{kernel (256,768), bias (768,)}` + `mem_encoder/motion_encoder_static/{kernel (1536,1024), bias (1024,)}`）；真实 checkpoint → policy 加载走生产口径；budget 跨源一致；norm_stats 未变。
+- 怎么证：基线 `records/smoke-runner.sh` 同法换 YAML / 配置名 `mme_vla_suite_b128_80k`，tmux `mv2-smoke`，run_name `smoke-m8x8-modul-motion-<UTC>`，GPU 4–7；基线同档实测 5 分 18 秒 > 5 min，按第 17 条完整留档、验完删 run 产物。`check_config_provenance.py` **逐个显式传** `--ckpt <smoke run>/19 --lib v1-store/datasets/4task-v2-1600ep-604f16da --train-config mme_vla_suite_b128_80k --store-subdir framesamp-8x8 --neg-lib v1-store/datasets/4task-motion-400ep --norm-stats <新库 norm_stats.json>`（默认值全指旧库旧 run）；负例臂 `MOTION_STORE_PATH` 判的是报错内容含「绑定的清单不同」，依赖「旧 layout 的表仍能 load 到 `check_same_source` 那一步」——schema 不升版即满足。**新验收器必须新写**，不得沿用 `smoke-m8x8-modul-20260915T054007Z/records/finish_check.py`（硬编码 `motion_enabled is False`、`n_model=n_ckpt=61`、`PREFLIGHT=PASS n=25` / `== 25`、`mme_vla_suite_b128_60k`）。
+- 判定行：`SMOKE20=PASS steps=20 finite=1 exit_code=0`（新写）/ `PREFLIGHT=PASS n=30`（实测）/ `PARAM_TREE_EXACT=PASS … n_model=65 n_ckpt=65 missing=0 extra=0 shape_mismatch=0`（实测）/ `MEM_PARAMS=PASS n=10`（6 modulation 叶 + 4 motion 叶；新写）/ `check_config_provenance.py` **全部五条**（实测；第三轮只列了一条）`NORM_STATS_SAME=PASS` / `LIB_PROVENANCE_MATCH … all_equal=1` / `MOTION_STORE_PATH … guard=raise infer_reads_store=0 same_manifest=1` / `CKPT_PARAM_TREE=PASS … leaves=65 ckpt_has_motion=1` / 观察行 `CKPT_DTYPE_PROFILE` / 汇总 `TIC_L0=PASS`（任一 FAIL 整脚本非零退出）/ `BUDGET_CONSISTENT=PASS snapshot=160 repo_yaml=160 expected=160`（新写、**跨源**：run 内 `history_config.resolved.yaml` vs 仓库新 YAML vs 160。第三轮写的「快照 == dataloader 实际值 == 在线 `_motion_cfg`」三侧在代码里同源自一个 DictConfig、恒等不可能 FAIL，且 smoke 不构造 policy；在线侧 budget 归 V-online 的 CPU 前置门）/ `NORM_STATS=PASS sha256=856c75ea…`（新写）。
+- 耗时 / GPU / 留档：约 6 min + 验收，GPU 4–7，留档 `docs/training-doc/smoke-m8x8-modul-motion-<UTC>/`。
+
+**V10 起跑 preflight**
+- `preflight_train_launch.py`（runner 内，与 train 共用同一 `TRAIN_ARGS`）；`n=25` 的前提是 runner 传 `--run-root`。新增 5 项 motion 检查——**期望值全部由 runner 显式传参**（preflight 只 import 标准库、无 YAML 解析器，第三轮没写期望值从哪来）：`--motion-store` / `--motion-store-meta-sha256` / `--motion-layout`（== `motion-768-grid16-demopad17-v1`）/ `--motion-rows`（== 71316，值来自建库留档、**不从被测 store 现算**，否则等号两侧同源）+ `CHECK_MOTION_ENV_UNSET`（无参，`MMEVLA_MOTION_STORE` 为 unset）。由此 runner 与基线的差异从 8 处变 **9 处**（第三节）。建议再加 `CHECK_MOTION_SOURCE_RUN`（provenance `run_name` 与 YAML `source_run` 一致），把 A6 那条「起跑必 raise」提前到 preflight。
+- 判定行 `PREFLIGHT=PASS n=30`（实测口径，5 项无条件计入）。
+
+##### E. 秒级 CPU 单测（第九节 2b，全部新写）
+
+`GUARD_LR=PASS steps=80000 mismatches=0`（`config.lr_schedule.create()` 在 `range(0, 80_000)` 逐步比 60k 与 80k 两条配置）；`INIT_COMMON=PASS common_mismatches=0 open_only=4`（I.2）；`ROPE_LEN_EFFECT=PASS tv_144_160=… relL2_144_160=… tv_512_672=… pad_content_diff=0`（I.2）；A8 离线边界用例表驱动全部 10 处独立实现（`test_guards.py` 新旧两组 + `for mr in (17, 33)`，负例含「旧 layout 带新键 / 新 layout 缺新键 / 三方不同值」）；`EVAL_ES_BOUND=PASS tasks=4 episodes=<n> es_max=<m> budget=160 headroom=<…>`（第七节，起跑前）。
+
+##### F. 跑完后
+
+motion 全遮消融评估（I.2，用户拍板加入）+ 基线 `59999` 评估（第三节末交接约束，下一轮）。
+
+##### 归因唯一化与两块划分
+
+**归因**：V1 排除交付层、V6 排除单步数值、V7 排除 100 步累积——三项同过的唯一解释是关闭态语义未变；V2 排除旧物被改坏；V3 排除新表本身错；V4 + V-online ① 排除交付与装配错；V5 排除接线错；V8 排除不可复现与 motion 叶不更新。**本轮承诺的是实现等价与可复现，不是因果归因**；「motion 有没有用」由消融臂回答。
+
+**`AGENTS.md` 第 18 条两块划分（第四轮重划）**：第一块（非训练轻量对拍）= V1 / V2 / V4 / V-online；第二块（本机训练梯度一致）= **只有 V7**；V6 单列「单步数值对拍（固定夹具、不启动训练）」；V8 是 A/A 可复现性基线，开启态没有旧链路，**第 18 条第二块对开启态不适用**，本轮以 V8 + V9 + V-online 替代并如实登记为盲区；V0 / V3 / V5 / V9 / V10 不属两块（分别是配置守卫 / 建库对拍 / 模型接线 / 冒烟 / 起跑闸）。**第二块不通过不得宣称改动等价。** 两张链路图（外加第四轮补的在线图）见 H 节。
+
+**判定行标注约定**：F 表每条判定行标「实测」或「新写」。在 `AUDIT_BASE=530e841` 下 grep 零命中、本轮新定义的判定行名：`GUARD_LR`、`INIT_COMMON`、`ROPE_LEN_EFFECT`、`EVAL_ES_BOUND`、`INDEX_TRAIN`、`GUARD_GRAD_100`、`AA_100`、`MOTION_PARAMS_UPDATED`、`LEGACY_LAYOUT` / `LEGACY_YAML` / `LEGACY_POLICY`、`V4_COVER`、`PAD_CONTENT_INVARIANCE`、`LEN_EQUIV_NA`、`ONLINE_INPUT_SHA`、`ONLINE_STRATA`、`SHARD_SET`、`YAML_STORE_PATH`、`A11_PAD`、`A6_SAMESOURCE`、`INPUT_REANCHOR`、`BUDGET_CONSISTENT`、`SMOKE20`、`MEM_PARAMS`、`NORM_STATS`、5 条 `CHECK_MOTION_*`、`GPU_IDLE`。第三轮那句「每一行都已与工具实际输出对表两轮」**只对标「实测」的行成立**。
+
+
+#### I.8 执行顺序步级细节（原第九节全文，含 tmux 会话名清单与清理纪律）
+
+主副本上顺序执行，每个 commit 后立即 push。建库 8 卡全开；**除 V-online ③ 独占 8 卡外**，对拍、smoke、正式 run 用 GPU 4–7（V6 / V7 / V8 钉死 4,5）。
+
+**本轮 tmux 会话名清单**（第 7 条要求先记清单、清理时只按全名逐个 kill；两两之间无前缀关系）：`mv2-wan`、`mv2-encode`、`mv2-pack`、`mv2-oracle`、`mv2-v1`、`mv2-v2`、`mv2-v4`、`mv2-vonl-a`、`mv2-vonl-b`、`mv2-vonl-c`、`mv2-bench-base`、`mv2-bench-cand`、`mv2-aa`、`mv2-m4`、`mv2-smoke`、`mv2-prod`、`mv2-dense`。**清理命令统一写 `tmux kill-session -t =<全名>`**（`=` 强制精确匹配）。第三轮说「`tmux -t` 做前缀匹配，`mv2-prod` 会误杀 `mv2-prod-dense`」把顺序说反了：tmux 先精确名再前缀，**目标会话已结束时**前缀匹配才会命中同前缀的其他会话——所以仍不叫 `mv2-prod-dense`，且一律用 `=`。
+
+| 步 | 做什么 | commit |
+|---|---|---|
+| 0 | 用户确认 `run_name`（V5 模型档已拍板用乙）；`df -h /scratch` ≥ 400 G 才起跑 | — |
+| 1 | 本文入库 | `docs:` |
+| **1b** | **只改验证工具白名单、不触生产链路**（第四轮新增，解 2a 与 2b 的互斥）：`dump_fixture_samples.py` 与 `bench_train_steps.py` 的 `_EXPECTED_HISTORY_CONFIGS` 各加 `perceptual-framesamp-modul-8frame-8x8.yaml` 与 `perceptual-framesamp-modul-8frame-8x8-motion.yaml`；`run_2gpu_epoch_bench.sh` 的 `case "${HISTORY_CONFIG}"` 白名单同加；`ref_npy_dataset.py` 形制闸放开 `integration_type in ("context", "modulation")`。commit + push 后 **`BASE=$(git rev-parse HEAD)`（不写死 sha）**。第三轮把 2a 写成「clean HEAD 跑 V1+V6+V7」物理上不成立：白名单不改 V1/V7 起手 raise，改了 V6 的 porcelain 清洁闸又不过 | `fix:`（取证工具白名单） |
+| **2a** | **在 1b 之后的 clean BASE 取「改前」证**，`DTYPE_SOURCE_COMMIT=$BASE`：V1 dump、V2② dump（`perceptual-framesamp-context-motion.yaml` + 40ep 库）、V6 定点梯度、V7（`dump` + `manifest` + bench + `project_scalars`）；卡号钉 `CUDA_VISIBLE_DEVICES=4,5`；记 `git rev-parse HEAD` 与 porcelain 入留档；产物落 `v1-store/bench/2gpu-epoch-bench/<RUN_TAG>-base/`（V7）与各自 `DTYPE_*_DIR`。留档目录 `docs/training-doc/mv2-v1-dump/`、`mv2-v2-legacy/`、`mv2-v6-grad/`、`mv2-v7-guard-base/`；V7 真起训练进程，run 名记入清单、**先把 metrics / digests / env.json 拷入 `records/` 再删 run 产物**（第 6 / 17 条） | — |
+| **2b** | 实施第二部分 A–E 全部生产代码 + F 节全部验证工具（`legacy_regress.py`、`hand_calc_8frame.py` 参数化、`motion_gates_model.py` 六层适配、`compare_online_motion.py` 三档与 aggregate、`finish_check.py`、preflight 5 项、`eval_rhythm_gates.py` 区间与 `--yaml`）+ CPU 单测（`GUARD_LR` / `INIT_COMMON` / `ROPE_LEN_EFFECT` / A8 边界表 / `test_guards.py` 新旧两组）；此阶段工作区 dirty，**不跑任何带 clean-source 校验的工具**；**禁止 `uv add`**（V6 比较器比 `uv_lock_sha256`） | — |
+| **2c** | **两个 commit**（第四轮拆分，让回滚只碰生产改动）：`commitV10.0: demo 段补帧网格、modulation 接入 motion 与 80k 配置`（A–E 生产链路）→ `commitV10.1: 第四轮验证工具与 CPU 单测`（F 节工具）→ push；记 `CAND=$(git rev-parse HEAD)`；**`git status --porcelain` 必须为空才能进 2d** | `commitV10.0` + `commitV10.1` |
+| **2d** | 取「改后」证并对拍（`DTYPE_SOURCE_COMMIT=$CAND`，卡号仍 4,5）：V1 / V2② compare、V6 compare、V7 `check --base` + bench + `project_scalars` + `compare_baseline`（tmux `mv2-bench-cand`）、V2① / V2③ 秒级。对拍前 `jq` 断言两侧源码身份（I.7 开头）。**FAIL 分流**：harness 失配（`reason=运行口径不同…`、目录已存在、白名单 raise）先排查；数值项失配 → `git revert --no-commit <commitV10.0 sha>` + 手写 subject `revert: 撤销 commitV10.0（2d 对拍 <判定行> FAIL）` + push（裸 `git revert` 产出英文无前缀 commit，违反第 11 条；**只 revert V10.0、保留 V10.1 工具**），停下交用户。第二轮规则：`DTYPE_SOURCE_COMMIT` 取 revert 后新 commit、产物目录 / `RUN_TAG` 加 `-r2`；基线证在 `uv.lock` / `packages` / `CUDA_VISIBLE_DEVICES` / GPU 列表不变时可跨轮复用（`compare_fixed_grad.py` 不比 `source["head"]`，但 `environment` 任一变化即 raise） | — |
+| 3 | encoder 换型落盘 + `ASSETS_LOCK.json` 更新 + `test_assets_lock.py` 通过 + 输入重锚（`INPUT_REANCHOR=PASS files=4`） | `fix:`（资产锚点） |
+| 4 | 建库四步（tmux `mv2-wan` → `mv2-encode` → `mv2-pack` → `mv2-oracle`；**Wan 与 encode 之间零 commit**）+ 账目五项；`--raw-dir` 三方断言在 `run_local.py` / `oracle_driver vae` **读完清单后立即做**（A6，不等 5 h GPU 跑完） | — |
+| 5 | 建库留档 `docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/` | `docs:` |
+| **6** | 开启态验证，**串行子步、标卡号、每档结束 `tmux ls` + `nvidia-smi` 确认前一档进程已退**（第四轮 P0：第三轮五项并列在一格、V-online 要 8 卡与表头「用 4–7」冲突）：**6a** V4（CPU，tmux `mv2-v4`）‖ V5（GPU 4，tmux `mv2-m4`）→ **6b** V8（GPU 4,5，tmux `mv2-aa`）→ **6c** V-online ①②（零 GPU，tmux `mv2-vonl-a` / `mv2-vonl-b`）→ **6d** V-online ③（**独占 GPU 0–7**，tmux `mv2-vonl-c`，约 7 min）→ **6e** smoke（GPU 4–7，tmux `mv2-smoke`，run_name `smoke-m8x8-modul-motion-<UTC>`，> 5 min 完整留档）。本步所有工具改动已在 2c 入库 | `docs:` 守卫留档 |
+| 7 | 起跑留档 `docs/training-doc/<run_name>/launch.md`（沿用「起跑前留档不嵌入自身提交 SHA」）；此刻记 `TRAIN_HEAD` 写进 launch.md 正文；同步做 `EVAL_ES_BOUND`（无 GPU，第七节） | `docs:` |
+| 8 | 生成 runner 落 **`v1-store/logs/mv2-prod-runner.sh`（不进 git）**：照抄基线 runner + `launch.actual.json` 的 `env` 前缀，只改第三节那 **9** 处 → **独立占卡闸**（不依赖 runner 内的 `test`——两个基线 runner 的 `body()` 内没有 `set -e`，第 33 行 `test "$(nvidia-smi …)" = "0"` 失败后照样往下走）：`nvidia-smi --id=4,5,6,7 --query-gpu=memory.used --format=csv,noheader,nounits` 求和为 0 且 `tmux ls` 中本轮会话只剩待起的 `mv2-prod`，判定行 `GPU_IDLE=PASS gpus=4,5,6,7 used_mib=0 sessions=<清单>` 写进 launch 留档 → tmux `mv2-prod` → preflight `PREFLIGHT=PASS n=30` → 训练；Monitor 盯日志；**300 步处按第 16 条口径重估 ETA 并回报**，分记 dataloader 等待占步时比例与 step compute | — |
+| **8b** | **起跑后归档**（第四轮补，第 12 条要求的 commit / 命令 / 配置 / 输出路径此前只留在终端与 v1-store）：`records/launch.actual.json`（`train_head` / `launch_command` / `tmux_sessions` / `train_pid`）+ `records/preflight.log` + `records/prod-runner.sh` 副本 | `docs:` |
+| 9 | 训完：motion 全遮消融评估 + 基线 `59999` 评估（评估口径另起计划，第三节末交接约束） | 另起计划 |
+
+
+#### I.9 步时三因与 4 卡理由
+
+**步时必须重测，52 h 只是下界**：基线 4 卡 2.34033 s/步（`result.md` 的 step 100→59900 实测），80,000 × 2.34 s = **52.0 h**。但基线本身已是数据受限——全程 15 s 采样四卡 util 均值 **72.39%**、0% 采样占比 **25.39%**，起跑 500 ms 密采均值 70.14%。三个增量按量级排序（第四轮订正，第三轮并列写法不成比例）：**数据路**的 84 MB/batch 与 8 worker 常驻 1.75 GB 最大 ≫ 每样本一次 672 长稳定排序（numpy，微秒级）≫ `MemoryAttention` 在 18 层里每层对整条 mem_seq 做 K/V 投影（512→672 即 +31%，remat 策略 `nothing_saveable` 反向还要重算，但按I.1 的 4.3 推算折合毫秒级）。步时若上升，先看数据路。执行顺序表为此设了硬节点：推进到 300 步后按 `AGENTS.md` 第 16 条口径（稳态窗口均值 + 0% 占比 + 慢/非慢分层，**禁用中位数**）重估 ETA 并回报；步时较基线上升 > 15% 时先停下评估 `num_workers` 是否要上调（属第 10 条超参，须另行确认落点）。
+
+**为什么仍用 4 卡而不是 8 卡**：成对可比要求的是**卡数**（`fsdp_devices=4`、可见 4 张 → per-device batch 32）与 mesh 形状，物理卡号不影响任何数值（基线当初用 4–7 只因 0–3 在跑 MotionJEPA 训练，现在 8 卡全空）。改 8 卡会让 per-device batch 从 32 变 16、fsdp mesh 改变，与基线不再逐位可比——代价是另外 4 张 A100 闲置约 52 h。**若愿意牺牲成对可比换速度，这一条可以改，需用户明确。**
