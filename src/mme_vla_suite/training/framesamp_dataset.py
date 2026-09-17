@@ -105,7 +105,8 @@ class FrameSampDataset(Dataset):
         self._motion_enabled = bool(mcfg is not None and mcfg.get("enabled", False))
         if self._motion_enabled:
             _req(int(mcfg.dim) == ms.MOTION_ROW_SHAPE[0], f"motion.dim={mcfg.dim} != {ms.MOTION_ROW_SHAPE[0]}")
-            _req(int(mcfg.budget) == 96, f"motion.budget={mcfg.budget} != 96")
+            _req(int(mcfg.budget) >= 16 and int(mcfg.budget) % 16 == 0,
+                 f"motion.budget={mcfg.budget} 必须为至少 16 的 16 倍数")
             _req(int(mcfg.pos_dim) == int(hc.memory_feature.pos.input_dim) // 3,
                  f"motion.pos_dim={mcfg.pos_dim} != pos.input_dim // 3 = {int(hc.memory_feature.pos.input_dim) // 3}")
             _req(int(mcfg.stride) >= 1, f"motion.stride={mcfg.stride} < 1")
@@ -160,6 +161,13 @@ class FrameSampDataset(Dataset):
         if self._motion_enabled:
             self._motion_root = pathlib.Path(motion_root)
             self._motion_meta = ms.MotionMeta.load(self._motion_root)
+            has_min, has_pad = "demo_min_real_frames" in mcfg, "demo_tail_pad" in mcfg
+            _req(has_min == has_pad, "demo_min_real_frames 与 demo_tail_pad 必须同时提供或同时缺省")
+            got_min = mcfg.get("demo_min_real_frames", 33)
+            got_pad = mcfg.get("demo_tail_pad", "none")
+            want = self._motion_meta.spec
+            _req(type(got_min) is int and (got_min, got_pad) == (want.demo_min_real, want.demo_tail_pad),
+                 f"motion demo 契约 {(got_min, got_pad)} 与表 {(want.demo_min_real, want.demo_tail_pad)} 不符")
             ms.run_fast_checks(self._motion_meta, manifest_path=self._manifest_path)
             # 双 store 同源硬闸：同一份清单 + 逐 episode 身份互校（R23）
             ms.check_same_source(self._meta.manifest_sha256, self._motion_meta, manifest)

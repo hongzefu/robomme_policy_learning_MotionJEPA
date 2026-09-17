@@ -55,8 +55,12 @@ class MME_VLA_Policy:
         if self.motion_enabled and self._motion_client is None:
             raise ValueError("motion.enabled=true 的模型必须注入 motion_enc_fn（MotionEncoderClient 或 stub）")
         if self.motion_enabled:
+            if ("demo_min_real_frames" in mcfg) != ("demo_tail_pad" in mcfg):
+                raise ValueError("demo_min_real_frames 与 demo_tail_pad 必须同时提供或同时缺省")
             self._motion_cfg = {k: mcfg[k] for k in ("stride", "window_frames", "budget", "frame_size", "pos_dim", "dim",
                                                      "window_direction", "grid_origin")}
+            self._motion_cfg.update(demo_min_real_frames=mcfg.get("demo_min_real_frames", 33),
+                                    demo_tail_pad=mcfg.get("demo_tail_pad", "none"))
         
         self.reset()
         

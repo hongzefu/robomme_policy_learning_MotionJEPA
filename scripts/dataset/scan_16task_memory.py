@@ -172,6 +172,8 @@ def dist(xs: list[int]) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--manifest", required=True)
+    ap.add_argument("--motion-layout", choices=tuple(ms.LAYOUT_SPECS), required=True,
+                    help="独立扫描必须显式指定窗口布局")
     ap.add_argument("--out", required=True)
     ap.add_argument("--raw-dir", default="",
                     help="原始 H5 目录；给了才读 subgoal 分段（只对每个中位集读，不全扫）")
@@ -183,7 +185,7 @@ def main() -> None:
     RAW_DIR = pathlib.Path(args.raw_dir) if args.raw_dir else None
 
     manifest = json.loads(pathlib.Path(args.manifest).read_text())
-    entries = ms.build_index_entries(manifest)      # 段基址与每段 num_grid 全部由它算
+    entries = ms.build_index_entries(manifest, ms.LAYOUT_SPECS[args.motion_layout])
 
     by_task: dict[str, list] = {}
     for e in entries:
@@ -199,7 +201,7 @@ def main() -> None:
         med_nt = statistics.median_high(nts)
         med = sorted([e for e in eps if e.num_timesteps == med_nt], key=lambda e: e.raw_ep_idx)[0]
         t = med.num_timesteps - 1
-        n_demo = ms.seg_num_grid(med.demo.seg_len)
+        n_demo = ms.seg_num_grid(med.demo.seg_len, med.spec.demo_min_real)
         n_exec_vis = len(ms.visible_motion_rows(med, t)[0]) - n_demo
         total_vis = ms.max_visible_count(med)
         paths = {}

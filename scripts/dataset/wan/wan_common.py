@@ -6,7 +6,8 @@
 `scripts/dataset/test_guards.py` 在主 venv 里断言（两份实现互为对照，不是复制粘贴的借口）。
 
 段工作项键：``<Task>_ep<j>_<exec|demo>``，demo = 全域 ``[0, es)``、exec = ``[es, T)``；
-每段网格起点 ``0, 16, 32, …``（段内绝对位置），起点数 ``len(range(0, max(0, L-32), 16))``。
+每段网格起点 ``0,16,32,…``，起点数为 ``len(range(0,max(0,L-min_real+1),16))``；
+本轮 writer 默认 demo 最少 17 帧、exec 最少 33 帧，历史测试显式传 33/33。
 """
 
 from __future__ import annotations
@@ -29,6 +30,9 @@ GRID_ORIGIN = "segment_start"
 WINDOW_DIRECTION = "forward"
 TRUNCATION_POLICY = "none"
 FRAME_SIZE = 256
+DEMO_MIN_REAL_FRAMES = 17
+EXEC_MIN_REAL_FRAMES = 33
+DEMO_TAIL_PAD = "repeat_last"
 LAT_SHAPE = (9, 16, 32, 32)                 # 组优先 latent，f32
 CHUNK_BYTES = int(np.prod(LAT_SHAPE)) * 4    # 589,824
 TOKEN_DIM = 768
@@ -57,12 +61,14 @@ def load_manifest(path: str | pathlib.Path) -> dict:
 # ── 网格公式 ──────────────────────────────────────────────────────────────────
 
 
-def seg_num_chunks(seg_len: int) -> int:
-    return max(0, int(seg_len) - (WINDOW_FRAMES - 1))
+def seg_num_chunks(seg_len: int, min_real: int = 33) -> int:
+    if not 1 <= min_real <= WINDOW_FRAMES:
+        raise ValueError(f"min_real={min_real} 不在 [1,{WINDOW_FRAMES}]")
+    return max(0, int(seg_len) - (min_real - 1))
 
 
-def seg_num_grid(seg_len: int) -> int:
-    return len(range(0, seg_num_chunks(seg_len), GRID_STRIDE))
+def seg_num_grid(seg_len: int, min_real: int = 33) -> int:
+    return len(range(0, seg_num_chunks(seg_len, min_real), GRID_STRIDE))
 
 
 def task_of_h5(h5_file: str) -> str:
@@ -72,21 +78,27 @@ def task_of_h5(h5_file: str) -> str:
     return name[len("record_dataset_"):-len(".h5")]
 
 
-def list_segments(manifest: dict) -> list[dict]:
+def list_segments(manifest: dict, *, demo_min_real: int = DEMO_MIN_REAL_FRAMES,
+                  exec_min_real: int = EXEC_MIN_REAL_FRAMES) -> list[dict]:
     """全部 num_grid > 0 的段工作项（清单序）。每项：key / g / h5_file / raw_ep_idx / segment /
     seg_start（全域帧号）/ seg_len / num_grid / num_chunks。"""
     items: list[dict] = []
     for ep in manifest["episodes"]:
         nt, es = int(ep["num_timesteps"]), int(ep["exec_start_idx"])
         for seg, start, L in (("demo", 0, es), ("exec", es, nt - es)):
-            ng = seg_num_grid(L)
+            min_real = demo_min_real if seg == "demo" else exec_min_real
+            ng = seg_num_grid(L, min_real)
+            num_chunks = seg_num_chunks(L, min_real)
+            if ng != len(range(0, num_chunks, GRID_STRIDE)):
+                raise ValueError("num_grid 与 num_chunks 不自洽")
             if ng == 0:
                 continue
             items.append({
                 "key": f"{task_of_h5(ep['h5_file'])}_ep{int(ep['raw_ep_idx'])}_{seg}",
                 "g": int(ep["global_episode_idx"]), "h5_file": str(ep["h5_file"]),
                 "raw_ep_idx": int(ep["raw_ep_idx"]), "segment": seg,
-                "seg_start": start, "seg_len": L, "num_grid": ng, "num_chunks": seg_num_chunks(L),
+                "seg_start": start, "seg_len": L, "num_grid": ng, "num_chunks": num_chunks,
+                "min_real": min_real,
             })
     return items
 
@@ -168,10 +180,13 @@ def write_json(path: pathlib.Path, obj) -> None:
     atomic_write_bytes(path, (json.dumps(obj, ensure_ascii=False, indent=1) + "\n").encode("utf-8"))
 
 
-def segment_outputs_complete(out_dir: pathlib.Path, key: str, expect_bytes: int) -> bool:
-    """续跑判据：``.bin`` 存在且字节数相符 + ``.sha256`` sidecar 相符 + metadata 可解析。"""
-    b = out_dir / f"{key}.bin"
-    s = out_dir / f"{key}.bin.sha256"
+def segment_outputs_complete(out_dir: pathlib.Path, key: str, expect_bytes: int, *,
+                             bin_stem: str | None = None, expect_schema: int | None = None,
+                             require_keys: tuple[str, ...] = (), require_row_keys: tuple[str, ...] = ()) -> bool:
+    """续跑判据：独立 binary/metadata 文件名、字节数、sha 与指定的契约字段。"""
+    stem = key if bin_stem is None else bin_stem
+    b = out_dir / f"{stem}.bin"
+    s = out_dir / f"{stem}.bin.sha256"
     m = out_dir / f"{key}.metadata.json"
     if not (b.is_file() and s.is_file() and m.is_file()):
         return False
@@ -179,7 +194,19 @@ def segment_outputs_complete(out_dir: pathlib.Path, key: str, expect_bytes: int)
         return False
     try:
         want = s.read_text().split()[0]
-        json.loads(m.read_text(encoding="utf-8"))
+        meta = json.loads(m.read_text(encoding="utf-8"))
+        if not isinstance(meta, dict):
+            return False
+        if expect_schema is not None and meta.get("schema") != expect_schema:
+            return False
+        if any(k not in meta for k in require_keys):
+            return False
+        if require_row_keys:
+            rows = meta.get("rows")
+            if not isinstance(rows, list) or len(rows) != meta.get("num_grid"):
+                return False
+            if any(not isinstance(r, dict) or any(k not in r for k in require_row_keys) for r in rows):
+                return False
     except (OSError, ValueError, IndexError):
         return False
     return sha256_file(b) == want

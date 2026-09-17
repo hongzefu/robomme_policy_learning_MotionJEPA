@@ -1,0 +1,38 @@
+# modulation 8×8 开启 motion：帧路与关闭态 YAML 相同，仅增加 motion 节。
+budget: 512
+num_views: 1
+token_per_image: 64
+streaming_obs_horizon: 16
+pool_type: mean
+use_pos_emb: true
+use_state_emb: false
+memory_feature:
+  img:
+    net: identity
+    input_dim: 2048
+  pos:
+    input_dim: 768
+    hidden_dim: 768
+  state:
+    input_dim: 8
+    hidden_dim: 512
+integration_type: modulation
+memory_token_dim: 1024
+representation_type: perceptual
+perceptual_memory:
+  type: frame_sampling
+motion:
+  enabled: true
+  dim: 768
+  budget: 160               # 模型语义参数，训练、评估与在线侧必须一致；超限直接报错。
+  demo_min_real_frames: 17
+  demo_tail_pad: repeat_last
+  stride: 16
+  window_frames: 33
+  window_direction: forward
+  grid_origin: segment_start
+  store_path: v1-store/datasets/4task-v2-1600ep-604f16da/motion
+  source_run: wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt#encoder
+  pos_dim: 256
+  frame_size: 256
+  online_gpu: 4             # 只供在线 sidecar 使用，训练不读取。

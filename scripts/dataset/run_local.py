@@ -4,7 +4,7 @@
   --stage siglip   主 venv：``build_shard.py --worker-mode``，工作项 = episode（按 num_timesteps LPT 降序），
                    产 ``<lib>/source/{features,data,meta}``；随后另跑 finalize_checks.py / pack_framesamp_store.py
   --stage wan      子 venv：``wan/extract_wan.py``，工作项 = 段（按网格窗数 LPT），产 ``<lib>/wan-latents/``；
-                   收尾把逐段 metadata 汇总成 ``wan-latents/metadata.json``（schema 2，唯一窗口清单）
+                   收尾把逐段 metadata 汇总成 ``wan-latents/metadata.json``（schema 3，唯一窗口清单）
   --stage encode   子 venv：``wan/encode_motion.py``，工作项 = 段，产 ``<lib>/motion-tokens/`` + ``metadata.json``
 
 领任务用 ``<out>/_claims/_claim_<key>``（O_CREAT|O_EXCL），完成即 unlink；收尾断言零残留 claim、工作项全覆盖。
@@ -26,6 +26,7 @@ import argparse
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -106,8 +107,14 @@ def worker_cmd(stage: str, gpu: int, k: int, n: int, args, env: dict) -> tuple[l
     return cmd, env, out
 
 
-def pump(prefix: str, proc: subprocess.Popen, logf) -> None:
+def pump(prefix: str, proc: subprocess.Popen, logf, stats: dict) -> None:
     for line in proc.stdout:
+        event = re.match(r"\[(?:extract|encode)\] (\S+) windows=(\d+)", line)
+        if event:
+            stats["processed_keys"].append(event.group(1))
+        done = re.match(r"WORKER_DONE stage=\w+ worker=\S+ items=(\d+) windows=(\d+) skipped=(\d+)", line)
+        if done:
+            stats["done"].append(tuple(int(x) for x in done.groups()))
         logf.write(line)
         logf.flush()
         sys.stdout.write(f"[{prefix}] {line}")
@@ -115,7 +122,7 @@ def pump(prefix: str, proc: subprocess.Popen, logf) -> None:
 
 
 def aggregate_segments(out: pathlib.Path, manifest_path: pathlib.Path, stage: str) -> int:
-    """把逐段 metadata 汇总成 <out>/metadata.json（schema 2），断言集合 == 清单重算的段集合、零残留 claim。"""
+    """汇总 schema 3，核完整段/窗口集合及零残留 claim，并保留 raw_dir 与分段契约。"""
     import wan_common as wc
     manifest = wc.load_manifest(manifest_path)
     expect = {it["key"]: it for it in wc.list_segments(manifest)}
@@ -129,6 +136,12 @@ def aggregate_segments(out: pathlib.Path, manifest_path: pathlib.Path, stage: st
         w = m["worker"]
         workers[f"{w['hostname']}:{w['gpu_uuid']}:{w['worker']}:{w['pid']}"] = w
         if stage == "wan":
+            if m.get("schema") != 3 or m.get("min_real") != expect[key]["min_real"]:
+                raise SystemExit(f"{key} 单段 metadata 的 schema 或 min_real 不符")
+            rows = m["rows"]
+            ng = expect[key]["num_grid"]
+            if len(rows) != ng or {r["m"] for r in rows} != set(range(ng)):
+                raise SystemExit(f"{key} 窗口行数或 m 集合不完整")
             segs[key] = {"num_grid": m["num_grid"], "seg_len": m["seg_len"], "seg_start_global": m["seg_start_global"],
                          "segment_kind": m["segment_kind"], "g": m["g"], "rows": m["rows"], "sha256": m["sha256"],
                          "bytes": m["bytes"], "worker": w["worker"]}
@@ -136,6 +149,7 @@ def aggregate_segments(out: pathlib.Path, manifest_path: pathlib.Path, stage: st
             segs[key] = {"num_grid": m["num_grid"], "segment_kind": m["segment_kind"], "g": m["g"],
                          "sha256": m["sha256"], "bytes": m["bytes"], "input_latent_sha256": m["input_latent_sha256"],
                          "worker": w["worker"]}
+        segs[key]["min_real"] = expect[key]["min_real"]
         if int(m["num_grid"]) != expect[key]["num_grid"]:
             raise SystemExit(f"{key} num_grid {m['num_grid']} != 清单重算 {expect[key]['num_grid']}")
     missing = sorted(set(expect) - set(segs))
@@ -147,7 +161,10 @@ def aggregate_segments(out: pathlib.Path, manifest_path: pathlib.Path, stage: st
     tmps = sorted(out.glob("*.tmp.*"))
     if tmps:
         raise SystemExit(f"残留 tmp {len(tmps)}: {[p.name for p in tmps[:8]]}")
-    payload = {"schema": 2, "stage": stage, "grid_stride": wc.GRID_STRIDE, "window_frames": wc.WINDOW_FRAMES,
+    payload = {"schema": 3, "stage": stage, "grid_stride": wc.GRID_STRIDE, "window_frames": wc.WINDOW_FRAMES,
+               "demo_min_real_frames": wc.DEMO_MIN_REAL_FRAMES,
+               "exec_min_real_frames": wc.EXEC_MIN_REAL_FRAMES, "demo_tail_pad": wc.DEMO_TAIL_PAD,
+               "raw_dir": str(pathlib.Path(manifest["raw_dir"]).resolve()),
                "grid_origin": wc.GRID_ORIGIN, "window_direction": wc.WINDOW_DIRECTION,
                "truncation_policy": wc.TRUNCATION_POLICY, "frame_size": wc.FRAME_SIZE,
                "manifest_sha256": manifest["sha256"], "manifest_path": str(manifest_path.resolve()),
@@ -179,6 +196,27 @@ def main() -> None:
     manifest_path = lib / "meta" / "episode_manifest.json"
     if not manifest_path.is_file():
         raise SystemExit(f"缺清单: {manifest_path}（先跑 scan_manifest.py build）")
+    initial_keys = set()
+    if args.stage in ("wan", "encode"):
+        import wan_common as wc
+        manifest = wc.load_manifest(manifest_path)
+        if pathlib.Path(args.raw_dir).resolve() != pathlib.Path(manifest["raw_dir"]).resolve():
+            raise SystemExit(f"--raw-dir 与清单绑定目录不同: {args.raw_dir} != {manifest['raw_dir']}")
+        expected_items = wc.list_segments(manifest)
+        for item in expected_items:
+            key = item["key"]
+            if args.stage == "wan":
+                complete = wc.segment_outputs_complete(
+                    lib / "wan-latents", key, item["num_grid"] * wc.CHUNK_BYTES,
+                    expect_schema=3, require_keys=("min_real",),
+                    require_row_keys=("real_frames", "pad_frames", "pad_source_frame"))
+            else:
+                from encode_motion import token_outputs_complete
+                complete = token_outputs_complete(lib / "motion-tokens", key, item["num_grid"],
+                                                  lib / "wan-latents" / f"{key}.bin")
+            if complete:
+                initial_keys.add(key)
+        print(f"STAGE_START stage={args.stage} initial_complete={len(initial_keys)} items={len(expected_items)}", flush=True)
     gpus = [int(g) for g in args.gpus.split(",") if g.strip() != ""]
     if not gpus:
         raise SystemExit("--gpus 为空")
@@ -200,6 +238,7 @@ def main() -> None:
     (lib / "logs").mkdir(parents=True, exist_ok=True)
     t0 = time.perf_counter()
     procs = []
+    worker_stats = {}
     outs = set()
     for k, g in enumerate(gpus):
         cmd, wenv, out = worker_cmd(args.stage, g, k, len(gpus), args, env)
@@ -210,7 +249,8 @@ def main() -> None:
         print(f"[run_local] 起 worker gpu{g}: {' '.join(cmd)}", flush=True)
         p = subprocess.Popen(cmd, env=wenv, cwd=str(_REPO_ROOT), stdout=subprocess.PIPE,
                              stderr=subprocess.STDOUT, text=True, bufsize=1)
-        th = threading.Thread(target=pump, args=(f"gpu{g}", p, logf), daemon=True)
+        worker_stats[g] = {"processed_keys": [], "done": []}
+        th = threading.Thread(target=pump, args=(f"gpu{g}", p, logf, worker_stats[g]), daemon=True)
         th.start()
         procs.append((g, p, th, logf))
     rc = {}
@@ -227,13 +267,25 @@ def main() -> None:
     out = next(iter(outs))
     if args.stage in ("wan", "encode"):
         items = aggregate_segments(out, manifest_path, args.stage)
+        processed = [key for stats in worker_stats.values() for key in stats["processed_keys"]]
+        if any(len(stats["done"]) != 1 or stats["done"][0][0] != len(stats["processed_keys"])
+               for stats in worker_stats.values()):
+            raise SystemExit("worker 完成事件缺失、重复或处理段计数不符")
+        expected_keys = {item["key"] for item in expected_items}
+        if (len(set(processed)) != len(processed) or set(processed) & initial_keys
+                or set(processed) | initial_keys != expected_keys):
+            raise SystemExit("阶段处理段存在重复、遗漏或不属于本清单的项")
+        skipped = sum(stats["done"][0][2] for stats in worker_stats.values())
+        print(f"STAGE_WORKSET=PASS stage={args.stage} processed={len(processed)} "
+              f"initial_complete={len(initial_keys)} duplicates=0 missing=0", flush=True)
     else:
         left = sorted((out / "_claims").glob("_claim_*")) if (out / "_claims").is_dir() else []
         if left:
             print(f"STAGE_FAIL stage=siglip 残留 claim {len(left)}", flush=True)
             raise SystemExit(1)
         items = len(json.loads(manifest_path.read_text(encoding="utf-8"))["episodes"])
-    print(f"STAGE_DONE stage={args.stage} workers={len(gpus)} items={items} elapsed={elapsed:.0f}s", flush=True)
+    counts = f" skipped={skipped} initial_complete={len(initial_keys)}" if args.stage in ("wan", "encode") else ""
+    print(f"STAGE_DONE stage={args.stage} workers={len(gpus)} items={items}{counts} elapsed={elapsed:.0f}s", flush=True)
 
 
 if __name__ == "__main__":

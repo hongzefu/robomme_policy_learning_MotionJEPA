@@ -53,6 +53,8 @@ def load_infer_module():
 
 def load_index(motion_root: pathlib.Path) -> tuple[dict, np.ndarray]:
     index = json.loads((motion_root / "meta" / "motion_index.json").read_text(encoding="utf-8"))
+    if index.get("layout") != "motion-768-grid16-v1":
+        raise ValueError("extra_checks 仅支持历史 33 帧完整窗，不适用于 demo 补帧新库；新库使用 oracle 与 a11")
     table = np.fromfile(motion_root / "motion_token.f32.bin", dtype=np.float32)
     table.shape = (int(index["totals"]["rows"]), wc.TOKEN_DIM)
     return index, table

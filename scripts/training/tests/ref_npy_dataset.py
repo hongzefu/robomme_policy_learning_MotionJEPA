@@ -61,8 +61,14 @@ class RefNpyFrameSampDataset:
             ms.run_fast_checks(self._motion_meta, manifest_path=self._manifest_path)
             ms.check_same_source(manifest["sha256"], self._motion_meta, manifest)
             self._motion_budget, self._motion_pos_dim = int(mc.budget), int(mc.pos_dim)
-            if (self._motion_budget, self._motion_pos_dim, int(mc.stride), int(mc.window_frames)) != (96, 256, 16, 33):
+            if (self._motion_budget < 16 or self._motion_budget % 16
+                    or (self._motion_pos_dim, int(mc.stride), int(mc.window_frames)) != (256, 16, 33)):
                 raise ValueError("参考链 motion 协议不符")
+            if ("demo_min_real_frames" in mc) != ("demo_tail_pad" in mc):
+                raise ValueError("参考链 demo 契约两键必须同时存在或同时缺省")
+            want = self._motion_meta.spec
+            if type(mc.get("demo_min_real_frames", 33)) is not int or (mc.get("demo_min_real_frames", 33), mc.get("demo_tail_pad", "none")) != (want.demo_min_real, want.demo_tail_pad):
+                raise ValueError("参考链配置与 motion 表的 demo 契约不同")
             if any(ms.max_visible_count(e) > self._motion_budget for e in self._motion_meta.entries):
                 raise ValueError("合法 motion 窗数超过预算")
 

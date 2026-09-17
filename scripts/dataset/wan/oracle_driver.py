@@ -32,6 +32,8 @@ import hashlib
 import json
 import os
 import pathlib
+import re
+from decimal import Decimal
 import sys
 import time
 
@@ -102,19 +104,22 @@ def task_of(h5_file: str) -> str:
     return n[len("record_dataset_"):-3]
 
 
-def expected_segments(manifest: dict) -> list[dict]:
-    """独立重算：每 episode demo=[0,es)、exec=[es,T)；起点 range(0, max(0, L-32), 16)。"""
+def expected_segments(manifest: dict, *, demo_min_real: int, exec_min_real: int) -> list[dict]:
+    """独立重算 demo 与 exec；两段分别取最少真实帧数，不导入被测公式。"""
+    if not 1 <= demo_min_real <= WINDOW or exec_min_real != WINDOW:
+        raise SystemExit("oracle 要求 demo 最少真实帧在 [1,33]，exec 固定 33")
     out = []
     for ep in manifest["episodes"]:
         T, es = int(ep["num_timesteps"]), int(ep["exec_start_idx"])
         for seg, start, L in (("demo", 0, es), ("exec", es, T - es)):
-            starts = list(range(0, max(0, L - (WINDOW - 1)), STRIDE))
+            min_real = demo_min_real if seg == "demo" else exec_min_real
+            starts = list(range(0, max(0, L - (min_real - 1)), STRIDE))
             if not starts:
                 continue
             out.append({"key": f"{task_of(ep['h5_file'])}_ep{int(ep['raw_ep_idx'])}_{seg}",
                         "g": int(ep["global_episode_idx"]), "h5_file": ep["h5_file"],
                         "raw_ep_idx": int(ep["raw_ep_idx"]), "seg": seg, "start": start, "len": L,
-                        "starts": starts})
+                        "starts": starts, "min_real": min_real})
     return out
 
 
@@ -151,6 +156,17 @@ def atomic_write(path: pathlib.Path, data: bytes) -> None:
 
 # ---------------- vae ----------------
 
+def sample_selected(sample_spec: str | None, key: str, m: int, *, padded: bool) -> bool:
+    """确定式抽样：SHA256 前八字节按大端解释，模 10000 与整数阈值比较。"""
+    if sample_spec is None:
+        return True
+    match = re.fullmatch(r"padded:all,rest:(0(?:\.\d{1,4})?|1(?:\.0{1,4})?),seed:(\d+)", sample_spec)
+    if match is None:
+        raise SystemExit(f"抽样规格不合法: {sample_spec!r}")
+    threshold = int(Decimal(match.group(1)) * 10000)
+    value = int.from_bytes(hashlib.sha256(f"{int(match.group(2))}:{key}:{m}".encode()).digest()[:8], "big")
+    return padded or value % 10000 < threshold
+
 def cmd_vae(args):
     import torch
     W = import_orig(args.mj_repo)
@@ -160,11 +176,24 @@ def cmd_vae(args):
     torch.manual_seed(0)
     device = torch.device("cuda")
     manifest = load_manifest(args.manifest)
-    segs = expected_segments(manifest)
+    if pathlib.Path(args.raw_dir).resolve() != pathlib.Path(manifest["raw_dir"]).resolve():
+        raise SystemExit("--raw-dir 与清单绑定的 raw_dir 不同")
+    segs = expected_segments(manifest, demo_min_real=args.demo_min_real, exec_min_real=args.exec_min_real)
     lat_root = pathlib.Path(args.latents)
     tested = json.loads((lat_root / "metadata.json").read_text(encoding="utf-8"))
-    if tested.get("schema") != 2:
-        raise SystemExit(f"被测 metadata.json schema={tested.get('schema')} != 2")
+    schema = tested.get("schema")
+    if schema not in (2, 3):
+        raise SystemExit(f"被测 metadata.json schema={schema} 不在 {{2,3}}")
+    if schema == 2 and (args.demo_min_real, args.exec_min_real) != (33, 33):
+        raise SystemExit("schema=2 只接受历史 33/33 契约")
+    if schema == 3:
+        contract = {"demo_min_real_frames": args.demo_min_real, "exec_min_real_frames": args.exec_min_real,
+                    "demo_tail_pad": "none" if args.demo_min_real == 33 else "repeat_last"}
+        if any(tested.get(k) != v for k, v in contract.items()):
+            raise SystemExit("被测 metadata 的补帧契约与 oracle 显式参数不同")
+        if pathlib.Path(tested["raw_dir"]).resolve() != pathlib.Path(args.raw_dir).resolve():
+            raise SystemExit("Wan metadata 与 oracle 的 raw_dir 不同")
+    sample_selected(args.sample_spec, "规格检查", 0, padded=False)
     for k, v in (("grid_stride", STRIDE), ("window_frames", WINDOW), ("grid_origin", "segment_start"),
                  ("window_direction", "forward"), ("truncation_policy", "none")):
         if tested.get(k) != v:
@@ -181,6 +210,8 @@ def cmd_vae(args):
           f"vae_state={vinfo['vae_state_sha256'][:16]}… segments={len(segs)} shard={args.shard_idx}/{args.num_shards}", flush=True)
 
     frame_mismatches, meta_mismatches, n_windows = 0, 0, 0
+    metadata_rows_checked = 0
+    sampled = []
     per_seg = {}
     t_all = time.perf_counter()
     for i, s in enumerate(segs):
@@ -196,18 +227,38 @@ def cmd_vae(args):
         seg_frame_bad = 0
         for m, off in enumerate(s["starts"]):
             r = rows[m]
+            metadata_rows_checked += 1
             if int(r["m"]) != m or int(r["seg_offset"]) != off or int(r["start_global_frame"]) != s["start"] + off:
                 meta_mismatches += 1
                 print(f"  ✗ {s['key']} m={m} 行记录 {r} 与重算 (off={off}, f={s['start'] + off}) 不符", flush=True)
-            win = np.ascontiguousarray(frames[off:off + WINDOW])
+            real = min(WINDOW, s["len"] - off)
+            pad = WINDOW - real
+            source_frame = s["start"] + s["len"] - 1 if pad else None
+            if real < s["min_real"] or (s["seg"] == "exec" and pad):
+                raise SystemExit("oracle 独立切窗越过段契约")
+            if schema == 3 and (r.get("real_frames"), r.get("pad_frames"), r.get("pad_source_frame")) != (real, pad, source_frame):
+                meta_mismatches += 1
+            if schema == 3 and any(k not in r for k in ("real_frames", "pad_frames", "pad_source_frame")):
+                meta_mismatches += 1
+            if r.get("input_shape") != [WINDOW, FRAME_SIZE, FRAME_SIZE, 3] or r.get("input_dtype") != "uint8":
+                meta_mismatches += 1
+            # 独立装配：先分配固定 33 帧，尾部直接广播本段最后一帧。
+            win = np.empty((WINDOW, FRAME_SIZE, FRAME_SIZE, 3), np.uint8)
+            win[:real] = frames[off:off + real]
+            if pad:
+                win[real:] = frames[-1]
             got_sha = sha_arr(win)
             if got_sha != r["input_frames_sha256"]:
                 frame_mismatches += 1
                 seg_frame_bad += 1
-            W.pin_numerics()
-            lat = W.encode_chunk(vae, win, device)                      # 原版
-            blob += lat.cpu().numpy().astype(np.float32).tobytes()
-            n_windows += 1
+            if sample_selected(args.sample_spec, s["key"], m, padded=bool(pad)):
+                sampled.append({"segment": s["key"], "m": m})
+                W.pin_numerics()
+                lat = W.encode_chunk(vae, win, device)                  # 原版
+                blob += lat.cpu().numpy().astype(np.float32).tobytes()
+                n_windows += 1
+            else:
+                blob += bytes(CHUNK_BYTES)                            # 保持每段定长，未抽中行不作为数值真值。
         p = out / f"{s['key']}.bin"
         atomic_write(p, bytes(blob))
         sha = sha_file(p)
@@ -217,20 +268,25 @@ def cmd_vae(args):
             print(f"[oracle-vae] {i + 1}/{len(segs)} 段, windows={n_windows} frame_mismatches={frame_mismatches} "
                   f"({time.perf_counter() - t_all:.0f}s)", flush=True)
     report = {"manifest_sha256": manifest["sha256"], "segments": per_seg, "windows": n_windows,
+              "windows_encoded": n_windows, "metadata_rows_checked": metadata_rows_checked,
+              "raw_dir": str(pathlib.Path(args.raw_dir).resolve()), "sample_spec": args.sample_spec,
+              "demo_min_real_frames": args.demo_min_real, "exec_min_real_frames": args.exec_min_real,
               "frame_mismatches": frame_mismatches, "metadata_mismatches": meta_mismatches,
               "tested_metadata_sha256": sha_file(lat_root / "metadata.json"),
               "elapsed_s": time.perf_counter() - t_all, "vae_provenance": vinfo,
               "orig_module_sha256": W.sha256_file(W.__file__), "mj_repo": os.path.abspath(args.mj_repo)}
+    sample_name = _shard_name("sampled_windows", args, ".json") if args.num_shards > 1 else "sampled_windows.json"
+    atomic_write(out / sample_name, json.dumps({"sample_spec": args.sample_spec, "windows": sampled}, ensure_ascii=False).encode())
     if args.num_shards > 1:
         report["shard"] = {"idx": args.shard_idx, "num": args.num_shards}
         (out / _shard_name("vae_report", args, ".json")).write_text(
             json.dumps(report, ensure_ascii=False, indent=1, default=str))
-        print(f"ORACLE_VAE=DONE shard={args.shard_idx}/{args.num_shards} windows={n_windows} "
+        print(f"ORACLE_VAE=DONE shard={args.shard_idx}/{args.num_shards} metadata_rows={metadata_rows_checked} windows={n_windows} "
               f"frame_mismatches={frame_mismatches} metadata_mismatches={meta_mismatches} "
               f"elapsed={report['elapsed_s']:.0f}s", flush=True)
     else:
         (out / "vae_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str))
-        print(f"ORACLE_VAE=DONE windows={n_windows} frame_mismatches={frame_mismatches} "
+        print(f"ORACLE_VAE=DONE metadata_rows={metadata_rows_checked} windows={n_windows} frame_mismatches={frame_mismatches} "
               f"metadata_mismatches={meta_mismatches} elapsed={report['elapsed_s']:.0f}s", flush=True)
     if frame_mismatches or meta_mismatches:
         raise SystemExit(1)
@@ -247,7 +303,7 @@ def cmd_encoder(args):
     torch.manual_seed(0)
     device = torch.device("cuda")
     manifest = load_manifest(args.manifest)
-    segs = _shard(expected_segments(manifest), args)
+    segs = _shard(expected_segments(manifest, demo_min_real=args.demo_min_real, exec_min_real=args.exec_min_real), args)
     lat_root = pathlib.Path(args.latents)
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -334,7 +390,7 @@ def _same_across(reps: list[dict], key: str, what: str):
 def cmd_aggregate(args):
     """把 n 片的报告 / 表合成与单进程逐字节同构的产物；任一片缺失、口径不一致或段集合与清单重算不符即 FAIL。"""
     manifest = load_manifest(args.manifest)
-    segs = expected_segments(manifest)
+    segs = expected_segments(manifest, demo_min_real=args.demo_min_real, exec_min_real=args.exec_min_real)
     out = pathlib.Path(args.out)
     n = int(args.num_shards)
     did = []
@@ -354,6 +410,12 @@ def cmd_aggregate(args):
                 raise SystemExit(f"vae: 缺段文件 {s['key']}.bin(.sha256)")
         report = {
             "manifest_sha256": _same_across(reps, "manifest_sha256", "vae"),
+            "raw_dir": _same_across(reps, "raw_dir", "vae"),
+            "sample_spec": _same_across(reps, "sample_spec", "vae"),
+            "demo_min_real_frames": _same_across(reps, "demo_min_real_frames", "vae"),
+            "exec_min_real_frames": _same_across(reps, "exec_min_real_frames", "vae"),
+            "metadata_rows_checked": sum(int(r["metadata_rows_checked"]) for r in reps),
+            "windows_encoded": sum(int(r["windows_encoded"]) for r in reps),
             "segments": {s["key"]: per_seg[s["key"]] for s in segs},
             "windows": sum(int(r["windows"]) for r in reps),
             "frame_mismatches": sum(int(r["frame_mismatches"]) for r in reps),
@@ -368,8 +430,22 @@ def cmd_aggregate(args):
         }
         if report["manifest_sha256"] != manifest["sha256"]:
             raise SystemExit("vae: 分片报告的 manifest_sha256 与 --manifest 不同")
+        if (report["demo_min_real_frames"], report["exec_min_real_frames"]) != (args.demo_min_real, args.exec_min_real):
+            raise SystemExit("vae: 分片窗口契约与 aggregate 显式参数不同")
+        if report["metadata_rows_checked"] != sum(len(s["starts"]) for s in segs):
+            raise SystemExit("vae: 全量元数据检查行数不足")
+        merged = []
+        for i in range(n):
+            sample = json.loads((out / f"sampled_windows.shard{i}of{n}.json").read_text())
+            if sample["sample_spec"] != report["sample_spec"]:
+                raise SystemExit("vae: 分片抽样表规格不一致")
+            merged.extend(sample["windows"])
+        keys = {(r["segment"], int(r["m"])) for r in merged}
+        if len(keys) != len(merged) or len(merged) != report["windows"] or report["windows_encoded"] != report["windows"]:
+            raise SystemExit("vae: 抽样集合重复或编码计数不符")
+        atomic_write(out / "sampled_windows.json", json.dumps({"sample_spec": report["sample_spec"], "windows": merged}).encode())
         (out / "vae_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str))
-        print(f"ORACLE_VAE=DONE windows={report['windows']} frame_mismatches={report['frame_mismatches']} "
+        print(f"ORACLE_VAE=DONE metadata_rows={report['metadata_rows_checked']} windows={report['windows']} frame_mismatches={report['frame_mismatches']} "
               f"metadata_mismatches={report['metadata_mismatches']} elapsed={report['elapsed_s']:.0f}s shards={n}", flush=True)
         did.append("vae")
         if report["frame_mismatches"] or report["metadata_mismatches"]:
@@ -427,6 +503,9 @@ def main():
     p.add_argument("--out", required=True)
     p.add_argument("--shard-idx", type=int, default=0)
     p.add_argument("--num-shards", type=int, default=1)
+    p.add_argument("--demo-min-real", type=int, required=True)
+    p.add_argument("--exec-min-real", type=int, required=True)
+    p.add_argument("--sample-spec", default=None)
     p.set_defaults(func=cmd_vae)
     p = sub.add_parser("encoder")
     p.add_argument("--manifest", required=True)
@@ -438,12 +517,16 @@ def main():
                    help="默认按 ASSETS_LOCK.json 校；探未入 lock 的 run_dir 时显式传 SKIP")
     p.add_argument("--shard-idx", type=int, default=0)
     p.add_argument("--num-shards", type=int, default=1)
+    p.add_argument("--demo-min-real", type=int, required=True)
+    p.add_argument("--exec-min-real", type=int, required=True)
     p.set_defaults(func=cmd_encoder)
     p = sub.add_parser("aggregate", help="把 --num-shards 片的 vae / encoder 产物合成单进程同构产物")
     p.add_argument("--manifest", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--num-shards", type=int, required=True)
     p.add_argument("--kind", choices=["vae", "encoder", "both"], default="both")
+    p.add_argument("--demo-min-real", type=int, required=True)
+    p.add_argument("--exec-min-real", type=int, required=True)
     p.set_defaults(func=cmd_aggregate)
     args = ap.parse_args()
     args.func(args)

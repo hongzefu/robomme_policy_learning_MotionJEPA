@@ -18,6 +18,8 @@ import argparse
 import hashlib
 import json
 import pathlib
+import re
+from decimal import Decimal
 import subprocess
 
 import numpy as np
@@ -37,6 +39,32 @@ def sha_file(p) -> str:
     return h.hexdigest()
 
 
+def expected_samples(meta: dict, sample_spec: str) -> tuple[set, set]:
+    """比较器独立重算抽样与补帧集合；不导入 oracle 的抽样函数。"""
+    match = re.fullmatch(r"padded:all,rest:(0(?:\.\d{1,4})?|1(?:\.0{1,4})?),seed:(\d+)", sample_spec)
+    if match is None:
+        raise SystemExit(f"比较器抽样规格不合法: {sample_spec!r}")
+    limit = int(Decimal(match.group(1)) * 10000)
+    seed = int(match.group(2))
+    selected, padded = set(), set()
+    for key, segment in meta["segments"].items():
+        is_demo = segment["segment_kind"] == "demo"
+        length = int(segment["seg_len"])
+        minimum = int(meta.get("demo_min_real_frames", 33)) if is_demo else 33
+        starts = list(range(0, max(0, length - minimum + 1), 16))
+        if len(starts) != segment["num_grid"]:
+            raise SystemExit(f"比较器独立网格计数不符: {key}")
+        for m, start in enumerate(starts):
+            row = (key, m)
+            pad = is_demo and start + 33 > length
+            if pad:
+                padded.add(row)
+            digest = hashlib.sha256(f"{seed}:{key}:{m}".encode()).digest()
+            if pad or int.from_bytes(digest[:8], byteorder="big") % 10000 < limit:
+                selected.add(row)
+    return selected, padded
+
+
 def cmd_latents(args):
     lat = pathlib.Path(args.latents)
     orc = pathlib.Path(args.oracle)
@@ -49,6 +77,23 @@ def cmd_latents(args):
     if set(segs) != set(rep["segments"]):
         print(f"✗ 段集合不符: {len(segs)} vs {len(rep['segments'])}")
         raise SystemExit(1)
+    if bool(args.sampled) != bool(args.sample_spec):
+        raise SystemExit("--sampled 与 --sample-spec 必须一起提供")
+    padded = set()
+    if args.sampled:
+        chosen, padded = expected_samples(meta, args.sample_spec)
+        sample = json.loads(pathlib.Path(args.sampled).read_text())
+        actual = {(r["segment"], int(r["m"])) for r in sample["windows"]}
+        if (sample.get("sample_spec") != args.sample_spec or rep.get("sample_spec") != args.sample_spec
+                or actual != chosen or len(actual) != len(sample["windows"])):
+            raise SystemExit("抽样表与比较器独立重算集合不同，或抽样规格不一致")
+        if len(padded) != args.expect_padded or not padded <= chosen:
+            raise SystemExit(f"补帧集合覆盖不符: {len(padded)} != {args.expect_padded}")
+        if rep.get("metadata_rows_checked") != sum(int(meta["segments"][k]["num_grid"]) for k in segs):
+            raise SystemExit("oracle 元数据检查未覆盖全部窗口")
+    else:
+        chosen = {(key, m) for key in segs for m in range(int(meta["segments"][key]["num_grid"]))}
+    covered_padded = set()
     compared, bad = 0, []
     for key in segs:
         ng = int(meta["segments"][key]["num_grid"])
@@ -60,15 +105,19 @@ def cmd_latents(args):
         a = a.reshape(ng, CHUNK_F32)
         b = b.reshape(ng, CHUNK_F32)
         for m in range(ng):
+            if (key, m) not in chosen:
+                continue
             compared += 1
+            if (key, m) in padded:
+                covered_padded.add((key, m))
             if not np.array_equal(a[m].view(np.uint32), b[m].view(np.uint32)):
                 bad.append((key, m, float(np.abs(a[m].astype(np.float64) - b[m]).max())))
     fm = int(rep["frame_mismatches"])
     mm = int(rep.get("metadata_mismatches", 0))
     for key, m, d in bad[:20]:
         print(f"  ✗ {key} m={m} max|Δ|={d}")
-    ok = (not bad) and fm == 0 and mm == 0 and compared == int(rep["windows"])
-    print(f"WAN_BITEXACT={'PASS' if ok else 'FAIL'} compared={compared} frame_mismatches={fm} "
+    ok = (not bad) and fm == 0 and mm == 0 and compared == int(rep["windows"]) == len(chosen) and covered_padded == padded
+    print(f"WAN_BITEXACT={'PASS' if ok else 'FAIL'} compared={compared} padded_covered={len(covered_padded)} frame_mismatches={fm} "
           f"latent_mismatches={len(bad)} metadata_mismatches={mm} oracle_windows={rep['windows']}")
     if not ok:
         raise SystemExit(1)
@@ -134,6 +183,9 @@ def main():
     p = sub.add_parser("latents")
     p.add_argument("--latents", required=True)
     p.add_argument("--oracle", required=True)
+    p.add_argument("--sampled", default=None)
+    p.add_argument("--sample-spec", default=None)
+    p.add_argument("--expect-padded", type=int, default=1600)
     p.set_defaults(func=cmd_latents)
     p = sub.add_parser("tokens")
     p.add_argument("--store", required=True)

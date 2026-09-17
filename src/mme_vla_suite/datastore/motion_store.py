@@ -5,7 +5,7 @@
 在线侧（S3）与对拍工具一律从这里 import，绝不复制；``framesamp_store.py`` 一字不动（两套索引公式不同，
 帧路按 ``row_of()`` 逐帧、运动路按段内网格，混放会互相污染）。
 
-布局 ``motion-768-grid16-v1``：
+支持历史 ``motion-768-grid16-v1`` 与 demo 补帧 ``motion-768-grid16-demopad17-v1``：
 
     <motion_root>/
     ├── meta/store_meta.json          唯一契约，两阶段写：pack→"packed"、verify→"verified"
@@ -15,11 +15,11 @@
     └── motion_token.f32.bin          (rows, 768) f32 裸字节；行序 = 清单 canonical_order 逐 episode，
                                       每 episode 先 demo 段后 exec 段，段内按网格序 0,16,32,… 升序
 
-窗口口径（红线 14 / 15 冻结）：起点钉在段内绝对网格 ``0, 16, 32, …``（``GRID_ORIGIN = segment_start``，
-demo / exec 各自起算、窗口不跨段），前视 33 帧 ``[起点, 起点+32]``，exec 段不截尾
-``num_chunks = max(0, 段帧数 − 32)``、``num_grid = len(range(0, num_chunks, 16))``。
+起点钉在段内网格 ``0,16,32,…``，demo / exec 各自起算。历史布局两段均要求 33 个真实帧；
+新布局 demo 至少 17 个真实帧，不足 33 时重复本段最后一帧，exec 始终要求 33 帧。
+窗口契约随 ``IndexEntry.spec`` 与 ``MotionMeta.spec`` 传递，禁止用最新布局替代旧表契约。
 
-读取实现：表最大也只有几十 MiB（4env400ep 全量 78.45 MiB），每进程整表 ``np.fromfile`` 读入即可，
+读取实现：1600 集新表约 219 MB，每进程整表 ``np.fromfile`` 读入，
 仍照抄 FrameSampStore 的三条纪律——记录 ``owner_pid``、``__reduce__`` 直接 raise 禁 pickle、跨进程懒构造
 （懒构造由 FrameSampDataset 负责）。本模块不 import 任何 training/model 模块（单向依赖）。
 
@@ -42,7 +42,7 @@ from mme_vla_suite.datastore.manifest import load_manifest
 logger = logging.getLogger(__name__)
 
 # ── 布局常量 ──────────────────────────────────────────────────────────────────
-LAYOUT = "motion-768-grid16-v1"
+LAYOUT = "motion-768-grid16-demopad17-v1"
 META_SCHEMA = 1
 INDEX_SCHEMA = 1
 
@@ -74,21 +74,69 @@ ROW_DIGEST_COVERAGE = "motion_token 行原始位串（store 侧字节）"
 
 SEGMENTS = ("demo", "exec")             # 行序内 episode 内的段顺序
 
-if not LAYOUT.endswith(f"-{LAYOUT_GRID_SUFFIX}-v1"):
-    raise RuntimeError(f"LAYOUT {LAYOUT!r} 的 grid 后缀与 GRID_STRIDE={GRID_STRIDE} 不符")
+@dataclasses.dataclass(frozen=True)
+class LayoutSpec:
+    """布局自身的窗口契约；随索引一起传递，可哈希且可被 worker pickle。"""
+
+    demo_min_real: int
+    exec_min_real: int
+    demo_tail_pad: str
+
+    def min_real(self, segment: str) -> int:
+        if segment not in SEGMENTS:
+            raise ValueError(f"未知段类型 {segment!r}")
+        return self.demo_min_real if segment == "demo" else self.exec_min_real
+
+    def fields(self) -> dict:
+        return {"demo_min_real_frames": self.demo_min_real,
+                "exec_min_real_frames": self.exec_min_real,
+                "demo_tail_pad": self.demo_tail_pad}
+
+
+LAYOUT_SPECS = {
+    "motion-768-grid16-v1": LayoutSpec(33, 33, "none"),
+    "motion-768-grid16-demopad17-v1": LayoutSpec(17, 33, "repeat_last"),
+}
+if LAYOUT not in LAYOUT_SPECS or any(
+    f"-{LAYOUT_GRID_SUFFIX}-" not in name or not name.endswith("-v1") for name in LAYOUT_SPECS
+):
+    raise RuntimeError(f"motion 布局名与 GRID_STRIDE={GRID_STRIDE} 不符")
+
+DEMO_MIN_REAL_FRAMES = LAYOUT_SPECS[LAYOUT].demo_min_real
+EXEC_MIN_REAL_FRAMES = LAYOUT_SPECS[LAYOUT].exec_min_real
+DEMO_TAIL_PAD = LAYOUT_SPECS[LAYOUT].demo_tail_pad
+
+
+def layout_spec(raw: dict, ctx: str) -> LayoutSpec:
+    """新布局要求三键齐备；历史布局允许三键全缺，部分缺失或错值一律拒绝。"""
+    name = raw.get("layout")
+    if name not in LAYOUT_SPECS:
+        raise ValueError(f"{ctx} 未知 layout={name!r}")
+    spec = LAYOUT_SPECS[name]
+    fields = spec.fields()
+    present = {key for key in fields if key in raw}
+    if not present and name == "motion-768-grid16-v1":
+        return spec
+    if present != set(fields):
+        raise ValueError(f"{ctx} 布局契约缺字段 {sorted(set(fields) - present)}")
+    if any(type(raw[key]) is not type(value) or raw[key] != value for key, value in fields.items()):
+        raise ValueError(f"{ctx} 三键与布局 {name} 不符，期望 {fields}")
+    return spec
 
 
 # ── 网格公式（写读共用；训练侧 / 在线侧 / oracle 三方同式）───────────────────────
 
 
-def seg_num_chunks(seg_len: int) -> int:
-    """段内可作起点的帧数：exec 段不截尾，``max(0, 段帧数 − (WINDOW_FRAMES − 1))``。"""
-    return max(0, int(seg_len) - (WINDOW_FRAMES - 1))
+def seg_num_chunks(seg_len: int, min_real: int = 33) -> int:
+    """至少剩余 min_real 个真实帧的起点数；exec 恒取 33。"""
+    if not 1 <= min_real <= WINDOW_FRAMES:
+        raise ValueError(f"min_real={min_real} 不在 [1,{WINDOW_FRAMES}]")
+    return max(0, int(seg_len) - (min_real - 1))
 
 
-def seg_num_grid(seg_len: int) -> int:
+def seg_num_grid(seg_len: int, min_real: int = 33) -> int:
     """段内网格起点数 = ``len(range(0, num_chunks, GRID_STRIDE))``。"""
-    return len(range(0, seg_num_chunks(seg_len), GRID_STRIDE))
+    return len(range(0, seg_num_chunks(seg_len, min_real), GRID_STRIDE))
 
 
 def segment_lengths(num_timesteps: int, exec_start_idx: int) -> dict[str, int]:
@@ -100,15 +148,15 @@ def segment_lengths(num_timesteps: int, exec_start_idx: int) -> dict[str, int]:
     return {"demo": es, "exec": nt - es}
 
 
-def segment_grid_starts(seg_len: int) -> list[int]:
+def segment_grid_starts(seg_len: int, min_real: int = 33) -> list[int]:
     """段内网格起点偏移列表 ``[0, 16, 32, …]``（长度 = seg_num_grid）。"""
-    return list(range(0, seg_num_chunks(seg_len), GRID_STRIDE))
+    return list(range(0, seg_num_chunks(seg_len, min_real), GRID_STRIDE))
 
 
 def visible_motion_rows(entry: "IndexEntry", t: int) -> tuple[np.ndarray, np.ndarray]:
     """给定 episode 的 index 条目与当前样本全域帧号 t，返回 (rows, frames)：
 
-    - demo 段：``s = 16m``、合法条件 ``s + 32 ≤ es − 1``（整段已见、与 t 无关），全域起点 ``f = s``；
+    - demo 段：``s = 16m``、合法条件 ``s + spec.demo_min_real − 1 ≤ es − 1``（整段已见、与 t 无关）；
     - exec 段：``u = 16m``、合法条件 ``u + 32 ≤ t − es``，全域起点 ``f = es + u``；
     合并后按 f 升序。rows 是 motion 表全局行号（int64），frames 是全域起点帧号（int64）。
     预算（motion.budget）上限检查不在这里做——由调用方按配置 raise，本函数只负责集合本身。
@@ -123,7 +171,7 @@ def visible_motion_rows(entry: "IndexEntry", t: int) -> tuple[np.ndarray, np.nda
     if entry.demo.row_base is not None:
         for m in range(entry.demo.num_grid):
             s = GRID_STRIDE * m
-            if s + (WINDOW_FRAMES - 1) <= es - 1:
+            if s + (entry.spec.demo_min_real - 1) <= es - 1:
                 rows.append(entry.demo.row_base + m)
                 frames.append(s)
     if entry.exec.row_base is not None:
@@ -196,15 +244,18 @@ class IndexEntry:
     exec_start_idx: int
     demo: SegmentInfo
     exec: SegmentInfo
+    spec: LayoutSpec
 
 
-def build_index_entries(manifest: dict) -> list[IndexEntry]:
+def build_index_entries(manifest: dict, spec: LayoutSpec) -> list[IndexEntry]:
     """按清单 canonical 序（episodes 列表序 = global_episode_idx 序）算出每 episode 的段基址表。
 
     行序契约：逐 episode，每 episode 先 demo 后 exec，段内网格升序。这是 motion 表唯一的行序定义，
     打包器写、MotionMeta 校验、oracle 重算三方都从这里派生。
     """
     entries: list[IndexEntry] = []
+    if spec not in LAYOUT_SPECS.values():
+        raise ValueError(f"未支持的窗口契约 {spec}")
     cursor = 0
     for g, ep in enumerate(manifest["episodes"]):
         if int(ep["global_episode_idx"]) != g:
@@ -213,14 +264,15 @@ def build_index_entries(manifest: dict) -> list[IndexEntry]:
         segs: dict[str, SegmentInfo] = {}
         for seg in SEGMENTS:
             L = lens[seg]
-            ng = seg_num_grid(L)
+            min_real = spec.min_real(seg)
+            ng = seg_num_grid(L, min_real)
             segs[seg] = SegmentInfo(row_base=(cursor if ng > 0 else None), num_grid=ng,
-                                    num_chunks=seg_num_chunks(L), seg_len=L)
+                                    num_chunks=seg_num_chunks(L, min_real), seg_len=L)
             cursor += ng
         entries.append(IndexEntry(
             g=g, h5_file=str(ep["h5_file"]), raw_ep_idx=int(ep["raw_ep_idx"]),
             num_timesteps=int(ep["num_timesteps"]), exec_start_idx=int(ep["exec_start_idx"]),
-            demo=segs["demo"], exec=segs["exec"]))
+            demo=segs["demo"], exec=segs["exec"], spec=spec))
     return entries
 
 
@@ -230,14 +282,18 @@ def index_totals(entries: list[IndexEntry]) -> dict[str, int]:
     return {"rows": exec_rows + demo_rows, "exec_rows": exec_rows, "demo_rows": demo_rows}
 
 
-def index_payload(manifest: dict, entries: list[IndexEntry], *, mj_repo_commit: str) -> dict:
+def index_payload(manifest: dict, entries: list[IndexEntry], *, spec: LayoutSpec, layout: str,
+                  mj_repo_commit: str) -> dict:
     """motion_index.json 的完整内容（不含任何运行时字段，可重算比对）。"""
+    if LAYOUT_SPECS.get(layout) != spec or any(e.spec != spec for e in entries):
+        raise ValueError("writer 的布局名、窗口契约与索引条目不一致")
     def seg(s: SegmentInfo) -> dict:
         return {"row_base": s.row_base, "num_grid": s.num_grid, "num_chunks": s.num_chunks,
                 "seg_len": s.seg_len}
     return {
         "schema": INDEX_SCHEMA,
-        "layout": LAYOUT,
+        "layout": layout,
+        **spec.fields(),
         "grid_stride": GRID_STRIDE,
         "window_frames": WINDOW_FRAMES,
         "grid_origin": GRID_ORIGIN,
@@ -263,8 +319,7 @@ def parse_index(raw: dict, ctx: str = "motion_index.json") -> list[IndexEntry]:
         return raw[k]
     if int(need("schema")) != INDEX_SCHEMA:
         raise ValueError(f"{ctx} schema={raw['schema']} != {INDEX_SCHEMA}")
-    if need("layout") != LAYOUT:
-        raise ValueError(f"{ctx} layout={raw['layout']!r} != {LAYOUT!r}")
+    spec = layout_spec(raw, ctx)
     for key, want in (("grid_stride", GRID_STRIDE), ("window_frames", WINDOW_FRAMES),
                       ("grid_origin", GRID_ORIGIN), ("window_direction", WINDOW_DIRECTION),
                       ("truncation_policy", TRUNCATION_POLICY)):
@@ -282,10 +337,11 @@ def parse_index(raw: dict, ctx: str = "motion_index.json") -> list[IndexEntry]:
             L = lens[seg]
             if int(s["seg_len"]) != L:
                 raise ValueError(f"{ctx} g={g} {seg}.seg_len={s['seg_len']} != {L}")
-            if int(s["num_chunks"]) != seg_num_chunks(L) or int(s["num_grid"]) != seg_num_grid(L):
+            min_real = spec.min_real(seg)
+            if int(s["num_chunks"]) != seg_num_chunks(L, min_real) or int(s["num_grid"]) != seg_num_grid(L, min_real):
                 raise ValueError(
                     f"{ctx} g={g} {seg} num_chunks/num_grid={s['num_chunks']}/{s['num_grid']} "
-                    f"!= 公式 {seg_num_chunks(L)}/{seg_num_grid(L)}")
+                    f"!= 公式 {seg_num_chunks(L, min_real)}/{seg_num_grid(L, min_real)}")
             ng = int(s["num_grid"])
             if ng == 0:
                 if s["row_base"] is not None:
@@ -300,7 +356,7 @@ def parse_index(raw: dict, ctx: str = "motion_index.json") -> list[IndexEntry]:
         entries.append(IndexEntry(
             g=g, h5_file=str(e["h5_file"]), raw_ep_idx=int(e["raw_ep_idx"]),
             num_timesteps=int(e["num_timesteps"]), exec_start_idx=int(e["exec_start_idx"]),
-            demo=segs["demo"], exec=segs["exec"]))
+            demo=segs["demo"], exec=segs["exec"], spec=spec))
     totals = need("totals")
     calc = index_totals(entries)
     if {k: int(totals[k]) for k in calc} != calc:
@@ -340,6 +396,7 @@ class MotionMeta:
     table_sha256: str | None
     entries: tuple[IndexEntry, ...]
     provenance: dict
+    spec: LayoutSpec
 
     @classmethod
     def load(cls, store_root: str | pathlib.Path) -> "MotionMeta":
@@ -359,8 +416,7 @@ class MotionMeta:
 
         if int(need("schema")) != META_SCHEMA:
             raise ValueError(f"schema={raw['schema']} != {META_SCHEMA}")
-        if need("layout") != LAYOUT:
-            raise ValueError(f"layout 不符: {raw['layout']!r} != {LAYOUT!r}")
+        spec = layout_spec(raw, str(meta_path))
         if need("byte_order") != BYTE_ORDER or need("array_order") != ARRAY_ORDER:
             raise ValueError("byte_order/array_order 与格式常量不符")
         for key, want in (("grid_stride", GRID_STRIDE), ("window_frames", WINDOW_FRAMES),
@@ -391,11 +447,14 @@ class MotionMeta:
             raise ValueError(
                 f"motion_index.json sha256 不符（被改动？）: 现算 {got[:16]}… != "
                 f"store_meta 记 {raw['motion_index_sha256'][:16]}…")
-        entries = parse_index(json.loads(idx_bytes.decode("utf-8")), ctx=str(idx_path))
+        index_raw = json.loads(idx_bytes.decode("utf-8"))
+        entries = parse_index(index_raw, ctx=str(idx_path))
+        if index_raw["layout"] != raw["layout"] or layout_spec(index_raw, str(idx_path)) != spec:
+            raise ValueError("motion_index 与 store_meta 的布局或窗口契约不同")
         totals = index_totals(entries)
         if totals["rows"] != num_rows:
             raise ValueError(f"motion_index totals.rows={totals['rows']} != num_rows {num_rows}")
-        if json.loads(idx_bytes.decode("utf-8")).get("manifest_sha256") != need("manifest_sha256"):
+        if index_raw.get("manifest_sha256") != need("manifest_sha256"):
             raise ValueError("motion_index.json 的 manifest_sha256 与 store_meta 不符")
         provenance = need("provenance")
         if not isinstance(provenance, dict):
@@ -403,7 +462,7 @@ class MotionMeta:
         return cls(root=root, raw=raw, status=status, num_rows=num_rows,
                    manifest_sha256=need("manifest_sha256"), manifest_path=need("manifest_path"),
                    motion_index_sha256=raw["motion_index_sha256"], table_sha256=t.get("sha256"),
-                   entries=tuple(entries), provenance=provenance)
+                   entries=tuple(entries), provenance=provenance, spec=spec)
 
 
 def run_fast_checks(meta: MotionMeta, *, manifest_path: str | None = None) -> None:

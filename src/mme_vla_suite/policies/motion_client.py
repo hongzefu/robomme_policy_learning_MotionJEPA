@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import os
 import pathlib
+import re
 import socket
 import subprocess
 import sys
@@ -41,11 +42,20 @@ PROV_SAME_ENC = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", 
 class MotionEncoderClient:
     def __init__(self, *, online_gpu: int | str, encoder_run_dir: str | None = None, checkpoint: str = "checkpoint_epoch_72.pt",
                  expected_ckpt_sha256: str | None = None, store_provenance: dict | None = None, stub: bool = False,
-                 v1_store: str | pathlib.Path | None = None, handshake_timeout: float = P.HANDSHAKE_TIMEOUT_S):
+                 v1_store: str | pathlib.Path | None = None, handshake_timeout: float = P.HANDSHAKE_TIMEOUT_S,
+                 source_run: str | None = None):
         self._lock = threading.Lock()
         self.stub = bool(stub)
         # v1-store 根：显式参数 > MMEVLA_V1_STORE（worktree 开发时指到主树）> 仓库内 v1-store
         v1 = pathlib.Path(v1_store or os.environ.get("MMEVLA_V1_STORE") or (_REPO_ROOT / "v1-store"))
+        if source_run is not None:
+            match = re.fullmatch(r"([A-Za-z0-9][A-Za-z0-9_.-]*)/(checkpoint_epoch_\d+\.pt)#encoder", source_run)
+            if match is None:
+                raise ValueError(f"motion.source_run 格式不合法: {source_run!r}")
+            expected_dir = v1 / "external" / "motionjepa" / match.group(1)
+            if encoder_run_dir is not None and pathlib.Path(encoder_run_dir).resolve() != expected_dir.resolve():
+                raise ValueError("encoder_run_dir 与 motion.source_run 指向不同目录")
+            encoder_run_dir, checkpoint = str(expected_dir), match.group(2)
         wan_dir = _REPO_ROOT / "scripts" / "dataset" / "wan"
         child_env = dict(os.environ)
         child_env["UV_LINK_MODE"] = "copy"
@@ -60,7 +70,7 @@ class MotionEncoderClient:
         if self.stub:
             argv.append("--stub")
         else:
-            argv += ["--encoder-run-dir", str(encoder_run_dir or v1 / "external/motionjepa/wan-v8-filter10-72ep-a"),
+            argv += ["--encoder-run-dir", str(encoder_run_dir or v1 / "external/motionjepa/wan-full1600-filter2-b176x4-72ep-a"),
                      "--checkpoint", checkpoint]
             if expected_ckpt_sha256:
                 argv += ["--expected-ckpt-sha256", expected_ckpt_sha256]

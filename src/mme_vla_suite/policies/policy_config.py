@@ -141,6 +141,7 @@ def create_trained_policy(
         if not motion_stub and (store_prov["vae"] is None or store_prov["encoder"] is None):
             raise ValueError(f"开启态 run 缺 motion_provenance.json 的 vae / encoder 字段，无法核对 sidecar 同源: {run_root}")
         motion_enc_fn = MotionEncoderClient(
+            source_run=str(mcfg.source_run),
             online_gpu=mcfg.get("online_gpu", 1), stub=motion_stub, store_provenance=store_prov,
             expected_ckpt_sha256=(store_prov["encoder"] or {}).get("checkpoint_sha256") if not motion_stub else None)
 

@@ -215,8 +215,8 @@ class HistoryPi0(BaseModel):
             # inputs_spec 与 mem_encoder.motion_enabled 一致性显式 raise（两侧 enabled 同源，plan 2.9）
             if _motion_enabled(self.history_config) != bool(self.mem_encoder.motion_enabled):
                 raise ValueError("motion.enabled 在 inputs_spec 与 PerceptualMemory 之间不一致")
-            if self.mem_encoder.motion_enabled and self.integration_type != "context":
-                raise ValueError(f"motion memory 只接 integration_type=context（当前 {self.integration_type!r}）")
+            if self.mem_encoder.motion_enabled and self.integration_type not in ("context", "modulation"):
+                raise ValueError(f"motion memory 只接 context 或 modulation（当前 {self.integration_type!r}）")
 
             print(
                 f"====== Using History, Representation Type: perceptual , Integration Type: {self.integration_type} ======"
@@ -335,7 +335,7 @@ class HistoryPi0(BaseModel):
             na_mask = [False] * tokens.shape[1]
             return tokens, input_mask, ar_mask, na_mask
 
-        # ── 开启态（0901-motion-memory-plan.md 2.3）：并列序 (b,608,2048) → 按 mem_order 重排 token 与 input_mask ──
+        # 开启态：并列序 (b, 帧路 budget + motion.budget, memory_token_dim)，按 mem_order 重排 token 与 mask。
         # 非 None 闸：HistAugObservation.from_dict 缺键静默为 None，jaxtyping 在跨 jit 的 pytree 解包上被 disable，不能指望它兜底
         if obs.motion_emb is None or obs.motion_pos is None or obs.motion_mask is None or obs.mem_order is None:
             raise ValueError("motion.enabled=true 但 observation 缺 motion_emb / motion_pos / motion_mask / mem_order")
@@ -350,7 +350,7 @@ class HistoryPi0(BaseModel):
             raise ValueError(f"mem_order dtype {obs.mem_order.dtype} != int32")
         tokens = jnp.take_along_axis(tokens, obs.mem_order[:, :, None], axis=1)
         input_mask = jnp.take_along_axis(input_mask, obs.mem_order, axis=1)
-        # ar_mask / na_mask 是无 batch 维的 (L,) 常量、记忆区恒 False，不重排；长度自动跟随 608
+        # ar_mask / na_mask 是无 batch 维的 (L,) 常量、记忆区恒 False，不重排；长度跟随合并记忆区。
         ar_mask = [False] * tokens.shape[1]
         na_mask = [False] * tokens.shape[1]
         return tokens, input_mask, ar_mask, na_mask

@@ -311,10 +311,10 @@ class RoboMMEDataConfig(DataConfigFactory):
                         "static_mask": "static_mask", # (b, l)
                         # motion memory（0901-motion-memory-plan.md 2.7）：未登记的键会被 RepackTransform 静默丢弃；
                         # 关闭态四键为 None 透传（pytree 空节点，n_keys 仍 12）
-                        "motion_emb": "motion_emb",   # (b, 96, 768) f32
-                        "motion_pos": "motion_pos",   # (b, 96, 256) f32
-                        "motion_mask": "motion_mask", # (b, 96) bool
-                        "mem_order": "mem_order",     # (b, 608) int32，512 帧路位 + 96 运动路位的交错次序表
+                        "motion_emb": "motion_emb",   # (b, motion.budget, 768) f32
+                        "motion_pos": "motion_pos",   # (b, motion.budget, 256) f32
+                        "motion_mask": "motion_mask", # (b, motion.budget) bool
+                        "mem_order": "mem_order",     # (b, 512 + motion.budget) int32 交错次序表
                     }
                 )
             ]
@@ -569,6 +569,45 @@ _CONFIGS = [
         num_workers=8,
         ema_decay=0.999,
         fsdp_devices=4,
+    ),
+    # 只改 60k 条目的训练步数、decay_steps、fsdp_devices、num_workers 四项。
+    # peak_lr == decay_lr == 5e-5，因此任意 step 的学习率与 60k 条目逐步相同。
+    TrainConfig(
+        name="mme_vla_suite_b128_80k",
+        model=history_pi0.HistoryPi0Config(
+            pi05=True,
+            action_horizon=20,
+            use_history=True,
+            history_config=None,
+            discrete_state_input=False,
+        ),
+        data=RoboMMEDataConfig(
+            repo_id="robomme",
+            assets=AssetsConfig(
+                assets_dir="v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        batch_size=128,
+        lr_schedule=_optimizer.CosineDecaySchedule(
+            warmup_steps=5_000,
+            peak_lr=5e-5,
+            decay_steps=80_000,
+            decay_lr=5e-5,
+        ),
+        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
+        freeze_filter=history_pi0.HistoryPi0Config().get_freeze_filter(),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            os.path.join(OPENPI_DATA_HOME, "openpi-assets/checkpoints/pi05_base/params"),
+        ),
+        num_train_steps=80_000,
+        save_interval=5_000,
+        keep_period=5_000,
+        project_name="robomme-framesamp",
+        num_workers=16,
+        ema_decay=0.999,
+        fsdp_devices=8,
     ),
 ]
 

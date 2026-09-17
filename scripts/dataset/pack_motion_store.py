@@ -170,7 +170,8 @@ def _load_json(p: pathlib.Path) -> dict:
 
 
 def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, entries: list[ms.IndexEntry],
-                      manifest: dict, index_sha: str) -> dict:
+                      manifest: dict, index_sha: str, *, encoder_run_dir: pathlib.Path,
+                      raw_dir: pathlib.Path, input_manifest_path: pathlib.Path) -> dict:
     """store_meta.provenance：SOURCE_PIN、VAE info、encoder info（各取自逐段 metadata 并断言跨段唯一）、
     逐 worker 指纹、encoder_state_sha256 清单、wan-latents/metadata.json sha。"""
     pin = _load_json(_WAN_DIR / "SOURCE_PIN.json")
@@ -188,6 +189,9 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
     for _e, _seg, key, _, _ng in iter_rows_in_order(entries):
         lm = _load_json(latents_root / f"{key}.metadata.json")
         tm = _load_json(tokens_root / f"{key}.metadata.json")
+        actual_run = pathlib.Path(tm["encoder"]["run_dir"]).resolve()
+        if actual_run != encoder_run_dir.resolve():
+            raise ValueError(f"{key} 的 encoder 目录与 --encoder-run-dir 不同")
         v = {k: lm["vae"].get(k) for k in same_keys_vae}
         vae_infos[json.dumps(v, sort_keys=True, default=str)] = v
         enc = {k: tm["encoder"].get(k) for k in same_keys_enc}
@@ -215,6 +219,9 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
         if len(vals) != 1:
             raise ValueError(f"跨 worker {k} 不唯一: {sorted(vals)}")
     ckpt_name = enc["checkpoint"]
+    checkpoint_path = encoder_run_dir / ckpt_name
+    if not checkpoint_path.is_file() or ms.sha256_file(checkpoint_path) != enc["checkpoint_sha256"]:
+        raise ValueError("encoder 目录中的 checkpoint 与逐段 provenance 不符")
     epoch = int(ckpt_name.replace("checkpoint_epoch_", "").replace(".pt", ""))
     if epoch != int(enc["checkpoint_epoch"]):
         raise ValueError(f"checkpoint 名解析出的 epoch {epoch} != ckpt 内记录 {enc['checkpoint_epoch']}")
@@ -225,7 +232,7 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
         "mj_repo_commit": pin["mj_repo_commit"],
         "source_pin": pin,
         "vae": vae,
-        "encoder": {"run_name": "wan-v8-filter10-72ep-a", "checkpoint_name": ckpt_name, "epoch": epoch,
+        "encoder": {"run_name": encoder_run_dir.resolve().name, "checkpoint_name": ckpt_name, "epoch": epoch,
                     "state_key": "encoder", "batch": 1, **enc},
         "encoder_state_sha256": state_sha,
         "workers": list(workers.values()),
@@ -233,19 +240,52 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
         "latents_metadata_sha256": ms.sha256_file(latents_meta) if latents_meta.is_file() else None,
         "latents_root": str(latents_root.resolve()),
         "tokens_root": str(tokens_root.resolve()),
+        "raw_dir": str(raw_dir.resolve()),
+        "input_manifest_sha256": ms.sha256_file(input_manifest_path),
     }
 
 
 # ══ 子命令 ════════════════════════════════════════════════════════════════════
 
 
+def check_raw_sources(manifest_path: pathlib.Path, latents_root: pathlib.Path,
+                      raw_dir: pathlib.Path, oracle_report: pathlib.Path) -> pathlib.Path:
+    """在写表前核对输入清单、Wan、oracle 三方绑定，并核 oracle 所验的元数据身份。"""
+    input_path = manifest_path.parent / "input_manifest.json"
+    inputs = _load_json(input_path)
+    latent_meta = _load_json(latents_root / "metadata.json")
+    report = _load_json(oracle_report)
+    manifest = load_manifest(manifest_path)
+    spec = ms.LAYOUT_SPECS[ms.LAYOUT]
+    if any(latent_meta.get(k) != v for k, v in spec.fields().items()):
+        raise ValueError("Wan metadata 的窗口契约与目标布局不同")
+    if (report.get("demo_min_real_frames"), report.get("exec_min_real_frames")) != (spec.demo_min_real, spec.exec_min_real):
+        raise ValueError("oracle 报告的窗口契约与目标布局不同")
+    sources = [inputs, latent_meta, report, manifest]
+    want = raw_dir.resolve()
+    if any("raw_dir" not in source or pathlib.Path(source["raw_dir"]).resolve() != want for source in sources):
+        raise ValueError("输入清单、Wan、oracle 与 --raw-dir 的三方目录绑定不同")
+    if (report.get("manifest_sha256") != manifest["sha256"]
+            or report.get("tested_metadata_sha256") != ms.sha256_file(latents_root / "metadata.json")):
+        raise ValueError("oracle 报告与当前清单或 Wan metadata 不同源")
+    if report.get("frame_mismatches") != 0 or report.get("metadata_mismatches") != 0:
+        raise ValueError("oracle 全量输入核验未通过，拒绝打包")
+    return input_path
+
+
 def cmd_pack(args) -> None:
     t_all = time.perf_counter()
     manifest = load_manifest(args.manifest)
-    entries = ms.build_index_entries(manifest)
+    spec = ms.LAYOUT_SPECS[ms.LAYOUT]
+    entries = ms.build_index_entries(manifest, spec)
     totals = ms.index_totals(entries)
     tokens_root = pathlib.Path(args.tokens).resolve()
     latents_root = pathlib.Path(args.latents).resolve()
+    raw_dir = pathlib.Path(args.raw_dir).resolve()
+    encoder_run_dir = pathlib.Path(args.encoder_run_dir).resolve()
+    input_manifest_path = check_raw_sources(
+        pathlib.Path(args.manifest).resolve(), latents_root, raw_dir,
+        pathlib.Path(args.oracle_report) if args.oracle_report else latents_root.parent / "oracle/wan-mj/vae_report.json")
     store_root = pathlib.Path(args.out).resolve()
     if store_root.is_symlink():
         raise RuntimeError(f"输出根是符号链接，拒绝写入: {store_root}")
@@ -257,7 +297,7 @@ def cmd_pack(args) -> None:
         if meta_path.exists() and not args.resume:
             raise RuntimeError(f"store_meta.json 已存在: {meta_path}；重打包须显式 --resume")
         pin = _load_json(_WAN_DIR / "SOURCE_PIN.json")
-        index = ms.index_payload(manifest, entries, mj_repo_commit=pin["mj_repo_commit"])
+        index = ms.index_payload(manifest, entries, spec=spec, layout=ms.LAYOUT, mj_repo_commit=pin["mj_repo_commit"])
         index_bytes = (json.dumps(index, ensure_ascii=False, indent=1) + "\n").encode("utf-8")
         index_sha = hashlib.sha256(index_bytes).hexdigest()
         print(f"[pack] episodes={len(entries)} rows={totals['rows']} (exec {totals['exec_rows']} + "
@@ -294,12 +334,15 @@ def cmd_pack(args) -> None:
             raise RuntimeError("表落盘后 sha256 与写入流不符")
 
         atomic_write_bytes(store_root / ms.INDEX_RELPATH, index_bytes)
-        prov = gather_provenance(latents_root, tokens_root, entries, manifest, index_sha)
+        prov = gather_provenance(latents_root, tokens_root, entries, manifest, index_sha,
+                                 encoder_run_dir=encoder_run_dir, raw_dir=raw_dir,
+                                 input_manifest_path=input_manifest_path)
         git_head = subprocess.run(["git", "-C", str(_REPO_ROOT), "rev-parse", "HEAD"],
                                   capture_output=True, text=True, check=False).stdout.strip()
         import importlib.metadata as md
         meta = {
             "schema": ms.META_SCHEMA, "layout": ms.LAYOUT, "status": "packed",
+            **spec.fields(),
             "byte_order": ms.BYTE_ORDER, "array_order": ms.ARRAY_ORDER,
             "grid_stride": ms.GRID_STRIDE, "window_frames": ms.WINDOW_FRAMES, "grid_origin": ms.GRID_ORIGIN,
             "window_direction": ms.WINDOW_DIRECTION, "truncation_policy": ms.TRUNCATION_POLICY,
@@ -323,7 +366,7 @@ def cmd_pack(args) -> None:
         ms.MotionMeta.load(store_root)     # 自检：契约能读回（含 index sha 现场重算）
         print(f"[pack] 表 {offset:,} B / {totals['rows']} 行 / {n_seg} 段, sha256={table_sha[:16]}…; "
               f"meta 阶段1 落盘（status=packed）; 耗时 {time.perf_counter() - t_all:.1f}s", flush=True)
-        print("PACK_MOTION_DONE=1 （pack.lock 保留，verify 回填后才释放）", flush=True)
+        print("PACK_MOTION_DONE=1 raw_dir_match=1 （pack.lock 保留，verify 回填后才释放）", flush=True)
     except BaseException:
         print("[pack] 失败：pack.lock 与半成品保留", flush=True)
         raise
@@ -338,7 +381,7 @@ def cmd_verify(args) -> None:
     manifest = load_manifest(manifest_path)
     if manifest["sha256"] != meta.manifest_sha256:
         raise RuntimeError("verify: 清单指纹与 meta 不符")
-    entries = ms.build_index_entries(manifest)
+    entries = ms.build_index_entries(manifest, meta.spec)
     if [dataclass_tuple(e) for e in entries] != [dataclass_tuple(e) for e in meta.entries]:
         raise RuntimeError("verify: 现场按清单重算的 index 与 meta 内 motion_index 不同")
     started_at = _now()
@@ -386,7 +429,7 @@ def cmd_verify(args) -> None:
 
 
 def dataclass_tuple(e: ms.IndexEntry) -> tuple:
-    return (e.g, e.h5_file, e.raw_ep_idx, e.num_timesteps, e.exec_start_idx,
+    return (e.g, e.h5_file, e.raw_ep_idx, e.num_timesteps, e.exec_start_idx, e.spec,
             (e.demo.row_base, e.demo.num_grid, e.demo.num_chunks, e.demo.seg_len),
             (e.exec.row_base, e.exec.num_grid, e.exec.num_chunks, e.exec.seg_len))
 
@@ -409,6 +452,9 @@ def main() -> None:
     p.add_argument("--tokens", required=True, help="<lib>/motion-tokens")
     p.add_argument("--latents", required=True, help="<lib>/wan-latents（只读 metadata 取 provenance）")
     p.add_argument("--out", required=True, help="<lib>/motion")
+    p.add_argument("--encoder-run-dir", required=True)
+    p.add_argument("--raw-dir", required=True)
+    p.add_argument("--oracle-report", default=None, help="默认 <lib>/oracle/wan-mj/vae_report.json")
     p.add_argument("--resume", action="store_true")
     p.add_argument("--force-break-lock", action="store_true")
     p.set_defaults(func=cmd_pack)

@@ -119,7 +119,8 @@ def cmd_a6(args):
 
 def cmd_a7(args):
     manifest = load_manifest(args.manifest)
-    entries = ms.build_index_entries(manifest)
+    meta = ms.MotionMeta.load(args.motion)
+    entries = ms.build_index_entries(manifest, meta.spec)
     lat = pathlib.Path(args.latents)
     tok = pathlib.Path(args.tokens)
     bad, n_seg = 0, 0
@@ -144,9 +145,11 @@ def cmd_a7(args):
         raise SystemExit(1)
 
 
-def _independent_visible(manifest: dict, lat_meta: dict, g: int, t: int) -> tuple[list[int], list[tuple[str, int]]]:
+def _independent_visible(manifest: dict, lat_meta: dict, g: int, t: int,
+                         store_meta: dict) -> tuple[list[int], list[tuple[str, int]]]:
     """独立实现：从 wan-latents/metadata.json 的段清单（起点全域帧号）现算可见集合，不用 motion_store 的公式。"""
     ep = manifest["episodes"][g]
+    demo_min_real = store_meta.get("demo_min_real_frames", 33)
     task = ep["h5_file"][len("record_dataset_"):-3]
     frames, rows = [], []
     for seg in ("demo", "exec"):
@@ -156,7 +159,7 @@ def _independent_visible(manifest: dict, lat_meta: dict, g: int, t: int) -> tupl
             continue
         for r in sm["rows"]:
             f = int(r["start_global_frame"])
-            if f + 32 <= t:
+            if (seg == "demo" and f <= ep["exec_start_idx"] - demo_min_real) or (seg == "exec" and f + 32 <= t):
                 frames.append(f)
                 rows.append((key, int(r["m"])))
     order = sorted(range(len(frames)), key=lambda i: frames[i])
@@ -170,13 +173,15 @@ def cmd_a9set(args):
     rng = random.Random(args.seed)
     bad = 0
     samples = []
+    if args.cold_all:
+        samples.extend((e, e.exec_start_idx) for e in meta.entries)
     for _ in range(args.n):
         e = rng.choice(meta.entries)
         t = rng.randrange(e.exec_start_idx, e.num_timesteps)
         samples.append((e, t))
     for e, t in samples:
         rows, frames = ms.visible_motion_rows(e, t)
-        f_ind, seg_ind = _independent_visible(manifest, lat_meta, e.g, t)
+        f_ind, seg_ind = _independent_visible(manifest, lat_meta, e.g, t, meta.raw)
         if frames.tolist() != f_ind:
             bad += 1
             print(f"  ✗ g={e.g} t={t} 起点集合 {frames.tolist()} != 独立 {f_ind}")
@@ -190,32 +195,98 @@ def cmd_a9set(args):
                 print(f"  ✗ g={e.g} t={t} row {r} != {key} row_base {s.row_base} + m {m}")
                 break
     ok = bad == 0
-    print(f"A9_INDEXSET={'PASS' if ok else 'FAIL'} samples={len(samples)} mismatches={bad}")
+    print(f"A9_INDEXSET={'PASS' if ok else 'FAIL'} samples={len(samples)} cold={len(meta.entries) if args.cold_all else 0} mismatches={bad}")
     if not ok:
         raise SystemExit(1)
 
 
 def cmd_a10(args):
     meta = ms.MotionMeta.load(args.motion)
+    manifest = load_manifest(args.manifest)
+    ms.check_index_against_manifest(list(meta.entries), manifest)
     totals = ms.index_totals(list(meta.entries))
-    bad = 0
+    bad = int(meta.spec.demo_min_real != args.demo_min_real)
     cursor = 0
-    for e in meta.entries:
-        lens = ms.segment_lengths(e.num_timesteps, e.exec_start_idx)
+    for e, ep in zip(meta.entries, manifest["episodes"], strict=True):
+        lens = {"demo": int(ep["exec_start_idx"]), "exec": int(ep["num_timesteps"]) - int(ep["exec_start_idx"])}
         for seg in ms.SEGMENTS:
             s = getattr(e, seg)
-            want = len(range(0, max(0, lens[seg] - 32), 16))
+            minimum = args.demo_min_real if seg == "demo" else 33
+            want = len(range(0, max(0, lens[seg] - minimum + 1), 16))
             if s.num_grid != want:
                 bad += 1
             if s.num_grid and s.row_base != cursor:
                 bad += 1
             cursor += s.num_grid
     ok = bad == 0 and meta.num_rows == totals["rows"] == cursor == args.expect_rows \
-        and totals["exec_rows"] == args.expect_exec and totals["demo_rows"] == args.expect_demo
+        and totals["exec_rows"] == args.expect_exec and totals["demo_rows"] == args.expect_demo \
+        and len(manifest["episodes"]) == args.expect_episodes
     print(f"A10_ROWS={'PASS' if ok else 'FAIL'} rows={meta.num_rows} exec={totals['exec_rows']} demo={totals['demo_rows']} "
-          f"formula_or_rowbase_mismatches={bad} expect={args.expect_rows}={args.expect_exec}+{args.expect_demo}")
+          f"episodes={len(manifest['episodes'])} formula_or_rowbase_mismatches={bad} expect={args.expect_rows}={args.expect_exec}+{args.expect_demo}")
     if not ok:
         raise SystemExit(1)
+
+
+def cmd_a6set(args):
+    manifest = load_manifest(args.manifest)
+    frame = StoreMeta.load(args.framesamp)
+    motion = ms.MotionMeta.load(args.motion)
+    index = json.loads((pathlib.Path(args.motion) / ms.INDEX_RELPATH).read_text())
+    ms.check_index_against_manifest(list(motion.entries), manifest)
+    if not (frame.manifest_sha256 == motion.manifest_sha256 == index["manifest_sha256"] == manifest["sha256"]):
+        raise SystemExit("A6_SAMESOURCE=FAIL 四方清单绑定不同")
+    print(f"A6_SAMESOURCE=PASS episodes={len(manifest['episodes'])} manifest_sha_same=1")
+
+
+def audit_padding(manifest: dict, latents: pathlib.Path, demo_min_real: int = 17) -> dict:
+    """从清单独立枚举全部窗口，核逐段文件与 aggregate 的集合、行序和补帧源。"""
+    aggregate = json.loads((latents / "metadata.json").read_text())
+    expected = {}
+    padded = 0
+    for ep in manifest["episodes"]:
+        task = ep["h5_file"][len("record_dataset_"):-3]
+        es, total = int(ep["exec_start_idx"]), int(ep["num_timesteps"])
+        for segment, start, length, minimum in (("demo", 0, es, demo_min_real), ("exec", es, total-es, 33)):
+            offsets = list(range(0, max(0, length-minimum+1), 16))
+            if not offsets:
+                continue
+            key = f"{task}_ep{ep['raw_ep_idx']}_{segment}"
+            path = latents / f"{key}.metadata.json"
+            actual = json.loads(path.read_text())
+            rows = actual["rows"]
+            if (actual.get("schema") != 3 or actual.get("min_real") != minimum
+                    or actual["num_grid"] != len(offsets) or len(rows) != len(offsets)
+                    or {r["m"] for r in rows} != set(range(len(offsets)))):
+                raise ValueError(f"{key} schema、契约、行数或 m 集合不符")
+            if aggregate["segments"].get(key, {}).get("rows") != rows:
+                raise ValueError(f"{key} 逐段行与 aggregate 不同")
+            for m, offset in enumerate(offsets):
+                row = rows[m]
+                real = min(33, length-offset)
+                pad = 33-real
+                source = start+length-1 if pad else None
+                want = {"m": m, "seg_offset": offset, "start_global_frame": start+offset,
+                        "real_frames": real, "pad_frames": pad, "pad_source_frame": source}
+                if any(k not in row or row[k] != v for k, v in want.items()):
+                    raise ValueError(f"{key} m={m} 补帧或起点字段不符，期望 {want}")
+                if segment == "exec" and (real != 33 or pad != 0 or source is not None):
+                    raise ValueError(f"{key} exec 段出现补帧")
+                padded += int(pad > 0)
+            expected[key] = len(offsets)
+    files = {p.name.removesuffix(".metadata.json") for p in latents.glob("*.metadata.json")}
+    if files != set(expected) or set(aggregate["segments"]) != set(expected):
+        raise ValueError("逐段文件或 aggregate 的窗口段集合与清单不同")
+    eligible = sum(int(ep["exec_start_idx"]) >= demo_min_real for ep in manifest["episodes"])
+    if demo_min_real == 17 and padded != eligible:
+        raise ValueError("补帧窗数不等于满足 17 帧的 episode 数")
+    return {"segments": len(expected), "rows": sum(expected.values()), "padded": padded, "eligible": eligible}
+
+
+def cmd_a11(args):
+    result = audit_padding(load_manifest(args.manifest), pathlib.Path(args.latents), args.demo_min_real)
+    if (result["rows"], result["padded"], result["eligible"]) != (args.expect_rows, args.expect_padded, args.expect_episodes):
+        raise SystemExit(f"A11_PAD=FAIL {result}")
+    print(f"A11_PAD=PASS segs={result['segments']} rows={result['rows']} padded={result['padded']} set_diff=0")
 
 
 def main():
@@ -233,6 +304,11 @@ def main():
     p.add_argument("--framesamp", required=True)
     p.add_argument("--motion", required=True)
     p.set_defaults(func=cmd_a6)
+    p = sub.add_parser("a6set")
+    p.add_argument("--manifest", required=True)
+    p.add_argument("--framesamp", required=True)
+    p.add_argument("--motion", required=True)
+    p.set_defaults(func=cmd_a6set)
     p = sub.add_parser("a7")
     p.add_argument("--manifest", required=True)
     p.add_argument("--latents", required=True)
@@ -244,14 +320,26 @@ def main():
     p.add_argument("--latents", required=True)
     p.add_argument("--motion", required=True)
     p.add_argument("--n", type=int, default=500)
+    p.add_argument("--cold-all", action="store_true")
     p.add_argument("--seed", type=int, default=20260903)
     p.set_defaults(func=cmd_a9set)
     p = sub.add_parser("a10")
+    p.add_argument("--manifest", required=True)
+    p.add_argument("--demo-min-real", type=int, required=True)
+    p.add_argument("--expect-episodes", type=int, required=True)
     p.add_argument("--motion", required=True)
     p.add_argument("--expect-rows", type=int, default=772)
     p.add_argument("--expect-exec", type=int, default=658)
     p.add_argument("--expect-demo", type=int, default=114)
     p.set_defaults(func=cmd_a10)
+    p = sub.add_parser("a11")
+    p.add_argument("--manifest", required=True)
+    p.add_argument("--latents", required=True)
+    p.add_argument("--demo-min-real", type=int, default=17)
+    p.add_argument("--expect-rows", type=int, default=71316)
+    p.add_argument("--expect-padded", type=int, default=1600)
+    p.add_argument("--expect-episodes", type=int, default=1600)
+    p.set_defaults(func=cmd_a11)
     args = ap.parse_args()
     args.func(args)
 

@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib.util
+import json
 import pathlib
 import sys
 import time
@@ -61,6 +62,17 @@ def read_latent_bin(path: pathlib.Path, num_grid: int) -> np.ndarray:
     arr = np.fromfile(path, dtype=np.float32)
     arr.shape = (num_grid,) + wc.LAT_SHAPE
     return arr
+
+
+def token_outputs_complete(out_dir: pathlib.Path, key: str, num_grid: int,
+                           latent_path: pathlib.Path) -> bool:
+    """token 文件名带 .f32，metadata 不带；必须同时绑定实际 latent 输入。"""
+    if not wc.segment_outputs_complete(out_dir, key, num_grid * wc.TOKEN_BYTES,
+                                       bin_stem=key + ".f32", expect_schema=METADATA_SCHEMA,
+                                       require_keys=("input_latent_sha256",)):
+        return False
+    meta = json.loads((out_dir / f"{key}.metadata.json").read_text(encoding="utf-8"))
+    return latent_path.is_file() and meta["input_latent_sha256"] == wc.sha256_file(latent_path)
 
 
 def main() -> None:
@@ -114,17 +126,20 @@ def main() -> None:
         key = it["key"]
         ng = it["num_grid"]
         final = out_dir / f"{key}.f32.bin"
-        if wc.segment_outputs_complete(out_dir, key + ".f32", ng * wc.TOKEN_BYTES) \
-                and (out_dir / f"{key}.metadata.json").is_file():
+        lat_path = lat_dir / f"{key}.bin"
+        if token_outputs_complete(out_dir, key, ng, lat_path):
             skipped += 1
             continue
         if not wc.try_claim(claims, key, args.worker):
             continue
         try:
+            # 先复核、后清残件，防止领取到刚由另一 worker 完成的段。
+            if token_outputs_complete(out_dir, key, ng, lat_path):
+                skipped += 1
+                continue
             for suffix in (".f32.bin", ".f32.bin.sha256", ".metadata.json"):
                 (out_dir / f"{key}{suffix}").unlink(missing_ok=True)
             t0 = time.perf_counter()
-            lat_path = lat_dir / f"{key}.bin"
             lats = read_latent_bin(lat_path, ng)
             toks = np.empty((ng, wc.TOKEN_DIM), dtype=np.float32)
             block_sha = []

@@ -64,8 +64,12 @@ def main() -> int:
 
             def encode(start: int, window: np.ndarray) -> np.ndarray:
                 ids = P.stub_decode(window)
-                if ids != list(range(start, start + P.WINDOW_FRAMES)):
-                    raise RuntimeError(f"stub: 33 帧编号不连续或与起点 {start} 不符: {ids[:4]}…{ids[-2:]}")
+                # 协议没有段身份：这里只核连续真实前缀与重复末帧；段契约由在线装配侧核验。
+                valid = any(ids[:r] == list(range(start, start + r))
+                            and ids[r:] == [ids[r - 1]] * (P.WINDOW_FRAMES - r)
+                            for r in range(1, P.WINDOW_FRAMES + 1))
+                if not valid:
+                    raise RuntimeError(f"stub: 33 帧编号不符合连续前缀与重复末帧规则: {ids[:4]}…{ids[-2:]}")
                 return np.full(P.TOKEN_DIM, float(start), np.float32)
         else:
             import torch

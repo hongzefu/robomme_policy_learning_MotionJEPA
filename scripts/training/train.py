@@ -1,4 +1,5 @@
 import dataclasses
+from contextlib import nullcontext
 import functools
 import json
 import logging
@@ -365,6 +366,19 @@ def main(config: _config.TrainConfig):
     train_rng, init_rng = jax.random.split(rng)
 
     mesh = sharding.make_mesh(config.fsdp_devices)
+    mesh_shape = {str(axis): int(size) for axis, size in mesh.shape.items()}
+    print(f"TRAIN_MESH shape={tuple(mesh_shape.values())} devices={jax.device_count()} "
+          f"fsdp_devices={config.fsdp_devices} batch_size={config.batch_size} num_workers={config.num_workers}", flush=True)
+    if os.environ.get("TRAIN_RECORD_DIR"):
+        runtime_path = pathlib.Path(os.environ["TRAIN_RECORD_DIR"]) / "runtime.json"
+        runtime_path.parent.mkdir(parents=True, exist_ok=True)
+        with runtime_path.open("x") as file:
+            json.dump({"mesh": mesh_shape, "device_count": jax.device_count(),
+                       "fsdp_devices": config.fsdp_devices, "batch_size": config.batch_size,
+                       "num_workers": config.num_workers, "seed": config.seed,
+                       "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES", ""),
+                       "config_name": config.name, "exp_name": config.exp_name,
+                       "devices": [str(d) for d in mesh.devices.flat]}, file, indent=2)
     data_sharding = jax.sharding.NamedSharding(
         mesh, jax.sharding.PartitionSpec(sharding.DATA_AXIS)
     )
@@ -451,26 +465,47 @@ def main(config: _config.TrainConfig):
         dynamic_ncols=True,
     )
 
+    # 默认关闭；只记录主线程阶段与设备 trace，不将异步提交时间当成 GPU 计算时间。
+    timing = None
+    timing_steps = int(os.environ.get("TRAIN_TIMING_STEPS", "0"))
+    if timing_steps < 0:
+        raise ValueError("TRAIN_TIMING_STEPS 不能为负数")
+    if timing_steps:
+        from step_timing import StepTiming
+        record_root = os.environ.get("TRAIN_RECORD_DIR")
+        if not record_root:
+            raise ValueError("开启计时必须同时指定 TRAIN_RECORD_DIR")
+        timing = StepTiming(record_root, min(timing_steps, config.num_train_steps - start_step))
+
     infos = []
-    for step in pbar:
-        with sharding.set_mesh(mesh):
-            train_state, info = ptrain_step(train_rng, train_state, batch)
-        infos.append(info)
-        if step % config.log_interval == 0:
-            stacked_infos = common_utils.stack_forest(infos)
-            reduced_info = jax.device_get(jax.tree.map(jnp.mean, stacked_infos))
+    try:
+        for step in pbar:
+            with timing.step(step, flush=lambda: jax.block_until_ready(train_state)) if timing else nullcontext():
+                with timing.phase("train_dispatch") if timing else nullcontext():
+                    with sharding.set_mesh(mesh):
+                        train_state, info = ptrain_step(train_rng, train_state, batch)
+                infos.append(info)
+                if step % config.log_interval == 0:
+                    with timing.phase("logging") if timing else nullcontext():
+                        stacked_infos = common_utils.stack_forest(infos)
+                        reduced_info = jax.device_get(jax.tree.map(jnp.mean, stacked_infos))
 
-            info_str = ", ".join(f"{k}={v:.4f}" for k, v in reduced_info.items())
-            pbar.write(f"Step {step}: {info_str}")
-            wandb.log(reduced_info, step=step)
-            infos = []
+                        info_str = ", ".join(f"{k}={v:.4f}" for k, v in reduced_info.items())
+                        pbar.write(f"Step {step}: {info_str}")
+                        wandb.log(reduced_info, step=step)
+                        infos = []
 
-        batch = next(data_iter)
+                with timing.phase("data_next") if timing else nullcontext():
+                    batch = next(data_iter)
 
-        if (
-            step % config.save_interval == 0 and step > start_step
-        ) or step == config.num_train_steps - 1:
-            _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
+                if (
+                    step % config.save_interval == 0 and step > start_step
+                ) or step == config.num_train_steps - 1:
+                    with timing.phase("checkpoint") if timing else nullcontext():
+                        _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
+    finally:
+        if timing:
+            timing.close()
 
     logging.info("Waiting for checkpoint manager to finish")
     checkpoint_manager.wait_until_finished()

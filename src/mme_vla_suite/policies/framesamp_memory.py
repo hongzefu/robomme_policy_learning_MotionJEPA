@@ -18,7 +18,8 @@ import mem_buffer（建库域留有冻结副本 `dataset_builder/mem_buffer.py`�
 - 注入 `motion_enc_fn`（同 `vision_enc_fn` 范式；模型本体 / sidecar 句柄建在 `MME_VLA_Policy.__init__`，本类每 episode 随 `reset()` 销毁重建，不持模型）；
 - 256 域原始帧缓冲 `_raw_frames`（现有 add_buffer 缩到 224 后就丢了原图，Wan VAE 要 256 域），入库前 raise 校验 `(frame_size, frame_size, 3)`；
 - 段边界 `exec_start_idx` 由 policy 显式下传；demo / exec 各持 `next_grid_start`（段内绝对位置，初值 0，编完一窗 `+= stride`），
-  每次 add_buffer 后用 **while** 循环把所有已合法起点编完（demo 判据 `next+32 ≤ es−1`、exec 判据 `next+32 ≤ 本批末帧段内帧号`），
+  每次 add_buffer 后用 **while** 编完合法起点（demo 按最少真实帧契约，exec 始终要求 33 帧），
+  新 demo 契约把不足 33 帧的尾窗用第 `es−1` 帧补齐，绝不借用 exec 首帧；
   存 `_history_feats_motion[f]`（键 = 全域起点帧号）；编完一窗后删除 `< next_grid_start` 的原始帧；
 - `_prepare_motion(step_idx)`：按训练侧同一公式取全部合法起点（>budget 立即报错、不裁剪），右填充 + mask，
   `motion_pos = pos_emb[f, 0, :pos_dim]`（与训练侧 `store.pos_rows` 同表同切片），并返回每行全域时刻（padding 记哨兵）供交错排序。
@@ -86,6 +87,17 @@ class FrameSampMemory:
             self.motion_frame_size = int(motion_cfg["frame_size"])
             self.motion_pos_dim = int(motion_cfg["pos_dim"])
             self.motion_dim = int(motion_cfg["dim"])
+            has_min = "demo_min_real_frames" in motion_cfg
+            has_pad = "demo_tail_pad" in motion_cfg
+            if has_min != has_pad:
+                raise ValueError("demo_min_real_frames 与 demo_tail_pad 必须同时提供或同时缺省")
+            self.demo_min_real = motion_cfg.get("demo_min_real_frames", 33)
+            self.demo_tail_pad = motion_cfg.get("demo_tail_pad", "none")
+            if type(self.demo_min_real) is not int or not (
+                (self.demo_min_real == self.motion_window and self.demo_tail_pad == "none")
+                or (1 <= self.demo_min_real <= self.motion_window and self.demo_tail_pad == "repeat_last")
+            ):
+                raise ValueError(f"在线 demo 窗口契约不合法: {self.demo_min_real}, {self.demo_tail_pad!r}")
             if str(motion_cfg.get("window_direction", "forward")) != "forward" or str(motion_cfg.get("grid_origin", "segment_start")) != "segment_start":
                 raise ValueError("在线运动路只实现 forward + segment_start 口径")
         self._history_feats_motion: dict[int, np.ndarray] = {}
@@ -177,9 +189,16 @@ class FrameSampMemory:
     def _encode_window(self, f: int) -> None:
         import time
         W = self.motion_window
-        frames = [self._raw_frames.get(f + j) for j in range(W)]
+        es = self.exec_start_idx
+        real = min(W, es - f) if f < es else W
+        if real < (self.demo_min_real if f < es else W):
+            raise RuntimeError(f"起点 {f} 的真实帧数 {real} 不满足段契约")
+        if real < W and self.demo_tail_pad != "repeat_last":
+            raise RuntimeError("当前 demo 契约不允许尾部补帧")
+        frame_ids = [f + j for j in range(real)] + [es - 1] * (W - real)
+        frames = [self._raw_frames.get(i) for i in frame_ids]
         if any(x is None for x in frames):
-            missing = [f + j for j, x in enumerate(frames) if x is None]
+            missing = [i for i, x in zip(frame_ids, frames) if x is None]
             raise RuntimeError(f"起点 {f} 的 33 帧不齐（缺 {missing[:4]}…），原始帧缓冲被过早清理？")
         window = np.ascontiguousarray(np.stack(frames))
         t0 = time.perf_counter()
@@ -196,7 +215,7 @@ class FrameSampMemory:
         es = self.exec_start_idx
         W = self.motion_window
         # demo 段：整段已见，判据与 t 无关（首批一次跑完）
-        while self._next_grid_start_demo + (W - 1) <= es - 1:
+        while self._next_grid_start_demo + (self.demo_min_real - 1) <= es - 1:
             s = self._next_grid_start_demo
             self._encode_window(s)                                   # 全域帧号 f = s
             self._next_grid_start_demo += self.motion_stride
@@ -207,9 +226,10 @@ class FrameSampMemory:
             self._next_grid_start_exec += self.motion_stride
         # 只保留下一个起点之后的原始帧（demo 段编完后其帧不再需要；exec 段保留 ≥ es + next_exec 的帧）
         keep_from = es + self._next_grid_start_exec
-        if self._next_grid_start_demo + (W - 1) <= es - 1:           # demo 未编完（不应发生：首批整段到货）
+        demo_unfinished = self._next_grid_start_demo + (self.demo_min_real - 1) <= es - 1
+        if demo_unfinished:                                      # demo 未编完（首批应整段到货）
             keep_from = min(keep_from, self._next_grid_start_demo)
-        for k in [k for k in self._raw_frames if k < keep_from and not (k < es and self._next_grid_start_demo + (W - 1) <= es - 1)]:
+        for k in [k for k in self._raw_frames if k < keep_from and not (k < es and demo_unfinished)]:
             del self._raw_frames[k]
 
     def visible_motion_frames(self, step_idx: int) -> list[int]:
@@ -218,7 +238,7 @@ class FrameSampMemory:
         W = self.motion_window
         out = []
         s = 0
-        while s + (W - 1) <= es - 1:
+        while s + (self.demo_min_real - 1) <= es - 1:
             out.append(s)
             s += self.motion_stride
         u = 0

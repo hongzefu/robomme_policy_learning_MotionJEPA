@@ -8,8 +8,8 @@
 产物（每段三件，原子落盘）：
   <out>/<段>.bin              num_grid × 589,824 B：组优先 (9,16,32,32) f32 裸字节，chunk 序 = 网格序
   <out>/<段>.bin.sha256       "<sha256>  <段>.bin"
-  <out>/<段>.metadata.json    schema 2 单段清单：rows[{m, seg_offset, start_global_frame, input_shape,
-                              input_dtype, input_frames_sha256}]、sha256、worker 指纹与 VAE info
+  <out>/<段>.metadata.json    schema 3 单段清单：起点、输入形制/sha、real_frames、pad_frames、pad_source_frame，
+                              以及 worker 指纹、VAE info 与最少真实帧契约
 ``input_frames_sha256`` 在紧邻 ``encode_chunk`` 调用前对最终 C 连续的 33 帧 uint8 原始字节计算（1.2 契约）。
 
 领任务：工作项按 num_grid LPT 降序排队，``os.open(<out>/_claims/_claim_<段>, O_CREAT|O_EXCL)`` 领一项、
@@ -42,7 +42,8 @@ sys.path.insert(0, str(_HERE))
 import wan_common as wc  # noqa: E402
 
 VAE_ID = "Wan-AI/Wan2.1-T2V-1.3B-Diffusers"
-METADATA_SCHEMA = 2
+METADATA_SCHEMA = 3
+_ROW_KEYS = ("real_frames", "pad_frames", "pad_source_frame")
 
 
 def load_infer_module():
@@ -58,7 +59,7 @@ def process_segment(W, torch, vae, device, item: dict, raw_dir: pathlib.Path, ou
     frames = wc.read_segment_frames(str(raw_dir / item["h5_file"]), item["raw_ep_idx"],
                                     item["seg_start"], item["seg_len"])
     ng = item["num_grid"]
-    if ng != wc.seg_num_grid(item["seg_len"]):
+    if ng != wc.seg_num_grid(item["seg_len"], item["min_real"]) or item["num_chunks"] != wc.seg_num_chunks(item["seg_len"], item["min_real"]):
         raise RuntimeError(f"{key} num_grid 与公式不符")
     final = out_dir / f"{key}.bin"
     tmp = final.with_name(final.name + f".tmp.{os.getpid()}")
@@ -68,9 +69,16 @@ def process_segment(W, torch, vae, device, item: dict, raw_dir: pathlib.Path, ou
     with open(tmp, "wb") as f:
         for m in range(ng):
             off = wc.GRID_STRIDE * m
-            if off + wc.WINDOW_FRAMES > item["seg_len"]:
-                raise RuntimeError(f"{key} m={m} 窗口越段（seg_len={item['seg_len']}）")
-            window = np.ascontiguousarray(frames[off:off + wc.WINDOW_FRAMES])
+            real = min(wc.WINDOW_FRAMES, item["seg_len"] - off)
+            if real < item["min_real"]:
+                raise RuntimeError(f"{key} m={m} 真实帧数 {real} 不足 {item['min_real']}")
+            window = frames[off:off + real]
+            if real < wc.WINDOW_FRAMES:
+                if item["segment"] != "demo":
+                    raise RuntimeError(f"{key} exec 段禁止补帧")
+                last = frames[item["seg_len"] - 1:item["seg_len"]]
+                window = np.concatenate([window, np.repeat(last, wc.WINDOW_FRAMES - real, axis=0)])
+            window = np.ascontiguousarray(window)
             if window.shape != (wc.WINDOW_FRAMES, wc.FRAME_SIZE, wc.FRAME_SIZE, 3) or window.dtype != np.uint8:
                 raise RuntimeError(f"{key} m={m} 窗口形制异常 {window.shape} {window.dtype}")
             in_sha = wc.sha256_bytes(window)               # 紧邻 encode_chunk 之前、对最终连续输入计算
@@ -86,7 +94,9 @@ def process_segment(W, torch, vae, device, item: dict, raw_dir: pathlib.Path, ou
             sha.update(b)
             rows.append({"m": m, "seg_offset": off, "start_global_frame": item["seg_start"] + off,
                          "input_shape": list(window.shape), "input_dtype": "uint8",
-                         "input_frames_sha256": in_sha})
+                         "input_frames_sha256": in_sha,
+                         "real_frames": real, "pad_frames": wc.WINDOW_FRAMES - real,
+                         "pad_source_frame": item["seg_start"] + item["seg_len"] - 1 if real < wc.WINDOW_FRAMES else None})
         f.flush()
         os.fsync(f.fileno())
     size = tmp.stat().st_size
@@ -107,6 +117,7 @@ def process_segment(W, torch, vae, device, item: dict, raw_dir: pathlib.Path, ou
         "raw_ep_idx": item["raw_ep_idx"], "segment_kind": item["segment"],
         "seg_start_global": item["seg_start"], "seg_len": item["seg_len"],
         "num_grid": ng, "num_chunks": item["num_chunks"],
+        "min_real": item["min_real"],
         "grid_stride": wc.GRID_STRIDE, "window_frames": wc.WINDOW_FRAMES,
         "grid_origin": wc.GRID_ORIGIN, "window_direction": wc.WINDOW_DIRECTION,
         "truncation_policy": wc.TRUNCATION_POLICY, "frame_size": wc.FRAME_SIZE,
@@ -166,12 +177,18 @@ def main() -> None:
             break
         key = it["key"]
         expect = it["num_grid"] * wc.CHUNK_BYTES
-        if wc.segment_outputs_complete(out_dir, key, expect):
+        if wc.segment_outputs_complete(out_dir, key, expect, expect_schema=METADATA_SCHEMA,
+                                       require_keys=("min_real",), require_row_keys=_ROW_KEYS):
             skipped += 1
             continue
         if not wc.try_claim(claims, key, args.worker):
             continue
         try:
+            # 领到任务后再核一次，防止其他 worker 刚完成并释放 claim 后重复抽取。
+            if wc.segment_outputs_complete(out_dir, key, expect, expect_schema=METADATA_SCHEMA,
+                                           require_keys=("min_real",), require_row_keys=_ROW_KEYS):
+                skipped += 1
+                continue
             wc.purge_segment_outputs(out_dir, key)
             t0 = time.perf_counter()
             W.pin_numerics()
