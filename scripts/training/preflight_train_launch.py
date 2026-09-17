@@ -84,6 +84,8 @@ def main() -> int:
 
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--repo", required=True, help="主副本仓库根；训练必须从这里起跑")
+    ap.add_argument("--bench-copy", action="store_true", help="显式允许隔离的基准 worktree")
+    ap.add_argument("--v1-store-realpath", help="基准副本共享的主副本实体存储目录")
     ap.add_argument("--train-head", required=True, help="40 位 sha 字面量，不得写 $(git rev-parse HEAD)")
     ap.add_argument("--history-config", required=True)
     ap.add_argument("--history-config-sha256", required=True)
@@ -95,6 +97,8 @@ def main() -> int:
     ap.add_argument("--train-script", default="scripts/training/train.py",
                     help="按 cwd 相对解析，与 runner 里交给 python 的那条路径逐字相同")
     a = ap.parse_args(raw)
+    if a.bench_copy != (a.v1_store_realpath is not None):
+        ap.error("--bench-copy 与 --v1-store-realpath 必须同时提供")
 
     wt = pathlib.Path(a.repo).resolve()
     venv = wt / ".venv"
@@ -171,11 +175,25 @@ def main() -> int:
     # 主副本身份两条：开发副本的 v1-store 是 symlink、目录名带 -temp，两者都能把「在开发副本
     # 里误起正式训练」当场挡下（AGENTS 第 14 条环境 B 段的例外条款）
     v1 = wt / "v1-store"
-    check("V1_STORE_REAL", "起跑位置", v1.is_dir() and not v1.is_symlink(),
-          f"{v1} 是实体目录（开发副本那份是 symlink）",
-          "symlink" if v1.is_symlink() else ("实体目录" if v1.is_dir() else "不存在"))
-    check("NOT_DEV_COPY", "起跑位置", not wt.name.endswith("-temp"),
-          "仓库根不是 -temp 开发副本", wt.name)
+    if a.bench_copy:
+        target = pathlib.Path(a.v1_store_realpath)
+        check("V1_STORE_LINK_TARGET", "起跑位置",
+              target.is_absolute() and target.is_dir() and not target.is_symlink()
+              and target == target.resolve() and v1.is_symlink() and v1.resolve() == target,
+              f"{v1} 链向实体目录 {target}", str(v1.resolve()))
+    else:
+        check("V1_STORE_REAL", "起跑位置", v1.is_dir() and not v1.is_symlink(),
+              f"{v1} 是实体目录（开发副本那份是 symlink）",
+              "symlink" if v1.is_symlink() else ("实体目录" if v1.is_dir() else "不存在"))
+    if a.bench_copy:
+        rc, worktrees = git(str(target.parent), "worktree", "list", "--porcelain")
+        registered = {line.removeprefix("worktree ") for line in worktrees.splitlines()
+                      if line.startswith("worktree ")}
+        check("BENCH_COPY_IS_WORKTREE", "起跑位置", rc == 0 and str(wt) in registered,
+              f"{wt} 注册在 {target.parent} 的 worktree 清单", sorted(registered))
+    else:
+        check("NOT_DEV_COPY", "起跑位置", not wt.name.endswith("-temp"),
+              "仓库根不是 -temp 开发副本", wt.name)
 
     # 关键第三方包必须来自该 venv（空 venv 里 jax 根本不存在，这条把它挡在起跑前）
     try:

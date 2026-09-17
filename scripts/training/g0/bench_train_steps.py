@@ -100,12 +100,17 @@ import numpy as np  # noqa: E402
 
 import openpi.training.data_loader as _openpi_dl  # noqa: E402
 
+_SOURCE_ROOT = pathlib.Path(os.environ.get("BENCH_SOURCE_ROOT", str(_REPO_ROOT))).resolve()
+if not pathlib.Path(_openpi_dl.__file__).resolve().is_relative_to(_SOURCE_ROOT):
+    raise SystemExit(f"BENCH_SOURCE_ROOT 不匹配：{_openpi_dl.__file__} 不在 {_SOURCE_ROOT} 下")
+
 import mme_vla_suite.training.config as _config  # noqa: E402
 
 _MAX_BENCH_STEPS = 1200  # G0b 基线升级为 1000 步（用户 2026-08-26 指定）；上限仍远低于正式训练量级
 # 只接受 closed / open 两个精确文件名（0901-motion-memory-plan.md 2.1）：T1 / T2 默认钉 closed，T3 open 侧显式钉 open
 _EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml",
-                             "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml")
+                             "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml",
+                             "perceptual-framesamp-modul-8frame-8x8.yaml")
 _EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 
@@ -716,6 +721,8 @@ def main() -> None:
     print("[bench] import_origins=" + json.dumps(origins), flush=True)
     start_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=_REPO_ROOT, text=True).strip()
     start_status = subprocess.check_output(["git", "status", "--porcelain"], cwd=_REPO_ROOT, text=True)
+    source_head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=_SOURCE_ROOT, text=True).strip()
+    source_status = subprocess.check_output(["git", "status", "--porcelain"], cwd=_SOURCE_ROOT, text=True)
     _install_reference_dataset()
     norm_record = _install_norm_recorder(config)
     cache_counter = _CacheEventCounter()
@@ -760,6 +767,10 @@ def main() -> None:
             "import_origins": origins,
             "start_head": start_head,
             "start_status": start_status,
+            "tool_head": start_head,
+            "source_head": source_head,
+            "source_status": source_status,
+            "source_root": str(_SOURCE_ROOT),
             "reference_commit": os.environ.get("BENCH_REF_COMMIT"),
             "candidate_commit": os.environ.get("BENCH_CAND_COMMIT"),
             "dataset_impl": os.environ.get("BENCH_DATASET_IMPL", "packed"),
