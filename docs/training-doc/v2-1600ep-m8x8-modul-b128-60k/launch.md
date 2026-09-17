@@ -84,7 +84,7 @@ MEM_PARAMS=PASS n=6
 
 正式训练稳定起步后记录 `framesamp_dataset.py`、`train.py`、`history_pi0.py` 的 SHA256，并执行 `chmod -R a-w src scripts packages`。此后代码、留档编辑和环境安装均在开发副本进行，主副本不改文件、不 pull、不运行 uv sync/add/pip。开发副本禁止对共享数据执行带 `--force` 或破坏性输出根的命令。
 
-训练连续推进超过 25 步后已执行只读锁定，目录权限为 `dr-xr-xr-x`，主副本 Git 状态仍干净；锁定摘要见 [records/lock_sha256.txt](records/lock_sha256.txt)。这证明起跑时的隔离已生效，训练结束后的 V10 复查仍待执行。
+训练连续推进超过 25 步后已执行只读锁定，目录权限为 `dr-xr-xr-x`，主副本 Git 状态仍干净；锁定摘要见 [records/lock_sha256.txt](records/lock_sha256.txt)。训练结束后的 V10 已于 2026-09-17 通过：主副本在解锁及合并前仍是起跑 HEAD、工作区干净、三份源码 SHA 全部一致，见 [records/final_pre_merge.json](records/final_pre_merge.json)。
 
 本次正式运行的 tmux 清单是 `m8-prod` 与 `m8-prod-dense`，smoke 使用 `m8-smoke`；不操作其他会话。训练有精确 PID 的 15 秒采样器并由 EXIT trap 回收；另用 500ms 密采记录前 30 分钟。每一级日志过滤均行缓冲，存活以 `tmux has-session` 判断。300 步后按实际稳定段重新估算 ETA；计划的约 65 小时仅为旧档位外推。利用率结论使用均值、0% 占比及慢步/非慢步分层，不以中位数作结论。
 
@@ -93,3 +93,5 @@ MEM_PARAMS=PASS n=6
 保护边界：preflight 与 train 必须使用同一 argv 数组；chmod 不能阻止 root 或主动恢复写权限；环境保护依赖禁止主副本 uv 操作；失败可能留下半截 run 根与 wandb run。任何正式失败不自动覆盖、清空或复用名称，先把原因及残留交用户决定。
 
 训练结束后恢复 `src/scripts/packages` 的用户写权限，确认 `git status --porcelain` 为空且三个源码 SHA 不变，记录 12 个 checkpoint、退出码、里程碑 loss、稳态吞吐及利用率统计，再归档 `result.md` 和日志/指标；不提交权重。评估不在本轮范围。
+
+**最终实况（2026-09-17 收尾）**：训练于 `2026-09-16T20:53:31Z` 以 `EXIT_CODE=0` 结束，60k 步全程耗时 39h05m04s，12 个 checkpoint 全部落盘。最终 `59999` 在 CPU 上成功读取，参数树 61/61 精确匹配；主副本已解除写保护并快进同步开发副本的三个文档提交。最终结果、统计复现与清理进展以 [result.md](result.md) 为准；本文件的起跑命令及原始版本信息继续作为历史记录。

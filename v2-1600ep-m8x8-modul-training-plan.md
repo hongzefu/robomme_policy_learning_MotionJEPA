@@ -2,7 +2,7 @@
 
 > **实施过程档案**（2026-09-15，用户批准）。结果以 [`docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/`](docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md) 为准；本文按 `AGENTS.md` 第 2 条分两部分，另含 F（守卫放宽与增补验证）、G（训练锁主副本 + `-temp` 开发副本）、H（审计结论）、I（本文固化）、J（motion 接入前后的 modulation 梯度对拍）五节。
 >
-> **进度**：执行顺序步骤 1–9 已完成，正式训练已于 `2026-09-15T05:48:27Z` 从 clean HEAD `dd07f18fc385b01eb52db7563fe5f202997b9706` 启动，run_name 为 `v2-1600ep-m8x8-modul-b128-60k`。F2/F3、两档 modulation 的 A/A 与 A/B、b128 四卡 20 步 smoke、61/61 参数树和 25 项 preflight 均通过。主副本 `src/scripts/packages` 已锁只读，独立开发副本及其 `.venv` 已建立；训练在 tmux `m8-prod` 进行，密采会话 `m8-prod-dense`。后续执行步骤 10–11：持续训练、训练结束后的只读复查与最终结果留档。用户已再次确认名称，并批准本轮沿用 GitHub SSH 推送。
+> **进度（2026-09-17 收尾）**：步骤 1–10 已完成，步骤 11 的训练结束验收及主副本同步已完成，最终留档提交推送后清理开发副本。正式训练从 clean HEAD `dd07f18fc385b01eb52db7563fe5f202997b9706` 于 `2026-09-15T05:48:27Z` 启动，已于 `2026-09-16T20:53:31Z` 正常结束，`EXIT_CODE=0`，60k 步耗时 **39h05m04s**。12 个 checkpoint 全部落盘，最终 `59999` 参数树 61/61 精确匹配；V10 复查主副本干净且三份源码 SHA 未变。主副本已解锁并快进同步开发副本的三个文档提交。最终结果见 [`result.md`](docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/result.md)，下文的预计耗时、起跑命令和训练期间规定保留为历史计划。
 
 环境判定：**环境 B（AWS 单机）**。仓库主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，8 × A100-SXM4-80GB。无 turbo、无 GreatLakes。起跑 commit 见 `TRAIN_HEAD`（执行顺序步骤 8 记下）。
 

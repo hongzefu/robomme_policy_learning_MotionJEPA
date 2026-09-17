@@ -1,0 +1,272 @@
+{
+  "run": "v2-1600ep-m8x8-modul-b128-60k",
+  "input_sha256": {
+    "train.log.gz": "6752e3071b83c02868915fcfc8c35a2a476e95b2065556b5454f398dc8bf177a",
+    "metrics.jsonl": "38d719287d553193c293509e57eedefe1bb698f38dfc5d5b8613778dffd90bbe",
+    "gpu_util_15s_full.csv": "569c4116f167bad949b7c2f6937c39a85c8a3bb6ee4d1ca684bdfb7d880c9225"
+  },
+  "decompressed_train_log_sha256": "f9cccc40aa9f6ef3ae437018868710f8b26b847a10fcabc5b4524133ac63510e",
+  "start_utc": "2026-09-15T05:48:27+00:00",
+  "end_utc": "2026-09-16T20:53:31+00:00",
+  "duration_seconds": 140704.0,
+  "duration": "1 day, 15:05:04",
+  "exit_code": 0,
+  "metrics": {
+    "count": 600,
+    "steps": {
+      "first": 0,
+      "last": 59900,
+      "interval": 100,
+      "complete": true
+    },
+    "all_five_scalars_finite": true,
+    "hex_matches_decimal": true,
+    "timestamps_strictly_increasing": true,
+    "first_log_utc": "2026-09-15T05:52:42.307248+00:00",
+    "last_log_utc": "2026-09-16T20:49:14.835970+00:00",
+    "milestones": [
+      {
+        "step": 0,
+        "grad_norm": 1.2679520845413208,
+        "llm_grad_norm": 1.2565815448760986,
+        "loss": 0.08936773985624313,
+        "mem_enc_norm": 0.10920923203229904,
+        "param_norm": 1815.5465087890625
+      },
+      {
+        "step": 100,
+        "grad_norm": 0.5048187375068665,
+        "llm_grad_norm": 0.4985204339027405,
+        "loss": 0.05631614476442337,
+        "mem_enc_norm": 0.04163641482591629,
+        "param_norm": 1815.5462646484375
+      },
+      {
+        "step": 1000,
+        "grad_norm": 0.13674308359622955,
+        "llm_grad_norm": 0.13367576897144318,
+        "loss": 0.014734499156475067,
+        "mem_enc_norm": 0.011388379149138927,
+        "param_norm": 1815.55712890625
+      },
+      {
+        "step": 5000,
+        "grad_norm": 0.056611135601997375,
+        "llm_grad_norm": 0.0497879721224308,
+        "loss": 0.00827813521027565,
+        "mem_enc_norm": 0.014822675846517086,
+        "param_norm": 1817.0789794921875
+      },
+      {
+        "step": 10000,
+        "grad_norm": 0.037219028919935226,
+        "llm_grad_norm": 0.03149890899658203,
+        "loss": 0.005476545542478561,
+        "mem_enc_norm": 0.008363754488527775,
+        "param_norm": 1821.371826171875
+      },
+      {
+        "step": 20000,
+        "grad_norm": 0.02912764437496662,
+        "llm_grad_norm": 0.025010036304593086,
+        "loss": 0.0034884398337453604,
+        "mem_enc_norm": 0.004235297441482544,
+        "param_norm": 1829.4739990234375
+      },
+      {
+        "step": 30000,
+        "grad_norm": 0.026519039645791054,
+        "llm_grad_norm": 0.02295411005616188,
+        "loss": 0.0027722774539142847,
+        "mem_enc_norm": 0.0033012458588927984,
+        "param_norm": 1837.26171875
+      },
+      {
+        "step": 40000,
+        "grad_norm": 0.023273183032870293,
+        "llm_grad_norm": 0.020089328289031982,
+        "loss": 0.002315347548574209,
+        "mem_enc_norm": 0.002227718010544777,
+        "param_norm": 1844.68896484375
+      },
+      {
+        "step": 50000,
+        "grad_norm": 0.023208370432257652,
+        "llm_grad_norm": 0.020106472074985504,
+        "loss": 0.0020108141470700502,
+        "mem_enc_norm": 0.0020347849931567907,
+        "param_norm": 1851.765625
+      },
+      {
+        "step": 59000,
+        "grad_norm": 0.021346334367990494,
+        "llm_grad_norm": 0.01854221522808075,
+        "loss": 0.001756521756760776,
+        "mem_enc_norm": 0.0016937609761953354,
+        "param_norm": 1857.9034423828125
+      },
+      {
+        "step": 59900,
+        "grad_norm": 0.023289060220122337,
+        "llm_grad_norm": 0.01990952529013157,
+        "loss": 0.0017725301440805197,
+        "mem_enc_norm": 0.0017604929162189364,
+        "param_norm": 1858.508056640625
+      }
+    ],
+    "last_ten_logs": {
+      "steps": [
+        59000,
+        59100,
+        59200,
+        59300,
+        59400,
+        59500,
+        59600,
+        59700,
+        59800,
+        59900
+      ],
+      "loss_mean": 0.0018321253708563745,
+      "covered_training_step_range_inclusive": [
+        58901,
+        59900
+      ],
+      "note": "十条日志各聚合 100 步，合计 1000 步；训练最后 59901–59999 共 99 步未触发日志，不能称为训练最后 1000 步的精确均值。"
+    }
+  },
+  "performance_window": {
+    "log_step_range": [
+      100,
+      59900
+    ],
+    "start_utc": "2026-09-15T05:56:43.050287+00:00",
+    "end_utc": "2026-09-16T20:49:14.835970+00:00",
+    "duration_seconds": 139951.7856836319,
+    "updates": 59800,
+    "mean_seconds_per_update": 2.340330864274781,
+    "batch_size": 128,
+    "samples_per_second": 54.693121367548386,
+    "interval_count": 598,
+    "steps_per_interval": 100,
+    "min_interval_seconds_per_update": 2.131274800300598,
+    "max_interval_seconds_per_update": 2.529299840927124,
+    "slow_interval_threshold_seconds_per_update": 3.593587029576302,
+    "slow_interval_count": 0,
+    "note": "使用 metrics 的精确 step/wall_time，统计 598 个 100 步间隔；包含窗口内数据等待与 checkpoint 开销，不是单步延时分布。慢区间阈值仅按区间步时中位数的 1.5 倍定义，不作逐步慢步判定。"
+  },
+  "gpu_15s": {
+    "first_sample_utc": "2026-09-15T05:48:28.548000+00:00",
+    "last_sample_utc": "2026-09-16T20:53:27.058000+00:00",
+    "full_run": {
+      "sample_count": 37520,
+      "util_mean_pct": 72.38579424307036,
+      "zero_sample_count": 9526,
+      "zero_sample_share_pct": 25.38912579957356,
+      "memory_used_max_MiB": 79449.0
+    },
+    "full_run_per_gpu": {
+      "4": {
+        "sample_count": 9380,
+        "util_mean_pct": 72.32579957356077,
+        "zero_sample_count": 2372,
+        "zero_sample_share_pct": 25.287846481876333,
+        "memory_used_max_MiB": 79449.0
+      },
+      "5": {
+        "sample_count": 9380,
+        "util_mean_pct": 72.43358208955223,
+        "zero_sample_count": 2391,
+        "zero_sample_share_pct": 25.49040511727079,
+        "memory_used_max_MiB": 79433.0
+      },
+      "6": {
+        "sample_count": 9380,
+        "util_mean_pct": 72.34413646055437,
+        "zero_sample_count": 2384,
+        "zero_sample_share_pct": 25.415778251599146,
+        "memory_used_max_MiB": 79433.0
+      },
+      "7": {
+        "sample_count": 9380,
+        "util_mean_pct": 72.43965884861407,
+        "zero_sample_count": 2379,
+        "zero_sample_share_pct": 25.362473347547976,
+        "memory_used_max_MiB": 79433.0
+      }
+    },
+    "metrics_window": {
+      "sample_count": 37320,
+      "util_mean_pct": 72.54565916398714,
+      "zero_sample_count": 9416,
+      "zero_sample_share_pct": 25.230439442658092,
+      "memory_used_max_MiB": 79449.0
+    },
+    "metrics_window_per_gpu": {
+      "4": {
+        "sample_count": 9330,
+        "util_mean_pct": 72.47181136120042,
+        "zero_sample_count": 2347,
+        "zero_sample_share_pct": 25.155412647374064,
+        "memory_used_max_MiB": 79449.0
+      },
+      "5": {
+        "sample_count": 9330,
+        "util_mean_pct": 72.5957127545552,
+        "zero_sample_count": 2363,
+        "zero_sample_share_pct": 25.326902465166132,
+        "memory_used_max_MiB": 79433.0
+      },
+      "6": {
+        "sample_count": 9330,
+        "util_mean_pct": 72.50760986066452,
+        "zero_sample_count": 2356,
+        "zero_sample_share_pct": 25.2518756698821,
+        "memory_used_max_MiB": 79433.0
+      },
+      "7": {
+        "sample_count": 9330,
+        "util_mean_pct": 72.60750267952841,
+        "zero_sample_count": 2350,
+        "zero_sample_share_pct": 25.187566988210076,
+        "memory_used_max_MiB": 79433.0
+      }
+    },
+    "per_gpu_median_actual_sampling_interval_seconds": {
+      "4": 15.000999927520752,
+      "5": 15.000999927520752,
+      "6": 15.000999927520752,
+      "7": 15.000999927520752
+    },
+    "note": "全程 15 秒离散采样的等权均值与 0% 样本占比只能作为采样估计；采样间隔大于训练步时，不能据此逐步定位等待或证明 GPU 吃满。显存值为驱动报告的设备显存占用，包含 JAX 预分配，不能等同模型实际工作集。"
+  },
+  "checkpoint_log": {
+    "completed_steps": [
+      5000,
+      10000,
+      15000,
+      20000,
+      25000,
+      30000,
+      35000,
+      40000,
+      45000,
+      50000,
+      55000,
+      59999
+    ],
+    "count": 12,
+    "final_step": 59999,
+    "note": "仅核对完整日志中异步保存完成标志；checkpoint 文件与 61/61 参数树的 CPU restore 另行验收。"
+  },
+  "log_checks": {
+    "error_pattern_matches": [],
+    "clock_reversals": [
+      {
+        "before": "23:59:55.217",
+        "after": "00:00:06.970"
+      }
+    ],
+    "note": "日志显示时钟不带日期，跨午夜会回绕；本脚本的耗时只使用 START_UTC/END_UTC 与 metrics epoch 时间戳，不解析 tqdm 的 k 单位舍入进度。"
+  }
+}

@@ -1,0 +1,148 @@
+{
+  "checked_utc": "2026-09-17T01:59:03.904748+00:00",
+  "run_name": "v2-1600ep-m8x8-modul-b128-60k",
+  "environment": "B",
+  "train_head": "dd07f18fc385b01eb52db7563fe5f202997b9706",
+  "dev_head": "9a58dc8c048a3661e39b3d7cc47887185b3c8c40",
+  "main_git_status_porcelain": "",
+  "dev_git_status_porcelain": "",
+  "training_pid_absent": 1701901,
+  "sampler_pid_absent": 1701896,
+  "source_lock_checks": [
+    {
+      "path": "src/mme_vla_suite/training/framesamp_dataset.py",
+      "expected_sha256": "c25ce12113c3013d00994daab12a977d41153eac9e070f9fb0cbe91f3b64da7c",
+      "actual_sha256": "c25ce12113c3013d00994daab12a977d41153eac9e070f9fb0cbe91f3b64da7c",
+      "ok": true
+    },
+    {
+      "path": "scripts/training/train.py",
+      "expected_sha256": "e907825f1b053f8c0ec5eb5b0c3357978a6b85198fd5b950bcad06c5880e23e5",
+      "actual_sha256": "e907825f1b053f8c0ec5eb5b0c3357978a6b85198fd5b950bcad06c5880e23e5",
+      "ok": true
+    },
+    {
+      "path": "src/mme_vla_suite/models/integration/history_pi0.py",
+      "expected_sha256": "6c65d8b9e50c4241dd65c784542246e7dc4d1081c0b621d878ac2f9f58932cb8",
+      "actual_sha256": "6c65d8b9e50c4241dd65c784542246e7dc4d1081c0b621d878ac2f9f58932cb8",
+      "ok": true
+    }
+  ],
+  "log_sha256": "f9cccc40aa9f6ef3ae437018868710f8b26b847a10fcabc5b4524133ac63510e",
+  "checkpoint_inventory": [
+    {
+      "step": 5000,
+      "commit_timestamp_nsecs": 1789463670218732531,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "5a32dc44d37c9061806053d2c109aa1dc46a46d0557d593461e2de33e2aef519",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "920303a1b85162d7e9ccd875bb82badb943f65c33db0ed6863c9d6524025d045"
+    },
+    {
+      "step": 10000,
+      "commit_timestamp_nsecs": 1789475516607664679,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "fabe7c9d51d1d44f869782ba93ca7fe45ce1e3f7df1033578e529eeb43c74c0a",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "697a031724d45850025ec5713d62d9307d1626209bb0d73fd95fa9c679ca4d2f"
+    },
+    {
+      "step": 15000,
+      "commit_timestamp_nsecs": 1789486459398057875,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "9de1dcdc73ffcf21bbe33516a1c560e7922bdbdc8df89f6d38f188af0b3236c8",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "d2f6732247e35d993335c7571e4eefbc066833d90aa8a429fe403165ce533125"
+    },
+    {
+      "step": 20000,
+      "commit_timestamp_nsecs": 1789497952680439143,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "53bf02e2402c6bdba1e7819e686139d4ec6d01fa3d8e664a69f4e55a95e2b5fc",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "c6c9ebbcea55ef4085afbaf54de8501317bc4fde10c0a14441f6c31d51d044f8"
+    },
+    {
+      "step": 25000,
+      "commit_timestamp_nsecs": 1789509993663960337,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "f84f69140699498e9fc3648c59c2ee2f12be40a09bb8b1c1dc65718b13923ec6",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "6527ab132eb66ceae6da9f4b09c87abe40f59e7d1be5416b397eb15d2f0ef918"
+    },
+    {
+      "step": 30000,
+      "commit_timestamp_nsecs": 1789522123445936714,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "3edd69088f7bd252be810939e78c77f6dea24ffd15d1af86b3b5bc29b5d25fe0",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "cb20ae392c6324a09ddff68791fb549876735fe91c73c9cb4162537576200c9f"
+    },
+    {
+      "step": 35000,
+      "commit_timestamp_nsecs": 1789534263397859690,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "286dbe7a1e2df8e2db34dafea52fbdff40aff3db6855a2a52039ac8bf24bc7f2",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "8db6b80fd2deae6f56972441cde27b48684b26956e013d9f76518968d4dd50b5"
+    },
+    {
+      "step": 40000,
+      "commit_timestamp_nsecs": 1789545832199687859,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "3fc0688de1af3e8ffe7a424021b667aaea1e5b38d6e91404baf93f7fe166e447",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "cc813d2bc3e60434d98a99b912e0edc737a94f44ce4d4443bc27d977a0fd7c17"
+    },
+    {
+      "step": 45000,
+      "commit_timestamp_nsecs": 1789557245970054353,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "9fa53b58b86a3dab819dff906eafa169e158d8ab2050e7f95e618f08d5461dce",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "a591e655628941ce86755615e3c2759850682a1894263e0992563ca0dad42352"
+    },
+    {
+      "step": 50000,
+      "commit_timestamp_nsecs": 1789568164813213537,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "30199b5a367059d99de7663b423b93fb9ce57d596aad0cee757c434ebf0eb75f",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "1060c6bdaaa194f80318697605db380083bd453185e0a23dd745710d2361687e"
+    },
+    {
+      "step": 55000,
+      "commit_timestamp_nsecs": 1789579786566427421,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "2df84f5a3894c1b97ff6c7cf1107abf45f659933dacb123ba1b4e03511bf88bd",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "aebda6e43da6d4f65162e1184f55a8ad1a740417f20cf6caab60a17cff094ba5"
+    },
+    {
+      "step": 59999,
+      "commit_timestamp_nsecs": 1789592001437330930,
+      "norm_stats_sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173",
+      "metadata_sha256": "d213e453f058238ecf1acf71b0287d7488fe8d3b1c7a831214f94734b8014183",
+      "params_metadata_sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65",
+      "params_manifest_sha256": "afadd979a1048a8387852e83fdeab8a39e823eb31696060b866a9831f9fdb862"
+    }
+  ],
+  "store_identity": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store",
+    "device": 2304,
+    "inode": 24696075782
+  },
+  "tmux_sessions": [
+    "0",
+    "1",
+    "claude-private",
+    "codex",
+    "codex-repo",
+    "codex2"
+  ],
+  "code_modes": {
+    "src": "0o555",
+    "scripts": "0o555",
+    "packages": "0o555"
+  }
+}

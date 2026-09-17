@@ -69,7 +69,7 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`v2-1600ep-m8x8-modul-b128-60k/`](v2-1600ep-m8x8-modul-b128-60k/result.md) | 新库 1600 集、modulation 8×8、b128、60k、lr 5e-5，GPU 4–7 | 训练进行中：全部起跑前验证通过，主副本代码已锁只读 |
+| [`v2-1600ep-m8x8-modul-b128-60k/`](v2-1600ep-m8x8-modul-b128-60k/result.md) | 新库 1600 集、modulation 8×8、b128、60k、lr 5e-5，GPU 4–7 | 完成：退出 0，12 个 checkpoint，最终 59999 参数树 61/61；V10 通过，耗时 39h05m04s |
 | [`smoke-m8x8-modul-20260915T054007Z/`](smoke-m8x8-modul-20260915T054007Z/result.md) | 正式 b128 四卡配置的 20 步 smoke 与 checkpoint 参数树验收 | PASS：20 步有限、61/61 参数树精确匹配、六条 modulation 叶子和新 norm_stats 齐全 |
 | [`awsprod40k-b128-motion/`](awsprod40k-b128-motion/result.md) | 生产训练：40k 步、global batch 128、400 ep 库、motion 接入 | 跑完，checkpoint 39999 |
 | [`bench-b128-util/`](bench-b128-util/result.md) | 起跑前钉 b128 的卡数 / fsdp / util 档位 | 见 result.md |
