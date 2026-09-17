@@ -81,11 +81,11 @@ fi
 EPOCH_SAMPLES="${_es_sm:-${_es_st}}"
 [[ "${EPOCH_SAMPLES}" =~ ^[0-9]+$ ]] || {
   echo "错误: epoch 样本数无法从 ${DATASET_PATH}/meta/{store_meta,stats}.json 读出（得到: '${EPOCH_SAMPLES}'）" >&2; exit 1; }
-# history config 只接受 closed / open 两个精确文件名并原样写入记录（0901-motion-memory-plan.md 2.1）
+# history config 只接受列出的精确文件名并原样写入记录。
 HISTORY_CONFIG="${HISTORY_CONFIG:-perceptual-framesamp-context.yaml}"
 case "${HISTORY_CONFIG}" in
-  perceptual-framesamp-context.yaml|perceptual-framesamp-context-motion.yaml) ;;
-  *) echo "错误: HISTORY_CONFIG 必须是 perceptual-framesamp-context.yaml 或 perceptual-framesamp-context-motion.yaml, 当前 ${HISTORY_CONFIG}" >&2; exit 1 ;;
+  perceptual-framesamp-context.yaml|perceptual-framesamp-context-motion.yaml|perceptual-framesamp-modul-8frame-8x8.yaml|perceptual-framesamp-modul-8frame-8x8-motion.yaml) ;;
+  *) echo "错误: HISTORY_CONFIG 不在 context 或 modulation 8×8 验证白名单中，当前 ${HISTORY_CONFIG}" >&2; exit 1 ;;
 esac
 NORM_STATS="${TRAIN_ASSETS}/mme_vla_suite/robomme/norm_stats.json"
 BENCH_ROOT="${V1_STORE}/bench/2gpu-epoch-bench"
@@ -113,14 +113,10 @@ CKPT_DIR="${CKPT_BASE}/mme_vla_suite/${EXP_NAME}"
 RECORD_DIR="${BENCH_ROOT}/${RUN_TAG}"
 LOG="${LOGS_DIR}/${RUN_TAG}.log"
 
-# jax 编译缓存收敛进 v1-store（AGENTS 14，不动 train.py、不覆盖 HOME）：
-# train.main 硬编码写 ~/.cache/jax_<exp_name>，用软链把它指到 v1-store/cache/jax/
+# 训练入口已有显式缓存参数；直接传入仓库路径，不再创建 HOME 软链接。
 JAX_CACHE_DIR="${CACHE_DIR}/jax/${EXP_NAME}"
-JAX_CACHE_LINK="${HOME}/.cache/jax_${EXP_NAME}"
-mkdir -p "${JAX_CACHE_DIR}" "${HOME}/.cache"
-[[ -e "${JAX_CACHE_LINK}" && ! -L "${JAX_CACHE_LINK}" ]] && {
-  echo "错误: ${JAX_CACHE_LINK} 已存在且不是软链, 拒绝覆盖" >&2; exit 1; }
-ln -sfn "${JAX_CACHE_DIR}" "${JAX_CACHE_LINK}"
+export MMEVLA_JAX_CACHE_DIR="${JAX_CACHE_DIR}"
+mkdir -p "${JAX_CACHE_DIR}"
 
 [[ -e "${CKPT_DIR}" ]] && {
   echo "错误: run 目录已存在, 禁止 overwrite: ${CKPT_DIR}" >&2; exit 1; }
@@ -285,7 +281,7 @@ set +e
 RC="${PIPESTATUS[0]}"
 set -e
 
-# 跑完（无论成败）清理 run 目录空壳；编译缓存按 KEEP_JAX_CACHE 处置（软链总是拆掉）
+# 跑完（无论成败）清理 run 目录空壳；编译缓存按 KEEP_JAX_CACHE 处置。
 # ⚠ BENCH_SAVE_FINAL_CKPT=1（T3 两侧 run）时 run 目录里有最终 checkpoint 999 与配置快照，必须保留、不得清理
 #   （2026-09-03 motion-t3-closed 跑到一半发现此处会连 999 一起 rm，临时以硬链接看门狗保出；本条修补对之后的 run 生效）
 if [[ -e "${CKPT_DIR}" ]]; then
@@ -298,7 +294,6 @@ if [[ -e "${CKPT_DIR}" ]]; then
     esac
   fi
 fi
-rm -f -- "${JAX_CACHE_LINK}"
 if [[ "${KEEP_JAX_CACHE}" != "1" ]]; then
   case "${JAX_CACHE_DIR}" in
     "${CACHE_DIR}/jax/${EXP_NAME}") rm -rf -- "${JAX_CACHE_DIR}" ;;

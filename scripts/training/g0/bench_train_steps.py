@@ -107,10 +107,10 @@ if not pathlib.Path(_openpi_dl.__file__).resolve().is_relative_to(_SOURCE_ROOT):
 import mme_vla_suite.training.config as _config  # noqa: E402
 
 _MAX_BENCH_STEPS = 1200  # G0b 基线升级为 1000 步（用户 2026-08-26 指定）；上限仍远低于正式训练量级
-# 只接受 closed / open 两个精确文件名（0901-motion-memory-plan.md 2.1）：T1 / T2 默认钉 closed，T3 open 侧显式钉 open
+# 验证工具只接受明确列出的 context 与 modulation 档位，默认仍为历史关闭态。
 _EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml",
                              "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml",
-                             "perceptual-framesamp-modul-8frame-8x8.yaml")
+                             "perceptual-framesamp-modul-8frame-8x8.yaml", "perceptual-framesamp-modul-8frame-8x8-motion.yaml")
 _EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 

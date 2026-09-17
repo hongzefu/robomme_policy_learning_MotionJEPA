@@ -22,7 +22,9 @@ class RefNpyFrameSampDataset:
         hc = history_config
         if (int(hc.budget), int(hc.token_per_image), int(hc.num_views)) not in {(512, 16, 1), (512, 64, 1)}:
             raise ValueError("参考链只支持 32×16 与 8×64")
-        if (hc.representation_type, hc.integration_type, hc.perceptual_memory.type) != ("perceptual", "context", "frame_sampling"):
+        if (hc.representation_type != "perceptual"
+                or hc.integration_type not in ("context", "modulation")
+                or hc.perceptual_memory.type != "frame_sampling"):
             raise ValueError("参考链形制不符")
         self._source_root = str(pathlib.Path(source_root).resolve())
         self._manifest_path = str(pathlib.Path(manifest_path).resolve())
