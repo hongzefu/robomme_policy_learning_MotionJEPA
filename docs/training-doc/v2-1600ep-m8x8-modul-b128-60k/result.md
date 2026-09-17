@@ -38,7 +38,11 @@ EXIT_CODE=0
 
 在解锁及合并前，主副本仍是起跑 HEAD，`git status --porcelain` 为空，`framesamp_dataset.py`、`train.py`、`history_pi0.py` 三份文件与锁定 SHA256 全部一致。证据已先保存到 [records/final_pre_merge.json](records/final_pre_merge.json)，随后恢复 `src/scripts/packages` 的用户写权限，并再次核对源码 SHA 一致。
 
-开发副本比主副本多 `739aca3`、`3f62ba3`、`9a58dc8` 三个已推送的文档提交，主副本已通过 `git merge --ff-only origin/v2-motionmem` 快进至 `9a58dc8`。本次同步带回起跑留档及 motion 后续计划，未实施 motion 计划、改变超参或重装依赖。最终留档提交推送后，再按用户批准清理开发副本并记录清理验收。
+开发副本比主副本多 `739aca3`、`3f62ba3`、`9a58dc8` 三个已推送的文档提交，主副本已通过 `git merge --ff-only origin/v2-motionmem` 快进至 `9a58dc8`。本次同步带回起跑留档及 motion 后续计划，未实施 motion 计划、改变超参或重装依赖。最终训练留档已提交并推送为 `9f7f423`。
+
+开发副本已于 2026-09-17 删除。删除前再次确认主副本及远端包含开发副本全部提交、双方工作区干净，开发副本无 stash、独有分支或其他 worktree，忽略产物仅为独立 `.venv` 和 `v1-store` 链接。先移除该链接，再从 `/scratch/hongze` 删除准确的 `-temp` 目录；主数据根的 device/inode、12 个 checkpoint 清单及其元数据、参数 manifest 和 norm_stats 摘要均保持一致，三个受保护源码摘要仍匹配。验收见 [records/merge_cleanup.json](records/merge_cleanup.json)。
+
+用户已针对 `claude-private` 仍在开发目录运行的情况明确允许直接删除；本次没有关闭会话或发送按键，tmux 会话清单前后相同。后续开发统一从主副本进入。
 
 ## 起跑前验证全部通过
 

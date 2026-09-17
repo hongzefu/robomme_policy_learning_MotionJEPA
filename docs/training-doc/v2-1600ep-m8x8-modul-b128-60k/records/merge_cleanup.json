@@ -1,0 +1,99 @@
+{
+  "checked_utc": "2026-09-17T02:01:45.072681+00:00",
+  "main_head_pushed_before_cleanup": "9f7f423b408ebac4938963799ab056cb2b686608",
+  "dev_head_included": "9a58dc8c048a3661e39b3d7cc47887185b3c8c40",
+  "remote_head_before_cleanup": "9f7f423b408ebac4938963799ab056cb2b686608",
+  "main_clean_before_cleanup": true,
+  "dev_clean_before_cleanup": true,
+  "dev_ignored_paths": [
+    "!! .venv/",
+    "!! v1-store"
+  ],
+  "dev_stashes_empty": true,
+  "dev_only_one_local_branch": true,
+  "dev_only_one_worktree": true,
+  "shared_data_link_target": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store",
+  "store_identity_before": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store",
+    "device": 2304,
+    "inode": 24696075782
+  },
+  "checkpoint_steps_before": [
+    5000,
+    10000,
+    15000,
+    20000,
+    25000,
+    30000,
+    35000,
+    40000,
+    45000,
+    50000,
+    55000,
+    59999
+  ],
+  "tmux_sessions_before": [
+    "0",
+    "1",
+    "claude-private",
+    "codex",
+    "codex-repo",
+    "codex2"
+  ],
+  "tmux_panes_before": [
+    "0 %0 /home/ec2-user code",
+    "1 %1 /scratch/hongze code",
+    "claude-private %446 /scratch/hongze/robomme_policy_learning_MotionJEPA-temp claude",
+    "codex %359 /scratch/hongze/MotionJEPA codex",
+    "codex-repo %349 /scratch/hongze/robomme_policy_learning_MotionJEPA codex",
+    "codex2 %440 /scratch/hongze/robomme_policy_learning_MotionJEPA codex"
+  ],
+  "active_dev_session_user_override": "用户已针对 claude-private 仍在开发目录的情况明确允许计划确认后直接删除；不关闭会话、不发键。",
+  "completed_utc": "2026-09-17T02:01:45.944426+00:00",
+  "dev_removed": true,
+  "commands": [
+    [
+      "unlink",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/v1-store"
+    ],
+    [
+      "rm",
+      "-rf",
+      "--one-file-system",
+      "--",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp"
+    ]
+  ],
+  "store_identity_after": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store",
+    "device": 2304,
+    "inode": 24696075782
+  },
+  "checkpoint_steps_after": [
+    5000,
+    10000,
+    15000,
+    20000,
+    25000,
+    30000,
+    35000,
+    40000,
+    45000,
+    50000,
+    55000,
+    59999
+  ],
+  "checkpoint_metadata_norm_stats_manifests_unchanged": true,
+  "main_source_lock_sha256_unchanged": true,
+  "main_clean_after_deletion_before_receipt": true,
+  "tmux_sessions_after": [
+    "0",
+    "1",
+    "claude-private",
+    "codex",
+    "codex-repo",
+    "codex2"
+  ],
+  "tmux_sessions_unchanged": true,
+  "status": "PASS"
+}
