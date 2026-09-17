@@ -1,6 +1,6 @@
 # motion-p5-online — P5 真编码器在线链 vs 离线 motion 表（launch）
 
-- **目的**：motion-memory-plan.md 四节表一 **P5**（原 A23 升格）。在线 sidecar（真 Wan VAE + MotionJEPA encoder）沿 eval.py 真实节奏逐窗编码，
+- **目的**：0901-motion-memory-plan.md 四节表一 **P5**（原 A23 升格）。在线 sidecar（真 Wan VAE + MotionJEPA encoder）沿 eval.py 真实节奏逐窗编码，
   与 S1 离线库 `v1-store/datasets/4task-motion-40ep/motion/motion_token.f32.bin` 对应行逐位比对；同时验起点集合、时间码、交错次序与 provenance，记三笔耗时。
 - **前提**：P1–P4 全过（`scripts/training/tests/motion_gates_online.py`，commitV6.6）；S1 40 集库 `verified`；同机同型号卡（2×RTX 6000 Ada，跨卡逐位由 A3 保证）。
 - **入口**：`scripts/training/g0/compare_online_motion.py`（commitV6.6 新增）。

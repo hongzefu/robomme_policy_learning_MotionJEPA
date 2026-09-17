@@ -1,6 +1,6 @@
 """framesamp packed 特征库：格式常量、StoreMeta 契约、只读 FrameSampStore。
 
-对应 v2-framesamp-restructure-plan.md 的 A.1 / B.2（本文件是格式层唯一实现，
+对应 0827-framesamp-restructure-plan.md 的 A.1 / B.2（本文件是格式层唯一实现，
 打包工具、FrameSampDataset、对拍工具一律从这里 import，绝不复制）：
 
 - 布局 ``framesamp-4x4-v1``：三张表只存 framesample 真正用到的键——

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """S0 探针：Wan VAE + MotionJEPA encoder 在本机 Ada 上的耗时 / 显存 / 精度漂移 / 跨卡 / 双 venv 逐位。
 
-对应 motion-memory-plan.md 第二部分四节表二的 A2（延迟与漂移，只记录）、A3（跨卡探针）、A4（双 venv 探针）。
+对应 0901-motion-memory-plan.md 第二部分四节表二的 A2（延迟与漂移，只记录）、A3（跨卡探针）、A4（双 venv 探针）。
 本脚本**不复写任何数值语句**：所有前向都经 `wan_motion_infer` 的 `load_vae / encode_chunk / load_encoder / motion_token`
 调用，`--module copy` 导入本目录的复制件，`--module orig` 导入 MotionJEPA 树内原版（只在 MotionJEPA 的 uv 环境下有意义）。
 

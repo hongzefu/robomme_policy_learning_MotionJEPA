@@ -67,7 +67,7 @@ unset _raw_h5_default
 readonly TARGET_TASKS=(ButtonUnmask ButtonUnmaskSwap VideoUnmask VideoUnmaskSwap)
 readonly TARGET_TASKS_CSV="ButtonUnmask,ButtonUnmaskSwap,VideoUnmask,VideoUnmaskSwap"
 
-# ── MotionJEPA 只读副本与 encoder 资产（motion-memory-plan.md 红线 2 / 9 / 10）───────
+# ── MotionJEPA 只读副本与 encoder 资产（0901-motion-memory-plan.md 红线 2 / 9 / 10）───────
 # 环境 A 默认 turbo 只读副本；环境 B 用环境变量 MJ_REPO 指向 /scratch/hongze/MotionJEPA（同一 commit）
 MJ_REPO="${MJ_REPO:-/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA}"
 readonly MJ_COMMIT="2a484ad960ed6155321dc34def9011eb119f857f"

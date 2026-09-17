@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""framesamp packed 特征库打包工具（v2-framesamp-restructure-plan.md A.1/A.2）。
+"""framesamp packed 特征库打包工具（0827-framesamp-restructure-plan.md A.1/A.2）。
 
 把 4task-gl 的 483,291 个每帧 npy（602,951 B pickle dict，无法部分读取）压成
 只含 framesample 真正要的三张表的连续大文件库：

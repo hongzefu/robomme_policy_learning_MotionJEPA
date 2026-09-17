@@ -146,7 +146,7 @@ class HistoryPi0Config(Pi0Config):
                     ],
                     jnp.float32,
                 ),
-                # motion memory（motion-memory-plan.md 2.3）：仅当 motion.enabled 时补四个 spec，从 config 键推导；
+                # motion memory（0901-motion-memory-plan.md 2.3）：仅当 motion.enabled 时补四个 spec，从 config 键推导；
                 # 关闭态返回值与 HEAD 同构
                 **_motion_specs(self.history_config, batch_size),
             )
@@ -335,7 +335,7 @@ class HistoryPi0(BaseModel):
             na_mask = [False] * tokens.shape[1]
             return tokens, input_mask, ar_mask, na_mask
 
-        # ── 开启态（motion-memory-plan.md 2.3）：并列序 (b,608,2048) → 按 mem_order 重排 token 与 input_mask ──
+        # ── 开启态（0901-motion-memory-plan.md 2.3）：并列序 (b,608,2048) → 按 mem_order 重排 token 与 input_mask ──
         # 非 None 闸：HistAugObservation.from_dict 缺键静默为 None，jaxtyping 在跨 jit 的 pytree 解包上被 disable，不能指望它兜底
         if obs.motion_emb is None or obs.motion_pos is None or obs.motion_mask is None or obs.mem_order is None:
             raise ValueError("motion.enabled=true 但 observation 缺 motion_emb / motion_pos / motion_mask / mem_order")

@@ -1,6 +1,6 @@
 # motion-t1-closed（T1：关闭态训练等价，旧库 1000 步，对 G0b r1 黄金基线）launch
 
-- **目的**：`motion-memory-plan.md` 5.2 T1 / 四节表一——S2 接线完成后，`motion.enabled=false` 的新代码在旧库 `4task-gl-framesamp` 上
+- **目的**：`0901-motion-memory-plan.md` 5.2 T1 / 四节表一——S2 接线完成后，`motion.enabled=false` 的新代码在旧库 `4task-gl-framesamp` 上
   1000 步 × batch 8，`scalars_hex.tsv` 必须逐位命中黄金锚点 `c799a0b2…`、`g0_gate.py --profile t1` 唯一成功行 `G0_EQ=PASS`。证明的是**代码等价**。
 - **run_name**：`motion-t1-closed`（用户 2026-09-03 批准）；`EXP_NAME=RUN_TAG=motion-t1-closed`。
 - **commit**：S2 合入后的 clean HEAD（sha 在 `result.md` 回填）。相对 A21（`c5925d9`）的差异 = 全部 S2 改动（5.1 一览表 21 项）。

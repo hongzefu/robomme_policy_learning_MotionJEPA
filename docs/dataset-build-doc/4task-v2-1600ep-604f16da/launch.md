@@ -2,7 +2,7 @@
 
 ## 结论与实施范围
 
-按照 [合并建库计划](../../../v2-4task-h5-merge-plan.md) 交付全部 1600 条 primary 的物理合并 H5、SigLIP source、4×4 与 8×8 framesamp，以及这批数据独立的 norm_stats；最后在关闭 motion 的配置上跑 20 步训练可读性验证。Wan 抽取、motion 编码和 sim 评估均不属于本轮。正式运行须等 28 集冒烟全部通过，本文件先记录命令与口径，实际启动版本和时间另由阶段日志固定。
+按照 [合并建库计划](../../../0914-4task-h5-merge-plan.md) 交付全部 1600 条 primary 的物理合并 H5、SigLIP source、4×4 与 8×8 framesamp，以及这批数据独立的 norm_stats；最后在关闭 motion 的配置上跑 20 步训练可读性验证。Wan 抽取、motion 编码和 sim 评估均不属于本轮。正式运行须等 28 集冒烟全部通过，本文件先记录命令与口径，实际启动版本和时间另由阶段日志固定。
 
 ## 版本与代码状态
 

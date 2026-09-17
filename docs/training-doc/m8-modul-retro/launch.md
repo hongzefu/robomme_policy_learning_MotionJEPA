@@ -1,6 +1,6 @@
 # modulation 关闭态追溯梯度对拍
 
-本运行实施用户已批准的 `v2-1600ep-m8x8-modul-training-plan.md` J 节。F3 已完整通过，见 [守卫验证结果](../t8-c8-guard-s100/result.md)。记录名 `m8-modul-retro`，只计算固定初态上的前向与反向，不执行 optimizer 更新，不产出训练 checkpoint。
+本运行实施用户已批准的 `0915-1600ep-m8x8-modul-training-plan.md` J 节。F3 已完整通过，见 [守卫验证结果](../t8-c8-guard-s100/result.md)。记录名 `m8-modul-retro`，只计算固定初态上的前向与反向，不执行 optimizer 更新，不产出训练 checkpoint。
 
 ## 命题与边界
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """D2 / D3 oracle 驱动：经 MotionJEPA 的 uv 环境调**原版** ``wan_motion_infer`` 产出对拍真值。
 
-对应 motion-memory-plan.md 第一部分 4.3 与第二部分 1.4「Wan 侧」。只依赖 stdlib + numpy + h5py + 原版模块
+对应 0901-motion-memory-plan.md 第一部分 4.3 与第二部分 1.4「Wan 侧」。只依赖 stdlib + numpy + h5py + 原版模块
 （``sys.path`` 指向 ``<MotionJEPA>/scripts/inference-example``），**禁止** import ``mme_vla_suite`` / jax / openpi；
 起手 ``check_env()`` + ``pin_numerics()``；``load_vae(..., expected_state_sha256=9980d252…)``；
 ``load_encoder`` 用与被测**同一份**拷贝 ``v1-store/external/motionjepa/<run>/``（否则 provenance 的 run_dir 必不等）。

@@ -85,7 +85,7 @@ def create_trained_policy(
         with open(history_config_path, "r") as f:
             history_config = f.read()
 
-    # ── run 内配置快照（motion-memory-plan.md 2.1，红线 16）──────────────────────────────
+    # ── run 内配置快照（0901-motion-memory-plan.md 2.1，红线 16）──────────────────────────────
     # 带 history_config.resolved.yaml 的新 run：只从快照恢复（先核 sha 与 motion_provenance.json），
     # 并要求 checkpoint 参数树与模型定义 missing / extra 集合均为空（禁止 remove_extra_params 静默裁掉）。
     # 旧的不含快照的非 motion checkpoint 保留 history_config.txt 兼容路径；任何带 motion 参数的 checkpoint

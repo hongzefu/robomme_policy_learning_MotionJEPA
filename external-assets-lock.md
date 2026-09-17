@@ -113,7 +113,7 @@ MotionJEPA 的**模型代码**在私有 GitHub `hongzefu/MotionJEPA`，由 `scri
 `HF_HUB_OFFLINE=1` 下按 repo_id 的离线加载都要它 —— 首次 `verify --level full` 报 `wan_vae: 缺 refs/main` → `ASSETS=FAIL`；`fetch_assets.py` 现在在
 钉 sha 的 snapshot 落盘后补写 `refs/main = revision`（已存在且不同则响亮失败不覆盖），复跑 `fetch --force --assets wan_vae` 后 `ASSETS=PASS assets=6 mismatches=0`。
 完整复刻记录（环境判定、四个公开 h5 与环境 A sha256 对拍、40 ep 库 D1–D3 逐位、400 ep 完整库）见
-`docs/dataset-build-doc/4task-motion-40ep-aws/` 与 `docs/dataset-build-doc/4task-motion-400ep/`，以及 `motion-memory-plan.md`「环境 B 复刻」节。
+`docs/dataset-build-doc/4task-motion-40ep-aws/` 与 `docs/dataset-build-doc/4task-motion-400ep/`，以及 `0901-motion-memory-plan.md`「环境 B 复刻」节。
 异地机器上 `paths.sh` 仍要求仓库位于三个前缀之一；换第四台机器需再加一项常量（有 `test_paths_sh_prefixes_identical` 盯两份同值）。
 
 **数据侧口径**：原始 16 任务 × 100 episode 的 H5 在公开数据集 `Yinpei/robomme_data_h5`；派生库

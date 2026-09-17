@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# T3_EVAL_OBS 单侧驱动（motion-memory-plan.md 四节表二 / 七节 S3）：起 policy server（uv venv）→ 跑 examples/robomme/eval.py（micromamba robomme 环境）→ 收 server。
+# T3_EVAL_OBS 单侧驱动（0901-motion-memory-plan.md 四节表二 / 七节 S3）：起 policy server（uv venv）→ 跑 examples/robomme/eval.py（micromamba robomme 环境）→ 收 server。
 # 用法：SIDE=closed|open [TASKS=…] [MAX_EPISODES=10] [RUN_SUFFIX=-a] [OVERWRITE=1] [PORT=…] [POLICY_GPU=…] [SIM_GPU=…] [RUN_PREFIX=…] [CKPT_CLOSED=… CKPT_OPEN=…] bash scripts/training/tests/run_t3_eval_obs.sh
 #   分片并行：同一侧按 TASKS 拆成多个进程时给不同 RUN_SUFFIX（结果目录 v1-store/evaluation/<RUN><RUN_SUFFIX>/…）与 PORT，事后合并。
 #   closed：checkpoint v1-store/train-runs/motion-t3-closed-final/999（关闭态，不起 sidecar）

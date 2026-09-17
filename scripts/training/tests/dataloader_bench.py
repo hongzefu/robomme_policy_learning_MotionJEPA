@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""dataloader-only 微基准（motion-memory-plan.md 第二部分 1.6）：motion 开 / 关两档 × worker 档位，b64、warmup 5、measure 40。
+"""dataloader-only 微基准（0901-motion-memory-plan.md 第二部分 1.6）：motion 开 / 关两档 × worker 档位，b64、warmup 5、measure 40。
 
 只走 FrameSampDataset + transform_dataset + torch DataLoader（不建模型、不 device_put），报告样本/s 与每批 pickle 载荷字节；
 另做 30 秒 `multiprocessing.Pipe` pickle 往返微基准（带 / 不带四个新增键的 batch dict）。

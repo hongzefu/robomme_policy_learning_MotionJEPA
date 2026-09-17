@@ -345,7 +345,7 @@ ButtonUnmaskSwap_ep3），与 v8 冒烟的 `data-raw-smoke/`（6 entry）集合�
 
 ## 放行记录（robomme framesamp v2 计划，2026-08-27）
 
-**S8b GL e2e 收官四 job 放行**（v2-framesamp-restructure-plan.md D 节；均超调试限额
+**S8b GL e2e 收官四 job 放行**（0827-framesamp-restructure-plan.md D 节；均超调试限额
 ≤2 GPU / ≤30 min，经用户 AskUserQuestion 显式批准「四个全批」）：
 
 | job | 资源 | walltime | 备注 |

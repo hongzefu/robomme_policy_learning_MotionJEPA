@@ -13,7 +13,7 @@ import mem_buffer（建库域留有冻结副本 `dataset_builder/mem_buffer.py`�
 ⚠ 禁把 encode 与 pool 包进新的 jax.jit（R18）：融合边界变了，bf16 累加序可能变位。
 本实现保持 encode（注入的 vision_enc_fn，本身已 jit）与 pool 分离调用，同旧实现。
 
-── 运动路（motion-memory-plan.md 第二部分三节，S3）──────────────────────────────
+── 运动路（0901-motion-memory-plan.md 第二部分三节，S3）──────────────────────────────
 帧路 `_prepare_frame_sampling` 一字不动（「只换模块、不换数值路径」）。另加：
 - 注入 `motion_enc_fn`（同 `vision_enc_fn` 范式；模型本体 / sidecar 句柄建在 `MME_VLA_Policy.__init__`，本类每 episode 随 `reset()` 销毁重建，不持模型）；
 - 256 域原始帧缓冲 `_raw_frames`（现有 add_buffer 缩到 224 后就丢了原图，Wan VAE 要 256 域），入库前 raise 校验 `(frame_size, frame_size, 3)`；

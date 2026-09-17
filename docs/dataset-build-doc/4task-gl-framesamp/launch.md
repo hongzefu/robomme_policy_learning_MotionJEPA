@@ -1,6 +1,6 @@
 # 4task-gl-framesamp 全量打包（S4）launch 记录
 
-对应 `v2-framesamp-restructure-plan.md` 阶段 2 S4（A.1 布局契约 / A.2 打包工具）。
+对应 `0827-framesamp-restructure-plan.md` 阶段 2 S4（A.1 布局契约 / A.2 打包工具）。
 按 AGENTS 12 起跑前预提交：commit、命令、配置、数据来源、输出路径与判据。
 
 ## 起跑环境

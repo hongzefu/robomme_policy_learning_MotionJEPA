@@ -92,7 +92,7 @@ def main() -> None:
     p10 = srt[int(0.10 * (len(srt) - 1))]
     p90 = srt[int(0.90 * (len(srt) - 1))]
 
-    # epoch 样本数与 batch 不再硬编码（motion-memory-plan.md 2.8 / R14）：优先读 run_meta.json，缺失则要求显式参数
+    # epoch 样本数与 batch 不再硬编码（0901-motion-memory-plan.md 2.8 / R14）：优先读 run_meta.json，缺失则要求显式参数
     epoch_samples, batch_size = args.epoch_samples, args.batch_size
     rm = rec / "run_meta.json"
     if rm.exists():

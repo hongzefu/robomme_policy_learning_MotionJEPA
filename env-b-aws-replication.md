@@ -1,7 +1,7 @@
 # 环境 B 复刻：AWS 8×A100 上从零重跑 motion-memory 全部测试（≤100 步）与 4 任务 × 100 ep 完整库
 
 2026-09-04，在一台全新的 AWS 单机（环境 B：8 × A100-SXM4-80GB，仓库在 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，无 GreatLakes、无 turbo、无本机 `/data/hongzefu` 原件）上，
-把 `motion-memory-plan.md` 里在环境 A（2×RTX 6000 Ada + turbo）完成的 S0–S3 从零复刻了一遍，并构造了 ButtonUnmask / ButtonUnmaskSwap / VideoUnmask / VideoUnmaskSwap
+把 `0901-motion-memory-plan.md` 里在环境 A（2×RTX 6000 Ada + turbo）完成的 S0–S3 从零复刻了一遍，并构造了 ButtonUnmask / ButtonUnmaskSwap / VideoUnmask / VideoUnmaskSwap
 四任务 × 100 episode 的完整库。终判：
 
 - **40 ep 测试库**同链路重建，探针 A2/A3/A4、D1 两条 SigLIP oracle、D2（8 片）、D3、A6–A10 **全部逐位 PASS**；清单内容与环境 A 逐字相同。
@@ -11,7 +11,7 @@
 - 7 个 commit：`8093ebd`（commitV6.12 代码适配）/ `4f56c6c` / `cbf24e9`（fix）/ `e94285c` / `c0e13aa` / `58cfacb` / `9dbf511`（文档），全部已 push。
 
 本文是**高层导读**，目标是让读者不翻 records 就能核对每一步做了什么、判定行原文是什么、数字是多少、哪里偏离了计划、哪里出了事故。
-判定行一律内联原文；records 快照在各留档目录（附录索引），本文不复述其内容。`motion-memory-plan.md` 末尾「环境 B 复刻（2026-09-04）」节是本文的一页版结论。
+判定行一律内联原文；records 快照在各留档目录（附录索引），本文不复述其内容。`0901-motion-memory-plan.md` 末尾「环境 B 复刻（2026-09-04）」节是本文的一页版结论。
 
 ---
 
@@ -377,5 +377,5 @@ test_padding_dtype.py（DTYPE_MANIFEST=400 ep 清单）14 passed
 - `docs/dataset-build-doc/4task-motion-40ep-aws/`（launch / result / records：两份 store_meta、motion_index、两份清单、input_manifest、compare-o1/o2、vae/encoder 报告、A2 探针、dataloader_bench、closed_equiv 两侧 dump、判定行汇总）
 - `docs/dataset-build-doc/4task-motion-400ep/`（launch / result / records：两份 store_meta、motion_index、input_manifest、vae/encoder 报告、norm_stats 交付件、dataloader_bench、判定行汇总）
 - `docs/training-doc/aws-t2-ref-s100/`（records 含 `t2_reference_manifest.json`、`BASELINE_MANIFEST.json`、`scalars_hex.tsv`）、`aws-t2-cand-s100/`（两次 cand 的 records 与两次 gate 输出）、`aws-t3-closed-s100/`、`aws-t3-open-s100/`（T3 跨侧判定、`t3_mechanism.*`、`t3_phase.*`、`eval/`）、`aws-p5-online/`、`aws-a22-grad/`（两侧 `grad_summary.json`）
-- `motion-memory-plan.md` 末尾「环境 B 复刻（2026-09-04）」节；`external-assets-lock.md` 第五节「已知阻塞——已解除」。
+- `0901-motion-memory-plan.md` 末尾「环境 B 复刻（2026-09-04）」节；`external-assets-lock.md` 第五节「已知阻塞——已解除」。
 - 记忆文件（`~/.claude-personal/projects/…/memory/`）：`env-b-aws-replication-state`、`never-tmux-kill-server`、`no-commit-between-wan-and-pack`。

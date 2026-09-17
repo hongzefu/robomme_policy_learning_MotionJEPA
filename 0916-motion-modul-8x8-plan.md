@@ -194,7 +194,7 @@ uv run --no-sync python scripts/dataset/wan/compare_wan.py tokens  --store $LIB/
 | V6 | 关闭态定点梯度（改前 vs 改后） | `single_step_grad_fixed.py` × 2 + `compare_fixed_grad.py`，fixture `v1-store/fixtures/8x8` | `GRAD_EQ=PASS mismatches=0` |
 | V7 | 关闭态 100 步守卫 | `bench_train_steps.py` 2 卡 b8 确定性 flag | `GUARD_GRAD_100=PASS` |
 | V8 | 开启态 A/A 100 步可复现 | 同上 × 2 | `AA_100=PASS hex_mismatch_steps=0` |
-| V9 | 4 卡 b128 20 步 smoke（开启态，临时 run 跑完删） | `v2-1600ep-m8x8-modul-training-plan.md` B 节同法 | `SMOKE20=PASS`、`PARAM_TREE_EXACT … n_model=65` |
+| V9 | 4 卡 b128 20 步 smoke（开启态，临时 run 跑完删） | `0915-1600ep-m8x8-modul-training-plan.md` B 节同法 | `SMOKE20=PASS`、`PARAM_TREE_EXACT … n_model=65` |
 | V10 | 起跑 preflight | `preflight_train_launch.py` | `PREFLIGHT=PASS` |
 
 ### G. 顺序、留档与 commit

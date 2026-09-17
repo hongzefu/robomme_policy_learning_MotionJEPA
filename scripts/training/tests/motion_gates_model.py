@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""motion memory S2 开启态正确性闸 M1–M5（motion-memory-plan.md 第一部分 5.3 / 第二部分四节表一、五节）。
+"""motion memory S2 开启态正确性闸 M1–M5（0901-motion-memory-plan.md 第一部分 5.3 / 第二部分四节表一、五节）。
 
 全部在本机 CPU 跑（`JAX_PLATFORMS=cpu`），不需要训练 checkpoint；M3 / M4 用 gemma `dummy` 变体随机初始化的 HistoryPi0。
 
@@ -897,7 +897,7 @@ def main():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# T3 真实训练链路四层（motion-memory-plan.md 5.3 / 2.10）：t3common / t3trace / t3mechanism / t3phase
+# T3 真实训练链路四层（0901-motion-memory-plan.md 5.3 / 2.10）：t3common / t3trace / t3mechanism / t3phase
 # 复用 bench_train_steps 的两把哈希尺子（_leaf_sha256 / _canonical_sha256），不复制 hash 实现。
 # ══════════════════════════════════════════════════════════════════════════════
 

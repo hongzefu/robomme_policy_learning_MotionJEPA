@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""motion memory 在线侧闸门 P1–P4（motion-memory-plan.md 第二部分四节 / 七节 S3）——stub 档、CPU、不加载模型。
+"""motion memory 在线侧闸门 P1–P4（0901-motion-memory-plan.md 第二部分四节 / 七节 S3）——stub 档、CPU、不加载模型。
 
 P1  协议与 sidecar 进程：`MotionEncoderClient(stub=True)` 真起子进程（`uv run --project scripts/dataset/wan --no-sync … --stub`）、
     socketpair + pass_fds、握手协议 sha 核对；三窗（起点 0 / 16 / 100000）逐位返回 `full(768, 起点)`；错帧（不连续）→ sidecar 报错、

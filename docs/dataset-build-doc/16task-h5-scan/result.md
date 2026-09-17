@@ -17,7 +17,7 @@
 
 1. **4 个已有任务逐条相同 —— PASS。** 新清单与 `v1-store/datasets/4task-motion-400ep/meta/episode_manifest.json`
    的 400 条按 `(h5_file, raw_ep_idx)` 对齐后 **缺失 0、不一致 0**，4 任务帧数合计 `123044` 与旧 `totals.timesteps` 相同。
-2. **逐任务单集最大窗口数 —— PASS，15 项逐个吻合** `motion-memory-plan.md` 第 2.3 节（环境 A 全集实测）：
+2. **逐任务单集最大窗口数 —— PASS，15 项逐个吻合** `0901-motion-memory-plan.md` 第 2.3 节（环境 A 全集实测）：
    VideoPlaceOrder 85、VideoPlaceButton 65、BinFill 64、PickXtimes 63、VideoRepick 61、RouteStick 40、
    PickHighlight 39、SwingXtimes 36、StopCube 35、InsertPeg 34、VideoUnmaskSwap 34、ButtonUnmaskSwap 33、
    PatternLock 32、ButtonUnmask 27、VideoUnmask 22。（MoveCube 30 未在 2.3 节列出，该节只列了超 32 的 12 项与 v1 四任务。）

@@ -1,6 +1,6 @@
 # 4task-motion-40ep 数据集构建 launch 记录（S0 先验与 oracle / S1 重抽与建库）
 
-对应 `motion-memory-plan.md` 第一部分四节与第二部分一节、〇节 S0 / S1。按 `AGENTS.md` 第 12 条起跑前预提交：
+对应 `0901-motion-memory-plan.md` 第一部分四节与第二部分一节、〇节 S0 / S1。按 `AGENTS.md` 第 12 条起跑前预提交：
 commit、命令、配置、数据来源、输出路径与判据。结果随各阶段结束以 docs commit 补写进同目录 `result.md`。
 本文件先写 S0；S1 起跑前追加「S1」一节。
 

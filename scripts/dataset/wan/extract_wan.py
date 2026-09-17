@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Wan VAE 网格窗抽取 worker：按段领任务，每段 num_grid 个 33 帧窗口 → 复制件 ``encode_chunk`` → ``wan-latents/<段>.bin``。
 
-对应 motion-memory-plan.md 第一部分 4.2 第 4 步与第二部分 1.2 / 1.3。本脚本只做「读输入 → 调复制件
+对应 0901-motion-memory-plan.md 第一部分 4.2 第 4 步与第二部分 1.2 / 1.3。本脚本只做「读输入 → 调复制件
 ``encode_chunk`` → 落盘」，不复写任何 🔒 数值语句；起手 ``check_env()`` + ``pin_numerics()`` +
 ``check_versions()``，``load_vae(..., expected_state_sha256=9980d252…)``；B=1、33 帧一次喂。
 

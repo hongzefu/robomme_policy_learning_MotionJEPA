@@ -97,4 +97,4 @@ A10_ROWS=PASS rows=772 exec=658 demo=114 formula_or_rowbase_mismatches=0 expect=
 
 40 ep 库在环境 B 交付：`framesamp/`（`status=verified`）与 `motion/`（`status=verified`）绑定同一清单 `d7cfb137…`（内容 == 环境 A `fee2777f…`）；
 D1（两条 SigLIP oracle）、D2（原版 `encode_chunk` 772 窗 8 片）、D3（原版 `motion_token` 772 行）全部逐位；A6–A10 全过；A3 证 A100 跨卡逐位。
-本库随后用于 `docs/training-doc/aws-*/` 八个 100 步 run 与全部 M / P / T 闸门（见各 run 留档与 `motion-memory-plan.md`「环境 B 复刻」节）。
+本库随后用于 `docs/training-doc/aws-*/` 八个 100 步 run 与全部 M / P / T 闸门（见各 run 留档与 `0901-motion-memory-plan.md`「环境 B 复刻」节）。

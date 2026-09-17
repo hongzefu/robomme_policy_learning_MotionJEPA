@@ -1,6 +1,6 @@
 # 4×4 在线回归启动记录
 
-本任务对应 `8frame-8x8-training-plan.md` 第三块第一步，使用已有真模型验证在线记忆改为网格驱动后，4×4 行为没有改变。参考代码 `REF=99faacb1319adfc63c0cf9a15187e24c34e38fd1`；候选代码为本文件随附的 `commitV9.2`，启动前要求工作区干净，实际完整 HEAD 在日志首行 `START_HEAD=` 固化，完成后写入结果。
+本任务对应 `0908-8frame-8x8-training-plan.md` 第三块第一步，使用已有真模型验证在线记忆改为网格驱动后，4×4 行为没有改变。参考代码 `REF=99faacb1319adfc63c0cf9a15187e24c34e38fd1`；候选代码为本文件随附的 `commitV9.2`，启动前要求工作区干净，实际完整 HEAD 在日志首行 `START_HEAD=` 固化，完成后写入结果。
 
 环境 B：AWS 本地 NVMe RAID `/dev/md0`，本轮仅使用物理 GPU 7。数据、模型与缓存均来自当前仓库 `v1-store/` 的已核实副本；不连接集群、不下载或重抽特征。原始 H5 位于 `/scratch/hongze/robomme_data_h5`。
 

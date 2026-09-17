@@ -1,6 +1,6 @@
 # motion-a22-grad — A22 单步定点梯度（launch）
 
-- **目的**：motion-memory-plan.md 四节表二 **A22**——S2/S3 合入后的关闭态代码，在三个定点 batch（`mixed1` / `allshort` / `allfull`）上做单步前向反向，
+- **目的**：0901-motion-memory-plan.md 四节表二 **A22**——S2/S3 合入后的关闭态代码，在三个定点 batch（`mixed1` / `allshort` / `allfull`）上做单步前向反向，
   逐叶梯度 sha256 + 单步 loss `float.hex()` 与既有基线逐位比对。基线 = `docs/training-doc/v1-dtype-p5-grad/records/grad_summary.json`（dtype 统一修复后、
   commitV4.x 时代的同一模型 / 同一定点计划；其 32 个梯度叶子 = 可训练参数集合）。`allfull` 为阴性对照。
 - **run 名**：`motion-a22-grad`（≤30 min 诊断 run，按 `AGENTS.md` 第 6 条短测自命名、第 17 条留档；不在 2026-09-03 批准的八个正式 run_name 之列，特此注明）。

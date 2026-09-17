@@ -267,7 +267,7 @@ commit，在白名单内、训练语义零影响，该轮与 r1 对拍仍 bitwis
 | **G0-speed-r2（现行锚点）** | `v1-g0-speed-r2` | `570287f` | 1000 步 speed 链锚点 | 稳态中位 **1.152 s/step**（n=949，p10 1.097 / p90 1.276）、均值 1.186、util 均值 **86.5%**、0% 采样 4.9%、慢步 3（分层 1.959 vs 1.184 s）、epoch 外推 15.82 h。vs 旧锚 +3.1%，主因 1000 步窗稀释了 page cache 的乐观偏差 | `docs/archive/training-doc/v1-g0-speed-r2/` |
 
 > 第二阶段的 G1 与 G1-speed 两行见 [`v1-phase2-dtype-unify-report.md`](v1-phase2-dtype-unify-report.md)；
-> 登记簿的现行权威版本在 [`v2-framesamp-restructure-plan.md`](../../v2-framesamp-restructure-plan.md)。
+> 登记簿的现行权威版本在 [`0827-framesamp-restructure-plan.md`](../../0827-framesamp-restructure-plan.md)。
 
 ### 10.3 run_name 轮次规约
 
@@ -318,4 +318,4 @@ run_name 一律带 `-r<N>`（或语义后缀），确定性实验的 `v1-det-*-r
   `docs/archive/training-doc/v1-g0-speed{,-r2}/`
 - 量具与判据说明：`scripts/smoke-local/README.md`；工具 `bench_train_steps.py`、`check_baseline_env.py`、
   `compare_baseline.py`
-- 登记簿的现行权威版本：[`v2-framesamp-restructure-plan.md`](../../v2-framesamp-restructure-plan.md)
+- 登记簿的现行权威版本：[`0827-framesamp-restructure-plan.md`](../../0827-framesamp-restructure-plan.md)

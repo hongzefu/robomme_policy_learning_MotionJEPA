@@ -146,7 +146,7 @@ run_name **`v2-1600ep-m8x8-modul-b128-60k`**（用户在本轮已再次确认，
 3. **F2**：CPU 轻量对拍 + 三条守卫断言（3–5 分钟，≤5 分钟不触发 AGENTS 17）→ `DS_EQUIV=PASS`。
 4. **F2.5 → F3**：先 `commitV9.6` + push，工作区回到 clean；再从该 clean HEAD 起跑 `t8-c8-guard-s100`（tmux `m8-guard`，30–35 分钟，`BENCH_CHECKSUM=1`）→ `GUARD_GRAD_100=PASS` → 建 `docs/training-doc/t8-c8-guard-s100/` 三件套 + README 加行 → `docs:` commit → push。**FAIL 则 `git revert` commitV9.6 + push，停下交用户处置。**
 5. **modulation 关闭态的追溯梯度对拍**（用户 2026-09-15 拍板：放在正式 run 起跑前做）。锚点 `07702f0`（2026-08-29）对 HEAD，**一次覆盖整条演进链**（motion 接入 `06220c4` 只是其中一个 commit）；两档都做：32 帧 4×4 与 8 帧 8×8。走「固定 batch 喂两版模型」，**不走**「两棵源码树各起训练」。**先跑 A/A 自复现**（V5）确认 modulation 路径 bit 级可复现，不过即停、请示后再决定判据是否降级。详见 J 节。
-6. 本计划固化为根目录 `v2-1600ep-m8x8-modul-training-plan.md` + `docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md` 初稿 + `docs/training-doc/README.md` 加行 → `docs:` commit → push。（I 节）
+6. 本计划固化为根目录 `0915-1600ep-m8x8-modul-training-plan.md` + `docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/launch.md` 初稿 + `docs/training-doc/README.md` 加行 → `docs:` commit → push。（I 节）
 7. 从**主副本**起 smoke（tmux `m8-smoke`）→ 核判据（含 `PREFLIGHT=PASS`）→ 删临时产物。（B 节）
 8. `launch.md` 补 smoke 与步骤 3/4/5 的判定行摘录 → `docs:` commit → push → **此刻记 `TRAIN_HEAD` = 主副本 HEAD**（抄进 launch.md）→ `git clone` 建开发副本 `-temp` + symlink v1-store + `uv sync`。（G 节）
 9. 从**主副本**起正式 run（tmux `m8-prod`）→ `PREFLIGHT=PASS` 且训练确认进入稳态后，立即 `chmod -R a-w src scripts packages` 锁死只读 → 挂 Monitor。（C 节）
@@ -772,7 +772,7 @@ sha256sum -c v1-store/bench/$RUN/lock_sha256.txt  # 三个文件的 sha 必须�
 
 ### I. 计划固化到仓库根目录（步骤 6）
 
-本文件已在仓库根目录（与 `8frame-8x8-training-plan.md` 同级、同体例），文首带状态说明。步骤 6 只需与 `launch.md` 初稿、`docs/training-doc/README.md` 加行一起 `git add`，subject `docs: v2-1600ep-m8x8-modul-b128-60k 计划固化与起跑留档初稿`，push。之后再记 `TRAIN_HEAD`（保证起跑 commit 含这份计划）。验证：`git diff --check`；Markdown 链接 `docs/training-doc/README.md` → 新 run 目录可解析。
+本文件已在仓库根目录（与 `0908-8frame-8x8-training-plan.md` 同级、同体例），文首带状态说明。步骤 6 只需与 `launch.md` 初稿、`docs/training-doc/README.md` 加行一起 `git add`，subject `docs: v2-1600ep-m8x8-modul-b128-60k 计划固化与起跑留档初稿`，push。之后再记 `TRAIN_HEAD`（保证起跑 commit 含这份计划）。验证：`git diff --check`；Markdown 链接 `docs/training-doc/README.md` → 新 run 目录可解析。
 
 ### J. modulation 关闭态的追溯梯度对拍（`07702f0` → HEAD，执行顺序步骤 5）
 

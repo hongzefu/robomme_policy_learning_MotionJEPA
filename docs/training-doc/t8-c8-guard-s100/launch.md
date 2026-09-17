@@ -1,6 +1,6 @@
 # t8-c8-guard-s100 守卫等价验证
 
-本运行实施根目录 `v2-1600ep-m8x8-modul-training-plan.md` 的 F3：复用环境 B 的 `t8-c8-b` 前 100 步固化轨迹，验证 `FrameSampDataset.__init__` 的成对白名单放宽不改变既有 context 8×8 训练结果。用户已在计划中确定本 run_name、100 步、GPU 4,5 和完整状态摘要。起跑必须是 clean HEAD；准确 SHA 由 runner 的 `HEAD=` 与 `run_meta.json.start_head` 同时记录。候选功能提交为 `commitV9.6`（`81ba002`），其后仅加入本起跑留档。用户于本轮明确批准沿用 GitHub SSH 凭据推送。
+本运行实施根目录 `0915-1600ep-m8x8-modul-training-plan.md` 的 F3：复用环境 B 的 `t8-c8-b` 前 100 步固化轨迹，验证 `FrameSampDataset.__init__` 的成对白名单放宽不改变既有 context 8×8 训练结果。用户已在计划中确定本 run_name、100 步、GPU 4,5 和完整状态摘要。起跑必须是 clean HEAD；准确 SHA 由 runner 的 `HEAD=` 与 `run_meta.json.start_head` 同时记录。候选功能提交为 `commitV9.6`（`81ba002`），其后仅加入本起跑留档。用户于本轮明确批准沿用 GitHub SSH 凭据推送。
 
 ## 改动与两张链路图
 

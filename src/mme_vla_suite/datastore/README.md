@@ -1,6 +1,6 @@
 # datastore：framesamp packed 特征库 + motion 离线表 格式层
 
-对应 `v2-framesamp-restructure-plan.md`（A.1 布局契约、B.2 Store 行为）与 `motion-memory-plan.md`（第二部分一节 1.1 motion 表契约）。本包是格式层
+对应 `0827-framesamp-restructure-plan.md`（A.1 布局契约、B.2 Store 行为）与 `0901-motion-memory-plan.md`（第二部分一节 1.1 motion 表契约）。本包是格式层
 **唯一实现**：打包工具（`scripts/dataset/pack_framesamp_store.py`、`scripts/dataset/pack_motion_store.py`）、`FrameSampDataset`、对拍工具
 一律从这里 import，绝不复制；本包不 import 任何 training/model 模块（单向依赖，B.1）。
 

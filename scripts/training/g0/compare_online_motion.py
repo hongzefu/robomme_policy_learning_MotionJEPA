@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P5：真编码器在线链 vs 离线 motion 表（motion-memory-plan.md 四节表一 P5；run `motion-p5-online`）。
+"""P5：真编码器在线链 vs 离线 motion 表（0901-motion-memory-plan.md 四节表一 P5；run `motion-p5-online`）。
 
 驱动：从录制 h5 按 `episode_manifest.json` 逐 episode 读全部 `front_rgb` (256,256,3) uint8 帧，沿 eval.py 真实节奏喂
 `FrameSampMemory.add_buffer`（首批 pre_traj = demo [0, es) + exec 首帧、之后每批 16 帧、`exec_start_idx` 下传），运动路编码走真

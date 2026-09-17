@@ -2,7 +2,7 @@
 
 v2-motionmem（2026-09-03）起的建库链路，全部在本机双卡（RTX 6000 Ada ×2）跑，不再提交集群
 （旧 `gl/` 与 `pack/` 目录已删除，`gl_submit.py` 搬到 `scripts/training/`）。权威设计与判据：
-仓库根 [`motion-memory-plan.md`](../../motion-memory-plan.md) 第一部分四节与第二部分一节；本次 40 ep 库的
+仓库根 [`0901-motion-memory-plan.md`](../../0901-motion-memory-plan.md) 第一部分四节与第二部分一节；本次 40 ep 库的
 起跑与结果留档：[`docs/dataset-build-doc/4task-motion-40ep/`](../../docs/dataset-build-doc/4task-motion-40ep/)。
 
 ## 目录

@@ -75,7 +75,7 @@ uv run --no-sync python scripts/dataset/wan/compare_wan.py tokens --store $LIB/m
 SigLIP 阶段 6 worker（GPU0–5）+ O1（GPU7）+ O2（GPU6）同时跑；Wan 抽取 6 worker（GPU0–5，此时 GPU6/7 仍被 O1/O2 占用）；encode 8 worker；D2 oracle VAE 8 片各占一卡。
 A3 已证 A100 跨卡逐位（`max_abs_diff=0`），故 worker 数与卡号不影响任何字节。
 
-## 不可做项（环境 B 永久失效，见 motion-memory-plan.md「环境 B 复刻」节）
+## 不可做项（环境 B 永久失效，见 0901-motion-memory-plan.md「环境 B 复刻」节）
 
 A5（vs `/data/hongzefu/robomme_data_h5_v2_4env400ep` 与 MotionJEPA `data-raw`）、A11（vs turbo `4task-gl`）、A12（v7 latent）、MotionJEPA `crosscheck.py --vae_check`（需 `/data/hongzefu/dataset-4env-v8`）——对照物都在环境 A 的 `/data` 或 turbo。
 A5 的替代证据：公开版四个 h5 与环境 A 留档的 sha256 前缀与字节数全部命中（result.md）。

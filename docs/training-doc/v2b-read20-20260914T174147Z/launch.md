@@ -2,7 +2,7 @@
 
 ## 范围与当前状态
 
-本检查属于用户要求实施的 `v2-4task-h5-merge-plan.md`，只验证新库能被现有训练链路读取并完成 20 次更新，不用于判断策略效果，也不进行 sim 评估。用户补充“继续工作 忽略huggingface的任务 但是要注意git”。正式 SigLIP、两档 framesamp 和新 norm_stats 全部通过后，本检查于 `2026-09-14T21:11:15Z` 从干净 HEAD `81a6c7580507f82a4ad19cf4c651ccd8a3c80336` 启动并完成；结果见 [result.md](result.md)。
+本检查属于用户要求实施的 `0914-4task-h5-merge-plan.md`，只验证新库能被现有训练链路读取并完成 20 次更新，不用于判断策略效果，也不进行 sim 评估。用户补充“继续工作 忽略huggingface的任务 但是要注意git”。正式 SigLIP、两档 framesamp 和新 norm_stats 全部通过后，本检查于 `2026-09-14T21:11:15Z` 从干净 HEAD `81a6c7580507f82a4ad19cf4c651ccd8a3c80336` 启动并完成；结果见 [result.md](result.md)。
 
 前置建库现已全部通过。新 norm_stats SHA256 为 `856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173`；两档真实 CPU batch 检查均通过，记录见 `records/batch4.json`、`records/batch8.json`。state/actions 分别为 `(64,32)` / `(64,20,32)` float32 且有限，静态图像特征为 `(64,512,2048)` bfloat16，四个 motion 字段全为 None。输入检查使用 worker 0；下面的真实训练保持默认 worker 4。
 

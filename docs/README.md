@@ -82,11 +82,31 @@
 
 | 根目录文件 | 性质 | 对应正本 / 处置 |
 |---|---|---|
-| `motion-memory-plan.md`、`motion-memory-interleave.md` | motion 接入计划与交错设计（过程档案，冻结） | [`motion-memory.md`](motion-memory.md) |
-| `v2-framesamp-restructure-plan.md`、`v3-destructive-restructure-plan.md`、`v5.0-train-entry-restructure-plan.md` | dataloader 三阶段计划（过程档案，冻结） | [`dataloader-restructure.md`](dataloader-restructure.md) |
-| `v1-framesamp-restructure-plan.md`、`v1-framesamp-restructure-adversarial-review.md`、`v1-post-restructure-roadmap.md` | 已被 v2 取代的首版计划、对抗审查与 roadmap（三个加速项不立项） | 历史，只读 |
-| `v1-gradient-baseline.md`、`v1-dtype-unify-plan.md`、`v1-95util.md` | 第一 / 二阶段与 util 计划（环境 A） | 报告见第三节（已归档） |
-| `v5.1-prod-60k-wandb-plan.md` | GreatLakes 60k 正式训练计划（环境 A） | 留档已归档：`archive/training-doc/v1-prod-60k/` |
+| `0901-motion-memory-plan.md`、`motion-memory-interleave.md` | motion 接入计划与交错设计（过程档案，冻结） | [`motion-memory.md`](motion-memory.md) |
+| `0827-framesamp-restructure-plan.md`、`0829-destructive-restructure-plan.md`、`0830-train-entry-restructure-plan.md` | dataloader 三阶段计划（过程档案，冻结） | [`dataloader-restructure.md`](dataloader-restructure.md) |
+| `0825-framesamp-restructure-plan.md`、`v1-framesamp-restructure-adversarial-review.md`、`v1-post-restructure-roadmap.md` | 已被 v2 取代的首版计划、对抗审查与 roadmap（三个加速项不立项） | 历史，只读 |
+| `v1-gradient-baseline.md`、`0826-dtype-unify-plan.md`、`v1-95util.md` | 第一 / 二阶段与 util 计划（环境 A） | 报告见第三节（已归档） |
+| `0830-prod-60k-wandb-plan.md` | GreatLakes 60k 正式训练计划（环境 A） | 留档已归档：`archive/training-doc/v1-prod-60k/` |
 | `greatlakes.md` | 集群操作指引 | 环境 B 下只读存档（AGENTS 第 8 条） |
 | `env-b-aws-replication.md` | 环境 B 从零复刻实录 | 现行，与本目录正本互补 |
 | `external-assets-lock.md`、`HF-EXPORT-robomme-vla-motionjepa-v1.md` | 外部资产锁与 HF 发布实录 | 现行 |
+
+### 计划文件命名迁移表
+
+2026-09-16（美国东部时间）统一根目录计划文件名为 `MMDD-<主题>-plan.md`。下列历史计划按首次新增 Git 提交自身时区记录的日期命名，未使用修改时间；新计划按 `America/New_York` 的创建日期命名，后续修订不改前缀。完整约定见根目录 [AGENTS.md](../AGENTS.md) 第 2 条。
+
+| 历史文件名 | 当前文件名 | 首次新增提交 |
+|---|---|---|
+| `v1-framesamp-restructure-plan.md` | [0825-framesamp-restructure-plan.md](../0825-framesamp-restructure-plan.md) | `40857c4`（2026-08-25） |
+| `v1-dtype-unify-plan.md` | [0826-dtype-unify-plan.md](../0826-dtype-unify-plan.md) | `a0cb5fc`（2026-08-26） |
+| `v2-framesamp-restructure-plan.md` | [0827-framesamp-restructure-plan.md](../0827-framesamp-restructure-plan.md) | `fb99027`（2026-08-27） |
+| `v3-destructive-restructure-plan.md` | [0829-destructive-restructure-plan.md](../0829-destructive-restructure-plan.md) | `f2eb900`（2026-08-29） |
+| `v5.0-train-entry-restructure-plan.md` | [0830-train-entry-restructure-plan.md](../0830-train-entry-restructure-plan.md) | `f33d51f`（2026-08-30） |
+| `v5.1-prod-60k-wandb-plan.md` | [0830-prod-60k-wandb-plan.md](../0830-prod-60k-wandb-plan.md) | `4da7f12`（2026-08-30） |
+| `motion-memory-plan.md` | [0901-motion-memory-plan.md](../0901-motion-memory-plan.md) | `132ca7f`（2026-09-01） |
+| `8frame-8x8-training-plan.md` | [0908-8frame-8x8-training-plan.md](../0908-8frame-8x8-training-plan.md) | `82c2cce`（2026-09-08） |
+| `v2-4task-h5-merge-plan.md` | [0914-4task-h5-merge-plan.md](../0914-4task-h5-merge-plan.md) | `21d9b13`（2026-09-14） |
+| `v2-1600ep-m8x8-modul-training-plan.md` | [0915-1600ep-m8x8-modul-training-plan.md](../0915-1600ep-m8x8-modul-training-plan.md) | `b625f48`（2026-09-15） |
+| `v2-motion-modul-8x8-plan.md` | [0916-motion-modul-8x8-plan.md](../0916-motion-modul-8x8-plan.md) | `9a58dc8`（2026-09-16） |
+
+历史用户原话、固定提交变更描述、归档软引用和只读源码快照中的旧名保留为原文，可按本表查找现文件。历史版本号、分支名与 run_name 不随文件改名变化；本表未列出的旧文件名（例如 `v6-motion-memory-plan.md`）不属于本次迁移。

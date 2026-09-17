@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""G0 对拍 fail-closed 总闸（v5.0，v5.0-train-entry-restructure-plan.md 第九节）。
+"""G0 对拍 fail-closed 总闸（v5.0，0830-train-entry-restructure-plan.md 第九节）。
 
 **为什么需要**：`compare_baseline.py` 有三处 fail-open——缺 scalar key 即 `continue`、
 index 只比最短公共前缀、canonical/INDEX_SEQ 不进总 verdict。历史上靠人工判读补位，
@@ -145,7 +145,7 @@ def _check_run_dir(run_dir: pathlib.Path, fails: list[str]) -> None:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# --profile t2：新库严格 A/B 闸（motion-memory-plan.md 5.2 / 2.8）——reference（S2_BASE，冻结 manifest）vs candidate
+# --profile t2：新库严格 A/B 闸（0901-motion-memory-plan.md 5.2 / 2.8）——reference（S2_BASE，冻结 manifest）vs candidate
 # 直接读两侧 records，不经 compare_baseline.py（fail-closed：缺文件 / 缺 step / 缺键 / 空交集 / 任一计数不符均 FAIL）
 # ══════════════════════════════════════════════════════════════════════════════
 

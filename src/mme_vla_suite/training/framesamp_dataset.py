@@ -55,7 +55,7 @@ _NONE_KEYS = (
     "static_state_emb",
     "static_mask",
     "prompt",
-    # motion memory 四键（motion-memory-plan.md 2.6；关闭态恒 None，与 compute_norm_stats._NONE_KEYS 同 commit 同步）
+    # motion memory 四键（0901-motion-memory-plan.md 2.6；关闭态恒 None，与 compute_norm_stats._NONE_KEYS 同 commit 同步）
     "motion_emb",
     "motion_pos",
     "motion_mask",
@@ -100,7 +100,7 @@ class FrameSampDataset(Dataset):
              f"memory_feature.pos.input_dim={hc.memory_feature.pos.input_dim} != 768")
         _req(hc.use_state_emb is False, f"use_state_emb={hc.use_state_emb!r} 必须为 False")
 
-        # ── motion memory（motion-memory-plan.md 2.1 / 2.6）：关闭态只判 enabled、不判子键（旧 yaml 缺整节照跑）──
+        # ── motion memory（0901-motion-memory-plan.md 2.1 / 2.6）：关闭态只判 enabled、不判子键（旧 yaml 缺整节照跑）──
         mcfg = getattr(hc, "motion", None)
         self._motion_enabled = bool(mcfg is not None and mcfg.get("enabled", False))
         if self._motion_enabled:

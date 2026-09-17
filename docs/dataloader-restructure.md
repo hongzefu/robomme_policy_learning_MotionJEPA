@@ -2,7 +2,7 @@
 
 > 默认训练最多读取32帧、每帧4×4的SigLIP特征；现也支持最多8帧、每帧8×8，见第七节。原来每帧存一个小文件，一个样本要开三十几个文件、每个文件还要整包反序列化；现在改成三张连续大表，一个样本只开一个文件、按行直接读。本页只讲三件事：改之前和改之后的文件结构、这些文件怎么生成、怎么证明改前改后训练结果一模一样。
 >
-> 数字分两个环境、不混表：**环境 A**（GreatLakes 4×A40 + turbo NFS、本机 2×RTX 6000 Ada，2026-09-03 及以前）是历史；**环境 B**（AWS 单机 8×A100-80GB，本地 NVMe RAID，2026-09-04 起）是现行。根目录四份计划文件（`v1-`/`v2-framesamp-restructure-plan.md`、`v3-destructive-restructure-plan.md`、`v5.0-train-entry-restructure-plan.md`）保留为过程档案，冲突以本页为准。更细的 `store_meta.json` 逐字段表、锁协议、删旧链路的七次提交顺序、吞吐档位扫描，见本文件 git 历史 `3f4afb5` 版本。
+> 数字分两个环境、不混表：**环境 A**（GreatLakes 4×A40 + turbo NFS、本机 2×RTX 6000 Ada，2026-09-03 及以前）是历史；**环境 B**（AWS 单机 8×A100-80GB，本地 NVMe RAID，2026-09-04 起）是现行。根目录四份计划文件（`0825-framesamp-restructure-plan.md`、`0827-framesamp-restructure-plan.md`、`0829-destructive-restructure-plan.md`、`0830-train-entry-restructure-plan.md`）保留为过程档案，冲突以本页为准。更细的 `store_meta.json` 逐字段表、锁协议、删旧链路的七次提交顺序、吞吐档位扫描，见本文件 git 历史 `3f4afb5` 版本。
 
 ## 一、结论
 

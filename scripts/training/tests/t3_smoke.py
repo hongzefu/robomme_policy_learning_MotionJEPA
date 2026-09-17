@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """T3_SMOKE：两侧（open / closed）训练 records 的收尾汇总判定。
 
-motion-memory-plan.md 第一部分五节的 T3_SMOKE 原是人工从 records 汇总，仓库里没有 emitter；环境 B 复刻（2026-09-04）
+0901-motion-memory-plan.md 第一部分五节的 T3_SMOKE 原是人工从 records 汇总，仓库里没有 emitter；环境 B 复刻（2026-09-04）
 把它写成脚本，判据不变、全部零容差：
 
   1. metrics.jsonl 两侧都恰好 steps 行（步 0..steps-1），loss / grad_norm / param_norm 全部有限 → nan=0；

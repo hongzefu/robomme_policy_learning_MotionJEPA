@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""S1 附加检查（wan 子 venv、需 GPU；motion-memory-plan.md 第二部分四节表二 A8 / A9（编码半） / A12）。
+"""S1 附加检查（wan 子 venv、需 GPU；0901-motion-memory-plan.md 第二部分四节表二 A8 / A9（编码半） / A12）。
 
   a8    抽表逐位：随机 128 个 (段, 网格序号)，在线用复制件 ``motion_token``（B=1）对 ``wan-latents/<段>.bin`` 的该块编码，
         与 motion 表（按 motion_index 行序）对应行 ``np.array_equal``。判定行 ``A8_TABLE_BITEXACT=PASS sampled=128 mismatches=0``。

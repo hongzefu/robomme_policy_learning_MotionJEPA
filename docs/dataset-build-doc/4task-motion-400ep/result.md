@@ -50,7 +50,7 @@ WAN_BITEXACT=PASS compared=6832 frame_mismatches=0 latent_mismatches=0 metadata_
 
 - **Wan 抽了三次**（留档 `v1-store/attic/400ep-attempt{1,2}-mixedcommit/` 与 `logs/p3-wan{,2,3}*.log`）：
   1. 第一次（`8093ebd`，GPU0–5，1638 s）后 encode 在 `cbf24e9` 跑 → `pack_motion_store.gather_provenance` 报 `跨 worker git_commit 不唯一`（它把 latents 与 tokens 两阶段 worker 指纹合并要求唯一）；
-  2. 第二次在 `e94285c` 重抽（GPU2–7）到 240/600 段时，被本人误用 `tmux kill-server` 杀掉（同时杀掉了机器上原有的用户 tmux 会话，见 motion-memory-plan.md「环境 B 复刻」五节），
+  2. 第二次在 `e94285c` 重抽（GPU2–7）到 240/600 段时，被本人误用 `tmux kill-server` 杀掉（同时杀掉了机器上原有的用户 tmux 会话，见 0901-motion-memory-plan.md「环境 B 复刻」五节），
      清残留 claim / tmp 后 8 卡续抽完成，但 encode 又落在新 commit `c0e13aa` → 再次不唯一；
   3. 第三次在 `c0e13aa` 全量重抽（GPU2–7，1639 s），**打包完成前冻结 HEAD**，encode / pack / oracle 全在 `c0e13aa`。教训：Wan 抽取 → encode → pack 期间不得有任何 commit。
 - M1 起早了一次（motion 表未建时 `FileNotFoundError`），重排到 pack 之后。

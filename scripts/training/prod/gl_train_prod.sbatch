@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ── 正式训练（GL 4×A40）：10 小时利用率趋势观测 run ────────────────────────────
 # 计划：~/.claude/plans/worker8-packed-run-name-smooth-flute.md（用户 2026-08-28 批准）
-# v5.0（v5.0-train-entry-restructure-plan.md）：prod_train_once.py 删除，本脚本直调
+# v5.0（0830-train-entry-restructure-plan.md）：prod_train_once.py 删除，本脚本直调
 # scripts/training/train.py（已改单跑、自带 TRAIN_RECORD_DIR 记录器）；同批做退出码
 # 硬化——此前 write_env/analyzer/downsample 任一失败都不改变最终 EXIT_CODE，新记录器
 # schema 出错会以「analyzer 崩溃」形式出现却仍报 EXIT_CODE=0，故改为四段 RC 各自留档、

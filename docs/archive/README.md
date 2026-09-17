@@ -9,7 +9,8 @@
 - **产物不可得**：这些留档引用的 `v1-store/` 产物（`v1-prod-*` run、`4task-gl` 库、`env.json` 指纹、固化梯度数组）在环境 B 不存在，凡依赖它们的对拍口径按 `AGENTS.md` 第 13 条环境 B 段视作失效。
 - **新 run 落点不变**：新的训练 / 评估 / 对拍 run 仍留档在 `docs/training-doc/<run_name>/`，数据集构建仍在 `docs/dataset-build-doc/<dataset_name>/`；`docs/archive/` 只进不出、不接收新 run。
 - **空壳例外**：`eval-official-framesamp-modul` 是环境 B 目录，但只含一个 `download.sh`、没有 launch / result，从未跑成；按「未完成空壳」归档，不代表该评估已完成。
-- **软引用有意保留**：根目录冻结的计划文件（`motion-memory-plan.md`、`v1-gradient-baseline.md`、`v1-95util.md`、`greatlakes.md` 等）与归档目录内部互相引用的反引号路径仍写着归档前位置，这些文件按仓库规则不再改动；查找时把 `docs/training-doc/<name>` 换成 `docs/archive/training-doc/<name>` 即可。Markdown 形式的链接已全部修正，断链为 0。
+- **软引用有意保留**：根目录冻结的计划文件（`0901-motion-memory-plan.md`、`v1-gradient-baseline.md`、`v1-95util.md`、`greatlakes.md` 等）与归档目录内部互相引用的反引号路径仍写着归档前位置，这些文件按仓库规则不再改动；查找时把 `docs/training-doc/<name>` 换成 `docs/archive/training-doc/<name>` 即可。Markdown 形式的链接已全部修正，断链为 0。
+- **计划日期前缀迁移**：2026-09-16（美国东部时间）根目录计划统一采用 `MMDD-<主题>-plan.md`，归档中的导航链接已同步。历史软引用、用户原话和固定提交描述保留旧名，按 [计划文件命名迁移表](../README.md#计划文件命名迁移表) 查找现位置。
 
 ## 清单（training-doc 34 项 + dataset-build-doc 2 项）
 

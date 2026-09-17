@@ -43,7 +43,7 @@
   5 次 TrainState `state_digest`（177 叶，含 `input_embedding` 及其 ema / opt）**逐值相同**——训练 `train_step`（`nnx.DiffState` + fsdp 2 sharding）里该叶梯度是确定的；
   不确定只出现在 t3mechanism 自己的 `jax.jit(value_and_grad(loss_fn))` 编译路径。
 - 结论：证据指向「A100 上本诊断脚本的 embedding 反向核不确定」而非「motion 垫料泄漏」（loss 逐位同、motion 相关叶与其余 35 叶逐位同、`emb_effect=1 pos_effect=1` 与
-  分组范数都正常）。按 motion-memory-plan.md 四节表一的处置，硬闸 FAIL 不放宽、不裁剪；**是否接受「把该叶的不确定性单列（先跑同 obs 两次探针、把两次都变的叶排除）」这一
+  分组范数都正常）。按 0901-motion-memory-plan.md 四节表一的处置，硬闸 FAIL 不放宽、不裁剪；**是否接受「把该叶的不确定性单列（先跑同 obs 两次探针、把两次都变的叶排除）」这一
   与环境 A 同性质的修法，留给用户裁决**；裁决前 T3_MOTION_CAUSAL / T3_MECHANISM 在环境 B 记 FAIL。
 
 ## 三、描述性观察（无 PASS / FAIL；单 seed；100 步 × b8 = 800 样本 < 1 epoch；ep0–9 在 encoder 训练集内，不得升级为泛化结论）

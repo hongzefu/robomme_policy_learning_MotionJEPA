@@ -1,6 +1,6 @@
 # motion-t3-open（T3 真实训练端到端，open 侧 1000 步，保存最终 EMA checkpoint）launch
 
-- **目的**：`motion-memory-plan.md` 5.3 T3 / 2.10——closed / open 两份不可变 YAML 各在 `4task-motion-40ep/framesamp` 跑 1000 步 × batch 8（同 seed、同样本顺序，
+- **目的**：`0901-motion-memory-plan.md` 5.3 T3 / 2.10——closed / open 两份不可变 YAML 各在 `4task-motion-40ep/framesamp` 跑 1000 步 × batch 8（同 seed、同样本顺序，
   8,000 样本在 11,530 的单 epoch 内），保存最终 EMA checkpoint（目录 999）。硬闸：`T3_COMMON_INIT`（起跑前）→ `T3_SMOKE` → `T3_TOKEN_TRACE` → `T3_MECHANISM`；
   `T3_PHASE_REPORT` 完整性硬条件、均值只报告；最后 200 步 loss 只记 `T3_EFFECT_OBS`。跨侧 verdict 与比较只归档在 open run 的 `result.md` / `records/comparison/`。
 - **run_name**：`motion-t3-open`；`EXP_NAME=RUN_TAG=motion-t3-open`；history config **固定** `perceptual-framesamp-context-motion.yaml`（红线 16，不手改开关）。

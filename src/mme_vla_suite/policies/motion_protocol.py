@@ -1,4 +1,4 @@
-"""在线 motion 编码进程（sidecar）与 policy 之间的 Unix socket 协议公共件（motion-memory-plan.md 第二部分三节）。
+"""在线 motion 编码进程（sidecar）与 policy 之间的 Unix socket 协议公共件（0901-motion-memory-plan.md 第二部分三节）。
 
 **只 import stdlib**：主侧 `from mme_vla_suite.policies.motion_protocol import ...`；sidecar（wan 子 venv，装不下 mme_vla_suite）用
 `importlib.util.spec_from_file_location` 从同一绝对文件加载，并在握手里上报本文件 sha256——双方不得各抄常量或 `_recv_exact`。

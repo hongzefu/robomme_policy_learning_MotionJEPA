@@ -586,7 +586,7 @@ def test_worker_processor_refreshes_completeness_snapshot(tmp_path: pathlib.Path
     assert worker.episode_is_complete(ep1) is True, "worker 模式必须刷新快照"
 
 
-# ── v2-motionmem S2：MotionStore 的 spawn / pickle 契约（motion-memory-plan.md 2.8）────────────────
+# ── v2-motionmem S2：MotionStore 的 spawn / pickle 契约（0901-motion-memory-plan.md 2.8）────────────────
 def _real_lib() -> pathlib.Path | None:
     lib = _REPO_ROOT / "v1-store" / "datasets" / "4task-motion-40ep"
     alt = pathlib.Path(os.environ.get("MMEVLA_V1_STORE", "")) / "datasets" / "4task-motion-40ep" if os.environ.get("MMEVLA_V1_STORE") else None

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ── D2：集群侧上游对拍（v5.1-prod-60k-wandb-plan.md）────────────────────────────
+# ── D2：集群侧上游对拍（0830-prod-60k-wandb-plan.md）────────────────────────────
 # 单 job 串行跑 A（上游 main ecf086c，worktree + 独立 NFS venv，legacy 库，tentative
 # 12 步 + 正式 1000 步）与 B（新入口 scripts/training/train.py，packed 库，1000 步），
 # 生产口径 b64/fsdp4 + 确定性 XLA 档，judge 硬判 → ENTRY_EQ=PASS；随后同 job 用真

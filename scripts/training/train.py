@@ -96,7 +96,7 @@ def init_wandb(
         wandb.run.log_code(epath.Path(__file__).parent.parent.parent)
 
 def init_history_config(config: _config.TrainConfig, resolved_history_config=None, framesamp_root=None):
-    """run 根写三样（motion-memory-plan.md 2.1，红线 16）：
+    """run 根写三样（0901-motion-memory-plan.md 2.1，红线 16）：
     - history_config.txt：只作源文件名标签（旧口径，评估侧兼容路径仍读它）；
     - history_config.resolved.yaml + .sha256：训练实际使用的完整解析结果与原始字节 sha256；
     - motion_provenance.json：motion.enabled、framesamp manifest sha256；open run 另填 motion 侧 manifest / index sha / store meta sha /
@@ -378,7 +378,7 @@ def main(config: _config.TrainConfig):
         resume=config.resume,
     )
     init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
-    # 两侧 enabled 同源（motion-memory-plan.md 2.1 / 2.9）：只按 CLI 文件名解析一次，同一个 DictConfig 对象装入
+    # 两侧 enabled 同源（0901-motion-memory-plan.md 2.1 / 2.9）：只按 CLI 文件名解析一次，同一个 DictConfig 对象装入
     # model config 并直接传给 dataloader，禁止两侧再次按文件名重读（数据侧给了、模型侧不消费会让 n_keys 悄悄变而训练照跑）
     history_config_name = config.model.history_config
     resolved_history_config = get_history_config(history_config_name)

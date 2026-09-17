@@ -65,7 +65,7 @@ PYTHONUNBUFFERED=1 HF_HOME=v1-store/cache/hf .venv/bin/python scripts/dataset/fe
 
 1. **4 个已有任务逐条相同**：新扫描的 400 条 `(num_timesteps, exec_start_idx)` 必须与
    `v1-store/datasets/4task-motion-400ep/meta/episode_manifest.json` 一致（`totals.timesteps = 123044`）。
-2. **逐任务单集最大窗口数**吻合 `motion-memory-plan.md` 第 2.3 节（环境 A 全集实测）：
+2. **逐任务单集最大窗口数**吻合 `0901-motion-memory-plan.md` 第 2.3 节（环境 A 全集实测）：
    VideoPlaceOrder 85、VideoPlaceButton 65、BinFill 64、PickXtimes 63、VideoRepick 61、RouteStick 40、
    PickHighlight 39、SwingXtimes 36、StopCube 35、InsertPeg 34、VideoUnmaskSwap 34、ButtonUnmaskSwap 33、
    PatternLock 32、ButtonUnmask 27、VideoUnmask 22。

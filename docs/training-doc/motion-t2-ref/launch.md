@@ -1,6 +1,6 @@
 # motion-t2-ref（T2 reference：S2 改码前在 40 ep 新库上冻结 300 步参照）launch
 
-- **目的**：`motion-memory-plan.md` 第一部分 5.2 / 第二部分六节——S1 完成后的 clean HEAD 记为 `S2_BASE`，在任何 S2 模型代码改动前，
+- **目的**：`0901-motion-memory-plan.md` 第一部分 5.2 / 第二部分六节——S1 完成后的 clean HEAD 记为 `S2_BASE`，在任何 S2 模型代码改动前，
   以关闭态 YAML 在新库 `v1-store/datasets/4task-motion-40ep/framesamp` 跑 300 步 × batch 8 的 reference；S2 完成后 candidate
   只与它比（`g0_gate.py --profile t2` 唯一成功行 `T2_EQ=PASS`）。
 - **run_name**：`motion-t2-ref`（用户 2026-09-03 批准）；`EXP_NAME=RUN_TAG=motion-t2-ref`。

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# C4 上游 main 对拍驱动（v5.0，v5.0-train-entry-restructure-plan.md 第十节）。
+# C4 上游 main 对拍驱动（v5.0，0830-train-entry-restructure-plan.md 第十节）。
 #
 # 子命令：
 #   run-a   A 侧（上游 worktree @ ecf086c，官方 __main__ 双跑，加 --overwrite）

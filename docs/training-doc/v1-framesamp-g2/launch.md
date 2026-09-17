@@ -1,6 +1,6 @@
 # v1-framesamp-g2（S6 第二块·G2 训练对拍）launch 记录
 
-对应 `v2-framesamp-restructure-plan.md` 阶段 3 S6（C.3）：`MMEVLA_DATA_BACKEND=packed`
+对应 `0827-framesamp-restructure-plan.md` 阶段 3 S6（C.3）：`MMEVLA_DATA_BACKEND=packed`
 从 clean HEAD 起跑一轮 1000 步，离线对拍 G0 固化产物（A 侧不重跑）。run_name
 2026-08-27 经用户确认。
 

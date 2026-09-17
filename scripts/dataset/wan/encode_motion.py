@@ -2,7 +2,7 @@
 """MotionJEPA encoder 编码 worker：按段领任务，读 ``wan-latents/<段>.bin`` 每块 → 复制件 ``motion_token`` →
 ``motion-tokens/<段>.f32.bin``（num_grid × 768 f32）。
 
-对应 motion-memory-plan.md 第一部分 4.2 第 5 步与第二部分 1.5。只做「读 latent → 调复制件 ``motion_token`` → 落盘」，
+对应 0901-motion-memory-plan.md 第一部分 4.2 第 5 步与第二部分 1.5。只做「读 latent → 调复制件 ``motion_token`` → 落盘」，
 不复写任何 🔒 数值语句；起手 ``check_env()`` + ``pin_numerics()`` + ``check_versions()``；
 ``load_encoder(run_dir, ckpt, expected_sha256=…)`` 整份 strict（affine buffer 从 ckpt 带入，禁 ``load_wan_latent_stats``）；
 B=1 硬约束；autocast 由 run 配置决定（bf16）。CLI 刻意不设 ``--encoder-key`` / ``--tf32`` / ``--amp``。

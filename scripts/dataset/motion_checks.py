@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""S1 附加检查（主 venv、numpy + h5py；motion-memory-plan.md 第二部分四节表二 A5 / A6 / A7 / A9（集合半） / A10）。
+"""S1 附加检查（主 venv、numpy + h5py；0901-motion-memory-plan.md 第二部分四节表二 A5 / A6 / A7 / A9（集合半） / A10）。
 
   a5      原始帧同源：40 ep 库每帧 `front_rgb` 与 4env400ep 同 (task, raw_ep_idx) 逐帧 sha256 相等（13,756 帧）；
           另与 MotionJEPA v7 data-raw `video_exec.h5` / `video_demo.h5` 的 `frames` 逐帧比（截尾处以内）。

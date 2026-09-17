@@ -1,7 +1,7 @@
 # v1-singlerun-g0 起跑档（C3：G0 完整重锚）
 
 - **run_name**：`v1-singlerun-g0`（用户 2026-08-30 经 AskUserQuestion 确认采计划拟名；AGENTS 6）。
-- **计划**：`v5.0-train-entry-restructure-plan.md` 第三版 4.1/第九节；本 run 属用户已授权的三 run 之一（「本机 2 卡，约 1 h loop，预算 1–2 h」）。
+- **计划**：`0830-train-entry-restructure-plan.md` 第三版 4.1/第九节；本 run 属用户已授权的三 run 之一（「本机 2 卡，约 1 h loop，预算 1–2 h」）。
 - **起跑 commit**：`f641f40`（commitV5.0 训练入口重构；工作区 clean，AGENTS 12/17）。
 - **被裁决的两个变量**：`train.main` 体内删三处 tentative 死代码；目录拆分 `bench/`→`g0/`+`util/`（train.py 内置记录器在 bench 路径根本不装，构造性零影响）。
 

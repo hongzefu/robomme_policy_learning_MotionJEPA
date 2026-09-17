@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""本机多 GPU 调度器：每 GPU 一个常驻 worker 进程、动态领任务，三阶段共用（motion-memory-plan.md 第二部分 1.3）。
+"""本机多 GPU 调度器：每 GPU 一个常驻 worker 进程、动态领任务，三阶段共用（0901-motion-memory-plan.md 第二部分 1.3）。
 
   --stage siglip   主 venv：``build_shard.py --worker-mode``，工作项 = episode（按 num_timesteps LPT 降序），
                    产 ``<lib>/source/{features,data,meta}``；随后另跑 finalize_checks.py / pack_framesamp_store.py

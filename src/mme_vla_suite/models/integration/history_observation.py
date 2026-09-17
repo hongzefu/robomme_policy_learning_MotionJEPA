@@ -23,7 +23,7 @@ class HistAugObservation(_Observation):
     static_mask: at.Bool[at.Array, "b l1"] | None = None
     static_pos_emb: at.Float[at.Array, "b l1 d2"] | None = None
     static_state_emb: at.Float[at.Array, "b l1 d3"] | None = None
-    # motion memory（motion-memory-plan.md 2.2）：追加在四个 static_* 之后，mem_order 排在三个 motion_* 之后；
+    # motion memory（0901-motion-memory-plan.md 2.2）：追加在四个 static_* 之后，mem_order 排在三个 motion_* 之后；
     # l4 = motion.budget（96），d4 = motion.dim（768），d5 = motion.pos_dim（256）；
     # mem_order 用 at.Int（jaxtyping 的 Float 白名单不含 int32）与新维名 l5 = budget + motion.budget（608），
     # 不得复用 l1/l4（@at.typecheck 把全部字段塞进同一个 memo，同名维必须同值）

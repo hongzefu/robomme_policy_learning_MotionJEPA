@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""motion 离线表打包 / 校验工具（motion-memory-plan.md 第二部分一节 1.1）。
+"""motion 离线表打包 / 校验工具（0901-motion-memory-plan.md 第二部分一节 1.1）。
 
 把 encoder 阶段落在 ``<lib>/motion-tokens/<段>.f32.bin`` 的逐段 token 按**行序契约**拼成一张表：
 

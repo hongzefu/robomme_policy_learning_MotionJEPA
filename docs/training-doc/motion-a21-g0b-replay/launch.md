@@ -1,6 +1,6 @@
 # motion-a21-g0b-replay（A21：S2 起工前 HEAD 原样复跑 G0b 黄金基线，1000 步）launch
 
-- **目的**：`motion-memory-plan.md` 第二部分四节表二 A21 / 六节 runbook 第一步——S2 改任何模型代码之前，用当前 clean HEAD
+- **目的**：`0901-motion-memory-plan.md` 第二部分四节表二 A21 / 六节 runbook 第一步——S2 改任何模型代码之前，用当前 clean HEAD
   把 G0b 黄金基线原样复跑一遍，取得 `G0_EQ=PASS`；否则 T1 挂了分不清「基线腐烂 / 环境漂移 / 代码问题」。
   同时它兼作 S1 重构后的第四层检验（`AGENTS.md` 第 18 条第二块）：本 commit 相对 `442a7b9` 的 `src/` 改动只有新增
   `datastore/motion_store.py`（无人 import）与 `framesamp_store.py` 的一行注释，训练语义应逐位不变。

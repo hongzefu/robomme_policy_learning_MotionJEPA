@@ -103,7 +103,7 @@ import openpi.training.data_loader as _openpi_dl  # noqa: E402
 import mme_vla_suite.training.config as _config  # noqa: E402
 
 _MAX_BENCH_STEPS = 1200  # G0b 基线升级为 1000 步（用户 2026-08-26 指定）；上限仍远低于正式训练量级
-# 只接受 closed / open 两个精确文件名（motion-memory-plan.md 2.1）：T1 / T2 默认钉 closed，T3 open 侧显式钉 open
+# 只接受 closed / open 两个精确文件名（0901-motion-memory-plan.md 2.1）：T1 / T2 默认钉 closed，T3 open 侧显式钉 open
 _EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml",
                              "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml")
 _EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
@@ -335,7 +335,7 @@ def _install_checksum_recorder(record_dir: pathlib.Path, enabled: bool, gate,
             _checksum_full_state(checksums_path, state, step,
                                  dump_dir=dump_dir if step in dump_steps else None)
         if save_final and step == final_step:
-            # motion-memory-plan.md 2.8：沿现有外层编号把最终 EMA checkpoint 放目录 999（orbax save 仍走原版
+            # 0901-motion-memory-plan.md 2.8：沿现有外层编号把最终 EMA checkpoint 放目录 999（orbax save 仍走原版
             # save_state：params 项 = ema_params，assets 项 = norm_stats）；metadata 明记 checkpoint_id / state_step / param_kind
             orig_save_state(checkpoint_manager, state, data_loader, 999)
             checkpoint_manager.wait_until_finished()
@@ -742,7 +742,7 @@ def main() -> None:
         if finalize_digests is not None:
             finalize_digests()
         # 真实 argv 与编译缓存事件计数——驱动脚本收官时并进 env.json
-        # motion-memory-plan.md 2.8：实际 epoch 样本数（数据集真值源）、batch、history config 文件名 / resolved sha 进 run_meta
+        # 0901-motion-memory-plan.md 2.8：实际 epoch 样本数（数据集真值源）、batch、history config 文件名 / resolved sha 进 run_meta
         _ds = pathlib.Path(config.dataset_path)
         _es = {}
         if os.environ.get("BENCH_DATASET_IMPL", "packed") == "refnpy":

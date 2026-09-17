@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""关闭态轻量等价对拍 A13 / A15 / A17（motion-memory-plan.md 第二部分五节）：S2_BASE 代码 vs S2 新代码，motion.enabled=false。
+"""关闭态轻量等价对拍 A13 / A15 / A17（0901-motion-memory-plan.md 第二部分五节）：S2_BASE 代码 vs S2 新代码，motion.enabled=false。
 
 两侧各跑一次 `dump`（PYTHONPATH 分别指向两棵源码树），再 `compare` 两份 json：
   dump     A15：固定 idx 集合的 `FrameSampDataset.__getitem__` 全键 raw sha256 / dtype / shape（None 键记 "None"）；

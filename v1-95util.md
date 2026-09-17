@@ -22,7 +22,7 @@
 
 > **本文件是本轮（2026-08-28 起，Codex 审计后重排版）的单一权威计划文档。**
 > G0/G2 定义、红线表（R1–R17）、白名单（T1）、登记簿（T8）的权威源是
-> [`v2-framesamp-restructure-plan.md`](v2-framesamp-restructure-plan.md)；L3 的 scope 权威源是
+> [`0827-framesamp-restructure-plan.md`](0827-framesamp-restructure-plan.md)；L3 的 scope 权威源是
 > [`v1-post-restructure-roadmap.md`](v1-post-restructure-roadmap.md) 项 2 与项 3（含其「拆开两轮、
 > 项 3 走缩减档」的用户拍板）；**L4 无既有权威源，系本文件新提出的评估储备项**（立项依据见 L4 节）；
 > 本文件只引用不复制。

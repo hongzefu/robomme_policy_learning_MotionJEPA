@@ -1,6 +1,6 @@
 # motion-t2-cand（T2 candidate：新库 300 步，对冻结的 motion-t2-ref 严格 A/B）launch
 
-- **目的**：`motion-memory-plan.md` 5.2 T2——S2 后以相同训练语义参数在 `4task-motion-40ep/framesamp` 跑 300 步 × batch 8，
+- **目的**：`0901-motion-memory-plan.md` 5.2 T2——S2 后以相同训练语义参数在 `4task-motion-40ep/framesamp` 跑 300 步 × batch 8，
   用 `g0_gate.py --profile t2` 对 reference（`motion-t2-ref`，`S2_BASE=c5925d9`）逐位：日志唯一 `EXIT_CODE=0`、环境指纹相同、规范化 argv 只差
   run / output 路径、配置只新增规范 `motion.enabled:false` 节、step 集 / scalar 键全集相同且 hex 逐位、TrainState 摘要步集 {0,100,200,299} `state_digest` 逐位且 `n_leaves=177`、
   输入摘要步集 {0,1,2,100,200,299} raw 逐位且 `n_keys=12`、index 序列前 2,400 逐项相同。唯一成功行 `T2_EQ=PASS`。

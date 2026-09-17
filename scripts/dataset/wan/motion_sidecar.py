@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""在线 motion 编码进程（sidecar，motion-memory-plan.md 第二部分三节）：收 33 帧、还 768 个数，一次一窗、B=1。
+"""在线 motion 编码进程（sidecar，0901-motion-memory-plan.md 第二部分三节）：收 33 帧、还 768 个数，一次一窗、B=1。
 
 由 `MotionEncoderClient` 用 `subprocess.Popen` 起（argv 从 `uv run --project scripts/dataset/wan --no-sync python motion_sidecar.py --fd N` 开始，
 `socketpair` 的一端经 `pass_fds` 交给本进程）。起手 `check_env()` + `pin_numerics()` + `check_versions()`，`load_vae(expected_state_sha256)`、

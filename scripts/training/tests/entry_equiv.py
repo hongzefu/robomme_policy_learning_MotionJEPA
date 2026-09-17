@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""C4 上游 main 对拍 harness（v5.0，v5.0-train-entry-restructure-plan.md 第十节）。
+"""C4 上游 main 对拍 harness（v5.0，0830-train-entry-restructure-plan.md 第十节）。
 
 两个子命令：
 
@@ -37,7 +37,7 @@
       [--expect-steps N] [--expect-tentative-a 12] \\
       [--expect-state-steps 100,200,...,999] [--expect-head-a <sha> --expect-head-b <sha>]
 
-  v5.1 硬化（v5.1-prod-60k-wandb-plan.md D1，堵对抗审计列出的假阳性孔洞）：
+  v5.1 硬化（0830-prod-60k-wandb-plan.md D1，堵对抗审计列出的假阳性孔洞）：
   步集合必须恰为 0..N-1、A 段 tentative 行数恰 12/N 且 B 段恰 0（进退出码）、
   状态摘要步集合恰为期望集且原始行数无重复、provenance HEAD 断言 + porcelain 必须空；
   --expect-sha256 改可选（A40 无本机锚点时打 anchor=SKIPPED、不进判据）。

@@ -1,7 +1,7 @@
 # IO 重构（v4）之后的立项路线（high-level）
 
 > 本文件只记录**立项顺序结论与各项的确定 scope**，不含实施细节。前提链条：
-> [`v1-dtype-unify-plan.md`](v1-dtype-unify-plan.md)（前置）→ [`v1-framesamp-restructure-plan.md`](v1-framesamp-restructure-plan.md)（IO 重构 v4）→ 本文件所列各项。
+> [`0826-dtype-unify-plan.md`](0826-dtype-unify-plan.md)（前置）→ [`0825-framesamp-restructure-plan.md`](0825-framesamp-restructure-plan.md)（IO 重构 v4）→ 本文件所列各项。
 > 2026-08-26 增补：全链梯度对拍锚定黄金基线 G0，权威载体 [`v1-gradient-baseline.md`](v1-gradient-baseline.md)，本文件各项适用文末「梯度对拍规约」。
 > **立项门（2026-08-26 审计修正：拆双状态，消除「性能失败无补救路径」死锁）**：v4 的 GL 验收拆为两个独立结论——`CORRECTNESS_PASS`（等价性梯子全过）与 `PERFORMANCE_PASS|FAIL`（GL 性能判据表机器判定）。本文件所列各项一律以 **`CORRECTNESS_PASS` 为硬前提**；`PERFORMANCE_PASS` 时按下方决策门排优先级，**`PERFORMANCE_FAIL`（如 util 落在 80–90%）时允许用户单独批准针对性的「v4 性能补救项」（首选项 1）**——但此时不得称 v4 已通过 GL 验收，补救项收官后须重跑 GL 验收。每项立项前均须用户单独拍板；此处不构成实施授权（AGENTS 2）。（原规格「必须先通过 GL 验收才允许立项」与项 1 的 80–90% 启动条件互斥：性能必达 util ≥90%，恰是失败场景里补救分支不可达。）
 > 结论来源：2026-08-26 会话讨论（问题一"dtype 之外的机制修复"与问题二"memory token 取数机制可读性重构"）。

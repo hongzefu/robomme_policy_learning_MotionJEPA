@@ -1,8 +1,8 @@
 # framesample+context 数据链路彻底重构计划（v1-dataloader-Restructure）
 
-> **⚠ 本文件已并入 [`v2-framesamp-restructure-plan.md`](v2-framesamp-restructure-plan.md)（2026-08-27，用户拍板彻底重构为独立可执行单一文档）**：重构前后链路、三块验证、GL 吞吐验收、实施顺序与红线的现行权威版本均在 v2 文件；本文件只作历史存档，不再更新，内容冲突时一律以 v2 为准。
+> **⚠ 本文件已并入 [`0827-framesamp-restructure-plan.md`](0827-framesamp-restructure-plan.md)（2026-08-27，用户拍板彻底重构为独立可执行单一文档）**：重构前后链路、三块验证、GL 吞吐验收、实施顺序与红线的现行权威版本均在 v2 文件；本文件只作历史存档，不再更新，内容冲突时一律以 v2 为准。
 
-> 本文件是计划文档，尚未实施。v1 定稿于 2026-08-24；v2 于 2026-08-25 依据两轮独立对抗验证修订；v3 定稿于 2026-08-25；本版为 **v4（2026-08-26，拆分瘦身）**：dtype 统一已拆分为**前置计划 [`v1-dtype-unify-plan.md`](v1-dtype-unify-plan.md)**（先行独立验收），本计划随之删除 replica/f32 交付模式、`MMEVLA_FRAMESAMP_DTYPE` 三态开关、第 3 层验证（原 C.4）与 GL b64 dtype 抽查——A/B 变为单变量（只剩「字节从哪读」）。**实施前提：前置计划两块正确性验收通过后由用户拍板开工（2026-08-26 裁定：dtype 修复不做性能对比，其性能效果并入本计划收官的 `v1-g2-speed` vs `v1-g0-speed` speed 链对比一并体现——符号与口径以基线计划「符号总表」为权威）。** v3 的评审背书如下：
+> 本文件是计划文档，尚未实施。v1 定稿于 2026-08-24；v2 于 2026-08-25 依据两轮独立对抗验证修订；v3 定稿于 2026-08-25；本版为 **v4（2026-08-26，拆分瘦身）**：dtype 统一已拆分为**前置计划 [`0826-dtype-unify-plan.md`](0826-dtype-unify-plan.md)**（先行独立验收），本计划随之删除 replica/f32 交付模式、`MMEVLA_FRAMESAMP_DTYPE` 三态开关、第 3 层验证（原 C.4）与 GL b64 dtype 抽查——A/B 变为单变量（只剩「字节从哪读」）。**实施前提：前置计划两块正确性验收通过后由用户拍板开工（2026-08-26 裁定：dtype 修复不做性能对比，其性能效果并入本计划收官的 `v1-g2-speed` vs `v1-g0-speed` speed 链对比一并体现——符号与口径以基线计划「符号总表」为权威）。** v3 的评审背书如下：
 > ① 61-agent 对抗验证 workflow（报告 `v1-framesamp-restructure-adversarial-review.md`：确认问题 high 4 / medium 6 / low 10，驳回 3）；
 > ② Codex 四路独立审计（8 阻断 / 16 高风险 / 8 规格缺口；其 file:line 断言已逐条读码复核属实）；
 > ③ 定稿复核 workflow（全 opus，6 agent：修订落实 ×2 / 数字复算 / 设计自洽 / 残留扫描 + 裁决）：裁决清单必须修 M1–M13、建议修 S1–S9 已全部落实，驳回 R1–R6 维持原文。
@@ -13,7 +13,7 @@
 - v1 端到端实测（`docs/training-doc/v1-e2e-b64/`）：GPU util 均值仅 69.7%（中位 100% 是假象）、0% 采样占比 27.8%、慢步占稳态墙钟 32.9%；步时中位 6.933 s，而 compute-only 下界 4.778 s（+45%）。NFS 带宽已排除（供给 398–628 MB/s vs 需求 256 MB/s），坐实瓶颈在 dataloader worker 的 CPU/文件层。
 - 16 CPU 档纯参数调整不解决问题已有**三档完整实据**：w8c16 **5.301 s / 71.2% / epoch ≈9.09 h**、w12c16 **5.319 s / 70.6% / ≈9.13 h**、w16c16 **5.327 s / 67.1% / ≈9.14 h**——workers 8/12/16 曲线完全平坦，三档均距 compute-only 下界 4.778 s 差约 11%、util 均值仍只有 67–71%、慢步墙钟 32–36%。需要代码级彻底重构。
 - 本轮范围：**只兼容 `perceptual-framesamp-context` 一种 run**；硬性要求**每个 step 拿到的 memory token 近乎一致、训练梯度差距极小**（本计划把目标提到「受控环境下逐位一致」并给出证明梯子，有效性域见第三节）；同时让整条流程更具可读性。
-- dtype 双路径问题（98.4% batch f64 提升 / 1.6% bf16 并存）已拆分为前置计划 `v1-dtype-unify-plan.md` 在旧链路上原地修复并独立验收——**本计划的「重构前基线」是 dtype 统一后的旧链路**，交付 dtype 天然 bf16/f32，本计划不再含任何 dtype 变更。GL e2e 验收尽快并行提交（接受与在跑档位互相排队；用户已拍板）。整链方向性目标：**GPU 占用 100%**（north star，用户 2026-08-26；验收阈值见 D 节，不按字面 100% 定判据）。
+- dtype 双路径问题（98.4% batch f64 提升 / 1.6% bf16 并存）已拆分为前置计划 `0826-dtype-unify-plan.md` 在旧链路上原地修复并独立验收——**本计划的「重构前基线」是 dtype 统一后的旧链路**，交付 dtype 天然 bf16/f32，本计划不再含任何 dtype 变更。GL e2e 验收尽快并行提交（接受与在跑档位互相排队；用户已拍板）。整链方向性目标：**GPU 占用 100%**（north star，用户 2026-08-26；验收阈值见 D 节，不按字面 100% 定判据）。
 
 ---
 
@@ -161,7 +161,7 @@
 
 1. **文件个数**：每样本 ≤33 次 NFS open——32 次 64 KiB 读若落在一个常开 fd 上只要 0.33 ms，open 却要 74.3 ms。
 2. **整包 pickle 反序列化**：7 键绑死，读 5.3× 于所需字节。
-3. ~~float64 提升~~——已由前置计划 `v1-dtype-unify-plan.md` 修复，不再属本计划范围。
+3. ~~float64 提升~~——已由前置计划 `0826-dtype-unify-plan.md` 修复，不再属本计划范围。
 4. **每样本新建 ≤32 线程的线程池**（用完即弃）。
 5. **pos_emb 冗余**：纯函数按帧存盘反复读，占必需读量 38%。
 6. **worker 里的 JAX**：每 worker 初始化 8 s、GPU0 上 442 MiB CUDA context（16 workers ≈ 7 GB 显存 + 上下文抢占）。来源是 dataset 模块级导入链（`training/dataset.py → mem_buffer → openpi.shared.image_tools`），**不是 ResizeImages**（后者为 NumPy/PIL CPU 实现，2026-08-26 审计修正归因）。
@@ -286,7 +286,7 @@
 1. **这个 step 取了哪 64 个样本。** 同一迭代器生命周期内，torch 的 index 序列只由 `(len(dataset), seed, batch_size, drop_last, shuffle)` 决定、与 num_workers 无关；跨 epoch 的 num_workers 相关性是 torch 既有语义（见 1.6），恒等链只依赖「新旧链路在相同 num_workers 下序列相同」。重构不换 `TorchDataLoader`、不换 generator、不换 seed 语义，且 `len` 相同（395,289）→ 同 workers 档位下序列逐位不变。
 2. **每个样本选了哪 32 帧。** `even_sampling_indices(step_idx, 32)` 是纯函数、零随机源；新链路 **import 同一个函数**而非重写；`step_idx` 取自 pkl 且与清单推导值互相校验（不一致显式 raise）。
 3. **每帧特征的字节。** 打包库的每一行：写侧与源 npy 逐帧校验 + 写后读回 + part sha256，**g 级身份由独立进程全量 verify（483,291 帧全部与源库对拍）零遗漏钉死**（见 A.2）→ 新链路读进内存的数组与旧链路逐位相同。
-4. **这些字节以什么 dtype 走到 GPU encoder 输入。** 前置计划 `v1-dtype-unify-plan.md` 已把旧链路交付 dtype 统一为 bf16/f32 并完成两块一致性验收（非训练轻量对拍 + 本机 300 步梯度检验）；本计划新链路的 `_pad` 交付完全相同的 dtype 组合——**此环节零变化**。历史论证与实测证据（bf16 精确升位往返无损、`promote_dtype` 使三种交付进 `pos_proj`/`encoder_static` 逐位相同、memory token 输出全等 max 差 0.0）已固化在前置计划 Context 及其留档，此处不再复述。
+4. **这些字节以什么 dtype 走到 GPU encoder 输入。** 前置计划 `0826-dtype-unify-plan.md` 已把旧链路交付 dtype 统一为 bf16/f32 并完成两块一致性验收（非训练轻量对拍 + 本机 300 步梯度检验）；本计划新链路的 `_pad` 交付完全相同的 dtype 组合——**此环节零变化**。历史论证与实测证据（bf16 精确升位往返无损、`promote_dtype` 使三种交付进 `pos_proj`/`encoder_static` 逐位相同、memory token 输出全等 max 差 0.0）已固化在前置计划 Context 及其留档，此处不再复述。
 
 ### 3.2 不靠论证靠梯子：四层验证，每层有硬判据
 
@@ -525,7 +525,7 @@ def __getitem__(self, idx):
 
 ### C.4 （v4 已删除）dtype 正规化验证——整体移入前置计划
 
-v3 的第 3 层（单步定点梯度对拍、300 步 replica vs native、GL b64 100 步抽查、参数化量化降级判据）随拆分整体移入前置计划 `v1-dtype-unify-plan.md`（其 T4/P5/P6）并在该计划内完成验收。量化判据的参数化定义（等价性检验形态：null 对标定 + 包络，原 rel 三档先验阈值 + OLS 趋势已于 2026-08-26 废除重做）以基线计划 `v1-gradient-baseline.md`「量化判据」节为权威版本；本计划 3.4 的兜底评估引用之，但不作为放行依据（见 3.4）。
+v3 的第 3 层（单步定点梯度对拍、300 步 replica vs native、GL b64 100 步抽查、参数化量化降级判据）随拆分整体移入前置计划 `0826-dtype-unify-plan.md`（其 T4/P5/P6）并在该计划内完成验收。量化判据的参数化定义（等价性检验形态：null 对标定 + 包络，原 rel 三档先验阈值 + OLS 趋势已于 2026-08-26 废除重做）以基线计划 `v1-gradient-baseline.md`「量化判据」节为权威版本；本计划 3.4 的兜底评估引用之，但不作为放行依据（见 3.4）。
 
 ### C.5 守卫测试
 
@@ -705,7 +705,7 @@ v3 的第 3 层（单步定点梯度对拍、300 步 replica vs native、GL b64 
 
 ### v3 → v4（2026-08-26，拆分瘦身）
 
-依据：用户拍板将 dtype 双路径问题拆为前置计划 `v1-dtype-unify-plan.md` 先行修复（在旧链路上原地修 `right_padding_token_emb` 三个 `np.zeros` 的 dtype，`shared/**` 红线的函数级例外已获授权），本计划的「重构前基线」随之变为 dtype 统一后的旧链路，A/B 成为单变量。同批拍板：本计划实施前提为前置计划两块正确性验收通过 + 用户拍板（2026-08-26 裁定：dtype 不做性能对比，原「300 步 A/B 顺带产出决策门」作废——正确性 run 的摘要停顿与确定性档污染性能口径；性能对比统一走 speed 链，本计划收官跑 `v1-g2-speed` vs `v1-g0-speed`）；GL 基线数字标注口径不重测；整链方向性目标 GPU 占用 100%（north star，验收阈值不动）；commit V2.1–V2.3 归前置计划、本计划从 V2.4 顺延；前置计划不做 GL 侧验证。
+依据：用户拍板将 dtype 双路径问题拆为前置计划 `0826-dtype-unify-plan.md` 先行修复（在旧链路上原地修 `right_padding_token_emb` 三个 `np.zeros` 的 dtype，`shared/**` 红线的函数级例外已获授权），本计划的「重构前基线」随之变为 dtype 统一后的旧链路，A/B 成为单变量。同批拍板：本计划实施前提为前置计划两块正确性验收通过 + 用户拍板（2026-08-26 裁定：dtype 不做性能对比，原「300 步 A/B 顺带产出决策门」作废——正确性 run 的摘要停顿与确定性档污染性能口径；性能对比统一走 speed 链，本计划收官跑 `v1-g2-speed` vs `v1-g0-speed`）；GL 基线数字标注口径不重测；整链方向性目标 GPU 占用 100%（north star，验收阈值不动）；commit V2.1–V2.3 归前置计划、本计划从 V2.4 顺延；前置计划不做 GL 侧验证。
 
 | 修订 | 落点 |
 |---|---|

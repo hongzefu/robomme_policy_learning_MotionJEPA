@@ -33,7 +33,7 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
 def _epoch_samples(dataset: pathlib.Path) -> int:
-    """epoch 样本数真值源（motion-memory-plan.md 2.8 / R14）：packed 根读 store_meta.num_exec_samples，
+    """epoch 样本数真值源（0901-motion-memory-plan.md 2.8 / R14）：packed 根读 store_meta.num_exec_samples，
     旧 source 根读 stats.execution_samples；两者同时存在却不等、或都读不到即 raise。"""
     vals = {}
     sm = dataset / "meta" / "store_meta.json"

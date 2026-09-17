@@ -1,6 +1,6 @@
 # v1-postclean-g3（G3：v4 破坏性重构正确性长跑）launch
 
-- **目的**：v3 破坏性单一化重构计划（v3-destructive-restructure-plan.md）的终局闸门
+- **目的**：v3 破坏性单一化重构计划（0829-destructive-restructure-plan.md）的终局闸门
   N5——七刀（commitV4.0–V4.6）全部冻结后，从 clean HEAD 以最终两域布局跑 1000 步
   确定性档，离线对拍 G0（G0b r1 固化产物）bitwise。红线：收敛后训练侧交付给模型
   的字节与重构前逐位一致。

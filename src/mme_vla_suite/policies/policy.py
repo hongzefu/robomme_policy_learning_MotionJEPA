@@ -47,7 +47,7 @@ class MME_VLA_Policy:
         self.state_norm_stats = norm_stats['state']
         self.use_quantiles = use_quantiles
 
-        # ── motion memory（motion-memory-plan.md 第二部分三节）：编码句柄（sidecar 客户端 / stub）建在 policy 层、跨 episode 常驻；
+        # ── motion memory（0901-motion-memory-plan.md 第二部分三节）：编码句柄（sidecar 客户端 / stub）建在 policy 层、跨 episode 常驻；
         #    FrameSampMemory 每 episode 随 reset() 销毁重建，只注入引用
         mcfg = getattr(self.config, "motion", None)
         self.motion_enabled = _motion_enabled(self.config)      # 与模型侧同一判定式

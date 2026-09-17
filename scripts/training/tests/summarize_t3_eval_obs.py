@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""T3_EVAL_OBS 汇总（motion-memory-plan.md 四节表二）：合并每侧各分片的 progress.json / log.json 与 server 日志 TIMING 行。
+"""T3_EVAL_OBS 汇总（0901-motion-memory-plan.md 四节表二）：合并每侧各分片的 progress.json / log.json 与 server 日志 TIMING 行。
 
 输入约定（run_t3_eval_obs.sh 分片口径）：
   结果  v1-store/evaluation/motion-t3-<side><suffix>/ckpt999/seed<seed>/{progress.json,log.json}

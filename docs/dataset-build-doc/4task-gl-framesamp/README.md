@@ -1,6 +1,6 @@
 # 4task-gl-framesamp 全量打包构建留档（S4 结果）
 
-对应 `v2-framesamp-restructure-plan.md` 阶段 2 S4；launch 预提交见同目录
+对应 `0827-framesamp-restructure-plan.md` 阶段 2 S4；launch 预提交见同目录
 [`launch.md`](launch.md)（探针 30 抽样原始输出亦在该文件）。**判定：**
 
 ```

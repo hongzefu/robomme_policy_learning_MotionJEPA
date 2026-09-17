@@ -16,7 +16,7 @@ def even_sampling_indices(step_idx: int, token_budget: int) -> list[int]:
         return np.linspace(0, step_idx, token_budget, dtype=np.int32).tolist()
 
 
-# ── motion memory 交错次序（motion-memory-plan.md 3.4 ④′ / 第二部分 2.6）────────────────────
+# ── motion memory 交错次序（0901-motion-memory-plan.md 3.4 ④′ / 第二部分 2.6）────────────────────
 # 训练侧（FrameSampDataset.__getitem__）与在线侧（MME_VLA_Policy._prepare_history）必须 import 同一份本函数
 # （R20：两侧各写一份不会报错，只静默让在线看到与训练不同的次序）。本模块 import 面只有 numpy。
 

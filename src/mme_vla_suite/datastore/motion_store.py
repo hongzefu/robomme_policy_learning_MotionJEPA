@@ -1,6 +1,6 @@
 """motion 离线表：格式常量、motion_index 契约、MotionMeta、只读 MotionStore、起点查表公式。
 
-对应 motion-memory-plan.md 第二部分一节 1.1（离线 motion 表格式契约）。体例照 ``framesamp_store.py``：
+对应 0901-motion-memory-plan.md 第二部分一节 1.1（离线 motion 表格式契约）。体例照 ``framesamp_store.py``：
 本文件是格式层唯一实现——打包工具（scripts/dataset/pack_motion_store.py）、FrameSampDataset（S2）、
 在线侧（S3）与对拍工具一律从这里 import，绝不复制；``framesamp_store.py`` 一字不动（两套索引公式不同，
 帧路按 ``row_of()`` 逐帧、运动路按段内网格，混放会互相污染）。

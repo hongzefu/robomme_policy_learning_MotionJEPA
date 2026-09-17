@@ -1,4 +1,4 @@
-"""`MotionEncoderClient`：policy 进程内的 sidecar 客户端（motion-memory-plan.md 第二部分三节）。
+"""`MotionEncoderClient`：policy 进程内的 sidecar 客户端（0901-motion-memory-plan.md 第二部分三节）。
 
 - 进程：复制 `os.environ` 为 child env，设 `UV_LINK_MODE=copy`、`UV_PROJECT_ENVIRONMENT=$V1_STORE/venvs/wan`、`HF_HOME`、`HF_HUB_OFFLINE=1`、
   `CUDA_VISIBLE_DEVICES=<motion.online_gpu>`；argv 固定 `["uv","run","--project",scripts/dataset/wan,"--no-sync","python",motion_sidecar.py,"--fd",N,...]`

@@ -2,7 +2,7 @@
 
 ## 范围与判据
 
-用户要求“开始实现该计划 有问题提前问用户 越早越好”，并明确“继续工作 忽略huggingface的任务 但是要注意git”。沿用根目录 `v2-4task-h5-merge-plan.md`，先以 `--per-group 2` 选取 14 个任务难度组各两条，共 28 条，跑通物理合并、full 验真、SigLIP、finalize、4×4 与 8×8 打包及跨网格校验。必须取得 `PLAN_OK`、`MERGE_VERIFY=PASS`、`STAGE_DONE stage=siglip`、`FINALIZE_EXIT_CODE=0`、两档 `VERIFY_PACK=PASS` 和跨网格判定。此冒烟预计超过五分钟，因此保留本档案和清洗日志；通过后仅清理本轮新建的两个数据目录。
+用户要求“开始实现该计划 有问题提前问用户 越早越好”，并明确“继续工作 忽略huggingface的任务 但是要注意git”。沿用根目录 `0914-4task-h5-merge-plan.md`，先以 `--per-group 2` 选取 14 个任务难度组各两条，共 28 条，跑通物理合并、full 验真、SigLIP、finalize、4×4 与 8×8 打包及跨网格校验。必须取得 `PLAN_OK`、`MERGE_VERIFY=PASS`、`STAGE_DONE stage=siglip`、`FINALIZE_EXIT_CODE=0`、两档 `VERIFY_PACK=PASS` 和跨网格判定。此冒烟预计超过五分钟，因此保留本档案和清洗日志；通过后仅清理本轮新建的两个数据目录。
 
 ## 版本与环境
 
