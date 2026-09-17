@@ -470,6 +470,7 @@ def _install_batch_digest_recorder(record_dir: pathlib.Path, interval: int,
                     return
                 try:
                     batch = next(data_iter)
+                    batch = getattr(_openpi_dl, "_from_shared_torch", lambda b: b)(batch)
                 except StopIteration:
                     break
                 idx = num_items

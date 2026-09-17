@@ -8,6 +8,7 @@ import time
 
 import jax
 import jax.numpy as jnp
+import ml_dtypes
 import numpy as np
 import torch
 
@@ -442,7 +443,7 @@ class TorchDataLoader:
             num_workers=num_workers,
             multiprocessing_context=mp_context,
             persistent_workers=num_workers > 0,
-            collate_fn=_collate_fn,
+            collate_fn=_collate_fn_shm,
             worker_init_fn=_worker_init_fn,
             drop_last=True,
             generator=generator,
@@ -461,6 +462,7 @@ class TorchDataLoader:
                     return
                 try:
                     batch = next(data_iter)
+                    batch = _from_shared_torch(batch)
                 except StopIteration:
                     break  # We've exhausted the dataset. Create a new iterator and start over.
                 num_items += 1
@@ -476,6 +478,38 @@ def _collate_fn(items):
     # Make sure to convert to numpy arrays before stacking since some of the incoming elements
     # may be JAX arrays.
     return jax.tree.map(lambda *xs: np.stack([np.asarray(x) for x in xs], axis=0), *items)
+
+
+def _to_shared_torch(batch):
+    """worker 侧转为零拷贝 tensor 视图，让 DataLoader 队列通过共享内存传递。
+
+    numpy 的 bf16 先按 uint16 查看，再还原 torch bf16；全程保持位模式。
+    """
+    def convert(x):
+        if x is None:
+            return None
+        x = np.asarray(x)
+        if x.dtype == ml_dtypes.bfloat16:
+            return torch.from_numpy(x.view(np.uint16)).view(torch.bfloat16)
+        return torch.from_numpy(x)
+
+    return jax.tree.map(convert, batch, is_leaf=lambda x: x is None)
+
+
+def _from_shared_torch(batch):
+    """主进程还原共享内存上的 numpy 视图，bf16 反向查看且不改字节。"""
+    def convert(t):
+        if t is None:
+            return None
+        if t.dtype == torch.bfloat16:
+            return t.view(torch.uint16).numpy().view(ml_dtypes.bfloat16)
+        return t.numpy()
+
+    return jax.tree.map(convert, batch, is_leaf=lambda x: x is None)
+
+
+def _collate_fn_shm(items):
+    return _to_shared_torch(_collate_fn(items))
 
 
 def _worker_init_fn(worker_id: int) -> None:
