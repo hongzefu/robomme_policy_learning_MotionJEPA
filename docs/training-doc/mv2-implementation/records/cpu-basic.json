@@ -1,0 +1,39 @@
+{
+  "lr": {
+    "steps": 80000,
+    "sha256": "2b55e282c58951c2021bad79b549584aa9bd754969811077be4ea0e787fa9041"
+  },
+  "rope": {
+    "seed": 42,
+    "dtype": "float32",
+    "heads": 4,
+    "head_dim": 256,
+    "real_keys_budget_pair": 600,
+    "real_keys_baseline_pair": 400,
+    "tv_144_160": 0.3375600576400757,
+    "relL2_144_160": 0.7787887454032898,
+    "tv_512_672": 0.43331748247146606,
+    "pad_content_diff": 0,
+    "tv_without_rope": 3.5428843858653636e-08,
+    "tv_without_padding_positions": 3.446911733817615e-08
+  },
+  "policy": {
+    "keys": [
+      "budget",
+      "demo_min_real_frames",
+      "demo_tail_pad",
+      "dim",
+      "frame_size",
+      "grid_origin",
+      "pos_dim",
+      "stride",
+      "window_direction",
+      "window_frames"
+    ],
+    "budget": 160,
+    "episodes": [
+      17,
+      114
+    ]
+  }
+}

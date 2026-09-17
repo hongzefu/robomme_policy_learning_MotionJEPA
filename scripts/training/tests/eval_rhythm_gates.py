@@ -87,8 +87,7 @@ DEF_LIB = "v1-store/datasets/4task-motion-400ep"
 
 
 def _new_mem() -> FrameSampMemory:
-    return FrameSampMemory(token_per_image=G.TOKEN_PER_IMAGE, vision_enc_fn=G._dummy_vision_enc, motion_enc_fn=G._stub_enc_local,
-                           motion_cfg=G.MOTION_CFG)
+    return G._new_memory()
 
 
 def _reset(pol, mem) -> None:
@@ -309,12 +308,12 @@ def gate_termination(cases, rec: dict) -> tuple[str, bool]:
 
 # ── 判定 3：TAU_LONG ────────────────────────────────────────────────────────
 
-def gate_tau_long(rec: dict) -> tuple[str, bool]:
+def gate_tau_long(rec: dict, *, max_es: int = 216) -> tuple[str, bool]:
     mem = _new_mem()
     pol = G._bare_policy(mem)
     fails: list[str] = []
     rows: list[dict] = []
-    for es in (0, 216):                                    # 0 = Button 系；216 = 真实四任务最大 demo 段
+    for es in (0, max_es):                                 # 零 demo 边界与当前真实清单最大 demo 段。
         t_big = es + MAX_STEPS + 400
         _reset(pol, mem)
         entry = G._entry(es, t_big)
@@ -378,8 +377,21 @@ def _k_and_raise(mem: FrameSampMemory, es: int, tau: int) -> tuple[int, bool]:
         return len(frames), True
 
 
+def predict_k(es: int, tau: int, *, demo_min_real: int | None = None) -> int:
+    """独立窗口公式；demo 使用显式契约，exec 保持 33 帧。"""
+    minimum = int(G.MOTION_CFG.get("demo_min_real_frames", 33)) if demo_min_real is None else demo_min_real
+    demo = (es-minimum)//16+1 if es >= minimum else 0
+    execution = (tau-es-32)//16+1 if tau-es >= 32 else 0
+    return demo + execution
+
+
 def gate_es_boundary(real_es: list[int], rec: dict) -> tuple[str, bool]:
-    lo, hi = 200, 320
+    minimum = int(G.MOTION_CFG.get("demo_min_real_frames", 33))
+    boundary = minimum + 16*(BUDGET-80)
+    if BUDGET < 80:
+        raise ValueError("预算小于 1300 步对应的 exec 窗口数")
+    before, after = boundary-1, boundary
+    lo, hi = max(0, boundary-17), boundary+16
     mem = _new_mem()
     fails: list[str] = []
 
@@ -391,24 +403,19 @@ def gate_es_boundary(real_es: list[int], rec: dict) -> tuple[str, bool]:
         if raised and first_raise is None:
             first_raise = es
 
-    # 独立预测：demo 段可见窗数 ⌊(es−33)/16⌋+1（es ≥ 33）＋ exec 段在 τ=es+1296 处的 80 个 > budget
-    def predict_k(es: int, tau: int) -> int:
-        demo = ((es - 33) // 16 + 1) if es >= 33 else 0
-        ex = ((tau - es - 32) // 16 + 1) if tau - es >= 32 else 0
-        return demo + ex
     predicted = next((es for es in range(lo, hi) if predict_k(es, es + 1296) > BUDGET), None)
-    if first_raise != predicted:
+    if predicted is None or first_raise != predicted:
         fails.append(f"实测首个撞 budget 的 es={first_raise} != 公式预测 {predicted}")
-    k288 = next(r["k"] for r in scan if r["es"] == 288)
-    k289 = next(r["k"] for r in scan if r["es"] == 289)
-    if k288 > BUDGET or k289 <= BUDGET:
-        fails.append(f"边界两侧不符：k_at_288={k288}（应 ≤ {BUDGET}）k_at_289={k289}（应 > {BUDGET}）")
+    k_before = next(r["k"] for r in scan if r["es"] == before)
+    k_after = next(r["k"] for r in scan if r["es"] == after)
+    if k_before > BUDGET or k_after <= BUDGET:
+        fails.append(f"边界两侧不符：es={before} k={k_before}（应 ≤ {BUDGET}），es={after} k={k_after}（应 > {BUDGET}）")
 
-    # 边界两侧各跑一遍完整 eval 控制流（真编码、真装配），确认 288 不 raise、289 在最晚时刻 raise
+    # 边界两侧各跑完整 eval 控制流；新契约对应 1296 / 1297，历史契约仍对应 288 / 289。
     mem_full = _new_mem()
     pol = G._bare_policy(mem_full)
     full: list[dict] = []
-    for es in (288, 289):
+    for es in (before, after):
         _reset(pol, mem_full)
         t_big = es + MAX_STEPS + 400
         entry = G._entry(es, t_big)
@@ -425,11 +432,11 @@ def gate_es_boundary(real_es: list[int], rec: dict) -> tuple[str, bool]:
         full.append({"es": es, "raise": int(raised_at is not None), "raise_at_tau": raised_at,
                      "points": len(sink), "k_last": sink[-1]["k"] if sink else None, "msg": msg[:200]})
     if full[0]["raise"]:
-        fails.append(f"es=288 完整驱动竟 raise: {full[0]['msg']}")
+        fails.append(f"es={before} 完整驱动竟 raise: {full[0]['msg']}")
     if not full[1]["raise"]:
-        fails.append("es=289 完整驱动未 raise（budget 闸没拦住）")
-    elif full[1]["raise_at_tau"] != 289 + 1296:
-        fails.append(f"es=289 raise 发生在 τ={full[1]['raise_at_tau']}，预期最晚决策时刻 {289 + 1296}")
+        fails.append(f"es={after} 完整驱动未 raise（budget 闸没拦住）")
+    elif full[1]["raise_at_tau"] != after + 1296:
+        fails.append(f"es={after} raise 发生在 τ={full[1]['raise_at_tau']}，预期 {after + 1296}")
 
     # 真实四任务的 es 取值与其在最晚决策时刻的 k
     real = [{"es": es, "k": _k_and_raise(mem, es, es + 1296)[0]} for es in sorted(real_es)]
@@ -440,14 +447,14 @@ def gate_es_boundary(real_es: list[int], rec: dict) -> tuple[str, bool]:
 
     ok = not fails
     rec["es_boundary"] = {"scanned": [lo, hi], "first_raise_es": first_raise, "predicted": predicted,
-                          "k_at_288": k288, "k_at_289": k289, "full_drive": full,
+                          "before_es": before, "after_es": after, "k_before": k_before, "k_after": k_after, "full_drive": full,
                           "real": real, "real_max_k": real_max_k, "margin_windows": margin,
                           "budget": BUDGET, "fails": fails}
-    print(f"  完整驱动：es=288 raise={full[0]['raise']} 点数={full[0]['points']} k_last={full[0]['k_last']} | "
-          f"es=289 raise={full[1]['raise']} @τ={full[1]['raise_at_tau']} 点数={full[1]['points']}")
+    print(f"  完整驱动：es={before} raise={full[0]['raise']} 点数={full[0]['points']} k_last={full[0]['k_last']} | "
+          f"es={after} raise={full[1]['raise']} @τ={full[1]['raise_at_tau']} 点数={full[1]['points']}")
     print(f"  真实 es → 最晚决策时刻 k: " + " ".join(f"{r['es']}:{r['k']}" for r in real))
     line = (f"ES_BOUNDARY={'PASS' if ok else 'FAIL'} scanned=[{lo},{hi}) first_raise_es={first_raise} "
-            f"predicted={predicted} k_at_288={k288} k_at_289={k289} "
+            f"predicted={predicted} k_at_{before}={k_before} k_at_{after}={k_after} "
             f"real_es_values=[{','.join(str(r['es']) for r in real)}] real_max_k={real_max_k} "
             f"margin_windows={margin}")
     if fails:
@@ -477,8 +484,13 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="TIC 节奏层闸门（CPU + stub）")
     ap.add_argument("--gate", default="all", choices=["all", "rhythm", "term", "taulong", "esbound"])
     ap.add_argument("--lib", default=DEF_LIB, help="取真实 es / T 取值的库根")
+    ap.add_argument("--yaml", default="perceptual-framesamp-modul-8frame-8x8-motion.yaml")
     ap.add_argument("--out", default="", help="判定明细 JSON 落点（可选）")
     args = ap.parse_args()
+    global BUDGET
+    G.configure(args.yaml)
+    BUDGET = int(G.MOTION_CFG["budget"])
+    print(f"RHYTHM_CONFIG yaml={args.yaml} budget={BUDGET}", flush=True)
 
     lib = pathlib.Path(args.lib)
     if not lib.is_absolute():
@@ -487,7 +499,7 @@ def main() -> int:
     real_es = [c[0] for c in cases]
     print(f"真实样本（每个 demo 段长度取最长一条）: " + " ".join(f"es={a} T={b} {c}" for a, b, c in cases))
 
-    rec: dict = {"schema": "tic-rhythm-v1", "lib": str(lib),
+    rec: dict = {"schema": "tic-rhythm-v2", "lib": str(lib), "yaml": args.yaml, "budget": BUDGET,
                  "real_cases": [{"es": a, "t_env": b, "tag": c} for a, b, c in cases]}
     lines: list[str] = []
     results: list[bool] = []
@@ -509,7 +521,7 @@ def main() -> int:
     if "term" in sel:
         run("EVAL_TERMINATION", lambda: gate_termination(cases, rec))
     if "taulong" in sel:
-        run("TAU_LONG", lambda: gate_tau_long(rec))
+        run("TAU_LONG", lambda: gate_tau_long(rec, max_es=max(real_es)))
     if "esbound" in sel:
         run("ES_BOUNDARY", lambda: gate_es_boundary(real_es, rec))
 

@@ -1,6 +1,6 @@
 # 新库 motion 表构建 + modulation 8×8 接入 motion 计划（v2-motion）
 
-> **状态：方案已固化，全部口径经用户拍板，`run_name` 待确认；未实施。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
+> **状态：实施中：步骤 2b 已落地并完成工作区短测，run_name 已确认；两项验证执行方式待用户裁决。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
 >
 > **第一部分只讲做什么、为什么、哪些不变**；命令、判定行、代码锚点、推导与数字出处全部在第二部分（A–H 按模块，I 节收第一部分精简时移出的细节）。正本 `docs/motion-memory.md` 是 context 口径，本文只写与其不同的部分，实施后另立 `docs:` 更新正本。
 
@@ -42,6 +42,10 @@
 ---
 
 ## 第一部分（给人看）
+
+**实施进度（09-17）**：步骤 2b 的生产及验证代码已完成首轮实现，87 项 CPU 自动测试通过；CPU 初态真调用 `init_train_state` 完成 61 个公共参数叶逐位比较，仅增加 4 个 motion 叶，耗时 116.4 秒。新旧布局读取、真实 H5 补帧、独立抽样删行负例、跨集 reset、GPU 计时及比较器错误 token/符号零负例均已验证。详见 [实施短测记录](docs/training-doc/mv2-implementation/result.md)。接下来分别提交生产链路与验证工具，再从 clean CAND 取 V1/V2/V6/V7 候选证据。
+
+**两项新增待裁决事项**：CPU `PosEmb3D` 与离线 GPU 表存在真实浮点差异，GPU 则对新旧两张整表逐位相同；因此 V-online 的 CPU 位置编码口径需用户选择“预生成并校验 GPU 表后供 CPU 使用”或“主进程也使用 GPU”。此外，真实 EnvRunner 的 RGB reset 使用 GPU 渲染，仿真运行环境是已在位的 robomme 环境，已询问单卡渲染与逐任务隔离执行。两项都不降低判据，未把未答复当作同意；不影响先完成关闭态候选对拍。
 
 ### 这轮做什么
 

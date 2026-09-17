@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import importlib.util
+import json
 import os
 import pathlib
 import subprocess
@@ -75,7 +76,34 @@ def cli_value(argv: list[str], flag: str):
     return None
 
 
+def check_motion_store(a, dataset_path: pathlib.Path, v1: pathlib.Path) -> None:
+    """motion 期望值来自 runner；路径同时与帧库的同级目录交叉核对。"""
+    root = pathlib.Path(a.motion_store)
+    expected_root = dataset_path.resolve().parent / "motion"
+    path_ok = (root.is_absolute() and root.is_dir() and not root.is_symlink()
+               and root.resolve() == expected_root and under(v1.resolve(), root.resolve()))
+    check("MOTION_STORE_PATH", "motion 数据", path_ok, expected_root, root)
+    meta_path = root / "meta/store_meta.json"
+    meta = {}
+    try:
+        meta = json.loads(meta_path.read_text())
+        if not isinstance(meta, dict):
+            meta = {}
+    except (OSError, ValueError):
+        pass
+    got_sha = sha256_file(meta_path) if meta_path.is_file() else "<缺文件>"
+    check("MOTION_STORE_META_SHA256", "motion 数据", got_sha == a.motion_store_meta_sha256,
+          a.motion_store_meta_sha256, got_sha)
+    check("MOTION_LAYOUT", "motion 数据", meta.get("layout") == a.motion_layout,
+          a.motion_layout, meta.get("layout"))
+    check("MOTION_ROWS", "motion 数据", type(meta.get("num_rows")) is int and meta["num_rows"] == a.motion_rows,
+          a.motion_rows, meta.get("num_rows"))
+    check("MOTION_ENV_UNSET", "motion 数据", "MMEVLA_MOTION_STORE" not in os.environ,
+          "未设置", os.environ.get("MMEVLA_MOTION_STORE", "<未设置>"))
+
+
 def main() -> int:
+    _RESULTS.clear()
     raw = sys.argv[1:]
     train_argv: list[str] = []
     if "--" in raw:
@@ -94,9 +122,16 @@ def main() -> int:
     ap.add_argument("--norm-stats-sha256", required=True)
     ap.add_argument("--dataset-path", required=True)
     ap.add_argument("--run-root", default=None, help="checkpoint run 根；存在即 FAIL")
+    ap.add_argument("--motion-store")
+    ap.add_argument("--motion-store-meta-sha256")
+    ap.add_argument("--motion-layout")
+    ap.add_argument("--motion-rows", type=int)
     ap.add_argument("--train-script", default="scripts/training/train.py",
                     help="按 cwd 相对解析，与 runner 里交给 python 的那条路径逐字相同")
     a = ap.parse_args(raw)
+    motion_args = (a.motion_store, a.motion_store_meta_sha256, a.motion_layout, a.motion_rows)
+    if any(x is not None for x in motion_args) and not all(x is not None for x in motion_args):
+        ap.error("四个 --motion-* 期望值参数必须一起提供")
     if a.bench_copy != (a.v1_store_realpath is not None):
         ap.error("--bench-copy 与 --v1-store-realpath 必须同时提供")
 
@@ -230,6 +265,9 @@ def main() -> int:
         rr = pathlib.Path(a.run_root)
         check("RUN_ROOT_ABSENT", "留档", not rr.exists(), f"{rr} 不存在",
               "存在" if rr.exists() else "不存在")
+
+    if a.motion_store is not None:
+        check_motion_store(a, ds, v1)
 
     failed = [n for n, ok in _RESULTS if not ok]
     if failed:

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """motion memory S2 开启态正确性闸 M1–M5（0901-motion-memory-plan.md 第一部分 5.3 / 第二部分四节表一、五节）。
 
-全部在本机 CPU 跑（`JAX_PLATFORMS=cpu`），不需要训练 checkpoint；M3 / M4 用 gemma `dummy` 变体随机初始化的 HistoryPi0。
+数据与公式档可在 CPU 跑；context M3/M4 保留 dummy 对照。modulation M3/M4 须显式设
+`JAX_PLATFORMS=cuda`，采用真实 pi05 配置、1024 维 memory 与 18 层 action expert，
+仅 VLM 主干替换为用户确认的 gemma_150m；不加载训练 checkpoint。
 
   --gate m1   数据端交付：脚本内独立 oracle（直读 motion_index.json / motion 表 / pos 表 / 清单，不 import 被测 dataset / store / sampling
               的公式）按公式重算每个样本的 motion_emb / motion_pos / motion_mask / mem_order，与 FrameSampDataset.__getitem__ 逐位；
@@ -14,10 +16,9 @@
   --gate m3   新层与重排：帧路输出两态逐位；运动路两层按生产 bf16 语义用独立 jax.lax.dot_general 复算逐位（另报 ULP）；
               padding 行两两逐位；gather 对 20 个随机置换 vs np.take_along_axis 逐位；三种坏 mem_order 必 raise；参数命名与分组。
               判定行 MOTION_ENC=PASS、MEM_GATHER=PASS
-  --gate m4   mask 正确性：三样本定点 batch（k=6,m=0 / k=32,m=11 / k=32,m=96）：(a) 补位塞垃圾 loss 与动作逐位不变；
-              (b) 输入梯度补位为零、真位非零，参数梯度全空 batch 为零；(c) 并列序 vs 交错 loss 必变；(d) 真行置换 + 重算 mem_order loss 逐位；
-              (e) 关闭态参数拷入开启态，m=0 样本 |Δloss| ≤ 1e-4·|loss| 且 ≤ 1% × (c) 的差。
-              判定行 MASK_INVARIANCE / GRAD_LEAK / ORDER_EFFECT / ZERO_MOTION_EQUIV
+  --gate m4   四类样本：合成零 motion、真实中位、真实最大与合成满 budget。先做至少三次确定性探针，
+              再核 padding 对 loss、动作及全部可训练梯度的影响；核真实内容作用、梯度泄漏与行置换。
+              modulation 不声称全遮等价于关闭态，明确输出 LEN_EQUIV_NA（query 的 RoPE 位置随记忆长度改变）。
   --gate m5   搬运环节：spec / observation / preprocess / Repack / 双 store 同源 正向全链透传；负向：坏 mem_order、缺键、spec 与开关不一致、
               stride / window / direction / origin / frame_size 错、未 verified、换入另一合法 store、只篡改 index、resolved sha 错、
               motion checkpoint extra / missing——每种都必须在训练或评估前 raise。判定行 MOTION_PLUMBING=PASS
@@ -61,6 +62,9 @@ STORE_SUBDIR = "framesamp"
 TOKENS_PER_FRAME = 16
 FRAME_BUDGET = 32
 MOTION_BUDGET = 96
+DEMO_MIN_REAL = 33
+PALIGEMMA_VARIANT = "gemma_150m"
+ACTION_EXPERT_VARIANT = "gemma_300m"
 POS_DIM = 256
 
 
@@ -75,14 +79,16 @@ def oracle_even_indices(step: int, budget: int) -> list[int]:
     return np.linspace(0, step, budget, dtype=np.int32).tolist()
 
 
-def oracle_visible(entry: dict, t: int, stride: int = 16, window: int = 33) -> list[tuple[int, int]]:
+def oracle_visible(entry: dict, t: int, stride: int = 16, window: int = 33,
+                   demo_min_real: int | None = None) -> list[tuple[int, int]]:
     """(row, f) 按 f 升序：demo s=stride·m 满足 s+window−1 ≤ es−1；exec u=stride·m 满足 u+window−1 ≤ t−es。"""
     es = int(entry["exec_start_idx"])
+    minimum = entry.get("_demo_min_real", DEMO_MIN_REAL) if demo_min_real is None else demo_min_real
     out = []
     d, x = entry["demo"], entry["exec"]
     for m in range(int(d["num_grid"])):
         s = stride * m
-        if s + window - 1 <= es - 1:
+        if s + minimum - 1 <= es - 1:
             out.append((int(d["row_base"]) + m, s))
     for m in range(int(x["num_grid"])):
         u = stride * m
@@ -104,8 +110,9 @@ def oracle_mem_order(frame_times: list[int], motion_times: list[int], tokens_per
     return np.array([i[2] for i in sorted(items)], dtype=np.int32)
 
 
-def oracle_sample(entry: dict, t: int, table: np.ndarray, pos_table: np.ndarray, budget: int = MOTION_BUDGET,
+def oracle_sample(entry: dict, t: int, table: np.ndarray, pos_table: np.ndarray, budget: int | None = None,
                   pos_dim: int = POS_DIM) -> dict:
+    budget = MOTION_BUDGET if budget is None else budget
     vis = oracle_visible(entry, t)
     k = len(vis)
     if k > budget:
@@ -128,6 +135,8 @@ def oracle_sample(entry: dict, t: int, table: np.ndarray, pos_table: np.ndarray,
 
 def load_lib_oracle(lib: pathlib.Path, store_subdir=None):
     index = json.loads((lib / "motion" / "meta" / "motion_index.json").read_text(encoding="utf-8"))
+    for entry in index["entries"]:
+        entry["_demo_min_real"] = int(index.get("demo_min_real_frames", 33))
     table = np.fromfile(lib / "motion" / "motion_token.f32.bin", dtype=np.float32).reshape(-1, 768)
     from mme_vla_suite.datastore.framesamp_store import StoreMeta
     root = lib / (store_subdir or STORE_SUBDIR)
@@ -157,7 +166,8 @@ def manifest_expected_k(lib: pathlib.Path, stride: int = 16, window: int = 33) -
     if int(idx_meta["grid_stride"]) != stride or int(idx_meta["window_frames"]) != window:
         raise SystemExit(f"库网格口径 stride={idx_meta['grid_stride']} window={idx_meta['window_frames']} "
                          f"与期望侧 {stride}/{window} 不符")
-    ks: list[int] = []
+    minimum = int(idx_meta.get("demo_min_real_frames", 33))
+    ks = []
     cursor = 0
     for g, e in enumerate(manifest["episodes"]):
         nt = int(e["num_timesteps"]); es = int(e["exec_start_idx"]); ns = int(e["exec_samples"])
@@ -165,11 +175,12 @@ def manifest_expected_k(lib: pathlib.Path, stride: int = 16, window: int = 33) -
             raise SystemExit(f"清单 episode {g} 的 exec_sample_offset={e['exec_sample_offset']} 与前缀和 {cursor} 不符")
         if es + ns != nt:
             raise SystemExit(f"清单 episode {g}: exec_start_idx+exec_samples={es + ns} != num_timesteps={nt}")
-        entry, _ = _synthetic_entry(g, nt, es, 0, stride, window)
-        for t in range(es, nt):
-            ks.append(len(oracle_visible(entry, t, stride, window)))
+        # 清单独立公式，按 episode 向量化，避免逐样本再遍历全部窗口。
+        demo = len(range(0, max(0, es-minimum+1), stride))
+        delta = np.arange(ns, dtype=np.int64)
+        ks.append(demo + np.where(delta >= window-1, (delta-(window-1)) // stride + 1, 0))
         cursor += ns
-    return np.array(ks, np.int64)
+    return np.concatenate(ks) if ks else np.zeros(0, np.int64)
 
 
 def k_stats(ks: np.ndarray) -> dict:
@@ -207,11 +218,14 @@ def _bytes_equal(a, b) -> bool:
 # M1
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _synthetic_entry(g: int, nt: int, es: int, row_cursor: int, stride=16, window=33) -> tuple[dict, int]:
-    def seg(L):
-        nc = max(0, L - (window - 1)); ng = len(range(0, nc, stride)); return nc, ng
-    dnc, dng = seg(es); xnc, xng = seg(nt - es)
+def _synthetic_entry(g: int, nt: int, es: int, row_cursor: int, stride=16, window=33,
+                     demo_min_real: int | None = None) -> tuple[dict, int]:
+    minimum = DEMO_MIN_REAL if demo_min_real is None else demo_min_real
+    def seg(L, mr):
+        nc = max(0, L - (mr - 1)); ng = len(range(0, nc, stride)); return nc, ng
+    dnc, dng = seg(es, minimum); xnc, xng = seg(nt - es, window)
     e = {"g": g, "h5_file": "record_dataset_T.h5", "raw_ep_idx": g, "num_timesteps": nt, "exec_start_idx": es,
+         "_demo_min_real": minimum,
          "demo": {"row_base": row_cursor if dng else None, "num_grid": dng, "num_chunks": dnc, "seg_len": es},
          "exec": {"row_base": row_cursor + dng if xng else None, "num_grid": xng, "num_chunks": xnc, "seg_len": nt - es}}
     return e, row_cursor + dng + xng
@@ -228,7 +242,8 @@ def m1_helper_layer() -> tuple[int, int]:
     for g, (nt, es) in enumerate(specs):
         e, cursor = _synthetic_entry(g, nt, es, cursor)
         entries.append(e)
-    parsed = ms.parse_index({"schema": 1, "layout": ms.LAYOUT, "grid_stride": 16, "window_frames": 33,
+    layout = "motion-768-grid16-v1" if DEMO_MIN_REAL == 33 else "motion-768-grid16-demopad17-v1"
+    parsed = ms.parse_index({"schema": 1, "layout": layout, **ms.LAYOUT_SPECS[layout].fields(), "grid_stride": 16, "window_frames": 33,
                              "grid_origin": "segment_start", "window_direction": "forward", "truncation_policy": "none",
                              "entries": entries, "totals": {"rows": cursor, "exec_rows": sum(e["exec"]["num_grid"] for e in entries),
                                                             "demo_rows": sum(e["demo"]["num_grid"] for e in entries)}})
@@ -250,9 +265,9 @@ def m1_helper_layer() -> tuple[int, int]:
     # mem_order 对合成时刻与 oracle 逐位
     rng = random.Random(1)
     for _ in range(200):
-        n = rng.randint(0, 32); m = rng.randint(0, 96)
-        ft = sorted(rng.sample(range(0, 600), n)) + [SENTINEL] * (32 - n)
-        mt = sorted(rng.sample(range(0, 600), m)) + [SENTINEL] * (96 - m)
+        n = rng.randint(0, FRAME_BUDGET); m = rng.randint(0, MOTION_BUDGET)
+        ft = sorted(rng.sample(range(0, 600), n)) + [SENTINEL] * (FRAME_BUDGET - n)
+        mt = sorted(rng.sample(range(0, 600), m)) + [SENTINEL] * (MOTION_BUDGET - m)
         checked += 1
         if not np.array_equal(memory_order(np.array(ft), TOKENS_PER_FRAME, np.array(mt)), oracle_mem_order(ft, mt)):
             bad += 1
@@ -365,29 +380,29 @@ def cmd_m2(args):
     bad = 0
     N = 10000
     for i in range(N):
-        n = rng.randint(0, 32); m = rng.randint(0, 96)
+        n = rng.randint(0, FRAME_BUDGET); m = rng.randint(0, MOTION_BUDGET)
         step = rng.randint(0, 1200)
-        fr = oracle_even_indices(step, 32)[:n] if rng.random() < 0.5 else sorted(rng.sample(range(0, 1300), n))  # 含 linspace 重复值
-        ft = list(fr) + [MEM_ORDER_SENTINEL] * (32 - len(fr))
+        fr = oracle_even_indices(step, FRAME_BUDGET)[:n] if rng.random() < 0.5 else sorted(rng.sample(range(0, 1300), n))
+        ft = list(fr) + [MEM_ORDER_SENTINEL] * (FRAME_BUDGET - len(fr))
         if rng.random() < 0.5 and fr:
             mt = sorted(set(rng.choices(fr, k=min(m, len(fr))) + rng.sample(range(0, 1300), max(0, m - len(fr)))))[:m]
         else:
             mt = sorted(rng.sample(range(0, 1300), m))
-        mt = mt + [MEM_ORDER_SENTINEL] * (96 - len(mt))
-        got = memory_order(np.array(ft), 16, np.array(mt))
+        mt = mt + [MEM_ORDER_SENTINEL] * (MOTION_BUDGET - len(mt))
+        got = memory_order(np.array(ft), TOKENS_PER_FRAME, np.array(mt))
         exp = oracle_mem_order(ft, mt)
         if not np.array_equal(got, exp):
             bad += 1; continue
         # 五条性质
-        n_valid = 16 * len(fr) + (96 - mt.count(MEM_ORDER_SENTINEL))
-        if not np.array_equal(np.sort(got), np.arange(608)):
+        n_valid = TOKENS_PER_FRAME * len(fr) + (MOTION_BUDGET - mt.count(MEM_ORDER_SENTINEL))
+        if not np.array_equal(np.sort(got), np.arange(512 + MOTION_BUDGET)):
             bad += 1; continue
-        valid_positions = set(range(16 * len(fr))) | set(512 + j for j in range(96) if mt[j] != MEM_ORDER_SENTINEL)
+        valid_positions = set(range(TOKENS_PER_FRAME * len(fr))) | set(512 + j for j in range(MOTION_BUDGET) if mt[j] != MEM_ORDER_SENTINEL)
         if set(got[:n_valid].tolist()) != valid_positions:
             bad += 1; continue                                    # 真 token 占前 16k+m 位
         for f_i in range(len(fr)):                                # 同帧 16 位连续升序
-            where = [p for p, v in enumerate(got) if 16 * f_i <= v < 16 * (f_i + 1)]
-            if where != list(range(where[0], where[0] + 16)):
+            where = [p for p, v in enumerate(got) if TOKENS_PER_FRAME * f_i <= v < TOKENS_PER_FRAME * (f_i + 1)]
+            if where != list(range(where[0], where[0] + TOKENS_PER_FRAME)):
                 bad += 1; break
         # 同刻帧在 motion 前；padding 帧路在前
         keyed = [(ft[v // 16], 0) if v < 512 else (mt[v - 512], 1) for v in got]
@@ -410,51 +425,73 @@ def cmd_m2(args):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _make_models(seed: int = 0):
-    """CPU 上用 gemma dummy 变体（宽度 64）随机初始化开 / 关两态 HistoryPi0。
-
-    dummy 主干宽度 64 ≠ 生产的 2048，所以模型侧 memory_token_dim 同步改成 64（只影响 encoder_static / motion_encoder_static
-    的输出维；数据侧仍按生产 YAML 交付）。M3 的运动路 bf16 复算与 M4 的 mask 性质都不依赖具体宽度。
-    """
+    """context 沿用 CPU dummy；modulation 继承真实训练配置，仅替换指定的 VLM 变体。"""
     import jax
     from openpi.models import gemma as _gemma
     from mme_vla_suite.models.integration.history_pi0 import HistoryPi0Config
-    width = int(_gemma.get_config("dummy").width)
     def cfg(name):
         hc = _load_yaml(name)
-        hc.memory_token_dim = width
+        modulation = hc.integration_type == "modulation"
+        if modulation:
+            from mme_vla_suite.training.config import get_config
+            return dataclasses.replace(get_config("mme_vla_suite_b128_80k").model,
+                                       history_config=hc, paligemma_variant=PALIGEMMA_VARIANT,
+                                       action_expert_variant=ACTION_EXPERT_VARIANT)
+        if not modulation:
+            hc.memory_token_dim = int(_gemma.get_config("dummy").width)
         return HistoryPi0Config(use_history=True, history_config=hc, dtype="bfloat16", action_horizon=20,
-                                paligemma_variant="dummy", action_expert_variant="dummy")
+                                paligemma_variant=PALIGEMMA_VARIANT if modulation else "dummy",
+                                action_expert_variant=ACTION_EXPERT_VARIANT if modulation else "dummy")
     c_open, c_closed = cfg(OPEN_YAML), cfg(CLOSED_YAML)
     return c_open, c_open.create(jax.random.key(seed)), c_closed, c_closed.create(jax.random.key(seed))
 
 
 def _fixture_batch(lib: pathlib.Path, ds, specs):
-    """按 (k 帧数, m motion 数) 从真实库挑样本：k=6 → t=5 的样本；k=32,m=11 → 某 t 使可见 11；k=32,m=96 → 人造满 96。"""
-    index, table, pos_table, manifest = load_lib_oracle(lib)
-    eps = manifest["episodes"]
-    starts = [e["exec_sample_offset"] for e in eps]
-    chosen = []
+    """中位与最大来自真库；零 motion 与满 budget 按需要合成，并保留时刻供置换对拍。"""
+    from mme_vla_suite.shared.sampling import memory_order, pad_times
+    ks = manifest_expected_k(lib)
+    frame_counts = np.minimum(ds._step_of + 1, FRAME_BUDGET)
+    manifest = json.loads((lib / "meta/episode_manifest.json").read_text())
+    chosen, samples = [], []
     for want_k, want_m in specs:
-        found = None
-        best = (-1, None)
-        for g, e in enumerate(eps):
-            for t in range(e["exec_start_idx"], e["num_timesteps"]):
-                k = min(t + 1, 32)
-                m = len(oracle_visible(index["entries"][g], t))
-                idx = starts[g] + (t - e["exec_start_idx"])
-                if want_m == "max":
-                    if k == want_k and m > best[0]:
-                        best = (m, idx)
-                elif k == want_k and m == want_m:
-                    found = idx; break
-            if found is not None:
-                break
-        if want_m == "max":
-            found = best[1]
-        if found is None:
+        candidates = np.flatnonzero(frame_counts == want_k)
+        if not len(candidates):
             raise SystemExit(f"库里找不到 k={want_k} m={want_m} 的样本")
+        if want_m in ("max", "full"):
+            found = int(candidates[np.argmax(ks[candidates])])
+        else:
+            target = int(np.median(ks[candidates])) if want_m == "median" else int(want_m)
+            nearest = int(candidates[np.argmin(np.abs(ks[candidates] - target))])
+            if want_m not in ("median", 0) and ks[nearest] != target:
+                raise SystemExit(f"库里找不到 motion 数 {target}")
+            found = nearest
+        item = dict(ds[found])
+        ep = manifest["episodes"][int(ds._epis_of[found])]
+        t, es = int(ds._step_of[found]), int(ep["exec_start_idx"])
+        mtimes = [s for s in range(0, max(0, es-DEMO_MIN_REAL+1), 16)]
+        mtimes += [s for s in range(es, t+1, 16) if s+32 <= t]
+        if want_m == 0:
+            mtimes = []
+            item["motion_emb"] = np.zeros_like(item["motion_emb"])
+            item["motion_pos"] = np.zeros_like(item["motion_pos"])
+            item["motion_mask"] = np.zeros(MOTION_BUDGET, np.bool_)
+        elif want_m == "full":
+            count = int(item["motion_mask"].sum())
+            if count == 0:
+                raise ValueError("合成满 budget 需要至少一行真实 motion")
+            emb, pos = np.array(item["motion_emb"]), np.array(item["motion_pos"])
+            for j in range(count, MOTION_BUDGET):
+                emb[j] = emb[j % count] * (1 + 0.01*j)
+                pos[j] = pos[j % count]
+            item.update(motion_emb=emb, motion_pos=pos, motion_mask=np.ones(MOTION_BUDGET, np.bool_))
+            mtimes = (np.arange(MOTION_BUDGET) * 16).tolist()
+        item["mem_order"] = memory_order(pad_times(oracle_even_indices(t, FRAME_BUDGET), FRAME_BUDGET),
+                                          TOKENS_PER_FRAME, pad_times(mtimes, MOTION_BUDGET))
+        item["_motion_times"] = mtimes
+        item["_fixture_kind"] = str(want_m)
+        samples.append(item)
         chosen.append(found)
-    return [ds[i] for i in chosen], chosen
+    return samples, chosen
 
 
 def _obs_from_samples(samples, motion: bool):
@@ -494,17 +531,8 @@ def cmd_m3(args):
     lib = pathlib.Path(args.lib)
     ds = _make_dataset(lib, OPEN_YAML)
     c_open, m_open, c_closed, m_closed = _make_models(0)
-    samples, idxs = _fixture_batch(lib, ds, [(6, 0), (32, 11), (32, "max")])
-    # 人造第三个样本满 96：把真 motion 行复制填满（M3 只看层算术，不要求物理合法）
-    s3 = dict(samples[2]); k3 = int(s3["motion_mask"].sum())
-    emb = np.array(s3["motion_emb"]); pos = np.array(s3["motion_pos"]); msk = np.ones(96, np.bool_)
-    for j in range(k3, 96):
-        emb[j] = emb[j % k3] + 0.001 * (j + 1); pos[j] = pos[j % k3]
-    from mme_vla_suite.shared.sampling import memory_order, pad_times
-    s3.update(motion_emb=emb, motion_pos=pos, motion_mask=msk,
-              mem_order=memory_order(pad_times(oracle_even_indices(int(s3["step_idx"].item()), 32), 32), 16,
-                                     np.array(sorted(list(np.arange(0, 96) * 16)))))
-    samples[2] = s3
+    first_frames = min(6, FRAME_BUDGET) if np.any(ds._step_of == 5) else FRAME_BUDGET
+    samples, idxs = _fixture_batch(lib, ds, [(first_frames, 0), (FRAME_BUDGET, "median"), (FRAME_BUDGET, "full")])
     obs = _obs_from_samples(samples, motion=True)
     obs_c = dataclasses.replace(obs, motion_emb=None, motion_pos=None, motion_mask=None, mem_order=None)
     fails = []
@@ -537,14 +565,14 @@ def cmd_m3(args):
     print(f"[m3] 运动路独立 bf16 复算 逐位={bit_same} max_bf16_ulp={ulp}")
     if not bit_same:
         fails.append(f"运动路独立复算不逐位（max ulp {ulp}）")
-    # ③ padding 行两两逐位（样本 0 全 96 padding、样本 1 后 85 行）
+    # ③ 样本 0 的全部 motion 位为 padding，经两层投影后应两两逐位相同。
     pad_rows = mot[0]
-    if not all(np.array_equal(pad_rows[0].view(np.uint16), pad_rows[j].view(np.uint16)) for j in range(1, 96)):
+    if not all(np.array_equal(pad_rows[0].view(np.uint16), pad_rows[j].view(np.uint16)) for j in range(1, MOTION_BUDGET)):
         fails.append("padding 行经两层后不两两逐位")
     # ④ gather 对 20 个随机置换 vs np.take_along_axis
     rng = np.random.default_rng(0)
     for i in range(20):
-        perm = np.stack([rng.permutation(608) for _ in range(3)]).astype(np.int32)
+        perm = np.stack([rng.permutation(512 + MOTION_BUDGET) for _ in range(3)]).astype(np.int32)
         o2 = dataclasses.replace(obs, mem_order=jnp.asarray(perm))
         with at.disable_typechecking():
             t2, m2, _, _ = m_open.embed_memory(o2)
@@ -555,8 +583,8 @@ def cmd_m3(args):
             break
     # ⑤ 三种坏 mem_order 必 raise
     # 注：jax 默认 x64 关闭，int64 输入会被静默降成 int32，故「错 dtype」用 float32（真正会静默通过 take_along_axis 的类型）
-    for name, bad in (("错长度", jnp.asarray(np.tile(np.arange(600, dtype=np.int32), (3, 1)))),
-                      ("错 dtype", jnp.asarray(np.tile(np.arange(608), (3, 1)).astype(np.float32))),
+    for name, bad in (("错长度", jnp.asarray(np.tile(np.arange(512 + MOTION_BUDGET - 1, dtype=np.int32), (3, 1)))),
+                      ("错 dtype", jnp.asarray(np.tile(np.arange(512 + MOTION_BUDGET), (3, 1)).astype(np.float32))),
                       ("缺键 None", None)):
         try:
             with at.disable_typechecking():
@@ -590,149 +618,179 @@ def cmd_m3(args):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def cmd_m4(args):
+    """固定参数与随机流，核 mask、全部可训练梯度、内容作用和交错次序。"""
     import jax
     import jax.numpy as jnp
-    import openpi.shared.array_typing as at
     from flax import nnx
+    import openpi.shared.array_typing as at
     from mme_vla_suite.shared.sampling import memory_order, pad_times
+
+    if args.det_probes < 3:
+        raise ValueError("M4 至少需要三次确定性探针")
+    out = pathlib.Path(args.out)
+    if out.exists():
+        raise FileExistsError(f"拒绝覆盖模型闸门报告: {out}")
     lib = pathlib.Path(args.lib)
     ds = _make_dataset(lib, OPEN_YAML)
-    c_open, m_open, c_closed, m_closed = _make_models(0)
-    samples, idxs = _fixture_batch(lib, ds, [(6, 0), (32, 11), (32, "max")])
-    # 第三个样本人造满 96（阴性对照：无补位）
-    s3 = dict(samples[2]); k3 = int(s3["motion_mask"].sum())
-    emb = np.array(s3["motion_emb"]); pos = np.array(s3["motion_pos"])
-    for j in range(k3, 96):
-        emb[j] = emb[j % k3] * (1 + 0.01 * j); pos[j] = pos[j % k3]
-    ftimes3 = pad_times(oracle_even_indices(int(s3["step_idx"].item()), 32), 32)
-    s3.update(motion_emb=emb, motion_pos=pos, motion_mask=np.ones(96, np.bool_),
-              mem_order=memory_order(ftimes3, 16, np.arange(96, dtype=np.int64) * 16))
-    samples[2] = s3
+    c_open, model, c_closed, closed_model = _make_models(42)
+    first_frames = min(6, FRAME_BUDGET) if np.any(ds._step_of == 5) else FRAME_BUDGET
+    samples, indices = _fixture_batch(lib, ds, [
+        (first_frames, 0), (FRAME_BUDGET, "median"),
+        (FRAME_BUDGET, "max"), (FRAME_BUDGET, "full")])
     obs = _obs_from_samples(samples, motion=True)
-    B = 3
-    actions = jnp.asarray(np.random.default_rng(0).standard_normal((B, 20, 32)).astype(np.float32))
+    batch_size = len(samples)
+    actions = jnp.asarray(np.random.default_rng(0).normal(size=(batch_size, 20, 32)).astype(np.float32))
+    noise = jnp.asarray(np.random.default_rng(1).normal(size=(batch_size, 20, 32)).astype(np.float32))
     rng = jax.random.key(7)
-    noise = jnp.asarray(np.random.default_rng(1).standard_normal((B, 20, 32)).astype(np.float32))
+    train_filter = nnx.All(nnx.Param, nnx.Not(c_open.get_freeze_filter()))
+    graph, trainable, frozen = nnx.split(model, train_filter, ...)
 
-    def loss_fn(model, o):
+    def loss_fn(tp, fp, o):
+        m = nnx.merge(graph, tp, fp)
         with at.disable_typechecking():
-            return model.compute_loss(rng, o, actions, train=False)
+            return jnp.mean(m.compute_loss(rng, o, actions, train=False))
 
-    def sample_fn(model, o):
+    loss_and_grads = jax.jit(jax.value_and_grad(loss_fn, argnums=0))
+    loss_only = jax.jit(loss_fn)
+
+    @jax.jit
+    def sample_actions(tp, fp, o):
+        m = nnx.merge(graph, tp, fp)
         with at.disable_typechecking():
-            return model.sample_actions(jax.random.key(3), o, noise=noise, num_steps=10)
+            return m.sample_actions(jax.random.key(3), o, noise=noise, num_steps=10)
 
-    fails = []
-    base_loss = np.asarray(loss_fn(m_open, obs)); base_act = np.asarray(sample_fn(m_open, obs))
-    print(f"[m4] base loss {base_loss.mean():.6f} shape {base_loss.shape} actions {base_act.shape}")
-    # (a) 补位塞有限随机垃圾
-    g = np.random.default_rng(5)
-    def garbage(o):
-        sm = np.asarray(o.static_mask); mm = np.asarray(o.motion_mask)
-        si = np.array(np.asarray(o.static_image_emb)); sp = np.array(np.asarray(o.static_pos_emb))
-        me = np.array(np.asarray(o.motion_emb)); mp = np.array(np.asarray(o.motion_pos))
-        si[~sm] = g.normal(0, 1e3, si[~sm].shape); sp[~sm] = g.normal(0, 1e3, sp[~sm].shape)
-        me[~mm] = g.normal(0, 1e3, me[~mm].shape); mp[~mm] = g.normal(0, 1e3, mp[~mm].shape)
-        return dataclasses.replace(o, static_image_emb=jnp.asarray(si), static_pos_emb=jnp.asarray(sp),
-                                   motion_emb=jnp.asarray(me), motion_pos=jnp.asarray(mp))
-    og = garbage(obs)
-    la = np.asarray(loss_fn(m_open, og)); aa = np.asarray(sample_fn(m_open, og))
-    inv_ok = np.array_equal(la.view(np.uint8), base_loss.view(np.uint8)) and np.array_equal(aa.view(np.uint8), base_act.view(np.uint8))
-    print(f"MASK_INVARIANCE={'PASS' if inv_ok else 'FAIL'} loss_bitexact={int(np.array_equal(la.view(np.uint8), base_loss.view(np.uint8)))} "
-          f"actions_bitexact={int(np.array_equal(aa.view(np.uint8), base_act.view(np.uint8)))}")
-    if not inv_ok:
-        fails.append("MASK_INVARIANCE")
-    # (b) 输入梯度：补位为零、真位非零；参数梯度：全空 batch 两新层四叶全零，有 motion 非零
-    graphdef, state = nnx.split(m_open)
-    def loss_wrt_inputs(si, sp, me, mp):
-        model = nnx.merge(graphdef, state)
-        o = dataclasses.replace(obs, static_image_emb=si, static_pos_emb=sp, motion_emb=me, motion_pos=mp)
-        return jnp.sum(loss_fn(model, o))
-    grads = jax.grad(loss_wrt_inputs, argnums=(0, 1, 2, 3))(obs.static_image_emb, obs.static_pos_emb, obs.motion_emb, obs.motion_pos)
-    sm = np.asarray(obs.static_mask); mm = np.asarray(obs.motion_mask)
+    def digest(o, *, retain=(), diff_ref=None):
+        loss, grads = loss_and_grads(trainable, frozen, o)
+        value = float(loss)
+        if not np.isfinite(value):
+            raise ValueError("模型闸门 loss 非有限")
+        shas, maxima, kept, differences = {}, {}, {}, {}
+        # 同时只持有一棵设备梯度树；逐叶取回、检查、哈希后释放 host 数组。
+        for path, leaf in jax.tree_util.tree_flatten_with_path(grads.to_pure_dict())[0]:
+            name = jax.tree_util.keystr(path)
+            arr = np.asarray(jax.device_get(leaf))
+            if not np.isfinite(arr).all():
+                raise ValueError(f"梯度非有限: {name}")
+            shas[name] = hashlib.sha256(str(arr.dtype).encode() + str(arr.shape).encode() + arr.tobytes()).hexdigest()
+            maxima[name] = float(np.max(np.abs(arr)))
+            if name in retain:
+                kept[name] = arr.copy()
+            if diff_ref is not None and name in diff_ref:
+                differences[name] = float(np.max(np.abs(arr.astype(np.float32) - diff_ref[name].astype(np.float32))))
+            del arr
+        del grads
+        return value.hex(), shas, maxima, kept, differences
+
+    probes = [digest(obs) for _ in range(args.det_probes)]
+    base_loss, base_shas, base_maxima, _, _ = probes[0]
+    all_keys = set(base_shas)
+    nondeterministic = sorted(k for k in all_keys if any(p[1][k] != base_shas[k] for p in probes[1:]))
+    if any(p[0] != base_loss for p in probes) or any("mem_encoder" in k or "motion" in k for k in nondeterministic):
+        raise ValueError(f"确定性探针失败: losses={[p[0] for p in probes]}, leaves={nondeterministic}")
+    covered = all_keys - set(nondeterministic)
+    if not covered:
+        raise ValueError("可训练梯度比较集合为空")
+    retained = digest(obs, retain=nondeterministic)[3] if nondeterministic else {}
+    base_base = digest(obs, diff_ref=retained)[4] if retained else {}
+
+    random = np.random.default_rng(5)
+    garbage_fields = {}
+    for key, mask in (("static_image_emb", obs.static_mask), ("static_pos_emb", obs.static_mask),
+                      ("motion_emb", obs.motion_mask), ("motion_pos", obs.motion_mask)):
+        arr = np.array(getattr(obs, key))
+        invalid = ~np.asarray(mask)
+        arr[invalid] = random.normal(0, 1e3, arr[invalid].shape)
+        garbage_fields[key] = jnp.asarray(arr)
+    garbage_obs = dataclasses.replace(obs, **garbage_fields)
+    pad_loss, pad_shas, _, _, base_pad = digest(garbage_obs, diff_ref=retained)
+    del retained
+    base_actions = np.asarray(sample_actions(trainable, frozen, obs))
+    pad_actions = np.asarray(sample_actions(trainable, frozen, garbage_obs))
+    mask_ok = pad_loss == base_loss and _bytes_equal(base_actions, pad_actions)
+    pad_ok = mask_ok and all(base_shas[k] == pad_shas[k] for k in covered)
+
+    @jax.jit
+    def input_grads(tp, fp, o):
+        def f(si, sp, me, mp):
+            return loss_fn(tp, fp, dataclasses.replace(o, static_image_emb=si, static_pos_emb=sp,
+                                                       motion_emb=me, motion_pos=mp))
+        return jax.grad(f, argnums=(0, 1, 2, 3))(o.static_image_emb, o.static_pos_emb, o.motion_emb, o.motion_pos)
+
     leak_ok = True
-    for name, gr, mask in (("static_image_emb", grads[0], sm), ("static_pos_emb", grads[1], sm), ("motion_emb", grads[2], mm), ("motion_pos", grads[3], mm)):
-        gr = np.asarray(gr).astype(np.float64)
-        pad_zero = bool(np.all(gr[~mask] == 0)) if (~mask).any() else True
-        real_nonzero = bool(np.any(gr[mask] != 0)) if mask.any() else True
-        finite = bool(np.isfinite(gr).all())
-        print(f"  [grad] {name}: padding_zero={pad_zero} real_nonzero={real_nonzero} finite={finite}")
-        leak_ok &= pad_zero and real_nonzero and finite
-    def param_grads(o):
-        def f(st):
-            model = nnx.merge(graphdef, st)
-            return jnp.sum(loss_fn(model, o))
-        return jax.grad(f)(state)
-    obs_empty = dataclasses.replace(obs, motion_emb=jnp.zeros_like(obs.motion_emb), motion_pos=jnp.zeros_like(obs.motion_pos),
-                                    motion_mask=jnp.zeros_like(obs.motion_mask),
-                                    mem_order=jnp.asarray(np.stack([memory_order(pad_times(oracle_even_indices(int(s["step_idx"].item()), 32), 32), 16,
-                                                                                 np.full(96, SENTINEL, np.int64)) for s in samples])))
-    pg_empty = _leaf_paths_state(param_grads(obs_empty)); pg_full = _leaf_paths_state(param_grads(obs))
-    new_keys = [k for k in pg_empty if "motion" in k]
-    empty_zero = all(np.all(np.asarray(pg_empty[k]).astype(np.float64) == 0) for k in new_keys)
-    full_nonzero = all(np.any(np.asarray(pg_full[k]).astype(np.float64) != 0) for k in new_keys)
-    print(f"  [grad] 新层四叶: 全空 batch 全零={empty_zero} 有 motion 非零={full_nonzero} keys={len(new_keys)}")
-    leak_ok &= empty_zero and full_nonzero and len(new_keys) == 4
-    print(f"GRAD_LEAK={'PASS' if leak_ok else 'FAIL'}")
-    if not leak_ok:
-        fails.append("GRAD_LEAK")
-    # (c) 并列序 vs 交错：loss 必变
-    obs_par = dataclasses.replace(obs, mem_order=jnp.asarray(np.tile(np.arange(608, dtype=np.int32), (B, 1))))
-    lp = np.asarray(loss_fn(m_open, obs_par))
-    diff_c = float(np.abs(lp.astype(np.float64) - base_loss).max())
-    order_ok = diff_c > 0
-    print(f"ORDER_EFFECT={'PASS' if order_ok else 'FAIL'} max_abs_diff_parallel_vs_interleaved={diff_c:.3e}")
-    if not order_ok:
-        fails.append("ORDER_EFFECT")
-    # (d) 真 motion 行内部随机置换 + 重算 mem_order → loss 逐位
-    perm_rng = np.random.default_rng(9)
-    me = np.array(np.asarray(obs.motion_emb)); mp = np.array(np.asarray(obs.motion_pos)); mo = np.array(np.asarray(obs.mem_order))
-    for i, s in enumerate(samples):
-        k = int(s["motion_mask"].sum())
-        if k < 2:
-            continue
-        p = perm_rng.permutation(k)
-        me[i, :k] = me[i, :k][p]; mp[i, :k] = mp[i, :k][p]
-        # 真行的全域时刻跟着置换（时刻 = 原次序下的起点帧号，从 mem_order 反推不便，直接用 oracle）
-        idx = idxs[i]
-        manifest = json.loads((lib / "meta/episode_manifest.json").read_text())
-        eps = manifest["episodes"]; starts = [e["exec_sample_offset"] for e in eps]
-        g_ = int(np.searchsorted(np.array(starts), idx, side="right") - 1); t_ = eps[g_]["exec_start_idx"] + idx - starts[g_]
-        index = json.loads((lib / "motion/meta/motion_index.json").read_text())
-        frames = [f for _, f in oracle_visible(index["entries"][g_], t_)] if i != 2 else list(np.arange(96) * 16)
-        frames = np.array(frames)[p].tolist() if i != 2 else np.array(frames)[p].tolist()
-        mo[i] = memory_order(pad_times(oracle_even_indices(t_, 32), 32), 16, pad_times(frames, 96))
-    obs_perm = dataclasses.replace(obs, motion_emb=jnp.asarray(me), motion_pos=jnp.asarray(mp), mem_order=jnp.asarray(mo))
-    ld = np.asarray(loss_fn(m_open, obs_perm))
-    perm_ok = np.array_equal(ld.view(np.uint8), base_loss.view(np.uint8))
-    print(f"[m4] (d) 真行置换后 loss 逐位={perm_ok} max|Δ|={float(np.abs(ld.astype(np.float64) - base_loss).max()):.3e}")
-    if not perm_ok:
-        fails.append("ROW_PERM_INVARIANCE")
-    # (e) 关闭态参数拷入开启态：m=0 样本 loss 差 ≤ 1e-4·|loss| 且 ≤ 1% × (c)
-    gd_o, st_o = nnx.split(m_open)
-    st_c = nnx.state(m_closed, nnx.Param)
-    merged = copy.deepcopy(st_o)
-    def copy_in(dst, src):
-        for kp, v in jax.tree_util.tree_flatten_with_path(src.to_pure_dict())[0]:
-            node = dst
-            for k in kp[:-1]:
-                node = node[getattr(k, "key", getattr(k, "name", k))]
-            last = getattr(kp[-1], "key", getattr(kp[-1], "name", kp[-1]))
-            node[last].value = v
-    copy_in(merged, st_c)
-    m_mix = nnx.merge(gd_o, merged)
-    l_mix = np.asarray(loss_fn(m_mix, obs))
-    obs_closed = _obs_from_samples(samples, motion=False)
-    l_closed = np.asarray(loss_fn(m_closed, obs_closed))
-    d_e = float(np.abs(l_mix[0].astype(np.float64) - l_closed[0]).max())
-    tol = 1e-4 * float(np.abs(l_closed[0]).max())
-    e_ok = d_e <= tol and d_e <= 0.01 * diff_c
-    print(f"ZERO_MOTION_EQUIV={'PASS' if e_ok else 'FAIL'} max_abs_diff={d_e:.3e} tol={tol:.3e} order_diff={diff_c:.3e}")
-    if not e_ok:
-        fails.append("ZERO_MOTION_EQUIV")
+    gs = input_grads(trainable, frozen, obs)
+    for grad, mask in zip(gs, (obs.static_mask, obs.static_mask, obs.motion_mask, obs.motion_mask), strict=True):
+        arr, valid = np.asarray(grad), np.asarray(mask)
+        leak_ok &= bool(np.isfinite(arr).all() and np.all(arr[~valid] == 0) and np.any(arr[valid] != 0))
+    del gs
+
+    empty_orders = np.stack([
+        memory_order(pad_times(oracle_even_indices(int(s["step_idx"].item()), FRAME_BUDGET), FRAME_BUDGET),
+                     TOKENS_PER_FRAME, np.full(MOTION_BUDGET, SENTINEL, np.int64)) for s in samples])
+    empty_obs = dataclasses.replace(obs, motion_emb=jnp.zeros_like(obs.motion_emb),
+                                    motion_pos=jnp.zeros_like(obs.motion_pos), motion_mask=jnp.zeros_like(obs.motion_mask),
+                                    mem_order=jnp.asarray(empty_orders))
+    empty_maxima = digest(empty_obs)[2]
+    motion_keys = sorted(k for k in all_keys if "motion" in k)
+    leak_ok &= len(motion_keys) == 4 and all(empty_maxima[k] == 0 and base_maxima[k] > 0 for k in motion_keys)
+
+    changed = np.array(obs.motion_emb)
+    changed[np.asarray(obs.motion_mask)] = 0
+    changed_loss = float(loss_only(trainable, frozen, dataclasses.replace(obs, motion_emb=jnp.asarray(changed)))).hex()
+    content_ok = changed_loss != base_loss
+    parallel_obs = dataclasses.replace(obs, mem_order=jnp.asarray(np.tile(np.arange(512 + MOTION_BUDGET, dtype=np.int32), (batch_size, 1))))
+    parallel_loss = float(loss_only(trainable, frozen, parallel_obs))
+    order_diff = abs(parallel_loss - float.fromhex(base_loss))
+    order_ok = order_diff > 0
+
+    emb, pos, orders = np.array(obs.motion_emb), np.array(obs.motion_pos), np.array(obs.mem_order)
+    random = np.random.default_rng(9)
+    for i, item in enumerate(samples):
+        count = int(item["motion_mask"].sum())
+        permutation = random.permutation(count)
+        emb[i, :count], pos[i, :count] = emb[i, :count][permutation], pos[i, :count][permutation]
+        times = np.asarray(item["_motion_times"], np.int64)[permutation]
+        orders[i] = memory_order(pad_times(oracle_even_indices(int(item["step_idx"].item()), FRAME_BUDGET), FRAME_BUDGET),
+                                 TOKENS_PER_FRAME, pad_times(times, MOTION_BUDGET))
+    permuted = dataclasses.replace(obs, motion_emb=jnp.asarray(emb), motion_pos=jnp.asarray(pos), mem_order=jnp.asarray(orders))
+    permutation_loss = float(loss_only(trainable, frozen, permuted))
+    permutation_ok = permutation_loss.hex() == base_loss
+    checks = {"MASK_INVARIANCE": bool(mask_ok), "PAD_CONTENT_INVARIANCE": bool(pad_ok),
+              "GRAD_LEAK": bool(leak_ok), "MOTION_CONTENT_EFFECT": bool(content_ok),
+              "ORDER_EFFECT": bool(order_ok), "ROW_PERM_INVARIANCE": bool(permutation_ok)}
+    for name, ok in checks.items():
+        suffix = ""
+        if name == "PAD_CONTENT_INVARIANCE":
+            suffix = (f" det_probes={args.det_probes} nondeterministic_leaves={json.dumps(nondeterministic)}"
+                      f" excluded={len(nondeterministic)} covered={len(covered)}/{len(all_keys)}")
+        elif name == "ROW_PERM_INVARIANCE":
+            suffix = f" max_abs_diff={abs(permutation_loss-float.fromhex(base_loss)):.9g}"
+        elif name == "ORDER_EFFECT":
+            suffix = f" max_abs_diff={order_diff:.9g}"
+        print(f"{name}={'PASS' if ok else 'FAIL'}{suffix}", flush=True)
+    if c_open.history_config.integration_type == "modulation":
+        print("LEN_EQUIV_NA 不同记忆长度会平移 query 的 RoPE 位置，不做全遮与关闭态等价断言", flush=True)
+    else:
+        motion_state = nnx.state(model, nnx.Param).filter(lambda path, value: any("motion" in str(p) for p in path))
+        mixed = nnx.merge(graph, nnx.state(closed_model, nnx.Param), motion_state)
+        closed_obs = dataclasses.replace(empty_obs, motion_emb=None, motion_pos=None, motion_mask=None, mem_order=None)
+        with at.disable_typechecking():
+            a = np.asarray(mixed.compute_loss(rng, empty_obs, actions, train=False))
+            b = np.asarray(closed_model.compute_loss(rng, closed_obs, actions, train=False))
+        difference = float(np.max(np.abs(a.astype(np.float64)-b)))
+        checks["ZERO_MOTION_EQUIV"] = difference <= 1e-4*float(np.max(np.abs(b)))
+        print(f"ZERO_MOTION_EQUIV={'PASS' if checks['ZERO_MOTION_EQUIV'] else 'FAIL'} max_abs_diff={difference}", flush=True)
     ds.close()
-    if fails:
-        print("FAILS:", fails)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("x") as f:
+        json.dump({"checks": checks, "indices": indices,
+                   "fixture_motion_counts": [int(s["motion_mask"].sum()) for s in samples],
+                   "det_probes": args.det_probes, "nondeterministic_leaves": nondeterministic,
+                   "covered": len(covered), "all_trainable": len(all_keys), "motion_keys": motion_keys,
+                   "base_base_max_abs": base_base, "base_pad_max_abs": base_pad,
+                   "base_loss_hex": base_loss, "pad_loss_hex": pad_loss,
+                   "paligemma_variant": c_open.paligemma_variant, "action_expert_variant": c_open.action_expert_variant,
+                   "pi05": c_open.pi05, "budget": MOTION_BUDGET}, f, ensure_ascii=False, indent=2)
+    if not all(checks.values()):
         raise SystemExit(1)
 
 
@@ -768,7 +826,7 @@ def cmd_m5(args):
     cfg_open = _load_yaml(OPEN_YAML)
     c = HistoryPi0Config(use_history=True, history_config=cfg_open, dtype="bfloat16", paligemma_variant="dummy", action_expert_variant="dummy")
     spec, _ = c.inputs_spec(batch_size=2)
-    if tuple(spec.mem_order.shape) != (2, 608) or spec.mem_order.dtype != jnp.int32 or tuple(spec.motion_emb.shape) != (2, 96, 768):
+    if tuple(spec.mem_order.shape) != (2, 512 + MOTION_BUDGET) or spec.mem_order.dtype != jnp.int32 or tuple(spec.motion_emb.shape) != (2, MOTION_BUDGET, 768):
         fails.append("inputs_spec 形制错")
     ds = _make_dataset(lib, OPEN_YAML)
     s = ds[100]
@@ -1496,6 +1554,10 @@ def _t3_main():
     ap.add_argument("--lib", default=str(_V1 / "datasets/4task-motion-40ep"))
     ap.add_argument("--dataset", default=None)
     ap.add_argument("--store-subdir", choices=("framesamp", "framesamp-8x8"), default="framesamp")
+    ap.add_argument("--integration", choices=("context", "modulation"), default="context")
+    ap.add_argument("--motion-budget", type=int, default=None)
+    ap.add_argument("--paligemma-variant", default="gemma_150m")
+    ap.add_argument("--action-expert-variant", default="gemma_300m")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--seed", type=int, default=20260903)
     ap.add_argument("--tmp", default=None)
@@ -1513,13 +1575,20 @@ def _t3_main():
                     help="t3mechanism：同一 obs 连算几次梯度做确定性探针（默认 3，最少 2）")
     _add_m1_expect_args(ap)
     args = ap.parse_args()
-    global STORE_SUBDIR, TOKENS_PER_FRAME, FRAME_BUDGET, OPEN_YAML, CLOSED_YAML
+    global STORE_SUBDIR, TOKENS_PER_FRAME, FRAME_BUDGET, OPEN_YAML, CLOSED_YAML, MOTION_BUDGET, DEMO_MIN_REAL
+    global PALIGEMMA_VARIANT, ACTION_EXPERT_VARIANT
     from mme_vla_suite.datastore.framesamp_store import StoreMeta
     STORE_SUBDIR = args.store_subdir
     spec = StoreMeta.load(pathlib.Path(args.lib) / STORE_SUBDIR).spec
     TOKENS_PER_FRAME, FRAME_BUDGET = spec.tokens_per_frame, 512 // spec.tokens_per_frame
-    stem = "perceptual-framesamp-context" + ("-8frame-8x8" if spec.tokens_per_frame == 64 else "")
+    stem = "perceptual-framesamp-" + ("modul" if args.integration == "modulation" else "context") + ("-8frame-8x8" if spec.tokens_per_frame == 64 else "")
     CLOSED_YAML, OPEN_YAML = stem + ".yaml", stem + "-motion.yaml"
+    motion = _load_yaml(OPEN_YAML).motion
+    MOTION_BUDGET = int(motion.budget)
+    if args.motion_budget is not None and args.motion_budget != MOTION_BUDGET:
+        raise ValueError("--motion-budget 与真实 YAML 不同")
+    DEMO_MIN_REAL = int(motion.get("demo_min_real_frames", 33))
+    PALIGEMMA_VARIANT, ACTION_EXPERT_VARIANT = args.paligemma_variant, args.action_expert_variant
     args.dataset = args.dataset or str(pathlib.Path(args.lib) / STORE_SUBDIR)
     {"m1": cmd_m1, "m2": cmd_m2, "m3": cmd_m3, "m4": cmd_m4, "m5": cmd_m5, "t3common": cmd_t3common, "t3verifyinit": cmd_t3verifyinit,
      "t3trace": cmd_t3trace, "t3mechanism": cmd_t3mechanism, "t3phase": cmd_t3phase}[args.gate](args)

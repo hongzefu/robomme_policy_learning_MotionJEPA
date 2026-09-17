@@ -46,15 +46,43 @@ def _dummy_vision_enc(x):
     return jnp.zeros((t, v, 64, 2048), jnp.bfloat16)
 
 
-def _stub_enc_local(window: np.ndarray, start: int) -> np.ndarray:
+def _stub_enc_local(window: np.ndarray, start: int, *, exec_start_idx: int | None = None,
+                    demo_min_real: int | None = None) -> np.ndarray:
     ids = P.stub_decode(window)
-    assert ids == list(range(start, start + P.WINDOW_FRAMES)), (ids[:3], start)
+    minimum = int(MOTION_CFG.get("demo_min_real_frames", 33)) if demo_min_real is None else demo_min_real
+    minimum = P.WINDOW_FRAMES if exec_start_idx is not None and start >= exec_start_idx else minimum
+    assert any(ids[:r] == list(range(start, start+r)) and ids[r:] == [ids[r-1]] * (P.WINDOW_FRAMES-r)
+               for r in range(minimum, P.WINDOW_FRAMES+1)), (ids[:3], ids[-3:], start)
     return np.full(P.TOKEN_DIM, float(start), np.float32)
+
+
+def _new_memory(motion_cfg=None):
+    """本地 stub 获得真实段边界，exec 始终拒绝重复尾帧。"""
+    cfg = dict(MOTION_CFG if motion_cfg is None else motion_cfg)
+    mem = FrameSampMemory(token_per_image=TOKEN_PER_IMAGE, vision_enc_fn=_dummy_vision_enc,
+                          motion_enc_fn=lambda window, start: _stub_enc_local(
+                              window, start, exec_start_idx=mem.exec_start_idx,
+                              demo_min_real=int(cfg.get("demo_min_real_frames", 33))), motion_cfg=cfg)
+    return mem
+
+
+def configure(yaml_name: str):
+    """主程序与节奏闸门共同从实际 YAML 初始化，避免 import 时常量永久停留在旧档位。"""
+    global HIST_BUDGET, TOKEN_PER_IMAGE, NUM_VIEWS, MAX_FRAMES, MOTION_CFG
+    from mme_vla_suite.models.config.utils import get_history_config
+    hc = get_history_config(yaml_name)
+    HIST_BUDGET, TOKEN_PER_IMAGE, NUM_VIEWS = int(hc.budget), int(hc.token_per_image), int(hc.num_views)
+    MAX_FRAMES = HIST_BUDGET // (TOKEN_PER_IMAGE * NUM_VIEWS)
+    MOTION_CFG = dict(hc.motion)
+    _Cfg.budget, _Cfg.token_per_image, _Cfg.num_views = HIST_BUDGET, TOKEN_PER_IMAGE, NUM_VIEWS
+    return hc
 
 
 def _entry(es: int, T: int) -> ms.IndexEntry:
     return ms.build_index_entries({"episodes": [{"global_episode_idx": 0, "h5_file": "x", "raw_ep_idx": 0,
-                                                 "num_timesteps": T, "exec_start_idx": es}]})[0]
+                                                 "num_timesteps": T, "exec_start_idx": es}]},
+                                  ms.LayoutSpec(int(MOTION_CFG.get("demo_min_real_frames", 33)), 33,
+                                                str(MOTION_CFG.get("demo_tail_pad", "none"))))[0]
 
 
 def _frames(lo: int, hi: int) -> np.ndarray:
@@ -108,7 +136,7 @@ def gate_p1() -> bool:
         c2(bad, 0)
         ok = False; print("  ✗ 错帧未 raise")
     except P.ProtocolError as e:
-        assert "不连续" in str(e), str(e)[:200]
+        assert "不符合连续前缀与重复末帧规则" in str(e), str(e)[:200]
     c2._proc.wait(timeout=30)
     assert c2._proc.returncode == 4, c2._proc.returncode
     try:
@@ -137,7 +165,10 @@ def _check_episode(mem: FrameSampMemory, es: int, T: int, tag: str) -> None:
         assert mem.motion_encode_calls == len(got), (tag, t, mem.motion_encode_calls, len(got))
         emb, pos, mask, times = mem._prepare_motion(t)
         k = len(got)
-        assert emb.shape == (96, 768) and pos.shape == (96, 256) and mask.shape == (96,) and times.shape == (96,)
+        budget = int(MOTION_CFG["budget"])
+        assert emb.shape == (budget, 768) and pos.shape == (budget, 256) and mask.shape == (budget,) and times.shape == (budget,)
+        if t == es == 114 and int(MOTION_CFG.get("demo_min_real_frames", 33)) == 17:
+            assert got == [0,16,32,48,64,80,96] and mem.motion_encode_calls == 7
         assert mask[:k].all() and not mask[k:].any()
         assert np.all(emb[:k, 0] == np.asarray(got, np.float32)) and np.all(emb[k:] == 0)
         assert np.array_equal(pos[:k], mem.pos_emb[np.asarray(got, np.int64), 0, :256]) and np.all(pos[k:] == 0)
@@ -153,12 +184,12 @@ def _check_episode(mem: FrameSampMemory, es: int, T: int, tag: str) -> None:
 def gate_p2() -> bool:
     ok = True
     for es, T, tag in ((66, 300, "Video-es66"), (114, 420, "Video-es114"), (0, 260, "Button-es0")):
-        mem = FrameSampMemory(token_per_image=TOKEN_PER_IMAGE, vision_enc_fn=_dummy_vision_enc, motion_enc_fn=_stub_enc_local, motion_cfg=MOTION_CFG)
+        mem = _new_memory()
         _check_episode(mem, es, T, tag)
         mem.clear()
         assert mem.n_steps == 0 and not mem._history_feats_motion and not mem._raw_frames and mem.exec_start_idx is None
     # 坏输入
-    mem = FrameSampMemory(token_per_image=TOKEN_PER_IMAGE, vision_enc_fn=_dummy_vision_enc, motion_enc_fn=_stub_enc_local, motion_cfg=MOTION_CFG)
+    mem = _new_memory()
     bad_cases = {
         "缺 exec_start_idx": lambda: mem.add_buffer(_frames(0, 1), np.zeros((1, 8), np.float32), [0]),
         "224 域": lambda: mem.add_buffer(np.zeros((1, 1, 224, 224, 3), np.uint8), np.zeros((1, 8), np.float32), [0], exec_start_idx=0),
@@ -178,11 +209,11 @@ def gate_p2() -> bool:
             fn(); ok = False; print(f"  ✗ {name} 未 raise")
         except ValueError:
             pass
-    # budget 越界：demo 段极长（es=1600 → demo 网格 99 > 96）→ _encode 正常、_prepare_motion raise（不裁剪）
-    mem2 = FrameSampMemory(token_per_image=TOKEN_PER_IMAGE, vision_enc_fn=_dummy_vision_enc, motion_enc_fn=_stub_enc_local, motion_cfg=MOTION_CFG)
-    es = 1600
+    # 用专用小预算制造超限，避免生产预算扩展后阴性用例失效。
+    mem2 = _new_memory({**MOTION_CFG, "budget": 8})
+    es = 200
     mem2.add_buffer(_frames(0, es + 1), np.zeros((es + 1, 8), np.float32), list(range(es + 1)), exec_start_idx=es)
-    assert mem2.motion_encode_calls == ms.seg_num_grid(es) > 96, (mem2.motion_encode_calls, ms.seg_num_grid(es))
+    assert mem2.motion_encode_calls == ms.seg_num_grid(es, int(MOTION_CFG.get("demo_min_real_frames", 33))) > 8
     try:
         mem2._prepare_motion(es); ok = False; print("  ✗ budget 越界未 raise")
     except RuntimeError as e:
@@ -213,7 +244,7 @@ def gate_p3() -> bool:
     ok = True
     n_checked = 0
     for es, T in ((66, 300), (0, 260)):
-        mem = FrameSampMemory(token_per_image=TOKEN_PER_IMAGE, vision_enc_fn=_dummy_vision_enc, motion_enc_fn=_stub_enc_local, motion_cfg=MOTION_CFG)
+        mem = _new_memory()
         pol = _bare_policy(mem)
         entry = _entry(es, T)
 
@@ -224,11 +255,13 @@ def gate_p3() -> bool:
             # 训练侧同式（FrameSampDataset.__getitem__ 末段）
             frames_arr = np.asarray(even_sampling_indices(t, MAX_FRAMES), np.int64)
             _, f_m = ms.visible_motion_rows(entry, t)
-            ref = memory_order(pad_times(frames_arr, MAX_FRAMES), TOKEN_PER_IMAGE * NUM_VIEWS, pad_times(f_m, 96))
+            budget = int(MOTION_CFG["budget"])
+            total = HIST_BUDGET + budget
+            ref = memory_order(pad_times(frames_arr, MAX_FRAMES), TOKEN_PER_IMAGE * NUM_VIEWS, pad_times(f_m, budget))
             got = inputs["mem_order"]
-            assert got.dtype == np.int32 and got.shape == (608,) and np.array_equal(got, ref), (es, t)
-            assert np.array_equal(np.sort(got), np.arange(608))
-            assert inputs["motion_emb"].shape == (96, 768) and inputs["motion_mask"].sum() == len(f_m)
+            assert got.dtype == np.int32 and got.shape == (total,) and np.array_equal(got, ref), (es, t)
+            assert np.array_equal(np.sort(got), np.arange(total))
+            assert inputs["motion_emb"].shape == (budget, 768) and inputs["motion_mask"].sum() == len(f_m)
             assert inputs["static_mask"].shape == (512,)
             n_checked += 1
 
@@ -243,7 +276,7 @@ def gate_p3() -> bool:
 def gate_p4() -> bool:
     from mme_vla_suite.policies.motion_client import MotionEncoderClient
     ok = True
-    mem = FrameSampMemory(token_per_image=TOKEN_PER_IMAGE, vision_enc_fn=_dummy_vision_enc, motion_enc_fn=_stub_enc_local, motion_cfg=MOTION_CFG)
+    mem = _new_memory()
     pol = _bare_policy(mem)
     obs = lambda lo, hi, es: {"images": _frames(lo, hi), "state": np.zeros((hi - lo, 8), np.float32), "exec_start_idx": es}
     pol.add_buffer(obs(0, 67, 66)); assert pol.exec_start_idx == 66 and pol.step_idx == 66
@@ -265,6 +298,10 @@ def gate_p4() -> bool:
         _check_episode(mem2, 66, 200, "Video-es66-sidecar")
         assert c.n_calls == mem2.motion_encode_calls
         print(f"  P4 sidecar 端到端 {c.n_calls} 窗，均 {c.total_s / c.n_calls * 1e3:.2f} ms/窗")
+        before = c.n_calls
+        mem3 = FrameSampMemory(token_per_image=TOKEN_PER_IMAGE, vision_enc_fn=_dummy_vision_enc, motion_enc_fn=c, motion_cfg=MOTION_CFG)
+        _check_episode(mem3, 114, 200, "Video-es114-sidecar")
+        assert c.n_calls-before == mem3.motion_encode_calls
     finally:
         c.close()
     assert c._proc.returncode == 0
@@ -277,12 +314,7 @@ def main() -> int:
     ap.add_argument("--gate", default="all", choices=["all", "p1", "p2", "p3", "p4"])
     ap.add_argument("--yaml", default="perceptual-framesamp-context-motion.yaml")
     args = ap.parse_args()
-    global HIST_BUDGET, TOKEN_PER_IMAGE, NUM_VIEWS, MAX_FRAMES
-    from mme_vla_suite.models.config.utils import get_history_config
-    hc = get_history_config(args.yaml)
-    HIST_BUDGET, TOKEN_PER_IMAGE, NUM_VIEWS = int(hc.budget), int(hc.token_per_image), int(hc.num_views)
-    MAX_FRAMES = HIST_BUDGET // (TOKEN_PER_IMAGE * NUM_VIEWS)
-    _Cfg.budget, _Cfg.token_per_image, _Cfg.num_views = HIST_BUDGET, TOKEN_PER_IMAGE, NUM_VIEWS
+    configure(args.yaml)
     gates = {"p1": gate_p1, "p2": gate_p2, "p3": gate_p3, "p4": gate_p4}
     sel = list(gates) if args.gate == "all" else [args.gate]
     results = {}

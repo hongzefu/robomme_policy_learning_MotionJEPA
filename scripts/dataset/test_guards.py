@@ -452,9 +452,14 @@ def test_wan_common_constants_match_motion_store() -> None:
     for k in ("GRID_STRIDE", "WINDOW_FRAMES", "GRID_ORIGIN", "WINDOW_DIRECTION", "TRUNCATION_POLICY", "FRAME_SIZE"):
         assert getattr(wc, k) == getattr(ms, k), k
     assert wc.TOKEN_BYTES == ms.MOTION_ROW_BYTES and wc.TOKEN_DIM == ms.MOTION_ROW_SHAPE[0]
-    for L in range(0, 1300):
-        assert wc.seg_num_chunks(L) == ms.seg_num_chunks(L), L
-        assert wc.seg_num_grid(L) == ms.seg_num_grid(L), L
+    for minimum in (17, 33):
+        for L in range(0, 1300):
+            assert wc.seg_num_chunks(L, minimum) == ms.seg_num_chunks(L, minimum), (L, minimum)
+            assert wc.seg_num_grid(L, minimum) == ms.seg_num_grid(L, minimum), (L, minimum)
+    for key in ("DEMO_MIN_REAL_FRAMES", "EXEC_MIN_REAL_FRAMES", "DEMO_TAIL_PAD"):
+        assert getattr(wc, key) == getattr(ms, key)
+    assert ms.seg_num_grid(100, 17) == 6 and ms.seg_num_grid(100, 33) == 5
+    assert ms.seg_num_grid(16, 17) == 0 and ms.seg_num_grid(17, 17) == 1
     # 计划 2.2 / 4.1 的实测锚点：VideoPlaceOrder ep4 demo 1118 + exec 293 → 68 + 17；exec 段不截尾
     assert ms.seg_num_grid(1118) == 68 and ms.seg_num_grid(293) == 17
     assert ms.seg_num_grid(32) == 0 and ms.seg_num_grid(33) == 1 and ms.seg_num_grid(48) == 1 and ms.seg_num_grid(49) == 2
@@ -485,48 +490,57 @@ def _mini_manifest_for_motion(specs):
     return m
 
 
-def test_motion_index_roundtrip_and_totals() -> None:
+@pytest.mark.parametrize("layout,demo_rows,exec_base", [
+    ("motion-768-grid16-v1", 15, 20),
+    ("motion-768-grid16-demopad17-v1", 17, 21),
+])
+def test_motion_index_roundtrip_and_totals(layout, demo_rows, exec_base) -> None:
     from mme_vla_suite.datastore import motion_store as ms
     m = _mini_manifest_for_motion([(291, 0), (338, 66), (586, 216), (40, 0), (32, 0)])
-    entries = ms.build_index_entries(m)
-    payload = ms.index_payload(m, entries, mj_repo_commit="abc")
+    spec = ms.LAYOUT_SPECS[layout]
+    entries = ms.build_index_entries(m, spec)
+    payload = ms.index_payload(m, entries, spec=spec, layout=layout, mj_repo_commit="abc")
     back = ms.parse_index(payload)
     assert [e for e in back] == [e for e in entries]
     t = ms.index_totals(entries)
     # 291 exec → 17；demo 66 → 3、exec 272 → 15；demo 216 → 12、exec 370 → 22；exec 40 → 1；exec 32 → 0
-    assert (t["exec_rows"], t["demo_rows"]) == (17 + 15 + 22 + 1, 3 + 12)
+    assert (t["exec_rows"], t["demo_rows"]) == (17 + 15 + 22 + 1, demo_rows)
     assert entries[0].demo.row_base is None and entries[0].exec.row_base == 0
-    assert entries[1].demo.row_base == 17 and entries[1].exec.row_base == 20
+    assert entries[1].demo.row_base == 17 and entries[1].exec.row_base == exec_base
     ms.check_index_against_manifest(entries, m)
     # 篡改 row_base 必 raise
     bad = json.loads(json.dumps(payload))
-    bad["entries"][1]["exec"]["row_base"] = 21
+    bad["entries"][1]["exec"]["row_base"] = exec_base + 1
     with pytest.raises(ValueError, match="row_base"):
         ms.parse_index(bad)
 
 
-def test_visible_motion_rows_boundaries() -> None:
+@pytest.mark.parametrize("layout,demo66,demo33,demo32", [
+    ("motion-768-grid16-v1", [0,16,32], [0], []),
+    ("motion-768-grid16-demopad17-v1", [0,16,32,48], [0,16], [0]),
+])
+def test_visible_motion_rows_boundaries(layout, demo66, demo33, demo32) -> None:
     from mme_vla_suite.datastore import motion_store as ms
     m = _mini_manifest_for_motion([(338, 66), (291, 0), (100, 33), (100, 32)])
-    e = ms.build_index_entries(m)
+    e = ms.build_index_entries(m, ms.LAYOUT_SPECS[layout])
     # demo 段 66 帧 → 起点 0,16,32（32+32=64 ≤ 65）；exec 段 t-es<32 时无 exec 起点
     r, f = ms.visible_motion_rows(e[0], 66)
-    assert f.tolist() == [0, 16, 32] and r.tolist() == [0, 1, 2]
+    assert f.tolist() == demo66 and r.tolist() == list(range(len(demo66)))
     r, f = ms.visible_motion_rows(e[0], 66 + 31)
-    assert f.tolist() == [0, 16, 32]
+    assert f.tolist() == demo66
     r, f = ms.visible_motion_rows(e[0], 66 + 32)          # 第一个 exec 起点 u=0 恰好可见
-    assert f.tolist() == [0, 16, 32, 66] and r.tolist() == [0, 1, 2, 3]
+    assert f.tolist() == demo66 + [66] and r.tolist() == list(range(len(demo66)+1))
     r, f = ms.visible_motion_rows(e[0], 66 + 47)
-    assert f.tolist() == [0, 16, 32, 66]
+    assert f.tolist() == demo66 + [66]
     r, f = ms.visible_motion_rows(e[0], 66 + 48)
-    assert f.tolist() == [0, 16, 32, 66, 82]
-    assert ms.max_visible_count(e[0]) == 3 + 15
+    assert f.tolist() == demo66 + [66, 82]
+    assert ms.max_visible_count(e[0]) == len(demo66) + 15
     # es=0：t=31 无起点，t=32 一个
     assert ms.visible_motion_rows(e[1], 31)[0].size == 0
     assert ms.visible_motion_rows(e[1], 32)[1].tolist() == [0]
     # demo 恰好 33 帧 → 1 个 demo 起点；demo 32 帧 → 0 个
-    assert ms.visible_motion_rows(e[2], 33)[1].tolist() == [0]
-    assert ms.visible_motion_rows(e[3], 32)[1].size == 0
+    assert ms.visible_motion_rows(e[2], 33)[1].tolist() == demo33
+    assert ms.visible_motion_rows(e[3], 32)[1].tolist() == demo32
     with pytest.raises(ValueError):
         ms.visible_motion_rows(e[0], 65)                   # t 落在 demo 段不是 exec 样本
 
@@ -551,12 +565,14 @@ def test_worker_claim_is_exclusive(tmp_path: pathlib.Path) -> None:
     assert wc.try_claim(claims, "T_ep0_exec", "gpu1")
 
 
-def test_wan_common_list_segments_matches_index() -> None:
+@pytest.mark.parametrize("layout", ["motion-768-grid16-v1", "motion-768-grid16-demopad17-v1"])
+def test_wan_common_list_segments_matches_index(layout) -> None:
     from mme_vla_suite.datastore import motion_store as ms
     wc = _wan_common()
     m = _mini_manifest_for_motion([(291, 0), (338, 66), (586, 216), (32, 0)])
-    segs = wc.list_segments(m)
-    entries = ms.build_index_entries(m)
+    spec = ms.LAYOUT_SPECS[layout]
+    segs = wc.list_segments(m, demo_min_real=spec.demo_min_real, exec_min_real=spec.exec_min_real)
+    entries = ms.build_index_entries(m, spec)
     exp = []
     for e in entries:
         for seg in ms.SEGMENTS:

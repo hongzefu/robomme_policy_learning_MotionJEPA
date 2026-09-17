@@ -71,11 +71,12 @@ _PROBE_ENV_RE = re.compile(r"\bPROBE_ENV\b(?P<rest>.*)$")
 # --------------------------------------------------------------------------
 # 独立重算（刻意不 import mme_vla_suite.shared.sampling —— 两侧各写一份才有对拍意义）
 # --------------------------------------------------------------------------
-def motion_frames_formula(es: int, t: int, window: int = MOTION_WINDOW, stride: int = MOTION_STRIDE) -> list[int]:
+def motion_frames_formula(es: int, t: int, window: int = MOTION_WINDOW, stride: int = MOTION_STRIDE,
+                          demo_min_real: int = 33) -> list[int]:
     """合法运动窗起点（全域帧号，升序）：demo 段 [0, es) 与 exec 段 [es, t] 各按 segment_start 网格 forward 取。"""
     out: list[int] = []
     s = 0
-    while s + (window - 1) <= es - 1:
+    while s + (demo_min_real - 1) <= es - 1:
         out.append(s)
         s += stride
     u = 0
@@ -261,10 +262,11 @@ def main() -> int:
     ap.add_argument("--train-pkl-root", default=None,
                     help="训练 pkl 根（默认 <lib>/source/data，即 FrameSampDataset.__getitem__ 读的那一份）")
     ap.add_argument("--videos-dir", default=None, help="默认 <progress 所在目录>/videos，用于 timeout 交叉核")
-    ap.add_argument("--budget", type=int, default=96, help="motion token 预算")
+    ap.add_argument("--budget", type=int, default=None, help="motion token 预算；显式值须与策略一致")
+    ap.add_argument("--demo-min-real", type=int, default=None, help="demo 最少真实帧数；缺省取训练库布局契约")
     ap.add_argument("--max-steps", type=int, default=1300, help="eval.py 的 --args.max_steps")
-    ap.add_argument("--max-frames", type=int, default=32, help="帧路最多帧数 = budget/(token_per_image·num_views)")
-    ap.add_argument("--tokens-per-frame", type=int, default=16, help="token_per_image × num_views")
+    ap.add_argument("--max-frames", type=int, default=None, help="帧路最多帧数；缺省取策略记录")
+    ap.add_argument("--tokens-per-frame", type=int, default=None, help="token_per_image × num_views；缺省取策略记录")
     ap.add_argument("--expect-episodes", type=int, default=24, help="预期总集数（4 任务 × 6 集）")
     ap.add_argument("--expect-tasks", type=int, default=4)
     ap.add_argument("--out", default=None, help="JSON 报告落点（默认 v1-store/reports/tic/eval_probe_summary.json）")
@@ -282,6 +284,19 @@ def main() -> int:
     motion_enabled = penv.get("motion_enabled") == "1"
     if penv.get("motion_enabled") not in ("0", "1"):
         raise ValueError("PROBE_ENV 缺 motion_enabled")
+    actual_tokens = int(penv["token_per_image"]) * int(penv["num_views"])
+    args.tokens_per_frame = actual_tokens if args.tokens_per_frame is None else args.tokens_per_frame
+    args.max_frames = int(penv["budget"]) // actual_tokens if args.max_frames is None else args.max_frames
+    actual_budget = int(penv["motion_budget"]) if motion_enabled else 0
+    if args.budget is not None and args.budget != actual_budget:
+        raise ValueError("命令行 motion 预算与真实策略记录不同")
+    args.budget = actual_budget
+    if motion_enabled:
+        motion_index = json.loads((lib / "motion/meta/motion_index.json").read_text())
+        minimum = int(motion_index.get("demo_min_real_frames", 33))
+        if args.demo_min_real is not None and args.demo_min_real != minimum:
+            raise ValueError("命令行 demo 契约与训练库不同")
+        args.demo_min_real = minimum
     if int(penv["budget"]) != args.max_frames * args.tokens_per_frame or int(penv["token_per_image"]) * int(penv["num_views"]) != args.tokens_per_frame:
         raise ValueError("命令行帧预算与真实策略配置不符")
     if not motion_enabled:
@@ -375,7 +390,7 @@ def main() -> int:
     kf_mis = 0
     fs_mis = 0
     for r in recs:
-        want = motion_frames_formula(int(r["es"]), int(r["t"])) if motion_enabled else []
+        want = motion_frames_formula(int(r["es"]), int(r["t"]), demo_min_real=args.demo_min_real) if motion_enabled else []
         if [int(x) for x in r["motion_frames"]] != want:
             kf_mis += 1
         want_fs = frames_sampled_formula(int(r["t"]), args.max_frames)
@@ -514,7 +529,7 @@ def main() -> int:
         T = int(ep["num_timesteps"])
         train_tau_max = max(train_tau_max, T - 1)
         for t in range(es, T):
-            train_ks.append(len(motion_frames_formula(es, t)) if motion_enabled else 0)
+            train_ks.append(len(motion_frames_formula(es, t, demo_min_real=args.demo_min_real)) if motion_enabled else 0)
     emit("EVAL_DIST_OBS", None,
          f"online_k_median={stat.median(ks)} mean={stat.mean(ks):.2f} max={max(ks)} | "
          f"train_k_median={stat.median(train_ks)} mean={stat.mean(train_ks):.2f} max={max(train_ks)} "

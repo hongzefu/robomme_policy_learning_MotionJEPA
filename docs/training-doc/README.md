@@ -10,11 +10,13 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
+| [`mv2-implementation/`](mv2-implementation/result.md) | 新旧契约、独立公式、初态、位置编码与计时验证 | 工作区短测通过；位置表和仿真预检执行方式待用户裁决 |
 | [`v2-1600ep-m8x8-modul-motion-b128-80k/`](v2-1600ep-m8x8-modul-motion-b128-80k/launch.md) | 1600 集 demo 补帧 motion 表及 8 卡 b128 的 80k 训练 | 名称已确认，实施准备中，尚未起跑 |
 | [`mv2-v1-dump/`](mv2-v1-dump/result.md) | 关闭态 Dataset 完整取证 | 改前取证完成，退出码 0，改后逐位比较待执行 |
 | [`mv2-v2-legacy/`](mv2-v2-legacy/result.md) | 旧 YAML 与旧表完整取证 | 改前取证完成，退出码 0，改后逐位比较待执行 |
 | [`mv2-v6-grad/`](mv2-v6-grad/result.md) | 关闭态固定 batch 梯度取证 | 改前取证完成，退出码 0，改后逐位比较待执行 |
 | [`mv2-v7-guard-base/`](mv2-v7-guard-base/result.md) | 关闭态真实 100 步基线 | 改前取证完成，退出码 0，改后逐位比较待执行 |
+| [`mv2-v7-guard-cand/`](mv2-v7-guard-cand/launch.md) | 关闭态真实 100 步候选及逐位对拍 | 起跑准备中 |
 
 ### modulation 8×8 起跑前验证（2026-09-15）
 
