@@ -32,14 +32,127 @@
 
 ---
 
-## 二、总图：五站流水线，第四站分叉
+## 二、调用链：训练一步里谁调谁、每个函数干什么
+
+先给一棵调用树（训练一步，`scripts/training/train.py` 起），缩进表示「被上一级调用」，行尾标它属于五站里的哪一站；★ 标 context / modulation 分叉处。再用一张表把每个函数的职责说成一句话。最后才是五站总图。
+
+### 2.1 调用树
+
+```
+main()                                                     scripts/training/train.py
+├─ create_data_loader()  → DataLoaderImpl                   src/mme_vla_suite/training/dataloader.py
+│   └─ DataLoaderImpl.__iter__()                              每步 next(data_iter) 触发
+│       ├─ torch DataLoader worker → FrameSampDataset.__getitem__(idx)         ①
+│       │   ├─ even_sampling_indices(step, 8)          选 8 个帧号
+│       │   ├─ store.read_image_rows / pos_rows / state_rows   读帧库 8 行
+│       │   ├─ _pad(...)                                右填充到 8 帧（本库恒满）
+│       │   ├─ reshape + np.repeat                       摊成 static_* 四键 (512,·)
+│       │   ├─ visible_motion_rows(entry, step)         算 k 个合法 motion 窗的表行号与起点帧
+│       │   ├─ mstore.rows(rows_m) / store.pos_rows(f_m) 读 motion 表 k 行、切 k 个时间码
+│       │   ├─ _pad_motion(...) → pad_times(...)         右填充到 160 行，记每行时刻（padding 记哨兵）
+│       │   └─ memory_order(帧时刻, 64, motion 时刻)      算 (672,) 置换 mem_order
+│       ├─ collate                                       每键前加 b 维
+│       └─ HistAugObservation.from_dict(batch)           字典 → 带 12 个字段的 observation 对象
+└─ train_step(config, rng, state, batch)                                       ②–⑤
+    └─ nnx.value_and_grad(loss_fn)(model, rng, observation, actions)
+        └─ loss_fn → model.compute_loss(rng, observation, actions, train=True)   history_pi0.py
+            ├─ preprocess_observation(rng, obs, train=True)   图像增广；记忆 8 键原样透传
+            ├─ 加噪：x_t = t·noise + (1−t)·actions，u_t = noise − actions
+            ├─ embed_prefix(obs)
+            │   ├─ ★ context 才走：embed_memory(obs)                              ②③
+            │   │   ├─ mem_encoder.__call__(static_*, motion_*)   = PerceptualMemory     ②
+            │   │   │   ├─ feature_encoder.encode_perceptual_memory(...)  帧路
+            │   │   │   │   └─ _encode_memory → _add_pos_emb(pos_proj+silu) → encoder_static
+            │   │   │   ├─ motion_pos_proj + silu → concat → motion_encoder_static   运动路
+            │   │   │   └─ jnp.concatenate([帧路, 运动路], axis=1)   并列序 (b,672,D)
+            │   │   ├─ input_mask = concat([static_mask, motion_mask])
+            │   │   └─ jnp.take_along_axis(·, mem_order)   重排成时间序          ③
+            │   ├─ PaliGemma.img(images[name])  ×2 视角      SigLIP 出 256 个 token
+            │   ├─ PaliGemma.llm(tokenized_prompt, method="embed")   文本查词表
+            │   └─ concat → prefix_tokens / input_mask / ar_mask / na_mask
+            ├─ embed_suffix(obs, x_t, time)
+            │   ├─ action_in_proj(x_t)                      32 → 1024
+            │   └─ posemb_sincos(time) → time_mlp_in → swish → time_mlp_out → swish = adarms_cond
+            ├─ make_attn_mask(input_mask, ar_mask, na_mask)  (b,L,L) 可见表
+            ├─ positions = cumsum(input_mask) − 1
+            ├─ ★ modulation 才走：embed_memory(obs) → mem_seq, mem_mask（内部同上 ②③）
+            ├─ PaliGemma.llm([prefix_tokens, suffix_tokens], mask, positions, adarms_cond,
+            │                 ★ mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])        ④
+            │   = history_gemma.Module.__call__
+            │   └─ self.layers = nn.scan(HistoryBlock) × 18，每层 HistoryBlock.__call__
+            │       ├─ RMSNorm(pre_attention_norm_i)  expert 0 普通版 / expert 1 自适应版吃 adarms_cond
+            │       ├─ Attention(configs)(pre_attn, positions, attn_mask, kv_cache)   openpi gemma.py
+            │       │   ├─ 各 expert 自己的 q_einsum / kv_einsum
+            │       │   ├─ concat 两 expert 的 q、k、v → _apply_rope(q/k, positions)
+            │       │   ├─ einsum 打分 → where(mask) → softmax → einsum 加权
+            │       │   └─ 各 expert 自己的 attn_vec_einsum 投回
+            │       ├─ _gated_residual(x, post_attn, gate)
+            │       ├─ ★ modulation 且 i == 最后一条流：
+            │       │   ├─ MemoryAttention("mem_attn")(x, mem_seq, mem_mask)   history_gemma.py
+            │       │   │   ├─ MemoryRMSNorm("mem_rms_norm")(x)、同一实例 (mem_seq)
+            │       │   │   ├─ q_einsum_mem / kv_einsum_mem
+            │       │   │   ├─ _apply_rope(q, arange(672,692))、_apply_rope(k, arange(672))
+            │       │   │   └─ einsum → where(mem_mask) → softmax → einsum → out_einsum_mem
+            │       │   └─ MemoryRMSNorm("mem_rms_norm_ffn")(x, cond=上一行)  Dense 1024→2048 → scale/shift
+            │       ├─ RMSNorm(pre_ffw_norm_i) → lora.FeedForward(mlp_i)
+            │       └─ _gated_residual(x, out, gate)
+            │   └─ final_norms[i] 各 expert 一次
+            ├─ action_out_proj(suffix_out[:, −20:])         1024 → 32 = v_t                ⑤
+            └─ mean((v_t − u_t)², axis=−1) → loss_fn 再对 b、20 取均值 → 标量
+        ← 反向：nnx.value_and_grad 得与参数树同形的 grads
+    ├─ state.tx.update(grads, opt_state, params) → optax.apply_updates   参数更新
+    └─ nnx.update(model, new_params)
+```
+
+推理（`sample_actions`）的调用树只在两处不同：`compute_loss` 换成 `sample_actions`，它先只跑 `embed_prefix` + `PaliGemma.llm([prefix, None])` 存 kv_cache，再在 `jax.lax.while_loop` 里 10 次调 `step`，每次 `embed_suffix` → `make_attn_mask` → `PaliGemma.llm([None, suffix], kv_cache=…, ★ mem_seq=…)` → `action_out_proj` → Euler 一步；★ modulation 下 `embed_memory` 在循环外只调一次，`mem_seq` 每步原样传入。在线侧数据不来自 `FrameSampDataset`，而是 `policies/policy.py` 的 `_prepare_history` 从内存字典组装同样的 12 个键后 `HistAugObservation.from_dict`（`motion-memory-interleave.md` 五节）。
+
+### 2.2 每个函数的职责一句话
+
+按调用树的出现顺序。「输入 → 输出」只写主形状，b = batch，D = `memory_token_dim`。
+
+| 函数 | 文件 | 被谁调用 | 干什么 | 输入 → 输出 |
+|---|---|---|---|---|
+| `FrameSampDataset.__getitem__` | `training/framesamp_dataset.py` | torch DataLoader worker | 给定样本序号，查清单得 (episode g, 帧号 t)，读离线表拼出一个样本字典 | idx → dict：图像 2 键、文本、state、actions (20,32)、`static_*` 4 键、`motion_*` 3 键、`mem_order` |
+| `even_sampling_indices` | `shared/sampling.py` | `__getitem__`；在线侧同一函数 | 从 0…t 里等距选 8 个帧号（t < 8 时全取） | (t, 8) → 8 个 int |
+| `store.read_image_rows` / `pos_rows` / `state_rows` | `datastore/framesamp_store.py` | `__getitem__` | 按帧号从帧库读每帧 64 个 patch 的外观 / 位置码 / state | 8 个帧号 → (8,64,2048)、(8,64,768)、(8,8) |
+| `_pad` | `framesamp_dataset.py` | `__getitem__` | 不足 8 帧时右填零并出帧级 mask | (n,…) → (8,…)、mask (8,) |
+| `visible_motion_rows` | `shared/motion_store.py` | `__getitem__`；在线侧同式 `visible_motion_frames` | 按 demo / exec 两段的 16 步网格，找出「33 帧窗尾端 ≤ t」的全部起点，返回它们在 motion 表里的行号与全域起点帧 | (entry, t) → rows (k,)、frames (k,) |
+| `mstore.rows` | `shared/motion_store.py` | `__getitem__` | 从 `motion_token.f32.bin` 按行号读 motion token | (k,) → (k,768) |
+| `_pad_motion` → `pad_times` | `framesamp_dataset.py` / `sampling.py` | `__getitem__` | 把 k 行右填充到 160 行，mask 前 k 位 True；每行记全域起点帧，padding 行记 `MEM_ORDER_SENTINEL` | (k,768)、(k,256)、(k,) → (160,768)、(160,256)、(160,)、时刻 (160,) |
+| `memory_order` | `shared/sampling.py` | `__getitem__`；在线侧同一函数 | 672 个候选位按「时刻×2+类型」稳定排序，得把并列序变时间序的置换 | 帧时刻 (8,)、64、motion 时刻 (160,) → (672,) int32 |
+| `HistAugObservation.from_dict` | `integration/history_observation.py` | `DataLoaderImpl.__iter__`；在线侧 `policy.py` | 把 batch 字典装进 dataclass；缺键静默为 None（所以模型侧有非 None 闸） | dict → `HistAugObservation` |
+| `train_step` → `loss_fn` | `scripts/training/train.py` | 训练主循环 | `nnx.merge` 出模型，`value_and_grad(loss_fn)` 得 loss 与梯度，optax 更新参数 | (state, batch) → (new_state, info) |
+| `HistoryPi0.compute_loss` | `integration/history_pi0.py` | `loss_fn` | 训练一次前向：预处理、加噪、嵌入前缀后缀、建 mask、过 llm、出速度、算 MSE | (rng, obs, actions) → (b,20) |
+| `preprocess_observation` | `history_observation.py` | `compute_loss` / `sample_actions` | 对图像做增广（训练）或什么都不做（推理）；`static_*` / `motion_*` / `mem_order` 八键原样透传 | obs → obs |
+| `HistoryPi0.embed_prefix` | `history_pi0.py` | `compute_loss` / `sample_actions` | 拼前缀：★ context 先放记忆，再放两视角图像、文本；同时拼 `input_mask`、`ar_mask`、`na_mask` | obs → tokens (b,1248 或 576,2048) + 三条 mask |
+| `HistoryPi0.embed_memory` | `history_pi0.py` | ★ context：`embed_prefix`；★ modulation：`compute_loss` / `sample_actions` 直接调 | 调 `mem_encoder` 得并列序记忆，拼 `input_mask`，按 `mem_order` 重排；关闭态早返回 512 位 | obs → tokens (b,672,D)、input_mask (b,672)、ar_mask、na_mask |
+| `PerceptualMemory.__call__` | `representation/percep_mem.py` | `embed_memory` | 帧路过 `feature_encoder`，运动路过两层 Linear，两路沿长度轴拼接（并列序） | (b,512,2048)、(b,512,768)、(b,160,768)、(b,160,256) → (b,672,D) |
+| `FeatureEncoder.encode_perceptual_memory` → `_encode_memory` | `representation/mem_encoder.py` | `PerceptualMemory.__call__` | 帧路：`pos_proj`+silu 后与外观拼 2816 维，过 `encoder_static` 到 D | (b,512,2048)+(b,512,768) → (b,512,D) |
+| `PaliGemma.img` | openpi SigLIP | `embed_prefix` | 一张 224×224 图 → 256 个 2048 维 token | (b,224,224,3) → (b,256,2048) |
+| `PaliGemma.llm(…, method="embed")` | `history_gemma.Module.embed` | `embed_prefix` | 文本 id 查词表 | (b,64) int → (b,64,2048) |
+| `HistoryPi0.embed_suffix` | `history_pi0.py` | `compute_loss` / `step` | 带噪动作投到 1024；时间步编成 `adarms_cond` | (b,20,32)、(b,) → (b,20,1024)、(b,1024) + 三条 mask |
+| `make_attn_mask` | `history_pi0.py` 模块级 | `compute_loss` / `sample_actions` / `step` | 三条一维 mask → 一张 (b,L,L) 可见表（块号规则 ∧ padding ∧ na 屏蔽） | (b,L)、(L,)、(L,) → (b,L,L) |
+| `history_gemma.Module.__call__` | `integration/history_gemma.py` | `compute_loss` / `sample_actions` 里的 `PaliGemma.llm(...)` | 把两条流交给 `nn.scan` 叠的 18 层 `HistoryBlock`，最后各过 `final_norm`；★ `mem_seq` / `mem_mask` 以 `nn.broadcast` 传给每层同一份 | [prefix, suffix] → [prefix_out, suffix_out], kv_cache |
+| `HistoryBlock.__call__` | `history_gemma.py` | `nn.scan` 每层一次 | 一层 transformer：归一化 → 共享 `Attention` → 残差 → ★（modulation：`MemoryAttention` → `MemoryRMSNorm`）→ 归一化 → FFN → 残差 | xs → xs |
+| `RMSNorm` | openpi `gemma.py` | `HistoryBlock` | expert 0：`x/√(mean x²+ε)·(1+scale)`；expert 1：用 `adarms_cond` 出 scale/shift/gate | (b,T,W) → (b,T,W)[, gate] |
+| `Attention.__call__` | openpi `gemma.py` | `HistoryBlock` | 两条流各自投影 q/k/v，沿长度轴拼成一条做一次 self-attention，再各自投回；context 下记忆 token 就在这里与图像文本动作互相看 | [(b,T0,2048),(b,T1,1024)] → 同形 |
+| `_apply_rope` | openpi `gemma.py` | `Attention` / `MemoryAttention` | 按整数位置号旋转 q、k 的每对维度；q·k 只取决于位置号之差 | (b,T,H,256)、(b,T) → 同形 |
+| `_gated_residual` | openpi `gemma.py` | `HistoryBlock` | expert 0：`x+y`；expert 1：`x+y·gate` | — |
+| ★ `MemoryAttention.__call__` | `history_gemma.py` | `HistoryBlock`（仅 modulation、仅最后一条流） | 20 个动作 token 出 q，672 位记忆出 k/v，k 位置 `arange(672)`、q 位置 `arange(672,692)`，按 `mem_mask` 屏蔽 padding 列，4 头 cross-attention 读出一个向量 | (b,20,1024)、(b,672,1024)、(b,672) → (b,20,1024) |
+| ★ `MemoryRMSNorm.__call__` | `history_gemma.py` | `MemoryAttention`（无 cond）；`HistoryBlock`（有 cond） | 无 cond：普通 RMSNorm 带 `scale`；有 cond：无参 RMSNorm 后用 `Dense(1024→2048)(cond)` 切出 scale/shift 调制 | (b,20,1024)[, cond (b,20,1024)] → (b,20,1024) |
+| `lora.FeedForward` | openpi `lora.py` | `HistoryBlock` | `gelu(x·W0)·(x·W1)` 再投回 | (b,T,W) → (b,T,W) |
+| `action_out_proj` | `history_pi0.py` | `compute_loss` / `step` | 1024 → 32，得速度场 | (b,20,1024) → (b,20,32) |
+| `HistoryPi0.sample_actions` | `history_pi0.py` | `policy.py` 经 `module_jit` | 推理：前缀一次存 kv_cache，★ modulation 另调一次 `embed_memory`，`while_loop` 10 步 Euler | obs → (b,20,32) |
+
+### 2.3 五站总图
+
+把 2.1 的树折叠成五站，①②③⑤ 两边同一份代码，④ 分叉：
 
 ```
  ┌─────────────────────────────────────────────────────────────────────────────────────────┐
- │ ① dataloader  FrameSampDataset.__getitem__                                              │
+ │ ① FrameSampDataset.__getitem__ → collate → HistAugObservation.from_dict                  │
  │    帧路 static_* 四键 (512,…)  +  运动路 motion_emb/pos/mask (160,…)  +  mem_order (672,)   │
  └───────────────────────────────────────┬─────────────────────────────────────────────────┘
-                                         │  collate → 每键前加 b 维
  ┌───────────────────────────────────────▼─────────────────────────────────────────────────┐
  │ ② PerceptualMemory.__call__   帧路 (b,512,D) ‖ 运动路 (b,160,D) → 并列序 (b,672,D)          │
  └───────────────────────────────────────┬─────────────────────────────────────────────────┘
@@ -50,12 +163,14 @@
               ┌──────────────────────────┴──────────────────────────────┐
               │ context（D = 2048）                                      │ modulation（D = 1024）
  ┌────────────▼────────────────────────┐              ┌─────────────────▼──────────────────────────┐
- │ ④c embed_prefix 把 672 位排在最前     │              │ ④m 主干序列 = 基线 596 位，记忆不进主干           │
+ │ ④c embed_prefix 调 embed_memory，     │              │ ④m compute_loss 自己调 embed_memory，          │
+ │    把 672 位排在图像之前              │              │    embed_prefix 不碰记忆：主干 = 基线 596 位     │
  │    前缀 1248 = 记忆 672+图像 512+文本 64│              │    mem_seq 经 llm(mem_seq=[None, mem_seq])       │
  │    全序列 1268，一张 1268×1268 mask    │              │    只交给 expert 1，nn.broadcast 给 18 层同一份    │
- │    18 层 self-attention，记忆逐层被改写 │              │    每层：20 个动作 token → MemoryAttention 读记忆  │
- │    positions = cumsum(input_mask)−1   │              │    → MemoryRMSNorm 出 scale/shift 调制 FFN 输入   │
- │    padding 不占位置号                  │              │    k 位置 = arange(672)，padding 占号            │
+ │    HistoryBlock 里的共享 Attention     │              │    每层 HistoryBlock：MemoryAttention 读记忆 →    │
+ │    18 层 self-attention，记忆逐层被改写 │              │    MemoryRMSNorm 出 scale/shift 调制 FFN 输入     │
+ │    positions = cumsum(input_mask)−1   │              │    k 位置 = arange(672)，padding 占号            │
+ │    padding 不占位置号                  │              │                                                │
  └────────────┬────────────────────────┘              └─────────────────┬──────────────────────────┘
               └──────────────────────────┬──────────────────────────────┘
  ┌───────────────────────────────────────▼─────────────────────────────────────────────────┐
@@ -63,7 +178,7 @@
  └─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-①②③⑤ 两边逐字同一份代码；`src/mme_vla_suite/policies/` 目录下 grep `integration_type` 零命中，所以在线装配层也不分叉（主计划 I.1 第 3 条）。
+`src/mme_vla_suite/policies/` 目录下 grep `integration_type` 零命中，所以在线装配层也不分叉（主计划 I.1 第 3 条）。
 
 ---
 
