@@ -1,4 +1,4 @@
-# 八卡80k已起跑，稳态主线程与利用率已测，设备覆盖存在缺口
+# 八卡80k已起跑，按用户确认口径完成分窗性能报告
 
 2026-09-18 05:47:05 UTC从clean `2f10473161b760f16d9240d3c2959ff326cde66b`（commitV10.2Beta）启动 `v2-1600ep-m8x8-modul-motion-b128-80k`。30项preflight全部通过；运行时实际8×A100-SXM4-80GB、batch128、fsdp8、workers16、mesh(1,8)，source/norm/motion表指纹与起跑档案一致。完整配置与启动命令见 [launch.md](launch.md)，实际进程、参数和独立空卡检查见 [launch.actual.json](records/launch.actual.json)。训练仍在运行，不把起跑结果称为80k训练完成。
 
@@ -24,6 +24,8 @@ tmux全名为mv2-prod，Python训练PID545524，WandB为 [uzv8avpq](https://wand
 | 其他步采样均值 / 0%占比 | 98.6415% / 0%，3096条 |
 
 慢步定义为host_step超过均值的1.5倍，阈值1.480819秒，命中step100和200这两个记录标量的步骤。500ms共取得3152条卡级读数，即每卡394条；NVML自身存在采样周期，相同连续读数不视为新增独立证据。各卡均值98.2538%–98.7208%，各卡0%占比均为0。
+
+完整密集采样于05:46:56→06:16:56 UTC按1800秒自然结束，`SAMPLER_EXIT_CODE=124`为timeout正常到时，驱动核验后`DENSE_CAPTURE=PASS`、`EXIT_CODE=0`；未提前终止。每卡3579条、总28632条，首尾实际跨度1798.265–1798.270秒，平均间隔0.502590秒，最大间隔0.878秒；stderr为空。完整CSV为1077226字节，SHA256为`7ea2685075c59589ad6abacd62e85c01cbf32e2e1bba4c38c26f48b4a3af764f`。第300步快照是完整文件的精确字节前缀，因此上述稳态统计输入与完整采样同源；不将包含初始化和导出停顿的30分钟全程均值当稳态利用率。见 [完整CSV](records/gpu_util_500ms.full.csv)、[采样验收](records/dense_capture_complete.json) 与 [采样日志](records/dense.summary.log)。
 
 `train_dispatch`含异步提交和可能的背压，不是GPU计算耗时。取batch等待也可能与设备工作重叠，14.4906%不能解释为GPU空闲或可直接节省的时间。由于下述设备覆盖缺口，当前窗口不能计算等待期间全部GPU同时空闲的时间，也不能据高util判断计算/通信瓶颈或决定调整worker。
 
@@ -57,14 +59,18 @@ JAX0.5.3对应的 [XLA固定提交](https://github.com/jax-ml/jax/blob/jax-v0.5.
 
 ## 用户决定与后续
 
-用户原话「继续工作」「纳入计时与 trace，按计划提供实测分解」。本轮已完成正式起跑和完整的稳态主线程/NVML统计；第100–299步的设备分解仍未满足原判据。已询问用户是否接受将第5–24步的设备分解单列为早期短窗诊断；在取得答复前，不把分窗视为原300步要求已验收。
+用户原话「继续工作」「纳入计时与 trace，按计划提供实测分解」。发现原始设备采集缺口后，用户进一步确认「保持训练，接受明确标注的分窗报告（推荐）」。据此采用第100–299步的步时、主线程等待、NVML统计，加第5–24步的独立设备短窗诊断；正式训练保持运行。**这是用户接受的分窗口径，第100–299步设备分解仍未满足原判据，不因批准分窗而将缺失写成完整。**
 
 80k训练继续运行，未宣称已训完。正式策略评估及同权重motion全遮消融仍另起计划；当前loss或运行正常均不证明motion提升策略成功率。主仓保持Beta和只读源码，全部档案修改在独立开发副本完成。
+
+本轮正式起跑、用户接受的分窗报告和完整采样归档已完成。06:17:01 UTC收尾核查时，训练PID545524仍在，最新标量记录至step1300，各已记录loss/梯度范数/参数范数均有限，主仓仍为clean Beta；`mv2-dense`已自然退出，`mv2-prod`继续保留。训练结束后再补全程指标和配对V10.2结论，不预填成功或策略效果。
 
 ## 本次归档与复现
 
 `records/launch.actual.json`和`preflight.log`固定真实起跑；`runtime.json`固定卡数、batch、mesh及worker；`source_lock.before.json`、`source_lock.json`和`source_recheck_step900.json`证明290份Git源码在锁定及第900步复核时均未变、主仓clean且只读。第900步指标快照与清洗日志只描述当时进度，不包含或预设80k结束状态。
 
 `step_timing.jsonl`、`step_trace_metadata.json`、`gpu_util_500ms.step300.snapshot.csv`和`perf_step300_input.json`固定主线程300步及稳态采样输入；主线程与NVML结果、失败日志、短窗JSON、原始覆盖复核和真实回归分别按上文链接保存。`trace_export_resume.json`记录大trace的SHA与位置，原始文件保留在v1-store，不进Git；checkpoint同理。
+
+`gpu_util_500ms.full.csv`、`dense_capture_complete.json`、`dense.summary.log`补全30分钟采样证据；`metrics.at_dense_end.snapshot.jsonl`与`train.at_dense_end.summary.log`保存采样结束时的指标和清洗日志，不覆盖第900步快照。汇总器覆盖修补与启动归档提交为`70ca65c2c9a09ebcc4536cd64d7e551fa851f4bd`；此后的文档提交只固定用户分窗决定和采样收尾，不进入正在训练的主仓。
 
 实际短窗命令为 `uv run --no-sync python scripts/training/tests/summarize_step_timing.py --records v1-store/bench/v2-1600ep-m8x8-modul-motion-b128-80k --gpu-csv v1-store/bench/v2-1600ep-m8x8-modul-motion-b128-80k/gpu_util_500ms.step300.snapshot.csv --warmup-steps 5 --end-step 24 --out v1-store/bench/v2-1600ep-m8x8-modul-motion-b128-80k/perf_early_step5_24.json`。主线程与原始覆盖的独立诊断脚本保存在 [step300-host-and-coverage.py](records/step300-host-and-coverage.py)，实际执行位置为主仓 `v1-store/logs/mv2-step300-host-and-coverage.py`；恢复到该位置后才能使用其相对路径。所有输出均拒绝覆盖，复跑应使用独立输出位置。
