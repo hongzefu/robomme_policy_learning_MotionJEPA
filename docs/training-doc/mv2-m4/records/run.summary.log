@@ -1,0 +1,23 @@
+CHECK_HEAD=81bd0217f890218a1134b135adcf3490cc68dd51
+STAGE=m4
+START_UTC=2026-09-18T02:56:23Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+V5_PRETRAINED=PASS side=open loaded=40 random=25 action=19
+V5_PRETRAINED=PASS side=closed loaded=40 random=21 action=19
+MASK_INVARIANCE=PASS
+PAD_CONTENT_INVARIANCE=PASS det_probes=3 nondeterministic_leaves=[] excluded=0 covered=42/42
+GRAD_LEAK=PASS
+MOTION_CONTENT_EFFECT=PASS
+ORDER_EFFECT=PASS max_abs_diff=0.00404310226
+ROW_PERM_INVARIANCE=PASS max_abs_diff=0
+LEN_EQUIV_NA 不同记忆长度会平移 query 的 RoPE 位置，不做全遮与关闭态等价断言
+END_UTC=2026-09-18T03:00:20Z
+EXIT_CODE=0

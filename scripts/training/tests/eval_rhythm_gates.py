@@ -222,6 +222,7 @@ def gate_rhythm(cases, rec: dict) -> tuple[str, bool]:
                         "k_max": max((r["k"] for r in rows_a), default=0),
                         "termination": info["termination"],
                         "c_env": t_env - 1 - es, "c_env_mod16": (t_env - 1 - es) % 16})
+        print(f"RHYTHM_PROGRESS cases={len(details)}/{len(cases)} es={es} points={len(rows_a)}", flush=True)
 
     ok = tau_mis == es_mis == k_mis == sha_mis == 0
     rec["rhythm"] = {"episodes": len(cases), "points": n_points, "details": details,
@@ -480,11 +481,28 @@ def load_real_cases(lib: pathlib.Path) -> list[tuple[int, int, str]]:
     return out
 
 
+def representative_replay_cases(cases, *, minimum: int, stride: int):
+    """保留各尾帧余数的最短/最长及各任务最长 demo；只缩减重复回放。"""
+    if not cases:
+        raise ValueError("真实回放样本集合为空")
+    residues, tasks = {}, {}
+    for case in cases:
+        residues.setdefault((case[0] - minimum) % stride, []).append(case)
+        tasks.setdefault(case[2].split("-", 1)[1], []).append(case)
+    chosen = {case for group in residues.values() for case in (min(group), max(group))}
+    chosen.update(max(group) for group in tasks.values())
+    return sorted(chosen)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="TIC 节奏层闸门（CPU + stub）")
     ap.add_argument("--gate", default="all", choices=["all", "rhythm", "term", "taulong", "esbound"])
     ap.add_argument("--lib", default=DEF_LIB, help="取真实 es / T 取值的库根")
     ap.add_argument("--yaml", default="perceptual-framesamp-modul-8frame-8x8-motion.yaml")
+    ap.add_argument("--replay-cases", choices=("all", "representative"), default="all",
+                    help="只选择 rhythm/term 的重复回放，预算扫描始终使用全部真实长度")
+    ap.add_argument("--expect-replay-cases", type=int)
+    ap.add_argument("--expect-real-es", type=int)
     ap.add_argument("--out", default="", help="判定明细 JSON 落点（可选）")
     args = ap.parse_args()
     global BUDGET
@@ -495,12 +513,32 @@ def main() -> int:
     lib = pathlib.Path(args.lib)
     if not lib.is_absolute():
         lib = _REPO_ROOT / lib
-    cases = load_real_cases(lib)
-    real_es = [c[0] for c in cases]
-    print(f"真实样本（每个 demo 段长度取最长一条）: " + " ".join(f"es={a} T={b} {c}" for a, b, c in cases))
+    all_cases = load_real_cases(lib)
+    real_es = [c[0] for c in all_cases]
+    minimum = int(G.MOTION_CFG.get("demo_min_real_frames", 33))
+    stride = int(G.MOTION_CFG["stride"])
+    cases = (all_cases if args.replay_cases == "all" else
+             representative_replay_cases(all_cases, minimum=minimum, stride=stride))
+    if args.expect_real_es is not None and len(real_es) != args.expect_real_es:
+        raise ValueError(f"真实长度数 {len(real_es)} != 外部期望 {args.expect_real_es}")
+    if args.expect_replay_cases is not None and len(cases) != args.expect_replay_cases:
+        raise ValueError(f"回放样本数 {len(cases)} != 外部期望 {args.expect_replay_cases}")
+    coverage = {"mode": args.replay_cases, "real_es_count": len(real_es), "replay_count": len(cases),
+                "residues": sorted({(c[0]-minimum) % stride for c in cases}),
+                "tasks": sorted({c[2].split("-", 1)[1] for c in cases}),
+                "es_min": min(c[0] for c in cases), "es_max": max(c[0] for c in cases)}
+    if (set(cases)-set(all_cases) or coverage["residues"] != sorted({(e-minimum) % stride for e in real_es})
+            or coverage["tasks"] != sorted({c[2].split("-", 1)[1] for c in all_cases})
+            or coverage["es_min"] != min(real_es) or coverage["es_max"] != max(real_es)):
+        raise ValueError("回放选择丢失真实范围、任务或尾帧余数")
+    print(f"RHYTHM_CASES=PASS mode={args.replay_cases} real_es={len(real_es)} replay={len(cases)} "
+          f"residues={len(coverage['residues'])} tasks={len(coverage['tasks'])}", flush=True)
+    print("真实回放样本: " + " ".join(f"es={a} T={b} {c}" for a, b, c in cases))
 
     rec: dict = {"schema": "tic-rhythm-v2", "lib": str(lib), "yaml": args.yaml, "budget": BUDGET,
-                 "real_cases": [{"es": a, "t_env": b, "tag": c} for a, b, c in cases]}
+                 "real_cases": [{"es": a, "t_env": b, "tag": c} for a, b, c in all_cases],
+                 "replay_cases": [{"es": a, "t_env": b, "tag": c} for a, b, c in cases],
+                 "case_selection": coverage}
     lines: list[str] = []
     results: list[bool] = []
 

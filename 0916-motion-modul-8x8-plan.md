@@ -1,10 +1,12 @@
 # 新库 motion 表构建 + modulation 8×8 接入 motion 计划（v2-motion）
 
-> **状态：新库建库全部验收通过，200 次真实 reset 通过；准备开启态 V4/V5/V8/V-online/V9，正式训练尚未起跑。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
+> **状态：建库、200 次 reset、V4 和完整 V5 全部通过；按用户决定改为 35 例节奏回放，保留全部其他覆盖；V8/V-online/V9 与正式训练尚未起跑。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
 >
 > **第一部分只讲做什么、为什么、哪些不变**；命令、判定行、代码锚点、推导与数字出处全部在第二部分（A–H 按模块，I 节收第一部分精简时移出的细节）。正本 `docs/motion-memory.md` 是 context 口径，本文只写与其不同的部分，实施后另立 `docs:` 更新正本。
 
 **用户已拍板**
+
+**09-18 节奏回放裁决**：用户原话「采用35例，保留其他全部覆盖（推荐）」。`eval_rhythm_gates.py --replay-cases representative --expect-replay-cases 35 --expect-real-es 411` 只缩减 rhythm/termination 重复回放：16种余数各取最短/最长，并保留四任务最长及全局最大es1152，共35个真实例。全部411种长度的预算扫描、1296/1297两侧完整1300步、TAU_LONG、V4、V-online和200次reset全部保留。默认all兼容原行为。原411例任务运行1334秒后按该决定中止、EXIT_CODE=143，保留日志且不计通过；5项测试及实际边界短测通过，完整代表例从修补后的clean HEAD重跑。
 
 | 项 | 决定 | 日期 |
 |---|---|---|
@@ -43,7 +45,7 @@
 
 ## 第一部分（给人看）
 
-**最新进度（步骤 5 完成，09-18）**：关闭态 V1/V2/V6/V7 已逐位通过。输入重锚后，Wan→encode→oracle→pack 全程固定 clean f6915f2a09443d48c1bb57e9b5f83e95400704fd；71316 token 全量逐位相同，8632 VAE 抽样窗逐位相同且含全部1600补帧窗，A6/A7/A9/A10/A11 全过，详见 [建库结果](docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)。200 次真实 reset 亦通过，es_max=383、budget=160、headroom=57，见 [预算预检](docs/training-doc/mv2-evalbound/result.md)。下一步从归档提交后的 clean HEAD 跑开启态验证；正式80k训练尚未启动。
+**最新进度（步骤 5 完成，09-18）**：关闭态 V1/V2/V6/V7 已逐位通过。输入重锚后，Wan→encode→oracle→pack 全程固定 clean f6915f2a09443d48c1bb57e9b5f83e95400704fd；71316 token 全量逐位相同，8632 VAE 抽样窗逐位相同且含全部1600补帧窗，A6/A7/A9/A10/A11 全过，详见 [建库结果](docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)。200 次真实 reset 亦通过，es_max=383、budget=160、headroom=57，见 [预算预检](docs/training-doc/mv2-evalbound/result.md)。下一步从归档提交后的 clean HEAD 跑开启态验证；正式80k训练尚未启动。 V4 已完成3232个关键样本逐位对拍；完整V5六项全部通过，三次探针、42/42可训练叶、无排除，见 [V4](docs/training-doc/mv2-v4/result.md) 与 [V5](docs/training-doc/mv2-m4/result.md)。
 
 **V5 初始化裁决已确认**：用户原话「采用兼容权重加载，保留 gemma_150m 替身」。`motion_gates_model.py::_make_models` 对 modulation 测试加载 `pi05_base` 中名称与形状均兼容的参数；`compatible_pi05_weights.py::merge_compatible` 独立要求动作专家及六个 AdaRMS 参数齐全，检查 18 层门不全零，报告保留随机的参数名单。生产初始化和门值不改。此前随机零门导致的失败是测试初态问题，不属于关闭态回归失败。
 
