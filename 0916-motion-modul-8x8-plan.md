@@ -1,14 +1,14 @@
 # 新库 motion 表构建 + modulation 8×8 接入 motion 计划（v2-motion）
 
-> **状态：建库、200 次 reset、V4 和完整 V5 全部通过；按用户决定改为 35 例节奏回放，保留全部其他覆盖；V8/V-online/V9 与正式训练尚未起跑。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
+> **状态：建库、关闭态验证、V4/V5、200次reset、节奏边界、V8与V-online三档全部通过；八卡20步smoke待运行，正式80k尚未起跑。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
 >
-> **第一部分只讲做什么、为什么、哪些不变**；命令、判定行、代码锚点、推导与数字出处全部在第二部分（A–H 按模块，I 节收第一部分精简时移出的细节）。正本 `docs/motion-memory.md` 是 context 口径，本文只写与其不同的部分，实施后另立 `docs:` 更新正本。
+> **第一部分只讲做什么、为什么、哪些不变**；命令、判定行、代码锚点、推导与数字出处全部在第二部分（A–H 按模块，I 节收第一部分精简时移出的细节）。正本 `docs/motion-memory.md` 已补充 modulation 的布局、位置、模型与验证口径，历史 context 记录保留其适用范围。
 
 **用户已拍板**
 
-**09-18 节奏回放裁决**：用户原话「采用35例，保留其他全部覆盖（推荐）」。`eval_rhythm_gates.py --replay-cases representative --expect-replay-cases 35 --expect-real-es 411` 只缩减 rhythm/termination 重复回放：16种余数各取最短/最长，并保留四任务最长及全局最大es1152，共35个真实例。全部411种长度的预算扫描、1296/1297两侧完整1300步、TAU_LONG、V4、V-online和200次reset全部保留。默认all兼容原行为。原411例任务运行1334秒后按该决定中止、EXIT_CODE=143，保留日志且不计通过；5项测试及实际边界短测通过，完整代表例从修补后的clean HEAD重跑。
+**09-18 节奏回放裁决**：用户原话「采用35例，保留其他全部覆盖（推荐）」。`eval_rhythm_gates.py --replay-cases representative --expect-replay-cases 35 --expect-real-es 411` 只缩减 rhythm/termination 重复回放：16种余数各取最短/最长，并保留四任务最长及全局最大es1152，共35个真实例。全部411种长度的预算扫描、1296/1297两侧完整1300步、TAU_LONG、V4、V-online和200次reset全部保留。默认all兼容原行为。原411例任务运行1334秒后按该决定中止、EXIT_CODE=143，保留日志且不计通过；5项测试及实际边界短测通过，完整代表例已从修补后的clean HEAD重跑通过，见节奏档案。
 
-**09-18 终止参考裁决**：用户确认「修正验证参考并补用例（推荐）」。35例首次重跑发现g317在16步整边界终止时，eval控制流/通用参考/独立生成点数为67/68/67；只修`eval_rhythm_gates.py::gate_rhythm`的参考帧数截止与`gate_termination`公式，不改生产eval、通用_drive或任何其他覆盖。环境终止推理次数为ceil((T−1−es)/16)，即floor((T−2−es)/16)+1；1296/1297预算边界与411长度扫描保留。19项测试和真实g317短测已通过，完整重跑从新clean HEAD执行。
+**09-18 终止参考裁决**：用户确认「修正验证参考并补用例（推荐）」。35例首次重跑发现g317在16步整边界终止时，eval控制流/通用参考/独立生成点数为67/68/67；只修`eval_rhythm_gates.py::gate_rhythm`的参考帧数截止与`gate_termination`公式，不改生产eval、通用_drive或任何其他覆盖。环境终止推理次数为ceil((T−1−es)/16)，即floor((T−2−es)/16)+1；1296/1297预算边界与411长度扫描保留。19项测试和真实g317短测已通过，完整重跑已从clean782696c通过，生产eval和通用_drive保持不变。
 
 | 项 | 决定 | 日期 |
 |---|---|---|
@@ -33,7 +33,7 @@
 | 与基线成对可比 | **接受降级、不重跑 8 卡基线**；主比较锚点仍是 80k run 的 `60000` vs 基线 `59999` | 09-17 |
 | `run_name` | `v2-1600ep-m8x8-modul-motion-b128-80k`（本轮用户确认采用） | 09-17 |
 
-**09-17 实施记录（优先于上方方案固化时的状态）**：用户指令原话「开始实施 有问题尽早问用户」；正式名称确认原话「采用 v2-1600ep-m8x8-modul-motion-b128-80k」。已开始步骤 0–1，起始提交为 `f9f668920923c58e5d7b721c2827da17b6afa865`，主副本工作区干净；环境 B，本地 `/dev/md0` XFS，8 × A100-SXM4-80GB，显存占用均为 0，磁盘剩余约 1.1 TB，`/dev/shm` 剩余 561 GiB。数据目录在位，内容核验尚未执行，所有验证与训练结果均待实测。
+**历史实施起点（09-17；最终进度以本页顶部和下方最新进度为准）**：用户指令原话「开始实施 有问题尽早问用户」；正式名称确认原话「采用 v2-1600ep-m8x8-modul-motion-b128-80k」。已开始步骤 0–1，起始提交为 `f9f668920923c58e5d7b721c2827da17b6afa865`，主副本工作区干净；环境 B，本地 `/dev/md0` XFS，8 × A100-SXM4-80GB，显存占用均为 0，磁盘剩余约 1.1 TB，`/dev/shm` 剩余 561 GiB。数据目录在位，内容核验尚未执行，所有验证与训练结果均待实测。
 
 用户另确认「采用建议顺序，保留三方强校验」：建库顺序修正为 **Wan → encode → oracle 重算及汇总 → pack/verify → compare → 五项账目**。原因是 pack 要读取 oracle 生成的 `vae_report.json`，必须先生成该报告；oracle 重算只依赖清单与 latent，不依赖 motion 整表。Wan 与 encode 之间零 commit，三个来源的 `raw_dir` 校验继续保留。
 
@@ -41,17 +41,17 @@
 
 **实施补充裁决（执行时优先于下方原计划表述）**：① 用户原话「纳入修补，确保所有起跑检查失败即停」，新 smoke / 正式 runner 的任务主体使用启用 `set -euo pipefail` 的子 shell，外层继续写 EXIT_CODE；内外日志使用不同路径。② 用户原话「采用真实 skipped 计数及完整性验收」，取消首次建库 `skipped=0` 的预设，汇总真实 skipped，另记起跑前完成段数；以 3,200 段、完整窗口集合与无重复处理验收。③ 用户原话「纳入计时与 trace，按计划提供实测分解」，增加默认关闭的主线程计时与 JAX 设备 trace，本轮 smoke / 正式 run 取前 300 步（smoke 取实际 20 步），不增加逐步设备同步；仅在 trace 收尾等待一次，单独区分主线程取 batch 等待、异步提交和设备 kernel 时间。
 
-**步骤 2a 完成**：BASE=`2126b1b1c436166662ff89a629985ecd4524fc42`；V1 为 3,200 样本 / 200 batch，V2 为 1,200 样本 / 200 batch，V6 为 61 初态叶 / 三类各 38 梯度叶，V7 为 100 步 / 5 状态摘要 / 7 输入摘要 / 872 索引，均退出码 0。详情见 [V1](docs/training-doc/mv2-v1-dump/result.md)、[V2](docs/training-doc/mv2-v2-legacy/result.md)、[V6](docs/training-doc/mv2-v6-grad/result.md)、[V7](docs/training-doc/mv2-v7-guard-base/result.md)。生产代码尚未修改；下一步实施 2b。
+**步骤 2a 完成**：BASE=`2126b1b1c436166662ff89a629985ecd4524fc42`；V1 为 3,200 样本 / 200 batch，V2 为 1,200 样本 / 200 batch，V6 为 61 初态叶 / 三类各 38 梯度叶，V7 为 100 步 / 5 状态摘要 / 7 输入摘要 / 872 索引，均退出码 0。详情见 [V1](docs/training-doc/mv2-v1-dump/result.md)、[V2](docs/training-doc/mv2-v2-legacy/result.md)、[V6](docs/training-doc/mv2-v6-grad/result.md)、[V7](docs/training-doc/mv2-v7-guard-base/result.md)。此处记录当时改前基线，后续生产改动和对拍已完成。
 
 ---
 
 ## 第一部分（给人看）
 
-**最新进度（步骤 5 完成，09-18）**：关闭态 V1/V2/V6/V7 已逐位通过。输入重锚后，Wan→encode→oracle→pack 全程固定 clean f6915f2a09443d48c1bb57e9b5f83e95400704fd；71316 token 全量逐位相同，8632 VAE 抽样窗逐位相同且含全部1600补帧窗，A6/A7/A9/A10/A11 全过，详见 [建库结果](docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)。200 次真实 reset 亦通过，es_max=383、budget=160、headroom=57，见 [预算预检](docs/training-doc/mv2-evalbound/result.md)。下一步从归档提交后的 clean HEAD 跑开启态验证；正式80k训练尚未启动。 V4 已完成3232个关键样本逐位对拍；完整V5六项全部通过，三次探针、42/42可训练叶、无排除，见 [V4](docs/training-doc/mv2-v4/result.md) 与 [V5](docs/training-doc/mv2-m4/result.md)。
+**最新进度（步骤6d完成，09-18）**：关闭态V1/V2/V6/V7、71316行建库全量验收、3232样本V4、完整V5和200次真实reset均通过。修正后的35例节奏回放、411长度扫描及1296/1297边界全部通过。开启态V8两轮100步的五标量、5份217叶完整状态、7份输入摘要及800训练索引逐位一致，四个motion参数叶全部更新。V-online三档同源于clean `782696c231aace21c20200638ae302a5a1c7f277`：71316窗输入SHA全量一致；1600集起点/时间码/次序一致；全部1600补帧窗与23个整集去重后的3139真编码窗逐位一致，含g367、4条es≥1000、16种余数及四任务。参见 [建库](docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)、[V8](docs/training-doc/mv2-aa/result.md)、[V-online](docs/training-doc/mv2-online/result.md)、[节奏](docs/training-doc/mv2-rhythm/result.md) 与 [200次reset](docs/training-doc/mv2-evalbound/result.md)。两个实际runner拒绝负例（占卡、错误YAML SHA）均在训练之前停止；下一步八卡20步smoke，正式80k尚未启动。
 
 **V5 初始化裁决已确认**：用户原话「采用兼容权重加载，保留 gemma_150m 替身」。`motion_gates_model.py::_make_models` 对 modulation 测试加载 `pi05_base` 中名称与形状均兼容的参数；`compatible_pi05_weights.py::merge_compatible` 独立要求动作专家及六个 AdaRMS 参数齐全，检查 18 层门不全零，报告保留随机的参数名单。生产初始化和门值不改。此前随机零门导致的失败是测试初态问题，不属于关闭态回归失败。
 
-**实施进度（09-17）**：步骤 2b 的生产及验证代码已完成首轮实现，87 项 CPU 自动测试通过；CPU 初态真调用 `init_train_state` 完成 61 个公共参数叶逐位比较，仅增加 4 个 motion 叶，耗时 116.4 秒。新旧布局读取、真实 H5 补帧、独立抽样删行负例、跨集 reset、GPU 计时及比较器错误 token/符号零负例均已验证。详见 [实施短测记录](docs/training-doc/mv2-implementation/result.md)。接下来分别提交生产链路与验证工具，再从 clean CAND 取 V1/V2/V6/V7 候选证据。
+**历史实施短测（09-17）**：步骤 2b 的生产及验证代码已完成首轮实现，87 项 CPU 自动测试通过；CPU 初态真调用 `init_train_state` 完成 61 个公共参数叶逐位比较，仅增加 4 个 motion 叶，耗时 116.4 秒。新旧布局读取、真实 H5 补帧、独立抽样删行负例、跨集 reset、GPU 计时及比较器错误 token/符号零负例均已验证。详见 [实施短测记录](docs/training-doc/mv2-implementation/result.md)。后续已分别提交生产链路与验证工具，并完成 clean CAND 的 V1/V2/V6/V7 逐位对拍。
 
 **位置表与仿真环境裁决已确认**：用户原话「采用预生成并校验的 GPU 位置表，CPU 验证装配与次序」与「采用现有仿真环境和单卡渲染，保留 200 次真实 reset」。`verified_gpu_posemb.py` 在 GPU 运行原 `PosEmb3D`，逐位核对整张离线位置表并记录源码、配置、表字节 SHA；`compare_online_motion.py --gpu-posemb-cache` 在 CPU 复核这些证据后注入已验证组件输出，继续严格比较装配和次序。仿真由 uv 调用 `/scratch/hongze/micromamba/envs/robomme/bin/python`，GPU 7 渲染，设置 `GLIBC_TUNABLES=glibc.rtld.optional_static_tls=8192`，四任务各独立进程完成 50 次真实 reset，不加载策略模型。输入 SHA 重锚以 `df6fdcc4f9424f00901a107a66d98e19e679a7ba` 完成后，先提交这次验证修补，再用新的 clean BUILD_HEAD 启动 Wan；Wan 与 encode 之间仍为零 commit。
 
@@ -159,7 +159,7 @@ demo 帧号   0        16       32       48       64       80       96  99 │10
 - 推理：主干 kv_cache 不含记忆、形状不随 motion 变；cross-attention 每个去噪步每层重算、没有缓存，但折合每集只有约 +9 ms，评估耗时的大头仍是 sidecar 逐窗编码。
 - 一条不要误修的：modulation 下 `mask_na` 恒等空操作，训练与推理传不传都等价，不构成训推不一致。
 
-**为什么 budget 变成模型参数**：padding 占号 ⇒ 动作 token 到最后一个真实 motion token 的 RoPE 距离恒等于 `budget − k`（本库 19..154），是一个与内容无关、逐样本跳动的旁路信号。把 budget 从 96 改到 160 不是「多留余量」，是换了一个模型；训练 / 评估 / 在线三侧必须逐值相同，且参数树校验看不出来（motion 四个参数叶的形状与 budget 无关）。
+**为什么 budget 变成模型参数**：`history_gemma.py::MemoryAttention` 的动作 query 位置是 `512+budget+i`，有效 memory key 位置是交错后的 `p_j`，因此 RoPE 距离为 `512+budget+i-p_j`。帧路有效位满512时，`budget−k`（本库19..154）是尾部padding长度；最后一个motion后还可能有采样帧，所以它不等于动作到最后motion的距离。固定有效key排列时增大budget会把这些距离整体平移，均值增加、方差保持不变。这会改变模型语义；训练、评估和在线三侧的budget必须逐值相同，而参数树形状不受budget影响，单靠参数树校验无法发现差异。
 
 **由此新增什么**：
 - `INIT_COMMON`（秒级 CPU）：6 条 modulation 叶 + 4 条 motion 叶与基线是否同初值，现有验证没有一项能核到。
@@ -211,9 +211,9 @@ demo 帧号   0        16       32       48       64       80       96  99 │10
 | 144 | 0 | 0 | 0 | 30.5% | 6 |
 | **160** | 0 | 0 | 0 | **27.4%** | **0** |
 
-**为什么不是 176**：budget 不是免费的——它是模型语义参数（第四节），越大 `rope_gap` 的均值与方差越大；K/V 计算量的增加反而是次要的（毫秒级）。
+**为什么不是 176**：budget 是模型语义参数（第四节）。固定有效key排列时，160→176使每个动作query到有效key的RoPE距离增加16；不能推断该平移让距离方差增加。K/V计算量也随之增加，实际训练成本由本轮第300步分解测量。
 
-**评估集**：最后一列度量的是训练集外推（1300 步下最大 151 ≤ 160），评估集走新 seed、es 不受训练 manifest 约束。零截断的充要条件是评估 `es ≤ 1296`；训练集上界 1152、裕度 12.5%，唯一风险线是 BinFill hard。**起跑前用 `EVAL_ES_BOUND` 实测**（200 次 `env.reset()`，无 GPU），把赌变成测。`es ≥ 1297` 的真实后果不是「该集记 error」而是整轮评估中止并触发全量重跑，评估计划另起时须先修评估脚本的错误处理。推导备注（填充率定义、τ_max 修正、评估脚本控制流）见 I.6。
+**评估集**：最后一列度量的是训练集外推（1300 步下最大 151 ≤ 160），评估集走新 seed、es 不受训练 manifest 约束。零截断的充要条件是评估 `es ≤ 1296`；训练集上界 1152、裕度 12.5%，唯一风险线是 BinFill hard。**起跑前用 `EVAL_ES_BOUND` 实测**（200 次真实 `env.reset()`，单卡 GPU 渲染），把赌变成测。`es ≥ 1297` 的真实后果不是「该集记 error」而是整轮评估中止并触发全量重跑，评估计划另起时须先修评估脚本的错误处理。推导备注（填充率定义、τ_max 修正、评估脚本控制流）见 I.6。
 
 ### 八、怎么证明没改坏
 
@@ -261,7 +261,7 @@ demo 帧号   0        16       32       48       64       80       96  99 │10
 | 5 | 建库留档 | — | `docs:` |
 | 6 | 开启态验证，串行标卡号：6a V4 ‖ V5 → 6b V8 → 6c V-online ①② → 6d V-online ③（独占 8 卡）→ 6e smoke | 每档结束确认前一档进程已退，避免残留占卡 | `docs:` |
 | 7 | 起跑留档 + `EVAL_ES_BOUND` | — | `docs:` |
-| 8 | 生成 runner（含 G 节 6 处卡号改写）→ 独立占卡闸 `GPU_IDLE`（**0–7**）→ preflight → 训练；300 步重估 ETA | runner 内的显存检查是无效闸 | — |
+| 8 | 生成 runner（含 G 节 6 处卡号改写）→ 独立占卡闸 `GPU_IDLE`（**0–7**）→ preflight → 训练；300 步重估 ETA | 独立空卡复核，加严格子shell保证每项起跑检查失败即停 | — |
 | 8b | 起跑后归档 | 第 12 条 | `docs:` |
 | 9 | 训完：消融评估 + 基线评估 | 归因 | 另起计划 |
 
@@ -780,7 +780,7 @@ MME_VLA_Policy.infer ──► _prepare_history ──► _prepare_motion（k > 
 - **`es ≥ 1297` 的真实后果（第四轮订正，比第三轮写的「该集记 error」严重得多）**：raise 点唯一，在 `FrameSampMemory._prepare_motion`（`_encode_ready_windows` **不做上限检查**，超限的集会先白编一堆窗再在第一次 infer 时炸）；服务端 `websocket_policy_server._handler` 发回 traceback、关连接后 raise，server 进程存活；但 `examples/robomme/eval.py::evaluate` 的控制流是——episode 异常只写 `"error"` 后 `if success_flag == "unknown": … return` 整轮提前返回；只要 progress 里出现过一个 `"error"`，收尾的 `success_rate = sum(...)` 混入字符串抛 `TypeError` 被吞、`log.json` 永不落盘、外层 `while not os.path.exists(...)` 把全部任务重跑一遍，且续评跳过判据用 `str(episode_id)` 而运行中写的是 int 键 ⇒ 重跑一集也不跳。代价是几十 GPU·小时白跑且拿不到成功率。评估计划另起时须先修 `success_flag` 作用域与 `success_rate` 对 `"error"` 的处理，或把超 budget 的集显式降级；`EVAL_ES_BOUND` 是它的前置门。
 - 评估口径或任务集变更时须按第二部分 C 节的式子重核。
 
-**代价栏**（初稿写的「只是多 16 个被 mask 的 K/V 位」是错的，已删）：K/V 长度 512 → 672（+31%），`MemoryAttention` 在 18 层里每层都对整条 mem_seq 做 K/V 投影、`sample_actions` 每个去噪步再算一遍，且 remat 策略是 `nothing_saveable`（反向要重算）——但按I.1 的 4.3 o 行推算，这一项折合每集只有约 +9 ms；训练步时里的占比在 **4 卡数据受限档**下是毫秒级量级，但 8 卡 + collate 共享内存之后数据路已不再是瓶颈，**新档位下的瓶颈归属尚未实测**（0917 只测 motion 关闭态，且 NVML util 不区分计算与通信），由 300 步分解裁决（I.9）。真正的代价是语义上的：query 与最后一个真实 token 的 RoPE 间距 `rope_gap = budget − k` 会逐样本在 **19..154** 间跳动（本库 `k` 最小 6、最大 141；第三轮称「gap 只要非 0 分布总变差就已饱和在 ≈ 0.4」，该数字待 `ROPE_LEN_EFFECT` 重取），这是一个与内容无关的旁路信号，**budget 取得越大该 `rope_gap` 的均值与方差越大**——所以 176 并非免费保险。
+**代价栏**（初稿写的「只是多 16 个被 mask 的 K/V 位」是错的，已删）：K/V 长度 512 → 672（+31%），`MemoryAttention` 在 18 层里每层都对整条 mem_seq 做 K/V 投影、`sample_actions` 每个去噪步再算一遍，且 remat 策略是 `nothing_saveable`（反向要重算）——但按I.1 的 4.3 o 行推算，这一项折合每集只有约 +9 ms；训练步时里的占比在 **4 卡数据受限档**下是毫秒级量级，但 8 卡 + collate 共享内存之后数据路已不再是瓶颈，**新档位下的瓶颈归属尚未实测**（0917 只测 motion 关闭态，且 NVML util 不区分计算与通信），由 300 步分解裁决（I.9）。位置编码的代价也需要单独考虑：`rope_gap(i,j)=512+budget+i-p_j`。本库 `k` 为6..141，满512个有效帧位时 `budget-k` 为19..154，这描述padding长度；query到最后motion的距离还取决于交错位置 `p_j`。固定内容与排列时增大budget使距离整体平移、方差不变，不能将19..154写成准确的query-key距离。固定fp32探针实测144→160的概率总变差为0.3375600576、输出相对L2为0.7787887454，同budget垃圾padding影响为0，详见实施记录。预算仍按用户决定固定为160。
 
 #### I.7 验证体系每项五层叙述（原第八节全文，与 F 表互为补充：F 是命令级，本节是每项「证什么 / 怎么证 / 判定行 / 耗时 / 不过怎么办」）
 

@@ -1,5 +1,7 @@
 # V8：开启态两轮 100 步 A/A
 
+本任务已从clean `782696c231aace21c20200638ae302a5a1c7f277` 完整执行，两轮逐位通过，详见 [结果](result.md)。以下保留起跑前固定的驱动与判据。
+
 本任务按 0916 计划验证同一实现的可复现性和四个 motion 参数叶的更新。使用真新库、真实完整生产模型，GPU 4,5、batch8、fsdp2、workers4、seed42，各运行100步；两轮共用 EXP_NAME=mv2-aa 及同一 JAX 缓存，RUN_TAG 分别为 mv2-aa-a、mv2-aa-b。正式八卡 batch128 由后续 smoke 覆盖；本档带确定性和摘要记录，不用作吞吐结论。
 
 ## 版本与输入
@@ -25,7 +27,7 @@ XLA_FLAGS=--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0，内存�
 
 五项标量100步逐位同；完整状态摘要步0/25/50/75/99、原始与canonical batch摘要步0/1/2/25/50/75/99全部一致；前800个训练索引逐项一致；motion四键均非null；四个motion参数叶从初态到最后一步均发生更新。最终要求 AA_100、MOTION_PARAMS_UPDATED 与全部比较器判定通过，EXIT_CODE=0。
 
-tmux全名mv2-aa，命令 `bash v1-store/logs/mv2-aa-runner.sh <CHECK_HEAD>`。外层日志mv2-aa.driver.log与两侧内部日志mv2-aa-a.log、mv2-aa-b.log分开。完整记录保留在v1-store/bench/2gpu-epoch-bench/mv2-aa-{a,b}，缓存保留供两轮复用；驱动只清理本轮无checkpoint的run壳。运行尚未开始。
+tmux全名mv2-aa，命令 `bash v1-store/logs/mv2-aa-runner.sh <CHECK_HEAD>`。外层日志mv2-aa.driver.log与两侧内部日志mv2-aa-a.log、mv2-aa-b.log分开。完整记录保留在v1-store/bench/2gpu-epoch-bench/mv2-aa-{a,b}，缓存保留供两轮复用；驱动只清理本轮无checkpoint的run壳。实际CHECK_HEAD和执行结果见本页顶部与结果页。
 
 ## 完整外壳
 

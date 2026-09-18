@@ -1,0 +1,4882 @@
+{
+  "schema": "tic-rhythm-v2",
+  "lib": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da",
+  "yaml": "perceptual-framesamp-modul-8frame-8x8-motion.yaml",
+  "budget": 160,
+  "real_cases": [
+    {
+      "es": 100,
+      "t_env": 200,
+      "tag": "g401-RouteStick"
+    },
+    {
+      "es": 114,
+      "t_env": 446,
+      "tag": "g1201-VideoUnmaskSwap"
+    },
+    {
+      "es": 150,
+      "t_env": 300,
+      "tag": "g400-RouteStick"
+    },
+    {
+      "es": 168,
+      "t_env": 534,
+      "tag": "g1405-VideoUnmaskSwap"
+    },
+    {
+      "es": 200,
+      "t_env": 400,
+      "tag": "g503-RouteStick"
+    },
+    {
+      "es": 216,
+      "t_env": 552,
+      "tag": "g1403-VideoUnmaskSwap"
+    },
+    {
+      "es": 250,
+      "t_env": 500,
+      "tag": "g500-RouteStick"
+    },
+    {
+      "es": 252,
+      "t_env": 508,
+      "tag": "g810-VideoRepick"
+    },
+    {
+      "es": 253,
+      "t_env": 639,
+      "tag": "g895-VideoRepick"
+    },
+    {
+      "es": 254,
+      "t_env": 785,
+      "tag": "g905-VideoRepick"
+    },
+    {
+      "es": 255,
+      "t_env": 527,
+      "tag": "g809-VideoRepick"
+    },
+    {
+      "es": 257,
+      "t_env": 787,
+      "tag": "g877-VideoRepick"
+    },
+    {
+      "es": 258,
+      "t_env": 766,
+      "tag": "g838-VideoRepick"
+    },
+    {
+      "es": 259,
+      "t_env": 641,
+      "tag": "g912-VideoRepick"
+    },
+    {
+      "es": 260,
+      "t_env": 782,
+      "tag": "g807-VideoRepick"
+    },
+    {
+      "es": 261,
+      "t_env": 789,
+      "tag": "g866-VideoRepick"
+    },
+    {
+      "es": 262,
+      "t_env": 761,
+      "tag": "g864-VideoRepick"
+    },
+    {
+      "es": 263,
+      "t_env": 785,
+      "tag": "g808-VideoRepick"
+    },
+    {
+      "es": 264,
+      "t_env": 579,
+      "tag": "g1502-VideoUnmaskSwap"
+    },
+    {
+      "es": 265,
+      "t_env": 659,
+      "tag": "g835-VideoRepick"
+    },
+    {
+      "es": 266,
+      "t_env": 544,
+      "tag": "g845-VideoRepick"
+    },
+    {
+      "es": 267,
+      "t_env": 798,
+      "tag": "g811-VideoRepick"
+    },
+    {
+      "es": 268,
+      "t_env": 860,
+      "tag": "g802-VideoRepick"
+    },
+    {
+      "es": 269,
+      "t_env": 545,
+      "tag": "g870-VideoRepick"
+    },
+    {
+      "es": 270,
+      "t_env": 638,
+      "tag": "g917-VideoRepick"
+    },
+    {
+      "es": 271,
+      "t_env": 768,
+      "tag": "g834-VideoRepick"
+    },
+    {
+      "es": 272,
+      "t_env": 647,
+      "tag": "g862-VideoRepick"
+    },
+    {
+      "es": 273,
+      "t_env": 777,
+      "tag": "g894-VideoRepick"
+    },
+    {
+      "es": 274,
+      "t_env": 766,
+      "tag": "g909-VideoRepick"
+    },
+    {
+      "es": 275,
+      "t_env": 647,
+      "tag": "g848-VideoRepick"
+    },
+    {
+      "es": 276,
+      "t_env": 795,
+      "tag": "g846-VideoRepick"
+    },
+    {
+      "es": 277,
+      "t_env": 554,
+      "tag": "g74-BinFill"
+    },
+    {
+      "es": 278,
+      "t_env": 560,
+      "tag": "g903-VideoRepick"
+    },
+    {
+      "es": 279,
+      "t_env": 659,
+      "tag": "g883-VideoRepick"
+    },
+    {
+      "es": 280,
+      "t_env": 560,
+      "tag": "g68-BinFill"
+    },
+    {
+      "es": 281,
+      "t_env": 664,
+      "tag": "g879-VideoRepick"
+    },
+    {
+      "es": 282,
+      "t_env": 810,
+      "tag": "g902-VideoRepick"
+    },
+    {
+      "es": 283,
+      "t_env": 805,
+      "tag": "g893-VideoRepick"
+    },
+    {
+      "es": 284,
+      "t_env": 824,
+      "tag": "g854-VideoRepick"
+    },
+    {
+      "es": 287,
+      "t_env": 574,
+      "tag": "g77-BinFill"
+    },
+    {
+      "es": 288,
+      "t_env": 825,
+      "tag": "g928-VideoRepick"
+    },
+    {
+      "es": 290,
+      "t_env": 580,
+      "tag": "g57-BinFill"
+    },
+    {
+      "es": 292,
+      "t_env": 584,
+      "tag": "g78-BinFill"
+    },
+    {
+      "es": 293,
+      "t_env": 545,
+      "tag": "g867-VideoRepick"
+    },
+    {
+      "es": 294,
+      "t_env": 588,
+      "tag": "g50-BinFill"
+    },
+    {
+      "es": 299,
+      "t_env": 740,
+      "tag": "g800-VideoRepick"
+    },
+    {
+      "es": 300,
+      "t_env": 600,
+      "tag": "g11-BinFill"
+    },
+    {
+      "es": 301,
+      "t_env": 602,
+      "tag": "g10-BinFill"
+    },
+    {
+      "es": 304,
+      "t_env": 608,
+      "tag": "g20-BinFill"
+    },
+    {
+      "es": 305,
+      "t_env": 610,
+      "tag": "g58-BinFill"
+    },
+    {
+      "es": 306,
+      "t_env": 612,
+      "tag": "g31-BinFill"
+    },
+    {
+      "es": 307,
+      "t_env": 614,
+      "tag": "g113-BinFill"
+    },
+    {
+      "es": 308,
+      "t_env": 843,
+      "tag": "g992-VideoRepick"
+    },
+    {
+      "es": 309,
+      "t_env": 846,
+      "tag": "g1011-VideoRepick"
+    },
+    {
+      "es": 310,
+      "t_env": 824,
+      "tag": "g886-VideoRepick"
+    },
+    {
+      "es": 311,
+      "t_env": 848,
+      "tag": "g1022-VideoRepick"
+    },
+    {
+      "es": 312,
+      "t_env": 826,
+      "tag": "g859-VideoRepick"
+    },
+    {
+      "es": 313,
+      "t_env": 821,
+      "tag": "g1020-VideoRepick"
+    },
+    {
+      "es": 314,
+      "t_env": 706,
+      "tag": "g814-VideoRepick"
+    },
+    {
+      "es": 315,
+      "t_env": 810,
+      "tag": "g901-VideoRepick"
+    },
+    {
+      "es": 316,
+      "t_env": 833,
+      "tag": "g952-VideoRepick"
+    },
+    {
+      "es": 317,
+      "t_env": 838,
+      "tag": "g1043-VideoRepick"
+    },
+    {
+      "es": 318,
+      "t_env": 1312,
+      "tag": "g1505-VideoUnmaskSwap"
+    },
+    {
+      "es": 319,
+      "t_env": 834,
+      "tag": "g1055-VideoRepick"
+    },
+    {
+      "es": 320,
+      "t_env": 719,
+      "tag": "g1008-VideoRepick"
+    },
+    {
+      "es": 321,
+      "t_env": 861,
+      "tag": "g1036-VideoRepick"
+    },
+    {
+      "es": 322,
+      "t_env": 843,
+      "tag": "g959-VideoRepick"
+    },
+    {
+      "es": 323,
+      "t_env": 866,
+      "tag": "g819-VideoRepick"
+    },
+    {
+      "es": 324,
+      "t_env": 742,
+      "tag": "g931-VideoRepick"
+    },
+    {
+      "es": 325,
+      "t_env": 874,
+      "tag": "g913-VideoRepick"
+    },
+    {
+      "es": 326,
+      "t_env": 850,
+      "tag": "g945-VideoRepick"
+    },
+    {
+      "es": 327,
+      "t_env": 842,
+      "tag": "g983-VideoRepick"
+    },
+    {
+      "es": 328,
+      "t_env": 875,
+      "tag": "g1046-VideoRepick"
+    },
+    {
+      "es": 329,
+      "t_env": 860,
+      "tag": "g921-VideoRepick"
+    },
+    {
+      "es": 330,
+      "t_env": 863,
+      "tag": "g986-VideoRepick"
+    },
+    {
+      "es": 331,
+      "t_env": 834,
+      "tag": "g1010-VideoRepick"
+    },
+    {
+      "es": 333,
+      "t_env": 725,
+      "tag": "g961-VideoRepick"
+    },
+    {
+      "es": 334,
+      "t_env": 891,
+      "tag": "g871-VideoRepick"
+    },
+    {
+      "es": 337,
+      "t_env": 872,
+      "tag": "g881-VideoRepick"
+    },
+    {
+      "es": 338,
+      "t_env": 888,
+      "tag": "g880-VideoRepick"
+    },
+    {
+      "es": 339,
+      "t_env": 746,
+      "tag": "g1060-VideoRepick"
+    },
+    {
+      "es": 340,
+      "t_env": 880,
+      "tag": "g1039-VideoRepick"
+    },
+    {
+      "es": 343,
+      "t_env": 911,
+      "tag": "g907-VideoRepick"
+    },
+    {
+      "es": 345,
+      "t_env": 756,
+      "tag": "g1044-VideoRepick"
+    },
+    {
+      "es": 347,
+      "t_env": 898,
+      "tag": "g852-VideoRepick"
+    },
+    {
+      "es": 348,
+      "t_env": 920,
+      "tag": "g960-VideoRepick"
+    },
+    {
+      "es": 349,
+      "t_env": 755,
+      "tag": "g813-VideoRepick"
+    },
+    {
+      "es": 350,
+      "t_env": 700,
+      "tag": "g606-RouteStick"
+    },
+    {
+      "es": 355,
+      "t_env": 922,
+      "tag": "g833-VideoRepick"
+    },
+    {
+      "es": 361,
+      "t_env": 774,
+      "tag": "g1027-VideoRepick"
+    },
+    {
+      "es": 362,
+      "t_env": 724,
+      "tag": "g1-BinFill"
+    },
+    {
+      "es": 363,
+      "t_env": 754,
+      "tag": "g1047-VideoRepick"
+    },
+    {
+      "es": 364,
+      "t_env": 886,
+      "tag": "g941-VideoRepick"
+    },
+    {
+      "es": 366,
+      "t_env": 877,
+      "tag": "g978-VideoRepick"
+    },
+    {
+      "es": 367,
+      "t_env": 766,
+      "tag": "g1030-VideoRepick"
+    },
+    {
+      "es": 368,
+      "t_env": 632,
+      "tag": "g1053-VideoRepick"
+    },
+    {
+      "es": 369,
+      "t_env": 899,
+      "tag": "g1018-VideoRepick"
+    },
+    {
+      "es": 370,
+      "t_env": 640,
+      "tag": "g942-VideoRepick"
+    },
+    {
+      "es": 371,
+      "t_env": 754,
+      "tag": "g1012-VideoRepick"
+    },
+    {
+      "es": 372,
+      "t_env": 775,
+      "tag": "g997-VideoRepick"
+    },
+    {
+      "es": 373,
+      "t_env": 899,
+      "tag": "g979-VideoRepick"
+    },
+    {
+      "es": 374,
+      "t_env": 908,
+      "tag": "g962-VideoRepick"
+    },
+    {
+      "es": 375,
+      "t_env": 759,
+      "tag": "g990-VideoRepick"
+    },
+    {
+      "es": 376,
+      "t_env": 884,
+      "tag": "g987-VideoRepick"
+    },
+    {
+      "es": 377,
+      "t_env": 904,
+      "tag": "g970-VideoRepick"
+    },
+    {
+      "es": 378,
+      "t_env": 915,
+      "tag": "g1051-VideoRepick"
+    },
+    {
+      "es": 379,
+      "t_env": 779,
+      "tag": "g951-VideoRepick"
+    },
+    {
+      "es": 380,
+      "t_env": 924,
+      "tag": "g936-VideoRepick"
+    },
+    {
+      "es": 381,
+      "t_env": 805,
+      "tag": "g975-VideoRepick"
+    },
+    {
+      "es": 382,
+      "t_env": 915,
+      "tag": "g991-VideoRepick"
+    },
+    {
+      "es": 386,
+      "t_env": 928,
+      "tag": "g1045-VideoRepick"
+    },
+    {
+      "es": 388,
+      "t_env": 919,
+      "tag": "g1056-VideoRepick"
+    },
+    {
+      "es": 390,
+      "t_env": 677,
+      "tag": "g946-VideoRepick"
+    },
+    {
+      "es": 392,
+      "t_env": 789,
+      "tag": "g984-VideoRepick"
+    },
+    {
+      "es": 395,
+      "t_env": 790,
+      "tag": "g196-BinFill"
+    },
+    {
+      "es": 398,
+      "t_env": 968,
+      "tag": "g934-VideoRepick"
+    },
+    {
+      "es": 400,
+      "t_env": 800,
+      "tag": "g701-RouteStick"
+    },
+    {
+      "es": 405,
+      "t_env": 810,
+      "tag": "g165-BinFill"
+    },
+    {
+      "es": 409,
+      "t_env": 818,
+      "tag": "g239-BinFill"
+    },
+    {
+      "es": 410,
+      "t_env": 820,
+      "tag": "g125-BinFill"
+    },
+    {
+      "es": 411,
+      "t_env": 822,
+      "tag": "g221-BinFill"
+    },
+    {
+      "es": 414,
+      "t_env": 675,
+      "tag": "g1165-VideoRepick"
+    },
+    {
+      "es": 416,
+      "t_env": 906,
+      "tag": "g1099-VideoRepick"
+    },
+    {
+      "es": 417,
+      "t_env": 914,
+      "tag": "g1106-VideoRepick"
+    },
+    {
+      "es": 419,
+      "t_env": 687,
+      "tag": "g1132-VideoRepick"
+    },
+    {
+      "es": 420,
+      "t_env": 958,
+      "tag": "g1085-VideoRepick"
+    },
+    {
+      "es": 421,
+      "t_env": 961,
+      "tag": "g1153-VideoRepick"
+    },
+    {
+      "es": 422,
+      "t_env": 948,
+      "tag": "g1118-VideoRepick"
+    },
+    {
+      "es": 423,
+      "t_env": 801,
+      "tag": "g1125-VideoRepick"
+    },
+    {
+      "es": 424,
+      "t_env": 848,
+      "tag": "g131-BinFill"
+    },
+    {
+      "es": 425,
+      "t_env": 922,
+      "tag": "g1147-VideoRepick"
+    },
+    {
+      "es": 426,
+      "t_env": 968,
+      "tag": "g1175-VideoRepick"
+    },
+    {
+      "es": 427,
+      "t_env": 819,
+      "tag": "g1198-VideoRepick"
+    },
+    {
+      "es": 428,
+      "t_env": 965,
+      "tag": "g1096-VideoRepick"
+    },
+    {
+      "es": 429,
+      "t_env": 961,
+      "tag": "g1135-VideoRepick"
+    },
+    {
+      "es": 430,
+      "t_env": 860,
+      "tag": "g23-BinFill"
+    },
+    {
+      "es": 431,
+      "t_env": 862,
+      "tag": "g16-BinFill"
+    },
+    {
+      "es": 432,
+      "t_env": 958,
+      "tag": "g1079-VideoRepick"
+    },
+    {
+      "es": 433,
+      "t_env": 978,
+      "tag": "g1190-VideoRepick"
+    },
+    {
+      "es": 434,
+      "t_env": 974,
+      "tag": "g1164-VideoRepick"
+    },
+    {
+      "es": 436,
+      "t_env": 939,
+      "tag": "g1197-VideoRepick"
+    },
+    {
+      "es": 437,
+      "t_env": 839,
+      "tag": "g1138-VideoRepick"
+    },
+    {
+      "es": 438,
+      "t_env": 982,
+      "tag": "g1193-VideoRepick"
+    },
+    {
+      "es": 439,
+      "t_env": 878,
+      "tag": "g83-BinFill"
+    },
+    {
+      "es": 442,
+      "t_env": 857,
+      "tag": "g1084-VideoRepick"
+    },
+    {
+      "es": 443,
+      "t_env": 886,
+      "tag": "g60-BinFill"
+    },
+    {
+      "es": 444,
+      "t_env": 888,
+      "tag": "g52-BinFill"
+    },
+    {
+      "es": 445,
+      "t_env": 890,
+      "tag": "g156-BinFill"
+    },
+    {
+      "es": 446,
+      "t_env": 892,
+      "tag": "g213-BinFill"
+    },
+    {
+      "es": 447,
+      "t_env": 721,
+      "tag": "g1092-VideoRepick"
+    },
+    {
+      "es": 448,
+      "t_env": 896,
+      "tag": "g7-BinFill"
+    },
+    {
+      "es": 449,
+      "t_env": 942,
+      "tag": "g1170-VideoRepick"
+    },
+    {
+      "es": 450,
+      "t_env": 900,
+      "tag": "g702-RouteStick"
+    },
+    {
+      "es": 451,
+      "t_env": 902,
+      "tag": "g65-BinFill"
+    },
+    {
+      "es": 452,
+      "t_env": 904,
+      "tag": "g254-BinFill"
+    },
+    {
+      "es": 453,
+      "t_env": 952,
+      "tag": "g1093-VideoRepick"
+    },
+    {
+      "es": 454,
+      "t_env": 908,
+      "tag": "g219-BinFill"
+    },
+    {
+      "es": 455,
+      "t_env": 910,
+      "tag": "g49-BinFill"
+    },
+    {
+      "es": 456,
+      "t_env": 912,
+      "tag": "g6-BinFill"
+    },
+    {
+      "es": 457,
+      "t_env": 914,
+      "tag": "g13-BinFill"
+    },
+    {
+      "es": 458,
+      "t_env": 916,
+      "tag": "g265-BinFill"
+    },
+    {
+      "es": 460,
+      "t_env": 920,
+      "tag": "g92-BinFill"
+    },
+    {
+      "es": 461,
+      "t_env": 922,
+      "tag": "g102-BinFill"
+    },
+    {
+      "es": 463,
+      "t_env": 926,
+      "tag": "g227-BinFill"
+    },
+    {
+      "es": 466,
+      "t_env": 932,
+      "tag": "g36-BinFill"
+    },
+    {
+      "es": 467,
+      "t_env": 934,
+      "tag": "g158-BinFill"
+    },
+    {
+      "es": 468,
+      "t_env": 982,
+      "tag": "g1090-VideoRepick"
+    },
+    {
+      "es": 469,
+      "t_env": 992,
+      "tag": "g1150-VideoRepick"
+    },
+    {
+      "es": 470,
+      "t_env": 940,
+      "tag": "g8-BinFill"
+    },
+    {
+      "es": 471,
+      "t_env": 1015,
+      "tag": "g1178-VideoRepick"
+    },
+    {
+      "es": 472,
+      "t_env": 944,
+      "tag": "g204-BinFill"
+    },
+    {
+      "es": 473,
+      "t_env": 946,
+      "tag": "g118-BinFill"
+    },
+    {
+      "es": 474,
+      "t_env": 994,
+      "tag": "g1139-VideoRepick"
+    },
+    {
+      "es": 475,
+      "t_env": 855,
+      "tag": "g1157-VideoRepick"
+    },
+    {
+      "es": 476,
+      "t_env": 968,
+      "tag": "g1143-VideoRepick"
+    },
+    {
+      "es": 477,
+      "t_env": 748,
+      "tag": "g1077-VideoRepick"
+    },
+    {
+      "es": 478,
+      "t_env": 1009,
+      "tag": "g1115-VideoRepick"
+    },
+    {
+      "es": 479,
+      "t_env": 1009,
+      "tag": "g1075-VideoRepick"
+    },
+    {
+      "es": 480,
+      "t_env": 978,
+      "tag": "g1149-VideoRepick"
+    },
+    {
+      "es": 481,
+      "t_env": 1043,
+      "tag": "g1069-VideoRepick"
+    },
+    {
+      "es": 482,
+      "t_env": 865,
+      "tag": "g1089-VideoRepick"
+    },
+    {
+      "es": 483,
+      "t_env": 1020,
+      "tag": "g1148-VideoRepick"
+    },
+    {
+      "es": 484,
+      "t_env": 896,
+      "tag": "g1080-VideoRepick"
+    },
+    {
+      "es": 485,
+      "t_env": 970,
+      "tag": "g17-BinFill"
+    },
+    {
+      "es": 486,
+      "t_env": 972,
+      "tag": "g25-BinFill"
+    },
+    {
+      "es": 487,
+      "t_env": 974,
+      "tag": "g209-BinFill"
+    },
+    {
+      "es": 488,
+      "t_env": 1004,
+      "tag": "g1172-VideoRepick"
+    },
+    {
+      "es": 489,
+      "t_env": 978,
+      "tag": "g181-BinFill"
+    },
+    {
+      "es": 490,
+      "t_env": 980,
+      "tag": "g228-BinFill"
+    },
+    {
+      "es": 491,
+      "t_env": 1130,
+      "tag": "g1071-VideoRepick"
+    },
+    {
+      "es": 492,
+      "t_env": 985,
+      "tag": "g1072-VideoRepick"
+    },
+    {
+      "es": 495,
+      "t_env": 1019,
+      "tag": "g1109-VideoRepick"
+    },
+    {
+      "es": 497,
+      "t_env": 994,
+      "tag": "g201-BinFill"
+    },
+    {
+      "es": 498,
+      "t_env": 1031,
+      "tag": "g1129-VideoRepick"
+    },
+    {
+      "es": 500,
+      "t_env": 1000,
+      "tag": "g700-RouteStick"
+    },
+    {
+      "es": 501,
+      "t_env": 1002,
+      "tag": "g39-BinFill"
+    },
+    {
+      "es": 502,
+      "t_env": 1004,
+      "tag": "g189-BinFill"
+    },
+    {
+      "es": 503,
+      "t_env": 1006,
+      "tag": "g37-BinFill"
+    },
+    {
+      "es": 504,
+      "t_env": 909,
+      "tag": "g1127-VideoRepick"
+    },
+    {
+      "es": 508,
+      "t_env": 898,
+      "tag": "g1194-VideoRepick"
+    },
+    {
+      "es": 511,
+      "t_env": 1022,
+      "tag": "g250-BinFill"
+    },
+    {
+      "es": 515,
+      "t_env": 1030,
+      "tag": "g155-BinFill"
+    },
+    {
+      "es": 525,
+      "t_env": 1050,
+      "tag": "g134-BinFill"
+    },
+    {
+      "es": 529,
+      "t_env": 1058,
+      "tag": "g138-BinFill"
+    },
+    {
+      "es": 532,
+      "t_env": 1064,
+      "tag": "g105-BinFill"
+    },
+    {
+      "es": 534,
+      "t_env": 1068,
+      "tag": "g12-BinFill"
+    },
+    {
+      "es": 543,
+      "t_env": 1086,
+      "tag": "g85-BinFill"
+    },
+    {
+      "es": 546,
+      "t_env": 1092,
+      "tag": "g157-BinFill"
+    },
+    {
+      "es": 553,
+      "t_env": 1106,
+      "tag": "g34-BinFill"
+    },
+    {
+      "es": 574,
+      "t_env": 1148,
+      "tag": "g54-BinFill"
+    },
+    {
+      "es": 578,
+      "t_env": 1156,
+      "tag": "g149-BinFill"
+    },
+    {
+      "es": 579,
+      "t_env": 1158,
+      "tag": "g223-BinFill"
+    },
+    {
+      "es": 581,
+      "t_env": 1162,
+      "tag": "g75-BinFill"
+    },
+    {
+      "es": 585,
+      "t_env": 1170,
+      "tag": "g21-BinFill"
+    },
+    {
+      "es": 587,
+      "t_env": 1174,
+      "tag": "g398-BinFill"
+    },
+    {
+      "es": 590,
+      "t_env": 1180,
+      "tag": "g19-BinFill"
+    },
+    {
+      "es": 593,
+      "t_env": 1186,
+      "tag": "g27-BinFill"
+    },
+    {
+      "es": 594,
+      "t_env": 1188,
+      "tag": "g395-BinFill"
+    },
+    {
+      "es": 595,
+      "t_env": 1190,
+      "tag": "g72-BinFill"
+    },
+    {
+      "es": 596,
+      "t_env": 1192,
+      "tag": "g374-BinFill"
+    },
+    {
+      "es": 597,
+      "t_env": 1194,
+      "tag": "g261-BinFill"
+    },
+    {
+      "es": 599,
+      "t_env": 1198,
+      "tag": "g116-BinFill"
+    },
+    {
+      "es": 601,
+      "t_env": 1202,
+      "tag": "g63-BinFill"
+    },
+    {
+      "es": 602,
+      "t_env": 1204,
+      "tag": "g262-BinFill"
+    },
+    {
+      "es": 603,
+      "t_env": 1206,
+      "tag": "g176-BinFill"
+    },
+    {
+      "es": 605,
+      "t_env": 1210,
+      "tag": "g287-BinFill"
+    },
+    {
+      "es": 608,
+      "t_env": 1216,
+      "tag": "g93-BinFill"
+    },
+    {
+      "es": 609,
+      "t_env": 1218,
+      "tag": "g202-BinFill"
+    },
+    {
+      "es": 613,
+      "t_env": 1226,
+      "tag": "g106-BinFill"
+    },
+    {
+      "es": 614,
+      "t_env": 1228,
+      "tag": "g256-BinFill"
+    },
+    {
+      "es": 615,
+      "t_env": 1230,
+      "tag": "g47-BinFill"
+    },
+    {
+      "es": 616,
+      "t_env": 1232,
+      "tag": "g161-BinFill"
+    },
+    {
+      "es": 617,
+      "t_env": 1234,
+      "tag": "g236-BinFill"
+    },
+    {
+      "es": 618,
+      "t_env": 1236,
+      "tag": "g315-BinFill"
+    },
+    {
+      "es": 619,
+      "t_env": 1238,
+      "tag": "g214-BinFill"
+    },
+    {
+      "es": 620,
+      "t_env": 1240,
+      "tag": "g381-BinFill"
+    },
+    {
+      "es": 622,
+      "t_env": 1244,
+      "tag": "g370-BinFill"
+    },
+    {
+      "es": 623,
+      "t_env": 1246,
+      "tag": "g211-BinFill"
+    },
+    {
+      "es": 624,
+      "t_env": 1248,
+      "tag": "g14-BinFill"
+    },
+    {
+      "es": 625,
+      "t_env": 1250,
+      "tag": "g285-BinFill"
+    },
+    {
+      "es": 626,
+      "t_env": 1252,
+      "tag": "g371-BinFill"
+    },
+    {
+      "es": 628,
+      "t_env": 1256,
+      "tag": "g28-BinFill"
+    },
+    {
+      "es": 629,
+      "t_env": 1258,
+      "tag": "g114-BinFill"
+    },
+    {
+      "es": 630,
+      "t_env": 1260,
+      "tag": "g154-BinFill"
+    },
+    {
+      "es": 631,
+      "t_env": 1262,
+      "tag": "g170-BinFill"
+    },
+    {
+      "es": 633,
+      "t_env": 1266,
+      "tag": "g279-BinFill"
+    },
+    {
+      "es": 634,
+      "t_env": 1268,
+      "tag": "g242-BinFill"
+    },
+    {
+      "es": 635,
+      "t_env": 1270,
+      "tag": "g159-BinFill"
+    },
+    {
+      "es": 636,
+      "t_env": 1272,
+      "tag": "g241-BinFill"
+    },
+    {
+      "es": 637,
+      "t_env": 1274,
+      "tag": "g32-BinFill"
+    },
+    {
+      "es": 638,
+      "t_env": 1276,
+      "tag": "g144-BinFill"
+    },
+    {
+      "es": 641,
+      "t_env": 1282,
+      "tag": "g210-BinFill"
+    },
+    {
+      "es": 643,
+      "t_env": 1286,
+      "tag": "g302-BinFill"
+    },
+    {
+      "es": 646,
+      "t_env": 1292,
+      "tag": "g328-BinFill"
+    },
+    {
+      "es": 649,
+      "t_env": 1298,
+      "tag": "g79-BinFill"
+    },
+    {
+      "es": 651,
+      "t_env": 1302,
+      "tag": "g339-BinFill"
+    },
+    {
+      "es": 652,
+      "t_env": 1304,
+      "tag": "g24-BinFill"
+    },
+    {
+      "es": 654,
+      "t_env": 1308,
+      "tag": "g171-BinFill"
+    },
+    {
+      "es": 655,
+      "t_env": 1310,
+      "tag": "g87-BinFill"
+    },
+    {
+      "es": 656,
+      "t_env": 1312,
+      "tag": "g132-BinFill"
+    },
+    {
+      "es": 657,
+      "t_env": 1314,
+      "tag": "g222-BinFill"
+    },
+    {
+      "es": 658,
+      "t_env": 1316,
+      "tag": "g327-BinFill"
+    },
+    {
+      "es": 659,
+      "t_env": 1318,
+      "tag": "g84-BinFill"
+    },
+    {
+      "es": 660,
+      "t_env": 1320,
+      "tag": "g385-BinFill"
+    },
+    {
+      "es": 661,
+      "t_env": 1322,
+      "tag": "g194-BinFill"
+    },
+    {
+      "es": 662,
+      "t_env": 1324,
+      "tag": "g86-BinFill"
+    },
+    {
+      "es": 663,
+      "t_env": 1326,
+      "tag": "g43-BinFill"
+    },
+    {
+      "es": 664,
+      "t_env": 1328,
+      "tag": "g117-BinFill"
+    },
+    {
+      "es": 665,
+      "t_env": 1330,
+      "tag": "g249-BinFill"
+    },
+    {
+      "es": 667,
+      "t_env": 1334,
+      "tag": "g55-BinFill"
+    },
+    {
+      "es": 669,
+      "t_env": 1338,
+      "tag": "g282-BinFill"
+    },
+    {
+      "es": 670,
+      "t_env": 1340,
+      "tag": "g320-BinFill"
+    },
+    {
+      "es": 672,
+      "t_env": 1344,
+      "tag": "g62-BinFill"
+    },
+    {
+      "es": 675,
+      "t_env": 1350,
+      "tag": "g80-BinFill"
+    },
+    {
+      "es": 678,
+      "t_env": 1356,
+      "tag": "g0-BinFill"
+    },
+    {
+      "es": 680,
+      "t_env": 1360,
+      "tag": "g5-BinFill"
+    },
+    {
+      "es": 682,
+      "t_env": 1364,
+      "tag": "g107-BinFill"
+    },
+    {
+      "es": 684,
+      "t_env": 1368,
+      "tag": "g310-BinFill"
+    },
+    {
+      "es": 687,
+      "t_env": 1374,
+      "tag": "g64-BinFill"
+    },
+    {
+      "es": 688,
+      "t_env": 1376,
+      "tag": "g56-BinFill"
+    },
+    {
+      "es": 689,
+      "t_env": 1378,
+      "tag": "g9-BinFill"
+    },
+    {
+      "es": 691,
+      "t_env": 1382,
+      "tag": "g128-BinFill"
+    },
+    {
+      "es": 694,
+      "t_env": 1388,
+      "tag": "g135-BinFill"
+    },
+    {
+      "es": 698,
+      "t_env": 1396,
+      "tag": "g340-BinFill"
+    },
+    {
+      "es": 699,
+      "t_env": 1398,
+      "tag": "g360-BinFill"
+    },
+    {
+      "es": 702,
+      "t_env": 1404,
+      "tag": "g233-BinFill"
+    },
+    {
+      "es": 703,
+      "t_env": 1406,
+      "tag": "g346-BinFill"
+    },
+    {
+      "es": 705,
+      "t_env": 1410,
+      "tag": "g316-BinFill"
+    },
+    {
+      "es": 707,
+      "t_env": 1414,
+      "tag": "g183-BinFill"
+    },
+    {
+      "es": 708,
+      "t_env": 1416,
+      "tag": "g291-BinFill"
+    },
+    {
+      "es": 709,
+      "t_env": 1418,
+      "tag": "g61-BinFill"
+    },
+    {
+      "es": 712,
+      "t_env": 1424,
+      "tag": "g391-BinFill"
+    },
+    {
+      "es": 721,
+      "t_env": 1442,
+      "tag": "g341-BinFill"
+    },
+    {
+      "es": 727,
+      "t_env": 1454,
+      "tag": "g2-BinFill"
+    },
+    {
+      "es": 730,
+      "t_env": 1460,
+      "tag": "g46-BinFill"
+    },
+    {
+      "es": 738,
+      "t_env": 1476,
+      "tag": "g325-BinFill"
+    },
+    {
+      "es": 753,
+      "t_env": 1506,
+      "tag": "g188-BinFill"
+    },
+    {
+      "es": 754,
+      "t_env": 1508,
+      "tag": "g271-BinFill"
+    },
+    {
+      "es": 755,
+      "t_env": 1510,
+      "tag": "g331-BinFill"
+    },
+    {
+      "es": 758,
+      "t_env": 1516,
+      "tag": "g237-BinFill"
+    },
+    {
+      "es": 760,
+      "t_env": 1520,
+      "tag": "g246-BinFill"
+    },
+    {
+      "es": 762,
+      "t_env": 1524,
+      "tag": "g180-BinFill"
+    },
+    {
+      "es": 763,
+      "t_env": 1526,
+      "tag": "g353-BinFill"
+    },
+    {
+      "es": 765,
+      "t_env": 1530,
+      "tag": "g109-BinFill"
+    },
+    {
+      "es": 766,
+      "t_env": 1532,
+      "tag": "g253-BinFill"
+    },
+    {
+      "es": 768,
+      "t_env": 1536,
+      "tag": "g145-BinFill"
+    },
+    {
+      "es": 770,
+      "t_env": 1540,
+      "tag": "g326-BinFill"
+    },
+    {
+      "es": 771,
+      "t_env": 1542,
+      "tag": "g215-BinFill"
+    },
+    {
+      "es": 772,
+      "t_env": 1544,
+      "tag": "g163-BinFill"
+    },
+    {
+      "es": 774,
+      "t_env": 1548,
+      "tag": "g160-BinFill"
+    },
+    {
+      "es": 778,
+      "t_env": 1556,
+      "tag": "g312-BinFill"
+    },
+    {
+      "es": 780,
+      "t_env": 1560,
+      "tag": "g190-BinFill"
+    },
+    {
+      "es": 782,
+      "t_env": 1564,
+      "tag": "g224-BinFill"
+    },
+    {
+      "es": 785,
+      "t_env": 1570,
+      "tag": "g230-BinFill"
+    },
+    {
+      "es": 786,
+      "t_env": 1572,
+      "tag": "g186-BinFill"
+    },
+    {
+      "es": 789,
+      "t_env": 1578,
+      "tag": "g275-BinFill"
+    },
+    {
+      "es": 791,
+      "t_env": 1582,
+      "tag": "g218-BinFill"
+    },
+    {
+      "es": 792,
+      "t_env": 1584,
+      "tag": "g147-BinFill"
+    },
+    {
+      "es": 793,
+      "t_env": 1586,
+      "tag": "g167-BinFill"
+    },
+    {
+      "es": 795,
+      "t_env": 1590,
+      "tag": "g153-BinFill"
+    },
+    {
+      "es": 797,
+      "t_env": 1594,
+      "tag": "g333-BinFill"
+    },
+    {
+      "es": 798,
+      "t_env": 1596,
+      "tag": "g184-BinFill"
+    },
+    {
+      "es": 801,
+      "t_env": 1602,
+      "tag": "g332-BinFill"
+    },
+    {
+      "es": 802,
+      "t_env": 1604,
+      "tag": "g148-BinFill"
+    },
+    {
+      "es": 803,
+      "t_env": 1606,
+      "tag": "g389-BinFill"
+    },
+    {
+      "es": 804,
+      "t_env": 1608,
+      "tag": "g301-BinFill"
+    },
+    {
+      "es": 805,
+      "t_env": 1610,
+      "tag": "g168-BinFill"
+    },
+    {
+      "es": 807,
+      "t_env": 1614,
+      "tag": "g266-BinFill"
+    },
+    {
+      "es": 808,
+      "t_env": 1616,
+      "tag": "g217-BinFill"
+    },
+    {
+      "es": 810,
+      "t_env": 1620,
+      "tag": "g193-BinFill"
+    },
+    {
+      "es": 811,
+      "t_env": 1622,
+      "tag": "g139-BinFill"
+    },
+    {
+      "es": 812,
+      "t_env": 1624,
+      "tag": "g245-BinFill"
+    },
+    {
+      "es": 814,
+      "t_env": 1628,
+      "tag": "g232-BinFill"
+    },
+    {
+      "es": 815,
+      "t_env": 1630,
+      "tag": "g321-BinFill"
+    },
+    {
+      "es": 816,
+      "t_env": 1632,
+      "tag": "g136-BinFill"
+    },
+    {
+      "es": 818,
+      "t_env": 1636,
+      "tag": "g361-BinFill"
+    },
+    {
+      "es": 820,
+      "t_env": 1640,
+      "tag": "g164-BinFill"
+    },
+    {
+      "es": 822,
+      "t_env": 1644,
+      "tag": "g288-BinFill"
+    },
+    {
+      "es": 823,
+      "t_env": 1646,
+      "tag": "g263-BinFill"
+    },
+    {
+      "es": 824,
+      "t_env": 1648,
+      "tag": "g344-BinFill"
+    },
+    {
+      "es": 825,
+      "t_env": 1650,
+      "tag": "g252-BinFill"
+    },
+    {
+      "es": 827,
+      "t_env": 1654,
+      "tag": "g207-BinFill"
+    },
+    {
+      "es": 828,
+      "t_env": 1656,
+      "tag": "g248-BinFill"
+    },
+    {
+      "es": 829,
+      "t_env": 1658,
+      "tag": "g284-BinFill"
+    },
+    {
+      "es": 830,
+      "t_env": 1660,
+      "tag": "g354-BinFill"
+    },
+    {
+      "es": 831,
+      "t_env": 1662,
+      "tag": "g178-BinFill"
+    },
+    {
+      "es": 834,
+      "t_env": 1668,
+      "tag": "g200-BinFill"
+    },
+    {
+      "es": 836,
+      "t_env": 1672,
+      "tag": "g307-BinFill"
+    },
+    {
+      "es": 838,
+      "t_env": 1676,
+      "tag": "g323-BinFill"
+    },
+    {
+      "es": 839,
+      "t_env": 1678,
+      "tag": "g191-BinFill"
+    },
+    {
+      "es": 840,
+      "t_env": 1680,
+      "tag": "g231-BinFill"
+    },
+    {
+      "es": 842,
+      "t_env": 1684,
+      "tag": "g289-BinFill"
+    },
+    {
+      "es": 843,
+      "t_env": 1686,
+      "tag": "g229-BinFill"
+    },
+    {
+      "es": 844,
+      "t_env": 1688,
+      "tag": "g205-BinFill"
+    },
+    {
+      "es": 846,
+      "t_env": 1692,
+      "tag": "g142-BinFill"
+    },
+    {
+      "es": 848,
+      "t_env": 1696,
+      "tag": "g363-BinFill"
+    },
+    {
+      "es": 849,
+      "t_env": 1698,
+      "tag": "g387-BinFill"
+    },
+    {
+      "es": 851,
+      "t_env": 1702,
+      "tag": "g179-BinFill"
+    },
+    {
+      "es": 852,
+      "t_env": 1704,
+      "tag": "g137-BinFill"
+    },
+    {
+      "es": 854,
+      "t_env": 1708,
+      "tag": "g269-BinFill"
+    },
+    {
+      "es": 855,
+      "t_env": 1710,
+      "tag": "g208-BinFill"
+    },
+    {
+      "es": 856,
+      "t_env": 1712,
+      "tag": "g349-BinFill"
+    },
+    {
+      "es": 857,
+      "t_env": 1714,
+      "tag": "g280-BinFill"
+    },
+    {
+      "es": 861,
+      "t_env": 1722,
+      "tag": "g278-BinFill"
+    },
+    {
+      "es": 865,
+      "t_env": 1730,
+      "tag": "g348-BinFill"
+    },
+    {
+      "es": 868,
+      "t_env": 1736,
+      "tag": "g187-BinFill"
+    },
+    {
+      "es": 872,
+      "t_env": 1744,
+      "tag": "g368-BinFill"
+    },
+    {
+      "es": 874,
+      "t_env": 1748,
+      "tag": "g255-BinFill"
+    },
+    {
+      "es": 879,
+      "t_env": 1758,
+      "tag": "g152-BinFill"
+    },
+    {
+      "es": 880,
+      "t_env": 1760,
+      "tag": "g300-BinFill"
+    },
+    {
+      "es": 881,
+      "t_env": 1762,
+      "tag": "g234-BinFill"
+    },
+    {
+      "es": 892,
+      "t_env": 1784,
+      "tag": "g298-BinFill"
+    },
+    {
+      "es": 898,
+      "t_env": 1796,
+      "tag": "g373-BinFill"
+    },
+    {
+      "es": 914,
+      "t_env": 1828,
+      "tag": "g380-BinFill"
+    },
+    {
+      "es": 928,
+      "t_env": 1856,
+      "tag": "g390-BinFill"
+    },
+    {
+      "es": 937,
+      "t_env": 1874,
+      "tag": "g366-BinFill"
+    },
+    {
+      "es": 942,
+      "t_env": 1884,
+      "tag": "g356-BinFill"
+    },
+    {
+      "es": 952,
+      "t_env": 1904,
+      "tag": "g393-BinFill"
+    },
+    {
+      "es": 953,
+      "t_env": 1906,
+      "tag": "g283-BinFill"
+    },
+    {
+      "es": 956,
+      "t_env": 1912,
+      "tag": "g329-BinFill"
+    },
+    {
+      "es": 968,
+      "t_env": 1936,
+      "tag": "g392-BinFill"
+    },
+    {
+      "es": 971,
+      "t_env": 1942,
+      "tag": "g372-BinFill"
+    },
+    {
+      "es": 976,
+      "t_env": 1952,
+      "tag": "g274-BinFill"
+    },
+    {
+      "es": 977,
+      "t_env": 1954,
+      "tag": "g384-BinFill"
+    },
+    {
+      "es": 978,
+      "t_env": 1956,
+      "tag": "g286-BinFill"
+    },
+    {
+      "es": 980,
+      "t_env": 1960,
+      "tag": "g276-BinFill"
+    },
+    {
+      "es": 983,
+      "t_env": 1966,
+      "tag": "g376-BinFill"
+    },
+    {
+      "es": 992,
+      "t_env": 1984,
+      "tag": "g303-BinFill"
+    },
+    {
+      "es": 994,
+      "t_env": 1988,
+      "tag": "g394-BinFill"
+    },
+    {
+      "es": 996,
+      "t_env": 1992,
+      "tag": "g335-BinFill"
+    },
+    {
+      "es": 1001,
+      "t_env": 2002,
+      "tag": "g319-BinFill"
+    },
+    {
+      "es": 1002,
+      "t_env": 2004,
+      "tag": "g281-BinFill"
+    },
+    {
+      "es": 1004,
+      "t_env": 2008,
+      "tag": "g347-BinFill"
+    },
+    {
+      "es": 1005,
+      "t_env": 2010,
+      "tag": "g311-BinFill"
+    },
+    {
+      "es": 1007,
+      "t_env": 2014,
+      "tag": "g304-BinFill"
+    },
+    {
+      "es": 1025,
+      "t_env": 2050,
+      "tag": "g383-BinFill"
+    },
+    {
+      "es": 1026,
+      "t_env": 2052,
+      "tag": "g297-BinFill"
+    },
+    {
+      "es": 1030,
+      "t_env": 2060,
+      "tag": "g294-BinFill"
+    },
+    {
+      "es": 1031,
+      "t_env": 2062,
+      "tag": "g357-BinFill"
+    },
+    {
+      "es": 1033,
+      "t_env": 2066,
+      "tag": "g324-BinFill"
+    },
+    {
+      "es": 1034,
+      "t_env": 2068,
+      "tag": "g313-BinFill"
+    },
+    {
+      "es": 1035,
+      "t_env": 2070,
+      "tag": "g399-BinFill"
+    },
+    {
+      "es": 1036,
+      "t_env": 2072,
+      "tag": "g292-BinFill"
+    },
+    {
+      "es": 1038,
+      "t_env": 2076,
+      "tag": "g299-BinFill"
+    },
+    {
+      "es": 1039,
+      "t_env": 2078,
+      "tag": "g268-BinFill"
+    },
+    {
+      "es": 1047,
+      "t_env": 2094,
+      "tag": "g330-BinFill"
+    },
+    {
+      "es": 1057,
+      "t_env": 2114,
+      "tag": "g337-BinFill"
+    },
+    {
+      "es": 1073,
+      "t_env": 2146,
+      "tag": "g317-BinFill"
+    },
+    {
+      "es": 1078,
+      "t_env": 2156,
+      "tag": "g273-BinFill"
+    },
+    {
+      "es": 1097,
+      "t_env": 2194,
+      "tag": "g355-BinFill"
+    },
+    {
+      "es": 1152,
+      "t_env": 2304,
+      "tag": "g367-BinFill"
+    }
+  ],
+  "replay_cases": [
+    {
+      "es": 100,
+      "t_env": 200,
+      "tag": "g401-RouteStick"
+    },
+    {
+      "es": 114,
+      "t_env": 446,
+      "tag": "g1201-VideoUnmaskSwap"
+    },
+    {
+      "es": 150,
+      "t_env": 300,
+      "tag": "g400-RouteStick"
+    },
+    {
+      "es": 168,
+      "t_env": 534,
+      "tag": "g1405-VideoUnmaskSwap"
+    },
+    {
+      "es": 250,
+      "t_env": 500,
+      "tag": "g500-RouteStick"
+    },
+    {
+      "es": 252,
+      "t_env": 508,
+      "tag": "g810-VideoRepick"
+    },
+    {
+      "es": 253,
+      "t_env": 639,
+      "tag": "g895-VideoRepick"
+    },
+    {
+      "es": 254,
+      "t_env": 785,
+      "tag": "g905-VideoRepick"
+    },
+    {
+      "es": 255,
+      "t_env": 527,
+      "tag": "g809-VideoRepick"
+    },
+    {
+      "es": 257,
+      "t_env": 787,
+      "tag": "g877-VideoRepick"
+    },
+    {
+      "es": 259,
+      "t_env": 641,
+      "tag": "g912-VideoRepick"
+    },
+    {
+      "es": 261,
+      "t_env": 789,
+      "tag": "g866-VideoRepick"
+    },
+    {
+      "es": 263,
+      "t_env": 785,
+      "tag": "g808-VideoRepick"
+    },
+    {
+      "es": 265,
+      "t_env": 659,
+      "tag": "g835-VideoRepick"
+    },
+    {
+      "es": 267,
+      "t_env": 798,
+      "tag": "g811-VideoRepick"
+    },
+    {
+      "es": 272,
+      "t_env": 647,
+      "tag": "g862-VideoRepick"
+    },
+    {
+      "es": 318,
+      "t_env": 1312,
+      "tag": "g1505-VideoUnmaskSwap"
+    },
+    {
+      "es": 500,
+      "t_env": 1000,
+      "tag": "g700-RouteStick"
+    },
+    {
+      "es": 508,
+      "t_env": 898,
+      "tag": "g1194-VideoRepick"
+    },
+    {
+      "es": 805,
+      "t_env": 1610,
+      "tag": "g168-BinFill"
+    },
+    {
+      "es": 851,
+      "t_env": 1702,
+      "tag": "g179-BinFill"
+    },
+    {
+      "es": 968,
+      "t_env": 1936,
+      "tag": "g392-BinFill"
+    },
+    {
+      "es": 996,
+      "t_env": 1992,
+      "tag": "g335-BinFill"
+    },
+    {
+      "es": 1005,
+      "t_env": 2010,
+      "tag": "g311-BinFill"
+    },
+    {
+      "es": 1026,
+      "t_env": 2052,
+      "tag": "g297-BinFill"
+    },
+    {
+      "es": 1034,
+      "t_env": 2068,
+      "tag": "g313-BinFill"
+    },
+    {
+      "es": 1035,
+      "t_env": 2070,
+      "tag": "g399-BinFill"
+    },
+    {
+      "es": 1036,
+      "t_env": 2072,
+      "tag": "g292-BinFill"
+    },
+    {
+      "es": 1038,
+      "t_env": 2076,
+      "tag": "g299-BinFill"
+    },
+    {
+      "es": 1039,
+      "t_env": 2078,
+      "tag": "g268-BinFill"
+    },
+    {
+      "es": 1047,
+      "t_env": 2094,
+      "tag": "g330-BinFill"
+    },
+    {
+      "es": 1073,
+      "t_env": 2146,
+      "tag": "g317-BinFill"
+    },
+    {
+      "es": 1078,
+      "t_env": 2156,
+      "tag": "g273-BinFill"
+    },
+    {
+      "es": 1097,
+      "t_env": 2194,
+      "tag": "g355-BinFill"
+    },
+    {
+      "es": 1152,
+      "t_env": 2304,
+      "tag": "g367-BinFill"
+    }
+  ],
+  "case_selection": {
+    "mode": "representative",
+    "real_es_count": 411,
+    "replay_count": 35,
+    "residues": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "tasks": [
+      "BinFill",
+      "RouteStick",
+      "VideoRepick",
+      "VideoUnmaskSwap"
+    ],
+    "es_min": 100,
+    "es_max": 1152
+  },
+  "rhythm": {
+    "episodes": 35,
+    "points": 1520,
+    "details": [
+      {
+        "tag": "g401-RouteStick",
+        "es": 100,
+        "t_env": 200,
+        "points_eval": 7,
+        "points_drive": 7,
+        "points_expected": 7,
+        "tau_max": 196,
+        "k_max": 11,
+        "termination": "env_done",
+        "reference_frames": 199,
+        "c_env": 99,
+        "c_env_mod16": 3
+      },
+      {
+        "tag": "g1201-VideoUnmaskSwap",
+        "es": 114,
+        "t_env": 446,
+        "points_eval": 21,
+        "points_drive": 21,
+        "points_expected": 21,
+        "tau_max": 434,
+        "k_max": 26,
+        "termination": "env_done",
+        "reference_frames": 445,
+        "c_env": 331,
+        "c_env_mod16": 11
+      },
+      {
+        "tag": "g400-RouteStick",
+        "es": 150,
+        "t_env": 300,
+        "points_eval": 10,
+        "points_drive": 10,
+        "points_expected": 10,
+        "tau_max": 294,
+        "k_max": 17,
+        "termination": "env_done",
+        "reference_frames": 299,
+        "c_env": 149,
+        "c_env_mod16": 5
+      },
+      {
+        "tag": "g1405-VideoUnmaskSwap",
+        "es": 168,
+        "t_env": 534,
+        "points_eval": 23,
+        "points_drive": 23,
+        "points_expected": 23,
+        "tau_max": 520,
+        "k_max": 31,
+        "termination": "env_done",
+        "reference_frames": 533,
+        "c_env": 365,
+        "c_env_mod16": 13
+      },
+      {
+        "tag": "g500-RouteStick",
+        "es": 250,
+        "t_env": 500,
+        "points_eval": 16,
+        "points_drive": 16,
+        "points_expected": 16,
+        "tau_max": 490,
+        "k_max": 29,
+        "termination": "env_done",
+        "reference_frames": 499,
+        "c_env": 249,
+        "c_env_mod16": 9
+      },
+      {
+        "tag": "g810-VideoRepick",
+        "es": 252,
+        "t_env": 508,
+        "points_eval": 16,
+        "points_drive": 16,
+        "points_expected": 16,
+        "tau_max": 492,
+        "k_max": 29,
+        "termination": "env_done",
+        "reference_frames": 507,
+        "c_env": 255,
+        "c_env_mod16": 15
+      },
+      {
+        "tag": "g895-VideoRepick",
+        "es": 253,
+        "t_env": 639,
+        "points_eval": 25,
+        "points_drive": 25,
+        "points_expected": 25,
+        "tau_max": 637,
+        "k_max": 38,
+        "termination": "env_done",
+        "reference_frames": 638,
+        "c_env": 385,
+        "c_env_mod16": 1
+      },
+      {
+        "tag": "g905-VideoRepick",
+        "es": 254,
+        "t_env": 785,
+        "points_eval": 34,
+        "points_drive": 34,
+        "points_expected": 34,
+        "tau_max": 782,
+        "k_max": 47,
+        "termination": "env_done",
+        "reference_frames": 784,
+        "c_env": 530,
+        "c_env_mod16": 2
+      },
+      {
+        "tag": "g809-VideoRepick",
+        "es": 255,
+        "t_env": 527,
+        "points_eval": 17,
+        "points_drive": 17,
+        "points_expected": 17,
+        "tau_max": 511,
+        "k_max": 30,
+        "termination": "env_done",
+        "reference_frames": 526,
+        "c_env": 271,
+        "c_env_mod16": 15
+      },
+      {
+        "tag": "g877-VideoRepick",
+        "es": 257,
+        "t_env": 787,
+        "points_eval": 34,
+        "points_drive": 34,
+        "points_expected": 34,
+        "tau_max": 785,
+        "k_max": 48,
+        "termination": "env_done",
+        "reference_frames": 786,
+        "c_env": 529,
+        "c_env_mod16": 1
+      },
+      {
+        "tag": "g912-VideoRepick",
+        "es": 259,
+        "t_env": 641,
+        "points_eval": 24,
+        "points_drive": 24,
+        "points_expected": 24,
+        "tau_max": 627,
+        "k_max": 38,
+        "termination": "env_done",
+        "reference_frames": 640,
+        "c_env": 381,
+        "c_env_mod16": 13
+      },
+      {
+        "tag": "g866-VideoRepick",
+        "es": 261,
+        "t_env": 789,
+        "points_eval": 33,
+        "points_drive": 33,
+        "points_expected": 33,
+        "tau_max": 773,
+        "k_max": 47,
+        "termination": "env_done",
+        "reference_frames": 788,
+        "c_env": 527,
+        "c_env_mod16": 15
+      },
+      {
+        "tag": "g808-VideoRepick",
+        "es": 263,
+        "t_env": 785,
+        "points_eval": 33,
+        "points_drive": 33,
+        "points_expected": 33,
+        "tau_max": 775,
+        "k_max": 47,
+        "termination": "env_done",
+        "reference_frames": 784,
+        "c_env": 521,
+        "c_env_mod16": 9
+      },
+      {
+        "tag": "g835-VideoRepick",
+        "es": 265,
+        "t_env": 659,
+        "points_eval": 25,
+        "points_drive": 25,
+        "points_expected": 25,
+        "tau_max": 649,
+        "k_max": 39,
+        "termination": "env_done",
+        "reference_frames": 658,
+        "c_env": 393,
+        "c_env_mod16": 9
+      },
+      {
+        "tag": "g811-VideoRepick",
+        "es": 267,
+        "t_env": 798,
+        "points_eval": 34,
+        "points_drive": 34,
+        "points_expected": 34,
+        "tau_max": 795,
+        "k_max": 48,
+        "termination": "env_done",
+        "reference_frames": 797,
+        "c_env": 530,
+        "c_env_mod16": 2
+      },
+      {
+        "tag": "g862-VideoRepick",
+        "es": 272,
+        "t_env": 647,
+        "points_eval": 24,
+        "points_drive": 24,
+        "points_expected": 24,
+        "tau_max": 640,
+        "k_max": 38,
+        "termination": "env_done",
+        "reference_frames": 646,
+        "c_env": 374,
+        "c_env_mod16": 6
+      },
+      {
+        "tag": "g1505-VideoUnmaskSwap",
+        "es": 318,
+        "t_env": 1312,
+        "points_eval": 63,
+        "points_drive": 63,
+        "points_expected": 63,
+        "tau_max": 1310,
+        "k_max": 80,
+        "termination": "env_done",
+        "reference_frames": 1311,
+        "c_env": 993,
+        "c_env_mod16": 1
+      },
+      {
+        "tag": "g700-RouteStick",
+        "es": 500,
+        "t_env": 1000,
+        "points_eval": 32,
+        "points_drive": 32,
+        "points_expected": 32,
+        "tau_max": 996,
+        "k_max": 61,
+        "termination": "env_done",
+        "reference_frames": 999,
+        "c_env": 499,
+        "c_env_mod16": 3
+      },
+      {
+        "tag": "g1194-VideoRepick",
+        "es": 508,
+        "t_env": 898,
+        "points_eval": 25,
+        "points_drive": 25,
+        "points_expected": 25,
+        "tau_max": 892,
+        "k_max": 54,
+        "termination": "env_done",
+        "reference_frames": 897,
+        "c_env": 389,
+        "c_env_mod16": 5
+      },
+      {
+        "tag": "g168-BinFill",
+        "es": 805,
+        "t_env": 1610,
+        "points_eval": 51,
+        "points_drive": 51,
+        "points_expected": 51,
+        "tau_max": 1605,
+        "k_max": 99,
+        "termination": "env_done",
+        "reference_frames": 1609,
+        "c_env": 804,
+        "c_env_mod16": 4
+      },
+      {
+        "tag": "g179-BinFill",
+        "es": 851,
+        "t_env": 1702,
+        "points_eval": 54,
+        "points_drive": 54,
+        "points_expected": 54,
+        "tau_max": 1699,
+        "k_max": 105,
+        "termination": "env_done",
+        "reference_frames": 1701,
+        "c_env": 850,
+        "c_env_mod16": 2
+      },
+      {
+        "tag": "g392-BinFill",
+        "es": 968,
+        "t_env": 1936,
+        "points_eval": 61,
+        "points_drive": 61,
+        "points_expected": 61,
+        "tau_max": 1928,
+        "k_max": 119,
+        "termination": "env_done",
+        "reference_frames": 1935,
+        "c_env": 967,
+        "c_env_mod16": 7
+      },
+      {
+        "tag": "g335-BinFill",
+        "es": 996,
+        "t_env": 1992,
+        "points_eval": 63,
+        "points_drive": 63,
+        "points_expected": 63,
+        "tau_max": 1988,
+        "k_max": 123,
+        "termination": "env_done",
+        "reference_frames": 1991,
+        "c_env": 995,
+        "c_env_mod16": 3
+      },
+      {
+        "tag": "g311-BinFill",
+        "es": 1005,
+        "t_env": 2010,
+        "points_eval": 63,
+        "points_drive": 63,
+        "points_expected": 63,
+        "tau_max": 1997,
+        "k_max": 123,
+        "termination": "env_done",
+        "reference_frames": 2009,
+        "c_env": 1004,
+        "c_env_mod16": 12
+      },
+      {
+        "tag": "g297-BinFill",
+        "es": 1026,
+        "t_env": 2052,
+        "points_eval": 65,
+        "points_drive": 65,
+        "points_expected": 65,
+        "tau_max": 2050,
+        "k_max": 127,
+        "termination": "env_done",
+        "reference_frames": 2051,
+        "c_env": 1025,
+        "c_env_mod16": 1
+      },
+      {
+        "tag": "g313-BinFill",
+        "es": 1034,
+        "t_env": 2068,
+        "points_eval": 65,
+        "points_drive": 65,
+        "points_expected": 65,
+        "tau_max": 2058,
+        "k_max": 127,
+        "termination": "env_done",
+        "reference_frames": 2067,
+        "c_env": 1033,
+        "c_env_mod16": 9
+      },
+      {
+        "tag": "g399-BinFill",
+        "es": 1035,
+        "t_env": 2070,
+        "points_eval": 65,
+        "points_drive": 65,
+        "points_expected": 65,
+        "tau_max": 2059,
+        "k_max": 127,
+        "termination": "env_done",
+        "reference_frames": 2069,
+        "c_env": 1034,
+        "c_env_mod16": 10
+      },
+      {
+        "tag": "g292-BinFill",
+        "es": 1036,
+        "t_env": 2072,
+        "points_eval": 65,
+        "points_drive": 65,
+        "points_expected": 65,
+        "tau_max": 2060,
+        "k_max": 127,
+        "termination": "env_done",
+        "reference_frames": 2071,
+        "c_env": 1035,
+        "c_env_mod16": 11
+      },
+      {
+        "tag": "g299-BinFill",
+        "es": 1038,
+        "t_env": 2076,
+        "points_eval": 65,
+        "points_drive": 65,
+        "points_expected": 65,
+        "tau_max": 2062,
+        "k_max": 127,
+        "termination": "env_done",
+        "reference_frames": 2075,
+        "c_env": 1037,
+        "c_env_mod16": 13
+      },
+      {
+        "tag": "g268-BinFill",
+        "es": 1039,
+        "t_env": 2078,
+        "points_eval": 65,
+        "points_drive": 65,
+        "points_expected": 65,
+        "tau_max": 2063,
+        "k_max": 127,
+        "termination": "env_done",
+        "reference_frames": 2077,
+        "c_env": 1038,
+        "c_env_mod16": 14
+      },
+      {
+        "tag": "g330-BinFill",
+        "es": 1047,
+        "t_env": 2094,
+        "points_eval": 66,
+        "points_drive": 66,
+        "points_expected": 66,
+        "tau_max": 2087,
+        "k_max": 129,
+        "termination": "env_done",
+        "reference_frames": 2093,
+        "c_env": 1046,
+        "c_env_mod16": 6
+      },
+      {
+        "tag": "g317-BinFill",
+        "es": 1073,
+        "t_env": 2146,
+        "points_eval": 67,
+        "points_drive": 67,
+        "points_expected": 67,
+        "tau_max": 2129,
+        "k_max": 132,
+        "termination": "env_done",
+        "reference_frames": 2145,
+        "c_env": 1072,
+        "c_env_mod16": 0
+      },
+      {
+        "tag": "g273-BinFill",
+        "es": 1078,
+        "t_env": 2156,
+        "points_eval": 68,
+        "points_drive": 68,
+        "points_expected": 68,
+        "tau_max": 2150,
+        "k_max": 133,
+        "termination": "env_done",
+        "reference_frames": 2155,
+        "c_env": 1077,
+        "c_env_mod16": 5
+      },
+      {
+        "tag": "g355-BinFill",
+        "es": 1097,
+        "t_env": 2194,
+        "points_eval": 69,
+        "points_drive": 69,
+        "points_expected": 69,
+        "tau_max": 2185,
+        "k_max": 135,
+        "termination": "env_done",
+        "reference_frames": 2193,
+        "c_env": 1096,
+        "c_env_mod16": 8
+      },
+      {
+        "tag": "g367-BinFill",
+        "es": 1152,
+        "t_env": 2304,
+        "points_eval": 72,
+        "points_drive": 72,
+        "points_expected": 72,
+        "tau_max": 2288,
+        "k_max": 141,
+        "termination": "env_done",
+        "reference_frames": 2303,
+        "c_env": 1151,
+        "c_env_mod16": 15
+      }
+    ],
+    "tau_mismatches": 0,
+    "es_mismatches": 0,
+    "k_mismatches": 0,
+    "order_sha_mismatches": 0
+  },
+  "termination": {
+    "case_count_guard": {
+      "es": 0,
+      "t_env": 1700,
+      "infer_calls": 82,
+      "tau_max": 1296,
+      "count": 1301,
+      "residual_frames": 4,
+      "termination": "count_guard"
+    },
+    "cases_env_done": [
+      {
+        "tag": "g401-RouteStick",
+        "es": 100,
+        "t_env": 200,
+        "termination": "env_done",
+        "infer_calls": 7,
+        "formula": 7,
+        "simulated": 7,
+        "count": 99,
+        "residual_frames": 3
+      },
+      {
+        "tag": "g1201-VideoUnmaskSwap",
+        "es": 114,
+        "t_env": 446,
+        "termination": "env_done",
+        "infer_calls": 21,
+        "formula": 21,
+        "simulated": 21,
+        "count": 331,
+        "residual_frames": 11
+      },
+      {
+        "tag": "g400-RouteStick",
+        "es": 150,
+        "t_env": 300,
+        "termination": "env_done",
+        "infer_calls": 10,
+        "formula": 10,
+        "simulated": 10,
+        "count": 149,
+        "residual_frames": 5
+      },
+      {
+        "tag": "g1405-VideoUnmaskSwap",
+        "es": 168,
+        "t_env": 534,
+        "termination": "env_done",
+        "infer_calls": 23,
+        "formula": 23,
+        "simulated": 23,
+        "count": 365,
+        "residual_frames": 13
+      },
+      {
+        "tag": "g500-RouteStick",
+        "es": 250,
+        "t_env": 500,
+        "termination": "env_done",
+        "infer_calls": 16,
+        "formula": 16,
+        "simulated": 16,
+        "count": 249,
+        "residual_frames": 9
+      },
+      {
+        "tag": "g810-VideoRepick",
+        "es": 252,
+        "t_env": 508,
+        "termination": "env_done",
+        "infer_calls": 16,
+        "formula": 16,
+        "simulated": 16,
+        "count": 255,
+        "residual_frames": 15
+      },
+      {
+        "tag": "g895-VideoRepick",
+        "es": 253,
+        "t_env": 639,
+        "termination": "env_done",
+        "infer_calls": 25,
+        "formula": 25,
+        "simulated": 25,
+        "count": 385,
+        "residual_frames": 1
+      },
+      {
+        "tag": "g905-VideoRepick",
+        "es": 254,
+        "t_env": 785,
+        "termination": "env_done",
+        "infer_calls": 34,
+        "formula": 34,
+        "simulated": 34,
+        "count": 530,
+        "residual_frames": 2
+      },
+      {
+        "tag": "g809-VideoRepick",
+        "es": 255,
+        "t_env": 527,
+        "termination": "env_done",
+        "infer_calls": 17,
+        "formula": 17,
+        "simulated": 17,
+        "count": 271,
+        "residual_frames": 15
+      },
+      {
+        "tag": "g877-VideoRepick",
+        "es": 257,
+        "t_env": 787,
+        "termination": "env_done",
+        "infer_calls": 34,
+        "formula": 34,
+        "simulated": 34,
+        "count": 529,
+        "residual_frames": 1
+      },
+      {
+        "tag": "g912-VideoRepick",
+        "es": 259,
+        "t_env": 641,
+        "termination": "env_done",
+        "infer_calls": 24,
+        "formula": 24,
+        "simulated": 24,
+        "count": 381,
+        "residual_frames": 13
+      },
+      {
+        "tag": "g866-VideoRepick",
+        "es": 261,
+        "t_env": 789,
+        "termination": "env_done",
+        "infer_calls": 33,
+        "formula": 33,
+        "simulated": 33,
+        "count": 527,
+        "residual_frames": 15
+      },
+      {
+        "tag": "g808-VideoRepick",
+        "es": 263,
+        "t_env": 785,
+        "termination": "env_done",
+        "infer_calls": 33,
+        "formula": 33,
+        "simulated": 33,
+        "count": 521,
+        "residual_frames": 9
+      },
+      {
+        "tag": "g835-VideoRepick",
+        "es": 265,
+        "t_env": 659,
+        "termination": "env_done",
+        "infer_calls": 25,
+        "formula": 25,
+        "simulated": 25,
+        "count": 393,
+        "residual_frames": 9
+      },
+      {
+        "tag": "g811-VideoRepick",
+        "es": 267,
+        "t_env": 798,
+        "termination": "env_done",
+        "infer_calls": 34,
+        "formula": 34,
+        "simulated": 34,
+        "count": 530,
+        "residual_frames": 2
+      },
+      {
+        "tag": "g862-VideoRepick",
+        "es": 272,
+        "t_env": 647,
+        "termination": "env_done",
+        "infer_calls": 24,
+        "formula": 24,
+        "simulated": 24,
+        "count": 374,
+        "residual_frames": 6
+      },
+      {
+        "tag": "g1505-VideoUnmaskSwap",
+        "es": 318,
+        "t_env": 1312,
+        "termination": "env_done",
+        "infer_calls": 63,
+        "formula": 63,
+        "simulated": 63,
+        "count": 993,
+        "residual_frames": 1
+      },
+      {
+        "tag": "g700-RouteStick",
+        "es": 500,
+        "t_env": 1000,
+        "termination": "env_done",
+        "infer_calls": 32,
+        "formula": 32,
+        "simulated": 32,
+        "count": 499,
+        "residual_frames": 3
+      },
+      {
+        "tag": "g1194-VideoRepick",
+        "es": 508,
+        "t_env": 898,
+        "termination": "env_done",
+        "infer_calls": 25,
+        "formula": 25,
+        "simulated": 25,
+        "count": 389,
+        "residual_frames": 5
+      },
+      {
+        "tag": "g168-BinFill",
+        "es": 805,
+        "t_env": 1610,
+        "termination": "env_done",
+        "infer_calls": 51,
+        "formula": 51,
+        "simulated": 51,
+        "count": 804,
+        "residual_frames": 4
+      },
+      {
+        "tag": "g179-BinFill",
+        "es": 851,
+        "t_env": 1702,
+        "termination": "env_done",
+        "infer_calls": 54,
+        "formula": 54,
+        "simulated": 54,
+        "count": 850,
+        "residual_frames": 2
+      },
+      {
+        "tag": "g392-BinFill",
+        "es": 968,
+        "t_env": 1936,
+        "termination": "env_done",
+        "infer_calls": 61,
+        "formula": 61,
+        "simulated": 61,
+        "count": 967,
+        "residual_frames": 7
+      },
+      {
+        "tag": "g335-BinFill",
+        "es": 996,
+        "t_env": 1992,
+        "termination": "env_done",
+        "infer_calls": 63,
+        "formula": 63,
+        "simulated": 63,
+        "count": 995,
+        "residual_frames": 3
+      },
+      {
+        "tag": "g311-BinFill",
+        "es": 1005,
+        "t_env": 2010,
+        "termination": "env_done",
+        "infer_calls": 63,
+        "formula": 63,
+        "simulated": 63,
+        "count": 1004,
+        "residual_frames": 12
+      },
+      {
+        "tag": "g297-BinFill",
+        "es": 1026,
+        "t_env": 2052,
+        "termination": "env_done",
+        "infer_calls": 65,
+        "formula": 65,
+        "simulated": 65,
+        "count": 1025,
+        "residual_frames": 1
+      },
+      {
+        "tag": "g313-BinFill",
+        "es": 1034,
+        "t_env": 2068,
+        "termination": "env_done",
+        "infer_calls": 65,
+        "formula": 65,
+        "simulated": 65,
+        "count": 1033,
+        "residual_frames": 9
+      },
+      {
+        "tag": "g399-BinFill",
+        "es": 1035,
+        "t_env": 2070,
+        "termination": "env_done",
+        "infer_calls": 65,
+        "formula": 65,
+        "simulated": 65,
+        "count": 1034,
+        "residual_frames": 10
+      },
+      {
+        "tag": "g292-BinFill",
+        "es": 1036,
+        "t_env": 2072,
+        "termination": "env_done",
+        "infer_calls": 65,
+        "formula": 65,
+        "simulated": 65,
+        "count": 1035,
+        "residual_frames": 11
+      },
+      {
+        "tag": "g299-BinFill",
+        "es": 1038,
+        "t_env": 2076,
+        "termination": "env_done",
+        "infer_calls": 65,
+        "formula": 65,
+        "simulated": 65,
+        "count": 1037,
+        "residual_frames": 13
+      },
+      {
+        "tag": "g268-BinFill",
+        "es": 1039,
+        "t_env": 2078,
+        "termination": "env_done",
+        "infer_calls": 65,
+        "formula": 65,
+        "simulated": 65,
+        "count": 1038,
+        "residual_frames": 14
+      },
+      {
+        "tag": "g330-BinFill",
+        "es": 1047,
+        "t_env": 2094,
+        "termination": "env_done",
+        "infer_calls": 66,
+        "formula": 66,
+        "simulated": 66,
+        "count": 1046,
+        "residual_frames": 6
+      },
+      {
+        "tag": "g317-BinFill",
+        "es": 1073,
+        "t_env": 2146,
+        "termination": "env_done",
+        "infer_calls": 67,
+        "formula": 67,
+        "simulated": 67,
+        "count": 1072,
+        "residual_frames": 16
+      },
+      {
+        "tag": "g273-BinFill",
+        "es": 1078,
+        "t_env": 2156,
+        "termination": "env_done",
+        "infer_calls": 68,
+        "formula": 68,
+        "simulated": 68,
+        "count": 1077,
+        "residual_frames": 5
+      },
+      {
+        "tag": "g355-BinFill",
+        "es": 1097,
+        "t_env": 2194,
+        "termination": "env_done",
+        "infer_calls": 69,
+        "formula": 69,
+        "simulated": 69,
+        "count": 1096,
+        "residual_frames": 8
+      },
+      {
+        "tag": "g367-BinFill",
+        "es": 1152,
+        "t_env": 2304,
+        "termination": "env_done",
+        "infer_calls": 72,
+        "formula": 72,
+        "simulated": 72,
+        "count": 1151,
+        "residual_frames": 15
+      }
+    ],
+    "fails": []
+  },
+  "tau_long": {
+    "cases": [
+      {
+        "es": 0,
+        "tau": 1296,
+        "k": 80,
+        "k_ref": 80,
+        "raise": 0,
+        "order_legal": 1,
+        "headroom": 80
+      },
+      {
+        "es": 1152,
+        "tau": 2448,
+        "k": 151,
+        "k_ref": 151,
+        "raise": 0,
+        "order_legal": 1,
+        "headroom": 9
+      }
+    ],
+    "budget": 160,
+    "headroom_min": 9,
+    "fails": []
+  },
+  "es_boundary": {
+    "scanned": [
+      1280,
+      1313
+    ],
+    "first_raise_es": 1297,
+    "predicted": 1297,
+    "before_es": 1296,
+    "after_es": 1297,
+    "k_before": 160,
+    "k_after": 161,
+    "full_drive": [
+      {
+        "es": 1296,
+        "raise": 0,
+        "raise_at_tau": null,
+        "points": 82,
+        "k_last": 160,
+        "msg": ""
+      },
+      {
+        "es": 1297,
+        "raise": 1,
+        "raise_at_tau": 2593,
+        "points": 81,
+        "k_last": 160,
+        "msg": "step 2593 合法 motion 起点数 161 > motion.budget 160（零截断契约，禁止裁剪）"
+      }
+    ],
+    "real": [
+      {
+        "es": 100,
+        "k": 86
+      },
+      {
+        "es": 114,
+        "k": 87
+      },
+      {
+        "es": 150,
+        "k": 89
+      },
+      {
+        "es": 168,
+        "k": 90
+      },
+      {
+        "es": 200,
+        "k": 92
+      },
+      {
+        "es": 216,
+        "k": 93
+      },
+      {
+        "es": 250,
+        "k": 95
+      },
+      {
+        "es": 252,
+        "k": 95
+      },
+      {
+        "es": 253,
+        "k": 95
+      },
+      {
+        "es": 254,
+        "k": 95
+      },
+      {
+        "es": 255,
+        "k": 95
+      },
+      {
+        "es": 257,
+        "k": 96
+      },
+      {
+        "es": 258,
+        "k": 96
+      },
+      {
+        "es": 259,
+        "k": 96
+      },
+      {
+        "es": 260,
+        "k": 96
+      },
+      {
+        "es": 261,
+        "k": 96
+      },
+      {
+        "es": 262,
+        "k": 96
+      },
+      {
+        "es": 263,
+        "k": 96
+      },
+      {
+        "es": 264,
+        "k": 96
+      },
+      {
+        "es": 265,
+        "k": 96
+      },
+      {
+        "es": 266,
+        "k": 96
+      },
+      {
+        "es": 267,
+        "k": 96
+      },
+      {
+        "es": 268,
+        "k": 96
+      },
+      {
+        "es": 269,
+        "k": 96
+      },
+      {
+        "es": 270,
+        "k": 96
+      },
+      {
+        "es": 271,
+        "k": 96
+      },
+      {
+        "es": 272,
+        "k": 96
+      },
+      {
+        "es": 273,
+        "k": 97
+      },
+      {
+        "es": 274,
+        "k": 97
+      },
+      {
+        "es": 275,
+        "k": 97
+      },
+      {
+        "es": 276,
+        "k": 97
+      },
+      {
+        "es": 277,
+        "k": 97
+      },
+      {
+        "es": 278,
+        "k": 97
+      },
+      {
+        "es": 279,
+        "k": 97
+      },
+      {
+        "es": 280,
+        "k": 97
+      },
+      {
+        "es": 281,
+        "k": 97
+      },
+      {
+        "es": 282,
+        "k": 97
+      },
+      {
+        "es": 283,
+        "k": 97
+      },
+      {
+        "es": 284,
+        "k": 97
+      },
+      {
+        "es": 287,
+        "k": 97
+      },
+      {
+        "es": 288,
+        "k": 97
+      },
+      {
+        "es": 290,
+        "k": 98
+      },
+      {
+        "es": 292,
+        "k": 98
+      },
+      {
+        "es": 293,
+        "k": 98
+      },
+      {
+        "es": 294,
+        "k": 98
+      },
+      {
+        "es": 299,
+        "k": 98
+      },
+      {
+        "es": 300,
+        "k": 98
+      },
+      {
+        "es": 301,
+        "k": 98
+      },
+      {
+        "es": 304,
+        "k": 98
+      },
+      {
+        "es": 305,
+        "k": 99
+      },
+      {
+        "es": 306,
+        "k": 99
+      },
+      {
+        "es": 307,
+        "k": 99
+      },
+      {
+        "es": 308,
+        "k": 99
+      },
+      {
+        "es": 309,
+        "k": 99
+      },
+      {
+        "es": 310,
+        "k": 99
+      },
+      {
+        "es": 311,
+        "k": 99
+      },
+      {
+        "es": 312,
+        "k": 99
+      },
+      {
+        "es": 313,
+        "k": 99
+      },
+      {
+        "es": 314,
+        "k": 99
+      },
+      {
+        "es": 315,
+        "k": 99
+      },
+      {
+        "es": 316,
+        "k": 99
+      },
+      {
+        "es": 317,
+        "k": 99
+      },
+      {
+        "es": 318,
+        "k": 99
+      },
+      {
+        "es": 319,
+        "k": 99
+      },
+      {
+        "es": 320,
+        "k": 99
+      },
+      {
+        "es": 321,
+        "k": 100
+      },
+      {
+        "es": 322,
+        "k": 100
+      },
+      {
+        "es": 323,
+        "k": 100
+      },
+      {
+        "es": 324,
+        "k": 100
+      },
+      {
+        "es": 325,
+        "k": 100
+      },
+      {
+        "es": 326,
+        "k": 100
+      },
+      {
+        "es": 327,
+        "k": 100
+      },
+      {
+        "es": 328,
+        "k": 100
+      },
+      {
+        "es": 329,
+        "k": 100
+      },
+      {
+        "es": 330,
+        "k": 100
+      },
+      {
+        "es": 331,
+        "k": 100
+      },
+      {
+        "es": 333,
+        "k": 100
+      },
+      {
+        "es": 334,
+        "k": 100
+      },
+      {
+        "es": 337,
+        "k": 101
+      },
+      {
+        "es": 338,
+        "k": 101
+      },
+      {
+        "es": 339,
+        "k": 101
+      },
+      {
+        "es": 340,
+        "k": 101
+      },
+      {
+        "es": 343,
+        "k": 101
+      },
+      {
+        "es": 345,
+        "k": 101
+      },
+      {
+        "es": 347,
+        "k": 101
+      },
+      {
+        "es": 348,
+        "k": 101
+      },
+      {
+        "es": 349,
+        "k": 101
+      },
+      {
+        "es": 350,
+        "k": 101
+      },
+      {
+        "es": 355,
+        "k": 102
+      },
+      {
+        "es": 361,
+        "k": 102
+      },
+      {
+        "es": 362,
+        "k": 102
+      },
+      {
+        "es": 363,
+        "k": 102
+      },
+      {
+        "es": 364,
+        "k": 102
+      },
+      {
+        "es": 366,
+        "k": 102
+      },
+      {
+        "es": 367,
+        "k": 102
+      },
+      {
+        "es": 368,
+        "k": 102
+      },
+      {
+        "es": 369,
+        "k": 103
+      },
+      {
+        "es": 370,
+        "k": 103
+      },
+      {
+        "es": 371,
+        "k": 103
+      },
+      {
+        "es": 372,
+        "k": 103
+      },
+      {
+        "es": 373,
+        "k": 103
+      },
+      {
+        "es": 374,
+        "k": 103
+      },
+      {
+        "es": 375,
+        "k": 103
+      },
+      {
+        "es": 376,
+        "k": 103
+      },
+      {
+        "es": 377,
+        "k": 103
+      },
+      {
+        "es": 378,
+        "k": 103
+      },
+      {
+        "es": 379,
+        "k": 103
+      },
+      {
+        "es": 380,
+        "k": 103
+      },
+      {
+        "es": 381,
+        "k": 103
+      },
+      {
+        "es": 382,
+        "k": 103
+      },
+      {
+        "es": 386,
+        "k": 104
+      },
+      {
+        "es": 388,
+        "k": 104
+      },
+      {
+        "es": 390,
+        "k": 104
+      },
+      {
+        "es": 392,
+        "k": 104
+      },
+      {
+        "es": 395,
+        "k": 104
+      },
+      {
+        "es": 398,
+        "k": 104
+      },
+      {
+        "es": 400,
+        "k": 104
+      },
+      {
+        "es": 405,
+        "k": 105
+      },
+      {
+        "es": 409,
+        "k": 105
+      },
+      {
+        "es": 410,
+        "k": 105
+      },
+      {
+        "es": 411,
+        "k": 105
+      },
+      {
+        "es": 414,
+        "k": 105
+      },
+      {
+        "es": 416,
+        "k": 105
+      },
+      {
+        "es": 417,
+        "k": 106
+      },
+      {
+        "es": 419,
+        "k": 106
+      },
+      {
+        "es": 420,
+        "k": 106
+      },
+      {
+        "es": 421,
+        "k": 106
+      },
+      {
+        "es": 422,
+        "k": 106
+      },
+      {
+        "es": 423,
+        "k": 106
+      },
+      {
+        "es": 424,
+        "k": 106
+      },
+      {
+        "es": 425,
+        "k": 106
+      },
+      {
+        "es": 426,
+        "k": 106
+      },
+      {
+        "es": 427,
+        "k": 106
+      },
+      {
+        "es": 428,
+        "k": 106
+      },
+      {
+        "es": 429,
+        "k": 106
+      },
+      {
+        "es": 430,
+        "k": 106
+      },
+      {
+        "es": 431,
+        "k": 106
+      },
+      {
+        "es": 432,
+        "k": 106
+      },
+      {
+        "es": 433,
+        "k": 107
+      },
+      {
+        "es": 434,
+        "k": 107
+      },
+      {
+        "es": 436,
+        "k": 107
+      },
+      {
+        "es": 437,
+        "k": 107
+      },
+      {
+        "es": 438,
+        "k": 107
+      },
+      {
+        "es": 439,
+        "k": 107
+      },
+      {
+        "es": 442,
+        "k": 107
+      },
+      {
+        "es": 443,
+        "k": 107
+      },
+      {
+        "es": 444,
+        "k": 107
+      },
+      {
+        "es": 445,
+        "k": 107
+      },
+      {
+        "es": 446,
+        "k": 107
+      },
+      {
+        "es": 447,
+        "k": 107
+      },
+      {
+        "es": 448,
+        "k": 107
+      },
+      {
+        "es": 449,
+        "k": 108
+      },
+      {
+        "es": 450,
+        "k": 108
+      },
+      {
+        "es": 451,
+        "k": 108
+      },
+      {
+        "es": 452,
+        "k": 108
+      },
+      {
+        "es": 453,
+        "k": 108
+      },
+      {
+        "es": 454,
+        "k": 108
+      },
+      {
+        "es": 455,
+        "k": 108
+      },
+      {
+        "es": 456,
+        "k": 108
+      },
+      {
+        "es": 457,
+        "k": 108
+      },
+      {
+        "es": 458,
+        "k": 108
+      },
+      {
+        "es": 460,
+        "k": 108
+      },
+      {
+        "es": 461,
+        "k": 108
+      },
+      {
+        "es": 463,
+        "k": 108
+      },
+      {
+        "es": 466,
+        "k": 109
+      },
+      {
+        "es": 467,
+        "k": 109
+      },
+      {
+        "es": 468,
+        "k": 109
+      },
+      {
+        "es": 469,
+        "k": 109
+      },
+      {
+        "es": 470,
+        "k": 109
+      },
+      {
+        "es": 471,
+        "k": 109
+      },
+      {
+        "es": 472,
+        "k": 109
+      },
+      {
+        "es": 473,
+        "k": 109
+      },
+      {
+        "es": 474,
+        "k": 109
+      },
+      {
+        "es": 475,
+        "k": 109
+      },
+      {
+        "es": 476,
+        "k": 109
+      },
+      {
+        "es": 477,
+        "k": 109
+      },
+      {
+        "es": 478,
+        "k": 109
+      },
+      {
+        "es": 479,
+        "k": 109
+      },
+      {
+        "es": 480,
+        "k": 109
+      },
+      {
+        "es": 481,
+        "k": 110
+      },
+      {
+        "es": 482,
+        "k": 110
+      },
+      {
+        "es": 483,
+        "k": 110
+      },
+      {
+        "es": 484,
+        "k": 110
+      },
+      {
+        "es": 485,
+        "k": 110
+      },
+      {
+        "es": 486,
+        "k": 110
+      },
+      {
+        "es": 487,
+        "k": 110
+      },
+      {
+        "es": 488,
+        "k": 110
+      },
+      {
+        "es": 489,
+        "k": 110
+      },
+      {
+        "es": 490,
+        "k": 110
+      },
+      {
+        "es": 491,
+        "k": 110
+      },
+      {
+        "es": 492,
+        "k": 110
+      },
+      {
+        "es": 495,
+        "k": 110
+      },
+      {
+        "es": 497,
+        "k": 111
+      },
+      {
+        "es": 498,
+        "k": 111
+      },
+      {
+        "es": 500,
+        "k": 111
+      },
+      {
+        "es": 501,
+        "k": 111
+      },
+      {
+        "es": 502,
+        "k": 111
+      },
+      {
+        "es": 503,
+        "k": 111
+      },
+      {
+        "es": 504,
+        "k": 111
+      },
+      {
+        "es": 508,
+        "k": 111
+      },
+      {
+        "es": 511,
+        "k": 111
+      },
+      {
+        "es": 515,
+        "k": 112
+      },
+      {
+        "es": 525,
+        "k": 112
+      },
+      {
+        "es": 529,
+        "k": 113
+      },
+      {
+        "es": 532,
+        "k": 113
+      },
+      {
+        "es": 534,
+        "k": 113
+      },
+      {
+        "es": 543,
+        "k": 113
+      },
+      {
+        "es": 546,
+        "k": 114
+      },
+      {
+        "es": 553,
+        "k": 114
+      },
+      {
+        "es": 574,
+        "k": 115
+      },
+      {
+        "es": 578,
+        "k": 116
+      },
+      {
+        "es": 579,
+        "k": 116
+      },
+      {
+        "es": 581,
+        "k": 116
+      },
+      {
+        "es": 585,
+        "k": 116
+      },
+      {
+        "es": 587,
+        "k": 116
+      },
+      {
+        "es": 590,
+        "k": 116
+      },
+      {
+        "es": 593,
+        "k": 117
+      },
+      {
+        "es": 594,
+        "k": 117
+      },
+      {
+        "es": 595,
+        "k": 117
+      },
+      {
+        "es": 596,
+        "k": 117
+      },
+      {
+        "es": 597,
+        "k": 117
+      },
+      {
+        "es": 599,
+        "k": 117
+      },
+      {
+        "es": 601,
+        "k": 117
+      },
+      {
+        "es": 602,
+        "k": 117
+      },
+      {
+        "es": 603,
+        "k": 117
+      },
+      {
+        "es": 605,
+        "k": 117
+      },
+      {
+        "es": 608,
+        "k": 117
+      },
+      {
+        "es": 609,
+        "k": 118
+      },
+      {
+        "es": 613,
+        "k": 118
+      },
+      {
+        "es": 614,
+        "k": 118
+      },
+      {
+        "es": 615,
+        "k": 118
+      },
+      {
+        "es": 616,
+        "k": 118
+      },
+      {
+        "es": 617,
+        "k": 118
+      },
+      {
+        "es": 618,
+        "k": 118
+      },
+      {
+        "es": 619,
+        "k": 118
+      },
+      {
+        "es": 620,
+        "k": 118
+      },
+      {
+        "es": 622,
+        "k": 118
+      },
+      {
+        "es": 623,
+        "k": 118
+      },
+      {
+        "es": 624,
+        "k": 118
+      },
+      {
+        "es": 625,
+        "k": 119
+      },
+      {
+        "es": 626,
+        "k": 119
+      },
+      {
+        "es": 628,
+        "k": 119
+      },
+      {
+        "es": 629,
+        "k": 119
+      },
+      {
+        "es": 630,
+        "k": 119
+      },
+      {
+        "es": 631,
+        "k": 119
+      },
+      {
+        "es": 633,
+        "k": 119
+      },
+      {
+        "es": 634,
+        "k": 119
+      },
+      {
+        "es": 635,
+        "k": 119
+      },
+      {
+        "es": 636,
+        "k": 119
+      },
+      {
+        "es": 637,
+        "k": 119
+      },
+      {
+        "es": 638,
+        "k": 119
+      },
+      {
+        "es": 641,
+        "k": 120
+      },
+      {
+        "es": 643,
+        "k": 120
+      },
+      {
+        "es": 646,
+        "k": 120
+      },
+      {
+        "es": 649,
+        "k": 120
+      },
+      {
+        "es": 651,
+        "k": 120
+      },
+      {
+        "es": 652,
+        "k": 120
+      },
+      {
+        "es": 654,
+        "k": 120
+      },
+      {
+        "es": 655,
+        "k": 120
+      },
+      {
+        "es": 656,
+        "k": 120
+      },
+      {
+        "es": 657,
+        "k": 121
+      },
+      {
+        "es": 658,
+        "k": 121
+      },
+      {
+        "es": 659,
+        "k": 121
+      },
+      {
+        "es": 660,
+        "k": 121
+      },
+      {
+        "es": 661,
+        "k": 121
+      },
+      {
+        "es": 662,
+        "k": 121
+      },
+      {
+        "es": 663,
+        "k": 121
+      },
+      {
+        "es": 664,
+        "k": 121
+      },
+      {
+        "es": 665,
+        "k": 121
+      },
+      {
+        "es": 667,
+        "k": 121
+      },
+      {
+        "es": 669,
+        "k": 121
+      },
+      {
+        "es": 670,
+        "k": 121
+      },
+      {
+        "es": 672,
+        "k": 121
+      },
+      {
+        "es": 675,
+        "k": 122
+      },
+      {
+        "es": 678,
+        "k": 122
+      },
+      {
+        "es": 680,
+        "k": 122
+      },
+      {
+        "es": 682,
+        "k": 122
+      },
+      {
+        "es": 684,
+        "k": 122
+      },
+      {
+        "es": 687,
+        "k": 122
+      },
+      {
+        "es": 688,
+        "k": 122
+      },
+      {
+        "es": 689,
+        "k": 123
+      },
+      {
+        "es": 691,
+        "k": 123
+      },
+      {
+        "es": 694,
+        "k": 123
+      },
+      {
+        "es": 698,
+        "k": 123
+      },
+      {
+        "es": 699,
+        "k": 123
+      },
+      {
+        "es": 702,
+        "k": 123
+      },
+      {
+        "es": 703,
+        "k": 123
+      },
+      {
+        "es": 705,
+        "k": 124
+      },
+      {
+        "es": 707,
+        "k": 124
+      },
+      {
+        "es": 708,
+        "k": 124
+      },
+      {
+        "es": 709,
+        "k": 124
+      },
+      {
+        "es": 712,
+        "k": 124
+      },
+      {
+        "es": 721,
+        "k": 125
+      },
+      {
+        "es": 727,
+        "k": 125
+      },
+      {
+        "es": 730,
+        "k": 125
+      },
+      {
+        "es": 738,
+        "k": 126
+      },
+      {
+        "es": 753,
+        "k": 127
+      },
+      {
+        "es": 754,
+        "k": 127
+      },
+      {
+        "es": 755,
+        "k": 127
+      },
+      {
+        "es": 758,
+        "k": 127
+      },
+      {
+        "es": 760,
+        "k": 127
+      },
+      {
+        "es": 762,
+        "k": 127
+      },
+      {
+        "es": 763,
+        "k": 127
+      },
+      {
+        "es": 765,
+        "k": 127
+      },
+      {
+        "es": 766,
+        "k": 127
+      },
+      {
+        "es": 768,
+        "k": 127
+      },
+      {
+        "es": 770,
+        "k": 128
+      },
+      {
+        "es": 771,
+        "k": 128
+      },
+      {
+        "es": 772,
+        "k": 128
+      },
+      {
+        "es": 774,
+        "k": 128
+      },
+      {
+        "es": 778,
+        "k": 128
+      },
+      {
+        "es": 780,
+        "k": 128
+      },
+      {
+        "es": 782,
+        "k": 128
+      },
+      {
+        "es": 785,
+        "k": 129
+      },
+      {
+        "es": 786,
+        "k": 129
+      },
+      {
+        "es": 789,
+        "k": 129
+      },
+      {
+        "es": 791,
+        "k": 129
+      },
+      {
+        "es": 792,
+        "k": 129
+      },
+      {
+        "es": 793,
+        "k": 129
+      },
+      {
+        "es": 795,
+        "k": 129
+      },
+      {
+        "es": 797,
+        "k": 129
+      },
+      {
+        "es": 798,
+        "k": 129
+      },
+      {
+        "es": 801,
+        "k": 130
+      },
+      {
+        "es": 802,
+        "k": 130
+      },
+      {
+        "es": 803,
+        "k": 130
+      },
+      {
+        "es": 804,
+        "k": 130
+      },
+      {
+        "es": 805,
+        "k": 130
+      },
+      {
+        "es": 807,
+        "k": 130
+      },
+      {
+        "es": 808,
+        "k": 130
+      },
+      {
+        "es": 810,
+        "k": 130
+      },
+      {
+        "es": 811,
+        "k": 130
+      },
+      {
+        "es": 812,
+        "k": 130
+      },
+      {
+        "es": 814,
+        "k": 130
+      },
+      {
+        "es": 815,
+        "k": 130
+      },
+      {
+        "es": 816,
+        "k": 130
+      },
+      {
+        "es": 818,
+        "k": 131
+      },
+      {
+        "es": 820,
+        "k": 131
+      },
+      {
+        "es": 822,
+        "k": 131
+      },
+      {
+        "es": 823,
+        "k": 131
+      },
+      {
+        "es": 824,
+        "k": 131
+      },
+      {
+        "es": 825,
+        "k": 131
+      },
+      {
+        "es": 827,
+        "k": 131
+      },
+      {
+        "es": 828,
+        "k": 131
+      },
+      {
+        "es": 829,
+        "k": 131
+      },
+      {
+        "es": 830,
+        "k": 131
+      },
+      {
+        "es": 831,
+        "k": 131
+      },
+      {
+        "es": 834,
+        "k": 132
+      },
+      {
+        "es": 836,
+        "k": 132
+      },
+      {
+        "es": 838,
+        "k": 132
+      },
+      {
+        "es": 839,
+        "k": 132
+      },
+      {
+        "es": 840,
+        "k": 132
+      },
+      {
+        "es": 842,
+        "k": 132
+      },
+      {
+        "es": 843,
+        "k": 132
+      },
+      {
+        "es": 844,
+        "k": 132
+      },
+      {
+        "es": 846,
+        "k": 132
+      },
+      {
+        "es": 848,
+        "k": 132
+      },
+      {
+        "es": 849,
+        "k": 133
+      },
+      {
+        "es": 851,
+        "k": 133
+      },
+      {
+        "es": 852,
+        "k": 133
+      },
+      {
+        "es": 854,
+        "k": 133
+      },
+      {
+        "es": 855,
+        "k": 133
+      },
+      {
+        "es": 856,
+        "k": 133
+      },
+      {
+        "es": 857,
+        "k": 133
+      },
+      {
+        "es": 861,
+        "k": 133
+      },
+      {
+        "es": 865,
+        "k": 134
+      },
+      {
+        "es": 868,
+        "k": 134
+      },
+      {
+        "es": 872,
+        "k": 134
+      },
+      {
+        "es": 874,
+        "k": 134
+      },
+      {
+        "es": 879,
+        "k": 134
+      },
+      {
+        "es": 880,
+        "k": 134
+      },
+      {
+        "es": 881,
+        "k": 135
+      },
+      {
+        "es": 892,
+        "k": 135
+      },
+      {
+        "es": 898,
+        "k": 136
+      },
+      {
+        "es": 914,
+        "k": 137
+      },
+      {
+        "es": 928,
+        "k": 137
+      },
+      {
+        "es": 937,
+        "k": 138
+      },
+      {
+        "es": 942,
+        "k": 138
+      },
+      {
+        "es": 952,
+        "k": 139
+      },
+      {
+        "es": 953,
+        "k": 139
+      },
+      {
+        "es": 956,
+        "k": 139
+      },
+      {
+        "es": 968,
+        "k": 140
+      },
+      {
+        "es": 971,
+        "k": 140
+      },
+      {
+        "es": 976,
+        "k": 140
+      },
+      {
+        "es": 977,
+        "k": 141
+      },
+      {
+        "es": 978,
+        "k": 141
+      },
+      {
+        "es": 980,
+        "k": 141
+      },
+      {
+        "es": 983,
+        "k": 141
+      },
+      {
+        "es": 992,
+        "k": 141
+      },
+      {
+        "es": 994,
+        "k": 142
+      },
+      {
+        "es": 996,
+        "k": 142
+      },
+      {
+        "es": 1001,
+        "k": 142
+      },
+      {
+        "es": 1002,
+        "k": 142
+      },
+      {
+        "es": 1004,
+        "k": 142
+      },
+      {
+        "es": 1005,
+        "k": 142
+      },
+      {
+        "es": 1007,
+        "k": 142
+      },
+      {
+        "es": 1025,
+        "k": 144
+      },
+      {
+        "es": 1026,
+        "k": 144
+      },
+      {
+        "es": 1030,
+        "k": 144
+      },
+      {
+        "es": 1031,
+        "k": 144
+      },
+      {
+        "es": 1033,
+        "k": 144
+      },
+      {
+        "es": 1034,
+        "k": 144
+      },
+      {
+        "es": 1035,
+        "k": 144
+      },
+      {
+        "es": 1036,
+        "k": 144
+      },
+      {
+        "es": 1038,
+        "k": 144
+      },
+      {
+        "es": 1039,
+        "k": 144
+      },
+      {
+        "es": 1047,
+        "k": 145
+      },
+      {
+        "es": 1057,
+        "k": 146
+      },
+      {
+        "es": 1073,
+        "k": 147
+      },
+      {
+        "es": 1078,
+        "k": 147
+      },
+      {
+        "es": 1097,
+        "k": 148
+      },
+      {
+        "es": 1152,
+        "k": 151
+      }
+    ],
+    "real_max_k": 151,
+    "margin_windows": 9,
+    "budget": 160,
+    "fails": []
+  },
+  "lines": [
+    "RHYTHM_EQ=PASS episodes=35 points=1520 tau_mismatches=0 es_mismatches=0 k_mismatches=0 order_sha_mismatches=0 driver=examples/robomme/utils.py:EpisodeState",
+    "EVAL_TERMINATION=PASS max_steps=1300 infer_calls=82 first_batch_included=1 tau_max=es+1296 last_partial_batch_dropped=1 residual_frames=4 termination=count_guard env_done_cases=35",
+    "TAU_LONG=PASS cases=2 es=0 tau=1296 k=80 raise=0 order_legal=1 | es=1152 tau=2448 k=151 raise=0 order_legal=1 budget=160 headroom_min=9",
+    "ES_BOUNDARY=PASS scanned=[1280,1313) first_raise_es=1297 predicted=1297 k_at_1296=160 k_at_1297=161 real_es_values=[100,114,150,168,200,216,250,252,253,254,255,257,258,259,260,261,262,263,264,265,266,267,268,269,270,271,272,273,274,275,276,277,278,279,280,281,282,283,284,287,288,290,292,293,294,299,300,301,304,305,306,307,308,309,310,311,312,313,314,315,316,317,318,319,320,321,322,323,324,325,326,327,328,329,330,331,333,334,337,338,339,340,343,345,347,348,349,350,355,361,362,363,364,366,367,368,369,370,371,372,373,374,375,376,377,378,379,380,381,382,386,388,390,392,395,398,400,405,409,410,411,414,416,417,419,420,421,422,423,424,425,426,427,428,429,430,431,432,433,434,436,437,438,439,442,443,444,445,446,447,448,449,450,451,452,453,454,455,456,457,458,460,461,463,466,467,468,469,470,471,472,473,474,475,476,477,478,479,480,481,482,483,484,485,486,487,488,489,490,491,492,495,497,498,500,501,502,503,504,508,511,515,525,529,532,534,543,546,553,574,578,579,581,585,587,590,593,594,595,596,597,599,601,602,603,605,608,609,613,614,615,616,617,618,619,620,622,623,624,625,626,628,629,630,631,633,634,635,636,637,638,641,643,646,649,651,652,654,655,656,657,658,659,660,661,662,663,664,665,667,669,670,672,675,678,680,682,684,687,688,689,691,694,698,699,702,703,705,707,708,709,712,721,727,730,738,753,754,755,758,760,762,763,765,766,768,770,771,772,774,778,780,782,785,786,789,791,792,793,795,797,798,801,802,803,804,805,807,808,810,811,812,814,815,816,818,820,822,823,824,825,827,828,829,830,831,834,836,838,839,840,842,843,844,846,848,849,851,852,854,855,856,857,861,865,868,872,874,879,880,881,892,898,914,928,937,942,952,953,956,968,971,976,977,978,980,983,992,994,996,1001,1002,1004,1005,1007,1025,1026,1030,1031,1033,1034,1035,1036,1038,1039,1047,1057,1073,1078,1097,1152] real_max_k=151 margin_windows=9"
+  ],
+  "pass": true
+}

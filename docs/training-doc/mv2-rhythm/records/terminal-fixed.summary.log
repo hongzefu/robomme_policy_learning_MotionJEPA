@@ -1,0 +1,126 @@
+CHECK_HEAD=782696c231aace21c20200638ae302a5a1c7f277
+STAGE=rhythm-fixed
+START_UTC=2026-09-18T03:43:00Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+RHYTHM_CONFIG yaml=perceptual-framesamp-modul-8frame-8x8-motion.yaml budget=160
+RHYTHM_CASES=PASS mode=representative real_es=411 replay=35 residues=16 tasks=4
+真实回放样本: es=100 T=200 g401-RouteStick es=114 T=446 g1201-VideoUnmaskSwap es=150 T=300 g400-RouteStick es=168 T=534 g1405-VideoUnmaskSwap es=250 T=500 g500-RouteStick es=252 T=508 g810-VideoRepick es=253 T=639 g895-VideoRepick es=254 T=785 g905-VideoRepick es=255 T=527 g809-VideoRepick es=257 T=787 g877-VideoRepick es=259 T=641 g912-VideoRepick es=261 T=789 g866-VideoRepick es=263 T=785 g808-VideoRepick es=265 T=659 g835-VideoRepick es=267 T=798 g811-VideoRepick es=272 T=647 g862-VideoRepick es=318 T=1312 g1505-VideoUnmaskSwap es=500 T=1000 g700-RouteStick es=508 T=898 g1194-VideoRepick es=805 T=1610 g168-BinFill es=851 T=1702 g179-BinFill es=968 T=1936 g392-BinFill es=996 T=1992 g335-BinFill es=1005 T=2010 g311-BinFill es=1026 T=2052 g297-BinFill es=1034 T=2068 g313-BinFill es=1035 T=2070 g399-BinFill es=1036 T=2072 g292-BinFill es=1038 T=2076 g299-BinFill es=1039 T=2078 g268-BinFill es=1047 T=2094 g330-BinFill es=1073 T=2146 g317-BinFill es=1078 T=2156 g273-BinFill es=1097 T=2194 g355-BinFill es=1152 T=2304 g367-BinFill
+== RHYTHM_EQ ==
+RHYTHM_PROGRESS cases=1/35 es=100 points=7
+RHYTHM_PROGRESS cases=2/35 es=114 points=21
+RHYTHM_PROGRESS cases=3/35 es=150 points=10
+RHYTHM_PROGRESS cases=4/35 es=168 points=23
+RHYTHM_PROGRESS cases=5/35 es=250 points=16
+RHYTHM_PROGRESS cases=6/35 es=252 points=16
+RHYTHM_PROGRESS cases=7/35 es=253 points=25
+RHYTHM_PROGRESS cases=8/35 es=254 points=34
+RHYTHM_PROGRESS cases=9/35 es=255 points=17
+RHYTHM_PROGRESS cases=10/35 es=257 points=34
+RHYTHM_PROGRESS cases=11/35 es=259 points=24
+RHYTHM_PROGRESS cases=12/35 es=261 points=33
+RHYTHM_PROGRESS cases=13/35 es=263 points=33
+RHYTHM_PROGRESS cases=14/35 es=265 points=25
+RHYTHM_PROGRESS cases=15/35 es=267 points=34
+RHYTHM_PROGRESS cases=16/35 es=272 points=24
+RHYTHM_PROGRESS cases=17/35 es=318 points=63
+RHYTHM_PROGRESS cases=18/35 es=500 points=32
+RHYTHM_PROGRESS cases=19/35 es=508 points=25
+RHYTHM_PROGRESS cases=20/35 es=805 points=51
+RHYTHM_PROGRESS cases=21/35 es=851 points=54
+RHYTHM_PROGRESS cases=22/35 es=968 points=61
+RHYTHM_PROGRESS cases=23/35 es=996 points=63
+RHYTHM_PROGRESS cases=24/35 es=1005 points=63
+RHYTHM_PROGRESS cases=25/35 es=1026 points=65
+RHYTHM_PROGRESS cases=26/35 es=1034 points=65
+RHYTHM_PROGRESS cases=27/35 es=1035 points=65
+RHYTHM_PROGRESS cases=28/35 es=1036 points=65
+RHYTHM_PROGRESS cases=29/35 es=1038 points=65
+RHYTHM_PROGRESS cases=30/35 es=1039 points=65
+RHYTHM_PROGRESS cases=31/35 es=1047 points=66
+RHYTHM_PROGRESS cases=32/35 es=1073 points=67
+RHYTHM_PROGRESS cases=33/35 es=1078 points=68
+RHYTHM_PROGRESS cases=34/35 es=1097 points=69
+RHYTHM_PROGRESS cases=35/35 es=1152 points=72
+  g401-RouteStick: es=100 T=200 点数 eval/_drive/独立生成 = 7/7/7 τ_max=196 k_max=11 终止=env_done C=99 C%16=3
+  g1201-VideoUnmaskSwap: es=114 T=446 点数 eval/_drive/独立生成 = 21/21/21 τ_max=434 k_max=26 终止=env_done C=331 C%16=11
+  g400-RouteStick: es=150 T=300 点数 eval/_drive/独立生成 = 10/10/10 τ_max=294 k_max=17 终止=env_done C=149 C%16=5
+  g1405-VideoUnmaskSwap: es=168 T=534 点数 eval/_drive/独立生成 = 23/23/23 τ_max=520 k_max=31 终止=env_done C=365 C%16=13
+  g500-RouteStick: es=250 T=500 点数 eval/_drive/独立生成 = 16/16/16 τ_max=490 k_max=29 终止=env_done C=249 C%16=9
+  g810-VideoRepick: es=252 T=508 点数 eval/_drive/独立生成 = 16/16/16 τ_max=492 k_max=29 终止=env_done C=255 C%16=15
+  g895-VideoRepick: es=253 T=639 点数 eval/_drive/独立生成 = 25/25/25 τ_max=637 k_max=38 终止=env_done C=385 C%16=1
+  g905-VideoRepick: es=254 T=785 点数 eval/_drive/独立生成 = 34/34/34 τ_max=782 k_max=47 终止=env_done C=530 C%16=2
+  g809-VideoRepick: es=255 T=527 点数 eval/_drive/独立生成 = 17/17/17 τ_max=511 k_max=30 终止=env_done C=271 C%16=15
+  g877-VideoRepick: es=257 T=787 点数 eval/_drive/独立生成 = 34/34/34 τ_max=785 k_max=48 终止=env_done C=529 C%16=1
+  g912-VideoRepick: es=259 T=641 点数 eval/_drive/独立生成 = 24/24/24 τ_max=627 k_max=38 终止=env_done C=381 C%16=13
+  g866-VideoRepick: es=261 T=789 点数 eval/_drive/独立生成 = 33/33/33 τ_max=773 k_max=47 终止=env_done C=527 C%16=15
+  g808-VideoRepick: es=263 T=785 点数 eval/_drive/独立生成 = 33/33/33 τ_max=775 k_max=47 终止=env_done C=521 C%16=9
+  g835-VideoRepick: es=265 T=659 点数 eval/_drive/独立生成 = 25/25/25 τ_max=649 k_max=39 终止=env_done C=393 C%16=9
+  g811-VideoRepick: es=267 T=798 点数 eval/_drive/独立生成 = 34/34/34 τ_max=795 k_max=48 终止=env_done C=530 C%16=2
+  g862-VideoRepick: es=272 T=647 点数 eval/_drive/独立生成 = 24/24/24 τ_max=640 k_max=38 终止=env_done C=374 C%16=6
+  g1505-VideoUnmaskSwap: es=318 T=1312 点数 eval/_drive/独立生成 = 63/63/63 τ_max=1310 k_max=80 终止=env_done C=993 C%16=1
+  g700-RouteStick: es=500 T=1000 点数 eval/_drive/独立生成 = 32/32/32 τ_max=996 k_max=61 终止=env_done C=499 C%16=3
+  g1194-VideoRepick: es=508 T=898 点数 eval/_drive/独立生成 = 25/25/25 τ_max=892 k_max=54 终止=env_done C=389 C%16=5
+  g168-BinFill: es=805 T=1610 点数 eval/_drive/独立生成 = 51/51/51 τ_max=1605 k_max=99 终止=env_done C=804 C%16=4
+  g179-BinFill: es=851 T=1702 点数 eval/_drive/独立生成 = 54/54/54 τ_max=1699 k_max=105 终止=env_done C=850 C%16=2
+  g392-BinFill: es=968 T=1936 点数 eval/_drive/独立生成 = 61/61/61 τ_max=1928 k_max=119 终止=env_done C=967 C%16=7
+  g335-BinFill: es=996 T=1992 点数 eval/_drive/独立生成 = 63/63/63 τ_max=1988 k_max=123 终止=env_done C=995 C%16=3
+  g311-BinFill: es=1005 T=2010 点数 eval/_drive/独立生成 = 63/63/63 τ_max=1997 k_max=123 终止=env_done C=1004 C%16=12
+  g297-BinFill: es=1026 T=2052 点数 eval/_drive/独立生成 = 65/65/65 τ_max=2050 k_max=127 终止=env_done C=1025 C%16=1
+  g313-BinFill: es=1034 T=2068 点数 eval/_drive/独立生成 = 65/65/65 τ_max=2058 k_max=127 终止=env_done C=1033 C%16=9
+  g399-BinFill: es=1035 T=2070 点数 eval/_drive/独立生成 = 65/65/65 τ_max=2059 k_max=127 终止=env_done C=1034 C%16=10
+  g292-BinFill: es=1036 T=2072 点数 eval/_drive/独立生成 = 65/65/65 τ_max=2060 k_max=127 终止=env_done C=1035 C%16=11
+  g299-BinFill: es=1038 T=2076 点数 eval/_drive/独立生成 = 65/65/65 τ_max=2062 k_max=127 终止=env_done C=1037 C%16=13
+  g268-BinFill: es=1039 T=2078 点数 eval/_drive/独立生成 = 65/65/65 τ_max=2063 k_max=127 终止=env_done C=1038 C%16=14
+  g330-BinFill: es=1047 T=2094 点数 eval/_drive/独立生成 = 66/66/66 τ_max=2087 k_max=129 终止=env_done C=1046 C%16=6
+  g317-BinFill: es=1073 T=2146 点数 eval/_drive/独立生成 = 67/67/67 τ_max=2129 k_max=132 终止=env_done C=1072 C%16=0
+  g273-BinFill: es=1078 T=2156 点数 eval/_drive/独立生成 = 68/68/68 τ_max=2150 k_max=133 终止=env_done C=1077 C%16=5
+  g355-BinFill: es=1097 T=2194 点数 eval/_drive/独立生成 = 69/69/69 τ_max=2185 k_max=135 终止=env_done C=1096 C%16=8
+  g367-BinFill: es=1152 T=2304 点数 eval/_drive/独立生成 = 72/72/72 τ_max=2288 k_max=141 终止=env_done C=1151 C%16=15
+RHYTHM_EQ=PASS episodes=35 points=1520 tau_mismatches=0 es_mismatches=0 k_mismatches=0 order_sha_mismatches=0 driver=examples/robomme/utils.py:EpisodeState
+== EVAL_TERMINATION ==
+  env_done g401-RouteStick: es=100 T=200 C=99 infer=7 （公式 7 / 独立生成 7）终止=env_done
+  env_done g1201-VideoUnmaskSwap: es=114 T=446 C=331 infer=21 （公式 21 / 独立生成 21）终止=env_done
+  env_done g400-RouteStick: es=150 T=300 C=149 infer=10 （公式 10 / 独立生成 10）终止=env_done
+  env_done g1405-VideoUnmaskSwap: es=168 T=534 C=365 infer=23 （公式 23 / 独立生成 23）终止=env_done
+  env_done g500-RouteStick: es=250 T=500 C=249 infer=16 （公式 16 / 独立生成 16）终止=env_done
+  env_done g810-VideoRepick: es=252 T=508 C=255 infer=16 （公式 16 / 独立生成 16）终止=env_done
+  env_done g895-VideoRepick: es=253 T=639 C=385 infer=25 （公式 25 / 独立生成 25）终止=env_done
+  env_done g905-VideoRepick: es=254 T=785 C=530 infer=34 （公式 34 / 独立生成 34）终止=env_done
+  env_done g809-VideoRepick: es=255 T=527 C=271 infer=17 （公式 17 / 独立生成 17）终止=env_done
+  env_done g877-VideoRepick: es=257 T=787 C=529 infer=34 （公式 34 / 独立生成 34）终止=env_done
+  env_done g912-VideoRepick: es=259 T=641 C=381 infer=24 （公式 24 / 独立生成 24）终止=env_done
+  env_done g866-VideoRepick: es=261 T=789 C=527 infer=33 （公式 33 / 独立生成 33）终止=env_done
+  env_done g808-VideoRepick: es=263 T=785 C=521 infer=33 （公式 33 / 独立生成 33）终止=env_done
+  env_done g835-VideoRepick: es=265 T=659 C=393 infer=25 （公式 25 / 独立生成 25）终止=env_done
+  env_done g811-VideoRepick: es=267 T=798 C=530 infer=34 （公式 34 / 独立生成 34）终止=env_done
+  env_done g862-VideoRepick: es=272 T=647 C=374 infer=24 （公式 24 / 独立生成 24）终止=env_done
+  env_done g1505-VideoUnmaskSwap: es=318 T=1312 C=993 infer=63 （公式 63 / 独立生成 63）终止=env_done
+  env_done g700-RouteStick: es=500 T=1000 C=499 infer=32 （公式 32 / 独立生成 32）终止=env_done
+  env_done g1194-VideoRepick: es=508 T=898 C=389 infer=25 （公式 25 / 独立生成 25）终止=env_done
+  env_done g168-BinFill: es=805 T=1610 C=804 infer=51 （公式 51 / 独立生成 51）终止=env_done
+  env_done g179-BinFill: es=851 T=1702 C=850 infer=54 （公式 54 / 独立生成 54）终止=env_done
+  env_done g392-BinFill: es=968 T=1936 C=967 infer=61 （公式 61 / 独立生成 61）终止=env_done
+  env_done g335-BinFill: es=996 T=1992 C=995 infer=63 （公式 63 / 独立生成 63）终止=env_done
+  env_done g311-BinFill: es=1005 T=2010 C=1004 infer=63 （公式 63 / 独立生成 63）终止=env_done
+  env_done g297-BinFill: es=1026 T=2052 C=1025 infer=65 （公式 65 / 独立生成 65）终止=env_done
+  env_done g313-BinFill: es=1034 T=2068 C=1033 infer=65 （公式 65 / 独立生成 65）终止=env_done
+  env_done g399-BinFill: es=1035 T=2070 C=1034 infer=65 （公式 65 / 独立生成 65）终止=env_done
+  env_done g292-BinFill: es=1036 T=2072 C=1035 infer=65 （公式 65 / 独立生成 65）终止=env_done
+  env_done g299-BinFill: es=1038 T=2076 C=1037 infer=65 （公式 65 / 独立生成 65）终止=env_done
+  env_done g268-BinFill: es=1039 T=2078 C=1038 infer=65 （公式 65 / 独立生成 65）终止=env_done
+  env_done g330-BinFill: es=1047 T=2094 C=1046 infer=66 （公式 66 / 独立生成 66）终止=env_done
+  env_done g317-BinFill: es=1073 T=2146 C=1072 infer=67 （公式 67 / 独立生成 67）终止=env_done
+  env_done g273-BinFill: es=1078 T=2156 C=1077 infer=68 （公式 68 / 独立生成 68）终止=env_done
+  env_done g355-BinFill: es=1097 T=2194 C=1096 infer=69 （公式 69 / 独立生成 69）终止=env_done
+  env_done g367-BinFill: es=1152 T=2304 C=1151 infer=72 （公式 72 / 独立生成 72）终止=env_done
+EVAL_TERMINATION=PASS max_steps=1300 infer_calls=82 first_batch_included=1 tau_max=es+1296 last_partial_batch_dropped=1 residual_frames=4 termination=count_guard env_done_cases=35
+== TAU_LONG ==
+TAU_LONG=PASS cases=2 es=0 tau=1296 k=80 raise=0 order_legal=1 | es=1152 tau=2448 k=151 raise=0 order_legal=1 budget=160 headroom_min=9
+== ES_BOUNDARY ==
+  完整驱动：es=1296 raise=0 点数=82 k_last=160 | es=1297 raise=1 @τ=2593 点数=81
+  真实 es → 最晚决策时刻 k: 100:86 114:87 150:89 168:90 200:92 216:93 250:95 252:95 253:95 254:95 255:95 257:96 258:96 259:96 260:96 261:96 262:96 263:96 264:96 265:96 266:96 267:96 268:96 269:96 270:96 271:96 272:96 273:97 274:97 275:97 276:97 277:97 278:97 279:97 280:97 281:97 282:97 283:97 284:97 287:97 288:97 290:98 292:98 293:98 294:98 299:98 300:98 301:98 304:98 305:99 306:99 307:99 308:99 309:99 310:99 311:99 312:99 313:99 314:99 315:99 316:99 317:99 318:99 319:99 320:99 321:100 322:100 323:100 324:100 325:100 326:100 327:100 328:100 329:100 330:100 331:100 333:100 334:100 337:101 338:101 339:101 340:101 343:101 345:101 347:101 348:101 349:101 350:101 355:102 361:102 362:102 363:102 364:102 366:102 367:102 368:102 369:103 370:103 371:103 372:103 373:103 374:103 375:103 376:103 377:103 378:103 379:103 380:103 381:103 382:103 386:104 388:104 390:104 392:104 395:104 398:104 400:104 405:105 409:105 410:105 411:105 414:105 416:105 417:106 419:106 420:106 421:106 422:106 423:106 424:106 425:106 426:106 427:106 428:106 429:106 430:106 431:106 432:106 433:107 434:107 436:107 437:107 438:107 439:107 442:107 443:107 444:107 445:107 446:107 447:107 448:107 449:108 450:108 451:108 452:108 453:108 454:108 455:108 456:108 457:108 458:108 460:108 461:108 463:108 466:109 467:109 468:109 469:109 470:109 471:109 472:109 473:109 474:109 475:109 476:109 477:109 478:109 479:109 480:109 481:110 482:110 483:110 484:110 485:110 486:110 487:110 488:110 489:110 490:110 491:110 492:110 495:110 497:111 498:111 500:111 501:111 502:111 503:111 504:111 508:111 511:111 515:112 525:112 529:113 532:113 534:113 543:113 546:114 553:114 574:115 578:116 579:116 581:116 585:116 587:116 590:116 593:117 594:117 595:117 596:117 597:117 599:117 601:117 602:117 603:117 605:117 608:117 609:118 613:118 614:118 615:118 616:118 617:118 618:118 619:118 620:118 622:118 623:118 624:118 625:119 626:119 628:119 629:119 630:119 631:119 633:119 634:119 635:119 636:119 637:119 638:119 641:120 643:120 646:120 649:120 651:120 652:120 654:120 655:120 656:120 657:121 658:121 659:121 660:121 661:121 662:121 663:121 664:121 665:121 667:121 669:121 670:121 672:121 675:122 678:122 680:122 682:122 684:122 687:122 688:122 689:123 691:123 694:123 698:123 699:123 702:123 703:123 705:124 707:124 708:124 709:124 712:124 721:125 727:125 730:125 738:126 753:127 754:127 755:127 758:127 760:127 762:127 763:127 765:127 766:127 768:127 770:128 771:128 772:128 774:128 778:128 780:128 782:128 785:129 786:129 789:129 791:129 792:129 793:129 795:129 797:129 798:129 801:130 802:130 803:130 804:130 805:130 807:130 808:130 810:130 811:130 812:130 814:130 815:130 816:130 818:131 820:131 822:131 823:131 824:131 825:131 827:131 828:131 829:131 830:131 831:131 834:132 836:132 838:132 839:132 840:132 842:132 843:132 844:132 846:132 848:132 849:133 851:133 852:133 854:133 855:133 856:133 857:133 861:133 865:134 868:134 872:134 874:134 879:134 880:134 881:135 892:135 898:136 914:137 928:137 937:138 942:138 952:139 953:139 956:139 968:140 971:140 976:140 977:141 978:141 980:141 983:141 992:141 994:142 996:142 1001:142 1002:142 1004:142 1005:142 1007:142 1025:144 1026:144 1030:144 1031:144 1033:144 1034:144 1035:144 1036:144 1038:144 1039:144 1047:145 1057:146 1073:147 1078:147 1097:148 1152:151
+ES_BOUNDARY=PASS scanned=[1280,1313) first_raise_es=1297 predicted=1297 k_at_1296=160 k_at_1297=161 real_es_values=[100,114,150,168,200,216,250,252,253,254,255,257,258,259,260,261,262,263,264,265,266,267,268,269,270,271,272,273,274,275,276,277,278,279,280,281,282,283,284,287,288,290,292,293,294,299,300,301,304,305,306,307,308,309,310,311,312,313,314,315,316,317,318,319,320,321,322,323,324,325,326,327,328,329,330,331,333,334,337,338,339,340,343,345,347,348,349,350,355,361,362,363,364,366,367,368,369,370,371,372,373,374,375,376,377,378,379,380,381,382,386,388,390,392,395,398,400,405,409,410,411,414,416,417,419,420,421,422,423,424,425,426,427,428,429,430,431,432,433,434,436,437,438,439,442,443,444,445,446,447,448,449,450,451,452,453,454,455,456,457,458,460,461,463,466,467,468,469,470,471,472,473,474,475,476,477,478,479,480,481,482,483,484,485,486,487,488,489,490,491,492,495,497,498,500,501,502,503,504,508,511,515,525,529,532,534,543,546,553,574,578,579,581,585,587,590,593,594,595,596,597,599,601,602,603,605,608,609,613,614,615,616,617,618,619,620,622,623,624,625,626,628,629,630,631,633,634,635,636,637,638,641,643,646,649,651,652,654,655,656,657,658,659,660,661,662,663,664,665,667,669,670,672,675,678,680,682,684,687,688,689,691,694,698,699,702,703,705,707,708,709,712,721,727,730,738,753,754,755,758,760,762,763,765,766,768,770,771,772,774,778,780,782,785,786,789,791,792,793,795,797,798,801,802,803,804,805,807,808,810,811,812,814,815,816,818,820,822,823,824,825,827,828,829,830,831,834,836,838,839,840,842,843,844,846,848,849,851,852,854,855,856,857,861,865,868,872,874,879,880,881,892,898,914,928,937,942,952,953,956,968,971,976,977,978,980,983,992,994,996,1001,1002,1004,1005,1007,1025,1026,1030,1031,1033,1034,1035,1036,1038,1039,1047,1057,1073,1078,1097,1152] real_max_k=151 margin_windows=9
+明细写入 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/reports/motion/mv2-rhythm-fixed.json
+TIC_RHYTHM=PASS
+END_UTC=2026-09-18T03:47:19Z
+EXIT_CODE=0
