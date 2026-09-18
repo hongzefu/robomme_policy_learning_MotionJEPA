@@ -227,13 +227,19 @@ def setup_log_dict(save_dir: Path, args: Args) -> dict:
     else:
         log_dict = {}
 
-    for task_name in log_dict:
-        error_list = []
-        for k, v in log_dict[task_name].items():
-            if v == "error":
-                error_list.append(k)
-        for k in error_list:
-            log_dict[task_name].pop(k)
+    # 官方路径保持原语义：重启即重试 error 集。
+    # 注入候选路径不能这么做——run_shard.sh 把客户端分块跑（每块新评 <= max_new_episodes 集），
+    # 块数按「计划集数 / 每块集数」固定算；若在这里删掉 error，下一块会重跑它而不是推进，
+    # 计划末尾的集就永远轮不到，check_shard.py 最后报「计划与结果不符」。
+    # 所以那条路径下 error 是终态，补跑由 merge_shards.py 产出的 retry_plan.json + 独立 job 承担。
+    if not args.episode_plan:
+        for task_name in log_dict:
+            error_list = []
+            for k, v in log_dict[task_name].items():
+                if v == "error":
+                    error_list.append(k)
+            for k in error_list:
+                log_dict[task_name].pop(k)
 
     if args.re_eval_tasks:
         for task_name in args.re_eval_tasks.split(","):

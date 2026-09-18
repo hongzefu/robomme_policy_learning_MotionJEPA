@@ -109,13 +109,31 @@ done
 # healthz 通过还不够：得确认监听这个端口的就是自己的 server。
 # 历史事故：同节点两片同时探到 18011 空闲，其中一片连上了别人的服务，12 秒 EXIT_CODE=0、跑了 0 集
 # （docs/training-doc/eval-official-framesamp-context/result.md 的 w1/w3）。
+# ⚠ 必须查整棵进程树：$! 拿到的是 wrapper，实际 bind 端口的是孙进程
+#   （env -> uv -> python，本机实测 wrapper 1066086 / uv 1066093 / python 1066100），
+#   socket fd 不在 wrapper 的 /proc/<pid>/fd 里。
+collect_tree() {
+    local pid="$1" child kids
+    printf '%s\n' "$pid"
+    kids="$(cat "/proc/$pid/task/$pid/children" 2>/dev/null)"
+    [[ -n "$kids" ]] || kids="$(ps -o pid= --ppid "$pid" 2>/dev/null)"
+    for child in $kids; do
+        collect_tree "$child"
+    done
+}
 HEXPORT=$(printf '%04X' "$PORT")
+SERVER_TREE="$(collect_tree "$SERVER_PID" | tr '\n' ' ')"
 OWN=0
 for INODE in $(awk -v p=":$HEXPORT" '$2 ~ p"$" && $4=="0A" {print $10}' /proc/net/tcp /proc/net/tcp6 2>/dev/null); do
-    if ls -l "/proc/$SERVER_PID/fd" 2>/dev/null | grep -q "socket:\[$INODE\]"; then OWN=1; fi
+    for P in $SERVER_TREE; do
+        if ls -l "/proc/$P/fd" 2>/dev/null | grep -q "socket:\[$INODE\]"; then OWN=1; break 2; fi
+    done
 done
-[[ "$OWN" == 1 ]] || { echo "端口 $PORT 的监听者不是本次 server(PID=$SERVER_PID)，停止"; exit 2; }
-echo "SERVER_READY port=$PORT pid=$SERVER_PID own=1"
+[[ "$OWN" == 1 ]] || {
+    echo "端口 $PORT 的监听者不在本次 server 进程树（根 PID=$SERVER_PID，树=$SERVER_TREE），停止"
+    exit 2
+}
+echo "SERVER_READY port=$PORT pid=$SERVER_PID own=1 tree=$SERVER_TREE"
 
 # 分块：每块客户端进程只新评 CHUNK_EPISODES 集，靠 progress.json 续跑衔接。
 # 这样任何一个进程的 make_env 次数都远低于 Vulkan 静态 TLS 的 27 轮红线。
