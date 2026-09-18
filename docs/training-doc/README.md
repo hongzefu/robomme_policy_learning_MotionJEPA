@@ -131,6 +131,7 @@
 | [`eval-3seed-context-vs-motion/`](eval-3seed-context-vs-motion/result.md) | 三 seed 四任务成功率对照：motion 24.2% ± 1.3 vs 官方 24.5% ± 0.5，无可辨别差异 |
 | [`eval-hard-patternlock-routestick/`](eval-hard-patternlock-routestick/result.md) / [`eval-medium-patternlock-routestick/`](eval-medium-patternlock-routestick/result.md) | PatternLock / RouteStick 难度分层评估 |
 | [`eval-binfill-pickxtimes/`](eval-binfill-pickxtimes/result.md) | BinFill / PickXTimes 评估 |
+| [`primary700-motion50k-gl/`](primary700-motion50k-gl/launch.md) | motion 80k run 的 50000 接入 700 条评测链路：资产落位、sidecar 跨硬件放行、gpu-hold 作业直跑；集群两集冒烟 `SHARD_PASS`（A40 sidecar 1.64 s/窗、infer 126 ms、anon 峰 15.7 GiB）。**正式 700 条未起跑** |
 
 ## 五、已归档（`../archive/training-doc/`，34 项）
 
