@@ -47,10 +47,10 @@
 
 | 资产 | 落点 | 来源与核验 |
 |---|---|---|
-| sidecar venv | `v1-store/venvs/wan` | `setup.sh wan`，NFS 3.11.14 解释器，`WAN_VENV_OK torch=2.9.0+cu128 diffusers=0.39.0`，约 4 分钟（`records/setup-wan.log`） |
+| sidecar venv | `v1-store/venvs/wan` | `setup.sh wan`，NFS 3.11.14 解释器，`WAN_VENV_OK torch=2.9.0+cu128 diffusers=0.39.0`，约 4 分钟（`records/setup-wan.txt`） |
 | Wan2.1 VAE | `v1-store/cache/hf/hub/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers` | 本机 `/data` 缓存 rsync（507 MB），`fetch_assets.py verify --level full` ✓ |
 | MotionJEPA encoder | `v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a/{checkpoint_epoch_72.pt,config.yaml}` | bucket `HongzeFu/motionjepa-wan-full1600-72ep-v1`，`download.sh` 按其 `SHA256SUMS.pre.txt` 校验 `CHECKPOINT_DOWNLOAD_PASS mode=sha256 files=2`；`fetch_assets.py verify` ✓（sha `0c198629…` / `4a505440…`） |
-| VLA 50000 | `v1-store/models/robomme-vla-modul-motion-80k-v1/` | `download.sh … 50000`，`CHECKPOINT_DOWNLOAD_PASS mode=size files=25`，11.07 GiB（`records/dl-vla-50000.log`） |
+| VLA 50000 | `v1-store/models/robomme-vla-modul-motion-80k-v1/` | `download.sh … 50000`，`CHECKPOINT_DOWNLOAD_PASS mode=size files=25`，11.07 GiB（`records/dl-vla-50000.txt`） |
 
 `check_checkpoint.py`（服务端环境、CPU）对 50000：`BUDGET_CONSISTENT=PASS budget=160`、
 `PARAM_TREE_EXACT=PASS n_model=65 n_ckpt=65 missing=0 extra=0 shape_mismatch=0 motion_leaves=4`、
@@ -63,7 +63,7 @@ SOURCES / RENDER / BUDGET_CONSISTENT / PARAM_TREE 全过，sidecar 握手成功�
 `MOTION_PROV_RELAXED` 恰 6 行（gpu_name Ada≠A100、compute_cap 8.9≠8.0、sm_count 142≠108，vae / encoder 各一组），
 随后 **`driver: sidecar='570.211.01' store='595.71.05'` 硬拒**——`driver` 不在用户批准的三键内，守卫按设计 raise。
 结论：本机驱动与训练侧不同，本机不能跑 motion sidecar（除非另行批准放行 `driver`）；集群 gl1523 驱动 595.71.05 与训练侧一致，
-冒烟改在集群做。日志 `records/smoke-local-*.log`。
+冒烟改在集群做。日志 `records/smoke-local-*.txt`。
 
 ## 冒烟二：集群 gpu-hold-08（job 61495578，gl1523，1×A40 / 1 CPU / 24G）
 
@@ -76,7 +76,7 @@ EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 MMEVLA_MOTION_PROV_RELAX=gpu_name,compute
 
 - **attempt1**（HEAD `c0bb5eb`，21:30:51Z → 21:33:24Z，rc=127）：一路走到 `SERVER_READY` 之前的端口归属断言，
   `HEXPORT4781: command not found`——commitV10.3 前移 `collect_tree()` 时把 `HEXPORT=$(…)` 写丢了等号。已修（`f8697f8`），
-  日志 `records/smoke-gl-attempt1-driver.log`。
+  日志 `records/smoke-gl-attempt1-driver.txt`。
 - **attempt2**（HEAD `f8697f8`，clean，21:34:45Z → 21:42:42Z，**7 分 57 秒**，`EXIT_CODE=0`，`QUEUE_DONE failed=0`）：
 
 ```
@@ -97,7 +97,7 @@ driver 595.71.05、torch 2.9.0+cu128、cuda 12.8、cudnn 91002、diffusers 0.39.
 `0c198629…` 全部与训练侧相等。`SERVER_READY port=18305 own=1 tree=2253282 2253289 2253668 2253672`（后两级即 sidecar 的
 uv → python），收尾 `cleanup()` 按树从叶到根 TERM，作业内无残留 step。
 
-**计时（A40，`records/smoke-gl-server.excerpt.log` 的 TIMING 行）**：
+**计时（A40，`records/smoke-gl-server.excerpt.txt` 的 TIMING 行）**：
 
 | 环节 | 实测 |
 |---|---|

@@ -116,3 +116,30 @@ bash scripts/evaluation/run_shard.sh <运行名> "$PWD/v1-store/models/robomme-v
 集群侧不再发 array，而是在**既有** gpu-hold 作业里直接跑（`gl_hold_queue.sh`，登录节点 detached tmux 内对一个 jobid 串行
 `srun --jobid --overlap --exact --gpu_cmode=shared` 若干分片；`gl_eval_shard.sbatch` 用 `SHARD_INDEX` 代替 array 下标）。
 `EPISODE_WALL_S` 只兜死锁不属口径：sidecar 每窗约 1.5 s（A100 实测）会把 2000 步的集推近默认 900 s，motion 轮放宽到 2400 s。
+
+### 两轮对照入口：无 motion 50000 与 motion 50000 同一套调用、动态抢单（2026-09-18）
+
+用户要求「跑无 motion 和带 motion 的 50k ckpt 全部 700 个 eval，在集群 6 张卡上跑，尽可能保持一致的调用」，随后追加 gpu-hold-09/10
+可用并要求「使用动态的分配」。无 motion 侧 = bucket `HongzeFu/robomme-vla-modul-60k-v1` 的 `50000`（`download.sh` 增量模式：落点已有
+59999 时只补下 `50000/`，按本地 `SHA256SUMS.pre.txt` 校验），与 motion 的 50000 同步数对照。
+
+**动态分配**：共享队列目录（默认 `v1-store/evaluation/primary700-ab50k-gl/queue/`）里 `items.txt` 列 20 个 (模型, 分片) 单元——
+`motion 0`…`motion 9` 在前、`nomotion 0`…`nomotion 9` 在后（长任务先、短任务填尾）；每个 gpu-hold 作业在登录节点起一个 worker
+`gl_hold_pool.sh <jobid>`（`RUN_SUFFIX` 默认 `-gl`，冒烟传 `-smoke-gl`），靠 NFS 原子 `mkdir claims/<单元>` 抢单、跑完写 `done/<单元>`（rc、起止、作业、节点），扫完退出；还在 PENDING 的作业
+也可先起 worker，它等 RUNNING 后从当前未抢项接着抢。每个单元仍走 `gl_hold_queue.sh → srun --overlap → gl_eval_shard.sbatch → run_shard.sh`。
+共用变量写死在 worker 里（`EXPECT_CKPT_ID=50000 EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 SEED=7 CHUNK_EPISODES=20 STEP_TIME=12:00:00
+MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count`，后者无 motion 轮无人读取、只为环境逐字相同），两轮只差四个值：
+
+| | 无 motion | 带 motion |
+|---|---|---|
+| `RUN_NAME` | `primary700-nomotion50k-gl` | `primary700-motion50k-gl` |
+| `CKPT` | `v1-store/models/robomme-vla-modul-60k-v1/50000` | `v1-store/models/robomme-vla-modul-motion-80k-v1/50000` |
+| `POLICY` | `perceptual-framesamp-modul-8frame-8x8` | `perceptual-framesamp-modul-8frame-8x8-motion` |
+| `POLICY_CONFIG` | `mme_vla_suite` | `mme_vla_suite_b128_80k` |
+
+```bash
+# 分片计划先复制到 v1-store/evaluation/<run_name>/plans/；队列 items.txt 写好后，登录节点每个作业一个 detached tmux
+ssh greatlakes "tmux new-session -d -s ev-ab-h03 'bash $REPO/scripts/evaluation/gl_hold_pool.sh 61495431 2>&1 | tee $REPO/v1-store/logs/policy-eval/primary700-ab50k-gl.h03.log'"
+# 合并各自：merge_shards.py v1-store/evaluation/primary700-nomotion50k-gl --ckpt 50000
+#          merge_shards.py v1-store/evaluation/primary700-motion50k-gl --policy perceptual-framesamp-modul-8frame-8x8-motion --ckpt 50000
+```
