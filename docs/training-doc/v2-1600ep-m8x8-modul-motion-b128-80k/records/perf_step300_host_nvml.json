@@ -1,0 +1,107 @@
+{
+  "window": {
+    "start_step": 100,
+    "end_step": 299,
+    "steps": 200,
+    "start_utc": "2026-09-18T05:53:10.733674+00:00",
+    "end_utc": "2026-09-18T05:56:28.224496+00:00"
+  },
+  "runtime": {
+    "mesh": {
+      "batch": 1,
+      "fsdp": 8
+    },
+    "device_count": 8,
+    "fsdp_devices": 8,
+    "batch_size": 128,
+    "num_workers": 16,
+    "seed": 42,
+    "cuda_visible_devices": "0,1,2,3,4,5,6,7",
+    "config_name": "mme_vla_suite_b128_80k",
+    "exp_name": "v2-1600ep-m8x8-modul-motion-b128-80k",
+    "devices": [
+      "cuda:0",
+      "cuda:1",
+      "cuda:2",
+      "cuda:3",
+      "cuda:4",
+      "cuda:5",
+      "cuda:6",
+      "cuda:7"
+    ]
+  },
+  "mean_step_s": 0.9874541115760803,
+  "samples_per_second": 129.62627680561133,
+  "host_phases_mean_s": {
+    "train_dispatch": 0.8371228544134647,
+    "data_next": 0.14305312319425867,
+    "logging": 0.006967936533037573,
+    "checkpoint": 0
+  },
+  "host_data_wait_fraction": 0.14490613168618588,
+  "slow_threshold_host_step_s": 1.480818529170938,
+  "slow_step_ids": [
+    100,
+    200
+  ],
+  "gpu_util": {
+    "samples": 3152,
+    "mean": 98.57772842639594,
+    "zero_fraction": 0.0
+  },
+  "gpu_util_slow_steps": {
+    "samples": 56,
+    "mean": 95.05357142857143,
+    "zero_fraction": 0.0
+  },
+  "gpu_util_other_steps": {
+    "samples": 3096,
+    "mean": 98.64147286821705,
+    "zero_fraction": 0.0
+  },
+  "gpu_util_per_device": {
+    "0": {
+      "samples": 394,
+      "mean": 98.48984771573605,
+      "zero_fraction": 0.0
+    },
+    "1": {
+      "samples": 394,
+      "mean": 98.71319796954315,
+      "zero_fraction": 0.0
+    },
+    "2": {
+      "samples": 394,
+      "mean": 98.57868020304568,
+      "zero_fraction": 0.0
+    },
+    "3": {
+      "samples": 394,
+      "mean": 98.70304568527919,
+      "zero_fraction": 0.0
+    },
+    "4": {
+      "samples": 394,
+      "mean": 98.72081218274111,
+      "zero_fraction": 0.0
+    },
+    "5": {
+      "samples": 394,
+      "mean": 98.25380710659898,
+      "zero_fraction": 0.0
+    },
+    "6": {
+      "samples": 394,
+      "mean": 98.45431472081218,
+      "zero_fraction": 0.0
+    },
+    "7": {
+      "samples": 394,
+      "mean": 98.70812182741116,
+      "zero_fraction": 0.0
+    }
+  },
+  "eta_remaining_at_step300_hours": 21.861136859059332,
+  "gpu_device_breakdown_status": "缺失：原始设备事件在第25步内截止，不能将短窗结果填入此窗口。",
+  "note": "dispatch不是GPU计算耗时；数据等待与设备工作可重叠；未测得该稳态窗口的等待期间GPU空闲比例。"
+}

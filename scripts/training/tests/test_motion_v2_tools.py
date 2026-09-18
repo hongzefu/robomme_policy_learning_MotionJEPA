@@ -98,6 +98,21 @@ def test_timing_summary_uses_one_wall_window(tmp_path):
     assert result["gpu_util"]["mean"]==pytest.approx(190/3)
     assert result["gpu_util"]["zero_fraction"]==pytest.approx(1/3)
     assert result["gpu_ignored_non_stream_events"]==3
+    assert result["gpu_step_event_coverage"]=={"0":{"steps_with_events":3,"missing_steps":[]}}
+    # 真实故障形态：设备采集提前截止，但主线程、元数据和派生XLA轨道仍然完整。
+    original_trace=trace.read_bytes()
+    for missing_step in (1,2):
+        damaged=[e for e in events if not (e.get("ph")=="X" and e.get("pid")==1
+                  and e.get("tid")==9 and missing_step*1e6 <= e["ts"] < (missing_step+1)*1e6)]
+        trace.write_bytes(gzip.compress(json.dumps({"traceEvents":damaged}).encode()))
+        with pytest.raises(ValueError,match="未覆盖每个步骤"):
+            summarize(tmp_path,csv,0,2)
+    # 异步kernel跨越主线程步骤边界是合法覆盖，不要求每步恰好有一次新launch。
+    spanning=[e for e in events if not (e.get("ph")=="X" and e.get("pid")==1 and e.get("tid")==9)]
+    spanning.append(dict(ph="X",pid=1,tid=9,name="gemm",ts=0.1e6,dur=2.8e6))
+    trace.write_bytes(gzip.compress(json.dumps({"traceEvents":spanning}).encode()))
+    assert summarize(tmp_path,csv,0,2)["gpu_step_event_coverage"]["0"]["steps_with_events"]==3
+    trace.write_bytes(original_trace)
     (tmp_path/"step_trace_metadata.json").write_text(json.dumps({"trace_viewer_event_limit":15}))
     with pytest.raises(ValueError,match="事件上限"): summarize(tmp_path,csv,0,2)
     # 恢复文件必须绑定本轮原始数据及其自身内容，拒绝误选其他run的同名步骤。

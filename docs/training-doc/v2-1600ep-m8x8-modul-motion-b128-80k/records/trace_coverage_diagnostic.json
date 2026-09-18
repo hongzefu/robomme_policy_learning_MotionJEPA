@@ -1,0 +1,1664 @@
+{
+  "utc": "2026-09-18T06:03:07.694893+00:00",
+  "total_events": 26162279,
+  "gpu_streams": {
+    "/device:GPU:0 Stream #118(MemcpyH2D,MemcpyD2D,Memset,MemcpyD2H,Compute)": {
+      "count": 266492,
+      "start": 45678192.785,
+      "end": 146091568.361,
+      "examples": [
+        "Memset 3",
+        "Memset 3",
+        "MemcpyH2D"
+      ]
+    },
+    "/device:GPU:0 Stream #282(Compute)": {
+      "count": 4810,
+      "start": 120373745.286,
+      "end": 145353348.725,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:0 Stream #281(Compute,Memset)": {
+      "count": 8502,
+      "start": 120464138.832,
+      "end": 145320487.667,
+      "examples": [
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:0 Stream #279(Compute)": {
+      "count": 4360,
+      "start": 124048241.3,
+      "end": 146091558.377,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:0 Stream #280(Compute,Memset)": {
+      "count": 7740,
+      "start": 124051903.468,
+      "end": 146091423.30499998,
+      "examples": [
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:1 Stream #136(MemcpyD2H,Memset,Compute,MemcpyD2D,MemcpyH2D)": {
+      "count": 216690,
+      "start": 119964128.007,
+      "end": 146089245.04,
+      "examples": [
+        "MemcpyH2D",
+        "MemcpyH2D",
+        "MemcpyH2D"
+      ]
+    },
+    "/device:GPU:1 Stream #693(Memset)": {
+      "count": 1,
+      "start": 120218399.023,
+      "end": 120218401.327,
+      "examples": [
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:1 Stream #295(Compute)": {
+      "count": 4724,
+      "start": 120373744.035,
+      "end": 146088477.297,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:1 Stream #294(Compute,Memset)": {
+      "count": 7912,
+      "start": 120377024.345,
+      "end": 146088370.86499998,
+      "examples": [
+        "Memset 3",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:1 Stream #292(Compute)": {
+      "count": 4440,
+      "start": 123082232.805,
+      "end": 145353347.743,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:1 Stream #293(Memset,Compute)": {
+      "count": 7404,
+      "start": 123085554.491,
+      "end": 145320498.59800002,
+      "examples": [
+        "Memset 3",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:2 Stream #154(MemcpyD2H,Memset,MemcpyH2D,Compute,MemcpyD2D)": {
+      "count": 216749,
+      "start": 119971836.985,
+      "end": 146098328.33400002,
+      "examples": [
+        "MemcpyH2D",
+        "MemcpyH2D",
+        "MemcpyH2D"
+      ]
+    },
+    "/device:GPU:2 Stream #719(Memset)": {
+      "count": 1,
+      "start": 120218731.012,
+      "end": 120218733.316,
+      "examples": [
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:2 Stream #312(Compute)": {
+      "count": 4730,
+      "start": 120373745.217,
+      "end": 146091558.53300002,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:2 Stream #311(Compute,Memset)": {
+      "count": 7925,
+      "start": 120464509.939,
+      "end": 146091421.60500002,
+      "examples": [
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:2 Stream #308(Compute)": {
+      "count": 4440,
+      "start": 123082233.033,
+      "end": 145353348.088,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:2 Stream #309(Memset,Compute)": {
+      "count": 7404,
+      "start": 123085552.042,
+      "end": 145320477.06800002,
+      "examples": [
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:3 Stream #172(MemcpyD2H,Memset,MemcpyH2D,Compute,MemcpyD2D)": {
+      "count": 216712,
+      "start": 119913932.777,
+      "end": 146091220.31,
+      "examples": [
+        "MemcpyH2D",
+        "MemcpyH2D",
+        "MemcpyH2D"
+      ]
+    },
+    "/device:GPU:3 Stream #697(Memset)": {
+      "count": 1,
+      "start": 120218483.829,
+      "end": 120218486.133,
+      "examples": [
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:3 Stream #318(Compute)": {
+      "count": 4727,
+      "start": 120373743.552,
+      "end": 146091210.74199998,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:3 Stream #316(Memset,Compute)": {
+      "count": 7924,
+      "start": 120377017.07,
+      "end": 146091137.078,
+      "examples": [
+        "Memset 3",
+        "Memset 3",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:3 Stream #314(Compute)": {
+      "count": 4440,
+      "start": 123082241.098,
+      "end": 145353347.952,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:3 Stream #315(Memset,Compute)": {
+      "count": 7416,
+      "start": 123085554.647,
+      "end": 145320502.601,
+      "examples": [
+        "Memset 3",
+        "Memset 3",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:4 Stream #190(MemcpyD2H,Memset,MemcpyH2D,Compute,MemcpyD2D)": {
+      "count": 216718,
+      "start": 119943401.056,
+      "end": 146091021.011,
+      "examples": [
+        "MemcpyH2D",
+        "MemcpyH2D",
+        "MemcpyH2D"
+      ]
+    },
+    "/device:GPU:4 Stream #720(Memset)": {
+      "count": 1,
+      "start": 120218777.565,
+      "end": 120218779.869,
+      "examples": [
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:4 Stream #300(Compute)": {
+      "count": 4726,
+      "start": 120373743.206,
+      "end": 146090769.20299998,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:4 Stream #299(Memset,Compute)": {
+      "count": 7921,
+      "start": 120494527.455,
+      "end": 146091088.146,
+      "examples": [
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:4 Stream #297(Compute)": {
+      "count": 4440,
+      "start": 123082239.702,
+      "end": 145353348.572,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:4 Stream #298(Memset,Compute)": {
+      "count": 7404,
+      "start": 123085556.619,
+      "end": 145320478.147,
+      "examples": [
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:5 Stream #208(MemcpyH2D,MemcpyD2D,Compute,MemcpyD2H,Memset)": {
+      "count": 216330,
+      "start": 119934765.039,
+      "end": 146166681.828,
+      "examples": [
+        "MemcpyH2D",
+        "MemcpyH2D",
+        "MemcpyH2D"
+      ]
+    },
+    "/device:GPU:5 Stream #713(Memset)": {
+      "count": 1,
+      "start": 120218621.535,
+      "end": 120218623.839,
+      "examples": [
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:5 Stream #305(Compute)": {
+      "count": 4754,
+      "start": 120373746.606,
+      "end": 146160098.102,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:5 Stream #304(Compute,Memset)": {
+      "count": 7476,
+      "start": 120496662.348,
+      "end": 146159999.637,
+      "examples": [
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3",
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:5 Stream #302(Compute)": {
+      "count": 4440,
+      "start": 123082236.364,
+      "end": 145353348.055,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:5 Stream #303(Compute,Memset)": {
+      "count": 6960,
+      "start": 123085558.702,
+      "end": 145320476.653,
+      "examples": [
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3",
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:6 Stream #226(MemcpyH2D,MemcpyD2D,Memset,MemcpyD2H,Compute)": {
+      "count": 216715,
+      "start": 119925783.197,
+      "end": 146091435.42499998,
+      "examples": [
+        "MemcpyH2D",
+        "MemcpyH2D",
+        "MemcpyH2D"
+      ]
+    },
+    "/device:GPU:6 Stream #695(Memset)": {
+      "count": 1,
+      "start": 120217666.183,
+      "end": 120217668.455,
+      "examples": [
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:6 Stream #330(Compute)": {
+      "count": 4728,
+      "start": 120373746.804,
+      "end": 146091518.561,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:6 Stream #329(Memset,Compute)": {
+      "count": 7906,
+      "start": 120377021.493,
+      "end": 146091425.793,
+      "examples": [
+        "Memset 3",
+        "Memset 3",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:6 Stream #326(Compute)": {
+      "count": 4440,
+      "start": 123082236.229,
+      "end": 145353347.74,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:6 Stream #327(Memset,Compute)": {
+      "count": 7392,
+      "start": 123085559.367,
+      "end": 145320473.774,
+      "examples": [
+        "Memset 3",
+        "Memset 3",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:7 Stream #244(MemcpyD2H,Memset,MemcpyH2D,MemcpyD2D,Compute)": {
+      "count": 215769,
+      "start": 119956612.208,
+      "end": 146089129.65100002,
+      "examples": [
+        "MemcpyH2D",
+        "MemcpyH2D",
+        "MemcpyH2D"
+      ]
+    },
+    "/device:GPU:7 Stream #714(Memset)": {
+      "count": 1,
+      "start": 120218548.414,
+      "end": 120218550.749,
+      "examples": [
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:7 Stream #324(Compute)": {
+      "count": 4724,
+      "start": 120373748.379,
+      "end": 146088476.853,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:7 Stream #323(Compute,Memset)": {
+      "count": 8360,
+      "start": 120495187.106,
+      "end": 146088352.565,
+      "examples": [
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3"
+      ]
+    },
+    "/device:GPU:7 Stream #320(Compute)": {
+      "count": 4440,
+      "start": 123082237.309,
+      "end": 145353347.227,
+      "examples": [
+        "ncclDevKernel_ReduceScatter_Sum_f32_RING_LL(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)"
+      ]
+    },
+    "/device:GPU:7 Stream #321(Compute,Memset)": {
+      "count": 7824,
+      "start": 123085558.323,
+      "end": 145320471.60799998,
+      "examples": [
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "ncclDevKernel_SendRecv(ncclDevKernelArgsStorage<4096ul>)",
+        "Memset 3"
+      ]
+    }
+  },
+  "steps": {
+    "0": {
+      "start": 103022.292,
+      "end": 123004874.288
+    },
+    "1": {
+      "start": 123005113.742,
+      "end": 123518883.463
+    },
+    "2": {
+      "start": 123519072.598,
+      "end": 124492108.958
+    },
+    "3": {
+      "start": 124492307.342,
+      "end": 125452010.19899999
+    },
+    "4": {
+      "start": 125452204.785,
+      "end": 126434459.049
+    },
+    "5": {
+      "start": 126434647.832,
+      "end": 127401006.448
+    },
+    "6": {
+      "start": 127401196.818,
+      "end": 128354524.759
+    },
+    "7": {
+      "start": 128354740.142,
+      "end": 129296642.539
+    },
+    "8": {
+      "start": 129296829.01,
+      "end": 130293564.62300001
+    },
+    "9": {
+      "start": 130293753.872,
+      "end": 131269895.29699999
+    },
+    "10": {
+      "start": 131270080.715,
+      "end": 132242398.889
+    },
+    "11": {
+      "start": 132242580.254,
+      "end": 133216253.54499999
+    },
+    "12": {
+      "start": 133217046.605,
+      "end": 134187867.577
+    },
+    "13": {
+      "start": 134188064.893,
+      "end": 135163630.541
+    },
+    "14": {
+      "start": 135163961.879,
+      "end": 136132092.08200002
+    },
+    "15": {
+      "start": 136132296.497,
+      "end": 137112302.542
+    },
+    "16": {
+      "start": 137112484.968,
+      "end": 138119831.005
+    },
+    "17": {
+      "start": 138120042.337,
+      "end": 139042263.34100002
+    },
+    "18": {
+      "start": 139042474.275,
+      "end": 140032631.706
+    },
+    "19": {
+      "start": 140032827.008,
+      "end": 140999370.343
+    },
+    "20": {
+      "start": 140999611.338,
+      "end": 141976905.79
+    },
+    "21": {
+      "start": 141977091.53,
+      "end": 142955390.626
+    },
+    "22": {
+      "start": 142955576.592,
+      "end": 143926836.51700002
+    },
+    "23": {
+      "start": 143928246.764,
+      "end": 144907508.209
+    },
+    "24": {
+      "start": 144907691.106,
+      "end": 145861588.961
+    },
+    "25": {
+      "start": 145861783.738,
+      "end": 146855346.518
+    },
+    "26": {
+      "start": 146855534.17,
+      "end": 147834240.57999998
+    },
+    "27": {
+      "start": 147834425.887,
+      "end": 148819271.65199998
+    },
+    "28": {
+      "start": 148819471.901,
+      "end": 149786967.02199998
+    },
+    "29": {
+      "start": 149787164.105,
+      "end": 150765538.32
+    },
+    "30": {
+      "start": 150765742.574,
+      "end": 151739084.489
+    },
+    "31": {
+      "start": 151739274.738,
+      "end": 152728430.56800002
+    },
+    "32": {
+      "start": 152728619.113,
+      "end": 153678352.739
+    },
+    "33": {
+      "start": 153678539.782,
+      "end": 154676730.722
+    },
+    "34": {
+      "start": 154677528.496,
+      "end": 155669276.90399998
+    },
+    "35": {
+      "start": 155669498.879,
+      "end": 156631999.236
+    },
+    "36": {
+      "start": 156632191.707,
+      "end": 157612141.60999998
+    },
+    "37": {
+      "start": 157612352.737,
+      "end": 158583283.69
+    },
+    "38": {
+      "start": 158583472.194,
+      "end": 159576988.503
+    },
+    "39": {
+      "start": 159577257.223,
+      "end": 160511902.067
+    },
+    "40": {
+      "start": 160512084.871,
+      "end": 161510504.347
+    },
+    "41": {
+      "start": 161510673.577,
+      "end": 162494738.83699998
+    },
+    "42": {
+      "start": 162494916.298,
+      "end": 163477755.98900002
+    },
+    "43": {
+      "start": 163477934.823,
+      "end": 164451943.426
+    },
+    "44": {
+      "start": 164452126.822,
+      "end": 166033979.109
+    },
+    "45": {
+      "start": 166034797.297,
+      "end": 166552864.42999998
+    },
+    "46": {
+      "start": 166553047.731,
+      "end": 167559604.905
+    },
+    "47": {
+      "start": 167559795.377,
+      "end": 168534898.9
+    },
+    "48": {
+      "start": 168535133.19,
+      "end": 169507755.964
+    },
+    "49": {
+      "start": 169507941.546,
+      "end": 170468702.932
+    },
+    "50": {
+      "start": 170468899.765,
+      "end": 171529906.526
+    },
+    "51": {
+      "start": 171530095.593,
+      "end": 172425054.686
+    },
+    "52": {
+      "start": 172425246.489,
+      "end": 173400572.54799998
+    },
+    "53": {
+      "start": 173400770.284,
+      "end": 174384627.409
+    },
+    "54": {
+      "start": 174384846.101,
+      "end": 175354524.926
+    },
+    "55": {
+      "start": 175354738.697,
+      "end": 176350684.726
+    },
+    "56": {
+      "start": 176351640.849,
+      "end": 177313798.99
+    },
+    "57": {
+      "start": 177313999.409,
+      "end": 178300386.055
+    },
+    "58": {
+      "start": 178300573.913,
+      "end": 179266868.913
+    },
+    "59": {
+      "start": 179267054.657,
+      "end": 180263946.696
+    },
+    "60": {
+      "start": 180264133.315,
+      "end": 181203491.66
+    },
+    "61": {
+      "start": 181203680.549,
+      "end": 182191301.283
+    },
+    "62": {
+      "start": 182191479.793,
+      "end": 183170645.655
+    },
+    "63": {
+      "start": 183170828.712,
+      "end": 184167042.912
+    },
+    "64": {
+      "start": 184167230.256,
+      "end": 185152971.807
+    },
+    "65": {
+      "start": 185153173.387,
+      "end": 186113775.813
+    },
+    "66": {
+      "start": 186113960.631,
+      "end": 187188315.11900002
+    },
+    "67": {
+      "start": 187189129.6,
+      "end": 188100816.38799998
+    },
+    "68": {
+      "start": 188101006.516,
+      "end": 189092809.465
+    },
+    "69": {
+      "start": 189092993.328,
+      "end": 190058915.505
+    },
+    "70": {
+      "start": 190059103.2,
+      "end": 191035691.69799998
+    },
+    "71": {
+      "start": 191035894.214,
+      "end": 192021671.931
+    },
+    "72": {
+      "start": 192021870.06,
+      "end": 192972342.446
+    },
+    "73": {
+      "start": 192972547.769,
+      "end": 193980863.697
+    },
+    "74": {
+      "start": 193981078.954,
+      "end": 194968137.054
+    },
+    "75": {
+      "start": 194968346.829,
+      "end": 195951235.898
+    },
+    "76": {
+      "start": 195951443.993,
+      "end": 196904851.943
+    },
+    "77": {
+      "start": 196905058.619,
+      "end": 197858469.461
+    },
+    "78": {
+      "start": 197859283.161,
+      "end": 198842982.97
+    },
+    "79": {
+      "start": 198843215.518,
+      "end": 199883412.87600002
+    },
+    "80": {
+      "start": 199883611.172,
+      "end": 200858148.081
+    },
+    "81": {
+      "start": 200858335.109,
+      "end": 201804733.133
+    },
+    "82": {
+      "start": 201804927.398,
+      "end": 202827064.797
+    },
+    "83": {
+      "start": 202827260.679,
+      "end": 203803370.156
+    },
+    "84": {
+      "start": 203803565.544,
+      "end": 204802361.83
+    },
+    "85": {
+      "start": 204802549.58,
+      "end": 205762287.509
+    },
+    "86": {
+      "start": 205762477.258,
+      "end": 206744951.107
+    },
+    "87": {
+      "start": 206745140.585,
+      "end": 207746431.04500002
+    },
+    "88": {
+      "start": 207746637.564,
+      "end": 208708319.507
+    },
+    "89": {
+      "start": 208709152.438,
+      "end": 209690176.768
+    },
+    "90": {
+      "start": 209690369.08,
+      "end": 210673943.238
+    },
+    "91": {
+      "start": 210674125.034,
+      "end": 211658139.941
+    },
+    "92": {
+      "start": 211658339.33,
+      "end": 212605951.03800002
+    },
+    "93": {
+      "start": 212606127.308,
+      "end": 213595471.69
+    },
+    "94": {
+      "start": 213595668.669,
+      "end": 214585309.751
+    },
+    "95": {
+      "start": 214585488.889,
+      "end": 215593167.047
+    },
+    "96": {
+      "start": 215593352.4,
+      "end": 216569089.565
+    },
+    "97": {
+      "start": 216569279.115,
+      "end": 217541533.428
+    },
+    "98": {
+      "start": 217541717.245,
+      "end": 218551136.702
+    },
+    "99": {
+      "start": 218551325.997,
+      "end": 219532548.389
+    },
+    "100": {
+      "start": 219533313.036,
+      "end": 221253520.069
+    },
+    "101": {
+      "start": 221253761.842,
+      "end": 221763905.775
+    },
+    "102": {
+      "start": 221764147.638,
+      "end": 222753120.738
+    },
+    "103": {
+      "start": 222753287.212,
+      "end": 223744761.166
+    },
+    "104": {
+      "start": 223744924.086,
+      "end": 224713180.289
+    },
+    "105": {
+      "start": 224713348.906,
+      "end": 225709750.487
+    },
+    "106": {
+      "start": 225709923.849,
+      "end": 226704458.895
+    },
+    "107": {
+      "start": 226704632.783,
+      "end": 227693651.559
+    },
+    "108": {
+      "start": 227693838.427,
+      "end": 228655907.54099998
+    },
+    "109": {
+      "start": 228656089.129,
+      "end": 229612761.467
+    },
+    "110": {
+      "start": 229613808.154,
+      "end": 230603541.354
+    },
+    "111": {
+      "start": 230603728.851,
+      "end": 231636310.613
+    },
+    "112": {
+      "start": 231636502.635,
+      "end": 232625113.207
+    },
+    "113": {
+      "start": 232625308.433,
+      "end": 233566243.372
+    },
+    "114": {
+      "start": 233566485.402,
+      "end": 234595943.523
+    },
+    "115": {
+      "start": 234596248.031,
+      "end": 235545368.33299997
+    },
+    "116": {
+      "start": 235545562.354,
+      "end": 236537621.618
+    },
+    "117": {
+      "start": 236537806.043,
+      "end": 237527025.21600002
+    },
+    "118": {
+      "start": 237527218.379,
+      "end": 238506420.43
+    },
+    "119": {
+      "start": 238506629.293,
+      "end": 239496139.354
+    },
+    "120": {
+      "start": 239496345.065,
+      "end": 240463242.261
+    },
+    "121": {
+      "start": 240464191.662,
+      "end": 241458997.058
+    },
+    "122": {
+      "start": 241459189.909,
+      "end": 242434120.404
+    },
+    "123": {
+      "start": 242434311.81,
+      "end": 243400577.191
+    },
+    "124": {
+      "start": 243400762.027,
+      "end": 244376908.727
+    },
+    "125": {
+      "start": 244377249.686,
+      "end": 245341461.919
+    },
+    "126": {
+      "start": 245341648.942,
+      "end": 246341419.813
+    },
+    "127": {
+      "start": 246341605.378,
+      "end": 247341963.46899998
+    },
+    "128": {
+      "start": 247342161.279,
+      "end": 248318350.486
+    },
+    "129": {
+      "start": 248318553.986,
+      "end": 249299917.138
+    },
+    "130": {
+      "start": 249300103.391,
+      "end": 250341569.774
+    },
+    "131": {
+      "start": 250341754.445,
+      "end": 251287088.597
+    },
+    "132": {
+      "start": 251288081.268,
+      "end": 252235884.106
+    },
+    "133": {
+      "start": 252236077.854,
+      "end": 253226081.96400002
+    },
+    "134": {
+      "start": 253226274.733,
+      "end": 254222475.194
+    },
+    "135": {
+      "start": 254222708.179,
+      "end": 255176140.526
+    },
+    "136": {
+      "start": 255176320.767,
+      "end": 256151891.177
+    },
+    "137": {
+      "start": 256152059.777,
+      "end": 257160971.70000002
+    },
+    "138": {
+      "start": 257161146.157,
+      "end": 258128944.64900002
+    },
+    "139": {
+      "start": 258129116.348,
+      "end": 259140614.716
+    },
+    "140": {
+      "start": 259140806.855,
+      "end": 260096034.466
+    },
+    "141": {
+      "start": 260096231.173,
+      "end": 261063899.64900002
+    },
+    "142": {
+      "start": 261064093.581,
+      "end": 262044773.441
+    },
+    "143": {
+      "start": 262045700.745,
+      "end": 263076738.98700002
+    },
+    "144": {
+      "start": 263076936.282,
+      "end": 264054520.437
+    },
+    "145": {
+      "start": 264054731.765,
+      "end": 265004237.044
+    },
+    "146": {
+      "start": 265004429.505,
+      "end": 266020137.95
+    },
+    "147": {
+      "start": 266020347.36,
+      "end": 266965753.72800002
+    },
+    "148": {
+      "start": 266965952.615,
+      "end": 267981815.30900002
+    },
+    "149": {
+      "start": 267982002.273,
+      "end": 268957233.369
+    },
+    "150": {
+      "start": 268957481.814,
+      "end": 269926836.953
+    },
+    "151": {
+      "start": 269927024.719,
+      "end": 270906702.865
+    },
+    "152": {
+      "start": 270906889.107,
+      "end": 271896178.045
+    },
+    "153": {
+      "start": 271896385.452,
+      "end": 272878608.852
+    },
+    "154": {
+      "start": 272879586.269,
+      "end": 273858093.43299997
+    },
+    "155": {
+      "start": 273858286.758,
+      "end": 274845813.709
+    },
+    "156": {
+      "start": 274846004.423,
+      "end": 275793294.316
+    },
+    "157": {
+      "start": 275793491.435,
+      "end": 276776418.05
+    },
+    "158": {
+      "start": 276776710.758,
+      "end": 277777463.88600004
+    },
+    "159": {
+      "start": 277777658.017,
+      "end": 278777084.13100004
+    },
+    "160": {
+      "start": 278777278.442,
+      "end": 279749944.778
+    },
+    "161": {
+      "start": 279750129.97,
+      "end": 280724663.61
+    },
+    "162": {
+      "start": 280724873.414,
+      "end": 281713786.16599995
+    },
+    "163": {
+      "start": 281713970.348,
+      "end": 282710883.972
+    },
+    "164": {
+      "start": 282711068.254,
+      "end": 283665232.976
+    },
+    "165": {
+      "start": 283666142.473,
+      "end": 284652660.42
+    },
+    "166": {
+      "start": 284652836.92,
+      "end": 285638554.975
+    },
+    "167": {
+      "start": 285638728.191,
+      "end": 286601600.905
+    },
+    "168": {
+      "start": 286601777.223,
+      "end": 287585128.884
+    },
+    "169": {
+      "start": 287585308.743,
+      "end": 288579192.783
+    },
+    "170": {
+      "start": 288579370.228,
+      "end": 289580516.397
+    },
+    "171": {
+      "start": 289580695.431,
+      "end": 290574043.101
+    },
+    "172": {
+      "start": 290574228.256,
+      "end": 291523615.41499996
+    },
+    "173": {
+      "start": 291523796.464,
+      "end": 292499315.70199996
+    },
+    "174": {
+      "start": 292499495.033,
+      "end": 293487362.935
+    },
+    "175": {
+      "start": 293487555.994,
+      "end": 294502289.57600003
+    },
+    "176": {
+      "start": 294503104.441,
+      "end": 295482800.21599996
+    },
+    "177": {
+      "start": 295482981.527,
+      "end": 296446775.174
+    },
+    "178": {
+      "start": 296446963.363,
+      "end": 297461094.348
+    },
+    "179": {
+      "start": 297461289.028,
+      "end": 298409634.445
+    },
+    "180": {
+      "start": 298409822.161,
+      "end": 299426543.894
+    },
+    "181": {
+      "start": 299426732.888,
+      "end": 300410109.941
+    },
+    "182": {
+      "start": 300410329.78,
+      "end": 301383740.23099995
+    },
+    "183": {
+      "start": 301383940.027,
+      "end": 302375731.396
+    },
+    "184": {
+      "start": 302376013.05,
+      "end": 303347764.638
+    },
+    "185": {
+      "start": 303347959.483,
+      "end": 304334061.23899996
+    },
+    "186": {
+      "start": 304334252.645,
+      "end": 305317347.69699997
+    },
+    "187": {
+      "start": 305318347.863,
+      "end": 306303018.385
+    },
+    "188": {
+      "start": 306303208.685,
+      "end": 307259265.991
+    },
+    "189": {
+      "start": 307259447.557,
+      "end": 308244185.245
+    },
+    "190": {
+      "start": 308244376.169,
+      "end": 309231515.378
+    },
+    "191": {
+      "start": 309231699.41,
+      "end": 310251884.146
+    },
+    "192": {
+      "start": 310252195.422,
+      "end": 311209503.136
+    },
+    "193": {
+      "start": 311209703.341,
+      "end": 312197556.653
+    },
+    "194": {
+      "start": 312197768.876,
+      "end": 313188311.426
+    },
+    "195": {
+      "start": 313188505.254,
+      "end": 314187028.21500003
+    },
+    "196": {
+      "start": 314187224.408,
+      "end": 315141794.987
+    },
+    "197": {
+      "start": 315141997.08,
+      "end": 316135643.004
+    },
+    "198": {
+      "start": 316136635.708,
+      "end": 317131174.059
+    },
+    "199": {
+      "start": 317131372.411,
+      "end": 318107744.27000004
+    },
+    "200": {
+      "start": 318107937.293,
+      "end": 319754260.39199996
+    },
+    "201": {
+      "start": 319754450.01,
+      "end": 320286584.57
+    },
+    "202": {
+      "start": 320286776.779,
+      "end": 321263485.80799997
+    },
+    "203": {
+      "start": 321263683.969,
+      "end": 322254988.361
+    },
+    "204": {
+      "start": 322255171.186,
+      "end": 323226261.224
+    },
+    "205": {
+      "start": 323226460.228,
+      "end": 324211795.36
+    },
+    "206": {
+      "start": 324211985.328,
+      "end": 325221369.265
+    },
+    "207": {
+      "start": 325221661.152,
+      "end": 326208270.86300004
+    },
+    "208": {
+      "start": 326209106.949,
+      "end": 327203176.465
+    },
+    "209": {
+      "start": 327203356.656,
+      "end": 328173784.41300005
+    },
+    "210": {
+      "start": 328173969.998,
+      "end": 329171811.514
+    },
+    "211": {
+      "start": 329172001.706,
+      "end": 330125941.31399995
+    },
+    "212": {
+      "start": 330126128.175,
+      "end": 331138623.439
+    },
+    "213": {
+      "start": 331138810.468,
+      "end": 332122625.76
+    },
+    "214": {
+      "start": 332122818.6,
+      "end": 333105934.98
+    },
+    "215": {
+      "start": 333106134.968,
+      "end": 334102722.715
+    },
+    "216": {
+      "start": 334102916.597,
+      "end": 335084321.082
+    },
+    "217": {
+      "start": 335084521.992,
+      "end": 336073887.051
+    },
+    "218": {
+      "start": 336074099.987,
+      "end": 337055119.37299997
+    },
+    "219": {
+      "start": 337056000.995,
+      "end": 338038716.771
+    },
+    "220": {
+      "start": 338038896.119,
+      "end": 339008260.90900004
+    },
+    "221": {
+      "start": 339008439.859,
+      "end": 340023968.30200005
+    },
+    "222": {
+      "start": 340024150.157,
+      "end": 340990281.643
+    },
+    "223": {
+      "start": 340990470.038,
+      "end": 341990329.783
+    },
+    "224": {
+      "start": 341990522.721,
+      "end": 342970887.399
+    },
+    "225": {
+      "start": 342971081.303,
+      "end": 343956749.91099995
+    },
+    "226": {
+      "start": 343956977.787,
+      "end": 344970026.974
+    },
+    "227": {
+      "start": 344970333.132,
+      "end": 345950740.28900003
+    },
+    "228": {
+      "start": 345950932.277,
+      "end": 346918220.447
+    },
+    "229": {
+      "start": 346918414.174,
+      "end": 347911785.926
+    },
+    "230": {
+      "start": 347912625.361,
+      "end": 348901102.03000003
+    },
+    "231": {
+      "start": 348901298.569,
+      "end": 349863570.851
+    },
+    "232": {
+      "start": 349863767.162,
+      "end": 350854787.987
+    },
+    "233": {
+      "start": 350854991.995,
+      "end": 351873960.393
+    },
+    "234": {
+      "start": 351874153.188,
+      "end": 352843622.433
+    },
+    "235": {
+      "start": 352843820.948,
+      "end": 353847138.343
+    },
+    "236": {
+      "start": 353847320.852,
+      "end": 354804228.992
+    },
+    "237": {
+      "start": 354804413.181,
+      "end": 355787196.871
+    },
+    "238": {
+      "start": 355787378.652,
+      "end": 356792215.412
+    },
+    "239": {
+      "start": 356792413.374,
+      "end": 357804788.88100004
+    },
+    "240": {
+      "start": 357804974.783,
+      "end": 358790663.15
+    },
+    "241": {
+      "start": 358791462.49,
+      "end": 359763841.764
+    },
+    "242": {
+      "start": 359764031.121,
+      "end": 360762984.015
+    },
+    "243": {
+      "start": 360763172.911,
+      "end": 361731460.947
+    },
+    "244": {
+      "start": 361731665.035,
+      "end": 362743010.05700004
+    },
+    "245": {
+      "start": 362743200.74,
+      "end": 363734019.643
+    },
+    "246": {
+      "start": 363734215.149,
+      "end": 364716230.221
+    },
+    "247": {
+      "start": 364716421.339,
+      "end": 365718245.162
+    },
+    "248": {
+      "start": 365718431.007,
+      "end": 366686272.814
+    },
+    "249": {
+      "start": 366686477.599,
+      "end": 367677932.371
+    },
+    "250": {
+      "start": 367678132.002,
+      "end": 368664295.367
+    },
+    "251": {
+      "start": 368664482.886,
+      "end": 369643100.82299995
+    },
+    "252": {
+      "start": 369643872.377,
+      "end": 370611465.296
+    },
+    "253": {
+      "start": 370611646.162,
+      "end": 371597800.165
+    },
+    "254": {
+      "start": 371597986.266,
+      "end": 372597116.279
+    },
+    "255": {
+      "start": 372597306.335,
+      "end": 373593694.315
+    },
+    "256": {
+      "start": 373593887.296,
+      "end": 374565206.612
+    },
+    "257": {
+      "start": 374565397.479,
+      "end": 375550440.974
+    },
+    "258": {
+      "start": 375550628.452,
+      "end": 376542966.829
+    },
+    "259": {
+      "start": 376543157.96,
+      "end": 377608053.85099995
+    },
+    "260": {
+      "start": 377608243.021,
+      "end": 378509182.169
+    },
+    "261": {
+      "start": 378509377.608,
+      "end": 379497942.265
+    },
+    "262": {
+      "start": 379498134.899,
+      "end": 380490454.746
+    },
+    "263": {
+      "start": 380491293.784,
+      "end": 381458563.85099995
+    },
+    "264": {
+      "start": 381458761.214,
+      "end": 382448022.19699997
+    },
+    "265": {
+      "start": 382448223.617,
+      "end": 383452139.013
+    },
+    "266": {
+      "start": 383452350.721,
+      "end": 384428432.365
+    },
+    "267": {
+      "start": 384428630.615,
+      "end": 385433084.65000004
+    },
+    "268": {
+      "start": 385433276.701,
+      "end": 386397822.00399995
+    },
+    "269": {
+      "start": 386398005.368,
+      "end": 387386484.052
+    },
+    "270": {
+      "start": 387386708.448,
+      "end": 388370644.85400003
+    },
+    "271": {
+      "start": 388370838.258,
+      "end": 389368307.249
+    },
+    "272": {
+      "start": 389368499.593,
+      "end": 390349387.018
+    },
+    "273": {
+      "start": 390349580.874,
+      "end": 391327895.087
+    },
+    "274": {
+      "start": 391328793.196,
+      "end": 392320782.491
+    },
+    "275": {
+      "start": 392320986.807,
+      "end": 393298028.858
+    },
+    "276": {
+      "start": 393298236.352,
+      "end": 394313544.973
+    },
+    "277": {
+      "start": 394313742.084,
+      "end": 395302285.5
+    },
+    "278": {
+      "start": 395302483.411,
+      "end": 396277455.67800003
+    },
+    "279": {
+      "start": 396277659.444,
+      "end": 397264340.235
+    },
+    "280": {
+      "start": 397264564.091,
+      "end": 398278056.689
+    },
+    "281": {
+      "start": 398278324.401,
+      "end": 399326114.174
+    },
+    "282": {
+      "start": 399326310.063,
+      "end": 400211136.68600005
+    },
+    "283": {
+      "start": 400211370.107,
+      "end": 401238553.134
+    },
+    "284": {
+      "start": 401238770.399,
+      "end": 402198818.959
+    },
+    "285": {
+      "start": 402199735.395,
+      "end": 403165857.26699996
+    },
+    "286": {
+      "start": 403166052.438,
+      "end": 404173398.829
+    },
+    "287": {
+      "start": 404173600.923,
+      "end": 405170024.74899995
+    },
+    "288": {
+      "start": 405170225.771,
+      "end": 406158157.48700005
+    },
+    "289": {
+      "start": 406158369.197,
+      "end": 407145225.37
+    },
+    "290": {
+      "start": 407145428.381,
+      "end": 408136203.69299996
+    },
+    "291": {
+      "start": 408136405.918,
+      "end": 409124355.956
+    },
+    "292": {
+      "start": 409124557.269,
+      "end": 410106696.86
+    },
+    "293": {
+      "start": 410106891.576,
+      "end": 411107600.009
+    },
+    "294": {
+      "start": 411107791.94,
+      "end": 412097313.109
+    },
+    "295": {
+      "start": 412097515.968,
+      "end": 413060508.605
+    },
+    "296": {
+      "start": 413061311.816,
+      "end": 414050562.945
+    },
+    "297": {
+      "start": 414050757.705,
+      "end": 415055832.254
+    },
+    "298": {
+      "start": 415056017.174,
+      "end": 416027787.17
+    },
+    "299": {
+      "start": 416027971.205,
+      "end": 417024115.592
+    }
+  }
+}

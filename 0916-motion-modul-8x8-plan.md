@@ -1,6 +1,6 @@
 # 新库 motion 表构建 + modulation 8×8 接入 motion 计划（v2-motion）
 
-> **状态：建库、关闭态验证、V4/V5、200次reset、节奏边界、V8与V-online三档全部通过；八卡20步smoke及计时修复已通过，正式80k准备从Beta锚点起跑。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，8 卡全空，无 turbo、无 GreatLakes。
+> **状态：全部起跑前验证通过；正式80k已于09-18 05:47:05 UTC从clean 2f10473Beta起跑。第100–299步主线程/NVML已测，设备事件原始采集仅到第25步附近，稳态设备分解仍有缺口，未标为完成。** 2026-09-16 起草，09-17 经五轮审查修订（第二轮九路核验 32 条外部清单；第三轮三路对抗 52 条；第四轮九路对抗审计 108 条、0 条被推翻、P0 3 条，报告在 `v1-store/reports/audit/0916-sec7-audit-report.md`，不进 git；**第五轮 09-17 按用户指令把正式 run 从 4 卡改为 8 卡**——依据是 `0917-collate-shm-8gpu-plan.md` 的 collate 共享内存改动已并入 `v2-motionmem`（`3868cc9` `commitV9.10`），该轮修订另经 Codex 只读审计、锚定 `26863de`、6 条意见逐条处置）。环境 B（AWS 单机 8×A100），主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；基线 `v2-1600ep-m8x8-modul-b128-60k` 已跑完，当前八卡用于本轮正式训练，无 turbo、无 GreatLakes。
 >
 > **第一部分只讲做什么、为什么、哪些不变**；命令、判定行、代码锚点、推导与数字出处全部在第二部分（A–H 按模块，I 节收第一部分精简时移出的细节）。正本 `docs/motion-memory.md` 已补充 modulation 的布局、位置、模型与验证口径，历史 context 记录保留其适用范围。
 
@@ -47,7 +47,9 @@
 
 ## 第一部分（给人看）
 
-**最新进度（步骤6全部完成，09-18）**：关闭态V1/V2/V6/V7、71316行建库全量验收、3232样本V4、完整V5和200次真实reset均通过。修正后的35例节奏回放、411长度扫描及1296/1297边界全部通过。开启态V8两轮100步的五标量、5份217叶完整状态、7份输入摘要及800训练索引逐位一致，四个motion参数叶全部更新。V-online三档同源于clean `782696c231aace21c20200638ae302a5a1c7f277`：71316窗输入SHA全量一致；1600集起点/时间码/次序一致；全部1600补帧窗与23个整集去重后的3139真编码窗逐位一致，含g367、4条es≥1000、16种余数及四任务。参见 [建库](docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)、[V8](docs/training-doc/mv2-aa/result.md)、[V-online](docs/training-doc/mv2-online/result.md)、[节奏](docs/training-doc/mv2-rhythm/result.md) 与 [200次reset](docs/training-doc/mv2-evalbound/result.md)。两个实际runner拒绝负例（占卡、错误YAML SHA）均在训练之前停止；八卡smoke20步、65叶参数树、10个记忆参数叶及配置同源全部通过；原始XPlane恢复了查看器截断的完整20步八卡trace，导出上限修复已通过14项CPU测试与真实GPU探针。正式80k准备从Beta锚点起跑。
+**最新进度（正式已起跑，09-18）**：关闭态V1/V2/V6/V7、71316行建库全量验收、3232样本V4、完整V5和200次真实reset均通过。修正后的35例节奏回放、411长度扫描及1296/1297边界全部通过。开启态V8两轮100步的五标量、5份217叶完整状态、7份输入摘要及800训练索引逐位一致，四个motion参数叶全部更新。V-online三档同源于clean `782696c231aace21c20200638ae302a5a1c7f277`：71316窗输入SHA全量一致；1600集起点/时间码/次序一致；全部1600补帧窗与23个整集去重后的3139真编码窗逐位一致，含g367、4条es≥1000、16种余数及四任务。参见 [建库](docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)、[V8](docs/training-doc/mv2-aa/result.md)、[V-online](docs/training-doc/mv2-online/result.md)、[节奏](docs/training-doc/mv2-rhythm/result.md) 与 [200次reset](docs/training-doc/mv2-evalbound/result.md)。两个实际runner拒绝负例（占卡、错误YAML SHA）均在训练之前停止；八卡smoke20步、65叶参数树、10个记忆参数叶及配置同源全部通过；原始XPlane恢复了查看器截断的完整20步八卡trace，导出上限修复已通过14项CPU测试与真实GPU探针。正式run从 `2f10473161b760f16d9240d3c2959ff326cde66b` clean起跑、30项preflight全部通过，训练PID545524；主仓290份源码SHA在锁为只读前后不变，回写改在独立开发副本。
+
+**第300步报告的已测与未测**：第100–299步共200步，平均0.987454秒/步、129.626样本/秒；主线程取batch等待0.143053秒/步（14.4906%，不能视为GPU空闲比例）。500ms八卡采样均值98.5777%、0%占比0；慢步/其他步均值95.0536%/98.6415%。第299步后一次trace导出停顿180.894504秒，GPU暂时0%，随后恢复训练。主线程300步完整，但原始XPlane设备事件到第25步内截止，不能恢复100–299步设备分类；分窗报告建议已提交用户确认，在答复前保留原判据未满足状态。按稳态步时，第300步剩余约21.86小时，不含后续保存开销。完整证据见 [正式起跑与性能记录](docs/training-doc/v2-1600ep-m8x8-modul-motion-b128-80k/result.md)，80k训练仍在运行，策略评估另起计划。
 
 **V5 初始化裁决已确认**：用户原话「采用兼容权重加载，保留 gemma_150m 替身」。`motion_gates_model.py::_make_models` 对 modulation 测试加载 `pi05_base` 中名称与形状均兼容的参数；`compatible_pi05_weights.py::merge_compatible` 独立要求动作专家及六个 AdaRMS 参数齐全，检查 18 层门不全零，报告保留随机的参数名单。生产初始化和门值不改。此前随机零门导致的失败是测试初态问题，不属于关闭态回归失败。
 

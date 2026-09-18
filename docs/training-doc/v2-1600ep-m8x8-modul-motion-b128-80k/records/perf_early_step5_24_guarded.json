@@ -1,0 +1,222 @@
+{
+  "window": {
+    "start_step": 5,
+    "end_step": 24,
+    "steps": 20,
+    "start_utc_epoch": 1789710697.6350102,
+    "end_utc_epoch": 1789710717.0619698
+  },
+  "runtime": {
+    "mesh": {
+      "batch": 1,
+      "fsdp": 8
+    },
+    "device_count": 8,
+    "fsdp_devices": 8,
+    "batch_size": 128,
+    "num_workers": 16,
+    "seed": 42,
+    "cuda_visible_devices": "0,1,2,3,4,5,6,7",
+    "config_name": "mme_vla_suite_b128_80k",
+    "exp_name": "v2-1600ep-m8x8-modul-motion-b128-80k",
+    "devices": [
+      "cuda:0",
+      "cuda:1",
+      "cuda:2",
+      "cuda:3",
+      "cuda:4",
+      "cuda:5",
+      "cuda:6",
+      "cuda:7"
+    ]
+  },
+  "mean_step_s": 0.971347975730896,
+  "samples_per_second": 131.77563880100303,
+  "host_phases_mean_s": {
+    "train_dispatch": 0.8310699556022882,
+    "data_next": 0.13994458827655762,
+    "logging": 0,
+    "checkpoint": 0
+  },
+  "host_data_wait_fraction": 0.1441116462950528,
+  "gpu_kernel_mean_ms_per_step": {
+    "gemm": 621.3107488687285,
+    "communication": 129.36742380000686,
+    "transfer": 2.3226489249013365,
+    "other": 188.80009980076215
+  },
+  "gpu_busy_mean_ms_per_step": 941.256117100355,
+  "host_data_wait_all_gpu_idle_s": 0.0037865760001391173,
+  "gpu_util": {
+    "samples": 304,
+    "mean": 98.85526315789474,
+    "zero_fraction": 0.0
+  },
+  "gpu_util_slow_steps": {
+    "samples": 0,
+    "mean": null,
+    "zero_fraction": null
+  },
+  "gpu_util_other_steps": {
+    "samples": 304,
+    "mean": 98.85526315789474,
+    "zero_fraction": 0.0
+  },
+  "slow_threshold_host_step_s": 1.45662677383516,
+  "gpu_util_per_device": {
+    "0": {
+      "samples": 38,
+      "mean": 98.71052631578948,
+      "zero_fraction": 0.0
+    },
+    "1": {
+      "samples": 38,
+      "mean": 98.86842105263158,
+      "zero_fraction": 0.0
+    },
+    "2": {
+      "samples": 38,
+      "mean": 98.84210526315789,
+      "zero_fraction": 0.0
+    },
+    "3": {
+      "samples": 38,
+      "mean": 98.92105263157895,
+      "zero_fraction": 0.0
+    },
+    "4": {
+      "samples": 38,
+      "mean": 98.84210526315789,
+      "zero_fraction": 0.0
+    },
+    "5": {
+      "samples": 38,
+      "mean": 98.94736842105263,
+      "zero_fraction": 0.0
+    },
+    "6": {
+      "samples": 38,
+      "mean": 98.8157894736842,
+      "zero_fraction": 0.0
+    },
+    "7": {
+      "samples": 38,
+      "mean": 98.89473684210526,
+      "zero_fraction": 0.0
+    }
+  },
+  "trace_file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/v2-1600ep-m8x8-modul-motion-b128-80k/step_trace/plugins/profile/2026_09_18_05_57_25/ip-10-242-11-177.us-west-2.compute.internal.trace.json.gz",
+  "trace_event_counts": {
+    "0": 194384,
+    "1": 194384,
+    "2": 194384,
+    "3": 194384,
+    "4": 194384,
+    "5": 192906,
+    "6": 194344,
+    "7": 194344
+  },
+  "trace_total_events": 26162279,
+  "gpu_ignored_non_stream_events": 0,
+  "gpu_step_event_coverage": {
+    "0": {
+      "steps_with_events": 20,
+      "missing_steps": []
+    },
+    "1": {
+      "steps_with_events": 20,
+      "missing_steps": []
+    },
+    "2": {
+      "steps_with_events": 20,
+      "missing_steps": []
+    },
+    "3": {
+      "steps_with_events": 20,
+      "missing_steps": []
+    },
+    "4": {
+      "steps_with_events": 20,
+      "missing_steps": []
+    },
+    "5": {
+      "steps_with_events": 20,
+      "missing_steps": []
+    },
+    "6": {
+      "steps_with_events": 20,
+      "missing_steps": []
+    },
+    "7": {
+      "steps_with_events": 20,
+      "missing_steps": []
+    }
+  },
+  "trace_reexport_binding": null,
+  "gpu_physical_streams": {
+    "0": [
+      "Stream #118(MemcpyH2D,MemcpyD2D,Memset,MemcpyD2H,Compute)",
+      "Stream #279(Compute)",
+      "Stream #280(Compute,Memset)",
+      "Stream #281(Compute,Memset)",
+      "Stream #282(Compute)"
+    ],
+    "1": [
+      "Stream #136(MemcpyD2H,Memset,Compute,MemcpyD2D,MemcpyH2D)",
+      "Stream #292(Compute)",
+      "Stream #293(Memset,Compute)",
+      "Stream #294(Compute,Memset)",
+      "Stream #295(Compute)",
+      "Stream #693(Memset)"
+    ],
+    "2": [
+      "Stream #154(MemcpyD2H,Memset,MemcpyH2D,Compute,MemcpyD2D)",
+      "Stream #308(Compute)",
+      "Stream #309(Memset,Compute)",
+      "Stream #311(Compute,Memset)",
+      "Stream #312(Compute)",
+      "Stream #719(Memset)"
+    ],
+    "3": [
+      "Stream #172(MemcpyD2H,Memset,MemcpyH2D,Compute,MemcpyD2D)",
+      "Stream #314(Compute)",
+      "Stream #315(Memset,Compute)",
+      "Stream #316(Memset,Compute)",
+      "Stream #318(Compute)",
+      "Stream #697(Memset)"
+    ],
+    "4": [
+      "Stream #190(MemcpyD2H,Memset,MemcpyH2D,Compute,MemcpyD2D)",
+      "Stream #297(Compute)",
+      "Stream #298(Memset,Compute)",
+      "Stream #299(Memset,Compute)",
+      "Stream #300(Compute)",
+      "Stream #720(Memset)"
+    ],
+    "5": [
+      "Stream #208(MemcpyH2D,MemcpyD2D,Compute,MemcpyD2H,Memset)",
+      "Stream #302(Compute)",
+      "Stream #303(Compute,Memset)",
+      "Stream #304(Compute,Memset)",
+      "Stream #305(Compute)",
+      "Stream #713(Memset)"
+    ],
+    "6": [
+      "Stream #226(MemcpyH2D,MemcpyD2D,Memset,MemcpyD2H,Compute)",
+      "Stream #326(Compute)",
+      "Stream #327(Memset,Compute)",
+      "Stream #329(Memset,Compute)",
+      "Stream #330(Compute)",
+      "Stream #695(Memset)"
+    ],
+    "7": [
+      "Stream #244(MemcpyD2H,Memset,MemcpyH2D,MemcpyD2D,Compute)",
+      "Stream #320(Compute)",
+      "Stream #321(Compute,Memset)",
+      "Stream #323(Compute,Memset)",
+      "Stream #324(Compute)",
+      "Stream #714(Memset)"
+    ]
+  },
+  "measurement_note": "设备事件按同一墙钟窗口统计；异步执行可重叠，kernel 累计时间与主线程各阶段不能相加。NVML 使用原始密集采样，不把相同读数视为新增独立证据。"
+}

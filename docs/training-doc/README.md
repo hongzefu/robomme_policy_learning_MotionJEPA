@@ -18,7 +18,7 @@
 | [`mv2-aa/`](mv2-aa/result.md) | 新库开启态两轮100步A/A及四叶更新 | PASS：100步五标量、5状态、7输入摘要与800训练索引逐位同，四叶均更新 |
 | [`mv2-online/`](mv2-online/result.md) | 全量装配、stub及分层真实encoder三档 | PASS：全71316窗装配、1600集次序、3139真编码窗逐位同 |
 | [`smoke-m8x8-modul-motion-20260918T050716Z/`](smoke-m8x8-modul-motion-20260918T050716Z/result.md) | 八卡b128/w16、20步开启态及trace验收 | PASS：20步有限，65叶/10记忆叶，配置同源，八卡完整trace已恢复并修复导出上限 |
-| [`v2-1600ep-m8x8-modul-motion-b128-80k/`](v2-1600ep-m8x8-modul-motion-b128-80k/launch.md) | 1600 集 demo 补帧 motion 表及 8 卡 b128 的 80k 训练 | 名称已确认，实施准备中，尚未起跑 |
+| [`v2-1600ep-m8x8-modul-motion-b128-80k/`](v2-1600ep-m8x8-modul-motion-b128-80k/result.md) | 1600 集 demo 补帧 motion 表及 8 卡 b128 的 80k 训练 | 已从2f10473Beta起跑，30项preflight通过；稳态0.987454秒/步，util均值98.58%、零占比0；设备trace仅到25步附近，原稳态设备分解未完成 |
 | [`mv2-v1-dump/`](mv2-v1-dump/result.md) | 关闭态 Dataset 完整取证 | PASS：3,200 样本 / 200 batch 前后逐位一致 |
 | [`mv2-v2-legacy/`](mv2-v2-legacy/result.md) | 旧 YAML 与旧表完整取证 | PASS：1,200 样本 / 200 batch 逐位一致，历史 policy 构造通过 |
 | [`mv2-v6-grad/`](mv2-v6-grad/result.md) | 关闭态固定 batch 梯度取证 | PASS：61 初态叶及三类各 38 梯度叶前后逐位一致 |

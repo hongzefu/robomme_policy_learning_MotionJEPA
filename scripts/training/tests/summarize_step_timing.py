@@ -40,6 +40,25 @@ def utilization(rows):
     return {"samples":len(rows),"mean":statistics.mean(rows),"zero_fraction":sum(x==0 for x in rows)/len(rows)}
 
 
+def require_gpu_events_each_step(gpu_intervals, step_events, steps, gpu_pids):
+    """拒绝采集提前截止或整步缺失；有事件不代表该步每个kernel均未丢失。"""
+    coverage={}
+    for pid,intervals in gpu_intervals.items():
+        busy=merged(intervals)
+        ends=[end for _,end in busy]
+        missing=[]
+        for step in steps:
+            event=step_events[step]
+            begin=float(event["ts"]); end=begin+float(event["dur"])
+            index=bisect.bisect_right(ends,begin)
+            if index==len(busy) or busy[index][0]>=end:
+                missing.append(step)
+        if missing:
+            raise ValueError(f"GPU {gpu_pids[pid]} 的物理stream设备事件未覆盖每个步骤，缺失步骤={missing}")
+        coverage[str(gpu_pids[pid])]={"steps_with_events":len(steps),"missing_steps":[]}
+    return coverage
+
+
 def summarize(records, gpu_csv, warmup=100, end_step=299, trace_dir=None):
     runtime=json.loads((records/"runtime.json").read_text())
     rows=[json.loads(s) for s in (records/"step_timing.jsonl").read_text().splitlines() if s]
@@ -104,6 +123,7 @@ def summarize(records, gpu_csv, warmup=100, end_step=299, trace_dir=None):
         else: kind="other"
         categories[kind]+=finish-begin
     if not all(event_counts.values()): raise ValueError("稳态窗口内有 GPU 缺少物理stream设备事件")
+    step_coverage=require_gpu_events_each_step(gpu_intervals,step_events,list(range(warmup,end_step+1)),gpu_pids)
     waits=[]
     for e in events:
         if e.get("name")=="motionjepa_data_next" and e.get("ph")=="X" and e.get("pid") not in gpu_pids and warmup <= int(e["args"]["step_num"]) <= end_step:
@@ -140,6 +160,7 @@ def summarize(records, gpu_csv, warmup=100, end_step=299, trace_dir=None):
             "slow_threshold_host_step_s":slow_limit,"gpu_util_per_device":{str(k):utilization(v) for k,v in per_gpu.items()},
             "trace_file":str(trace_files[0]),"trace_event_counts":{str(gpu_pids[k]):v for k,v in event_counts.items()},
             "trace_total_events":len(events),"gpu_ignored_non_stream_events":ignored_non_stream_events,
+            "gpu_step_event_coverage":step_coverage,
             "trace_reexport_binding":trace_binding,
             "gpu_physical_streams":{str(gpu_pids[pid]):sorted(name for (p,_),name in physical_streams.items() if p==pid) for pid in gpu_pids},
             "measurement_note":"设备事件按同一墙钟窗口统计；异步执行可重叠，kernel 累计时间与主线程各阶段不能相加。NVML 使用原始密集采样，不把相同读数视为新增独立证据。"}
