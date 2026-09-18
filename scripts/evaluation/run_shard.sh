@@ -146,7 +146,7 @@ done
 # ⚠ 必须查整棵进程树：$! 拿到的是 wrapper，实际 bind 端口的是孙进程
 #   （env -> uv -> python，本机实测 wrapper 1066086 / uv 1066093 / python 1066100），
 #   socket fd 不在 wrapper 的 /proc/<pid>/fd 里。
-HEXPORT$(printf '%04X' "$PORT")
+HEXPORT=$(printf '%04X' "$PORT")
 SERVER_TREE="$(collect_tree "$SERVER_PID" | tr '\n' ' ')"
 OWN=0
 for INODE in $(awk -v p=":$HEXPORT" '$2 ~ p"$" && $4=="0A" {print $10}' /proc/net/tcp /proc/net/tcp6 2>/dev/null); do
