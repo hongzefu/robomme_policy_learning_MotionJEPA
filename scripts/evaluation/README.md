@@ -2,7 +2,7 @@
 
 主入口为 `scripts/evaluation/run.sh 运行名 checkpoint绝对路径 任务 episode上限 [策略seed=7]`。本轮仅验收指定 bucket 末步 59999。旧入口 scripts/training/eval.sh 直接转发相同参数。
 
-环境准备：`bash scripts/evaluation/setup.sh`。权重准备：`bash scripts/evaluation/download.sh`。首次安装生成客户端 uv.lock，后续安装应使用已经提交的锁文件。服务端和客户端依赖隔离，全部解释器、包和评估产物位于当前 MotionJEPA 工作副本；训练 .venv 不变。
+环境准备：`bash scripts/evaluation/setup.sh`。权重准备：`bash scripts/evaluation/download.sh`。两套环境都使用已提交的锁文件执行 frozen 安装。准备脚本将本仓库已有的 `v1-store/models/big_vision/paligemma_tokenizer.model` 复制进独立缓存并核验 SHA256；该源文件必须存在。服务端和客户端依赖隔离，全部包和评估产物位于当前 MotionJEPA 工作副本，解释器使用已固定的 NFS Python；训练 .venv 不变。
 
 单回合从 clean HEAD 启动：
 
