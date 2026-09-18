@@ -62,11 +62,25 @@ def build_master() -> None:
         "-o", "NumberOfPasswordPrompts=1",
         ALIAS, f"echo {mark} && hostname",
     ]
+    # push 要等用户看手机、做数字匹配，90 秒不够；TOTP 路径很快，保持 90。
+    timeout = 90 if otp else 240
     print(f">>> 无 master,正在建立 {ALIAS} 主连接"
-          f"（{'TOTP 码认证' if otp else '留空触发 push,需手机数字匹配'}）...", file=sys.stderr)
-    child = pexpect.spawn("ssh", ssh_args, encoding="utf-8", timeout=90)
+          f"（{'TOTP 码认证' if otp else 'push,需在手机上做数字匹配'}）...", file=sys.stderr)
+    child = pexpect.spawn("ssh", ssh_args, encoding="utf-8", timeout=timeout)
+    # 把远端输出实时落盘，调用方可以 tail 这个文件拿到数字匹配提示（push 路径必备）。
+    # logfile_read 只记录「读到的」服务器输出，不含我们 sendline 出去的密码/OTP。
+    log_path = os.environ.get("GL_CONNECT_LOG")
+    if log_path:
+        child.logfile_read = open(log_path, "w", encoding="utf-8", buffering=1)
+
+    # Okta Verify 的数字匹配提示与「按回车继续」——两者缺一，push 路径就会一直 expect 到 TIMEOUT，
+    # 表现为「卡死」（2026-06-19 定位的真根因，见 greatlakes.md）。
+    number_hint = r"(?i)(?:correct answer is|select the number|choose the number|number to select[^\d]*)[^\d]{0,20}(\d+)"
+    press_enter = r"(?i)press enter to continue"
     pats = [r"[Pp]assword:", r"[Pp]asscode", mark,
             r"(?i)are you sure you want to continue connecting",
+            number_hint,
+            press_enter,
             r"(?i)(permission denied|authentication failed)",
             pexpect.EOF, pexpect.TIMEOUT]
     sent_pw = False
@@ -79,13 +93,20 @@ def build_master() -> None:
             sent_pw = True
         elif i == 1:
             child.sendline(otp)            # 空串=回车=触发 push
+            if not otp:
+                print(">>> 已触发 push，请留意手机上的 Okta Verify 通知", file=sys.stderr, flush=True)
         elif i == 2:
             break
         elif i == 3:
             child.sendline("yes")
         elif i == 4:
-            sys.exit(f"ERROR: 认证失败（密码或 OTP 不对）:\n{child.before}")
+            number = child.match.group(1)
+            print(f">>> OKTA_NUMBER={number}  请在手机上选这个数字", file=sys.stderr, flush=True)
         elif i == 5:
+            child.sendline("")             # 「Press enter to continue」——缺这条会一路 TIMEOUT
+        elif i == 6:
+            sys.exit(f"ERROR: 认证失败（密码或 OTP 不对）:\n{child.before}")
+        elif i == 7:
             sys.exit(f"ERROR: 连接意外结束（认证未通过?）:\n{child.before}")
         else:
             sys.exit(f"ERROR: 超时（网络或认证卡住）:\n{child.before}")
