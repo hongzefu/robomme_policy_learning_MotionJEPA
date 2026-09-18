@@ -1,7 +1,9 @@
+import contextlib
 import dataclasses
 import json
 import os
 import shutil
+import signal
 import time
 from pathlib import Path
 from typing import Optional, Any, Tuple
@@ -21,7 +23,36 @@ from env_runner import EnvRunner, SpecEnvRunner
 
 
 class EpisodeWallClockTimeout(RuntimeError):
-    """单集墙钟超时；只兜 rollout 期死锁，不参与正常的 max_steps 判定。"""
+    """单集墙钟超时；只兜死锁，不参与正常的 max_steps 判定。"""
+
+
+@contextlib.contextmanager
+def episode_deadline(seconds: int):
+    """给整集设墙钟，覆盖 make_env 与 reset，不只是 rollout 循环。
+
+    原先只在 rollout 里比时间，管不到建环境与 reset。实测 VideoRepick/medium 有若干集
+    卡在 reset 期（s9 的 ep172 静默 36 分钟、s2 的 ep155 静默 12 分钟，都停在
+    「setup finished」之后、`exec_start_idx` 之前），只能靠 job 级 EVAL_TIMEOUT 兜底：
+    一次浪费两小时，而且该集不会被记成 error，下一块续跑时还会再撞同一条。
+
+    SIGALRM 能打断停在 Python 层的重试循环；若卡在 native 调用内部，信号要等调用返回
+    才会递达，那种情况仍由 EVAL_TIMEOUT 兜底。超时抛 EpisodeWallClockTimeout，
+    由调用方的 except 记成 "error" 并继续下一集。
+    """
+    if seconds <= 0:
+        yield
+        return
+
+    def _handler(signum, frame):
+        raise EpisodeWallClockTimeout(f"单集超过 {seconds}s 墙钟（含建环境与 reset）")
+
+    previous = signal.signal(signal.SIGALRM, _handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, previous)
 
 
 @dataclasses.dataclass
@@ -341,9 +372,10 @@ def evaluate(args: Args):
                     break
                 episode_id = row["episode"]
                 try:
-                    env_runner.make_env(row)
-                    print(f"\n[robomme] env for {group} episode {episode_id} setup finished")
-                    success_flag = evaluator.eval_each_episode(env_runner, video_save_dir)
+                    with episode_deadline(args.episode_wall_s):
+                        env_runner.make_env(row)
+                        print(f"\n[robomme] env for {group} episode {episode_id} setup finished")
+                        success_flag = evaluator.eval_each_episode(env_runner, video_save_dir)
                     if success_flag in ("unknown", "error"):
                         log_dict[group][str(episode_id)] = "error"
                     else:

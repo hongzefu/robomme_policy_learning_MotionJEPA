@@ -11,7 +11,7 @@ from env_runner import EnvRunner
 
 out = Path(sys.argv[1])
 task = sys.argv[2]
-out.mkdir(parents=True)
+out.mkdir(parents=True, exist_ok=True)   # 续跑（ALLOW_RESUME）时目录已存在，重跑探针覆盖即可
 runner = EnvRunner(task, str(out), max_steps=1300)
 try:
     runner.make_env(0)
