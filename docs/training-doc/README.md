@@ -10,14 +10,14 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`mv2-implementation/`](mv2-implementation/result.md) | 新旧契约、独立公式、初态、位置编码与计时验证 | CPU单测、初态与位置组件验证通过；GPU生产档计时待smoke |
+| [`mv2-implementation/`](mv2-implementation/result.md) | 新旧契约、独立公式、初态、位置编码与计时验证 | 全部通过；八卡trace导出上限修复与实测见smoke档案 |
 | [`mv2-evalbound/`](mv2-evalbound/result.md) | 四任务 test 集 200 次真实 reset 与 budget 160 上界 | PASS：最长 demo 383 帧，需求 103 窗，余量 57 |
 | [`mv2-v4/`](mv2-v4/result.md) | 新库交付与独立手算逐位验证 | PASS：3232 样本逐位同，完整覆盖关键集合 |
 | [`mv2-m4/`](mv2-m4/result.md) | 真实 modulation 结构的完整 V5 mask/梯度验证 | 六项 PASS：3 次探针、42/42 叶、无排除 |
 | [`mv2-rhythm/`](mv2-rhythm/result.md) | 新配置客户端节奏与 1296/1297 边界 | PASS：35例1520点、411长度扫描及完整边界全部通过 |
 | [`mv2-aa/`](mv2-aa/result.md) | 新库开启态两轮100步A/A及四叶更新 | PASS：100步五标量、5状态、7输入摘要与800训练索引逐位同，四叶均更新 |
 | [`mv2-online/`](mv2-online/result.md) | 全量装配、stub及分层真实encoder三档 | PASS：全71316窗装配、1600集次序、3139真编码窗逐位同 |
-| [`smoke-m8x8-modul-motion-20260918T050716Z/`](smoke-m8x8-modul-motion-20260918T050716Z/launch.md) | 八卡b128/w16、20步开启态及trace验收 | 起跑前准备完成，待从本轮提交后的clean HEAD运行 |
+| [`smoke-m8x8-modul-motion-20260918T050716Z/`](smoke-m8x8-modul-motion-20260918T050716Z/result.md) | 八卡b128/w16、20步开启态及trace验收 | PASS：20步有限，65叶/10记忆叶，配置同源，八卡完整trace已恢复并修复导出上限 |
 | [`v2-1600ep-m8x8-modul-motion-b128-80k/`](v2-1600ep-m8x8-modul-motion-b128-80k/launch.md) | 1600 集 demo 补帧 motion 表及 8 卡 b128 的 80k 训练 | 名称已确认，实施准备中，尚未起跑 |
 | [`mv2-v1-dump/`](mv2-v1-dump/result.md) | 关闭态 Dataset 完整取证 | PASS：3,200 样本 / 200 batch 前后逐位一致 |
 | [`mv2-v2-legacy/`](mv2-v2-legacy/result.md) | 旧 YAML 与旧表完整取证 | PASS：1,200 样本 / 200 batch 逐位一致，历史 policy 构造通过 |

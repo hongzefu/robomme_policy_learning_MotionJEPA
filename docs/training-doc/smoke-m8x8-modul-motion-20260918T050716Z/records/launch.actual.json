@@ -1,0 +1,27 @@
+{
+  "run_name": "smoke-m8x8-modul-motion-20260918T050716Z",
+  "train_head": "5b3b812961ed089f94546edfda8c116d1e7564c1",
+  "source_status": "",
+  "start_utc": "2026-09-18T05:12:33Z",
+  "recorded_utc": "2026-09-18T05:12:48.419345+00:00",
+  "tmux": "mv2-smoke",
+  "tmux_pane_pid": 512527,
+  "launch_command": "bash v1-store/logs/mv2-smoke-stage.sh smoke-m8x8-modul-motion-20260918T050716Z 5b3b812961ed089f94546edfda8c116d1e7564c1 6c9f165f928786e456b98c2448a60d6be2c2fd3e935882d9fc08e439964f1d20 d3a518011c80a115f7b398458a510a6f128f47e76c03fc251e59dab4c9c56268",
+  "gpu_ids": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "batch_size": 128,
+  "fsdp_devices": 8,
+  "num_workers": 16,
+  "steps": 20,
+  "timing_steps": 20,
+  "nvml_interval_ms": 500,
+  "storage": "AWS本地NVMe RAID /dev/md0 XFS"
+}

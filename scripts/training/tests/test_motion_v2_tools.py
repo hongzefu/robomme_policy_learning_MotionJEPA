@@ -75,13 +75,16 @@ def test_timing_summary_uses_one_wall_window(tmp_path):
     rows=[dict(step=i,completed=True,wall_start=origin+i,wall_end=origin+i+1,
                host_step_s=1.0,phases_s={"data_next":0.2,"train_dispatch":0.8}) for i in range(3)]
     (tmp_path/"step_timing.jsonl").write_text("\n".join(json.dumps(r) for r in rows))
-    events=[dict(ph="M",pid=1,name="process_name",args={"name":"/device:GPU:0"})]
+    events=[dict(ph="M",pid=1,name="process_name",args={"name":"/device:GPU:0"}),
+            dict(ph="M",pid=1,tid=9,name="thread_name",args={"name":"Stream #9(Compute)"}),
+            dict(ph="M",pid=1,tid=10000,name="thread_name",args={"name":"XLA Ops"})]
     for i in range(3):
         events.extend([
             dict(ph="X",pid=701,name="motionjepa_train",ts=i*1e6,dur=1e6,args={"step_num":str(i)}),
             dict(ph="X",pid=701,name="motionjepa_data_next",ts=(i+0.75)*1e6,dur=0.2e6,args={"step_num":str(i)}),
-            dict(ph="X",pid=1,name="gemm",ts=(i+0.1)*1e6,dur=0.8e6),
-            dict(ph="X",pid=1,name="nccl_all_reduce",ts=(i+0.7)*1e6,dur=0.2e6),
+            dict(ph="X",pid=1,tid=9,name="gemm",ts=(i+0.1)*1e6,dur=0.8e6),
+            dict(ph="X",pid=1,tid=9,name="nccl_all_reduce",ts=(i+0.7)*1e6,dur=0.2e6),
+            dict(ph="X",pid=1,tid=10000,name="nccl_all_reduce",ts=i*1e6,dur=1e6),
         ])
     trace=tmp_path/"step_trace/test.trace.json.gz"; trace.parent.mkdir()
     trace.write_bytes(gzip.compress(json.dumps({"traceEvents":events}).encode()))
@@ -94,6 +97,20 @@ def test_timing_summary_uses_one_wall_window(tmp_path):
     assert result["host_data_wait_all_gpu_idle_s"]==pytest.approx(0.15)
     assert result["gpu_util"]["mean"]==pytest.approx(190/3)
     assert result["gpu_util"]["zero_fraction"]==pytest.approx(1/3)
+    assert result["gpu_ignored_non_stream_events"]==3
+    (tmp_path/"step_trace_metadata.json").write_text(json.dumps({"trace_viewer_event_limit":15}))
+    with pytest.raises(ValueError,match="事件上限"): summarize(tmp_path,csv,0,2)
+    # 恢复文件必须绑定本轮原始数据及其自身内容，拒绝误选其他run的同名步骤。
+    from reexport_step_trace import write_binding
+    original=trace.parent/'source.xplane.pb'; original.write_bytes(b'fixture-original')
+    recovered=tmp_path/'recovered'; recovered.mkdir()
+    copied=recovered/'full.trace.json.gz'; copied.write_bytes(trace.read_bytes())
+    binding=write_binding(original,recovered,100000000,'测试夹具')
+    assert summarize(tmp_path,csv,0,2,recovered)['trace_reexport_binding']==binding
+    original.write_bytes(b'fixture-other-run')
+    with pytest.raises(ValueError,match='不同源'): summarize(tmp_path,csv,0,2,recovered)
+    original.write_bytes(b'fixture-original'); copied.write_bytes(b'wrong-json')
+    with pytest.raises(ValueError,match='JSON指纹'): summarize(tmp_path,csv,0,2,recovered)
 
 
 def test_eval_bound_requires_all_episodes_and_recomputes_budget(tmp_path):

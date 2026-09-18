@@ -1,8 +1,8 @@
 # modulation 8×8 motion 80k 正式训练
 
-本页固定用户已确认的正式run `v2-1600ep-m8x8-modul-motion-b128-80k`。起跑前须完成V8、V-online和八卡smoke全部验收；本草稿不表示已起跑。用户原话：「开始实施 有问题尽早问用户」「采用 v2-1600ep-m8x8-modul-motion-b128-80k」。
+本页固定用户已确认的正式run `v2-1600ep-m8x8-modul-motion-b128-80k`。V8、V-online和八卡smoke全部验收已通过，此页为Beta起跑前档案；实际启动版本、时刻和进程随启动记录固定。用户原话：「开始实施 有问题尽早问用户」「采用 v2-1600ep-m8x8-modul-motion-b128-80k」。
 
-实施依据为 [0916计划](../../../0916-motion-modul-8x8-plan.md)。前置证据见 [建库结果](../../dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)、[V8逐位对拍](../mv2-aa/result.md)、[V-online三档](../mv2-online/result.md) 与 [八卡smoke起跑档案](../smoke-m8x8-modul-motion-20260918T050716Z/launch.md)。
+实施依据为 [0916计划](../../../0916-motion-modul-8x8-plan.md)。前置证据见 [建库结果](../../dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)、[V8逐位对拍](../mv2-aa/result.md)、[V-online三档](../mv2-online/result.md) 与 [八卡smoke结果](../smoke-m8x8-modul-motion-20260918T050716Z/result.md)。
 
 ## 版本与代码状态
 
@@ -41,6 +41,10 @@ norm_stats来自 `v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/r
 环境B，8×A100-SXM4-80GB，AWS本地NVMe RAID `/dev/md0` XFS。启动前重新确认scratch可用≥400G、共享内存余量、GPU0–7显存占用之和为0，并核本轮前置tmux均已退出。独立输出GPU_IDLE判定；runner主体使用启用 `set -euo pipefail` 的子shell，任何起跑检查非零即止，preflight和train.py消费同一个TRAIN_ARGS数组。preflight必须30项通过。
 
 全程GPU采样为15秒；首段另起 `mv2-dense`，500ms采集八卡timestamp/index/utilization/memory。`TRAIN_TIMING_STEPS=300`启用前300步主线程分段计时与JAX设备trace，不增加逐步强制同步，trace结束时仅等待一次。性能窗口为第100–299步：报告平均步时、吞吐、主线程取batch等待比例、设备kernel分类、GPU利用率均值与0%比例，并按慢步/其他步分层。异步dispatch、数据等待和设备计算可能重叠，不能相加成互斥百分比；计时与采样范围须完全覆盖八卡。
+
+八卡smoke暴露并闭合了查看器JSON事件上限问题：完整原始XPlane成功恢复20步和全部GPU事件。正式入口继续采集全部前300步，`StepTiming`仅在导出时将查看器上限至少提高到一亿并恢复环境，汇总器检查上限与步骤/GPU覆盖、仅计物理stream。指标与原始XPlane都保留在记录目录。密集采样最长1800秒，或在第299步trace完整落盘后请求停止；采样器真实退出码单独留存。
+
+正式和密集采样入口的精确源码见 [prod-runner.sh](records/prod-runner.sh) 与 [dense-runner.sh](records/dense-runner.sh)。独立开发副本准备记录见 [devcopy.summary.log](records/devcopy.summary.log)。
 
 正式稳定起步后保存源码SHA并锁定主副本src/scripts/packages只读。开发和起跑后文档回写使用 `/scratch/hongze/robomme_policy_learning_MotionJEPA-temp` 独立克隆及独立uv环境；共享v1-store仅沿用已批准的指向主副本实体目录的symlink。克隆继承主副本既有GitHub地址和身份，不修改主副本的upstream或凭据。主副本在训练期间保持TRAIN_HEAD及clean状态，开发副本仅提交本轮档案。
 

@@ -665,7 +665,7 @@ motion 表是**独立 store**，**不混进 framesamp packed 库**——帧路�
 
 ## 八、闸门体系与环境 B 结果
 
-**2026-09-18 modulation 当前结果。** 关闭态前后V1/V2/V6/V7、3232样本V4、完整V5、200次真实reset和节奏边界均通过。开启态 [V8](training-doc/mv2-aa/result.md) 的两轮100步、5份完整状态、7份输入摘要与训练索引逐位一致，四个motion参数叶均更新。[V-online](training-doc/mv2-online/result.md) 覆盖全部71316窗的33帧输入SHA、全1600集的起点/时间码/次序，并对全部1600补帧窗与23个必含整集去重后的3139窗真实重编，逐位失配为0。八卡20步smoke仍待实跑；这些结果不代替正式策略评估与motion全遮消融。
+**2026-09-18 modulation 当前结果。** 关闭态前后V1/V2/V6/V7、3232样本V4、完整V5、200次真实reset和节奏边界均通过。开启态 [V8](training-doc/mv2-aa/result.md) 的两轮100步、5份完整状态、7份输入摘要与训练索引逐位一致，四个motion参数叶均更新。[V-online](training-doc/mv2-online/result.md) 覆盖全部71316窗的33帧输入SHA、全1600集的起点/时间码/次序，并对全部1600补帧窗与23个必含整集去重后的3139窗真实重编，逐位失配为0。[八卡20步smoke](training-doc/smoke-m8x8-modul-motion-20260918T050716Z/result.md) 的训练、65叶参数树、配置同源和完整trace验收均通过；这些结果不代替正式策略评估与motion全遮消融。
 
 ### 8.1 闸门体系一览
 

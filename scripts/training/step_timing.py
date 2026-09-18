@@ -4,10 +4,30 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
 import pathlib
 import time
 
 import jax
+
+
+TRACE_VIEWER_LIMIT_ENV = "TF_PROFILER_TRACE_VIEWER_MAX_EVENTS"
+MIN_TRACE_VIEWER_EVENTS = 100_000_000
+
+
+@contextlib.contextmanager
+def complete_trace_export():
+    """仅在导出期间提高查看器上限，避免首步编译挤掉后续设备事件。"""
+    previous = os.environ.get(TRACE_VIEWER_LIMIT_ENV)
+    limit = max(MIN_TRACE_VIEWER_EVENTS, int(previous or "0"))
+    os.environ[TRACE_VIEWER_LIMIT_ENV] = str(limit)
+    try:
+        yield limit
+    finally:
+        if previous is None:
+            os.environ.pop(TRACE_VIEWER_LIMIT_ENV, None)
+        else:
+            os.environ[TRACE_VIEWER_LIMIT_ENV] = previous
 
 
 class StepTiming:
@@ -21,7 +41,8 @@ class StepTiming:
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root / "step_timing.jsonl"
         self.trace_dir = self.root / "step_trace"
-        if self.path.exists() or self.trace_dir.exists():
+        self.trace_metadata = self.root / "step_trace_metadata.json"
+        if self.path.exists() or self.trace_dir.exists() or self.trace_metadata.exists():
             raise FileExistsError("计时或 trace 输出已存在，拒绝覆盖")
         self._file = self.path.open("x", encoding="utf-8")
         self._active = False
@@ -78,8 +99,17 @@ class StepTiming:
                     if flush is not None:
                         flush()
                 finally:
-                    jax.profiler.stop_trace()
-                    self._active = False
+                    # XLA的JSON查看器有事件数量上限；不影响原始XPlane的采集范围。
+                    # 首步编译可超过默认上限，八卡20步实测完整数据有1153万个事件。
+                    try:
+                        with complete_trace_export() as limit:
+                            jax.profiler.stop_trace()
+                        with self.trace_metadata.open("x") as file:
+                            json.dump({"schema": 1, "steps": self._count,
+                                       "trace_viewer_event_limit": limit,
+                                       "jax_version": jax.__version__}, file, indent=2)
+                    finally:
+                        self._active = False
         finally:
             self._file.close()
         print(f"STEP_TIMING_DONE steps={self._count} host={self.path} trace={self.trace_dir}", flush=True)

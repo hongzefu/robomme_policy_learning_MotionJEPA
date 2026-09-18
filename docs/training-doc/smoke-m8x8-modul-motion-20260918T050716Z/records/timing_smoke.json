@@ -1,0 +1,245 @@
+{
+  "window": {
+    "start_step": 5,
+    "end_step": 19,
+    "steps": 15,
+    "start_utc_epoch": 1789708617.857071,
+    "end_utc_epoch": 1789708641.4261537
+  },
+  "runtime": {
+    "mesh": {
+      "batch": 1,
+      "fsdp": 8
+    },
+    "device_count": 8,
+    "fsdp_devices": 8,
+    "batch_size": 128,
+    "num_workers": 16,
+    "seed": 42,
+    "cuda_visible_devices": "0,1,2,3,4,5,6,7",
+    "config_name": "mme_vla_suite_b128_80k",
+    "exp_name": "smoke-m8x8-modul-motion-20260918T050716Z",
+    "devices": [
+      "cuda:0",
+      "cuda:1",
+      "cuda:2",
+      "cuda:3",
+      "cuda:4",
+      "cuda:5",
+      "cuda:6",
+      "cuda:7"
+    ]
+  },
+  "mean_step_s": 1.5712721824645997,
+  "samples_per_second": 81.46265263808539,
+  "host_phases_mean_s": {
+    "train_dispatch": 0.36626428499196967,
+    "data_next": 0.13044550130143762,
+    "logging": 0.5931109220099946,
+    "checkpoint": 0.4812286381299297
+  },
+  "host_data_wait_fraction": 0.0830268514000607,
+  "gpu_kernel_mean_ms_per_step": {
+    "gemm": 618.0287762000586,
+    "communication": 128.59928368329605,
+    "transfer": 26.38511764996064,
+    "other": 188.3356463173306
+  },
+  "gpu_busy_mean_ms_per_step": 960.7502501087354,
+  "host_data_wait_all_gpu_idle_s": 1.6908989999998807,
+  "gpu_util": {
+    "samples": 376,
+    "mean": 61.80053191489362,
+    "zero_fraction": 0.17287234042553193
+  },
+  "gpu_util_slow_steps": {
+    "samples": 136,
+    "mean": 16.00735294117647,
+    "zero_fraction": 0.47794117647058826
+  },
+  "gpu_util_other_steps": {
+    "samples": 240,
+    "mean": 87.75,
+    "zero_fraction": 0.0
+  },
+  "slow_threshold_host_step_s": 2.3566864050924776,
+  "gpu_util_per_device": {
+    "0": {
+      "samples": 47,
+      "mean": 63.234042553191486,
+      "zero_fraction": 0.1702127659574468
+    },
+    "1": {
+      "samples": 47,
+      "mean": 64.74468085106383,
+      "zero_fraction": 0.19148936170212766
+    },
+    "2": {
+      "samples": 47,
+      "mean": 61.255319148936174,
+      "zero_fraction": 0.1702127659574468
+    },
+    "3": {
+      "samples": 47,
+      "mean": 60.787234042553195,
+      "zero_fraction": 0.14893617021276595
+    },
+    "4": {
+      "samples": 47,
+      "mean": 61.61702127659574,
+      "zero_fraction": 0.19148936170212766
+    },
+    "5": {
+      "samples": 47,
+      "mean": 62.48936170212766,
+      "zero_fraction": 0.1702127659574468
+    },
+    "6": {
+      "samples": 47,
+      "mean": 59.40425531914894,
+      "zero_fraction": 0.19148936170212766
+    },
+    "7": {
+      "samples": 47,
+      "mean": 60.87234042553192,
+      "zero_fraction": 0.14893617021276595
+    }
+  },
+  "trace_file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/smoke-m8x8-modul-motion-20260918T050716Z/step_trace_verified/plugins/profile/2026_09_18_05_34_08/ip-10-242-11-177.us-west-2.compute.internal.trace.json.gz",
+  "trace_event_counts": {
+    "0": 146898,
+    "1": 146493,
+    "2": 146493,
+    "3": 146493,
+    "4": 146493,
+    "5": 145383,
+    "6": 146463,
+    "7": 146463
+  },
+  "trace_total_events": 11530267,
+  "gpu_ignored_non_stream_events": 0,
+  "trace_reexport_binding": {
+    "schema": 1,
+    "source_xplane": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/smoke-m8x8-modul-motion-20260918T050716Z/step_trace/plugins/profile/2026_09_18_05_17_44/ip-10-242-11-177.us-west-2.compute.internal.xplane.pb",
+    "source_xplane_sha256": "ffcae70e84d4eaf44ef3f3d076d573bd2f17e6f883b6960fbcad1d17ab752a04",
+    "trace_sha256": "d9b168335c495dd2c811103cb5c00b48f94688ae6fbcaec04652082f90c53cb0",
+    "trace_viewer_event_limit": 100000000,
+    "exporter": "jaxlib.ProfilerSession.export"
+  },
+  "gpu_physical_streams": {
+    "0": [
+      "Stream #118(MemcpyD2H,Compute,MemcpyD2D,MemcpyH2D,Memset)",
+      "Stream #119(MemcpyH2D)",
+      "Stream #120(MemcpyD2H)",
+      "Stream #121(MemcpyD2H)",
+      "Stream #122(MemcpyD2H)",
+      "Stream #123(MemcpyD2H)",
+      "Stream #124(MemcpyP2P)",
+      "Stream #125(MemcpyP2P)",
+      "Stream #126(MemcpyP2P)",
+      "Stream #127(MemcpyP2P)",
+      "Stream #281(Compute,Memset)",
+      "Stream #282(Compute)",
+      "Stream #355(MemcpyH2D)"
+    ],
+    "1": [
+      "Stream #136(MemcpyH2D,Compute,MemcpyD2D,MemcpyD2H,Memset)",
+      "Stream #137(MemcpyH2D)",
+      "Stream #138(MemcpyD2H)",
+      "Stream #139(MemcpyD2H)",
+      "Stream #140(MemcpyD2H)",
+      "Stream #141(MemcpyD2H)",
+      "Stream #302(Compute)",
+      "Stream #303(Memset,Compute)",
+      "Stream #305(Memset,Compute)",
+      "Stream #306(Compute)",
+      "Stream #354(MemcpyH2D)",
+      "Stream #705(Memset)"
+    ],
+    "2": [
+      "Stream #154(MemcpyH2D,MemcpyD2D,Compute,MemcpyD2H,Memset)",
+      "Stream #155(MemcpyH2D)",
+      "Stream #156(MemcpyD2H)",
+      "Stream #157(MemcpyD2H)",
+      "Stream #158(MemcpyD2H)",
+      "Stream #159(MemcpyD2H)",
+      "Stream #326(Compute)",
+      "Stream #327(Compute,Memset)",
+      "Stream #329(Compute,Memset)",
+      "Stream #330(Compute)",
+      "Stream #348(MemcpyH2D)",
+      "Stream #697(Memset)"
+    ],
+    "3": [
+      "Stream #172(MemcpyD2H,Memset,MemcpyH2D,Compute,MemcpyD2D)",
+      "Stream #173(MemcpyH2D)",
+      "Stream #174(MemcpyD2H)",
+      "Stream #175(MemcpyD2H)",
+      "Stream #176(MemcpyD2H)",
+      "Stream #177(MemcpyD2H)",
+      "Stream #297(Compute)",
+      "Stream #298(Compute,Memset)",
+      "Stream #299(Memset,Compute)",
+      "Stream #300(Compute)",
+      "Stream #359(MemcpyH2D)",
+      "Stream #695(Memset)"
+    ],
+    "4": [
+      "Stream #190(MemcpyD2H,Memset,MemcpyH2D,MemcpyD2D,Compute)",
+      "Stream #191(MemcpyH2D)",
+      "Stream #192(MemcpyD2H)",
+      "Stream #193(MemcpyD2H)",
+      "Stream #194(MemcpyD2H)",
+      "Stream #195(MemcpyD2H)",
+      "Stream #292(Compute)",
+      "Stream #293(Memset,Compute)",
+      "Stream #294(Compute,Memset)",
+      "Stream #295(Compute)",
+      "Stream #358(MemcpyH2D)",
+      "Stream #788(Memset)"
+    ],
+    "5": [
+      "Stream #208(MemcpyH2D,Compute,MemcpyD2D,MemcpyD2H,Memset)",
+      "Stream #209(MemcpyH2D)",
+      "Stream #210(MemcpyD2H)",
+      "Stream #211(MemcpyD2H)",
+      "Stream #212(MemcpyD2H)",
+      "Stream #213(MemcpyD2H)",
+      "Stream #308(Compute)",
+      "Stream #309(Compute,Memset)",
+      "Stream #311(Compute,Memset)",
+      "Stream #312(Compute)",
+      "Stream #352(MemcpyH2D)",
+      "Stream #701(Memset)"
+    ],
+    "6": [
+      "Stream #226(Compute,MemcpyD2D,MemcpyD2H,Memset,MemcpyH2D)",
+      "Stream #227(MemcpyH2D)",
+      "Stream #228(MemcpyD2H)",
+      "Stream #229(MemcpyD2H)",
+      "Stream #230(MemcpyD2H)",
+      "Stream #231(MemcpyD2H)",
+      "Stream #314(Compute)",
+      "Stream #315(Memset,Compute)",
+      "Stream #317(Memset,Compute)",
+      "Stream #318(Compute)",
+      "Stream #361(MemcpyH2D)",
+      "Stream #699(Memset)"
+    ],
+    "7": [
+      "Stream #244(MemcpyH2D,MemcpyD2D,Compute,MemcpyD2H,Memset)",
+      "Stream #245(MemcpyH2D)",
+      "Stream #246(MemcpyD2H)",
+      "Stream #247(MemcpyD2H)",
+      "Stream #248(MemcpyD2H)",
+      "Stream #249(MemcpyD2H)",
+      "Stream #320(Compute)",
+      "Stream #321(Compute,Memset)",
+      "Stream #323(Compute,Memset)",
+      "Stream #324(Compute)",
+      "Stream #349(MemcpyH2D)",
+      "Stream #693(Memset)"
+    ]
+  },
+  "measurement_note": "设备事件按同一墙钟窗口统计；异步执行可重叠，kernel 累计时间与主线程各阶段不能相加。NVML 使用原始密集采样，不把相同读数视为新增独立证据。"
+}

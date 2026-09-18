@@ -1,6 +1,6 @@
 # modulation 8×8 motion 八卡20步smoke
 
-本任务执行0916计划V9，验收生产档位batch128、fsdp8、workers16和新motion布局。本轮唯一名称为 `smoke-m8x8-modul-motion-20260918T050716Z`，名称时间戳表示准备时刻；本页为起跑前记录，实际启动时刻见驱动日志。前置为V8两轮100步A/A与V-online三档全部通过。
+本任务执行0916计划V9，验收生产档位batch128、fsdp8、workers16和新motion布局。本轮唯一名称为 `smoke-m8x8-modul-motion-20260918T050716Z`，名称时间戳表示准备时刻。已从clean `5b3b812961ed089f94546edfda8c116d1e7564c1` 完成20步及全部验收；原始trace查看器截断的问题通过同次XPlane恢复和工具修补闭合，详见 [结果](result.md)。以下保留起跑前固定口径。
 
 ## 版本、数据与启动口径
 

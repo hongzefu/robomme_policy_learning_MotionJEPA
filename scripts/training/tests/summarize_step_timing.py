@@ -8,6 +8,7 @@ import gzip
 import json
 import math
 import pathlib
+import re
 import statistics
 
 
@@ -39,7 +40,7 @@ def utilization(rows):
     return {"samples":len(rows),"mean":statistics.mean(rows),"zero_fraction":sum(x==0 for x in rows)/len(rows)}
 
 
-def summarize(records, gpu_csv, warmup=100, end_step=299):
+def summarize(records, gpu_csv, warmup=100, end_step=299, trace_dir=None):
     runtime=json.loads((records/"runtime.json").read_text())
     rows=[json.loads(s) for s in (records/"step_timing.jsonl").read_text().splitlines() if s]
     selected=[r for r in rows if warmup <= r["step"] <= end_step]
@@ -47,14 +48,38 @@ def summarize(records, gpu_csv, warmup=100, end_step=299):
         raise ValueError("计时没有覆盖要求的完整稳态窗口")
     if any(not math.isfinite(r["host_step_s"]) or r["host_step_s"] <= 0 for r in selected):
         raise ValueError("主线程计时不合法")
-    trace_files=list((records/"step_trace").rglob("*.trace.json.gz"))
+    trace_files=list((trace_dir or records/"step_trace").rglob("*.trace.json.gz"))
     if len(trace_files)!=1: raise ValueError("trace 文件缺失或混入多轮")
+    trace_binding=None
+    if trace_dir is not None:
+        from reexport_step_trace import sha256_file
+        trace_binding=json.loads((trace_dir/"trace_reexport.json").read_text())
+        originals=list((records/"step_trace").rglob("*.xplane.pb"))
+        if len(originals)!=1 or sha256_file(originals[0])!=trace_binding["source_xplane_sha256"]:
+            raise ValueError("恢复trace与本轮原始XPlane不同源")
+        if sha256_file(trace_files[0])!=trace_binding["trace_sha256"]:
+            raise ValueError("恢复trace的JSON指纹不符")
     with gzip.open(trace_files[0]) as f: trace=json.load(f)
     events=trace["traceEvents"]
     gpu_pids={e["pid"]:int(e["args"]["name"].rsplit(":",1)[1]) for e in events
               if e.get("name")=="process_name" and e.get("args",{}).get("name","").startswith("/device:GPU:")}
-    if len(gpu_pids)!=runtime["device_count"]: raise ValueError("trace 没有覆盖全部 GPU")
-    step_events={int(e["args"]["step_num"]):e for e in events if e.get("ph")=="X" and e.get("name")=="motionjepa_train"}
+    if len(gpu_pids)!=runtime["device_count"] or set(gpu_pids.values())!=set(range(runtime["device_count"])):
+        raise ValueError("trace 没有覆盖全部 GPU")
+    physical_streams={(e["pid"],e["tid"]):e["args"]["name"] for e in events
+                      if e.get("name")=="thread_name" and e.get("pid") in gpu_pids
+                      and re.match(r"^Stream #\d+",e.get("args",{}).get("name",""))}
+    step_events={}
+    event_count=sum(e.get("ph")=="X" for e in events)
+    metadata_path=records/"step_trace_metadata.json"
+    export_metadata=trace_binding or (json.loads(metadata_path.read_text()) if metadata_path.exists() else None)
+    if export_metadata is not None:
+        limit=export_metadata["trace_viewer_event_limit"]
+        if event_count>=limit: raise ValueError("trace达到查看器事件上限，不能据此做完整性能结论")
+    for e in events:
+        if e.get("ph")=="X" and e.get("name")=="motionjepa_train" and e.get("pid") not in gpu_pids:
+            step=int(e["args"]["step_num"])
+            if step in step_events: raise ValueError("trace出现重复的主线程步骤注解")
+            step_events[step]=e
     if any(r["step"] not in step_events for r in selected): raise ValueError("trace 缺少逐步注解")
     first,last=step_events[warmup],step_events[end_step]
     lo,hi=float(first["ts"]),float(last["ts"])+float(last["dur"])
@@ -62,22 +87,26 @@ def summarize(records, gpu_csv, warmup=100, end_step=299):
     gpu_intervals={pid:[] for pid in gpu_pids}
     categories={"gemm":0.0,"communication":0.0,"transfer":0.0,"other":0.0}
     event_counts={pid:0 for pid in gpu_pids}
+    ignored_non_stream_events=0
     for e in events:
         pid=e.get("pid")
         if pid not in gpu_pids or e.get("ph")!="X": continue
+        if (pid,e.get("tid")) not in physical_streams:
+            ignored_non_stream_events+=1
+            continue
         begin,finish=max(lo,float(e["ts"])),min(hi,float(e["ts"])+float(e.get("dur",0)))
         if finish <= begin: continue
         gpu_intervals[pid].append((begin,finish)); event_counts[pid]+=1
         label=(str(e.get("name",""))+" "+str(e.get("args",{}).get("hlo_op",""))).lower()
-        if any(x in label for x in ("nccl","all_reduce","all-reduce","all_gather","all-gather","reduce_scatter")): kind="communication"
+        if any(x in label for x in ("nccl","all_reduce","all-reduce","all_gather","all-gather","reduce_scatter","reduce-scatter","all-to-all","collective-permute")): kind="communication"
         elif any(x in label for x in ("memcpy","memset")): kind="transfer"
         elif any(x in label for x in ("gemm","matmul","dot")): kind="gemm"
         else: kind="other"
         categories[kind]+=finish-begin
-    if not all(event_counts.values()): raise ValueError("稳态窗口内有 GPU 缺少设备事件")
+    if not all(event_counts.values()): raise ValueError("稳态窗口内有 GPU 缺少物理stream设备事件")
     waits=[]
     for e in events:
-        if e.get("name")=="motionjepa_data_next" and e.get("ph")=="X" and warmup <= int(e["args"]["step_num"]) <= end_step:
+        if e.get("name")=="motionjepa_data_next" and e.get("ph")=="X" and e.get("pid") not in gpu_pids and warmup <= int(e["args"]["step_num"]) <= end_step:
             waits.append((float(e["ts"]),float(e["ts"])+float(e["dur"])))
     any_busy=merged([interval for intervals in gpu_intervals.values() for interval in intervals])
     wait_total=duration(waits)
@@ -110,6 +139,9 @@ def summarize(records, gpu_csv, warmup=100, end_step=299):
             "gpu_util_slow_steps":utilization(slow),"gpu_util_other_steps":utilization(other),
             "slow_threshold_host_step_s":slow_limit,"gpu_util_per_device":{str(k):utilization(v) for k,v in per_gpu.items()},
             "trace_file":str(trace_files[0]),"trace_event_counts":{str(gpu_pids[k]):v for k,v in event_counts.items()},
+            "trace_total_events":len(events),"gpu_ignored_non_stream_events":ignored_non_stream_events,
+            "trace_reexport_binding":trace_binding,
+            "gpu_physical_streams":{str(gpu_pids[pid]):sorted(name for (p,_),name in physical_streams.items() if p==pid) for pid in gpu_pids},
             "measurement_note":"设备事件按同一墙钟窗口统计；异步执行可重叠，kernel 累计时间与主线程各阶段不能相加。NVML 使用原始密集采样，不把相同读数视为新增独立证据。"}
     return result
 
@@ -120,9 +152,10 @@ def main():
     parser.add_argument("--gpu-csv",type=pathlib.Path,required=True)
     parser.add_argument("--warmup-steps",type=int,default=100)
     parser.add_argument("--end-step",type=int,default=299)
+    parser.add_argument("--trace-dir",type=pathlib.Path,help="显式使用从同一次原始XPlane完整重导出的目录")
     parser.add_argument("--out",type=pathlib.Path,required=True)
     args=parser.parse_args()
-    result=summarize(args.records,args.gpu_csv,args.warmup_steps,args.end_step)
+    result=summarize(args.records,args.gpu_csv,args.warmup_steps,args.end_step,args.trace_dir)
     args.out.parent.mkdir(parents=True,exist_ok=True)
     with args.out.open("x") as f: json.dump(result,f,ensure_ascii=False,indent=2)
     print(f"STEADY_PERF=PASS steps={result['window']['steps']} mean_step_s={result['mean_step_s']:.6f} samples_per_second={result['samples_per_second']:.3f}")

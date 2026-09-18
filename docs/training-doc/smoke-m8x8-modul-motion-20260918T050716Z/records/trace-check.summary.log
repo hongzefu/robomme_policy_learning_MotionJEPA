@@ -1,0 +1,22 @@
+SOURCE_HEAD=5b3b812961ed089f94546edfda8c116d1e7564c1
+VALIDATION_SOURCE=working_tree
+START_UTC=2026-09-18T05:34:03Z
+ M scripts/training/step_timing.py
+ M scripts/training/tests/summarize_step_timing.py
+ M scripts/training/tests/test_motion_v2_tools.py
+?? scripts/training/tests/reexport_step_trace.py
+?? scripts/training/tests/test_step_timing_export.py
+207872959317097409b28c9ea11d2754c5db94e99aa3f0743e5f3f97fd29d374  scripts/training/step_timing.py
+a1dc076e7d28490d5f511cc2e73daa95af9684fdd5dbb7f553c9760187d1dbbd  scripts/training/tests/reexport_step_trace.py
+79a3bf7f23368f4c592643f2565dd206dac7e9b70e50cc3515042180a0505454  scripts/training/tests/summarize_step_timing.py
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+TRACE_REEXPORT=PASS {"schema": 1, "source_xplane": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/smoke-m8x8-modul-motion-20260918T050716Z/step_trace/plugins/profile/2026_09_18_05_17_44/ip-10-242-11-177.us-west-2.compute.internal.xplane.pb", "source_xplane_sha256": "ffcae70e84d4eaf44ef3f3d076d573bd2f17e6f883b6960fbcad1d17ab752a04", "trace_sha256": "d9b168335c495dd2c811103cb5c00b48f94688ae6fbcaec04652082f90c53cb0", "trace_viewer_event_limit": 100000000, "exporter": "jaxlib.ProfilerSession.export"}
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+STEADY_PERF=PASS steps=15 mean_step_s=1.571272 samples_per_second=81.463
+HOST_PHASES {"train_dispatch": 0.36626428499196967, "data_next": 0.13044550130143762, "logging": 0.5931109220099946, "checkpoint": 0.4812286381299297}
+DEVICE_PHASES_MS_PER_STEP {"gemm": 618.0287762000586, "communication": 128.59928368329605, "transfer": 26.38511764996064, "other": 188.3356463173306}
+GPU_UTIL {"samples": 376, "mean": 61.80053191489362, "zero_fraction": 0.17287234042553193}
+GPU_UTIL_STRATA {"slow": {"samples": 136, "mean": 16.00735294117647, "zero_fraction": 0.47794117647058826}, "other": {"samples": 240, "mean": 87.75, "zero_fraction": 0.0}}
+SMOKE_TRACE_RECOVERY=PASS model_training_repeated=0
+END_UTC=2026-09-18T05:35:56Z
+EXIT_CODE=0
