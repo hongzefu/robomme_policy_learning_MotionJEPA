@@ -19,7 +19,7 @@ import mani_skill
 from robomme.injection_candidates import load_candidates, candidate_key
 
 BENCHMARK = repo / 'third_party/robomme_benchmark'
-# benchmark 锁定提交：fork 的 PolicyEvalThirdParty-v2-vail-eval-0917 分支，
+# benchmark 锁定提交：fork 的 PolicyEvalThirdParty-v2-eval-0917 分支，
 # 从 newtask-v2.1refractor 的 77681e106f005f1ff93157f36b973d1005cf0ebe 切出并加了策略侧建环境入口
 PINNED = 'b4e97f22fe007078e297205898c07c1acbc69165'
 FORK_URLS = (

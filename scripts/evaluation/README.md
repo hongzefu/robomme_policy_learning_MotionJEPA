@@ -21,7 +21,7 @@ CUDA_VISIBLE_DEVICES=1 bash scripts/evaluation/run.sh 新运行名 "$PWD/v1-stor
 ## test/primary 700 条评测（2026-09-18 起）
 
 评测集换成 fork `hongzefu/robomme_benchmark_MotionJEPA` 的注入候选，**不是官方 test split**。
-submodule 锁在 `PolicyEvalThirdParty-v2-vail-eval-0917` 分支的 `b4e97f2`（从 `newtask-v2.1refractor`
+submodule 锁在 `PolicyEvalThirdParty-v2-eval-0917` 分支的 `b4e97f2`（从 `newtask-v2.1refractor`
 的 `77681e1` 切出，加了 `make_env_for_spec` 与 `robomme.injection_candidates`）。
 
 ### 700 条是什么
