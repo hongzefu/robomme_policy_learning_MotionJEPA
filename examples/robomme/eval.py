@@ -223,6 +223,8 @@ def setup_log_dict(save_dir: Path, args: Args) -> dict:
 def evaluate(args: Args):
     """Main evaluation function."""
     check_args(args)
+    if args.max_episodes < 0:
+        raise ValueError("max_episodes 必须为非负整数")
 
     save_dir = setup_save_directory(args)
     video_save_dir = save_dir / "videos"
@@ -241,7 +243,7 @@ def evaluate(args: Args):
 
     evaluator = EpisodeEvaluator(args, save_dir)
 
-    while not os.path.exists(save_dir / "log.json"):
+    if not os.path.exists(save_dir / "log.json"):
         for task_name in task_names:
             if task_name not in log_dict:
                 log_dict[task_name] = {}
@@ -258,26 +260,26 @@ def evaluate(args: Args):
                     print(f"[robomme] episode {episode_id} already evaluated, skipping...")
                     continue
 
-                env_runner.make_env(episode_id)
-                print(f"\n[robomme] env for task {task_name} episode {episode_id} setup finished")
-
                 try:
+                    env_runner.make_env(episode_id)
+                    print(f"\n[robomme] env for task {task_name} episode {episode_id} setup finished")
                     success_flag = evaluator.eval_each_episode(env_runner, video_save_dir)
-                    if success_flag == "unknown":
-                        log_dict[task_name][episode_id] = "error"
+                    if success_flag in ("unknown", "error"):
+                        log_dict[task_name][str(episode_id)] = "error"
                     else:
-                        log_dict[task_name][episode_id] = success_flag == "success"
+                        log_dict[task_name][str(episode_id)] = success_flag == "success"
                 except Exception as e:
                     print(f"Error evaluating episode {episode_id} for task {task_name}: {e}")
-                    log_dict[task_name][episode_id] = "error"
-
-                env_runner.close_env()
+                    success_flag = "error"
+                    log_dict[task_name][str(episode_id)] = "error"
+                finally:
+                    try:
+                        env_runner.close_env()
+                    except Exception as e:
+                        print(f"关闭环境失败：{task_name}/{episode_id}: {e}")
+                        log_dict[task_name][str(episode_id)] = "error"
                 with open(save_dir / "progress.json", "w") as f:
                     json.dump(log_dict, f, indent=2)
-
-                if success_flag == "unknown":
-                    print("API calling error, aborting...")
-                    return
 
             del env_runner
             time.sleep(1)
@@ -285,7 +287,7 @@ def evaluate(args: Args):
         try:
             final_results = {}
             final_results["success_rate"] = {
-                task_name: sum(log_dict[task_name].values()) / len(log_dict[task_name].values())
+                task_name: sum(value is True for value in log_dict[task_name].values()) / len(log_dict[task_name].values())
                 for task_name in log_dict.keys()
             }
             final_results["total_success_rate"] = (
@@ -295,7 +297,7 @@ def evaluate(args: Args):
                 json.dump(final_results, f, indent=2)
         except Exception as e:
             print(f"Error saving final results: {e}")
-            time.sleep(1)
+            raise
 
 
 if __name__ == "__main__":
