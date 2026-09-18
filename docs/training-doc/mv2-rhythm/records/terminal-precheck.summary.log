@@ -1,0 +1,8 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+RHYTHM_PROGRESS cases=1/1 es=1073 points=67
+  g317-BinFill: es=1073 T=2146 点数 eval/_drive/独立生成 = 67/67/67 τ_max=2129 k_max=132 终止=env_done C=1072 C%16=0
+RHYTHM_EQ=PASS episodes=1 points=67 tau_mismatches=0 es_mismatches=0 k_mismatches=0 order_sha_mismatches=0 driver=examples/robomme/utils.py:EpisodeState
+  env_done g317-BinFill: es=1073 T=2146 C=1072 infer=67 （公式 67 / 独立生成 67）终止=env_done
+EVAL_TERMINATION=PASS max_steps=1300 infer_calls=82 first_batch_included=1 tau_max=es+1296 last_partial_batch_dropped=1 residual_frames=4 termination=count_guard env_done_cases=1
+TERMINAL_PRECHECK=PASS seconds=19.22
+EXIT_CODE=0

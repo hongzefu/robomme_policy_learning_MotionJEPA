@@ -1,0 +1,52 @@
+{
+  "rhythm": {
+    "episodes": 1,
+    "points": 67,
+    "details": [
+      {
+        "tag": "g317-BinFill",
+        "es": 1073,
+        "t_env": 2146,
+        "points_eval": 67,
+        "points_drive": 67,
+        "points_expected": 67,
+        "tau_max": 2129,
+        "k_max": 132,
+        "termination": "env_done",
+        "reference_frames": 2145,
+        "c_env": 1072,
+        "c_env_mod16": 0
+      }
+    ],
+    "tau_mismatches": 0,
+    "es_mismatches": 0,
+    "k_mismatches": 0,
+    "order_sha_mismatches": 0
+  },
+  "termination": {
+    "case_count_guard": {
+      "es": 0,
+      "t_env": 1700,
+      "infer_calls": 82,
+      "tau_max": 1296,
+      "count": 1301,
+      "residual_frames": 4,
+      "termination": "count_guard"
+    },
+    "cases_env_done": [
+      {
+        "tag": "g317-BinFill",
+        "es": 1073,
+        "t_env": 2146,
+        "termination": "env_done",
+        "infer_calls": 67,
+        "formula": 67,
+        "simulated": 67,
+        "count": 1072,
+        "residual_frames": 16
+      }
+    ],
+    "fails": []
+  },
+  "seconds": 19.222851207945496
+}

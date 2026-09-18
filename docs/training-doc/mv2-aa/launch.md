@@ -62,7 +62,7 @@ body() (
   NORM="$V1_STORE/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json"
   test "$(tail -n 1 "$V1_STORE/logs/mv2-m4.driver.log")" = EXIT_CODE=0
   test "$(tail -n 1 "$V1_STORE/logs/mv2-v4.driver.log")" = EXIT_CODE=0
-  test "$(tail -n 1 "$V1_STORE/logs/mv2-rhythm-rep.driver.log")" = EXIT_CODE=0
+  test "$(tail -n 1 "$V1_STORE/logs/mv2-rhythm-fixed.driver.log")" = EXIT_CODE=0
   printf 'CHECK_HEAD=%s\nSTART_UTC=%s\n' "$CHECK_HEAD" "$(date -u +%FT%TZ)"
   for side in a b; do
     test "$(nvidia-smi --id=4,5 --query-gpu=memory.used --format=csv,noheader,nounits | paste -sd+ | bc)" = 0

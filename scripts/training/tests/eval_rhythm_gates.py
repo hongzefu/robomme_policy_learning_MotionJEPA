@@ -155,6 +155,11 @@ def expected_taus(es: int, t_env: int, max_steps: int = MAX_STEPS) -> list[int]:
     return [es + 16 * j for j in range(last_count // 16 + 1)] if last_count >= 0 else []
 
 
+def reference_frame_count(es: int, t_env: int, max_steps: int = MAX_STEPS) -> int:
+    """通用重放只覆盖终止前可能进入下一次 infer 的帧，不把终止帧补成新推理点。"""
+    return min(t_env - 1, es + max_steps + 1)
+
+
 def _per_step_collect(pol, entry, out: list):
     """收集每个决策时刻的 (τ, es, k, mem_order sha)；k 同时与训练侧 motion_store 公式交叉核对。
 
@@ -199,7 +204,10 @@ def gate_rhythm(cases, rec: dict) -> tuple[str, bool]:
             _pol.exec_start_idx = _pol.mem_buffer.exec_start_idx
             _per_step_collect(_pol, _entry, _rows)(t)
 
-        G._drive(mem_b, es, t_env, per_step_b)
+        # eval 在终止步记录观测后 break；即使恰好凑满16帧，也不再进入下一次 infer。
+        # 通用 _drive 保持完整帧流语义，仅在本验证调用处约束环境终止/步数兜底。
+        ref_frames = reference_frame_count(es, t_env)
+        G._drive(mem_b, es, ref_frames, per_step_b)
 
         # 本脚本独立生成的清单（第三方核对，不取自任一臂）
         want = expected_taus(es, t_env)
@@ -220,7 +228,7 @@ def gate_rhythm(cases, rec: dict) -> tuple[str, bool]:
                         "points_drive": len(rows_b), "points_expected": len(want),
                         "tau_max": rows_a[-1]["tau"] if rows_a else None,
                         "k_max": max((r["k"] for r in rows_a), default=0),
-                        "termination": info["termination"],
+                        "termination": info["termination"], "reference_frames": ref_frames,
                         "c_env": t_env - 1 - es, "c_env_mod16": (t_env - 1 - es) % 16})
         print(f"RHYTHM_PROGRESS cases={len(details)}/{len(cases)} es={es} points={len(rows_a)}", flush=True)
 
@@ -270,7 +278,7 @@ def gate_termination(cases, rec: dict) -> tuple[str, bool]:
     if not dropped:
         fails.append("case A 末尾残批未被丢弃（buffer 为空，与 eval.py 语义不符）")
 
-    # case B：环境主动截断（真实四任务 episode，T < 1300）
+    # case B：环境主动截断，真实案例的执行步数 C=T-1-es 不超过1300。
     rows_b: list[dict] = []
     for es, t_env, tag in cases:
         _reset(pol, mem)
@@ -278,7 +286,7 @@ def gate_termination(cases, rec: dict) -> tuple[str, bool]:
         sink: list[dict] = []
         info = eval_drive(pol, es, t_env, _per_step_collect(pol, entry, sink))
         got = len(info["taus"])
-        want_formula = (t_env - 1 - es) // 16 + 1          # 计划公式 ⌊(T−1−es)/16⌋+1
+        want_formula = (t_env - 2 - es) // 16 + 1          # C>0 时为 ceil(C/16)，终止后不再 infer
         want_sim = len(expected_taus(es, t_env))
         rows_b.append({"tag": tag, "es": es, "t_env": t_env, "termination": info["termination"],
                        "infer_calls": got, "formula": want_formula, "simulated": want_sim,
@@ -286,7 +294,7 @@ def gate_termination(cases, rec: dict) -> tuple[str, bool]:
         if info["termination"] != "env_done":
             fails.append(f"case B {tag} 终止方式 {info['termination']} != env_done")
         if got != want_formula:
-            fails.append(f"case B {tag} infer 次数 {got} != ⌊(T−1−es)/16⌋+1 = {want_formula}")
+            fails.append(f"case B {tag} infer 次数 {got} != ⌊(T−2−es)/16⌋+1 = {want_formula}")
         if got != want_sim:
             fails.append(f"case B {tag} infer 次数 {got} != 独立生成 {want_sim}")
         print(f"  env_done {tag}: es={es} T={t_env} C={t_env - 1 - es} infer={got} "

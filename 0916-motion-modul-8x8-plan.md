@@ -8,6 +8,8 @@
 
 **09-18 节奏回放裁决**：用户原话「采用35例，保留其他全部覆盖（推荐）」。`eval_rhythm_gates.py --replay-cases representative --expect-replay-cases 35 --expect-real-es 411` 只缩减 rhythm/termination 重复回放：16种余数各取最短/最长，并保留四任务最长及全局最大es1152，共35个真实例。全部411种长度的预算扫描、1296/1297两侧完整1300步、TAU_LONG、V4、V-online和200次reset全部保留。默认all兼容原行为。原411例任务运行1334秒后按该决定中止、EXIT_CODE=143，保留日志且不计通过；5项测试及实际边界短测通过，完整代表例从修补后的clean HEAD重跑。
 
+**09-18 终止参考裁决**：用户确认「修正验证参考并补用例（推荐）」。35例首次重跑发现g317在16步整边界终止时，eval控制流/通用参考/独立生成点数为67/68/67；只修`eval_rhythm_gates.py::gate_rhythm`的参考帧数截止与`gate_termination`公式，不改生产eval、通用_drive或任何其他覆盖。环境终止推理次数为ceil((T−1−es)/16)，即floor((T−2−es)/16)+1；1296/1297预算边界与411长度扫描保留。19项测试和真实g317短测已通过，完整重跑从新clean HEAD执行。
+
 | 项 | 决定 | 日期 |
 |---|---|---|
 | 接入目标 | modulation 8×8，与基线 `v2-1600ep-m8x8-modul-b128-60k` 同 YAML、只多 `motion` 节 | 09-16 |
