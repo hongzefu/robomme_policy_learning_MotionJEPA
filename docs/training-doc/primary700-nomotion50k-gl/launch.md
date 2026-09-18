@@ -63,7 +63,18 @@ AskUserQuestion 拍板工作单元粒度 = 20 个 (模型, 分片)。机制（`s
 
 ## 冒烟（gpu-hold-08，两轮各 2 集）
 
-（待补：冒烟完成后填）
+HEAD `41f116f`（clean）。登录节点 tmux `ev-ab-smoke-gl` 内 `RUN_SUFFIX=-smoke-gl CHUNK_EPISODES=1 QUEUE_DIR=…/primary700-ab50k-smoke/queue
+gl_hold_pool.sh 61495578`，队列两项 `nomotion smoke`、`motion smoke`（计划 = RouteStick/xhard 115 + BinFill/hard 153）。
+`WORKER_START … node=gl1523 22:12:15Z` → `WORKER_DONE job=61495578 ran=2 failed=0 22:22:37Z`（10 min 22 s）。日志 `records/smoke-gl-worker.txt`，
+两轮 `check.json` / `progress.json` / server 摘录 / `done` 记录均在 `records/smoke-gl-*`。
+
+| 轮 | 起止（UTC） | 结果 | `MOTION_PROV_RELAXED` | server 进程树 | 首批 `add_buffer`（451 帧） | 首次 `infer` | 16 帧 `add_buffer` 稳态 median | `infer` 稳态 median |
+|---|---|---|---|---|---|---|---|---|
+| 无 motion 50000 | 22:12:15 → 22:15:25（3 min 10 s） | `SHARD_PASS evaluated=2 successes=0 errors=[]` | 0 行（无 sidecar） | 2 级 | 3,562 ms | 3,663 ms | **62 ms**（n=45） | 124 ms |
+| motion 50000 | 22:15:25 → 22:22:37（7 min 12 s） | `SHARD_PASS evaluated=2 successes=1 errors=[]`（RouteStick 成功） | 恰 6 行（gpu_name / compute_cap / sm_count × vae / encoder） | 4 级（含 sidecar） | 49,044 ms | 3,823 ms | **1,711 ms**（n=93） | 126 ms |
+
+两轮 `EVAL_PARAMS` 除 `policy` / `config` 外逐字相同（`ckpt=50000 seed=7 max_steps=2000 wall=2400 online_gpu=0 prov_relax=gpu_name,compute_cap,sm_count`）。
+首次 `infer` 从上一轮冒烟的 43 s 降到 3.8 s：JAX 编译缓存（`v1-store/cache/policy-eval/jax`）已热。冒烟产物（两个 `*-smoke-gl` 运行目录与冒烟队列）已删除。
 
 ## 正式起跑
 
