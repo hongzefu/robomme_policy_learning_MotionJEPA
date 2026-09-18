@@ -1,10 +1,12 @@
 """执行真实 evaluate 控制流，验证单回合、异常、恢复和收尾。"""
 import ast
+import contextlib
 import dataclasses
 import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -14,7 +16,7 @@ SOURCE = Path(__file__).resolve().parents[2] / 'examples/robomme/eval.py'
 class ControlTests(unittest.TestCase):
     def setUp(self):
         tree = ast.parse(SOURCE.read_text())
-        tree.body = [node for node in tree.body if getattr(node, 'name', None) in {'Args', 'setup_save_directory', 'setup_log_dict', 'evaluate'}]
+        tree.body = [node for node in tree.body if getattr(node, 'name', None) in {'Args', 'setup_save_directory', 'setup_log_dict', 'evaluate', 'summarize', 'load_plan', 'episode_deadline'}]
         self.visited = []
         self.closed = 0
         self.outcomes = {}
@@ -34,7 +36,7 @@ class ControlTests(unittest.TestCase):
                 value = owner.outcomes.get(runner.episode_id, 'success')
                 if isinstance(value, Exception): raise value
                 return value
-        self.ns = dict(dataclasses=dataclasses, json=json, os=os, shutil=shutil, Path=Path,
+        self.ns = dict(dataclasses=dataclasses, json=json, os=os, shutil=shutil, Path=Path, contextlib=contextlib, signal=signal,
                        check_args=lambda _: None, TASK_NAME_LIST=['RouteStick'], EnvRunner=Runner,
                        EpisodeEvaluator=Evaluator, time=SimpleNamespace(sleep=lambda _: None))
         exec(compile(tree, str(SOURCE), 'exec'), self.ns)

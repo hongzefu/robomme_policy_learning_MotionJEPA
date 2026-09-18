@@ -3,14 +3,24 @@
 # 用法：run_shard.sh <运行名> <checkpoint绝对路径> <分片计划json> [策略seed=7] [分片标识]
 # 可覆盖：EVAL_TIMEOUT（每块客户端超时秒，默认 7200）、CHUNK_EPISODES（每块最多新评几集，默认 20）
 #        ALLOW_RESUME=1（运行目录已存在时继续跑，用于被 Slurm 砍掉后重提）
+#        POLICY（结果目录层级名，默认 perceptual-framesamp-modul-8frame-8x8）、POLICY_CONFIG（serve_policy 的训练 config 名，默认 mme_vla_suite）
+#        EXPECT_CKPT_ID（只接受这个 step 目录名，默认 59999）、EPISODE_WALL_S（单集墙钟秒，不设则用 eval.py 默认 900）
+#        SHARD_INDEX（srun 进既有作业时代替 SLURM_ARRAY_TASK_ID 决定默认分片标识与端口基准）
+#        MMEVLA_MOTION_PROV_RELAX（motion 轮：sidecar provenance 放行的硬件键，见 motion_client.py）
+#   motion 轮示例：POLICY=perceptual-framesamp-modul-8frame-8x8-motion POLICY_CONFIG=mme_vla_suite_b128_80k EXPECT_CKPT_ID=50000
+#                 EPISODE_WALL_S=2400 MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 RUN_NAME="${1:?需要运行名}"
 CKPT="${2:?需要 checkpoint 绝对路径}"
 PLAN="${3:?需要分片计划 json}"
 SEED="${4:-7}"
-SHARD_TAG="${5:-${SLURM_ARRAY_TASK_ID:-s0}}"
-POLICY=perceptual-framesamp-modul-8frame-8x8
+SHARD_INDEX="${SHARD_INDEX:-${SLURM_ARRAY_TASK_ID:-0}}"
+SHARD_TAG="${5:-s$SHARD_INDEX}"
+POLICY="${POLICY:-perceptual-framesamp-modul-8frame-8x8}"
+POLICY_CONFIG="${POLICY_CONFIG:-mme_vla_suite}"
+EXPECT_CKPT_ID="${EXPECT_CKPT_ID:-59999}"
+EPISODE_WALL_S="${EPISODE_WALL_S:-}"
 MAX_STEPS=2000
 EVAL_TIMEOUT="${EVAL_TIMEOUT:-7200}"
 CHUNK_EPISODES="${CHUNK_EPISODES:-20}"
@@ -21,10 +31,12 @@ TLS_TUNABLE="glibc.rtld.optional_static_tls=65536"
 
 [[ "$RUN_NAME" =~ ^[a-zA-Z0-9_-]+$ && "$SEED" =~ ^[0-9]+$ && "$SHARD_TAG" =~ ^[a-zA-Z0-9_-]+$ ]] || exit 2
 [[ "$EVAL_TIMEOUT" =~ ^[1-9][0-9]*$ && "$CHUNK_EPISODES" =~ ^[1-9][0-9]*$ ]] || exit 2
+[[ "$POLICY" =~ ^[a-zA-Z0-9_.-]+$ && "$POLICY_CONFIG" =~ ^[a-zA-Z0-9_]+$ && "$EXPECT_CKPT_ID" =~ ^[0-9]+$ && "$SHARD_INDEX" =~ ^[a-zA-Z0-9_-]+$ ]] || exit 2
+[[ -z "$EPISODE_WALL_S" || "$EPISODE_WALL_S" =~ ^[1-9][0-9]*$ ]] || exit 2
 [[ "$CKPT" == /* && -d "$CKPT/params" && -f "$CKPT/assets/robomme/norm_stats.json" ]] || { echo 'checkpoint 路径无效'; exit 2; }
 [[ -f "$PLAN" ]] || { echo "分片计划不存在：$PLAN"; exit 2; }
 CKPT_ID="$(basename "$CKPT")"
-[[ "$CKPT_ID" == 59999 ]] || { echo '本轮只验收 59999'; exit 2; }
+[[ "$CKPT_ID" == "$EXPECT_CKPT_ID" ]] || { echo "本轮只验收 step $EXPECT_CKPT_ID，得到 $CKPT_ID"; exit 2; }
 RUN_DIR="$EVAL_REPO/v1-store/evaluation/$RUN_NAME/$SHARD_TAG"
 # 防覆盖判据是「已有评测结果」而不是「目录存在」：sbatch 的 start_samplers 会先把
 # $RUN_DIR/records 建出来（采样必须覆盖起跑段），拿目录存在当判据会让每个 job 一起跑就自杀。
@@ -49,11 +61,25 @@ check_local_gpu
 cd "$EVAL_REPO"
 mkdir -p "$RUN_DIR"
 SERVER_PID=''
+# 递归收集进程树（wrapper → uv → python → sidecar uv → sidecar python）；端口归属断言与收尾清理共用
+collect_tree() {
+    local pid="$1" child kids
+    printf '%s\n' "$pid"
+    kids="$(cat "/proc/$pid/task/$pid/children" 2>/dev/null)"
+    [[ -n "$kids" ]] || kids="$(ps -o pid= --ppid "$pid" 2>/dev/null)"
+    for child in $kids; do
+        collect_tree "$child"
+    done
+}
 cleanup() {
     RC=$?
     trap - EXIT
     if [[ -n "$SERVER_PID" ]]; then
-        kill "$SERVER_PID" 2>/dev/null || true
+        # motion 开启时 sidecar 是 server 的孙进程，只 kill wrapper 会留孤儿：先收树、再从叶到根逐个 TERM
+        local P
+        for P in $(collect_tree "$SERVER_PID" | tac); do
+            kill "$P" 2>/dev/null || true
+        done
         wait "$SERVER_PID" 2>/dev/null || true
     fi
     date -u +END_UTC=%Y-%m-%dT%H:%M:%SZ
@@ -92,14 +118,19 @@ timeout --kill-after=15s 180s "${CLIENT_UV[@]}" scripts/evaluation/render_probe.
 JAX_PLATFORMS=cpu "${SERVER_UV[@]}" scripts/evaluation/check_checkpoint.py "$CKPT" | tee "$RUN_DIR/checkpoint.log"
 
 # 端口：按 array 下标错开基准，避开同节点多片同时探到同一个空闲端口的竞态窗口
-PORT=$((18011 + (${SLURM_ARRAY_TASK_ID:-0} % 100) * 7))
+PORT_SLOT="$SHARD_INDEX"; [[ "$PORT_SLOT" =~ ^[0-9]+$ ]] || PORT_SLOT=$(( $(printf '%s' "$PORT_SLOT" | cksum | cut -d' ' -f1) % 100 ))
+PORT=$((18011 + (PORT_SLOT % 100) * 7))
 while (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; do
     PORT=$((PORT + 1))
     (( PORT < 18811 )) || exit 2
 done
 check_local_gpu
+# motion sidecar 的卡号跟随本进程可见的第一张卡（Slurm 单卡 step 里是 0；本机冒烟是 CUDA_VISIBLE_DEVICES 所选卡）
+export MMEVLA_MOTION_ONLINE_GPU="${CUDA_VISIBLE_DEVICES%%,*}"
+[[ -n "$MMEVLA_MOTION_ONLINE_GPU" ]] || export MMEVLA_MOTION_ONLINE_GPU=0
+echo "EVAL_PARAMS policy=$POLICY config=$POLICY_CONFIG ckpt=$CKPT_ID seed=$SEED max_steps=$MAX_STEPS wall=${EPISODE_WALL_S:-default} online_gpu=$MMEVLA_MOTION_ONLINE_GPU prov_relax=${MMEVLA_MOTION_PROV_RELAX:-none}"
 "${SERVER_UV[@]}" scripts/training/serve_policy.py --seed="$SEED" --port="$PORT" policy:checkpoint \
-    --policy.dir="$CKPT" --policy.config=mme_vla_suite > "$RUN_DIR/server.log" 2>&1 &
+    --policy.dir="$CKPT" --policy.config="$POLICY_CONFIG" > "$RUN_DIR/server.log" 2>&1 &
 SERVER_PID=$!
 READY=0
 for ((ATTEMPT=0; ATTEMPT<180; ATTEMPT++)); do
@@ -115,16 +146,7 @@ done
 # ⚠ 必须查整棵进程树：$! 拿到的是 wrapper，实际 bind 端口的是孙进程
 #   （env -> uv -> python，本机实测 wrapper 1066086 / uv 1066093 / python 1066100），
 #   socket fd 不在 wrapper 的 /proc/<pid>/fd 里。
-collect_tree() {
-    local pid="$1" child kids
-    printf '%s\n' "$pid"
-    kids="$(cat "/proc/$pid/task/$pid/children" 2>/dev/null)"
-    [[ -n "$kids" ]] || kids="$(ps -o pid= --ppid "$pid" 2>/dev/null)"
-    for child in $kids; do
-        collect_tree "$child"
-    done
-}
-HEXPORT=$(printf '%04X' "$PORT")
+HEXPORT$(printf '%04X' "$PORT")
 SERVER_TREE="$(collect_tree "$SERVER_PID" | tr '\n' ' ')"
 OWN=0
 for INODE in $(awk -v p=":$HEXPORT" '$2 ~ p"$" && $4=="0A" {print $10}' /proc/net/tcp /proc/net/tcp6 2>/dev/null); do
@@ -150,6 +172,7 @@ for ((CHUNK=1; CHUNK<=CHUNKS; CHUNK++)); do
         --args.max_steps="$MAX_STEPS" --args.save_dir="$RUN_DIR" \
         --args.episode_plan="$PLAN" --args.shard_tag="$SHARD_TAG" \
         --args.max_new_episodes="$CHUNK_EPISODES" \
+        ${EPISODE_WALL_S:+--args.episode_wall_s="$EPISODE_WALL_S"} \
         2>&1 | tee -a "$RUN_DIR/client.log"
     echo "CHUNK_DONE $CHUNK/$CHUNKS"
 done

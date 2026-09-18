@@ -208,16 +208,12 @@
       "headtail": "91834dfbaf50c90cb0c32bf9332c8f12",
       "needs_token": true,
       "source": {
-        "type": "hf_file",
-        "repo_id": "HongzeFu/MotionJEPA",
-        "repo_type": "model",
-        "revision": "749224110f91c82f5fc5d3007281d07a5d5c944e",
-        "tag": "wan-v8-filter10-72ep-a-e72",
-        "filename": "wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt",
+        "type": "hf_bucket",
+        "bucket_id": "HongzeFu/motionjepa-wan-full1600-72ep-v1",
+        "path": "checkpoint_epoch_72.pt",
         "private": true,
         "token_env": "HF_TOKEN",
-        "pending_upload": true,
-        "note": "新资产尚未上传；revision/tag 仍为历史定位，不可据此复刻新文件。本轮只使用已核验的本地原件，上传另行处理。"
+        "note": "2026-09-18 用户已把 wan-full1600-filter2-b176x4-72ep-a 全部 epoch 上传到该 bucket（根目录 checkpoint_epoch_*.pt / config.yaml / SHA256SUMS.pre.txt）；评估侧用 scripts/evaluation/download.sh 取回并按 SHA256SUMS.pre.txt 核验。fetch_assets.py 的 hf_file 拉取器不支持 bucket，本条只作定位与 verify 用。"
       },
       "related": {
         "mj_repo_commit": "2a484ad960ed6155321dc34def9011eb119f857f",
@@ -239,16 +235,12 @@
       "headtail": "9235775eafec313b22b6dc258a633188",
       "needs_token": true,
       "source": {
-        "type": "hf_file",
-        "repo_id": "HongzeFu/MotionJEPA",
-        "repo_type": "model",
-        "revision": "749224110f91c82f5fc5d3007281d07a5d5c944e",
-        "tag": "wan-v8-filter10-72ep-a-e72",
-        "filename": "wan-full1600-filter2-b176x4-72ep-a/config.yaml",
+        "type": "hf_bucket",
+        "bucket_id": "HongzeFu/motionjepa-wan-full1600-72ep-v1",
+        "path": "config.yaml",
         "private": true,
         "token_env": "HF_TOKEN",
-        "pending_upload": true,
-        "note": "新资产尚未上传；revision/tag 仍为历史定位，不可据此复刻新文件。本轮只使用已核验的本地原件，上传另行处理。"
+        "note": "2026-09-18 用户已把 wan-full1600-filter2-b176x4-72ep-a 全部 epoch 上传到该 bucket（根目录 checkpoint_epoch_*.pt / config.yaml / SHA256SUMS.pre.txt）；评估侧用 scripts/evaluation/download.sh 取回并按 SHA256SUMS.pre.txt 核验。fetch_assets.py 的 hf_file 拉取器不支持 bucket，本条只作定位与 verify 用。"
       },
       "related": {
         "mj_repo_commit": "2a484ad960ed6155321dc34def9011eb119f857f",
@@ -263,5 +255,5 @@
       ]
     }
   },
-  "sha256": "0a654077426d65a23d8e47c4ac98434bf47b34653c071e2d4768a332d245b27c"
+  "sha256": "62f972a8ef3f7a927f175404be87948cbe6cb8b1a98ef6a3289ce1714355bb8d"
 }

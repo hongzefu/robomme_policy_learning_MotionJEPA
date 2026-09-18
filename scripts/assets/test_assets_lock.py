@@ -77,6 +77,10 @@ def test_lock_revisions_are_commit_sha() -> None:
     """HF 来源的 revision 必须是 40 hex commit sha —— 禁 main/master（private repo 自己能 push，会漂）。"""
     for name, entry in LOCK["assets"].items():
         src = entry["source"]
+        if src["type"] == "hf_bucket":
+            # HF bucket 没有 commit / revision 概念，只钉 bucket_id + path，字节身份由资产自身 sha256 保证
+            assert src["bucket_id"] and src["path"], f"{name} hf_bucket 缺 bucket_id/path"
+            continue
         if src["type"].startswith("hf"):
             assert re.fullmatch(r"[0-9a-f]{40}", src["revision"]), f"{name} revision 非 40 hex"
 

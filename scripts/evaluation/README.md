@@ -21,8 +21,9 @@ CUDA_VISIBLE_DEVICES=1 bash scripts/evaluation/run.sh 新运行名 "$PWD/v1-stor
 ## test/primary 700 条评测（2026-09-18 起）
 
 评测集换成 fork `hongzefu/robomme_benchmark_MotionJEPA` 的注入候选，**不是官方 test split**。
-submodule 锁在 `PolicyEvalThirdParty-v2-eval-0917` 分支的 `b4e97f2`（从 `newtask-v2.1refractor`
-的 `77681e1` 切出，加了 `make_env_for_spec` 与 `robomme.injection_candidates`）。
+submodule 锁在 `b4e97f2`（从 `newtask-v2.1refractor` 的 `77681e1` 切出，加了 `make_env_for_spec` 与
+`robomme.injection_candidates`）；fork 上 `PolicyEvalThirdParty-v2-eval-0917` 与 `PolicyEvalThirdParty-v2-eval-0918-motion`
+两个分支都指向这一个 commit（motion 轮未改 benchmark 源码，只按「`PolicyEvalThirdParty-<主仓库任务分支>`」机制建名）。
 
 ### 700 条是什么
 
@@ -82,3 +83,36 @@ VideoUnmaskSwap/xhard 最大要 1312 步、BinFill/hard 真实最大 1152 步，
 （`success_flag=="unknown"` 与抛异常两条路都不落视频，都记 `"error"`），并逐帧解码每个 mp4。
 `merge_shards.py` 断言 10 片并集 700、两两不交，给出 14 组成功率、宏平均（14 组均值）与
 微平均（成功数/700），error 条目另写 `retry_plan.json` 供单 job 补跑。
+
+## motion 轮（2026-09-18 起，分支 `v2-eval-0918-motion`）
+
+被评权重换成 bucket `HongzeFu/robomme-vla-modul-motion-80k-v1` 的 `50000`（run `v2-1600ep-m8x8-modul-motion-b128-80k`，
+`motion.enabled=true`、`motion.budget=160`），口径与 `primary700-gl` 基线逐项相同（同一套 10 个分片计划、seed 7、`max_steps=2000`）。
+`src/` 里的在线 motion 路（`FrameSampMemory` 滚动缓存 + `MotionEncoderClient` sidecar）本来就在本分支，评估侧只补了两个口子：
+
+- `MMEVLA_MOTION_ONLINE_GPU`：sidecar 的卡号，`run_shard.sh` 自动设成本进程可见的第一张卡（Slurm 单卡 step 里是 0），
+  覆盖 run 快照写死的 `motion.online_gpu: 4`（训练机的卡号）。
+- `MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count`：sidecar 与 run 内 `motion_provenance.json` 逐键比对时只放行这
+  三个硬件键（训练 A100 → 评估 A40 / Ada 必然不等；driver / torch / cuda / cudnn / diffusers 已核实逐值相同），不等改为打
+  `MOTION_PROV_RELAXED` 行进 server.log；其余键仍硬拒。用户 2026-09-18 批准。
+
+多出来的三份资产（`setup.sh wan` + `download.sh` 落位，`scripts/assets/fetch_assets.py verify --assets wan_vae,motionjepa_ckpt,motionjepa_config` 核验）：
+
+| 资产 | 落点 | 来源 |
+|---|---|---|
+| sidecar venv（torch 2.9.0+cu128 / diffusers 0.39.0） | `v1-store/venvs/wan` | `scripts/dataset/wan/uv.lock`，NFS 3.11.14 解释器 |
+| Wan2.1 VAE | `v1-store/cache/hf/hub/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers` | 本机 `/data` 同路径缓存复制 |
+| MotionJEPA encoder `checkpoint_epoch_72.pt` + `config.yaml` | `v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a/` | bucket `HongzeFu/motionjepa-wan-full1600-72ep-v1`，按其 `SHA256SUMS.pre.txt` 核验 |
+
+入口全部经环境变量切换，非 motion 轮默认值不变：
+
+```bash
+bash scripts/evaluation/download.sh HongzeFu/robomme-vla-modul-motion-80k-v1 50000 "$PWD/v1-store/models/robomme-vla-modul-motion-80k-v1"
+POLICY=perceptual-framesamp-modul-8frame-8x8-motion POLICY_CONFIG=mme_vla_suite_b128_80k EXPECT_CKPT_ID=50000 \
+EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count \
+bash scripts/evaluation/run_shard.sh <运行名> "$PWD/v1-store/models/robomme-vla-modul-motion-80k-v1/50000" <分片计划json> 7 <分片标识>
+```
+
+集群侧不再发 array，而是在**既有** gpu-hold 作业里直接跑（`gl_hold_queue.sh`，登录节点 detached tmux 内对一个 jobid 串行
+`srun --jobid --overlap --exact --gpu_cmode=shared` 若干分片；`gl_eval_shard.sbatch` 用 `SHARD_INDEX` 代替 array 下标）。
+`EPISODE_WALL_S` 只兜死锁不属口径：sidecar 每窗约 1.5 s（A100 实测）会把 2000 步的集推近默认 900 s，motion 轮放宽到 2400 s。

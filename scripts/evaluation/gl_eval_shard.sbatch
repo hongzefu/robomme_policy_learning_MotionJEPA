@@ -10,6 +10,9 @@
 # 必传（经 --export）：RUN_NAME、CKPT、PLAN_DIR
 # 可选：SEED(7)、EXPECTED_GIT_HEAD（传入则起跑前断言 HEAD 未漂移 + 工作区 clean）、
 #      ALLOW_RESUME(0)、EVAL_TIMEOUT(7200)、CHUNK_EPISODES(20)
+#      SHARD_INDEX：用 srun --jobid=<既有作业> --overlap 直接跑时没有 SLURM_ARRAY_TASK_ID，由它指定分片下标
+#                   （gl_hold_queue.sh 就是这么调的）；两者都没有则拒绝起跑
+#      POLICY / POLICY_CONFIG / EXPECT_CKPT_ID / EPISODE_WALL_S / MMEVLA_MOTION_PROV_RELAX：原样透传给 run_shard.sh（motion 轮用）
 #
 #SBATCH --job-name=primary700-gl
 #SBATCH --account=chaijy2
@@ -43,8 +46,10 @@ RUN_NAME="${RUN_NAME:?需要 RUN_NAME}"
 CKPT="${CKPT:?需要 CKPT 绝对路径}"
 PLAN_DIR="${PLAN_DIR:?需要 PLAN_DIR}"
 SEED="${SEED:-7}"
-SHARD="s${SLURM_ARRAY_TASK_ID}"
-PLAN="$PLAN_DIR/shard${SLURM_ARRAY_TASK_ID}.json"
+SHARD_INDEX="${SHARD_INDEX:-${SLURM_ARRAY_TASK_ID:?需要 SHARD_INDEX 或 SLURM_ARRAY_TASK_ID}}"
+export SHARD_INDEX
+SHARD="s${SHARD_INDEX}"
+PLAN="$PLAN_DIR/shard${SHARD_INDEX}.json"
 
 # ── 起跑闸：array 可能排队数小时，期间仓库变动一律 fail-fast ──
 if [ -n "${EXPECTED_GIT_HEAD:-}" ]; then
