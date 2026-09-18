@@ -16,6 +16,18 @@ RUN_DIR="$EVAL_REPO/v1-store/evaluation/$RUN_NAME"
 [[ ! -e "$RUN_DIR" ]] || { echo "运行目录已存在：$RUN_DIR"; exit 2; }
 [[ -z "$(git -C "$EVAL_REPO" status --porcelain)" ]] || { echo '必须从 clean HEAD 启动'; exit 2; }
 command -v uv
+check_local_gpu() {
+    [[ -z "${SLURM_JOB_ID:-}" ]] || return 0
+    [[ -n "${CUDA_VISIBLE_DEVICES:-}" ]] || { echo '本机必须显式选择 GPU'; return 2; }
+    local gpu_pids
+    gpu_pids="$(nvidia-smi -i "$CUDA_VISIBLE_DEVICES" --query-compute-apps=pid --format=csv,noheader)" || return 2
+    if [[ -n "$gpu_pids" ]]; then
+        echo "所选 GPU 已被占用，停止起跑：$gpu_pids"
+        return 2
+    fi
+    echo "LOCAL_GPU_IDLE=PASS device=$CUDA_VISIBLE_DEVICES"
+}
+check_local_gpu
 cd "$EVAL_REPO"
 mkdir -p "$RUN_DIR"
 SERVER_PID=''
@@ -53,6 +65,7 @@ while (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; do
     PORT=$((PORT + 1))
     (( PORT < 18111 )) || exit 2
 done
+check_local_gpu
 "${SERVER_UV[@]}" scripts/training/serve_policy.py --seed="$SEED" --port="$PORT" policy:checkpoint \
     --policy.dir="$CKPT" --policy.config=mme_vla_suite > "$RUN_DIR/server.log" 2>&1 &
 SERVER_PID=$!

@@ -12,6 +12,8 @@ CUDA_VISIBLE_DEVICES=1 bash scripts/evaluation/run.sh 新运行名 "$PWD/v1-stor
 
 实际运行必须在 detached tmux 内，使用 PYTHONUNBUFFERED=1、pipefail、tee 和 EXIT_CODE。集群复用已分配资源，srun 显式加 --gpu_cmode=shared，工作目录指向本仓库。不可自动申请新作业，也不退回兼容渲染。
 
+本机起跑及模型服务启动前都会检查所选 GPU 上的计算进程，占用即停止。用户已明确要求等待空闲 GPU，不与已有任务同卡运行。
+
 测试：在已安装 uv 环境中执行 `scripts/evaluation/test_control.py` 和 `test_result.py`。来源检查额外核对官方 benchmark 锁定 SHA、editable 路径、ManiSkill fork 及 RouteStick 元数据。模型检查使用当前源码形状与 Orbax 元数据，不跳过多余参数。
 
 产物位于 v1-store/evaluation/<运行名>。EVAL_PASS 表示指定回合正常完成且视频完整可解码，任务成功由 task_successes 单独报告。error 不能作为正常失败通过验收。不得覆盖运行名或换 seed 挑选成功结果。
