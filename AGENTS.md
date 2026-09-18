@@ -144,6 +144,14 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
     - **应用后核对**：除 `git diff --check` 外，还必须运行 `git status --short`，并对本轮每个明确目标逐文件检查 `git diff -- <path>`；发现越界文件、`.orig` / `.rej`、非预期 hunk 或用户在途改动被带入时立即停止，不得暂存或提交。
     - **授权边界不扩张**：本回退只替代失效的文件补丁传输机制，不授权扩大修改范围、绕过破坏性操作审批，也不改变第 11 条逐文件暂存和保护他人在途改动的要求。
 
+## 策略评估的工作副本与第三方分支机制
+
+- 本轮用户明确授权：环境 A 的评估开发与运行使用 `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA`，主仓库分支为 `v2-vail-eval-0917`。此评估任务是第 13 条 NFS 只读归档规则的明确例外；产物仍只进入本工作副本 `v1-store/`，不依赖其他评估仓库。
+- 未修改 benchmark 时，保持官方 `RoboMME/robomme_benchmark` 来源与主仓库锁定的 gitlink，不创建 benchmark 分支，不切换 fork。本轮基线为 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。
+- 确需修改 benchmark 时，先说明具体阻塞、文件和修改范围；只使用 `hongzefu/robomme_benchmark_MotionJEPA`，从原锁定提交建立 `PolicyEvalThirdParty-<主仓库任务分支>`。本轮对应 `PolicyEvalThirdParty-v2-vail-eval-0917`。
+- benchmark 改动先在配套分支提交并推送，再由主仓库提交来源变更和新 gitlink。禁止以 fork 最新 HEAD 替换锁定版本，禁止直接提交到 benchmark 默认分支。
+- 所有评估脚本、环境配置与留档在主仓库任务分支提交。服务端与客户端使用独立 uv 环境，环境、缓存、权重和结果都位于本仓库 `v1-store/`，不覆盖训练 `.venv`。
+
 ## 项目 scope（未来工作，不代表当前实施授权）
 
 - 仓库总体目标：修改 MME-VLA 的 `perceptual-framesamp-context`，并在后续阶段接入 [MotionJEPA](https://github.com/hongzefu/MotionJEPA) motion token。
