@@ -1,0 +1,30 @@
+{
+  "build_head": "f6915f2a09443d48c1bb57e9b5f83e95400704fd",
+  "start_status": "",
+  "start_utc": "2026-09-17T22:25:56.983555+00:00",
+  "input_head": "df6fdcc4f9424f00901a107a66d98e19e679a7ba",
+  "commands": {
+    "wan": "bash v1-store/logs/mv2-build-runner.sh wan f6915f2a09443d48c1bb57e9b5f83e95400704fd",
+    "encode": "bash v1-store/logs/mv2-build-runner.sh encode f6915f2a09443d48c1bb57e9b5f83e95400704fd",
+    "oracle": "bash v1-store/logs/mv2-build-runner.sh oracle f6915f2a09443d48c1bb57e9b5f83e95400704fd",
+    "pack": "bash v1-store/logs/mv2-build-runner.sh pack f6915f2a09443d48c1bb57e9b5f83e95400704fd"
+  },
+  "sessions": [
+    "mv2-wan",
+    "mv2-encode",
+    "mv2-oracle",
+    "mv2-pack"
+  ],
+  "gpu_ids": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "initial_complete": 0,
+  "eval_bound": "EVAL_ES_BOUND=PASS tasks=4 episodes=200 es_max=383 budget=160 headroom=57"
+}

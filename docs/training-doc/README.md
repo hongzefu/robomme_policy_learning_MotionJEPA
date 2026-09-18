@@ -11,7 +11,10 @@
 | 目录 | 内容 | 判定 |
 |---|---|---|
 | [`mv2-implementation/`](mv2-implementation/result.md) | 新旧契约、独立公式、初态、位置编码与计时验证 | 三项新增验证方式已确认，按批准方案实施 |
-| [`mv2-evalbound/`](mv2-evalbound/launch.md) | 四任务 test 集 200 次真实 reset 与 budget 160 上界 | 单卡短测通过，全量待运行 |
+| [`mv2-evalbound/`](mv2-evalbound/result.md) | 四任务 test 集 200 次真实 reset 与 budget 160 上界 | PASS：最长 demo 383 帧，需求 103 窗，余量 57 |
+| [`mv2-v4/`](mv2-v4/launch.md) | 新库交付与独立手算逐位验证 | 建库已通过，准备起跑 |
+| [`mv2-m4/`](mv2-m4/launch.md) | 真实 modulation 结构的完整 V5 mask/梯度验证 | 兼容预训练单步预检通过，完整验证准备起跑 |
+| [`mv2-rhythm/`](mv2-rhythm/launch.md) | 新配置客户端节奏与 1296/1297 边界 | 准备起跑 |
 | [`v2-1600ep-m8x8-modul-motion-b128-80k/`](v2-1600ep-m8x8-modul-motion-b128-80k/launch.md) | 1600 集 demo 补帧 motion 表及 8 卡 b128 的 80k 训练 | 名称已确认，实施准备中，尚未起跑 |
 | [`mv2-v1-dump/`](mv2-v1-dump/result.md) | 关闭态 Dataset 完整取证 | PASS：3,200 样本 / 200 batch 前后逐位一致 |
 | [`mv2-v2-legacy/`](mv2-v2-legacy/result.md) | 旧 YAML 与旧表完整取证 | PASS：1,200 样本 / 200 batch 逐位一致，历史 policy 构造通过 |

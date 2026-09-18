@@ -10,7 +10,7 @@
 
 | 档案 | 库 | 内容 | 状态 |
 |---|---|---|---|
-| [`4task-v2-1600ep-motion-demopad17/`](4task-v2-1600ep-motion-demopad17/launch.md) | `v1-store/datasets/4task-v2-1600ep-604f16da/motion` | 新 encoder、demo 最少 17 真帧补尾、71316 窗与独立 oracle | 起跑准备，尚未抽取 |
+| [`4task-v2-1600ep-motion-demopad17/`](4task-v2-1600ep-motion-demopad17/result.md) | `v1-store/datasets/4task-v2-1600ep-604f16da/motion` | 新 encoder、demo 最少 17 真帧补尾、71316 窗与独立 oracle | 全部 PASS：71316 token、8632 VAE 抽样窗逐位同，1600 补帧窗全覆盖 |
 | [`4task-v2-1600ep-604f16da/`](4task-v2-1600ep-604f16da/launch.md) | `v1-store/datasets/4task-v2-1600ep-604f16da` | 私有新版四任务全部 1600 primary；合并 H5、SigLIP、两档 framesamp 和独立 norm_stats | 已完成：全部数据验证与 20 步真实训练均通过（[result](4task-v2-1600ep-604f16da/result.md)） |
 | [`4task-v2-smoke28/`](4task-v2-smoke28/launch.md) | `v1-store/datasets/4task-v2-smoke28` | 新版四任务 H5 合并、SigLIP 与两档 framesamp 的 28 集冒烟 | 全部通过；临时数据按计划清理（[result](4task-v2-smoke28/result.md)） |
 | [`h5-acquire-4task-20260912-v2/`](h5-acquire-4task-20260912-v2/launch.md) | `/scratch/hongze/robomme-4task-h5-20260912-v2` | 既有私有数据获取的来源、原始结果与条数分布补档 | 原获取记录 PASS；本轮完整前检通过（[result](h5-acquire-4task-20260912-v2/result.md)） |

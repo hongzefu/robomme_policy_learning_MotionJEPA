@@ -1,0 +1,50 @@
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+[oracle-vae] 原版模块 /scratch/hongze/MotionJEPA/scripts/inference-example/wan_motion_infer.py sha256=af67fdd913543aee… vae_state=9980d252230c265c… segments=400 shard=2/8
+[oracle-vae] 10/400 段, windows=42 frame_mismatches=0 (67s)
+[oracle-vae] 20/400 段, windows=76 frame_mismatches=0 (120s)
+[oracle-vae] 30/400 段, windows=110 frame_mismatches=0 (175s)
+[oracle-vae] 40/400 段, windows=154 frame_mismatches=0 (245s)
+[oracle-vae] 50/400 段, windows=195 frame_mismatches=0 (310s)
+[oracle-vae] 60/400 段, windows=242 frame_mismatches=0 (385s)
+[oracle-vae] 70/400 段, windows=296 frame_mismatches=0 (471s)
+[oracle-vae] 80/400 段, windows=360 frame_mismatches=0 (573s)
+[oracle-vae] 90/400 段, windows=409 frame_mismatches=0 (653s)
+[oracle-vae] 100/400 段, windows=476 frame_mismatches=0 (758s)
+[oracle-vae] 110/400 段, windows=496 frame_mismatches=0 (788s)
+[oracle-vae] 120/400 段, windows=510 frame_mismatches=0 (809s)
+[oracle-vae] 130/400 段, windows=525 frame_mismatches=0 (833s)
+[oracle-vae] 140/400 段, windows=546 frame_mismatches=0 (866s)
+[oracle-vae] 150/400 段, windows=572 frame_mismatches=0 (905s)
+[oracle-vae] 160/400 段, windows=598 frame_mismatches=0 (945s)
+[oracle-vae] 170/400 段, windows=621 frame_mismatches=0 (982s)
+[oracle-vae] 180/400 段, windows=646 frame_mismatches=0 (1022s)
+[oracle-vae] 190/400 段, windows=683 frame_mismatches=0 (1080s)
+[oracle-vae] 200/400 段, windows=719 frame_mismatches=0 (1137s)
+[oracle-vae] 210/400 段, windows=744 frame_mismatches=0 (1176s)
+[oracle-vae] 220/400 段, windows=770 frame_mismatches=0 (1216s)
+[oracle-vae] 230/400 段, windows=794 frame_mismatches=0 (1254s)
+[oracle-vae] 240/400 段, windows=823 frame_mismatches=0 (1300s)
+[oracle-vae] 250/400 段, windows=848 frame_mismatches=0 (1339s)
+[oracle-vae] 260/400 段, windows=882 frame_mismatches=0 (1392s)
+[oracle-vae] 270/400 段, windows=914 frame_mismatches=0 (1442s)
+[oracle-vae] 280/400 段, windows=944 frame_mismatches=0 (1491s)
+[oracle-vae] 290/400 段, windows=978 frame_mismatches=0 (1545s)
+[oracle-vae] 300/400 段, windows=1020 frame_mismatches=0 (1610s)
+[oracle-vae] 310/400 段, windows=1035 frame_mismatches=0 (1633s)
+[oracle-vae] 320/400 段, windows=1055 frame_mismatches=0 (1664s)
+[oracle-vae] 330/400 段, windows=1071 frame_mismatches=0 (1688s)
+[oracle-vae] 340/400 段, windows=1091 frame_mismatches=0 (1718s)
+[oracle-vae] 350/400 段, windows=1112 frame_mismatches=0 (1750s)
+[oracle-vae] 360/400 段, windows=1132 frame_mismatches=0 (1780s)
+[oracle-vae] 370/400 段, windows=1147 frame_mismatches=0 (1804s)
+[oracle-vae] 380/400 段, windows=1176 frame_mismatches=0 (1849s)
+[oracle-vae] 390/400 段, windows=1205 frame_mismatches=0 (1893s)
+[oracle-vae] 400/400 段, windows=1227 frame_mismatches=0 (1928s)
+ORACLE_VAE=DONE shard=2/8 metadata_rows=8898 windows=1227 frame_mismatches=0 metadata_mismatches=0 elapsed=1928s
+SHARD_EXIT_CODE=0 shard=2

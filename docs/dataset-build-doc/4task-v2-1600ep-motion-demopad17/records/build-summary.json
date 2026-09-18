@@ -1,0 +1,53 @@
+{
+  "build_head": "f6915f2a09443d48c1bb57e9b5f83e95400704fd",
+  "phases": {
+    "wan": {
+      "start": "2026-09-17T22:25:57Z",
+      "end": "2026-09-18T01:59:45Z",
+      "seconds": 12828.0,
+      "exit_code": 0
+    },
+    "encode": {
+      "start": "2026-09-18T02:00:00Z",
+      "end": "2026-09-18T02:02:12Z",
+      "seconds": 132.0,
+      "exit_code": 0
+    },
+    "oracle": {
+      "start": "2026-09-18T02:02:51Z",
+      "end": "2026-09-18T02:49:42Z",
+      "seconds": 2811.0,
+      "exit_code": 0
+    },
+    "pack": {
+      "start": "2026-09-18T02:50:20Z",
+      "end": "2026-09-18T02:50:52Z",
+      "seconds": 32.0,
+      "exit_code": 0
+    }
+  },
+  "protected_files_unchanged": {
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/source/meta/provenance.json": "72b297922adaddddb02fd02099ce53d7c8b2319ebd81ba44c4ce83f407870178",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8/meta/store_meta.json": "f7677e69e5c473ab2962a5ac05a5909348c2f96736152b7217b77f0d2eb4231a",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173"
+  },
+  "motion_store_meta_sha256": "d3a518011c80a115f7b398458a510a6f128f47e76c03fc251e59dab4c9c56268",
+  "motion_index_sha256": "d68696a0c260d689e05f600b135d8372b7bf953a491be41cf364d703068b7864",
+  "motion_table_sha256": "03fb46e150dd9015f264f9bd8f08b35883d84da40e9e8080147d2af5fef9b6c5",
+  "motion_table_bytes": 219082752,
+  "oracle_encoder_table_sha256": "03fb46e150dd9015f264f9bd8f08b35883d84da40e9e8080147d2af5fef9b6c5",
+  "vae_windows": 8632,
+  "metadata_rows": 71316,
+  "rows": 71316,
+  "totals": {
+    "rows": 71316,
+    "exec_rows": 35403,
+    "demo_rows": 35913
+  },
+  "manifest_sha256": "4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918",
+  "full_report_sha256": {
+    "vae_report.json": "f564ec1de141347897dfa084798f8b142dd30fa68a66b7d5517f4a78958c503f",
+    "encoder_report.json": "79e433aca243ea182ff96a1aa9295234a4c85c6745d287a2069e402f230f217b",
+    "sampled_windows.json": "94ce2d8aa01431f61171bd9fa7a3f44eae25eace60013203b7fa10a1d1f60574"
+  }
+}
