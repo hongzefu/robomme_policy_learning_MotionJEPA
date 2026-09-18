@@ -26,8 +26,11 @@ TLS_TUNABLE="glibc.rtld.optional_static_tls=65536"
 CKPT_ID="$(basename "$CKPT")"
 [[ "$CKPT_ID" == 59999 ]] || { echo '本轮只验收 59999'; exit 2; }
 RUN_DIR="$EVAL_REPO/v1-store/evaluation/$RUN_NAME/$SHARD_TAG"
-if [[ -e "$RUN_DIR" && "${ALLOW_RESUME:-0}" != 1 ]]; then
-    echo "运行目录已存在：$RUN_DIR（要续跑请显式 ALLOW_RESUME=1）"; exit 2
+# 防覆盖判据是「已有评测结果」而不是「目录存在」：sbatch 的 start_samplers 会先把
+# $RUN_DIR/records 建出来（采样必须覆盖起跑段），拿目录存在当判据会让每个 job 一起跑就自杀。
+RESULT_ROOT="$RUN_DIR/$POLICY/ckpt$CKPT_ID/seed$SEED"
+if [[ -e "$RESULT_ROOT/progress.json" && "${ALLOW_RESUME:-0}" != 1 ]]; then
+    echo "运行结果已存在：$RESULT_ROOT/progress.json（要续跑请显式 ALLOW_RESUME=1）"; exit 2
 fi
 [[ -z "$(git -C "$EVAL_REPO" status --porcelain)" ]] || { echo '必须从 clean HEAD 启动'; exit 2; }
 command -v uv
