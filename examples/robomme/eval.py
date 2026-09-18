@@ -17,8 +17,11 @@ from utils import (
     EpisodeState,
 )
 from utils import RolloutRecorder
-from env_runner import EnvRunner
+from env_runner import EnvRunner, SpecEnvRunner
 
+
+class EpisodeWallClockTimeout(RuntimeError):
+    """单集墙钟超时；只兜 rollout 期死锁，不参与正常的 max_steps 判定。"""
 
 
 @dataclasses.dataclass
@@ -27,6 +30,9 @@ class Args:
     port: int = 8011
 
     obs_horizon: int = 16
+    # 默认保持 1300：官方 env_metadata 路径（run.sh 的单回合验收）不传这个参数，
+    # 改默认值会把 docs/training-doc/vail-eval-gl-20260918T0400Z 的口径悄悄换掉。
+    # 注入候选路径由 run_shard.sh 显式传 --args.max_steps=2000。
     max_steps: int = 1300
     save_dir: str = "v1-store/evaluation"
     overwrite: bool = False
@@ -36,12 +42,18 @@ class Args:
     model_seed: int = 42
     model_ckpt_id: int = 80000
 
-    # task control
+    # task control（官方 env_metadata 路径）
     re_eval_tasks: str = "" # tasks split by comma
     only_tasks: str = "" # tasks split by comma
     exclude_tasks: str = "" # tasks split by comma
     max_episodes: int = 0 # 每任务最多评几集（0 = 环境提供的全部；T3_EVAL_OBS 用 10）
 
+    # 注入候选路径（fork 的 test/primary）：给了 episode_plan 就走这条，与上面的 task control 互斥
+    episode_plan: str = ""      # 分片计划 json；{"shard_tag":..., "candidates":..., "groups":{"任务/难度":[episode...]}}
+    candidates: str = ""        # candidates.jsonl 路径；留空则用 plan 里记的那个
+    max_new_episodes: int = 0   # 本进程最多「新评」几集（0 = 不限）；用于把 make_env 次数压在 Vulkan TLS 红线下
+    shard_tag: str = ""         # 分片标识，只写进 plan.json 便于追溯
+    episode_wall_s: int = 900   # 单集墙钟上限，超时记 "error"
 
 
 class EpisodeEvaluator:
@@ -51,12 +63,22 @@ class EpisodeEvaluator:
 
     def eval_each_episode(
         self,
-        env_runner: EnvRunner,
+        env_runner,
         video_save_dir: Path,
     ) -> str:
         client = _websocket_client_policy.MMEVLAWebsocketClientPolicy(
             self.args.host, self.args.port
         )
+        try:
+            return self._rollout(client, env_runner, video_save_dir)
+        finally:
+            # 每集一个新 client，不关会在 server 侧攒下同样多的常驻 handler
+            try:
+                client._ws.close()
+            except Exception as e:
+                print(f"关闭 websocket 失败（不影响本集结果）：{e}")
+
+    def _rollout(self, client, env_runner, video_save_dir: Path) -> str:
         resp = client.reset()
         while not resp.get("reset_finished", False):
             time.sleep(0.1)
@@ -67,8 +89,13 @@ class EpisodeEvaluator:
         img, wrist_img, robot_state = epstate.get_current_obs()
         prompt = task_goal
         success_flag = "unknown"
+        deadline = time.monotonic() + self.args.episode_wall_s
 
         while True:
+            if time.monotonic() > deadline:
+                raise EpisodeWallClockTimeout(
+                    f"单集超过 {self.args.episode_wall_s}s 墙钟（已走 {epstate.count} 步）"
+                )
             if not epstate.action_plan:
                 action_chunk = self.get_action_chunk(
                     client, epstate, img, wrist_img, robot_state, prompt,
@@ -110,7 +137,7 @@ class EpisodeEvaluator:
 
     def init_episode(
         self,
-        env_runner: EnvRunner,
+        env_runner,
         epstate: EpisodeState,
         video_save_dir: Path,
     ) -> Tuple[str, RolloutRecorder]:
@@ -220,17 +247,123 @@ def setup_log_dict(save_dir: Path, args: Args) -> dict:
     return log_dict
 
 
+def summarize(log_dict: dict, save_dir: Path) -> None:
+    """按组算成功率。组键在官方路径下是任务名，在注入候选路径下是「任务/难度」。"""
+    try:
+        rates = {
+            group: sum(value is True for value in entries.values()) / len(entries)
+            for group, entries in log_dict.items() if entries
+        }
+        if not rates:
+            print("[robomme] 没有已完成的组，跳过汇总")
+            return
+        final_results = {
+            "success_rate": rates,
+            "total_success_rate": sum(rates.values()) / len(rates),
+        }
+        with open(save_dir / "log.json", "w") as f:
+            json.dump(final_results, f, indent=2)
+    except Exception as e:
+        print(f"Error saving final results: {e}")
+        raise
+
+
+def load_plan(args: Args):
+    """读分片计划与候选库，返回 (组 -> [episode...], (task,difficulty,episode) -> 候选行)。"""
+    import robomme
+    from robomme.injection_candidates import load_candidates, candidate_key
+
+    plan = json.loads(Path(args.episode_plan).read_text(encoding="utf-8"))
+    jsonl = args.candidates or plan["candidates"]
+    benchmark_root = Path(robomme.__file__).resolve().parents[2]
+    header, rows = load_candidates(jsonl, repo_root=benchmark_root)
+    index = {candidate_key(row): row for row in rows}
+
+    groups = {}
+    for group, episodes in plan["groups"].items():
+        task, difficulty = group.split("/")
+        picked = []
+        for episode in episodes:
+            key = (task, difficulty, int(episode))
+            row = index.get(key)
+            if row is None:
+                raise ValueError(f"计划里的候选不在候选库中：{key}")
+            if row["split"] != "test" or row["role"] != "primary":
+                raise ValueError(f"计划里的候选不是 test/primary：{key} -> {row['split']}/{row['role']}")
+            picked.append(row)
+        groups[group] = picked
+    return plan, header, groups
+
+
 def evaluate(args: Args):
     """Main evaluation function."""
     check_args(args)
     if args.max_episodes < 0:
         raise ValueError("max_episodes 必须为非负整数")
+    if args.episode_plan and (args.only_tasks or args.exclude_tasks or args.re_eval_tasks or args.max_episodes):
+        raise ValueError("episode_plan 与 only_tasks/exclude_tasks/re_eval_tasks/max_episodes 互斥")
 
     save_dir = setup_save_directory(args)
     video_save_dir = save_dir / "videos"
 
     log_dict = setup_log_dict(save_dir, args)
+    evaluator = EpisodeEvaluator(args, save_dir)
+    evaluated = 0
 
+    if args.episode_plan:
+        plan, header, groups = load_plan(args)
+        sampling = header["sampling_config"]
+        (save_dir / "plan.json").write_text(json.dumps(
+            {"shard_tag": args.shard_tag or plan.get("shard_tag", ""),
+             "candidates": args.candidates or plan["candidates"],
+             "identity_sha256": header["identity_sha256"],
+             "groups": {g: [row["episode"] for row in rows] for g, rows in groups.items()}},
+            indent=2, ensure_ascii=False), encoding="utf-8")
+
+        for group, rows in groups.items():
+            log_dict.setdefault(group, {})
+            pending = [row for row in rows if str(row["episode"]) not in log_dict[group]]
+            if not pending:
+                continue
+            task, difficulty = group.split("/")
+            per_task = {"parameters": sampling["parameters"][task],
+                        "positions": sampling["positions"][task]}
+            env_runner = SpecEnvRunner(task, difficulty, per_task, video_save_dir,
+                                       max_steps=args.max_steps)
+            for row in pending:
+                if args.max_new_episodes and evaluated >= args.max_new_episodes:
+                    break
+                episode_id = row["episode"]
+                try:
+                    env_runner.make_env(row)
+                    print(f"\n[robomme] env for {group} episode {episode_id} setup finished")
+                    success_flag = evaluator.eval_each_episode(env_runner, video_save_dir)
+                    if success_flag in ("unknown", "error"):
+                        log_dict[group][str(episode_id)] = "error"
+                    else:
+                        log_dict[group][str(episode_id)] = success_flag == "success"
+                except Exception as e:
+                    print(f"Error evaluating {group} episode {episode_id}: {e}")
+                    log_dict[group][str(episode_id)] = "error"
+                finally:
+                    try:
+                        env_runner.close_env()
+                    except Exception as e:
+                        print(f"关闭环境失败：{group}/{episode_id}: {e}")
+                        log_dict[group][str(episode_id)] = "error"
+                evaluated += 1
+                with open(save_dir / "progress.json", "w") as f:
+                    json.dump(log_dict, f, indent=2)
+            del env_runner
+            time.sleep(1)
+            if args.max_new_episodes and evaluated >= args.max_new_episodes:
+                print(f"[robomme] 本进程已新评 {evaluated} 集，达到 max_new_episodes，正常退出")
+                return
+
+        summarize(log_dict, save_dir)
+        return
+
+    # ---- 官方 env_metadata 路径（保持原口径，run.sh 的单回合验收依赖它）----
     if args.only_tasks:
         task_names = args.only_tasks.split(",")
     else:
@@ -241,63 +374,47 @@ def evaluate(args: Args):
         for task in args.exclude_tasks.split(","):
             log_dict[task] = {str(i): False for i in range(50)}
 
-    evaluator = EpisodeEvaluator(args, save_dir)
+    for task_name in task_names:
+        if task_name not in log_dict:
+            log_dict[task_name] = {}
 
-    if not os.path.exists(save_dir / "log.json"):
-        for task_name in task_names:
-            if task_name not in log_dict:
-                log_dict[task_name] = {}
+        env_runner = EnvRunner(task_name, video_save_dir, max_steps=args.max_steps)
+        num_episodes = env_runner.num_episodes
 
-            env_runner = EnvRunner(task_name, video_save_dir, max_steps=args.max_steps)
-            num_episodes = env_runner.num_episodes
+        success_flag = "unknown"
 
-            success_flag = "unknown"
+        if args.max_episodes > 0:
+            num_episodes = min(num_episodes, args.max_episodes)
+        for episode_id in range(num_episodes):
+            if str(episode_id) in log_dict[task_name]:
+                print(f"[robomme] episode {episode_id} already evaluated, skipping...")
+                continue
 
-            if args.max_episodes > 0:
-                num_episodes = min(num_episodes, args.max_episodes)
-            for episode_id in range(num_episodes):
-                if str(episode_id) in log_dict[task_name]:
-                    print(f"[robomme] episode {episode_id} already evaluated, skipping...")
-                    continue
-
-                try:
-                    env_runner.make_env(episode_id)
-                    print(f"\n[robomme] env for task {task_name} episode {episode_id} setup finished")
-                    success_flag = evaluator.eval_each_episode(env_runner, video_save_dir)
-                    if success_flag in ("unknown", "error"):
-                        log_dict[task_name][str(episode_id)] = "error"
-                    else:
-                        log_dict[task_name][str(episode_id)] = success_flag == "success"
-                except Exception as e:
-                    print(f"Error evaluating episode {episode_id} for task {task_name}: {e}")
-                    success_flag = "error"
+            try:
+                env_runner.make_env(episode_id)
+                print(f"\n[robomme] env for task {task_name} episode {episode_id} setup finished")
+                success_flag = evaluator.eval_each_episode(env_runner, video_save_dir)
+                if success_flag in ("unknown", "error"):
                     log_dict[task_name][str(episode_id)] = "error"
-                finally:
-                    try:
-                        env_runner.close_env()
-                    except Exception as e:
-                        print(f"关闭环境失败：{task_name}/{episode_id}: {e}")
-                        log_dict[task_name][str(episode_id)] = "error"
-                with open(save_dir / "progress.json", "w") as f:
-                    json.dump(log_dict, f, indent=2)
+                else:
+                    log_dict[task_name][str(episode_id)] = success_flag == "success"
+            except Exception as e:
+                print(f"Error evaluating episode {episode_id} for task {task_name}: {e}")
+                success_flag = "error"
+                log_dict[task_name][str(episode_id)] = "error"
+            finally:
+                try:
+                    env_runner.close_env()
+                except Exception as e:
+                    print(f"关闭环境失败：{task_name}/{episode_id}: {e}")
+                    log_dict[task_name][str(episode_id)] = "error"
+            with open(save_dir / "progress.json", "w") as f:
+                json.dump(log_dict, f, indent=2)
 
-            del env_runner
-            time.sleep(1)
+        del env_runner
+        time.sleep(1)
 
-        try:
-            final_results = {}
-            final_results["success_rate"] = {
-                task_name: sum(value is True for value in log_dict[task_name].values()) / len(log_dict[task_name].values())
-                for task_name in log_dict.keys()
-            }
-            final_results["total_success_rate"] = (
-                sum(final_results["success_rate"].values()) / len(final_results["success_rate"].values())
-            )
-            with open(save_dir / "log.json", "w") as f:
-                json.dump(final_results, f, indent=2)
-        except Exception as e:
-            print(f"Error saving final results: {e}")
-            raise
+    summarize(log_dict, save_dir)
 
 
 if __name__ == "__main__":
