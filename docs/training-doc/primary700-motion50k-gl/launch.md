@@ -1,7 +1,6 @@
-# primary700-motion50k-gl 起跑留档（冒烟阶段，正式 700 条未起跑）
+# primary700-motion50k-gl 起跑留档（冒烟阶段 + 2026-09-18/19 正式 700 条）
 
-**环境 A**（仓库工作副本 turbo，分支 `v2-eval-0918-motion`）。本档只记录到「集群两集冒烟通过」为止；
-正式 700 条评测按用户 2026-09-18 指令「只做到集群冒烟为止之后收尾commit并且记录」**本轮不起跑**，起跑方案见文末。
+**环境 A**（仓库工作副本 turbo，分支 `v2-eval-0918-motion`）。前半部分记录到「集群两集冒烟通过」；正式 700 条评测于 2026-09-18 22:24Z 起跑，与无 motion 50000 成对进行，见文末「正式起跑」一节。
 
 ## 用户指令原话（按时间）
 
@@ -156,3 +155,11 @@ ssh greatlakes "tmux new-session -d -s ev-mot-h03 \"cd $REPO; STEP_TIME=12:00:00
 
 本机：`ev-mot-setup-wan`、`ev-mot-dl-vla`、`ev-mot-smoke-local`（均已自然退出）；登录节点：`ev-mot-smoke-gl`（已自然退出）。
 正式起跑时将用登录节点 `ev-mot-h03…h08`。
+
+## 正式起跑（2026-09-18 22:24:29Z，与 primary700-nomotion50k-gl 成对、同一套调用）
+
+用户新指令「跑无motion和带motion的50k ckpt全部700个eval 在集群6张卡上跑 尽可能保持一致的调用」→ 追加 gpu-hold-09/10 →「使用动态的分配」。
+上文「正式起跑方案」里的静态作业→分片表**作废**，改为 8 个作业动态抢 20 个 (模型, 分片) 单元；共用口径、四个不同值、看门狗与续跑队列、
+作业表与实际执行记录全部写在配对 run 的留档里，不重复：[`../primary700-nomotion50k-gl/launch.md`](../primary700-nomotion50k-gl/launch.md)、
+[`../primary700-nomotion50k-gl/result.md`](../primary700-nomotion50k-gl/result.md)。HEAD `d33c0ba`（clean）。
+motion 侧 10 片全部 `SHARD_PASS`，`MERGE_OK shards=10 episodes=700 successes=285 errors=9`，结果见本目录 `result.md`。

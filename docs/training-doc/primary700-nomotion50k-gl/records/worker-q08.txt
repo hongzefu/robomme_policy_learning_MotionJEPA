@@ -1,0 +1,113 @@
+CLAIM item=motion-s4 job=61495578 node=gl1523 2026-09-19T02:32:38Z
+QUEUE_START job=61495578 run=primary700-motion50k-gl shards=4 head=d33c0ba16662b69cc2d900a034a2b2654a357924 node=gl1523 2026-09-19T02:32:39Z
+QUEUE_SHARD_START job=61495578 shard=4 log=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/primary700-motion50k-gl-s4.log 2026-09-19T02:32:39Z
+CGROUP=/sys/fs/cgroup/system.slice/slurmstepd.scope/job_61495578/step_11/user/task_0 SAMPLE_INTERVAL=15s
+SHARD_START run=primary700-motion50k-gl shard=s4 plan=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-motion50k-gl/plans/shard4.json node=gl1523.arc-ts.umich.edu job=61495578
+/home/hongzefu/.local/bin/uv
+START_UTC=2026-09-19T02:32:40Z
+gl1523.arc-ts.umich.edu
+d33c0ba16662b69cc2d900a034a2b2654a357924
+ b4e97f22fe007078e297205898c07c1acbc69165 third_party/robomme_benchmark (heads/PolicyEvalThirdParty-v2-eval-0917)
+uv 0.8.22
+name, uuid, memory.used [MiB], compute_mode
+NVIDIA A40, GPU-2afd4024-8246-06a6-38d8-481f7e072fde, 0 MiB, Default
+REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA SLURM_JOB_ID=61495578 ARRAY_TASK=none SHARD=s4 CUDA_VISIBLE_DEVICES=0
+PLAN=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-motion50k-gl/plans/shard4.json episodes=70 chunk=20
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+SOURCES_PASS {"python": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/bin/python3", "benchmark": "b4e97f22fe007078e297205898c07c1acbc69165", "robomme": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark/src/robomme/__init__.py", "openpi_client": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/__init__.py", "candidates": {"run_id": "20260912-contract-v3-10", "identity_sha256": "3b4de03a0b4639181f9c68086aea11e9b51ffcb65bbed701a44f573e74e0beb7", "groups": 14, "primary": 700}, "probe": {"key": ["RouteStick", "xhard", 115], "seed": 27500, "spec_sha256": "ae9abaed203437030b6237478f35e80df26d6811e34054e7c944a11ae4126d93"}, "official_routestick_ep0": {"task": "RouteStick", "episode": 0, "seed": 660000, "difficulty": "easy"}}
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+RENDER_PASS {"render_pass": true, "task": "BinFill", "episode": 0, "status": "ongoing", "frames": [{"shape": [256, 256, 3], "std": 53.09643729088601}, {"shape": [256, 256, 3], "std": 52.75876086672221}, {"shape": [256, 256, 3], "std": 53.09674462593213}, {"shape": [256, 256, 3], "std": 52.013364007753225}]}
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SERVER_SOURCE /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-server/bin/python3 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/policy_config.py /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/openpi/models/model.py
+BUDGET_CONSISTENT=PASS budget=160 source_run=wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt#encoder
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+PARAM_TREE_EXACT=PASS n_model=65 n_ckpt=65 missing=0 extra=0 shape_mismatch=0 motion_leaves=4
+HISTORY_CONFIG=PASS NORM_STATS=PASS MOTION_ENABLED=PASS config=mme_vla_suite_b128_80k step=50000
+EVAL_PARAMS policy=perceptual-framesamp-modul-8frame-8x8-motion config=mme_vla_suite_b128_80k ckpt=50000 seed=7 max_steps=2000 wall=2400 online_gpu=0 prov_relax=gpu_name,compute_cap,sm_count
+SERVER_READY port=18039 pid=2553548 own=1 tree=2553548 2553555 2553800 2553804 
+CHUNK_START 1/4
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+we will resume the evaluation
+
+[robomme] env for VideoUnmaskSwap/easy episode 119 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/easy episode 129 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/easy episode 139 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/easy episode 149 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/easy episode 159 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/hard episode 119 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube
+exec_start_idx: 216
+
+[robomme] env for VideoUnmaskSwap/hard episode 129 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/hard episode 139 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 216
+
+[robomme] env for VideoUnmaskSwap/hard episode 149 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/hard episode 159 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/medium episode 119 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/medium episode 129 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/medium episode 139 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/medium episode 149 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/medium episode 159 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/xhard episode 119 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 264
+
+[robomme] env for VideoUnmaskSwap/xhard episode 129 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 264
+
+[robomme] env for VideoUnmaskSwap/xhard episode 139 setup finished
+END_UTC=2026-09-19T03:05:41Z
+EXIT_CODE=137
+EXIT_CODE=137
+srun: error: gl1523: task 0: Exited with exit code 137
+QUEUE_SHARD_DONE job=61495578 shard=4 rc=137 2026-09-19T03:05:43Z
+QUEUE_DONE job=61495578 failed=1 2026-09-19T03:05:43Z
+ITEM_DONE item=motion-s4 rc=1 job=61495578 2026-09-19T03:05:43Z

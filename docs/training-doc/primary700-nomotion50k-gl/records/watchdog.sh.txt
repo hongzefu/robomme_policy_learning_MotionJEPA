@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# 看门狗（运行在登录节点，不进 git；用户 2026-09-19 授权「自动标 error + KILL 客户端」）：
+# VideoRepick 等若干 episode 会卡死在 make_env/reset 的 native 调用里，eval.py 的 SIGALRM 墙钟打不断，只能等 4 h 的 EVAL_TIMEOUT；
+# 且 run_shard.sh 有 set -e，客户端一被砍整片就 rc≠0 退出，之后用 ALLOW_RESUME=1 续跑。
+# 判据：client.log 静默 ≥ STALL_MIN 分钟，且最后一行是 "env for <group> episode <ep> setup finished"（后面没有 task_goal / exec_start_idx）。
+# 处置：先把该集写成 "error" 进 progress.json（续跑会跳过它），再经 srun --overlap 在计算节点只 KILL 该分片的客户端 python
+#（不碰 server / sidecar / 其他分片 / 其他作业）。
+# 用法：watchdog.sh [once]   环境变量 STALL_MIN（默认 12）、INTERVAL（默认 180 秒）
+set -uo pipefail
+REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA
+QROOT=$REPO/v1-store/evaluation/primary700-ab50k-gl
+STALL_MIN="${STALL_MIN:-12}"; INTERVAL="${INTERVAL:-180}"
+declare -A POL=([nomotion]=perceptual-framesamp-modul-8frame-8x8 [motion]=perceptual-framesamp-modul-8frame-8x8-motion)
+echo "WATCHDOG_START stall_min=$STALL_MIN interval=$INTERVAL $(date -u +%FT%TZ)"
+while true; do
+  # 主队列 queue/ 与续跑队列 queue-resume/ 一起扫
+  for Q in "$QROOT"/queue "$QROOT"/queue-resume; do
+    [[ -d "$Q/claims" ]] || continue
+    for c in $(ls "$Q/claims" 2>/dev/null); do
+        [[ -f "$Q/done/$c" ]] && continue
+        m="${c%-s*}"; k="${c##*-s}"; run="primary700-${m}50k-gl"; dir="$REPO/v1-store/evaluation/$run/s$k"
+        log="$dir/client.log"; [[ -f "$log" ]] || continue
+        age=$(( ($(date +%s) - $(stat -c %Y "$log")) / 60 ))
+        (( age >= STALL_MIN )) || continue
+        last="$(grep -v '^[[:space:]]*$' "$log" | tail -n 1)"
+        [[ "$last" =~ env\ for\ ([A-Za-z]+/[a-z]+)\ episode\ ([0-9]+)\ setup\ finished ]] || continue
+        g="${BASH_REMATCH[1]}"; ep="${BASH_REMATCH[2]}"
+        # 同一 item 同一集只处理一次（done/ 尚未落盘的几秒窗口内不重复标记/重复 kill）
+        grep -qs "item=$c group=$g episode=$ep " "$QROOT/queue/hang_marks.txt" && continue
+        prog="$dir/${POL[$m]}/ckpt50000/seed7/progress.json"
+        job="$(sed -n 's/^job=\([0-9]*\).*/\1/p' "$Q/claims/$c/owner")"
+        echo "HANG_DETECTED item=$c group=$g ep=$ep silent_min=$age job=$job $(date -u +%FT%TZ)"
+        python3 - "$prog" "$g" "$ep" <<'PY'
+import json, os, sys
+p, g, ep = sys.argv[1:4]
+d = json.load(open(p)) if os.path.exists(p) else {}
+d.setdefault(g, {})[ep] = "error"
+tmp = p + ".tmp"; json.dump(d, open(tmp, "w"), indent=2); os.replace(tmp, p)
+print("HANG_MARKED_ERROR", p, g, ep, flush=True)
+PY
+        # 与评测自身抛出的 error 区分：看门狗标的每一条都记进 hang_marks.txt（留档单列）
+        echo "item=$c group=$g episode=$ep silent_min=$age job=$job marked=$(date -u +%FT%TZ)" >> "$QROOT/queue/hang_marks.txt"
+        # [e]val.py 的括号技巧：pkill -f 不会匹配到承载这条命令的 bash -c 自身
+        timeout 180 srun --jobid="$job" --overlap -N1 -n1 --cpus-per-task=1 --time=00:05:00 \
+            bash -c "pkill -KILL -u \$USER -f 'policy-eval-client/bin/python3 examples/robomme/[e]val.py .*save_dir=$dir '; echo pkill_rc=\$?"
+        echo "HANG_KILLED item=$c group=$g ep=$ep queue=$(basename "$Q") $(date -u +%FT%TZ)"
+    done
+  done
+  # 续跑登记：主队列 rc≠0 的单元追加到 queue-resume/items.txt（去重）；续跑队列 rc≠0 的单元把 claims/done 归档到 history/ 后允许再抢（每单元最多 3 次）
+  R="$QROOT/queue-resume"; mkdir -p "$R/history"; touch "$R/items.txt"
+  for c in $(ls "$QROOT/queue/done" 2>/dev/null); do
+      rc="$(sed -n 's/^rc=\([0-9]*\).*/\1/p' "$QROOT/queue/done/$c")"; [[ "$rc" != 0 ]] || continue
+      m="${c%-s*}"; k="${c##*-s}"
+      grep -qx "$m $k" "$R/items.txt" || { echo "$m $k" >> "$R/items.txt"; echo "REQUEUE item=$c rc=$rc -> queue-resume $(date -u +%FT%TZ)"; }
+  done
+  for c in $(ls "$R/done" 2>/dev/null); do
+      rc="$(sed -n 's/^rc=\([0-9]*\).*/\1/p' "$R/done/$c")"; [[ "$rc" != 0 ]] || continue
+      n="$(ls "$R/history" 2>/dev/null | grep -c "^$c\.done\.")"
+      if (( n >= 3 )); then echo "REQUEUE_GIVEUP item=$c attempts=$((n+1)) $(date -u +%FT%TZ)"; mv "$R/done/$c" "$R/history/$c.giveup"; continue; fi
+      ts="$(date -u +%Y%m%dT%H%M%SZ)"; mv "$R/done/$c" "$R/history/$c.done.$ts"; mv "$R/claims/$c" "$R/history/$c.claim.$ts"
+      echo "REQUEUE_RESUME item=$c rc=$rc attempt=$((n+2)) $(date -u +%FT%TZ)"
+  done
+    [[ "${1:-}" == once ]] && { echo "WATCHDOG_ONCE_DONE $(date -u +%FT%TZ)"; exit 0; }
+    sleep "$INTERVAL"
+done

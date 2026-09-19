@@ -1,0 +1,1368 @@
+WORKER_START job=61495578 node=gl1523 head=d33c0ba16662b69cc2d900a034a2b2654a357924 queue=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-ab50k-gl/queue suffix=-gl chunk=20 2026-09-18T22:24:28Z
+CLAIM item=motion-s0 job=61495578 node=gl1523 2026-09-18T22:24:29Z
+QUEUE_START job=61495578 run=primary700-motion50k-gl shards=0 head=d33c0ba16662b69cc2d900a034a2b2654a357924 node=gl1523 2026-09-18T22:24:29Z
+QUEUE_SHARD_START job=61495578 shard=0 log=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/primary700-motion50k-gl-s0.log 2026-09-18T22:24:29Z
+CGROUP=/sys/fs/cgroup/system.slice/slurmstepd.scope/job_61495578/step_5/user/task_0 SAMPLE_INTERVAL=15s
+SHARD_START run=primary700-motion50k-gl shard=s0 plan=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-motion50k-gl/plans/shard0.json node=gl1523.arc-ts.umich.edu job=61495578
+/home/hongzefu/.local/bin/uv
+START_UTC=2026-09-18T22:24:30Z
+gl1523.arc-ts.umich.edu
+d33c0ba16662b69cc2d900a034a2b2654a357924
+ b4e97f22fe007078e297205898c07c1acbc69165 third_party/robomme_benchmark (heads/PolicyEvalThirdParty-v2-eval-0917)
+uv 0.8.22
+name, uuid, memory.used [MiB], compute_mode
+NVIDIA A40, GPU-2afd4024-8246-06a6-38d8-481f7e072fde, 0 MiB, Default
+REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA SLURM_JOB_ID=61495578 ARRAY_TASK=none SHARD=s0 CUDA_VISIBLE_DEVICES=0
+PLAN=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-motion50k-gl/plans/shard0.json episodes=70 chunk=20
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+SOURCES_PASS {"python": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/bin/python3", "benchmark": "b4e97f22fe007078e297205898c07c1acbc69165", "robomme": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark/src/robomme/__init__.py", "openpi_client": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/__init__.py", "candidates": {"run_id": "20260912-contract-v3-10", "identity_sha256": "3b4de03a0b4639181f9c68086aea11e9b51ffcb65bbed701a44f573e74e0beb7", "groups": 14, "primary": 700}, "probe": {"key": ["RouteStick", "xhard", 115], "seed": 27500, "spec_sha256": "ae9abaed203437030b6237478f35e80df26d6811e34054e7c944a11ae4126d93"}, "official_routestick_ep0": {"task": "RouteStick", "episode": 0, "seed": 660000, "difficulty": "easy"}}
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+RENDER_PASS {"render_pass": true, "task": "BinFill", "episode": 0, "status": "ongoing", "frames": [{"shape": [256, 256, 3], "std": 53.09643729088601}, {"shape": [256, 256, 3], "std": 52.75876086672221}, {"shape": [256, 256, 3], "std": 53.09674462593213}, {"shape": [256, 256, 3], "std": 52.013364007753225}]}
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SERVER_SOURCE /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-server/bin/python3 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/policy_config.py /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/openpi/models/model.py
+BUDGET_CONSISTENT=PASS budget=160 source_run=wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt#encoder
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+PARAM_TREE_EXACT=PASS n_model=65 n_ckpt=65 missing=0 extra=0 shape_mismatch=0 motion_leaves=4
+HISTORY_CONFIG=PASS NORM_STATS=PASS MOTION_ENABLED=PASS config=mme_vla_suite_b128_80k step=50000
+EVAL_PARAMS policy=perceptual-framesamp-modul-8frame-8x8-motion config=mme_vla_suite_b128_80k ckpt=50000 seed=7 max_steps=2000 wall=2400 online_gpu=0 prov_relax=gpu_name,compute_cap,sm_count
+SERVER_READY port=18011 pid=2292744 own=1 tree=2292744 2292751 2293423 2293427 
+CHUNK_START 1/4
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+
+[robomme] env for BinFill/easy episode 155 setup finished
+task_goal: put three red cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 165 setup finished
+task_goal: put three red cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 175 setup finished
+task_goal: put one blue cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 185 setup finished
+task_goal: put one red cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 195 setup finished
+task_goal: put two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 153 setup finished
+task_goal: put two red cubes and two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 163 setup finished
+task_goal: put one red cube, two blue cubes and two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 173 setup finished
+task_goal: put one red cube, two blue cubes and two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 183 setup finished
+task_goal: put one red cube, one blue cube and one green cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 193 setup finished
+task_goal: put two red cubes and three blue cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 153 setup finished
+task_goal: put two red cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 163 setup finished
+task_goal: put four green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 173 setup finished
+task_goal: put one red cube and one blue cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 183 setup finished
+task_goal: put one blue cube and one green cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 193 setup finished
+task_goal: put one red cube and one blue cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for RouteStick/easy episode 115 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 150
+
+[robomme] env for RouteStick/easy episode 125 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 100
+
+[robomme] env for RouteStick/easy episode 135 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 100
+
+[robomme] env for RouteStick/easy episode 145 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 150
+
+[robomme] env for RouteStick/easy episode 155 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 100
+[robomme] 本进程已新评 20 集，达到 max_new_episodes，正常退出
+CHUNK_DONE 1/4
+CHUNK_START 2/4
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+we will resume the evaluation
+
+[robomme] env for RouteStick/hard episode 115 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+
+[robomme] env for RouteStick/hard episode 125 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+
+[robomme] env for RouteStick/hard episode 135 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 300
+
+[robomme] env for RouteStick/hard episode 145 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 300
+
+[robomme] env for RouteStick/hard episode 155 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 300
+
+[robomme] env for RouteStick/medium episode 115 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+
+[robomme] env for RouteStick/medium episode 125 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/medium episode 135 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+
+[robomme] env for RouteStick/medium episode 145 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/medium episode 155 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+
+[robomme] env for RouteStick/xhard episode 115 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 450
+
+[robomme] env for RouteStick/xhard episode 125 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 500
+
+[robomme] env for RouteStick/xhard episode 135 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 400
+
+[robomme] env for RouteStick/xhard episode 145 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 450
+
+[robomme] env for RouteStick/xhard episode 155 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 500
+
+[robomme] env for VideoRepick/easy episode 155 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 255
+
+[robomme] env for VideoRepick/easy episode 165 setup finished
+task_goal: watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop
+exec_start_idx: 308
+
+[robomme] env for VideoRepick/easy episode 175 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 271
+
+[robomme] env for VideoRepick/easy episode 185 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 314
+
+[robomme] env for VideoRepick/easy episode 195 setup finished
+task_goal: watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop
+exec_start_idx: 325
+[robomme] 本进程已新评 20 集，达到 max_new_episodes，正常退出
+CHUNK_DONE 2/4
+CHUNK_START 3/4
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+we will resume the evaluation
+
+[robomme] env for VideoRepick/medium episode 153 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 322
+
+[robomme] env for VideoRepick/medium episode 163 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 328
+
+[robomme] env for VideoRepick/medium episode 173 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 331
+
+[robomme] env for VideoRepick/medium episode 183 setup finished
+task_goal: watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop
+exec_start_idx: 323
+
+[robomme] env for VideoRepick/medium episode 193 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 339
+
+[robomme] env for VideoRepick/xhard episode 153 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 475
+
+[robomme] env for VideoRepick/xhard episode 163 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 482
+
+[robomme] env for VideoRepick/xhard episode 173 setup finished
+screw plan failed
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 493
+
+[robomme] env for VideoRepick/xhard episode 183 setup finished
+task_goal: watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop
+exec_start_idx: 420
+
+[robomme] env for VideoRepick/xhard episode 193 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 476
+
+[robomme] env for VideoUnmaskSwap/easy episode 115 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/easy episode 125 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/easy episode 135 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/easy episode 145 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/easy episode 155 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/hard episode 115 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/hard episode 125 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 216
+
+[robomme] env for VideoUnmaskSwap/hard episode 135 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 216
+
+[robomme] env for VideoUnmaskSwap/hard episode 145 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/hard episode 155 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 216
+[robomme] 本进程已新评 20 集，达到 max_new_episodes，正常退出
+CHUNK_DONE 3/4
+CHUNK_START 4/4
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+we will resume the evaluation
+
+[robomme] env for VideoUnmaskSwap/medium episode 115 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/medium episode 125 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/medium episode 135 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/medium episode 145 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/medium episode 155 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/xhard episode 115 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 318
+
+[robomme] env for VideoUnmaskSwap/xhard episode 125 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 318
+
+[robomme] env for VideoUnmaskSwap/xhard episode 135 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube
+exec_start_idx: 264
+
+[robomme] env for VideoUnmaskSwap/xhard episode 145 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 264
+
+[robomme] env for VideoUnmaskSwap/xhard episode 155 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 318
+CHUNK_DONE 4/4
+SHARD_PASS {"pipeline_pass": true, "shard_tag": "s0", "identity_sha256": "3b4de03a0b4639181f9c68086aea11e9b51ffcb65bbed701a44f573e74e0beb7", "episodes": 70, "evaluated": 70, "successes": 33, "errors": [], "groups": {"BinFill/easy": {"episodes": 5, "successes": 2, "errors": 0}, "BinFill/hard": {"episodes": 5, "successes": 0, "errors": 0}, "BinFill/medium": {"episodes": 5, "successes": 1, "errors": 0}, "RouteStick/easy": {"episodes": 5, "successes": 5, "errors": 0}, "RouteStick/hard": {"episodes": 5, "successes": 5, "errors": 0}, "RouteStick/medium": {"episodes": 5, "successes": 5, "errors": 0}, "RouteStick/xhard": {"episodes": 5, "successes": 4, "errors": 0}, "VideoRepick/easy": {"episodes": 5, "successes": 0, "errors": 0}, "VideoRepick/medium": {"episodes": 5, "successes": 2, "errors": 0}, "VideoRepick/xhard": {"episodes": 5, "successes": 3, "errors": 0}, "VideoUnmaskSwap/easy": {"episodes": 5, "successes": 2, "errors": 0}, "VideoUnmaskSwap/hard": {"episodes": 5, "successes": 1, "errors": 0}, "VideoUnmaskSwap/medium": {"episodes": 5, "successes": 2, "errors": 0}, "VideoUnmaskSwap/xhard": {"episodes": 5, "successes": 1, "errors": 0}}}
+SHARD_DONE run=primary700-motion50k-gl shard=s0 episodes=70
+END_UTC=2026-09-19T00:10:30Z
+EXIT_CODE=0
+EXIT_CODE=0
+QUEUE_SHARD_DONE job=61495578 shard=0 rc=0 2026-09-19T00:10:31Z
+QUEUE_DONE job=61495578 failed=0 2026-09-19T00:10:31Z
+ITEM_DONE item=motion-s0 rc=0 job=61495578 2026-09-19T00:10:31Z
+CLAIM item=nomotion-s1 job=61495578 node=gl1523 2026-09-19T00:10:31Z
+QUEUE_START job=61495578 run=primary700-nomotion50k-gl shards=1 head=d33c0ba16662b69cc2d900a034a2b2654a357924 node=gl1523 2026-09-19T00:10:31Z
+QUEUE_SHARD_START job=61495578 shard=1 log=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/primary700-nomotion50k-gl-s1.log 2026-09-19T00:10:31Z
+CGROUP=/sys/fs/cgroup/system.slice/slurmstepd.scope/job_61495578/step_6/user/task_0 SAMPLE_INTERVAL=15s
+SHARD_START run=primary700-nomotion50k-gl shard=s1 plan=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/plans/shard1.json node=gl1523.arc-ts.umich.edu job=61495578
+/home/hongzefu/.local/bin/uv
+START_UTC=2026-09-19T00:10:32Z
+gl1523.arc-ts.umich.edu
+d33c0ba16662b69cc2d900a034a2b2654a357924
+ b4e97f22fe007078e297205898c07c1acbc69165 third_party/robomme_benchmark (heads/PolicyEvalThirdParty-v2-eval-0917)
+uv 0.8.22
+name, uuid, memory.used [MiB], compute_mode
+NVIDIA A40, GPU-2afd4024-8246-06a6-38d8-481f7e072fde, 0 MiB, Default
+REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA SLURM_JOB_ID=61495578 ARRAY_TASK=none SHARD=s1 CUDA_VISIBLE_DEVICES=0
+PLAN=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/plans/shard1.json episodes=70 chunk=20
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+SOURCES_PASS {"python": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/bin/python3", "benchmark": "b4e97f22fe007078e297205898c07c1acbc69165", "robomme": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark/src/robomme/__init__.py", "openpi_client": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/__init__.py", "candidates": {"run_id": "20260912-contract-v3-10", "identity_sha256": "3b4de03a0b4639181f9c68086aea11e9b51ffcb65bbed701a44f573e74e0beb7", "groups": 14, "primary": 700}, "probe": {"key": ["RouteStick", "xhard", 115], "seed": 27500, "spec_sha256": "ae9abaed203437030b6237478f35e80df26d6811e34054e7c944a11ae4126d93"}, "official_routestick_ep0": {"task": "RouteStick", "episode": 0, "seed": 660000, "difficulty": "easy"}}
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+RENDER_PASS {"render_pass": true, "task": "BinFill", "episode": 0, "status": "ongoing", "frames": [{"shape": [256, 256, 3], "std": 53.09643729088601}, {"shape": [256, 256, 3], "std": 52.75876086672221}, {"shape": [256, 256, 3], "std": 53.09674462593213}, {"shape": [256, 256, 3], "std": 52.013364007753225}]}
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SERVER_SOURCE /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-server/bin/python3 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/policy_config.py /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/openpi/models/model.py
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+PARAM_TREE_EXACT=PASS n_model=61 n_ckpt=61 missing=0 extra=0 shape_mismatch=0 motion_leaves=0
+HISTORY_CONFIG=PASS NORM_STATS=PASS MOTION_DISABLED=PASS config=mme_vla_suite step=50000
+EVAL_PARAMS policy=perceptual-framesamp-modul-8frame-8x8 config=mme_vla_suite ckpt=50000 seed=7 max_steps=2000 wall=2400 online_gpu=0 prov_relax=gpu_name,compute_cap,sm_count
+SERVER_READY port=18018 pid=2404416 own=1 tree=2404416 2404423 
+CHUNK_START 1/4
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+
+[robomme] env for BinFill/easy episode 156 setup finished
+task_goal: put one blue cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 166 setup finished
+task_goal: put two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 176 setup finished
+task_goal: put two red cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 186 setup finished
+task_goal: put two red cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 196 setup finished
+task_goal: put two red cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 154 setup finished
+task_goal: put one blue cube and two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 164 setup finished
+task_goal: put three red cubes and two blue cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 174 setup finished
+task_goal: put three blue cubes and one green cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 184 setup finished
+task_goal: put one red cube, one blue cube and one green cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 194 setup finished
+task_goal: put one red cube, one blue cube and two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 154 setup finished
+task_goal: put two red cubes and one blue cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 164 setup finished
+task_goal: put two blue cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 174 setup finished
+task_goal: put four blue cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 184 setup finished
+task_goal: put two red cubes and one green cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 194 setup finished
+task_goal: put one red cube and two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for RouteStick/easy episode 116 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 100
+
+[robomme] env for RouteStick/easy episode 126 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 150
+
+[robomme] env for RouteStick/easy episode 136 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 100
+
+[robomme] env for RouteStick/easy episode 146 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 100
+
+[robomme] env for RouteStick/easy episode 156 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 150
+[robomme] 本进程已新评 20 集，达到 max_new_episodes，正常退出
+CHUNK_DONE 1/4
+CHUNK_START 2/4
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+we will resume the evaluation
+
+[robomme] env for RouteStick/hard episode 116 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/hard episode 126 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/hard episode 136 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/hard episode 146 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 350
+
+[robomme] env for RouteStick/hard episode 156 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/medium episode 116 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+
+[robomme] env for RouteStick/medium episode 126 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+
+[robomme] env for RouteStick/medium episode 136 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/medium episode 146 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/medium episode 156 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/xhard episode 116 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 400
+
+[robomme] env for RouteStick/xhard episode 126 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 400
+
+[robomme] env for RouteStick/xhard episode 136 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 450
+
+[robomme] env for RouteStick/xhard episode 146 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 400
+
+[robomme] env for RouteStick/xhard episode 156 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 400
+
+[robomme] env for VideoRepick/easy episode 156 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 321
+
+[robomme] env for VideoRepick/easy episode 166 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 324
+
+[robomme] env for VideoRepick/easy episode 176 setup finished
+task_goal: watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop
+exec_start_idx: 263
+
+[robomme] env for VideoRepick/easy episode 186 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 310
+
+[robomme] env for VideoRepick/easy episode 196 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 269
+[robomme] 本进程已新评 20 集，达到 max_new_episodes，正常退出
+CHUNK_DONE 2/4
+CHUNK_START 3/4
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+we will resume the evaluation
+
+[robomme] env for VideoRepick/medium episode 154 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 307
+
+[robomme] env for VideoRepick/medium episode 164 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 379
+
+[robomme] env for VideoRepick/medium episode 174 setup finished
+task_goal: watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop
+exec_start_idx: 410
+
+[robomme] env for VideoRepick/medium episode 184 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 373
+
+[robomme] env for VideoRepick/medium episode 194 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 317
+
+[robomme] env for VideoRepick/xhard episode 154 setup finished
+task_goal: watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop
+exec_start_idx: 420
+
+[robomme] env for VideoRepick/xhard episode 164 setup finished
+task_goal: watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop
+exec_start_idx: 433
+
+[robomme] env for VideoRepick/xhard episode 174 setup finished
+task_goal: watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop
+exec_start_idx: 482
+
+[robomme] env for VideoRepick/xhard episode 184 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 425
+
+[robomme] env for VideoRepick/xhard episode 194 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop
+exec_start_idx: 427
+
+[robomme] env for VideoUnmaskSwap/easy episode 116 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/easy episode 126 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/easy episode 136 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the red cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/easy episode 146 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/easy episode 156 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/hard episode 116 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/hard episode 126 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 216
+
+[robomme] env for VideoUnmaskSwap/hard episode 136 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 216
+
+[robomme] env for VideoUnmaskSwap/hard episode 146 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/hard episode 156 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 216
+[robomme] 本进程已新评 20 集，达到 max_new_episodes，正常退出
+CHUNK_DONE 3/4
+CHUNK_START 4/4
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+we will resume the evaluation
+
+[robomme] env for VideoUnmaskSwap/medium episode 116 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/medium episode 126 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/medium episode 136 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/medium episode 146 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+
+[robomme] env for VideoUnmaskSwap/medium episode 156 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 168
+
+[robomme] env for VideoUnmaskSwap/xhard episode 116 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 264
+
+[robomme] env for VideoUnmaskSwap/xhard episode 126 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube
+exec_start_idx: 318
+
+[robomme] env for VideoUnmaskSwap/xhard episode 136 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube
+exec_start_idx: 264
+
+[robomme] env for VideoUnmaskSwap/xhard episode 146 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube
+exec_start_idx: 318
+
+[robomme] env for VideoUnmaskSwap/xhard episode 156 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube
+exec_start_idx: 318
+CHUNK_DONE 4/4
+SHARD_PASS {"pipeline_pass": true, "shard_tag": "s1", "identity_sha256": "3b4de03a0b4639181f9c68086aea11e9b51ffcb65bbed701a44f573e74e0beb7", "episodes": 70, "evaluated": 70, "successes": 27, "errors": [], "groups": {"BinFill/easy": {"episodes": 5, "successes": 2, "errors": 0}, "BinFill/hard": {"episodes": 5, "successes": 1, "errors": 0}, "BinFill/medium": {"episodes": 5, "successes": 3, "errors": 0}, "RouteStick/easy": {"episodes": 5, "successes": 5, "errors": 0}, "RouteStick/hard": {"episodes": 5, "successes": 1, "errors": 0}, "RouteStick/medium": {"episodes": 5, "successes": 4, "errors": 0}, "RouteStick/xhard": {"episodes": 5, "successes": 0, "errors": 0}, "VideoRepick/easy": {"episodes": 5, "successes": 2, "errors": 0}, "VideoRepick/medium": {"episodes": 5, "successes": 4, "errors": 0}, "VideoRepick/xhard": {"episodes": 5, "successes": 1, "errors": 0}, "VideoUnmaskSwap/easy": {"episodes": 5, "successes": 1, "errors": 0}, "VideoUnmaskSwap/hard": {"episodes": 5, "successes": 0, "errors": 0}, "VideoUnmaskSwap/medium": {"episodes": 5, "successes": 2, "errors": 0}, "VideoUnmaskSwap/xhard": {"episodes": 5, "successes": 1, "errors": 0}}}
+SHARD_DONE run=primary700-nomotion50k-gl shard=s1 episodes=70
+END_UTC=2026-09-19T00:45:21Z
+EXIT_CODE=0
+EXIT_CODE=0
+QUEUE_SHARD_DONE job=61495578 shard=1 rc=0 2026-09-19T00:45:22Z
+QUEUE_DONE job=61495578 failed=0 2026-09-19T00:45:23Z
+ITEM_DONE item=nomotion-s1 rc=0 job=61495578 2026-09-19T00:45:23Z
+CLAIM item=nomotion-s4 job=61495578 node=gl1523 2026-09-19T00:45:23Z
+QUEUE_START job=61495578 run=primary700-nomotion50k-gl shards=4 head=d33c0ba16662b69cc2d900a034a2b2654a357924 node=gl1523 2026-09-19T00:45:23Z
+QUEUE_SHARD_START job=61495578 shard=4 log=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/primary700-nomotion50k-gl-s4.log 2026-09-19T00:45:23Z
+CGROUP=/sys/fs/cgroup/system.slice/slurmstepd.scope/job_61495578/step_7/user/task_0 SAMPLE_INTERVAL=15s
+SHARD_START run=primary700-nomotion50k-gl shard=s4 plan=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/plans/shard4.json node=gl1523.arc-ts.umich.edu job=61495578
+/home/hongzefu/.local/bin/uv
+START_UTC=2026-09-19T00:45:24Z
+gl1523.arc-ts.umich.edu
+d33c0ba16662b69cc2d900a034a2b2654a357924
+ b4e97f22fe007078e297205898c07c1acbc69165 third_party/robomme_benchmark (heads/PolicyEvalThirdParty-v2-eval-0917)
+uv 0.8.22
+name, uuid, memory.used [MiB], compute_mode
+NVIDIA A40, GPU-2afd4024-8246-06a6-38d8-481f7e072fde, 0 MiB, Default
+REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA SLURM_JOB_ID=61495578 ARRAY_TASK=none SHARD=s4 CUDA_VISIBLE_DEVICES=0
+PLAN=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/plans/shard4.json episodes=70 chunk=20
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+SOURCES_PASS {"python": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/bin/python3", "benchmark": "b4e97f22fe007078e297205898c07c1acbc69165", "robomme": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark/src/robomme/__init__.py", "openpi_client": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/__init__.py", "candidates": {"run_id": "20260912-contract-v3-10", "identity_sha256": "3b4de03a0b4639181f9c68086aea11e9b51ffcb65bbed701a44f573e74e0beb7", "groups": 14, "primary": 700}, "probe": {"key": ["RouteStick", "xhard", 115], "seed": 27500, "spec_sha256": "ae9abaed203437030b6237478f35e80df26d6811e34054e7c944a11ae4126d93"}, "official_routestick_ep0": {"task": "RouteStick", "episode": 0, "seed": 660000, "difficulty": "easy"}}
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+RENDER_PASS {"render_pass": true, "task": "BinFill", "episode": 0, "status": "ongoing", "frames": [{"shape": [256, 256, 3], "std": 53.09643729088601}, {"shape": [256, 256, 3], "std": 52.75876086672221}, {"shape": [256, 256, 3], "std": 53.09674462593213}, {"shape": [256, 256, 3], "std": 52.013364007753225}]}
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SERVER_SOURCE /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-server/bin/python3 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/policy_config.py /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/src/openpi/models/model.py
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+PARAM_TREE_EXACT=PASS n_model=61 n_ckpt=61 missing=0 extra=0 shape_mismatch=0 motion_leaves=0
+HISTORY_CONFIG=PASS NORM_STATS=PASS MOTION_DISABLED=PASS config=mme_vla_suite step=50000
+EVAL_PARAMS policy=perceptual-framesamp-modul-8frame-8x8 config=mme_vla_suite ckpt=50000 seed=7 max_steps=2000 wall=2400 online_gpu=0 prov_relax=gpu_name,compute_cap,sm_count
+SERVER_READY port=18039 pid=2442701 own=1 tree=2442701 2442708 
+CHUNK_START 1/4
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+
+[robomme] env for BinFill/easy episode 159 setup finished
+task_goal: put two red cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 169 setup finished
+task_goal: put three green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 179 setup finished
+task_goal: put three blue cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 189 setup finished
+task_goal: put three red cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/easy episode 199 setup finished
+task_goal: put one blue cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 157 setup finished
+task_goal: put two blue cubes and two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 167 setup finished
+task_goal: put two red cubes, one blue cube and one green cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 177 setup finished
+task_goal: put four red cubes and one blue cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 187 setup finished
+task_goal: put one red cube, two blue cubes and two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/hard episode 197 setup finished
+task_goal: put three red cubes and two blue cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 157 setup finished
+task_goal: put one red cube and one blue cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 167 setup finished
+task_goal: put two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 177 setup finished
+task_goal: put one red cube and one green cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 187 setup finished
+task_goal: put one red cube and one blue cube into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for BinFill/medium episode 197 setup finished
+task_goal: put one red cube and two blue cubes into the bin, then press the button to stop
+exec_start_idx: 0
+
+[robomme] env for RouteStick/easy episode 119 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 150
+
+[robomme] env for RouteStick/easy episode 129 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 100
+
+[robomme] env for RouteStick/easy episode 139 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 100
+
+[robomme] env for RouteStick/easy episode 149 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 150
+
+[robomme] env for RouteStick/easy episode 159 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 150
+[robomme] 本进程已新评 20 集，达到 max_new_episodes，正常退出
+CHUNK_DONE 1/4
+CHUNK_START 2/4
+/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/policy-eval-client/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+we will resume the evaluation
+
+[robomme] env for RouteStick/hard episode 119 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 300
+
+[robomme] env for RouteStick/hard episode 129 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+
+[robomme] env for RouteStick/hard episode 139 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 350
+
+[robomme] env for RouteStick/hard episode 149 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 350
+
+[robomme] env for RouteStick/hard episode 159 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 300
+
+[robomme] env for RouteStick/medium episode 119 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/medium episode 129 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/medium episode 139 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+
+[robomme] env for RouteStick/medium episode 149 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+
+[robomme] env for RouteStick/medium episode 159 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+
+[robomme] env for RouteStick/xhard episode 119 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 450
+
+[robomme] env for RouteStick/xhard episode 129 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 500
+
+[robomme] env for RouteStick/xhard episode 139 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 400
+
+[robomme] env for RouteStick/xhard episode 149 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 400
+
+[robomme] env for RouteStick/xhard episode 159 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 500
+
+[robomme] env for VideoRepick/easy episode 159 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 285
+
+[robomme] env for VideoRepick/easy episode 169 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 324
+
+[robomme] env for VideoRepick/easy episode 179 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 328
+
+[robomme] env for VideoRepick/easy episode 189 setup finished
+END_UTC=2026-09-19T01:35:53Z
+EXIT_CODE=137
+EXIT_CODE=137
+srun: error: gl1523: task 0: Exited with exit code 137
+QUEUE_SHARD_DONE job=61495578 shard=4 rc=137 2026-09-19T01:35:54Z
+QUEUE_DONE job=61495578 failed=1 2026-09-19T01:35:54Z
+ITEM_DONE item=nomotion-s4 rc=1 job=61495578 2026-09-19T01:35:54Z
+WORKER_DONE job=61495578 ran=3 failed=1 2026-09-19T01:35:54Z
+EXIT_CODE=1

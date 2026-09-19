@@ -39,14 +39,14 @@ AskUserQuestion 拍板：无 motion 侧 = bucket `HongzeFu/robomme-vla-modul-60k
 与老基线 `primary700-gl`（59999，sbatch array、2 CPU / 32G、`EPISODE_WALL_S` 默认 900）相比，本轮两侧互相一致，但资源档位与墙钟
 与老基线不同；对照表里三列并排时以此为注。
 
-## 动态分配：8 个作业抢 20 个单元（gpu-hold-01、02 用户保留不用；09、10 为用户中途追加）
+## 动态分配：8 个作业抢 20 个单元 + 看门狗 + 续跑队列（gpu-hold-01、02 用户保留不用；09、10 为用户中途追加）
 
 用户在计划批准后追加「61512013 gpu-hold-09 … 61512014 gpu-hold-10 … 这两个你也可以用」与「能否使用动态分配的机制？重新制定计划 使用动态的分配」，
-AskUserQuestion 拍板工作单元粒度 = 20 个 (模型, 分片)。机制（`scripts/evaluation/gl_hold_pool.sh`）：队列目录
+AskUserQuestion 拍板工作单元粒度 = 20 个 (模型, 分片)。机制（`scripts/evaluation/gl_hold_pool.sh`，commitV10.4）：队列目录
 `v1-store/evaluation/primary700-ab50k-gl/queue/` 的 `items.txt` 按「长任务先、短任务填尾」列 `motion 0`…`motion 9`、`nomotion 0`…`nomotion 9`；
 每个作业在登录节点起一个 worker（tmux `ev-ab-h03`…`ev-ab-h10`），靠 NFS 原子 `mkdir claims/<单元>` 抢单、跑完写 `done/<单元>`（rc、起止、作业、节点），
-扫完退出；起跑时仍 PENDING 的 gpu-hold-10 先起 worker、自己等 RUNNING 再加入。同一分片的两轮不保证同节点同卡（用户已选此粒度）；
-所有节点均为 A40 + 驱动 595.71.05，调用逐字相同。本机两进程并发干跑（`DRY_RUN=1`）：20 单元各被抢恰一次、两 worker 各 10。
+扫完退出。同一分片的两轮不保证同节点同卡（用户已选此粒度）；所有节点均为 A40 + 驱动 595.71.05，调用逐字相同。
+本机两进程并发干跑（`DRY_RUN=1`）：20 单元各被抢恰一次、两 worker 各 10。
 
 | 作业 | jobid | 节点 | 起跑时状态 |
 |---|---|---|---|
@@ -57,9 +57,22 @@ AskUserQuestion 拍板工作单元粒度 = 20 个 (模型, 分片)。机制（`s
 | gpu-hold-07 | 61495577 | gl1522 | RUNNING，剩 1 天 21.7 h |
 | gpu-hold-08 | 61495578 | gl1523 | RUNNING，剩 1 天 21.7 h |
 | gpu-hold-09 | 61512013 | gl1524 | RUNNING，剩 1 天 23.9 h |
-| gpu-hold-10 | 61512014 | — | PENDING |
+| gpu-hold-10 | 61512014 | gl1511 | 计划时 PENDING，起跑前已 RUNNING |
 
-实际抢单结果（单元 → 作业/节点/起止/rc）见 `result.md`。
+**起跑后补上的两层（用户 2026-09-19 授权「自动标 error + KILL 客户端」）**，脚本本体在 `v1-store/evaluation/primary700-ab50k-gl/watchdog.sh`
+（不进 git，副本见 `records/watchdog.sh.txt`）：
+
+- **看门狗**（登录节点 tmux `ev-ab-watchdog`，每 180 s 扫一次）：VideoRepick / VideoUnmaskSwap 的 9 条 episode 会卡死在 `make_env`/reset 的
+  native 调用里（与老基线 `primary700-gl` 的 9 条 error 完全同一批），`eval.py` 的 `SIGALRM` 单集墙钟打不断，只能等 4 h 的 `EVAL_TIMEOUT`，
+  且 `run_shard.sh` 有 `set -e`、客户端一被砍整片 rc≠0 退出。判据：`client.log` 静默 ≥ 12 min 且最后一行是 `env for <group> episode <ep> setup finished`。
+  处置：先把该集写成 `"error"`（与 `False`/fail 严格区分，`check_shard.py` 只接受 `{True, False, "error"}`），同时追加到 `queue/hang_marks.txt`
+  以区分「看门狗标的 error」与「评测自身抛出的 error」；再经 `srun --jobid --overlap` 在计算节点只 `pkill -KILL` 该分片的客户端 python
+  （`[e]val.py` 括号技巧防自匹配，不碰 server / sidecar / 其他分片）。
+- **续跑队列** `queue-resume/`：看门狗把主队列 rc≠0 的单元追加进 `items.txt`；续跑再失败（同一分片含多条坏集）则把 `claims/`、`done/` 归档到
+  `history/` 允许再抢，每单元最多 4 次尝试。续跑 worker 为 `ALLOW_RESUME=1 QUEUE_DIR=…/queue-resume gl_hold_pool.sh <jobid>`
+  （tmux `ev-ab-r0K` 一次性 + `ev-ab-q0K` 循环直到 `queue-resume/STOP`），走同一条调用链，`run_shard.sh` 按 `progress.json` 跳过已评与已标 error 的集。
+
+实际抢单结果（单元 → 作业 / 节点 / 起止 / rc）与看门狗标记表见 `result.md`。
 
 ## 冒烟（gpu-hold-08，两轮各 2 集）
 
@@ -78,7 +91,18 @@ gl_hold_pool.sh 61495578`，队列两项 `nomotion smoke`、`motion smoke`（计
 
 ## 正式起跑
 
-（待补：正式起跑后填 HEAD、items.txt、八条 tmux 命令与起跑时刻）
+HEAD `d33c0ba`（clean，冒烟记录 docs commit 之后）。2026-09-18 **22:24:27Z** 在登录节点一次性起八个 detached tmux `ev-ab-h03`…`ev-ab-h10`，
+每个：`bash $REPO/scripts/evaluation/gl_hold_pool.sh <jobid> 2>&1 | tee -a $REPO/v1-store/logs/policy-eval/primary700-ab50k-gl.h<K>.log`
+（作业号 03:61495431 04:61495432 05:61495575 06:61495576 07:61495577 08:61495578 09:61512013 10:61512014；起跑时 gpu-hold-10 已 RUNNING 于 gl1511）。
+队列 `v1-store/evaluation/primary700-ab50k-gl/queue/items.txt`（20 行）：
+
+```
+motion 0 … motion 9
+nomotion 0 … nomotion 9
+```
+
+本机每份 `h<K>.log` 各挂一个 Monitor（过滤 `WORKER_START|CLAIM|SHARD_PASS|SHARD_FAIL|ITEM_DONE|WORKER_DONE|EXIT_CODE=|Traceback|…`）。
+实际抢单结果（单元 → 作业 / 节点 / 起止 / rc）见 `result.md`。
 
 ## tmux 会话清单（清理唯一依据）
 

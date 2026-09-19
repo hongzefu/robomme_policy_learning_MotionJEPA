@@ -1,0 +1,28 @@
+SHARD_START run=primary700-nomotion50k-gl shard=s2 plan=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/plans/shard2.json node=gl1517.arc-ts.umich.edu job=61495431
+START_UTC=2026-09-19T00:11:35Z
+EVAL_PARAMS policy=perceptual-framesamp-modul-8frame-8x8 config=mme_vla_suite ckpt=50000 seed=7 max_steps=2000 wall=2400 online_gpu=0 prov_relax=gpu_name,compute_cap,sm_count
+SERVER_READY port=18025 pid=1210492 own=1 tree=1210492 1210499 
+CHUNK_START 1/4
+CHUNK_DONE 1/4
+CHUNK_START 2/4
+CHUNK_DONE 2/4
+CHUNK_START 3/4
+END_UTC=2026-09-19T01:35:53Z
+EXIT_CODE=137
+EXIT_CODE=137
+SHARD_START run=primary700-nomotion50k-gl shard=s2 plan=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/primary700-nomotion50k-gl/plans/shard2.json node=gl1517.arc-ts.umich.edu job=61495431
+START_UTC=2026-09-19T01:56:36Z
+EVAL_PARAMS policy=perceptual-framesamp-modul-8frame-8x8 config=mme_vla_suite ckpt=50000 seed=7 max_steps=2000 wall=2400 online_gpu=0 prov_relax=gpu_name,compute_cap,sm_count
+SERVER_READY port=18025 pid=1298935 own=1 tree=1298935 1298942 
+CHUNK_START 1/4
+CHUNK_DONE 1/4
+CHUNK_START 2/4
+CHUNK_DONE 2/4
+CHUNK_START 3/4
+CHUNK_DONE 3/4
+CHUNK_START 4/4
+CHUNK_DONE 4/4
+SHARD_PASS {"pipeline_pass": true, "shard_tag": "s2", "identity_sha256": "3b4de03a0b4639181f9c68086aea11e9b51ffcb65bbed701a44f573e74e0beb7", "episodes": 70, "evaluated": 69, "successes": 21, "errors": [{"group": "VideoRepick/medium", "episode": 155}], "groups": {"BinFill/easy": {"episodes": 5, "successes": 3, "errors": 0}, "BinFill/hard": {"episodes": 5, "successes": 0, "errors": 0}, "BinFill/medium": {"episodes": 5, "successes": 1, "errors": 0}, "RouteStick/easy": {"episodes": 5, "successes": 4, "errors": 0}, "RouteStick/hard": {"episodes": 5, "successes": 1, "errors": 0}, "RouteStick/medium": {"episodes": 5, "successes": 2, "errors": 0}, "RouteStick/xhard": {"episodes": 5, "successes": 0, "errors": 0}, "VideoRepick/easy": {"episodes": 5, "successes": 3, "errors": 0}, "VideoRepick/medium": {"episodes": 5, "successes": 2, "errors": 1}, "VideoRepick/xhard": {"episodes": 5, "successes": 1, "errors": 0}, "VideoUnmaskSwap/easy": {"episodes": 5, "successes": 3, "errors": 0}, "VideoUnmaskSwap/hard": {"episodes": 5, "successes": 0, "errors": 0}, "VideoUnmaskSwap/medium": {"episodes": 5, "successes": 0, "errors": 0}, "VideoUnmaskSwap/xhard": {"episodes": 5, "successes": 1, "errors": 0}}}
+END_UTC=2026-09-19T02:17:22Z
+EXIT_CODE=0
+EXIT_CODE=0

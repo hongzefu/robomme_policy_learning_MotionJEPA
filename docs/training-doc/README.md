@@ -131,7 +131,8 @@
 | [`eval-3seed-context-vs-motion/`](eval-3seed-context-vs-motion/result.md) | 三 seed 四任务成功率对照：motion 24.2% ± 1.3 vs 官方 24.5% ± 0.5，无可辨别差异 |
 | [`eval-hard-patternlock-routestick/`](eval-hard-patternlock-routestick/result.md) / [`eval-medium-patternlock-routestick/`](eval-medium-patternlock-routestick/result.md) | PatternLock / RouteStick 难度分层评估 |
 | [`eval-binfill-pickxtimes/`](eval-binfill-pickxtimes/result.md) | BinFill / PickXTimes 评估 |
-| [`primary700-motion50k-gl/`](primary700-motion50k-gl/launch.md) | motion 80k run 的 50000 接入 700 条评测链路：资产落位、sidecar 跨硬件放行、gpu-hold 作业直跑；集群两集冒烟 `SHARD_PASS`（A40 sidecar 1.64 s/窗、infer 126 ms、anon 峰 15.7 GiB）。**正式 700 条未起跑** |
+| [`primary700-motion50k-gl/`](primary700-motion50k-gl/result.md) | motion 80k run 的 50000 跑完 700 条：**40.71%**（285/700，error 9），A40 sidecar 1.64 s/窗、infer 126 ms、anon 峰 18.2 GiB；链路接入与冒烟见其 `launch.md` |
+| [`primary700-nomotion50k-gl/`](primary700-nomotion50k-gl/result.md) | 无 motion 60k run 的 50000 跑完 700 条：**26.00%**（182/700，error 9），与 motion 50000 同一套调用、8 个 gpu-hold 作业动态抢单 + 看门狗 + 续跑队列；两轮对照表、配对 2×2、执行记录都在此 |
 
 ## 五、已归档（`../archive/training-doc/`，34 项）
 
