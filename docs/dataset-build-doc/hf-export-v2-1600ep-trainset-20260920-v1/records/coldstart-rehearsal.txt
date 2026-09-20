@@ -1,0 +1,6 @@
+TRAIN_MESH shape=(2, 4) devices=8 fsdp_devices=4 batch_size=128 num_workers=8
+Step 0: grad_norm=1.2782, llm_grad_norm=1.2667, loss=0.0894, mem_enc_norm=0.1101, param_norm=1815.5465
+  彩排通过: mme_vla_suite_b128_60k
+TRAIN_MESH shape=(1, 8) devices=8 fsdp_devices=8 batch_size=128 num_workers=16
+Step 0: grad_norm=1.1138, llm_grad_norm=1.1027, loss=0.0888, mem_enc_norm=0.0938, param_norm=1815.7416
+  彩排通过: mme_vla_suite_b128_80k
