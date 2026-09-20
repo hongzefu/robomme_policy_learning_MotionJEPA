@@ -1,5 +1,7 @@
 # modulation 8×8 motion 80k 正式训练
 
+**结束状态已回写**：80k于2026-09-19 03:24:35 UTC（9月18日23:24:35 EDT）完成，EXIT_CODE=0，最终79999 checkpoint真实加载通过；详见[result.md](result.md)。以下保留原起跑记录与配置，起跑Beta不改写。
+
 **已于2026-09-18 05:47:05 UTC正式起跑。** 训练锚点为 `2f10473161b760f16d9240d3c2959ff326cde66b`（commitV10.2Beta），30项preflight全部通过，实际8卡/b128/fsdp8/w16。训练PID545524，tmux为mv2-prod；[WandB运行](https://wandb.ai/hongzefu-university-of-michigan/robomme-framesamp/runs/uzv8avpq)已同步。实际命令与起跑状态见 [launch.actual.json](records/launch.actual.json)，过程见 [result.md](result.md)。本页以下保留Beta固定的配置。
 
 本页固定用户已确认的正式run `v2-1600ep-m8x8-modul-motion-b128-80k`。V8、V-online和八卡smoke全部验收已通过，此页为Beta起跑前档案；实际启动版本、时刻和进程随启动记录固定。用户原话：「开始实施 有问题尽早问用户」「采用 v2-1600ep-m8x8-modul-motion-b128-80k」。
