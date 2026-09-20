@@ -25,7 +25,7 @@ perceptual memory 走 8 帧 × 8×8 frame sampling。60,000 step 跑满，`EXIT_
 | memory_token_dim | 1024 |
 | global batch / steps | 128 / 60,000 |
 | fsdp_devices / dtype | 4 / bfloat16 |
-| 任务 | ButtonUnmask、VideoUnmask、ButtonUnmaskSwap、VideoUnmaskSwap |
+| 任务 | BinFill、RouteStick、VideoRepick、VideoUnmaskSwap |
 | framesamp 库 | `4task-v2-1600ep-604f16da/framesamp-8x8` |
 | framesamp manifest sha256 | `4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918` |
 | framesamp store meta sha256 | `f7677e69e5c473ab2962a5ac05a5909348c2f96736152b7217b77f0d2eb4231a` |

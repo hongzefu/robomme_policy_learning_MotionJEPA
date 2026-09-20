@@ -3,9 +3,10 @@
 
 单遍读：每个源文件只 read 一次，同一份字节流同时喂给 sha256 与 tar/复制目标。
 
-两条 layout，各自的产物布局见 build_jobs()：
+三条 layout，各自的产物布局见 build_jobs()：
   gl-v1          环境 A 的 4task-gl + 4task-gl-framesamp（480 GB / 88 万小文件）
   motion400ep-v1 环境 B 的 4task-motion-400ep（130 GB / 22.9 万文件）
+  v2-1600ep-v1   环境 B 的 4task-v2-1600ep-604f16da（669 GiB / 63.2 万文件）
 
 库路径、暂存根、目标 bucket 全部由 CLI 必填参数给出，**模块里不留任何硬编码路径**
 （AGENTS 第 13 条：/data/hongzefu 与 /nfs/turbo 不得写进新脚本的默认值；两条链路各自
@@ -349,6 +350,78 @@ def build_jobs(args, logs: Path, smoke: bool):
         data_prefix, feat_prefix = "source/data_tars", "source/features_tars"
         data_dir, feat_dir = lib / "source/data", lib / "source/features"
         num = fs_meta["num_exec_samples"]
+    elif args.layout == "v2-1600ep-v1":
+        # 环境 B：4task-v2-1600ep-604f16da（BinFill / RouteStick / VideoRepick /
+        # VideoUnmaskSwap，1600 集）。与 motion400ep-v1 的三点不同：
+        #   1. 同时带 framesamp-8x8（两条生产 run 训练直读）与 framesamp（4×4 对照）；
+        #   2. source/features 共 674 GiB，训练只用得上 source_spot_sha256 点名的那几个，
+        #      因此不整目录打 tar，只直传被点名的文件（feat_dir=None 关掉 features 分片）；
+        #   3. num_exec_samples 取 framesamp-8x8 的 store_meta。
+        fs8_meta = json.loads((lib / "framesamp-8x8/meta/store_meta.json").read_text())
+        fs4_meta = json.loads((lib / "framesamp/meta/store_meta.json").read_text())
+        mo_meta = json.loads((lib / "motion/meta/store_meta.json").read_text())
+        # pack.lock 是读侧硬闸（framesamp_store.require_no_pack_lock /
+        # motion_store.require_no_pack_lock，存在即 raise 且无逃生阀），打进包等于交付一个
+        # 异地一起跑就拒绝加载的库，这里提前拦住。
+        for sub in ("framesamp-8x8", "framesamp", "motion"):
+            if (lib / sub / "meta" / "pack.lock").exists():
+                raise SystemExit(f"错误: {sub}/meta/pack.lock 存在——读侧闸会拒跑，不能打进包")
+        # 锚点必须从**本库自己的** store_meta 现读，抄留档常量会得到恒失败或恒通过的假验证
+        expected_small = {
+            "framesamp-8x8/pos_emb_8x8.f32.bin": fs8_meta["tables"]["pos_emb_8x8"]["sha256"],
+            "framesamp-8x8/state_emb.f32.bin": fs8_meta["tables"]["state_emb"]["sha256"],
+            "framesamp/pos_emb_4x4.f32.bin": fs4_meta["tables"]["pos_emb_4x4"]["sha256"],
+            "framesamp/state_emb.f32.bin": fs4_meta["tables"]["state_emb"]["sha256"],
+            "motion/motion_token.f32.bin": mo_meta["tables"]["motion_token"]["sha256"],
+        }
+        for name in sorted(os.listdir(lib / "meta")):
+            copy_jobs.append((lib / "meta" / name, f"meta/{name}", "link"))
+        for name in sorted(os.listdir(lib / "source/meta")):
+            copy_jobs.append((lib / "source/meta" / name, f"source/meta/{name}", "link"))
+        copy_jobs += _scan_dir_files(lib / "motion", "motion", "link")
+        # 源库抽样复验（framesamp_store 的 run_fast_checks）按 os.getpid() 轮转抽
+        # source_spot_sha256.entries，落在 features/ 下的条目必须随库交付，
+        # 否则异地起跑会在「源库抽样文件缺失」处 FileNotFoundError。名单现读、不硬编码。
+        spot_feats = sorted(
+            {
+                e["relpath"]
+                for e in fs8_meta.get("source_spot_sha256", {}).get("entries", [])
+                if e["relpath"].startswith("features/")
+            }
+        )
+        if not spot_feats:
+            raise SystemExit("错误: framesamp-8x8 的 source_spot_sha256 无 features/ 条目，请核对库")
+        for relpath in spot_feats:
+            copy_jobs.append((lib / "source" / relpath, f"source/{relpath}", "link"))
+        if smoke:
+            # smoke 跳过两库合计 64 个 part 大 bin（370 GiB），只带小 bin + meta 验锚点
+            for sub, names in (
+                ("framesamp-8x8", ("pos_emb_8x8.f32.bin", "state_emb.f32.bin")),
+                ("framesamp", ("pos_emb_4x4.f32.bin", "state_emb.f32.bin")),
+            ):
+                for name in names:
+                    copy_jobs.append((lib / sub / name, f"{sub}/{name}", "link"))
+                for name in sorted(os.listdir(lib / sub / "meta")):
+                    copy_jobs.append((lib / sub / "meta" / name, f"{sub}/meta/{name}", "link"))
+        else:
+            copy_jobs += _scan_dir_files(lib / "framesamp-8x8", "framesamp-8x8", "link")
+            copy_jobs += _scan_dir_files(lib / "framesamp", "framesamp", "link")
+        if args.norm_stats is not None:
+            # 本库唯一的训练交付件；没有它这个数据集训不起来。镜像 openpi 的 assets/<repo_id>/ 布局
+            copy_jobs.append((args.norm_stats, "assets/robomme/norm_stats.json", "link"))
+        # 三个扁平小文件目录 → tar
+        if not smoke:
+            for name, sub, arc in (
+                ("wan-latents", "wan-latents", "wan-latents"),
+                ("oracle-wan-mj", "oracle", "oracle"),
+                ("motion-tokens", "motion-tokens", "motion-tokens"),
+            ):
+                tar_groups += build_flat_plan(
+                    logs / f"{name}_plan.json", lib / sub, f"{sub}_tars", arc, name
+                )
+        data_prefix, feat_prefix = "source/data_tars", None
+        data_dir, feat_dir = lib / "source/data", None
+        num = fs8_meta["num_exec_samples"]
     else:
         raise SystemExit(f"错误: 未知 layout {args.layout}")
 
@@ -372,9 +445,13 @@ def build_jobs(args, logs: Path, smoke: bool):
         }
         for i in range(n_data_shards)
     ]
-    feat_shards = build_features_plan(logs / "features_plan.json", feat_dir, feat_prefix)
-    for s in feat_shards:
-        s.update({"kind": "features_shard", "src_dir": str(feat_dir), "arc_prefix": "features"})
+    if feat_dir is None:
+        # v2-1600ep-v1：features 整目录不上传，只直传 source_spot_sha256 点名的那几个
+        feat_shards: list[dict] = []
+    else:
+        feat_shards = build_features_plan(logs / "features_plan.json", feat_dir, feat_prefix)
+        for s in feat_shards:
+            s.update({"kind": "features_shard", "src_dir": str(feat_dir), "arc_prefix": "features"})
 
     if smoke:
         data_groups = data_groups[: args.limit_shards]
@@ -391,7 +468,7 @@ def main() -> int:
     ap.add_argument("--packed-lib", type=Path, default=None, help="仅 gl-v1：packed 库根")
     ap.add_argument("--stage-root", type=Path, required=True, help="暂存根（其下自动建 stage/ logs/）")
     ap.add_argument("--bucket", required=True, help="目标 bucket URI，写进 upload_manifest.json")
-    ap.add_argument("--layout", required=True, choices=("gl-v1", "motion400ep-v1"))
+    ap.add_argument("--layout", required=True, choices=("gl-v1", "motion400ep-v1", "v2-1600ep-v1"))
     ap.add_argument("--norm-stats", type=Path, default=None, help="额外带上的 norm_stats.json")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument(
