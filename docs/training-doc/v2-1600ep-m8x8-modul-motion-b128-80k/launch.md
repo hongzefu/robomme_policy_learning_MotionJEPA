@@ -1,5 +1,9 @@
 # modulation 8×8 motion 80k 正式训练
 
+**结束状态已回写**：80k于2026-09-19 03:24:35 UTC（9月18日23:24:35 EDT）完成，EXIT_CODE=0，最终79999 checkpoint真实加载通过；详见[result.md](result.md)。以下保留原起跑记录与配置，起跑Beta不改写。
+
+**已于2026-09-18 05:47:05 UTC正式起跑。** 训练锚点为 `2f10473161b760f16d9240d3c2959ff326cde66b`（commitV10.2Beta），30项preflight全部通过，实际8卡/b128/fsdp8/w16。训练PID545524，tmux为mv2-prod；[WandB运行](https://wandb.ai/hongzefu-university-of-michigan/robomme-framesamp/runs/uzv8avpq)已同步。实际命令与起跑状态见 [launch.actual.json](records/launch.actual.json)，过程见 [result.md](result.md)。本页以下保留Beta固定的配置。
+
 本页固定用户已确认的正式run `v2-1600ep-m8x8-modul-motion-b128-80k`。V8、V-online和八卡smoke全部验收已通过，此页为Beta起跑前档案；实际启动版本、时刻和进程随启动记录固定。用户原话：「开始实施 有问题尽早问用户」「采用 v2-1600ep-m8x8-modul-motion-b128-80k」。
 
 实施依据为 [0916计划](../../../0916-motion-modul-8x8-plan.md)。前置证据见 [建库结果](../../dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)、[V8逐位对拍](../mv2-aa/result.md)、[V-online三档](../mv2-online/result.md) 与 [八卡smoke结果](../smoke-m8x8-modul-motion-20260918T050716Z/result.md)。
@@ -42,7 +46,7 @@ norm_stats来自 `v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/r
 
 全程GPU采样为15秒；首段另起 `mv2-dense`，500ms采集八卡timestamp/index/utilization/memory。`TRAIN_TIMING_STEPS=300`启用前300步主线程分段计时与JAX设备trace，不增加逐步强制同步，trace结束时仅等待一次。性能窗口为第100–299步：报告平均步时、吞吐、主线程取batch等待比例、设备kernel分类、GPU利用率均值与0%比例，并按慢步/其他步分层。异步dispatch、数据等待和设备计算可能重叠，不能相加成互斥百分比；计时与采样范围须完全覆盖八卡。
 
-八卡smoke暴露并闭合了查看器JSON事件上限问题：完整原始XPlane成功恢复20步和全部GPU事件。正式入口继续采集全部前300步，`StepTiming`仅在导出时将查看器上限至少提高到一亿并恢复环境，汇总器检查上限与步骤/GPU覆盖、仅计物理stream。指标与原始XPlane都保留在记录目录。密集采样最长1800秒，或在第299步trace完整落盘后请求停止；采样器真实退出码单独留存。
+八卡smoke暴露并闭合了查看器JSON事件上限问题：完整原始XPlane成功恢复20步和全部GPU事件。正式入口请求采集全部前300步，`StepTiming`仅在导出时将查看器上限至少提高到一亿并恢复环境，汇总器检查上限与步骤/GPU覆盖、仅计物理stream。**实际正式采集另遇设备层覆盖缺口：主线程300步完整，GPU原始事件仅到第25步附近，详见result.md；不能把查看器上限修复等同于300步设备采集完整。** 指标与原始XPlane都保留在记录目录。本轮密集采样采用原定1800秒自然到时路径，未提前发信号，采样器真实退出码单独留存。
 
 正式和密集采样入口的精确源码见 [prod-runner.sh](records/prod-runner.sh) 与 [dense-runner.sh](records/dense-runner.sh)。独立开发副本准备记录见 [devcopy.summary.log](records/devcopy.summary.log)。
 

@@ -1,0 +1,145 @@
+{
+  "run_name": "v2-1600ep-m8x8-modul-motion-b128-80k",
+  "train_head": "2f10473161b760f16d9240d3c2959ff326cde66b",
+  "source_status": "",
+  "start_utc": "2026-09-18T05:47:05Z",
+  "recorded_utc": "2026-09-18T05:48:55.862767+00:00",
+  "launch_command": "bash v1-store/logs/mv2-prod-runner.sh 2f10473161b760f16d9240d3c2959ff326cde66b 6c9f165f928786e456b98c2448a60d6be2c2fd3e935882d9fc08e439964f1d20 d3a518011c80a115f7b398458a510a6f128f47e76c03fc251e59dab4c9c56268",
+  "train_pid": 545524,
+  "train_argv": [
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python3",
+    "scripts/training/train.py",
+    "mme_vla_suite_b128_80k",
+    "--exp-name",
+    "v2-1600ep-m8x8-modul-motion-b128-80k",
+    "--assets-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+    "--data.assets.assets-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da",
+    "--data.assets.asset-id",
+    "robomme",
+    "--checkpoint-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs",
+    "--dataset-path",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8",
+    "--model.history-config",
+    "perceptual-framesamp-modul-8frame-8x8-motion.yaml"
+  ],
+  "uv_parent_pid": 545520,
+  "tmux_sessions": [
+    "mv2-prod",
+    "mv2-dense"
+  ],
+  "prod_pane_pid": 545464,
+  "dense_pane_pid": 545282,
+  "dense_timeout_pid": 545296,
+  "sampler_15s_pid": 545519,
+  "gpu_ids": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "runtime": {
+    "mesh": {
+      "batch": 1,
+      "fsdp": 8
+    },
+    "device_count": 8,
+    "fsdp_devices": 8,
+    "batch_size": 128,
+    "num_workers": 16,
+    "seed": 42,
+    "cuda_visible_devices": "0,1,2,3,4,5,6,7",
+    "config_name": "mme_vla_suite_b128_80k",
+    "exp_name": "v2-1600ep-m8x8-modul-motion-b128-80k",
+    "devices": [
+      "cuda:0",
+      "cuda:1",
+      "cuda:2",
+      "cuda:3",
+      "cuda:4",
+      "cuda:5",
+      "cuda:6",
+      "cuda:7"
+    ]
+  },
+  "wandb_url": "https://wandb.ai/hongzefu-university-of-michigan/robomme-framesamp/runs/uzv8avpq",
+  "preflight_checks": 30,
+  "prelaunch": {
+    "passed": true,
+    "utc": "2026-09-18T05:46:30.688451+00:00",
+    "run_name": "v2-1600ep-m8x8-modul-motion-b128-80k",
+    "train_head": "2f10473161b760f16d9240d3c2959ff326cde66b",
+    "source_status": "",
+    "gpus": [
+      {
+        "index": 0,
+        "name": "NVIDIA A100-SXM4-80GB",
+        "used_mib": 0
+      },
+      {
+        "index": 1,
+        "name": "NVIDIA A100-SXM4-80GB",
+        "used_mib": 0
+      },
+      {
+        "index": 2,
+        "name": "NVIDIA A100-SXM4-80GB",
+        "used_mib": 0
+      },
+      {
+        "index": 3,
+        "name": "NVIDIA A100-SXM4-80GB",
+        "used_mib": 0
+      },
+      {
+        "index": 4,
+        "name": "NVIDIA A100-SXM4-80GB",
+        "used_mib": 0
+      },
+      {
+        "index": 5,
+        "name": "NVIDIA A100-SXM4-80GB",
+        "used_mib": 0
+      },
+      {
+        "index": 6,
+        "name": "NVIDIA A100-SXM4-80GB",
+        "used_mib": 0
+      },
+      {
+        "index": 7,
+        "name": "NVIDIA A100-SXM4-80GB",
+        "used_mib": 0
+      }
+    ],
+    "sessions": [
+      "0",
+      "1",
+      "claude-private",
+      "codex",
+      "codex-repo",
+      "codex2"
+    ],
+    "own_sessions_active": [],
+    "scratch_free_bytes": 1000608665600,
+    "shm_free_bytes": 602265333760,
+    "sha256": {
+      "history_yaml": "6c9f165f928786e456b98c2448a60d6be2c2fd3e935882d9fc08e439964f1d20",
+      "motion_meta": "d3a518011c80a115f7b398458a510a6f128f47e76c03fc251e59dab4c9c56268",
+      "norm_stats": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173"
+    },
+    "development_head": "2f10473161b760f16d9240d3c2959ff326cde66b",
+    "environment_flags": {
+      "XLA_FLAGS": null,
+      "JAX_PLATFORMS": null,
+      "UV_PROJECT_ENVIRONMENT": null,
+      "XLA_PYTHON_CLIENT_PREALLOCATE": null
+    }
+  }
+}

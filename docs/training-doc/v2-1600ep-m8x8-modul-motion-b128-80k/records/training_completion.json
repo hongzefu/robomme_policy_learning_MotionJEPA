@@ -1,0 +1,81 @@
+{
+  "recorded_utc": "2026-09-20T19:56:54.205750+00:00",
+  "run_name": "v2-1600ep-m8x8-modul-motion-b128-80k",
+  "train_head": "2f10473161b760f16d9240d3c2959ff326cde66b",
+  "start_utc": "2026-09-18T05:47:05Z",
+  "end_utc": "2026-09-19T03:24:35Z",
+  "start_edt": "2026-09-18T01:47:05-04:00",
+  "end_edt": "2026-09-18T23:24:35-04:00",
+  "elapsed_wall_s": 77850.0,
+  "exit_code": 0,
+  "training_steps": 80000,
+  "final_checkpoint": 79999,
+  "checkpoint_count": 16,
+  "metric_rows": 800,
+  "metric_steps": {
+    "start": 0,
+    "last": 79900,
+    "interval": 100
+  },
+  "finite_metric_scalars": 4000,
+  "last_logged_metrics": {
+    "loss": 0.001474518794566393,
+    "grad_norm": 0.020426495000720024,
+    "llm_grad_norm": 0.017289817333221436,
+    "mem_enc_norm": 0.0027863914147019386,
+    "param_norm": 1856.6375732421875
+  },
+  "last10_logged_metrics_mean": {
+    "loss": 0.00144775704247877,
+    "grad_norm": 0.020806629210710526,
+    "llm_grad_norm": 0.017784855142235757,
+    "mem_enc_norm": 0.0029345421586185693,
+    "param_norm": 1856.4276000976563
+  },
+  "metric_60000": {
+    "step": 60000,
+    "wall_time": 1789768914.4302576,
+    "grad_norm": {
+      "dec": 0.021225446835160255,
+      "hex": "0x1.5bc1fa0000000p-6"
+    },
+    "llm_grad_norm": {
+      "dec": 0.017921006307005882,
+      "hex": "0x1.259e260000000p-6"
+    },
+    "loss": {
+      "dec": 0.001640728092752397,
+      "hex": "0x1.ae1b660000000p-10"
+    },
+    "mem_enc_norm": {
+      "dec": 0.0036871531046926975,
+      "hex": "0x1.e348540000000p-9"
+    },
+    "param_norm": {
+      "dec": 1847.0235595703125,
+      "hex": "0x1.cdc1820000000p+10"
+    }
+  },
+  "final_checkpoint_real_cpu_restore": {
+    "passed": true,
+    "source_head": "d7370f5d40bf51488e039fe290740773130d8d68",
+    "record": "completion_l0.json",
+    "tmux": "mv2-finish-l0-20260920",
+    "elapsed_seconds": 27,
+    "parameter_leaves": 65
+  },
+  "source_files_compared": 290,
+  "source_sha_mismatches": [],
+  "main_git_status_at_completion_audit": [
+    "?? scripts/dataset/hf_export/motion80k_bucket_README.md",
+    "?? scripts/dataset/hf_export/motion80k_result_block.py",
+    "?? scripts/dataset/hf_export/motionjepa_encoder_full1600_bucket_README.md",
+    "?? scripts/dataset/hf_export/run_motion80k_ckpt_export.sh",
+    "?? scripts/dataset/hf_export/run_motion80k_passb_watcher.sh",
+    "?? scripts/dataset/hf_export/run_motionjepa_encoder_full1600_export.sh"
+  ],
+  "source_note": "当前290份既有Git源码与起跑SHA一致；六份未跟踪导出文件属于其他工作，未读写或暂存。不能将当前整个主仓状态称为clean。",
+  "uv_lock_sha256": "02cbc3ba67a9024f8afb9e31f60661c9abdcc3eb680ae80a8ee464c639327221",
+  "policy_evaluation_performed_in_this_task": false,
+  "performance_note": "沿用用户接受的100至299主线程/NVML与5至24设备分窗；原稳态设备覆盖缺失保持原结论。"
+}

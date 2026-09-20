@@ -1,0 +1,11 @@
+SOURCE_HEAD=2f10473161b760f16d9240d3c2959ff326cde66b
+START_UTC=2026-09-18T06:04:29Z
+ROLE=early_window_diagnostic_not_step100_299
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+STEADY_PERF=PASS steps=20 mean_step_s=0.971348 samples_per_second=131.776
+HOST_PHASES {"train_dispatch": 0.8310699556022882, "data_next": 0.13994458827655762, "logging": 0, "checkpoint": 0}
+DEVICE_PHASES_MS_PER_STEP {"gemm": 621.3107488687285, "communication": 129.36742380000686, "transfer": 2.3226489249013365, "other": 188.80009980076215}
+GPU_UTIL {"samples": 304, "mean": 98.85526315789474, "zero_fraction": 0.0}
+GPU_UTIL_STRATA {"slow": {"samples": 0, "mean": null, "zero_fraction": null}, "other": {"samples": 304, "mean": 98.85526315789474, "zero_fraction": 0.0}}
+END_UTC=2026-09-18T06:06:15Z
+EXIT_CODE=0

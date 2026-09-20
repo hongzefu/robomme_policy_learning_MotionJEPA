@@ -1,0 +1,23 @@
+{
+  "recorded_utc": "2026-09-18T06:00:06.392003+00:00",
+  "train_pid": 545524,
+  "last_profiled_step": 299,
+  "last_profiled_step_end_utc": "2026-09-18T05:56:28.224496+00:00",
+  "training_resumed_utc": "2026-09-18T05:59:29.119000+00:00",
+  "trace_export_pause_upper_bound_s": 180.89450407028198,
+  "steps": 300,
+  "all_steps_completed": true,
+  "trace_files": [
+    {
+      "path": "v1-store/bench/v2-1600ep-m8x8-modul-motion-b128-80k/step_trace/plugins/profile/2026_09_18_05_57_25/ip-10-242-11-177.us-west-2.compute.internal.trace.json.gz",
+      "bytes": 356898751,
+      "sha256": "adb4a718a20c8fdc456b9953351927cedff25efb0b03331b178302e780cd59f1"
+    },
+    {
+      "path": "v1-store/bench/v2-1600ep-m8x8-modul-motion-b128-80k/step_trace/plugins/profile/2026_09_18_05_57_25/ip-10-242-11-177.us-west-2.compute.internal.xplane.pb",
+      "bytes": 739736011,
+      "sha256": "1b581695bee5897d625f8f27617da264cc6ec4f37f64fa0dcc792d90b068ece0"
+    }
+  ],
+  "note": "从第299步结束至进度恢复计时，含单次flush/trace导出及日志；这是导出停顿上界，不混入稳态步时。05:59:30左右实查8卡均99%，训练进程继续。"
+}

@@ -1,0 +1,17 @@
+SOURCE_HEAD=2f10473161b760f16d9240d3c2959ff326cde66b
+START_UTC=2026-09-18T05:59:42Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+PERF_INPUT=PASS timing_steps=300 xplane_errors=0 xplane_warnings=0
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/summarize_step_timing.py", line 169, in <module>
+    main()
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/summarize_step_timing.py", line 158, in main
+    result=summarize(args.records,args.gpu_csv,args.warmup_steps,args.end_step,args.trace_dir)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/summarize_step_timing.py", line 106, in summarize
+    if not all(event_counts.values()): raise ValueError("稳态窗口内有 GPU 缺少物理stream设备事件")
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ValueError: 稳态窗口内有 GPU 缺少物理stream设备事件
+END_UTC=2026-09-18T06:01:20Z
+EXIT_CODE=1
