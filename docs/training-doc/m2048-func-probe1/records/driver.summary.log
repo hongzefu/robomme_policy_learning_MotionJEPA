@@ -1,0 +1,19 @@
+START_HEAD=0c877c7495dfe5db8b83f033442013c6d6fd8552
+START_UTC=2026-09-21T04:18:56Z
+EXPLORATORY_ONLY=1
+9746737da8cdeedcb006fa02bd7fb9c4b0629f6585fa58d3e036021b9b243c75  scripts/training/tests/check_32frame_modul.py
+a302dc0a365c2c2a786a29b63144c5df4f8f37c0c9fd914c57ad134ab5e1729f  v1-store/bench/m2048/func_constant_probe.py
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+EXPLORATORY_ONLY=1 source_commit=0c877c7495dfe5db8b83f033442013c6d6fd8552
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+DETERMINISM=PASS probes=3 gradient_leaves=38 excluded=0
+TOKEN_GRAD=PASS tokens=2048 image_nonzero=2048 pos_nonzero=2048
+TOKEN_DROP_NEGATIVE=PASS rejected=1 kept_per_band=1
+FRAME_BAND_PERTURB=PASS bands=32 above_noise=32 noise_floor=0.0 min_delta=0.0006692409515380859
+MASK_SYNTH=PASS n_set=1,8,31 loss_bitexact=1 actions_bitexact=1 grad_sha_same=38/38 masked_grad_zero=1 valid_tokens_nonzero=1 negative_control_changed=1
+CHECKS_DONE run=m2048-func-probe1 utc=2026-09-21T04:23:03Z
+
+EXIT_CODE=0

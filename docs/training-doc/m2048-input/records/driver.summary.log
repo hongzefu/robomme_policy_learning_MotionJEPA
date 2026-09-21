@@ -1,0 +1,37 @@
+START_HEAD=0c877c7495dfe5db8b83f033442013c6d6fd8552
+START_UTC=2026-09-21T04:08:00Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+YAML_DIFF=PASS keys_diff=['budget'] old=512 new=2048 budget_type=int motion_enabled=0
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+GUARD_2048=PASS accept=1 reject_type=3 reject_combo=4 legacy_accept=2 ref_same=1
+STATIC_SHAPE=PASS keys=4 bad_mask_b1_rejected=1 optimized_rejected=1
+GUARD_2048=PASS accept=1 reject_type=3 reject_combo=4 legacy_accept=2 ref_same=1
+STATIC_SHAPE=PASS keys=4 bad_mask_b1_rejected=1 optimized_rejected=1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+FRAME_SELECT=PASS cases=12 max_frames=32 mismatches=0
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+REF_VS_PACKED=PASS samples=400 keys=8 none_keys=4 tasks=4 seams=200 tails=200 mismatches=0 mask_sum_all=2048
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+FRAME_SELECT=PASS cases=12 max_frames=32 mismatches=0
+PAD_SYNTH=PASS n_cases=32 full=1 zero_tail=1 mask_ok=1 dtype_ok=1 online_pad_bitexact=1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+ONLINE_ASM=PASS steps=5 shapes=(2048,2048)/(2048,768)/(2048,8)/(2048,) dtype_stage=pre_normalize dtype_ok=1 mask_sums=64,512,2048,2048,2048 pooling_branches=2
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+JAX_DELIVERY=PASS keys=8 f64_to_f32=1 mismatches=0
+COLLATE_MIXED=PASS kinds=3 dtype_contract=1 mismatches=0
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+MEMATTN_PARAMS={"kv_einsum_mem": {"w": [2, 1, 1024, 256]}, "mem_rms_norm": {"scale": [1024]}, "out_einsum_mem": {"w": [4, 256, 1024]}, "q_einsum_mem": {"w": [4, 1024, 256]}}
+MEMATTN_ORACLE=PASS atol=1e-6 rtol=1e-5 singleton_length_invariant=1 garbage_bitexact=1 nondegenerate_rope_sensitive=1 compact_q_match=1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+COLLATE_DUMP=PASS batches=4 batch_bytes=120961552 steady_wait_mean_s=0.139244
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+COLLATE_DUMP=PASS batches=4 batch_bytes=120961552 steady_wait_mean_s=0.000420
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+COLLATE_EQUIV=PASS batches=4 keys=12 none_keys=4 mismatches=0
+INDEX_SEQ=PASS n=32
+COLLATE_WAIT old=0.139244 new=0.000420
+CHECKS_DONE run=m2048-input utc=2026-09-21T04:10:08Z
+
+EXIT_CODE=0

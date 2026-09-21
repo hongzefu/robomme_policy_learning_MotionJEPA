@@ -1,0 +1,16 @@
+{
+  "run": "m2048-func",
+  "source_head": "0c877c7495dfe5db8b83f033442013c6d6fd8552",
+  "start_utc": "2026-09-21T04:08:00Z",
+  "failure_utc_from_log": "2026-09-21T04:13:15.137173Z",
+  "exit_code": 1,
+  "session": "m2048-func",
+  "physical_gpu": "2",
+  "passed_before_failure": [
+    "DETERMINISM probes=3 gradient_leaves=38 excluded=0"
+  ],
+  "failure": "JIT闭包捕获模型权重，CompilationResultProto约10039569987字节超过2GB；新常量75497472字节分配失败",
+  "status": "未通过V5；待工具修复后在全新run重测",
+  "launcher_carrier_sha256_at_archive": "dec6a2af6b386fd26ca3fcde2090b5c2dae0ece0e49a5652ed7e5c5a51570ea8",
+  "checker_sha256": "9746737da8cdeedcb006fa02bd7fb9c4b0629f6585fa58d3e036021b9b243c75"
+}

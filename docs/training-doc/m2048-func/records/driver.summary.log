@@ -1,0 +1,26 @@
+START_HEAD=0c877c7495dfe5db8b83f033442013c6d6fd8552
+START_UTC=2026-09-21T04:08:00Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+DETERMINISM=PASS probes=3 gradient_leaves=38 excluded=0
+[libprotobuf ERROR external/com_google_protobuf/src/google/protobuf/message_lite.cc:449] xla.gpu.CompilationResultProto exceeded maximum protobuf size of 2GB: 10039569987
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/compiler.py:774: UserWarning: Error writing persistent compilation cache entry for 'jit_input_function': XlaRuntimeError: INTERNAL: PjRtStreamExecutorClient::SerializeExecutable proto serialization failed
+  warnings.warn(
+E0921 04:13:15.137173 3793702 pjrt_stream_executor_client.cc:3077] Execution of replica 0 failed: INTERNAL: Failed to allocate 75497472 bytes for new constant
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_32frame_modul.py", line 697, in <module>
+    main()
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_32frame_modul.py", line 690, in main
+    result=commands[a.command](a)
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_32frame_modul.py", line 480, in func
+    full_norms=token_table(full,input_normal(full))
+                                ^^^^^^^^^^^^^^^^^^
+jaxlib.xla_extension.XlaRuntimeError: INTERNAL: Failed to allocate 75497472 bytes for new constant
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+
+EXIT_CODE=1
