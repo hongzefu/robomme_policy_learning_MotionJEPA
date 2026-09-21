@@ -1,0 +1,44 @@
+CHECKER_HEAD=cd7a0bc50d2ef32a6d392873431fa7a101e660e1
+START_UTC=2026-09-21T06:35:36Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+OK manifest 复验通过: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/m2048/m2048-r20-refnpy/BASELINE_MANIFEST.json（8 条）
+OK manifest 复验通过: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/m2048/m2048-r20-packed/BASELINE_MANIFEST.json（8 条）
+SCALARS steps=20 keys=5 hex_mismatch_steps=0 first_mismatch_step=None
+REL key=loss median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=grad_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=llm_grad_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=mem_enc_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=param_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+STATE_DIGEST rows=20 mismatch=0
+BATCH_DIGEST rows=20 mismatch=0
+BATCH_DIGEST_CANONICAL rows=20 mismatch=0
+CANON_CHECK=PASS steps=20
+INDEX_SEQ=PASS n=232（共同前缀逐个一致, steps≈20）
+DET_CHECK=PASS tier=m2048-new steps=20 scalar_hex_diff=0 state_digest_diff=0 batch_digest_diff=0
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+OK manifest 复验通过: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/m2048/m2048-r20-refnpy-step1/BASELINE_MANIFEST.json（8 条）
+OK manifest 复验通过: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/m2048/m2048-r20-packed-step1/BASELINE_MANIFEST.json（8 条）
+SCALARS steps=1 keys=5 hex_mismatch_steps=0 first_mismatch_step=None
+REL key=loss median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=grad_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=llm_grad_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=mem_enc_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+REL key=param_norm median=0.000e+00 p95=0.000e+00 max=0.000e+00
+STATE_DIGEST rows=1 mismatch=0
+BATCH_DIGEST rows=1 mismatch=0
+BATCH_DIGEST_CANONICAL rows=1 mismatch=0
+CANON_CHECK=PASS steps=1
+INDEX_SEQ=PASS n=80（共同前缀逐个一致, steps≈1）
+DET_CHECK=PASS tier=m2048-new steps=1 scalar_hex_diff=0 state_digest_diff=0 batch_digest_diff=0
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+MASK_FULL=PASS batches=20 mask_sum=16384
+MASK_FULL=PASS batches=1 mask_sum=16384
+MASK_FULL=PASS batches=20 mask_sum=16384
+MASK_FULL=PASS batches=1 mask_sum=16384
+TRAIN_RECORDS=PASS state_steps=0,2..20 step1_from_rerun=1 index_train=160 idx_rows=29 index_n=232 leaves=201 finite=1 mismatches=0
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+MASK_FULL=PASS batches=20 mask_sum=16384
+MODUL_LEAVES_UPDATED=PASS leaves=10 nu_changed=10 params_changed=10 finite=10 first=0 last=20
+MASK_FULL=PASS batches=20 mask_sum=16384
+TRAIN_RECORD_NEGATIVE=PASS cases=7 rejected=7
+CHECKS_DONE run=m2048-compare-r20 utc=2026-09-21T06:35:37Z

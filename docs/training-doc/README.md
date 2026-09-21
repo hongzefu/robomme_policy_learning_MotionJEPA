@@ -10,7 +10,7 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`m2048-implementation/`](m2048-implementation/result.md) | 实施、验证与用户决定总记录 | 输入、初态、旧8×64训练回归及正式功能门通过；其余长程验收继续 |
+| [`m2048-implementation/`](m2048-implementation/result.md) | 实施、验证与用户决定总记录 | 全部正确性验收通过；容量与测速待运行 |
 | [`m2048-dump-base-8x64/`](m2048-dump-base-8x64/result.md) | 旧 8×64 全量定点输入基线 | 完成：3200样本、200批、完整1600集身份遍历 |
 | [`m2048-dump-base-32x16/`](m2048-dump-base-32x16/result.md) | 旧 32×16 全量定点输入基线 | 完成：3000样本、200批、完整1600集身份遍历 |
 | [`m2048-b20-base-8x64/`](m2048-b20-base-8x64/result.md) | 旧 8×64 真实20步基线 | 与CAND完整20+1步逐位对拍通过 |
@@ -31,9 +31,10 @@
 | [`m2048-func-retry2/`](m2048-func-retry2/result.md) | 帧带与正负对照统一JIT路径的最终功能门 | 全部通过，32帧带最小delta=1.04189e-4>同路径噪声0 |
 | [`m2048-dump-packed/`](m2048-dump-packed/result.md) | 新档packed完整输入取证 | 与源NPY的3000样本/200批逐位相同 |
 | [`m2048-dump-refnpy/`](m2048-dump-refnpy/result.md) | 新档源NPY完整输入取证 | 完整1600集身份与1192918帧索引相同 |
-| [`m2048-r20-refnpy/`](m2048-r20-refnpy/result.md) | 新档源NPY真实20步与补跑 | 本侧0..20状态完整、十叶更新；待packed双侧比较 |
+| [`m2048-r20-refnpy/`](m2048-r20-refnpy/result.md) | 新档源NPY真实20步与补跑 | 与packed完整0..20状态、五标量和输入逐位同 |
 | [`m2048-r20-refnpy-step1/`](m2048-r20-refnpy-step1/result.md) | 新参考链的第1次更新补跑 | 与主run初态、首批及首标量一致 |
-| [`m2048-r20-packed/`](m2048-r20-packed/launch.md) | 新档packed真实20步与补跑 | 05:22:51Z起跑，GPU0/1取证中 |
+| [`m2048-r20-packed/`](m2048-r20-packed/result.md) | 新档packed真实20步与补跑 | 双侧0..20/201叶通过，十叶更新，七反例拒绝 |
+| [`m2048-r20-packed-step1/`](m2048-r20-packed-step1/result.md) | 新packed第1次更新补跑 | 状态1已补齐，全部真实训练对拍完成 |
 | [`m2048-train100/`](m2048-train100/result.md) | 新档100步、原数组及checkpoint保存加载 | 全通过，201叶原数组/61叶加载一致，动作RMS=0、mem_len2048 |
 | [`m2048-smoke/`](m2048-smoke/launch.md) | b128/w16/FSDP8的20步容量检查 | 已预建档，待全部正确性门通过后独占八卡运行 |
 | [`perf-m32x8x8-modul-b128-20260921T051856Z/`](perf-m32x8x8-modul-b128-20260921T051856Z/launch.md) | 独占八卡1000步测速与80k外推 | 已预建档，待容量通过后运行 |
