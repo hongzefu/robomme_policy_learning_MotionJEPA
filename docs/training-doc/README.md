@@ -36,7 +36,7 @@
 | [`m2048-r20-packed/`](m2048-r20-packed/result.md) | 新档packed真实20步与补跑 | 双侧0..20/201叶通过，十叶更新，七反例拒绝 |
 | [`m2048-r20-packed-step1/`](m2048-r20-packed-step1/result.md) | 新packed第1次更新补跑 | 状态1已补齐，全部真实训练对拍完成 |
 | [`m2048-train100/`](m2048-train100/result.md) | 新档100步、原数组及checkpoint保存加载 | 全通过，201叶原数组/61叶加载一致，动作RMS=0、mem_len2048 |
-| [`m2048-smoke/`](m2048-smoke/launch.md) | b128/w16/FSDP8的20步容量检查 | 已预建档，待全部正确性门通过后独占八卡运行 |
+| [`m2048-smoke/`](m2048-smoke/result.md) | b128/w16/FSDP8的20步容量检查 | 全通过，61叶加载正确，共享内存峰值10.60%，临时checkpoint已按归属清理 |
 | [`perf-m32x8x8-modul-b128-20260921T051856Z/`](perf-m32x8x8-modul-b128-20260921T051856Z/launch.md) | 独占八卡1000步测速与80k外推 | 已预建档，待容量通过后运行 |
 | [`v2-1600ep-m32x8x8-modul-b128-80k/`](v2-1600ep-m32x8x8-modul-b128-80k/launch.md) | 已定正式80k运行 | 尚未起跑；全部门通过且测速稳态利用率>50%时按用户条件授权启动 |
 
