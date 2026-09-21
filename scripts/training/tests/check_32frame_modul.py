@@ -456,15 +456,16 @@ def func(a):
     noise_floor=max(abs(x[0]-probes[0][0]) for x in probes)
     print(f"DETERMINISM=PASS probes=3 gradient_leaves={len(probes[0][1])} excluded=0",flush=True)
 
-    def input_function(o,drop=False):
+    # 权重显式传入JIT，避免闭包把整棵参数树编译为巨大的设备常量。
+    def input_function(tp,fp,o,drop=False):
         def f(si,sp):
             if drop:
                 keep=(jnp.arange(2048)%64 == 0)[None,:,None]
                 si,sp=jnp.where(keep,si,0),jnp.where(keep,sp,0)
-            return loss_fn(trainable,frozen,dataclasses.replace(o,static_image_emb=si,static_pos_emb=sp))
+            return loss_fn(tp,fp,dataclasses.replace(o,static_image_emb=si,static_pos_emb=sp))
         return jax.grad(f,argnums=(0,1))(o.static_image_emb,o.static_pos_emb)
     input_normal=jax.jit(input_function)
-    input_drop=jax.jit(lambda o:input_function(o,True))
+    input_drop=jax.jit(lambda tp,fp,o:input_function(tp,fp,o,True))
 
     def token_table(o,gradients):
         tables=[]
@@ -477,10 +478,10 @@ def func(a):
             if np.any(~valid):
                 require(np.all(arr[~valid] == 0),"无效位置梯度泄漏")
         return tables
-    full_norms=token_table(full,input_normal(full))
+    full_norms=token_table(full,input_normal(trainable,frozen,full))
     require(all(np.all(t>0) for t in full_norms),"TOKEN_GRAD有位置未参与")
     print("TOKEN_GRAD=PASS tokens=2048 image_nonzero=2048 pos_nonzero=2048",flush=True)
-    dropped=token_table(full,input_drop(full))
+    dropped=token_table(full,input_drop(trainable,frozen,full))
     require(all(np.count_nonzero(t) == 32 and np.all(t[:,::64]>0) for t in dropped),"故障注入没有隔离每帧63位置")
     require(not all(np.all(t>0) for t in dropped),"逐位置门未拒绝删token故障")
     print("TOKEN_DROP_NEGATIVE=PASS rejected=1 kept_per_band=1",flush=True)
@@ -496,7 +497,7 @@ def func(a):
     for n in (1,8,31):
         samples.append({**sample,"static_mask":np.arange(2048)<n*64})
     short=_obs_from_samples(samples,motion=False)
-    short_norms=token_table(short,input_normal(short))
+    short_norms=token_table(short,input_normal(trainable,frozen,short))
     valid=np.asarray(short.static_mask)
     require(valid.any() and (~valid).any() and all(np.all(t[valid]>0) for t in short_norms),"短历史有效位置梯度为零")
     dirty={}
@@ -507,12 +508,12 @@ def func(a):
     left,right=digest(short),digest(garbage)
     require(left[0].hex()==right[0].hex() and left[1]==right[1] and len(left[1])>0,"mask外垃圾改变loss或任一可训练梯度")
     @jax.jit
-    def act(o):
-        m=nnx.merge(graph,trainable,frozen)
+    def act(tp,fp,o):
+        m=nnx.merge(graph,tp,fp)
         noise=jnp.asarray(np.random.default_rng(9).normal(size=(o.state.shape[0],20,32)).astype(np.float32))
         with at.disable_typechecking():
             return m.sample_actions(jax.random.key(3),o,noise=noise,num_steps=10)
-    la,ra=np.asarray(act(short)),np.asarray(act(garbage))
+    la,ra=np.asarray(act(trainable,frozen,short)),np.asarray(act(trainable,frozen,garbage))
     require(np.isfinite(la).all() and exact(la,ra),"mask外垃圾改变固定noise动作")
     changed=np.array(short.static_image_emb);changed[valid]=random.normal(0,1000,changed[valid].shape)
     negative=float(loss_only(trainable,frozen,dataclasses.replace(short,static_image_emb=jnp.asarray(changed))))

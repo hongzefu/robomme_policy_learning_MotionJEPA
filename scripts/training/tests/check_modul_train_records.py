@@ -77,7 +77,9 @@ def state_records(root, expected):
     return states
 
 
-def validate(root, steps, batch_size):
+def validate(root, steps, batch_size, expected_devices="4,5"):
+    require(re.fullmatch(r"[0-7],[0-7]",expected_devices) is not None and expected_devices[0]!=expected_devices[2],
+            "必须显式指定两个不同的物理GPU编号")
     root = Path(root)
     meta = load(root / "run_meta.json")
     require(meta["start_status"] == meta["source_status"] == "", "起跑工具或源码工作区不干净")
@@ -94,7 +96,7 @@ def validate(root, steps, batch_size):
     require(workers == 4,"验证worker数不是已定的4")
     require(int(flag(meta["argv"], "--seed")) == 42, "种子不符")
     require(int(flag(meta["argv"], "--fsdp-devices")) == 2, "验证 mesh 不符")
-    require(meta["environment"]["CUDA_VISIBLE_DEVICES"] == "4,5", "验证使用的物理GPU不同")
+    require(meta["environment"]["CUDA_VISIBLE_DEVICES"] == expected_devices, "验证使用的物理GPU不同")
     require(meta["environment"]["XLA_FLAGS"] == "--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0", "确定性环境不同")
     require(meta["bench_checksum_enabled"] and meta["bench_batch_digests_enabled"] and meta["bench_dump_idx_enabled"],
             "有记录器未启用")
@@ -130,9 +132,9 @@ def validate(root, steps, batch_size):
                 idx_rows=idx_rows, root=str(root))
 
 
-def with_step1(root, supplement, steps, batch_size):
-    main = validate(root, steps, batch_size)
-    one = validate(supplement, 1, batch_size)
+def with_step1(root, supplement, steps, batch_size, expected_devices="4,5"):
+    main = validate(root, steps, batch_size, expected_devices)
+    one = validate(supplement, 1, batch_size, expected_devices)
     for key in ("source_head", "history_config_resolved_sha256", "norm_stats_actual", "import_origins"):
         require(main["meta"][key] == one["meta"][key], f"补跑与主 run 不同: {key}")
     require(main["states"][0]["per_leaf"] == one["states"][0]["per_leaf"], "补跑初态不同")
@@ -163,10 +165,10 @@ def leaves_updated(root, names):
     return {"leaves": names, "first": 0, "last": states[-1]["state_step"]}
 
 
-def negative_tests(root,steps,batch_size):
+def negative_tests(root,steps,batch_size,expected_devices="4,5"):
     """复制本次真实记录做缺项、非有限值和错配反例，不碰原记录。"""
     root=Path(root)
-    validate(root,steps,batch_size)
+    validate(root,steps,batch_size,expected_devices)
     tmp_root=ROOT/"v1-store/tmp"
     faults=("missing_state","wrong_phase","nonfinite","missing_leaf","consistent_missing_leaf","wrong_index","missing_scalar")
     with tempfile.TemporaryDirectory(prefix="m2048-record-negative-",dir=tmp_root) as temporary:
@@ -192,7 +194,7 @@ def negative_tests(root,steps,batch_size):
             else:
                 path=out/"metrics.jsonl";records=rows(path);records[0].pop("mem_enc_norm")
                 path.write_text("".join(json.dumps(r)+"\n" for r in records))
-            try:validate(out,steps,batch_size)
+            try:validate(out,steps,batch_size,expected_devices)
             except (ValueError,KeyError):pass
             else:raise ValueError(f"记录检查器未拒绝反例: {fault}")
     print(f"TRAIN_RECORD_NEGATIVE=PASS cases={len(faults)} rejected={len(faults)}")
@@ -204,19 +206,20 @@ def main():
         p.add_argument("--" + name)
     p.add_argument("--steps", type=int, default=20)
     p.add_argument("--batch-size", type=int, default=8)
+    p.add_argument("--expected-devices",default="4,5",help="两侧主run与补跑共同使用的物理GPU对，默认保持旧档4,5")
     p.add_argument("--negative-tests",action="store_true")
     a = p.parse_args()
     if a.records:
         require(a.expect_leaves is not None, "单侧模式必须显式 --expect-leaves")
-        validate(a.records,a.steps,a.batch_size)
+        validate(a.records,a.steps,a.batch_size,a.expected_devices)
         names = list(MEM_LEAVES) if a.expect_leaves == "modulation10" else load(a.expect_leaves)
         result = leaves_updated(a.records, names)
-        if a.negative_tests:negative_tests(a.records,a.steps,a.batch_size)
+        if a.negative_tests:negative_tests(a.records,a.steps,a.batch_size,a.expected_devices)
     else:
         require(all((a.records_a, a.records_b, a.step1_a, a.step1_b)), "双侧比较必须提供两份主记录与两份补跑")
-        left = with_step1(a.records_a, a.step1_a, a.steps, a.batch_size)
-        right = with_step1(a.records_b, a.step1_b, a.steps, a.batch_size)
-        if a.negative_tests:negative_tests(a.records_a,a.steps,a.batch_size)
+        left = with_step1(a.records_a, a.step1_a, a.steps, a.batch_size,a.expected_devices)
+        right = with_step1(a.records_b, a.step1_b, a.steps, a.batch_size,a.expected_devices)
+        if a.negative_tests:negative_tests(a.records_a,a.steps,a.batch_size,a.expected_devices)
         for key in ("history_config_resolved_sha256", "norm_stats_actual", "batch_size", "environment"):
             if key != "environment":
                 require(left["meta"][key] == right["meta"][key], f"两侧实际配置不一致: {key}")

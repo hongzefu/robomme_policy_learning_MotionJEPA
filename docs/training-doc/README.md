@@ -24,6 +24,7 @@
 | [`m2048-input/`](m2048-input/launch.md) | 新档配置、装配、padding、在线、共享内存及oracle | 已建档，待运行 |
 | [`m2048-init/`](m2048-init/launch.md) | 512与2048完整初态逐叶比较 | 已建档，待运行 |
 | [`m2048-func/`](m2048-func/launch.md) | 逐token梯度、故障注入、帧带扰动与mask | 已建档，待运行 |
+| [`m2048-func-retry1/`](m2048-func-retry1/launch.md) | 修复验证器JIT权重常量捕获后，从独立副本正式重测 | 已建启动档案，待clean修复提交后运行 |
 | [`m2048-dump-packed/`](m2048-dump-packed/launch.md) | 新档packed完整输入取证 | 已建档，待运行 |
 | [`m2048-dump-refnpy/`](m2048-dump-refnpy/launch.md) | 新档源NPY完整输入取证 | 已建档，待运行 |
 | [`m2048-r20-refnpy/`](m2048-r20-refnpy/launch.md) | 新档源NPY真实20步与补跑 | 已建档，待运行 |
