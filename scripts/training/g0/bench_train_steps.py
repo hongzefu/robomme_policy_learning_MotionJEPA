@@ -110,7 +110,8 @@ _MAX_BENCH_STEPS = 1200  # G0b 基线升级为 1000 步（用户 2026-08-26 指�
 # 验证工具只接受明确列出的 context 与 modulation 档位，默认仍为历史关闭态。
 _EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml",
                              "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml",
-                             "perceptual-framesamp-modul-8frame-8x8.yaml", "perceptual-framesamp-modul-8frame-8x8-motion.yaml")
+                             "perceptual-framesamp-modul-8frame-8x8.yaml", "perceptual-framesamp-modul-8frame-8x8-motion.yaml",
+                             "perceptual-framesamp-modul.yaml", "perceptual-framesamp-modul-32frame-8x8.yaml")
 _EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 

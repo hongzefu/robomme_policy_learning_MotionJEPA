@@ -64,7 +64,9 @@ from openpi.training.data_loader import transform_dataset  # noqa: E402
 
 # 只接受 closed / open 两个精确文件名（0901-motion-memory-plan.md 2.1）：T1 / T2 默认钉 closed，T3 open 侧显式钉 open
 _EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml",
-                             "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml")
+                             "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml",
+                             "perceptual-framesamp-modul.yaml", "perceptual-framesamp-modul-8frame-8x8.yaml",
+                             "perceptual-framesamp-modul-8frame-8x8-motion.yaml", "perceptual-framesamp-modul-32frame-8x8.yaml")
 _EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 # 三个定点 batch：每种组成取该组第一个（batch_id 由 BATCH_PLAN 顺序决定，两侧一致）

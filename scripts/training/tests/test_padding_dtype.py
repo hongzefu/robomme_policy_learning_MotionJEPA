@@ -19,7 +19,9 @@ from __future__ import annotations
 import importlib.util
 import os
 import pathlib
+import subprocess
 import sys
+import types
 
 import ml_dtypes
 import numpy as np
@@ -142,9 +144,60 @@ def test_fixture_indices_are_reproducible_and_on_boundary() -> None:
         idxs = g1[f"step{step}"]
         assert len(idxs) == C.fixture_per_step(manifest)
         for i in idxs[:20]:
-            _epis, got_step = C.resolve_index(manifest, i)
-            assert got_step == step, f"index {i} 反查 step_idx={got_step}，应为 {step}"
+            epis, got_step = C.resolve_index(manifest, i)
+            ep = next(e for e in manifest["episodes"] if e["global_episode_idx"] == epis)
+            expected = step + (ep["exec_start_idx"] if C.fixture_origin_mode(manifest) == "per_episode_offset" else 0)
+            assert got_step == expected, f"index {i} 反查 step_idx={got_step}，应为 {expected}"
     assert len(g1["random"]) == C.N_RANDOM
     batches = C.build_fixture_batches(g1)
     assert len(batches) == sum(n for _, n in C.BATCH_PLAN)
     assert all(len(b["indices"]) == C.BATCH_SIZE for b in batches)
+
+
+@pytest.mark.parametrize("max_frames", [8, 32])
+def test_fixture_compat(max_frames):
+    """从固定改前提交载入四函数，在零起点与带 demo 混合清单上逐字对拍。"""
+    head0 = "c31b0509be3f76a6cc262fd655f5f0080b12c266"
+    code = subprocess.check_output(
+        ["git", "show", f"{head0}:scripts/training/tests/_common.py"], cwd=C.REPO_ROOT, text=True)
+    old = types.ModuleType("_fixture_before_m2048")
+    old.__file__ = str(_HERE / "_common.py")
+    exec(compile(code, old.__file__, "exec"), old.__dict__)
+    eps, offset = [], 0
+    for g, start in enumerate([0, 0, 0, 5, 100, 250]):
+        count = 500
+        eps.append(dict(global_episode_idx=g, exec_start_idx=start, num_timesteps=start + count,
+                        exec_samples=count, exec_sample_offset=offset))
+        offset += count
+    manifest = {"episodes": eps, "totals": {"exec_samples": offset}}
+    assert C.fixture_origin_mode(manifest) == "absolute"
+    assert C.fixture_steps(max_frames) == old.fixture_steps(max_frames)
+    assert C.fixture_per_step(manifest, max_frames) == old.fixture_per_step(manifest)
+    groups = C.build_fixture_indices(manifest, max_frames)
+    assert groups == old.build_fixture_indices(manifest, max_frames)
+    assert C.build_fixture_batches(groups, max_frames) == old.build_fixture_batches(groups, max_frames)
+    print("FIXTURE_COMPAT=PASS manifest=synthetic_zero_origin origin_mode=absolute mismatches=0")
+
+
+@pytest.mark.parametrize("max_frames", [8, 32])
+def test_fixture_new_mode(max_frames):
+    """1600ep 每个偏移候选含四任务各 400 集；不声称真实数据覆盖补零。"""
+    manifest = C.load_manifest(pathlib.Path(os.environ["DTYPE_MANIFEST"]))
+    assert len(manifest["episodes"]) == 1600
+    assert C.fixture_origin_mode(manifest) == "per_episode_offset"
+    assert min(ep["exec_start_idx"] for ep in manifest["episodes"]) >= 32
+    assert C.fixture_per_step(manifest, max_frames) == 200
+    for step in {s for group in C.fixture_steps(max_frames) for s in group}:
+        candidates = C.fixture_candidates(manifest, step)
+        assert len(candidates) == len(set(candidates)) == 1600
+        counts = [0, 0, 0, 0]
+        for idx in candidates:
+            g, t = C.resolve_index(manifest, idx)
+            ep = manifest["episodes"][g]
+            assert t == ep["exec_start_idx"] + step
+            counts[g // 400] += 1
+        assert counts == [400, 400, 400, 400]
+    groups = C.build_fixture_indices(manifest, max_frames)
+    assert len(C.build_fixture_batches(groups, max_frames)) == 200
+    print("FIXTURE_NEW=PASS manifest=1600ep origin_mode=per_episode_offset per_step=200 "
+          "per_task=400/400/400/400 batches=200 covers_zero_pad=false")

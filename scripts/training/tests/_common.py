@@ -196,11 +196,31 @@ def fixture_steps(max_frames: int = 32):
     return (0, 1, 2, max_frames - 3, max_frames - 2), (max_frames - 1, max_frames, max_frames + 1), (33, 34, 35)
 
 
-def fixture_per_step(manifest: dict) -> int:
-    """每档配额取实际可覆盖短样本的 episode 数，上限 200。"""
-    n = min(200, sum(ep["exec_start_idx"] == 0 for ep in manifest["episodes"]))
+def fixture_origin_mode(manifest: dict) -> str:
+    """含零起点时保留历史绝对时刻；全带 demo 时按各集执行起点取偏移。"""
+    return "absolute" if any(ep["exec_start_idx"] == 0 for ep in manifest["episodes"]) else "per_episode_offset"
+
+
+def fixture_candidates(manifest: dict, step: int) -> list[int]:
+    """候选身份独立按清单换算，偏移模式不假装覆盖补零边界。"""
+    relative = fixture_origin_mode(manifest) == "per_episode_offset"
+    candidates = []
+    for ep in manifest["episodes"]:
+        t = step + ep["exec_start_idx"] if relative else step
+        if ep["exec_start_idx"] <= t < ep["num_timesteps"]:
+            candidates.append(index_of(ep, t))
+    return candidates
+
+
+def fixture_per_step(manifest: dict, max_frames: int = 32) -> int:
+    """旧清单保持原配额；偏移清单取各档最小候选数，上限 200。"""
+    if fixture_origin_mode(manifest) == "absolute":
+        n = min(200, sum(ep["exec_start_idx"] == 0 for ep in manifest["episodes"]))
+    else:
+        steps = {s for group in fixture_steps(max_frames) for s in group}
+        n = min(200, *(len(fixture_candidates(manifest, s)) for s in steps))
     if n == 0:
-        raise ValueError("清单没有 exec_start_idx=0 的 episode，无法覆盖补零分支")
+        raise ValueError("清单至少一个定点档没有合法执行样本，拒绝不完整取证")
     return n
 
 
@@ -222,22 +242,12 @@ def index_of(ep: dict, step_idx: int) -> int:
 
 
 def build_fixture_indices(manifest: dict, max_frames: int = 32) -> dict:
-    """构造 ~2600 个定点样本 index。
-
-    短样本档（step_idx <= 30）只能取自 exec_start_idx == 0 的 800 个 Button 系
-    episode——Video 系 exec_start_idx 最小 66，其样本 step_idx 恒 >= 66、永远走满长
-    分支。这是数据事实而非取样偏置，留档须声明；满长档与随机 1000 自然覆盖两系。
-    """
-    eps = manifest["episodes"]
+    """构造可复现定点集；相对偏移组名不代表真实短历史，模式须记入计划。"""
     total = manifest["totals"]["exec_samples"]
     groups: dict[str, list[int]] = {}
-    per_step = fixture_per_step(manifest)
+    per_step = fixture_per_step(manifest, max_frames)
     for step_idx in dict.fromkeys(s for group in fixture_steps(max_frames) for s in group):
-        cand = [
-            index_of(ep, step_idx)
-            for ep in eps
-            if ep["exec_start_idx"] <= step_idx < ep["num_timesteps"]
-        ]
+        cand = fixture_candidates(manifest, step_idx)
         if len(cand) < per_step:
             raise SystemExit(f"step_idx={step_idx} 的候选只有 {len(cand)} 个，不足 {per_step}")
         groups[f"step{step_idx}"] = sorted(cand)[:per_step]

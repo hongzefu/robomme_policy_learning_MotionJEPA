@@ -355,18 +355,22 @@ def test_g6a_exec_lookup_formula():
     manifest = fs.load_manifest(MANIFEST)
     epis_of, step_of, row_base = fs.build_exec_lookup(manifest)
     assert len(epis_of) == manifest["totals"]["exec_samples"]
-    for h5 in ("record_dataset_VideoUnmask.h5", "record_dataset_VideoUnmaskSwap.h5"):
-        ep = next(e for e in manifest["episodes"] if e["h5_file"] == h5)
+    first_by_task = {}
+    for ep in manifest["episodes"]:
+        first_by_task.setdefault(ep["h5_file"], ep)
+    demo_eps = [ep for ep in first_by_task.values() if ep["exec_start_idx"] > 0]
+    assert demo_eps, "清单必须包含带 demo 前缀的任务，才能检验偏移换算"
+    for ep in demo_eps:
+        h5 = ep["h5_file"]
         idx = ep["exec_sample_offset"]
-        assert ep["exec_start_idx"] > 0, h5   # Video* 任务必有 demo 前缀
+        assert ep["exec_start_idx"] > 0, h5
         assert int(step_of[idx]) == ep["exec_start_idx"], h5   # ⚠ 漏 exec_start_idx 即错位
         assert int(epis_of[idx]) == ep["global_episode_idx"]
         assert int(row_base[ep["global_episode_idx"]]) == ep["total_sample_offset"]
 
 
 def test_g2_pad_dtype_boundary(mini_store):
-    """step=30 短样本与 step=31 满长样本经 _pad 后各键 dtype 一致且为
-    image bf16 / pos f32 / stt f32（episode 0 exec_start=0 → idx 即 step）。"""
+    """合成帧号核补零边界，合法执行索引核真实交付；两者不可混用。"""
     import ml_dtypes
     ds = _make_dataset(mini_store)
     try:
@@ -385,13 +389,17 @@ def test_g2_pad_dtype_boundary(mini_store):
             results[step] = (img.dtype, pos.dtype, stt.dtype)
         assert results[30] == results[31]   # 短/满长 dtype 逐键一致
         # 全链 getitem 交付层复核（含 padding 后 reshape/repeat）
-        for idx, n in ((30, 31), (31, 32)):
-            item = ds[idx]
+        from _common import index_of
+        ep = fs.load_manifest(MANIFEST)["episodes"][0]
+        for step in sorted({30, 31, ep["exec_start_idx"], ep["num_timesteps"] - 1}):
+            if not ep["exec_start_idx"] <= step < ep["num_timesteps"]:
+                continue
+            item = ds[index_of(ep, step)]
             assert item["static_image_emb"].dtype == ml_dtypes.bfloat16
             assert item["static_image_emb"].shape == (512, 2048)
             assert item["static_pos_emb"].dtype == np.float32
             assert item["static_state_emb"].dtype == np.float64   # normalize 后恒 f64（同旧路径）
-            assert int(item["static_mask"].sum()) == n * 16
+            assert int(item["static_mask"].sum()) == min(step + 1, ds._max_frames) * 16
     finally:
         ds.close()
 
@@ -555,8 +563,12 @@ def test_8x8_real_rows_and_padding(mini_stores):
             assert store.pos_rows([t])[0].tobytes() == raw["pos_emb_8x8"][0].tobytes()
     ds = _make_dataset(root, "perceptual-framesamp-context-8frame-8x8.yaml")
     try:
-        for step in (0, 6, 7, 8, 9, 33):
-            item = ds[step]
+        from _common import index_of
+        ep = fs.load_manifest(MANIFEST)["episodes"][0]
+        for step in sorted({0, 6, 7, 8, 9, 33, ep["exec_start_idx"], ep["num_timesteps"] - 1}):
+            if not ep["exec_start_idx"] <= step < ep["num_timesteps"]:
+                continue
+            item = ds[index_of(ep, step)]
             assert item["static_image_emb"].shape == (512, 2048)
             assert str(item["static_image_emb"].dtype) == "bfloat16"
             assert int(item["static_mask"].sum()) == min(step + 1, 8) * 64

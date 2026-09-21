@@ -20,8 +20,19 @@ class RefNpyFrameSampDataset:
     def __init__(self, source_root, manifest_path, data_config, history_config,
                  action_horizon, motion_root=None):
         hc = history_config
-        if (int(hc.budget), int(hc.token_per_image), int(hc.num_views)) not in {(512, 16, 1), (512, 64, 1)}:
-            raise ValueError("参考链只支持 32×16 与 8×64")
+        mc = getattr(hc, "motion", None)
+        self._motion_enabled = bool(mc is not None and mc.get("enabled", False))
+        raw = (hc.budget, hc.token_per_image, hc.num_views)
+        shape = (int(hc.budget), int(hc.token_per_image), int(hc.num_views))
+        legacy_shape = shape in {(512, 16, 1), (512, 64, 1)}
+        new_shape = (
+            all(type(v) is int for v in raw)
+            and raw == (2048, 64, 1)
+            and str(hc.integration_type) == "modulation"
+            and not self._motion_enabled
+        )
+        if not (legacy_shape or new_shape):
+            raise ValueError(f"参考链不支持形制 {raw}；2048 仅支持 32×64、modulation、无 motion")
         if (hc.representation_type != "perceptual"
                 or hc.integration_type not in ("context", "modulation")
                 or hc.perceptual_memory.type != "frame_sampling"):
@@ -42,7 +53,7 @@ class RefNpyFrameSampDataset:
         if np.any(self._epis_of < 0):
             raise ValueError("清单执行样本区间有空洞")
         self._tokens_per_frame = int(hc.token_per_image)
-        self._max_frames = 512 // self._tokens_per_frame
+        self._max_frames = int(hc.budget) // self._tokens_per_frame
         g = 8 if self._tokens_per_frame == 64 else 4
         self._image_key, self._pos_key = f"image_emb_{g}x{g}", f"pos_emb_{g}x{g}"
         self.action_horizon = action_horizon

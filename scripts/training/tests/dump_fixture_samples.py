@@ -57,7 +57,8 @@ from openpi.training.data_loader import transform_dataset  # noqa: E402
 # 验证工具只接受明确列出的 context 与 modulation 档位，默认仍为历史关闭态。
 _EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml",
                              "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml",
-                             "perceptual-framesamp-modul-8frame-8x8.yaml", "perceptual-framesamp-modul-8frame-8x8-motion.yaml")
+                             "perceptual-framesamp-modul-8frame-8x8.yaml", "perceptual-framesamp-modul-8frame-8x8-motion.yaml",
+                             "perceptual-framesamp-modul.yaml", "perceptual-framesamp-modul-32frame-8x8.yaml")
 _EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 
@@ -178,7 +179,9 @@ def main() -> None:
         "seed": C.FIXTURE_SEED, "limit": limit, "groups": groups, "batches": plan,
         "manifest_sha256": manifest.get("sha256"),
         "max_frames": max_frames, "tokens_per_frame": int(history_config.token_per_image),
-        "per_step": C.fixture_per_step(manifest),
+        "per_step": C.fixture_per_step(manifest, max_frames),
+        "origin_mode": C.fixture_origin_mode(manifest),
+        "covers_zero_pad": C.fixture_origin_mode(manifest) == "absolute",
     }, ensure_ascii=False), encoding="utf-8")
 
     data_config = config.data.create(config.assets_dirs, config.model)
