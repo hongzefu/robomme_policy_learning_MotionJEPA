@@ -6,7 +6,7 @@
 >
 > **2026-09-20 修订依据**：对本文的三路独立对抗验证（七维审查 workflow、对外部审计意见的逐条复核、主会话实测），审计锚点 `AUDIT_BASE = f4131e6a3acdc0c963f7fd6c0d2dfada9cbc728d`。本次修订落地的用户决策：定点取证链改造 `_common.py` 而**不换数据集**（只用 1600ep 及其 v2 衍生）；`state_step=1` 用 1 步补跑补齐；checkpoint 验收走 bench 落盘路径；生产改动由「两处」扩到**四个文件**；新增四项功能性检验；`AGENTS.md` 项目 scope 行本轮不动；验证步数 20/20/100 写死为已定值。
 >
-> **2026-09-21 修订（用户决定）**：正式档超参**原样沿用** `mme_vla_suite_b128_80k`、正式 `run_name` 定为 `v2-1600ep-m32x8x8-modul-b128-80k`；旧库 `4task-motion-400ep` / `4task-motion-40ep` **一律不再使用**，一切取证（含旧 512 两档的改前 / 改后回归）只在 `4task-v2-1600ep-604f16da` 上做；新增第一部分「六、commit 与执行顺序」与第二部分「9. 验证与判定行」「10. 三次训练的配置对比」三节。
+> **2026-09-21 修订（用户决定）**：正式档超参**原样沿用** `mme_vla_suite_b128_80k`、正式 `run_name` 定为 `v2-1600ep-m32x8x8-modul-b128-80k`；旧库 `4task-motion-400ep` / `4task-motion-40ep` **一律不再使用**，一切取证（含旧 512 两档的改前 / 改后回归）只在 `4task-v2-1600ep-604f16da` 上做；新增第一部分「六、commit 与执行顺序」与第二部分「8. 验证与判定行」「9. 三次训练的配置对比」三节。
 
 ## 第一部分（给人看）
 
@@ -66,7 +66,7 @@
 
 ### 六、commit 与执行顺序：从现在到 80k 起跑
 
-主副本上顺序执行（2026-09-21 实测主副本未锁、`git status` 干净、8 卡显存全 0、`tmux ls` 无 `m2048-*` 会话），每个 commit 后立即 `git push`。**旧库 `4task-motion-400ep` / `4task-motion-40ep` 一律不用**，旧 512 两档的改前 / 改后回归也在 1600ep 上做（8×64 走 `framesamp-8x8`，32×16 走同库的 `framesamp`，两者 `store_meta.json` 实测均 `verified / full`、1,192,918 帧 / 605,611 执行样本）。GPU 分配：**步 2a / 2d / 4 / 5 全部钉 `CUDA_VISIBLE_DEVICES=4,5`**，V5 钉 GPU 4，CPU 项零 GPU，**V9 与正式 run 独占 0–7**。每档结束先 `tmux ls` + `nvidia-smi` 确认前一档退出再起下一档。每步的工具、参数与判定行见第二部分第 9 节。
+主副本上顺序执行（2026-09-21 实测主副本未锁、`git status` 干净、8 卡显存全 0、`tmux ls` 无 `m2048-*` 会话），每个 commit 后立即 `git push`。**旧库 `4task-motion-400ep` / `4task-motion-40ep` 一律不用**，旧 512 两档的改前 / 改后回归也在 1600ep 上做（8×64 走 `framesamp-8x8`，32×16 走同库的 `framesamp`，两者 `store_meta.json` 实测均 `verified / full`、1,192,918 帧 / 605,611 执行样本）。GPU 分配：**步 2a / 2d / 4 / 5 全部钉 `CUDA_VISIBLE_DEVICES=4,5`**，V5 钉 GPU 4，CPU 项零 GPU，**V9 与正式 run 独占 0–7**。每档结束先 `tmux ls` + `nvidia-smi` 确认前一档退出再起下一档。每步的工具、参数与判定行见第二部分第 8 节。
 
 | 步 | 做什么 | 卡 | commit |
 |---|---|---|---|
@@ -507,7 +507,7 @@ tail -n +1 -F <run.log> | stdbuf -oL tr '\r' '\n' \
 
 **耗时量级（仅供排期，不作判据）。** 依 `docs/training-doc/v2b-read20-20260914T174147Z/records/train.summary.log` 实测（同代码栈、budget=512 / batch=64 / FSDP4）：dataloader 初始化约 30 s、Step 0 含 JIT 约 79 s、Step 1–19 约 2 min 09 s、checkpoint 阻塞写入 7.31 s，全程约 3 min。本方案 §6.2 共 7 个独立配置各自独立编译、其中一条 100 步，另加 2A 口径下每档两侧各一次 1 步补跑，真实训练部分大概率 1 小时以上；非训练侧的 1600ep 全量定点 dump 是小时级（§6.1）。**该参考 log 的 batch / FSDP 规格与本方案的 batch 8 / FSDP 2 不同，只能作量级参考，实测以第一条旧档回归 run 为准。**
 
-正式长训练的超参**已定**（2026-09-21 用户决定）：原样沿用 `mme_vla_suite_b128_80k`，不在 CLI 覆盖任何一项；`run_name` 为 `v2-1600ep-m32x8x8-modul-b128-80k`。「支持 2048」的结论仍以第 11 节完成判据为准，不因超参已定而提前视为已获起跑授权——起跑仍须完成第 9 节 V9 / V10。启动时的核心选择为：
+正式长训练的超参**已定**（2026-09-21 用户决定）：原样沿用 `mme_vla_suite_b128_80k`，不在 CLI 覆盖任何一项；`run_name` 为 `v2-1600ep-m32x8x8-modul-b128-80k`。「支持 2048」的结论仍以第 10 节完成判据为准，不因超参已定而提前视为已获起跑授权——起跑仍须完成第 8 节 V9 / V10。启动时的核心选择为：
 
 ```text
 --model.use-history
@@ -517,7 +517,7 @@ tail -n +1 -F <run.log> | stdbuf -oL tr '\r' '\n' \
 
 同时核对 norm_stats 的文件 SHA 与解析后数组摘要，保存 `history_config.resolved.yaml`、其 SHA256 和 `motion_provenance.json`。新 run 的 checkpoint 加载后必须实际得到 2048 长度、motion 关闭；不覆盖旧 run，不修改旧快照。
 
-### 9. 验证与判定行
+### 8. 验证与判定行
 
 > **判定行标注约定**：第 4 列每条判定行标「实测」（既有工具原样输出，给出产出者；`<…>` 为首跑核实的实值）或「新写」（本轮定义、须先落地自测，落地文件写在第 3 列）。所有「实测」行均已对着脚本源码或既有留档核过格式与产出者（`compare_fixture_dumps.py` 四行、`compare_baseline.py` 七行、`check_baseline_env.py` 一行、`check_config_provenance.py` 五门、`compare_collate_paths.py` 两行、smoke 留档四行）；「新写」行名在 `c187d18` 下 grep 零命中。**第 18 条两块划分**：第一块（非训练轻量对拍）= V1a / V1b / V2 / V3 / V4；第二块（真实训练梯度一致）= **V7a（旧档改前 vs 改后）与 V7b（新档 refnpy vs packed）**；V5 是功能性闸门、V8 是单侧 100 步、V9 是生产形制 smoke，三者无旧链路可比、第二块不适用，登记为盲区并以 `INIT_MATCH_100` 与逐叶更新证据补位。**全部取证只用 `4task-v2-1600ep-604f16da`**（8×64 与 2048 走 `framesamp-8x8`，32×16 走 `framesamp`），旧库一律不用。GPU 项统一 `XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'`，缓存 `UV_CACHE_DIR` / `XDG_CACHE_HOME` / `HF_HOME` / `MMEVLA_JAX_CACHE_DIR` 全指 `v1-store/cache/`，`OPENPI_DATA_HOME=v1-store/models`。
 
@@ -528,11 +528,11 @@ tail -n +1 -F <run.log> | stdbuf -oL tr '\r' '\n' \
 | G2 | 独立选帧对照 | `check_32frame_modul.py frames`：期望序列**手写常量**（不 import `even_sampling_indices` 生成期望），`t ∈ {0,1,7,8,15,30,31,32,33,63,64,1151}`；例 `t=31 → 0..31`、`t=32 → 0..30,32`、`t=63 → 0,2,…,60,63` | 新写 `FRAME_SELECT=PASS cases=12 max_frames=32 mismatches=0` | 3 |
 | G3 | `_common.py` 向后兼容（机器证明） | `test_padding_dtype.py::test_fixture_compat`：用 `git show $HEAD0:scripts/training/tests/_common.py` 装入改造前模块，在**测试内手造的零起点清单**（6 集：`exec_start_idx=0` ×3 + `>0` ×3，`num_timesteps ≥ 40`，不读任何库）上比 `fixture_steps` / `fixture_per_step` / `build_fixture_indices` / `build_fixture_batches` 四函数产出逐字相等；`::test_fixture_new_mode` 在 1600ep 清单（`DTYPE_MANIFEST`）上断言每偏移候选 1600、四任务各 400、`per_step=200`、200 batch | 新写 `FIXTURE_COMPAT=PASS manifest=synthetic_zero_origin origin_mode=absolute mismatches=0` / `FIXTURE_NEW=PASS manifest=1600ep origin_mode=per_episode_offset per_step=200 per_task=400/400/400/400 batches=200 covers_zero_pad=false` | 1b |
 | G4 | 初态锚点 | `JAX_PLATFORMS=cpu`、`seed=42`，分别用 `perceptual-framesamp-modul-8frame-8x8.yaml` 与新 YAML 只做 `init_train_state(..., resume=False)`，逐叶 sha256（口径同 `motion_v2_checks.py::INIT_COMMON`）；把 §5.1「`budget` 不进入任何参数形状」变成机器事实 | 新写 `INIT_SAME_512_2048=PASS leaves=61 mismatches=0 shape_mismatch=0` | 3 |
-| V1a | **旧档** dataset 交付逐位（`BASE` vs `CAND`），两档 | `dump_fixture_samples.py` ×2 + `compare_fixture_dumps.py`；1600ep：8×64 → `--dataset-path …/framesamp-8x8` + `perceptual-framesamp-modul-8frame-8x8.yaml`；32×16 → `…/framesamp` + `perceptual-framesamp-modul.yaml`（后者靠 1b 放行白名单）；`DTYPE_DUMP_MODE=both DTYPE_DUMP_ARRAYS=0 DTYPE_DUMP_LIMIT=0`、`DTYPE_DUMP_GIT_HEAD=$BASE/$CAND`、`JAX_PLATFORMS=cpu`；对拍前 `jq -r .git_head` 断言两侧、`jq .origin_mode,.covers_zero_pad` 断言 `per_episode_offset / false`；每次 dump 小时级（`SOURCE_IDENTITY` 遍历全部 pkl），tmux 见第一部分六 | 实测（`dump_fixture_samples.py` / `compare_fixture_dumps.py`）：单侧 `DUMP_DONE samples=3200 batches=200`（8 帧档 11 组）/ `samples=3000 batches=200`（32 帧档 10 组）；对拍 `SOURCE_IDENTITY=PASS episodes=1600 samples=605611` / `FRAME_INDEX_EXACT=PASS steps=1192918 max_frames=8|32` / `SAMPLE_RAW_EXACT=PASS samples=3200|3000 per_step=200 mismatches=0` / `BATCH_RAW_EXACT=PASS batches=200 mismatches=0`。失败是抛异常 + 退出码 1，无 FAIL 行。留档必须写明「200 个 batch 在本库全部满帧，`mixed1` / `allshort` 只是名义档」 | 2a / 2d |
+| V1a | **旧档** dataset 交付逐位（`BASE` vs `CAND`），两档 | `dump_fixture_samples.py` ×2 + `compare_fixture_dumps.py`；1600ep：8×64 → `--dataset-path …/framesamp-8x8` + `perceptual-framesamp-modul-8frame-8x8.yaml`；32×16 → `…/framesamp` + `perceptual-framesamp-modul.yaml`（后者靠 1b 放行白名单）；`DTYPE_DUMP_MODE=both DTYPE_DUMP_ARRAYS=0 DTYPE_DUMP_LIMIT=0`、`DTYPE_DUMP_GIT_HEAD=$BASE/$CAND`、`JAX_PLATFORMS=cpu`；对拍前 `jq -r .git_head` 断言两侧、`jq .origin_mode,.covers_zero_pad` 断言 `per_episode_offset / false`；每次 dump 小时级（`SOURCE_IDENTITY` 遍历全部 pkl），tmux 见第一部分六 | 实测（`dump_fixture_samples.py` / `compare_fixture_dumps.py`）：单侧 `DUMP_DONE samples=3200 batches=200`（8 帧档 11 组）/ `samples=3000 batches=200`（32 帧档 10 组）；对拍 `SOURCE_IDENTITY=PASS episodes=1600 samples=605611` / `FRAME_INDEX_EXACT=PASS steps=1192918 max_frames=8 或 32` / `SAMPLE_RAW_EXACT=PASS samples=3200 或 3000 per_step=200 mismatches=0` / `BATCH_RAW_EXACT=PASS batches=200 mismatches=0`。失败是抛异常 + 退出码 1，无 FAIL 行。留档必须写明「200 个 batch 在本库全部满帧，`mixed1` / `allshort` 只是名义档」 | 2a / 2d |
 | V1b | **新档** 2048 refnpy vs packed 交付逐位（1600ep 全量） | 同工具，`DTYPE_DUMP_IMPL=packed`（`--dataset-path …/framesamp-8x8`）与 `=refnpy`（`--dataset-path …/source`），同一 norm_stats，两侧同 `$CAND`；有界检查先行：`check_32frame_modul.py assembly`（恰满 / 接缝 `idx=exec_sample_offset` / 尾部 `idx=exec_sample_offset+exec_samples-1` / 四任务按 global 区间各 ≥ 50 样本，逐键 dtype / shape / 字节 + 四个 None 键） | 新写 `REF_VS_PACKED=PASS samples=<n≥400> keys=8 none_keys=4 tasks=4 seams=<n> tails=<n> mismatches=0 mask_sum_all=2048`；实测 `SOURCE_IDENTITY=PASS episodes=1600 samples=605611` / `FRAME_INDEX_EXACT=PASS steps=1192918 max_frames=32` / `SAMPLE_RAW_EXACT=PASS samples=3000 per_step=200 mismatches=0` / `BATCH_RAW_EXACT=PASS batches=200 mismatches=0` | 3 |
 | V2 | 补零与短历史（绕过 `__getitem__` 直调 `_pad`） | `check_32frame_modul.py pad`：1600ep `framesamp-8x8` 真实行 + 合成 `t_synth ∈ 0..31`（`n=1..32` 全覆盖）+ `t_synth=1151`（满）；判据 `out[n:]` 逐位零、`mask.sum()==min(t+1,32)`、`mask[n:]` 全 False、四键 dtype / shape 与满帧样本一致；同组 `n` 喂在线侧 `right_padding_token_emb`，两实现输出逐字节相等 | 新写 `PAD_SYNTH=PASS n_cases=32 full=1 zero_tail=1 mask_ok=1 dtype_ok=1 online_pad_bitexact=1` | 3 |
 | V3 | 真实 batch 与进程交付 | ① `compare_collate_paths.py` 参数化（新增 `--history-config` / `--batch-size` / `--config`，现写死 modul-8frame + b128 + 60k）：1600ep 全满长 batch，`workers=0` vs `workers=4`（spawn），≥ 4 批；② JAX 交付：CPU 原始字节 vs 参考 dtype 转换后（`static_state_emb` f64→f32）比对；③ 合成混合 batch：V2 的样本字典手工 `stack` 成 `mixed1` / `allshort` / `allfull` 三档直接喂 `_collate_fn_shm` → `_from_shared_torch` | 实测（`compare_collate_paths.py`）`COLLATE_EQUIV=PASS batches=<n> keys=<k> none_keys=4 mismatches=0` / `INDEX_SEQ=PASS n=<batches×batch_size>`；新写 `JAX_DELIVERY=PASS keys=8 f64_to_f32=1 mismatches=0` / `COLLATE_MIXED=PASS kinds=3 keys=<k> f64_lift_mixed=1 f64_lift_allshort=1 mismatches=0` | 3 |
-| V4 | 在线装配（不做数值等价） | `check_32frame_modul.py online`：合成 `(t,1,224,224,3) uint8` + 桩视觉编码器（照 `motion_gates_online.py::_dummy_vision_enc`），`FrameSampMemory(token_per_image=64, num_views=1, …)`，`add_buffer` ≥ 33 帧，`prepare_frame_sampling(step_idx, 2048, 64, default_history_feats_gather_fn)`，`step_idx ∈ {0,7,31,32,40}`；留档写明 `PosEmb3D` 常驻表大小与 `pool_tokens_to_size` 走了哪条分支 | 新写 `ONLINE_ASM=PASS steps=5 shapes=(2048,2048)/(2048,768)/(2048,8)/(2048,) dtype_ok=1 mask_sums=64,512,2048,2048,2048 pooled=<avg_pool|identity>` | 3 |
+| V4 | 在线装配（不做数值等价） | `check_32frame_modul.py online`：合成 `(t,1,224,224,3) uint8` + 桩视觉编码器（照 `motion_gates_online.py::_dummy_vision_enc`），`FrameSampMemory(token_per_image=64, num_views=1, …)`，`add_buffer` ≥ 33 帧，`prepare_frame_sampling(step_idx, 2048, 64, default_history_feats_gather_fn)`，`step_idx ∈ {0,7,31,32,40}`；留档写明 `PosEmb3D` 常驻表大小与 `pool_tokens_to_size` 走了哪条分支 | 新写 `ONLINE_ASM=PASS steps=5 shapes=(2048,2048)/(2048,768)/(2048,8)/(2048,) dtype_ok=1 mask_sums=64,512,2048,2048,2048 pooled=<avg_pool 或 identity>` | 3 |
 | V5 | 功能性闸门（2048 位置全参与 / mask / RoPE 解析锚点） | `check_32frame_modul.py func`（GPU 4，tmux `m2048-func`，**第 17 条留档**）；模型档照 `motion_gates_model.py::_make_models` 的 modulation 分支（`gemma_150m` 替身 + `gemma_300m` + `merge_compatible(pi05_base)`），`_obs_from_samples(..., motion=False)` 吃 2048 合成样本；确定性 `--det-probes 3`、`nondeterministic_leaves` 单列排除、流式逐叶（照 `cmd_m4::digest`）；四项按 §6.1a：① 帧带梯度（有效带严格 `>0`、无效带严格 `==0`，不设容差）② 帧带扰动（`Δloss_k` 高于 A/A 噪声基线）③ 合成短历史 `n∈{1,8,31}` 同 batch + 阴性对照 ④ `MemoryAttention().init` 独立 numpy oracle 三层 | 新写 `FRAME_BAND_GRAD=PASS bands=32 nonzero=32 beyond512=24/24 min_band_l2=<v> det_probes=3 nondeterministic_leaves=[]` / `FRAME_BAND_PERTURB=PASS bands=32 above_noise=32 noise_floor=<v> min_dloss=<v> argmin_k=<k> eps=<e>` / `MASK_SYNTH=PASS n_set=1,8,31 loss_bitexact=1 actions_bitexact=1 grad_sha_same=<n>/<m> masked_grad_zero=1 valid_bands_nonzero=1 negative_control_changed=1` / `MEMATTN_ORACLE=PASS exact_cases=<n> bitexact=1 tol_cases=3 max_rel=<≤1e-5> garbage_invariant=1 len512_vs_2048_differ=1 compact_q_shrinks=1 params=mem_rms_norm/scale,q_einsum_mem/w,kv_einsum_mem/w,out_einsum_mem/w` | 3 |
 | V7a | **旧档** 20 步真实训练（`BASE` vs `CAND`），两档 + 1 步补跑 | 直接调 `bench_train_steps.py mme_vla_suite --exp-name <run> --checkpoint-base-dir v1-store/train-runs/<run> --batch-size 8 --num-workers 4 --num-train-steps 20 --log-interval 1 --save-interval 1 --seed 42 --fsdp-devices 2 --no-wandb-enabled --dataset-path <1600ep 子目录> --model.history-config <旧 YAML>`（一行式照 `docs/training-doc/t8-m8-a1/launch.md`）；`BENCH_RECORD_DIR` 预先不存在、`BENCH_CHECKSUM=1 BENCH_BATCH_DIGESTS=1 BENCH_DIGEST_INTERVAL=1 BENCH_DUMP_IDX=1`、`BENCH_REF_COMMIT=$BASE BENCH_CAND_COMMIT=$CAND`；链路 `check_baseline_env.py dump`（两侧）→ `manifest`（BASE）→ `check --base … --steps 20 --batch-size 8`（CAND）→ bench → `project_scalars.py` → `compare_baseline.py`；同 seed 另跑 `--num-train-steps 1` 补 `state_step=1`；两侧 `CUDA_VISIBLE_DEVICES=4,5` | 实测（`check_baseline_env.py` / `compare_baseline.py`）：`BASELINE_ENV=PASS` / `SCALARS steps=20 keys=5 hex_mismatch_steps=0` / `INDEX_SEQ=PASS n=232` / `STATE_DIGEST rows=20 mismatch=0` / `BATCH_DIGEST rows=20 mismatch=0` / `BATCH_DIGEST_CANONICAL rows=20 mismatch=0` / `CANON_CHECK=PASS steps=20` / `DET_CHECK=PASS tier=m2048-legacy …`；新写（`check_modul_train_records.py` 双侧）`TRAIN_RECORDS=PASS state_steps=0,2..20 step1_from_rerun=1 index_train=160 idx_rows=29 index_n=232 leaves=<n> finite=1 mismatches=0`（1 步 run 侧 `index_n=80`） | 2a / 2d |
 | V7b | **新档** 2048 refnpy vs packed 20 步 + 1 步补跑 + 逐叶更新 | 同 V7a 驱动，YAML `perceptual-framesamp-modul-32frame-8x8.yaml`，两侧同 `$CAND`；packed 侧 `--dataset-path …/framesamp-8x8`；refnpy 侧 `BENCH_DATASET_IMPL=refnpy BENCH_REF_SOURCE=…/source BENCH_REF_MANIFEST=…/meta/episode_manifest.json` 且 `--dataset-path` 同为 `source/`；`check_baseline_env.py check` 对数据路径键按 `t8-m8-a1` 留档口径 `--allow-difference`；refnpy 侧墙钟显著更长属预期（每样本约 19.3 MB） | 实测同 V7a 七行（`steps=20 / rows=20 / n=232`）；新写 `TRAIN_RECORDS=PASS …`（同上）/ 单侧 `MODUL_LEAVES_UPDATED=PASS leaves=10 nu_changed=10 params_changed=10 finite=10 first=0 last=20`（modulation 六叶 + `mem_encoder` 四叶按显式清单，缺一即 FAIL）/ `MASK_FULL=PASS batches=20 mask_sum=16384`（形制自洽，非鉴别判据） | 4 |
@@ -544,7 +544,7 @@ tail -n +1 -F <run.log> | stdbuf -oL tr '\r' '\n' \
 
 **新写判定行名清单**（落地自测时逐个 grep 确认已实现）：`GUARD_2048`、`YAML_DIFF`、`FRAME_SELECT`、`FIXTURE_COMPAT`、`FIXTURE_NEW`、`INIT_SAME_512_2048`、`REF_VS_PACKED`、`PAD_SYNTH`、`JAX_DELIVERY`、`COLLATE_MIXED`、`ONLINE_ASM`、`FRAME_BAND_GRAD`、`FRAME_BAND_PERTURB`、`MASK_SYNTH`、`MEMATTN_ORACLE`、`TRAIN_RECORDS`、`MODUL_LEAVES_UPDATED`、`MASK_FULL`、`TRAIN100`、`INIT_MATCH_100`、`CKPT_LEAF_BF16`、`CKPT_VS_INIT`、`CKPT_ACTIONS`、`CKPT_SHAPE`、`SMOKE20`、`IO_BW`、`SHM_PEAK`、`GPU_IDLE`。
 
-### 10. 三次训练的配置对比
+### 9. 三次训练的配置对比
 
 「③ 新档」列按 2026-09-21 用户决定填写：`mme_vla_suite_b128_80k` 原样、`run_name` = `v2-1600ep-m32x8x8-modul-b128-80k`。标 † 的是本档相对前两次真正变化的行；其余行与 ② 相同即为「一字不动」。
 
@@ -576,15 +576,15 @@ tail -n +1 -F <run.log> | stdbuf -oL tr '\r' '\n' \
 | 步时（稳态实测） | 2.340 s/步（4 卡、w8、无共享内存 collate） | 0.971 s/步（20 步短窗）；0.987 s/步 @300 步 | 待 V9 实测；**不得按 4× 外推** |
 | 全程墙钟 | 39 h 05 m | 21 h 37 m | 待测；② 的 21.6 h 是下界 |
 | tmux | `m8-prod` / `m8-prod-dense` | `mv2-prod` / `mv2-dense` | `m2048-prod` / `m2048-dense` |
-| 起跑前判据体系 | V5–V8 + `GUARD_GRAD_100` + 4 卡 smoke | 0916 方案 F 表 V0–V10 + `AA_100` + `P5_ONLINE` + 8 卡 smoke | 本文第 9 节 G0–G4、V1a–V10 |
+| 起跑前判据体系 | V5–V8 + `GUARD_GRAD_100` + 4 卡 smoke | 0916 方案 F 表 V0–V10 + `AA_100` + `P5_ONLINE` + 8 卡 smoke | 本文第 8 节 G0–G4、V1a–V10 |
 
-### 11. 交付与完成判据
+### 10. 交付与完成判据
 
 本轮交付为根目录同名文件 `0920-32frame-8x8-modul-2048-plan.md` 的修订。检查两个顶层部分、Markdown 代码围栏、相对链接、`git diff --check` 与文件范围；第一部分只写高层目标、阻塞原因、改动文件清单与实施顺序（2026-09-20 用户要求），第二部分保留具体文件、函数、参数、命令和通过条件。提交只逐文件暂存本文，使用中文 `docs:` subject，不纳入其他任务的在途文件。同步遵循 `AGENTS.md` 第 11 条：只推已有 upstream；遇到远端拒绝即停止，交用户处置，不重复推送或改写历史。
 
 后续实施按“验证工具准备并固定基线 → 新配置与守卫 → 非训练输入验证 → 真实训练一致性 → 2048 保存/加载”顺序推进。代码交付应包含新 YAML、明确限制在本目标内的四处生产改动、必要测试及结果档案；每个阶段按实际代码与验证结果提交，不把本方案中的预期值写成已完成结果。
 
-完成判据为下列各项**全部**通过，缺一不可（每项对应的判定行见第 9 节）：
+完成判据为下列各项**全部**通过，缺一不可（每项对应的判定行见第 8 节）：
 
 1. 新配置通过守卫，且类型反例（`budget: 2048.5` / `budget: "2048"` / `num_views: true`）与组合反例（`2048+context` / `2048+motion` / `2048+4×4` / 多视角）按预期拒绝。
 2. 真实 2048 输入对拍通过（§6.1 第 3 项），留档写明其证明边界与「本库无短历史样本」这一事实。
