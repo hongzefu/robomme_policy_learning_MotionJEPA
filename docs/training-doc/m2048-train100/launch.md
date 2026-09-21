@@ -1,5 +1,7 @@
 # m2048-train100 启动口径
 
+起跑前按用户并行决定调整为GPU6、7；主副本源码保持CAND 0c877c7495dfe5db8b83f033442013c6d6fd8552。环境指纹引用届时已完成的refnpy主run，明确只允许原参考链既有的dataset.store_meta_sha256差异，以及本次GPU编号gpu.CUDA_VISIBLE_DEVICES差异；全部基线文件SHA仍核验。初态数值依然逐201叶与packed首态比较，未写完时须等，不豁免。如此可与packed20步并行而不引用其仍追加记录的BASELINE_MANIFEST。
+
 用户原话：「一路实现到测速结束报告用户为止」；并选择「保持原计划，完整取证（推荐）」。本档从与2048两侧20步对拍相同的clean CAND独立初始化，使用1600ep/framesamp-8x8和同一norm_stats，GPU4、5，batch8、worker4、FSDP2、seed42、100步，启动覆盖log1/save25，不改全局默认。完整HEAD与UTC在START_HEAD记录；硬件为AWS A100，本地/dev/md0 XFS NVMe RAID。
 
 本档必须保存初态与第100次更新的完整原数组，使用既有BENCH_STATE_DUMP_STEPS=0,99；文件名state_step_99对应实际state.step100。bench真实保存固定写checkpoint目录999，内容为该时刻EMA。数组先与本次逐叶摘要逐一核对，再转bf16比加载叶；十个记忆叶须区别于初态，并以相同observation、固定noise、10步采样比较动作，rms≤6.8e-5。不能用不可逆哈希替代数组，也不能从待验checkpoint重建参照。
@@ -21,7 +23,7 @@ unset MMEVLA_MOTION_STORE BENCH_REF_MOTION MMEVLA_FRAMESAMP_ALLOW_SUBSET
 test -z "$(git status --porcelain)"
 M2048_HEAD=$(git rev-parse HEAD)
 printf 'START_HEAD=%s\nSTART_UTC=%s\n' "$M2048_HEAD" "$(date -u +%FT%TZ)"
-export CUDA_VISIBLE_DEVICES=4,5 XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 WANDB_MODE=disabled
+export CUDA_VISIBLE_DEVICES=6,7 XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 WANDB_MODE=disabled
 export XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'
 export BENCH_REF_COMMIT="$M2048_HEAD" BENCH_CAND_COMMIT="$M2048_HEAD"
 unset JAX_PLATFORMS BENCH_STATE_DUMP_STEPS BENCH_STATE_DUMP_DIR
@@ -41,7 +43,8 @@ JAX_PLATFORMS=cpu uv run --no-sync python scripts/training/g0/check_baseline_env
  --manifest "$DS/meta/episode_manifest.json" --dataset "$DS/framesamp-8x8" \
  --norm-stats "$V1_STORE/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json"
 JAX_PLATFORMS=cpu uv run --no-sync python scripts/training/g0/check_baseline_env.py check \
- --base "$V1_STORE/bench/m2048/m2048-r20-packed" --record-dir "$BENCH_RECORD_DIR" \
+ --base "$V1_STORE/bench/m2048/m2048-r20-refnpy" --record-dir "$BENCH_RECORD_DIR" \
+ --allow-difference gpu.CUDA_VISIBLE_DEVICES --allow-difference dataset.store_meta_sha256 \
  --steps 100 --batch-size 8 --dataset "$DS/framesamp-8x8"
 uv run --no-sync python scripts/training/g0/bench_train_steps.py mme_vla_suite \
  --exp-name "$M2048_RUN" --assets-base-dir "$V1_STORE/train-assets" \

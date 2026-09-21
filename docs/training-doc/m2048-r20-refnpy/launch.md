@@ -1,5 +1,7 @@
 # m2048-r20-refnpy 起跑口径
 
+实施中的用户并行决定已覆盖下方最初预提交的GPU编号：用户要求「能并行的尽可能并行 8个gpu你可以用」后，本档实际于2026-09-21T04:09:38Z从主副本clean CAND 0c877c7495dfe5db8b83f033442013c6d6fd8552启动，CUDA_VISIBLE_DEVICES=0,1，其他训练命令不变。实际run_meta与启动载体记录该变化；下方原GPU4,5命令保留为最初口径，不伪称其就是调整后的启动。packed对照也固定0,1，仍同卡顺序比较。
+
 用户要求实现至测速报告，后续又明确选择「保持原计划，完整取证（推荐）」。本档遵循[实施计划](../../../0920-32frame-8x8-modul-2048-plan.md)，仅使用1600ep库；物理GPU4、5，batch8、worker4、FSDP2、seed42、20步与同配置1步补跑，均为启动覆盖，保持全局默认。
 
 本档须在生产与验证工具提交完毕后的同一clean CAND运行；完整实际HEAD与UTC由下面的START_HEAD/RUN_START记录，版本不是未来分支名。两侧使用同一CAND，仅输入读取器及dataset-path不同；归一化、采样和下游模型共享。依赖固定uv.lock，本轮不更改；存储是AWS /dev/md0 XFS NVMe RAID。

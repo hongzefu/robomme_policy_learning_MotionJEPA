@@ -32,6 +32,8 @@
 | [`m2048-r20-refnpy/`](m2048-r20-refnpy/launch.md) | 新档源NPY真实20步与补跑 | 2026-09-21T04:09:38Z起跑，取证中 |
 | [`m2048-r20-packed/`](m2048-r20-packed/launch.md) | 新档packed真实20步与补跑 | 已建档，待运行 |
 | [`m2048-train100/`](m2048-train100/launch.md) | 新档100步、原数组及checkpoint保存加载 | 已建档，待运行 |
+| [`m2048-smoke/`](m2048-smoke/launch.md) | b128/w16/FSDP8的20步容量检查 | 已预建档，待全部正确性门通过后独占八卡运行 |
+| [`perf-m32x8x8-modul-b128-20260921T051856Z/`](perf-m32x8x8-modul-b128-20260921T051856Z/launch.md) | 独占八卡1000步测速与80k外推 | 已预建档，待容量通过后运行 |
 
 ### modulation 8×8 接入 motion（2026-09-17）
 

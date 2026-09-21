@@ -1,5 +1,7 @@
 # m2048-r20-packed 起跑口径
 
+起跑前按用户「能并行的尽可能并行 8个gpu你可以用」调整为GPU0、1，与实际refnpy基线同卡；主副本源码仍冻结CAND 0c877c7495dfe5db8b83f033442013c6d6fd8552。下面命令中的设备编号已据此更新，全部数值判据与启动超参不变，真实开始时刻由RUN_START记录。
+
 用户要求实现至测速报告，后续又明确选择「保持原计划，完整取证（推荐）」。本档遵循[实施计划](../../../0920-32frame-8x8-modul-2048-plan.md)，仅使用1600ep库；物理GPU4、5，batch8、worker4、FSDP2、seed42、20步与同配置1步补跑，均为启动覆盖，保持全局默认。
 
 本档须在生产与验证工具提交完毕后的同一clean CAND运行；完整实际HEAD与UTC由下面的START_HEAD/RUN_START记录，版本不是未来分支名。两侧使用同一CAND，仅输入读取器及dataset-path不同；归一化、采样和下游模型共享。依赖固定uv.lock，本轮不更改；存储是AWS /dev/md0 XFS NVMe RAID。
@@ -21,7 +23,7 @@ unset MMEVLA_MOTION_STORE BENCH_REF_MOTION MMEVLA_FRAMESAMP_ALLOW_SUBSET
 test -z "$(git status --porcelain)"
 M2048_HEAD=$(git rev-parse HEAD)
 printf 'START_HEAD=%s\nSTART_UTC=%s\n' "$M2048_HEAD" "$(date -u +%FT%TZ)"
-export CUDA_VISIBLE_DEVICES=4,5 XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 WANDB_MODE=disabled
+export CUDA_VISIBLE_DEVICES=0,1 XLA_PYTHON_CLIENT_MEM_FRACTION=0.95 WANDB_MODE=disabled
 export XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'
 export BENCH_REF_COMMIT="$M2048_HEAD" BENCH_CAND_COMMIT="$M2048_HEAD"
 unset JAX_PLATFORMS BENCH_STATE_DUMP_STEPS BENCH_STATE_DUMP_DIR
