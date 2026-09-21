@@ -121,19 +121,19 @@ class HistoryPi0Config(Pi0Config):
                 static_image_emb=jax.ShapeDtypeStruct(
                     [
                         batch_size,
-                        self.history_config.budget,
+                        int(self.history_config.budget),
                         self.history_config.memory_feature.img.input_dim,
                     ],
                     jnp.float32,
                 ),
                 static_mask=jax.ShapeDtypeStruct(
-                    [batch_size, self.history_config.budget],
+                    [batch_size, int(self.history_config.budget)],
                     jnp.bool_,
                 ),
                 static_pos_emb=jax.ShapeDtypeStruct(
                     [
                         batch_size,
-                        self.history_config.budget,
+                        int(self.history_config.budget),
                         self.history_config.memory_feature.pos.input_dim,
                     ],
                     jnp.float32,
@@ -141,7 +141,7 @@ class HistoryPi0Config(Pi0Config):
                 static_state_emb=jax.ShapeDtypeStruct(
                     [
                         batch_size,
-                        self.history_config.budget,
+                        int(self.history_config.budget),
                         self.history_config.memory_feature.state.input_dim,
                     ],
                     jnp.float32,
@@ -331,6 +331,10 @@ class HistoryPi0(BaseModel):
         if not self.mem_encoder.motion_enabled:
             # 关闭态守卫：编译期 Python 分支 + 早返回，四处一个元素都不追加、不重排，返回值与 HEAD 逐位相同
             input_mask = obs.static_mask
+            expected = (tokens.shape[0], int(self.history_config.budget))
+            if input_mask is None or input_mask.dtype != jnp.bool_ or tuple(input_mask.shape) != expected:
+                raise ValueError(f"static_mask 必须为bool且形状精确等于 {expected}，实际为 "
+                                 f"{getattr(input_mask, 'shape', None)}/{getattr(input_mask, 'dtype', None)}")
             ar_mask = [False] * tokens.shape[1]
             na_mask = [False] * tokens.shape[1]
             return tokens, input_mask, ar_mask, na_mask

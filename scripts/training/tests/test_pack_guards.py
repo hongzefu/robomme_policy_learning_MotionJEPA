@@ -471,7 +471,7 @@ def test_g13_integration_dim_pairs(mini_store):
                          source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
 
 
-def _g10_child(ds, expect_pos_nbytes, expect_state_nbytes, q):
+def _g10_child(ds, expect_pos_nbytes, expect_state_nbytes, q, expected_tokens=512):
     """G10 spawn 子进程体：消费 Dataset 并回报 store 懒构造契约各断言项。"""
     try:
         item = ds[0]
@@ -479,7 +479,7 @@ def _g10_child(ds, expect_pos_nbytes, expect_state_nbytes, q):
         os.fstat(s._fds[0])   # fd 有效可读
         q.put({"ok": True,
                "pid_ok": s.owner_pid == os.getpid(),
-               "shape_ok": item["static_image_emb"].shape == (512, 2048),
+               "shape_ok": item["static_image_emb"].shape == (expected_tokens, 2048),
                "pos_nbytes_ok": s.pos_table.nbytes == expect_pos_nbytes,
                "state_nbytes_ok": s.state_table.nbytes == expect_state_nbytes,
                "pos_base_none": s.pos_table.base is None,
@@ -583,6 +583,75 @@ def test_8x8_real_rows_and_padding(mini_stores):
 def test_config_layout_mismatch(mini_stores, layout, yaml):
     with pytest.raises(ValueError, match="与库布局"):
         _make_dataset(mini_stores[layout], yaml)
+
+
+@pytest.mark.parametrize("change", [
+    {"budget": 2048.5}, {"budget": "2048"}, {"num_views": True},
+    {"integration_type": "context", "memory_token_dim": 2048}, {"motion": {"enabled": True}},
+    {"token_per_image": 16}, {"num_views": 2}, {"memory_token_dim": 2048},
+])
+def test_2048_reject_type_and_combination(mini_stores, change):
+    from omegaconf import OmegaConf
+    from mme_vla_suite.models.config.utils import get_history_config
+    from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+    hc = get_history_config("perceptual-framesamp-modul-32frame-8x8.yaml")
+    hc = OmegaConf.create({**OmegaConf.to_container(hc), **change})
+    with pytest.raises(ValueError, match="形制断言"):
+        FrameSampDataset(str(mini_stores["framesamp-8x8-v1"]), _fake_data_config(), hc, 20,
+                         source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
+
+
+def test_2048_real_rows_and_spawn(mini_stores):
+    import multiprocessing
+    from mme_vla_suite.models.config.utils import get_history_config
+    from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+    root = mini_stores["framesamp-8x8-v1"]
+    hc = get_history_config("perceptual-framesamp-modul-32frame-8x8.yaml")
+    for explicit in (False, True):
+        if explicit:
+            hc.motion = {"enabled": False}
+        ds = FrameSampDataset(str(root), _fake_data_config(), hc, 20,
+                             source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
+        try:
+            sample = ds[0]
+            assert sample["static_image_emb"].shape == (2048, 2048)
+            assert sample["static_pos_emb"].shape == (2048, 768)
+            assert sample["static_state_emb"].shape == (2048, 8)
+            assert sample["static_mask"].shape == (2048,)
+            assert str(sample["static_image_emb"].dtype) == "bfloat16"
+            assert all(sample[k] is None for k in ("motion_emb", "motion_pos", "motion_mask", "mem_order"))
+        finally:
+            ds.close()
+    ds = _make_dataset(root, "perceptual-framesamp-modul-32frame-8x8.yaml")
+    meta = fs.StoreMeta.load(root)
+    ctx = multiprocessing.get_context("spawn")
+    q = ctx.Queue()
+    child = ctx.Process(target=_g10_child, args=(ds, meta.raw["tables"][meta.spec.pos_key]["byte_count"],
+                        meta.raw["tables"][fs.STATE_KEY]["byte_count"], q, 2048))
+    child.start()
+    try:
+        result = q.get(timeout=180)
+        child.join(30)
+        assert child.exitcode == 0 and result.get("ok") and all(result.values()), result
+        assert ds._store is None
+    finally:
+        if child.is_alive():
+            child.terminate()
+            child.join()
+        q.close()
+        q.join_thread()
+
+
+@pytest.mark.parametrize("budget", [512, 512.5, "512"])
+def test_legacy_budget_conversion_unchanged(mini_store, budget):
+    from mme_vla_suite.models.config.utils import get_history_config
+    from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+    hc = get_history_config("perceptual-framesamp-modul.yaml")
+    hc.budget = budget
+    ds = FrameSampDataset(str(mini_store), _fake_data_config(), hc, 20,
+                         source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
+    assert ds._max_frames == 32
+    ds.close()
 
 
 @pytest.mark.parametrize("fault", ["layout", "part_dir", "part_bytes", "part_path", "pos_relpath"])

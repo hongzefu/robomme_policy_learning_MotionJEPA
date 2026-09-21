@@ -91,9 +91,22 @@ class FrameSampDataset(Dataset):
         _req((str(hc.integration_type), int(hc.memory_token_dim)) in {("context", 2048), ("modulation", 1024)},
              f"(integration_type, memory_token_dim)=({hc.integration_type!r}, {hc.memory_token_dim}) "
              f"不在支持的 (context,2048)/(modulation,1024) 档位中")
-        _req((int(hc.budget), int(hc.token_per_image), int(hc.num_views)) in {(512, 16, 1), (512, 64, 1)},
-             f"(budget,token_per_image,num_views)=({hc.budget},{hc.token_per_image},"
-             f"{hc.num_views}) 不在支持的 (512,16,1)/(512,64,1) 档位中")
+        # 新档形制依赖motion开关；旧档int转换接受条件保持不变。
+        mcfg = getattr(hc, "motion", None)
+        self._motion_enabled = bool(mcfg is not None and mcfg.get("enabled", False))
+        raw = (hc.budget, hc.token_per_image, hc.num_views)
+        shape = (int(hc.budget), int(hc.token_per_image), int(hc.num_views))
+        legacy_shape = shape in {(512, 16, 1), (512, 64, 1)}
+        new_shape = (
+            all(type(v) is int for v in raw)
+            and raw == (2048, 64, 1)
+            and str(hc.integration_type) == "modulation"
+            and not self._motion_enabled
+        )
+        _req(legacy_shape or new_shape,
+             f"(budget,token_per_image,num_views)={raw}（类型 {tuple(type(v).__name__ for v in raw)}）、"
+             f"integration_type={hc.integration_type!r}、motion_enabled={self._motion_enabled} "
+             "不在支持的 (512,16,1)/(512,64,1) 与 (2048,64,1)+modulation+无 motion 档位中")
         _req(int(hc.memory_feature.img.input_dim) == 2048,
              f"memory_feature.img.input_dim={hc.memory_feature.img.input_dim} != 2048")
         _req(int(hc.memory_feature.pos.input_dim) == 768,
@@ -319,7 +332,7 @@ class FrameSampDataset(Dataset):
         img, pos, stt, mask = self._pad(img, pos, stt, n)
 
         # 与旧路径 _prepare_frame_sampling 的 reshape/repeat 逐字对齐：
-        # (max_frames,tokens_per_frame,2048)→(512,2048)，C-order 保留原始字节。
+        # (max_frames,tokens_per_frame,2048)→(budget,2048)，C-order 保留原始字节。
         data["static_image_emb"] = img.reshape(-1, img.shape[-1])
         data["static_pos_emb"] = pos.reshape(-1, pos.shape[-1])
         data["static_state_emb"] = self._normalize_state(

@@ -52,8 +52,16 @@ class PerceptualMemory(nnx.Module):
         motion_pos=None,
         motion_mask=None,
     ):
-        # get memory tokens using feature encoder
-        assert static_image_emb.shape[1] == self.config.budget
+        # 三种静态输入共享batch与预算；显式异常在-O下仍有效，不改输入数值。
+        budget = int(self.config.budget)
+        if static_image_emb is None or static_image_emb.ndim != 3:
+            raise ValueError("static_image_emb 必须为非None的三维数组")
+        batch = static_image_emb.shape[0]
+        for name, value in (("static_image_emb", static_image_emb),
+                            ("static_pos_emb", static_pos_emb),
+                            ("static_state_emb", static_state_emb)):
+            if value is None or value.ndim != 3 or tuple(value.shape[:2]) != (batch, budget):
+                raise ValueError(f"{name} 的batch/长度必须为 {(batch, budget)}，实际为 {getattr(value, 'shape', None)}")
 
         hidden_states = self.feature_encoder.encode_perceptual_memory(
             static_image_emb, static_pos_emb, static_state_emb
