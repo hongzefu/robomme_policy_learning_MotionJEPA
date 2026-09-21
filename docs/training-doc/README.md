@@ -38,7 +38,7 @@
 | [`m2048-train100/`](m2048-train100/result.md) | 新档100步、原数组及checkpoint保存加载 | 全通过，201叶原数组/61叶加载一致，动作RMS=0、mem_len2048 |
 | [`m2048-smoke/`](m2048-smoke/result.md) | b128/w16/FSDP8的20步容量检查 | 全通过，61叶加载正确，共享内存峰值10.60%，临时checkpoint已按归属清理 |
 | [`perf-m32x8x8-modul-b128-20260921T051856Z/`](perf-m32x8x8-modul-b128-20260921T051856Z/result.md) | 独占八卡1000步测速与80k外推 | READY；1.030681秒/步、GPU均值98.6104%，80k约23小时 |
-| [`v2-1600ep-m32x8x8-modul-b128-80k/`](v2-1600ep-m32x8x8-modul-b128-80k/launch.md) | 已定正式80k运行 | 条件已满足，固定Beta并执行V10后直接起跑 |
+| [`v2-1600ep-m32x8x8-modul-b128-80k/`](v2-1600ep-m32x8x8-modul-b128-80k/result.md) | 正式80k运行 | 已起跑，V10全过；前300步正常，1.0324秒/步、GPU均值98.37% |
 
 ### modulation 8×8 接入 motion（2026-09-17）
 
