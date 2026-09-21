@@ -453,8 +453,13 @@ def func(a):
 
     probes=[digest(full) for _ in range(3)]
     require(all(x[0].hex()==probes[0][0].hex() and x[1]==probes[0][1] for x in probes),"A/A非确定性：禁止排除梯度叶以凑通过")
-    noise_floor=max(abs(x[0]-probes[0][0]) for x in probes)
+    # 帧带扰动使用loss_only，因此其A/A基线也必须走同一个已编译函数。
+    loss_probes=[float(loss_only(trainable,frozen,full)) for _ in range(3)]
+    require(all(np.isfinite(v) and v.hex()==loss_probes[0].hex() for v in loss_probes),"loss_only A/A不确定或非有限")
+    noise_floor=max(abs(v-loss_probes[0]) for v in loss_probes)
+    jit_path_delta=abs(loss_probes[0]-probes[0][0])
     print(f"DETERMINISM=PASS probes=3 gradient_leaves={len(probes[0][1])} excluded=0",flush=True)
+    print(f"LOSS_PATH_BASELINE=PASS loss_only_probes=3 jit_path_delta={jit_path_delta} band_reference=loss_only",flush=True)
 
     # 权重显式传入JIT，避免闭包把整棵参数树编译为巨大的设备常量。
     def input_function(tp,fp,o,drop=False):
@@ -489,7 +494,8 @@ def func(a):
     for band in range(32):
         changed=dataclasses.replace(full,static_image_emb=full.static_image_emb.at[:,band*64:(band+1)*64].add(.25))
         value=float(loss_only(trainable,frozen,changed))
-        deltas.append(abs(value-probes[0][0]))
+        require(np.isfinite(value),"帧带扰动loss非有限")
+        deltas.append(abs(value-loss_probes[0]))
     require(all(d>noise_floor for d in deltas),"帧带扰动未全部超过A/A噪声")
     print(f"FRAME_BAND_PERTURB=PASS bands=32 above_noise=32 noise_floor={noise_floor} min_delta={min(deltas)}",flush=True)
 
@@ -516,11 +522,15 @@ def func(a):
     la,ra=np.asarray(act(trainable,frozen,short)),np.asarray(act(trainable,frozen,garbage))
     require(np.isfinite(la).all() and exact(la,ra),"mask外垃圾改变固定noise动作")
     changed=np.array(short.static_image_emb);changed[valid]=random.normal(0,1000,changed[valid].shape)
+    short_baseline=float(loss_only(trainable,frozen,short))
     negative=float(loss_only(trainable,frozen,dataclasses.replace(short,static_image_emb=jnp.asarray(changed))))
-    require(negative != left[0],"有效位置垃圾负对照没有改变loss")
+    require(np.isfinite(short_baseline) and np.isfinite(negative) and negative != short_baseline,
+            "有效位置垃圾负对照没有有限的loss变化")
     print(f"MASK_SYNTH=PASS n_set=1,8,31 loss_bitexact=1 actions_bitexact=1 grad_sha_same={len(left[1])}/{len(left[1])} masked_grad_zero=1 valid_tokens_nonzero=1 negative_control_changed=1",flush=True)
     return {"full_token_norms":[t.tolist() for t in full_norms],"short_token_norms":[t.tolist() for t in short_norms],
-            "band_deltas":deltas,"noise_floor":noise_floor,"loss":left[0],"gradient_shas":left[1],"pretrained":pretrained}
+            "band_deltas":deltas,"noise_floor":noise_floor,"loss":left[0],"gradient_shas":left[1],"pretrained":pretrained,
+            "loss_only_probes":loss_probes,"loss_grad_baseline":probes[0][0],"jit_path_delta":jit_path_delta,
+            "valid_garbage_baseline":short_baseline,"valid_garbage_loss":negative}
 
 
 def ckpt(a):
