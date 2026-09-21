@@ -37,6 +37,7 @@
 | [`m2048-train100/`](m2048-train100/result.md) | 新档100步、原数组及checkpoint保存加载 | 全通过，201叶原数组/61叶加载一致，动作RMS=0、mem_len2048 |
 | [`m2048-smoke/`](m2048-smoke/launch.md) | b128/w16/FSDP8的20步容量检查 | 已预建档，待全部正确性门通过后独占八卡运行 |
 | [`perf-m32x8x8-modul-b128-20260921T051856Z/`](perf-m32x8x8-modul-b128-20260921T051856Z/launch.md) | 独占八卡1000步测速与80k外推 | 已预建档，待容量通过后运行 |
+| [`v2-1600ep-m32x8x8-modul-b128-80k/`](v2-1600ep-m32x8x8-modul-b128-80k/launch.md) | 已定正式80k运行 | 尚未起跑；全部门通过且测速稳态利用率>50%时按用户条件授权启动 |
 
 ### modulation 8×8 接入 motion（2026-09-17）
 

@@ -1,0 +1,103 @@
+{
+  "status": "PREVIEW_ONLY",
+  "argv": [
+    "mme_vla_suite_b128_80k",
+    "--exp-name",
+    "v2-1600ep-m32x8x8-modul-b128-80k",
+    "--assets-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+    "--data.assets.assets-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da",
+    "--data.assets.asset-id",
+    "robomme",
+    "--checkpoint-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs",
+    "--dataset-path",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8",
+    "--model.history-config",
+    "perceptual-framesamp-modul-32frame-8x8.yaml"
+  ],
+  "actual": {
+    "asset_id": "robomme",
+    "assets_base_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+    "assets_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da",
+    "batch_size": 128,
+    "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m32x8x8-modul-b128-80k",
+    "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8",
+    "ema_decay": 0.999,
+    "exp_name": "v2-1600ep-m32x8x8-modul-b128-80k",
+    "freeze_filter": "PathRegex(pattern=re.compile('.*img.*'), sep='/')",
+    "fsdp_devices": 8,
+    "history_values": {
+      "budget": 2048,
+      "integration_type": "modulation",
+      "memory_feature": {
+        "img": {
+          "input_dim": 2048,
+          "net": "identity"
+        },
+        "pos": {
+          "hidden_dim": 768,
+          "input_dim": 768
+        },
+        "state": {
+          "hidden_dim": 512,
+          "input_dim": 8
+        }
+      },
+      "memory_token_dim": 1024,
+      "num_views": 1,
+      "perceptual_memory": {
+        "type": "frame_sampling"
+      },
+      "pool_type": "mean",
+      "representation_type": "perceptual",
+      "streaming_obs_horizon": 16,
+      "token_per_image": 64,
+      "use_pos_emb": true,
+      "use_state_emb": false
+    },
+    "keep_period": 5000,
+    "log_interval": 100,
+    "lr_schedule": {
+      "decay_lr": 5e-05,
+      "decay_steps": 80000,
+      "peak_lr": 5e-05,
+      "warmup_steps": 5000
+    },
+    "model": {
+      "action_dim": 32,
+      "action_expert_variant": "gemma_300m",
+      "action_horizon": 20,
+      "discrete_state_input": false,
+      "dtype": "bfloat16",
+      "history_config": "perceptual-framesamp-modul-32frame-8x8.yaml",
+      "max_token_len": 64,
+      "memory_expert_variant": "gemma_150m",
+      "paligemma_variant": "gemma_2b",
+      "pi05": true,
+      "use_history": true
+    },
+    "name": "mme_vla_suite_b128_80k",
+    "num_train_steps": 80000,
+    "num_workers": 16,
+    "optimizer": {
+      "b1": 0.9,
+      "b2": 0.95,
+      "clip_gradient_norm": 1.0,
+      "eps": 1e-08,
+      "weight_decay": 1e-10
+    },
+    "overwrite": false,
+    "pytorch_training_precision": "bfloat16",
+    "resume": false,
+    "save_interval": 5000,
+    "seed": 42,
+    "wandb_enabled": true,
+    "weight_loader_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params"
+  },
+  "config_sha256": "b2acd4a95c6c9fb5649fe0791b24ab891292ffeaa56befb747221cf90179bbb8",
+  "repeat_parse_equal": true,
+  "source_head": "0c877c7495dfe5db8b83f033442013c6d6fd8552",
+  "generated_utc_from_mtime": "2026-09-21T05:57:46.553141+00:00"
+}
