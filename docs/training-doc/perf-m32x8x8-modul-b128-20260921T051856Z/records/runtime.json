@@ -1,0 +1,24 @@
+{
+  "mesh": {
+    "batch": 1,
+    "fsdp": 8
+  },
+  "device_count": 8,
+  "fsdp_devices": 8,
+  "batch_size": 128,
+  "num_workers": 16,
+  "seed": 42,
+  "cuda_visible_devices": "0,1,2,3,4,5,6,7",
+  "config_name": "mme_vla_suite_b128_80k",
+  "exp_name": "perf-m32x8x8-modul-b128-20260921T051856Z",
+  "devices": [
+    "cuda:0",
+    "cuda:1",
+    "cuda:2",
+    "cuda:3",
+    "cuda:4",
+    "cuda:5",
+    "cuda:6",
+    "cuda:7"
+  ]
+}

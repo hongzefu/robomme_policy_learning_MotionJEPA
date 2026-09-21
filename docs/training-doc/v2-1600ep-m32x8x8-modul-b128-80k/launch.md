@@ -1,5 +1,7 @@
 # 无motion、32帧×8×8 modulation 80k正式训练
 
+**更新：全部前置条件已满足，固定 commitV11.2Beta 后执行 V10。** [测速报告](../perf-m32x8x8-modul-b128-20260921T051856Z/result.md)为READY，GPU稳态均值98.6104%>50%，正确性与容量全部通过，无未解决问题。条件判定见 [conditions.met.json](records/conditions.met.json)，正式授权记录待Beta实际SHA生成后写入忽略目录。下面保留预建档时的决定与完整启动约定；实际起跑状态以随后写入的records为准。
+
 **准备中，尚未起跑。** 用户已指定新run_name `v2-1600ep-m32x8x8-modul-b128-80k`，并明确：「1000步测速后如果占用率高于50% 并且没有其他的问题 可以直接启动训练」。采用800步稳态窗口内八卡总体平均GPU利用率严格大于50%、全部正确性与容量检查通过、SPEED_REPORT=READY且无未解决问题的口径。条件成立后生成绑定实际报告/runner/TRAIN_HEAD的授权记录，再执行V10，不重复询问。条件未满足则不启动。
 
 ## 版本与代码状态

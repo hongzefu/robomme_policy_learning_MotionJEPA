@@ -1,0 +1,50 @@
+{
+  "start_wall": 1789973448.2650857,
+  "wrapper_start_wall": 1789973448.3420277,
+  "start_clock": "proc_start_ticks+CLOCK_BOOTTIME",
+  "pid": 3966623,
+  "argv": [
+    "mme_vla_suite_b128_80k",
+    "--exp-name",
+    "perf-m32x8x8-modul-b128-20260921T051856Z",
+    "--assets-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+    "--data.assets.assets-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da",
+    "--data.assets.asset-id",
+    "robomme",
+    "--checkpoint-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs",
+    "--dataset-path",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8",
+    "--model.history-config",
+    "perceptual-framesamp-modul-32frame-8x8.yaml",
+    "--num-train-steps",
+    "1000",
+    "--no-wandb-enabled"
+  ],
+  "mode": "perf",
+  "head": "9a7acc81b93855032a5f177a03adffe2c2209318",
+  "wrapper_sha256": "310dca60a76f7dee93c4644622a8258a9f412128133146ba92e269604dc798a5",
+  "profiler": false,
+  "entry_calls": 1,
+  "save_calls": [
+    {
+      "step": 999,
+      "state_step": 1000,
+      "start_wall": 1789974736.1508105,
+      "checkpoint_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/perf-m32x8x8-modul-b128-20260921T051856Z",
+      "return_wall": 1789974742.0873494
+    }
+  ],
+  "loader": {
+    "batch_size": 128,
+    "workers": 16,
+    "prefetch_factor": 2,
+    "persistent_workers": true,
+    "pin_memory": false
+  },
+  "success": true,
+  "end_wall": 1789974748.088851,
+  "sampler_stopped": true
+}
