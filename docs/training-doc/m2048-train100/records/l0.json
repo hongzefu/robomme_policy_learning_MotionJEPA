@@ -1,0 +1,117 @@
+{
+  "schema": "tic-l0-v1",
+  "args": {
+    "ckpt": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/m2048-train100/mme_vla_suite/m2048-train100/999",
+    "lib": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da",
+    "train_config": "mme_vla_suite",
+    "store_subdir": "framesamp-8x8",
+    "norm_stats": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json",
+    "provenance": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/m2048-train100/mme_vla_suite/m2048-train100/motion_provenance.json",
+    "neg_lib": "v1-store/datasets/4task-motion-40ep",
+    "out": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/m2048/m2048-train100/l0.json"
+  },
+  "norm_stats": {
+    "train_src": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json",
+    "infer_src": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/m2048-train100/mme_vla_suite/m2048-train100/999/assets/robomme/norm_stats.json",
+    "asset_id": "robomme",
+    "keys": [
+      "actions",
+      "state"
+    ],
+    "arrays": 8,
+    "agg_sha256": "db55daab64f1fe9696de69bbffe9f415e7cada715feda926fd2fad19fa5fe6dd",
+    "diffs": []
+  },
+  "lib_provenance": {
+    "lib": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da",
+    "provenance": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/m2048-train100/mme_vla_suite/m2048-train100/motion_provenance.json",
+    "fields": {
+      "framesamp_manifest_sha256": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/meta/episode_manifest.json",
+        "scheme": "manifest",
+        "current": "4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918",
+        "provenance": "4cd5a170b0ed9718922bfd7c9287e80b3681a0ea7489dfdb07ddeb3a53dbb918",
+        "equal": true
+      },
+      "motion_manifest_sha256": {
+        "path": null,
+        "scheme": "manifest",
+        "current": null,
+        "provenance": null,
+        "equal": true
+      },
+      "framesamp_store_meta_sha256": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8/meta/store_meta.json",
+        "scheme": "file",
+        "current": "f7677e69e5c473ab2962a5ac05a5909348c2f96736152b7217b77f0d2eb4231a",
+        "provenance": "f7677e69e5c473ab2962a5ac05a5909348c2f96736152b7217b77f0d2eb4231a",
+        "equal": true
+      },
+      "motion_index_sha256": {
+        "path": null,
+        "scheme": "file",
+        "current": null,
+        "provenance": null,
+        "equal": true
+      },
+      "motion_store_meta_sha256": {
+        "path": null,
+        "scheme": "file",
+        "current": null,
+        "provenance": null,
+        "equal": true
+      },
+      "motion_table_sha256": {
+        "path": null,
+        "scheme": "file",
+        "current": null,
+        "provenance": null,
+        "equal": true
+      }
+    }
+  },
+  "motion_store_path": {
+    "enabled": false,
+    "null_fields": [
+      "motion_root",
+      "motion_manifest_sha256",
+      "motion_index_sha256",
+      "motion_store_meta_sha256",
+      "motion_table_sha256",
+      "vae",
+      "encoder"
+    ],
+    "equal": true
+  },
+  "ckpt_param_tree": {
+    "missing": [],
+    "n_missing": 0,
+    "extra": [],
+    "n_extra": 0,
+    "leaves": 61,
+    "model_leaves": 61,
+    "ckpt_has_motion": false,
+    "raise_msg": ""
+  },
+  "ckpt_dtype_profile": {
+    "by_dtype": {
+      "bfloat16": 23,
+      "float32": 38
+    },
+    "img_dtypes": [
+      "bfloat16"
+    ],
+    "trainable_dtypes": [
+      "float32"
+    ],
+    "n_frozen_paths": 23
+  },
+  "lines": [
+    "NORM_STATS_SAME=PASS sha=db55daab64f1fe96 train_src=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json infer_src=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/m2048-train100/mme_vla_suite/m2048-train100/999/assets/robomme/norm_stats.json keys=[actions,state] arrays=8",
+    "LIB_PROVENANCE_MATCH=PASS framesamp_manifest_sha256=4cd5a170b0ed9718 motion_manifest_sha256=MISSING framesamp_store_meta_sha256=f7677e69e5c473ab motion_index_sha256=MISSING motion_store_meta_sha256=MISSING motion_table_sha256=MISSING all_equal=1",
+    "MOTION_STORE_PATH=PASS motion_enabled=0 motion_store_unused=1",
+    "CKPT_PARAM_TREE=PASS missing=0 extra=0 leaves=61 model_leaves=61 ckpt_has_motion=0",
+    "CKPT_DTYPE_PROFILE f32_leaves=38 bf16_leaves=23 img_all_bf16=1 trainable_all_f32=1 by_dtype={'bfloat16': 23, 'float32': 38} img_dtypes=['bfloat16']"
+  ],
+  "pass": true
+}

@@ -15,13 +15,14 @@
 | [`m2048-dump-base-32x16/`](m2048-dump-base-32x16/result.md) | 旧 32×16 全量定点输入基线 | 完成：3000样本、200批、完整1600集身份遍历 |
 | [`m2048-b20-base-8x64/`](m2048-b20-base-8x64/result.md) | 旧 8×64 真实20步基线 | 与CAND完整20+1步逐位对拍通过 |
 | [`m2048-b20-base-8x64-step1/`](m2048-b20-base-8x64-step1/result.md) | 旧 8×64 更新1补跑 | 完成：初态/首批/首步标量与主run逐位同 |
-| [`m2048-b20-base-32x16/`](m2048-b20-base-32x16/result.md) | 旧 32×16 真实20步基线 | 完成：20标量、20状态、201叶、232索引，待CAND对拍 |
+| [`m2048-b20-base-32x16/`](m2048-b20-base-32x16/result.md) | 旧 32×16 真实20步基线 | 与CAND完整20+1步逐位对拍通过 |
 | [`m2048-b20-base-32x16-step1/`](m2048-b20-base-32x16-step1/result.md) | 旧 32×16 更新1补跑 | 完成：初态/首批/首步标量与主run逐位同 |
 | [`m2048-dump-cand-8x64/`](m2048-dump-cand-8x64/result.md) | 旧 8×64 候选输入回归 | 与BASE的3200样本/200批逐位相同 |
 | [`m2048-dump-cand-32x16/`](m2048-dump-cand-32x16/result.md) | 旧 32×16 候选输入回归 | 与BASE的3000样本/200批逐位相同 |
 | [`m2048-b20-cand-8x64/`](m2048-b20-cand-8x64/result.md) | 旧 8×64 候选20步与补跑 | 完整状态0..20、201叶、标量与输入逐位通过 |
 | [`m2048-b20-cand-8x64-step1/`](m2048-b20-cand-8x64-step1/result.md) | 旧 8×64 候选第1次更新补跑 | 与BASE及本侧主run相同，补齐状态1 |
-| [`m2048-b20-cand-32x16/`](m2048-b20-cand-32x16/launch.md) | 旧 32×16 候选20步与补跑 | 2026-09-21T04:40:55Z起跑，取证中 |
+| [`m2048-b20-cand-32x16/`](m2048-b20-cand-32x16/result.md) | 旧 32×16 候选20步与补跑 | 完整0..20状态、201叶、标量和输入逐位通过 |
+| [`m2048-b20-cand-32x16-step1/`](m2048-b20-cand-32x16-step1/result.md) | 旧 32×16第1次更新补跑 | 初态/首批/首标量相同，更新1已补齐 |
 | [`m2048-input/`](m2048-input/result.md) | 新档配置、装配、padding、在线、共享内存及oracle | 全通过，400真实样本、32种pad、worker0/4等 |
 | [`m2048-init/`](m2048-init/result.md) | 512与2048完整初态逐叶比较 | 61叶shape/dtype/SHA完全相同 |
 | [`m2048-func/`](m2048-func/result.md) | 功能门首次运行 | 验证器权重常量捕获失败，保留错误；retry1已闭合 |
@@ -33,7 +34,7 @@
 | [`m2048-r20-refnpy/`](m2048-r20-refnpy/result.md) | 新档源NPY真实20步与补跑 | 本侧0..20状态完整、十叶更新；待packed双侧比较 |
 | [`m2048-r20-refnpy-step1/`](m2048-r20-refnpy-step1/result.md) | 新参考链的第1次更新补跑 | 与主run初态、首批及首标量一致 |
 | [`m2048-r20-packed/`](m2048-r20-packed/launch.md) | 新档packed真实20步与补跑 | 05:22:51Z起跑，GPU0/1取证中 |
-| [`m2048-train100/`](m2048-train100/launch.md) | 新档100步、原数组及checkpoint保存加载 | 05:22:53Z起跑，GPU6/7取证中 |
+| [`m2048-train100/`](m2048-train100/result.md) | 新档100步、原数组及checkpoint保存加载 | 全通过，201叶原数组/61叶加载一致，动作RMS=0、mem_len2048 |
 | [`m2048-smoke/`](m2048-smoke/launch.md) | b128/w16/FSDP8的20步容量检查 | 已预建档，待全部正确性门通过后独占八卡运行 |
 | [`perf-m32x8x8-modul-b128-20260921T051856Z/`](perf-m32x8x8-modul-b128-20260921T051856Z/launch.md) | 独占八卡1000步测速与80k外推 | 已预建档，待容量通过后运行 |
 
