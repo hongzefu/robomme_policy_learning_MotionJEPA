@@ -43,8 +43,8 @@ def dump(args):
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=False)
     store = Path(os.environ.get("V1_STORE", root / "v1-store"))
-    config = configs.get_config("mme_vla_suite_b128_60k")
-    hc = get_history_config("perceptual-framesamp-modul-8frame-8x8.yaml")
+    config = configs.get_config(args.config)
+    hc = get_history_config(args.history_config)
     assets = dataclasses.replace(config.data.assets,
                                 assets_dir=str(store / "train-assets/mme_vla_suite/4task-v2-1600ep-604f16da"),
                                 asset_id="robomme")
@@ -54,7 +54,7 @@ def dump(args):
     loader = dataloader.create_data_loader(
         str(store / "datasets/4task-v2-1600ep-604f16da/framesamp-8x8"), data_config,
         history_config=hc, sharding=None, shuffle=True, action_horizon=config.model.action_horizon,
-        batch_size=128, num_workers=args.workers, seed=42)
+        batch_size=args.batch_size, num_workers=args.workers, seed=42)
     torch_loader = loader._data_loader.torch_loader
     sampler = IndexRecorder(torch_loader.batch_sampler.sampler)
     torch_loader.batch_sampler.sampler = sampler
@@ -80,14 +80,15 @@ def dump(args):
                         digest[key] = hashlib.sha256(f"{a.dtype}|{a.shape}|".encode() + a.tobytes()).hexdigest()
                 stream.write(json.dumps({"step": step, "keys": digest}) + "\n")
                 stream.flush()
-        indices = sampler.indices[:128 * args.batches]
-        if len(indices) != 128 * args.batches:
+        indices = sampler.indices[:args.batch_size * args.batches]
+        if len(indices) != args.batch_size * args.batches:
             raise ValueError("已消费索引数量不足")
         (out / "indices.json").write_text(json.dumps(indices) + "\n")
         meta = {"head": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
                 "status": subprocess.check_output(["git", "status", "--porcelain"], text=True),
                 "source": data_loader.__file__, "sys_prefix": sys.prefix,
-                "batch_size": 128, "workers": args.workers, "seed": 42, "batches": args.batches,
+                "batch_size": args.batch_size, "workers": args.workers, "seed": 42, "batches": args.batches,
+                "config": args.config, "history_config": args.history_config,
                 "batch_bytes": nbytes, "wait_seconds": waits, "warmup_batches": 3,
                 "steady_wait_mean_s": statistics.fmean(waits[3:])}
         (out / "meta.json").write_text(json.dumps(meta, indent=2) + "\n")
@@ -102,7 +103,12 @@ def compare(args):
     old, new = Path(args.old), Path(args.new)
     metas = [json.loads((d / "meta.json").read_text()) for d in (old, new)]
     for key in ("batch_size", "workers", "seed", "batches", "batch_bytes"):
+        if key == "workers" and args.allow_worker_difference:
+            continue
         if metas[0][key] != metas[1][key]:
+            raise ValueError(f"配置不同：{key}")
+    for key in ("config", "history_config"):
+        if metas[0].get(key) != metas[1].get(key):
             raise ValueError(f"配置不同：{key}")
     n = metas[0]["batches"]
     records = [[json.loads(line) for line in (d / "digests.jsonl").read_text().splitlines()]
@@ -112,7 +118,7 @@ def compare(args):
             raise ValueError("batch 记录不足、重复或乱序")
     mismatches = sum(a != b for a, b in zip(*records, strict=True))
     indices = [json.loads((d / "indices.json").read_text()) for d in (old, new)]
-    if indices[0] != indices[1] or any(len(x) != n * 128 for x in indices):
+    if indices[0] != indices[1] or any(len(x) != n * metas[0]["batch_size"] for x in indices):
         raise ValueError("索引序列不一致或不足")
     keys = records[0][0]["keys"]
     if any(set(row["keys"]) != set(keys) for rows in records for row in rows):
@@ -133,9 +139,13 @@ def main():
     p.add_argument("--out", required=True)
     p.add_argument("--batches", type=int, default=20)
     p.add_argument("--workers", type=int, default=16)
+    p.add_argument("--batch-size", type=int, default=128)
+    p.add_argument("--config", default="mme_vla_suite_b128_60k")
+    p.add_argument("--history-config", default="perceptual-framesamp-modul-8frame-8x8.yaml")
     p = sub.add_parser("compare")
     p.add_argument("old")
     p.add_argument("new")
+    p.add_argument("--allow-worker-difference", action="store_true")
     args = parser.parse_args()
     return dump(args) if args.command == "dump" else compare(args)
 

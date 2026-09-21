@@ -10,10 +10,25 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`m2048-dump-base-8x64/`](m2048-dump-base-8x64/launch.md) | 旧 8×64 全量定点输入基线 | 已建启动档案，待运行 |
-| [`m2048-dump-base-32x16/`](m2048-dump-base-32x16/launch.md) | 旧 32×16 全量定点输入基线 | 已建启动档案，待运行 |
-| [`m2048-b20-base-8x64/`](m2048-b20-base-8x64/launch.md) | 旧 8×64 真实20步与1步补跑基线 | 已建启动档案，待运行 |
-| [`m2048-b20-base-32x16/`](m2048-b20-base-32x16/launch.md) | 旧 32×16 真实20步与1步补跑基线 | 已建启动档案，待运行 |
+| [`m2048-implementation/`](m2048-implementation/result.md) | 生产守卫、验证工具及启动配置门短测 | 41项真实packed测试、46项启动/测速自测通过；长程验收待完成 |
+| [`m2048-dump-base-8x64/`](m2048-dump-base-8x64/result.md) | 旧 8×64 全量定点输入基线 | 完成：3200样本、200批、完整1600集身份遍历 |
+| [`m2048-dump-base-32x16/`](m2048-dump-base-32x16/result.md) | 旧 32×16 全量定点输入基线 | 完成：3000样本、200批、完整1600集身份遍历 |
+| [`m2048-b20-base-8x64/`](m2048-b20-base-8x64/result.md) | 旧 8×64 真实20步基线 | 完成：20标量、20状态、201叶、232索引，待CAND对拍 |
+| [`m2048-b20-base-8x64-step1/`](m2048-b20-base-8x64-step1/result.md) | 旧 8×64 更新1补跑 | 完成：初态/首批/首步标量与主run逐位同 |
+| [`m2048-b20-base-32x16/`](m2048-b20-base-32x16/result.md) | 旧 32×16 真实20步基线 | 完成：20标量、20状态、201叶、232索引，待CAND对拍 |
+| [`m2048-b20-base-32x16-step1/`](m2048-b20-base-32x16-step1/result.md) | 旧 32×16 更新1补跑 | 完成：初态/首批/首步标量与主run逐位同 |
+| [`m2048-dump-cand-8x64/`](m2048-dump-cand-8x64/launch.md) | 旧 8×64 候选输入回归 | 已建档，待运行 |
+| [`m2048-dump-cand-32x16/`](m2048-dump-cand-32x16/launch.md) | 旧 32×16 候选输入回归 | 已建档，待运行 |
+| [`m2048-b20-cand-8x64/`](m2048-b20-cand-8x64/launch.md) | 旧 8×64 候选20步与补跑 | 已建档，待运行 |
+| [`m2048-b20-cand-32x16/`](m2048-b20-cand-32x16/launch.md) | 旧 32×16 候选20步与补跑 | 已建档，待运行 |
+| [`m2048-input/`](m2048-input/launch.md) | 新档配置、装配、padding、在线、共享内存及oracle | 已建档，待运行 |
+| [`m2048-init/`](m2048-init/launch.md) | 512与2048完整初态逐叶比较 | 已建档，待运行 |
+| [`m2048-func/`](m2048-func/launch.md) | 逐token梯度、故障注入、帧带扰动与mask | 已建档，待运行 |
+| [`m2048-dump-packed/`](m2048-dump-packed/launch.md) | 新档packed完整输入取证 | 已建档，待运行 |
+| [`m2048-dump-refnpy/`](m2048-dump-refnpy/launch.md) | 新档源NPY完整输入取证 | 已建档，待运行 |
+| [`m2048-r20-refnpy/`](m2048-r20-refnpy/launch.md) | 新档源NPY真实20步与补跑 | 已建档，待运行 |
+| [`m2048-r20-packed/`](m2048-r20-packed/launch.md) | 新档packed真实20步与补跑 | 已建档，待运行 |
+| [`m2048-train100/`](m2048-train100/launch.md) | 新档100步、原数组及checkpoint保存加载 | 已建档，待运行 |
 
 ### modulation 8×8 接入 motion（2026-09-17）
 

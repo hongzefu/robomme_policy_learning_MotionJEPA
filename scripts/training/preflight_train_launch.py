@@ -126,9 +126,16 @@ def main() -> int:
     ap.add_argument("--motion-store-meta-sha256")
     ap.add_argument("--motion-layout")
     ap.add_argument("--motion-rows", type=int)
+    ap.add_argument("--launch-mode", choices=("smoke", "perf", "prod"))
+    ap.add_argument("--expected-run-name")
+    ap.add_argument("--approval-record")
+    ap.add_argument("--runner")
+    ap.add_argument("--report")
     ap.add_argument("--train-script", default="scripts/training/train.py",
                     help="按 cwd 相对解析，与 runner 里交给 python 的那条路径逐字相同")
     a = ap.parse_args(raw)
+    if a.history_config == "perceptual-framesamp-modul-32frame-8x8.yaml" and a.launch_mode is None:
+        ap.error("2048档必须明确 --launch-mode；正式模式还须绑定用户同意")
     motion_args = (a.motion_store, a.motion_store_meta_sha256, a.motion_layout, a.motion_rows)
     if any(x is not None for x in motion_args) and not all(x is not None for x in motion_args):
         ap.error("四个 --motion-* 期望值参数必须一起提供")
@@ -268,6 +275,10 @@ def main() -> int:
 
     if a.motion_store is not None:
         check_motion_store(a, ds, v1)
+
+    if a.launch_mode is not None:
+        from modul_launch_contract import check_contract
+        check_contract(a, train_argv, check)
 
     failed = [n for n, ok in _RESULTS if not ok]
     if failed:
