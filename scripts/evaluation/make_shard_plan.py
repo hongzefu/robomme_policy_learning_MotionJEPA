@@ -128,9 +128,10 @@ def cmd_task(args):
         if dropped:
             print(f"[plan] 按 demo 前缀库剔除 {dropped} 条（预生成未成功）", flush=True)
 
-    if len(rows) % args.shards:
-        raise SystemExit(f"{len(rows)} 条无法被 --shards={args.shards} 均分；"
-                         f"按计划应在剔除后重新选片数，或把剔除清单交用户裁决")
+    if len(rows) < args.shards:
+        raise SystemExit(f"只剩 {len(rows)} 条，少于 --shards={args.shards}")
+    # 不要求整除：``rows[i::shards]`` 天然保证各片最多差 1 条。
+    # planner 失败剔除后条数几乎不可能还是 10 的倍数，强行要求整除只会让计划出不来。
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
     rows.sort(key=candidate_key)
