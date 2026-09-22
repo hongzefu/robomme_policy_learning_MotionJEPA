@@ -36,7 +36,7 @@ AskUserQuestion 拍板：无 motion 侧 = bucket `HongzeFu/robomme-vla-modul-60k
 | `POLICY` | `perceptual-framesamp-modul-8frame-8x8` | `perceptual-framesamp-modul-8frame-8x8-motion` |
 | `POLICY_CONFIG` | `mme_vla_suite` | `mme_vla_suite_b128_80k` |
 
-与老基线 `primary700-gl`（59999，sbatch array、2 CPU / 32G、`EPISODE_WALL_S` 默认 900）相比，本轮两侧互相一致，但资源档位与墙钟
+与老基线 `primary700-gl`（59999，sbatch array、1 CPU / 24G、`EPISODE_WALL_S` 默认 900）相比，本轮两侧互相一致，但资源档位与墙钟
 与老基线不同；对照表里三列并排时以此为注。
 
 ## 动态分配：8 个作业抢 20 个单元 + 看门狗 + 续跑队列（gpu-hold-01、02 用户保留不用；09、10 为用户中途追加）

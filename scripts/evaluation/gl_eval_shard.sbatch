@@ -10,6 +10,8 @@
 # 必传（经 --export）：RUN_NAME、CKPT、PLAN_DIR
 # 可选：SEED(7)、EXPECTED_GIT_HEAD（传入则起跑前断言 HEAD 未漂移 + 工作区 clean）、
 #      ALLOW_RESUME(0)、EVAL_TIMEOUT(7200)、CHUNK_EPISODES(20)
+#      MANIFEST：一条 array 跑多个 run 时，按 SLURM_ARRAY_TASK_ID 从该文件取一行（六列 TAB），覆盖
+#               RUN_NAME/CKPT/POLICY/POLICY_CONFIG/EXPECT_CKPT_ID/SHARD_INDEX；不传则行为不变
 #      SHARD_INDEX：用 srun --jobid=<既有作业> --overlap 直接跑时没有 SLURM_ARRAY_TASK_ID，由它指定分片下标
 #                   （gl_hold_queue.sh 就是这么调的）；两者都没有则拒绝起跑
 #      POLICY / POLICY_CONFIG / EXPECT_CKPT_ID / EPISODE_WALL_S / MMEVLA_MOTION_PROV_RELAX：原样透传给 run_shard.sh（motion 轮用）
@@ -41,6 +43,25 @@ _finalize() {
 }
 trap _finalize EXIT
 trap 'exit 143' TERM INT
+
+# ── 可选 MANIFEST 模式：一条 array 同时跑多个 run 的分片 ──────────────────────────
+# manifest 一行一个任务，TAB 分隔六列：run_name / ckpt绝对路径 / policy / policy_config / expect_ckpt_id / shard_index，
+# 第 N 行对应 SLURM_ARRAY_TASK_ID = N-1。用于「两个模型 × 10 分片 = 20 个任务」这类一次性排完的场景
+# （提交例：sbatch --array=0-19%4 --export=ALL,MANIFEST=<file> ...，%4 把并发压到 4 张卡）。
+# 不传 MANIFEST 时下面这段整段跳过，原有的 RUN_NAME / CKPT / PLAN_DIR 环境变量用法一字不变。
+if [ -n "${MANIFEST:-}" ]; then
+    [ -f "$MANIFEST" ] || { echo "错误: manifest 不存在 $MANIFEST"; exit 1; }
+    MANIFEST_LINE=$(( ${SLURM_ARRAY_TASK_ID:?MANIFEST 模式需要 array} + 1 ))
+    LINE="$(sed -n "${MANIFEST_LINE}p" "$MANIFEST")"
+    [ -n "$LINE" ] || { echo "错误: manifest 第 $MANIFEST_LINE 行为空 $MANIFEST"; exit 1; }
+    IFS=$'\t' read -r RUN_NAME CKPT POLICY POLICY_CONFIG EXPECT_CKPT_ID SHARD_INDEX <<< "$LINE"
+    [ -n "$RUN_NAME" ] && [ -n "$CKPT" ] && [ -n "$POLICY" ] && [ -n "$POLICY_CONFIG" ] \
+        && [ -n "$EXPECT_CKPT_ID" ] && [ -n "$SHARD_INDEX" ] || {
+        echo "错误: manifest 第 $MANIFEST_LINE 行列数不足（需要 6 列 TAB 分隔）: $LINE"; exit 1; }
+    export RUN_NAME CKPT POLICY POLICY_CONFIG EXPECT_CKPT_ID SHARD_INDEX
+    PLAN_DIR="${PLAN_DIR:-$REPO/v1-store/evaluation/$RUN_NAME/plans}"
+    echo "MANIFEST_TASK line=$MANIFEST_LINE run=$RUN_NAME policy=$POLICY config=$POLICY_CONFIG step=$EXPECT_CKPT_ID shard=$SHARD_INDEX ckpt=$CKPT"
+fi
 
 RUN_NAME="${RUN_NAME:?需要 RUN_NAME}"
 CKPT="${CKPT:?需要 CKPT 绝对路径}"

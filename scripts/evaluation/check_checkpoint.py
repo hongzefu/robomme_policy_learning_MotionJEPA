@@ -1,5 +1,5 @@
 """不加载大数组，先核对冻结配置、归一化与完整参数形状。
-按 run 根目录名（checkpoint 的父目录名）查 RUNS 表，决定允许的 step 集合、motion 开关、config 名与两个 sha256 的期望值；
+按 run 根目录名（checkpoint 的父目录名）查 RUNS 表，决定允许的 step 集合、motion 开关、config 名、budget 与两个 sha256 的期望值；
 不在表里的 run 直接拒绝——评估只认这张表里登记过的权重。"""
 import dataclasses
 import hashlib
@@ -25,7 +25,7 @@ RUNS = {
     # bucket HongzeFu/robomme-vla-modul-60k-v1，run v2-1600ep-m8x8-modul-b128-60k，motion 关闭，61 叶；
     # 59999 = primary700-gl 基线，50000 = 与 motion 50000 同步数对照（2026-09-18 加入；norm_stats 两步同一份 sha）
     'robomme-vla-modul-60k-v1': dict(
-        steps=('59999', '50000'), motion=False, config='mme_vla_suite',
+        steps=('59999', '50000'), motion=False, config='mme_vla_suite', budget=512,
         resolved_sha256='804b25382af668d67c8f8ea2d1cca414aee9a184ec737dcad704bdff253a2f92',
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
     ),
@@ -33,11 +33,22 @@ RUNS = {
     # resolved sha 与 bucket 根 history_config.resolved.sha256 及 motion_provenance.json.resolved_sha256 三方一致（2026-09-18 核）；
     # norm_stats 与 60k 同一份（开 motion 不重算归一化）
     'robomme-vla-modul-motion-80k-v1': dict(
-        steps=('50000',), motion=True, config='mme_vla_suite_b128_80k',
+        steps=('50000', '79999'), motion=True, config='mme_vla_suite_b128_80k', budget=512,
         resolved_sha256='9650f225fe42b802262f93b71139cebbda934dc5ccfaa849fa4dadaf30d73110',
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
         motion_budget=160,
         motion_source_run='wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt#encoder',
+    ),
+    # bucket HongzeFu/robomme-vla-modul-2048-80k-v1，run v2-1600ep-m32x8x8-modul-b128-80k，motion 关闭，61 叶；
+    # 与上面两条的唯一差别是感知上下文预算：budget 2048 = 32 帧 × token_per_image 64（上面是 512 = 8 帧 × 64）。
+    # budget 只改运行期序列长度、不改参数树形状（位置编码表是无参数的 PosEmb3D，modulation 下记忆 token 走交叉注意力），
+    # 所以参数树校验对它失明 —— 必须靠下面的 budget 断言钉死。norm_stats 全 16 个 step 同一份 sha（2026-09-22 核）。
+    'robomme-vla-modul-2048-80k-v1': dict(
+        steps=('5000', '10000', '15000', '20000', '25000', '30000', '35000', '40000',
+               '45000', '50000', '55000', '60000', '65000', '70000', '75000', '79999'),
+        motion=False, config='mme_vla_suite_b128_80k', budget=2048,
+        resolved_sha256='91512306b3aaaaa541d248bc5dfaf8be2849632cd3b9e89a226207c09c6501c0',
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
     ),
 }
 
@@ -47,7 +58,10 @@ assert run is not None, f'未登记的 run 根目录 {checkpoint.parent.name}，
 assert checkpoint.name in run['steps'], (checkpoint, run['steps'])
 cfg, motion_enabled = _load_resolved_snapshot(checkpoint.parent)
 assert motion_enabled == run['motion'], (motion_enabled, run['motion'])
-assert cfg.budget == 512 and cfg.token_per_image == 64 and cfg.integration_type == 'modulation'
+# budget 逐 run 钉死：它是模型语义参数（决定 static_image_emb 的序列长度与取帧数 budget//token_per_image），
+# 参数树形状对它失明，配错了不会被 PARAM_TREE_EXACT 拦住
+assert int(cfg.budget) == run['budget'], (cfg.budget, run['budget'])
+assert cfg.token_per_image == 64 and cfg.integration_type == 'modulation'
 assert cfg.perceptual_memory.type == 'frame_sampling'
 assert hashlib.sha256((checkpoint.parent / 'history_config.resolved.yaml').read_bytes()).hexdigest() == run['resolved_sha256']
 assert hashlib.sha256((checkpoint / 'assets/robomme/norm_stats.json').read_bytes()).hexdigest() == run['norm_stats_sha256']
@@ -72,4 +86,4 @@ for key, value in expected.items():
 motion_leaves = sorted('/'.join(map(str, k)) for k in actual if 'motion_pos_proj' in '/'.join(map(str, k)) or 'motion_encoder_static' in '/'.join(map(str, k)))
 assert bool(motion_leaves) == run['motion'], motion_leaves
 print(f'PARAM_TREE_EXACT=PASS n_model={len(expected)} n_ckpt={len(actual)} missing=0 extra=0 shape_mismatch=0 motion_leaves={len(motion_leaves)}', flush=True)
-print(f"HISTORY_CONFIG=PASS NORM_STATS=PASS {'MOTION_ENABLED=PASS' if run['motion'] else 'MOTION_DISABLED=PASS'} config={run['config']} step={checkpoint.name}", flush=True)
+print(f"HISTORY_CONFIG=PASS NORM_STATS=PASS {'MOTION_ENABLED=PASS' if run['motion'] else 'MOTION_DISABLED=PASS'} config={run['config']} step={checkpoint.name} budget={int(cfg.budget)}", flush=True)

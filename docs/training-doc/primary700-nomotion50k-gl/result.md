@@ -179,7 +179,7 @@ server.log 的 TIMING 行（续跑会覆盖 server.log，多次续跑的分片�
 
 ## 盲区诚实清单
 
-- 单 seed（7）、单 checkpoint（两侧各 50000）；老基线 59999 列仅供参考，它用 sbatch array、2 CPU / 32G、`EPISODE_WALL_S` 默认 900，与本轮档位不同。
+- 单 seed（7）、单 checkpoint（两侧各 50000）；老基线 59999 列仅供参考，它用 sbatch array、1 CPU / 24G（`sacct -j 61466496` 实测 `cpu=1,mem=24G`；本档早先误记为 2 CPU / 32G，那是 sbatch 头部默认值、提交时被 CLI 覆盖）、`EPISODE_WALL_S` 默认 900，与本轮墙钟不同。
 - 9 条 error 是环境侧 reset 卡死（策略尚未动作），两侧对称；若视作失败，两侧成功率不变（分母已含），只是不能再说「700 条全部评完」。
 - 同一分片的两轮不在同一节点 / 同一张卡上跑（20 单元动态抢单），但均为 A40 + 同驱动、调用逐字相同。
 - BinFill 退化未看视频归因；VideoRepick / VideoUnmaskSwap 的正差在各格 ±6 集内，不作单格结论。

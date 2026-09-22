@@ -143,3 +143,27 @@ ssh greatlakes "tmux new-session -d -s ev-ab-h03 'bash $REPO/scripts/evaluation/
 # 合并各自：merge_shards.py v1-store/evaluation/primary700-nomotion50k-gl --ckpt 50000
 #          merge_shards.py v1-store/evaluation/primary700-motion50k-gl --policy perceptual-framesamp-modul-8frame-8x8-motion --ckpt 50000
 ```
+
+### 一条 array 跑多个 run（MANIFEST 模式，2026-09-22 起）
+
+要同时评多个 checkpoint（例如「2048 上下文 @50000」与「motion @79999」各 10 个分片）时，不必提交多条 array：
+`gl_eval_shard.sbatch` 支持可选的 `MANIFEST`，一行一个任务、按 `SLURM_ARRAY_TASK_ID` 取第 N+1 行，六列 TAB 分隔：
+
+```
+run_name <TAB> ckpt绝对路径 <TAB> policy <TAB> policy_config <TAB> expect_ckpt_id <TAB> shard_index
+```
+
+好处是**任务粒度最细**（每个任务仍是 1 卡 / 1 CPU / 24G，最容易 backfill），`%N` 一处就把总并发钉死，
+Slurm 按索引贪心派发、谁空谁接下一片，不需要登录节点常驻 worker。不传 `MANIFEST` 时行为一字不变
+（`RUN_NAME` / `CKPT` / `PLAN_DIR` 走环境变量，`SHARD_INDEX` 走 array 下标或显式传入）。
+
+```bash
+# 20 个任务（两个 run × 10 分片），最多 4 张卡并发；含逗号的变量提交前 export，别塞进 --export 的逗号列表
+ssh greatlakes "export MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count; \
+  sbatch --job-name=<name> --array=0-19%4 --gpu_cmode=shared --cpus-per-task=1 --mem=24G --time=08:00:00 \
+    --export=ALL,MANIFEST=<manifest.tsv>,EXPECTED_GIT_HEAD=<sha>,SEED=7,ALLOW_RESUME=1,\
+EPISODE_WALL_S=2400,EVAL_TIMEOUT=14400,CHUNK_EPISODES=20 \
+    <repo>/scripts/evaluation/gl_eval_shard.sbatch"
+```
+
+各任务日志仍是 `v1-store/logs/<job-name>-<arrayjobid>_<task>.log`，每行 `MANIFEST_TASK line=… run=… shard=…` 标明它跑的是哪一片。
