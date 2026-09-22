@@ -361,6 +361,9 @@ def cmd_finalize(args):
     for shard in range(args.shards):
         path = out_root / "logs" / f"shard{shard}.json"
         if not path.is_file():
+            # --partial 只归整已有记录（冒烟库只跑了一条），正式 finalize 必须全齐
+            if args.partial:
+                continue
             raise SystemExit(f"缺分片日志：{path}")
         payload = json.loads(path.read_text(encoding="utf-8"))
         if payload["identity_sha256"] != header["identity_sha256"]:
@@ -373,7 +376,11 @@ def cmd_finalize(args):
     expected = {f"{r['task']}/{r['difficulty']}/{r['episode']}" for r in rows}
     missing = sorted(expected - set(records))
     if missing:
-        raise SystemExit(f"还有 {len(missing)} 条没跑：{missing[:5]}")
+        if not args.partial:
+            raise SystemExit(f"还有 {len(missing)} 条没跑：{missing[:5]}")
+        print(f"[partial] 只归整已有的 {len(records)} 条，跳过未跑的 {len(missing)} 条"
+              f"（冒烟口径，正式 finalize 不得带 --partial）", flush=True)
+        expected = set(records)
 
     ok = {k: v for k, v in records.items() if v.get("demo_status") == "ok"}
     for key, record in ok.items():
@@ -447,6 +454,8 @@ def main():
     parser.add_argument("--retries", type=int, default=1,
                         help="单集失败后额外重试几次；重试有效性未实测前按计划保持 1，不设 0")
     parser.add_argument("--candidates", default=str(DEFAULT_CANDIDATES))
+    parser.add_argument("--partial", action="store_true",
+                        help="finalize 模式：只归整已有记录（冒烟用），跳过「全部集齐」断言；正式跑不得带")
     args = parser.parse_args()
     if not (0 <= args.shard < args.shards):
         raise SystemExit(f"--shard 必须落在 [0, {args.shards})")
