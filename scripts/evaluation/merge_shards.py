@@ -22,9 +22,11 @@ def load_shards(run_root: Path, policy: str, ckpt: str, seed: str):
         if not progress.is_file():
             print(f"[warn] 跳过没有 progress.json 的目录：{shard_dir.name}")
             continue
+        motion = shard_dir / policy / f"ckpt{ckpt}" / f"seed{seed}" / "motion_stats.json"
         shards[shard_dir.name] = {
             "progress": json.loads(progress.read_text(encoding="utf-8")),
             "plan": json.loads(plan.read_text(encoding="utf-8")) if plan.is_file() else None,
+            "motion": json.loads(motion.read_text(encoding="utf-8")) if motion.is_file() else None,
         }
     if not shards:
         raise SystemExit(f"{run_root} 下没有找到任何分片结果")
@@ -110,6 +112,45 @@ def main():
                 "identity_sha256": (p["plan"] or {}).get("identity_sha256", "")}
          for name, p in sorted(shards.items())}, indent=2, ensure_ascii=False), encoding="utf-8")
     (merged_dir / "errors.json").write_text(json.dumps(errors, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    # motion 窗统计合并（0922-binfill-demo-prefix-plan.md C 节）：只有 motion run 的分片才有这份文件
+    motion_merged = {}
+    for name, payload in shards.items():
+        for key, stat in (payload["motion"] or {}).items():
+            if key in motion_merged:
+                raise SystemExit(f"分片 {name} 与别的分片都记了 {key} 的 motion 统计")
+            motion_merged[key] = stat
+    if motion_merged:
+        (merged_dir / "motion_stats.json").write_text(
+            json.dumps(dict(sorted(motion_merged.items())), indent=2, ensure_ascii=False), encoding="utf-8")
+        downsampled = [k for k, s in motion_merged.items() if int(s["motion_downsample_steps"]) > 0]
+        k_max = max(int(s["motion_k_max"]) for s in motion_merged.values())
+        es_max = max(int(s["exec_start_idx"]) for s in motion_merged.values())
+        log["motion"] = {
+            "episodes": len(motion_merged),
+            "budget": sorted({int(s["motion_budget"]) for s in motion_merged.values()}),
+            "overflow": sorted({str(s["motion_overflow"]) for s in motion_merged.values()}),
+            "k_max": k_max, "exec_start_idx_max": es_max,
+            "episodes_downsampled": len(downsampled),
+            "downsample_steps_total": sum(int(s["motion_downsample_steps"]) for s in motion_merged.values()),
+        }
+        # 分层成功率**只作描述、不作因果验收**：触发降级需要该集活过 16*(162-k_demo) 步，
+        # 早早成功的集天然进不了触发组——两组本来就不可比（选择偏倚，不是处理效应）。
+        merged_flat = {f"{g}/{e}": v for g, entries in merged.items() for e, v in entries.items()}
+        for label, keys in (("downsampled", downsampled),
+                            ("not_downsampled", [k for k in motion_merged if k not in set(downsampled)])):
+            values = [merged_flat.get(k) for k in keys]
+            done = [v for v in values if v is not True and v is not False]
+            n_ok = sum(1 for v in values if v is True)
+            log["motion"][f"{label}_n"] = len(keys)
+            log["motion"][f"{label}_successes"] = n_ok
+            log["motion"][f"{label}_errors"] = len(done)
+        (merged_dir / "log.json").write_text(json.dumps(log, indent=2, ensure_ascii=False), encoding="utf-8")
+        print(f"  MOTION_MERGED episodes={len(motion_merged)} k_max={k_max} es_max={es_max} "
+              f"downsampled_episodes={len(downsampled)} "
+              f"（分层成功率 {log['motion']['downsampled_successes']}/{log['motion']['downsampled_n']} vs "
+              f"{log['motion']['not_downsampled_successes']}/{log['motion']['not_downsampled_n']}，"
+              f"仅作描述：两组存在选择偏倚，不可当因果证据）")
 
     if errors:
         groups = collections.defaultdict(list)

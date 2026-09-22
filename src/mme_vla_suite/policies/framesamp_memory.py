@@ -26,6 +26,7 @@ import mem_buffer（建库域留有冻结副本 `dataset_builder/mem_buffer.py`�
 """
 
 import math
+import os
 from typing import Callable
 
 import einops
@@ -100,6 +101,12 @@ class FrameSampMemory:
                 raise ValueError(f"在线 demo 窗口契约不合法: {self.demo_min_real}, {self.demo_tail_pad!r}")
             if str(motion_cfg.get("window_direction", "forward")) != "forward" or str(motion_cfg.get("grid_origin", "segment_start")) != "segment_start":
                 raise ValueError("在线运动路只实现 forward + segment_start 口径")
+            # 超预算口径（0922-binfill-demo-prefix-plan.md C 节）：默认 "raise"，与补 demo 之前一字不差；
+            # "resample" 只在 k > budget 时生效，做「demo 段全保 + exec 段内等距降采样」。开关由 policy 层
+            # 从环境变量 MMEVLA_MOTION_OVERFLOW 读入后写进 motion_cfg——不能进 resolved 快照，那份 sha 被三方钉死。
+            self.motion_overflow = str(motion_cfg.get("overflow", "raise"))
+            if self.motion_overflow not in ("raise", "resample"):
+                raise ValueError(f"motion.overflow 只能是 raise / resample，得到 {self.motion_overflow!r}")
         self._history_feats_motion: dict[int, np.ndarray] = {}
         self._raw_frames: dict[int, np.ndarray] = {}
         self._next_grid_start_demo = 0
@@ -107,6 +114,10 @@ class FrameSampMemory:
         self.exec_start_idx: int | None = None
         self.motion_encode_calls = 0
         self.motion_encode_s = 0.0
+        # 降级统计：由 policy.infer 回传客户端，落 motion_stats.json 供 check_shard.py 的 MOTION_WINDOWS 闸验收
+        self.motion_downsample_steps = 0
+        self.motion_downsample_max_k = 0
+        self.motion_last_k = 0
 
     @property
     def n_steps(self) -> int:
@@ -119,6 +130,9 @@ class FrameSampMemory:
         self._next_grid_start_demo = 0
         self._next_grid_start_exec = 0
         self.exec_start_idx = None
+        self.motion_downsample_steps = 0
+        self.motion_downsample_max_k = 0
+        self.motion_last_k = 0
 
     def add_buffer(
         self,
@@ -159,16 +173,29 @@ class FrameSampMemory:
                 self._raw_frames[step_idx] = np.ascontiguousarray(images[i, 0])
 
         # 与旧实现逐字同式的归一化 / resize / 编码链
-        image_jnp = jnp.array(
-            images.astype(np.float32) / 255.0 * 2.0 - 1.0
-        )
-        image_jnp = einops.rearrange(image_jnp, "t v h w c -> (t v) h w c")
-        image_jnp = image_tools.resize_with_pad(image_jnp, 224, 224)
-        image_jnp = einops.rearrange(image_jnp, "(t v) h w c -> t v h w c", t=t, v=v)
-        output_emb = self.vision_enc(image_jnp)  # 真实 SigLIP 输出 (t,v,256,2048)
+        # MMEVLA_ENC_CHUNK（默认 0 = 关闭）：BinFill 补 demo 前缀后首批最多 1282 帧一次性进 SigLIP，
+        # (t,1,224,224,3) float32 输入与 bf16 输出都随 t 线性涨（1282 帧约 771 MiB / 1.3 GiB），显存风险未测。
+        # 设正整数即按该尺寸切 batch 维分批；切 batch 可能让 XLA 换 kernel、改变 bf16 累加序，
+        # 因此默认关闭（chunk >= t 时走单次循环，与关闭时逐字等价），开启前须先跑 enc_chunk_cmp.py 测出差异量级。
+        chunk = int(os.environ.get("MMEVLA_ENC_CHUNK", "0") or 0)
+        if chunk < 0:
+            raise ValueError(f"MMEVLA_ENC_CHUNK 必须为非负整数，得到 {chunk}")
+        if chunk == 0 or chunk >= t:
+            chunk = t
+        pooled_parts = []
+        for b0 in range(0, t, chunk):
+            b1 = min(b0 + chunk, t)
+            image_jnp = jnp.array(
+                images[b0:b1].astype(np.float32) / 255.0 * 2.0 - 1.0
+            )
+            image_jnp = einops.rearrange(image_jnp, "t v h w c -> (t v) h w c")
+            image_jnp = image_tools.resize_with_pad(image_jnp, 224, 224)
+            image_jnp = einops.rearrange(image_jnp, "(t v) h w c -> t v h w c", t=b1 - b0, v=v)
+            output_emb = self.vision_enc(image_jnp)  # 真实 SigLIP 输出 (t,v,256,2048)
 
-        pooled_emb = pool_tokens_to_size(output_emb, self.token_per_image)
-        pooled_host = jax.device_get(pooled_emb)  # 循环外一次（合法差异②）
+            pooled_emb = pool_tokens_to_size(output_emb, self.token_per_image)
+            pooled_parts.append(jax.device_get(pooled_emb))  # 每批循环外一次（合法差异②；不分批时就是原来的一次）
+        pooled_host = pooled_parts[0] if len(pooled_parts) == 1 else np.concatenate(pooled_parts, axis=0)
 
         for i, step_idx in enumerate(step_idx_list):
             image_emb = pooled_host[i]  # (v,token_per_image,2048)
@@ -255,8 +282,28 @@ class FrameSampMemory:
         frames = self.visible_motion_frames(step_idx)
         k = len(frames)
         B = self.motion_budget
+        self.motion_last_k = k
         if k > B:
-            raise RuntimeError(f"step {step_idx} 合法 motion 起点数 {k} > motion.budget {B}（零截断契约，禁止裁剪）")
+            if self.motion_overflow != "resample":
+                raise RuntimeError(f"step {step_idx} 合法 motion 起点数 {k} > motion.budget {B}（零截断契约，禁止裁剪）")
+            # 降级（overflow=resample）：超额只可能来自 exec 段——评测 max_steps=2000 让 exec 窗恒 124，
+            # 是训练 exec 上限 70 的 1.77 倍；demo 段与训练同分布，故 demo 全保、超额由 exec 段内等距抽稀承担。
+            # 被丢的窗仍留在 _history_feats_motion 里，下一步重算取点时可能又被选中，直接取用、不重编码。
+            es = self.exec_start_idx
+            demo = [f for f in frames if f < es]
+            exec_ = [f for f in frames if f >= es]
+            keep_demo, keep_exec = _motion_quota(len(demo), len(exec_), B)
+            frames = ([demo[i] for i in _even_pick(len(demo), keep_demo)]
+                      + [exec_[i] for i in _even_pick(len(exec_), keep_exec)])
+            # 显式核，不靠注释：降级后必须恰好填满预算且全域帧号严格递增（mem_order 依赖升序）
+            if len(frames) != B or any(b <= a for a, b in zip(frames, frames[1:])):
+                raise RuntimeError(
+                    f"降级结果非法：step {step_idx} 得到 {len(frames)} 个起点（应为 {B}）或次序非严格递增")
+            self.motion_downsample_steps += 1
+            self.motion_downsample_max_k = max(self.motion_downsample_max_k, k)
+            print(f"MOTION_DOWNSAMPLE step={step_idx} es={es} k={k} k_demo={len(demo)} k_exec={len(exec_)} "
+                  f"kept_demo={keep_demo} kept_exec={keep_exec} budget={B}", flush=True)
+            k = len(frames)
         emb = np.zeros((B, self.motion_dim), np.float32)
         pos = np.zeros((B, self.motion_pos_dim), np.float32)
         for i, f in enumerate(frames):
@@ -311,6 +358,42 @@ class FrameSampMemory:
 
     def default_history_feats_gather_fn(self, indices_to_load, *args, **kwargs):
         return {idx: self._history_feats[idx] for idx in indices_to_load}
+
+
+def _even_pick(n: int, keep: int) -> list[int]:
+    """在 ``[0, n)`` 上等距取 ``keep`` 个下标（升序、无重复）。
+
+    ``keep == n`` 时恒等返回、绝不走 linspace（浮点取整在边界上可能与 range 不同）。
+    取点用 ``np.linspace(...).astype(np.int64)`` **截断**而非 round，与帧路
+    ``sampling.even_sampling_indices`` 同一算子。调用方保证 ``keep < n`` 时步长
+    ``(n-1)/(keep-1) > 1``，故截断不会撞出重复；仍显式核一遍——一旦少一个，
+    ``mask[:k]`` 与 ``pad_times`` 会静默给出「非满」形态，没有别的地方能发现。
+    """
+    if keep == n:
+        return list(range(n))
+    if not (0 < keep < n):
+        raise RuntimeError(f"_even_pick 非法参数 n={n} keep={keep}")
+    out = [int(i) for i in np.linspace(0, n - 1, keep, dtype=np.int64)]
+    if len(out) != keep or any(b <= a for a, b in zip(out, out[1:])):
+        raise RuntimeError(f"_even_pick 产生重复或非递增下标 n={n} keep={keep}")
+    return out
+
+
+def _motion_quota(k_demo: int, k_exec: int, budget: int) -> tuple[int, int]:
+    """超预算时两段各保留几个窗。调用方保证 ``k_demo + k_exec > budget``。
+
+    demo 段优先全保，但不得超过 ``budget // 2``——这条保护防 demo 变长时把 exec 挤成 0。
+    预生成侧另有 ``D <= 1281`` 的硬闸把 ``k_demo`` 钉在 80 以内，所以正常样本里这条保护不会真的丢窗
+    （训练实测 demo 窗上限 71）。exec 段吃不满余额时把余额退回 demo 段，保证合计恰好等于 budget。
+    """
+    keep_demo = min(k_demo, budget // 2)
+    keep_exec = min(k_exec, budget - keep_demo)
+    keep_demo = budget - keep_exec
+    if keep_demo > k_demo or keep_exec > k_exec or keep_demo + keep_exec != budget:
+        raise RuntimeError(
+            f"_motion_quota 配额非法：k_demo={k_demo} k_exec={k_exec} budget={budget} "
+            f"→ keep_demo={keep_demo} keep_exec={keep_exec}")
+    return keep_demo, keep_exec
 
 
 def _accepts_start(fn) -> bool:

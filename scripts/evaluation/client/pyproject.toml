@@ -8,6 +8,10 @@ dependencies = [
     "qwen-vl-utils==0.0.14", "transformers==4.57.3", "moviepy==2.2.1",
     "setuptools==80.9.0", "torch==2.9.1", "torchvision==0.24.1",
     "mani-skill", "tyro", "loguru", "imageio[ffmpeg]", "pytest",
+    # BinFill demo 前缀（0922-binfill-demo-prefix-plan.md）：预生成脚本与 DemoPrefixStore 直接
+    # import h5py / cv2 存取前缀帧。两者本来就作为 mani-skill / robomme 的传递依赖在环境里，
+    # 这里只是把「直接依赖」这件事显式声明出来；版本钉死在既有 lock 已解析到的那一个，解析图不变。
+    "h5py==3.16.0", "opencv-python==4.11.0.86",
 ]
 
 [tool.uv]

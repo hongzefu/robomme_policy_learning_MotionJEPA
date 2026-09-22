@@ -14,6 +14,7 @@ from robomme.robomme_env import *  # noqa: F401, F403 - env registration
 from robomme.env_record_wrapper import BenchmarkEnvBuilder, make_env_for_spec
 
 from utils import TASK_NAME_LIST
+from demo_prefix import DemoPrefixStore
 
 np.set_printoptions(precision=4, suppress=True)
 
@@ -132,13 +133,20 @@ class SpecEnvRunner(BaseEnvRunner):
     """
 
     def __init__(self, task: str, difficulty: str, sampling_config: Mapping[str, Any],
-                 video_save_dir: str, max_steps: int = 2000) -> None:
+                 video_save_dir: str, max_steps: int = 2000,
+                 demo_prefix_store: str = "") -> None:
         if task not in SPEC_TASKS:
             raise ValueError(f"注入候选不覆盖任务 {task}，只有 {SPEC_TASKS}")
         super().__init__(task, video_save_dir)
         self.group_difficulty = difficulty
         self.sampling_config = sampling_config
         self.max_steps = max_steps
+        # 守卫①：其余三任务的 reset() 本来就返回 planner 演示帧，再拼一段会双重叠加
+        if demo_prefix_store and task != "BinFill":
+            raise ValueError(f"demo 前缀注入只支持 BinFill，得到 {task}")
+        self._demo_store = DemoPrefixStore(demo_prefix_store) if demo_prefix_store else None
+        self._demo_key: tuple[str, str, int] | None = None
+        self.demo_prefix_len = 0
 
     def make_env(self, candidate: Mapping[str, Any]) -> None:
         """``candidate`` 是候选行（已经过 load_candidates 校验）。"""
@@ -156,9 +164,50 @@ class SpecEnvRunner(BaseEnvRunner):
             max_steps=self.max_steps,
         )
         self.episode_id = candidate["episode"]
+        self._demo_key = (candidate["task"], candidate["difficulty"], int(candidate["episode"]))
+        self.demo_prefix_len = 0
         self.difficulty = self.env.unwrapped.difficulty
         # 难度必须原样传到环境里：xhard 走错分支会静默退化成 easy（RouteStick 的兜底分支有这个老 bug）
         if self.difficulty != self.group_difficulty:
             raise ValueError(
                 f"难度未按规格生效：期望 {self.group_difficulty}，实际 {self.difficulty}"
             )
+
+    def get_init_obs(self) -> dict[str, Any]:
+        """在干净 env 的 reset 观测前面拼上离线生成的 demo 前缀（0922-binfill-demo-prefix-plan.md B 节）。
+
+        注入点选在这里而不是 ``eval.py::init_episode``：``eval.py`` 下游的三个 buffer、recorder 循环、
+        ``exec_start_idx = len(image_buffer) - 1`` 与 ``is_video_demo`` 五处全部自动正确，逻辑一行不用改。
+
+        off-by-one：注入后 ``image_buffer = [demo 0..D-1] + [干净 env 的 reset 帧]``，长度 D+1，
+        故 ``exec_start_idx = D``。这与训练侧「demo 段 [0, es)、exec 起点 es」一致，
+        也与原生 demo 任务同构（VideoRepick 的 reset 返回 [D 帧 planner] + [1 帧复位步]，es = D）。
+        """
+        obs = super().get_init_obs()
+        if self._demo_store is None:
+            return obs                       # 关闭时与改动前逐字等价
+        if self._demo_key is None:
+            raise RuntimeError("尚未 make_env，取不到候选键")
+        prefix = self._demo_store.get(*self._demo_key)
+        if prefix["task_goal"] != obs["task_goal"]:
+            raise ValueError(
+                f"{self._demo_key} 的 demo 前缀 task_goal 与本次 reset 不符：\n"
+                f"  前缀：{prefix['task_goal']!r}\n  本次：{obs['task_goal']!r}")
+        d = int(prefix["D"])
+        if not (len(prefix["images"]) == len(prefix["wrist_images"]) == len(prefix["states"]) == d):
+            raise ValueError(f"{self._demo_key} 的前缀三个缓冲长度不一致")
+        if len(obs["images"]) != 1:
+            # BinFill 的 task_list 里 demonstration 三处全 False，干净 env 的 reset 只返回 1 帧复位观测。
+            # 不是 1 就说明 benchmark 侧行为变了，拼接语义随之失效，必须停。
+            raise ValueError(
+                f"{self._demo_key} 的干净 env reset 返回 {len(obs['images'])} 帧（期望 1 帧）")
+        for key in ("images", "wrist_images", "states"):
+            if obs[key][0].shape != prefix[key][0].shape or obs[key][0].dtype != prefix[key][0].dtype:
+                raise ValueError(
+                    f"{self._demo_key} 的 {key} 前缀与在线形制不符："
+                    f"{prefix[key][0].shape}/{prefix[key][0].dtype} vs {obs[key][0].shape}/{obs[key][0].dtype}")
+            obs[key] = list(prefix[key]) + list(obs[key])
+        self.demo_prefix_len = d
+        print(f"DEMO_PREFIX_INJECTED key={'/'.join(map(str, self._demo_key))} D={d} "
+              f"total_frames={len(obs['images'])} exec_start_idx={len(obs['images']) - 1}", flush=True)
+        return obs

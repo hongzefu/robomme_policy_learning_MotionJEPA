@@ -7,6 +7,10 @@
 #        EXPECT_CKPT_ID（只接受这个 step 目录名，默认 59999）、EPISODE_WALL_S（单集墙钟秒，不设则用 eval.py 默认 900）
 #        SHARD_INDEX（srun 进既有作业时代替 SLURM_ARRAY_TASK_ID 决定默认分片标识与端口基准）
 #        MMEVLA_MOTION_PROV_RELAX（motion 轮：sidecar provenance 放行的硬件键，见 motion_client.py）
+#        DEMO_PREFIX_STORE（BinFill demo 前缀库根目录绝对路径，给了才注入；见 0922-binfill-demo-prefix-plan.md）
+#        MMEVLA_ENC_CHUNK（SigLIP 编码分批尺寸，0/不设 = 一次编完，与改动前逐字等价）
+#        MMEVLA_MOTION_OVERFLOW（raise|resample，默认 raise；补 demo 后 motion 轮须设 resample）
+#        EXPECT_MOTION_STATS=1（本轮 motion run 缺 motion_stats.json 即判 FAIL，不许走 SKIP）
 #   motion 轮示例：POLICY=perceptual-framesamp-modul-8frame-8x8-motion POLICY_CONFIG=mme_vla_suite_b128_80k EXPECT_CKPT_ID=50000
 #                 EPISODE_WALL_S=2400 MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count
 set -euo pipefail
@@ -33,6 +37,19 @@ TLS_TUNABLE="glibc.rtld.optional_static_tls=65536"
 [[ "$EVAL_TIMEOUT" =~ ^[1-9][0-9]*$ && "$CHUNK_EPISODES" =~ ^[1-9][0-9]*$ ]] || exit 2
 [[ "$POLICY" =~ ^[a-zA-Z0-9_.-]+$ && "$POLICY_CONFIG" =~ ^[a-zA-Z0-9_]+$ && "$EXPECT_CKPT_ID" =~ ^[0-9]+$ && "$SHARD_INDEX" =~ ^[a-zA-Z0-9_-]+$ ]] || exit 2
 [[ -z "$EPISODE_WALL_S" || "$EPISODE_WALL_S" =~ ^[1-9][0-9]*$ ]] || exit 2
+DEMO_PREFIX_STORE="${DEMO_PREFIX_STORE:-}"
+if [[ -n "$DEMO_PREFIX_STORE" ]]; then
+    [[ "$DEMO_PREFIX_STORE" == /* ]] || { echo "DEMO_PREFIX_STORE 必须是绝对路径：$DEMO_PREFIX_STORE"; exit 2; }
+    [[ -f "$DEMO_PREFIX_STORE/index.json" ]] || { echo "demo 前缀库缺 index.json：$DEMO_PREFIX_STORE"; exit 2; }
+fi
+[[ -z "${MMEVLA_ENC_CHUNK:-}" || "$MMEVLA_ENC_CHUNK" =~ ^[0-9]+$ ]] || { echo 'MMEVLA_ENC_CHUNK 必须是非负整数'; exit 2; }
+[[ -z "${MMEVLA_MOTION_OVERFLOW:-}" || "$MMEVLA_MOTION_OVERFLOW" =~ ^(raise|resample)$ ]] || { echo 'MMEVLA_MOTION_OVERFLOW 只能是 raise / resample'; exit 2; }
+[[ -z "${EXPECT_MOTION_STATS:-}" || "$EXPECT_MOTION_STATS" =~ ^[01]$ ]] || { echo 'EXPECT_MOTION_STATS 只能是 0 / 1'; exit 2; }
+# 这三个要被子进程读到：前两个由 server 侧的 framesamp_memory.py / policy.py 读，
+# EXPECT_MOTION_STATS 由客户端 uv 起的 check_shard.py 读。经 env 传进来时本已 exported，这里显式化以防漏。
+[[ -z "${MMEVLA_ENC_CHUNK:-}" ]] || export MMEVLA_ENC_CHUNK
+[[ -z "${MMEVLA_MOTION_OVERFLOW:-}" ]] || export MMEVLA_MOTION_OVERFLOW
+[[ -z "${EXPECT_MOTION_STATS:-}" ]] || export EXPECT_MOTION_STATS
 [[ "$CKPT" == /* && -d "$CKPT/params" && -f "$CKPT/assets/robomme/norm_stats.json" ]] || { echo 'checkpoint 路径无效'; exit 2; }
 [[ -f "$PLAN" ]] || { echo "分片计划不存在：$PLAN"; exit 2; }
 CKPT_ID="$(basename "$CKPT")"
@@ -129,6 +146,7 @@ check_local_gpu
 export MMEVLA_MOTION_ONLINE_GPU="${CUDA_VISIBLE_DEVICES%%,*}"
 [[ -n "$MMEVLA_MOTION_ONLINE_GPU" ]] || export MMEVLA_MOTION_ONLINE_GPU=0
 echo "EVAL_PARAMS policy=$POLICY config=$POLICY_CONFIG ckpt=$CKPT_ID seed=$SEED max_steps=$MAX_STEPS wall=${EPISODE_WALL_S:-default} online_gpu=$MMEVLA_MOTION_ONLINE_GPU prov_relax=${MMEVLA_MOTION_PROV_RELAX:-none}"
+echo "EVAL_PARAMS_DEMO demo_prefix_store=${DEMO_PREFIX_STORE:-none} enc_chunk=${MMEVLA_ENC_CHUNK:-0} motion_overflow=${MMEVLA_MOTION_OVERFLOW:-raise} expect_motion_stats=${EXPECT_MOTION_STATS:-0}"
 "${SERVER_UV[@]}" scripts/training/serve_policy.py --seed="$SEED" --port="$PORT" policy:checkpoint \
     --policy.dir="$CKPT" --policy.config="$POLICY_CONFIG" > "$RUN_DIR/server.log" 2>&1 &
 SERVER_PID=$!
@@ -173,6 +191,7 @@ for ((CHUNK=1; CHUNK<=CHUNKS; CHUNK++)); do
         --args.episode_plan="$PLAN" --args.shard_tag="$SHARD_TAG" \
         --args.max_new_episodes="$CHUNK_EPISODES" \
         ${EPISODE_WALL_S:+--args.episode_wall_s="$EPISODE_WALL_S"} \
+        ${DEMO_PREFIX_STORE:+--args.demo_prefix_store="$DEMO_PREFIX_STORE"} \
         2>&1 | tee -a "$RUN_DIR/client.log"
     echo "CHUNK_DONE $CHUNK/$CHUNKS"
 done

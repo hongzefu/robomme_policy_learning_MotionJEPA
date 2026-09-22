@@ -104,17 +104,75 @@ def cmd_probe(args):
               f"file={path} sha256={sha[:12]}", flush=True)
 
 
+def cmd_task(args):
+    """单任务分片计划（0922-binfill-demo-prefix-plan.md D 节）：BinFill 150 条切 10 片，每片 15 集。
+
+    与 ``shards`` 的两点不同：只收一个任务的组，且**只收 demo 前缀预生成成功的集**——
+    ``--demo-store`` 给出前缀库根时，按 ``index.json`` 里 ``demo_status == "ok"`` 过滤。
+    planner 失败的集在这里就被排除，评测侧的 ``DemoPrefixStore.get`` 因此永远不会缺条目
+    （缺了它会直接 raise，绝不静默无 demo 跑）。
+    """
+    candidates = Path(args.candidates).resolve()
+    header, primary = load_primary(candidates)
+    rows = [r for r in primary if r["task"] == args.task]
+    if not rows:
+        raise SystemExit(f"候选库里没有任务 {args.task}")
+
+    allowed = None
+    if args.demo_store:
+        index = json.loads((Path(args.demo_store) / "index.json").read_text(encoding="utf-8"))
+        allowed = {k for k, v in index.items() if v.get("demo_status") == "ok"}
+        before = len(rows)
+        rows = [r for r in rows if f"{r['task']}/{r['difficulty']}/{r['episode']}" in allowed]
+        dropped = before - len(rows)
+        if dropped:
+            print(f"[plan] 按 demo 前缀库剔除 {dropped} 条（预生成未成功）", flush=True)
+
+    if len(rows) % args.shards:
+        raise SystemExit(f"{len(rows)} 条无法被 --shards={args.shards} 均分；"
+                         f"按计划应在剔除后重新选片数，或把剔除清单交用户裁决")
+    out = Path(args.out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    rows.sort(key=candidate_key)
+    shards = [rows[i::args.shards] for i in range(args.shards)]
+    manifest = {"candidates": str(candidates), "identity_sha256": header["identity_sha256"],
+                "task": args.task, "shards": args.shards, "total": len(rows),
+                "demo_store": args.demo_store, "files": {}}
+    seen = set()
+    for i, shard_rows in enumerate(shards):
+        path = out / f"shard{i}.json"
+        manifest["files"][path.name] = write_plan(
+            path, f"s{i}", candidates, header["identity_sha256"], shard_rows)
+        keys = {candidate_key(r) for r in shard_rows}
+        if keys & seen:
+            raise SystemExit(f"分片 {i} 与前面的分片相交")
+        seen |= keys
+    if len(seen) != len(rows):
+        raise SystemExit(f"分片并集 {len(seen)} != {len(rows)}")
+    (out / "plan_manifest.json").write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    per_group = collections.Counter(r["difficulty"] for r in rows)
+    print(f"PLAN_OK task={args.task} shards={args.shards} total={len(rows)} "
+          f"per_shard={len(rows) // args.shards} disjoint=True by_difficulty={dict(sorted(per_group.items()))} "
+          f"identity={header['identity_sha256'][:12]}", flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("shards", "probe"))
+    parser.add_argument("mode", choices=("shards", "probe", "task"))
     parser.add_argument("out_dir")
     parser.add_argument("--shards", type=int, default=10)
     parser.add_argument("--candidates", default=DEFAULT_CANDIDATES)
+    parser.add_argument("--task", default="BinFill", help="mode=task 时只收这一个任务")
+    parser.add_argument("--demo-store", default="",
+                        help="mode=task 时按该 demo 前缀库的 index.json 过滤，只收 demo_status=ok 的集")
     args = parser.parse_args()
     if args.mode == "shards":
         if 700 % args.shards or (700 // args.shards) % 14:
             raise SystemExit(f"--shards={args.shards} 无法把 14 组 × 50 均分")
         cmd_shards(args)
+    elif args.mode == "task":
+        cmd_task(args)
     else:
         cmd_probe(args)
 

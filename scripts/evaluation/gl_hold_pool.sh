@@ -13,6 +13,10 @@
 #             run_name / ckpt绝对路径 / policy / policy_config / expect_ckpt_id / shard_index），
 #             单元名 = <run_name>-s<shard_index>，四个差异值与 step 逐行取，不再走下面写死的 nomotion / motion 两个 case。
 #             这样同一套占卡 worker 能跑任意多个 run 的任意 step，加新 run 只改 manifest、不改脚本。
+#             MANIFEST 模式下按 policy 名是否以 -motion 结尾自动设 MMEVLA_MOTION_OVERFLOW 与
+#             EXPECT_MOTION_STATS（motion run 用 resample + 期望统计，其余两者关闭）。
+#   DEMO_PREFIX_STORE：起 worker 前 export 即可，经 gl_hold_queue.sh 的 PASS 白名单透传到 run_shard.sh。
+#   MMEVLA_ENC_CHUNK：同上，SigLIP 编码分批尺寸（0/不设 = 一次编完）。
 # 判定行：WORKER_START job= node= / CLAIM item= job= node= / （gl_hold_queue.sh 的 QUEUE_SHARD_DONE … rc=）/ ITEM_DONE item= rc= /
 #         WORKER_DONE job= ran= failed=
 set -uo pipefail
@@ -52,6 +56,15 @@ while true; do
             if mkdir "$QUEUE_DIR/claims/$M_RUN-s$M_SHARD" 2>/dev/null; then
                 ITEM="$M_RUN-s$M_SHARD"; RUN="$M_RUN"; CKPT="$M_CKPT"; K="$M_SHARD"
                 export POLICY="$M_POLICY" POLICY_CONFIG="$M_CONFIG" EXPECT_CKPT_ID="$M_STEP"
+                # motion 口径逐 run 分叉（0922-binfill-demo-prefix-plan.md C/D 节）：只有 motion 模型
+                # 才会超预算、才产出 motion_stats.json。整份 manifest 一刀切会让非 motion 的两个 run
+                # 因「期望 motion_stats 却没有」而 FAIL。policy 名是 manifest 逐行给的确定值，不是猜；
+                # 万一设反了，check_shard.py 的 MOTION_WINDOWS 闸会当场炸，不会静默跑完。
+                case "$M_POLICY" in
+                    *-motion) export MMEVLA_MOTION_OVERFLOW="${MMEVLA_MOTION_OVERFLOW_MOTION:-resample}" \
+                                     EXPECT_MOTION_STATS=1 ;;
+                    *)        unset MMEVLA_MOTION_OVERFLOW; export EXPECT_MOTION_STATS=0 ;;
+                esac
                 break
             fi
         done < "$MANIFEST"

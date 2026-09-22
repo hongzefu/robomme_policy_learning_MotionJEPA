@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+import os
 import time
 from typing import Any, TypeAlias
 
@@ -61,6 +62,17 @@ class MME_VLA_Policy:
                                                      "window_direction", "grid_origin")}
             self._motion_cfg.update(demo_min_real_frames=mcfg.get("demo_min_real_frames", 33),
                                     demo_tail_pad=mcfg.get("demo_tail_pad", "none"))
+            # 超预算口径只能走环境变量：评测侧 motion 配置来自 checkpoint 桶里的 history_config.resolved.yaml，
+            # 其 sha256 被 check_checkpoint.py::RUNS 与 motion_provenance.json 三方钉死，改任何一份都到不了评测路径或直接炸闸。
+            # 优先级 = 环境变量 > resolved 快照可选键 > "raise"（默认，与补 demo 之前一字不差）。
+            overflow = (os.environ.get("MMEVLA_MOTION_OVERFLOW", "").strip()
+                        or str(mcfg.get("overflow", "raise")))
+            if overflow not in ("raise", "resample"):
+                raise ValueError(
+                    f"MMEVLA_MOTION_OVERFLOW / motion.overflow 只能是 raise / resample，得到 {overflow!r}")
+            self._motion_cfg["overflow"] = overflow
+            print(f"MOTION_OVERFLOW={overflow} budget={self._motion_cfg['budget']} "
+                  f"stride={self._motion_cfg['stride']} window_frames={self._motion_cfg['window_frames']}", flush=True)
         
         self.reset()
         
@@ -103,7 +115,15 @@ class MME_VLA_Policy:
         outputs = jax.tree.map(lambda x: np.asarray(x[0, ...]), outputs)      
         outputs = self._output_transform(outputs)
         outputs["infer_time_ms"] = model_time * 1000
-        
+        if self.motion_enabled:
+            # 随 infer_time_ms 一并回传（已有先例）：客户端累计成 motion_stats.json，
+            # 供 check_shard.py 的 MOTION_WINDOWS 闸用闭式公式独立复核
+            outputs["motion_k"] = int(self.mem_buffer.motion_last_k)
+            outputs["motion_downsample_steps"] = int(self.mem_buffer.motion_downsample_steps)
+            # budget 与 overflow 一并回传，验收端才不用硬编码假设这两个值是什么
+            outputs["motion_budget"] = int(self.mem_buffer.motion_budget)
+            outputs["motion_overflow"] = str(self.mem_buffer.motion_overflow)
+
         return outputs
     
     @override

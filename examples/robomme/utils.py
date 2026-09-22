@@ -58,6 +58,15 @@ class EpisodeState:
         self.action_plan = collections.deque()
         self.count = 0
         self.exec_start_idx = 0
+        # ── motion 窗统计（0922-binfill-demo-prefix-plan.md C 节）──
+        # 这四个字段**绝不能**放进 clear_buffers：那个方法每个 action chunk 调一次，清掉就只剩最后一次推理的数。
+        # exec_start_idx_initial 单独存一份，正是因为 clear_buffers 会把 exec_start_idx 归零。
+        self.exec_start_idx_initial = 0
+        self.motion_infers = 0
+        self.motion_k_max = 0
+        self.motion_downsample_steps = 0
+        self.motion_budget = 0
+        self.motion_overflow = ""
 
     def add_observation(self, img: np.ndarray, wrist_img: np.ndarray, state: np.ndarray):
         self.image_buffer.append(img.copy())

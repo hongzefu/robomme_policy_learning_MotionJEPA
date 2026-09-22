@@ -86,23 +86,53 @@ class Args:
     shard_tag: str = ""         # 分片标识，只写进 plan.json 便于追溯
     episode_wall_s: int = 900   # 单集墙钟上限，超时记 "error"
 
+    # BinFill demo 前缀注入（0922-binfill-demo-prefix-plan.md B 节）：给了路径才启用，默认关闭 ⇒ 旧 run 逐字等价。
+    # 只支持 BinFill——其余三任务的 reset() 本来就返回 planner 演示帧，再拼一段会双重叠加。
+    demo_prefix_store: str = ""
+
+
+def motion_stat_of(epstate) -> Optional[dict]:
+    """把一集的 motion 窗统计整理成一条记录；该集没跑过 motion 推理则返回 None。
+
+    ``motion_infers == 0`` 有两种成因：非 motion 模型（server 不回传 motion_k），
+    或该集在第一次 infer 之前就挂了。两种都不该产出记录——
+    check_shard.py 的覆盖判据是「非 error 集都必须有记录」，能把后者揪出来。
+    """
+    if epstate is None or epstate.motion_infers == 0:
+        return None
+    return {
+        "exec_start_idx": int(epstate.exec_start_idx_initial),
+        "steps": int(epstate.count),
+        "motion_infers": int(epstate.motion_infers),
+        "motion_k_max": int(epstate.motion_k_max),
+        "motion_downsample_steps": int(epstate.motion_downsample_steps),
+        "motion_budget": int(epstate.motion_budget),
+        "motion_overflow": str(epstate.motion_overflow),
+    }
+
 
 class EpisodeEvaluator:
     def __init__(self, args: Args, save_dir: Path):
         self.args = args
         self.save_dir = save_dir
+        self._epstate = None          # 当前集的状态，供收尾取 motion 统计（异常路径也取得到）
+        self.last_motion_stat = None
 
     def eval_each_episode(
         self,
         env_runner,
         video_save_dir: Path,
     ) -> str:
+        self._epstate = None
+        self.last_motion_stat = None
         client = _websocket_client_policy.MMEVLAWebsocketClientPolicy(
             self.args.host, self.args.port
         )
         try:
             return self._rollout(client, env_runner, video_save_dir)
         finally:
+            # 统计必须在 finally 里取：墙钟超时 / step 异常那两条路径同样要留下已跑部分的窗数
+            self.last_motion_stat = motion_stat_of(self._epstate)
             # 每集一个新 client，不关会在 server 侧攒下同样多的常驻 handler
             try:
                 client._ws.close()
@@ -115,6 +145,7 @@ class EpisodeEvaluator:
             time.sleep(0.1)
 
         epstate = EpisodeState()
+        self._epstate = epstate
         task_goal, recorder = self.init_episode(env_runner, epstate, video_save_dir)
 
         img, wrist_img, robot_state = epstate.get_current_obs()
@@ -183,15 +214,20 @@ class EpisodeEvaluator:
         epstate.wrist_image_buffer.extend(pre_traj["wrist_images"])
         epstate.state_buffer.extend(pre_traj["states"])
 
+        # 注入 demo 前缀时走显式长度，不动 TASK_WITH_VIDEO_DEMO：那张表表达的是「该任务恒有 video demo」，
+        # 而 BinFill 只在本轮注入时才有——把它加进表里会让 baseline 700 条的 BinFill 变成假命题。
+        demo_len = getattr(env_runner, "demo_prefix_len", 0)
         for i in range(len(pre_traj["images"])):
             recorder.record(
                 image=pre_traj["images"][i].copy(),
                 wrist_image=pre_traj["wrist_images"][i].copy(),
                 state=pre_traj["states"][i].copy(),
-                is_video_demo=env_runner.env_id in TASK_WITH_VIDEO_DEMO and i < len(pre_traj["images"]) - 1,
+                is_video_demo=(i < demo_len) if demo_len else
+                              (env_runner.env_id in TASK_WITH_VIDEO_DEMO and i < len(pre_traj["images"]) - 1),
             )
 
         epstate.exec_start_idx = len(epstate.image_buffer) - 1
+        epstate.exec_start_idx_initial = epstate.exec_start_idx
         print(f"exec_start_idx: {epstate.exec_start_idx}")
         return task_goal, recorder
 
@@ -221,7 +257,17 @@ class EpisodeEvaluator:
             "prompt": prompt,
         }
 
-        action_chunk = client.infer(element)["actions"]
+        # 留住整个响应：motion 模型会随 actions 一并回传 motion_k / motion_downsample_steps
+        resp = client.infer(element)
+        if "motion_k" in resp:
+            state.motion_infers += 1
+            state.motion_k_max = max(state.motion_k_max, int(resp["motion_k"]))
+            # 服务端侧是 episode 内累计值（FrameSampMemory 每 episode 随 reset 重建），取最大即本集总数
+            state.motion_downsample_steps = max(
+                state.motion_downsample_steps, int(resp["motion_downsample_steps"]))
+            state.motion_budget = int(resp["motion_budget"])
+            state.motion_overflow = str(resp["motion_overflow"])
+        action_chunk = resp["actions"]
         return action_chunk[:exec_horizon]
 
 
@@ -346,9 +392,19 @@ def evaluate(args: Args):
     log_dict = setup_log_dict(save_dir, args)
     evaluator = EpisodeEvaluator(args, save_dir)
     evaluated = 0
+    # motion 窗统计与 progress.json 同样跨块续写（run_shard.sh 把一个分片切成多个客户端进程）；
+    # 不能塞进 progress.json——check_shard.py 对那份硬断言 `type(value) is bool`
+    motion_stats_path = save_dir / "motion_stats.json"
+    motion_stats = json.loads(motion_stats_path.read_text(encoding="utf-8")) \
+        if motion_stats_path.is_file() else {}
 
     if args.episode_plan:
         plan, header, groups = load_plan(args)
+        if args.demo_prefix_store:
+            # 守卫②：注入只对 BinFill 有定义；混进别的任务会与其原生 demo 双重叠加，宁可拒绝起跑
+            bad = sorted({g.split("/")[0] for g in groups} - {"BinFill"})
+            if bad:
+                raise ValueError(f"demo_prefix_store 只支持 BinFill，计划里还有 {bad}")
         sampling = header["sampling_config"]
         (save_dir / "plan.json").write_text(json.dumps(
             {"shard_tag": args.shard_tag or plan.get("shard_tag", ""),
@@ -366,7 +422,8 @@ def evaluate(args: Args):
             per_task = {"parameters": sampling["parameters"][task],
                         "positions": sampling["positions"][task]}
             env_runner = SpecEnvRunner(task, difficulty, per_task, video_save_dir,
-                                       max_steps=args.max_steps)
+                                       max_steps=args.max_steps,
+                                       demo_prefix_store=args.demo_prefix_store)
             for row in pending:
                 if args.max_new_episodes and evaluated >= args.max_new_episodes:
                     break
@@ -390,8 +447,14 @@ def evaluate(args: Args):
                         print(f"关闭环境失败：{group}/{episode_id}: {e}")
                         log_dict[group][str(episode_id)] = "error"
                 evaluated += 1
+                stat = evaluator.last_motion_stat
+                if stat is not None:
+                    motion_stats[f"{group}/{episode_id}"] = stat
                 with open(save_dir / "progress.json", "w") as f:
                     json.dump(log_dict, f, indent=2)
+                if motion_stats:
+                    with open(motion_stats_path, "w") as f:
+                        json.dump(motion_stats, f, indent=2)
             del env_runner
             time.sleep(1)
             if args.max_new_episodes and evaluated >= args.max_new_episodes:
