@@ -141,9 +141,13 @@ class SpecEnvRunner(BaseEnvRunner):
         self.group_difficulty = difficulty
         self.sampling_config = sampling_config
         self.max_steps = max_steps
-        # 守卫①：其余三任务的 reset() 本来就返回 planner 演示帧，再拼一段会双重叠加
+        # 守卫①：注入只对 BinFill 有定义——其余三任务的 reset() 本来就返回 planner 演示帧，
+        # 再拼一段会双重叠加。692 条混合计划里非 BinFill 的 runner 也会收到 store 路径，
+        # 这里**显式关掉并打一行日志**，不是静默忽略；eval.py 侧另有「BinFill 集必须全部命中 store」的硬校验，
+        # check_shard.py 再核一遍「BinFill 集有 DEMO_PREFIX_INJECTED、非 BinFill 集没有」。
         if demo_prefix_store and task != "BinFill":
-            raise ValueError(f"demo 前缀注入只支持 BinFill，得到 {task}")
+            print(f"DEMO_PREFIX_DISABLED task={task} difficulty={difficulty} reason=not-BinFill", flush=True)
+            demo_prefix_store = ""
         self._demo_store = DemoPrefixStore(demo_prefix_store) if demo_prefix_store else None
         self._demo_key: tuple[str, str, int] | None = None
         self.demo_prefix_len = 0

@@ -116,6 +116,47 @@ def check_motion_windows(root: Path, progress: dict) -> dict:
     return summary
 
 
+def check_demo_injection(run_dir, progress: dict) -> dict:
+    """DEMO_INJECT 闸：注入恰好发生在该发生的地方，一条不多一条不少。
+
+    692 条混合计划里 BinFill 要注入、其余三任务不能注入（它们的 reset 本来就返回 planner 演示帧，
+    再拼一段会双重叠加）。``SpecEnvRunner`` 对非 BinFill 打 ``DEMO_PREFIX_DISABLED`` 后关掉注入——
+    那是**静默失效的高风险点**，所以这里从 client.log 逐条核对：
+
+    * 每个非 error 的 BinFill 集都必须有一行 ``DEMO_PREFIX_INJECTED``；
+    * 注入行的条数不得超过 BinFill 的集数（多了说明注到别的任务上去了）。
+
+    ``EXPECT_DEMO_INJECT`` 未置 1 时跳过（无 demo 的老口径 run 照常验收）。
+    """
+    if os.environ.get("EXPECT_DEMO_INJECT", "0") != "1":
+        print("DEMO_INJECT=SKIP reason=not-expected", flush=True)
+        return {"verdict": "SKIP", "reason": "not-expected"}
+
+    log = Path(run_dir) / "client.log"
+    if not log.is_file():
+        print("DEMO_INJECT=FAIL reason=no-client-log", flush=True)
+        raise AssertionError(f"EXPECT_DEMO_INJECT=1 但找不到 {log}")
+    injected = set()
+    for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith("DEMO_PREFIX_INJECTED key="):
+            injected.add(line.split("key=")[1].split()[0])      # BinFill/<难度>/<episode>
+
+    binfill_ok = {f"{g}/{e}" for g, entries in progress.items() if g.startswith("BinFill/")
+                  for e, v in entries.items() if v != "error"}
+    other_ok = {f"{g}/{e}" for g, entries in progress.items() if not g.startswith("BinFill/")
+                for e, v in entries.items() if v != "error"}
+
+    missing = sorted(binfill_ok - injected)
+    assert not missing, f"DEMO_INJECT=FAIL 这些 BinFill 集没有注入记录：{missing[:5]}"
+    leaked = sorted(injected & other_ok)
+    assert not leaked, f"DEMO_INJECT=FAIL 非 BinFill 集出现了注入：{leaked[:5]}"
+
+    summary = {"verdict": "PASS", "injected": len(injected),
+               "binfill_non_error": len(binfill_ok), "other_non_error": len(other_ok)}
+    print("DEMO_INJECT=PASS " + json.dumps(summary, ensure_ascii=False), flush=True)
+    return summary
+
+
 def check_shard(run_dir, policy, ckpt, seed, plan_path):
     root = Path(run_dir) / policy / f"ckpt{ckpt}" / f"seed{seed}"
     plan = json.loads(Path(plan_path).read_text(encoding="utf-8"))
@@ -159,11 +200,13 @@ def check_shard(run_dir, policy, ckpt, seed, plan_path):
                         "path": str(video), "frames": count, "bytes": video.stat().st_size})
 
     motion = check_motion_windows(root, progress)
+    demo = check_demo_injection(run_dir, progress)
 
     total = len(planned)
     summary = {
         "pipeline_pass": True,
         "motion_windows": motion,
+        "demo_inject": demo,
         "shard_tag": plan.get("shard_tag", ""),
         "identity_sha256": plan.get("identity_sha256", ""),
         "episodes": total,

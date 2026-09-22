@@ -401,10 +401,21 @@ def evaluate(args: Args):
     if args.episode_plan:
         plan, header, groups = load_plan(args)
         if args.demo_prefix_store:
-            # 守卫②：注入只对 BinFill 有定义；混进别的任务会与其原生 demo 双重叠加，宁可拒绝起跑
-            bad = sorted({g.split("/")[0] for g in groups} - {"BinFill"})
-            if bad:
-                raise ValueError(f"demo_prefix_store 只支持 BinFill，计划里还有 {bad}")
+            # 守卫②：允许混合计划（692 条那种），但**计划里的每一条 BinFill 都必须在 store 里有条目**。
+            # 非 BinFill 组由 SpecEnvRunner 显式关掉注入（打 DEMO_PREFIX_DISABLED），不与其原生 demo 叠加。
+            # 缺条目直接拒绝起跑：静默跳过会让一部分 BinFill 集按旧的错口径跑，事后无从分辨。
+            from demo_prefix import DemoPrefixStore
+            store_probe = DemoPrefixStore(args.demo_prefix_store)
+            missing = [f"BinFill/{g.split('/')[1]}/{row['episode']}"
+                       for g, rows_ in groups.items() if g.startswith("BinFill/")
+                       for row in rows_ if not store_probe.has("BinFill", g.split("/")[1], row["episode"])]
+            if missing:
+                raise ValueError(
+                    f"计划里有 {len(missing)} 条 BinFill 不在 demo 前缀库中：{missing[:5]}"
+                    f"（库根 {args.demo_prefix_store}）")
+            n_binfill = sum(len(rows_) for g, rows_ in groups.items() if g.startswith("BinFill/"))
+            n_other = sum(len(rows_) for g, rows_ in groups.items() if not g.startswith("BinFill/"))
+            print(f"DEMO_PREFIX_PLAN binfill={n_binfill}（全部命中 store）other={n_other}（不注入）", flush=True)
         sampling = header["sampling_config"]
         (save_dir / "plan.json").write_text(json.dumps(
             {"shard_tag": args.shard_tag or plan.get("shard_tag", ""),

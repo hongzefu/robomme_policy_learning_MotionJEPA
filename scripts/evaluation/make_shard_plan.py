@@ -55,6 +55,17 @@ def cmd_shards(args):
     out = Path(args.out_dir)
     out.mkdir(parents=True, exist_ok=True)
 
+    # --demo-store：BinFill 按前缀库过滤（只收 demo_status=ok），其余三任务原样全收。
+    # 用于 692 条的混合计划——BinFill 走补 demo 口径，其余 550 条口径不变。
+    if args.demo_store:
+        index = json.loads((Path(args.demo_store) / "index.json").read_text(encoding="utf-8"))
+        allowed = {k for k, v in index.items() if v.get("demo_status") == "ok"}
+        before = len(primary)
+        primary = [r for r in primary if r["task"] != "BinFill"
+                   or f"{r['task']}/{r['difficulty']}/{r['episode']}" in allowed]
+        print(f"[plan] 按 demo 前缀库剔除 BinFill {before - len(primary)} 条（预生成未成功），"
+              f"其余三任务全收；合计 {len(primary)} 条", flush=True)
+
     shards = [primary[i::args.shards] for i in range(args.shards)]
     manifest = {"candidates": str(candidates), "identity_sha256": header["identity_sha256"],
                 "shards": args.shards, "total": len(primary), "files": {}}
@@ -69,7 +80,14 @@ def cmd_shards(args):
             raise SystemExit(f"分片 {i} 与前面的分片相交")
         seen |= keys
         per_group = collections.Counter((r["task"], r["difficulty"]) for r in rows)
-        if len(per_group) != 14 or set(per_group.values()) != {len(rows) // 14}:
+        if len(per_group) != 14:
+            raise SystemExit(f"分片 {i} 少了组：只有 {len(per_group)} 组")
+        # 无 --demo-store 时 14 组各 50 条、必然整除，沿用严格判据；
+        # 带 --demo-store 时 BinFill 三组被剔到 49/49/44，各片只能保证「最多差 1 条」
+        if args.demo_store:
+            if max(per_group.values()) - min(per_group.values()) > 1:
+                raise SystemExit(f"分片 {i} 的组分布不均：{dict(per_group)}")
+        elif set(per_group.values()) != {len(rows) // 14}:
             raise SystemExit(f"分片 {i} 的组分布不均：{dict(per_group)}")
 
     if len(seen) != len(primary):
@@ -77,8 +95,11 @@ def cmd_shards(args):
     (out / "plan_manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     per = len(primary) // args.shards
+    by_group = collections.Counter(f"{r['task']}/{r['difficulty']}" for r in primary)
     print(f"PLAN_OK shards={args.shards} total={len(primary)} per_shard={per} "
-          f"disjoint=True per_group={per // 14} identity={header['identity_sha256'][:12]}", flush=True)
+          f"disjoint=True groups={len(by_group)} demo_store={args.demo_store or 'none'} "
+          f"identity={header['identity_sha256'][:12]}", flush=True)
+    print("  组分布: " + " ".join(f"{g}={n}" for g, n in sorted(by_group.items())), flush=True)
 
 
 def cmd_probe(args):
@@ -169,7 +190,8 @@ def main():
                         help="mode=task 时按该 demo 前缀库的 index.json 过滤，只收 demo_status=ok 的集")
     args = parser.parse_args()
     if args.mode == "shards":
-        if 700 % args.shards or (700 // args.shards) % 14:
+        # 带 --demo-store 时 BinFill 被剔成 49/49/44，总数不再是 700，整除要求不适用
+        if not args.demo_store and (700 % args.shards or (700 // args.shards) % 14):
             raise SystemExit(f"--shards={args.shards} 无法把 14 组 × 50 均分")
         cmd_shards(args)
     elif args.mode == "task":
