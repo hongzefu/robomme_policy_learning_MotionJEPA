@@ -1,0 +1,291 @@
+未检测到训练进程 => 趟 B（补传 + 全量验收）
+阶段0开始：预检 + 建 bucket
+  motion_enabled=False 确认，本 bucket 不含 _motion-encoder/
+  whoami: [90mHint: A new version of huggingface_hub (1.32.0) is available! You are using version 1.30.0.[0m [90mHint: The `hf-cli` skill is not installed. Run `hf skills add -g --claude` to teach your AI agents how to use the `hf` CLI.[0m [32m✓ Logged in[0m user: HongzeFu orgs: umich 
+HF_WHOAMI=HongzeFu
+[32m✓ Bucket created[0m
+  uri: hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1
+  url: https://huggingface.co/buckets/HongzeFu/robomme-vla-modul-2048-80k-v1
+  bucket create 成功
+  目标 bucket 现状: files=0 size=0
+阶段0完成
+阶段1开始：枚举可安全上传的 step 目录 + 增量 stage（硬链接）+ 分片 sha256
+  本趟可传 16 个 step: 5000 10000 15000 20000 25000 30000 35000 40000 45000 50000 55000 60000 65000 70000 75000 79999
+  stage step 5000
+  stage step 10000
+  stage step 15000
+  stage step 20000
+  stage step 25000
+  stage step 30000
+  stage step 35000
+  stage step 40000
+  stage step 45000
+  stage step 50000
+  stage step 55000
+  stage step 60000
+  stage step 65000
+  stage step 70000
+  stage step 75000
+  stage step 79999
+阶段1完成
+阶段2开始：按 step 目录分批上传
+  [1/16] step 5000  21 件 / 11879485950 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/5000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/5000
+  Uploads: 21
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 11 files]                : 100%|██████████| 6.68GB / 6.68GB            
+Sync completed.
+  批完成: 5000
+  [2/16] step 10000  21 件 / 11879125934 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/10000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/10000
+  Uploads: 21
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 11 files]                : 100%|██████████| 9.36GB / 9.36GB            
+Sync completed.
+  批完成: 10000
+  [3/16] step 15000  19 件 / 11879002169 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/15000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/15000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 9 files]                 : 100%|██████████| 3.19GB / 3.19GB            
+Sync completed.
+  批完成: 15000
+  [4/16] step 20000  20 件 / 11878948259 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/20000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/20000
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 10 files]                : 100%|██████████| 5.73GB / 5.73GB            
+Sync completed.
+  批完成: 20000
+  [5/16] step 25000  19 件 / 11878773928 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/25000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/25000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 9 files]                 : 100%|██████████| 7.54GB / 7.54GB            
+Sync completed.
+  批完成: 25000
+  [6/16] step 30000  20 件 / 11878631321 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/30000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/30000
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 10 files]                : 100%|██████████| 3.92GB / 3.92GB            
+Sync completed.
+  批完成: 30000
+  [7/16] step 35000  20 件 / 11878522888 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/35000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/35000
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 10 files]                : 100%|██████████| 8.75GB / 8.75GB            
+Sync completed.
+  批完成: 35000
+  [8/16] step 40000  19 件 / 11878344185 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/40000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/40000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 9 files]                 : 100%|██████████| 7.40GB / 7.40GB            
+Sync completed.
+  批完成: 40000
+  [9/16] step 45000  21 件 / 11878226404 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/45000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/45000
+  Uploads: 21
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 11 files]                : 100%|██████████| 4.88GB / 4.88GB            
+Traceback (most recent call last):
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/bin/hf", line 12, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/huggingface_hub/cli/hf.py", line 133, in main
+    app()
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/click/core.py", line 1631, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/click/core.py", line 1552, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/huggingface_hub/cli/_cli_utils.py", line 131, in invoke
+    return super().invoke(ctx)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/click/core.py", line 2032, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/click/core.py", line 1415, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/click/core.py", line 910, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/huggingface_hub/cli/_framework.py", line 365, in handler
+    return func(**call_kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/huggingface_hub/cli/buckets.py", line 692, in sync
+    api.sync_bucket(
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/huggingface_hub/hf_api.py", line 15014, in sync_bucket
+    return sync_bucket_internal(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/huggingface_hub/_buckets.py", line 1243, in sync_bucket_internal
+    _execute_plan(sync_plan, api, verbose=verbose, status=status)
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/huggingface_hub/_buckets.py", line 930, in _execute_plan
+    api.batch_bucket_files(
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/huggingface_hub/hf_api.py", line 14558, in batch_bucket_files
+    self._batch_bucket_files(bucket_id, add=add, copy=copy, delete=delete, token=token)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/.cache/uv/archive-v0/q7o66T7If4ElmMUB/lib/python3.11/site-packages/huggingface_hub/hf_api.py", line 14669, in _batch_bucket_files
+    with session.new_upload_commit(
+TimeoutError: Timeout: Request error: error decoding response body, domain: no-url
+  批 [45000] 第 1 次中断，60s 后重试续传
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/45000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/45000
+  Uploads: 21
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 11 files]                : 100%|██████████| 7.04GB / 7.04GB            
+Sync completed.
+  批完成: 45000
+  [10/16] step 50000  23 件 / 11878073407 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/50000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/50000
+  Uploads: 23
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 13 files]                : 100%|██████████| 7.43GB / 7.43GB            
+Sync completed.
+  批完成: 50000
+  [11/16] step 55000  20 件 / 11877903169 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/55000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/55000
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 10 files]                : 100%|██████████| 8.68GB / 8.68GB            
+Sync completed.
+  批完成: 55000
+  [12/16] step 60000  21 件 / 11877722068 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/60000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/60000
+  Uploads: 21
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 11 files]                : 100%|██████████| 7.37GB / 7.37GB            
+Sync completed.
+  批完成: 60000
+  [13/16] step 65000  20 件 / 11877581026 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/65000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/65000
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 10 files]                : 100%|██████████| 7.55GB / 7.55GB            
+Sync completed.
+  批完成: 65000
+  [14/16] step 70000  20 件 / 11877482887 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/70000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/70000
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 10 files]                : 100%|██████████| 7.40GB / 7.40GB            
+Sync completed.
+  批完成: 70000
+  [15/16] step 75000  21 件 / 11877318025 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/75000 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/75000
+  Uploads: 21
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 11 files]                : 100%|██████████| 4.51GB / 4.51GB            
+Sync completed.
+  批完成: 75000
+  [16/16] step 79999  19 件 / 11877138859 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/79999 -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/79999
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 9 files]                 : 100%|██████████| 7.12GB / 7.12GB            
+Sync completed.
+  批完成: 79999
+  上传根下 5 个 sidecar
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/history_config.resolved.sha256
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/history_config.resolved.sha256
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/history_config.resolved.yaml
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/history_config.resolved.yaml
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/history_config.txt
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/history_config.txt
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/motion_provenance.json
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/motion_provenance.json
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/wandb_id.txt
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/wandb_id.txt
+阶段2完成
+阶段2b开始：训练已结束，补齐 _run-meta（训练日志 + wandb）与 README、pre 清单
+  训练日志见到 EXIT_CODE=0
+  wandb run 目录: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/wandb/run-20260921_072103-u5qogzm9
+README 已生成: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/README.md（训练结果 662 字符，loss 采样 10 条）
+LOCAL_FILES=343 LOCAL_BYTES=190076831330 PRE_LINES=342
+PRE_PARTS_CONSISTENT=OK
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/_run-meta -> hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/_run-meta
+  Uploads: 12
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+  [+ 2 files]                 : 100%|██████████| 21.7MB / 21.7MB            
+Sync completed.
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/README.md
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/README.md
+[32m✓ Uploaded[0m
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/stage/SHA256SUMS.pre.txt
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1/SHA256SUMS.pre.txt
+UPLOAD_DONE batches=16
+阶段2b完成
+阶段3开始：计数层核对（buckets REST API，异步滞后则复查一次）
+  首次不符（files=342 bytes=190076791106），统计接口可能异步滞后，120s 后复查
+BUCKET_FILES=343 BUCKET_BYTES=190076831330
+阶段3完成
+阶段4开始：全量回读到 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/verify（约 178 GiB）
+Sync plan: hf://buckets/HongzeFu/robomme-vla-modul-2048-80k-v1 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m32x8x8-modul-b128-80k/verify
+  Uploads: 0
+  Downloads: 343
+  Deletes: 0
+  Skips: 0
+Sync completed.
+阶段4完成
+阶段5开始：上传后 sha256（POST）+ 与上传前逐行对照
+SHA256_PRE_POST_DIFF=0
+  sha256sum -c 校验行数: 342
+RESULT=PASS
+阶段5完成
+阶段6开始：收尾断言（源侧第三遍 sha256，证明硬链接未改动原件）
+  pre(剔 README/_run-meta)=329 行, src-after=329 行, _run-meta=12 行
+SRC_UNCHANGED=OK
+阶段6完成
+全部完成
+EXIT_CODE=0
