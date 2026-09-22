@@ -1,5 +1,13 @@
 # primary700-nomotion50k-gl 与 primary700-motion50k-gl — 结果（无 motion 50000 vs motion 50000，700 条）
 
+> **⚠ 本页的 BinFill 部分已作废，总成绩已被取代。** BinFill 是四任务里唯一「训练有 demo 段、评测没有」的，
+> 本页那 150 条是在训练时从未出现过的输入分布上打的分。补齐 demo 前缀重测后，
+> 本模型（512（8 帧 / budget 512））的总成绩由 **26.00% 更新为 30.49%**。
+> 现行权威结果见 [`binfilldemo-nomotion50k-gl/result.md`](../binfilldemo-nomotion50k-gl/result.md)。
+>
+> 本页其余部分（非 BinFill 的 11 组共 550 条、执行记录、推理开销、error 清单）**仍然有效且未重跑**，
+> 新结果直接沿用。
+
 **环境 A**（GreatLakes spgpu A40，gpu-hold-03…10 八个既有作业，各 1×A40 / 1 CPU / 24G，驱动 595.71.05）。执行 HEAD `d33c0ba`（clean），
 两轮同一套调用（`gl_hold_pool.sh` → `gl_hold_queue.sh` → `srun --overlap` → `gl_eval_shard.sbatch` → `run_shard.sh`，见 `launch.md`）：
 同一套 10 个分片计划（身份 sha `3b4de03a…`）、策略 seed 7、`max_steps=2000`、`EPISODE_WALL_S=2400`、`EVAL_TIMEOUT=14400`、`CHUNK_EPISODES=20`、

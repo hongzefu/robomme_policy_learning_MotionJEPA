@@ -1,5 +1,13 @@
 # primary700-modul32frame-50k-gl — 结果（32 帧 / 2048，modulation，motion 关，50000 步）
 
+> **⚠ 本页的 BinFill 部分已作废，总成绩已被取代。** BinFill 是四任务里唯一「训练有 demo 段、评测没有」的，
+> 本页那 150 条是在训练时从未出现过的输入分布上打的分。补齐 demo 前缀重测后，
+> 本模型（2048（32 帧 / budget 2048））的总成绩由 **34.86% 更新为 45.09%**。
+> 现行权威结果见 [`binfilldemo-nomotion50k-gl/result.md`](../binfilldemo-nomotion50k-gl/result.md)。
+>
+> 本页其余部分（非 BinFill 的 11 组共 550 条、执行记录、推理开销、error 清单）**仍然有效且未重跑**，
+> 新结果直接沿用。
+
 `MERGE_OK shards=10 episodes=700 successes=244 errors=9`，**宏平均 = 微平均 = 34.86%**（每组恰 50 集，两者必然相等）。
 起跑与口径见 [`launch.md`](launch.md)。下面是与同为 50000 步的另两条 run 的三方对照，**三条全是 modulation 注入**，
 差别只在感知记忆规模与 motion 通道开关。

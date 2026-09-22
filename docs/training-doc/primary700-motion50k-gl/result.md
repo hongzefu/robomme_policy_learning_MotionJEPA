@@ -1,5 +1,13 @@
 # primary700-motion50k-gl — 结果（motion 50000，700 条；与 primary700-nomotion50k-gl 成对）
 
+> **⚠ 本页的 BinFill 部分已作废，总成绩已被取代。** BinFill 是四任务里唯一「训练有 demo 段、评测没有」的，
+> 本页那 150 条是在训练时从未出现过的输入分布上打的分。补齐 demo 前缀重测后，
+> 本模型（512+motion）的总成绩由 **40.71% 更新为 54.62%**。
+> 现行权威结果见 [`binfilldemo-nomotion50k-gl/result.md`](../binfilldemo-nomotion50k-gl/result.md)。
+>
+> 本页其余部分（非 BinFill 的 11 组共 550 条、执行记录、推理开销、error 清单）**仍然有效且未重跑**，
+> 新结果直接沿用。
+
 **环境 A**（GreatLakes A40，gpu-hold-03…10，1×A40 / 1 CPU / 24G）。HEAD `d33c0ba`，被评 checkpoint bucket `HongzeFu/robomme-vla-modul-motion-80k-v1` 的 `50000`
 （`motion.enabled=true`、`budget=160`、stride 16、window 33），策略 seed 7，`max_steps=2000`，同一套 700 条 test/primary 计划。
 **两轮对照的完整结果、配对 2×2、执行记录、看门狗标记、资源统计都在配对 run 的
