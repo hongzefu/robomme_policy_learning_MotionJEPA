@@ -15,17 +15,19 @@
 ``export-reset`` 存下的 npy 同时供 ``enc_chunk_cmp.py --reset-frame-npy`` 用——那一帧是 exec 段第 0 帧、
 有历史口径，必须进 SigLIP 分批对照的覆盖点。
 
-motion 侧用 stub 编码器（``motion_stub=True``）：窗数、键集合、缓冲淘汰这些结构性的东西与真编码器一致，
-而 stub 省掉起 sidecar 的开销；本脚本不验 motion token 的数值（那是 motion_gates_online.py 的事）。
+**motion 侧必须走真 sidecar，不能用 stub**：stub sidecar 靠 ``P.stub_decode(window)`` 从**像素**
+解出帧编号，只认 ``P.stub_frame(j)`` 那种合成的带编号帧；喂真实渲染帧解出来是乱的，必报
+「33 帧编号不符合连续前缀与重复末帧规则」。正式评测本来也走真 sidecar，所以这里同源。
+代价是首批要真编 ``k_demo`` 个窗（约 1.7 s/窗），顺带把这个耗时实测出来。
 
 用法：
     # client 环境
     uv run scripts/evaluation/smoke_demo_inject.py export-reset \
         --store <前缀库根> --task BinFill --difficulty easy --episode 156
-    # server 环境（需 GPU）
+    # server 环境（需 GPU；motion run 另需 MMEVLA_MOTION_PROV_RELAX）
     uv run scripts/evaluation/smoke_demo_inject.py verify \
         --store <前缀库根> --task BinFill --difficulty easy --episode 156 \
-        --ckpt <绝对路径>/50000 --config mme_vla_suite_b128_80k --steps 4
+        --ckpt <绝对路径>/50000 --config mme_vla_suite_b128_80k
 判定行：``SMOKE_RESET=PASS {...}`` / ``SMOKE_INJECT=PASS {...}``
 """
 from __future__ import annotations
@@ -114,15 +116,16 @@ def cmd_export_reset(args) -> int:
 def cmd_verify(args) -> int:
     """server 环境：读前缀 + reset 帧，建 policy，喂注入后的首批并逐项断言。"""
     import jax
-    from unittest import mock
     from demo_prefix import DemoPrefixStore
     from mme_vla_suite.training import config as _config
     from mme_vla_suite.policies import policy_config as _policy_config
-    from mme_vla_suite.policies import motion_client as mc
     from mme_vla_suite.shared.sampling import memory_order, pad_times
 
     if jax.default_backend() != "gpu":
         raise SystemExit(f"错误: jax 后端 {jax.default_backend()} != gpu")
+    # sidecar 卡号与 run_shard.sh 同一口径：跟随本进程可见的第一张卡
+    os.environ.setdefault("MMEVLA_MOTION_ONLINE_GPU",
+                          (os.environ.get("CUDA_VISIBLE_DEVICES", "") or "0").split(",")[0] or "0")
 
     out_dir = pathlib.Path(args.out or (REPO / "v1-store/demo-prefix/smoke-inject"))
     npy = reset_npy_path(out_dir, args.task, args.difficulty, args.episode)
@@ -147,12 +150,13 @@ def cmd_verify(args) -> int:
                     "enc_chunk": os.environ.get("MMEVLA_ENC_CHUNK", "0"),
                     "motion_overflow_env": os.environ.get("MMEVLA_MOTION_OVERFLOW", "")}
 
-    original = mc.MotionEncoderClient
-    with mock.patch.object(mc, "MotionEncoderClient",
-                           lambda **kw: original(**(kw | {"online_gpu": ""}))):
-        policy = _policy_config.create_trained_policy(
-            _config.get_config(args.config), pathlib.Path(args.ckpt), motion_stub=True)
+    # ⚠ 绝不能用 motion_stub=True：stub sidecar 靠 P.stub_decode(window) 从**像素**解帧编号，
+    # 只认 P.stub_frame(j) 那种合成的带编号帧；真实渲染帧解出来是乱的，必报
+    # 「33 帧编号不符合连续前缀与重复末帧规则」。真实帧只能走真 sidecar——正式评测本来也是这么跑的。
+    policy = _policy_config.create_trained_policy(
+        _config.get_config(args.config), pathlib.Path(args.ckpt), motion_stub=args.motion_stub)
     mem = policy.mem_buffer
+    report["motion_stub"] = bool(args.motion_stub)
     report["motion_enabled"] = bool(policy.motion_enabled)
     report["motion_overflow_effective"] = getattr(mem, "motion_overflow", None)
 
@@ -243,7 +247,10 @@ def main() -> int:
     # 首批之后 mem_order / demo 窗数 / 缓冲淘汰就都验得到了，不需要 exec 批；
     # 要喂 exec 批得起真 sidecar，或改用不开 motion 的 checkpoint。
     parser.add_argument("--steps", type=int, default=0,
-                        help="verify 模式再喂几个 16 帧的 exec 批（motion + stub 下必须为 0，见代码注释）")
+                        help="verify 模式再喂几个 16 帧的 exec 批（stub sidecar 下必须为 0，见代码注释）")
+    parser.add_argument("--motion-stub", action="store_true",
+                        help="用 stub sidecar。只对合成的带编号帧有效，喂真实帧必报错，"
+                             "所以本脚本默认关闭、走与正式评测同一条的真 sidecar")
     parser.add_argument("--out", default="")
     args = parser.parse_args()
     if args.mode == "export-reset":
