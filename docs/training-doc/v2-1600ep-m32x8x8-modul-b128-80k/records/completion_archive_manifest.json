@@ -1,0 +1,55 @@
+{
+  "train.complete.summary.log": {
+    "sha256": "aa3a728e7659df488f918c001ab09ceedf8af1689c587e8f17ff9956d3d1a29a",
+    "bytes": 264673,
+    "original_sha256": "1d2a466c768d039215cfd34615df6f5eaf524041bab42eea4a9fcee91f5c4e3b",
+    "original_bytes": 1338079,
+    "transform": "回车转行；去除tqdm中间态和Progress on中间态，仅保留最后一次进度；去除尾空白并合并连续空行；800条Step及唯一EXIT_CODE=0完整保留。"
+  },
+  "driver.full.log.gz": {
+    "sha256": "c6ae9e1dd5fa6639adb1cddd4932cc6f08b771bba983e43d5c5df2b050408422",
+    "bytes": 167807,
+    "original_sha256": "1d2a466c768d039215cfd34615df6f5eaf524041bab42eea4a9fcee91f5c4e3b",
+    "original_bytes": 1338079
+  },
+  "metrics.full.jsonl.gz": {
+    "sha256": "69fbf338c8ce55c4ea81d69ddb68614687ec92a1dc46f4ac684ae9d625edae2c",
+    "bytes": 69130,
+    "original_sha256": "891d2ea4fe55f0d896f12e05ae1dfec0505f8bf13600e85d6487fdb1c7ec761b",
+    "original_bytes": 340262
+  },
+  "run_meta.final.json": {
+    "sha256": "7fccdd76a9ec9d5bb969382a20eaa7c2d434c82bfa4e191d17c188511d319870",
+    "bytes": 1031
+  },
+  "checkpoint_inventory.json": {
+    "sha256": "f111a5f1e63f382fd58a53d68ec79d320bb34fdd935126cdac6f716f6bfb77f4",
+    "bytes": 46812
+  },
+  "completion_l0.json": {
+    "sha256": "b42aa105b0dcce04df131b27f770301cae32085d7f72fef11f5782c86e33a3d7",
+    "bytes": 4971
+  },
+  "completion-l0.summary.log": {
+    "sha256": "abee3a9dd5dc09ca93b1f6f0f7b2a2d9a473a1c312a656142144530f0d3f7318",
+    "bytes": 1566
+  },
+  "merge.before.json": {
+    "sha256": "71ede5cd9afcd6d86c06c76fb766c76307d9604f9ebbc905dbd295da0969bb2c",
+    "bytes": 37862
+  },
+  "performance.full.json": {
+    "sha256": "9b651d18e3921135df29e5883716cf3624b1fb5334f1e20ada5fc896052f8c0e",
+    "bytes": 4733
+  },
+  "gpu_util_500ms.full.csv.gz": {
+    "sha256": "83a9b8bda22b5849d16abad166795f2a365237a58a5ccf41a110ba9e478610fa",
+    "bytes": 3544185,
+    "original_sha256": "57f723fef93f6adfa7429b591c367920166f050cf158cd315d2f46d13c8e4311",
+    "original_bytes": 50115996
+  },
+  "training_completion.json": {
+    "sha256": "087f658edd5a3667cd26e6b53f4d1d8320c9b7db35f6e932c47d73ba473016e2",
+    "bytes": 1328
+  }
+}

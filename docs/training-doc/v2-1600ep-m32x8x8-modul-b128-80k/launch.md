@@ -1,5 +1,7 @@
 # 无motion、32帧×8×8 modulation 80k正式训练
 
+**结束状态：** 2026-09-22 06:19:30 UTC已正常完成80000步，耗时22小时58分52秒、EXIT_CODE=0；最终61叶权重真实加载和16份checkpoint验收通过。完整结论及副本合并见 [result.md](result.md)。下文保留实际起跑时的代码、配置、授权与监控约定。
+
 **已于2026-09-21 07:20:38 UTC正式起跑，V10全部26门通过。** commitV11.2Beta为 `55647ff33c8ddb9ec324fdbcee8bd1491456725b`，起跑工作区clean，与PERF_HEAD之间只有档案变化。[测速报告](../perf-m32x8x8-modul-b128-20260921T051856Z/result.md)为READY，GPU均值98.6104%>50%，全部正确性及容量通过。实际绑定见 [approval.actual.json](records/approval.actual.json)，启动命令、PID及W&B见 [launch.actual.json](records/launch.actual.json)，门的原始判定见 [preflight.log](records/preflight.log)。
 
 用户已指定新run_name `v2-1600ep-m32x8x8-modul-b128-80k`，并明确：「1000步测速后如果占用率高于50% 并且没有其他的问题 可以直接启动训练」。采用800步稳态窗口内八卡总体平均GPU利用率严格大于50%、全部正确性与容量检查通过、SPEED_REPORT=READY且无未解决问题的口径。条件成立后已生成绑定实际报告/runner/TRAIN_HEAD的授权记录并执行V10，没有再次询问。

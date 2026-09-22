@@ -1,0 +1,41 @@
+{
+  "status": "TRAINING_COMPLETE",
+  "run_name": "v2-1600ep-m32x8x8-modul-b128-80k",
+  "train_head": "55647ff33c8ddb9ec324fdbcee8bd1491456725b",
+  "recorded_at": "2026-09-22T14:50:41.351778+00:00",
+  "start_utc": "2026-09-21T07:20:38Z",
+  "end_utc": "2026-09-22T06:19:30Z",
+  "elapsed_wall_s": 82732.0,
+  "training_steps": 80000,
+  "exit_code": 0,
+  "checkpoint_count": 16,
+  "final_checkpoint": "79999",
+  "checkpoint_bytes": 190052280479,
+  "metric_rows": 800,
+  "finite_metric_scalars": 4000,
+  "last_logged_step": 79900,
+  "last_logged_metrics": {
+    "loss": 0.0012461843434721231,
+    "grad_norm": 0.02127394638955593,
+    "llm_grad_norm": 0.018379945307970047,
+    "mem_enc_norm": 0.0015487385680899024,
+    "param_norm": 1866.032470703125
+  },
+  "last10_logged_metrics_mean": {
+    "loss": 0.0012503650621511042,
+    "grad_norm": 0.0205177815631032,
+    "llm_grad_norm": 0.01777451243251562,
+    "mem_enc_norm": 0.001597948488779366,
+    "param_norm": 1865.7761840820312
+  },
+  "final_checkpoint_real_cpu_restore": {
+    "passed": true,
+    "parameter_leaves": 61,
+    "source_head": "55647ff33c8ddb9ec324fdbcee8bd1491456725b",
+    "tmux": "m2048-finish-l0-20260922",
+    "start_utc": "2026-09-22T14:49:05Z",
+    "end_utc": "2026-09-22T14:49:26Z",
+    "elapsed_seconds": 21
+  },
+  "policy_evaluation_performed": false
+}

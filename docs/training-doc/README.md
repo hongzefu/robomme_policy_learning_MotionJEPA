@@ -10,7 +10,7 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`m2048-implementation/`](m2048-implementation/result.md) | 实施、验证与用户决定总记录 | 全部正确性、容量与测速通过，正式起跑条件已满足 |
+| [`m2048-implementation/`](m2048-implementation/result.md) | 实施、验证与用户决定总记录 | 正确性、容量、测速及正式80k完成，收尾验收与主仓合并完成 |
 | [`m2048-dump-base-8x64/`](m2048-dump-base-8x64/result.md) | 旧 8×64 全量定点输入基线 | 完成：3200样本、200批、完整1600集身份遍历 |
 | [`m2048-dump-base-32x16/`](m2048-dump-base-32x16/result.md) | 旧 32×16 全量定点输入基线 | 完成：3000样本、200批、完整1600集身份遍历 |
 | [`m2048-b20-base-8x64/`](m2048-b20-base-8x64/result.md) | 旧 8×64 真实20步基线 | 与CAND完整20+1步逐位对拍通过 |
@@ -38,7 +38,7 @@
 | [`m2048-train100/`](m2048-train100/result.md) | 新档100步、原数组及checkpoint保存加载 | 全通过，201叶原数组/61叶加载一致，动作RMS=0、mem_len2048 |
 | [`m2048-smoke/`](m2048-smoke/result.md) | b128/w16/FSDP8的20步容量检查 | 全通过，61叶加载正确，共享内存峰值10.60%，临时checkpoint已按归属清理 |
 | [`perf-m32x8x8-modul-b128-20260921T051856Z/`](perf-m32x8x8-modul-b128-20260921T051856Z/result.md) | 独占八卡1000步测速与80k外推 | READY；1.030681秒/步、GPU均值98.6104%，80k约23小时 |
-| [`v2-1600ep-m32x8x8-modul-b128-80k/`](v2-1600ep-m32x8x8-modul-b128-80k/result.md) | 正式80k运行 | 已起跑，V10全过；前300步正常，1.0324秒/步、GPU均值98.37% |
+| [`v2-1600ep-m32x8x8-modul-b128-80k/`](v2-1600ep-m32x8x8-modul-b128-80k/result.md) | 正式80k运行 | 完成：22h58m52s、EXIT0，16份checkpoint及最终61叶加载通过；主仓已合并 |
 
 ### modulation 8×8 接入 motion（2026-09-17）
 
