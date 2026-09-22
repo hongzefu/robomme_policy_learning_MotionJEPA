@@ -35,8 +35,12 @@ import numpy as np
 REPO = pathlib.Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "examples/robomme"))
 
-#: 既有 f32/bf16 编码器差异的量级（docs/train-infer-consistency.md 七节）。超过它就停下来问用户。
-REFERENCE_REL = 0.0033
+#: 既有「训练 f32 逐帧编 vs 推理 bf16 整批编」的差异量级（docs/train-infer-consistency.md 第七节 1，
+#: 2409 帧记忆 token 实测）。这是参照系不是阈值：超过它就停下来交用户裁决，不自行放行。
+#: 该节原话：「差异只来自精度和批形状，两者各贡献约 0.3%」——批形状本就是既有差异来源之一，
+#: 本脚本测的分批属同一类，理应落在这个量级之内。
+REFERENCE_REL = 0.0033      # rel_fro
+REFERENCE_COS = 0.99998     # 余弦最小值
 
 
 def load_frames(args) -> tuple[np.ndarray, np.ndarray, int]:
@@ -98,15 +102,29 @@ def encode_with_chunk(policy, images, states, chunk: int) -> np.ndarray:
 
 
 def compare(a: np.ndarray, b: np.ndarray) -> dict:
-    """逐帧比相对差与余弦。相对差用 ``|a-b| / (|a| + |b| + eps)`` 的两倍，对称、不被小分母放大。"""
-    eps = np.float32(1e-8)
-    rel, cos = [], []
+    """逐帧比相对 Frobenius 范数差与余弦——与 ``docs/train-infer-consistency.md`` 第七节 1 同口径。
+
+    那一节记的基线是「2409 帧记忆 token **相对差 0.33%、余弦最小 0.99998**」，
+    指的就是 rel_fro 与 cos，所以这里必须用同一对指标，否则没法比。
+
+    **不要用逐元素相对差**：``2|a-b|/(|a|+|b|+eps)`` 的理论上界是 2，只要某个元素符号相反或
+    一方为 0 就取到 2；bf16 特征里大量元素接近 0，那个指标在那里没有信息量。
+    本函数仍然把它算出来记进报告，但只作参考、不进判据。
+    """
+    eps = np.float64(1e-12)
+    rel_fro, cos, elem_max = [], [], []
     for i in range(a.shape[0]):
-        x, y = a[i].reshape(-1), b[i].reshape(-1)
-        rel.append(float(np.max(2.0 * np.abs(x - y) / (np.abs(x) + np.abs(y) + eps))))
+        x = a[i].reshape(-1).astype(np.float64)
+        y = b[i].reshape(-1).astype(np.float64)
         nx, ny = np.linalg.norm(x), np.linalg.norm(y)
+        rel_fro.append(float(np.linalg.norm(x - y) / (nx + eps)))
         cos.append(1.0 if nx == 0 and ny == 0 else float(np.dot(x, y) / (nx * ny + eps)))
-    return {"rel": rel, "cos": cos}
+        elem_max.append(float(np.max(2.0 * np.abs(x - y) / (np.abs(x) + np.abs(y) + eps))))
+    # 全局 rel_fro：把所有帧当成一个大矩阵，与文档「2409 帧」那个数同口径
+    fa, fb = a.reshape(-1).astype(np.float64), b.reshape(-1).astype(np.float64)
+    global_rel_fro = float(np.linalg.norm(fa - fb) / (np.linalg.norm(fa) + eps))
+    return {"rel_fro": rel_fro, "cos": cos, "elem_max": elem_max,
+            "global_rel_fro": global_rel_fro}
 
 
 def main() -> int:
@@ -149,7 +167,7 @@ def main() -> int:
     full = encode_with_chunk(policy, images, states, 0)
     chunked = encode_with_chunk(policy, images, states, args.chunk)
     stats = compare(full, chunked)
-    rel, cos = stats["rel"], stats["cos"]
+    rel, cos = stats["rel_fro"], stats["cos"]
 
     # 覆盖点：reset 帧（最后一帧，exec 段第 0 帧）与每个分批边界帧及其前一帧
     boundaries = sorted({b for b0 in range(args.chunk, t, args.chunk) for b in (b0 - 1, b0)})
@@ -157,24 +175,34 @@ def main() -> int:
     summary = {
         "prefix_h5": str(args.prefix_h5), "D": d, "frames": t, "chunk": args.chunk,
         "ckpt": str(args.ckpt), "config": args.config,
-        "rel_max": max(rel), "rel_mean": float(np.mean(rel)),
+        "rel_fro_max": max(rel), "rel_fro_mean": float(np.mean(rel)),
+        "global_rel_fro": stats["global_rel_fro"],
         "cos_min": min(cos), "cos_mean": float(np.mean(cos)),
-        "reset_frame_index": t - 1, "reset_frame_rel": rel[-1], "reset_frame_cos": cos[-1],
+        "reset_frame_index": t - 1, "reset_frame_rel_fro": rel[-1], "reset_frame_cos": cos[-1],
         "boundary_indices": boundaries,
-        "boundary_rel_max": max(boundary_rel.values()) if boundary_rel else 0.0,
-        "boundary_rel": boundary_rel,
+        "boundary_rel_fro_max": max(boundary_rel.values()) if boundary_rel else 0.0,
+        "boundary_rel_fro": boundary_rel,
         "bitexact": bool(max(rel) == 0.0),
-        "reference_rel": REFERENCE_REL,
+        # 逐元素相对差只作参考：理论上界是 2，bf16 里大量接近 0 的元素会让它恒等于 2，没有信息量
+        "elem_rel_max_reference_only": max(stats["elem_max"]),
+        "reference_rel_fro": REFERENCE_REL, "reference_cos_min": REFERENCE_COS,
     }
     print("ENC_CHUNK_CMP " + json.dumps(
-        {k: summary[k] for k in ("rel_max", "cos_min", "reset_frame_rel", "boundary_rel_max",
+        {k: summary[k] for k in ("rel_fro_max", "global_rel_fro", "cos_min",
+                                 "reset_frame_rel_fro", "boundary_rel_fro_max",
                                  "bitexact", "D", "frames", "chunk")}, ensure_ascii=False), flush=True)
+    print(f"ENC_CHUNK_BASELINE 既有「训练 f32 逐帧编 vs 推理 bf16 整批编」差异："
+          f"rel_fro={REFERENCE_REL} cos_min={REFERENCE_COS}"
+          f"（docs/train-infer-consistency.md 第七节 1，2409 帧实测；"
+          f"该节明确「差异只来自精度和批形状，两者各贡献约 0.3%」——批形状本就是既有来源之一）",
+          flush=True)
     if args.out:
         pathlib.Path(args.out).parent.mkdir(parents=True, exist_ok=True)
         pathlib.Path(args.out).write_text(json.dumps(summary, indent=2, ensure_ascii=False),
                                           encoding="utf-8")
-    if summary["rel_max"] > REFERENCE_REL:
-        print(f"[warn] rel_max={summary['rel_max']:.6g} 超过既有编码器差异量级 {REFERENCE_REL}，"
+    if summary["rel_fro_max"] > REFERENCE_REL or summary["cos_min"] < REFERENCE_COS:
+        print(f"[warn] rel_fro_max={summary['rel_fro_max']:.6g} / cos_min={summary['cos_min']:.8f} "
+              f"超过既有编码器差异量级（{REFERENCE_REL} / {REFERENCE_COS}），"
               f"按计划停下来交用户裁决（不要自行放行）", flush=True)
         return 1
     return 0
