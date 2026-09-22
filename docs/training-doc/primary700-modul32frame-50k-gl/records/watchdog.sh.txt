@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# 看门狗（登录节点，不进 git；用户 2026-09-19 授权「自动标 error + KILL 客户端」，本轮沿用并改为 manifest 口径）：
+# 少数 episode 会卡死在环境 make_env/reset 的 native 调用里，eval.py 的 SIGALRM 单集墙钟打不断，只能等 EVAL_TIMEOUT；
+# 本轮已按分片把前三轮那 9 条预先标成 error，所以这里只兜「新出现」的卡死。
+# 判据：client.log 静默 ≥ STALL_MIN 分钟，且最后一行是 "env for <group> episode <ep> setup finished"。
+# 处置：把该集写成 "error"（与 False/fail 严格区分）+ 记 hang_marks.txt，再经 srun --overlap 只 KILL 该分片的客户端 python。
+# 单元名与 manifest 一致：<run_name>-s<shard>；policy / step 逐行从 manifest 取（六列 TAB）。
+# 用法：watchdog.sh [once]   环境变量 STALL_MIN（默认 12）、INTERVAL（默认 180）
+set -uo pipefail
+REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA
+B=$REPO/v1-store/evaluation/primary700-ab2048-gl
+Q=$B/queue; MANIFEST=$B/manifest.tsv
+STALL_MIN="${STALL_MIN:-12}"; INTERVAL="${INTERVAL:-180}"
+mkdir -p "$Q/claims" "$Q/done"
+echo "WATCHDOG_START stall_min=$STALL_MIN interval=$INTERVAL manifest=$MANIFEST $(date -u +%FT%TZ)"
+while true; do
+    while IFS=$'\t' read -r RUN CKPT POLICY CONFIG STEP K; do
+        [[ -n "$RUN" ]] || continue
+        c="$RUN-s$K"
+        [[ -d "$Q/claims/$c" ]] || continue          # 没被抢就不管
+        [[ -f "$Q/done/$c" ]] && continue            # 已结束
+        dir="$REPO/v1-store/evaluation/$RUN/s$K"
+        log="$dir/client.log"; [[ -f "$log" ]] || continue
+        age=$(( ($(date +%s) - $(stat -c %Y "$log")) / 60 ))
+        (( age >= STALL_MIN )) || continue
+        last="$(grep -v '^[[:space:]]*$' "$log" | tail -n 1)"
+        [[ "$last" =~ env\ for\ ([A-Za-z]+/[a-z]+)\ episode\ ([0-9]+)\ setup\ finished ]] || continue
+        g="${BASH_REMATCH[1]}"; ep="${BASH_REMATCH[2]}"
+        grep -qs "item=$c group=$g episode=$ep " "$Q/hang_marks.txt" && continue
+        job="$(sed -n 's/^job=\([0-9]*\).*/\1/p' "$Q/claims/$c/owner")"
+        prog="$dir/$POLICY/ckpt$STEP/seed7/progress.json"
+        echo "HANG_DETECTED item=$c group=$g ep=$ep silent_min=$age job=$job $(date -u +%FT%TZ)"
+        python3 - "$prog" "$g" "$ep" <<'PY'
+import json, os, sys
+p, g, ep = sys.argv[1:4]
+d = json.load(open(p)) if os.path.exists(p) else {}
+d.setdefault(g, {})[ep] = "error"
+tmp = p + ".tmp"; json.dump(d, open(tmp, "w"), indent=2); os.replace(tmp, p)
+print("HANG_MARKED_ERROR", p, g, ep, flush=True)
+PY
+        echo "item=$c group=$g episode=$ep silent_min=$age job=$job marked=$(date -u +%FT%TZ)" >> "$Q/hang_marks.txt"
+        # [e]val.py 括号技巧：pkill -f 不会匹配到承载这条命令的 bash -c 自身
+        timeout 180 srun --jobid="$job" --overlap -N1 -n1 --cpus-per-task=1 --time=00:05:00 \
+            bash -c "pkill -KILL -u \$USER -f 'policy-eval-client/bin/python3 examples/robomme/[e]val.py .*save_dir=$dir '; echo pkill_rc=\$?"
+        echo "HANG_KILLED item=$c group=$g ep=$ep $(date -u +%FT%TZ)"
+    done < "$MANIFEST"
+    [[ "${1:-}" == once ]] && { echo "WATCHDOG_ONCE_DONE $(date -u +%FT%TZ)"; exit 0; }
+    sleep "$INTERVAL"
+done

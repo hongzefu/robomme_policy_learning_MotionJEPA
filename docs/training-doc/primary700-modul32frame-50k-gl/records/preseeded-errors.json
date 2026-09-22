@@ -1,0 +1,92 @@
+{
+  "primary700-motion80k-gl": {
+    "policy": "perceptual-framesamp-modul-8frame-8x8-motion",
+    "ckpt": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/robomme-vla-modul-motion-80k-v1/79999",
+    "step": "79999",
+    "total_preseeded": 9,
+    "by_shard": {
+      "s2": {
+        "VideoRepick/medium": [
+          "155"
+        ]
+      },
+      "s4": {
+        "VideoRepick/easy": [
+          "189"
+        ],
+        "VideoRepick/medium": [
+          "167"
+        ],
+        "VideoRepick/xhard": [
+          "197"
+        ],
+        "VideoUnmaskSwap/xhard": [
+          "139"
+        ]
+      },
+      "s5": {
+        "VideoRepick/xhard": [
+          "168"
+        ]
+      },
+      "s8": {
+        "VideoRepick/xhard": [
+          "201"
+        ]
+      },
+      "s9": {
+        "VideoRepick/medium": [
+          "172"
+        ],
+        "VideoUnmaskSwap/xhard": [
+          "164"
+        ]
+      }
+    }
+  },
+  "primary700-modul32frame-50k-gl": {
+    "policy": "perceptual-framesamp-modul-32frame-8x8",
+    "ckpt": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/models/robomme-vla-modul-2048-80k-v1/50000",
+    "step": "50000",
+    "total_preseeded": 9,
+    "by_shard": {
+      "s2": {
+        "VideoRepick/medium": [
+          "155"
+        ]
+      },
+      "s4": {
+        "VideoRepick/easy": [
+          "189"
+        ],
+        "VideoRepick/medium": [
+          "167"
+        ],
+        "VideoRepick/xhard": [
+          "197"
+        ],
+        "VideoUnmaskSwap/xhard": [
+          "139"
+        ]
+      },
+      "s5": {
+        "VideoRepick/xhard": [
+          "168"
+        ]
+      },
+      "s8": {
+        "VideoRepick/xhard": [
+          "201"
+        ]
+      },
+      "s9": {
+        "VideoRepick/medium": [
+          "172"
+        ],
+        "VideoUnmaskSwap/xhard": [
+          "164"
+        ]
+      }
+    }
+  }
+}

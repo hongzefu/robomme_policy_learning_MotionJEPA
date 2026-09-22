@@ -133,6 +133,7 @@
 | [`eval-binfill-pickxtimes/`](eval-binfill-pickxtimes/result.md) | BinFill / PickXTimes 评估 |
 | [`primary700-motion50k-gl/`](primary700-motion50k-gl/result.md) | motion 80k run 的 50000 跑完 700 条：**40.71%**（285/700，error 9），A40 sidecar 1.64 s/窗、infer 126 ms、anon 峰 18.2 GiB；链路接入与冒烟见其 `launch.md` |
 | [`primary700-nomotion50k-gl/`](primary700-nomotion50k-gl/result.md) | 无 motion 60k run 的 50000 跑完 700 条：**26.00%**（182/700，error 9），与 motion 50000 同一套调用、8 个 gpu-hold 作业动态抢单 + 看门狗 + 续跑队列；两轮对照表、配对 2×2、执行记录都在此 |
+| [`primary700-modul32frame-50k-gl/`](primary700-modul32frame-50k-gl/result.md) | 32 帧 / 感知预算 2048（modulation，motion 关）的 50000 跑完 700 条：**34.86%**（244/700，error 9）。与 8 帧/512 的 26.00%、512+motion 的 40.71% 三方对照——放大感知上下文 +8.86 pp，只有 motion 收益的六成；BinFill 上两条独立机制同向退化 |
 
 ## 五、已归档（`../archive/training-doc/`，34 项）
 
