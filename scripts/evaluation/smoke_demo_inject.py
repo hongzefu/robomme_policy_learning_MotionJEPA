@@ -176,6 +176,20 @@ def cmd_verify(args) -> int:
         assert sorted(mem._raw_frames) == [es], \
             f"_raw_frames 首批后剩 {sorted(mem._raw_frames)}，期望 [{es}]"
 
+        # mem_order 在首批之后就能验，不必喂 exec 批：此刻 step_idx == es，帧路与运动路都已就绪
+        _, _, m_mask, m_times = mem._prepare_motion(policy.step_idx)
+        frames = mem.get_frame_sampling_indices(
+            policy.step_idx, policy.config.budget, policy.config.token_per_image)
+        max_frames = policy.config.budget // (policy.config.token_per_image * policy.config.num_views)
+        order = memory_order(pad_times(frames, max_frames),
+                             policy.config.token_per_image * policy.config.num_views, m_times)
+        expected_order = policy.config.budget + mem.motion_budget
+        assert len(order) == expected_order, f"mem_order 长度 {len(order)} != {expected_order}"
+        report["mem_order_len"] = int(len(order))
+        report["frame_path_indices"] = len(frames)
+        assert int(m_mask.sum()) == expected, \
+            f"motion mask 真实位 {int(m_mask.sum())} != demo 窗数 {expected}"
+
     # 再喂若干 16 帧的 exec 批，验窗数随步数增长、mem_order 是合法置换、降级按闭式触发
     downsample_first_at = None
     for _ in range(args.steps):
@@ -224,7 +238,12 @@ def main() -> int:
     parser.add_argument("--config", default="mme_vla_suite_b128_80k")
     parser.add_argument("--candidates", default=str(
         REPO / "third_party/robomme_benchmark/artifacts/injection/20260912-contract-v3-10/candidates/candidates.jsonl"))
-    parser.add_argument("--steps", type=int, default=4, help="verify 模式再喂几个 16 帧的 exec 批")
+    # 默认 0：motion 的 stub 编码器会校验每个 33 帧窗是「连续前缀 + 重复末帧」，
+    # 而这里能合成的 exec 帧只有重复的同一张，33 帧编号全同、必被 stub 拒绝。
+    # 首批之后 mem_order / demo 窗数 / 缓冲淘汰就都验得到了，不需要 exec 批；
+    # 要喂 exec 批得起真 sidecar，或改用不开 motion 的 checkpoint。
+    parser.add_argument("--steps", type=int, default=0,
+                        help="verify 模式再喂几个 16 帧的 exec 批（motion + stub 下必须为 0，见代码注释）")
     parser.add_argument("--out", default="")
     args = parser.parse_args()
     if args.mode == "export-reset":
