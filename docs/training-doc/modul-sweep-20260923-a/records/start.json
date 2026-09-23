@@ -1,0 +1,54 @@
+{
+  "head": "e1b97169d9a1cdc838af5f27bce0bca6a7a513e9",
+  "before_head": "742f2d894d25abe802a26b1c118852b0b7676e44",
+  "pid": 1197529,
+  "batch": "modul-sweep-20260923-a",
+  "user_quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/0922-4096-1024-8gpu-training-plan.md 开始做 有问题立刻问用户 起泡后给出预计的时间",
+  "started_at": "2026-09-23T00:31:18.760817+00:00",
+  "environment": {
+    "packages": {
+      "torch": "2.7.1",
+      "jax": "0.5.3",
+      "jaxlib": "0.5.3",
+      "numpy": "1.26.4",
+      "ml_dtypes": "0.4.1",
+      "flax": "0.10.2",
+      "optax": "0.2.4"
+    },
+    "uv_lock_sha256": "02cbc3ba67a9024f8afb9e31f60661c9abdcc3eb680ae80a8ee464c639327221",
+    "sys_prefix": "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv",
+    "storage": "/dev/md0 xfs    /scratch",
+    "gpus": [
+      "NVIDIA A100-SXM4-80GB, 595.71.05",
+      "NVIDIA A100-SXM4-80GB, 595.71.05",
+      "NVIDIA A100-SXM4-80GB, 595.71.05",
+      "NVIDIA A100-SXM4-80GB, 595.71.05",
+      "NVIDIA A100-SXM4-80GB, 595.71.05",
+      "NVIDIA A100-SXM4-80GB, 595.71.05",
+      "NVIDIA A100-SXM4-80GB, 595.71.05",
+      "NVIDIA A100-SXM4-80GB, 595.71.05"
+    ],
+    "environment": {
+      "CUDA_VISIBLE_DEVICES": "0,1,2,3,4,5,6,7",
+      "XLA_FLAGS": null,
+      "XLA_PYTHON_CLIENT_MEM_FRACTION": "0.95",
+      "JAX_ENABLE_X64": null,
+      "JAX_DEFAULT_MATMUL_PRECISION": null,
+      "XLA_PYTHON_CLIENT_PREALLOCATE": null,
+      "MMEVLA_JAX_CACHE_DIR": null,
+      "CUDA_CACHE_PATH": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda"
+    }
+  },
+  "tmux_session": "modul-sweep-20260923T003111Z",
+  "environment_overrides": {
+    "CUDA_VISIBLE_DEVICES": "0,1,2,3,4,5,6,7",
+    "MMEVLA_FRAMESAMP_MANIFEST": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/meta/episode_manifest.json",
+    "MMEVLA_FRAMESAMP_SOURCE": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/source",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "OPENPI_DATA_HOME": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models",
+    "TZ": "UTC",
+    "UV_CACHE_DIR": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/uv",
+    "XLA_PYTHON_CLIENT_MEM_FRACTION": "0.95"
+  }
+}

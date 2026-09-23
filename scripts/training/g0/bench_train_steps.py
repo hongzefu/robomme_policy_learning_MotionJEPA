@@ -90,6 +90,8 @@ import time
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from state_checksum import leaf_sha256 as _buffer_leaf_sha256, collect_leaves
 sys.path.insert(0, str(_REPO_ROOT / "scripts" / "training"))
 _SOURCE_ROOT = pathlib.Path(os.environ.get("BENCH_SOURCE_ROOT", str(_REPO_ROOT))).resolve()
 # 同一取证器读取固定旧提交；只切换源码导入，不写快照，不更换训练计算。
@@ -169,11 +171,7 @@ def _install_metrics_recorder(record_dir: pathlib.Path) -> None:
 
 
 def _leaf_sha256(arr) -> str:
-    h = hashlib.sha256()
-    h.update(str(arr.dtype).encode())
-    h.update(str(arr.shape).encode())
-    h.update(arr.tobytes())
-    return h.hexdigest()
+    return _buffer_leaf_sha256(arr)
 
 
 def _canonical_sha256(arr: np.ndarray) -> str:
@@ -274,22 +272,24 @@ def _checksum_full_state(checksums_path: pathlib.Path, state, step: int,
     trees = {"params": state.params, "opt_state": state.opt_state, "step": state.step}
     if state.ema_params is not None:
         trees["ema_params"] = state.ema_params
+    jobs = []
     for tree_name, tree in trees.items():
         flat, _ = jax.tree_util.tree_flatten_with_path(tree)
         for path, leaf in flat:
             if leaf is None:
                 continue
-            key = tree_name + jax.tree_util.keystr(path)
-            arr = np.asarray(jax.device_get(leaf))
-            per_leaf[key] = _leaf_sha256(arr)
-            per_leaf_finite[key] = bool(np.isfinite(arr).all())
-            if dump_f is not None:
-                data = arr.tobytes()
-                dump_f.write(data)
-                dump_meta[key] = {"dtype": str(arr.dtype), "shape": list(arr.shape),
-                                  "offset": dump_offset, "nbytes": len(data),
-                                  "sha256": per_leaf[key]}
-                dump_offset += len(data)
+            jobs.append((tree_name + jax.tree_util.keystr(path),leaf))
+    workers = int(os.environ.get("BENCH_CHECKSUM_WORKERS","1"))
+    for count,(key,observed) in enumerate(collect_leaves(jobs,workers=workers,keep_bytes=dump_f is not None),1):
+        per_leaf[key] = observed["sha256"]
+        per_leaf_finite[key] = observed["finite"]
+        if dump_f is not None:
+            dump_f.write(observed["data"])
+            dump_meta[key] = {"dtype":observed["dtype"],"shape":observed["shape"],"offset":dump_offset,
+                              "nbytes":observed["nbytes"],"sha256":observed["sha256"]}
+            dump_offset += observed["nbytes"]
+        if workers > 1 and (count%32 == 0 or count == len(jobs)):
+            print(f"BENCH_CHECKSUM_PROGRESS step={step} leaves={count}/{len(jobs)} workers={workers} elapsed_s={time.time()-t0:.3f}",flush=True)
     if dump_f is not None:
         dump_f.close()
         with meta_path.open("w") as f:
@@ -802,6 +802,7 @@ def main() -> None:
                                  if (record_dir / "final_checkpoint.json").is_file() else None),
             "monitoring_event_counts": cache_counter.counts,
             "bench_checksum_enabled": checksum_on,
+            "checksum_workers": int(os.environ.get("BENCH_CHECKSUM_WORKERS","1")),
             "bench_batch_digests_enabled": digests_on,
             "bench_dump_idx_enabled": dump_idx_on,
             "digest_interval_effective": digest_interval,

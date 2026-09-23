@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import gzip
 import json
 import os
 from pathlib import Path
 import shlex
+import shutil
+import re
 import subprocess
 import sys
 
@@ -121,6 +124,7 @@ class Workflow:
         env = {"BENCH_RECORD_DIR":str(rec),"TRAIN_RECORD_DIR":str(rec),"BENCH_DUMP_IDX":"1",
             "BENCH_DATASET_IMPL":impl,"BENCH_REF_SOURCE":str(self.ds/"source"),
             "BENCH_REF_MANIFEST":str(self.ds/"meta/episode_manifest.json"),"BENCH_CHECKSUM":"1",
+            "BENCH_CHECKSUM_WORKERS":"8",
             "BENCH_BATCH_DIGESTS":"1","MMEVLA_JAX_CACHE_DIR":str(self.store/"cache/jax"/run),
             "WANDB_MODE":"disabled","XLA_FLAGS":"--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0",
             "BENCH_REF_COMMIT":self.before_head,"BENCH_CAND_COMMIT":self.head}
@@ -211,8 +215,117 @@ class Workflow:
             "run_name":run,"config_sha256":json_sha(actual),"yaml_sha256":sha(ROOT/"src/mme_vla_suite/models/config/robomme"/BUDGET_YAMLS[budget]),
             "norm_stats_sha256":NORM_SHA,"manifest_file_sha256":data["manifest_file_sha256"],"store_meta_sha256":data["store_meta_sha256"],
             "run_root":args.run_root,"approved":True,"user_quote":USER_QUOTE,"approved_at":self.now(),
+            "approval_time_kind":"本轮既有授权与实际报告完成绑定的时间，不代表用户再次发言",
             "scope":"执行0922计划；4096验收后1024；八卡b128/w16/FSDP8，各80000步，不自动改参"})
         return approval
+
+    def archive_all(self):
+        """两档进程均结束后才回写预建档案，避免影响中途clean HEAD检查。"""
+        self.clean()
+        resources(ROOT,"smoke")
+        docs = ROOT/"docs/training-doc"
+        changed = []
+        def copy(source,destination):
+            require(source.is_file(),f"归档源缺失: {source}")
+            require(not destination.exists(),f"拒绝覆盖归档记录: {destination}")
+            destination.parent.mkdir(parents=True,exist_ok=True)
+            if source.suffix == ".log":
+                lines = source.read_text().replace("\r","\n").splitlines()
+                cleaned = [line.rstrip() for line in lines if not re.search(r"%\|",line)]
+                require([l for l in lines if l.startswith("EXIT_CODE=")] ==
+                        [l for l in cleaned if l.startswith("EXIT_CODE=")],"清洗丢失退出码")
+                destination.write_text("\n".join(cleaned)+"\n")
+            elif destination.suffix == ".gz":
+                with source.open("rb") as src,gzip.open(destination,"xb") as dst:
+                    shutil.copyfileobj(src,dst)
+            else:
+                shutil.copyfile(source,destination)
+            changed.append(destination)
+        events = [json.loads(line) for line in (self.root/"events.jsonl").read_text().splitlines()]
+        starts = {row["stage"]:row for row in events if row.get("status")=="START"}
+        ends = {row["stage"]:row for row in events if row.get("status")=="PASS"}
+        require(starts.keys()==ends.keys(),"存在未完成阶段，禁止生成全部成功档案")
+        group = docs/self.batch
+        for name in ("start.json","events.jsonl","baseline-2048.json"):
+            copy(self.root/name,group/"records"/name)
+        for stage in starts:
+            copy(self.root/(stage+".log"),group/"records"/(stage+".summary.log"))
+            result = self.root/(stage+".json")
+            if result.is_file():copy(result,group/"records"/result.name)
+        names = [name for name in starts if name.startswith(self.batch+"-m") and name.endswith(("-20","-1","-100","-capacity","-perf"))]
+        names += [PROD_RUNS[4096],PROD_RUNS[1024]]
+        for name in names:
+            target = docs/name
+            require((target/"launch.md").is_file(),f"缺预建档案: {name}")
+            record_root = self.run_records(name) if name in PROD_RUNS.values() or name.endswith(("-capacity","-perf")) else self.root/name
+            for filename in ("run_meta.json","runtime.json","metrics.jsonl","param_checksums.jsonl","batch_digests.jsonl",
+                             "index_sequence.json","idx_seq.jsonl","final_checkpoint.json","speed_start.json","speed_run.json",
+                             "host_samples.jsonl","step_timing.jsonl"):
+                source = record_root/filename
+                if source.is_file():copy(source,target/"records"/filename)
+            if (record_root/"final").is_dir():
+                for filename in ("start.json","final.json","checkpoint_wait_done.json"):
+                    copy(record_root/"final"/filename,target/"records/final"/filename)
+            gpu = Path(str(record_root)+".gpu.csv")
+            if gpu.is_file():copy(gpu,target/"records/gpu.csv.gz")
+            driver = self.store/"logs"/(name+".driver.log")
+            copy(driver if driver.is_file() else self.root/(name+".log"),target/"records/run.summary.log")
+            complete = self.root/(name+".completed.json")
+            if complete.is_file():copy(complete,target/"records/completed.json")
+            actual = {"head":self.head,"start":starts[name],"end":ends[name],"user_quote":USER_QUOTE}
+            write_json(target/"records/launch.actual.json",actual);changed.append(target/"records/launch.actual.json")
+            meta = json.loads((record_root/"run_meta.json").read_text())
+            source_head = meta.get("source_head",self.head)
+            text = f"# {name} 实际结果\n\n本阶段正常完成，退出码0。起跑/取证器提交为 `{self.head}`，训练源码为 `{source_head}`；启动UTC为{starts[name]['time']}，结束UTC为{ends[name]['time']}。\n\n"
+            text += f"用户原话：「{USER_QUOTE}」。配置、命令、全部阶段覆盖与硬件见[实际记录](records/launch.actual.json)及[总档案](../{self.batch}/launch.md)。\n\n"
+            text += "本轮使用AWS八卡A100、全局batch128、数据worker16、FSDP8。状态取证worker8仅作用于验证记录器，不是数据worker或训练并行度。权重及原数组保留在v1-store，不复制到Git。\n\n"
+            metric_rows = [json.loads(line) for line in (record_root/"metrics.jsonl").read_text().splitlines()]
+            text += f"本阶段实际记录{len(metric_rows)}条指标，记录步范围{metric_rows[0]['step']}至{metric_rows[-1]['step']}。日志与指标见records。本轮两侧主跑和补跑共同满足20+1步与201叶逐位判据；100步保存、容量与测速分别按总档案约定验收。训练loss用于过程检查，不作为策略成功率结论。\n"
+            if name in PROD_RUNS.values():
+                result = json.loads(complete.read_text())
+                text += f"\n正式80000步完成，{len(result['checkpoints'])}份checkpoint齐全；最终79999原dtype权重与现场EMA摘要一致、末99步及固定noise的10步动作有限。末条常规日志为79900，不代表79999单步loss。GPU原始500ms采样无损压缩为gpu.csv.gz。\n"
+            (target/"result.md").write_text(text);changed.append(target/"result.md")
+            with (target/"launch.md").open("a") as stream:
+                stream.write(f"\n## 实际起跑与完成\n\n已从 `{self.head}` 正常完成；实际命令、UTC、环境和退出码见[launch.actual.json](records/launch.actual.json)，结论见[result.md](result.md)。上文未启动标记为起跑前记录。\n")
+            changed.append(target/"launch.md")
+        for budget in (4096,1024):
+            target = docs/f"{self.batch}-m{budget}-input"
+            commands = ("yaml","frames","guards","assembly","pad","online","collate","oracle","init")
+            for command in commands:
+                name = f"m{budget}-{command}"
+                copy(self.root/(name+".json"),target/"records"/(command+".json"))
+            (target/"result.md").write_text(f"# {budget}输入及语义验收\n\n所有九项验收通过；提交 `{self.head}`。有界真实样本、索引、字节、padding、在线缓存、RoPE和初始化的实测记录见records；没有宣称全库特征重新扫描。用户原话及全部命令见[总档案](../{self.batch}/launch.md)。\n")
+            changed.append(target/"result.md")
+            for name in (f"m{budget}-speed.json",f"m{budget}-approval.json",f"m{budget}-provenance.json",f"m{budget}-reload.json",f"m{budget}-refnpy-packed.json"):
+                destination = group/"records"/name
+                if not destination.exists():copy(self.root/name,destination)
+        (group/"result.md").write_text(f"# 顺序训练完成\n\n4096与1024均完成80000步和最终验收，先4096后1024，全部阶段退出0。起跑锚点 `{self.head}`；旧源码对照 `{self.before_head}`。\n\n用户原话：「{USER_QUOTE}」。全部展开命令、环境、UTC及阶段退出见records/events.jsonl，两档独立测速与初始化/稳态/保存的ETA见records/m4096-speed.json、records/m1024-speed.json。正式结果在两个run子档案。\n\n取证优化保持原dtype/C序字节/SHA、全部201叶及20+1步判据；没有减少验证或改变正式超参。原a批次的中断和615.913秒初态摘要保留。策略rollout与外部权重导出未执行。\n")
+        changed.append(group/"result.md")
+        index = docs/"README.md"
+        rows=[]
+        for line in index.read_text().splitlines():
+            if line.startswith("| ") and any(f"`{name}/`" in line for name in [self.batch,*names,f"{self.batch}-m4096-input",f"{self.batch}-m1024-input"]):
+                cells=line.split("|");cells[-2]=" 已完成，通过对应验收 ";line="|".join(cells)
+            rows.append(line)
+        index.write_text("\n".join(rows)+"\n");changed.append(index)
+        relative = sorted({str(path.relative_to(ROOT)) for path in changed})
+        subprocess.run(["git","diff","--check"],cwd=ROOT,check=True)
+        logs = [path for path in relative if path.endswith(".summary.log")]
+        subprocess.run(["git","add","--",*[path for path in relative if path not in logs]],cwd=ROOT,check=True)
+        if logs:
+            # 仓库全局忽略*.log；只对本函数明确生成的清洗日志逐路径放行。
+            subprocess.run(["git","add","-f","--",*logs],cwd=ROOT,check=True)
+        staged = set(subprocess.check_output(["git","diff","--cached","--name-only"],cwd=ROOT,text=True).splitlines())
+        require(staged == set(relative),"暂存范围含非本轮文件")
+        subprocess.run(["git","diff","--cached","--check"],cwd=ROOT,check=True)
+        subject = subprocess.check_output(["git","show","-s","--format=%s",self.head],cwd=ROOT,text=True).strip()
+        match = re.match(r"commitV(\d+\.\d+)Beta:",subject)
+        require(match is not None,"起跑提交不是Beta锚点")
+        body = f"commitV{match.group(1)}: 完成4096与1024八卡80k顺序训练归档\n\n用户原话：{USER_QUOTE}\n\n按0922计划，完成2048改前/改后20+1步及最终记录开关回归，两个新预算输入与NPY/packed完整状态对拍、100步保存加载、20步容量、1000步独立测速均通过；两档各80000步、16份checkpoint、尾窗与最终动作验收通过。所有阶段命令、覆盖、SHA、实测日志和指标见本批次档案。仅回写本轮文档与运行记录，未改训练源码、未复制权重或配置脚本。初始慢取证中断与有界并行优化已留档；本次沿用全部逐位判据。当前训练及归档完成，策略rollout和外部导出未开展。\n"
+        message=self.root/"completion-commit.txt";message.write_text(body)
+        subprocess.run(["git","commit","-F",str(message)],cwd=ROOT,check=True)
+        subprocess.run(["git","push"],cwd=ROOT,check=True)
+        print("SWEEP_ARCHIVE=PASS commit="+subprocess.check_output(["git","rev-parse","HEAD"],cwd=ROOT,text=True).strip(),flush=True)
 
     def run(self):
         resources(ROOT,"smoke")
@@ -227,6 +340,7 @@ class Workflow:
             approval = self.approve(budget,report)
             self.execute(PROD_RUNS[budget],self.production_runner("prod",budget,PROD_RUNS[budget],approval,report,handoff))
             handoff = self.complete(budget,PROD_RUNS[budget])
+        self.archive_all()
         self.event(status="ALL_COMPLETED")
         print("SWEEP_COMPLETED=PASS budgets=4096,1024",flush=True)
 

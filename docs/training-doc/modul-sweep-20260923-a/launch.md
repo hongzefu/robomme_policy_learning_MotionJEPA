@@ -1,6 +1,6 @@
 # 4096→1024八卡顺序实施
 
-用户已授权执行0922计划。本档当前为起跑前记录，两个正式run均未启动。用户原话：「/scratch/hongze/robomme_policy_learning_MotionJEPA/0922-4096-1024-8gpu-training-plan.md 开始做 有问题立刻问用户 起泡后给出预计的时间」。
+本批次已于2026-09-23 00:31:21 UTC从e1b97169d9a1cdc838af5f27bce0bca6a7a513e9启动，于00:53:36 UTC主动中断慢取证，阶段退出130、队列退出1。两个正式run均未启动。后续见[b批次](../modul-sweep-20260923-b/launch.md)。用户原话：「/scratch/hongze/robomme_policy_learning_MotionJEPA/0922-4096-1024-8gpu-training-plan.md 开始做 有问题立刻问用户 起泡后给出预计的时间」。
 
 ## 版本与硬件
 
@@ -28,11 +28,11 @@
 
 ## 验证状态
 
-已完成的CPU短测在[result.md](result.md)列出。长验证尚未启动，不以单元测试代替真实八卡对拍。正式起跑前所有闸门必须通过；测速1000步后提供各档ETA，正式约300步复核。
+已完成的CPU短测及实际中断记录在[result.md](result.md)列出。长验证只完成2048初态和前两步，不以它替代完整八卡对拍。正式训练未启动；b批次继续全部闸门，测速1000步后提供各档ETA，正式约300步复核。
 
 ## 本批次档案
 
-- [modul-sweep-20260923-a-m2048-before-20](../modul-sweep-20260923-a-m2048-before-20/launch.md)：2048 before 20步数值回归，预建未启动。
+- [modul-sweep-20260923-a-m2048-before-20](../modul-sweep-20260923-a-m2048-before-20/launch.md)：已启动后中断，退出130，不满足20步判据。
 - [modul-sweep-20260923-a-m2048-before-1](../modul-sweep-20260923-a-m2048-before-1/launch.md)：2048 before 1步数值回归，预建未启动。
 - [modul-sweep-20260923-a-m2048-after-20](../modul-sweep-20260923-a-m2048-after-20/launch.md)：2048 after 20步数值回归，预建未启动。
 - [modul-sweep-20260923-a-m2048-after-1](../modul-sweep-20260923-a-m2048-after-1/launch.md)：2048 after 1步数值回归，预建未启动。

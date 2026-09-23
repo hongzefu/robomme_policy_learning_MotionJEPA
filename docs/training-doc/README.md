@@ -6,12 +6,44 @@
 
 ## 一、环境 B 现行（AWS 8×A100，2026-09-04 起）
 
-### 4096→1024顺序实验（2026-09-23）
+### 4096→1024顺序实验重跑（2026-09-23，取证并行化）
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`modul-sweep-20260923-a/`](modul-sweep-20260923-a/launch.md) | 代码实施、旧档回归与完整顺序验证总档案 | 代码验证中，正式训练尚未启动 |
-| [`modul-sweep-20260923-a-m2048-before-20/`](modul-sweep-20260923-a-m2048-before-20/launch.md) | 2048 before 20步数值回归 | 预建，未启动 |
+| [`modul-sweep-20260923-b/`](modul-sweep-20260923-b/launch.md) | 保留完整判据的有界并行取证与顺序队列 | 取证协议短测通过，重跑未启动 |
+| [`modul-sweep-20260923-b-m2048-before-20/`](modul-sweep-20260923-b-m2048-before-20/launch.md) | 2048 before 20步数值回归 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m2048-before-1/`](modul-sweep-20260923-b-m2048-before-1/launch.md) | 2048 before 1步数值回归 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m2048-after-20/`](modul-sweep-20260923-b-m2048-after-20/launch.md) | 2048 after 20步数值回归 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m2048-after-1/`](modul-sweep-20260923-b-m2048-after-1/launch.md) | 2048 after 1步数值回归 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m2048-after-final-20/`](modul-sweep-20260923-b-m2048-after-final-20/launch.md) | 2048 after-final 20步数值回归 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m2048-after-final-1/`](modul-sweep-20260923-b-m2048-after-final-1/launch.md) | 2048 after-final 1步数值回归 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m4096-refnpy-20/`](modul-sweep-20260923-b-m4096-refnpy-20/launch.md) | 4096 refnpy 20步真实输入、五标量与201叶取证 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m4096-refnpy-1/`](modul-sweep-20260923-b-m4096-refnpy-1/launch.md) | 4096 refnpy 1步真实输入、五标量与201叶取证 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m4096-packed-20/`](modul-sweep-20260923-b-m4096-packed-20/launch.md) | 4096 packed 20步真实输入、五标量与201叶取证 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m4096-packed-1/`](modul-sweep-20260923-b-m4096-packed-1/launch.md) | 4096 packed 1步真实输入、五标量与201叶取证 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m4096-save-100/`](modul-sweep-20260923-b-m4096-save-100/launch.md) | 4096 100步真实保存与加载 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m4096-capacity/`](modul-sweep-20260923-b-m4096-capacity/launch.md) | 4096 八卡生产容量验证 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m4096-perf/`](modul-sweep-20260923-b-m4096-perf/launch.md) | 4096 八卡独立测速 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m4096-input/`](modul-sweep-20260923-b-m4096-input/launch.md) | 4096 有界输入、在线装配、padding、RoPE及初始化 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m1024-refnpy-20/`](modul-sweep-20260923-b-m1024-refnpy-20/launch.md) | 1024 refnpy 20步真实输入、五标量与201叶取证 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m1024-refnpy-1/`](modul-sweep-20260923-b-m1024-refnpy-1/launch.md) | 1024 refnpy 1步真实输入、五标量与201叶取证 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m1024-packed-20/`](modul-sweep-20260923-b-m1024-packed-20/launch.md) | 1024 packed 20步真实输入、五标量与201叶取证 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m1024-packed-1/`](modul-sweep-20260923-b-m1024-packed-1/launch.md) | 1024 packed 1步真实输入、五标量与201叶取证 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m1024-save-100/`](modul-sweep-20260923-b-m1024-save-100/launch.md) | 1024 100步真实保存与加载 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m1024-capacity/`](modul-sweep-20260923-b-m1024-capacity/launch.md) | 1024 八卡生产容量验证 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m1024-perf/`](modul-sweep-20260923-b-m1024-perf/launch.md) | 1024 八卡独立测速 | 预建，未启动 |
+| [`modul-sweep-20260923-b-m1024-input/`](modul-sweep-20260923-b-m1024-input/launch.md) | 1024 有界输入、在线装配、padding、RoPE及初始化 | 预建，未启动 |
+| [`v2-1600ep-m64x8x8-modul-b128-80k/`](v2-1600ep-m64x8x8-modul-b128-80k/launch.md) | 4096八卡80000步正式训练 | 预建，未启动 |
+| [`v2-1600ep-m16x8x8-modul-b128-80k/`](v2-1600ep-m16x8x8-modul-b128-80k/launch.md) | 1024八卡80000步正式训练 | 预建，未启动 |
+
+### 首次4096→1024实施（2026-09-23，已中断取证）
+
+a批次仅执行配置基线和2048 before-20的部分前缀，其余预建验证未运行；由b批次完整重跑，原记录保留。
+
+| 目录 | 内容 | 判定 |
+|---|---|---|
+| [`modul-sweep-20260923-a/`](modul-sweep-20260923-a/launch.md) | 代码实施、旧档回归与完整顺序验证总档案 | 初态摘要615.913秒；主动中断，队列退出1 |
+| [`modul-sweep-20260923-a-m2048-before-20/`](modul-sweep-20260923-a-m2048-before-20/launch.md) | 2048 before 20步数值回归 | 只有初态和前两步，退出130，不算通过 |
 | [`modul-sweep-20260923-a-m2048-before-1/`](modul-sweep-20260923-a-m2048-before-1/launch.md) | 2048 before 1步数值回归 | 预建，未启动 |
 | [`modul-sweep-20260923-a-m2048-after-20/`](modul-sweep-20260923-a-m2048-after-20/launch.md) | 2048 after 20步数值回归 | 预建，未启动 |
 | [`modul-sweep-20260923-a-m2048-after-1/`](modul-sweep-20260923-a-m2048-after-1/launch.md) | 2048 after 1步数值回归 | 预建，未启动 |
@@ -33,8 +65,6 @@
 | [`modul-sweep-20260923-a-m1024-capacity/`](modul-sweep-20260923-a-m1024-capacity/launch.md) | 1024 八卡生产容量验证 | 预建，未启动 |
 | [`modul-sweep-20260923-a-m1024-perf/`](modul-sweep-20260923-a-m1024-perf/launch.md) | 1024 八卡独立测速 | 预建，未启动 |
 | [`modul-sweep-20260923-a-m1024-input/`](modul-sweep-20260923-a-m1024-input/launch.md) | 1024 有界输入、在线装配、padding、RoPE及初始化 | 预建，未启动 |
-| [`v2-1600ep-m64x8x8-modul-b128-80k/`](v2-1600ep-m64x8x8-modul-b128-80k/launch.md) | 4096八卡80000步正式训练 | 预建，未启动 |
-| [`v2-1600ep-m16x8x8-modul-b128-80k/`](v2-1600ep-m16x8x8-modul-b128-80k/launch.md) | 1024八卡80000步正式训练 | 预建，未启动 |
 
 ### 无 motion、32 帧 × 8×8 扩容至 2048 token（2026-09-21）
 
