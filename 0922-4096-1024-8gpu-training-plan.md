@@ -2,21 +2,23 @@
 
 创建日期：2026-09-22（America/New_York）。本轮交付为本根目录计划文件，尚未修改代码、配置或启动训练。用户原话：「给出再训练4096和1024的计划 配置和2048一致 跑完4096跑1024 都是8卡 计划落在根目录 /scratch/hongze/robomme_policy_learning_MotionJEPA」。
 
+修订（2026-09-22）：用户原话「文本太多细节太少第一部分 参考…0920-32frame-8x8-modul-2048-plan.md对齐风格」「主要是每一节的叙述方式 不是章节表格这种大的排版」。第一部分保留原章节与表格，逐段改为结论先行加代码级细节的叙述；按 `exec_start_idx` 最小 100 的实测，更正 64 帧满额口径，并同步第二部分三处相应表述。
+
 ## 第一部分（给人看）
 
 ### 1. 训练安排与参照版本
 
-先训练 **4096 token（64 帧 × 每帧 64 token）**，完整完成 80,000 步并验收保存结果后，再训练 **1024 token（16 帧 × 每帧 64 token）**。两档均独占本机 GPU `0,1,2,3,4,5,6,7`，沿用 2048 档的全局 batch 128、worker 16、FSDP 8 和其余训练配置。每档独立从同一 `pi05_base` 初始化；4096 的权重不传给 1024。
+**两档都是 2048 run 的「只换预算」复刻，先 4096、后 1024，串行不并行。** 先训 4096 token（最多 64 帧 × 每帧 64 token），80,000 步跑完并通过完成验收后，再训 1024 token（最多 16 帧 × 64 token）。两档都独占 GPU `0–7`：单个 JAX 训练进程、`fsdp=8`、全局 batch 128、`num_workers=16`，各自从 `pi05_base/params` 重新初始化——4096 的权重不传给 1024。
 
-参照是已完成的 `v2-1600ep-m32x8x8-modul-b128-80k`，正式起跑 Beta 为 `55647ff33c8ddb9ec324fdbcee8bd1491456725b`。以其 [实际配置记录](docs/training-doc/v2-1600ep-m32x8x8-modul-b128-80k/records/approval.actual.json)、[启动档案](docs/training-doc/v2-1600ep-m32x8x8-modul-b128-80k/launch.md) 和 [完成结果](docs/training-doc/v2-1600ep-m32x8x8-modul-b128-80k/result.md) 为配置依据；本计划核对时仓库 HEAD 为 `f711d68fcb23ac2cdd8b776c1f051f9916173e36`，工作区为空。
+**参照对象是刚跑完的 2048 run，不是任何数值相近的旧配置。** `v2-1600ep-m32x8x8-modul-b128-80k` 从 Beta `55647ff33c8ddb9ec324fdbcee8bd1491456725b` 起跑，2026-09-22 06:19:30 UTC 以 `EXIT_CODE=0` 结束，全程 22 小时 58 分 52 秒；step100→79900 平均 1.030577 秒/步、124.2023 samples/s，八卡 GPU 利用率均值 98.4911%。「配置和 2048 一致」以它的 [实际配置记录](docs/training-doc/v2-1600ep-m32x8x8-modul-b128-80k/records/approval.actual.json)（完整解析配置，config SHA `b2acd4a95c6c9fb5649fe0791b24ab891292ffeaa56befb747221cf90179bbb8`）为准，[启动档案](docs/training-doc/v2-1600ep-m32x8x8-modul-b128-80k/launch.md) 与 [完成结果](docs/training-doc/v2-1600ep-m32x8x8-modul-b128-80k/result.md) 提供命令和结果依据。
 
-已实测本机为环境 B：8 × `NVIDIA A100-SXM4-80GB`，`/scratch` 为 `/dev/md0`、XFS、本地 NVMe RAID；编写时八卡显存均为 0 MiB，scratch 可用约 1.2 TiB，`/dev/shm` 总量约 561 GiB。仓库、数据、资产和新产物均使用 `/scratch/hongze/robomme_policy_learning_MotionJEPA/`，运行产物统一落 `v1-store/`。这些是编写时快照，每档起跑前仍重查。
+**本机是环境 B，资源在编写时足够起步，但每档起跑前都要重查。** 8 × `NVIDIA A100-SXM4-80GB`；`/scratch` 是 `/dev/md0`（XFS，本地 NVMe RAID），编写时可用约 1.2 TiB；`/dev/shm` 总量约 561 GiB；八卡显存均为 0 MiB。核对时 HEAD 为 `f711d68fcb23ac2cdd8b776c1f051f9916173e36`，工作区干净。仓库、数据、资产和新产物都在 `/scratch/hongze/robomme_policy_learning_MotionJEPA/`，运行产物统一落 `v1-store/`。
 
-本轮只新增这份文档，从本文件标题至第 9 节；下文的代码、验证和长训练都是后续实施安排。计划所描述的是训练实施，因此按两部分组织：第一部分给出训练安排、完整配置及关键保证的具体依据；第二部分列出实现文件、命令、验证和交付。新名称拟为 `v2-1600ep-m64x8x8-modul-b128-80k` 和 `v2-1600ep-m16x8x8-modul-b128-80k`，本次已检查两处训练输出均不存在。正式实施前依据 [AGENTS.md](AGENTS.md) 第 6 条一次确认两个名称和实施范围；若用户直接认可本计划及这两个名称，沿用该决定，4096 结束后不再重复确认。2048 档的历史同意记录不能代替本轮实施授权。
+**两个 run 名已查重，确认一次后 4096 → 1024 自动交接。** 拟定 `v2-1600ep-m64x8x8-modul-b128-80k`（4096）与 `v2-1600ep-m16x8x8-modul-b128-80k`（1024），两处训练输出目录编写时均不存在。按 [AGENTS.md](AGENTS.md) 第 6 条，实施前一次确认两个名称和本计划范围；确认后 4096 验收通过即转入 1024，不在交接点再问。2048 的历史同意记录不能代替本轮授权。本轮只交付这份文档，代码、验证和训练都未开始。
 
 ### 2. 三档配置对照：只改变记忆预算
 
-正式配置仍为 [training/config.py](src/mme_vla_suite/training/config.py) 中 `_CONFIGS` 的 `mme_vla_suite_b128_80k`。不改这份具名配置和已有 2048 YAML；新增的两份 history YAML 从 [32frame 配置](src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-32frame-8x8.yaml) 派生，解析后只允许 `budget` 一个键不同。启动参数只切换新 YAML、run 名和相应产物路径，不另加学习率、batch、worker 或训练步数覆盖。
+**唯一的实质差异是 history YAML 里的 `budget`。** 具名配置仍是 [training/config.py](src/mme_vla_suite/training/config.py) 中 `_CONFIGS` 的 `mme_vla_suite_b128_80k`，本轮不改它，也不改已有的 [32frame 配置](src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-32frame-8x8.yaml)。新增 `perceptual-framesamp-modul-64frame-8x8.yaml` 与 `perceptual-framesamp-modul-16frame-8x8.yaml`，从 32frame 复制后只把 `budget: 2048` 改成 `4096` / `1024`。最大帧数由 `FrameSampDataset.__init__` 按 `budget // (token_per_image * num_views)` 推出（4096//64=64、1024//64=16），选帧、读行、展平都已按这个值参数化，不需要为新档另写分支。启动命令只换 YAML、run 名和输出路径，不加学习率、batch、worker 或步数覆盖。
 
 | 项目 | 2048 参照 | 先跑 4096 | 后跑 1024 |
 |---|---|---|---|
@@ -33,17 +35,19 @@
 | 日志 / 保存 / 保留间隔 | 100 / 5000 / 5000 | 相同 | 相同 |
 | 初始化 | `pi05_base/params`，独立初始化 | 相同 | 相同 |
 
-完整固定项如下，不能把数值相近的其他配置当作参照：AdamW `b1=0.9,b2=0.95,eps=1e-8,weight_decay=1e-10`；模型 `pi05=true,paligemma_variant=gemma_2b,action_expert_variant=gemma_300m,memory_expert_variant=gemma_150m`，bf16 计算，`action_dim=32,action_horizon=20,max_token_len=64,use_history=true,discrete_state_input=false`，冻结 `.*img.*`。history 保持 `streaming_obs_horizon=16,pool_type=mean,use_pos_emb=true,use_state_emb=false`，位置输入及隐藏维度均为 768。`streaming_obs_horizon` 不随 64/16 帧档位改变。学习率仍使用 `CosineDecaySchedule`；因 peak 与 decay LR 相同，warmup 后为 5e-5。
+**表外的固定项同样逐项继承。** AdamW `b1=0.9,b2=0.95,eps=1e-8,weight_decay=1e-10`；模型 `pi05=true,paligemma_variant=gemma_2b,action_expert_variant=gemma_300m,memory_expert_variant=gemma_150m`，bf16 计算，`action_dim=32,action_horizon=20,max_token_len=64,use_history=true,discrete_state_input=false`，冻结 `.*img.*`。history 保持 `streaming_obs_horizon=16,pool_type=mean,use_pos_emb=true,use_state_emb=false`，位置输入与隐藏维度均为 768；`streaming_obs_horizon` 不随 64/16 帧档改变。学习率仍是 `CosineDecaySchedule`，peak 与 decay 同为 5e-5，warmup 后恒为 5e-5。
 
-数据加载沿用 [create_data_loader](src/mme_vla_suite/training/dataloader.py) 与 [TorchDataLoader](src/openpi/training/data_loader.py)：`spawn`、`persistent_workers=true`、`prefetch_factor=2`、`pin_memory=false`、`shuffle=true`、`drop_last=true`、`_collate_fn_shm`。运行方式是**单个 JAX 训练进程使用八卡**，`make_mesh` 得到 `batch=1,fsdp=8`，每设备数据分片 16 个样本；不改成八个 `torchrun` 进程，也不加入梯度累积。
+**数据加载与并行方式不变。** [create_data_loader](src/mme_vla_suite/training/dataloader.py) 经 [TorchDataLoader](src/openpi/training/data_loader.py)：`spawn`、`persistent_workers=true`、`prefetch_factor=2`、`pin_memory=false`、`shuffle=true`、`drop_last=true`、`_collate_fn_shm`。单个 JAX 进程用八卡，`make_mesh` 得 `batch=1,fsdp=8`，每卡 128/8=16 个样本；不改成八个 `torchrun` 进程，不加梯度累积。
 
-正式配置比对必须比较完整解析对象，与 2048 的实际记录逐项核对；仅放行 `budget`、history 文件名、run 名、输出/日志/缓存路径等运行身份差异。模型、loss、优化器、冻结参数、数据和初始化资产都不应发生额外变化。两份 YAML 与完整 CLI 解析结果分别计算摘要并绑定自己的起跑记录，不能共用 2048 的 config SHA。
+**现在直接跑会在三处被拦下，所以需要少量代码改动。** 一是 `FrameSampDataset.__init__` 的形制守卫：`legacy_shape` 只认 `(512,16,1)`、`(512,64,1)`，新档分支只认 `raw == (2048,64,1)` 且 modulation、无 motion，`budget: 4096` 会直接抛 `ValueError`。二是启动链写死 2048：[modul_launch_contract.py](scripts/training/modul_launch_contract.py) 的 `YAML="perceptual-framesamp-modul-32frame-8x8.yaml"` 与 `history_expected["budget"]=2048`，[run_modul2048.sh](scripts/training/prod/run_modul2048.sh) 固定 `HC=perceptual-framesamp-modul-32frame-8x8.yaml`、记录目录 `v1-store/bench/m2048/`。三是验收工具写死旧档：`check_modul_speed.py::report` 断言 `history_values["budget"]==2048`，`check_modul_train_records.py::validate` 要求 `--fsdp-devices == 2`、mask 摘要按 `(batch_size,2048)` 计算。在线 [FrameSampMemory](src/mme_vla_suite/policies/framesamp_memory.py) 与 [HistoryPi0](src/mme_vla_suite/models/integration/history_pi0.py) 都读配置里的预算，不在拦截之列。逐文件改法见第二部分第 4 节。
+
+**「一致」靠整对象比对来证明，不靠挑键看。** 起跑时把完整解析配置与 2048 的 `approval.actual.json` 逐键比对，只放行 `budget`、history 文件名、run 名、输出/日志/缓存路径这类身份差异；模型、loss、优化器、冻结参数、数据与初始化资产任何一项变化都拒绝起跑。两档各自计算 YAML 与完整 CLI 解析结果的摘要，绑定自己的起跑记录，不共用 2048 的 config SHA。
 
 ### 3. 数据、输入链路与两条核心保证
 
-两档复用 `v1-store/datasets/4task-v2-1600ep-604f16da/`，其中 `--dataset-path` 为 `framesamp-8x8`，`MMEVLA_FRAMESAMP_SOURCE` 为 `source`，`MMEVLA_FRAMESAMP_MANIFEST` 为 `meta/episode_manifest.json`。规模仍为四任务 1600 episode、605611 个执行样本、1192918 帧，packed store 为 `verified/full`；沿用整个 manifest 的执行样本，不另造训练/验证划分。归一化根为 `v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da`，`asset_id=robomme`；初始权重位于 `v1-store/models/openpi-assets/checkpoints/pi05_base/params`。上述实体路径已只读检查。
+**数据原样复用，不重建、不重抽特征、不下载模型。** 两档都用 `v1-store/datasets/4task-v2-1600ep-604f16da/`：`--dataset-path` 为 `framesamp-8x8`，`MMEVLA_FRAMESAMP_SOURCE` 为 `source`，`MMEVLA_FRAMESAMP_MANIFEST` 为 `meta/episode_manifest.json`。规模为四任务 1600 episode、605611 个执行样本、1192918 帧，packed store 状态 `verified/full`，沿用整个 manifest 的执行样本，不另造训练/验证划分。归一化根 `v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da`（`asset_id=robomme`），初始权重 `v1-store/models/openpi-assets/checkpoints/pi05_base/params`，均已只读确认存在。
 
-本次对本地文件重新计算 SHA256，均与 2048 档案一致：
+**三个关键文件本次重算 SHA256，与 2048 档案逐字一致：**
 
 | 文件 | SHA256 |
 |---|---|
@@ -51,9 +55,11 @@
 | `framesamp-8x8/meta/store_meta.json` | `f7677e69e5c473ab2962a5ac05a5909348c2f96736152b7217b77f0d2eb4231a` |
 | `robomme/norm_stats.json` | `856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173` |
 
-这些摘要核对不等于重新扫描全部大文件；起跑仍需使用现有 preflight 检查 store 状态、清单关联及资产。无需重建数据、重新抽特征或下载模型。
+这只核了摘要，没有重扫大文件；store 状态、清单关联与资产由起跑 preflight 再查。
 
-改前 2048 链路如下，箭头上的变换沿用现有实现：
+**本库每个样本在三档下都是满帧，补零分支是死代码。** 清单 1600 集的 `exec_start_idx` 最小 100、最大 1152（本次 `jq` 实测），执行样本的全域帧号 `step ≥ 100`。`even_sampling_indices(step, max_frames)` 只在 `step < max_frames` 时返回 `step+1` 帧，否则返回满额的 `linspace(0, step, max_frames)`；100 > 64，所以 4096 档每样本恰好 64 帧、1024 档恰好 16 帧，`static_mask` 恒全 True。「2048 满 32 帧不代表 4096 满 64 帧」的顾虑因此不成立；实施时仍按执行索引统计一次满额比例留档（期望 605611/605611）。补零与 mask 屏蔽在真实数据上碰不到，只能用合成案例覆盖 0、1、15、16、17、31、32、33、63、64、65 帧，不伪造清单、不重建库。
+
+**改前 2048 链路**（箭头上的变换沿用现有实现）：
 
 ```text
 同一 source / manifest / framesamp-8x8
@@ -66,11 +72,11 @@
   → modulation动作分支：20个action query；同一动作监督、loss及优化器
 ```
 
-改后使用相同数据、相同算法和同一交付链，仅预算决定选帧数量与记忆轴长度：
+**改后只动两处：选几帧、记忆轴多长。** 数据、算法和交付链全部相同：
 
 ```text
 同一 source / manifest / framesamp-8x8
-  → FrameSampDataset：4096选最多64帧；1024选最多16帧；每帧仍64 token
+  → FrameSampDataset：4096恰选64帧；1024恰选16帧（本库恒满帧）；每帧仍64 token
   → 单样本 image(B,2048) bf16 + pos(B,768) f32
             + state(B,8) f64 + mask(B,) bool，B分别为4096、1024
   → 同一 _collate_fn_shm / JAX交付：batch128、八卡分片、state仍由f64转f32
@@ -78,7 +84,7 @@
   → 同一20个action query及动作监督；历史内容与query位置按预算产生预期变化
 ```
 
-下表只计算Dataset归一化后、collate阶段四个history输入张量的逻辑字节量，其中state为f64；不含图像当前观测、动作、主机队列、参数、梯度或模型中间张量，不能当成实际显存：
+**字节账：history 四键的逻辑量随预算线性变化，4096 是 2048 的两倍。** 下表只算 Dataset 归一化后、collate 阶段的四个 history 张量（state 为 f64），不含当前观测、动作、主机队列、参数、梯度或模型中间张量，不能当显存看：
 
 | 预算 | image 字节/样本 | pos 字节/样本 | state 字节/样本 | mask 字节/样本 | 合计字节/样本 | batch128 合计 |
 |---|---:|---:|---:|---:|---:|---:|
@@ -86,27 +92,25 @@
 | 4096 | 16777216 | 12582912 | 262144 | 4096 | 29626368 | 3792175104 |
 | 1024 | 4194304 | 3145728 | 65536 | 1024 | 7406592 | 948043776 |
 
-JAX交付后state转成f32，三档每样本四键合计分别为14747648、29495296、7373824字节。按worker16×prefetch2只计算主机队列内四键，2048/4096/1024分别约56.51/113.02/28.25GiB；实际峰值还包含其他字段和副本，需实测。
+JAX 交付后 state 转 f32，三档每样本四键合计分别为 14747648、29495296、7373824 字节。按 worker16 × prefetch2 只算主机队列里的四键，2048/4096/1024 约 56.51/113.02/28.25 GiB；实际峰值还含其他字段和副本，要实测。每 epoch 图像行逻辑读取量为 4731.3/9462.7/2365.7 GiB（605611 样本 × budget × 2048 × 2 字节）；page cache 与预读会让磁盘实读不同，不能拿它推断步时。
 
-同一被选帧的底层特征、观测和标签不改数；选帧集合、padding 数量和动作 query 的 RoPE 位置有意改变。`MemoryAttention` 的动作 query 位置随预算从 `2048..2067` 改为 `4096..4115` 或 `1024..1043`，因此不要求三档 loss、梯度或输出相等。等价验证只在**相同预算**的源 NPY 参考链与 packed 链之间进行。
+**跨档输出不同是预期的，所以等价只在同一预算内证明。** 同一被选帧的底层特征、观测和标签不改数；改的是选帧集合和动作 query 的 RoPE 位置。`MemoryAttention` 把 20 个动作 query 接在记忆轴之后，位置从 `2048..2067` 变为 `4096..4115` 或 `1024..1043`，因此三档的 loss、梯度和输出都不要求相等。等价验证只在**同一预算**的源 NPY 参考链与 packed 链之间做。
 
-2048 档案只证明该库样本均能提供 32 帧，不能据此声称 4096 均满 64 帧。实施时先由 episode/执行索引统计可用历史长度，记录 16/32/64 帧各档的满额比例；对 64 帧不足的真实样本验证既有 padding。合成案例再覆盖 0、1、15、16、17、31、32、33、63、64、65 帧及长历史边界，不伪造生产清单或重建库。
+#### 保证一：两档继承 2048 的训练配置，额外差异在起跑前被拒绝
 
-#### 保证一：两档继承2048的训练配置，额外差异在起跑前被拒绝
+**配置文件层：新 YAML 只能比 32frame 多改 `budget` 一个键。** 两份新 YAML 解析后与 32frame 逐键比较，只放行 `budget=4096` / `budget=1024`，拟新增判定行如 `BUDGET_CONFIG=PASS budget=4096 baseline=2048 diff_keys=budget`。`memory_token_dim=1024`、`img.input_dim=2048`、`streaming_obs_horizon=16` 任一被顺带改动即失败，避免通道宽度或观测节奏的变化混进来。
 
-**配置文件层只扩预算。** 拟新增的 `perceptual-framesamp-modul-64frame-8x8.yaml`、`perceptual-framesamp-modul-16frame-8x8.yaml` 解析后，逐键与既有32frame配置比较，只放行 `budget=4096` 或 `budget=1024`。例如4096档的拟新增判定行为 `BUDGET_CONFIG=PASS budget=4096 baseline=2048 diff_keys=budget`。`memory_token_dim=1024`、`img.input_dim=2048`、`streaming_obs_horizon=16` 任一被顺带改变都应失败；否则会混入通道宽度或观察节奏的变化。
+**实际命令层：检查的是即将交给训练的同一份 `TRAIN_ARGS`。** `modul_launch_contract.py` 的 `parse_config`、`validate_config` 由写死 2048 扩为 1024/2048/4096 三档映射，[preflight_train_launch.py](scripts/training/preflight_train_launch.py) 对即将执行的 CLI 做 CPU 解析。两档都必须输出既有格式 `LAUNCH_CONFIG=PASS mode=prod steps=80000 batch=128 workers=16 fsdp=8`，解析记录还要证明 seed 42、warmup 5000、lr 5e-5、EMA 0.999、`pi05_base` 初始化及第 2 节其余固定值一致。YAML 对了但 CLI 偷偷覆盖 batch、学习率或步数，同样起不了跑。
 
-**实际命令层再次检查最终生效值。** [modul_launch_contract.py](scripts/training/modul_launch_contract.py) 的 `parse_config`、`validate_config` 目前只绑定2048，实施时扩展为三档映射，由 [preflight_train_launch.py](scripts/training/preflight_train_launch.py) 核对即将交给训练的同一份 `TRAIN_ARGS`。两档都必须输出既有格式 `LAUNCH_CONFIG=PASS mode=prod steps=80000 batch=128 workers=16 fsdp=8`，并在解析记录中证明seed42、warmup5000、lr5e-5、EMA0.999、pi05_base初始化及第2节其他固定值全部一致。YAML正确但CLI偷偷覆盖batch、学习率或步数，也不能起跑。
+**数据与版本层：绑定本次实际输入，不借 2048 的记录。** 同一 preflight 重查上面三个文件摘要、`verified/full` 规模、全新输出根和 clean `TRAIN_HEAD`，把本档 YAML、runner 和测速报告的摘要写进本档记录。2048 的旧批准 JSON 与旧测速报告不能挪用。
 
-**数据与版本层绑定本次实际输入。** 同一preflight重新检查第3节三个文件摘要、verified/full数据规模、全新输出根及clean TRAIN_HEAD，把本档YAML、runner和测速报告摘要写入各自记录。不能借用2048的旧批准JSON或旧测速报告。这些检查的对象是即将执行的代码、配置和数据，而不只是文档里列出的值。
+#### 保证二：4096 完整成功并释放八卡后，1024 才能启动
 
-#### 保证二：4096完整成功并释放八卡后，1024才能启动
+**完成与否看真实训练产物，不看最后一条日志。** 拟新增 `scripts/training/tests/check_modul_completion.py` 同时要求：唯一终态 `EXIT_CODE=0`；checkpoint 目录恰为 `5000,10000,…,75000,79999` 共 16 份；log100 共 800 条记录、五项标量全部有限；最终 79999 经真实加载与本档配置/来源检查。最后一条常规日志是 79900，不能当成 79999 的结果。[train.py](scripts/training/train.py) 的 `main` 结束前已调用 `checkpoint_manager.wait_until_finished()`，调度器等整个训练入口返回后才验收。通过时输出 `RUN_COMPLETED=PASS run=v2-1600ep-m64x8x8-modul-b128-80k budget=4096 steps=80000 checkpoints=16 final=79999`，并把最终文件摘要写进完成 JSON。
 
-**先以真实训练产物判定完成。** 拟新增 `scripts/training/tests/check_modul_completion.py` 必须同时检查4096正常 `EXIT_CODE=0`、80000步完成、5000到75000每5000一步加79999共16份checkpoint、800条有限指标以及最终79999真实加载通过。训练入口 [train.py](scripts/training/train.py) 的 `main` 已在结束前调用 `checkpoint_manager.wait_until_finished()`；顺序调度器等待整个训练入口返回后才验收，不在看到最后一条日志时提前释放下一档。完成检查拟输出 `RUN_COMPLETED=PASS run=v2-1600ep-m64x8x8-modul-b128-80k budget=4096 steps=80000 checkpoints=16 final=79999`，并把最终文件摘要写入JSON。
+**交接由独立检查放行，任一不满足则 1024 训练入口调用 0 次。** 拟新增 `scripts/training/prod/run_modul4096_then1024.sh` 先核完成 JSON 绑定的是本轮 4096 的 run/HEAD/budget，再核训练与采样 PID 已退出、八卡显存均为 0 MiB、`/scratch` 空闲 ≥ 400 GB、代码与环境未变，然后才进入 1024 的验证、测速和正式训练。非零退出、被杀无退出码、缺最终 checkpoint、加载失败、只有 79900 日志、伪造的旧完成 JSON 等负例都必须得到 `SECOND_TRAIN_CALLS=0`。
 
-**再由独立交接检查控制下一次调用。** 拟新增 `scripts/training/prod/run_modul4096_then1024.sh` 验证该完成JSON绑定的是本轮4096，而后检查训练/采样PID退出、八卡显存均为0、剩余空间至少400GB及代码/环境未变化，才开始1024的GPU验证、测速和正式训练。4096报错、缺最终checkpoint、加载失败或完成记录错配时，负例必须得到 `SECOND_TRAIN_CALLS=0`；本轮授权一旦覆盖完整顺序和两个run名，不在正常交接点重复请求确认。
-
-**时间与容量以各档本机实测为准。** 2048的22小时58分52秒和约190GB检查点只是基线；4096的输入逻辑字节翻倍不意味着整模型耗时必然翻倍，也不证明显存能容纳。两档各做八卡20步容量和1000步测速，主统计窗口固定100–899步，报告GPU均值、0%占比及慢步分层。若原b128/w16/FSDP8不能通过容量，队列停止并报告，不自动改变已定配置。上述两条保证是待实施及验证的要求，不是本轮已运行的结果。
+**时间与容量按各档本机实测，不按 token 比例外推。** 2048 的 22 小时 58 分 52 秒与 16 份 checkpoint 合计 190052280479 字节只是基线：预算不改参数形状，两新 run 权重预计各约 190 GB、合计约 380 GB；但输入逻辑字节翻倍不代表整模型步时翻倍，也不证明 4096 放得进显存（2048 的显存读数含 `XLA_PYTHON_CLIENT_MEM_FRACTION=0.95` 预分配）。每档各跑八卡 20 步容量检查和 1000 步测速，稳态窗口固定 100–899 步，报告 GPU 均值、0% 采样占比和慢步分层。原 b128/w16/FSDP8 容量不过时队列停下报告，不自动降配。以上两条保证都是待实施、待验证的要求，不是本轮已跑出的结果。
 
 ## 第二部分（技术细节，供 agent 追踪）
 
@@ -121,7 +125,7 @@ JAX交付后state转成f32，三档每样本四键合计分别为14747648、2949
 | `scripts/training/tests/ref_npy_dataset.py::RefNpyFrameSampDataset.__init__` | 独立参考链加入相同两档；参考采样与拼装不调用生产Dataset以免同源错误互相通过。 |
 | `scripts/training/g0/bench_train_steps.py` | 扩展history文件白名单；复用现有refnpy/packed、索引、batch、初始化和参数记录能力。 |
 | `scripts/training/tests/check_32frame_modul.py` | 将写死32/2048的检查参数化为显式预算，保留2048默认；新增有界真实样本入口，覆盖选帧、collate、padding、在线缓存、初始化、RoPE及保存加载。 |
-| `scripts/training/tests/check_modul_train_records.py::validate` | 移除仅支持两卡/w4/fsdp2的验证器限制，新增明确的预算、worker、FSDP期望参数；校验八个不重复设备、mask实际形状与逐样本有效数，不能继续硬判mask全True。旧两卡默认仍可回归。 |
+| `scripts/training/tests/check_modul_train_records.py::validate` | 移除仅支持两卡/w4/fsdp2的验证器限制，新增明确的预算、worker、FSDP期望参数；校验八个不重复设备；mask摘要由写死的`(batch_size,2048)`改为`(batch_size,budget)`，本库恒满帧，全True判据对三档仍成立，同时记录逐样本有效数。旧两卡默认仍可回归。 |
 | `scripts/training/modul_launch_contract.py`、`preflight_train_launch.py` | 显式映射1024/2048/4096与16/32/64frame配置；正式run及报告按本次记录绑定。每个新档都强制进入launch-mode检查，防止换文件名绕过闸门；保留完整配置、数据、初始化、clean HEAD、资源及授权校验。 |
 | `scripts/training/tests/check_modul_speed.py::report` | 将budget=2048断言和图像逻辑读取带宽公式改为从已校验预算推导；保持1000步、800步稳态与资源/报告完整性判据。 |
 | 拟新增 `scripts/training/prod/run_modul_budget.sh` | 接受显式预算和本档run/HEAD/YAML SHA/报告，复用2048的环境及训练CLI纪律；保留原2048入口兼容，不让它静默启动新档。 |
@@ -136,8 +140,8 @@ JAX交付后state转成f32，三档每样本四键合计分别为14747648、2949
 
 | 阶段 | 验证内容 | 通过标准 |
 |---|---|---|
-| CPU配置及拒绝测试 | 三档完整解析对照，旧512/2048守卫回归，错误融合方式、motion、浮点budget、错误run/数据/摘要、失败交接负例 | 两新YAML只差budget，输出第3节拟新增`BUDGET_CONFIG=PASS`；错误输入全部拒绝且训练调用0次。 |
-| 真实输入对拍 | 固定seed42；四任务每个episode至少取首/中/末执行样本并去重；加入16/32/64帧边界及前20个实际batch；保存精确索引清单 | 同预算refnpy与packed的索引顺序、选帧索引、逐键shape/dtype/原始字节完全相同，mismatches=0。合成短历史与在线链另测。 |
+| CPU配置及拒绝测试 | 三档完整解析对照，旧512/2048守卫回归，错误融合方式、motion、浮点budget、错误run/数据/摘要、失败交接负例 | 两新YAML只差budget，输出第3节保证一的`BUDGET_CONFIG=PASS`；错误输入全部拒绝且训练调用0次。 |
+| 真实输入对拍 | 固定seed42；四任务每个episode至少取首/中/末执行样本并去重；加入episode接缝与尾部样本及前20个实际batch（本库恒满帧，16/32/64帧短历史边界只在合成案例中覆盖）；保存精确索引清单 | 同预算refnpy与packed的索引顺序、选帧索引、逐键shape/dtype/原始字节完全相同，mismatches=0。合成短历史与在线链另测。 |
 | 模型语义检查 | 初始化参数树；mask垃圾值不影响输出；各预算独立RoPE oracle；短历史padding和collate交付 | 相同seed初态61叶逐位相同；mask无效位扰动不改输出；oracle `atol=1e-6,rtol=1e-5`。跨预算非退化前向允许不同。 |
 | 2048旧档训练回归 | 在改前/改后代码、同一八卡环境各跑20步，另各补1步保存第一次更新现场 | 同一输入、相同初态；loss/梯度及params/optimizer/EMA摘要逐步一致，证明扩白名单未改旧档。 |
 | 新档真实训练对拍 | 每档refnpy与packed各20步，各补1步；固定数据、seed、设备列表和运行环境 | 输入和初态逐位一致；五项标量及完整状态摘要一致，覆盖首次更新与第20次更新；发现差异先定位，不能按新预算放宽。 |
@@ -200,7 +204,7 @@ bash scripts/training/prod/run_modul_budget.sh \
 
 4096交接必须同时满足：训练进程正常退出且唯一终态为 `EXIT_CODE=0`；`train.py::main` 的 `checkpoint_manager.wait_until_finished()` 已返回；保存目录集合为 `5000,10000,…,75000,79999` 共16份且元数据/数据完整；正常log100共800条记录、五项标量全部有限；最终79999经过真实加载和本档配置/来源检查。最后一条常规日志是79900，不能将它当成79999单步loss。预算不改变61叶参数形状，因而“目录存在、61叶形状正确”不足以证明拿到了本run的权重，完成检查还须绑定run来源、文件摘要和保存记录。
 
-通过上述检查后，调度器核对训练PID和本轮GPU采样PID均退出、八卡释放，并生成绑定4096 run/HEAD/budget/最终checkpoint摘要的完成JSON及第3节的 `RUN_COMPLETED=PASS` 判定；1024起跑门重新验证该JSON及其产物。只有4096完成记录有效且1024自身检查全过，才能调用1024训练入口。任一失败均停止队列并保留现场；不跳过4096、不自动续训、不自动改超参、不用tmux会话消失判断成功。当前checkpoint主要保存params/assets，不完整保存优化器状态，不能把载入权重称为精确断点续训。
+通过上述检查后，调度器核对训练PID和本轮GPU采样PID均退出、八卡释放，并生成绑定4096 run/HEAD/budget/最终checkpoint摘要的完成JSON及第3节保证二的 `RUN_COMPLETED=PASS` 判定；1024起跑门重新验证该JSON及其产物。只有4096完成记录有效且1024自身检查全过，才能调用1024训练入口。任一失败均停止队列并保留现场；不跳过4096、不自动续训、不自动改超参、不用tmux会话消失判断成功。当前checkpoint主要保存params/assets，不完整保存优化器状态，不能把载入权重称为精确断点续训。
 
 调度器的负例至少覆盖：4096非零退出、被终止而无退出码、最终checkpoint缺失或加载失败、仅有79900日志、旧run伪造完成JSON、预算/HEAD不匹配、1024配置变化、GPU未释放及磁盘不足。上述任一情况都应得到 `SECOND_TRAIN_CALLS=0`。零训练负例使用替身入口核对控制流；正向完成验收必须读真实训练产物。
 
