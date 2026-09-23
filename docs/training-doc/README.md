@@ -134,9 +134,12 @@
 | [`primary700-motion50k-gl/`](primary700-motion50k-gl/result.md) | motion 80k run 的 50000 跑完 700 条：40.71%（285/700，error 9）——**BinFill 部分已作废、总成绩更新为 54.62%**，见 `binfilldemo-*`；本页非 BinFill 的 550 条仍有效，A40 sidecar 1.64 s/窗、infer 126 ms、anon 峰 18.2 GiB；链路接入与冒烟见其 `launch.md` |
 | [`primary700-nomotion50k-gl/`](primary700-nomotion50k-gl/result.md) | 无 motion 60k run 的 50000 跑完 700 条：26.00%（182/700，error 9）——**BinFill 部分已作废、总成绩更新为 30.49%**；本页非 BinFill 的 550 条仍有效，与 motion 50000 同一套调用、8 个 gpu-hold 作业动态抢单 + 看门狗 + 续跑队列；两轮对照表、配对 2×2、执行记录都在此 |
 | [`primary700-modul32frame-50k-gl/`](primary700-modul32frame-50k-gl/result.md) | 32 帧 / 感知预算 2048（modulation，motion 关）的 50000 跑完 700 条：34.86%（244/700，error 9）——**BinFill 部分已作废、总成绩更新为 45.09%**；本页非 BinFill 的 550 条仍有效。与 8 帧/512 的 26.00%、512+motion 的 40.71% 三方对照——放大感知上下文 +8.86 pp，只有 motion 收益的六成；BinFill 上两条独立机制同向退化 |
-| [`binfilldemo-nomotion50k-gl/`](binfilldemo-nomotion50k-gl/result.md) | **三模型现行权威结果页**（取代上面三条的总成绩）：512 **30.49%** / 2048 **45.09%** / 512+motion **54.62%**（692 条）。旧 BinFill 因训练/推理不一致作废——它是四任务里唯一「训练有 demo 段、评测没有」的；补齐后同一批 142 条上 512 档 30.3%→51.4%，三者排序从颠倒恢复成与其它三任务一致。含 14 组逐格、按任务/按难度、「这些数字不能怎么用」与盲区清单 |
+| [`binfilldemo-nomotion50k-gl/`](binfilldemo-nomotion50k-gl/result.md) | **三模型现行权威结果页，含 50000 与最终 ckpt 两档**：@50000 为 512 **30.49%** / 2048 **45.09%** / 512+motion **54.62%**，最终 ckpt 为 **32.95%**（59999）/ **45.66%**（79999）/ **56.36%**（79999）——三条 run 在 50k 后基本收敛，多训只带来 +0.6~+2.5 pp。旧 BinFill 因训练/推理不一致作废——它是四任务里唯一「训练有 demo 段、评测没有」的；补齐后同一批 142 条上 512 档 30.3%→51.4%，三者排序从颠倒恢复成与其它三任务一致。含 14 组逐格、按任务/按难度、「这些数字不能怎么用」与盲区清单 |
 | [`binfilldemo-motion50k-gl/`](binfilldemo-motion50k-gl/result.md) | 512+motion 补 demo 后 12.7%→**78.2%**（111/142，6.17x），三者中回升最多；另含 motion 窗统计与端到端降级验证（`MMEVLA_MOTION_OVERFLOW=resample`，真实评测仅 1 条集触发、闭式与实测三项全同） |
 | [`binfilldemo-modul32frame-50k-gl/`](binfilldemo-modul32frame-50k-gl/result.md) | 32 帧 / 2048 补 demo 后 11.3%→**59.2%**（84/142，5.25x），回升倍数介于 8 帧基线 1.70x 与 512+motion 6.17x 之间，与记忆通道宽度单调对应 |
+| [`finalckpt-nomotion59999-gl/`](finalckpt-nomotion59999-gl/result.md) | **最终 ckpt 档的起跑留档**（三个 run 共用）+ 512 @59999 的 692 条：**32.95%**（228/692）。60k run 训到 60000 步为止、没有 80k，故本档不是等步数比较 |
+| [`finalckpt-motion79999-gl/`](finalckpt-motion79999-gl/result.md) | 512+motion @79999 的 692 条：**56.36%**（390/692），三者最高；十片 `MOTION_WINDOWS` 全 PASS，降级仅 1 条集触发、闭式与实测精确相等 |
+| [`finalckpt-modul32frame79999-gl/`](finalckpt-modul32frame79999-gl/result.md) | 2048 @79999 的 692 条：**45.66%**（316/692），较 @50000 仅 +0.58 pp |
 
 ## 五、已归档（`../archive/training-doc/`，34 项）
 
