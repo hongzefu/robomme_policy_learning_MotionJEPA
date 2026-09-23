@@ -99,14 +99,14 @@ class FrameSampDataset(Dataset):
         legacy_shape = shape in {(512, 16, 1), (512, 64, 1)}
         new_shape = (
             all(type(v) is int for v in raw)
-            and raw == (2048, 64, 1)
+            and raw in {(1024, 64, 1), (2048, 64, 1), (4096, 64, 1)}
             and str(hc.integration_type) == "modulation"
             and not self._motion_enabled
         )
         _req(legacy_shape or new_shape,
              f"(budget,token_per_image,num_views)={raw}（类型 {tuple(type(v).__name__ for v in raw)}）、"
              f"integration_type={hc.integration_type!r}、motion_enabled={self._motion_enabled} "
-             "不在支持的 (512,16,1)/(512,64,1) 与 (2048,64,1)+modulation+无 motion 档位中")
+             "不在支持的 (512,16,1)/(512,64,1) 与 (1024/2048/4096,64,1)+modulation+无 motion 档位中")
         _req(int(hc.memory_feature.img.input_dim) == 2048,
              f"memory_feature.img.input_dim={hc.memory_feature.img.input_dim} != 2048")
         _req(int(hc.memory_feature.pos.input_dim) == 768,

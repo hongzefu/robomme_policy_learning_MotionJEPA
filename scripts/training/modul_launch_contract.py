@@ -1,4 +1,4 @@
-"""2048启动契约：CPU解析真实CLI，绑定配置、资源与明确同意记录。"""
+"""记忆预算启动契约：完整CPU配置、资源、测速与本次授权共同约束入口。"""
 
 from __future__ import annotations
 
@@ -17,6 +17,10 @@ PROD_RUN="v2-1600ep-m32x8x8-modul-b128-80k"
 CONFIG="mme_vla_suite_b128_80k"
 MANIFEST_SHA="df0ec8edd823b1415fa2bba6a51fa1c911dadc4d10364590d537a97526add482"
 NORM_SHA="856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173"
+STORE_SHA="f7677e69e5c473ab2962a5ac05a5909348c2f96736152b7217b77f0d2eb4231a"
+BUDGET_YAMLS = {budget: f"perceptual-framesamp-modul-{budget//64}frame-8x8.yaml"
+                for budget in (1024, 2048, 4096)}
+PROD_RUNS = {budget: f"v2-1600ep-m{budget//64}x8x8-modul-b128-80k" for budget in BUDGET_YAMLS}
 
 
 def runtime_environment(repo):
@@ -76,6 +80,8 @@ def validate_argv(argv,mode):
 
 PARSE_SCRIPT = '''
 import dataclasses,json,sys
+sys.path.insert(0, __RECORD_MODULE_DIR__)
+from config_record import complete_record
 from mme_vla_suite.training.config import cli,get_config
 from mme_vla_suite.models.config.utils import get_history_config
 from omegaconf import OmegaConf
@@ -92,20 +98,22 @@ def serialize(c):
         "dataset_path":str(c.dataset_path),"log_interval":c.log_interval,
         "save_interval":c.save_interval,"keep_period":c.keep_period,
         "wandb_enabled":c.wandb_enabled,"overwrite":c.overwrite,"resume":c.resume,
-        "history_values":OmegaConf.to_container(get_history_config(c.model.history_config)) if c.model.history_config else None}
+        "history_values":OmegaConf.to_container(get_history_config(c.model.history_config)) if c.model.history_config else None,
+        "complete":complete_record(dataclasses.replace(c,model=dataclasses.replace(c.model,history_config=actual.model.history_config)))}
 actual=cli()
 default=get_config("mme_vla_suite_b128_80k")
 default=dataclasses.replace(default,exp_name=actual.exp_name)
 history_expected=OmegaConf.to_container(get_history_config("perceptual-framesamp-modul-8frame-8x8.yaml"))
-history_expected["budget"]=2048
+history_expected["budget"]=OmegaConf.to_container(get_history_config(actual.model.history_config))["budget"]
 print("LAUNCH_PARSE_JSON="+json.dumps({"actual":serialize(actual),"default":serialize(default),"history_expected":history_expected},sort_keys=True))
-'''
+'''.replace("__RECORD_MODULE_DIR__", repr(str(Path(__file__).resolve().parent)))
 
 
 def parse_config(argv,repo):
     env=dict(os.environ,JAX_PLATFORMS="cpu",CUDA_VISIBLE_DEVICES="",HF_HUB_OFFLINE="1",TRANSFORMERS_OFFLINE="1")
     for key,suffix in (("UV_CACHE_DIR","uv"),("XDG_CACHE_HOME","xdg"),("HF_HOME","hf"),("MMEVLA_JAX_CACHE_DIR","jax")):
         env[key]=str(Path(repo)/"v1-store/cache"/suffix)
+    env.setdefault("OPENPI_DATA_HOME", str(Path(repo)/"v1-store/models"))
     result=subprocess.run([sys.executable,"-c",PARSE_SCRIPT,*argv],cwd=repo,env=env,text=True,capture_output=True)
     require(result.returncode == 0,f"真实CLI解析失败: {result.stdout}\n{result.stderr}")
     lines=[x.removeprefix("LAUNCH_PARSE_JSON=") for x in result.stdout.splitlines() if x.startswith("LAUNCH_PARSE_JSON=")]
@@ -123,16 +131,18 @@ def validate_config(parsed,a):
         require(actual[key]==default[key],f"实际配置偏离具名默认: {key}")
     require(actual["lr_schedule"] == {"warmup_steps":5000,"peak_lr":5e-5,"decay_steps":80000,"decay_lr":5e-5},"实际学习率口径不符")
     require(actual["ema_decay"]==.999 and actual["optimizer"]["clip_gradient_norm"]==1.,"EMA或裁剪不符")
-    expected_model={**default["model"],"use_history":True,"history_config":YAML}
-    require(actual["model"]==expected_model and a.history_config==YAML,"实际模型、精度或history配置不同")
     history=actual["history_values"]
-    require(history==parsed["history_expected"] and all(type(history[k]) is int for k in ("budget","token_per_image","num_views")),"实际YAML内容或类型不是已验证2048档")
+    budget = history["budget"]
+    require(type(budget) is int and budget in BUDGET_YAMLS, "实际记忆预算不受支持")
+    expected_model={**default["model"],"use_history":True,"history_config":BUDGET_YAMLS[budget]}
+    require(actual["model"]==expected_model and a.history_config==BUDGET_YAMLS[budget],"实际模型、精度或history配置不同")
+    require(history==parsed["history_expected"] and all(type(history[k]) is int for k in ("budget","token_per_image","num_views")),"实际YAML内容或类型不是已验证预算档")
     require(not actual["overwrite"] and not actual["resume"],"禁止覆盖或续训")
     if a.launch_mode=="prod":
         require(actual["wandb_enabled"]==default["wandb_enabled"] and actual["log_interval"]==default["log_interval"],"正式日志或W&B偏离默认")
-        require(a.expected_run_name==PROD_RUN,"正式run名不是已定名称")
+        require(a.expected_run_name==PROD_RUNS[budget],"正式run名不是本预算已定名称")
     else:
-        require(a.expected_run_name!=PROD_RUN and not actual["wandb_enabled"],"验证运行使用正式名或开启W&B")
+        require(a.expected_run_name not in PROD_RUNS.values() and not actual["wandb_enabled"],"验证运行使用正式名或开启W&B")
         if a.launch_mode=="perf":require(actual["log_interval"]==100,"测速必须保持log100")
     repo=Path(a.repo).resolve();v1=repo/"v1-store"
     ds=v1/"datasets/4task-v2-1600ep-604f16da"
@@ -143,6 +153,19 @@ def validate_config(parsed,a):
     require(Path(actual["assets_dir"]).resolve()==Path(a.assets_dir).resolve()==v1/"train-assets/mme_vla_suite/4task-v2-1600ep-604f16da","归一化资产路径不符")
     require(actual["asset_id"]==a.asset_id=="robomme","资产id不符")
     require(Path(actual["dataset_path"]).resolve()==Path(a.dataset_path).resolve()==ds/"framesamp-8x8","实际数据路径不符")
+    from config_record import compare_records, BUDGET_FIELDS
+    # 从当前具名默认完整比对，只有已单独校验的启动路径和运行身份可以变化。
+    compare_records(default["complete"], actual["complete"], (*BUDGET_FIELDS,
+        "train_config.fields.assets_base_dir", "train_config.fields.checkpoint_base_dir",
+        "train_config.fields.dataset_path", "train_config.fields.data.fields.assets.fields.assets_dir",
+        "derived.assets_dirs"))
+    baseline_path = getattr(a, "config_baseline", None)
+    if budget != 2048:
+        require(baseline_path, "新预算必须绑定2048 Beta补建的完整配置基线")
+    if baseline_path:
+        baseline = json.loads(Path(baseline_path).read_text())
+        require(baseline.get("source_head") == "55647ff33c8ddb9ec324fdbcee8bd1491456725b", "完整配置基线不是2048 Beta")
+        compare_records(baseline["complete"], actual["complete"], BUDGET_FIELDS)
     return actual
 
 
@@ -157,6 +180,7 @@ def validate_data(a):
     canonical=json_sha({k:v for k,v in document.items() if k!="sha256"})
     require(canonical==document["sha256"],"清单规范化指纹不符")
     meta=json.loads((ds/"meta/store_meta.json").read_text())
+    require(sha(ds/"meta/store_meta.json") == STORE_SHA,"packed元数据不再与2048基线同源")
     require((meta["layout"],meta["status"],meta["manifest_scope"],meta["num_rows"],meta["num_exec_samples"]) ==
             ("framesamp-8x8-v1","verified","full",1192918,605611),"数据布局、验证状态或覆盖规模不符")
     require(meta["manifest_sha256"]==canonical,"packed与清单指纹不符")
@@ -171,12 +195,20 @@ def validate_approval(a,actual,data):
               "run_name":a.expected_run_name,"config_sha256":json_sha(actual),"yaml_sha256":a.history_config_sha256,
               "norm_stats_sha256":a.norm_stats_sha256,"manifest_file_sha256":data["manifest_file_sha256"],
               "store_meta_sha256":data["store_meta_sha256"],"run_root":str(Path(a.run_root).resolve())}
+    if getattr(a,"config_baseline",None):
+        expected["config_baseline_sha256"] = sha(a.config_baseline)
     require(all(approval.get(k)==v for k,v in expected.items()),"同意记录未绑定本次代码、配置、报告、runner或数据")
     require(approval.get("user_quote","").strip() and approval.get("approved") is True,"缺用户明确同意原话")
     approved_at=datetime.datetime.fromisoformat(approval["approved_at"])
     require(approved_at.tzinfo is not None and approved_at.timestamp()<=time_now(),"同意记录时间无效")
     report=json.loads(Path(a.report).read_text())
     require(report.get("status")=="READY","测速报告尚不完整")
+    from config_record import compare_records, PERF_FIELDS
+    perf_actual = report["launch"]["actual"]
+    require(perf_actual["num_train_steps"] == 1000 and not perf_actual["wandb_enabled"], "报告不是独立1000步测速")
+    require(perf_actual["history_values"] == actual["history_values"], "测速报告属于另一记忆预算")
+    require(report["launch"]["data"]["yaml_sha256"] == a.history_config_sha256, "测速YAML摘要与正式配置不同")
+    compare_records(perf_actual["complete"], actual["complete"], PERF_FIELDS)
     current=runtime_environment(a.repo)
     environment=report.get("environment",{})
     for key in ("packages","uv_lock_sha256","sys_prefix","storage","gpus"):
@@ -217,6 +249,10 @@ def check_contract(a,argv,check):
         parsed=parse_config(argv,a.repo)
         actual=validate_config(parsed,a)
         data=validate_data(a)
+        sys.path.insert(0,str(Path(a.repo)/"scripts/assets"))
+        import assets_lock
+        assets_lock.require(["pi05_base","paligemma_tokenizer"],level="full")
+        print("INITIAL_ASSETS=PASS level=full assets=pi05_base,paligemma_tokenizer",flush=True)
         data.update(yaml_sha256=a.history_config_sha256,norm_stats_file_sha256=a.norm_stats_sha256)
         require(not os.environ.get("XLA_FLAGS"),"必须unset验证阶段XLA_FLAGS")
         require(os.environ.get("CUDA_VISIBLE_DEVICES")=="0,1,2,3,4,5,6,7","生产形制必须明确使用物理GPU0–7")

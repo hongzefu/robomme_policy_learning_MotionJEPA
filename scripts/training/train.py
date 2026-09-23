@@ -392,6 +392,10 @@ def main(config: _config.TrainConfig):
         resume=config.resume,
     )
     init_wandb(config, resuming=resuming, enabled=config.wandb_enabled)
+    final_record_handle = None
+    if os.environ.get("TRAIN_FINAL_RECORD_DIR"):
+        import final_record
+        final_record_handle = final_record.begin(config, wandb)
     # 两侧 enabled 同源（0901-motion-memory-plan.md 2.1 / 2.9）：只按 CLI 文件名解析一次，同一个 DictConfig 对象装入
     # model config 并直接传给 dataloader，禁止两侧再次按文件名重读（数据侧给了、模型侧不消费会让 n_keys 悄悄变而训练照跑）
     history_config_name = config.model.history_config
@@ -503,12 +507,16 @@ def main(config: _config.TrainConfig):
                 ) or step == config.num_train_steps - 1:
                     with timing.phase("checkpoint") if timing else nullcontext():
                         _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
+                        if final_record_handle is not None and step == config.num_train_steps - 1:
+                            final_record.finish(final_record_handle, train_state, infos, step)
     finally:
         if timing:
             timing.close()
 
     logging.info("Waiting for checkpoint manager to finish")
     checkpoint_manager.wait_until_finished()
+    if final_record_handle is not None:
+        final_record.committed(final_record_handle)
 
 
 # ── 可选 metrics 记录器（仅 __main__ 路径、设 TRAIN_RECORD_DIR 时装载）───────────

@@ -239,11 +239,18 @@ def must(ok, why):
 
 def gpu_rows(path):
     rows = []
+    last = {}
     for line in Path(path).read_text().splitlines():
         parts = [x.strip() for x in line.split(",")]
         must(len(parts) == 4, "GPU采样行不完整")
         stamp = datetime.datetime.strptime(parts[0], "%Y/%m/%d %H:%M:%S.%f").replace(tzinfo=datetime.timezone.utc).timestamp()
-        rows.append((stamp, int(parts[1]), float(parts[2]), float(parts[3])))
+        gpu, util, memory = int(parts[1]), float(parts[2]), float(parts[3])
+        must(gpu in range(8), "GPU编号必须属于0–7")
+        must(all(math.isfinite(x) for x in (stamp, util, memory)), "GPU采样含NaN或Inf")
+        must(0 <= util <= 100 and memory >= 0, "GPU利用率或显存范围无效")
+        must(gpu not in last or stamp > last[gpu], "同卡GPU时间戳重复或非递增")
+        last[gpu] = stamp
+        rows.append((stamp, gpu, util, memory))
     return rows
 
 
@@ -270,7 +277,8 @@ def report(args):
     must("TRAIN_HEAD="+meta["head"] in log_lines,"起跑日志与测速源码锚点不同")
     actual=launch_rows[0]["actual"]
     must((actual["batch_size"],actual["num_train_steps"],actual["num_workers"],actual["fsdp_devices"])==(128,1000,16,8),"测速实际配置不同")
-    must(actual["history_values"]["budget"]==2048,"测速未使用2048记忆")
+    budget = actual["history_values"]["budget"]
+    must(type(budget) is int and budget in (1024, 2048, 4096), "测速记忆预算无效")
     must(len(meta["save_calls"]) == 1, "真实保存调用次数错误")
     save = meta["save_calls"][0]
     run_meta=json.loads((root/"run_meta.json").read_text())
@@ -369,7 +377,7 @@ def report(args):
         "per_gpu":per_gpu, "gpu_mean_pct":util_mean, "gpu_zero_pct":zero_pct,"gpu_strata":util_strata,
         "shm_peak_ratio":shm_ratio, "blocks":blocks, "tail_host_mean_s":trend,"tail_sync_mean_s":tail_sync_mean,
         "drift_ratio":drift,"drift_blocks":{"early":[200,399],"late":[600,799]},
-        "logical_image_gib_s":128/mu/128,
+        "logical_image_gib_s":128/mu*budget*2048*2/2**30,
         "md0_read_bytes":(hosts[-1]["md0_read_sectors"]-hosts[0]["md0_read_sectors"])*512,
         "md0_steady_read_bytes":(host_window[-1]["md0_read_sectors"]-host_window[0]["md0_read_sectors"])*512,
         "external_io":external_io,"external_io_review_threshold_bytes":2**30,"io_coverage":io_coverage,
@@ -382,7 +390,7 @@ def report(args):
                   "NVML重复读数不增加独立证据；显存读数含JAX预分配，不等于活跃张量峰值。",
                   "设备计数包含同设备其他进程；约10秒的进程IO观察可能漏掉短命进程。"]}
     with Path(args.out).open("x") as f:
-        json.dump(report_data,f,ensure_ascii=False,indent=2)
+        json.dump(report_data,f,ensure_ascii=False,indent=2,allow_nan=False)
     print("SPEED_WINDOW=PASS steps=1000 warmup=0..99 steady=100..899 steady_steps=800 profiler=0")
     print(f"GPU_COVERAGE={'PASS' if coverage_ok else 'FAIL'}")
     print(f"SHM_PEAK=PASS ratio={shm_ratio:.6f}")

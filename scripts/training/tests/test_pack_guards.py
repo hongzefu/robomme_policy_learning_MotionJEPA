@@ -601,12 +601,14 @@ def test_2048_reject_type_and_combination(mini_stores, change):
                          source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
 
 
-def test_2048_real_rows_and_spawn(mini_stores):
+@pytest.mark.parametrize("budget", [1024,2048,4096])
+def test_2048_real_rows_and_spawn(mini_stores,budget):
     import multiprocessing
     from mme_vla_suite.models.config.utils import get_history_config
     from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
     root = mini_stores["framesamp-8x8-v1"]
-    hc = get_history_config("perceptual-framesamp-modul-32frame-8x8.yaml")
+    yaml = f"perceptual-framesamp-modul-{budget//64}frame-8x8.yaml"
+    hc = get_history_config(yaml)
     for explicit in (False, True):
         if explicit:
             hc.motion = {"enabled": False}
@@ -614,20 +616,20 @@ def test_2048_real_rows_and_spawn(mini_stores):
                              source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
         try:
             sample = ds[0]
-            assert sample["static_image_emb"].shape == (2048, 2048)
-            assert sample["static_pos_emb"].shape == (2048, 768)
-            assert sample["static_state_emb"].shape == (2048, 8)
-            assert sample["static_mask"].shape == (2048,)
+            assert sample["static_image_emb"].shape == (budget, 2048)
+            assert sample["static_pos_emb"].shape == (budget, 768)
+            assert sample["static_state_emb"].shape == (budget, 8)
+            assert sample["static_mask"].shape == (budget,)
             assert str(sample["static_image_emb"].dtype) == "bfloat16"
             assert all(sample[k] is None for k in ("motion_emb", "motion_pos", "motion_mask", "mem_order"))
         finally:
             ds.close()
-    ds = _make_dataset(root, "perceptual-framesamp-modul-32frame-8x8.yaml")
+    ds = _make_dataset(root, yaml)
     meta = fs.StoreMeta.load(root)
     ctx = multiprocessing.get_context("spawn")
     q = ctx.Queue()
     child = ctx.Process(target=_g10_child, args=(ds, meta.raw["tables"][meta.spec.pos_key]["byte_count"],
-                        meta.raw["tables"][fs.STATE_KEY]["byte_count"], q, 2048))
+                        meta.raw["tables"][fs.STATE_KEY]["byte_count"], q, budget))
     child.start()
     try:
         result = q.get(timeout=180)

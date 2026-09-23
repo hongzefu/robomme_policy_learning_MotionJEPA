@@ -1,0 +1,244 @@
+"""从固定提交执行验证与4096→1024队列；任一阶段失败立即停止并保留现场。"""
+
+from __future__ import annotations
+
+import argparse
+import datetime
+import json
+import os
+from pathlib import Path
+import shlex
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0,str(ROOT/"scripts/training"))
+from modul_launch_contract import BUDGET_YAMLS, PROD_RUNS, CONFIG, NORM_SHA, parse_config, validate_config, validate_data, resources, runtime_environment, json_sha, sha
+from final_record import write_json
+
+BETA_2048 = "55647ff33c8ddb9ec324fdbcee8bd1491456725b"
+USER_QUOTE = "/scratch/hongze/robomme_policy_learning_MotionJEPA/0922-4096-1024-8gpu-training-plan.md 开始做 有问题立刻问用户 起泡后给出预计的时间"
+
+
+def require(ok, message):
+    if not ok:
+        raise ValueError(message)
+
+
+class Workflow:
+    def __init__(self, batch, head, before_head):
+        require(batch and all(c.isalnum() or c in "-_" for c in batch), "批次名非法")
+        self.head, self.before_head, self.batch = head,before_head,batch
+        self.store = ROOT/"v1-store"
+        self.root = self.store/"bench/modul-budget-sweep"/batch
+        self.root.mkdir(parents=True,exist_ok=False)
+        self.ds = self.store/"datasets/4task-v2-1600ep-604f16da"
+        self.asset = self.store/"train-assets/mme_vla_suite/4task-v2-1600ep-604f16da"
+        self.env = dict(os.environ)
+        self.env.update(PYTHONUNBUFFERED="1",UV_CACHE_DIR=str(self.store/"cache/uv"),
+            OPENPI_DATA_HOME=str(self.store/"models"),CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7",
+            XLA_PYTHON_CLIENT_MEM_FRACTION="0.95",OMP_NUM_THREADS="1",OPENBLAS_NUM_THREADS="1",TZ="UTC",
+            MMEVLA_FRAMESAMP_SOURCE=str(self.ds/"source"),MMEVLA_FRAMESAMP_MANIFEST=str(self.ds/"meta/episode_manifest.json"),
+            HF_HUB_OFFLINE="1",TRANSFORMERS_OFFLINE="1",CUDA_CACHE_PATH=str(self.store/"cache/cuda"),
+            WANDB_DATA_DIR=str(self.store/"cache/wandb-data"),XDG_DATA_HOME=str(self.store/"cache/xdg-data"))
+        for key in ("PYTHONPATH","JAX_PLATFORMS","XLA_FLAGS","MMEVLA_MOTION_STORE","MMEVLA_FRAMESAMP_ALLOW_SUBSET"):
+            self.env.pop(key,None)
+        for key in list(self.env):
+            if key.startswith("BENCH_") or key.startswith("TRAIN_"):
+                self.env.pop(key,None)
+        # 当前调度器只做CPU配置核验；数据来源环境与子进程显式一致。
+        for key in ("MMEVLA_FRAMESAMP_SOURCE","MMEVLA_FRAMESAMP_MANIFEST","OPENPI_DATA_HOME"):
+            os.environ[key] = self.env[key]
+        self.clean()
+        write_json(self.root/"start.json",{"head":head,"before_head":before_head,"pid":os.getpid(),
+            "batch":batch,"user_quote":USER_QUOTE,"started_at":self.now(),"environment":runtime_environment(ROOT),
+            "tmux_session":os.environ.get("MODUL_TMUX_SESSION"),"environment_overrides":{k:self.env[k] for k in sorted(self.env) if k in (
+                "CUDA_VISIBLE_DEVICES","XLA_PYTHON_CLIENT_MEM_FRACTION","OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","TZ","OPENPI_DATA_HOME","MMEVLA_FRAMESAMP_SOURCE","MMEVLA_FRAMESAMP_MANIFEST","UV_CACHE_DIR")}})
+
+    @staticmethod
+    def now():
+        return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    def clean(self):
+        require(subprocess.check_output(["git","rev-parse","HEAD"],cwd=ROOT,text=True).strip()==self.head,"HEAD已变化")
+        require(not subprocess.check_output(["git","status","--porcelain"],cwd=ROOT,text=True),"工作区不干净")
+
+    def event(self, **row):
+        with (self.root/"events.jsonl").open("a") as stream:
+            stream.write(json.dumps({"time":self.now(),**row},ensure_ascii=False)+"\n")
+
+    def execute(self, name, command, changes=None, cwd=ROOT):
+        self.clean()
+        log = self.root/(name+".log")
+        require(not log.exists(),"拒绝覆盖阶段日志")
+        env = dict(self.env)
+        env.update(changes or {})
+        env["STAGE_LOG"] = str(log)
+        self.event(stage=name,status="START",command=command,cwd=str(cwd),environment_overrides=changes or {})
+        print(f"SWEEP_STAGE_START name={name} utc={self.now()}",flush=True)
+        wrapper = 'set -o pipefail; "$@" 2>&1 | tee "$STAGE_LOG"; rc=$?; printf "EXIT_CODE=%s\\n" "$rc" | tee -a "$STAGE_LOG"; end=$?; if [ "$end" -ne 0 ]; then exit "$end"; fi; exit "$rc"'
+        result = subprocess.run(["bash","-c",wrapper,"stage",*command],cwd=cwd,env=env)
+        self.event(stage=name,status="PASS" if result.returncode==0 else "FAIL",exit_code=result.returncode)
+        print(f"SWEEP_STAGE_END name={name} exit_code={result.returncode} utc={self.now()}",flush=True)
+        require(result.returncode==0,f"阶段失败: {name}；停止队列，不自动重试")
+        return log
+
+    @staticmethod
+    def python(script, *args):
+        return ["uv","run","--project",str(ROOT),"--no-sync","python",str(ROOT/script),*map(str,args)]
+
+    def train_args(self, budget, run, impl="packed"):
+        return [CONFIG,"--exp-name",run,"--assets-base-dir",str(self.store/"train-assets"),
+            "--data.assets.assets-dir",str(self.asset),"--data.assets.asset-id","robomme",
+            "--checkpoint-base-dir",str(self.store/"train-runs"),"--dataset-path",str(self.ds/("source" if impl=="refnpy" else "framesamp-8x8")),
+            "--model.history-config",BUDGET_YAMLS[budget]]
+
+    def snapshot(self, name, head):
+        path = self.root/name
+        subprocess.run(["git","worktree","add","--detach",str(path),head],cwd=ROOT,check=True)
+        require(not subprocess.check_output(["git","status","--porcelain"],cwd=path,text=True),"源码快照不干净")
+        return path
+
+    def baseline(self):
+        old = self.snapshot("source-before",self.before_head)
+        beta = self.snapshot("source-2048-beta",BETA_2048)
+        log = self.execute("baseline-config",self.python("scripts/training/config_record.py",*self.train_args(2048,PROD_RUNS[2048])),
+            {"PYTHONPATH":str(beta/"src"),"JAX_PLATFORMS":"cpu","CUDA_VISIBLE_DEVICES":"","PYTHONDONTWRITEBYTECODE":"1"},cwd=beta)
+        lines = [line.removeprefix("COMPLETE_CONFIG_JSON=") for line in log.read_text().splitlines() if line.startswith("COMPLETE_CONFIG_JSON=")]
+        require(len(lines)==1,"基线完整配置不唯一")
+        self.baseline_path = self.root/"baseline-2048.json"
+        write_json(self.baseline_path,{"source_head":BETA_2048,"complete":json.loads(lines[0])})
+        original = self.bench_pair(2048,"before",source=old)
+        after = self.bench_pair(2048,"after")
+        recorded = self.bench_pair(2048,"after-final",final=True)
+        self.compare("regression-2048",2048,original,after)
+        self.compare("regression-final-record",2048,after,recorded)
+
+    def bench(self, budget, label, steps, impl="packed", source=None, final=False, save=False):
+        run = f"{self.batch}-m{budget}-{label}-{steps}"
+        rec = self.root/run
+        require(not rec.exists(),"取证目录已存在")
+        env = {"BENCH_RECORD_DIR":str(rec),"TRAIN_RECORD_DIR":str(rec),"BENCH_DUMP_IDX":"1",
+            "BENCH_DATASET_IMPL":impl,"BENCH_REF_SOURCE":str(self.ds/"source"),
+            "BENCH_REF_MANIFEST":str(self.ds/"meta/episode_manifest.json"),"BENCH_CHECKSUM":"1",
+            "BENCH_BATCH_DIGESTS":"1","MMEVLA_JAX_CACHE_DIR":str(self.store/"cache/jax"/run),
+            "WANDB_MODE":"disabled","XLA_FLAGS":"--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0",
+            "BENCH_REF_COMMIT":self.before_head,"BENCH_CAND_COMMIT":self.head}
+        if source:
+            env.update(BENCH_SOURCE_ROOT=str(source),PYTHONPATH=str(source/"src"),PYTHONDONTWRITEBYTECODE="1")
+        if final:
+            env["TRAIN_FINAL_RECORD_DIR"] = str(rec/"final")
+        if save:
+            env.update(BENCH_SAVE_FINAL_CKPT="1",BENCH_FINAL_STEP=str(steps-1),
+                       BENCH_STATE_DUMP_STEPS=f"0,{steps-1}",BENCH_STATE_DUMP_DIR=str(rec/"arrays"),
+                       BENCH_DIGEST_INTERVAL=str(steps-1))
+        self.execute(run,self.python("scripts/training/g0/bench_train_steps.py",*self.train_args(budget,run,impl),
+            "--num-train-steps",steps,"--log-interval",1,"--save-interval",1,"--no-wandb-enabled"),env,cwd=source or ROOT)
+        return rec
+
+    def bench_pair(self,budget,label,impl="packed",source=None,final=False):
+        return (self.bench(budget,label,20,impl,source,final),self.bench(budget,label,1,impl,source,final))
+
+    def compare(self,name,budget,left,right):
+        self.execute(name,self.python("scripts/training/tests/check_modul_train_records.py", "--records-a",left[0],
+            "--step1-a",left[1],"--records-b",right[0],"--step1-b",right[1],"--batch-size",128,
+            "--expected-devices","0,1,2,3,4,5,6,7","--expected-workers",16,"--expected-fsdp",8,
+            "--budget",budget,"--negative-tests","--out",self.root/(name+".json")),{"JAX_PLATFORMS":"cpu","CUDA_VISIBLE_DEVICES":""})
+
+    def production_runner(self,mode,budget,run,approval="",report="",handoff=""):
+        return ["bash","scripts/training/prod/run_modul_budget.sh",mode,str(budget),run,self.head,
+            sha(ROOT/"src/mme_vla_suite/models/config/robomme"/BUDGET_YAMLS[budget]),str(approval),str(report),str(self.baseline_path),str(handoff)]
+
+    def run_records(self,run):
+        return self.store/"bench/modul-budget-sweep/runs"/run
+
+    def complete(self,budget,run,steps=80000,interval=100):
+        rec = self.run_records(run)
+        out = self.root/(run+".completed.json")
+        self.execute(run+"-completion",self.python("scripts/training/tests/check_modul_completion.py",
+            "--records",rec/"final","--metrics",rec/"metrics.jsonl","--log",self.store/"logs"/(run+".driver.log"),
+            "--run-root",self.store/"train-runs"/CONFIG/run,"--run",run,"--head",self.head,
+            "--budget",budget,"--steps",steps,"--log-interval",interval,"--out",out),
+            {"MMEVLA_JAX_CACHE_DIR":str(self.store/"cache/jax"/(run+"-completion"))})
+        resources(ROOT,"smoke")
+        return out
+
+    def verify_budget(self,budget):
+        for command in ("yaml","frames","guards","assembly","pad","online","collate","oracle","init"):
+            name = f"m{budget}-{command}"
+            env = {"JAX_PLATFORMS":"cpu","CUDA_VISIBLE_DEVICES":""} if command!="init" else {}
+            env["MMEVLA_JAX_CACHE_DIR"] = str(self.store/"cache/jax"/(self.batch+"-"+name))
+            self.execute(name,self.python("scripts/training/tests/check_32frame_modul.py",command,"--budget",budget,
+                "--out",self.root/(name+".json")),env)
+        ref = self.bench_pair(budget,"refnpy",impl="refnpy")
+        packed = self.bench_pair(budget,"packed")
+        self.compare(f"m{budget}-refnpy-packed",budget,ref,packed)
+        input_report = json.loads((self.root/f"m{budget}-assembly.json").read_text())["result"]
+        actual_indices = json.loads((packed[0]/"index_sequence.json").read_text())["indices"][:2560]
+        require(actual_indices == [i for row in input_report["batch_indices"] for i in row],"轻量对拍索引与实际前20个batch不同")
+        hundred = self.bench(budget,"save",100,save=True)
+        run = hundred.name
+        checkpoint = self.store/"train-runs"/CONFIG/run/"999"
+        self.execute(f"m{budget}-provenance",self.python("scripts/training/g0/check_config_provenance.py",
+            "--ckpt",checkpoint,"--lib",self.ds,"--train-config",CONFIG,"--store-subdir","framesamp-8x8",
+            "--norm-stats",self.asset/"robomme/norm_stats.json","--out",self.root/f"m{budget}-provenance.json"),
+            {"JAX_PLATFORMS":"cpu","CUDA_VISIBLE_DEVICES":""})
+        self.execute(f"m{budget}-reload",self.python("scripts/training/tests/check_32frame_modul.py","ckpt","--budget",budget,
+            "--records",hundred,"--init-records",packed[0],"--state-dump-dir",hundred/"arrays","--ckpt",checkpoint,
+            "--out",self.root/f"m{budget}-reload.json"),{"MMEVLA_JAX_CACHE_DIR":str(self.store/"cache/jax"/(run+"-reload"))})
+        smoke = f"{self.batch}-m{budget}-capacity"
+        self.execute(smoke,self.production_runner("smoke",budget,smoke))
+        self.complete(budget,smoke,20,1)
+        perf = f"{self.batch}-m{budget}-perf"
+        self.execute(perf,self.production_runner("perf",budget,perf))
+        report = self.root/f"m{budget}-speed.json"
+        self.execute(perf+"-report",self.python("scripts/training/tests/check_modul_speed.py","report","--records",self.run_records(perf),
+            "--gpu",str(self.run_records(perf))+".gpu.csv","--log",self.store/"logs"/(perf+".driver.log"),"--out",report))
+        return report
+
+    def approve(self,budget,report):
+        from types import SimpleNamespace
+        run = PROD_RUNS[budget]
+        runner = ROOT/"scripts/training/prod/run_modul_budget.sh"
+        args = SimpleNamespace(repo=str(ROOT),launch_mode="prod",expected_run_name=run,history_config=BUDGET_YAMLS[budget],
+            run_root=str(self.store/"train-runs"/CONFIG/run),assets_dir=str(self.asset),asset_id="robomme",
+            dataset_path=str(self.ds/"framesamp-8x8"),config_baseline=str(self.baseline_path),norm_stats_sha256=NORM_SHA)
+        actual = validate_config(parse_config(self.train_args(budget,run),ROOT),args)
+        data = validate_data(args)
+        approval = self.root/f"m{budget}-approval.json"
+        write_json(approval,{"train_head":self.head,"runner_sha256":sha(runner),"report_sha256":sha(report),
+            "config_baseline_sha256":sha(self.baseline_path),
+            "run_name":run,"config_sha256":json_sha(actual),"yaml_sha256":sha(ROOT/"src/mme_vla_suite/models/config/robomme"/BUDGET_YAMLS[budget]),
+            "norm_stats_sha256":NORM_SHA,"manifest_file_sha256":data["manifest_file_sha256"],"store_meta_sha256":data["store_meta_sha256"],
+            "run_root":args.run_root,"approved":True,"user_quote":USER_QUOTE,"approved_at":self.now(),
+            "scope":"执行0922计划；4096验收后1024；八卡b128/w16/FSDP8，各80000步，不自动改参"})
+        return approval
+
+    def run(self):
+        resources(ROOT,"smoke")
+        self.baseline()
+        handoff = ""
+        for budget in (4096,1024):
+            if budget == 1024:
+                self.execute("handoff-4096",self.python("scripts/training/tests/check_modul_completion.py","--verify-handoff",handoff,"--head",self.head),
+                    {"JAX_PLATFORMS":"cpu","CUDA_VISIBLE_DEVICES":""})
+            resources(ROOT,"smoke")
+            report = self.verify_budget(budget)
+            approval = self.approve(budget,report)
+            self.execute(PROD_RUNS[budget],self.production_runner("prod",budget,PROD_RUNS[budget],approval,report,handoff))
+            handoff = self.complete(budget,PROD_RUNS[budget])
+        self.event(status="ALL_COMPLETED")
+        print("SWEEP_COMPLETED=PASS budgets=4096,1024",flush=True)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--batch",required=True)
+    parser.add_argument("--head",required=True)
+    parser.add_argument("--before-head",required=True)
+    args = parser.parse_args()
+    Workflow(args.batch,args.head,args.before_head).run()
+
+
+if __name__ == "__main__":
+    main()

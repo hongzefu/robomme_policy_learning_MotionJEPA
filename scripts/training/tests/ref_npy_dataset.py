@@ -27,12 +27,12 @@ class RefNpyFrameSampDataset:
         legacy_shape = shape in {(512, 16, 1), (512, 64, 1)}
         new_shape = (
             all(type(v) is int for v in raw)
-            and raw == (2048, 64, 1)
+            and raw in {(1024, 64, 1), (2048, 64, 1), (4096, 64, 1)}
             and str(hc.integration_type) == "modulation"
             and not self._motion_enabled
         )
         if not (legacy_shape or new_shape):
-            raise ValueError(f"参考链不支持形制 {raw}；2048 仅支持 32×64、modulation、无 motion")
+            raise ValueError(f"参考链不支持形制 {raw}；1024/2048/4096 仅支持每帧64 token、modulation、无 motion")
         if (hc.representation_type != "perceptual"
                 or hc.integration_type not in ("context", "modulation")
                 or hc.perceptual_memory.type != "frame_sampling"):

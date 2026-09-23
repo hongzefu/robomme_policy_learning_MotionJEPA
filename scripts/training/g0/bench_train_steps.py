@@ -90,7 +90,10 @@ import time
 _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
-sys.path.insert(0, str(_REPO_ROOT / "scripts" / "training"))   # train.py 在 scripts/training/ 下，不是包
+sys.path.insert(0, str(_REPO_ROOT / "scripts" / "training"))
+_SOURCE_ROOT = pathlib.Path(os.environ.get("BENCH_SOURCE_ROOT", str(_REPO_ROOT))).resolve()
+# 同一取证器读取固定旧提交；只切换源码导入，不写快照，不更换训练计算。
+sys.path.insert(0, str(_SOURCE_ROOT / "scripts" / "training"))
 
 import train as _train  # noqa: E402
 
@@ -111,7 +114,8 @@ _MAX_BENCH_STEPS = 1200  # G0b 基线升级为 1000 步（用户 2026-08-26 指�
 _EXPECTED_HISTORY_CONFIGS = ("perceptual-framesamp-context.yaml", "perceptual-framesamp-context-motion.yaml",
                              "perceptual-framesamp-context-8frame-8x8.yaml", "perceptual-framesamp-context-8frame-8x8-motion.yaml",
                              "perceptual-framesamp-modul-8frame-8x8.yaml", "perceptual-framesamp-modul-8frame-8x8-motion.yaml",
-                             "perceptual-framesamp-modul.yaml", "perceptual-framesamp-modul-32frame-8x8.yaml")
+                             "perceptual-framesamp-modul.yaml", "perceptual-framesamp-modul-32frame-8x8.yaml",
+                             "perceptual-framesamp-modul-64frame-8x8.yaml", "perceptual-framesamp-modul-16frame-8x8.yaml")
 _EXPECTED_HISTORY_CONFIG = _EXPECTED_HISTORY_CONFIGS[0]
 
 
@@ -449,6 +453,7 @@ def _install_batch_digest_recorder(record_dir: pathlib.Path, interval: int,
             "sample_indices": sample_indices,
             "per_key": per_key,
             "per_key_canonical": per_key_canonical,
+            "static_mask_counts": np.asarray(batch["static_mask"]).sum(axis=1).tolist(),
         }
         with digests_path.open("a") as f:
             f.write(json.dumps(row) + "\n")
@@ -636,7 +641,12 @@ def _install_norm_recorder(config):
         recorded.update(norm_stats_path=str(path.resolve()), norm_stats_file_sha256=hashlib.sha256(raw).hexdigest(),
                         norm_stats_actual=norm_stats_digest(data_config.norm_stats),
                         norm_stats_expected=norm_stats_digest(deserialize_json(raw.decode())))
-        return original(dataset_path, data_config, *args, **kwargs)
+        result = original(dataset_path, data_config, *args, **kwargs)
+        loader = result._data_loader.torch_loader
+        recorded["loader"] = {"batch_size": loader.batch_size, "workers": loader.num_workers,
+            "prefetch_factor": loader.prefetch_factor, "persistent_workers": loader.persistent_workers,
+            "pin_memory": loader.pin_memory}
+        return result
 
     _train._data_loader.create_data_loader = create
     return recorded
@@ -644,6 +654,8 @@ def _install_norm_recorder(config):
 
 def main() -> None:
     config = _config.cli()
+    from config_record import complete_record
+    actual_config_record = complete_record(config)
     if config.num_train_steps > _MAX_BENCH_STEPS:
         raise ValueError(
             f"bench 入口只允许 ≤{_MAX_BENCH_STEPS} steps（当前 {config.num_train_steps}）；"
@@ -766,6 +778,7 @@ def main() -> None:
         meta = {
             **norm_record,
             "argv": list(sys.argv),
+            "actual_config": actual_config_record,
             "import_origins": origins,
             "start_head": start_head,
             "start_status": start_status,

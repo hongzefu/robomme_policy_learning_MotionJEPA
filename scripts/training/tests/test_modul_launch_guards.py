@@ -39,6 +39,16 @@ def parsed():
     return contract.parse_config(argv,ROOT)
 
 
+def speed_report(actual, a):
+    perf = copy.deepcopy(actual)
+    perf["num_train_steps"] = 1000
+    perf["wandb_enabled"] = False
+    perf["complete"]["train_config"]["fields"]["num_train_steps"] = 1000
+    perf["complete"]["train_config"]["fields"]["wandb_enabled"] = False
+    return {"status":"READY","perf_head":a.train_head,"environment":contract.runtime_environment(ROOT),
+            "launch":{"actual":perf,"data":{"yaml_sha256":a.history_config_sha256}}}
+
+
 @pytest.mark.parametrize("mode",["prod","smoke","perf"])
 def test_real_cli_configuration(mode):
     argv,a=arguments(mode)
@@ -85,7 +95,7 @@ def test_missing_approval_never_trains(parsed):
 def test_approval_binds_every_digest(parsed,tmp_path):
     _,a=arguments()
     runner=tmp_path/"runner.sh";runner.write_text("# 测试桩，无训练\n")
-    report=tmp_path/"report.json";report.write_text(json.dumps({"status":"READY","perf_head":a.train_head,"environment":contract.runtime_environment(ROOT)}))
+    report=tmp_path/"report.json";report.write_text(json.dumps(speed_report(parsed["actual"],a)))
     a.runner=str(runner);a.report=str(report);a.approval_record=str(tmp_path/"approval.json")
     data={"manifest_file_sha256":contract.MANIFEST_SHA,"store_meta_sha256":"c"*64}
     approval={"train_head":a.train_head,"runner_sha256":contract.sha(runner),"report_sha256":contract.sha(report),
@@ -114,6 +124,14 @@ def test_busy_gpu_never_trains(monkeypatch):
 def test_full_preflight_with_train_stub(tmp_path,monkeypatch,fault,capsys):
     """真实preflight及CLI解析；仅隔离Git/硬件状态和训练调用，不初始化模型。"""
     import preflight_train_launch as preflight
+    # 已完成的2048正式run必须保留；夹具用独立身份模拟全新输出根。
+    fixture_run = "test-preflight-"+tmp_path.name
+    monkeypatch.setattr(contract,"PROD_RUN",fixture_run)
+    monkeypatch.setitem(contract.PROD_RUNS,2048,fixture_run)
+    monkeypatch.syspath_prepend(str(ROOT/"scripts/assets"))
+    import assets_lock
+    # 原生资产全量校验另行实跑；CLI反例不重复扫描12GB初始化权重。
+    monkeypatch.setattr(assets_lock,"require",lambda names,level:None)
     argv,a=arguments()
     monkeypatch.setenv("OPENPI_DATA_HOME",str(ROOT/"v1-store/models"))
     monkeypatch.setenv("MMEVLA_FRAMESAMP_SOURCE",str(Path(a.dataset_path).parent/"source"))
@@ -125,7 +143,7 @@ def test_full_preflight_with_train_stub(tmp_path,monkeypatch,fault,capsys):
     actual=contract.parse_config(argv,ROOT)["actual"]
     a.history_config_sha256=contract.sha(ROOT/"src/mme_vla_suite/models/config/robomme"/contract.YAML)
     runner=tmp_path/"fixture-runner.sh";runner.write_text("# 只读测试桩\n")
-    report=tmp_path/"report.json";report.write_text(json.dumps({"status":"READY","perf_head":a.train_head,"environment":contract.runtime_environment(ROOT)}))
+    report=tmp_path/"report.json";report.write_text(json.dumps(speed_report(actual,a)))
     approval=tmp_path/"approval.json"
     data=contract.validate_data(a)
     approval.write_text(json.dumps({"train_head":a.train_head,"runner_sha256":contract.sha(runner),

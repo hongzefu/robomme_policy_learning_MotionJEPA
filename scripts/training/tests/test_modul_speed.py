@@ -160,7 +160,7 @@ def test_async_boundary_wait_is_not_misread_as_drift(tmp_path):
     assert result["tail_host_mean_s"]==.5
 
 
-@pytest.mark.parametrize("fault",["missing_step","missing_sync","missing_gpu","exit_code","checkpoint"])
+@pytest.mark.parametrize("fault",["missing_step","missing_sync","missing_gpu","exit_code","checkpoint","nan","inf","duplicate","sparse"])
 def test_incomplete_speed_evidence_rejected(tmp_path,fault):
     args=report_fixture(tmp_path);root=Path(args.records)
     if fault in ("missing_step","missing_sync"):
@@ -171,5 +171,15 @@ def test_incomplete_speed_evidence_rejected(tmp_path,fault):
     elif fault=="missing_gpu":
         path=Path(args.gpu);path.write_text("\n".join(l for l in path.read_text().splitlines() if ", 7," not in l)+"\n")
     elif fault=="exit_code":Path(args.log).write_text("EXIT_CODE=1\n")
+    elif fault in ("nan","inf","duplicate","sparse"):
+        path=Path(args.gpu);lines=path.read_text().splitlines()
+        if fault in ("nan","inf"):lines[3000]=lines[3000].replace(", 95,",f", {fault},")
+        elif fault=="duplicate":lines.insert(3001,lines[3000])
+        else:lines=[line for i,line in enumerate(lines) if (i//8)%8==0]
+        path.write_text("\n".join(lines)+"\n")
+        if fault=="sparse":
+            assert speed.report(args)==1
+            assert json.loads(Path(args.out).read_text())["status"]=="INCOMPLETE"
+            return
     else:(tmp_path/"checkpoints/999/_CHECKPOINT_METADATA").unlink()
     with pytest.raises((ValueError,KeyError,OSError)):speed.report(args)

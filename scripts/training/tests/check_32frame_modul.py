@@ -1,4 +1,4 @@
-"""2048无motion档的配置、输入、逐位置功能与保存加载验收。"""
+"""1024/2048/4096无motion档的配置、输入、逐位置功能与保存加载验收。"""
 
 from __future__ import annotations
 
@@ -37,7 +37,9 @@ def exact(a, b):
 
 def config(a):
     from mme_vla_suite.models.config.utils import get_history_config
-    return get_history_config(a.history_config)
+    result = get_history_config(a.history_config)
+    require(type(result.budget) is int and result.budget == a.budget, "文件名与显式预算不符")
+    return result
 
 
 def data_config(a):
@@ -52,6 +54,14 @@ def dataset(a):
 
 def frames(a):
     from mme_vla_suite.shared.sampling import even_sampling_indices
+    if a.budget != 2048:
+        count = a.budget // 64
+        expected = {t: list(range(t+1)) if t < count else [t*i//(count-1) for i in range(count)]
+                    for t in (0,1,14,15,16,30,31,32,62,63,64,1151)}
+        for t, want in expected.items():
+            require(list(even_sampling_indices(t, count)) == want, f"独立选帧失败: t={t}")
+        print(f"FRAME_SELECT=PASS cases={len(expected)} max_frames={count} mismatches=0")
+        return expected
     expected = {t:list(range(t+1)) for t in (0,1,7,8,15,30,31)}
     expected.update({
         32: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,32],
@@ -69,11 +79,11 @@ def frames(a):
 def yaml_check(a):
     from omegaconf import OmegaConf
     from mme_vla_suite.models.config.utils import get_history_config
-    old,new = [OmegaConf.to_container(get_history_config(x)) for x in (OLD_YAML,a.history_config)]
+    old,new = [OmegaConf.to_container(get_history_config(x)) for x in (OLD_YAML if a.budget == 2048 else YAML,a.history_config)]
     diff = sorted(k for k in set(old)|set(new) if old.get(k) != new.get(k))
-    require(diff == ["budget"] and old["budget"] == 512 and new["budget"] == 2048
+    require(diff == ["budget"] and old["budget"] == (512 if a.budget == 2048 else 2048) and new["budget"] == a.budget
             and type(new["budget"]) is int and "motion" not in new, "YAML差异不止budget或新值类型错误")
-    print("YAML_DIFF=PASS keys_diff=['budget'] old=512 new=2048 budget_type=int motion_enabled=0")
+    print(f"BUDGET_CONFIG=PASS budget={a.budget} baseline={old['budget']} diff_keys=budget")
     return {"keys_diff":diff}
 
 
@@ -92,12 +102,12 @@ def guards(a):
     def construct(h):
         packed = FrameSampDataset(a.store,dc,h,20,source_root=a.source,manifest_path=a.manifest)
         ref = RefNpyFrameSampDataset(a.source,a.manifest,dc,h,20)
-        require(packed._max_frames == ref._max_frames == 32, "新档帧预算错误")
+        require(packed._max_frames == ref._max_frames == a.budget//64, "新档帧预算错误")
         packed.close(); ref.close()
     construct(hc)
     explicit = OmegaConf.create(OmegaConf.to_container(hc)); explicit.motion={"enabled":False}
     construct(explicit)
-    bad = [{"budget":2048.5},{"budget":"2048"},{"num_views":True},
+    bad = [{"budget":a.budget+.5},{"budget":str(a.budget)},{"num_views":True},
            {"integration_type":"context","memory_token_dim":2048},{"motion":{"enabled":True}},
            {"token_per_image":16},{"num_views":2}]
     for change in bad:
@@ -116,16 +126,16 @@ def guards(a):
         ds = FrameSampDataset(str(Path(a.store).parent/sub),dc,get_history_config(y),20,source_root=a.source,manifest_path=a.manifest)
         ds.close()
     mem = PerceptualMemory(hc,nnx.Rngs(42))
-    arrays = [jnp.ones((1,2048,d),jnp.float32) for d in (2048,768,8)]
+    arrays = [jnp.ones((1,a.budget,d),jnp.float32) for d in (2048,768,8)]
     # 不建立大模型；直接调用真实接口，记忆编码器是真实实例。
     fake = SimpleNamespace(mem_encoder=mem,history_config=hc)
-    obs = SimpleNamespace(**dict(zip(KEYS[:3],arrays)),static_mask=jnp.ones((1,2048),bool),
+    obs = SimpleNamespace(**dict(zip(KEYS[:3],arrays)),static_mask=jnp.ones((1,a.budget),bool),
                           motion_emb=None,motion_pos=None,motion_mask=None)
     with at.disable_typechecking():
         tokens,mask,_,_ = HistoryPi0.embed_memory(fake,obs)
-        require(tokens.shape[:2] == mask.shape == (1,2048), "正确输入未得到2048记忆")
+        require(tokens.shape[:2] == mask.shape == (1,a.budget), "正确输入的记忆预算不同")
         for i in range(3):
-            for wrong in (None,arrays[i][:,:512],jnp.ones((2,2048,arrays[i].shape[-1]))):
+            for wrong in (None,arrays[i][:,:512],jnp.ones((2,a.budget,arrays[i].shape[-1]))):
                 changed = list(arrays); changed[i]=wrong
                 try:
                     mem(*changed)
@@ -133,7 +143,7 @@ def guards(a):
                     pass
                 else:
                     raise ValueError(f"static输入错误未被拒绝: {KEYS[i]}")
-        for wrong in (None,jnp.ones((1,2048),jnp.float32),jnp.ones((1,1),bool),jnp.ones((1,512),bool)):
+        for wrong in (None,jnp.ones((1,a.budget),jnp.float32),jnp.ones((1,1),bool),jnp.ones((1,512),bool)):
             broken = SimpleNamespace(**{**vars(obs),"static_mask":wrong})
             try:
                 HistoryPi0.embed_memory(fake,broken)
@@ -142,41 +152,77 @@ def guards(a):
             else:
                 raise ValueError("static_mask坏形制未被拒绝")
     spec,_ = HistoryPi0Config(use_history=True,history_config=hc,pi05=True).inputs_spec(batch_size=2)
-    require(all(getattr(spec,k).shape[:2] == (2,2048) for k in KEYS), "inputs_spec预算错误")
+    require(all(getattr(spec,k).shape[:2] == (2,a.budget) for k in KEYS), "inputs_spec预算错误")
     if not a.skip_opt:
-        child = [sys.executable,"-O",str(Path(__file__).resolve()),"guards","--skip-opt"]
+        child = [sys.executable,"-O",str(Path(__file__).resolve()),"guards","--skip-opt","--budget",str(a.budget)]
         for key in ("store","source","manifest","norm_stats","history_config"):
             child += ["--"+key.replace("_","-"),str(getattr(a,key))]
         subprocess.run(child,check=True)
-    print("GUARD_2048=PASS accept=1 reject_type=3 reject_combo=4 legacy_accept=2 ref_same=1")
+    print(f"GUARD_{a.budget}=PASS accept=1 reject_type=3 reject_combo=4 legacy_accept=2 ref_same=1")
     print(f"STATIC_SHAPE=PASS keys=4 bad_mask_b1_rejected=1 optimized_rejected={int(not a.skip_opt or not __debug__)}")
     return {"type_reject":3,"combo_reject":4,"optimized":not __debug__}
 
 
 def assembly(a):
     from ref_npy_dataset import RefNpyFrameSampDataset
+    import ref_npy_dataset as reference_module
+    import mme_vla_suite.training.framesamp_dataset as production_module
+    import torch
+    import itertools
     import _common as C
     manifest = C.load_manifest(Path(a.manifest))
     ds,ref = dataset(a),RefNpyFrameSampDataset(a.source,a.manifest,data_config(a),config(a),20)
     selected, descriptors = [], None
+    boundary = []
+    for ep in manifest["episodes"]:
+        lo, hi = ep["exec_start_idx"], ep["num_timesteps"]-1
+        boundary.extend(C.index_of(ep,t) for t in (lo,(lo+hi)//2,hi))
+    generator = torch.Generator().manual_seed(42)
+    # DataLoader自身消费base_seed；直接randperm会漏这一跳而与真实训练错位。
+    index_loader = torch.utils.data.DataLoader(range(len(ds)),batch_size=128,shuffle=True,
+                                               drop_last=True,num_workers=0,generator=generator)
+    batch_indices = [batch.tolist() for batch in itertools.islice(index_loader,20)]
+    wanted = list(dict.fromkeys(boundary + [i for batch in batch_indices for i in batch]))
+    full = sum(ep["num_timesteps"]-ep["exec_start_idx"] for ep in manifest["episodes"]
+               if ep["exec_start_idx"] >= a.budget//64)
+    require(full == len(ds) == 605611, "本库存在未满额历史，须重新核实口径")
+    traces = [[],[]]
+    originals = [production_module.even_sampling_indices,reference_module.even_sampling_indices]
+    def observed(side):
+        def sample(step,count):
+            result = originals[side](step,count)
+            traces[side].append({"step":int(step),"count":int(count),"frames":[int(x) for x in result]})
+            return result
+        return sample
+    production_module.even_sampling_indices = observed(0)
+    reference_module.even_sampling_indices = observed(1)
+    selected_frames = []
     try:
-        for task in range(4):
-            for ep in manifest["episodes"][task*400:task*400+50]:
-                for t in (ep["exec_start_idx"],ep["num_timesteps"]-1):
-                    i = C.index_of(ep,t)
-                    left,right = ds[i],ref[i]
-                    require(set(left) == set(right), f"样本键集不同: {i}")
-                    for key in left:
-                        require(exact(left[key],right[key]),f"源NPY对packed不同: {i}/{key}")
-                    require(all(left[k] is None for k in NONE_KEYS), "无motion档四键并非None")
-                    require(left["static_mask"].sum() == 2048, "真实样本不是满32帧")
-                    descriptors = {k:{"shape":list(left[k].shape),"dtype":str(left[k].dtype),"bytes":left[k].nbytes} for k in KEYS}
-                    selected.append(i)
+        for i in wanted:
+            traces[0].clear();traces[1].clear()
+            left,right = ds[i],ref[i]
+            require(len(traces[0]) == 1 and traces[0] == traces[1], "真实调用的选帧索引不同")
+            trace = traces[0][0]
+            count, step = trace["count"], trace["step"]
+            expected_frames = list(range(step+1)) if step<count else [step*j//(count-1) for j in range(count)]
+            require(count == a.budget//64 and trace["frames"] == expected_frames, "真实选帧未满足独立整数oracle")
+            selected_frames.append({"sample_index":i,**trace})
+            require(set(left) == set(right), f"样本键集不同: {i}")
+            for key in left:
+                require(exact(left[key],right[key]),f"源NPY对packed不同: {i}/{key}")
+            require(all(left[k] is None for k in NONE_KEYS), "无motion档四键并非None")
+            require(left["static_mask"].sum() == a.budget, "真实样本不是满额历史")
+            descriptors = {k:{"shape":list(left[k].shape),"dtype":str(left[k].dtype),"bytes":left[k].nbytes} for k in KEYS}
+            selected.append(i)
+            if len(selected)%200 == 0:
+                print(f"BOUNDED_INPUT_PROGRESS samples={len(selected)}/{len(wanted)}",flush=True)
     finally:
+        production_module.even_sampling_indices,reference_module.even_sampling_indices = originals
         ds.close(); ref.close()
-    require(len(selected) == len(set(selected)) == 400, "四任务有界取样数量或唯一性不符")
-    print("REF_VS_PACKED=PASS samples=400 keys=8 none_keys=4 tasks=4 seams=200 tails=200 mismatches=0 mask_sum_all=2048")
-    return {"indices":selected,"descriptors":descriptors,"proof":"独立特征读取、padding与身份换算；共享采样、归一化和下游模型"}
+    require(selected == wanted, "有界取样数量或唯一性不符")
+    print(f"REF_VS_PACKED=PASS samples={len(selected)} episodes=1600 actual_batch_prefix=20 mismatches=0 budget={a.budget}")
+    return {"indices":selected,"selected_frames":selected_frames,"descriptors":descriptors,"batch_indices":batch_indices,"samples_read_each":len(selected),
+            "full_history_samples":full,"proof":"有界样本逐键原始字节比对，不声称全库特征重扫"}
 
 
 def pad(a):
@@ -184,30 +230,31 @@ def pad(a):
     ds = dataset(a)
     try:
         store = ds._ensure_store()
-        for n in range(1,33):
+        for n in range(1,a.budget//64+1):
             f = np.arange(n,dtype=np.int64)
             img,pos,state = store.read_image_rows(ds._row_base[0]+f),store.pos_rows(f),store.state_rows(ds._row_base[0]+f)
             out = ds._pad(img,pos,state,n)
-            reference = right_padding_token_emb(img,pos,state,np.ones(n,bool),32)
+            reference = right_padding_token_emb(img,pos,state,np.ones(n,bool),a.budget//64)
             require(all(exact(x,y) for x,y in zip(out,reference,strict=True)), f"两种padding不等: n={n}")
             for x,dt in zip(out,("bfloat16","float32","float32","bool"),strict=True):
-                require(str(x.dtype) == dt and x.shape[0] == 32, "padding形状或dtype不同")
+                require(str(x.dtype) == dt and x.shape[0] == a.budget//64, "padding形状或dtype不同")
                 require(not np.any(x[n:]), "补零尾部非零")
             require(out[3].sum() == n and out[3][:n].all(), "padding mask错误")
         f = np.asarray(frames(a)[1151],dtype=np.int64)
-        full = ds._pad(store.read_image_rows(ds._row_base[0]+f),store.pos_rows(f),store.state_rows(ds._row_base[0]+f),32)
+        full = ds._pad(store.read_image_rows(ds._row_base[0]+f),store.pos_rows(f),store.state_rows(ds._row_base[0]+f),a.budget//64)
         require(full[3].all(), "真实长帧号装配mask错误")
     finally:
         ds.close()
-    print("PAD_SYNTH=PASS n_cases=32 full=1 zero_tail=1 mask_ok=1 dtype_ok=1 online_pad_bitexact=1")
-    return {"n_cases":32,"full":1}
+    print(f"PAD_SYNTH=PASS n_cases={a.budget//64} full=1 zero_tail=1 mask_ok=1 dtype_ok=1 online_pad_bitexact=1")
+    return {"n_cases":a.budget//64,"full":1}
 
 
 def online(a):
     import jax.numpy as jnp
     from mme_vla_suite.policies.framesamp_memory import FrameSampMemory
     hc=config(a)
-    require((hc.budget,hc.token_per_image,hc.num_views)==(2048,64,1),"在线检查必须使用2048/64/1配置")
+    require((hc.budget,hc.token_per_image,hc.num_views)==(a.budget,64,1),"在线检查预算错误")
+    count = a.budget//64
     summaries=[]
     for tokens in (256,64):
         def encoder(x):
@@ -216,19 +263,19 @@ def online(a):
             return jnp.broadcast_to(values[...,None,None],(*x.shape[:2],tokens,2048)).astype(jnp.bfloat16)
         memory = FrameSampMemory(vision_enc_fn=encoder,token_per_image=int(hc.token_per_image),num_views=int(hc.num_views))
         previous = 0
-        for t in (0,7,31,32,40):
+        for t in (0,1,14,15,16,30,31,32,62,63,64):
             n=t+1-previous
             frame_ids=np.arange(previous,t+1)
             images=np.broadcast_to(frame_ids[:,None,None,None,None],(n,1,224,224,3)).astype(np.uint8)
             states=np.broadcast_to(frame_ids[:,None],(n,8)).astype(np.float32)
             memory.add_buffer(images,states,list(range(previous,t+1)))
             previous=t+1
-            selected=list(range(t+1)) if t<32 else [t*i//31 for i in range(32)]
-            require(list(memory.get_frame_sampling_indices(t,2048,64))==selected,"在线选帧与独立整数公式不同")
+            selected=list(range(t+1)) if t<count else [t*i//(count-1) for i in range(count)]
+            require(list(memory.get_frame_sampling_indices(t,a.budget,64))==selected,"在线选帧与独立整数公式不同")
             result = memory.prepare_frame_sampling(t,int(hc.budget),int(hc.token_per_image),memory.default_history_feats_gather_fn)
-            for x,shape,dt in zip(result,((2048,2048),(2048,768),(2048,8),(2048,)),("bfloat16","float32","float32","bool"),strict=True):
+            for x,shape,dt in zip(result,((a.budget,2048),(a.budget,768),(a.budget,8),(a.budget,)),("bfloat16","float32","float32","bool"),strict=True):
                 require(x.shape == shape and str(x.dtype) == dt,"在线装配shape或dtype错误")
-            require(result[3].sum() == 64*min(t+1,32),"在线mask计数错误")
+            require(result[3].sum() == 64*min(t+1,count),"在线mask计数错误")
             require(np.all(result[0][result[3]].astype(np.float32)==np.repeat(selected,64)[:,None]),"桩特征的帧身份或池化错误")
             require(np.all(result[2][result[3]]==np.repeat(selected,64)[:,None]),"在线状态的帧身份错误")
             require(exact(result[1][result[3]],memory.pos_emb[selected].reshape(-1,768)),"在线位置表选帧或展开错误")
@@ -236,7 +283,7 @@ def online(a):
         summaries.append({"encoder_tokens":tokens,"pos_table_bytes":memory.pos_emb.nbytes})
         del memory
         gc.collect()
-    print("ONLINE_ASM=PASS steps=5 shapes=(2048,2048)/(2048,768)/(2048,8)/(2048,) dtype_stage=pre_normalize dtype_ok=1 mask_sums=64,512,2048,2048,2048 pooling_branches=2")
+    print(f"ONLINE_ASM=PASS steps=11 budget={a.budget} dtype_stage=pre_normalize dtype_ok=1 mask_sums_verified=1 pooling_branches=2")
     return summaries
 
 
@@ -260,14 +307,15 @@ def collate(a):
     ds=dataset(a)
     try:
         store=ds._ensure_store()
-        for counts in ((1,8,31),(1,32,8),(32,32,32)):
+        count = a.budget//64
+        for counts in ((1,8,count-1),(1,count,8),(count,count,count)):
             samples=[]
             for n in counts:
                 f=np.arange(n,dtype=np.int64)
                 img,pos,state,mask=ds._pad(store.read_image_rows(ds._row_base[0]+f),store.pos_rows(f),store.state_rows(ds._row_base[0]+f),n)
                 state=np.repeat(state,64,axis=0)
                 state=(state-ns.q01)/(ns.q99-ns.q01+1e-6)*2.-1.
-                samples.append(dict(static_image_emb=img.reshape(2048,2048),static_pos_emb=pos.reshape(2048,768),
+                samples.append(dict(static_image_emb=img.reshape(a.budget,2048),static_pos_emb=pos.reshape(a.budget,768),
                                     static_state_emb=state,static_mask=np.repeat(mask,64),**dict.fromkeys(NONE_KEYS)))
             ctx=multiprocessing.get_context("spawn")
             queue,consumed=ctx.Queue(),ctx.Event()
@@ -305,11 +353,11 @@ def init(a):
     sys.path.insert(0,str(ROOT/"scripts/training"))
     import train
     from _common import leaf_sha256
-    mesh=sharding.make_mesh(1)
+    mesh=sharding.make_mesh(8)
     _,rng=jax.random.split(jax.random.key(42))
     outputs=[]
-    for name in (OLD_YAML,a.history_config):
-        c=get_config("mme_vla_suite")
+    for name in (YAML,a.history_config):
+        c=get_config("mme_vla_suite_b128_80k")
         c=dataclasses.replace(c,model=dataclasses.replace(c.model,use_history=True,history_config=get_history_config(name)))
         state,_=train.init_train_state(c,rng,mesh,resume=False)
         jax.block_until_ready(state)
@@ -321,8 +369,8 @@ def init(a):
         outputs.append(result)
         del state
         gc.collect()
-    require(outputs[0] == outputs[1] and len(outputs[0]) == 61,"512与2048初态不相同")
-    print("INIT_SAME_512_2048=PASS leaves=61 mismatches=0 shape_mismatch=0")
+    require(outputs[0] == outputs[1] and len(outputs[0]) == 61,"预算变化导致初态不相同")
+    print(f"INIT_SAME=PASS baseline=2048 budget={a.budget} leaves=61 mismatches=0 shape_mismatch=0")
     return outputs[0]
 
 
@@ -332,9 +380,9 @@ def memory_oracle(a):
     from mme_vla_suite.models.integration import history_gemma as hg
     rng=np.random.default_rng(42)
     x=rng.normal(size=(1,20,1024)).astype(np.float32)
-    mem=rng.normal(size=(1,2048,1024)).astype(np.float32)
+    mem=rng.normal(size=(1,a.budget,1024)).astype(np.float32)
     module=hg.MemoryAttention()
-    params=module.init(jax.random.key(42),jnp.asarray(x),jnp.asarray(mem),jnp.ones((1,2048),bool))
+    params=module.init(jax.random.key(42),jnp.asarray(x),jnp.asarray(mem),jnp.ones((1,a.budget),bool))
     p=jax.tree.map(np.asarray,params["params"])
     require(set(p) == {"mem_rms_norm","q_einsum_mem","kv_einsum_mem","out_einsum_mem"},"MemoryAttention参数树变化")
     print("MEMATTN_PARAMS="+json.dumps({k:{kk:list(vv.shape) for kk,vv in v.items()} for k,v in p.items()}))
@@ -381,7 +429,7 @@ def memory_oracle(a):
             hg._apply_rope=original
 
     errors={}
-    for length in (512,2048):
+    for length in (512,a.budget):
         for n in (1,64,length):
             actual,want=apply(length,n),oracle(length,n)
             error=float(np.max(np.abs(actual-want)))
@@ -389,15 +437,15 @@ def memory_oracle(a):
             require(error <= tolerance,f"独立oracle不符: length={length} n={n} error={error} tolerance={tolerance}")
             require(exact(actual,apply(length,n,garbage=True)),"mask外垃圾改变输出")
             errors[f"{length}/{n}"]={"max_abs":error,"tolerance":tolerance}
-    require(np.allclose(apply(512,1),apply(2048,1),atol=1e-6,rtol=1e-5),"单key退化输出随长度改变")
-    oa,ob=oracle(512,64),oracle(2048,64)
+    require(np.allclose(apply(512,1),apply(a.budget,1),atol=1e-6,rtol=1e-5),"单key退化输出随长度改变")
+    oa,ob=oracle(512,64),oracle(a.budget,64)
     length_delta=float(np.max(np.abs(oa-ob)))
     tol=1e-6+1e-5*max(float(np.max(np.abs(oa))),float(np.max(np.abs(ob))))
     require(length_delta > 10*tol,"非退化fixture对RoPE长度不敏感")
-    for length in (512,2048):
+    for length in (512,a.budget):
         actual,want=apply(length,64,compact=True),oracle(length,64,compact=True)
         require(np.max(np.abs(actual-want)) <= 1e-6+1e-5*np.max(np.abs(want)),"统一query位置与oracle不同")
-    ca,cb=apply(512,64,compact=True),apply(2048,64,compact=True)
+    ca,cb=apply(512,64,compact=True),apply(a.budget,64,compact=True)
     require(np.max(np.abs(ca-cb)) <= 1e-6+1e-5*np.max(np.abs(cb)),"统一query位置后长度差异未消失")
     print("MEMATTN_ORACLE=PASS atol=1e-6 rtol=1e-5 singleton_length_invariant=1 garbage_bitexact=1 nondegenerate_rope_sensitive=1 compact_q_match=1")
     return {"errors":errors,"length_delta":length_delta}
@@ -427,8 +475,8 @@ def func(a):
     initial.replace_by_pure_dict(jax.tree.map(jnp.asarray,merged));nnx.update(model,initial)
     del initial,merged
     random=np.random.default_rng(42)
-    sample={k:random.normal(0,.25,size=(2048,d)).astype(np.float32) for k,d in zip(KEYS[:3],(2048,768,8))}
-    sample["static_mask"]=np.ones(2048,bool)
+    sample={k:random.normal(0,.25,size=(a.budget,d)).astype(np.float32) for k,d in zip(KEYS[:3],(2048,768,8))}
+    sample["static_mask"]=np.ones(a.budget,bool)
     full=_obs_from_samples([sample],motion=False)
     graph,trainable,frozen=nnx.split(model,nnx.All(nnx.Param,nnx.Not(c.get_freeze_filter())),...)
     rng=jax.random.key(7)
@@ -465,7 +513,7 @@ def func(a):
     def input_function(tp,fp,o,drop=False):
         def f(si,sp):
             if drop:
-                keep=(jnp.arange(2048)%64 == 0)[None,:,None]
+                keep=(jnp.arange(a.budget)%64 == 0)[None,:,None]
                 si,sp=jnp.where(keep,si,0),jnp.where(keep,sp,0)
             return loss_fn(tp,fp,dataclasses.replace(o,static_image_emb=si,static_pos_emb=sp))
         return jax.grad(f,argnums=(0,1))(o.static_image_emb,o.static_pos_emb)
@@ -485,23 +533,23 @@ def func(a):
         return tables
     full_norms=token_table(full,input_normal(trainable,frozen,full))
     require(all(np.all(t>0) for t in full_norms),"TOKEN_GRAD有位置未参与")
-    print("TOKEN_GRAD=PASS tokens=2048 image_nonzero=2048 pos_nonzero=2048",flush=True)
+    print(f"TOKEN_GRAD=PASS tokens={a.budget} image_nonzero={a.budget} pos_nonzero={a.budget}",flush=True)
     dropped=token_table(full,input_drop(trainable,frozen,full))
-    require(all(np.count_nonzero(t) == 32 and np.all(t[:,::64]>0) for t in dropped),"故障注入没有隔离每帧63位置")
+    require(all(np.count_nonzero(t) == a.budget//64 and np.all(t[:,::64]>0) for t in dropped),"故障注入没有隔离每帧63位置")
     require(not all(np.all(t>0) for t in dropped),"逐位置门未拒绝删token故障")
     print("TOKEN_DROP_NEGATIVE=PASS rejected=1 kept_per_band=1",flush=True)
     deltas=[]
-    for band in range(32):
+    for band in range(a.budget//64):
         changed=dataclasses.replace(full,static_image_emb=full.static_image_emb.at[:,band*64:(band+1)*64].add(.25))
         value=float(loss_only(trainable,frozen,changed))
         require(np.isfinite(value),"帧带扰动loss非有限")
         deltas.append(abs(value-loss_probes[0]))
     require(all(d>noise_floor for d in deltas),"帧带扰动未全部超过A/A噪声")
-    print(f"FRAME_BAND_PERTURB=PASS bands=32 above_noise=32 noise_floor={noise_floor} min_delta={min(deltas)}",flush=True)
+    print(f"FRAME_BAND_PERTURB=PASS bands={a.budget//64} above_noise={len(deltas)} noise_floor={noise_floor} min_delta={min(deltas)}",flush=True)
 
     samples=[]
-    for n in (1,8,31):
-        samples.append({**sample,"static_mask":np.arange(2048)<n*64})
+    for n in (1,8,a.budget//64-1):
+        samples.append({**sample,"static_mask":np.arange(a.budget)<n*64})
     short=_obs_from_samples(samples,motion=False)
     short_norms=token_table(short,input_normal(trainable,frozen,short))
     valid=np.asarray(short.static_mask)
@@ -526,7 +574,7 @@ def func(a):
     negative=float(loss_only(trainable,frozen,dataclasses.replace(short,static_image_emb=jnp.asarray(changed))))
     require(np.isfinite(short_baseline) and np.isfinite(negative) and negative != short_baseline,
             "有效位置垃圾负对照没有有限的loss变化")
-    print(f"MASK_SYNTH=PASS n_set=1,8,31 loss_bitexact=1 actions_bitexact=1 grad_sha_same={len(left[1])}/{len(left[1])} masked_grad_zero=1 valid_tokens_nonzero=1 negative_control_changed=1",flush=True)
+    print(f"MASK_SYNTH=PASS n_set=1,8,{a.budget//64-1} loss_bitexact=1 actions_bitexact=1 grad_sha_same={len(left[1])}/{len(left[1])} masked_grad_zero=1 valid_tokens_nonzero=1 negative_control_changed=1",flush=True)
     return {"full_token_norms":[t.tolist() for t in full_norms],"short_token_norms":[t.tolist() for t in short_norms],
             "band_deltas":deltas,"noise_floor":noise_floor,"loss":left[0],"gradient_shas":left[1],"pretrained":pretrained,
             "loss_only_probes":loss_probes,"loss_grad_baseline":probes[0][0],"jit_path_delta":jit_path_delta,
@@ -602,7 +650,7 @@ def ckpt(a):
                        "delta_l2":float(np.linalg.norm(difference)),"relative_l2":float(np.linalg.norm(difference))/norm if norm else None}
     print("CKPT_VS_INIT=PASS mem_leaves_changed=10/10",flush=True)
     hc,motion=_load_resolved_snapshot(ck.parent)
-    require((hc.budget,hc.token_per_image,hc.memory_token_dim,motion) == (2048,64,1024,False),"加载配置形制错误")
+    require((hc.budget,hc.token_per_image,hc.memory_token_dim,motion) == (a.budget,64,1024,False),"加载配置形制错误")
     tc=get_config("mme_vla_suite")
     tc=dataclasses.replace(tc,model=dataclasses.replace(tc.model,history_config=hc,use_history=True),
                           data=dataclasses.replace(tc.data,assets=dataclasses.replace(tc.data.assets,
@@ -635,9 +683,9 @@ def ckpt(a):
     rms=float(np.sqrt(np.mean((left.astype(np.float64)-right)**2)))
     aa=float(np.sqrt(np.mean((left.astype(np.float64)-again)**2)))
     require(rms <= 6.8e-5,"checkpoint动作偏差超过预设阈值")
-    require(seen and set(seen) == {2048},f"实际MemoryAttention长度不是2048: {seen}")
+    require(seen and set(seen) == {a.budget},f"实际MemoryAttention长度不是{a.budget}: {seen}")
     print(f"CKPT_ACTIONS=PASS rms_diff={rms} threshold=6.8e-5 num_steps=10 aa_rms={aa}",flush=True)
-    print("CKPT_SHAPE=PASS budget=2048 mem_len=2048 motion_enabled=0",flush=True)
+    print(f"CKPT_SHAPE=PASS budget={a.budget} mem_len={a.budget} motion_enabled=0",flush=True)
     return {"changes":changes,"actions_rms":rms,"aa_rms":aa,"memory_lengths":seen}
 
 
@@ -659,7 +707,7 @@ def capacity(a):
     require(len(run["save_calls"])==1 and run["save_calls"][0]["state_step"]==20,"未真实保存第20次更新")
     checkpoint=Path(run["save_calls"][0]["checkpoint_root"])/"19"
     snapshot,enabled=_load_resolved_snapshot(checkpoint.parent)
-    require((snapshot.budget,snapshot.token_per_image,snapshot.memory_token_dim,enabled)==(2048,64,1024,False),"容量checkpoint配置错误")
+    require((snapshot.budget,snapshot.token_per_image,snapshot.memory_token_dim,enabled)==(a.budget,64,1024,False),"容量checkpoint配置错误")
     tc=get_config("mme_vla_suite_b128_80k")
     tc=dataclasses.replace(tc,model=dataclasses.replace(tc.model,history_config=snapshot,use_history=True))
     restored=restore_params(checkpoint/"params",dtype=jnp.bfloat16)
@@ -687,12 +735,16 @@ def main():
     p.add_argument("--source",default=str(ds/"source"))
     p.add_argument("--manifest",default=str(ds/"meta/episode_manifest.json"))
     p.add_argument("--norm-stats",default=str(ROOT/"v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json"))
-    p.add_argument("--history-config",default=YAML)
+    p.add_argument("--history-config")
+    p.add_argument("--budget",type=int,choices=(1024,2048,4096),default=2048)
     p.add_argument("--out")
     p.add_argument("--skip-opt",action="store_true")
     for name in ("records","init-records","state-dump-dir","ckpt","log"):
         p.add_argument("--"+name)
     a=p.parse_args()
+    expected_yaml = f"perceptual-framesamp-modul-{a.budget//64}frame-8x8.yaml"
+    a.history_config = a.history_config or expected_yaml
+    require(a.history_config == expected_yaml, "显式预算与YAML文件名不同")
     if a.out:
         require(not Path(a.out).exists(),"拒绝覆盖验收报告")
     commands={"yaml":yaml_check,"guards":guards,"frames":frames,"assembly":assembly,"pad":pad,
