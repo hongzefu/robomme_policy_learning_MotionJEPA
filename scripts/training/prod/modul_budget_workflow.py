@@ -16,11 +16,12 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT/"scripts/training"))
-from modul_launch_contract import BUDGET_YAMLS, PROD_RUNS, CONFIG, NORM_SHA, parse_config, validate_config, validate_data, resources, runtime_environment, json_sha, sha
+from modul_launch_contract import BUDGET_YAMLS, PROD_RUNS, CONFIG, MANIFEST_SHA, STORE_SHA, NORM_SHA, parse_config, validate_config, validate_data, resources, runtime_environment, json_sha, sha
 from final_record import write_json
 
 BETA_2048 = "55647ff33c8ddb9ec324fdbcee8bd1491456725b"
 USER_QUOTE = "/scratch/hongze/robomme_policy_learning_MotionJEPA/0922-4096-1024-8gpu-training-plan.md 开始做 有问题立刻问用户 起泡后给出预计的时间"
+RECORDER_DECISION = "可以优化取证方式 但要保证改前后都是用的一种取证方式 这个是用户最终决策"
 
 
 def require(ok, message):
@@ -29,9 +30,10 @@ def require(ok, message):
 
 
 class Workflow:
-    def __init__(self, batch, head, before_head):
+    def __init__(self, batch, head, before_head, baseline_records=None):
         require(batch and all(c.isalnum() or c in "-_" for c in batch), "批次名非法")
         self.head, self.before_head, self.batch = head,before_head,batch
+        self.baseline_records = baseline_records
         self.store = ROOT/"v1-store"
         self.root = self.store/"bench/modul-budget-sweep"/batch
         self.root.mkdir(parents=True,exist_ok=False)
@@ -54,7 +56,9 @@ class Workflow:
             os.environ[key] = self.env[key]
         self.clean()
         write_json(self.root/"start.json",{"head":head,"before_head":before_head,"pid":os.getpid(),
-            "batch":batch,"user_quote":USER_QUOTE,"started_at":self.now(),"environment":runtime_environment(ROOT),
+            "batch":batch,"user_quote":USER_QUOTE,"recorder_decision":RECORDER_DECISION,
+            "baseline_records":str(baseline_records) if baseline_records else None,
+            "started_at":self.now(),"environment":runtime_environment(ROOT),
             "tmux_session":os.environ.get("MODUL_TMUX_SESSION"),"environment_overrides":{k:self.env[k] for k in sorted(self.env) if k in (
                 "CUDA_VISIBLE_DEVICES","XLA_PYTHON_CLIENT_MEM_FRACTION","OMP_NUM_THREADS","OPENBLAS_NUM_THREADS","TZ","OPENPI_DATA_HOME","MMEVLA_FRAMESAMP_SOURCE","MMEVLA_FRAMESAMP_MANIFEST","UV_CACHE_DIR")}})
 
@@ -116,6 +120,63 @@ class Workflow:
         recorded = self.bench_pair(2048,"after-final",final=True)
         self.compare("regression-2048",2048,original,after)
         self.compare("regression-final-record",2048,after,recorded)
+
+    def reuse_baseline(self, source):
+        """只复用完整对照组；代码、取证器、依赖、硬件、数据和精度均须仍可比。"""
+        source = Path(source).resolve()
+        require(source != self.root.resolve() and source.parent == self.root.parent.resolve(), "基线必须是本仓库其他批次")
+        old = json.loads((source/"start.json").read_text())
+        require(old["batch"] == source.name and old["before_head"] == self.before_head, "基线来源或改前版本不符")
+        require(re.fullmatch(r"[0-9a-f]{40}", old["head"]) is not None, "基线提交锚点不完整")
+        changed = subprocess.check_output(["git","diff","--name-only",old["head"],self.head],cwd=ROOT,text=True).splitlines()
+        # 此清单只含验收/调度；取证、训练、配置和依赖发生任何变化都不能复用。
+        allowed = {"scripts/training/tests/check_32frame_modul.py", "scripts/training/tests/check_modul_train_records.py",
+            "scripts/training/tests/test_modul_train_records.py", "scripts/training/tests/test_modul_sampling_oracle.py",
+            "scripts/training/tests/test_modul_sweep.py", "scripts/training/prod/modul_budget_workflow.py",
+            "scripts/training/prod/run_modul4096_then1024.sh", "0922-4096-1024-8gpu-training-plan.md"}
+        require(all(p in allowed or p.startswith("docs/training-doc/") for p in changed), "基线后有训练/取证/依赖或未列明代码变化，必须重跑")
+        current = runtime_environment(ROOT)
+        require(current == old["environment"], "基线环境指纹不符，必须重跑")
+        data = {str(self.ds/"meta/episode_manifest.json"):MANIFEST_SHA,
+                str(self.ds/"framesamp-8x8/meta/store_meta.json"):STORE_SHA,
+                str(self.asset/"robomme/norm_stats.json"):NORM_SHA}
+        require(all(sha(path) == expected for path,expected in data.items()), "基线数据摘要已变化")
+        events = [json.loads(line) for line in (source/"events.jsonl").read_text().splitlines()]
+        pairs = {label:tuple(source/f"{old['batch']}-m2048-{label}-{steps}" for steps in (20,1))
+                 for label in ("before","after","after-final")}
+        stages = ["baseline-config", "regression-2048", "regression-final-record"]
+        stages += [path.name for pair in pairs.values() for path in pair]
+        for stage in stages:
+            outcomes = [r for r in events if r.get("stage") == stage and r.get("status") in ("PASS","FAIL")]
+            require(len(outcomes) == 1 and outcomes[0]["status"] == "PASS" and outcomes[0]["exit_code"] == 0,
+                    f"基线阶段没有唯一成功终态: {stage}")
+            exits = [line for line in (source/(stage+".log")).read_text().splitlines() if line.startswith("EXIT_CODE=")]
+            require(exits == ["EXIT_CODE=0"], f"基线阶段退出码不完整: {stage}")
+        from importlib.util import spec_from_file_location, module_from_spec
+        spec = spec_from_file_location("reuse_record_checker",ROOT/"scripts/training/tests/check_modul_train_records.py")
+        checker = module_from_spec(spec);spec.loader.exec_module(checker)
+        for label,pair in pairs.items():
+            for path in pair:
+                meta = checker.load(path/"run_meta.json")
+                expected_source = self.before_head if label == "before" else old["head"]
+                require(meta["source_head"] == expected_source and meta["tool_head"] == old["head"], "基线记录版本与批次不符")
+                current_meta = dict(meta,tool_head=self.head,checksum_workers=8,bench_checksum_enabled=True,
+                    bench_batch_digests_enabled=True,bench_dump_idx_enabled=True,digest_interval_effective=1,
+                    extra_digest_steps=[],state_dump_steps=[])
+                require(checker.recorder_identity(meta) == checker.recorder_identity(current_meta), "当前取证方式与基线不相同")
+        self.baseline_path = self.root/"baseline-2048.json"
+        shutil.copyfile(source/"baseline-2048.json",self.baseline_path)
+        # 新验收器重新读全部原记录，不能仅相信旧PASS标签。
+        self.compare("regression-2048",2048,pairs["before"],pairs["after"])
+        self.compare("regression-final-record",2048,pairs["after"],pairs["after-final"])
+        files = [source/"start.json",source/"events.jsonl",source/"baseline-2048.json"]
+        files += [path/name for pair in pairs.values() for path in pair for name in
+                  ("run_meta.json","runtime.json","metrics.jsonl","param_checksums.jsonl","batch_digests.jsonl","index_sequence.json","idx_seq.jsonl")]
+        write_json(self.root/"baseline-reuse.json",{"source_batch":old["batch"],"source_head":old["head"],
+            "before_head":self.before_head,"current_head":self.head,"changed_paths":changed,"environment":current,
+            "data_sha256":data,"record_sha256":{str(p):sha(p) for p in files},"recorder_decision":RECORDER_DECISION,
+            "result":"PASS","meaning":"整组原始记录以相同取证器重验；没有混用不同测法，也没有重新执行训练"})
+        print(f"BASELINE_REUSE=PASS batch={old['batch']} complete_groups=3 recorder_identical=1",flush=True)
 
     def bench(self, budget, label, steps, impl="packed", source=None, final=False, save=False):
         run = f"{self.batch}-m{budget}-{label}-{steps}"
@@ -248,6 +309,8 @@ class Workflow:
         group = docs/self.batch
         for name in ("start.json","events.jsonl","baseline-2048.json"):
             copy(self.root/name,group/"records"/name)
+        if (self.root/"baseline-reuse.json").is_file():
+            copy(self.root/"baseline-reuse.json",group/"records/baseline-reuse.json")
         for stage in starts:
             copy(self.root/(stage+".log"),group/"records"/(stage+".summary.log"))
             result = self.root/(stage+".json")
@@ -272,12 +335,14 @@ class Workflow:
             copy(driver if driver.is_file() else self.root/(name+".log"),target/"records/run.summary.log")
             complete = self.root/(name+".completed.json")
             if complete.is_file():copy(complete,target/"records/completed.json")
-            actual = {"head":self.head,"start":starts[name],"end":ends[name],"user_quote":USER_QUOTE}
+            actual = {"head":self.head,"start":starts[name],"end":ends[name],"user_quote":USER_QUOTE,
+                      "recorder_decision":RECORDER_DECISION}
             write_json(target/"records/launch.actual.json",actual);changed.append(target/"records/launch.actual.json")
             meta = json.loads((record_root/"run_meta.json").read_text())
             source_head = meta.get("source_head",self.head)
             text = f"# {name} 实际结果\n\n本阶段正常完成，退出码0。起跑/取证器提交为 `{self.head}`，训练源码为 `{source_head}`；启动UTC为{starts[name]['time']}，结束UTC为{ends[name]['time']}。\n\n"
             text += f"用户原话：「{USER_QUOTE}」。配置、命令、全部阶段覆盖与硬件见[实际记录](records/launch.actual.json)及[总档案](../{self.batch}/launch.md)。\n\n"
+            text += f"取证最终决定：「{RECORDER_DECISION}」。主跑、补跑及对照两侧共同核对取证源码与设置。\n\n"
             text += "本轮使用AWS八卡A100、全局batch128、数据worker16、FSDP8。状态取证worker8仅作用于验证记录器，不是数据worker或训练并行度。权重及原数组保留在v1-store，不复制到Git。\n\n"
             metric_rows = [json.loads(line) for line in (record_root/"metrics.jsonl").read_text().splitlines()]
             text += f"本阶段实际记录{len(metric_rows)}条指标，记录步范围{metric_rows[0]['step']}至{metric_rows[-1]['step']}。日志与指标见records。本轮两侧主跑和补跑共同满足20+1步与201叶逐位判据；100步保存、容量与测速分别按总档案约定验收。训练loss用于过程检查，不作为策略成功率结论。\n"
@@ -300,6 +365,8 @@ class Workflow:
                 destination = group/"records"/name
                 if not destination.exists():copy(self.root/name,destination)
         (group/"result.md").write_text(f"# 顺序训练完成\n\n4096与1024均完成80000步和最终验收，先4096后1024，全部阶段退出0。起跑锚点 `{self.head}`；旧源码对照 `{self.before_head}`。\n\n用户原话：「{USER_QUOTE}」。全部展开命令、环境、UTC及阶段退出见records/events.jsonl，两档独立测速与初始化/稳态/保存的ETA见records/m4096-speed.json、records/m1024-speed.json。正式结果在两个run子档案。\n\n取证优化保持原dtype/C序字节/SHA、全部201叶及20+1步判据；没有减少验证或改变正式超参。原a批次的中断和615.913秒初态摘要保留。策略rollout与外部权重导出未执行。\n")
+        with (group/"result.md").open("a") as stream:
+            stream.write(f"\n用户取证最终决定：「{RECORDER_DECISION}」。同组取证方式的检查记录与完整比较结果一同归档。\n")
         changed.append(group/"result.md")
         index = docs/"README.md"
         rows=[]
@@ -322,6 +389,7 @@ class Workflow:
         match = re.match(r"commitV(\d+\.\d+)Beta:",subject)
         require(match is not None,"起跑提交不是Beta锚点")
         body = f"commitV{match.group(1)}: 完成4096与1024八卡80k顺序训练归档\n\n用户原话：{USER_QUOTE}\n\n按0922计划，完成2048改前/改后20+1步及最终记录开关回归，两个新预算输入与NPY/packed完整状态对拍、100步保存加载、20步容量、1000步独立测速均通过；两档各80000步、16份checkpoint、尾窗与最终动作验收通过。所有阶段命令、覆盖、SHA、实测日志和指标见本批次档案。仅回写本轮文档与运行记录，未改训练源码、未复制权重或配置脚本。初始慢取证中断与有界并行优化已留档；本次沿用全部逐位判据。当前训练及归档完成，策略rollout和外部导出未开展。\n"
+        body += f"\n取证最终用户决定：{RECORDER_DECISION}\n各组主跑、补跑与对照两侧使用相同取证器源码和设置；不同方法的记录不拼接为等价结论。\n"
         message=self.root/"completion-commit.txt";message.write_text(body)
         subprocess.run(["git","commit","-F",str(message)],cwd=ROOT,check=True)
         subprocess.run(["git","push"],cwd=ROOT,check=True)
@@ -329,7 +397,10 @@ class Workflow:
 
     def run(self):
         resources(ROOT,"smoke")
-        self.baseline()
+        if getattr(self,"baseline_records",None):
+            self.reuse_baseline(self.baseline_records)
+        else:
+            self.baseline()
         handoff = ""
         for budget in (4096,1024):
             if budget == 1024:
@@ -350,8 +421,9 @@ def main():
     parser.add_argument("--batch",required=True)
     parser.add_argument("--head",required=True)
     parser.add_argument("--before-head",required=True)
+    parser.add_argument("--baseline-records",type=Path,help="完整2048对照组；仅环境、代码和取证器均匹配时复用")
     args = parser.parse_args()
-    Workflow(args.batch,args.head,args.before_head).run()
+    Workflow(args.batch,args.head,args.before_head,args.baseline_records).run()
 
 
 if __name__ == "__main__":

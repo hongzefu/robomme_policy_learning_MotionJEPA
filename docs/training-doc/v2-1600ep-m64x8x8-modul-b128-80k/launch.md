@@ -1,6 +1,6 @@
 # 4096八卡80000步正式训练
 
-当前为预建档案，尚未启动。本档由[重跑总档案](../modul-sweep-20260923-b/launch.md)管理；a批次已因取证过慢中断，正式训练尚未开始。
+当前为预建档案，尚未启动。本档由[c批次总档案](../modul-sweep-20260923-c/launch.md)管理；a批次中断记录保留，b批次完整2048对照须通过指纹及相同取证方式检查后整组复用，正式训练尚未开始。
 
 ## 用户决定与范围
 
@@ -8,7 +8,9 @@
 
 ## 版本、环境与启动
 
-实施前BASE为 `742f2d894d25abe802a26b1c118852b0b7676e44`。起跑锚点为本次重跑Beta，实际完整HEAD、UTC、PID、tmux全名和逐阶段命令在 `v1-store/bench/modul-budget-sweep/modul-sweep-20260923-b/start.json` 与 `events.jsonl` 现场记录。
+实施前BASE为 `742f2d894d25abe802a26b1c118852b0b7676e44`。起跑锚点为包含c批次档案的Beta，实际完整HEAD、UTC、PID、tmux全名和逐阶段命令在 `v1-store/bench/modul-budget-sweep/modul-sweep-20260923-c/start.json` 与 `events.jsonl` 现场记录。
+
+用户最终决定：「可以优化取证方式 但要保证改前后都是用的一种取证方式 这个是用户最终决策」。所有主跑、补跑及对照两侧必须通过取证源码摘要和记录设置一致性检查；正式训练设置不因此改变。
 
 本机8×A100-SXM4-80GB，`/scratch` 为 `/dev/md0` XFS NVMe RAID。所有过程从clean HEAD启动，源码与依赖保持不变；只读旧源码快照通过PYTHONPATH导入，沿用主副本uv环境，只执行 `uv run --no-sync --project`，不在快照中同步或安装依赖。
 

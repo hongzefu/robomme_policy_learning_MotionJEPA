@@ -141,8 +141,64 @@ def test_finished_archive_preserves_records_and_excludes_weights(tmp_path,monkey
     monkeypatch.setattr(workflow.subprocess,"check_output",fake_output)
     instance.archive_all()
     assert calls[-1]==["git","push"] and calls[-2][:2]==["git","commit"]
+    assert workflow.RECORDER_DECISION in (instance.root/"completion-commit.txt").read_text()
+    assert workflow.RECORDER_DECISION in (docs/instance.batch/"result.md").read_text()
     assert not list(docs.rglob("*.bin")) and not list(docs.rglob("*.yaml")) and not list(docs.rglob("*.sh"))
     for name in names:
         assert gzip.open(docs/name/"records/gpu.csv.gz","rt").read()=="原始采样字节\n"
         assert (docs/name/"records/run.summary.log").read_text()=="训练阶段\nEXIT_CODE=0\n"
         assert "80000步" in (docs/name/"result.md").read_text()
+
+
+@pytest.mark.parametrize("fault", [None,"training_code","recorder_code","dependencies","environment",
+                                  "data","missing_pass","bad_exit","wrong_source","mixed_method"])
+def test_baseline_reuse_requires_complete_comparable_group(tmp_path, monkeypatch, fault):
+    """实际读取夹具记录及Git取证器；CPU重验入口计数，失败不能进入后续阶段。"""
+    instance = object.__new__(workflow.Workflow)
+    head = subprocess.check_output(["git","rev-parse","HEAD"],cwd=ROOT,text=True).strip()
+    instance.head=head;instance.before_head="b"*40;instance.batch="new"
+    instance.root=tmp_path/"new";instance.root.mkdir()
+    instance.ds=tmp_path/"data";instance.asset=tmp_path/"assets"
+    source=tmp_path/"old";source.mkdir()
+    environment={"packages":{"jax":"fixture"},"storage":"NVMe","gpus":["A100"]*8}
+    (source/"start.json").write_text(json.dumps({"batch":"old","head":head,"before_head":instance.before_head,"environment":environment}))
+    (source/"baseline-2048.json").write_text("{}")
+    stages=["baseline-config","regression-2048","regression-final-record"]
+    for label in ("before","after","after-final"):
+        for steps in (20,1):
+            root=source/f"old-m2048-{label}-{steps}";root.mkdir();stages.append(root.name)
+            meta={"source_head":instance.before_head if label=="before" else head,"tool_head":head,
+                  "checksum_workers":8,"bench_checksum_enabled":True,"bench_batch_digests_enabled":True,
+                  "bench_dump_idx_enabled":True,"digest_interval_effective":1,"extra_digest_steps":[],"state_dump_steps":[]}
+            if fault=="wrong_source" and label=="before":meta["source_head"]="c"*40
+            if fault=="mixed_method" and label=="after-final":meta["checksum_workers"]=1
+            (root/"run_meta.json").write_text(json.dumps(meta))
+            for name in ("runtime.json","metrics.jsonl","param_checksums.jsonl","batch_digests.jsonl","index_sequence.json","idx_seq.jsonl"):
+                (root/name).write_text("{}\n")
+    events=[]
+    for stage in stages:
+        events.append({"stage":stage,"status":"PASS","exit_code":0})
+        (source/(stage+".log")).write_text("EXIT_CODE=0\n")
+    if fault=="missing_pass":events.pop()
+    if fault=="bad_exit":(source/"regression-final-record.log").write_text("EXIT_CODE=130\n")
+    (source/"events.jsonl").write_text("".join(json.dumps(r)+"\n" for r in events))
+    changed={"training_code":"scripts/training/train.py","recorder_code":"scripts/training/g0/state_checksum.py","dependencies":"uv.lock"}
+    monkeypatch.setattr(workflow.subprocess,"check_output",lambda *a,**k:changed[fault]+"\n" if fault in changed else "")
+    monkeypatch.setattr(workflow,"runtime_environment",lambda repo:{} if fault=="environment" else environment)
+    real_sha=workflow.sha
+    def data_sha(path):
+        if str(path).endswith("episode_manifest.json"):return "bad" if fault=="data" else workflow.MANIFEST_SHA
+        if str(path).endswith("store_meta.json"):return workflow.STORE_SHA
+        if str(path).endswith("norm_stats.json"):return workflow.NORM_SHA
+        return real_sha(path)
+    monkeypatch.setattr(workflow,"sha",data_sha)
+    calls=[]
+    instance.compare=lambda name,*args:calls.append(name)
+    if fault:
+        with pytest.raises(ValueError):instance.reuse_baseline(source)
+        assert calls==[]
+    else:
+        instance.reuse_baseline(source)
+        assert calls==["regression-2048","regression-final-record"]
+        record=json.loads((instance.root/"baseline-reuse.json").read_text())
+        assert record["result"]=="PASS" and len(record["record_sha256"])==45

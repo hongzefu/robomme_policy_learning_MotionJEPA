@@ -9,12 +9,17 @@ import math
 from pathlib import Path
 import re
 import shutil
+import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 
 SCALARS = {"loss", "grad_norm", "llm_grad_norm", "param_norm", "mem_enc_norm"}
 NORM_SHA = "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173"
+RECORDER_FILES = ("scripts/training/g0/bench_train_steps.py", "scripts/training/g0/state_checksum.py",
+                  "scripts/training/config_record.py", "scripts/training/g0/check_baseline_env.py")
+RECORDER_SETTINGS = ("checksum_workers", "bench_checksum_enabled", "bench_batch_digests_enabled",
+                     "bench_dump_idx_enabled", "digest_interval_effective", "extra_digest_steps", "state_dump_steps")
 MEM_LEAVES = (
     "PaliGemma/llm/layers/mem_attn/q_einsum_mem/w",
     "PaliGemma/llm/layers/mem_attn/kv_einsum_mem/w",
@@ -47,6 +52,24 @@ def flag(argv, key):
                for i, x in enumerate(argv) if x == key or x.startswith(key + "=")]
     require(len(matches) == 1, f"参数必须明确且唯一: {key}")
     return matches[0]
+
+
+def recorder_identity(meta, repo=ROOT):
+    """从起跑提交还原取证器；训练源码是被测对象，不纳入此身份。"""
+    head = meta.get("tool_head", meta.get("start_head", ""))
+    require(isinstance(head, str) and re.fullmatch(r"[0-9a-f]{40}", head), "取证器缺完整提交锚点")
+    require(all(key in meta for key in RECORDER_SETTINGS), "缺取证设置，不能混入本轮正式对照")
+    require(type(meta["checksum_workers"]) is int and 1 <= meta["checksum_workers"] <= 8, "取证线程数无效")
+    files = {}
+    for path in RECORDER_FILES:
+        result = subprocess.run(["git", "show", f"{head}:{path}"], cwd=repo, capture_output=True)
+        require(result.returncode == 0, f"无法还原取证器: {head}:{path}")
+        files[path] = hashlib.sha256(result.stdout).hexdigest()
+    return {"files": files, "settings": {key: meta[key] for key in RECORDER_SETTINGS}}
+
+
+def same_recorder(left, right):
+    require(left["recorder"] == right["recorder"], "取证源码或设置不同；须统一方法后重新取证")
 
 
 def state_records(root, expected):
@@ -83,6 +106,8 @@ def validate(root, steps, batch_size, expected_devices="4,5", expected_workers=4
             "必须显式指定与FSDP一致的不重复物理GPU编号")
     root = Path(root)
     meta = load(root / "run_meta.json")
+    # 历史两卡记录保留旧检查；本轮八卡必须完整还原取证器身份。
+    recorder = recorder_identity(meta) if expected_fsdp != 2 or "checksum_workers" in meta else None
     require(meta["start_status"] == meta["source_status"] == "", "起跑工具或源码工作区不干净")
     require(all(re.fullmatch(r"[0-9a-f]{40}",meta[key]) for key in ("start_head","source_head")), "源码或取证器锚点不完整")
     if meta["start_head"] != meta["source_head"]:
@@ -151,12 +176,13 @@ def validate(root, steps, batch_size, expected_devices="4,5", expected_workers=4
             require(all(row["static_mask_counts"] == [budget]*batch_size for row in batches), "逐样本有效token数不符")
         print(f"MASK_FULL=PASS batches={steps} mask_sum={batch_size*budget}")
     return dict(meta=meta, metrics=metrics, states=states, batches=batches, indices=indices,
-                idx_rows=idx_rows, root=str(root))
+                idx_rows=idx_rows, root=str(root), recorder=recorder)
 
 
 def with_step1(root, supplement, steps, batch_size, expected_devices="4,5", expected_workers=4, expected_fsdp=2, budget=2048):
     main = validate(root, steps, batch_size, expected_devices, expected_workers, expected_fsdp, budget)
     one = validate(supplement, 1, batch_size, expected_devices, expected_workers, expected_fsdp, budget)
+    same_recorder(main, one)
     for key in ("source_head", "history_config_resolved_sha256", "norm_stats_actual", "import_origins"):
         require(main["meta"][key] == one["meta"][key], f"补跑与主 run 不同: {key}")
     require(main["states"][0]["per_leaf"] == one["states"][0]["per_leaf"], "补跑初态不同")
@@ -247,6 +273,7 @@ def main():
         require(all((a.records_a, a.records_b, a.step1_a, a.step1_b)), "双侧比较必须提供两份主记录与两份补跑")
         left = with_step1(a.records_a, a.step1_a, a.steps, a.batch_size,*shape)
         right = with_step1(a.records_b, a.step1_b, a.steps, a.batch_size,*shape)
+        same_recorder(left, right)
         if a.negative_tests:negative_tests(a.records_a,a.steps,a.batch_size,*shape)
         for key in ("history_config_resolved_sha256", "norm_stats_actual", "batch_size", "environment"):
             if key != "environment":
@@ -259,7 +286,9 @@ def main():
             require(all(la[k] == rb[k] for k in ("per_key", "per_key_canonical", "sample_indices")), "输入逐键不同")
         require(left["indices"]["indices"][:a.steps*a.batch_size] == right["indices"]["indices"][:a.steps*a.batch_size], "实际训练索引不同")
         n = len(left["states"][0]["per_leaf"])
-        result = {"steps": a.steps, "leaves": n, "mismatches": 0}
+        result = {"steps": a.steps, "leaves": n, "mismatches": 0, "recorder": left["recorder"]}
+        if left["recorder"] is not None:
+            print("RECORDER_MATCH=PASS source_files=4 settings=7 main_and_step1=1")
         print(f"TRAIN_RECORDS=PASS state_steps=0,2..{a.steps} step1_from_rerun=1 index_train={a.steps*a.batch_size} "
               f"idx_rows={len(left['idx_rows'])} index_n={left['indices']['n']} leaves={n} finite=1 mismatches=0")
     if a.out:

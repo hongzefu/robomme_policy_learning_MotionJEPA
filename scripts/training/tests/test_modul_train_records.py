@@ -4,6 +4,8 @@ import hashlib
 import json
 from pathlib import Path
 import sys
+import subprocess
+from copy import deepcopy
 
 import pytest
 
@@ -13,6 +15,7 @@ import check_modul_train_records as checker
 
 def fixture(root):
     source = str(Path(__file__).resolve().parents[3])
+    head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
     params = [f"['img']['p{i}']" for i in range(23)] + [f"['p{i}']" for i in range(38)]
     keys = [prefix+path for prefix in ("params","ema_params") for path in params]
     keys += [f"opt_state[1][0].{moment}['p{i}']" for moment in ("mu","nu") for i in range(38)]
@@ -23,7 +26,7 @@ def fixture(root):
                "per_leaf":per_leaf,"per_leaf_finite":{key:True for key in keys},"n_leaves":201,"state_digest":digest} for s in (0,1)]
     norm = {str(i):"norm" for i in range(8)}
     actual = {"num_train_steps":1,"batch_size":128,"num_workers":16,"seed":42,"fsdp_devices":8}
-    metadata = {"start_status":"","source_status":"","start_head":"a"*40,"source_head":"a"*40,"source_root":source,
+    metadata = {"start_status":"","source_status":"","start_head":head,"source_head":head,"source_root":source,
         "import_origins":{key:source+"/src/"+key+".py" for key in ("train","framesamp_dataset","framesamp_store","mme_vla_suite")},
         "norm_stats_file_sha256":checker.NORM_SHA,"norm_stats_actual":norm,"norm_stats_expected":norm,
         "argv":["bench_train_steps.py","mme_vla_suite_b128_80k","--num-train-steps","1"],
@@ -31,6 +34,7 @@ def fixture(root):
         "batch_size":128,"loader":{"batch_size":128,"workers":16,"prefetch_factor":2,"persistent_workers":True,"pin_memory":False},
         "environment":{"CUDA_VISIBLE_DEVICES":"0,1,2,3,4,5,6,7","XLA_FLAGS":"--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"},
         "bench_checksum_enabled":True,"bench_batch_digests_enabled":True,"bench_dump_idx_enabled":True,
+        "checksum_workers":8,"digest_interval_effective":1,"extra_digest_steps":[],"state_dump_steps":[],
         "history_config_resolved_sha256":"b"*64,"history_config":"perceptual-framesamp-modul-32frame-8x8.yaml"}
     runtime = {**actual,"mesh":{"batch":1,"fsdp":8},"device_count":8,"cuda_visible_devices":"0,1,2,3,4,5,6,7",
                "devices":[f"CUDA_{i}" for i in range(8)]}
@@ -72,3 +76,44 @@ def test_wrong_actual_configuration_rejected(tmp_path,fault):
     (tmp_path/"runtime.json").write_text(json.dumps(runtime))
     with pytest.raises(ValueError):
         checker.validate(tmp_path,1,128,"0,1,2,3,4,5,6,7",16,8,2048)
+
+
+@pytest.mark.parametrize("key,value", [("checksum_workers", 1), ("digest_interval_effective", 2),
+    ("bench_checksum_enabled", False), ("bench_batch_digests_enabled", False),
+    ("bench_dump_idx_enabled", False), ("extra_digest_steps", [1]), ("state_dump_steps", [0])])
+def test_mixed_recorder_settings_rejected(tmp_path, key, value):
+    meta, _ = fixture(tmp_path)
+    changed = deepcopy(meta)
+    changed[key] = value
+    with pytest.raises(ValueError, match="取证源码或设置不同"):
+        checker.same_recorder({"recorder": checker.recorder_identity(meta)},
+                              {"recorder": checker.recorder_identity(changed)})
+
+
+def test_recorder_source_changes_rejected(tmp_path, monkeypatch):
+    meta, _ = fixture(tmp_path)
+    first = checker.recorder_identity(meta)
+    original = checker.subprocess.run
+    def changed_source(command, **kwargs):
+        result = original(command, **kwargs)
+        if command[-1].endswith("state_checksum.py"):
+            result.stdout += "\n# 测试注入不同取证器\n".encode()
+        return result
+    monkeypatch.setattr(checker.subprocess, "run", changed_source)
+    with pytest.raises(ValueError, match="取证源码或设置不同"):
+        checker.same_recorder({"recorder": first}, {"recorder": checker.recorder_identity(meta)})
+
+
+def test_missing_recorder_identity_rejected(tmp_path):
+    meta, _ = fixture(tmp_path)
+    meta.pop("checksum_workers")
+    with pytest.raises(ValueError, match="缺取证设置"):
+        checker.recorder_identity(meta)
+
+
+def test_training_revision_is_separate_from_recorder(tmp_path):
+    meta, _ = fixture(tmp_path)
+    other = deepcopy(meta)
+    other["source_head"] = "b" * 40
+    checker.same_recorder({"recorder": checker.recorder_identity(meta)},
+                          {"recorder": checker.recorder_identity(other)})

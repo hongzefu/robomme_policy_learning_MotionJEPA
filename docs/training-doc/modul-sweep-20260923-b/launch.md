@@ -32,31 +32,37 @@
 
 两档完整训练及验收成功后，`Workflow.archive_all`才回写预建文档、清洗日志、指标、配置解析记录与无损压缩的500ms GPU采样，并生成与本次Beta同小版本的结论commit及普通push。它不复制权重、原数组、脚本或YAML，不在两档之间改动主副本。归档实写临时夹具测试通过，Git仅使用计数桩，不把夹具当真实训练结果。
 
-已完成的CPU短测在[result.md](result.md)列出。长验证尚未启动，不以单元测试代替真实八卡对拍。正式起跑前所有闸门必须通过；测速1000步后提供各档ETA，正式约300步复核。
+已完成的CPU短测在[result.md](result.md)列出。本批次2048真实八卡对拍已完成，实测和边界退出见末节。正式起跑前所有闸门必须通过；测速1000步后提供各档ETA，正式约300步复核。
 
 ## 本批次档案
 
-- [modul-sweep-20260923-b-m2048-before-20](../modul-sweep-20260923-b-m2048-before-20/launch.md)：2048 before 20步数值回归，预建未启动。
-- [modul-sweep-20260923-b-m2048-before-1](../modul-sweep-20260923-b-m2048-before-1/launch.md)：2048 before 1步数值回归，预建未启动。
-- [modul-sweep-20260923-b-m2048-after-20](../modul-sweep-20260923-b-m2048-after-20/launch.md)：2048 after 20步数值回归，预建未启动。
-- [modul-sweep-20260923-b-m2048-after-1](../modul-sweep-20260923-b-m2048-after-1/launch.md)：2048 after 1步数值回归，预建未启动。
-- [modul-sweep-20260923-b-m2048-after-final-20](../modul-sweep-20260923-b-m2048-after-final-20/launch.md)：2048 after-final 20步数值回归，预建未启动。
-- [modul-sweep-20260923-b-m2048-after-final-1](../modul-sweep-20260923-b-m2048-after-final-1/launch.md)：2048 after-final 1步数值回归，预建未启动。
-- [modul-sweep-20260923-b-m4096-refnpy-20](../modul-sweep-20260923-b-m4096-refnpy-20/launch.md)：4096 refnpy 20步真实输入、五标量与201叶取证，预建未启动。
-- [modul-sweep-20260923-b-m4096-refnpy-1](../modul-sweep-20260923-b-m4096-refnpy-1/launch.md)：4096 refnpy 1步真实输入、五标量与201叶取证，预建未启动。
-- [modul-sweep-20260923-b-m4096-packed-20](../modul-sweep-20260923-b-m4096-packed-20/launch.md)：4096 packed 20步真实输入、五标量与201叶取证，预建未启动。
-- [modul-sweep-20260923-b-m4096-packed-1](../modul-sweep-20260923-b-m4096-packed-1/launch.md)：4096 packed 1步真实输入、五标量与201叶取证，预建未启动。
-- [modul-sweep-20260923-b-m4096-save-100](../modul-sweep-20260923-b-m4096-save-100/launch.md)：4096 100步真实保存与加载，预建未启动。
-- [modul-sweep-20260923-b-m4096-capacity](../modul-sweep-20260923-b-m4096-capacity/launch.md)：4096 八卡生产容量验证，预建未启动。
-- [modul-sweep-20260923-b-m4096-perf](../modul-sweep-20260923-b-m4096-perf/launch.md)：4096 八卡独立测速，预建未启动。
-- [modul-sweep-20260923-b-m4096-input](../modul-sweep-20260923-b-m4096-input/launch.md)：4096 有界输入、在线装配、padding、RoPE及初始化，预建未启动。
-- [modul-sweep-20260923-b-m1024-refnpy-20](../modul-sweep-20260923-b-m1024-refnpy-20/launch.md)：1024 refnpy 20步真实输入、五标量与201叶取证，预建未启动。
-- [modul-sweep-20260923-b-m1024-refnpy-1](../modul-sweep-20260923-b-m1024-refnpy-1/launch.md)：1024 refnpy 1步真实输入、五标量与201叶取证，预建未启动。
-- [modul-sweep-20260923-b-m1024-packed-20](../modul-sweep-20260923-b-m1024-packed-20/launch.md)：1024 packed 20步真实输入、五标量与201叶取证，预建未启动。
-- [modul-sweep-20260923-b-m1024-packed-1](../modul-sweep-20260923-b-m1024-packed-1/launch.md)：1024 packed 1步真实输入、五标量与201叶取证，预建未启动。
-- [modul-sweep-20260923-b-m1024-save-100](../modul-sweep-20260923-b-m1024-save-100/launch.md)：1024 100步真实保存与加载，预建未启动。
-- [modul-sweep-20260923-b-m1024-capacity](../modul-sweep-20260923-b-m1024-capacity/launch.md)：1024 八卡生产容量验证，预建未启动。
-- [modul-sweep-20260923-b-m1024-perf](../modul-sweep-20260923-b-m1024-perf/launch.md)：1024 八卡独立测速，预建未启动。
-- [modul-sweep-20260923-b-m1024-input](../modul-sweep-20260923-b-m1024-input/launch.md)：1024 有界输入、在线装配、padding、RoPE及初始化，预建未启动。
+- [modul-sweep-20260923-b-m2048-before-20](../modul-sweep-20260923-b-m2048-before-20/launch.md)：2048 before 20步数值回归，已完成，退出0。
+- [modul-sweep-20260923-b-m2048-before-1](../modul-sweep-20260923-b-m2048-before-1/launch.md)：2048 before 1步数值回归，已完成，退出0。
+- [modul-sweep-20260923-b-m2048-after-20](../modul-sweep-20260923-b-m2048-after-20/launch.md)：2048 after 20步数值回归，已完成，退出0。
+- [modul-sweep-20260923-b-m2048-after-1](../modul-sweep-20260923-b-m2048-after-1/launch.md)：2048 after 1步数值回归，已完成，退出0。
+- [modul-sweep-20260923-b-m2048-after-final-20](../modul-sweep-20260923-b-m2048-after-final-20/launch.md)：2048 after-final 20步数值回归，已完成，退出0。
+- [modul-sweep-20260923-b-m2048-after-final-1](../modul-sweep-20260923-b-m2048-after-final-1/launch.md)：2048 after-final 1步数值回归，已完成，退出0。
+- [modul-sweep-20260923-b-m4096-refnpy-20](../modul-sweep-20260923-b-m4096-refnpy-20/launch.md)：4096 refnpy 20步真实输入、五标量与201叶取证，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m4096-refnpy-1](../modul-sweep-20260923-b-m4096-refnpy-1/launch.md)：4096 refnpy 1步真实输入、五标量与201叶取证，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m4096-packed-20](../modul-sweep-20260923-b-m4096-packed-20/launch.md)：4096 packed 20步真实输入、五标量与201叶取证，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m4096-packed-1](../modul-sweep-20260923-b-m4096-packed-1/launch.md)：4096 packed 1步真实输入、五标量与201叶取证，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m4096-save-100](../modul-sweep-20260923-b-m4096-save-100/launch.md)：4096 100步真实保存与加载，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m4096-capacity](../modul-sweep-20260923-b-m4096-capacity/launch.md)：4096 八卡生产容量验证，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m4096-perf](../modul-sweep-20260923-b-m4096-perf/launch.md)：4096 八卡独立测速，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m4096-input](../modul-sweep-20260923-b-m4096-input/launch.md)：4096 有界输入、在线装配、padding、RoPE及初始化，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m1024-refnpy-20](../modul-sweep-20260923-b-m1024-refnpy-20/launch.md)：1024 refnpy 20步真实输入、五标量与201叶取证，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m1024-refnpy-1](../modul-sweep-20260923-b-m1024-refnpy-1/launch.md)：1024 refnpy 1步真实输入、五标量与201叶取证，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m1024-packed-20](../modul-sweep-20260923-b-m1024-packed-20/launch.md)：1024 packed 20步真实输入、五标量与201叶取证，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m1024-packed-1](../modul-sweep-20260923-b-m1024-packed-1/launch.md)：1024 packed 1步真实输入、五标量与201叶取证，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m1024-save-100](../modul-sweep-20260923-b-m1024-save-100/launch.md)：1024 100步真实保存与加载，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m1024-capacity](../modul-sweep-20260923-b-m1024-capacity/launch.md)：1024 八卡生产容量验证，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m1024-perf](../modul-sweep-20260923-b-m1024-perf/launch.md)：1024 八卡独立测速，本批次未运行，转c批次。
+- [modul-sweep-20260923-b-m1024-input](../modul-sweep-20260923-b-m1024-input/launch.md)：1024 有界输入、在线装配、padding、RoPE及初始化，本批次未运行，转c批次。
 - [v2-1600ep-m64x8x8-modul-b128-80k](../v2-1600ep-m64x8x8-modul-b128-80k/launch.md)：4096八卡80000步正式训练，预建未启动。
 - [v2-1600ep-m16x8x8-modul-b128-80k](../v2-1600ep-m16x8x8-modul-b128-80k/launch.md)：1024八卡80000步正式训练，预建未启动。
+
+## 实际运行与边界暂停
+
+起跑提交 `5e97d52a6420fdfd85620773b0496526bbf589a4`，tmux `modul-sweep-20260923T011058Z`。九个验证阶段均正常退出0，2048三组各20+1步及两个完整比较于 2026-09-23T04:04:34.141714+00:00 全部通过。调度器随后按预定边界收到SIGINT，队列退出130；这不是训练阶段失败，4096阶段尚未进入。八卡和本轮进程已释放。原始事件和退出记录见[events.jsonl](records/events.jsonl)及[queue.summary.log](records/queue.summary.log)。
+
+用户最终决定：「可以优化取证方式 但要保证改前后都是用的一种取证方式 这个是用户最终决策」。 取证器与训练源码版本分开记录；b批次六个run始终同一8线程取证器。a批次前缀不参与完整训练代码对照。具体实测见[result.md](result.md)，后续由[c批次](../modul-sweep-20260923-c/launch.md)从新Beta校验并整组复用本档。

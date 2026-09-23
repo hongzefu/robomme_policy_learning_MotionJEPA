@@ -35,6 +35,16 @@ def exact(a, b):
     return aa.dtype == bb.dtype and aa.shape == bb.shape and aa.tobytes() == bb.tobytes()
 
 
+def sample_indices_oracle(step, count):
+    """独立保留既有float64步长、正数整数截断和末端固定，不用理想整数除法替代。"""
+    if step < count:
+        return list(range(step + 1))
+    spacing = float(step) / (count - 1)
+    result = [int(float(index) * spacing) for index in range(count)]
+    result[-1] = int(step)
+    return result
+
+
 def config(a):
     from mme_vla_suite.models.config.utils import get_history_config
     result = get_history_config(a.history_config)
@@ -56,8 +66,8 @@ def frames(a):
     from mme_vla_suite.shared.sampling import even_sampling_indices
     if a.budget != 2048:
         count = a.budget // 64
-        expected = {t: list(range(t+1)) if t < count else [t*i//(count-1) for i in range(count)]
-                    for t in (0,1,14,15,16,30,31,32,62,63,64,1151)}
+        expected = {t: sample_indices_oracle(t, count)
+                    for t in (0,1,14,15,16,30,31,32,62,63,64,153,161,177,259,1151)}
         for t, want in expected.items():
             require(list(even_sampling_indices(t, count)) == want, f"独立选帧失败: t={t}")
         print(f"FRAME_SELECT=PASS cases={len(expected)} max_frames={count} mismatches=0")
@@ -204,8 +214,8 @@ def assembly(a):
             require(len(traces[0]) == 1 and traces[0] == traces[1], "真实调用的选帧索引不同")
             trace = traces[0][0]
             count, step = trace["count"], trace["step"]
-            expected_frames = list(range(step+1)) if step<count else [step*j//(count-1) for j in range(count)]
-            require(count == a.budget//64 and trace["frames"] == expected_frames, "真实选帧未满足独立整数oracle")
+            expected_frames = sample_indices_oracle(step, count)
+            require(count == a.budget//64 and trace["frames"] == expected_frames, "真实选帧未满足既有float64规则")
             selected_frames.append({"sample_index":i,**trace})
             require(set(left) == set(right), f"样本键集不同: {i}")
             for key in left:
@@ -263,15 +273,15 @@ def online(a):
             return jnp.broadcast_to(values[...,None,None],(*x.shape[:2],tokens,2048)).astype(jnp.bfloat16)
         memory = FrameSampMemory(vision_enc_fn=encoder,token_per_image=int(hc.token_per_image),num_views=int(hc.num_views))
         previous = 0
-        for t in (0,1,14,15,16,30,31,32,62,63,64):
+        for t in (0,1,14,15,16,30,31,32,62,63,64,153,161,177):
             n=t+1-previous
             frame_ids=np.arange(previous,t+1)
             images=np.broadcast_to(frame_ids[:,None,None,None,None],(n,1,224,224,3)).astype(np.uint8)
             states=np.broadcast_to(frame_ids[:,None],(n,8)).astype(np.float32)
             memory.add_buffer(images,states,list(range(previous,t+1)))
             previous=t+1
-            selected=list(range(t+1)) if t<count else [t*i//(count-1) for i in range(count)]
-            require(list(memory.get_frame_sampling_indices(t,a.budget,64))==selected,"在线选帧与独立整数公式不同")
+            selected=sample_indices_oracle(t,count)
+            require(list(memory.get_frame_sampling_indices(t,a.budget,64))==selected,"在线选帧与独立float64规则不同")
             result = memory.prepare_frame_sampling(t,int(hc.budget),int(hc.token_per_image),memory.default_history_feats_gather_fn)
             for x,shape,dt in zip(result,((a.budget,2048),(a.budget,768),(a.budget,8),(a.budget,)),("bfloat16","float32","float32","bool"),strict=True):
                 require(x.shape == shape and str(x.dtype) == dt,"在线装配shape或dtype错误")
@@ -283,7 +293,7 @@ def online(a):
         summaries.append({"encoder_tokens":tokens,"pos_table_bytes":memory.pos_emb.nbytes})
         del memory
         gc.collect()
-    print(f"ONLINE_ASM=PASS steps=11 budget={a.budget} dtype_stage=pre_normalize dtype_ok=1 mask_sums_verified=1 pooling_branches=2")
+    print(f"ONLINE_ASM=PASS steps=14 budget={a.budget} dtype_stage=pre_normalize dtype_ok=1 mask_sums_verified=1 pooling_branches=2")
     return summaries
 
 

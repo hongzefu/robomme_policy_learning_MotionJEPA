@@ -4,6 +4,7 @@ set -o pipefail
 BATCH="${1:?需要批次名、TRAIN_HEAD、改前BASE}"
 TRAIN_HEAD="${2:?}"
 BEFORE_HEAD="${3:?}"
+BASELINE_RECORDS="${4:-}"
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
 cd "$MAIN" || exit 2
 LOG="$MAIN/v1-store/logs/$BATCH.queue.log"
@@ -17,8 +18,9 @@ body() (
   export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 TZ=UTC
   export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
   unset PYTHONPATH JAX_PLATFORMS XLA_FLAGS MMEVLA_MOTION_STORE MMEVLA_FRAMESAMP_ALLOW_SUBSET
-  uv run --no-sync python scripts/training/prod/modul_budget_workflow.py \
-    --batch "$BATCH" --head "$TRAIN_HEAD" --before-head "$BEFORE_HEAD"
+  ARGS=(--batch "$BATCH" --head "$TRAIN_HEAD" --before-head "$BEFORE_HEAD")
+  if [ -n "$BASELINE_RECORDS" ]; then ARGS+=(--baseline-records "$BASELINE_RECORDS"); fi
+  uv run --no-sync python scripts/training/prod/modul_budget_workflow.py "${ARGS[@]}"
 )
 body 2>&1 | tee "$LOG"
 statuses=("${PIPESTATUS[@]}")
