@@ -1,0 +1,287 @@
+THROTTLE_MODE=idle NPROC=2
+阶段0开始：预检 + 建 bucket
+  STORE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store
+  完成记录: status=PASS run=v2-1600ep-m64x8x8-modul-b128-80k budget=4096 checkpoints=16 final=79999
+TRAIN_COMPLETED=OK
+  motion_enabled=False 确认，本 bucket 不含 _motion-encoder/
+  whoami: Installed 15 packages in 151ms warning: The package `huggingface-hub==1.30.0` does not have an extra named `cli` Hint: A new version of huggingface_hub (2.0.0) is available! You are using version 1.30.0. Hint: The `hf-cli` skill is not installed. Run `hf skills add -g --claude` to teach your AI agents how to use the `hf` CLI. ✓ Logged in user: HongzeFu orgs: umich
+HF_WHOAMI=HongzeFu
+✓ Bucket created
+  uri: hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1
+  url: https://huggingface.co/buckets/HongzeFu/robomme-vla-modul-4096-80k-v1
+  bucket create 成功
+  目标 bucket 现状: files=0 size=0
+阶段0完成
+阶段1开始：枚举 step 目录 + 增量 stage（硬链接）+ 分片 sha256
+  本趟上传 16 个 step: 5000 10000 15000 20000 25000 30000 35000 40000 45000 50000 55000 60000 65000 70000 75000 79999
+  stage step 5000
+  stage step 10000
+  stage step 15000
+  stage step 20000
+  stage step 25000
+  stage step 30000
+  stage step 35000
+  stage step 40000
+  stage step 45000
+  stage step 50000
+  stage step 55000
+  stage step 60000
+  stage step 65000
+  stage step 70000
+  stage step 75000
+  stage step 79999
+阶段1完成
+阶段2开始：按 step 目录分批上传
+  [1/16] step 5000  19 件 / 11879530185 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/5000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/5000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 5000
+  [2/16] step 10000  19 件 / 11879145225 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/10000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/10000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 10000
+  [3/16] step 15000  20 件 / 11879052118 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/15000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/15000
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 15000
+  [4/16] step 20000  20 件 / 11878939801 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/20000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/20000
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 20000
+  [5/16] step 25000  20 件 / 11878769439 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/25000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/25000
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 25000
+  [6/16] step 30000  19 件 / 11878634444 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/30000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/30000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 30000
+  [7/16] step 35000  19 件 / 11878490709 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/35000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/35000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 35000
+  [8/16] step 40000  21 件 / 11878400611 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/40000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/40000
+  Uploads: 21
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 40000
+  [9/16] step 45000  19 件 / 11878263251 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/45000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/45000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 45000
+  [10/16] step 50000  19 件 / 11878122995 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/50000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/50000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 50000
+  [11/16] step 55000  19 件 / 11877946436 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/55000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/55000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 55000
+  [12/16] step 60000  19 件 / 11877768389 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/60000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/60000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 60000
+  [13/16] step 65000  18 件 / 11877642585 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/65000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/65000
+  Uploads: 18
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 65000
+  [14/16] step 70000  19 件 / 11877489003 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/70000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/70000
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 70000
+  [15/16] step 75000  20 件 / 11877307321 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/75000 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/75000
+  Uploads: 20
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 75000
+  [16/16] step 79999  21 件 / 11877215574 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/79999 -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/79999
+  Uploads: 21
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+  批完成: 79999
+  上传根下 5 个 sidecar
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/history_config.resolved.sha256
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/history_config.resolved.sha256
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/history_config.resolved.yaml
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/history_config.resolved.yaml
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/history_config.txt
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/history_config.txt
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/motion_provenance.json
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/motion_provenance.json
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/wandb_id.txt
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/wandb_id.txt
+阶段2完成
+阶段2b开始：补齐 _run-meta（训练日志 + wandb + 完成证据）与 README、pre 清单
+  wandb run 目录: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/wandb/run-20260923_071626-iuw13maz
+README 已生成: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/README.md（训练结果 537 字符，loss 采样 10 条）
+LOCAL_FILES=337 LOCAL_BYTES=190081207647 PRE_LINES=336
+PRE_PARTS_CONSISTENT=OK
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/_run-meta -> hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/_run-meta
+  Uploads: 19
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+Sync completed.
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/README.md
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/README.md
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B
+New Data Upload               : |          |  0.00B /  0.00B            [A
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/stage/SHA256SUMS.pre.txt
+  dst: hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1/SHA256SUMS.pre.txt
+UPLOAD_DONE batches=16
+阶段2b完成
+阶段3开始：计数层核对（buckets REST API，异步滞后则复查一次）
+  首次不符（files=336 bytes=190081168379），统计接口可能异步滞后，120s 后复查
+BUCKET_FILES=337 BUCKET_BYTES=190081207647
+阶段3完成
+阶段4开始：全量回读到 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/verify（约 177 GiB）
+Sync plan: hf://buckets/HongzeFu/robomme-vla-modul-4096-80k-v1 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-v2-1600ep-m64x8x8-modul-b128-80k/verify
+  Uploads: 0
+  Downloads: 337
+  Deletes: 0
+  Skips: 0
+Syncing...
+Sync completed.
+阶段4完成
+阶段5开始：上传后 sha256（POST）+ 与上传前逐行对照
+SHA256_PRE_POST_DIFF=0
+  sha256sum -c 校验行数: 336
+RESULT=PASS
+阶段5完成
+阶段6开始：收尾断言（源侧第三遍 sha256，证明硬链接未改动原件）
+  pre(剔 README/_run-meta)=316 行, src-after=316 行, _run-meta=19 行
+SRC_UNCHANGED=OK
+阶段6完成
+全部完成
+EXIT_CODE=0
