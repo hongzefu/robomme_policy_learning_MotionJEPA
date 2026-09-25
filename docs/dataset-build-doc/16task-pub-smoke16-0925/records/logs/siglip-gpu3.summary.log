@@ -1,0 +1,8 @@
+### 2026-09-25T20:58:04 cmd=uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu3 --worker-idx 3 --num-workers 8 --resume --report_every 2000
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[shard 3/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu3
+Episode 10: timesteps=482, exec_start=0, kept_indices=471, task_goal='pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion two times, finally press the button to stop'
+EPISODE g=10 record_dataset_SwingXtimes.h5#0 steps=482 took=96.1s rate=5.016 step/s worker=gpu3
+Episode 9: timesteps=459, exec_start=0, kept_indices=240, task_goal='press the button to stop the cube just as it reaches the target for the fourth time'
+EPISODE g=9 record_dataset_StopCube.h5#0 steps=459 took=46.2s rate=9.930 step/s worker=gpu3
+SHARD_DONE shard=3 episodes=2 skipped=5 steps=941 elapsed=142.4s rate=6.610 step/s steady_steps=459 rate_steady=9.920 step/s

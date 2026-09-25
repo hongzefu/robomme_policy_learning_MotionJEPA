@@ -1,0 +1,10 @@
+### 2026-09-25T20:58:04 cmd=uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu4 --worker-idx 4 --num-workers 8 --resume --report_every 2000
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[shard 4/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu4
+Episode 2: timesteps=514, exec_start=0, kept_indices=651, task_goal='first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube'
+EPISODE g=2 record_dataset_ButtonUnmaskSwap.h5#0 steps=514 took=101.0s rate=5.087 step/s worker=gpu4
+Episode 1: timesteps=291, exec_start=0, kept_indices=286, task_goal='first press the button, then pick up the container hiding the red cube'
+EPISODE g=1 record_dataset_ButtonUnmask.h5#0 steps=291 took=29.3s rate=9.939 step/s worker=gpu4
+Episode 5: timesteps=96, exec_start=48, kept_indices=183, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=5 record_dataset_PatternLock.h5#0 steps=96 took=9.7s rate=9.947 step/s worker=gpu4
+SHARD_DONE shard=4 episodes=3 skipped=2 steps=901 elapsed=140.0s rate=6.435 step/s steady_steps=387 rate_steady=9.930 step/s

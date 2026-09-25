@@ -1,0 +1,33 @@
+{
+  "kind": "post_smoke_remaining_build_budget",
+  "smoke_sizes_sha256": "ab11bec7d307fcf5cf7bca394ecbe959d98e4532261f402c19a4e07a0fb857b5",
+  "max_feature_allocated_bytes": 606208,
+  "max_pkl_allocated_bytes": 397312,
+  "remaining_libraries": {
+    "full": {
+      "episodes": 1600,
+      "timesteps": 768897,
+      "exec_samples": 476857,
+      "max_timesteps": 1411,
+      "estimated_bytes": 706174072880
+    },
+    "counting": {
+      "episodes": 400,
+      "timesteps": 189035,
+      "exec_samples": 189035,
+      "max_timesteps": 1044,
+      "estimated_bytes": 202175603728
+    }
+  },
+  "data_with_ten_percent_bytes": 999184644269,
+  "extra_budget": {
+    "cache_environment_bytes": 68719476736,
+    "validation_checkpoint_temporary_bytes": 51539607552,
+    "logs_other_bytes": 17179869184
+  },
+  "reserve_bytes": 322122547200,
+  "required_free_bytes": 1458746144941,
+  "available_bytes": 1784546611200,
+  "pass": true,
+  "note": "只对尚未构建的两正式库预算；既有smoke已计入当前占用。分项外推不是正式库体积实测。"
+}

@@ -1,0 +1,8 @@
+### 2026-09-25T20:58:04 cmd=uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu1 --worker-idx 1 --num-workers 8 --resume --report_every 2000
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[shard 1/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu1
+Episode 0: timesteps=550, exec_start=0, kept_indices=590, task_goal='put two red cubes into the bin, then press the button to stop'
+EPISODE g=0 record_dataset_BinFill.h5#0 steps=550 took=98.6s rate=5.578 step/s worker=gpu1
+Episode 15: timesteps=326, exec_start=168, kept_indices=299, task_goal='watch the video carefully, then pick up the container hiding the green cube'
+EPISODE g=15 record_dataset_VideoUnmaskSwap.h5#0 steps=326 took=32.8s rate=9.939 step/s worker=gpu1
+SHARD_DONE shard=1 episodes=2 skipped=4 steps=876 elapsed=131.4s rate=6.664 step/s steady_steps=326 rate_steady=9.927 step/s

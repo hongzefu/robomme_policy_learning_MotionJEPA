@@ -1,0 +1,6 @@
+### 2026-09-25T20:58:04 cmd=uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu6 --worker-idx 6 --num-workers 8 --resume --report_every 2000
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[shard 6/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu6
+Episode 12: timesteps=1200, exec_start=940, kept_indices=1708, task_goal='watch the video carefully, then place the blue cube on the first target it was previously placed on'
+EPISODE g=12 record_dataset_VideoPlaceOrder.h5#0 steps=1200 took=161.7s rate=7.421 step/s worker=gpu6
+SHARD_DONE shard=6 episodes=1 skipped=15 steps=1200 elapsed=161.8s rate=7.418 step/s steady_steps=0 rate_steady=NA（只有一个 episode，全是启动开销）

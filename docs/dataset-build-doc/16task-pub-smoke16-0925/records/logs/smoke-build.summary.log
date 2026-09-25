@@ -1,0 +1,199 @@
+SESSION=pub16-smoke16-20260925T205655Z
+BUILD_HEAD=42b91cd96499bd51fcb6acaeedd642b368dbefeb
+WRAPPER_PID=3798932
+START_UTC=2026-09-25T20:58:03Z
+BUDGET_GATE=PASS available=1791912865792 required=1466841656330 estimate=pre_smoke
+BUILD_STAGE=scan16 START_UTC=2026-09-25T20:58:03Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[scan] 原始目录: /scratch/hongze/robomme_data_h5
+[scan] 规范序: ['record_dataset_BinFill.h5', 'record_dataset_ButtonUnmask.h5', 'record_dataset_ButtonUnmaskSwap.h5', 'record_dataset_InsertPeg.h5', 'record_dataset_MoveCube.h5', 'record_dataset_PatternLock.h5', 'record_dataset_PickHighlight.h5', 'record_dataset_PickXtimes.h5', 'record_dataset_RouteStick.h5', 'record_dataset_StopCube.h5', 'record_dataset_SwingXtimes.h5', 'record_dataset_VideoPlaceButton.h5', 'record_dataset_VideoPlaceOrder.h5', 'record_dataset_VideoRepick.h5', 'record_dataset_VideoUnmask.h5', 'record_dataset_VideoUnmaskSwap.h5']
+  扫完 record_dataset_BinFill.h5: 累计 1 episode, 550 timestep, 550 执行样本 (0.0s)
+  扫完 record_dataset_ButtonUnmask.h5: 累计 2 episode, 841 timestep, 841 执行样本 (0.0s)
+  扫完 record_dataset_ButtonUnmaskSwap.h5: 累计 3 episode, 1355 timestep, 1355 执行样本 (0.0s)
+  扫完 record_dataset_InsertPeg.h5: 累计 4 episode, 1830 timestep, 1592 执行样本 (0.1s)
+  扫完 record_dataset_MoveCube.h5: 累计 5 episode, 2255 timestep, 1783 执行样本 (0.1s)
+  扫完 record_dataset_PatternLock.h5: 累计 6 episode, 2351 timestep, 1831 执行样本 (0.1s)
+  扫完 record_dataset_PickHighlight.h5: 累计 7 episode, 2659 timestep, 2139 执行样本 (0.1s)
+  扫完 record_dataset_PickXtimes.h5: 累计 8 episode, 3188 timestep, 2668 执行样本 (0.1s)
+  扫完 record_dataset_RouteStick.h5: 累计 9 episode, 3388 timestep, 2768 执行样本 (0.1s)
+  扫完 record_dataset_StopCube.h5: 累计 10 episode, 3847 timestep, 3227 执行样本 (0.1s)
+  扫完 record_dataset_SwingXtimes.h5: 累计 11 episode, 4329 timestep, 3709 执行样本 (0.1s)
+  扫完 record_dataset_VideoPlaceButton.h5: 累计 12 episode, 5377 timestep, 3992 执行样本 (0.3s)
+  扫完 record_dataset_VideoPlaceOrder.h5: 累计 13 episode, 6577 timestep, 4252 执行样本 (0.5s)
+  扫完 record_dataset_VideoRepick.h5: 累计 14 episode, 7333 timestep, 4687 执行样本 (0.6s)
+  扫完 record_dataset_VideoUnmask.h5: 累计 15 episode, 7572 timestep, 4860 执行样本 (0.6s)
+  扫完 record_dataset_VideoUnmaskSwap.h5: 累计 16 episode, 7898 timestep, 5018 执行样本 (0.6s)
+[scan] 写出 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json
+  episode=16  timestep=7898  执行样本=5018
+  分片负载(timestep)=[7898]  极差=0.00%
+  sha256=938cb31f91b044cc6974346854c9da57bb3f4fdecbdc9385fdb63ea1dbf39724
+STAGE_EXIT_CODE stage=scan16 code=0 END_UTC=2026-09-25T20:58:04Z
+BUILD_STAGE=identity16 START_UTC=2026-09-25T20:58:04Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SMOKE_IDENTITY=PASS episodes=16 timesteps=7898 samples=5018
+STAGE_EXIT_CODE stage=identity16 code=0 END_UTC=2026-09-25T20:58:04Z
+BUILD_STAGE=siglip START_UTC=2026-09-25T20:58:04Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[run_local] 起 worker gpu0: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu0 --worker-idx 0 --num-workers 8 --resume --report_every 2000
+[run_local] 起 worker gpu1: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu1 --worker-idx 1 --num-workers 8 --resume --report_every 2000
+[run_local] 起 worker gpu2: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu2 --worker-idx 2 --num-workers 8 --resume --report_every 2000
+[run_local] 起 worker gpu3: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu3 --worker-idx 3 --num-workers 8 --resume --report_every 2000
+[run_local] 起 worker gpu4: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu4 --worker-idx 4 --num-workers 8 --resume --report_every 2000
+[run_local] 起 worker gpu5: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu5 --worker-idx 5 --num-workers 8 --resume --report_every 2000
+[run_local] 起 worker gpu6: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu6 --worker-idx 6 --num-workers 8 --resume --report_every 2000
+[run_local] 起 worker gpu7: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source --worker-mode --worker-label gpu7 --worker-idx 7 --num-workers 8 --resume --report_every 2000
+[gpu2] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu4] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu7] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu5] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu1] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu0] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu3] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu6] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu5] [shard 5/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu5
+[gpu1] [shard 1/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu1
+[gpu3] [shard 3/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu3
+[gpu4] [shard 4/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu4
+[gpu0] [shard 0/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu0
+[gpu7] [shard 7/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu7
+[gpu2] [shard 2/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu2
+[gpu6] [shard 6/8] episode=16 timestep=7898 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-smoke16-0925/source worker=gpu6
+[gpu3] Episode 10: timesteps=482, exec_start=0, kept_indices=471, task_goal='pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion two times, finally press the button to stop'
+[gpu3] EPISODE g=10 record_dataset_SwingXtimes.h5#0 steps=482 took=96.1s rate=5.016 step/s worker=gpu3
+[gpu2] Episode 7: timesteps=529, exec_start=0, kept_indices=528, task_goal='pick up the red cube and place it on the target, repeating this action two times, then press the button to stop'
+[gpu2] EPISODE g=7 record_dataset_PickXtimes.h5#0 steps=529 took=97.4s rate=5.431 step/s worker=gpu2
+[gpu1] Episode 0: timesteps=550, exec_start=0, kept_indices=590, task_goal='put two red cubes into the bin, then press the button to stop'
+[gpu1] EPISODE g=0 record_dataset_BinFill.h5#0 steps=550 took=98.6s rate=5.578 step/s worker=gpu1
+[gpu0] Episode 3: timesteps=475, exec_start=238, kept_indices=446, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+[gpu0] EPISODE g=3 record_dataset_InsertPeg.h5#0 steps=475 took=97.6s rate=4.867 step/s worker=gpu0
+[gpu4] Episode 2: timesteps=514, exec_start=0, kept_indices=651, task_goal='first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube'
+[gpu4] EPISODE g=2 record_dataset_ButtonUnmaskSwap.h5#0 steps=514 took=101.0s rate=5.087 step/s worker=gpu4
+[gpu5] Episode 13: timesteps=756, exec_start=321, kept_indices=859, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop'
+[gpu5] EPISODE g=13 record_dataset_VideoRepick.h5#0 steps=756 took=119.8s rate=6.312 step/s worker=gpu5
+[gpu0] Episode 6: timesteps=308, exec_start=0, kept_indices=253, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+[gpu0] EPISODE g=6 record_dataset_PickHighlight.h5#0 steps=308 took=31.0s rate=9.927 step/s worker=gpu0
+[gpu4] Episode 1: timesteps=291, exec_start=0, kept_indices=286, task_goal='first press the button, then pick up the container hiding the red cube'
+[gpu4] EPISODE g=1 record_dataset_ButtonUnmask.h5#0 steps=291 took=29.3s rate=9.939 step/s worker=gpu4
+[gpu1] Episode 15: timesteps=326, exec_start=168, kept_indices=299, task_goal='watch the video carefully, then pick up the container hiding the green cube'
+[gpu1] EPISODE g=15 record_dataset_VideoUnmaskSwap.h5#0 steps=326 took=32.8s rate=9.939 step/s worker=gpu1
+[gpu1] SHARD_DONE shard=1 episodes=2 skipped=4 steps=876 elapsed=131.4s rate=6.664 step/s steady_steps=326 rate_steady=9.927 step/s
+[gpu4] Episode 5: timesteps=96, exec_start=48, kept_indices=183, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+[gpu4] EPISODE g=5 record_dataset_PatternLock.h5#0 steps=96 took=9.7s rate=9.947 step/s worker=gpu4
+[gpu2] Episode 4: timesteps=425, exec_start=234, kept_indices=505, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+[gpu2] EPISODE g=4 record_dataset_MoveCube.h5#0 steps=425 took=42.8s rate=9.932 step/s worker=gpu2
+[gpu4] SHARD_DONE shard=4 episodes=3 skipped=2 steps=901 elapsed=140.0s rate=6.435 step/s steady_steps=387 rate_steady=9.930 step/s
+[gpu2] SHARD_DONE shard=2 episodes=2 skipped=5 steps=954 elapsed=140.2s rate=6.802 step/s steady_steps=425 rate_steady=9.922 step/s
+[gpu3] Episode 9: timesteps=459, exec_start=0, kept_indices=240, task_goal='press the button to stop the cube just as it reaches the target for the fourth time'
+[gpu3] EPISODE g=9 record_dataset_StopCube.h5#0 steps=459 took=46.2s rate=9.930 step/s worker=gpu3
+[gpu5] Episode 14: timesteps=239, exec_start=66, kept_indices=363, task_goal='watch the video carefully, then pick up the container hiding the blue cube'
+[gpu5] EPISODE g=14 record_dataset_VideoUnmask.h5#0 steps=239 took=24.0s rate=9.950 step/s worker=gpu5
+[gpu3] SHARD_DONE shard=3 episodes=2 skipped=5 steps=941 elapsed=142.4s rate=6.610 step/s steady_steps=459 rate_steady=9.920 step/s
+[gpu5] SHARD_DONE shard=5 episodes=2 skipped=6 steps=995 elapsed=143.8s rate=6.917 step/s steady_steps=239 rate_steady=9.930 step/s
+[gpu0] Episode 8: timesteps=200, exec_start=100, kept_indices=368, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+[gpu0] EPISODE g=8 record_dataset_RouteStick.h5#0 steps=200 took=20.1s rate=9.935 step/s worker=gpu0
+[gpu0] SHARD_DONE shard=0 episodes=3 skipped=1 steps=983 elapsed=148.8s rate=6.606 step/s steady_steps=508 rate_steady=9.922 step/s
+[gpu7] Episode 11: timesteps=1048, exec_start=765, kept_indices=1442, task_goal='watch the video carefully, then place the red cube on the target right after the button was pressed'
+[gpu7] EPISODE g=11 record_dataset_VideoPlaceButton.h5#0 steps=1048 took=152.3s rate=6.882 step/s worker=gpu7
+[gpu7] SHARD_DONE shard=7 episodes=1 skipped=14 steps=1048 elapsed=152.4s rate=6.879 step/s steady_steps=0 rate_steady=NA（只有一个 episode，全是启动开销）
+[gpu6] Episode 12: timesteps=1200, exec_start=940, kept_indices=1708, task_goal='watch the video carefully, then place the blue cube on the first target it was previously placed on'
+[gpu6] EPISODE g=12 record_dataset_VideoPlaceOrder.h5#0 steps=1200 took=161.7s rate=7.421 step/s worker=gpu6
+[gpu6] SHARD_DONE shard=6 episodes=1 skipped=15 steps=1200 elapsed=161.8s rate=7.418 step/s steady_steps=0 rate_steady=NA（只有一个 episode，全是启动开销）
+STAGE_DONE stage=siglip workers=8 items=16 elapsed=181s
+STAGE_EXIT_CODE stage=siglip code=0 END_UTC=2026-09-25T21:01:05Z
+BUILD_STAGE=finalize START_UTC=2026-09-25T21:01:05Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+=== [1/5] 输入 H5 同源核验（level=sha256）===
+  ✓ record_dataset_BinFill.h5 sha256 同源
+  ✓ record_dataset_ButtonUnmask.h5 sha256 同源
+  ✓ record_dataset_ButtonUnmaskSwap.h5 sha256 同源
+  ✓ record_dataset_InsertPeg.h5 sha256 同源
+  ✓ record_dataset_MoveCube.h5 sha256 同源
+  ✓ record_dataset_PatternLock.h5 sha256 同源
+  ✓ record_dataset_PickHighlight.h5 sha256 同源
+  ✓ record_dataset_PickXtimes.h5 sha256 同源
+  ✓ record_dataset_RouteStick.h5 sha256 同源
+  ✓ record_dataset_StopCube.h5 sha256 同源
+  ✓ record_dataset_SwingXtimes.h5 sha256 同源
+  ✓ record_dataset_VideoPlaceButton.h5 sha256 同源
+  ✓ record_dataset_VideoPlaceOrder.h5 sha256 同源
+  ✓ record_dataset_VideoRepick.h5 sha256 同源
+  ✓ record_dataset_VideoUnmask.h5 sha256 同源
+  ✓ record_dataset_VideoUnmaskSwap.h5 sha256 同源
+=== [2/5] 产物完整性核验 ===
+  feature 目录缺失=0  pkl 实得=5018 期望=5018
+=== [3/5] 分片 sidecar 汇总 ===
+  sidecar=8 覆盖 episode=16 残留 claim=0
+=== [4/5] 同架构零容差抽检（1024 条）===
+  抽检 1024/1024 条，全体 max|diff|=0.000e+00
+  ✓ 同架构复算全部逐位一致 PASS（1024 条）
+=== [5/5] 写 stats.json 与 provenance.json ===
+  stats={'execution_samples': 5018, 'total_samples': 7898}
+  provenance(finalize 节点): host=ip-10-242-11-177.us-west-2.compute.internal gpu=NVIDIA A100-SXM4-80GB jax=0.5.3
+  provenance(构建分片): gpu=NVIDIA A100-SXM4-80GB jax=0.5.3 commit=42b91cd96499 节点=8 个 全体同源 ✓
+全部检查通过 PASS
+FINALIZE_EXIT_CODE=0
+STAGE_EXIT_CODE stage=finalize code=0 END_UTC=2026-09-25T21:09:32Z
+BUILD_STAGE=pack START_UTC=2026-09-25T21:09:32Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[pack] pos 表：episode_12（1200 帧）逐位抽取拼装
+[pack] state 表：48 进程 decode 16 episode / 7898 帧
+[pack] state 表进度 1/16 episode (0s)
+[pack] state 表进度 2/16 episode (0s)
+[pack] state 表进度 3/16 episode (0s)
+[pack] state 表进度 4/16 episode (0s)
+[pack] state 表进度 5/16 episode (0s)
+[pack] state 表进度 6/16 episode (0s)
+[pack] state 表进度 7/16 episode (0s)
+[pack] state 表进度 8/16 episode (0s)
+[pack] state 表进度 9/16 episode (0s)
+[pack] state 表进度 10/16 episode (0s)
+[pack] state 表进度 11/16 episode (0s)
+[pack] state 表进度 12/16 episode (0s)
+[pack] state 表进度 13/16 episode (0s)
+[pack] state 表进度 14/16 episode (0s)
+[pack] state 表进度 15/16 episode (0s)
+[pack] state 表进度 16/16 episode (0s)
+[pack] 小表落盘: pos 58,982,400 B / state 252,736 B
+[pack] image part: 共 13 个, 跳过已完好 0 个, 本轮 13 个 × 48 进程
+[pack] part_001 完成 rows=291 (0.2s), 进度 1/13
+[pack] part_005 完成 rows=404 (0.2s), 进度 2/13
+[pack] part_004 完成 rows=425 (0.3s), 进度 3/13
+[pack] part_003 完成 rows=475 (0.3s), 进度 4/13
+[pack] part_008 完成 rows=482 (0.3s), 进度 5/13
+[pack] part_012 完成 rows=565 (0.3s), 进度 6/13
+[pack] part_002 完成 rows=514 (0.4s), 进度 7/13
+[pack] part_006 完成 rows=529 (0.4s), 进度 8/13
+[pack] part_007 完成 rows=659 (0.4s), 进度 9/13
+[pack] part_000 完成 rows=550 (0.4s), 进度 10/13
+[pack] part_011 完成 rows=756 (0.5s), 进度 11/13
+[pack] part_009 完成 rows=1048 (0.7s), 进度 12/13
+[pack] part_010 完成 rows=1200 (0.8s), 进度 13/13
+[pack] meta 阶段1 落盘（status=packed）; 总耗时 2s
+PACK_DONE=1 （pack.lock 保留，verify 回填后才释放——A.2）
+STAGE_EXIT_CODE stage=pack code=0 END_UTC=2026-09-25T21:09:34Z
+BUILD_STAGE=verify START_UTC=2026-09-25T21:09:34Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[verify] part_001 扫 291 行, 失配 0, 进度 1/13 (0s)
+[verify] part_004 扫 425 行, 失配 0, 进度 2/13 (0s)
+[verify] part_005 扫 404 行, 失配 0, 进度 3/13 (0s)
+[verify] part_003 扫 475 行, 失配 0, 进度 4/13 (0s)
+[verify] part_008 扫 482 行, 失配 0, 进度 5/13 (0s)
+[verify] part_002 扫 514 行, 失配 0, 进度 6/13 (0s)
+[verify] part_000 扫 550 行, 失配 0, 进度 7/13 (0s)
+[verify] part_012 扫 565 行, 失配 0, 进度 8/13 (0s)
+[verify] part_006 扫 529 行, 失配 0, 进度 9/13 (0s)
+[verify] part_007 扫 659 行, 失配 0, 进度 10/13 (0s)
+[verify] part_011 扫 756 行, 失配 0, 进度 11/13 (0s)
+[verify] part_010 扫 1200 行, 失配 0, 进度 12/13 (1s)
+[verify] part_009 扫 1048 行, 失配 0, 进度 13/13 (1s)
+[verify] meta 回填（status=verified）+ row_digests 落盘, 总耗时 1s
+VERIFY_PACK=PASS scanned=7898 mismatches=0
+STAGE_EXIT_CODE stage=verify code=0 END_UTC=2026-09-25T21:09:35Z
+BUILD_STAGE=measure START_UTC=2026-09-25T21:09:35Z
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+SMOKE_BUILD=PASS {"manifest_sha256": "938cb31f91b044cc6974346854c9da57bb3f4fdecbdc9385fdb63ea1dbf39724", "max_feature_allocated_bytes": 606208, "max_pkl_allocated_bytes": 397312, "packed": {"allocated_bytes": 576983040, "files": 18, "logical_bytes": 576977634}, "source": {"allocated_bytes": 6781734912, "files": 12942, "logical_bytes": 6747074966}, "status": "PASS", "totals": {"episodes": 16, "exec_samples": 5018, "timesteps": 7898}}
+STAGE_EXIT_CODE stage=measure code=0 END_UTC=2026-09-25T21:09:35Z
+TASK_EXIT=0
+TEE_EXIT=0
+END_UTC=2026-09-25T21:09:35Z
+EXIT_CODE=0
