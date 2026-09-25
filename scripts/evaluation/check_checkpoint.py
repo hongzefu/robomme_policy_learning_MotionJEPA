@@ -50,6 +50,26 @@ RUNS = {
         resolved_sha256='91512306b3aaaaa541d248bc5dfaf8be2849632cd3b9e89a226207c09c6501c0',
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
     ),
+    # bucket HongzeFu/robomme-vla-modul-1024-80k-v1，run v2-1600ep-m16x8x8-modul-b128-80k，motion 关闭，61 叶；
+    # 与 2048 条目只差感知上下文预算：budget 1024 = 16 帧 × token_per_image 64。resolved sha 与 bucket 根
+    # history_config.resolved.sha256 及 motion_provenance.json.resolved_sha256 三方一致（2026-09-25 核）；norm_stats 沿用同一份。
+    'robomme-vla-modul-1024-80k-v1': dict(
+        steps=('5000', '10000', '15000', '20000', '25000', '30000', '35000', '40000',
+               '45000', '50000', '55000', '60000', '65000', '70000', '75000', '79999'),
+        motion=False, config='mme_vla_suite_b128_80k', budget=1024,
+        resolved_sha256='9d7a18fe2cdb720dce21dc7d1c03b7a905fc6f65d98758a582268e5fa9e5390b',
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+    ),
+    # bucket HongzeFu/robomme-vla-modul-4096-80k-v1，run v2-1600ep-m64x8x8-modul-b128-80k，motion 关闭，61 叶；
+    # budget 4096 = 64 帧 × 64。FrameSampMemory 的 max_steps=4096 硬上界限制的是全域帧号（本口径最大约 2518），与 budget 无关。
+    # 两个 sha 三方一致（2026-09-25 核）。
+    'robomme-vla-modul-4096-80k-v1': dict(
+        steps=('5000', '10000', '15000', '20000', '25000', '30000', '35000', '40000',
+               '45000', '50000', '55000', '60000', '65000', '70000', '75000', '79999'),
+        motion=False, config='mme_vla_suite_b128_80k', budget=4096,
+        resolved_sha256='9df78b4dac2acdc43fbce5040a88014805df1b50bb803feba027559fc31f96a3',
+        norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
+    ),
 }
 
 checkpoint = Path(sys.argv[1]).resolve()
