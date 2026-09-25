@@ -43,6 +43,12 @@
   --expect-sha256 改可选（A40 无本机锚点时打 anchor=SKIPPED、不进判据）。
   run 侧新增可重复 --forbid-root：断言项目模块不落在该目录下（B 侧传 A worktree
   路径——worktree 在仓库 v1-store/ 子目录下，仅 expect_root 归属检查拦不住）。
+
+  0925：judge 必须提供 tentative/state/head 期望值，默认 upstream 保持异根；
+  --mode same-entry 改判同根同源码，且要求 A=solo、B=concurrent 和
+  --concurrent-peer-dir，step 10..99 交集覆盖双方各至少 50 个完整主机完成间隔。
+  两种模式都拒绝非有限值和缺失起止证据。run 的 --jax-cache-dir 只改缓存路径，
+  不改变计算配置。P1 两步只验 run 成功、分段、有限值和来源，不调用轨迹 judge。
 """
 
 from __future__ import annotations
@@ -50,9 +56,12 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import hashlib
+import importlib.metadata
 import json
+import math
 import os
 import pathlib
+import platform
 import runpy
 import subprocess
 import sys
@@ -61,7 +70,178 @@ import time
 _PROJECT_TOPLEVELS = ("openpi", "mme_vla_suite")
 _SCALAR_KEYS = ["loss", "grad_norm", "llm_grad_norm", "mem_enc_norm", "param_norm"]
 _CFG_WHITELIST = {"exp_name", "dataset_path", "checkpoint_base_dir", "overwrite"}
+_SAME_ENTRY_WHITELIST = {"exp_name", "checkpoint_base_dir"}
 _CFG_SPOTLIGHT = ["ema_decay", "optimizer", "lr_schedule"]  # 单独列出、不埋进总比对
+_FINGERPRINT_VERSION = 1
+
+
+def _file_record(path: pathlib.Path) -> dict:
+    path = path.resolve(strict=True)
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1 << 20), b""):
+            digest.update(chunk)
+    return {"path": str(path), "bytes": path.stat().st_size, "sha256": digest.hexdigest()}
+
+
+def _runtime_fingerprint(config, root: pathlib.Path) -> dict:
+    """绑定实际输入来源；大权重完整校验仍由启动前资产锁负责。"""
+    import jax
+
+    dataset = pathlib.Path(config.dataset_path).resolve(strict=True)
+    store_path = dataset / "meta/store_meta.json"
+    store = json.loads(store_path.read_text()) if store_path.is_file() else {}
+    source = pathlib.Path(os.environ.get("MMEVLA_FRAMESAMP_SOURCE")
+                          or store.get("source_dataset_root") or dataset).resolve(strict=True)
+    manifest = pathlib.Path(os.environ.get("MMEVLA_FRAMESAMP_MANIFEST")
+                            or store.get("manifest_path")
+                            or source.parent / "meta/episode_manifest.json")
+    source_records = {"episode_manifest": _file_record(manifest),
+                      "stats": _file_record(source / "meta/stats.json")}
+    for name in ("input_manifest.json",):
+        path = source.parent / "meta" / name
+        if path.is_file():
+            source_records[name] = _file_record(path)
+    asset_id = config.data.assets.asset_id or config.data.repo_id
+    norm = pathlib.Path(config.data.assets.assets_dir or config.assets_dirs) / asset_id / "norm_stats.json"
+    params = pathlib.Path(config.weight_loader.params_path).resolve(strict=True)
+    initialization = {name: _file_record(params / name)
+                      for name in ("_METADATA", "manifest.ocdbt", "commit_success.txt")
+                      if (params / name).is_file()}
+    if not initialization:
+        raise ValueError(f"初始化权重缺少原生恢复索引: {params}")
+    tokenizer_root = pathlib.Path(os.environ["OPENPI_DATA_HOME"]).resolve(strict=True)
+    history = root / "src/mme_vla_suite/models/config/robomme" / config.model.history_config
+    packages = {}
+    for dist in importlib.metadata.distributions():
+        name = dist.metadata.get("Name", "").lower().replace("_", "-")
+        if name:
+            if name in packages and packages[name] != dist.version:
+                raise ValueError(f"依赖存在多版本: {name}")
+            packages[name] = dist.version
+    smi = subprocess.run(
+        ["nvidia-smi", "--query-gpu=index,uuid,name,driver_version", "--format=csv,noheader"],
+        capture_output=True, text=True, check=True)
+    devices = [dict(zip(("index", "uuid", "name", "driver"),
+                        (part.strip() for part in line.split(",")), strict=True))
+               for line in smi.stdout.splitlines() if line.strip()]
+    visible = os.environ.get("CUDA_VISIBLE_DEVICES", "").split(",")
+    selected = [next(d for d in devices if token in (d["index"], d["uuid"]))
+                for token in visible if token]
+    if not selected or len({d["uuid"] for d in selected}) != len(selected):
+        raise ValueError("CUDA_VISIBLE_DEVICES 必须明确指定互异的实际 GPU")
+    env_names = {"XLA_FLAGS", "XLA_PYTHON_CLIENT_MEM_FRACTION", "CUDA_VISIBLE_DEVICES",
+                 "JAX_ENABLE_X64", "JAX_DEFAULT_MATMUL_PRECISION", "JAX_PLATFORMS",
+                 "JAX_PLATFORM_NAME", "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS",
+                 "MKL_NUM_THREADS", "NVIDIA_TF32_OVERRIDE", "PYTHONHASHSEED"}
+    return {"version": _FINGERPRINT_VERSION,
+            "python": {"version": sys.version, "implementation": platform.python_implementation()},
+            "dependencies": packages, "uv_lock_sha256": _file_record(root / "uv.lock")["sha256"],
+            "devices": selected, "environment": {key: os.environ.get(key) for key in sorted(env_names)},
+            "jax": {"enable_x64": bool(jax.config.jax_enable_x64),
+                    "matmul_precision": str(jax.config.jax_default_matmul_precision)},
+            "history": _file_record(history),
+            "assets": {"norm_stats": _file_record(norm), "initialization": initialization,
+                       "tokenizer": _file_record(tokenizer_root / "big_vision/paligemma_tokenizer.model")},
+            "source": {"path": str(source), "records": source_records},
+            "dataset": {"path": str(dataset), "store_meta": _file_record(store_path) if store else None}}
+
+
+def _install_jax_cache_redirect(config, target: pathlib.Path):
+    """只替换上游写死的缓存路径；返回恢复函数和实际转接调用记录。"""
+    original = config.update
+    calls = []
+
+    def update(name, value, *args, **kwargs):
+        if name == "jax_compilation_cache_dir":
+            calls.append({"requested": str(value), "actual": str(target)})
+            value = str(target)
+        return original(name, value, *args, **kwargs)
+
+    config.update = update
+    return original, calls
+
+
+class _CheckpointOwnership:
+    """首轮拒绝复用输出，只允许上游正式段重建本次 tentative 自己创建的目录。"""
+
+    def __init__(self, record_dir: pathlib.Path, *, upstream: bool):
+        self.record_path = record_dir / "init_ownership.json"
+        self.upstream = upstream
+        self.events = []
+        self.path = None
+        self.inode = None
+
+    def initialize(self, original, config, *args, **kwargs):
+        # config.checkpoint_dir 已 resolve，必须从未解析的三个配置字段还原后检查链接。
+        path = pathlib.Path(config.checkpoint_base_dir) / config.name / config.exp_name
+        if not path.is_absolute() or path != path.resolve():
+            raise ValueError(f"checkpoint 原始路径不是绝对实体路径或含符号链接: {path}")
+        supplied = args[0] if args else kwargs.get("checkpoint_dir")
+        if supplied is None or pathlib.Path(supplied).resolve() != path:
+            raise ValueError("checkpoint 初始化路径与实际配置不同")
+        overwrite = kwargs.get("overwrite", False)
+        if kwargs.get("resume", False) or (overwrite and not self.upstream):
+            raise ValueError("对拍禁止 resume；B 侧禁止 overwrite")
+        limit = 2 if self.upstream else 1
+        if len(self.events) >= limit:
+            raise ValueError("checkpoint 初始化次数超过预期")
+        if not self.events:
+            if os.path.lexists(path):
+                raise FileExistsError(f"拒绝清空或复用已有 checkpoint 输出: {path}")
+        else:
+            if path != self.path or not overwrite:
+                raise ValueError("上游第二次初始化须 overwrite 本次 tentative 的同一路径")
+            self._check_owned()
+        effective = dict(kwargs)
+        # 即使检查后出现并发创建，首轮底层也不得以 overwrite=True 清理它。
+        if not self.events:
+            effective["overwrite"] = False
+        result = original(*args, **effective)
+        if not path.is_dir() or path.is_symlink() or path != path.resolve():
+            raise ValueError("初始化没有产生预期的实体 checkpoint 目录")
+        stat = path.stat()
+        self.path, self.inode = path, (stat.st_dev, stat.st_ino)
+        self.events.append({"call": len(self.events) + 1, "path": str(path),
+                            "requested_overwrite": bool(overwrite), "effective_overwrite": effective["overwrite"],
+                            "device": stat.st_dev, "inode": stat.st_ino})
+        self.record_path.write_text(json.dumps({"upstream": self.upstream, "events": self.events}, indent=2))
+        return result
+
+    def _check_owned(self):
+        if self.path is None or not self.path.is_dir() or self.path.is_symlink() or self.path != self.path.resolve():
+            raise ValueError("本次 checkpoint 目录已消失或被链接替换")
+        stat = self.path.stat()
+        if (stat.st_dev, stat.st_ino) != self.inode:
+            raise ValueError("本次 checkpoint 目录归属已改变，禁止覆盖")
+
+    def check_complete(self):
+        if len(self.events) != (2 if self.upstream else 1):
+            raise ValueError("checkpoint 初始化次数与官方入口段数不符")
+        self._check_owned()
+
+
+def _finite_metrics(rows: list[dict]) -> bool:
+    if not rows:
+        return False
+    for row in rows:
+        for key in _SCALAR_KEYS:
+            value = row.get(key, {})
+            try:
+                number = float.fromhex(value["hex"])
+                if (value.get("finite") is not True or not math.isfinite(number)
+                        or float(value["dec"]).hex() != number.hex()):
+                    return False
+            except (KeyError, TypeError, ValueError, OverflowError):
+                return False
+    return True
+
+
+def _finite_states(rows: list[dict]) -> bool:
+    return bool(rows) and all(
+        row.get("finite") is True and type(row.get("n_leaves")) is int
+        and row["n_leaves"] > 0 and row.get("finite_leaves") == row["n_leaves"]
+        and row.get("nonfinite_keys") == [] for row in rows)
 
 
 # ────────────────────────── run 侧 ──────────────────────────
@@ -81,7 +261,8 @@ class _WandbRecorderProxy:
                 fv = float(v)
             except (TypeError, ValueError):
                 continue
-            row[k] = {"dec": fv, "hex": fv.hex()}
+            row[k] = {"dec": fv if math.isfinite(fv) else None,
+                      "hex": fv.hex(), "finite": math.isfinite(fv)}
             n_scalar += 1
         if n_scalar:
             with self._path.open("a") as f:
@@ -126,14 +307,25 @@ def _module_provenance(expect_root: pathlib.Path, entry: pathlib.Path) -> dict:
         mods[name] = {"file": str(p),
                       "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=os.getcwd(),
-                          capture_output=True, text=True, check=False).stdout.strip()
+                          capture_output=True, text=True, check=True).stdout.strip()
     porcelain = subprocess.run(["git", "status", "--porcelain"], cwd=os.getcwd(),
-                               capture_output=True, text=True, check=False).stdout
+                               capture_output=True, text=True, check=True).stdout
+    git_root = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=os.getcwd(),
+                              capture_output=True, text=True, check=True).stdout.strip()
     return {"expect_root": str(expect_root),
             "entry": {"file": str(entry),
                       "sha256": hashlib.sha256(entry.read_bytes()).hexdigest()},
             "cwd": os.getcwd(), "git_head_of_cwd": head,
-            "git_porcelain_of_cwd": porcelain, "modules": mods}
+            "git_porcelain_of_cwd": porcelain, "git_root": git_root, "modules": mods}
+
+
+def _assert_clean_snapshot(snapshot: dict, expected_head: str | None) -> None:
+    if snapshot["git_porcelain_of_cwd"].strip():
+        raise ValueError("对拍必须从 clean HEAD 启动且运行期间保持 clean")
+    if pathlib.Path(snapshot["git_root"]).resolve() != pathlib.Path(snapshot["expect_root"]).resolve():
+        raise ValueError("cwd 的 Git 根与 expect_root 不同")
+    if expected_head is not None and snapshot["git_head_of_cwd"] != expected_head:
+        raise ValueError("实际 HEAD 与期望完整提交不同")
 
 
 def _split_segments(all_path: pathlib.Path, record_dir: pathlib.Path) -> tuple[int, int]:
@@ -178,6 +370,15 @@ def _run(args, tail: list[str]) -> int:
     record_dir = pathlib.Path(args.record_dir).resolve()
     expect_root = pathlib.Path(args.expect_root).resolve()
     forbid_roots = [pathlib.Path(p).resolve() for p in (args.forbid_root or [])]
+    if pathlib.Path(sys.prefix).resolve() != (expect_root / ".venv").resolve():
+        raise ValueError("必须使用目标仓库自身的独立 uv .venv")
+    cache_target = None
+    if args.jax_cache_dir:
+        candidate = pathlib.Path(args.jax_cache_dir)
+        storage = pathlib.Path(__file__).resolve().parents[3] / "v1-store"
+        if not candidate.is_absolute() or not candidate.resolve().is_relative_to(storage.resolve()):
+            raise ValueError("JAX 缓存必须是本仓库 v1-store 下的绝对路径")
+        cache_target = candidate.resolve()
 
     if "PYTHONPATH" in os.environ or "PYTHONHOME" in os.environ:
         raise SystemExit("来源污染防护: 必须以 env -u PYTHONPATH -u PYTHONHOME 启动")
@@ -200,7 +401,12 @@ def _run(args, tail: list[str]) -> int:
                 raise SystemExit(f"来源污染: {top} 解析到 {spec.origin}，"
                                  f"落在 --forbid-root {fr} 下")
 
+    if record_dir.exists() and any(record_dir.iterdir()):
+        raise FileExistsError(f"记录目录非空，拒绝混用旧记录: {record_dir}")
+    snapshot_start = _module_provenance(expect_root, entry)
+    _assert_clean_snapshot(snapshot_start, args.expect_head)
     record_dir.mkdir(parents=True, exist_ok=True)
+    (record_dir / "provenance_start.json").write_text(json.dumps(snapshot_start, indent=2))
     all_path = record_dir / "metrics_all.jsonl"
     if all_path.exists():
         raise FileExistsError(f"记录已存在，拒绝覆盖: {all_path}")
@@ -214,12 +420,28 @@ def _run(args, tail: list[str]) -> int:
     import jax  # noqa: I001 —— 延迟到断言通过后才 import 项目环境
     import numpy as np
     import openpi.training.checkpoints as _ckpt
+    cache_calls = []
+    original_update = None
+    if cache_target is not None:
+        original_update, cache_calls = _install_jax_cache_redirect(jax.config, cache_target)
     state_path = record_dir / "state_digests.jsonl"
     _orig_init_dir = _ckpt.initialize_checkpoint_dir
+    original_save_state = _ckpt.save_state
+    fingerprint_start = None
+    upstream = entry == expect_root / "scripts/train.py" and bool(args.expect_tentative)
+    ownership = _CheckpointOwnership(record_dir, upstream=upstream)
 
     def _wrapped_init_dir(*a, **kw):
+        nonlocal fingerprint_start
         _assert_provenance(expect_root, forbid_roots)   # main 已开始、任何计算之前
-        return _orig_init_dir(*a, **kw)
+        cfg = sys.modules["mme_vla_suite.training.config"].cli()
+        current = _runtime_fingerprint(cfg, expect_root)
+        if fingerprint_start is None:
+            fingerprint_start = current
+            (record_dir / "runtime_fingerprint.json").write_text(json.dumps(current, indent=2))
+        elif current != fingerprint_start:
+            raise ValueError("tentative 与正式段的输入或环境指纹变化")
+        return ownership.initialize(_orig_init_dir, cfg, *a, **kw)
 
     def _summarize_state(checkpoint_manager, state, data_loader, step):
         trees = {"params": state.params, "opt_state": state.opt_state,
@@ -228,6 +450,7 @@ def _run(args, tail: list[str]) -> int:
             trees["ema_params"] = state.ema_params
         per_strict: dict[str, str] = {}
         per_g0: dict[str, str] = {}
+        nonfinite_keys = []
         for tree_name, tree in trees.items():
             flat, _ = jax.tree_util.tree_flatten_with_path(tree)
             for path, leaf in flat:
@@ -235,6 +458,8 @@ def _run(args, tail: list[str]) -> int:
                     continue
                 key = tree_name + jax.tree_util.keystr(path)
                 arr = np.asarray(jax.device_get(leaf))
+                if not bool(np.isfinite(arr).all()):
+                    nonfinite_keys.append(key)
                 hs = hashlib.sha256()
                 hs.update(key.encode())
                 hs.update(str(arr.dtype).encode())
@@ -258,6 +483,9 @@ def _run(args, tail: list[str]) -> int:
                "keyset_sha": hashlib.sha256(
                    "\n".join(sorted(per_strict)).encode()).hexdigest(),
                "n_leaves": len(per_strict),
+               "finite": not nonfinite_keys,
+               "finite_leaves": len(per_strict) - len(nonfinite_keys),
+               "nonfinite_keys": nonfinite_keys,
                "per_leaf_strict": per_strict, "per_leaf_g0": per_g0}
         with state_path.open("a") as f:
             f.write(json.dumps(row) + "\n")
@@ -267,12 +495,15 @@ def _run(args, tail: list[str]) -> int:
     _ckpt.save_state = _summarize_state
     _ckpt.initialize_checkpoint_dir = _wrapped_init_dir
 
+    original_argv, original_path = sys.argv, list(sys.path)
     sys.path.insert(0, str(entry.parent))
     sys.argv = [entry.name, *tail]
     (record_dir / "harness_meta.json").write_text(json.dumps(
         {"entry": str(entry), "argv_tail": tail, "expect_root": str(expect_root),
          "forbid_roots": [str(p) for p in forbid_roots],
-         "expect_steps": args.expect_steps}, indent=2, ensure_ascii=False))
+         "expect_steps": args.expect_steps, "execution_role": args.execution_role,
+         "harness_sha256": _file_record(pathlib.Path(__file__))["sha256"],
+         "pid": os.getpid()}, indent=2, ensure_ascii=False))
 
     rc = 0
     try:
@@ -283,20 +514,63 @@ def _run(args, tail: list[str]) -> int:
         print(f"[entry_equiv] 入口异常: {type(e).__name__}: {e}", flush=True)
         rc = 1
     finally:
-        _assert_provenance(expect_root, forbid_roots)
-        (record_dir / "provenance.json").write_text(json.dumps(
-            _module_provenance(expect_root, entry), indent=2, ensure_ascii=False))
-        _dump_resolved_config(record_dir)
+        try:
+            _assert_provenance(expect_root, forbid_roots)
+            snapshot_end = _module_provenance(expect_root, entry)
+            (record_dir / "provenance.json").write_text(json.dumps(snapshot_end, indent=2, ensure_ascii=False))
+            _assert_clean_snapshot(snapshot_end, snapshot_start["git_head_of_cwd"])
+            if snapshot_end["entry"] != snapshot_start["entry"]:
+                raise ValueError("入口在运行期间变化")
+            for name, record in snapshot_start["modules"].items():
+                if snapshot_end["modules"].get(name) != record:
+                    raise ValueError(f"模块在运行期间变化: {name}")
+            _dump_resolved_config(record_dir)
+            cfgmod = sys.modules.get("mme_vla_suite.training.config")
+            fingerprint_end = _runtime_fingerprint(cfgmod.cli(), expect_root) if cfgmod else None
+            (record_dir / "runtime_fingerprint_end.json").write_text(json.dumps(fingerprint_end, indent=2))
+            if fingerprint_start is None or fingerprint_end != fingerprint_start:
+                raise ValueError("运行前后指纹不同或起跑取证缺失")
+            if rc == 0:
+                ownership.check_complete()
+            if cache_target is not None:
+                actual_cache = str(jax.config.jax_compilation_cache_dir)
+                if not cache_calls or actual_cache != str(cache_target):
+                    raise ValueError("JAX 缓存适配未生效")
+                (record_dir / "jax_cache.json").write_text(json.dumps(
+                    {"calls": cache_calls, "actual": actual_cache}, indent=2))
+        except BaseException as e:
+            print(f"[entry_equiv] 收尾取证失败: {e}", flush=True)
+            rc = 1
+        finally:
+            if original_update is not None:
+                jax.config.update = original_update
+            _ckpt.save_state = original_save_state
+            _ckpt.initialize_checkpoint_dir = _orig_init_dir
+            sys.modules["wandb"] = _real_wandb
+            sys.argv = original_argv
+            sys.path[:] = original_path
 
     if rc == 0:
-        if proxy.rows == 0:
-            raise SystemExit("wandb 代理零记录——补丁未生效或训练没跑，fail-loud")
-        tent, main_rows = _split_segments(all_path, record_dir)
-        print(f"SEGMENTS tentative_rows={tent} main_rows={main_rows}")
-        if main_rows != args.expect_steps:
-            raise SystemExit(f"正式段行数 {main_rows} != 期望步数 {args.expect_steps}，"
-                             "fail-loud")
-        print("ENTRY_RUN=OK")
+        try:
+            if proxy.rows == 0:
+                raise ValueError("wandb 代理零记录——补丁未生效或训练没跑")
+            tent, main_rows = _split_segments(all_path, record_dir)
+            print(f"SEGMENTS tentative_rows={tent} main_rows={main_rows}")
+            main_metrics = _load_jsonl(record_dir / "metrics.jsonl")
+            if (main_rows != args.expect_steps
+                    or [row.get("step") for row in main_metrics] != list(range(args.expect_steps))):
+                raise ValueError("正式段步集合不完整或重复")
+            if args.expect_tentative is not None and tent != args.expect_tentative:
+                raise ValueError(f"tentative 行数 {tent} != {args.expect_tentative}")
+            # P1 保留两段 step=1 摘要：这里检有限值，不把重复状态步当成轨迹对拍。
+            if not _finite_metrics(_load_jsonl(all_path)) or not _finite_states(_load_jsonl(state_path)):
+                raise ValueError("标量或状态存在非有限值或缺少完整记录")
+            print("ENTRY_FINITE=PASS")
+            print("ENTRY_RUN=OK")
+        except (ValueError, OSError) as e:
+            print(f"[entry_equiv] 运行验收失败: {e}", flush=True)
+            rc = 1
+    (record_dir / "run_status.json").write_text(json.dumps({"exit_code": rc, "entry_run_ok": rc == 0}))
     return rc
 
 
@@ -314,6 +588,73 @@ def _load_metrics(path: pathlib.Path) -> dict[int, dict]:
 
 def _load_jsonl(path: pathlib.Path) -> list[dict]:
     return [json.loads(x) for x in path.open() if x.strip()]
+
+
+def _read_run_evidence(directory: pathlib.Path, expected_head: str | None) -> tuple[dict, dict, dict]:
+    start = json.loads((directory / "provenance_start.json").read_text())
+    end = json.loads((directory / "provenance.json").read_text())
+    meta = json.loads((directory / "harness_meta.json").read_text())
+    status = json.loads((directory / "run_status.json").read_text())
+    if status != {"exit_code": 0, "entry_run_ok": True}:
+        raise ValueError("入口未成功退出")
+    for snapshot in (start, end):
+        _assert_clean_snapshot(snapshot, expected_head)
+        root = pathlib.Path(snapshot["expect_root"])
+        if root != pathlib.Path(meta["expect_root"]) or not root.is_absolute():
+            raise ValueError("provenance 与启动根不一致")
+        paths = [snapshot["entry"]["file"], *(m["file"] for m in snapshot["modules"].values())]
+        for value in paths:
+            path = pathlib.Path(value)
+            if not path.is_relative_to(root) or any(
+                    path.is_relative_to(pathlib.Path(fr)) for fr in meta["forbid_roots"]):
+                raise ValueError(f"记录的来源越界: {path}")
+    if (start["git_head_of_cwd"] != end["git_head_of_cwd"] or start["entry"] != end["entry"]
+            or end["entry"]["file"] != meta["entry"]):
+        raise ValueError("起止 HEAD 或入口发生变化")
+    if not {"mme_vla_suite.training.config", "openpi.training.checkpoints"} <= set(end["modules"]):
+        raise ValueError("缺少实际训练模块来源")
+    if any(end["modules"].get(key) != value for key, value in start["modules"].items()):
+        raise ValueError("起止模块内容发生变化")
+    fingerprint = json.loads((directory / "runtime_fingerprint.json").read_text())
+    fingerprint_end = json.loads((directory / "runtime_fingerprint_end.json").read_text())
+    fields = {"python", "dependencies", "uv_lock_sha256", "devices", "environment",
+              "jax", "history", "assets", "source", "dataset"}
+    if (fingerprint.get("version") != _FINGERPRINT_VERSION
+            or any(not fingerprint.get(key) for key in fields) or fingerprint != fingerprint_end):
+        raise ValueError("缺少完整指纹或起止指纹变化")
+    if not meta.get("harness_sha256"):
+        raise ValueError("缺少量具摘要")
+    return end, fingerprint, meta
+
+
+def _concurrent_overlap(current: pathlib.Path, peer: pathlib.Path, expected_head: str) -> dict:
+    """按 step 10..99 的主机完成间隔判定，不把日志间隔称为 GPU 计算时间。"""
+    if current.resolve() == peer.resolve():
+        raise ValueError("并跑 peer 不能是本 run")
+    evidence = [_read_run_evidence(path, expected_head) for path in (current, peer)]
+    if any(meta.get("execution_role") != "concurrent" for _, _, meta in evidence):
+        raise ValueError("并跑双方必须标记 concurrent")
+    if evidence[0][0]["expect_root"] != evidence[1][0]["expect_root"]:
+        raise ValueError("并跑双方必须使用同仓库根")
+    uuids = [{gpu["uuid"] for gpu in fingerprint["devices"]} for _, fingerprint, _ in evidence]
+    if any(len(group) != 4 for group in uuids) or uuids[0] & uuids[1]:
+        raise ValueError("并跑必须为互不重叠的四卡加四卡")
+    intervals = []
+    for directory in (current, peer):
+        rows = _load_jsonl(directory / "metrics.jsonl")
+        if [r.get("step") for r in rows] != list(range(100)) or not _finite_metrics(rows):
+            raise ValueError("并跑必须记录完整且有限的 100 步")
+        times = [r["wall_time"] for r in rows]
+        if any(not math.isfinite(t) for t in times) or any(b <= a for a, b in zip(times, times[1:])):
+            raise ValueError("主机完成时间必须严格递增且有限")
+        intervals.append([(times[step - 1], times[step]) for step in range(10, 100)])
+    begin = max(items[0][0] for items in intervals)
+    end = min(items[-1][1] for items in intervals)
+    complete = [sum(a >= begin and b <= end for a, b in items) for items in intervals]
+    if end <= begin or min(complete) < 50:
+        raise ValueError(f"并跑重叠不足：各侧完整步骤={complete}，均须至少 50")
+    return {"window_steps": [10, 99], "begin": begin, "end": end,
+            "seconds": end - begin, "complete_steps": complete}
 
 
 def _judge(args) -> int:
@@ -365,6 +706,16 @@ def _judge(args) -> int:
     # 步集合必须恰为该集、原始行数 == 集合大小（无重复），两侧同
     a_st_rows = _load_jsonl(a_dir / "state_digests.jsonl")
     b_st_rows = _load_jsonl(b_dir / "state_digests.jsonl")
+    finite_ok = True
+    for directory, states in ((a_dir, a_st_rows), (b_dir, b_st_rows)):
+        rows = _load_jsonl(directory / "metrics.jsonl")
+        tentative = directory / "metrics_tentative.jsonl"
+        if tentative.exists():
+            rows.extend(_load_jsonl(tentative))
+        finite_ok = finite_ok and _finite_metrics(rows) and _finite_states(states)
+    print(f"ENTRY_FINITE={'PASS' if finite_ok else 'FAIL'}")
+    if not finite_ok:
+        fails.append("标量或状态非有限或缺少 finite 证据")
     a_st = {r["step"]: r for r in a_st_rows}
     b_st = {r["step"]: r for r in b_st_rows}
     st_common = sorted(set(a_st) & set(b_st))
@@ -391,7 +742,8 @@ def _judge(args) -> int:
         cfg_mism = -1
     else:
         fa, fb = a_cfg["fields"], b_cfg["fields"]
-        keys = (set(fa) | set(fb)) - _CFG_WHITELIST
+        whitelist = _SAME_ENTRY_WHITELIST if args.mode == "same-entry" else _CFG_WHITELIST
+        keys = (set(fa) | set(fb)) - whitelist
         bad = sorted(k for k in keys if fa.get(k) != fb.get(k))
         cfg_mism = len(bad)
         for k in bad:
@@ -399,38 +751,49 @@ def _judge(args) -> int:
         for k in _CFG_SPOTLIGHT:   # 单独列出对比、不埋进总哈希
             tag = "SAME" if fa.get(k) == fb.get(k) else "DIFF"
             print(f"CFG_SPOTLIGHT field={k} {tag}")
-    print(f"ENTRY_RESOLVED_CFG mismatch={cfg_mism} whitelist={len(_CFG_WHITELIST)}")
+    print(f"ENTRY_RESOLVED_CFG mismatch={cfg_mism} mode={args.mode}")
     if cfg_mism != 0:
         fails.append(f"ENTRY_RESOLVED_CFG mismatch={cfg_mism}")
 
-    # ④ ENTRY_PROVENANCE：两侧各自归位且根不同；v5.1 增 HEAD 断言 + porcelain 必须空
+    # ④ 起止证据与两种比较模式。same-entry 的放行不能削弱 upstream 异根守卫。
     prov_ok = True
-    roots = []
+    evidence = []
     expect_heads = {"A": args.expect_head_a, "B": args.expect_head_b}
     for side, d in (("A", a_dir), ("B", b_dir)):
-        p = json.loads((d / "provenance.json").read_text())
-        root = pathlib.Path(p["expect_root"])
-        roots.append(root)
-        for name, m in p["modules"].items():
-            if not pathlib.Path(m["file"]).is_relative_to(root):
-                print(f"PROVENANCE_BAD side={side} module={name} file={m['file']}")
-                prov_ok = False
-        if expect_heads[side] is not None:
-            head = p.get("git_head_of_cwd", "")
-            if head != expect_heads[side]:
-                print(f"PROVENANCE_BAD side={side} git_head={head!r} "
-                      f"!= 期望 {expect_heads[side]!r}")
-                prov_ok = False
-            if "git_porcelain_of_cwd" not in p:
-                print(f"PROVENANCE_BAD side={side} 记录缺 git_porcelain_of_cwd"
-                      "（旧版 harness 产物，HEAD 断言口径下不接受）")
-                prov_ok = False
-            elif p["git_porcelain_of_cwd"].strip():
-                print(f"PROVENANCE_BAD side={side} 起跑时工作区不 clean: "
-                      f"{p['git_porcelain_of_cwd']!r}")
-                prov_ok = False
-    if len(roots) == 2 and roots[0] == roots[1]:
-        print("PROVENANCE_BAD 两侧 expect_root 相同——A/B 跑的是同一份代码")
+        try:
+            evidence.append(_read_run_evidence(d, expect_heads[side]))
+        except (ValueError, KeyError, OSError, TypeError) as e:
+            print(f"PROVENANCE_BAD side={side} reason={e}")
+            prov_ok = False
+    try:
+        if len(evidence) != 2:
+            raise ValueError("双侧完整来源证据缺失")
+        (pa, fpa, ma), (pb, fpb, mb) = evidence
+        if ma["harness_sha256"] != mb["harness_sha256"]:
+            raise ValueError("两侧量具内容不同")
+        if args.mode == "same-entry":
+            for key in ("expect_root", "entry", "git_head_of_cwd", "modules"):
+                if pa[key] != pb[key]:
+                    raise ValueError(f"same-entry 来源字段不同: {key}")
+            if fpa != fpb:
+                raise ValueError("same-entry 的依赖/设备/数据/资产/有效环境指纹不同")
+            if ma.get("execution_role") != "solo" or mb.get("execution_role") != "concurrent":
+                raise ValueError("same-entry 必须比较 A=solo 与 B=concurrent")
+            if not args.concurrent_peer_dir:
+                raise ValueError("same-entry 缺少 S2 另一侧 concurrent-peer-dir")
+            overlap = _concurrent_overlap(b_dir, pathlib.Path(args.concurrent_peer_dir), args.expect_head_b)
+            print("ENTRY_CONCURRENT=PASS " + json.dumps(overlap, sort_keys=True))
+        else:
+            if pa["expect_root"] == pb["expect_root"]:
+                raise ValueError("upstream 两侧 expect_root 相同")
+            for key in ("python", "dependencies", "uv_lock_sha256", "devices", "environment", "jax", "assets", "source"):
+                if fpa[key] != fpb[key]:
+                    raise ValueError(f"upstream 共同环境/输入不同: {key}")
+            for key in ("sha256", "bytes"):
+                if fpa["history"][key] != fpb["history"][key]:
+                    raise ValueError("upstream history 内容不同")
+    except (ValueError, KeyError, OSError, TypeError) as e:
+        print(f"PROVENANCE_BAD reason={e}")
         prov_ok = False
     print(f"ENTRY_PROVENANCE={'PASS' if prov_ok else 'FAIL'}")
     if not prov_ok:
@@ -439,7 +802,11 @@ def _judge(args) -> int:
     # ⑤ 两侧各自投影对锚点；v5.1 起锚点可选（A40 无本机锚点时打 SKIPPED，不进判据）
     shas = {}
     for side, d in (("A", a_dir), ("B", b_dir)):
-        text = project_scalars.project(d / "metrics.jsonl")
+        try:
+            text = project_scalars.project(d / "metrics.jsonl")
+        except (SystemExit, ValueError, KeyError, OSError) as e:
+            fails.append(f"{side} 侧标量投影失败: {e}")
+            continue
         (d / "scalars_hex.tsv").write_text(text)
         shas[side] = hashlib.sha256(text.encode()).hexdigest()
         if args.expect_sha256 is None:
@@ -467,6 +834,11 @@ def main() -> int:
     p_run.add_argument("--forbid-root", action="append", default=[],
                        help="可重复；断言项目模块 __file__ 不落在该目录下")
     p_run.add_argument("--expect-steps", type=int, default=1000)
+    p_run.add_argument("--expect-tentative", type=int, default=None,
+                       help="P1 可要求 A=2、B=0；不对重复 tentative 状态 step 做轨迹判定")
+    p_run.add_argument("--expect-head", help="起跑与收尾必须命中的完整提交")
+    p_run.add_argument("--execution-role", choices=("upstream", "solo", "concurrent"), default="upstream")
+    p_run.add_argument("--jax-cache-dir", help="只转接 JAX 缓存路径，本仓库 v1-store 下的绝对目录")
     p_judge = sub.add_parser("judge")
     p_judge.add_argument("--a-dir", required=True)
     p_judge.add_argument("--b-dir", required=True)
@@ -474,14 +846,16 @@ def main() -> int:
                         help="v5.1 起可选；缺省打 anchor=SKIPPED、不进判据")
     p_judge.add_argument("--expect-steps", type=int, default=1000,
                         help="scalar 步集合必须恰为 0..N-1（两侧同）")
-    p_judge.add_argument("--expect-tentative-a", type=int, default=None,
+    p_judge.add_argument("--expect-tentative-a", type=int, required=True,
                         help="A 段 tentative 行数必须恰为此值且 B 段恰 0，进退出码")
-    p_judge.add_argument("--expect-state-steps", default=None,
+    p_judge.add_argument("--expect-state-steps", required=True,
                         help="逗号分隔；状态摘要步集合必须恰为此集且无重复（两侧同）")
-    p_judge.add_argument("--expect-head-a", default=None,
+    p_judge.add_argument("--expect-head-a", required=True,
                         help="A 侧 provenance git HEAD 断言 + porcelain 必须空")
-    p_judge.add_argument("--expect-head-b", default=None,
+    p_judge.add_argument("--expect-head-b", required=True,
                         help="B 侧 provenance git HEAD 断言 + porcelain 必须空")
+    p_judge.add_argument("--mode", choices=("upstream", "same-entry"), default="upstream")
+    p_judge.add_argument("--concurrent-peer-dir", help="same-entry 时 S2 另一库的完整记录目录")
 
     argv = sys.argv[1:]
     tail: list[str] = []
@@ -489,6 +863,12 @@ def main() -> int:
         i = argv.index("--")
         argv, tail = argv[:i], argv[i + 1:]
     args = ap.parse_args(argv)
+    for name in ("expect_head", "expect_head_a", "expect_head_b"):
+        value = getattr(args, name, None)
+        if value is not None and (len(value) != 40 or any(c not in "0123456789abcdef" for c in value)):
+            ap.error(f"--{name.replace('_', '-')} 必须为完整 40 位 SHA")
+    if args.expect_steps < 2:
+        ap.error("对拍至少两步，单步无法可靠识别上游 tentative 回绕")
     if args.cmd == "run":
         return _run(args, tail)
     return _judge(args)
