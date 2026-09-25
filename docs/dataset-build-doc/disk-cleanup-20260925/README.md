@@ -26,3 +26,16 @@
 
 - MotionJEPA `scripts/dataset-filter-vis/README.md` 的示例 `--source-root` 仍指向已删的 `extracted`，复用前需先从 `snapshot/` 解压恢复。
 - 预检口径：逐项 `ls -ld` 为实体目录、目录内无 symlink、无进程占用（`lsof`）。
+
+## 第二轮：HF 回读校验副本（2026-09-25）
+
+用户目标：可用空间 ≥1.5T。第一轮之后 m1024 导出的回读校验又把 16 个 ckpt 从 HF 下载回 `verify/`，可用空间从 1.3T 降到 1138G。
+
+| 时点 | 已用 | 可用 | 占用率 |
+|---|---|---|---|
+| 删前 | 5863G | 1138G | 84% |
+| 删后 | 5332G | 1669G | 77% |
+
+已删除 `v1-store/exports/hf-ckpt-v2-1600ep-{m16x8x8,m32x8x8,m64x8x8}-modul-b128-80k/verify/`（3×178G）。它们是从 HF bucket 回读、只用于 sha256 比对的副本，三次导出日志均为 `RESULT=PASS`、`EXIT_CODE=0`；删前核实共 1031 个文件无硬链接共享、无 symlink、无进程占用。`train-runs/` 下源 ckpt 删后仍各 16 步。
+
+注意：`scripts/dataset/hf_export/run_m*_ckpt_export.sh` 每次导出都会留下约 178G 的 `verify/`，校验通过后应清理（脚本改动另立任务）。
