@@ -1,0 +1,4 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+MEMATTN_PARAMS={"kv_einsum_mem": {"w": [2, 1, 1024, 256]}, "mem_rms_norm": {"scale": [1024]}, "out_einsum_mem": {"w": [4, 256, 1024]}, "q_einsum_mem": {"w": [4, 1024, 256]}}
+MEMATTN_ORACLE=PASS atol=1e-6 rtol=1e-5 singleton_length_invariant=1 garbage_bitexact=1 nondegenerate_rope_sensitive=1 compact_q_match=1
+EXIT_CODE=0

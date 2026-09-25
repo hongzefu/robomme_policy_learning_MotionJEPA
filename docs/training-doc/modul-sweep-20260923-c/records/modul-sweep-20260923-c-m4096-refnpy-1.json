@@ -1,0 +1,46 @@
+{
+  "result": "PASS",
+  "scope": "NPY侧20+1完整性及同方法核验；packed对照尚待完成",
+  "steps": 20,
+  "leaves": 201,
+  "state_steps": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "recorder": {
+    "files": {
+      "scripts/training/g0/bench_train_steps.py": "511b93db3211c0703e448956e1eeb491da45c8a6ad4d09e5d3b3ded71d18d633",
+      "scripts/training/g0/state_checksum.py": "6633efbfc45eafecce875ae53ca2a1253eed1832bbeda07ac1522c3334f334c3",
+      "scripts/training/config_record.py": "812add2fb3c134a63ace6ff251d7afbfcfa0eed163a3186f70bf23e1b19a11c8",
+      "scripts/training/g0/check_baseline_env.py": "247cdf5805f5432a15ee0f4ceffe029a0ce45891c04af2d94367bf4cf9d16bcf"
+    },
+    "settings": {
+      "checksum_workers": 8,
+      "bench_checksum_enabled": true,
+      "bench_batch_digests_enabled": true,
+      "bench_dump_idx_enabled": true,
+      "digest_interval_effective": 1,
+      "extra_digest_steps": [],
+      "state_dump_steps": []
+    }
+  }
+}

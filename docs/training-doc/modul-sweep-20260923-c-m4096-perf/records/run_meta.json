@@ -1,0 +1,28 @@
+{
+  "argv": [
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/train.py",
+    "mme_vla_suite_b128_80k",
+    "--exp-name",
+    "modul-sweep-20260923-c-m4096-perf",
+    "--assets-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+    "--data.assets.assets-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da",
+    "--data.assets.asset-id",
+    "robomme",
+    "--checkpoint-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs",
+    "--dataset-path",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8",
+    "--model.history-config",
+    "perceptual-framesamp-modul-64frame-8x8.yaml",
+    "--num-train-steps",
+    "1000",
+    "--no-wandb-enabled"
+  ],
+  "entry": "scripts/training/train.py",
+  "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/modul-sweep-20260923-c-m4096-perf",
+  "num_train_steps": 1000,
+  "log_interval": 100,
+  "save_interval": 5000
+}

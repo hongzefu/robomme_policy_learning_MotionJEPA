@@ -27,3 +27,7 @@
 要求1000步完整、100–899共800步稳态、500ms GPU采样唯一递增且有限、共享内存峰值≤70%、SPEED_REPORT=READY。ETA列初始化、稳态及保存估计，正式约300步后复核。
 
 完整运行记录保留在本批次 `v1-store/`，结果与清洗日志结束后归入本目录；不复制脚本、YAML或权重进Git。实测结论见 [result.md](result.md)。
+
+## 实际起跑与完成
+
+已从 `0571fea5f626e822ca2b23b9e5f90c5bf31dd5eb` 正常完成；实际命令、UTC、环境和退出码见[launch.actual.json](records/launch.actual.json)，结论见[result.md](result.md)。上文未启动标记为起跑前记录。

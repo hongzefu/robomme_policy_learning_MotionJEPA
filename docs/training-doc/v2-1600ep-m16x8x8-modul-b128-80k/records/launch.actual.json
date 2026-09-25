@@ -1,0 +1,31 @@
+{
+  "head": "0571fea5f626e822ca2b23b9e5f90c5bf31dd5eb",
+  "start": {
+    "time": "2026-09-24T12:43:59.634086+00:00",
+    "stage": "v2-1600ep-m16x8x8-modul-b128-80k",
+    "status": "START",
+    "command": [
+      "bash",
+      "scripts/training/prod/run_modul_budget.sh",
+      "prod",
+      "1024",
+      "v2-1600ep-m16x8x8-modul-b128-80k",
+      "0571fea5f626e822ca2b23b9e5f90c5bf31dd5eb",
+      "ec1308fe96e1eca2028980258a361d863b22e80de6115ebd6e9cb8f4cb6520ed",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/modul-budget-sweep/modul-sweep-20260923-c/m1024-approval.json",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/modul-budget-sweep/modul-sweep-20260923-c/m1024-speed.json",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/modul-budget-sweep/modul-sweep-20260923-c/baseline-2048.json",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/modul-budget-sweep/modul-sweep-20260923-c/v2-1600ep-m64x8x8-modul-b128-80k.completed.json"
+    ],
+    "cwd": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+    "environment_overrides": {}
+  },
+  "end": {
+    "time": "2026-09-25T10:45:41.850820+00:00",
+    "stage": "v2-1600ep-m16x8x8-modul-b128-80k",
+    "status": "PASS",
+    "exit_code": 0
+  },
+  "user_quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/0922-4096-1024-8gpu-training-plan.md 开始做 有问题立刻问用户 起泡后给出预计的时间",
+  "recorder_decision": "可以优化取证方式 但要保证改前后都是用的一种取证方式 这个是用户最终决策"
+}

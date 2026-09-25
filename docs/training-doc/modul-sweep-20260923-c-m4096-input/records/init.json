@@ -1,0 +1,528 @@
+{
+  "command": "init",
+  "seconds": 160.13077807426453,
+  "result": {
+    "['PaliGemma']['img']['Transformer']['encoder_norm']['bias']": {
+      "shape": [
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "e40fbf8c58fbb48f582b35cdbeb6a95511f528490dbd54240d3ef934e20cbefd"
+    },
+    "['PaliGemma']['img']['Transformer']['encoder_norm']['scale']": {
+      "shape": [
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "38e592a2389d54f6e6d4862c9e7197ce5905f3e34ed16a969249ea56eaae762e"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_0']['bias']": {
+      "shape": [
+        27,
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "596e1b91b24648d5c4d1d1a3d5df8a6eb3a583e805dcc0809b49a9e8ef31ed53"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_0']['scale']": {
+      "shape": [
+        27,
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "4b6d060c0367e2d2653fff4a47cd1187437c0bca14a7ca5af5ed1df53454472b"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_1']['bias']": {
+      "shape": [
+        27,
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "a7ac47328f8474ae0ef95470e8cae0d9fa8f924d6cbd89b7eb99ff3781c5e93f"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_1']['scale']": {
+      "shape": [
+        27,
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "8035f12cdff0aec52b6e438f12895c0da06fb8ef505944588ae44681703cb448"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['bias']": {
+      "shape": [
+        27,
+        4304
+      ],
+      "dtype": "bfloat16",
+      "sha256": "02f196bd66fc63e90ca53bfae23b59ec5c8d0822d93f39b0831d3ee7978f5b29"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['kernel']": {
+      "shape": [
+        27,
+        1152,
+        4304
+      ],
+      "dtype": "bfloat16",
+      "sha256": "3a3304524f1c129aacf9a6629aa17c86e1b2cdc08f4873bea4086590d17ef2f4"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['bias']": {
+      "shape": [
+        27,
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "d8f3e9d2cb9090246cc9a1af9623f9ed589784dce90b8807a6f47340c547e59b"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['kernel']": {
+      "shape": [
+        27,
+        4304,
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "9200075097fd26de9af6febf6907637c1f4a6519531ff16bcf0b37473235152c"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['bias']": {
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "dtype": "bfloat16",
+      "sha256": "d0e53f307725f9da4133720f6e931d78967893df228ab7b914c56550a2c0314f"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['kernel']": {
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "dtype": "bfloat16",
+      "sha256": "7635db8a0d391240525a112677068e5c7583b6ae38308bc755a0d524c26f1f2e"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['bias']": {
+      "shape": [
+        27,
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "0b5fa61731342263dc4de70b17e655799aa144fb5d540bb3435fa640637d377c"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['kernel']": {
+      "shape": [
+        27,
+        16,
+        72,
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "62c7ac989d35c817189aa03e6513bc332a94f6e9ec2ced566224eff19746276e"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['bias']": {
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "dtype": "bfloat16",
+      "sha256": "f9bba9fb14707b4f162d4e8b6135ec6c22236c349dc4661668bd9801a09ae698"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['kernel']": {
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "dtype": "bfloat16",
+      "sha256": "1209e74f57c9289fcb89bdab8b5906fefa0fa5d987af98b1a8c9dd38a70c7b4c"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['bias']": {
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "dtype": "bfloat16",
+      "sha256": "fd3e2717ac526d8b722e9f440732e5d7cc754e6fbfa2062e56e264c141a6c719"
+    },
+    "['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['kernel']": {
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "dtype": "bfloat16",
+      "sha256": "01c8c1ac0e2e580fc509b376bfd9e66d70d754544e5cb02b4feed7079c2ec63c"
+    },
+    "['PaliGemma']['img']['embedding']['bias']": {
+      "shape": [
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "260ff4f39a25e99443b45b6c860d2b6cb43ecd902fd7d0f9e29cbb00c1a2704f"
+    },
+    "['PaliGemma']['img']['embedding']['kernel']": {
+      "shape": [
+        14,
+        14,
+        3,
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "aad5f3b62258904c442ecdc60f7997162fffc50085b663ad7c551e9b89b21bee"
+    },
+    "['PaliGemma']['img']['head']['bias']": {
+      "shape": [
+        2048
+      ],
+      "dtype": "bfloat16",
+      "sha256": "af69acf0ca52d01365a2a92fc3ef66b3c3619eea64af6dcce3bf30c22366a73a"
+    },
+    "['PaliGemma']['img']['head']['kernel']": {
+      "shape": [
+        1152,
+        2048
+      ],
+      "dtype": "bfloat16",
+      "sha256": "7a3627fb7babf6c8339b04100c81da01776f9428e4fc987de9d08ad09c36af9d"
+    },
+    "['PaliGemma']['img']['pos_embedding']": {
+      "shape": [
+        1,
+        256,
+        1152
+      ],
+      "dtype": "bfloat16",
+      "sha256": "f5260d6fbe079652be2209e2258014e5d5ec5305acec5b3124f9de889b68db58"
+    },
+    "['PaliGemma']['llm']['embedder']['input_embedding']": {
+      "shape": [
+        257152,
+        2048
+      ],
+      "dtype": "float32",
+      "sha256": "1ffab44a8789561ae46c72441d08f9ce6f74ec147a9f638746021f7375507954"
+    },
+    "['PaliGemma']['llm']['final_norm']['scale']": {
+      "shape": [
+        2048
+      ],
+      "dtype": "float32",
+      "sha256": "4217db7bcc5432a92f610fc27712c95f5653d474aadcd38acc1ac85e547aed29"
+    },
+    "['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias']": {
+      "shape": [
+        3072
+      ],
+      "dtype": "float32",
+      "sha256": "3d5ecabea774c3caa1b018cf2063ec517c39a977889e56dbc0bc2d1d9edf07ca"
+    },
+    "['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel']": {
+      "shape": [
+        1024,
+        3072
+      ],
+      "dtype": "float32",
+      "sha256": "a0a050f4a53c3c0eb0e9325a7411597d1272410e1adbbed6390490c580ff104f"
+    },
+    "['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w']": {
+      "shape": [
+        18,
+        8,
+        256,
+        2048
+      ],
+      "dtype": "float32",
+      "sha256": "efeff678d44b82fd16c2216790a7fd86fe730a9ffa9c5fca80f0ff31fbc7a8d4"
+    },
+    "['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w']": {
+      "shape": [
+        18,
+        8,
+        256,
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "44a564a4916a4b79c0ed245a7f98c0790be32246ab64a5ddd3b9f336756f3af6"
+    },
+    "['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w']": {
+      "shape": [
+        18,
+        2,
+        1,
+        2048,
+        256
+      ],
+      "dtype": "float32",
+      "sha256": "126b907689999f80387b8a88b2ec1108e83e4d25494882a3f607fb1e62e09481"
+    },
+    "['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w']": {
+      "shape": [
+        18,
+        2,
+        1,
+        1024,
+        256
+      ],
+      "dtype": "float32",
+      "sha256": "2860f363f397b067440c7e2bec08b76441d87152018f50bf73d6c8bee2b5095c"
+    },
+    "['PaliGemma']['llm']['layers']['attn']['q_einsum']['w']": {
+      "shape": [
+        18,
+        8,
+        2048,
+        256
+      ],
+      "dtype": "float32",
+      "sha256": "d73c25e443491e3b7499fb7045b4b54bd023cda5c79a8b2a35b690f44a196173"
+    },
+    "['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w']": {
+      "shape": [
+        18,
+        8,
+        1024,
+        256
+      ],
+      "dtype": "float32",
+      "sha256": "a3151e3ff0ab557d45b78ec3206cbf6dc336c1894280d7e851dae1c26d33fd9f"
+    },
+    "['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w']": {
+      "shape": [
+        18,
+        2,
+        1,
+        1024,
+        256
+      ],
+      "dtype": "float32",
+      "sha256": "b2624d3f1d2c42c13a86d2e824ea5c931aeb5b2d520cb9ce4d147aae7a32518c"
+    },
+    "['PaliGemma']['llm']['layers']['mem_attn']['mem_rms_norm']['scale']": {
+      "shape": [
+        18,
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "a972548f4b0daee55135be1fefce9566ecb7fe9a2b6ed9923cdcfe841afde2d1"
+    },
+    "['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w']": {
+      "shape": [
+        18,
+        4,
+        256,
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "0397048b4f493e7163957b2359fcc5cf4a80ba982ce737a71a06965eb268e3dc"
+    },
+    "['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w']": {
+      "shape": [
+        18,
+        4,
+        1024,
+        256
+      ],
+      "dtype": "float32",
+      "sha256": "56f52e53c1b60d2498c18b6badcecd79eb24e1e304a27ad17f733929ad1d2a2d"
+    },
+    "['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['bias']": {
+      "shape": [
+        18,
+        2048
+      ],
+      "dtype": "float32",
+      "sha256": "01b92881091099d70192788b24821a4c36043876c0cb187e90b4de7aaca699cb"
+    },
+    "['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel']": {
+      "shape": [
+        18,
+        1024,
+        2048
+      ],
+      "dtype": "float32",
+      "sha256": "593a0d11c1a9d0c38f2263cc7a7ffd157e22e3a10f19badc1491140d3c058dca"
+    },
+    "['PaliGemma']['llm']['layers']['mlp']['gating_einsum']": {
+      "shape": [
+        18,
+        2,
+        2048,
+        16384
+      ],
+      "dtype": "float32",
+      "sha256": "e400b63460a79073d89ea8c0336948296648d17c210314e0ad890c1a1a61566b"
+    },
+    "['PaliGemma']['llm']['layers']['mlp']['linear']": {
+      "shape": [
+        18,
+        16384,
+        2048
+      ],
+      "dtype": "float32",
+      "sha256": "67137a1fad1f2a0afde6aa899e2cd93774124b5ef6658fe16ae269cc7677f1f7"
+    },
+    "['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum']": {
+      "shape": [
+        18,
+        2,
+        1024,
+        4096
+      ],
+      "dtype": "float32",
+      "sha256": "17c9b527fd6417505115b0089cfcf1c37c4ae53557852039f17cbe8bc6abd352"
+    },
+    "['PaliGemma']['llm']['layers']['mlp_1']['linear']": {
+      "shape": [
+        18,
+        4096,
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "add5a2f934f429f8feb592d94ea74eefb3f7a8d47247ef7979af634dc455f004"
+    },
+    "['PaliGemma']['llm']['layers']['pre_attention_norm']['scale']": {
+      "shape": [
+        18,
+        2048
+      ],
+      "dtype": "float32",
+      "sha256": "f6e3cdec559b40e7b43358445b147ee876805176f235c6c2892727763b5abedf"
+    },
+    "['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias']": {
+      "shape": [
+        18,
+        3072
+      ],
+      "dtype": "float32",
+      "sha256": "13a2fd9c4043f9775db0c99375bacc071963897a9c644a31225d7b513ea80818"
+    },
+    "['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel']": {
+      "shape": [
+        18,
+        1024,
+        3072
+      ],
+      "dtype": "float32",
+      "sha256": "085abcdb492df5fdbccedcc7710064fbef82f34480ed959f04ed2d51212b3f6d"
+    },
+    "['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale']": {
+      "shape": [
+        18,
+        2048
+      ],
+      "dtype": "float32",
+      "sha256": "85ad8c03a25e8793fbfb0583ab824c492fdb4ea6ba759d5b12d3f10830f755a6"
+    },
+    "['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias']": {
+      "shape": [
+        18,
+        3072
+      ],
+      "dtype": "float32",
+      "sha256": "ac476a196962ce69c0604d09b9b2262177141c638f487ab37663c2dc4474fa11"
+    },
+    "['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel']": {
+      "shape": [
+        18,
+        1024,
+        3072
+      ],
+      "dtype": "float32",
+      "sha256": "a474a6859538af8a70ce47e3bce717f064a8a10a5308a34cc27e6044ff7c4bba"
+    },
+    "['action_in_proj']['bias']": {
+      "shape": [
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "d6c7b0d1f7afc57c68245c8a62ad20ff8e6cf5cea9a0a0ded4be7a5d4cc6268e"
+    },
+    "['action_in_proj']['kernel']": {
+      "shape": [
+        32,
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "3d9b8a3c3d3be74002263fc0a074399e546aab53863f250b2b46da77ff15dfe4"
+    },
+    "['action_out_proj']['bias']": {
+      "shape": [
+        32
+      ],
+      "dtype": "float32",
+      "sha256": "2330e09cad55e462f9779d8fa2e9729ca177834b3b88796f0662b03693d403e1"
+    },
+    "['action_out_proj']['kernel']": {
+      "shape": [
+        1024,
+        32
+      ],
+      "dtype": "float32",
+      "sha256": "c196e673f02bebdfe0c3582d5780e283021f6485f8fe219997bd99b36c51254a"
+    },
+    "['mem_encoder']['feature_encoder']['encoder_static']['bias']": {
+      "shape": [
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "6b8e8717d4a9b1c58d4cc22d7326728251466aef3ad2fd955a609ca6f3d06970"
+    },
+    "['mem_encoder']['feature_encoder']['encoder_static']['kernel']": {
+      "shape": [
+        2816,
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "01ddae211edfb70207b47d7912e21e6065f519e1187efb6bbfe0947890aac76f"
+    },
+    "['mem_encoder']['feature_encoder']['pos_proj']['bias']": {
+      "shape": [
+        768
+      ],
+      "dtype": "float32",
+      "sha256": "148521ef532cf47b4e7826be150b05c5f44c00e6a97e5903d4db37680a56f145"
+    },
+    "['mem_encoder']['feature_encoder']['pos_proj']['kernel']": {
+      "shape": [
+        768,
+        768
+      ],
+      "dtype": "float32",
+      "sha256": "51527a4593916e2bdaaf795fb2f9fdf8b76d9febcc2c0e146eddd4f4fecbe0ad"
+    },
+    "['time_mlp_in']['bias']": {
+      "shape": [
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "b9ae9ed4ef31d32bd56a50e1acbc55febb64c8791159981710ba926612817db2"
+    },
+    "['time_mlp_in']['kernel']": {
+      "shape": [
+        1024,
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "562d1b8b407a4c279e9b9370b61889b2d05c4a2428a70ace4d6d43691bb3b700"
+    },
+    "['time_mlp_out']['bias']": {
+      "shape": [
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "6c6622bb294eb1e2b11455a50f5bc5701daf370ca81dcb9e5d657a66b9dd5b1f"
+    },
+    "['time_mlp_out']['kernel']": {
+      "shape": [
+        1024,
+        1024
+      ],
+      "dtype": "float32",
+      "sha256": "033dd2f705e62854b7ffb823d4bf9b2627b62e30daed8eeea2fc4d47a078c714"
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "kind": "正式训练阶段的原生日志ETA复核",
+  "phase": "running_at_step300",
+  "completed": false,
+  "eta_at_step300": {
+    "kind": "正式约300步原生日志复核，短窗口估算不是完成时间保证",
+    "run_name": "v2-1600ep-m64x8x8-modul-b128-80k",
+    "head": "0571fea5f626e822ca2b23b9e5f90c5bf31dd5eb",
+    "last_log_step": 300,
+    "state_updates_at_last_log": 301,
+    "window": [
+      100,
+      300
+    ],
+    "seconds_per_step": 1.1596460354328155,
+    "block_seconds_per_step": [
+      1.165234582424164,
+      1.1540574884414674
+    ],
+    "samples_per_second": 110.37850869056476,
+    "elapsed_to_step300_s": 601.3247621059418,
+    "estimated_total_hours": 25.888045083350605,
+    "remaining_hours_at_step300": 25.721010427210064,
+    "estimated_end_utc": "2026-09-24T09:09:44.743858+00:00",
+    "benchmark_eta_hours": 27.595846023741696,
+    "benchmark_scenario_hours": [
+      27.225270101692946,
+      28.66603805469142
+    ],
+    "clock_points": [
+      {
+        "step": 0,
+        "wall_time": 1790148039.1876886
+      },
+      {
+        "step": 100,
+        "wall_time": 1790148157.177113
+      },
+      {
+        "step": 200,
+        "wall_time": 1790148273.7005713
+      },
+      {
+        "step": 300,
+        "wall_time": 1790148389.1063201
+      }
+    ],
+    "method": "只读取原生log100时间戳，没有新增逐步同步或profiler；剩余保存按独立测速B/C估计。"
+  }
+}

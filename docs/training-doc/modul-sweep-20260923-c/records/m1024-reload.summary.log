@@ -1,0 +1,29 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+TRAIN100=PASS steps=100 finite_keys=5/5
+INIT_MATCH_100=PASS mismatches=0
+SAVE_ARRAYS=PASS init_state=0 final_state=100 raw_sha_match=1
+CKPT_LEAF_BF16=PASS mismatches=0
+CKPT_VS_INIT=PASS mem_leaves_changed=10/10
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+max_token_len: 64
+Training config:  TrainConfig(name='mme_vla_suite', project_name='openpi', exp_name=<PropagatingMissingType id='139760885875920'>, model=HistoryPi0Config(action_dim=32, action_horizon=20, max_token_len=64, dtype='bfloat16', paligemma_variant='gemma_2b', action_expert_variant='gemma_300m', pi05=True, discrete_state_input=False, memory_expert_variant='gemma_150m', use_history=True, history_config={'budget': 1024, 'num_views': 1, 'token_per_image': 64, 'streaming_obs_horizon': 16, 'pool_type': 'mean', 'use_pos_emb': True, 'use_state_emb': False, 'memory_feature': {'img': {'net': 'identity', 'input_dim': 2048}, 'pos': {'input_dim': 768, 'hidden_dim': 768}, 'state': {'input_dim': 8, 'hidden_dim': 512}}, 'integration_type': 'modulation', 'memory_token_dim': 1024, 'representation_type': 'perceptual', 'perceptual_memory': {'type': 'frame_sampling'}}), weight_loader=CheckpointWeightLoader(params_path='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params'), pytorch_weight_path=None, pytorch_training_precision='bfloat16', lr_schedule=CosineDecaySchedule(warmup_steps=10000, peak_lr=5e-05, decay_steps=100000, decay_lr=5e-05), optimizer=AdamW(b1=0.9, b2=0.95, eps=1e-08, weight_decay=1e-10, clip_gradient_norm=1.0), ema_decay=0.999, freeze_filter=PathRegex(pattern=re.compile('.*img.*'), sep='/'), data=RoboMMEDataConfig(repo_id='robomme', assets=AssetsConfig(assets_dir='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da', asset_id='robomme'), base_config=DataConfig(repo_id=None, asset_id=None, norm_stats=None, repack_transforms=Group(inputs=(), outputs=()), data_transforms=Group(inputs=(), outputs=()), model_transforms=Group(inputs=(), outputs=()), use_quantile_norm=False, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)), assets_base_dir='runs/assets', checkpoint_base_dir='runs/ckpts', seed=42, batch_size=64, num_workers=4, num_train_steps=80000, log_interval=100, save_interval=10000, keep_period=10000, overwrite=False, resume=False, wandb_enabled=True, policy_metadata=None, fsdp_devices=4, resum_ckpt_id=None, dataset_path='data/robomme')
+Data config:  DataConfig(repo_id='robomme', asset_id='robomme', norm_stats={'state': NormStats(mean=array([ 0.00544689,  0.34402379, -0.00671877, -2.11373067,  0.00322757,
+        2.45563293,  0.78381395,  0.02388305]), std=array([0.16478151, 0.26347092, 0.11289434, 0.40329489, 0.07155797,
+       0.28879926, 0.52658856, 0.01676663]), q01=array([-0.37184694, -0.16709099, -0.30414039, -2.83378435, -0.17129615,
+        1.57079637, -0.55371888,  0.        ]), q99=array([ 0.39931992,  0.95670372,  0.25378957, -1.19168596,  0.20282241,
+        3.04267762,  2.12228779,  0.039992  ])), 'actions': NormStats(mean=array([ 1.37897587e-04,  2.37449654e-03, -2.68928474e-04, -1.81423891e-02,
+       -1.75017685e-05,  2.03041825e-02,  1.73073102e-04, -6.72034994e-02]), std=array([0.04495756, 0.1347107 , 0.03318233, 0.14564596, 0.03407279,
+       0.12839898, 0.10178235, 0.99773932]), q01=array([-0.14138138, -0.31630597, -0.11067081, -0.46341702, -0.1069543 ,
+       -0.28236278, -0.35101238, -1.        ]), q99=array([0.14234874, 0.35805632, 0.10676843, 0.43390816, 0.10698911,
+       0.44373546, 0.35252609, 0.9996    ]))}, repack_transforms=Group(inputs=[RepackTransform(structure={'observation/image': 'image', 'observation/wrist_image': 'wrist_image', 'observation/state': 'state', 'actions': 'actions', 'prompt': 'prompt', 'static_image_emb': 'static_image_emb', 'static_pos_emb': 'static_pos_emb', 'static_state_emb': 'static_state_emb', 'static_mask': 'static_mask', 'motion_emb': 'motion_emb', 'motion_pos': 'motion_pos', 'motion_mask': 'motion_mask', 'mem_order': 'mem_order'})], outputs=()), data_transforms=Group(inputs=(RoboMMEInputs(model_type=<ModelType.PI05: 'pi05'>), DeltaActions(mask=(True, True, True, True, True, True, True, False))), outputs=(AbsoluteActions(mask=(True, True, True, True, True, True, True, False)), RoboMMEOutputs())), model_transforms=Group(inputs=[InjectDefaultPrompt(prompt=None), ResizeImages(height=224, width=224), TokenizePromptWithState(tokenizer=<mme_vla_suite.training.config.PaligemmaTokenizer object at 0x7f1b43b05ed0>, discrete_state_input=False), PadStatesAndActions(model_action_dim=32)], outputs=()), use_quantile_norm=True, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)
+max_token_len: 64
+CKPT_ACTIONS=PASS rms_diff=0.0 threshold=6.8e-5 num_steps=10 aa_rms=0.0
+CKPT_SHAPE=PASS budget=1024 mem_len=1024 motion_enabled=0
+EXIT_CODE=0

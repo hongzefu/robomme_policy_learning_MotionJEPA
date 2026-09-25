@@ -12,23 +12,23 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`modul-sweep-20260923-c/`](modul-sweep-20260923-c/launch.md) | 取证一致性守卫、选帧参考修正及顺序队列 | 52项短测通过，未起跑 |
-| [`modul-sweep-20260923-c-m4096-refnpy-20/`](modul-sweep-20260923-c-m4096-refnpy-20/launch.md) | 4096 refnpy 20步真实输入、五标量与201叶取证 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m4096-refnpy-1/`](modul-sweep-20260923-c-m4096-refnpy-1/launch.md) | 4096 refnpy 1步真实输入、五标量与201叶取证 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m4096-packed-20/`](modul-sweep-20260923-c-m4096-packed-20/launch.md) | 4096 packed 20步真实输入、五标量与201叶取证 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m4096-packed-1/`](modul-sweep-20260923-c-m4096-packed-1/launch.md) | 4096 packed 1步真实输入、五标量与201叶取证 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m4096-save-100/`](modul-sweep-20260923-c-m4096-save-100/launch.md) | 4096 100步真实保存与加载 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m4096-capacity/`](modul-sweep-20260923-c-m4096-capacity/launch.md) | 4096 八卡生产容量验证 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m4096-perf/`](modul-sweep-20260923-c-m4096-perf/launch.md) | 4096 八卡独立测速 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m4096-input/`](modul-sweep-20260923-c-m4096-input/launch.md) | 4096 有界输入、在线装配、padding、RoPE及初始化 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m1024-refnpy-20/`](modul-sweep-20260923-c-m1024-refnpy-20/launch.md) | 1024 refnpy 20步真实输入、五标量与201叶取证 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m1024-refnpy-1/`](modul-sweep-20260923-c-m1024-refnpy-1/launch.md) | 1024 refnpy 1步真实输入、五标量与201叶取证 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m1024-packed-20/`](modul-sweep-20260923-c-m1024-packed-20/launch.md) | 1024 packed 20步真实输入、五标量与201叶取证 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m1024-packed-1/`](modul-sweep-20260923-c-m1024-packed-1/launch.md) | 1024 packed 1步真实输入、五标量与201叶取证 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m1024-save-100/`](modul-sweep-20260923-c-m1024-save-100/launch.md) | 1024 100步真实保存与加载 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m1024-capacity/`](modul-sweep-20260923-c-m1024-capacity/launch.md) | 1024 八卡生产容量验证 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m1024-perf/`](modul-sweep-20260923-c-m1024-perf/launch.md) | 1024 八卡独立测速 | 预建，未启动 |
-| [`modul-sweep-20260923-c-m1024-input/`](modul-sweep-20260923-c-m1024-input/launch.md) | 1024 有界输入、在线装配、padding、RoPE及初始化 | 预建，未启动 |
+| [`modul-sweep-20260923-c/`](modul-sweep-20260923-c/launch.md) | 取证一致性守卫、选帧参考修正及顺序队列 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m4096-refnpy-20/`](modul-sweep-20260923-c-m4096-refnpy-20/launch.md) | 4096 refnpy 20步真实输入、五标量与201叶取证 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m4096-refnpy-1/`](modul-sweep-20260923-c-m4096-refnpy-1/launch.md) | 4096 refnpy 1步真实输入、五标量与201叶取证 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m4096-packed-20/`](modul-sweep-20260923-c-m4096-packed-20/launch.md) | 4096 packed 20步真实输入、五标量与201叶取证 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m4096-packed-1/`](modul-sweep-20260923-c-m4096-packed-1/launch.md) | 4096 packed 1步真实输入、五标量与201叶取证 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m4096-save-100/`](modul-sweep-20260923-c-m4096-save-100/launch.md) | 4096 100步真实保存与加载 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m4096-capacity/`](modul-sweep-20260923-c-m4096-capacity/launch.md) | 4096 八卡生产容量验证 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m4096-perf/`](modul-sweep-20260923-c-m4096-perf/launch.md) | 4096 八卡独立测速 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m4096-input/`](modul-sweep-20260923-c-m4096-input/launch.md) | 4096 有界输入、在线装配、padding、RoPE及初始化 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m1024-refnpy-20/`](modul-sweep-20260923-c-m1024-refnpy-20/launch.md) | 1024 refnpy 20步真实输入、五标量与201叶取证 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m1024-refnpy-1/`](modul-sweep-20260923-c-m1024-refnpy-1/launch.md) | 1024 refnpy 1步真实输入、五标量与201叶取证 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m1024-packed-20/`](modul-sweep-20260923-c-m1024-packed-20/launch.md) | 1024 packed 20步真实输入、五标量与201叶取证 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m1024-packed-1/`](modul-sweep-20260923-c-m1024-packed-1/launch.md) | 1024 packed 1步真实输入、五标量与201叶取证 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m1024-save-100/`](modul-sweep-20260923-c-m1024-save-100/launch.md) | 1024 100步真实保存与加载 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m1024-capacity/`](modul-sweep-20260923-c-m1024-capacity/launch.md) | 1024 八卡生产容量验证 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m1024-perf/`](modul-sweep-20260923-c-m1024-perf/launch.md) | 1024 八卡独立测速 | 已完成，通过对应验收 |
+| [`modul-sweep-20260923-c-m1024-input/`](modul-sweep-20260923-c-m1024-input/launch.md) | 1024 有界输入、在线装配、padding、RoPE及初始化 | 已完成，通过对应验收 |
 
 ### 4096→1024顺序实验重跑（2026-09-23，取证并行化）
 
@@ -57,8 +57,8 @@
 | [`modul-sweep-20260923-b-m1024-capacity/`](modul-sweep-20260923-b-m1024-capacity/launch.md) | 1024 八卡生产容量验证 | 本批次未运行，转c批次 |
 | [`modul-sweep-20260923-b-m1024-perf/`](modul-sweep-20260923-b-m1024-perf/launch.md) | 1024 八卡独立测速 | 本批次未运行，转c批次 |
 | [`modul-sweep-20260923-b-m1024-input/`](modul-sweep-20260923-b-m1024-input/launch.md) | 1024 有界输入、在线装配、padding、RoPE及初始化 | 本批次未运行，转c批次 |
-| [`v2-1600ep-m64x8x8-modul-b128-80k/`](v2-1600ep-m64x8x8-modul-b128-80k/launch.md) | 4096八卡80000步正式训练 | 预建，未启动 |
-| [`v2-1600ep-m16x8x8-modul-b128-80k/`](v2-1600ep-m16x8x8-modul-b128-80k/launch.md) | 1024八卡80000步正式训练 | 预建，未启动 |
+| [`v2-1600ep-m64x8x8-modul-b128-80k/`](v2-1600ep-m64x8x8-modul-b128-80k/launch.md) | 4096八卡80000步正式训练 | 已完成，通过对应验收 |
+| [`v2-1600ep-m16x8x8-modul-b128-80k/`](v2-1600ep-m16x8x8-modul-b128-80k/launch.md) | 1024八卡80000步正式训练 | 已完成，通过对应验收 |
 
 ### 首次4096→1024实施（2026-09-23，已中断取证）
 

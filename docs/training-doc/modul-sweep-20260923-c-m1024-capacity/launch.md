@@ -27,3 +27,7 @@
 要求八卡b128/w16/FSDP8真实20步与末步保存、状态step20、现场EMA摘要与真实读回逐叶相同、全叶和固定动作有限、共享内存峰值≤70%。
 
 完整运行记录保留在本批次 `v1-store/`，结果与清洗日志结束后归入本目录；不复制脚本、YAML或权重进Git。实测结论见 [result.md](result.md)。
+
+## 实际起跑与完成
+
+已从 `0571fea5f626e822ca2b23b9e5f90c5bf31dd5eb` 正常完成；实际命令、UTC、环境和退出码见[launch.actual.json](records/launch.actual.json)，结论见[result.md](result.md)。上文未启动标记为起跑前记录。

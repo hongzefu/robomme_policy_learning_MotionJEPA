@@ -1,0 +1,4103 @@
+{
+  "record_version": 1,
+  "run_uuid": "2e4568e4-87c2-4124-84c0-12264ee0a10d",
+  "run_name": "modul-sweep-20260923-c-m4096-perf",
+  "head": "0571fea5f626e822ca2b23b9e5f90c5bf31dd5eb",
+  "budget": 4096,
+  "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/modul-sweep-20260923-c-m4096-perf",
+  "num_train_steps": 1000,
+  "log_interval": 100,
+  "save_interval": 5000,
+  "keep_period": 5000,
+  "wandb_run_id": "zg3cgqe1",
+  "pid": 1652073,
+  "started_at": "2026-09-23T06:49:07.977059+00:00",
+  "complete": {
+    "config_record_version": 2,
+    "train_config": {
+      "type": "mme_vla_suite.training.config.TrainConfig",
+      "fields": {
+        "name": "mme_vla_suite_b128_80k",
+        "project_name": "robomme-framesamp",
+        "exp_name": "modul-sweep-20260923-c-m4096-perf",
+        "model": {
+          "type": "mme_vla_suite.models.integration.history_pi0.HistoryPi0Config",
+          "fields": {
+            "action_dim": 32,
+            "action_horizon": 20,
+            "max_token_len": 64,
+            "dtype": "bfloat16",
+            "paligemma_variant": "gemma_2b",
+            "action_expert_variant": "gemma_300m",
+            "pi05": true,
+            "discrete_state_input": false,
+            "memory_expert_variant": "gemma_150m",
+            "use_history": true,
+            "history_config": "perceptual-framesamp-modul-64frame-8x8.yaml"
+          }
+        },
+        "weight_loader": {
+          "type": "openpi.training.weight_loaders.CheckpointWeightLoader",
+          "fields": {
+            "params_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params"
+          }
+        },
+        "pytorch_weight_path": null,
+        "pytorch_training_precision": "bfloat16",
+        "lr_schedule": {
+          "type": "openpi.training.optimizer.CosineDecaySchedule",
+          "fields": {
+            "warmup_steps": 5000,
+            "peak_lr": 5e-05,
+            "decay_steps": 80000,
+            "decay_lr": 5e-05
+          }
+        },
+        "optimizer": {
+          "type": "openpi.training.optimizer.AdamW",
+          "fields": {
+            "b1": 0.9,
+            "b2": 0.95,
+            "eps": 1e-08,
+            "weight_decay": 1e-10,
+            "clip_gradient_norm": 1.0
+          }
+        },
+        "ema_decay": 0.999,
+        "freeze_filter": {
+          "type": "openpi.shared.nnx_utils.PathRegex",
+          "fields": {
+            "pattern": {
+              "type": "re.Pattern",
+              "pattern": ".*img.*",
+              "flags": 32
+            },
+            "sep": "/"
+          }
+        },
+        "data": {
+          "type": "mme_vla_suite.training.config.RoboMMEDataConfig",
+          "fields": {
+            "repo_id": "robomme",
+            "assets": {
+              "type": "mme_vla_suite.training.config.AssetsConfig",
+              "fields": {
+                "assets_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da",
+                "asset_id": "robomme"
+              }
+            },
+            "base_config": {
+              "type": "mme_vla_suite.training.config.DataConfig",
+              "fields": {
+                "repo_id": null,
+                "asset_id": null,
+                "norm_stats": null,
+                "repack_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "data_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "model_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "use_quantile_norm": false,
+                "action_sequence_keys": {
+                  "type": "builtins.tuple",
+                  "items": [
+                    "actions"
+                  ]
+                },
+                "prompt_from_task": true,
+                "rlds_data_dir": null,
+                "action_space": null,
+                "filter_dict_path": null
+              }
+            }
+          }
+        },
+        "assets_base_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+        "checkpoint_base_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs",
+        "seed": 42,
+        "batch_size": 128,
+        "num_workers": 16,
+        "num_train_steps": 1000,
+        "log_interval": 100,
+        "save_interval": 5000,
+        "keep_period": 5000,
+        "overwrite": false,
+        "resume": false,
+        "wandb_enabled": false,
+        "policy_metadata": null,
+        "fsdp_devices": 8,
+        "resum_ckpt_id": null,
+        "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8"
+      }
+    },
+    "resolved_data": {
+      "type": "mme_vla_suite.training.config.DataConfig",
+      "fields": {
+        "repo_id": "robomme",
+        "asset_id": "robomme",
+        "norm_stats": {
+          "actions": {
+            "type": "openpi.shared.normalize.NormStats",
+            "fields": {
+              "mean": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "bbc61568f3e35d93e426eaaf496772639d49cc0d95c3d55ca347fc596420196f"
+              },
+              "std": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "b293e11ad2cf227e898351cd603c44f2f08b020224e5f71442990823f223f15b"
+              },
+              "q01": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "674ad5cbdff786ce15d741254732970dee1bb647859ffdfdf5808c6f8e6addf6"
+              },
+              "q99": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "04e5fcfede29a00e7820648e0425442a47991b2668619ea9ce17b49fa9a11126"
+              }
+            }
+          },
+          "state": {
+            "type": "openpi.shared.normalize.NormStats",
+            "fields": {
+              "mean": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "e8b231787d5bf0c9dea01a3a9d67a50938e3e16cfb3ccd0f015f08f00d0db963"
+              },
+              "std": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "05acd73b09d638ecefdbf008c52e849dd7d4bae23fb9cee7dbbb627698d25afa"
+              },
+              "q01": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "88fc0b69d538f5e2001037b812e6fd2e0fd7fe5d8d6ee192be747fa7b9cfb094"
+              },
+              "q99": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "8a9a4e9035fa376b59732425c0d1459136b673fa7ec7cad3ffceb76308dace01"
+              }
+            }
+          }
+        },
+        "repack_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.list",
+              "items": [
+                {
+                  "type": "openpi.transforms.RepackTransform",
+                  "fields": {
+                    "structure": {
+                      "actions": "actions",
+                      "mem_order": "mem_order",
+                      "motion_emb": "motion_emb",
+                      "motion_mask": "motion_mask",
+                      "motion_pos": "motion_pos",
+                      "observation/image": "image",
+                      "observation/state": "state",
+                      "observation/wrist_image": "wrist_image",
+                      "prompt": "prompt",
+                      "static_image_emb": "static_image_emb",
+                      "static_mask": "static_mask",
+                      "static_pos_emb": "static_pos_emb",
+                      "static_state_emb": "static_state_emb"
+                    }
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": []
+            }
+          }
+        },
+        "data_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.tuple",
+              "items": [
+                {
+                  "type": "mme_vla_suite.policies.robomme_policy.RoboMMEInputs",
+                  "fields": {
+                    "model_type": {
+                      "type": "openpi.models.model.ModelType",
+                      "value": "pi05"
+                    }
+                  }
+                },
+                {
+                  "type": "openpi.transforms.DeltaActions",
+                  "fields": {
+                    "mask": {
+                      "type": "builtins.tuple",
+                      "items": [
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        false
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": [
+                {
+                  "type": "openpi.transforms.AbsoluteActions",
+                  "fields": {
+                    "mask": {
+                      "type": "builtins.tuple",
+                      "items": [
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        false
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "mme_vla_suite.policies.robomme_policy.RoboMMEOutputs",
+                  "fields": {}
+                }
+              ]
+            }
+          }
+        },
+        "model_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.list",
+              "items": [
+                {
+                  "type": "openpi.transforms.InjectDefaultPrompt",
+                  "fields": {
+                    "prompt": null
+                  }
+                },
+                {
+                  "type": "openpi.transforms.ResizeImages",
+                  "fields": {
+                    "height": 224,
+                    "width": 224
+                  }
+                },
+                {
+                  "type": "mme_vla_suite.training.config.TokenizePromptWithState",
+                  "fields": {
+                    "tokenizer": {
+                      "type": "mme_vla_suite.training.config.PaligemmaTokenizer",
+                      "fields": {
+                        "_max_len": 64,
+                        "_tokenizer": {
+                          "type": "sentencepiece.SentencePieceProcessor",
+                          "model_sha256": "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6"
+                        }
+                      }
+                    },
+                    "discrete_state_input": false
+                  }
+                },
+                {
+                  "type": "openpi.transforms.PadStatesAndActions",
+                  "fields": {
+                    "model_action_dim": 32
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": []
+            }
+          }
+        },
+        "use_quantile_norm": true,
+        "action_sequence_keys": {
+          "type": "builtins.tuple",
+          "items": [
+            "actions"
+          ]
+        },
+        "prompt_from_task": true,
+        "rlds_data_dir": null,
+        "action_space": null,
+        "filter_dict_path": null
+      }
+    },
+    "assets": {
+      "norm_stats": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json",
+        "bytes": 2077,
+        "sha256": "856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173"
+      },
+      "initialization/_METADATA": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/_METADATA",
+        "bytes": 21402,
+        "sha256": "250d0ad0f6540a5e4bdd70442d6864cef729724f2d23e2dd2cc669563a668d70"
+      },
+      "initialization/manifest.ocdbt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/manifest.ocdbt",
+        "bytes": 117,
+        "sha256": "78b6898ea1f8897a0225022b0ab799455cff0e15158a9ca349d8efbbe044aa55"
+      },
+      "initialization/commit_success.txt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/commit_success.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "tokenizer": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/big_vision/paligemma_tokenizer.model",
+        "bytes": 4264023,
+        "sha256": "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6"
+      },
+      "assets_lock": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/assets/ASSETS_LOCK.json",
+        "bytes": 12240,
+        "sha256": "c2d140c1d934b9c7aadc49996c978697cb008a7ef9c8f6fa66892801a64cb032"
+      }
+    },
+    "history_values": {
+      "budget": 4096,
+      "num_views": 1,
+      "token_per_image": 64,
+      "streaming_obs_horizon": 16,
+      "pool_type": "mean",
+      "use_pos_emb": true,
+      "use_state_emb": false,
+      "memory_feature": {
+        "img": {
+          "net": "identity",
+          "input_dim": 2048
+        },
+        "pos": {
+          "input_dim": 768,
+          "hidden_dim": 768
+        },
+        "state": {
+          "input_dim": 8,
+          "hidden_dim": 512
+        }
+      },
+      "integration_type": "modulation",
+      "memory_token_dim": 1024,
+      "representation_type": "perceptual",
+      "perceptual_memory": {
+        "type": "frame_sampling"
+      }
+    },
+    "derived": {
+      "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/modul-sweep-20260923-c-m4096-perf",
+      "assets_dirs": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite_b128_80k"
+    }
+  },
+  "loop_step": 999,
+  "state_step": 1000,
+  "checkpoint_step": 999,
+  "ema_leaves": {
+    "PaliGemma/img/Transformer/encoder_norm/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152
+      ],
+      "bytes": 2304,
+      "sha256": "e40fbf8c58fbb48f582b35cdbeb6a95511f528490dbd54240d3ef934e20cbefd",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoder_norm/scale": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152
+      ],
+      "bytes": 2304,
+      "sha256": "38e592a2389d54f6e6d4862c9e7197ce5905f3e34ed16a969249ea56eaae762e",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_0/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "596e1b91b24648d5c4d1d1a3d5df8a6eb3a583e805dcc0809b49a9e8ef31ed53",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_0/scale": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "4b6d060c0367e2d2653fff4a47cd1187437c0bca14a7ca5af5ed1df53454472b",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_1/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "a7ac47328f8474ae0ef95470e8cae0d9fa8f924d6cbd89b7eb99ff3781c5e93f",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_1/scale": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "8035f12cdff0aec52b6e438f12895c0da06fb8ef505944588ae44681703cb448",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_0/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        4304
+      ],
+      "bytes": 232416,
+      "sha256": "02f196bd66fc63e90ca53bfae23b59ec5c8d0822d93f39b0831d3ee7978f5b29",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_0/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        4304
+      ],
+      "bytes": 267743232,
+      "sha256": "3a3304524f1c129aacf9a6629aa17c86e1b2cdc08f4873bea4086590d17ef2f4",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_1/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "d8f3e9d2cb9090246cc9a1af9623f9ed589784dce90b8807a6f47340c547e59b",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_1/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        4304,
+        1152
+      ],
+      "bytes": 267743232,
+      "sha256": "9200075097fd26de9af6febf6907637c1f4a6519531ff16bcf0b37473235152c",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/key/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "bytes": 62208,
+      "sha256": "d0e53f307725f9da4133720f6e931d78967893df228ab7b914c56550a2c0314f",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/key/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "bytes": 71663616,
+      "sha256": "7635db8a0d391240525a112677068e5c7583b6ae38308bc755a0d524c26f1f2e",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/out/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "0b5fa61731342263dc4de70b17e655799aa144fb5d540bb3435fa640637d377c",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/out/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72,
+        1152
+      ],
+      "bytes": 71663616,
+      "sha256": "62c7ac989d35c817189aa03e6513bc332a94f6e9ec2ced566224eff19746276e",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/query/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "bytes": 62208,
+      "sha256": "f9bba9fb14707b4f162d4e8b6135ec6c22236c349dc4661668bd9801a09ae698",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/query/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "bytes": 71663616,
+      "sha256": "1209e74f57c9289fcb89bdab8b5906fefa0fa5d987af98b1a8c9dd38a70c7b4c",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/value/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "bytes": 62208,
+      "sha256": "fd3e2717ac526d8b722e9f440732e5d7cc754e6fbfa2062e56e264c141a6c719",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/value/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "bytes": 71663616,
+      "sha256": "01c8c1ac0e2e580fc509b376bfd9e66d70d754544e5cb02b4feed7079c2ec63c",
+      "finite": true
+    },
+    "PaliGemma/img/embedding/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152
+      ],
+      "bytes": 2304,
+      "sha256": "260ff4f39a25e99443b45b6c860d2b6cb43ecd902fd7d0f9e29cbb00c1a2704f",
+      "finite": true
+    },
+    "PaliGemma/img/embedding/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        14,
+        14,
+        3,
+        1152
+      ],
+      "bytes": 1354752,
+      "sha256": "aad5f3b62258904c442ecdc60f7997162fffc50085b663ad7c551e9b89b21bee",
+      "finite": true
+    },
+    "PaliGemma/img/head/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        2048
+      ],
+      "bytes": 4096,
+      "sha256": "af69acf0ca52d01365a2a92fc3ef66b3c3619eea64af6dcce3bf30c22366a73a",
+      "finite": true
+    },
+    "PaliGemma/img/head/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152,
+        2048
+      ],
+      "bytes": 4718592,
+      "sha256": "7a3627fb7babf6c8339b04100c81da01776f9428e4fc987de9d08ad09c36af9d",
+      "finite": true
+    },
+    "PaliGemma/img/pos_embedding": {
+      "dtype": "bfloat16",
+      "shape": [
+        1,
+        256,
+        1152
+      ],
+      "bytes": 589824,
+      "sha256": "f5260d6fbe079652be2209e2258014e5d5ec5305acec5b3124f9de889b68db58",
+      "finite": true
+    },
+    "PaliGemma/llm/embedder/input_embedding": {
+      "dtype": "float32",
+      "shape": [
+        257152,
+        2048
+      ],
+      "bytes": 2106589184,
+      "sha256": "f1eacbd915b050126f323eaec1d766844531200eabf709f0a44e9269fe5cc296",
+      "finite": true
+    },
+    "PaliGemma/llm/final_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        2048
+      ],
+      "bytes": 8192,
+      "sha256": "2648dd768904bf32d79719418ff58a852c13e6cf0a9c3044e8b79ba1bc755865",
+      "finite": true
+    },
+    "PaliGemma/llm/final_norm_1/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        3072
+      ],
+      "bytes": 12288,
+      "sha256": "099706f1754dbe54fb421b7209494865d6a2e98335cff7529642232e07dc2d84",
+      "finite": true
+    },
+    "PaliGemma/llm/final_norm_1/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        3072
+      ],
+      "bytes": 12582912,
+      "sha256": "da2cfd94a9c46f08bdbf0560df22e2c73ed6d85ab65e9bc764728a1c196fe384",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/attn_vec_einsum/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        256,
+        2048
+      ],
+      "bytes": 301989888,
+      "sha256": "1dacf80ddb34ea6dd9e6638c6f21c0ef5cce92bf08c8302011e0877e72d4de1d",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/attn_vec_einsum_1/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        256,
+        1024
+      ],
+      "bytes": 150994944,
+      "sha256": "c46543b43a15f9827815270d9397c0363c1e51e468673f3f25e10df938f34f68",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/kv_einsum/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1,
+        2048,
+        256
+      ],
+      "bytes": 75497472,
+      "sha256": "6b3af8df7cb6d557e50d14a026755b2ba94d1f0f6437a82be834f3f81c71df81",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/kv_einsum_1/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1,
+        1024,
+        256
+      ],
+      "bytes": 37748736,
+      "sha256": "c99cceb3c6e3e7f17330a56edb7743dc8e761de21e3ef8da586df5b85932c1ed",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/q_einsum/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        2048,
+        256
+      ],
+      "bytes": 301989888,
+      "sha256": "19b3bb91c98fbdb3c1d382387171eb1043b43ca984df72459fbfc78787c188a0",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/q_einsum_1/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        1024,
+        256
+      ],
+      "bytes": 150994944,
+      "sha256": "185da1cf577ce6d5ab0eb4aff284b7723b46b56d366b7487e512b9eaeff24f88",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/kv_einsum_mem/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1,
+        1024,
+        256
+      ],
+      "bytes": 37748736,
+      "sha256": "858c113b1a2c9bfba2077ebddb1d79b04fef68f3806228a02456014dca10fc14",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/mem_rms_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024
+      ],
+      "bytes": 73728,
+      "sha256": "cc821d778cb3774435309eac9cde1597d4becdea10e18558c6af944d357a9722",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/out_einsum_mem/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        4,
+        256,
+        1024
+      ],
+      "bytes": 75497472,
+      "sha256": "c8a5cedcd00b91a7e92e6b774f1655ba6251754b7a84844cd976501c5cd1612d",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/q_einsum_mem/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        4,
+        1024,
+        256
+      ],
+      "bytes": 75497472,
+      "sha256": "ca1cb394e52150fedd9cb62ede1c3192d0760e51aa7c978695657801cc88575b",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_rms_norm_ffn/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2048
+      ],
+      "bytes": 147456,
+      "sha256": "394bfb5ef3d324c3c7723b667e6107289e0295612ab64e5428f15963ec3e1737",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_rms_norm_ffn/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024,
+        2048
+      ],
+      "bytes": 150994944,
+      "sha256": "a759e81e7a008788d8d49fd69586d070423becc8e03215efa87b67ba6178b72c",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp/gating_einsum": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        2048,
+        16384
+      ],
+      "bytes": 4831838208,
+      "sha256": "6b760673ec763169258254782184c469251d7601b705d339fe7be3e959588070",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp/linear": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        16384,
+        2048
+      ],
+      "bytes": 2415919104,
+      "sha256": "0ebb66d89161f0bcee41ab5056dae51e10f2f742782164952aaffefe5516ef7e",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp_1/gating_einsum": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1024,
+        4096
+      ],
+      "bytes": 603979776,
+      "sha256": "ab4707ec138308b2ae3d9b05113ae56515e0527add2acc86a2d2dfcf36510c95",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp_1/linear": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        4096,
+        1024
+      ],
+      "bytes": 301989888,
+      "sha256": "6eee30d6a666fa656b4707efff94882f98fe2c0e75dadf9cd0f33bc0e056128f",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_attention_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2048
+      ],
+      "bytes": 147456,
+      "sha256": "6fb4760c40374f4b05b72b5db46ebb7c246bd3c37d18424506752fc6b17d65cf",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_attention_norm_1/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        3072
+      ],
+      "bytes": 221184,
+      "sha256": "74b14f8b31187247d3f2359a4070fbf91633c7ec459ebe1b43091386ef5b8578",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_attention_norm_1/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024,
+        3072
+      ],
+      "bytes": 226492416,
+      "sha256": "b49e79be68867730be53fbda83f9892990baaa06f9957b3995d9ad92ad21dd5e",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_ffw_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2048
+      ],
+      "bytes": 147456,
+      "sha256": "bd17e7f976be66cb528a6947f8de859f6dc2332a36172c53babde33dab4a14b5",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_ffw_norm_1/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        3072
+      ],
+      "bytes": 221184,
+      "sha256": "6ecf06c4f13b85847a5e98cd0009998a80ab9669473acc2e0baa592e7121c6a3",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_ffw_norm_1/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024,
+        3072
+      ],
+      "bytes": 226492416,
+      "sha256": "745ec52bcef0f2de34b5d479bb625977cf376419ca16072e04580019e9500a07",
+      "finite": true
+    },
+    "action_in_proj/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "53f01d7c69ec07273f52014602441cb7ccfabda63474eddd2de9dc52f82a5508",
+      "finite": true
+    },
+    "action_in_proj/kernel": {
+      "dtype": "float32",
+      "shape": [
+        32,
+        1024
+      ],
+      "bytes": 131072,
+      "sha256": "fbc4f3942326529bb405d474dbf56716450e52cb63f2547fe2d67e86153248e4",
+      "finite": true
+    },
+    "action_out_proj/bias": {
+      "dtype": "float32",
+      "shape": [
+        32
+      ],
+      "bytes": 128,
+      "sha256": "110618fc5c4fb0a2ae95fe570fb8eadf1d34ab8300a8f142c68faac756dd029b",
+      "finite": true
+    },
+    "action_out_proj/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        32
+      ],
+      "bytes": 131072,
+      "sha256": "bc6ffd19a38a3be2c446351b8ed7a1a9d1e601597b7122502c799710b6f8a7c5",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/encoder_static/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "f6a6b6406b286425020f575af8487ad0fe5f5150ccea36b8501f8bc4a02b879f",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/encoder_static/kernel": {
+      "dtype": "float32",
+      "shape": [
+        2816,
+        1024
+      ],
+      "bytes": 11534336,
+      "sha256": "1339bf83c386aa075ce9987f9669315266937f6b188bde99acbf03d98fc6dcbe",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/pos_proj/bias": {
+      "dtype": "float32",
+      "shape": [
+        768
+      ],
+      "bytes": 3072,
+      "sha256": "5ebe067d1de421bb92d20b8932fc5c891bb8a6465659fbdc75e91ef338842564",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/pos_proj/kernel": {
+      "dtype": "float32",
+      "shape": [
+        768,
+        768
+      ],
+      "bytes": 2359296,
+      "sha256": "2810605905a5eedbba7b3606c981e3383c7b1981fa37a1f56a1c3abcc39d2e57",
+      "finite": true
+    },
+    "time_mlp_in/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "3609b8090322767c02ed8d1fd070e7a3802c21f1df82918aece196a25fa47eb1",
+      "finite": true
+    },
+    "time_mlp_in/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        1024
+      ],
+      "bytes": 4194304,
+      "sha256": "35f135fd919cfbd2919fcc8c4011009f27c6d91ee4303c200d508e4dac9a4bb5",
+      "finite": true
+    },
+    "time_mlp_out/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "b5c4a15398e563d9fe3908df5b95d5b2cb40751f13afb18a7b472e83f1c631cb",
+      "finite": true
+    },
+    "time_mlp_out/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        1024
+      ],
+      "bytes": 4194304,
+      "sha256": "76d7b170508d0de9746a6ce2709bb7f6235d6ada06486cb7e0c6d36bb54374d8",
+      "finite": true
+    }
+  },
+  "tail": [
+    {
+      "step": 901,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.14278198778629303,
+          "hex": "0x1.246ae20000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.1409173309803009,
+          "hex": "0x1.2099440000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013415450230240822,
+          "hex": "0x1.b798f40000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009953952394425869,
+          "hex": "0x1.462bce0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5557861328125,
+          "hex": "0x1.c5e3920000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 902,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1619863510131836,
+          "hex": "0x1.4bbf800000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.15909942984580994,
+          "hex": "0x1.45d5ec0000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01599397510290146,
+          "hex": "0x1.060b980000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.012874891050159931,
+          "hex": "0x1.a5e26a0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5557861328125,
+          "hex": "0x1.c5e3920000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 903,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1647205650806427,
+          "hex": "0x1.5159040000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.16093586385250092,
+          "hex": "0x1.4998be0000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.015446317382156849,
+          "hex": "0x1.fa251a0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.013995868153870106,
+          "hex": "0x1.ca9dda0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5557861328125,
+          "hex": "0x1.c5e3920000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 904,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.14712628722190857,
+          "hex": "0x1.2d508c0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14468711614608765,
+          "hex": "0x1.2851b80000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.017428403720259666,
+          "hex": "0x1.1d8c060000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.01106995064765215,
+          "hex": "0x1.6abd7a0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5557861328125,
+          "hex": "0x1.c5e3920000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 905,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1568940430879593,
+          "hex": "0x1.4151aa0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.15408174693584442,
+          "hex": "0x1.3b8f360000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014183081686496735,
+          "hex": "0x1.d0c0500000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.01373948622494936,
+          "hex": "0x1.c2372a0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5557861328125,
+          "hex": "0x1.c5e3920000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 906,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1358862668275833,
+          "hex": "0x1.164b8a0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.1331372857093811,
+          "hex": "0x1.10aa480000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013165202923119068,
+          "hex": "0x1.af65ba0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.012398159131407738,
+          "hex": "0x1.96434c0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.555908203125,
+          "hex": "0x1.c5e3940000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 907,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1463138312101364,
+          "hex": "0x1.2ba6960000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14367952942848206,
+          "hex": "0x1.2641740000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.015070912428200245,
+          "hex": "0x1.edd7fa0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.012186105363070965,
+          "hex": "0x1.8f50760000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.555908203125,
+          "hex": "0x1.c5e3940000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 908,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11526411026716232,
+          "hex": "0x1.d81f2e0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11264720559120178,
+          "hex": "0x1.cd67280000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014991632662713528,
+          "hex": "0x1.eb3eee0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.008675465360283852,
+          "hex": "0x1.1c47140000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.555908203125,
+          "hex": "0x1.c5e3940000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 909,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13320612907409668,
+          "hex": "0x1.10ce600000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.13086454570293427,
+          "hex": "0x1.0c02b60000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.016717908903956413,
+          "hex": "0x1.11e7fe0000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.010035470128059387,
+          "hex": "0x1.48d7a00000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.555908203125,
+          "hex": "0x1.c5e3940000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 910,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13002949953079224,
+          "hex": "0x1.0a4ce80000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.1276744306087494,
+          "hex": "0x1.057a2c0000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.015451778657734394,
+          "hex": "0x1.fa52ea0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009176336228847504,
+          "hex": "0x1.2cb0b00000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.555908203125,
+          "hex": "0x1.c5e3940000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 911,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12510815262794495,
+          "hex": "0x1.0038b40000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.12214714288711548,
+          "hex": "0x1.f450900000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013347356580197811,
+          "hex": "0x1.b55dbe0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009103599935770035,
+          "hex": "0x1.2a4e880000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.555908203125,
+          "hex": "0x1.c5e3940000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 912,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13617826998233795,
+          "hex": "0x1.16e4a20000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.13300196826457977,
+          "hex": "0x1.1063560000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01565798744559288,
+          "hex": "0x1.008a5c0000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011369374580681324,
+          "hex": "0x1.748d3a0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5560302734375,
+          "hex": "0x1.c5e3960000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 913,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12306703627109528,
+          "hex": "0x1.f815240000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11992057412862778,
+          "hex": "0x1.eb31d60000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.016086146235466003,
+          "hex": "0x1.078e300000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.008518383838236332,
+          "hex": "0x1.1721620000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5560302734375,
+          "hex": "0x1.c5e3960000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 914,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.14328351616859436,
+          "hex": "0x1.2571d40000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14054827392101288,
+          "hex": "0x1.1fd7c60000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01518958993256092,
+          "hex": "0x1.f1bb840000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011961791664361954,
+          "hex": "0x1.87f6c80000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5560302734375,
+          "hex": "0x1.c5e3960000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 915,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12510357797145844,
+          "hex": "0x1.00364e0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.1223883256316185,
+          "hex": "0x1.f54d760000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.016114164143800735,
+          "hex": "0x1.0803b40000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009322072379291058,
+          "hex": "0x1.3177360000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5560302734375,
+          "hex": "0x1.c5e3960000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 916,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.18556444346904755,
+          "hex": "0x1.7c09360000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.18350860476493835,
+          "hex": "0x1.77d35c0000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.016609204933047295,
+          "hex": "0x1.10200e0000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011992144398391247,
+          "hex": "0x1.88f5660000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5560302734375,
+          "hex": "0x1.c5e3960000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 917,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.15410582721233368,
+          "hex": "0x1.3b9bd60000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.15182437002658844,
+          "hex": "0x1.36efb20000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014861255884170532,
+          "hex": "0x1.e6f9400000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011851714923977852,
+          "hex": "0x1.845b640000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.55615234375,
+          "hex": "0x1.c5e3980000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 918,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.14498282968997955,
+          "hex": "0x1.28ecc20000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14090481400489807,
+          "hex": "0x1.2092b40000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01627172902226448,
+          "hex": "0x1.0a98940000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011913564056158066,
+          "hex": "0x1.8662380000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.55615234375,
+          "hex": "0x1.c5e3980000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 919,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12210457026958466,
+          "hex": "0x1.f423ec0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11954548954963684,
+          "hex": "0x1.e9a8880000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.012645706534385681,
+          "hex": "0x1.9e5fe00000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009984961710870266,
+          "hex": "0x1.472fee0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5562744140625,
+          "hex": "0x1.c5e39a0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 920,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.16322483122348785,
+          "hex": "0x1.4e48d20000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.1603958159685135,
+          "hex": "0x1.487d9a0000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014336123131215572,
+          "hex": "0x1.d5c41e0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.015389024280011654,
+          "hex": "0x1.f8447e0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5562744140625,
+          "hex": "0x1.c5e39a0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 921,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11370798200368881,
+          "hex": "0x1.d1bf760000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11064483970403671,
+          "hex": "0x1.c533860000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013697795569896698,
+          "hex": "0x1.c0d9700000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.00979047454893589,
+          "hex": "0x1.40d0740000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5562744140625,
+          "hex": "0x1.c5e39a0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 922,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11961629241704941,
+          "hex": "0x1.e9f2c60000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11711183190345764,
+          "hex": "0x1.dfb0a80000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01335961278527975,
+          "hex": "0x1.b5c48e0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.008431056514382362,
+          "hex": "0x1.1444d40000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.556396484375,
+          "hex": "0x1.c5e39c0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 923,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13815362751483917,
+          "hex": "0x1.1af04a0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.13510459661483765,
+          "hex": "0x1.14b1b80000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.019500702619552612,
+          "hex": "0x1.3f7fe00000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.010799462907016277,
+          "hex": "0x1.61e0760000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.556396484375,
+          "hex": "0x1.c5e39c0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 924,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13324549794197083,
+          "hex": "0x1.10e3040000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.12981277704238892,
+          "hex": "0x1.09db480000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01595233753323555,
+          "hex": "0x1.055cf40000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.010164780542254448,
+          "hex": "0x1.4d145c0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.556396484375,
+          "hex": "0x1.c5e39c0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 925,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1400117427110672,
+          "hex": "0x1.1ebe7a0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.13654805719852448,
+          "hex": "0x1.17a6820000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.017838923260569572,
+          "hex": "0x1.2445de0000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.010949017480015755,
+          "hex": "0x1.66c7040000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5565185546875,
+          "hex": "0x1.c5e39e0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 926,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13131137192249298,
+          "hex": "0x1.0cecfa0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.1285315752029419,
+          "hex": "0x1.073b900000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014563123695552349,
+          "hex": "0x1.dd34560000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011233950965106487,
+          "hex": "0x1.701d360000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5565185546875,
+          "hex": "0x1.c5e39e0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 927,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11077391356229782,
+          "hex": "0x1.c5bade0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.10785215348005295,
+          "hex": "0x1.b9c32e0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013603337109088898,
+          "hex": "0x1.bdc1100000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.00980654638260603,
+          "hex": "0x1.4157460000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.556640625,
+          "hex": "0x1.c5e3a00000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 928,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1573222279548645,
+          "hex": "0x1.4232280000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.15421275794506073,
+          "hex": "0x1.3bd3e60000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.0199540127068758,
+          "hex": "0x1.46ed320000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.013266462832689285,
+          "hex": "0x1.b2b7280000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.556640625,
+          "hex": "0x1.c5e3a00000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 929,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12177440524101257,
+          "hex": "0x1.f2c9b80000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.1185692623257637,
+          "hex": "0x1.e5a8e20000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.012314689345657825,
+          "hex": "0x1.93871a0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011426746845245361,
+          "hex": "0x1.766e800000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5567626953125,
+          "hex": "0x1.c5e3a20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 930,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13832803070545197,
+          "hex": "0x1.1b4bba0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.13566350936889648,
+          "hex": "0x1.15d6c00000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014466268010437489,
+          "hex": "0x1.da07da0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011177902109920979,
+          "hex": "0x1.6e470a0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5567626953125,
+          "hex": "0x1.c5e3a20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 931,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13106943666934967,
+          "hex": "0x1.0c6e220000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.12799721956253052,
+          "hex": "0x1.0623680000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.017005935311317444,
+          "hex": "0x1.16a0100000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011713346466422081,
+          "hex": "0x1.7fd2ac0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5567626953125,
+          "hex": "0x1.c5e3a20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 932,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.17909014225006104,
+          "hex": "0x1.6ec6d00000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.1762649267911911,
+          "hex": "0x1.68fd960000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.017362836748361588,
+          "hex": "0x1.1c79040000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.014487446285784245,
+          "hex": "0x1.dab9820000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5567626953125,
+          "hex": "0x1.c5e3a20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 933,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1157894879579544,
+          "hex": "0x1.da46140000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11219489574432373,
+          "hex": "0x1.cb8ce00000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01481840293854475,
+          "hex": "0x1.e591c60000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.00878519844263792,
+          "hex": "0x1.1fdf960000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5567626953125,
+          "hex": "0x1.c5e3a20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 934,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1623724102973938,
+          "hex": "0x1.4c89e80000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.15946564078330994,
+          "hex": "0x1.4695ec0000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.016315637156367302,
+          "hex": "0x1.0b50be0000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011943824589252472,
+          "hex": "0x1.8760100000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5567626953125,
+          "hex": "0x1.c5e3a20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 935,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12161408364772797,
+          "hex": "0x1.f2219c0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11904381215572357,
+          "hex": "0x1.e79a7c0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014421462081372738,
+          "hex": "0x1.d88ffe0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009626083076000214,
+          "hex": "0x1.3b6d700000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5567626953125,
+          "hex": "0x1.c5e3a20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 936,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.14921115338802338,
+          "hex": "0x1.31959e0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14646320044994354,
+          "hex": "0x1.2bf4e60000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.015061934478580952,
+          "hex": "0x1.ed8caa0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.012701360508799553,
+          "hex": "0x1.a032bc0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5567626953125,
+          "hex": "0x1.c5e3a20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 937,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1013583242893219,
+          "hex": "0x1.9f29e80000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.09870480746030807,
+          "hex": "0x1.944b7e0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.011082489043474197,
+          "hex": "0x1.6b26a80000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.00857373233884573,
+          "hex": "0x1.18f1ae0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5567626953125,
+          "hex": "0x1.c5e3a20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 938,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12844868004322052,
+          "hex": "0x1.07101a0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.12620550394058228,
+          "hex": "0x1.0278080000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014776574447751045,
+          "hex": "0x1.e432e40000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.008235828951001167,
+          "hex": "0x1.0ddf240000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.556884765625,
+          "hex": "0x1.c5e3a40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 939,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.14932531118392944,
+          "hex": "0x1.31d1780000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14612847566604614,
+          "hex": "0x1.2b45680000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01581217721104622,
+          "hex": "0x1.0311140000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.012797472067177296,
+          "hex": "0x1.a358fa0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5570068359375,
+          "hex": "0x1.c5e3a60000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 940,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.15395568311214447,
+          "hex": "0x1.3b4d1e0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.150933176279068,
+          "hex": "0x1.351c740000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.016099652275443077,
+          "hex": "0x1.07c6d60000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.014325464144349098,
+          "hex": "0x1.d56ab40000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5570068359375,
+          "hex": "0x1.c5e3a60000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 941,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11384786665439606,
+          "hex": "0x1.d252240000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11019538342952728,
+          "hex": "0x1.c35c3c0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.016154920682311058,
+          "hex": "0x1.08aea60000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009287506341934204,
+          "hex": "0x1.3055400000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.55712890625,
+          "hex": "0x1.c5e3a80000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 942,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.10796342045068741,
+          "hex": "0x1.ba37da0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.10447411984205246,
+          "hex": "0x1.abed0e0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013255803845822811,
+          "hex": "0x1.b25dbe0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.008151823654770851,
+          "hex": "0x1.0b1e740000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.55712890625,
+          "hex": "0x1.c5e3a80000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 943,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.10995908081531525,
+          "hex": "0x1.c264740000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.10754726082086563,
+          "hex": "0x1.b8837a0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014901353977620602,
+          "hex": "0x1.e8499e0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.008767442777752876,
+          "hex": "0x1.1f4aa40000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5572509765625,
+          "hex": "0x1.c5e3aa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 944,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13066379725933075,
+          "hex": "0x1.0b99760000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.12743394076824188,
+          "hex": "0x1.04fc160000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.015240523032844067,
+          "hex": "0x1.f366c60000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011628895066678524,
+          "hex": "0x1.7d0e3e0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5572509765625,
+          "hex": "0x1.c5e3aa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 945,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1554432213306427,
+          "hex": "0x1.3e59040000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.15198875963687897,
+          "hex": "0x1.3745e20000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.015516738407313824,
+          "hex": "0x1.fc73d60000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.012660178355872631,
+          "hex": "0x1.9ed9460000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.557373046875,
+          "hex": "0x1.c5e3ac0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 946,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11800801753997803,
+          "hex": "0x1.e35c600000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.1145012304186821,
+          "hex": "0x1.d4ff3e0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01346705574542284,
+          "hex": "0x1.b949da0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009640787728130817,
+          "hex": "0x1.3be8ca0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.557373046875,
+          "hex": "0x1.c5e3ac0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 947,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13129788637161255,
+          "hex": "0x1.0ce5e80000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.12878374755382538,
+          "hex": "0x1.07bfc60000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013696136884391308,
+          "hex": "0x1.c0cb860000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011616873554885387,
+          "hex": "0x1.7ca9660000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.557373046875,
+          "hex": "0x1.c5e3ac0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 948,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1404845118522644,
+          "hex": "0x1.1fb6580000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.13783195614814758,
+          "hex": "0x1.1a47a40000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.012256468646228313,
+          "hex": "0x1.919eb60000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.012644730508327484,
+          "hex": "0x1.9e57b00000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.557373046875,
+          "hex": "0x1.c5e3ac0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 949,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11926332861185074,
+          "hex": "0x1.e880aa0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11594349145889282,
+          "hex": "0x1.dae7900000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.012264166958630085,
+          "hex": "0x1.91df4a0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009973064064979553,
+          "hex": "0x1.46cc200000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.557373046875,
+          "hex": "0x1.c5e3ac0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 950,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.14655326306819916,
+          "hex": "0x1.2c241e0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14350992441177368,
+          "hex": "0x1.25e8880000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01493479497730732,
+          "hex": "0x1.e962240000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011897709220647812,
+          "hex": "0x1.85dd380000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.557373046875,
+          "hex": "0x1.c5e3ac0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 951,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1665187031030655,
+          "hex": "0x1.5507c20000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.16314555704593658,
+          "hex": "0x1.4e1f420000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013826238922774792,
+          "hex": "0x1.c50ee60000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.015937751159071922,
+          "hex": "0x1.051fc60000000p-6",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.557373046875,
+          "hex": "0x1.c5e3ac0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 952,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1489967554807663,
+          "hex": "0x1.3125360000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14530536532402039,
+          "hex": "0x1.2995dc0000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01459966879338026,
+          "hex": "0x1.de66e60000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.01277249027043581,
+          "hex": "0x1.a2876a0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5574951171875,
+          "hex": "0x1.c5e3ae0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 953,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.156040221452713,
+          "hex": "0x1.3f92040000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.15310898423194885,
+          "hex": "0x1.3991340000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013927538879215717,
+          "hex": "0x1.c860aa0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.014857211150228977,
+          "hex": "0x1.e6d7520000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5576171875,
+          "hex": "0x1.c5e3b00000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 954,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1419256031513214,
+          "hex": "0x1.22a9e40000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.13912619650363922,
+          "hex": "0x1.1cee320000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013202184811234474,
+          "hex": "0x1.b09bf40000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011320922523736954,
+          "hex": "0x1.72f6c80000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5577392578125,
+          "hex": "0x1.c5e3b20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 955,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.20611295104026794,
+          "hex": "0x1.a61e8c0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.20290224254131317,
+          "hex": "0x1.9f8b360000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013471427373588085,
+          "hex": "0x1.b96e860000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.017583051696419716,
+          "hex": "0x1.2014aa0000000p-6",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5577392578125,
+          "hex": "0x1.c5e3b20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 956,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1389482170343399,
+          "hex": "0x1.1c90e20000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.13578136265277863,
+          "hex": "0x1.16148a0000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013976261019706726,
+          "hex": "0x1.c9f9600000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011285482905805111,
+          "hex": "0x1.71cd7e0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5576171875,
+          "hex": "0x1.c5e3b00000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 957,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13447900116443634,
+          "hex": "0x1.1369ba0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.1314067840576172,
+          "hex": "0x1.0d1f000000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014840698800981045,
+          "hex": "0x1.e64cce0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.01080279890447855,
+          "hex": "0x1.61fc720000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5576171875,
+          "hex": "0x1.c5e3b00000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 958,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.16241995990276337,
+          "hex": "0x1.4ca2d60000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.15836602449417114,
+          "hex": "0x1.4455680000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01551557332277298,
+          "hex": "0x1.fc6a100000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.01330809760838747,
+          "hex": "0x1.b4146a0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5577392578125,
+          "hex": "0x1.c5e3b20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 959,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.16519378125667572,
+          "hex": "0x1.52511e0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.16107162833213806,
+          "hex": "0x1.49dfec0000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01859266869723797,
+          "hex": "0x1.309f4e0000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.014400174841284752,
+          "hex": "0x1.d7dd6c0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5577392578125,
+          "hex": "0x1.c5e3b20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 960,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.10727840662002563,
+          "hex": "0x1.b769900000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.10422002524137497,
+          "hex": "0x1.aae29e0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014397123828530312,
+          "hex": "0x1.d7c3d40000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.007777093909680843,
+          "hex": "0x1.fdadfc0000000p-8",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5577392578125,
+          "hex": "0x1.c5e3b20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 961,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.17220120131969452,
+          "hex": "0x1.60ab060000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.16885438561439514,
+          "hex": "0x1.59d0540000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.016599809750914574,
+          "hex": "0x1.0ff8a60000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.014593775384128094,
+          "hex": "0x1.de35760000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.557861328125,
+          "hex": "0x1.c5e3b40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 962,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11453463137149811,
+          "hex": "0x1.d522440000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11147502064704895,
+          "hex": "0x1.c89a080000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01331226248294115,
+          "hex": "0x1.b4375a0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.0097409812733531,
+          "hex": "0x1.3f31460000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.557861328125,
+          "hex": "0x1.c5e3b40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 963,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11962636560201645,
+          "hex": "0x1.e9fd560000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11661270260810852,
+          "hex": "0x1.dda5480000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013377648778259754,
+          "hex": "0x1.b65bda0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.00931613240391016,
+          "hex": "0x1.3145620000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.557861328125,
+          "hex": "0x1.c5e3b40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 964,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11740075796842575,
+          "hex": "0x1.e0df9e0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11456282436847687,
+          "hex": "0x1.d53fd40000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013154864311218262,
+          "hex": "0x1.af0f000000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.010572576895356178,
+          "hex": "0x1.5a71340000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.557861328125,
+          "hex": "0x1.c5e3b40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 965,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12539350986480713,
+          "hex": "0x1.00ce500000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.12161321938037872,
+          "hex": "0x1.f220b40000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013408586382865906,
+          "hex": "0x1.b75f600000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011677752248942852,
+          "hex": "0x1.7ea8160000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5579833984375,
+          "hex": "0x1.c5e3b60000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 966,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.175261989235878,
+          "hex": "0x1.66efc20000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.17185845971107483,
+          "hex": "0x1.5ff7540000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013500848785042763,
+          "hex": "0x1.ba65540000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.015139729715883732,
+          "hex": "0x1.f019420000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5579833984375,
+          "hex": "0x1.c5e3b60000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 967,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12011851370334625,
+          "hex": "0x1.ec01640000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11595018953084946,
+          "hex": "0x1.daee960000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013014438562095165,
+          "hex": "0x1.aa75060000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009411112405359745,
+          "hex": "0x1.3462220000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5579833984375,
+          "hex": "0x1.c5e3b60000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 968,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1266765296459198,
+          "hex": "0x1.036efc0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.12384127825498581,
+          "hex": "0x1.fb40fe0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014523846097290516,
+          "hex": "0x1.dbeada0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.01127802487462759,
+          "hex": "0x1.718eee0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5579833984375,
+          "hex": "0x1.c5e3b60000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 969,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.19155997037887573,
+          "hex": "0x1.8850980000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.18772044777870178,
+          "hex": "0x1.8073940000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01813632622361183,
+          "hex": "0x1.2925440000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.0183247122913599,
+          "hex": "0x1.2c3b6a0000000p-6",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5579833984375,
+          "hex": "0x1.c5e3b60000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 970,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12084010243415833,
+          "hex": "0x1.eef6080000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11725050210952759,
+          "hex": "0x1.e042100000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013472111895680428,
+          "hex": "0x1.b974440000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009790425188839436,
+          "hex": "0x1.40d00a0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.55810546875,
+          "hex": "0x1.c5e3b80000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 971,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11338579654693604,
+          "hex": "0x1.d06da00000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.10997508466243744,
+          "hex": "0x1.c2753c0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.012571978382766247,
+          "hex": "0x1.9bf5660000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009531981311738491,
+          "hex": "0x1.38580e0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.55810546875,
+          "hex": "0x1.c5e3b80000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 972,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1252279430627823,
+          "hex": "0x1.0077820000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.12032861262559891,
+          "hex": "0x1.ecddb20000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.012517946772277355,
+          "hex": "0x1.9a30260000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.01180630549788475,
+          "hex": "0x1.82de780000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5582275390625,
+          "hex": "0x1.c5e3ba0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 973,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.15194956958293915,
+          "hex": "0x1.3731560000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14774014055728912,
+          "hex": "0x1.2e92620000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.018158234655857086,
+          "hex": "0x1.2981280000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011770208366215229,
+          "hex": "0x1.81afaa0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.55810546875,
+          "hex": "0x1.c5e3b80000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 974,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12063992023468018,
+          "hex": "0x1.ee24200000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11758504062891006,
+          "hex": "0x1.e1a0da0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.012303009629249573,
+          "hex": "0x1.9325200000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.00985763967037201,
+          "hex": "0x1.4303e00000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5582275390625,
+          "hex": "0x1.c5e3ba0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 975,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.15185952186584473,
+          "hex": "0x1.3702200000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14808358252048492,
+          "hex": "0x1.2f46720000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.012603339739143848,
+          "hex": "0x1.9cfc7a0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.013488191179931164,
+          "hex": "0x1.b9fb260000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.55810546875,
+          "hex": "0x1.c5e3b80000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 976,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1215265765786171,
+          "hex": "0x1.f1c5da0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11839290708303452,
+          "hex": "0x1.e4eff60000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014508781023323536,
+          "hex": "0x1.db6c7a0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009598733857274055,
+          "hex": "0x1.3a88040000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5582275390625,
+          "hex": "0x1.c5e3ba0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 977,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12390168756246567,
+          "hex": "0x1.fb80560000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.12110724300146103,
+          "hex": "0x1.f00e260000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01678239367902279,
+          "hex": "0x1.12f6760000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.010668392293155193,
+          "hex": "0x1.5d94f60000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558349609375,
+          "hex": "0x1.c5e3bc0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 978,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1021430641412735,
+          "hex": "0x1.a260c40000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.09973873198032379,
+          "hex": "0x1.9887a40000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.011505280621349812,
+          "hex": "0x1.79014a0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.008415252901613712,
+          "hex": "0x1.13c0420000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558349609375,
+          "hex": "0x1.c5e3bc0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 979,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1565057784318924,
+          "hex": "0x1.40861a0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.15326696634292603,
+          "hex": "0x1.39e4080000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01377698965370655,
+          "hex": "0x1.c371c40000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.014013615436851978,
+          "hex": "0x1.cb32ba0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558349609375,
+          "hex": "0x1.c5e3bc0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 980,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12194107472896576,
+          "hex": "0x1.f3787c0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11922427266836166,
+          "hex": "0x1.e857b60000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013271418400108814,
+          "hex": "0x1.b2e0ba0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.010822015814483166,
+          "hex": "0x1.629da60000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558349609375,
+          "hex": "0x1.c5e3bc0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 981,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13983984291553497,
+          "hex": "0x1.1e645a0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.13730065524578094,
+          "hex": "0x1.1931160000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.018373331055045128,
+          "hex": "0x1.2d07560000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.01008762326091528,
+          "hex": "0x1.4a8d1e0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558349609375,
+          "hex": "0x1.c5e3bc0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 982,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.13615289330482483,
+          "hex": "0x1.16d7540000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.13283486664295197,
+          "hex": "0x1.100bba0000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.011644958518445492,
+          "hex": "0x1.7d94fe0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.012034830637276173,
+          "hex": "0x1.8a5b7a0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5584716796875,
+          "hex": "0x1.c5e3be0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 983,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.15289366245269775,
+          "hex": "0x1.3920500000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14902758598327637,
+          "hex": "0x1.3135600000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01621640846133232,
+          "hex": "0x1.09b08c0000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.014701645821332932,
+          "hex": "0x1.e1be580000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558349609375,
+          "hex": "0x1.c5e3bc0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 984,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1426476687192917,
+          "hex": "0x1.2424760000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.13946403563022614,
+          "hex": "0x1.1d9f520000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01656596176326275,
+          "hex": "0x1.0f6aae0000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.013186422176659107,
+          "hex": "0x1.b017ba0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5584716796875,
+          "hex": "0x1.c5e3be0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 985,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.10965965688228607,
+          "hex": "0x1.c12a7c0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.10696980357170105,
+          "hex": "0x1.b625f80000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014214582741260529,
+          "hex": "0x1.d1c8900000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.008775338530540466,
+          "hex": "0x1.1f8ce00000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5584716796875,
+          "hex": "0x1.c5e3be0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 986,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12260499596595764,
+          "hex": "0x1.f630a80000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11874278634786606,
+          "hex": "0x1.e65ed60000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01493665762245655,
+          "hex": "0x1.e971c40000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.010469549335539341,
+          "hex": "0x1.5710f20000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5587158203125,
+          "hex": "0x1.c5e3c20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 987,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1678352952003479,
+          "hex": "0x1.57ba080000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.16399051249027252,
+          "hex": "0x1.4fda420000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01427276898175478,
+          "hex": "0x1.d3b0aa0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.01706516370177269,
+          "hex": "0x1.17987c0000000p-6",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5587158203125,
+          "hex": "0x1.c5e3c20000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 988,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.08940678089857101,
+          "hex": "0x1.6e35ce0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.08653239160776138,
+          "hex": "0x1.626fca0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.011443596333265305,
+          "hex": "0x1.76fbd80000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.007530054543167353,
+          "hex": "0x1.ed7d5a0000000p-8",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558837890625,
+          "hex": "0x1.c5e3c40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 989,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12126107513904572,
+          "hex": "0x1.f0af740000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11806896328926086,
+          "hex": "0x1.e39c480000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.012472647242248058,
+          "hex": "0x1.98b4260000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.010571355000138283,
+          "hex": "0x1.5a66f40000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558837890625,
+          "hex": "0x1.c5e3c40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 990,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11305298656225204,
+          "hex": "0x1.cf10a60000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11067096143960953,
+          "hex": "0x1.c54eea0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.012843810021877289,
+          "hex": "0x1.a4ddb00000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009639021940529346,
+          "hex": "0x1.3bd9fa0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558837890625,
+          "hex": "0x1.c5e3c40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 991,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11286955326795578,
+          "hex": "0x1.ce504e0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.10989208519458771,
+          "hex": "0x1.c21e340000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.015915313735604286,
+          "hex": "0x1.04c1aa0000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.00877145491540432,
+          "hex": "0x1.1f6c4c0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558837890625,
+          "hex": "0x1.c5e3c40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 992,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1584285944700241,
+          "hex": "0x1.4476360000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.15577705204486847,
+          "hex": "0x1.3f080a0000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.016523344442248344,
+          "hex": "0x1.0eb7ee0000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.012367410585284233,
+          "hex": "0x1.95415c0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558837890625,
+          "hex": "0x1.c5e3c40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 993,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1125493124127388,
+          "hex": "0x1.cd00820000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.11001462489366531,
+          "hex": "0x1.c29eb20000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.012611295096576214,
+          "hex": "0x1.9d3f360000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.010753411799669266,
+          "hex": "0x1.605e280000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558837890625,
+          "hex": "0x1.c5e3c40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 994,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.10555379837751389,
+          "hex": "0x1.b0592e0000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.10172028839588165,
+          "hex": "0x1.a0a5740000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.013217511586844921,
+          "hex": "0x1.b11c860000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.009299388155341148,
+          "hex": "0x1.30b8ec0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558837890625,
+          "hex": "0x1.c5e3c40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 995,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.12945802509784698,
+          "hex": "0x1.09214a0000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.1260991245508194,
+          "hex": "0x1.0240420000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.015605272725224495,
+          "hex": "0x1.ff5a840000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011167643591761589,
+          "hex": "0x1.6df0fc0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.558837890625,
+          "hex": "0x1.c5e3c40000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 996,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.109695203602314,
+          "hex": "0x1.c14fc20000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.10744623839855194,
+          "hex": "0x1.b8198c0000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.009903325699269772,
+          "hex": "0x1.44831e0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.008814719505608082,
+          "hex": "0x1.20d73a0000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5589599609375,
+          "hex": "0x1.c5e3c60000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 997,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.11117108911275864,
+          "hex": "0x1.c75b560000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.10779298841953278,
+          "hex": "0x1.b985240000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.014655237086117268,
+          "hex": "0x1.e0390a0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.01059446670114994,
+          "hex": "0x1.5b28d40000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5589599609375,
+          "hex": "0x1.c5e3c60000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 998,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.09791171550750732,
+          "hex": "0x1.910be00000000p-4",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.09513607621192932,
+          "hex": "0x1.85ad680000000p-4",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.01297649648040533,
+          "hex": "0x1.a936be0000000p-7",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.008669384755194187,
+          "hex": "0x1.1c14120000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5589599609375,
+          "hex": "0x1.c5e3c60000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 999,
+      "scalars": {
+        "grad_norm": {
+          "dec": 0.1460752785205841,
+          "hex": "0x1.2b29840000000p-3",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 0.14283671975135803,
+          "hex": "0x1.2487940000000p-3",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.017959751188755035,
+          "hex": "0x1.2640a80000000p-6",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.011575452983379364,
+          "hex": "0x1.7b4df00000000p-7",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5589599609375,
+          "hex": "0x1.c5e3c60000000p+10",
+          "finite": true
+        }
+      }
+    }
+  ],
+  "tail_means": {
+    "grad_norm": 0.13541991775385057,
+    "llm_grad_norm": 0.13233844687541327,
+    "loss": 0.014665470364494155,
+    "mem_enc_norm": 0.011292469269135083,
+    "param_norm": 1815.5573767459755
+  },
+  "recorded_at": "2026-09-23T07:15:11.166853+00:00"
+}

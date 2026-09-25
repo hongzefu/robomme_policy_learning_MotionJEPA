@@ -1,0 +1,76 @@
+{
+  "command": "ckpt",
+  "seconds": 435.5998044013977,
+  "result": {
+    "changes": {
+      "PaliGemma/llm/layers/mem_attn/q_einsum_mem/w": {
+        "changed_f32": true,
+        "changed_bf16": true,
+        "delta_l2": 0.0012255083749580476,
+        "relative_l2": 9.028177119436648e-06
+      },
+      "PaliGemma/llm/layers/mem_attn/kv_einsum_mem/w": {
+        "changed_f32": true,
+        "changed_bf16": true,
+        "delta_l2": 0.0019657645349838064,
+        "relative_l2": 2.04743873858352e-05
+      },
+      "PaliGemma/llm/layers/mem_attn/out_einsum_mem/w": {
+        "changed_f32": true,
+        "changed_bf16": true,
+        "delta_l2": 0.003310855032108172,
+        "relative_l2": 2.4389263894652187e-05
+      },
+      "PaliGemma/llm/layers/mem_attn/mem_rms_norm/scale": {
+        "changed_f32": true,
+        "changed_bf16": true,
+        "delta_l2": 0.00010324203453965175,
+        "relative_l2": null
+      },
+      "PaliGemma/llm/layers/mem_rms_norm_ffn/Dense_0/kernel": {
+        "changed_f32": true,
+        "changed_bf16": true,
+        "delta_l2": 0.004528425713025044,
+        "relative_l2": 0.0003685513711247089
+      },
+      "PaliGemma/llm/layers/mem_rms_norm_ffn/Dense_0/bias": {
+        "changed_f32": true,
+        "changed_bf16": true,
+        "delta_l2": 0.0001430103234116291,
+        "relative_l2": null
+      },
+      "mem_encoder/feature_encoder/pos_proj/kernel": {
+        "changed_f32": true,
+        "changed_bf16": true,
+        "delta_l2": 0.0005084543566615037,
+        "relative_l2": 3.3084297767548056e-05
+      },
+      "mem_encoder/feature_encoder/pos_proj/bias": {
+        "changed_f32": true,
+        "changed_bf16": true,
+        "delta_l2": 2.0095302013926864e-05,
+        "relative_l2": null
+      },
+      "mem_encoder/feature_encoder/encoder_static/kernel": {
+        "changed_f32": true,
+        "changed_bf16": true,
+        "delta_l2": 0.0011900225049798119,
+        "relative_l2": 3.50317982169018e-05
+      },
+      "mem_encoder/feature_encoder/encoder_static/bias": {
+        "changed_f32": true,
+        "changed_bf16": true,
+        "delta_l2": 2.3203678904412354e-05,
+        "relative_l2": null
+      }
+    },
+    "actions_rms": 0.0,
+    "aa_rms": 0.0,
+    "memory_lengths": [
+      1024,
+      1024,
+      1024,
+      1024
+    ]
+  }
+}

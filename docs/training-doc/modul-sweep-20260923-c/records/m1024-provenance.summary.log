@@ -1,0 +1,14 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+NORM_STATS_SAME=PASS sha=db55daab64f1fe96 train_src=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da/robomme/norm_stats.json infer_src=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/modul-sweep-20260923-c-m1024-save-100/999/assets/robomme/norm_stats.json keys=[actions,state] arrays=8
+LIB_PROVENANCE_MATCH=PASS framesamp_manifest_sha256=4cd5a170b0ed9718 motion_manifest_sha256=MISSING framesamp_store_meta_sha256=f7677e69e5c473ab motion_index_sha256=MISSING motion_store_meta_sha256=MISSING motion_table_sha256=MISSING all_equal=1
+MOTION_STORE_PATH=PASS motion_enabled=0 motion_store_unused=1
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+CKPT_PARAM_TREE=PASS missing=0 extra=0 leaves=61 model_leaves=61 ckpt_has_motion=0
+CKPT_DTYPE_PROFILE f32_leaves=38 bf16_leaves=23 img_all_bf16=1 trainable_all_f32=1 by_dtype={'bfloat16': 23, 'float32': 38} img_dtypes=['bfloat16']
+明细写入 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/modul-budget-sweep/modul-sweep-20260923-c/m1024-provenance.json
+TIC_L0=PASS
+EXIT_CODE=0

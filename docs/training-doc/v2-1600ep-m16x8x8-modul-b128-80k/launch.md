@@ -25,3 +25,7 @@
 要求80000步、16份checkpoint、800条正常log100、末99步五标量全有限，最终原dtype权重逐叶与本run现场EMA摘要相同，固定noise/10步动作有限。4096任一失败则1024训练调用为0。
 
 完整运行记录保留在本批次 `v1-store/`，结果与清洗日志结束后归入本目录；不复制脚本、YAML或权重进Git。实测结论见 [result.md](result.md)。
+
+## 实际起跑与完成
+
+已从 `0571fea5f626e822ca2b23b9e5f90c5bf31dd5eb` 正常完成；实际命令、UTC、环境和退出码见[launch.actual.json](records/launch.actual.json)，结论见[result.md](result.md)。上文未启动标记为起跑前记录。

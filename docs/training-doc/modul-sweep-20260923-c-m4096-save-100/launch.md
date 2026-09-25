@@ -27,3 +27,7 @@
 要求同预算输入、五标量hex、完整TrainState的201叶摘要一致；20步与独立1步共同覆盖状态0..20。100步档另保存初末原数组和真实checkpoint，按既有6.8e-5动作RMS上限验收。
 
 完整运行记录保留在本批次 `v1-store/`，结果与清洗日志结束后归入本目录；不复制脚本、YAML或权重进Git。实测结论见 [result.md](result.md)。
+
+## 实际起跑与完成
+
+已从 `0571fea5f626e822ca2b23b9e5f90c5bf31dd5eb` 正常完成；实际命令、UTC、环境和退出码见[launch.actual.json](records/launch.actual.json)，结论见[result.md](result.md)。上文未启动标记为起跑前记录。
