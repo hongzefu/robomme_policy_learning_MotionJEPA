@@ -140,6 +140,10 @@
 | [`finalckpt-nomotion59999-gl/`](finalckpt-nomotion59999-gl/result.md) | **最终 ckpt 档的起跑留档**（三个 run 共用）+ 512 @59999 的 692 条：**32.95%**（228/692）。60k run 训到 60000 步为止、没有 80k，故本档不是等步数比较 |
 | [`finalckpt-motion79999-gl/`](finalckpt-motion79999-gl/result.md) | 512+motion @79999 的 692 条：**56.36%**（390/692），三者最高；十片 `MOTION_WINDOWS` 全 PASS，降级仅 1 条集触发、闭式与实测精确相等 |
 | [`finalckpt-modul32frame79999-gl/`](finalckpt-modul32frame79999-gl/result.md) | 2048 @79999 的 692 条：**45.66%**（316/692），较 @50000 仅 +0.58 pp |
+| [`finalckpt-modul16frame50000-gl/`](finalckpt-modul16frame50000-gl/result.md) | **1024（16 帧）@50000 的 692 条：42.05%**（291/692）；本目录另存 1024 / 4096 四个 run 共用的起跑留档 `launch.md`（8 个 48 h 占位作业、40 行 manifest、3 h 15 min 跑完、逐个 scancel 记录）与 40 片两道闸汇总 |
+| [`finalckpt-modul16frame79999-gl/`](finalckpt-modul16frame79999-gl/result.md) | 1024 @79999 的 692 条：**41.33%**（286/692），较 @50000 −0.72 pp（噪声级） |
+| [`finalckpt-modul64frame50000-gl/`](finalckpt-modul64frame50000-gl/result.md) | 4096（64 帧）@50000 的 692 条：**45.23%**（313/692），与 2048 @50000 持平 |
+| [`finalckpt-modul64frame79999-gl/`](finalckpt-modul64frame79999-gl/result.md) | 4096 @79999 的 692 条：**45.95%**（318/692），与 2048 @79999 持平——感知上下文收益在 2048 饱和，512+motion 仍高 10 pp 以上 |
 
 ## 五、已归档（`../archive/training-doc/`，34 项）
 
