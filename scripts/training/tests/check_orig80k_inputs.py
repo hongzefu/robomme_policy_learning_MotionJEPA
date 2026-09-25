@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""在两侧独立环境取证真实输入，再按原始 dtype、shape 与字节严格判定。
+"""在两侧独立环境取证真实输入，保留原始字节并严格比较主机数值。
 
 collect 不导入本工具所在仓库的辅助模块；项目模块只来自 --expect-root。
 索引探针与内容取证都委托目标侧创建的真实 TorchDataLoader / sampler。
 探针只把该实例的数据集改成等长索引返回器；内容侧只筛选原 BatchSampler
 产出的批次，并核对两遍的完整 sampler 序列、generator 状态和 drop_last。
-筛选不改变单个样本及 collate；原始短历史 dtype 不转换、不补缺失 motion 键。
+筛选不改变单个样本及 collate；只在摘要副本中无损编码数值，不补缺失 motion 键。
 """
 
 from __future__ import annotations
@@ -24,7 +24,9 @@ import subprocess
 import sys
 import time
 
-SCHEMA = 1
+SCHEMA = 2
+NUMERIC_ENCODING = "exact-real-sign-u64-exp2-i16-le-v1"
+INPUT_COMPARISON = "host_numeric_exact_signed_zero_v1"
 BATCH_SIZE = 64
 WORKERS = 4
 SEED = 42
@@ -160,7 +162,7 @@ def full_identity(source, manifest):
 
 
 def describe_tree(value):
-    """记录结构和 raw 位模式；有限值诊断使用副本视图，不修改任何训练输入。"""
+    """原始位模式与精确数值同时留证；摘要过程不修改训练输入。"""
     import numpy as np
 
     if isinstance(value, dict):
@@ -177,9 +179,103 @@ def describe_tree(value):
     finite = True
     if array.dtype.kind in "fc" or str(array.dtype) == "bfloat16":
         finite = bool(np.isfinite(array.astype(np.complex128 if array.dtype.kind == "c" else np.float64)).all())
+    numeric = exact_numeric_record(array) if finite else None
     blob = array.tobytes(order="C")
     return {"kind": "array", "dtype": str(array.dtype), "dtype_str": array.dtype.str, "shape": list(array.shape),
-            "bytes": len(blob), "sha256": hashlib.sha256(blob).hexdigest(), "finite": finite}
+            "bytes": len(blob), "sha256": hashlib.sha256(blob).hexdigest(), "finite": finite,
+            "numeric": numeric}
+
+
+def real_dtype(dtype):
+    """本轮实数编码覆盖整数≤64位与bf16/f16/f32/f64，不降精度接受未知浮点。"""
+    supported = str(dtype) == "bfloat16" or (dtype.kind in "iuf" and dtype.itemsize <= 8)
+    require(dtype.kind not in "fc" or supported, f"不支持的数值dtype，须单独定义无损编码: {dtype}")
+    return supported
+
+
+def exact_numeric_record(array):
+    """把每个实数精确编码为符号、奇数幅值、二进制指数；保留正负零。
+
+    浮点≤64位无损提升到float64再解码IEEE位型；整数直接使用uint64幅值，
+    从不先转浮点，因此2**53以上整数、INT64_MIN和UINT64_MAX都不会混同。
+    固定11字节/元素，分块处理仅生成摘要副本，不修改原数组或dtype。
+    """
+    import numpy as np
+
+    if not real_dtype(array.dtype):
+        return None
+    digest = hashlib.sha256()
+    record_dtype = np.dtype([("sign", "u1"), ("magnitude", "<u8"), ("exponent", "<i2")])
+    for chunk in np.nditer(array, flags=["external_loop", "buffered", "zerosize_ok"],
+                           op_flags=["readonly"], order="C", buffersize=65536):
+        if array.dtype.kind in "iu":
+            negative = chunk < 0 if array.dtype.kind == "i" else np.zeros(chunk.shape, dtype=np.bool_)
+            magnitude = chunk.astype(np.uint64, copy=True)
+            magnitude[negative] = np.uint64(0) - magnitude[negative]
+            exponent = np.zeros(chunk.shape, dtype=np.int16)
+        else:
+            promoted = chunk.astype("<f8", copy=True)
+            require(np.isfinite(promoted).all(), "数值摘要拒绝NaN/Inf")
+            bits = promoted.view("<u8")
+            negative = (bits >> 63).astype(np.bool_)
+            encoded_exponent = ((bits >> 52) & 2047).astype(np.int16)
+            magnitude = bits & np.uint64((1 << 52) - 1)
+            normal = encoded_exponent != 0
+            magnitude[normal] |= np.uint64(1 << 52)
+            exponent = np.where(normal, encoded_exponent - 1075, -1074).astype(np.int16)
+        nonzero = magnitude != 0
+        for shift in (32, 16, 8, 4, 2, 1):
+            divisible = nonzero & ((magnitude & np.uint64((1 << shift) - 1)) == 0)
+            magnitude[divisible] >>= np.uint64(shift)
+            exponent[divisible] += shift
+        exponent[~nonzero] = 0
+        records = np.empty(chunk.shape, dtype=record_dtype)
+        records["sign"] = negative
+        records["magnitude"] = magnitude
+        records["exponent"] = exponent
+        digest.update(records.tobytes())
+    return {"encoding": NUMERIC_ENCODING, "elements": int(array.size), "bytes": int(array.size) * 11,
+            "sha256": digest.hexdigest()}
+
+
+def validate_array_record(tree, label):
+    """旧记录或缺数值证据不可回退通过，原始dtype/字节描述也必须自洽。"""
+    import math
+    import re
+
+    import ml_dtypes
+    import numpy as np
+
+    dtype = np.dtype(ml_dtypes.bfloat16) if tree.get("dtype") == "bfloat16" else np.dtype(tree["dtype"])
+    require(tree.get("dtype_str") == dtype.str, f"原始dtype记录不自洽: {label}")
+    shape = tree.get("shape")
+    require(isinstance(shape, list) and all(type(size) is int and size >= 0 for size in shape), f"shape记录无效: {label}")
+    size = math.prod(shape)
+    require(type(tree.get("bytes")) is int and tree["bytes"] == size * dtype.itemsize, f"原始字节数不自洽: {label}")
+    require(re.fullmatch(r"[0-9a-f]{64}", tree.get("sha256", "")) is not None, f"原始摘要缺失: {label}")
+    require("numeric" in tree, f"缺少数值摘要字段，旧记录须重新取证: {label}")
+    numeric = tree["numeric"]
+    if real_dtype(dtype):
+        require(isinstance(numeric, dict) and set(numeric) == {"encoding", "elements", "bytes", "sha256"},
+                f"缺少完整数值摘要: {label}")
+        require(numeric["encoding"] == NUMERIC_ENCODING and type(numeric["elements"]) is int
+                and numeric["elements"] == size and type(numeric["bytes"]) is int and numeric["bytes"] == size * 11
+                and re.fullmatch(r"[0-9a-f]{64}", numeric.get("sha256", "")) is not None,
+                f"数值摘要契约不符: {label}")
+    else:
+        require(numeric is None, f"非实数字段不能套用实数摘要: {label}")
+
+
+def numeric_comparison_tree(tree):
+    """仅数值比较忽略主机dtype；字段、shape、符号零及非数值内容保持严格。"""
+    kind = tree["kind"]
+    if kind == "array" and tree["numeric"] is not None:
+        return {"kind": kind, "shape": tree["shape"], "finite": tree["finite"], "numeric": tree["numeric"]}
+    if kind == "dict":
+        return {"kind": kind, "items": {key: numeric_comparison_tree(value) for key, value in tree["items"].items()}}
+    if kind in ("list", "tuple"):
+        return {"kind": kind, "items": [numeric_comparison_tree(value) for value in tree["items"]]}
+    return tree
 
 
 def comparison_tree(value):
@@ -194,6 +290,7 @@ def require_finite_tree(tree, label):
             f"输入摘要结构无效: {label}")
     if tree["kind"] == "array":
         require(tree.get("finite") is True, f"输入存在非有限值: {label}")
+        validate_array_record(tree, label)
     elif tree["kind"] == "dict":
         for key, child in tree["items"].items():
             require_finite_tree(child, f"{label}.{key}")
@@ -601,7 +698,8 @@ def collect(args):
                     "contract": {"batch_size": BATCH_SIZE, "workers": WORKERS, "seed": SEED, "epochs": 2,
                                  "prefix_batches": PREFIX_BATCHES, "drop_last": True, "history": HISTORY,
                                  "action_horizon": config.model.action_horizon, "endpoint": "collate_before_jax",
-                                 "excluded_legacy_none_keys": list(LEGACY_NONE_KEYS)},
+                                 "excluded_legacy_none_keys": list(LEGACY_NONE_KEYS),
+                                 "input_comparison": INPUT_COMPARISON},
                     "index_probe_overrides": ["等长 dataset 返回索引", "索引 collate"],
                     "content_overrides": ["委托原 BatchSampler 选择已登记批次", "worker 模块来源记录"],
                     "finished_unix": time.time()}
@@ -630,7 +728,8 @@ def validate_record(out, expected_head):
     require(metadata["implementations"]["dataset"] == expected_dataset, "未记录目标侧真实 Dataset")
     expected = {"batch_size": BATCH_SIZE, "workers": WORKERS, "seed": SEED, "epochs": 2,
                 "prefix_batches": PREFIX_BATCHES, "drop_last": True, "history": HISTORY, "action_horizon": 20,
-                "endpoint": "collate_before_jax", "excluded_legacy_none_keys": list(LEGACY_NONE_KEYS)}
+                "endpoint": "collate_before_jax", "excluded_legacy_none_keys": list(LEGACY_NONE_KEYS),
+                "input_comparison": INPUT_COMPARISON}
     require(contract == expected, "输入取证契约被缩小或改变")
     for phase in ("start", "end"):
         provenance = read_json(out / f"provenance_{phase}.json")
@@ -714,10 +813,11 @@ def judge(args):
         for left, right in zip(rows_a, rows_b, strict=True):
             label = str(left.get("identity", {"epoch": left.get("epoch"), "batch": left.get("batch")}))
             for field in fields:
-                difference = first_difference(left[field], right[field], f"{label}/{field}")
+                difference = first_difference(numeric_comparison_tree(left[field]), numeric_comparison_tree(right[field]),
+                                              f"{label}/{field}")
                 require(not difference, difference)
     print(f"INPUT_EQ=PASS episodes={a[1]['episodes']} samples={a[1]['exec_samples']} "
-          f"boundary_samples={len(a[3])} batches={len(a[4])} epochs=2", flush=True)
+          f"boundary_samples={len(a[3])} batches={len(a[4])} epochs=2 comparison={INPUT_COMPARISON}", flush=True)
 
 
 def main(argv=None):

@@ -6,7 +6,11 @@
 
 修订授权：用户在对抗审查后回复「同意修改」，该轮只修改本计划，未实施下述代码、建库或训练。审查基线为 `90098d7922d7e504bb19d1ad4696743ae569021d`，上游固定为 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`；后文所有“拟新增”接口与判定行都是实施要求，不代表已存在或已通过。已确认的数据口径、history 与超参沿用，正式执行授权与 run_name 见 D 节。
 
-执行授权（在上述文档修订后追加）：用户原话「开始实现该计划 有问题立刻问用户 不要自己决策」。现已进入工具实现与 P0 准备，沿用本文两组 run_name 和既定配置；下文“拟新增”描述仍是对应实现的验收要求，不以代码已写完代替实测通过。启动复核可用磁盘为 `1221847916544 B = 1137.93 GiB`，未达到全量建库预算，已提交用户安排清理；上游 padding dtype 与新增 motion 四键缺失/None 的严格比较差异也已提问。用户答复前保留严格判据，暂停依赖这些决定的步骤，继续独立的工具实现。
+执行授权（在上述文档修订后追加）：用户原话「开始实现该计划 有问题立刻问用户 不要自己决策」。该阶段进入工具实现与 P0 准备，沿用本文两组 run_name 和既定配置；下文“拟新增”描述仍是对应实现的验收要求，不以代码已写完代替实测通过。启动复核可用磁盘为 `1221847916544 B = 1137.93 GiB`，未达到全量建库预算，当时已向用户提出磁盘、上游 padding dtype 和新增 motion 四键缺失/None 三项问题。P0 从 clean `5489e4b3a92197d0e9a37421b1e6415b3022b613` 完成，结果见 [P0档案](docs/training-doc/orig80k-env-0925/result.md)；以下最新决定是在 P0 后收到，不能写成 P0 起跑时已经批准。
+
+**P0 后的阶段性决定（建库暂停已被下条覆盖）**：用户当时明确「允许主机 dtype 不同，但要求数值一致且训练标量/状态逐位一致」、「本轮只实现和验证工具，暂不建库」和 motion 四键「先保留严格判据并取证，结果出来后再决定」。该阶段只继续工具与有限非训练输入取证，没有据此启动建库或训练。主机输入改用 §1.2 的精确数值口径，原始 dtype/raw SHA 保留；motion schema 与训练 bitwise 判据保持严格。
+
+**最新执行决定**：用户随后明确「恢复计划中的建库，严格按前置闸门推进」，覆盖上一条的暂不建库范围。当前可从环境、来源 pin、输出路径和实际磁盘预算检查推进 16 集构建冒烟，再根据实测预算与验收结果推进两个正式库；不以工具通过代替这些闸门。最新只读复核为 `/dev/md0` XFS 可用 `1792014577664 B`、使用率 77%，8 张 GPU 全空，两个新库及 counting 硬链接目录均不存在；这只是现场快照，不能单独判定预算通过，也不形成新的固定容量门槛。主机精确数值、训练标量/状态 bitwise 和 motion 四键先严格取证再由用户裁决的决定不变；训练仍须满足计划全部对应前置闸门，不能从恢复建库直接跳到 perf 或 80k。
 
 运行环境：**环境 B（AWS 单机）**。本轮复核为 8×A100-80GB，`/scratch` 位于 `/dev/md0`（XFS，本地 NVMe RAID），旧 `/data/hongzefu`、NFS 与集群 SSH 配置不存在。早前清理后记录的可用 **1.2T（84% 已用）**和“GPU 全空”只是当时快照；起跑必须重测，不能代替第 0 步预算。远端改动由 `7e44706` 合并，磁盘清理记在 `2216672`。
 
@@ -70,7 +74,7 @@ runner 显式加载 `scripts/training/paths.sh`，设置 `OPENPI_DATA_HOME` 等�
 
 上表样本数以已提交的 `docs/dataset-build-doc/16task-h5-scan/records/episode_manifest.json` 为参考，按 `Σ(num_timesteps − exec_start_idx)` 实算。counting 任务没有 demo 段，所以样本数等于帧数。新库建好后会用各自的 manifest 复算一次，结果必须与上表一致，并双向核对 episode 集合、顺序及身份。
 
-- 第 2 步先对输入，再对训练：两侧使用本轮相同的 A100、依赖、source 与 norm_stats，验证上游 source 链与当前 packed 链在规定输入集合及确定性档前 100 步内逐位相同。这不等于证明历史 A40 轨迹相同，也不外推为非确定性生产档全部 80k 步相同。
+- 第 2 步先对输入，再对训练：两侧使用相同的 A100、依赖、source 与 norm_stats，按 §1.2 验证主机输入的精确数值、结构与顺序，并在确定性档前 100 步要求训练标量/状态逐位相同。主机 dtype 差异只按用户最新决定留证，不再单独构成失败；真实输入和训练计算不做适配性 cast。上述训练验证必须先满足对应数据和输入闸门；其结论也不等于历史 A40 轨迹相同，不能外推为非确定性生产档全部 80k 步相同。
 - counting run 的 ①②③ 会改变训练结果，这是「只训 counting 子集」带来的预期差异。它和完整 run 的 loss 不能直接比，因为二者的数据分布和 epoch 数都不同。
 - 原版 norm_stats 与新库自算版的比较只记录、不作闸门：逐键报告最大绝对差，以及参考值非零位置的最大相对差；参考零值单列，避免除零。默认仍用原版文件，不因差异自行切换。
 
@@ -86,7 +90,7 @@ runner 显式加载 `scripts/training/paths.sh`，设置 `OPENPI_DATA_HOME` 等�
 
 ### 1.2 两条输入链：先比较交付内容，再比较训练
 
-两侧消费本轮同一份 source；上游使用自己的 Dataset、采样和 transforms 作为参照，不能只用当前仓库参考类代替上游。拟补的非训练量具须在各自独立环境记录身份、shape、dtype 与字节摘要，再由第三个只读判定过程比较。
+两侧对拍时消费同一份 source；上游使用自己的 Dataset、采样和 transforms 作为参照，不能只用当前仓库参考类代替上游。非训练量具须在各自独立环境保留身份、shape、原始 dtype 和 raw SHA，再增加独立的无损精确数值摘要，由第三个只读判定过程比较。当前先安排真实 3 样本 CPU 字段取证并核对建库前置；小范围结果单独留证，不据工具单测或小样本宣称两个待建正式库已通过全量输入对拍。
 
 ```text
 上游 A：公开 H5 → 本轮 source（执行 pkl + 逐帧 npy）
@@ -99,13 +103,21 @@ runner 显式加载 `scripts/training/paths.sh`，设置 `OPENPI_DATA_HOME` 等�
         → JAX sharding → 模型
 ```
 
-H5 到 source 的抽取是两侧共同前置；源图像每执行样本为两幅 `(256,256,3) uint8`，纯图像共 `393216 B`。packed 的历史图像每总帧为 `(16,2048) bf16 = 65536 B`，pos/state 另存；pack 对保留的 4x4 特征应逐位不改数。当前 B 装配后的历史图像每样本为 `(512,2048) bf16 = 2097152 B`，历史位置为 `(512,768) float32 = 1572864 B`，历史 state 归一化后为 `(512,8) float64 = 32768 B`，mask 为 `(512,) bool = 512 B`。当前两幅图像经 transforms 缩到 `(224,224,3) uint8`，在 Observation 构造中转到 `[-1,1] float32`；state/actions 经归一化、补维，再由禁用 x64 的 JAX 环境交付 `(64,32)` / `(64,20,32) float32`。这些已有转换本身会改数，要求的是对应节点之间的实现对拍，不能把整链写成不做数值转换。motion 四键保持 `None`。
+H5 到 source 的抽取是两侧共同前置；源图像每执行样本为两幅 `(256,256,3) uint8`，纯图像共 `393216 B`。packed 的历史图像每总帧为 `(16,2048) bf16 = 65536 B`，pos/state 另存；pack 对保留的 4x4 特征应逐位不改数。当前 B 装配后的历史图像每样本为 `(512,2048) bf16 = 2097152 B`，历史位置为 `(512,768) float32 = 1572864 B`，历史 state 归一化后为 `(512,8) float64 = 32768 B`，mask 为 `(512,) bool = 512 B`。当前两幅图像经 transforms 缩到 `(224,224,3) uint8`，在 Observation 构造中转到 `[-1,1] float32`；state/actions 经归一化、补维，再由禁用 x64 的 JAX 环境交付 `(64,32)` / `(64,20,32) float32`。这些已有转换本身会改数，要求的是对应节点之间的实现对拍，不能把整链写成不做数值转换。当前 B 的 motion 四键为 `None`；上游缺失这些键时仍按 schema 差异记录并判失败，不能默认为两侧都存在且为 `None`。
 
-**修订时发现的执行前阻断：上游短历史 padding 的 dtype 已有差异。** 固定上游的 `shared/data_utils.py::right_padding_token_emb()` 用未指定 dtype 的 `np.zeros`，短历史可能使 image/pos 提升为 float64，混合 batch 还会扩大影响；当前同函数及 `FrameSampDataset._pad()` 保留输入 dtype。上游对应数组的实际 dtype/字节量必须单独记录，不能套用上述 B 侧数字。此差异尚无本轮输入/训练实测；严格输入判据不自动豁免它，也不得临时 cast 真正训练输入或修改上游来制造 PASS。旁路统一 dtype 的数值诊断只能定位差异，不能代替原始摘要。若原始输入判据因此失败，应先形成差异报告，是否改变实现或接受另一等价口径另行明确，未解决前不进入正式训练。
+**主机 dtype 差异按最新决定留证，数值仍须精确一致。** 固定上游的 `shared/data_utils.py::right_padding_token_emb()` 用未指定 dtype 的 `np.zeros`，短历史可能使 image/pos 提升为 float64，混合 batch 还会扩大影响；当前同函数及 `FrameSampDataset._pad()` 保留输入 dtype。此前将该 dtype 差异本身列为阻断；P0 后用户明确允许主机 dtype 不同，因此现在分别记录两侧真实 dtype、字节量和 raw SHA，用新增的精确数值摘要判定对应元素是否相同。该变更只影响观测和判定，不 cast 真正训练输入、不修改上游 padding，也不把 B 侧字节量套给 A。
 
-输入判据：两库分别核对全量样本身份及 sampler 的前两个完整 epoch 顺序（含 `drop_last` 与重建 iterator 边界）；每集选执行首尾、demo/exec 交界及历史不足/达到/超过 32 帧的合法样本，比较原始样本和 transforms 后的全部模型输入；另比较正式 b64/workers4 的前 100 个 batch，并覆盖 epoch 换轮前后各两批。仅日志路径、运行身份及不进入模型的历史废弃键可列明排除，任何模型输入键不得忽略。数值、dtype、shape 和顺序均要求逐位一致，判定行拟为 `INPUT_EQ=PASS`，摘要按字段记录，失败打印首个样本身份与键名。
+精确数值摘要的接口在 `scripts/training/tests/check_orig80k_inputs.py::exact_numeric_record()`：输入记录升级为 `schema=2`，每个 array 保留原 `dtype/dtype_str/shape/bytes/sha256`，新增 `numeric={encoding, elements, bytes, sha256}`，其中 `encoding` 固定为 `exact-real-sign-u64-exp2-i16-le-v1`。支持 `bf16/f16/f32/f64` 及 64 位以内的有符号/无符号整数；每个元素编码为 1 B 符号、8 B 小端 `uint64` 幅值和 2 B 小端二进制 `int16` 指数，共 `11 B/元素`，按 C 顺序计算 SHA256，shape 另作严格比较。非零幅值约去二进制因子后为奇数；零的幅值、指数均为 0，但保留符号。浮点无损提升到 float64 后解析 IEEE 位型，整数直接求整数幅值，不经过浮点；分块编码只创建观测副本，不修改输入。例如整数 `2**53+1` 不能与被 float64 舍入后的 `2**53` 混同，正零与负零也不混同。不设容差，不向低精度舍入；NaN/Inf、未知更宽浮点及 complex 拒绝，bool/字符串仍按原始内容比较。
+
+`metadata.contract.input_comparison` 固定为 `host_numeric_exact_signed_zero_v1`；judge 使用 `numeric_comparison_tree()` 生成比较视图，只在支持的数值叶上忽略原 dtype 描述、字节数和 raw SHA 的差异，完整原始证据仍在记录中，shape、字段存在性、容器顺序、有限性及 `None` 均保持严格。缺失数值摘要或旧 schema 记录不能回退通过，必须重新取证。成功判定行要求含 `INPUT_EQ=PASS ... comparison=host_numeric_exact_signed_zero_v1`；这是本次工具协议及验收格式，不是已经获得的输入实测结论。新增协议的测试及输入结果另行记录，不用 P0 或旧工具测试替代。
+
+**motion 四键仍是独立的严格闸门。** `motion_emb`、`motion_pos`、`motion_mask`、`mem_order` 的缺键与显式 `None` 不等价，不丢弃、不补键、不隐式归一化。先保存上游及当前的真实 schema 与取证结果，再交用户决定；即使其他字段的精确数值全部相同，这项差异仍使总判失败。训练侧 `entry_equiv.py` 的五标量 `float.hex()` 和参数、EMA、优化器状态及 step 摘要仍要求 bitwise 相同，主机 dtype 的允许差异不传递为训练判据放宽。
+
+后续完整输入判据：两库分别核对全量样本身份及 sampler 的前两个完整 epoch 顺序（含 `drop_last` 与重建 iterator 边界）；每集选执行首尾、demo/exec 交界及历史不足/达到/超过 32 帧的合法样本，比较原始样本和 transforms 后的全部模型输入；另比较正式 b64/workers4 的前 100 个 batch，并覆盖 epoch 换轮前后各两批。仅日志路径、运行身份及不进入模型的历史废弃键可列明排除，任何模型输入键不得忽略。主机数值按上述无损口径精确相同，shape、schema 和顺序仍严格一致，dtype/raw SHA 差异单列留证；总判使用 `INPUT_EQ`，失败打印首个样本身份与键名。当前只做有限输入取证，须明确样本与 batch 范围，不把小范围结果冒称此处全量判据通过。
 
 ### 2. 执行顺序：环境与预算 → 构建冒烟 → 两个正式库 → 输入与训练对拍 → 测速 → 正式 80k
+
+用户已恢复建库范围，以下流程从已完成的 P0 及待核实的来源、预算闸门继续推进。必须先完成第 0 步，再进入第 1 步构建冒烟和正式库；训练侧仍按第 2–4 步逐关验收，P0 或工具测试通过不能替代任何后续闸门，motion schema 未裁决时不进入依赖它的训练阶段。
 
 **第 0 步：先把环境、来源与磁盘闸门做实。** 确认主副本 clean、分支与既有 upstream 同步，固定实施提交。先串行准备上游 worktree 的独立 `.venv` 和本仓库环境，记录相同 Python 版本、依赖指纹、CUDA/JAX、资产摘要与模块导入来源。上游 `pyproject.toml` 的 workspace 声明含未入提交树的 `sandbox2/flash_attn_jax`，不能假定 fresh worktree 内直接 `uv sync` 就绪；C 节规定受控准备、恢复源码及来源验收，通过后才进入全量建库。
 
@@ -162,16 +174,16 @@ H5 到 source 的抽取是两侧共同前置；源图像每执行样本为两幅
 
 1. **对拍驱动 `scripts/training/tests/run_entry_equiv.sh`**：参数化 `HISTORY_YAML`、`BATCH`、`FSDP`、`GPUS`、`SAVE_INTERVAL`、`DATA_A/B`、`ASSETS_DIR`、`ANCHOR_SHA256`（显式空值表示不传锚点）、记录根与两侧完整 HEAD。新增 `ASSETS_DIR` 设置时才传 `--data.assets.assets-dir` 和 asset-id，未设置时保留历史默认 argv；新增 dry 展开并验证历史默认 argv 逐字不变。B 独立注入 `MMEVLA_FRAMESAMP_SOURCE/MANIFEST` 与 JAX cache；A 解释器由 C 节确定。judge 必须传 steps、tentative、state steps、HEAD 与比较模式，不能继承不适用的历史 1000 步锚点。
 2. **判定器 `scripts/training/tests/entry_equiv.py`**：拟新增 `judge --mode upstream|same-entry`（默认 upstream）。upstream 保留异根与 forbid-root；same-entry 要求两次 entry/root/HEAD/模块 SHA 一致，并核对依赖、设备、数据、资产、history 与有效环境指纹。两种模式都要求唯一完整步集合、状态步集合、标量和状态全有限；记录器写 finite 结果，judge 缺记录即失败。same-entry 对 resolved config 只放行 run 身份与输出路径，不能沿用 upstream 的 dataset/overwrite 宽白名单。起跑和收尾分别记录 clean HEAD，避免只在 finally 取证却称为起跑版本。
-3. **输入量具**：拟新增 `scripts/training/tests/check_orig80k_inputs.py` 的取证/判定能力，分别在 A/B 环境 import 该侧 Dataset、transforms 和真实 loader，按 §1.2 样本与 batch 计划取摘要，禁止 A 导入当前仓库参考实现。现有 `dump_fixture_samples.py` 的 `DTYPE_DUMP_IMPL=refnpy|packed`、`DTYPE_DUMP_MODE=both`、`DTYPE_DUMP_ARRAYS=0` 可作为当前 source→packed 的额外检查，正式取证不设 `DTYPE_DUMP_LIMIT`；其现有 batch 固定为 8、单进程 collate，不能冒称正式 b64/workers4 检查。拟参数化真实 sampler/collate 量具补足正式档位，原始 dtype 差异按 §1.2 阻断，不扩大排除键。
+3. **输入量具**：`scripts/training/tests/check_orig80k_inputs.py` 在 A/B 环境分别 import 该侧 Dataset、transforms 和真实 loader，按 §1.2 样本与 batch 计划取摘要，禁止 A 导入当前仓库参考实现。本次按最新决定补充无损精确数值摘要和对应判定，保留原始 dtype/raw SHA、shape、键存在性及有限值记录；原始 dtype 不同本身不再阻断，数值或 schema 差异仍阻断，尤其不豁免 motion 四键。现有 `dump_fixture_samples.py` 的 `DTYPE_DUMP_IMPL=refnpy|packed`、`DTYPE_DUMP_MODE=both`、`DTYPE_DUMP_ARRAYS=0` 可作为当前 source→packed 的额外检查，正式取证不设 `DTYPE_DUMP_LIMIT`；其现有 batch 固定为 8、单进程 collate，不能冒称正式 b64/workers4 检查。真实 sampler/collate 量具与有限输入范围的结果应明确区分；全量及训练对拍仍须在数据和相应输入闸门满足后进行。
 4. **runner `scripts/training/prod/run_orig80k.sh <prod|perf|smoke> <run_name> <gpus> <lib> <assets_dir>`**：拟新增三模式与统一 `TRAIN_ARGS`，分别固定 80000/300/20 步；不接受未登记的额外训练参数。显式 source 训练域 `paths.sh`，设置 `UV_CACHE_DIR`、`OPENPI_DATA_HOME`、`XDG_CACHE_HOME`、`HF_HOME`、每 run 独立的 `MMEVLA_JAX_CACHE_DIR/JAX_COMPILATION_CACHE_DIR`、`CUDA_CACHE_PATH`、`WANDB_DIR/CACHE_DIR/CONFIG_DIR/DATA_DIR`，以及 `MMEVLA_FRAMESAMP_SOURCE/MANIFEST`、`TRAIN_RECORD_DIR`、`TRAIN_FINAL_RECORD_DIR`。显式清除验证遗留 `XLA_FLAGS`、`TRAIN_TIMING_STEPS` 和非本模式观测补丁；保留真实环境快照。
 5. **runner 的 preflight 与测速**：复用 `preflight_train_launch.py` 的通用检查，传完整 `TRAIN_HEAD` 字面量、history/norm_stats 期望 SHA、绝对数据/资产路径与由配置推导的 run-root。512/4x4 本轮不传绑定旧 modul 契约的 `--launch-mode`，由新 runner 实现 §3 的模式契约，不能因不传旧参数就跳过配置检查。先 CPU 解析最终 argv 并对原版配置做完整比对，再单独核对可见物理 GPU 恰四张且空闲、两组不重叠；CPU 解析子进程的 `JAX_PLATFORMS=cpu` 不得泄漏到正式训练。拟新增 `scripts/training/tests/check_orig80k_speed.py` 的进程内观测/汇总两入口，不开启 profiler；perf 由其观测入口接收原始 `TRAIN_ARGS` 后 `runpy` 执行训练，按第 3 步插入边界同步且保留真实保存。prod/smoke 默认直调 `uv run --no-sync scripts/training/train.py ...`，正式仅使用已有指标记录与外部资源采样。两种调用都保存实际入口/argv/观测项，不能声称 perf 与 prod 的包装完全相同；并发期间禁止同步或修改共享 `.venv`。
 6. **完成器 `scripts/training/tests/check_orig80k_completion.py`**：拟新增按 mode 固定期望步骤的检查；prod 按第 4 步全部判据输出 `RUN_COMPLETED=PASS run=<name> checkpoints=8 final=79999`，perf/smoke 分别要求末步 `299/19`、`state_step=300/20`、对应普通日志与尾窗、真实保存加载同本次 EMA。不可用手造文件名或仅统计目录数通过；缺失/重复终态、非有限值、UUID/HEAD 不符、缺保存等待记录、权重摘要不符均失败。
 7. **数据守卫**：拟新增 `scripts/dataset/check_orig80k_sources.py`，参数为 `--input-manifest`、`--reference-input`、`--manifest`、`--reference-manifest`、可选 `--tasks`，实现第 0 步 pin 与 episode 集合检查。拟新增 `scripts/dataset/check_subset_eq.py --full <lib> --subset <lib>`，实现 §2 的全覆盖全字段比较；既有 `compare_datasets.py` 只取 episode 交集且 pkl 用 `np.array_equal`，只能复用身份映射/读数逻辑，必须补集合、dtype、字节判据。
-8. **最小验证**：工具实现后运行 D 节列出的正负例和两侧 P1 冒烟，新增测试位于 `scripts/training/tests/` 与 `scripts/dataset/`；单测尽量 5 分钟内。上述工具均尚未实施，本次修订不运行它们。
+8. **最小验证**：工具测试位于 `scripts/training/tests/` 与 `scripts/dataset/`，单测尽量 5 分钟内。P0 档案记录了首轮工具合测 `271 passed`，不代表新增数值口径或真实训练已通过。后续 `schema=2` 已实现并通过 123 项针对测试；当前安排真实 3 样本 CPU 字段取证，不预写输入 PASS。两侧 P1 冒烟及其他真实训练验证仍须先满足对应数据和输入闸门。
 
 ### B. 建库命令骨架（沿用 `docs/dataset-build-doc/4task-v2-1600ep-604f16da/launch.md` 的「命令与配置还原」）
 
-以下骨架依赖 A 节拟新增的 `check_orig80k_sources.py`，实施及单测通过后才可使用。第 0 步环境、16 文件来源与预算闸门，以及第 1 步独立 16 集构建冒烟必须先通过。函数内各阶段应由本轮 detached tmux 驱动串行执行，逐阶段记完整命令、耗时、退出码与日志；不是当前可直接整段启动的命令。
+用户已明确恢复建库，以下骨架仍须先通过第 0 步环境、16 文件来源与实际预算闸门，以及第 1 步独立 16 集构建冒烟后才能用于两个正式库；不能只因 `check_orig80k_sources.py` 已实现或单测通过就启动。函数内各阶段应由本轮记录的 detached tmux 驱动串行执行，逐阶段记完整命令、耗时、退出码与日志。
 
 ```bash
 source scripts/dataset/paths.sh
@@ -212,7 +224,7 @@ build_lib /scratch/hongze/robomme_data_h5_counting4 4task-counting-pub-400ep --t
 
 ### C. 对拍执行细节
 
-- **P0 独立环境**：A worktree 放在全新 `v1-store/worktrees/orig-ecf086c`，固定上游完整 SHA。拟新增环境准备器，针对上游不存在且未列入锁文件 workspace 清单的 `sandbox2/flash_attn_jax`，只在安装期间对 `pyproject.toml` 做可逆补丁，移除这一成员；以同一 Python 版本、上游 `uv.lock` 和 `uv sync --frozen` 建独立 `.venv`，随后逐字恢复原文件。`UV_CACHE_DIR` 与 uv 管理的 Python 下载目录显式位于本仓库 `v1-store/`；`UV_LINK_MODE=copy`。准备前后核对原 pyproject/uv.lock SHA、clean HEAD、editable 项目模块来源与第三方包指纹；任何差异失败，不以空壳包或修改训练源码替代。该方案仍待实施和真实验证，失败就停在 P0。恢复缺失成员声明后，不假定 `uv run --no-sync` 可绕过 workspace 发现；A 用这份 uv 管理的 `<worktree>/.venv/bin/python` 执行 harness，B 用自身环境，绝不共享 `.venv`。
+- **P0 独立环境**：A worktree 位于 `v1-store/worktrees/orig-ecf086c`，固定上游完整 SHA。环境准备器针对上游不存在且未列入锁文件 workspace 清单的 `sandbox2/flash_attn_jax`，只在安装期间对 `pyproject.toml` 做可逆补丁，移除这一成员；以同一 Python 版本、上游 `uv.lock` 和 `uv sync --frozen` 建独立 `.venv`，随后逐字恢复原文件。`UV_CACHE_DIR` 与 uv 管理的 Python 下载目录显式位于本仓库 `v1-store/`；`UV_LINK_MODE=copy`。实际 P0 已从 clean `5489e4b3a92197d0e9a37421b1e6415b3022b613` 完成：源码与锁文件摘要恢复、两侧 clean、208 项分发包版本一致，详见 [P0结果](docs/training-doc/orig80k-env-0925/result.md)。这不是输入或训练对拍通过；不覆盖重建现有 worktree。恢复缺失成员声明后，不假定 `uv run --no-sync` 可绕过 workspace 发现；A 用这份 uv 管理的 `<worktree>/.venv/bin/python` 执行 harness，B 用自身环境，绝不共享 `.venv`。
 - **缓存与来源隔离**：上游入口写死 `~/.cache/jax_<exp_name>`；拟在 harness `run` 新增可选 `--jax-cache-dir <绝对路径>`，仅转接 `jax.config.update` 的 `jax_compilation_cache_dir` 设置到本轮 `v1-store/cache/jax/<run>`，其他配置调用原样转发，记录实际值并测试没有额外配置变化。该路径适配不改上游文件、不覆盖 HOME，也不创建 HOME 下的缓存链接。A/B 共用只读资产的绝对路径，各自分开记录、输出和编译缓存。A run 带 `--expect-root <worktree>`，B 带 `--expect-root <主仓库> --forbid-root <worktree>`，清除 `PYTHONPATH/PYTHONHOME`，所有导入来源要实际记录。
 - **P1 入口冒烟**：两库分别在 A/B 跑 2 步，A 保留官方 tentative+正式双段，B 单段；A 的 2 步 tentative 判据为 2，而不是 100 步对拍时的 12。两段都会触发末步 `1` 的状态摘要，现有 harness 只拆 metrics，所以 P1 仅判入口 `ENTRY_RUN=OK/EXIT_CODE=0`、A 的 tentative/main 各 2 行、B 的 main 2 行、有限值与来源，保留两段状态记录，不套用要求状态 step 无重复的 100 步 judge，也不据 P1 宣称轨迹等价。先完成这项及 §1.2 的输入检查，再跑 100 步；上游 A 消费 source，不能描述为直接读取 packed。
 - **拟判定命令**：`entry_equiv.py judge --mode upstream --expect-steps 100 --expect-tentative-a 12 --expect-state-steps 50,99 --expect-head-a ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b --expect-head-b <实施 HEAD> --a-dir <A记录> --b-dir <B记录>`；同入口比较用 `--mode same-entry --expect-tentative-a 0`，两侧 `--expect-head-*` 均为同一实施 SHA，其余 steps/state 判据保持。显式空锚点时完全不传 `--expect-sha256`，不能传空字符串。
@@ -223,13 +235,13 @@ build_lib /scratch/hongze/robomme_data_h5_counting4 4task-counting-pub-400ep --t
 
 **已完成的纯文档修订轮**只改本文件，执行了 `git diff --check`、代码锚点/路径核对、B 节 shell 骨架语法及最终范围检查，未运行仓库脚本、依赖同步或训练，形成独立提交 `a433f4e36b9475198c5ead57aa1578f9a40ff30b`。当轮用户「同意修改」仅为文档授权；后续实施使用本文件开头追加的「开始实现该计划」授权。
 
-**后续工具实施验证**：`uv run --no-sync pytest <本轮明确测试路径>`，测试路径随工具实现列入 commit body；对拍驱动增加 dry 展开，历史参数未设置时 argv 必须与旧默认逐字相同。最低覆盖如下：
+**本轮工具验证**：`uv run --no-sync pytest <本轮明确测试路径>`，测试路径随工具实现列入 commit body；对拍驱动 dry 展开时，历史参数未设置的 argv 必须与旧默认逐字相同。新数值口径完成后记录实际命令与结果，不能借用 P0 前的 271 项测试宣称新行为已通过。最低覆盖如下：
 
 - runner：prod/perf/smoke 分别解析出 80000/300/20，prod 拒绝步数覆盖；双层 `robomme`、相对资产路径、错 norm_stats SHA、卡数不为 4、重复 GPU、已有输出根均拒绝；CPU preflight 不污染真实设备环境。
 - harness：upstream 同根拒绝、same-entry 合法同根通过、same-entry 不同 HEAD/模块/数据拒绝；两侧同为 NaN/Inf 仍失败；缺/重复 step、缺 finite 证据或状态步集合错误失败；JAX 路径适配只改变缓存目录；未重叠的 S2 不得判并跑有效。
-- 数据：H5 同尺寸改内容、缺/多文件、episode 缺失/重复、仅 wrist 图像错帧、同值不同 dtype、错误 epis_idx 映射都失败；允许 input_manifest 记录字段和 manifest 分片字段的约定差异，禁止丢掉真实内容差异；任一建库阶段模拟失败，必须保留非零退出码且后续阶段不启动。
+- 数据：H5 同尺寸改内容、缺/多文件、episode 缺失/重复、仅 wrist 图像错帧、错误 epis_idx 映射都失败；source/packed 构建及子集的原有字节守卫不因主机输入授权而放宽。主机输入另覆盖 bf16/f16/f32/f64 和 64 位以内整数的同值异 dtype 正例，以及最小可表示差异、超过浮点精确整数范围的大整数、signed zero、NaN/Inf、shape/顺序变化负例；只允许精确数值相等时通过，并核对原始 dtype/raw SHA 仍保留。motion 缺键与显式 `None` 仍失败，不能由数值摘要规则旁路。允许 input_manifest 记录字段和 manifest 分片字段的约定差异；任一建库阶段模拟或实际失败，必须保留非零退出码且后续阶段不启动。
 - 完成器：缺/多 checkpoint、普通日志重复/缺步、尾窗任一五标量非有限、`state_step` 错、run/HEAD/UUID 错、缺保存完成记录、真实加载权重与 EMA 摘要不一致都失败。真实 smoke/perf 保存加载验证补上合成负例无法覆盖的核心路径。
 
-**实施阶段提交与档案**：代码及环境准备工具先提交；每阶段 launch 在该阶段起跑前完成提交，再运行并回写结果。顺序为环境 P0 → 16 集冒烟 → 两个正式库 → 输入/入口/训练对拍 → perf → 两个正式 launch 一并就绪 → 从同一 HEAD 起跑 → result。每份超过 5 分钟的记录保留，临时权重清理不删除归档。代码编号实施前查最新 `commitV*` 再确定，审查基线中 `commitV11.8Beta` 已被 `d023b72` 占用，不能假定未来 `11.9Beta` 仍空闲；按仓库提交约定逐文件暂存、同步既有 upstream，不改写历史。
+**实施阶段提交与档案**：P0 起跑提交与归档保持不变；本轮新数值口径、工具验证、输入取证和恢复建库各记录实际范围、版本与结果，不回填成 P0 时已有结论。代码及文档验证后按仓库约定逐文件提交。仍按环境 P0 → 16 集冒烟 → 两个正式库 → 输入/入口/训练对拍 → perf → 两个正式 launch 一并就绪 → 同一 clean HEAD 起跑 → result 的依赖顺序，每阶段先提交 launch、后运行及回写；当前从建库前置继续，未通过的闸门不跳过。每份超过 5 分钟的记录保留，临时权重清理不删除归档。代码编号实施前查最新 `commitV*` 再确定，按仓库提交约定同步既有 upstream，不改写历史。
 
-**范围与决定**：公开 16×100 全集、四 counting×100 子集、modul、原版超参和 counting 重算 norm_stats 已由用户明确，沿用不重复询问。用户后续「开始实现该计划」批准按本文实施，沿用表中两个全新 run_name、两个库名、完整 run 原版 norm_stats、100 步确定性对拍、300 步测速，以及 full=GPU0–3/counting=GPU4–7；起跑前仍检查这些输出不存在，发现冲突立即询问。§1.2 已知上游 padding dtype 差异及新增的输入字段差异必须先报告并解决，不把执行授权当成放宽判据或修改训练语义的授权。
+**范围与决定**：公开 16×100 全集、四 counting×100 子集、modul、原版超参、counting 重算 norm_stats、两组名称与 GPU 分配沿用。此前「本轮只实现和验证工具，暂不建库」是已被后续覆盖的阶段性决定；当前依据最新原话「恢复计划中的建库，严格按前置闸门推进」继续来源、路径与实际预算检查、构建冒烟及两个正式库。训练仍须满足所有对应前置，不因恢复建库而跳过输入、对拍、perf 和完成验收。主机 dtype 可不同，但精确数值与训练标量/状态 bitwise 要求不变；motion 四键按「先保留严格判据并取证，结果出来后再决定」执行，取证失败如实保留，不补键或隐式归一化。每阶段重测磁盘及输出冲突，已有名称、数据口径等决定无需重复询问。

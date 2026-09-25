@@ -2,15 +2,19 @@
 
 import argparse
 import copy
+import hashlib
 import json
+import math
 import multiprocessing
 from pathlib import Path
 import pickle
+import struct
 import subprocess
 import sys
 import types
 import uuid
 
+import ml_dtypes
 import numpy as np
 import pytest
 import torch
@@ -62,7 +66,7 @@ def test_full_pkl_identity_real_files(tmp_path):
 
 
 @pytest.mark.parametrize("change", ["dtype", "shape", "signed_zero", "value", "missing_none"])
-def test_raw_comparison_never_casts_or_fills(change):
+def test_raw_evidence_keeps_dtype_and_other_differences(change):
     a = {"state": np.asarray([0.0, 1.0], dtype=np.float32)}
     b = copy.deepcopy(a)
     if change == "dtype":
@@ -76,6 +80,87 @@ def test_raw_comparison_never_casts_or_fills(change):
     else:
         b["motion_emb"] = None
     assert tool.first_difference(tool.comparison_tree(a), tool.comparison_tree(b), "样本")
+
+
+def value_tree(array):
+    tree = tool.comparison_tree({"value": array})
+    tool.require_finite_tree(tree, "测试输入")
+    return tool.numeric_comparison_tree(tree)
+
+
+@pytest.mark.parametrize("dtype", [ml_dtypes.bfloat16, np.float16, np.float32, np.float64, np.int16, np.int64, np.uint64])
+def test_exact_values_match_across_host_dtypes_without_mutation(dtype):
+    array = np.asarray([0, 1, 2, 1024], dtype=dtype)
+    original = (array.dtype, array.tobytes())
+    assert value_tree(array) == value_tree(np.asarray([0, 1, 2, 1024], dtype=np.float64))
+    assert (array.dtype, array.tobytes()) == original
+
+
+@pytest.mark.parametrize("dtype", [ml_dtypes.bfloat16, np.float16, np.float32, np.float64])
+def test_fractional_exact_values_keep_signed_zero(dtype):
+    values = [1.5, -2.25, -0.0]
+    assert value_tree(np.asarray(values, dtype=dtype)) == value_tree(np.asarray(values, dtype=np.float64))
+
+
+@pytest.mark.parametrize(("left", "right"), [
+    (np.asarray([np.nextafter(1.0, 2.0)], dtype=np.float64), np.asarray([1.0], dtype=np.float32)),
+    (np.asarray([0.1], dtype=np.float16), np.asarray([0.1], dtype=np.float32)),
+    (np.asarray([np.nextafter(0.0, 1.0)], dtype=np.float64), np.asarray([0.0], dtype=np.float64)),
+    (np.asarray([2**53], dtype=np.int64), np.asarray([2**53 + 1], dtype=np.int64)),
+    (np.asarray([2**53 + 1], dtype=np.int64), np.asarray([float(2**53 + 1)], dtype=np.float64)),
+    (np.asarray([-1], dtype=np.int64), np.asarray([2**64 - 1], dtype=np.uint64)),
+    (np.asarray([2**64 - 1], dtype=np.uint64), np.asarray([float(2**64 - 1)], dtype=np.float64)),
+    (np.asarray([0.0], dtype=np.float32), np.asarray([-0.0], dtype=np.float64)),
+])
+def test_value_changes_cannot_hide_in_dtype_conversion(left, right):
+    assert value_tree(left) != value_tree(right)
+
+
+def test_int64_min_is_encoded_without_signed_overflow():
+    assert value_tree(np.asarray([-(2**63)], dtype=np.int64)) == value_tree(np.asarray([-(2**63)], dtype=np.float64))
+
+
+def test_real_summary_is_independent_of_chunk_boundaries_and_memory_order():
+    array = np.arange(140000, dtype=np.int64).reshape(200, 700)[:, ::-1]
+    before = array.tobytes()
+    assert value_tree(array) == value_tree(np.asarray(array, dtype=">f8"))
+    assert array.tobytes() == before
+    assert value_tree(np.zeros((0, 2), dtype=np.float32)) == value_tree(np.zeros((0, 2), dtype=np.float64))
+
+
+@pytest.mark.parametrize("dtype", [ml_dtypes.bfloat16, np.float16, np.float32, np.float64, np.int64, np.uint64])
+def test_numeric_digest_matches_independent_exact_ratio_oracle(dtype):
+    if np.dtype(dtype).kind in "iu":
+        values = [0, 1, 2**53, 2**53 + 1, 2**63 - 1]
+        values += [-(2**63), -1] if np.dtype(dtype).kind == "i" else [2**64 - 1]
+    else:
+        values = [0.0, -0.0, 1.5, -2.25, 0.1, np.nextafter(0.0, 1.0), np.nextafter(1.0, 2.0)]
+        values += np.random.default_rng(42).uniform(-100, 100, size=30).tolist()
+    array = np.asarray(values, dtype=dtype)
+    expected = hashlib.sha256()
+    for value in array:
+        if array.dtype.kind in "iu":
+            numerator, denominator = int(value), 1
+            negative = numerator < 0
+        else:
+            scalar = float(value)
+            numerator, denominator = scalar.as_integer_ratio()
+            negative = math.copysign(1.0, scalar) < 0
+        magnitude = abs(numerator)
+        exponent = -(denominator.bit_length() - 1)
+        while magnitude and magnitude % 2 == 0:
+            magnitude //= 2
+            exponent += 1
+        if not magnitude:
+            exponent = 0
+        expected.update(struct.pack("<BQh", negative, magnitude, exponent))
+    assert tool.exact_numeric_record(array)["sha256"] == expected.hexdigest()
+
+
+@pytest.mark.parametrize("dtype", [np.clongdouble, np.complex128, np.longdouble])
+def test_unsupported_numeric_precision_is_not_silently_rounded(dtype):
+    with pytest.raises(ValueError, match="不支持的数值dtype"):
+        tool.describe_tree(np.asarray([1], dtype=dtype))
 
 
 @pytest.mark.parametrize("value", [np.nan, np.inf, -np.inf])
@@ -211,7 +296,8 @@ def _ready_record(out, root, side, head, shared):
                 "contract": {"batch_size": batch_size, "workers": tool.WORKERS, "seed": 42, "epochs": 2,
                              "prefix_batches": tool.PREFIX_BATCHES,
                              "drop_last": True, "history": tool.HISTORY, "action_horizon": 20,
-                             "endpoint": "collate_before_jax", "excluded_legacy_none_keys": list(tool.LEGACY_NONE_KEYS)}}
+                             "endpoint": "collate_before_jax", "excluded_legacy_none_keys": list(tool.LEGACY_NONE_KEYS),
+                             "input_comparison": tool.INPUT_COMPARISON}}
     tool.write_json(out / "meta.json", metadata)
     tool.write_record_manifest(out)
 
@@ -231,6 +317,47 @@ def ready_records(tmp_path, monkeypatch):
 def test_complete_judge_records(ready_records, capsys):
     tool.judge(ready_records)
     assert "INPUT_EQ=PASS" in capsys.readouterr().out
+
+
+def test_judge_accepts_exact_dtype_change_but_retains_raw_evidence(ready_records, capsys):
+    out = ready_records.b_dir
+    for name, fields in (("samples.jsonl", ("raw_all", "raw", "transformed_all", "transformed")),
+                          ("batches.jsonl", ("inputs_all", "inputs"))):
+        path = out / name
+        records = tool.read_jsonl(path)
+        for row in records:
+            for field in fields:
+                row[field]["items"]["state"] = tool.describe_tree(np.asarray([1.0], dtype=np.float64))
+        _jsonl(path, records)
+    tool.write_record_manifest(out)
+    tool.judge(ready_records)
+    assert "comparison=host_numeric_exact_signed_zero_v1" in capsys.readouterr().out
+    a = tool.read_jsonl(ready_records.a_dir / "samples.jsonl")[0]["raw_all"]["items"]["state"]
+    b = tool.read_jsonl(out / "samples.jsonl")[0]["raw_all"]["items"]["state"]
+    assert a["dtype"] == "float32"
+    assert b["dtype"] == "float64"
+    assert a["sha256"] != b["sha256"]
+    assert a["numeric"] == b["numeric"]
+
+
+@pytest.mark.parametrize("field", ["numeric", "schema", "input_comparison"])
+def test_old_or_incomplete_numeric_records_are_rejected(ready_records, field):
+    out = ready_records.b_dir
+    if field == "numeric":
+        records = tool.read_jsonl(out / "samples.jsonl")
+        for key in ("raw_all", "raw"):
+            del records[0][key]["items"]["state"]["numeric"]
+        _jsonl(out / "samples.jsonl", records)
+    else:
+        metadata = tool.read_json(out / "meta.json")
+        if field == "schema":
+            metadata["schema"] = 1
+        else:
+            del metadata["contract"]["input_comparison"]
+        tool.write_json(out / "meta.json", metadata)
+    tool.write_record_manifest(out)
+    with pytest.raises(ValueError, match="数值摘要|取证未完整|契约"):
+        tool.judge(ready_records)
 
 
 @pytest.mark.parametrize("change", ["missing_sample", "duplicate_sample", "missing_batch", "duplicate_batch",
