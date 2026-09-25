@@ -11,9 +11,3 @@
 本阶段实际记录800条指标，记录步范围0至79900。日志与指标见records。本轮两侧主跑和补跑共同满足20+1步与201叶逐位判据；100步保存、容量与测速分别按总档案约定验收。训练loss用于过程检查，不作为策略成功率结论。
 
 正式80000步完成，16份checkpoint齐全；最终79999原dtype权重与现场EMA摘要一致、末99步及固定noise的10步动作有限。末条常规日志为79900，不代表79999单步loss。GPU原始500ms采样无损压缩为gpu.csv.gz。
-
-## HuggingFace 备份
-
-16 份 checkpoint 已于 2026-09-24 上传到 private bucket `HongzeFu/robomme-vla-modul-4096-80k-v1`
-（337 文件 / 190,081,207,647 B，上传前后 sha256 逐行 diff 为 0）；导出过程与验收见
-[hf-export-m4096-80k-ckpt-v1](../../dataset-build-doc/hf-export-m4096-80k-ckpt-v1/result.md)。
