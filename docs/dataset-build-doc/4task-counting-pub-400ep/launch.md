@@ -10,6 +10,10 @@
 
 ## 版本、输入与输出
 
+正式起跑前追加确认：来源前检和16集冒烟已通过并在 `de6354fd7c0f78b347c7b07c4b8ee0c8b9b37418` 归档。本库与完整库使用包含本段的下一份 `commitV11.11Beta` 作为正式构建锚点，实际完整SHA写入运行日志；旧smoke的Beta不是本阶段启动版本。以[冒烟后的剩余预算](../16task-pub-smoke16-0925/records/post_smoke_budget.json)为起点，完整库完成后再按实际落盘量重算本库剩余需求，不照抄初始双库门槛。前一库未通过时本库不启动。
+
+本库数据阶段通过后，单独执行已预建档案的[20步可读性检查](../../training-doc/smoke-orig80k-count-0925/launch.md)，再做后续完整输入和训练对拍。
+
 正式raw/SigLIP起跑前先完成本轮Beta提交，传完整40位`BUILD_HEAD`字面量且工作区clean。实际启动SHA、会话、UTC和退出码待起跑日志记录；不以事后提交或占位符声称已有Beta。源码按`git show <实际Beta完整SHA>:<路径>`还原，入口为`scan_manifest.cmd_build()`、`check_orig80k_sources.check_sources()`、`run_local.worker_cmd()`、finalize的hash/check、packed的pack/verify、`compute_norm_stats.main()`及`check_subset_eq.py`，不复制脚本或yaml到档案。
 
 公开原始根为`/scratch/hongze/robomme_data_h5`；新硬链接目录为`/scratch/hongze/robomme_data_h5_counting4`。库根为`/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep`，统计量根为`v1-store/train-assets/mme_vla_suite/4task-counting-pub-400ep`。三处新输出均必须不存在（含悬空链接）；核对同盘和实体父目录后才能创建。硬链接只指向四个原H5，共享同一设备/inode，不修改或删除原文件。

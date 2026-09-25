@@ -10,6 +10,10 @@ P0已通过；必须先完成[来源前检与16集构建冒烟](../16task-pub-sm
 
 ## 版本与可复现面
 
+正式起跑前追加确认：公开来源pin与16集冒烟已在 `commitV11.10Beta` / `commitV11.10` 配对中全部通过，结果提交为 `de6354fd7c0f78b347c7b07c4b8ee0c8b9b37418`。本库及后续counting使用包含本段的下一份 `commitV11.11Beta` 作为新起跑锚点，生产构建代码未改；实际完整SHA将在每个阶段的 `BUILD_HEAD` 写入，不将旧smoke Beta误作正式运行版本。冒烟实测F=`606208 B`、P=`397312 B`；[剩余预算](../16task-pub-smoke16-0925/records/post_smoke_budget.json)要求可用 `1458746144941 B`，2026-09-25T21:18:10Z复查可用 `1784545669120 B`、八卡空闲，两正式库及两统计量根均未创建。起跑仍再核对这些条件。
+
+本库数据阶段通过后，单独执行已预建档案的[20步可读性检查](../../training-doc/smoke-orig80k-full-0925/launch.md)，不把构建日志中的成功当成该训练检查成功。
+
 正式SigLIP/raw构造前必须先完成本轮代码及档案的Beta提交，从该完整40位字面量`BUILD_HEAD`的clean HEAD启动。**实际Beta SHA、会话、UTC和退出码尚未产生，起跑现场填入日志及本档案；不把事后提交当启动版本。** 若来源前检与正式构建不在同一提交，分别记各阶段HEAD和差异，不声称全过程为一个未变版本。
 
 还原使用`git show <实际Beta完整SHA>:scripts/dataset/scan_manifest.py`、`finalize_checks.py`、`check_orig80k_sources.py`、`run_local.py`、`pack_framesamp_store.py`及`git show <实际Beta完整SHA>:scripts/training/compute_norm_stats.py`。稳定入口为`scan_manifest.cmd_build()`、`run_local.worker_cmd()`、`finalize_checks`的hash/check、packed的pack/verify和`compute_norm_stats.main()`；全部覆盖参数见下方命令。配置、脚本及yaml不另行拷贝入档案。
