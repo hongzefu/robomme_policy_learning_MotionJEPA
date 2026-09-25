@@ -78,7 +78,7 @@ def test_raw_evidence_keeps_dtype_and_other_differences(change):
     elif change == "value":
         b["state"][1] += 1
     else:
-        b["motion_emb"] = None
+        b["other_optional_field"] = None
     assert tool.first_difference(tool.comparison_tree(a), tool.comparison_tree(b), "样本")
 
 
@@ -178,6 +178,18 @@ def test_only_none_recurrent_keys_are_excluded():
     a["recur_image_emb"] = np.zeros(1)
     with pytest.raises(ValueError, match="并未关闭"):
         tool.comparison_tree(a)
+
+
+@pytest.mark.parametrize("key", tool.MOTION_NONE_KEYS)
+def test_only_approved_motion_missing_and_none_are_equivalent(key):
+    left = {"state": np.ones(1)}
+    right = {**left, key: None}
+    assert tool.comparison_tree(left) == tool.comparison_tree(right)
+    assert tool.describe_tree(left) != tool.describe_tree(right)
+    with pytest.raises(ValueError, match="必须缺失或为None"):
+        tool.comparison_tree({**left, key: np.zeros(1)})
+    with pytest.raises(ValueError, match="必须缺失或为None"):
+        tool.comparison_tree({**left, key: False})
 
 
 class TinyDataset:
@@ -297,6 +309,7 @@ def _ready_record(out, root, side, head, shared):
                              "prefix_batches": tool.PREFIX_BATCHES,
                              "drop_last": True, "history": tool.HISTORY, "action_horizon": 20,
                              "endpoint": "collate_before_jax", "excluded_legacy_none_keys": list(tool.LEGACY_NONE_KEYS),
+                             "equivalent_motion_none_keys": list(tool.MOTION_NONE_KEYS),
                              "input_comparison": tool.INPUT_COMPARISON}}
     tool.write_json(out / "meta.json", metadata)
     tool.write_record_manifest(out)
@@ -331,13 +344,26 @@ def test_judge_accepts_exact_dtype_change_but_retains_raw_evidence(ready_records
         _jsonl(path, records)
     tool.write_record_manifest(out)
     tool.judge(ready_records)
-    assert "comparison=host_numeric_exact_signed_zero_v1" in capsys.readouterr().out
+    assert "comparison=host_numeric_exact_motion_none_v1" in capsys.readouterr().out
     a = tool.read_jsonl(ready_records.a_dir / "samples.jsonl")[0]["raw_all"]["items"]["state"]
     b = tool.read_jsonl(out / "samples.jsonl")[0]["raw_all"]["items"]["state"]
     assert a["dtype"] == "float32"
     assert b["dtype"] == "float64"
     assert a["sha256"] != b["sha256"]
     assert a["numeric"] == b["numeric"]
+
+
+def test_judge_accepts_only_approved_none_schema_difference(ready_records):
+    out = ready_records.b_dir
+    for name, fields in (("samples.jsonl", ("raw_all", "transformed_all")), ("batches.jsonl", ("inputs_all",))):
+        path = out / name
+        records = tool.read_jsonl(path)
+        for row in records:
+            for field in fields:
+                row[field]["items"].update({key: {"kind": "none"} for key in tool.MOTION_NONE_KEYS})
+        _jsonl(path, records)
+    tool.write_record_manifest(out)
+    tool.judge(ready_records)
 
 
 @pytest.mark.parametrize("field", ["numeric", "schema", "input_comparison"])

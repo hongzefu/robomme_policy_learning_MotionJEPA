@@ -1,0 +1,155 @@
+{
+  "kind": "three_sample_tool_diagnostic",
+  "upstream_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+  "current_head": "1b504b2e4d2c3be0a0b92b5cf0c2b287bca1e53e",
+  "input_library": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-motion-40ep",
+  "samples": [
+    {
+      "index": 0,
+      "stages": {
+        "raw": {
+          "upstream_only": [],
+          "current_only": [
+            "mem_order",
+            "motion_emb",
+            "motion_mask",
+            "motion_pos"
+          ],
+          "current_only_kinds": {
+            "mem_order": "none",
+            "motion_emb": "none",
+            "motion_mask": "none",
+            "motion_pos": "none"
+          },
+          "common_fields": 15,
+          "common_numeric_mismatches": [],
+          "dtype_differences": [
+            {
+              "field": ".static_image_emb",
+              "upstream": "float64",
+              "current": "bfloat16"
+            },
+            {
+              "field": ".static_pos_emb",
+              "upstream": "float64",
+              "current": "float32"
+            }
+          ]
+        },
+        "transformed": {
+          "upstream_only": [],
+          "current_only": [
+            "mem_order",
+            "motion_emb",
+            "motion_mask",
+            "motion_pos"
+          ],
+          "current_only_kinds": {
+            "mem_order": "none",
+            "motion_emb": "none",
+            "motion_mask": "none",
+            "motion_pos": "none"
+          },
+          "common_fields": 10,
+          "common_numeric_mismatches": [],
+          "dtype_differences": [
+            {
+              "field": ".static_image_emb",
+              "upstream": "float64",
+              "current": "bfloat16"
+            },
+            {
+              "field": ".static_pos_emb",
+              "upstream": "float64",
+              "current": "float32"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "index": 31,
+      "stages": {
+        "raw": {
+          "upstream_only": [],
+          "current_only": [
+            "mem_order",
+            "motion_emb",
+            "motion_mask",
+            "motion_pos"
+          ],
+          "current_only_kinds": {
+            "mem_order": "none",
+            "motion_emb": "none",
+            "motion_mask": "none",
+            "motion_pos": "none"
+          },
+          "common_fields": 15,
+          "common_numeric_mismatches": [],
+          "dtype_differences": []
+        },
+        "transformed": {
+          "upstream_only": [],
+          "current_only": [
+            "mem_order",
+            "motion_emb",
+            "motion_mask",
+            "motion_pos"
+          ],
+          "current_only_kinds": {
+            "mem_order": "none",
+            "motion_emb": "none",
+            "motion_mask": "none",
+            "motion_pos": "none"
+          },
+          "common_fields": 10,
+          "common_numeric_mismatches": [],
+          "dtype_differences": []
+        }
+      }
+    },
+    {
+      "index": 32,
+      "stages": {
+        "raw": {
+          "upstream_only": [],
+          "current_only": [
+            "mem_order",
+            "motion_emb",
+            "motion_mask",
+            "motion_pos"
+          ],
+          "current_only_kinds": {
+            "mem_order": "none",
+            "motion_emb": "none",
+            "motion_mask": "none",
+            "motion_pos": "none"
+          },
+          "common_fields": 15,
+          "common_numeric_mismatches": [],
+          "dtype_differences": []
+        },
+        "transformed": {
+          "upstream_only": [],
+          "current_only": [
+            "mem_order",
+            "motion_emb",
+            "motion_mask",
+            "motion_pos"
+          ],
+          "current_only_kinds": {
+            "mem_order": "none",
+            "motion_emb": "none",
+            "motion_mask": "none",
+            "motion_pos": "none"
+          },
+          "common_fields": 10,
+          "common_numeric_mismatches": [],
+          "dtype_differences": []
+        }
+      }
+    }
+  ],
+  "strict_schema_pass": false,
+  "common_numeric_pass": true
+}

@@ -26,7 +26,7 @@ import time
 
 SCHEMA = 2
 NUMERIC_ENCODING = "exact-real-sign-u64-exp2-i16-le-v1"
-INPUT_COMPARISON = "host_numeric_exact_signed_zero_v1"
+INPUT_COMPARISON = "host_numeric_exact_motion_none_v1"
 BATCH_SIZE = 64
 WORKERS = 4
 SEED = 42
@@ -34,6 +34,7 @@ PREFIX_BATCHES = 100
 HISTORY = "perceptual-framesamp-modul.yaml"
 PROJECTS = ("mme_vla_suite", "openpi", "openpi_client")
 LEGACY_NONE_KEYS = ("recur_image_emb", "recur_pos_emb", "recur_state_emb", "recur_mask")
+MOTION_NONE_KEYS = ("motion_emb", "motion_pos", "motion_mask", "mem_order")
 REQUIRED_RAW = {"image", "wrist_image", "state", "actions", "prompt", "static_image_emb",
                 "static_pos_emb", "static_state_emb", "static_mask"}
 REQUIRED_TRANSFORMED = {"image", "image_mask", "state", "actions", "tokenized_prompt", "tokenized_prompt_mask",
@@ -282,7 +283,10 @@ def comparison_tree(value):
     require(isinstance(value, dict), "样本或 batch 顶层必须为字典")
     for key in LEGACY_NONE_KEYS:
         require(key not in value or value[key] is None, f"废弃 recurrent 字段并未关闭: {key}")
-    return describe_tree({key: item for key, item in value.items() if key not in LEGACY_NONE_KEYS})
+    for key in MOTION_NONE_KEYS:
+        require(key not in value or value[key] is None, f"本轮motion字段必须缺失或为None: {key}")
+    return describe_tree({key: item for key, item in value.items()
+                          if key not in (*LEGACY_NONE_KEYS, *MOTION_NONE_KEYS)})
 
 
 def require_finite_tree(tree, label):
@@ -304,8 +308,11 @@ def validate_projection(all_fields, compared, required, label):
     for key in LEGACY_NONE_KEYS:
         require(key not in all_fields["items"] or all_fields["items"][key] == {"kind": "none"},
                 f"recurrent 废弃键包含实际内容: {label}.{key}")
+    for key in MOTION_NONE_KEYS:
+        require(key not in all_fields["items"] or all_fields["items"][key] == {"kind": "none"},
+                f"本轮motion字段包含非None内容: {label}.{key}")
     expected = {"kind": "dict", "items": {key: value for key, value in all_fields["items"].items()
-                                         if key not in LEGACY_NONE_KEYS}}
+                                         if key not in (*LEGACY_NONE_KEYS, *MOTION_NONE_KEYS)}}
     require(compared == expected, f"比较投影丢弃或改变了模型输入: {label}")
     require_finite_tree(compared, label)
 
@@ -699,6 +706,7 @@ def collect(args):
                                  "prefix_batches": PREFIX_BATCHES, "drop_last": True, "history": HISTORY,
                                  "action_horizon": config.model.action_horizon, "endpoint": "collate_before_jax",
                                  "excluded_legacy_none_keys": list(LEGACY_NONE_KEYS),
+                                 "equivalent_motion_none_keys": list(MOTION_NONE_KEYS),
                                  "input_comparison": INPUT_COMPARISON},
                     "index_probe_overrides": ["等长 dataset 返回索引", "索引 collate"],
                     "content_overrides": ["委托原 BatchSampler 选择已登记批次", "worker 模块来源记录"],
@@ -729,6 +737,7 @@ def validate_record(out, expected_head):
     expected = {"batch_size": BATCH_SIZE, "workers": WORKERS, "seed": SEED, "epochs": 2,
                 "prefix_batches": PREFIX_BATCHES, "drop_last": True, "history": HISTORY, "action_horizon": 20,
                 "endpoint": "collate_before_jax", "excluded_legacy_none_keys": list(LEGACY_NONE_KEYS),
+                "equivalent_motion_none_keys": list(MOTION_NONE_KEYS),
                 "input_comparison": INPUT_COMPARISON}
     require(contract == expected, "输入取证契约被缩小或改变")
     for phase in ("start", "end"):

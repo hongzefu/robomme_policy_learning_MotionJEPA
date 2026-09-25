@@ -2,14 +2,17 @@
 
 > 环境 B（AWS 单机 8×A100，2026-09-04 起）现行。环境 A（GreatLakes / turbo）时期的两份档案已于 2026-09-07 迁入
 > [`docs/archive/dataset-build-doc/`](../archive/dataset-build-doc/)（见 [`docs/archive/README.md`](../archive/README.md)）。
-> 库本体一律在 `v1-store/datasets/<name>/`（不进 git）；本目录只放 launch / result / records。
+> 库本体一律在 `v1-store/datasets/<name>/`（不进 git）；本目录只放启动说明、结果正文和不可由Git还原的records，正式库可用十三节README整理档案。
 > 数据集格式与建库链路的正文见 [`docs/motion-memory.md`](../motion-memory.md)（motion 表）与
 > [`docs/dataloader-restructure.md`](../dataloader-restructure.md)（framesamp 三表）。
 
-## 环境 B 现行库（训练 / 对拍实际使用）
+## 环境 B 现行库与待构建档案
 
 | 档案 | 库 | 内容 | 状态 |
 |---|---|---|---|
+| [`16task-pub-smoke16-0925/`](16task-pub-smoke16-0925/launch.md) | `v1-store/datasets/16task-pub-smoke16-0925` | 公开16文件重新hash/全集scan与来源绑定；每任务首集16集source及4×4冒烟 | 起跑前档案，未执行；按来源、预算及clean版本闸门推进 |
+| [`16task-pub-1600ep/`](16task-pub-1600ep/README.md) | `v1-store/datasets/16task-pub-1600ep` | 公开16任务×100集，source、4×4 packed及仅供比较的自算统计量 | 起跑前十三节档案；须冒烟及实际预算通过，Beta待提交后记录 |
+| [`4task-counting-pub-400ep/`](4task-counting-pub-400ep/README.md) | `v1-store/datasets/4task-counting-pub-400ep` | 同一公开全集的四counting任务×100集，独立统计量和全覆盖子集比较 | 起跑前十三节档案；待完整库数据验收及剩余预算通过 |
 | [`4task-v2-1600ep-motion-demopad17/`](4task-v2-1600ep-motion-demopad17/result.md) | `v1-store/datasets/4task-v2-1600ep-604f16da/motion` | 新 encoder、demo 最少 17 真帧补尾、71316 窗与独立 oracle | 全部 PASS：71316 token、8632 VAE 抽样窗逐位同，1600 补帧窗全覆盖 |
 | [`4task-v2-1600ep-604f16da/`](4task-v2-1600ep-604f16da/launch.md) | `v1-store/datasets/4task-v2-1600ep-604f16da` | 私有新版四任务全部 1600 primary；合并 H5、SigLIP、两档 framesamp 和独立 norm_stats | 已完成：全部数据验证与 20 步真实训练均通过（[result](4task-v2-1600ep-604f16da/result.md)） |
 | [`4task-v2-smoke28/`](4task-v2-smoke28/launch.md) | `v1-store/datasets/4task-v2-smoke28` | 新版四任务 H5 合并、SigLIP 与两档 framesamp 的 28 集冒烟 | 全部通过；临时数据按计划清理（[result](4task-v2-smoke28/result.md)） |
