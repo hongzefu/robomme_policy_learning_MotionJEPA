@@ -1,18 +1,18 @@
-# 原版80k正式CPU输入对拍：预先启动记录（尚未运行）
+# 原版80k正式CPU输入对拍：启动记录（已运行）
 
-本档案在正式 CPU 输入对拍前预建；四份 collector 与两份 judge 均尚未执行，INPUT_EQ、P1、100 步训练对拍和 perf 的本阶段结果均待验证。数据组已完成归档提交 `ec6c9e35784a96f636a587dd737dffa294b616ad`，构建及两次 20 步检查的实际 Beta 为 `49a333eb18e8d6ff1143bf7871ef7c498ab91579`；两者都是前置证据版本，**均不是尚未启动的本次 INPUT_HEAD**。本 launch 和 [README](README.md) 须先提交，再从包含本 launch 的 clean 提交运行。`INPUT_HEAD` 必须在该提交创建后填入完整 **40 位 Git SHA 字面量**；64 位只用于文件 SHA256。实际标签、展开后的完整命令、会话名、起止版本及退出记录在启动现场留证，结果回写另行提交，不预写尚未发生的会话或通过结论。
+本档案在正式CPU输入对拍前预建，并在全部任务结束后回填实际展开值。四份collector与两份judge于2026-09-26 17:07:21—19:41:35 UTC完成，两组`INPUT_EQ`均PASS，详见[result](result.md)。实际B侧及取证工具的 **INPUT_HEAD为`3a1582db39c723c735e04752e5027bfe40ecc3e1`**，A固定`ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`；四侧起止均为各自clean版本，CPU期间冻结代码与环境。数据组归档提交`ec6c9e35784a96f636a587dd737dffa294b616ad`和构建/既有20步Beta`49a333eb18e8d6ff1143bf7871ef7c498ab91579`是前置版本，不是本次INPUT_HEAD。原预建launch可从实际INPUT_HEAD还原，其当时文件SHA256为`d4f6f991f92721d19af2cc9575fdb539720b3fef102bbe49df0d390b38f673b0`；本次事后回填及后续归档提交均不替换运行锚点。P1、100步、新测速包装20步对照、perf与80k尚未实跑。
 
-用户现已批准「允许仅对拍关闭 W&B」及「补充 0.5 秒只读采样」。W&B仅在P1/100步A/B对拍关闭，完整标量与状态仍在本地保留；20步可读性、300步perf和80k继续开启。perf获准每0.5秒只读采本轮checkpoint文件分配字节与`/scratch`可用字节，记录采样观察到的峰值并保留保守预算余量；采样实现、验证及真实perf测量尚不能因获准而视为已完成。
+用户现已批准「允许仅对拍关闭 W&B」及「补充 0.5 秒只读采样」。W&B仅在P1/100步A/B对拍关闭，完整标量与状态仍在本地保留；20步可读性、300步perf和80k继续开启。perf获准每0.5秒只读采本轮checkpoint文件分配字节与`/scratch`可用字节，记录采样观察到的峰值并保留保守预算余量；采样工具已在INPUT_HEAD完成实现与工具验证，但真实perf仍未执行。用户另选择「两库各跑一对 20 步（推荐）」验证新测速包装开关，两侧仍真实保存且W&B开启；该新20步对照未由本次CPU输入验证。
 
 从内容依赖看，本CPU阶段独立于上述两项设置。`check_orig80k_inputs.py::collect()`只构造目标侧Dataset、transforms、真实TorchDataLoader并做CPU输入取证，不调用训练入口、`wandb.init()`、模型初始化、优化器更新或checkpoint保存；`judge()`只读记录并打印判定。本阶段不调用`run_entry_equiv.sh`或`run_orig80k.sh`，也不修改训练参数、真正输入或依赖，下方CPU命令与判据保持原样。
 
-**用户在上述两项批准后进一步明确：「补记限制，继续 CPU 输入取证」。三项均已决定；CPU尚未实际运行，可从本轮提交后的clean INPUT_HEAD启动。** 历史说明见[exit-record-audit.md](exit-record-audit.md)。数据及两次20步的子任务和产物验收PASS未被该反例证伪，但历史最外footer与整体进程真实退出0不能仅凭日志独立证明；这一边界和原始records继续保留。下方六份命令仍为待执行模板，须在提交后填实锚点、核对新输出及环境再执行；本次批准不直接放行后续训练或测速。
+**用户在上述两项批准后进一步明确：「补记限制，继续 CPU 输入取证」。本次据此从clean INPUT_HEAD执行，四侧采集与两组judge均通过。** 历史说明见[exit-record-audit.md](exit-record-audit.md)。数据及两次20步的子任务和产物验收PASS未被该反例证伪，但历史最外footer与整体进程真实退出0不能仅凭日志独立证明；这一边界和原始records继续保留。下方六份命令用于还原本次现场，现有输出已存在，不能照抄重复运行或覆盖；CPU输入PASS不直接放行后续训练或测速。
 
 预建审查已复现新INPUT启动包装的一项缺口：footer tee可完整写出成功终态后再返回非零。当前包装已改为先检查footer printf/tee，再受检查地直接append两项footer状态与唯一综合退出码。实现方与独立审查方各用6例纯shell替身验证，正常、主命令exit7、正文tee失败、footer完整输出后失败、自SHA不匹配及日志冲突均通过；footer失败测试分别保留非零终态1和29，没有成功EXIT_CODE。测试未运行真实tmux、collector或训练，临时载体已清理。这是新包装的验证，不是历史真实退出状态的独立观测，也不改变本阶段采集、数值、并行或参数判据。
 
 ## 已核实的输入与资产
 
-以下路径均以主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA` 为根。两库 source/framesamp 是实体目录，4×4 packed metadata 均为 `verified`。前置结果已在数据组完整提交 `ec6c9e35784a96f636a587dd737dffa294b616ad` 归档：[公开16任务库](../../dataset-build-doc/16task-pub-1600ep/README.md)、[counting四任务库及严格子集检查](../../dataset-build-doc/4task-counting-pub-400ep/README.md)、[full20真实保存/恢复](../smoke-orig80k-full-0925/README.md)、[count20真实保存/恢复](../smoke-orig80k-count-0925/README.md)。这些已验收的数据/产物范围不替代本次完整输入取证，也不自动补齐历史最外终态的独立证据；原始记录保持不变。阶段关系遵循[原版80k计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)，用户已允许补记该边界后从本轮提交后的clean INPUT_HEAD继续CPU取证。
+以下路径均以主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA` 为根。两库 source/framesamp 是实体目录，4×4 packed metadata 均为 `verified`。前置结果已在数据组完整提交 `ec6c9e35784a96f636a587dd737dffa294b616ad` 归档：[公开16任务库](../../dataset-build-doc/16task-pub-1600ep/README.md)、[counting四任务库及严格子集检查](../../dataset-build-doc/4task-counting-pub-400ep/README.md)、[full20真实保存/恢复](../smoke-orig80k-full-0925/README.md)、[count20真实保存/恢复](../smoke-orig80k-count-0925/README.md)。这些已验收的数据/产物范围与本次正式输入结果分开，也不自动补齐历史最外终态的独立证据；原始记录保持不变。阶段关系遵循[原版80k计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)，本次CPU取证按用户允许补记该边界后的决定执行。
 
 | 组 | 库路径（相对 `v1-store/datasets/`） | 总帧 / 执行样本 | manifest 内嵌 SHA256 |
 |---|---|---|---|
@@ -63,15 +63,15 @@ A 固定 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`，工作树为 `v1-store/wor
 
 ## 公共命令设置与有退出记录的启动包装
 
-以下为已获准继续的待执行模板，尚未实际运行；须从本轮提交后的clean INPUT_HEAD启动，并先将所有占位符填实。`INPUT_HEAD` 在包含正式 launch 的提交创建后手动填完整字面量；不要用 `INPUT_HEAD=$(git rev-parse HEAD)` 代替期望锚点。`INPUT_TAG` 一经选定即同时用于六个会话、日志及命令文件，起跑前确认没有重名记录。实际执行先逐份保存展开后的同一命令文件，现场计算其SHA256，再以短命令交给tmux运行，避免长内联命令限制。文件路径和真实SHA在日志现场头记录，不能提前编造当前尚未创建的文件摘要，也不将这些运行时命令文件复制到本档案目录。
+以下保留原启动机制并回填实际`INPUT_HEAD`及`INPUT_TAG`，用于还原已经完成的本次运行。期望HEAD使用40位字面量，没有用动态读取HEAD替代。实际执行逐份保存展开后的同一命令文件，现场计算SHA256，再以短命令交给tmux，避免长内联限制；六份文件路径、真实SHA及进程/UTC由[result第三节](result.md#3-启动与配置还原)和实际日志给出。现在这些输出已存在，命令中的防覆盖检查应当拒绝复跑；不将运行时命令文件复制到本档案目录，也不改变原collector清单。
 
 ```bash
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
 STORE="$MAIN/v1-store"
 UP="$STORE/worktrees/orig-ecf086c"
 UPSTREAM_HEAD=ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b
-INPUT_HEAD='<待包含launch的提交创建后填写40位Git SHA>'
-INPUT_TAG='<本次唯一UTC标签>'
+INPUT_HEAD=3a1582db39c723c735e04752e5027bfe40ecc3e1
+INPUT_TAG=20260926T170654Z
 INPUT_ROOT="$STORE/bench/orig80k-equiv-0925/input-$INPUT_TAG"
 COMMAND_ROOT="$STORE/bench/orig80k-equiv-0925/commands-$INPUT_TAG"
 INPUT_TOOL="$MAIN/scripts/training/tests/check_orig80k_inputs.py"
@@ -166,7 +166,7 @@ exit "$rc"'
 
 公共设置只检查两个新根；启动包装会把命令文件保存在独立的 `COMMAND_ROOT`，collector自行创建各自输出及父路径，命令文件不会混入任何collector清单。命令文件中引用自身执行路径及外部传入的期望SHA，避免把文件自身摘要写回正文而改变它；运行前再次核对实际SHA，只有一致才调用collector/judge。四份独立任务可依次发出启动命令后并行运行，无须等待另一collector完成。六份环境均固化在各自命令文件中，不依赖既有tmux server是否继承当前shell的自定义环境变量。
 
-日志现场头必须包含会话全名、wrapper/body PID、声明的 `INPUT_HEAD`、命令文件路径及期望/实际SHA、`START_UTC`。尾部先经tee记录 `END_UTC`、命令退出码和正文 `TEE_EXIT`，立即捕获该尾部printf与tee状态；之后才用受检查的直接append写 `FOOTER_PRINTF_EXIT`、`FOOTER_TEE_EXIT` 和唯一综合 `EXIT_CODE`，不能先写成功终态再检查tee。任一写入或退出记录失败均不得视作成功。这里的 `INPUT_HEAD` 是本CPU阶段的B侧锚点；A侧实际 `--expect-head` 仍固定上游完整提交，不被头部字段替代。当前这些值均待运行现场产生，并无实际启动记录。
+日志现场头必须包含会话全名、wrapper/body PID、声明的 `INPUT_HEAD`、命令文件路径及期望/实际SHA、`START_UTC`。尾部先经tee记录 `END_UTC`、命令退出码和正文 `TEE_EXIT`，立即捕获该尾部printf与tee状态；之后才用受检查的直接append写 `FOOTER_PRINTF_EXIT`、`FOOTER_TEE_EXIT` 和唯一综合 `EXIT_CODE`，不能先写成功终态再检查tee。任一写入或退出记录失败均不得视作成功。这里的 `INPUT_HEAD` 是本CPU阶段的B侧锚点；A侧实际 `--expect-head` 仍固定上游完整提交，不被头部字段替代。六份现场记录已经产生，各自五项退出值唯一为0，实际判定与日志摘要见[result](result.md)。
 
 `launch_input` 返回只表示会话创建，不表示collector或judge成功。进入同组judge前，须核对本组A/B各自日志中的 `INPUT_COLLECT=PASS`，以及**唯一 `EXIT_CODE=0`、唯一 `COMMAND_EXIT=0`、唯一正文 `TEE_EXIT=0`、唯一 `FOOTER_PRINTF_EXIT=0`、唯一 `FOOTER_TEE_EXIT=0`**；缺失、重复或非零均不放行。两份judge自身也使用同一退出记录要求，再结合各自唯一 `INPUT_EQ` 成功判定，不能只看到工具PASS或正文tee成功就宣布阶段完成。
 

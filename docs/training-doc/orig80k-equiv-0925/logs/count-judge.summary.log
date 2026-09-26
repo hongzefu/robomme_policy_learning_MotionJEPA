@@ -1,0 +1,19 @@
+SESSION=orig80k-input-count-judge-20260926T170654Z
+WRAPPER_PID=392319
+BODY_PID=392321
+INPUT_HEAD=3a1582db39c723c735e04752e5027bfe40ecc3e1
+COMMAND_FILE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/commands-20260926T170654Z/orig80k-input-count-judge-20260926T170654Z.command
+COMMAND_FILE_SHA256_EXPECTED=ab2f9269afd97127719e0ecce6801bcece33a6b58d26a2e82ae2ed4a7d535519
+START_UTC=2026-09-26T18:33:44Z
+COMMAND_FILE_SHA256_ACTUAL=ab2f9269afd97127719e0ecce6801bcece33a6b58d26a2e82ae2ed4a7d535519
+COMMAND=env -u PYTHONPATH -u PYTHONHOME -u JAX_PLATFORM_NAME -u XLA_FLAGS CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu JAX_ENABLE_X64=0 PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 OPENPI_DATA_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models UV_CACHE_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/uv XDG_CACHE_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/xdg HF_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/hf HF_HUB_OFFLINE=1 JAX_COMPILATION_CACHE_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/orig80k-input-20260926T170654Z/count-judge uv run --no-sync python -B /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_orig80k_inputs.py judge --a-dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/input-20260926T170654Z/count/a --b-dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/input-20260926T170654Z/count/b --expect-head-a ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b --expect-head-b 3a1582db39c723c735e04752e5027bfe40ecc3e1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+INPUT_EQ=PASS episodes=400 samples=189035 boundary_samples=2400 batches=104 epochs=2 comparison=host_numeric_exact_motion_none_v1
+SESSION_END=orig80k-input-count-judge-20260926T170654Z
+INPUT_HEAD_END=3a1582db39c723c735e04752e5027bfe40ecc3e1
+END_UTC=2026-09-26T18:33:50Z
+COMMAND_EXIT=0
+TEE_EXIT=0
+FOOTER_PRINTF_EXIT=0
+FOOTER_TEE_EXIT=0
+EXIT_CODE=0

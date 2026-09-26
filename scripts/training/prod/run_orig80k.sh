@@ -9,6 +9,13 @@ MODE=$1 RUN=$2 GPUS=$3 LIB=$4 ASSETS_DIR=$5
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA
 case "$MODE" in prod) STEPS=80000 ;; perf) STEPS=300 ;; smoke) STEPS=20 ;; *) printf '模式非法\n' >&2; exit 2 ;; esac
 case "$RUN" in *[!a-zA-Z0-9_-]*|'') printf 'run 名非法\n' >&2; exit 2 ;; esac
+# 仅显式smoke对照启用共同取证；未设置时三个原模式的训练调用保持原样。
+if [[ -n "${ORIG80K_SMOKE_EQ_MODE+x}" ]]; then
+  if [[ "$MODE" != smoke || ( "$ORIG80K_SMOKE_EQ_MODE" != off && "$ORIG80K_SMOKE_EQ_MODE" != on ) ]]; then
+    printf 'ORIG80K_SMOKE_EQ_MODE仅允许smoke的off或on，其他模式禁止设置\n' >&2
+    exit 2
+  fi
+fi
 : "${TRAIN_HEAD:?必须传入完整 TRAIN_HEAD 字面量}"
 : "${HISTORY_CONFIG_SHA256:?必须传入 history 的期望 SHA256}"
 : "${NORM_STATS_SHA256:?必须传入 norm_stats 的期望 SHA256}"
@@ -113,6 +120,9 @@ body() (
   trap 'cleanup_sampler "$?"' EXIT
   if [ "$MODE" = perf ]; then
     uv run --no-sync python scripts/training/tests/check_orig80k_speed.py run --records "$REC" -- "${TRAIN_ARGS[@]}" &
+  elif [[ -n "${ORIG80K_SMOKE_EQ_MODE+x}" ]]; then
+    uv run --no-sync python scripts/training/tests/check_orig80k_timing_equiv.py run \
+      --timing "$ORIG80K_SMOKE_EQ_MODE" --records "$REC" -- "${TRAIN_ARGS[@]}" &
   else
     uv run --no-sync python scripts/training/train.py "${TRAIN_ARGS[@]}" &
   fi
@@ -127,8 +137,15 @@ body 2>&1 | tee "$LOG"
 statuses=("${PIPESTATUS[@]}")
 rc=${statuses[0]}
 if [ "${statuses[1]}" -ne 0 ]; then rc=${statuses[1]}; fi
-printf 'TRAIN_PIPE_EXIT=%s\nTEE_EXIT=%s\nEND_UTC=%s\nEXIT_CODE=%s\n' \
-  "${statuses[0]}" "${statuses[1]}" "$(date -u +%FT%TZ)" "$rc" | tee -a "$LOG"
+# 先取得footer自身状态，再直接追加唯一综合终态；外层还须捕获整个runner返回码。
+printf 'TRAIN_PIPE_EXIT=%s\nTEE_EXIT=%s\nEND_UTC=%s\n' \
+  "${statuses[0]}" "${statuses[1]}" "$(date -u +%FT%TZ)" | tee -a "$LOG"
 ending=("${PIPESTATUS[@]}")
-if [ "${ending[0]}" -ne 0 ] || [ "${ending[1]}" -ne 0 ]; then exit 1; fi
+if [ "${ending[0]}" -ne 0 ]; then rc=${ending[0]}; fi
+if [ "${ending[1]}" -ne 0 ]; then rc=${ending[1]}; fi
+if ! printf 'FOOTER_PRINTF_EXIT=%s\nFOOTER_TEE_EXIT=%s\nEXIT_CODE=%s\n' \
+  "${ending[0]}" "${ending[1]}" "$rc" >> "$LOG"; then
+  printf '最终退出记录追加失败：%s\n' "$LOG" >&2
+  exit 1
+fi
 exit "$rc"

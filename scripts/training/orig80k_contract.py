@@ -6,12 +6,17 @@ from __future__ import annotations
 
 import argparse
 import ast
+import datetime
 import hashlib
 import importlib.metadata
+import itertools
 import json
+import math
 import os
 from pathlib import Path
 import re
+import stat
+import statistics
 import subprocess
 import sys
 
@@ -35,6 +40,9 @@ PATH_FLAGS = {
     "--data.assets.asset-id", "--checkpoint-base-dir", "--weight-loader.params-path",
     "--model.history-config", "--model.use-history",
 }
+DISK_BUDGET_SCHEMA = 2
+MEASUREMENT_SCHEMA = 1
+MARGIN_KEYS = ("checkpoint_growth_margin_bytes", "save_sampling_margin_bytes", "logs_cache_margin_bytes")
 
 
 def require(ok, message):
@@ -251,41 +259,365 @@ def validate_gpus(gpus, expected):
     return [rows[index] for index in ids]
 
 
+def file_reference(path):
+    path = Path(path)
+    return {"path": str(path), "sha256": sha256_file(path)}
+
+
+def bound_file(reference, repo):
+    require(isinstance(reference, dict) and isinstance(reference.get("sha256"), str)
+            and re.fullmatch(r"[0-9a-f]{64}", reference["sha256"]), "预算证据缺完整文件SHA256")
+    path = entity_path(reference["path"], Path(repo))
+    require(path.is_file() and sha256_file(path) == reference["sha256"], f"预算证据SHA256不符: {path}")
+    if "bytes" in reference:
+        require(type(reference["bytes"]) is int and reference["bytes"] == path.stat().st_size, "预算证据字节数不符")
+    return path
+
+
+def _disk_helpers():
+    # 仅复用只读取证/验收函数；这些模块不会在import时运行模型或采样。
+    sys.path.insert(0, str(ROOT / "scripts/training/tests"))
+    from check_orig80k_completion import validate_gpu_sampling
+    from check_orig80k_completion import validate_records
+    from check_orig80k_speed import summarize_disk
+
+    return validate_records, validate_gpu_sampling, summarize_disk
+
+
+def checkpoint_stat(root):
+    """完成后的稳定目录账目；记录原始stat并按inode去重，不读取权重内容。"""
+    root = Path(root)
+    require(root.is_dir() and not root.is_symlink() and root == root.resolve(), "checkpoint必须为已存在的实体目录")
+    entries = []
+
+    def walk(path):
+        info = path.lstat()
+        require(stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode), f"checkpoint存在软链或非普通项: {path}")
+        entries.append({"path": "." if path == root else str(path.relative_to(root)),
+                        "kind": "directory" if stat.S_ISDIR(info.st_mode) else "file",
+                        "device": info.st_dev, "inode": info.st_ino, "size": info.st_size,
+                        "blocks": info.st_blocks, "mtime_ns": info.st_mtime_ns})
+        if stat.S_ISDIR(info.st_mode):
+            for child in sorted(path.iterdir()):
+                walk(child)
+
+    walk(root)
+    return stat_receipt(entries)
+
+
+def stat_receipt(entries):
+    require(isinstance(entries, list) and entries, "checkpoint测量账目为空")
+    seen_paths, seen_inodes = set(), {}
+    allocated = logical = 0
+    for row in entries:
+        path = Path(row["path"])
+        require(not path.is_absolute() and ".." not in path.parts and row["path"] not in seen_paths,
+                "checkpoint测量路径越界或重复")
+        require(row["kind"] in ("directory", "file"), "checkpoint测量项类型非法")
+        require(all(type(row.get(key)) is int and row[key] >= 0
+                    for key in ("device", "inode", "size", "blocks", "mtime_ns")), "checkpoint测量stat非法")
+        seen_paths.add(row["path"])
+        identity = (row["device"], row["inode"])
+        inode_value = (row["kind"], row["size"], row["blocks"], row["mtime_ns"])
+        if identity in seen_inodes:
+            require(seen_inodes[identity] == inode_value, "同inode测量数值不一致")
+        else:
+            seen_inodes[identity] = inode_value
+            allocated += row["blocks"] * 512
+            logical += row["size"]
+    require("." in seen_paths and entries[0]["path"] == "." and entries[0]["kind"] == "directory", "测量缺目录根")
+    return {"entries": entries, "entries_sha256": json_sha(entries), "allocated_bytes": allocated,
+            "logical_bytes": logical, "unique_inodes": len(seen_inodes)}
+
+
+def _perf_context(source, group, repo):
+    run, head = source.get("run_name", ""), source.get("head", "")
+    require(re.fullmatch(r"[A-Za-z0-9_-]+", run) is not None
+            and re.fullmatch(r"[0-9a-f]{40}", head) is not None, "perf来源缺run或完整HEAD")
+    library = {"full": "16task-pub-1600ep", "counting": "4task-counting-pub-400ep"}[group]
+    records = Path(repo) / "v1-store/bench/orig80k" / run
+    run_root = Path(repo) / "v1-store/train-runs" / CONFIG / run
+    references = {key: source[key] for key in ("launch", "report", "completion", "disk_samples")}
+    paths = {key: bound_file(value, repo) for key, value in references.items()}
+    references = {key: file_reference(path) for key, path in paths.items()}
+    require(paths["launch"] == records / "launch.json" and paths["disk_samples"] == records / "disk_samples.jsonl",
+            "perf启动或磁盘记录路径不属于本run")
+    launch, report, completion = (json.loads(paths[key].read_text()) for key in ("launch", "report", "completion"))
+    require((launch.get("mode"), launch.get("run_name"), launch.get("head")) == ("perf", run, head), "perf启动身份不符")
+    validate_argv(launch["argv"], "perf")
+    actual = launch["actual"]
+    fields = actual["complete"]["train_config"]["fields"]
+    require(actual["num_train_steps"] == 300 and fields["dataset_path"] == str(Path(repo) / "v1-store/datasets" / library / "framesamp")
+            and launch["checkpoint_dir"] == str(run_root), "perf步数、库或输出根不符")
+    require(actual.get("jax_enable_x64") is False, "perf启动记录缺x64禁用证据")
+    require((completion.get("status"), completion.get("mode"), completion.get("run_name"), completion.get("head"),
+             completion.get("state_step"), completion.get("final"), completion.get("checkpoints")) ==
+            ("PASS", "perf", run, head, 300, 299, [299]), "预算必须来自真实300/299保存恢复PASS")
+    sections = [report] if "disk" in report else [report.get("full_or_first", {}), report.get("counting_or_second", {})]
+    sections = [section for section in sections if section.get("disk", {}).get("checkpoint_root") == str(run_root)]
+    require(len(sections) == 1, "perf报告没有唯一匹配的run磁盘段")
+    report = sections[0]
+    require((report.get("head"), report.get("batch_size"), report.get("workers"), report.get("steady_steps")) ==
+            (head, 64, 4, [100, 299]), "perf报告版本或档位不符")
+    disk = report["disk"]
+    require(disk["samples_sha256"] == references["disk_samples"]["sha256"]
+            and disk["run_uuid"] == completion["run_uuid"], "perf采样SHA或恢复UUID不符")
+    require(disk["sampling_interval_s"] == .5 and disk["save_samples"] > 0, "perf缺0.5秒真实保存窗口观测")
+    for key in ("final_allocated_bytes", "sampled_max_allocated_bytes"):
+        require(type(disk.get(key)) is int and disk[key] > 0, "perf分配字节数无效")
+    start, final, wait = (json.loads((records / "final" / name).read_text())
+                          for name in ("start.json", "final.json", "checkpoint_wait_done.json"))
+    require(all(row.get("checkpoint_dir") == str(run_root) for row in (start, final)), "实际保存记录输出根不同")
+    metrics = [json.loads(line) for line in (records / "metrics.jsonl").read_text().splitlines()]
+    log = Path(repo) / "v1-store/logs" / f"{run}.driver.log"
+    lines = log.read_text().splitlines()
+    exits = [line for line in lines if line.startswith("EXIT_CODE=")]
+    for prefix in ("TRAIN_PIPE_EXIT=", "TEE_EXIT="):
+        require([line for line in lines if line.startswith(prefix)] == [prefix + "0"], "训练或tee未成功收尾")
+    validate_records, validate_gpu_sampling, _ = _disk_helpers()
+    validate_records(start, final, wait, metrics, exits, [299], mode="perf", run=run, head=head)
+    require(start["complete"] == launch["actual"]["complete"]
+            and completion["run_uuid"] == start["run_uuid"]
+            and completion["restored_leaves"] == final["ema_leaves"], "实际恢复与末步EMA或启动配置不一致")
+    runtime = json.loads((records / "runtime.json").read_text())
+    require((runtime.get("device_count"), runtime.get("fsdp_devices"), runtime.get("batch_size"), runtime.get("num_workers")) ==
+            (4, 4, 64, 4), "真实设备或loader形制不同")
+    require(runtime.get("exp_name") == run and runtime.get("config_name") == CONFIG and runtime.get("seed") == 42,
+            "真实runtime身份或种子不同")
+    require(runtime.get("cuda_visible_devices") == launch["environment"]["CUDA_VISIBLE_DEVICES"] == LIBRARIES[library]["gpus"],
+            "真实GPU分组与启动记录不同")
+    require(completion["gpu_sampling"] == validate_gpu_sampling(records, lines,
+            [int(value) for value in runtime["cuda_visible_devices"].split(",")], start, wait),
+            "完成器GPU采样摘要不能从原始记录重建")
+    speed_path = records / "speed_run.json"
+    speed = json.loads(speed_path.read_text())
+    require(speed.get("success") and speed.get("mode") == "perf" and speed.get("steps") == 300
+            and speed.get("head") == head and speed.get("entry_calls") == 1 and speed.get("sampler_stopped")
+            and not speed.get("sampling_error") and speed.get("profiler") is False
+            and speed.get("disk_sampling", {}).get("sha256") == disk["samples_sha256"],
+            "perf未真实完成或磁盘记录未绑定")
+    require(len(speed["save_calls"]) == 1 and speed["save_calls"][0]["step"] == 299
+            and speed["save_calls"][0]["state_step"] == 300, "perf真实保存次数或末步计数不同")
+    require(disk["wait_record_sha256"] == sha256_file(records / "final/checkpoint_wait_done.json"), "保存等待记录SHA不符")
+    # 稳定小记录须全部留存；权重目录的两项小元数据由测量回执保留原文，允许事后清理权重。
+    completion_files = {}
+    for item in completion["files"]:
+        path = Path(item["path"])
+        require(path.is_absolute() and path == path.resolve() and path.is_relative_to(Path(repo)), "完成证据路径越界")
+        require(str(path) not in completion_files, "完成证据路径重复")
+        completion_files[str(path)] = item
+        if not path.is_relative_to(run_root):
+            bound_file(item, repo)
+    needed = [log, *[records / name for name in ("launch.json", "runtime.json", "metrics.jsonl", "gpu.csv", "gpu.csv.err")],
+              *[records / "final" / name
+              for name in ("start.json", "final.json", "checkpoint_wait_done.json")],
+              run_root / "299/_CHECKPOINT_METADATA", run_root / "299/params/_METADATA"]
+    require(all(str(path) in completion_files for path in needed), "完成证据文件链不完整")
+    references["speed_run"] = file_reference(speed_path)
+    return {"run": run, "head": head, "records": records, "run_root": run_root, "disk": disk,
+            "speed": speed, "completion": completion, "completion_files": completion_files, "references": references}
+
+
+def measure_checkpoint(args, repo=ROOT):
+    """只在perf完成恢复后测量真实299目录；不训练、不恢复、不修改checkpoint。"""
+    repo = Path(repo)
+    require(re.fullmatch(r"[A-Za-z0-9_-]+", args.run) is not None, "perf run名称非法")
+    records = entity_path(repo / "v1-store/bench/orig80k" / args.run, repo)
+    report_path = entity_path(args.report, repo)
+    completion_path = entity_path(args.completion, records)
+    source = {"run_name": args.run, "head": args.head, "launch": file_reference(records / "launch.json"),
+              "report": file_reference(report_path), "completion": file_reference(completion_path),
+              "disk_samples": file_reference(records / "disk_samples.jsonl")}
+    ctx = _perf_context(source, args.group, repo)
+    output = entity_path(args.out, records, exists=False)
+    require(not os.path.lexists(output), "测量回执输出已存在")
+    checkpoint = ctx["run_root"] / "299"
+    require(sorted(path.name for path in ctx["run_root"].iterdir() if path.name.isdecimal()) == ["299"]
+            and not any("orbax-checkpoint-tmp" in path.name for path in ctx["run_root"].iterdir()), "perf目录不是完整且唯一的末步299")
+    require(all((checkpoint / suffix).is_file() for suffix in
+                ("_CHECKPOINT_METADATA", "params/_METADATA", "params/manifest.ocdbt", "assets/robomme/norm_stats.json")),
+            "真实checkpoint缺参数索引或保存资产")
+    _, _, summarize_disk = _disk_helpers()
+    require(summarize_disk(records, ctx["speed"]) == ctx["disk"], "perf磁盘报告不能从原始采样重建")
+    snapshots = {}
+    for suffix in ("_CHECKPOINT_METADATA", "params/_METADATA"):
+        path = checkpoint / suffix
+        reference = ctx["completion_files"][str(path)]
+        bound_file(reference, repo)
+        snapshots[suffix] = {"text": path.read_bytes().decode("utf-8"), "sha256": reference["sha256"]}
+    require(snapshots["_CHECKPOINT_METADATA"]["sha256"] == ctx["disk"]["checkpoint_metadata_sha256"], "原生保存元数据SHA不同")
+    first, run_first = checkpoint_stat(checkpoint), checkpoint_stat(ctx["run_root"])
+    require(first == checkpoint_stat(checkpoint) and run_first == checkpoint_stat(ctx["run_root"]), "测量时checkpoint仍在变化")
+    require(run_first["allocated_bytes"] == ctx["disk"]["final_allocated_bytes"], "稳定stat与最终run根采样不一致")
+    receipt = {"schema": MEASUREMENT_SCHEMA, "group": args.group, "run_name": args.run, "head": args.head,
+               "run_uuid": ctx["completion"]["run_uuid"], "checkpoint_step": 299,
+               "checkpoint_path": str(checkpoint), "checkpoint": first, "run_tree": run_first,
+               "evidence": ctx["references"], "disk": ctx["disk"], "metadata_snapshots": snapshots,
+               "measured_at": datetime.datetime.now(datetime.UTC).isoformat(),
+               "measurement_tool_sha256": sha256_file(__file__)}
+    # 测量期间所有上游小记录也必须保持原来的字节。
+    for reference in ctx["references"].values():
+        bound_file(reference, repo)
+    with output.open("x") as stream:
+        json.dump(receipt, stream, ensure_ascii=False, indent=2, allow_nan=False)
+    print(f"CHECKPOINT_MEASURED=PASS run={args.run} step=299 allocated_bytes={first['allocated_bytes']} receipt_sha256={sha256_file(output)}", flush=True)
+    return receipt
+
+
+def _recorded_disk_summary(ctx, metadata_text):
+    """按summarize_disk同口径重算；原生元数据来自快照，不重建已清理的权重目录。"""
+    root, meta = ctx["records"], ctx["speed"]
+    contract = meta.get("disk_sampling", {})
+    require(contract.get("schema") == 1 and contract.get("interval_s") == .5
+            and contract.get("stopped") and not contract.get("error"), "磁盘采样未正常完成")
+    require(contract.get("samples_file") == "disk_samples.jsonl" and contract.get("scratch_path") == "/scratch",
+            "磁盘采样位置或范围错误")
+    path = Path(root) / "disk_samples.jsonl"
+    require(hashlib.sha256(path.read_bytes()).hexdigest() == contract.get("sha256"), "磁盘采样记录摘要不符")
+    data = [json.loads(line) for line in path.read_text().splitlines()]
+    require(len(data) == contract.get("samples") and len(data) >= 3
+            and [row["sequence"] for row in data] == list(range(len(data))), "磁盘采样缺失或乱序")
+    require(data[0]["kind"] == "start" and data[-1]["kind"] == "final"
+            and all(row["kind"] == "periodic" for row in data[1:-1]), "磁盘起止采样缺失")
+    require(data[0]["wall_end"] <= meta["entry_start_wall"]
+            and data[-1]["wall_start"] >= meta["end_wall"], "磁盘采样未覆盖真实入口及异步保存完成")
+    for row in data:
+        checkpoint = row["checkpoint"]
+        require(not row["errors"] and not checkpoint["errors"] and not checkpoint["symlinks"],
+                "磁盘采样存在I/O错误或软链，不能据其生成预算")
+        require(type(checkpoint["allocated_bytes"]) is int and checkpoint["allocated_bytes"] >= 0
+                and type(row["scratch_available_bytes"]) is int and row["scratch_available_bytes"] >= 0,
+                "磁盘字节数无效")
+        require(all(math.isfinite(row[key]) and row[key] >= 0 for key in ("duration_s", "lateness_s"))
+                and row["wall_end"] >= row["wall_start"], "磁盘采样时钟或延迟无效")
+    intervals = [b["monotonic_start"] - a["monotonic_start"] for a, b in itertools.pairwise(data)]
+    require(all(value > 0 and math.isfinite(value) for value in intervals), "磁盘采样单调时钟无效")
+    require(all(row["interval_s"] == value for row, value in zip(data[1:], intervals, strict=True)),
+            "磁盘采样实际间隔记录不符")
+    final = data[-1]["checkpoint"]
+    require(final["exists"] and not final["disappeared"] and not final["changed"], "最终checkpoint采样仍不完整")
+    save = meta["save_calls"][0]
+    require(save["checkpoint_root"] == contract["checkpoint_root"], "磁盘采样不是实际保存目录")
+    # wait返回后入口还会收尾W&B；只以原生checkpoint提交时刻定义保存窗口。
+    checkpoint_bytes = metadata_text.encode()
+    checkpoint_meta = json.loads(checkpoint_bytes)
+    init_ns = checkpoint_meta["init_timestamp_nsecs"]
+    commit_ns = checkpoint_meta["commit_timestamp_nsecs"]
+    require(type(init_ns) is int and type(commit_ns) is int and 0 < init_ns < commit_ns,
+            "checkpoint原生提交时间无效")
+    start_record = json.loads((Path(root) / "final/start.json").read_text())
+    wait_bytes = (Path(root) / "final/checkpoint_wait_done.json").read_bytes()
+    wait_record = json.loads(wait_bytes)
+    require(start_record["run_uuid"] == wait_record["run_uuid"]
+            and start_record["head"] == wait_record["head"] == meta["head"]
+            and start_record["checkpoint_dir"] == contract["checkpoint_root"]
+            and wait_record.get("wait_until_finished") is True, "磁盘保存窗口未绑定本run的wait完成证据")
+    completed = datetime.datetime.fromisoformat(wait_record["completed_at"])
+    require(completed.tzinfo is not None, "checkpoint wait完成时间缺时区")
+    wait_done = completed.timestamp()
+    commit_wall = commit_ns / 1_000_000_000
+    require(save["start_wall"] <= init_ns / 1_000_000_000 < commit_wall <= wait_done <= meta["end_wall"],
+            "checkpoint提交、wait或入口结束时间顺序错误")
+    during_save = [row for row in data if row["kind"] == "periodic"
+                   and save["start_wall"] <= row["wall_start"] <= row["wall_end"] <= commit_wall]
+    require(during_save, "缺保存期间磁盘采样，不能用终态大小替代峰值")
+    return {"checkpoint_root": contract["checkpoint_root"], "scratch_path": contract["scratch_path"],
+            "sampling_interval_s": .5, "samples": len(data), "save_samples": len(during_save),
+            "save_window_wall": [save["start_wall"], commit_wall], "save_wait_done_wall": wait_done,
+            "checkpoint_init_timestamp_nsecs": init_ns, "checkpoint_commit_timestamp_nsecs": commit_ns,
+            "checkpoint_save_commit_seconds": (commit_ns - init_ns) / 1_000_000_000,
+            "checkpoint_metadata_sha256": hashlib.sha256(checkpoint_bytes).hexdigest(),
+            "wait_record_sha256": hashlib.sha256(wait_bytes).hexdigest(), "run_uuid": start_record["run_uuid"],
+            "start_allocated_bytes": data[0]["checkpoint"]["allocated_bytes"],
+            "final_allocated_bytes": final["allocated_bytes"],
+            "start_scratch_available_bytes": data[0]["scratch_available_bytes"],
+            "final_scratch_available_bytes": data[-1]["scratch_available_bytes"],
+            "sampled_max_allocated_bytes": max(row["checkpoint"]["allocated_bytes"] for row in data),
+            "save_sampled_max_allocated_bytes": max(row["checkpoint"]["allocated_bytes"] for row in during_save),
+            "scratch_available_min_bytes": min(row["scratch_available_bytes"] for row in data),
+            "mean_interval_s": statistics.fmean(intervals), "max_interval_s": max(intervals),
+            "max_sampling_duration_s": max(row["duration_s"] for row in data),
+            "max_lateness_s": max(row["lateness_s"] for row in data), "missed_ticks": contract["missed_ticks"],
+            "samples_with_path_races": sum(bool(row["checkpoint"]["disappeared"] or row["checkpoint"]["changed"])
+                                           for row in data),
+            "duplicate_inodes_observed": sum(row["checkpoint"]["duplicate_inodes"] for row in data),
+            "samples_sha256": contract["sha256"], "note": contract["note"]}
+
+
+def _validated_measurement(source, group, repo):
+    ctx = _perf_context(source, group, repo)
+    receipt = json.loads(bound_file(source["measurement"], repo).read_text())
+    require((receipt.get("schema"), receipt.get("group"), receipt.get("run_name"), receipt.get("head"),
+             receipt.get("run_uuid"), receipt.get("checkpoint_step"), receipt.get("checkpoint_path")) ==
+            (MEASUREMENT_SCHEMA, group, ctx["run"], ctx["head"], ctx["completion"]["run_uuid"], 299,
+             str(ctx["run_root"] / "299")), "测量回执身份或步骤不符")
+    require(receipt["evidence"] == ctx["references"] and receipt["disk"] == ctx["disk"], "测量回执与perf证据链不同")
+    for key in ("checkpoint", "run_tree"):
+        require(receipt[key] == stat_receipt(receipt[key]["entries"]), "测量账目与分配量不一致")
+    projected = [{**row, "path": "." if row["path"] == "299" else row["path"][4:]}
+                 for row in receipt["run_tree"]["entries"]
+                 if row["path"] == "299" or row["path"].startswith("299/")]
+    require(receipt["checkpoint"] == stat_receipt(projected), "单份checkpoint账目不是run树的真实299子树")
+    require(receipt["checkpoint"]["allocated_bytes"] > 0
+            and receipt["run_tree"]["allocated_bytes"] == ctx["disk"]["final_allocated_bytes"], "测量尺寸与最终采样不同")
+    for suffix in ("_CHECKPOINT_METADATA", "params/_METADATA"):
+        row = receipt["metadata_snapshots"][suffix]
+        require(hashlib.sha256(row["text"].encode()).hexdigest() == row["sha256"]
+                == ctx["completion_files"][str(ctx["run_root"] / "299" / suffix)]["sha256"], "测量保留的原生元数据不符")
+    require(receipt["metadata_snapshots"]["_CHECKPOINT_METADATA"]["sha256"] == ctx["disk"]["checkpoint_metadata_sha256"],
+            "采样与原生保存元数据不一致")
+    native = json.loads(receipt["metadata_snapshots"]["_CHECKPOINT_METADATA"]["text"])
+    require(native["init_timestamp_nsecs"] == ctx["disk"]["checkpoint_init_timestamp_nsecs"]
+            and native["commit_timestamp_nsecs"] == ctx["disk"]["checkpoint_commit_timestamp_nsecs"],
+            "报告的原生保存时刻与测量快照不符")
+    require(isinstance(receipt.get("measurement_tool_sha256"), str)
+            and re.fullmatch(r"[0-9a-f]{64}", receipt["measurement_tool_sha256"]), "测量回执缺工具指纹")
+    require(_recorded_disk_summary(ctx, receipt["metadata_snapshots"]["_CHECKPOINT_METADATA"]["text"]) == ctx["disk"],
+            "预算磁盘摘要不能从原始采样与原生保存快照重建")
+    return ctx, receipt
+
+
 def validate_disk_budget(mode, repo=ROOT, *, budget_path=None, budget_sha=None):
-    """只执行计划既定字节公式；正式预算与来源均由外部已确认记录提供。"""
+    """正式预算绑定已完成perf、真实测量与显式余量；观测增量不是连续峰值。"""
     repo = Path(repo)
     minimum = 300 * 2**30
     report = {"minimum_bytes": minimum, "required_bytes": minimum}
     if mode == "prod":
         require(bool(budget_path) and bool(budget_sha), "正式运行缺磁盘预算 JSON 或期望 SHA256")
-        require(re.fullmatch(r"[0-9a-f]{64}", budget_sha) is not None, "预算期望必须为完整 SHA256")
-        path = entity_path(budget_path, repo)
-        require(path.is_file() and sha256_file(path) == budget_sha, "磁盘预算 SHA256 不符")
+        path = bound_file({"path": str(budget_path), "sha256": budget_sha}, repo)
         budget = json.loads(path.read_text())
-        names = ("checkpoint_total_bytes", "save_temporary_peak_bytes", "logs_cache_margin_bytes")
-        require(all(type(budget.get(name)) is int and budget[name] >= 0 for name in names), "磁盘预算必须明确给出三项非负整数字节数")
-        require(budget["checkpoint_total_bytes"] > 0, "正式 checkpoint 总预算必须大于零")
+        require(budget.get("schema") == DISK_BUDGET_SCHEMA, "预算需要完整实测证据schema2，旧版launch不足")
         sources = budget.get("source_perf", {})
-        require(set(sources) == {"full", "counting"}, "预算必须绑定两侧 perf 身份")
+        require(set(sources) == {"full", "counting"} and sources["full"].get("run_name") != sources["counting"].get("run_name"),
+                "预算必须绑定两侧不同perf")
+        require(sources["full"].get("head") == sources["counting"].get("head"), "两侧perf必须使用相同代码版本")
+        margins = json.loads(bound_file(budget["margin_source"], repo).read_text())
+        require(margins.get("schema") == 1 and all(type(margins.get(key)) is int and margins[key] >= 0 for key in MARGIN_KEYS),
+                "余量来源必须明确给出全部非负整数字节")
+        require(margins["save_sampling_margin_bytes"] > 0 and margins["logs_cache_margin_bytes"] > 0,
+                "采样盲区及日志缓存保守余量不能省略或自动取零")
+        require(isinstance(margins.get("basis"), dict)
+                and all(isinstance(margins["basis"].get(key), str) and margins["basis"][key].strip()
+                    for key in MARGIN_KEYS), "余量来源缺逐项依据")
+        retained = observed_extra = 0
         source_records = {}
-        run_names = set()
-        for group, library in (("full", "16task-pub-1600ep"), ("counting", "4task-counting-pub-400ep")):
-            source = sources[group]
-            run, head = source.get("run_name", ""), source.get("head", "")
-            require(re.fullmatch(r"[A-Za-z0-9_-]+", run) is not None
-                    and re.fullmatch(r"[0-9a-f]{40}", head) is not None, "perf 来源缺 run 名或完整 HEAD")
-            require(run not in run_names, "两侧 perf 来源不能是同一个 run")
-            run_names.add(run)
-            launch_path = entity_path(repo / "v1-store/bench/orig80k" / run / "launch.json", repo / "v1-store")
-            launch = json.loads(launch_path.read_text())
-            require((launch.get("mode"), launch.get("run_name"), launch.get("head")) == ("perf", run, head), "预算 perf 来源身份不符")
-            actual = launch["actual"]
-            require(actual["num_train_steps"] == 300 and actual["complete"]["train_config"]["fields"]["dataset_path"] ==
-                    str(repo / "v1-store/datasets" / library / "framesamp"), "预算来源不是对应库的 300 步 perf")
-            source_records[group] = {**source, "launch_path": str(launch_path), "launch_sha256": sha256_file(launch_path)}
-        report.update(required_bytes=max(minimum, sum(budget[name] for name in names)),
-                      budget_path=str(path), budget_sha256=budget_sha,
-                      components={name: budget[name] for name in names}, source_perf=source_records)
+        for group in ("full", "counting"):
+            ctx, receipt = _validated_measurement(sources[group], group, repo)
+            size = receipt["checkpoint"]["allocated_bytes"]
+            extra = max(0, ctx["disk"]["sampled_max_allocated_bytes"] - ctx["disk"]["final_allocated_bytes"])
+            retained += 8 * size
+            observed_extra += extra
+            source_records[group] = {"run_name": ctx["run"], "head": ctx["head"], "checkpoints": 8,
+                                     "per_checkpoint_allocated_bytes": size, "retained_bytes": 8 * size,
+                                     "observed_extra_lower_bound_bytes": extra, "evidence": sources[group]}
+        components = {"checkpoint_total_bytes": retained + margins["checkpoint_growth_margin_bytes"],
+                      "save_temporary_peak_bytes": observed_extra + margins["save_sampling_margin_bytes"],
+                      "logs_cache_margin_bytes": margins["logs_cache_margin_bytes"]}
+        require(all(type(budget.get(key)) is int and budget[key] == value for key, value in components.items()),
+                "预算总额与两侧各8份实测保留量/观测增量/明确余量不符")
+        report.update(required_bytes=max(minimum, sum(components.values())), budget_path=str(path), budget_sha256=budget_sha,
+                      components=components, margin_source=budget["margin_source"], source_perf=source_records,
+                      note="0.5秒离散非原子采样；观测增量仅为下界，保守余量由明确来源提供，不设默认倍率")
     info = os.statvfs(repo)
     report["available_bytes"] = info.f_bavail * info.f_frsize
     require(report["available_bytes"] >= report["required_bytes"],
@@ -353,11 +685,17 @@ def main():
     for name in ("run", "head", "history-sha", "norm-sha", "lib", "assets", "gpus", "records"):
         check.add_argument("--" + name, required=True)
     check.add_argument("train_args", nargs=argparse.REMAINDER)
+    measure = sub.add_parser("measure-checkpoint")
+    measure.add_argument("--group", choices=("full", "counting"), required=True)
+    for name in ("run", "head", "report", "completion", "out"):
+        measure.add_argument("--" + name, required=True)
     args = parser.parse_args()
     try:
         if args.command == "_parse":
             argv = args.train_args[1:] if args.train_args[:1] == ["--"] else args.train_args
             print("ORIG80K_PARSE_JSON=" + json.dumps(parse_in_process(argv, args.mode), sort_keys=True, allow_nan=False))
+        elif args.command == "measure-checkpoint":
+            measure_checkpoint(args)
         else:
             check_launch(args)
         return 0

@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "scope": "已结束full INPUT_EQ judge原始日志及清洗stage，非训练轨迹对拍",
+  "log_checks": {
+    "source": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-input-full-judge-20260926T170654Z.log",
+      "bytes": 2250,
+      "sha256": "282a827f091ae72f4ad390f54fc1be3e2ee829f45c18ec55b26e5da4fa9cec32"
+    },
+    "summary": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/full-judge.summary.log",
+      "bytes": 2250,
+      "sha256": "282a827f091ae72f4ad390f54fc1be3e2ee829f45c18ec55b26e5da4fa9cec32"
+    },
+    "cleaning": "仅CRLF/CR转LF并移除%|匹配tqdm行；保留行尾空白",
+    "removed_tqdm_lines": 0,
+    "critical_lines_exactly_equal": true,
+    "critical_lines_count": 18,
+    "critical_lines_sha256": "56444d94e6e97e20c32f19ac58be3895544336e55609d429170c80a3302fc408",
+    "source_bytes_and_stat_unchanged": true
+  },
+  "result": "INPUT_EQ=PASS episodes=1600 samples=476857 boundary_samples=6906 batches=104 epochs=2 comparison=host_numeric_exact_motion_none_v1",
+  "finished_at": "2026-09-26T19:44:55.443257+00:00"
+}

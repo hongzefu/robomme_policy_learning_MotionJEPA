@@ -10,9 +10,9 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`orig80k-equiv-0925/`](orig80k-equiv-0925/README.md) | 两个已验收公开库的正式CPU INPUT_EQ预建：四侧并行，每侧104真实批及两epoch完整索引 | 三项已获准：仅对拍关闭W&B、perf 0.5秒只读采样、补记限制继续CPU；尚未运行，可从本轮提交后的clean INPUT_HEAD启动，非输入或perf实测PASS |
-| [`smoke-orig80k-full-0925/`](smoke-orig80k-full-0925/README.md) | 公开16任务正式库20步四卡可读性、原版norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；正式INPUT/100步/并跑/perf未验证 |
-| [`smoke-orig80k-count-0925/`](smoke-orig80k-count-0925/README.md) | 公开counting正式库20步四卡可读性、独立norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；正式INPUT/100步/并跑/perf未验证 |
+| [`orig80k-equiv-0925/`](orig80k-equiv-0925/README.md) | 两个公开库正式CPU INPUT_EQ：四侧并行，full/counting每侧6906/2400定点、104真实批及两epoch完整索引 | 两组INPUT_EQ PASS，实际INPUT_HEAD=`3a1582d`；P1/100步/新包装20步/perf未实跑，训练bitwise与后续闸门不被豁免 |
+| [`smoke-orig80k-full-0925/`](smoke-orig80k-full-0925/README.md) | 公开16任务正式库20步四卡可读性、原版norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；INPUT另档已PASS，本档不覆盖100步/新包装20步/并跑/perf |
+| [`smoke-orig80k-count-0925/`](smoke-orig80k-count-0925/README.md) | 公开counting正式库20步四卡可读性、独立norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；INPUT另档已PASS，本档不覆盖100步/新包装20步/并跑/perf |
 | [`orig80k-schema-0925/`](orig80k-schema-0925/result.md) | 既有40集库三样本CPU输入字段取证，保留dtype及精确数值摘要 | 共同字段精确数值相同；用户事后允许四键缺失/None等价，三样本按新规则通过，非正式全量验收 |
 | [`orig80k-env-0925/`](orig80k-env-0925/result.md) | 上游独立uv环境P0、源码恢复和模块来源验证 | P0通过，208项依赖版本一致、退出0；已恢复建库并批准四键缺失/None等价，训练仍须全部前置闸门 |
 

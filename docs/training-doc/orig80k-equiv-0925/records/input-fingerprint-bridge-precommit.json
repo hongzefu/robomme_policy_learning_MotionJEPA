@@ -1,0 +1,621 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "checked_utc": "2026-09-26T19:49:42.665143+00:00",
+  "input_head": "3a1582db39c723c735e04752e5027bfe40ecc3e1",
+  "target_state": "待提交工作区；实际TRAIN_HEAD须起跑时另记，本文不声称新HEAD重跑过INPUT",
+  "tracked_changes": [
+    "0925-orig-80k-full-counting-4plus4-plan.md",
+    "docs/training-doc/README.md",
+    "docs/training-doc/orig80k-equiv-0925/README.md",
+    "docs/training-doc/orig80k-equiv-0925/launch.md",
+    "scripts/training/orig80k_contract.py",
+    "scripts/training/prod/run_orig80k.sh",
+    "scripts/training/tests/test_orig80k_launch.py"
+  ],
+  "untracked": [
+    "docs/training-doc/orig80k-equiv-0925/logs/count.logs.archive_checks.json",
+    "docs/training-doc/orig80k-equiv-0925/logs/final-log-checks.json",
+    "docs/training-doc/orig80k-equiv-0925/logs/full-a.final-log-checks.json",
+    "docs/training-doc/orig80k-equiv-0925/logs/full-b.final-log-checks.json",
+    "docs/training-doc/orig80k-equiv-0925/logs/full-judge.final-log-checks.json",
+    "docs/training-doc/orig80k-equiv-0925/p1-launch.md",
+    "docs/training-doc/orig80k-equiv-0925/records/archive-index.json",
+    "docs/training-doc/orig80k-equiv-0925/records/count-a.archive_checks.json",
+    "docs/training-doc/orig80k-equiv-0925/records/count-a.records.tar.gz",
+    "docs/training-doc/orig80k-equiv-0925/records/count-b.archive_checks.json",
+    "docs/training-doc/orig80k-equiv-0925/records/count-b.records.tar.gz",
+    "docs/training-doc/orig80k-equiv-0925/records/full-a.archive_checks.json",
+    "docs/training-doc/orig80k-equiv-0925/records/full-a.records.tar.gz",
+    "docs/training-doc/orig80k-equiv-0925/records/full-b.archive_checks.json",
+    "docs/training-doc/orig80k-equiv-0925/records/full-b.records.tar.gz",
+    "docs/training-doc/orig80k-equiv-0925/records/full-judge.archive_checks.json",
+    "docs/training-doc/orig80k-equiv-0925/records/resources.jsonl",
+    "docs/training-doc/orig80k-equiv-0925/records/runtime-controller.json",
+    "docs/training-doc/orig80k-equiv-0925/result.md",
+    "docs/training-doc/orig80k-equiv-0925/train100-launch.md",
+    "scripts/training/tests/check_orig80k_timing_equiv.py",
+    "scripts/training/tests/test_orig80k_timing_equiv.py"
+  ],
+  "record_files_checked": 44,
+  "file_refs_checked": 113,
+  "file_refs": {
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul.yaml": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul.yaml",
+      "sha256": "823c3948e75a9335ace3f250d0255e6a8618e8ecf0bb77c65af65077349d199a",
+      "bytes": 405
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/meta/input_manifest.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/meta/input_manifest.json",
+      "sha256": "3ec2bf9a7df4bdd035476574a07ba2da243eb165f44a13ace16dd8be9abf4847",
+      "bytes": 2585
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/meta/episode_manifest.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/meta/episode_manifest.json",
+      "sha256": "222d84f58fb82073603fda19992c4f82e542475294176bea99e8868036b8a11a",
+      "bytes": 476750
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme/norm_stats.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/robomme/norm_stats.json",
+      "sha256": "f332bbd34ace1b6837cdc415b44f680896070a41564f9ce39016f1ebf99d1be5",
+      "bytes": 2068
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/source/meta/provenance.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/source/meta/provenance.json",
+      "sha256": "42a852f89673939bb556887ecdaf51bc83285fb3cbdf0711ddd2b5c2bf827ff8",
+      "bytes": 7218
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/source/meta/stats.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/source/meta/stats.json",
+      "sha256": "f48b9c92d9c7eaa389490130be85889ef2b6d7b94a9691c72061767d6d3df57a",
+      "bytes": 60
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/big_vision/paligemma_tokenizer.model": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/big_vision/paligemma_tokenizer.model",
+      "sha256": "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6",
+      "bytes": 4264023
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_orig80k_inputs.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_orig80k_inputs.py",
+      "sha256": "0e52ad01d2de5f9250de465bc7c1fb6550377d564e8037ad476c9ec1150a7305",
+      "bytes": 47669
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/__init__.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/config/utils.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/config/utils.py",
+      "sha256": "bd73f9a79640ffb4d09ef2dd60ce569d616e900082e401f61b0674fe2baa89c7",
+      "bytes": 608
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/integration/history_gemma.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/integration/history_gemma.py",
+      "sha256": "a4882087a74b52b08a7a002a2a8bf7d64324af3ff05daf99c15a17f30bab60d1",
+      "bytes": 12263
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/integration/history_observation.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/integration/history_observation.py",
+      "sha256": "5fd2b791361c5df960cb2c523ce68bdbf4d2d841add2a1fca70216e023b2f532",
+      "bytes": 6199
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/integration/history_pi0.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/integration/history_pi0.py",
+      "sha256": "a48dbfd412268a4ee689e10e6a6fd26c044eaa2b03cea8c075e2a34de49c4e57",
+      "bytes": 32797
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/integration/utils.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/integration/utils.py",
+      "sha256": "097941e87e6629f9baaae3d9f54490fce475084948401af7b85d2d880d4a15e9",
+      "bytes": 6863
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/representation/utils.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/models/representation/utils.py",
+      "sha256": "e8fc4f3ad494803afac7b9953d23ecf78affc1b2c41635b53941d947eadbabb3",
+      "bytes": 3164
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/policies/robomme_policy.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/policies/robomme_policy.py",
+      "sha256": "6361c023c298b95b63d1fa9106d40d060698d87533b033d65f65cef82a869936",
+      "bytes": 4265
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/shared/data_utils.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/shared/data_utils.py",
+      "sha256": "dda1583743528403aa97a4bde8c0305deacfb5a618c9c61937703e59ae76d27a",
+      "bytes": 4937
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/shared/mem_buffer.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/shared/mem_buffer.py",
+      "sha256": "ed37406c663cc9be9035cbadb2b961ad2babcc26d7fb8883535aaff1698efef7",
+      "bytes": 21605
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/training/config.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/training/config.py",
+      "sha256": "ca95d2df1f53b4145c08f3adef82a354113736f0d09286cbc90ba91bdaf52357",
+      "bytes": 27347
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/training/dataloader.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/training/dataloader.py",
+      "sha256": "c287a0a1389a9ce2e0ef760932d85cc7131da1c2a25e52b412cc44665d5844a0",
+      "bytes": 2292
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/training/dataset.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/mme_vla_suite/training/dataset.py",
+      "sha256": "435df6266d4fbc3c1c8ca1c3e7b72c7f53f398f929a62f7488daa64cdcecfa48",
+      "bytes": 11195
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/__init__.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/__init__.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/gemma.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/gemma.py",
+      "sha256": "ad2d77d689f33a2908cd062484c83af31041debb79722ee413cc1463c195faa9",
+      "bytes": 17141
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/gemma_fast.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/gemma_fast.py",
+      "sha256": "563c6e1ffd8afa31c406bcb8894a605e87df88f6c075d398d97a57af6bc3aefa",
+      "bytes": 15643
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/lora.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/lora.py",
+      "sha256": "bd98b70ae66eb0bd85976099f9f44c0f2b972e40ed158c6c1bef1047d351a37b",
+      "bytes": 5343
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/model.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/model.py",
+      "sha256": "a555d11c1fc0253a634b2de54f05cd188432227df70de260e63b0bfcdae62b11",
+      "bytes": 12855
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/pi0.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/pi0.py",
+      "sha256": "24b32d7c6ed5e409459afa8ca5af96a4dae09c2dcdf48e828907e411f4f12342",
+      "bytes": 12887
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/pi0_config.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/pi0_config.py",
+      "sha256": "3948022fad7cb16d898e855dd592856ff9d0d202dcea03d1d2c20829b8116804",
+      "bytes": 4361
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/pi0_fast.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/pi0_fast.py",
+      "sha256": "627332a555046f2744ef144c45f8bd3361a9820cf68854a4528d0fdbba7e9aa3",
+      "bytes": 13209
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/siglip.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/siglip.py",
+      "sha256": "14b4df0be280d5769fb0dc31a40cde27525dbb1980cc998c28475d62fa3cad32",
+      "bytes": 12078
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/tokenizer.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/tokenizer.py",
+      "sha256": "39130cb0a86e1e1f212ec59eb5cb8778c0a432909bc2d6b3ea207d210dbd7917",
+      "bytes": 17559
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/utils/fsq_tokenizer.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models/utils/fsq_tokenizer.py",
+      "sha256": "88866638ee4775f46a222561a957bd35e20600fe38c5888b587016ad77b1065f",
+      "bytes": 15928
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models_pytorch/gemma_pytorch.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models_pytorch/gemma_pytorch.py",
+      "sha256": "08fd8d750519f0fb44fc5173311e50a30f4c8f32c02e51244b4f8e47b32cd52f",
+      "bytes": 13509
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models_pytorch/pi0_pytorch.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models_pytorch/pi0_pytorch.py",
+      "sha256": "0c7b9f1de02ed886da49035e3fa1b38efea46eb6209489cb4f594f777f97b70c",
+      "bytes": 19014
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models_pytorch/preprocessing_pytorch.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/models_pytorch/preprocessing_pytorch.py",
+      "sha256": "6a44e91be2d7a724c6140d2cc98ed0a631b8d38bbb29f63b380a0a19f903bbf6",
+      "bytes": 7264
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/policies/aloha_policy.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/policies/aloha_policy.py",
+      "sha256": "50d7ad972d80142ecb0f03b0780dacfd3af212946f4c9aac31a204b02db4543d",
+      "bytes": 7543
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/policies/droid_policy.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/policies/droid_policy.py",
+      "sha256": "7d0893555964d485e231f70084125084a99495705ddd74b29461229d524fff26",
+      "bytes": 3186
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/policies/libero_policy.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/policies/libero_policy.py",
+      "sha256": "ad01e5be74516d9ec9aeb1f76294d5c9f7f7179a60f1f7fbbb35e7646534f81a",
+      "bytes": 4320
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/__init__.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/array_typing.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/array_typing.py",
+      "sha256": "6524945566eab3eb97b75a6280ba4724617b4d028c55f05172b283c3de68a026",
+      "bytes": 3402
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/download.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/download.py",
+      "sha256": "1fee4957a275ab632fd4dd98af240516a2a708da2db38a838132f05c04da425d",
+      "bytes": 7817
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/image_tools.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/image_tools.py",
+      "sha256": "0f8fcb355288119e56acb56d550c1cc1f3a9edddceb0dc5b319f955943ef7767",
+      "bytes": 4665
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/nnx_utils.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/nnx_utils.py",
+      "sha256": "4da7111ba3011c4d1c381c9ed17257771df6a50ed89182647c3fb6f79208005e",
+      "bytes": 2844
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/normalize.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/shared/normalize.py",
+      "sha256": "6c2cea4946fb07e51801530400d2b2fd94730e195cd290d6b6960114eca9739d",
+      "bytes": 5529
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/config.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/config.py",
+      "sha256": "3a108c09860afa60806b568af904ef830305caa643e1182ee87099ffa5cc3823",
+      "bytes": 47426
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/data_loader.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/data_loader.py",
+      "sha256": "e35acc93a1a43752d638595d1ed323cade471dee35031f48ec70a76a13e0a17b",
+      "bytes": 20030
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/droid_rlds_dataset.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/droid_rlds_dataset.py",
+      "sha256": "9480e75ab2dbcc16d9219ed0f0982b057e5ba555b1b2b5abc692956568bdc722",
+      "bytes": 9305
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/misc/roboarena_config.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/misc/roboarena_config.py",
+      "sha256": "914acdd74ccf90e6779c13a5093140595c7e4f687e9e0b167439446a81d74c01",
+      "bytes": 4804
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/optimizer.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/optimizer.py",
+      "sha256": "cfb5d6f6aec61fbe961287b4015c652260628a0ed4682a0dbdc271b8e65431fa",
+      "bytes": 3202
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/sharding.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/sharding.py",
+      "sha256": "08434b9375263b261a53cdae4ef69403135285ce02848a27e19adb401fc777b5",
+      "bytes": 4158
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/weight_loaders.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/training/weight_loaders.py",
+      "sha256": "82e6b2f928d08165d316a1b075ee9c24b11ae753198f655870fa96fe17ed9d52",
+      "bytes": 3888
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/transforms.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/src/openpi/transforms.py",
+      "sha256": "a1b94e9e72849a18834778f229c6bb389a495eb7fbe0aa800edea728b9424ff4",
+      "bytes": 15752
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/packages/openpi-client/src/openpi_client/__init__.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/packages/openpi-client/src/openpi_client/__init__.py",
+      "sha256": "91447944015cec709e8aa7655f7e9d64e1e4508e7023a57fe3746911c0fc6fed",
+      "bytes": 22
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/packages/openpi-client/src/openpi_client/image_tools.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/packages/openpi-client/src/openpi_client/image_tools.py",
+      "sha256": "d48b4bd7f44e79fe6db8a8e07c9161144fa250be686e1245014a8b47e6171977",
+      "bytes": 2426
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul.yaml": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul.yaml",
+      "sha256": "823c3948e75a9335ace3f250d0255e6a8618e8ecf0bb77c65af65077349d199a",
+      "bytes": 405
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/framesamp/meta/store_meta.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/framesamp/meta/store_meta.json",
+      "sha256": "a554a7859ba35c883ec805244c98764a9eb10c1ddbc244850c5f213db4da669b",
+      "bytes": 15587
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/__init__.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/datastore/__init__.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/datastore/__init__.py",
+      "sha256": "636b479113c5c092ffe52b1ffe9b3e2928892b00a94005b0d6f0a4fd6b5acdb0",
+      "bytes": 635
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/datastore/framesamp_store.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/datastore/framesamp_store.py",
+      "sha256": "00b9077a4c810b00f160b97b1c6e3883233a701dca2d910a123f6bd102221f6b",
+      "bytes": 27606
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/datastore/manifest.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/datastore/manifest.py",
+      "sha256": "5863e19d750cfa90c51072990aa5a018c2c0501069b40c3589e354770e511628",
+      "bytes": 1697
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/datastore/motion_store.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/datastore/motion_store.py",
+      "sha256": "3aeb09f2bb538c1d93f7f228650dbbcc674c639ca0cd1d188b0b915a591d0c2a",
+      "bytes": 27785
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/config/utils.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/config/utils.py",
+      "sha256": "bd73f9a79640ffb4d09ef2dd60ce569d616e900082e401f61b0674fe2baa89c7",
+      "bytes": 608
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_gemma.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_gemma.py",
+      "sha256": "a4882087a74b52b08a7a002a2a8bf7d64324af3ff05daf99c15a17f30bab60d1",
+      "bytes": 12263
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_observation.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_observation.py",
+      "sha256": "af2feb5cd626a1ab9418a823ae358797875d904fd7a12a8948eff26344ac4133",
+      "bytes": 5543
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py",
+      "sha256": "d84824e535f6c34b8b376508e1a54f4df3eba57bcb2bb64940b84b9c83fbada8",
+      "bytes": 30516
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/utils.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/utils.py",
+      "sha256": "097941e87e6629f9baaae3d9f54490fce475084948401af7b85d2d880d4a15e9",
+      "bytes": 6863
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/representation/utils.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/representation/utils.py",
+      "sha256": "ab3be1edcf07854d79199f029c66abd2c6a3bdb8357d602dfd6bfe4f30e5d95a",
+      "bytes": 137
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/robomme_policy.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/policies/robomme_policy.py",
+      "sha256": "8b09058ef6f5c8a3097ce6d476ad6e29bf60fca1bdf6838362771aaf118bac0d",
+      "bytes": 4209
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/shared/sampling.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/shared/sampling.py",
+      "sha256": "02ad2389e35ed8a2802a981fce05b00e4c56803f3f8497e73cecd81755896531",
+      "bytes": 3346
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/training/config.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/training/config.py",
+      "sha256": "646421ba786ab0d4673d1fee8b06931f3795b7dd0fa898404be8d4367d4d9c62",
+      "bytes": 26594
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/training/dataloader.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/training/dataloader.py",
+      "sha256": "71ef404a8a68d90c08f56db546cc9c006a9011e793e9cef9d0f80f64dda424b8",
+      "bytes": 6873
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/training/framesamp_dataset.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/training/framesamp_dataset.py",
+      "sha256": "8389f936c0fa3cc2ca7eec783401b33dca6ab230782d6b88b3df56b64c7068bc",
+      "bytes": 18990
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/__init__.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/__init__.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/gemma.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/gemma.py",
+      "sha256": "ad2d77d689f33a2908cd062484c83af31041debb79722ee413cc1463c195faa9",
+      "bytes": 17141
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/gemma_fast.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/gemma_fast.py",
+      "sha256": "563c6e1ffd8afa31c406bcb8894a605e87df88f6c075d398d97a57af6bc3aefa",
+      "bytes": 15643
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/lora.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/lora.py",
+      "sha256": "bd98b70ae66eb0bd85976099f9f44c0f2b972e40ed158c6c1bef1047d351a37b",
+      "bytes": 5343
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/model.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/model.py",
+      "sha256": "a555d11c1fc0253a634b2de54f05cd188432227df70de260e63b0bfcdae62b11",
+      "bytes": 12855
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/pi0.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/pi0.py",
+      "sha256": "24b32d7c6ed5e409459afa8ca5af96a4dae09c2dcdf48e828907e411f4f12342",
+      "bytes": 12887
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/pi0_config.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/pi0_config.py",
+      "sha256": "3948022fad7cb16d898e855dd592856ff9d0d202dcea03d1d2c20829b8116804",
+      "bytes": 4361
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/pi0_fast.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/pi0_fast.py",
+      "sha256": "627332a555046f2744ef144c45f8bd3361a9820cf68854a4528d0fdbba7e9aa3",
+      "bytes": 13209
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/siglip.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/siglip.py",
+      "sha256": "14b4df0be280d5769fb0dc31a40cde27525dbb1980cc998c28475d62fa3cad32",
+      "bytes": 12078
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/tokenizer.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/tokenizer.py",
+      "sha256": "39130cb0a86e1e1f212ec59eb5cb8778c0a432909bc2d6b3ea207d210dbd7917",
+      "bytes": 17559
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/utils/fsq_tokenizer.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models/utils/fsq_tokenizer.py",
+      "sha256": "88866638ee4775f46a222561a957bd35e20600fe38c5888b587016ad77b1065f",
+      "bytes": 15928
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models_pytorch/gemma_pytorch.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models_pytorch/gemma_pytorch.py",
+      "sha256": "08fd8d750519f0fb44fc5173311e50a30f4c8f32c02e51244b4f8e47b32cd52f",
+      "bytes": 13509
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models_pytorch/pi0_pytorch.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models_pytorch/pi0_pytorch.py",
+      "sha256": "0c7b9f1de02ed886da49035e3fa1b38efea46eb6209489cb4f594f777f97b70c",
+      "bytes": 19014
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models_pytorch/preprocessing_pytorch.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/models_pytorch/preprocessing_pytorch.py",
+      "sha256": "6a44e91be2d7a724c6140d2cc98ed0a631b8d38bbb29f63b380a0a19f903bbf6",
+      "bytes": 7264
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/policies/aloha_policy.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/policies/aloha_policy.py",
+      "sha256": "50d7ad972d80142ecb0f03b0780dacfd3af212946f4c9aac31a204b02db4543d",
+      "bytes": 7543
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/policies/droid_policy.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/policies/droid_policy.py",
+      "sha256": "7d0893555964d485e231f70084125084a99495705ddd74b29461229d524fff26",
+      "bytes": 3186
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/policies/libero_policy.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/policies/libero_policy.py",
+      "sha256": "ad01e5be74516d9ec9aeb1f76294d5c9f7f7179a60f1f7fbbb35e7646534f81a",
+      "bytes": 4320
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/__init__.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/array_typing.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/array_typing.py",
+      "sha256": "6524945566eab3eb97b75a6280ba4724617b4d028c55f05172b283c3de68a026",
+      "bytes": 3402
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/download.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/download.py",
+      "sha256": "9f05e53a01e99ba898f95a707edadf18ad673fdb7ff9b29f8998a1f5c2f42f77",
+      "bytes": 8328
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/image_tools.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/image_tools.py",
+      "sha256": "0f8fcb355288119e56acb56d550c1cc1f3a9edddceb0dc5b319f955943ef7767",
+      "bytes": 4665
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/nnx_utils.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/nnx_utils.py",
+      "sha256": "4da7111ba3011c4d1c381c9ed17257771df6a50ed89182647c3fb6f79208005e",
+      "bytes": 2844
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/normalize.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/shared/normalize.py",
+      "sha256": "6c2cea4946fb07e51801530400d2b2fd94730e195cd290d6b6960114eca9739d",
+      "bytes": 5529
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/config.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/config.py",
+      "sha256": "3a108c09860afa60806b568af904ef830305caa643e1182ee87099ffa5cc3823",
+      "bytes": 47426
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/data_loader.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/data_loader.py",
+      "sha256": "47ba37917efa3ecbbb752a0337b5dad0cfef80cd17f247565c5f67582cbd43c0",
+      "bytes": 21126
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/droid_rlds_dataset.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/droid_rlds_dataset.py",
+      "sha256": "9480e75ab2dbcc16d9219ed0f0982b057e5ba555b1b2b5abc692956568bdc722",
+      "bytes": 9305
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/misc/roboarena_config.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/misc/roboarena_config.py",
+      "sha256": "914acdd74ccf90e6779c13a5093140595c7e4f687e9e0b167439446a81d74c01",
+      "bytes": 4804
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/optimizer.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/optimizer.py",
+      "sha256": "cfb5d6f6aec61fbe961287b4015c652260628a0ed4682a0dbdc271b8e65431fa",
+      "bytes": 3202
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/sharding.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/sharding.py",
+      "sha256": "08434b9375263b261a53cdae4ef69403135285ce02848a27e19adb401fc777b5",
+      "bytes": 4158
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/weight_loaders.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/training/weight_loaders.py",
+      "sha256": "82e6b2f928d08165d316a1b075ee9c24b11ae753198f655870fa96fe17ed9d52",
+      "bytes": 3888
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/transforms.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/src/openpi/transforms.py",
+      "sha256": "a1b94e9e72849a18834778f229c6bb389a495eb7fbe0aa800edea728b9424ff4",
+      "bytes": 15752
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/__init__.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/__init__.py",
+      "sha256": "91447944015cec709e8aa7655f7e9d64e1e4508e7023a57fe3746911c0fc6fed",
+      "bytes": 22
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/image_tools.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/packages/openpi-client/src/openpi_client/image_tools.py",
+      "sha256": "d48b4bd7f44e79fe6db8a8e07c9161144fa250be686e1245014a8b47e6171977",
+      "bytes": 2426
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/meta/input_manifest.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/meta/input_manifest.json",
+      "sha256": "39f12dffa5dcebc60a366e3994b75058701a62ed185556166a3229742261dd4d",
+      "bytes": 707
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/meta/episode_manifest.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/meta/episode_manifest.json",
+      "sha256": "fa0535335751910451c483d198cda151f04d25df36b75467c7460d118e25ad52",
+      "bytes": 117562
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-counting-pub-400ep/robomme/norm_stats.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-counting-pub-400ep/robomme/norm_stats.json",
+      "sha256": "a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9",
+      "bytes": 2068
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/source/meta/provenance.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/source/meta/provenance.json",
+      "sha256": "4271e7e646760a5d4efa1fc4949ffed706e5842e9939bddc66751ff033a59258",
+      "bytes": 7222
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/source/meta/stats.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/source/meta/stats.json",
+      "sha256": "e55e1c44c347dcd3d9dfb735f019a00ce00dcb8884501368d6b65225a332d417",
+      "bytes": 60
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/framesamp/meta/store_meta.json": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/framesamp/meta/store_meta.json",
+      "sha256": "6c0ffe3968149fd666091e1809fa55a4c1540132db906ec27a40a584cb6aa748",
+      "bytes": 15124
+    }
+  },
+  "packages": 208,
+  "package_versions_sha256": "a31fe021dbb20937aa93ce68d59a7d2f7d38d92a7e9514256ca2da617f5274dc",
+  "python_build": "3.11.15 (main, Aug  5 2026, 15:45:52) [Clang 22.1.3 ]",
+  "input_source_diff_empty": [
+    "src",
+    "packages",
+    "shared",
+    "pyproject.toml",
+    "uv.lock",
+    "scripts/training/tests/check_orig80k_inputs.py"
+  ],
+  "boundary": "核对取证器、双方父/worker已加载模块、依赖版本/锁、history、norm、tokenizer、来源清单/provenance、packed metadata均保持原字节；仅作为原INPUT_HEAD证据沿用检查，不改写原记录"
+}

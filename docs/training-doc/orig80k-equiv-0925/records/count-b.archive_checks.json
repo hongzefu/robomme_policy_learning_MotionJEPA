@@ -1,0 +1,206 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "scope": "仅count-B已完成collector的无损归档；不代表INPUT_EQ",
+  "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/input-20260926T170654Z/count/b",
+  "session": "orig80k-input-count-b-20260926T170654Z",
+  "collector_head": "3a1582db39c723c735e04752e5027bfe40ecc3e1",
+  "source_manifest_sha256": "ac66670e25f5c9f9b01e088b5c15d1577f62d6cc11563c67c4be54b6fbc69430",
+  "source_manifest_bytes": 2090,
+  "source_record_files": 17,
+  "archive_members": 18,
+  "payload_bytes": 49198475,
+  "archived_bytes": 49200565,
+  "archive": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/count-b.records.tar.gz",
+    "bytes": 5313445,
+    "sha256": "d41ca9f527718b188252fb4410d26cd83fc95c2ea09668e06abe7eeda5928140"
+  },
+  "normalization": {
+    "tar_format": "USTAR",
+    "member_order": "lexicographic",
+    "uid": 0,
+    "gid": 0,
+    "uname": "",
+    "gname": "",
+    "mode": "0644",
+    "mtime": 0,
+    "gzip_mtime": 0,
+    "gzip_filename": "",
+    "gzip_compresslevel": 6,
+    "regular_files_only": true,
+    "directories_or_links_in_archive": false
+  },
+  "checks": {
+    "exact_manifest_members": true,
+    "original_manifest_bytes_equal": true,
+    "all_decoded_member_sha_and_bytes_equal": true,
+    "source_sha_and_stat_unchanged": true,
+    "only_json_and_jsonl": true
+  },
+  "members": [
+    {
+      "path": "batches.jsonl",
+      "source_sha256": "68433ed57c5c0ee7ca21c99d1aae39f9ecaecf9628ece795fed7d251b15d35a9",
+      "source_bytes": 921839,
+      "archive_sha256": "68433ed57c5c0ee7ca21c99d1aae39f9ecaecf9628ece795fed7d251b15d35a9",
+      "archive_bytes": 921839,
+      "status": "PASS"
+    },
+    {
+      "path": "episode_manifest.json",
+      "source_sha256": "f8eb6e2842af91fea933a5dbc68a63a0a21cfe7bbb3346055a3de4fb6aa602f5",
+      "source_bytes": 91897,
+      "archive_sha256": "f8eb6e2842af91fea933a5dbc68a63a0a21cfe7bbb3346055a3de4fb6aa602f5",
+      "archive_bytes": 91897,
+      "status": "PASS"
+    },
+    {
+      "path": "identity.json",
+      "source_sha256": "5913fc5890c98ffe35a9a17383259de47cfaca1db9d96b57c536d0e0fdb4983a",
+      "source_bytes": 237,
+      "archive_sha256": "5913fc5890c98ffe35a9a17383259de47cfaca1db9d96b57c536d0e0fdb4983a",
+      "archive_bytes": 237,
+      "status": "PASS"
+    },
+    {
+      "path": "meta.json",
+      "source_sha256": "0e223632db68c172924661b6f798b32258b47671079df77c7ceef62ec42cb908",
+      "source_bytes": 4045,
+      "archive_sha256": "0e223632db68c172924661b6f798b32258b47671079df77c7ceef62ec42cb908",
+      "archive_bytes": 4045,
+      "status": "PASS"
+    },
+    {
+      "path": "provenance_end.json",
+      "source_sha256": "7aa7966832a0c928e0ec95737c383f7b88b7a7801fe8607e995d716a3a52acae",
+      "source_bytes": 11467,
+      "archive_sha256": "7aa7966832a0c928e0ec95737c383f7b88b7a7801fe8607e995d716a3a52acae",
+      "archive_bytes": 11467,
+      "status": "PASS"
+    },
+    {
+      "path": "provenance_start.json",
+      "source_sha256": "7aa7966832a0c928e0ec95737c383f7b88b7a7801fe8607e995d716a3a52acae",
+      "source_bytes": 11467,
+      "archive_sha256": "7aa7966832a0c928e0ec95737c383f7b88b7a7801fe8607e995d716a3a52acae",
+      "archive_bytes": 11467,
+      "status": "PASS"
+    },
+    {
+      "path": "record_manifest.json",
+      "source_sha256": "ac66670e25f5c9f9b01e088b5c15d1577f62d6cc11563c67c4be54b6fbc69430",
+      "source_bytes": 2090,
+      "archive_sha256": "ac66670e25f5c9f9b01e088b5c15d1577f62d6cc11563c67c4be54b6fbc69430",
+      "archive_bytes": 2090,
+      "status": "PASS"
+    },
+    {
+      "path": "sample_plan.json",
+      "source_sha256": "ed638967d22dfd9fc051e419ea2373117a45a59ed54bbe56d705009d79f0ed4d",
+      "source_bytes": 266336,
+      "archive_sha256": "ed638967d22dfd9fc051e419ea2373117a45a59ed54bbe56d705009d79f0ed4d",
+      "archive_bytes": 266336,
+      "status": "PASS"
+    },
+    {
+      "path": "sampler.json",
+      "source_sha256": "376a66cebbea0bc98d6a2aac8bfa782c636bcd104d17faa55c359affa4356438",
+      "source_bytes": 5607536,
+      "archive_sha256": "376a66cebbea0bc98d6a2aac8bfa782c636bcd104d17faa55c359affa4356438",
+      "archive_bytes": 5607536,
+      "status": "PASS"
+    },
+    {
+      "path": "samples.jsonl",
+      "source_sha256": "fcecd00312556773f0b944ef0235d6969a6020683f383f73c9393e9baaf7e24a",
+      "source_bytes": 42194059,
+      "archive_sha256": "fcecd00312556773f0b944ef0235d6969a6020683f383f73c9393e9baaf7e24a",
+      "archive_bytes": 42194059,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/content/worker-0.json",
+      "source_sha256": "8b9f84c47af34bc83d6129256fa0669739fa0d21e95610821cdfe74a95381229",
+      "source_bytes": 11199,
+      "archive_sha256": "8b9f84c47af34bc83d6129256fa0669739fa0d21e95610821cdfe74a95381229",
+      "archive_bytes": 11199,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/content/worker-1.json",
+      "source_sha256": "d268aaff40864415bb831469d771bc8a4ec0d58166bdd24138166a220d42b4d5",
+      "source_bytes": 11199,
+      "archive_sha256": "d268aaff40864415bb831469d771bc8a4ec0d58166bdd24138166a220d42b4d5",
+      "archive_bytes": 11199,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/content/worker-2.json",
+      "source_sha256": "5bdf701ea76d96328c8a259bec9198d69a65de31fe83981fdd6c85c00285d62c",
+      "source_bytes": 11199,
+      "archive_sha256": "5bdf701ea76d96328c8a259bec9198d69a65de31fe83981fdd6c85c00285d62c",
+      "archive_bytes": 11199,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/content/worker-3.json",
+      "source_sha256": "e7ff4d43caeea54d34e9d740abb5fd0b0efd1414d8c426ffe45185717c262b74",
+      "source_bytes": 11199,
+      "archive_sha256": "e7ff4d43caeea54d34e9d740abb5fd0b0efd1414d8c426ffe45185717c262b74",
+      "archive_bytes": 11199,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/index/worker-0.json",
+      "source_sha256": "78d8f3a3c81662a79dd38d9a14b254f422408b36d47690b129e47b1a1951cc1f",
+      "source_bytes": 11199,
+      "archive_sha256": "78d8f3a3c81662a79dd38d9a14b254f422408b36d47690b129e47b1a1951cc1f",
+      "archive_bytes": 11199,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/index/worker-1.json",
+      "source_sha256": "47c6e6a6a0df0e16de65f0ee2e3bd30e96b0dcf6cff7b9877fd367b5ae637e47",
+      "source_bytes": 11199,
+      "archive_sha256": "47c6e6a6a0df0e16de65f0ee2e3bd30e96b0dcf6cff7b9877fd367b5ae637e47",
+      "archive_bytes": 11199,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/index/worker-2.json",
+      "source_sha256": "c944a8100f681f1c38dbe43256a3ebfa9b7b9652f51fdbe2efd7fac704ac4633",
+      "source_bytes": 11199,
+      "archive_sha256": "c944a8100f681f1c38dbe43256a3ebfa9b7b9652f51fdbe2efd7fac704ac4633",
+      "archive_bytes": 11199,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/index/worker-3.json",
+      "source_sha256": "b5a2f9fa1e00c5cb662e60d071d22f0dd35de228fa20d8752bfb3ed0d336fa9d",
+      "source_bytes": 11199,
+      "archive_sha256": "b5a2f9fa1e00c5cb662e60d071d22f0dd35de228fa20d8752bfb3ed0d336fa9d",
+      "archive_bytes": 11199,
+      "status": "PASS"
+    }
+  ],
+  "controller_snapshot": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/controller_state.json",
+    "sha256_at_read": "630f1b64f81f5f042b1f6a00cb561115ea8907e55b24a4672e5acb676bb25918",
+    "read_at": "2026-09-26T18:25:17.250595+00:00",
+    "note": "控制器可继续更新；此处绑定一次读取快照",
+    "session_record": {
+      "name": "orig80k-input-count-b-20260926T170654Z",
+      "status": "collector_pass_checked_footer_exit_0",
+      "record_files": 17,
+      "record_payload_bytes": 49198475,
+      "record_manifest_sha256": "ac66670e25f5c9f9b01e088b5c15d1577f62d6cc11563c67c4be54b6fbc69430",
+      "verification": "命令/正文tee/footer printf/footer tee/综合退出均唯一0；全部17文件bytes/SHA及清单集合已独立核对，非INPUT_EQ通过",
+      "end_utc": "2026-09-26T18:22:36Z",
+      "tmux_session_absent": true
+    }
+  },
+  "started_at": "2026-09-26T18:25:17.250375+00:00",
+  "finished_at": "2026-09-26T18:25:18.665000+00:00",
+  "elapsed_seconds": 1.414629361126572
+}

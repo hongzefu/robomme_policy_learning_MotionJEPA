@@ -1,102 +1,80 @@
-# 原版80k正式CPU输入对拍档案（预建，尚未运行）
+# 原版80k正式CPU输入对拍档案
 
 ## 1. 结论与指标速览
 
-**本档案仅完成 CPU 输入阶段的预建，尚无本次采集或判定结果；用户已批准补记历史限制后继续CPU输入取证，可从本轮提交后的clean INPUT_HEAD启动。** 两个公开库、严格子集内容检查及两次20步保存/恢复的子任务和产物验收PASS未被该日志反例证伪；但最外footer及整体进程真实退出0不能仅凭日志独立证明。本阶段将另做两组上游/当前完整输入对拍，不以此前三样本或工具单测代替。P1、100步训练轨迹、单跑/并跑、perf及80k均不在本次CPU执行范围内。
+**full和counting两组正式CPU输入对拍均PASS，四份collector与两份judge已结束。** 实际运行于2026-09-26 17:07:21—19:41:35 UTC，B及取证工具锚定`3a1582db39c723c735e04752e5027bfe40ecc3e1`，A固定上游`ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`。完整判定、UTC/PID、原始记录与归档SHA见[result](result.md)。
 
-| 对象 | 本阶段要求 | 当前实际状态 |
-|---|---|---|
-| full A/B | 各自核对1600集、476857个执行样本身份 | 未采集 |
-| counting A/B | 各自核对400集、189035个执行样本身份 | 未采集 |
-| 每侧定点样本 | 执行首尾/交界及合法历史边界，数量由实际计划计算 | 未采集 |
-| 每侧真实批次 | b64/workers4，共104批、6656个批内样本位置 | 未采集 |
-| 每侧采样顺序 | 两个完整epoch索引、drop_last尾部及generator状态 | 未采集 |
-| 两组输入判定 | 分别由同组A/B记录进行精确数值及获准None等价判定 | 待结果 |
+| 组 | 全量身份 | 每侧定点样本 | 每侧真实内容与顺序 | 结论 |
+|---|---|---:|---|---|
+| full | 1600集、768897帧、476857执行样本 | 6906 | 104个b64批；两epoch完整索引 | INPUT_EQ PASS |
+| counting | 400集、189035帧及执行样本 | 2400 | 104个b64批；两epoch完整索引 | INPUT_EQ PASS |
 
-完整启动设置、四份collector及两份judge命令见[launch.md](launch.md)。本表只列要求与当前状态，不是通过判定。
+此结论截至`collate_before_jax`，不等于GPU训练标量/参数/EMA/优化器状态逐位等价。P1、100步、单跑/并跑、新测速包装20步开关对照、300步perf及80k尚未实跑。
 
 ## 2. 版本与代码状态
 
-数据组归档提交为 **`ec6c9e35784a96f636a587dd737dffa294b616ad`**；两库构建及两次20步检查的实际运行Beta为 `49a333eb18e8d6ff1143bf7871ef7c498ab91579`。它们是已经完成的前置证据版本，不能填写为尚未执行的CPU输入采集版本。
+实际INPUT_HEAD为`3a1582db39c723c735e04752e5027bfe40ecc3e1`；后续归档或工具提交不得替换该运行锚点。四侧分别从各自clean根启动，起止provenance逐字相同、porcelain为空，父进程和worker模块来源分别留证。A使用独立上游uv环境，B使用主仓库uv环境；Python均为3.11.15，起跑前208项包版本一致。输入工具SHA256为`0e52ad01d2de5f9250de465bc7c1fb6550377d564e8037ad476c9ec1150a7305`。
 
-A固定上游 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`，使用 `v1-store/worktrees/orig-ecf086c/.venv/bin/python`。B的 **`INPUT_HEAD` 待包含本README及launch的clean提交创建后填写**，实际命令须传40位Git SHA字面量；本档案不预填未来提交，不通过动态读取当前HEAD代替期望锚点。
-
-正式启动时再记录双方实际HEAD、clean状态、解释器、取证工具和项目模块摘要、完整argv/env及时间。采集期间冻结主副本和两侧环境，不改tracked文件、不提交结果、不同步依赖。结果结束后另行归档提交，不改写真实启动版本。
+数据与既有20步实际Beta为`49a333eb18e8d6ff1143bf7871ef7c498ab91579`，数据组归档提交为`ec6c9e35784a96f636a587dd737dffa294b616ad`，均与本次INPUT运行版本分开。CPU采集期间主副本与两侧环境保持冻结，六会话全部结束后才解除本阶段冻结。
 
 ## 3. 启动与配置还原
 
-入口为 `scripts/training/tests/check_orig80k_inputs.py` 的 `collect` 和 `judge`，当前保留已获准继续的待执行模板，须从本轮提交后的clean INPUT_HEAD启动。既定执行方式仍为四侧collector独立并行，每侧拥有新输出、日志、tmux会话与JAX缓存；full或counting任一组的A/B均成功后，该组即可运行judge，**无需等无关组结束**。具体六份命令及退出状态包装均在[launch](launch.md#公共命令设置与有退出记录的启动包装)保留，不额外复制脚本或yaml。
+实际标签`20260926T170654Z`，四份collector独立并行，每侧独立输出、日志、tmux及编译缓存。同组A/B成功后即可启动该组judge，因此count judge在full仍运行时先完成。具体命令及包装按[launch](launch.md)还原；六份实际命令文件SHA、会话全名、wrapper/body PID、UTC起止见[result第三节](result.md#3-启动与配置还原)。
 
-CPU环境固定 `CUDA_VISIBLE_DEVICES=''`、`JAX_PLATFORMS=cpu`、`JAX_ENABLE_X64=0`、`HF_HUB_OFFLINE=1`，清除 `PYTHONPATH/PYTHONHOME/JAX_PLATFORM_NAME/XLA_FLAGS`，不覆盖用户HOME。`OPENPI_DATA_HOME`指向主副本只读共享模型资产；依赖缓存、日志和六份独立编译缓存均在本仓库 `v1-store/`。A与B各用自己的uv环境，B使用 `uv run --no-sync`，不安装或同步依赖。
-
-`INPUT_TAG`、最终输出路径、实际六份会话名和日志名均待启动时展开、核实唯一并记录；目前未创建任何采集输出或会话。每份实际命令先保存在 `v1-store/` 内独立命令文件，现场计算SHA256，再由tmux执行该同一文件并核对SHA，避免长内联命令限制。日志头留会话全名、wrapper/body PID、声明的INPUT_HEAD、命令文件路径/期望与实际SHA及START_UTC。尾部先记录END_UTC、命令及正文tee状态，捕获footer printf/tee状态后，才以受检查的直接append写两项footer状态和唯一综合退出码；不得在检查footer tee之前写成功终态。当前不预写任何实际摘要或时间。tee日志和命令文件都在collector输出目录之外，不能混入其 `record_manifest.json` 所约束的文件集合。
+CPU环境固定`CUDA_VISIBLE_DEVICES=''`、`JAX_PLATFORMS=cpu`、`JAX_ENABLE_X64=0`、`HF_HUB_OFFLINE=1`；清除`PYTHONPATH/PYTHONHOME/JAX_PLATFORM_NAME/XLA_FLAGS`，不覆盖HOME。`OMP_NUM_THREADS=1`、`OPENBLAS_NUM_THREADS=1`四侧一致；缓存落本仓库scratch的`v1-store/cache`，六个JAX缓存分别隔离。B使用`uv run --no-sync`，本阶段没有安装或同步依赖、模型初始化、训练或W&B调用。
 
 ## 4. 数据集与划分口径
 
-full为公开16任务各100集，共1600集、768897帧、476857个执行样本；counting为同一集合中BinFill、PickXtimes、StopCube、SwingXtimes各100集，共400集、189035帧及执行样本。本阶段不修改划分、不重建或裁剪数据。
+full为公开16任务各100集；counting为其中BinFill、PickXtimes、StopCube、SwingXtimes各100集。双方同组共享source、manifest和norm_stats；A读取原版source，B读取同库4×4 packed，实际数据与划分未改变。full仍使用原版norm SHA `f332bbd34ace1b6837cdc415b44f680896070a41564f9ce39016f1ebf99d1be5`，counting使用自算SHA `a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9`。
 
-本阶段采用的前置档案均已在数据组提交中归档：[full正式库](../../dataset-build-doc/16task-pub-1600ep/README.md)、[counting正式库及严格子集检查](../../dataset-build-doc/4task-counting-pub-400ep/README.md)、[full20保存/恢复](../smoke-orig80k-full-0925/README.md)、[count20保存/恢复](../smoke-orig80k-count-0925/README.md)。其通过范围与本次输入闸门分开，不互相替代。
-
-同组A/B消费同一source、manifest与norm_stats；A从source读取原版格式，B从同库4×4 packed读取历史特征。full使用原版norm SHA `f332bbd34ace1b6837cdc415b44f680896070a41564f9ce39016f1ebf99d1be5`；counting使用自算norm SHA `a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9`。资产父目录、两库manifest完整SHA与只读路径详列于[launch的输入表](launch.md#已核实的输入与资产)。
+前置档案为[full库](../../dataset-build-doc/16task-pub-1600ep/README.md)、[counting库及严格SUBSET](../../dataset-build-doc/4task-counting-pub-400ep/README.md)、[full20保存/恢复](../smoke-orig80k-full-0925/README.md)和[count20保存/恢复](../smoke-orig80k-count-0925/README.md)。这些前置PASS与本次INPUT PASS各有独立范围。
 
 ## 5. 输入参数与判定口径
 
-固定b64、workers4、原生prefetch2、seed42、`drop_last=True`、action_horizon20、modul 4×4（budget512、16 token/帧）及motion关闭。四侧并行只改变调度，不改任何这些值、数据范围或判据。
+固定b64/workers4/prefetch2/seed42、drop_last=True、action_horizon20、modul 4×4（budget512、16 token/帧）和motion关闭。每集按合法执行首尾、交界和30/31/32步定点；真实内容为epoch0前100批及末2批、epoch1首2批，共104批、6656个批内样本位置。full每epoch7450完整批、丢弃57项；counting2953批、丢弃43项。索引探针和真实内容两遍均完整保存并比较两epoch的索引、generator起止状态、base_seed和drop_last尾项；不能把104批内容称为两个epoch全量内容解码。
 
-每集定点范围为合法执行步集合 `{exec_start_idx, exec_start_idx+1, num_timesteps-1, 30, 31, 32}` 的排序去重结果。每侧真实内容取首epoch的前100批与末2批，以及次epoch首2批，共104批；full每epoch7450完整批并丢弃57个尾样本，counting为2953批和43个尾样本。两遍真实sampler还要完整消费并核对两epoch的全部索引、base_seed和generator起止状态，不能将104批内容误称为全量两epoch内容解码。取证终点为 `collate_before_jax`。
-
-协议为 `schema=2`、`host_numeric_exact_motion_none_v1`。主机dtype可不同，但无损数值摘要须精确一致，signed zero、有限性、shape、顺序与未获准字段保持严格。仅 `motion_emb/motion_pos/motion_mask/mem_order` 的缺失与严格None等价，完整记录 `equivalent_motion_none_keys`；任何非None值或其他未获准字段差异失败。原始 `raw_all/transformed_all/inputs_all`、dtype和raw SHA均保留，实际输入不补键、不改值。训练五标量及参数/EMA/优化器状态的bitwise要求不在本阶段放宽。
+协议`schema=2`、`host_numeric_exact_motion_none_v1`：主机dtype可不同，支持数值叶的无损摘要必须精确相同，signed zero、有限性、shape和顺序严格。仅`motion_emb/motion_pos/motion_mask/mem_order`允许缺失与严格None等价；任何非None或其他未获准字段差异失败。四键登记于`equivalent_motion_none_keys`，原始ALL字段、dtype和raw SHA保留，实际输入不补键、不cast。训练五标量及完整状态bitwise要求不变。
 
 ## 6. 硬件、资源与耗时
 
-环境为AWS单机，存储 `/dev/md0` XFS，本阶段显式使用CPU。预建前只读快照为96个可见CPU、MemAvailable约1068.17GiB、可用SHM约560.90GiB；相关cgroup没有CPU quota或内存硬限。完整快照及限制说明见[launch资源段](launch.md#cpu内存与输出预检)，起跑时仍须重新核实。
+AWS单机，`/scratch`为`/dev/md0` XFS，本次只用CPU。起跑前96个可见CPU，MemAvailable约1064.49GiB、scratch可用793.11GiB、SHM可用560.90GiB，cgroup OOM事件0；这些是快照。资源记录共6份离散快照，末份19:46:07 UTC时INPUT进程已全部结束、另有独立CPU单测，不能当作输入峰值。指定时点、进程树PSS、线程/FD和SHM见[result第六节](result.md#6-硬件资源与耗时)，不把稀疏快照称为全程峰值。
 
-按源码shape、预取与复制路径估算，四侧应用数据工作集约50GiB量级，两份B的SHM约4.78GiB；这些不是实测峰值、硬上限或容量保证。上游两份A的历史读取线程可合计达到256条，另有JAX CPU线程，不能凭CPU数量宣称没有瓶颈。运行中按明确PID监测进程树RSS/PSS、线程/FD、MemAvailable、SHM和CPU/IO压力；不以重复共享页计数冒充独占内存，不改参数来消除资源失败。
-
-本阶段尚无实际起止时间、耗时或资源峰值。它不测吞吐，也不承诺四侧并行的性能收益；后续仅记录本次诊断耗时及资源行为，不替代perf。
+count-A/B包装耗时5123/4515秒，full-A/B为9223/8292秒；count/full judge分别6/16秒。本阶段不测训练吞吐，不用这些并行取证耗时推断loader速度比。预建约50GiB工作集和4.78GiB SHM只是估计，不能写成本次实测峰值。
 
 ## 7. 采集过程行为（本阶段无训练）
 
-尚未启动collector。后续在独立detached tmux中运行四份采集，以流式日志观察各侧全量身份扫描、定点样本与批次进度。每侧须记录完整会话名、实际进程、起止时间、工具退出码和tee退出码；会话消失本身不算成功。
+四侧均于17:07:21 UTC启动；count-B/A先后于18:22:36/18:32:44完成，count judge在18:33:44—18:33:50执行。full-B/A分别于19:25:33/19:41:04完成，full judge在19:41:19—19:41:35执行。每侧完成17项记录文件及record_manifest，同组judge在两侧完整成功后运行。
 
-四份collector彼此无内容依赖，可连续发出启动命令并行运行；同组judge只依赖本组两份成功且记录清单完整，不等待无关组。放行必须同时具备唯一工具完成判定，以及日志中各自唯一的 `COMMAND_EXIT=0`、正文 `TEE_EXIT=0`、`FOOTER_PRINTF_EXIT=0`、`FOOTER_TEE_EXIT=0` 和 `EXIT_CODE=0`；缺失、重复、任何非零或终态追加失败均不算成功，两份judge自身也适用同一要求。任一失败保留原始输出和日志，停止相关依赖步骤并报告；不覆盖重试、不改名破坏provenance、不往collector目录追加外部日志。
+六份日志各有唯一工具PASS，以及各自唯一的`COMMAND_EXIT=0`、`TEE_EXIT=0`、`FOOTER_PRINTF_EXIT=0`、`FOOTER_TEE_EXIT=0`、`EXIT_CODE=0`。现场头尾还记录会话、进程、命令自SHA、INPUT_HEAD及UTC。六会话结束状态与退出记录共同核对，会话消失本身不算成功；原始collector目录没有混入tee或judge日志。
 
 ## 8. 输入判定与后续评估状态
 
-full和counting两组judge均待执行。collector成功只说明该侧取证完整，仍需同组A/B的来源、完整范围、精确数值与获准None等价全部满足才形成该组输入结论。实际判定行、退出记录、失配定位和各组范围将在结果文件中原样留证。
+两组judge均输出`INPUT_EQ=PASS ... comparison=host_numeric_exact_motion_none_v1`，full为1600/476857/6906/104/2，counting为400/189035/2400/104/2（依次为集、执行样本、定点、批、epoch）。原始记录保留，结论只覆盖本次输入与顺序。
 
-P1、上游/当前100步、同入口单跑/并跑、300步perf及正式80k均未由本阶段验证。用户现已批准仅P1/100步A/B对拍关闭W&B、为perf补充0.5秒只读磁盘采样，以及补记历史限制后继续CPU输入取证；批准范围见第9节。这三项决定均不构成输入、训练或perf闸门通过，也不把历史最外终态证据缺项补成已测。本次CPU阶段不启动任何训练或策略评估。
+本次没有执行P1、100步或单跑/并跑训练，没有执行新测速包装20步开关对照、300步perf和80k。既有两次可读性20步的checkpoint19保存/恢复PASS不能替代新包装对照。没有进行策略评估。
 
 ## 9. 用户决定记录
 
-用户要求「给出方案跑完整的80k 和80k纯counting任务 完全参照原版训练 4卡+4卡 先做对拍测试」，并授权「开始实现该计划 有问题立刻问用户 不要自己决策」。数据阶段按后续决定「恢复计划中的建库，严格按前置闸门推进」完成。发现历史终态证据边界后曾暂停CPU起跑并询问用户；随后三项决定按以下时序获得明确答复，CPU目前仍尚未实际运行。
+用户原话：「给出方案跑完整的80k 和80k纯counting任务 完全参照原版训练 4卡+4卡 先做对拍测试」；实施授权：「开始实现该计划 有问题立刻问用户 不要自己决策」。暂不建库的阶段性范围后来由「恢复计划中的建库，严格按前置闸门推进」覆盖，其他前置要求保留。
 
-比较口径沿用用户原话：「允许主机 dtype 不同，但要求数值一致且训练标量/状态逐位一致」及「允许这四键缺失与 None 等价」。四键白名单、原始字段保留和训练bitwise约束按第5节执行，不扩大为一般schema或容差豁免。四侧并行是已明确的本阶段调度安排，不改变b64/workers4/prefetch2/种子或取证覆盖范围。
+比较口径沿用「允许主机 dtype 不同，但要求数值一致且训练标量/状态逐位一致」及「允许这四键缺失与 None 等价」。此前按「先保留严格判据并取证，结果出来后再决定」留下的三样本严格失败仍保留于[三样本档案](../orig80k-schema-0925/result.md)，不改写历史。
 
-用户最新连续批准：「允许仅对拍关闭 W&B」及「补充 0.5 秒只读采样」。前者仅覆盖P1/100步A/B对拍，完整标量和状态继续保存在本地；20步可读性、300步perf和80k仍开启W&B。后者覆盖perf期间本轮checkpoint文件分配字节与`/scratch`可用字节，记录采样观察到的峰值，并在预算中保留保守余量；不能把0.5秒离散采样峰值当作连续时间真实峰值的无遗漏证明。采样实现、验证和实际perf取证仍须分别完成，本文不预写实测结果。
-
-在上述两项批准之后，用户进一步明确：「补记限制，继续 CPU 输入取证」。因此三项均已决定：保留历史数据与20步子任务和产物PASS，并如实补记最外层终态缺项；不追加未经要求的历史重跑，也不改写原始记录。CPU输入可按原命令和判据，从本轮提交后的clean INPUT_HEAD启动，授权本身不替代实际采集与judge结果。
+用户已批准「允许仅对拍关闭 W&B」（仅P1/100步A/B，本地完整证据保留）、「补充 0.5 秒只读采样」（perf checkpoint分配字节与scratch可用字节，预算保留保守余量）及「补记限制，继续 CPU 输入取证」。用户另选择「两库各跑一对 20 步（推荐）」验证新测速包装开关，真实保存和W&B仍开启；该新20步尚未执行。20步/perf/80k的W&B开启要求不变，批准不能代替实跑PASS。
 
 ## 10. 计划外事件与处置
 
-本阶段尚未采集，但预建审查发现新启动包装会先写成功EXIT_CODE再检查footer tee。纯shell反例证明，footer tee可完整输出成功文本后返回非零，从而留下不能代表wrapper实际成功的日志。当前INPUT包装已修复为先捕获footer printf/tee状态、合并非零返回，再以受检查的直接append写两项footer状态和唯一综合退出码；放行要求命令、正文tee、footer printf/tee及综合状态各唯一且全0。
+新INPUT包装起跑前修复了“先写成功EXIT_CODE、后检查footer tee”的缺口，两方各6例纯shell失败传播验证通过，实际CPU使用修正版。历史四次数据/20步最外footer和整体包装退出0缺独立观测的边界仍见[exit-record-audit](exit-record-audit.md)，子任务与产物PASS未被反例证伪，原记录未改，也未用新包装测试补造旧观测。
 
-实现方和独立审查方各完成6例纯shell替身验证：正常、主命令exit7、正文tee失败、footer完整输出后失败、自SHA不匹配、日志冲突均正确；两方footer失败案例分别得到非零终态1与29，没有残留成功EXIT_CODE。未运行真实tmux、collector或训练，临时载体已清理。这是新包装验证，不是历史运行退出码的新增独立观测。
-
-历史最外包装终态的证据边界已补充在[exit-record-audit.md](exit-record-audit.md)。数据与两次20步子任务和产物验收PASS未被该反例证伪，也不能因新包装已修复就推定历史整体进程真实退出0已获独立证明。原始记录保持不变，不将旧日志退出0重新标成独立观测。此前曾暂停并询问处置，用户现已选择「补记限制，继续 CPU 输入取证」；固定审计锚点及两轮纯shell测试事实保持原样。
-
-后续如资源不足、来源污染、原始字段或精确数值不一致、缺记录或非零退出，应保留实际失败证据及当时版本，明确对应侧与阶段，不以修改阈值、删除记录或缩小范围制造通过。
-
-历史三样本曾按当时严格schema规则留有失败，后来仅按用户批准的四None键规则更新比较结论，详见[三样本档案](../orig80k-schema-0925/result.md)；本阶段不重写该历史，也不拿其小范围结果顶替正式两库输入验收。
+原始INPUT日志没有tqdm中间态；归档时只在独立Git副本删除COMMAND行末一个未转义ASCII分隔空格，解析argv及判定/退出原文保持一致，原日志和collector记录不改。记录无损压缩包解码后逐成员校验SHA/bytes及原manifest字节，检查链随档案保存。具体日志与包摘要见[result第十二节](result.md#12-归档文件清单与摘要)。
 
 ## 11. 当前结论与下一步
 
-当前结论为三项用户决定均已明确，历史证据边界已补记；本CPU阶段尚未实际运行，可从本轮提交后的clean INPUT_HEAD启动。填实INPUT_HEAD和唯一标签，复核环境/资源/路径后执行既定四侧并行流程；每组A/B都成功才运行本组judge，结果事后回写。现在不填任何实际会话、运行时间、输入通过或perf采样实测结论；后续训练和测速仍须各自前置闸门。
+正式CPU INPUT闸门两组均通过，后续继续既定P1→100步/单跑与并跑→新20步包装对照及perf等前置链。INPUT运行期间，预算对接和测速包装工具仅为ignored候选；解除冻结后已落实源码并完成工具合测，具体验证由总计划记录，不能将工具测试外推为真实训练通过。[P1启动档](p1-launch.md)和[100步/单跑/并跑启动档](train100-launch.md)均已预建、尚未执行。80k仍须所有对应前置通过。
 
-后续仅改文档或无关测速工具时，旧输入记录仍须锚定原INPUT_HEAD；沿用前应记录新旧提交diff和取证工具、输入链模块、依赖、数据及资产指纹一致性，不能改写记录HEAD或声称新提交已重跑。取证工具变化要求两侧同工具重采；输入相关变化或影响不明先报告再确定重测范围。训练S1/S3与S2仍须同HEAD。完整边界见[launch](launch.md#后续提交变化与证据沿用边界)。
+后续沿用证据须同时记录原INPUT_HEAD和实际TRAIN_HEAD，并核对固定提交diff、取证工具、父/worker输入模块、依赖、参数、数据、资产与history指纹一致；不能重写原记录HEAD或仅重复judge便声称新HEAD已重采。取证工具变化需双方同工具重采，输入相关变化或影响不明先报告。详见[launch沿用边界](launch.md#后续提交变化与证据沿用边界)。
 
-## 12. 归档文件清单与待更新项
+## 12. 归档文件清单
 
-本README和[launch.md](launch.md)均为起跑前文件；[历史最外终态说明](exit-record-audit.md)记录独立审查及新包装验证，不是本阶段输入实测结果。实际运行结束后才新增CPU结果正文及 `records/`，保存四侧原始采集记录与record_manifest、两组judge日志、各侧原始/清洗日志、环境/资源记录和真实起止/退出证据。collector子目录保持文件字节与清单完整，外部解释和日志放独立层级。
+[launch.md](launch.md)保留起跑前机制和本次实际展开值；[result.md](result.md)保存完整12节实测与SHA；[exit-record-audit.md](exit-record-audit.md)保留历史边界。四侧无损记录位于`records/{full-a,full-b,count-a,count-b}.records.tar.gz`，各自`*.archive_checks.json`绑定原始目录/manifest及解码校验；六份Git日志及检查链位于`logs/`。资源和控制器快照分别为`records/resources.jsonl`、`records/runtime-controller.json`。
 
-三项用户答复原话与范围已在第9节登记。实际启动时仍须补INPUT_HEAD、INPUT_TAG、六份展开命令及运行时命令文件路径/真实SHA、会话/日志路径、wrapper/body PID与起止时间；结束后补四份collector状态、每侧定点样本数和批次/索引覆盖、两组judge判定、耗时、资源行为及计划外事件。仅归档Git不能还原的实测记录；源码和配置由固定提交还原，不复制脚本/yaml、运行时命令文件、模型权重或敏感凭据，命令正文按launch和运行日志还原。本次无CPU结果文件或通过记录需要提前创建。
+四侧无损包及六份日志的stage检查均已通过，最终归档副本由主代理统一复制核验；资源文件SHA已记录，controller固定副本SHA在[result](result.md)明确待复制时填写，不编造。源码、脚本和yaml由固定提交还原，不复制到档案；权重、缓存和凭据不归档。原始运行路径及全部collector内部文件字节保持不变。

@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "scope": "仅生成供Git归档使用的三份日志副本；不修改原始日志、旧stage/checks、collector tar或raw records",
+  "normalization": "只去行尾ASCII空格/制表符；本现场每份仅删除COMMAND输出末尾一个未转义分隔空格",
+  "previous_stage_checks": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/count.logs.archive_checks.json",
+    "bytes": 11066,
+    "sha256": "9b9b00e4c75d252840ed6c38edad29a9b7a557af68b8298e46747edb65a4d131"
+  },
+  "logs": [
+    {
+      "name": "count-a",
+      "raw": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-input-count-a-20260926T170654Z.log",
+        "bytes": 8543,
+        "sha256": "907324d97d4d7b3a57bcb34488bfdbac93cee687d3b090ddb0418e429df5b509"
+      },
+      "previous_stage": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/count-a.summary.log",
+        "bytes": 8543,
+        "sha256": "907324d97d4d7b3a57bcb34488bfdbac93cee687d3b090ddb0418e429df5b509"
+      },
+      "git_ready": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/git-ready/count-a.summary.log",
+        "bytes": 8542,
+        "sha256": "f3a23050075686ebd31437dea5bb777b9c97667be3dbaf3602048af5c57a8278"
+      },
+      "removed_characters": 1,
+      "changes": [
+        {
+          "line": 9,
+          "field": "COMMAND",
+          "removed_bytes": 1,
+          "removed_hex": "20",
+          "unescaped_command_separator": true,
+          "parsed_argv_unchanged": true,
+          "argv_count": 44
+        }
+      ],
+      "normalized_critical_lines_equal": true,
+      "critical_line_count": 18,
+      "normalized_critical_lines_sha256": "23cf4881193b460690d1fb94c183be72d0f0b0ab24ebffe9959d85cf4c680fdd",
+      "verdict_lines_original_bytes_unchanged": true,
+      "verdict_line_count": 6,
+      "verdict_lines_sha256": "9b13a70019a9d3a59f274968b74f2b9fec50b22767db0eed8edb662a3855629d",
+      "raw_and_previous_stage_unchanged": true
+    },
+    {
+      "name": "count-b",
+      "raw": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-input-count-b-20260926T170654Z.log",
+        "bytes": 8720,
+        "sha256": "0c0569957bded1da5106191f25bd747fe67f31b4e2e0af4a5de3aa101668ee29"
+      },
+      "previous_stage": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/count-b.summary.log",
+        "bytes": 8720,
+        "sha256": "0c0569957bded1da5106191f25bd747fe67f31b4e2e0af4a5de3aa101668ee29"
+      },
+      "git_ready": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/git-ready/count-b.summary.log",
+        "bytes": 8719,
+        "sha256": "be3cdd378e9c2395d656d440e76dab86ad6f3a1d01a828336b298df856350808"
+      },
+      "removed_characters": 1,
+      "changes": [
+        {
+          "line": 9,
+          "field": "COMMAND",
+          "removed_bytes": 1,
+          "removed_hex": "20",
+          "unescaped_command_separator": true,
+          "parsed_argv_unchanged": true,
+          "argv_count": 49
+        }
+      ],
+      "normalized_critical_lines_equal": true,
+      "critical_line_count": 18,
+      "normalized_critical_lines_sha256": "46a996e4cbe64acfb8082d3337e754498f5d747a30a201cc6d5a33124954546e",
+      "verdict_lines_original_bytes_unchanged": true,
+      "verdict_line_count": 6,
+      "verdict_lines_sha256": "9c9347b6adab1c69703e9f259700ae8101a82d8638ac4905f3cc9178a3dffbaa",
+      "raw_and_previous_stage_unchanged": true
+    },
+    {
+      "name": "count-judge",
+      "raw": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-input-count-judge-20260926T170654Z.log",
+        "bytes": 2255,
+        "sha256": "6b69b0cdaf34e04e086324d014540d47d9a6dbc71088cb7c96846b3d9a2b91b0"
+      },
+      "previous_stage": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/count-judge.summary.log",
+        "bytes": 2255,
+        "sha256": "6b69b0cdaf34e04e086324d014540d47d9a6dbc71088cb7c96846b3d9a2b91b0"
+      },
+      "git_ready": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/git-ready/count-judge.summary.log",
+        "bytes": 2254,
+        "sha256": "d324f0b8ab7cc8cbff163de95a0fd363e74b996674757e8bf1c7f310c2830fd9"
+      },
+      "removed_characters": 1,
+      "changes": [
+        {
+          "line": 9,
+          "field": "COMMAND",
+          "removed_bytes": 1,
+          "removed_hex": "20",
+          "unescaped_command_separator": true,
+          "parsed_argv_unchanged": true,
+          "argv_count": 37
+        }
+      ],
+      "normalized_critical_lines_equal": true,
+      "critical_line_count": 18,
+      "normalized_critical_lines_sha256": "95e40ce8494d3cc978f07284e40ea662f36bb1dacd182f8f5b6d9cd05d5fb135",
+      "verdict_lines_original_bytes_unchanged": true,
+      "verdict_line_count": 6,
+      "verdict_lines_sha256": "fe58e115973f334e4a0bb7f4b2d19a5b30381edc946042de7dc5e085a8f0ad25",
+      "raw_and_previous_stage_unchanged": true
+    }
+  ],
+  "finished_at": "2026-09-26T18:38:12.253359+00:00"
+}

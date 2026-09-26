@@ -1,0 +1,206 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "scope": "仅count-A collector记录无损归档；counting INPUT_EQ结论独立绑定judge日志",
+  "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/input-20260926T170654Z/count/a",
+  "session": "orig80k-input-count-a-20260926T170654Z",
+  "collector_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+  "source_manifest_sha256": "4adabc7d5e4f959682530360c6ea06acb30222cc5419ffd16b4e19ec9706c24e",
+  "source_manifest_bytes": 2090,
+  "source_record_files": 17,
+  "archive_members": 18,
+  "payload_bytes": 49264791,
+  "archived_bytes": 49266881,
+  "archive": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/count-a.records.tar.gz",
+    "bytes": 5328311,
+    "sha256": "2ce614db05bf0c7c2fa348bf274df3a8155bfa3b066e5c0a062e21e2013b8e12"
+  },
+  "normalization": {
+    "tar_format": "USTAR",
+    "member_order": "lexicographic",
+    "uid": 0,
+    "gid": 0,
+    "uname": "",
+    "gname": "",
+    "mode": "0644",
+    "mtime": 0,
+    "gzip_mtime": 0,
+    "gzip_filename": "",
+    "gzip_compresslevel": 6,
+    "regular_files_only": true
+  },
+  "checks": {
+    "exact_manifest_members": true,
+    "original_manifest_bytes_equal": true,
+    "all_decoded_member_sha_and_bytes_equal": true,
+    "source_sha_and_stat_unchanged": true,
+    "only_json_and_jsonl": true,
+    "gzip_crc_complete": true
+  },
+  "members": [
+    {
+      "path": "batches.jsonl",
+      "source_sha256": "9260a3e16bf318ce20f5fc3b129a58aea98f57172708dbc1d96e9018fb36536f",
+      "source_bytes": 922993,
+      "archive_sha256": "9260a3e16bf318ce20f5fc3b129a58aea98f57172708dbc1d96e9018fb36536f",
+      "archive_bytes": 922993,
+      "status": "PASS"
+    },
+    {
+      "path": "episode_manifest.json",
+      "source_sha256": "f8eb6e2842af91fea933a5dbc68a63a0a21cfe7bbb3346055a3de4fb6aa602f5",
+      "source_bytes": 91897,
+      "archive_sha256": "f8eb6e2842af91fea933a5dbc68a63a0a21cfe7bbb3346055a3de4fb6aa602f5",
+      "archive_bytes": 91897,
+      "status": "PASS"
+    },
+    {
+      "path": "identity.json",
+      "source_sha256": "5913fc5890c98ffe35a9a17383259de47cfaca1db9d96b57c536d0e0fdb4983a",
+      "source_bytes": 237,
+      "archive_sha256": "5913fc5890c98ffe35a9a17383259de47cfaca1db9d96b57c536d0e0fdb4983a",
+      "archive_bytes": 237,
+      "status": "PASS"
+    },
+    {
+      "path": "meta.json",
+      "source_sha256": "d9f4cf1b07a6435b4cedb3030914c9929f9bb831124a970aa166c1dc215f439e",
+      "source_bytes": 3793,
+      "archive_sha256": "d9f4cf1b07a6435b4cedb3030914c9929f9bb831124a970aa166c1dc215f439e",
+      "archive_bytes": 3793,
+      "status": "PASS"
+    },
+    {
+      "path": "provenance_end.json",
+      "source_sha256": "310896d19f675b64ff4d8156dfcb321e37067b0f76539c89c511d03e44fd3c55",
+      "source_bytes": 12274,
+      "archive_sha256": "310896d19f675b64ff4d8156dfcb321e37067b0f76539c89c511d03e44fd3c55",
+      "archive_bytes": 12274,
+      "status": "PASS"
+    },
+    {
+      "path": "provenance_start.json",
+      "source_sha256": "310896d19f675b64ff4d8156dfcb321e37067b0f76539c89c511d03e44fd3c55",
+      "source_bytes": 12274,
+      "archive_sha256": "310896d19f675b64ff4d8156dfcb321e37067b0f76539c89c511d03e44fd3c55",
+      "archive_bytes": 12274,
+      "status": "PASS"
+    },
+    {
+      "path": "record_manifest.json",
+      "source_sha256": "4adabc7d5e4f959682530360c6ea06acb30222cc5419ffd16b4e19ec9706c24e",
+      "source_bytes": 2090,
+      "archive_sha256": "4adabc7d5e4f959682530360c6ea06acb30222cc5419ffd16b4e19ec9706c24e",
+      "archive_bytes": 2090,
+      "status": "PASS"
+    },
+    {
+      "path": "sample_plan.json",
+      "source_sha256": "ed638967d22dfd9fc051e419ea2373117a45a59ed54bbe56d705009d79f0ed4d",
+      "source_bytes": 266336,
+      "archive_sha256": "ed638967d22dfd9fc051e419ea2373117a45a59ed54bbe56d705009d79f0ed4d",
+      "archive_bytes": 266336,
+      "status": "PASS"
+    },
+    {
+      "path": "sampler.json",
+      "source_sha256": "376a66cebbea0bc98d6a2aac8bfa782c636bcd104d17faa55c359affa4356438",
+      "source_bytes": 5607536,
+      "archive_sha256": "376a66cebbea0bc98d6a2aac8bfa782c636bcd104d17faa55c359affa4356438",
+      "archive_bytes": 5607536,
+      "status": "PASS"
+    },
+    {
+      "path": "samples.jsonl",
+      "source_sha256": "dd4100257bc507ef070a395879163b4976bdb4fd173b55fbf01105265d6f7a4a",
+      "source_bytes": 42251659,
+      "archive_sha256": "dd4100257bc507ef070a395879163b4976bdb4fd173b55fbf01105265d6f7a4a",
+      "archive_bytes": 42251659,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/content/worker-0.json",
+      "source_sha256": "2e77b1eaf308d960ba0ac48fd483e96f82076a4c0ff0cf124ad3486990a555ff",
+      "source_bytes": 11974,
+      "archive_sha256": "2e77b1eaf308d960ba0ac48fd483e96f82076a4c0ff0cf124ad3486990a555ff",
+      "archive_bytes": 11974,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/content/worker-1.json",
+      "source_sha256": "02c8ba84879cb801605be5b4b5e94c29217f5b34bace12fffb5dd5fe43fc3145",
+      "source_bytes": 11974,
+      "archive_sha256": "02c8ba84879cb801605be5b4b5e94c29217f5b34bace12fffb5dd5fe43fc3145",
+      "archive_bytes": 11974,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/content/worker-2.json",
+      "source_sha256": "58f6fefe0d2046495aeca8d0713ac0053f5e777a7fd5886acbfe8c4a6697ac49",
+      "source_bytes": 11974,
+      "archive_sha256": "58f6fefe0d2046495aeca8d0713ac0053f5e777a7fd5886acbfe8c4a6697ac49",
+      "archive_bytes": 11974,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/content/worker-3.json",
+      "source_sha256": "954820cea6d90c4b0c5b8c97f6cff94e0e89d89cb90cdf03720f0762b2980d26",
+      "source_bytes": 11974,
+      "archive_sha256": "954820cea6d90c4b0c5b8c97f6cff94e0e89d89cb90cdf03720f0762b2980d26",
+      "archive_bytes": 11974,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/index/worker-0.json",
+      "source_sha256": "61a8caa513f67261932bdc6c0f778c03fab6217e97776dfd8293af762a26a0e2",
+      "source_bytes": 11974,
+      "archive_sha256": "61a8caa513f67261932bdc6c0f778c03fab6217e97776dfd8293af762a26a0e2",
+      "archive_bytes": 11974,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/index/worker-1.json",
+      "source_sha256": "6fdf65894190b6301f3d99bf6da3ec4e9cb0df7b921c5788e93581f377f42224",
+      "source_bytes": 11974,
+      "archive_sha256": "6fdf65894190b6301f3d99bf6da3ec4e9cb0df7b921c5788e93581f377f42224",
+      "archive_bytes": 11974,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/index/worker-2.json",
+      "source_sha256": "64e74ae3ab9f61acc30a00f89e6459b640a7a4fb070dafb96bbc102fa7e7e0cc",
+      "source_bytes": 11974,
+      "archive_sha256": "64e74ae3ab9f61acc30a00f89e6459b640a7a4fb070dafb96bbc102fa7e7e0cc",
+      "archive_bytes": 11974,
+      "status": "PASS"
+    },
+    {
+      "path": "workers/index/worker-3.json",
+      "source_sha256": "7cad2270d59b2fe095c32cde3aa29839f9a1ead9a40a34d0e7aa7bb58e0298ed",
+      "source_bytes": 11974,
+      "archive_sha256": "7cad2270d59b2fe095c32cde3aa29839f9a1ead9a40a34d0e7aa7bb58e0298ed",
+      "archive_bytes": 11974,
+      "status": "PASS"
+    }
+  ],
+  "controller_snapshot": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/controller_state.json",
+    "sha256_at_read": "a6099ea15cf5dc5441b142276acbccccc4ae2036831a113567beaeb54b064c86",
+    "read_at": "2026-09-26T18:35:58.736089+00:00",
+    "note": "控制器可继续更新；绑定一次读取快照",
+    "session_record": {
+      "name": "orig80k-input-count-a-20260926T170654Z",
+      "status": "collector_pass_checked_footer_exit_0",
+      "record_files": 17,
+      "record_payload_bytes": 49264791,
+      "record_manifest_sha256": "4adabc7d5e4f959682530360c6ea06acb30222cc5419ffd16b4e19ec9706c24e",
+      "verification": "命令/正文tee/footer printf/footer tee/综合退出均唯一0；全部17文件bytes/SHA及清单集合已独立核对",
+      "end_utc": "2026-09-26T18:32:44Z",
+      "tmux_session_absent": true
+    }
+  },
+  "started_at": "2026-09-26T18:35:58.721483+00:00",
+  "finished_at": "2026-09-26T18:36:00.231422+00:00",
+  "elapsed_seconds": 1.5099443159997463
+}
