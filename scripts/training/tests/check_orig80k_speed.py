@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import bisect
 import contextlib
+import datetime
 import hashlib
 import itertools
 import json
@@ -12,6 +13,7 @@ import math
 import os
 from pathlib import Path
 import runpy
+import stat
 import statistics
 import subprocess
 import sys
@@ -25,6 +27,8 @@ ROOT = Path(__file__).resolve().parents[3]
 STEPS = 300
 WARMUP = 100
 SCALARS = {"loss", "grad_norm", "llm_grad_norm", "mem_enc_norm", "param_norm"}
+DISK_INTERVAL = 0.5
+SCRATCH = Path("/scratch")
 
 
 def require(condition, message):
@@ -40,6 +44,235 @@ def write_json(path, value):
 
 def rows(path):
     return [json.loads(line) for line in Path(path).read_text().splitlines() if line.strip()]
+
+
+def checkpoint_allocation(root):
+    """只读统计本run全部目录项的已分配块；包括Orbax临时目录，不穿透软链。"""
+    root = Path(root)
+    result = {"exists": False, "allocated_bytes": 0, "unique_inodes": 0,
+              "duplicate_inodes": 0, "disappeared": 0, "changed": 0, "symlinks": 0, "errors": []}
+    seen = set()
+
+    def error(operation, path, exc):
+        # 并发rename/unlink是异步保存的正常竞态，单独披露其可能少计的样本。
+        if isinstance(exc, FileNotFoundError):
+            result["disappeared"] += 1
+        else:
+            result["errors"].append({"operation": operation, "path": str(path),
+                                     "type": type(exc).__name__, "errno": exc.errno})
+
+    def count(info):
+        identity = (info.st_dev, info.st_ino)
+        if identity in seen:
+            result["duplicate_inodes"] += 1
+            return False
+        seen.add(identity)
+        result["allocated_bytes"] += info.st_blocks * 512
+        result["unique_inodes"] += 1
+        return True
+
+    def walk(fd, path):
+        try:
+            with os.scandir(fd) as entries:
+                for entry in entries:
+                    child = path / entry.name
+                    try:
+                        info = os.stat(entry.name, dir_fd=fd, follow_symlinks=False)
+                        if stat.S_ISDIR(info.st_mode):
+                            child_fd = os.open(entry.name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+                            try:
+                                actual = os.fstat(child_fd)
+                                if (actual.st_dev, actual.st_ino) != (info.st_dev, info.st_ino):
+                                    result["changed"] += 1
+                                if count(actual):
+                                    walk(child_fd, child)
+                            finally:
+                                os.close(child_fd)
+                        elif count(info) and stat.S_ISLNK(info.st_mode):
+                            result["symlinks"] += 1
+                    except OSError as exc:
+                        error("entry", child, exc)
+        except OSError as exc:
+            error("scandir", path, exc)
+
+    try:
+        fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    except FileNotFoundError:
+        # 初始采样早于训练创建run根；不存在是明确的零，而不是采样错误。
+        return result
+    except OSError as exc:
+        error("root", root, exc)
+        return result
+    try:
+        result["exists"] = True
+        count(os.fstat(fd))
+        walk(fd, root)
+    finally:
+        os.close(fd)
+    return result
+
+
+class DiskSampler:
+    """0.5秒单调时钟采样；不调用同步/保存，只读本run块分配及scratch可用量。"""
+
+    def __init__(self, path, checkpoint_root, scratch):
+        self.path = Path(path)
+        self.checkpoint_root = Path(checkpoint_root)
+        self.scratch = Path(scratch)
+        self.stopped = threading.Event()
+        self.thread = threading.Thread(target=self._run, daemon=True)
+        self.phase = "before_entry"
+        self.previous = None
+        self.count = 0
+        self.missed_ticks = 0
+        self.error = None
+        self.stream = None
+
+    def sample(self, kind, scheduled):
+        begin = time.monotonic()
+        row = {"sequence": self.count, "kind": kind, "phase": self.phase,
+               "wall_start": time.time(), "monotonic_start": begin, "scheduled_monotonic": scheduled,
+               "interval_s": None if self.previous is None else begin - self.previous,
+               "lateness_s": max(0, begin - scheduled), "errors": []}
+        row["checkpoint"] = checkpoint_allocation(self.checkpoint_root)
+        try:
+            usage = os.statvfs(self.scratch)
+            row["scratch_available_bytes"] = usage.f_bavail * usage.f_frsize
+        except OSError as exc:
+            row["scratch_available_bytes"] = None
+            row["errors"].append({"operation": "statvfs", "type": type(exc).__name__, "errno": exc.errno})
+        row.update(wall_end=time.time(), duration_s=time.monotonic() - begin)
+        self.stream.write(json.dumps(row, allow_nan=False) + "\n")
+        self.stream.flush()
+        self.previous = begin
+        self.count += 1
+
+    def start(self):
+        self.stream = self.path.open("x")
+        self.sample("start", time.monotonic())
+        self.phase = "training"
+        self.thread.start()
+
+    def _run(self):
+        deadline = self.previous + DISK_INTERVAL
+        try:
+            while not self.stopped.wait(max(0, deadline - time.monotonic())):
+                self.sample("periodic", deadline)
+                deadline += DISK_INTERVAL
+                now = time.monotonic()
+                if now >= deadline:
+                    skipped = int((now - deadline) // DISK_INTERVAL) + 1
+                    self.missed_ticks += skipped
+                    deadline += skipped * DISK_INTERVAL
+        except Exception as exc:
+            self.error = repr(exc)
+
+    def finish(self, success):
+        self.stopped.set()
+        if self.thread.ident is not None:
+            self.thread.join(timeout=5)
+        stopped = not self.thread.is_alive()
+        if stopped and self.stream is not None:
+            self.phase = "entry_finished" if success else "entry_failed"
+            try:
+                self.sample("final", time.monotonic())
+            except Exception as exc:
+                self.error = repr(exc)
+            finally:
+                try:
+                    self.stream.close()
+                except Exception as exc:
+                    self.error = repr(exc)
+        digest = None
+        if stopped and self.stream is not None:
+            try:
+                digest = hashlib.sha256(self.path.read_bytes()).hexdigest()
+            except OSError as exc:
+                self.error = repr(exc)
+        return {"schema": 1, "interval_s": DISK_INTERVAL, "checkpoint_root": str(self.checkpoint_root),
+                "scratch_path": str(self.scratch), "samples_file": self.path.name, "samples": self.count,
+                "stopped": stopped, "error": self.error, "missed_ticks": self.missed_ticks,
+                "sha256": digest,
+                "note": "只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减"}
+
+
+def summarize_disk(root, meta):
+    contract = meta.get("disk_sampling", {})
+    require(contract.get("schema") == 1 and contract.get("interval_s") == DISK_INTERVAL
+            and contract.get("stopped") and not contract.get("error"), "磁盘采样未正常完成")
+    require(contract.get("samples_file") == "disk_samples.jsonl" and contract.get("scratch_path") == str(SCRATCH),
+            "磁盘采样位置或范围错误")
+    path = Path(root) / "disk_samples.jsonl"
+    require(hashlib.sha256(path.read_bytes()).hexdigest() == contract.get("sha256"), "磁盘采样记录摘要不符")
+    data = rows(path)
+    require(len(data) == contract.get("samples") and len(data) >= 3
+            and [row["sequence"] for row in data] == list(range(len(data))), "磁盘采样缺失或乱序")
+    require(data[0]["kind"] == "start" and data[-1]["kind"] == "final"
+            and all(row["kind"] == "periodic" for row in data[1:-1]), "磁盘起止采样缺失")
+    require(data[0]["wall_end"] <= meta["entry_start_wall"]
+            and data[-1]["wall_start"] >= meta["end_wall"], "磁盘采样未覆盖真实入口及异步保存完成")
+    for row in data:
+        checkpoint = row["checkpoint"]
+        require(not row["errors"] and not checkpoint["errors"] and not checkpoint["symlinks"],
+                "磁盘采样存在I/O错误或软链，不能据其生成预算")
+        require(type(checkpoint["allocated_bytes"]) is int and checkpoint["allocated_bytes"] >= 0
+                and type(row["scratch_available_bytes"]) is int and row["scratch_available_bytes"] >= 0,
+                "磁盘字节数无效")
+        require(all(math.isfinite(row[key]) and row[key] >= 0 for key in ("duration_s", "lateness_s"))
+                and row["wall_end"] >= row["wall_start"], "磁盘采样时钟或延迟无效")
+    intervals = [b["monotonic_start"] - a["monotonic_start"] for a, b in itertools.pairwise(data)]
+    require(all(value > 0 and math.isfinite(value) for value in intervals), "磁盘采样单调时钟无效")
+    require(all(row["interval_s"] == value for row, value in zip(data[1:], intervals, strict=True)),
+            "磁盘采样实际间隔记录不符")
+    final = data[-1]["checkpoint"]
+    require(final["exists"] and not final["disappeared"] and not final["changed"], "最终checkpoint采样仍不完整")
+    save = meta["save_calls"][0]
+    require(save["checkpoint_root"] == contract["checkpoint_root"], "磁盘采样不是实际保存目录")
+    # wait返回后入口还会收尾W&B；只以原生checkpoint提交时刻定义保存窗口。
+    checkpoint_path = Path(contract["checkpoint_root"]) / str(save["step"]) / "_CHECKPOINT_METADATA"
+    checkpoint_bytes = checkpoint_path.read_bytes()
+    checkpoint_meta = json.loads(checkpoint_bytes)
+    init_ns = checkpoint_meta["init_timestamp_nsecs"]
+    commit_ns = checkpoint_meta["commit_timestamp_nsecs"]
+    require(type(init_ns) is int and type(commit_ns) is int and 0 < init_ns < commit_ns,
+            "checkpoint原生提交时间无效")
+    start_record = json.loads((Path(root) / "final/start.json").read_text())
+    wait_bytes = (Path(root) / "final/checkpoint_wait_done.json").read_bytes()
+    wait_record = json.loads(wait_bytes)
+    require(start_record["run_uuid"] == wait_record["run_uuid"]
+            and start_record["head"] == wait_record["head"] == meta["head"]
+            and start_record["checkpoint_dir"] == contract["checkpoint_root"]
+            and wait_record.get("wait_until_finished") is True, "磁盘保存窗口未绑定本run的wait完成证据")
+    completed = datetime.datetime.fromisoformat(wait_record["completed_at"])
+    require(completed.tzinfo is not None, "checkpoint wait完成时间缺时区")
+    wait_done = completed.timestamp()
+    commit_wall = commit_ns / 1_000_000_000
+    require(save["start_wall"] <= init_ns / 1_000_000_000 < commit_wall <= wait_done <= meta["end_wall"],
+            "checkpoint提交、wait或入口结束时间顺序错误")
+    during_save = [row for row in data if row["kind"] == "periodic"
+                   and save["start_wall"] <= row["wall_start"] <= row["wall_end"] <= commit_wall]
+    require(during_save, "缺保存期间磁盘采样，不能用终态大小替代峰值")
+    return {"checkpoint_root": contract["checkpoint_root"], "scratch_path": contract["scratch_path"],
+            "sampling_interval_s": DISK_INTERVAL, "samples": len(data), "save_samples": len(during_save),
+            "save_window_wall": [save["start_wall"], commit_wall], "save_wait_done_wall": wait_done,
+            "checkpoint_init_timestamp_nsecs": init_ns, "checkpoint_commit_timestamp_nsecs": commit_ns,
+            "checkpoint_save_commit_seconds": (commit_ns - init_ns) / 1_000_000_000,
+            "checkpoint_metadata_sha256": hashlib.sha256(checkpoint_bytes).hexdigest(),
+            "wait_record_sha256": hashlib.sha256(wait_bytes).hexdigest(), "run_uuid": start_record["run_uuid"],
+            "start_allocated_bytes": data[0]["checkpoint"]["allocated_bytes"],
+            "final_allocated_bytes": final["allocated_bytes"],
+            "start_scratch_available_bytes": data[0]["scratch_available_bytes"],
+            "final_scratch_available_bytes": data[-1]["scratch_available_bytes"],
+            "sampled_max_allocated_bytes": max(row["checkpoint"]["allocated_bytes"] for row in data),
+            "save_sampled_max_allocated_bytes": max(row["checkpoint"]["allocated_bytes"] for row in during_save),
+            "scratch_available_min_bytes": min(row["scratch_available_bytes"] for row in data),
+            "mean_interval_s": statistics.fmean(intervals), "max_interval_s": max(intervals),
+            "max_sampling_duration_s": max(row["duration_s"] for row in data),
+            "max_lateness_s": max(row["lateness_s"] for row in data), "missed_ticks": contract["missed_ticks"],
+            "samples_with_path_races": sum(bool(row["checkpoint"]["disappeared"] or row["checkpoint"]["changed"])
+                                           for row in data),
+            "duplicate_inodes_observed": sum(row["checkpoint"]["duplicate_inodes"] for row in data),
+            "samples_sha256": contract["sha256"], "note": contract["note"]}
 
 
 class HostTiming:
@@ -135,16 +368,20 @@ def run(args):
     mode = args.mode
     require(mode in ("perf", "smoke"), "观测入口只允许perf或20步smoke验证")
     expected_steps = STEPS if mode == "perf" else 20
-    validate_argv(argv, mode)
+    values = validate_argv(argv, mode)
+    checkpoint_root = (Path(values["--checkpoint-base-dir"]) / argv[0] / values["--exp-name"]).resolve()
+    require(checkpoint_root.is_relative_to(root / "v1-store"), "磁盘采样的checkpoint目录必须属于本仓库v1-store")
     gpu_ids = os.environ.get("CUDA_VISIBLE_DEVICES", "").split(",")
     require(len(gpu_ids) == 4 and len(set(gpu_ids)) == 4 and all(x.isdecimal() for x in gpu_ids),
             "测速必须指定四个不同物理GPU编号")
-    owned = ("speed_start.json", "speed_run.json", "step_timing.jsonl", "host_samples.jsonl")
+    owned = ("speed_start.json", "speed_run.json", "step_timing.jsonl", "host_samples.jsonl", "disk_samples.jsonl")
     require(not any((records / name).exists() for name in owned), "拒绝覆盖既有测速记录")
     records.mkdir(parents=True, exist_ok=True)
     metadata = {"schema": 1, "mode": mode, "steps": expected_steps, "head": head, "argv": argv,
                 "gpu_ids": [int(x) for x in gpu_ids], "pid": os.getpid(),
                 "start_wall": time.time(), "profiler": False, "entry_calls": 0, "save_calls": [],
+                "disk_sampling_requested": {"interval_s": DISK_INTERVAL, "checkpoint_root": str(checkpoint_root),
+                                            "scratch_path": str(SCRATCH), "samples_file": "disk_samples.jsonl"},
                 "wrapper_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                 "timing_difference": "轻量阶段记录；若到达step99则在其完成时同步，最后一步保存前同步"}
     write_json(records / "speed_start.json", metadata)
@@ -163,16 +400,20 @@ def run(args):
     stopped = threading.Event()
     thread = threading.Thread(target=sample_host,
                               args=(records / "host_samples.jsonl", stopped, metadata), daemon=True)
+    disk = DiskSampler(records / "disk_samples.jsonl", checkpoint_root, SCRATCH)
 
     def forbidden_trace(*a, **kw):
         raise RuntimeError("原版测速禁止开启profiler")
 
     def observed_save(manager, state, loader, step):
         require(step == expected_steps - 1 and not metadata["save_calls"], "真实保存步骤或次数错误")
+        require(Path(str(manager.directory)).resolve() == checkpoint_root, "实际保存目录与磁盘采样范围不同")
         record = {"step": int(step), "state_step": int(state.step), "start_wall": time.time(),
-                  "checkpoint_root": str(manager.directory)}
+                  "checkpoint_root": str(checkpoint_root)}
+        disk.phase = "save_dispatch"
         result = original_save(manager, state, loader, step)
         record["return_wall"] = time.time()
+        disk.phase = "save_pending"
         metadata["save_calls"].append(record)
         return result
 
@@ -193,13 +434,16 @@ def run(args):
         os.environ["TRAIN_RECORD_DIR"] = str(records)
         # 复用已有阶段钩子，但在入口加载前替换计时实现，绝不调用原profiler。
         os.environ["TRAIN_TIMING_STEPS"] = str(expected_steps)
+        disk.start()
         thread.start()
         sys.argv = [str(root / "scripts/training/train.py"), *argv]
         metadata["entry_calls"] += 1
+        metadata["entry_start_wall"] = time.time()
         runpy.run_path(sys.argv[0], run_name="__main__")
         metadata["success"] = True
     finally:
         metadata["end_wall"] = time.time()
+        metadata["disk_sampling"] = disk.finish(bool(metadata.get("success")))
         stopped.set()
         if thread.ident is not None:
             thread.join(timeout=5)
@@ -282,6 +526,7 @@ def summarize(records, gpu_path):
     hosts = rows(root / "host_samples.jsonl")
     require(len(hosts) > 1 and hosts[0]["wall_time"] <= start and hosts[-1]["wall_time"] >= end,
             "主机采样未覆盖稳态窗口")
+    disk = summarize_disk(root, meta)
     return {"head": meta["head"], "gpu_ids": expected_gpus, "batch_size": 64, "workers": 4,
             "storage": "AWS本地NVMe RAID /dev/md0", "warmup_steps": [0, 99],
             "steady_steps": [100, 299], "steady_wall": [start, end], "steady_seconds": end - start,
@@ -298,6 +543,7 @@ def summarize(records, gpu_path):
             "host_rss_note": "各进程RSS之和含共享页重复计数，不是物理独占内存",
             "shm_peak_bytes": max(row["shm_used"] for row in hosts),
             "mem_available_min_bytes": min(row["MemAvailable_bytes"] for row in hosts),
+            "disk": disk,
             "checkpoint_validation": "另由check_orig80k_completion.py执行真实恢复验收"}
 
 

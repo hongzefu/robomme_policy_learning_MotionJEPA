@@ -2,15 +2,17 @@
 
 本档案在正式 CPU 输入对拍前预建；四份 collector 与两份 judge 均尚未执行，INPUT_EQ、P1、100 步训练对拍和 perf 的本阶段结果均待验证。数据组已完成归档提交 `ec6c9e35784a96f636a587dd737dffa294b616ad`，构建及两次 20 步检查的实际 Beta 为 `49a333eb18e8d6ff1143bf7871ef7c498ab91579`；两者都是前置证据版本，**均不是尚未启动的本次 INPUT_HEAD**。本 launch 和 [README](README.md) 须先提交，再从包含本 launch 的 clean 提交运行。`INPUT_HEAD` 必须在该提交创建后填入完整 **40 位 Git SHA 字面量**；64 位只用于文件 SHA256。实际标签、展开后的完整命令、会话名、起止版本及退出记录在启动现场留证，结果回写另行提交，不预写尚未发生的会话或通过结论。
 
-从内容依赖看，本阶段仍独立于未答复的 P1/100 步 W&B 和 perf 磁盘采样问题。`check_orig80k_inputs.py::collect()` 只构造目标侧 Dataset、transforms、真实 TorchDataLoader 并做 CPU 输入取证，不调用训练入口、`wandb.init()`、模型初始化、优化器更新或 checkpoint 保存；`judge()` 只读记录并打印判定。因此这两个未决问题不影响CPU输入内容本身，但仍阻止跳入对应的后续训练/测速阶段。本阶段不调用 `run_entry_equiv.sh` 或 `run_orig80k.sh`，也不修改训练参数、真正输入或依赖。
+用户现已批准「允许仅对拍关闭 W&B」及「补充 0.5 秒只读采样」。W&B仅在P1/100步A/B对拍关闭，完整标量与状态仍在本地保留；20步可读性、300步perf和80k继续开启。perf获准每0.5秒只读采本轮checkpoint文件分配字节与`/scratch`可用字节，记录采样观察到的峰值并保留保守预算余量；采样实现、验证及真实perf测量尚不能因获准而视为已完成。
 
-**当前另有第三项前置处置待答：历史最外包装终态的证据边界；CPU输入采集暂缓启动。** 已向用户询问是“补记限制继续CPU输入”，还是“先制定额外复验方案”，目前没有答复，不默认接受任一选项。历史说明见[exit-record-audit.md](exit-record-audit.md)，该说明由根代理另行补充。数据及两次20步的子任务和产物验收PASS未被该反例证伪，但历史最外footer与整体进程真实退出0不能仅凭日志独立证明。下方六份命令仅保留为待执行模板；第三项处置明确并落实前，不调用launch_input、collect或judge。前两项与第三项的依赖关系分开记录，任何一项均未被写成用户已批准。
+从内容依赖看，本CPU阶段独立于上述两项设置。`check_orig80k_inputs.py::collect()`只构造目标侧Dataset、transforms、真实TorchDataLoader并做CPU输入取证，不调用训练入口、`wandb.init()`、模型初始化、优化器更新或checkpoint保存；`judge()`只读记录并打印判定。本阶段不调用`run_entry_equiv.sh`或`run_orig80k.sh`，也不修改训练参数、真正输入或依赖，下方CPU命令与判据保持原样。
+
+**用户在上述两项批准后进一步明确：「补记限制，继续 CPU 输入取证」。三项均已决定；CPU尚未实际运行，可从本轮提交后的clean INPUT_HEAD启动。** 历史说明见[exit-record-audit.md](exit-record-audit.md)。数据及两次20步的子任务和产物验收PASS未被该反例证伪，但历史最外footer与整体进程真实退出0不能仅凭日志独立证明；这一边界和原始records继续保留。下方六份命令仍为待执行模板，须在提交后填实锚点、核对新输出及环境再执行；本次批准不直接放行后续训练或测速。
 
 预建审查已复现新INPUT启动包装的一项缺口：footer tee可完整写出成功终态后再返回非零。当前包装已改为先检查footer printf/tee，再受检查地直接append两项footer状态与唯一综合退出码。实现方与独立审查方各用6例纯shell替身验证，正常、主命令exit7、正文tee失败、footer完整输出后失败、自SHA不匹配及日志冲突均通过；footer失败测试分别保留非零终态1和29，没有成功EXIT_CODE。测试未运行真实tmux、collector或训练，临时载体已清理。这是新包装的验证，不是历史真实退出状态的独立观测，也不改变本阶段采集、数值、并行或参数判据。
 
 ## 已核实的输入与资产
 
-以下路径均以主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA` 为根。两库 source/framesamp 是实体目录，4×4 packed metadata 均为 `verified`。前置结果已在数据组完整提交 `ec6c9e35784a96f636a587dd737dffa294b616ad` 归档：[公开16任务库](../../dataset-build-doc/16task-pub-1600ep/README.md)、[counting四任务库及严格子集检查](../../dataset-build-doc/4task-counting-pub-400ep/README.md)、[full20真实保存/恢复](../smoke-orig80k-full-0925/README.md)、[count20真实保存/恢复](../smoke-orig80k-count-0925/README.md)。这些已验收的数据/产物范围不替代本次完整输入取证，也不自动补齐历史最外终态的独立证据；原始记录保持不变。阶段关系遵循[原版80k计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)，实际CPU起跑目前等待上述历史边界处置。
+以下路径均以主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA` 为根。两库 source/framesamp 是实体目录，4×4 packed metadata 均为 `verified`。前置结果已在数据组完整提交 `ec6c9e35784a96f636a587dd737dffa294b616ad` 归档：[公开16任务库](../../dataset-build-doc/16task-pub-1600ep/README.md)、[counting四任务库及严格子集检查](../../dataset-build-doc/4task-counting-pub-400ep/README.md)、[full20真实保存/恢复](../smoke-orig80k-full-0925/README.md)、[count20真实保存/恢复](../smoke-orig80k-count-0925/README.md)。这些已验收的数据/产物范围不替代本次完整输入取证，也不自动补齐历史最外终态的独立证据；原始记录保持不变。阶段关系遵循[原版80k计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)，用户已允许补记该边界后从本轮提交后的clean INPUT_HEAD继续CPU取证。
 
 | 组 | 库路径（相对 `v1-store/datasets/`） | 总帧 / 执行样本 | manifest 内嵌 SHA256 |
 |---|---|---|---|
@@ -61,7 +63,7 @@ A 固定 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`，工作树为 `v1-store/wor
 
 ## 公共命令设置与有退出记录的启动包装
 
-以下仅为待执行模板；当前须先等待用户对历史最外终态边界的处置答复并落实，不能直接启动。之后再将所有占位符填实。`INPUT_HEAD` 在包含正式 launch 的提交创建后手动填完整字面量；不要用 `INPUT_HEAD=$(git rev-parse HEAD)` 代替期望锚点。`INPUT_TAG` 一经选定即同时用于六个会话、日志及命令文件，起跑前确认没有重名记录。实际执行先逐份保存展开后的同一命令文件，现场计算其SHA256，再以短命令交给tmux运行，避免长内联命令限制。文件路径和真实SHA在日志现场头记录，不能提前编造当前尚未创建的文件摘要，也不将这些运行时命令文件复制到本档案目录。
+以下为已获准继续的待执行模板，尚未实际运行；须从本轮提交后的clean INPUT_HEAD启动，并先将所有占位符填实。`INPUT_HEAD` 在包含正式 launch 的提交创建后手动填完整字面量；不要用 `INPUT_HEAD=$(git rev-parse HEAD)` 代替期望锚点。`INPUT_TAG` 一经选定即同时用于六个会话、日志及命令文件，起跑前确认没有重名记录。实际执行先逐份保存展开后的同一命令文件，现场计算其SHA256，再以短命令交给tmux运行，避免长内联命令限制。文件路径和真实SHA在日志现场头记录，不能提前编造当前尚未创建的文件摘要，也不将这些运行时命令文件复制到本档案目录。
 
 ```bash
 MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA

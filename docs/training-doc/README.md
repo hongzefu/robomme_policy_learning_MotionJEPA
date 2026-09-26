@@ -10,7 +10,7 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`orig80k-equiv-0925/`](orig80k-equiv-0925/README.md) | 两个已验收公开库的正式CPU INPUT_EQ预建：四侧并行，每侧104真实批及两epoch完整索引 | 预建、未启动，待历史最外终态证据边界处置答复；CPU暂缓，未默认批准任一待决项 |
+| [`orig80k-equiv-0925/`](orig80k-equiv-0925/README.md) | 两个已验收公开库的正式CPU INPUT_EQ预建：四侧并行，每侧104真实批及两epoch完整索引 | 三项已获准：仅对拍关闭W&B、perf 0.5秒只读采样、补记限制继续CPU；尚未运行，可从本轮提交后的clean INPUT_HEAD启动，非输入或perf实测PASS |
 | [`smoke-orig80k-full-0925/`](smoke-orig80k-full-0925/README.md) | 公开16任务正式库20步四卡可读性、原版norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；正式INPUT/100步/并跑/perf未验证 |
 | [`smoke-orig80k-count-0925/`](smoke-orig80k-count-0925/README.md) | 公开counting正式库20步四卡可读性、独立norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；正式INPUT/100步/并跑/perf未验证 |
 | [`orig80k-schema-0925/`](orig80k-schema-0925/result.md) | 既有40集库三样本CPU输入字段取证，保留dtype及精确数值摘要 | 共同字段精确数值相同；用户事后允许四键缺失/None等价，三样本按新规则通过，非正式全量验收 |

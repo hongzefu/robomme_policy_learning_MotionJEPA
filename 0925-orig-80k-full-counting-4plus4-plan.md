@@ -14,9 +14,9 @@
 
 **2026-09-26 建库与20步检查结果**：两个正式库及两次可读性检查均从 clean `49a333eb18e8d6ff1143bf7871ef7c498ab91579`（`commitV11.11Beta`）启动，各子任务和产物验收通过；最外包装退出记录的证据边界见下条补充。完整库为1600集、768897帧、476857执行样本，source/packed文件分配量合计 `706084982784 B`；counting为400集、189035帧及执行样本，合计 `202152935424 B`。两库来源pin、1024点复算最大绝对差0及packed全量字节校验均通过；`SUBSET_EQ=PASS episodes=400 samples=189035 feature_mismatch=0 sample_mismatch=0`。完整run仍使用原版 `f332bbd34ace1b6837cdc415b44f680896070a41564f9ce39016f1ebf99d1be5` 统计量；counting使用新算的 `a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9`。两个20步run均真实保存并恢复checkpoint 19，各自61个EMA叶均与各自训练末步摘要逐项一致且有限。详见[完整库档案](docs/dataset-build-doc/16task-pub-1600ep/README.md)、[counting档案](docs/dataset-build-doc/4task-counting-pub-400ep/README.md)和两份[full20](docs/training-doc/smoke-orig80k-full-0925/README.md)/[count20](docs/training-doc/smoke-orig80k-count-0925/README.md)记录。这些结果不等于正式`INPUT_EQ`、上游100步、单跑/并跑、perf或80k已经通过。
 
-**三项后续待决事项**：实际驱动 `run_entry_equiv.sh::common_args()` 仍沿用历史 `--no-wandb-enabled`，但第2步原文只登记了steps/log/save覆盖；已向用户询问是否允许仅P1/100步对拍关闭W&B，当前尚未收到答复，不能把既有默认当成该覆盖已获批准。现有 `check_orig80k_speed.py` 也尚未记录保存期间磁盘占用峰值；full20/count20最终checkpoint分别实占 `11879907328/11879915520 B`，真实提交耗时约 `14.491722/16.201302 s`，这些终态大小和时长不能替代峰值。已提出后续perf每0.5秒只读采样本轮checkpoint目录分配量和`/scratch`可用字节、结合保守余量形成预算，用户尚未决定。受影响的P1/100步和perf不得提前执行。
+**三项后续事项的最新决定**：用户已明确「允许仅对拍关闭 W&B」。因此仅P1/100步对拍的A/B两侧沿用 `run_entry_equiv.sh::common_args()` 中的 `--no-wandb-enabled`，保留完整本地标量/状态证据；20步可读性、300步perf及正式80k仍开启W&B。用户随后明确「补充 0.5 秒只读采样」，批准后续perf增加本轮checkpoint目录分配字节和`/scratch`可用字节的周期记录，报告采样峰值并保留保守余量。full20/count20最终checkpoint分别实占 `11879907328/11879915520 B`，真实提交耗时约 `14.491722/16.201302 s`；这些旧终态不能冒充新采样结果，工具实现和实跑验收仍须分别完成。
 
-第三项来自CPU启动包装的失败传播审查：旧四次建库/20步最外层包装先记录此前计算的`EXIT_CODE`，再检查末尾tee；没有独立保存最后这次管道或整体包装进程的真实退出状态。各建库阶段、实际训练、完整训练runner和CPU恢复的真实成功证据仍成立，目前没有证据表明历史末尾tee实际失败，原始日志也保持不变。详见[固定版本审计说明](docs/training-doc/orig80k-equiv-0925/exit-record-audit.md)。新[CPU启动包装](docs/training-doc/orig80k-equiv-0925/launch.md)已修复并通过两方各6例纯shell失败传播验证；但历史记录应补记限制后继续，还是先制定额外复验方案，已按用户“有问题立刻问用户 不要自己决策”要求提出，尚未答复。因此CPU输入采集当前也暂缓；第一、二项本身不影响CPU取证，不代表第三项可默认通过。所有后续证据仍保留实际来源与比较范围，不将旧记录自动改写到新HEAD。
+第三项来自CPU启动包装的失败传播审查：旧四次建库/20步最外层包装先记录此前计算的`EXIT_CODE`，再检查末尾tee；没有独立保存最后这次管道或整体包装进程的真实退出状态。各建库阶段、实际训练、完整训练runner和CPU恢复的真实成功证据仍成立，目前没有证据表明历史末尾tee实际失败，原始日志也保持不变。详见[固定版本审计说明](docs/training-doc/orig80k-equiv-0925/exit-record-audit.md)。新[CPU启动包装](docs/training-doc/orig80k-equiv-0925/launch.md)已修复并通过两方各6例纯shell失败传播验证。用户现已明确「补记限制，继续 CPU 输入取证」；按此保留限制说明与原始证据，从适用的clean提交推进CPU采集，不补造历史最外退出状态，也不重建或重训已验收产物。三项决定均不豁免INPUT、P1/100步、单跑/并跑和perf前置闸门；所有后续证据保留实际来源与比较范围，不将旧记录自动改写到新HEAD。
 
 运行环境：**环境 B（AWS 单机）**。本轮复核为 8×A100-80GB，`/scratch` 位于 `/dev/md0`（XFS，本地 NVMe RAID），旧 `/data/hongzefu`、NFS 与集群 SSH 配置不存在。早前清理后记录的可用 **1.2T（84% 已用）**和“GPU 全空”只是当时快照；起跑必须重测，不能代替第 0 步预算。远端改动由 `7e44706` 合并，磁盘清理记在 `2216672`。
 
@@ -28,7 +28,7 @@
 
 **正式 `prod` 模式只指定 run、路径、资产与已选 history，不覆盖上述训练超参。** CLI 包括 `--exp-name`、`--dataset-path <lib>/framesamp`、`--assets-base-dir`、`--data.assets.assets-dir`、`--data.assets.asset-id robomme`、`--checkpoint-base-dir`、`--weight-loader.params-path`、`--model.use-history --model.history-config perceptual-framesamp-modul.yaml`；路径全部传本仓库 `v1-store/` 下的绝对路径。`DataConfigFactory._load_norm_stats()` 实际读取 `<assets-dir>/<asset-id>/norm_stats.json`，所以完整 run 的 `assets-dir` 是 `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite`，不能多加一层 `robomme`；counting 则是该目录下的 `4task-counting-pub-400ep`。`--weight-loader.params-path` 指向 `v1-store/models/openpi-assets/checkpoints/pi05_base/params` 的绝对路径。
 
-runner 显式加载 `scripts/training/paths.sh`，设置 `OPENPI_DATA_HOME` 等资产/缓存变量以及 `MMEVLA_FRAMESAMP_SOURCE/MANIFEST`；不能依赖之前建库 shell 的环境。`project_name=openpi`、W&B 开启。`perf` 的 300 步、`smoke` 的 20 步及对拍的 100 步覆盖仅限对应验证入口，不修改全局默认或正式 `prod` 参数；对拍另覆盖 log/save 间隔，见第 2 步。
+runner 显式加载 `scripts/training/paths.sh`，设置 `OPENPI_DATA_HOME` 等资产/缓存变量以及 `MMEVLA_FRAMESAMP_SOURCE/MANIFEST`；不能依赖之前建库 shell 的环境。`project_name=openpi`，prod/perf/smoke的W&B开启；仅P1/100步对拍按用户批准在两侧关闭W&B。`perf` 的 300 步、`smoke` 的 20 步及对拍的 100 步覆盖仅限对应验证入口，不修改全局默认或正式 `prod` 参数；对拍另覆盖 log/save 间隔，见第 2 步。
 
 | | 完整 run（GPU 0–3） | 纯 counting run（GPU 4–7） |
 |---|---|---|
@@ -151,7 +151,7 @@ H5 到 source 的抽取是两侧共同前置；源图像每执行样本为两幅
 
 两库上述载荷已达 `901431426432 B = 839.52 GiB`；尚未含 NPY/pickle 头、动作、packed pos/state、索引、文件系统分配与缓存。这是静态计算下界，不是体积实测；仅它与正式 300 GiB 余量就需 1139.52 GiB，最终闸门按第 0 步完整预算计算。耗时也在冒烟后重估，不沿用旧“约 1.5 小时”。
 
-**第 2 步：先完成 §1.2 输入验证，再做两类训练对拍。** 两类均使用确定性档 `XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'`，正式配置的 b64/fsdp4/workers4/seed42/modul 不变；验证入口仅覆盖 `num_train_steps=100`、`log_interval=1`、`save_interval=50`，保留原 warmup/lr/save keep 口径。每侧记录 step `0…99` 的五标量 `float.hex()`，以及 step `50,99` 的参数、EMA、优化器状态和 step 摘要。现有 `entry_equiv.py` 已可替换 `save_state` 为摘要器；拟补有限值检查，要求五标量及每次摘要的所有数值叶都有限，不能仅靠相等的 `nan/inf` 字符串或哈希通过。
+**第 2 步：先完成 §1.2 输入验证，再做两类训练对拍。** 两类均使用确定性档 `XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'`，正式配置的 b64/fsdp4/workers4/seed42/modul 不变；验证入口覆盖 `num_train_steps=100`、`log_interval=1`、`save_interval=50`，并按用户批准在A/B两侧传 `--no-wandb-enabled`，保留原 warmup/lr/save keep 口径。P1同样只在对拍入口关闭W&B，不改变20步可读性、perf或prod。每侧完整保留本地证据：step `0…99` 的五标量 `float.hex()`，以及 step `50,99` 的参数、EMA、优化器状态和 step 摘要。现有 `entry_equiv.py` 已可替换 `save_state` 为摘要器；拟补有限值检查，要求五标量及每次摘要的所有数值叶都有限，不能仅靠相等的 `nan/inf` 字符串或哈希通过。
 
 - **2a 上游与当前入口**：A 固定上游完整提交，使用其官方 `scripts/train.py::__main__`（12 步 tentative，再 `--overwrite` 正式跑），读本轮 source；B 固定实施提交，用当前 `scripts/training/train.py` 读 packed。argv 仅允许入口、exp-name、dataset-path、checkpoint 根及 A 的 `--overwrite` 五处差异，路径都由运行清单约束到相应数据/资产。两组 A 可在 GPU 0–3 / 4–7 并行；等两组 A 全部退出，再先 B-full 独占运行、后 B-count 独占运行，期间停止本轮其他 GPU/建库/测速负载并记录主机其他负载。判定保留 scalars/state/config/provenance 四项，并新增 `ENTRY_FINITE=PASS`；总判 `ENTRY_EQ=PASS`。没有历史锚点时打 `anchor=SKIPPED`。
 - **2b 同入口单跑与并跑**：复用刚才真正单跑的 B-full 为 S1、B-count 为 S3；再新起 B-full+B-count 作为 S2。拟新增 `judge --mode same-entry`，两侧必须同 root、同 HEAD、同入口和模块摘要、同依赖/数据/资产/配置；仅 run 身份、输出与缓存目录可不同。它与 `--mode upstream` 的异根防污染要求分开，不能直接删除原有同根拒绝。S1 对 S2-full、S3 对 S2-count 均要求标量与状态零失配且全部有限。记录逐步时间区间，并跑观测窗口定义为各自 step `10…99`，两窗口交集须覆盖各侧至少 50 个完整步骤；若编译错开导致不满足，则本次不能判并跑通过，在独立同配置预热后重跑，不能把同时起进程当成同时训练。
@@ -161,6 +161,12 @@ H5 到 source 的抽取是两侧共同前置；源图像每执行样本为两幅
 **第 3 步：正式环境测速，`perf` 模式 4+4 同时各跑 300 步。** 与 `prod` 共用同一训练配置和计算环境构造，配置仅步数与 run 身份不同；另有下述显式记录的计时观测差异。清除确定性档 `XLA_FLAGS`，保留 b64/fsdp4/workers4/log100/save10000/keep10000/W&B。拟新增进程内轻量观测 harness，通过 `runpy` 执行原入口，对训练调用、取数及真实 `save_state` 安装计时包装并原样转发，不能像对拍 harness 那样取消真保存。不启用会启动 profiler 的 `TRAIN_TIMING_STEPS`，也不直接套用固定 1000 步、8 卡/b128 的 `check_modul_speed.py`。预热 `0…99`，稳态 `100…299`；仅在窗口边界等待设备完成，末步训练完成后、保存前结束稳态窗口，初始化/JIT、常规 logging 与最终保存耗时分别说明，ETA 加回周期保存成本。单步记录含主机阶段耗时，其异步提交时间不冒充 GPU 计算时间；包装的开关对照纳入 20 步真实短测，验证输入、标量、状态不变并披露计时开销，prod/smoke 默认直调训练入口。
 
 `nvidia-smi -lms 500` 采样按物理 GPU 和时间戳对齐上述窗口，报告 util 均值、0% 采样占比，以及慢步（主机端到端时长大于稳态中位步时 2 倍）/其他步骤的分层均值；中位数只用于分层定义，不作吞吐结论。报告每侧及合计 samples/s、两侧稳态实际重叠时间、主机内存和 `/dev/shm` 峰值，记录底层存储、batch、worker、窗口、采样间隔。300 步的末步 `299` 须真实保存、等待完成、加载并对本次 EMA 摘要验证；任一非有限值拒绝进入正式训练。预计超过 5 分钟，两个 perf run 各自从 clean HEAD 在 detached tmux 起跑并先建 launch 档，结果与测量记录归档后才清理本轮临时权重/缓存。即使发现瓶颈，也不自行修改 workers 或其他超参。
+
+按用户新批准，`check_orig80k_speed.py` 增加独立0.5秒只读磁盘采样，记录本run checkpoint根下全部临时/最终文件的实际分配字节及`/scratch`可用字节，首尾补采并覆盖原入口异步保存等待结束。记录写入独立 `disk_samples.jsonl`，报告采样最大占用、最低可用量、实际间隔/延迟、扫描耗时与异常，不能把采样最大值称作连续真实峰值。checkpoint未创建、原子改名和临时路径消失须留明确信息；真I/O错误或保存窗口缺覆盖不能用于预算放行。该观测只读取文件元信息，不更改保存行为、超参或全局配置。正式预算仍按第0步包含两run所有保留checkpoint、保存临时占用及日志缓存余量，并保留至少300GiB门槛；不得把有限采样恰好未见临时增量当作临时空间为0的依据。
+
+实现中的 `checkpoint_allocation()` 按`st_blocks*512`及`(st_dev,st_ino)`去重计量，不跟随软链；`DiskSampler`按单调时钟调度并记录漏过周期。`summarize_disk()` 将保存窗口终点绑定原生`_CHECKPOINT_METADATA.commit_timestamp_nsecs`，再核对本run的`final/checkpoint_wait_done.json`及UUID/HEAD，防止将W&B收尾期间的样本冒充保存期间采样。新工具先完成文件系统与失败负例验证，真实300步及包装开关对照仍待对应前置通过后执行。
+
+预算对接复核还发现 `orig80k_contract.validate_disk_budget()` 当前只绑定两份perf启动记录，未强制关联完成器和新磁盘证据。此项必须在prod起跑前补齐：预算须绑定实际perf报告、原始采样、真实恢复PASS和末步checkpoint分配量测量，按每run8份保留量复算，并记录保守余量来源；仅launch存在不能放行。该补齐先在独立草稿中准备，CPU采集期间冻结主副本tracked文件；后续实现须按INPUT证据沿用边界确认未影响输入链，不能把尚未补齐的预算工具算作正式闸门已通过。
 
 **第 4 步：正式 80k，从同一个 clean HEAD 启动两个 detached tmux。** 先完成两个 `docs/training-doc/<run>/launch.md` 的准备与提交，之后锁定共同 `<TRAIN_HEAD>`；最终命令使用该完整 SHA 字面量，避免先起一个 run 再提交另一个档案使版本漂移。档案区分代码提交与包含档案自身的提交，不把尚未创建的提交写成已知值；启动现场记录再保存真实 HEAD、完整 argv/env、数据/资产 SHA256 与会话名。会话为 `orig80k-full-<UTC>`、`orig80k-count-<UTC>`，只按本轮清单用 `tmux has-session -t '=完整名称'` 检查，必要清理同样逐个精确匹配并核对前后清单。
 
