@@ -1,0 +1,474 @@
+{
+  "record_version": 1,
+  "run_uuid": "ba82f509-8189-4002-809a-021f11d58d97",
+  "run_name": "smoke-orig80k-count-0925",
+  "head": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+  "budget": 512,
+  "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/smoke-orig80k-count-0925",
+  "num_train_steps": 20,
+  "log_interval": 100,
+  "save_interval": 10000,
+  "keep_period": 10000,
+  "wandb_run_id": "iuk34x8g",
+  "pid": 3957603,
+  "started_at": "2026-09-26T01:46:41.036776+00:00",
+  "complete": {
+    "config_record_version": 2,
+    "train_config": {
+      "type": "mme_vla_suite.training.config.TrainConfig",
+      "fields": {
+        "name": "mme_vla_suite",
+        "project_name": "openpi",
+        "exp_name": "smoke-orig80k-count-0925",
+        "model": {
+          "type": "mme_vla_suite.models.integration.history_pi0.HistoryPi0Config",
+          "fields": {
+            "action_dim": 32,
+            "action_horizon": 20,
+            "max_token_len": 64,
+            "dtype": "bfloat16",
+            "paligemma_variant": "gemma_2b",
+            "action_expert_variant": "gemma_300m",
+            "pi05": true,
+            "discrete_state_input": false,
+            "memory_expert_variant": "gemma_150m",
+            "use_history": true,
+            "history_config": "perceptual-framesamp-modul.yaml"
+          }
+        },
+        "weight_loader": {
+          "type": "openpi.training.weight_loaders.CheckpointWeightLoader",
+          "fields": {
+            "params_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params"
+          }
+        },
+        "pytorch_weight_path": null,
+        "pytorch_training_precision": "bfloat16",
+        "lr_schedule": {
+          "type": "openpi.training.optimizer.CosineDecaySchedule",
+          "fields": {
+            "warmup_steps": 10000,
+            "peak_lr": 5e-05,
+            "decay_steps": 100000,
+            "decay_lr": 5e-05
+          }
+        },
+        "optimizer": {
+          "type": "openpi.training.optimizer.AdamW",
+          "fields": {
+            "b1": 0.9,
+            "b2": 0.95,
+            "eps": 1e-08,
+            "weight_decay": 1e-10,
+            "clip_gradient_norm": 1.0
+          }
+        },
+        "ema_decay": 0.999,
+        "freeze_filter": {
+          "type": "openpi.shared.nnx_utils.PathRegex",
+          "fields": {
+            "pattern": {
+              "type": "re.Pattern",
+              "pattern": ".*img.*",
+              "flags": 32
+            },
+            "sep": "/"
+          }
+        },
+        "data": {
+          "type": "mme_vla_suite.training.config.RoboMMEDataConfig",
+          "fields": {
+            "repo_id": "robomme",
+            "assets": {
+              "type": "mme_vla_suite.training.config.AssetsConfig",
+              "fields": {
+                "assets_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-counting-pub-400ep",
+                "asset_id": "robomme"
+              }
+            },
+            "base_config": {
+              "type": "mme_vla_suite.training.config.DataConfig",
+              "fields": {
+                "repo_id": null,
+                "asset_id": null,
+                "norm_stats": null,
+                "repack_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "data_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "model_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "use_quantile_norm": false,
+                "action_sequence_keys": {
+                  "type": "builtins.tuple",
+                  "items": [
+                    "actions"
+                  ]
+                },
+                "prompt_from_task": true,
+                "rlds_data_dir": null,
+                "action_space": null,
+                "filter_dict_path": null
+              }
+            }
+          }
+        },
+        "assets_base_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+        "checkpoint_base_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs",
+        "seed": 42,
+        "batch_size": 64,
+        "num_workers": 4,
+        "num_train_steps": 20,
+        "log_interval": 100,
+        "save_interval": 10000,
+        "keep_period": 10000,
+        "overwrite": false,
+        "resume": false,
+        "wandb_enabled": true,
+        "policy_metadata": null,
+        "fsdp_devices": 4,
+        "resum_ckpt_id": null,
+        "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/framesamp"
+      }
+    },
+    "resolved_data": {
+      "type": "mme_vla_suite.training.config.DataConfig",
+      "fields": {
+        "repo_id": "robomme",
+        "asset_id": "robomme",
+        "norm_stats": {
+          "actions": {
+            "type": "openpi.shared.normalize.NormStats",
+            "fields": {
+              "mean": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "c5e8411646988da5b587ef4eee2bc29fc034728ff2b37994a8ad5711e31c451e"
+              },
+              "std": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "aa2083af61ec12d4a3bbcb83bbe8774a81603997bf13427a036c24d297cc4ba4"
+              },
+              "q01": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "cdce0108b48fea552ea8bef0111b95db152a4906062cd4671b1d6488a9313c6c"
+              },
+              "q99": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "f6eb2609c7473ca354e7f3c39a7186a171dd417c39c7f279a6d38cd91f44f0bc"
+              }
+            }
+          },
+          "state": {
+            "type": "openpi.shared.normalize.NormStats",
+            "fields": {
+              "mean": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "5c7ce9635c0f851a962174c1e4a8170e7c20c35957b05b2ddcc083bde7928bf4"
+              },
+              "std": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "004b0ef6abc2c375abd80d888dd1a3f17c0d7aaa0eb2538492fa2eeb372bbff5"
+              },
+              "q01": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "4bf858fff6289c5eb5f256e347e31d54eecb43c55ecd3733c9b24a97349900b4"
+              },
+              "q99": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "d7de958e968ce40a57fb558f4ecf753b0e49e16626a6113a7e0b0c73bd3211ec"
+              }
+            }
+          }
+        },
+        "repack_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.list",
+              "items": [
+                {
+                  "type": "openpi.transforms.RepackTransform",
+                  "fields": {
+                    "structure": {
+                      "actions": "actions",
+                      "mem_order": "mem_order",
+                      "motion_emb": "motion_emb",
+                      "motion_mask": "motion_mask",
+                      "motion_pos": "motion_pos",
+                      "observation/image": "image",
+                      "observation/state": "state",
+                      "observation/wrist_image": "wrist_image",
+                      "prompt": "prompt",
+                      "static_image_emb": "static_image_emb",
+                      "static_mask": "static_mask",
+                      "static_pos_emb": "static_pos_emb",
+                      "static_state_emb": "static_state_emb"
+                    }
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": []
+            }
+          }
+        },
+        "data_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.tuple",
+              "items": [
+                {
+                  "type": "mme_vla_suite.policies.robomme_policy.RoboMMEInputs",
+                  "fields": {
+                    "model_type": {
+                      "type": "openpi.models.model.ModelType",
+                      "value": "pi05"
+                    }
+                  }
+                },
+                {
+                  "type": "openpi.transforms.DeltaActions",
+                  "fields": {
+                    "mask": {
+                      "type": "builtins.tuple",
+                      "items": [
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        false
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": [
+                {
+                  "type": "openpi.transforms.AbsoluteActions",
+                  "fields": {
+                    "mask": {
+                      "type": "builtins.tuple",
+                      "items": [
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        false
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "mme_vla_suite.policies.robomme_policy.RoboMMEOutputs",
+                  "fields": {}
+                }
+              ]
+            }
+          }
+        },
+        "model_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.list",
+              "items": [
+                {
+                  "type": "openpi.transforms.InjectDefaultPrompt",
+                  "fields": {
+                    "prompt": null
+                  }
+                },
+                {
+                  "type": "openpi.transforms.ResizeImages",
+                  "fields": {
+                    "height": 224,
+                    "width": 224
+                  }
+                },
+                {
+                  "type": "mme_vla_suite.training.config.TokenizePromptWithState",
+                  "fields": {
+                    "tokenizer": {
+                      "type": "mme_vla_suite.training.config.PaligemmaTokenizer",
+                      "fields": {
+                        "_max_len": 64,
+                        "_tokenizer": {
+                          "type": "sentencepiece.SentencePieceProcessor",
+                          "model_sha256": "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6"
+                        }
+                      }
+                    },
+                    "discrete_state_input": false
+                  }
+                },
+                {
+                  "type": "openpi.transforms.PadStatesAndActions",
+                  "fields": {
+                    "model_action_dim": 32
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": []
+            }
+          }
+        },
+        "use_quantile_norm": true,
+        "action_sequence_keys": {
+          "type": "builtins.tuple",
+          "items": [
+            "actions"
+          ]
+        },
+        "prompt_from_task": true,
+        "rlds_data_dir": null,
+        "action_space": null,
+        "filter_dict_path": null
+      }
+    },
+    "assets": {
+      "norm_stats": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-counting-pub-400ep/robomme/norm_stats.json",
+        "bytes": 2068,
+        "sha256": "a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9"
+      },
+      "initialization/_METADATA": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/_METADATA",
+        "bytes": 21402,
+        "sha256": "250d0ad0f6540a5e4bdd70442d6864cef729724f2d23e2dd2cc669563a668d70"
+      },
+      "initialization/manifest.ocdbt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/manifest.ocdbt",
+        "bytes": 117,
+        "sha256": "78b6898ea1f8897a0225022b0ab799455cff0e15158a9ca349d8efbbe044aa55"
+      },
+      "initialization/commit_success.txt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/commit_success.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "tokenizer": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/big_vision/paligemma_tokenizer.model",
+        "bytes": 4264023,
+        "sha256": "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6"
+      },
+      "assets_lock": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/assets/ASSETS_LOCK.json",
+        "bytes": 12240,
+        "sha256": "c2d140c1d934b9c7aadc49996c978697cb008a7ef9c8f6fa66892801a64cb032"
+      }
+    },
+    "history_values": {
+      "budget": 512,
+      "num_views": 1,
+      "token_per_image": 16,
+      "streaming_obs_horizon": 16,
+      "pool_type": "mean",
+      "use_pos_emb": true,
+      "use_state_emb": false,
+      "memory_feature": {
+        "img": {
+          "net": "identity",
+          "input_dim": 2048
+        },
+        "pos": {
+          "input_dim": 768,
+          "hidden_dim": 768
+        },
+        "state": {
+          "input_dim": 8,
+          "hidden_dim": 512
+        }
+      },
+      "integration_type": "modulation",
+      "memory_token_dim": 1024,
+      "representation_type": "perceptual",
+      "perceptual_memory": {
+        "type": "frame_sampling"
+      }
+    },
+    "derived": {
+      "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/smoke-orig80k-count-0925",
+      "assets_dirs": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite"
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "mesh": {
+    "batch": 1,
+    "fsdp": 4
+  },
+  "device_count": 4,
+  "fsdp_devices": 4,
+  "batch_size": 64,
+  "num_workers": 4,
+  "seed": 42,
+  "cuda_visible_devices": "0,1,2,3",
+  "config_name": "mme_vla_suite",
+  "exp_name": "smoke-orig80k-full-0925",
+  "devices": [
+    "cuda:0",
+    "cuda:1",
+    "cuda:2",
+    "cuda:3"
+  ]
+}

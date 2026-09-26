@@ -1,0 +1,1703 @@
+{
+  "record_version": 1,
+  "run_uuid": "ba82f509-8189-4002-809a-021f11d58d97",
+  "run_name": "smoke-orig80k-count-0925",
+  "head": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+  "budget": 512,
+  "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/smoke-orig80k-count-0925",
+  "num_train_steps": 20,
+  "log_interval": 100,
+  "save_interval": 10000,
+  "keep_period": 10000,
+  "wandb_run_id": "iuk34x8g",
+  "pid": 3957603,
+  "started_at": "2026-09-26T01:46:41.036776+00:00",
+  "complete": {
+    "config_record_version": 2,
+    "train_config": {
+      "type": "mme_vla_suite.training.config.TrainConfig",
+      "fields": {
+        "name": "mme_vla_suite",
+        "project_name": "openpi",
+        "exp_name": "smoke-orig80k-count-0925",
+        "model": {
+          "type": "mme_vla_suite.models.integration.history_pi0.HistoryPi0Config",
+          "fields": {
+            "action_dim": 32,
+            "action_horizon": 20,
+            "max_token_len": 64,
+            "dtype": "bfloat16",
+            "paligemma_variant": "gemma_2b",
+            "action_expert_variant": "gemma_300m",
+            "pi05": true,
+            "discrete_state_input": false,
+            "memory_expert_variant": "gemma_150m",
+            "use_history": true,
+            "history_config": "perceptual-framesamp-modul.yaml"
+          }
+        },
+        "weight_loader": {
+          "type": "openpi.training.weight_loaders.CheckpointWeightLoader",
+          "fields": {
+            "params_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params"
+          }
+        },
+        "pytorch_weight_path": null,
+        "pytorch_training_precision": "bfloat16",
+        "lr_schedule": {
+          "type": "openpi.training.optimizer.CosineDecaySchedule",
+          "fields": {
+            "warmup_steps": 10000,
+            "peak_lr": 5e-05,
+            "decay_steps": 100000,
+            "decay_lr": 5e-05
+          }
+        },
+        "optimizer": {
+          "type": "openpi.training.optimizer.AdamW",
+          "fields": {
+            "b1": 0.9,
+            "b2": 0.95,
+            "eps": 1e-08,
+            "weight_decay": 1e-10,
+            "clip_gradient_norm": 1.0
+          }
+        },
+        "ema_decay": 0.999,
+        "freeze_filter": {
+          "type": "openpi.shared.nnx_utils.PathRegex",
+          "fields": {
+            "pattern": {
+              "type": "re.Pattern",
+              "pattern": ".*img.*",
+              "flags": 32
+            },
+            "sep": "/"
+          }
+        },
+        "data": {
+          "type": "mme_vla_suite.training.config.RoboMMEDataConfig",
+          "fields": {
+            "repo_id": "robomme",
+            "assets": {
+              "type": "mme_vla_suite.training.config.AssetsConfig",
+              "fields": {
+                "assets_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-counting-pub-400ep",
+                "asset_id": "robomme"
+              }
+            },
+            "base_config": {
+              "type": "mme_vla_suite.training.config.DataConfig",
+              "fields": {
+                "repo_id": null,
+                "asset_id": null,
+                "norm_stats": null,
+                "repack_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "data_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "model_transforms": {
+                  "type": "openpi.transforms.Group",
+                  "fields": {
+                    "inputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    },
+                    "outputs": {
+                      "type": "builtins.tuple",
+                      "items": []
+                    }
+                  }
+                },
+                "use_quantile_norm": false,
+                "action_sequence_keys": {
+                  "type": "builtins.tuple",
+                  "items": [
+                    "actions"
+                  ]
+                },
+                "prompt_from_task": true,
+                "rlds_data_dir": null,
+                "action_space": null,
+                "filter_dict_path": null
+              }
+            }
+          }
+        },
+        "assets_base_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+        "checkpoint_base_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs",
+        "seed": 42,
+        "batch_size": 64,
+        "num_workers": 4,
+        "num_train_steps": 20,
+        "log_interval": 100,
+        "save_interval": 10000,
+        "keep_period": 10000,
+        "overwrite": false,
+        "resume": false,
+        "wandb_enabled": true,
+        "policy_metadata": null,
+        "fsdp_devices": 4,
+        "resum_ckpt_id": null,
+        "dataset_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/framesamp"
+      }
+    },
+    "resolved_data": {
+      "type": "mme_vla_suite.training.config.DataConfig",
+      "fields": {
+        "repo_id": "robomme",
+        "asset_id": "robomme",
+        "norm_stats": {
+          "actions": {
+            "type": "openpi.shared.normalize.NormStats",
+            "fields": {
+              "mean": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "c5e8411646988da5b587ef4eee2bc29fc034728ff2b37994a8ad5711e31c451e"
+              },
+              "std": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "aa2083af61ec12d4a3bbcb83bbe8774a81603997bf13427a036c24d297cc4ba4"
+              },
+              "q01": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "cdce0108b48fea552ea8bef0111b95db152a4906062cd4671b1d6488a9313c6c"
+              },
+              "q99": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "f6eb2609c7473ca354e7f3c39a7186a171dd417c39c7f279a6d38cd91f44f0bc"
+              }
+            }
+          },
+          "state": {
+            "type": "openpi.shared.normalize.NormStats",
+            "fields": {
+              "mean": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "5c7ce9635c0f851a962174c1e4a8170e7c20c35957b05b2ddcc083bde7928bf4"
+              },
+              "std": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "004b0ef6abc2c375abd80d888dd1a3f17c0d7aaa0eb2538492fa2eeb372bbff5"
+              },
+              "q01": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "4bf858fff6289c5eb5f256e347e31d54eecb43c55ecd3733c9b24a97349900b4"
+              },
+              "q99": {
+                "type": "numpy.ndarray",
+                "dtype": "float64",
+                "shape": [
+                  8
+                ],
+                "sha256": "d7de958e968ce40a57fb558f4ecf753b0e49e16626a6113a7e0b0c73bd3211ec"
+              }
+            }
+          }
+        },
+        "repack_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.list",
+              "items": [
+                {
+                  "type": "openpi.transforms.RepackTransform",
+                  "fields": {
+                    "structure": {
+                      "actions": "actions",
+                      "mem_order": "mem_order",
+                      "motion_emb": "motion_emb",
+                      "motion_mask": "motion_mask",
+                      "motion_pos": "motion_pos",
+                      "observation/image": "image",
+                      "observation/state": "state",
+                      "observation/wrist_image": "wrist_image",
+                      "prompt": "prompt",
+                      "static_image_emb": "static_image_emb",
+                      "static_mask": "static_mask",
+                      "static_pos_emb": "static_pos_emb",
+                      "static_state_emb": "static_state_emb"
+                    }
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": []
+            }
+          }
+        },
+        "data_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.tuple",
+              "items": [
+                {
+                  "type": "mme_vla_suite.policies.robomme_policy.RoboMMEInputs",
+                  "fields": {
+                    "model_type": {
+                      "type": "openpi.models.model.ModelType",
+                      "value": "pi05"
+                    }
+                  }
+                },
+                {
+                  "type": "openpi.transforms.DeltaActions",
+                  "fields": {
+                    "mask": {
+                      "type": "builtins.tuple",
+                      "items": [
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        false
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": [
+                {
+                  "type": "openpi.transforms.AbsoluteActions",
+                  "fields": {
+                    "mask": {
+                      "type": "builtins.tuple",
+                      "items": [
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        true,
+                        false
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "mme_vla_suite.policies.robomme_policy.RoboMMEOutputs",
+                  "fields": {}
+                }
+              ]
+            }
+          }
+        },
+        "model_transforms": {
+          "type": "openpi.transforms.Group",
+          "fields": {
+            "inputs": {
+              "type": "builtins.list",
+              "items": [
+                {
+                  "type": "openpi.transforms.InjectDefaultPrompt",
+                  "fields": {
+                    "prompt": null
+                  }
+                },
+                {
+                  "type": "openpi.transforms.ResizeImages",
+                  "fields": {
+                    "height": 224,
+                    "width": 224
+                  }
+                },
+                {
+                  "type": "mme_vla_suite.training.config.TokenizePromptWithState",
+                  "fields": {
+                    "tokenizer": {
+                      "type": "mme_vla_suite.training.config.PaligemmaTokenizer",
+                      "fields": {
+                        "_max_len": 64,
+                        "_tokenizer": {
+                          "type": "sentencepiece.SentencePieceProcessor",
+                          "model_sha256": "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6"
+                        }
+                      }
+                    },
+                    "discrete_state_input": false
+                  }
+                },
+                {
+                  "type": "openpi.transforms.PadStatesAndActions",
+                  "fields": {
+                    "model_action_dim": 32
+                  }
+                }
+              ]
+            },
+            "outputs": {
+              "type": "builtins.tuple",
+              "items": []
+            }
+          }
+        },
+        "use_quantile_norm": true,
+        "action_sequence_keys": {
+          "type": "builtins.tuple",
+          "items": [
+            "actions"
+          ]
+        },
+        "prompt_from_task": true,
+        "rlds_data_dir": null,
+        "action_space": null,
+        "filter_dict_path": null
+      }
+    },
+    "assets": {
+      "norm_stats": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-counting-pub-400ep/robomme/norm_stats.json",
+        "bytes": 2068,
+        "sha256": "a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9"
+      },
+      "initialization/_METADATA": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/_METADATA",
+        "bytes": 21402,
+        "sha256": "250d0ad0f6540a5e4bdd70442d6864cef729724f2d23e2dd2cc669563a668d70"
+      },
+      "initialization/manifest.ocdbt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/manifest.ocdbt",
+        "bytes": 117,
+        "sha256": "78b6898ea1f8897a0225022b0ab799455cff0e15158a9ca349d8efbbe044aa55"
+      },
+      "initialization/commit_success.txt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params/commit_success.txt",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "tokenizer": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/big_vision/paligemma_tokenizer.model",
+        "bytes": 4264023,
+        "sha256": "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6"
+      },
+      "assets_lock": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/assets/ASSETS_LOCK.json",
+        "bytes": 12240,
+        "sha256": "c2d140c1d934b9c7aadc49996c978697cb008a7ef9c8f6fa66892801a64cb032"
+      }
+    },
+    "history_values": {
+      "budget": 512,
+      "num_views": 1,
+      "token_per_image": 16,
+      "streaming_obs_horizon": 16,
+      "pool_type": "mean",
+      "use_pos_emb": true,
+      "use_state_emb": false,
+      "memory_feature": {
+        "img": {
+          "net": "identity",
+          "input_dim": 2048
+        },
+        "pos": {
+          "input_dim": 768,
+          "hidden_dim": 768
+        },
+        "state": {
+          "input_dim": 8,
+          "hidden_dim": 512
+        }
+      },
+      "integration_type": "modulation",
+      "memory_token_dim": 1024,
+      "representation_type": "perceptual",
+      "perceptual_memory": {
+        "type": "frame_sampling"
+      }
+    },
+    "derived": {
+      "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/smoke-orig80k-count-0925",
+      "assets_dirs": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite"
+    }
+  },
+  "loop_step": 19,
+  "state_step": 20,
+  "checkpoint_step": 19,
+  "ema_leaves": {
+    "PaliGemma/img/Transformer/encoder_norm/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152
+      ],
+      "bytes": 2304,
+      "sha256": "e40fbf8c58fbb48f582b35cdbeb6a95511f528490dbd54240d3ef934e20cbefd",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoder_norm/scale": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152
+      ],
+      "bytes": 2304,
+      "sha256": "38e592a2389d54f6e6d4862c9e7197ce5905f3e34ed16a969249ea56eaae762e",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_0/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "596e1b91b24648d5c4d1d1a3d5df8a6eb3a583e805dcc0809b49a9e8ef31ed53",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_0/scale": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "4b6d060c0367e2d2653fff4a47cd1187437c0bca14a7ca5af5ed1df53454472b",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_1/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "a7ac47328f8474ae0ef95470e8cae0d9fa8f924d6cbd89b7eb99ff3781c5e93f",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/LayerNorm_1/scale": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "8035f12cdff0aec52b6e438f12895c0da06fb8ef505944588ae44681703cb448",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_0/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        4304
+      ],
+      "bytes": 232416,
+      "sha256": "02f196bd66fc63e90ca53bfae23b59ec5c8d0822d93f39b0831d3ee7978f5b29",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_0/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        4304
+      ],
+      "bytes": 267743232,
+      "sha256": "3a3304524f1c129aacf9a6629aa17c86e1b2cdc08f4873bea4086590d17ef2f4",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_1/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "d8f3e9d2cb9090246cc9a1af9623f9ed589784dce90b8807a6f47340c547e59b",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MlpBlock_0/Dense_1/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        4304,
+        1152
+      ],
+      "bytes": 267743232,
+      "sha256": "9200075097fd26de9af6febf6907637c1f4a6519531ff16bcf0b37473235152c",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/key/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "bytes": 62208,
+      "sha256": "d0e53f307725f9da4133720f6e931d78967893df228ab7b914c56550a2c0314f",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/key/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "bytes": 71663616,
+      "sha256": "7635db8a0d391240525a112677068e5c7583b6ae38308bc755a0d524c26f1f2e",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/out/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152
+      ],
+      "bytes": 62208,
+      "sha256": "0b5fa61731342263dc4de70b17e655799aa144fb5d540bb3435fa640637d377c",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/out/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72,
+        1152
+      ],
+      "bytes": 71663616,
+      "sha256": "62c7ac989d35c817189aa03e6513bc332a94f6e9ec2ced566224eff19746276e",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/query/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "bytes": 62208,
+      "sha256": "f9bba9fb14707b4f162d4e8b6135ec6c22236c349dc4661668bd9801a09ae698",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/query/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "bytes": 71663616,
+      "sha256": "1209e74f57c9289fcb89bdab8b5906fefa0fa5d987af98b1a8c9dd38a70c7b4c",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/value/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        16,
+        72
+      ],
+      "bytes": 62208,
+      "sha256": "fd3e2717ac526d8b722e9f440732e5d7cc754e6fbfa2062e56e264c141a6c719",
+      "finite": true
+    },
+    "PaliGemma/img/Transformer/encoderblock/MultiHeadDotProductAttention_0/value/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        27,
+        1152,
+        16,
+        72
+      ],
+      "bytes": 71663616,
+      "sha256": "01c8c1ac0e2e580fc509b376bfd9e66d70d754544e5cb02b4feed7079c2ec63c",
+      "finite": true
+    },
+    "PaliGemma/img/embedding/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152
+      ],
+      "bytes": 2304,
+      "sha256": "260ff4f39a25e99443b45b6c860d2b6cb43ecd902fd7d0f9e29cbb00c1a2704f",
+      "finite": true
+    },
+    "PaliGemma/img/embedding/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        14,
+        14,
+        3,
+        1152
+      ],
+      "bytes": 1354752,
+      "sha256": "aad5f3b62258904c442ecdc60f7997162fffc50085b663ad7c551e9b89b21bee",
+      "finite": true
+    },
+    "PaliGemma/img/head/bias": {
+      "dtype": "bfloat16",
+      "shape": [
+        2048
+      ],
+      "bytes": 4096,
+      "sha256": "af69acf0ca52d01365a2a92fc3ef66b3c3619eea64af6dcce3bf30c22366a73a",
+      "finite": true
+    },
+    "PaliGemma/img/head/kernel": {
+      "dtype": "bfloat16",
+      "shape": [
+        1152,
+        2048
+      ],
+      "bytes": 4718592,
+      "sha256": "7a3627fb7babf6c8339b04100c81da01776f9428e4fc987de9d08ad09c36af9d",
+      "finite": true
+    },
+    "PaliGemma/img/pos_embedding": {
+      "dtype": "bfloat16",
+      "shape": [
+        1,
+        256,
+        1152
+      ],
+      "bytes": 589824,
+      "sha256": "f5260d6fbe079652be2209e2258014e5d5ec5305acec5b3124f9de889b68db58",
+      "finite": true
+    },
+    "PaliGemma/llm/embedder/input_embedding": {
+      "dtype": "float32",
+      "shape": [
+        257152,
+        2048
+      ],
+      "bytes": 2106589184,
+      "sha256": "671018ab16fbe843609351f964f9f0df263f7eda538c09f743ef20744fc3b79d",
+      "finite": true
+    },
+    "PaliGemma/llm/final_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        2048
+      ],
+      "bytes": 8192,
+      "sha256": "fc7c06248a5399a806b4e085f967805ec699c86ba6dc7a70176e2ff4c6abc089",
+      "finite": true
+    },
+    "PaliGemma/llm/final_norm_1/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        3072
+      ],
+      "bytes": 12288,
+      "sha256": "76cb2e677c9105c4dd215061bbda66083f2b67d86be4a4ff85dbf115e6e82b43",
+      "finite": true
+    },
+    "PaliGemma/llm/final_norm_1/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        3072
+      ],
+      "bytes": 12582912,
+      "sha256": "91590ff77f8fddf31a653482d975df10450a9f0fd249833b3b5ac36d31d17cc1",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/attn_vec_einsum/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        256,
+        2048
+      ],
+      "bytes": 301989888,
+      "sha256": "81990118e77c8020f1134ddd6ba6ce6f81d05179cb718f727929620ce9c16622",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/attn_vec_einsum_1/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        256,
+        1024
+      ],
+      "bytes": 150994944,
+      "sha256": "c75492ca2213fb627d7926a689d55424f49360102a1724cf3f0d6289de16105c",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/kv_einsum/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1,
+        2048,
+        256
+      ],
+      "bytes": 75497472,
+      "sha256": "e4e9898238a2471035db4390170a8b0f71bb8cdefd63b88067be191dc7bf53f4",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/kv_einsum_1/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1,
+        1024,
+        256
+      ],
+      "bytes": 37748736,
+      "sha256": "7a0dd107248b28c7f70e2655a1a2e8cb51c280767b7bad4a2205349f0adb3c46",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/q_einsum/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        2048,
+        256
+      ],
+      "bytes": 301989888,
+      "sha256": "4b1526159ae85d50aef159a2a28e9656b84798f79de61b314eb28674025da03b",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/attn/q_einsum_1/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        8,
+        1024,
+        256
+      ],
+      "bytes": 150994944,
+      "sha256": "92a0aa9b9ad414e54a4da8b1add6dc18099cd54983bb6f1a34d2cd6b2cadb32d",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/kv_einsum_mem/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1,
+        1024,
+        256
+      ],
+      "bytes": 37748736,
+      "sha256": "51f9d6665a6b7db76001bbcd70bf2faea17f25c672615395b061f15033ff695f",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/mem_rms_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024
+      ],
+      "bytes": 73728,
+      "sha256": "d956a9aa8ad2933a911081f672f30afe37a7ffdbae1526d453a62b1ad529d916",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/out_einsum_mem/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        4,
+        256,
+        1024
+      ],
+      "bytes": 75497472,
+      "sha256": "f45557981f5584a71c5407fe925b3f92508b64b58e6e2d0f0fea94d639196e14",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_attn/q_einsum_mem/w": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        4,
+        1024,
+        256
+      ],
+      "bytes": 75497472,
+      "sha256": "f75053d041106a5dbb0655466413f75706df2483f353bcc370650de308847852",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_rms_norm_ffn/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2048
+      ],
+      "bytes": 147456,
+      "sha256": "f719f00825cf2ea869bdecf1e16dfb6350ac9c08f63692b299a01bee3f367d75",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mem_rms_norm_ffn/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024,
+        2048
+      ],
+      "bytes": 150994944,
+      "sha256": "caaa2362350daee223a354bd6788d0d4ea833a2ca7019f96b0990a715578022b",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp/gating_einsum": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        2048,
+        16384
+      ],
+      "bytes": 4831838208,
+      "sha256": "d44afdc344afc2327fba3ad0742983d2813eaa18da20d5665bcb5be93eb8fd67",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp/linear": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        16384,
+        2048
+      ],
+      "bytes": 2415919104,
+      "sha256": "80f10a7d928b26af4ac4f1232d28c7e639b1ca4603de14cb11dcd6fa078cd04f",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp_1/gating_einsum": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2,
+        1024,
+        4096
+      ],
+      "bytes": 603979776,
+      "sha256": "a31985ba1de2a800275c3500c6de89bd21da8214ed64390d38285ffe99bef110",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/mlp_1/linear": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        4096,
+        1024
+      ],
+      "bytes": 301989888,
+      "sha256": "a01544db48b0c6308c8a7e377e02257b77dd65730223ff156debba7c676da83c",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_attention_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2048
+      ],
+      "bytes": 147456,
+      "sha256": "7df8a932f1f9fd4aa72542f0f045110ff0378f82dfc512ea2e3f85ff176940c5",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_attention_norm_1/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        3072
+      ],
+      "bytes": 221184,
+      "sha256": "64aabf835bbb2cac43bab71774c56e622d2f2fd22945099b0a882808911250be",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_attention_norm_1/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024,
+        3072
+      ],
+      "bytes": 226492416,
+      "sha256": "214ae1a890c5c88b475b48a19b9bc7dbf68ff6724d37534150db8cb0e164e0b8",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_ffw_norm/scale": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        2048
+      ],
+      "bytes": 147456,
+      "sha256": "cff9ea299b23a4691922fcd8f40ab2e18c677baedc6301d8f0fc65744feb60d2",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_ffw_norm_1/Dense_0/bias": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        3072
+      ],
+      "bytes": 221184,
+      "sha256": "333768e26a4cf96bfef57b70cad070899f6e875464e72ec216f2378a7a29892c",
+      "finite": true
+    },
+    "PaliGemma/llm/layers/pre_ffw_norm_1/Dense_0/kernel": {
+      "dtype": "float32",
+      "shape": [
+        18,
+        1024,
+        3072
+      ],
+      "bytes": 226492416,
+      "sha256": "6e5daeec5c080c629aa080703f0b9734e790f37182e897ca24af4c1075e168d2",
+      "finite": true
+    },
+    "action_in_proj/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "d730ca7e0286c999d7bdc5219bd3543de2fcc672e9e86695469058de029cc716",
+      "finite": true
+    },
+    "action_in_proj/kernel": {
+      "dtype": "float32",
+      "shape": [
+        32,
+        1024
+      ],
+      "bytes": 131072,
+      "sha256": "442ba43c497e54e440998a5420ebba4b3fbb1b8cc427df332510d4238c042413",
+      "finite": true
+    },
+    "action_out_proj/bias": {
+      "dtype": "float32",
+      "shape": [
+        32
+      ],
+      "bytes": 128,
+      "sha256": "f71c61cddbcf75e9e9b2c919c89e846b5e7fbe7db04722c25c0c4da41bcab2e5",
+      "finite": true
+    },
+    "action_out_proj/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        32
+      ],
+      "bytes": 131072,
+      "sha256": "8b9399b94bc8f3d7fb8c6f9eeaea14838e6188499fdec705a9a0573cb70c726d",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/encoder_static/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "1b318552a54449c5264bdbe5d737a8357dc1ae89138e282398461eb24ee9a262",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/encoder_static/kernel": {
+      "dtype": "float32",
+      "shape": [
+        2816,
+        1024
+      ],
+      "bytes": 11534336,
+      "sha256": "9c11379a21d54ab597fe11716f8acd23e394d4b809c72bc607ad8c987fd2011e",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/pos_proj/bias": {
+      "dtype": "float32",
+      "shape": [
+        768
+      ],
+      "bytes": 3072,
+      "sha256": "9b2a62334f2f9a1cff48ad1997d60b16ba9301b248ecd0cddbe4e9e4fd707c1c",
+      "finite": true
+    },
+    "mem_encoder/feature_encoder/pos_proj/kernel": {
+      "dtype": "float32",
+      "shape": [
+        768,
+        768
+      ],
+      "bytes": 2359296,
+      "sha256": "792f40a8742ab629f1bc002668592b7aeb63f1660f926c1c3daf9660a32303b9",
+      "finite": true
+    },
+    "time_mlp_in/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "89c8c297dfe291fdb5e1fe78000935af1d05f9a0bd5fe9fffae84d96c36e52dd",
+      "finite": true
+    },
+    "time_mlp_in/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        1024
+      ],
+      "bytes": 4194304,
+      "sha256": "4237923978c708cbe7a56b86c30ebcaf6b4030b15026a98d96f8733a1c29d467",
+      "finite": true
+    },
+    "time_mlp_out/bias": {
+      "dtype": "float32",
+      "shape": [
+        1024
+      ],
+      "bytes": 4096,
+      "sha256": "85dbf13338ac9e2284723fa1c61adf3477b084b4cc6844ab8bae0b841d194033",
+      "finite": true
+    },
+    "time_mlp_out/kernel": {
+      "dtype": "float32",
+      "shape": [
+        1024,
+        1024
+      ],
+      "bytes": 4194304,
+      "sha256": "f5405558f603eed42bcafd45ff145dfd15ce6fc97ef2f42a16319cfa64e43f61",
+      "finite": true
+    }
+  },
+  "tail": [
+    {
+      "step": 1,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.648186445236206,
+          "hex": "0x1.a5ef8c0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.6326147317886353,
+          "hex": "0x1.a1f30a0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09490116685628891,
+          "hex": "0x1.84b7160000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.13630397617816925,
+          "hex": "0x1.17268a0000000p-3",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 2,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.4932252168655396,
+          "hex": "0x1.7e44020000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.4805220365524292,
+          "hex": "0x1.7b037e0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08507288247346878,
+          "hex": "0x1.5c75620000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.12720897793769836,
+          "hex": "0x1.0486240000000p-3",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 3,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.5752171277999878,
+          "hex": "0x1.93416e0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.559950828552246,
+          "hex": "0x1.8f58f00000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08795111626386642,
+          "hex": "0x1.683f6e0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.1358669549226761,
+          "hex": "0x1.16416a0000000p-3",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 4,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.3671724796295166,
+          "hex": "0x1.5dff040000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.3541704416275024,
+          "hex": "0x1.5aaaea0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.0907677412033081,
+          "hex": "0x1.73c8e00000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.11730564385652542,
+          "hex": "0x1.e07be20000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 5,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.3701320886611938,
+          "hex": "0x1.5ec0fa0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.3552783727645874,
+          "hex": "0x1.5af3860000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09844920039176941,
+          "hex": "0x1.933f780000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.1172366514801979,
+          "hex": "0x1.e0338a0000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 6,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.5039348602294922,
+          "hex": "0x1.8101e00000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.4909441471099854,
+          "hex": "0x1.7dae840000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08590283244848251,
+          "hex": "0x1.5fdba60000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.12558582425117493,
+          "hex": "0x1.0133240000000p-3",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 7,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.236879825592041,
+          "hex": "0x1.3ca4280000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.2256604433059692,
+          "hex": "0x1.39c4e20000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08325845748186111,
+          "hex": "0x1.5506d20000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.10391609370708466,
+          "hex": "0x1.a9a3ec0000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 8,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.4004186391830444,
+          "hex": "0x1.6681d60000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.388537049293518,
+          "hex": "0x1.63772a0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08644863218069077,
+          "hex": "0x1.6217f60000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.11536718904972076,
+          "hex": "0x1.d88b440000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 9,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.5695444345474243,
+          "hex": "0x1.91cdaa0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.5563119649887085,
+          "hex": "0x1.8e6a760000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09860886633396149,
+          "hex": "0x1.93e6e40000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.13345591723918915,
+          "hex": "0x1.1151560000000p-3",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 10,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.5683183670043945,
+          "hex": "0x1.917d500000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.5538960695266724,
+          "hex": "0x1.8dcc220000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09947697073221207,
+          "hex": "0x1.97752a0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.1315293163061142,
+          "hex": "0x1.0d5f3e0000000p-3",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 11,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.5729920864105225,
+          "hex": "0x1.92af9c0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.5604912042617798,
+          "hex": "0x1.8f7c5a0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09459371119737625,
+          "hex": "0x1.8374b20000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.1291995793581009,
+          "hex": "0x1.0899ca0000000p-3",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 12,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.3777189254760742,
+          "hex": "0x1.60b2300000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.3647791147232056,
+          "hex": "0x1.5d622a0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09609595686197281,
+          "hex": "0x1.899bea0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.1161273643374443,
+          "hex": "0x1.dba85e0000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 13,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.4451649188995361,
+          "hex": "0x1.71f6540000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.4306330680847168,
+          "hex": "0x1.6e3df80000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09271224588155746,
+          "hex": "0x1.7bbfd60000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.12029757350683212,
+          "hex": "0x1.ecbd260000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 14,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.379631757736206,
+          "hex": "0x1.612f8c0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.366763949394226,
+          "hex": "0x1.5de43e0000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.09032174944877625,
+          "hex": "0x1.71f5380000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.11596545577049255,
+          "hex": "0x1.dafe980000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 15,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.2960503101348877,
+          "hex": "0x1.4bc9f40000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.2836194038391113,
+          "hex": "0x1.489b480000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08705168217420578,
+          "hex": "0x1.64904e0000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.10805930197238922,
+          "hex": "0x1.ba9c640000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 16,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.360854983329773,
+          "hex": "0x1.5c60fe0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.3476107120513916,
+          "hex": "0x1.58fd040000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.0897066742181778,
+          "hex": "0x1.6f70440000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.11725130677223206,
+          "hex": "0x1.e042e80000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 17,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.256457805633545,
+          "hex": "0x1.41a7380000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.24507737159729,
+          "hex": "0x1.3ebd640000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08973409980535507,
+          "hex": "0x1.6f8d060000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.10501576215028763,
+          "hex": "0x1.ae25020000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 18,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.2909334897994995,
+          "hex": "0x1.4a7a9e0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.2782602310180664,
+          "hex": "0x1.473c100000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08384522050619125,
+          "hex": "0x1.576e160000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.10980091243982315,
+          "hex": "0x1.c1be9a0000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    },
+    {
+      "step": 19,
+      "scalars": {
+        "grad_norm": {
+          "dec": 1.4611536264419556,
+          "hex": "0x1.760e2a0000000p+0",
+          "finite": true
+        },
+        "llm_grad_norm": {
+          "dec": 1.4486770629882812,
+          "hex": "0x1.72dc800000000p+0",
+          "finite": true
+        },
+        "loss": {
+          "dec": 0.08788717538118362,
+          "hex": "0x1.67fc620000000p-4",
+          "finite": true
+        },
+        "mem_enc_norm": {
+          "dec": 0.11867742985486984,
+          "hex": "0x1.e61a4e0000000p-4",
+          "finite": true
+        },
+        "param_norm": {
+          "dec": 1815.5465087890625,
+          "hex": "0x1.c5e2fa0000000p+10",
+          "finite": true
+        }
+      }
+    }
+  ],
+  "tail_means": {
+    "grad_norm": 1.4302098625584652,
+    "llm_grad_norm": 1.417042010708859,
+    "loss": 0.0906729674653003,
+    "mem_enc_norm": 0.12021953847847487,
+    "param_norm": 1815.5465087890625
+  },
+  "recorded_at": "2026-09-26T01:50:26.981786+00:00"
+}

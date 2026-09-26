@@ -1,91 +1,119 @@
-# 公开16任务1600集正式库：起跑前记录
+# 公开16任务1600集正式库：启动实录
 
-## 范围与启动条件
+## 范围、起跑前约定与实际状态
 
-**尚未启动，不预填Beta提交或成功结果。** 用户最新原话：「恢复计划中的建库，严格按前置闸门推进」。本库使用公开`Yinpei/robomme_data_h5`的16任务×100集，交付source、4×4 packed和仅供比较的自算norm_stats，不建8×8、Wan或motion。原版正式训练仍使用既有`v1-store/train-assets/mme_vla_suite/robomme/norm_stats.json`，禁止用本库自算版静默替换。
+**本库数据阶段及独立full20均已PASS。** 本文件由起跑前记录回填实际会话、环境和退出状态，起跑前正文仍可通过下方Beta还原。用户原话：「恢复计划中的建库，严格按前置闸门推进」。范围保持公开 `Yinpei/robomme_data_h5` 的16任务×100集，交付source、4×4 packed及仅供比较的自算norm_stats；不生成8×8、Wan或motion。full正式训练与本次full20使用原版 `v1-store/train-assets/mme_vla_suite/robomme/norm_stats.json`，没有用新自算统计量替换。
 
-P0已通过；必须先完成[来源前检与16集构建冒烟](../16task-pub-smoke16-0925/launch.md)，归档全部阶段成功、来源pin和冒烟实际分配字节，再重新计算预算。当前估算的full/count/smoke加10%为938.1027 GiB，临时等分项保守估计128 GiB，加300 GiB保留量共1366.1027 GiB；可用1668.9436 GiB仅为近期快照。估算不得写成实测，完整字节分项记录为闸门依据；冒烟后校正，阶段前重测。
+起跑前约定依次通过P0、[来源与16集冒烟](../16task-pub-smoke16-0925/result.md)、实际文件分配量预算、全新实体输出和clean Beta检查。历史初估为两库加smoke数据10%余量938.1027 GiB、缓存/临时/日志128 GiB及保留300 GiB，共1366.1027 GiB；该估算不是最终体积。冒烟得到F=606208 B、P=397312 B后，[校正预算](../16task-pub-smoke16-0925/records/post_smoke_budget.json)将所需可用字节定为1458746144941 B；本次正式起跑实测1784545525760 B，`BUDGET_GATE=PASS`。输入原件、两个新输出不存在、精确HEAD与clean检查均成功，才进入十阶段。
 
-用户另已明确「允许主机 dtype 不同，但要求数值一致且训练标量/状态逐位一致」及「允许这四键缺失与 None 等价」。后者只限`motion_emb/motion_pos/motion_mask/mem_order`缺失与显式None，其他键、非None值仍严格；原始dtype/raw SHA留证、signed zero和训练bitwise要求不变。既有3样本取证不是全库输入验收；本档案不启动训练，后续训练仍须全部前置闸门。
+用户已允许主机dtype不同但数值精确一致、训练标量/状态逐位一致；另允许 `motion_emb/motion_pos/motion_mask/mem_order` 仅缺失与严格None等价。原始dtype/raw SHA留证，其他键、非None和signed zero要求不变。这些许可不放宽建库字节判据，既有3样本取证也不能代替两库正式输入验收。
 
-## 版本与可复现面
+## 版本、路径与日志保护
 
-正式起跑前追加确认：公开来源pin与16集冒烟已在 `commitV11.10Beta` / `commitV11.10` 配对中全部通过，结果提交为 `de6354fd7c0f78b347c7b07c4b8ee0c8b9b37418`。本库及后续counting使用包含本段的下一份 `commitV11.11Beta` 作为新起跑锚点，生产构建代码未改；实际完整SHA将在每个阶段的 `BUILD_HEAD` 写入，不将旧smoke Beta误作正式运行版本。冒烟实测F=`606208 B`、P=`397312 B`；[剩余预算](../16task-pub-smoke16-0925/records/post_smoke_budget.json)要求可用 `1458746144941 B`，2026-09-25T21:18:10Z复查可用 `1784545669120 B`、八卡空闲，两正式库及两统计量根均未创建。起跑仍再核对这些条件。
+实际启动及结束HEAD均为 **`49a333eb18e8d6ff1143bf7871ef7c498ab91579`**，提交主题 `commitV11.11Beta: 锚定两个公开正式库及20步可读性检查`。来源与冒烟结果提交为 `de6354fd7c0f78b347c7b07c4b8ee0c8b9b37418`，冒烟Beta为 `42b91cd96499bd51fcb6acaeedd642b368dbefeb`，不是本库的启动版本。生产构建代码未为本轮改算法或参数；实际环境与操作记录由本次日志补齐。
 
-本库数据阶段通过后，单独执行已预建档案的[20步可读性检查](../../training-doc/smoke-orig80k-full-0925/launch.md)，不把构建日志中的成功当成该训练检查成功。
+输入为 `/scratch/hongze/robomme_data_h5`；库为 `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep`；自算统计根为 `v1-store/train-assets/mme_vla_suite/16task-pub-1600ep`。全新输出检查包含悬空链接，原H5不改。实际规模为1600集、768897总帧、476857执行样本，已与已提交来源pin绑定。
 
-正式SigLIP/raw构造前必须先完成本轮代码及档案的Beta提交，从该完整40位字面量`BUILD_HEAD`的clean HEAD启动。**实际Beta SHA、会话、UTC和退出码尚未产生，起跑现场填入日志及本档案；不把事后提交当启动版本。** 若来源前检与正式构建不在同一提交，分别记各阶段HEAD和差异，不声称全过程为一个未变版本。
+起跑前模板要求逐阶段留退出记录；实际为一个detached tmux串行十阶段、共享一份构建日志，各stage保留独立开始/结束及退出行。外层 `set -o pipefail`、body `set -euo pipefail`，`run_stage()` 调用失败即返回并停止下游，tee与任务的 `PIPESTATUS` 分别记录；日志用noclobber拒绝复用。结束再次核对相同HEAD与clean。不是十个独立tmux或十份外层tee日志。
 
-还原使用`git show <实际Beta完整SHA>:scripts/dataset/scan_manifest.py`、`finalize_checks.py`、`check_orig80k_sources.py`、`run_local.py`、`pack_framesamp_store.py`及`git show <实际Beta完整SHA>:scripts/training/compute_norm_stats.py`。稳定入口为`scan_manifest.cmd_build()`、`run_local.worker_cmd()`、`finalize_checks`的hash/check、packed的pack/verify和`compute_norm_stats.main()`；全部覆盖参数见下方命令。配置、脚本及yaml不另行拷贝入档案。
+还原起跑前约定与默认：
 
-## 路径、环境与阶段命令
+```bash
+git show 49a333eb18e8d6ff1143bf7871ef7c498ab91579:docs/dataset-build-doc/16task-pub-1600ep/launch.md
+git show 49a333eb18e8d6ff1143bf7871ef7c498ab91579:scripts/dataset/paths.sh
+```
 
-输入`/scratch/hongze/robomme_data_h5`。库根`/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep`，统计量根`v1-store/train-assets/mme_vla_suite/16task-pub-1600ep`，两处起跑时必须全新、实体路径且无外链。规范期望为1600集、768897总帧、476857执行样本；这些来自已提交参考清单，是验收目标，不是本次已生成结果。
+## 实际环境与阶段命令
 
-各阶段必须在已记录的detached tmux内按下面顺序执行，遵守[冒烟档案的日志与会话纪律](../16task-pub-smoke16-0925/launch.md)。下方代码块是阶段命令体，外围为每阶段独立tee日志和`EXIT_CODE=`；不能不带外围就粘贴启动。任一失败停止后续阶段。
+完整构建实际在一个detached tmux会话 `pub16-full-20260925T212238Z` 内，通过 `run_stage()` 串行执行十个阶段。包装PID为 **3815822**，原始日志为 `v1-store/logs/pub16-full-20260925T212238Z.build.log`。运行时保存的命令正文位于 `v1-store/bench/orig80k-build-preflight-0925/full_build_command.txt`，SHA256为 `02e47a92d5753f2e649860bdd72a5bf74c2b256ee422ab93ef27f6b91b0182bb`；它是运行时保存的shell文本，不是Beta里新增的脚本，也不应作为独立脚本拷入正式档案。
+
+下面还原该正文的实际环境与实质阶段命令。原运行另有新输出检查、预算检查、`set -euo pipefail`、逐阶段退出码记录及外层tee；现在这些输出已经存在，下列文本仅供还原，不能重放来覆盖它们。
+
+起跑前launch的CUDA缓存示例是 `$V1_STORE/cache/cuda`，实跑明确覆盖为 `$V1_STORE/cache/cuda/orig80k-build`；它不是paths.sh提供的默认值。实际环境口径如下。表中的“固定提交默认”来自 `scripts/dataset/paths.sh @ 49a333eb18e8d6ff1143bf7871ef7c498ab91579`，没有混称为运行命令手动覆盖；`run_local.base_env()` 在worker环境中再次设置的同值项也按该Beta源码还原。`LIB/MANI/INMANI/STATS/REFERENCE` 是命令正文的普通shell路径变量，见下方代码块。
+
+| 来源 | 环境项 | 实际值或作用范围 |
+|---|---|---|
+| 手动export，在source前 | `RAW_H5_DIR` | `/scratch/hongze/robomme_data_h5` |
+| 手动export | `BUILD_HEAD` | `49a333eb18e8d6ff1143bf7871ef7c498ab91579` |
+| 手动export | `UV_CACHE_DIR` | `$V1_STORE/cache/uv` |
+| 手动export | `OMP_NUM_THREADS`、`OPENBLAS_NUM_THREADS` | 均为`1` |
+| 手动export | `PYTHONUNBUFFERED`、`PYTHONDONTWRITEBYTECODE` | 均为`1`；前者虽在paths中已有同值，命令仍明确export |
+| 手动export | `CUDA_CACHE_PATH` | `$V1_STORE/cache/cuda/orig80k-build` |
+| 手动unset | `XLA_FLAGS`、`JAX_PLATFORMS` | 在实质阶段开始前清除继承值 |
+| CPU阶段命令的局部覆盖 | `CUDA_VISIBLE_DEVICES=''`、`JAX_PLATFORMS=cpu` | asset_verify、scan1600、hash16、source_pin、pack、verify、norm_stats、report；不导出到后续GPU阶段 |
+| SigLIP阶段命令的局部覆盖 | `CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7` | 调度器可见八卡；`run_local.worker_cmd()` 再将每个worker限制到其指定单卡 |
+| finalize阶段命令的局部覆盖 | `CUDA_VISIBLE_DEVICES=7` | 使用GPU7复算；该阶段没有CPU平台覆盖 |
+| paths.sh固定提交默认 | `OPENPI_DATA_HOME`、`XDG_CACHE_HOME`、`HF_HOME` | 分别为`$V1_STORE/models`、`$V1_STORE/cache/xdg`、`$V1_STORE/cache/hf` |
+| paths.sh固定提交默认 | `JAX_COMPILATION_CACHE_DIR`、`HF_HUB_OFFLINE`、`UV_LINK_MODE` | 分别为`$V1_STORE/cache/jax`、`1`、`copy` |
 
 ```bash
 cd /scratch/hongze/robomme_policy_learning_MotionJEPA
 set -euo pipefail
+export RAW_H5_DIR=/scratch/hongze/robomme_data_h5
 source scripts/dataset/paths.sh
+export BUILD_HEAD=49a333eb18e8d6ff1143bf7871ef7c498ab91579
 export UV_CACHE_DIR="$V1_STORE/cache/uv" PYTHONUNBUFFERED=1
 export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
-export CUDA_CACHE_PATH="$V1_STORE/cache/cuda" PYTHONDONTWRITEBYTECODE=1
-RAW=/scratch/hongze/robomme_data_h5
+export CUDA_CACHE_PATH="$V1_STORE/cache/cuda/orig80k-build" PYTHONDONTWRITEBYTECODE=1
+unset XLA_FLAGS JAX_PLATFORMS
 LIB="$V1_STORE/datasets/16task-pub-1600ep"
 MANI="$LIB/meta/episode_manifest.json"
 INMANI="$LIB/meta/input_manifest.json"
 STATS="$V1_STORE/train-assets/mme_vla_suite/16task-pub-1600ep"
 REFERENCE="$REPO_ROOT/docs/dataset-build-doc/16task-h5-scan/records"
-: "${BUILD_HEAD:?必须传已提交的完整Beta SHA字面量}"
-test "$BUILD_HEAD" = "$(git rev-parse HEAD)"
-test -z "$(git status --porcelain)"
-test ! -e "$LIB" && test ! -L "$LIB"
-test ! -e "$STATS" && test ! -L "$STATS"
+
+env CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/assets/fetch_assets.py verify --level full --assets siglip_params
+env CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/dataset/scan_manifest.py build --raw_dir "$RAW_H5_DIR" --episodes-per-task 100 --num_shards 1 --out "$MANI"
+env CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/dataset/finalize_checks.py hash-inputs --raw_dir "$RAW_H5_DIR" --out "$INMANI"
+env CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/dataset/check_orig80k_sources.py --input-manifest "$INMANI" --reference-input "$REFERENCE/input_manifest.json" --manifest "$MANI" --reference-manifest "$REFERENCE/episode_manifest.json"
+env CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 uv run --no-sync python scripts/dataset/run_local.py --stage siglip --lib "$LIB" --gpus 0,1,2,3,4,5,6,7 --raw-dir "$RAW_H5_DIR" --require-free-mib 70000
+env CUDA_VISIBLE_DEVICES=7 uv run --no-sync python scripts/dataset/finalize_checks.py check --manifest "$MANI" --out "$LIB/source" --raw_dir "$RAW_H5_DIR" --input_manifest "$INMANI" --input_level sha256 --spot_check 1024
+env CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/dataset/pack_framesamp_store.py pack --source "$LIB/source" --manifest "$MANI" --out "$LIB/framesamp" --procs 48
+env CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/dataset/pack_framesamp_store.py verify --store "$LIB/framesamp" --resume --procs 48
+env CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/training/compute_norm_stats.py --output-dir "$STATS" --config-name mme_vla_suite --repo-id robomme --dataset-path "$LIB/source"
 ```
 
-**来源与全量清单阶段：**不传`--tasks`；恰好收录已提交pin的16个H5。即使前检已成功，本库实际消费的input/episode清单仍须重新生成并绑定参考，不把现场清单互相比较当来源证明。
+第十个 `report` 是实际命令正文中的CPU内联Python：检查规模和packed状态，核对自算统计量形状与有限性，逐键比较原版文件，再以 `os.walk/stat` 累计source与packed的逻辑/分配字节，独占写出 `meta/norm_stats_comparison.json` 和 `meta/build_sizes.json`。这段报告代码没有被误称为Beta中的既有入口；其实际输出和SHA在本档案中保留，归档不复制shell/yaml载体。
+
+生产代码与依赖由以下固定提交还原；其余入口同理：
 
 ```bash
-uv run --no-sync python scripts/dataset/scan_manifest.py build \
-  --raw_dir "$RAW" --episodes-per-task 100 --num_shards 1 --out "$MANI"
-uv run --no-sync python scripts/dataset/finalize_checks.py hash-inputs \
-  --raw_dir "$RAW" --out "$INMANI"
-uv run --no-sync python scripts/dataset/check_orig80k_sources.py \
-  --input-manifest "$INMANI" --reference-input "$REFERENCE/input_manifest.json" \
-  --manifest "$MANI" --reference-manifest "$REFERENCE/episode_manifest.json"
+git show 49a333eb18e8d6ff1143bf7871ef7c498ab91579:scripts/dataset/run_local.py
+git show 49a333eb18e8d6ff1143bf7871ef7c498ab91579:scripts/dataset/finalize_checks.py
+git show 49a333eb18e8d6ff1143bf7871ef7c498ab91579:scripts/dataset/pack_framesamp_store.py
+git show 49a333eb18e8d6ff1143bf7871ef7c498ab91579:scripts/training/compute_norm_stats.py
+git show 49a333eb18e8d6ff1143bf7871ef7c498ab91579:pyproject.toml
+git show 49a333eb18e8d6ff1143bf7871ef7c498ab91579:uv.lock
 ```
 
-**构建与验证阶段：**SigLIP用本机八卡；finalize用GPU7复算1024条，pack/verify及norm_stats用CPU。source保留原版多尺度feature，packed只生成4×4布局；所有阶段为独立记录的实际命令，不能因前段成功跳过后段验收。
 
-```bash
-uv run --no-sync python scripts/dataset/run_local.py --stage siglip \
-  --lib "$LIB" --gpus 0,1,2,3,4,5,6,7 --raw-dir "$RAW" --require-free-mib 70000
-CUDA_VISIBLE_DEVICES=7 uv run --no-sync python scripts/dataset/finalize_checks.py check \
-  --manifest "$MANI" --out "$LIB/source" --raw_dir "$RAW" \
-  --input_manifest "$INMANI" --input_level sha256 --spot_check 1024
-CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/dataset/pack_framesamp_store.py pack \
-  --source "$LIB/source" --manifest "$MANI" --out "$LIB/framesamp" --procs 48
-CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/dataset/pack_framesamp_store.py verify \
-  --store "$LIB/framesamp" --resume --procs 48
-CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu uv run --no-sync python scripts/training/compute_norm_stats.py \
-  --output-dir "$STATS" --config-name mme_vla_suite --repo-id robomme --dataset-path "$LIB/source"
-```
+## 实际会话、阶段退出与交接
 
-norm_stats实际输出为`$STATS/robomme/norm_stats.json`。与原版文件逐键比较最大绝对差、非零参考项最大相对差和参考零值项，只归档差异和摘要，不因不一致自行更换训练资产。
+| 项目 | 实际记录 |
+|---|---|
+| 构建会话 | `pub16-full-20260925T212238Z` |
+| 包装PID | `3815822` |
+| UTC起止 | 2026-09-25 21:23:38 → 2026-09-26 00:40:16 |
+| 总跨度 | 11798秒，3小时16分38秒 |
+| 原始日志 | `v1-store/logs/pub16-full-20260925T212238Z.build.log` |
+| 任务/tee/整体终态 | `TASK_EXIT=0`、`TEE_EXIT=0`、唯一外层 `EXIT_CODE=0` |
 
-## 会话清单、判据与交接
+| 阶段 | UTC开始→结束 | 秒级跨度 | 阶段退出 |
+|---|---|---:|---:|
+| asset_verify | 09-25 21:23:38→21:23:42 | 4 | 0 |
+| scan1600 | 09-25 21:23:42→21:24:44 | 62 | 0 |
+| hash16 | 09-25 21:24:44→21:44:40 | 1196 | 0 |
+| source_pin | 09-25 21:44:40→21:44:40 | 0 | 0 |
+| siglip | 09-25 21:44:40→09-26 00:27:27 | 9767 | 0 |
+| finalize | 09-26 00:27:27→00:35:37 | 490 | 0 |
+| pack | 09-26 00:35:37→00:37:46 | 129 | 0 |
+| verify | 09-26 00:37:46→00:37:59 | 13 | 0 |
+| norm_stats | 09-26 00:37:59→00:40:02 | 123 | 0 |
+| report | 09-26 00:40:02→00:40:16 | 14 | 0 |
 
-当前实际创建会话清单为空；使用`pub16-<阶段>-<UTC>`命名模板，运行时填完整名称。每阶段记录`BUILD_HEAD`、`git status --porcelain`、命令、起止UTC、精确PID和`v1-store/logs/<完整会话名>.<阶段>.log`。保存任务及tee退出码；任一非零使最终`EXIT_CODE`非零。每份日志行缓冲独立监听。
 
-| 阶段 | 实际完整tmux名称 | 当前状态 |
-|---|---|---|
-| scan/hash/pin绑定 | 待起跑填写 | 未启动 |
-| SigLIP | 待起跑填写 | 未启动 |
-| finalize | 待起跑填写 | 未启动 |
-| pack/verify | 待起跑填写 | 未启动 |
-| norm_stats及原版比较 | 待起跑填写 | 未执行 |
+实际source pin为 `INPUT_PIN=PASS files=16`、`EPISODE_IDENTITY=PASS episodes=1600 timesteps=768897 samples=476857`。SigLIP8 worker完成1600集；finalize1024条最大绝对差0；全量packed verify768897行、零失配；source＋packed实测分配量706084982784 B。`FULL_DATA_BUILD=PASS`绑定[实际报告](records/build_sizes.json)，自算norm差异已[单独记录](records/norm_stats_comparison.json)，训练继续使用原版。
 
-只用`tmux has-session -t '=实际完整名称'`检查；清理只按实际清单完整匹配，一次一个，前后核对其他会话未变，不全局kill或按前缀猜测。源文件不动，不使用覆盖或强制清理选项。
+后续[counting构建](../4task-counting-pub-400ep/launch.md)在full结束后重新统计最大F/P及剩余预算，再开始独立构造，现已完成严格子集与count20。full20另在 `orig80k-full-read20-20260926T004046Z`（包装PID3915445）运行，2026-09-26 00:41:03→00:47:20 UTC整体PASS；20次更新、末步19、61个EMA叶实际恢复一致，见[独立训练档案](../../training-doc/smoke-orig80k-full-0925/launch.md)。
 
-数据阶段交付要求来源pin、全部episode身份和顺序、SigLIP worker、finalize、packed全量verify及norm_stats全部满足，实际规模和摘要与参考绑定。清单分片调度字段可以与历史不同，真实内容及全量身份不能放宽。保留实际字节量，重算counting阶段剩余预算后再进入[counting库](../4task-counting-pub-400ep/launch.md)。训练可读性检查和模型输入/训练对拍单独记录，未执行不得写成“全部交付通过”。正式结果按[十三节README](README.md)回填。
+记录已归档于[十三节README](README.md)及[正式核验清单](records/archive_checks.json)，共27文件、1634943 B。本轮只按完整tmux名称精确检查，会话随任务自然退出，未执行tmux清理；本次没有删除源数据、库或权重。两库正式INPUT、P1、100步对拍、300步perf及80k均尚未通过；20步PASS不能代替它们。

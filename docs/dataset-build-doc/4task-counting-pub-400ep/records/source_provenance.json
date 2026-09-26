@@ -1,0 +1,235 @@
+{
+  "produced_by": "scripts/dataset/build_shard.py",
+  "finalize_host": "ip-10-242-11-177.us-west-2.compute.internal",
+  "host": "ip-10-242-11-177.us-west-2.compute.internal",
+  "slurm_job": "",
+  "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+  "jax": "0.5.3",
+  "jaxlib": "0.5.3",
+  "git_commit": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+  "manifest_sha256": "6b309822aa604a31f6eb0dfb5f02d5482573dc5fa11dc5c4f917880aa92ba986",
+  "raw_dir": "/scratch/hongze/robomme_data_h5_counting4",
+  "resource_tier": {
+    "cpus_per_task": "",
+    "mem_per_node_mb": ""
+  },
+  "shard_fingerprints": {
+    "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+    "jax": "0.5.3",
+    "jaxlib": "0.5.3",
+    "git_commit": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+    "hosts": [
+      "ip-10-242-11-177.us-west-2.compute.internal",
+      "ip-10-242-11-177.us-west-2.compute.internal",
+      "ip-10-242-11-177.us-west-2.compute.internal",
+      "ip-10-242-11-177.us-west-2.compute.internal",
+      "ip-10-242-11-177.us-west-2.compute.internal",
+      "ip-10-242-11-177.us-west-2.compute.internal",
+      "ip-10-242-11-177.us-west-2.compute.internal",
+      "ip-10-242-11-177.us-west-2.compute.internal"
+    ],
+    "slurm_jobs": [
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "resource_tiers": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ],
+    "shards_with_fingerprint": 8
+  },
+  "shards": [
+    {
+      "schema_version": 2,
+      "shard_idx": 0,
+      "num_shards": 8,
+      "episodes_done": 50,
+      "episodes_skipped": 85,
+      "steps": 23681,
+      "elapsed_s": 2436.265947789885,
+      "rate_step_per_s": 9.720203174650438,
+      "rate_steady_step_per_s": 9.925905588813524,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu0",
+        "cuda_visible_devices": "0",
+        "gpu_uuid": "GPU-191942f6-8212-df10-f8f9-aafa4d397152",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+        "pid": 3926935
+      }
+    },
+    {
+      "schema_version": 2,
+      "shard_idx": 1,
+      "num_shards": 8,
+      "episodes_done": 50,
+      "episodes_skipped": 78,
+      "steps": 23570,
+      "elapsed_s": 2433.601020503789,
+      "rate_step_per_s": 9.685235912302783,
+      "rate_steady_step_per_s": 9.914681083972605,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu1",
+        "cuda_visible_devices": "1",
+        "gpu_uuid": "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+        "pid": 3926944
+      }
+    },
+    {
+      "schema_version": 2,
+      "shard_idx": 2,
+      "num_shards": 8,
+      "episodes_done": 50,
+      "episodes_skipped": 82,
+      "steps": 23561,
+      "elapsed_s": 2433.2793687311932,
+      "rate_step_per_s": 9.682817477832652,
+      "rate_steady_step_per_s": 9.914831961453425,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu2",
+        "cuda_visible_devices": "2",
+        "gpu_uuid": "GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+        "pid": 3926942
+      }
+    },
+    {
+      "schema_version": 2,
+      "shard_idx": 3,
+      "num_shards": 8,
+      "episodes_done": 50,
+      "episodes_skipped": 78,
+      "steps": 23718,
+      "elapsed_s": 2436.3222521278076,
+      "rate_step_per_s": 9.735165362170559,
+      "rate_steady_step_per_s": 9.912253067556318,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu3",
+        "cuda_visible_devices": "3",
+        "gpu_uuid": "GPU-8fb13753-84aa-f408-93f7-518b05582e9a",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+        "pid": 3926938
+      }
+    },
+    {
+      "schema_version": 2,
+      "shard_idx": 4,
+      "num_shards": 8,
+      "episodes_done": 50,
+      "episodes_skipped": 83,
+      "steps": 23705,
+      "elapsed_s": 2434.2896249550395,
+      "rate_step_per_s": 9.737953839587934,
+      "rate_steady_step_per_s": 9.915874696566876,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu4",
+        "cuda_visible_devices": "4",
+        "gpu_uuid": "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+        "pid": 3926933
+      }
+    },
+    {
+      "schema_version": 2,
+      "shard_idx": 5,
+      "num_shards": 8,
+      "episodes_done": 50,
+      "episodes_skipped": 80,
+      "steps": 23704,
+      "elapsed_s": 2435.775964845903,
+      "rate_step_per_s": 9.731601075840162,
+      "rate_steady_step_per_s": 9.915787556796822,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu5",
+        "cuda_visible_devices": "5",
+        "gpu_uuid": "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+        "pid": 3926934
+      }
+    },
+    {
+      "schema_version": 2,
+      "shard_idx": 6,
+      "num_shards": 8,
+      "episodes_done": 50,
+      "episodes_skipped": 78,
+      "steps": 23526,
+      "elapsed_s": 2434.7672788598575,
+      "rate_step_per_s": 9.662525122736435,
+      "rate_steady_step_per_s": 9.896608780924435,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu6",
+        "cuda_visible_devices": "6",
+        "gpu_uuid": "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+        "pid": 3926936
+      }
+    },
+    {
+      "schema_version": 2,
+      "shard_idx": 7,
+      "num_shards": 8,
+      "episodes_done": 50,
+      "episodes_skipped": 65,
+      "steps": 23570,
+      "elapsed_s": 2433.8964567971416,
+      "rate_step_per_s": 9.6840602788077,
+      "rate_steady_step_per_s": 9.919397021649798,
+      "fingerprint": {
+        "host": "ip-10-242-11-177.us-west-2.compute.internal",
+        "worker": "gpu7",
+        "cuda_visible_devices": "7",
+        "gpu_uuid": "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+        "gpu_device_kind": "NVIDIA A100-SXM4-80GB",
+        "jax": "0.5.3",
+        "jaxlib": "0.5.3",
+        "git_commit": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+        "pid": 3926943
+      }
+    }
+  ],
+  "stats": {
+    "execution_samples": 189035,
+    "total_samples": 189035
+  }
+}

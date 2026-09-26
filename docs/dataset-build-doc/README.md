@@ -11,8 +11,8 @@
 | 档案 | 库 | 内容 | 状态 |
 |---|---|---|---|
 | [`16task-pub-smoke16-0925/`](16task-pub-smoke16-0925/result.md) | `v1-store/datasets/16task-pub-smoke16-0925` | 公开16文件重新hash/全集scan与来源绑定；每任务首集16集source及4×4冒烟 | 全部PASS：16集/7898帧/5018样本，finalize1024零差，verify7898零失配；两正式库剩余预算PASS，smoke约7.36GB保留 |
-| [`16task-pub-1600ep/`](16task-pub-1600ep/README.md) | `v1-store/datasets/16task-pub-1600ep` | 公开16任务×100集，source、4×4 packed及仅供比较的自算统计量 | 起跑前十三节档案；须冒烟及实际预算通过，Beta待提交后记录 |
-| [`4task-counting-pub-400ep/`](4task-counting-pub-400ep/README.md) | `v1-store/datasets/4task-counting-pub-400ep` | 同一公开全集的四counting任务×100集，独立统计量和全覆盖子集比较 | 起跑前十三节档案；待完整库数据验收及剩余预算通过 |
+| [`16task-pub-1600ep/`](16task-pub-1600ep/README.md) | `v1-store/datasets/16task-pub-1600ep` | 公开16任务×100集，source、4×4 packed及仅供比较的自算统计量 | PASS：1600集/768897帧/476857样本，finalize1024最大差0、verify零失配，full20保存恢复PASS |
+| [`4task-counting-pub-400ep/`](4task-counting-pub-400ep/README.md) | `v1-store/datasets/4task-counting-pub-400ep` | 同一公开全集的四counting任务×100集，独立统计量和全覆盖子集比较 | PASS：400集/189035样本，独立norm与严格SUBSET_EQ通过，count20保存恢复PASS |
 | [`4task-v2-1600ep-motion-demopad17/`](4task-v2-1600ep-motion-demopad17/result.md) | `v1-store/datasets/4task-v2-1600ep-604f16da/motion` | 新 encoder、demo 最少 17 真帧补尾、71316 窗与独立 oracle | 全部 PASS：71316 token、8632 VAE 抽样窗逐位同，1600 补帧窗全覆盖 |
 | [`4task-v2-1600ep-604f16da/`](4task-v2-1600ep-604f16da/launch.md) | `v1-store/datasets/4task-v2-1600ep-604f16da` | 私有新版四任务全部 1600 primary；合并 H5、SigLIP、两档 framesamp 和独立 norm_stats | 已完成：全部数据验证与 20 步真实训练均通过（[result](4task-v2-1600ep-604f16da/result.md)） |
 | [`4task-v2-smoke28/`](4task-v2-smoke28/launch.md) | `v1-store/datasets/4task-v2-smoke28` | 新版四任务 H5 合并、SigLIP 与两档 framesamp 的 28 集冒烟 | 全部通过；临时数据按计划清理（[result](4task-v2-smoke28/result.md)） |

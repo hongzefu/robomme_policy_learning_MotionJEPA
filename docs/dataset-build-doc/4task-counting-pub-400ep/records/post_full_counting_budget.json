@@ -1,0 +1,51 @@
+{
+  "kind": "post_full_counting_remaining_build_budget",
+  "build_head": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+  "measured_utc": "2026-09-26T00:50:31Z",
+  "full_manifest_sha256": "fb1bdbcbcc176d15475332b728fa218bb545b4a8c9dcaa9ce1ec9e0bb17f174f",
+  "full_sizes_sha256": "a9a6b9772c51979b36face7fb85603a118801409e457421e3ffc53b7b6e1d9ef",
+  "full_log_sha256": "9ac411726e04cc5ead58d2dc5a940956d7824a1e21d6ec8e36abd7766bbda6ef",
+  "full_self_norm_stats_sha256": "c5d45b4bdb481ca46d18aeb32446bbedec34de435eef31d3212a179ee7868bcd",
+  "original_norm_stats_sha256": "f332bbd34ace1b6837cdc415b44f680896070a41564f9ce39016f1ebf99d1be5",
+  "full_measurement": {
+    "feature_files": 768897,
+    "pkl_files": 476857,
+    "feature_logical_bytes": 463607215047,
+    "feature_allocated_bytes": 466111512576,
+    "pkl_logical_bytes": 188620437906,
+    "pkl_allocated_bytes": 189461008384,
+    "max_feature_allocated_bytes": 606208,
+    "max_pkl_allocated_bytes": 397312
+  },
+  "smoke_floor": {
+    "feature_allocated_bytes": 606208,
+    "pkl_allocated_bytes": 397312
+  },
+  "effective_feature_allocated_bytes": 606208,
+  "effective_pkl_allocated_bytes": 397312,
+  "counting_totals": {
+    "episodes": 400,
+    "timesteps": 189035,
+    "exec_samples": 189035
+  },
+  "counting_max_timesteps": 1044,
+  "data_parts": {
+    "source_features": 114594529280,
+    "source_pkl": 75105873920,
+    "packed_image_state_row_digest": 12397671440,
+    "packed_position": 51314688,
+    "episode_metadata": 26214400
+  },
+  "data_estimated_bytes": 202175603728,
+  "data_with_ten_percent_bytes": 222393164101,
+  "extra_budget": {
+    "cache_environment_bytes": 68719476736,
+    "validation_checkpoint_temporary_bytes": 51539607552,
+    "logs_other_bytes": 17179869184
+  },
+  "reserve_bytes": 322122547200,
+  "required_free_bytes": 681954664773,
+  "available_bytes": 1065860091904,
+  "pass": true,
+  "note": "仅预算未构建的counting；full与smoke已在当前占用中。F/P取full全量stat与smoke下限较大值。"
+}

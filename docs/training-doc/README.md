@@ -10,8 +10,8 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`smoke-orig80k-full-0925/`](smoke-orig80k-full-0925/launch.md) | 公开16任务正式库20步四卡可读性、真实保存与加载 | 预建，等待本库完整数据验收 |
-| [`smoke-orig80k-count-0925/`](smoke-orig80k-count-0925/launch.md) | 公开counting正式库20步四卡可读性、真实保存与加载 | 预建，等待本库完整数据验收及新统计量 |
+| [`smoke-orig80k-full-0925/`](smoke-orig80k-full-0925/README.md) | 公开16任务正式库20步四卡可读性、原版norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；正式INPUT/100步/并跑/perf未验证 |
+| [`smoke-orig80k-count-0925/`](smoke-orig80k-count-0925/README.md) | 公开counting正式库20步四卡可读性、独立norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；正式INPUT/100步/并跑/perf未验证 |
 | [`orig80k-schema-0925/`](orig80k-schema-0925/result.md) | 既有40集库三样本CPU输入字段取证，保留dtype及精确数值摘要 | 共同字段精确数值相同；用户事后允许四键缺失/None等价，三样本按新规则通过，非正式全量验收 |
 | [`orig80k-env-0925/`](orig80k-env-0925/result.md) | 上游独立uv环境P0、源码恢复和模块来源验证 | P0通过，208项依赖版本一致、退出0；已恢复建库并批准四键缺失/None等价，训练仍须全部前置闸门 |
 

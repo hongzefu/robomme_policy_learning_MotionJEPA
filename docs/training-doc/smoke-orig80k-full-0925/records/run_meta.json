@@ -1,0 +1,30 @@
+{
+  "argv": [
+    "scripts/training/train.py",
+    "mme_vla_suite",
+    "--exp-name",
+    "smoke-orig80k-full-0925",
+    "--dataset-path",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/framesamp",
+    "--assets-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+    "--data.assets.assets-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite",
+    "--data.assets.asset-id",
+    "robomme",
+    "--checkpoint-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs",
+    "--weight-loader.params-path",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params",
+    "--model.use-history",
+    "--model.history-config",
+    "perceptual-framesamp-modul.yaml",
+    "--num-train-steps",
+    "20"
+  ],
+  "entry": "scripts/training/train.py",
+  "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/smoke-orig80k-full-0925",
+  "num_train_steps": 20,
+  "log_interval": 100,
+  "save_interval": 10000
+}

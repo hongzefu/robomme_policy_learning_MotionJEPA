@@ -1,0 +1,115 @@
+### 2026-09-26T00:55:43 cmd=uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5_counting4 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/source --worker-mode --worker-label gpu0 --worker-idx 0 --num-workers 8 --resume --report_every 2000
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[shard 0/8] episode=400 timestep=189035 raw_dir=/scratch/hongze/robomme_data_h5_counting4 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/source worker=gpu0
+Episode 63: timesteps=1044, exec_start=0, kept_indices=1345, task_goal='put two red cubes and three green cubes into the bin, then press the button to stop'
+EPISODE g=63 record_dataset_BinFill.h5#63 steps=1044 took=155.7s rate=6.707 step/s worker=gpu0
+Episode 46: timesteps=926, exec_start=0, kept_indices=1103, task_goal='put four red cubes into the bin, then press the button to stop'
+EPISODE g=46 record_dataset_BinFill.h5#46 steps=926 took=92.6s rate=9.996 step/s worker=gpu0
+Episode 66: timesteps=846, exec_start=0, kept_indices=938, task_goal='put two red cubes and two green cubes into the bin, then press the button to stop'
+PROGRESS steps=2816 elapsed=333.1s rate=8.454 step/s
+EPISODE g=66 record_dataset_BinFill.h5#66 steps=846 took=84.7s rate=9.983 step/s worker=gpu0
+Episode 34: timesteps=828, exec_start=0, kept_indices=990, task_goal='put two red cubes and two blue cubes into the bin, then press the button to stop'
+EPISODE g=34 record_dataset_BinFill.h5#34 steps=828 took=83.0s rate=9.971 step/s worker=gpu0
+Episode 22: timesteps=811, exec_start=0, kept_indices=904, task_goal='put three blue cubes and one green cube into the bin, then press the button to stop'
+PROGRESS steps=4455 elapsed=497.6s rate=8.952 step/s
+EPISODE g=22 record_dataset_BinFill.h5#22 steps=811 took=81.5s rate=9.953 step/s worker=gpu0
+Episode 183: timesteps=723, exec_start=0, kept_indices=874, task_goal='pick up the red cube and place it on the target, repeating this action four times, then press the button to stop'
+EPISODE g=183 record_dataset_PickXtimes.h5#83 steps=723 took=72.7s rate=9.938 step/s worker=gpu0
+Episode 20: timesteps=711, exec_start=0, kept_indices=703, task_goal='put three red cubes into the bin, then press the button to stop'
+EPISODE g=20 record_dataset_BinFill.h5#20 steps=711 took=71.4s rate=9.963 step/s worker=gpu0
+Episode 52: timesteps=690, exec_start=0, kept_indices=731, task_goal='put three red cubes into the bin, then press the button to stop'
+PROGRESS steps=6579 elapsed=710.9s rate=9.254 step/s
+EPISODE g=52 record_dataset_BinFill.h5#52 steps=690 took=69.0s rate=9.994 step/s worker=gpu0
+Episode 14: timesteps=645, exec_start=0, kept_indices=774, task_goal='put three red cubes into the bin, then press the button to stop'
+EPISODE g=14 record_dataset_BinFill.h5#14 steps=645 took=64.7s rate=9.970 step/s worker=gpu0
+Episode 9: timesteps=629, exec_start=0, kept_indices=611, task_goal='put three blue cubes into the bin, then press the button to stop'
+EPISODE g=9 record_dataset_BinFill.h5#9 steps=629 took=63.2s rate=9.956 step/s worker=gpu0
+Episode 128: timesteps=616, exec_start=0, kept_indices=669, task_goal='pick up the blue cube and place it on the target, repeating this action three times, then press the button to stop'
+PROGRESS steps=8469 elapsed=900.4s rate=9.405 step/s
+EPISODE g=128 record_dataset_PickXtimes.h5#28 steps=616 took=61.6s rate=9.997 step/s worker=gpu0
+Episode 157: timesteps=581, exec_start=0, kept_indices=652, task_goal='pick up the blue cube and place it on the target, repeating this action three times, then press the button to stop'
+EPISODE g=157 record_dataset_PickXtimes.h5#57 steps=581 took=58.4s rate=9.952 step/s worker=gpu0
+Episode 250: timesteps=578, exec_start=0, kept_indices=261, task_goal='press the button to stop the cube just as it reaches the target for the fifth time'
+EPISODE g=250 record_dataset_StopCube.h5#50 steps=578 took=58.1s rate=9.941 step/s worker=gpu0
+Episode 208: timesteps=574, exec_start=0, kept_indices=290, task_goal='press the button to stop the cube just as it reaches the target for the fifth time'
+PROGRESS steps=10202 elapsed=1075.0s rate=9.491 step/s
+EPISODE g=208 record_dataset_StopCube.h5#8 steps=574 took=57.7s rate=9.943 step/s worker=gpu0
+Episode 173: timesteps=560, exec_start=0, kept_indices=630, task_goal='pick up the blue cube and place it on the target, repeating this action three times, then press the button to stop'
+EPISODE g=173 record_dataset_PickXtimes.h5#73 steps=560 took=56.3s rate=9.941 step/s worker=gpu0
+Episode 316: timesteps=547, exec_start=0, kept_indices=660, task_goal='pick up the blue cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+EPISODE g=316 record_dataset_SwingXtimes.h5#16 steps=547 took=54.8s rate=9.984 step/s worker=gpu0
+Episode 303: timesteps=535, exec_start=0, kept_indices=787, task_goal='pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+EPISODE g=303 record_dataset_SwingXtimes.h5#3 steps=535 took=53.8s rate=9.946 step/s worker=gpu0
+Episode 343: timesteps=499, exec_start=0, kept_indices=605, task_goal='pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+PROGRESS steps=12343 elapsed=1290.3s rate=9.566 step/s
+EPISODE g=343 record_dataset_SwingXtimes.h5#43 steps=499 took=50.0s rate=9.989 step/s worker=gpu0
+Episode 348: timesteps=492, exec_start=0, kept_indices=630, task_goal='pick up the blue cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+EPISODE g=348 record_dataset_SwingXtimes.h5#48 steps=492 took=49.3s rate=9.978 step/s worker=gpu0
+Episode 359: timesteps=488, exec_start=0, kept_indices=559, task_goal='pick up the blue cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+EPISODE g=359 record_dataset_SwingXtimes.h5#59 steps=488 took=49.1s rate=9.947 step/s worker=gpu0
+Episode 399: timesteps=472, exec_start=0, kept_indices=523, task_goal='pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+EPISODE g=399 record_dataset_SwingXtimes.h5#99 steps=472 took=47.5s rate=9.946 step/s worker=gpu0
+Episode 353: timesteps=467, exec_start=0, kept_indices=546, task_goal='pick up the blue cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+PROGRESS steps=14262 elapsed=1483.2s rate=9.616 step/s
+EPISODE g=353 record_dataset_SwingXtimes.h5#53 steps=467 took=46.8s rate=9.983 step/s worker=gpu0
+Episode 8: timesteps=462, exec_start=0, kept_indices=587, task_goal='put two blue cubes into the bin, then press the button to stop'
+EPISODE g=8 record_dataset_BinFill.h5#8 steps=462 took=46.5s rate=9.940 step/s worker=gpu0
+Episode 391: timesteps=459, exec_start=0, kept_indices=583, task_goal='pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+EPISODE g=391 record_dataset_SwingXtimes.h5#91 steps=459 took=46.2s rate=9.931 step/s worker=gpu0
+Episode 192: timesteps=450, exec_start=0, kept_indices=598, task_goal='pick up the blue cube and place it on the target, repeating this action two times, then press the button to stop'
+EPISODE g=192 record_dataset_PickXtimes.h5#92 steps=450 took=45.1s rate=9.974 step/s worker=gpu0
+Episode 85: timesteps=448, exec_start=0, kept_indices=408, task_goal='put two green cubes into the bin, then press the button to stop'
+PROGRESS steps=16081 elapsed=1666.5s rate=9.650 step/s
+EPISODE g=85 record_dataset_BinFill.h5#85 steps=448 took=45.1s rate=9.943 step/s worker=gpu0
+Episode 197: timesteps=437, exec_start=0, kept_indices=537, task_goal='pick up the green cube and place it on the target, repeating this action two times, then press the button to stop'
+EPISODE g=197 record_dataset_PickXtimes.h5#97 steps=437 took=44.0s rate=9.939 step/s worker=gpu0
+Episode 38: timesteps=427, exec_start=0, kept_indices=503, task_goal='put one red cube and one green cube into the bin, then press the button to stop'
+EPISODE g=38 record_dataset_BinFill.h5#38 steps=427 took=43.0s rate=9.936 step/s worker=gpu0
+Episode 120: timesteps=421, exec_start=0, kept_indices=407, task_goal='pick up the red cube and place it on the target, repeating this action two times, then press the button to stop'
+EPISODE g=120 record_dataset_PickXtimes.h5#20 steps=421 took=42.3s rate=9.944 step/s worker=gpu0
+Episode 360: timesteps=408, exec_start=0, kept_indices=471, task_goal='pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion two times, finally press the button to stop'
+EPISODE g=360 record_dataset_SwingXtimes.h5#60 steps=408 took=41.1s rate=9.927 step/s worker=gpu0
+Episode 258: timesteps=402, exec_start=0, kept_indices=248, task_goal='press the button to stop the cube just as it reaches the target for the fifth time'
+PROGRESS steps=18176 elapsed=1878.1s rate=9.678 step/s
+EPISODE g=258 record_dataset_StopCube.h5#58 steps=402 took=40.4s rate=9.948 step/s worker=gpu0
+Episode 326: timesteps=398, exec_start=0, kept_indices=407, task_goal='pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion two times, finally press the button to stop'
+EPISODE g=326 record_dataset_SwingXtimes.h5#26 steps=398 took=40.1s rate=9.928 step/s worker=gpu0
+Episode 373: timesteps=391, exec_start=0, kept_indices=431, task_goal='pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion two times, finally press the button to stop'
+EPISODE g=373 record_dataset_SwingXtimes.h5#73 steps=391 took=39.3s rate=9.941 step/s worker=gpu0
+Episode 1: timesteps=366, exec_start=0, kept_indices=429, task_goal='put one red cube into the bin, then press the button to stop'
+EPISODE g=1 record_dataset_BinFill.h5#1 steps=366 took=36.9s rate=9.928 step/s worker=gpu0
+Episode 346: timesteps=349, exec_start=0, kept_indices=337, task_goal='pick up the red cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop'
+EPISODE g=346 record_dataset_SwingXtimes.h5#46 steps=349 took=35.2s rate=9.924 step/s worker=gpu0
+Episode 324: timesteps=337, exec_start=0, kept_indices=393, task_goal='pick up the red cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop'
+PROGRESS steps=20017 elapsed=2064.2s rate=9.697 step/s
+EPISODE g=324 record_dataset_SwingXtimes.h5#24 steps=337 took=33.9s rate=9.927 step/s worker=gpu0
+Episode 230: timesteps=332, exec_start=0, kept_indices=200, task_goal='press the button to stop the cube just as it reaches the target for the third time'
+EPISODE g=230 record_dataset_StopCube.h5#30 steps=332 took=33.4s rate=9.930 step/s worker=gpu0
+Episode 178: timesteps=318, exec_start=0, kept_indices=271, task_goal='pick up the blue cube and place it on the target, then press the button to stop'
+EPISODE g=178 record_dataset_PickXtimes.h5#78 steps=318 took=32.0s rate=9.928 step/s worker=gpu0
+Episode 233: timesteps=314, exec_start=0, kept_indices=244, task_goal='press the button to stop the cube just as it reaches the target for the fourth time'
+EPISODE g=233 record_dataset_StopCube.h5#33 steps=314 took=31.6s rate=9.931 step/s worker=gpu0
+Episode 198: timesteps=309, exec_start=0, kept_indices=293, task_goal='pick up the green cube and place it on the target, then press the button to stop'
+EPISODE g=198 record_dataset_PickXtimes.h5#98 steps=309 took=31.0s rate=9.952 step/s worker=gpu0
+Episode 278: timesteps=305, exec_start=0, kept_indices=205, task_goal='press the button to stop the cube just as it reaches the target for the fifth time'
+EPISODE g=278 record_dataset_StopCube.h5#78 steps=305 took=30.7s rate=9.943 step/s worker=gpu0
+Episode 144: timesteps=300, exec_start=0, kept_indices=356, task_goal='pick up the red cube and place it on the target, then press the button to stop'
+EPISODE g=144 record_dataset_PickXtimes.h5#44 steps=300 took=30.2s rate=9.942 step/s worker=gpu0
+Episode 45: timesteps=288, exec_start=0, kept_indices=306, task_goal='put one red cube into the bin, then press the button to stop'
+PROGRESS steps=22183 elapsed=2283.7s rate=9.714 step/s
+EPISODE g=45 record_dataset_BinFill.h5#45 steps=288 took=29.0s rate=9.933 step/s worker=gpu0
+Episode 49: timesteps=282, exec_start=0, kept_indices=357, task_goal='put one red cube into the bin, then press the button to stop'
+EPISODE g=49 record_dataset_BinFill.h5#49 steps=282 took=28.4s rate=9.932 step/s worker=gpu0
+Episode 286: timesteps=249, exec_start=0, kept_indices=170, task_goal='press the button to stop the cube just as it reaches the target for the fourth time'
+EPISODE g=286 record_dataset_StopCube.h5#86 steps=249 took=25.0s rate=9.947 step/s worker=gpu0
+Episode 202: timesteps=243, exec_start=0, kept_indices=185, task_goal='press the button to stop the cube just as it reaches the target for the third time'
+EPISODE g=202 record_dataset_StopCube.h5#2 steps=243 took=24.5s rate=9.938 step/s worker=gpu0
+Episode 259: timesteps=235, exec_start=0, kept_indices=200, task_goal='press the button to stop the cube just as it reaches the target for the third time'
+EPISODE g=259 record_dataset_StopCube.h5#59 steps=235 took=23.6s rate=9.938 step/s worker=gpu0
+Episode 299: timesteps=211, exec_start=0, kept_indices=171, task_goal='press the button to stop the cube just as it reaches the target for the second time'
+EPISODE g=299 record_dataset_StopCube.h5#99 steps=211 took=21.2s rate=9.963 step/s worker=gpu0
+Episode 292: timesteps=157, exec_start=0, kept_indices=152, task_goal='press the button to stop the cube just as it reaches the target for the second time'
+EPISODE g=292 record_dataset_StopCube.h5#92 steps=157 took=15.8s rate=9.958 step/s worker=gpu0
+Episode 226: timesteps=121, exec_start=0, kept_indices=147, task_goal='press the button to stop the cube just as it reaches the target for the second time'
+EPISODE g=226 record_dataset_StopCube.h5#26 steps=121 took=12.1s rate=9.981 step/s worker=gpu0
+SHARD_DONE shard=0 episodes=50 skipped=85 steps=23681 elapsed=2436.3s rate=9.720 step/s steady_steps=22637 rate_steady=9.926 step/s

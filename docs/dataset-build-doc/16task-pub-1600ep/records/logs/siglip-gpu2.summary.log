@@ -1,0 +1,452 @@
+### 2026-09-25T21:44:40 cmd=uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_data_h5 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/source --worker-mode --worker-label gpu2 --worker-idx 2 --num-workers 8 --resume --report_every 2000
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[shard 2/8] episode=1600 timestep=768897 raw_dir=/scratch/hongze/robomme_data_h5 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/source worker=gpu2
+Episode 1230: timesteps=1320, exec_start=1120, kept_indices=1702, task_goal='watch the video carefully, then place the blue cube on the third target it was previously placed on'
+EPISODE g=1230 record_dataset_VideoPlaceOrder.h5#30 steps=1320 took=178.5s rate=7.393 step/s worker=gpu2
+Episode 1226: timesteps=1314, exec_start=1108, kept_indices=2025, task_goal='watch the video carefully, then place the blue cube on the first target it was previously placed on'
+PROGRESS steps=2634 elapsed=310.6s rate=8.479 step/s
+EPISODE g=1226 record_dataset_VideoPlaceOrder.h5#26 steps=1314 took=132.1s rate=9.948 step/s worker=gpu2
+Episode 1222: timesteps=1296, exec_start=1099, kept_indices=1698, task_goal='watch the video carefully, then place the red cube on the third target it was previously placed on'
+EPISODE g=1222 record_dataset_VideoPlaceOrder.h5#22 steps=1296 took=131.2s rate=9.881 step/s worker=gpu2
+Episode 1269: timesteps=1270, exec_start=1058, kept_indices=1839, task_goal='watch the video carefully, then place the red cube on the first target it was previously placed on'
+PROGRESS steps=5200 elapsed=569.4s rate=9.133 step/s
+EPISODE g=1269 record_dataset_VideoPlaceOrder.h5#69 steps=1270 took=127.6s rate=9.955 step/s worker=gpu2
+Episode 1200: timesteps=1200, exec_start=940, kept_indices=1708, task_goal='watch the video carefully, then place the blue cube on the first target it was previously placed on'
+PROGRESS steps=6400 elapsed=689.7s rate=9.279 step/s
+EPISODE g=1200 record_dataset_VideoPlaceOrder.h5#0 steps=1200 took=120.3s rate=9.973 step/s worker=gpu2
+Episode 1273: timesteps=1135, exec_start=936, kept_indices=1627, task_goal='watch the video carefully, then place the green cube on the second target it was previously placed on'
+EPISODE g=1273 record_dataset_VideoPlaceOrder.h5#73 steps=1135 took=114.5s rate=9.916 step/s worker=gpu2
+Episode 1212: timesteps=1116, exec_start=903, kept_indices=1677, task_goal='watch the video carefully, then place the blue cube on the second target it was previously placed on'
+PROGRESS steps=8651 elapsed=917.0s rate=9.434 step/s
+EPISODE g=1212 record_dataset_VideoPlaceOrder.h5#12 steps=1116 took=112.8s rate=9.896 step/s worker=gpu2
+Episode 1104: timesteps=1089, exec_start=803, kept_indices=1425, task_goal='watch the video carefully, then place the green cube on the target right after the button was pressed'
+EPISODE g=1104 record_dataset_VideoPlaceButton.h5#4 steps=1089 took=110.2s rate=9.882 step/s worker=gpu2
+Episode 1100: timesteps=1048, exec_start=765, kept_indices=1442, task_goal='watch the video carefully, then place the red cube on the target right after the button was pressed'
+PROGRESS steps=10788 elapsed=1133.3s rate=9.519 step/s
+EPISODE g=1100 record_dataset_VideoPlaceButton.h5#0 steps=1048 took=106.1s rate=9.881 step/s worker=gpu2
+Episode 71: timesteps=1011, exec_start=0, kept_indices=902, task_goal='put three blue cubes and two green cubes into the bin, then press the button to stop'
+EPISODE g=71 record_dataset_BinFill.h5#71 steps=1011 took=101.8s rate=9.933 step/s worker=gpu2
+Episode 1238: timesteps=1003, exec_start=803, kept_indices=1286, task_goal='watch the video carefully, then place the red cube on the first target it was previously placed on'
+PROGRESS steps=12802 elapsed=1336.3s rate=9.580 step/s
+EPISODE g=1238 record_dataset_VideoPlaceOrder.h5#38 steps=1003 took=101.1s rate=9.920 step/s worker=gpu2
+Episode 1261: timesteps=997, exec_start=792, kept_indices=1593, task_goal='watch the video carefully, then place the green cube on the second target it was previously placed on'
+EPISODE g=1261 record_dataset_VideoPlaceOrder.h5#61 steps=997 took=100.2s rate=9.952 step/s worker=gpu2
+Episode 1236: timesteps=988, exec_start=781, kept_indices=1602, task_goal='watch the video carefully, then place the green cube on the second target it was previously placed on'
+PROGRESS steps=14787 elapsed=1536.1s rate=9.626 step/s
+EPISODE g=1236 record_dataset_VideoPlaceOrder.h5#36 steps=988 took=99.7s rate=9.914 step/s worker=gpu2
+Episode 1197: timesteps=983, exec_start=770, kept_indices=1435, task_goal='watch the video carefully, then place the green cube on the target right after the button was pressed'
+EPISODE g=1197 record_dataset_VideoPlaceButton.h5#97 steps=983 took=98.6s rate=9.973 step/s worker=gpu2
+Episode 1135: timesteps=976, exec_start=781, kept_indices=1197, task_goal='watch the video carefully, then place the blue cube on the target right after the button was pressed'
+PROGRESS steps=16746 elapsed=1733.2s rate=9.662 step/s
+EPISODE g=1135 record_dataset_VideoPlaceButton.h5#35 steps=976 took=98.5s rate=9.911 step/s worker=gpu2
+Episode 1174: timesteps=971, exec_start=777, kept_indices=1360, task_goal='watch the video carefully, then place the red cube on the target right after the button was pressed'
+EPISODE g=1174 record_dataset_VideoPlaceButton.h5#74 steps=971 took=97.8s rate=9.924 step/s worker=gpu2
+Episode 27: timesteps=964, exec_start=0, kept_indices=1036, task_goal='put three blue cubes and two green cubes into the bin, then press the button to stop'
+PROGRESS steps=18681 elapsed=1928.2s rate=9.688 step/s
+EPISODE g=27 record_dataset_BinFill.h5#27 steps=964 took=97.2s rate=9.921 step/s worker=gpu2
+Episode 1149: timesteps=961, exec_start=765, kept_indices=1191, task_goal='watch the video carefully, then place the red cube on the target right before the button was pressed'
+EPISODE g=1149 record_dataset_VideoPlaceButton.h5#49 steps=961 took=96.9s rate=9.916 step/s worker=gpu2
+Episode 1116: timesteps=957, exec_start=761, kept_indices=1120, task_goal='watch the video carefully, then place the red cube on the target right after the button was pressed'
+PROGRESS steps=20599 elapsed=2121.6s rate=9.709 step/s
+EPISODE g=1116 record_dataset_VideoPlaceButton.h5#16 steps=957 took=96.4s rate=9.923 step/s worker=gpu2
+Episode 1109: timesteps=954, exec_start=751, kept_indices=1062, task_goal='watch the video carefully, then place the blue cube on the target right before the button was pressed'
+EPISODE g=1109 record_dataset_VideoPlaceButton.h5#9 steps=954 took=96.1s rate=9.927 step/s worker=gpu2
+Episode 1114: timesteps=951, exec_start=747, kept_indices=1309, task_goal='watch the video carefully, then place the red cube on the target right after the button was pressed'
+PROGRESS steps=22504 elapsed=2313.2s rate=9.728 step/s
+EPISODE g=1114 record_dataset_VideoPlaceButton.h5#14 steps=951 took=95.5s rate=9.962 step/s worker=gpu2
+Episode 1193: timesteps=946, exec_start=743, kept_indices=1489, task_goal='watch the video carefully, then place the red cube on the target right after the button was pressed'
+EPISODE g=1193 record_dataset_VideoPlaceButton.h5#93 steps=946 took=95.2s rate=9.938 step/s worker=gpu2
+Episode 1150: timesteps=942, exec_start=746, kept_indices=1116, task_goal='watch the video carefully, then place the green cube on the target right before the button was pressed'
+PROGRESS steps=24392 elapsed=2503.3s rate=9.744 step/s
+EPISODE g=1150 record_dataset_VideoPlaceButton.h5#50 steps=942 took=94.9s rate=9.926 step/s worker=gpu2
+Episode 1160: timesteps=935, exec_start=740, kept_indices=1115, task_goal='watch the video carefully, then place the red cube on the target right before the button was pressed'
+EPISODE g=1160 record_dataset_VideoPlaceButton.h5#60 steps=935 took=94.1s rate=9.933 step/s worker=gpu2
+Episode 1130: timesteps=929, exec_start=736, kept_indices=1149, task_goal='watch the video carefully, then place the green cube on the target right after the button was pressed'
+PROGRESS steps=26256 elapsed=2691.1s rate=9.757 step/s
+EPISODE g=1130 record_dataset_VideoPlaceButton.h5#30 steps=929 took=93.6s rate=9.930 step/s worker=gpu2
+Episode 1165: timesteps=920, exec_start=727, kept_indices=1120, task_goal='watch the video carefully, then place the red cube on the target right after the button was pressed'
+EPISODE g=1165 record_dataset_VideoPlaceButton.h5#65 steps=920 took=92.9s rate=9.903 step/s worker=gpu2
+Episode 1119: timesteps=900, exec_start=703, kept_indices=1233, task_goal='watch the video carefully, then place the red cube on the target right before the button was pressed'
+PROGRESS steps=28076 elapsed=2875.0s rate=9.766 step/s
+EPISODE g=1119 record_dataset_VideoPlaceButton.h5#19 steps=900 took=90.8s rate=9.916 step/s worker=gpu2
+Episode 75: timesteps=894, exec_start=0, kept_indices=956, task_goal='put four blue cubes and one green cube into the bin, then press the button to stop'
+EPISODE g=75 record_dataset_BinFill.h5#75 steps=894 took=89.8s rate=9.958 step/s worker=gpu2
+Episode 791: timesteps=864, exec_start=0, kept_indices=861, task_goal='pick up the red cube and place it on the target, repeating this action five times, then press the button to stop'
+EPISODE g=791 record_dataset_PickXtimes.h5#91 steps=864 took=87.1s rate=9.923 step/s worker=gpu2
+Episode 31: timesteps=842, exec_start=0, kept_indices=992, task_goal='put three red cubes and one green cube into the bin, then press the button to stop'
+PROGRESS steps=30676 elapsed=3136.8s rate=9.779 step/s
+EPISODE g=31 record_dataset_BinFill.h5#31 steps=842 took=84.7s rate=9.946 step/s worker=gpu2
+Episode 755: timesteps=841, exec_start=0, kept_indices=919, task_goal='pick up the green cube and place it on the target, repeating this action five times, then press the button to stop'
+EPISODE g=755 record_dataset_PickXtimes.h5#55 steps=841 took=84.7s rate=9.934 step/s worker=gpu2
+Episode 1389: timesteps=822, exec_start=311, kept_indices=900, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop'
+PROGRESS steps=32339 elapsed=3304.7s rate=9.786 step/s
+EPISODE g=1389 record_dataset_VideoRepick.h5#89 steps=822 took=83.1s rate=9.898 step/s worker=gpu2
+Episode 1358: timesteps=807, exec_start=309, kept_indices=1013, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop'
+EPISODE g=1358 record_dataset_VideoRepick.h5#58 steps=807 took=81.3s rate=9.931 step/s worker=gpu2
+Episode 90: timesteps=789, exec_start=0, kept_indices=719, task_goal='put one red cube and three green cubes into the bin, then press the button to stop'
+EPISODE g=90 record_dataset_BinFill.h5#90 steps=789 took=79.8s rate=9.887 step/s worker=gpu2
+Episode 7: timesteps=785, exec_start=0, kept_indices=785, task_goal='put two red cubes and two blue cubes into the bin, then press the button to stop'
+PROGRESS steps=34720 elapsed=3545.2s rate=9.793 step/s
+EPISODE g=7 record_dataset_BinFill.h5#7 steps=785 took=79.3s rate=9.903 step/s worker=gpu2
+Episode 1341: timesteps=724, exec_start=317, kept_indices=726, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop'
+EPISODE g=1341 record_dataset_VideoRepick.h5#41 steps=724 took=73.1s rate=9.910 step/s worker=gpu2
+Episode 783: timesteps=723, exec_start=0, kept_indices=874, task_goal='pick up the red cube and place it on the target, repeating this action four times, then press the button to stop'
+PROGRESS steps=36167 elapsed=3691.3s rate=9.798 step/s
+EPISODE g=783 record_dataset_PickXtimes.h5#83 steps=723 took=72.7s rate=9.938 step/s worker=gpu2
+Episode 747: timesteps=703, exec_start=0, kept_indices=827, task_goal='pick up the blue cube and place it on the target, repeating this action four times, then press the button to stop'
+EPISODE g=747 record_dataset_PickXtimes.h5#47 steps=703 took=70.6s rate=9.961 step/s worker=gpu2
+Episode 1385: timesteps=699, exec_start=313, kept_indices=918, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop'
+EPISODE g=1385 record_dataset_VideoRepick.h5#85 steps=699 took=70.3s rate=9.941 step/s worker=gpu2
+Episode 731: timesteps=686, exec_start=0, kept_indices=1048, task_goal='pick up the blue cube and place it on the target, repeating this action four times, then press the button to stop'
+PROGRESS steps=38255 elapsed=3901.4s rate=9.806 step/s
+EPISODE g=731 record_dataset_PickXtimes.h5#31 steps=686 took=69.0s rate=9.948 step/s worker=gpu2
+Episode 1305: timesteps=648, exec_start=312, kept_indices=818, task_goal='watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop'
+EPISODE g=1305 record_dataset_VideoRepick.h5#5 steps=648 took=65.8s rate=9.849 step/s worker=gpu2
+Episode 1331: timesteps=644, exec_start=157, kept_indices=963, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop'
+EPISODE g=1331 record_dataset_VideoRepick.h5#31 steps=644 took=64.9s rate=9.918 step/s worker=gpu2
+Episode 9: timesteps=629, exec_start=0, kept_indices=611, task_goal='put three blue cubes into the bin, then press the button to stop'
+PROGRESS steps=40176 elapsed=4095.8s rate=9.809 step/s
+EPISODE g=9 record_dataset_BinFill.h5#9 steps=629 took=63.2s rate=9.953 step/s worker=gpu2
+Episode 94: timesteps=628, exec_start=0, kept_indices=628, task_goal='put two red cubes and one green cube into the bin, then press the button to stop'
+EPISODE g=94 record_dataset_BinFill.h5#94 steps=628 took=63.4s rate=9.903 step/s worker=gpu2
+Episode 1001: timesteps=608, exec_start=0, kept_indices=768, task_goal='pick up the green cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+EPISODE g=1001 record_dataset_SwingXtimes.h5#1 steps=608 took=61.3s rate=9.925 step/s worker=gpu2
+Episode 843: timesteps=600, exec_start=300, kept_indices=841, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+PROGRESS steps=42012 elapsed=4281.8s rate=9.812 step/s
+EPISODE g=843 record_dataset_RouteStick.h5#43 steps=600 took=61.0s rate=9.834 step/s worker=gpu2
+Episode 1318: timesteps=588, exec_start=308, kept_indices=809, task_goal='watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop'
+EPISODE g=1318 record_dataset_VideoRepick.h5#18 steps=588 took=59.7s rate=9.848 step/s worker=gpu2
+Episode 757: timesteps=581, exec_start=0, kept_indices=652, task_goal='pick up the blue cube and place it on the target, repeating this action three times, then press the button to stop'
+EPISODE g=757 record_dataset_PickXtimes.h5#57 steps=581 took=58.5s rate=9.940 step/s worker=gpu2
+Episode 950: timesteps=578, exec_start=0, kept_indices=261, task_goal='press the button to stop the cube just as it reaches the target for the fifth time'
+EPISODE g=950 record_dataset_StopCube.h5#50 steps=578 took=58.3s rate=9.919 step/s worker=gpu2
+Episode 1365: timesteps=575, exec_start=307, kept_indices=715, task_goal='watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop'
+PROGRESS steps=44334 elapsed=4516.6s rate=9.816 step/s
+EPISODE g=1365 record_dataset_VideoRepick.h5#65 steps=575 took=57.9s rate=9.933 step/s worker=gpu2
+Episode 1067: timesteps=570, exec_start=0, kept_indices=562, task_goal='pick up the green cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+EPISODE g=1067 record_dataset_SwingXtimes.h5#67 steps=570 took=57.4s rate=9.928 step/s worker=gpu2
+Episode 722: timesteps=568, exec_start=0, kept_indices=576, task_goal='pick up the green cube and place it on the target, repeating this action three times, then press the button to stop'
+EPISODE g=722 record_dataset_PickXtimes.h5#22 steps=568 took=57.0s rate=9.970 step/s worker=gpu2
+Episode 383: timesteps=560, exec_start=280, kept_indices=702, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+PROGRESS steps=46032 elapsed=4687.5s rate=9.820 step/s
+EPISODE g=383 record_dataset_InsertPeg.h5#83 steps=560 took=56.3s rate=9.942 step/s worker=gpu2
+Episode 627: timesteps=556, exec_start=0, kept_indices=454, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+EPISODE g=627 record_dataset_PickHighlight.h5#27 steps=556 took=56.0s rate=9.930 step/s worker=gpu2
+Episode 0: timesteps=550, exec_start=0, kept_indices=590, task_goal='put two red cubes into the bin, then press the button to stop'
+EPISODE g=0 record_dataset_BinFill.h5#0 steps=550 took=55.5s rate=9.919 step/s worker=gpu2
+Episode 732: timesteps=540, exec_start=0, kept_indices=742, task_goal='pick up the green cube and place it on the target, repeating this action three times, then press the button to stop'
+EPISODE g=732 record_dataset_PickXtimes.h5#32 steps=540 took=54.2s rate=9.955 step/s worker=gpu2
+Episode 1049: timesteps=536, exec_start=0, kept_indices=586, task_goal='pick up the blue cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+PROGRESS steps=48214 elapsed=4907.8s rate=9.824 step/s
+EPISODE g=1049 record_dataset_SwingXtimes.h5#49 steps=536 took=53.9s rate=9.946 step/s worker=gpu2
+Episode 667: timesteps=529, exec_start=0, kept_indices=598, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+EPISODE g=667 record_dataset_PickHighlight.h5#67 steps=529 took=53.4s rate=9.907 step/s worker=gpu2
+Episode 372: timesteps=524, exec_start=262, kept_indices=559, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+EPISODE g=372 record_dataset_InsertPeg.h5#72 steps=524 took=52.6s rate=9.957 step/s worker=gpu2
+Episode 442: timesteps=520, exec_start=299, kept_indices=636, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=442 record_dataset_MoveCube.h5#42 steps=520 took=52.3s rate=9.939 step/s worker=gpu2
+Episode 699: timesteps=511, exec_start=0, kept_indices=670, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+PROGRESS steps=50298 elapsed=5118.6s rate=9.827 step/s
+EPISODE g=699 record_dataset_PickHighlight.h5#99 steps=511 took=51.4s rate=9.932 step/s worker=gpu2
+Episode 62: timesteps=503, exec_start=0, kept_indices=386, task_goal='put two red cubes into the bin, then press the button to stop'
+EPISODE g=62 record_dataset_BinFill.h5#62 steps=503 took=50.7s rate=9.929 step/s worker=gpu2
+Episode 803: timesteps=500, exec_start=250, kept_indices=615, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+EPISODE g=803 record_dataset_RouteStick.h5#3 steps=500 took=50.5s rate=9.894 step/s worker=gpu2
+Episode 894: timesteps=500, exec_start=250, kept_indices=741, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+EPISODE g=894 record_dataset_RouteStick.h5#94 steps=500 took=50.3s rate=9.931 step/s worker=gpu2
+Episode 1075: timesteps=497, exec_start=0, kept_indices=712, task_goal='pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+PROGRESS steps=52298 elapsed=5320.4s rate=9.830 step/s
+EPISODE g=1075 record_dataset_SwingXtimes.h5#75 steps=497 took=49.8s rate=9.980 step/s worker=gpu2
+Episode 311: timesteps=494, exec_start=247, kept_indices=490, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+EPISODE g=311 record_dataset_InsertPeg.h5#11 steps=494 took=49.7s rate=9.946 step/s worker=gpu2
+Episode 305: timesteps=492, exec_start=247, kept_indices=549, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+EPISODE g=305 record_dataset_InsertPeg.h5#5 steps=492 took=49.4s rate=9.953 step/s worker=gpu2
+Episode 417: timesteps=491, exec_start=255, kept_indices=649, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=417 record_dataset_MoveCube.h5#17 steps=491 took=49.4s rate=9.945 step/s worker=gpu2
+Episode 322: timesteps=488, exec_start=243, kept_indices=768, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+PROGRESS steps=54263 elapsed=5518.0s rate=9.834 step/s
+EPISODE g=322 record_dataset_InsertPeg.h5#22 steps=488 took=49.1s rate=9.942 step/s worker=gpu2
+Episode 1059: timesteps=488, exec_start=0, kept_indices=559, task_goal='pick up the blue cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+EPISODE g=1059 record_dataset_SwingXtimes.h5#59 steps=488 took=49.1s rate=9.942 step/s worker=gpu2
+Episode 519: timesteps=484, exec_start=242, kept_indices=541, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=519 record_dataset_PatternLock.h5#19 steps=484 took=48.7s rate=9.934 step/s worker=gpu2
+Episode 466: timesteps=481, exec_start=271, kept_indices=587, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=466 record_dataset_MoveCube.h5#66 steps=481 took=48.4s rate=9.933 step/s worker=gpu2
+Episode 380: timesteps=478, exec_start=239, kept_indices=387, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+PROGRESS steps=56194 elapsed=5712.9s rate=9.836 step/s
+EPISODE g=380 record_dataset_InsertPeg.h5#80 steps=478 took=48.0s rate=9.963 step/s worker=gpu2
+Episode 329: timesteps=477, exec_start=242, kept_indices=960, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+EPISODE g=329 record_dataset_InsertPeg.h5#29 steps=477 took=48.0s rate=9.944 step/s worker=gpu2
+Episode 1036: timesteps=475, exec_start=0, kept_indices=611, task_goal='pick up the green cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion three times, finally press the button to stop'
+EPISODE g=1036 record_dataset_SwingXtimes.h5#36 steps=475 took=47.6s rate=9.970 step/s worker=gpu2
+Episode 279: timesteps=473, exec_start=0, kept_indices=721, task_goal='first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube'
+EPISODE g=279 record_dataset_ButtonUnmaskSwap.h5#79 steps=473 took=47.6s rate=9.946 step/s worker=gpu2
+Episode 1559: timesteps=472, exec_start=216, kept_indices=644, task_goal='watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube'
+PROGRESS steps=58091 elapsed=5903.7s rate=9.840 step/s
+EPISODE g=1559 record_dataset_VideoUnmaskSwap.h5#59 steps=472 took=47.6s rate=9.921 step/s worker=gpu2
+Episode 988: timesteps=469, exec_start=0, kept_indices=252, task_goal='press the button to stop the cube just as it reaches the target for the fourth time'
+EPISODE g=988 record_dataset_StopCube.h5#88 steps=469 took=47.3s rate=9.910 step/s worker=gpu2
+Episode 313: timesteps=466, exec_start=233, kept_indices=800, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+EPISODE g=313 record_dataset_InsertPeg.h5#13 steps=466 took=47.2s rate=9.876 step/s worker=gpu2
+Episode 245: timesteps=464, exec_start=0, kept_indices=606, task_goal='first press both buttons on the table, then pick up the container hiding the red cube, finally pick up another container hiding the blue cube'
+EPISODE g=245 record_dataset_ButtonUnmaskSwap.h5#45 steps=464 took=46.4s rate=9.999 step/s worker=gpu2
+Episode 371: timesteps=464, exec_start=232, kept_indices=430, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+EPISODE g=371 record_dataset_InsertPeg.h5#71 steps=464 took=46.5s rate=9.985 step/s worker=gpu2
+Episode 393: timesteps=462, exec_start=231, kept_indices=510, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+PROGRESS steps=60416 elapsed=6138.2s rate=9.843 step/s
+EPISODE g=393 record_dataset_InsertPeg.h5#93 steps=462 took=46.6s rate=9.925 step/s worker=gpu2
+Episode 221: timesteps=460, exec_start=0, kept_indices=648, task_goal='first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube'
+EPISODE g=221 record_dataset_ButtonUnmaskSwap.h5#21 steps=460 took=46.3s rate=9.935 step/s worker=gpu2
+Episode 982: timesteps=460, exec_start=0, kept_indices=252, task_goal='press the button to stop the cube just as it reaches the target for the fourth time'
+EPISODE g=982 record_dataset_StopCube.h5#82 steps=460 took=46.3s rate=9.945 step/s worker=gpu2
+Episode 277: timesteps=458, exec_start=0, kept_indices=611, task_goal='first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube'
+EPISODE g=277 record_dataset_ButtonUnmaskSwap.h5#77 steps=458 took=46.1s rate=9.943 step/s worker=gpu2
+Episode 428: timesteps=457, exec_start=255, kept_indices=457, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+PROGRESS steps=62251 elapsed=6323.1s rate=9.845 step/s
+EPISODE g=428 record_dataset_MoveCube.h5#28 steps=457 took=46.1s rate=9.919 step/s worker=gpu2
+Episode 492: timesteps=455, exec_start=259, kept_indices=685, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=492 record_dataset_MoveCube.h5#92 steps=455 took=45.8s rate=9.926 step/s worker=gpu2
+Episode 375: timesteps=454, exec_start=227, kept_indices=609, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+EPISODE g=375 record_dataset_InsertPeg.h5#75 steps=454 took=45.8s rate=9.921 step/s worker=gpu2
+Episode 477: timesteps=453, exec_start=244, kept_indices=541, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=477 record_dataset_MoveCube.h5#77 steps=453 took=45.6s rate=9.939 step/s worker=gpu2
+Episode 207: timesteps=451, exec_start=0, kept_indices=681, task_goal='first press both buttons on the table, then pick up the container hiding the green cube, finally pick up another container hiding the red cube'
+PROGRESS steps=64064 elapsed=6505.7s rate=9.847 step/s
+EPISODE g=207 record_dataset_ButtonUnmaskSwap.h5#7 steps=451 took=45.4s rate=9.942 step/s worker=gpu2
+Episode 248: timesteps=450, exec_start=0, kept_indices=579, task_goal='first press both buttons on the table, then pick up the container hiding the green cube, finally pick up another container hiding the red cube'
+EPISODE g=248 record_dataset_ButtonUnmaskSwap.h5#48 steps=450 took=45.2s rate=9.953 step/s worker=gpu2
+Episode 452: timesteps=449, exec_start=257, kept_indices=563, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=452 record_dataset_MoveCube.h5#52 steps=449 took=45.2s rate=9.939 step/s worker=gpu2
+Episode 40: timesteps=447, exec_start=0, kept_indices=578, task_goal='put two red cubes into the bin, then press the button to stop'
+EPISODE g=40 record_dataset_BinFill.h5#40 steps=447 took=45.1s rate=9.918 step/s worker=gpu2
+Episode 464: timesteps=446, exec_start=246, kept_indices=570, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=464 record_dataset_MoveCube.h5#64 steps=446 took=45.1s rate=9.895 step/s worker=gpu2
+Episode 1355: timesteps=445, exec_start=168, kept_indices=406, task_goal='watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop'
+PROGRESS steps=66301 elapsed=6731.1s rate=9.850 step/s
+EPISODE g=1355 record_dataset_VideoRepick.h5#55 steps=445 took=44.7s rate=9.963 step/s worker=gpu2
+Episode 465: timesteps=442, exec_start=243, kept_indices=516, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=465 record_dataset_MoveCube.h5#65 steps=442 took=44.5s rate=9.940 step/s worker=gpu2
+Episode 413: timesteps=439, exec_start=244, kept_indices=464, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=413 record_dataset_MoveCube.h5#13 steps=439 took=44.2s rate=9.933 step/s worker=gpu2
+Episode 777: timesteps=438, exec_start=0, kept_indices=482, task_goal='pick up the green cube and place it on the target, repeating this action two times, then press the button to stop'
+EPISODE g=777 record_dataset_PickXtimes.h5#77 steps=438 took=44.0s rate=9.948 step/s worker=gpu2
+Episode 1528: timesteps=436, exec_start=168, kept_indices=425, task_goal='watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube'
+PROGRESS steps=68056 elapsed=6907.8s rate=9.852 step/s
+EPISODE g=1528 record_dataset_VideoUnmaskSwap.h5#28 steps=436 took=43.9s rate=9.939 step/s worker=gpu2
+Episode 1311: timesteps=434, exec_start=162, kept_indices=421, task_goal='watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop'
+EPISODE g=1311 record_dataset_VideoRepick.h5#11 steps=434 took=43.7s rate=9.939 step/s worker=gpu2
+Episode 1543: timesteps=432, exec_start=168, kept_indices=473, task_goal='watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube'
+EPISODE g=1543 record_dataset_VideoUnmaskSwap.h5#43 steps=432 took=43.5s rate=9.932 step/s worker=gpu2
+Episode 453: timesteps=428, exec_start=244, kept_indices=515, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=453 record_dataset_MoveCube.h5#53 steps=428 took=43.1s rate=9.927 step/s worker=gpu2
+Episode 1327: timesteps=426, exec_start=159, kept_indices=577, task_goal='watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop'
+EPISODE g=1327 record_dataset_VideoRepick.h5#27 steps=426 took=42.9s rate=9.938 step/s worker=gpu2
+Episode 650: timesteps=421, exec_start=0, kept_indices=319, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+PROGRESS steps=70197 elapsed=7124.0s rate=9.854 step/s
+EPISODE g=650 record_dataset_PickHighlight.h5#50 steps=421 took=42.3s rate=9.949 step/s worker=gpu2
+Episode 1509: timesteps=420, exec_start=168, kept_indices=535, task_goal='watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube'
+EPISODE g=1509 record_dataset_VideoUnmaskSwap.h5#9 steps=420 took=42.3s rate=9.937 step/s worker=gpu2
+Episode 499: timesteps=416, exec_start=238, kept_indices=573, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=499 record_dataset_MoveCube.h5#99 steps=416 took=41.7s rate=9.970 step/s worker=gpu2
+Episode 398: timesteps=413, exec_start=207, kept_indices=557, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+EPISODE g=398 record_dataset_InsertPeg.h5#98 steps=413 took=41.5s rate=9.945 step/s worker=gpu2
+Episode 583: timesteps=410, exec_start=205, kept_indices=665, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=583 record_dataset_PatternLock.h5#83 steps=410 took=41.4s rate=9.911 step/s worker=gpu2
+Episode 462: timesteps=406, exec_start=222, kept_indices=477, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+PROGRESS steps=72262 elapsed=7332.1s rate=9.856 step/s
+EPISODE g=462 record_dataset_MoveCube.h5#62 steps=406 took=41.0s rate=9.912 step/s worker=gpu2
+Episode 658: timesteps=400, exec_start=0, kept_indices=453, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+EPISODE g=658 record_dataset_PickHighlight.h5#58 steps=400 took=40.2s rate=9.941 step/s worker=gpu2
+Episode 822: timesteps=400, exec_start=200, kept_indices=540, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+EPISODE g=822 record_dataset_RouteStick.h5#22 steps=400 took=40.2s rate=9.946 step/s worker=gpu2
+Episode 854: timesteps=400, exec_start=200, kept_indices=568, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+EPISODE g=854 record_dataset_RouteStick.h5#54 steps=400 took=40.2s rate=9.939 step/s worker=gpu2
+Episode 898: timesteps=400, exec_start=200, kept_indices=525, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+EPISODE g=898 record_dataset_RouteStick.h5#98 steps=400 took=40.4s rate=9.910 step/s worker=gpu2
+Episode 1002: timesteps=396, exec_start=0, kept_indices=358, task_goal='pick up the green cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop'
+PROGRESS steps=74258 elapsed=7534.1s rate=9.856 step/s
+EPISODE g=1002 record_dataset_SwingXtimes.h5#2 steps=396 took=39.9s rate=9.923 step/s worker=gpu2
+Episode 924: timesteps=393, exec_start=0, kept_indices=207, task_goal='press the button to stop the cube just as it reaches the target for the fifth time'
+EPISODE g=924 record_dataset_StopCube.h5#24 steps=393 took=39.5s rate=9.941 step/s worker=gpu2
+Episode 1013: timesteps=390, exec_start=0, kept_indices=459, task_goal='pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back and forth motion two times, finally press the button to stop'
+EPISODE g=1013 record_dataset_SwingXtimes.h5#13 steps=390 took=39.4s rate=9.890 step/s worker=gpu2
+Episode 686: timesteps=383, exec_start=0, kept_indices=355, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+EPISODE g=686 record_dataset_PickHighlight.h5#86 steps=383 took=38.5s rate=9.936 step/s worker=gpu2
+Episode 5: timesteps=378, exec_start=0, kept_indices=344, task_goal='put one red cube into the bin, then press the button to stop'
+EPISODE g=5 record_dataset_BinFill.h5#5 steps=378 took=38.1s rate=9.931 step/s worker=gpu2
+Episode 614: timesteps=376, exec_start=0, kept_indices=410, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+PROGRESS steps=76178 elapsed=7728.0s rate=9.857 step/s
+EPISODE g=614 record_dataset_PickHighlight.h5#14 steps=376 took=38.1s rate=9.877 step/s worker=gpu2
+Episode 662: timesteps=371, exec_start=0, kept_indices=446, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+EPISODE g=662 record_dataset_PickHighlight.h5#62 steps=371 took=37.4s rate=9.917 step/s worker=gpu2
+Episode 139: timesteps=368, exec_start=0, kept_indices=404, task_goal='first press the button, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube'
+EPISODE g=139 record_dataset_ButtonUnmask.h5#39 steps=368 took=37.0s rate=9.947 step/s worker=gpu2
+Episode 1569: timesteps=364, exec_start=114, kept_indices=339, task_goal='watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube'
+EPISODE g=1569 record_dataset_VideoUnmaskSwap.h5#69 steps=364 took=36.6s rate=9.944 step/s worker=gpu2
+Episode 127: timesteps=360, exec_start=0, kept_indices=471, task_goal='first press the button, then pick up the container hiding the blue cube, finally pick up another container hiding the red cube'
+EPISODE g=127 record_dataset_ButtonUnmask.h5#27 steps=360 took=36.2s rate=9.952 step/s worker=gpu2
+Episode 1046: timesteps=349, exec_start=0, kept_indices=337, task_goal='pick up the red cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop'
+EPISODE g=1046 record_dataset_SwingXtimes.h5#46 steps=349 took=35.0s rate=9.958 step/s worker=gpu2
+Episode 1483: timesteps=339, exec_start=66, kept_indices=358, task_goal='watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube'
+PROGRESS steps=78329 elapsed=7945.2s rate=9.859 step/s
+EPISODE g=1483 record_dataset_VideoUnmask.h5#83 steps=339 took=33.9s rate=10.011 step/s worker=gpu2
+Episode 948: timesteps=337, exec_start=0, kept_indices=241, task_goal='press the button to stop the cube just as it reaches the target for the third time'
+EPISODE g=948 record_dataset_StopCube.h5#48 steps=337 took=33.9s rate=9.945 step/s worker=gpu2
+Episode 1491: timesteps=335, exec_start=66, kept_indices=393, task_goal='watch the video carefully, then pick up the container hiding the green cube, finally pick up another container hiding the blue cube'
+EPISODE g=1491 record_dataset_VideoUnmask.h5#91 steps=335 took=33.2s rate=10.094 step/s worker=gpu2
+Episode 708: timesteps=332, exec_start=0, kept_indices=303, task_goal='pick up the red cube and place it on the target, then press the button to stop'
+EPISODE g=708 record_dataset_PickXtimes.h5#8 steps=332 took=33.3s rate=9.965 step/s worker=gpu2
+Episode 1487: timesteps=330, exec_start=66, kept_indices=449, task_goal='watch the video carefully, then pick up the container hiding the red cube, finally pick up another container hiding the green cube'
+EPISODE g=1487 record_dataset_VideoUnmask.h5#87 steps=330 took=33.2s rate=9.945 step/s worker=gpu2
+Episode 1500: timesteps=326, exec_start=168, kept_indices=299, task_goal='watch the video carefully, then pick up the container hiding the green cube'
+EPISODE g=1500 record_dataset_VideoUnmaskSwap.h5#0 steps=326 took=32.8s rate=9.938 step/s worker=gpu2
+Episode 1427: timesteps=324, exec_start=66, kept_indices=478, task_goal='watch the video carefully, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube'
+PROGRESS steps=80313 elapsed=8144.4s rate=9.861 step/s
+EPISODE g=1427 record_dataset_VideoUnmask.h5#27 steps=324 took=32.8s rate=9.872 step/s worker=gpu2
+Episode 270: timesteps=322, exec_start=0, kept_indices=457, task_goal='first press both buttons on the table, then pick up the container hiding the green cube'
+EPISODE g=270 record_dataset_ButtonUnmaskSwap.h5#70 steps=322 took=32.3s rate=9.972 step/s worker=gpu2
+Episode 604: timesteps=320, exec_start=0, kept_indices=292, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+EPISODE g=604 record_dataset_PickHighlight.h5#4 steps=320 took=32.2s rate=9.940 step/s worker=gpu2
+Episode 551: timesteps=318, exec_start=159, kept_indices=668, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=551 record_dataset_PatternLock.h5#51 steps=318 took=32.2s rate=9.883 step/s worker=gpu2
+Episode 1032: timesteps=313, exec_start=0, kept_indices=409, task_goal='pick up the red cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop'
+EPISODE g=1032 record_dataset_SwingXtimes.h5#32 steps=313 took=31.5s rate=9.928 step/s worker=gpu2
+Episode 929: timesteps=311, exec_start=0, kept_indices=219, task_goal='press the button to stop the cube just as it reaches the target for the fifth time'
+EPISODE g=929 record_dataset_StopCube.h5#29 steps=311 took=31.2s rate=9.956 step/s worker=gpu2
+Episode 798: timesteps=309, exec_start=0, kept_indices=293, task_goal='pick up the green cube and place it on the target, then press the button to stop'
+PROGRESS steps=82206 elapsed=8336.6s rate=9.861 step/s
+EPISODE g=798 record_dataset_PickXtimes.h5#98 steps=309 took=31.0s rate=9.953 step/s worker=gpu2
+Episode 286: timesteps=307, exec_start=0, kept_indices=396, task_goal='first press both buttons on the table, then pick up the container hiding the blue cube'
+EPISODE g=286 record_dataset_ButtonUnmaskSwap.h5#86 steps=307 took=30.9s rate=9.936 step/s worker=gpu2
+Episode 503: timesteps=306, exec_start=153, kept_indices=663, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=503 record_dataset_PatternLock.h5#3 steps=306 took=30.8s rate=9.942 step/s worker=gpu2
+Episode 586: timesteps=304, exec_start=152, kept_indices=586, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=586 record_dataset_PatternLock.h5#86 steps=304 took=30.6s rate=9.939 step/s worker=gpu2
+Episode 730: timesteps=301, exec_start=0, kept_indices=326, task_goal='pick up the blue cube and place it on the target, then press the button to stop'
+EPISODE g=730 record_dataset_PickXtimes.h5#30 steps=301 took=30.2s rate=9.953 step/s worker=gpu2
+Episode 808: timesteps=300, exec_start=150, kept_indices=470, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+EPISODE g=808 record_dataset_RouteStick.h5#8 steps=300 took=30.2s rate=9.933 step/s worker=gpu2
+Episode 841: timesteps=300, exec_start=150, kept_indices=392, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+PROGRESS steps=84024 elapsed=8519.5s rate=9.863 step/s
+EPISODE g=841 record_dataset_RouteStick.h5#41 steps=300 took=30.2s rate=9.934 step/s worker=gpu2
+Episode 873: timesteps=300, exec_start=150, kept_indices=405, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+EPISODE g=873 record_dataset_RouteStick.h5#73 steps=300 took=30.5s rate=9.827 step/s worker=gpu2
+Episode 101: timesteps=294, exec_start=0, kept_indices=482, task_goal='first press the button, then pick up the container hiding the green cube'
+EPISODE g=101 record_dataset_ButtonUnmask.h5#1 steps=294 took=29.5s rate=9.952 step/s worker=gpu2
+Episode 566: timesteps=290, exec_start=145, kept_indices=460, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=566 record_dataset_PatternLock.h5#66 steps=290 took=29.3s rate=9.904 step/s worker=gpu2
+Episode 49: timesteps=282, exec_start=0, kept_indices=357, task_goal='put one red cube into the bin, then press the button to stop'
+EPISODE g=49 record_dataset_BinFill.h5#49 steps=282 took=28.3s rate=9.973 step/s worker=gpu2
+Episode 467: timesteps=279, exec_start=168, kept_indices=269, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=467 record_dataset_MoveCube.h5#67 steps=279 took=28.1s rate=9.934 step/s worker=gpu2
+Episode 457: timesteps=276, exec_start=164, kept_indices=254, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=457 record_dataset_MoveCube.h5#57 steps=276 took=27.6s rate=10.004 step/s worker=gpu2
+Episode 483: timesteps=274, exec_start=161, kept_indices=271, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+PROGRESS steps=86019 elapsed=8721.4s rate=9.863 step/s
+EPISODE g=483 record_dataset_MoveCube.h5#83 steps=274 took=27.6s rate=9.945 step/s worker=gpu2
+Episode 415: timesteps=272, exec_start=163, kept_indices=375, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=415 record_dataset_MoveCube.h5#15 steps=272 took=27.4s rate=9.936 step/s worker=gpu2
+Episode 1546: timesteps=269, exec_start=168, kept_indices=327, task_goal='watch the video carefully, then pick up the container hiding the green cube'
+EPISODE g=1546 record_dataset_VideoUnmaskSwap.h5#46 steps=269 took=27.4s rate=9.829 step/s worker=gpu2
+Episode 482: timesteps=266, exec_start=158, kept_indices=285, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=482 record_dataset_MoveCube.h5#82 steps=266 took=26.8s rate=9.924 step/s worker=gpu2
+Episode 468: timesteps=262, exec_start=160, kept_indices=228, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=468 record_dataset_MoveCube.h5#68 steps=262 took=26.4s rate=9.932 step/s worker=gpu2
+Episode 493: timesteps=256, exec_start=156, kept_indices=250, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+EPISODE g=493 record_dataset_MoveCube.h5#93 steps=256 took=25.9s rate=9.893 step/s worker=gpu2
+Episode 689: timesteps=249, exec_start=0, kept_indices=183, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+EPISODE g=689 record_dataset_PickHighlight.h5#89 steps=249 took=25.1s rate=9.935 step/s worker=gpu2
+Episode 542: timesteps=244, exec_start=122, kept_indices=267, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=542 record_dataset_PatternLock.h5#42 steps=244 took=24.5s rate=9.940 step/s worker=gpu2
+Episode 128: timesteps=242, exec_start=0, kept_indices=332, task_goal='first press the button, then pick up the container hiding the red cube'
+PROGRESS steps=88079 elapsed=8930.3s rate=9.863 step/s
+EPISODE g=128 record_dataset_ButtonUnmask.h5#28 steps=242 took=24.3s rate=9.946 step/s worker=gpu2
+Episode 1400: timesteps=239, exec_start=66, kept_indices=363, task_goal='watch the video carefully, then pick up the container hiding the blue cube'
+EPISODE g=1400 record_dataset_VideoUnmask.h5#0 steps=239 took=24.0s rate=9.939 step/s worker=gpu2
+Episode 673: timesteps=235, exec_start=0, kept_indices=297, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+EPISODE g=673 record_dataset_PickHighlight.h5#73 steps=235 took=23.6s rate=9.972 step/s worker=gpu2
+Episode 916: timesteps=233, exec_start=0, kept_indices=179, task_goal='press the button to stop the cube just as it reaches the target for the third time'
+EPISODE g=916 record_dataset_StopCube.h5#16 steps=233 took=23.4s rate=9.948 step/s worker=gpu2
+Episode 1561: timesteps=230, exec_start=114, kept_indices=194, task_goal='watch the video carefully, then pick up the container hiding the red cube'
+EPISODE g=1561 record_dataset_VideoUnmaskSwap.h5#61 steps=230 took=23.2s rate=9.933 step/s worker=gpu2
+Episode 124: timesteps=228, exec_start=0, kept_indices=335, task_goal='first press the button, then pick up the container hiding the blue cube'
+EPISODE g=124 record_dataset_ButtonUnmask.h5#24 steps=228 took=22.9s rate=9.939 step/s worker=gpu2
+Episode 149: timesteps=226, exec_start=0, kept_indices=241, task_goal='first press the button, then pick up the container hiding the green cube'
+EPISODE g=149 record_dataset_ButtonUnmask.h5#49 steps=226 took=22.7s rate=9.950 step/s worker=gpu2
+Episode 621: timesteps=225, exec_start=0, kept_indices=281, task_goal='first press the button, then pick up all cubes that have been highlighteted with white areas on the table'
+EPISODE g=621 record_dataset_PickHighlight.h5#21 steps=225 took=22.7s rate=9.906 step/s worker=gpu2
+Episode 161: timesteps=224, exec_start=0, kept_indices=232, task_goal='first press the button, then pick up the container hiding the red cube'
+EPISODE g=161 record_dataset_ButtonUnmask.h5#61 steps=224 took=22.4s rate=9.980 step/s worker=gpu2
+Episode 148: timesteps=223, exec_start=0, kept_indices=313, task_goal='first press the button, then pick up the container hiding the green cube'
+PROGRESS steps=90142 elapsed=9139.6s rate=9.863 step/s
+EPISODE g=148 record_dataset_ButtonUnmask.h5#48 steps=223 took=22.4s rate=9.947 step/s worker=gpu2
+Episode 1544: timesteps=223, exec_start=114, kept_indices=286, task_goal='watch the video carefully, then pick up the container hiding the green cube'
+EPISODE g=1544 record_dataset_VideoUnmaskSwap.h5#44 steps=223 took=22.4s rate=9.947 step/s worker=gpu2
+Episode 125: timesteps=221, exec_start=0, kept_indices=237, task_goal='first press the button, then pick up the container hiding the red cube'
+EPISODE g=125 record_dataset_ButtonUnmask.h5#25 steps=221 took=22.1s rate=9.984 step/s worker=gpu2
+Episode 1525: timesteps=221, exec_start=114, kept_indices=218, task_goal='watch the video carefully, then pick up the container hiding the blue cube'
+EPISODE g=1525 record_dataset_VideoUnmaskSwap.h5#25 steps=221 took=22.2s rate=9.944 step/s worker=gpu2
+Episode 1558: timesteps=220, exec_start=114, kept_indices=241, task_goal='watch the video carefully, then pick up the container hiding the red cube'
+EPISODE g=1558 record_dataset_VideoUnmaskSwap.h5#58 steps=220 took=22.1s rate=9.936 step/s worker=gpu2
+Episode 1573: timesteps=219, exec_start=114, kept_indices=237, task_goal='watch the video carefully, then pick up the container hiding the blue cube'
+EPISODE g=1573 record_dataset_VideoUnmaskSwap.h5#73 steps=219 took=22.0s rate=9.939 step/s worker=gpu2
+Episode 186: timesteps=217, exec_start=0, kept_indices=284, task_goal='first press the button, then pick up the container hiding the red cube'
+EPISODE g=186 record_dataset_ButtonUnmask.h5#86 steps=217 took=21.8s rate=9.956 step/s worker=gpu2
+Episode 121: timesteps=215, exec_start=0, kept_indices=256, task_goal='first press the button, then pick up the container hiding the green cube'
+EPISODE g=121 record_dataset_ButtonUnmask.h5#21 steps=215 took=21.6s rate=9.951 step/s worker=gpu2
+Episode 1550: timesteps=214, exec_start=114, kept_indices=235, task_goal='watch the video carefully, then pick up the container hiding the red cube'
+EPISODE g=1550 record_dataset_VideoUnmaskSwap.h5#50 steps=214 took=21.5s rate=9.941 step/s worker=gpu2
+Episode 909: timesteps=212, exec_start=0, kept_indices=181, task_goal='press the button to stop the cube just as it reaches the target for the second time'
+PROGRESS steps=92104 elapsed=9337.2s rate=9.864 step/s
+EPISODE g=909 record_dataset_StopCube.h5#9 steps=212 took=21.4s rate=9.909 step/s worker=gpu2
+Episode 522: timesteps=210, exec_start=105, kept_indices=376, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=522 record_dataset_PatternLock.h5#22 steps=210 took=21.1s rate=9.934 step/s worker=gpu2
+Episode 530: timesteps=204, exec_start=102, kept_indices=276, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=530 record_dataset_PatternLock.h5#30 steps=204 took=20.6s rate=9.916 step/s worker=gpu2
+Episode 809: timesteps=200, exec_start=100, kept_indices=312, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+EPISODE g=809 record_dataset_RouteStick.h5#9 steps=200 took=20.2s rate=9.915 step/s worker=gpu2
+Episode 829: timesteps=200, exec_start=100, kept_indices=313, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+EPISODE g=829 record_dataset_RouteStick.h5#29 steps=200 took=20.1s rate=9.938 step/s worker=gpu2
+Episode 868: timesteps=200, exec_start=100, kept_indices=333, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+EPISODE g=868 record_dataset_RouteStick.h5#68 steps=200 took=20.1s rate=9.943 step/s worker=gpu2
+Episode 896: timesteps=200, exec_start=100, kept_indices=224, task_goal='Watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path'
+EPISODE g=896 record_dataset_RouteStick.h5#96 steps=200 took=20.1s rate=9.938 step/s worker=gpu2
+Episode 536: timesteps=192, exec_start=96, kept_indices=299, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=536 record_dataset_PatternLock.h5#36 steps=192 took=19.4s rate=9.886 step/s worker=gpu2
+Episode 901: timesteps=186, exec_start=0, kept_indices=184, task_goal='press the button to stop the cube just as it reaches the target for the third time'
+EPISODE g=901 record_dataset_StopCube.h5#1 steps=186 took=18.7s rate=9.941 step/s worker=gpu2
+Episode 1453: timesteps=183, exec_start=66, kept_indices=129, task_goal='watch the video carefully, then pick up the container hiding the blue cube'
+EPISODE g=1453 record_dataset_VideoUnmask.h5#53 steps=183 took=18.4s rate=9.934 step/s worker=gpu2
+Episode 1433: timesteps=182, exec_start=66, kept_indices=135, task_goal='watch the video carefully, then pick up the container hiding the red cube'
+PROGRESS steps=94061 elapsed=9535.4s rate=9.864 step/s
+EPISODE g=1433 record_dataset_VideoUnmask.h5#33 steps=182 took=18.3s rate=9.943 step/s worker=gpu2
+Episode 1416: timesteps=178, exec_start=66, kept_indices=172, task_goal='watch the video carefully, then pick up the container hiding the red cube'
+EPISODE g=1416 record_dataset_VideoUnmask.h5#16 steps=178 took=17.9s rate=9.935 step/s worker=gpu2
+Episode 1452: timesteps=176, exec_start=66, kept_indices=147, task_goal='watch the video carefully, then pick up the container hiding the red cube'
+EPISODE g=1452 record_dataset_VideoUnmask.h5#52 steps=176 took=17.8s rate=9.885 step/s worker=gpu2
+Episode 1497: timesteps=174, exec_start=66, kept_indices=248, task_goal='watch the video carefully, then pick up the container hiding the green cube'
+EPISODE g=1497 record_dataset_VideoUnmask.h5#97 steps=174 took=17.5s rate=9.943 step/s worker=gpu2
+Episode 1445: timesteps=170, exec_start=66, kept_indices=225, task_goal='watch the video carefully, then pick up the container hiding the green cube'
+EPISODE g=1445 record_dataset_VideoUnmask.h5#45 steps=170 took=17.0s rate=9.992 step/s worker=gpu2
+Episode 1424: timesteps=167, exec_start=66, kept_indices=188, task_goal='watch the video carefully, then pick up the container hiding the green cube'
+EPISODE g=1424 record_dataset_VideoUnmask.h5#24 steps=167 took=16.8s rate=9.942 step/s worker=gpu2
+Episode 1408: timesteps=165, exec_start=66, kept_indices=158, task_goal='watch the video carefully, then pick up the container hiding the red cube'
+EPISODE g=1408 record_dataset_VideoUnmask.h5#8 steps=165 took=16.5s rate=10.003 step/s worker=gpu2
+Episode 1420: timesteps=164, exec_start=66, kept_indices=169, task_goal='watch the video carefully, then pick up the container hiding the green cube'
+EPISODE g=1420 record_dataset_VideoUnmask.h5#20 steps=164 took=16.4s rate=10.002 step/s worker=gpu2
+Episode 992: timesteps=157, exec_start=0, kept_indices=152, task_goal='press the button to stop the cube just as it reaches the target for the second time'
+EPISODE g=992 record_dataset_StopCube.h5#92 steps=157 took=15.9s rate=9.890 step/s worker=gpu2
+Episode 593: timesteps=140, exec_start=70, kept_indices=247, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=593 record_dataset_PatternLock.h5#93 steps=140 took=14.1s rate=9.920 step/s worker=gpu2
+Episode 905: timesteps=131, exec_start=0, kept_indices=162, task_goal='press the button to stop the cube just as it reaches the target for the second time'
+EPISODE g=905 record_dataset_StopCube.h5#5 steps=131 took=13.1s rate=10.003 step/s worker=gpu2
+Episode 549: timesteps=126, exec_start=63, kept_indices=235, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=549 record_dataset_PatternLock.h5#49 steps=126 took=12.7s rate=9.939 step/s worker=gpu2
+Episode 546: timesteps=118, exec_start=59, kept_indices=137, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=546 record_dataset_PatternLock.h5#46 steps=118 took=12.0s rate=9.860 step/s worker=gpu2
+Episode 545: timesteps=112, exec_start=56, kept_indices=191, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+PROGRESS steps=96039 elapsed=9736.1s rate=9.864 step/s
+EPISODE g=545 record_dataset_PatternLock.h5#45 steps=112 took=11.3s rate=9.942 step/s worker=gpu2
+Episode 588: timesteps=64, exec_start=32, kept_indices=133, task_goal='Watch the video carefully, then use the stick attached to the robot to retrace the same pattern'
+EPISODE g=588 record_dataset_PatternLock.h5#88 steps=64 took=6.5s rate=9.905 step/s worker=gpu2
+SHARD_DONE shard=2 episodes=200 skipped=152 steps=96103 elapsed=9745.8s rate=9.861 step/s steady_steps=94783 rate_steady=9.907 step/s
