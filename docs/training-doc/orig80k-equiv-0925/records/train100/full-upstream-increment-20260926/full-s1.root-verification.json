@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "kind": "EQ100_RUN_RECORDS",
+  "checked_utc": "2026-09-26T22:30:15.321376+00:00",
+  "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "upstream_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+  "eq100_tag": "20260926T210415Z",
+  "script_sha256": "68ad04bf13e31c5212f3a2151751e3e7f96773df15182793c2d96c5955df32ac",
+  "status": "PASS",
+  "results": {
+    "full-s1": {
+      "status": "PASS",
+      "head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+      "record_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/solo",
+      "execution_role": "solo",
+      "harness_pid": 1049115,
+      "module_files": 52,
+      "n_leaves_by_state": [
+        201,
+        201
+      ],
+      "state_steps": [
+        50,
+        99
+      ],
+      "main_rows": 100,
+      "tentative_rows": 0,
+      "dependencies": 208,
+      "session": "orig80k-eq100-full-s1-20260926T210415Z",
+      "start_utc": "2026-09-26T22:11:16+00:00",
+      "end_utc": "2026-09-26T22:29:49+00:00",
+      "elapsed_seconds": 1113.0,
+      "command_sha256": "236456374131c164cbf6099af880841eff5590bd85ee65d62e863f19ad9c902d",
+      "wrapper_pid": 1049102,
+      "body_pid": 1049104,
+      "checkpoint_work_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/checkpoints/full-s1/mme_vla_suite/eq100-orig80k-full-s1-20260926T210415Z",
+      "jax_cache": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/orig80k-eq100-20260926T210415Z/full-s1",
+      "init_calls": 1,
+      "log": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-eq100-full-s1-20260926T210415Z.log",
+        "bytes": 60277,
+        "sha256": "0fa9651e94f315316b49f99305d748ba64bab98b281e432b54cae08a9ec9a481"
+      },
+      "record_files": {
+        "harness_meta.json": {
+          "bytes": 1585,
+          "sha256": "dd05215cbe21aec8207f80641291de2dfb29c3a6ce59a56fc6a013ad0e39921d"
+        },
+        "init_ownership.json": {
+          "bytes": 379,
+          "sha256": "d983efee3fe05f18d5a0682023c68103dd08c8f1cee9530e7aa65165ecf70cce"
+        },
+        "jax_cache.json": {
+          "bytes": 414,
+          "sha256": "413f934f792c5bca72de5a04eb7502fd988aa9ae8408dd185e4f3c36e432b349"
+        },
+        "metrics.jsonl": {
+          "bytes": 49609,
+          "sha256": "46baa8b3e84c24a3b12323876011c8f7271cd3a5fbd25239bc983c6acd12ca0b"
+        },
+        "metrics_all.jsonl": {
+          "bytes": 49609,
+          "sha256": "46baa8b3e84c24a3b12323876011c8f7271cd3a5fbd25239bc983c6acd12ca0b"
+        },
+        "provenance.json": {
+          "bytes": 12682,
+          "sha256": "d93894cba26d19fbf04dd864a601fcd30b0a98b9169110f64a951f2f42a5981a"
+        },
+        "provenance_start.json": {
+          "bytes": 507,
+          "sha256": "b211f31529adf02ef1f9bc9d670f278fefde08243f588634c094e4e6acf95681"
+        },
+        "resolved_config.json": {
+          "bytes": 2487,
+          "sha256": "5894feb412000cf15d9ac6dfe6a88bf2191744a0656cd2ebef4eb4c1f5c6afdb"
+        },
+        "run_status.json": {
+          "bytes": 38,
+          "sha256": "97d327e20b36da5f388b1453f669da1fa43b3954c452e22756d42d6c9d826d06"
+        },
+        "runtime_fingerprint.json": {
+          "bytes": 10221,
+          "sha256": "b9408974a4407db76e1c13de708298eb5a310f9e2cb1a77ccd6373d23cd3872f"
+        },
+        "runtime_fingerprint_end.json": {
+          "bytes": 10221,
+          "sha256": "b9408974a4407db76e1c13de708298eb5a310f9e2cb1a77ccd6373d23cd3872f"
+        },
+        "state_digests.jsonl": {
+          "bytes": 119310,
+          "sha256": "fa9e799be83cb502890eef8dad548fd89f95ee3233571499e237a3804596f02d"
+        }
+      },
+      "preflight": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-preflight-20260926T210415Z.json",
+        "sha256": "12219976ca38d58acd4a9b6f2b20f2a17ae91f488fab29bef051f1e7e1ae83d1"
+      },
+      "outer_exit": {
+        "identity": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s1-20260926T210415Z.identity.json",
+          "bytes": 1471,
+          "sha256": "fc8a4cc7524ca1a2529d61e2af34e1864b874e94a99197dcb4be20d6a8146677"
+        },
+        "receipt": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s1-20260926T210415Z.exit.json",
+          "bytes": 5187,
+          "sha256": "94824030a7cfbf6a9a83d9f95eda2e3fc67bc9fecab8d776869ca9c6e010736d"
+        },
+        "capture": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s1-20260926T210415Z.exit.capture.json",
+          "bytes": 2365,
+          "sha256": "75ab992f49219a7915e047eb857a7aabe29423fa63a79814468d80fa5400a5c0"
+        },
+        "guard_tool": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+          "bytes": 20398,
+          "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+        },
+        "capture_actual_exit_code": 0,
+        "pane_dead": 1,
+        "pane_dead_status": 0,
+        "pane_id": "%559",
+        "pane_pid": 1049094,
+        "scope": "父进程自身返回码另由宿主/controller留证，本字段不自报它"
+      },
+      "venv_evidence": "固定driver/outer命令、harness的sys.prefix入口断言与独立解释器只读查询；JSON未直接记录sys.prefix",
+      "scope": "仅此run记录与独立退出完整性；不比较A/B轨迹，不判S2重叠，不代替正式entry_equiv judge"
+    }
+  },
+  "note": "辅助只读完整性检查；没有执行正式judge，没有比较轨迹或判重叠，不启动训练/恢复/80k"
+}

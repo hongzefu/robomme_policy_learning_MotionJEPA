@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "created_utc": "2026-09-26T20:50:21.476261+00:00",
+  "status": "PASS",
+  "scope": "四侧P1入口/记录独立验收均真实返回0；不比较A/B轨迹，不是100步基线，不验证保存恢复",
+  "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "upstream_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+  "verifier_sha256": "ce469d04fc29e81fb383a1b514f1602594f88fae08f77a780e3c77f6abf4e728",
+  "sequence_check": "两A全部结束之后B-full启动；B-full结束之后B-count启动，按日志UTC窗口核对通过",
+  "sides": {
+    "full-a": {
+      "report": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/p1-full-a-verification-independent-20260926.json",
+        "bytes": 4522,
+        "sha256": "2cad7dcfcb9dfebf634b4bf76e40f1d8fabdcbc095b691980a025b24fb666614"
+      },
+      "checker_exit_code": 0,
+      "status": "PASS",
+      "head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+      "start_utc": "2026-09-26T19:56:57+00:00",
+      "end_utc": "2026-09-26T20:31:18+00:00",
+      "elapsed_seconds": 2061,
+      "module_files": 49,
+      "dependencies": 208,
+      "n_leaves_by_segment": [
+        201,
+        201
+      ],
+      "init_calls": 2,
+      "log": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-full-a-20260926T195426Z.log",
+        "bytes": 86803,
+        "sha256": "923dd3f0120c40bbf88f58e6c1e0cedc8aadccb5bd6943a50c718dfc6ca30343"
+      }
+    },
+    "count-a": {
+      "report": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/p1-count-a-verification-independent-20260926.json",
+        "bytes": 4529,
+        "sha256": "8c287c5c643045b7e9a2e266e2cf114617b8db1a5912132cd12c73b749497b3f"
+      },
+      "checker_exit_code": 0,
+      "status": "PASS",
+      "head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+      "start_utc": "2026-09-26T19:56:57+00:00",
+      "end_utc": "2026-09-26T20:30:32+00:00",
+      "elapsed_seconds": 2015,
+      "module_files": 49,
+      "dependencies": 208,
+      "n_leaves_by_segment": [
+        201,
+        201
+      ],
+      "init_calls": 2,
+      "log": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-count-a-20260926T195426Z.log",
+        "bytes": 84947,
+        "sha256": "efef69c76514c2e606db36c714d3f999eaea2044bb9831c594f34a845a51ab65"
+      }
+    },
+    "full-b": {
+      "report": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/p1-full-b-verification-independent-20260926.json",
+        "bytes": 4337,
+        "sha256": "bb1de1426f6504ca5bfe9c20ff9f2c423839fffeb5b1af0c5c08970775c355dd"
+      },
+      "checker_exit_code": 0,
+      "status": "PASS",
+      "head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+      "start_utc": "2026-09-26T20:32:04+00:00",
+      "end_utc": "2026-09-26T20:40:08+00:00",
+      "elapsed_seconds": 484,
+      "module_files": 52,
+      "dependencies": 208,
+      "n_leaves_by_segment": [
+        201
+      ],
+      "init_calls": 1,
+      "log": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-full-b-20260926T195426Z.log",
+        "bytes": 44508,
+        "sha256": "ffcea9c4aa6075d39c8750fe3d13033f9b83dbb7718f368dde5ec65266a7a5d8"
+      }
+    },
+    "count-b": {
+      "report": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/p1-count-b-verification-independent-20260926.json",
+        "bytes": 4344,
+        "sha256": "4e18108c141374dfff9339636c71a59aea5611775d5c3eb0f846f1990004fee9"
+      },
+      "checker_exit_code": 0,
+      "status": "PASS",
+      "head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+      "start_utc": "2026-09-26T20:40:40+00:00",
+      "end_utc": "2026-09-26T20:48:32+00:00",
+      "elapsed_seconds": 472,
+      "module_files": 52,
+      "dependencies": 208,
+      "n_leaves_by_segment": [
+        201
+      ],
+      "init_calls": 1,
+      "log": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-count-b-20260926T195426Z.log",
+        "bytes": 44572,
+        "sha256": "8c0a7e2b32e9d5e62761f70b2d8f2d5aa6e707143a77504b9ff55b4c376f7cfb"
+      }
+    }
+  },
+  "cleanup": "仅结束audit_equiv自建的四个读日志PTY；未操作训练tmux/训练进程，未修改tracked或venv。"
+}

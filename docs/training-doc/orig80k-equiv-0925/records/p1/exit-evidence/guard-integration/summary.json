@@ -1,0 +1,53 @@
+{
+  "tool": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+  "tool_sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b",
+  "records": [
+    {
+      "case": "success",
+      "session": "orig80k-guardtest-success-20260926T214038Z",
+      "identity": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-guard-integration-20260926T214038Z/success/identity.json",
+      "identity_sha256": "995e4aae0a7ef071967212f2d51f66a6f3c34be1047c370ef16257ee435ddda3",
+      "receipt": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-guard-integration-20260926T214038Z/success/exit.json",
+      "receipt_sha256": "f9f7b9104896478980da1e9d4e46da1bdb5e0f0227e7d287ed2a76e27ec8d67a",
+      "launch_actual_exit": 0,
+      "capture_actual_exit": 0,
+      "native_status": "0",
+      "native_signal": "",
+      "status": "PASS",
+      "scope": "独立纯shell测试；日志始终0，按真实pane退出状态判定",
+      "cleanup_pending": true
+    },
+    {
+      "case": "false_success",
+      "session": "orig80k-guardtest-false_success-20260926T214038Z",
+      "identity": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-guard-integration-20260926T214038Z/false_success/identity.json",
+      "identity_sha256": "ab2227435f0fbafab52230a249c6ad65551de839096c2e1b10052117dc464cfb",
+      "receipt": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-guard-integration-20260926T214038Z/false_success/exit.json",
+      "receipt_sha256": "98cd1c7357212c3b170a409a4569fafca400e5c95a09e5b7105cc2b27e3a9620",
+      "launch_actual_exit": 0,
+      "capture_actual_exit": 1,
+      "native_status": "1",
+      "native_signal": "",
+      "status": "PASS",
+      "scope": "独立纯shell测试；日志始终0，按真实pane退出状态判定",
+      "cleanup_pending": true
+    },
+    {
+      "case": "signal",
+      "session": "orig80k-guardtest-signal-20260926T214038Z",
+      "identity": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-guard-integration-20260926T214038Z/signal/identity.json",
+      "identity_sha256": "ad4abef47012013aaa2ef107ac1208e4e096ce8efbfcc6f3c06c66a9b2219da5",
+      "receipt": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-guard-integration-20260926T214038Z/signal/exit.json",
+      "receipt_sha256": "36c96d0b198d4b4b81be1248145bbbcc23b297d3eb830275736ed38e194f6833",
+      "launch_actual_exit": 0,
+      "capture_actual_exit": 1,
+      "native_status": "",
+      "native_signal": "15",
+      "status": "PASS",
+      "scope": "独立纯shell测试；日志始终0，按真实pane退出状态判定",
+      "cleanup_pending": true
+    }
+  ],
+  "status": "PASS",
+  "repository_status": ""
+}

@@ -1,0 +1,62 @@
+{
+  "status": "PASS",
+  "mode": "upstream",
+  "group": "full",
+  "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "upstream_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+  "steps": 100,
+  "scalar_keys": 5,
+  "hex_mismatch": 0,
+  "state_rows": 2,
+  "state_mismatch": 0,
+  "state_steps": [
+    50,
+    99
+  ],
+  "state_leaves_per_row": 201,
+  "checked_utc": "2026-09-26T22:32:56.323949+00:00",
+  "log": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-eq100-full-upstream-judge-20260926T210415Z.log",
+    "bytes": 4440,
+    "sha256": "83d6a6d440885fa0f19600158de8476f7cbc2d9f5fa10d026086274b10313077"
+  },
+  "identity": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.identity.json",
+    "bytes": 1531,
+    "sha256": "3d8628391a6267f02cf8751b85cdc282a333389d555ce6e61e3314143c821de8"
+  },
+  "receipt": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.exit.json",
+    "bytes": 5363,
+    "sha256": "533ea051627ebc3be484b2ddf48d34caa0dc6e604cb63f2e360346e4d2a8333d"
+  },
+  "capture_sidecar": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.exit.capture.json",
+    "bytes": 2449,
+    "sha256": "7cc236bd40f3f10eb448f96935eda88683d921bd960a2f1d849aae21efa610ae"
+  },
+  "capture_actual_exit": 0,
+  "scalar_projections": {
+    "A": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/a/scalars_hex.tsv",
+      "bytes": 10968,
+      "sha256": "dac4e9e1ac5ab5e7308e9282cdf2fec140408c726c60b41b0a397158401cc5ec"
+    },
+    "B": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/solo/scalars_hex.tsv",
+      "bytes": 10968,
+      "sha256": "dac4e9e1ac5ab5e7308e9282cdf2fec140408c726c60b41b0a397158401cc5ec"
+    }
+  },
+  "verdict_lines": [
+    "A_SIDE_SEGMENTS tentative_rows=12 main_rows=100",
+    "B_SIDE_SEGMENTS tentative_rows=0 main_rows=100",
+    "ENTRY_SCALARS steps=100 keys=5 hex_mismatch=0",
+    "ENTRY_FINITE=PASS",
+    "ENTRY_STATE_DIGEST rows=2 mismatch=0",
+    "ENTRY_RESOLVED_CFG mismatch=0 mode=upstream",
+    "ENTRY_PROVENANCE=PASS",
+    "ENTRY_EQ=PASS"
+  ],
+  "scope": "本机固定确定性档full上游A与当前S1的100步等价；不是count或S2/perf/80k结果"
+}

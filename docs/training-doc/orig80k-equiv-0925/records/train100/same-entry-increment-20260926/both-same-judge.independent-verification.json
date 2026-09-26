@@ -1,0 +1,265 @@
+{
+  "schema": 1,
+  "origin": "audit_equiv独立只读复核；exec_command直接观测验收进程返回值",
+  "invocation": [
+    ".venv/bin/python",
+    "-B",
+    "-"
+  ],
+  "cwd": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+  "checker_actual_exit_code": 0,
+  "checker_wall_time_seconds": 0.004799421,
+  "output": {
+    "schema": 1,
+    "status": "PASS",
+    "checked_utc": "2026-09-26T23:11:53.961416+00:00",
+    "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+    "results": {
+      "full": {
+        "status": "PASS",
+        "root_report": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-same-judge-verification-root-20260926.json",
+          "bytes": 2796,
+          "sha256": "f3f52bef9e75f3e3556adf950cfb912359369a1b240ea5e8cd406e603a7d5062"
+        },
+        "log": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-eq100-full-same-judge-20260926T210415Z.log",
+          "bytes": 4714,
+          "sha256": "38fcf2cbdd556d8e9a073c46967ffb133bbd00450e5bf77474626c6b4f794543"
+        },
+        "command_file": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.command",
+          "bytes": 4873,
+          "sha256": "b8225b308bde6e0de54a968b5bebfc21e5fea9c71883a4b35593ede543cbf53e"
+        },
+        "environment_assignments_checked": 46,
+        "outer_exit": {
+          "identity": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.identity.json",
+            "bytes": 1511,
+            "sha256": "984dd79f2c956f4f09c7528553762f2c59df08f14b3f1fbc262d31808f3ad286"
+          },
+          "receipt": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.exit.json",
+            "bytes": 5303,
+            "sha256": "d84602f71b940c2ea736cf7e9aba82d118ef9dc887fb99c90ffed3f5eafd3f00"
+          },
+          "capture": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.exit.capture.json",
+            "bytes": 2421,
+            "sha256": "e05870ae68daf46e29ac1c118b01cea4362d3eaaf1d78ac3bace8b357c816885"
+          },
+          "guard_tool": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+            "bytes": 20398,
+            "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+          },
+          "capture_actual_exit_code": 0,
+          "pane_dead": 1,
+          "pane_dead_status": 0,
+          "pane_id": "%565",
+          "pane_pid": 1114482,
+          "scope": "父进程自身返回码另由宿主/controller留证，本字段不自报它"
+        },
+        "scalar_projections": {
+          "A": {
+            "metrics": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/solo/metrics.jsonl",
+              "bytes": 49609,
+              "sha256": "46baa8b3e84c24a3b12323876011c8f7271cd3a5fbd25239bc983c6acd12ca0b"
+            },
+            "tsv": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/solo/scalars_hex.tsv",
+              "bytes": 10968,
+              "sha256": "dac4e9e1ac5ab5e7308e9282cdf2fec140408c726c60b41b0a397158401cc5ec"
+            },
+            "source_verification": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-s1-verification-independent-20260926.json",
+              "bytes": 6650,
+              "sha256": "dcec3ac89735b13431588a97aa7740e5cf988286b265f2e27e84d6f92346f719"
+            },
+            "rows": 100,
+            "keys": 5
+          },
+          "B": {
+            "metrics": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/concurrent/metrics.jsonl",
+              "bytes": 49611,
+              "sha256": "bfa9eb13f160df9cde085b99775b65051ba7c19fb235a8403fd10cda97a13cb7"
+            },
+            "tsv": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/concurrent/scalars_hex.tsv",
+              "bytes": 10968,
+              "sha256": "dac4e9e1ac5ab5e7308e9282cdf2fec140408c726c60b41b0a397158401cc5ec"
+            },
+            "source_verification": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-both-s2-verification-independent-20260926.json",
+              "bytes": 12420,
+              "sha256": "3a976996abb7943e616c3d369d4d8a44ba851fcc04160f244e8baf541afd94dd"
+            },
+            "rows": 100,
+            "keys": 5
+          }
+        },
+        "state_steps": [
+          50,
+          99
+        ],
+        "state_leaves": [
+          201,
+          201
+        ],
+        "same_entry_config_and_fingerprint_equal": true,
+        "overlap": {
+          "window_steps": [
+            10,
+            99
+          ],
+          "begin": 1790463191.363476,
+          "end": 1790463823.3560028,
+          "seconds": 631.9925267696381,
+          "complete_steps": [
+            90,
+            85
+          ]
+        },
+        "overlap_sources": [
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/concurrent/metrics.jsonl",
+            "bytes": 49611,
+            "sha256": "bfa9eb13f160df9cde085b99775b65051ba7c19fb235a8403fd10cda97a13cb7"
+          },
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/concurrent/metrics.jsonl",
+            "bytes": 49644,
+            "sha256": "7ed290dfadf15126ce28fa5918ba00e7a43557dbb1e2feb037a43876d6120376"
+          }
+        ],
+        "overlap_scope": "step10..99前后主机完成时间构造的完整间隔交集；不是GPU内核时间或稳态吞吐"
+      },
+      "count": {
+        "status": "PASS",
+        "root_report": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-same-judge-verification-root-20260926.json",
+          "bytes": 2803,
+          "sha256": "bfa8908f236974dbc2d362c16b06be06345b5f9cbf381ead8c1b9709d56fe063"
+        },
+        "log": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-eq100-count-same-judge-20260926T210415Z.log",
+          "bytes": 4780,
+          "sha256": "521b81c91f2b5905fce7d8b422d5158192ee73d3cb240647772e632b63b406a2"
+        },
+        "command_file": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-same-judge-20260926T210415Z.command",
+          "bytes": 4938,
+          "sha256": "c9de929c560b86ca4358c0409d411a02c14e997640b397ab335b11d6bdc90830"
+        },
+        "environment_assignments_checked": 46,
+        "outer_exit": {
+          "identity": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-same-judge-20260926T210415Z.identity.json",
+            "bytes": 1516,
+            "sha256": "246d4da7badfcada953b7cc672acf115d26f1e1294837c7a43d58960aebf2d46"
+          },
+          "receipt": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-same-judge-20260926T210415Z.exit.json",
+            "bytes": 5319,
+            "sha256": "bb340dcbe3e35995067ef850c9132051246b7b735cd8193f7c01792cf671a52c"
+          },
+          "capture": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-same-judge-20260926T210415Z.exit.capture.json",
+            "bytes": 2428,
+            "sha256": "546037d36f809842c90e0cfad1023b8815b7795fc191cf3d8f7c57efcf23b1ac"
+          },
+          "guard_tool": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+            "bytes": 20398,
+            "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+          },
+          "capture_actual_exit_code": 0,
+          "pane_dead": 1,
+          "pane_dead_status": 0,
+          "pane_id": "%566",
+          "pane_pid": 1114515,
+          "scope": "父进程自身返回码另由宿主/controller留证，本字段不自报它"
+        },
+        "scalar_projections": {
+          "A": {
+            "metrics": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/solo/metrics.jsonl",
+              "bytes": 49632,
+              "sha256": "ff728dc79bb273704cd7009fe04df4d967802b53e4fef372ea3eb8d43947e5f1"
+            },
+            "tsv": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/solo/scalars_hex.tsv",
+              "bytes": 10968,
+              "sha256": "d37c6b4eb6aeb58207e92657d70a7d0b71d50d27fbcfc5dcefa881d2236904e9"
+            },
+            "source_verification": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-s3-verification-independent-20260926.json",
+              "bytes": 6661,
+              "sha256": "11ce1c9dfd856f49cfc87796d4df3caee7273e7ee748f20337162945e2ea562e"
+            },
+            "rows": 100,
+            "keys": 5
+          },
+          "B": {
+            "metrics": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/concurrent/metrics.jsonl",
+              "bytes": 49644,
+              "sha256": "7ed290dfadf15126ce28fa5918ba00e7a43557dbb1e2feb037a43876d6120376"
+            },
+            "tsv": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/concurrent/scalars_hex.tsv",
+              "bytes": 10968,
+              "sha256": "d37c6b4eb6aeb58207e92657d70a7d0b71d50d27fbcfc5dcefa881d2236904e9"
+            },
+            "source_verification": {
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-both-s2-verification-independent-20260926.json",
+              "bytes": 12420,
+              "sha256": "3a976996abb7943e616c3d369d4d8a44ba851fcc04160f244e8baf541afd94dd"
+            },
+            "rows": 100,
+            "keys": 5
+          }
+        },
+        "state_steps": [
+          50,
+          99
+        ],
+        "state_leaves": [
+          201,
+          201
+        ],
+        "same_entry_config_and_fingerprint_equal": true,
+        "overlap": {
+          "window_steps": [
+            10,
+            99
+          ],
+          "begin": 1790463191.363476,
+          "end": 1790463823.3560028,
+          "seconds": 631.9925267696381,
+          "complete_steps": [
+            85,
+            90
+          ]
+        },
+        "overlap_sources": [
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/concurrent/metrics.jsonl",
+            "bytes": 49644,
+            "sha256": "7ed290dfadf15126ce28fa5918ba00e7a43557dbb1e2feb037a43876d6120376"
+          },
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/concurrent/metrics.jsonl",
+            "bytes": 49611,
+            "sha256": "bfa9eb13f160df9cde085b99775b65051ba7c19fb235a8403fd10cda97a13cb7"
+          }
+        ],
+        "overlap_scope": "step10..99前后主机完成时间构造的完整间隔交集；不是GPU内核时间或稳态吞吐"
+      }
+    },
+    "scope": "只读复核两份已执行same-entry judge的正式结果、参数、原生退出、来源投影及完整主机间隔重叠；未重跑judge或写TSV；不是20/perf/80k通过"
+  }
+}

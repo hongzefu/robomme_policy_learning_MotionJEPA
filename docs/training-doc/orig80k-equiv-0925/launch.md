@@ -10,6 +10,8 @@
 
 预建审查已复现新INPUT启动包装的一项缺口：footer tee可完整写出成功终态后再返回非零。当前包装已改为先检查footer printf/tee，再受检查地直接append两项footer状态与唯一综合退出码。实现方与独立审查方各用6例纯shell替身验证，正常、主命令exit7、正文tee失败、footer完整输出后失败、自SHA不匹配及日志冲突均通过；footer失败测试分别保留非零终态1和29，没有成功EXIT_CODE。测试未运行真实tmux、collector或训练，临时载体已清理。这是新包装的验证，不是历史真实退出状态的独立观测，也不改变本阶段采集、数值、并行或参数判据。
 
+**后续批准补记，原启动代码与六份实际命令不改。** 用户对旧INPUT已明确「同样补记限制，沿用INPUT结果（推荐）」：六个collector/judge实际子命令返回0、manifest和INPUT_EQ内容证据保留，但最终direct append之后最外整体进程的独立退出码没有保存，现不可追补。日志EXIT_CODE=0不能单独证明最外实退0，目前没有实际任务失败的新证据。上述两方6例测试是当时覆盖范围，不包含这个后来发现的边界；下文launch_input只用于还原本次已结束执行，后续不得仅凭该旧包装日志放行。详见[result第十节](result.md#10-计划外事件与处置)，不扩大历史exit-record-audit的固定范围。
+
 ## 已核实的输入与资产
 
 以下路径均以主副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA` 为根。两库 source/framesamp 是实体目录，4×4 packed metadata 均为 `verified`。前置结果已在数据组完整提交 `ec6c9e35784a96f636a587dd737dffa294b616ad` 归档：[公开16任务库](../../dataset-build-doc/16task-pub-1600ep/README.md)、[counting四任务库及严格子集检查](../../dataset-build-doc/4task-counting-pub-400ep/README.md)、[full20真实保存/恢复](../smoke-orig80k-full-0925/README.md)、[count20真实保存/恢复](../smoke-orig80k-count-0925/README.md)。这些已验收的数据/产物范围与本次正式输入结果分开，也不自动补齐历史最外终态的独立证据；原始记录保持不变。阶段关系遵循[原版80k计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)，本次CPU取证按用户允许补记该边界后的决定执行。
@@ -257,3 +259,13 @@ launch_input "orig80k-input-count-judge-$INPUT_TAG" "$STORE/logs/orig80k-input-c
 A 固定上游源码、A独立环境、数据和工具均未改变时，A 的既有取证仍是该上游环境的有效历史基线；若取证工具本身改变，judge 明确要求 A/B 的 `harness.sha256` 一致，不能混用新旧工具记录，需两侧重采。数据/资产改变时，其对应组的 A/B 都受影响；仅重新运行 judge 不产生新输入证据。
 
 训练基线另受更严格的现有约束：计划要求 S1/S3 与 S2 同 HEAD，`entry_equiv.py --mode same-entry` 也直接比较两侧提交和模块摘要。因此 100 步单跑基线一旦与 S2 的 HEAD 不同，即便只改了文档，也不能擅自让 same-entry 忽略它；应先统一验证用 clean HEAD，再按既定判据取得可比较基线。本档案不新增跨 HEAD 放行规则，也不以 CPU INPUT_EQ 替代 P1、100 步、并跑、perf 或正式完成验收。
+
+## 后续批准与本轮推进边界
+
+后续用户分别明确「补记P1限制，补独立退出取证后继续（推荐）」和「同样补记限制，沿用INPUT结果（推荐）」。两项决定各自作用于P1与INPUT的历史证据边界，不补造旧最外退出回执，也不放宽输入数值/顺序/来源或训练逐位判据。用户另要求「继续工作 一路做到起泡前 有问题问用户」，本轮据此只推进至正式80k起跑前；「尽可能并行做」「你有8张卡」按保留判据的4+4调度执行。
+
+其后P1四侧入口、finite、分段与来源记录已经完成；实际量具/B为`00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8`，上游按原固定提交，旧最外退出码不可追取的限制按用户批准保留，不将P1称作轨迹等价。本节是CPU起跑之后的追加记录，不改前文历史命令或P1/100预建launch在00bd时的状态。100步六侧训练、两项upstream和两项same-entry judge均通过，完整实测与独立退出回执见[100步结果](train100-result.md)。新20步、perf和正式预算仍待完成。
+
+最新调度保持完整前置：100步S1/S3分别独占训练窗口，不与另一组GPU任务并跑；S2以GPU0–3和4–7形成真实训练重叠并按同HEAD/环境判据验收。新20步为两条并行库链，各库off训练、真保存/恢复和独立退出验收后才进入同4卡on，再及时进行本库CPU judge，两库互不等待无关阶段；300步perf按4+4并跑并核稳态重叠。20步只验正确性，不据其耗时作吞吐结论。每阶段保留各自全新输出/cache、W&B既定口径、真实恢复、磁盘预算和独立退出要求；两份正式launch最终同Beta/clean就绪后仍停在放行前，不启动80k。
+
+后续必须先保留本任务pane并持久化identity后才释放启动门闩；结束后联合验原生pane退出、capture父进程真实返回及sidecar文件绑定，再核原有内容判据。父适配本身的真实返回由宿主/controller另留证；工具或日志自报0、session消失均不能代替独立退出证据。

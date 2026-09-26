@@ -1,0 +1,83 @@
+{
+  "status": "PASS",
+  "utc": "2026-09-26T21:05:47.868823+00:00",
+  "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "upstream_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+  "tag": "20260926T210415Z",
+  "p1_verification": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/p1-four-sides-verification-root-20260926.json",
+    "bytes": 14144,
+    "sha256": "eda0e63e5a81e041474a45dc207c5987a1cc0a2ff1a7fa5789db04cc6d415dcf"
+  },
+  "asset_verify_log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-assets-20260926T210415Z.log",
+  "asset_verify_log_sha256": "0f3e70dee1fb34ed715a2b164b69425ee48dc3916657a61636282e398890957e",
+  "asset_verify_actual_exit": 0,
+  "gpu_apps": "",
+  "gpu_snapshot": "0, GPU-191942f6-8212-df10-f8f9-aafa4d397152, NVIDIA A100-SXM4-80GB, 595.71.05, 0 MiB\n1, GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b, NVIDIA A100-SXM4-80GB, 595.71.05, 0 MiB\n2, GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5, NVIDIA A100-SXM4-80GB, 595.71.05, 0 MiB\n3, GPU-8fb13753-84aa-f408-93f7-518b05582e9a, NVIDIA A100-SXM4-80GB, 595.71.05, 0 MiB\n4, GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5, NVIDIA A100-SXM4-80GB, 595.71.05, 0 MiB\n5, GPU-bbf6a4e1-ee29-4372-915c-484798a601fe, NVIDIA A100-SXM4-80GB, 595.71.05, 0 MiB\n6, GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd, NVIDIA A100-SXM4-80GB, 595.71.05, 0 MiB\n7, GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd, NVIDIA A100-SXM4-80GB, 595.71.05, 0 MiB\n",
+  "scratch_available_bytes": 851085942784,
+  "meminfo": {
+    "MemTotal": "1176300004 kB",
+    "MemAvailable": "1120477520 kB",
+    "Shmem": "805420 kB"
+  },
+  "shm": "Filesystem        1B-blocks   Used    Available Use% Mounted on\ntmpfs          602265600000 266240 602265333760   1% /dev/shm\n",
+  "storage": "/dev/md0 xfs    /scratch\n",
+  "packages": 208,
+  "package_sha256": "a31fe021dbb20937aa93ce68d59a7d2f7d38d92a7e9514256ca2da617f5274dc",
+  "python_build": "3.11.15 (main, Aug  5 2026, 15:45:52) [Clang 22.1.3 ]",
+  "dependency_scope": "四侧P1验收器已在本次取证重探两侧独立uv解释器及依赖并对原指纹，代码/venv保持冻结",
+  "libraries": {
+    "16task-pub-1600ep": {
+      "framesamp/meta/store_meta.json": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/framesamp/meta/store_meta.json",
+        "bytes": 15587,
+        "sha256": "a554a7859ba35c883ec805244c98764a9eb10c1ddbc244850c5f213db4da669b"
+      },
+      "meta/episode_manifest.json": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/meta/episode_manifest.json",
+        "bytes": 476750,
+        "sha256": "222d84f58fb82073603fda19992c4f82e542475294176bea99e8868036b8a11a"
+      },
+      "meta/input_manifest.json": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/meta/input_manifest.json",
+        "bytes": 2585,
+        "sha256": "3ec2bf9a7df4bdd035476574a07ba2da243eb165f44a13ace16dd8be9abf4847"
+      },
+      "source/meta/stats.json": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep/source/meta/stats.json",
+        "bytes": 60,
+        "sha256": "f48b9c92d9c7eaa389490130be85889ef2b6d7b94a9691c72061767d6d3df57a"
+      }
+    },
+    "4task-counting-pub-400ep": {
+      "framesamp/meta/store_meta.json": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/framesamp/meta/store_meta.json",
+        "bytes": 15124,
+        "sha256": "6c0ffe3968149fd666091e1809fa55a4c1540132db906ec27a40a584cb6aa748"
+      },
+      "meta/episode_manifest.json": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/meta/episode_manifest.json",
+        "bytes": 117562,
+        "sha256": "fa0535335751910451c483d198cda151f04d25df36b75467c7460d118e25ad52"
+      },
+      "meta/input_manifest.json": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/meta/input_manifest.json",
+        "bytes": 707,
+        "sha256": "39f12dffa5dcebc60a366e3994b75058701a62ed185556166a3229742261dd4d"
+      },
+      "source/meta/stats.json": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/source/meta/stats.json",
+        "bytes": 60,
+        "sha256": "e55e1c44c347dcd3d9dfb735f019a00ce00dcb8884501368d6b65225a332d417"
+      }
+    }
+  },
+  "dispatch": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-a-dispatch-20260926T210415Z.command.txt",
+    "sha256": "93b17b2e0f64449b21facf95ed55012b1b74d2391365955e4500e1373175fe86",
+    "source": "docs/training-doc/orig80k-equiv-0925/train100-launch.md",
+    "source_sha256": "6668d34874174366b4b9643b00444bc09153eaccd25a3f0047e1be87f2da0b30",
+    "executed": false
+  },
+  "scope": "100步起跑前置检查，不是100步对拍PASS"
+}

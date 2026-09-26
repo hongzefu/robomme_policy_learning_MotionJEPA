@@ -1,0 +1,534 @@
+{
+  "archive": {
+    "bytes": 61888,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/archive-staging/full-a.records.tar.gz",
+    "sha256": "f44842124be28e84bddcd2ebf0a91ca9ec59fd8e26444475d1b3129bdf702df8"
+  },
+  "checks": {
+    "all_original_sha_and_bytes_equal": true,
+    "credential_scan_no_findings": true,
+    "decoded_sha_and_bytes_equal": true,
+    "exact_json_jsonl_member_set": true,
+    "gzip_crc_complete": true,
+    "no_weights_scripts_yaml_commands": true,
+    "original_source_stat_and_bytes_unchanged": true
+  },
+  "deferred": {
+    "scalars_hex.tsv": "正式judge产生后另行补归档；本次未生成或预写"
+  },
+  "finished_at": "2026-09-26T22:21:30.912204+00:00",
+  "log": {
+    "all_other_normalized_lines_identical": true,
+    "critical_line_count": 132,
+    "critical_lines_exactly_equal": true,
+    "critical_lines_sha256": "0f09d06e3d5106d8491fedf47e0c3893117a6c490f22cfd75e70ce00bed8a1df",
+    "normalization": "CRLF/CR转LF；仅删除独立tqdm_logging.py Progress on行",
+    "normalized_raw_lines": 901,
+    "raw": {
+      "bytes": 103998,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-eq100-full-a-20260926T210415Z.log",
+      "sha256": "e0e2743e6da7e74326f239eb44be0498e112e46a041fdf682c03c354bfb5a4a2"
+    },
+    "raw_bytes_and_stat_unchanged": true,
+    "removed_tqdm_lines": [
+      {
+        "line": 245,
+        "sha256": "2f6128529d50f05fa4163a9f9f05f69e6fd07446705d96f4ac9d0320d981c3e3",
+        "text": "21:07:18.446 [I] Progress on: -/100 rate:- remaining:? elapsed:00:00 postfix:-                    (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 264,
+        "sha256": "882c4287042cc7af1914fb41250b206261e255f6a1fcdf174124c84d4fdaf3d9",
+        "text": "21:08:04.717 [I] Progress on: -/100 rate:- remaining:? elapsed:00:46 postfix:-                    (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 271,
+        "sha256": "8bff2170f435c1604c6ba332a5d6333ada1add347ef39fb3cb3e0b4bf2364d84",
+        "text": "21:08:14.750 [I] Progress on: 3.00it/100it rate:14.2s/it remaining:22:54 elapsed:00:56 postfix:-  (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 281,
+        "sha256": "1482f40136b83047684a5117b596eceb1a86dfe43f2147b9d2789d092fa3d1c9",
+        "text": "21:08:27.236 [I] Progress on: 5.00it/100it rate:8.2s/it remaining:13:03 elapsed:01:08 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 288,
+        "sha256": "3657b938b7474531240fad83228e09199245f9b9122acff9a10153bd3e1ab8f5",
+        "text": "21:08:39.901 [I] Progress on: 8.00it/100it rate:6.3s/it remaining:09:35 elapsed:01:21 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 298,
+        "sha256": "f2b4d5d7423d2ce5e7ab438f92be6ccabde1f4bf613c48253682e03c38510fb6",
+        "text": "21:08:51.076 [I] Progress on: 10.0it/100it rate:5.2s/it remaining:07:45 elapsed:01:32 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 309,
+        "sha256": "883fef63297361c18e4aeb20e4b97d8585cfd5255226be9910f3cb5a6a3a0b8f",
+        "text": "21:08:59.156 [I] Progress on: 11.0it/100it rate:5.1s/it remaining:07:30 elapsed:01:40 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 542,
+        "sha256": "1c0d8a7e9549fb4bbc36582e13e4339e5083252f7e5485ab1646fe3b66f6ba8f",
+        "text": "21:10:11.125 [I] Progress on: -/100 rate:- remaining:? elapsed:00:00 postfix:-                    (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 546,
+        "sha256": "7e9daa131bc587347e54755b039a03d1734a79b78681f5485fa955149981d3ec",
+        "text": "21:10:21.996 [I] Progress on: -/100 rate:- remaining:? elapsed:00:10 postfix:-                    (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 556,
+        "sha256": "d911adcfc77b15bb1fab23af971777e3a355cf459b6fd1f5e68ad51dbf290474",
+        "text": "21:10:33.616 [I] Progress on: 3.00it/100it rate:5.8s/it remaining:09:25 elapsed:00:22 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 563,
+        "sha256": "5207693456c06d512a79359e43b0ec438c8924ec2cd4e86a8b996b83625e650c",
+        "text": "21:10:44.633 [I] Progress on: 5.00it/100it rate:5.4s/it remaining:08:32 elapsed:00:33 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 570,
+        "sha256": "b8658a348303930845b56ed50f47de364a0179cdb32a08ef26daf90d47524b22",
+        "text": "21:10:57.460 [I] Progress on: 8.00it/100it rate:5.7s/it remaining:08:42 elapsed:00:46 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 580,
+        "sha256": "e14f789e9d6494e110788b4715a6fb47cd27247fe441d98b6b869f6c538ef051",
+        "text": "21:11:08.825 [I] Progress on: 11.0it/100it rate:4.5s/it remaining:06:44 elapsed:00:57 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 587,
+        "sha256": "a7a529e5c40b3f1aacb4fdfac03e19df76e66682160245b3e8f58ea959e46c3d",
+        "text": "21:11:18.955 [I] Progress on: 13.0it/100it rate:4.7s/it remaining:06:44 elapsed:01:07 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 594,
+        "sha256": "32ab3e6f651fad2d1479c9739bd02c315ab079f18bddebd63d7cf139703b979d",
+        "text": "21:12:07.257 [I] Progress on: 14.0it/100it rate:4.2s/it remaining:05:58 elapsed:01:56 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 601,
+        "sha256": "cafb61670097a63850378b80fed768ac66c82db93efbf6068743efa5eaa3bb34",
+        "text": "21:12:19.779 [I] Progress on: 16.0it/100it rate:14.3s/it remaining:19:58 elapsed:02:08 postfix:-  (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 611,
+        "sha256": "7a78b063321a31c9d1ca27e4e4271d939a5bb3535a05780ec298c7a76910e032",
+        "text": "21:12:31.201 [I] Progress on: 19.0it/100it rate:7.5s/it remaining:10:07 elapsed:02:20 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 618,
+        "sha256": "af62da4df17f3428440b17deac379661aaa83656049711f0ce6b6b0295d7dab4",
+        "text": "21:12:42.319 [I] Progress on: 21.0it/100it rate:6.3s/it remaining:08:18 elapsed:02:31 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 625,
+        "sha256": "5e292f9553bd7885e8d6154e7d238bb4bdb3c01197411567a97d81c076ad9874",
+        "text": "21:12:55.181 [I] Progress on: 24.0it/100it rate:6.0s/it remaining:07:35 elapsed:02:44 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 635,
+        "sha256": "854f10fb5ba968b25b3f08d2042a747419f36ce35906e1b977264d9223ae3843",
+        "text": "21:13:06.509 [I] Progress on: 27.0it/100it rate:4.7s/it remaining:05:39 elapsed:02:55 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 642,
+        "sha256": "3374d607dab60d02a6d75fbc839f1dd5228c50fc6c3eda0f57eab41f320ebcc8",
+        "text": "21:13:17.378 [I] Progress on: 28.0it/100it rate:5.6s/it remaining:06:43 elapsed:03:06 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 652,
+        "sha256": "22a3fe96bc2d60aee67651c88548b492b9e28a8176154a542fb54849ce9a8ba8",
+        "text": "21:13:28.801 [I] Progress on: 31.0it/100it rate:4.5s/it remaining:05:13 elapsed:03:17 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 659,
+        "sha256": "a497d24735c414c7885a24ca0ef877a693844f820df84b275cf5d2245d196736",
+        "text": "21:13:39.819 [I] Progress on: 33.0it/100it rate:4.8s/it remaining:05:24 elapsed:03:28 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 666,
+        "sha256": "4780796aa64cb0d946baaf0f143aab19ceca4e92901fbc06f06fbbf4401ada2c",
+        "text": "21:13:52.694 [I] Progress on: 36.0it/100it rate:5.5s/it remaining:05:51 elapsed:03:41 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 676,
+        "sha256": "09d8c0871b302de4e10710e0a04ec8afa164588fb6b064686f14d0b3cba51676",
+        "text": "21:14:04.120 [I] Progress on: 39.0it/100it rate:4.5s/it remaining:04:34 elapsed:03:52 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 683,
+        "sha256": "0c3bd9c1ace187893e16a4fcb842f4101e5e9831b2436348a20025a4a63af503",
+        "text": "21:14:14.980 [I] Progress on: 40.0it/100it rate:5.5s/it remaining:05:29 elapsed:04:03 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 693,
+        "sha256": "00b9817495ee1641554aee492090b8a75d9affe8ba728e583bf1d093f32785d2",
+        "text": "21:14:26.401 [I] Progress on: 43.0it/100it rate:4.5s/it remaining:04:16 elapsed:04:15 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 700,
+        "sha256": "2dde07276d32ad825531c86ba6a5bbd01d5baf69d8a108d26a0e95a90fc9f3d1",
+        "text": "21:14:36.466 [I] Progress on: 46.0it/100it rate:4.2s/it remaining:03:45 elapsed:04:25 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 707,
+        "sha256": "5972fe91c942976a69ad84f3dc3ea9d39d13e46690aab26adb53ee2a86952bad",
+        "text": "21:14:49.086 [I] Progress on: 48.0it/100it rate:5.4s/it remaining:04:40 elapsed:04:37 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 718,
+        "sha256": "fac5515d10cd7563cfaab107ef0347e8230a5bb66bafbc6bb2274d03b11bcee9",
+        "text": "21:25:50.931 [I] Progress on: 51.0it/100it rate:199.6s/it remaining:2:43:00 elapsed:15:39 postfix:- (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 725,
+        "sha256": "d852de3235e0c35567b83a7fd69b9be7dd5794368de7f85b596c3657cff2da00",
+        "text": "21:26:02.080 [I] Progress on: 52.0it/100it rate:142.1s/it remaining:1:53:42 elapsed:15:50 postfix:- (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 735,
+        "sha256": "07b7f6574ba7e54c250192d3e196c3ad527c827e9cfbe0a250f0c2a5fe32d5d1",
+        "text": "21:26:13.501 [I] Progress on: 55.0it/100it rate:51.4s/it remaining:38:32 elapsed:16:02 postfix:-  (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 742,
+        "sha256": "21b34f191bb900ac706e6157009251adff9101d6fc0b8e5c26410165f634383b",
+        "text": "21:26:24.617 [I] Progress on: 57.0it/100it rate:27.8s/it remaining:19:55 elapsed:16:13 postfix:-  (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 749,
+        "sha256": "996f7c5331f3d511a95fc41e6109d1cd3680b695201bf291f3540b5cb4c30732",
+        "text": "21:26:37.506 [I] Progress on: 60.0it/100it rate:13.4s/it remaining:08:54 elapsed:16:26 postfix:-  (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 759,
+        "sha256": "8bef7ef43eb6658d34d53967d3f84da1c1b71ece5c67041710658c32a1c151d5",
+        "text": "21:26:48.929 [I] Progress on: 63.0it/100it rate:7.2s/it remaining:04:26 elapsed:16:37 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 766,
+        "sha256": "cf04e672e823a8360be86625215b86f043e0723f38866b9c84451b32dcbd410a",
+        "text": "21:26:59.778 [I] Progress on: 64.0it/100it rate:7.4s/it remaining:04:26 elapsed:16:48 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 776,
+        "sha256": "a90a2418fc321036bccb70fb8435535fa03db6db045259c61c26e812f3a86f30",
+        "text": "21:27:11.199 [I] Progress on: 67.0it/100it rate:5.1s/it remaining:02:49 elapsed:17:00 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 783,
+        "sha256": "bfecf4989d3d3761f298ebb8bec89fc238b14bf04bcdd77ff307019be6bb73d6",
+        "text": "21:27:22.317 [I] Progress on: 69.0it/100it rate:5.2s/it remaining:02:40 elapsed:17:11 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 790,
+        "sha256": "14f2874b6ecd2af63389f94b9bd52fa71bb3fff49af1c0a99d2dc97e0ee729ed",
+        "text": "21:27:35.206 [I] Progress on: 72.0it/100it rate:5.6s/it remaining:02:37 elapsed:17:24 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 800,
+        "sha256": "9e583b9aefc565142e30b92d5b74e68e8fdafdc6bdc7c768c23e12f95c4bb837",
+        "text": "21:27:46.634 [I] Progress on: 75.0it/100it rate:4.5s/it remaining:01:53 elapsed:17:35 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 807,
+        "sha256": "faa34f930dfc6e9471ff349378fe2fd5042220822993378404371105244095cd",
+        "text": "21:27:57.485 [I] Progress on: 76.0it/100it rate:5.5s/it remaining:02:13 elapsed:17:46 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 817,
+        "sha256": "3e2d3353914be79c897c078117a7a89aec031ea04e95ac47aa90d226645243e4",
+        "text": "21:28:08.907 [I] Progress on: 79.0it/100it rate:4.5s/it remaining:01:34 elapsed:17:57 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 824,
+        "sha256": "573e3dce6f5b482460581835dcb1483236f884f228eb2228bb3a24f661132fd2",
+        "text": "21:28:20.027 [I] Progress on: 81.0it/100it rate:4.8s/it remaining:01:31 elapsed:18:08 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 831,
+        "sha256": "9337492a255a3f14add68678b2cf34a6cb53ee08bd72c64b44dfe18571c51ea6",
+        "text": "21:28:31.762 [I] Progress on: 84.0it/100it rate:5.2s/it remaining:01:22 elapsed:18:20 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 841,
+        "sha256": "b84c1f1d1d3fb48801815da067b1c8adc6e12d1f5eb30876e2264ea4af788779",
+        "text": "21:28:43.031 [I] Progress on: 87.0it/100it rate:4.4s/it remaining:00:56 elapsed:18:31 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 848,
+        "sha256": "cae6b5185c4c3f083ed4f762b4f83fe3553980ee6148b167a8bce53880ac0a7b",
+        "text": "21:28:53.786 [I] Progress on: 88.0it/100it rate:5.4s/it remaining:01:04 elapsed:18:42 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 858,
+        "sha256": "a8534c0618b44d17414b4dbb39cec6a5f1bd4a8bf66c75998d1d980465d93b78",
+        "text": "21:29:05.207 [I] Progress on: 91.0it/100it rate:4.5s/it remaining:00:40 elapsed:18:54 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 865,
+        "sha256": "693a731ea68588901b6dcbb2ada3cf71a232427af136387b98d0817abfa9d2ed",
+        "text": "21:29:16.326 [I] Progress on: 93.0it/100it rate:4.8s/it remaining:00:33 elapsed:19:05 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 872,
+        "sha256": "4d30f6fef12b64be2476e068e2ddae1031e0a97a944c165019a2d269b0698f87",
+        "text": "21:29:29.199 [I] Progress on: 96.0it/100it rate:5.5s/it remaining:00:21 elapsed:19:18 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 882,
+        "sha256": "13daf3fedd53bd6d56a9c274521d84336697e68a03ce358d9462af42db8bdbcd",
+        "text": "21:29:40.631 [I] Progress on: 99.0it/100it rate:4.5s/it remaining:00:04 elapsed:19:29 postfix:-   (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 887,
+        "sha256": "2ba4cedd042f14bd638b0c0babc9092a54ce0daf1b84f067bf34cc960705d38e",
+        "text": "21:40:05.281 [I] Progress on: 100it/100it rate:190.5s/it remaining:00:00 elapsed:29:54 postfix:-  (704727:tqdm_logging.py:145)"
+      },
+      {
+        "line": 888,
+        "sha256": "2ba4cedd042f14bd638b0c0babc9092a54ce0daf1b84f067bf34cc960705d38e",
+        "text": "21:40:05.281 [I] Progress on: 100it/100it rate:190.5s/it remaining:00:00 elapsed:29:54 postfix:-  (704727:tqdm_logging.py:145)"
+      }
+    ],
+    "stage": {
+      "bytes": 97390,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/archive-staging/full-a.summary.log",
+      "sha256": "d6e070e24a3ec014d2bf0be3411cbc33b1a65624b0b2bfdedca9afd690ea19d2"
+    },
+    "stage_lines": 849,
+    "step_lines": 112
+  },
+  "members": [
+    {
+      "archive_bytes": 1565,
+      "archive_sha256": "eb413f3b70c79d7cf1c092d3a030ba646c02953321c8a0f2b87ab061181c0e8c",
+      "path": "harness_meta.json",
+      "source_bytes": 1565,
+      "source_sha256": "eb413f3b70c79d7cf1c092d3a030ba646c02953321c8a0f2b87ab061181c0e8c",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 709,
+      "archive_sha256": "8c352184e768fc6fb041ce94c0dd14cc5b1e79af29fd17da59edf3cfbea55f1a",
+      "path": "init_ownership.json",
+      "source_bytes": 709,
+      "source_sha256": "8c352184e768fc6fb041ce94c0dd14cc5b1e79af29fd17da59edf3cfbea55f1a",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 592,
+      "archive_sha256": "b1d72d8d25d9806d335b7dea2d060ce47802b7c75341a6b1fdf00b325d8223c7",
+      "path": "jax_cache.json",
+      "source_bytes": 592,
+      "source_sha256": "b1d72d8d25d9806d335b7dea2d060ce47802b7c75341a6b1fdf00b325d8223c7",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 49610,
+      "archive_sha256": "9f8072095f36adfa1af76d4955476302454a0c4b8355cc879a87027ec36e6074",
+      "path": "metrics.jsonl",
+      "source_bytes": 49610,
+      "source_sha256": "9f8072095f36adfa1af76d4955476302454a0c4b8355cc879a87027ec36e6074",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 55547,
+      "archive_sha256": "11a87029cc6f5d9201987a71362d6559f22f58705b5aa94f6f5062c26cff2668",
+      "path": "metrics_all.jsonl",
+      "source_bytes": 55547,
+      "source_sha256": "11a87029cc6f5d9201987a71362d6559f22f58705b5aa94f6f5062c26cff2668",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 5937,
+      "archive_sha256": "3f18539ecc2d2d74b3404918cd06f905f6db23d08ef88848641b2c5fa8650f5b",
+      "path": "metrics_tentative.jsonl",
+      "source_bytes": 5937,
+      "source_sha256": "3f18539ecc2d2d74b3404918cd06f905f6db23d08ef88848641b2c5fa8650f5b",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 13618,
+      "archive_sha256": "037df19bb39da4cad829dbbb4a7d5afdef6649279fdcf3218f06a3ee1510ac01",
+      "path": "provenance.json",
+      "source_bytes": 13618,
+      "source_sha256": "037df19bb39da4cad829dbbb4a7d5afdef6649279fdcf3218f06a3ee1510ac01",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 626,
+      "archive_sha256": "166cbb8b34c40187ddaa26f36f9f9d6dacc014d6ee8e4917376d041f2d2e33d5",
+      "path": "provenance_start.json",
+      "source_bytes": 626,
+      "source_sha256": "166cbb8b34c40187ddaa26f36f9f9d6dacc014d6ee8e4917376d041f2d2e33d5",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 2481,
+      "archive_sha256": "3a313ec04154e5829442972897e3053c48541799455b0b94c16644f7964b332d",
+      "path": "resolved_config.json",
+      "source_bytes": 2481,
+      "source_sha256": "3a313ec04154e5829442972897e3053c48541799455b0b94c16644f7964b332d",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 38,
+      "archive_sha256": "97d327e20b36da5f388b1453f669da1fa43b3954c452e22756d42d6c9d826d06",
+      "path": "run_status.json",
+      "source_bytes": 38,
+      "source_sha256": "97d327e20b36da5f388b1453f669da1fa43b3954c452e22756d42d6c9d826d06",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 10007,
+      "archive_sha256": "35186e00d8aff5b0dd3f4d01a3fb2edec0610070821e4750868438d0babe4e4b",
+      "path": "runtime_fingerprint.json",
+      "source_bytes": 10007,
+      "source_sha256": "35186e00d8aff5b0dd3f4d01a3fb2edec0610070821e4750868438d0babe4e4b",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 10007,
+      "archive_sha256": "35186e00d8aff5b0dd3f4d01a3fb2edec0610070821e4750868438d0babe4e4b",
+      "path": "runtime_fingerprint_end.json",
+      "source_bytes": 10007,
+      "source_sha256": "35186e00d8aff5b0dd3f4d01a3fb2edec0610070821e4750868438d0babe4e4b",
+      "status": "PASS"
+    },
+    {
+      "archive_bytes": 119310,
+      "archive_sha256": "fa9e799be83cb502890eef8dad548fd89f95ee3233571499e237a3804596f02d",
+      "path": "state_digests.jsonl",
+      "source_bytes": 119310,
+      "source_sha256": "fa9e799be83cb502890eef8dad548fd89f95ee3233571499e237a3804596f02d",
+      "status": "PASS"
+    }
+  ],
+  "normalization": {
+    "format": "USTAR",
+    "gid": 0,
+    "gname": "",
+    "gzip_compresslevel": 6,
+    "gzip_filename": "",
+    "gzip_mtime": 0,
+    "mode": "0644",
+    "mtime": 0,
+    "order": "lexicographic",
+    "uid": 0,
+    "uname": ""
+  },
+  "outer_exit_evidence_separate_from_log": {
+    "capture": {
+      "bytes": 2358,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-a-20260926T210415Z.exit.capture.json",
+      "sha256": "0cecec64ce5889fe775169a291f1c193568adb84fc3a3541d19387bcce4b8e85"
+    },
+    "capture_actual_exit_code": 0,
+    "capture_stderr": {
+      "bytes": 187,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-a-20260926T210415Z.exit.capture.stderr",
+      "sha256": "7b6db36a3d50259e768b8f2e89a12d3562b55c6a8e29a9fbc39daae906631060"
+    },
+    "capture_stdout": {
+      "bytes": 4287,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-a-20260926T210415Z.exit.capture.stdout",
+      "sha256": "a65477c820057a90cb9abc236c39a328b921714497b5ca973c1742bae854ab45"
+    },
+    "command_file_reference_only": {
+      "bytes": 4315,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-a-20260926T210415Z.command",
+      "sha256": "21cf82e8b644f8d16fba95938f826736032edfaae324b5d18a826b3046e94219"
+    },
+    "enabled_mid_run": true,
+    "guard_tool_reference_only": {
+      "bytes": 20398,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+      "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+    },
+    "identity": {
+      "bytes": 1378,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-a-20260926T210415Z.identity.json",
+      "sha256": "42b09b76091ed9b7c7784f1d6788db93089df287df34d61a4147a5393bd848da"
+    },
+    "native_parsed": {
+      "pane_dead": "1",
+      "pane_dead_signal": "",
+      "pane_dead_status": "0",
+      "pane_dead_time": "1790458815",
+      "pane_id": "%552",
+      "pane_pid": "704720",
+      "pane_start_command": "\"bash /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-a-20260926T210415Z.command 21cf82e8b644f8d16fba95938f826736032edfaae324b5d18a826b3046e94219 \"",
+      "remain_on_exit": "on",
+      "session": "orig80k-eq100-full-a-20260926T210415Z",
+      "window_id": "@552"
+    },
+    "receipt": {
+      "bytes": 4653,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-a-20260926T210415Z.exit.json",
+      "sha256": "e612faf74a8c200103664acce4ea6bad94d60342320fc0bdf034f97142a045ff"
+    },
+    "scope": "真实pane退出与capture外部返回码独立于日志0；不自报capture父进程最终退出"
+  },
+  "payload_bytes": 270047,
+  "preflight_reference_only": {
+    "bytes": 5056,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-preflight-20260926T210415Z.json",
+    "sha256": "12219976ca38d58acd4a9b6f2b20f2a17ae91f488fab29bef051f1e7e1ae83d1"
+  },
+  "record_files": 13,
+  "schema": 1,
+  "scope": "已结束full-a的核心原字节快照；正式judge尚未运行，不是A/B轨迹PASS",
+  "segments": {
+    "all_rows": 112,
+    "main_rows": 100,
+    "tentative_rows": 12
+  },
+  "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/a",
+  "started_at": "2026-09-26T22:21:30.747573+00:00",
+  "state_rows_not_deduplicated": true,
+  "state_segments": [
+    {
+      "finite_leaves": 201,
+      "n_leaves": 201,
+      "position": 0,
+      "step": 50
+    },
+    {
+      "finite_leaves": 201,
+      "n_leaves": 201,
+      "position": 1,
+      "step": 99
+    }
+  ],
+  "status": "PASS",
+  "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "upstream_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+  "verification": {
+    "archived_copy": {
+      "independent": {
+        "bytes": 12710,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/archive-staging/eq100-both-a.independent-verification.json",
+        "sha256": "c1b23036b341a8c4081225a98850f4fa220b5f0de6f68a4c6d8fb96c4f766488"
+      },
+      "root": {
+        "bytes": 11797,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/archive-staging/eq100-both-a.root-verification.json",
+        "sha256": "038984869fb89eaf00b2e3eadd3758377588f040ef23e6d7038ded29cc0b479b"
+      }
+    },
+    "original": {
+      "independent": {
+        "bytes": 12710,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-both-a-verification-independent-20260926.json",
+        "sha256": "c1b23036b341a8c4081225a98850f4fa220b5f0de6f68a4c6d8fb96c4f766488"
+      },
+      "root": {
+        "bytes": 11797,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-both-a-verification-root-20260926.json",
+        "sha256": "038984869fb89eaf00b2e3eadd3758377588f040ef23e6d7038ded29cc0b479b"
+      }
+    }
+  }
+}

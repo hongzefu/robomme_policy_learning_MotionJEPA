@@ -1,0 +1,284 @@
+{
+  "recorded_utc": "2026-09-26T20:11:27.755322+00:00",
+  "tool": "py-spy 0.4.2",
+  "environment": "uv临时工具环境；主/A训练.venv未改",
+  "nonblocking": true,
+  "locals": false,
+  "scope": "瞬间只读Python栈，非连续profile；nonblocking模式存在采样不一致可能",
+  "sides": {
+    "full": {
+      "pid": 582619,
+      "capture_exit": 0,
+      "source": "v1-store/bench/orig80k-build-preflight-0925/p1-full-a-stack-20260926T2011.json",
+      "source_sha256": "144642b7756b8d299f38bac7aab168ce9978e862d1e0f89d6a54d761220a6801",
+      "stderr": "v1-store/bench/orig80k-build-preflight-0925/p1-full-a-stack-20260926T2011.err",
+      "stderr_bytes": 0,
+      "mtime_ns": 1790453460185707673,
+      "main_frames": [
+        {
+          "name": "_summarize_state",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "line": 461,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "main",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/scripts/train.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/scripts/train.py",
+          "line": 450,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "<module>",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/scripts/train.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/scripts/train.py",
+          "line": 457,
+          "locals": null,
+          "is_entry": true,
+          "is_shim_entry": false
+        },
+        {
+          "name": "_run_code",
+          "filename": "<frozen runpy>",
+          "module": null,
+          "short_filename": "<frozen runpy>",
+          "line": 88,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "_run_module_code",
+          "filename": "<frozen runpy>",
+          "module": null,
+          "short_filename": "<frozen runpy>",
+          "line": 98,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "run_path",
+          "filename": "<frozen runpy>",
+          "module": null,
+          "short_filename": "<frozen runpy>",
+          "line": 291,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "_run",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "line": 510,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "main",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "line": 873,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "<module>",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "line": 878,
+          "locals": null,
+          "is_entry": true,
+          "is_shim_entry": true
+        }
+      ],
+      "observation": "_summarize_state内执行有限值检查"
+    },
+    "count": {
+      "pid": 582633,
+      "capture_exit": 0,
+      "source": "v1-store/bench/orig80k-build-preflight-0925/p1-count-a-stack-20260926T2011.json",
+      "source_sha256": "c050e41c01f4c7ec00eb49efdf81e0a5e9f2438c0eda8673b959018a8d2b57e0",
+      "stderr": "v1-store/bench/orig80k-build-preflight-0925/p1-count-a-stack-20260926T2011.err",
+      "stderr_bytes": 0,
+      "mtime_ns": 1790453460175707593,
+      "main_frames": [
+        {
+          "name": "_value",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/array.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/array.py",
+          "line": 663,
+          "locals": null,
+          "is_entry": true,
+          "is_shim_entry": false
+        },
+        {
+          "name": "wrapper",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/profiler.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/profiler.py",
+          "line": 334,
+          "locals": null,
+          "is_entry": true,
+          "is_shim_entry": false
+        },
+        {
+          "name": "__array__",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/array.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/array.py",
+          "line": 441,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "_device_get",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/api.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/api.py",
+          "line": 2536,
+          "locals": null,
+          "is_entry": true,
+          "is_shim_entry": false
+        },
+        {
+          "name": "<genexpr>",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/tree_util.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/tree_util.py",
+          "line": 358,
+          "locals": null,
+          "is_entry": true,
+          "is_shim_entry": false
+        },
+        {
+          "name": "tree_map",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/tree_util.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/tree_util.py",
+          "line": 358,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "device_get",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/api.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/api.py",
+          "line": 2575,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "_summarize_state",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "line": 460,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "main",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/scripts/train.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/scripts/train.py",
+          "line": 450,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "<module>",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/scripts/train.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/scripts/train.py",
+          "line": 457,
+          "locals": null,
+          "is_entry": true,
+          "is_shim_entry": false
+        },
+        {
+          "name": "_run_code",
+          "filename": "<frozen runpy>",
+          "module": null,
+          "short_filename": "<frozen runpy>",
+          "line": 88,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "_run_module_code",
+          "filename": "<frozen runpy>",
+          "module": null,
+          "short_filename": "<frozen runpy>",
+          "line": 98,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "run_path",
+          "filename": "<frozen runpy>",
+          "module": null,
+          "short_filename": "<frozen runpy>",
+          "line": 291,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "_run",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "line": 510,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "main",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "line": 873,
+          "locals": null,
+          "is_entry": false,
+          "is_shim_entry": false
+        },
+        {
+          "name": "<module>",
+          "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "module": null,
+          "short_filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+          "line": 878,
+          "locals": null,
+          "is_entry": true,
+          "is_shim_entry": true
+        }
+      ],
+      "observation": "_summarize_state内device_get，JAX _value组装host数组"
+    }
+  }
+}

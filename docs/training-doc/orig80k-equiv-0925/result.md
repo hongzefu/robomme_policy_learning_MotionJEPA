@@ -1,5 +1,7 @@
 # 原版80k正式CPU输入对拍结果
 
+后续阶段结果另见[P1](p1-result.md)及[100步](train100-result.md)：P1内容验收和100步四项judge现均通过，实际B/量具版本为`00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8`。本文件的INPUT原始证据仍锚定`3a1582db39c723c735e04752e5027bfe40ecc3e1`，不改写为后续运行版本。
+
 本次正式CPU阶段于2026-09-26 17:07:21—19:41:35 UTC完成。四侧collector与两份judge均通过，各自命令、正文tee、footer printf、footer tee及综合退出均唯一为0。实际运行版本与原始记录保持不变；本文是运行结束后的结果回写，不把归档提交冒称为起跑版本。启动命令见[launch](launch.md)，总览见[README](README.md)。
 
 ## 1. 结论与指标速览
@@ -105,13 +107,15 @@ EXIT_CODE=0
 
 日志头还保留会话全名、wrapper/body PID、声明的INPUT_HEAD、命令文件期望/实际SHA及START_UTC，尾部保留SESSION_END、INPUT_HEAD_END和END_UTC。修正后的包装先核footer printf/tee状态再直接追加唯一综合退出码；没有把会话消失单独当作成功。四侧原始输出与六份原始日志均保留；会话结束状态与日志终态一起核验。
 
+上述五行是原始日志实测值，不是最外整体进程独立wait回执。固定源码直接捕获六个collector/judge子命令的返回，所以COMMAND_EXIT=0及工具/内容验收保留；最终direct append之后的最外真实退出码未独立保存，现不可追补。该后续发现与用户已批准的沿用处置见第9、10节，原五行和全部原始文件不改。
+
 ## 8. 输入判定与后续评估状态
 
 两组PASS分别覆盖本次各组记录的共同来源/资产、全量身份和索引顺序、full的6906点或counting的2400点，以及104个真实批的精确数值与授权None等价。原始dtype、schema和raw字节摘要仍可查；PASS不意味着所有原始摘要都逐位相同，也不是全量两epoch内容解码。
 
 两份judge都保持`--expect-head-a=ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`、`--expect-head-b=3a1582db39c723c735e04752e5027bfe40ecc3e1`。正式结论来自原始完整collector目录；无损归档只保存证据，不重新命名或改写其provenance。
 
-P1两步入口自检、上游/当前100步、同入口单跑/并跑、两库各一对新测速包装20步开关对照、300步perf及两个80k均尚未执行。既有两次数据可读性20步确曾真实保存并恢复checkpoint19，但不是新测速包装20步等价对照。此阶段未运行策略评估。
+以下保留CPU首次结果回写时的阶段范围：P1两步入口自检、上游/当前100步、同入口单跑/并跑、两库各一对新测速包装20步开关对照、300步perf及两个80k均尚未执行。既有两次数据可读性20步确曾真实保存并恢复checkpoint19，但不是新测速包装20步等价对照。此阶段未运行策略评估。
 
 ## 9. 用户决定记录
 
@@ -123,9 +127,17 @@ P1两步入口自检、上游/当前100步、同入口单跑/并跑、两库各�
 
 历史最外footer证据边界提出后，用户选择「补记限制，继续 CPU 输入取证」，因此本轮按新包装继续，保留旧数据与20步子任务/产物PASS，既不补造旧最外进程退出观测，也不重训已验收产物。用户另已选择「两库各跑一对 20 步（推荐）」，用于新测速包装关闭/开启的真实等价覆盖；两侧仍真实保存且W&B开启，**截至本CPU结果回写尚未执行**。上述决定完整保留，均不是相应闸门已经通过。
 
+后续用户分别明确「补记P1限制，补独立退出取证后继续（推荐）」和「同样补记限制，沿用INPUT结果（推荐）」。两项决定各自作用于P1与INPUT的历史证据边界，不补造旧最外退出回执，也不放宽输入数值/顺序/来源或训练逐位判据。用户另要求「继续工作 一路做到起泡前 有问题问用户」，本轮据此只推进至正式80k起跑前；「尽可能并行做」「你有8张卡」按保留判据的4+4调度执行。
+
 ## 10. 计划外事件与处置
 
 起跑前新INPUT包装曾存在先写成功EXIT_CODE再检查footer tee的确定缺口。现已修正，并由实现方及独立审查方分别完成6例纯shell替身测试（正常、命令exit7、正文tee失败、footer完整输出后失败、自SHA不匹配、日志冲突）；两方footer失败例分别返回1与29，未残留成功终态。这些测试不能补成旧四次数据/20步最外层的独立退出观测。历史边界详见[exit-record-audit.md](exit-record-audit.md)；原始历史记录保持不变。
+
+后续发现另一层边界：最终direct append可能已经完整写出日志0，随后自身返回非零。固定INPUT源码在子shell最后直接执行collector/judge并捕获其PIPESTATUS，所以六份COMMAND_EXIT=0仍是实际子命令返回0；四份collector、manifest及两组INPUT_EQ内容验收保留。已结束INPUT/P1没有保存最外整体进程独立wait/pane退出码，现不可追补；日志EXIT_CODE=0不是该最外实际返回码的独立证明。目前没有这些真实任务失败的新证据，纯shell反例也不写成它们的真实退出值。
+
+[INPUT静态取证补充](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/input-outer-exit-scope-supplement-20260926.md)的SHA256为 `bd8c37ba659b2dca0db52f1ebf54c5ff9e925416acbe9e7f8b0e3b46dfb2fd8a`，后续[INPUT批准说明](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/input-outer-exit-scope-approved-20260926.md)为 `c9b3149476fea956f1baf2b473667b2c5221e9e24c0922ea4004fe521d4b093a`；[P1已批准限制说明](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/archive-staging/p1-result-draft.md)为 `aa2bf921ffbc676bc1444c00bf42ff9f6378fccc3ff5d336c30085e2ea76b1c4`。这些追加说明不改变原collector、数值/索引结果、SHA、raw日志或归档包，也不扩大[exit-record-audit.md](exit-record-audit.md)原固定审计范围。
+
+P1四侧入口、finite、分段与来源记录完成；A保留tentative/main两段状态，不去重，也没有以P1执行100步轨迹judge。按用户对P1的独立批准保留这些证据，不把原日志0标成最外实退0。后续必须先保留本任务pane并持久化identity后才释放启动门闩；结束后联合验原生pane退出、capture父进程真实返回及sidecar文件绑定，再核原有内容判据。父适配本身的真实返回由宿主/controller另留证；工具或日志自报0、session消失均不能代替独立退出证据。
 
 本次六份原始日志均没有tqdm中间态需要过滤，第一份stage summary与各自原日志逐字相同。随后为满足Git行尾空白检查，在独立`git-ready/`副本中仅删除每份日志`COMMAND=`行末一个未转义ASCII分隔空格（0x20），不改变解析argv；不是删掉参数字符。每份各减少1 B，各18条关键行规范化一致、6条判定/退出行保留原始字节。原始日志、旧stage/checks、collector记录和tar包均未改，没有借日志清洗删去失败或进度记录。
 
@@ -135,7 +147,9 @@ P1两步入口自检、上游/当前100步、同入口单跑/并跑、两库各�
 
 两组正式INPUT_EQ现均PASS，六会话结束后已解除本阶段tracked冻结；完整原始证据继续锚定实际INPUT_HEAD。CPU采集期间预算/测速包装工具仅在ignored路径准备候选，后续工具集成与测试单独留证，不能把本输入结果当作这些候选已经通过真实训练的依据。
 
-解除冻结后，预算对接和测速包装20步对照工具已落实到源码并完成工具合测，具体实施验证记录见[总计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)；这不新增真实训练结果。后续启动方案见[P1预建记录](p1-launch.md)与[100步及单跑/并跑预建记录](train100-launch.md)，两份均未运行。仍需实际执行P1、100步与单跑/并跑、已批准的两库各一对20步包装对照及真实300步perf。正式预算须补真实perf/恢复、末步stat与采样证据及保守余量来源，80k仍待全部对应前置通过。
+CPU阶段解除冻结后，预算对接和测速包装20步对照工具已落实到源码并完成工具合测，具体实施验证记录见[总计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)。[P1预建记录](p1-launch.md)与[100步及单跑/并跑预建记录](train100-launch.md)保留00bd起跑前文本，后续真实执行不回写成当时已知。其后P1按实际量具/B提交`00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8`完成并按批准补记限制；上游锚点仍按原档案。100步六侧训练和四项judge均通过，来源、有限值、500个标量及2×201叶完整状态逐位判据均满足，并独立核验十个最外进程原生退出0。新20步、perf和正式预算仍待完成；正式预算仍须真实perf/恢复、末步stat、采样证据及保守余量来源，80k全部前置保留。
+
+最新调度保持完整前置：100步S1/S3分别独占训练窗口，不与另一组GPU任务并跑；S2以GPU0–3和4–7形成真实训练重叠并按同HEAD/环境判据验收。新20步为两条并行库链，各库off训练、真保存/恢复和独立退出验收后才进入同4卡on，再及时进行本库CPU judge，两库互不等待无关阶段；300步perf按4+4并跑并核稳态重叠。20步只验正确性，不据其耗时作吞吐结论。每阶段保留各自全新输出/cache、W&B既定口径、真实恢复、磁盘预算和独立退出要求；两份正式launch最终同Beta/clean就绪后仍停在放行前，不启动80k。
 
 仅改文档或无关测速/预算工具时，旧输入证据继续锚定原INPUT_HEAD；沿用前留新旧提交diff以及取证工具、输入链模块、依赖、数据和资产指纹一致性证明，不改原记录HEAD或声称新HEAD已重跑。取证工具变化要求两侧同工具重采；输入相关变化或影响不明先报告，训练S1/S3/S2仍要求同HEAD。
 

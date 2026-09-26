@@ -1,0 +1,151 @@
+{
+  "all_other_normalized_lines_identical": true,
+  "critical_line_count": 25,
+  "critical_lines_exactly_equal": true,
+  "critical_lines_sha256": "acd196220ff44076d1709f61c3bc6499a5735d3954aa50c14e8bb810c7152274",
+  "group": "full",
+  "mode": "upstream",
+  "normalization": "CRLF/CR转LF；仅删除独立tqdm_logging.py Progress on行",
+  "normalized_raw_lines": 31,
+  "outer_exit_evidence_separate_from_log": {
+    "capture": {
+      "bytes": 2449,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.exit.capture.json",
+      "sha256": "7cc236bd40f3f10eb448f96935eda88683d921bd960a2f1d849aae21efa610ae"
+    },
+    "capture_actual_exit_code": 0,
+    "capture_stderr": {
+      "bytes": 187,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.exit.capture.stderr",
+      "sha256": "7b6db36a3d50259e768b8f2e89a12d3562b55c6a8e29a9fbc39daae906631060"
+    },
+    "capture_stdout": {
+      "bytes": 4987,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.exit.capture.stdout",
+      "sha256": "41f721923686c795e7937b8f463756b344cd3ce74a6d4593e256bb8378527bbc"
+    },
+    "command_file_reference_only": {
+      "bytes": 4758,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.command",
+      "sha256": "df34f79a2021a5597f05108d39d0051ff3f49e2800e82c63d9832463775c70f2"
+    },
+    "enabled_mid_run": false,
+    "guard_tool_reference_only": {
+      "bytes": 20398,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+      "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+    },
+    "identity": {
+      "bytes": 1531,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.identity.json",
+      "sha256": "3d8628391a6267f02cf8751b85cdc282a333389d555ce6e61e3314143c821de8"
+    },
+    "launch_records_reference_only": {
+      "status": {
+        "bytes": 2,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.launch.guard.status",
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+      },
+      "stderr": {
+        "bytes": 187,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.launch.guard.stderr",
+        "sha256": "7b6db36a3d50259e768b8f2e89a12d3562b55c6a8e29a9fbc39daae906631060"
+      },
+      "stdout": {
+        "bytes": 9072,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.launch.guard.stdout",
+        "sha256": "cd56bd235a3d6499a788857b51a11bd494f0e5b726206506c99360daf7831437"
+      }
+    },
+    "native_parsed": {
+      "pane_dead": "1",
+      "pane_dead_signal": "",
+      "pane_dead_status": "0",
+      "pane_dead_time": "1790461930",
+      "pane_id": "%561",
+      "pane_pid": "1069848",
+      "pane_start_command": "/bin/sh -c \"\\\"$1\\\" wait-for \\\"$2\\\" || exit 2\\nexec bash \\\"$3\\\" \\\"$4\\\"\" tmux-exit-guard /usr/bin/tmux orig80k-exit-guard-74fb7719877a49ae8b0094b9e74f49a3 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.command df34f79a2021a5597f05108d39d0051ff3f49e2800e82c63d9832463775c70f2",
+      "remain_on_exit": "on",
+      "session": "orig80k-eq100-full-upstream-judge-20260926T210415Z",
+      "window_id": "@561"
+    },
+    "receipt": {
+      "bytes": 5363,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.exit.json",
+      "sha256": "533ea051627ebc3be484b2ddf48d34caa0dc6e604cb63f2e360346e4d2a8333d"
+    },
+    "scope": "原生退出0与外部capture真实返回0独立于日志0；父进程终态另由宿主记录"
+  },
+  "raw": {
+    "bytes": 4440,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-eq100-full-upstream-judge-20260926T210415Z.log",
+    "sha256": "83d6a6d440885fa0f19600158de8476f7cbc2d9f5fa10d026086274b10313077"
+  },
+  "raw_bytes_and_stat_unchanged": true,
+  "removed_tqdm_lines": [],
+  "schema": 1,
+  "scope": "本机固定确定性档full上游A与S1的100步正式judge PASS，仅归档已执行结果",
+  "stage": {
+    "bytes": 4440,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/archive-staging/full-upstream-increment-20260926/full-upstream-judge.summary.log",
+    "sha256": "83d6a6d440885fa0f19600158de8476f7cbc2d9f5fa10d026086274b10313077"
+  },
+  "stage_lines": 31,
+  "status": "PASS",
+  "step_lines": 0,
+  "verdict_lines": [
+    "A_SIDE_SEGMENTS tentative_rows=12 main_rows=100",
+    "B_SIDE_SEGMENTS tentative_rows=0 main_rows=100",
+    "ENTRY_SCALARS steps=100 keys=5 hex_mismatch=0",
+    "ENTRY_FINITE=PASS",
+    "ENTRY_STATE_DIGEST rows=2 mismatch=0",
+    "ENTRY_RESOLVED_CFG mismatch=0 mode=upstream",
+    "ENTRY_PROVENANCE=PASS",
+    "ENTRY_EQ=PASS"
+  ],
+  "verdict_lines_each_exactly_once": true,
+  "verification_copies": {
+    "full-s1.independent-verification": {
+      "bytes": 6650,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/archive-staging/full-upstream-increment-20260926/full-s1.independent-verification.json",
+      "sha256": "dcec3ac89735b13431588a97aa7740e5cf988286b265f2e27e84d6f92346f719"
+    },
+    "full-s1.root-verification": {
+      "bytes": 6001,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/archive-staging/full-upstream-increment-20260926/full-s1.root-verification.json",
+      "sha256": "eee77deb84ae3a72d674cf331fad4b06d3529120400c8edfa233d6f51d35c373"
+    },
+    "full-upstream-judge.independent-verification": {
+      "bytes": 5160,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/archive-staging/full-upstream-increment-20260926/full-upstream-judge.independent-verification.json",
+      "sha256": "e95102d9121294e0fb80fc6334e32ef1feff332b5edf389a00c627512f22f94f"
+    },
+    "full-upstream-judge.root-verification": {
+      "bytes": 2635,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/archive-staging/full-upstream-increment-20260926/full-upstream-judge.root-verification.json",
+      "sha256": "cb19125eea2f71f1536ac8b4490d6cd513861812470ec8c0b5a86dc0c11e8163"
+    }
+  },
+  "verification_original": {
+    "full-s1.independent-verification": {
+      "bytes": 6650,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-s1-verification-independent-20260926.json",
+      "sha256": "dcec3ac89735b13431588a97aa7740e5cf988286b265f2e27e84d6f92346f719"
+    },
+    "full-s1.root-verification": {
+      "bytes": 6001,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-s1-verification-root-20260926.json",
+      "sha256": "eee77deb84ae3a72d674cf331fad4b06d3529120400c8edfa233d6f51d35c373"
+    },
+    "full-upstream-judge.independent-verification": {
+      "bytes": 5160,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-upstream-judge-verification-independent-20260926.json",
+      "sha256": "e95102d9121294e0fb80fc6334e32ef1feff332b5edf389a00c627512f22f94f"
+    },
+    "full-upstream-judge.root-verification": {
+      "bytes": 2635,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-upstream-judge-verification-root-20260926.json",
+      "sha256": "cb19125eea2f71f1536ac8b4490d6cd513861812470ec8c0b5a86dc0c11e8163"
+    }
+  }
+}

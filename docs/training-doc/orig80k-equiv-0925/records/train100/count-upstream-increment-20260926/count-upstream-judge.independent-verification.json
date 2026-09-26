@@ -1,0 +1,110 @@
+{
+  "schema": 1,
+  "origin": "audit_equiv独立只读复核；exec_command直接观测验收进程返回值",
+  "invocation": [
+    ".venv/bin/python",
+    "-B",
+    "-"
+  ],
+  "cwd": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+  "checker_actual_exit_code": 0,
+  "checker_wall_time_seconds": 0.000006299,
+  "output": {
+    "schema": 1,
+    "status": "PASS",
+    "checked_utc": "2026-09-26T22:51:49.319749+00:00",
+    "scope": "只读复核已执行count upstream judge的参数、日志、来源投影和独立退出；未重跑judge或写TSV；不代表same-entry通过",
+    "root_report": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-upstream-judge-verification-root-20260926.json",
+      "bytes": 2635,
+      "sha256": "382c9bf19f8ded3d15c6307a4c8d78141ba3a2786d8cd961fa807464e4ee6792"
+    },
+    "log": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-eq100-count-upstream-judge-20260926T210415Z.log",
+      "bytes": 4507,
+      "sha256": "71af7f59ffc0a9fddb3c95ef5ffb205916dcff1eedf7fdbf1fea7da3e52b405d"
+    },
+    "command_file": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-upstream-judge-20260926T210415Z.command",
+      "bytes": 4824,
+      "sha256": "c33b22c13aaa730dec50a498842b0b7362f8cb7b83715c5a1252fd2a7e58093e"
+    },
+    "mode": "upstream",
+    "steps": 100,
+    "tentative_a": 12,
+    "state_steps": [
+      50,
+      99
+    ],
+    "state_digest_fields_match": true,
+    "environment_assignments_checked": 46,
+    "outer_exit": {
+      "identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-upstream-judge-20260926T210415Z.identity.json",
+        "bytes": 1536,
+        "sha256": "7b72eb8df44581c44e3a36594efc16faf248e5e839d72c5b44216f6a3ffd60df"
+      },
+      "receipt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-upstream-judge-20260926T210415Z.exit.json",
+        "bytes": 5375,
+        "sha256": "67ba08c12ae71a0c36b748bad9d85288b6f3784c317f0486239ce5934b6cb069"
+      },
+      "capture": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-upstream-judge-20260926T210415Z.exit.capture.json",
+        "bytes": 2456,
+        "sha256": "85ff50d4a20d6e496f710b541f0083d09b6d37267451edf70a94aacb7032b67d"
+      },
+      "guard_tool": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+        "bytes": 20398,
+        "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+      },
+      "capture_actual_exit_code": 0,
+      "pane_dead": 1,
+      "pane_dead_status": 0,
+      "pane_id": "%562",
+      "pane_pid": 1085088,
+      "scope": "父进程自身返回码另由宿主/controller留证，本字段不自报它"
+    },
+    "scalar_projections": {
+      "A": {
+        "metrics": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/a/metrics.jsonl",
+          "bytes": 49633,
+          "sha256": "79d153fda0b9ab7dc6c75d8473805a58942f54e3aebeff8b01197069d7de8302"
+        },
+        "tsv": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/a/scalars_hex.tsv",
+          "bytes": 10968,
+          "sha256": "d37c6b4eb6aeb58207e92657d70a7d0b71d50d27fbcfc5dcefa881d2236904e9"
+        },
+        "source_verification": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-both-a-verification-independent-20260926.json",
+          "bytes": 12710,
+          "sha256": "c1b23036b341a8c4081225a98850f4fa220b5f0de6f68a4c6d8fb96c4f766488"
+        },
+        "rows": 100,
+        "keys": 5
+      },
+      "B": {
+        "metrics": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/solo/metrics.jsonl",
+          "bytes": 49632,
+          "sha256": "ff728dc79bb273704cd7009fe04df4d967802b53e4fef372ea3eb8d43947e5f1"
+        },
+        "tsv": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/solo/scalars_hex.tsv",
+          "bytes": 10968,
+          "sha256": "d37c6b4eb6aeb58207e92657d70a7d0b71d50d27fbcfc5dcefa881d2236904e9"
+        },
+        "source_verification": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-s3-verification-independent-20260926.json",
+          "bytes": 6661,
+          "sha256": "11ce1c9dfd856f49cfc87796d4df3caee7273e7ee748f20337162945e2ea562e"
+        },
+        "rows": 100,
+        "keys": 5
+      }
+    }
+  }
+}

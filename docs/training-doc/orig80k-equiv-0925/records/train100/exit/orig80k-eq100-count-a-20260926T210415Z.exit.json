@@ -1,0 +1,89 @@
+{
+  "command_file": {
+    "bytes": 4379,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-a-20260926T210415Z.command",
+    "sha256": "1ce020c3426ae7be1ce8d9e44f5ec971058c2b19220a73ae285ce9fb7f3ddd01"
+  },
+  "identity": {
+    "bytes": 1383,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-a-20260926T210415Z.identity.json",
+    "sha256": "da8697c92033d7c4e9db62a57c9f8ad44cef2d35a2a5b09c06696ef1ceea8441"
+  },
+  "identity_snapshot": {
+    "command_file": {
+      "bytes": 4379,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-a-20260926T210415Z.command",
+      "sha256": "1ce020c3426ae7be1ce8d9e44f5ec971058c2b19220a73ae285ce9fb7f3ddd01"
+    },
+    "enabled_mid_run": true,
+    "initial_pane_dead": 0,
+    "label": "eq100-orig80k-count-a-20260926T210415Z",
+    "pane_id": "%553",
+    "pane_pid": 704733,
+    "pane_start_command": "\"bash /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-a-20260926T210415Z.command 1ce020c3426ae7be1ce8d9e44f5ec971058c2b19220a73ae285ce9fb7f3ddd01 \"",
+    "recorded_utc": "2026-09-26T21:21:39.487427+00:00",
+    "remain_on_exit": "on",
+    "retention_configuration": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-a-exit-retention-20260926T210415Z.json",
+      "sha256": "5da022a4563e27e0b89b684e5652a7c9776bed5681e688a4d317b72ec9d74a4a"
+    },
+    "schema": 1,
+    "scope": "\u5171\u540cTRAIN_HEAD\u4e3aB\u4fa7\u951a\u70b9\uff1bA\u5b9e\u9645\u6267\u884cHEAD\u53e6\u7531\u539f\u751fprovenance\u56fa\u5b9a\u3002pane_start_command\u4fdd\u7559tmux\u5bf9\u5355\u4e2ashell-command\u53c2\u6570\u7684\u5f15\u53f7\u5316\u539f\u6587\u3002",
+    "session": "orig80k-eq100-count-a-20260926T210415Z",
+    "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+    "window_id": "@553"
+  },
+  "observed_utc": "2026-09-26T21:42:27.493054+00:00",
+  "pane_query": {
+    "argv": [
+      "/usr/bin/tmux",
+      "list-panes",
+      "-s",
+      "-t",
+      "=orig80k-eq100-count-a-20260926T210415Z",
+      "-f",
+      "#{==:#{pane_id},%553}",
+      "-F",
+      "#{session_name}\u001f#{window_id}\u001f#{pane_id}\u001f#{pane_pid}\u001f#{pane_dead}\u001f#{pane_dead_status}\u001f#{pane_dead_signal}\u001f#{pane_dead_time}\u001f#{pane_start_command}\u001f#{remain-on-exit}\u001e"
+    ],
+    "exception": null,
+    "returncode": 0,
+    "stderr": "",
+    "stderr_base64": "",
+    "stdout": "orig80k-eq100-count-a-20260926T210415Z\u001f@553\u001f%553\u001f704733\u001f1\u001f0\u001f\u001f1790458819\u001f\"bash /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-a-20260926T210415Z.command 1ce020c3426ae7be1ce8d9e44f5ec971058c2b19220a73ae285ce9fb7f3ddd01 \"\u001fon\u001e\n",
+    "stdout_base64": "b3JpZzgway1lcTEwMC1jb3VudC1hLTIwMjYwOTI2VDIxMDQxNVofQDU1Mx8lNTUzHzcwNDczMx8xHzAfHzE3OTA0NTg4MTkfImJhc2ggL3NjcmF0Y2gvaG9uZ3plL3JvYm9tbWVfcG9saWN5X2xlYXJuaW5nX01vdGlvbkpFUEEvdjEtc3RvcmUvYmVuY2gvb3JpZzgway1lcTEwMC1jb21tYW5kcy0yMDI2MDkyNlQyMTA0MTVaL29yaWc4MGstZXExMDAtY291bnQtYS0yMDI2MDkyNlQyMTA0MTVaLmNvbW1hbmQgMWNlMDIwYzM0MjZhZTdiZTFjZThkOWU0NGY1ZWM5NzEwNThjMmIxOTIyMGE3M2FlMjg1Y2U5ZmI3ZjNkZGQwMSAiH29uHgo="
+  },
+  "parsed": {
+    "pane_dead": "1",
+    "pane_dead_signal": "",
+    "pane_dead_status": "0",
+    "pane_dead_time": "1790458819",
+    "pane_id": "%553",
+    "pane_pid": "704733",
+    "pane_start_command": "\"bash /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-a-20260926T210415Z.command 1ce020c3426ae7be1ce8d9e44f5ec971058c2b19220a73ae285ce9fb7f3ddd01 \"",
+    "remain_on_exit": "on",
+    "session": "orig80k-eq100-count-a-20260926T210415Z",
+    "window_id": "@553"
+  },
+  "reason": "",
+  "schema": 1,
+  "status": "PASS",
+  "tmux_version": "tmux 3.6a",
+  "tool": {
+    "bytes": 20398,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+    "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+  },
+  "version_query": {
+    "argv": [
+      "/usr/bin/tmux",
+      "-V"
+    ],
+    "exception": null,
+    "returncode": 0,
+    "stderr": "",
+    "stderr_base64": "",
+    "stdout": "tmux 3.6a\n",
+    "stdout_base64": "dG11eCAzLjZhCg=="
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "scope": "仅P1 count-b的Git日志副本，非A/B轨迹对拍",
+  "previous_stage_checks": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/archive-staging/count-b.archive_checks.json",
+    "bytes": 7904,
+    "sha256": "ae99abf240ecf65fe4aa71ced7a44782dd854047e59246594e47c377dae6a3f1"
+  },
+  "raw": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-count-b-20260926T195426Z.log",
+    "bytes": 44572,
+    "sha256": "8c0a7e2b32e9d5e62761f70b2d8f2d5aa6e707143a77504b9ff55b4c376f7cfb"
+  },
+  "previous_stage": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/archive-staging/count-b.summary.log",
+    "bytes": 44062,
+    "sha256": "a65211fab51d86af4f8ea04906818429c98313f3753e051c42d20bcdee18355e"
+  },
+  "git_ready": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/archive-staging/git-ready/count-b.summary.log",
+    "bytes": 44061,
+    "sha256": "f116966606d02fe29f6fdb63bf9cd8424e2e532433073e5640ad05d852f39687"
+  },
+  "normalization": "仅去COMMAND末尾一个未转义分隔空格，argv相等",
+  "removed_characters": 1,
+  "changes": [
+    {
+      "line": 9,
+      "field": "COMMAND",
+      "removed_bytes": 1,
+      "removed_hex": "20",
+      "unescaped_separator": true,
+      "argv_unchanged": true,
+      "argv_count": 56
+    }
+  ],
+  "normalized_critical_lines_equal": true,
+  "critical_line_count": 23,
+  "normalized_critical_lines_sha256": "070907d3e6d1b3aaa69803e65dc067f501224a7df1a3009e4c0ed0c51a022b4c",
+  "all_non_command_critical_lines_original_bytes_unchanged": true,
+  "raw_and_previous_stage_and_checks_unchanged": true,
+  "finished_at": "2026-09-26T21:04:33.418444+00:00"
+}

@@ -1,0 +1,325 @@
+{
+  "schema": 1,
+  "created_utc": "2026-09-26T20:12:29.686445+00:00",
+  "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "upstream_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+  "scope": "仅P1验收器小夹具自检和状态摘要的只读机制/模板估算；不是实际P1通过或A/B轨迹等价",
+  "verifier": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/check_p1_records_20260926.py",
+    "bytes": 29187,
+    "sha256": "ce469d04fc29e81fb383a1b514f1602594f88fae08f77a780e3c77f6abf4e728"
+  },
+  "self_checks": {
+    "status": "PASS",
+    "cases": [
+      {
+        "case": "A双段state=[1,1]不去重正例",
+        "status": "PASS"
+      },
+      {
+        "case": "五标量finite=False拒绝",
+        "status": "PASS"
+      },
+      {
+        "case": "per-leaf与global不一致拒绝",
+        "status": "PASS"
+      },
+      {
+        "case": "丢失tentative state拒绝",
+        "status": "PASS"
+      },
+      {
+        "case": "strict/g0叶集合不全拒绝",
+        "status": "PASS"
+      },
+      {
+        "case": "现场TrainConfig文本解析与P1参数正例",
+        "status": "PASS"
+      },
+      {
+        "case": "batch64改32且重算配置SHA仍拒绝",
+        "status": "PASS"
+      }
+    ],
+    "elapsed_seconds": 0.014726899098604918,
+    "execution": "现有uv管理.venv/bin/python -B；stdlib加载本轮ignored验收器，/tmp临时JSON夹具已自动删除，不import项目/模型，不更改环境",
+    "coverage_limit": "这些7例覆盖核心参数/完整摘要负例，不替代结束后的实际P1完整验收"
+  },
+  "source_files": [
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/api.py",
+      "bytes": 125063,
+      "sha256": "ea7bf682d2a1cd74301c234a98927ce34494f9834c51a7b7d2b61d6c06dee2a6",
+      "anchors": [
+        "device_get",
+        "_device_get"
+      ]
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/array.py",
+      "bytes": 49323,
+      "sha256": "7be77ad4acabc658d37284602389ba9d80aa43cc637d2efbc290d3e597c9d4d9",
+      "anchors": [
+        "ArrayImpl.__array__",
+        "ArrayImpl.copy_to_host_async",
+        "ArrayImpl._value"
+      ]
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/optax/_src/alias.py",
+      "bytes": 100566,
+      "sha256": "cd2858a9a2ccab5a20e9c3afb61030f760483b80a3ff3ee6eb3361c7af69cceb",
+      "anchors": [
+        "adamw"
+      ]
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/optax/_src/transform.py",
+      "bytes": 59356,
+      "sha256": "a48cba1e5acdd88d97ff2603bc811589a283725a6789107361498c1c3a5058f4",
+      "anchors": [
+        "scale_by_adam",
+        "scale_by_schedule",
+        "scale_by_learning_rate"
+      ]
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/api.py",
+      "bytes": 125063,
+      "sha256": "ea7bf682d2a1cd74301c234a98927ce34494f9834c51a7b7d2b61d6c06dee2a6",
+      "anchors": [
+        "device_get",
+        "_device_get"
+      ]
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/array.py",
+      "bytes": 49323,
+      "sha256": "7be77ad4acabc658d37284602389ba9d80aa43cc637d2efbc290d3e597c9d4d9",
+      "anchors": [
+        "ArrayImpl.__array__",
+        "ArrayImpl.copy_to_host_async",
+        "ArrayImpl._value"
+      ]
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/optax/_src/alias.py",
+      "bytes": 100566,
+      "sha256": "cd2858a9a2ccab5a20e9c3afb61030f760483b80a3ff3ee6eb3361c7af69cceb",
+      "anchors": [
+        "adamw"
+      ]
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/optax/_src/transform.py",
+      "bytes": 59356,
+      "sha256": "a48cba1e5acdd88d97ff2603bc811589a283725a6789107361498c1c3a5058f4",
+      "anchors": [
+        "scale_by_adam",
+        "scale_by_schedule",
+        "scale_by_learning_rate"
+      ]
+    }
+  ],
+  "harness": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+    "bytes": 47283,
+    "sha256": "92b17055af8f185175aabfc65aee1e94287d6f188a68bc7c6f1dcf5c98f99ce6",
+    "anchor": "_run._summarize_state"
+  },
+  "upstream_entry": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/scripts/train.py",
+    "bytes": 15668,
+    "sha256": "574fdf2003d4ed69bcd0d186882955b5002d757509735030cf119a9bb7235fb2",
+    "anchors": [
+      "init_train_state",
+      "main",
+      "train_step"
+    ]
+  },
+  "mechanism": {
+    "host_cache": "JAX device_get先copy_to_host_async，再经__array__/_value；分片数组np.empty全局shape并组装后保留self._npy_value，活JAX叶可持续持有host副本。副本不会仅因局部arr换到下一叶就必然释放。",
+    "temporary_and_hash": "每叶isfinite产生临时bool数组；随后两次顺序arr.tobytes分别交strict/g0 SHA，存在全量CPU拷贝和读hash成本。两次bytes为累计载荷，不声明两份同时存活。",
+    "observability": "只有整棵组合state所有叶完成后才写一行state_digests并打印；代码在末步标量后还会先next(data_iter)，单凭两标量与无state不足定位。现有20:11非阻塞栈样本补充证明各自在该瞬间已进入摘要。",
+    "digest_limit": "重算strict/g0 global和keyset；treedef仅有摘要，不能重建原树；sys.prefix由固定harness入口断言/driver/独立解释器来源支撑，JSON未直接记录该值。"
+  },
+  "initialization_templates": {
+    "full": {
+      "log_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-full-a-20260926T195426Z.log",
+      "append_only_log_prefix_at_read_bytes": 45449,
+      "append_only_log_prefix_at_read_sha256": "9632d41cf43874b90f5ee1b82ba6bfe404469f9d3890aeef865356edffb8e2c4",
+      "initialization_block_lines": 61,
+      "initialization_block_sha256": "775c8fb7b16e9a79d4b29152d3b21edb9bb6d0d059a118098ada36019187a30a",
+      "normalized_shape_dtype_rows_sha256": "649c015b4cffcbdd4cf381f34bd6103a3c330d10013519eb8530478f0f6b0fd9",
+      "parameter_bytes": 12937988704,
+      "frozen_bfloat16_bytes": 829607392,
+      "trainable_float32_bytes": 12108381312,
+      "parameter_leaves": 61,
+      "frozen_leaves": 23,
+      "trainable_leaves": 38,
+      "ema_template_bytes": 12937988704,
+      "adam_mu_template_bytes": 12108381312,
+      "adam_nu_template_bytes": 12108381312,
+      "adam_and_schedule_counter_bytes": 8,
+      "train_step_bytes": 4,
+      "full_state_template_bytes": 50092740044,
+      "full_state_template_gib": 46.65249962732196,
+      "estimated_full_state_leaves": 201,
+      "two_sha_payload_bytes_per_state": 100185480088,
+      "largest_leaf_bytes": 4831838208,
+      "largest_isfinite_bool_temporary_bytes": 1207959552,
+      "two_sha_payload_mib_per_second_if_600s": 159.24053206125896
+    },
+    "count": {
+      "log_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-count-a-20260926T195426Z.log",
+      "append_only_log_prefix_at_read_bytes": 43591,
+      "append_only_log_prefix_at_read_sha256": "bacceff9ffebbe695043f3129d7c305006075a81c664877df41e7ccbacedde7a",
+      "initialization_block_lines": 61,
+      "initialization_block_sha256": "3a117c9e3954ce8eea4abb13a72400e714bd2b4053234ce1252acf4ad9c876ae",
+      "normalized_shape_dtype_rows_sha256": "649c015b4cffcbdd4cf381f34bd6103a3c330d10013519eb8530478f0f6b0fd9",
+      "parameter_bytes": 12937988704,
+      "frozen_bfloat16_bytes": 829607392,
+      "trainable_float32_bytes": 12108381312,
+      "parameter_leaves": 61,
+      "frozen_leaves": 23,
+      "trainable_leaves": 38,
+      "ema_template_bytes": 12937988704,
+      "adam_mu_template_bytes": 12108381312,
+      "adam_nu_template_bytes": 12108381312,
+      "adam_and_schedule_counter_bytes": 8,
+      "train_step_bytes": 4,
+      "full_state_template_bytes": 50092740044,
+      "full_state_template_gib": 46.65249962732196,
+      "estimated_full_state_leaves": 201,
+      "two_sha_payload_bytes_per_state": 100185480088,
+      "largest_leaf_bytes": 4831838208,
+      "largest_isfinite_bool_temporary_bytes": 1207959552,
+      "two_sha_payload_mib_per_second_if_600s": 159.24053206125896
+    }
+  },
+  "full_count_shapes_equal": true,
+  "template_assumptions": [
+    "从本次初始化打印逐叶shape×dtype itemsize相加；日志Model Size的MB实际是元素数/2^20，不能直接当字节。",
+    "freeze_filter.*img.*对应23个bf16叶，其余38个f32叶参与优化；Optax AdamW含同shape/dtype mu/nu及两个int32计数，另TrainState.step为禁x64下int32。",
+    "EMA按同shape/dtype模板计量；每树各叶累计不扣别名或已有host cache，所以50,092,740,044B是完整逻辑payload模板，不是实际新增RSS、DMA流量或峰值。"
+  ],
+  "interpretation": {
+    "rss": "46.65GiB state host缓存加4.5GiB最大bytes临时量、1.125GiB最大finite临时量可解释显著内存压力；单一模板不能完整归因72/80GiB RSS，编译/初始化/分片组装/loader和分配器常驻另计且未量化。",
+    "duration": "每次双SHA有效载荷100,185,480,088B，若摊600秒约159.24MiB/s，仅是反算。未测当前DMA/copy/hash吞吐，不能仅凭字节量断言十分钟正常或保证剩余时间。",
+    "progress": "有机制解释及瞬态栈定位，未完成时仍为PENDING；不减参数、不改判据，不据RSS判成功。本子任务仅读取主代理已产生的非阻塞栈JSON，没有新增栈采样、信号或进程控制。"
+  },
+  "stack_samples": [
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/p1-full-a-stack-20260926T2011.json",
+      "bytes": 15240,
+      "sha256": "144642b7756b8d299f38bac7aab168ce9978e862d1e0f89d6a54d761220a6801",
+      "source": "主代理已完成的py-spy --nonblocking只读采样，两次返回0；本报告只读取现有JSON",
+      "scope": "2026-09-26 20:11 UTC附近的瞬态，未采locals；不能推定全程位置或进度",
+      "threads": [
+        {
+          "pid": 582619,
+          "thread_id": 140501834152832,
+          "thread_name": "MainThread",
+          "frames": [
+            {
+              "name": "_summarize_state",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+              "line": 461
+            },
+            {
+              "name": "main",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/scripts/train.py",
+              "line": 450
+            },
+            {
+              "name": "<module>",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/scripts/train.py",
+              "line": 457
+            },
+            {
+              "name": "_run_code",
+              "filename": "<frozen runpy>",
+              "line": 88
+            },
+            {
+              "name": "_run_module_code",
+              "filename": "<frozen runpy>",
+              "line": 98
+            },
+            {
+              "name": "run_path",
+              "filename": "<frozen runpy>",
+              "line": 291
+            },
+            {
+              "name": "_run",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+              "line": 510
+            },
+            {
+              "name": "main",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+              "line": 873
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/p1-count-a-stack-20260926T2011.json",
+      "bytes": 18728,
+      "sha256": "c050e41c01f4c7ec00eb49efdf81e0a5e9f2438c0eda8673b959018a8d2b57e0",
+      "source": "主代理已完成的py-spy --nonblocking只读采样，两次返回0；本报告只读取现有JSON",
+      "scope": "2026-09-26 20:11 UTC附近的瞬态，未采locals；不能推定全程位置或进度",
+      "threads": [
+        {
+          "pid": 582633,
+          "thread_id": 140691885009792,
+          "thread_name": "MainThread",
+          "frames": [
+            {
+              "name": "_value",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/array.py",
+              "line": 663
+            },
+            {
+              "name": "wrapper",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/profiler.py",
+              "line": 334
+            },
+            {
+              "name": "__array__",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/array.py",
+              "line": 441
+            },
+            {
+              "name": "_device_get",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/api.py",
+              "line": 2536
+            },
+            {
+              "name": "<genexpr>",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/tree_util.py",
+              "line": 358
+            },
+            {
+              "name": "tree_map",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/tree_util.py",
+              "line": 358
+            },
+            {
+              "name": "device_get",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/lib/python3.11/site-packages/jax/_src/api.py",
+              "line": 2575
+            },
+            {
+              "name": "_summarize_state",
+              "filename": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/entry_equiv.py",
+              "line": 460
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
