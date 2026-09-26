@@ -28,13 +28,15 @@ env -u JAX_PLATFORMS -u JAX_PLATFORM_NAME \
 
 实际detached tmux全名为`orig80k-count-read20-20260926T014535Z`，pane `%541`，pane/包装PID `3957023`；run UUID为`ba82f509-8189-4002-809a-021f11d58d97`。2026-09-26 UTC整体时间`01:45:54→01:51:37`，训练runner为`01:45:55→01:50:36`，随后CPU完成器至`01:51:37`。采样、真实训练等其余精确PID见[wrapper日志](records/wrapper.summary.log)和[final开始记录](records/final/start.json)。
 
-实际driver日志为`v1-store/logs/smoke-orig80k-count-0925.driver.log`，wrapper日志为`v1-store/logs/orig80k-count-read20-20260926T014535Z.wrapper.log`。runner独占driver终态，外层没有往driver追加；wrapper保存其自身任务、tee及整体终态。checkpoint根`v1-store/train-runs/mme_vla_suite/smoke-orig80k-count-0925`、记录根`v1-store/bench/orig80k/smoke-orig80k-count-0925`起跑时全新，现已生成结果，未覆盖重跑。
+实际driver日志为`v1-store/logs/smoke-orig80k-count-0925.driver.log`，wrapper日志为`v1-store/logs/orig80k-count-read20-20260926T014535Z.wrapper.log`。runner独占driver终态，外层没有往driver追加；wrapper保存其主体任务、正文tee返回码及预先计算的日志终态，最外层footer证据边界见下文。checkpoint根`v1-store/train-runs/mme_vla_suite/smoke-orig80k-count-0925`、记录根`v1-store/bench/orig80k/smoke-orig80k-count-0925`起跑时全新，现已生成结果，未覆盖重跑。
 
 ## 实际验收与归档
 
 训练成功后同一tmux串行以`CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu`调用`check_orig80k_completion.py --mode smoke`，完整`--run/--head/--records/--run-root/--log/--out`参数及实际命令在[结果正文](README.md)第3节；`--out`为本run记录根下`completion.json`，完成器日志单独tee，两个返回码分别核对。
 
-实际验收为20次更新、唯一末步19、普通step0和尾窗1–19完整有限、四卡与x64关闭、GPU采样覆盖及异步保存完成。CPU完成器真实加载19/params，与本次EMA的61个叶逐项比较，23个bf16叶与38个f32叶的dtype/shape/字节摘要全部相等。`RUN_COMPLETED=PASS run=smoke-orig80k-count-0925 checkpoints=1 final=19`、`READABILITY20=PASS`、各任务/tee及最终退出码均为0。原版训练标量/状态对上游的bitwise要求没有被这道自恢复检查替代。
+实际验收为20次更新、唯一末步19、普通step0和尾窗1–19完整有限、四卡与x64关闭、GPU采样覆盖及异步保存完成。CPU完成器真实加载19/params，与本次EMA的61个叶逐项比较，23个bf16叶与38个f32叶的dtype/shape/字节摘要全部相等。日志保留`RUN_COMPLETED=PASS run=smoke-orig80k-count-0925 checkpoints=1 final=19`与`READABILITY20=PASS`；整个runner的真实返回0由外层捕获，恢复器及各主体管道也分别返回0。原版训练标量/状态对上游的bitwise要求没有被这道自恢复检查替代。
+
+最外层wrapper先写终态文本、再检查footer自身printf/tee，最后状态未独立持久化；末行`EXIT_CODE=0`不能单独证明包装进程实际退出0，详见[历史退出记录审计](../orig80k-equiv-0925/exit-record-audit.md)。没有证据表明历史footer失败，训练、保存和CPU恢复PASS保留，原始records不改写。
 
 本目录已归档16个records文件，共340204 B，最终[archive_checks.json](records/archive_checks.json) SHA为`7625a23a55ad539468b78513f57ed6bf4502d5477cd94e8941eb3853dcaf7762`。正式副本只对.log去行尾空格/制表符，train/wrapper两log共去169个字符；原始和ignored暂存未改，规范化后逐行一致，没有指标变化。权重留在运行目录，不复制脚本、yaml或独立bash载体。
 

@@ -108,8 +108,10 @@ git show 49a333eb18e8d6ff1143bf7871ef7c498ab91579:scripts/training/compute_norm_
 | UTC起止 | 2026-09-26 00:50:24 → 01:44:56 |
 | 总跨度 | 3272秒，54分32秒 |
 | 原始日志 | `v1-store/logs/cnt-pub400-20260926T004948Z.build.log` |
-| 任务/tee/整体终态 | `TASK_EXIT=0`、`TEE_EXIT=0`、唯一外层 `EXIT_CODE=0` |
+| 主体及日志终态记录 | `TASK_EXIT=0`、`TEE_EXIT=0`、唯一外层 `EXIT_CODE=0` |
 | 子集工具/tee | `SUBSET_TASK_EXIT=0`、`SUBSET_TEE_EXIT=0` |
+
+`TASK_EXIT/TEE_EXIT`为构建主体及正文tee的真实返回码，子集工具与其tee也分别返回0；最外层footer先写退出文本、再检查自身管道，最后状态没有独立持久化。末行0不能单独证明最外层包装实际退出0，详见[历史退出记录审计](../../training-doc/orig80k-equiv-0925/exit-record-audit.md)。没有证据表明历史footer失败，数据及严格子集PASS保留。
 
 | 阶段 | UTC开始→结束，2026-09-26 | 秒级跨度 | 退出 |
 |---|---|---:|---:|

@@ -4,7 +4,7 @@
 
 ## 1. 结论与指标速览
 
-**counting400数据阶段、与full库的严格子集内容对拍、count20真实保存与恢复均已独立通过。** 实际会话从 2026-09-26 00:50:24 UTC 运行至01:44:56 UTC，共3272秒（54分32秒）。十二个阶段全部退出0，任务、内层子集tee和外层tee均成功。
+**counting400数据阶段、与full库的严格子集内容对拍、count20真实保存与恢复均已独立通过。** 实际会话从 2026-09-26 00:50:24 UTC 运行至01:44:56 UTC，共3272秒（54分32秒）。十二个阶段全部退出0，构建主体、内层子集tee和正文tee均返回0；最外层退出记录的证据边界见第9节。
 
 | 指标 | counting本次实测 |
 |---|---:|
@@ -31,7 +31,7 @@
 
 ## 3. 版本与代码状态
 
-实际Beta为 **`49a333eb18e8d6ff1143bf7871ef7c498ab91579`**，主题 `commitV11.11Beta: 锚定两个公开正式库及20步可读性检查`。counting日志的 `BUILD_HEAD/BUILD_END_HEAD`、source构建分片指纹、finalize provenance及packer均记录该提交。起末均执行HEAD相等和工作区clean检查，最终成功退出包含这些检查。
+实际Beta为 **`49a333eb18e8d6ff1143bf7871ef7c498ab91579`**，主题 `commitV11.11Beta: 锚定两个公开正式库及20步可读性检查`。counting日志的 `BUILD_HEAD/BUILD_END_HEAD`、source构建分片指纹、finalize provenance及packer均记录该提交。起末均执行HEAD相等和工作区clean检查，构建主体的实际返回0包含这些检查，不以最末退出文本单独证明最外层进程状态。
 
 同组full库也是这个Beta；counting预检读取full已经完成的日志和报告，核对full完整阶段退出、规模、清单绑定、packed verified和统计量摘要后才启动。更早的16集冒烟Beta `42b91cd96499bd51fcb6acaeedd642b368dbefeb` 及结果提交 `de6354fd7c0f78b347c7b07c4b8ee0c8b9b37418` 仅作为已有前置，不能误记为counting起跑版本。
 
@@ -224,6 +224,8 @@ EXIT_CODE=0
 ```
 
 `COUNTING_DATA_BUILD=PASS` 后的完整JSON与现存 `meta/build_sizes.json` 一致。原始构建日志SHA为 `4074acb1c1659c54881c7bf76805e2136b5f821c891542b2b99aeeb51e38757f`。
+
+补记[历史最外层退出记录审计](../../training-doc/orig80k-equiv-0925/exit-record-audit.md)：十二阶段、严格子集工具及其tee、构建主体与正文tee均有真实返回0的记录；末尾footer先写`EXIT_CODE=0`，再检查自身printf/tee，最后状态未独立持久化。因此日志末行0不能单独证明最外层包装实际退出0。目前没有证据表明历史footer失败，数据及严格子集PASS保留，原始records不改写。
 
 ## 10. 验收与内容一致性
 

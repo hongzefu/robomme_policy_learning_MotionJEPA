@@ -17,7 +17,7 @@
 | 标量 | 常规日志仅step0；末段1–19完整、全部有限 |
 | 恢复 | 61叶全部有限且与保存现场EMA逐叶一致 |
 | 完成器 | `RUN_COMPLETED=PASS run=smoke-orig80k-count-0925 checkpoints=1 final=19` |
-| 整体 | `READABILITY20=PASS`，最后`EXIT_CODE=0` |
+| 日志终态记录 | `READABILITY20=PASS`，最后`EXIT_CODE=0`；最外层进程退出证据边界见第8节 |
 
 这道检查没有完成正式`INPUT_EQ`、上游100步对拍、单跑/并跑对照或300步perf；也不构成策略评估、模型质量或吞吐/ETA结论。
 
@@ -135,7 +135,9 @@ GPU采样通过完成器的覆盖检查：每卡452个窗口内样本，平均�
 
 此前完成器通过`restore_params(..., restore_type=np.ndarray, dtype=None)`真实加载checkpoint，保持原dtype；61个恢复叶全部有限，且完整叶描述与保存现场EMA相同。`completion.json`的SHA为`97cd2cdc2c6feb6c9c5612813c64f871cadcb53259a44829ba58bef72549b268`，已在归档准备中核对小记录哈希及叶描述相等，没有重跑恢复。
 
-driver中训练与tee退出0，completion任务与tee退出0，wrapper任务与tee退出0，最后`READABILITY20=PASS`。driver保留唯一成功终态；wrapper转录driver输出后另有自己的最终状态，整体判断使用其末尾`WRAPPER_TASK_EXIT/WRAPPER_TEE_EXIT/READABILITY20/EXIT_CODE`，不把中途转录的一行EXIT_CODE当整体结束。
+driver中训练与正文tee退出0，整个runner的真实返回0另由wrapper捕获，包含runner自身footer检查。completion任务及其tee、wrapper主体及正文tee也分别返回0。driver保留唯一成功终态；wrapper转录driver输出，不把中途转录的一行EXIT_CODE当作wrapper结束。
+
+补记[历史最外层退出记录审计](../orig80k-equiv-0925/exit-record-audit.md)：wrapper末尾先写`WRAPPER_TASK_EXIT/WRAPPER_TEE_EXIT/READABILITY20/EXIT_CODE`，再检查该footer自身printf/tee，最后状态未独立持久化。末行0不能单独证明最外层包装实际退出0；目前没有证据表明历史footer失败。训练、真实保存和CPU恢复PASS保留，原始records不改写。
 
 正式全范围`INPUT_EQ`、上游P1/100步、同入口单跑/并跑、300步perf和策略评估仍未由本run完成。保存恢复对自身EMA逐叶相等，不等于训练标量与状态已对上游逐位验证。
 

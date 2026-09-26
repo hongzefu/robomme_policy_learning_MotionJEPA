@@ -4,7 +4,7 @@
 
 ## 1. 结论与指标速览
 
-**公开16任务×100集正式库的数据阶段及 full 库20步可读性、真实保存与恢复检查均已通过。** 数据阶段从 2026-09-25 21:23:38 UTC 到次日 00:40:16 UTC，10个阶段全部退出0，任务与tee最终退出也均为0。随后独立的 `smoke-orig80k-full-0925` 更新20次，保存唯一末步 `19`，CPU真实恢复的61个EMA叶与本次末步摘要逐项一致。
+**公开16任务×100集正式库的数据阶段及 full 库20步可读性、真实保存与恢复检查均已通过。** 数据阶段从 2026-09-25 21:23:38 UTC 到次日 00:40:16 UTC，10个阶段全部退出0，构建主体任务与正文tee返回也均为0；最外层退出记录的证据边界见第9节。随后独立的 `smoke-orig80k-full-0925` 更新20次，保存唯一末步 `19`，CPU真实恢复的61个EMA叶与本次末步摘要逐项一致。
 
 | 指标 | 本次实测 |
 |---|---:|
@@ -33,7 +33,7 @@
 
 ## 3. 版本与代码状态
 
-本组正式构建与full20共同使用 **`49a333eb18e8d6ff1143bf7871ef7c498ab91579`**，提交主题为 `commitV11.11Beta: 锚定两个公开正式库及20步可读性检查`，提交时间为 2026-09-25 21:21:09 UTC。full构建日志的 `BUILD_HEAD/BUILD_END_HEAD`、source的构建分片指纹、packer记录以及full20的launch/start/final/completion均指向该完整提交。启动与结束按相同HEAD和clean工作区执行硬检查；两份外层成功终态证明这些检查已经通过。
+本组正式构建与full20共同使用 **`49a333eb18e8d6ff1143bf7871ef7c498ab91579`**，提交主题为 `commitV11.11Beta: 锚定两个公开正式库及20步可读性检查`，提交时间为 2026-09-25 21:21:09 UTC。full构建日志的 `BUILD_HEAD/BUILD_END_HEAD`、source的构建分片指纹、packer记录以及full20的launch/start/final/completion均指向该完整提交。启动与结束按相同HEAD和clean工作区执行硬检查；构建主体和read20主体的实际返回0包含这些检查，不以最末退出文本单独证明最外层进程状态。
 
 来源前检与16集冒烟的起跑Beta为 `42b91cd96499bd51fcb6acaeedd642b368dbefeb`，其结果已在 `de6354fd7c0f78b347c7b07c4b8ee0c8b9b37418` 归档，详见[冒烟结果](../16task-pub-smoke16-0925/result.md)。P0环境起跑提交 `5489e4b3a92197d0e9a37421b1e6415b3022b613` 是更早的环境准备锚点，不能作为本次构建版本。
 
@@ -203,6 +203,8 @@ EXIT_CODE=0
 
 `FULL_DATA_BUILD=PASS` 后附完整报告JSON，已与现有 `meta/build_sizes.json` 一致。原始构建日志SHA256为 `9ac411726e04cc5ead58d2dc5a940956d7824a1e21d6ec8e36abd7766bbda6ef`。[构建清洗日志](records/logs/full-build.summary.log)已保留10条 `STAGE_EXIT_CODE`、来源判定、finalize/verify、报告和唯一外层退出记录；归档核验逐份确认关键行序列与原始日志一致。
 
+补记[历史最外层退出记录审计](../../training-doc/orig80k-equiv-0925/exit-record-audit.md)：上述`TASK_EXIT/TEE_EXIT`记录构建主体和正文tee的真实返回码；末尾footer先写`EXIT_CODE=0`，再检查自身printf/tee，最后状态未独立持久化。因此日志末行0不能单独证明最外层包装实际退出0。目前没有证据表明历史footer失败，子阶段和数据内容PASS保留，原始records不改写。
+
 ## 10. 验收与内容一致性
 
 数据阶段分别证实了：16个原H5与公开pin一致；1600集身份及规范顺序、样本offset和规模一致；source完整；1024条feature同架构复算的最大绝对差为0；packed经真实读取API与source对应4×4三键全量逐位对拍，768897行零遗漏、零失配。packed元数据文件SHA为 `a554a7859ba35c883ec805244c98764a9eb10c1ddbc244850c5f213db4da669b`，其 `source_provenance_sha256` 与实际source provenance文件 `42a852f89673939bb556887ecdaf51bc83285fb3cbdf0711ddd2b5c2bf827ff8` 相同。
@@ -252,7 +254,7 @@ WRAPPER_TEE_EXIT=0
 READABILITY20=PASS
 ```
 
-driver日志只有自己的唯一 `EXIT_CODE=0`。wrapper转录了driver输出，并在最后记录自己的整体退出0与 `READABILITY20=PASS`，两类终态不能混合计数。恢复结果JSON SHA256为 `340f8b53543041c36456f8c4aebacf6182139711caf5a3121ca8b307c248f897`。
+driver日志只有自己的唯一 `EXIT_CODE=0`，整个runner的真实返回0另由wrapper捕获。wrapper转录driver输出后，在末尾记录预先计算的 `EXIT_CODE=0` 与 `READABILITY20=PASS`；其footer自身的证据边界同第9节，两类终态不能混合计数。恢复结果JSON SHA256为 `340f8b53543041c36456f8c4aebacf6182139711caf5a3121ca8b307c248f897`。
 
 checkpoint `19` 的控制器已记录最终逻辑字节 **11879851680 B**、文件分配字节 **11879907328 B，约11.064 GiB**；本档案引用该小型记录，没有重新遍历权重目录。原生 `_CHECKPOINT_METADATA` 文件SHA `bd70f6fff3fbc2ae5144b081ae34d247ffa49fbf06f32aeaf5f5f1deb02187fa` 已与completion文件清单核对；其初始化到提交差为14491721657 ns，即 **14.491722秒**（保留六位小数）。这是本次真实保存提交区间，不能替代保存期间磁盘占用峰值；峰值尚未测量。
 

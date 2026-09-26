@@ -96,7 +96,9 @@ git show 49a333eb18e8d6ff1143bf7871ef7c498ab91579:uv.lock
 | UTC起止 | 2026-09-25 21:23:38 → 2026-09-26 00:40:16 |
 | 总跨度 | 11798秒，3小时16分38秒 |
 | 原始日志 | `v1-store/logs/pub16-full-20260925T212238Z.build.log` |
-| 任务/tee/整体终态 | `TASK_EXIT=0`、`TEE_EXIT=0`、唯一外层 `EXIT_CODE=0` |
+| 主体及日志终态记录 | `TASK_EXIT=0`、`TEE_EXIT=0`、唯一外层 `EXIT_CODE=0` |
+
+`TASK_EXIT/TEE_EXIT`为构建主体及正文tee的真实返回码；最外层footer先写退出文本、再检查自身管道，最后状态没有独立持久化。末行0不能单独证明最外层包装实际退出0，详见[历史退出记录审计](../../training-doc/orig80k-equiv-0925/exit-record-audit.md)。没有证据表明历史footer失败，子阶段及内容验收PASS保留。
 
 | 阶段 | UTC开始→结束 | 秒级跨度 | 阶段退出 |
 |---|---|---:|---:|
