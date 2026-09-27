@@ -1,0 +1,159 @@
+{
+  "status": "PASS",
+  "scope": "仅语法、文档链接和替身argv；无生产入口/tmux/GPU",
+  "implementation_head": "aec86db64e5178e63d9e7f77d3f5bc235db16390",
+  "files": {
+    "orig80k-timing20-det-0927/README.md": {
+      "bytes": 7190,
+      "sha256": "aee3611bf8bfb4ae88f296eec86d0c2da51c5d604a6997ef1b0dfa53f2311a68"
+    },
+    "orig80k-timing20-det-0927/launch.md": {
+      "bytes": 39939,
+      "sha256": "377f5818aea4add8f1f53732488bdeaf313e71ebda772158d1a75513c0ba4c01"
+    },
+    "timing20-count-off-0926-20260927T012426Z/README.md": {
+      "bytes": 9192,
+      "sha256": "4f48d2e2578f332ff01b562de6fb6c4ef772966d98bba8bec72d61cde06e4a4d"
+    },
+    "timing20-count-on-0926-20260927T012426Z/README.md": {
+      "bytes": 9279,
+      "sha256": "d1f62717035a80404da3f7c797ac4c686f1fc93ced9809229f072efc91f560ec"
+    },
+    "timing20-full-off-0926-20260927T012426Z/README.md": {
+      "bytes": 9111,
+      "sha256": "ccb6c098b78d197bd946c6df3354e5288f0350aeec5371896feb600f452e203b"
+    },
+    "timing20-full-on-0926-20260927T012426Z/README.md": {
+      "bytes": 9198,
+      "sha256": "7bfd76d8267a8773213ec08b699ff280e053ae54d3aa04fa279bae9114875393"
+    }
+  },
+  "bash_blocks": 15,
+  "python_blocks": 2,
+  "links": 38,
+  "readme_sections": {
+    "orig80k-timing20-det-0927/README.md": 12,
+    "timing20-count-off-0926-20260927T012426Z/README.md": 12,
+    "timing20-count-on-0926-20260927T012426Z/README.md": 12,
+    "timing20-full-off-0926-20260927T012426Z/README.md": 12,
+    "timing20-full-on-0926-20260927T012426Z/README.md": 12
+  },
+  "guard_parent_adapter_unchanged": true,
+  "six_launch_argv_exact": true,
+  "calls": [
+    [
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/timing20-wrapper.sh",
+      "45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f",
+      "orig80k-timing20-full-off-0926-20260927T012426Z",
+      "1111111111111111111111111111111111111111",
+      "timing20-full-off-0926-20260927T012426Z",
+      "off",
+      "0,1,2,3",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite",
+      "f332bbd34ace1b6837cdc415b44f680896070a41564f9ce39016f1ebf99d1be5",
+      "orig80k-timing20-full-off-0926-20260927T012426Z",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-off-0926-20260927T012426Z.wrapper.log"
+    ],
+    [
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/timing20-wrapper.sh",
+      "45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f",
+      "orig80k-timing20-count-off-0926-20260927T012426Z",
+      "1111111111111111111111111111111111111111",
+      "timing20-count-off-0926-20260927T012426Z",
+      "off",
+      "4,5,6,7",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-counting-pub-400ep",
+      "a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9",
+      "orig80k-timing20-count-off-0926-20260927T012426Z",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-off-0926-20260927T012426Z.wrapper.log"
+    ],
+    [
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/timing20-wrapper.sh",
+      "45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f",
+      "orig80k-timing20-full-on-0926-20260927T012426Z",
+      "1111111111111111111111111111111111111111",
+      "timing20-full-on-0926-20260927T012426Z",
+      "on",
+      "0,1,2,3",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-pub-1600ep",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite",
+      "f332bbd34ace1b6837cdc415b44f680896070a41564f9ce39016f1ebf99d1be5",
+      "orig80k-timing20-full-on-0926-20260927T012426Z",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-on-0926-20260927T012426Z.wrapper.log"
+    ],
+    [
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/timing20-wrapper.sh",
+      "45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f",
+      "orig80k-timing20-count-on-0926-20260927T012426Z",
+      "1111111111111111111111111111111111111111",
+      "timing20-count-on-0926-20260927T012426Z",
+      "on",
+      "4,5,6,7",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-counting-pub-400ep",
+      "a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9",
+      "orig80k-timing20-count-on-0926-20260927T012426Z",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-on-0926-20260927T012426Z.wrapper.log"
+    ],
+    [
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/timing20-judge-wrapper.sh",
+      "17c0d6deea3ab3cd132bf406c968097ff9e7b455c9f22f5e3614c8641d7aafce",
+      "orig80k-timing20-full-judge-20260927T012426Z",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/common-wrapper.sh",
+      "45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f",
+      "1111111111111111111111111111111111111111",
+      "timing20-full-off-0926-20260927T012426Z",
+      "timing20-full-on-0926-20260927T012426Z",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-results-20260927T012426Z/full.json",
+      "orig80k-timing20-full-judge-20260927T012426Z",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-judge-20260927T012426Z.wrapper.log"
+    ],
+    [
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/timing20-judge-wrapper.sh",
+      "17c0d6deea3ab3cd132bf406c968097ff9e7b455c9f22f5e3614c8641d7aafce",
+      "orig80k-timing20-count-judge-20260927T012426Z",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/common-wrapper.sh",
+      "45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f",
+      "1111111111111111111111111111111111111111",
+      "timing20-count-off-0926-20260927T012426Z",
+      "timing20-count-on-0926-20260927T012426Z",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-results-20260927T012426Z/count.json",
+      "orig80k-timing20-count-judge-20260927T012426Z",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-judge-20260927T012426Z.wrapper.log"
+    ]
+  ],
+  "fixed_templates_and_guard": {
+    "scripts/training/tests/timing20-wrapper.sh": "45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f",
+    "scripts/training/tests/timing20-judge-wrapper.sh": "17c0d6deea3ab3cd132bf406c968097ff9e7b455c9f22f5e3614c8641d7aafce",
+    "scripts/training/tests/tmux_exit_guard.py": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+  },
+  "runtime_profile_test": {
+    "command": "bash /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-deterministic-candidate-20260927/test-runtime-profile-bindings.sh",
+    "actual_exit_code": 0,
+    "actual_pass_cases": 9,
+    "duration_seconds": 0.141354193,
+    "results": "runtime-profile-bindings.results.tsv"
+  },
+  "head": "aec86db64e5178e63d9e7f77d3f5bc235db16390",
+  "git_status_porcelain": "",
+  "artifact_references": {
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-deterministic-candidate-20260927/test-runtime-profile-bindings.sh": {
+      "bytes": 3807,
+      "sha256": "6d5e852471297a1c0c3ed9f70de685cc1da65b3122b310954db8185839b1e32b"
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-deterministic-candidate-20260927/runtime-profile-bindings.results.tsv": {
+      "bytes": 465,
+      "sha256": "0163755e42387aa2ef5a95649d4658a9f784606b11b9fc292e3b81c371badd20"
+    },
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf-normal-profile-addendum-20260927.md": {
+      "bytes": 1386,
+      "sha256": "85e7c57a401f3152b46b75cfdf40c73a90c8abd489731ba4f6a34694e53472fc"
+    }
+  },
+  "future_output_paths_absent": 52,
+  "production_created": false,
+  "git_diff_check": "PASS"
+}
+
