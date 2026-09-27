@@ -1,0 +1,95 @@
+# 原版80k前置：两库测速包装off/on真保存20步
+
+## 1. 结论与指标速览
+
+**本阶段尚未运行；已准备两库各一对off/on的4个run及2个CPU judge。** 准备标签 `20260926T231534Z`不是实际起跑时间。INPUT/P1及100步前置已有各自证据，本阶段实际Beta SHA、开始/结束、UUID、W&B ID与所有20步结果仍待真实记录，不能预填PASS。
+
+| 库/模式 | run档案 | GPU |
+|---|---|---|
+| full-off | [timing20-full-off-0926-20260926T231534Z](../timing20-full-off-0926-20260926T231534Z/README.md) | 0,1,2,3 |
+| full-on | [timing20-full-on-0926-20260926T231534Z](../timing20-full-on-0926-20260926T231534Z/README.md) | 0,1,2,3 |
+| count-off | [timing20-count-off-0926-20260926T231534Z](../timing20-count-off-0926-20260926T231534Z/README.md) | 4,5,6,7 |
+| count-on | [timing20-count-on-0926-20260926T231534Z](../timing20-count-on-0926-20260926T231534Z/README.md) | 4,5,6,7 |
+
+## 2. 版本与代码状态
+
+本阶段拟进入下一份 `commitV11.14Beta`，完整40位SHA尚未生成，launch保留明确待填项。四run/两judge将共用同一clean Beta，运行期间冻结源码与主仓独立uv环境。当前正式模板由此前已测副本逐字纳入，guard为f8、run模板45b4…、judge模板17c0…；完整SHA及Git源/工作树/runtime绑定均在[launch](launch.md)中锁定，不预填未来hash。
+
+旧INPUT运行HEAD为 `3a1582db39c723c735e04752e5027bfe40ecc3e1`；P1及100量具/B为 `00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8`；上游A为 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`。旧运行的启动版本永远不回填为本阶段新提交。Beta后沿用前核固定diff、取证/输入/训练模块及依赖指纹，不能把归档或再次运行旧judge称为新HEAD重训。
+
+## 3. 启动与配置还原
+
+[launch.md](launch.md)完整写入通用参数绑定、guard父适配、launch/capture/verify、日志联合验收及六任务命令。两正式Git模板在 `scripts/training/tests/`；生成runtime时加 `set -- "$1" <printf %q固定参数>`，后接模板原字节，guard绑定整份runtime新SHA。judge COMMON是未加前缀的run模板实体副本，不覆盖judge位置参数。
+
+实际guard仍执行原 `v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py`；每动作与新Beta中的正式源及工作树逐字核对，把source/runtime绑定写入launch/capture父记录。不放宽v1-store实体路径限制，也不修改旧100工具路径或回执。新会话必须先门闩retain+identity再释放，结束后取得独立退出证据。准备期间未实际launch、capture或创建run输出。
+
+## 4. 数据集与划分口径
+
+沿用公开16任务×100集完整库与其中4个counting任务×100集子集，不改变数据或划分。full为1600集/768897帧/476857执行样本，count为400集/189035帧及执行样本；建库实际Beta均为 `49a333eb18e8d6ff1143bf7871ef7c498ab91579`。详见[full库](../../dataset-build-doc/16task-pub-1600ep/README.md)和[count库](../../dataset-build-doc/4task-counting-pub-400ep/README.md)。
+
+full使用 `v1-store/datasets/16task-pub-1600ep`和原版norm `f332bbd34ace1b6837cdc415b44f680896070a41564f9ce39016f1ebf99d1be5`；count使用 `4task-counting-pub-400ep`及重算norm `a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9`。full不得替换为完整库自算c5d45b…统计量。source/manifest/packed及assets绝对路径、history摘要见launch。
+
+## 5. 关键超参
+
+四run均为mme_vla_suite、b64/fsdp4/workers4/seed42，仅smoke覆盖steps20。history为perceptual-framesamp-modul.yaml，modulation、budget512、4×4=16 token/帧、最多32 memory帧、memory_token_dim1024；原streaming_obs_horizon16保持。warmup10000、peak_lr=decay_lr=5e-5、decay_steps100000、AdamW clip1.0、EMA0.999、log100/save10000/keep10000不改。
+
+W&B online（project openpi），初始化为本仓v1-store内pi05_base。只清遗留CPU平台，实际x64必须False且不能静默覆盖继承环境绕过拒绝。off直调原训练，on调用speed.run(mode=smoke)，两侧安装相同的额外只读取证层，真实保存行为不变。
+
+## 6. 硬件、调度与耗时
+
+使用AWS 8×A100-SXM4-80GB，/scratch为md0 XFS本地NVMe。full-off与count-off先并行，各库只在自己的训练、真实保存/CPU恢复及独立退出通过后推进on，再进行本库CPU judge；同库不重叠使用相同四卡，两库互不等待无关阶段。实际设备空闲、预算、资源及所有起止时间待起跑重测，不拿历史快照作保证。
+
+本阶段包含device_get/哈希和计时包装观测开销，20步只用于正确性，不计算吞吐优劣、正式ETA或GPU瓶颈结论。已有100步重叠时间也只证明调度有效，不能作为本阶段性能测量。
+
+## 7. 待执行过程与输出行为
+
+每run实际取21批，模型使用其中20批并更新20次；两侧记录每次模型实参/RNG、完整20步五标量及末态params/EMA/optimizer/step。普通step0日志和尾窗1…19合起来覆盖全部20步。末步loop19必须真实save并等待异步提交完成，再CPU真正恢复checkpoint19。
+
+on侧启用既定0.5秒磁盘元数据采样和smoke计时，保存窗口须有原生commit之前的有效样本；off无这些speed记录。观测最大占用不是连续真实峰值。四个run的真实进程、W&B ID、UUID、记录与状态均待运行产生，不能拿旧20步或100摘要代替。
+
+## 8. 已有前置与本阶段验收
+
+CPU INPUT两组已通过，保留原3a范围与批准的最外退出限制，见[INPUT结果](../orig80k-equiv-0925/result.md)。P1四侧入口/finite/分段/来源记录通过，保留A两段状态且不称轨迹等价，见[P1四侧记录](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/p1-four-sides-verification-root-20260926.json)及[批准后的限制说明](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/archive-staging/p1-result-draft.md)。
+
+100步六run及四judge均已真实完成，数据仍锚定00bd/ecf；下表是刚完成的原报告，不把它们迁移成新Beta运行：
+
+| 证据 | 已完成范围 | SHA256 |
+|---|---|---|
+| [六run记录验收](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-six-runs-verification-root-20260926.json) | A各main100+tentative12，B的S1/S3/S2各main100，state50/99各201叶，独立退出完整 | `f23eb261938939958e122cf5138d604175ffc922f2f2552293351e3b0d379648` |
+| [full upstream judge](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-upstream-judge-verification-root-20260926.json) | 100步五标量与完整状态严格比较通过 | `cb19125eea2f71f1536ac8b4490d6cd513861812470ec8c0b5a86dc0c11e8163` |
+| [count upstream judge](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-upstream-judge-verification-root-20260926.json) | 同上，count库独立判定 | `382c9bf19f8ded3d15c6307a4c8d78141ba3a2786d8cd961fa807464e4ee6792` |
+| [full same-entry judge](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-same-judge-verification-root-20260926.json) | hex_mismatch=0、state_mismatch=0，实际4+4训练重叠 | `f3f52bef9e75f3e3556adf950cfb912359369a1b240ea5e8cd406e603a7d5062` |
+| [count same-entry judge](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-same-judge-verification-root-20260926.json) | count单跑/并跑独立通过 | `bfa8908f236974dbc2d362c16b06be06345b5f9cbf381ead8c1b9709d56fe063` |
+| [两库same-entry独立复核](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-both-same-judge-verification-independent-20260926.json) | 实际checker返回0，两组完整结果及原生退出链通过 | `9fcf54005bdb5766eade0aea4aa89d18cefdf507c3bdded83691e92c9f255e3f` |
+
+S2主机记录窗口10…99内两侧实际训练重叠631.992527秒，完整落入重叠的步骤数为90/85；仅是并跑有效性证据。100是在既定确定性验证档下的前100步等价，不承诺生产80k逐位轨迹。
+
+本阶段仍须实际取得四run的checkpoint19真恢复、21 fetch/20 model输入与RNG、20步五标量、完整末态结构/dtype/shape/bytes的off/on逐位一致，以及两个CPU judge及所有原生退出链。任何非有限、缺记录、错误身份或独立非零退出均失败。此刻没有本阶段验收结果；策略评估不在范围内。
+
+## 9. 用户决定记录
+
+用户原始目标为「给出方案跑完整的80k 和80k纯counting任务 完全参照原版训练 4卡+4卡 先做对拍测试」，执行要求「开始实现该计划 有问题立刻问用户 不要自己决策」。本阶段范围经「两库各跑一对 20 步（推荐）」确认；「尽可能并行做」「你有8张卡」落实为两条独立4卡库链。
+
+「允许仅对拍关闭 W&B」仅限P1/100，本阶段保持W&B online。「允许主机 dtype 不同，但要求数值一致且训练标量/状态逐位一致」及四None键授权只保留其CPU输入范围，训练比较不降判据。「继续工作 一路做到起泡前 有问题问用户」仍把本轮终点限定为正式80k起跑前。
+
+## 10. 历史限制与新阶段处置
+
+V11.13结果提交`f7a9757656ae38391319c4001d823bc06e62621f`首次push被远端非快进拒绝后已暂停。用户于2026-09-27要求「给出合并方案」，在只读核实后明确「没有冲突是吧 继续工作」。远端`d710d8489b88aa75770af3452fd7c9b374deaef7`仅改AGENTS.md、CLAUDE.md和greatlakes.md；普通双父合并为`40de98a1b3b60072e80bcf82dc4fbdf64d329b6c`并已正常push，训练源码、依赖、旧运行记录和六份20步启动文档均未受该合并改动。新Beta沿用核验只对这三份规则增加固定d710内容登记，00bd基准、训练源码保护、六工具SHA和113项输入引用判据保留。
+
+远端新增“生产入口不得依赖测试目录”的通用规则；本轮此前已批准的总计划明确指定tests中的speed/timing/completion量具及runner/预算调用，按已有精确授权保留其路径和源码SHA，不宣称其符合该通用新句，不把长期目录迁移混入当前训练准备。AWS本机、v1-store缓存和当前宿主实际并行容量同样沿用已确认范围。
+
+旧INPUT/P1最外final append可能写出日志0后自身失败，已结束pane的最外实际退出不可追补；没有真实任务失败的新证据。用户分别批准「同样补记限制，沿用INPUT结果（推荐）」和「补记P1限制，补独立退出取证后继续（推荐）」，原始数值/来源/记录及历史限制保留，不补造回执。新100已补独立退出证据，原实际HEAD不变。
+
+本阶段所有任务从新门闩起跑，f8留原生pane，父适配实测launch/capture返回并绑定stdout/stderr、identity、receipt及Git源/runtime；现场宿主另记父适配的实际返回。不能仅依赖旧11项wrapper测试或日志0。任何失败保留现场、停止依赖阶段并报告，不自动清理、重命名或放宽配置。
+
+## 11. 当前结论与下一步
+
+现已完成起跑前档案，等待新Beta真实生成、固定指纹复核及现场输出/资源/预算闸门；没有运行20步。实际按launch两个off同启，各链完成后及时推进on和CPU judge。只有四run与两judge内容及独立退出全部通过，才回写本阶段结果。
+
+之后仍须真实300步4+4 perf、保存恢复与带明确余量来源的预算，完成两份正式80k launch共同Beta/clean准备后停在起跑前。本group不执行80k，不把100或本阶段工具测试替代后续实测。
+
+## 12. 归档文件清单
+
+起跑前文件为本README、[launch](launch.md)及四run README；没有真实训练结果。准备时不复制.sh/.yaml或权重入docs。正式源与命令正文由新Beta还原，运行时新命令、template/runtime SHA及Git绑定留在 `v1-store/bench/orig80k-timing20-commands-20260926T231534Z`。
+
+每run记录根、权重根及缓存独立；待生成的原始timing_eq目录只含metadata.json、fetch_inputs.jsonl、model_inputs.jsonl、full_state.json及manifest.json，不能加日志。组judge结果拟为 `v1-store/bench/orig80k-timing20-results-20260926T231534Z/full.json`与 `count.json`，在两run records外。各记录、清洗日志、完成器、GPU/磁盘样本及guard父侧证和检查链待实际产生后归档，权重留run根；真实时间、UUID、W&B ID及结果均按现场填写。

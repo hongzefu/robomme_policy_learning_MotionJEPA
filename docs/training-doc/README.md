@@ -10,6 +10,11 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
+| [`orig80k-timing20-0926/`](orig80k-timing20-0926/README.md) | 两库各off/on真保存20步；两条四卡链并行、各库独立恢复及判定 | 启动资料已准备，拟由V11.14Beta统一锚定；尚未运行 |
+| [`timing20-full-off-0926-20260926T231534Z/`](timing20-full-off-0926-20260926T231534Z/README.md) | full，GPU0–3，包装off，20步真实保存与完整取证 | 待起跑及独立验收 |
+| [`timing20-full-on-0926-20260926T231534Z/`](timing20-full-on-0926-20260926T231534Z/README.md) | full，GPU0–3，包装on；依赖本库off通过 | 待起跑及独立验收 |
+| [`timing20-count-off-0926-20260926T231534Z/`](timing20-count-off-0926-20260926T231534Z/README.md) | counting，GPU4–7，包装off，20步真实保存与完整取证 | 待起跑及独立验收 |
+| [`timing20-count-on-0926-20260926T231534Z/`](timing20-count-on-0926-20260926T231534Z/README.md) | counting，GPU4–7，包装on；依赖本库off通过 | 待起跑及独立验收 |
 | [`orig80k-equiv-0925/`](orig80k-equiv-0925/README.md) | 两库CPU输入、P1及100步上游/当前和单跑/并跑对拍 | INPUT PASS（`3a1582d`）；P1及100步四项judge PASS（B=`00bdabc`），每项500标量及2×201叶逐位一致；INPUT/P1最外退出限制按用户批准保留，新包装20步/perf仍待完成 |
 | [`smoke-orig80k-full-0925/`](smoke-orig80k-full-0925/README.md) | 公开16任务正式库20步四卡可读性、原版norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；INPUT另档已PASS，本档不覆盖100步/新包装20步/并跑/perf |
 | [`smoke-orig80k-count-0925/`](smoke-orig80k-count-0925/README.md) | 公开counting正式库20步四卡可读性、独立norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；INPUT另档已PASS，本档不覆盖100步/新包装20步/并跑/perf |
