@@ -10,6 +10,9 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
+| [`orig80k-off-repeat-0927/`](orig80k-off-repeat-0927/README.md) | 用户批准两库各一次同配置20步off重复性诊断，4+4并行 | 起跑前准备；保留旧off/on失败，不放行perf |
+| [`timing20-full-off-0926-20260927T003051Z/`](timing20-full-off-0926-20260927T003051Z/README.md) | full追加off，GPU0–3，与旧b0基线独立比较 | 待新Beta及实际运行 |
+| [`timing20-count-off-0926-20260927T003051Z/`](timing20-count-off-0926-20260927T003051Z/README.md) | counting追加off，GPU4–7，与旧b0基线独立比较 | 待新Beta及实际运行 |
 | [`orig80k-timing20-0926/`](orig80k-timing20-0926/README.md) | 两库各off/on真保存20步，实际Beta=`b0efbde` | 两库正式等价FAIL；输入/RNG相同，每库80/100标量和147/201状态叶不等；四run恢复及原生退出0通过，perf暂停，已批准追加off诊断 |
 | [`timing20-full-off-0926-20260926T231534Z/`](timing20-full-off-0926-20260926T231534Z/README.md) | full，GPU0–3，包装off，20步真实保存与完整取证 | 单run保存恢复及独立退出PASS；与on正式比较FAIL |
 | [`timing20-full-on-0926-20260926T231534Z/`](timing20-full-on-0926-20260926T231534Z/README.md) | full，GPU0–3，包装on；本库off通过后起跑 | 单run保存恢复及独立退出PASS；与off正式比较FAIL |
