@@ -1,0 +1,63 @@
+{
+  "extracted_utc": "2026-09-27T01:56:01.895834+00:00",
+  "head": "c71d5255597db2f26930b7b5684a1d5b2994cf75",
+  "phases": {
+    "count-on": {
+      "host_actual_exit": 0,
+      "host_observation": {
+        "chunk_id": "68faad",
+        "exit_code": 0,
+        "wall_time_seconds": 0.577780575
+      },
+      "process": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-count-on-20260927.process.json",
+      "process_ref": {
+        "bytes": 1244,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-count-on-20260927.process.json",
+        "sha256": "51c20f1774acf4b36c1639a9f2292c4c35f5a8a90f7cd5d363779fb7827e743c"
+      }
+    },
+    "full-on": {
+      "host_actual_exit": 0,
+      "host_observation": {
+        "chunk_id": "daab4f",
+        "exit_code": 0,
+        "wall_time_seconds": 0.416086784
+      },
+      "process": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-full-on-20260927.process.json",
+      "process_ref": {
+        "bytes": 1239,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-full-on-20260927.process.json",
+        "sha256": "18d87c25772a755883e6c62465bf83d1fad782fe8060c0b2693cd856f2da5aa1"
+      }
+    },
+    "start": {
+      "host_actual_exit": 0,
+      "host_observation": {
+        "chunk_id": "044f68",
+        "exit_code": 0,
+        "wall_time_seconds": 0.28165203
+      },
+      "process": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-start-20260927.process.json",
+      "process_ref": {
+        "bytes": 1230,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-start-20260927.process.json",
+        "sha256": "fc3c6b048c3e802f9c8f643513f1f4f4dcde696b8652a6f5275c9d67802b3942"
+      }
+    }
+  },
+  "schema": 1,
+  "scope": "单次读取的已结束父阶段快照；full-on/count-on阶段仅验收off并释放on，不是on训练结束证据。动态controller后续改变属于预期。",
+  "selected_fields": [
+    "deterministic20.head",
+    "deterministic20.tag",
+    "deterministic20.phases.start",
+    "deterministic20.phases.full-on",
+    "deterministic20.phases.count-on"
+  ],
+  "source": {
+    "bytes": 122976,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/controller_state.json",
+    "sha256": "487d5776454daf392e8b654a7025053b65577e4aeebb6ba966fe1cc878fcddf5"
+  },
+  "tag": "20260927T012426Z"
+}

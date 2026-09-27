@@ -1,23 +1,23 @@
 # timing20-count-on-0926-20260927T012426Z
 
-已形成并推送的实现锚点为 `aec86db64e5178e63d9e7f77d3f5bc235db16390`；它锁定本轮已批准档位实现，377项核心合测通过。下一档案Beta确定为 `commitV11.16Beta`，其实际TRAIN_HEAD仍待生成；实施锚点不能冒充尚未发生的训练起跑版本。
+实际训练Beta为 `c71d5255597db2f26930b7b5684a1d5b2994cf75`（commitV11.16Beta），实施锚点为 `aec86db64e5178e63d9e7f77d3f5bc235db16390`。377项核心合测属于起跑前工具验证；本档案另记录本run及确定性配对的真实结果，后续归档提交不替代运行锚点。
 
 ## 1. 结论与指标速览
 
-本run为确定性档20步包装对照的count/on侧，**尚未起跑，没有训练、恢复或等价结论**。准备标签 `20260927T012426Z` 不表示实际起跑时间。预期验收21次取批、20次模型输入/更新、五标量20步逐位比较及完整TrainState，真实保存checkpoint19并CPU恢复EMA；实际结果待回填。
+本run为count/on确定性20步包装对照，实际完成21次取批、20次模型输入/更新与末步真实保存；checkpoint19/state20的61个EMA叶CPU恢复一致。本库正式off/on判定PASS：100个标量对及201叶完整TrainState零差异，输入与RNG逐位相同。结论仅限本次deterministic100及共同观察层，旧normal失败保留，不作性能结论。
 
 ## 2. 版本与代码状态
 
-本轮TRAIN_HEAD待新Beta真实生成后填写完整40位SHA，预计编号 `commitV11.16Beta`，以实际Git记录为准。运行前HEAD必须与另外三run、两个judge一致且工作区clean；运行中源码和uv环境冻结。不能把准备时HEAD、归档提交或旧normal版本写成这次运行锚点。
+本轮四run和两judge均在clean Beta `c71d5255597db2f26930b7b5684a1d5b2994cf75`下执行；运行期间源码及uv环境冻结，主代理在2026-09-27T02:07:11Z记录完成快照后解除冻结。原始记录继续绑定该Beta，不改写为归档后的工作区。
 
 INPUT原HEAD为 `3a1582db39c723c735e04752e5027bfe40ecc3e1`；P1/100量具与B为 `00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8`，上游A为 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`。沿用范围需由新Beta前置核对模块、依赖和数据证明，不宣称在本新HEAD重跑历史INPUT/100。旧normal结果仅引用[group历史边界](../orig80k-timing20-det-0927/README.md)。
 
 ## 3. 启动与配置还原
 
-实际执行须使用[group launch完整函数与六任务命令](../orig80k-timing20-det-0927/launch.md)的门闩、独立退出及联合验收，下面仅列本run待展开的固定参数，不能绕开group控制链直接起跑：
+实际执行须使用[group launch完整函数与六任务命令](../orig80k-timing20-det-0927/launch.md)的门闩、独立退出及联合验收，下面列本run实际固定参数，不能绕开group控制链直接起跑：
 
 ```bash
-TRAIN_HEAD='<待新Beta生成后填写实际完整40位SHA>'
+TRAIN_HEAD='c71d5255597db2f26930b7b5684a1d5b2994cf75'
 RUN=timing20-count-on-0926-20260927T012426Z
 TIMING=on
 GPUS=4,5,6,7
@@ -54,23 +54,21 @@ norm实体为 `$ASSETS/robomme/norm_stats.json`，期望SHA `a77075cd024dcb1f0e8
 
 ## 6. 硬件、调度与耗时
 
-现有机器记录为AWS 8×A100-SXM4-80GB及/scratch md0 XFS，起跑前须重核现场空闲与预算。本run固定GPU `4,5,6,7`，同库配对侧用相同四卡；full/count各自off→on独立推进。必须等本库off真实恢复及独立退出全部通过后起跑，不等待另一库链。
+AWS8×A100-SXM4-80GB、/scratch md0 XFS；本run固定GPU 4–7，同库off→on按真实恢复及独立退出依赖推进。UTC为 `2026-09-27T01:53:14Z` → `2026-09-27T02:03:52Z`。
 
-会话名固定 `orig80k-timing20-count-on-0926-20260927T012426Z`；实际START/END_UTC、window/pane/PID、UUID、W&B ID及耗时全部待运行记录。共同观测存在同步和CPU哈希开销，不将20步耗时写成吞吐、ETA或性能结论。
+会话 `orig80k-timing20-count-on-0926-20260927T012426Z`，window/pane `@577/%577`，pane PID `1295599`；UUID `1d572c9d-8b26-4f48-9f3e-0926c3f8308a`，W&B ID `jv5qsxcg`。这些身份由[原生identity](../orig80k-timing20-det-0927/records/exit/orig80k-timing20-count-on-0926-20260927T012426Z/identity.json)和原始记录绑定；共同取证存在同步/CPU读回开销，不把本窗口用作吞吐或ETA。
 
 ## 7. 训练过程行为
 
-on在相同共同取证层下执行speed.run(mode=smoke)，保留HostTiming与原同步点，step19保存前同步；0.5秒磁盘采样含异步保存wait完成后的末次样本。 两侧均必须真实保存，不用摘要器替代save_state。预期共同记录21次fetch、20次model/RNG，最后一批未用于训练；完整末态覆盖params/EMA/opt_state/step及每叶结构、dtype与原始字节摘要。
+on运行speed.run(smoke20)，speed_start/run均schema2，profile与实际flags相同；真实同步、主机/磁盘/GPU采样保留。实际取批21次、仅前20批进入模型并更新；一次原save_state返回，末态step20/loop19。完整状态为params61、EMA61、optimizer78、step1，共201叶，所有标量和状态有限。
 
-log100的step0与final尾窗1…19覆盖全部20×5标量；不改log_interval，不用四位小数或W&B摘要替代原始hex逐位判定。此节为待执行判据，尚无实际训练行为。
+log100的step0与final尾窗1…19覆盖20×5原始标量，未改变日志间隔。独立核验覆盖52个项目模块及208项依赖，launch与metadata均显式deterministic100；实际flags为精确两项。
 
 ## 8. 保存、恢复与配对验收
 
-完成器须真实恢复checkpoint19的EMA，与训练末步及共同完整状态EMA摘要相等；EMA恢复范围不冒称覆盖全部optimizer/params状态。completion必须为smoke/state20/final19/checkpoints[19]，绑定run/HEAD/UUID、GPU窗口和全部小文件。
+[本run独立报告](../orig80k-timing20-det-0927/records/verification/count-on.independent-verification-v2.json)确认checkpoint19/state20实际恢复61个EMA叶，与final及共同完整状态的EMA一致；恢复范围不冒称包含全部optimizer。
 
-同库[配对off侧](../timing20-count-off-0926-20260927T012426Z/README.md)完成后运行原正式judge，严格比较21fetch、20model/RNG、100对标量和完整TrainState。不加容差、不改BASE或跨HEAD正式判据。联合验收还必须核launch/metadata及judge结果的 `timing_eq_profile={name:deterministic100,xla_flags:精确两flags}`，on两份speed JSON为schema2且与记录一致；不能凭任意profile的PASS放行。
-
-每run和judge均要原生pane实际退出、capture父实际返回、父适配宿主退出及原日志内容联合通过。全部结果当前待验证。
+[本库正式judge](../orig80k-timing20-det-0927/records/judges/count.json)逐位通过21fetch、20model/RNG、100个标量对及201叶完整状态，schema2与deterministic100均明确。四run和两judge的原生pane均退出0且无信号，capture父实际返回0；七调度阶段的父进程与宿主返回0另由[最终controller快照](../orig80k-timing20-det-0927/records/controller.completed.snapshot.json)绑定。日志0不单独作为最外成功证据。
 
 ## 9. 用户决定记录
 
@@ -82,14 +80,14 @@ log100的step0与final尾窗1…19覆盖全部20×5标量；不改log_interval�
 
 旧normal off/on及追加off诊断的差异保留原始FAIL，只引用既有档案，不归因autotune或包装、也不预言本档位必过。旧INPUT/P1最外final append实际退出不可追补，分别按「同样补记限制，沿用INPUT结果（推荐）」及「补记P1限制，补独立退出取证后继续（推荐）」处置；其内容与子命令证据保留，不补造独立wait。
 
-本轮六任务都由f8先保留自有窗口并落identity后释放，结束联合capture及真实父返回；日志0不能单独证明最外实际成功。新意外尚无；失败保留现场、停止依赖，不覆盖或自动清理。
+本轮六任务都由f8先保留自有窗口并落identity后释放，结束联合capture及真实父返回；日志0不能单独证明最外实际成功。本run没有训练/恢复失败。后续独立报告封装的大整数精度事件见[group结果](../orig80k-timing20-det-0927/result.md)：原记录、原checker stdout及真实判定未改，四份修正v2报告单独保留，首版不导入。
 
 ## 11. 当前结论与下一步
 
-当前仅完成启动候选准备，本run尚无PASS/FAIL结果。须先形成统一新Beta、核前置沿用和现场资源，再执行本run、同库配对和正式judge；只有确定性档全部严格通过才能讨论后续normal300步perf及预算。不能把确定性档结果回写成旧normal逐位通过，不自动启动80k。
+本run真实完成及本库确定性包装对照PASS。该结论只证明同一额外观察层、指定两flags、固定模型与输入下本次20步逐位相等；不能推广normal环境、一般确定性、无观测运行或性能。后续仍须normal300步perf、真实测盘预算及正式起跑前条件，本轮不自行启动80k。
 
 ## 12. 归档文件清单
 
-本候选现有文件仅README和[group launch](../orig80k-timing20-det-0927/launch.md)。未来run根为 `v1-store/train-runs/mme_vla_suite/timing20-count-on-0926-20260927T012426Z`，records为 `v1-store/bench/orig80k/timing20-count-on-0926-20260927T012426Z`，driver为 `v1-store/logs/timing20-count-on-0926-20260927T012426Z.driver.log`，wrapper为 `v1-store/logs/orig80k-timing20-count-on-0926-20260927T012426Z.wrapper.log`；均要求新目录/新文件，当前不得预建。
+[核心原字节包](records/core.records.tar.gz)共22成员，169900 B，SHA `46be89af776144173b19cfc7560be8b575379154110c7f0a8338efe47224e65e`；[成员检查](records/archive_checks.json)记录逐成员源bytes/SHA、完整解压CRC及退出证据。
 
-待真实产生后归档launch/runtime、metrics/final、timing_eq四记录及manifest、completion、GPU采样、speed/host/disk记录、清洗日志及原字节检查链，另保留六任务identity/native receipt/父capture及实际返回。runtime命令和cache留v1-store；docs只纳Git不可还原实测，不复制.sh/.yaml/venv或大权重。待产生清单不表示已有记录。
+清洗日志为[driver](logs/driver.summary.log)、[wrapper](logs/wrapper.summary.log)、[completion](logs/completion.summary.log)，并附[清洗检查](logs/log_checks.json)。仅删除已识别独立进度行，Git副本仅处理获批纯W&B装饰尾白；其他行及EOF保真，关键行零丢失。group保留六任务独立退出链、父过程、最终结果和精确v2报告。权重留v1-store，脚本/配置/运行命令不作为独立docs附件。

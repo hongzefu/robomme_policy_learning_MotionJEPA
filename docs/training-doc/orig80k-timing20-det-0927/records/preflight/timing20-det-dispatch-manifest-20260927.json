@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "head": "c71d5255597db2f26930b7b5684a1d5b2994cf75",
+  "source": {
+    "path": "docs/training-doc/orig80k-timing20-det-0927/launch.md",
+    "bytes": 42302,
+    "sha256": "e1430dfc57e0e5e46f24fc650de3a24544bbf6ea486e1d3755e07cb5b38edde1"
+  },
+  "selection": "start使用完整设置，其余仅变量定义；函数原文和阶段原文不变，只替换待填TRAIN_HEAD",
+  "bash_blocks": [
+    {
+      "index": 0,
+      "bytes": 619,
+      "sha256": "4f078dd30122710f95e3a298a3cfad9ee1f20278ec44798b1331f2a9a560665a"
+    },
+    {
+      "index": 1,
+      "bytes": 2558,
+      "sha256": "d9c6fc309e1c0d01598f65e9899f463ed00a73e8c58c973c22f943338aeee699"
+    },
+    {
+      "index": 2,
+      "bytes": 670,
+      "sha256": "f5a2cff5ab6e820423e5f216e24132d749d679e2c7f10c549cf87dbcc48c3151"
+    },
+    {
+      "index": 3,
+      "bytes": 17703,
+      "sha256": "c73ee0ed6a182eac00e9c3381383b2c494ee9961fe8a8f1d158acde5d88a91d2"
+    },
+    {
+      "index": 4,
+      "bytes": 453,
+      "sha256": "2ec4a98cb619f2fd82b6af0e2a27025570cc5114fd5bd6d39ddff40256a37c18"
+    },
+    {
+      "index": 5,
+      "bytes": 451,
+      "sha256": "1547a92f0141684d23dc019bb9a89facb9b937f11fab5cf973f67139ea3a311e"
+    },
+    {
+      "index": 6,
+      "bytes": 461,
+      "sha256": "24707dea9d8fcd74438f85d1cbb9a02edfa6a23de599f2a3977d54f951834141"
+    },
+    {
+      "index": 7,
+      "bytes": 518,
+      "sha256": "1c3b65063c74a87104c3aa6ed74e2eb0b4e430ac9d28ea26f7b6ef7df0291978"
+    },
+    {
+      "index": 8,
+      "bytes": 527,
+      "sha256": "2221af5ccd11b13a94602c6cd71f0c278052422b2c8d5f5862287c66e06887c1"
+    },
+    {
+      "index": 9,
+      "bytes": 296,
+      "sha256": "022fbc3995c2341830960e8a6f393de814c92e3fbd360c1969c2164ebfd47e40"
+    },
+    {
+      "index": 10,
+      "bytes": 299,
+      "sha256": "82872238295b5fa8b79f7224e94cc37fc6b9db6d36c6cbfb79d117e197365cb9"
+    }
+  ],
+  "phases": {
+    "start": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-start-20260927.command",
+      "bytes": 21407,
+      "sha256": "c3c441a0e9b0e348c1f54411f74a60aa716469223e4d78f21fe883ab61fc2ad4",
+      "phase_block": 4,
+      "bash_syntax_exit": 0
+    },
+    "full-on": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-full-on-20260927.command",
+      "bytes": 20197,
+      "sha256": "c2e7b5ab59aadec5115d7fe40370c33df85fa6ea37b8cf4523bfe0d2fca603e9",
+      "phase_block": 5,
+      "bash_syntax_exit": 0
+    },
+    "count-on": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-count-on-20260927.command",
+      "bytes": 20207,
+      "sha256": "cc577a27b997579aa001ba815eb898b2e2c5428e5dfc6c1e232baba87aac6c1a",
+      "phase_block": 6,
+      "bash_syntax_exit": 0
+    },
+    "full-judge": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-full-judge-20260927.command",
+      "bytes": 20264,
+      "sha256": "92f7f550ee71838333d323b38edc3b31195afabd20f7d3e65fba96b56d376a5b",
+      "phase_block": 7,
+      "bash_syntax_exit": 0
+    },
+    "count-judge": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-count-judge-20260927.command",
+      "bytes": 20273,
+      "sha256": "f13f2a1b7cc0866d884c89808838b227d1945e20c3010a379e5c66dfecea8a34",
+      "phase_block": 8,
+      "bash_syntax_exit": 0
+    },
+    "full-finish": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-full-finish-20260927.command",
+      "bytes": 20042,
+      "sha256": "37aff25bb7342dc80946f1cda9ea38d51910ad4964683f1f491c2a0ff612e4ac",
+      "phase_block": 9,
+      "bash_syntax_exit": 0
+    },
+    "count-finish": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-count-finish-20260927.command",
+      "bytes": 20045,
+      "sha256": "c59423ab11c438a88c14259fbb36dc1dbc87126fae84b21bb78b67d83648cfe3",
+      "phase_block": 10,
+      "bash_syntax_exit": 0
+    }
+  }
+}

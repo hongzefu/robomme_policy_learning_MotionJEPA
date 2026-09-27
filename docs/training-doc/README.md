@@ -10,11 +10,11 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`orig80k-timing20-det-0927/`](orig80k-timing20-det-0927/README.md) | 用户批准的两库确定性档off/on真保存20步，4+4独立库链 | 起跑前准备；实施锚点aec86db、377项核心合测通过；GPU等价结果待实跑 |
-| [`timing20-full-off-0926-20260927T012426Z/`](timing20-full-off-0926-20260927T012426Z/README.md) | full确定性off，GPU0–3 | 待同一新Beta与前置核验 |
-| [`timing20-full-on-0926-20260927T012426Z/`](timing20-full-on-0926-20260927T012426Z/README.md) | full确定性on，依赖本库off恢复和原生退出通过 | 待运行及逐位判定 |
-| [`timing20-count-off-0926-20260927T012426Z/`](timing20-count-off-0926-20260927T012426Z/README.md) | counting确定性off，GPU4–7 | 待同一新Beta与前置核验 |
-| [`timing20-count-on-0926-20260927T012426Z/`](timing20-count-on-0926-20260927T012426Z/README.md) | counting确定性on，依赖本库off恢复和原生退出通过 | 待运行及逐位判定 |
+| [`orig80k-timing20-det-0927/`](orig80k-timing20-det-0927/README.md) | 用户批准的两库确定性档off/on真保存20步，4+4独立库链 | 确定性档两库各100标量/201叶零差异，四run真实恢复及六原生退出PASS；旧normal FAIL保留，perf/预算待完成 |
+| [`timing20-full-off-0926-20260927T012426Z/`](timing20-full-off-0926-20260927T012426Z/README.md) | full确定性off，GPU0–3 | state20/checkpoint19、61EMA真实恢复及原生/父退出0；本库deterministic100逐位PASS |
+| [`timing20-full-on-0926-20260927T012426Z/`](timing20-full-on-0926-20260927T012426Z/README.md) | full确定性on，依赖本库off恢复和原生退出通过 | state20/checkpoint19、61EMA真实恢复及原生/父退出0；本库deterministic100逐位PASS |
+| [`timing20-count-off-0926-20260927T012426Z/`](timing20-count-off-0926-20260927T012426Z/README.md) | counting确定性off，GPU4–7 | state20/checkpoint19、61EMA真实恢复及原生/父退出0；本库deterministic100逐位PASS |
+| [`timing20-count-on-0926-20260927T012426Z/`](timing20-count-on-0926-20260927T012426Z/README.md) | counting确定性on，依赖本库off恢复和原生退出通过 | state20/checkpoint19、61EMA真实恢复及原生/父退出0；本库deterministic100逐位PASS |
 | [`orig80k-off-repeat-0927/`](orig80k-off-repeat-0927/README.md) | 两库同配置20步off重复性诊断，实际Beta=`b60ec2b`，4+4并行 | 两库DIFFER/FAIL，各80/100标量与147/201状态叶不等；已批准下一阶段确定性20闸门，尚未新实测，perf不放行 |
 | [`timing20-full-off-0926-20260927T003051Z/`](timing20-full-off-0926-20260927T003051Z/README.md) | full追加off，GPU0–3，与旧b0基线独立比较 | 单run真实恢复及原生退出PASS；与旧off重复比较FAIL |
 | [`timing20-count-off-0926-20260927T003051Z/`](timing20-count-off-0926-20260927T003051Z/README.md) | counting追加off，GPU4–7，与旧b0基线独立比较 | 单run真实恢复及原生退出PASS；与旧off重复比较FAIL |

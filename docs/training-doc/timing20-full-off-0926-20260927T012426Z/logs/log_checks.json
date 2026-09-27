@@ -1,0 +1,276 @@
+{
+  "archive_integrity": "PASS",
+  "logs": {
+    "completion": {
+      "all_other_lines_identical": true,
+      "critical_line_count": 2,
+      "critical_lines_exactly_equal": true,
+      "critical_lines_sha256": "50e16f97f34e433d984458ea38de8e6da08ecb6e3432c6e46a6af2faee0cf129",
+      "git_ready": {
+        "bytes": 1136,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-archive-staging-20260927/completed-off-v2/full-off/git-ready/completion.summary.log",
+        "sha256": "28ba3d3ebcda6da6cc8238b79cb22f4caab95c0eb5637178482622d3832fb342"
+      },
+      "git_ready_changes": [],
+      "normalization": "CRLF/CR转LF；仅删除独立tqdm进度行；Git副本仅处理明确批准的纯wandb空白装饰行",
+      "original": {
+        "bytes": 1136,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T012426Z/completion.summary.log",
+        "sha256": "28ba3d3ebcda6da6cc8238b79cb22f4caab95c0eb5637178482622d3832fb342"
+      },
+      "raw_normalized_lines": 3,
+      "removed_progress": [],
+      "stage": {
+        "bytes": 1136,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-archive-staging-20260927/completed-off-v2/full-off/logs/completion.summary.log",
+        "sha256": "28ba3d3ebcda6da6cc8238b79cb22f4caab95c0eb5637178482622d3832fb342"
+      },
+      "stage_lines": 3
+    },
+    "driver": {
+      "all_other_lines_identical": true,
+      "critical_line_count": 62,
+      "critical_lines_exactly_equal": true,
+      "critical_lines_sha256": "b8dc57ab44df65ba020309c4eacbf815aa432ec40b60319d5c2196747ea3d4c1",
+      "git_ready": {
+        "bytes": 57835,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-archive-staging-20260927/completed-off-v2/full-off/git-ready/driver.summary.log",
+        "sha256": "a845e34e211f2e589dc4bd00b3cae0d73eb6821340a946b50f719615cb14d54c"
+      },
+      "git_ready_changes": [
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "0acb3770ccb38c17cfe18effab3ece30d53ce667241e85c20b7d3c305f4e2b42",
+          "kind": "wandb_blank_padding",
+          "line": 335,
+          "removed_bytes": 80
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "kind": "wandb_blank_padding",
+          "line": 336,
+          "removed_bytes": 1
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "kind": "wandb_blank_padding",
+          "line": 343,
+          "removed_bytes": 1
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "kind": "wandb_blank_padding",
+          "line": 350,
+          "removed_bytes": 1
+        }
+      ],
+      "normalization": "CRLF/CR转LF；仅删除独立tqdm进度行；Git副本仅处理明确批准的纯wandb空白装饰行",
+      "original": {
+        "bytes": 59584,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/timing20-full-off-0926-20260927T012426Z.driver.log",
+        "sha256": "0b1070fdf5b9f6d4237a85692f68da73339dd69244f3d59da0ed05df18ecd487"
+      },
+      "raw_normalized_lines": 379,
+      "removed_progress": [
+        {
+          "line": 283,
+          "sha256": "13c77cf98871aca66ccd7f86d0a558381f87206c37cd0d62e4e60acc204aa464",
+          "text": "01:44:12.832 [I] Progress on: -/20 rate:- remaining:? elapsed:00:00 postfix:-                     (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 302,
+          "sha256": "34777e17a780b75079f04e5973f094805e10552c00cf4554f60ab656287c5d2b",
+          "text": "01:44:59.308 [I] Progress on: -/20 rate:- remaining:? elapsed:00:46 postfix:-                     (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 303,
+          "sha256": "e0c33ab11911985560dd91d33df81484fc39cb2be55afe59b70ba9e0b7737dab",
+          "text": "01:45:12.622 [I] Progress on: 3.00it/20.0it rate:15.3s/it remaining:04:19 elapsed:00:59 postfix:- (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 304,
+          "sha256": "420059ef03e51edb731bb16c8dcf64ae7cf743e4ff6d27721c7869552f53ac7e",
+          "text": "01:45:23.945 [I] Progress on: 5.00it/20.0it rate:9.4s/it remaining:02:20 elapsed:01:11 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 305,
+          "sha256": "aa2daf427e557e07f98a0639ec1fc4e32b6e4c676462fb755c70521cf602c50d",
+          "text": "01:45:35.168 [I] Progress on: 7.00it/20.0it rate:7.3s/it remaining:01:34 elapsed:01:22 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 306,
+          "sha256": "4ff6b8644285fcba8a8bb9f6aecd1593de135530176f076626db8c001c765555",
+          "text": "01:45:46.287 [I] Progress on: 9.00it/20.0it rate:6.4s/it remaining:01:09 elapsed:01:33 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 307,
+          "sha256": "74e615342c248e0fbaffbf60557fb77c3a3a388bc3d8897bf9d99bc385047a3e",
+          "text": "01:45:57.518 [I] Progress on: 11.0it/20.0it rate:6.0s/it remaining:00:53 elapsed:01:44 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 308,
+          "sha256": "31fed6f55841b9dc581d145562d02f5b66d88fd97c74e7a20f513eb8bbbf52f3",
+          "text": "01:46:08.842 [I] Progress on: 13.0it/20.0it rate:5.8s/it remaining:00:40 elapsed:01:56 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 309,
+          "sha256": "6b28bd78aa4cac16d914643f842fc87f7769f10b789e2fc75a4fd8f082717d86",
+          "text": "01:46:20.168 [I] Progress on: 15.0it/20.0it rate:5.7s/it remaining:00:28 elapsed:02:07 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 310,
+          "sha256": "cfef2110e5fdc14d584149810d7e0f6c00f91b498950c96efee3462d497ebcd9",
+          "text": "01:46:31.494 [I] Progress on: 17.0it/20.0it rate:5.7s/it remaining:00:17 elapsed:02:18 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 311,
+          "sha256": "fb36300b3dfc7d4a54d840c7cb68b719ace958d02c8bb8ee153827506d76fc27",
+          "text": "01:46:42.818 [I] Progress on: 19.0it/20.0it rate:5.7s/it remaining:00:05 elapsed:02:29 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 344,
+          "sha256": "b3509d3addbe656465fdd50cfa10d8e6a26ca42eb42605ae19df71f7ae65548c",
+          "text": "01:52:07.815 [I] Progress on: 20.0it/20.0it rate:101.6s/it remaining:00:00 elapsed:07:54 postfix:- (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 345,
+          "sha256": "b3509d3addbe656465fdd50cfa10d8e6a26ca42eb42605ae19df71f7ae65548c",
+          "text": "01:52:07.815 [I] Progress on: 20.0it/20.0it rate:101.6s/it remaining:00:00 elapsed:07:54 postfix:- (1279574:tqdm_logging.py:145)"
+        }
+      ],
+      "stage": {
+        "bytes": 57918,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-archive-staging-20260927/completed-off-v2/full-off/logs/driver.summary.log",
+        "sha256": "8f83b17e33e4d1a84fd3dfa4c418674daace75434b1d0983d68ccee9c7d0c138"
+      },
+      "stage_lines": 366
+    },
+    "wrapper": {
+      "all_other_lines_identical": true,
+      "critical_line_count": 85,
+      "critical_lines_exactly_equal": true,
+      "critical_lines_sha256": "dea2074a17d2bb0a627cda20aa1215c53c83cca79e40e40ecd9af1bae82d9ea0",
+      "git_ready": {
+        "bytes": 60846,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-archive-staging-20260927/completed-off-v2/full-off/git-ready/wrapper.summary.log",
+        "sha256": "dcba28ae78b34120099baceefc08f802ea3a28d5789e07b57864498b2a58d217"
+      },
+      "git_ready_changes": [
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "0acb3770ccb38c17cfe18effab3ece30d53ce667241e85c20b7d3c305f4e2b42",
+          "kind": "wandb_blank_padding",
+          "line": 346,
+          "removed_bytes": 80
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "kind": "wandb_blank_padding",
+          "line": 347,
+          "removed_bytes": 1
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "kind": "wandb_blank_padding",
+          "line": 354,
+          "removed_bytes": 1
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "kind": "wandb_blank_padding",
+          "line": 361,
+          "removed_bytes": 1
+        }
+      ],
+      "normalization": "CRLF/CR转LF；仅删除独立tqdm进度行；Git副本仅处理明确批准的纯wandb空白装饰行",
+      "original": {
+        "bytes": 62595,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-off-0926-20260927T012426Z.wrapper.log",
+        "sha256": "9ef8586e29c0232efcace1c4cd51d4106080ab3e3ffce1190a43d0c726b61332"
+      },
+      "raw_normalized_lines": 404,
+      "removed_progress": [
+        {
+          "line": 294,
+          "sha256": "13c77cf98871aca66ccd7f86d0a558381f87206c37cd0d62e4e60acc204aa464",
+          "text": "01:44:12.832 [I] Progress on: -/20 rate:- remaining:? elapsed:00:00 postfix:-                     (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 313,
+          "sha256": "34777e17a780b75079f04e5973f094805e10552c00cf4554f60ab656287c5d2b",
+          "text": "01:44:59.308 [I] Progress on: -/20 rate:- remaining:? elapsed:00:46 postfix:-                     (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 314,
+          "sha256": "e0c33ab11911985560dd91d33df81484fc39cb2be55afe59b70ba9e0b7737dab",
+          "text": "01:45:12.622 [I] Progress on: 3.00it/20.0it rate:15.3s/it remaining:04:19 elapsed:00:59 postfix:- (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 315,
+          "sha256": "420059ef03e51edb731bb16c8dcf64ae7cf743e4ff6d27721c7869552f53ac7e",
+          "text": "01:45:23.945 [I] Progress on: 5.00it/20.0it rate:9.4s/it remaining:02:20 elapsed:01:11 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 316,
+          "sha256": "aa2daf427e557e07f98a0639ec1fc4e32b6e4c676462fb755c70521cf602c50d",
+          "text": "01:45:35.168 [I] Progress on: 7.00it/20.0it rate:7.3s/it remaining:01:34 elapsed:01:22 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 317,
+          "sha256": "4ff6b8644285fcba8a8bb9f6aecd1593de135530176f076626db8c001c765555",
+          "text": "01:45:46.287 [I] Progress on: 9.00it/20.0it rate:6.4s/it remaining:01:09 elapsed:01:33 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 318,
+          "sha256": "74e615342c248e0fbaffbf60557fb77c3a3a388bc3d8897bf9d99bc385047a3e",
+          "text": "01:45:57.518 [I] Progress on: 11.0it/20.0it rate:6.0s/it remaining:00:53 elapsed:01:44 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 319,
+          "sha256": "31fed6f55841b9dc581d145562d02f5b66d88fd97c74e7a20f513eb8bbbf52f3",
+          "text": "01:46:08.842 [I] Progress on: 13.0it/20.0it rate:5.8s/it remaining:00:40 elapsed:01:56 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 320,
+          "sha256": "6b28bd78aa4cac16d914643f842fc87f7769f10b789e2fc75a4fd8f082717d86",
+          "text": "01:46:20.168 [I] Progress on: 15.0it/20.0it rate:5.7s/it remaining:00:28 elapsed:02:07 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 321,
+          "sha256": "cfef2110e5fdc14d584149810d7e0f6c00f91b498950c96efee3462d497ebcd9",
+          "text": "01:46:31.494 [I] Progress on: 17.0it/20.0it rate:5.7s/it remaining:00:17 elapsed:02:18 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 322,
+          "sha256": "fb36300b3dfc7d4a54d840c7cb68b719ace958d02c8bb8ee153827506d76fc27",
+          "text": "01:46:42.818 [I] Progress on: 19.0it/20.0it rate:5.7s/it remaining:00:05 elapsed:02:29 postfix:-  (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 355,
+          "sha256": "b3509d3addbe656465fdd50cfa10d8e6a26ca42eb42605ae19df71f7ae65548c",
+          "text": "01:52:07.815 [I] Progress on: 20.0it/20.0it rate:101.6s/it remaining:00:00 elapsed:07:54 postfix:- (1279574:tqdm_logging.py:145)"
+        },
+        {
+          "line": 356,
+          "sha256": "b3509d3addbe656465fdd50cfa10d8e6a26ca42eb42605ae19df71f7ae65548c",
+          "text": "01:52:07.815 [I] Progress on: 20.0it/20.0it rate:101.6s/it remaining:00:00 elapsed:07:54 postfix:- (1279574:tqdm_logging.py:145)"
+        }
+      ],
+      "stage": {
+        "bytes": 60929,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-archive-staging-20260927/completed-off-v2/full-off/logs/wrapper.summary.log",
+        "sha256": "1ff7b47b4b8c9778681796f3e26609744a81243565dea408da8b0c55818a2e09"
+      },
+      "stage_lines": 391
+    }
+  },
+  "schema": 1,
+  "scope": "仅证明日志清洗保真；当前det单run完整，off/on配对仍待判定",
+  "wandb_padding_normalization_authorized": true
+}

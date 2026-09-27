@@ -1,14 +1,14 @@
-# 两库确定性档20步包装对照（启动档，尚未运行）
+# 两库确定性档20步包装对照（已完成）
 
-已形成并推送的实现锚点为 `aec86db64e5178e63d9e7f77d3f5bc235db16390`；它锁定本轮已批准档位实现，377项核心合测通过。下一档案Beta确定为 `commitV11.16Beta`，其实际TRAIN_HEAD仍待生成；实施锚点不能冒充尚未发生的训练起跑版本。
+实现锚点为 `aec86db64e5178e63d9e7f77d3f5bc235db16390`，实际起跑Beta为 `c71d5255597db2f26930b7b5684a1d5b2994cf75`（`commitV11.16Beta`）。两库确定性档off/on正式判定均通过；完整实测与证据导读见[result](result.md)。
 
 ## 1. 结论与指标速览
 
-本阶段准备两库各off/on一对20步真保存对照，当前没有运行结果。预期严格核21次fetch、20次模型输入/RNG、20×5标量和完整TrainState逐位相等，两侧各自实际恢复EMA。确定性档仅用于包装正确性闸门，不构成normal环境数值不变、性能或模型质量结论。
+两库各off/on一对20步真保存对照均通过：每库21次fetch、20次模型输入/RNG、100对标量和201个完整TrainState叶逐位相等；四run全部实际保存19/state20并恢复61叶EMA。确定性档仅用于包装正确性闸门，不构成normal环境数值不变、性能或模型质量结论。
 
 ## 2. 版本与代码状态
 
-新TRAIN_HEAD待Beta生成后填写实际完整40位SHA，预计 `commitV11.16Beta`，以Git最终编号为准。四run和两judge必须同一clean Beta；原训练/model源码、超参、依赖和两venv不改，本轮批准修改集中于runner/contract/speed/observer的显式档位守卫与对应测试。
+四run和两judge均从同一clean `c71d5255597db2f26930b7b5684a1d5b2994cf75`启动。实际运行与独立验收期间冻结tracked及两venv，2026-09-27 02:07:11 UTC验收完成后才解除；原训练/model源码、超参、依赖均未改。本轮先前批准的工具改动集中于runner/contract/speed/observer的显式档位守卫与对应测试，377项核心合测通过。
 
 INPUT源HEAD为 `3a1582db39c723c735e04752e5027bfe40ecc3e1`；[P1](../orig80k-equiv-0925/p1-result.md)及[100步](../orig80k-equiv-0925/train100-result.md)的量具与B为 `00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8`，上游A为 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`。原normal20锚 `b0efbde61e38411fb1b9114eec8485d36a4ee9a0` 与追加off锚 `b60ec2b59e0ba012cae0998c5f8713b2aef07b2e` 保持原样；新schema2不提供缺profile旧记录自动normal的豁免。
 
@@ -35,7 +35,7 @@ steps20、b64、fsdp4、workers4、seed42；history modulation/budget512/4×4/�
 
 ## 6. 硬件、调度与耗时
 
-已知环境AWS8×A10080、本地md0 XFS，起跑前重核资源。两库各4卡独立off→on；本库off完成真实恢复与独立退出即可启动本库on，不等待另一库。两run完成后各自CPU judge可并行或及时启动。所有START/END_UTC、PID、UUID、W&B ID和耗时尚待记录；20步不作吞吐或ETA。
+实测环境AWS8×A10080、本地md0 XFS，两库各4卡独立off→on。本库off完成真实恢复与独立退出后启动本库on，再独立CPU judge。两off均于01:42:29 UTC开始，count/full分别于01:52:53/01:53:35结束；两on于01:53:14/01:53:39开始，分别于02:03:52/02:04:25结束。两judge于02:04:29/02:04:39结束，完整身份见四run档案及result。20步不作吞吐或ETA。
 
 ## 7. 训练过程行为
 
@@ -43,9 +43,9 @@ off共同观测原train入口，on共同观测speed.run(smoke20)，两侧都保�
 
 ## 8. 保存、恢复与正式判定
 
-四run均须checkpoint19/state20真实EMA恢复、完整来源/UUID/HEAD/采样证据；两正式judge须原严格输入/RNG/100标量/完整状态逐位判据。额外联合守卫要求launch、metadata及judge结果均显式deterministic100；on两speed JSON须schema2、实际flags一致。任意normal PASS不能满足本阶段。
+四run的checkpoint19/state20真实EMA恢复、完整来源/UUID/HEAD及两on采样证据均通过。两正式judge满足原严格输入/RNG/100标量/完整状态逐位判据；额外联合守卫确认launch、metadata及judge结果均显式deterministic100，on两speed JSON均为schema2且实际flags一致。任意normal PASS不能满足本阶段。
 
-六任务都必须f8原生pane退出0、无信号、capture父真实返回0、父适配宿主返回0及原日志内容联合通过；仅文本0或session消失不够。任一非零/PENDING不放行。当前这些都是待执行判据。
+六任务的f8原生pane退出均0且无信号，capture父真实返回0；七段根调度及其宿主实际返回均0，原日志内容联合通过。六份独立只读验收均通过，终态controller快照锁定七段过程与六任务身份；仅文本0或session消失不构成本结论。
 
 ## 9. 用户决定记录
 
@@ -57,12 +57,14 @@ off共同观测原train入口，on共同观测speed.run(smoke20)，两侧都保�
 
 旧INPUT/P1最外final append实际退出不可追补，子命令0、manifest/输入/标量/状态内容证据仍保留。用户分别批准「同样补记限制，沿用INPUT结果（推荐）」和「补记P1限制，补独立退出取证后继续（推荐）」。此次六任务从起跑前就使用强独立退出链，不能补造历史wait。
 
+独立报告首轮外封装经JavaScript解析后舍入了部分纳秒大整数；原训练记录、判定器stdout及真实PASS未变。保留四份首版失败封装，正式归档仅使用原stdout字节直接嵌入的v2，并经Python逐值复核。事件说明和校验限制随result归档；未因此重跑训练或judge。
+
 ## 11. 当前结论与下一步
 
-本目录为起跑前档案。待统一Beta、现场资源、前置沿用及六任务新输出核对后，按两条库链执行。全部确定性档通过后仍须normal300步perf、完整磁盘预算与正式起跑前全部条件；不自行启动80k。发生差异保留原始记录并向用户报告，不改容差或替换正式judge。
+确定性档包装正确性闸门已完成。下一步执行normal300步perf、据实完成磁盘预算及正式起跑前条件；本轮仍止于正式80k起跑前。旧normal失败不改写，确定性档的通过不能推导为normal包装数值不变或已解释原差异根因。
 
 ## 12. 归档文件清单
 
-本README、[launch](launch.md)和四run README共同锁定启动口径；[候选原验证](records/validation.json)、[on两speed验收补充](records/validation-on-speed-addendum.json)和[9项shell绑定实测](records/runtime-profile-bindings.results.tsv)只证明控制文本和绑定，不是训练实测。原报告记录候选当时SHA，后续补充单独保存，没有改写旧报告。未来六任务runtime/identity/native receipt/父capture保留`v1-store/bench/orig80k-timing20-commands-20260927T012426Z`，两judge结果位于独立`v1-store/bench/orig80k-timing20-results-20260927T012426Z`。run记录和日志路径见launch，当前不能提前创建。
+本README、[launch](launch.md)和四run README共同锁定启动口径；[候选原验证](records/validation.json)、[on两speed验收补充](records/validation-on-speed-addendum.json)和[9项shell绑定实测](records/runtime-profile-bindings.results.tsv)只证明控制文本和绑定。实际训练证据、白名单及事件记录见[result](result.md)。六任务runtime/identity/native receipt/父capture保留在`v1-store/bench/orig80k-timing20-commands-20260927T012426Z`，两judge结果位于独立`v1-store/bench/orig80k-timing20-results-20260927T012426Z`。
 
-真实结束后只归档Git不能还原的小JSON/JSONL、清洗日志、检查链和退出回执；权重留run根，cache/runtime留v1-store，不复制.sh/.yaml入docs。正式导入清单与结果均待真实生成。
+仅归档Git不能还原的小JSON/JSONL、清洗日志、检查链和退出回执；权重留run根，cache/runtime留v1-store，不复制.sh/.yaml入docs。原记录及六个已结束tmux窗口均保留，不以清理产物换取通过。

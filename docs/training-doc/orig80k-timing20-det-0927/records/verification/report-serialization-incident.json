@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "status": "已修复报告封装；原始训练与checker证据未改",
+  "head": "c71d5255597db2f26930b7b5684a1d5b2994cf75",
+  "checker_sha256": "b0153c1b53a5e4de2141ff7d47b22b55fb429dc20b3efc69c2a88ea6316df6d7",
+  "cause": "本次代理用JavaScript JSON.parse组装首版output，Number对大于2^53的checkpoint纳秒整数舍入；四份报告各两字段受影响。",
+  "affected": {
+    "full": {
+      "checkpoint_commit_timestamp_nsecs": {
+        "exact": "1790474529901695207",
+        "first_envelope": "1790474529901695200"
+      },
+      "checkpoint_init_timestamp_nsecs": {
+        "exact": "1790474520060843455",
+        "first_envelope": "1790474520060843500"
+      }
+    },
+    "count": {
+      "checkpoint_commit_timestamp_nsecs": {
+        "exact": "1790474494475217447",
+        "first_envelope": "1790474494475217400"
+      },
+      "checkpoint_init_timestamp_nsecs": {
+        "exact": "1790474484434342329",
+        "first_envelope": "1790474484434342400"
+      }
+    }
+  },
+  "original_envelopes_preserved": {
+    "full-on": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-on.independent-verification.json",
+      "bytes": 24464,
+      "sha256": "92bf7111a1ab37046b16e79dfd75c4d066a1a0394040ab2c7d32d0a8767895cb"
+    },
+    "count-on": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-on.independent-verification.json",
+      "bytes": 24523,
+      "sha256": "045387bf82381adec3e6108c2fe8d5d6c25e83c985b122e3663d4cbdb004965b"
+    },
+    "full-judge": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-judge.independent-verification.json",
+      "bytes": 45161,
+      "sha256": "e8d8efcbeac3c8fcd4b9f378b3615c4d272055f62c89a7d12635740c8f2043a3"
+    },
+    "count-judge": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-judge.independent-verification.json",
+      "bytes": 45278,
+      "sha256": "08531fba89ee98def3214b9dba00614cff131a24e53d82fb7b19c0c847363f01"
+    }
+  },
+  "original_checker_stdout_stderr_and_returns_preserved": true,
+  "training_capture_judge_rerun": false,
+  "initial_serialization_check": {
+    "result": "拒绝：output与原stdout JSON不一致，AssertionError",
+    "raw_host_result": {
+      "chunk_id": "8915b5",
+      "wall_time_seconds": 0.000005011,
+      "exit_code": 0,
+      "original_token_count": 192,
+      "output": "{\"role\": \"full-off\", \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-off.independent-verification.json\", \"bytes\": 17443, \"sha256\": \"d14e74238c3d64432c5e02cad31c99d8da570d89d5d03be85a27de7290d9f7c8\", \"host_chunk\": \"37cbb7\"}\n{\"role\": \"count-off\", \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-off.independent-verification.json\", \"bytes\": 17491, \"sha256\": \"1bcf0ea74f6de3364fd5f66587ec8cae380a5e746b3087d210d8d301799ea8ca\", \"host_chunk\": \"ee5421\"}\nTraceback (most recent call last):\n  File \"<stdin>\", line 8, in <module>\nAssertionError\nc71d5255597db2f26930b7b5684a1d5b2994cf75\n"
+    },
+    "boundary": "此首次合并shell在Python断言失败后继续执行git，宿主shell最终0不是Python检查成功；该结果未用于放行，也未声称单独观测到Python返回码。"
+  },
+  "remedy": "遵照root明确要求，不覆盖或删除四首版；新增四份-v2，将output直接嵌入原checker stdout JSON文本；原stdout字符串/argv/时间/真实checker与父返回原样保留。",
+  "final_serialization_check": {
+    "scope": "仅用Python标准库大整数重核六份报告output与原stdout、四首版原SHA、v2原stdout/argv/host返回未变及两judge嵌入off/on等于四单run。",
+    "actual_exit_code": 0,
+    "chunk_id": "b31009",
+    "stdout": "{\"status\": \"PASS\", \"checks\": [\"六报告output与原stdout逐字段一致\", \"所有checker及父实际返回0\", \"stderr均空\", \"四首版SHA保持\", \"四v2原stdout/argv/返回码不变\", \"两judge嵌入off/on与四单run完全一致\"], \"refs\": {\"full-off\": {\"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-off.independent-verification.json\", \"bytes\": 17443, \"sha256\": \"d14e74238c3d64432c5e02cad31c99d8da570d89d5d03be85a27de7290d9f7c8\", \"host_chunk\": \"37cbb7\"}, \"count-off\": {\"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-off.independent-verification.json\", \"bytes\": 17491, \"sha256\": \"1bcf0ea74f6de3364fd5f66587ec8cae380a5e746b3087d210d8d301799ea8ca\", \"host_chunk\": \"ee5421\"}, \"full-on\": {\"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-on.independent-verification-v2.json\", \"bytes\": 24769, \"sha256\": \"5511d9d115e67448eec60c92ae9ce9c91a991ad2550a924d44ecf17b879ae016\", \"host_chunk\": \"1336d9\"}, \"count-on\": {\"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-on.independent-verification-v2.json\", \"bytes\": 24829, \"sha256\": \"11b24c322e94d3534cd0027877851808a23ce067b90e337ec38268660563d127\", \"host_chunk\": \"0f15fd\"}, \"full-judge\": {\"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-judge.independent-verification-v2.json\", \"bytes\": 45107, \"sha256\": \"fd57adfa4cfccc36bc4c4d1edcef980a1039309b809203b4fa200820324c333c\", \"host_chunk\": \"959ce2\"}, \"count-judge\": {\"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-judge.independent-verification-v2.json\", \"bytes\": 45225, \"sha256\": \"1de68e2d005c93f7d1dde141c0a998d58ec617437e94ffd2ef7d69fdfec3ada0\", \"host_chunk\": \"ff3bde\"}}}\n",
+    "result": {
+      "status": "PASS",
+      "checks": [
+        "六报告output与原stdout逐字段一致",
+        "所有checker及父实际返回0",
+        "stderr均空",
+        "四首版SHA保持",
+        "四v2原stdout/argv/返回码不变",
+        "两judge嵌入off/on与四单run完全一致"
+      ],
+      "refs": {
+        "full-off": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-off.independent-verification.json",
+          "bytes": 17443,
+          "sha256": "d14e74238c3d64432c5e02cad31c99d8da570d89d5d03be85a27de7290d9f7c8",
+          "host_chunk": "37cbb7"
+        },
+        "count-off": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-off.independent-verification.json",
+          "bytes": 17491,
+          "sha256": "1bcf0ea74f6de3364fd5f66587ec8cae380a5e746b3087d210d8d301799ea8ca",
+          "host_chunk": "ee5421"
+        },
+        "full-on": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-on.independent-verification-v2.json",
+          "bytes": 24769,
+          "sha256": "5511d9d115e67448eec60c92ae9ce9c91a991ad2550a924d44ecf17b879ae016",
+          "host_chunk": "1336d9"
+        },
+        "count-on": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-on.independent-verification-v2.json",
+          "bytes": 24829,
+          "sha256": "11b24c322e94d3534cd0027877851808a23ce067b90e337ec38268660563d127",
+          "host_chunk": "0f15fd"
+        },
+        "full-judge": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-judge.independent-verification-v2.json",
+          "bytes": 45107,
+          "sha256": "fd57adfa4cfccc36bc4c4d1edcef980a1039309b809203b4fa200820324c333c",
+          "host_chunk": "959ce2"
+        },
+        "count-judge": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-judge.independent-verification-v2.json",
+          "bytes": 45225,
+          "sha256": "1de68e2d005c93f7d1dde141c0a998d58ec617437e94ffd2ef7d69fdfec3ada0",
+          "host_chunk": "ff3bde"
+        }
+      }
+    }
+  },
+  "archival": "仅四份-v2供正式归档，两个off报告继续原文件；四首版只作封装故障原始证据留存，不作验收报告。旧normal FAIL不受影响。"
+}
