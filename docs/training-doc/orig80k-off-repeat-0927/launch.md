@@ -1,6 +1,8 @@
-# 两库追加20步off重复性诊断：完整启动档，尚未执行
+# 两库追加20步off重复性诊断：已执行，结果DIFFER
 
 用户已批准当前off/on取证结束后，两库各追加一次同配置20步off，4+4并行，严格判据不变，仅作诊断。根代理已采用 `timing20-full-off-0926-20260927T003051Z`、`timing20-count-off-0926-20260927T003051Z`；TAG是准备标签，不是实际起跑时间。本档案用于新Beta起跑前锚定；尚未执行新任务，模板/量具/argv/容差/依赖保持原样。
+
+**实测追加**：上述启动前模板由实际Beta`b60ec2b59e0ba012cae0998c5f8713b2aef07b2e`锁定，两个run均于2026-09-27 00:54:30 UTC起跑，真实保存恢复与原生退出0通过。独立CPU比较于01:05:59完成，进程0、严格结果DIFFER/FAIL；每库80/100标量与147/201状态叶不等，见[result](result.md)。下方保留原模板与占位规则，实际调度仅把TRAIN_HEAD展开为b60并留SHA，旧输出已存在不得重跑覆盖。下一阶段的确定性档是其后新授权，不属于本次normal执行。
 
 旧四run真实保存/恢复及原生退出已通过，两正式off/on judge实际FAIL“20步五标量不是逐位一致”，原生退出1/capture1；完整核验报告SHA为 `113cec3b17a19e85bd55c7a2b4420f150eac17dbea69a2b3c3e6c38d62265e99`，已由`c6d726f3834f871fcef10f33fa2530321bee534f`归档，见[原失败结果](../orig80k-timing20-0926/result.md)。每库21 fetch/20 model+RNG一致，100个标量80个不同，末态147/201叶不同。追加off不改写这些失败；[机理说明](../orig80k-timing20-0926/records/diagnostics/timing20-step0-mechanism-note-20260927.md)没有已证根因，初始完整state未摘要、相同param_norm仅为kernel聚合的边界仍保留。
 

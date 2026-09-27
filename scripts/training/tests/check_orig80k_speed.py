@@ -24,6 +24,7 @@ from check_modul_speed import gpu_rows
 from check_modul_speed import host_sample
 
 ROOT = Path(__file__).resolve().parents[3]
+RUN_SCHEMA = 2
 STEPS = 300
 WARMUP = 100
 SCALARS = {"loss", "grad_norm", "llm_grad_norm", "mem_enc_norm", "param_norm"}
@@ -353,20 +354,24 @@ def sample_host(path, stopped, metadata):
 
 
 def run(args):
+    mode = args.mode
+    require(mode in ("perf", "smoke"), "观测入口只允许perf或20步smoke验证")
     root = ROOT.resolve()
     records = Path(args.records).resolve()
     require(records.is_relative_to(root / "v1-store"), "测速记录必须位于本仓库v1-store")
-    require(not os.environ.get("XLA_FLAGS"), "测速必须清除验证用XLA_FLAGS")
+    sys.path.insert(0, str(root / "scripts/training"))
+    from orig80k_contract import resolve_timing_eq_profile
+    from orig80k_contract import validate_argv
+
+    profile = resolve_timing_eq_profile(mode)
+    require(profile["name"] == "normal" or os.environ.get("ORIG80K_SMOKE_EQ_MODE") == "on",
+            "确定性计时包装仅允许显式smoke20 on")
+    actual_flags = os.environ.get("XLA_FLAGS")
     require(not subprocess.check_output(["git", "status", "--porcelain"], cwd=root, text=True),
             "测速必须从clean HEAD启动")
     head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip()
     require(os.environ.get("MMEVLA_EXPECTED_TRAIN_HEAD") == head, "测速HEAD与已通过preflight的锚点不同")
     argv = args.train_args[1:] if args.train_args[:1] == ["--"] else args.train_args
-    sys.path.insert(0, str(root / "scripts/training"))
-    from orig80k_contract import validate_argv
-
-    mode = args.mode
-    require(mode in ("perf", "smoke"), "观测入口只允许perf或20步smoke验证")
     expected_steps = STEPS if mode == "perf" else 20
     values = validate_argv(argv, mode)
     checkpoint_root = (Path(values["--checkpoint-base-dir"]) / argv[0] / values["--exp-name"]).resolve()
@@ -377,7 +382,8 @@ def run(args):
     owned = ("speed_start.json", "speed_run.json", "step_timing.jsonl", "host_samples.jsonl", "disk_samples.jsonl")
     require(not any((records / name).exists() for name in owned), "拒绝覆盖既有测速记录")
     records.mkdir(parents=True, exist_ok=True)
-    metadata = {"schema": 1, "mode": mode, "steps": expected_steps, "head": head, "argv": argv,
+    metadata = {"schema": RUN_SCHEMA, "mode": mode, "steps": expected_steps, "head": head, "argv": argv,
+                "timing_eq_profile": profile, "xla_flags": actual_flags,
                 "gpu_ids": [int(x) for x in gpu_ids], "pid": os.getpid(),
                 "start_wall": time.time(), "profiler": False, "entry_calls": 0, "save_calls": [],
                 "disk_sampling_requested": {"interval_s": DISK_INTERVAL, "checkpoint_root": str(checkpoint_root),
@@ -465,6 +471,30 @@ def summarize(records, gpu_path):
     root = Path(records)
     meta = json.loads((root / "speed_run.json").read_text())
     require(meta.get("mode") == "perf" and meta.get("steps") == STEPS, "20步包装验证不能用于300步测速报告")
+    sys.path.insert(0, str(ROOT / "scripts/training"))
+    from orig80k_contract import validate_timing_eq_profile_record
+
+    # 读回只消费已记录的档位及实际flags，不以报告进程当前环境补齐或覆盖记录。
+    start_record = json.loads((root / "speed_start.json").read_text())
+    for record in (start_record, meta):
+        require(type(record.get("schema")) is int and record["schema"] == RUN_SCHEMA
+                and {"timing_eq_profile", "xla_flags"} <= record.keys(), "测速记录缺schema2或必填档位/实际XLA_FLAGS")
+        require(all(record.get(key) == meta.get(key) for key in ("head", "mode", "steps")), "测速起止身份不一致")
+        validate_timing_eq_profile_record(record["timing_eq_profile"], mode="perf", timing=None,
+                                         xla_flags=record["xla_flags"])
+    require(start_record["timing_eq_profile"] == meta["timing_eq_profile"]
+            and start_record["xla_flags"] == meta["xla_flags"], "测速起止档位或实际XLA_FLAGS不一致")
+    launch = json.loads((root / "launch.json").read_text())
+    environment = launch.get("environment")
+    require(launch.get("mode") == "perf" and launch.get("head") == meta.get("head")
+            and isinstance(environment, dict)
+            and {"XLA_FLAGS", "ORIG80K_SMOKE_EQ_MODE", "ORIG80K_TIMING_EQ_PROFILE"} <= environment.keys(),
+            "perf启动记录缺身份或档位环境证据")
+    profile = validate_timing_eq_profile_record(launch.get("timing_eq_profile"), mode="perf",
+        timing=environment["ORIG80K_SMOKE_EQ_MODE"], xla_flags=environment["XLA_FLAGS"])
+    require(environment["ORIG80K_TIMING_EQ_PROFILE"] is None and profile["name"] == "normal"
+            and profile == meta["timing_eq_profile"] and environment["XLA_FLAGS"] == meta["xla_flags"],
+            "perf报告只允许与实际启动一致的normal档")
     require(meta.get("success") and meta.get("entry_calls") == 1 and meta.get("sampler_stopped")
             and not meta.get("sampling_error"), "训练或主机采样未正常完成")
     require(meta.get("profiler") is False and not (root / "step_trace").exists(), "存在profiler记录")
@@ -528,6 +558,7 @@ def summarize(records, gpu_path):
             "主机采样未覆盖稳态窗口")
     disk = summarize_disk(root, meta)
     return {"head": meta["head"], "gpu_ids": expected_gpus, "batch_size": 64, "workers": 4,
+            "timing_eq_profile": profile, "xla_flags": meta["xla_flags"],
             "storage": "AWS本地NVMe RAID /dev/md0", "warmup_steps": [0, 99],
             "steady_steps": [100, 299], "steady_wall": [start, end], "steady_seconds": end - start,
             "samples_per_second": 200 * 64 / (end - start), "mean_step_s": (end - start) / 200,

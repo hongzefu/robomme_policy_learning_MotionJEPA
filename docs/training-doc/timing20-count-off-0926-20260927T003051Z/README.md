@@ -1,27 +1,32 @@
-# timing20-count-off-0926-20260927T003051Z：追加off重复性诊断启动档
+# timing20-count-off-0926-20260927T003051Z：追加off重复性诊断实测
 
 ## 1. 一句话结论与指标速览
 
-**本run尚未启动，仅为用户已批准的同配置20步off追加诊断。** 目的是比较本库旧off与新off是否严格重复一致；不替代、修改或放行原off/on正式judge。准备TAG `20260927T003051Z`不是未来实际开始UTC，当前没有新run的PASS、MATCH、吞吐或质量结论。
+**本run的20步训练、真实保存与EMA恢复通过；与同库旧off的严格重复性结果为DIFFER / FAIL。** 实测21次取批、20次模型使用与更新，完整TrainState共201叶且有限，checkpoint 19真实保存并恢复61个EMA叶；wrapper、原生pane和capture实际返回均为0。
 
-| 项目 | 值或当前状态 |
+与[旧off基线](../timing20-count-off-0926-20260926T231534Z/README.md)相比，21批输入树及20次模型实参/RNG全部相同，但100对标量中80对不同、201叶末态中147叶摘要不同。诊断比较程序读完返回0，`comparison_status=FAIL`；不能从执行成功推导重复一致，也不改写旧off/on失败或放行perf/80k。
+
+| 项目 | 实际值 |
 |---|---|
 | run_name | `timing20-count-off-0926-20260927T003051Z` |
 | 旧off基线 | `timing20-count-off-0926-20260926T231534Z` |
 | GPU / steps / batch | `4,5,6,7` / 20 / 64 |
-| 新TRAIN_HEAD、START/END、UUID、W&B ID | 全部待真实记录 |
+| 实际Beta | `b60ec2b59e0ba012cae0998c5f8713b2aef07b2e` |
+
+名称中的TAG是准备标签，实际UTC与运行身份见第6节。
 
 ## 2. 版本与代码状态
 
-旧off固定 `b0efbde61e38411fb1b9114eec8485d36a4ee9a0`；新run预计由独立 `commitV11.15Beta`锁定档案，完整40位SHA待真实生成。必须先完成当前V11.14失败归档，再从新clean Beta启动，源代码/工具/依赖逐字不变，新旧差异仅本轮docs/计划。三规则继续固定 `d710d8489b88aa75770af3452fd7c9b374deaef7`。
+实际运行Beta为 `commitV11.15Beta`：`b60ec2b59e0ba012cae0998c5f8713b2aef07b2e`，从clean状态起跑，运行与验收期间冻结源码和uv环境。旧off仍固定 `b0efbde61e38411fb1b9114eec8485d36a4ee9a0`；V11.14失败已先归档，新旧差异仅docs/计划，训练源码、runner、量具、模板及依赖逐字不变。三规则继续固定 `d710d8489b88aa75770af3452fd7c9b374deaef7`。
 
-旧records.head和归档原SHA不改，不把新提交回填成旧off运行版本。新旧数据、资产、history、模块与依赖指纹分别核对；声明的相同配置不能替代实际指纹。本次只准备启动文档，不改量具或venv；实际新Beta与运行结果待产生。
+原INPUT/100沿用预检、旧off固定基线/read_side与空间复核均已通过；每run另完成25项前置及完整资产检查。新旧数据、资产、history、模块与依赖指纹分别核对，原records中的HEAD及旧文件SHA未改，归档提交不替代各自真实运行版本。
 
 ## 3. 启动与配置还原
 
-完整命令、Git差异/新输出守卫、原样模板及guard父适配见[共享launch](../orig80k-off-repeat-0927/launch.md)，不能绕过它直接运行内部runner。固定展开值如下，仅是配置定义：
+完整命令、Git差异/新输出守卫、原样模板及guard父适配见[共享launch](../orig80k-off-repeat-0927/launch.md)，不能绕过它直接运行内部runner。实际使用的固定展开值如下，用于还原而非再次启动：
 
 ```bash
+TRAIN_HEAD=b60ec2b59e0ba012cae0998c5f8713b2aef07b2e
 RUN=timing20-count-off-0926-20260927T003051Z
 TIMING=off
 GPUS=4,5,6,7
@@ -30,7 +35,15 @@ ASSETS=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/
 NORM_STATS_SHA256=a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9
 ```
 
-实际session为 `orig80k-timing20-count-off-0926-20260927T003051Z`，实际开始时间/PID待记录。原模板 `scripts/training/tests/timing20-wrapper.sh`完整SHA为 `45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f`，不改正文。runtime在新v1-store命令目录加固定参数前缀并绑定整文件SHA；f8仍用原runtime实体，新Beta Git源/工作树/runtime字节联合校验。
+实际session为 `orig80k-timing20-count-off-0926-20260927T003051Z`，实际UTC及PID见第6节。原模板 `scripts/training/tests/timing20-wrapper.sh`完整SHA为 `45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f`，不改正文。runtime在新v1-store命令目录加固定参数前缀，整文件SHA为 `fecb37b05b5711b6f65d50c6893e113bd04bf0a8e76f1ebdd5aaf4d9153cbe96`；f8仍用原runtime实体，新Beta Git源/工作树/runtime字节联合校验。
+
+还原实际Beta中的入口、模板与控制正文：
+
+```bash
+git show b60ec2b59e0ba012cae0998c5f8713b2aef07b2e:scripts/training/prod/run_orig80k.sh
+git show b60ec2b59e0ba012cae0998c5f8713b2aef07b2e:scripts/training/tests/timing20-wrapper.sh
+git show b60ec2b59e0ba012cae0998c5f8713b2aef07b2e:docs/training-doc/orig80k-off-repeat-0927/launch.md
+```
 
 ## 4. 数据集与划分口径
 
@@ -54,44 +67,81 @@ norm为 `$ASSETS/robomme/norm_stats.json`，期望SHA `a77075cd024dcb1f0e82de670
 
 ## 6. 硬件、调度与耗时
 
-AWS 8×A100-SXM4-80GB、md0 XFS；本run固定 `4,5,6,7`四卡，full/count新off按4+4并行。各自用原45b模板在训练后立即串行CPU恢复，和旧off行为相同，不采用perf的双侧训练结束屏障改变其流程。
+AWS 8×A100-SXM4-80GB、md0 XFS；本run固定 `4,5,6,7`四卡，full/count新off按4+4并行。各自用原45b模板在训练后立即串行CPU恢复，与旧off流程相同。设备UUID、依赖及输入身份已对前置记录核验。
 
-实际GPU UUID、占用、CPU/内存/SHM、磁盘、起止时间与耗时待记录。新两份checkpoint及临时/cache/log需求需现场核算，不能仅凭300GiB最低保护放行。此诊断的观测/哈希耗时不用于性能结论。
+| 实测项 | 值 |
+|---|---|
+| START_UTC | `2026-09-27T00:54:30Z` |
+| END_UTC | `2026-09-27T01:05:12Z` |
+| wrapper总墙钟 | 642秒，包含前置、训练、保存和CPU恢复 |
+| tmux window / pane | `@574` / `%574` |
+| pane及wrapper PID / body PID | 1220989 / 1221004 |
+| 训练uv子进程 / 实际训练PID | 1221533 / 1221543 |
+| run UUID | `5e8178e6-fce4-48a7-b1a3-1c3ffef0d6e8` |
+| W&B run | [4qxclhfu](https://wandb.ai/hongzefu-university-of-michigan/openpi/runs/4qxclhfu) |
+
+W&B ID及链接取自本机driver日志，日志记录online同步完成。前置资源与剩余空间按实际快照核对；此run没有speed的五份采样记录，符合off路径。上述墙钟包含共同观测/哈希开销，不用于吞吐、ETA或性能优劣结论。
 
 ## 7. 训练过程行为
 
-与旧off一样：共同只读取证层下直接runpy原train.py，不经过speed.run；取21批、实际训练20批，记录输入tree/RNG、step0及tail1…19五标量和末步params/EMA/optimizer/step。真实save_state及异步wait不替换为摘要器，checkpoint19必须真保存。
+与旧off一样，在共同只读取证层下直接runpy原train.py，没有经过speed.run。实际判定原文：
 
-初始完整state仍不新增摘要；现有观察器仅末步记录完整状态。param_norm只覆盖筛选kernel的聚合值，不能据相同norm证明初始params/EMA/优化器逐位相同。这项证据边界不因追加一次off自动消失。
+```text
+TIMING_EQ_RUN=PASS timing=off fetched=21 used=20 state_step=20 real_save=1
+```
+
+21批中20批用于模型与更新，最后一批未使用。保留真实save_state及异步wait，checkpoint 19已保存。完整末态记录params 61叶、EMA 61叶、opt_state 78叶、step 1叶，共201叶；常规log100提供step 0，final尾窗补齐1…19的五标量。
+
+初始完整state未记录。param_norm只覆盖筛选kernel的聚合值，不能据相同norm证明初始params/EMA/优化器逐位相同。W&B的Run summary仅对应常规记录的step 0，不能当作loop_step 19的末步指标。
 
 ## 8. 真恢复与独立重复性比较
 
-先要求本run真实恢复checkpoint19、state_step20/loop19、完整有限值、run/HEAD/UUID、GPU采样及异步wait一致；完成器/tee、wrapper、原生pane、capture父实际返回和宿主父适配返回各自核对。单run成功不等于两次重复一致。
+本run真实保存checkpoint 19，state_step=20、loop_step=19；完成器实际恢复61个EMA叶并与本run末步/完整状态EMA摘要相同。201叶完整状态由共同摘要核验，不能把EMA恢复范围扩写为201叶均从checkpoint恢复。完成器判定为：
 
-两新run各自验收后，按[独立CPU方案](../orig80k-off-repeat-0927/launch.md)分别用read_side读取旧b0和新真实Beta。它验证各自存档HEAD并重核当前代码/资产字节，未要求当前HEAD等于旧HEAD；不修改旧records，不猴补检查。完整配置仅放行现有IDENTITY_FIELDS两项run/输出差异，provenance只在比较投影中排除已分别核实的git_head_of_cwd，其他模块/来源字段严格相等。
+```text
+RUN_COMPLETED=PASS run=timing20-count-off-0926-20260927T003051Z checkpoints=1 final=19
+```
 
-同库21 fetch、20 model/RNG、20×5原始hex及完整state payload严格比较、无容差。读完工具进程0与comparison_status分开：不同就是独立诊断比较FAIL；即使MATCH也不输出原正式TIMING_EQ=PASS或抵销旧off/on失败。当前比较未执行。
+completion的11项文件引用、run/HEAD/UUID、GPU采样和异步wait完整；runner、completion/tee、identity/version、wrapper各层退出均0，原生pane及capture实际0。[两新run独立报告](../orig80k-off-repeat-0927/records/verification/both-off.independent-verification.json)中 `output.results.count`记录本run，SHA为 `b0428ec4a9a229b35307387c570d05fd29ff6f5c63fe7ac9c4e245ed9bf58f90`。
+
+随后按[独立CPU方案](../orig80k-off-repeat-0927/launch.md)分别以旧b0和新b60真实HEAD读取两侧。仅配置身份字段exp_name/derived checkpoint_dir不同，provenance仅在比较投影中排除已分别核实的git_head_of_cwd；fingerprint、loader、toolchain、其余来源及原保存函数均相同。没有调用原同HEAD正式judge或修改旧记录。
+
+```text
+OFF_REPEAT_DIAGNOSTIC_READ=COMPLETE
+OFF_REPEAT_DIAGNOSTIC_EQ=FAIL
+```
+
+比较进程实际返回0表示两侧验证与比较正常读完，结果JSON为 `status=DIFFER`、`comparison_status=FAIL`。21次fetch tree和20次model tree/RNG全部相同；loss、grad_norm、llm_grad_norm、mem_enc_norm各20步不同，param_norm 20步相同，共80/100标量对不同。原结构和叶集合相同，params 37/61、EMA 36/61、opt_state 74/78、step 0/1叶不同，总147/201叶摘要不同；原treedef、EMA路径和步数相同。完整结果见[group result](../orig80k-off-repeat-0927/result.md)及[独立比较核验](../orig80k-off-repeat-0927/records/verification/repeat-comparison.independent.json)。
 
 ## 9. 用户决定记录
 
-用户已批准两库各追加一次同配置20步off、4+4并行、仅诊断；此处是授权范围复述，不另造用户原话。两个新名称由根代理采用，准备TAG不代表开始时间。
+用户对两库各追加一次同配置20步off、4+4并行、仅诊断的请求回复「同意」。两个新名称由根代理采用，准备TAG不代表开始时间。
 
 既有「尽可能并行做」「你有8张卡」继续落实；「允许主机 dtype 不同，但要求数值一致且训练标量/状态逐位一致」不放宽本次训练payload判据。W&B保持online，原no-W&B授权仅P1/100适用。本轮仍按「继续工作 一路做到起泡前 有问题问用户」停在正式80k起跑前。
 
+结果回填后，用户已明确同意下一阶段仅在包装正确性20步对照使用两项指定确定性flags，其他训练参数和逐位判据不变，perf/prod仍normal。本run本身仍为b60的normal off，不回填为用了新档。
+
 ## 10. 计划外事实与处置
 
-旧off/on每库全21 fetch、20 model/RNG一致，但100标量80个不同，末态147/201叶不同；四run自身真保存/恢复及原生退出通过，两正式judge真实FAIL。完整核验报告SHA `113cec3b17a19e85bd55c7a2b4420f150eac17dbea69a2b3c3e6c38d62265e99`由根代理归档，原失败不得删除或改写。
+旧off/on每库21 fetch、20 model/RNG一致，但100标量80对不同，末态147/201叶不同；四run自身保存/恢复及原生退出通过，两正式judge真实FAIL。该V11.14结论已归档，完整报告SHA `113cec3b17a19e85bd55c7a2b4420f150eac17dbea69a2b3c3e6c38d62265e99`保持不变。
 
-[机理说明](../orig80k-timing20-0926/records/diagnostics/timing20-step0-mechanism-note-20260927.md)未证实原因。若旧/新off仍不同，包装开关不是差异所必需条件；若重复相同，只是进一步线索，不能证明唯一根因或一般确定性。本run发生任何运行/验收错误均保留现场并报告，不自动重跑、改环境、改名、覆盖或放宽判据。
+本次追加off在首步再次出现四项标量不同，已单独保存首完整行bytes/SHA证据；结束后完整比较确认同库两次off也不逐位相同。[机理说明](../orig80k-timing20-0926/records/diagnostics/timing20-step0-mechanism-note-20260927.md)所列边界仍成立：初始完整state未记录，不能确定具体初始化、编译或计算机制，也不能证明一般确定性。原数据、记录和判据均未修改，没有自动重跑或降低标准。
 
 ## 11. 当前结论与下一步
 
-旧V11.14失败结果已归档，本run等待独立新Beta及现场前置；未启动、未恢复、未比较。所有新时间、UUID、W&B ID与结果待真实记录。
+本run已完成训练、真实保存恢复及原生退出验收；旧off/新off严格重复性诊断为DIFFER / FAIL。两次均为off也出现差异，不据此指定某个机制为根因；旧off/on正式FAIL保持原样。
 
-两off诊断及独立比较之后由根代理/用户依据实测决定后续；原正式off/on失败仍保留，perf冻结不启动。诊断MATCH不能自动放行perf或80k，DIFFER不能自动归因具体数值机制。
+300步perf和正式80k继续等待新严格闸门。确定性20步方案已获用户批准，正在另行实现与验证，尚无新GPU实测；后续使用新代码Beta和全新run，不改本run原始结果。
 
 ## 12. 归档文件清单
 
-当前起跑前档案为本README及[共享launch](../orig80k-off-repeat-0927/launch.md)，尚未创建run输出或实测结果。未来records为 `v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z`、权重根为 `v1-store/train-runs/mme_vla_suite/timing20-count-off-0926-20260927T003051Z`、driver为 `v1-store/logs/timing20-count-off-0926-20260927T003051Z.driver.log`。
+原始records为 `v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z`，权重根为 `v1-store/train-runs/mme_vla_suite/timing20-count-off-0926-20260927T003051Z`，driver为 `v1-store/logs/timing20-count-off-0926-20260927T003051Z.driver.log`，wrapper为 `v1-store/logs/orig80k-timing20-count-off-0926-20260927T003051Z.wrapper.log`。旧off仍保留b0的原目录与SHA，新run保留b60真实身份，比较输出在独立 `v1-store/bench/orig80k-offrepeat-results-20260927T003051Z/repeat-comparison.json`，SHA为 `92d8726e27819374b0a7feeee1824e35e42215c1749b0fafc6549bcfbe3ce125`。
 
-待运行后保存实际launch/runtime/run_meta、metrics/final、timing_eq记录及manifest、completion/清洗日志、GPU采样、命令与模板SHA、Git源/runtime绑定、identity/native receipt/父sidecar和独立比较报告。旧off保留b0的原目录/文件SHA，新off保留其真实新Beta；比较输出在独立results根。只归档Git不能还原的测量记录，不复制脚本/yaml、权重、venv或cache入docs。
+按已验收清单由主代理统一导入以下目标；本次正文回填时，尚未复制的链接随group结果落地，不把目标路径当作已导入证明：
+
+- 本run小记录：[core.records.tar.gz](records/core.records.tar.gz)、[archive_checks.json](records/archive_checks.json)。
+- 清洗日志：[driver](logs/driver.summary.log)、[wrapper](logs/wrapper.summary.log)、[completion](logs/completion.summary.log)、[检查链](logs/log_checks.json)。
+- 原生退出链：[identity](../orig80k-off-repeat-0927/records/exit/orig80k-timing20-count-off-0926-20260927T003051Z/identity.json)、[receipt](../orig80k-off-repeat-0927/records/exit/orig80k-timing20-count-off-0926-20260927T003051Z/exit.json)、[capture父回执](../orig80k-off-repeat-0927/records/exit/orig80k-timing20-count-off-0926-20260927T003051Z/capture.json)；同目录保留launch/capture原始输出。
+- [单run独立报告](../orig80k-off-repeat-0927/records/verification/both-off.independent-verification.json)、[重复比较独立报告](../orig80k-off-repeat-0927/records/verification/repeat-comparison.independent.json)、[group result](../orig80k-off-repeat-0927/result.md)。后者独立报告SHA为 `c557f7403a09b706f192666e76814ab9b89b669f5d0fd43d7131957eae5b5e54`。
+
+仅归档Git不能还原的小型实测记录；不把脚本/yaml、权重、venv或cache复制进docs。真实checkpoint保留在原run根，原始产物和旧失败记录不改写。

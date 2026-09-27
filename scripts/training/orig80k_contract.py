@@ -25,6 +25,7 @@ CONFIG = "mme_vla_suite"
 HISTORY = "perceptual-framesamp-modul.yaml"
 UPSTREAM_HEAD = "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b"
 MODE_STEPS = {"prod": 80000, "perf": 300, "smoke": 20}
+TIMING_EQ_DETERMINISTIC_FLAGS = "--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"
 LIBRARIES = {
     "16task-pub-1600ep": {
         "gpus": "0,1,2,3", "run": "v2-orig-16task-pub1600ep-modul-b64-80k",
@@ -48,6 +49,38 @@ MARGIN_KEYS = ("checkpoint_growth_margin_bytes", "save_sampling_margin_bytes", "
 def require(ok, message):
     if not ok:
         raise ValueError(message)
+
+
+def validate_timing_eq_profile_record(profile, *, mode, timing, xla_flags):
+    """仅核验记录内必填的闭集档位，不使用判定进程当前环境。"""
+    require(mode in MODE_STEPS, "计时对拍档位的模式必须为 prod/perf/smoke")
+    require(timing is None or (mode == "smoke" and timing in ("off", "on")),
+            "计时对拍档位仅允许smoke的显式off/on")
+    require(xla_flags is None or isinstance(xla_flags, str), "记录XLA_FLAGS必须为空或字符串")
+    require(isinstance(profile, dict) and set(profile) == {"name", "xla_flags"}, "计时对拍档位字段不完整或存在额外字段")
+    name = profile["name"]
+    require(name in ("normal", "deterministic100"), "未知计时对拍档位")
+    expected = TIMING_EQ_DETERMINISTIC_FLAGS if name == "deterministic100" else ""
+    require(profile["xla_flags"] == expected, "计时对拍档位声明的XLA_FLAGS不同")
+    if name == "deterministic100":
+        require(mode == "smoke" and timing in ("off", "on"), "deterministic100仅允许显式smoke20 off/on")
+    require((xla_flags or "") == expected, "实际XLA_FLAGS与计时对拍档位不同")
+    return {"name": name, "xla_flags": expected}
+
+
+def resolve_timing_eq_profile(mode, environ=None):
+    """读取显式档位并核验进程实际flags；不设置环境，也不宽免训练配置。"""
+    env = os.environ if environ is None else environ
+    timing = env.get("ORIG80K_SMOKE_EQ_MODE")
+    if "ORIG80K_SMOKE_EQ_MODE" in env:
+        require(mode == "smoke" and timing in ("off", "on"), "ORIG80K_SMOKE_EQ_MODE仅允许smoke的off/on")
+    name = "normal"
+    if "ORIG80K_TIMING_EQ_PROFILE" in env:
+        require(env["ORIG80K_TIMING_EQ_PROFILE"] == "deterministic100",
+                "ORIG80K_TIMING_EQ_PROFILE仅允许显式deterministic100；空值或其他值均拒绝")
+        name = "deterministic100"
+    profile = {"name": name, "xla_flags": TIMING_EQ_DETERMINISTIC_FLAGS if name == "deterministic100" else ""}
+    return validate_timing_eq_profile_record(profile, mode=mode, timing=timing, xla_flags=env.get("XLA_FLAGS"))
 
 
 def sha256_file(path):
@@ -344,6 +377,13 @@ def _perf_context(source, group, repo):
             "perf启动或磁盘记录路径不属于本run")
     launch, report, completion = (json.loads(paths[key].read_text()) for key in ("launch", "report", "completion"))
     require((launch.get("mode"), launch.get("run_name"), launch.get("head")) == ("perf", run, head), "perf启动身份不符")
+    environment = launch.get("environment")
+    require(isinstance(environment, dict)
+            and {"XLA_FLAGS", "ORIG80K_SMOKE_EQ_MODE", "ORIG80K_TIMING_EQ_PROFILE"} <= environment.keys(),
+            "perf来源缺完整档位环境字段")
+    validate_timing_eq_profile_record(launch.get("timing_eq_profile"), mode="perf",
+        timing=environment["ORIG80K_SMOKE_EQ_MODE"], xla_flags=environment["XLA_FLAGS"])
+    require(environment["ORIG80K_TIMING_EQ_PROFILE"] is None, "perf来源不能选择确定性对拍档")
     validate_argv(launch["argv"], "perf")
     actual = launch["actual"]
     fields = actual["complete"]["train_config"]["fields"]
@@ -391,6 +431,8 @@ def _perf_context(source, group, repo):
             "完成器GPU采样摘要不能从原始记录重建")
     speed_path = records / "speed_run.json"
     speed = json.loads(speed_path.read_text())
+    require(speed.get("schema") == 2, "perf来源缺显式档位版本记录")
+    validate_timing_eq_profile_record(speed.get("timing_eq_profile"), mode="perf", timing=None, xla_flags=speed["xla_flags"])
     require(speed.get("success") and speed.get("mode") == "perf" and speed.get("steps") == 300
             and speed.get("head") == head and speed.get("entry_calls") == 1 and speed.get("sampler_stopped")
             and not speed.get("sampling_error") and speed.get("profiler") is False
@@ -636,7 +678,8 @@ def check_launch(args):
     run_root, selected = validate_paths(values, args.mode, args.run, args.lib, args.assets)
     reference = original_reference()
     require(reference["history_sha256"] == args.history_sha, "history 期望 SHA 与上游不符")
-    require(not os.environ.get("XLA_FLAGS") and not os.environ.get("JAX_PLATFORMS"), "生产环境残留验证平台/确定性设置")
+    timing_eq_profile = resolve_timing_eq_profile(args.mode)
+    require(not os.environ.get("JAX_PLATFORMS"), "训练环境残留验证平台设置")
     require(os.environ.get("XLA_PYTHON_CLIENT_MEM_FRACTION") == "0.95", "显存比例必须为 0.95")
     require(os.environ.get("TRAIN_TIMING_STEPS", "0") == "0", "启动前不能开启 profiler")
     require(os.environ.get("WANDB_MODE", "online") == "online", "本轮所有模式必须保持 W&B 在线")
@@ -655,11 +698,13 @@ def check_launch(args):
     require(not os.path.lexists(records), "记录目录已存在，禁止覆盖")
     require(os.environ.get("TRAIN_RECORD_DIR") == str(records)
             and os.environ.get("TRAIN_FINAL_RECORD_DIR") == str(records / "final"), "指标或末步记录未开启")
-    environment_keys = ("CUDA_VISIBLE_DEVICES", "XLA_FLAGS", "JAX_PLATFORMS", "JAX_ENABLE_X64",
+    environment_keys = ("CUDA_VISIBLE_DEVICES", "XLA_FLAGS", "ORIG80K_TIMING_EQ_PROFILE", "ORIG80K_SMOKE_EQ_MODE",
+        "JAX_PLATFORMS", "JAX_ENABLE_X64",
         "JAX_DEFAULT_MATMUL_PRECISION", "XLA_PYTHON_CLIENT_MEM_FRACTION", "XLA_PYTHON_CLIENT_PREALLOCATE",
         "OPENPI_DATA_HOME", "UV_CACHE_DIR", "HF_HOME", "XDG_CACHE_HOME", "MMEVLA_JAX_CACHE_DIR",
         "CUDA_CACHE_PATH", "WANDB_DIR", "WANDB_CACHE_DIR", "WANDB_CONFIG_DIR", "WANDB_DATA_DIR")
     result = {"mode": args.mode, "run_name": args.run, "head": args.head, "argv": argv,
+        "timing_eq_profile": timing_eq_profile,
         "checkpoint_dir": str(run_root), "actual": parsed, "data": data, "reference": reference, "gpus": gpus, "disk": disk,
         "environment": {key: os.environ.get(key) for key in environment_keys},
         "packages": {name: importlib.metadata.version(name) for name in ("torch", "jax", "jaxlib", "numpy", "ml_dtypes", "flax", "optax")},

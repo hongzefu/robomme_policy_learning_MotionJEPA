@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "scope": "仅追加两份独立报告；不修改或重打包已有47项，单run完成与重复比较FAIL分开。",
+  "head": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+  "file_count": 2,
+  "total_bytes": 56892,
+  "destination_base": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+  "items": [
+    {
+      "source": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-new-runs-verification-independent-20260927.json",
+        "bytes": 28240,
+        "sha256": "b0428ec4a9a229b35307387c570d05fd29ff6f5c63fe7ac9c4e245ed9bf58f90"
+      },
+      "destination": "docs/training-doc/orig80k-off-repeat-0927/records/verification/both-off.independent-verification.json",
+      "purpose": "两新off各自完整201叶、真实恢复61EMA及原生退出核验；实际读取程序0、单run核验PASS"
+    },
+    {
+      "source": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-comparison-verification-independent-20260927.json",
+        "bytes": 28652,
+        "sha256": "c557f7403a09b706f192666e76814ab9b89b669f5d0fd43d7131957eae5b5e54"
+      },
+      "destination": "docs/training-doc/orig80k-off-repeat-0927/records/verification/repeat-comparison.independent.json",
+      "purpose": "重复比较独立核验；读取程序0，比较DIFFER/FAIL，每库80/100标量与147/201末态叶不同"
+    }
+  ],
+  "policy": "逐字节复制，不改写原JSON实际来源路径，不递归跟随旧证据。"
+}

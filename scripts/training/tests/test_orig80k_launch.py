@@ -177,7 +177,9 @@ def perf_budget_source(repo, group, library):
         "dataset_path": str(repo / "v1-store/datasets" / library / "framesamp")}}}
     gpus = contract.LIBRARIES[library]["gpus"]
     launch = {"mode": "perf", "run_name": run, "head": head, "checkpoint_dir": str(run_root),
-              "environment": {"CUDA_VISIBLE_DEVICES": gpus},
+              "timing_eq_profile": {"name": "normal", "xla_flags": ""},
+              "environment": {"CUDA_VISIBLE_DEVICES": gpus, "XLA_FLAGS": None,
+                              "ORIG80K_TIMING_EQ_PROFILE": None, "ORIG80K_SMOKE_EQ_MODE": None},
               "argv": contract.make_train_args("perf", run, repo / "v1-store/datasets" / library,
                         repo / "v1-store/train-assets" / contract.LIBRARIES[library]["assets"], repo),
               "actual": {"num_train_steps": 300, "complete": complete, "jax_enable_x64": False}}
@@ -229,7 +231,8 @@ def perf_budget_source(repo, group, library):
                           "checkpoint": {**allocation, "allocated_bytes": allocation["allocated_bytes"] + (4096 if index == 1 else 0)}})
     disk_path = records / "disk_samples.jsonl"
     disk_path.write_text("".join(json.dumps(row) + "\n" for row in disk_rows))
-    speed_run = {"head": head, "mode": "perf", "steps": 300, "success": True, "entry_calls": 1,
+    speed_run = {"schema": 2, "head": head, "mode": "perf", "steps": 300, "success": True, "entry_calls": 1,
+                 "timing_eq_profile": {"name": "normal", "xla_flags": ""}, "xla_flags": None,
                  "sampler_stopped": True, "profiler": False,
                  "entry_start_wall": 1000.1, "end_wall": 1000.95,
                  "save_calls": [{"step": 299, "state_step": 300, "start_wall": 1000.25,
@@ -304,6 +307,43 @@ def test_budget_launch_only_is_not_completed_perf(tmp_path):
     path = tmp_path / "old-budget.json"
     write_budget_json(path, old)
     with pytest.raises(ValueError, match="schema2"):
+        contract.validate_disk_budget("prod", tmp_path, budget_path=str(path), budget_sha=contract.sha256_file(path))
+
+
+@pytest.mark.parametrize(("filename", "fault"), [
+    ("launch.json", "missing"), ("launch.json", "deterministic"),
+    ("speed_run.json", "missing"), ("speed_run.json", "deterministic"), ("speed_run.json", "old_schema"),
+])
+def test_budget_requires_explicit_normal_perf_profile(tmp_path, filename, fault):
+    path, budget = budget_fixture(tmp_path)
+    source = budget["source_perf"]["full"]
+    target = Path(source["launch"]["path"]).with_name(filename)
+    value = json.loads(target.read_text())
+    if fault == "missing":
+        del value["timing_eq_profile"]
+    elif fault == "old_schema":
+        value["schema"] = 1
+    else:
+        value["timing_eq_profile"] = {"name": "deterministic100", "xla_flags": contract.TIMING_EQ_DETERMINISTIC_FLAGS}
+    write_budget_json(target, value)
+    if filename == "launch.json":
+        source["launch"] = contract.file_reference(target)
+        write_budget_json(path, budget)
+    with pytest.raises(ValueError, match="档位|仅允许"):
+        contract.validate_disk_budget("prod", tmp_path, budget_path=str(path), budget_sha=contract.sha256_file(path))
+
+
+@pytest.mark.parametrize("missing", ["ORIG80K_SMOKE_EQ_MODE", "ORIG80K_TIMING_EQ_PROFILE"])
+def test_budget_rejects_missing_profile_environment_fields(tmp_path, missing):
+    path, budget = budget_fixture(tmp_path)
+    source = budget["source_perf"]["full"]
+    target = Path(source["launch"]["path"])
+    launch = json.loads(target.read_text())
+    del launch["environment"][missing]
+    write_budget_json(target, launch)
+    source["launch"] = contract.file_reference(target)
+    write_budget_json(path, budget)
+    with pytest.raises(ValueError, match="完整档位环境字段"):
         contract.validate_disk_budget("prod", tmp_path, budget_path=str(path), budget_sha=contract.sha256_file(path))
 
 
@@ -500,9 +540,121 @@ def test_validation_preserves_300_gib_without_inventing_budget(mode, tmp_path, m
         contract.validate_disk_budget(mode, tmp_path)
 
 
-@pytest.mark.parametrize("mode", ["prod", "perf", "smoke"])
+@pytest.mark.parametrize(("mode", "timing"), [("prod", None), ("perf", None), ("smoke", None), ("smoke", "off"), ("smoke", "on")])
+def test_normal_timing_profile_record_is_independent_of_current_env(mode, timing, monkeypatch):
+    env = {} if timing is None else {"ORIG80K_SMOKE_EQ_MODE": timing}
+    expected = {"name": "normal", "xla_flags": ""}
+    assert contract.resolve_timing_eq_profile(mode, env) == expected
+    # 读取记录不应受判定进程自己的确定性环境影响。
+    monkeypatch.setenv("ORIG80K_TIMING_EQ_PROFILE", "deterministic100")
+    monkeypatch.setenv("XLA_FLAGS", contract.TIMING_EQ_DETERMINISTIC_FLAGS)
+    assert contract.validate_timing_eq_profile_record(expected, mode=mode, timing=timing, xla_flags=None) == expected
+
+
+@pytest.mark.parametrize("timing", ["off", "on"])
+def test_deterministic_profile_requires_actual_exact_flags_without_mutating_env(timing):
+    env = {"ORIG80K_SMOKE_EQ_MODE": timing, "ORIG80K_TIMING_EQ_PROFILE": "deterministic100",
+           "XLA_FLAGS": contract.TIMING_EQ_DETERMINISTIC_FLAGS}
+    before = dict(env)
+    assert contract.resolve_timing_eq_profile("smoke", env) == {
+        "name": "deterministic100", "xla_flags": contract.TIMING_EQ_DETERMINISTIC_FLAGS}
+    assert env == before
+
+
+@pytest.mark.parametrize("timing", ["off", "on"])
+def test_real_cpu_cli_accepts_deterministic_flags_without_changing_config(cpu_environment, monkeypatch, timing):
+    monkeypatch.setenv("ORIG80K_SMOKE_EQ_MODE", timing)
+    monkeypatch.setenv("ORIG80K_TIMING_EQ_PROFILE", "deterministic100")
+    monkeypatch.setenv("XLA_FLAGS", contract.TIMING_EQ_DETERMINISTIC_FLAGS)
+    parsed = contract.parse_config(argv("smoke"), "smoke")
+    assert parsed["num_train_steps"] == 20
+    assert parsed["jax_enable_x64"] is False
+    assert os.environ["XLA_FLAGS"] == contract.TIMING_EQ_DETERMINISTIC_FLAGS
+
+
+@pytest.mark.parametrize(("mode", "env"), [
+    ("smoke", {"ORIG80K_TIMING_EQ_PROFILE": ""}),
+    ("smoke", {"ORIG80K_TIMING_EQ_PROFILE": "normal"}),
+    ("smoke", {"ORIG80K_TIMING_EQ_PROFILE": "unknown"}),
+    ("smoke", {"ORIG80K_TIMING_EQ_PROFILE": "deterministic100", "XLA_FLAGS": contract.TIMING_EQ_DETERMINISTIC_FLAGS}),
+    ("perf", {"ORIG80K_TIMING_EQ_PROFILE": "deterministic100", "ORIG80K_SMOKE_EQ_MODE": "on", "XLA_FLAGS": contract.TIMING_EQ_DETERMINISTIC_FLAGS}),
+    ("prod", {"ORIG80K_TIMING_EQ_PROFILE": "deterministic100", "XLA_FLAGS": contract.TIMING_EQ_DETERMINISTIC_FLAGS}),
+    ("smoke", {"ORIG80K_SMOKE_EQ_MODE": ""}),
+    ("smoke", {"ORIG80K_TIMING_EQ_PROFILE": "deterministic100", "ORIG80K_SMOKE_EQ_MODE": "off"}),
+    ("smoke", {"XLA_FLAGS": contract.TIMING_EQ_DETERMINISTIC_FLAGS}),
+    ("smoke", {"ORIG80K_TIMING_EQ_PROFILE": "deterministic100", "ORIG80K_SMOKE_EQ_MODE": "off",
+               "XLA_FLAGS": contract.TIMING_EQ_DETERMINISTIC_FLAGS + " --unknown=true"}),
+])
+def test_profile_resolver_rejects_invalid_selection_or_flags(mode, env):
+    with pytest.raises(ValueError, match="PROFILE|MODE|仅允许|XLA_FLAGS"):
+        contract.resolve_timing_eq_profile(mode, env)
+
+
+@pytest.mark.parametrize(("profile", "mode", "timing", "flags"), [
+    (None, "smoke", "off", ""),
+    ({}, "smoke", "off", ""),
+    ({"name": "normal", "xla_flags": "", "extra": True}, "smoke", "off", ""),
+    ({"name": "unknown", "xla_flags": ""}, "smoke", "off", ""),
+    ({"name": "normal", "xla_flags": contract.TIMING_EQ_DETERMINISTIC_FLAGS}, "smoke", "off", ""),
+    (None, "smoke", "off", contract.TIMING_EQ_DETERMINISTIC_FLAGS),
+    ({"name": "deterministic100", "xla_flags": contract.TIMING_EQ_DETERMINISTIC_FLAGS}, "perf", None, contract.TIMING_EQ_DETERMINISTIC_FLAGS),
+    ({"name": "deterministic100", "xla_flags": contract.TIMING_EQ_DETERMINISTIC_FLAGS}, "smoke", None, contract.TIMING_EQ_DETERMINISTIC_FLAGS),
+    ({"name": "deterministic100", "xla_flags": contract.TIMING_EQ_DETERMINISTIC_FLAGS}, "smoke", "on", ""),
+    ({"name": "deterministic100", "xla_flags": contract.TIMING_EQ_DETERMINISTIC_FLAGS}, "smoke", "on", contract.TIMING_EQ_DETERMINISTIC_FLAGS + " "),
+])
+def test_profile_record_rejects_unknown_or_inconsistent_evidence(profile, mode, timing, flags):
+    with pytest.raises(ValueError, match="档位|XLA_FLAGS|仅允许"):
+        contract.validate_timing_eq_profile_record(profile, mode=mode, timing=timing, xla_flags=flags)
+
+
+@pytest.mark.parametrize("timing", [None, "off", "on"])
+def test_launch_json_records_actual_profile(tmp_path, monkeypatch, timing):
+    """执行真实launch记录写入；资产与设备校验用小桩，避免读取权重或启动GPU。"""
+    mode, run = "smoke", "test-profile"
+    store = tmp_path / "v1-store"
+    records = store / "bench/orig80k" / run
+    run_root = store / "train-runs/mme_vla_suite" / run
+    store.mkdir()
+    (tmp_path / "uv.lock").write_text("仅记录写入测试的锁文件\n")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    monkeypatch.setattr(contract, "ROOT", tmp_path)
+    monkeypatch.setattr(contract, "validate_paths", lambda *a: (run_root, {"gpus": "0,1,2,3"}))
+    monkeypatch.setattr(contract, "original_reference", lambda: {"history_sha256": "b" * 64})
+    monkeypatch.setattr(contract, "validate_data", lambda *a: {})
+    monkeypatch.setattr(contract, "validate_disk_budget", lambda *a, **k: {})
+    monkeypatch.setattr(contract, "validate_gpus", lambda *a: [])
+    monkeypatch.setattr(contract, "parse_config", lambda *a: {"jax_enable_x64": False, "checkpoint_dir": str(run_root)})
+    monkeypatch.setitem(sys.modules, "assets_lock", SimpleNamespace(require=lambda *a, **k: None))
+    monkeypatch.setattr(contract.subprocess, "check_output", lambda args, **k:
+                        "a" * 40 + "\n" if args[:2] == ["git", "rev-parse"] else "" if args[0] == "git" else "测试存储")
+    for key in ("ORIG80K_TIMING_EQ_PROFILE", "ORIG80K_SMOKE_EQ_MODE", "XLA_FLAGS", "JAX_PLATFORMS", "TRAIN_TIMING_STEPS"):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.95")
+    monkeypatch.setenv("WANDB_MODE", "online")
+    monkeypatch.setenv("TRAIN_RECORD_DIR", str(records))
+    monkeypatch.setenv("TRAIN_FINAL_RECORD_DIR", str(records / "final"))
+    if timing is not None:
+        monkeypatch.setenv("ORIG80K_SMOKE_EQ_MODE", timing)
+        monkeypatch.setenv("ORIG80K_TIMING_EQ_PROFILE", "deterministic100")
+        monkeypatch.setenv("XLA_FLAGS", contract.TIMING_EQ_DETERMINISTIC_FLAGS)
+    contract.check_launch(SimpleNamespace(mode=mode, run=run, head="a" * 40, history_sha="b" * 64, norm_sha="c" * 64,
+        lib=str(store / "datasets/16task-pub-1600ep"), assets=str(store / "train-assets/mme_vla_suite"),
+        gpus="0,1,2,3", records=str(records), train_args=contract.make_train_args(mode, run,
+            store / "datasets/16task-pub-1600ep", store / "train-assets/mme_vla_suite", tmp_path)))
+    launch = json.loads((records / "launch.json").read_text())
+    assert launch["timing_eq_profile"] == contract.resolve_timing_eq_profile(mode)
+    assert launch["environment"]["ORIG80K_SMOKE_EQ_MODE"] == timing
+    assert launch["environment"]["XLA_FLAGS"] == (None if timing is None else contract.TIMING_EQ_DETERMINISTIC_FLAGS)
+
+
+@pytest.mark.parametrize(("mode", "timing", "profile"), [
+    ("prod", None, None), ("perf", None, None), ("smoke", None, None),
+    ("smoke", "off", None), ("smoke", "on", None),
+    ("smoke", "off", "deterministic100"), ("smoke", "on", "deterministic100"),
+])
 @pytest.mark.parametrize("failure", ["none", "preflight", "contract", "train", "sampler"])
-def test_real_shell_propagates_failures_and_keeps_cpu_scoped(tmp_path, mode, failure):
+def test_real_shell_propagates_failures_and_keeps_cpu_scoped(tmp_path, mode, timing, profile, failure):
     """执行真实 shell 控制流，外部训练与设备调用换为计数桩。"""
     fixture = tmp_path / "repo"
     paths = fixture / "scripts/training/paths.sh"
@@ -531,10 +683,10 @@ esac
 case "$*" in
   *preflight_train_launch.py*) phase=preflight ;;
   *orig80k_contract.py*) phase=contract ;;
-  *scripts/training/train.py*|*check_orig80k_speed.py*) phase=train ;;
+  *scripts/training/train.py*|*check_orig80k_speed.py*|*check_orig80k_timing_equiv.py*) phase=train ;;
   *) exit 90 ;;
 esac
-printf '%s:%s\n' "$phase" "${JAX_PLATFORMS:-unset}" >> "$TEST_CALLS"
+printf '%s:%s:%s:%s\n' "$phase" "${JAX_PLATFORMS:-unset}" "${XLA_FLAGS:-unset}" "${JAX_ENABLE_X64:-unset}" >> "$TEST_CALLS"
 if [ "$phase" = "$TEST_FAILURE" ]; then exit 7; fi
 if [ "$phase" = contract ]; then mkdir -p "$TRAIN_RECORD_DIR"; fi
 if [ "$phase" = train ] && [ "$TEST_FAILURE" = sampler ]; then sleep .2; fi
@@ -545,14 +697,23 @@ exit 0
     calls = tmp_path / "calls"
     env = dict(os.environ, PATH=str(bins) + os.pathsep + os.environ["PATH"], TEST_CALLS=str(calls),
                TEST_FAILURE=failure, TRAIN_HEAD="a" * 40, HISTORY_CONFIG_SHA256="b" * 64, NORM_STATS_SHA256="c" * 64,
-               JAX_PLATFORMS="old-cpu-value", XLA_FLAGS="old-validation-flags")
+               JAX_PLATFORMS="old-cpu-value", XLA_FLAGS="old-validation-flags", JAX_ENABLE_X64="inherited-marker")
+    for key, value in (("ORIG80K_SMOKE_EQ_MODE", timing), ("ORIG80K_TIMING_EQ_PROFILE", profile)):
+        if value is None:
+            env.pop(key, None)
+        else:
+            env[key] = value
+    if profile is not None:
+        # 首个子进程前由runner注入；覆盖未设置输入，而非测试自己预置flags。
+        env.pop("XLA_FLAGS")
     result = subprocess.run(["bash", str(runner), mode, "test-launch", "0,1,2,3", str(tmp_path / "lib"), str(tmp_path / "assets")],
                             env=env, text=True, capture_output=True, timeout=20, check=False)
-    expected = ["preflight:cpu"]
+    actual_flags = contract.TIMING_EQ_DETERMINISTIC_FLAGS if profile is not None else "unset"
+    expected = [f"preflight:cpu:{actual_flags}:inherited-marker"]
     if failure != "preflight":
-        expected += ["contract:unset"]
+        expected += [f"contract:unset:{actual_flags}:inherited-marker"]
     if failure in ("none", "train", "sampler"):
-        expected += ["train:unset"]
+        expected += [f"train:unset:{actual_flags}:inherited-marker"]
     assert calls.read_text().splitlines() == expected
     assert result.returncode == (0 if failure == "none" else (1 if failure == "sampler" else 7)), result.stdout + result.stderr
     # 最终状态在footer检查之后直接落日志；独立核对真实进程返回及唯一持久化回执。
@@ -572,3 +733,68 @@ exit 0
                               env=env, text=True, capture_output=True, timeout=20, check=False)
     assert repeated.returncode != 0
     assert calls.read_text().splitlines() == expected
+
+
+@pytest.mark.parametrize(("mode", "timing", "profile", "flags"), [
+    ("prod", None, "deterministic100", ""), ("perf", None, "deterministic100", ""),
+    ("smoke", None, "deterministic100", ""), ("smoke", "off", "", ""),
+    ("smoke", "on", "normal", ""), ("smoke", "off", "unknown", ""),
+    ("smoke", "off", "deterministic100", "--unknown=true"),
+    ("smoke", "on", "deterministic100", contract.TIMING_EQ_DETERMINISTIC_FLAGS + " --unknown=true"),
+    ("smoke", "on", "deterministic100", contract.TIMING_EQ_DETERMINISTIC_FLAGS + " "),
+])
+def test_real_shell_rejects_profile_before_creating_log_or_running_python(mode, timing, profile, flags, tmp_path):
+    env = dict(os.environ, ORIG80K_TIMING_EQ_PROFILE=profile, XLA_FLAGS=flags)
+    env.pop("TRAIN_HEAD", None)
+    env.pop("ORIG80K_SMOKE_EQ_MODE", None)
+    if timing is not None:
+        env["ORIG80K_SMOKE_EQ_MODE"] = timing
+    result = subprocess.run(["bash", str(ROOT / "scripts/training/prod/run_orig80k.sh"), mode,
+                             "test-profile-reject", "0,1,2,3", str(tmp_path / "lib"), str(tmp_path / "assets")],
+                            env=env, capture_output=True, text=True, check=False, timeout=10)
+    assert result.returncode == 2
+    assert "ORIG80K_TIMING_EQ_PROFILE" in result.stderr
+
+
+@pytest.mark.parametrize(("requested", "secret"), [
+    ("deterministic100", "unset ORIG80K_TIMING_EQ_PROFILE XLA_FLAGS\n"),
+    ("deterministic100", "ORIG80K_TIMING_EQ_PROFILE=normal\nunset XLA_FLAGS\n"),
+    (None, "ORIG80K_TIMING_EQ_PROFILE=deterministic100\n"),
+    ("deterministic100", "unset XLA_FLAGS\n"),
+    (None, "XLA_FLAGS=--unknown=true\n"),
+])
+def test_real_shell_rejects_secret_profile_or_flags_mutation(tmp_path, requested, secret):
+    """执行真实source及失败收尾，确保改档在首个Python进程前拒绝。"""
+    fixture = tmp_path / "repo"
+    paths = fixture / "scripts/training/paths.sh"
+    paths.parent.mkdir(parents=True)
+    paths.write_text('V1_STORE="' + str(fixture / "v1-store") + '"\n')
+    (fixture / "v1-store/logs").mkdir(parents=True)
+    secrets = fixture / "v1-store/secrets"
+    secrets.mkdir()
+    (secrets / "wandb.env").write_text(secret)
+    runner = tmp_path / "runner.sh"
+    runner.write_text((ROOT / "scripts/training/prod/run_orig80k.sh").read_text().replace(
+        "MAIN=/scratch/hongze/robomme_policy_learning_MotionJEPA", "MAIN=" + str(fixture)))
+    bins = tmp_path / "bin"
+    bins.mkdir()
+    (bins / "git").write_text('#!/bin/bash\nif [ "$1" = rev-parse ]; then printf "%s\\n" "' + "a" * 40 + '"; fi\n')
+    (bins / "uv").write_text('#!/bin/bash\nprintf called > "$TEST_CALLS"\nexit 91\n')
+    for binary in bins.iterdir():
+        binary.chmod(0o700)
+    calls = tmp_path / "calls"
+    env = dict(os.environ, PATH=str(bins) + os.pathsep + os.environ["PATH"], TEST_CALLS=str(calls),
+               TRAIN_HEAD="a" * 40, HISTORY_CONFIG_SHA256="b" * 64, NORM_STATS_SHA256="c" * 64,
+               ORIG80K_SMOKE_EQ_MODE="off")
+    env.pop("XLA_FLAGS", None)
+    env.pop("ORIG80K_TIMING_EQ_PROFILE", None)
+    if requested is not None:
+        env["ORIG80K_TIMING_EQ_PROFILE"] = requested
+    result = subprocess.run(["bash", str(runner), "smoke", "test-secret", "0,1,2,3",
+                             str(tmp_path / "lib"), str(tmp_path / "assets")],
+                            env=env, capture_output=True, text=True, timeout=10, check=False)
+    assert result.returncode == 2
+    assert "环境文件" in result.stdout
+    assert not calls.exists()
+    lines = (fixture / "v1-store/logs/test-secret.driver.log").read_text().splitlines()
+    assert [line for line in lines if line.startswith("EXIT_CODE=")] == ["EXIT_CODE=2"]
