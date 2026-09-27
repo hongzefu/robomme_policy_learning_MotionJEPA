@@ -10,6 +10,9 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
+| [`orig80k-prod-0927/`](orig80k-prod-0927/launch.md) | 两个原版normal80k共用Beta/预算的最终起跑前检查及f8启动 | 用户已授权确认无误后直接启动；V11.18Beta及最终现场检查待完成，当前未起跑 |
+| [`v2-orig-16task-pub1600ep-modul-b64-80k/`](v2-orig-16task-pub1600ep-modul-b64-80k/README.md) | full正式80000步，b64/fsdp4，GPU0–3，online | 未起跑；最终检查通过后与count按4+4直接启动 |
+| [`v2-orig-counting-pub400ep-modul-b64-80k/`](v2-orig-counting-pub400ep-modul-b64-80k/README.md) | counting正式80000步，b64/fsdp4，GPU4–7，online | 未起跑；共用B预算3653与同一正式Beta |
 | [`orig80k-perf300-0927/`](orig80k-perf300-0927/README.md) | normal档两库4+4并行300步perf、真实恢复、采样与预算 | normal300/恢复/report/measurement及B预算八阶段PASS；已获确认无误后直接起两80k授权，待正式Beta/最终预检 |
 | [`perf-orig80k-full-300-20260926T232339Z/`](perf-orig80k-full-300-20260926T232339Z/README.md) | full normal300，GPU0–3，online与末步299真保存 | normal300真实恢复/measure及独立退出PASS；共享B预算通过，正式80k待共同Beta/最终预检 |
 | [`perf-orig80k-count-300-20260926T232339Z/`](perf-orig80k-count-300-20260926T232339Z/README.md) | counting normal300，GPU4–7，与full并跑 | normal300真实恢复/measure及独立退出PASS；共享B预算通过，正式80k待共同Beta/最终预检 |

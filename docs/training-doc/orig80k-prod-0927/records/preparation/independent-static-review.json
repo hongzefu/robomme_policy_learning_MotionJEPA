@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "status": "有界静态复核通过，未发现实质接口阻断",
+  "audit_base": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+  "initial_status_porcelain": " M docs/training-doc/orig80k-perf300-0927/README.md\n M docs/training-doc/orig80k-perf300-0927/launch.md\n",
+  "scope": "本轮用户已明确授权的prod候选五文件、固定70a源码及现有113/208/8perf记录接口；root同期归档tracked文档属于已知在途范围，本报告未替代其内容审校。",
+  "locked_candidates": {
+    "observed_utc": "2026-09-27T04:31:00.910709+00:00",
+    "refs": {
+      "files/docs/training-doc/orig80k-prod-0927/launch.md": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/prod-normal-ready-candidate-20260927/import-ready/files/docs/training-doc/orig80k-prod-0927/launch.md",
+        "bytes": 26919,
+        "sha256": "d97d18145a8d0e9965c0e95e903a942406de5403ddc413e2a8ac3fe7c6872cc9"
+      },
+      "files/docs/training-doc/orig80k-prod-0927/checklist.md": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/prod-normal-ready-candidate-20260927/import-ready/files/docs/training-doc/orig80k-prod-0927/checklist.md",
+        "bytes": 6176,
+        "sha256": "75c34536bb87914bd65535d282e995706575b7e7e02a85a092ed6e39f05cecb4"
+      },
+      "files/docs/training-doc/v2-orig-16task-pub1600ep-modul-b64-80k/README.md": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/prod-normal-ready-candidate-20260927/import-ready/files/docs/training-doc/v2-orig-16task-pub1600ep-modul-b64-80k/README.md",
+        "bytes": 16694,
+        "sha256": "2563e552665939fb86d987f6ff73f1b538f5718e5deee4edde2dae443da21a1a"
+      },
+      "files/docs/training-doc/v2-orig-counting-pub400ep-modul-b64-80k/README.md": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/prod-normal-ready-candidate-20260927/import-ready/files/docs/training-doc/v2-orig-counting-pub400ep-modul-b64-80k/README.md",
+        "bytes": 16968,
+        "sha256": "d297b96eed22545e9c30f158a5939fc94e08406a6cc8cc4f9c028c57d4b9e2db"
+      },
+      "check_prod_ready.py": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/prod-normal-ready-candidate-20260927/import-ready/check_prod_ready.py",
+        "bytes": 17870,
+        "sha256": "af8f32b10f51ff9062db919443e5892f74a46f112bc268e027251f47c83ee12b"
+      }
+    },
+    "parent_exact": true,
+    "parent_chars": 9076,
+    "parent_sha256": "5d8344101ea20c1bdd4841bd34f2920b54cb99dd1578dfd9457b39c973177381"
+  },
+  "confirmed": [
+    "两个固定新run仍调用原prod五实参入口，4+4分组与f332/a770资产不变，80000步来自原具名配置",
+    "实际env命令显式unset对拍selector、XLA_FLAGS、TRAIN_TIMING_STEPS、CPU平台和Python路径污染；实际x64True仍拒绝",
+    "两run共用固定3653预算和09ea余量源；最终只读consumer仍重查现场可用空间",
+    "5aba helper保留113输入refs、两独立uv环境208依赖、00bd运行模块/配置/数据/资产/设备桥接",
+    "2795不可变perf快照闭集8job与8phase、独立报告嵌套字段和原f8回执/父过程/宿主记录接口一致",
+    "完整9076字符guard_perf_action与固定70a原文逐字相同；新prod runtime走exec原runner",
+    "最后检查只CPU解析完整配置并和4cf预览相等，不调用check_launch，不提前创建正式run/records/cache",
+    "四MD准确保留最新用户起跑授权；STOP_BEFORE_PROD_LAUNCH仅表示该检查器职责到此，root后续独立launch不需重复请求批准"
+  ],
+  "executed": "只读Git/文件读取、标准库文本/SHA对照；未执行候选main、CPU配置、资源查询、预算函数、prod、tmux或capture。",
+  "limitations": [
+    "此报告不是未来V11.18Beta的实际预检PASS；root仍需填真实17/18提交、clean检查并执行最后只读/CPU闸门",
+    "最新用户授权不豁免任何既定数值、来源、资源或输出冲突守卫",
+    "原INPUT/P1/100/20/perf证据锚点和历史normal失败不被新候选改写"
+  ],
+  "end_repository": {
+    "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+    "status_porcelain": " M docs/training-doc/orig80k-perf300-0927/README.md\n M docs/training-doc/orig80k-perf300-0927/launch.md\n?? docs/training-doc/orig80k-perf300-0927/records/budget-evidence/\n?? docs/training-doc/orig80k-perf300-0927/records/controller.completed.snapshot.json\n?? docs/training-doc/orig80k-perf300-0927/records/controller.measurement-stage.snapshot.json\n?? docs/training-doc/orig80k-perf300-0927/records/exit/\n?? docs/training-doc/orig80k-perf300-0927/records/final-perf-archive-index.json\n?? docs/training-doc/orig80k-perf300-0927/records/formal-import-whitelist.json\n?? docs/training-doc/orig80k-perf300-0927/records/margin-source.json\n?? docs/training-doc/orig80k-perf300-0927/records/normal-perf-logs-cache-stat.json\n?? docs/training-doc/orig80k-perf300-0927/records/paired-speed.json\n?? docs/training-doc/orig80k-perf300-0927/records/preflight/\n?? docs/training-doc/orig80k-perf300-0927/records/process/\n?? docs/training-doc/orig80k-perf300-0927/records/prod-disk-budget.json\n?? docs/training-doc/orig80k-perf300-0927/records/verification/\n?? docs/training-doc/orig80k-perf300-0927/records/wrapper-log-policy.json\n?? docs/training-doc/perf-orig80k-count-300-20260926T232339Z/logs/\n?? docs/training-doc/perf-orig80k-count-300-20260926T232339Z/records/\n?? docs/training-doc/perf-orig80k-full-300-20260926T232339Z/logs/\n?? docs/training-doc/perf-orig80k-full-300-20260926T232339Z/records/\n",
+    "protected_worktree_diff": ""
+  }
+}

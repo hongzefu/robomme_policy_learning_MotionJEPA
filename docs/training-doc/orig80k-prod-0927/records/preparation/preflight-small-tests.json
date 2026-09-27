@@ -1,0 +1,47 @@
+{
+  "status": "PASS",
+  "tests": [
+    {
+      "name": "only_docs_and_root_plan",
+      "result": "PASS"
+    },
+    {
+      "name": "training_source",
+      "result": "PASS",
+      "expected": "拒绝"
+    },
+    {
+      "name": "root_rules",
+      "result": "PASS",
+      "expected": "拒绝"
+    },
+    {
+      "name": "dependency",
+      "result": "PASS",
+      "expected": "拒绝"
+    },
+    {
+      "name": "script_copy_under_docs",
+      "result": "PASS",
+      "expected": "拒绝"
+    },
+    {
+      "name": "perf_head_cannot_be_future_prod_beta",
+      "result": "PASS",
+      "expected": "拒绝"
+    },
+    {
+      "name": "normal_cpu_preserves_inherited_x64",
+      "result": "PASS"
+    },
+    {
+      "name": "reuse_readonly_contract_only_no_old_main_or_launch",
+      "result": "PASS"
+    },
+    {
+      "name": "pinned_actual_budget_preview_and_eight_phases",
+      "result": "PASS"
+    }
+  ],
+  "scope": "纯小验证；无实际最终预检/CPU解析/consumer执行/资源或tmux查询"
+}
