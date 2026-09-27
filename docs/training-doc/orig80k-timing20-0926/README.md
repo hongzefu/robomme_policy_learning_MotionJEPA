@@ -2,7 +2,7 @@
 
 ## 1. 结论与指标速览
 
-**本阶段尚未运行；已准备两库各一对off/on的4个run及2个CPU judge。** 准备标签 `20260926T231534Z`不是实际起跑时间。INPUT/P1及100步前置已有各自证据，本阶段实际Beta SHA、开始/结束、UUID、W&B ID与所有20步结果仍待真实记录，不能预填PASS。
+**两库off/on正式判定均为FAIL；四次20步训练、真实保存与CPU恢复均正常完成。** 实际Beta为`b0efbde61e38411fb1b9114eec8485d36a4ee9a0`，运行于2026-09-27 00:09:50—00:33:34 UTC。每库21次取批、20次模型输入与RNG全部相同，但100对标量有80对不同，末态201叶有147叶摘要不同。两正式judge均返回1，原生退出和capture亦为1；300步perf不放行。完整证据与用户追加off诊断决定见[result](result.md)。准备标签`20260926T231534Z`仍不是实际起跑时间。
 
 | 库/模式 | run档案 | GPU |
 |---|---|---|
@@ -13,7 +13,7 @@
 
 ## 2. 版本与代码状态
 
-本阶段拟进入下一份 `commitV11.14Beta`，完整40位SHA尚未生成，launch保留明确待填项。四run/两judge将共用同一clean Beta，运行期间冻结源码与主仓独立uv环境。当前正式模板由此前已测副本逐字纳入，guard为f8、run模板45b4…、judge模板17c0…；完整SHA及Git源/工作树/runtime绑定均在[launch](launch.md)中锁定，不预填未来hash。
+实际`commitV11.14Beta`为`b0efbde61e38411fb1b9114eec8485d36a4ee9a0`。四run与两judge共用该clean版本，运行及最终独立核验期间源码、主仓uv环境保持冻结。guard为f8、run模板45b4…、judge模板17c0…；完整SHA及Git源/工作树/runtime绑定按[launch](launch.md)执行。后续归档提交不替换此运行锚点。
 
 旧INPUT运行HEAD为 `3a1582db39c723c735e04752e5027bfe40ecc3e1`；P1及100量具/B为 `00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8`；上游A为 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`。旧运行的启动版本永远不回填为本阶段新提交。Beta后沿用前核固定diff、取证/输入/训练模块及依赖指纹，不能把归档或再次运行旧judge称为新HEAD重训。
 
@@ -21,7 +21,7 @@
 
 [launch.md](launch.md)完整写入通用参数绑定、guard父适配、launch/capture/verify、日志联合验收及六任务命令。两正式Git模板在 `scripts/training/tests/`；生成runtime时加 `set -- "$1" <printf %q固定参数>`，后接模板原字节，guard绑定整份runtime新SHA。judge COMMON是未加前缀的run模板实体副本，不覆盖judge位置参数。
 
-实际guard仍执行原 `v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py`；每动作与新Beta中的正式源及工作树逐字核对，把source/runtime绑定写入launch/capture父记录。不放宽v1-store实体路径限制，也不修改旧100工具路径或回执。新会话必须先门闩retain+identity再释放，结束后取得独立退出证据。准备期间未实际launch、capture或创建run输出。
+实际guard执行原`v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py`；每动作与实际Beta中的正式源及工作树逐字核对，source/runtime绑定写入launch/capture父记录。六会话均先门闩retain+identity再释放；四训练包装最终原生退出0，两失败judge原生退出1，原始回执不改。七个阶段调度载体由Beta中的对应代码块提取，实际文件SHA与父进程返回值另行留证。
 
 ## 4. 数据集与划分口径
 
@@ -37,15 +37,15 @@ W&B online（project openpi），初始化为本仓v1-store内pi05_base。只清
 
 ## 6. 硬件、调度与耗时
 
-使用AWS 8×A100-SXM4-80GB，/scratch为md0 XFS本地NVMe。full-off与count-off先并行，各库只在自己的训练、真实保存/CPU恢复及独立退出通过后推进on，再进行本库CPU judge；同库不重叠使用相同四卡，两库互不等待无关阶段。实际设备空闲、预算、资源及所有起止时间待起跑重测，不拿历史快照作保证。
+使用AWS 8×A100-SXM4-80GB，/scratch为md0 XFS本地NVMe。两off均于00:09:50起跑，count/full分别于00:20:35/00:21:15结束；各自恢复与原生退出通过后，count-on于00:20:57、full-on于00:21:48起跑，分别于00:31:59/00:32:55结束。每库固定同一组四卡、两库独立推进；现场资源由本次预检记录，完整UTC/PID/UUID见结果档。
 
 本阶段包含device_get/哈希和计时包装观测开销，20步只用于正确性，不计算吞吐优劣、正式ETA或GPU瓶颈结论。已有100步重叠时间也只证明调度有效，不能作为本阶段性能测量。
 
-## 7. 待执行过程与输出行为
+## 7. 实际执行过程与输出行为
 
 每run实际取21批，模型使用其中20批并更新20次；两侧记录每次模型实参/RNG、完整20步五标量及末态params/EMA/optimizer/step。普通step0日志和尾窗1…19合起来覆盖全部20步。末步loop19必须真实save并等待异步提交完成，再CPU真正恢复checkpoint19。
 
-on侧启用既定0.5秒磁盘元数据采样和smoke计时，保存窗口须有原生commit之前的有效样本；off无这些speed记录。观测最大占用不是连续真实峰值。四个run的真实进程、W&B ID、UUID、记录与状态均待运行产生，不能拿旧20步或100摘要代替。
+on侧启用0.5秒磁盘元数据采样和smoke计时，保存窗口采样与原生commit绑定经独立核验；off无speed记录。四run均记录完整201叶末态，真实恢复与自身EMA一致，不能据此推出off/on相等。观测最大占用不是连续真实峰值；W&B ID、UUID、进程和实际状态由各run结果留档。
 
 ## 8. 已有前置与本阶段验收
 
@@ -64,13 +64,15 @@ CPU INPUT两组已通过，保留原3a范围与批准的最外退出限制，见
 
 S2主机记录窗口10…99内两侧实际训练重叠631.992527秒，完整落入重叠的步骤数为90/85；仅是并跑有效性证据。100是在既定确定性验证档下的前100步等价，不承诺生产80k逐位轨迹。
 
-本阶段仍须实际取得四run的checkpoint19真恢复、21 fetch/20 model输入与RNG、20步五标量、完整末态结构/dtype/shape/bytes的off/on逐位一致，以及两个CPU judge及所有原生退出链。任何非有限、缺记录、错误身份或独立非零退出均失败。此刻没有本阶段验收结果；策略评估不在范围内。
+四run各自完整性与恢复通过；两组正式判定原文均为`TIMING_EQ_JUDGE=FAIL reason=20步五标量不是逐位一致`。独立全量核对显示：每库loss、grad_norm、llm_grad_norm、mem_enc_norm各20项不等，param_norm的20项相等；状态treedef/keyset一致，但params有37/61、EMA有36/61、opt有74/78叶不等，step的1叶相同。两失败judge没有生成成功结果JSON，后续原生退出守卫按非零拒绝。原因尚未确定，策略评估不在范围内。
 
 ## 9. 用户决定记录
 
 用户原始目标为「给出方案跑完整的80k 和80k纯counting任务 完全参照原版训练 4卡+4卡 先做对拍测试」，执行要求「开始实现该计划 有问题立刻问用户 不要自己决策」。本阶段范围经「两库各跑一对 20 步（推荐）」确认；「尽可能并行做」「你有8张卡」落实为两条独立4卡库链。
 
 「允许仅对拍关闭 W&B」仅限P1/100，本阶段保持W&B online。「允许主机 dtype 不同，但要求数值一致且训练标量/状态逐位一致」及四None键授权只保留其CPU输入范围，训练比较不降判据。「继续工作 一路做到起泡前 有问题问用户」仍把本轮终点限定为正式80k起跑前。
+
+发现首步差异后，询问用户是否在当前取证结束后两库各追加一次相同配置20步off、按4+4并行，保持严格判据且仅用于诊断。用户明确答复「同意」。该复验不替代原off/on闸门，当前失败记录和原始SHA不改。
 
 ## 10. 历史限制与新阶段处置
 
@@ -82,14 +84,16 @@ V11.13结果提交`f7a9757656ae38391319c4001d823bc06e62621f`首次push被远端�
 
 本阶段所有任务从新门闩起跑，f8留原生pane，父适配实测launch/capture返回并绑定stdout/stderr、identity、receipt及Git源/runtime；现场宿主另记父适配的实际返回。不能仅依赖旧11项wrapper测试或日志0。任何失败保留现场、停止依赖阶段并报告，不自动清理、重命名或放宽配置。
 
+独立核验首次通过uv入口得到`sys.executable=.../python3`，与Beta父适配实际`.../python`的argv字面不同而被拒；按原解释器重核后通过，原失败调用与修正均保留，未改回执或判据。只读机理核查没有证明首步数学计算被包装改写，也没有证明后端非确定性是原因；完整初始state未被摘要，且param_norm只聚合特定kernel，相同norm不能替代完整初态逐位证据。
+
 ## 11. 当前结论与下一步
 
-现已完成起跑前档案，等待新Beta真实生成、固定指纹复核及现场输出/资源/预算闸门；没有运行20步。实际按launch两个off同启，各链完成后及时推进on和CPU judge。只有四run与两judge内容及独立退出全部通过，才回写本阶段结果。
+本阶段按严格判据失败，已完成四run真实保存恢复、两份正式失败判定及独立退出留证。按新增授权准备两库各一次同配置off诊断复验，保留旧b0基线与新仅文档Beta的来源边界，先区分关闭包装时是否也有运行间差异；不改确定性设置、容差或原判定器。
 
 之后仍须真实300步4+4 perf、保存恢复与带明确余量来源的预算，完成两份正式80k launch共同Beta/clean准备后停在起跑前。本group不执行80k，不把100或本阶段工具测试替代后续实测。
 
 ## 12. 归档文件清单
 
-起跑前文件为本README、[launch](launch.md)及四run README；没有真实训练结果。准备时不复制.sh/.yaml或权重入docs。正式源与命令正文由新Beta还原，运行时新命令、template/runtime SHA及Git绑定留在 `v1-store/bench/orig80k-timing20-commands-20260926T231534Z`。
+起跑前文本由实际Beta还原，本README、[launch](launch.md)、四run README与[result](result.md)追加实测结论。代码、脚本和配置不另行复制，权重留run根；运行时命令、template/runtime SHA及Git绑定保留在`v1-store/bench/orig80k-timing20-commands-20260926T231534Z`，小型实测资料按结果档白名单归档。
 
-每run记录根、权重根及缓存独立；待生成的原始timing_eq目录只含metadata.json、fetch_inputs.jsonl、model_inputs.jsonl、full_state.json及manifest.json，不能加日志。组judge结果拟为 `v1-store/bench/orig80k-timing20-results-20260926T231534Z/full.json`与 `count.json`，在两run records外。各记录、清洗日志、完成器、GPU/磁盘样本及guard父侧证和检查链待实际产生后归档，权重留run根；真实时间、UUID、W&B ID及结果均按现场填写。
+每run的原始timing_eq目录保持metadata.json、fetch_inputs.jsonl、model_inputs.jsonl、full_state.json及manifest.json五个文件，未混入日志。两正式judge在标量比较失败后退出，预定的full.json/count.json成功结果没有生成，不补造空成功文件。原记录、清洗日志、完成器、on采样及六任务guard侧证和核验报告分别保留，原始绝对路径与字节不改。

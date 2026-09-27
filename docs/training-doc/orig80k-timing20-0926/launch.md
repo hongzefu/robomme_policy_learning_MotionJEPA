@@ -1,6 +1,6 @@
-# 原版80k前置：两库测速包装off/on真保存20步启动档（待Beta，尚未运行）
+# 原版80k前置：两库测速包装off/on真保存20步启动档（已执行，等价判定失败）
 
-本档案的准备标签为 `20260926T231534Z`，**不是实际起跑时间**。四个run和两个CPU judge均未启动；真实START/END_UTC、PID、run UUID、W&B ID、运行结果及本阶段TRAIN_HEAD尚待记录。主代理拟将本档案与四份run README放入下一阶段 `commitV11.14Beta`，完整SHA必须在该提交真实生成后填写，不能预造未来提交或用旧100的00bd替代。本文包含完整控制函数及实际CLI，不能整页直接执行。
+本档案的准备标签为`20260926T231534Z`，**不是实际起跑时间**。四run及两CPU judge已于2026-09-27执行，实际`commitV11.14Beta`为`b0efbde61e38411fb1b9114eec8485d36a4ee9a0`。四run保存恢复及原生退出0均通过，两正式judge因五标量不逐位一致而退出1，失败原生回执齐全；详见[result](result.md)。下方保留Beta起跑前的完整模板、占位规则与判据；实际调度载体将TRAIN_HEAD唯一展开为上述b0提交并留有SHA。旧输出已存在，不能整页重跑或覆盖，后续结果提交不替换真实运行版本。
 
 前置INPUT沿用真实 `3a1582db39c723c735e04752e5027bfe40ecc3e1`，P1/100量具与B为 `00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8`，上游A为 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`。六份100步run及两库各自upstream/same-entry共四份judge已完成并独立验收通过；详见[group README](README.md)的原始报告引用。旧INPUT/P1最外退出不可追补的限制分别按用户批准保留，不改原证据或HEAD。新Beta起跑前还须按固定diff/模块和依赖指纹核对这些证据的沿用范围，不能只把旧judge重跑一遍便声称新HEAD已重训。
 

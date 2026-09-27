@@ -1,0 +1,2760 @@
+{
+  "schema": 1,
+  "origin": "audit_equiv独立只读失败证据核验；宿主实际返回0仅代表取证执行成功，不代表实验PASS",
+  "command": "env -u PYTHONPATH -u PYTHONHOME -u JAX_PLATFORM_NAME -u XLA_FLAGS CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu JAX_ENABLE_X64=0 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B - <<'PY'\nimport contextlib,datetime,hashlib,io,json,os,pathlib,re,shlex,subprocess,sys\nR=pathlib.Path('/scratch/hongze/robomme_policy_learning_MotionJEPA');S=R/'v1-store';P=S/'bench/orig80k-build-preflight-0925';H='b0efbde61e38411fb1b9114eec8485d36a4ee9a0';T='20260926T231534Z';C=S/f'bench/orig80k-timing20-commands-{T}'\nG=P/'tmux-exit-guard-candidate-20260926/tmux_exit_guard.py';GS='f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b';WS='45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f'\ndef sha(p):return hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()\ndef ref(p):\n p=pathlib.Path(p);assert p.is_absolute() and p==p.resolve() and p.is_relative_to(R) and p.is_file()\n return {'path':str(p),'bytes':p.stat().st_size,'sha256':sha(p)}\ndef load(p):return json.loads(pathlib.Path(p).read_text())\ndef rows(p):return [json.loads(line) for line in pathlib.Path(p).read_text().splitlines()]\ndoc=R/'docs/training-doc/orig80k-timing20-0926/launch.md';docbytes=subprocess.check_output(['git','show',H+':'+str(doc.relative_to(R))],cwd=R);assert docbytes==doc.read_bytes()\nbody=re.findall(r\"<<'PY'\\n(.*?)\\nPY\",docbytes.decode(),re.S);assert len(body)==1\nprefix,separator,_=body[0].partition('if action == \"verify\":');assert separator\noff_report=P/'timing20-both-off-verification-independent-20260927.json';on_report=P/'timing20-both-on-verification-independent-20260927.json'\nassert sha(off_report)=='1a17d5e21c5960f912af96adf97abf79aa540981a13deb17faac66a821ffea61'\nassert sha(on_report)=='41c6f5896de5247b5690ba2bc338e8c26d30de3658a181b4050f28b84851cb55'\nverified={mode:load(p)['output'] for mode,p in [('off',off_report),('on',on_report)]}\nresults={}\nfor group in ('full','count'):\n session=f'orig80k-timing20-{group}-judge-{T}';log=S/'logs'/f'{session}.wrapper.log';rawlog=log.read_bytes();lines=rawlog.decode().splitlines()\n def field(key):\n  values=[line.split('=',1)[1] for line in lines if line.startswith(key+'=')];assert len(values)==1,key;return values[0]\n assert field('WRAPPER_SESSION')==session and field('WRAPPER_TRAIN_HEAD')==H\n for key in ('JUDGE_EXIT_CODE','WRAPPER_COMMAND_EXIT','WRAPPER_EXIT_CODE'):assert field(key)=='1'\n for key in ('WRAPPER_TEE_EXIT','WRAPPER_FOOTER_PRINTF_EXIT','WRAPPER_FOOTER_TEE_EXIT'):assert field(key)=='0'\n fail='TIMING_EQ_JUDGE=FAIL reason=20步五标量不是逐位一致'\n assert lines.count(fail)==1 and not any(line.startswith(('TIMING_EQ=PASS','JUDGE_RESULT_SHA256=')) for line in lines)\n saved=sys.argv;ns={'__name__':'readonly_failure_evidence'}\n try:\n  sys.argv=['readonly-failure','verify',session,'',H,str(R),str(C),str(G),GS]\n  exec(compile(prefix,str(doc)+'::definitions_only','exec'),ns)\n finally:sys.argv=saved\n guard=ns['guard'];launch=ns['read_launch']();ip=C/f'{session}.identity.json';cp=C/f'{session}.exit.capture.json';rp=C/f'{session}.exit.json'\n identity=guard.read_identity(ip,launch['identity']['sha256']);capture=guard.read_json(cp);receipt=guard.read_json(rp)\n assert capture['schema']==1 and capture['session']==session and capture['observer']=='root subprocess.run.returncode' and type(capture['actual_exit_code']) is int and capture['actual_exit_code']==1\n assert capture['git_source_binding']==launch['git_source_binding']==ns['git_source_binding']\n for key in ('identity','receipt','guard_tool','stdout','stderr'):guard.check_reference(capture[key],R)\n assert capture['identity']==ref(ip) and capture['receipt']==ref(rp) and capture['guard_tool']==ref(G)\n expected_capture=[str(R/'.venv/bin/python'),'-B',str(G),'capture','--identity',str(ip),'--identity-sha256',sha(ip),'--out',str(rp)]\n assert capture['argv']==expected_capture and guard.read_json(capture['stdout']['path'])==receipt\n assert receipt['status']=='FAIL' and receipt['identity']==ref(ip) and receipt['identity_snapshot']==identity and receipt['command_file']==identity['command_file'] and receipt['tool']==ref(G)\n guard.validate_query(receipt['version_query'],[guard.TMUX,'-V']);assert receipt['tmux_version']==receipt['version_query']['stdout'].strip()\n guard.validate_query(receipt['pane_query'],guard.pane_argv(identity));parsed=guard.parse_pane(receipt['pane_query']['stdout']);assert parsed==receipt['parsed']\n assert all(parsed[k]==str(identity[k]) for k in ('session','window_id','pane_id','pane_pid','pane_start_command'))\n assert parsed['remain_on_exit']=='on' and parsed['pane_dead']=='1' and parsed['pane_dead_status']=='1' and parsed['pane_dead_signal']==''\n assert int(guard.utc_time(identity['recorded_utc']).timestamp())<=int(parsed['pane_dead_time'])<=int(guard.utc_time(receipt['observed_utc']).timestamp())\n try:guard.classify_pane(parsed,identity,receipt['observed_utc'])\n except ValueError as e:assert str(e)==receipt['reason']=='pane非零、信号退出或缺明确0字符串'\n else:raise AssertionError('失败pane不应被原分类器放行')\n assert int(field('WRAPPER_PID'))==identity['pane_pid']\n command=C/f'{session}.command';first,template=command.read_bytes().split(b'\\n',1);assert template==(R/'scripts/training/tests/timing20-judge-wrapper.sh').read_bytes()\n common=C/'common-wrapper.sh';assert common.read_bytes()==(R/'scripts/training/tests/timing20-wrapper.sh').read_bytes() and sha(common)==WS\n off=f'timing20-{group}-off-0926-{T}';on=f'timing20-{group}-on-0926-{T}';out=S/f'bench/orig80k-timing20-results-{T}'/(group+'.json')\n assert shlex.split(first.decode())==['set','--','$1',str(common),WS,H,off,on,str(out),session,str(log)]\n assert field('WRAPPER_COMMAND_FILE')==str(command) and field('WRAPPER_COMMAND_SHA256_EXPECTED')==field('WRAPPER_COMMAND_SHA256_ACTUAL')==sha(command)\n expected_judge=['env','-u','JAX_PLATFORM_NAME','-u','PYTHONPATH','-u','PYTHONHOME','CUDA_VISIBLE_DEVICES=','JAX_PLATFORMS=cpu','uv','run','--no-sync','python',str(R/'scripts/training/tests/check_orig80k_timing_equiv.py'),'judge']\n offdir=S/'bench/orig80k'/off;ondir=S/'bench/orig80k'/on\n for flag,value in [('--off-records',offdir),('--on-records',ondir),('--off-completion',offdir/'completion.json'),('--on-completion',ondir/'completion.json'),('--off-wrapper-log',S/'logs'/f'orig80k-{off}.wrapper.log'),('--on-wrapper-log',S/'logs'/f'orig80k-{on}.wrapper.log'),('--head',H),('--out',out)]:expected_judge.extend([flag,str(value)])\n assert shlex.split(field('JUDGE_COMMAND'))==expected_judge and not os.path.lexists(out)\n parsed_runs={}\n for mode,d in [('off',offdir),('on',ondir)]:\n  v=verified[mode]['results'][group];assert v['status']=='PASS'\n  bindings=v['bindings'];assert bindings['manifest']==ref(d/'timing_eq/manifest.json')\n  manifest=load(d/'timing_eq/manifest.json')\n  for name,item in manifest['files'].items():assert item==ref(d/'timing_eq'/name)\n  for item in bindings['completion_files']:assert item==ref(item['path'])\n  metrics=rows(d/'metrics.jsonl');final=load(d/'final/final.json');scalars=[{'step':0,'scalars':{k:metrics[0][k] for k in ('loss','grad_norm','llm_grad_norm','mem_enc_norm','param_norm')}}]+final['tail']\n  assert [r['step'] for r in scalars]==list(range(20))\n  parsed_runs[mode]={'fetch':rows(d/'timing_eq/fetch_inputs.jsonl'),'model':rows(d/'timing_eq/model_inputs.jsonl'),'state':load(d/'timing_eq/full_state.json'),'metadata':load(d/'timing_eq/metadata.json'),'scalars':scalars,\n                    'sources':{name:ref(d/name) for name in ('timing_eq/manifest.json','timing_eq/fetch_inputs.jsonl','timing_eq/model_inputs.jsonl','timing_eq/full_state.json','metrics.jsonl','final/final.json')}}\n a,b=parsed_runs['off'],parsed_runs['on'];assert len(a['fetch'])==len(b['fetch'])==21 and len(a['model'])==len(b['model'])==20\n fetch_mismatch=[i for i,(x,y) in enumerate(zip(a['fetch'],b['fetch'])) if x['tree']!=y['tree']]\n model_mismatch=[i for i,(x,y) in enumerate(zip(a['model'],b['model'])) if (x['tree'],x['rng'])!=(y['tree'],y['rng'])]\n scalar_diff={}\n for key in ('loss','grad_norm','llm_grad_norm','mem_enc_norm','param_norm'):\n  diffs=[{'step':i,'off':x['scalars'][key],'on':y['scalars'][key]} for i,(x,y) in enumerate(zip(a['scalars'],b['scalars'])) if x['scalars'][key]['hex']!=y['scalars'][key]['hex']]\n  scalar_diff[key]={'mismatch_steps':len(diffs),'differences':diffs}\n state_diff={}\n for name in ('params','ema_params','opt_state','step'):\n  x,y=a['state']['groups'][name],b['state']['groups'][name];assert x['leaves'].keys()==y['leaves'].keys()\n  changed=[key for key in x['leaves'] if x['leaves'][key]!=y['leaves'][key]]\n  state_diff[name]={'leaves':len(x['leaves']),'different_leaves':len(changed),'different_paths':changed,'whole_tree_equal':x==y}\n structure_same=a['state']['original_treedefs']==b['state']['original_treedefs']\n assert not fetch_mismatch and not model_mismatch and sum(v['mismatch_steps'] for v in scalar_diff.values())>0\n assert a['metadata']['fingerprint']==b['metadata']['fingerprint'] and a['metadata']['toolchain']==b['metadata']['toolchain'] and a['metadata']['loader']==b['metadata']['loader']\n assert log.read_bytes()==rawlog\n results[group]={'experiment_status':'FAIL','failure_evidence_consistent':True,'formal_failure_line':fail,'formal_judge_exit_code':1,'wrapper_exit_code':1,'native_pane_exit_code':1,'capture_process_exit_code':1,\n  'native_refs':{'identity':ref(ip),'launch_process':ref(C/f'{session}.launch.process.json'),'capture_process':ref(cp),'receipt':ref(rp),'command':ref(command),'log':ref(log),'guard':ref(G)},\n  'result_json_absent':True,'result_json_path':str(out),'start_utc':field('WRAPPER_START_UTC'),'end_utc':field('WRAPPER_END_UTC'),\n  'input_comparison':{'fetched':21,'used':20,'fetch_tree_mismatch_indexes':fetch_mismatch,'model_tree_or_rng_mismatch_steps':model_mismatch},'scalar_comparison':scalar_diff,\n  'full_state_comparison':{'loop_step':19,'state_step':20,'original_treedefs_equal':structure_same,'groups':state_diff,'scope':'比较现有逐叶摘要；未读取大权重，不能据摘要推断参数数值误差大小'},\n  'fingerprint_toolchain_loader_equal':True,'comparison_sources':{mode:v['sources'] for mode,v in parsed_runs.items()},\n  'parent_dispatcher_boundary':'主代理报告finish dispatcher子/父实际2；本报告独立核原生pane1和capture父记录1，不伪造另一宿主调用的wait观测'}\nassert subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip()==H and subprocess.check_output(['git','status','--porcelain'],cwd=R)==b''\nprint(json.dumps({'schema':1,'status':'FAIL','evidence_verification':'CONSISTENT','checked_utc':datetime.datetime.now(datetime.UTC).isoformat(),'head':H,'tag':T,'run_verifications':{'off':ref(off_report),'on':ref(on_report)},'results':results,\n 'cause':'尚未确定，不把输入/RNG相同或一次off/on差异归因到某机制','scope':'独立只读复核两份正式失败judge的真实非零链，并汇总20步原摘要；未执行judge/恢复/训练或改变PASS规则'},ensure_ascii=False,sort_keys=True))\nPY",
+  "cwd": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+  "observation_actual_exit_code": 0,
+  "observation_wall_time_seconds": 0.062020204,
+  "output": {
+    "cause": "尚未确定，不把输入/RNG相同或一次off/on差异归因到某机制",
+    "checked_utc": "2026-09-27T00:35:56.501458+00:00",
+    "evidence_verification": "CONSISTENT",
+    "head": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+    "results": {
+      "count": {
+        "capture_process_exit_code": 1,
+        "comparison_sources": {
+          "off": {
+            "final/final.json": {
+              "bytes": 47665,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/final/final.json",
+              "sha256": "80a36f8e8e09831d5a79703772bb557c6ec6d90f519208528cff7ca477f1dd7e"
+            },
+            "metrics.jsonl": {
+              "bytes": 414,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/metrics.jsonl",
+              "sha256": "d6a728fe4db6a9c673a6eb84c2682871c321e19c04d41c0af6a83bc8ec2d463d"
+            },
+            "timing_eq/fetch_inputs.jsonl": {
+              "bytes": 71484,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/timing_eq/fetch_inputs.jsonl",
+              "sha256": "2e3124a93d643f1edf699f63144f9a6925fd325086224167c8979d554c69dcf7"
+            },
+            "timing_eq/full_state.json": {
+              "bytes": 142435,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/timing_eq/full_state.json",
+              "sha256": "7d3a9d076c3fd68a9a31c913607b8ec8d7c9f3da12a0f0cc7f3f6cda46c9e78f"
+            },
+            "timing_eq/manifest.json": {
+              "bytes": 1072,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/timing_eq/manifest.json",
+              "sha256": "6a2bce3dea8108c4da93d0229ba9949ac316e3ddc137892f65f02977264a93b8"
+            },
+            "timing_eq/model_inputs.jsonl": {
+              "bytes": 75638,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/timing_eq/model_inputs.jsonl",
+              "sha256": "be0c39f1457dc637f02a4362d592d88e3bd130ce61aee381de8191dd9695b4d3"
+            }
+          },
+          "on": {
+            "final/final.json": {
+              "bytes": 47662,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/final/final.json",
+              "sha256": "9e2c31adcf7850d2a05a82ac846e772448040de0eee89772956f5d6b4f8ff566"
+            },
+            "metrics.jsonl": {
+              "bytes": 415,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/metrics.jsonl",
+              "sha256": "ca9db08f0cc700947e10c0b08d97299ca272a8c30f395b87b32d49d903110d3c"
+            },
+            "timing_eq/fetch_inputs.jsonl": {
+              "bytes": 71483,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/timing_eq/fetch_inputs.jsonl",
+              "sha256": "8a6d6426911d70b960c853ac71a4d500c0959604e5274210ce35c4b76cce49c8"
+            },
+            "timing_eq/full_state.json": {
+              "bytes": 142434,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/timing_eq/full_state.json",
+              "sha256": "4082ef1d9cb5801e9179d93e529fd180bd34736dc8723e04625e03d348d2dafa"
+            },
+            "timing_eq/manifest.json": {
+              "bytes": 1068,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/timing_eq/manifest.json",
+              "sha256": "9c2e82d379acfb1f31c923d2f830a15af6524d2090e2eb6f003972a420af10c3"
+            },
+            "timing_eq/model_inputs.jsonl": {
+              "bytes": 75637,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/timing_eq/model_inputs.jsonl",
+              "sha256": "75c0bdf6da8910580b8d2a4aa1601dff1bbc1e29ce94f65a691dff302fc0abd1"
+            }
+          }
+        },
+        "end_utc": "2026-09-27T00:33:11Z",
+        "experiment_status": "FAIL",
+        "failure_evidence_consistent": true,
+        "fingerprint_toolchain_loader_equal": true,
+        "formal_failure_line": "TIMING_EQ_JUDGE=FAIL reason=20步五标量不是逐位一致",
+        "formal_judge_exit_code": 1,
+        "full_state_comparison": {
+          "groups": {
+            "ema_params": {
+              "different_leaves": 36,
+              "different_paths": [
+                "['PaliGemma']['llm']['embedder']['input_embedding']",
+                "['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['q_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['mem_rms_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['mlp']['gating_einsum']",
+                "['PaliGemma']['llm']['layers']['mlp']['linear']",
+                "['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum']",
+                "['PaliGemma']['llm']['layers']['mlp_1']['linear']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel']",
+                "['action_in_proj']['bias']",
+                "['action_in_proj']['kernel']",
+                "['action_out_proj']['kernel']",
+                "['mem_encoder']['feature_encoder']['encoder_static']['bias']",
+                "['mem_encoder']['feature_encoder']['encoder_static']['kernel']",
+                "['mem_encoder']['feature_encoder']['pos_proj']['bias']",
+                "['mem_encoder']['feature_encoder']['pos_proj']['kernel']",
+                "['time_mlp_in']['bias']",
+                "['time_mlp_in']['kernel']",
+                "['time_mlp_out']['bias']",
+                "['time_mlp_out']['kernel']"
+              ],
+              "leaves": 61,
+              "whole_tree_equal": false
+            },
+            "opt_state": {
+              "different_leaves": 74,
+              "different_paths": [
+                "[1][0].mu['PaliGemma']['llm']['embedder']['input_embedding'].value",
+                "[1][0].mu['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias'].value",
+                "[1][0].mu['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_attn']['mem_rms_norm']['scale'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['bias'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mlp']['linear'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mlp_1']['linear'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_attention_norm']['scale'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].mu['action_in_proj']['bias'].value",
+                "[1][0].mu['action_in_proj']['kernel'].value",
+                "[1][0].mu['action_out_proj']['bias'].value",
+                "[1][0].mu['action_out_proj']['kernel'].value",
+                "[1][0].mu['mem_encoder']['feature_encoder']['encoder_static']['bias'].value",
+                "[1][0].mu['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value",
+                "[1][0].mu['mem_encoder']['feature_encoder']['pos_proj']['bias'].value",
+                "[1][0].mu['mem_encoder']['feature_encoder']['pos_proj']['kernel'].value",
+                "[1][0].mu['time_mlp_in']['bias'].value",
+                "[1][0].mu['time_mlp_in']['kernel'].value",
+                "[1][0].mu['time_mlp_out']['bias'].value",
+                "[1][0].mu['time_mlp_out']['kernel'].value",
+                "[1][0].nu['PaliGemma']['llm']['embedder']['input_embedding'].value",
+                "[1][0].nu['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias'].value",
+                "[1][0].nu['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_attn']['mem_rms_norm']['scale'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['bias'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mlp']['linear'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mlp_1']['linear'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_attention_norm']['scale'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].nu['action_in_proj']['bias'].value",
+                "[1][0].nu['action_in_proj']['kernel'].value",
+                "[1][0].nu['action_out_proj']['bias'].value",
+                "[1][0].nu['action_out_proj']['kernel'].value",
+                "[1][0].nu['mem_encoder']['feature_encoder']['encoder_static']['bias'].value",
+                "[1][0].nu['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value",
+                "[1][0].nu['mem_encoder']['feature_encoder']['pos_proj']['bias'].value",
+                "[1][0].nu['mem_encoder']['feature_encoder']['pos_proj']['kernel'].value",
+                "[1][0].nu['time_mlp_in']['bias'].value",
+                "[1][0].nu['time_mlp_in']['kernel'].value",
+                "[1][0].nu['time_mlp_out']['bias'].value",
+                "[1][0].nu['time_mlp_out']['kernel'].value"
+              ],
+              "leaves": 78,
+              "whole_tree_equal": false
+            },
+            "params": {
+              "different_leaves": 37,
+              "different_paths": [
+                "['PaliGemma']['llm']['embedder']['input_embedding']",
+                "['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['q_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['mem_rms_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['mlp']['gating_einsum']",
+                "['PaliGemma']['llm']['layers']['mlp']['linear']",
+                "['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum']",
+                "['PaliGemma']['llm']['layers']['mlp_1']['linear']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel']",
+                "['action_in_proj']['bias']",
+                "['action_in_proj']['kernel']",
+                "['action_out_proj']['bias']",
+                "['action_out_proj']['kernel']",
+                "['mem_encoder']['feature_encoder']['encoder_static']['bias']",
+                "['mem_encoder']['feature_encoder']['encoder_static']['kernel']",
+                "['mem_encoder']['feature_encoder']['pos_proj']['bias']",
+                "['mem_encoder']['feature_encoder']['pos_proj']['kernel']",
+                "['time_mlp_in']['bias']",
+                "['time_mlp_in']['kernel']",
+                "['time_mlp_out']['bias']",
+                "['time_mlp_out']['kernel']"
+              ],
+              "leaves": 61,
+              "whole_tree_equal": false
+            },
+            "step": {
+              "different_leaves": 0,
+              "different_paths": [],
+              "leaves": 1,
+              "whole_tree_equal": true
+            }
+          },
+          "loop_step": 19,
+          "original_treedefs_equal": true,
+          "scope": "比较现有逐叶摘要；未读取大权重，不能据摘要推断参数数值误差大小",
+          "state_step": 20
+        },
+        "input_comparison": {
+          "fetch_tree_mismatch_indexes": [],
+          "fetched": 21,
+          "model_tree_or_rng_mismatch_steps": [],
+          "used": 20
+        },
+        "native_pane_exit_code": 1,
+        "native_refs": {
+          "capture_process": {
+            "bytes": 3961,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.capture.json",
+            "sha256": "62fc7fd6d990632d0bddd9319a40af10ff707b165673ce616122856f3ff2cb00"
+          },
+          "command": {
+            "bytes": 3410,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.command",
+            "sha256": "9d7524adc3928c235fe2bb9e528e51f97c8d59f0b28422d2a03f1bd013282d57"
+          },
+          "guard": {
+            "bytes": 20398,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+            "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+          },
+          "identity": {
+            "bytes": 1515,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.identity.json",
+            "sha256": "0752a5d674e9c7766b56b62cb14d7d1d84f2686bce75b7ad54df1537e65a06af"
+          },
+          "launch_process": {
+            "bytes": 4167,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.launch.process.json",
+            "sha256": "435db7633a7da50bf5f47cc959c5648ffec76b082cb3cc67299b56c5ba67847f"
+          },
+          "log": {
+            "bytes": 2252,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-judge-20260926T231534Z.wrapper.log",
+            "sha256": "2bb099eaf911edd2066a7b61a8505a6a0f49005454dd5f6286ad5506d8f66749"
+          },
+          "receipt": {
+            "bytes": 5401,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.json",
+            "sha256": "ab18c34751976a30e99b2dbdb93a831c4402da6879f5938fd795647aaaed002b"
+          }
+        },
+        "parent_dispatcher_boundary": "主代理报告finish dispatcher子/父实际2；本报告独立核原生pane1和capture父记录1，不伪造另一宿主调用的wait观测",
+        "result_json_absent": true,
+        "result_json_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-results-20260926T231534Z/count.json",
+        "scalar_comparison": {
+          "grad_norm": {
+            "differences": [
+              {
+                "off": {
+                  "dec": 1.5022308826446533,
+                  "hex": "0x1.8092340000000p+0"
+                },
+                "on": {
+                  "dec": 1.4999850988388062,
+                  "hex": "0x1.7fff060000000p+0"
+                },
+                "step": 0
+              },
+              {
+                "off": {
+                  "dec": 1.6476942300796509,
+                  "finite": true,
+                  "hex": "0x1.a5cf4a0000000p+0"
+                },
+                "on": {
+                  "dec": 1.6485882997512817,
+                  "finite": true,
+                  "hex": "0x1.a609e20000000p+0"
+                },
+                "step": 1
+              },
+              {
+                "off": {
+                  "dec": 1.4969377517700195,
+                  "finite": true,
+                  "hex": "0x1.7f37500000000p+0"
+                },
+                "on": {
+                  "dec": 1.4954570531845093,
+                  "finite": true,
+                  "hex": "0x1.7ed6460000000p+0"
+                },
+                "step": 2
+              },
+              {
+                "off": {
+                  "dec": 1.5777740478515625,
+                  "finite": true,
+                  "hex": "0x1.93e9000000000p+0"
+                },
+                "on": {
+                  "dec": 1.5742343664169312,
+                  "finite": true,
+                  "hex": "0x1.9301060000000p+0"
+                },
+                "step": 3
+              },
+              {
+                "off": {
+                  "dec": 1.36613130569458,
+                  "finite": true,
+                  "hex": "0x1.5dbac80000000p+0"
+                },
+                "on": {
+                  "dec": 1.3660228252410889,
+                  "finite": true,
+                  "hex": "0x1.5db3ac0000000p+0"
+                },
+                "step": 4
+              },
+              {
+                "off": {
+                  "dec": 1.3721085786819458,
+                  "finite": true,
+                  "hex": "0x1.5f42820000000p+0"
+                },
+                "on": {
+                  "dec": 1.3708475828170776,
+                  "finite": true,
+                  "hex": "0x1.5eefde0000000p+0"
+                },
+                "step": 5
+              },
+              {
+                "off": {
+                  "dec": 1.5087370872497559,
+                  "finite": true,
+                  "hex": "0x1.823c980000000p+0"
+                },
+                "on": {
+                  "dec": 1.5038235187530518,
+                  "finite": true,
+                  "hex": "0x1.80fa940000000p+0"
+                },
+                "step": 6
+              },
+              {
+                "off": {
+                  "dec": 1.2392504215240479,
+                  "finite": true,
+                  "hex": "0x1.3d3f840000000p+0"
+                },
+                "on": {
+                  "dec": 1.237585186958313,
+                  "finite": true,
+                  "hex": "0x1.3cd2620000000p+0"
+                },
+                "step": 7
+              },
+              {
+                "off": {
+                  "dec": 1.4008678197860718,
+                  "finite": true,
+                  "hex": "0x1.669f460000000p+0"
+                },
+                "on": {
+                  "dec": 1.4000383615493774,
+                  "finite": true,
+                  "hex": "0x1.6668ea0000000p+0"
+                },
+                "step": 8
+              },
+              {
+                "off": {
+                  "dec": 1.5705442428588867,
+                  "finite": true,
+                  "hex": "0x1.920f300000000p+0"
+                },
+                "on": {
+                  "dec": 1.5691688060760498,
+                  "finite": true,
+                  "hex": "0x1.91b50c0000000p+0"
+                },
+                "step": 9
+              },
+              {
+                "off": {
+                  "dec": 1.5696622133255005,
+                  "finite": true,
+                  "hex": "0x1.91d5620000000p+0"
+                },
+                "on": {
+                  "dec": 1.5692294836044312,
+                  "finite": true,
+                  "hex": "0x1.91b9060000000p+0"
+                },
+                "step": 10
+              },
+              {
+                "off": {
+                  "dec": 1.5778684616088867,
+                  "finite": true,
+                  "hex": "0x1.93ef300000000p+0"
+                },
+                "on": {
+                  "dec": 1.572129249572754,
+                  "finite": true,
+                  "hex": "0x1.9277100000000p+0"
+                },
+                "step": 11
+              },
+              {
+                "off": {
+                  "dec": 1.378745436668396,
+                  "finite": true,
+                  "hex": "0x1.60f5760000000p+0"
+                },
+                "on": {
+                  "dec": 1.3777709007263184,
+                  "finite": true,
+                  "hex": "0x1.60b5980000000p+0"
+                },
+                "step": 12
+              },
+              {
+                "off": {
+                  "dec": 1.4472615718841553,
+                  "finite": true,
+                  "hex": "0x1.727fbc0000000p+0"
+                },
+                "on": {
+                  "dec": 1.4460583925247192,
+                  "finite": true,
+                  "hex": "0x1.7230e20000000p+0"
+                },
+                "step": 13
+              },
+              {
+                "off": {
+                  "dec": 1.378580927848816,
+                  "finite": true,
+                  "hex": "0x1.60eaae0000000p+0"
+                },
+                "on": {
+                  "dec": 1.3795474767684937,
+                  "finite": true,
+                  "hex": "0x1.612a060000000p+0"
+                },
+                "step": 14
+              },
+              {
+                "off": {
+                  "dec": 1.296902060508728,
+                  "finite": true,
+                  "hex": "0x1.4c01c60000000p+0"
+                },
+                "on": {
+                  "dec": 1.2975393533706665,
+                  "finite": true,
+                  "hex": "0x1.4c2b8a0000000p+0"
+                },
+                "step": 15
+              },
+              {
+                "off": {
+                  "dec": 1.3626272678375244,
+                  "finite": true,
+                  "hex": "0x1.5cd5240000000p+0"
+                },
+                "on": {
+                  "dec": 1.3598790168762207,
+                  "finite": true,
+                  "hex": "0x1.5c21080000000p+0"
+                },
+                "step": 16
+              },
+              {
+                "off": {
+                  "dec": 1.2558233737945557,
+                  "finite": true,
+                  "hex": "0x1.417da40000000p+0"
+                },
+                "on": {
+                  "dec": 1.2552183866500854,
+                  "finite": true,
+                  "hex": "0x1.4155fe0000000p+0"
+                },
+                "step": 17
+              },
+              {
+                "off": {
+                  "dec": 1.289890170097351,
+                  "finite": true,
+                  "hex": "0x1.4a363e0000000p+0"
+                },
+                "on": {
+                  "dec": 1.2907453775405884,
+                  "finite": true,
+                  "hex": "0x1.4a6e4a0000000p+0"
+                },
+                "step": 18
+              },
+              {
+                "off": {
+                  "dec": 1.4581708908081055,
+                  "finite": true,
+                  "hex": "0x1.754ab00000000p+0"
+                },
+                "on": {
+                  "dec": 1.4608664512634277,
+                  "finite": true,
+                  "hex": "0x1.75fb580000000p+0"
+                },
+                "step": 19
+              }
+            ],
+            "mismatch_steps": 20
+          },
+          "llm_grad_norm": {
+            "differences": [
+              {
+                "off": {
+                  "dec": 1.48934006690979,
+                  "hex": "0x1.7d45640000000p+0"
+                },
+                "on": {
+                  "dec": 1.487106204032898,
+                  "hex": "0x1.7cb2fe0000000p+0"
+                },
+                "step": 0
+              },
+              {
+                "off": {
+                  "dec": 1.6321083307266235,
+                  "finite": true,
+                  "hex": "0x1.a1d1da0000000p+0"
+                },
+                "on": {
+                  "dec": 1.633009672164917,
+                  "finite": true,
+                  "hex": "0x1.a20cec0000000p+0"
+                },
+                "step": 1
+              },
+              {
+                "off": {
+                  "dec": 1.4842052459716797,
+                  "finite": true,
+                  "hex": "0x1.7bf4e00000000p+0"
+                },
+                "on": {
+                  "dec": 1.4827402830123901,
+                  "finite": true,
+                  "hex": "0x1.7b94de0000000p+0"
+                },
+                "step": 2
+              },
+              {
+                "off": {
+                  "dec": 1.562497854232788,
+                  "finite": true,
+                  "hex": "0x1.8fffdc0000000p+0"
+                },
+                "on": {
+                  "dec": 1.5589724779129028,
+                  "finite": true,
+                  "hex": "0x1.8f18d20000000p+0"
+                },
+                "step": 3
+              },
+              {
+                "off": {
+                  "dec": 1.3531241416931152,
+                  "finite": true,
+                  "hex": "0x1.5a66580000000p+0"
+                },
+                "on": {
+                  "dec": 1.3530279397964478,
+                  "finite": true,
+                  "hex": "0x1.5a600a0000000p+0"
+                },
+                "step": 4
+              },
+              {
+                "off": {
+                  "dec": 1.3572272062301636,
+                  "finite": true,
+                  "hex": "0x1.5b733e0000000p+0"
+                },
+                "on": {
+                  "dec": 1.3559956550598145,
+                  "finite": true,
+                  "hex": "0x1.5b22880000000p+0"
+                },
+                "step": 5
+              },
+              {
+                "off": {
+                  "dec": 1.495734453201294,
+                  "finite": true,
+                  "hex": "0x1.7ee8740000000p+0"
+                },
+                "on": {
+                  "dec": 1.4908448457717896,
+                  "finite": true,
+                  "hex": "0x1.7da8020000000p+0"
+                },
+                "step": 6
+              },
+              {
+                "off": {
+                  "dec": 1.2280113697052002,
+                  "finite": true,
+                  "hex": "0x1.3a5ef40000000p+0"
+                },
+                "on": {
+                  "dec": 1.2263622283935547,
+                  "finite": true,
+                  "hex": "0x1.39f2e00000000p+0"
+                },
+                "step": 7
+              },
+              {
+                "off": {
+                  "dec": 1.3889555931091309,
+                  "finite": true,
+                  "hex": "0x1.6392980000000p+0"
+                },
+                "on": {
+                  "dec": 1.3881531953811646,
+                  "finite": true,
+                  "hex": "0x1.635e020000000p+0"
+                },
+                "step": 8
+              },
+              {
+                "off": {
+                  "dec": 1.5573004484176636,
+                  "finite": true,
+                  "hex": "0x1.8eab3e0000000p+0"
+                },
+                "on": {
+                  "dec": 1.555932879447937,
+                  "finite": true,
+                  "hex": "0x1.8e519e0000000p+0"
+                },
+                "step": 9
+              },
+              {
+                "off": {
+                  "dec": 1.5552301406860352,
+                  "finite": true,
+                  "hex": "0x1.8e23900000000p+0"
+                },
+                "on": {
+                  "dec": 1.5547996759414673,
+                  "finite": true,
+                  "hex": "0x1.8e075a0000000p+0"
+                },
+                "step": 10
+              },
+              {
+                "off": {
+                  "dec": 1.5653481483459473,
+                  "finite": true,
+                  "hex": "0x1.90baa80000000p+0"
+                },
+                "on": {
+                  "dec": 1.5596344470977783,
+                  "finite": true,
+                  "hex": "0x1.8f44340000000p+0"
+                },
+                "step": 11
+              },
+              {
+                "off": {
+                  "dec": 1.3658109903335571,
+                  "finite": true,
+                  "hex": "0x1.5da5ca0000000p+0"
+                },
+                "on": {
+                  "dec": 1.3648340702056885,
+                  "finite": true,
+                  "hex": "0x1.5d65c40000000p+0"
+                },
+                "step": 12
+              },
+              {
+                "off": {
+                  "dec": 1.4327354431152344,
+                  "finite": true,
+                  "hex": "0x1.6ec7c00000000p+0"
+                },
+                "on": {
+                  "dec": 1.4315241575241089,
+                  "finite": true,
+                  "hex": "0x1.6e785e0000000p+0"
+                },
+                "step": 13
+              },
+              {
+                "off": {
+                  "dec": 1.3657127618789673,
+                  "finite": true,
+                  "hex": "0x1.5d9f5a0000000p+0"
+                },
+                "on": {
+                  "dec": 1.3666877746582031,
+                  "finite": true,
+                  "hex": "0x1.5ddf400000000p+0"
+                },
+                "step": 14
+              },
+              {
+                "off": {
+                  "dec": 1.2844573259353638,
+                  "finite": true,
+                  "hex": "0x1.48d2320000000p+0"
+                },
+                "on": {
+                  "dec": 1.2851057052612305,
+                  "finite": true,
+                  "hex": "0x1.48fcb00000000p+0"
+                },
+                "step": 15
+              },
+              {
+                "off": {
+                  "dec": 1.3493455648422241,
+                  "finite": true,
+                  "hex": "0x1.596eb60000000p+0"
+                },
+                "on": {
+                  "dec": 1.3466466665267944,
+                  "finite": true,
+                  "hex": "0x1.58bdd60000000p+0"
+                },
+                "step": 16
+              },
+              {
+                "off": {
+                  "dec": 1.2444192171096802,
+                  "finite": true,
+                  "hex": "0x1.3e92420000000p+0"
+                },
+                "on": {
+                  "dec": 1.243853211402893,
+                  "finite": true,
+                  "hex": "0x1.3e6d2a0000000p+0"
+                },
+                "step": 17
+              },
+              {
+                "off": {
+                  "dec": 1.277254581451416,
+                  "finite": true,
+                  "hex": "0x1.46fa280000000p+0"
+                },
+                "on": {
+                  "dec": 1.2780723571777344,
+                  "finite": true,
+                  "hex": "0x1.472fc00000000p+0"
+                },
+                "step": 18
+              },
+              {
+                "off": {
+                  "dec": 1.4457015991210938,
+                  "finite": true,
+                  "hex": "0x1.7219800000000p+0"
+                },
+                "on": {
+                  "dec": 1.4483931064605713,
+                  "finite": true,
+                  "hex": "0x1.72c9e40000000p+0"
+                },
+                "step": 19
+              }
+            ],
+            "mismatch_steps": 20
+          },
+          "loss": {
+            "differences": [
+              {
+                "off": {
+                  "dec": 0.09141584485769272,
+                  "hex": "0x1.7670760000000p-4"
+                },
+                "on": {
+                  "dec": 0.09136414527893066,
+                  "hex": "0x1.763a400000000p-4"
+                },
+                "step": 0
+              },
+              {
+                "off": {
+                  "dec": 0.09492623805999756,
+                  "finite": true,
+                  "hex": "0x1.84d1600000000p-4"
+                },
+                "on": {
+                  "dec": 0.09490673243999481,
+                  "finite": true,
+                  "hex": "0x1.84bcec0000000p-4"
+                },
+                "step": 1
+              },
+              {
+                "off": {
+                  "dec": 0.085140161216259,
+                  "finite": true,
+                  "hex": "0x1.5cbbee0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08511968702077866,
+                  "finite": true,
+                  "hex": "0x1.5ca6760000000p-4"
+                },
+                "step": 2
+              },
+              {
+                "off": {
+                  "dec": 0.08800169080495834,
+                  "finite": true,
+                  "hex": "0x1.6874760000000p-4"
+                },
+                "on": {
+                  "dec": 0.08794241398572922,
+                  "finite": true,
+                  "hex": "0x1.68364e0000000p-4"
+                },
+                "step": 3
+              },
+              {
+                "off": {
+                  "dec": 0.09076639264822006,
+                  "finite": true,
+                  "hex": "0x1.73c7760000000p-4"
+                },
+                "on": {
+                  "dec": 0.09076470881700516,
+                  "finite": true,
+                  "hex": "0x1.73c5b20000000p-4"
+                },
+                "step": 4
+              },
+              {
+                "off": {
+                  "dec": 0.09851790964603424,
+                  "finite": true,
+                  "hex": "0x1.9387840000000p-4"
+                },
+                "on": {
+                  "dec": 0.09843122214078903,
+                  "finite": true,
+                  "hex": "0x1.932c9e0000000p-4"
+                },
+                "step": 5
+              },
+              {
+                "off": {
+                  "dec": 0.0859183669090271,
+                  "finite": true,
+                  "hex": "0x1.5febf00000000p-4"
+                },
+                "on": {
+                  "dec": 0.08588714152574539,
+                  "finite": true,
+                  "hex": "0x1.5fcb320000000p-4"
+                },
+                "step": 6
+              },
+              {
+                "off": {
+                  "dec": 0.08332984894514084,
+                  "finite": true,
+                  "hex": "0x1.5551ae0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08327119797468185,
+                  "finite": true,
+                  "hex": "0x1.55142e0000000p-4"
+                },
+                "step": 7
+              },
+              {
+                "off": {
+                  "dec": 0.08651024848222733,
+                  "finite": true,
+                  "hex": "0x1.6258920000000p-4"
+                },
+                "on": {
+                  "dec": 0.08646120131015778,
+                  "finite": true,
+                  "hex": "0x1.6225240000000p-4"
+                },
+                "step": 8
+              },
+              {
+                "off": {
+                  "dec": 0.09861265867948532,
+                  "finite": true,
+                  "hex": "0x1.93eade0000000p-4"
+                },
+                "on": {
+                  "dec": 0.09862764179706573,
+                  "finite": true,
+                  "hex": "0x1.93fa940000000p-4"
+                },
+                "step": 9
+              },
+              {
+                "off": {
+                  "dec": 0.09954210370779037,
+                  "finite": true,
+                  "hex": "0x1.97b9760000000p-4"
+                },
+                "on": {
+                  "dec": 0.09949257224798203,
+                  "finite": true,
+                  "hex": "0x1.9785860000000p-4"
+                },
+                "step": 10
+              },
+              {
+                "off": {
+                  "dec": 0.09466858953237534,
+                  "finite": true,
+                  "hex": "0x1.83c3360000000p-4"
+                },
+                "on": {
+                  "dec": 0.09458556026220322,
+                  "finite": true,
+                  "hex": "0x1.836c260000000p-4"
+                },
+                "step": 11
+              },
+              {
+                "off": {
+                  "dec": 0.09607908874750137,
+                  "finite": true,
+                  "hex": "0x1.898a3a0000000p-4"
+                },
+                "on": {
+                  "dec": 0.09609029442071915,
+                  "finite": true,
+                  "hex": "0x1.8995fa0000000p-4"
+                },
+                "step": 12
+              },
+              {
+                "off": {
+                  "dec": 0.09275233745574951,
+                  "finite": true,
+                  "hex": "0x1.7be9e00000000p-4"
+                },
+                "on": {
+                  "dec": 0.09270863234996796,
+                  "finite": true,
+                  "hex": "0x1.7bbc0c0000000p-4"
+                },
+                "step": 13
+              },
+              {
+                "off": {
+                  "dec": 0.09032011032104492,
+                  "finite": true,
+                  "hex": "0x1.71f3800000000p-4"
+                },
+                "on": {
+                  "dec": 0.090301014482975,
+                  "finite": true,
+                  "hex": "0x1.71df7a0000000p-4"
+                },
+                "step": 14
+              },
+              {
+                "off": {
+                  "dec": 0.08710774779319763,
+                  "finite": true,
+                  "hex": "0x1.64cb180000000p-4"
+                },
+                "on": {
+                  "dec": 0.08706638962030411,
+                  "finite": true,
+                  "hex": "0x1.649fba0000000p-4"
+                },
+                "step": 15
+              },
+              {
+                "off": {
+                  "dec": 0.08974705636501312,
+                  "finite": true,
+                  "hex": "0x1.6f9a9c0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08968710899353027,
+                  "finite": true,
+                  "hex": "0x1.6f5bc00000000p-4"
+                },
+                "step": 16
+              },
+              {
+                "off": {
+                  "dec": 0.08974158763885498,
+                  "finite": true,
+                  "hex": "0x1.6f94e00000000p-4"
+                },
+                "on": {
+                  "dec": 0.08966477960348129,
+                  "finite": true,
+                  "hex": "0x1.6f44560000000p-4"
+                },
+                "step": 17
+              },
+              {
+                "off": {
+                  "dec": 0.08384000509977341,
+                  "finite": true,
+                  "hex": "0x1.57689e0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08385384827852249,
+                  "finite": true,
+                  "hex": "0x1.5777220000000p-4"
+                },
+                "step": 18
+              },
+              {
+                "off": {
+                  "dec": 0.08788277953863144,
+                  "finite": true,
+                  "hex": "0x1.67f7c60000000p-4"
+                },
+                "on": {
+                  "dec": 0.08787465840578079,
+                  "finite": true,
+                  "hex": "0x1.67ef420000000p-4"
+                },
+                "step": 19
+              }
+            ],
+            "mismatch_steps": 20
+          },
+          "mem_enc_norm": {
+            "differences": [
+              {
+                "off": {
+                  "dec": 0.12670262157917023,
+                  "hex": "0x1.037caa0000000p-3"
+                },
+                "on": {
+                  "dec": 0.12649083137512207,
+                  "hex": "0x1.030da00000000p-3"
+                },
+                "step": 0
+              },
+              {
+                "off": {
+                  "dec": 0.13624389469623566,
+                  "finite": true,
+                  "hex": "0x1.17070a0000000p-3"
+                },
+                "on": {
+                  "dec": 0.1363355815410614,
+                  "finite": true,
+                  "hex": "0x1.17371c0000000p-3"
+                },
+                "step": 1
+              },
+              {
+                "off": {
+                  "dec": 0.1275101900100708,
+                  "finite": true,
+                  "hex": "0x1.0524100000000p-3"
+                },
+                "on": {
+                  "dec": 0.12738771736621857,
+                  "finite": true,
+                  "hex": "0x1.04e3da0000000p-3"
+                },
+                "step": 2
+              },
+              {
+                "off": {
+                  "dec": 0.13611072301864624,
+                  "finite": true,
+                  "hex": "0x1.16c1380000000p-3"
+                },
+                "on": {
+                  "dec": 0.13579322397708893,
+                  "finite": true,
+                  "hex": "0x1.161ac20000000p-3"
+                },
+                "step": 3
+              },
+              {
+                "off": {
+                  "dec": 0.11723567545413971,
+                  "finite": true,
+                  "hex": "0x1.e032840000000p-4"
+                },
+                "on": {
+                  "dec": 0.11720111221075058,
+                  "finite": true,
+                  "hex": "0x1.e00e460000000p-4"
+                },
+                "step": 4
+              },
+              {
+                "off": {
+                  "dec": 0.11745647341012955,
+                  "finite": true,
+                  "hex": "0x1.e11a0a0000000p-4"
+                },
+                "on": {
+                  "dec": 0.11733242869377136,
+                  "finite": true,
+                  "hex": "0x1.e097f80000000p-4"
+                },
+                "step": 5
+              },
+              {
+                "off": {
+                  "dec": 0.12601059675216675,
+                  "finite": true,
+                  "hex": "0x1.0211d80000000p-3"
+                },
+                "on": {
+                  "dec": 0.12554380297660828,
+                  "finite": true,
+                  "hex": "0x1.011d1c0000000p-3"
+                },
+                "step": 6
+              },
+              {
+                "off": {
+                  "dec": 0.10411198437213898,
+                  "finite": true,
+                  "hex": "0x1.aa71540000000p-4"
+                },
+                "on": {
+                  "dec": 0.10395782440900803,
+                  "finite": true,
+                  "hex": "0x1.a9cfae0000000p-4"
+                },
+                "step": 7
+              },
+              {
+                "off": {
+                  "dec": 0.11542075872421265,
+                  "finite": true,
+                  "hex": "0x1.d8c3700000000p-4"
+                },
+                "on": {
+                  "dec": 0.1153472438454628,
+                  "finite": true,
+                  "hex": "0x1.d8765a0000000p-4"
+                },
+                "step": 8
+              },
+              {
+                "off": {
+                  "dec": 0.13353756070137024,
+                  "finite": true,
+                  "hex": "0x1.117c240000000p-3"
+                },
+                "on": {
+                  "dec": 0.13341374695301056,
+                  "finite": true,
+                  "hex": "0x1.113b3a0000000p-3"
+                },
+                "step": 9
+              },
+              {
+                "off": {
+                  "dec": 0.1316642165184021,
+                  "finite": true,
+                  "hex": "0x1.0da5f80000000p-3"
+                },
+                "on": {
+                  "dec": 0.13165895640850067,
+                  "finite": true,
+                  "hex": "0x1.0da3360000000p-3"
+                },
+                "step": 10
+              },
+              {
+                "off": {
+                  "dec": 0.12960471212863922,
+                  "finite": true,
+                  "hex": "0x1.096e320000000p-3"
+                },
+                "on": {
+                  "dec": 0.1291072964668274,
+                  "finite": true,
+                  "hex": "0x1.0869680000000p-3"
+                },
+                "step": 11
+              },
+              {
+                "off": {
+                  "dec": 0.11620493233203888,
+                  "finite": true,
+                  "hex": "0x1.dbf9b40000000p-4"
+                },
+                "on": {
+                  "dec": 0.11614784598350525,
+                  "finite": true,
+                  "hex": "0x1.dbbdd80000000p-4"
+                },
+                "step": 12
+              },
+              {
+                "off": {
+                  "dec": 0.12047795951366425,
+                  "finite": true,
+                  "hex": "0x1.ed7a4c0000000p-4"
+                },
+                "on": {
+                  "dec": 0.1203610971570015,
+                  "finite": true,
+                  "hex": "0x1.ecffc20000000p-4"
+                },
+                "step": 13
+              },
+              {
+                "off": {
+                  "dec": 0.1158599704504013,
+                  "finite": true,
+                  "hex": "0x1.da8ffc0000000p-4"
+                },
+                "on": {
+                  "dec": 0.11595065146684647,
+                  "finite": true,
+                  "hex": "0x1.daef120000000p-4"
+                },
+                "step": 14
+              },
+              {
+                "off": {
+                  "dec": 0.10811840742826462,
+                  "finite": true,
+                  "hex": "0x1.bada5e0000000p-4"
+                },
+                "on": {
+                  "dec": 0.10815659910440445,
+                  "finite": true,
+                  "hex": "0x1.bb026a0000000p-4"
+                },
+                "step": 15
+              },
+              {
+                "off": {
+                  "dec": 0.11745046824216843,
+                  "finite": true,
+                  "hex": "0x1.e113be0000000p-4"
+                },
+                "on": {
+                  "dec": 0.11718077957630157,
+                  "finite": true,
+                  "hex": "0x1.dff8f40000000p-4"
+                },
+                "step": 16
+              },
+              {
+                "off": {
+                  "dec": 0.10497447103261948,
+                  "finite": true,
+                  "hex": "0x1.adf9b60000000p-4"
+                },
+                "on": {
+                  "dec": 0.1048521101474762,
+                  "finite": true,
+                  "hex": "0x1.ad79680000000p-4"
+                },
+                "step": 17
+              },
+              {
+                "off": {
+                  "dec": 0.10975376516580582,
+                  "finite": true,
+                  "hex": "0x1.c18d2a0000000p-4"
+                },
+                "on": {
+                  "dec": 0.1097751259803772,
+                  "finite": true,
+                  "hex": "0x1.c1a3900000000p-4"
+                },
+                "step": 18
+              },
+              {
+                "off": {
+                  "dec": 0.11838323622941971,
+                  "finite": true,
+                  "hex": "0x1.e4e5d20000000p-4"
+                },
+                "on": {
+                  "dec": 0.11863330751657486,
+                  "finite": true,
+                  "hex": "0x1.e5ec0a0000000p-4"
+                },
+                "step": 19
+              }
+            ],
+            "mismatch_steps": 20
+          },
+          "param_norm": {
+            "differences": [],
+            "mismatch_steps": 0
+          }
+        },
+        "start_utc": "2026-09-27T00:33:10Z",
+        "wrapper_exit_code": 1
+      },
+      "full": {
+        "capture_process_exit_code": 1,
+        "comparison_sources": {
+          "off": {
+            "final/final.json": {
+              "bytes": 47606,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/final/final.json",
+              "sha256": "e9bb0ea074aeb888c785c1a3a013ef6b2218e9fd65bda3118213b122de1fdf80"
+            },
+            "metrics.jsonl": {
+              "bytes": 414,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/metrics.jsonl",
+              "sha256": "5f2a777b5b76b8d40a8428dbd3befe662e36481d8a78cf339bbfda3b6ade870a"
+            },
+            "timing_eq/fetch_inputs.jsonl": {
+              "bytes": 71489,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/timing_eq/fetch_inputs.jsonl",
+              "sha256": "d664801f7018075f0c5b1424422190ab44e7e7df87ae7a197e0333237cb1f226"
+            },
+            "timing_eq/full_state.json": {
+              "bytes": 142434,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/timing_eq/full_state.json",
+              "sha256": "a9f7eb53abae146970b6e44d86254cee9becc72dd86886f5f7e0d8bb11945763"
+            },
+            "timing_eq/manifest.json": {
+              "bytes": 1068,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/timing_eq/manifest.json",
+              "sha256": "f749d181e9efa803b2d23851477e217f5302999bb30c9f7a53f30deb7d9ffc9a"
+            },
+            "timing_eq/model_inputs.jsonl": {
+              "bytes": 75634,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/timing_eq/model_inputs.jsonl",
+              "sha256": "d5b8a9d5a25b423f0a37ce6f7be9abe4746018bd8906d1431d38b1a32b64746c"
+            }
+          },
+          "on": {
+            "final/final.json": {
+              "bytes": 47603,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/final/final.json",
+              "sha256": "bd8015d646ead19e534b8c553a93166656fde41ae48d46a61a35700e6f718e67"
+            },
+            "metrics.jsonl": {
+              "bytes": 416,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/metrics.jsonl",
+              "sha256": "90cab971ddfc0bcdf7d00eeb9c38bef7d16dd051f920770c5eececaf775a8054"
+            },
+            "timing_eq/fetch_inputs.jsonl": {
+              "bytes": 71484,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/timing_eq/fetch_inputs.jsonl",
+              "sha256": "3df402bee6c3ba15b1ed1b6b548b4cd0cbc31645f5eeac2ea48459d8d3b58a93"
+            },
+            "timing_eq/full_state.json": {
+              "bytes": 142433,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/timing_eq/full_state.json",
+              "sha256": "d75f72cea204becc1750ebe778919f122c1049c449b8a01364c905776750938a"
+            },
+            "timing_eq/manifest.json": {
+              "bytes": 1064,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/timing_eq/manifest.json",
+              "sha256": "25bd2d5d41a5558d61d8c175ae9a52a4432bea8d8cad5a772faf440bbb4f4df7"
+            },
+            "timing_eq/model_inputs.jsonl": {
+              "bytes": 75636,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/timing_eq/model_inputs.jsonl",
+              "sha256": "06cf04cda4d6323dbd5d79ebd089f7f13706ef02819812dfe54ced2e56bf5e03"
+            }
+          }
+        },
+        "end_utc": "2026-09-27T00:33:34Z",
+        "experiment_status": "FAIL",
+        "failure_evidence_consistent": true,
+        "fingerprint_toolchain_loader_equal": true,
+        "formal_failure_line": "TIMING_EQ_JUDGE=FAIL reason=20步五标量不是逐位一致",
+        "formal_judge_exit_code": 1,
+        "full_state_comparison": {
+          "groups": {
+            "ema_params": {
+              "different_leaves": 36,
+              "different_paths": [
+                "['PaliGemma']['llm']['embedder']['input_embedding']",
+                "['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['q_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['mem_rms_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['mlp']['gating_einsum']",
+                "['PaliGemma']['llm']['layers']['mlp']['linear']",
+                "['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum']",
+                "['PaliGemma']['llm']['layers']['mlp_1']['linear']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel']",
+                "['action_in_proj']['bias']",
+                "['action_in_proj']['kernel']",
+                "['action_out_proj']['kernel']",
+                "['mem_encoder']['feature_encoder']['encoder_static']['bias']",
+                "['mem_encoder']['feature_encoder']['encoder_static']['kernel']",
+                "['mem_encoder']['feature_encoder']['pos_proj']['bias']",
+                "['mem_encoder']['feature_encoder']['pos_proj']['kernel']",
+                "['time_mlp_in']['bias']",
+                "['time_mlp_in']['kernel']",
+                "['time_mlp_out']['bias']",
+                "['time_mlp_out']['kernel']"
+              ],
+              "leaves": 61,
+              "whole_tree_equal": false
+            },
+            "opt_state": {
+              "different_leaves": 74,
+              "different_paths": [
+                "[1][0].mu['PaliGemma']['llm']['embedder']['input_embedding'].value",
+                "[1][0].mu['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias'].value",
+                "[1][0].mu['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_attn']['mem_rms_norm']['scale'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['bias'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mlp']['linear'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['mlp_1']['linear'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_attention_norm']['scale'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias'].value",
+                "[1][0].mu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].mu['action_in_proj']['bias'].value",
+                "[1][0].mu['action_in_proj']['kernel'].value",
+                "[1][0].mu['action_out_proj']['bias'].value",
+                "[1][0].mu['action_out_proj']['kernel'].value",
+                "[1][0].mu['mem_encoder']['feature_encoder']['encoder_static']['bias'].value",
+                "[1][0].mu['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value",
+                "[1][0].mu['mem_encoder']['feature_encoder']['pos_proj']['bias'].value",
+                "[1][0].mu['mem_encoder']['feature_encoder']['pos_proj']['kernel'].value",
+                "[1][0].mu['time_mlp_in']['bias'].value",
+                "[1][0].mu['time_mlp_in']['kernel'].value",
+                "[1][0].mu['time_mlp_out']['bias'].value",
+                "[1][0].mu['time_mlp_out']['kernel'].value",
+                "[1][0].nu['PaliGemma']['llm']['embedder']['input_embedding'].value",
+                "[1][0].nu['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias'].value",
+                "[1][0].nu['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_attn']['mem_rms_norm']['scale'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['bias'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mlp']['linear'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['mlp_1']['linear'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_attention_norm']['scale'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias'].value",
+                "[1][0].nu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value",
+                "[1][0].nu['action_in_proj']['bias'].value",
+                "[1][0].nu['action_in_proj']['kernel'].value",
+                "[1][0].nu['action_out_proj']['bias'].value",
+                "[1][0].nu['action_out_proj']['kernel'].value",
+                "[1][0].nu['mem_encoder']['feature_encoder']['encoder_static']['bias'].value",
+                "[1][0].nu['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value",
+                "[1][0].nu['mem_encoder']['feature_encoder']['pos_proj']['bias'].value",
+                "[1][0].nu['mem_encoder']['feature_encoder']['pos_proj']['kernel'].value",
+                "[1][0].nu['time_mlp_in']['bias'].value",
+                "[1][0].nu['time_mlp_in']['kernel'].value",
+                "[1][0].nu['time_mlp_out']['bias'].value",
+                "[1][0].nu['time_mlp_out']['kernel'].value"
+              ],
+              "leaves": 78,
+              "whole_tree_equal": false
+            },
+            "params": {
+              "different_leaves": 37,
+              "different_paths": [
+                "['PaliGemma']['llm']['embedder']['input_embedding']",
+                "['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['q_einsum']['w']",
+                "['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['mem_rms_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w']",
+                "['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['mlp']['gating_einsum']",
+                "['PaliGemma']['llm']['layers']['mlp']['linear']",
+                "['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum']",
+                "['PaliGemma']['llm']['layers']['mlp_1']['linear']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias']",
+                "['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel']",
+                "['action_in_proj']['bias']",
+                "['action_in_proj']['kernel']",
+                "['action_out_proj']['bias']",
+                "['action_out_proj']['kernel']",
+                "['mem_encoder']['feature_encoder']['encoder_static']['bias']",
+                "['mem_encoder']['feature_encoder']['encoder_static']['kernel']",
+                "['mem_encoder']['feature_encoder']['pos_proj']['bias']",
+                "['mem_encoder']['feature_encoder']['pos_proj']['kernel']",
+                "['time_mlp_in']['bias']",
+                "['time_mlp_in']['kernel']",
+                "['time_mlp_out']['bias']",
+                "['time_mlp_out']['kernel']"
+              ],
+              "leaves": 61,
+              "whole_tree_equal": false
+            },
+            "step": {
+              "different_leaves": 0,
+              "different_paths": [],
+              "leaves": 1,
+              "whole_tree_equal": true
+            }
+          },
+          "loop_step": 19,
+          "original_treedefs_equal": true,
+          "scope": "比较现有逐叶摘要；未读取大权重，不能据摘要推断参数数值误差大小",
+          "state_step": 20
+        },
+        "input_comparison": {
+          "fetch_tree_mismatch_indexes": [],
+          "fetched": 21,
+          "model_tree_or_rng_mismatch_steps": [],
+          "used": 20
+        },
+        "native_pane_exit_code": 1,
+        "native_refs": {
+          "capture_process": {
+            "bytes": 3954,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.capture.json",
+            "sha256": "445a8ec451b4f00c24fe8bee1e275cac6eda12e434c5d7aea2a45d1ee1585a9f"
+          },
+          "command": {
+            "bytes": 3405,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.command",
+            "sha256": "69ae38b006811d15fc6f847f1a7b48a2d68a81b3ce57cbdf570003a1b3c14ba3"
+          },
+          "guard": {
+            "bytes": 20398,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+            "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+          },
+          "identity": {
+            "bytes": 1510,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.identity.json",
+            "sha256": "93b6902fcad440aa96b943ce7e86ffb30a35d44e7b48d8802358a0d16d7a8fa4"
+          },
+          "launch_process": {
+            "bytes": 4158,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.launch.process.json",
+            "sha256": "7a73811f3748ddc31a796f676ab097f2f70a25e94aae5d91b6b9d00f41ef06c1"
+          },
+          "log": {
+            "bytes": 2243,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-judge-20260926T231534Z.wrapper.log",
+            "sha256": "d55f91c1a93ac438d9fabe28f8f1d71d343d7ec6b583b7f6bb66e74d62549e22"
+          },
+          "receipt": {
+            "bytes": 5389,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.json",
+            "sha256": "cf71e12c26af837cb9a03bedca56432de726f8a8ace92a79edd0425e52c99a44"
+          }
+        },
+        "parent_dispatcher_boundary": "主代理报告finish dispatcher子/父实际2；本报告独立核原生pane1和capture父记录1，不伪造另一宿主调用的wait观测",
+        "result_json_absent": true,
+        "result_json_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-results-20260926T231534Z/full.json",
+        "scalar_comparison": {
+          "grad_norm": {
+            "differences": [
+              {
+                "off": {
+                  "dec": 1.5071771144866943,
+                  "hex": "0x1.81d65c0000000p+0"
+                },
+                "on": {
+                  "dec": 1.5069117546081543,
+                  "hex": "0x1.81c4f80000000p+0"
+                },
+                "step": 0
+              },
+              {
+                "off": {
+                  "dec": 1.4516479969024658,
+                  "finite": true,
+                  "hex": "0x1.739f340000000p+0"
+                },
+                "on": {
+                  "dec": 1.4524918794631958,
+                  "finite": true,
+                  "hex": "0x1.73d6820000000p+0"
+                },
+                "step": 1
+              },
+              {
+                "off": {
+                  "dec": 1.3647063970565796,
+                  "finite": true,
+                  "hex": "0x1.5d5d660000000p+0"
+                },
+                "on": {
+                  "dec": 1.3636478185653687,
+                  "finite": true,
+                  "hex": "0x1.5d18060000000p+0"
+                },
+                "step": 2
+              },
+              {
+                "off": {
+                  "dec": 1.4038207530975342,
+                  "finite": true,
+                  "hex": "0x1.6760cc0000000p+0"
+                },
+                "on": {
+                  "dec": 1.4039926528930664,
+                  "finite": true,
+                  "hex": "0x1.676c100000000p+0"
+                },
+                "step": 3
+              },
+              {
+                "off": {
+                  "dec": 1.4284005165100098,
+                  "finite": true,
+                  "hex": "0x1.6daba80000000p+0"
+                },
+                "on": {
+                  "dec": 1.4281212091445923,
+                  "finite": true,
+                  "hex": "0x1.6d995a0000000p+0"
+                },
+                "step": 4
+              },
+              {
+                "off": {
+                  "dec": 1.400101661682129,
+                  "finite": true,
+                  "hex": "0x1.666d100000000p+0"
+                },
+                "on": {
+                  "dec": 1.4000272750854492,
+                  "finite": true,
+                  "hex": "0x1.6668300000000p+0"
+                },
+                "step": 5
+              },
+              {
+                "off": {
+                  "dec": 1.3916332721710205,
+                  "finite": true,
+                  "hex": "0x1.6442140000000p+0"
+                },
+                "on": {
+                  "dec": 1.3904428482055664,
+                  "finite": true,
+                  "hex": "0x1.63f4100000000p+0"
+                },
+                "step": 6
+              },
+              {
+                "off": {
+                  "dec": 1.2967708110809326,
+                  "finite": true,
+                  "hex": "0x1.4bf92c0000000p+0"
+                },
+                "on": {
+                  "dec": 1.2969164848327637,
+                  "finite": true,
+                  "hex": "0x1.4c02b80000000p+0"
+                },
+                "step": 7
+              },
+              {
+                "off": {
+                  "dec": 1.5039161443710327,
+                  "finite": true,
+                  "hex": "0x1.8100a60000000p+0"
+                },
+                "on": {
+                  "dec": 1.504565954208374,
+                  "finite": true,
+                  "hex": "0x1.812b3c0000000p+0"
+                },
+                "step": 8
+              },
+              {
+                "off": {
+                  "dec": 1.3752250671386719,
+                  "finite": true,
+                  "hex": "0x1.600ec00000000p+0"
+                },
+                "on": {
+                  "dec": 1.3751609325408936,
+                  "finite": true,
+                  "hex": "0x1.600a8c0000000p+0"
+                },
+                "step": 9
+              },
+              {
+                "off": {
+                  "dec": 1.420824646949768,
+                  "finite": true,
+                  "hex": "0x1.6bbb2a0000000p+0"
+                },
+                "on": {
+                  "dec": 1.4216850996017456,
+                  "finite": true,
+                  "hex": "0x1.6bf38e0000000p+0"
+                },
+                "step": 10
+              },
+              {
+                "off": {
+                  "dec": 1.5247191190719604,
+                  "finite": true,
+                  "hex": "0x1.8653fe0000000p+0"
+                },
+                "on": {
+                  "dec": 1.5240068435668945,
+                  "finite": true,
+                  "hex": "0x1.8625500000000p+0"
+                },
+                "step": 11
+              },
+              {
+                "off": {
+                  "dec": 1.3870505094528198,
+                  "finite": true,
+                  "hex": "0x1.6315be0000000p+0"
+                },
+                "on": {
+                  "dec": 1.387374758720398,
+                  "finite": true,
+                  "hex": "0x1.632afe0000000p+0"
+                },
+                "step": 12
+              },
+              {
+                "off": {
+                  "dec": 1.193373441696167,
+                  "finite": true,
+                  "hex": "0x1.3180ec0000000p+0"
+                },
+                "on": {
+                  "dec": 1.1937569379806519,
+                  "finite": true,
+                  "hex": "0x1.319a0e0000000p+0"
+                },
+                "step": 13
+              },
+              {
+                "off": {
+                  "dec": 1.3923439979553223,
+                  "finite": true,
+                  "hex": "0x1.6470a80000000p+0"
+                },
+                "on": {
+                  "dec": 1.3944779634475708,
+                  "finite": true,
+                  "hex": "0x1.64fc820000000p+0"
+                },
+                "step": 14
+              },
+              {
+                "off": {
+                  "dec": 1.3131052255630493,
+                  "finite": true,
+                  "hex": "0x1.5027aa0000000p+0"
+                },
+                "on": {
+                  "dec": 1.313027262687683,
+                  "finite": true,
+                  "hex": "0x1.50228e0000000p+0"
+                },
+                "step": 15
+              },
+              {
+                "off": {
+                  "dec": 1.2977243661880493,
+                  "finite": true,
+                  "hex": "0x1.4c37aa0000000p+0"
+                },
+                "on": {
+                  "dec": 1.2982063293457031,
+                  "finite": true,
+                  "hex": "0x1.4c57400000000p+0"
+                },
+                "step": 16
+              },
+              {
+                "off": {
+                  "dec": 1.2600421905517578,
+                  "finite": true,
+                  "hex": "0x1.4292200000000p+0"
+                },
+                "on": {
+                  "dec": 1.2593472003936768,
+                  "finite": true,
+                  "hex": "0x1.4264940000000p+0"
+                },
+                "step": 17
+              },
+              {
+                "off": {
+                  "dec": 1.1047266721725464,
+                  "finite": true,
+                  "hex": "0x1.1acf5e0000000p+0"
+                },
+                "on": {
+                  "dec": 1.1040171384811401,
+                  "finite": true,
+                  "hex": "0x1.1aa0de0000000p+0"
+                },
+                "step": 18
+              },
+              {
+                "off": {
+                  "dec": 1.338753342628479,
+                  "finite": true,
+                  "hex": "0x1.56b88a0000000p+0"
+                },
+                "on": {
+                  "dec": 1.337731957435608,
+                  "finite": true,
+                  "hex": "0x1.56759a0000000p+0"
+                },
+                "step": 19
+              }
+            ],
+            "mismatch_steps": 20
+          },
+          "llm_grad_norm": {
+            "differences": [
+              {
+                "off": {
+                  "dec": 1.491883397102356,
+                  "hex": "0x1.7dec120000000p+0"
+                },
+                "on": {
+                  "dec": 1.4916257858276367,
+                  "hex": "0x1.7ddb300000000p+0"
+                },
+                "step": 0
+              },
+              {
+                "off": {
+                  "dec": 1.4388982057571411,
+                  "finite": true,
+                  "hex": "0x1.705ba20000000p+0"
+                },
+                "on": {
+                  "dec": 1.4397422075271606,
+                  "finite": true,
+                  "hex": "0x1.7092f20000000p+0"
+                },
+                "step": 1
+              },
+              {
+                "off": {
+                  "dec": 1.353127121925354,
+                  "finite": true,
+                  "hex": "0x1.5a668a0000000p+0"
+                },
+                "on": {
+                  "dec": 1.352070689201355,
+                  "finite": true,
+                  "hex": "0x1.5a214e0000000p+0"
+                },
+                "step": 2
+              },
+              {
+                "off": {
+                  "dec": 1.3885451555252075,
+                  "finite": true,
+                  "hex": "0x1.6377b20000000p+0"
+                },
+                "on": {
+                  "dec": 1.3887205123901367,
+                  "finite": true,
+                  "hex": "0x1.6383300000000p+0"
+                },
+                "step": 3
+              },
+              {
+                "off": {
+                  "dec": 1.4161072969436646,
+                  "finite": true,
+                  "hex": "0x1.6a86020000000p+0"
+                },
+                "on": {
+                  "dec": 1.4158265590667725,
+                  "finite": true,
+                  "hex": "0x1.6a739c0000000p+0"
+                },
+                "step": 4
+              },
+              {
+                "off": {
+                  "dec": 1.3868447542190552,
+                  "finite": true,
+                  "hex": "0x1.6308420000000p+0"
+                },
+                "on": {
+                  "dec": 1.386775255203247,
+                  "finite": true,
+                  "hex": "0x1.6303b40000000p+0"
+                },
+                "step": 5
+              },
+              {
+                "off": {
+                  "dec": 1.3789441585540771,
+                  "finite": true,
+                  "hex": "0x1.61027c0000000p+0"
+                },
+                "on": {
+                  "dec": 1.3777629137039185,
+                  "finite": true,
+                  "hex": "0x1.60b5120000000p+0"
+                },
+                "step": 6
+              },
+              {
+                "off": {
+                  "dec": 1.28457510471344,
+                  "finite": true,
+                  "hex": "0x1.48d9ea0000000p+0"
+                },
+                "on": {
+                  "dec": 1.2847213745117188,
+                  "finite": true,
+                  "hex": "0x1.48e3800000000p+0"
+                },
+                "step": 7
+              },
+              {
+                "off": {
+                  "dec": 1.4901280403137207,
+                  "finite": true,
+                  "hex": "0x1.7d79080000000p+0"
+                },
+                "on": {
+                  "dec": 1.490775465965271,
+                  "finite": true,
+                  "hex": "0x1.7da3760000000p+0"
+                },
+                "step": 8
+              },
+              {
+                "off": {
+                  "dec": 1.3636358976364136,
+                  "finite": true,
+                  "hex": "0x1.5d173e0000000p+0"
+                },
+                "on": {
+                  "dec": 1.3635673522949219,
+                  "finite": true,
+                  "hex": "0x1.5d12c00000000p+0"
+                },
+                "step": 9
+              },
+              {
+                "off": {
+                  "dec": 1.4085352420806885,
+                  "finite": true,
+                  "hex": "0x1.6895c40000000p+0"
+                },
+                "on": {
+                  "dec": 1.4093985557556152,
+                  "finite": true,
+                  "hex": "0x1.68ce580000000p+0"
+                },
+                "step": 10
+              },
+              {
+                "off": {
+                  "dec": 1.5120906829833984,
+                  "finite": true,
+                  "hex": "0x1.8318600000000p+0"
+                },
+                "on": {
+                  "dec": 1.5113821029663086,
+                  "finite": true,
+                  "hex": "0x1.82e9f00000000p+0"
+                },
+                "step": 11
+              },
+              {
+                "off": {
+                  "dec": 1.375075101852417,
+                  "finite": true,
+                  "hex": "0x1.6004ec0000000p+0"
+                },
+                "on": {
+                  "dec": 1.3754030466079712,
+                  "finite": true,
+                  "hex": "0x1.601a6a0000000p+0"
+                },
+                "step": 12
+              },
+              {
+                "off": {
+                  "dec": 1.182615876197815,
+                  "finite": true,
+                  "hex": "0x1.2ebfea0000000p+0"
+                },
+                "on": {
+                  "dec": 1.1830006837844849,
+                  "finite": true,
+                  "hex": "0x1.2ed9220000000p+0"
+                },
+                "step": 13
+              },
+              {
+                "off": {
+                  "dec": 1.3789856433868408,
+                  "finite": true,
+                  "hex": "0x1.6105340000000p+0"
+                },
+                "on": {
+                  "dec": 1.3811177015304565,
+                  "finite": true,
+                  "hex": "0x1.6190ee0000000p+0"
+                },
+                "step": 14
+              },
+              {
+                "off": {
+                  "dec": 1.3006255626678467,
+                  "finite": true,
+                  "hex": "0x1.4cf5cc0000000p+0"
+                },
+                "on": {
+                  "dec": 1.3005530834197998,
+                  "finite": true,
+                  "hex": "0x1.4cf10c0000000p+0"
+                },
+                "step": 15
+              },
+              {
+                "off": {
+                  "dec": 1.2838199138641357,
+                  "finite": true,
+                  "hex": "0x1.48a86c0000000p+0"
+                },
+                "on": {
+                  "dec": 1.284287929534912,
+                  "finite": true,
+                  "hex": "0x1.48c7180000000p+0"
+                },
+                "step": 16
+              },
+              {
+                "off": {
+                  "dec": 1.248799204826355,
+                  "finite": true,
+                  "hex": "0x1.3fb14e0000000p+0"
+                },
+                "on": {
+                  "dec": 1.248112440109253,
+                  "finite": true,
+                  "hex": "0x1.3f844c0000000p+0"
+                },
+                "step": 17
+              },
+              {
+                "off": {
+                  "dec": 1.0902293920516968,
+                  "finite": true,
+                  "hex": "0x1.1719460000000p+0"
+                },
+                "on": {
+                  "dec": 1.0895105600357056,
+                  "finite": true,
+                  "hex": "0x1.16ea2a0000000p+0"
+                },
+                "step": 18
+              },
+              {
+                "off": {
+                  "dec": 1.325815200805664,
+                  "finite": true,
+                  "hex": "0x1.5368a00000000p+0"
+                },
+                "on": {
+                  "dec": 1.3248004913330078,
+                  "finite": true,
+                  "hex": "0x1.5326200000000p+0"
+                },
+                "step": 19
+              }
+            ],
+            "mismatch_steps": 20
+          },
+          "loss": {
+            "differences": [
+              {
+                "off": {
+                  "dec": 0.09993819147348404,
+                  "hex": "0x1.9958ca0000000p-4"
+                },
+                "on": {
+                  "dec": 0.09992760419845581,
+                  "hex": "0x1.994db00000000p-4"
+                },
+                "step": 0
+              },
+              {
+                "off": {
+                  "dec": 0.08958879858255386,
+                  "finite": true,
+                  "hex": "0x1.6ef4aa0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08961299806833267,
+                  "finite": true,
+                  "hex": "0x1.6f0e0a0000000p-4"
+                },
+                "step": 1
+              },
+              {
+                "off": {
+                  "dec": 0.07677455991506577,
+                  "finite": true,
+                  "hex": "0x1.3a77f60000000p-4"
+                },
+                "on": {
+                  "dec": 0.07680003345012665,
+                  "finite": true,
+                  "hex": "0x1.3a92ac0000000p-4"
+                },
+                "step": 2
+              },
+              {
+                "off": {
+                  "dec": 0.09266512840986252,
+                  "finite": true,
+                  "hex": "0x1.7b8e6e0000000p-4"
+                },
+                "on": {
+                  "dec": 0.09267377108335495,
+                  "finite": true,
+                  "hex": "0x1.7b977e0000000p-4"
+                },
+                "step": 3
+              },
+              {
+                "off": {
+                  "dec": 0.08726625889539719,
+                  "finite": true,
+                  "hex": "0x1.65714e0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08726129680871964,
+                  "finite": true,
+                  "hex": "0x1.656c1a0000000p-4"
+                },
+                "step": 4
+              },
+              {
+                "off": {
+                  "dec": 0.08971355110406876,
+                  "finite": true,
+                  "hex": "0x1.6f777a0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08970614522695541,
+                  "finite": true,
+                  "hex": "0x1.6f6fb60000000p-4"
+                },
+                "step": 5
+              },
+              {
+                "off": {
+                  "dec": 0.0871422216296196,
+                  "finite": true,
+                  "hex": "0x1.64ef3e0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08713676780462265,
+                  "finite": true,
+                  "hex": "0x1.64e9860000000p-4"
+                },
+                "step": 6
+              },
+              {
+                "off": {
+                  "dec": 0.08434883505105972,
+                  "finite": true,
+                  "hex": "0x1.597e2a0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08435509353876114,
+                  "finite": true,
+                  "hex": "0x1.5984ba0000000p-4"
+                },
+                "step": 7
+              },
+              {
+                "off": {
+                  "dec": 0.09164970368146896,
+                  "finite": true,
+                  "hex": "0x1.7765ae0000000p-4"
+                },
+                "on": {
+                  "dec": 0.09163370728492737,
+                  "finite": true,
+                  "hex": "0x1.7754e80000000p-4"
+                },
+                "step": 8
+              },
+              {
+                "off": {
+                  "dec": 0.09009705483913422,
+                  "finite": true,
+                  "hex": "0x1.71099c0000000p-4"
+                },
+                "on": {
+                  "dec": 0.09012099355459213,
+                  "finite": true,
+                  "hex": "0x1.7122b60000000p-4"
+                },
+                "step": 9
+              },
+              {
+                "off": {
+                  "dec": 0.09535358846187592,
+                  "finite": true,
+                  "hex": "0x1.86917c0000000p-4"
+                },
+                "on": {
+                  "dec": 0.09535770863294601,
+                  "finite": true,
+                  "hex": "0x1.8695ce0000000p-4"
+                },
+                "step": 10
+              },
+              {
+                "off": {
+                  "dec": 0.10557346791028976,
+                  "finite": true,
+                  "hex": "0x1.b06dce0000000p-4"
+                },
+                "on": {
+                  "dec": 0.1055450439453125,
+                  "finite": true,
+                  "hex": "0x1.b050000000000p-4"
+                },
+                "step": 11
+              },
+              {
+                "off": {
+                  "dec": 0.09813930094242096,
+                  "finite": true,
+                  "hex": "0x1.91fa840000000p-4"
+                },
+                "on": {
+                  "dec": 0.09811320900917053,
+                  "finite": true,
+                  "hex": "0x1.91df280000000p-4"
+                },
+                "step": 12
+              },
+              {
+                "off": {
+                  "dec": 0.08869711309671402,
+                  "finite": true,
+                  "hex": "0x1.6b4daa0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08869267255067825,
+                  "finite": true,
+                  "hex": "0x1.6b49020000000p-4"
+                },
+                "step": 13
+              },
+              {
+                "off": {
+                  "dec": 0.09280236065387726,
+                  "finite": true,
+                  "hex": "0x1.7c1e540000000p-4"
+                },
+                "on": {
+                  "dec": 0.09279859066009521,
+                  "finite": true,
+                  "hex": "0x1.7c1a600000000p-4"
+                },
+                "step": 14
+              },
+              {
+                "off": {
+                  "dec": 0.0943792462348938,
+                  "finite": true,
+                  "hex": "0x1.8293d00000000p-4"
+                },
+                "on": {
+                  "dec": 0.09438866376876831,
+                  "finite": true,
+                  "hex": "0x1.829db00000000p-4"
+                },
+                "step": 15
+              },
+              {
+                "off": {
+                  "dec": 0.08597748726606369,
+                  "finite": true,
+                  "hex": "0x1.6029ee0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08598559349775314,
+                  "finite": true,
+                  "hex": "0x1.60326e0000000p-4"
+                },
+                "step": 16
+              },
+              {
+                "off": {
+                  "dec": 0.08585568517446518,
+                  "finite": true,
+                  "hex": "0x1.5faa360000000p-4"
+                },
+                "on": {
+                  "dec": 0.08584397286176682,
+                  "finite": true,
+                  "hex": "0x1.5f9dee0000000p-4"
+                },
+                "step": 17
+              },
+              {
+                "off": {
+                  "dec": 0.08134790509939194,
+                  "finite": true,
+                  "hex": "0x1.4d33760000000p-4"
+                },
+                "on": {
+                  "dec": 0.08132010698318481,
+                  "finite": true,
+                  "hex": "0x1.4d16500000000p-4"
+                },
+                "step": 18
+              },
+              {
+                "off": {
+                  "dec": 0.08990602195262909,
+                  "finite": true,
+                  "hex": "0x1.70414c0000000p-4"
+                },
+                "on": {
+                  "dec": 0.08993294090032578,
+                  "finite": true,
+                  "hex": "0x1.705d860000000p-4"
+                },
+                "step": 19
+              }
+            ],
+            "mismatch_steps": 20
+          },
+          "mem_enc_norm": {
+            "differences": [
+              {
+                "off": {
+                  "dec": 0.1297648549079895,
+                  "hex": "0x1.09c2280000000p-3"
+                },
+                "on": {
+                  "dec": 0.12973782420158386,
+                  "hex": "0x1.09b3fc0000000p-3"
+                },
+                "step": 0
+              },
+              {
+                "off": {
+                  "dec": 0.11996805667877197,
+                  "finite": true,
+                  "hex": "0x1.eb63a00000000p-4"
+                },
+                "on": {
+                  "dec": 0.12004375457763672,
+                  "finite": true,
+                  "hex": "0x1.ebb3000000000p-4"
+                },
+                "step": 1
+              },
+              {
+                "off": {
+                  "dec": 0.1157447025179863,
+                  "finite": true,
+                  "hex": "0x1.da171e0000000p-4"
+                },
+                "on": {
+                  "dec": 0.11566144227981567,
+                  "finite": true,
+                  "hex": "0x1.d9bfd00000000p-4"
+                },
+                "step": 2
+              },
+              {
+                "off": {
+                  "dec": 0.12062054872512817,
+                  "finite": true,
+                  "hex": "0x1.ee0fd00000000p-4"
+                },
+                "on": {
+                  "dec": 0.12068037688732147,
+                  "finite": true,
+                  "hex": "0x1.ee4e8c0000000p-4"
+                },
+                "step": 3
+              },
+              {
+                "off": {
+                  "dec": 0.11991698294878006,
+                  "finite": true,
+                  "hex": "0x1.eb2e120000000p-4"
+                },
+                "on": {
+                  "dec": 0.11991080641746521,
+                  "finite": true,
+                  "hex": "0x1.eb27980000000p-4"
+                },
+                "step": 4
+              },
+              {
+                "off": {
+                  "dec": 0.11930778622627258,
+                  "finite": true,
+                  "hex": "0x1.e8af480000000p-4"
+                },
+                "on": {
+                  "dec": 0.11929257214069366,
+                  "finite": true,
+                  "hex": "0x1.e89f540000000p-4"
+                },
+                "step": 5
+              },
+              {
+                "off": {
+                  "dec": 0.11924641579389572,
+                  "finite": true,
+                  "hex": "0x1.e86eee0000000p-4"
+                },
+                "on": {
+                  "dec": 0.11912250518798828,
+                  "finite": true,
+                  "hex": "0x1.e7ed000000000p-4"
+                },
+                "step": 6
+              },
+              {
+                "off": {
+                  "dec": 0.11126673221588135,
+                  "finite": true,
+                  "hex": "0x1.c7bfa00000000p-4"
+                },
+                "on": {
+                  "dec": 0.11128204315900803,
+                  "finite": true,
+                  "hex": "0x1.c7cfae0000000p-4"
+                },
+                "step": 7
+              },
+              {
+                "off": {
+                  "dec": 0.12441696971654892,
+                  "finite": true,
+                  "hex": "0x1.fd9ca60000000p-4"
+                },
+                "on": {
+                  "dec": 0.12446756660938263,
+                  "finite": true,
+                  "hex": "0x1.fdd1b40000000p-4"
+                },
+                "step": 8
+              },
+              {
+                "off": {
+                  "dec": 0.11670414358377457,
+                  "finite": true,
+                  "hex": "0x1.de052a0000000p-4"
+                },
+                "on": {
+                  "dec": 0.11672452092170715,
+                  "finite": true,
+                  "hex": "0x1.de1a880000000p-4"
+                },
+                "step": 9
+              },
+              {
+                "off": {
+                  "dec": 0.11886830627918243,
+                  "finite": true,
+                  "hex": "0x1.e6e2740000000p-4"
+                },
+                "on": {
+                  "dec": 0.118951715528965,
+                  "finite": true,
+                  "hex": "0x1.e739ea0000000p-4"
+                },
+                "step": 10
+              },
+              {
+                "off": {
+                  "dec": 0.12889187037944794,
+                  "finite": true,
+                  "hex": "0x1.07f8760000000p-3"
+                },
+                "on": {
+                  "dec": 0.12884648144245148,
+                  "finite": true,
+                  "hex": "0x1.07e0aa0000000p-3"
+                },
+                "step": 11
+              },
+              {
+                "off": {
+                  "dec": 0.11451542377471924,
+                  "finite": true,
+                  "hex": "0x1.d50e200000000p-4"
+                },
+                "on": {
+                  "dec": 0.11452804505825043,
+                  "finite": true,
+                  "hex": "0x1.d51b5c0000000p-4"
+                },
+                "step": 12
+              },
+              {
+                "off": {
+                  "dec": 0.10138094425201416,
+                  "finite": true,
+                  "hex": "0x1.9f41a00000000p-4"
+                },
+                "on": {
+                  "dec": 0.10138489305973053,
+                  "finite": true,
+                  "hex": "0x1.9f45c40000000p-4"
+                },
+                "step": 13
+              },
+              {
+                "off": {
+                  "dec": 0.12164076417684555,
+                  "finite": true,
+                  "hex": "0x1.f23d960000000p-4"
+                },
+                "on": {
+                  "dec": 0.12184008955955505,
+                  "finite": true,
+                  "hex": "0x1.f30e980000000p-4"
+                },
+                "step": 14
+              },
+              {
+                "off": {
+                  "dec": 0.11103380471467972,
+                  "finite": true,
+                  "hex": "0x1.c6cb620000000p-4"
+                },
+                "on": {
+                  "dec": 0.11100158840417862,
+                  "finite": true,
+                  "hex": "0x1.c6a99a0000000p-4"
+                },
+                "step": 15
+              },
+              {
+                "off": {
+                  "dec": 0.11310063302516937,
+                  "finite": true,
+                  "hex": "0x1.cf429c0000000p-4"
+                },
+                "on": {
+                  "dec": 0.11312686651945114,
+                  "finite": true,
+                  "hex": "0x1.cf5e1e0000000p-4"
+                },
+                "step": 16
+              },
+              {
+                "off": {
+                  "dec": 0.10729982703924179,
+                  "finite": true,
+                  "hex": "0x1.b780060000000p-4"
+                },
+                "on": {
+                  "dec": 0.10722710192203522,
+                  "finite": true,
+                  "hex": "0x1.b733c40000000p-4"
+                },
+                "step": 17
+              },
+              {
+                "off": {
+                  "dec": 0.09332819283008575,
+                  "finite": true,
+                  "hex": "0x1.7e45b40000000p-4"
+                },
+                "on": {
+                  "dec": 0.09324822574853897,
+                  "finite": true,
+                  "hex": "0x1.7df1da0000000p-4"
+                },
+                "step": 18
+              },
+              {
+                "off": {
+                  "dec": 0.11242867261171341,
+                  "finite": true,
+                  "hex": "0x1.cc82020000000p-4"
+                },
+                "on": {
+                  "dec": 0.11233982443809509,
+                  "finite": true,
+                  "hex": "0x1.cc24d80000000p-4"
+                },
+                "step": 19
+              }
+            ],
+            "mismatch_steps": 20
+          },
+          "param_norm": {
+            "differences": [],
+            "mismatch_steps": 0
+          }
+        },
+        "start_utc": "2026-09-27T00:33:33Z",
+        "wrapper_exit_code": 1
+      }
+    },
+    "run_verifications": {
+      "off": {
+        "bytes": 29666,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-both-off-verification-independent-20260927.json",
+        "sha256": "1a17d5e21c5960f912af96adf97abf79aa540981a13deb17faac66a821ffea61"
+      },
+      "on": {
+        "bytes": 35391,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-both-on-verification-independent-20260927.json",
+        "sha256": "41c6f5896de5247b5690ba2bc338e8c26d30de3658a181b4050f28b84851cb55"
+      }
+    },
+    "schema": 1,
+    "scope": "独立只读复核两份正式失败judge的真实非零链，并汇总20步原摘要；未执行judge/恢复/训练或改变PASS规则",
+    "status": "FAIL",
+    "tag": "20260926T231534Z"
+  }
+}

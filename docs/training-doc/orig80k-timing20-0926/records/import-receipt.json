@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "utc": "2026-09-27T00:43:36.518108+00:00",
+  "archive_integrity": "PASS",
+  "timing_eq_verdict": "FAIL",
+  "whitelist_sha256": "8b2329013812639274fb059e9e4200a2d8300aeca01d2d90aaba668dcc5c83b2",
+  "items": 81,
+  "bytes": 1665572,
+  "destination_bytes_equal_source": true,
+  "extra_records": [
+    {
+      "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-reuse-preflight-20260927.json",
+      "destination": "docs/training-doc/orig80k-timing20-0926/records/diagnostics/timing20-reuse-preflight-20260927.json",
+      "bytes": 124382,
+      "sha256": "0cf8c97a31c31419369368a4cfb61ac95c928d681c578da1a9c2e573ed2f6832"
+    },
+    {
+      "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-reuse-preflight-process-20260927.json",
+      "destination": "docs/training-doc/orig80k-timing20-0926/records/diagnostics/timing20-reuse-preflight-process-20260927.json",
+      "bytes": 1301,
+      "sha256": "69276d03b1004c45ba941e7154aeaeb70c97f4ccf7408a26965a2cbe46124943"
+    },
+    {
+      "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-reuse-rules-20260927-validation.json",
+      "destination": "docs/training-doc/orig80k-timing20-0926/records/diagnostics/timing20-reuse-rules-20260927-validation.json",
+      "bytes": 3010,
+      "sha256": "a973f6a2e19de8ac29bd25941086187219be89afe4993cfeaf4857c7a2c9c4a7"
+    },
+    {
+      "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-reuse-rules-20260927-delta.json",
+      "destination": "docs/training-doc/orig80k-timing20-0926/records/diagnostics/timing20-reuse-rules-20260927-delta.json",
+      "bytes": 1899,
+      "sha256": "1738e38ab127969d05d865f85b64ff69d9aecd02ad522f58b33ec990373b5117"
+    },
+    {
+      "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-step0-early-mismatch-independent-20260927.json",
+      "destination": "docs/training-doc/orig80k-timing20-0926/records/diagnostics/timing20-step0-early-mismatch-independent-20260927.json",
+      "bytes": 13064,
+      "sha256": "ed38c6e5ec6a167918a81e42c9416f58cc4257d77e08c3df1fbc35dd9fdd5831"
+    },
+    {
+      "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-step0-mechanism-note-20260927.md",
+      "destination": "docs/training-doc/orig80k-timing20-0926/records/diagnostics/timing20-step0-mechanism-note-20260927.md",
+      "bytes": 5745,
+      "sha256": "4d0af587c6aec2a23737778575c87c329c7084ece696e4be2521865799b3d87b"
+    },
+    {
+      "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-dispatch-manifest-20260927.json",
+      "destination": "docs/training-doc/orig80k-timing20-0926/records/diagnostics/timing20-dispatch-manifest-20260927.json",
+      "bytes": 3618,
+      "sha256": "72601e86d2eacf3ce5f1f75a313e865149accc2a5462284aacc6619f9e60853f"
+    }
+  ],
+  "original_files_modified": false,
+  "scope": "只导入已完成实测与失败证据，不放行perf，不复制权重或独立脚本"
+}

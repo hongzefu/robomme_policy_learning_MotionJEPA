@@ -1,0 +1,18 @@
+WRAPPER_SESSION=orig80k-timing20-full-judge-20260926T231534Z
+WRAPPER_PID=1202763
+WRAPPER_BODY_PID=1202776
+WRAPPER_COMMAND_FILE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.command
+WRAPPER_COMMAND_SHA256_EXPECTED=69ae38b006811d15fc6f847f1a7b48a2d68a81b3ce57cbdf570003a1b3c14ba3
+WRAPPER_TRAIN_HEAD=b0efbde61e38411fb1b9114eec8485d36a4ee9a0
+WRAPPER_START_UTC=2026-09-27T00:33:33Z
+WRAPPER_COMMAND_SHA256_ACTUAL=69ae38b006811d15fc6f847f1a7b48a2d68a81b3ce57cbdf570003a1b3c14ba3
+JUDGE_COMMAND=env -u JAX_PLATFORM_NAME -u PYTHONPATH -u PYTHONHOME CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_orig80k_timing_equiv.py judge --off-records /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z --on-records /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z --off-completion /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/completion.json --on-completion /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/completion.json --off-wrapper-log /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-off-0926-20260926T231534Z.wrapper.log --on-wrapper-log /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-on-0926-20260926T231534Z.wrapper.log --head b0efbde61e38411fb1b9114eec8485d36a4ee9a0 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-results-20260926T231534Z/full.json
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+TIMING_EQ_JUDGE=FAIL reason=20步五标量不是逐位一致
+JUDGE_EXIT_CODE=1
+WRAPPER_COMMAND_EXIT=1
+WRAPPER_TEE_EXIT=0
+WRAPPER_END_UTC=2026-09-27T00:33:34Z
+WRAPPER_FOOTER_PRINTF_EXIT=0
+WRAPPER_FOOTER_TEE_EXIT=0
+WRAPPER_EXIT_CODE=1
