@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "status": "复制清单准备完毕，尚未执行复制",
+  "copy": [
+    {
+      "source": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-schema2-candidate-20260927/validation.json",
+        "bytes": 17175,
+        "sha256": "4253263cdc24796e766fef0475dd558f66b8ebec2ca036cec97fb38e5b677e35"
+      },
+      "target": "docs/training-doc/orig80k-perf300-0927/records/preparation/validation.json",
+      "operation": "字节相同复制；不重写原引用/数值"
+    },
+    {
+      "source": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-schema2-candidate-20260927/change-summary.json",
+        "bytes": 3622,
+        "sha256": "cfa0c8c41da2b9aaa07eec1f9c3cfe41cf8348c15f4c84df102a5b8f66882d43"
+      },
+      "target": "docs/training-doc/orig80k-perf300-0927/records/preparation/change-summary.json",
+      "operation": "字节相同复制；不重写原引用/数值"
+    },
+    {
+      "source": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-schema2-candidate-20260927/preflight-contract.json",
+        "bytes": 5711,
+        "sha256": "c15ac16d823684c56423877d044c81a92f0bdfe3364ceffc6efae171b2619c58"
+      },
+      "target": "docs/training-doc/orig80k-perf300-0927/records/preparation/preflight-contract.json",
+      "operation": "字节相同复制；不重写原引用/数值"
+    },
+    {
+      "source": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-schema2-candidate-20260927/preflight-small-tests.json",
+        "bytes": 1518,
+        "sha256": "26fd063cd94fa340ac46b0a4ecca387853d0d7a727d3d6270ff62f6f811d8920"
+      },
+      "target": "docs/training-doc/orig80k-perf300-0927/records/preparation/preflight-small-tests.json",
+      "operation": "字节相同复制；不重写原引用/数值"
+    }
+  ],
+  "source_tools_not_copied": [
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-schema2-candidate-20260927/check_candidate.py",
+      "bytes": 8754,
+      "sha256": "62210198f5a1460aa21db5ae745aac0faad298335d58210b4668a855d44d3a55"
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-schema2-candidate-20260927/check_normal_perf_preflight.py",
+      "bytes": 23989,
+      "sha256": "d3f39f3612c4db1ef1abfbffd4973338096776b7413497aa1cfa745d049e4f43"
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-schema2-candidate-20260927/test_normal_perf_preflight.py",
+      "bytes": 3548,
+      "sha256": "3130ec1f460274fa867021195270ee5d8930b1dbfb5c6385b15ed51d40d38ac9"
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/check_timing20_reuse_preflight_20260927.py",
+      "bytes": 23765,
+      "sha256": "5aba6835f54937f04f014bcbd126f3c8c0f6739c03927e53350fdeadd75ef7b8"
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/verify.py",
+      "bytes": 18635,
+      "sha256": "b0153c1b53a5e4de2141ff7d47b22b55fb429dc20b3efc69c2a88ea6316df6d7"
+    },
+    {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+      "bytes": 20398,
+      "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+    }
+  ],
+  "this_manifest_target": "docs/training-doc/orig80k-perf300-0927/records/preparation/records-source-manifest.json",
+  "future_runtime_records": {
+    "actual_perf_preflight_stdout": null,
+    "stderr": null,
+    "host_process_record": null,
+    "perf_beta_head": null,
+    "det_archive_head": null,
+    "det_six_reports_and_controller": "由root按最终归档和无损v2引用填入；本清单不复制det原记录到perf档案"
+  },
+  "boundary": "MD补丁单独；只复制已完成准备验证JSON，不复制.py/.sh/.yaml/.command、权重或venv；原封版source均不改"
+}
+

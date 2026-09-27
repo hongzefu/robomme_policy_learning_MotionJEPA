@@ -1,0 +1,64 @@
+{
+  "status": "PASS",
+  "tests": [
+    {
+      "name": "docs_and_exact_root_plan_allowed",
+      "status": "PASS"
+    },
+    {
+      "name": "training_source_rejected",
+      "status": "PASS",
+      "expected_rejection": true
+    },
+    {
+      "name": "root_rules_rejected",
+      "status": "PASS",
+      "expected_rejection": true
+    },
+    {
+      "name": "docs_script_copy_rejected",
+      "status": "PASS",
+      "expected_rejection": true
+    },
+    {
+      "name": "arbitrary_root_markdown_rejected",
+      "status": "PASS",
+      "expected_rejection": true
+    },
+    {
+      "name": "same_det_head_cannot_be_future_beta",
+      "status": "PASS",
+      "expected_rejection": true
+    },
+    {
+      "name": "missing_six_reports_rejected_before_reading",
+      "status": "PASS",
+      "expected_rejection": true
+    },
+    {
+      "name": "bad_checker_sha_rejected_before_reading",
+      "status": "PASS",
+      "expected_rejection": true
+    },
+    {
+      "name": "unknown_checker_sha_rejected_before_reading",
+      "status": "PASS",
+      "expected_rejection": true
+    },
+    {
+      "name": "dynamic_controller_rejected",
+      "status": "PASS",
+      "expected_rejection": true
+    },
+    {
+      "name": "cpu_env_unsets_selectors_but_preserves_inherited_x64",
+      "status": "PASS"
+    },
+    {
+      "name": "embedded_cpu_parse_syntax_and_no_old_side_rejudge",
+      "status": "PASS"
+    }
+  ],
+  "scope": "纯函数/环境字典/AST；未执行main、CPU配置、helper来源扫描、tmux或GPU"
+}
+

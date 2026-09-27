@@ -10,6 +10,9 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
+| [`orig80k-perf300-0927/`](orig80k-perf300-0927/README.md) | normal档两库4+4并行300步perf、真实恢复、采样与预算 | 起跑前档案；det双judge已PASS，V11.17Beta及实际perf结果待生成，预算余量未填 |
+| [`perf-orig80k-full-300-20260926T232339Z/`](perf-orig80k-full-300-20260926T232339Z/README.md) | full normal300，GPU0–3，online与末步299真保存 | 未运行；须同一新Beta及只读前置通过 |
+| [`perf-orig80k-count-300-20260926T232339Z/`](perf-orig80k-count-300-20260926T232339Z/README.md) | counting normal300，GPU4–7，与full并跑 | 未运行；恢复/report/measurement/预算待真实取证 |
 | [`orig80k-timing20-det-0927/`](orig80k-timing20-det-0927/README.md) | 用户批准的两库确定性档off/on真保存20步，4+4独立库链 | 确定性档两库各100标量/201叶零差异，四run真实恢复及六原生退出PASS；旧normal FAIL保留，perf/预算待完成 |
 | [`timing20-full-off-0926-20260927T012426Z/`](timing20-full-off-0926-20260927T012426Z/README.md) | full确定性off，GPU0–3 | state20/checkpoint19、61EMA真实恢复及原生/父退出0；本库deterministic100逐位PASS |
 | [`timing20-full-on-0926-20260927T012426Z/`](timing20-full-on-0926-20260927T012426Z/README.md) | full确定性on，依赖本库off恢复和原生退出通过 | state20/checkpoint19、61EMA真实恢复及原生/父退出0；本库deterministic100逐位PASS |

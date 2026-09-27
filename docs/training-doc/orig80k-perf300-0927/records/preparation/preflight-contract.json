@@ -1,0 +1,138 @@
+{
+  "schema": 1,
+  "status": "候选已验证纯函数，完整main未执行",
+  "implementation_head": "aec86db64e5178e63d9e7f77d3f5bc235db16390",
+  "det_head": "c71d5255597db2f26930b7b5684a1d5b2994cf75",
+  "archive_head": null,
+  "perf_head": null,
+  "perf_tag": "20260926T232339Z",
+  "prerequisite": "只有原c71两库正式judge均schema2/deterministic100 PASS，四run恢复与六独立退出、七phase宿主wait完整通过，且归档提交/独立perf Beta已形成才能实际执行此main",
+  "frozen_helper": {
+    "path": "../check_timing20_reuse_preflight_20260927.py",
+    "sha256": "5aba6835f54937f04f014bcbd126f3c8c0f6739c03927e53350fdeadd75ef7b8"
+  },
+  "frozen_det_checker": {
+    "path": "../timing20-det-independent-20260927/verify.py",
+    "sha256": "b0153c1b53a5e4de2141ff7d47b22b55fb429dc20b3efc69c2a88ea6316df6d7"
+  },
+  "cli": [
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python",
+    "-B",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-schema2-candidate-20260927/check_normal_perf_preflight.py",
+    "--archive-head",
+    "<真实V11.16归档40位SHA>",
+    "--head",
+    "<真实独立perf Beta40位SHA>",
+    "--det-checker-sha256",
+    "b0153c1b53a5e4de2141ff7d47b22b55fb429dc20b3efc69c2a88ea6316df6d7",
+    "--det-controller",
+    "<完成快照归档绝对路径>",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-completed-controller-snapshot-20260927.json",
+    "<期末快照固定64位SHA>"
+  ],
+  "repeated_arguments": [
+    [
+      "--det-report",
+      "full-off",
+      "<本角色归档报告绝对路径>",
+      "<同角色preflight/timing20-det-independent-20260927/原报告绝对路径>",
+      "<已核实同一原始/归档64位SHA>"
+    ],
+    [
+      "--det-report",
+      "full-on",
+      "<本角色归档报告绝对路径>",
+      "<同角色preflight/timing20-det-independent-20260927/原报告绝对路径>",
+      "<已核实同一原始/归档64位SHA>"
+    ],
+    [
+      "--det-report",
+      "full-judge",
+      "<本角色归档报告绝对路径>",
+      "<同角色preflight/timing20-det-independent-20260927/原报告绝对路径>",
+      "<已核实同一原始/归档64位SHA>"
+    ],
+    [
+      "--det-report",
+      "count-off",
+      "<本角色归档报告绝对路径>",
+      "<同角色preflight/timing20-det-independent-20260927/原报告绝对路径>",
+      "<已核实同一原始/归档64位SHA>"
+    ],
+    [
+      "--det-report",
+      "count-on",
+      "<本角色归档报告绝对路径>",
+      "<同角色preflight/timing20-det-independent-20260927/原报告绝对路径>",
+      "<已核实同一原始/归档64位SHA>"
+    ],
+    [
+      "--det-report",
+      "count-judge",
+      "<本角色归档报告绝对路径>",
+      "<同角色preflight/timing20-det-independent-20260927/原报告绝对路径>",
+      "<已核实同一原始/归档64位SHA>"
+    ]
+  ],
+  "reports": {
+    "envelope": {
+      "checker_actual_exit_code": 0,
+      "output": "schema1/status PASS/head c71/group/stage/timing/checker/result"
+    },
+    "source_archive_bytes": "必须逐字一致且归档字节同时被archive-head和perf-head锁定",
+    "six_roles": [
+      "full-off",
+      "full-on",
+      "count-off",
+      "count-on",
+      "full-judge",
+      "count-judge"
+    ],
+    "old_record_rejudge": false
+  },
+  "controller": {
+    "source": "不可变timing20-det-completed-controller-snapshot-20260927.json；禁止controller_state.json",
+    "deterministic20": {
+      "head": "c71d5255597db2f26930b7b5684a1d5b2994cf75",
+      "tag": "20260927T012426Z",
+      "phases": "必须恰为start/full-on/count-on/full-judge/count-judge/full-finish/count-finish；每项process原路径、process_ref(path/bytes/sha256)、host_actual_exit整数0",
+      "jobs": "必须恰为六角色；state='completed'，session/identity/pane/pane_pid与对应独立报告及原identity相同"
+    },
+    "nested_process": "七process.json各schema1/phase/head/argv/observer/actual_exit_code=0，实际command/stdout/stderr引用逐字核验",
+    "proof_boundary": "快照host_actual_exit取自宿主tools真实返回；process.json取自根Python wait bash，不能用后者代替前者"
+  },
+  "cpu_configuration": {
+    "mode": "perf",
+    "runs": 2,
+    "steps": 300,
+    "profile": {
+      "name": "normal",
+      "xla_flags": ""
+    },
+    "selectors": "实际子进程显式unset两个ORIG selector及XLA_FLAGS",
+    "x64": "不覆写JAX_ENABLE_X64；沿继承输入实际parse_in_process要求False",
+    "gpu_isolation": "CUDA_VISIBLE_DEVICES空、JAX_PLATFORMS=cpu；不读取大权重/不训练"
+  },
+  "future_actual_main": [
+    "docs/根计划跨commit白名单及七工具逐字绑定",
+    "113原始来源引用",
+    "两venv Python及208依赖指纹",
+    "固定100保护runtime/小资产/数据元记录",
+    "只读设备/资源快照与两run/8会话新输出冲突",
+    "CPU实际解析两normal300配置",
+    "起末HEAD/clean复核"
+  ],
+  "current_validation": {
+    "help": "实际返回0",
+    "pure_cases": 12,
+    "ast": "脚本与嵌入CPU正文通过",
+    "main_executed": false,
+    "helper_data_scan_executed": false,
+    "cpu_project_parse_executed": false,
+    "tmux_executed": false,
+    "gpu_queries_executed": false
+  },
+  "operator_recording": "实际执行由root将stdout/stderr独占留档并单独保存宿主真实返回；候选PASS不替代未来完整执行结果；脚本自身只写stdout",
+  "preserved": "原四MD及原validation/check_candidate/变化摘要不改；新增preflight独立文件与报告，不触碰tracked/旧helper/venv"
+}
+
