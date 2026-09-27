@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+  "utc": "2026-09-27T02:18:06.544478+00:00",
+  "status": "PASS",
+  "rows": [
+    {
+      "group": "full",
+      "reference_run": "timing20-full-on-0926-20260927T012426Z",
+      "disk_samples": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260927T012426Z/disk_samples.jsonl",
+        "bytes": 486477,
+        "sha256": "bc71b5618fa578a24a0c7ab158df8cb3cb0aa5cf300754757f15eeaa8c3b1462"
+      },
+      "completion": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260927T012426Z/completion.json",
+        "bytes": 20686,
+        "sha256": "8819a64e3e5fc1889b7aeb92cf510e8a710af63ce4974c88d52cc250456b3a41"
+      },
+      "final_checkpoint_tree_allocated_bytes": 11879964672,
+      "sampled_checkpoint_tree_max_bytes": 14932197376,
+      "records_logs_caches_allocated_bytes": 4390912,
+      "internal_links_lstat_only": [
+        "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/timing20-full-on-0926-20260927T012426Z/wandb/debug-internal.log",
+        "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/timing20-full-on-0926-20260927T012426Z/wandb/debug.log",
+        "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/timing20-full-on-0926-20260927T012426Z/wandb/latest-run",
+        "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/timing20-full-on-0926-20260927T012426Z/wandb/run-20260927_015427-bngtdcfw/logs/debug-core.log"
+      ],
+      "observed_estimate_bytes": 14936588288
+    },
+    {
+      "group": "count",
+      "reference_run": "timing20-count-on-0926-20260927T012426Z",
+      "disk_samples": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260927T012426Z/disk_samples.jsonl",
+        "bytes": 485842,
+        "sha256": "bdb69a4f96c41653eefe2178dfbfc3d9d07c23e30bf45cd4fc61ca4349abe27e"
+      },
+      "completion": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260927T012426Z/completion.json",
+        "bytes": 20698,
+        "sha256": "2b98446eb18b06d36f442048c56deea5e1fcc370e50b4492e5d90d995d773060"
+      },
+      "final_checkpoint_tree_allocated_bytes": 11880026112,
+      "sampled_checkpoint_tree_max_bytes": 12714913792,
+      "records_logs_caches_allocated_bytes": 4399104,
+      "internal_links_lstat_only": [
+        "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/timing20-count-on-0926-20260927T012426Z/wandb/debug-internal.log",
+        "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/timing20-count-on-0926-20260927T012426Z/wandb/debug.log",
+        "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/timing20-count-on-0926-20260927T012426Z/wandb/latest-run",
+        "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/timing20-count-on-0926-20260927T012426Z/wandb/run-20260927_015405-jv5qsxcg/logs/debug-core.log"
+      ],
+      "observed_estimate_bytes": 12719312896
+    }
+  ],
+  "scratch_available_bytes": 732187877376,
+  "observed_two_run_estimate_bytes": 27655901184,
+  "after_observed_estimate_bytes": 704531976192,
+  "existing_protected_reserve_bytes": 322122547200,
+  "scope": "复用已完成两on同形状真保存的当前分配量、采样峰值及日志缓存占用估计两perf新增需求；差额仍高于既定300GiB保护。采样最大值仅为下界，富余不称为连续真实峰值上界，此记录不是正式80k预算或三margin决定。"
+}

@@ -1,0 +1,3693 @@
+{
+  "combined_unique_allocated_bytes": 9662464,
+  "combined_unique_logical_bytes": 8760448,
+  "formal_report": {
+    "bytes": 9584,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json",
+    "sha256": "dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8"
+  },
+  "groups": {
+    "count": {
+      "eta_s_from_formal_report": 78132.49923014641,
+      "gpu_csv_bytes": 155799,
+      "gpu_csv_eta_projection_bytes": 23297184.444940776,
+      "gpu_csv_observed_bytes_per_s": 298.1753390009552,
+      "gpu_sample_observed_span_s": 522.5079998970032,
+      "measurement": {
+        "bytes": 51366,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/checkpoint_measurement.json",
+        "sha256": "162f4fbf3dcbd0ee22bb80c08126f6bbd2d796c980d6f402c7264d122a116a4c"
+      },
+      "metrics_rows": 3,
+      "observed_save_extra_lower_bound_bytes": 1371791360,
+      "projection_scope": "CSV速率×报告ETA仅为量级线索，不是硬上界、承诺或margin决定",
+      "run": "perf-orig80k-count-300-20260926T232339Z",
+      "single_checkpoint_allocated_bytes": 11879923712,
+      "single_checkpoint_logical_bytes": 11879871342,
+      "stat": {
+        "absent_roots": [],
+        "allocated_bytes": 4833280,
+        "categories": {
+          "cuda_cache": {
+            "allocated_bytes": 12288,
+            "logical_bytes": 5919,
+            "unique_inodes": 5
+          },
+          "driver_log": {
+            "allocated_bytes": 65536,
+            "logical_bytes": 62094,
+            "unique_inodes": 1
+          },
+          "jax_cache": {
+            "allocated_bytes": 2842624,
+            "logical_bytes": 2471108,
+            "unique_inodes": 97
+          },
+          "records": {
+            "allocated_bytes": 1441792,
+            "logical_bytes": 1390642,
+            "unique_inodes": 18
+          },
+          "stage_wrapper_logs": {
+            "allocated_bytes": 73728,
+            "logical_bytes": 69052,
+            "unique_inodes": 3
+          },
+          "wandb_cache": {
+            "allocated_bytes": 4096,
+            "logical_bytes": 2136,
+            "unique_inodes": 4
+          },
+          "wandb_config": {
+            "allocated_bytes": 0,
+            "logical_bytes": 10,
+            "unique_inodes": 1
+          },
+          "wandb_data": {
+            "allocated_bytes": 0,
+            "logical_bytes": 10,
+            "unique_inodes": 1
+          },
+          "wandb_logs": {
+            "allocated_bytes": 393216,
+            "logical_bytes": 381917,
+            "unique_inodes": 22
+          },
+          "xdg_data": {
+            "allocated_bytes": 0,
+            "logical_bytes": 10,
+            "unique_inodes": 1
+          }
+        },
+        "entries": [
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790476304214917705",
+            "device": 2304,
+            "inode": 18530442002,
+            "kind": "directory",
+            "mtime_ns": "1790476304214917705",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z",
+            "size": 4096
+          },
+          {
+            "blocks": 104,
+            "category": "records",
+            "ctime_ns": "1790476304214917705",
+            "device": 2304,
+            "inode": 18530442020,
+            "kind": "file",
+            "mtime_ns": "1790476304214917705",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/checkpoint_measurement.json",
+            "size": 51366
+          },
+          {
+            "blocks": 48,
+            "category": "records",
+            "ctime_ns": "1790476241034389378",
+            "device": 2304,
+            "inode": 18530442019,
+            "kind": "file",
+            "mtime_ns": "1790476241034389378",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/completion.json",
+            "size": 20700
+          },
+          {
+            "blocks": 1048,
+            "category": "records",
+            "ctime_ns": "1790476064962922540",
+            "device": 2304,
+            "inode": 18530442009,
+            "kind": "file",
+            "mtime_ns": "1790476064962922540",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/disk_samples.jsonl",
+            "size": 530201
+          },
+          {
+            "blocks": 0,
+            "category": "records",
+            "ctime_ns": "1790476062062898312",
+            "device": 2304,
+            "inode": 25233765836,
+            "kind": "directory",
+            "mtime_ns": "1790476062062898312",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/final",
+            "size": 91
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790476062062898312",
+            "device": 2304,
+            "inode": 25233765839,
+            "kind": "file",
+            "mtime_ns": "1790476062062898312",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/final/checkpoint_wait_done.json",
+            "size": 196
+          },
+          {
+            "blocks": 216,
+            "category": "records",
+            "ctime_ns": "1790476062062898312",
+            "device": 2304,
+            "inode": 25233765838,
+            "kind": "file",
+            "mtime_ns": "1790476062062898312",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/final/final.json",
+            "size": 107667
+          },
+          {
+            "blocks": 32,
+            "category": "records",
+            "ctime_ns": "1790475562498801014",
+            "device": 2304,
+            "inode": 25233765837,
+            "kind": "file",
+            "mtime_ns": "1790475562498801014",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/final/start.json",
+            "size": 16308
+          },
+          {
+            "blocks": 320,
+            "category": "records",
+            "ctime_ns": "1790476071462976844",
+            "device": 2304,
+            "inode": 18530442006,
+            "kind": "file",
+            "mtime_ns": "1790476071462976844",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/gpu.csv",
+            "size": 155799
+          },
+          {
+            "blocks": 0,
+            "category": "records",
+            "ctime_ns": "1790475547218676930",
+            "device": 2304,
+            "inode": 18530442007,
+            "kind": "file",
+            "mtime_ns": "1790475547218676930",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/gpu.csv.err",
+            "size": 0
+          },
+          {
+            "blocks": 808,
+            "category": "records",
+            "ctime_ns": "1790476064862921704",
+            "device": 2304,
+            "inode": 18530442010,
+            "kind": "file",
+            "mtime_ns": "1790476064862921704",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/host_samples.jsonl",
+            "size": 409469
+          },
+          {
+            "blocks": 48,
+            "category": "records",
+            "ctime_ns": "1790475547198676767",
+            "device": 2304,
+            "inode": 18530442003,
+            "kind": "file",
+            "mtime_ns": "1790475547198676767",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/launch.json",
+            "size": 21183
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790475906391571806",
+            "device": 2304,
+            "inode": 18530442016,
+            "kind": "file",
+            "mtime_ns": "1790475906391571806",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/metrics.jsonl",
+            "size": 1252
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790476063912913768",
+            "device": 2304,
+            "inode": 18530442017,
+            "kind": "file",
+            "mtime_ns": "1790476063912913768",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/run_meta.json",
+            "size": 1276
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790475561128789891",
+            "device": 2304,
+            "inode": 18530442011,
+            "kind": "file",
+            "mtime_ns": "1790475561128789891",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/runtime.json",
+            "size": 348
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790476064962922540",
+            "device": 2304,
+            "inode": 18530442018,
+            "kind": "file",
+            "mtime_ns": "1790476064962922540",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/speed_run.json",
+            "size": 2911
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790475549138692523",
+            "device": 2304,
+            "inode": 18530442008,
+            "kind": "file",
+            "mtime_ns": "1790475549138692523",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/speed_start.json",
+            "size": 1776
+          },
+          {
+            "blocks": 136,
+            "category": "records",
+            "ctime_ns": "1790476062062898312",
+            "device": 2304,
+            "inode": 18530442014,
+            "kind": "file",
+            "mtime_ns": "1790476062062898312",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/step_timing.jsonl",
+            "size": 66003
+          },
+          {
+            "blocks": 0,
+            "category": "cuda_cache",
+            "ctime_ns": "1790475609249180148",
+            "device": 2304,
+            "inode": 18530442005,
+            "kind": "directory",
+            "mtime_ns": "1790475609249180148",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-count-300-20260926T232339Z",
+            "size": 40
+          },
+          {
+            "blocks": 0,
+            "category": "cuda_cache",
+            "ctime_ns": "1790475609249180148",
+            "device": 2304,
+            "inode": 806189915,
+            "kind": "directory",
+            "mtime_ns": "1790475609249180148",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-count-300-20260926T232339Z/e",
+            "size": 23
+          },
+          {
+            "blocks": 0,
+            "category": "cuda_cache",
+            "ctime_ns": "1790475609249180148",
+            "device": 2304,
+            "inode": 1074116602,
+            "kind": "directory",
+            "mtime_ns": "1790475609249180148",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-count-300-20260926T232339Z/e/0",
+            "size": 28
+          },
+          {
+            "blocks": 16,
+            "category": "cuda_cache",
+            "ctime_ns": "1790475609249180148",
+            "device": 2304,
+            "inode": 1074116603,
+            "kind": "file",
+            "mtime_ns": "1790475609249180148",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-count-300-20260926T232339Z/e/0/a45e0018c5eaa5",
+            "size": 5796
+          },
+          {
+            "blocks": 8,
+            "category": "cuda_cache",
+            "ctime_ns": "1790475609249180148",
+            "device": 2304,
+            "inode": 18530442013,
+            "kind": "file",
+            "mtime_ns": "1790475609249180148",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-count-300-20260926T232339Z/index",
+            "size": 32
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475708429981247",
+            "device": 2304,
+            "inode": 18530442004,
+            "kind": "directory",
+            "mtime_ns": "1790475708429981247",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z",
+            "size": 4096
+          },
+          {
+            "blocks": 4480,
+            "category": "jax_cache",
+            "ctime_ns": "1790475708429981247",
+            "device": 2304,
+            "inode": 18530442015,
+            "kind": "file",
+            "mtime_ns": "1790475708429981247",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/jit__unnamed_wrapped_function_-52cac280691fa14e5d0b03c63c0835363b305ff1178c5e4e90064631e89975af-cache",
+            "size": 2293757
+          },
+          {
+            "blocks": 304,
+            "category": "jax_cache",
+            "ctime_ns": "1790475603009129644",
+            "device": 2304,
+            "inode": 18530442012,
+            "kind": "file",
+            "mtime_ns": "1790475603009129644",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/jit_init-67196cbeda293f1255caca164b2850e49e8a495f74935513726dd86e77c1e017-cache",
+            "size": 153627
+          },
+          {
+            "blocks": 24,
+            "category": "jax_cache",
+            "ctime_ns": "1790475653199533516",
+            "device": 2304,
+            "inode": 2160364368,
+            "kind": "directory",
+            "mtime_ns": "1790475653199533516",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir",
+            "size": 8192
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648499495970",
+            "device": 2304,
+            "inode": 2182509184,
+            "kind": "file",
+            "mtime_ns": "1790475648499495970",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/1D2WlzFiHy-aPtZqw38d0Od2nlZ2yXP2txRgQ8gOiaA.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644429463456",
+            "device": 2304,
+            "inode": 2160364378,
+            "kind": "file",
+            "mtime_ns": "1790475644429463456",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/29NE2qEzQaEm-L9nxHe8N_AngSr4dxCt3jcKIivt8jY.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651349518738",
+            "device": 2304,
+            "inode": 2182509213,
+            "kind": "file",
+            "mtime_ns": "1790475651349518738",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/2_xWhkpyKcxhbunjt5A0ArANqSdmvzX_KB2ehJYhZJk.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648839498686",
+            "device": 2304,
+            "inode": 2182509188,
+            "kind": "file",
+            "mtime_ns": "1790475648839498686",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/2i53RufaFsWgC0_C7f9rvORh8iYqKK9AoRPldGQq2gY.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645319470568",
+            "device": 2304,
+            "inode": 2160364395,
+            "kind": "file",
+            "mtime_ns": "1790475645319470568",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/3yfOmEMzgjPrecosd_Lws6If52xzQEXPIGa13xy97Ns.textproto",
+            "size": 138
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644839466731",
+            "device": 2304,
+            "inode": 2160364386,
+            "kind": "file",
+            "mtime_ns": "1790475644839466731",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/4A8PABZfVuMGXE7bz6TJTvjKB-xzTUnaovi-B3cbF5c.textproto",
+            "size": 54
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652059524409",
+            "device": 2304,
+            "inode": 2182509218,
+            "kind": "file",
+            "mtime_ns": "1790475652059524409",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/4FxhYRPpT9Xmpj9vuXVxm9j1hk4G7GxNuUhRgsNVZ3I.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649649505155",
+            "device": 2304,
+            "inode": 2182509194,
+            "kind": "file",
+            "mtime_ns": "1790475649649505155",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/4h-sTCvV3P4EE85wAGP2iQEYRaQ5bA0ZU6muIkqGhTU.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650889515062",
+            "device": 2304,
+            "inode": 2182509205,
+            "kind": "file",
+            "mtime_ns": "1790475650889515062",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/5z3CpOorB2pXegCYtH5LD4B1M18D1m3ZC5ri7ksBs_s.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647229485824",
+            "device": 2304,
+            "inode": 2160364405,
+            "kind": "file",
+            "mtime_ns": "1790475647229485824",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/7bNYcrdFKQqHioM1TJc7DOcUlqTDI-jo0zI5OhvEh4c.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644729465853",
+            "device": 2304,
+            "inode": 2160364385,
+            "kind": "file",
+            "mtime_ns": "1790475644729465853",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/7qZPW_JASx7XVNxwqfjXLoP5gh7KwjqQLhgesdsQXSE.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652409527206",
+            "device": 2304,
+            "inode": 2182509224,
+            "kind": "file",
+            "mtime_ns": "1790475652409527206",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/9CElY-H68zfTNp4dwSFuyY6_RSgXcMcX4HL9pYQ2UGk.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649759506037",
+            "device": 2304,
+            "inode": 2182509195,
+            "kind": "file",
+            "mtime_ns": "1790475649759506037",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/9T4UvG7CXY54Ha-vG5hBn5TD4Btc-d3GtekRpdFoG6o.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647589488700",
+            "device": 2304,
+            "inode": 2160364410,
+            "kind": "file",
+            "mtime_ns": "1790475647589488700",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/AvKDA8RL-Vet66u4xrL5h3rI_7H9eBF7RzGOaB4QzIA.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651989523850",
+            "device": 2304,
+            "inode": 2182509217,
+            "kind": "file",
+            "mtime_ns": "1790475651989523850",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/CArrNvumt4LaZJad4yE_sN6mLADXJOZjx5sp2bHQhAI.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647409487264",
+            "device": 2304,
+            "inode": 2160364407,
+            "kind": "file",
+            "mtime_ns": "1790475647409487264",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/CflDTLOLYfnyEb82mmR8737m6HLZz2pSRDi6DFLukLg.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644529464255",
+            "device": 2304,
+            "inode": 2160364380,
+            "kind": "file",
+            "mtime_ns": "1790475644529464255",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/DVJA01M3s-iudbLnE3mwXYl3tKtnpqp8trxY22f-Y00.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649609504839",
+            "device": 2304,
+            "inode": 2182509193,
+            "kind": "file",
+            "mtime_ns": "1790475649609504839",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/E4c_76EyiG8TnwIWgC_p9cyvXuuLgw08xTfd5jasWak.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650769514103",
+            "device": 2304,
+            "inode": 2182509203,
+            "kind": "file",
+            "mtime_ns": "1790475650769514103",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/EaH-2VNEfwb9Li7SX549mwubcnN5_owSx7hcGYxIjL8.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648569496529",
+            "device": 2304,
+            "inode": 2182509185,
+            "kind": "file",
+            "mtime_ns": "1790475648569496529",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/FgqrxkVojePip9vXqL3z3uiARr_Af0kvgSDlc1rUfyo.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652489527845",
+            "device": 2304,
+            "inode": 2182509226,
+            "kind": "file",
+            "mtime_ns": "1790475652489527845",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/G2vIYGCLBQyqVz9zPlQnAF9klDRh1VqvpiQXVxGJW9s.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644469463776",
+            "device": 2304,
+            "inode": 2160364379,
+            "kind": "file",
+            "mtime_ns": "1790475644469463776",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/GEUEQiQ-PFExV5GCZSb_WcQTCN-1yX9ix6ZoNeG8aUw.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645139469128",
+            "device": 2304,
+            "inode": 2160364391,
+            "kind": "file",
+            "mtime_ns": "1790475645139469128",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/GZ60hjpf08s9U7RKBCx34zhi18dApss1-osbJ7-0v4w.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651219517698",
+            "device": 2304,
+            "inode": 2182509211,
+            "kind": "file",
+            "mtime_ns": "1790475651219517698",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/GjueW2LY9VfV8DhBzidx47ThJzxmf4fs95DA6fFEytM.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650089508671",
+            "device": 2304,
+            "inode": 2182509200,
+            "kind": "file",
+            "mtime_ns": "1790475650089508671",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/HNjNM0qEZxFa9_A8a8p2NJZAIPRdNEk_B0RL1DYQ3w0.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644039460340",
+            "device": 2304,
+            "inode": 2160364371,
+            "kind": "file",
+            "mtime_ns": "1790475644039460340",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/HWVsekqvFkrOxuAbWPuSSAaYSUncPwfz6WBLKFkxZUU.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647469487742",
+            "device": 2304,
+            "inode": 2160364408,
+            "kind": "file",
+            "mtime_ns": "1790475647469487742",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/HohvP9H4JB-72K0E-JnxyLczxJoiSu_f9Y08uV3VV64.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651269518099",
+            "device": 2304,
+            "inode": 2182509212,
+            "kind": "file",
+            "mtime_ns": "1790475651269518099",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/IJdgaqh9tgc5oVdpn8JvawpMJLx6HkJj0AX9MklhLps.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646939483508",
+            "device": 2304,
+            "inode": 2160364399,
+            "kind": "file",
+            "mtime_ns": "1790475646939483508",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/Iwo24ljOdolA64-QAyreqW3FzwQZ02F-o7yeNreAvYE.textproto",
+            "size": 55
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644879467051",
+            "device": 2304,
+            "inode": 2160364387,
+            "kind": "file",
+            "mtime_ns": "1790475644879467051",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/JOOw_syvWAh7KY34VtOlkUwJiM9qHqoNSfIBABo3PNA.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475653199533516",
+            "device": 2304,
+            "inode": 2182509229,
+            "kind": "file",
+            "mtime_ns": "1790475653199533516",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/JaXnuAxrKPjlfBfhl-UKWOrqvFg-yMReKpzu3LfgTHM.textproto",
+            "size": 378
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644589464735",
+            "device": 2304,
+            "inode": 2160364382,
+            "kind": "file",
+            "mtime_ns": "1790475644589464735",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/K0YCND8ckXb0XwzwjtJfe0z3DJeK5ZyBLuUhAgOP_QU.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652349526725",
+            "device": 2304,
+            "inode": 2182509222,
+            "kind": "file",
+            "mtime_ns": "1790475652349526725",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/KGaat_W9gkkGTLBcovnKfK5hFh5VUzOi33IX6FncnCs.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648449495570",
+            "device": 2304,
+            "inode": 2160364415,
+            "kind": "file",
+            "mtime_ns": "1790475648449495570",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/KI4BZ4mCttS5GWy_gMvGRwbgYD05-HLMM5Z60pZTIEs.textproto",
+            "size": 143
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647749489980",
+            "device": 2304,
+            "inode": 2160364412,
+            "kind": "file",
+            "mtime_ns": "1790475647749489980",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/N7afQum45dxvT-AyE0rkm3ZpjUjenWaiZk1gzcYY8eY.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650999515941",
+            "device": 2304,
+            "inode": 2182509207,
+            "kind": "file",
+            "mtime_ns": "1790475650999515941",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/NMdGSzSOq5hDmdfHM21esJFHtNlAO6FUrvmrKaNCK6g.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645179469447",
+            "device": 2304,
+            "inode": 2160364392,
+            "kind": "file",
+            "mtime_ns": "1790475645179469447",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/NZIpXV4CMRvi2T4PG8frbvHfp6UVGUpxdfXQyamNJUE.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652379526964",
+            "device": 2304,
+            "inode": 2182509223,
+            "kind": "file",
+            "mtime_ns": "1790475652379526964",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/NdqpK0-FkKueMVk6hhvWlg39aOpXw_Ed0X3Pw39DuzA.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651439519455",
+            "device": 2304,
+            "inode": 2182509215,
+            "kind": "file",
+            "mtime_ns": "1790475651439519455",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/OGyHZQ2ULFCgyut-121t1S85sV5N8rDml9UB4rlblJQ.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646999483986",
+            "device": 2304,
+            "inode": 2160364400,
+            "kind": "file",
+            "mtime_ns": "1790475646999483986",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/QUhxNymgHfBZZZ9ZWSyYjmsY_1he5yxW-6KoJBgsdy8.textproto",
+            "size": 54
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651129516978",
+            "device": 2304,
+            "inode": 2182509209,
+            "kind": "file",
+            "mtime_ns": "1790475651129516978",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/TcJIgIIPLgtdlUHbtyEP1iONh1fd7OOb39oNXduDv84.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652269526085",
+            "device": 2304,
+            "inode": 2182509221,
+            "kind": "file",
+            "mtime_ns": "1790475652269526085",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/UC-zOt5D0wefzGsnVCKrfrEfbvjse2i3X_91SutHCw4.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475643769458183",
+            "device": 2304,
+            "inode": 2160364370,
+            "kind": "file",
+            "mtime_ns": "1790475643769458183",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/UqNrvYeJm1Cjq4uqNpbyyH1yBb5H-jccArJHKQ_EtVA.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648749497966",
+            "device": 2304,
+            "inode": 2182509187,
+            "kind": "file",
+            "mtime_ns": "1790475648749497966",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/Uu8Xh6qVpqJIE9JaydkT-dmu0cGVl73eKFoC-lXwIaQ.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651169517298",
+            "device": 2304,
+            "inode": 2182509210,
+            "kind": "file",
+            "mtime_ns": "1790475651169517298",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/WwMzQss0ktPq6yY7NT8Gu57rSKvib9XfeIgGi6eOLAQ.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650729513784",
+            "device": 2304,
+            "inode": 2182509202,
+            "kind": "file",
+            "mtime_ns": "1790475650729513784",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/XMsueFFnNdpcewmVxJdPErvwk1hmF4ya3FLenXffezE.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647379487022",
+            "device": 2304,
+            "inode": 2160364406,
+            "kind": "file",
+            "mtime_ns": "1790475647379487022",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/XNyqPGD141_s03RQw5EnaS0f2U3zl4a3V5_gyTPfe5A.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652579528562",
+            "device": 2304,
+            "inode": 2182509228,
+            "kind": "file",
+            "mtime_ns": "1790475652579528562",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/XgRDs4FH6s1Xrr320sFMkQY8Q75vscdTDwZEA202uWU.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651399519135",
+            "device": 2304,
+            "inode": 2182509214,
+            "kind": "file",
+            "mtime_ns": "1790475651399519135",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/XrdxcEbJ7ljR34yxez9f2yoO_n0dqAzX6wv04Vc1EP0.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644379463056",
+            "device": 2304,
+            "inode": 2160364377,
+            "kind": "file",
+            "mtime_ns": "1790475644379463056",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/YLwHa1Kl0UhaurRSoMrc33ImrnH4QP0h40w7Hz2ZZXI.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650839514662",
+            "device": 2304,
+            "inode": 2182509204,
+            "kind": "file",
+            "mtime_ns": "1790475650839514662",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/ZBkMQ1RgK5USoeVFqNjMQ6qq5zqJfivCTK8NLgcy6k4.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644279462258",
+            "device": 2304,
+            "inode": 2160364375,
+            "kind": "file",
+            "mtime_ns": "1790475644279462258",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/ZPgHdbe8yqADe5SACH1-DDSA8YhhwJlHZIjTEqYoHN8.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648609496848",
+            "device": 2304,
+            "inode": 2182509186,
+            "kind": "file",
+            "mtime_ns": "1790475648609496848",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/Zwanp231GWA_lYBrj0cmBrwOFJr1iySMAZmQRXNwBXA.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649859506834",
+            "device": 2304,
+            "inode": 2182509196,
+            "kind": "file",
+            "mtime_ns": "1790475649859506834",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/aFPiv8ZJ4ORLq1ozCHjtI8ZdvXZ2J6P1BYQTa8Zjo-Y.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647059484468",
+            "device": 2304,
+            "inode": 2160364401,
+            "kind": "file",
+            "mtime_ns": "1790475647059484468",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/al4Yuwc9o2TGDaOI_N17q8R9DEJtWKRWez4PwQzPN1w.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645319470568",
+            "device": 2304,
+            "inode": 2160364394,
+            "kind": "file",
+            "mtime_ns": "1790475645319470568",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/bHK5gVHOMLCmMLFrZUzRhLZY6R73dMH7mup65mIA41s.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644549464415",
+            "device": 2304,
+            "inode": 2160364381,
+            "kind": "file",
+            "mtime_ns": "1790475644549464415",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/cK9PPC98UVfKNh1Ugkm77BiA38Y6LINmjbPzMNaCm_I.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647519488143",
+            "device": 2304,
+            "inode": 2160364409,
+            "kind": "file",
+            "mtime_ns": "1790475647519488143",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/d-_1MyJi2QZo5oBJgFzkWa3vzx39OU1wE58ih_kMWcc.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645069468569",
+            "device": 2304,
+            "inode": 2160364389,
+            "kind": "file",
+            "mtime_ns": "1790475645069468569",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/ecJ0RMHDclLq6GQECaI4jZYbmn5evn75yRaxa-xDYyI.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644669465375",
+            "device": 2304,
+            "inode": 2160364384,
+            "kind": "file",
+            "mtime_ns": "1790475644669465375",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/fmZtgqta6IW1KD8KWc93qLU8ybSKk5V-7Wa7Km8zw14.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644349462817",
+            "device": 2304,
+            "inode": 2160364376,
+            "kind": "file",
+            "mtime_ns": "1790475644349462817",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/gy1U496T2nI6nIYJ-iuTha46MO63xBExbr6WQ9SSFGw.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644169461380",
+            "device": 2304,
+            "inode": 2160364373,
+            "kind": "file",
+            "mtime_ns": "1790475644169461380",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/hIVefZSu2kSL151VeThVTsy0qKCMvrMnB7jVH_P_JeE.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647199485584",
+            "device": 2304,
+            "inode": 2160364404,
+            "kind": "file",
+            "mtime_ns": "1790475647199485584",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/i9NcdR5iKl27fDTYoRzGxfDT_nh4u3mABDMRBrCIob4.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649929507393",
+            "device": 2304,
+            "inode": 2182509198,
+            "kind": "file",
+            "mtime_ns": "1790475649929507393",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/kDROEsfzKlnDpn04jsgB6J8EEABR2ig5-a9bsbSbb8A.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650679513384",
+            "device": 2304,
+            "inode": 2182509201,
+            "kind": "file",
+            "mtime_ns": "1790475650679513384",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/kZ1N_HyiQrFCQe4ajxXJSjpzhQxT4RKfD-g8B03Ra1M.textproto",
+            "size": 143
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652459527603",
+            "device": 2304,
+            "inode": 2182509225,
+            "kind": "file",
+            "mtime_ns": "1790475652459527603",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/lIextONOEYtMjmYBc67DTAEsDjo7k7vrzOKsIm8XpRU.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647159485265",
+            "device": 2304,
+            "inode": 2160364403,
+            "kind": "file",
+            "mtime_ns": "1790475647159485265",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/lbTo_76XcCVswwNec_riCPT0pjkCXAkMEKmO3EMqpUU.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647919491336",
+            "device": 2304,
+            "inode": 2160364414,
+            "kind": "file",
+            "mtime_ns": "1790475647919491336",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/mM7rhYNXjSc032OfSM8zWHv7Av_fMr9Ur4BGqPX9afo.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649899507154",
+            "device": 2304,
+            "inode": 2182509197,
+            "kind": "file",
+            "mtime_ns": "1790475649899507154",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/meQqutsYeGPvtftJEsUzWJvCcEJbpengaWiq3XOIDsQ.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645099468808",
+            "device": 2304,
+            "inode": 2160364390,
+            "kind": "file",
+            "mtime_ns": "1790475645099468808",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/o7-Qp2KKao1z8BTtBjMc3p_-a6qZMAb4uqgMRJ8xiZg.textproto",
+            "size": 138
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649319502520",
+            "device": 2304,
+            "inode": 2182509189,
+            "kind": "file",
+            "mtime_ns": "1790475649319502520",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/o8sW2ITtFT4dFd67_0jisFWzdyLsmJsb7F4wEN0JO7A.textproto",
+            "size": 55
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652209525607",
+            "device": 2304,
+            "inode": 2182509220,
+            "kind": "file",
+            "mtime_ns": "1790475652209525607",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/pP1a9alCGfLKnwF8f9A5a_Z1lzY8oXeAFnjK21DSVRE.textproto",
+            "size": 54
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649519504118",
+            "device": 2304,
+            "inode": 2182509192,
+            "kind": "file",
+            "mtime_ns": "1790475649519504118",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/qt-gP_lenIHgFl46rhVwY9VsCe74aRWMKEnsSAvrN_c.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651899523130",
+            "device": 2304,
+            "inode": 2182509216,
+            "kind": "file",
+            "mtime_ns": "1790475651899523130",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/r-nD326-l5ZLZG_wtdXOExpXA5Pykfmu4LNUIm7JlmI.textproto",
+            "size": 55
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644969467771",
+            "device": 2304,
+            "inode": 2160364388,
+            "kind": "file",
+            "mtime_ns": "1790475644969467771",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/r3pryJIyM4hpdUmUSFtcByiNFPnJWWG-dctm6FQpgFs.textproto",
+            "size": 54
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647829490616",
+            "device": 2304,
+            "inode": 2160364413,
+            "kind": "file",
+            "mtime_ns": "1790475647829490616",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/rM_3XnIp-wXAOLNrG3AxEM3Rbs470gfwqgVDlHWD8g4.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644089460740",
+            "device": 2304,
+            "inode": 2160364372,
+            "kind": "file",
+            "mtime_ns": "1790475644089460740",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/rRnf7uUrZLaCo-rLpdXam9r2NjClKk5zoTSy8dYLvMM.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649359502839",
+            "device": 2304,
+            "inode": 2182509190,
+            "kind": "file",
+            "mtime_ns": "1790475649359502839",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/s7ZQelLY99Va1Vm3wMiRVDvGzXjogqtTL3gbly0LQNE.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647699489579",
+            "device": 2304,
+            "inode": 2160364411,
+            "kind": "file",
+            "mtime_ns": "1790475647699489579",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/sGZ0LzrCyH7EsQjgjQhJdP1q2Gq1DDBky5C7Klo7_j4.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645869474960",
+            "device": 2304,
+            "inode": 2160364396,
+            "kind": "file",
+            "mtime_ns": "1790475645869474960",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/sa5aYRfPc_KqijKNrDSK7qCITQTojK-S9Kegtod_d2U.textproto",
+            "size": 143
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647119484945",
+            "device": 2304,
+            "inode": 2160364402,
+            "kind": "file",
+            "mtime_ns": "1790475647119484945",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/swVAgU3ijhVWsWn07Nlh1SF0a03wMvdrZcZ0zn7TvJU.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644619464974",
+            "device": 2304,
+            "inode": 2160364383,
+            "kind": "file",
+            "mtime_ns": "1790475644619464974",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/tZKU2VRk8tfMkoXb6xjTN5wVbz9TNWfpRAHiC5-zQL0.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 0,
+            "category": "jax_cache",
+            "ctime_ns": "1790475653199533516",
+            "device": 2304,
+            "inode": 2160364369,
+            "kind": "directory",
+            "mtime_ns": "1790475653199533516",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/tmp",
+            "size": 6
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650949515541",
+            "device": 2304,
+            "inode": 2182509206,
+            "kind": "file",
+            "mtime_ns": "1790475650949515541",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/ts3kXiLwAqB2sfePmYQAO0jBkZ2wmh8jouxPPgIt794.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652579528562",
+            "device": 2304,
+            "inode": 2182509227,
+            "kind": "file",
+            "mtime_ns": "1790475652579528562",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/uM6Ka0-n6k_iFd4Fj_Hl-05BHi2rxtMX8SuTmmwkMTY.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649439503479",
+            "device": 2304,
+            "inode": 2182509191,
+            "kind": "file",
+            "mtime_ns": "1790475649439503479",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/umHjEakow7yZ0O9RL5D5Cs-xH1wA5qdf2X2PRi8ylSI.textproto",
+            "size": 54
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652119524887",
+            "device": 2304,
+            "inode": 2182509219,
+            "kind": "file",
+            "mtime_ns": "1790475652119524887",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/ux_bqadDx7wRqdy0jLqyt9xcFSh4MmHjxYQEfwbFw6E.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649999507952",
+            "device": 2304,
+            "inode": 2182509199,
+            "kind": "file",
+            "mtime_ns": "1790475649999507952",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/vF1094xUtep5RPBhgrIA3Gz28Z9BvRV8u4UxkgB9Dsk.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651069516500",
+            "device": 2304,
+            "inode": 2182509208,
+            "kind": "file",
+            "mtime_ns": "1790475651069516500",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/vg0k9VhjFb8dp8OxdQtBQhb2osPoLAmqYAMQ0jGIYOs.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646419479355",
+            "device": 2304,
+            "inode": 2160364397,
+            "kind": "file",
+            "mtime_ns": "1790475646419479355",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/vtHMH67puBlGpAg4mgOWenKeZKp7sU_59VZSYAl34Jk.textproto",
+            "size": 143
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644219461781",
+            "device": 2304,
+            "inode": 2160364374,
+            "kind": "file",
+            "mtime_ns": "1790475644219461781",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/w2F3HTDuy1jEICbm-0LZAQ6IqF-90qzHI2gh1eiOHqg.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645229469847",
+            "device": 2304,
+            "inode": 2160364393,
+            "kind": "file",
+            "mtime_ns": "1790475645229469847",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/wKAVqOI6k3q7bH-61bxcWTXBjS5op1xAruVmaWeGq3Q.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646489479913",
+            "device": 2304,
+            "inode": 2160364398,
+            "kind": "file",
+            "mtime_ns": "1790475646489479913",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/zgjxK3DVTF9pIP3yPs60wxDPJ3WElEdHmf1FHfoC5K8.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_config",
+            "ctime_ns": "1790475547218676930",
+            "device": 2304,
+            "inode": 19329297388,
+            "kind": "directory",
+            "mtime_ns": "1790475547218676930",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb-config/perf-orig80k-count-300-20260926T232339Z",
+            "size": 10
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_data",
+            "ctime_ns": "1790475547218676930",
+            "device": 2304,
+            "inode": 19598519259,
+            "kind": "directory",
+            "mtime_ns": "1790475547218676930",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb-data/perf-orig80k-count-300-20260926T232339Z",
+            "size": 10
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_cache",
+            "ctime_ns": "1790475561158790136",
+            "device": 2304,
+            "inode": 19126277454,
+            "kind": "directory",
+            "mtime_ns": "1790475561158790136",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-count-300-20260926T232339Z",
+            "size": 27
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_cache",
+            "ctime_ns": "1790475561158790136",
+            "device": 2304,
+            "inode": 22819764778,
+            "kind": "directory",
+            "mtime_ns": "1790475561158790136",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-count-300-20260926T232339Z/wandb",
+            "size": 26
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_cache",
+            "ctime_ns": "1790475561158790136",
+            "device": 2304,
+            "inode": 23086412520,
+            "kind": "directory",
+            "mtime_ns": "1790475561158790136",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/logs",
+            "size": 52
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_cache",
+            "ctime_ns": "1790476065952930812",
+            "device": 2304,
+            "inode": 23086412521,
+            "kind": "file",
+            "mtime_ns": "1790476065952930812",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/logs/core-debug-20260927_021921.log",
+            "size": 2031
+          },
+          {
+            "blocks": 0,
+            "category": "xdg_data",
+            "ctime_ns": "1790475547218676930",
+            "device": 2304,
+            "inode": 20007862768,
+            "kind": "directory",
+            "mtime_ns": "1790475547218676930",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/xdg-data/perf-orig80k-count-300-20260926T232339Z",
+            "size": 10
+          },
+          {
+            "blocks": 128,
+            "category": "stage_wrapper_logs",
+            "ctime_ns": "1790476071522977345",
+            "device": 2304,
+            "inode": 24969325803,
+            "kind": "file",
+            "mtime_ns": "1790476071522977345",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-20260926T232339Z.wrapper.log",
+            "size": 63846
+          },
+          {
+            "blocks": 8,
+            "category": "stage_wrapper_logs",
+            "ctime_ns": "1790476242094398167",
+            "device": 2304,
+            "inode": 24969325810,
+            "kind": "file",
+            "mtime_ns": "1790476242094398167",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-completion-20260926T232339Z.wrapper.log",
+            "size": 2597
+          },
+          {
+            "blocks": 8,
+            "category": "stage_wrapper_logs",
+            "ctime_ns": "1790476304244917953",
+            "device": 2304,
+            "inode": 24969325813,
+            "kind": "file",
+            "mtime_ns": "1790476304244917953",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-measure-20260926T232339Z.wrapper.log",
+            "size": 2609
+          },
+          {
+            "blocks": 128,
+            "category": "driver_log",
+            "ctime_ns": "1790476071492977096",
+            "device": 2304,
+            "inode": 24969325804,
+            "kind": "file",
+            "mtime_ns": "1790476071492977096",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/perf-orig80k-count-300-20260926T232339Z.driver.log",
+            "size": 62094
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561618793869",
+            "device": 2304,
+            "inode": 18791778302,
+            "kind": "directory",
+            "mtime_ns": "1790475561618793869",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z",
+            "size": 27
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561618793869",
+            "device": 2304,
+            "inode": 23354258626,
+            "kind": "directory",
+            "mtime_ns": "1790475561618793869",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb",
+            "size": 123
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561618793869",
+            "device": 2304,
+            "inode": 23354258629,
+            "kind": "link",
+            "mtime_ns": "1790475561618793869",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/debug-internal.log",
+            "size": 52
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561618793869",
+            "device": 2304,
+            "inode": 23354258628,
+            "kind": "link",
+            "mtime_ns": "1790475561618793869",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/debug.log",
+            "size": 43
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561618793869",
+            "device": 2304,
+            "inode": 23354258627,
+            "kind": "link",
+            "mtime_ns": "1790475561618793869",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/latest-run",
+            "size": 28
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561898796142",
+            "device": 2304,
+            "inode": 23651307472,
+            "kind": "directory",
+            "mtime_ns": "1790475561898796142",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1",
+            "size": 88
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476064352917445",
+            "device": 2304,
+            "inode": 24222831277,
+            "kind": "directory",
+            "mtime_ns": "1790476064352917445",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/files",
+            "size": 161
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476064352917445",
+            "device": 2304,
+            "inode": 24222831282,
+            "kind": "file",
+            "mtime_ns": "1790476064352917445",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/files/config.yaml",
+            "size": 3322
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475591069032448",
+            "device": 2304,
+            "inode": 271500119,
+            "kind": "directory",
+            "mtime_ns": "1790475591069032448",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/files/media",
+            "size": 28
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475591069032448",
+            "device": 2304,
+            "inode": 538080813,
+            "kind": "directory",
+            "mtime_ns": "1790475591069032448",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/files/media/images",
+            "size": 53
+          },
+          {
+            "blocks": 272,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475591069032448",
+            "device": 2304,
+            "inode": 538080814,
+            "kind": "file",
+            "mtime_ns": "1790475590669029190",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/files/media/images/camera_views_0_64ceea9493f9166a22cb.png",
+            "size": 139049
+          },
+          {
+            "blocks": 88,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476062072898396",
+            "device": 2304,
+            "inode": 24222831278,
+            "kind": "file",
+            "mtime_ns": "1790476062072898396",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/files/output.log",
+            "size": 44785
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475562288799311",
+            "device": 2304,
+            "inode": 24222831280,
+            "kind": "file",
+            "mtime_ns": "1790475562288799311",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/files/requirements.txt",
+            "size": 3864
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475562188798499",
+            "device": 2304,
+            "inode": 24222831279,
+            "kind": "file",
+            "mtime_ns": "1790475562188798499",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/files/wandb-metadata.json",
+            "size": 3212
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476064132915606",
+            "device": 2304,
+            "inode": 24222831281,
+            "kind": "file",
+            "mtime_ns": "1790476064132915606",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/files/wandb-summary.json",
+            "size": 423
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561618793869",
+            "device": 2304,
+            "inode": 23920522455,
+            "kind": "directory",
+            "mtime_ns": "1790475561618793869",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/logs",
+            "size": 87
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561618793869",
+            "device": 2304,
+            "inode": 23920522457,
+            "kind": "link",
+            "mtime_ns": "1790475561618793869",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/logs/debug-core.log",
+            "size": 153
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476064962922540",
+            "device": 2304,
+            "inode": 23920522458,
+            "kind": "file",
+            "mtime_ns": "1790476064962922540",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/logs/debug-internal.log",
+            "size": 1930
+          },
+          {
+            "blocks": 16,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476064962922540",
+            "device": 2304,
+            "inode": 23920522456,
+            "kind": "file",
+            "mtime_ns": "1790476064962922540",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/logs/debug.log",
+            "size": 5788
+          },
+          {
+            "blocks": 352,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476064962922540",
+            "device": 2304,
+            "inode": 23651307473,
+            "kind": "file",
+            "mtime_ns": "1790476064962922540",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/run-vxmquzs1.wandb",
+            "size": 178665
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561618793869",
+            "device": 2304,
+            "inode": 24427688301,
+            "kind": "directory",
+            "mtime_ns": "1790475561618793869",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/tmp",
+            "size": 26
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561618793869",
+            "device": 2304,
+            "inode": 24697436691,
+            "kind": "directory",
+            "mtime_ns": "1790475561618793869",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/tmp/code",
+            "size": 10
+          }
+        ],
+        "internal_aliases": [
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/debug-internal.log",
+            "policy": "链接本身只lstat，不通过它递归",
+            "target": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/logs/debug-internal.log",
+            "target_in_explicit_roots": true
+          },
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/debug.log",
+            "policy": "链接本身只lstat，不通过它递归",
+            "target": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/logs/debug.log",
+            "target_in_explicit_roots": true
+          },
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/latest-run",
+            "policy": "链接本身只lstat，不通过它递归",
+            "target": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1",
+            "target_in_explicit_roots": true
+          },
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/run-20260927_021921-vxmquzs1/logs/debug-core.log",
+            "policy": "链接本身只lstat，不通过它递归",
+            "target": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-count-300-20260926T232339Z/wandb/logs/core-debug-20260927_021921.log",
+            "target_in_explicit_roots": true
+          }
+        ],
+        "logical_bytes": 4382898,
+        "roots": [
+          {
+            "category": "records",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z"
+          },
+          {
+            "category": "driver_log",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/perf-orig80k-count-300-20260926T232339Z.driver.log"
+          },
+          {
+            "category": "stage_wrapper_logs",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-20260926T232339Z.wrapper.log"
+          },
+          {
+            "category": "stage_wrapper_logs",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-completion-20260926T232339Z.wrapper.log"
+          },
+          {
+            "category": "stage_wrapper_logs",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-measure-20260926T232339Z.wrapper.log"
+          },
+          {
+            "category": "jax_cache",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-count-300-20260926T232339Z"
+          },
+          {
+            "category": "cuda_cache",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-count-300-20260926T232339Z"
+          },
+          {
+            "category": "wandb_logs",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-count-300-20260926T232339Z"
+          },
+          {
+            "category": "wandb_cache",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-count-300-20260926T232339Z"
+          },
+          {
+            "category": "wandb_config",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb-config/perf-orig80k-count-300-20260926T232339Z"
+          },
+          {
+            "category": "wandb_data",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb-data/perf-orig80k-count-300-20260926T232339Z"
+          },
+          {
+            "category": "xdg_data",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/xdg-data/perf-orig80k-count-300-20260926T232339Z"
+          }
+        ],
+        "unique_inodes": 153
+      }
+    },
+    "full": {
+      "eta_s_from_formal_report": 77731.70163476467,
+      "gpu_csv_bytes": 157254,
+      "gpu_csv_eta_projection_bytes": 23098432.168467484,
+      "gpu_csv_observed_bytes_per_s": 297.155879553484,
+      "gpu_sample_observed_span_s": 529.1970000267029,
+      "measurement": {
+        "bytes": 51349,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/checkpoint_measurement.json",
+        "sha256": "7b3458c7f196e4657e57280c74d185e03a231a4043b4be36f179d225d8d7c0a2"
+      },
+      "metrics_rows": 3,
+      "observed_save_extra_lower_bound_bytes": 4159750144,
+      "projection_scope": "CSV速率×报告ETA仅为量级线索，不是硬上界、承诺或margin决定",
+      "run": "perf-orig80k-full-300-20260926T232339Z",
+      "single_checkpoint_allocated_bytes": 11879944192,
+      "single_checkpoint_logical_bytes": 11879892504,
+      "stat": {
+        "absent_roots": [],
+        "allocated_bytes": 4829184,
+        "categories": {
+          "cuda_cache": {
+            "allocated_bytes": 12288,
+            "logical_bytes": 5919,
+            "unique_inodes": 5
+          },
+          "driver_log": {
+            "allocated_bytes": 65536,
+            "logical_bytes": 61909,
+            "unique_inodes": 1
+          },
+          "jax_cache": {
+            "allocated_bytes": 2846720,
+            "logical_bytes": 2472774,
+            "unique_inodes": 97
+          },
+          "records": {
+            "allocated_bytes": 1441792,
+            "logical_bytes": 1394285,
+            "unique_inodes": 18
+          },
+          "stage_wrapper_logs": {
+            "allocated_bytes": 73728,
+            "logical_bytes": 68814,
+            "unique_inodes": 3
+          },
+          "wandb_cache": {
+            "allocated_bytes": 4096,
+            "logical_bytes": 2136,
+            "unique_inodes": 4
+          },
+          "wandb_config": {
+            "allocated_bytes": 0,
+            "logical_bytes": 10,
+            "unique_inodes": 1
+          },
+          "wandb_data": {
+            "allocated_bytes": 0,
+            "logical_bytes": 10,
+            "unique_inodes": 1
+          },
+          "wandb_logs": {
+            "allocated_bytes": 385024,
+            "logical_bytes": 371683,
+            "unique_inodes": 22
+          },
+          "xdg_data": {
+            "allocated_bytes": 0,
+            "logical_bytes": 10,
+            "unique_inodes": 1
+          }
+        },
+        "entries": [
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790476304054916389",
+            "device": 2304,
+            "inode": 17212307708,
+            "kind": "directory",
+            "mtime_ns": "1790476304054916389",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z",
+            "size": 4096
+          },
+          {
+            "blocks": 104,
+            "category": "records",
+            "ctime_ns": "1790476304054916389",
+            "device": 2304,
+            "inode": 17266365407,
+            "kind": "file",
+            "mtime_ns": "1790476304054916389",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/checkpoint_measurement.json",
+            "size": 51349
+          },
+          {
+            "blocks": 48,
+            "category": "records",
+            "ctime_ns": "1790476153163660035",
+            "device": 2304,
+            "inode": 17266211805,
+            "kind": "file",
+            "mtime_ns": "1790476153163660035",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/completion.json",
+            "size": 20692
+          },
+          {
+            "blocks": 1056,
+            "category": "records",
+            "ctime_ns": "1790476066762937578",
+            "device": 2304,
+            "inode": 17266211782,
+            "kind": "file",
+            "mtime_ns": "1790476066762937578",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/disk_samples.jsonl",
+            "size": 532932
+          },
+          {
+            "blocks": 0,
+            "category": "records",
+            "ctime_ns": "1790476063682911847",
+            "device": 2304,
+            "inode": 24969325805,
+            "kind": "directory",
+            "mtime_ns": "1790476063682911847",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/final",
+            "size": 91
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790476063682911847",
+            "device": 2304,
+            "inode": 24969325808,
+            "kind": "file",
+            "mtime_ns": "1790476063682911847",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/final/checkpoint_wait_done.json",
+            "size": 196
+          },
+          {
+            "blocks": 216,
+            "category": "records",
+            "ctime_ns": "1790476063682911847",
+            "device": 2304,
+            "inode": 24969325807,
+            "kind": "file",
+            "mtime_ns": "1790476063682911847",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/final/final.json",
+            "size": 107660
+          },
+          {
+            "blocks": 32,
+            "category": "records",
+            "ctime_ns": "1790475562108797848",
+            "device": 2304,
+            "inode": 24969325806,
+            "kind": "file",
+            "mtime_ns": "1790475562108797848",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/final/start.json",
+            "size": 16247
+          },
+          {
+            "blocks": 312,
+            "category": "records",
+            "ctime_ns": "1790476076283017029",
+            "device": 2304,
+            "inode": 17266211779,
+            "kind": "file",
+            "mtime_ns": "1790476076283017029",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/gpu.csv",
+            "size": 157254
+          },
+          {
+            "blocks": 0,
+            "category": "records",
+            "ctime_ns": "1790475547038675470",
+            "device": 2304,
+            "inode": 17266211780,
+            "kind": "file",
+            "mtime_ns": "1790475547038675470",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/gpu.csv.err",
+            "size": 0
+          },
+          {
+            "blocks": 808,
+            "category": "records",
+            "ctime_ns": "1790476066722937244",
+            "device": 2304,
+            "inode": 17266211783,
+            "kind": "file",
+            "mtime_ns": "1790476066722937244",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/host_samples.jsonl",
+            "size": 409241
+          },
+          {
+            "blocks": 48,
+            "category": "records",
+            "ctime_ns": "1790475547018675308",
+            "device": 2304,
+            "inode": 17212307709,
+            "kind": "file",
+            "mtime_ns": "1790475547018675308",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/launch.json",
+            "size": 21082
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790475908011583377",
+            "device": 2304,
+            "inode": 17266211789,
+            "kind": "file",
+            "mtime_ns": "1790475908011583377",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/metrics.jsonl",
+            "size": 1252
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790476065772929308",
+            "device": 2304,
+            "inode": 17266211790,
+            "kind": "file",
+            "mtime_ns": "1790476065772929308",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/run_meta.json",
+            "size": 1242
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790475560438784290",
+            "device": 2304,
+            "inode": 17266211784,
+            "kind": "file",
+            "mtime_ns": "1790475560438784290",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/runtime.json",
+            "size": 347
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790476066762937578",
+            "device": 2304,
+            "inode": 17266211791,
+            "kind": "file",
+            "mtime_ns": "1790476066762937578",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/speed_run.json",
+            "size": 2875
+          },
+          {
+            "blocks": 8,
+            "category": "records",
+            "ctime_ns": "1790475547288677501",
+            "device": 2304,
+            "inode": 17266211781,
+            "kind": "file",
+            "mtime_ns": "1790475547288677501",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/speed_start.json",
+            "size": 1741
+          },
+          {
+            "blocks": 136,
+            "category": "records",
+            "ctime_ns": "1790476063682911847",
+            "device": 2304,
+            "inode": 17266211787,
+            "kind": "file",
+            "mtime_ns": "1790476063682911847",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/step_timing.jsonl",
+            "size": 65988
+          },
+          {
+            "blocks": 0,
+            "category": "cuda_cache",
+            "ctime_ns": "1790475609459181838",
+            "device": 2304,
+            "inode": 17212307711,
+            "kind": "directory",
+            "mtime_ns": "1790475609459181838",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-full-300-20260926T232339Z",
+            "size": 40
+          },
+          {
+            "blocks": 0,
+            "category": "cuda_cache",
+            "ctime_ns": "1790475609459181838",
+            "device": 2304,
+            "inode": 1345334707,
+            "kind": "directory",
+            "mtime_ns": "1790475609459181838",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-full-300-20260926T232339Z/e",
+            "size": 23
+          },
+          {
+            "blocks": 0,
+            "category": "cuda_cache",
+            "ctime_ns": "1790475609459181838",
+            "device": 2304,
+            "inode": 2160364366,
+            "kind": "directory",
+            "mtime_ns": "1790475609459181838",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-full-300-20260926T232339Z/e/0",
+            "size": 28
+          },
+          {
+            "blocks": 16,
+            "category": "cuda_cache",
+            "ctime_ns": "1790475609459181838",
+            "device": 2304,
+            "inode": 2160364367,
+            "kind": "file",
+            "mtime_ns": "1790475609459181838",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-full-300-20260926T232339Z/e/0/a45e0018c5eaa5",
+            "size": 5796
+          },
+          {
+            "blocks": 8,
+            "category": "cuda_cache",
+            "ctime_ns": "1790475609459181838",
+            "device": 2304,
+            "inode": 17266211786,
+            "kind": "file",
+            "mtime_ns": "1790475609459181838",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-full-300-20260926T232339Z/index",
+            "size": 32
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475710990002249",
+            "device": 2304,
+            "inode": 17212307710,
+            "kind": "directory",
+            "mtime_ns": "1790475710990002249",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z",
+            "size": 4096
+          },
+          {
+            "blocks": 4488,
+            "category": "jax_cache",
+            "ctime_ns": "1790475710990002249",
+            "device": 2304,
+            "inode": 17266211788,
+            "kind": "file",
+            "mtime_ns": "1790475710990002249",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/jit__unnamed_wrapped_function_-8ea162891aa4cb4b457b8570162e9cbf7259b5a205867be8336998e87828ec9f-cache",
+            "size": 2295683
+          },
+          {
+            "blocks": 304,
+            "category": "jax_cache",
+            "ctime_ns": "1790475603519133796",
+            "device": 2304,
+            "inode": 17266211785,
+            "kind": "file",
+            "mtime_ns": "1790475603519133796",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/jit_init-4c27c67cf53be505d1d056897618f8f8eff8de4414d7c2506c8633afb72bc325-cache",
+            "size": 153630
+          },
+          {
+            "blocks": 24,
+            "category": "jax_cache",
+            "ctime_ns": "1790475653609536790",
+            "device": 2304,
+            "inode": 2541828947,
+            "kind": "directory",
+            "mtime_ns": "1790475653609536790",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir",
+            "size": 8192
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651869522891",
+            "device": 2304,
+            "inode": 2689552899,
+            "kind": "file",
+            "mtime_ns": "1790475651869522891",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/1D2WlzFiHy-aPtZqw38d0Od2nlZ2yXP2txRgQ8gOiaA.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652699529521",
+            "device": 2304,
+            "inode": 2689552906,
+            "kind": "file",
+            "mtime_ns": "1790475652699529521",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/29NE2qEzQaEm-L9nxHe8N_AngSr4dxCt3jcKIivt8jY.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648769498128",
+            "device": 2304,
+            "inode": 2689552668,
+            "kind": "file",
+            "mtime_ns": "1790475648769498128",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/2_xWhkpyKcxhbunjt5A0ArANqSdmvzX_KB2ehJYhZJk.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649639505078",
+            "device": 2304,
+            "inode": 2689552675,
+            "kind": "file",
+            "mtime_ns": "1790475649639505078",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/2i53RufaFsWgC0_C7f9rvORh8iYqKK9AoRPldGQq2gY.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651029516180",
+            "device": 2304,
+            "inode": 2689552691,
+            "kind": "file",
+            "mtime_ns": "1790475651029516180",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/3yfOmEMzgjPrecosd_Lws6If52xzQEXPIGa13xy97Ns.textproto",
+            "size": 138
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647109484865",
+            "device": 2304,
+            "inode": 2689552657,
+            "kind": "file",
+            "mtime_ns": "1790475647109484865",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/4A8PABZfVuMGXE7bz6TJTvjKB-xzTUnaovi-B3cbF5c.textproto",
+            "size": 54
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646879483027",
+            "device": 2304,
+            "inode": 2689552653,
+            "kind": "file",
+            "mtime_ns": "1790475646879483027",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/4FxhYRPpT9Xmpj9vuXVxm9j1hk4G7GxNuUhRgsNVZ3I.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650979515780",
+            "device": 2304,
+            "inode": 2689552689,
+            "kind": "file",
+            "mtime_ns": "1790475650979515780",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/4h-sTCvV3P4EE85wAGP2iQEYRaQ5bA0ZU6muIkqGhTU.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645339470726",
+            "device": 2304,
+            "inode": 2689552640,
+            "kind": "file",
+            "mtime_ns": "1790475645339470726",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/5z3CpOorB2pXegCYtH5LD4B1M18D1m3ZC5ri7ksBs_s.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645149469208",
+            "device": 2304,
+            "inode": 2689548540,
+            "kind": "file",
+            "mtime_ns": "1790475645149469208",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/7bNYcrdFKQqHioM1TJc7DOcUlqTDI-jo0zI5OhvEh4c.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646989483909",
+            "device": 2304,
+            "inode": 2689552656,
+            "kind": "file",
+            "mtime_ns": "1790475646989483909",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/7qZPW_JASx7XVNxwqfjXLoP5gh7KwjqQLhgesdsQXSE.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645189469528",
+            "device": 2304,
+            "inode": 2689548541,
+            "kind": "file",
+            "mtime_ns": "1790475645189469528",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/9CElY-H68zfTNp4dwSFuyY6_RSgXcMcX4HL9pYQ2UGk.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649329502600",
+            "device": 2304,
+            "inode": 2689552671,
+            "kind": "file",
+            "mtime_ns": "1790475649329502600",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/9T4UvG7CXY54Ha-vG5hBn5TD4Btc-d3GtekRpdFoG6o.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650939515461",
+            "device": 2304,
+            "inode": 2689552688,
+            "kind": "file",
+            "mtime_ns": "1790475650939515461",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/AvKDA8RL-Vet66u4xrL5h3rI_7H9eBF7RzGOaB4QzIA.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649419503321",
+            "device": 2304,
+            "inode": 2689552672,
+            "kind": "file",
+            "mtime_ns": "1790475649419503321",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/CArrNvumt4LaZJad4yE_sN6mLADXJOZjx5sp2bHQhAI.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647149485184",
+            "device": 2304,
+            "inode": 2689552658,
+            "kind": "file",
+            "mtime_ns": "1790475647149485184",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/CflDTLOLYfnyEb82mmR8737m6HLZz2pSRDi6DFLukLg.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646939483508",
+            "device": 2304,
+            "inode": 2689552655,
+            "kind": "file",
+            "mtime_ns": "1790475646939483508",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/DVJA01M3s-iudbLnE3mwXYl3tKtnpqp8trxY22f-Y00.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648659497249",
+            "device": 2304,
+            "inode": 2689552666,
+            "kind": "file",
+            "mtime_ns": "1790475648659497249",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/E4c_76EyiG8TnwIWgC_p9cyvXuuLgw08xTfd5jasWak.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649919507313",
+            "device": 2304,
+            "inode": 2689552679,
+            "kind": "file",
+            "mtime_ns": "1790475649919507313",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/EaH-2VNEfwb9Li7SX549mwubcnN5_owSx7hcGYxIjL8.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646729481829",
+            "device": 2304,
+            "inode": 2689552650,
+            "kind": "file",
+            "mtime_ns": "1790475646729481829",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/FgqrxkVojePip9vXqL3z3uiARr_Af0kvgSDlc1rUfyo.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651669521293",
+            "device": 2304,
+            "inode": 2689552896,
+            "kind": "file",
+            "mtime_ns": "1790475651669521293",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/G2vIYGCLBQyqVz9zPlQnAF9klDRh1VqvpiQXVxGJW9s.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651139517059",
+            "device": 2304,
+            "inode": 2689552693,
+            "kind": "file",
+            "mtime_ns": "1790475651139517059",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/GEUEQiQ-PFExV5GCZSb_WcQTCN-1yX9ix6ZoNeG8aUw.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650679513384",
+            "device": 2304,
+            "inode": 2689552684,
+            "kind": "file",
+            "mtime_ns": "1790475650679513384",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/GZ60hjpf08s9U7RKBCx34zhi18dApss1-osbJ7-0v4w.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651019516100",
+            "device": 2304,
+            "inode": 2689552690,
+            "kind": "file",
+            "mtime_ns": "1790475651019516100",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/GjueW2LY9VfV8DhBzidx47ThJzxmf4fs95DA6fFEytM.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644899467213",
+            "device": 2304,
+            "inode": 2689548537,
+            "kind": "file",
+            "mtime_ns": "1790475644899467213",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/HNjNM0qEZxFa9_A8a8p2NJZAIPRdNEk_B0RL1DYQ3w0.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646139477117",
+            "device": 2304,
+            "inode": 2689552647,
+            "kind": "file",
+            "mtime_ns": "1790475646139477117",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/HWVsekqvFkrOxuAbWPuSSAaYSUncPwfz6WBLKFkxZUU.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650749513943",
+            "device": 2304,
+            "inode": 2689552685,
+            "kind": "file",
+            "mtime_ns": "1790475650749513943",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/HohvP9H4JB-72K0E-JnxyLczxJoiSu_f9Y08uV3VV64.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645309470487",
+            "device": 2304,
+            "inode": 2689548543,
+            "kind": "file",
+            "mtime_ns": "1790475645309470487",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/IJdgaqh9tgc5oVdpn8JvawpMJLx6HkJj0AX9MklhLps.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475647699489579",
+            "device": 2304,
+            "inode": 2689552659,
+            "kind": "file",
+            "mtime_ns": "1790475647699489579",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/Iwo24ljOdolA64-QAyreqW3FzwQZ02F-o7yeNreAvYE.textproto",
+            "size": 55
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650639513064",
+            "device": 2304,
+            "inode": 2689552683,
+            "kind": "file",
+            "mtime_ns": "1790475650639513064",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/JOOw_syvWAh7KY34VtOlkUwJiM9qHqoNSfIBABo3PNA.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475653609536790",
+            "device": 2304,
+            "inode": 2689552912,
+            "kind": "file",
+            "mtime_ns": "1790475653609536790",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/JaXnuAxrKPjlfBfhl-UKWOrqvFg-yMReKpzu3LfgTHM.textproto",
+            "size": 378
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648409495250",
+            "device": 2304,
+            "inode": 2689552662,
+            "kind": "file",
+            "mtime_ns": "1790475648409495250",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/K0YCND8ckXb0XwzwjtJfe0z3DJeK5ZyBLuUhAgOP_QU.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648499495970",
+            "device": 2304,
+            "inode": 2689552664,
+            "kind": "file",
+            "mtime_ns": "1790475648499495970",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/KGaat_W9gkkGTLBcovnKfK5hFh5VUzOi33IX6FncnCs.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645919475360",
+            "device": 2304,
+            "inode": 2689552642,
+            "kind": "file",
+            "mtime_ns": "1790475645919475360",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/KI4BZ4mCttS5GWy_gMvGRwbgYD05-HLMM5Z60pZTIEs.textproto",
+            "size": 143
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651819522491",
+            "device": 2304,
+            "inode": 2689552898,
+            "kind": "file",
+            "mtime_ns": "1790475651819522491",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/N7afQum45dxvT-AyE0rkm3ZpjUjenWaiZk1gzcYY8eY.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644739465933",
+            "device": 2304,
+            "inode": 2689548534,
+            "kind": "file",
+            "mtime_ns": "1790475644739465933",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/NMdGSzSOq5hDmdfHM21esJFHtNlAO6FUrvmrKaNCK6g.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650829514582",
+            "device": 2304,
+            "inode": 2689552686,
+            "kind": "file",
+            "mtime_ns": "1790475650829514582",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/NZIpXV4CMRvi2T4PG8frbvHfp6UVGUpxdfXQyamNJUE.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645379471045",
+            "device": 2304,
+            "inode": 2689552641,
+            "kind": "file",
+            "mtime_ns": "1790475645379471045",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/NdqpK0-FkKueMVk6hhvWlg39aOpXw_Ed0X3Pw39DuzA.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645069468569",
+            "device": 2304,
+            "inode": 2689548539,
+            "kind": "file",
+            "mtime_ns": "1790475645069468569",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/OGyHZQ2ULFCgyut-121t1S85sV5N8rDml9UB4rlblJQ.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652909531200",
+            "device": 2304,
+            "inode": 2689552909,
+            "kind": "file",
+            "mtime_ns": "1790475652909531200",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/QUhxNymgHfBZZZ9ZWSyYjmsY_1he5yxW-6KoJBgsdy8.textproto",
+            "size": 54
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646169477356",
+            "device": 2304,
+            "inode": 2689552648,
+            "kind": "file",
+            "mtime_ns": "1790475646169477356",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/TcJIgIIPLgtdlUHbtyEP1iONh1fd7OOb39oNXduDv84.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644979467852",
+            "device": 2304,
+            "inode": 2689548538,
+            "kind": "file",
+            "mtime_ns": "1790475644979467852",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/UC-zOt5D0wefzGsnVCKrfrEfbvjse2i3X_91SutHCw4.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651269518099",
+            "device": 2304,
+            "inode": 2689552697,
+            "kind": "file",
+            "mtime_ns": "1790475651269518099",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/UqNrvYeJm1Cjq4uqNpbyyH1yBb5H-jccArJHKQ_EtVA.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652989531837",
+            "device": 2304,
+            "inode": 2689552911,
+            "kind": "file",
+            "mtime_ns": "1790475652989531837",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/Uu8Xh6qVpqJIE9JaydkT-dmu0cGVl73eKFoC-lXwIaQ.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645949475599",
+            "device": 2304,
+            "inode": 2689552643,
+            "kind": "file",
+            "mtime_ns": "1790475645949475599",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/WwMzQss0ktPq6yY7NT8Gu57rSKvib9XfeIgGi6eOLAQ.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646919483347",
+            "device": 2304,
+            "inode": 2689552654,
+            "kind": "file",
+            "mtime_ns": "1790475646919483347",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/XMsueFFnNdpcewmVxJdPErvwk1hmF4ya3FLenXffezE.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652659529201",
+            "device": 2304,
+            "inode": 2689552905,
+            "kind": "file",
+            "mtime_ns": "1790475652659529201",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/XNyqPGD141_s03RQw5EnaS0f2U3zl4a3V5_gyTPfe5A.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648669497327",
+            "device": 2304,
+            "inode": 2689552667,
+            "kind": "file",
+            "mtime_ns": "1790475648669497327",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/XgRDs4FH6s1Xrr320sFMkQY8Q75vscdTDwZEA202uWU.textproto",
+            "size": 138
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646769482149",
+            "device": 2304,
+            "inode": 2689552651,
+            "kind": "file",
+            "mtime_ns": "1790475646769482149",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/XrdxcEbJ7ljR34yxez9f2yoO_n0dqAzX6wv04Vc1EP0.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649969507713",
+            "device": 2304,
+            "inode": 2689552680,
+            "kind": "file",
+            "mtime_ns": "1790475649969507713",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/YLwHa1Kl0UhaurRSoMrc33ImrnH4QP0h40w7Hz2ZZXI.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645219469767",
+            "device": 2304,
+            "inode": 2689548542,
+            "kind": "file",
+            "mtime_ns": "1790475645219469767",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/ZBkMQ1RgK5USoeVFqNjMQ6qq5zqJfivCTK8NLgcy6k4.textproto",
+            "size": 138
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651239517860",
+            "device": 2304,
+            "inode": 2689552696,
+            "kind": "file",
+            "mtime_ns": "1790475651239517860",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/ZPgHdbe8yqADe5SACH1-DDSA8YhhwJlHZIjTEqYoHN8.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651619520895",
+            "device": 2304,
+            "inode": 2689552702,
+            "kind": "file",
+            "mtime_ns": "1790475651619520895",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/Zwanp231GWA_lYBrj0cmBrwOFJr1iySMAZmQRXNwBXA.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648339494691",
+            "device": 2304,
+            "inode": 2689552661,
+            "kind": "file",
+            "mtime_ns": "1790475648339494691",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/aFPiv8ZJ4ORLq1ozCHjtI8ZdvXZ2J6P1BYQTa8Zjo-Y.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650019508113",
+            "device": 2304,
+            "inode": 2689552681,
+            "kind": "file",
+            "mtime_ns": "1790475650019508113",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/al4Yuwc9o2TGDaOI_N17q8R9DEJtWKRWez4PwQzPN1w.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652949531517",
+            "device": 2304,
+            "inode": 2689552910,
+            "kind": "file",
+            "mtime_ns": "1790475652949531517",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/bHK5gVHOMLCmMLFrZUzRhLZY6R73dMH7mup65mIA41s.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651169517298",
+            "device": 2304,
+            "inode": 2689552694,
+            "kind": "file",
+            "mtime_ns": "1790475651169517298",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/cK9PPC98UVfKNh1Ugkm77BiA38Y6LINmjbPzMNaCm_I.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649509504038",
+            "device": 2304,
+            "inode": 2689552673,
+            "kind": "file",
+            "mtime_ns": "1790475649509504038",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/d-_1MyJi2QZo5oBJgFzkWa3vzx39OU1wE58ih_kMWcc.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646049476397",
+            "device": 2304,
+            "inode": 2689552645,
+            "kind": "file",
+            "mtime_ns": "1790475646049476397",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/ecJ0RMHDclLq6GQECaI4jZYbmn5evn75yRaxa-xDYyI.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651109516819",
+            "device": 2304,
+            "inode": 2689552692,
+            "kind": "file",
+            "mtime_ns": "1790475651109516819",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/fmZtgqta6IW1KD8KWc93qLU8ybSKk5V-7Wa7Km8zw14.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650899515144",
+            "device": 2304,
+            "inode": 2689552687,
+            "kind": "file",
+            "mtime_ns": "1790475650899515144",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/gy1U496T2nI6nIYJ-iuTha46MO63xBExbr6WQ9SSFGw.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651489519855",
+            "device": 2304,
+            "inode": 2689552700,
+            "kind": "file",
+            "mtime_ns": "1790475651489519855",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/hIVefZSu2kSL151VeThVTsy0qKCMvrMnB7jVH_P_JeE.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651209517618",
+            "device": 2304,
+            "inode": 2689552695,
+            "kind": "file",
+            "mtime_ns": "1790475651209517618",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/i9NcdR5iKl27fDTYoRzGxfDT_nh4u3mABDMRBrCIob4.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652439527444",
+            "device": 2304,
+            "inode": 2689552902,
+            "kind": "file",
+            "mtime_ns": "1790475652439527444",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/kDROEsfzKlnDpn04jsgB6J8EEABR2ig5-a9bsbSbb8A.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475650609512825",
+            "device": 2304,
+            "inode": 2689552682,
+            "kind": "file",
+            "mtime_ns": "1790475650609512825",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/kZ1N_HyiQrFCQe4ajxXJSjpzhQxT4RKfD-g8B03Ra1M.textproto",
+            "size": 143
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649549504357",
+            "device": 2304,
+            "inode": 2689552674,
+            "kind": "file",
+            "mtime_ns": "1790475649549504357",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/lIextONOEYtMjmYBc67DTAEsDjo7k7vrzOKsIm8XpRU.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649299502362",
+            "device": 2304,
+            "inode": 2689552670,
+            "kind": "file",
+            "mtime_ns": "1790475649299502362",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/lbTo_76XcCVswwNec_riCPT0pjkCXAkMEKmO3EMqpUU.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475645989475919",
+            "device": 2304,
+            "inode": 2689552644,
+            "kind": "file",
+            "mtime_ns": "1790475645989475919",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/mM7rhYNXjSc032OfSM8zWHv7Av_fMr9Ur4BGqPX9afo.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651649521135",
+            "device": 2304,
+            "inode": 2689552703,
+            "kind": "file",
+            "mtime_ns": "1790475651649521135",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/meQqutsYeGPvtftJEsUzWJvCcEJbpengaWiq3XOIDsQ.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649869506915",
+            "device": 2304,
+            "inode": 2689552678,
+            "kind": "file",
+            "mtime_ns": "1790475649869506915",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/o7-Qp2KKao1z8BTtBjMc3p_-a6qZMAb4uqgMRJ8xiZg.textproto",
+            "size": 139
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649259502042",
+            "device": 2304,
+            "inode": 2689552669,
+            "kind": "file",
+            "mtime_ns": "1790475649259502042",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/o8sW2ITtFT4dFd67_0jisFWzdyLsmJsb7F4wEN0JO7A.textproto",
+            "size": 55
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652859530800",
+            "device": 2304,
+            "inode": 2689552908,
+            "kind": "file",
+            "mtime_ns": "1790475652859530800",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/pP1a9alCGfLKnwF8f9A5a_Z1lzY8oXeAFnjK21DSVRE.textproto",
+            "size": 54
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644789466334",
+            "device": 2304,
+            "inode": 2689548535,
+            "kind": "file",
+            "mtime_ns": "1790475644789466334",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/qt-gP_lenIHgFl46rhVwY9VsCe74aRWMKEnsSAvrN_c.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646659481270",
+            "device": 2304,
+            "inode": 2689552649,
+            "kind": "file",
+            "mtime_ns": "1790475646659481270",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/r-nD326-l5ZLZG_wtdXOExpXA5Pykfmu4LNUIm7JlmI.textproto",
+            "size": 55
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652539528242",
+            "device": 2304,
+            "inode": 2689552903,
+            "kind": "file",
+            "mtime_ns": "1790475652539528242",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/r3pryJIyM4hpdUmUSFtcByiNFPnJWWG-dctm6FQpgFs.textproto",
+            "size": 54
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649849506754",
+            "device": 2304,
+            "inode": 2689552677,
+            "kind": "file",
+            "mtime_ns": "1790475649849506754",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/rM_3XnIp-wXAOLNrG3AxEM3Rbs470gfwqgVDlHWD8g4.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651549520334",
+            "device": 2304,
+            "inode": 2689552701,
+            "kind": "file",
+            "mtime_ns": "1790475651549520334",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/rRnf7uUrZLaCo-rLpdXam9r2NjClKk5zoTSy8dYLvMM.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648539496291",
+            "device": 2304,
+            "inode": 2689552665,
+            "kind": "file",
+            "mtime_ns": "1790475648539496291",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/s7ZQelLY99Va1Vm3wMiRVDvGzXjogqtTL3gbly0LQNE.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652739529841",
+            "device": 2304,
+            "inode": 2689552907,
+            "kind": "file",
+            "mtime_ns": "1790475652739529841",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/sGZ0LzrCyH7EsQjgjQhJdP1q2Gq1DDBky5C7Klo7_j4.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652409527206",
+            "device": 2304,
+            "inode": 2689552901,
+            "kind": "file",
+            "mtime_ns": "1790475652409527206",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/sa5aYRfPc_KqijKNrDSK7qCITQTojK-S9Kegtod_d2U.textproto",
+            "size": 143
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475649759506037",
+            "device": 2304,
+            "inode": 2689552676,
+            "kind": "file",
+            "mtime_ns": "1790475649759506037",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/swVAgU3ijhVWsWn07Nlh1SF0a03wMvdrZcZ0zn7TvJU.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646819482549",
+            "device": 2304,
+            "inode": 2689552652,
+            "kind": "file",
+            "mtime_ns": "1790475646819482549",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/tZKU2VRk8tfMkoXb6xjTN5wVbz9TNWfpRAHiC5-zQL0.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 0,
+            "category": "jax_cache",
+            "ctime_ns": "1790475653609536790",
+            "device": 2304,
+            "inode": 2689548532,
+            "kind": "directory",
+            "mtime_ns": "1790475653609536790",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/tmp",
+            "size": 6
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475652629528962",
+            "device": 2304,
+            "inode": 2689552904,
+            "kind": "file",
+            "mtime_ns": "1790475652629528962",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/ts3kXiLwAqB2sfePmYQAO0jBkZ2wmh8jouxPPgIt794.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475646109476877",
+            "device": 2304,
+            "inode": 2689552646,
+            "kind": "file",
+            "mtime_ns": "1790475646109476877",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/uM6Ka0-n6k_iFd4Fj_Hl-05BHi2rxtMX8SuTmmwkMTY.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651739521851",
+            "device": 2304,
+            "inode": 2689552897,
+            "kind": "file",
+            "mtime_ns": "1790475651739521851",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/umHjEakow7yZ0O9RL5D5Cs-xH1wA5qdf2X2PRi8ylSI.textproto",
+            "size": 54
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651419519296",
+            "device": 2304,
+            "inode": 2689552699,
+            "kind": "file",
+            "mtime_ns": "1790475651419519296",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/ux_bqadDx7wRqdy0jLqyt9xcFSh4MmHjxYQEfwbFw6E.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651909523210",
+            "device": 2304,
+            "inode": 2689552900,
+            "kind": "file",
+            "mtime_ns": "1790475651909523210",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/vF1094xUtep5RPBhgrIA3Gz28Z9BvRV8u4UxkgB9Dsk.textproto",
+            "size": 53
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644669465375",
+            "device": 2304,
+            "inode": 2689548533,
+            "kind": "file",
+            "mtime_ns": "1790475644669465375",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/vg0k9VhjFb8dp8OxdQtBQhb2osPoLAmqYAMQ0jGIYOs.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648219493732",
+            "device": 2304,
+            "inode": 2689552660,
+            "kind": "file",
+            "mtime_ns": "1790475648219493732",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/vtHMH67puBlGpAg4mgOWenKeZKp7sU_59VZSYAl34Jk.textproto",
+            "size": 143
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475648459495650",
+            "device": 2304,
+            "inode": 2689552663,
+            "kind": "file",
+            "mtime_ns": "1790475648459495650",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/w2F3HTDuy1jEICbm-0LZAQ6IqF-90qzHI2gh1eiOHqg.textproto",
+            "size": 140
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475644829466654",
+            "device": 2304,
+            "inode": 2689548536,
+            "kind": "file",
+            "mtime_ns": "1790475644829466654",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/wKAVqOI6k3q7bH-61bxcWTXBjS5op1xAruVmaWeGq3Q.textproto",
+            "size": 141
+          },
+          {
+            "blocks": 8,
+            "category": "jax_cache",
+            "ctime_ns": "1790475651379518977",
+            "device": 2304,
+            "inode": 2689552698,
+            "kind": "file",
+            "mtime_ns": "1790475651379518977",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z/xla_gpu_per_fusion_autotune_cache_dir/zgjxK3DVTF9pIP3yPs60wxDPJ3WElEdHmf1FHfoC5K8.textproto",
+            "size": 142
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_config",
+            "ctime_ns": "1790475547038675470",
+            "device": 2304,
+            "inode": 17266211778,
+            "kind": "directory",
+            "mtime_ns": "1790475547038675470",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb-config/perf-orig80k-full-300-20260926T232339Z",
+            "size": 10
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_data",
+            "ctime_ns": "1790475547038675470",
+            "device": 2304,
+            "inode": 18530442000,
+            "kind": "directory",
+            "mtime_ns": "1790475547038675470",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb-data/perf-orig80k-full-300-20260926T232339Z",
+            "size": 10
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_cache",
+            "ctime_ns": "1790475560468784532",
+            "device": 2304,
+            "inode": 17266211777,
+            "kind": "directory",
+            "mtime_ns": "1790475560468784532",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-full-300-20260926T232339Z",
+            "size": 27
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_cache",
+            "ctime_ns": "1790475560468784532",
+            "device": 2304,
+            "inode": 20402730966,
+            "kind": "directory",
+            "mtime_ns": "1790475560468784532",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-full-300-20260926T232339Z/wandb",
+            "size": 26
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_cache",
+            "ctime_ns": "1790475560468784532",
+            "device": 2304,
+            "inode": 20738363389,
+            "kind": "directory",
+            "mtime_ns": "1790475560468784532",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/logs",
+            "size": 52
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_cache",
+            "ctime_ns": "1790476067752945850",
+            "device": 2304,
+            "inode": 20738363390,
+            "kind": "file",
+            "mtime_ns": "1790476067752945850",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/logs/core-debug-20260927_021920.log",
+            "size": 2031
+          },
+          {
+            "blocks": 0,
+            "category": "xdg_data",
+            "ctime_ns": "1790475547038675470",
+            "device": 2304,
+            "inode": 18530442001,
+            "kind": "directory",
+            "mtime_ns": "1790475547038675470",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/xdg-data/perf-orig80k-full-300-20260926T232339Z",
+            "size": 10
+          },
+          {
+            "blocks": 128,
+            "category": "stage_wrapper_logs",
+            "ctime_ns": "1790476076333017445",
+            "device": 2304,
+            "inode": 24969325801,
+            "kind": "file",
+            "mtime_ns": "1790476076333017445",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-20260926T232339Z.wrapper.log",
+            "size": 63626
+          },
+          {
+            "blocks": 8,
+            "category": "stage_wrapper_logs",
+            "ctime_ns": "1790476154183668553",
+            "device": 2304,
+            "inode": 24969325809,
+            "kind": "file",
+            "mtime_ns": "1790476154183668553",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-completion-20260926T232339Z.wrapper.log",
+            "size": 2589
+          },
+          {
+            "blocks": 8,
+            "category": "stage_wrapper_logs",
+            "ctime_ns": "1790476304094916717",
+            "device": 2304,
+            "inode": 24969325812,
+            "kind": "file",
+            "mtime_ns": "1790476304094916717",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-measure-20260926T232339Z.wrapper.log",
+            "size": 2599
+          },
+          {
+            "blocks": 128,
+            "category": "driver_log",
+            "ctime_ns": "1790476076313017279",
+            "device": 2304,
+            "inode": 24969325802,
+            "kind": "file",
+            "mtime_ns": "1790476076313017279",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/perf-orig80k-full-300-20260926T232339Z.driver.log",
+            "size": 61909
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561098789649",
+            "device": 2304,
+            "inode": 17266211776,
+            "kind": "directory",
+            "mtime_ns": "1790475561098789649",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z",
+            "size": 27
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561098789649",
+            "device": 2304,
+            "inode": 20950621164,
+            "kind": "directory",
+            "mtime_ns": "1790475561098789649",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb",
+            "size": 123
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561098789649",
+            "device": 2304,
+            "inode": 20950621167,
+            "kind": "link",
+            "mtime_ns": "1790475561098789649",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/debug-internal.log",
+            "size": 52
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561098789649",
+            "device": 2304,
+            "inode": 20950621166,
+            "kind": "link",
+            "mtime_ns": "1790475561098789649",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/debug.log",
+            "size": 43
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561098789649",
+            "device": 2304,
+            "inode": 20950621165,
+            "kind": "link",
+            "mtime_ns": "1790475561098789649",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/latest-run",
+            "size": 28
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561378791922",
+            "device": 2304,
+            "inode": 21254617311,
+            "kind": "directory",
+            "mtime_ns": "1790475561378791922",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt",
+            "size": 88
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476066192932817",
+            "device": 2304,
+            "inode": 21789330222,
+            "kind": "directory",
+            "mtime_ns": "1790476066192932817",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/files",
+            "size": 161
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476066192932817",
+            "device": 2304,
+            "inode": 21789330229,
+            "kind": "file",
+            "mtime_ns": "1790476066192932817",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/files/config.yaml",
+            "size": 3289
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475590919031227",
+            "device": 2304,
+            "inode": 25502544451,
+            "kind": "directory",
+            "mtime_ns": "1790475590919031227",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/files/media",
+            "size": 28
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475590919031227",
+            "device": 2304,
+            "inode": 67282985,
+            "kind": "directory",
+            "mtime_ns": "1790475590919031227",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/files/media/images",
+            "size": 61
+          },
+          {
+            "blocks": 256,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475590919031227",
+            "device": 2304,
+            "inode": 67282986,
+            "kind": "file",
+            "mtime_ns": "1790475590489027727",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/files/media/images/camera_views_0_0ed28d706f3a1354ec6a.png",
+            "size": 128994
+          },
+          {
+            "blocks": 88,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476063742912348",
+            "device": 2304,
+            "inode": 21789330225,
+            "kind": "file",
+            "mtime_ns": "1790476063742912348",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/files/output.log",
+            "size": 44775
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561898796142",
+            "device": 2304,
+            "inode": 21789330227,
+            "kind": "file",
+            "mtime_ns": "1790475561898796142",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/files/requirements.txt",
+            "size": 3864
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561808795412",
+            "device": 2304,
+            "inode": 21789330226,
+            "kind": "file",
+            "mtime_ns": "1790475561808795412",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/files/wandb-metadata.json",
+            "size": 3178
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476066002931230",
+            "device": 2304,
+            "inode": 21789330228,
+            "kind": "file",
+            "mtime_ns": "1790476066002931230",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/files/wandb-summary.json",
+            "size": 426
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561108789728",
+            "device": 2304,
+            "inode": 21475454968,
+            "kind": "directory",
+            "mtime_ns": "1790475561108789728",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/logs",
+            "size": 87
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561108789728",
+            "device": 2304,
+            "inode": 21475454970,
+            "kind": "link",
+            "mtime_ns": "1790475561108789728",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/logs/debug-core.log",
+            "size": 152
+          },
+          {
+            "blocks": 8,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476066762937578",
+            "device": 2304,
+            "inode": 21475454971,
+            "kind": "file",
+            "mtime_ns": "1790476066762937578",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/logs/debug-internal.log",
+            "size": 1794
+          },
+          {
+            "blocks": 16,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476066762937578",
+            "device": 2304,
+            "inode": 21475454969,
+            "kind": "file",
+            "mtime_ns": "1790476066762937578",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/logs/debug.log",
+            "size": 5752
+          },
+          {
+            "blocks": 352,
+            "category": "wandb_logs",
+            "ctime_ns": "1790476066762937578",
+            "device": 2304,
+            "inode": 21254617312,
+            "kind": "file",
+            "mtime_ns": "1790476066762937578",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/run-ar2nmtrt.wandb",
+            "size": 178725
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561098789649",
+            "device": 2304,
+            "inode": 22084604703,
+            "kind": "directory",
+            "mtime_ns": "1790475561098789649",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/tmp",
+            "size": 26
+          },
+          {
+            "blocks": 0,
+            "category": "wandb_logs",
+            "ctime_ns": "1790475561098789649",
+            "device": 2304,
+            "inode": 22281002301,
+            "kind": "directory",
+            "mtime_ns": "1790475561098789649",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/tmp/code",
+            "size": 10
+          }
+        ],
+        "internal_aliases": [
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/debug-internal.log",
+            "policy": "链接本身只lstat，不通过它递归",
+            "target": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/logs/debug-internal.log",
+            "target_in_explicit_roots": true
+          },
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/debug.log",
+            "policy": "链接本身只lstat，不通过它递归",
+            "target": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/logs/debug.log",
+            "target_in_explicit_roots": true
+          },
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/latest-run",
+            "policy": "链接本身只lstat，不通过它递归",
+            "target": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt",
+            "target_in_explicit_roots": true
+          },
+          {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/run-20260927_021921-ar2nmtrt/logs/debug-core.log",
+            "policy": "链接本身只lstat，不通过它递归",
+            "target": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-full-300-20260926T232339Z/wandb/logs/core-debug-20260927_021920.log",
+            "target_in_explicit_roots": true
+          }
+        ],
+        "logical_bytes": 4377550,
+        "roots": [
+          {
+            "category": "records",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z"
+          },
+          {
+            "category": "driver_log",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/perf-orig80k-full-300-20260926T232339Z.driver.log"
+          },
+          {
+            "category": "stage_wrapper_logs",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-20260926T232339Z.wrapper.log"
+          },
+          {
+            "category": "stage_wrapper_logs",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-completion-20260926T232339Z.wrapper.log"
+          },
+          {
+            "category": "stage_wrapper_logs",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-measure-20260926T232339Z.wrapper.log"
+          },
+          {
+            "category": "jax_cache",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/perf-orig80k-full-300-20260926T232339Z"
+          },
+          {
+            "category": "cuda_cache",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/cuda/perf-orig80k-full-300-20260926T232339Z"
+          },
+          {
+            "category": "wandb_logs",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/wandb/perf-orig80k-full-300-20260926T232339Z"
+          },
+          {
+            "category": "wandb_cache",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb/perf-orig80k-full-300-20260926T232339Z"
+          },
+          {
+            "category": "wandb_config",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb-config/perf-orig80k-full-300-20260926T232339Z"
+          },
+          {
+            "category": "wandb_data",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/wandb-data/perf-orig80k-full-300-20260926T232339Z"
+          },
+          {
+            "category": "xdg_data",
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/xdg-data/perf-orig80k-full-300-20260926T232339Z"
+          }
+        ],
+        "unique_inodes": 153
+      }
+    }
+  },
+  "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+  "margins_selected": false,
+  "observed_utc": "2026-09-27T02:36:48.592634+00:00",
+  "policy": "目录/普通文件/链接逐项lstat；链接不递归，内部未覆盖的实体日志目标逐项显式lstat，按device+inode去重；两遍稳定。mtime_ns/ctime_ns记字符串。",
+  "schema": 1,
+  "scope": "已结束normal两run日志/记录/指定cache只读stat，不含checkpoint树或权重内容，不是预算来源或验收",
+  "shared_group_report_and_process_logs_not_in_per_run_total": true,
+  "unique_inodes": 306
+}

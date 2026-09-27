@@ -1,0 +1,21 @@
+WRAPPER_SESSION=orig80k-perf-full-completion-20260926T232339Z
+WRAPPER_PID=1344471
+WRAPPER_BODY_PID=1344473
+WRAPPER_TRAIN_HEAD=70a641a827eb2559c3acb69430f55c1c53babaeb
+WRAPPER_COMMAND_FILE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-completion-20260926T232339Z.command
+WRAPPER_COMMAND_SHA256_EXPECTED=bd318087f637a1ff0a85139f9b4f86cb009ea405ef781d1cddc628038371f605
+WRAPPER_START_UTC=2026-09-27T02:28:00Z
+WRAPPER_COMMAND_SHA256_ACTUAL=bd318087f637a1ff0a85139f9b4f86cb009ea405ef781d1cddc628038371f605
+WRAPPER_COMMAND=env -u PYTHONPATH -u PYTHONHOME -u JAX_PLATFORM_NAME -u XLA_FLAGS -u TRAIN_TIMING_STEPS -u ORIG80K_SMOKE_EQ_MODE -u ORIG80K_TIMING_EQ_PROFILE CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu UV_PROJECT_ENVIRONMENT=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv UV_CACHE_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/uv OPENPI_DATA_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models XDG_CACHE_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/xdg HF_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/hf PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 TZ=UTC uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_orig80k_completion.py --mode perf --records /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z --run-root /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z --log /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/perf-orig80k-full-300-20260926T232339Z.driver.log --run perf-orig80k-full-300-20260926T232339Z --head 70a641a827eb2559c3acb69430f55c1c53babaeb --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/completion.json 
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+RUN_COMPLETED=PASS run=perf-orig80k-full-300-20260926T232339Z checkpoints=1 final=299
+COMPLETION_EXIT_CODE=0
+WRAPPER_HEAD_END=70a641a827eb2559c3acb69430f55c1c53babaeb
+WRAPPER_VERSION_EXIT_CODE=0
+WRAPPER_COMMAND_EXIT=0
+WRAPPER_TEE_EXIT=0
+COMPLETION_TEE_EXIT_CODE=0
+WRAPPER_END_UTC=2026-09-27T02:29:14Z
+WRAPPER_FOOTER_PRINTF_EXIT=0
+WRAPPER_FOOTER_TEE_EXIT=0
+WRAPPER_EXIT_CODE=0

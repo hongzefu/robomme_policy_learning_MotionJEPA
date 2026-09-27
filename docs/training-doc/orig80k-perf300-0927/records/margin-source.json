@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "checkpoint_growth_margin_bytes": 84798963712,
+  "save_sampling_margin_bytes": 34359738368,
+  "logs_cache_margin_bytes": 68719476736,
+  "basis": {
+    "checkpoint_growth_margin_bytes": "用户明确选择“方案 B：16 / 32 / 64 GiB”。本轮normal perf实际HEAD为70a641a827eb2559c3acb69430f55c1c53babaeb；full单份299分配11879944192B、count单份11879923712B，两侧各8份的基数为190078943232B。按用户选定每份16GiB，共16份规划274877906944B，增长余量为差额84798963712B。full/count measurement SHA分别为7b3458c7f196e4657e57280c74d185e03a231a4043b4be36f179d225d8d7c0a2、162f4fbf3dcbd0ee22bb80c08126f6bbd2d796c980d6f402c7264d122a116a4c。同结构EMA未压缩张量约12.05GiB，16GiB是已批准规划额度，不是未来压缩率或容器开销的已证上界。",
+    "save_sampling_margin_bytes": "用户明确选择方案B的32GiB采样盲区余量，即34359738368B。正式联合报告SHA为dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8；两侧观测临时增量4159750144B与1371791360B共5531541504B，仅作离散采样下界，仍由预算原公式另加。目标0.5秒，实际最大间隔约3.76/3.73秒，count有1条路径竞态，故不以未观察到的占用为零。32GiB等于两份16GiB规划量的额外空间，两run未来并发不按本次保存错峰缩减；此选择不构成连续峰值保证。",
+    "logs_cache_margin_bytes": "用户明确选择方案B的64GiB日志/cache余量，即68719476736B。本轮两run记录、日志及指定缓存按inode去重为9662464B，两遍stat稳定、内部链接仅lstat，记录SHA674e47fc9cfed9894fd21641e43cc4db7b4a3f254e17b902c7792e88e0011f61。按实测字节速率与80k报告ETA，GPU CSV约23.10/23.30MB，metrics按log100约800条；prod不产生perf专用step_timing/host/disk记录。长期日志和编译缓存没有本工具证明的硬上界，因此64GiB是用户明确批准的工程余量，不能以本次小体积推导保证。既有数据、权重及缓存不删除，实时可用空间由原消费者重新核验。"
+  }
+}

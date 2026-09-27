@@ -1,5 +1,7 @@
 # 两库normal档4+4并行300步perf：起跑前启动档（待V11.17Beta，未执行）
 
+> 本页保留实际起跑前锁定的完整控制正文；下面的待填及“未执行”描述属于当时准备状态。真实Beta为 `70a641a827eb2559c3acb69430f55c1c53babaeb`，实际运行仅替换TRAIN_HEAD与经用户批准预算的SHA占位，十个Bash块原文不追改。八阶段现已完成，用户选择B档16/32/64GiB，正式预算SHA为 `3653beccde73c9550639828d022edddffe98f7cc1b083cceab17699920306b20`；实测、退出链与日志原字节豁免见[result](result.md)。
+
 本档案基于冻结[旧perf300-ready启动档](/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-ready-candidate-20260926/launch.md)，其SHA256为 `86b6140521928a2298391334abf377ebf73b4faec47d8c1db6347f0a080cca8c`，旧稿与更早wrapper故障记录保持原字节。仅更新显式清除新selector、normal/schema2记录核验及实现版本口径；两GPU并行→双方均退出→full恢复→count恢复→联合report→两measurement→预算共8阶段、子训练参数、wrapper/f8、0.5秒采样和三margin公式不改。正式perf尚未执行；实际TRAIN_HEAD待独立commitV11.17Beta生成，不预填任何未来身份或结果。
 
 接口实现锚点已形成：`aec86db64e5178e63d9e7f77d3f5bc235db16390`，新增显式档位/schema2的runner、contract、speed、observer及对应3份测试共7文件已提交，377项核心验证通过。不能再以00bd/b0工具字节作为现行接口，也不能声称相对旧normal版本只改文档。未来perf TRAIN_HEAD仍须独立实际Beta，并与实际确定性20 Beta核对受保护源码、依赖和数据指纹；本档案不伪造未来HEAD。

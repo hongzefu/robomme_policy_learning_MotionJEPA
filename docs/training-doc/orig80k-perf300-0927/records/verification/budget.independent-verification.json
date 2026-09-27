@@ -1,0 +1,342 @@
+{
+  "schema": 1,
+  "checker_actual_exit_code": 0,
+  "output": {
+    "checker": {
+      "bytes": 11371,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/verify_budget.py",
+      "sha256": "ea9495ddfda7a1c6a647db921a181da26dded09f1ce8853049f2785f11f82264"
+    },
+    "finished_utc": "2026-09-27T04:23:41.039920+00:00",
+    "frozen_terminal_checker": {
+      "bytes": 18239,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/verify_terminal.py",
+      "sha256": "d1c0c8145a3efac6ee6bd17f6e9bc7bdec3b36cfcd5dc34220c2738a8c77f48d"
+    },
+    "group": null,
+    "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+    "result": {
+      "approved_policy": {
+        "boundary": "用户规划额度；不是未来压缩体积、连续峰值或长期缓存的已证明上界",
+        "logs_cache_margin_gib": 64,
+        "name": "B",
+        "per_checkpoint_gib": 16,
+        "save_sampling_margin_gib": 32
+      },
+      "arithmetic": {
+        "checkpoint_copies_per_group": 8,
+        "checkpoint_total_copies": 16,
+        "components": {
+          "checkpoint_total_bytes": 274877906944,
+          "logs_cache_margin_bytes": 68719476736,
+          "save_temporary_peak_bytes": 39891279872
+        },
+        "margins": {
+          "checkpoint_growth_margin_bytes": 84798963712,
+          "logs_cache_margin_bytes": 68719476736,
+          "save_sampling_margin_bytes": 34359738368
+        },
+        "measured_retained_bytes": 190078943232,
+        "observed_extra_lower_bound_by_group": {
+          "counting": 1371791360,
+          "full": 4159750144
+        },
+        "per_checkpoint_planned_bytes": 17179869184,
+        "required_bytes": 383488663552
+      },
+      "body_pid": 1429126,
+      "budget": {
+        "bytes": 3346,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/prod-disk-budget.json",
+        "sha256": "3653beccde73c9550639828d022edddffe98f7cc1b083cceab17699920306b20"
+      },
+      "command": {
+        "bytes": 3916,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-budget-20260926T232339Z.command",
+        "sha256": "db43d0e9764cb209082f82c33d64409a48d4991bc144a5d71784faf8f48eda82"
+      },
+      "dispatch_parent_process": {
+        "budget": {
+          "bytes": 1230,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/normal-perf-budget-20260927.process.json",
+          "sha256": "0d07d785d6b149b552d11513ab61b0b261ab01bec96efdd6e3e431aba0e94018"
+        },
+        "budget-finish": {
+          "bytes": 1265,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/normal-perf-budget-finish-20260927.process.json",
+          "sha256": "ffba0663740c5e3980358b917b0ae83d6342b1822f13bb53318a100143843944"
+        }
+      },
+      "formal_recorded_consumer": {
+        "available_bytes": 708412715008,
+        "budget_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/prod-disk-budget.json",
+        "budget_sha256": "3653beccde73c9550639828d022edddffe98f7cc1b083cceab17699920306b20",
+        "components": {
+          "checkpoint_total_bytes": 274877906944,
+          "logs_cache_margin_bytes": 68719476736,
+          "save_temporary_peak_bytes": 39891279872
+        },
+        "margin_source": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/margin-source.json",
+          "sha256": "09ea4e4739e11e2851a013b00e9a2f3322d0b6d9b7859f9b749495be90d375bf"
+        },
+        "minimum_bytes": 322122547200,
+        "note": "0.5秒离散非原子采样；观测增量仅为下界，保守余量由明确来源提供，不设默认倍率",
+        "required_bytes": 383488663552,
+        "source_perf": {
+          "counting": {
+            "checkpoints": 8,
+            "evidence": {
+              "completion": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/completion.json",
+                "sha256": "c533f14a5b7f3cc912ed2782daf6eea19c9324aa1add0837f422ec8c123b60c7"
+              },
+              "disk_samples": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/disk_samples.jsonl",
+                "sha256": "63d698b9c451ad27fc5716506036c2cd53537498d943afe2aab8f66fc30e1cb2"
+              },
+              "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+              "launch": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/launch.json",
+                "sha256": "16ab2bd1a238b84f1a630e1226a71dcbe91834ae75c88ba1ef76a7026dec271b"
+              },
+              "measurement": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/checkpoint_measurement.json",
+                "sha256": "162f4fbf3dcbd0ee22bb80c08126f6bbd2d796c980d6f402c7264d122a116a4c"
+              },
+              "report": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json",
+                "sha256": "dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8"
+              },
+              "run_name": "perf-orig80k-count-300-20260926T232339Z"
+            },
+            "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+            "observed_extra_lower_bound_bytes": 1371791360,
+            "per_checkpoint_allocated_bytes": 11879923712,
+            "retained_bytes": 95039389696,
+            "run_name": "perf-orig80k-count-300-20260926T232339Z"
+          },
+          "full": {
+            "checkpoints": 8,
+            "evidence": {
+              "completion": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/completion.json",
+                "sha256": "c1a5cfd9a9fab18929ffcd9678777194f77f95cd22b4ee3a4dbeb5bda0599822"
+              },
+              "disk_samples": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/disk_samples.jsonl",
+                "sha256": "e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992"
+              },
+              "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+              "launch": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/launch.json",
+                "sha256": "1eb8623947f5cb0c3ea00ae240a9142c0832987b6f77ace55f79e56094f288a3"
+              },
+              "measurement": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/checkpoint_measurement.json",
+                "sha256": "7b3458c7f196e4657e57280c74d185e03a231a4043b4be36f179d225d8d7c0a2"
+              },
+              "report": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json",
+                "sha256": "dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8"
+              },
+              "run_name": "perf-orig80k-full-300-20260926T232339Z"
+            },
+            "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+            "observed_extra_lower_bound_bytes": 4159750144,
+            "per_checkpoint_allocated_bytes": 11879944192,
+            "retained_bytes": 95039553536,
+            "run_name": "perf-orig80k-full-300-20260926T232339Z"
+          }
+        }
+      },
+      "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+      "host_observation_boundary": "root已明确报告budget-finish宿主chunk225973实际0；本工具只核其process原文件和f8侧证，不从内部JSON声称独立观测了该最外wait",
+      "independent_available_observed_utc": "2026-09-27T04:23:41.021529+00:00",
+      "independent_readonly_consumer": {
+        "available_bytes": 708412710912,
+        "budget_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/prod-disk-budget.json",
+        "budget_sha256": "3653beccde73c9550639828d022edddffe98f7cc1b083cceab17699920306b20",
+        "components": {
+          "checkpoint_total_bytes": 274877906944,
+          "logs_cache_margin_bytes": 68719476736,
+          "save_temporary_peak_bytes": 39891279872
+        },
+        "margin_source": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/margin-source.json",
+          "sha256": "09ea4e4739e11e2851a013b00e9a2f3322d0b6d9b7859f9b749495be90d375bf"
+        },
+        "minimum_bytes": 322122547200,
+        "note": "0.5秒离散非原子采样；观测增量仅为下界，保守余量由明确来源提供，不设默认倍率",
+        "required_bytes": 383488663552,
+        "source_perf": {
+          "counting": {
+            "checkpoints": 8,
+            "evidence": {
+              "completion": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/completion.json",
+                "sha256": "c533f14a5b7f3cc912ed2782daf6eea19c9324aa1add0837f422ec8c123b60c7"
+              },
+              "disk_samples": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/disk_samples.jsonl",
+                "sha256": "63d698b9c451ad27fc5716506036c2cd53537498d943afe2aab8f66fc30e1cb2"
+              },
+              "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+              "launch": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/launch.json",
+                "sha256": "16ab2bd1a238b84f1a630e1226a71dcbe91834ae75c88ba1ef76a7026dec271b"
+              },
+              "measurement": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/checkpoint_measurement.json",
+                "sha256": "162f4fbf3dcbd0ee22bb80c08126f6bbd2d796c980d6f402c7264d122a116a4c"
+              },
+              "report": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json",
+                "sha256": "dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8"
+              },
+              "run_name": "perf-orig80k-count-300-20260926T232339Z"
+            },
+            "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+            "observed_extra_lower_bound_bytes": 1371791360,
+            "per_checkpoint_allocated_bytes": 11879923712,
+            "retained_bytes": 95039389696,
+            "run_name": "perf-orig80k-count-300-20260926T232339Z"
+          },
+          "full": {
+            "checkpoints": 8,
+            "evidence": {
+              "completion": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/completion.json",
+                "sha256": "c1a5cfd9a9fab18929ffcd9678777194f77f95cd22b4ee3a4dbeb5bda0599822"
+              },
+              "disk_samples": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/disk_samples.jsonl",
+                "sha256": "e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992"
+              },
+              "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+              "launch": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/launch.json",
+                "sha256": "1eb8623947f5cb0c3ea00ae240a9142c0832987b6f77ace55f79e56094f288a3"
+              },
+              "measurement": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/checkpoint_measurement.json",
+                "sha256": "7b3458c7f196e4657e57280c74d185e03a231a4043b4be36f179d225d8d7c0a2"
+              },
+              "report": {
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json",
+                "sha256": "dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8"
+              },
+              "run_name": "perf-orig80k-full-300-20260926T232339Z"
+            },
+            "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+            "observed_extra_lower_bound_bytes": 4159750144,
+            "per_checkpoint_allocated_bytes": 11879944192,
+            "retained_bytes": 95039553536,
+            "run_name": "perf-orig80k-full-300-20260926T232339Z"
+          }
+        }
+      },
+      "log": {
+        "bytes": 6457,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-budget-20260926T232339Z.wrapper.log",
+        "sha256": "1ca0db1b1b97e5ee4c0b544d306ca614ef684a18bba1237e8a7b09c2cc603902"
+      },
+      "logcache_basis": {
+        "bytes": 166370,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-archive-staging-20260927/normal-perf-logs-cache-stat-20260927.json",
+        "sha256": "674e47fc9cfed9894fd21641e43cc4db7b4a3f254e17b902c7792e88e0011f61"
+      },
+      "margin_source": {
+        "bytes": 2095,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/margin-source.json",
+        "sha256": "09ea4e4739e11e2851a013b00e9a2f3322d0b6d9b7859f9b749495be90d375bf"
+      },
+      "native": {
+        "capture_process": {
+          "bytes": 3158,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-budget-20260926T232339Z.exit.capture.json",
+          "sha256": "ef27bacfbcd8aec6d914dff7702e17298036783e6722ba0d5c9c81fa90e04fc2"
+        },
+        "identity": {
+          "bytes": 1467,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-budget-20260926T232339Z.identity.json",
+          "sha256": "16f2d5b89f8ddb4065a76adb1dcb14af2bd90d48370def78fd19e94b1c2c71c4"
+        },
+        "launch_process": {
+          "bytes": 3346,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-budget-20260926T232339Z.launch.process.json",
+          "sha256": "42ea9bd973dc0dc43bc7ca1efd6f1f2d7cd362d08912d1af9e54e02cfd6600f9"
+        },
+        "receipt": {
+          "bytes": 5173,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-budget-20260926T232339Z.exit.json",
+          "sha256": "e425930418b76ef8f9741e1c79c315c8844755d6edec23480b54feafca758359"
+        }
+      },
+      "prior_seven_reports": {
+        "count-completion": {
+          "bytes": 34916,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/count-completion.independent-verification.json",
+          "sha256": "908043e4c0f1451c107c72d5fe6b44f31262f3c5de357b1fd73597be63987bc2"
+        },
+        "count-measurement": {
+          "bytes": 16182,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/count-measurement.independent-verification.json",
+          "sha256": "7ed33e795d9ce996100cfd4adbb207074fa2de9b8fadf6d83f16bd57e33c08ab"
+        },
+        "count-run": {
+          "bytes": 29781,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/count-run.independent-verification.json",
+          "sha256": "e83a070a34fbbc3de78f32cd164ae505def7b3ea77c3e84f8794bf79d65c47f9"
+        },
+        "full-completion": {
+          "bytes": 34839,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/full-completion.independent-verification.json",
+          "sha256": "ecb894a595c423b5efb51ea85fb2a585b9baed1cfc78be6b53cb2d99059c236d"
+        },
+        "full-measurement": {
+          "bytes": 16151,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/full-measurement.independent-verification.json",
+          "sha256": "a6e2bcdc3e71cabd4f323a7dd3ed17d6a3c3c01f27801ad7fc28cb9ab7d7b043"
+        },
+        "full-run": {
+          "bytes": 29718,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/full-run.independent-verification.json",
+          "sha256": "3625a682ef417236b982895b9a3bd13f2dca911f39d35c2c05826761dd58ba31"
+        },
+        "report": {
+          "bytes": 100307,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/report.independent-verification.json",
+          "sha256": "d4942a17cddf4fa74ea58ffd635648c8800084c93a7fc5f7232971dcd3613ef0"
+        }
+      },
+      "scope": "第八预算独立只读验收，不启动80k，不重跑训练/恢复/measure或任何tmux/capture",
+      "status": "PASS",
+      "trailing_space": "按用户批准原字节保留预算WRAPPER_COMMAND末尾一个空格；未清洗任何原日志",
+      "wrapper_end_utc": "2026-09-27T04:20:41Z",
+      "wrapper_pid": 1429124,
+      "wrapper_start_utc": "2026-09-27T04:20:41Z"
+    },
+    "schema": 1,
+    "stage": "budget",
+    "started_utc": "2026-09-27T04:23:40.790379+00:00",
+    "status": "PASS"
+  },
+  "stdout": "{\n  \"checker\": {\n    \"bytes\": 11371,\n    \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/verify_budget.py\",\n    \"sha256\": \"ea9495ddfda7a1c6a647db921a181da26dded09f1ce8853049f2785f11f82264\"\n  },\n  \"finished_utc\": \"2026-09-27T04:23:41.039920+00:00\",\n  \"frozen_terminal_checker\": {\n    \"bytes\": 18239,\n    \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/verify_terminal.py\",\n    \"sha256\": \"d1c0c8145a3efac6ee6bd17f6e9bc7bdec3b36cfcd5dc34220c2738a8c77f48d\"\n  },\n  \"group\": null,\n  \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n  \"result\": {\n    \"approved_policy\": {\n      \"boundary\": \"用户规划额度；不是未来压缩体积、连续峰值或长期缓存的已证明上界\",\n      \"logs_cache_margin_gib\": 64,\n      \"name\": \"B\",\n      \"per_checkpoint_gib\": 16,\n      \"save_sampling_margin_gib\": 32\n    },\n    \"arithmetic\": {\n      \"checkpoint_copies_per_group\": 8,\n      \"checkpoint_total_copies\": 16,\n      \"components\": {\n        \"checkpoint_total_bytes\": 274877906944,\n        \"logs_cache_margin_bytes\": 68719476736,\n        \"save_temporary_peak_bytes\": 39891279872\n      },\n      \"margins\": {\n        \"checkpoint_growth_margin_bytes\": 84798963712,\n        \"logs_cache_margin_bytes\": 68719476736,\n        \"save_sampling_margin_bytes\": 34359738368\n      },\n      \"measured_retained_bytes\": 190078943232,\n      \"observed_extra_lower_bound_by_group\": {\n        \"counting\": 1371791360,\n        \"full\": 4159750144\n      },\n      \"per_checkpoint_planned_bytes\": 17179869184,\n      \"required_bytes\": 383488663552\n    },\n    \"body_pid\": 1429126,\n    \"budget\": {\n      \"bytes\": 3346,\n      \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/prod-disk-budget.json\",\n      \"sha256\": \"3653beccde73c9550639828d022edddffe98f7cc1b083cceab17699920306b20\"\n    },\n    \"command\": {\n      \"bytes\": 3916,\n      \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-budget-20260926T232339Z.command\",\n      \"sha256\": \"db43d0e9764cb209082f82c33d64409a48d4991bc144a5d71784faf8f48eda82\"\n    },\n    \"dispatch_parent_process\": {\n      \"budget\": {\n        \"bytes\": 1230,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/normal-perf-budget-20260927.process.json\",\n        \"sha256\": \"0d07d785d6b149b552d11513ab61b0b261ab01bec96efdd6e3e431aba0e94018\"\n      },\n      \"budget-finish\": {\n        \"bytes\": 1265,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/normal-perf-budget-finish-20260927.process.json\",\n        \"sha256\": \"ffba0663740c5e3980358b917b0ae83d6342b1822f13bb53318a100143843944\"\n      }\n    },\n    \"formal_recorded_consumer\": {\n      \"available_bytes\": 708412715008,\n      \"budget_path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/prod-disk-budget.json\",\n      \"budget_sha256\": \"3653beccde73c9550639828d022edddffe98f7cc1b083cceab17699920306b20\",\n      \"components\": {\n        \"checkpoint_total_bytes\": 274877906944,\n        \"logs_cache_margin_bytes\": 68719476736,\n        \"save_temporary_peak_bytes\": 39891279872\n      },\n      \"margin_source\": {\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/margin-source.json\",\n        \"sha256\": \"09ea4e4739e11e2851a013b00e9a2f3322d0b6d9b7859f9b749495be90d375bf\"\n      },\n      \"minimum_bytes\": 322122547200,\n      \"note\": \"0.5秒离散非原子采样；观测增量仅为下界，保守余量由明确来源提供，不设默认倍率\",\n      \"required_bytes\": 383488663552,\n      \"source_perf\": {\n        \"counting\": {\n          \"checkpoints\": 8,\n          \"evidence\": {\n            \"completion\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/completion.json\",\n              \"sha256\": \"c533f14a5b7f3cc912ed2782daf6eea19c9324aa1add0837f422ec8c123b60c7\"\n            },\n            \"disk_samples\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/disk_samples.jsonl\",\n              \"sha256\": \"63d698b9c451ad27fc5716506036c2cd53537498d943afe2aab8f66fc30e1cb2\"\n            },\n            \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n            \"launch\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/launch.json\",\n              \"sha256\": \"16ab2bd1a238b84f1a630e1226a71dcbe91834ae75c88ba1ef76a7026dec271b\"\n            },\n            \"measurement\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/checkpoint_measurement.json\",\n              \"sha256\": \"162f4fbf3dcbd0ee22bb80c08126f6bbd2d796c980d6f402c7264d122a116a4c\"\n            },\n            \"report\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json\",\n              \"sha256\": \"dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8\"\n            },\n            \"run_name\": \"perf-orig80k-count-300-20260926T232339Z\"\n          },\n          \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n          \"observed_extra_lower_bound_bytes\": 1371791360,\n          \"per_checkpoint_allocated_bytes\": 11879923712,\n          \"retained_bytes\": 95039389696,\n          \"run_name\": \"perf-orig80k-count-300-20260926T232339Z\"\n        },\n        \"full\": {\n          \"checkpoints\": 8,\n          \"evidence\": {\n            \"completion\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/completion.json\",\n              \"sha256\": \"c1a5cfd9a9fab18929ffcd9678777194f77f95cd22b4ee3a4dbeb5bda0599822\"\n            },\n            \"disk_samples\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/disk_samples.jsonl\",\n              \"sha256\": \"e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992\"\n            },\n            \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n            \"launch\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/launch.json\",\n              \"sha256\": \"1eb8623947f5cb0c3ea00ae240a9142c0832987b6f77ace55f79e56094f288a3\"\n            },\n            \"measurement\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/checkpoint_measurement.json\",\n              \"sha256\": \"7b3458c7f196e4657e57280c74d185e03a231a4043b4be36f179d225d8d7c0a2\"\n            },\n            \"report\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json\",\n              \"sha256\": \"dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8\"\n            },\n            \"run_name\": \"perf-orig80k-full-300-20260926T232339Z\"\n          },\n          \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n          \"observed_extra_lower_bound_bytes\": 4159750144,\n          \"per_checkpoint_allocated_bytes\": 11879944192,\n          \"retained_bytes\": 95039553536,\n          \"run_name\": \"perf-orig80k-full-300-20260926T232339Z\"\n        }\n      }\n    },\n    \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n    \"host_observation_boundary\": \"root已明确报告budget-finish宿主chunk225973实际0；本工具只核其process原文件和f8侧证，不从内部JSON声称独立观测了该最外wait\",\n    \"independent_available_observed_utc\": \"2026-09-27T04:23:41.021529+00:00\",\n    \"independent_readonly_consumer\": {\n      \"available_bytes\": 708412710912,\n      \"budget_path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/prod-disk-budget.json\",\n      \"budget_sha256\": \"3653beccde73c9550639828d022edddffe98f7cc1b083cceab17699920306b20\",\n      \"components\": {\n        \"checkpoint_total_bytes\": 274877906944,\n        \"logs_cache_margin_bytes\": 68719476736,\n        \"save_temporary_peak_bytes\": 39891279872\n      },\n      \"margin_source\": {\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/margin-source.json\",\n        \"sha256\": \"09ea4e4739e11e2851a013b00e9a2f3322d0b6d9b7859f9b749495be90d375bf\"\n      },\n      \"minimum_bytes\": 322122547200,\n      \"note\": \"0.5秒离散非原子采样；观测增量仅为下界，保守余量由明确来源提供，不设默认倍率\",\n      \"required_bytes\": 383488663552,\n      \"source_perf\": {\n        \"counting\": {\n          \"checkpoints\": 8,\n          \"evidence\": {\n            \"completion\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/completion.json\",\n              \"sha256\": \"c533f14a5b7f3cc912ed2782daf6eea19c9324aa1add0837f422ec8c123b60c7\"\n            },\n            \"disk_samples\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/disk_samples.jsonl\",\n              \"sha256\": \"63d698b9c451ad27fc5716506036c2cd53537498d943afe2aab8f66fc30e1cb2\"\n            },\n            \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n            \"launch\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/launch.json\",\n              \"sha256\": \"16ab2bd1a238b84f1a630e1226a71dcbe91834ae75c88ba1ef76a7026dec271b\"\n            },\n            \"measurement\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/checkpoint_measurement.json\",\n              \"sha256\": \"162f4fbf3dcbd0ee22bb80c08126f6bbd2d796c980d6f402c7264d122a116a4c\"\n            },\n            \"report\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json\",\n              \"sha256\": \"dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8\"\n            },\n            \"run_name\": \"perf-orig80k-count-300-20260926T232339Z\"\n          },\n          \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n          \"observed_extra_lower_bound_bytes\": 1371791360,\n          \"per_checkpoint_allocated_bytes\": 11879923712,\n          \"retained_bytes\": 95039389696,\n          \"run_name\": \"perf-orig80k-count-300-20260926T232339Z\"\n        },\n        \"full\": {\n          \"checkpoints\": 8,\n          \"evidence\": {\n            \"completion\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/completion.json\",\n              \"sha256\": \"c1a5cfd9a9fab18929ffcd9678777194f77f95cd22b4ee3a4dbeb5bda0599822\"\n            },\n            \"disk_samples\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/disk_samples.jsonl\",\n              \"sha256\": \"e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992\"\n            },\n            \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n            \"launch\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/launch.json\",\n              \"sha256\": \"1eb8623947f5cb0c3ea00ae240a9142c0832987b6f77ace55f79e56094f288a3\"\n            },\n            \"measurement\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/checkpoint_measurement.json\",\n              \"sha256\": \"7b3458c7f196e4657e57280c74d185e03a231a4043b4be36f179d225d8d7c0a2\"\n            },\n            \"report\": {\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json\",\n              \"sha256\": \"dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8\"\n            },\n            \"run_name\": \"perf-orig80k-full-300-20260926T232339Z\"\n          },\n          \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n          \"observed_extra_lower_bound_bytes\": 4159750144,\n          \"per_checkpoint_allocated_bytes\": 11879944192,\n          \"retained_bytes\": 95039553536,\n          \"run_name\": \"perf-orig80k-full-300-20260926T232339Z\"\n        }\n      }\n    },\n    \"log\": {\n      \"bytes\": 6457,\n      \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-budget-20260926T232339Z.wrapper.log\",\n      \"sha256\": \"1ca0db1b1b97e5ee4c0b544d306ca614ef684a18bba1237e8a7b09c2cc603902\"\n    },\n    \"logcache_basis\": {\n      \"bytes\": 166370,\n      \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-archive-staging-20260927/normal-perf-logs-cache-stat-20260927.json\",\n      \"sha256\": \"674e47fc9cfed9894fd21641e43cc4db7b4a3f254e17b902c7792e88e0011f61\"\n    },\n    \"margin_source\": {\n      \"bytes\": 2095,\n      \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/margin-source.json\",\n      \"sha256\": \"09ea4e4739e11e2851a013b00e9a2f3322d0b6d9b7859f9b749495be90d375bf\"\n    },\n    \"native\": {\n      \"capture_process\": {\n        \"bytes\": 3158,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-budget-20260926T232339Z.exit.capture.json\",\n        \"sha256\": \"ef27bacfbcd8aec6d914dff7702e17298036783e6722ba0d5c9c81fa90e04fc2\"\n      },\n      \"identity\": {\n        \"bytes\": 1467,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-budget-20260926T232339Z.identity.json\",\n        \"sha256\": \"16f2d5b89f8ddb4065a76adb1dcb14af2bd90d48370def78fd19e94b1c2c71c4\"\n      },\n      \"launch_process\": {\n        \"bytes\": 3346,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-budget-20260926T232339Z.launch.process.json\",\n        \"sha256\": \"42ea9bd973dc0dc43bc7ca1efd6f1f2d7cd362d08912d1af9e54e02cfd6600f9\"\n      },\n      \"receipt\": {\n        \"bytes\": 5173,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-budget-20260926T232339Z.exit.json\",\n        \"sha256\": \"e425930418b76ef8f9741e1c79c315c8844755d6edec23480b54feafca758359\"\n      }\n    },\n    \"prior_seven_reports\": {\n      \"count-completion\": {\n        \"bytes\": 34916,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/count-completion.independent-verification.json\",\n        \"sha256\": \"908043e4c0f1451c107c72d5fe6b44f31262f3c5de357b1fd73597be63987bc2\"\n      },\n      \"count-measurement\": {\n        \"bytes\": 16182,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/count-measurement.independent-verification.json\",\n        \"sha256\": \"7ed33e795d9ce996100cfd4adbb207074fa2de9b8fadf6d83f16bd57e33c08ab\"\n      },\n      \"count-run\": {\n        \"bytes\": 29781,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/count-run.independent-verification.json\",\n        \"sha256\": \"e83a070a34fbbc3de78f32cd164ae505def7b3ea77c3e84f8794bf79d65c47f9\"\n      },\n      \"full-completion\": {\n        \"bytes\": 34839,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/full-completion.independent-verification.json\",\n        \"sha256\": \"ecb894a595c423b5efb51ea85fb2a585b9baed1cfc78be6b53cb2d99059c236d\"\n      },\n      \"full-measurement\": {\n        \"bytes\": 16151,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/full-measurement.independent-verification.json\",\n        \"sha256\": \"a6e2bcdc3e71cabd4f323a7dd3ed17d6a3c3c01f27801ad7fc28cb9ab7d7b043\"\n      },\n      \"full-run\": {\n        \"bytes\": 29718,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/full-run.independent-verification.json\",\n        \"sha256\": \"3625a682ef417236b982895b9a3bd13f2dca911f39d35c2c05826761dd58ba31\"\n      },\n      \"report\": {\n        \"bytes\": 100307,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/report.independent-verification.json\",\n        \"sha256\": \"d4942a17cddf4fa74ea58ffd635648c8800084c93a7fc5f7232971dcd3613ef0\"\n      }\n    },\n    \"scope\": \"第八预算独立只读验收，不启动80k，不重跑训练/恢复/measure或任何tmux/capture\",\n    \"status\": \"PASS\",\n    \"trailing_space\": \"按用户批准原字节保留预算WRAPPER_COMMAND末尾一个空格；未清洗任何原日志\",\n    \"wrapper_end_utc\": \"2026-09-27T04:20:41Z\",\n    \"wrapper_pid\": 1429124,\n    \"wrapper_start_utc\": \"2026-09-27T04:20:41Z\"\n  },\n  \"schema\": 1,\n  \"stage\": \"budget\",\n  \"started_utc\": \"2026-09-27T04:23:40.790379+00:00\",\n  \"status\": \"PASS\"\n}\n",
+  "stderr": "",
+  "argv": [
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python",
+    "-B",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/verify_budget.py",
+    "--head",
+    "70a641a827eb2559c3acb69430f55c1c53babaeb"
+  ],
+  "cwd": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+  "started_utc": "2026-09-27T04:23:40.730428+00:00",
+  "finished_utc": "2026-09-27T04:23:41.057778+00:00",
+  "observer": "audit_equiv subprocess.run.returncode",
+  "integer_preservation": "原stdout及output由Python标准库JSON处理，未经JS数字重编码"
+,
+  "host_exec": {"actual_exit_code":0,"chunk_id":"a075d2","wall_time_seconds":0.2553225},
+  "parent_actual_exit_code": 0
+}

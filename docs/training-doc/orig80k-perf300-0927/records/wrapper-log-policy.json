@@ -1,0 +1,318 @@
+{
+  "approval": "用户明确批准本轮八阶段wrapper COMMAND末尾原1B空格保留；仅这八份摘要允许该类尾空白，其他规则不放宽。",
+  "checks": "逐文件恰一处WRAPPER_COMMAND=末尾未转义1B空格；实际未删；shlex前后argv相同；其他尾白仅原获批W&B装饰规范化；关键行/EOF保真。",
+  "git_blank_at_eol_exemption_paths": [
+    "docs/training-doc/orig80k-perf300-0927/logs/count-completion/wrapper.summary.log",
+    "docs/training-doc/orig80k-perf300-0927/logs/count-measure/wrapper.summary.log",
+    "docs/training-doc/orig80k-perf300-0927/logs/count/wrapper.summary.log",
+    "docs/training-doc/orig80k-perf300-0927/logs/full-completion/wrapper.summary.log",
+    "docs/training-doc/orig80k-perf300-0927/logs/full-measure/wrapper.summary.log",
+    "docs/training-doc/orig80k-perf300-0927/logs/full/wrapper.summary.log",
+    "docs/training-doc/orig80k-perf300-0927/logs/report/wrapper.summary.log",
+    "docs/training-doc/orig80k-perf300-0927/logs/budget/wrapper.summary.log"
+  ],
+  "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+  "logs": {
+    "budget": {
+      "EOF_preserved": true,
+      "commands": [
+        {
+          "actually_trimmed": false,
+          "line_sha256": "5d40f98f75e35df54d1c6316e254d9ad95559699d10fd5bbec04b7c1efe92e81",
+          "preserved_trailing_bytes": 1,
+          "shlex_argv_equal_if_trimmed": true,
+          "summary_line": 9,
+          "unescaped_separator": true
+        }
+      ],
+      "critical_line_count": 20,
+      "critical_lines_exactly_equal": true,
+      "critical_lines_sha256": "8515717caf960723b11243d63c59774fc0656317ea2b29674415943bb7322f2c",
+      "git_path": "docs/training-doc/orig80k-perf300-0927/logs/budget/wrapper.summary.log",
+      "policy": "APPROVED_ORIGINAL_COMMAND_SEPARATOR",
+      "removed_progress_lines": 0,
+      "source": {
+        "bytes": 6457,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-budget-20260926T232339Z.wrapper.log",
+        "sha256": "1ca0db1b1b97e5ee4c0b544d306ca614ef684a18bba1237e8a7b09c2cc603902"
+      },
+      "summary": {
+        "bytes": 6457,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-archive-staging-20260927/final-artifacts/logs/budget/wrapper.summary.log",
+        "sha256": "1ca0db1b1b97e5ee4c0b544d306ca614ef684a18bba1237e8a7b09c2cc603902"
+      },
+      "task": "budget",
+      "wandb_decoration_changes": []
+    },
+    "count-completion": {
+      "EOF_preserved": true,
+      "commands": [
+        {
+          "actually_trimmed": false,
+          "line_sha256": "4b185862ba3d96ddc1d54544e45ecd5fb71fd05eae1aacba05b8a127fd07bafc",
+          "preserved_trailing_bytes": 1,
+          "shlex_argv_equal_if_trimmed": true,
+          "summary_line": 9,
+          "unescaped_separator": true
+        }
+      ],
+      "critical_line_count": 20,
+      "critical_lines_exactly_equal": true,
+      "critical_lines_sha256": "921b1f71f83fd54b93540705ad7ae2879e83cd3d1dbed485323ba4f9f02eaeb0",
+      "git_path": "docs/training-doc/orig80k-perf300-0927/logs/count-completion/wrapper.summary.log",
+      "policy": "APPROVED_ORIGINAL_COMMAND_SEPARATOR",
+      "removed_progress_lines": 0,
+      "source": {
+        "bytes": 2597,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-completion-20260926T232339Z.wrapper.log",
+        "sha256": "24db8202d82ddf30eff6e9c228c1f35fbdc3a3ba6ac7d86637d6082ac6d4929e"
+      },
+      "summary": {
+        "bytes": 2597,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-archive-staging-20260927/final-artifacts/logs/count-completion/wrapper.summary.log",
+        "sha256": "24db8202d82ddf30eff6e9c228c1f35fbdc3a3ba6ac7d86637d6082ac6d4929e"
+      },
+      "task": "count-completion",
+      "wandb_decoration_changes": []
+    },
+    "count-measurement": {
+      "EOF_preserved": true,
+      "commands": [
+        {
+          "actually_trimmed": false,
+          "line_sha256": "a868db0d676030eb51a73980ec5117359597a30125f653006319b730f98bb0bd",
+          "preserved_trailing_bytes": 1,
+          "shlex_argv_equal_if_trimmed": true,
+          "summary_line": 9,
+          "unescaped_separator": true
+        }
+      ],
+      "critical_line_count": 19,
+      "critical_lines_exactly_equal": true,
+      "critical_lines_sha256": "2789d670598ab6410d01b649f120ed95d96d9c275dc2d24b92a60da58ac8f601",
+      "git_path": "docs/training-doc/orig80k-perf300-0927/logs/count-measure/wrapper.summary.log",
+      "policy": "APPROVED_ORIGINAL_COMMAND_SEPARATOR",
+      "removed_progress_lines": 0,
+      "source": {
+        "bytes": 2609,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-measure-20260926T232339Z.wrapper.log",
+        "sha256": "587af39b248201788b64514beb07c754ca08b4e3367cbc7a3ab91b61e9b35565"
+      },
+      "summary": {
+        "bytes": 2609,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-archive-staging-20260927/final-artifacts/logs/count-measure/wrapper.summary.log",
+        "sha256": "587af39b248201788b64514beb07c754ca08b4e3367cbc7a3ab91b61e9b35565"
+      },
+      "task": "count-measure",
+      "wandb_decoration_changes": []
+    },
+    "count-run": {
+      "EOF_preserved": true,
+      "commands": [
+        {
+          "actually_trimmed": false,
+          "line_sha256": "2c2061712fbc404bae3f86416521886d78dedc30dbc7dde706850ba331216b52",
+          "preserved_trailing_bytes": 1,
+          "shlex_argv_equal_if_trimmed": true,
+          "summary_line": 9,
+          "unescaped_separator": true
+        }
+      ],
+      "critical_line_count": 80,
+      "critical_lines_exactly_equal": true,
+      "critical_lines_sha256": "2833637080c48f476cedadfa8fb08ebc95fc9ab0a8daa19e450cb38a30afdb1d",
+      "git_path": "docs/training-doc/orig80k-perf300-0927/logs/count/wrapper.summary.log",
+      "policy": "APPROVED_ORIGINAL_COMMAND_SEPARATOR",
+      "removed_progress_lines": 31,
+      "source": {
+        "bytes": 63846,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-20260926T232339Z.wrapper.log",
+        "sha256": "721c0a47e4632e3364c5cdf46c15457117df7f97e202c45ed62ce4b0be70978f"
+      },
+      "summary": {
+        "bytes": 59795,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-archive-staging-20260927/final-artifacts/logs/count/wrapper.summary.log",
+        "sha256": "0d6f06b5e72b4b06435e2adafecba0376ee7be3816d20d69b453ca78d6f3f921"
+      },
+      "task": "count",
+      "wandb_decoration_changes": [
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "0acb3770ccb38c17cfe18effab3ece30d53ce667241e85c20b7d3c305f4e2b42",
+          "line": 351,
+          "removed_bytes": 80
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "line": 352,
+          "removed_bytes": 1
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "line": 359,
+          "removed_bytes": 1
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "line": 366,
+          "removed_bytes": 1
+        }
+      ]
+    },
+    "full-completion": {
+      "EOF_preserved": true,
+      "commands": [
+        {
+          "actually_trimmed": false,
+          "line_sha256": "ff34f9f2f0da70ff067843a4b93246279f1e2a0e43142474f9dc8c8c673737f1",
+          "preserved_trailing_bytes": 1,
+          "shlex_argv_equal_if_trimmed": true,
+          "summary_line": 9,
+          "unescaped_separator": true
+        }
+      ],
+      "critical_line_count": 20,
+      "critical_lines_exactly_equal": true,
+      "critical_lines_sha256": "d8904e4e00de731ca585e09dca154ebfccdf57fa672eeef014ec936ef2931e5a",
+      "git_path": "docs/training-doc/orig80k-perf300-0927/logs/full-completion/wrapper.summary.log",
+      "policy": "APPROVED_ORIGINAL_COMMAND_SEPARATOR",
+      "removed_progress_lines": 0,
+      "source": {
+        "bytes": 2589,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-completion-20260926T232339Z.wrapper.log",
+        "sha256": "9964189b976d42247114fd4fb836004c788791072e0f5b4704cf76daf1ab05c2"
+      },
+      "summary": {
+        "bytes": 2589,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-archive-staging-20260927/final-artifacts/logs/full-completion/wrapper.summary.log",
+        "sha256": "9964189b976d42247114fd4fb836004c788791072e0f5b4704cf76daf1ab05c2"
+      },
+      "task": "full-completion",
+      "wandb_decoration_changes": []
+    },
+    "full-measurement": {
+      "EOF_preserved": true,
+      "commands": [
+        {
+          "actually_trimmed": false,
+          "line_sha256": "3f2af173ed38f76afbbb88fa00f363c2de2b072e08a8c121c8c1db133ef8e696",
+          "preserved_trailing_bytes": 1,
+          "shlex_argv_equal_if_trimmed": true,
+          "summary_line": 9,
+          "unescaped_separator": true
+        }
+      ],
+      "critical_line_count": 19,
+      "critical_lines_exactly_equal": true,
+      "critical_lines_sha256": "6fcbea089ad5510af0497fad936049922a2a0dd0a7389ecb0bde4d641702f167",
+      "git_path": "docs/training-doc/orig80k-perf300-0927/logs/full-measure/wrapper.summary.log",
+      "policy": "APPROVED_ORIGINAL_COMMAND_SEPARATOR",
+      "removed_progress_lines": 0,
+      "source": {
+        "bytes": 2599,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-measure-20260926T232339Z.wrapper.log",
+        "sha256": "122c98debd50360996ed106f83daaad4cc8d1130123ede976d4f5771e79ed9f2"
+      },
+      "summary": {
+        "bytes": 2599,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-archive-staging-20260927/final-artifacts/logs/full-measure/wrapper.summary.log",
+        "sha256": "122c98debd50360996ed106f83daaad4cc8d1130123ede976d4f5771e79ed9f2"
+      },
+      "task": "full-measure",
+      "wandb_decoration_changes": []
+    },
+    "full-run": {
+      "EOF_preserved": true,
+      "commands": [
+        {
+          "actually_trimmed": false,
+          "line_sha256": "45117abf5ddcb6def3305c271ad694c529b0c1881b1a09a87fa283d5aebc0432",
+          "preserved_trailing_bytes": 1,
+          "shlex_argv_equal_if_trimmed": true,
+          "summary_line": 9,
+          "unescaped_separator": true
+        }
+      ],
+      "critical_line_count": 80,
+      "critical_lines_exactly_equal": true,
+      "critical_lines_sha256": "10a72fb9804c300aaed08997f50bfbd96585e612411f35d03c65ef79f990238a",
+      "git_path": "docs/training-doc/orig80k-perf300-0927/logs/full/wrapper.summary.log",
+      "policy": "APPROVED_ORIGINAL_COMMAND_SEPARATOR",
+      "removed_progress_lines": 31,
+      "source": {
+        "bytes": 63626,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-20260926T232339Z.wrapper.log",
+        "sha256": "5dc890a7177d4a10007c6506d7039f7ef24c0216fb4b181c51a382f6b8de9415"
+      },
+      "summary": {
+        "bytes": 59575,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-archive-staging-20260927/final-artifacts/logs/full/wrapper.summary.log",
+        "sha256": "c16bd8513b58fc973500360d2959f49b63320eaa2f522f4a1456b4d21bdeee56"
+      },
+      "task": "full",
+      "wandb_decoration_changes": [
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "0acb3770ccb38c17cfe18effab3ece30d53ce667241e85c20b7d3c305f4e2b42",
+          "line": 351,
+          "removed_bytes": 80
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "line": 352,
+          "removed_bytes": 1
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "line": 359,
+          "removed_bytes": 1
+        },
+        {
+          "after_sha256": "34482e7d3107482860c78ffe34ec4b2b8f9b384382f3ad4dc1897be59bc56445",
+          "before_sha256": "64726a13757cdeeb91b5136e3d5ada08e2fe33bdad61bf54dedc68469b2883df",
+          "line": 366,
+          "removed_bytes": 1
+        }
+      ]
+    },
+    "report": {
+      "EOF_preserved": true,
+      "commands": [
+        {
+          "actually_trimmed": false,
+          "line_sha256": "acfeec86eb3178bbd050ed9cab4212868a99154f11e601cf0d6093c535c8f31e",
+          "preserved_trailing_bytes": 1,
+          "shlex_argv_equal_if_trimmed": true,
+          "summary_line": 9,
+          "unescaped_separator": true
+        }
+      ],
+      "critical_line_count": 20,
+      "critical_lines_exactly_equal": true,
+      "critical_lines_sha256": "fc29448485c354c92bd022315060527ede3bab69d88fafe3d24c7b524794064a",
+      "git_path": "docs/training-doc/orig80k-perf300-0927/logs/report/wrapper.summary.log",
+      "policy": "APPROVED_ORIGINAL_COMMAND_SEPARATOR",
+      "removed_progress_lines": 0,
+      "source": {
+        "bytes": 2651,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-report-20260926T232339Z.wrapper.log",
+        "sha256": "182e5f2802db60f8c5f69a32aa486195b5f9247487b145e16a2376224dd41a52"
+      },
+      "summary": {
+        "bytes": 2651,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-archive-staging-20260927/final-artifacts/logs/report/wrapper.summary.log",
+        "sha256": "182e5f2802db60f8c5f69a32aa486195b5f9247487b145e16a2376224dd41a52"
+      },
+      "task": "report",
+      "wandb_decoration_changes": []
+    }
+  },
+  "schema": 1,
+  "status": "APPROVED",
+  "tag": "20260926T232339Z"
+}

@@ -1,28 +1,20 @@
-# perf-orig80k-count-300-20260926T232339Z：300步perf起跑前档案（待V11.17Beta，未运行）
+# perf-orig80k-count-300-20260926T232339Z：normal300步perf实际结果
 
 ## 1. 一句话结论与指标速览
 
-**本run仅完成名称及起跑前档案准备，尚未启动300步perf，实际Beta待commitV11.17Beta生成。** 根代理已采用名称 `perf-orig80k-count-300-20260926T232339Z`；准备标签 `20260926T232339Z`不是实际开始UTC。本run拟与另一库各4卡同时训练300步，W&B online、真实保存并CPU恢复299。没有本run吞吐、ETA、GPU/磁盘峰值或通过结论。
+本run已完成normal300步、真实保存299及61EMA叶CPU恢复，联合report、measurement及已批准B预算通过。稳态100–299共200步，193.667581秒，**66.092631 samples/s**。两库合计按窗口并集计算，不直接相加单侧速度；本结果不改写旧normal逐位重复性FAIL。
 
-| 项目 | 计划值或当前状态 |
-|---|---|
-| 数据 / GPU | 公开counting四任务子集 / `4,5,6,7` |
-| steps / batch / FSDP / workers | 300 / 64 / 4 / 4 |
-| 预热 / 稳态 | 0…99 / 100…299，共200稳态步 |
-| checkpoint / 真实恢复 | 末步299；当前未产生 |
-| perf TRAIN_HEAD、UUID、W&B ID、START/END | 均待真实记录 |
+真实Beta `70a641a827eb2559c3acb69430f55c1c53babaeb`，UUID `c8099d4f-a0d3-4af9-9cbd-80fe1d5f6a75`，W&B ID `vxmquzs1`。准备TAG `20260926T232339Z`不是实际开始时间。
 
 ## 2. 版本与代码状态
 
-正式perf必须另建独立Beta，两个run与后续8阶段共用其实际完整40位TRAIN_HEAD并保持clean；该SHA尚未生成，不能将准备时主仓、旧100或新20提交当作本run起跑版本。现行接口锚点为已提交实现 `aec86db64e5178e63d9e7f77d3f5bc235db16390`：runner/contract/speed/observer及3份测试共7文件已纳入显式档位/schema2，377项核心验证通过。不得再把旧00bd/b0量具当作新接口，或声称相对旧normal版本只有文档变化。未来perf Beta与aec及实际确定性20版本的受保护代码/依赖要求精确相同，数据/资产和环境指纹另行核对。
+两run与八个阶段实际使用clean Beta `70a641a827eb2559c3acb69430f55c1c53babaeb`（commitV11.17Beta）；运行中源码及venv冻结，最终完成快照于2026-09-27T04:24:31Z记录后解除冻结。现行实现锚为aec86db，确定性20运行锚c71、结果归档29f71均保留自身范围；本阶段受保护源码/依赖没有新增变化，归档提交不替代运行版本。
 
-既有INPUT保持 `3a1582db39c723c735e04752e5027bfe40ecc3e1`，P1/100量具与B保持 `00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8`，上游A保持 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`。两库确定性20实际Beta为 `c71d5255597db2f26930b7b5684a1d5b2994cf75`，准备TAG `20260927T012426Z`；两库原正式judge均为schema2/deterministic100 PASS，root已核七phase宿主/原生/capture均0；最终独立报告及归档路径/SHA由root补齐。见[确定性20实测结果](../orig80k-timing20-det-0927/result.md)。旧normal失败不改写，本normal perf仍未执行。
-
-本档案用于独立V11.17Beta起跑前登记；当前未运行perf，没有实际run UUID、W&B ID或起止UTC。新Beta必须仅含获准文档，运行时源码和venv冻结。
+INPUT仍为3a1582d、P1/100仍为00bd/ecf，已批准最外退出限制保留。旧normal20及off复验FAIL未被本次性能/恢复结果改写；确定性20的严格PASS仅作为已批准包装正确性闸门。
 
 ## 3. 启动与配置还原
 
-[共享launch](../orig80k-perf300-0927/launch.md)锁定完整8阶段控制正文、父适配及实际CLI。该run的内部调用是 `run_orig80k.sh perf "$RUN" "$GPUS" "$LIB" "$ASSETS"`，只覆盖perf步数300，不带额外训练超参。固定配置展开如下，仅是变量定义：
+[共享launch](../orig80k-perf300-0927/launch.md)锁定完整8阶段控制正文、父适配及实际CLI。该run的内部调用是 `run_orig80k.sh perf "$RUN" "$GPUS" "$LIB" "$ASSETS"`，只覆盖perf步数300，不带额外训练超参。固定配置展开如下，为实际参数还原：
 
 ```bash
 RUN=perf-orig80k-count-300-20260926T232339Z
@@ -32,7 +24,7 @@ ASSETS=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/
 NORM_STATS_SHA256=a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9
 ```
 
-训练session拟为 `orig80k-perf-count-20260926T232339Z`；实际session/window/pane/PID与开始UTC由新门闩执行时记录。所有阶段经f8 guard先retain和identity后释放，记录原命令文件及整文件SHA。guard仍执行原v1-store冻结副本，每阶段核正式Beta Git源、工作树和runtime字节相同，并将绑定写入外部launch/capture记录；不能直接把GUARD移出v1-store。
+实际训练session为 `orig80k-perf-count-20260926T232339Z`，window/pane `@582/%582`，pane PID `1325396`；起止UTC为 `2026-09-27T02:18:30Z` → `2026-09-27T02:27:51Z`。所有阶段经f8 guard先retain和identity后释放，记录原命令文件及整文件SHA。guard仍执行原v1-store冻结副本，每阶段核正式Beta Git源、工作树和runtime字节相同，并将绑定写入外部launch/capture记录；不能直接把GUARD移出v1-store。
 
 8阶段为两GPU runner → 两侧都结束并通过退出验收 → full CPU恢复 → count CPU恢复 → 联合report → 两个measurement receipt → budget。measurement为两个独立阶段，因此总数为8。两个CPU恢复顺序串行，不能在另一侧GPU训练尚未结束时抢先执行；其I/O和CPU工作不得污染对方稳态。
 
@@ -59,46 +51,44 @@ norm实际路径是 `$ASSETS/robomme/norm_stats.json`，期望SHA为 `a77075cd02
 
 ## 6. 硬件、调度与性能口径
 
-现场目标为AWS 8×A100-SXM4-80GB，/scratch为md0 XFS本地NVMe；本run固定物理GPU `4,5,6,7`，两库同时4+4，分别隔离记录、checkpoint及JAX/CUDA/W&B缓存。实际GPU UUID、占用/进程、CPU、内存、SHM、IO压力、存储和可用字节仍须起跑前重测，历史快照不是资源保证。
+AWS8×A100-SXM4-80GB，md0 XFS本地NVMe；本run固定GPU 4–7，两侧独立输出/cache并行。实际稳态为100–299，共200步，193.667581秒、平均0.968338秒/步、66.092631 samples/s；窗口与吞吐按正式report同步边界计算。
 
-稳态从step99完成同步到step299训练完成且保存之前的同步，单侧吞吐为 `200*64/steady_seconds`。GPU按0.5秒目标间隔记录均值、0%占比及慢步/其他步分层，慢步为host耗时超过稳态中位数2倍；中位数只用于分类。两库合计用两个稳态窗口并集跨度计算，不能简单相加不同时间窗的单侧速率。必须证实实际稳态正重叠，否则不能作本轮4+4结论。
+逐卡util均值：GPU4 98.499%, GPU5 98.904%, GPU6 98.543%, GPU7 98.837%；0%样本占比均0。本侧没有超过稳态中位host步时2倍的慢步，slow层样本0、均值null，不能写成慢步利用率0；其他步层即上述均值。重复相邻读数及实际间隔见[联合报告](../orig80k-perf300-0927/records/paired-speed.json)，高util不证明不存在瓶颈。
 
-实际数值全部待report生成。初始化/JIT/预热、保存提交、保存至收尾分别报告；含W&B收尾的跨度不叫纯磁盘写时，一次末步保存外推的80k ETA不是承诺。
+初始化/JIT/预热259.271秒，save dispatch 6.990秒，save至入口收尾62.879秒；最后一项包含额外收尾，不叫纯磁盘写时。原公式80k ETA约21.703小时，只是一次300步和末步保存的外推。
 
 ## 7. 训练过程、计时与磁盘采样
 
-runner原样构造训练ARGV，由speed.run将计时钩子接入HostTiming后进程内执行原入口；不调用JAX profiler。同步只用于既定窗口边界，单步host提交耗时不冒充GPU内核时间。保留真实save_state和wait，300步结束只留checkpoint299。
+实际speed_start/run均schema2且显式normal，300条step_timing闭合，真实save与wait完成。普通metrics步为[0,100,200]，末尾201…299的99步五标量完整有限；不把未逐步记录的其余loss虚写成已有日志。最终EMA61叶有限，perf未安装20步共同输入/完整201叶观察层。
 
-0.5秒只读采本run整个checkpoint根与/scratch可用量，首尾补采并覆盖异步wait结束。分配量按 `st_blocks*512`及device/inode去重，临时/最终文件都计入、不跟随软链；保留采样间隔、扫描延迟、漏tick、路径竞态及错误。它不是原子扫描，也不识别XFS reflink共享extent；采样最大值是观察下界，不是连续真实峰值。
-
-保存窗口必须绑定本run原生commit纳秒与wait/UUID/HEAD，不能把W&B收尾样本冒充保存期样本；真实I/O错误或保存期无覆盖不能放行预算。本perf所有记录均未生成；确定性20和旧normal差异各自保留其真实原档案，不回写数值或宣称根因已解决。
+磁盘目标0.5秒，实际999样本，间隔均值0.511879秒、最大3.725057秒，missed ticks 24；最大扫描3.251918秒。P=13251739648 B、F=11879948288 B；它们均整run根，峰值只是离散非原子观测下界。路径竞态样本1，正式工具按原口径接受且保留该事实，不能隐去采样盲区。
 
 ## 8. 真恢复、联合报告与measurement验收
 
-必须先等两个GPU run都结束，各自原生pane退出、capture父真实0、driver及wrapper终态均通过，再按full→count顺序执行CPU完成器。要求state_step300/loop_step299、checkpoint集合[299]、metrics步[0,100,200]和尾窗201…299共99步五标量完整有限；run/HEAD/UUID/W&B身份与异步wait、norm一致。真正恢复299/params并与该run末步EMA逐叶比较，不用文件名或旧恢复记录替代。
+双方GPU结束并原生退出后才顺序执行full/count CPU恢复。本侧恢复UTC `2026-09-27T02:29:30Z` → `2026-09-27T02:30:42Z`，唯一checkpoint[299]/state300，61EMA叶真实加载后逐叶等于自身final；不要求两库参数互相相等。
 
-GPU收尾后先核本run launch与两份speed schema2显式normal，包含真实300步、来源、argv、成功状态和保存计数；两侧恢复均通过才生成含peer的联合perf报告。报告后再按checkpoint_root唯一归属核两侧normal descriptor、实际flags与HEAD，才能继续测量。report本身无schema字段，不能把speed的schema2要求误写到report外层；两份真实299仍在时，分别调用 `orig80k_contract.py measure-checkpoint`，回执写各自REC/checkpoint_measurement.json，不能放通用RESULT_ROOT。回执绑定report、completion、原始采样、launch及原生元数据；小证据归档核验之前不讨论清理。本档案不安排删除，恢复/report/measurement/预算均未执行。
+联合report与[清理前measurement](records/checkpoint_measurement.json)已通过：单299目录allocated=11879923712 B，整个run根=11879948288 B，两者不能混称单份大小。receipt绑定原始小文件/采样/原生元数据，且在权重仍存在时生成；没有删除后补造或再次运行测量。见[group八阶段结果](../orig80k-perf300-0927/result.md)。
 
 ## 9. 用户决定记录
 
 用户目标为原版完整80k与纯counting80k、4卡+4卡并跑并先对拍；「尽可能并行做」「你有8张卡」落实为两份GPU perf同时进行。100的S1/S3真单跑判据保持，不因为利用率把旧基线改成并跑。
 
-「允许仅对拍关闭 W&B」只适用于P1/100，perf仍online。用户批准「补充 0.5 秒只读采样」，要求报告观察峰值并保守预留；本档案不选择余量倍率或容量。用户允许确定性档用于20步正确性对照，perf/prod继续normal，逐位判据不改；即使确定性档通过也不改写旧normal20及追加off差异结果。「继续工作 一路做到起泡前 有问题问用户」把本轮终点限定为正式80k起跑前，perf通过或预算通过都不直接起80k。
+「允许仅对拍关闭 W&B」只适用于P1/100，perf仍online。用户批准「补充 0.5 秒只读采样」，要求报告观察峰值并保守预留；用户随后已明确选择B余量，详见第11节及group结果；没有把短测峰值当硬上界。用户允许确定性档用于20步正确性对照，perf/prod继续normal，逐位判据不改；即使确定性档通过也不改写旧normal20及追加off差异结果。此前「继续工作 一路做到起泡前 有问题问用户」作为历史范围保留；用户最新明确「确认无误后可以直接开始两个训练」。因此最终共同Beta/clean、输出和全部前置核查通过后，root已获准直接启动两80k；本perf档案不冒称正式训练已启动。
 
 ## 10. 历史限制与失败处置
 
-旧INPUT/P1最外final append之后实际退出不可追补，分别按「同样补记限制，沿用INPUT结果（推荐）」及「补记P1限制，补独立退出取证后继续（推荐）」保留原始证据及限制；没有实际失败新证据，不补造wait。原perf wrapper的16例纯shell注入中15例符合预期、append_after反例确认日志0不能独立证明最外成功，此历史测试不改写。
+旧INPUT/P1退出限制、原wrapper 15/16测试与日志0盲区保持原史。本轮八任务均有原生pane退出0、capture父实际0、根调度宿主0；不靠日志自证。
 
-本阶段所有8任务使用新guard门闩、原生pane、独立capture实际返回和sidecar联合验收；还须保存宿主观测的父适配真实返回。失败或PENDING停止依赖步骤并保留所有产物，不自动覆盖、改名、清理或放宽数值/采样判据。wrapper日志与driver分别保留，外层不追加driver终态。
+八份wrapper第9行WRAPPER_COMMAND各有一个未转义末尾分隔空格。用户已批准原字节保留；仅[精确八文件清单](../orig80k-perf300-0927/records/wrapper-log-policy.json)允许这一类尾白，逐条shlex argv相同但实际没有删空格。其余进度/W&B清洗及所有其他文件的空白检查不放宽。原PENDING快照留存，不改写成事前批准。
 
-## 11. 当前结论、预算待填与下一步
+## 11. 当前结论、已批准预算与下一步
 
-当前仅有起跑前档案。det双judge PASS已确认，根代理仍须补齐最终归档与无损独立报告、四run完成器和六退出链的引用/SHA，并按共享launch在任何mkdir前执行固定d3f只读预检；独立V11.17Beta；现场资源与完整剩余空间；实际START/END、run UUID和W&B ID。现有perf代码300GiB最低保护不能冒充完整新增占用预算，须结合新20实际checkpoint和现场既有占用核算，不据旧11GiB结果自动通过。
+normal300性能、真实恢复、联合报告、测量及第八预算均PASS。用户选择B：16GiB/份×16份，另加32GiB采样盲区和64GiB日志/cache工程余量；增长余量84798963712 B，采样余量34359738368 B，日志余量68719476736 B。正式所需383488663552 B（357.151649GiB），执行时可用708412715008 B。
 
-真实perf、恢复、report及receipt之后，三项margin分别登记 `checkpoint_growth_margin_bytes`（非负整数）、`save_sampling_margin_bytes`（正整数）、`logs_cache_margin_bytes`（正整数）及可定位basis；**本档案不填写任何数值或默认倍率**。预算公式为两侧各8份单checkpoint真实分配量加增长余量、两侧采样额外量下界加采样余量，再加日志/cache余量，最终与300GiB取max。相同schema2预算和SHA供未来两prod共同引用；预算实际来源和人工合理性核对不能省略。
+同一[预算JSON](../orig80k-perf300-0927/records/prod-disk-budget.json) SHA `3653beccde73c9550639828d022edddffe98f7cc1b083cceab17699920306b20`供两正式run引用，起跑时仍重核空间及最终共同Beta/clean。按用户最新「确认无误后可以直接开始两个训练」推进，正式80k尚未由本档案执行。
 
 ## 12. 归档文件清单
 
-本档案保留起跑前README及[共享launch](../orig80k-perf300-0927/launch.md)；实际run输出尚未创建。未来runner记录根为 `v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z`、checkpoint根为 `v1-store/train-runs/mme_vla_suite/perf-orig80k-count-300-20260926T232339Z`、driver为 `v1-store/logs/perf-orig80k-count-300-20260926T232339Z.driver.log`，各自cache/W&B目录按run名隔离。
+[17成员核心包](records/core.records.tar.gz) 166965 B，SHA `bf7c03b6bd05131803e265f808a672a0f2129ba71dbeb926f3b5a84fa92ee24b`；[最终检查](records/archive_checks.json)和[独立measurement](records/checkpoint_measurement.json)保留原字节绑定。
 
-待真实运行后归档launch/runtime/run_meta、metrics/final、speed_start/speed_run、step_timing/host_samples/disk_samples、gpu.csv/.err、completion、checkpoint_measurement、原始及清洗日志、命令/源码/runtime摘要、guard identity/native receipt/父sidecar及检查链；联合report、三margin来源和schema2预算放公共结果根。保留原始小记录供权重清理后重算审查，不能用清洗日志覆盖其绑定源。Git能还原的脚本/yaml及大权重、venv、缓存不复制入docs；实际时间、UUID、W&B ID和结果只按现场回填。
+[driver摘要](logs/driver.summary.log)及[清洗账](logs/log_checks.json)另存，wrapper和独立退出在group的[八阶段索引](../orig80k-perf300-0927/records/final-perf-archive-index.json)。只归档Git不能还原的小记录；原始日志、checkpoint、cache保留v1-store，没有为归档删除权重或复制.sh/.yaml。

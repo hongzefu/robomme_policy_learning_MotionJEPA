@@ -1,0 +1,271 @@
+{
+  "full_or_first": {
+    "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+    "gpu_ids": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "batch_size": 64,
+    "workers": 4,
+    "timing_eq_profile": {
+      "name": "normal",
+      "xla_flags": ""
+    },
+    "xla_flags": null,
+    "storage": "AWS本地NVMe RAID /dev/md0",
+    "warmup_steps": [
+      0,
+      99
+    ],
+    "steady_steps": [
+      100,
+      299
+    ],
+    "steady_wall": [
+      1790475810.4978292,
+      1790476003.1372533
+    ],
+    "steady_seconds": 192.63942408561707,
+    "samples_per_second": 66.44538136861924,
+    "mean_step_s": 0.9631971204280854,
+    "initialization_and_warmup_s": 263.1997411251068,
+    "save_dispatch_s": 6.555440902709961,
+    "save_and_finish_s": 63.63149642944336,
+    "estimated_80k_eta_s": 77731.70163476467,
+    "eta_note": "初始化余量+80000稳态步+8次保存；保存成本由一次末步实测外推",
+    "slow_step_threshold_s": 1.921083238441497,
+    "slow_steps": [],
+    "gpu": {
+      "0": {
+        "mean_pct": 98.76363636363637,
+        "zero_pct": 0.0,
+        "samples": 385,
+        "mean_interval_s": 0.5005156248807907,
+        "max_gap_s": 0.505000114440918,
+        "memory_peak_mib": 79459.0,
+        "same_adjacent_readings": 240,
+        "slow_mean_pct": null,
+        "other_mean_pct": 98.76363636363637,
+        "slow_samples": 0,
+        "other_samples": 385
+      },
+      "1": {
+        "mean_pct": 98.56883116883117,
+        "zero_pct": 0.0,
+        "samples": 385,
+        "mean_interval_s": 0.5005156248807907,
+        "max_gap_s": 0.5039999485015869,
+        "memory_peak_mib": 79439.0,
+        "same_adjacent_readings": 350,
+        "slow_mean_pct": null,
+        "other_mean_pct": 98.56883116883117,
+        "slow_samples": 0,
+        "other_samples": 385
+      },
+      "2": {
+        "mean_pct": 98.50129870129871,
+        "zero_pct": 0.0,
+        "samples": 385,
+        "mean_interval_s": 0.5005156248807907,
+        "max_gap_s": 0.5039999485015869,
+        "memory_peak_mib": 79439.0,
+        "same_adjacent_readings": 262,
+        "slow_mean_pct": null,
+        "other_mean_pct": 98.50129870129871,
+        "slow_samples": 0,
+        "other_samples": 385
+      },
+      "3": {
+        "mean_pct": 98.8077922077922,
+        "zero_pct": 0.0,
+        "samples": 385,
+        "mean_interval_s": 0.5005130209028721,
+        "max_gap_s": 0.505000114440918,
+        "memory_peak_mib": 79439.0,
+        "same_adjacent_readings": 350,
+        "slow_mean_pct": null,
+        "other_mean_pct": 98.8077922077922,
+        "slow_samples": 0,
+        "other_samples": 385
+      }
+    },
+    "gpu_sampling_interval_s": 0.5,
+    "host_rss_sum_peak_bytes": 114735075328,
+    "host_rss_note": "各进程RSS之和含共享页重复计数，不是物理独占内存",
+    "shm_peak_bytes": 4620455936,
+    "mem_available_min_bytes": 1009290399744,
+    "disk": {
+      "checkpoint_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z",
+      "scratch_path": "/scratch",
+      "sampling_interval_s": 0.5,
+      "samples": 1004,
+      "save_samples": 23,
+      "save_window_wall": [
+        1790476003.1377487,
+        1790476014.6460276
+      ],
+      "save_wait_done_wall": 1790476063.689062,
+      "checkpoint_init_timestamp_nsecs": 1790476003190446822,
+      "checkpoint_commit_timestamp_nsecs": 1790476014646027608,
+      "checkpoint_save_commit_seconds": 11.455580786,
+      "checkpoint_metadata_sha256": "1640b77c9d84f65e68b0d49bd57aab95950b350b50ed932cfdefa3fa4e84c5c5",
+      "wait_record_sha256": "2fb9774cbb8750788c61e54d3f7f361d0e630490970af7a064d1b9d640438fda",
+      "run_uuid": "9bc82a7e-1f03-496a-824c-600d5eabd6d6",
+      "start_allocated_bytes": 0,
+      "final_allocated_bytes": 11879968768,
+      "start_scratch_available_bytes": 732187693056,
+      "final_scratch_available_bytes": 708417351680,
+      "sampled_max_allocated_bytes": 16039718912,
+      "save_sampled_max_allocated_bytes": 16039718912,
+      "scratch_available_min_bytes": 702857707520,
+      "mean_interval_s": 0.5127820017355739,
+      "max_interval_s": 3.757910222746432,
+      "max_sampling_duration_s": 3.519036336801946,
+      "max_lateness_s": 3.2421908248215914,
+      "missed_ticks": 26,
+      "samples_with_path_races": 0,
+      "duplicate_inodes_observed": 0,
+      "samples_sha256": "e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992",
+      "note": "只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减"
+    },
+    "checkpoint_validation": "另由check_orig80k_completion.py执行真实恢复验收"
+  },
+  "counting_or_second": {
+    "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+    "gpu_ids": [
+      4,
+      5,
+      6,
+      7
+    ],
+    "batch_size": 64,
+    "workers": 4,
+    "timing_eq_profile": {
+      "name": "normal",
+      "xla_flags": ""
+    },
+    "xla_flags": null,
+    "storage": "AWS本地NVMe RAID /dev/md0",
+    "warmup_steps": [
+      0,
+      99
+    ],
+    "steady_steps": [
+      100,
+      299
+    ],
+    "steady_wall": [
+      1790475808.419102,
+      1790476002.0866826
+    ],
+    "steady_seconds": 193.66758060455322,
+    "samples_per_second": 66.09263130175678,
+    "mean_step_s": 0.9683379030227661,
+    "initialization_and_warmup_s": 259.27092480659485,
+    "save_dispatch_s": 6.989881753921509,
+    "save_and_finish_s": 62.8787317276001,
+    "estimated_80k_eta_s": 78132.49923014641,
+    "eta_note": "初始化余量+80000稳态步+8次保存；保存成本由一次末步实测外推",
+    "slow_step_threshold_s": 1.9325086758472025,
+    "slow_steps": [],
+    "gpu": {
+      "4": {
+        "mean_pct": 98.49870801033592,
+        "zero_pct": 0.0,
+        "samples": 387,
+        "mean_interval_s": 0.5009922283301081,
+        "max_gap_s": 0.5690000057220459,
+        "memory_peak_mib": 79455.0,
+        "same_adjacent_readings": 235,
+        "slow_mean_pct": null,
+        "other_mean_pct": 98.49870801033592,
+        "slow_samples": 0,
+        "other_samples": 387
+      },
+      "5": {
+        "mean_pct": 98.90439276485787,
+        "zero_pct": 0.0,
+        "samples": 387,
+        "mean_interval_s": 0.5009922283301081,
+        "max_gap_s": 0.5690000057220459,
+        "memory_peak_mib": 79439.0,
+        "same_adjacent_readings": 377,
+        "slow_mean_pct": null,
+        "other_mean_pct": 98.90439276485787,
+        "slow_samples": 0,
+        "other_samples": 387
+      },
+      "6": {
+        "mean_pct": 98.54263565891473,
+        "zero_pct": 0.0,
+        "samples": 387,
+        "mean_interval_s": 0.5009922283301081,
+        "max_gap_s": 0.5690000057220459,
+        "memory_peak_mib": 79439.0,
+        "same_adjacent_readings": 243,
+        "slow_mean_pct": null,
+        "other_mean_pct": 98.54263565891473,
+        "slow_samples": 0,
+        "other_samples": 387
+      },
+      "7": {
+        "mean_pct": 98.83720930232558,
+        "zero_pct": 0.0,
+        "samples": 387,
+        "mean_interval_s": 0.5009922283301081,
+        "max_gap_s": 0.5690000057220459,
+        "memory_peak_mib": 79441.0,
+        "same_adjacent_readings": 308,
+        "slow_mean_pct": null,
+        "other_mean_pct": 98.83720930232558,
+        "slow_samples": 0,
+        "other_samples": 387
+      }
+    },
+    "gpu_sampling_interval_s": 0.5,
+    "host_rss_sum_peak_bytes": 64864890880,
+    "host_rss_note": "各进程RSS之和含共享页重复计数，不是物理独占内存",
+    "shm_peak_bytes": 4620455936,
+    "mem_available_min_bytes": 1009351651328,
+    "disk": {
+      "checkpoint_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-count-300-20260926T232339Z",
+      "scratch_path": "/scratch",
+      "sampling_interval_s": 0.5,
+      "samples": 999,
+      "save_samples": 25,
+      "save_window_wall": [
+        1790476002.0871637,
+        1790476016.7415419
+      ],
+      "save_wait_done_wall": 1790476062.069208,
+      "checkpoint_init_timestamp_nsecs": 1790476002143237964,
+      "checkpoint_commit_timestamp_nsecs": 1790476016741541893,
+      "checkpoint_save_commit_seconds": 14.598303929,
+      "checkpoint_metadata_sha256": "b02ed6a3ddf57b083528a3195fe11beb8c5f28344de90cd9202d83f742369726",
+      "wait_record_sha256": "2671932c8c4557aff2538c222aaeda3b6fa978ea3e9b0a2e9e05fc07844315c1",
+      "run_uuid": "c8099d4f-a0d3-4af9-9cbd-80fe1d5f6a75",
+      "start_allocated_bytes": 0,
+      "final_allocated_bytes": 11879948288,
+      "start_scratch_available_bytes": 732187643904,
+      "final_scratch_available_bytes": 708416647168,
+      "sampled_max_allocated_bytes": 13251739648,
+      "save_sampled_max_allocated_bytes": 13251739648,
+      "scratch_available_min_bytes": 702863810560,
+      "mean_interval_s": 0.5118794227350234,
+      "max_interval_s": 3.7250567451119423,
+      "max_sampling_duration_s": 3.2519182972609997,
+      "max_lateness_s": 2.775030746590346,
+      "missed_ticks": 24,
+      "samples_with_path_races": 1,
+      "duplicate_inodes_observed": 0,
+      "samples_sha256": "63d698b9c451ad27fc5716506036c2cd53537498d943afe2aab8f66fc30e1cb2",
+      "note": "只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减"
+    },
+    "checkpoint_validation": "另由check_orig80k_completion.py执行真实恢复验收"
+  },
+  "steady_overlap_seconds": 191.5888533592224,
+  "combined_steady_span_seconds": 194.71815133094788,
+  "combined_samples_per_second_over_span": 131.47207810374903
+}
