@@ -10,7 +10,10 @@ set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO"
 : "${SHARD:?}" "${ROUND:?}" "${PORT:?}" "${RUN_TAG:?}"
-CKPT=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning-frameSamp-continue/runs/ckpts/perceptual-framesamp-modul/79999
+# 官方 Yinpei/perceptual-framesamp-modul@c0f565dd 的 79999（与本机官方下载逐字节相同，diff -rq 18 文件）；
+# 官方加载器从 checkpoint_dir.parent/history_config.txt 读 history 配置，NFS 那份副本缺该文件，故另建 run 根：
+# history_config.txt 取自官方下载（内容 perceptual-framesamp-modul.yaml），79999 为指向 NFS 权重的 symlink。
+CKPT=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/eval-out/mmevla-ckpt/perceptual-framesamp-modul/79999
 SAVE_ROOT="${SAVE_ROOT:-/nfs/turbo/coe-chaijy-unreplicated/hongzefu/eval-out/mmevla-${RUN_TAG}-r${ROUND}-s${SHARD}}"
 SAVE_DIR="$SAVE_ROOT/mmevla-testhard/ckpt79999/seed7"
 LIMIT="${LIMIT:-0}"
