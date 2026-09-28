@@ -1,0 +1,141 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  ✓ siglip_params          level=cheap   0.00s
+  ✓ paligemma_tokenizer    level=cheap   0.00s
+  ✓ pi05_base              level=cheap   0.03s
+ASSETS=PASS assets=3 mismatches=0
+=== EVAL_SHARD shard=w5 HEAD=3ed41ae480346c31d5133ec9c833cc88fcc5ae98 ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/v2-orig-counting-pub400ep-modul-b64-80k/40000 run_kind=snapshot gpu=5 port=8156 seed=42 dataset=test tasks=BinFill,StopCube,PickXtimes,SwingXtimes ep_start=5 ep_stride=8 ep_count=0 policy_name=eval-orig40k-count4-w5 mem_fraction=0.28 start=2026-09-28 16:03:47 ===
+server pid=3587956 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ev40cnt-w5.server.log
+server 端口就绪 16:04:23
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+[robomme] task BinFill: 6 episodes [5, 13, 21, 29, 37, 45]
+EVAL_EPISODE split=test task=BinFill ep=5 env_seed=540500 difficulty=easy
+
+[robomme] env for task BinFill episode 5 setup finished
+task_goal: put two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=BinFill ep=13 env_seed=541300 difficulty=easy
+
+[robomme] env for task BinFill episode 13 setup finished
+task_goal: put three green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=BinFill ep=21 env_seed=542100 difficulty=easy
+
+[robomme] env for task BinFill episode 21 setup finished
+task_goal: put two red cubes into the bin, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=BinFill ep=29 env_seed=542900 difficulty=easy
+
+[robomme] env for task BinFill episode 29 setup finished
+task_goal: put three red cubes into the bin, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=BinFill ep=37 env_seed=543700 difficulty=easy
+
+[robomme] env for task BinFill episode 37 setup finished
+task_goal: put two blue cubes into the bin, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=BinFill ep=45 env_seed=544500 difficulty=easy
+
+[robomme] env for task BinFill episode 45 setup finished
+task_goal: put three blue cubes into the bin, then press the button to stop
+exec_start_idx: 0
+[robomme] task StopCube: 6 episodes [5, 13, 21, 29, 37, 45]
+EVAL_EPISODE split=test task=StopCube ep=5 env_seed=520500 difficulty=easy
+
+[robomme] env for task StopCube episode 5 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the second time
+exec_start_idx: 0
+EVAL_EPISODE split=test task=StopCube ep=13 env_seed=521300 difficulty=easy
+
+[robomme] env for task StopCube episode 13 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the second time
+exec_start_idx: 0
+EVAL_EPISODE split=test task=StopCube ep=21 env_seed=522100 difficulty=easy
+
+[robomme] env for task StopCube episode 21 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the fifth time
+exec_start_idx: 0
+EVAL_EPISODE split=test task=StopCube ep=29 env_seed=522900 difficulty=easy
+
+[robomme] env for task StopCube episode 29 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the third time
+exec_start_idx: 0
+EVAL_EPISODE split=test task=StopCube ep=37 env_seed=523700 difficulty=easy
+
+[robomme] env for task StopCube episode 37 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the third time
+exec_start_idx: 0
+EVAL_EPISODE split=test task=StopCube ep=45 env_seed=524500 difficulty=easy
+
+[robomme] env for task StopCube episode 45 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the fourth time
+exec_start_idx: 0
+[robomme] task PickXtimes: 6 episodes [5, 13, 21, 29, 37, 45]
+EVAL_EPISODE split=test task=PickXtimes ep=5 env_seed=510500 difficulty=easy
+
+[robomme] env for task PickXtimes episode 5 setup finished
+task_goal: pick up the red cube and place it on the target, repeating this action two times, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickXtimes ep=13 env_seed=511300 difficulty=easy
+
+[robomme] env for task PickXtimes episode 13 setup finished
+task_goal: pick up the green cube and place it on the target, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickXtimes ep=21 env_seed=512100 difficulty=easy
+
+[robomme] env for task PickXtimes episode 21 setup finished
+task_goal: pick up the red cube and place it on the target, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickXtimes ep=29 env_seed=512900 difficulty=easy
+
+[robomme] env for task PickXtimes episode 29 setup finished
+task_goal: pick up the red cube and place it on the target, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickXtimes ep=37 env_seed=513700 difficulty=easy
+
+[robomme] env for task PickXtimes episode 37 setup finished
+task_goal: pick up the green cube and place it on the target, repeating this action three times, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickXtimes ep=45 env_seed=514500 difficulty=easy
+
+[robomme] env for task PickXtimes episode 45 setup finished
+task_goal: pick up the blue cube and place it on the target, then press the button to stop
+exec_start_idx: 0
+[robomme] task SwingXtimes: 6 episodes [5, 13, 21, 29, 37, 45]
+EVAL_EPISODE split=test task=SwingXtimes ep=5 env_seed=530500 difficulty=easy
+
+[robomme] env for task SwingXtimes episode 5 setup finished
+task_goal: pick up the green cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=SwingXtimes ep=13 env_seed=531300 difficulty=easy
+
+[robomme] env for task SwingXtimes episode 13 setup finished
+task_goal: pick up the green cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back-and-forth motion two times, finally press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=SwingXtimes ep=21 env_seed=532100 difficulty=easy
+
+[robomme] env for task SwingXtimes episode 21 setup finished
+task_goal: pick up the blue cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back-and-forth motion three times, finally press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=SwingXtimes ep=29 env_seed=532900 difficulty=easy
+
+[robomme] env for task SwingXtimes episode 29 setup finished
+task_goal: pick up the red cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back-and-forth motion three times, finally press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=SwingXtimes ep=37 env_seed=533700 difficulty=easy
+
+[robomme] env for task SwingXtimes episode 37 setup finished
+task_goal: pick up the blue cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back-and-forth motion two times, finally press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=SwingXtimes ep=45 env_seed=534500 difficulty=easy
+
+[robomme] env for task SwingXtimes episode 45 setup finished
+task_goal: pick up the blue cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back-and-forth motion three times, finally press the button to stop
+exec_start_idx: 0
+EVAL_RC=0 end=2026-09-28 16:20:20
+TIMING_SUMMARY add_buffer(<=16帧) n=526 mean=95 median=91 p90=134 max=1177 | add_buffer(首批>16帧) n=0 | infer n=526 mean=201 median=180 p90=278 max=2897
+EXIT_CODE=0
