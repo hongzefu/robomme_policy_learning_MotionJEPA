@@ -284,7 +284,7 @@ a批次仅执行配置基线和2048 before-20的部分前缀，其余预建验�
 | [`eval-3seed-context-vs-motion/`](eval-3seed-context-vs-motion/result.md) | 三 seed 四任务成功率对照：motion 24.2% ± 1.3 vs 官方 24.5% ± 0.5，无可辨别差异 |
 | [`eval-hard-patternlock-routestick/`](eval-hard-patternlock-routestick/result.md) / [`eval-medium-patternlock-routestick/`](eval-medium-patternlock-routestick/result.md) | PatternLock / RouteStick 难度分层评估 |
 | [`eval-binfill-pickxtimes/`](eval-binfill-pickxtimes/result.md) | BinFill / PickXTimes 评估 |
-| [`eval-orig80k-modul-vs-official/`](eval-orig80k-modul-vs-official/launch.md) | 原版 80k 两 run（16 任务 / counting 4 任务）与官方 modul 80k 同口径 test 评估，8 卡 24 片并发，回放全保留 | 起跑中，见 launch.md |
+| [`eval-orig80k-modul-vs-official/`](eval-orig80k-modul-vs-official/result.md) | 原版 80k 两 run（16 任务 / counting 4 任务）与官方 modul 80k 同口径 test 评估，8 卡 24 片并发，回放全保留 | full16 44.62% vs 官方 47.88%（−3.25pp，未检出差异；Behavior −8pp 显著）；count4 70.0% vs 官方 72.0% |
 
 ## 五、已归档（`../archive/training-doc/`，34 项）
 
