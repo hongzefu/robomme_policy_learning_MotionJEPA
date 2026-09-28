@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # test-hard 单片评估（在占位 job 的 srun 步骤内运行；benchmark 0927 计划 §8.2 第 4 项、第二部分 §3.3）。
 # 同一张卡：先起 policy server，再跑 examples/robomme/eval.py（robomme_env 环境），结束收 server。
+# 显存：JAX 上限 0.75（第一轮 0.4 时 VideoPlace 新值档约 1419 帧演示的 add_buffer 需 6.8～8.5 GB，server OOM）；仿真渲染只占数 GB。
 # 用法（环境变量）：SHARD=<0..9> ROUND=<1|2> PORT=<端口> RUN_TAG=<标签> bash scripts/gl_eval_shard.sh
 #   片 SHARD、轮 ROUND：episode_start = 10×(ROUND−1)+SHARD、episode_stride = 20、max_episodes = 0，
 #   即 80 局的任务取 {s, s+20, s+40, s+60}、20 局的任务取 {s}，每片 13×4 + 3×1 = 55 局。
@@ -29,7 +30,7 @@ if (exec 3<>"/dev/tcp/127.0.0.1/${PORT}") 2>/dev/null; then
   exec 3>&-
   echo "错误: 端口 ${PORT} 起跑前已被占用"; echo "EXIT_CODE=1"; exit 1
 fi
-XLA_PYTHON_CLIENT_MEM_FRACTION=0.4 UV_LINK_MODE=copy PYTHONUNBUFFERED=1 \
+XLA_PYTHON_CLIENT_MEM_FRACTION=0.75 UV_LINK_MODE=copy PYTHONUNBUFFERED=1 \
   uv run --frozen --no-sync scripts/serve_policy.py --seed=7 --port="$PORT" \
     policy:checkpoint --policy.dir="$CKPT" --policy.config=mme_vla_suite >> "$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
@@ -82,6 +83,8 @@ print(sum(v=='error' for v in last.values()))" "$SAVE_DIR/episodes.jsonl" 2>/dev
   echo "EVAL_PASS_END $pass rc=$RC unresolved_errors=$unresolved"
   [[ "$unresolved" = 0 ]] && break
 done
+# 有未解决的 error 身份时不得以 0 退出（第一轮实测：只记最后一遍 eval 的返回码会把中止的片报成成功）
+[[ "$RC" = 0 && "${unresolved:-0}" != 0 ]] && RC=3
 echo "EVAL_RC=$RC end=$(date -Is)"
 echo "EXIT_CODE=$RC"
 exit "$RC"
