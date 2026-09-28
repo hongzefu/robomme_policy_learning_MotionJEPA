@@ -1,0 +1,31 @@
+[1m[33mwarning[39m[0m[1m:[0m [1mThe `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead[0m
+  ✓ siglip_params          level=cheap   0.00s
+  ✓ paligemma_tokenizer    level=cheap   0.00s
+  ✓ pi05_base              level=cheap   0.03s
+ASSETS=PASS assets=3 mismatches=0
+=== EVAL_SHARD shard=RouteStick-0 HEAD=1af91f9bf74533778cc4ca3fe9c979542a13d586 ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/official-mme-vla/perceptual-framesamp-modul/79999 run_kind=legacy(history_config.txt=perceptual-framesamp-modul.yaml) gpu=0 port=8091 seed=42 dataset=test tasks=RouteStick ep_start=0 ep_stride=1 ep_count=1 policy_name=smoke-orig80k-off-RouteStick-0 mem_fraction=0.28 start=2026-09-28 03:06:20 ===
+server pid=2701637 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/smoke-orig80k-off-RouteStick-0.server.log
+server 端口就绪 03:06:40
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+[robomme] task RouteStick: 1 episodes [0]
+EVAL_EPISODE split=test task=RouteStick ep=0 env_seed=660000 difficulty=easy
+
+[robomme] env for task RouteStick episode 0 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 150
+EVAL_RC=0 end=2026-09-28 03:10:19
+TIMING_SUMMARY add_buffer(<=16帧) n=9 mean=223 median=112 p90=nan max=1224 | add_buffer(首批>16帧) n=1 mean=14159 median=14159 p90=nan max=14159 | infer n=10 mean=428 median=182 p90=183 max=2655
+EXIT_CODE=0
