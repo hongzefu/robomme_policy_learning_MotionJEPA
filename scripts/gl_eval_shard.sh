@@ -51,7 +51,7 @@ for pass in 1 2 3; do
   ( cd examples/robomme && PYTHONUNBUFFERED=1 GLIBC_TUNABLES=glibc.rtld.optional_static_tls=16384 \
       "$REPO/robomme_env/bin/python" eval.py --args.port="$PORT" --args.model_seed=7 --args.model_ckpt_id=79999 \
       --args.policy_name=mmevla-testhard --args.episode_start="$EP_START" --args.episode_stride=20 \
-      --args.max_episodes="$LIMIT" --args.save_dir="$SAVE_ROOT" ) &
+      --args.max_episodes="$LIMIT" --args.save_dir="$SAVE_ROOT" ${ONLY_TASKS:+--args.only_tasks="$ONLY_TASKS"} ) &
   EVAL_PID=$!
   started=$(date +%s)
   stalled=0
