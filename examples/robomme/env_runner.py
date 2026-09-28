@@ -23,15 +23,18 @@ class EnvRunner:
     expose initial observation and step API.
     """
 
-    def __init__(self, env_id: str, video_save_dir: str, max_steps: int = 1300) -> None:
+    def __init__(self, env_id: str, video_save_dir: str, max_steps: int = 1300, dataset: str = "test") -> None:
         if env_id not in TASK_NAME_LIST:
             raise ValueError(f"Environment ID {env_id} not in {TASK_NAME_LIST}")
         self.env_id = env_id
         self.video_save_dir = video_save_dir
+        # benchmark split：train / val / test，决定 env_metadata/<split>/ 下读哪份 per-episode seed 与难度
+        # （episode_config_resolver.py 的 _ALLOWED_DATASETS）；默认 test，行为与历史一致
+        self.dataset = dataset
 
         self.env_builder = BenchmarkEnvBuilder(
             env_id=env_id,
-            dataset="test",
+            dataset=dataset,
             action_space="joint_angle",
             gui_render=False,
             max_steps=max_steps,
@@ -48,6 +51,12 @@ class EnvRunner:
 
     def make_env(self, episode_id: int) -> None:
         """Build and set the active env for the given episode."""
+        # 逐集自证跑的是哪个 split：seed / difficulty 取自 resolve_episode（纯查表、无副作用），
+        # 与 make_env_for_episode 内部写进 gym.make(env_kwargs) 的是同一组值。flush 必须有——
+        # 驱动日志经 tmux + tee -a，无 flush 会卡缓冲（AGENTS 7）。
+        _seed, _diff = self.env_builder.resolve_episode(episode_id)
+        print(f"EVAL_EPISODE split={self.dataset} task={self.env_id} ep={episode_id} "
+              f"env_seed={_seed} difficulty={_diff}", flush=True)
         self.env = self.env_builder.make_env_for_episode(episode_id)
         self.episode_id = episode_id
         self.difficulty = self.env.unwrapped.difficulty
