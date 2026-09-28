@@ -10,7 +10,7 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`ctx-stock-scaling-20260928/`](ctx-stock-scaling-20260928/launch.md) | 原train.py、固定数据与超参；先512+motion160，再512，分别比较8卡与双4卡 | 干净源码副本与CPU前置检查通过；性能结果待实跑；不修改训练计算、dataloader或读取逻辑 |
+| [`ctx-stock-scaling-20260928/`](ctx-stock-scaling-20260928/launch.md) | 原train.py、固定数据与超参；先512+motion160，再512，分别比较8卡与双4卡 | motion首轮8卡401步及59叶完整恢复通过，1.9794秒/步；双4已起跑；大预算原守卫拒绝，训练/读取机制未改 |
 
 ### 原版80k公开全集与counting四卡并跑（2026-09-25）
 

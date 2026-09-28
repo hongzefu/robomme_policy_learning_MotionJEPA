@@ -1,0 +1,33 @@
+{
+  "historical_run": "v2-1600ep-m8x8-modul-motion-b128-80k",
+  "context_run": "ctx-stock-motion-8before-20260928",
+  "history_differences": {
+    "integration_type": {
+      "historical": "modulation",
+      "context": "context"
+    },
+    "memory_token_dim": {
+      "historical": 1024,
+      "context": 2048
+    }
+  },
+  "provenance_differences": {
+    "history_config_name": {
+      "historical": "perceptual-framesamp-modul-8frame-8x8-motion.yaml",
+      "context": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/diagnostics/context-gpu-throughput-20260928/history-context-motion160.yaml"
+    },
+    "resolved_sha256": {
+      "historical": "9650f225fe42b802262f93b71139cebbda934dc5ccfaa849fa4dadaf30d73110",
+      "context": "21791b2964c868119784d086f5ce2334405596d8fa20586e217c4703f018d0e3"
+    }
+  },
+  "motion_fields_equal": true,
+  "actual_data_provenance_equal": true,
+  "files": {
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-modul-motion-b128-80k/history_config.resolved.yaml": "9650f225fe42b802262f93b71139cebbda934dc5ccfaa849fa4dadaf30d73110",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/v2-1600ep-m8x8-modul-motion-b128-80k/motion_provenance.json": "a951beea80fc5208074988afbf4854435079a0b39e04ce6e3eeb16607d675684",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/context-stock-scaling-20260928/checkpoints/mme_vla_suite_b128_80k/ctx-stock-motion-8before-20260928/history_config.resolved.yaml": "21791b2964c868119784d086f5ce2334405596d8fa20586e217c4703f018d0e3",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/context-stock-scaling-20260928/checkpoints/mme_vla_suite_b128_80k/ctx-stock-motion-8before-20260928/motion_provenance.json": "42e7490117ae299abda8345ca722b24c63b9aebbc158d2bf11b7465ae427ed68"
+  },
+  "meaning": "只核对历史与本轮原生落盘配置及数据provenance，不把诊断步数、W&B或allocator环境差异抹去"
+}
