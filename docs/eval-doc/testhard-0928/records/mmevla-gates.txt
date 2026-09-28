@@ -1,0 +1,10 @@
+EVAL_ROUND1=PASS policy=mmevla episodes=550 normal=550 error_left=0 retries=47/55(max_per_shard=9) shards=10 per_shard=55-55 shape=55x10
+EVAL_ROUND2=PASS policy=mmevla episodes=550 normal=550 error_left=0 retries=0/55(max_per_shard=0) shards=10 per_shard=55-55 shape=55x10
+EVAL_IDENTITY_SET=PASS policy=mmevla rounds=2 shards=10 per_shard=55 episodes=1100 missing=0 extra=0 dup=0
+EVAL_BINDING=PASS policy=mmevla episodes=1100 replay=1100 injected_mismatch=0 recorded_drift=62 max_abs=1.2e-07 unused=0
+EVAL_TIER_CAP=PASS policy=mmevla episodes=1100 mismatch=0
+EVAL_DEMO_FRAMES=INFO policy=mmevla episodes=1100 exact=1054 within_5=1096 max_diff=19
+EVAL_TIER_SUCCESS policy=mmevla tier=xhard1 episodes=260 success=14 rate=0.054 fail=233 timeout=13 error=0
+EVAL_TIER_SUCCESS policy=mmevla tier=xhard2 episodes=260 success=11 rate=0.042 fail=232 timeout=17 error=0
+EVAL_TIER_SUCCESS policy=mmevla tier=xhard3 episodes=260 success=7 rate=0.027 fail=232 timeout=21 error=0
+EVAL_TIER_SUCCESS policy=mmevla tier=xhard4 episodes=320 success=18 rate=0.056 fail=268 timeout=34 error=0
