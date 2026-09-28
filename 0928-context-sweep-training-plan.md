@@ -1,5 +1,7 @@
 # context 五组训练与通路验证计划
 
+> **2026-09-28 最新授权更新：只检查并记录，不修改训练链路。** 用户随后明确要求「不要修改训练计算的机制 如果发现训练计算机制有改进空间只做记录」「dataloader也是 读取逻辑也不要改」。因此本文中的输入守卫扩展、mask/attention优化、重计算或其他链路改造均保留为历史候选，当前不执行；本文本身不授予正式训练启动权限。八卡与双四卡比较必须遵守这些限制。64代理只读核查及发现见 [只读检查报告](docs/context-gpu-scaling-readonly-audit-20260928.md)，历史实验事实与失败记录不改写。
+
 > 创建日期：2026-09-28，America/New_York。权威工作副本：`/scratch/hongze/robomme_policy_learning_MotionJEPA`，环境 B；代码核对锚点：`8aee9ced0bbc7bc4d2a863539fa8c14873bb9832`，分支 `v2-motionmem`，开始时工作区干净。本文是本轮训练方案，不是启动回执。本轮授权范围为核对、最小验证和根目录计划；尚未实施生产代码、配置与启动器改动，尚未开始正式训练。后续实施和正式起跑分别按用户授权推进，已有明确决定不重复询问。
 >
 > 提交体例沿用 `docs:` 与 `commitV<大版本>.<小版本>Beta/正式版`；本计划用 `docs:` 提交，后续 Beta 编号从实施时最新历史接续，不预占编号。外部依赖以本提交的 `uv.lock`、`scripts/assets/ASSETS_LOCK.json` 为准；benchmark gitlink 为 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。不升级依赖、不下载或重建数据、不启动 Slurm、不访问 turbo。
