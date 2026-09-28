@@ -307,7 +307,8 @@ def evaluate(args: Args):
 
     ep_log = save_dir / "episodes.jsonl"  # 逐局终态；续评按其中身份判，不看 log.json
     rows = [json.loads(l) for l in open(ep_log)] if ep_log.exists() else []
-    done = {(r["task"], r["episode"]) for r in rows if r["status"] in ("success", "fail", "timeout")}
+    last = {(r["task"], r["episode"]): r["status"] for r in rows}  # 每个身份以最后一条记录为准（更正记录可覆盖）
+    done = {k for k, s in last.items() if s in ("success", "fail", "timeout")}
     for _pass in range(1):
         for task_name in task_names:
             if task_name not in log_dict:
@@ -335,6 +336,7 @@ def evaluate(args: Args):
                 except Exception as e:
                     print(f"Error evaluating episode {episode_id} for task {task_name}: {e}")
                     log_dict[task_name][episode_id] = "error"
+                    success_flag = "error"  # 不沿用上一局的终态；也不落到 "unknown" 触发整轮中止
 
                 status = success_flag if success_flag in ("success", "fail", "timeout") else "error"
                 with open(ep_log, "a") as f:
