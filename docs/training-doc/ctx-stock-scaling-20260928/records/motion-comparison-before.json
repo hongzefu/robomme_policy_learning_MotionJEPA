@@ -1,0 +1,65 @@
+{
+  "status": "BEFORE_BASELINE_ONLY",
+  "complete_original_runs": {
+    "8before": "ctx-stock-motion-8before-20260928",
+    "4left": "ctx-stock-motion-4left-20260928",
+    "4right": "ctx-stock-motion-4right-20260928"
+  },
+  "complete_configs_equal_except_name_fsdp_output": true,
+  "primary_union_start": 1790635441.102267,
+  "primary_union_finish": 1790636229.232484,
+  "parallel_coverage": {
+    "4left": {
+      "step0": 1790635055.9113743,
+      "step400": 1790636594.3225667,
+      "covers_union": true
+    },
+    "4right": {
+      "step0": 1790635070.5159755,
+      "step400": 1790636615.7385862,
+      "covers_union": true
+    }
+  },
+  "physical_gpu_uuids": {
+    "8before": [
+      "GPU-191942f6-8212-df10-f8f9-aafa4d397152",
+      "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+      "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+      "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+      "GPU-8fb13753-84aa-f408-93f7-518b05582e9a",
+      "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+      "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe",
+      "GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5"
+    ],
+    "4left": [
+      "GPU-191942f6-8212-df10-f8f9-aafa4d397152",
+      "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+      "GPU-8fb13753-84aa-f408-93f7-518b05582e9a",
+      "GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5"
+    ],
+    "4right": [
+      "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+      "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+      "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+      "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe"
+    ]
+  },
+  "seconds_per_step": {
+    "8before": 1.9793991327285767,
+    "4left": 3.844594863653183,
+    "4right": 3.862700729370117
+  },
+  "relative_to_before": {
+    "4left": 1.9423040053339105,
+    "4right": 1.9514511578296152
+  },
+  "combined_samples_per_second": 66.4309314980695,
+  "combined_throughput_ratio": 1.0272916265127363,
+  "equal_steps_pair_makespan_ratio": 0.9757255789148076,
+  "frozen_parameter_leaves_equal": 23,
+  "trainable_checkpoint_leaves_different_vs_before": {
+    "4left": 35,
+    "4right": 35
+  },
+  "limitation": "后八卡基线仍在运行，以上不是前后基线均已完成的最终倍率；冻结叶只证明三run末步相同，不冒充与初始权重逐位对拍"
+}
