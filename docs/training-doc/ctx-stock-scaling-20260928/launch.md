@@ -183,3 +183,13 @@ samples_per_second = 128 / t
 任何四卡OOM均保留原输出、退出码和资源记录，不切换mask、attention、精度、重计算或batch来完成这轮对比。原401步正常退出只证明本轮训练循环和保存完成，不能推导完整60k/80k训练稳定、策略收敛、环境成功率或控制性能。稳态窗口外的初始化、编译、最终保存、长训练磁盘增长和任务结束后的资源重新分配，需另列成本，不合并进短测慢倍数。
 
 本文件只负责启动授权、参数及验收口径；实际起跑时间、通过/失败、基线漂移、并发覆盖和最终比值待本轮原始证据产生后由主代理写入结果留档。尚未产生的结果不预填为PASS。
+
+## 追加：全部测速结束后的只读内容复核
+
+在8份GPU诊断全部结束后，另用独立会话 `ctx-stock-data-fullhash-0928` 调用原有完整哈希接口，读取帧库32个part、位置/状态表及motion整表，共313426537152字节。这样可以更新当前特征内容未变的证据；不在性能窗口内预热整个page cache，不重跑VAE或encoder，不重扫原始RGB/pkl，也不更改任何读取函数。
+
+外层工具 `BASE/check_current_data.py`（SHA256 `704020cf8046ff574ebe829075c76253afea88d95a9ddec0874795533e73fedd`）先要求8份 `train.log` 各有唯一退出回执，且 `nvidia-smi --query-compute-apps=pid` 为空；随后核对6db干净源码和固定帧/motion元数据SHA，调用 `framesamp_store.run_full_checks(StoreMeta.load(...))` 与 `motion_store.run_full_checks(MotionMeta.load(...))`。这两个API只读取完整文件；不能改用会创建pack.lock、写摘要和回填meta的两个打包器 `cmd_verify`。
+
+命令从 `SOURCE` 运行，解释器仍为 `MAIN/.venv/bin/python`，明确 `PYTHONPATH=SOURCE/src:SOURCE/packages/openpi-client/src`、`PYTHONDONTWRITEBYTECODE=1`、`JAX_PLATFORMS=cpu`、空 `CUDA_VISIBLE_DEVICES`，uv与XDG缓存落主仓 `v1-store/cache/`。进入独立tmux，以 `set -o pipefail` 和tee保留 `BASE/data-content-recheck.log`，结束记 `EXIT_CODE=`；结构化结果为 `BASE/data-content-recheck.json`。新输出路径不得覆盖旧文件。
+
+判据为全部固定SHA一致、`DATA_FULL_CHECK=PASS metadata_unchanged=1`、唯一退出0，且前后元数据字节不变、两库均无pack.lock。此处仅补充已授权验证的启动口径，结果待实际执行后写入；不为此改训练配置或数据内容。

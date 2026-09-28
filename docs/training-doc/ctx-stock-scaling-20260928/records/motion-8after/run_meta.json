@@ -1,0 +1,30 @@
+{
+  "argv": [
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/context-stock-scaling-20260928/source-6db0e0a/scripts/training/train.py",
+    "mme_vla_suite_b128_80k",
+    "--exp-name",
+    "ctx-stock-motion-8after-20260928",
+    "--dataset-path",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-v2-1600ep-604f16da/framesamp-8x8",
+    "--model.history-config",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/diagnostics/context-gpu-throughput-20260928/history-context-motion160.yaml",
+    "--assets-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+    "--data.assets.assets-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-v2-1600ep-604f16da",
+    "--data.assets.asset-id",
+    "robomme",
+    "--checkpoint-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/context-stock-scaling-20260928/checkpoints",
+    "--fsdp-devices",
+    "8",
+    "--num-train-steps",
+    "401",
+    "--no-wandb-enabled"
+  ],
+  "entry": "scripts/training/train.py",
+  "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/context-stock-scaling-20260928/checkpoints/mme_vla_suite_b128_80k/ctx-stock-motion-8after-20260928",
+  "num_train_steps": 401,
+  "log_interval": 100,
+  "save_interval": 5000
+}
