@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 import numpy as np
 
-from robomme.robomme_env import *  # noqa: F401, F403 - env registration
-from robomme.env_record_wrapper import BenchmarkEnvBuilder
+import robomme_hard.robomme_env  # noqa: F401 - env registration（test-hard：robomme_hard 接管 16 个 id）
+from robomme_hard.env_record_wrapper import BenchmarkEnvBuilder, TIER_MAX_STEPS, spec_binding
 
 from utils import TASK_NAME_LIST
 
@@ -31,7 +31,7 @@ class EnvRunner:
 
         self.env_builder = BenchmarkEnvBuilder(
             env_id=env_id,
-            dataset="test",
+            dataset="test-hard",
             action_space="joint_angle",
             gui_render=False,
             max_steps=max_steps,
@@ -48,13 +48,17 @@ class EnvRunner:
 
     def make_env(self, episode_id: int) -> None:
         """Build and set the active env for the given episode."""
-        self.env = self.env_builder.make_env_for_episode(episode_id)
+        _seed, self.tier = self.env_builder.resolve_episode(episode_id)
+        self.max_steps_for_episode = TIER_MAX_STEPS[self.tier]  # 按档步数上限逐局传入
+        self.identity, self.spec_binding, self.demo_frames, self.steps = self.env_builder.resolve_identity(episode_id), None, None, 0
+        self.env = self.env_builder.make_env_for_episode(episode_id, max_steps=self.max_steps_for_episode)
         self.episode_id = episode_id
         self.difficulty = self.env.unwrapped.difficulty
 
     def get_init_obs(self) -> dict[str, Any]:
         """Reset env and return initial observation dict (images, wrist_images, states, task_goal)."""
         obs, self.info = self.env.reset()
+        self.spec_binding, self.demo_frames = spec_binding(self.env), len(obs["front_rgb_list"]) - 1  # reset 之后取
         if isinstance(self.info["task_goal"], list):
             self.task_goal = self.info["task_goal"][0]
         else:

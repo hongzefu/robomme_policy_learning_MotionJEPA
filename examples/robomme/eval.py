@@ -42,6 +42,9 @@ class Args:
     policy_name: str = "dummy_test"
     model_seed: int = 42
     model_ckpt_id: int = 80000
+    episode_start: int = 0  # test-hard 分片：每任务取 range(n)[start::stride][:max_episodes]（0 = 不限）
+    episode_stride: int = 1
+    max_episodes: int = 0
 
     # task control
     re_eval_tasks: str = "" # tasks split by comma
@@ -123,7 +126,8 @@ class EpisodeEvaluator:
             obs, stop_flag, success_flag = env_runner.step(action)
             epstate.count += 1
 
-            if epstate.count > self.args.max_steps:
+            env_runner.steps = epstate.count
+            if epstate.count > env_runner.max_steps_for_episode:
                 success_flag = "timeout"
                 break
 
@@ -301,7 +305,10 @@ def evaluate(args: Args):
     subgoal_predictor = build_subgoal_predictor(args, save_dir)
     evaluator = EpisodeEvaluator(args, save_dir)
 
-    while not os.path.exists(save_dir / "log.json"):
+    ep_log = save_dir / "episodes.jsonl"  # 逐局终态；续评按其中身份判，不看 log.json
+    rows = [json.loads(l) for l in open(ep_log)] if ep_log.exists() else []
+    done = {(r["task"], r["episode"]) for r in rows if r["status"] in ("success", "fail", "timeout")}
+    for _pass in range(1):
         for task_name in task_names:
             if task_name not in log_dict:
                 log_dict[task_name] = {}
@@ -311,8 +318,8 @@ def evaluate(args: Args):
 
             success_flag = "unknown"
 
-            for episode_id in range(num_episodes):
-                if str(episode_id) in log_dict[task_name]:
+            for episode_id in list(range(num_episodes))[args.episode_start::args.episode_stride][:args.max_episodes or None]:
+                if (task_name, episode_id) in done:
                     print(f"[robomme] episode {episode_id} already evaluated, skipping...")
                     continue
 
@@ -329,6 +336,13 @@ def evaluate(args: Args):
                     print(f"Error evaluating episode {episode_id} for task {task_name}: {e}")
                     log_dict[task_name][episode_id] = "error"
 
+                status = success_flag if success_flag in ("success", "fail", "timeout") else "error"
+                with open(ep_log, "a") as f:
+                    f.write(json.dumps(dict(task=task_name, episode=episode_id, identity=env_runner.identity, tier=env_runner.tier,
+                        max_steps=env_runner.max_steps_for_episode, steps=getattr(env_runner, "steps", 0), status=status,
+                        task_success=status == "success", error_class="infra" if status == "error" else None,
+                        attempt=sum((r["task"], r["episode"]) == (task_name, episode_id) for r in rows) + 1,
+                        spec_binding=env_runner.spec_binding, demo_frames=env_runner.demo_frames)) + "\n")
                 env_runner.close_env()
                 with open(save_dir / "progress.json", "w") as f:
                     json.dump(log_dict, f, indent=2)
