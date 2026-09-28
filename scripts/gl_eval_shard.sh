@@ -51,8 +51,11 @@ for pass in 1 2 3; do
   errors=$(grep -c '"status": "error"' "$SAVE_DIR/episodes.jsonl" 2>/dev/null || echo 0)
   if [[ "$errors" -gt 55 ]]; then echo "RETRY_CAP_HIT round=$ROUND shard=$SHARD errors=$errors"; RC=4; break; fi
   echo "EVAL_PASS $pass errors_so_far=$errors $(date -Is)"
-  ( cd examples/robomme && PYTHONUNBUFFERED=1 GLIBC_TUNABLES=glibc.rtld.optional_static_tls=16384 \
-      "$REPO/robomme_env/bin/python" eval.py --args.port="$PORT" --args.model_seed=7 --args.model_ckpt_id=79999 \
+  # GL 计算节点设有 HTTP 代理变量，websocket 客户端连本机 server 会走代理被拒（proxy rejected connection: HTTP 403）：
+  # 评估进程去掉代理变量并显式连 127.0.0.1
+  ( cd examples/robomme && env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u all_proxy -u ALL_PROXY \
+      NO_PROXY=127.0.0.1,localhost PYTHONUNBUFFERED=1 GLIBC_TUNABLES=glibc.rtld.optional_static_tls=16384 \
+      "$REPO/robomme_env/bin/python" eval.py --args.host=127.0.0.1 --args.port="$PORT" --args.model_seed=7 --args.model_ckpt_id=79999 \
       --args.policy_name=mmevla-testhard --args.episode_start="$EP_START" --args.episode_stride=20 \
       --args.max_episodes="$LIMIT" --args.save_dir="$SAVE_ROOT" ${ONLY_TASKS:+--args.only_tasks="$ONLY_TASKS"} ) &
   EVAL_PID=$!
