@@ -19,6 +19,7 @@ from utils import (
 )
 from utils import RolloutRecorder
 from env_runner import EnvRunner
+import xhard0_manifest
 from subgoal_predictor import build_subgoal_predictor, SubgoalPredictorBase
 
 # qwen3-vl environment variables
@@ -42,6 +43,11 @@ class Args:
     policy_name: str = "dummy_test"
     model_seed: int = 42
     model_ckpt_id: int = 80000
+
+    # 官方路线 xhard0：给了清单就只评本片 (task, source_episode)，逐局写 episodes.jsonl；官方全量循环不动
+    episode_manifest: str = ""  # jsonl，每行 {task, source_episode, seed, shard}
+    shard: int = -1
+    video_dir: str = ""  # 视频写到这里，文件名 {task}_xhard0_{source_episode}_{seed}.mp4
 
     # task control
     re_eval_tasks: str = "" # tasks split by comma
@@ -123,6 +129,7 @@ class EpisodeEvaluator:
             obs, stop_flag, success_flag = env_runner.step(action)
             epstate.count += 1
 
+            self.last_steps = epstate.count  # 清单模式逐局记录用
             if epstate.count > self.args.max_steps:
                 success_flag = "timeout"
                 break
@@ -144,6 +151,10 @@ class EpisodeEvaluator:
         if success_flag == "unknown":
             return "unknown"
 
+        if self.args.episode_manifest:  # 清单模式：视频由 evaluate_manifest() 在记终态后写
+            subgoal_predictor.end_episode(epstate, success_flag)
+            return success_flag
+
         video_filename = f"{env_runner.env_id}_ep{env_runner.episode_id}_{success_flag}_{task_goal}_{env_runner.difficulty}.mp4"
         recorder.save_video(video_filename)
 
@@ -161,6 +172,7 @@ class EpisodeEvaluator:
         task_goal = pre_traj["task_goal"]
 
         recorder = RolloutRecorder(video_save_dir, task_goal, fps=30)
+        self.last_recorder = recorder
 
         print(f"task_goal: {task_goal}")
 
@@ -279,8 +291,77 @@ def setup_log_dict(save_dir: Path, args: Args) -> dict:
     return log_dict
 
 
+def evaluate_manifest(args: Args):
+    """官方路线 xhard0 清单评估：只评 --args.shard 选中的 (task, source_episode)，每局一条 episodes.jsonl 记录。"""
+    import sys
+    import robomme
+    check_args(args)
+    # 官方路线不得引入 robomme_hard（test-hard 覆盖层）
+    assert "robomme_hard" not in sys.modules, "官方路线不得 import robomme_hard"
+    print(f"[robomme] robomme={robomme.__file__}")
+    if args.shard < 0:
+        raise ValueError("--args.episode_manifest 需同时给 --args.shard (>=0)")
+    if not args.video_dir:
+        raise ValueError("--args.episode_manifest 需同时给 --args.video_dir")
+    save_dir = setup_save_directory(args)
+    video_dir = Path(args.video_dir)
+    video_dir.mkdir(parents=True, exist_ok=True)
+    by_task = xhard0_manifest.load_rows(args.episode_manifest, args.shard, TASK_NAME_LIST)
+    if args.only_tasks:
+        by_task = {t: v for t, v in by_task.items() if t in args.only_tasks.split(",")}
+    print(f"[robomme] manifest={args.episode_manifest} shard={args.shard} episodes={sum(map(len, by_task.values()))}")
+    subgoal_predictor = build_subgoal_predictor(args, save_dir)
+    evaluator = EpisodeEvaluator(args, save_dir)
+    ep_log = save_dir / "episodes.jsonl"
+    done, rows = xhard0_manifest.done_keys(ep_log)
+    for task_name, task_rows in by_task.items():
+        env_runner = EnvRunner(task_name, save_dir / "videos", max_steps=args.max_steps)
+        for row in task_rows:
+            src_ep, seed = int(row["source_episode"]), int(row["seed"])
+            if (task_name, src_ep) in done:
+                print(f"[robomme] {task_name} source_episode {src_ep} already evaluated, skipping...")
+                continue
+            builder_seed, difficulty = env_runner.env_builder.resolve_episode(src_ep)
+            xhard0_manifest.check_seed(row, builder_seed, difficulty)  # 不符即中止整片
+            evaluator.last_recorder, evaluator.last_steps, error = None, 0, None
+            env_runner.make_env(src_ep)
+            print(f"\n[robomme] env for task {task_name} source_episode {src_ep} seed {seed} setup finished")
+            try:
+                success_flag = evaluator.eval_each_episode(env_runner, subgoal_predictor, save_dir / "videos")
+            except Exception as e:
+                print(f"Error evaluating source_episode {src_ep} for task {task_name}: {e}")
+                success_flag, error = "error", f"{type(e).__name__}: {e}"  # 不沿用上一局的终态（同 7fc7128）
+            status = success_flag if success_flag in xhard0_manifest.NORMAL else "error"
+            if status == "error" and error is None:
+                error = f"success_flag={success_flag}"
+            attempt = sum((r["task"], int(r["source_episode"])) == (task_name, src_ep) for r in rows) + 1
+            video = None
+            recorder = evaluator.last_recorder
+            if recorder is not None and recorder.total_images:
+                # 终态之后写视频；error 局加后缀保留，不覆盖、不删除任何视频
+                name = xhard0_manifest.video_name(task_name, src_ep, seed)
+                if status == "error":
+                    name = name[:-len(".mp4")] + f".error{attempt}.mp4"
+                try:
+                    recorder.save_dir = video_dir
+                    recorder.save_video(name)
+                    video = str(video_dir / name)
+                except Exception as e:
+                    print(f"Error saving video for {task_name} source_episode {src_ep}: {e}")
+            rec = dict(task=task_name, source_episode=src_ep, seed=seed, status=status, task_success=status == "success",
+                       steps=evaluator.last_steps, error=error, max_steps=args.max_steps, attempt=attempt,
+                       shard=args.shard, video=video)
+            with open(ep_log, "a") as f:
+                f.write(json.dumps(rec) + "\n")
+            env_runner.close_env()
+        del env_runner
+        time.sleep(1)
+
+
 def evaluate(args: Args):
     """Main evaluation function."""
+    if args.episode_manifest:
+        return evaluate_manifest(args)
     check_args(args)
 
     save_dir = setup_save_directory(args)
