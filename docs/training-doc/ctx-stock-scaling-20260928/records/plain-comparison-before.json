@@ -1,0 +1,48 @@
+{
+  "status": "BEFORE_BASELINE_ONLY",
+  "variant": "context512",
+  "seconds_per_step": {
+    "8before": 1.7270376944541932,
+    "4left": 3.2472540700435637,
+    "4right": 3.251229016780853
+  },
+  "single_job_time_ratio": {
+    "4left": 1.880245046457897,
+    "4right": 1.8825466445932784
+  },
+  "combined_samples_per_second": 78.78764701254812,
+  "combined_throughput_ratio": 1.0630409081876713,
+  "equal_steps_pair_makespan_ratio": 0.9412733222966392,
+  "parallel_union": [
+    1790640158.3893642,
+    1790640813.8699205
+  ],
+  "parallel_progress_coverage": true,
+  "physical_gpu_uuids": {
+    "8before": [
+      "GPU-191942f6-8212-df10-f8f9-aafa4d397152",
+      "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+      "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+      "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+      "GPU-8fb13753-84aa-f408-93f7-518b05582e9a",
+      "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+      "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe",
+      "GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5"
+    ],
+    "4left": [
+      "GPU-191942f6-8212-df10-f8f9-aafa4d397152",
+      "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+      "GPU-8fb13753-84aa-f408-93f7-518b05582e9a",
+      "GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5"
+    ],
+    "4right": [
+      "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+      "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+      "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+      "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe"
+    ]
+  },
+  "complete_configs_equal_except_name_fsdp_output": true,
+  "all_native_and_restore_pass": true,
+  "limitation": "后八卡尚未完成；这里是前八卡参照的阶段比较。"
+}

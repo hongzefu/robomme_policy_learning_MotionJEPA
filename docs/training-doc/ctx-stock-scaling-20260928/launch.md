@@ -193,3 +193,11 @@ samples_per_second = 128 / t
 命令从 `SOURCE` 运行，解释器仍为 `MAIN/.venv/bin/python`，明确 `PYTHONPATH=SOURCE/src:SOURCE/packages/openpi-client/src`、`PYTHONDONTWRITEBYTECODE=1`、`JAX_PLATFORMS=cpu`、空 `CUDA_VISIBLE_DEVICES`，uv与XDG缓存落主仓 `v1-store/cache/`。进入独立tmux，以 `set -o pipefail` 和tee保留 `BASE/data-content-recheck.log`，结束记 `EXIT_CODE=`；结构化结果为 `BASE/data-content-recheck.json`。新输出路径不得覆盖旧文件。
 
 判据为全部固定SHA一致、`DATA_FULL_CHECK=PASS metadata_unchanged=1`、唯一退出0，且前后元数据字节不变、两库均无pack.lock。此处仅补充已授权验证的启动口径，结果待实际执行后写入；不为此改训练配置或数据内容。
+
+## 追加：初始权重与冻结参数的只读参考核验
+
+同样只在8份GPU诊断全部结束后，使用独立会话 `ctx-stock-initial-ref-0928`运行 `BASE/check_initial_reference.py`，SHA256为 `6c3eaba11a0da439d64be9aa7fc8110a5a2c5a3f844d4cafe8a9eed27a4dce6f`。该工具要求GPU空闲、8份恢复报告均通过且分别绑定自己的checkpoint400及history SHA，实际模块导入须来自干净6db快照。
+
+它先按资产锁full级别校验pi05_base和tokenizer，再用原 `restore_params(..., restore_type=np.ndarray, dtype=None)`只恢复一次base。共享叶参考按原加载器 `_merge_params` 的NumPy `astype(schema.dtype)`生成；schema由原模型和freeze_filter独立给出。比较口径为路径、shape、dtype及完整原始字节SHA，新增记忆参数的随机初值明确排除。统计共享非冻结EMA的变化／未变化清单，不预设每叶必须变化；冻结叶若不同则保留失败，不直接断言其参与了梯度更新。
+
+从 `SOURCE`运行，沿用上节CPU隔离与缓存环境；日志为 `BASE/initial-reference-check.log`，结构化结果为 `BASE/initial-reference-check.json`，以pipefail、tee、唯一 `EXIT_CODE=`留存。预计读取约12.44GB初始资产进行全文件哈希，再读取一次约同量的初始参数，故“恢复一次”不等于“只读一遍磁盘”。这只是独立只读验收，不修改训练、加载或数据读取函数；结果待执行后回写。
