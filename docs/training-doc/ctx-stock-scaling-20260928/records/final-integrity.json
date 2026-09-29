@@ -1,0 +1,32 @@
+{
+  "status": "PASS",
+  "checked_utc": "2026-09-29T00:50:39.041542+00:00",
+  "source_head": "6db0e0ab9ef266d0e80fc1dd8d4383705bd81ab0",
+  "source_worktree_clean": true,
+  "production_diff_from": "8aee9ced0bbc7bc4d2a863539fa8c14873bb9832",
+  "production_paths_unchanged": [
+    "src",
+    "scripts",
+    "pyproject.toml",
+    "uv.lock"
+  ],
+  "frozen_files_sha256": {
+    "scripts/training/tests/context_gpu_scaling.py": "0b9b897792039dd1850d748f33ce6e755e4c9fc46c64d086e0599cdf29f1eeba",
+    "scripts/training/tests/compare_context_gpu_scaling.py": "929b9ff07fd2d6361ffe850366fd63de5d94670c1471d3ac961aeb030d7e0ac1",
+    "scripts/training/tests/run_context_gpu_scaling.sh": "bb64b5bef111169c704ff0fb71ceed006a97d74f595dec5cd362e102bb5a9373",
+    "AGENTS.md": "bdb1e689f5b5aa23b089fb1224927f81e87528aa5a3e1a1cabb957a52c93a8ac"
+  },
+  "gpu_processes": [],
+  "owned_sessions_completed": [
+    "ctx-stock-motion-8before-0928",
+    "ctx-stock-motion-dual4-0928",
+    "ctx-stock-motion-8after-0928",
+    "ctx-stock-plain-8before-0928",
+    "ctx-stock-plain-dual4-0928",
+    "ctx-stock-plain-8after-0928",
+    "ctx-stock-data-fullhash-0928",
+    "ctx-stock-initial-ref-0928"
+  ],
+  "cpu_reports_and_archives_equal": true,
+  "scope": "只确认原训练源码未变、冻结草稿未动、收尾报告及日志有效、自己的会话结束；不证明大预算通路通过或长训练策略效果。"
+}

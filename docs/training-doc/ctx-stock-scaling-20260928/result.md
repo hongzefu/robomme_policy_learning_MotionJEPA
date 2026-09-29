@@ -2,7 +2,7 @@
 
 ## 当前状态
 
-512+motion160的前八卡、双四卡、后八卡均完成401步、原生保存及CPU完整恢复。两次八卡合并主窗口为1.979365205秒/步，前后漂移仅−0.003428%；双四卡为3.844594864、3.862700729秒/步，合计吞吐66.430931样本/秒。单任务耗时增加94.23%–95.15%，合计吞吐增加2.7274%；等步数两任务稳态工期外推减少2.4258%。纯512前八卡及双四卡也已通过，纯512后八卡正在运行；收尾数据内容和初始化参考复核待完成。训练计算、dataloader、读取逻辑与输入守卫均未修改。
+512+motion160与纯512各自的前八卡、双四卡、后八卡均完成401步、原生保存及CPU完整恢复，共八份独立运行。motion单个四卡任务比八卡耗时增加94.23%–95.15%，双四卡合计吞吐提高2.7274%；纯512相应为88.02%–88.25%和6.3065%。两份等步数任务的稳态完工时间外推分别减少2.4258%、5.8748%，不代表完整训练工期。初始权重参考核验和313426537152字节特征数据完整哈希均通过。训练计算、dataloader、读取逻辑与输入守卫均未修改，未启动正式60k/80k训练。
 
 ## 已有证据
 
@@ -70,7 +70,7 @@ run为 `ctx-stock-motion-8before-20260928`，实际会话 `ctx-stock-motion-8bef
 
 合计速率是两个相互覆盖窗口的速率之和；两个主窗口起点相差15.5901秒，不能称同一个完全相同墙钟区间的直接样本计数。完工时间用较慢任务计算，不是吞吐比的倒数；一侧先结束后的另一侧实际速率变化尚未单独测量。两次八卡也出现首步数值差异，不把它单独归因于8卡与4卡分片变化。
 
-### 纯512正在验证
+### 纯512：四份原入口运行全部完成
 
 `ctx-stock-plain-8before-20260928`在会话 `ctx-stock-plain-8before-0928`、PID25201运行，原生启动标记为2026-09-28 23:27:11 UTC，23:42:51 UTC完成保存，原生及外层均退出0。实际配置为原60k定义、global128、workers8、FSDP8，诊断循环401步；首步loss约0.5476，记忆编码器梯度范数约45.506，最后100步平均loss约0.0257，全部原生标量有限。
 
@@ -89,9 +89,22 @@ run为 `ctx-stock-motion-8before-20260928`，实际会话 `ctx-stock-motion-8bef
 | 原dtype完整恢复 | 55叶、12609567328字节 | 55叶、12609567328字节 |
 | 恢复与验收耗时 | 34.767秒 | 35.095秒 |
 
-`records/plain-comparison-before.json`已核实完整配置只差run身份/FSDP/输出，两组物理UUID互斥，两个主窗口都在双方Step0→400的训练进度覆盖之内。以前八卡作阶段参照，合计速率为78.787647样本/秒，提高6.3041%；两份等长任务稳态完工时间外推比0.941273322。两份检查点的精确schema、原dtype、全部有限值和归一化均通过；这些数值尚待后八卡完成后再给最终比较，不能用motion组倍率代替。
+`records/plain-comparison-before.json`已核实完整配置只差run身份/FSDP/输出，两组物理UUID互斥，两个主窗口都在双方Step0→400的训练进度覆盖之内。以前八卡作阶段参照，合计速率为78.787647样本/秒，提高6.3041%；两份等长任务稳态完工时间外推比0.941273322。两份检查点的精确schema、原dtype、全部有限值和归一化均通过。这份中间记录保留原口径；最终比较采用下文独立前后八卡合并参照，不用motion组倍率代替。
 
-最后一轮 `ctx-stock-plain-8after-20260928`已在会话 `ctx-stock-plain-8after-0928`启动，PID90100，实际启动标记2026-09-29 00:20:53 UTC。仍为8卡/FSDP8、global128、workers8、401步诊断，原60k学习率定义未改。
+最后一轮 `ctx-stock-plain-8after-20260928`在会话 `ctx-stock-plain-8after-0928`完成，PID90100，实际启动标记2026-09-29 00:20:53 UTC，00:36:18 UTC完成保存；原生与外层均退出0。仍为8卡/FSDP8、global128、workers8、401步诊断，原60k学习率定义未改。主窗口1.727116215秒/步，后段窗口1.726356919秒/步；checkpoint400完整CPU恢复55叶、12609567328字节，通过原dtype、精确schema、全部有限值与归一化核验，耗时33.319秒。主窗口每卡平均利用率99.5109%–99.7025%，零利用率采样均为0，采样显存峰值41785–41799MiB，最大相邻采样间隔0.531秒。
+
+最终四轮比较见 `records/plain-comparison.json`：八卡两次主窗口均值为1.727076955秒/步、74.113663样本/秒，前后漂移+0.004547%。左右四卡单任务耗时分别为八卡的1.880202304、1.882503850倍，即增加88.0202%、88.2504%；两任务合计78.787647样本/秒，提高6.3065%。等步数两任务并行／八卡依次运行的稳态时间比为0.941251925，外推减少5.8748%。前八卡保存早于双四卡启动，双四卡保存早于后八卡启动；四个独立PID、物理UUID、完整配置、依赖、源码及记录环境已经交叉核对。独立代理从四份原始产物复算全部吻合，判定 `PLAIN_FINAL_COMPARISON_INDEPENDENT=PASS`。
+
+| 最终比较口径 | 512+motion160 | 纯512 |
+|---|---:|---:|
+| 两次独立八卡平均秒/步 | 1.979365205 | 1.727076955 |
+| 左／右四卡秒/步 | 3.844594864／3.862700729 | 3.247254070／3.251229017 |
+| 每任务耗时增加 | 94.2337%／95.1485% | 88.0202%／88.2504% |
+| 双四卡合计吞吐增加 | 2.7274% | 6.3065% |
+| 两份等步数任务稳态工期外推减少 | 2.4258% | 5.8748% |
+| 八卡前后步时漂移 | −0.003428% | +0.004547% |
+
+上述比较仍使用各自两个相互覆盖的100→300窗口；不同配置的速度不能直接互作卡数对照。两个四卡任务各有全局batch128，不合并解释为一次全局128更新。也不能将本表的512倍率套用于尚被原读取守卫拒绝的2048、4096或8192。
 
 ### 有效性与数据边界的补充核查
 
@@ -105,18 +118,30 @@ run为 `ctx-stock-motion-8before-20260928`，实际会话 `ctx-stock-motion-8bef
 
 按实际两路图像、文本64、动作20、八卡每卡16样本，可从源码得到单层float32 logits的逻辑量 `16×8×(budget+596)²×4`：2048为3.333GiB，4096为10.498GiB，8192为36.826GiB。这些不是实际显存峰值，不能无条件称为峰值下界，也不能将旧四卡OOM请求除二当八卡实测。大预算原八卡的实际容量和速度仍是未验证项。
 
-下一组纯512的现有context YAML与历史modulation512相比，除融合方式、输出宽度外还多一段 `motion.enabled=false` 字典。旧96预算、40集路径等关闭态字段只进入配置留档，不触发motion表读取或模型层创建。旧60k配置、优化器源码、冻结规则和norm身份已核对一致；本轮保留这些不生效的历史字段，不修改配置进行清理。
+本轮纯512的现有context YAML与历史modulation512相比，除融合方式、输出宽度外还多一段 `motion.enabled=false` 字典。旧96预算、40集路径等关闭态字段只进入配置留档，不触发motion表读取或模型层创建。旧60k配置、优化器源码、冻结规则和norm身份已核对一致；本轮保留这些不生效的历史字段，不修改配置进行清理。
 
 ### 数据内容证据与末尾只读复核
 
 历史已完成全库验证：[帧库1192918行真实reader／源NPY逐行字节对拍](../../dataset-build-doc/4task-v2-1600ep-604f16da/result.md)、[motion71316行及219082752字节整表／独立encoder oracle一致](../../dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)，以及[9月20日294个payload、716544476858字节的独立哈希闭环及源库再次检查](../../dataset-build-doc/hf-export-v2-1600ep-trainset-20260920-v1/result.md)。VAE的独立数值验证为8632窗抽样，不称全量；9月28日权重/tokenizer的21文件全量哈希也不等于训练数据全量哈希。
 
-全部测速结束后，再由 `check_current_data.py`调用原 `framesamp_store.run_full_checks`、`motion_store.run_full_checks`，读取32个图像特征part、位置/状态表及motion表，共313426537152字节，更新当前内容未变的证据。该脚本要求八次测速均已有退出回执且GPU空闲，对固定元数据SHA先核验，再执行原只读接口，最后复核元数据未变且没有锁；不调用会写pack.lock/meta的打包verify入口。源码SHA为 `704020cf8046ff574ebe829075c76253afea88d95a9ddec0874795533e73fedd`。当前只完成脚本语法核查，尚未扫描数据，不能预写PASS。
+全部测速结束后，`check_current_data.py`已调用原 `framesamp_store.run_full_checks`、`motion_store.run_full_checks`，完整读取32个图像特征part、位置/状态表及motion表，共35文件、313426537152字节，SHA均匹配固定元数据。会话 `ctx-stock-data-fullhash-0928`于2026-09-29 00:37:11 UTC开始，00:49:41 UTC结束，总计749.919秒；日志为 `FRAMESAMP_FULL_HASH=PASS rows=1192918 seconds=749.413`、`MOTION_FULL_HASH=PASS rows=71316`、`DATA_FULL_CHECK=PASS metadata_unchanged=1`、唯一 `EXIT_CODE=0`。记录见 `records/data-content-recheck.json`及同名日志。
 
-同样在测速全部结束后，`check_initial_reference.py`补做初始资产全文件校验，并只恢复一次pi05_base。参考dtype来自原模型及freeze_filter的独立schema，按原 `_merge_params`逐叶NumPy转换，再用与已有恢复报告一致的原始字节SHA口径比较共享叶。目标是验证图像冻结叶仍等于初始化参考、统计共享非冻结EMA的字节变化；不模拟新增记忆参数的随机初值，不把变化量或训练效果从SHA推出。该工具已按只读审查意见增加实际导入路径、对应检查点路径及history SHA绑定；SHA为 `6c3eaba11a0da439d64be9aa7fc8110a5a2c5a3f844d4cafe8a9eed27a4dce6f`。当前仍未执行，不预填结果。
+该脚本要求八次测速已有唯一退出回执且GPU空闲，对固定元数据SHA先核验，再执行原只读接口，最后复核元数据未变且没有锁；两个原API按1MiB块读取至EOF，不使用首尾摘要，不调用会写pack.lock/meta的打包verify入口。源码SHA为 `704020cf8046ff574ebe829075c76253afea88d95a9ddec0874795533e73fedd`，方法由独立代理只读复核。motion索引由 `MotionMeta.load`额外校验SHA，不计入35个特征文件的字节数。本次没有重扫清单本体的语义摘要、源pkl、原始RGB/H5、逐行摘要或重跑VAE/encoder数值计算，不能把范围扩写成“所有训练来源文件重新全量验证”。
+
+测速全部结束后，`check_initial_reference.py`已补做初始资产全文件校验，并只恢复一次pi05_base。参考dtype来自原模型及freeze_filter的独立schema，按原 `_merge_params`逐叶NumPy转换，再用与已有恢复报告一致的原始字节SHA口径比较共享叶。该工具绑定实际导入路径、八份对应检查点路径及history SHA；SHA为 `6c3eaba11a0da439d64be9aa7fc8110a5a2c5a3f844d4cafe8a9eed27a4dce6f`。会话 `ctx-stock-initial-ref-0928`于2026-09-29 00:37:49 UTC开始检查，65.893秒完成，日志为 `INITIAL_ASSETS_FULL=PASS`、`INITIAL_REFERENCE_CHECK=PASS shared=51 frozen=23 runs=8`、唯一 `EXIT_CODE=0`。
+
+初始pi05_base及tokenizer共21文件、12445985954字节完整哈希通过。八份末态EMA中，共享51叶的shape、dtype及字节数均一致；23个冻结图像叶各自与转换后的初始化参考逐字节一致，28个共享非冻结叶各自的字节摘要均变化。独立代理依据八份恢复报告重新比较吻合，详见 `records/initial-reference-check.json`。这不是每个元素均变化或变化幅度的证明；没有模拟纯512新增4叶、motion新增8叶的随机初值，也不证明保存前现场EMA相同、逐步数值等价或策略效果。
 
 ### 取证工具与留档
 
 所有新增工具仅位于 `v1-store/bench/context-stock-scaling-20260928/`，不进入生产源码或被测训练进程。`run_dual4.sh`只并发启动两份原入口命令，SHA256为 `53c0fa99ed29edbff8f37b995a4ba0e39868abf4aeb793e849952e1dacbc0677`；纯离线 `summarize_native.py` 为 `dcdab97a2ac2732edd40b083279764faefacd42d63f7edc3fb6a96e01ba1e523`，`check_checkpoint.py` 为 `dc8da4f520a60604159fcfa952e4226b26dda39141dda46f2aeea9328ec59f98`。两份离线验收均禁止Python优化模式，避免跳过assert。训练使用的 `run_original.sh`、`preflight.py` 与快照源码保持起跑版本。
 
-`records/motion-8before/`保存原生指标、runtime、run_meta、前置证据、清洗日志、完整恢复报告、测量报告及两份压缩GPU原始采样。清洗保留全部5条Step指标和唯一退出码，删除进度中间态；没有归档配置YAML、启动shell或权重。后续各轮完成后继续追加原始证据；失败、超时及并发覆盖不足原样记录。
+`records/`下八个分组目录均保存完整配置JSON、原生指标、runtime、run_meta、前置证据、清洗日志、完整恢复报告、测量报告及两份压缩GPU原始采样。配置JSON含完整train_config、resolved_data、assets、history_values和derived，逐份与原产物字节一致，判定 `CONFIG_RECORD_ARCHIVE=PASS runs=8`。清洗保留每轮全部5条Step指标和唯一退出码，删除进度中间态；没有归档配置YAML、启动shell或权重。逐文件复核归档与本地产物、gzip解压后原始CSV字节一致，40条指标的十进制与十六进制值吻合，终态为 `ARCHIVE_BYTE_CHECK=PASS runs=8 metrics=40 raw_csv=16`、退出0。
+
+### 收尾状态与剩余限制
+
+2026-09-29 00:49 UTC收尾时GPU计算进程为空，工作盘可用374842220544字节，即349.099GiB。本轮原始记录和八份检查点保留；未删除其他数据或调整保存频率。按现有60k/80k及keep5000口径，五组共76份检查点的参数逻辑保留量约892.71GiB，实际压缩后占盘可能不同；当前空间不能按该完整逻辑预算覆盖全部五组，正式训练排程仍须独立核算空间。
+
+`git diff --exit-code 8aee9ced0bbc7bc4d2a863539fa8c14873bb9832 -- src scripts pyproject.toml uv.lock`退出0；实际被测6db源码工作树干净，原入口外层及前置脚本SHA保持起跑版本。三份旧未跟踪测速草稿与64代理审查时的SHA一致，均未用于本轮原入口测量、修补或提交。根目录最终方案见[context五组训练计划](../../../0928-context-sweep-training-plan.md)，64代理静态审查及未实施建议见[只读审查报告](../../context-gpu-scaling-readonly-audit-20260928.md)。context2048、4096、8192仍是原读取守卫阻断；本轮验证完成不代表这三档已能训练。
+
+最后独立核查源码差异、冻结文件SHA、两项CPU结果与归档字节、GPU空闲及本轮八个确切tmux会话均已结束，判定 `FINAL_INTEGRITY=PASS source_unchanged=1 frozen_drafts=3 gpu_idle=1 owned_sessions_completed=8`，退出0，见[收尾完整性记录](records/final-integrity.json)。文档核查得到 `DOCUMENT_LINKS=PASS files=4 local_links=236`、`HISTORICAL_SECTIONS=PASS sections=8.1-8.7 unchanged=1`；历史8.1–8.7与修订前逐字一致。

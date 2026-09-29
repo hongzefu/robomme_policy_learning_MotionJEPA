@@ -1,0 +1,630 @@
+{
+  "status": "COMPLETE_NATIVE_METRICS",
+  "run": "ctx-stock-plain-8after-20260928",
+  "runtime": {
+    "mesh": {
+      "batch": 1,
+      "fsdp": 8
+    },
+    "device_count": 8,
+    "fsdp_devices": 8,
+    "batch_size": 128,
+    "num_workers": 8,
+    "seed": 42,
+    "cuda_visible_devices": "0,1,2,3,4,5,6,7",
+    "config_name": "mme_vla_suite_b128_60k",
+    "exp_name": "ctx-stock-plain-8after-20260928",
+    "devices": [
+      "cuda:0",
+      "cuda:1",
+      "cuda:2",
+      "cuda:3",
+      "cuda:4",
+      "cuda:5",
+      "cuda:6",
+      "cuda:7"
+    ]
+  },
+  "metrics": [
+    {
+      "step": 0,
+      "wall_time": 1790641476.086459,
+      "grad_norm": {
+        "dec": 72.02704620361328,
+        "hex": "0x1.201bb20000000p+6"
+      },
+      "llm_grad_norm": {
+        "dec": 55.72726058959961,
+        "hex": "0x1.bdd16e0000000p+5"
+      },
+      "loss": {
+        "dec": 0.5476649403572083,
+        "hex": "0x1.18678a0000000p-1"
+      },
+      "mem_enc_norm": {
+        "dec": 45.5731086730957,
+        "hex": "0x1.6c95ba0000000p+5"
+      },
+      "param_norm": {
+        "dec": 1803.0919189453125,
+        "hex": "0x1.c2c5e20000000p+10"
+      }
+    },
+    {
+      "step": 100,
+      "wall_time": 1790641648.767401,
+      "grad_norm": {
+        "dec": 16.61202049255371,
+        "hex": "0x1.09cad60000000p+4"
+      },
+      "llm_grad_norm": {
+        "dec": 12.771669387817383,
+        "hex": "0x1.98b1840000000p+3"
+      },
+      "loss": {
+        "dec": 0.20419727265834808,
+        "hex": "0x1.a2322e0000000p-3"
+      },
+      "mem_enc_norm": {
+        "dec": 10.58901596069336,
+        "hex": "0x1.52d9380000000p+3"
+      },
+      "param_norm": {
+        "dec": 1803.0921630859375,
+        "hex": "0x1.c2c5e60000000p+10"
+      }
+    },
+    {
+      "step": 200,
+      "wall_time": 1790641821.4480054,
+      "grad_norm": {
+        "dec": 2.72775936126709,
+        "hex": "0x1.5d27380000000p+1"
+      },
+      "llm_grad_norm": {
+        "dec": 2.075162172317505,
+        "hex": "0x1.099eea0000000p+1"
+      },
+      "loss": {
+        "dec": 0.04622168466448784,
+        "hex": "0x1.7aa5e60000000p-5"
+      },
+      "mem_enc_norm": {
+        "dec": 1.762851357460022,
+        "hex": "0x1.c34a3a0000000p+0"
+      },
+      "param_norm": {
+        "dec": 1803.0931396484375,
+        "hex": "0x1.c2c5f60000000p+10"
+      }
+    },
+    {
+      "step": 300,
+      "wall_time": 1790641994.190644,
+      "grad_norm": {
+        "dec": 0.8615539073944092,
+        "hex": "0x1.b91d980000000p-1"
+      },
+      "llm_grad_norm": {
+        "dec": 0.6841750144958496,
+        "hex": "0x1.5e4c300000000p-1"
+      },
+      "loss": {
+        "dec": 0.031078536063432693,
+        "hex": "0x1.fd30d40000000p-6"
+      },
+      "mem_enc_norm": {
+        "dec": 0.5176869034767151,
+        "hex": "0x1.090e420000000p-1"
+      },
+      "param_norm": {
+        "dec": 1803.09423828125,
+        "hex": "0x1.c2c6080000000p+10"
+      }
+    },
+    {
+      "step": 400,
+      "wall_time": 1790642166.7193892,
+      "grad_norm": {
+        "dec": 0.782024085521698,
+        "hex": "0x1.9065760000000p-1"
+      },
+      "llm_grad_norm": {
+        "dec": 0.6270135641098022,
+        "hex": "0x1.4107ec0000000p-1"
+      },
+      "loss": {
+        "dec": 0.025660600513219833,
+        "hex": "0x1.a46c5c0000000p-6"
+      },
+      "mem_enc_norm": {
+        "dec": 0.4620392620563507,
+        "hex": "0x1.d920d20000000p-2"
+      },
+      "param_norm": {
+        "dec": 1803.094970703125,
+        "hex": "0x1.c2c6140000000p+10"
+      }
+    }
+  ],
+  "windows": {
+    "100_200": {
+      "start": 1790641648.767401,
+      "finish": 1790641821.4480054,
+      "steps": 100,
+      "seconds_per_step": 1.7268060445785522,
+      "samples_per_second": 74.12529067862971,
+      "gpus": {
+        "0": {
+          "samples": 344,
+          "util_mean": 99.53779069767442,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41799.0,
+          "temperature_mean_c": 72.93895348837209,
+          "power_mean_w": 370.49497093023257,
+          "sm_clock_mean_mhz": 1331.5116279069769,
+          "maximum_sample_gap_seconds": 0.5309998989105225
+        },
+        "1": {
+          "samples": 344,
+          "util_mean": 99.65697674418605,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.401162790697676,
+          "power_mean_w": 368.7133720930232,
+          "sm_clock_mean_mhz": 1333.2558139534883,
+          "maximum_sample_gap_seconds": 0.5219998359680176
+        },
+        "2": {
+          "samples": 344,
+          "util_mean": 99.46220930232558,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 71.70348837209302,
+          "power_mean_w": 376.2495639534884,
+          "sm_clock_mean_mhz": 1321.656976744186,
+          "maximum_sample_gap_seconds": 0.5209999084472656
+        },
+        "3": {
+          "samples": 344,
+          "util_mean": 99.7063953488372,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.71220930232558,
+          "power_mean_w": 372.11819767441864,
+          "sm_clock_mean_mhz": 1335.0,
+          "maximum_sample_gap_seconds": 0.5209999084472656
+        },
+        "4": {
+          "samples": 344,
+          "util_mean": 99.70348837209302,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 70.45930232558139,
+          "power_mean_w": 368.5529651162791,
+          "sm_clock_mean_mhz": 1323.6627906976744,
+          "maximum_sample_gap_seconds": 0.5199999809265137
+        },
+        "5": {
+          "samples": 344,
+          "util_mean": 99.68023255813954,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.55523255813954,
+          "power_mean_w": 370.6220348837209,
+          "sm_clock_mean_mhz": 1336.656976744186,
+          "maximum_sample_gap_seconds": 0.5199999809265137
+        },
+        "6": {
+          "samples": 344,
+          "util_mean": 99.56104651162791,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 71.04069767441861,
+          "power_mean_w": 371.91398255813954,
+          "sm_clock_mean_mhz": 1332.2529069767443,
+          "maximum_sample_gap_seconds": 0.5120000839233398
+        },
+        "7": {
+          "samples": 344,
+          "util_mean": 99.67441860465117,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.81104651162791,
+          "power_mean_w": 371.2622093023256,
+          "sm_clock_mean_mhz": 1348.953488372093,
+          "maximum_sample_gap_seconds": 0.5139999389648438
+        }
+      },
+      "observed_gpu_pids": [
+        90100
+      ]
+    },
+    "200_300": {
+      "start": 1790641821.4480054,
+      "finish": 1790641994.190644,
+      "steps": 100,
+      "seconds_per_step": 1.7274263858795167,
+      "samples_per_second": 74.09867132186301,
+      "gpus": {
+        "0": {
+          "samples": 345,
+          "util_mean": 99.67536231884058,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41799.0,
+          "temperature_mean_c": 74.13913043478261,
+          "power_mean_w": 375.8906956521739,
+          "sm_clock_mean_mhz": 1330.8695652173913,
+          "maximum_sample_gap_seconds": 0.5189998149871826
+        },
+        "1": {
+          "samples": 345,
+          "util_mean": 99.6,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.78550724637681,
+          "power_mean_w": 371.3755072463768,
+          "sm_clock_mean_mhz": 1331.695652173913,
+          "maximum_sample_gap_seconds": 0.5199999809265137
+        },
+        "2": {
+          "samples": 345,
+          "util_mean": 99.55942028985507,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 72.5855072463768,
+          "power_mean_w": 376.1913623188406,
+          "sm_clock_mean_mhz": 1320.6521739130435,
+          "maximum_sample_gap_seconds": 0.5199999809265137
+        },
+        "3": {
+          "samples": 345,
+          "util_mean": 99.59130434782608,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 63.14492753623188,
+          "power_mean_w": 372.09794202898547,
+          "sm_clock_mean_mhz": 1335.7391304347825,
+          "maximum_sample_gap_seconds": 0.5120000839233398
+        },
+        "4": {
+          "samples": 345,
+          "util_mean": 99.70144927536232,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 71.27246376811594,
+          "power_mean_w": 370.2946086956522,
+          "sm_clock_mean_mhz": 1322.0,
+          "maximum_sample_gap_seconds": 0.5139999389648438
+        },
+        "5": {
+          "samples": 345,
+          "util_mean": 99.54492753623188,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.99710144927536,
+          "power_mean_w": 369.2397391304348,
+          "sm_clock_mean_mhz": 1335.608695652174,
+          "maximum_sample_gap_seconds": 0.5160000324249268
+        },
+        "6": {
+          "samples": 345,
+          "util_mean": 99.66956521739131,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 71.80869565217391,
+          "power_mean_w": 374.87976811594206,
+          "sm_clock_mean_mhz": 1332.5217391304348,
+          "maximum_sample_gap_seconds": 0.5169999599456787
+        },
+        "7": {
+          "samples": 345,
+          "util_mean": 99.69855072463768,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 63.15652173913043,
+          "power_mean_w": 371.63565217391306,
+          "sm_clock_mean_mhz": 1350.1304347826087,
+          "maximum_sample_gap_seconds": 0.5189998149871826
+        }
+      },
+      "observed_gpu_pids": [
+        90100
+      ]
+    },
+    "300_400": {
+      "start": 1790641994.190644,
+      "finish": 1790642166.7193892,
+      "steps": 100,
+      "seconds_per_step": 1.7252874517440795,
+      "samples_per_second": 74.19053553690766,
+      "gpus": {
+        "0": {
+          "samples": 343,
+          "util_mean": 99.65889212827989,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41799.0,
+          "temperature_mean_c": 74.20408163265306,
+          "power_mean_w": 375.19673469387754,
+          "sm_clock_mean_mhz": 1329.0524781341107,
+          "maximum_sample_gap_seconds": 0.5220000743865967
+        },
+        "1": {
+          "samples": 343,
+          "util_mean": 99.57725947521865,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.880466472303205,
+          "power_mean_w": 373.71492711370263,
+          "sm_clock_mean_mhz": 1331.8513119533527,
+          "maximum_sample_gap_seconds": 0.5190000534057617
+        },
+        "2": {
+          "samples": 343,
+          "util_mean": 99.5801749271137,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 72.59183673469387,
+          "power_mean_w": 378.31854227405245,
+          "sm_clock_mean_mhz": 1320.3498542274053,
+          "maximum_sample_gap_seconds": 0.5179998874664307
+        },
+        "3": {
+          "samples": 343,
+          "util_mean": 99.69679300291546,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 63.119533527696795,
+          "power_mean_w": 373.5514577259475,
+          "sm_clock_mean_mhz": 1336.3119533527697,
+          "maximum_sample_gap_seconds": 0.5149998664855957
+        },
+        "4": {
+          "samples": 343,
+          "util_mean": 99.45189504373178,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 71.5131195335277,
+          "power_mean_w": 371.707638483965,
+          "sm_clock_mean_mhz": 1322.8425655976675,
+          "maximum_sample_gap_seconds": 0.5149998664855957
+        },
+        "5": {
+          "samples": 343,
+          "util_mean": 99.48979591836735,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.93002915451895,
+          "power_mean_w": 373.09816326530614,
+          "sm_clock_mean_mhz": 1336.661807580175,
+          "maximum_sample_gap_seconds": 0.5130000114440918
+        },
+        "6": {
+          "samples": 343,
+          "util_mean": 99.68221574344024,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 71.83381924198251,
+          "power_mean_w": 374.51909620991256,
+          "sm_clock_mean_mhz": 1327.259475218659,
+          "maximum_sample_gap_seconds": 0.5130000114440918
+        },
+        "7": {
+          "samples": 343,
+          "util_mean": 99.49562682215743,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 63.05539358600583,
+          "power_mean_w": 371.3588921282799,
+          "sm_clock_mean_mhz": 1351.530612244898,
+          "maximum_sample_gap_seconds": 0.5160000324249268
+        }
+      },
+      "observed_gpu_pids": [
+        90100
+      ]
+    },
+    "100_300": {
+      "start": 1790641648.767401,
+      "finish": 1790641994.190644,
+      "steps": 200,
+      "seconds_per_step": 1.7271162152290345,
+      "samples_per_second": 74.1119786099778,
+      "gpus": {
+        "0": {
+          "samples": 689,
+          "util_mean": 99.6066763425254,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41799.0,
+          "temperature_mean_c": 73.53991291727141,
+          "power_mean_w": 373.1967489114659,
+          "sm_clock_mean_mhz": 1331.190130624093,
+          "maximum_sample_gap_seconds": 0.5309998989105225
+        },
+        "1": {
+          "samples": 689,
+          "util_mean": 99.62844702467343,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.593613933236576,
+          "power_mean_w": 370.04637155297536,
+          "sm_clock_mean_mhz": 1332.4746008708273,
+          "maximum_sample_gap_seconds": 0.5219998359680176
+        },
+        "2": {
+          "samples": 689,
+          "util_mean": 99.51088534107402,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 72.14513788098694,
+          "power_mean_w": 376.22042089985484,
+          "sm_clock_mean_mhz": 1321.1538461538462,
+          "maximum_sample_gap_seconds": 0.5209999084472656
+        },
+        "3": {
+          "samples": 689,
+          "util_mean": 99.64876632801162,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.9288824383164,
+          "power_mean_w": 372.1080551523948,
+          "sm_clock_mean_mhz": 1335.3701015965166,
+          "maximum_sample_gap_seconds": 0.5209999084472656
+        },
+        "4": {
+          "samples": 689,
+          "util_mean": 99.70246734397678,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 70.86647314949202,
+          "power_mean_w": 369.4250507982584,
+          "sm_clock_mean_mhz": 1322.8301886792453,
+          "maximum_sample_gap_seconds": 0.5199999809265137
+        },
+        "5": {
+          "samples": 689,
+          "util_mean": 99.61248185776488,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.776487663280115,
+          "power_mean_w": 369.9298838896952,
+          "sm_clock_mean_mhz": 1336.132075471698,
+          "maximum_sample_gap_seconds": 0.5199999809265137
+        },
+        "6": {
+          "samples": 689,
+          "util_mean": 99.61538461538461,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 71.42525399129173,
+          "power_mean_w": 373.3990275761974,
+          "sm_clock_mean_mhz": 1332.3875181422352,
+          "maximum_sample_gap_seconds": 0.5169999599456787
+        },
+        "7": {
+          "samples": 689,
+          "util_mean": 99.68650217706822,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.984034833091435,
+          "power_mean_w": 371.4492017416546,
+          "sm_clock_mean_mhz": 1349.5428156748912,
+          "maximum_sample_gap_seconds": 0.5189998149871826
+        }
+      },
+      "observed_gpu_pids": [
+        90100
+      ]
+    },
+    "200_400": {
+      "start": 1790641821.4480054,
+      "finish": 1790642166.7193892,
+      "steps": 200,
+      "seconds_per_step": 1.7263569188117982,
+      "samples_per_second": 74.14457497473855,
+      "gpus": {
+        "0": {
+          "samples": 688,
+          "util_mean": 99.6671511627907,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41799.0,
+          "temperature_mean_c": 74.17151162790698,
+          "power_mean_w": 375.5447238372093,
+          "sm_clock_mean_mhz": 1329.9636627906978,
+          "maximum_sample_gap_seconds": 0.5220000743865967
+        },
+        "1": {
+          "samples": 688,
+          "util_mean": 99.58866279069767,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.832848837209305,
+          "power_mean_w": 372.5418168604651,
+          "sm_clock_mean_mhz": 1331.7732558139535,
+          "maximum_sample_gap_seconds": 0.5199999809265137
+        },
+        "2": {
+          "samples": 688,
+          "util_mean": 99.56976744186046,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 72.58866279069767,
+          "power_mean_w": 377.2518604651163,
+          "sm_clock_mean_mhz": 1320.5014534883721,
+          "maximum_sample_gap_seconds": 0.5199999809265137
+        },
+        "3": {
+          "samples": 688,
+          "util_mean": 99.6438953488372,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 63.13226744186046,
+          "power_mean_w": 372.82258720930236,
+          "sm_clock_mean_mhz": 1336.0247093023256,
+          "maximum_sample_gap_seconds": 0.5149998664855957
+        },
+        "4": {
+          "samples": 688,
+          "util_mean": 99.57703488372093,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 71.39244186046511,
+          "power_mean_w": 370.9990697674418,
+          "sm_clock_mean_mhz": 1322.4200581395348,
+          "maximum_sample_gap_seconds": 0.5149998664855957
+        },
+        "5": {
+          "samples": 688,
+          "util_mean": 99.51744186046511,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 62.963662790697676,
+          "power_mean_w": 371.16334302325583,
+          "sm_clock_mean_mhz": 1336.1337209302326,
+          "maximum_sample_gap_seconds": 0.5160000324249268
+        },
+        "6": {
+          "samples": 688,
+          "util_mean": 99.67587209302326,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 71.82122093023256,
+          "power_mean_w": 374.69995639534886,
+          "sm_clock_mean_mhz": 1329.8982558139535,
+          "maximum_sample_gap_seconds": 0.5169999599456787
+        },
+        "7": {
+          "samples": 688,
+          "util_mean": 99.59738372093024,
+          "zero_fraction": 0.0,
+          "memory_peak_mib": 41785.0,
+          "temperature_mean_c": 63.10610465116279,
+          "power_mean_w": 371.4976744186046,
+          "sm_clock_mean_mhz": 1350.828488372093,
+          "maximum_sample_gap_seconds": 0.5189998149871826
+        }
+      },
+      "observed_gpu_pids": [
+        90100
+      ]
+    }
+  },
+  "checkpoint": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/context-stock-scaling-20260928/checkpoints/mme_vla_suite_b128_60k/ctx-stock-plain-8after-20260928/400",
+  "checkpoint_commit": {
+    "item_handlers": {
+      "assets": "openpi.training.checkpoints.CallbackHandler",
+      "params": "orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler"
+    },
+    "metrics": {},
+    "performance_metrics": {},
+    "init_timestamp_nsecs": 1790642166873511428,
+    "commit_timestamp_nsecs": 1790642178265358924,
+    "custom_metadata": {}
+  },
+  "limitations": [
+    "checkpoint还须独立完整恢复，不能仅凭元数据认定保存内容正确",
+    "两个200步窗口重叠100步，不是独立重复",
+    "仅有100步原日志，不能识别逐个慢步或计算逐步p95",
+    "并发覆盖须在两个独立run之间另外核对，单run成功不是并发对照成功"
+  ]
+}

@@ -201,3 +201,9 @@ samples_per_second = 128 / t
 它先按资产锁full级别校验pi05_base和tokenizer，再用原 `restore_params(..., restore_type=np.ndarray, dtype=None)`只恢复一次base。共享叶参考按原加载器 `_merge_params` 的NumPy `astype(schema.dtype)`生成；schema由原模型和freeze_filter独立给出。比较口径为路径、shape、dtype及完整原始字节SHA，新增记忆参数的随机初值明确排除。统计共享非冻结EMA的变化／未变化清单，不预设每叶必须变化；冻结叶若不同则保留失败，不直接断言其参与了梯度更新。
 
 从 `SOURCE`运行，沿用上节CPU隔离与缓存环境；日志为 `BASE/initial-reference-check.log`，结构化结果为 `BASE/initial-reference-check.json`，以pipefail、tee、唯一 `EXIT_CODE=`留存。预计读取约12.44GB初始资产进行全文件哈希，再读取一次约同量的初始参数，故“恢复一次”不等于“只读一遍磁盘”。这只是独立只读验收，不修改训练、加载或数据读取函数；结果待执行后回写。
+
+## 追加：实际会话与执行完成记录
+
+上文六个原训练会话均已实际启动并自然结束；两个双四卡会话各含两份独立原入口运行，共八份401步诊断。两项CPU收尾检查也已在 `ctx-stock-data-fullhash-0928`、`ctx-stock-initial-ref-0928`实际启动并正常退出，分别耗时749.919秒、65.893秒，两份日志均只有一个 `EXIT_CODE=0`。没有清理其他tmux会话。
+
+收尾命令为 `bash BASE/run_final_readonly.sh data`、`bash BASE/run_final_readonly.sh initial`，分别进入上述独立会话；包装器SHA256为 `000d67c4a0711d10d14bdc61576a75a0f2f9784ad417efce8b47f1a19b830f1d`。八轮完整配置JSON及CPU结果已归档 `records/`，最终数值、覆盖范围与尚未证明事项见[result.md](result.md)。这些是诊断完成记录，未启动任何正式60k/80k训练。

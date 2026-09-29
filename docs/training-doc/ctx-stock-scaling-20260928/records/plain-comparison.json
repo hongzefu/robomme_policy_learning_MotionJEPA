@@ -1,0 +1,188 @@
+{
+  "status": "PASS",
+  "variant": "context512",
+  "source_head": "6db0e0ab9ef266d0e80fc1dd8d4383705bd81ab0",
+  "runs": {
+    "8before": "v1-store/bench/context-stock-scaling-20260928/ctx-stock-plain-8before-20260928",
+    "4left": "v1-store/bench/context-stock-scaling-20260928/ctx-stock-plain-4left-20260928",
+    "4right": "v1-store/bench/context-stock-scaling-20260928/ctx-stock-plain-4right-20260928",
+    "8after": "v1-store/bench/context-stock-scaling-20260928/ctx-stock-plain-8after-20260928"
+  },
+  "seconds_per_step": {
+    "8before": 1.7270376944541932,
+    "4left": 3.2472540700435637,
+    "4right": 3.251229016780853,
+    "8after": 1.7271162152290345
+  },
+  "eight_reference_seconds": 1.7270769548416138,
+  "eight_relative_drift": 4.546558253681887e-05,
+  "single_job_time_ratio": {
+    "4left": 1.880202304211373,
+    "4right": 1.882503850026194
+  },
+  "combined_samples_per_second": 78.78764701254812,
+  "eight_reference_samples_per_second": 74.11366334381931,
+  "combined_throughput_ratio": 1.063065074074747,
+  "equal_steps_pair_makespan_ratio": 0.941251925013097,
+  "parallel_union": [
+    1790640158.3893642,
+    1790640813.8699205
+  ],
+  "parallel_progress_coverage": true,
+  "phase_order_verified": true,
+  "complete_config_comparison": true,
+  "source_and_packages_equal": true,
+  "recorded_environment_equal_except_per_run_output": true,
+  "all_native_and_restore_pass": true,
+  "physical_gpu_uuids": {
+    "8before": [
+      "GPU-191942f6-8212-df10-f8f9-aafa4d397152",
+      "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+      "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+      "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+      "GPU-8fb13753-84aa-f408-93f7-518b05582e9a",
+      "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+      "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe",
+      "GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5"
+    ],
+    "4left": [
+      "GPU-191942f6-8212-df10-f8f9-aafa4d397152",
+      "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+      "GPU-8fb13753-84aa-f408-93f7-518b05582e9a",
+      "GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5"
+    ],
+    "4right": [
+      "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+      "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+      "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+      "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe"
+    ],
+    "8after": [
+      "GPU-191942f6-8212-df10-f8f9-aafa4d397152",
+      "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+      "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+      "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+      "GPU-8fb13753-84aa-f408-93f7-518b05582e9a",
+      "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+      "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe",
+      "GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5"
+    ]
+  },
+  "observed_gpu_pids": {
+    "8before": [
+      25201
+    ],
+    "4left": [
+      52558
+    ],
+    "4right": [
+      52569
+    ],
+    "8after": [
+      90100
+    ]
+  },
+  "first_step_scalars": {
+    "8before": {
+      "step": 0,
+      "wall_time": 1790638267.1790338,
+      "grad_norm": {
+        "dec": 71.91960906982422,
+        "hex": "0x1.1fadae0000000p+6"
+      },
+      "llm_grad_norm": {
+        "dec": 55.64324188232422,
+        "hex": "0x1.bd255c0000000p+5"
+      },
+      "loss": {
+        "dec": 0.5476049780845642,
+        "hex": "0x1.185fae0000000p-1"
+      },
+      "mem_enc_norm": {
+        "dec": 45.50603485107422,
+        "hex": "0x1.6c0c5c0000000p+5"
+      },
+      "param_norm": {
+        "dec": 1803.0919189453125,
+        "hex": "0x1.c2c5e20000000p+10"
+      }
+    },
+    "4left": {
+      "step": 0,
+      "wall_time": 1790639833.911528,
+      "grad_norm": {
+        "dec": 72.24430847167969,
+        "hex": "0x1.20fa2c0000000p+6"
+      },
+      "llm_grad_norm": {
+        "dec": 55.89079284667969,
+        "hex": "0x1.bf20580000000p+5"
+      },
+      "loss": {
+        "dec": 0.5474246740341187,
+        "hex": "0x1.18480c0000000p-1"
+      },
+      "mem_enc_norm": {
+        "dec": 45.71653366088867,
+        "hex": "0x1.6dbb760000000p+5"
+      },
+      "param_norm": {
+        "dec": 1803.0919189453125,
+        "hex": "0x1.c2c5e20000000p+10"
+      }
+    },
+    "4right": {
+      "step": 0,
+      "wall_time": 1790639838.66181,
+      "grad_norm": {
+        "dec": 72.10328674316406,
+        "hex": "0x1.2069c40000000p+6"
+      },
+      "llm_grad_norm": {
+        "dec": 55.785682678222656,
+        "hex": "0x1.be49140000000p+5"
+      },
+      "loss": {
+        "dec": 0.5474188923835754,
+        "hex": "0x1.18474a0000000p-1"
+      },
+      "mem_enc_norm": {
+        "dec": 45.62218475341797,
+        "hex": "0x1.6cfa3c0000000p+5"
+      },
+      "param_norm": {
+        "dec": 1803.0919189453125,
+        "hex": "0x1.c2c5e20000000p+10"
+      }
+    },
+    "8after": {
+      "step": 0,
+      "wall_time": 1790641476.086459,
+      "grad_norm": {
+        "dec": 72.02704620361328,
+        "hex": "0x1.201bb20000000p+6"
+      },
+      "llm_grad_norm": {
+        "dec": 55.72726058959961,
+        "hex": "0x1.bdd16e0000000p+5"
+      },
+      "loss": {
+        "dec": 0.5476649403572083,
+        "hex": "0x1.18678a0000000p-1"
+      },
+      "mem_enc_norm": {
+        "dec": 45.5731086730957,
+        "hex": "0x1.6c95ba0000000p+5"
+      },
+      "param_norm": {
+        "dec": 1803.0919189453125,
+        "hex": "0x1.c2c5e20000000p+10"
+      }
+    }
+  },
+  "limits": [
+    "两个独立八卡主窗口等权平均，四卡各一个主窗口；没有统计置信区间",
+    "合计吞吐是两个相互覆盖的稳态速率之和；完整工期含启动/保存等额外成本",
+    "401步均处于原5000步预热；不证明完整收敛、策略成功率或数值逐位一致"
+  ]
+}
