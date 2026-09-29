@@ -5,8 +5,13 @@
 # 用法（环境变量）：SHARD=<0..9> ROUND=<1|2> PORT=<端口> RUN_TAG=<标签> bash scripts/gl_eval_shard.sh
 #   片 SHARD、轮 ROUND：episode_start = 10×(ROUND−1)+SHARD、episode_stride = 20、max_episodes = 0，
 #   即 80 局的任务取 {s, s+20, s+40, s+60}、20 局的任务取 {s}，每片 13×4 + 3×1 = 55 局。
+# v7（身份清单）：另给 IDENTITIES=<v7 评估身份清单 jsonl> 时按清单评 (ROUND, SHARD) 选中的局，不再用 EP_START/stride；
+#   每片局数由清单决定（RETRY_CAP 也按清单片大小）。VIDEO_DIR=<目录> 可选，视频写到该目录、名为 {task}_{tier}_{episode}_{seed}.mp4。
+#   例：IDENTITIES=/path/eval-identities-v7.jsonl VIDEO_DIR=/path/videos SHARD=0 ROUND=1 PORT=18000 RUN_TAG=v7 bash scripts/gl_eval_shard.sh
+# srun 包装：在占位 job 内用 srun --overlap --jobid=<占位JobID> --ntasks=1 --cpus-per-task=4 ... bash scripts/gl_eval_shard.sh
+#   （每片 4 个 CPU：server 的 JAX 与 client 的仿真渲染、视频编码并行）。
 # 断点续评：eval.py 按 episodes.jsonl 里已有正常终态的身份跳过；本脚本最多跑 3 遍，error 身份在下一遍重评，
-# 每片每轮 error 合计超过 55 即 RETRY_CAP_HIT 停止。单局无进展（episodes.jsonl mtime）30 分钟即杀掉 eval 重起。
+# 每片每轮 error 合计超过本片局数（v6 为 55）即 RETRY_CAP_HIT 停止。单局无进展（episodes.jsonl mtime）30 分钟即杀掉 eval 重起。
 set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO"
@@ -21,9 +26,26 @@ LIMIT="${LIMIT:-0}"
 mkdir -p "$SAVE_ROOT"
 SERVER_LOG="$SAVE_ROOT/server.log"
 EP_START=$((10 * (ROUND - 1) + SHARD))
+IDENTITIES="${IDENTITIES:-}"
+VIDEO_DIR="${VIDEO_DIR:-}"
+if [[ -n "$IDENTITIES" ]]; then
+  [[ -f "$IDENTITIES" ]] || { echo "错误: 身份清单不存在: $IDENTITIES"; echo "EXIT_CODE=1"; exit 1; }
+  # 本片应评局数（清单里 round/shard 命中的行数），用作重跑上限
+  SHARD_N=$(python3 -c "
+import json,sys
+print(sum(1 for l in open(sys.argv[1]) if l.strip() and (lambda r: int(r['round'])==int(sys.argv[2]) and int(r['shard'])==int(sys.argv[3]))(json.loads(l))))" "$IDENTITIES" "$ROUND" "$SHARD")
+  [[ "$SHARD_N" -gt 0 ]] || { echo "错误: 清单里 round=$ROUND shard=$SHARD 没有行"; echo "EXIT_CODE=1"; exit 1; }
+  SEL_ARGS=(--args.identities="$IDENTITIES" --args.round="$ROUND" --args.shard="$SHARD")
+  SEL_DESC="identities=$IDENTITIES shard_n=$SHARD_N"
+else
+  SHARD_N=55
+  SEL_ARGS=(--args.episode_start="$EP_START" --args.episode_stride=20)
+  SEL_DESC="ep_start=$EP_START"
+fi
+[[ -n "$VIDEO_DIR" ]] && SEL_ARGS+=(--args.video_dir="$VIDEO_DIR")
 [[ -d "$CKPT/params" ]] || { echo "错误: checkpoint 缺 params: $CKPT"; echo "EXIT_CODE=1"; exit 1; }
 [[ -x "$REPO/robomme_env/bin/python" ]] || { echo "错误: robomme_env 不存在"; echo "EXIT_CODE=1"; exit 1; }
-echo "=== MMEVLA_SHARD host=$(hostname) job=${SLURM_JOB_ID:-none} HEAD=$(git -C "$REPO" rev-parse HEAD) round=$ROUND shard=$SHARD port=$PORT ckpt=$CKPT ep_start=$EP_START start=$(date -Is) ==="
+echo "=== MMEVLA_SHARD host=$(hostname) job=${SLURM_JOB_ID:-none} HEAD=$(git -C "$REPO" rev-parse HEAD) round=$ROUND shard=$SHARD port=$PORT ckpt=$CKPT $SEL_DESC video_dir=${VIDEO_DIR:-official} start=$(date -Is) ==="
 nvidia-smi --query-gpu=name,driver_version,compute_mode --format=csv,noheader
 # 端口占用守卫：已被占用就会把别人的服务误判为就绪、静默产出空结果
 if (exec 3<>"/dev/tcp/127.0.0.1/${PORT}") 2>/dev/null; then
@@ -49,15 +71,15 @@ grep -m1 -E "Restoring checkpoint|checkpoint" "$SERVER_LOG" | sed 's/^/SERVER_CK
 echo "server 端口就绪 $(date +%T)"
 RC=0
 for pass in 1 2 3; do
-  errors=$(grep -c '"status": "error"' "$SAVE_DIR/episodes.jsonl" 2>/dev/null || echo 0)
-  if [[ "$errors" -gt 55 ]]; then echo "RETRY_CAP_HIT round=$ROUND shard=$SHARD errors=$errors"; RC=4; break; fi
+  errors=$(grep -c '"status": "error"' "$SAVE_DIR/episodes.jsonl" 2>/dev/null); errors=${errors:-0}  # grep -c 无命中已输出 0，再 || echo 0 会得到两行
+  if [[ "$errors" -gt "$SHARD_N" ]]; then echo "RETRY_CAP_HIT round=$ROUND shard=$SHARD errors=$errors"; RC=4; break; fi
   echo "EVAL_PASS $pass errors_so_far=$errors $(date -Is)"
   # GL 计算节点设有 HTTP 代理变量，websocket 客户端连本机 server 会走代理被拒（proxy rejected connection: HTTP 403）：
   # 评估进程去掉代理变量并显式连 127.0.0.1
   ( cd examples/robomme && env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u all_proxy -u ALL_PROXY \
       NO_PROXY=127.0.0.1,localhost PYTHONUNBUFFERED=1 GLIBC_TUNABLES=glibc.rtld.optional_static_tls=16384 \
       "$REPO/robomme_env/bin/python" eval.py --args.host=127.0.0.1 --args.port="$PORT" --args.model_seed=7 --args.model_ckpt_id=79999 \
-      --args.policy_name=mmevla-testhard --args.episode_start="$EP_START" --args.episode_stride=20 \
+      --args.policy_name=mmevla-testhard "${SEL_ARGS[@]}" \
       --args.max_episodes="$LIMIT" --args.save_dir="$SAVE_ROOT" ${ONLY_TASKS:+--args.only_tasks="$ONLY_TASKS"} ) &
   EVAL_PID=$!
   started=$(date +%s)

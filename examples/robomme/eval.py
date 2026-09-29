@@ -20,6 +20,7 @@ from utils import (
 from utils import RolloutRecorder
 from env_runner import EnvRunner
 from subgoal_predictor import build_subgoal_predictor, SubgoalPredictorBase
+import identity_manifest
 
 # qwen3-vl environment variables
 os.environ['IMAGE_MAX_TOKEN_NUM'] = '256'
@@ -45,6 +46,11 @@ class Args:
     episode_start: int = 0  # test-hard 分片：每任务取 range(n)[start::stride][:max_episodes]（0 = 不限）
     episode_stride: int = 1
     max_episodes: int = 0
+    # v7：给了身份清单就只评 (round, shard) 选中的 (task, episode)，不再用 start/stride
+    identities: str = ""  # v7 评估身份清单 jsonl 路径
+    round: int = 0
+    shard: int = -1
+    video_dir: str = ""  # 给了就把视频写到这里，文件名 {task}_{tier}_{episode}_{seed}.mp4
 
     # task control
     re_eval_tasks: str = "" # tasks split by comma
@@ -148,6 +154,10 @@ class EpisodeEvaluator:
         if success_flag == "unknown":
             return "unknown"
 
+        if self.args.video_dir:  # v7：视频改由 evaluate() 在记终态后写
+            subgoal_predictor.end_episode(epstate, success_flag)
+            return success_flag
+
         video_filename = f"{env_runner.env_id}_ep{env_runner.episode_id}_{success_flag}_{task_goal}_{env_runner.difficulty}.mp4"
         recorder.save_video(video_filename)
 
@@ -165,6 +175,7 @@ class EpisodeEvaluator:
         task_goal = pre_traj["task_goal"]
 
         recorder = RolloutRecorder(video_save_dir, task_goal, fps=30)
+        self.last_recorder = recorder  # 终态确定后由 evaluate() 按 v7 文件名写视频
 
         print(f"task_goal: {task_goal}")
 
@@ -305,6 +316,20 @@ def evaluate(args: Args):
     subgoal_predictor = build_subgoal_predictor(args, save_dir)
     evaluator = EpisodeEvaluator(args, save_dir)
 
+    manifest_by_task = None
+    if args.identities:
+        if args.round not in (1, 2) or args.shard < 0:
+            raise ValueError("--args.identities 需同时给 --args.round (1|2) 与 --args.shard (>=0)")
+        picked = identity_manifest.select_rows(identity_manifest.load_manifest(args.identities),
+                                               args.round, args.shard, TASK_NAME_LIST)
+        manifest_by_task = identity_manifest.group_by_task(picked)
+        task_names = [t for t in task_names if t in manifest_by_task]  # only/exclude_tasks 仍可再收窄
+        print(f"[robomme] identities={args.identities} round={args.round} shard={args.shard} "
+              f"episodes={sum(len(manifest_by_task[t]) for t in task_names)} tasks={len(task_names)}")
+    video_dir = Path(args.video_dir) if args.video_dir else None
+    if video_dir is not None:
+        video_dir.mkdir(parents=True, exist_ok=True)
+
     ep_log = save_dir / "episodes.jsonl"  # 逐局终态；续评按其中身份判，不看 log.json
     rows = [json.loads(l) for l in open(ep_log)] if ep_log.exists() else []
     last = {(r["task"], r["episode"]): r["status"] for r in rows}  # 每个身份以最后一条记录为准（更正记录可覆盖）
@@ -319,11 +344,26 @@ def evaluate(args: Args):
 
             success_flag = "unknown"
 
-            for episode_id in list(range(num_episodes))[args.episode_start::args.episode_stride][:args.max_episodes or None]:
+            if manifest_by_task is not None:
+                row_of = {int(r["episode"]): r for r in manifest_by_task[task_name]}
+                episode_ids = list(row_of)[:args.max_episodes or None]  # 冒烟时 max_episodes 仍可截断每任务局数
+                bad = [e for e in episode_ids if not 0 <= e < num_episodes]
+                if bad:
+                    raise ValueError(f"{task_name} 清单 episode {bad} 越界（builder 共 {num_episodes} 局）")
+                for e in episode_ids:  # 本任务开评前先整体核对身份（tier、seed），不符即中止整片
+                    identity_manifest.check_identity(row_of[e], env_runner.env_builder.resolve_identity(e))
+            else:
+                row_of = {}
+                episode_ids = list(range(num_episodes))[args.episode_start::args.episode_stride][:args.max_episodes or None]
+
+            for episode_id in episode_ids:
                 if (task_name, episode_id) in done:
                     print(f"[robomme] episode {episode_id} already evaluated, skipping...")
                     continue
 
+                if episode_id in row_of:  # 起局前再核对一次
+                    identity_manifest.check_identity(row_of[episode_id], env_runner.env_builder.resolve_identity(episode_id))
+                evaluator.last_recorder = None
                 env_runner.make_env(episode_id)
                 print(f"\n[robomme] env for task {task_name} episode {episode_id} setup finished")
 
@@ -339,12 +379,30 @@ def evaluate(args: Args):
                     success_flag = "error"  # 不沿用上一局的终态；也不落到 "unknown" 触发整轮中止
 
                 status = success_flag if success_flag in ("success", "fail", "timeout") else "error"
+                attempt = sum((r["task"], r["episode"]) == (task_name, episode_id) for r in rows) + 1
+                seed = env_runner.identity.get("seed")
+                video_path = None
+                recorder = getattr(evaluator, "last_recorder", None)
+                if video_dir is not None and recorder is not None and recorder.total_images:
+                    # 终态之后写视频；error 局加后缀保留，不覆盖、不删除任何视频
+                    name = identity_manifest.video_name(task_name, env_runner.tier, episode_id, seed)
+                    if status == "error":
+                        name = name[:-len(".mp4")] + f".error{attempt}.mp4"
+                    try:
+                        recorder.save_dir = video_dir
+                        recorder.save_video(name)
+                        video_path = str(video_dir / name)
+                    except Exception as e:
+                        print(f"Error saving video for {task_name} episode {episode_id}: {e}")
+                rec = dict(task=task_name, episode=episode_id, seed=seed, identity=env_runner.identity, tier=env_runner.tier,
+                    binding_class=identity_manifest.binding_class(env_runner.tier),
+                    max_steps=env_runner.max_steps_for_episode, steps=getattr(env_runner, "steps", 0), status=status,
+                    task_success=status == "success", error_class="infra" if status == "error" else None,
+                    attempt=attempt, spec_binding=env_runner.spec_binding, demo_frames=env_runner.demo_frames, video=video_path)
+                if manifest_by_task is not None:
+                    rec.update(round=args.round, shard=args.shard)
                 with open(ep_log, "a") as f:
-                    f.write(json.dumps(dict(task=task_name, episode=episode_id, identity=env_runner.identity, tier=env_runner.tier,
-                        max_steps=env_runner.max_steps_for_episode, steps=getattr(env_runner, "steps", 0), status=status,
-                        task_success=status == "success", error_class="infra" if status == "error" else None,
-                        attempt=sum((r["task"], r["episode"]) == (task_name, episode_id) for r in rows) + 1,
-                        spec_binding=env_runner.spec_binding, demo_frames=env_runner.demo_frames)) + "\n")
+                    f.write(json.dumps(rec) + "\n")
                 env_runner.close_env()
                 with open(save_dir / "progress.json", "w") as f:
                     json.dump(log_dict, f, indent=2)
