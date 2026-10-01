@@ -1,0 +1,330 @@
+{
+  "schema": 1,
+  "checked_utc": "2026-09-26T21:03:56.561487+00:00",
+  "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "upstream_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+  "p1_tag": "20260926T195426Z",
+  "script_sha256": "ce469d04fc29e81fb383a1b514f1602594f88fae08f77a780e3c77f6abf4e728",
+  "status": "PASS",
+  "results": {
+    "full-a": {
+      "status": "PASS",
+      "head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+      "harness_pid": 582619,
+      "module_files": 49,
+      "n_leaves_by_segment": [
+        201,
+        201
+      ],
+      "dependencies": 208,
+      "session": "orig80k-p1-full-a-20260926T195426Z",
+      "start_utc": "2026-09-26T19:56:57+00:00",
+      "end_utc": "2026-09-26T20:31:18+00:00",
+      "elapsed_seconds": 2061.0,
+      "command_sha256": "7ae493d48f3237eea1bf6700f0d36fb5a183fea0d35cba2c399d557d52dc1753",
+      "wrapper_pid": 582616,
+      "body_pid": 582619,
+      "checkpoint_work_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/checkpoints/full-a/mme_vla_suite/p1-orig80k-full-a-20260926T195426Z",
+      "jax_cache": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/orig80k-p1-20260926T195426Z/full-a",
+      "init_calls": 2,
+      "log": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-full-a-20260926T195426Z.log",
+        "bytes": 86803,
+        "sha256": "923dd3f0120c40bbf88f58e6c1e0cedc8aadccb5bd6943a50c718dfc6ca30343"
+      },
+      "record_files": {
+        "harness_meta.json": {
+          "bytes": 1555,
+          "sha256": "5522bc5f4450fd701ec2eff62dc6efed18e46fc489b8770e9097dcbafeca5a0f"
+        },
+        "init_ownership.json": {
+          "bytes": 695,
+          "sha256": "c0a1bb60fd5f21830de04b7594d48865c4206a6b6fd41dded0d7fd05b91d53ad"
+        },
+        "jax_cache.json": {
+          "bytes": 577,
+          "sha256": "c96e045dff9a2ba23ad555977beb64e873f9c8605af6a9002eaaf9f96abd9b4f"
+        },
+        "metrics.jsonl": {
+          "bytes": 991,
+          "sha256": "9e4534a51e928d0236c97267ada0e99b5f23f89666ac25bb19c28a1699ba223f"
+        },
+        "metrics_all.jsonl": {
+          "bytes": 1980,
+          "sha256": "cddea9c4fb9b32ccc0db507e064c67bef63d6f7e28316a147eb856a90f605959"
+        },
+        "metrics_tentative.jsonl": {
+          "bytes": 989,
+          "sha256": "a0da0531f6eb4c8ae30ebdad47d617814dadb607ec1ab3f01e2bf09b678ffe09"
+        },
+        "provenance.json": {
+          "bytes": 13618,
+          "sha256": "037df19bb39da4cad829dbbb4a7d5afdef6649279fdcf3218f06a3ee1510ac01"
+        },
+        "provenance_start.json": {
+          "bytes": 626,
+          "sha256": "166cbb8b34c40187ddaa26f36f9f9d6dacc014d6ee8e4917376d041f2d2e33d5"
+        },
+        "resolved_config.json": {
+          "bytes": 2473,
+          "sha256": "012f8efe4247c1d627cdcbfed6a6d59b0979451fd040139ab4f14215633f70ea"
+        },
+        "run_status.json": {
+          "bytes": 38,
+          "sha256": "97d327e20b36da5f388b1453f669da1fa43b3954c452e22756d42d6c9d826d06"
+        },
+        "runtime_fingerprint.json": {
+          "bytes": 10007,
+          "sha256": "35186e00d8aff5b0dd3f4d01a3fb2edec0610070821e4750868438d0babe4e4b"
+        },
+        "runtime_fingerprint_end.json": {
+          "bytes": 10007,
+          "sha256": "35186e00d8aff5b0dd3f4d01a3fb2edec0610070821e4750868438d0babe4e4b"
+        },
+        "state_digests.jsonl": {
+          "bytes": 119308,
+          "sha256": "97d0e81faa029632c16d9fea9de69268460bbdc6e17fa2504fdaac6c93cb4954"
+        }
+      },
+      "venv_evidence": "固定driver/outer命令、已知harness的sys.prefix入口断言及当前独立解释器只读查询；JSON未直接记录sys.prefix",
+      "scope": "P1入口与记录完整性；没有比较A/B标量或状态相等，不是100步基线"
+    },
+    "count-a": {
+      "status": "PASS",
+      "head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+      "harness_pid": 582633,
+      "module_files": 49,
+      "n_leaves_by_segment": [
+        201,
+        201
+      ],
+      "dependencies": 208,
+      "session": "orig80k-p1-count-a-20260926T195426Z",
+      "start_utc": "2026-09-26T19:56:57+00:00",
+      "end_utc": "2026-09-26T20:30:32+00:00",
+      "elapsed_seconds": 2015.0,
+      "command_sha256": "cc43cfcb73009fb6254048986bff22336ba220993629d7e5a4d7def13a46b4f6",
+      "wrapper_pid": 582631,
+      "body_pid": 582633,
+      "checkpoint_work_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/checkpoints/count-a/mme_vla_suite/p1-orig80k-count-a-20260926T195426Z",
+      "jax_cache": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/orig80k-p1-20260926T195426Z/count-a",
+      "init_calls": 2,
+      "log": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-count-a-20260926T195426Z.log",
+        "bytes": 84947,
+        "sha256": "efef69c76514c2e606db36c714d3f999eaea2044bb9831c594f34a845a51ab65"
+      },
+      "record_files": {
+        "harness_meta.json": {
+          "bytes": 1589,
+          "sha256": "a5ae33671ea698de2152eedce2f7a8b7f63d94053e49c3e81937689959644b48"
+        },
+        "init_ownership.json": {
+          "bytes": 699,
+          "sha256": "55275f000bdeaa9eda16eaa5da0d0a80598f76dbea24441b01e9c8a0942195f7"
+        },
+        "jax_cache.json": {
+          "bytes": 582,
+          "sha256": "6bcf8ff33625cb0e838aaa40d67d45f87075a12e334e04e578373b59a2ba4d4f"
+        },
+        "metrics.jsonl": {
+          "bytes": 989,
+          "sha256": "035c67a0d8387604473fa0bfedc0e26395ab690a274c4f8359703bc238e4dfd2"
+        },
+        "metrics_all.jsonl": {
+          "bytes": 1979,
+          "sha256": "02731755f209d2a2af478e56b70388bf27df5609d1ba00a801fd957b0c092193"
+        },
+        "metrics_tentative.jsonl": {
+          "bytes": 990,
+          "sha256": "11c89f4a8d3bcd52973b3c9303fd088f398841554ccc0c57a69cb74b5d1ac8b8"
+        },
+        "provenance.json": {
+          "bytes": 13618,
+          "sha256": "037df19bb39da4cad829dbbb4a7d5afdef6649279fdcf3218f06a3ee1510ac01"
+        },
+        "provenance_start.json": {
+          "bytes": 626,
+          "sha256": "166cbb8b34c40187ddaa26f36f9f9d6dacc014d6ee8e4917376d041f2d2e33d5"
+        },
+        "resolved_config.json": {
+          "bytes": 2507,
+          "sha256": "0857628fb23555a673b0ac00584a228e73c68838ac5f30b776b628deeb0ac443"
+        },
+        "run_status.json": {
+          "bytes": 38,
+          "sha256": "97d327e20b36da5f388b1453f669da1fa43b3954c452e22756d42d6c9d826d06"
+        },
+        "runtime_fingerprint.json": {
+          "bytes": 10066,
+          "sha256": "1a2a14b229d1d94400a9e608a6d9d9048dc5dc3077613ff6e7c55a689005dcf6"
+        },
+        "runtime_fingerprint_end.json": {
+          "bytes": 10066,
+          "sha256": "1a2a14b229d1d94400a9e608a6d9d9048dc5dc3077613ff6e7c55a689005dcf6"
+        },
+        "state_digests.jsonl": {
+          "bytes": 119308,
+          "sha256": "4009cf27f267243764e68af93e644be8c0aaadad0dd15c97dd736b29ee5f8507"
+        }
+      },
+      "venv_evidence": "固定driver/outer命令、已知harness的sys.prefix入口断言及当前独立解释器只读查询；JSON未直接记录sys.prefix",
+      "scope": "P1入口与记录完整性；没有比较A/B标量或状态相等，不是100步基线"
+    },
+    "full-b": {
+      "status": "PASS",
+      "head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+      "harness_pid": 679425,
+      "module_files": 52,
+      "n_leaves_by_segment": [
+        201
+      ],
+      "dependencies": 208,
+      "session": "orig80k-p1-full-b-20260926T195426Z",
+      "start_utc": "2026-09-26T20:32:04+00:00",
+      "end_utc": "2026-09-26T20:40:08+00:00",
+      "elapsed_seconds": 484.0,
+      "command_sha256": "cefab91768a86a33730f934105ad5343cc6bb090a3bf3a56935f96910c7640ba",
+      "wrapper_pid": 679414,
+      "body_pid": 679416,
+      "checkpoint_work_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/checkpoints/full-b/mme_vla_suite/p1-orig80k-full-b-20260926T195426Z",
+      "jax_cache": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/orig80k-p1-20260926T195426Z/full-b",
+      "init_calls": 1,
+      "log": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-full-b-20260926T195426Z.log",
+        "bytes": 44508,
+        "sha256": "ffcea9c4aa6075d39c8750fe3d13033f9b83dbb7718f368dde5ec65266a7a5d8"
+      },
+      "record_files": {
+        "harness_meta.json": {
+          "bytes": 1572,
+          "sha256": "c7b4a2ce4cde0621fcbbe74932cbdb27f9e6fa40b3b242c6e29eb63cb5cf895f"
+        },
+        "init_ownership.json": {
+          "bytes": 371,
+          "sha256": "6089867d7c2d25735b3411f55811097c831b2096c458f4ab0d02e2af24c2dbfb"
+        },
+        "jax_cache.json": {
+          "bytes": 402,
+          "sha256": "983689a76f16e48cd37426df0166a6bfac55205640917369b6d7017b39c2a31a"
+        },
+        "metrics.jsonl": {
+          "bytes": 990,
+          "sha256": "1ab8e6ee525493e7c07d3552a323ff41440de9bd8ae1cb8060c9ac3c2b7e7619"
+        },
+        "metrics_all.jsonl": {
+          "bytes": 990,
+          "sha256": "1ab8e6ee525493e7c07d3552a323ff41440de9bd8ae1cb8060c9ac3c2b7e7619"
+        },
+        "provenance.json": {
+          "bytes": 12682,
+          "sha256": "d93894cba26d19fbf04dd864a601fcd30b0a98b9169110f64a951f2f42a5981a"
+        },
+        "provenance_start.json": {
+          "bytes": 507,
+          "sha256": "b211f31529adf02ef1f9bc9d670f278fefde08243f588634c094e4e6acf95681"
+        },
+        "resolved_config.json": {
+          "bytes": 2477,
+          "sha256": "9dd7f98f65473b1ca86bef72ccbf0d89cf51ef4bde60a30999cb423902c212c1"
+        },
+        "run_status.json": {
+          "bytes": 38,
+          "sha256": "97d327e20b36da5f388b1453f669da1fa43b3954c452e22756d42d6c9d826d06"
+        },
+        "runtime_fingerprint.json": {
+          "bytes": 10221,
+          "sha256": "b9408974a4407db76e1c13de708298eb5a310f9e2cb1a77ccd6373d23cd3872f"
+        },
+        "runtime_fingerprint_end.json": {
+          "bytes": 10221,
+          "sha256": "b9408974a4407db76e1c13de708298eb5a310f9e2cb1a77ccd6373d23cd3872f"
+        },
+        "state_digests.jsonl": {
+          "bytes": 59654,
+          "sha256": "ed316e63b7c1088a68a2047da82e1f9c31d6ae54bc4b85341a0f896ee2a63ea4"
+        }
+      },
+      "venv_evidence": "固定driver/outer命令、已知harness的sys.prefix入口断言及当前独立解释器只读查询；JSON未直接记录sys.prefix",
+      "scope": "P1入口与记录完整性；没有比较A/B标量或状态相等，不是100步基线"
+    },
+    "count-b": {
+      "status": "PASS",
+      "head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+      "harness_pid": 686830,
+      "module_files": 52,
+      "n_leaves_by_segment": [
+        201
+      ],
+      "dependencies": 208,
+      "session": "orig80k-p1-count-b-20260926T195426Z",
+      "start_utc": "2026-09-26T20:40:40+00:00",
+      "end_utc": "2026-09-26T20:48:32+00:00",
+      "elapsed_seconds": 472.0,
+      "command_sha256": "e78711a0354eb43ae0a13d2b67dcbaaa1dc54f841b2e0f532d394b21f508226a",
+      "wrapper_pid": 686819,
+      "body_pid": 686821,
+      "checkpoint_work_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/checkpoints/count-b/mme_vla_suite/p1-orig80k-count-b-20260926T195426Z",
+      "jax_cache": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/orig80k-p1-20260926T195426Z/count-b",
+      "init_calls": 1,
+      "log": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-count-b-20260926T195426Z.log",
+        "bytes": 44572,
+        "sha256": "8c0a7e2b32e9d5e62761f70b2d8f2d5aa6e707143a77504b9ff55b4c376f7cfb"
+      },
+      "record_files": {
+        "harness_meta.json": {
+          "bytes": 1606,
+          "sha256": "7298b7d1d46467463962d4067c497ea8fbe7a264ee29a03c295c9719819e3fdf"
+        },
+        "init_ownership.json": {
+          "bytes": 373,
+          "sha256": "35800dc51d898ce62d9c5e869e7d8b3820ac06da835f7e11e0ee0fdfd6f25538"
+        },
+        "jax_cache.json": {
+          "bytes": 405,
+          "sha256": "0f9f84ca0b113e40ef9e0b6cd7d8c41bfda9d27a02aa74120f0bbc616522432b"
+        },
+        "metrics.jsonl": {
+          "bytes": 989,
+          "sha256": "78a77f40664b0701a7eed9cbd88c99f32cffbc1fe6969e97f2929cef043082b2"
+        },
+        "metrics_all.jsonl": {
+          "bytes": 989,
+          "sha256": "78a77f40664b0701a7eed9cbd88c99f32cffbc1fe6969e97f2929cef043082b2"
+        },
+        "provenance.json": {
+          "bytes": 12682,
+          "sha256": "d93894cba26d19fbf04dd864a601fcd30b0a98b9169110f64a951f2f42a5981a"
+        },
+        "provenance_start.json": {
+          "bytes": 507,
+          "sha256": "b211f31529adf02ef1f9bc9d670f278fefde08243f588634c094e4e6acf95681"
+        },
+        "resolved_config.json": {
+          "bytes": 2511,
+          "sha256": "15b8756c587fba201838010fbebc87b65bf5450b9769bc2d90d8645854730021"
+        },
+        "run_status.json": {
+          "bytes": 38,
+          "sha256": "97d327e20b36da5f388b1453f669da1fa43b3954c452e22756d42d6c9d826d06"
+        },
+        "runtime_fingerprint.json": {
+          "bytes": 10287,
+          "sha256": "ef87e73685ec99e21e214f27f3cb4c70a9d1e2026b875f2148ae6222e63e27c8"
+        },
+        "runtime_fingerprint_end.json": {
+          "bytes": 10287,
+          "sha256": "ef87e73685ec99e21e214f27f3cb4c70a9d1e2026b875f2148ae6222e63e27c8"
+        },
+        "state_digests.jsonl": {
+          "bytes": 59654,
+          "sha256": "40b7eef5bbb1a5a607a5624dcd349e36224815cb7ed1602b6cbabdbf4a1a969b"
+        }
+      },
+      "venv_evidence": "固定driver/outer命令、已知harness的sys.prefix入口断言及当前独立解释器只读查询；JSON未直接记录sys.prefix",
+      "scope": "P1入口与记录完整性；没有比较A/B标量或状态相等，不是100步基线"
+    }
+  },
+  "note": "只读记录验收；不验证实际权重数组/恢复，不做A/B轨迹相等judge，不启动任何任务"
+}

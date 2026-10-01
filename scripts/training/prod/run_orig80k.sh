@@ -16,6 +16,22 @@ if [[ -n "${ORIG80K_SMOKE_EQ_MODE+x}" ]]; then
     exit 2
   fi
 fi
+# 仅本次显式20步对拍可选确定性档；normal仍清除继承flags，新档不得吞掉未知flags。
+readonly TIMING_EQ_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'
+if [[ -n "${ORIG80K_TIMING_EQ_PROFILE+x}" ]]; then
+  if [[ "$ORIG80K_TIMING_EQ_PROFILE" != deterministic100 || "$MODE" != smoke ||
+        ( "${ORIG80K_SMOKE_EQ_MODE:-}" != off && "${ORIG80K_SMOKE_EQ_MODE:-}" != on ) ]]; then
+    printf 'ORIG80K_TIMING_EQ_PROFILE仅允许显式smoke20 off/on的deterministic100\n' >&2
+    exit 2
+  fi
+  if [[ -n "${XLA_FLAGS:-}" && "$XLA_FLAGS" != "$TIMING_EQ_FLAGS" ]]; then
+    printf 'ORIG80K_TIMING_EQ_PROFILE拒绝未知或额外XLA_FLAGS\n' >&2
+    exit 2
+  fi
+fi
+# 保留最初请求，后续环境文件不得悄悄改档、删档或新注入档位。
+readonly TIMING_EQ_PROFILE_REQUESTED="${ORIG80K_TIMING_EQ_PROFILE-}"
+readonly TIMING_EQ_PROFILE_WAS_SET="${ORIG80K_TIMING_EQ_PROFILE+x}"
 : "${TRAIN_HEAD:?必须传入完整 TRAIN_HEAD 字面量}"
 : "${HISTORY_CONFIG_SHA256:?必须传入 history 的期望 SHA256}"
 : "${NORM_STATS_SHA256:?必须传入 norm_stats 的期望 SHA256}"
@@ -55,12 +71,30 @@ body() (
   export MMEVLA_FRAMESAMP_SOURCE="$LIB/source" MMEVLA_FRAMESAMP_MANIFEST="$LIB/meta/episode_manifest.json"
   export TRAIN_RECORD_DIR="$REC" TRAIN_FINAL_RECORD_DIR="$REC/final"
   export MMEVLA_EXPECTED_TRAIN_HEAD="$TRAIN_HEAD" ORIG80K_MODE="$MODE"
-  unset PYTHONPATH PYTHONHOME JAX_PLATFORMS XLA_FLAGS TRAIN_TIMING_STEPS MMEVLA_MOTION_STORE MMEVLA_FRAMESAMP_ALLOW_SUBSET
+  unset PYTHONPATH PYTHONHOME JAX_PLATFORMS TRAIN_TIMING_STEPS MMEVLA_MOTION_STORE MMEVLA_FRAMESAMP_ALLOW_SUBSET
+  if [[ "${ORIG80K_TIMING_EQ_PROFILE:-}" = deterministic100 ]]; then
+    export XLA_FLAGS="$TIMING_EQ_FLAGS"
+  else
+    unset XLA_FLAGS
+  fi
   unset DTYPE_GRAD_DIR DTYPE_BATCH_FIXTURE_DIR BENCH_REF_SOURCE BENCH_REF_MANIFEST
   if [ -f "$V1_STORE/secrets/wandb.env" ]; then
     set -a
     source "$V1_STORE/secrets/wandb.env"
     set +a
+  fi
+  if [[ "${ORIG80K_TIMING_EQ_PROFILE+x}" != "$TIMING_EQ_PROFILE_WAS_SET" ||
+        "${ORIG80K_TIMING_EQ_PROFILE-}" != "$TIMING_EQ_PROFILE_REQUESTED" ]]; then
+    printf '环境文件改变了原ORIG80K_TIMING_EQ_PROFILE请求\n' >&2
+    exit 2
+  fi
+  if [[ "$TIMING_EQ_PROFILE_REQUESTED" = deterministic100 ]]; then
+    [[ "${XLA_FLAGS:-}" = "$TIMING_EQ_FLAGS" ]] || {
+      printf '环境文件改变了确定性档实际XLA_FLAGS\n' >&2; exit 2;
+    }
+  elif [[ -n "${XLA_FLAGS:-}" ]]; then
+    printf '环境文件向normal档重新注入了XLA_FLAGS\n' >&2
+    exit 2
   fi
   TRAIN_ARGS=(mme_vla_suite --exp-name "$RUN" --dataset-path "$LIB/framesamp"
     --assets-base-dir "$V1_STORE/train-assets" --data.assets.assets-dir "$ASSETS_DIR"

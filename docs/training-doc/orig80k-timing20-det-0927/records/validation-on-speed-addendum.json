@@ -1,0 +1,33 @@
+{
+  "status": "PASS",
+  "scope": "仅候选on分支speed小JSON读取补充；不导入项目/不运行模型/tmux/GPU",
+  "implementation_head": "aec86db64e5178e63d9e7f77d3f5bc235db16390",
+  "launch": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-deterministic-candidate-20260927/orig80k-timing20-det-0927/launch.md",
+    "bytes": 41492,
+    "sha256": "3b5f5719ed03ab82cdf0278541b0b7c8568dd60ea3b5b079924b7419d14c5a6b"
+  },
+  "previous_validation": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-deterministic-candidate-20260927/validation.json",
+    "sha256": "601713f331dbf70c0eea3f6cbd167c4c965b61ee3b2abd06a6243fb53a3f5155",
+    "unchanged": true
+  },
+  "bash_blocks": 11,
+  "python_ast_blocks": 2,
+  "read_fixture_cases": [
+    {
+      "name": "on_det_schema2_both_speed_records",
+      "actual_exit_code": 0
+    },
+    {
+      "name": "speed_run_normal_descriptor_rejected",
+      "actual_exit_code": 1
+    }
+  ],
+  "generated_commands_executed": false,
+  "git_status": "",
+  "two_line_prefix_generator_unchanged": true,
+  "original_nine_binding_tests_unchanged": true,
+  "git_diff_check": "PASS"
+}
+

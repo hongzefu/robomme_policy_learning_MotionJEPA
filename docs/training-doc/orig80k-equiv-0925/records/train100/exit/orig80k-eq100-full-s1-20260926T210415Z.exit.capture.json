@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "session": "orig80k-eq100-full-s1-20260926T210415Z",
+  "actual_exit_code": 0,
+  "identity": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s1-20260926T210415Z.identity.json",
+    "bytes": 1471,
+    "sha256": "fc8a4cc7524ca1a2529d61e2af34e1864b874e94a99197dcb4be20d6a8146677"
+  },
+  "receipt": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s1-20260926T210415Z.exit.json",
+    "bytes": 5187,
+    "sha256": "94824030a7cfbf6a9a83d9f95eda2e3fc67bc9fecab8d776869ca9c6e010736d"
+  },
+  "guard_tool": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+    "bytes": 20398,
+    "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+  },
+  "stdout": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s1-20260926T210415Z.exit.capture.stdout",
+    "bytes": 4811,
+    "sha256": "5454c2c7ab7c9105277ad53aef82314e5e56931b458bf9b7f90f66683ecc67a9"
+  },
+  "stderr": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s1-20260926T210415Z.exit.capture.stderr",
+    "bytes": 187,
+    "sha256": "7b6db36a3d50259e768b8f2e89a12d3562b55c6a8e29a9fbc39daae906631060"
+  },
+  "argv": [
+    "uv",
+    "run",
+    "--no-sync",
+    "python",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+    "capture",
+    "--identity",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s1-20260926T210415Z.identity.json",
+    "--identity-sha256",
+    "fc8a4cc7524ca1a2529d61e2af34e1864b874e94a99197dcb4be20d6a8146677",
+    "--out",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s1-20260926T210415Z.exit.json"
+  ],
+  "observed_utc": "2026-09-26T22:30:09.843450+00:00",
+  "observer": "root subprocess.run.returncode"
+}

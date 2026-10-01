@@ -1,0 +1,1372 @@
+{
+  "comparison_status": "FAIL",
+  "diagnostic_only": true,
+  "new_head": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+  "old_head": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+  "read_validation_completed": true,
+  "results": {
+    "count": {
+      "allowed_config_identity_differences": [
+        "derived.checkpoint_dir",
+        "train_config.fields.exp_name"
+      ],
+      "checks": {
+        "fetch_trees": true,
+        "fingerprint": true,
+        "loader": true,
+        "model_trees_rng": true,
+        "original_save": true,
+        "provenance_end": true,
+        "provenance_start": true,
+        "scalar_hex_20x5": false,
+        "state_ema_leaf_paths": true,
+        "state_ema_leaves": false,
+        "state_groups": false,
+        "state_loop_step": true,
+        "state_original_treedefs": true,
+        "state_state_step": true,
+        "toolchain": true
+      },
+      "new": {
+        "bindings": {
+          "completion": {
+            "bytes": 20709,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/completion.json",
+            "sha256": "271f1f1496d95658226014d2b7159a8b701e73c6974cc00b83a51dd16bdf203d"
+          },
+          "completion_files": [
+            {
+              "bytes": 21047,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/launch.json",
+              "sha256": "b62bd242474c2afb3400b967b6a0728e86ae83d3ccc13d2b75bf07b4d2416471"
+            },
+            {
+              "bytes": 349,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/runtime.json",
+              "sha256": "a592f04f20a2412c59099f01abb3b6b76ecbad97cb34d38eaf4dd7508c8fd547"
+            },
+            {
+              "bytes": 414,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/metrics.jsonl",
+              "sha256": "d7fa21b23aadc9aa87b0529977620c9150b800adad2b18105f88dc0fd400c6cf"
+            },
+            {
+              "bytes": 156927,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/gpu.csv",
+              "sha256": "a8cda4801fb2bf05e5c2380b4fc2547ebbfa131118e082b70fc75769078863c3"
+            },
+            {
+              "bytes": 0,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/gpu.csv.err",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            {
+              "bytes": 16310,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/final/start.json",
+              "sha256": "b4f047cf3f1d0f7a3e4dcd7078b54038ff15f0323982ad56e25ff2b69a82b257"
+            },
+            {
+              "bytes": 47661,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/final/final.json",
+              "sha256": "d81fde4756fc51ae94524794cea451221daed6cdb4464163973c1b832d689ad2"
+            },
+            {
+              "bytes": 196,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/final/checkpoint_wait_done.json",
+              "sha256": "105e4eb2a85b55f7a13dac31075ff739bd352de0c91f831a3e3c3c673dfee437"
+            },
+            {
+              "bytes": 59409,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/timing20-count-off-0926-20260927T003051Z.driver.log",
+              "sha256": "b836d8fa9ffcdf1fb9eca603dda129afa07c16b312ea132cd326d53ef0a00b10"
+            },
+            {
+              "bytes": 327,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-count-off-0926-20260927T003051Z/19/_CHECKPOINT_METADATA",
+              "sha256": "a921408e9e03120db35e0938aa43e91e363571d05eabb21da671bdfcd92b1449"
+            },
+            {
+              "bytes": 28136,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-count-off-0926-20260927T003051Z/19/params/_METADATA",
+              "sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65"
+            }
+          ],
+          "manifest": {
+            "bytes": 1072,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/timing_eq/manifest.json",
+            "sha256": "974fc79530d8f1f133ccaa3d06e2f29d2c7a1de9a8ee1b4cec4f64d652506235"
+          },
+          "speed": null,
+          "wrapper": {
+            "command": {
+              "bytes": 7982,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-count-off-0926-20260927T003051Z.command",
+              "sha256": "fecb37b05b5711b6f65d50c6893e113bd04bf0a8e76f1ebdd5aaf4d9153cbe96"
+            },
+            "log": {
+              "bytes": 62463,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-off-0926-20260927T003051Z.wrapper.log",
+              "sha256": "4dd781d4e5bf84dcb4a89dc258885e2bd50396ba0a378e84bd26542345a08da3"
+            }
+          }
+        },
+        "head": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+        "run_name": "timing20-count-off-0926-20260927T003051Z",
+        "run_uuid": "5e8178e6-fce4-48a7-b1a3-1c3ffef0d6e8"
+      },
+      "old": {
+        "bindings": {
+          "completion": {
+            "bytes": 20705,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/completion.json",
+            "sha256": "63fa9ba23c75555487682c770d96d272f98d4c9a4bad9ebfe1c47dc7d7aca11f"
+          },
+          "completion_files": [
+            {
+              "bytes": 21047,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/launch.json",
+              "sha256": "ee0a65ad6cf8db098560bbd3ceb1444741c135f4e2d6530d71e1e117ece889b9"
+            },
+            {
+              "bytes": 349,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/runtime.json",
+              "sha256": "a7ba62bba530a6691aed90ef72641f72fda92b41f27bd0edb81cc56d424cd0a1"
+            },
+            {
+              "bytes": 414,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/metrics.jsonl",
+              "sha256": "d6a728fe4db6a9c673a6eb84c2682871c321e19c04d41c0af6a83bc8ec2d463d"
+            },
+            {
+              "bytes": 157232,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/gpu.csv",
+              "sha256": "fe167dc86d2530c2fb37e99d2ad6d769dcb30c6d2acbece9fe4e18ec95f0322a"
+            },
+            {
+              "bytes": 0,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/gpu.csv.err",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            {
+              "bytes": 16310,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/final/start.json",
+              "sha256": "d513c579ac1ae6575043269645acc0ef00ff1015ba679066d631299345157715"
+            },
+            {
+              "bytes": 47665,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/final/final.json",
+              "sha256": "80a36f8e8e09831d5a79703772bb557c6ec6d90f519208528cff7ca477f1dd7e"
+            },
+            {
+              "bytes": 196,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/final/checkpoint_wait_done.json",
+              "sha256": "e566acc04cf3e4139e479535b7a3912f8d78909e73efd56b3951ebb1e168a3dc"
+            },
+            {
+              "bytes": 59403,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/timing20-count-off-0926-20260926T231534Z.driver.log",
+              "sha256": "6bb73f5f5aa1d475c5760002ff5e8473f7c9166fde9648270e8415c1541ac255"
+            },
+            {
+              "bytes": 327,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-count-off-0926-20260926T231534Z/19/_CHECKPOINT_METADATA",
+              "sha256": "a55547372f0cc6031f35aa32e4460828cfaff127b3489c0723e7e5317da34dd7"
+            },
+            {
+              "bytes": 28136,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-count-off-0926-20260926T231534Z/19/params/_METADATA",
+              "sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65"
+            }
+          ],
+          "manifest": {
+            "bytes": 1072,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/timing_eq/manifest.json",
+            "sha256": "6a2bce3dea8108c4da93d0229ba9949ac316e3ddc137892f65f02977264a93b8"
+          },
+          "speed": null,
+          "wrapper": {
+            "command": {
+              "bytes": 7982,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-off-0926-20260926T231534Z.command",
+              "sha256": "de854f632e53fde450b0a51484b015d0ee7b4233473a3bb2dc933b22bb0a7bfd"
+            },
+            "log": {
+              "bytes": 62456,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-off-0926-20260926T231534Z.wrapper.log",
+              "sha256": "f860b0cdef41accf1646de124f06a5c1ae3de1d88905c60f32692620ffeb2175"
+            }
+          }
+        },
+        "head": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+        "run_name": "timing20-count-off-0926-20260926T231534Z",
+        "run_uuid": "46e800b2-2fd6-4132-be70-e289e7cbbab8"
+      },
+      "repeat_equal": false,
+      "scalar_mismatches": [
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.8007480000000p+0",
+          "old_hex": "0x1.8092340000000p+0",
+          "step": 0
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.7cbae00000000p+0",
+          "old_hex": "0x1.7d45640000000p+0",
+          "step": 0
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.7636560000000p-4",
+          "old_hex": "0x1.7670760000000p-4",
+          "step": 0
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.031c380000000p-3",
+          "old_hex": "0x1.037caa0000000p-3",
+          "step": 0
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.a5c7b00000000p+0",
+          "old_hex": "0x1.a5cf4a0000000p+0",
+          "step": 1
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.a1ca8c0000000p+0",
+          "old_hex": "0x1.a1d1da0000000p+0",
+          "step": 1
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.84c1ee0000000p-4",
+          "old_hex": "0x1.84d1600000000p-4",
+          "step": 1
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.170cb60000000p-3",
+          "old_hex": "0x1.17070a0000000p-3",
+          "step": 1
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.7eaff80000000p+0",
+          "old_hex": "0x1.7f37500000000p+0",
+          "step": 2
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.7b6ee20000000p+0",
+          "old_hex": "0x1.7bf4e00000000p+0",
+          "step": 2
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.5c8c5e0000000p-4",
+          "old_hex": "0x1.5cbbee0000000p-4",
+          "step": 2
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.04ca6e0000000p-3",
+          "old_hex": "0x1.0524100000000p-3",
+          "step": 2
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.9313a20000000p+0",
+          "old_hex": "0x1.93e9000000000p+0",
+          "step": 3
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.8f2b320000000p+0",
+          "old_hex": "0x1.8fffdc0000000p+0",
+          "step": 3
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.6857280000000p-4",
+          "old_hex": "0x1.6874760000000p-4",
+          "step": 3
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.161f3c0000000p-3",
+          "old_hex": "0x1.16c1380000000p-3",
+          "step": 3
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.5db82e0000000p+0",
+          "old_hex": "0x1.5dbac80000000p+0",
+          "step": 4
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.5a64660000000p+0",
+          "old_hex": "0x1.5a66580000000p+0",
+          "step": 4
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.73b0ca0000000p-4",
+          "old_hex": "0x1.73c7760000000p-4",
+          "step": 4
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.e022f40000000p-4",
+          "old_hex": "0x1.e032840000000p-4",
+          "step": 4
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.5ed34a0000000p+0",
+          "old_hex": "0x1.5f42820000000p+0",
+          "step": 5
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.5b04f40000000p+0",
+          "old_hex": "0x1.5b733e0000000p+0",
+          "step": 5
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.9349700000000p-4",
+          "old_hex": "0x1.9387840000000p-4",
+          "step": 5
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.e075a60000000p-4",
+          "old_hex": "0x1.e11a0a0000000p-4",
+          "step": 5
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.810dc80000000p+0",
+          "old_hex": "0x1.823c980000000p+0",
+          "step": 6
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.7dbac40000000p+0",
+          "old_hex": "0x1.7ee8740000000p+0",
+          "step": 6
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.5fbc500000000p-4",
+          "old_hex": "0x1.5febf00000000p-4",
+          "step": 6
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.0140460000000p-3",
+          "old_hex": "0x1.0211d80000000p-3",
+          "step": 6
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.3c93f40000000p+0",
+          "old_hex": "0x1.3d3f840000000p+0",
+          "step": 7
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.39b4ea0000000p+0",
+          "old_hex": "0x1.3a5ef40000000p+0",
+          "step": 7
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.5513040000000p-4",
+          "old_hex": "0x1.5551ae0000000p-4",
+          "step": 7
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.a974c20000000p-4",
+          "old_hex": "0x1.aa71540000000p-4",
+          "step": 7
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.6675780000000p+0",
+          "old_hex": "0x1.669f460000000p+0",
+          "step": 8
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.636ad20000000p+0",
+          "old_hex": "0x1.6392980000000p+0",
+          "step": 8
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.6210260000000p-4",
+          "old_hex": "0x1.6258920000000p-4",
+          "step": 8
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.d878e00000000p-4",
+          "old_hex": "0x1.d8c3700000000p-4",
+          "step": 8
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.91c0f00000000p+0",
+          "old_hex": "0x1.920f300000000p+0",
+          "step": 9
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.8e5e060000000p+0",
+          "old_hex": "0x1.8eab3e0000000p+0",
+          "step": 9
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.93d5200000000p-4",
+          "old_hex": "0x1.93eade0000000p-4",
+          "step": 9
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.11362a0000000p-3",
+          "old_hex": "0x1.117c240000000p-3",
+          "step": 9
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.9197c00000000p+0",
+          "old_hex": "0x1.91d5620000000p+0",
+          "step": 10
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.8de6020000000p+0",
+          "old_hex": "0x1.8e23900000000p+0",
+          "step": 10
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.9786560000000p-4",
+          "old_hex": "0x1.97b9760000000p-4",
+          "step": 10
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.0d76e00000000p-3",
+          "old_hex": "0x1.0da5f80000000p-3",
+          "step": 10
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.9300b40000000p+0",
+          "old_hex": "0x1.93ef300000000p+0",
+          "step": 11
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.8fcd8a0000000p+0",
+          "old_hex": "0x1.90baa80000000p+0",
+          "step": 11
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.835f300000000p-4",
+          "old_hex": "0x1.83c3360000000p-4",
+          "step": 11
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.08be1a0000000p-3",
+          "old_hex": "0x1.096e320000000p-3",
+          "step": 11
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.60cd020000000p+0",
+          "old_hex": "0x1.60f5760000000p+0",
+          "step": 12
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.5d7d2e0000000p+0",
+          "old_hex": "0x1.5da5ca0000000p+0",
+          "step": 12
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.8998d20000000p-4",
+          "old_hex": "0x1.898a3a0000000p-4",
+          "step": 12
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.dbc4d80000000p-4",
+          "old_hex": "0x1.dbf9b40000000p-4",
+          "step": 12
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.72337a0000000p+0",
+          "old_hex": "0x1.727fbc0000000p+0",
+          "step": 13
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.6e7ad00000000p+0",
+          "old_hex": "0x1.6ec7c00000000p+0",
+          "step": 13
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.7bc25a0000000p-4",
+          "old_hex": "0x1.7be9e00000000p-4",
+          "step": 13
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.ed041e0000000p-4",
+          "old_hex": "0x1.ed7a4c0000000p-4",
+          "step": 13
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.6102220000000p+0",
+          "old_hex": "0x1.60eaae0000000p+0",
+          "step": 14
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.5db7160000000p+0",
+          "old_hex": "0x1.5d9f5a0000000p+0",
+          "step": 14
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.71d9ae0000000p-4",
+          "old_hex": "0x1.71f3800000000p-4",
+          "step": 14
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.dac2a80000000p-4",
+          "old_hex": "0x1.da8ffc0000000p-4",
+          "step": 14
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.4ba88a0000000p+0",
+          "old_hex": "0x1.4c01c60000000p+0",
+          "step": 15
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.487a220000000p+0",
+          "old_hex": "0x1.48d2320000000p+0",
+          "step": 15
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.6485ca0000000p-4",
+          "old_hex": "0x1.64cb180000000p-4",
+          "step": 15
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.ba6a520000000p-4",
+          "old_hex": "0x1.bada5e0000000p-4",
+          "step": 15
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.5c46840000000p+0",
+          "old_hex": "0x1.5cd5240000000p+0",
+          "step": 16
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.58e2fc0000000p+0",
+          "old_hex": "0x1.596eb60000000p+0",
+          "step": 16
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.6f47b60000000p-4",
+          "old_hex": "0x1.6f9a9c0000000p-4",
+          "step": 16
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.e023480000000p-4",
+          "old_hex": "0x1.e113be0000000p-4",
+          "step": 16
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.416cd20000000p+0",
+          "old_hex": "0x1.417da40000000p+0",
+          "step": 17
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.3e83860000000p+0",
+          "old_hex": "0x1.3e92420000000p+0",
+          "step": 17
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.6f77d40000000p-4",
+          "old_hex": "0x1.6f94e00000000p-4",
+          "step": 17
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.ad99080000000p-4",
+          "old_hex": "0x1.adf9b60000000p-4",
+          "step": 17
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.4a7a060000000p+0",
+          "old_hex": "0x1.4a363e0000000p+0",
+          "step": 18
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.473dfc0000000p+0",
+          "old_hex": "0x1.46fa280000000p+0",
+          "step": 18
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.5761e00000000p-4",
+          "old_hex": "0x1.57689e0000000p-4",
+          "step": 18
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.c1d5040000000p-4",
+          "old_hex": "0x1.c18d2a0000000p-4",
+          "step": 18
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.75f0d40000000p+0",
+          "old_hex": "0x1.754ab00000000p+0",
+          "step": 19
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.72bf840000000p+0",
+          "old_hex": "0x1.7219800000000p+0",
+          "step": 19
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.67f5160000000p-4",
+          "old_hex": "0x1.67f7c60000000p-4",
+          "step": 19
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.e5c8ba0000000p-4",
+          "old_hex": "0x1.e4e5d20000000p-4",
+          "step": 19
+        }
+      ]
+    },
+    "full": {
+      "allowed_config_identity_differences": [
+        "derived.checkpoint_dir",
+        "train_config.fields.exp_name"
+      ],
+      "checks": {
+        "fetch_trees": true,
+        "fingerprint": true,
+        "loader": true,
+        "model_trees_rng": true,
+        "original_save": true,
+        "provenance_end": true,
+        "provenance_start": true,
+        "scalar_hex_20x5": false,
+        "state_ema_leaf_paths": true,
+        "state_ema_leaves": false,
+        "state_groups": false,
+        "state_loop_step": true,
+        "state_original_treedefs": true,
+        "state_state_step": true,
+        "toolchain": true
+      },
+      "new": {
+        "bindings": {
+          "completion": {
+            "bytes": 20697,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/completion.json",
+            "sha256": "a313f6db2c680ff0aedd887f52da90a5d731d5182a32ead62ab52c08cf39ce81"
+          },
+          "completion_files": [
+            {
+              "bytes": 20946,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/launch.json",
+              "sha256": "fb54e31a37fabd3766e3eeef33317f38937352f09eb2e4110f8933ccacf0ec57"
+            },
+            {
+              "bytes": 348,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/runtime.json",
+              "sha256": "8deb4df88da96871f7ece7a68b86e29ccb153273819a901c89c2adc2158548b1"
+            },
+            {
+              "bytes": 416,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/metrics.jsonl",
+              "sha256": "d0a4f72211238160abf06e10d2251e338581f914bdb8a0d0c4758dccb1a9b2e3"
+            },
+            {
+              "bytes": 160756,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/gpu.csv",
+              "sha256": "242105db5528ede9e4cfb3d85652d854ad1bd66dd5e0cc8f94c6792aa5356a27"
+            },
+            {
+              "bytes": 0,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/gpu.csv.err",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            {
+              "bytes": 16249,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/final/start.json",
+              "sha256": "f0f2211e56611698e97e335ed92ac0bc44e00c253bdf8ad195e89ee505ce76ed"
+            },
+            {
+              "bytes": 47606,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/final/final.json",
+              "sha256": "c218d315c4f9d363839bef5ccef6484d9561073ee85e97308958bd8a16116905"
+            },
+            {
+              "bytes": 196,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/final/checkpoint_wait_done.json",
+              "sha256": "fe0a553fafdc792426d0aa16a83acaa7e6bd13fb74b42198d42887e85315a0d5"
+            },
+            {
+              "bytes": 57405,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/timing20-full-off-0926-20260927T003051Z.driver.log",
+              "sha256": "b4eea7f2ab0afaae11d1bd37e71a301765e0c1f772cb9c71c0a4da7220eecee3"
+            },
+            {
+              "bytes": 327,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-full-off-0926-20260927T003051Z/19/_CHECKPOINT_METADATA",
+              "sha256": "4420dc78cacbc700e7741896ad59d186b8b1f968077c74a27b7e9e9f0b4ca052"
+            },
+            {
+              "bytes": 28136,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-full-off-0926-20260927T003051Z/19/params/_METADATA",
+              "sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65"
+            }
+          ],
+          "manifest": {
+            "bytes": 1068,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/timing_eq/manifest.json",
+            "sha256": "8284610b5d3bc3c03ccd31cd016d3d8a6621d1941ed2ce9d4154e44303d8d806"
+          },
+          "speed": null,
+          "wrapper": {
+            "command": {
+              "bytes": 7947,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-full-off-0926-20260927T003051Z.command",
+              "sha256": "b1aeed016e67fc1980218a018643bf24608c88241d6768f4b6f5944af5937023"
+            },
+            "log": {
+              "bytes": 60417,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-off-0926-20260927T003051Z.wrapper.log",
+              "sha256": "e429e8b08cee7d803fc780226de432e757e491cdff623d3ea66f151b7673132f"
+            }
+          }
+        },
+        "head": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+        "run_name": "timing20-full-off-0926-20260927T003051Z",
+        "run_uuid": "18ec5653-957e-48ab-9092-14998cfd3500"
+      },
+      "old": {
+        "bindings": {
+          "completion": {
+            "bytes": 20698,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/completion.json",
+            "sha256": "ae87733f0bf86735cf393850de04717d852545fde57402f6af97ee2152aec35c"
+          },
+          "completion_files": [
+            {
+              "bytes": 20946,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/launch.json",
+              "sha256": "52486df36b64b11c7eb2c9ada1b3b57bbcc1c52a617a342127901fbe68d8b5e3"
+            },
+            {
+              "bytes": 348,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/runtime.json",
+              "sha256": "416b89338cf76db11e9ac4fe6259374ec01be13969af7e4684e5909c12558d4c"
+            },
+            {
+              "bytes": 414,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/metrics.jsonl",
+              "sha256": "5f2a777b5b76b8d40a8428dbd3befe662e36481d8a78cf339bbfda3b6ade870a"
+            },
+            {
+              "bytes": 169833,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/gpu.csv",
+              "sha256": "20d141654ffcc78776825f187cbadc41947368d6c83ca0538ec1d4f40c905113"
+            },
+            {
+              "bytes": 0,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/gpu.csv.err",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            {
+              "bytes": 16249,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/final/start.json",
+              "sha256": "2592072d3e570194ad0fdef2361eaa15273dfdf56889c448b9541bc346346c5b"
+            },
+            {
+              "bytes": 47606,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/final/final.json",
+              "sha256": "e9bb0ea074aeb888c785c1a3a013ef6b2218e9fd65bda3118213b122de1fdf80"
+            },
+            {
+              "bytes": 196,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/final/checkpoint_wait_done.json",
+              "sha256": "84c2710eb7f0306fcaad0308e922ee5daa83a032edb08b646e4a839a4fecbd40"
+            },
+            {
+              "bytes": 59200,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/timing20-full-off-0926-20260926T231534Z.driver.log",
+              "sha256": "32fac7e27d23fd367f46657efee2df50d066db269f8f6cb90bc16f86dea4806a"
+            },
+            {
+              "bytes": 327,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-full-off-0926-20260926T231534Z/19/_CHECKPOINT_METADATA",
+              "sha256": "9afb79bc0fd7007109cdbe3435ef39b6bf552c03d43c8333661fdcd5dd3a220a"
+            },
+            {
+              "bytes": 28136,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-full-off-0926-20260926T231534Z/19/params/_METADATA",
+              "sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65"
+            }
+          ],
+          "manifest": {
+            "bytes": 1068,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/timing_eq/manifest.json",
+            "sha256": "f749d181e9efa803b2d23851477e217f5302999bb30c9f7a53f30deb7d9ffc9a"
+          },
+          "speed": null,
+          "wrapper": {
+            "command": {
+              "bytes": 7947,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-off-0926-20260926T231534Z.command",
+              "sha256": "5e915cf19ecc31b5b047f4d361ed934e723d0847e1767c0bbe04f87b8c8389d8"
+            },
+            "log": {
+              "bytes": 62211,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-off-0926-20260926T231534Z.wrapper.log",
+              "sha256": "55ecd2c0ee7668256802198c870bd26cda9aaea84c3658910a13d02aac5c3857"
+            }
+          }
+        },
+        "head": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+        "run_name": "timing20-full-off-0926-20260926T231534Z",
+        "run_uuid": "3522f36c-417c-4fe9-901f-85cbe85eb855"
+      },
+      "repeat_equal": false,
+      "scalar_mismatches": [
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.81c5240000000p+0",
+          "old_hex": "0x1.81d65c0000000p+0",
+          "step": 0
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.7ddb300000000p+0",
+          "old_hex": "0x1.7dec120000000p+0",
+          "step": 0
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.994db00000000p-4",
+          "old_hex": "0x1.9958ca0000000p-4",
+          "step": 0
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.09b3fc0000000p-3",
+          "old_hex": "0x1.09c2280000000p-3",
+          "step": 0
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.73dc700000000p+0",
+          "old_hex": "0x1.739f340000000p+0",
+          "step": 1
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.7098c20000000p+0",
+          "old_hex": "0x1.705ba20000000p+0",
+          "step": 1
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.6f121c0000000p-4",
+          "old_hex": "0x1.6ef4aa0000000p-4",
+          "step": 1
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.ebb7f00000000p-4",
+          "old_hex": "0x1.eb63a00000000p-4",
+          "step": 1
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.5d65740000000p+0",
+          "old_hex": "0x1.5d5d660000000p+0",
+          "step": 2
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.5a6e7c0000000p+0",
+          "old_hex": "0x1.5a668a0000000p+0",
+          "step": 2
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.3a8b360000000p-4",
+          "old_hex": "0x1.3a77f60000000p-4",
+          "step": 2
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.da200a0000000p-4",
+          "old_hex": "0x1.da171e0000000p-4",
+          "step": 2
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.673dfe0000000p+0",
+          "old_hex": "0x1.6760cc0000000p+0",
+          "step": 3
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.63558e0000000p+0",
+          "old_hex": "0x1.6377b20000000p+0",
+          "step": 3
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.7b869e0000000p-4",
+          "old_hex": "0x1.7b8e6e0000000p-4",
+          "step": 3
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.eddf4c0000000p-4",
+          "old_hex": "0x1.ee0fd00000000p-4",
+          "step": 3
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.6dbc880000000p+0",
+          "old_hex": "0x1.6daba80000000p+0",
+          "step": 4
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.6a96de0000000p+0",
+          "old_hex": "0x1.6a86020000000p+0",
+          "step": 4
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.6576f00000000p-4",
+          "old_hex": "0x1.65714e0000000p-4",
+          "step": 4
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.eb55a80000000p-4",
+          "old_hex": "0x1.eb2e120000000p-4",
+          "step": 4
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.6687760000000p+0",
+          "old_hex": "0x1.666d100000000p+0",
+          "step": 5
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.6322a60000000p+0",
+          "old_hex": "0x1.6308420000000p+0",
+          "step": 5
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.6f7a980000000p-4",
+          "old_hex": "0x1.6f777a0000000p-4",
+          "step": 5
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.e8c9f40000000p-4",
+          "old_hex": "0x1.e8af480000000p-4",
+          "step": 5
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.63d7f00000000p+0",
+          "old_hex": "0x1.6442140000000p+0",
+          "step": 6
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.6098c60000000p+0",
+          "old_hex": "0x1.61027c0000000p+0",
+          "step": 6
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.64c89a0000000p-4",
+          "old_hex": "0x1.64ef3e0000000p-4",
+          "step": 6
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.e7cebe0000000p-4",
+          "old_hex": "0x1.e86eee0000000p-4",
+          "step": 6
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.4c32ce0000000p+0",
+          "old_hex": "0x1.4bf92c0000000p+0",
+          "step": 7
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.4913180000000p+0",
+          "old_hex": "0x1.48d9ea0000000p+0",
+          "step": 7
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.599df40000000p-4",
+          "old_hex": "0x1.597e2a0000000p-4",
+          "step": 7
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.c80d840000000p-4",
+          "old_hex": "0x1.c7bfa00000000p-4",
+          "step": 7
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.80f46a0000000p+0",
+          "old_hex": "0x1.8100a60000000p+0",
+          "step": 8
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.7d6cfc0000000p+0",
+          "old_hex": "0x1.7d79080000000p+0",
+          "step": 8
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.774f8e0000000p-4",
+          "old_hex": "0x1.7765ae0000000p-4",
+          "step": 8
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.fd85a20000000p-4",
+          "old_hex": "0x1.fd9ca60000000p-4",
+          "step": 8
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.601e640000000p+0",
+          "old_hex": "0x1.600ec00000000p+0",
+          "step": 9
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.5d26540000000p+0",
+          "old_hex": "0x1.5d173e0000000p+0",
+          "step": 9
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.7119800000000p-4",
+          "old_hex": "0x1.71099c0000000p-4",
+          "step": 9
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.de3f960000000p-4",
+          "old_hex": "0x1.de052a0000000p-4",
+          "step": 9
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.6c03bc0000000p+0",
+          "old_hex": "0x1.6bbb2a0000000p+0",
+          "step": 10
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.68de8a0000000p+0",
+          "old_hex": "0x1.6895c40000000p+0",
+          "step": 10
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.8692560000000p-4",
+          "old_hex": "0x1.86917c0000000p-4",
+          "step": 10
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.e73e3e0000000p-4",
+          "old_hex": "0x1.e6e2740000000p-4",
+          "step": 10
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.860f000000000p+0",
+          "old_hex": "0x1.8653fe0000000p+0",
+          "step": 11
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.82d4180000000p+0",
+          "old_hex": "0x1.8318600000000p+0",
+          "step": 11
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.b067e00000000p-4",
+          "old_hex": "0x1.b06dce0000000p-4",
+          "step": 11
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.07c0560000000p-3",
+          "old_hex": "0x1.07f8760000000p-3",
+          "step": 11
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.6331340000000p+0",
+          "old_hex": "0x1.6315be0000000p+0",
+          "step": 12
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.6020b20000000p+0",
+          "old_hex": "0x1.6004ec0000000p+0",
+          "step": 12
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.91d8b60000000p-4",
+          "old_hex": "0x1.91fa840000000p-4",
+          "step": 12
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.d53de60000000p-4",
+          "old_hex": "0x1.d50e200000000p-4",
+          "step": 12
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.318d9e0000000p+0",
+          "old_hex": "0x1.3180ec0000000p+0",
+          "step": 13
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.2ecc660000000p+0",
+          "old_hex": "0x1.2ebfea0000000p+0",
+          "step": 13
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.6b400a0000000p-4",
+          "old_hex": "0x1.6b4daa0000000p-4",
+          "step": 13
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.9f35400000000p-4",
+          "old_hex": "0x1.9f41a00000000p-4",
+          "step": 13
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.64ba120000000p+0",
+          "old_hex": "0x1.6470a80000000p+0",
+          "step": 14
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.614f380000000p+0",
+          "old_hex": "0x1.6105340000000p+0",
+          "step": 14
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.7c1fe40000000p-4",
+          "old_hex": "0x1.7c1e540000000p-4",
+          "step": 14
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.f2b0540000000p-4",
+          "old_hex": "0x1.f23d960000000p-4",
+          "step": 14
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.5012e20000000p+0",
+          "old_hex": "0x1.5027aa0000000p+0",
+          "step": 15
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.4ce0ac0000000p+0",
+          "old_hex": "0x1.4cf5cc0000000p+0",
+          "step": 15
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.828cde0000000p-4",
+          "old_hex": "0x1.8293d00000000p-4",
+          "step": 15
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.c6c7000000000p-4",
+          "old_hex": "0x1.c6cb620000000p-4",
+          "step": 15
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.4c73b60000000p+0",
+          "old_hex": "0x1.4c37aa0000000p+0",
+          "step": 16
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.48e2c00000000p+0",
+          "old_hex": "0x1.48a86c0000000p+0",
+          "step": 16
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.604d520000000p-4",
+          "old_hex": "0x1.6029ee0000000p-4",
+          "step": 16
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.cf8ba80000000p-4",
+          "old_hex": "0x1.cf429c0000000p-4",
+          "step": 16
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.4235440000000p+0",
+          "old_hex": "0x1.4292200000000p+0",
+          "step": 17
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.3f54a20000000p+0",
+          "old_hex": "0x1.3fb14e0000000p+0",
+          "step": 17
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.5faad00000000p-4",
+          "old_hex": "0x1.5faa360000000p-4",
+          "step": 17
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.b709b40000000p-4",
+          "old_hex": "0x1.b780060000000p-4",
+          "step": 17
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.1ab24a0000000p+0",
+          "old_hex": "0x1.1acf5e0000000p+0",
+          "step": 18
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.16fc160000000p+0",
+          "old_hex": "0x1.1719460000000p+0",
+          "step": 18
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.4d2b8a0000000p-4",
+          "old_hex": "0x1.4d33760000000p-4",
+          "step": 18
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.7df9dc0000000p-4",
+          "old_hex": "0x1.7e45b40000000p-4",
+          "step": 18
+        },
+        {
+          "key": "grad_norm",
+          "new_hex": "0x1.5624520000000p+0",
+          "old_hex": "0x1.56b88a0000000p+0",
+          "step": 19
+        },
+        {
+          "key": "llm_grad_norm",
+          "new_hex": "0x1.52d40a0000000p+0",
+          "old_hex": "0x1.5368a00000000p+0",
+          "step": 19
+        },
+        {
+          "key": "loss",
+          "new_hex": "0x1.703de00000000p-4",
+          "old_hex": "0x1.70414c0000000p-4",
+          "step": 19
+        },
+        {
+          "key": "mem_enc_norm",
+          "new_hex": "0x1.cb94c00000000p-4",
+          "old_hex": "0x1.cc82020000000p-4",
+          "step": 19
+        }
+      ]
+    }
+  },
+  "schema": 1,
+  "scope": "同库旧off/新off严格重复性诊断；不代替或改写原off/on正式judge，不证明一般确定性",
+  "status": "DIFFER"
+}

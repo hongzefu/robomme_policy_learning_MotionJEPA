@@ -1,0 +1,196 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "scope": "仅已完成P1 count-b main2入口与记录归档，非A/B轨迹相等或100步基线",
+  "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/count/b",
+  "verification": {
+    "original": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/p1-count-b-verification-independent-20260926.json",
+      "bytes": 4344,
+      "sha256": "4e18108c141374dfff9339636c71a59aea5611775d5c3eb0f846f1990004fee9"
+    },
+    "archived_copy": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/archive-staging/p1-count-b.verification.json",
+      "bytes": 4344,
+      "sha256": "4e18108c141374dfff9339636c71a59aea5611775d5c3eb0f846f1990004fee9"
+    }
+  },
+  "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "record_files": 12,
+  "payload_bytes": 100328,
+  "archive": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/archive-staging/count-b.records.tar.gz",
+    "bytes": 26747,
+    "sha256": "27cd6c9d03fc51d29b2c63449109ff4d00d0e28e646ec1891bd5de1e11171a3b"
+  },
+  "members": [
+    {
+      "path": "harness_meta.json",
+      "source_sha256": "7298b7d1d46467463962d4067c497ea8fbe7a264ee29a03c295c9719819e3fdf",
+      "source_bytes": 1606,
+      "archive_sha256": "7298b7d1d46467463962d4067c497ea8fbe7a264ee29a03c295c9719819e3fdf",
+      "archive_bytes": 1606,
+      "status": "PASS"
+    },
+    {
+      "path": "init_ownership.json",
+      "source_sha256": "35800dc51d898ce62d9c5e869e7d8b3820ac06da835f7e11e0ee0fdfd6f25538",
+      "source_bytes": 373,
+      "archive_sha256": "35800dc51d898ce62d9c5e869e7d8b3820ac06da835f7e11e0ee0fdfd6f25538",
+      "archive_bytes": 373,
+      "status": "PASS"
+    },
+    {
+      "path": "jax_cache.json",
+      "source_sha256": "0f9f84ca0b113e40ef9e0b6cd7d8c41bfda9d27a02aa74120f0bbc616522432b",
+      "source_bytes": 405,
+      "archive_sha256": "0f9f84ca0b113e40ef9e0b6cd7d8c41bfda9d27a02aa74120f0bbc616522432b",
+      "archive_bytes": 405,
+      "status": "PASS"
+    },
+    {
+      "path": "metrics.jsonl",
+      "source_sha256": "78a77f40664b0701a7eed9cbd88c99f32cffbc1fe6969e97f2929cef043082b2",
+      "source_bytes": 989,
+      "archive_sha256": "78a77f40664b0701a7eed9cbd88c99f32cffbc1fe6969e97f2929cef043082b2",
+      "archive_bytes": 989,
+      "status": "PASS"
+    },
+    {
+      "path": "metrics_all.jsonl",
+      "source_sha256": "78a77f40664b0701a7eed9cbd88c99f32cffbc1fe6969e97f2929cef043082b2",
+      "source_bytes": 989,
+      "archive_sha256": "78a77f40664b0701a7eed9cbd88c99f32cffbc1fe6969e97f2929cef043082b2",
+      "archive_bytes": 989,
+      "status": "PASS"
+    },
+    {
+      "path": "provenance.json",
+      "source_sha256": "d93894cba26d19fbf04dd864a601fcd30b0a98b9169110f64a951f2f42a5981a",
+      "source_bytes": 12682,
+      "archive_sha256": "d93894cba26d19fbf04dd864a601fcd30b0a98b9169110f64a951f2f42a5981a",
+      "archive_bytes": 12682,
+      "status": "PASS"
+    },
+    {
+      "path": "provenance_start.json",
+      "source_sha256": "b211f31529adf02ef1f9bc9d670f278fefde08243f588634c094e4e6acf95681",
+      "source_bytes": 507,
+      "archive_sha256": "b211f31529adf02ef1f9bc9d670f278fefde08243f588634c094e4e6acf95681",
+      "archive_bytes": 507,
+      "status": "PASS"
+    },
+    {
+      "path": "resolved_config.json",
+      "source_sha256": "15b8756c587fba201838010fbebc87b65bf5450b9769bc2d90d8645854730021",
+      "source_bytes": 2511,
+      "archive_sha256": "15b8756c587fba201838010fbebc87b65bf5450b9769bc2d90d8645854730021",
+      "archive_bytes": 2511,
+      "status": "PASS"
+    },
+    {
+      "path": "run_status.json",
+      "source_sha256": "97d327e20b36da5f388b1453f669da1fa43b3954c452e22756d42d6c9d826d06",
+      "source_bytes": 38,
+      "archive_sha256": "97d327e20b36da5f388b1453f669da1fa43b3954c452e22756d42d6c9d826d06",
+      "archive_bytes": 38,
+      "status": "PASS"
+    },
+    {
+      "path": "runtime_fingerprint.json",
+      "source_sha256": "ef87e73685ec99e21e214f27f3cb4c70a9d1e2026b875f2148ae6222e63e27c8",
+      "source_bytes": 10287,
+      "archive_sha256": "ef87e73685ec99e21e214f27f3cb4c70a9d1e2026b875f2148ae6222e63e27c8",
+      "archive_bytes": 10287,
+      "status": "PASS"
+    },
+    {
+      "path": "runtime_fingerprint_end.json",
+      "source_sha256": "ef87e73685ec99e21e214f27f3cb4c70a9d1e2026b875f2148ae6222e63e27c8",
+      "source_bytes": 10287,
+      "archive_sha256": "ef87e73685ec99e21e214f27f3cb4c70a9d1e2026b875f2148ae6222e63e27c8",
+      "archive_bytes": 10287,
+      "status": "PASS"
+    },
+    {
+      "path": "state_digests.jsonl",
+      "source_sha256": "40b7eef5bbb1a5a607a5624dcd349e36224815cb7ed1602b6cbabdbf4a1a969b",
+      "source_bytes": 59654,
+      "archive_sha256": "40b7eef5bbb1a5a607a5624dcd349e36224815cb7ed1602b6cbabdbf4a1a969b",
+      "archive_bytes": 59654,
+      "status": "PASS"
+    }
+  ],
+  "state_segments": [
+    {
+      "position": 0,
+      "step": 1,
+      "n_leaves": 201,
+      "finite_leaves": 201
+    }
+  ],
+  "normalization": {
+    "format": "USTAR",
+    "order": "lexicographic",
+    "uid": 0,
+    "gid": 0,
+    "uname": "",
+    "gname": "",
+    "mode": "0644",
+    "mtime": 0,
+    "gzip_mtime": 0,
+    "gzip_filename": "",
+    "gzip_compresslevel": 6
+  },
+  "checks": {
+    "exact_json_jsonl_member_set": true,
+    "all_original_sha_and_bytes_equal": true,
+    "decoded_sha_and_bytes_equal": true,
+    "gzip_crc_complete": true,
+    "original_source_stat_and_bytes_unchanged": true,
+    "no_weights_scripts_yaml_commands": true
+  },
+  "log": {
+    "raw": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-count-b-20260926T195426Z.log",
+      "bytes": 44572,
+      "sha256": "8c0a7e2b32e9d5e62761f70b2d8f2d5aa6e707143a77504b9ff55b4c376f7cfb"
+    },
+    "stage": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/archive-staging/count-b.summary.log",
+      "bytes": 44062,
+      "sha256": "a65211fab51d86af4f8ea04906818429c98313f3753e051c42d20bcdee18355e"
+    },
+    "cleaning": "CRLF/CR转LF；仅删除独立tqdm_logging.py Progress on行，其余shape/配置/Step/状态/退出逐行保留",
+    "removed_tqdm_lines": [
+      {
+        "line": 247,
+        "text": "20:41:51.392 [I] Progress on: -/2 rate:- remaining:? elapsed:00:00 postfix:-                      (686830:tqdm_logging.py:145)",
+        "sha256": "9a9091d96fe50395023800a5dcd89f24268ed0b3ecb7475a00a8ab2f4c274455"
+      },
+      {
+        "line": 251,
+        "text": "20:42:38.889 [I] Progress on: -/2 rate:- remaining:? elapsed:00:47 postfix:-                      (686830:tqdm_logging.py:145)",
+        "sha256": "eadd7a9e156952200f7ff1739c187bcb869597565148367376fb967eeb6d0683"
+      },
+      {
+        "line": 256,
+        "text": "20:48:20.507 [I] Progress on: 2.00it/2.00it rate:220.5s/it remaining:00:00 elapsed:06:29 postfix:- (686830:tqdm_logging.py:145)",
+        "sha256": "e71e03bda6c415f4d3005933d50a4365fbc55cb0e58cae6bc5debfeb42cb361a"
+      },
+      {
+        "line": 257,
+        "text": "20:48:20.507 [I] Progress on: 2.00it/2.00it rate:220.5s/it remaining:00:00 elapsed:06:29 postfix:- (686830:tqdm_logging.py:145)",
+        "sha256": "e71e03bda6c415f4d3005933d50a4365fbc55cb0e58cae6bc5debfeb42cb361a"
+      }
+    ],
+    "all_other_normalized_lines_identical": true,
+    "all_non_tqdm_lines_sha256": "a65211fab51d86af4f8ea04906818429c98313f3753e051c42d20bcdee18355e",
+    "critical_lines_exactly_equal": true,
+    "critical_line_count": 23,
+    "critical_lines_sha256": "1511975255134477a866b9a96e20cf1d18d3639f17aad537fe0274df645aa402",
+    "raw_bytes_and_stat_unchanged": true
+  },
+  "started_at": "2026-09-26T21:04:33.402058+00:00",
+  "finished_at": "2026-09-26T21:04:33.417715+00:00"
+}

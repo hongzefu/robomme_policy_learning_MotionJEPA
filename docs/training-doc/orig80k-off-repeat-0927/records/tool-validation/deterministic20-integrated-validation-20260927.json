@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "utc": "2026-09-27T01:30:11.518593+00:00",
+  "baseline_head": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+  "scope": "当前获准在途源码合测，不是已提交新Beta或GPU20通过",
+  "pytest_files": [
+    "test_orig80k_launch.py",
+    "test_orig80k_speed.py",
+    "test_orig80k_timing_equiv.py",
+    "test_orig80k_completion.py"
+  ],
+  "pytest_passed": 377,
+  "seconds": 53.59,
+  "warning_count": 1,
+  "pytest_actual_exit": 0,
+  "tee_actual_exit": 0,
+  "host_tool_actual_exit": 0,
+  "ruff_actual_exit": 0,
+  "bash_syntax_exit": 0,
+  "diff_check_exit": 0,
+  "protected_training_and_templates_diff_exit": 0,
+  "log": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/deterministic20-integrated-tests-20260927.log",
+    "bytes": 1582,
+    "sha256": "6ed21a044f05885717b0705b7f3e7515fc81cb66a2fa114b452f6cc3522e9e50"
+  },
+  "source_files": {
+    "scripts/training/orig80k_contract.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/orig80k_contract.py",
+      "bytes": 48862,
+      "sha256": "2d65c06e37fa4fe36d80813b4758aa724a33ad205520b8e6871ff0fa16e0044a"
+    },
+    "scripts/training/prod/run_orig80k.sh": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/prod/run_orig80k.sh",
+      "bytes": 9914,
+      "sha256": "74fb8a10d3c7558d169073d4b695c0aad3dee9fa25e3d56eacbee3cd068b43b8"
+    },
+    "scripts/training/tests/check_orig80k_speed.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_orig80k_speed.py",
+      "bytes": 32946,
+      "sha256": "7d8126a555130781af23ca90041e38628723f8dc56d7370367ed6fe77005a4b4"
+    },
+    "scripts/training/tests/check_orig80k_timing_equiv.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_orig80k_timing_equiv.py",
+      "bytes": 42122,
+      "sha256": "2a9dfc4e096e896fab45f976dc5af5f7214dd6980ce4376a871bdb6fc5f94e07"
+    },
+    "scripts/training/tests/test_orig80k_launch.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/test_orig80k_launch.py",
+      "bytes": 46448,
+      "sha256": "6995985e93fe9def9c0b8f7b8a37fe64bca1d7c4661a10fd515a25ecf943fa87"
+    },
+    "scripts/training/tests/test_orig80k_speed.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/test_orig80k_speed.py",
+      "bytes": 27884,
+      "sha256": "a82a51ecc969399bbaa76b987782293361e7dca25e212e3c7c9e5c5e7af11129"
+    },
+    "scripts/training/tests/test_orig80k_timing_equiv.py": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/test_orig80k_timing_equiv.py",
+      "bytes": 34615,
+      "sha256": "f51da58d4b6d30aa3ba61c4ea6edce6e9c2e7a2806d86fe114d528dd329c927c"
+    }
+  }
+}

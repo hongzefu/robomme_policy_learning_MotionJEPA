@@ -1,0 +1,2691 @@
+{
+  "build_head": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+  "preflight_and_smoke_head": "42b91cd96499bd51fcb6acaeedd642b368dbefeb",
+  "current_phase": "deterministic20_pass_archiving_before_normal_perf",
+  "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "train_beta": "commitV11.13Beta",
+  "train_beta_pushed": true,
+  "p1_tag": "20260926T195426Z",
+  "p1_root": "v1-store/bench/orig80k-p1-20260926T195426Z",
+  "p1_preflight": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/p1-preflight-20260926T195426Z.json",
+    "sha256": "169010646dada4dc0dd58f4098016f8ccbbce9d75e847b402f88558d6dd38fe3",
+    "assets_full": "pi05_base与paligemma_tokenizer完整SHA核对通过，28.38秒",
+    "input_refs_rechecked": 113,
+    "upstream_and_current_packages": 208,
+    "all_eight_gpus_empty_before_launch": true
+  },
+  "p1_a_dispatch": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/p1-a-dispatch-20260926T195426Z.command.txt",
+    "sha256": "bd40c27bb62d5ad1e388e7e2d861d5025e8db2a6c191b16941fc9a853379caa1"
+  },
+  "full_input_eq_result": {
+    "status": "PASS",
+    "input_head": "3a1582db39c723c735e04752e5027bfe40ecc3e1",
+    "upstream_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+    "episodes": 1600,
+    "execution_samples_identity": 476857,
+    "boundary_samples": 6906,
+    "real_batches": 104,
+    "epochs_full_index_order": 2,
+    "comparison": "host_numeric_exact_motion_none_v1",
+    "judge_log": "v1-store/logs/orig80k-input-full-judge-20260926T170654Z.log",
+    "judge_log_sha256": "282a827f091ae72f4ad390f54fc1be3e2ee829f45c18ec55b26e5da4fa9cec32",
+    "end_utc": "2026-09-26T19:41:35Z",
+    "all_five_exit_records_unique_zero": true,
+    "scope": "输入及顺序对拍；不代表GPU训练标量/完整状态逐位等价或perf已通过"
+  },
+  "counting_input_eq_result": {
+    "status": "PASS",
+    "input_head": "3a1582db39c723c735e04752e5027bfe40ecc3e1",
+    "upstream_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+    "episodes": 400,
+    "execution_samples_identity": 189035,
+    "boundary_samples": 2400,
+    "real_batches": 104,
+    "epochs_full_index_order": 2,
+    "comparison": "host_numeric_exact_motion_none_v1",
+    "judge_log": "v1-store/logs/orig80k-input-count-judge-20260926T170654Z.log",
+    "judge_log_sha256": "6b69b0cdaf34e04e086324d014540d47d9a6dbc71088cb7c96846b3d9a2b91b0",
+    "end_utc": "2026-09-26T18:33:50Z",
+    "all_five_exit_records_unique_zero": true,
+    "scope": "输入及顺序对拍；不代表GPU训练标量/完整状态逐位等价或perf已通过"
+  },
+  "input_head": "3a1582db39c723c735e04752e5027bfe40ecc3e1",
+  "input_tag": "20260926T170654Z",
+  "input_start_utc": "2026-09-26T17:07:21Z",
+  "input_root": "v1-store/bench/orig80k-equiv-0925/input-20260926T170654Z",
+  "input_dispatch": "v1-store/bench/orig80k-build-preflight-0925/input-dispatch-20260926T170654Z.command.txt",
+  "input_dispatch_sha256": "1cb4fe7642e7a7bca2c43a15c5eb66e96c31eb334fd5141f06378c2cd5362d84",
+  "input_launch_markdown_sha256": "d4f6f991f92721d19af2cc9575fdb539720b3fef102bbe49df0d390b38f673b0",
+  "input_judge_dispatchers": {
+    "full": {
+      "path": "v1-store/bench/orig80k-build-preflight-0925/input-full-judge-dispatch-20260926T170654Z.command.txt",
+      "sha256": "61030216319779b3fc33a3028e07b37416fca04c42e65a6cffef39dec8b3cdfb"
+    },
+    "count": {
+      "path": "v1-store/bench/orig80k-build-preflight-0925/input-count-judge-dispatch-20260926T170654Z.command.txt",
+      "sha256": "c4757db7fa3043dd0c2ee99eceac7ec58cd2d04f102d773e682cfe3103098ee3"
+    },
+    "status": "仅准备；同组两侧会话结束、唯一工具PASS及五项唯一退出0、record_manifest存在后才启动，dispatcher自身也检查这些条件"
+  },
+  "input_last_confirmed_progress": {
+    "source": "四个独立流式监听器最近返回的判定行；不是最终结果",
+    "full_a_boundary_samples": 6906,
+    "full_b_boundary_samples": 6906,
+    "full_boundary_target": 6906,
+    "full_a_batches_completed": 104,
+    "full_b_batches_completed": 104,
+    "count_a_batches_completed": 104,
+    "count_b_batches_completed": 104,
+    "batches_target": 104,
+    "failures_seen": false
+  },
+  "post_input_candidates": {
+    "status": "INPUT两组PASS后已解除代码冻结，预算与20步包装候选已应用，合并核心测试217项通过36.38秒；Ruff修正和Beta归档准备中，尚未实际训练",
+    "budget_root": "v1-store/bench/orig80k-build-preflight-0925/perf-budget-candidate-3a1582d-v1",
+    "budget_patch_sha256": "54cb7b6328c84408b0caad5c0361363de5b2c6a72f616d06caafc9e809043b19",
+    "budget_native_apply_patch_sha256": "9123153f13743a72f63f3ba8f0882d76e3856f4b61d47d7dc1eca297978cbcad",
+    "budget_contract_candidate_sha256": "638c5a6bfd7eeada6f4be59af36274ec839ddd26999c4bcc1eddc039d783153e",
+    "budget_tests_candidate_sha256": "4ae56e1fee5918d85ceb0ed63efa151bd1238112586d47a40ed0a7c1a6550c18",
+    "timing_equiv_root": "v1-store/bench/orig80k-timing-equiv-candidate-20260926",
+    "timing_equiv_patch_sha256": "44a6b323037b2decf0b1f6602075985270603c7fa1082414b7f437028b61f5e8",
+    "timing_equiv_coverage": "用户已选择两库各一对20步；两侧真实保存及W&B仍开启；尚未执行",
+    "p1_launch_draft": "v1-store/bench/orig80k-build-preflight-0925/p1_launch_draft_20260926.md",
+    "p1_launch_draft_sha256": "0480338fa20216032d9df635a5e724b29d1197d1306dddfdf8ead503faf9cb2a",
+    "train100_launch_draft": "v1-store/bench/orig80k-build-preflight-0925/train100_launch_draft_20260926.md",
+    "train100_launch_draft_sha256": "b6608d5de0a3ceb5acb929813b57668214e97d390ee8acacf78ce63f4fb0b3e2",
+    "archive_strategy": "完整sample记录较大，结束后无损打包；解包逐文件SHA/bytes及record_manifest字节均须与原始目录一致，原始运行目录不改写"
+  },
+  "input_preflight": {
+    "packages_per_side": 208,
+    "versions_sha256": "a31fe021dbb20937aa93ce68d59a7d2f7d38d92a7e9514256ca2da617f5274dc",
+    "python": "3.11.15 (main, Aug 5 2026, 15:45:52) [Clang 22.1.3]",
+    "manifest_norm_history_tokenizer_check": "PASS",
+    "upstream_head": "ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b",
+    "cpus": 96,
+    "memory_available_bytes": 1142987542528,
+    "scratch_available_bytes": 851594649600,
+    "shm_available_bytes": 602265333760,
+    "all_eight_gpus_empty": true,
+    "cgroup_oom_events": 0
+  },
+  "perf_sampling_tool_result": {
+    "head": "3a1582db39c723c735e04752e5027bfe40ecc3e1",
+    "test_command": "uv run --no-sync pytest -q scripts/training/tests/test_orig80k_speed.py scripts/training/tests/test_orig80k_launch.py",
+    "tests_passed": 87,
+    "elapsed_seconds": 29.6,
+    "real_perf_executed": false,
+    "production_budget_binding": "待补齐：先ignored草稿准备，CPU期间冻结tracked文件"
+  },
+  "input_preparation_commit": "4b3b48573adcf2c3bf8ce2920d5684df1ee64a76",
+  "input_preparation_commit_state": "4b3b485为历史预建提交；最新采集版本、实际启动及会话见input_head和owned_tmux_sessions，当前已运行",
+  "repo": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+  "raw": "/scratch/hongze/robomme_data_h5",
+  "smoke_library": "16task-pub-smoke16-0925",
+  "full_library": "16task-pub-1600ep",
+  "counting_library": "4task-counting-pub-400ep",
+  "user_decisions": {
+    "resume_build": true,
+    "host_dtype_may_differ_but_values_exact": true,
+    "only_four_motion_missing_none_equivalent": true,
+    "training_scalars_and_states_bitwise": true,
+    "equivalence_only_wandb_disabled": true,
+    "equivalence_wandb_decision_quote": "允许仅对拍关闭 W&B",
+    "perf_readonly_disk_sampling_interval_seconds": 0.5,
+    "perf_disk_decision_quote": "补充 0.5 秒只读采样",
+    "historical_exit_disposition_quote": "补记限制，继续 CPU 输入取证",
+    "retain_local_full_equivalence_evidence": true,
+    "smoke_perf_prod_wandb_enabled": true,
+    "timing_equiv_coverage": "full_and_counting_each_off_on_20",
+    "timing_equiv_decision_quote": "两库各跑一对 20 步（推荐）"
+  },
+  "owned_tmux_sessions": [
+    {
+      "name": "pub16-pin-20260925T203220Z",
+      "pane_pid": 3787720,
+      "log": "v1-store/logs/pub16-pin-20260925T203220Z.preflight.log",
+      "status": "complete_exit_0",
+      "stream_session_id": 24191
+    },
+    {
+      "name": "pub16-smoke16-20260925T205655Z",
+      "pane_pid": 3798932,
+      "log": "v1-store/logs/pub16-smoke16-20260925T205655Z.build.log",
+      "status": "complete_exit_0"
+    },
+    {
+      "name": "pub16-full-20260925T212238Z",
+      "pane_pid": 3815822,
+      "log": "v1-store/logs/pub16-full-20260925T212238Z.build.log",
+      "command_record": "v1-store/bench/orig80k-build-preflight-0925/full_build_command.txt",
+      "status": "complete_exit_0",
+      "end_utc": "2026-09-26T00:40:16Z",
+      "stream_session_id": 23191
+    },
+    {
+      "name": "orig80k-full-read20-20260926T004046Z",
+      "pane_pid": 3915445,
+      "pane_id": "%539",
+      "log": "v1-store/logs/orig80k-full-read20-20260926T004046Z.wrapper.log",
+      "driver_log": "v1-store/logs/smoke-orig80k-full-0925.driver.log",
+      "command_record": "v1-store/bench/orig80k-build-preflight-0925/orig80k-full-read20-20260926T004046Z.command.txt",
+      "command_sha256": "7206c3d1ed54b7f05f5a28b25aa70c9621280b71f2f923eeb7baa6564c4d63eb",
+      "start_utc": "2026-09-26T00:41:03Z",
+      "stream_session_id": 24987,
+      "status": "complete_exit_0",
+      "end_utc": "2026-09-26T00:47:20Z"
+    },
+    {
+      "name": "cnt-pub400-20260926T004948Z",
+      "pane_pid": 3924000,
+      "pane_id": "%540",
+      "stream_session_id": 63000,
+      "log": "v1-store/logs/cnt-pub400-20260926T004948Z.build.log",
+      "command_record": "v1-store/bench/orig80k-build-preflight-0925/cnt-pub400-20260926T004948Z.command.txt",
+      "command_sha256": "35c0af03c1a8f58e3022eece8b0231521c97dcc863b6e3fab2c2d3a9c7fb6f2f",
+      "start_utc": "2026-09-26T00:50:24Z",
+      "launch_transport": "tmux执行已保存命令文件；首次内联因command too long失败，确认当时无会话或日志后使用相同已校验内容",
+      "status": "complete_exit_0",
+      "end_utc": "2026-09-26T01:44:56Z"
+    },
+    {
+      "name": "orig80k-count-read20-20260926T014535Z",
+      "pane_pid": 3957023,
+      "pane_id": "%541",
+      "stream_session_id": 48060,
+      "log": "v1-store/logs/orig80k-count-read20-20260926T014535Z.wrapper.log",
+      "driver_log": "v1-store/logs/smoke-orig80k-count-0925.driver.log",
+      "command_record": "v1-store/bench/orig80k-build-preflight-0925/orig80k-count-read20-20260926T014535Z.command.txt",
+      "command_sha256": "f487451f08b6cce8e77f9881b298878dd03508ae2ffcf7f7b2c7750de1b6e3a1",
+      "start_utc": "2026-09-26T01:45:54Z",
+      "norm_stats_sha256": "a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9",
+      "status": "complete_exit_0",
+      "end_utc": "2026-09-26T01:51:37Z"
+    },
+    {
+      "name": "orig80k-input-full-a-20260926T170654Z",
+      "pane_pid": 31406,
+      "wrapper_pid": 31409,
+      "body_pid": 31412,
+      "pane_id": "%542",
+      "stream_session_id": 80934,
+      "log": "v1-store/logs/orig80k-input-full-a-20260926T170654Z.log",
+      "command_sha256": "58f86ee7d62e39b1294bf23d321c0cd3a85033e786bac6c75b7e22134932f28d",
+      "status": "collector_pass_checked_footer_exit_0",
+      "end_utc": "2026-09-26T19:41:04Z",
+      "tmux_session_absent": true,
+      "collector_boundary_samples": 6906,
+      "collector_batches": 104,
+      "record_files": 17,
+      "record_payload_bytes": 138642249,
+      "record_manifest_sha256": "b95d89845d2e7219a6102cd05ffe26d5941ebcf66179f5c423539e1d710dbc05",
+      "raw_log_sha256": "5630af6c6f3a8bfda4f67dc114be3f1315ebe4dc4fad1fa2ded69852627a5e80",
+      "verification": "命令/正文tee/footer printf/footer tee/综合退出均唯一0；17文件bytes/SHA和集合已独立核对",
+      "archive_staging": "v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/full-a.records.tar.gz",
+      "archive_bytes": 14740202,
+      "archive_sha256": "0a6b3b4f0f7db98c134f4721506a13ac4f43a8d5e9de01bbf8b98d87c6cb36b1",
+      "archive_checks_sha256": "d9c0769784f749d0ad7ad8557abfa43b2eda772367c596eefe0781487981881b"
+    },
+    {
+      "name": "orig80k-input-full-b-20260926T170654Z",
+      "pane_pid": 31419,
+      "wrapper_pid": 31422,
+      "body_pid": 31426,
+      "pane_id": "%543",
+      "stream_session_id": 2808,
+      "log": "v1-store/logs/orig80k-input-full-b-20260926T170654Z.log",
+      "command_sha256": "35f9e8d5d1a5df0e63d036f136a3899d56e03845d1c62790f150eb21b02fceaa",
+      "status": "collector_pass_checked_footer_exit_0",
+      "end_utc": "2026-09-26T19:25:33Z",
+      "tmux_session_absent": true,
+      "collector_boundary_samples": 6906,
+      "collector_batches": 104,
+      "record_files": 17,
+      "record_payload_bytes": 138462397,
+      "record_manifest_sha256": "e70f4dc1c66e60ac97b1dd3f7fc116a82bb783f4bb4e00dd34c236572808ddf0",
+      "raw_log_sha256": "6caf0915328a89227a1b2214141789523357a9a4e2fc3dd974a00408613d49b9",
+      "verification": "命令/正文tee/footer printf/footer tee/综合退出均唯一0；17文件bytes/SHA和集合已独立核对；随后full组INPUT_EQ通过",
+      "archive_staging": "v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/full-b.records.tar.gz",
+      "archive_bytes": 14720809,
+      "archive_sha256": "7e9b7ebc24db5ea8e9ff29ada0154637cc3ea61a190e539dcee1354366486d25",
+      "archive_checks_sha256": "eee8a1be4c9d3a27eda8fc8a30eabbd8075c34ad2f49f89f2e6fdac595ea4738"
+    },
+    {
+      "name": "orig80k-input-count-a-20260926T170654Z",
+      "pane_pid": 31432,
+      "wrapper_pid": 31435,
+      "body_pid": 31440,
+      "pane_id": "%544",
+      "stream_session_id": 79031,
+      "log": "v1-store/logs/orig80k-input-count-a-20260926T170654Z.log",
+      "command_sha256": "f20abe885cb4cd444b248e6c7520d62e8b32f6c3869b32a99fc9753b338ad432",
+      "status": "collector_pass_checked_footer_exit_0",
+      "end_utc": "2026-09-26T18:32:44Z",
+      "tmux_session_absent": true,
+      "collector_boundary_samples": 2400,
+      "collector_batches": 104,
+      "record_files": 17,
+      "record_payload_bytes": 49264791,
+      "record_manifest_sha256": "4adabc7d5e4f959682530360c6ea06acb30222cc5419ffd16b4e19ec9706c24e",
+      "verification": "命令/正文tee/footer printf/footer tee/综合退出均唯一0；全部17文件bytes/SHA及清单集合已独立核对",
+      "archive_staging": "v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/count-a.records.tar.gz",
+      "archive_bytes": 5328311,
+      "archive_sha256": "2ce614db05bf0c7c2fa348bf274df3a8155bfa3b066e5c0a062e21e2013b8e12",
+      "archive_checks_sha256": "02ff448600576399f8d9ee133888e4fd31fb3ed0be6779b503877b7a5f0fc095"
+    },
+    {
+      "name": "orig80k-input-count-b-20260926T170654Z",
+      "pane_pid": 31446,
+      "wrapper_pid": 31448,
+      "body_pid": 31450,
+      "pane_id": "%545",
+      "stream_session_id": 27524,
+      "log": "v1-store/logs/orig80k-input-count-b-20260926T170654Z.log",
+      "command_sha256": "367f50c0a020742121dd01bece128ba0eaea4486a0ef5b96b68bf362213c629c",
+      "status": "collector_pass_checked_footer_exit_0",
+      "end_utc": "2026-09-26T18:22:36Z",
+      "tmux_session_absent": true,
+      "collector_boundary_samples": 2400,
+      "collector_batches": 104,
+      "record_files": 17,
+      "record_payload_bytes": 49198475,
+      "record_manifest_sha256": "ac66670e25f5c9f9b01e088b5c15d1577f62d6cc11563c67c4be54b6fbc69430",
+      "verification": "命令/正文tee/footer printf/footer tee/综合退出均唯一0；全部17文件bytes/SHA及清单集合已独立核对，非INPUT_EQ通过",
+      "archive_staging": "v1-store/bench/orig80k-equiv-0925/archive-staging-20260926T170654Z/count-b.records.tar.gz",
+      "archive_bytes": 5313445,
+      "archive_sha256": "d41ca9f527718b188252fb4410d26cd83fc95c2ea09668e06abe7eeda5928140",
+      "archive_checks_sha256": "fe7aa8774e747324b625bc31cc77efcc9b8262fa2e2f0479ce1d9f72658247cf",
+      "archive_verification": "18成员逐一解码核对原始SHA/bytes及清单字节；原目录未改，gzip完整性通过"
+    },
+    {
+      "name": "orig80k-input-count-judge-20260926T170654Z",
+      "wrapper_pid": 392319,
+      "body_pid": 392321,
+      "pane_pid": null,
+      "pane_pid_note": "任务6秒内结束，查询pane前会话已自然退出；未补造pane PID",
+      "start_utc": "2026-09-26T18:33:44Z",
+      "end_utc": "2026-09-26T18:33:50Z",
+      "log": "v1-store/logs/orig80k-input-count-judge-20260926T170654Z.log",
+      "command_sha256": "ab2f9269afd97127719e0ecce6801bcece33a6b58d26a2e82ae2ed4a7d535519",
+      "status": "input_eq_pass_checked_footer_exit_0",
+      "tmux_session_absent": true
+    },
+    {
+      "name": "orig80k-input-full-judge-20260926T170654Z",
+      "pane_pid": 566574,
+      "wrapper_pid": 566576,
+      "body_pid": 566578,
+      "pane_id": "%547",
+      "start_utc": "2026-09-26T19:41:19Z",
+      "end_utc": "2026-09-26T19:41:35Z",
+      "log": "v1-store/logs/orig80k-input-full-judge-20260926T170654Z.log",
+      "command_sha256": "3597b818656915a4c6b45474437c4e8d55b48d745d55d63cc2b5a5c50ca848e9",
+      "status": "input_eq_pass_checked_footer_exit_0",
+      "tmux_session_absent": true
+    },
+    {
+      "name": "orig80k-p1-full-a-20260926T195426Z",
+      "pane_pid": 582613,
+      "wrapper_pid": 582616,
+      "body_pid": 582619,
+      "pane_id": "%548",
+      "stream_session_id": 5795,
+      "run_name": "p1-orig80k-full-a-20260926T195426Z",
+      "gpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "start_utc": "2026-09-26T19:56:57Z",
+      "log": "v1-store/logs/orig80k-p1-full-a-20260926T195426Z.log",
+      "command_sha256": "7ae493d48f3237eea1bf6700f0d36fb5a183fea0d35cba2c399d557d52dc1753",
+      "status": "complete_exit_0_and_verified",
+      "end_utc": "2026-09-26T20:31:18+00:00",
+      "exit_code": 0
+    },
+    {
+      "name": "orig80k-p1-count-a-20260926T195426Z",
+      "pane_pid": 582626,
+      "wrapper_pid": 582631,
+      "body_pid": 582633,
+      "pane_id": "%549",
+      "stream_session_id": 91662,
+      "run_name": "p1-orig80k-count-a-20260926T195426Z",
+      "gpus": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "start_utc": "2026-09-26T19:56:57Z",
+      "log": "v1-store/logs/orig80k-p1-count-a-20260926T195426Z.log",
+      "command_sha256": "cc43cfcb73009fb6254048986bff22336ba220993629d7e5a4d7def13a46b4f6",
+      "status": "complete_exit_0_and_verified",
+      "end_utc": "2026-09-26T20:30:32+00:00",
+      "exit_code": 0
+    },
+    {
+      "name": "orig80k-p1-full-b-20260926T195426Z",
+      "pane_pid": 679412,
+      "wrapper_pid": 679414,
+      "body_pid": 679416,
+      "pane_id": "%550",
+      "stream_session_id": 93281,
+      "run_name": "p1-orig80k-full-b-20260926T195426Z",
+      "gpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "start_utc": "2026-09-26T20:32:04Z",
+      "log": "v1-store/logs/orig80k-p1-full-b-20260926T195426Z.log",
+      "command_sha256": "cefab91768a86a33730f934105ad5343cc6bb090a3bf3a56935f96910c7640ba",
+      "status": "complete_exit_0_and_verified",
+      "harness_pid": 679425,
+      "end_utc": "2026-09-26T20:40:08+00:00",
+      "exit_code": 0
+    },
+    {
+      "name": "orig80k-p1-count-b-20260926T195426Z",
+      "pane_pid": 686817,
+      "wrapper_pid": 686819,
+      "body_pid": 686821,
+      "pane_id": "%551",
+      "stream_session_id": 48652,
+      "run_name": "p1-orig80k-count-b-20260926T195426Z",
+      "gpus": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "start_utc": "2026-09-26T20:40:40Z",
+      "log": "v1-store/logs/orig80k-p1-count-b-20260926T195426Z.log",
+      "command_sha256": "e78711a0354eb43ae0a13d2b67dcbaaa1dc54f841b2e0f532d394b21f508226a",
+      "status": "complete_exit_0_and_verified",
+      "harness_pid": 686830,
+      "end_utc": "2026-09-26T20:48:32+00:00",
+      "exit_code": 0
+    },
+    {
+      "name": "orig80k-eq100-full-a-20260926T210415Z",
+      "pane_id": "%552",
+      "pane_pid": 704720,
+      "wrapper_pid": 704723,
+      "body_pid": 704727,
+      "harness_pid": 704727,
+      "stream_session_id": 9448,
+      "run_name": "eq100-orig80k-full-a-20260926T210415Z",
+      "gpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "start_utc": "2026-09-26T21:06:08Z",
+      "log": "v1-store/logs/orig80k-eq100-full-a-20260926T210415Z.log",
+      "command_sha256": "21cf82e8b644f8d16fba95938f826736032edfaae324b5d18a826b3046e94219",
+      "status": "complete_actual_outer_exit_0_and_verified",
+      "expected_steps": 100,
+      "expected_tentative": 12,
+      "expected_state_steps": [
+        50,
+        99
+      ],
+      "exit_retention_enabled": true,
+      "actual_outer_exit_pending": false,
+      "exit_identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-a-20260926T210415Z.identity.json",
+        "bytes": 1378,
+        "sha256": "42b09b76091ed9b7c7784f1d6788db93089df287df34d61a4147a5393bd848da"
+      },
+      "end_utc": "2026-09-26T21:40:15+00:00",
+      "exit_code": 0,
+      "exit_code_source": "retained tmux pane_dead_status + independent capture CLI returncode"
+    },
+    {
+      "name": "orig80k-eq100-count-a-20260926T210415Z",
+      "pane_id": "%553",
+      "pane_pid": 704733,
+      "wrapper_pid": 704738,
+      "body_pid": 704740,
+      "harness_pid": 704740,
+      "stream_session_id": 74379,
+      "run_name": "eq100-orig80k-count-a-20260926T210415Z",
+      "gpus": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "start_utc": "2026-09-26T21:06:08Z",
+      "log": "v1-store/logs/orig80k-eq100-count-a-20260926T210415Z.log",
+      "command_sha256": "1ce020c3426ae7be1ce8d9e44f5ec971058c2b19220a73ae285ce9fb7f3ddd01",
+      "status": "complete_actual_outer_exit_0_and_verified",
+      "expected_steps": 100,
+      "expected_tentative": 12,
+      "expected_state_steps": [
+        50,
+        99
+      ],
+      "exit_retention_enabled": true,
+      "actual_outer_exit_pending": false,
+      "exit_identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-a-20260926T210415Z.identity.json",
+        "bytes": 1383,
+        "sha256": "da8697c92033d7c4e9db62a57c9f8ad44cef2d35a2a5b09c06696ef1ceea8441"
+      },
+      "end_utc": "2026-09-26T21:40:19+00:00",
+      "exit_code": 0,
+      "exit_code_source": "retained tmux pane_dead_status + independent capture CLI returncode"
+    },
+    {
+      "name": "orig80k-eq100-full-s1-20260926T210415Z",
+      "window_id": "@559",
+      "pane_id": "%559",
+      "pane_pid": 1049094,
+      "wrapper_pid": 1049102,
+      "body_pid": 1049104,
+      "stream_session_id": 17933,
+      "run_name": "eq100-orig80k-full-s1-20260926T210415Z",
+      "gpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "start_utc": "2026-09-26T22:11:16Z",
+      "log": "v1-store/logs/orig80k-eq100-full-s1-20260926T210415Z.log",
+      "command_sha256": "236456374131c164cbf6099af880841eff5590bd85ee65d62e863f19ad9c902d",
+      "status": "complete_actual_outer_exit_0_and_verified",
+      "expected_steps": 100,
+      "expected_tentative": 0,
+      "expected_state_steps": [
+        50,
+        99
+      ],
+      "exit_retention_enabled": true,
+      "actual_outer_exit_pending": false,
+      "exit_identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s1-20260926T210415Z.identity.json",
+        "bytes": 1471,
+        "sha256": "fc8a4cc7524ca1a2529d61e2af34e1864b874e94a99197dcb4be20d6a8146677"
+      },
+      "guard_launch_actual_exit": 0,
+      "root_dispatch_actual_exit": 0,
+      "guard_launch_record": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s1-20260926T210415Z.launch.guard.stdout",
+        "sha256": "303610b7206699b945414704213e58eb6779a68d5656963ce0814f9d48cd2285"
+      },
+      "harness_pid": 1049115,
+      "end_utc": "2026-09-26T22:29:49+00:00",
+      "exit_code": 0,
+      "exit_code_source": "retained tmux pane_dead_status + independent capture CLI returncode"
+    },
+    {
+      "name": "orig80k-eq100-count-s3-20260926T210415Z",
+      "window_id": "@560",
+      "pane_id": "%560",
+      "pane_pid": 1067711,
+      "wrapper_pid": 1067719,
+      "body_pid": 1067721,
+      "stream_session_id": 80136,
+      "run_name": "eq100-orig80k-count-s3-20260926T210415Z",
+      "gpus": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "start_utc": "2026-09-26T22:30:39Z",
+      "log": "v1-store/logs/orig80k-eq100-count-s3-20260926T210415Z.log",
+      "command_sha256": "2407dc510030a4e8a157b56ae92e39fd00b6cb890fe9a5847262ae39452c6377",
+      "status": "complete_actual_outer_exit_0_and_verified",
+      "expected_steps": 100,
+      "expected_tentative": 0,
+      "expected_state_steps": [
+        50,
+        99
+      ],
+      "exit_retention_enabled": true,
+      "actual_outer_exit_pending": false,
+      "exit_identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-s3-20260926T210415Z.identity.json",
+        "bytes": 1476,
+        "sha256": "4f3ed3d50de984f915b695ec67b0930c1f47ec7aab456618e33de127b01aad6b"
+      },
+      "guard_launch_actual_exit": 0,
+      "root_dispatch_actual_exit": 0,
+      "guard_launch_record": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-s3-20260926T210415Z.launch.guard.stdout",
+        "sha256": "099336b0fb4580d0e429d1a3386d8b56492870e615efe777cc220468c50f02f6"
+      },
+      "harness_pid": 1067732,
+      "end_utc": "2026-09-26T22:49:33+00:00",
+      "exit_code": 0,
+      "exit_code_source": "retained tmux pane_dead_status + independent capture CLI returncode"
+    },
+    {
+      "name": "orig80k-eq100-full-upstream-judge-20260926T210415Z",
+      "window_id": "@561",
+      "pane_id": "%561",
+      "pane_pid": 1069848,
+      "wrapper_pid": 1069856,
+      "body_pid": 1069858,
+      "label": "eq100-orig80k-full-upstream-judge-20260926T210415Z",
+      "job_kind": "CPU upstream judge full",
+      "start_utc": "2026-09-26T22:32:10Z",
+      "end_utc": "2026-09-26T22:32:10Z",
+      "log": "v1-store/logs/orig80k-eq100-full-upstream-judge-20260926T210415Z.log",
+      "command_sha256": "df34f79a2021a5597f05108d39d0051ff3f49e2800e82c63d9832463775c70f2",
+      "status": "judge_pass_actual_outer_exit_0",
+      "exit_code": 0,
+      "exit_code_source": "retained tmux pane_dead_status + independent capture CLI returncode",
+      "exit_identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-upstream-judge-20260926T210415Z.identity.json",
+        "bytes": 1531,
+        "sha256": "3d8628391a6267f02cf8751b85cdc282a333389d555ce6e61e3314143c821de8"
+      },
+      "guard_launch_actual_exit": 0,
+      "root_dispatch_actual_exit": 0,
+      "capture_parent_exec_actual_exit": 0
+    },
+    {
+      "name": "orig80k-eq100-count-upstream-judge-20260926T210415Z",
+      "window_id": "@562",
+      "pane_id": "%562",
+      "pane_pid": 1085088,
+      "wrapper_pid": 1085096,
+      "body_pid": 1085098,
+      "label": "eq100-orig80k-count-upstream-judge-20260926T210415Z",
+      "job_kind": "CPU upstream judge count",
+      "start_utc": "2026-09-26T22:50:02Z",
+      "end_utc": "2026-09-26T22:50:02Z",
+      "log": "v1-store/logs/orig80k-eq100-count-upstream-judge-20260926T210415Z.log",
+      "command_sha256": "c33b22c13aaa730dec50a498842b0b7362f8cb7b83715c5a1252fd2a7e58093e",
+      "status": "judge_pass_actual_outer_exit_0",
+      "exit_code": 0,
+      "exit_code_source": "retained tmux pane_dead_status + independent capture CLI returncode",
+      "exit_identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-upstream-judge-20260926T210415Z.identity.json",
+        "bytes": 1536,
+        "sha256": "7b72eb8df44581c44e3a36594efc16faf248e5e839d72c5b44216f6a3ffd60df"
+      },
+      "guard_launch_actual_exit": 0,
+      "root_dispatch_actual_exit": 0,
+      "capture_parent_exec_actual_exit": 0
+    },
+    {
+      "name": "orig80k-eq100-full-s2-20260926T210415Z",
+      "window_id": "@563",
+      "pane_id": "%563",
+      "pane_pid": 1085917,
+      "wrapper_pid": 1085925,
+      "body_pid": 1085927,
+      "stream_session_id": 76355,
+      "run_name": "eq100-orig80k-full-s2-20260926T210415Z",
+      "gpus": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "start_utc": "2026-09-26T22:50:53Z",
+      "log": "v1-store/logs/orig80k-eq100-full-s2-20260926T210415Z.log",
+      "command_sha256": "42072c752c19cd13b4c4e43e4d7cb21431a7a06765695a8b4901fa264756fd79",
+      "status": "complete_actual_outer_exit_0_and_verified",
+      "expected_steps": 100,
+      "expected_tentative": 0,
+      "expected_state_steps": [
+        50,
+        99
+      ],
+      "execution_role": "concurrent",
+      "exit_retention_enabled": true,
+      "actual_outer_exit_pending": false,
+      "exit_identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s2-20260926T210415Z.identity.json",
+        "bytes": 1471,
+        "sha256": "9ac5e1f538894a563a0503ce92d5e591b3f9d18355958607485fea2ed6ce4ede"
+      },
+      "guard_launch_actual_exit": 0,
+      "root_dispatch_actual_exit": 0,
+      "guard_launch_record": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-s2-20260926T210415Z.launch.guard.stdout",
+        "sha256": "52f4432425289c729809444ecf409788679467788a7c4326d9eae506bb2096f9"
+      },
+      "harness_pid": 1085946,
+      "end_utc": "2026-09-26T23:09:33+00:00",
+      "elapsed_seconds": 1120.0,
+      "exit_code": 0,
+      "exit_code_source": "retained tmux pane_dead_status + independent capture CLI returncode"
+    },
+    {
+      "name": "orig80k-eq100-count-s2-20260926T210415Z",
+      "window_id": "@564",
+      "pane_id": "%564",
+      "pane_pid": 1085962,
+      "wrapper_pid": 1085970,
+      "body_pid": 1085972,
+      "stream_session_id": 66859,
+      "run_name": "eq100-orig80k-count-s2-20260926T210415Z",
+      "gpus": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "start_utc": "2026-09-26T22:50:54Z",
+      "log": "v1-store/logs/orig80k-eq100-count-s2-20260926T210415Z.log",
+      "command_sha256": "676812c2f7a2a12d6b9ff8a88690226106e07aca558473491c266cc3405b8c8f",
+      "status": "complete_actual_outer_exit_0_and_verified",
+      "expected_steps": 100,
+      "expected_tentative": 0,
+      "expected_state_steps": [
+        50,
+        99
+      ],
+      "execution_role": "concurrent",
+      "exit_retention_enabled": true,
+      "actual_outer_exit_pending": false,
+      "exit_identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-s2-20260926T210415Z.identity.json",
+        "bytes": 1476,
+        "sha256": "98082bae81d73dbf82b290d7a24e65f980577c65b05573c69dd6a2afa7ca89d4"
+      },
+      "guard_launch_actual_exit": 0,
+      "root_dispatch_actual_exit": 0,
+      "guard_launch_record": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-s2-20260926T210415Z.launch.guard.stdout",
+        "sha256": "4ce9ca4c7304acd22e1903d219a004dba1ee81d6fdcb36feb41010348db2d540"
+      },
+      "harness_pid": 1085982,
+      "end_utc": "2026-09-26T23:09:56+00:00",
+      "elapsed_seconds": 1142.0,
+      "exit_code": 0,
+      "exit_code_source": "retained tmux pane_dead_status + independent capture CLI returncode"
+    },
+    {
+      "name": "orig80k-eq100-full-same-judge-20260926T210415Z",
+      "window_id": "@565",
+      "pane_id": "%565",
+      "pane_pid": 1114482,
+      "wrapper_pid": 1114490,
+      "body_pid": 1114492,
+      "label": "eq100-orig80k-full-same-judge-20260926T210415Z",
+      "job_kind": "CPU same-entry judge full",
+      "start_utc": "2026-09-26T23:10:27Z",
+      "end_utc": "2026-09-26T23:10:28Z",
+      "log": "v1-store/logs/orig80k-eq100-full-same-judge-20260926T210415Z.log",
+      "command_sha256": "b8225b308bde6e0de54a968b5bebfc21e5fea9c71883a4b35593ede543cbf53e",
+      "status": "judge_pass_actual_outer_exit_0",
+      "exit_code": 0,
+      "exit_code_source": "retained tmux pane_dead_status + independent capture CLI returncode",
+      "exit_identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.identity.json",
+        "bytes": 1511,
+        "sha256": "984dd79f2c956f4f09c7528553762f2c59df08f14b3f1fbc262d31808f3ad286"
+      },
+      "guard_launch_actual_exit": 0,
+      "root_dispatch_actual_exit": 0,
+      "capture_parent_exec_actual_exit": 0
+    },
+    {
+      "name": "orig80k-eq100-count-same-judge-20260926T210415Z",
+      "window_id": "@566",
+      "pane_id": "%566",
+      "pane_pid": 1114515,
+      "wrapper_pid": 1114523,
+      "body_pid": 1114525,
+      "label": "eq100-orig80k-count-same-judge-20260926T210415Z",
+      "job_kind": "CPU same-entry judge count",
+      "start_utc": "2026-09-26T23:10:28Z",
+      "end_utc": "2026-09-26T23:10:28Z",
+      "log": "v1-store/logs/orig80k-eq100-count-same-judge-20260926T210415Z.log",
+      "command_sha256": "c9de929c560b86ca4358c0409d411a02c14e997640b397ab335b11d6bdc90830",
+      "status": "judge_pass_actual_outer_exit_0",
+      "exit_code": 0,
+      "exit_code_source": "retained tmux pane_dead_status + independent capture CLI returncode",
+      "exit_identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-same-judge-20260926T210415Z.identity.json",
+        "bytes": 1516,
+        "sha256": "246d4da7badfcada953b7cc672acf115d26f1e1294837c7a43d58960aebf2d46"
+      },
+      "guard_launch_actual_exit": 0,
+      "root_dispatch_actual_exit": 0,
+      "capture_parent_exec_actual_exit": 0
+    },
+    "orig80k-timing20-full-off-0926-20260927T012426Z",
+    "orig80k-timing20-count-off-0926-20260927T012426Z",
+    "orig80k-timing20-full-on-0926-20260927T012426Z",
+    "orig80k-timing20-count-on-0926-20260927T012426Z",
+    "orig80k-timing20-full-judge-20260927T012426Z",
+    "orig80k-timing20-count-judge-20260927T012426Z"
+  ],
+  "pre_smoke_required_free_bytes": 1466841656330,
+  "post_smoke_required_free_bytes": 1458746144941,
+  "last_observed_progress": {
+    "utc": "2026-09-26 00:40:16 UTC",
+    "stage": "full1600_data_build_complete",
+    "completed_episodes": 1600,
+    "completed_timesteps": 768897,
+    "total_timesteps": 768897,
+    "available_bytes": 1077743714304
+  },
+  "full_siglip_result": {
+    "start_utc": "2026-09-25T21:44:40Z",
+    "end_utc": "2026-09-26T00:27:27Z",
+    "exit_code": 0,
+    "workers": 8,
+    "episodes": 1600,
+    "timesteps": 768897,
+    "elapsed_seconds": 9767,
+    "status": "SigLIP抽取完成；不等同整个数据库验收通过"
+  },
+  "prepared_commands": {
+    "count_read20_template": "v1-store/bench/orig80k-build-preflight-0925/count_read20_command.template.txt",
+    "count_read20_template_sha256": "e894bc1f4e9d0415792b8e4595cfa35cb1c8b7604b9bde5e667f2297243c7bd9",
+    "count_read20_status": "已准备并通过bash语法、根代理及独立代理静态复核；未执行，待填写唯一SESSION与建库后独立核对的norm SHA字面量",
+    "full_read20_template": "v1-store/bench/orig80k-build-preflight-0925/full_read20_command.template.txt",
+    "full_read20_template_sha256": "dfafb6064aed727a4b3e04b08d256e0808fa0b4a174a461069e45e6676fb1647",
+    "counting_template": "v1-store/bench/orig80k-build-preflight-0925/counting_build_command.template.txt",
+    "counting_template_sha256": "caa41e55da0180766b8fd8c1d888de9928225ed982b25b2bd1e5c12fc7a31283",
+    "counting_status": "仅准备并通过bash语法、根代理和独立代理静态复核，未执行",
+    "full_read20_status": "已准备并通过bash语法、根代理及独立代理静态复核；未执行",
+    "only_placeholder": "SESSION=__COUNTING_TMUX_LOG_PREFIX__；替换为本轮唯一cnt-会话全名，并与实际tmux名一致",
+    "review_head": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+    "budget_basis": "full成功后全量stat扫描768897个feature和476857个pkl，F/P取实测最大值与smoke下限较大值；按counting剩余数据10%+128GiB其他项+300GiB保留量验收"
+  },
+  "pending_user_decisions": [],
+  "input_identity_result": {
+    "status": "两组A/B全量身份JSON相同，非完整INPUT_EQ通过",
+    "full_samples": 476857,
+    "full_identity_sha256": "aa17a64cd43c443a375df391380f871e5002838cd61a94c856d1d827abb3ba4b",
+    "count_samples": 189035,
+    "count_identity_sha256": "9e34dc982130f73d906b70a825aa7ae5b1ee5cf51e9e1f466066d3c66bff294b",
+    "full_boundary_samples_per_side": 6906,
+    "count_boundary_samples_per_side": 2400
+  },
+  "historical_outer_exit_evidence_audit": {
+    "audit_base": "ec6c9e35784a96f636a587dd737dffa294b616ad",
+    "runtime_beta": "49a333eb18e8d6ff1143bf7871ef7c498ab91579",
+    "report": "docs/training-doc/orig80k-equiv-0925/exit-record-audit.md",
+    "affected_sessions": [
+      "pub16-full-20260925T212238Z",
+      "orig80k-full-read20-20260926T004046Z",
+      "cnt-pub400-20260926T004948Z",
+      "orig80k-count-read20-20260926T014535Z"
+    ],
+    "prior_exit_zero_fields": "以上四次的既有exit_code=0和complete_exit_0保留为原始日志判读记录，不代表独立观测了最外footer或整个包装进程的最终退出码。子阶段实际返回码不受此限定替代。",
+    "outer_footer_and_process_exit_independently_observed": false,
+    "evidence_historical_footer_actually_failed": false,
+    "child_tasks_and_artifacts": "两库10/12个阶段、严格子集、两个真实训练进程、两个完整runner和CPU恢复器实际返回0，内容验收PASS；没有被本次反例证伪。",
+    "new_cpu_wrapper": "末尾tee前不写成功终态；捕获footer printf/tee后用受检查的直接追加记录唯一综合退出码。两方各6例纯shell替身验证均通过，未启动真实采集。",
+    "disposition": "用户已批准补记限制后继续CPU输入；原始记录不改写成独立观测，不重建或重训已验收产物"
+  },
+  "full_finalize_result": {
+    "start_utc": "2026-09-26T00:27:27Z",
+    "end_utc": "2026-09-26T00:35:37Z",
+    "exit_code": 0,
+    "source_h5_sha256_matches": 16,
+    "episodes": 1600,
+    "execution_samples": 476857,
+    "missing_feature_directories": 0,
+    "worker_sidecars": 8,
+    "residual_claims": 0,
+    "spot_check_samples": 1024,
+    "spot_check_max_abs_diff": 0
+  },
+  "full_packed_result": {
+    "pack_start_utc": "2026-09-26T00:35:37Z",
+    "pack_end_utc": "2026-09-26T00:37:46Z",
+    "pack_exit_code": 0,
+    "verify_end_utc": "2026-09-26T00:37:59Z",
+    "verify_exit_code": 0,
+    "scanned_rows": 768897,
+    "mismatches": 0
+  },
+  "full_data_build_result": {
+    "status": "PASS",
+    "end_utc": "2026-09-26T00:40:16Z",
+    "task_exit_code": 0,
+    "tee_exit_code": 0,
+    "exit_code": 0,
+    "manifest_sha256": "fb1bdbcbcc176d15475332b728fa218bb545b4a8c9dcaa9ce1ec9e0bb17f174f",
+    "source_allocated_bytes": 655588253696,
+    "packed_allocated_bytes": 50496729088,
+    "total_allocated_bytes": 706084982784,
+    "self_norm_stats_sha256": "c5d45b4bdb481ca46d18aeb32446bbedec34de435eef31d3212a179ee7868bcd",
+    "training_norm_stats_sha256": "f332bbd34ace1b6837cdc415b44f680896070a41564f9ce39016f1ebf99d1be5",
+    "training_uses": "original",
+    "norm_stats_max_absolute_difference": 0.0011207661509513578,
+    "note": "自算统计量差异只记录，不切换完整run的原版统计量；20步检查已另记PASS，后续正式对拍仍待完成"
+  },
+  "full_readability20_result": {
+    "status": "PASS",
+    "run_name": "smoke-orig80k-full-0925",
+    "run_uuid": "a56dd89a-ffbe-415d-9dd1-d5e205e14c25",
+    "start_utc": "2026-09-26T00:41:03Z",
+    "train_end_utc": "2026-09-26T00:46:19Z",
+    "completion_end_utc": "2026-09-26T00:47:20Z",
+    "state_step": 20,
+    "checkpoint": 19,
+    "checkpoint_allocated_bytes": 11879907328,
+    "checkpoint_logical_bytes": 11879851680,
+    "completion_sha256": "340f8b53543041c36456f8c4aebacf6182139711caf5a3121ca8b307c248f897",
+    "checkpoint_save_commit_seconds": 14.491722,
+    "save_disk_peak": "未测，不能从最终大小或保存耗时推导峰值",
+    "exit_code": 0
+  },
+  "counting_preflight_result": {
+    "status": "PASS",
+    "measured_utc": "2026-09-26T00:50:31Z",
+    "available_bytes": 1065860091904,
+    "required_free_bytes": 681954664773,
+    "budget_record": "v1-store/bench/orig80k-build-preflight-0925/cnt-pub400-20260926T004948Z.budget.json",
+    "full_feature_files_measured": 768897,
+    "full_pkl_files_measured": 476857,
+    "max_feature_allocated_bytes": 606208,
+    "max_pkl_allocated_bytes": 397312,
+    "hardlinks": 4,
+    "hardlink_device": 2304,
+    "counting_totals": {
+      "episodes": 400,
+      "timesteps": 189035,
+      "exec_samples": 189035
+    }
+  },
+  "counting_source_pin_result": {
+    "status": "PASS",
+    "hash4_end_utc": "2026-09-26T00:55:42Z",
+    "input_files": 4,
+    "episodes": 400,
+    "timesteps": 189035,
+    "execution_samples": 189035,
+    "siglip_start_utc": "2026-09-26T00:55:42Z"
+  },
+  "counting_progress": {
+    "observed_utc": "2026-09-26 01:40:07 UTC",
+    "stage": "data_build_complete",
+    "completed_episodes": 400,
+    "completed_timesteps": 189035,
+    "total_episodes": 400,
+    "total_timesteps": 189035,
+    "available_bytes": 919175843840,
+    "available_bytes_observed_utc": "2026-09-26 01:27:30 UTC",
+    "status": "complete_exit_0"
+  },
+  "archive_drafts": {
+    "full_dataset": "v1-store/bench/orig80k-build-preflight-0925/full_build_archive_draft.md",
+    "full_dataset_sha256": "d633aa4fca339e12108f805b3c0e6fa7a4fa18dea7f87ee9e7c0f3b5fb331e34",
+    "full_read20": "v1-store/bench/orig80k-build-preflight-0925/full20_archive_draft.md",
+    "full_read20_sha256": "5a5cd3d442cb83d9a710a75041a1d5753c7509203e30294300ed411ede490168",
+    "status": "已用于正式README回填；87份记录已正式复制并校验，数据组结果已配对提交"
+  },
+  "counting_siglip_result": {
+    "start_utc": "2026-09-26T00:55:42Z",
+    "end_utc": "2026-09-26T01:36:40Z",
+    "exit_code": 0,
+    "workers": 8,
+    "episodes": 400,
+    "timesteps": 189035,
+    "elapsed_seconds_reported": 2457,
+    "elapsed_seconds_from_utc": 2458
+  },
+  "counting_finalize_packed_result": {
+    "source_h5_sha256_matches": 4,
+    "spot_check_samples": 1024,
+    "spot_check_max_abs_diff": 0,
+    "finalize_end_utc": "2026-09-26T01:40:55Z",
+    "finalize_exit_code": 0,
+    "pack_end_utc": "2026-09-26T01:41:04Z",
+    "pack_exit_code": 0,
+    "verify_end_utc": "2026-09-26T01:41:07Z",
+    "verify_exit_code": 0,
+    "scanned_rows": 189035,
+    "mismatches": 0
+  },
+  "counting_data_build_result": {
+    "status": "PASS",
+    "end_utc": "2026-09-26T01:44:56Z",
+    "exit_code": 0,
+    "manifest_sha256": "6b309822aa604a31f6eb0dfb5f02d5482573dc5fa11dc5c4f917880aa92ba986",
+    "source_allocated_bytes": 189703917568,
+    "packed_allocated_bytes": 12449017856,
+    "total_allocated_bytes": 202152935424,
+    "norm_stats_sha256": "a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9",
+    "training_uses": "counting_self_norm_stats",
+    "norm_stats_batches": 1476,
+    "norm_stats_samples": 188928,
+    "norm_stats_drop_last_samples": 107,
+    "strict_subset_episodes": 400,
+    "strict_subset_samples": 189035,
+    "feature_mismatch": 0,
+    "sample_mismatch": 0,
+    "subset_end_utc": "2026-09-26T01:44:49Z",
+    "strict_subset_log_sha256": "cff7d4aa356454895095006b9b7dbc501146b858db8a6b0e30d4d26861e4a1fc",
+    "budget_sha256": "66b440a7c628c2123471a75c1059fe1d27c0858e83ae8428211f2d1c26ddfc3d"
+  },
+  "counting_readability20_result": {
+    "status": "PASS",
+    "run_name": "smoke-orig80k-count-0925",
+    "run_uuid": "ba82f509-8189-4002-809a-021f11d58d97",
+    "start_utc": "2026-09-26T01:45:54Z",
+    "train_start_utc": "2026-09-26T01:45:55Z",
+    "train_end_utc": "2026-09-26T01:50:36Z",
+    "completion_end_utc": "2026-09-26T01:51:37Z",
+    "state_step": 20,
+    "checkpoint": 19,
+    "restored_leaves": 61,
+    "restored_leaf_dtypes": {
+      "bfloat16": 23,
+      "float32": 38
+    },
+    "checkpoint_allocated_bytes": 11879915520,
+    "checkpoint_logical_bytes": 11879876416,
+    "completion_sha256": "97cd2cdc2c6feb6c9c5612813c64f871cadcb53259a44829ba58bef72549b268",
+    "checkpoint_save_commit_ns": 16201301633,
+    "checkpoint_save_commit_seconds": 16.201301633,
+    "save_disk_peak": "未测，不能从最终大小或保存耗时推导峰值",
+    "exit_code": 0
+  },
+  "next_steps": [
+    "完成并逐项验收当前P1 counting B；四侧P1全部通过后才进入100步。",
+    "从同一冻结TRAIN_HEAD运行两A tentative12/main100并行；两A通过后依次B-full S1、B-count S3，判两组upstream。",
+    "两组upstream均通过后新起B-full+B-count S2并行，再判两组same-entry及每侧至少50完整步交集。",
+    "P1/100全部验收归档后形成下一阶段Beta，执行两库各一对off/on真保存20步并真实恢复、完整输入/状态判定。",
+    "两组20步对照通过后4+4并行perf300、双方结束后CPU恢复、联合report、清理前两receipt；实测后明确三类margin与正式预算，备好同一正式Beta及已批准名称的启动材料，停在真正80k起跑之前。"
+  ],
+  "p1_b_dispatch_preparation": {
+    "source": "docs/training-doc/orig80k-equiv-0925/p1-launch.md",
+    "source_sha256": "e432ec0c22006e6eed4c738c7dd6a3cfa90e2269f8c08fbadeb696894d32b30e",
+    "head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+    "derivation": "仅填固定HEAD/标签，公共父目录改为实体已存在检查，每侧缓存/记录/checkpoint保持全新检查；阶段及强包装不变。运行前另核依赖JSON和GPU。",
+    "dispatchers": [
+      {
+        "path": "v1-store/bench/orig80k-build-preflight-0925/p1-full-b-dispatch-20260926T195426Z.command.txt",
+        "sha256": "081f6a10d2aa9bc0b8726f8454996ff0344541a73defe35274ffdb1ad3c91c58",
+        "syntax": "PASS",
+        "executed": false
+      },
+      {
+        "path": "v1-store/bench/orig80k-build-preflight-0925/p1-count-b-dispatch-20260926T195426Z.command.txt",
+        "sha256": "e22911d0f9bc4f457651e0fc0f663d053e4b0b359971fe1d46575b9e020ec613",
+        "syntax": "PASS",
+        "executed": false
+      }
+    ]
+  },
+  "p1_last_readonly_snapshot": {
+    "utc": "2026-09-26T20:29:31.000370+00:00",
+    "path": "v1-store/bench/orig80k-build-preflight-0925/p1-runtime-resources-20260926T195426Z.jsonl",
+    "second_state_record_pending": true,
+    "note": "该快照早于A结束；当前实际A均已退出并验收通过，B-full运行中。"
+  },
+  "p1_stack_observation": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/p1-stack-observation-20260926T2011.json",
+    "sha256": "e4db686f0be17fcd2d259740b1d674082d1749704621245a450eb89a100b4034",
+    "tool": "py-spy 0.4.2",
+    "capture_exit_by_side": {
+      "full": 0,
+      "count": 0
+    }
+  },
+  "timing20_launch_candidate": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/timing20-launch-candidate-00bdabc-20260926/launch-draft.md",
+    "sha256": "d53e9ae791eececaf525e27e8547e91a15d8ea084ea5df0ac820061004e9f6c3",
+    "status": "draft_only_not_executed",
+    "shell_failure_cases_pass": 11,
+    "run_wrapper_sha256": "45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f",
+    "judge_wrapper_sha256": "17c0d6deea3ab3cd132bf406c968097ff9e7b455c9f22f5e3614c8641d7aafce",
+    "schedule": "full/count两条独立off→on四卡链并行；各库前置完成后推进自己的后续；两组judge独立。"
+  },
+  "p1_readonly_verifier": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/check_p1_records_20260926.py",
+    "sha256": "ce469d04fc29e81fb383a1b514f1602594f88fae08f77a780e3c77f6abf4e728",
+    "selftest_cases_pass": 7,
+    "evidence": "v1-store/bench/orig80k-build-preflight-0925/p1-verifier-evidence-20260926.json",
+    "evidence_sha256": "5ffa707106cc3b50e90a40660b53ec44744fc92ecec35147c5fdc85e33fc1e5f"
+  },
+  "p1_latest_progress": {
+    "utc": "2026-09-26T20:17:51.145978+00:00",
+    "scope": "运行中首段状态前缀，只证实已出现部分记录，非P1完成或轨迹对拍",
+    "sides": {
+      "full": {
+        "state_rows_observed": 1,
+        "first_state_n_leaves": 201,
+        "first_state_finite": true,
+        "first_state_line_sha256": "ed316e63b7c1088a68a2047da82e1f9c31d6ae54bc4b85341a0f896ee2a63ea4",
+        "init_events_observed": 2,
+        "metric_rows_observed": 4
+      },
+      "count": {
+        "state_rows_observed": 1,
+        "first_state_n_leaves": 201,
+        "first_state_finite": true,
+        "first_state_line_sha256": "40b7eef5bbb1a5a607a5624dcd349e36224815cb7ed1602b6cbabdbf4a1a969b",
+        "init_events_observed": 2,
+        "metric_rows_observed": 4
+      }
+    }
+  },
+  "eq100_cpu_config_preview": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-config-preview-20260926T2028/summary.json",
+    "sha256": "54f2c24b29f2a3b1b78347f5d647e4b670fe98124248dbabf80e57de47793e01",
+    "status": {
+      "full": {
+        "field_count_a": 28,
+        "field_count_b": 28,
+        "diffs": {},
+        "status": "PASS"
+      },
+      "count": {
+        "field_count_a": 28,
+        "field_count_b": 28,
+        "diffs": {},
+        "status": "PASS"
+      }
+    },
+    "scope": "仅CPU配置解析，不是100步对拍或真实训练resolved_config结果"
+  },
+  "perf300_launch_draft": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/perf300_launch_draft_20260926.md",
+    "sha256": "0ed9c132094fdf512ab6f878364bba23f4ed2f1bab843f0cb42648ebbd2287ce",
+    "status": "draft_only_not_executed",
+    "bash_blocks_checked": 9,
+    "margin_values": "待真实perf来源；未选择数值"
+  },
+  "p1_a_result": {
+    "status": "PASS",
+    "root_verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/p1-both-a-verification-root-20260926.json",
+      "sha256": "9690fbf0cef0cbd508dc62ffedd4844c356576e1695c4c252a05bb5f3807ff92"
+    },
+    "sides": {
+      "full-a": {
+        "status": "PASS",
+        "elapsed_seconds": 2061.0,
+        "start_utc": "2026-09-26T19:56:57+00:00",
+        "end_utc": "2026-09-26T20:31:18+00:00",
+        "n_leaves_by_segment": [
+          201,
+          201
+        ],
+        "log": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-full-a-20260926T195426Z.log",
+          "bytes": 86803,
+          "sha256": "923dd3f0120c40bbf88f58e6c1e0cedc8aadccb5bd6943a50c718dfc6ca30343"
+        }
+      },
+      "count-a": {
+        "status": "PASS",
+        "elapsed_seconds": 2015.0,
+        "start_utc": "2026-09-26T19:56:57+00:00",
+        "end_utc": "2026-09-26T20:30:32+00:00",
+        "n_leaves_by_segment": [
+          201,
+          201
+        ],
+        "log": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-count-a-20260926T195426Z.log",
+          "bytes": 84947,
+          "sha256": "efef69c76514c2e606db36c714d3f999eaea2044bb9831c594f34a845a51ab65"
+        }
+      }
+    }
+  },
+  "p1_full_b_prelaunch": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/p1-full-b-prelaunch-20260926T195426Z.json",
+    "sha256": "cd6fdc1694535ec01fe5baa430496453d1ea6127cd5cadd13ba1d549070de5e1"
+  },
+  "p1_full_b_dispatch": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/p1-full-b-dispatch-20260926T195426Z.command.txt",
+    "sha256": "081f6a10d2aa9bc0b8726f8454996ff0344541a73defe35274ffdb1ad3c91c58",
+    "actual_launch_exit": 0
+  },
+  "p1_full_b_result": {
+    "status": "PASS",
+    "verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/p1-full-b-verification-root-20260926.json",
+      "sha256": "d1f455d96fc561e233906883fa207f12e7bc7edd3cac687a86c840babdb161b7",
+      "status": "PASS"
+    },
+    "result": {
+      "n_leaves_by_segment": [
+        201
+      ],
+      "module_files": 52,
+      "start_utc": "2026-09-26T20:32:04+00:00",
+      "end_utc": "2026-09-26T20:40:08+00:00",
+      "elapsed_seconds": 484.0,
+      "log": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-full-b-20260926T195426Z.log",
+        "bytes": 44508,
+        "sha256": "ffcea9c4aa6075d39c8750fe3d13033f9b83dbb7718f368dde5ec65266a7a5d8"
+      }
+    }
+  },
+  "p1_count_b_prelaunch": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/p1-count-b-prelaunch-20260926T195426Z.json",
+    "sha256": "516f38dd9a5dbc76d30a042baab68a9610cf33b5eec7dbb78961570f52ba6deb"
+  },
+  "p1_count_b_dispatch": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/p1-count-b-dispatch-20260926T195426Z.command.txt",
+    "sha256": "e22911d0f9bc4f457651e0fc0f663d053e4b0b359971fe1d46575b9e020ec613",
+    "actual_launch_exit": 0
+  },
+  "p1_independent_verifications": {
+    "full-a": {
+      "path": "v1-store/bench/orig80k-build-preflight-0925/p1-full-a-verification-independent-20260926.json",
+      "sha256": "2cad7dcfcb9dfebf634b4bf76e40f1d8fabdcbc095b691980a025b24fb666614"
+    },
+    "count-a": {
+      "path": "v1-store/bench/orig80k-build-preflight-0925/p1-count-a-verification-independent-20260926.json",
+      "sha256": "8c287c5c643045b7e9a2e266e2cf114617b8db1a5912132cd12c73b749497b3f"
+    },
+    "full-b": {
+      "path": "v1-store/bench/orig80k-build-preflight-0925/p1-full-b-verification-independent-20260926.json",
+      "sha256": "bb1de1426f6504ca5bfe9c20ff9f2c423839fffeb5b1af0c5c08970775c355dd"
+    }
+  },
+  "updated_utc": "2026-09-27T02:07:11.207283+00:00",
+  "tracked_and_venvs_frozen": false,
+  "p1_result": {
+    "status": "PASS",
+    "scope": "P1入口/分段/完整有限状态/来源通过；最外最终追加退出证据限制经用户接受；不是轨迹等价。",
+    "verification": {
+      "path": "v1-store/bench/orig80k-build-preflight-0925/p1-four-sides-verification-root-20260926.json",
+      "sha256": "eda0e63e5a81e041474a45dc207c5987a1cc0a2ff1a7fa5789db04cc6d415dcf"
+    },
+    "end_utc": "2026-09-26T20:48:32Z",
+    "outer_exit_evidence_limitation": "最外层最终日志追加动作的真实退出码未被独立外部等待保存，已结束P1无法追取；未见真实失败证据。用户已批准补记此限制并保留输入、标量、状态和来源验收继续，不补造外层返回码。"
+  },
+  "p1_count_b_result": {
+    "status": "PASS",
+    "head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+    "harness_pid": 686830,
+    "module_files": 52,
+    "n_leaves_by_segment": [
+      201
+    ],
+    "dependencies": 208,
+    "session": "orig80k-p1-count-b-20260926T195426Z",
+    "start_utc": "2026-09-26T20:40:40+00:00",
+    "end_utc": "2026-09-26T20:48:32+00:00",
+    "elapsed_seconds": 472.0,
+    "command_sha256": "e78711a0354eb43ae0a13d2b67dcbaaa1dc54f841b2e0f532d394b21f508226a",
+    "wrapper_pid": 686819,
+    "body_pid": 686821,
+    "checkpoint_work_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-p1-20260926T195426Z/checkpoints/count-b/mme_vla_suite/p1-orig80k-count-b-20260926T195426Z",
+    "jax_cache": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/orig80k-p1-20260926T195426Z/count-b",
+    "init_calls": 1,
+    "log": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-p1-count-b-20260926T195426Z.log",
+      "bytes": 44572,
+      "sha256": "8c0a7e2b32e9d5e62761f70b2d8f2d5aa6e707143a77504b9ff55b4c376f7cfb"
+    },
+    "record_files": {
+      "harness_meta.json": {
+        "bytes": 1606,
+        "sha256": "7298b7d1d46467463962d4067c497ea8fbe7a264ee29a03c295c9719819e3fdf"
+      },
+      "init_ownership.json": {
+        "bytes": 373,
+        "sha256": "35800dc51d898ce62d9c5e869e7d8b3820ac06da835f7e11e0ee0fdfd6f25538"
+      },
+      "jax_cache.json": {
+        "bytes": 405,
+        "sha256": "0f9f84ca0b113e40ef9e0b6cd7d8c41bfda9d27a02aa74120f0bbc616522432b"
+      },
+      "metrics.jsonl": {
+        "bytes": 989,
+        "sha256": "78a77f40664b0701a7eed9cbd88c99f32cffbc1fe6969e97f2929cef043082b2"
+      },
+      "metrics_all.jsonl": {
+        "bytes": 989,
+        "sha256": "78a77f40664b0701a7eed9cbd88c99f32cffbc1fe6969e97f2929cef043082b2"
+      },
+      "provenance.json": {
+        "bytes": 12682,
+        "sha256": "d93894cba26d19fbf04dd864a601fcd30b0a98b9169110f64a951f2f42a5981a"
+      },
+      "provenance_start.json": {
+        "bytes": 507,
+        "sha256": "b211f31529adf02ef1f9bc9d670f278fefde08243f588634c094e4e6acf95681"
+      },
+      "resolved_config.json": {
+        "bytes": 2511,
+        "sha256": "15b8756c587fba201838010fbebc87b65bf5450b9769bc2d90d8645854730021"
+      },
+      "run_status.json": {
+        "bytes": 38,
+        "sha256": "97d327e20b36da5f388b1453f669da1fa43b3954c452e22756d42d6c9d826d06"
+      },
+      "runtime_fingerprint.json": {
+        "bytes": 10287,
+        "sha256": "ef87e73685ec99e21e214f27f3cb4c70a9d1e2026b875f2148ae6222e63e27c8"
+      },
+      "runtime_fingerprint_end.json": {
+        "bytes": 10287,
+        "sha256": "ef87e73685ec99e21e214f27f3cb4c70a9d1e2026b875f2148ae6222e63e27c8"
+      },
+      "state_digests.jsonl": {
+        "bytes": 59654,
+        "sha256": "40b7eef5bbb1a5a607a5624dcd349e36224815cb7ed1602b6cbabdbf4a1a969b"
+      }
+    },
+    "venv_evidence": "固定driver/outer命令、已知harness的sys.prefix入口断言及当前独立解释器只读查询；JSON未直接记录sys.prefix",
+    "scope": "P1入口与记录完整性；没有比较A/B标量或状态相等，不是100步基线"
+  },
+  "eq100_tag": "20260926T210415Z",
+  "eq100_root": "v1-store/bench/orig80k-eq100-20260926T210415Z",
+  "eq100_a_dispatch": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-a-dispatch-20260926T210415Z.command.txt",
+    "sha256": "93b17b2e0f64449b21facf95ed55012b1b74d2391365955e4500e1373175fe86",
+    "source": "docs/training-doc/orig80k-equiv-0925/train100-launch.md",
+    "source_sha256": "6668d34874174366b4b9643b00444bc09153eaccd25a3f0047e1be87f2da0b30",
+    "executed": true,
+    "actual_launch_exit": 0
+  },
+  "latest_user_instruction": {
+    "quote": "继续工作 一路做到起泡前 有问题问用户",
+    "interpretation": "持续完成所有正式80k起跑前闸门和材料；本轮停在正式启动之前，遇需裁决问题立即询问用户。",
+    "recorded_utc": "2026-09-26T21:05:15.574244+00:00"
+  },
+  "stop_before_formal_80k_launch": true,
+  "eq100_preflight": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-preflight-20260926T210415Z.json",
+    "sha256": "12219976ca38d58acd4a9b6f2b20f2a17ae91f488fab29bef051f1e7e1ae83d1",
+    "status": "PASS"
+  },
+  "eq100_stage_dispatchers": {
+    "source": "docs/training-doc/orig80k-equiv-0925/train100-launch.md",
+    "source_sha256": "6668d34874174366b4b9643b00444bc09153eaccd25a3f0047e1be87f2da0b30",
+    "derivation": "仅填固定HEAD/tag；阶段父目录改为已存在实体检查，训练阶段仍要求各自记录/工作根/缓存全新；原各阶段命令与strong wrapper逐字沿用。",
+    "stages": [
+      {
+        "stage": "full-s1",
+        "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-full-s1-dispatch-20260926T210415Z.command.txt",
+        "sha256": "3d2c16ae753a96013d945bb7a1c6538140374d08f2cfc1f22a8008b254b118f9",
+        "syntax": "PASS",
+        "executed": true,
+        "pre_exit_guard_sha256": "42d51dfc754ed5faa5ab4965bafb2b59b8e9b5a6ca9373ef8e14c304ec8f10bd",
+        "exit_guard": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b",
+        "pre_exit_guard_backup": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-pre-exit-guard-dispatches-20260926T210415Z/eq100-full-s1-dispatch-20260926T210415Z.command.txt",
+        "actual_dispatch_exit": 0
+      },
+      {
+        "stage": "count-s3",
+        "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-count-s3-dispatch-20260926T210415Z.command.txt",
+        "sha256": "01ee8f258459f8dedd0b4178ec49103fe9cd5f2bffbf4d264997f14a000751fe",
+        "syntax": "PASS",
+        "executed": true,
+        "pre_exit_guard_sha256": "18ae615aa206108fe2701a0eca6bb357adaf9ee7f591a01d61d1024fc8c3690b",
+        "exit_guard": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b",
+        "pre_exit_guard_backup": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-pre-exit-guard-dispatches-20260926T210415Z/eq100-count-s3-dispatch-20260926T210415Z.command.txt",
+        "actual_dispatch_exit": 0
+      },
+      {
+        "stage": "upstream-judges",
+        "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-upstream-judges-dispatch-20260926T210415Z.command.txt",
+        "sha256": "093185717b2778abee656b04f8430dcbca5d350720ab001f2994b581b57ddd4e",
+        "syntax": "PASS",
+        "executed": false,
+        "pre_exit_guard_sha256": "41d119a60041971bcc9d93f13e47403cd876bf2151db4a360ce4bd6994a45f74",
+        "exit_guard": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b",
+        "pre_exit_guard_backup": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-pre-exit-guard-dispatches-20260926T210415Z/eq100-upstream-judges-dispatch-20260926T210415Z.command.txt",
+        "superseded_by_independent_dispatchers": true
+      },
+      {
+        "stage": "s2-pair",
+        "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-s2-pair-dispatch-20260926T210415Z.command.txt",
+        "sha256": "98a487cca8d5943065db9c09370eb0988a92c16381737ed4470d5bb89496795c",
+        "syntax": "PASS",
+        "executed": true,
+        "pre_exit_guard_sha256": "f4cb52ee20758a1dea1d8224b74ae95cc6e7ffdf8d58a180ecd93d96bfeb4f3e",
+        "exit_guard": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b",
+        "pre_exit_guard_backup": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-pre-exit-guard-dispatches-20260926T210415Z/eq100-s2-pair-dispatch-20260926T210415Z.command.txt",
+        "actual_dispatch_exit": 0
+      },
+      {
+        "stage": "same-judges",
+        "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-same-judges-dispatch-20260926T210415Z.command.txt",
+        "sha256": "29c0f02cff4aacd073d243714c3832f7a55cb90ed8b680e57e4528845b989a34",
+        "syntax": "PASS",
+        "executed": true,
+        "pre_exit_guard_sha256": "9bcbf8646df774055649e1b5dc5b9ec41c426ee35e7d63381a8872f27493fb93",
+        "exit_guard": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b",
+        "pre_exit_guard_backup": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-pre-exit-guard-dispatches-20260926T210415Z/eq100-same-judges-dispatch-20260926T210415Z.command.txt",
+        "actual_dispatch_exit": 0
+      },
+      {
+        "stage": "final-checks",
+        "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-final-checks-dispatch-20260926T210415Z.command.txt",
+        "sha256": "c710de0d9cadfa2d4603cd3c56a827110017d33c84d91dfb667adc11d46b665f",
+        "syntax": "PASS",
+        "executed": true,
+        "pre_exit_guard_sha256": "b8ec76f1fff71a268b97c38a2b091b54b6a440549eeb10bf99757c21ffb964c7",
+        "exit_guard": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b",
+        "pre_exit_guard_backup": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-pre-exit-guard-dispatches-20260926T210415Z/eq100-final-checks-dispatch-20260926T210415Z.command.txt",
+        "actual_dispatch_exit": 0
+      }
+    ],
+    "exit_guard_change": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-exit-guard-dispatch-change-20260926T210415Z.json",
+      "sha256": "cdcb5e9c6c348758274578acfb9f1a1563466161c508c03a7b12795c12d216a4",
+      "scope": "仅6份尚未执行的阶段dispatch改为先retain/identity后释放门闩；已执行A命令不改；原harness/TRAIN_ARGS/命令文件正文不改。"
+    }
+  },
+  "resolved_user_decisions": [
+    {
+      "id": "outer_final_append_status_observation_gap_20260926",
+      "status": "resolved",
+      "detected_utc": "2026-09-26T21:14:41.786417+00:00",
+      "evidence": {
+        "path": "v1-store/bench/orig80k-build-preflight-0925/perf300-wrapper-tests-20260926/results/results.tsv",
+        "sha256": "7c5ac6e50803708cd36020552e924c0993cfafcfdf00bd285b008491eb72f7ea"
+      },
+      "finding": "纯shell注入：最终append完整写出WRAPPER_EXIT_CODE=0后返回37，wrapper实际返回1，但仅看日志的require_perf_stage返回0。不是已发生的真实训练故障。",
+      "proposal": "当前两100任务及后续任务保留所属tmux结束窗口，读取pane_dead_status独立核验；已结束P1补记不能追取最外实际退出码的限制。",
+      "current_jobs": "保持两A100运行；暂停其后的依赖阶段，等用户裁决；尚未改当前窗口选项/源码/环境。",
+      "user_quote": "补记P1限制，补独立退出取证后继续（推荐）",
+      "resolved_utc": "2026-09-26T21:18:27.153637+00:00"
+    },
+    {
+      "id": "input_outer_final_append_exit_evidence_scope",
+      "status": "resolved",
+      "question": "4个CPU collector与2个input judge是否同样补记最外退出限制并沿用INPUT结果",
+      "evidence": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/input-outer-exit-scope-supplement-20260926.md",
+        "sha256": "bd8c37ba659b2dca0db52f1ebf54c5ff9e925416acbe9e7f8b0e3b46dfb2fd8a"
+      },
+      "scope": "子命令实际返回0及输入数值/顺序/来源结果保留；新的例外范围尚待用户确认，未自动外推P1批准。",
+      "user_quote": "同样补记限制，沿用INPUT结果（推荐）",
+      "resolved_utc": "2026-09-26T22:11:03.790410+00:00"
+    }
+  ],
+  "eq100_current_exit_retention": [
+    {
+      "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-full-a-exit-retention-20260926T210415Z.json",
+      "sha256": "e7a0e0c6ff20142c4e50e3c31886997013166cda10c08878a7f4ab40c698fe9d",
+      "session": "orig80k-eq100-full-a-20260926T210415Z",
+      "window_id": "@552",
+      "pane_id": "%552",
+      "pane_pid": 704720,
+      "before": "remain-on-exit* off\n",
+      "after": "remain-on-exit on\n",
+      "set_option_exit": 0,
+      "configured_utc": "2026-09-26T21:18:27.141423+00:00",
+      "initial": [
+        "orig80k-eq100-full-a-20260926T210415Z",
+        "@552",
+        "%552",
+        "704720",
+        "0",
+        "",
+        "",
+        ""
+      ],
+      "after_configuration": [
+        "orig80k-eq100-full-a-20260926T210415Z",
+        "@552",
+        "%552",
+        "704720",
+        "0",
+        "",
+        "",
+        ""
+      ],
+      "scope": "训练进行中仅设置本窗口结束后保留；尚无真实退出结论"
+    },
+    {
+      "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-count-a-exit-retention-20260926T210415Z.json",
+      "sha256": "5da022a4563e27e0b89b684e5652a7c9776bed5681e688a4d317b72ec9d74a4a",
+      "session": "orig80k-eq100-count-a-20260926T210415Z",
+      "window_id": "@553",
+      "pane_id": "%553",
+      "pane_pid": 704733,
+      "before": "remain-on-exit* off\n",
+      "after": "remain-on-exit on\n",
+      "set_option_exit": 0,
+      "configured_utc": "2026-09-26T21:18:27.152700+00:00",
+      "initial": [
+        "orig80k-eq100-count-a-20260926T210415Z",
+        "@553",
+        "%553",
+        "704733",
+        "0",
+        "",
+        "",
+        ""
+      ],
+      "after_configuration": [
+        "orig80k-eq100-count-a-20260926T210415Z",
+        "@553",
+        "%553",
+        "704733",
+        "0",
+        "",
+        "",
+        ""
+      ],
+      "scope": "训练进行中仅设置本窗口结束后保留；尚无真实退出结论"
+    }
+  ],
+  "eq100_exit_identity_schema": 1,
+  "p1_archive_draft": {
+    "path": "v1-store/bench/orig80k-p1-20260926T195426Z/archive-staging/p1-result-draft.md",
+    "sha256": "aa2bf921ffbc676bc1444c00bf42ff9f6378fccc3ff5d336c30085e2ea76b1c4",
+    "references_path": "v1-store/bench/orig80k-p1-20260926T195426Z/archive-staging/p1-archive-references.json",
+    "references_sha256": "e3e86e7a5126e95094fedc0f039482c08ab5aef2bacb4425176bd07b797b771b",
+    "scope": "含用户接受的P1最外退出证据限制；尚未写入tracked档案"
+  },
+  "tmux_exit_backend_probes": {
+    "20260926T211613Z": {
+      "result": {
+        "path": "v1-store/bench/orig80k-build-preflight-0925/tmux-exit-probe-20260926T211613Z/result.json",
+        "sha256": "107cb0a2bf5a1a58c06ab538dc6232172067ff7da491337baf1c0a37be6dca6e"
+      },
+      "cleanup": {
+        "path": "v1-store/bench/orig80k-build-preflight-0925/tmux-exit-probe-20260926T211613Z/cleanup.json",
+        "sha256": "412aeea7ac7c6e4759c4c228818ffe2f2ce1a4515e2e6c870f8a25eedf03bb0b"
+      },
+      "observed_log_exit": 0,
+      "tmux_observed_actual_exit": 1
+    },
+    "20260926T211743Z": {
+      "result": {
+        "path": "v1-store/bench/orig80k-build-preflight-0925/tmux-exit-probe-20260926T211743Z/result.json",
+        "sha256": "228bf57cdb76cffb800f2e96ca3e9bb34bbca18cf5f6a8129632c50c2e64ae83"
+      },
+      "cleanup": {
+        "path": "v1-store/bench/orig80k-build-preflight-0925/tmux-exit-probe-20260926T211743Z/cleanup.json",
+        "sha256": "73a329c7b4a925924ffe8ffa5b66f0f929bfdd44b3acd23f6ed24d614cf7deca"
+      },
+      "observed_log_exit": 0,
+      "tmux_observed_actual_exit": 0
+    }
+  },
+  "eq100_a_result": {
+    "status": "PASS",
+    "scope": "两份上游100步基线的记录/配置/finite/来源及独立退出验收；未做A/B轨迹judge",
+    "verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-both-a-verification-root-20260926.json",
+      "bytes": 11797,
+      "sha256": "038984869fb89eaf00b2e3eadd3758377588f040ef23e6d7038ded29cc0b479b"
+    },
+    "capture_parent_exec_actual_exit": 0,
+    "record_verifier_actual_exit": 0,
+    "sides": {
+      "full-a": {
+        "status": "PASS",
+        "main_rows": 100,
+        "tentative_rows": 12,
+        "state_steps": [
+          50,
+          99
+        ],
+        "n_leaves_by_state": [
+          201,
+          201
+        ],
+        "end_utc": "2026-09-26T21:40:15+00:00",
+        "elapsed_seconds": 2047.0,
+        "outer_exit": {
+          "identity": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-a-20260926T210415Z.identity.json",
+            "bytes": 1378,
+            "sha256": "42b09b76091ed9b7c7784f1d6788db93089df287df34d61a4147a5393bd848da"
+          },
+          "receipt": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-a-20260926T210415Z.exit.json",
+            "bytes": 4653,
+            "sha256": "e612faf74a8c200103664acce4ea6bad94d60342320fc0bdf034f97142a045ff"
+          },
+          "capture": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-a-20260926T210415Z.exit.capture.json",
+            "bytes": 2358,
+            "sha256": "0cecec64ce5889fe775169a291f1c193568adb84fc3a3541d19387bcce4b8e85"
+          },
+          "guard_tool": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+            "bytes": 20398,
+            "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+          },
+          "capture_actual_exit_code": 0,
+          "pane_dead": 1,
+          "pane_dead_status": 0,
+          "pane_id": "%552",
+          "pane_pid": 704720,
+          "scope": "父进程自身返回码另由宿主/controller留证，本字段不自报它"
+        }
+      },
+      "count-a": {
+        "status": "PASS",
+        "main_rows": 100,
+        "tentative_rows": 12,
+        "state_steps": [
+          50,
+          99
+        ],
+        "n_leaves_by_state": [
+          201,
+          201
+        ],
+        "end_utc": "2026-09-26T21:40:19+00:00",
+        "elapsed_seconds": 2051.0,
+        "outer_exit": {
+          "identity": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-a-20260926T210415Z.identity.json",
+            "bytes": 1383,
+            "sha256": "da8697c92033d7c4e9db62a57c9f8ad44cef2d35a2a5b09c06696ef1ceea8441"
+          },
+          "receipt": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-a-20260926T210415Z.exit.json",
+            "bytes": 4669,
+            "sha256": "3e09207ebcaf50c71258a29fbf70adad990a2363d80736ee43457b3f49bbfe8e"
+          },
+          "capture": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-a-20260926T210415Z.exit.capture.json",
+            "bytes": 2365,
+            "sha256": "dd2235fbdcdce6cc171d8f5dc8508b298a1aad053f52206597808d6d9561c702"
+          },
+          "guard_tool": {
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+            "bytes": 20398,
+            "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+          },
+          "capture_actual_exit_code": 0,
+          "pane_dead": 1,
+          "pane_dead_status": 0,
+          "pane_id": "%553",
+          "pane_pid": 704733,
+          "scope": "父进程自身返回码另由宿主/controller留证，本字段不自报它"
+        }
+      }
+    },
+    "independent_verification": {
+      "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-both-a-verification-independent-20260926.json",
+      "sha256": "c1b23036b341a8c4081225a98850f4fa220b5f0de6f68a4c6d8fb96c4f766488",
+      "actual_checker_exit": 0
+    }
+  },
+  "tmux_exit_guard": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+    "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b",
+    "frozen": true,
+    "stdlib_simulation_cases_pass": 18,
+    "real_backend_integration": {
+      "path": "v1-store/bench/orig80k-build-preflight-0925/tmux-guard-integration-20260926T214038Z/summary.json",
+      "sha256": "a8d148c24ed8d9f0692dcd20bc81fa5ed8bdc693b508de2bbdcb37b1fb1c804a",
+      "real_cases_pass": 3,
+      "root_exec_actual_exit": 0,
+      "all_three_owned_sessions_cleaned_with_exact_raw_line_difference": true
+    }
+  },
+  "eq100_aux_checker": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/check_eq100_records_20260926.py",
+    "sha256": "68ad04bf13e31c5212f3a2151751e3e7f96773df15182793c2d96c5955df32ac",
+    "tests_pass": 43,
+    "scope": "run完整性与独立退出，不代替正式轨迹/重叠judge"
+  },
+  "input_outer_exit_limitation_accepted": true,
+  "eq100_full_s1_prelaunch": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-s1-prelaunch-20260926T210415Z.json",
+    "sha256": "28791afa493ce31b98a5a1925e34a904da69417f147b8f70affb1ae0aeb95026"
+  },
+  "input_outer_exit_approved_note": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/input-outer-exit-scope-approved-20260926.md",
+    "sha256": "c9b3149476fea956f1baf2b473667b2c5221e9e24c0922ea4004fe521d4b093a"
+  },
+  "parallelism_user_instruction": {
+    "quotes": [
+      "尽可能并行做",
+      "你有8张卡"
+    ],
+    "recorded_utc": "2026-09-26T22:18:22.464276+00:00",
+    "application": "保留100 S1/S3真实独占基线；之后S2按4+4，timing20改为full与count两条off→on并行链，300perf按4+4；独立CPU判定/归档并行。不省略既定依赖或逐位判据。"
+  },
+  "eq100_full_s1_result": {
+    "status": "PASS",
+    "scope": "单run完整性/finite/来源/真实退出；正式轨迹judge未运行",
+    "verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-s1-verification-root-20260926.json",
+      "bytes": 6001,
+      "sha256": "eee77deb84ae3a72d674cf331fad4b06d3529120400c8edfa233d6f51d35c373"
+    },
+    "capture_parent_exec_actual_exit": 0,
+    "record_verifier_actual_exit": 0,
+    "end_utc": "2026-09-26T22:29:49+00:00",
+    "elapsed_seconds": 1113.0
+  },
+  "eq100_count_s3_prelaunch": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-s3-prelaunch-20260926T210415Z.json",
+    "sha256": "81cf1d1e8ea6d6a7258a33d4d2d73b74f5ec8cdcff6cc746e85263931153e840"
+  },
+  "eq100_independent_upstream_judges": {
+    "source": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-upstream-judges-dispatch-20260926T210415Z.command.txt",
+      "sha256": "093185717b2778abee656b04f8430dcbca5d350720ab001f2994b581b57ddd4e"
+    },
+    "rationale": "按用户尽可能并行要求，两个CPU judge按各自真实数据依赖分别调度；原judge argv/env与所有数值/来源判据不变，S2仍等两组都通过。",
+    "dispatchers": [
+      {
+        "group": "full",
+        "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-full-upstream-judge-independent-dispatch-20260926T210415Z.command.txt",
+        "sha256": "4331d4871e538c5aaaa5c4a391b2aa449b8fccfb0d4cd772c9b3da76734520d8",
+        "executed": true,
+        "actual_dispatch_exit": 0
+      },
+      {
+        "group": "count",
+        "path": "v1-store/bench/orig80k-build-preflight-0925/eq100-count-upstream-judge-independent-dispatch-20260926T210415Z.command.txt",
+        "sha256": "93a4af95997bccad255855daaf9e7e3120a933ea577eb645c4f2f496c5ae031f",
+        "executed": true,
+        "actual_dispatch_exit": 0
+      }
+    ]
+  },
+  "eq100_full_upstream_eq": {
+    "status": "PASS",
+    "verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-upstream-judge-verification-root-20260926.json",
+      "bytes": 2635,
+      "sha256": "cb19125eea2f71f1536ac8b4490d6cd513861812470ec8c0b5a86dc0c11e8163"
+    },
+    "steps": 100,
+    "scalar_keys": 5,
+    "hex_mismatches": 0,
+    "state_steps": [
+      50,
+      99
+    ],
+    "state_mismatches": 0,
+    "actual_outer_exit": 0,
+    "scope": "本机固定确定性档full上游A与当前S1的100步等价；不是count或S2/perf/80k结果",
+    "independent_verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-upstream-judge-verification-independent-20260926.json",
+      "sha256": "e95102d9121294e0fb80fc6334e32ef1feff332b5edf389a00c627512f22f94f",
+      "actual_checker_exit": 0
+    }
+  },
+  "eq100_archive_staging": {
+    "a_core": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/archive-staging/eq100-a-archive-references.json",
+      "bytes": 44390,
+      "sha256": "e4c7fa4b759e025ea909dfa7738e95886222827f659b2f93eb4f830d0f8fbc05"
+    },
+    "full_upstream_increment": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/archive-staging/full-upstream-increment-20260926/eq100-full-upstream-archive-increment.json",
+      "bytes": 78007,
+      "sha256": "1c023563d384342b085f794900783501d93ee278def78e1f39c4d98eee1f1a67"
+    }
+  },
+  "eq100_count_s3_result": {
+    "status": "PASS",
+    "verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-s3-verification-root-20260926.json",
+      "bytes": 6011,
+      "sha256": "9df1d4c5db59b2cdc048c8db56eac8642a80095e2d783f92b846f0eccaef2c35"
+    },
+    "capture_parent_exec_actual_exit": 0,
+    "record_verifier_actual_exit": 0,
+    "end_utc": "2026-09-26T22:49:33+00:00",
+    "elapsed_seconds": 1134.0,
+    "independent_verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-s3-verification-independent-20260926.json",
+      "sha256": "11ce1c9dfd856f49cfc87796d4df3caee7273e7ee748f20337162945e2ea562e",
+      "actual_checker_exit": 0
+    }
+  },
+  "eq100_count_upstream_eq": {
+    "status": "PASS",
+    "verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-upstream-judge-verification-root-20260926.json",
+      "bytes": 2635,
+      "sha256": "382c9bf19f8ded3d15c6307a4c8d78141ba3a2786d8cd961fa807464e4ee6792"
+    },
+    "steps": 100,
+    "scalar_keys": 5,
+    "hex_mismatches": 0,
+    "state_steps": [
+      50,
+      99
+    ],
+    "state_mismatches": 0,
+    "actual_outer_exit": 0,
+    "scope": "本机固定确定性档count上游A与当前S3的100步等价；不是S2/perf/80k结果",
+    "independent_verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-upstream-judge-verification-independent-20260926.json",
+      "sha256": "22bfa7a15872ca2f5d2d4f35f031a1adef52dd3a159950028fbf9084f737a820",
+      "actual_checker_exit": 0
+    }
+  },
+  "eq100_s2_prelaunch": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-s2-prelaunch-20260926T210415Z.json",
+    "bytes": 2096,
+    "sha256": "4510229181d8635d10aa723ccc872f1a9ca1664647bc68b3a83d7ee736419031"
+  },
+  "post_eq100_code_integration_candidates": {
+    "guard": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-integration-candidate-00bdabc-20260926/integrate.patch",
+      "bytes": 40365,
+      "sha256": "eb21d84bff457f4434487ae6980706e5c08c76848140362239252dbdd8922c23",
+      "applied_to_main": true
+    },
+    "timing20": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-integration-candidate-00bdabc-20260926/integrate.patch",
+      "bytes": 20107,
+      "sha256": "cf4bb4d3f8246f0c12675e6372f05eadde3c87e393b4d9577506956da4a7c33c",
+      "applied_to_main": true
+    }
+  },
+  "eq100_s2_result": {
+    "status": "PASS",
+    "verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-both-s2-verification-root-20260926.json",
+      "bytes": 11521,
+      "sha256": "dfe371a3a8e3a38e49e61074dda8166261c9d90f7adb4afbce8a78071a3ef173"
+    },
+    "capture_parent_exec_actual_exit": 0,
+    "record_verifier_actual_exit": 0
+  },
+  "eq100_full_same_eq": {
+    "status": "PASS",
+    "verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-same-judge-verification-root-20260926.json",
+      "bytes": 2796,
+      "sha256": "f3f52bef9e75f3e3556adf950cfb912359369a1b240ea5e8cd406e603a7d5062"
+    },
+    "steps": 100,
+    "scalar_keys": 5,
+    "hex_mismatches": 0,
+    "state_steps": [
+      50,
+      99
+    ],
+    "state_mismatches": 0,
+    "actual_outer_exit": 0,
+    "overlap": {
+      "begin": 1790463191.363476,
+      "complete_steps": [
+        90,
+        85
+      ],
+      "end": 1790463823.3560028,
+      "seconds": 631.9925267696381,
+      "window_steps": [
+        10,
+        99
+      ]
+    },
+    "scope": "本机固定确定性档本组solo与concurrent前100步等价及真实4+4重叠；不代表20/perf/80k通过"
+  },
+  "eq100_count_same_eq": {
+    "status": "PASS",
+    "verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-same-judge-verification-root-20260926.json",
+      "bytes": 2803,
+      "sha256": "bfa8908f236974dbc2d362c16b06be06345b5f9cbf381ead8c1b9709d56fe063"
+    },
+    "steps": 100,
+    "scalar_keys": 5,
+    "hex_mismatches": 0,
+    "state_steps": [
+      50,
+      99
+    ],
+    "state_mismatches": 0,
+    "actual_outer_exit": 0,
+    "overlap": {
+      "begin": 1790463191.363476,
+      "complete_steps": [
+        85,
+        90
+      ],
+      "end": 1790463823.3560028,
+      "seconds": 631.9925267696381,
+      "window_steps": [
+        10,
+        99
+      ]
+    },
+    "scope": "本机固定确定性档本组solo与concurrent前100步等价及真实4+4重叠；不代表20/perf/80k通过"
+  },
+  "eq100_result": {
+    "status": "PASS",
+    "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+    "six_run_verification": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-six-runs-verification-root-20260926.json",
+      "bytes": 33785,
+      "sha256": "f23eb261938939958e122cf5138d604175ffc922f2f2552293351e3b0d379648"
+    },
+    "actual_six_run_verifier_exit": 0,
+    "judges": {
+      "full_upstream_eq": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-upstream-judge-verification-root-20260926.json",
+        "bytes": 2635,
+        "sha256": "cb19125eea2f71f1536ac8b4490d6cd513861812470ec8c0b5a86dc0c11e8163"
+      },
+      "count_upstream_eq": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-upstream-judge-verification-root-20260926.json",
+        "bytes": 2635,
+        "sha256": "382c9bf19f8ded3d15c6307a4c8d78141ba3a2786d8cd961fa807464e4ee6792"
+      },
+      "full_same_eq": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-full-same-judge-verification-root-20260926.json",
+        "bytes": 2796,
+        "sha256": "f3f52bef9e75f3e3556adf950cfb912359369a1b240ea5e8cd406e603a7d5062"
+      },
+      "count_same_eq": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-count-same-judge-verification-root-20260926.json",
+        "bytes": 2803,
+        "sha256": "bfa8908f236974dbc2d362c16b06be06345b5f9cbf381ead8c1b9709d56fe063"
+      }
+    },
+    "scope": "本机A100、确定性档两库前100步，上游/当前与单跑/并跑严格等价；非20/perf/80k结论",
+    "independent_final_audit_pending": false,
+    "independent_final_audit": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/eq100-both-same-judge-verification-independent-20260926.json",
+      "bytes": 12770,
+      "sha256": "9fcf54005bdb5766eade0aea4aa89d18cefdf507c3bdded83691e92c9f255e3f",
+      "actual_checker_exit": 0
+    }
+  },
+  "source_freeze_released_utc": "2026-09-26T23:13:22.764759+00:00",
+  "timing20_tag": "20260926T231534Z",
+  "timing20_runs": {
+    "full-off": "timing20-full-off-0926-20260926T231534Z",
+    "full-on": "timing20-full-on-0926-20260926T231534Z",
+    "count-off": "timing20-count-off-0926-20260926T231534Z",
+    "count-on": "timing20-count-on-0926-20260926T231534Z"
+  },
+  "timing20_plan_archive": "orig80k-timing20-0926",
+  "post_eq100_local_validation": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/post-eq100-local-validation-20260926.json",
+    "sha256": "646bf50702e46c0874db55abb9324874e2e31822ae3209aa4348b970d1dc7a35",
+    "bytes": 1322,
+    "status": "PASS",
+    "guard_cases": 18,
+    "wrapper_cases": 11,
+    "runtime_binding_cases": 11
+  },
+  "timing20_train_head": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+  "timing20_source_freeze_utc": "2026-09-27T00:07:09.958515+00:00",
+  "rules_merge_20260927": {
+    "user": "没有冲突是吧 继续工作",
+    "local_parent": "f7a9757656ae38391319c4001d823bc06e62621f",
+    "remote_parent": "d710d8489b88aa75770af3452fd7c9b374deaef7",
+    "merge_head": "40de98a1b3b60072e80bcf82dc4fbdf64d329b6c",
+    "merge_actual_exit": 0,
+    "push_actual_exit": 0,
+    "text_conflicts": false,
+    "files": [
+      "AGENTS.md",
+      "CLAUDE.md",
+      "greatlakes.md"
+    ],
+    "training_source_changed": false,
+    "six_untracked_docs_preserved": true
+  },
+  "timing20_beta": {
+    "head": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+    "commit_actual_exit": 0,
+    "push_actual_exit": 0,
+    "porcelain": "",
+    "source_and_venv_frozen": false,
+    "started": true
+  },
+  "timing20_preflight": {
+    "status": "PASS",
+    "actual_exit": 0,
+    "parent_actual_exit": 0,
+    "report": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-reuse-preflight-20260927.json",
+      "bytes": 124382,
+      "sha256": "0cf8c97a31c31419369368a4cfb61ac95c928d681c578da1a9c2e573ed2f6832"
+    },
+    "process": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-reuse-preflight-process-20260927.json",
+      "bytes": 1301,
+      "sha256": "69276d03b1004c45ba941e7154aeaeb70c97f4ccf7408a26965a2cbe46124943"
+    }
+  },
+  "timing20_dispatch_manifest": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-dispatch-manifest-20260927.json",
+    "bytes": 3618,
+    "sha256": "72601e86d2eacf3ce5f1f75a313e865149accc2a5462284aacc6619f9e60853f"
+  },
+  "timing20_start_off_process": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-start-off-process-20260927.json",
+    "bytes": 1249,
+    "sha256": "d12ed0fa7c14d7168485d28b131164345afeaca5f9952e5fd5a6673f44b28245"
+  },
+  "timing20_start_off_parent_actual_exit": 0,
+  "timing20_jobs": {
+    "full-off": {
+      "run": "timing20-full-off-0926-20260926T231534Z",
+      "session": "orig80k-timing20-full-off-0926-20260926T231534Z",
+      "pane_id": "%567",
+      "pane_pid": 1158488,
+      "window_id": "@567",
+      "identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-off-0926-20260926T231534Z.identity.json",
+        "bytes": 1525,
+        "sha256": "f0dab1074638274ba71cb2739d44c6420d6ec2a01e792cd82afea8fea878e440"
+      },
+      "launch_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-off-0926-20260926T231534Z.launch.process.json",
+        "bytes": 4185,
+        "sha256": "232e94400a7a2f6e7aa1fccdbdd59edf93a0f95885dacabfb002c3e3a9b0524c"
+      },
+      "wrapper_log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-off-0926-20260926T231534Z.wrapper.log",
+      "status": "completion_and_native_exit_pass",
+      "monitor_exec_session": 5724,
+      "gpus": "0,1,2,3",
+      "observed_start_utc": "2026-09-27T00:09:50Z",
+      "end_utc": "2026-09-27T00:21:15Z",
+      "run_uuid": "3522f36c-417c-4fe9-901f-85cbe85eb855",
+      "receipt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-off-0926-20260926T231534Z.exit.json",
+        "bytes": 5344,
+        "sha256": "a0a4663b8962548a5e7d06352db41f59fba4fd2a895191ade615f7033fe18a60"
+      },
+      "capture_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-off-0926-20260926T231534Z.exit.capture.json",
+        "bytes": 3975,
+        "sha256": "d34857227d867ffd7fef4040be05f342b6fb256fa10da18e4873e6826e7c6b4d"
+      },
+      "completion": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/completion.json",
+        "bytes": 20698,
+        "sha256": "ae87733f0bf86735cf393850de04717d852545fde57402f6af97ee2152aec35c"
+      },
+      "monitor_actual_exit": 0,
+      "independent_verification": "PASS"
+    },
+    "count-off": {
+      "run": "timing20-count-off-0926-20260926T231534Z",
+      "session": "orig80k-timing20-count-off-0926-20260926T231534Z",
+      "pane_id": "%568",
+      "pane_pid": 1158558,
+      "window_id": "@568",
+      "identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-off-0926-20260926T231534Z.identity.json",
+        "bytes": 1530,
+        "sha256": "7ce407c5dc5a2c2a2aa374f4f519c905ea17a25c0a8b2a54dc4facc9eb61bc5d"
+      },
+      "launch_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-off-0926-20260926T231534Z.launch.process.json",
+        "bytes": 4194,
+        "sha256": "f2531f2ab7327481ea340112304260238d91c586d587979fdde32a3c7a8332e6"
+      },
+      "wrapper_log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-off-0926-20260926T231534Z.wrapper.log",
+      "status": "completion_and_native_exit_pass",
+      "monitor_exec_session": 70524,
+      "gpus": "4,5,6,7",
+      "observed_start_utc": "2026-09-27T00:09:50Z",
+      "end_utc": "2026-09-27T00:20:35Z",
+      "run_uuid": "46e800b2-2fd6-4132-be70-e289e7cbbab8",
+      "receipt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-off-0926-20260926T231534Z.exit.json",
+        "bytes": 5356,
+        "sha256": "593ce3c522814386238fca98afa94499838948325cb9a204753a3c9bb82a61eb"
+      },
+      "capture_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-off-0926-20260926T231534Z.exit.capture.json",
+        "bytes": 3982,
+        "sha256": "4dc8e9f0a83f548a188e732e4e585ba6d77dbf904b66d025da4d4dac12cf75f1"
+      },
+      "completion": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/completion.json",
+        "bytes": 20705,
+        "sha256": "63fa9ba23c75555487682c770d96d272f98d4c9a4bad9ebfe1c47dc7d7aca11f"
+      },
+      "monitor_actual_exit": 0,
+      "independent_verification": "PASS"
+    },
+    "count-on": {
+      "run": "timing20-count-on-0926-20260926T231534Z",
+      "session": "orig80k-timing20-count-on-0926-20260926T231534Z",
+      "pane_id": "%569",
+      "pane_pid": 1179422,
+      "window_id": "@569",
+      "identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.identity.json",
+        "bytes": 1525,
+        "sha256": "87007de2ddc56fbb4d2a125c361a729811fd2d271fc6ae4aacb32ba521045b34"
+      },
+      "launch_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.launch.process.json",
+        "bytes": 4185,
+        "sha256": "646400b0cb9636f92f2ad0014c0062e65b7ce1703f00a221e6d6b7b4c1d30524"
+      },
+      "wrapper_log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-on-0926-20260926T231534Z.wrapper.log",
+      "status": "completion_and_native_exit_pass",
+      "monitor_exec_session": 88255,
+      "gpus": "4,5,6,7",
+      "observed_start_utc": "2026-09-27T00:20:57Z",
+      "end_utc": "2026-09-27T00:31:59Z",
+      "run_uuid": "7f03958a-95bf-4c7e-9db0-7cc34b22c850",
+      "receipt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.exit.json",
+        "bytes": 5344,
+        "sha256": "952e669f55fd74682671ce8461fb1a4bde0780c4317f2162b1577d2d91d01967"
+      },
+      "capture_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.exit.capture.json",
+        "bytes": 3975,
+        "sha256": "fbcf6425364036d9ca363575d4d3ffbd6f6592d77fc4c52c5910e2366075f8d0"
+      },
+      "completion": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/completion.json",
+        "bytes": 20697,
+        "sha256": "a0d7f303df5ac4cfcd9b160def2e77be4dc0f3d145ce627a16b6795461075442"
+      },
+      "monitor_actual_exit": 0
+    },
+    "full-on": {
+      "run": "timing20-full-on-0926-20260926T231534Z",
+      "session": "orig80k-timing20-full-on-0926-20260926T231534Z",
+      "pane_id": "%570",
+      "pane_pid": 1180667,
+      "window_id": "@570",
+      "identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.identity.json",
+        "bytes": 1520,
+        "sha256": "6e9ece4cd09bd1d85a849187becec7500ae9fffa3deed6a84a576484a6a2d2cb"
+      },
+      "launch_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.launch.process.json",
+        "bytes": 4176,
+        "sha256": "214a9a3849f94e989405235f5b3a1290cfbb5029516b8b2316a7b794c4540d8b"
+      },
+      "wrapper_log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-on-0926-20260926T231534Z.wrapper.log",
+      "status": "completion_and_native_exit_pass",
+      "monitor_exec_session": 91791,
+      "gpus": "0,1,2,3",
+      "observed_start_utc": "2026-09-27T00:21:48Z",
+      "end_utc": "2026-09-27T00:32:55Z",
+      "run_uuid": "72a3a3e6-b03d-4b42-856f-824414bde02d",
+      "receipt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.exit.json",
+        "bytes": 5328,
+        "sha256": "3fab6671b10fda090cccfbf6a85e0beddff9c4d2e208d8b04fed89d5a326b6e6"
+      },
+      "capture_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.exit.capture.json",
+        "bytes": 3968,
+        "sha256": "8090e1f23a63ced4048e5255caec0ea5f2d12ccdb9c1c21ede2986cfbd220d3e"
+      },
+      "completion": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/completion.json",
+        "bytes": 20682,
+        "sha256": "a4c58d4225edba9a2f5f83ccf4c11089821aacf65d54e5fc954531e79247e2a0"
+      },
+      "monitor_actual_exit": 0
+    },
+    "full-judge": {
+      "session": "orig80k-timing20-full-judge-20260926T231534Z",
+      "pane_id": "%572",
+      "pane_pid": 1202763,
+      "window_id": "@572",
+      "status": "FAIL",
+      "reason": "20步五标量不是逐位一致",
+      "identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.identity.json",
+        "bytes": 1510,
+        "sha256": "93b6902fcad440aa96b943ce7e86ffb30a35d44e7b48d8802358a0d16d7a8fa4"
+      },
+      "launch_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.launch.process.json",
+        "bytes": 4158,
+        "sha256": "7a73811f3748ddc31a796f676ab097f2f70a25e94aae5d91b6b9d00f41ef06c1"
+      },
+      "receipt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.json",
+        "bytes": 5389,
+        "sha256": "cf71e12c26af837cb9a03bedca56432de726f8a8ace92a79edd0425e52c99a44"
+      },
+      "capture_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.capture.json",
+        "bytes": 3954,
+        "sha256": "445a8ec451b4f00c24fe8bee1e275cac6eda12e434c5d7aea2a45d1ee1585a9f"
+      },
+      "native_exit": 1,
+      "capture_actual_exit": 1,
+      "wrapper_log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-judge-20260926T231534Z.wrapper.log",
+      "success_result_json_exists": false
+    },
+    "count-judge": {
+      "session": "orig80k-timing20-count-judge-20260926T231534Z",
+      "pane_id": "%571",
+      "pane_pid": 1202255,
+      "window_id": "@571",
+      "status": "FAIL",
+      "reason": "20步五标量不是逐位一致",
+      "identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.identity.json",
+        "bytes": 1515,
+        "sha256": "0752a5d674e9c7766b56b62cb14d7d1d84f2686bce75b7ad54df1537e65a06af"
+      },
+      "launch_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.launch.process.json",
+        "bytes": 4167,
+        "sha256": "435db7633a7da50bf5f47cc959c5648ffec76b082cb3cc67299b56c5ba67847f"
+      },
+      "receipt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.json",
+        "bytes": 5401,
+        "sha256": "ab18c34751976a30e99b2dbdb93a831c4402da6879f5938fd795647aaaed002b"
+      },
+      "capture_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.capture.json",
+        "bytes": 3961,
+        "sha256": "62fc7fd6d990632d0bddd9319a40af10ff707b165673ce616122856f3ff2cb00"
+      },
+      "native_exit": 1,
+      "capture_actual_exit": 1,
+      "wrapper_log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-judge-20260926T231534Z.wrapper.log",
+      "success_result_json_exists": false
+    }
+  },
+  "timing20_count_off_to_on_process": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-count-off-to-on-20260927.process.json",
+    "bytes": 1279,
+    "sha256": "ae6099ae3ca9bb0c6daf793f50a9d08b16d8e9bf6cd5b835e6e22aa7f2a95401"
+  },
+  "timing20_count_off_to_on_parent_actual_exit": 0,
+  "timing20_full_off_to_on_process": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-full-off-to-on-20260927.process.json",
+    "bytes": 1274,
+    "sha256": "19099f902cc19f98fe168f0cb2e1188a198644643196fbd77c844f154724230e"
+  },
+  "timing20_full_off_to_on_parent_actual_exit": 0,
+  "timing20_off_independent_verification": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-both-off-verification-independent-20260927.json",
+    "bytes": 29666,
+    "sha256": "1a17d5e21c5960f912af96adf97abf79aa540981a13deb17faac66a821ffea61",
+    "actual_exit": 0,
+    "scope": "两off完整小记录/来源/恢复/独立退出联合；不是off/on相等判定"
+  },
+  "timing20_early_mismatch": {
+    "observed_utc": "2026-09-27T00:28:09.855345+00:00",
+    "status": "已确认首步严格标量不等，等待现有on完整取证与正式judge",
+    "groups": [
+      "full",
+      "count"
+    ],
+    "step": 0,
+    "mismatched_scalar_keys": [
+      "loss",
+      "grad_norm",
+      "llm_grad_norm",
+      "mem_enc_norm"
+    ],
+    "matching_scalar_keys": [
+      "param_norm"
+    ],
+    "first_fetch_tree_model_tree_rng_equal": true,
+    "cause": "尚未确定",
+    "perf_allowed": false,
+    "ongoing_on": "继续已授权20步真保存恢复及取证，不改参数/判据",
+    "new_diagnostic_question": "是否追加两库各一次相同配置20步off复验，4+4并行，仅诊断",
+    "new_diagnostic_approved": true,
+    "evidence": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-step0-early-mismatch-independent-20260927.json",
+      "bytes": 13064,
+      "sha256": "ed38c6e5ec6a167918a81e42c9416f58cc4257d77e08c3df1fbc35dd9fdd5831"
+    },
+    "user_response": "同意",
+    "approved_scope": "当前on及正式judge结束后，两库各追加一次相同配置20步off，4+4并行，仅诊断、严格判据不变，不能替代正式off/on闸门"
+  },
+  "timing20_full_on_to_judge_process": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-full-on-to-judge-20260927.process.json",
+    "bytes": 1284,
+    "sha256": "6f8432442ed4ec5fa8f970ac7e7ac08aacd41b3ad047a4b4bff1c93ad0799e95"
+  },
+  "timing20_full_judge_finish_process": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-full-judge-finish-20260927.process.json",
+    "bytes": 1380,
+    "sha256": "eeea13356b2a181724bdff3aeda5c345a3e3ed775f8021f36c7c799c81efd579"
+  },
+  "timing20_count_on_to_judge_process": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-count-on-to-judge-20260927.process.json",
+    "bytes": 1289,
+    "sha256": "454a2199392675640982b104ed05173b65372fbf0df06ecf84f5579d2bdc17a1"
+  },
+  "timing20_count_judge_finish_process": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-count-judge-finish-20260927.process.json",
+    "bytes": 1385,
+    "sha256": "63a6742b1f2e8e036f76415ac959541afeb594014e707b6733d2f7fc39011d58"
+  },
+  "timing20_judge_finish_parent_actual_exit": 2,
+  "timing20_final_independent_report": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-final-comparison-independent-20260927.json",
+    "bytes": 118391,
+    "sha256": "113cec3b17a19e85bd55c7a2b4420f150eac17dbea69a2b3c3e6c38d62265e99",
+    "read_only_observer_actual_exit": 0,
+    "formal_verdict": "FAIL"
+  },
+  "timing20_source_freeze_released_utc": "2026-09-27T00:37:18.826851+00:00",
+  "repeat_off_tag": "20260927T003051Z",
+  "repeat_off_runs": {
+    "full": "timing20-full-off-0926-20260927T003051Z",
+    "count": "timing20-count-off-0926-20260927T003051Z"
+  },
+  "repeat_off_beta": {
+    "head": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+    "commit_actual_exit": 0,
+    "push_actual_exit": 0,
+    "source_and_venv_frozen": false,
+    "freeze_utc": "2026-09-27T00:55:43.615977+00:00"
+  },
+  "repeat_off_jobs": {
+    "full": {
+      "run": "timing20-full-off-0926-20260927T003051Z",
+      "session": "orig80k-timing20-full-off-0926-20260927T003051Z",
+      "status": "completion_and_native_exit_pass",
+      "pane_id": "%573",
+      "pane_pid": 1220920,
+      "window_id": "@573",
+      "identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-full-off-0926-20260927T003051Z.identity.json",
+        "bytes": 1528,
+        "sha256": "e4c71b239725b4a1318898ed4d96266d6229cdd5499550c10c5a67016bcd380e"
+      },
+      "launch_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-full-off-0926-20260927T003051Z.launch.process.json",
+        "bytes": 3815,
+        "sha256": "c8a8ae121653a8b3e6baf6881a62621f64d9c7b837d5caa5c76ed98286cb045b"
+      },
+      "wrapper_log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-off-0926-20260927T003051Z.wrapper.log",
+      "start_utc": "2026-09-27T00:54:30Z",
+      "gpus": "0,1,2,3",
+      "monitor_exec_session": 15815,
+      "end_utc": "2026-09-27T01:05:30Z",
+      "run_uuid": "18ec5653-957e-48ab-9092-14998cfd3500",
+      "receipt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-full-off-0926-20260927T003051Z.exit.json",
+        "bytes": 5351,
+        "sha256": "a01bfe9259630805cd2db917e9f5c1ad6f2a764814ef2ab8421f1c2a4cb7d794"
+      },
+      "capture_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-full-off-0926-20260927T003051Z.exit.capture.json",
+        "bytes": 3605,
+        "sha256": "ec800c7ee5d40da41530a8cdc9fed282568717333bbfc6adafd2902bf1760e28"
+      },
+      "completion": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/completion.json",
+        "bytes": 20697,
+        "sha256": "a313f6db2c680ff0aedd887f52da90a5d731d5182a32ead62ab52c08cf39ce81"
+      },
+      "monitor_actual_exit": 0,
+      "finish_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-full-finish-20260927.process.json",
+        "bytes": 1263,
+        "sha256": "f46ed92a344a818bdba361486008f130357cdaa523ec9037fc3476f3ad8c7184"
+      }
+    },
+    "count": {
+      "run": "timing20-count-off-0926-20260927T003051Z",
+      "session": "orig80k-timing20-count-off-0926-20260927T003051Z",
+      "status": "completion_and_native_exit_pass",
+      "pane_id": "%574",
+      "pane_pid": 1220989,
+      "window_id": "@574",
+      "identity": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-count-off-0926-20260927T003051Z.identity.json",
+        "bytes": 1533,
+        "sha256": "bc3bcbdfe367f3bb9ba4d1d68bf1fe3f6b4883594f35b9a956ff1f3112cc5d45"
+      },
+      "launch_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-count-off-0926-20260927T003051Z.launch.process.json",
+        "bytes": 3824,
+        "sha256": "bedbaa310df5317205ea50b894ee69ac0d922c2cd92d138dd62ab0f7da9a046e"
+      },
+      "wrapper_log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-off-0926-20260927T003051Z.wrapper.log",
+      "start_utc": "2026-09-27T00:54:30Z",
+      "gpus": "4,5,6,7",
+      "monitor_exec_session": 85612,
+      "end_utc": "2026-09-27T01:05:12Z",
+      "run_uuid": "5e8178e6-fce4-48a7-b1a3-1c3ffef0d6e8",
+      "receipt": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-count-off-0926-20260927T003051Z.exit.json",
+        "bytes": 5367,
+        "sha256": "f1511830df07835bcbd9d6f3c4dfe59c9440865b4f14faed347017ce448a8c8e"
+      },
+      "capture_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-count-off-0926-20260927T003051Z.exit.capture.json",
+        "bytes": 3612,
+        "sha256": "1328d7e8979e799208a2bad3b3ed9e0f8108cc48833b4d9a23e5e3c06202613e"
+      },
+      "completion": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/completion.json",
+        "bytes": 20709,
+        "sha256": "271f1f1496d95658226014d2b7159a8b701e73c6974cc00b83a51dd16bdf203d"
+      },
+      "monitor_actual_exit": 0,
+      "finish_process": {
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-count-finish-20260927.process.json",
+        "bytes": 1268,
+        "sha256": "8a90bd0c1ff00a407449910f5bad305938fec58dd0164d12146651e53caaaa69"
+      }
+    }
+  },
+  "repeat_off_preflight": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-reuse-preflight-20260927.json",
+    "bytes": 143017,
+    "sha256": "4d0321200286edbb39467f6a7f52f95617ae4d0a3c73a5bbafed90a90d425a34"
+  },
+  "repeat_off_preflight_process": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-reuse-preflight-20260927.process.json",
+    "bytes": 1479,
+    "sha256": "31bf6222a53f0f92dfbb9b5c0db6de64c57600f677539b9ea313e93c96b50a10"
+  },
+  "repeat_off_baseline_space": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-baseline-and-space-20260927.json",
+    "bytes": 18635,
+    "sha256": "9de15bb867db743fde9101b277bd5cb22867788205ab480811a6a930aba57265"
+  },
+  "repeat_off_start_process": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-start-20260927.process.json",
+    "bytes": 1233,
+    "sha256": "e0a38120977bd39d90707c61da478830418392fcb0d8ee9cbeaeaaa077310b5a"
+  },
+  "repeat_off_parent_actual_exit": 0,
+  "repeat_off_dispatch_manifest": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-dispatch-manifest-20260927.json",
+    "bytes": 1632,
+    "sha256": "89d325434b7100db9e2c26740cd821df5e068dd6b68bd6baf2bc8639acd42cbe"
+  },
+  "repeat_off_early": {
+    "evidence": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-step0-early-independent-20260927.json",
+      "bytes": 13037,
+      "sha256": "5a86c541ab960ff25c8653329618477423ee40ba4a46b7acad0ba6778df9a8dc"
+    },
+    "step": 0,
+    "mismatched_scalars_per_group": 4,
+    "scalar_count": 5,
+    "first_input_rng_equal": true,
+    "scope": "关闭计时包装的两次正常运行也有首步差异；不是全20诊断终态，不归因具体机制",
+    "further_flag_changes_approved": false
+  },
+  "deterministic_timing20_proposal": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-deterministic-validation-option-20260927.md",
+    "bytes": 8072,
+    "sha256": "5984d021a9e3ca4c68698871afc070c3177de8faa0251b15956534490583f393",
+    "approved": true,
+    "scope": "仅包装正确性20对照显式确定性档；输入/标量/完整state仍严格，perf/prod normal保持；需用户明确批准验证环境和闸门覆盖范围",
+    "flags": [
+      "--xla_gpu_deterministic_ops=true",
+      "--xla_gpu_autotune_level=0"
+    ],
+    "new_two_pairs_required": true,
+    "user_response": "同意",
+    "approved_utc": "2026-09-27T01:16:01.554737+00:00",
+    "approved_scope": "包装正确性闸门改为两库各一对确定性档20步off/on，input/scalars/fullstate仍逐位一致；仅此启用两指定XLA flags，通过后进入normal300perf；旧normalFAIL保留，其余训练参数不变"
+  },
+  "repeat_off_comparison": {
+    "report": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-results-20260927T003051Z/repeat-comparison.json",
+      "bytes": 47732,
+      "sha256": "92d8726e27819374b0a7feeee1824e35e42215c1749b0fafc6549bcfbe3ce125"
+    },
+    "process": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-compare-20260927.process.json",
+      "bytes": 1244,
+      "sha256": "3ca9e34d07cc7bbb5801b808fc8910e9a2d8536e6ac8a80bf004220be323b6ad"
+    },
+    "actual_command_exit": 0,
+    "actual_parent_exit": 0,
+    "status": "DIFFER",
+    "comparison_status": "FAIL",
+    "scalar_mismatch_counts": {
+      "count": 80,
+      "full": 80
+    },
+    "scope": "关闭包装正常环境重复诊断，不改写旧off/on失败，不归因机制"
+  },
+  "repeat_off_final_independent_report": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-comparison-verification-independent-20260927.json",
+    "bytes": 28652,
+    "sha256": "c557f7403a09b706f192666e76814ab9b89b669f5d0fd43d7131957eae5b5e54",
+    "observation_actual_exit": 0,
+    "comparison_status": "FAIL"
+  },
+  "repeat_off_source_freeze_released_utc": "2026-09-27T01:09:56.916997+00:00",
+  "profile_implementation_owners": {
+    "audit_dataset": [
+      "scripts/training/orig80k_contract.py",
+      "scripts/training/prod/run_orig80k.sh",
+      "scripts/training/tests/test_orig80k_launch.py"
+    ],
+    "audit_launch": [
+      "scripts/training/tests/check_orig80k_speed.py",
+      "scripts/training/tests/test_orig80k_speed.py"
+    ],
+    "audit_equiv": [
+      "scripts/training/tests/check_orig80k_timing_equiv.py",
+      "scripts/training/tests/test_orig80k_timing_equiv.py"
+    ],
+    "root": [
+      "docs/training-doc/",
+      "0925-orig-80k-full-counting-4plus4-plan.md",
+      "最终整合和真实验证调度"
+    ]
+  },
+  "deterministic20": {
+    "head": "c71d5255597db2f26930b7b5684a1d5b2994cf75",
+    "implementation_head": "aec86db64e5178e63d9e7f77d3f5bc235db16390",
+    "tag": "20260927T012426Z",
+    "beta_pushed": true,
+    "preflight": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-actual-preflight-20260927.json",
+    "preflight_parent_actual_exit": 0,
+    "preflight_host_actual_exit": 0,
+    "space_preflight": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-space-preflight-20260927.json",
+    "dispatch_manifest": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-dispatch-manifest-20260927.json",
+    "phases": {
+      "start": {
+        "process": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-start-20260927.process.json",
+        "host_actual_exit": 0,
+        "process_ref": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-start-20260927.process.json",
+          "bytes": 1230,
+          "sha256": "fc3c6b048c3e802f9c8f643513f1f4f4dcde696b8652a6f5275c9d67802b3942"
+        },
+        "host_observation": {
+          "chunk_id": "044f68",
+          "exit_code": 0,
+          "wall_time_seconds": 0.28165203
+        }
+      },
+      "full-on": {
+        "process": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-full-on-20260927.process.json",
+        "process_ref": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-full-on-20260927.process.json",
+          "bytes": 1239,
+          "sha256": "18d87c25772a755883e6c62465bf83d1fad782fe8060c0b2693cd856f2da5aa1"
+        },
+        "host_actual_exit": 0,
+        "host_observation": {
+          "exit_code": 0,
+          "chunk_id": "daab4f",
+          "wall_time_seconds": 0.416086784
+        }
+      },
+      "count-on": {
+        "process": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-count-on-20260927.process.json",
+        "process_ref": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-count-on-20260927.process.json",
+          "bytes": 1244,
+          "sha256": "51c20f1774acf4b36c1639a9f2292c4c35f5a8a90f7cd5d363779fb7827e743c"
+        },
+        "host_actual_exit": 0,
+        "host_observation": {
+          "exit_code": 0,
+          "chunk_id": "68faad",
+          "wall_time_seconds": 0.577780575
+        }
+      },
+      "count-judge": {
+        "process": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-count-judge-20260927.process.json",
+        "process_ref": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-count-judge-20260927.process.json",
+          "bytes": 1259,
+          "sha256": "8761b506e395f061411139b6d6d6372b29d865b791cba71f3c8af01769c3b6c5"
+        },
+        "host_actual_exit": 0,
+        "host_observation": {
+          "exit_code": 0,
+          "chunk_id": "e91b74",
+          "wall_time_seconds": 0.545351047
+        }
+      },
+      "full-judge": {
+        "process": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-full-judge-20260927.process.json",
+        "process_ref": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-full-judge-20260927.process.json",
+          "bytes": 1254,
+          "sha256": "d24c69316f28d57e825c284da77c5423251e081bcb6b3ddbfe448fe3c7b17adc"
+        },
+        "host_actual_exit": 0,
+        "host_observation": {
+          "exit_code": 0,
+          "chunk_id": "b169b9",
+          "wall_time_seconds": 0.404518792
+        }
+      },
+      "count-finish": {
+        "process": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-count-finish-20260927.process.json",
+        "process_ref": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-count-finish-20260927.process.json",
+          "bytes": 1264,
+          "sha256": "0fcabfae58f6c5f35e4548f8f4452e0cdf5cc205e2f82499bc89ef8108d3e5e5"
+        },
+        "host_actual_exit": 0,
+        "host_observation": {
+          "exit_code": 0,
+          "chunk_id": "7f1abf",
+          "wall_time_seconds": 0.232982299
+        }
+      },
+      "full-finish": {
+        "process": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-full-finish-20260927.process.json",
+        "process_ref": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-full-finish-20260927.process.json",
+          "bytes": 1259,
+          "sha256": "1d5215685f3887d0f90b390ded72af61422b45bb8126651120eaa00aa9e17556"
+        },
+        "host_actual_exit": 0,
+        "host_observation": {
+          "exit_code": 0,
+          "chunk_id": "478e63",
+          "wall_time_seconds": 0.233812104
+        }
+      }
+    },
+    "jobs": {
+      "full-off": {
+        "session": "orig80k-timing20-full-off-0926-20260927T012426Z",
+        "identity": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-full-off-0926-20260927T012426Z.identity.json",
+        "pane": "%575",
+        "pane_pid": 1278710,
+        "stream_session_id": 72503,
+        "state": "completed",
+        "monitor_actual_exit": 0,
+        "independent_verification": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-off.independent-verification.json",
+          "bytes": 17443,
+          "sha256": "d14e74238c3d64432c5e02cad31c99d8da570d89d5d03be85a27de7290d9f7c8"
+        }
+      },
+      "count-off": {
+        "session": "orig80k-timing20-count-off-0926-20260927T012426Z",
+        "identity": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-count-off-0926-20260927T012426Z.identity.json",
+        "pane": "%576",
+        "pane_pid": 1278787,
+        "stream_session_id": 60870,
+        "state": "completed",
+        "monitor_actual_exit": 0,
+        "independent_verification": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-off.independent-verification.json",
+          "bytes": 17491,
+          "sha256": "1bcf0ea74f6de3364fd5f66587ec8cae380a5e746b3087d210d8d301799ea8ca"
+        }
+      },
+      "full-on": {
+        "state": "completed",
+        "session": "orig80k-timing20-full-on-0926-20260927T012426Z",
+        "identity": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-full-on-0926-20260927T012426Z.identity.json",
+        "pane": "%578",
+        "pane_pid": 1296146,
+        "stream_session_id": 10700,
+        "monitor_actual_exit": 0,
+        "independent_verification": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-on.independent-verification-v2.json",
+          "bytes": 24769,
+          "sha256": "5511d9d115e67448eec60c92ae9ce9c91a991ad2550a924d44ecf17b879ae016"
+        }
+      },
+      "count-on": {
+        "state": "completed",
+        "session": "orig80k-timing20-count-on-0926-20260927T012426Z",
+        "identity": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-count-on-0926-20260927T012426Z.identity.json",
+        "pane": "%577",
+        "pane_pid": 1295599,
+        "stream_session_id": 1648,
+        "monitor_actual_exit": 0,
+        "independent_verification": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-on.independent-verification-v2.json",
+          "bytes": 24829,
+          "sha256": "11b24c322e94d3534cd0027877851808a23ce067b90e337ec38268660563d127"
+        }
+      },
+      "full-judge": {
+        "state": "completed",
+        "session": "orig80k-timing20-full-judge-20260927T012426Z",
+        "identity": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-full-judge-20260927T012426Z.identity.json",
+        "pane": "%580",
+        "pane_pid": 1312393,
+        "monitor_actual_exit": 0,
+        "result": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-results-20260927T012426Z/full.json",
+          "bytes": 10644,
+          "sha256": "1d90989993003713492b8f5622b54481d6faa272dccb3dda09e99a833bae6669"
+        },
+        "independent_verification": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/full-judge.independent-verification-v2.json",
+          "bytes": 45107,
+          "sha256": "fd57adfa4cfccc36bc4c4d1edcef980a1039309b809203b4fa200820324c333c"
+        }
+      },
+      "count-judge": {
+        "state": "completed",
+        "session": "orig80k-timing20-count-judge-20260927T012426Z",
+        "identity": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-count-judge-20260927T012426Z.identity.json",
+        "pane": "%579",
+        "pane_pid": 1312055,
+        "monitor_actual_exit": 0,
+        "result": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-results-20260927T012426Z/count.json",
+          "bytes": 10682,
+          "sha256": "93301d00e696fc03237071524150699a3a6f7267d2c7bce51e96f0cf013981e9"
+        },
+        "independent_verification": {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-det-independent-20260927/count-judge.independent-verification-v2.json",
+          "bytes": 45225,
+          "sha256": "1de68e2d005c93f7d1dde141c0a998d58ec617437e94ffd2ef7d69fdfec3ada0"
+        }
+      }
+    },
+    "status": "PASS",
+    "completed_utc": "2026-09-27T02:07:11.207283+00:00",
+    "source_freeze_released_utc": "2026-09-27T02:07:11.207283+00:00",
+    "scope": "确定性20档两库严格等价通过；旧normal FAIL保留；正常300perf和正式预算未通过，80k未启动。"
+  }
+}

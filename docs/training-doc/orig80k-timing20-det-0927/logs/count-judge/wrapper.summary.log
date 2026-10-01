@@ -1,0 +1,19 @@
+WRAPPER_SESSION=orig80k-timing20-count-judge-20260927T012426Z
+WRAPPER_PID=1312055
+WRAPPER_BODY_PID=1312067
+WRAPPER_COMMAND_FILE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-count-judge-20260927T012426Z.command
+WRAPPER_COMMAND_SHA256_EXPECTED=36e2228db487aad12999f1c37fcb26a2e7a95c3dbd96c9591907f4913ddc1502
+WRAPPER_TRAIN_HEAD=c71d5255597db2f26930b7b5684a1d5b2994cf75
+WRAPPER_START_UTC=2026-09-27T02:04:28Z
+WRAPPER_COMMAND_SHA256_ACTUAL=36e2228db487aad12999f1c37fcb26a2e7a95c3dbd96c9591907f4913ddc1502
+JUDGE_COMMAND=env -u JAX_PLATFORM_NAME -u PYTHONPATH -u PYTHONHOME CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_orig80k_timing_equiv.py judge --off-records /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T012426Z --on-records /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260927T012426Z --off-completion /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T012426Z/completion.json --on-completion /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260927T012426Z/completion.json --off-wrapper-log /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-off-0926-20260927T012426Z.wrapper.log --on-wrapper-log /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-on-0926-20260927T012426Z.wrapper.log --head c71d5255597db2f26930b7b5684a1d5b2994cf75 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-results-20260927T012426Z/count.json
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+TIMING_EQ=PASS fetched=21 used=20 scalar_steps=20 full_state=bitwise real_restore=both
+JUDGE_EXIT_CODE=0
+JUDGE_RESULT_SHA256=93301d00e696fc03237071524150699a3a6f7267d2c7bce51e96f0cf013981e9
+WRAPPER_COMMAND_EXIT=0
+WRAPPER_TEE_EXIT=0
+WRAPPER_END_UTC=2026-09-27T02:04:29Z
+WRAPPER_FOOTER_PRINTF_EXIT=0
+WRAPPER_FOOTER_TEE_EXIT=0
+WRAPPER_EXIT_CODE=0

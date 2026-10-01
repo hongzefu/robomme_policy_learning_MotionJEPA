@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "reported_utc": "2026-09-26T23:21:30Z",
+  "scope": "获授权的当前工作区集成复核：六个新控制工具及新timing20启动接口；不是对旧100运行版本的新运行认证，也不是20步真实训练结果",
+  "repository": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+  "base_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "code_state": "六工具均为本轮未提交文件；新timing20文档及既有计划/INPUT文档在途，本报告不将它们算作已包含于base_head",
+  "findings": [],
+  "conclusion": "未发现当前接口中会确定阻止真实20步的运行缺口；新Beta、clean前置、真实运行和独立退出验收仍待实施",
+  "reviewed_anchors": [
+    "scripts/training/tests/tmux_exit_guard.py::launch/capture/validate_receipt",
+    "scripts/training/tests/timing20-wrapper.sh::verify_start/workflow/emit_identity/logged_workflow/main",
+    "scripts/training/tests/timing20-judge-wrapper.sh::judge_action及COMMON原模板source",
+    "docs/training-doc/orig80k-timing20-0926/launch.md::write_bound_runtime/guard_timing_action/read_launch/verify_capture/require_timing_stage",
+    "既有run_orig80k.sh smoke分支、check_orig80k_completion.py::check、check_orig80k_timing_equiv.py::run/judge/read_side作为接口依据"
+  ],
+  "code_sha256": {
+    "tmux_exit_guard.py": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b",
+    "test_tmux_exit_guard.py": "876be9ef1bb2b4ed6854d7499f2ccb1e24d7d3bb941915d2d0aa451f8debc6cc",
+    "timing20-wrapper.sh": "45b4cb8d7b04d3a177b5550f781b1ff97cd24aecd70d0a8647e7757ddf76d42f",
+    "timing20-judge-wrapper.sh": "17c0d6deea3ab3cd132bf406c968097ff9e7b455c9f22f5e3614c8641d7aafce",
+    "test_orig80k_timing20_wrapper.sh": "1b128797326af00614b3b948a75cee05315f0d141274be8c09f9edf0fff97444",
+    "test_orig80k_timing20_runtime_bindings.sh": "ae9be2bb80b9f4956f1690494ad6dfab0a2b26156eb4a68c995aa972abb4266f"
+  },
+  "verified_interfaces": {
+    "runtime_arguments": "guard仅传整份runtime SHA；固定set前缀形成run10参数、judge9参数；COMMON必须保持原模板，source不改judge位置参数",
+    "source_binding": "父适配从真实TRAIN_HEAD读三份Git源码，对工作树/固定SHA逐字核对；guard再对冻结v1-store runtime字节；绑定写入launch/capture侧证并在verify重核",
+    "failure_propagation": "runner失败不恢复；completion与其tee任一失败不放行；UUID/末步19恢复/HEAD检查均传播失败；judge失败不因PASS文本放行",
+    "native_exit": "日志最终append-after盲区保留为已知限制，由原生pane退出回执与capture父进程真实返回码联合补足，不能只读日志0",
+    "paths": "records由runner创建；completion写入该records；judge结果独立于两个run记录根，judge自行创建RESULT_ROOT",
+    "unchanged_production": "检查时runner、timing观察器、completion、speed与src相对base_head无diff"
+  },
+  "independent_validation": {
+    "six_files_equal_tested_candidates": {
+      "actual_exit": 0,
+      "files": 6
+    },
+    "shell_syntax": {
+      "actual_exit": 0,
+      "files": 4
+    },
+    "runtime_bindings": {
+      "actual_exit": 0,
+      "passed": 11,
+      "command": "bash scripts/training/tests/test_orig80k_timing20_runtime_bindings.sh docs/training-doc/orig80k-timing20-0926/launch.md scripts/training/tests/timing20-wrapper.sh scripts/training/tests/timing20-judge-wrapper.sh"
+    },
+    "launch_syntax": {
+      "actual_exit": 0,
+      "bash_blocks": 11,
+      "embedded_python_bodies": 1
+    },
+    "prior_validation_reused": "preflight/post-eq100-local-validation-20260926.json记载18 guard+11 wrapper+11 runtime均0；因六工具字节相等，本次不重复旧guard/故障测试",
+    "launch_file_sha256_at_report": "50a22bac494d848bac9c30cdd8549d0eedc60e678593ed880ccf5f8057babead",
+    "launch_snapshot_boundary": "该SHA是报告时文件快照；文档仍由另一代理编辑，不能据此把随后修订自动视作已测试"
+  },
+  "actions_not_taken": [
+    "未改任何跟踪文件或旧产物",
+    "未提交或同步依赖",
+    "未运行GPU/训练/恢复/新guard任务",
+    "未重跑要求旧clean HEAD的eq100 checker"
+  ],
+  "remaining": [
+    "生成并核验实际新Beta及clean状态",
+    "按新HEAD验证Git源/runtime绑定与前置证据沿用",
+    "四个真实20步及两个CPU judge、原生exit/capture联合验收",
+    "后续300步perf和正式预算；不启动80k"
+  ],
+  "workspace_changes_during_review": "其他代理继续补新20分组和四run README及文档索引；本报告不替代其文档审查"
+}

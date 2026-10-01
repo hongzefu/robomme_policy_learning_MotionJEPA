@@ -1,0 +1,333 @@
+{
+  "schema": 1,
+  "origin": "audit_equiv独立只读核验两次新off；实际返回0仅表示单run证据完整，不代表旧新重复一致",
+  "command": "env -u PYTHONPATH -u PYTHONHOME -u JAX_PLATFORM_NAME -u XLA_FLAGS CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu JAX_ENABLE_X64=0 PYTHONDONTWRITEBYTECODE=1 UV_CACHE_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/uv UV_PROJECT_ENVIRONMENT=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv /scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python -B - off full count <<'PY'\nimport contextlib,datetime,hashlib,importlib.metadata,io,json,os,pathlib,platform,re,shlex,subprocess,sys\nR=pathlib.Path('/scratch/hongze/robomme_policy_learning_MotionJEPA');S=R/'v1-store';P=S/'bench/orig80k-build-preflight-0925'\nHEAD='b60ec2b59e0ba012cae0998c5f8713b2aef07b2e';TAG='20260927T003051Z';MODE=sys.argv[1];SELECTED=sys.argv[2:]\nassert MODE in {'off','on'} and SELECTED and len(SELECTED)==len(set(SELECTED)) and set(SELECTED)<={'full','count'}\ndef sha(p):return hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()\ndef ref(p):\n p=pathlib.Path(p);assert p.is_absolute() and p==p.resolve() and p.is_relative_to(R) and p.is_file()\n return {'path':str(p),'bytes':p.stat().st_size,'sha256':sha(p)}\ndef committed(p):\n p=pathlib.Path(p);data=subprocess.check_output(['git','show',HEAD+':'+str(p.relative_to(R))],cwd=R)\n assert data==p.read_bytes();return ref(p)\nassert pathlib.Path(sys.prefix).resolve()==(R/'.venv').resolve()\nassert subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip()==HEAD\nassert subprocess.check_output(['git','status','--porcelain'],cwd=R)==b''\npre=P/'offrepeat-reuse-preflight-20260927.json';assert sha(pre)=='4d0321200286edbb39467f6a7f52f95617ae4d0a3c73a5bbafed90a90d425a34';pf=json.loads(pre.read_text())\nassert pf['status']=='PASS' and pf['new_head']==HEAD and pf['tag']==TAG\nlaunch_doc=R/'docs/training-doc/orig80k-off-repeat-0927/launch.md';committed(launch_doc)\nbody=re.findall(r\"<<'PY'\\n(.*?)\\nPY\",launch_doc.read_text(),re.S);assert len(body)==2\nGUARD=P/'tmux-exit-guard-candidate-20260926/tmux_exit_guard.py';GSHA='f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b'\nassert sha(GUARD)==GSHA\nCMD=S/f'bench/orig80k-offrepeat-commands-{TAG}'\nsys.path.insert(0,str(R/'scripts/training/tests'))\nimport check_orig80k_timing_equiv as tool\nexpected_python={'version':sys.version,'implementation':platform.python_implementation()}\npackages={}\nfor dist in importlib.metadata.distributions():\n name=dist.metadata.get('Name','').lower().replace('_','-')\n if name:\n  assert name not in packages or packages[name]==dist.version\n  packages[name]=dist.version\nassert packages==pf['python_environments']['current']['dependencies'] and expected_python==pf['python_environments']['current']['python']\ngroups={'full':('16task-pub-1600ep','mme_vla_suite','0,1,2,3','f332bbd34ace1b6837cdc415b44f680896070a41564f9ce39016f1ebf99d1be5'),'count':('4task-counting-pub-400ep','mme_vla_suite/4task-counting-pub-400ep','4,5,6,7','a77075cd024dcb1f0e82de6702332e5005b1ef926b485535ed0de0187e9a0ec9')}\nresults={}\nfor group in SELECTED:\n library,assets,gpus,normsha=groups[group];run=f'timing20-{group}-{MODE}-0926-{TAG}';session='orig80k-'+run\n record=S/'bench/orig80k'/run;completion=record/'completion.json';log=S/'logs'/f'{session}.wrapper.log';raw=log.read_bytes();lines=raw.decode().splitlines()\n def field(key):\n  values=[line.split('=',1)[1] for line in lines if line.startswith(key+'=')];assert len(values)==1,key;return values[0]\n identity_path=CMD/f'{session}.identity.json';capture_path=CMD/f'{session}.exit.capture.json';receipt_path=CMD/f'{session}.exit.json';launch_path=CMD/f'{session}.launch.process.json'\n # 仅执行已冻结Beta文档内的verify分支，SystemExit0发生在任何launch/capture写入逻辑之前。\n saved=sys.argv;namespace={'__name__':'timing20_readonly_verify'};buffer=io.StringIO()\n try:\n  sys.argv=['readonly-verify','verify',session,'',HEAD,str(R),str(CMD),str(GUARD),GSHA]\n  with contextlib.redirect_stdout(buffer):\n   try:exec(compile(body[0],str(launch_doc)+'::guard_timing_action','exec'),namespace)\n   except SystemExit as end:assert end.code==0\n   else:raise AssertionError('verify没有在只读分支结束')\n finally:sys.argv=saved\n assert buffer.getvalue()=='NATIVE_STAGE_EXIT=PASS session='+session+'\\n'\n guard=namespace['guard'];identity=guard.read_json(identity_path);capture=guard.read_json(capture_path);receipt=guard.read_json(receipt_path);launch=guard.read_json(launch_path)\n assert identity['pane_pid']==int(field('WRAPPER_PID')) and identity['label']==identity['session']==session\n assert field('WRAPPER_SESSION')==session and field('WRAPPER_TRAIN_HEAD')==HEAD and field('WRAPPER_TIMING')==MODE and field('WRAPPER_RUN')==run\n for key in (*tool.WRAPPER_EXITS,'WRAPPER_IDENTITY_EXIT_CODE','WRAPPER_VERSION_EXIT_CODE'):assert field(key)=='0'\n for marker in (f'TIMING_EQ_RUN=PASS timing={MODE} fetched=21 used=20 state_step=20 real_save=1',f'RUN_COMPLETED=PASS run={run} checkpoints=1 final=19'):assert lines.count(marker)==1\n command=CMD/f'{session}.command';first,template=command.read_bytes().split(b'\\n',1)\n assert template==(R/'scripts/training/tests/timing20-wrapper.sh').read_bytes()\n expected_prefix=['set','--','$1',HEAD,run,MODE,gpus,str(S/'datasets'/library),str(S/'train-assets'/assets),normsha,session,str(log)]\n assert shlex.split(first.decode())==expected_prefix\n assert field('WRAPPER_COMMAND_FILE')==str(command) and field('WRAPPER_COMMAND_SHA256_EXPECTED')==field('WRAPPER_COMMAND_SHA256_ACTUAL')==sha(command)\n side=tool.read_side(record,completion,log,MODE,HEAD);m=side['metadata'];fp=m['fingerprint'];cfg=m['complete']['train_config']['fields']\n assert m['run_name']==run and m['head']==HEAD and m['timing']==MODE and m['run_uuid']==field('WRAPPER_RUN_UUID')\n assert sha(completion)==field('WRAPPER_COMPLETION_SHA256')\n expected={'name':'mme_vla_suite','exp_name':run,'num_train_steps':20,'batch_size':64,'num_workers':4,'fsdp_devices':4,'seed':42,'log_interval':100,'save_interval':10000,'keep_period':10000,'wandb_enabled':True,'ema_decay':.999}\n assert all(cfg[k]==v for k,v in expected.items())\n assert cfg['lr_schedule']['fields']=={'warmup_steps':10000,'peak_lr':5e-5,'decay_steps':100000,'decay_lr':5e-5}\n assert cfg['optimizer']['fields']=={'b1':.9,'b2':.95,'eps':1e-8,'weight_decay':1e-10,'clip_gradient_norm':1.0}\n assert all(cfg['model']['fields'][k]==v for k,v in {'dtype':'bfloat16','action_horizon':20,'pi05':True,'use_history':True,'history_config':'perceptual-framesamp-modul.yaml'}.items())\n expected_argv=['mme_vla_suite','--exp-name',run,'--dataset-path',str(S/'datasets'/library/'framesamp'),'--assets-base-dir',str(S/'train-assets'),'--data.assets.assets-dir',str(S/'train-assets'/assets),'--data.assets.asset-id','robomme','--checkpoint-base-dir',str(S/'train-runs'),'--weight-loader.params-path',str(S/'models/openpi-assets/checkpoints/pi05_base/params'),'--model.use-history','--model.history-config','perceptual-framesamp-modul.yaml','--num-train-steps','20']\n assert m['argv']==expected_argv\n assert fp['dependencies']==packages and fp['python']==expected_python and fp['uv_lock_sha256']==sha(R/'uv.lock')\n assert fp['devices']==pf['eq100_runtime'][group]['devices']\n env=fp['environment'];assert env['CUDA_VISIBLE_DEVICES']==gpus and fp['jax']['enable_x64'] is False and not env['XLA_FLAGS'] and not env['JAX_PLATFORMS'] and not env['JAX_PLATFORM_NAME']\n assert env['OMP_NUM_THREADS']==env['OPENBLAS_NUM_THREADS']=='1' and env['XLA_PYTHON_CLIENT_MEM_FRACTION']=='0.95'\n assert fp['assets']['norm_stats']['path']==str(S/'train-assets'/assets/'robomme/norm_stats.json') and fp['assets']['norm_stats']['sha256']==normsha\n assert fp['history']['path']==str(R/'src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul.yaml') and fp['history']['sha256']=='823c3948e75a9335ace3f250d0255e6a8618e8ecf0bb77c65af65077349d199a'\n assert fp['source']['path']==str(S/'datasets'/library/'source') and fp['dataset']['path']==str(S/'datasets'/library/'framesamp')\n assert fp['dataset']['store_meta']['path']==str(S/'datasets'/library/'framesamp/meta/store_meta.json')\n prior=pf['eq100_runtime'][group]['small_asset_records']\n for item in [fp['history'],fp['assets']['norm_stats'],fp['assets']['tokenizer'],*fp['assets']['initialization'].values(),*fp['source']['records'].values(),fp['dataset']['store_meta']]:assert item==prior[item['path']]\n modules=m['provenance_end']['modules']\n for item in [m['provenance_end']['entry'],*modules.values()]:assert committed(item['file'])['sha256']==item['sha256']\n for relative,item in m['toolchain'].items():assert committed(R/relative)==item\n launch_record=tool.load(record/'launch.json');assert launch_record['actual']['jax_enable_x64'] is False\n for key,want in {'MMEVLA_JAX_CACHE_DIR':str(S/'cache/jax'/run),'CUDA_CACHE_PATH':str(S/'cache/cuda'/run),'WANDB_DIR':str(S/'logs/wandb'/run)}.items():assert launch_record['environment'][key]==want\n assert raw==log.read_bytes()\n results[group]={'status':'PASS','mode':MODE,'run':run,'run_uuid':m['run_uuid'],'head':HEAD,'session':session,'start_utc':field('WRAPPER_START_UTC'),'end_utc':field('WRAPPER_END_UTC'),'fetched_batches':len(side['fetches']),'used_batches':len(side['models']),'scalar_steps':len(side['scalars']),'state_step':side['state']['state_step'],'loop_step':side['state']['loop_step'],'state_groups_leaves':{key:len(value['leaves']) for key,value in side['state']['groups'].items()},'modules':len(modules),'packages':len(packages),'production_config_checked':expected,'bindings':side['bindings'],'native_exit':{'identity':ref(identity_path),'launch_process':ref(launch_path),'capture_process':ref(capture_path),'receipt':ref(receipt_path),'command':ref(command),'guard':ref(GUARD),'pane_dead_status':receipt['parsed']['pane_dead_status'],'capture_actual_exit_code':capture['actual_exit_code'],'parent_observation_boundary':'父适配本身的宿主退出状态由主代理/controller另记，不从父JSON反推'},'current_source_code_matches_beta':True}\nassert subprocess.check_output(['git','rev-parse','HEAD'],cwd=R,text=True).strip()==HEAD and subprocess.check_output(['git','status','--porcelain'],cwd=R)==b''\nprint('TIMING20_INDEPENDENT_JSON='+json.dumps({'schema':1,'status':'PASS','checked_utc':datetime.datetime.now(datetime.UTC).isoformat(),'head':HEAD,'tag':TAG,'preflight':ref(pre),'results':results,'scope':'单run完整小记录/真实恢复证据引用及独立原生退出链联合验收；未重新读取大权重恢复、未运行正式judge或修改原记录'},ensure_ascii=False,sort_keys=True))\n\nPY",
+  "cwd": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+  "checker_actual_exit_code": 0,
+  "checker_wall_time_seconds": 0.744780579,
+  "output": {
+    "checked_utc": "2026-09-27T01:07:13.394061+00:00",
+    "head": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+    "preflight": {
+      "bytes": 143017,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/offrepeat-reuse-preflight-20260927.json",
+      "sha256": "4d0321200286edbb39467f6a7f52f95617ae4d0a3c73a5bbafed90a90d425a34"
+    },
+    "results": {
+      "count": {
+        "bindings": {
+          "completion": {
+            "bytes": 20709,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/completion.json",
+            "sha256": "271f1f1496d95658226014d2b7159a8b701e73c6974cc00b83a51dd16bdf203d"
+          },
+          "completion_files": [
+            {
+              "bytes": 21047,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/launch.json",
+              "sha256": "b62bd242474c2afb3400b967b6a0728e86ae83d3ccc13d2b75bf07b4d2416471"
+            },
+            {
+              "bytes": 349,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/runtime.json",
+              "sha256": "a592f04f20a2412c59099f01abb3b6b76ecbad97cb34d38eaf4dd7508c8fd547"
+            },
+            {
+              "bytes": 414,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/metrics.jsonl",
+              "sha256": "d7fa21b23aadc9aa87b0529977620c9150b800adad2b18105f88dc0fd400c6cf"
+            },
+            {
+              "bytes": 156927,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/gpu.csv",
+              "sha256": "a8cda4801fb2bf05e5c2380b4fc2547ebbfa131118e082b70fc75769078863c3"
+            },
+            {
+              "bytes": 0,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/gpu.csv.err",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            {
+              "bytes": 16310,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/final/start.json",
+              "sha256": "b4f047cf3f1d0f7a3e4dcd7078b54038ff15f0323982ad56e25ff2b69a82b257"
+            },
+            {
+              "bytes": 47661,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/final/final.json",
+              "sha256": "d81fde4756fc51ae94524794cea451221daed6cdb4464163973c1b832d689ad2"
+            },
+            {
+              "bytes": 196,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/final/checkpoint_wait_done.json",
+              "sha256": "105e4eb2a85b55f7a13dac31075ff739bd352de0c91f831a3e3c3c673dfee437"
+            },
+            {
+              "bytes": 59409,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/timing20-count-off-0926-20260927T003051Z.driver.log",
+              "sha256": "b836d8fa9ffcdf1fb9eca603dda129afa07c16b312ea132cd326d53ef0a00b10"
+            },
+            {
+              "bytes": 327,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-count-off-0926-20260927T003051Z/19/_CHECKPOINT_METADATA",
+              "sha256": "a921408e9e03120db35e0938aa43e91e363571d05eabb21da671bdfcd92b1449"
+            },
+            {
+              "bytes": 28136,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-count-off-0926-20260927T003051Z/19/params/_METADATA",
+              "sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65"
+            }
+          ],
+          "manifest": {
+            "bytes": 1072,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/timing_eq/manifest.json",
+            "sha256": "974fc79530d8f1f133ccaa3d06e2f29d2c7a1de9a8ee1b4cec4f64d652506235"
+          },
+          "speed": null,
+          "wrapper": {
+            "command": {
+              "bytes": 7982,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-count-off-0926-20260927T003051Z.command",
+              "sha256": "fecb37b05b5711b6f65d50c6893e113bd04bf0a8e76f1ebdd5aaf4d9153cbe96"
+            },
+            "log": {
+              "bytes": 62463,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-off-0926-20260927T003051Z.wrapper.log",
+              "sha256": "4dd781d4e5bf84dcb4a89dc258885e2bd50396ba0a378e84bd26542345a08da3"
+            }
+          }
+        },
+        "current_source_code_matches_beta": true,
+        "end_utc": "2026-09-27T01:05:12Z",
+        "fetched_batches": 21,
+        "head": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+        "loop_step": 19,
+        "mode": "off",
+        "modules": 52,
+        "native_exit": {
+          "capture_actual_exit_code": 0,
+          "capture_process": {
+            "bytes": 3612,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-count-off-0926-20260927T003051Z.exit.capture.json",
+            "sha256": "1328d7e8979e799208a2bad3b3ed9e0f8108cc48833b4d9a23e5e3c06202613e"
+          },
+          "command": {
+            "bytes": 7982,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-count-off-0926-20260927T003051Z.command",
+            "sha256": "fecb37b05b5711b6f65d50c6893e113bd04bf0a8e76f1ebdd5aaf4d9153cbe96"
+          },
+          "guard": {
+            "bytes": 20398,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+            "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+          },
+          "identity": {
+            "bytes": 1533,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-count-off-0926-20260927T003051Z.identity.json",
+            "sha256": "bc3bcbdfe367f3bb9ba4d1d68bf1fe3f6b4883594f35b9a956ff1f3112cc5d45"
+          },
+          "launch_process": {
+            "bytes": 3824,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-count-off-0926-20260927T003051Z.launch.process.json",
+            "sha256": "bedbaa310df5317205ea50b894ee69ac0d922c2cd92d138dd62ab0f7da9a046e"
+          },
+          "pane_dead_status": "0",
+          "parent_observation_boundary": "父适配本身的宿主退出状态由主代理/controller另记，不从父JSON反推",
+          "receipt": {
+            "bytes": 5367,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-count-off-0926-20260927T003051Z.exit.json",
+            "sha256": "f1511830df07835bcbd9d6f3c4dfe59c9440865b4f14faed347017ce448a8c8e"
+          }
+        },
+        "packages": 208,
+        "production_config_checked": {
+          "batch_size": 64,
+          "ema_decay": 0.999,
+          "exp_name": "timing20-count-off-0926-20260927T003051Z",
+          "fsdp_devices": 4,
+          "keep_period": 10000,
+          "log_interval": 100,
+          "name": "mme_vla_suite",
+          "num_train_steps": 20,
+          "num_workers": 4,
+          "save_interval": 10000,
+          "seed": 42,
+          "wandb_enabled": true
+        },
+        "run": "timing20-count-off-0926-20260927T003051Z",
+        "run_uuid": "5e8178e6-fce4-48a7-b1a3-1c3ffef0d6e8",
+        "scalar_steps": 20,
+        "session": "orig80k-timing20-count-off-0926-20260927T003051Z",
+        "start_utc": "2026-09-27T00:54:30Z",
+        "state_groups_leaves": {
+          "ema_params": 61,
+          "opt_state": 78,
+          "params": 61,
+          "step": 1
+        },
+        "state_step": 20,
+        "status": "PASS",
+        "used_batches": 20
+      },
+      "full": {
+        "bindings": {
+          "completion": {
+            "bytes": 20697,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/completion.json",
+            "sha256": "a313f6db2c680ff0aedd887f52da90a5d731d5182a32ead62ab52c08cf39ce81"
+          },
+          "completion_files": [
+            {
+              "bytes": 20946,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/launch.json",
+              "sha256": "fb54e31a37fabd3766e3eeef33317f38937352f09eb2e4110f8933ccacf0ec57"
+            },
+            {
+              "bytes": 348,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/runtime.json",
+              "sha256": "8deb4df88da96871f7ece7a68b86e29ccb153273819a901c89c2adc2158548b1"
+            },
+            {
+              "bytes": 416,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/metrics.jsonl",
+              "sha256": "d0a4f72211238160abf06e10d2251e338581f914bdb8a0d0c4758dccb1a9b2e3"
+            },
+            {
+              "bytes": 160756,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/gpu.csv",
+              "sha256": "242105db5528ede9e4cfb3d85652d854ad1bd66dd5e0cc8f94c6792aa5356a27"
+            },
+            {
+              "bytes": 0,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/gpu.csv.err",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            {
+              "bytes": 16249,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/final/start.json",
+              "sha256": "f0f2211e56611698e97e335ed92ac0bc44e00c253bdf8ad195e89ee505ce76ed"
+            },
+            {
+              "bytes": 47606,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/final/final.json",
+              "sha256": "c218d315c4f9d363839bef5ccef6484d9561073ee85e97308958bd8a16116905"
+            },
+            {
+              "bytes": 196,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/final/checkpoint_wait_done.json",
+              "sha256": "fe0a553fafdc792426d0aa16a83acaa7e6bd13fb74b42198d42887e85315a0d5"
+            },
+            {
+              "bytes": 57405,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/timing20-full-off-0926-20260927T003051Z.driver.log",
+              "sha256": "b4eea7f2ab0afaae11d1bd37e71a301765e0c1f772cb9c71c0a4da7220eecee3"
+            },
+            {
+              "bytes": 327,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-full-off-0926-20260927T003051Z/19/_CHECKPOINT_METADATA",
+              "sha256": "4420dc78cacbc700e7741896ad59d186b8b1f968077c74a27b7e9e9f0b4ca052"
+            },
+            {
+              "bytes": 28136,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-full-off-0926-20260927T003051Z/19/params/_METADATA",
+              "sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65"
+            }
+          ],
+          "manifest": {
+            "bytes": 1068,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/timing_eq/manifest.json",
+            "sha256": "8284610b5d3bc3c03ccd31cd016d3d8a6621d1941ed2ce9d4154e44303d8d806"
+          },
+          "speed": null,
+          "wrapper": {
+            "command": {
+              "bytes": 7947,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-full-off-0926-20260927T003051Z.command",
+              "sha256": "b1aeed016e67fc1980218a018643bf24608c88241d6768f4b6f5944af5937023"
+            },
+            "log": {
+              "bytes": 60417,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-off-0926-20260927T003051Z.wrapper.log",
+              "sha256": "e429e8b08cee7d803fc780226de432e757e491cdff623d3ea66f151b7673132f"
+            }
+          }
+        },
+        "current_source_code_matches_beta": true,
+        "end_utc": "2026-09-27T01:05:30Z",
+        "fetched_batches": 21,
+        "head": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+        "loop_step": 19,
+        "mode": "off",
+        "modules": 52,
+        "native_exit": {
+          "capture_actual_exit_code": 0,
+          "capture_process": {
+            "bytes": 3605,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-full-off-0926-20260927T003051Z.exit.capture.json",
+            "sha256": "ec800c7ee5d40da41530a8cdc9fed282568717333bbfc6adafd2902bf1760e28"
+          },
+          "command": {
+            "bytes": 7947,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-full-off-0926-20260927T003051Z.command",
+            "sha256": "b1aeed016e67fc1980218a018643bf24608c88241d6768f4b6f5944af5937023"
+          },
+          "guard": {
+            "bytes": 20398,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+            "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+          },
+          "identity": {
+            "bytes": 1528,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-full-off-0926-20260927T003051Z.identity.json",
+            "sha256": "e4c71b239725b4a1318898ed4d96266d6229cdd5499550c10c5a67016bcd380e"
+          },
+          "launch_process": {
+            "bytes": 3815,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-full-off-0926-20260927T003051Z.launch.process.json",
+            "sha256": "c8a8ae121653a8b3e6baf6881a62621f64d9c7b837d5caa5c76ed98286cb045b"
+          },
+          "pane_dead_status": "0",
+          "parent_observation_boundary": "父适配本身的宿主退出状态由主代理/controller另记，不从父JSON反推",
+          "receipt": {
+            "bytes": 5351,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-offrepeat-commands-20260927T003051Z/orig80k-timing20-full-off-0926-20260927T003051Z.exit.json",
+            "sha256": "a01bfe9259630805cd2db917e9f5c1ad6f2a764814ef2ab8421f1c2a4cb7d794"
+          }
+        },
+        "packages": 208,
+        "production_config_checked": {
+          "batch_size": 64,
+          "ema_decay": 0.999,
+          "exp_name": "timing20-full-off-0926-20260927T003051Z",
+          "fsdp_devices": 4,
+          "keep_period": 10000,
+          "log_interval": 100,
+          "name": "mme_vla_suite",
+          "num_train_steps": 20,
+          "num_workers": 4,
+          "save_interval": 10000,
+          "seed": 42,
+          "wandb_enabled": true
+        },
+        "run": "timing20-full-off-0926-20260927T003051Z",
+        "run_uuid": "18ec5653-957e-48ab-9092-14998cfd3500",
+        "scalar_steps": 20,
+        "session": "orig80k-timing20-full-off-0926-20260927T003051Z",
+        "start_utc": "2026-09-27T00:54:30Z",
+        "state_groups_leaves": {
+          "ema_params": 61,
+          "opt_state": 78,
+          "params": 61,
+          "step": 1
+        },
+        "state_step": 20,
+        "status": "PASS",
+        "used_batches": 20
+      }
+    },
+    "schema": 1,
+    "scope": "单run完整小记录/真实恢复证据引用及独立原生退出链联合验收；未重新读取大权重恢复、未运行正式judge或修改原记录",
+    "status": "PASS",
+    "tag": "20260927T003051Z"
+  }
+}

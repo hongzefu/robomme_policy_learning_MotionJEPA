@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+  "source": {
+    "path": "docs/training-doc/orig80k-perf300-0927/launch.md",
+    "bytes": 61760,
+    "sha256": "39d095f368bf6503351a00bccce73c84a99bd1e814c7d91b3b749b83eb79b9e4"
+  },
+  "extraction": "实际Beta替换TRAIN_HEAD；后续调度沿同块变量/环境数组和同提交后续12个静态路径定义，不重复新路径守卫或mkdir。函数及阶段原块逐字保留。",
+  "static_stage_definitions": [
+    "FULL_SESSION=\"orig80k-perf-full-$PERF_TAG\"",
+    "COUNT_SESSION=\"orig80k-perf-count-$PERF_TAG\"",
+    "FULL_LOG=\"$STORE/logs/$FULL_SESSION.wrapper.log\"",
+    "COUNT_LOG=\"$STORE/logs/$COUNT_SESSION.wrapper.log\"",
+    "FULL_COMPLETION_LOG=\"$STORE/logs/orig80k-perf-full-completion-$PERF_TAG.wrapper.log\"",
+    "COUNT_COMPLETION_LOG=\"$STORE/logs/orig80k-perf-count-completion-$PERF_TAG.wrapper.log\"",
+    "REPORT_LOG=\"$STORE/logs/orig80k-perf-report-$PERF_TAG.wrapper.log\"",
+    "FULL_RECEIPT=\"$FULL_REC/checkpoint_measurement.json\"",
+    "COUNT_RECEIPT=\"$COUNT_REC/checkpoint_measurement.json\"",
+    "FULL_MEASURE_LOG=\"$STORE/logs/orig80k-perf-full-measure-$PERF_TAG.wrapper.log\"",
+    "COUNT_MEASURE_LOG=\"$STORE/logs/orig80k-perf-count-measure-$PERF_TAG.wrapper.log\"",
+    "BUDGET_LOG=\"$STORE/logs/orig80k-perf-budget-$PERF_TAG.wrapper.log\""
+  ],
+  "bash_blocks": [
+    {
+      "index": 0,
+      "bytes": 3513,
+      "sha256": "6c2a2ee802351c2dc4c23c12d31c2caef8f8df6297213f49f42cbdf6d6fea7ed"
+    },
+    {
+      "index": 1,
+      "bytes": 17241,
+      "sha256": "cacf5558ae045207e147fa0046aedf4d29704405a57c67ebbb7f77d51f9d4cf4"
+    },
+    {
+      "index": 2,
+      "bytes": 608,
+      "sha256": "e156e8d132207c1abac9f3bca32433cc37650d23a6c4638015b6cff72858173e"
+    },
+    {
+      "index": 3,
+      "bytes": 1212,
+      "sha256": "516e82a368d1ee3678d51b78e80211929ee49a51b618ccbcfce40aa4c7a4142b"
+    },
+    {
+      "index": 4,
+      "bytes": 616,
+      "sha256": "18d30ea7772ecbb04c46d686aefb71ba472dfbd215a011c6c7237768e377c687"
+    },
+    {
+      "index": 5,
+      "bytes": 676,
+      "sha256": "5004d2ae803748b8b53d5c3525165f9f00f0b2585a960721dc131a684e60c337"
+    },
+    {
+      "index": 6,
+      "bytes": 1401,
+      "sha256": "56efba52428c39825e1d6c09bffb1be5c5163f06970e5699b8b4d02fad66f0c1"
+    },
+    {
+      "index": 7,
+      "bytes": 885,
+      "sha256": "19eef1515e5ac3b7b54b2b5e1571ff6358092805a9bc8e61874a980452366285"
+    },
+    {
+      "index": 8,
+      "bytes": 775,
+      "sha256": "6d1d8ef5c988a0080b3909156722952d0c0366d6272097e44880ff4222f89b32"
+    },
+    {
+      "index": 9,
+      "bytes": 183,
+      "sha256": "4d003e79999c845d2324f5ad63c641e8a8c7b23bd5150e0cdcc3b390c91338a9"
+    }
+  ],
+  "phases": {
+    "start": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/normal-perf-start-20260927.command",
+      "bytes": 22128,
+      "sha256": "f91d49781fed1998847e56784d92ab078ee14d5499a97711653c45aaea1a6fae",
+      "phase_block": 2,
+      "bash_syntax_exit": 0
+    },
+    "full-completion": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/normal-perf-full-completion-20260927.command",
+      "bytes": 21712,
+      "sha256": "418875666748a59cb4b6238ce0a5468d7033dbd6a2b8ba0e5ed7c751d4548452",
+      "phase_block": 3,
+      "bash_syntax_exit": 0
+    },
+    "count-completion": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/normal-perf-count-completion-20260927.command",
+      "bytes": 21116,
+      "sha256": "562c1a38769ede35c67dbda50d93821ed35ce65d901a5956ebf0a8281a1cba94",
+      "phase_block": 4,
+      "bash_syntax_exit": 0
+    },
+    "report": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/normal-perf-report-20260927.command",
+      "bytes": 21176,
+      "sha256": "dd2fef871720f25dd28a5b1992cd3cbcf2f9807db0c8574d9a111d34f4ade087",
+      "phase_block": 5,
+      "bash_syntax_exit": 0
+    },
+    "measurements": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/normal-perf-measurements-20260927.command",
+      "bytes": 21901,
+      "sha256": "3ac2b7b14960ee3d0266f3f7499e7e135ea6bbf4ba7ee8c0e2d76382a92cbf8e",
+      "phase_block": 6,
+      "bash_syntax_exit": 0
+    },
+    "measurement-finish": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/normal-perf-measurement-finish-20260927.command",
+      "bytes": 21385,
+      "sha256": "7457d4bd88dedc5c25c484ca907c0c329ad160040ab8a2d91f4827166b3c87e3",
+      "phase_block": 7,
+      "bash_syntax_exit": 0
+    }
+  },
+  "deferred": {
+    "budget": {
+      "block": 8,
+      "reason": "待真实perf/measurement及明确margin/预算SHA后才生成"
+    },
+    "budget-finish": {
+      "block": 9,
+      "reason": "依赖真实budget任务"
+    }
+  }
+}

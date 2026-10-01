@@ -1,0 +1,2593 @@
+{
+ "line": "EVAL_ORIG40K_COUNT4=DONE tasks=4 episodes=200/200 errors=0 BinFill=22/50 StopCube=26/50 PickXtimes=39/50 SwingXtimes=47/50 mean_rate=0.6700 timeout=0/200 fail=66/200",
+ "split_seed_match": "SPLIT_SEED_MATCH=PASS split=test n=200 mismatch=0 unlogged=0",
+ "split": "test",
+ "split_mismatches": [],
+ "rates": {
+  "BinFill": {
+   "episodes": 50,
+   "success": 22,
+   "error": 0,
+   "rate": 0.44,
+   "missing": [],
+   "extra": [],
+   "timeout": 0,
+   "fail": 28,
+   "by_difficulty": {
+    "easy": "17/26",
+    "hard": "1/12",
+    "medium": "4/12"
+   }
+  },
+  "StopCube": {
+   "episodes": 50,
+   "success": 26,
+   "error": 0,
+   "rate": 0.52,
+   "missing": [],
+   "extra": [],
+   "timeout": 0,
+   "fail": 24,
+   "by_difficulty": {
+    "easy": "13/26",
+    "hard": "7/12",
+    "medium": "6/12"
+   }
+  },
+  "PickXtimes": {
+   "episodes": 50,
+   "success": 39,
+   "error": 0,
+   "rate": 0.78,
+   "missing": [],
+   "extra": [],
+   "timeout": 0,
+   "fail": 11,
+   "by_difficulty": {
+    "easy": "23/26",
+    "hard": "5/12",
+    "medium": "11/12"
+   }
+  },
+  "SwingXtimes": {
+   "episodes": 50,
+   "success": 47,
+   "error": 0,
+   "rate": 0.94,
+   "missing": [],
+   "extra": [],
+   "timeout": 0,
+   "fail": 3,
+   "by_difficulty": {
+    "easy": "25/26",
+    "hard": "10/12",
+    "medium": "12/12"
+   }
+  }
+ },
+ "mean_rate": 0.67,
+ "shards": [
+  {
+   "shard": "w0",
+   "dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/eval-orig40k-count4-w0/ckpt40000/seed42",
+   "has_progress": true,
+   "finished": true,
+   "episodes": 28,
+   "wall": {
+    "start": "2026-09-28 16:03:47",
+    "end": "2026-09-28 16:24:34",
+    "wall_s": 1247.0,
+    "eval_rc": 0,
+    "exit_code": 0
+   },
+   "timing": {
+    "add_buffer_le16": {
+     "n": 687,
+     "mean": 93.9,
+     "median": 90.2,
+     "p90": 131.9,
+     "max": 1284.9
+    },
+    "add_buffer_first_gt16": {
+     "n": 0
+    },
+    "infer_all": {
+     "n": 687,
+     "mean": 197.7,
+     "median": 179.8,
+     "p90": 278.1,
+     "max": 2699.6
+    },
+    "infer_excl_first": {
+     "n": 686,
+     "mean": 194.1,
+     "median": 179.8,
+     "p90": 277.9,
+     "max": 282.1
+    }
+   }
+  },
+  {
+   "shard": "w1",
+   "dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/eval-orig40k-count4-w1/ckpt40000/seed42",
+   "has_progress": true,
+   "finished": true,
+   "episodes": 28,
+   "wall": {
+    "start": "2026-09-28 16:03:47",
+    "end": "2026-09-28 16:23:30",
+    "wall_s": 1183.0,
+    "eval_rc": 0,
+    "exit_code": 0
+   },
+   "timing": {
+    "add_buffer_le16": {
+     "n": 642,
+     "mean": 93.1,
+     "median": 88.0,
+     "p90": 131.3,
+     "max": 1347.3
+    },
+    "add_buffer_first_gt16": {
+     "n": 0
+    },
+    "infer_all": {
+     "n": 642,
+     "mean": 200.7,
+     "median": 180.7,
+     "p90": 280.1,
+     "max": 2791.8
+    },
+    "infer_excl_first": {
+     "n": 641,
+     "mean": 196.7,
+     "median": 180.7,
+     "p90": 280.1,
+     "max": 282.5
+    }
+   }
+  },
+  {
+   "shard": "w2",
+   "dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/eval-orig40k-count4-w2/ckpt40000/seed42",
+   "has_progress": true,
+   "finished": true,
+   "episodes": 24,
+   "wall": {
+    "start": "2026-09-28 16:03:47",
+    "end": "2026-09-28 16:23:10",
+    "wall_s": 1163.0,
+    "eval_rc": 0,
+    "exit_code": 0
+   },
+   "timing": {
+    "add_buffer_le16": {
+     "n": 619,
+     "mean": 91.4,
+     "median": 85.1,
+     "p90": 129.8,
+     "max": 1393.2
+    },
+    "add_buffer_first_gt16": {
+     "n": 0
+    },
+    "infer_all": {
+     "n": 619,
+     "mean": 194.1,
+     "median": 179.6,
+     "p90": 275.2,
+     "max": 2878.0
+    },
+    "infer_excl_first": {
+     "n": 618,
+     "mean": 189.8,
+     "median": 179.6,
+     "p90": 272.9,
+     "max": 281.7
+    }
+   }
+  },
+  {
+   "shard": "w3",
+   "dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/eval-orig40k-count4-w3/ckpt40000/seed42",
+   "has_progress": true,
+   "finished": true,
+   "episodes": 24,
+   "wall": {
+    "start": "2026-09-28 16:03:47",
+    "end": "2026-09-28 16:25:56",
+    "wall_s": 1329.0,
+    "eval_rc": 0,
+    "exit_code": 0
+   },
+   "timing": {
+    "add_buffer_le16": {
+     "n": 722,
+     "mean": 91.7,
+     "median": 90.2,
+     "p90": 130.3,
+     "max": 1074.9
+    },
+    "add_buffer_first_gt16": {
+     "n": 0
+    },
+    "infer_all": {
+     "n": 722,
+     "mean": 193.5,
+     "median": 179.9,
+     "p90": 275.5,
+     "max": 2859.0
+    },
+    "infer_excl_first": {
+     "n": 721,
+     "mean": 189.8,
+     "median": 179.9,
+     "p90": 275.3,
+     "max": 282.0
+    }
+   }
+  },
+  {
+   "shard": "w4",
+   "dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/eval-orig40k-count4-w4/ckpt40000/seed42",
+   "has_progress": true,
+   "finished": true,
+   "episodes": 24,
+   "wall": {
+    "start": "2026-09-28 16:03:47",
+    "end": "2026-09-28 16:20:16",
+    "wall_s": 989.0,
+    "eval_rc": 0,
+    "exit_code": 0
+   },
+   "timing": {
+    "add_buffer_le16": {
+     "n": 527,
+     "mean": 92.3,
+     "median": 88.0,
+     "p90": 130.2,
+     "max": 1175.8
+    },
+    "add_buffer_first_gt16": {
+     "n": 0
+    },
+    "infer_all": {
+     "n": 527,
+     "mean": 196.1,
+     "median": 180.0,
+     "p90": 278.5,
+     "max": 2797.4
+    },
+    "infer_excl_first": {
+     "n": 526,
+     "mean": 191.2,
+     "median": 179.9,
+     "p90": 278.5,
+     "max": 281.2
+    }
+   }
+  },
+  {
+   "shard": "w5",
+   "dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/eval-orig40k-count4-w5/ckpt40000/seed42",
+   "has_progress": true,
+   "finished": true,
+   "episodes": 24,
+   "wall": {
+    "start": "2026-09-28 16:03:47",
+    "end": "2026-09-28 16:20:20",
+    "wall_s": 993.0,
+    "eval_rc": 0,
+    "exit_code": 0
+   },
+   "timing": {
+    "add_buffer_le16": {
+     "n": 526,
+     "mean": 95.5,
+     "median": 91.3,
+     "p90": 133.5,
+     "max": 1176.6
+    },
+    "add_buffer_first_gt16": {
+     "n": 0
+    },
+    "infer_all": {
+     "n": 526,
+     "mean": 201.3,
+     "median": 179.6,
+     "p90": 278.2,
+     "max": 2897.1
+    },
+    "infer_excl_first": {
+     "n": 525,
+     "mean": 196.2,
+     "median": 179.6,
+     "p90": 278.2,
+     "max": 293.2
+    }
+   }
+  },
+  {
+   "shard": "w6",
+   "dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/eval-orig40k-count4-w6/ckpt40000/seed42",
+   "has_progress": true,
+   "finished": true,
+   "episodes": 24,
+   "wall": {
+    "start": "2026-09-28 16:03:47",
+    "end": "2026-09-28 16:22:46",
+    "wall_s": 1139.0,
+    "eval_rc": 0,
+    "exit_code": 0
+   },
+   "timing": {
+    "add_buffer_le16": {
+     "n": 608,
+     "mean": 94.1,
+     "median": 90.7,
+     "p90": 133.3,
+     "max": 1473.8
+    },
+    "add_buffer_first_gt16": {
+     "n": 0
+    },
+    "infer_all": {
+     "n": 608,
+     "mean": 194.7,
+     "median": 180.1,
+     "p90": 275.2,
+     "max": 2782.4
+    },
+    "infer_excl_first": {
+     "n": 607,
+     "mean": 190.5,
+     "median": 180.1,
+     "p90": 274.5,
+     "max": 281.7
+    }
+   }
+  },
+  {
+   "shard": "w7",
+   "dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/evaluation/eval-orig40k-count4-w7/ckpt40000/seed42",
+   "has_progress": true,
+   "finished": true,
+   "episodes": 24,
+   "wall": {
+    "start": "2026-09-28 16:03:47",
+    "end": "2026-09-28 16:28:55",
+    "wall_s": 1508.0,
+    "eval_rc": 0,
+    "exit_code": 0
+   },
+   "timing": {
+    "add_buffer_le16": {
+     "n": 842,
+     "mean": 93.9,
+     "median": 94.1,
+     "p90": 132.3,
+     "max": 1427.7
+    },
+    "add_buffer_first_gt16": {
+     "n": 0
+    },
+    "infer_all": {
+     "n": 842,
+     "mean": 195.8,
+     "median": 179.3,
+     "p90": 278.1,
+     "max": 2782.0
+    },
+    "infer_excl_first": {
+     "n": 841,
+     "mean": 192.8,
+     "median": 179.3,
+     "p90": 278.0,
+     "max": 280.8
+    }
+   }
+  }
+ ],
+ "episodes": [
+  {
+   "task": "BinFill",
+   "episode": 0,
+   "seed": 540000,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "540000",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 1,
+   "seed": 540101,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "540101",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 2,
+   "seed": 540201,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w2",
+   "env_seed_logged": "540201",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 3,
+   "seed": 540302,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "540302",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 4,
+   "seed": 540400,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "540400",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 5,
+   "seed": 540500,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w5",
+   "env_seed_logged": "540500",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 6,
+   "seed": 540600,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "540600",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 7,
+   "seed": 540701,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w7",
+   "env_seed_logged": "540701",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 8,
+   "seed": 540800,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w0",
+   "env_seed_logged": "540800",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 9,
+   "seed": 540900,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "540900",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 10,
+   "seed": 541000,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w2",
+   "env_seed_logged": "541000",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 11,
+   "seed": 541100,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "541100",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 12,
+   "seed": 541200,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w4",
+   "env_seed_logged": "541200",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 13,
+   "seed": 541300,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w5",
+   "env_seed_logged": "541300",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 14,
+   "seed": 541400,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "541400",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 15,
+   "seed": 541500,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w7",
+   "env_seed_logged": "541500",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 16,
+   "seed": 541601,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "541601",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 17,
+   "seed": 541700,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "541700",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 18,
+   "seed": 541802,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "541802",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 19,
+   "seed": 541900,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "541900",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 20,
+   "seed": 542001,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w4",
+   "env_seed_logged": "542001",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 21,
+   "seed": 542100,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "542100",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 22,
+   "seed": 542200,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w6",
+   "env_seed_logged": "542200",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 23,
+   "seed": 542300,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "542300",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 24,
+   "seed": 542400,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "542400",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 25,
+   "seed": 542500,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "542500",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 26,
+   "seed": 542600,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w2",
+   "env_seed_logged": "542600",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 27,
+   "seed": 542700,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "542700",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 28,
+   "seed": 542800,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "542800",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 29,
+   "seed": 542900,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w5",
+   "env_seed_logged": "542900",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 30,
+   "seed": 543000,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w6",
+   "env_seed_logged": "543000",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 31,
+   "seed": 543100,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w7",
+   "env_seed_logged": "543100",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 32,
+   "seed": 543200,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "543200",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 33,
+   "seed": 543300,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w1",
+   "env_seed_logged": "543300",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 34,
+   "seed": 543400,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w2",
+   "env_seed_logged": "543400",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 35,
+   "seed": 543501,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "543501",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 36,
+   "seed": 543600,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w4",
+   "env_seed_logged": "543600",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 37,
+   "seed": 543700,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "543700",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 38,
+   "seed": 543800,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w6",
+   "env_seed_logged": "543800",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 39,
+   "seed": 543900,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w7",
+   "env_seed_logged": "543900",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 40,
+   "seed": 544000,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "544000",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 41,
+   "seed": 544100,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "544100",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 42,
+   "seed": 544200,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "544200",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 43,
+   "seed": 544300,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "544300",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 44,
+   "seed": 544400,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "544400",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 45,
+   "seed": 544500,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w5",
+   "env_seed_logged": "544500",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 46,
+   "seed": 544600,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w6",
+   "env_seed_logged": "544600",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 47,
+   "seed": 544700,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w7",
+   "env_seed_logged": "544700",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 48,
+   "seed": 544800,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "544800",
+   "split_logged": "test"
+  },
+  {
+   "task": "BinFill",
+   "episode": 49,
+   "seed": 544900,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "544900",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 0,
+   "seed": 520000,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "520000",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 1,
+   "seed": 520100,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "520100",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 2,
+   "seed": 520200,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w2",
+   "env_seed_logged": "520200",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 3,
+   "seed": 520300,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "520300",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 4,
+   "seed": 520400,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w4",
+   "env_seed_logged": "520400",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 5,
+   "seed": 520500,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w5",
+   "env_seed_logged": "520500",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 6,
+   "seed": 520600,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "520600",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 7,
+   "seed": 520700,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w7",
+   "env_seed_logged": "520700",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 8,
+   "seed": 520800,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w0",
+   "env_seed_logged": "520800",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 9,
+   "seed": 520901,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w1",
+   "env_seed_logged": "520901",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 10,
+   "seed": 521000,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w2",
+   "env_seed_logged": "521000",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 11,
+   "seed": 521100,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w3",
+   "env_seed_logged": "521100",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 12,
+   "seed": 521200,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w4",
+   "env_seed_logged": "521200",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 13,
+   "seed": 521300,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w5",
+   "env_seed_logged": "521300",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 14,
+   "seed": 521400,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w6",
+   "env_seed_logged": "521400",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 15,
+   "seed": 521500,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "521500",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 16,
+   "seed": 521600,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "521600",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 17,
+   "seed": 521700,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w1",
+   "env_seed_logged": "521700",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 18,
+   "seed": 521800,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "521800",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 19,
+   "seed": 521900,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "521900",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 20,
+   "seed": 522001,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w4",
+   "env_seed_logged": "522001",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 21,
+   "seed": 522100,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "522100",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 22,
+   "seed": 522200,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "522200",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 23,
+   "seed": 522300,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "522300",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 24,
+   "seed": 522400,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "522400",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 25,
+   "seed": 522501,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "522501",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 26,
+   "seed": 522600,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "522600",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 27,
+   "seed": 522700,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w3",
+   "env_seed_logged": "522700",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 28,
+   "seed": 522800,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "522800",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 29,
+   "seed": 522900,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "522900",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 30,
+   "seed": 523000,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "523000",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 31,
+   "seed": 523100,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w7",
+   "env_seed_logged": "523100",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 32,
+   "seed": 523200,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w0",
+   "env_seed_logged": "523200",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 33,
+   "seed": 523300,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "523300",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 34,
+   "seed": 523400,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w2",
+   "env_seed_logged": "523400",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 35,
+   "seed": 523500,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w3",
+   "env_seed_logged": "523500",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 36,
+   "seed": 523600,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "523600",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 37,
+   "seed": 523700,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w5",
+   "env_seed_logged": "523700",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 38,
+   "seed": 523800,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w6",
+   "env_seed_logged": "523800",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 39,
+   "seed": 523900,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "523900",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 40,
+   "seed": 524000,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w0",
+   "env_seed_logged": "524000",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 41,
+   "seed": 524100,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "524100",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 42,
+   "seed": 524200,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w2",
+   "env_seed_logged": "524200",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 43,
+   "seed": 524300,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "524300",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 44,
+   "seed": 524400,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w4",
+   "env_seed_logged": "524400",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 45,
+   "seed": 524500,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "524500",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 46,
+   "seed": 524600,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "524600",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 47,
+   "seed": 524700,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "524700",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 48,
+   "seed": 524800,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "524800",
+   "split_logged": "test"
+  },
+  {
+   "task": "StopCube",
+   "episode": 49,
+   "seed": 524900,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w1",
+   "env_seed_logged": "524900",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 0,
+   "seed": 510000,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "510000",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 1,
+   "seed": 510100,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "510100",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 2,
+   "seed": 510200,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "510200",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 3,
+   "seed": 510300,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "510300",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 4,
+   "seed": 510400,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "510400",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 5,
+   "seed": 510500,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "510500",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 6,
+   "seed": 510600,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "510600",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 7,
+   "seed": 510700,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w7",
+   "env_seed_logged": "510700",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 8,
+   "seed": 510800,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "510800",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 9,
+   "seed": 510900,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "510900",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 10,
+   "seed": 511000,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "511000",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 11,
+   "seed": 511100,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "511100",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 12,
+   "seed": 511200,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w4",
+   "env_seed_logged": "511200",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 13,
+   "seed": 511300,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "511300",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 14,
+   "seed": 511400,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "511400",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 15,
+   "seed": 511501,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "511501",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 16,
+   "seed": 511600,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "511600",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 17,
+   "seed": 511700,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "511700",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 18,
+   "seed": 511800,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "511800",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 19,
+   "seed": 511900,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w3",
+   "env_seed_logged": "511900",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 20,
+   "seed": 512000,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "512000",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 21,
+   "seed": 512100,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "512100",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 22,
+   "seed": 512200,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "512200",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 23,
+   "seed": 512300,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w7",
+   "env_seed_logged": "512300",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 24,
+   "seed": 512400,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "512400",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 25,
+   "seed": 512500,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "512500",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 26,
+   "seed": 512600,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "512600",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 27,
+   "seed": 512700,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w3",
+   "env_seed_logged": "512700",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 28,
+   "seed": 512800,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "512800",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 29,
+   "seed": 512900,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "512900",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 30,
+   "seed": 513000,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "513000",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 31,
+   "seed": 513100,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "513100",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 32,
+   "seed": 513200,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w0",
+   "env_seed_logged": "513200",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 33,
+   "seed": 513300,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "513300",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 34,
+   "seed": 513400,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "513400",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 35,
+   "seed": 513500,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "513500",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 36,
+   "seed": 513600,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "513600",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 37,
+   "seed": 513700,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w5",
+   "env_seed_logged": "513700",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 38,
+   "seed": 513800,
+   "difficulty": "medium",
+   "success": false,
+   "flag": "fail",
+   "shard": "w6",
+   "env_seed_logged": "513800",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 39,
+   "seed": 513900,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "513900",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 40,
+   "seed": 514000,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "514000",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 41,
+   "seed": 514100,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "514100",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 42,
+   "seed": 514200,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "514200",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 43,
+   "seed": 514300,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "514300",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 44,
+   "seed": 514400,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "514400",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 45,
+   "seed": 514500,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "514500",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 46,
+   "seed": 514600,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "514600",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 47,
+   "seed": 514700,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w7",
+   "env_seed_logged": "514700",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 48,
+   "seed": 514800,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "514800",
+   "split_logged": "test"
+  },
+  {
+   "task": "PickXtimes",
+   "episode": 49,
+   "seed": 514900,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "514900",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 0,
+   "seed": 530000,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "530000",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 1,
+   "seed": 530100,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "530100",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 2,
+   "seed": 530200,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "530200",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 3,
+   "seed": 530300,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w3",
+   "env_seed_logged": "530300",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 4,
+   "seed": 530400,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "530400",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 5,
+   "seed": 530500,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "530500",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 6,
+   "seed": 530600,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "530600",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 7,
+   "seed": 530700,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "530700",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 8,
+   "seed": 530800,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "530800",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 9,
+   "seed": 530900,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "530900",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 10,
+   "seed": 531000,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "531000",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 11,
+   "seed": 531100,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w3",
+   "env_seed_logged": "531100",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 12,
+   "seed": 531201,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "531201",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 13,
+   "seed": 531300,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "531300",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 14,
+   "seed": 531401,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "531401",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 15,
+   "seed": 531500,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "531500",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 16,
+   "seed": 531600,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "531600",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 17,
+   "seed": 531700,
+   "difficulty": "easy",
+   "success": false,
+   "flag": "fail",
+   "shard": "w1",
+   "env_seed_logged": "531700",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 18,
+   "seed": 531800,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "531800",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 19,
+   "seed": 531901,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w3",
+   "env_seed_logged": "531901",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 20,
+   "seed": 532000,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "532000",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 21,
+   "seed": 532100,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "532100",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 22,
+   "seed": 532200,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "532200",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 23,
+   "seed": 532300,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w7",
+   "env_seed_logged": "532300",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 24,
+   "seed": 532400,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "532400",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 25,
+   "seed": 532500,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "532500",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 26,
+   "seed": 532601,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "532601",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 27,
+   "seed": 532700,
+   "difficulty": "hard",
+   "success": false,
+   "flag": "fail",
+   "shard": "w3",
+   "env_seed_logged": "532700",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 28,
+   "seed": 532800,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "532800",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 29,
+   "seed": 532900,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "532900",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 30,
+   "seed": 533000,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "533000",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 31,
+   "seed": 533100,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "533100",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 32,
+   "seed": 533200,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "533200",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 33,
+   "seed": 533300,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "533300",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 34,
+   "seed": 533401,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "533401",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 35,
+   "seed": 533500,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w3",
+   "env_seed_logged": "533500",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 36,
+   "seed": 533600,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "533600",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 37,
+   "seed": 533700,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "533700",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 38,
+   "seed": 533800,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "533800",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 39,
+   "seed": 533900,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "533900",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 40,
+   "seed": 534000,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "534000",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 41,
+   "seed": 534100,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "534100",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 42,
+   "seed": 534200,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w2",
+   "env_seed_logged": "534200",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 43,
+   "seed": 534300,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w3",
+   "env_seed_logged": "534300",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 44,
+   "seed": 534400,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w4",
+   "env_seed_logged": "534400",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 45,
+   "seed": 534500,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w5",
+   "env_seed_logged": "534500",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 46,
+   "seed": 534600,
+   "difficulty": "medium",
+   "success": true,
+   "flag": "success",
+   "shard": "w6",
+   "env_seed_logged": "534600",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 47,
+   "seed": 534700,
+   "difficulty": "hard",
+   "success": true,
+   "flag": "success",
+   "shard": "w7",
+   "env_seed_logged": "534700",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 48,
+   "seed": 534800,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w0",
+   "env_seed_logged": "534800",
+   "split_logged": "test"
+  },
+  {
+   "task": "SwingXtimes",
+   "episode": 49,
+   "seed": 534900,
+   "difficulty": "easy",
+   "success": true,
+   "flag": "success",
+   "shard": "w1",
+   "env_seed_logged": "534900",
+   "split_logged": "test"
+  }
+ ]
+}

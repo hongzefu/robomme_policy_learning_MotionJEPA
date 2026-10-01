@@ -13,6 +13,9 @@ from types import SimpleNamespace
 import check_orig80k_speed as speed
 import pytest
 
+DETERMINISTIC_FLAGS = "--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"
+NORMAL_PROFILE = {"name": "normal", "xla_flags": ""}
+
 
 def dump_rows(path, values):
     path.write_text("".join(json.dumps(value) + "\n" for value in values))
@@ -79,11 +82,17 @@ def fixture(tmp_path):
     timing[299]["sync"] = {"location": "before_final_save", "wall_end": base + 300, "seconds": .1}
     timing[299].update(wall_end=base + 302, host_step_s=3., save_wall_start=base + 300)
     dump_rows(records / "step_timing.jsonl", timing)
-    metadata = {"head": "a" * 40, "mode": "perf", "steps": 300, "success": True, "entry_calls": 1, "sampler_stopped": True,
+    metadata = {"schema": speed.RUN_SCHEMA, "timing_eq_profile": dict(NORMAL_PROFILE), "xla_flags": None,
+                "head": "a" * 40, "mode": "perf", "steps": 300, "success": True, "entry_calls": 1, "sampler_stopped": True,
                 "profiler": False, "loader": {"batch_size": 64, "workers": 4}, "gpu_ids": [0, 1, 2, 3],
                 "start_wall": base - 5, "entry_start_wall": base - 4, "end_wall": base + 302,
                 "save_calls": [{"step": 299, "state_step": 300, "start_wall": base + 300,
                                 "return_wall": base + 301, "checkpoint_root": str(checkpoint_root)}]}
+    speed.write_json(records / "speed_start.json", {key: metadata[key] for key in
+                     ("schema", "timing_eq_profile", "xla_flags", "head", "mode", "steps")})
+    speed.write_json(records / "launch.json", {"mode": "perf", "head": "a" * 40,
+        "timing_eq_profile": dict(NORMAL_PROFILE), "environment": {
+            "XLA_FLAGS": None, "ORIG80K_SMOKE_EQ_MODE": None, "ORIG80K_TIMING_EQ_PROFILE": None}})
     disk = []
     for index in range(615):
         stamp = base - 4.5 + index * .5
@@ -129,6 +138,62 @@ def test_report_uses_full_mean_zero_fraction_and_excludes_save(tmp_path):
     assert result["disk"]["scratch_available_min_bytes"] == 40960 - 614
     assert result["disk"]["save_samples"] == 4
     assert result["disk"]["checkpoint_save_commit_seconds"] == 1.899000666
+    assert result["timing_eq_profile"] == NORMAL_PROFILE
+    assert result["xla_flags"] is None
+
+
+def test_report_uses_recorded_profile_not_reporting_process_environment(tmp_path, monkeypatch):
+    records, gpu = fixture(tmp_path)
+    monkeypatch.setenv("ORIG80K_TIMING_EQ_PROFILE", "deterministic100")
+    monkeypatch.setenv("ORIG80K_SMOKE_EQ_MODE", "on")
+    monkeypatch.setenv("XLA_FLAGS", DETERMINISTIC_FLAGS)
+    assert speed.summarize(records, gpu)["timing_eq_profile"] == NORMAL_PROFILE
+
+
+@pytest.mark.parametrize(("target", "fault"), [
+    ("speed_run.json", "schema"), ("speed_run.json", "missing_profile"),
+    ("speed_run.json", "null_profile"), ("speed_run.json", "extra_profile"),
+    ("speed_run.json", "missing_flags"), ("speed_run.json", "actual_flags"),
+    ("speed_run.json", "deterministic"), ("speed_start.json", "missing_profile"),
+    ("speed_start.json", "actual_flags"), ("speed_start.json", "head"),
+    ("launch.json", "missing_profile"), ("launch.json", "null_profile"),
+    ("launch.json", "actual_flags"), ("launch.json", "selector"),
+    ("launch.json", "timing"), ("launch.json", "missing_environment"),
+    ("launch.json", "head"),
+])
+def test_report_rejects_missing_forged_or_mixed_profiles(tmp_path, target, fault):
+    records, gpu = fixture(tmp_path)
+    path = records / target
+    record = json.loads(path.read_text())
+    if fault == "schema":
+        record["schema"] = 1
+    elif fault == "missing_profile":
+        del record["timing_eq_profile"]
+    elif fault == "null_profile":
+        record["timing_eq_profile"] = None
+    elif fault == "extra_profile":
+        record["timing_eq_profile"]["ignore"] = True
+    elif fault == "missing_flags":
+        del record["xla_flags"]
+    elif fault == "actual_flags":
+        if target == "launch.json":
+            record["environment"]["XLA_FLAGS"] = DETERMINISTIC_FLAGS
+        else:
+            record["xla_flags"] = DETERMINISTIC_FLAGS
+    elif fault == "deterministic":
+        record["timing_eq_profile"] = {"name": "deterministic100", "xla_flags": DETERMINISTIC_FLAGS}
+        record["xla_flags"] = DETERMINISTIC_FLAGS
+    elif fault == "selector":
+        record["environment"]["ORIG80K_TIMING_EQ_PROFILE"] = "deterministic100"
+    elif fault == "timing":
+        record["environment"]["ORIG80K_SMOKE_EQ_MODE"] = "on"
+    elif fault == "missing_environment":
+        del record["environment"]["ORIG80K_TIMING_EQ_PROFILE"]
+    else:
+        record["head"] = "b" * 40
+    path.write_text(json.dumps(record))
+    with pytest.raises(ValueError, match="档位|schema2|XLA_FLAGS|身份|smoke|normal档"):
+        speed.summarize(records, gpu)
 
 
 @pytest.mark.parametrize("fault", ["nan", "missing_step", "wrong_gpu", "missing_sync", "sampling_failure"])
@@ -155,7 +220,10 @@ def test_report_rejects_invalid_evidence(tmp_path, fault):
 
 
 def test_run_rejects_deterministic_flags_before_outputs(tmp_path, monkeypatch):
+    monkeypatch.syspath_prepend(str(speed.ROOT / "scripts/training"))
     monkeypatch.setattr(speed, "ROOT", tmp_path)
+    monkeypatch.delenv("ORIG80K_TIMING_EQ_PROFILE", raising=False)
+    monkeypatch.delenv("ORIG80K_SMOKE_EQ_MODE", raising=False)
     monkeypatch.setenv("XLA_FLAGS", "--xla_gpu_deterministic_ops=true")
     record_path = tmp_path / "v1-store/perf-test"
     with pytest.raises(ValueError, match="XLA_FLAGS"):
@@ -163,9 +231,39 @@ def test_run_rejects_deterministic_flags_before_outputs(tmp_path, monkeypatch):
     assert not record_path.exists()
 
 
+@pytest.mark.parametrize(("mode", "profile", "timing", "flags"), [
+    ("prod", None, None, None),
+    ("perf", "deterministic100", None, DETERMINISTIC_FLAGS),
+    ("perf", "deterministic100", "on", DETERMINISTIC_FLAGS),
+    ("smoke", "deterministic100", "off", DETERMINISTIC_FLAGS),
+    ("smoke", "deterministic100", None, DETERMINISTIC_FLAGS),
+    ("smoke", "deterministic100", "on", None),
+    ("smoke", "deterministic100", "on", DETERMINISTIC_FLAGS + " --extra=true"),
+    ("smoke", None, "on", DETERMINISTIC_FLAGS),
+    ("smoke", "", "on", None), ("smoke", "normal", "on", None),
+    ("smoke", "unknown", "on", None),
+])
+def test_run_profile_rejections_precede_git_training_and_outputs(tmp_path, monkeypatch, mode, profile, timing, flags):
+    monkeypatch.syspath_prepend(str(speed.ROOT / "scripts/training"))
+    monkeypatch.setattr(speed, "ROOT", tmp_path)
+    for key, value in (("ORIG80K_TIMING_EQ_PROFILE", profile), ("ORIG80K_SMOKE_EQ_MODE", timing), ("XLA_FLAGS", flags)):
+        if value is None:
+            monkeypatch.delenv(key, raising=False)
+        else:
+            monkeypatch.setenv(key, value)
+    def forbidden(*args, **kwargs):
+        raise AssertionError("非法档位不应进入Git查询或训练")
+    monkeypatch.setattr(speed.subprocess, "check_output", forbidden)
+    monkeypatch.setattr(speed.runpy, "run_path", forbidden)
+    records = tmp_path / "v1-store/rejected"
+    with pytest.raises(ValueError, match="仅允许|XLA_FLAGS|观测入口"):
+        speed.run(SimpleNamespace(records=str(records), mode=mode, train_args=[]))
+    assert not records.exists()
+
+
 @pytest.mark.parametrize("failed", [False, True])
-@pytest.mark.parametrize("mode", ["perf", "smoke"])
-def test_wrapper_forwards_real_entry_and_save_and_restores_state(tmp_path, monkeypatch, failed, mode):
+@pytest.mark.parametrize(("mode", "profile"), [("perf", "normal"), ("smoke", "normal"), ("smoke", "deterministic100")])
+def test_wrapper_forwards_real_entry_and_save_and_restores_state(tmp_path, monkeypatch, failed, mode, profile):
     """替换昂贵训练本身，实际执行包装器的安装、转发、采样和异常恢复。"""
     repo = speed.ROOT
     monkeypatch.syspath_prepend(str(repo / "scripts/training"))
@@ -175,6 +273,14 @@ def test_wrapper_forwards_real_entry_and_save_and_restores_state(tmp_path, monke
     monkeypatch.setenv("MMEVLA_EXPECTED_TRAIN_HEAD", "a" * 40)
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0,1,2,3")
     monkeypatch.delenv("XLA_FLAGS", raising=False)
+    monkeypatch.delenv("ORIG80K_TIMING_EQ_PROFILE", raising=False)
+    monkeypatch.delenv("ORIG80K_SMOKE_EQ_MODE", raising=False)
+    if profile == "deterministic100":
+        monkeypatch.setenv("ORIG80K_TIMING_EQ_PROFILE", profile)
+        monkeypatch.setenv("ORIG80K_SMOKE_EQ_MODE", "on")
+        monkeypatch.setenv("XLA_FLAGS", DETERMINISTIC_FLAGS)
+    expected_flags = DETERMINISTIC_FLAGS if profile == "deterministic100" else None
+    descriptor = {"name": profile, "xla_flags": expected_flags or ""}
     monkeypatch.setenv("TRAIN_TIMING_STEPS", "0")
     monkeypatch.setattr(speed.subprocess, "check_output", lambda argv, **kw: "" if "status" in argv else "a" * 40)
     calls = []
@@ -206,6 +312,7 @@ def test_wrapper_forwards_real_entry_and_save_and_restores_state(tmp_path, monke
         assert sys.argv[1:] == argv
         assert fake_timer.StepTiming is speed.HostTiming
         assert os_env("TRAIN_TIMING_STEPS") == str(expected_steps)
+        assert os_env("XLA_FLAGS") == expected_flags
         with pytest.raises(RuntimeError, match="profiler"):
             fake_jax.profiler.start_trace("任何路径")
         fake_loader.create_data_loader()
@@ -229,7 +336,14 @@ def test_wrapper_forwards_real_entry_and_save_and_restores_state(tmp_path, monke
     assert fake_checkpoint.save_state is original_save
     assert fake_jax.profiler.start_trace is original_trace
     assert os_env("TRAIN_TIMING_STEPS") == "0"
+    assert os_env("XLA_FLAGS") == expected_flags
     record = json.loads((record_path / "speed_run.json").read_text())
+    start_record = json.loads((record_path / "speed_start.json").read_text())
+    for value in (start_record, record):
+        assert value["schema"] == 2
+        assert value["timing_eq_profile"] == descriptor
+        assert "xla_flags" in value
+        assert value["xla_flags"] == expected_flags
     assert bool(record.get("success")) is not failed
     assert record["sampler_stopped"]
     assert len(record["save_calls"]) == 1

@@ -1,0 +1,1015 @@
+{
+  "schema": 1,
+  "checker_actual_exit_code": 0,
+  "output": {
+    "checker": {
+      "bytes": 18239,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/verify_terminal.py",
+      "sha256": "d1c0c8145a3efac6ee6bd17f6e9bc7bdec3b36cfcd5dc34220c2738a8c77f48d"
+    },
+    "finished_utc": "2026-09-27T02:32:10.861277+00:00",
+    "group": null,
+    "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+    "parent_observation_boundary": "调度父自身宿主实际退出另由root控制记录留证；本报告不从内部JSON反推该外层wait",
+    "result": {
+      "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+      "phase": "report",
+      "profile": {
+        "name": "normal",
+        "xla_flags": ""
+      },
+      "report": {
+        "bytes": 9584,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json",
+        "sha256": "dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8"
+      },
+      "scope": "只读核对既有正式报告与原始采样算术；未运行report CLI/未写正式report，不套用100步50完整步门槛",
+      "sides": {
+        "count": {
+          "completion": {
+            "bytes": 20700,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/completion.json",
+            "sha256": "c533f14a5b7f3cc912ed2782daf6eea19c9324aa1add0837f422ec8c123b60c7"
+          },
+          "completion_terminal": {
+            "body_pid": 1346176,
+            "command": {
+              "bytes": 4050,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-completion-20260926T232339Z.command",
+              "sha256": "d005a9401e6b8efb93bfa8303a66140db1d5a92b35a39ec09311858a21258c29"
+            },
+            "end_utc": "2026-09-27T02:30:42Z",
+            "log": {
+              "bytes": 2597,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-completion-20260926T232339Z.wrapper.log",
+              "sha256": "24db8202d82ddf30eff6e9c228c1f35fbdc3a3ba6ac7d86637d6082ac6d4929e"
+            },
+            "native": {
+              "capture_process": {
+                "bytes": 3228,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-completion-20260926T232339Z.exit.capture.json",
+                "sha256": "61b932593b1987781db59dba27cb524d0452ce352205779220e166567e9d8223"
+              },
+              "identity": {
+                "bytes": 1517,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-completion-20260926T232339Z.identity.json",
+                "sha256": "314bf4f8c1098223793bac966b0ad628ccf3352ba898e4bd10775393c2eef1d3"
+              },
+              "launch_process": {
+                "bytes": 3436,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-completion-20260926T232339Z.launch.process.json",
+                "sha256": "23e5861aae062fc8ea4fce85425a5a18a67134c7665aeb20aef1c27e8984782b"
+              },
+              "receipt": {
+                "bytes": 5321,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-completion-20260926T232339Z.exit.json",
+                "sha256": "61c3f6aa2020783becc8d92bc95e563809db42d74a4882ebbeb9fe1da91a0ba7"
+              }
+            },
+            "start_utc": "2026-09-27T02:29:30Z",
+            "wrapper_pid": 1346174
+          },
+          "disk": {
+            "checkpoint_commit_timestamp_nsecs": 1790476016741541893,
+            "checkpoint_init_timestamp_nsecs": 1790476002143237964,
+            "checkpoint_metadata_sha256": "b02ed6a3ddf57b083528a3195fe11beb8c5f28344de90cd9202d83f742369726",
+            "checkpoint_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-count-300-20260926T232339Z",
+            "checkpoint_save_commit_seconds": 14.598303929,
+            "duplicate_inodes_observed": 0,
+            "final_allocated_bytes": 11879948288,
+            "final_scratch_available_bytes": 708416647168,
+            "max_interval_s": 3.7250567451119423,
+            "max_lateness_s": 2.775030746590346,
+            "max_sampling_duration_s": 3.2519182972609997,
+            "mean_interval_s": 0.5118794227350234,
+            "missed_ticks": 24,
+            "note": "只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减",
+            "run_uuid": "c8099d4f-a0d3-4af9-9cbd-80fe1d5f6a75",
+            "sampled_max_allocated_bytes": 13251739648,
+            "samples": 999,
+            "samples_sha256": "63d698b9c451ad27fc5716506036c2cd53537498d943afe2aab8f66fc30e1cb2",
+            "samples_with_path_races": 1,
+            "sampling_interval_s": 0.5,
+            "save_sampled_max_allocated_bytes": 13251739648,
+            "save_samples": 25,
+            "save_wait_done_wall": 1790476062.069208,
+            "save_window_wall": [
+              1790476002.0871637,
+              1790476016.7415419
+            ],
+            "scratch_available_min_bytes": 702863810560,
+            "scratch_path": "/scratch",
+            "start_allocated_bytes": 0,
+            "start_scratch_available_bytes": 732187643904,
+            "wait_record_sha256": "2671932c8c4557aff2538c222aaeda3b6fa978ea3e9b0a2e9e05fc07844315c1"
+          },
+          "ema_leaves": 61,
+          "files": [
+            {
+              "bytes": 21183,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/launch.json",
+              "sha256": "16ab2bd1a238b84f1a630e1226a71dcbe91834ae75c88ba1ef76a7026dec271b"
+            },
+            {
+              "bytes": 1776,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/speed_start.json",
+              "sha256": "0f2577c9c3d377b57e71cf94ed073cf9026257608dbc9d2ebd7f2a00095fec8e"
+            },
+            {
+              "bytes": 2911,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/speed_run.json",
+              "sha256": "401015a5ae2f5bc3a16f2733d4ed9de402b97417d96527c8c9a5b6c7c930f1b8"
+            },
+            {
+              "bytes": 348,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/runtime.json",
+              "sha256": "d4ed794d7594a5cb80902b71655ebfd0f6b1bd9cdad44abae608c59b4c35459d"
+            },
+            {
+              "bytes": 1252,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/metrics.jsonl",
+              "sha256": "eddad72c18cc546b8090542aaeb7031688e550703a37a28f26bc7313ee903006"
+            },
+            {
+              "bytes": 66003,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/step_timing.jsonl",
+              "sha256": "dc248ebfe6d736c42eeda89b93c4e4db8455f4a78c37c3cd3e98f96f9bb28f09"
+            },
+            {
+              "bytes": 409469,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/host_samples.jsonl",
+              "sha256": "cf63c678116dcb6c7e4012d061bbb30274832770675f8d1d5ef2826e6a1fd7b9"
+            },
+            {
+              "bytes": 530201,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/disk_samples.jsonl",
+              "sha256": "63d698b9c451ad27fc5716506036c2cd53537498d943afe2aab8f66fc30e1cb2"
+            },
+            {
+              "bytes": 155799,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/gpu.csv",
+              "sha256": "19d077b0fe73935ac492f266a22783e8b069bd6aea16b464115cb5249aaf76a2"
+            },
+            {
+              "bytes": 0,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/gpu.csv.err",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            {
+              "bytes": 16308,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/final/start.json",
+              "sha256": "47c0c137d7401588e434f1df0f5fee585e9bc6b1b79e54de3e2ef75973961281"
+            },
+            {
+              "bytes": 107667,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/final/final.json",
+              "sha256": "5f82277e9cb06ae609bce66202ed6981cc93b67f48ebbe4e513f914f923c1b3d"
+            },
+            {
+              "bytes": 196,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/final/checkpoint_wait_done.json",
+              "sha256": "2671932c8c4557aff2538c222aaeda3b6fa978ea3e9b0a2e9e05fc07844315c1"
+            },
+            {
+              "bytes": 62094,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/perf-orig80k-count-300-20260926T232339Z.driver.log",
+              "sha256": "4ccec4b1d63c7aef169f4407693be8dbd7030983bbfa55a1fec8af127ed312a0"
+            },
+            {
+              "bytes": 327,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-count-300-20260926T232339Z/299/_CHECKPOINT_METADATA",
+              "sha256": "b02ed6a3ddf57b083528a3195fe11beb8c5f28344de90cd9202d83f742369726"
+            },
+            {
+              "bytes": 28136,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-count-300-20260926T232339Z/299/params/_METADATA",
+              "sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65"
+            }
+          ],
+          "gpu_sampling": {
+            "gpu": {
+              "4": {
+                "max_gap_s": 0.5690000057220459,
+                "mean_interval_s": 0.5008647293748263,
+                "samples": 997
+              },
+              "5": {
+                "max_gap_s": 0.5690000057220459,
+                "mean_interval_s": 0.5008647293748263,
+                "samples": 997
+              },
+              "6": {
+                "max_gap_s": 0.5690000057220459,
+                "mean_interval_s": 0.5008647293748263,
+                "samples": 997
+              },
+              "7": {
+                "max_gap_s": 0.5690000057220459,
+                "mean_interval_s": 0.5008647293748263,
+                "samples": 997
+              }
+            },
+            "training_window": [
+              1790475562.310365,
+              1790476062.069208
+            ]
+          },
+          "group": "count",
+          "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+          "loop_step": 299,
+          "metrics_steps": [
+            0,
+            100,
+            200
+          ],
+          "phase": "completion",
+          "profile": {
+            "name": "normal",
+            "xla_flags": ""
+          },
+          "restored_ema_leaves": 61,
+          "run": "perf-orig80k-count-300-20260926T232339Z",
+          "run_uuid": "c8099d4f-a0d3-4af9-9cbd-80fe1d5f6a75",
+          "scope": "仅核已完成真实恢复记录及摘要/来源；未再加载权重",
+          "startup": {
+            "body_pid": 1325408,
+            "command": {
+              "bytes": 3534,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.command",
+              "sha256": "b9a5e6ed251ce1ec1d24a5d0fb6e01ed94e46fcc5aa069c91769b5a3c00b467e"
+            },
+            "configuration": {
+              "batch_size": 64,
+              "ema_decay": 0.999,
+              "exp_name": "perf-orig80k-count-300-20260926T232339Z",
+              "fsdp_devices": 4,
+              "keep_period": 10000,
+              "log_interval": 100,
+              "name": "mme_vla_suite",
+              "num_train_steps": 300,
+              "num_workers": 4,
+              "overwrite": false,
+              "resume": false,
+              "save_interval": 10000,
+              "seed": 42,
+              "wandb_enabled": true
+            },
+            "gpu_sampler_pid": 1326098,
+            "group": "count",
+            "guard_count": 25,
+            "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+            "launch": {
+              "bytes": 21183,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/launch.json",
+              "sha256": "16ab2bd1a238b84f1a630e1226a71dcbe91834ae75c88ba1ef76a7026dec271b"
+            },
+            "log_prefix": {
+              "boundary": "仅到首个完整TRAIN_WRAPPER_PID行，不是整份inflight日志终态SHA",
+              "bytes": 6793,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-20260926T232339Z.wrapper.log",
+              "sha256": "0c3aacd308e649dc336c5a8ffd42a6ba2a1bdaaf2725578fdcb14fb1db34b539"
+            },
+            "native": {
+              "identity": {
+                "bytes": 1462,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.identity.json",
+                "sha256": "9039401bd93abd1d43b11aea8abfb4a8b12728cac547319d8401a4406cc9b00d"
+              },
+              "launch_process": {
+                "bytes": 3337,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.launch.process.json",
+                "sha256": "d1451ba885a94bf3edf63dfbc9209cee07841751fe7cc4043ee0c423917b5684"
+              }
+            },
+            "normal_xla_flags": null,
+            "phase": "startup_only",
+            "profile": {
+              "name": "normal",
+              "xla_flags": ""
+            },
+            "run": "perf-orig80k-count-300-20260926T232339Z",
+            "scope": "仅已封启动记录及现场25守卫；未宣称300步、保存恢复、稳态性能或预算通过",
+            "speed_pid": 1326105,
+            "speed_start": {
+              "bytes": 1776,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/speed_start.json",
+              "sha256": "0f2577c9c3d377b57e71cf94ed073cf9026257608dbc9d2ebd7f2a00095fec8e"
+            },
+            "start_utc": "2026-09-27T02:18:30Z",
+            "status": "PASS",
+            "training_wrapper_pid": 1326099,
+            "wrapper_pid": 1325405
+          },
+          "state_step": 300,
+          "status": "PASS",
+          "tail_count": 99,
+          "tail_steps": [
+            201,
+            299
+          ],
+          "terminal": {
+            "body_pid": 1325408,
+            "command": {
+              "bytes": 3534,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.command",
+              "sha256": "b9a5e6ed251ce1ec1d24a5d0fb6e01ed94e46fcc5aa069c91769b5a3c00b467e"
+            },
+            "end_utc": "2026-09-27T02:27:51Z",
+            "log": {
+              "bytes": 63846,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-20260926T232339Z.wrapper.log",
+              "sha256": "721c0a47e4632e3364c5cdf46c15457117df7f97e202c45ed62ce4b0be70978f"
+            },
+            "native": {
+              "capture_process": {
+                "bytes": 3151,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.exit.capture.json",
+                "sha256": "94b965db92c7567277185b8a33c91d5c0bca2fb3eae12ae06c68677faa41a994"
+              },
+              "identity": {
+                "bytes": 1462,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.identity.json",
+                "sha256": "9039401bd93abd1d43b11aea8abfb4a8b12728cac547319d8401a4406cc9b00d"
+              },
+              "launch_process": {
+                "bytes": 3337,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.launch.process.json",
+                "sha256": "d1451ba885a94bf3edf63dfbc9209cee07841751fe7cc4043ee0c423917b5684"
+              },
+              "receipt": {
+                "bytes": 5157,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.exit.json",
+                "sha256": "16fcd3c70f744cb02b240832b1a8034782debcd27daffcf918c9213c8a1d12ed"
+              }
+            },
+            "start_utc": "2026-09-27T02:18:30Z",
+            "wrapper_pid": 1325405
+          },
+          "timed_steps": 300,
+          "wandb_run_id": "vxmquzs1"
+        },
+        "full": {
+          "completion": {
+            "bytes": 20692,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/completion.json",
+            "sha256": "c1a5cfd9a9fab18929ffcd9678777194f77f95cd22b4ee3a4dbeb5bda0599822"
+          },
+          "completion_terminal": {
+            "body_pid": 1344473,
+            "command": {
+              "bytes": 4043,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-completion-20260926T232339Z.command",
+              "sha256": "bd318087f637a1ff0a85139f9b4f86cb009ea405ef781d1cddc628038371f605"
+            },
+            "end_utc": "2026-09-27T02:29:14Z",
+            "log": {
+              "bytes": 2589,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-completion-20260926T232339Z.wrapper.log",
+              "sha256": "9964189b976d42247114fd4fb836004c788791072e0f5b4704cf76daf1ab05c2"
+            },
+            "native": {
+              "capture_process": {
+                "bytes": 3221,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-completion-20260926T232339Z.exit.capture.json",
+                "sha256": "0d06f7ea5f5bd1fcbcf88a604051c3313f6bb7c381edaaf3970636a33ecb82f2"
+              },
+              "identity": {
+                "bytes": 1512,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-completion-20260926T232339Z.identity.json",
+                "sha256": "d0b373e52bf4397706fae849571cb9b611a3bcff83ea2c086223549c482494a3"
+              },
+              "launch_process": {
+                "bytes": 3427,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-completion-20260926T232339Z.launch.process.json",
+                "sha256": "29eaff32817f6926b343b56596ba42069a3bd6832993c999eaaaf776b55afacd"
+              },
+              "receipt": {
+                "bytes": 5305,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-completion-20260926T232339Z.exit.json",
+                "sha256": "f8b415e1b162788b233a58092f80b994662a33ee340b1b568be94d6e8e477946"
+              }
+            },
+            "start_utc": "2026-09-27T02:28:00Z",
+            "wrapper_pid": 1344471
+          },
+          "disk": {
+            "checkpoint_commit_timestamp_nsecs": 1790476014646027608,
+            "checkpoint_init_timestamp_nsecs": 1790476003190446822,
+            "checkpoint_metadata_sha256": "1640b77c9d84f65e68b0d49bd57aab95950b350b50ed932cfdefa3fa4e84c5c5",
+            "checkpoint_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z",
+            "checkpoint_save_commit_seconds": 11.455580786,
+            "duplicate_inodes_observed": 0,
+            "final_allocated_bytes": 11879968768,
+            "final_scratch_available_bytes": 708417351680,
+            "max_interval_s": 3.757910222746432,
+            "max_lateness_s": 3.2421908248215914,
+            "max_sampling_duration_s": 3.519036336801946,
+            "mean_interval_s": 0.5127820017355739,
+            "missed_ticks": 26,
+            "note": "只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减",
+            "run_uuid": "9bc82a7e-1f03-496a-824c-600d5eabd6d6",
+            "sampled_max_allocated_bytes": 16039718912,
+            "samples": 1004,
+            "samples_sha256": "e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992",
+            "samples_with_path_races": 0,
+            "sampling_interval_s": 0.5,
+            "save_sampled_max_allocated_bytes": 16039718912,
+            "save_samples": 23,
+            "save_wait_done_wall": 1790476063.689062,
+            "save_window_wall": [
+              1790476003.1377487,
+              1790476014.6460276
+            ],
+            "scratch_available_min_bytes": 702857707520,
+            "scratch_path": "/scratch",
+            "start_allocated_bytes": 0,
+            "start_scratch_available_bytes": 732187693056,
+            "wait_record_sha256": "2fb9774cbb8750788c61e54d3f7f361d0e630490970af7a064d1b9d640438fda"
+          },
+          "ema_leaves": 61,
+          "files": [
+            {
+              "bytes": 21082,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/launch.json",
+              "sha256": "1eb8623947f5cb0c3ea00ae240a9142c0832987b6f77ace55f79e56094f288a3"
+            },
+            {
+              "bytes": 1741,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/speed_start.json",
+              "sha256": "9ce533b17cb3167ec2cb97ec2bc27361288c9e7112d47c47db2f3ab3d56d746d"
+            },
+            {
+              "bytes": 2875,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/speed_run.json",
+              "sha256": "317fae89aaf82e886be5a82f299ca6eaa68e6043a541cbf2d0dc27e201956e4a"
+            },
+            {
+              "bytes": 347,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/runtime.json",
+              "sha256": "225661ffdd064e10b94d39e51fef10382fb727e615f89437f52877541d3e4555"
+            },
+            {
+              "bytes": 1252,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/metrics.jsonl",
+              "sha256": "a996c83699f1273e531e571c12f89372f0f7865144f5e6720d3ed65539253550"
+            },
+            {
+              "bytes": 65988,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/step_timing.jsonl",
+              "sha256": "392598e2e6fd1350ab38ce5c1f23c45930b9f25e520ab31acbc7e2cbf6014c48"
+            },
+            {
+              "bytes": 409241,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/host_samples.jsonl",
+              "sha256": "1a845cae4f2eb2752f8d5d510301ea11e00fe5d41e84fca40d5f83b9928176c1"
+            },
+            {
+              "bytes": 532932,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/disk_samples.jsonl",
+              "sha256": "e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992"
+            },
+            {
+              "bytes": 157254,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/gpu.csv",
+              "sha256": "1e295ff32770bc0ff7d8475e379cf56ed7c16d274f2b09930a5c78b5bae17678"
+            },
+            {
+              "bytes": 0,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/gpu.csv.err",
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            {
+              "bytes": 16247,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/final/start.json",
+              "sha256": "f112740904bc7f16c42c1c160afcd7f9d563e126375e047fe2c2acc2f14c44e9"
+            },
+            {
+              "bytes": 107660,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/final/final.json",
+              "sha256": "fe2fe8a14b482bfb15dc4a545af5f2b2f99843eba18441010f43b11a00af5347"
+            },
+            {
+              "bytes": 196,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/final/checkpoint_wait_done.json",
+              "sha256": "2fb9774cbb8750788c61e54d3f7f361d0e630490970af7a064d1b9d640438fda"
+            },
+            {
+              "bytes": 61909,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/perf-orig80k-full-300-20260926T232339Z.driver.log",
+              "sha256": "13576b00ffb502590a6027c11f4ca2d63f1fb8dce777fcd3c2ed498505cf038d"
+            },
+            {
+              "bytes": 327,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z/299/_CHECKPOINT_METADATA",
+              "sha256": "1640b77c9d84f65e68b0d49bd57aab95950b350b50ed932cfdefa3fa4e84c5c5"
+            },
+            {
+              "bytes": 28136,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z/299/params/_METADATA",
+              "sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65"
+            }
+          ],
+          "gpu_sampling": {
+            "gpu": {
+              "0": {
+                "max_gap_s": 0.5510001182556152,
+                "mean_interval_s": 0.5007178464891427,
+                "samples": 1002
+              },
+              "1": {
+                "max_gap_s": 0.5460000038146973,
+                "mean_interval_s": 0.5007178464891427,
+                "samples": 1002
+              },
+              "2": {
+                "max_gap_s": 0.5469999313354492,
+                "mean_interval_s": 0.5007178464891427,
+                "samples": 1002
+              },
+              "3": {
+                "max_gap_s": 0.5499999523162842,
+                "mean_interval_s": 0.5007178464891427,
+                "samples": 1002
+              }
+            },
+            "training_window": [
+              1790475561.921915,
+              1790476063.689062
+            ]
+          },
+          "group": "full",
+          "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+          "loop_step": 299,
+          "metrics_steps": [
+            0,
+            100,
+            200
+          ],
+          "phase": "completion",
+          "profile": {
+            "name": "normal",
+            "xla_flags": ""
+          },
+          "restored_ema_leaves": 61,
+          "run": "perf-orig80k-full-300-20260926T232339Z",
+          "run_uuid": "9bc82a7e-1f03-496a-824c-600d5eabd6d6",
+          "scope": "仅核已完成真实恢复记录及摘要/来源；未再加载权重",
+          "startup": {
+            "body_pid": 1325341,
+            "command": {
+              "bytes": 3499,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.command",
+              "sha256": "d6ba9dc8cf46dae8359011cac375db70a127b79e36fcbb465cd619c6b21d63e3"
+            },
+            "configuration": {
+              "batch_size": 64,
+              "ema_decay": 0.999,
+              "exp_name": "perf-orig80k-full-300-20260926T232339Z",
+              "fsdp_devices": 4,
+              "keep_period": 10000,
+              "log_interval": 100,
+              "name": "mme_vla_suite",
+              "num_train_steps": 300,
+              "num_workers": 4,
+              "overwrite": false,
+              "resume": false,
+              "save_interval": 10000,
+              "seed": 42,
+              "wandb_enabled": true
+            },
+            "gpu_sampler_pid": 1326067,
+            "group": "full",
+            "guard_count": 25,
+            "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+            "launch": {
+              "bytes": 21082,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/launch.json",
+              "sha256": "1eb8623947f5cb0c3ea00ae240a9142c0832987b6f77ace55f79e56094f288a3"
+            },
+            "log_prefix": {
+              "boundary": "仅到首个完整TRAIN_WRAPPER_PID行，不是整份inflight日志终态SHA",
+              "bytes": 6621,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-20260926T232339Z.wrapper.log",
+              "sha256": "41a37a2044391e286e8bb433a6d1481e0c4e8cf976a82e432426a6fff9167bbe"
+            },
+            "native": {
+              "identity": {
+                "bytes": 1457,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.identity.json",
+                "sha256": "2a30bcd5ec1106b30a38c4b34fc2dc5ecbae64a8d432d8566f4db8265f9abe00"
+              },
+              "launch_process": {
+                "bytes": 3328,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.launch.process.json",
+                "sha256": "ce363591ad7bd39e800e8618a4209915e5e05f85cd59b30d13c4ac06172372bc"
+              }
+            },
+            "normal_xla_flags": null,
+            "phase": "startup_only",
+            "profile": {
+              "name": "normal",
+              "xla_flags": ""
+            },
+            "run": "perf-orig80k-full-300-20260926T232339Z",
+            "scope": "仅已封启动记录及现场25守卫；未宣称300步、保存恢复、稳态性能或预算通过",
+            "speed_pid": 1326083,
+            "speed_start": {
+              "bytes": 1741,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/speed_start.json",
+              "sha256": "9ce533b17cb3167ec2cb97ec2bc27361288c9e7112d47c47db2f3ab3d56d746d"
+            },
+            "start_utc": "2026-09-27T02:18:30Z",
+            "status": "PASS",
+            "training_wrapper_pid": 1326068,
+            "wrapper_pid": 1325339
+          },
+          "state_step": 300,
+          "status": "PASS",
+          "tail_count": 99,
+          "tail_steps": [
+            201,
+            299
+          ],
+          "terminal": {
+            "body_pid": 1325341,
+            "command": {
+              "bytes": 3499,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.command",
+              "sha256": "d6ba9dc8cf46dae8359011cac375db70a127b79e36fcbb465cd619c6b21d63e3"
+            },
+            "end_utc": "2026-09-27T02:27:56Z",
+            "log": {
+              "bytes": 63626,
+              "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-20260926T232339Z.wrapper.log",
+              "sha256": "5dc890a7177d4a10007c6506d7039f7ef24c0216fb4b181c51a382f6b8de9415"
+            },
+            "native": {
+              "capture_process": {
+                "bytes": 3144,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.exit.capture.json",
+                "sha256": "3857dd2cf7aea511623587195a55458309a6478ac72594f250b326113603f15b"
+              },
+              "identity": {
+                "bytes": 1457,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.identity.json",
+                "sha256": "2a30bcd5ec1106b30a38c4b34fc2dc5ecbae64a8d432d8566f4db8265f9abe00"
+              },
+              "launch_process": {
+                "bytes": 3328,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.launch.process.json",
+                "sha256": "ce363591ad7bd39e800e8618a4209915e5e05f85cd59b30d13c4ac06172372bc"
+              },
+              "receipt": {
+                "bytes": 5145,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.exit.json",
+                "sha256": "d89e20c47ed7c9e9bfca7ed44ddaec978253427a262b2ba8d503267b688b9cf4"
+              }
+            },
+            "start_utc": "2026-09-27T02:18:30Z",
+            "wrapper_pid": 1325339
+          },
+          "timed_steps": 300,
+          "wandb_run_id": "ar2nmtrt"
+        }
+      },
+      "status": "PASS",
+      "terminal": {
+        "body_pid": 1347838,
+        "command": {
+          "bytes": 4047,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-report-20260926T232339Z.command",
+          "sha256": "8ff77558cfab933d459a5f3fd8b443d4f5bb352dabd5f4a1a51d0c4c52a745b6"
+        },
+        "end_utc": "2026-09-27T02:30:47Z",
+        "log": {
+          "bytes": 2651,
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-report-20260926T232339Z.wrapper.log",
+          "sha256": "182e5f2802db60f8c5f69a32aa486195b5f9247487b145e16a2376224dd41a52"
+        },
+        "native": {
+          "capture_process": {
+            "bytes": 3158,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-report-20260926T232339Z.exit.capture.json",
+            "sha256": "547f7f5a776b75701b316a2d67a96ceab1ed5eae94c9aab682d4030af7587961"
+          },
+          "identity": {
+            "bytes": 1467,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-report-20260926T232339Z.identity.json",
+            "sha256": "be033442463bace99e82e7953109062adfdcfd2d238ac8db37f6c678e741d29d"
+          },
+          "launch_process": {
+            "bytes": 3346,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-report-20260926T232339Z.launch.process.json",
+            "sha256": "e4a2da4fcbdcb3e32d958ea4aa38675fb01ba502c48b4c4100889da6a0db10bb"
+          },
+          "receipt": {
+            "bytes": 5173,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-report-20260926T232339Z.exit.json",
+            "sha256": "282e9197aeea916ffae7821f5108cda1f896d577340668c7b2011cde14704e3b"
+          }
+        },
+        "start_utc": "2026-09-27T02:30:47Z",
+        "wrapper_pid": 1347836
+      },
+      "values": {
+        "combined_samples_per_second_over_span": 131.47207810374903,
+        "combined_steady_span_seconds": 194.71815133094788,
+        "counting_or_second": {
+          "batch_size": 64,
+          "checkpoint_validation": "另由check_orig80k_completion.py执行真实恢复验收",
+          "disk": {
+            "checkpoint_commit_timestamp_nsecs": 1790476016741541893,
+            "checkpoint_init_timestamp_nsecs": 1790476002143237964,
+            "checkpoint_metadata_sha256": "b02ed6a3ddf57b083528a3195fe11beb8c5f28344de90cd9202d83f742369726",
+            "checkpoint_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-count-300-20260926T232339Z",
+            "checkpoint_save_commit_seconds": 14.598303929,
+            "duplicate_inodes_observed": 0,
+            "final_allocated_bytes": 11879948288,
+            "final_scratch_available_bytes": 708416647168,
+            "max_interval_s": 3.7250567451119423,
+            "max_lateness_s": 2.775030746590346,
+            "max_sampling_duration_s": 3.2519182972609997,
+            "mean_interval_s": 0.5118794227350234,
+            "missed_ticks": 24,
+            "note": "只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减",
+            "run_uuid": "c8099d4f-a0d3-4af9-9cbd-80fe1d5f6a75",
+            "sampled_max_allocated_bytes": 13251739648,
+            "samples": 999,
+            "samples_sha256": "63d698b9c451ad27fc5716506036c2cd53537498d943afe2aab8f66fc30e1cb2",
+            "samples_with_path_races": 1,
+            "sampling_interval_s": 0.5,
+            "save_sampled_max_allocated_bytes": 13251739648,
+            "save_samples": 25,
+            "save_wait_done_wall": 1790476062.069208,
+            "save_window_wall": [
+              1790476002.0871637,
+              1790476016.7415419
+            ],
+            "scratch_available_min_bytes": 702863810560,
+            "scratch_path": "/scratch",
+            "start_allocated_bytes": 0,
+            "start_scratch_available_bytes": 732187643904,
+            "wait_record_sha256": "2671932c8c4557aff2538c222aaeda3b6fa978ea3e9b0a2e9e05fc07844315c1"
+          },
+          "estimated_80k_eta_s": 78132.49923014641,
+          "eta_note": "初始化余量+80000稳态步+8次保存；保存成本由一次末步实测外推",
+          "gpu": {
+            "4": {
+              "max_gap_s": 0.5690000057220459,
+              "mean_interval_s": 0.5009922283301081,
+              "mean_pct": 98.49870801033592,
+              "memory_peak_mib": 79455.0,
+              "other_mean_pct": 98.49870801033592,
+              "other_samples": 387,
+              "same_adjacent_readings": 235,
+              "samples": 387,
+              "slow_mean_pct": null,
+              "slow_samples": 0,
+              "zero_pct": 0.0
+            },
+            "5": {
+              "max_gap_s": 0.5690000057220459,
+              "mean_interval_s": 0.5009922283301081,
+              "mean_pct": 98.90439276485787,
+              "memory_peak_mib": 79439.0,
+              "other_mean_pct": 98.90439276485787,
+              "other_samples": 387,
+              "same_adjacent_readings": 377,
+              "samples": 387,
+              "slow_mean_pct": null,
+              "slow_samples": 0,
+              "zero_pct": 0.0
+            },
+            "6": {
+              "max_gap_s": 0.5690000057220459,
+              "mean_interval_s": 0.5009922283301081,
+              "mean_pct": 98.54263565891473,
+              "memory_peak_mib": 79439.0,
+              "other_mean_pct": 98.54263565891473,
+              "other_samples": 387,
+              "same_adjacent_readings": 243,
+              "samples": 387,
+              "slow_mean_pct": null,
+              "slow_samples": 0,
+              "zero_pct": 0.0
+            },
+            "7": {
+              "max_gap_s": 0.5690000057220459,
+              "mean_interval_s": 0.5009922283301081,
+              "mean_pct": 98.83720930232558,
+              "memory_peak_mib": 79441.0,
+              "other_mean_pct": 98.83720930232558,
+              "other_samples": 387,
+              "same_adjacent_readings": 308,
+              "samples": 387,
+              "slow_mean_pct": null,
+              "slow_samples": 0,
+              "zero_pct": 0.0
+            }
+          },
+          "gpu_ids": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "gpu_sampling_interval_s": 0.5,
+          "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+          "host_rss_note": "各进程RSS之和含共享页重复计数，不是物理独占内存",
+          "host_rss_sum_peak_bytes": 64864890880,
+          "initialization_and_warmup_s": 259.27092480659485,
+          "mean_step_s": 0.9683379030227661,
+          "mem_available_min_bytes": 1009351651328,
+          "samples_per_second": 66.09263130175678,
+          "save_and_finish_s": 62.8787317276001,
+          "save_dispatch_s": 6.989881753921509,
+          "shm_peak_bytes": 4620455936,
+          "slow_step_threshold_s": 1.9325086758472025,
+          "slow_steps": [],
+          "steady_seconds": 193.66758060455322,
+          "steady_steps": [
+            100,
+            299
+          ],
+          "steady_wall": [
+            1790475808.419102,
+            1790476002.0866826
+          ],
+          "storage": "AWS本地NVMe RAID /dev/md0",
+          "timing_eq_profile": {
+            "name": "normal",
+            "xla_flags": ""
+          },
+          "warmup_steps": [
+            0,
+            99
+          ],
+          "workers": 4,
+          "xla_flags": null
+        },
+        "full_or_first": {
+          "batch_size": 64,
+          "checkpoint_validation": "另由check_orig80k_completion.py执行真实恢复验收",
+          "disk": {
+            "checkpoint_commit_timestamp_nsecs": 1790476014646027608,
+            "checkpoint_init_timestamp_nsecs": 1790476003190446822,
+            "checkpoint_metadata_sha256": "1640b77c9d84f65e68b0d49bd57aab95950b350b50ed932cfdefa3fa4e84c5c5",
+            "checkpoint_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z",
+            "checkpoint_save_commit_seconds": 11.455580786,
+            "duplicate_inodes_observed": 0,
+            "final_allocated_bytes": 11879968768,
+            "final_scratch_available_bytes": 708417351680,
+            "max_interval_s": 3.757910222746432,
+            "max_lateness_s": 3.2421908248215914,
+            "max_sampling_duration_s": 3.519036336801946,
+            "mean_interval_s": 0.5127820017355739,
+            "missed_ticks": 26,
+            "note": "只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减",
+            "run_uuid": "9bc82a7e-1f03-496a-824c-600d5eabd6d6",
+            "sampled_max_allocated_bytes": 16039718912,
+            "samples": 1004,
+            "samples_sha256": "e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992",
+            "samples_with_path_races": 0,
+            "sampling_interval_s": 0.5,
+            "save_sampled_max_allocated_bytes": 16039718912,
+            "save_samples": 23,
+            "save_wait_done_wall": 1790476063.689062,
+            "save_window_wall": [
+              1790476003.1377487,
+              1790476014.6460276
+            ],
+            "scratch_available_min_bytes": 702857707520,
+            "scratch_path": "/scratch",
+            "start_allocated_bytes": 0,
+            "start_scratch_available_bytes": 732187693056,
+            "wait_record_sha256": "2fb9774cbb8750788c61e54d3f7f361d0e630490970af7a064d1b9d640438fda"
+          },
+          "estimated_80k_eta_s": 77731.70163476467,
+          "eta_note": "初始化余量+80000稳态步+8次保存；保存成本由一次末步实测外推",
+          "gpu": {
+            "0": {
+              "max_gap_s": 0.505000114440918,
+              "mean_interval_s": 0.5005156248807907,
+              "mean_pct": 98.76363636363637,
+              "memory_peak_mib": 79459.0,
+              "other_mean_pct": 98.76363636363637,
+              "other_samples": 385,
+              "same_adjacent_readings": 240,
+              "samples": 385,
+              "slow_mean_pct": null,
+              "slow_samples": 0,
+              "zero_pct": 0.0
+            },
+            "1": {
+              "max_gap_s": 0.5039999485015869,
+              "mean_interval_s": 0.5005156248807907,
+              "mean_pct": 98.56883116883117,
+              "memory_peak_mib": 79439.0,
+              "other_mean_pct": 98.56883116883117,
+              "other_samples": 385,
+              "same_adjacent_readings": 350,
+              "samples": 385,
+              "slow_mean_pct": null,
+              "slow_samples": 0,
+              "zero_pct": 0.0
+            },
+            "2": {
+              "max_gap_s": 0.5039999485015869,
+              "mean_interval_s": 0.5005156248807907,
+              "mean_pct": 98.50129870129871,
+              "memory_peak_mib": 79439.0,
+              "other_mean_pct": 98.50129870129871,
+              "other_samples": 385,
+              "same_adjacent_readings": 262,
+              "samples": 385,
+              "slow_mean_pct": null,
+              "slow_samples": 0,
+              "zero_pct": 0.0
+            },
+            "3": {
+              "max_gap_s": 0.505000114440918,
+              "mean_interval_s": 0.5005130209028721,
+              "mean_pct": 98.8077922077922,
+              "memory_peak_mib": 79439.0,
+              "other_mean_pct": 98.8077922077922,
+              "other_samples": 385,
+              "same_adjacent_readings": 350,
+              "samples": 385,
+              "slow_mean_pct": null,
+              "slow_samples": 0,
+              "zero_pct": 0.0
+            }
+          },
+          "gpu_ids": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "gpu_sampling_interval_s": 0.5,
+          "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+          "host_rss_note": "各进程RSS之和含共享页重复计数，不是物理独占内存",
+          "host_rss_sum_peak_bytes": 114735075328,
+          "initialization_and_warmup_s": 263.1997411251068,
+          "mean_step_s": 0.9631971204280854,
+          "mem_available_min_bytes": 1009290399744,
+          "samples_per_second": 66.44538136861924,
+          "save_and_finish_s": 63.63149642944336,
+          "save_dispatch_s": 6.555440902709961,
+          "shm_peak_bytes": 4620455936,
+          "slow_step_threshold_s": 1.921083238441497,
+          "slow_steps": [],
+          "steady_seconds": 192.63942408561707,
+          "steady_steps": [
+            100,
+            299
+          ],
+          "steady_wall": [
+            1790475810.4978292,
+            1790476003.1372533
+          ],
+          "storage": "AWS本地NVMe RAID /dev/md0",
+          "timing_eq_profile": {
+            "name": "normal",
+            "xla_flags": ""
+          },
+          "warmup_steps": [
+            0,
+            99
+          ],
+          "workers": 4,
+          "xla_flags": null
+        },
+        "steady_overlap_seconds": 191.5888533592224
+      }
+    },
+    "schema": 1,
+    "stage": "report",
+    "started_utc": "2026-09-27T02:32:10.238331+00:00",
+    "startup_checker": {
+      "bytes": 14200,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/verify_start.py",
+      "sha256": "befaf77aa5b893db304c59ba5642f77a57a7e269ad65429300377f9ac2349b11"
+    },
+    "status": "PASS"
+  },
+  "stdout": "{\n  \"checker\": {\n    \"bytes\": 18239,\n    \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/verify_terminal.py\",\n    \"sha256\": \"d1c0c8145a3efac6ee6bd17f6e9bc7bdec3b36cfcd5dc34220c2738a8c77f48d\"\n  },\n  \"finished_utc\": \"2026-09-27T02:32:10.861277+00:00\",\n  \"group\": null,\n  \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n  \"parent_observation_boundary\": \"调度父自身宿主实际退出另由root控制记录留证；本报告不从内部JSON反推该外层wait\",\n  \"result\": {\n    \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n    \"phase\": \"report\",\n    \"profile\": {\n      \"name\": \"normal\",\n      \"xla_flags\": \"\"\n    },\n    \"report\": {\n      \"bytes\": 9584,\n      \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json\",\n      \"sha256\": \"dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8\"\n    },\n    \"scope\": \"只读核对既有正式报告与原始采样算术；未运行report CLI/未写正式report，不套用100步50完整步门槛\",\n    \"sides\": {\n      \"count\": {\n        \"completion\": {\n          \"bytes\": 20700,\n          \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/completion.json\",\n          \"sha256\": \"c533f14a5b7f3cc912ed2782daf6eea19c9324aa1add0837f422ec8c123b60c7\"\n        },\n        \"completion_terminal\": {\n          \"body_pid\": 1346176,\n          \"command\": {\n            \"bytes\": 4050,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-completion-20260926T232339Z.command\",\n            \"sha256\": \"d005a9401e6b8efb93bfa8303a66140db1d5a92b35a39ec09311858a21258c29\"\n          },\n          \"end_utc\": \"2026-09-27T02:30:42Z\",\n          \"log\": {\n            \"bytes\": 2597,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-completion-20260926T232339Z.wrapper.log\",\n            \"sha256\": \"24db8202d82ddf30eff6e9c228c1f35fbdc3a3ba6ac7d86637d6082ac6d4929e\"\n          },\n          \"native\": {\n            \"capture_process\": {\n              \"bytes\": 3228,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-completion-20260926T232339Z.exit.capture.json\",\n              \"sha256\": \"61b932593b1987781db59dba27cb524d0452ce352205779220e166567e9d8223\"\n            },\n            \"identity\": {\n              \"bytes\": 1517,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-completion-20260926T232339Z.identity.json\",\n              \"sha256\": \"314bf4f8c1098223793bac966b0ad628ccf3352ba898e4bd10775393c2eef1d3\"\n            },\n            \"launch_process\": {\n              \"bytes\": 3436,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-completion-20260926T232339Z.launch.process.json\",\n              \"sha256\": \"23e5861aae062fc8ea4fce85425a5a18a67134c7665aeb20aef1c27e8984782b\"\n            },\n            \"receipt\": {\n              \"bytes\": 5321,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-completion-20260926T232339Z.exit.json\",\n              \"sha256\": \"61c3f6aa2020783becc8d92bc95e563809db42d74a4882ebbeb9fe1da91a0ba7\"\n            }\n          },\n          \"start_utc\": \"2026-09-27T02:29:30Z\",\n          \"wrapper_pid\": 1346174\n        },\n        \"disk\": {\n          \"checkpoint_commit_timestamp_nsecs\": 1790476016741541893,\n          \"checkpoint_init_timestamp_nsecs\": 1790476002143237964,\n          \"checkpoint_metadata_sha256\": \"b02ed6a3ddf57b083528a3195fe11beb8c5f28344de90cd9202d83f742369726\",\n          \"checkpoint_root\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-count-300-20260926T232339Z\",\n          \"checkpoint_save_commit_seconds\": 14.598303929,\n          \"duplicate_inodes_observed\": 0,\n          \"final_allocated_bytes\": 11879948288,\n          \"final_scratch_available_bytes\": 708416647168,\n          \"max_interval_s\": 3.7250567451119423,\n          \"max_lateness_s\": 2.775030746590346,\n          \"max_sampling_duration_s\": 3.2519182972609997,\n          \"mean_interval_s\": 0.5118794227350234,\n          \"missed_ticks\": 24,\n          \"note\": \"只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减\",\n          \"run_uuid\": \"c8099d4f-a0d3-4af9-9cbd-80fe1d5f6a75\",\n          \"sampled_max_allocated_bytes\": 13251739648,\n          \"samples\": 999,\n          \"samples_sha256\": \"63d698b9c451ad27fc5716506036c2cd53537498d943afe2aab8f66fc30e1cb2\",\n          \"samples_with_path_races\": 1,\n          \"sampling_interval_s\": 0.5,\n          \"save_sampled_max_allocated_bytes\": 13251739648,\n          \"save_samples\": 25,\n          \"save_wait_done_wall\": 1790476062.069208,\n          \"save_window_wall\": [\n            1790476002.0871637,\n            1790476016.7415419\n          ],\n          \"scratch_available_min_bytes\": 702863810560,\n          \"scratch_path\": \"/scratch\",\n          \"start_allocated_bytes\": 0,\n          \"start_scratch_available_bytes\": 732187643904,\n          \"wait_record_sha256\": \"2671932c8c4557aff2538c222aaeda3b6fa978ea3e9b0a2e9e05fc07844315c1\"\n        },\n        \"ema_leaves\": 61,\n        \"files\": [\n          {\n            \"bytes\": 21183,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/launch.json\",\n            \"sha256\": \"16ab2bd1a238b84f1a630e1226a71dcbe91834ae75c88ba1ef76a7026dec271b\"\n          },\n          {\n            \"bytes\": 1776,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/speed_start.json\",\n            \"sha256\": \"0f2577c9c3d377b57e71cf94ed073cf9026257608dbc9d2ebd7f2a00095fec8e\"\n          },\n          {\n            \"bytes\": 2911,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/speed_run.json\",\n            \"sha256\": \"401015a5ae2f5bc3a16f2733d4ed9de402b97417d96527c8c9a5b6c7c930f1b8\"\n          },\n          {\n            \"bytes\": 348,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/runtime.json\",\n            \"sha256\": \"d4ed794d7594a5cb80902b71655ebfd0f6b1bd9cdad44abae608c59b4c35459d\"\n          },\n          {\n            \"bytes\": 1252,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/metrics.jsonl\",\n            \"sha256\": \"eddad72c18cc546b8090542aaeb7031688e550703a37a28f26bc7313ee903006\"\n          },\n          {\n            \"bytes\": 66003,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/step_timing.jsonl\",\n            \"sha256\": \"dc248ebfe6d736c42eeda89b93c4e4db8455f4a78c37c3cd3e98f96f9bb28f09\"\n          },\n          {\n            \"bytes\": 409469,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/host_samples.jsonl\",\n            \"sha256\": \"cf63c678116dcb6c7e4012d061bbb30274832770675f8d1d5ef2826e6a1fd7b9\"\n          },\n          {\n            \"bytes\": 530201,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/disk_samples.jsonl\",\n            \"sha256\": \"63d698b9c451ad27fc5716506036c2cd53537498d943afe2aab8f66fc30e1cb2\"\n          },\n          {\n            \"bytes\": 155799,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/gpu.csv\",\n            \"sha256\": \"19d077b0fe73935ac492f266a22783e8b069bd6aea16b464115cb5249aaf76a2\"\n          },\n          {\n            \"bytes\": 0,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/gpu.csv.err\",\n            \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n          },\n          {\n            \"bytes\": 16308,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/final/start.json\",\n            \"sha256\": \"47c0c137d7401588e434f1df0f5fee585e9bc6b1b79e54de3e2ef75973961281\"\n          },\n          {\n            \"bytes\": 107667,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/final/final.json\",\n            \"sha256\": \"5f82277e9cb06ae609bce66202ed6981cc93b67f48ebbe4e513f914f923c1b3d\"\n          },\n          {\n            \"bytes\": 196,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/final/checkpoint_wait_done.json\",\n            \"sha256\": \"2671932c8c4557aff2538c222aaeda3b6fa978ea3e9b0a2e9e05fc07844315c1\"\n          },\n          {\n            \"bytes\": 62094,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/perf-orig80k-count-300-20260926T232339Z.driver.log\",\n            \"sha256\": \"4ccec4b1d63c7aef169f4407693be8dbd7030983bbfa55a1fec8af127ed312a0\"\n          },\n          {\n            \"bytes\": 327,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-count-300-20260926T232339Z/299/_CHECKPOINT_METADATA\",\n            \"sha256\": \"b02ed6a3ddf57b083528a3195fe11beb8c5f28344de90cd9202d83f742369726\"\n          },\n          {\n            \"bytes\": 28136,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-count-300-20260926T232339Z/299/params/_METADATA\",\n            \"sha256\": \"fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65\"\n          }\n        ],\n        \"gpu_sampling\": {\n          \"gpu\": {\n            \"4\": {\n              \"max_gap_s\": 0.5690000057220459,\n              \"mean_interval_s\": 0.5008647293748263,\n              \"samples\": 997\n            },\n            \"5\": {\n              \"max_gap_s\": 0.5690000057220459,\n              \"mean_interval_s\": 0.5008647293748263,\n              \"samples\": 997\n            },\n            \"6\": {\n              \"max_gap_s\": 0.5690000057220459,\n              \"mean_interval_s\": 0.5008647293748263,\n              \"samples\": 997\n            },\n            \"7\": {\n              \"max_gap_s\": 0.5690000057220459,\n              \"mean_interval_s\": 0.5008647293748263,\n              \"samples\": 997\n            }\n          },\n          \"training_window\": [\n            1790475562.310365,\n            1790476062.069208\n          ]\n        },\n        \"group\": \"count\",\n        \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n        \"loop_step\": 299,\n        \"metrics_steps\": [\n          0,\n          100,\n          200\n        ],\n        \"phase\": \"completion\",\n        \"profile\": {\n          \"name\": \"normal\",\n          \"xla_flags\": \"\"\n        },\n        \"restored_ema_leaves\": 61,\n        \"run\": \"perf-orig80k-count-300-20260926T232339Z\",\n        \"run_uuid\": \"c8099d4f-a0d3-4af9-9cbd-80fe1d5f6a75\",\n        \"scope\": \"仅核已完成真实恢复记录及摘要/来源；未再加载权重\",\n        \"startup\": {\n          \"body_pid\": 1325408,\n          \"command\": {\n            \"bytes\": 3534,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.command\",\n            \"sha256\": \"b9a5e6ed251ce1ec1d24a5d0fb6e01ed94e46fcc5aa069c91769b5a3c00b467e\"\n          },\n          \"configuration\": {\n            \"batch_size\": 64,\n            \"ema_decay\": 0.999,\n            \"exp_name\": \"perf-orig80k-count-300-20260926T232339Z\",\n            \"fsdp_devices\": 4,\n            \"keep_period\": 10000,\n            \"log_interval\": 100,\n            \"name\": \"mme_vla_suite\",\n            \"num_train_steps\": 300,\n            \"num_workers\": 4,\n            \"overwrite\": false,\n            \"resume\": false,\n            \"save_interval\": 10000,\n            \"seed\": 42,\n            \"wandb_enabled\": true\n          },\n          \"gpu_sampler_pid\": 1326098,\n          \"group\": \"count\",\n          \"guard_count\": 25,\n          \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n          \"launch\": {\n            \"bytes\": 21183,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/launch.json\",\n            \"sha256\": \"16ab2bd1a238b84f1a630e1226a71dcbe91834ae75c88ba1ef76a7026dec271b\"\n          },\n          \"log_prefix\": {\n            \"boundary\": \"仅到首个完整TRAIN_WRAPPER_PID行，不是整份inflight日志终态SHA\",\n            \"bytes\": 6793,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-20260926T232339Z.wrapper.log\",\n            \"sha256\": \"0c3aacd308e649dc336c5a8ffd42a6ba2a1bdaaf2725578fdcb14fb1db34b539\"\n          },\n          \"native\": {\n            \"identity\": {\n              \"bytes\": 1462,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.identity.json\",\n              \"sha256\": \"9039401bd93abd1d43b11aea8abfb4a8b12728cac547319d8401a4406cc9b00d\"\n            },\n            \"launch_process\": {\n              \"bytes\": 3337,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.launch.process.json\",\n              \"sha256\": \"d1451ba885a94bf3edf63dfbc9209cee07841751fe7cc4043ee0c423917b5684\"\n            }\n          },\n          \"normal_xla_flags\": null,\n          \"phase\": \"startup_only\",\n          \"profile\": {\n            \"name\": \"normal\",\n            \"xla_flags\": \"\"\n          },\n          \"run\": \"perf-orig80k-count-300-20260926T232339Z\",\n          \"scope\": \"仅已封启动记录及现场25守卫；未宣称300步、保存恢复、稳态性能或预算通过\",\n          \"speed_pid\": 1326105,\n          \"speed_start\": {\n            \"bytes\": 1776,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/speed_start.json\",\n            \"sha256\": \"0f2577c9c3d377b57e71cf94ed073cf9026257608dbc9d2ebd7f2a00095fec8e\"\n          },\n          \"start_utc\": \"2026-09-27T02:18:30Z\",\n          \"status\": \"PASS\",\n          \"training_wrapper_pid\": 1326099,\n          \"wrapper_pid\": 1325405\n        },\n        \"state_step\": 300,\n        \"status\": \"PASS\",\n        \"tail_count\": 99,\n        \"tail_steps\": [\n          201,\n          299\n        ],\n        \"terminal\": {\n          \"body_pid\": 1325408,\n          \"command\": {\n            \"bytes\": 3534,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.command\",\n            \"sha256\": \"b9a5e6ed251ce1ec1d24a5d0fb6e01ed94e46fcc5aa069c91769b5a3c00b467e\"\n          },\n          \"end_utc\": \"2026-09-27T02:27:51Z\",\n          \"log\": {\n            \"bytes\": 63846,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-count-20260926T232339Z.wrapper.log\",\n            \"sha256\": \"721c0a47e4632e3364c5cdf46c15457117df7f97e202c45ed62ce4b0be70978f\"\n          },\n          \"native\": {\n            \"capture_process\": {\n              \"bytes\": 3151,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.exit.capture.json\",\n              \"sha256\": \"94b965db92c7567277185b8a33c91d5c0bca2fb3eae12ae06c68677faa41a994\"\n            },\n            \"identity\": {\n              \"bytes\": 1462,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.identity.json\",\n              \"sha256\": \"9039401bd93abd1d43b11aea8abfb4a8b12728cac547319d8401a4406cc9b00d\"\n            },\n            \"launch_process\": {\n              \"bytes\": 3337,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.launch.process.json\",\n              \"sha256\": \"d1451ba885a94bf3edf63dfbc9209cee07841751fe7cc4043ee0c423917b5684\"\n            },\n            \"receipt\": {\n              \"bytes\": 5157,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-20260926T232339Z.exit.json\",\n              \"sha256\": \"16fcd3c70f744cb02b240832b1a8034782debcd27daffcf918c9213c8a1d12ed\"\n            }\n          },\n          \"start_utc\": \"2026-09-27T02:18:30Z\",\n          \"wrapper_pid\": 1325405\n        },\n        \"timed_steps\": 300,\n        \"wandb_run_id\": \"vxmquzs1\"\n      },\n      \"full\": {\n        \"completion\": {\n          \"bytes\": 20692,\n          \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/completion.json\",\n          \"sha256\": \"c1a5cfd9a9fab18929ffcd9678777194f77f95cd22b4ee3a4dbeb5bda0599822\"\n        },\n        \"completion_terminal\": {\n          \"body_pid\": 1344473,\n          \"command\": {\n            \"bytes\": 4043,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-completion-20260926T232339Z.command\",\n            \"sha256\": \"bd318087f637a1ff0a85139f9b4f86cb009ea405ef781d1cddc628038371f605\"\n          },\n          \"end_utc\": \"2026-09-27T02:29:14Z\",\n          \"log\": {\n            \"bytes\": 2589,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-completion-20260926T232339Z.wrapper.log\",\n            \"sha256\": \"9964189b976d42247114fd4fb836004c788791072e0f5b4704cf76daf1ab05c2\"\n          },\n          \"native\": {\n            \"capture_process\": {\n              \"bytes\": 3221,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-completion-20260926T232339Z.exit.capture.json\",\n              \"sha256\": \"0d06f7ea5f5bd1fcbcf88a604051c3313f6bb7c381edaaf3970636a33ecb82f2\"\n            },\n            \"identity\": {\n              \"bytes\": 1512,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-completion-20260926T232339Z.identity.json\",\n              \"sha256\": \"d0b373e52bf4397706fae849571cb9b611a3bcff83ea2c086223549c482494a3\"\n            },\n            \"launch_process\": {\n              \"bytes\": 3427,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-completion-20260926T232339Z.launch.process.json\",\n              \"sha256\": \"29eaff32817f6926b343b56596ba42069a3bd6832993c999eaaaf776b55afacd\"\n            },\n            \"receipt\": {\n              \"bytes\": 5305,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-completion-20260926T232339Z.exit.json\",\n              \"sha256\": \"f8b415e1b162788b233a58092f80b994662a33ee340b1b568be94d6e8e477946\"\n            }\n          },\n          \"start_utc\": \"2026-09-27T02:28:00Z\",\n          \"wrapper_pid\": 1344471\n        },\n        \"disk\": {\n          \"checkpoint_commit_timestamp_nsecs\": 1790476014646027608,\n          \"checkpoint_init_timestamp_nsecs\": 1790476003190446822,\n          \"checkpoint_metadata_sha256\": \"1640b77c9d84f65e68b0d49bd57aab95950b350b50ed932cfdefa3fa4e84c5c5\",\n          \"checkpoint_root\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z\",\n          \"checkpoint_save_commit_seconds\": 11.455580786,\n          \"duplicate_inodes_observed\": 0,\n          \"final_allocated_bytes\": 11879968768,\n          \"final_scratch_available_bytes\": 708417351680,\n          \"max_interval_s\": 3.757910222746432,\n          \"max_lateness_s\": 3.2421908248215914,\n          \"max_sampling_duration_s\": 3.519036336801946,\n          \"mean_interval_s\": 0.5127820017355739,\n          \"missed_ticks\": 26,\n          \"note\": \"只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减\",\n          \"run_uuid\": \"9bc82a7e-1f03-496a-824c-600d5eabd6d6\",\n          \"sampled_max_allocated_bytes\": 16039718912,\n          \"samples\": 1004,\n          \"samples_sha256\": \"e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992\",\n          \"samples_with_path_races\": 0,\n          \"sampling_interval_s\": 0.5,\n          \"save_sampled_max_allocated_bytes\": 16039718912,\n          \"save_samples\": 23,\n          \"save_wait_done_wall\": 1790476063.689062,\n          \"save_window_wall\": [\n            1790476003.1377487,\n            1790476014.6460276\n          ],\n          \"scratch_available_min_bytes\": 702857707520,\n          \"scratch_path\": \"/scratch\",\n          \"start_allocated_bytes\": 0,\n          \"start_scratch_available_bytes\": 732187693056,\n          \"wait_record_sha256\": \"2fb9774cbb8750788c61e54d3f7f361d0e630490970af7a064d1b9d640438fda\"\n        },\n        \"ema_leaves\": 61,\n        \"files\": [\n          {\n            \"bytes\": 21082,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/launch.json\",\n            \"sha256\": \"1eb8623947f5cb0c3ea00ae240a9142c0832987b6f77ace55f79e56094f288a3\"\n          },\n          {\n            \"bytes\": 1741,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/speed_start.json\",\n            \"sha256\": \"9ce533b17cb3167ec2cb97ec2bc27361288c9e7112d47c47db2f3ab3d56d746d\"\n          },\n          {\n            \"bytes\": 2875,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/speed_run.json\",\n            \"sha256\": \"317fae89aaf82e886be5a82f299ca6eaa68e6043a541cbf2d0dc27e201956e4a\"\n          },\n          {\n            \"bytes\": 347,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/runtime.json\",\n            \"sha256\": \"225661ffdd064e10b94d39e51fef10382fb727e615f89437f52877541d3e4555\"\n          },\n          {\n            \"bytes\": 1252,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/metrics.jsonl\",\n            \"sha256\": \"a996c83699f1273e531e571c12f89372f0f7865144f5e6720d3ed65539253550\"\n          },\n          {\n            \"bytes\": 65988,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/step_timing.jsonl\",\n            \"sha256\": \"392598e2e6fd1350ab38ce5c1f23c45930b9f25e520ab31acbc7e2cbf6014c48\"\n          },\n          {\n            \"bytes\": 409241,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/host_samples.jsonl\",\n            \"sha256\": \"1a845cae4f2eb2752f8d5d510301ea11e00fe5d41e84fca40d5f83b9928176c1\"\n          },\n          {\n            \"bytes\": 532932,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/disk_samples.jsonl\",\n            \"sha256\": \"e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992\"\n          },\n          {\n            \"bytes\": 157254,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/gpu.csv\",\n            \"sha256\": \"1e295ff32770bc0ff7d8475e379cf56ed7c16d274f2b09930a5c78b5bae17678\"\n          },\n          {\n            \"bytes\": 0,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/gpu.csv.err\",\n            \"sha256\": \"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n          },\n          {\n            \"bytes\": 16247,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/final/start.json\",\n            \"sha256\": \"f112740904bc7f16c42c1c160afcd7f9d563e126375e047fe2c2acc2f14c44e9\"\n          },\n          {\n            \"bytes\": 107660,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/final/final.json\",\n            \"sha256\": \"fe2fe8a14b482bfb15dc4a545af5f2b2f99843eba18441010f43b11a00af5347\"\n          },\n          {\n            \"bytes\": 196,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/final/checkpoint_wait_done.json\",\n            \"sha256\": \"2fb9774cbb8750788c61e54d3f7f361d0e630490970af7a064d1b9d640438fda\"\n          },\n          {\n            \"bytes\": 61909,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/perf-orig80k-full-300-20260926T232339Z.driver.log\",\n            \"sha256\": \"13576b00ffb502590a6027c11f4ca2d63f1fb8dce777fcd3c2ed498505cf038d\"\n          },\n          {\n            \"bytes\": 327,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z/299/_CHECKPOINT_METADATA\",\n            \"sha256\": \"1640b77c9d84f65e68b0d49bd57aab95950b350b50ed932cfdefa3fa4e84c5c5\"\n          },\n          {\n            \"bytes\": 28136,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z/299/params/_METADATA\",\n            \"sha256\": \"fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65\"\n          }\n        ],\n        \"gpu_sampling\": {\n          \"gpu\": {\n            \"0\": {\n              \"max_gap_s\": 0.5510001182556152,\n              \"mean_interval_s\": 0.5007178464891427,\n              \"samples\": 1002\n            },\n            \"1\": {\n              \"max_gap_s\": 0.5460000038146973,\n              \"mean_interval_s\": 0.5007178464891427,\n              \"samples\": 1002\n            },\n            \"2\": {\n              \"max_gap_s\": 0.5469999313354492,\n              \"mean_interval_s\": 0.5007178464891427,\n              \"samples\": 1002\n            },\n            \"3\": {\n              \"max_gap_s\": 0.5499999523162842,\n              \"mean_interval_s\": 0.5007178464891427,\n              \"samples\": 1002\n            }\n          },\n          \"training_window\": [\n            1790475561.921915,\n            1790476063.689062\n          ]\n        },\n        \"group\": \"full\",\n        \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n        \"loop_step\": 299,\n        \"metrics_steps\": [\n          0,\n          100,\n          200\n        ],\n        \"phase\": \"completion\",\n        \"profile\": {\n          \"name\": \"normal\",\n          \"xla_flags\": \"\"\n        },\n        \"restored_ema_leaves\": 61,\n        \"run\": \"perf-orig80k-full-300-20260926T232339Z\",\n        \"run_uuid\": \"9bc82a7e-1f03-496a-824c-600d5eabd6d6\",\n        \"scope\": \"仅核已完成真实恢复记录及摘要/来源；未再加载权重\",\n        \"startup\": {\n          \"body_pid\": 1325341,\n          \"command\": {\n            \"bytes\": 3499,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.command\",\n            \"sha256\": \"d6ba9dc8cf46dae8359011cac375db70a127b79e36fcbb465cd619c6b21d63e3\"\n          },\n          \"configuration\": {\n            \"batch_size\": 64,\n            \"ema_decay\": 0.999,\n            \"exp_name\": \"perf-orig80k-full-300-20260926T232339Z\",\n            \"fsdp_devices\": 4,\n            \"keep_period\": 10000,\n            \"log_interval\": 100,\n            \"name\": \"mme_vla_suite\",\n            \"num_train_steps\": 300,\n            \"num_workers\": 4,\n            \"overwrite\": false,\n            \"resume\": false,\n            \"save_interval\": 10000,\n            \"seed\": 42,\n            \"wandb_enabled\": true\n          },\n          \"gpu_sampler_pid\": 1326067,\n          \"group\": \"full\",\n          \"guard_count\": 25,\n          \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n          \"launch\": {\n            \"bytes\": 21082,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/launch.json\",\n            \"sha256\": \"1eb8623947f5cb0c3ea00ae240a9142c0832987b6f77ace55f79e56094f288a3\"\n          },\n          \"log_prefix\": {\n            \"boundary\": \"仅到首个完整TRAIN_WRAPPER_PID行，不是整份inflight日志终态SHA\",\n            \"bytes\": 6621,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-20260926T232339Z.wrapper.log\",\n            \"sha256\": \"41a37a2044391e286e8bb433a6d1481e0c4e8cf976a82e432426a6fff9167bbe\"\n          },\n          \"native\": {\n            \"identity\": {\n              \"bytes\": 1457,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.identity.json\",\n              \"sha256\": \"2a30bcd5ec1106b30a38c4b34fc2dc5ecbae64a8d432d8566f4db8265f9abe00\"\n            },\n            \"launch_process\": {\n              \"bytes\": 3328,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.launch.process.json\",\n              \"sha256\": \"ce363591ad7bd39e800e8618a4209915e5e05f85cd59b30d13c4ac06172372bc\"\n            }\n          },\n          \"normal_xla_flags\": null,\n          \"phase\": \"startup_only\",\n          \"profile\": {\n            \"name\": \"normal\",\n            \"xla_flags\": \"\"\n          },\n          \"run\": \"perf-orig80k-full-300-20260926T232339Z\",\n          \"scope\": \"仅已封启动记录及现场25守卫；未宣称300步、保存恢复、稳态性能或预算通过\",\n          \"speed_pid\": 1326083,\n          \"speed_start\": {\n            \"bytes\": 1741,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/speed_start.json\",\n            \"sha256\": \"9ce533b17cb3167ec2cb97ec2bc27361288c9e7112d47c47db2f3ab3d56d746d\"\n          },\n          \"start_utc\": \"2026-09-27T02:18:30Z\",\n          \"status\": \"PASS\",\n          \"training_wrapper_pid\": 1326068,\n          \"wrapper_pid\": 1325339\n        },\n        \"state_step\": 300,\n        \"status\": \"PASS\",\n        \"tail_count\": 99,\n        \"tail_steps\": [\n          201,\n          299\n        ],\n        \"terminal\": {\n          \"body_pid\": 1325341,\n          \"command\": {\n            \"bytes\": 3499,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.command\",\n            \"sha256\": \"d6ba9dc8cf46dae8359011cac375db70a127b79e36fcbb465cd619c6b21d63e3\"\n          },\n          \"end_utc\": \"2026-09-27T02:27:56Z\",\n          \"log\": {\n            \"bytes\": 63626,\n            \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-full-20260926T232339Z.wrapper.log\",\n            \"sha256\": \"5dc890a7177d4a10007c6506d7039f7ef24c0216fb4b181c51a382f6b8de9415\"\n          },\n          \"native\": {\n            \"capture_process\": {\n              \"bytes\": 3144,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.exit.capture.json\",\n              \"sha256\": \"3857dd2cf7aea511623587195a55458309a6478ac72594f250b326113603f15b\"\n            },\n            \"identity\": {\n              \"bytes\": 1457,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.identity.json\",\n              \"sha256\": \"2a30bcd5ec1106b30a38c4b34fc2dc5ecbae64a8d432d8566f4db8265f9abe00\"\n            },\n            \"launch_process\": {\n              \"bytes\": 3328,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.launch.process.json\",\n              \"sha256\": \"ce363591ad7bd39e800e8618a4209915e5e05f85cd59b30d13c4ac06172372bc\"\n            },\n            \"receipt\": {\n              \"bytes\": 5145,\n              \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-full-20260926T232339Z.exit.json\",\n              \"sha256\": \"d89e20c47ed7c9e9bfca7ed44ddaec978253427a262b2ba8d503267b688b9cf4\"\n            }\n          },\n          \"start_utc\": \"2026-09-27T02:18:30Z\",\n          \"wrapper_pid\": 1325339\n        },\n        \"timed_steps\": 300,\n        \"wandb_run_id\": \"ar2nmtrt\"\n      }\n    },\n    \"status\": \"PASS\",\n    \"terminal\": {\n      \"body_pid\": 1347838,\n      \"command\": {\n        \"bytes\": 4047,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-report-20260926T232339Z.command\",\n        \"sha256\": \"8ff77558cfab933d459a5f3fd8b443d4f5bb352dabd5f4a1a51d0c4c52a745b6\"\n      },\n      \"end_utc\": \"2026-09-27T02:30:47Z\",\n      \"log\": {\n        \"bytes\": 2651,\n        \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-perf-report-20260926T232339Z.wrapper.log\",\n        \"sha256\": \"182e5f2802db60f8c5f69a32aa486195b5f9247487b145e16a2376224dd41a52\"\n      },\n      \"native\": {\n        \"capture_process\": {\n          \"bytes\": 3158,\n          \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-report-20260926T232339Z.exit.capture.json\",\n          \"sha256\": \"547f7f5a776b75701b316a2d67a96ceab1ed5eae94c9aab682d4030af7587961\"\n        },\n        \"identity\": {\n          \"bytes\": 1467,\n          \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-report-20260926T232339Z.identity.json\",\n          \"sha256\": \"be033442463bace99e82e7953109062adfdcfd2d238ac8db37f6c678e741d29d\"\n        },\n        \"launch_process\": {\n          \"bytes\": 3346,\n          \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-report-20260926T232339Z.launch.process.json\",\n          \"sha256\": \"e4a2da4fcbdcb3e32d958ea4aa38675fb01ba502c48b4c4100889da6a0db10bb\"\n        },\n        \"receipt\": {\n          \"bytes\": 5173,\n          \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-report-20260926T232339Z.exit.json\",\n          \"sha256\": \"282e9197aeea916ffae7821f5108cda1f896d577340668c7b2011cde14704e3b\"\n        }\n      },\n      \"start_utc\": \"2026-09-27T02:30:47Z\",\n      \"wrapper_pid\": 1347836\n    },\n    \"values\": {\n      \"combined_samples_per_second_over_span\": 131.47207810374903,\n      \"combined_steady_span_seconds\": 194.71815133094788,\n      \"counting_or_second\": {\n        \"batch_size\": 64,\n        \"checkpoint_validation\": \"另由check_orig80k_completion.py执行真实恢复验收\",\n        \"disk\": {\n          \"checkpoint_commit_timestamp_nsecs\": 1790476016741541893,\n          \"checkpoint_init_timestamp_nsecs\": 1790476002143237964,\n          \"checkpoint_metadata_sha256\": \"b02ed6a3ddf57b083528a3195fe11beb8c5f28344de90cd9202d83f742369726\",\n          \"checkpoint_root\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-count-300-20260926T232339Z\",\n          \"checkpoint_save_commit_seconds\": 14.598303929,\n          \"duplicate_inodes_observed\": 0,\n          \"final_allocated_bytes\": 11879948288,\n          \"final_scratch_available_bytes\": 708416647168,\n          \"max_interval_s\": 3.7250567451119423,\n          \"max_lateness_s\": 2.775030746590346,\n          \"max_sampling_duration_s\": 3.2519182972609997,\n          \"mean_interval_s\": 0.5118794227350234,\n          \"missed_ticks\": 24,\n          \"note\": \"只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减\",\n          \"run_uuid\": \"c8099d4f-a0d3-4af9-9cbd-80fe1d5f6a75\",\n          \"sampled_max_allocated_bytes\": 13251739648,\n          \"samples\": 999,\n          \"samples_sha256\": \"63d698b9c451ad27fc5716506036c2cd53537498d943afe2aab8f66fc30e1cb2\",\n          \"samples_with_path_races\": 1,\n          \"sampling_interval_s\": 0.5,\n          \"save_sampled_max_allocated_bytes\": 13251739648,\n          \"save_samples\": 25,\n          \"save_wait_done_wall\": 1790476062.069208,\n          \"save_window_wall\": [\n            1790476002.0871637,\n            1790476016.7415419\n          ],\n          \"scratch_available_min_bytes\": 702863810560,\n          \"scratch_path\": \"/scratch\",\n          \"start_allocated_bytes\": 0,\n          \"start_scratch_available_bytes\": 732187643904,\n          \"wait_record_sha256\": \"2671932c8c4557aff2538c222aaeda3b6fa978ea3e9b0a2e9e05fc07844315c1\"\n        },\n        \"estimated_80k_eta_s\": 78132.49923014641,\n        \"eta_note\": \"初始化余量+80000稳态步+8次保存；保存成本由一次末步实测外推\",\n        \"gpu\": {\n          \"4\": {\n            \"max_gap_s\": 0.5690000057220459,\n            \"mean_interval_s\": 0.5009922283301081,\n            \"mean_pct\": 98.49870801033592,\n            \"memory_peak_mib\": 79455.0,\n            \"other_mean_pct\": 98.49870801033592,\n            \"other_samples\": 387,\n            \"same_adjacent_readings\": 235,\n            \"samples\": 387,\n            \"slow_mean_pct\": null,\n            \"slow_samples\": 0,\n            \"zero_pct\": 0.0\n          },\n          \"5\": {\n            \"max_gap_s\": 0.5690000057220459,\n            \"mean_interval_s\": 0.5009922283301081,\n            \"mean_pct\": 98.90439276485787,\n            \"memory_peak_mib\": 79439.0,\n            \"other_mean_pct\": 98.90439276485787,\n            \"other_samples\": 387,\n            \"same_adjacent_readings\": 377,\n            \"samples\": 387,\n            \"slow_mean_pct\": null,\n            \"slow_samples\": 0,\n            \"zero_pct\": 0.0\n          },\n          \"6\": {\n            \"max_gap_s\": 0.5690000057220459,\n            \"mean_interval_s\": 0.5009922283301081,\n            \"mean_pct\": 98.54263565891473,\n            \"memory_peak_mib\": 79439.0,\n            \"other_mean_pct\": 98.54263565891473,\n            \"other_samples\": 387,\n            \"same_adjacent_readings\": 243,\n            \"samples\": 387,\n            \"slow_mean_pct\": null,\n            \"slow_samples\": 0,\n            \"zero_pct\": 0.0\n          },\n          \"7\": {\n            \"max_gap_s\": 0.5690000057220459,\n            \"mean_interval_s\": 0.5009922283301081,\n            \"mean_pct\": 98.83720930232558,\n            \"memory_peak_mib\": 79441.0,\n            \"other_mean_pct\": 98.83720930232558,\n            \"other_samples\": 387,\n            \"same_adjacent_readings\": 308,\n            \"samples\": 387,\n            \"slow_mean_pct\": null,\n            \"slow_samples\": 0,\n            \"zero_pct\": 0.0\n          }\n        },\n        \"gpu_ids\": [\n          4,\n          5,\n          6,\n          7\n        ],\n        \"gpu_sampling_interval_s\": 0.5,\n        \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n        \"host_rss_note\": \"各进程RSS之和含共享页重复计数，不是物理独占内存\",\n        \"host_rss_sum_peak_bytes\": 64864890880,\n        \"initialization_and_warmup_s\": 259.27092480659485,\n        \"mean_step_s\": 0.9683379030227661,\n        \"mem_available_min_bytes\": 1009351651328,\n        \"samples_per_second\": 66.09263130175678,\n        \"save_and_finish_s\": 62.8787317276001,\n        \"save_dispatch_s\": 6.989881753921509,\n        \"shm_peak_bytes\": 4620455936,\n        \"slow_step_threshold_s\": 1.9325086758472025,\n        \"slow_steps\": [],\n        \"steady_seconds\": 193.66758060455322,\n        \"steady_steps\": [\n          100,\n          299\n        ],\n        \"steady_wall\": [\n          1790475808.419102,\n          1790476002.0866826\n        ],\n        \"storage\": \"AWS本地NVMe RAID /dev/md0\",\n        \"timing_eq_profile\": {\n          \"name\": \"normal\",\n          \"xla_flags\": \"\"\n        },\n        \"warmup_steps\": [\n          0,\n          99\n        ],\n        \"workers\": 4,\n        \"xla_flags\": null\n      },\n      \"full_or_first\": {\n        \"batch_size\": 64,\n        \"checkpoint_validation\": \"另由check_orig80k_completion.py执行真实恢复验收\",\n        \"disk\": {\n          \"checkpoint_commit_timestamp_nsecs\": 1790476014646027608,\n          \"checkpoint_init_timestamp_nsecs\": 1790476003190446822,\n          \"checkpoint_metadata_sha256\": \"1640b77c9d84f65e68b0d49bd57aab95950b350b50ed932cfdefa3fa4e84c5c5\",\n          \"checkpoint_root\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z\",\n          \"checkpoint_save_commit_seconds\": 11.455580786,\n          \"duplicate_inodes_observed\": 0,\n          \"final_allocated_bytes\": 11879968768,\n          \"final_scratch_available_bytes\": 708417351680,\n          \"max_interval_s\": 3.757910222746432,\n          \"max_lateness_s\": 3.2421908248215914,\n          \"max_sampling_duration_s\": 3.519036336801946,\n          \"mean_interval_s\": 0.5127820017355739,\n          \"missed_ticks\": 26,\n          \"note\": \"只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减\",\n          \"run_uuid\": \"9bc82a7e-1f03-496a-824c-600d5eabd6d6\",\n          \"sampled_max_allocated_bytes\": 16039718912,\n          \"samples\": 1004,\n          \"samples_sha256\": \"e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992\",\n          \"samples_with_path_races\": 0,\n          \"sampling_interval_s\": 0.5,\n          \"save_sampled_max_allocated_bytes\": 16039718912,\n          \"save_samples\": 23,\n          \"save_wait_done_wall\": 1790476063.689062,\n          \"save_window_wall\": [\n            1790476003.1377487,\n            1790476014.6460276\n          ],\n          \"scratch_available_min_bytes\": 702857707520,\n          \"scratch_path\": \"/scratch\",\n          \"start_allocated_bytes\": 0,\n          \"start_scratch_available_bytes\": 732187693056,\n          \"wait_record_sha256\": \"2fb9774cbb8750788c61e54d3f7f361d0e630490970af7a064d1b9d640438fda\"\n        },\n        \"estimated_80k_eta_s\": 77731.70163476467,\n        \"eta_note\": \"初始化余量+80000稳态步+8次保存；保存成本由一次末步实测外推\",\n        \"gpu\": {\n          \"0\": {\n            \"max_gap_s\": 0.505000114440918,\n            \"mean_interval_s\": 0.5005156248807907,\n            \"mean_pct\": 98.76363636363637,\n            \"memory_peak_mib\": 79459.0,\n            \"other_mean_pct\": 98.76363636363637,\n            \"other_samples\": 385,\n            \"same_adjacent_readings\": 240,\n            \"samples\": 385,\n            \"slow_mean_pct\": null,\n            \"slow_samples\": 0,\n            \"zero_pct\": 0.0\n          },\n          \"1\": {\n            \"max_gap_s\": 0.5039999485015869,\n            \"mean_interval_s\": 0.5005156248807907,\n            \"mean_pct\": 98.56883116883117,\n            \"memory_peak_mib\": 79439.0,\n            \"other_mean_pct\": 98.56883116883117,\n            \"other_samples\": 385,\n            \"same_adjacent_readings\": 350,\n            \"samples\": 385,\n            \"slow_mean_pct\": null,\n            \"slow_samples\": 0,\n            \"zero_pct\": 0.0\n          },\n          \"2\": {\n            \"max_gap_s\": 0.5039999485015869,\n            \"mean_interval_s\": 0.5005156248807907,\n            \"mean_pct\": 98.50129870129871,\n            \"memory_peak_mib\": 79439.0,\n            \"other_mean_pct\": 98.50129870129871,\n            \"other_samples\": 385,\n            \"same_adjacent_readings\": 262,\n            \"samples\": 385,\n            \"slow_mean_pct\": null,\n            \"slow_samples\": 0,\n            \"zero_pct\": 0.0\n          },\n          \"3\": {\n            \"max_gap_s\": 0.505000114440918,\n            \"mean_interval_s\": 0.5005130209028721,\n            \"mean_pct\": 98.8077922077922,\n            \"memory_peak_mib\": 79439.0,\n            \"other_mean_pct\": 98.8077922077922,\n            \"other_samples\": 385,\n            \"same_adjacent_readings\": 350,\n            \"samples\": 385,\n            \"slow_mean_pct\": null,\n            \"slow_samples\": 0,\n            \"zero_pct\": 0.0\n          }\n        },\n        \"gpu_ids\": [\n          0,\n          1,\n          2,\n          3\n        ],\n        \"gpu_sampling_interval_s\": 0.5,\n        \"head\": \"70a641a827eb2559c3acb69430f55c1c53babaeb\",\n        \"host_rss_note\": \"各进程RSS之和含共享页重复计数，不是物理独占内存\",\n        \"host_rss_sum_peak_bytes\": 114735075328,\n        \"initialization_and_warmup_s\": 263.1997411251068,\n        \"mean_step_s\": 0.9631971204280854,\n        \"mem_available_min_bytes\": 1009290399744,\n        \"samples_per_second\": 66.44538136861924,\n        \"save_and_finish_s\": 63.63149642944336,\n        \"save_dispatch_s\": 6.555440902709961,\n        \"shm_peak_bytes\": 4620455936,\n        \"slow_step_threshold_s\": 1.921083238441497,\n        \"slow_steps\": [],\n        \"steady_seconds\": 192.63942408561707,\n        \"steady_steps\": [\n          100,\n          299\n        ],\n        \"steady_wall\": [\n          1790475810.4978292,\n          1790476003.1372533\n        ],\n        \"storage\": \"AWS本地NVMe RAID /dev/md0\",\n        \"timing_eq_profile\": {\n          \"name\": \"normal\",\n          \"xla_flags\": \"\"\n        },\n        \"warmup_steps\": [\n          0,\n          99\n        ],\n        \"workers\": 4,\n        \"xla_flags\": null\n      },\n      \"steady_overlap_seconds\": 191.5888533592224\n    }\n  },\n  \"schema\": 1,\n  \"stage\": \"report\",\n  \"started_utc\": \"2026-09-27T02:32:10.238331+00:00\",\n  \"startup_checker\": {\n    \"bytes\": 14200,\n    \"path\": \"/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/verify_start.py\",\n    \"sha256\": \"befaf77aa5b893db304c59ba5642f77a57a7e269ad65429300377f9ac2349b11\"\n  },\n  \"status\": \"PASS\"\n}\n",
+  "stderr": "",
+  "argv": [
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python",
+    "-B",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/perf300-independent-20260927/verify_terminal.py",
+    "--head",
+    "70a641a827eb2559c3acb69430f55c1c53babaeb",
+    "--stage",
+    "report"
+  ],
+  "cwd": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+  "started_utc": "2026-09-27T02:32:10.180224+00:00",
+  "finished_utc": "2026-09-27T02:32:10.879177+00:00",
+  "observer": "audit_equiv subprocess.run.returncode",
+  "integer_preservation": "原stdout及output由Python标准库JSON处理，未经JS数字重编码"
+,
+  "host_exec": {"actual_exit_code":0,"chunk_id":"71360e","wall_time_seconds":0.629291968},
+  "parent_actual_exit_code": 0
+}

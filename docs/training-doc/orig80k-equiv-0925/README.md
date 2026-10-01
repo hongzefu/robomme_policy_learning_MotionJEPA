@@ -1,4 +1,6 @@
-# 原版80k正式CPU输入对拍档案
+# 原版80k输入与训练对拍档案
+
+最新进度：CPU INPUT、P1及两库100步对拍均已完成。100步包括上游/当前与当前单跑/并跑四项judge，每项500个标量及两份201叶完整TrainState逐位一致；十个100步训练/judge最外进程另有原生pane退出0回执。实际P1/100工具及B版本为`00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8`，详见[P1结果](p1-result.md)和[100步结果](train100-result.md)。下文保留CPU输入阶段的独立结论与实际版本；新20步包装对照、300步perf和正式磁盘预算仍待完成，正式80k未启动。
 
 ## 1. 结论与指标速览
 
@@ -9,7 +11,7 @@
 | full | 1600集、768897帧、476857执行样本 | 6906 | 104个b64批；两epoch完整索引 | INPUT_EQ PASS |
 | counting | 400集、189035帧及执行样本 | 2400 | 104个b64批；两epoch完整索引 | INPUT_EQ PASS |
 
-此结论截至`collate_before_jax`，不等于GPU训练标量/参数/EMA/优化器状态逐位等价。P1、100步、单跑/并跑、新测速包装20步开关对照、300步perf及80k尚未实跑。
+此结论截至`collate_before_jax`，不等于GPU训练标量/参数/EMA/优化器状态逐位等价。CPU首次归档时，P1、100步、单跑/并跑、新测速包装20步开关对照、300步perf及80k尚未实跑；后续已完成P1的批准处置和本轮最新边界见第10、11节，不回填为CPU起跑时已知。
 
 ## 2. 版本与代码状态
 
@@ -47,6 +49,8 @@ count-A/B包装耗时5123/4515秒，full-A/B为9223/8292秒；count/full judge�
 
 六份日志各有唯一工具PASS，以及各自唯一的`COMMAND_EXIT=0`、`TEE_EXIT=0`、`FOOTER_PRINTF_EXIT=0`、`FOOTER_TEE_EXIT=0`、`EXIT_CODE=0`。现场头尾还记录会话、进程、命令自SHA、INPUT_HEAD及UTC。六会话结束状态与退出记录共同核对，会话消失本身不算成功；原始collector目录没有混入tee或judge日志。
 
+其中COMMAND_EXIT记录实际collector/judge子命令返回0，工具PASS与manifest/INPUT_EQ内容证据仍保留；最终EXIT_CODE是日志值，不能独立证明direct append之后最外整体进程实退0。六个旧任务未留最外wait/pane回执，现不可追补，按用户批准补记限制并沿用INPUT结果；详见第10节。
+
 ## 8. 输入判定与后续评估状态
 
 两组judge均输出`INPUT_EQ=PASS ... comparison=host_numeric_exact_motion_none_v1`，full为1600/476857/6906/104/2，counting为400/189035/2400/104/2（依次为集、执行样本、定点、批、epoch）。原始记录保留，结论只覆盖本次输入与顺序。
@@ -61,19 +65,27 @@ count-A/B包装耗时5123/4515秒，full-A/B为9223/8292秒；count/full judge�
 
 用户已批准「允许仅对拍关闭 W&B」（仅P1/100步A/B，本地完整证据保留）、「补充 0.5 秒只读采样」（perf checkpoint分配字节与scratch可用字节，预算保留保守余量）及「补记限制，继续 CPU 输入取证」。用户另选择「两库各跑一对 20 步（推荐）」验证新测速包装开关，真实保存和W&B仍开启；该新20步尚未执行。20步/perf/80k的W&B开启要求不变，批准不能代替实跑PASS。
 
+后续用户分别明确「补记P1限制，补独立退出取证后继续（推荐）」和「同样补记限制，沿用INPUT结果（推荐）」。两项决定各自作用于P1与INPUT的历史证据边界，不补造旧最外退出回执，也不放宽输入数值/顺序/来源或训练逐位判据。用户另要求「继续工作 一路做到起泡前 有问题问用户」，本轮据此只推进至正式80k起跑前；「尽可能并行做」「你有8张卡」按保留判据的4+4调度执行。
+
 ## 10. 计划外事件与处置
 
 新INPUT包装起跑前修复了“先写成功EXIT_CODE、后检查footer tee”的缺口，两方各6例纯shell失败传播验证通过，实际CPU使用修正版。历史四次数据/20步最外footer和整体包装退出0缺独立观测的边界仍见[exit-record-audit](exit-record-audit.md)，子任务与产物PASS未被反例证伪，原记录未改，也未用新包装测试补造旧观测。
+
+后续发现另一层边界：最终direct append可能已经完整写出日志0，随后自身返回非零。固定INPUT源码在子shell最后直接执行collector/judge并捕获其PIPESTATUS，所以六份COMMAND_EXIT=0仍是实际子命令返回0；四份collector、manifest及两组INPUT_EQ内容验收保留。已结束INPUT/P1没有保存最外整体进程独立wait/pane退出码，现不可追补；日志EXIT_CODE=0不是该最外实际返回码的独立证明。目前没有这些真实任务失败的新证据，纯shell反例也不写成它们的真实退出值。 按两项用户决定，INPUT的数值/顺序/来源与P1的入口/finite/分段/来源验收分别保留；完整授权与取证依据见[result第十节](result.md#10-计划外事件与处置)。后续必须先保留本任务pane并持久化identity后才释放启动门闩；结束后联合验原生pane退出、capture父进程真实返回及sidecar文件绑定，再核原有内容判据。父适配本身的真实返回由宿主/controller另留证；工具或日志自报0、session消失均不能代替独立退出证据。
 
 原始INPUT日志没有tqdm中间态；归档时只在独立Git副本删除COMMAND行末一个未转义ASCII分隔空格，解析argv及判定/退出原文保持一致，原日志和collector记录不改。记录无损压缩包解码后逐成员校验SHA/bytes及原manifest字节，检查链随档案保存。具体日志与包摘要见[result第十二节](result.md#12-归档文件清单与摘要)。
 
 ## 11. 当前结论与下一步
 
-正式CPU INPUT闸门两组均通过，后续继续既定P1→100步/单跑与并跑→新20步包装对照及perf等前置链。INPUT运行期间，预算对接和测速包装工具仅为ignored候选；解除冻结后已落实源码并完成工具合测，具体验证由总计划记录，不能将工具测试外推为真实训练通过。[P1启动档](p1-launch.md)和[100步/单跑/并跑启动档](train100-launch.md)均已预建、尚未执行。80k仍须所有对应前置通过。
+正式CPU INPUT闸门两组均通过，按用户批准补记最外退出限制后沿用原证据。INPUT运行期间，预算对接和测速包装工具仅为ignored候选；解除冻结后已落实源码并完成工具合测，具体验证由总计划记录，不能将工具测试外推为真实训练通过。[P1启动档](p1-launch.md)和[100步/单跑/并跑启动档](train100-launch.md)保留00bd中的起跑前约定。其后P1四侧入口、finite、分段与来源记录已完成，按批准保留历史最外退出限制；实际量具/B锚点为`00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8`，不替换原INPUT_HEAD。100步六侧训练及四项judge均通过，S2记录窗口重叠631.992527秒；详见独立结果档。新20步、perf和正式预算仍待完成。
+
+最新调度保持完整前置：100步S1/S3分别独占训练窗口，不与另一组GPU任务并跑；S2以GPU0–3和4–7形成真实训练重叠并按同HEAD/环境判据验收。新20步为两条并行库链，各库off训练、真保存/恢复和独立退出验收后才进入同4卡on，再及时进行本库CPU judge，两库互不等待无关阶段；300步perf按4+4并跑并核稳态重叠。20步只验正确性，不据其耗时作吞吐结论。每阶段保留各自全新输出/cache、W&B既定口径、真实恢复、磁盘预算和独立退出要求；两份正式launch最终同Beta/clean就绪后仍停在放行前，不启动80k。
 
 后续沿用证据须同时记录原INPUT_HEAD和实际TRAIN_HEAD，并核对固定提交diff、取证工具、父/worker输入模块、依赖、参数、数据、资产与history指纹一致；不能重写原记录HEAD或仅重复judge便声称新HEAD已重采。取证工具变化需双方同工具重采，输入相关变化或影响不明先报告。详见[launch沿用边界](launch.md#后续提交变化与证据沿用边界)。
 
 ## 12. 归档文件清单
+
+P1和100步实测追加至[白名单](records/post-eq100-import-whitelist.json)所列189个新目标，合计2536795 B，逐项SHA/bytes相等，见[导入回执](records/post-eq100-import-receipt.json)。P1使用`records/p1/`与`logs/p1/`，100步使用`records/train100/`与`logs/train100/`，十条独立退出链在`records/train100/exit/`；没有覆盖下方CPU INPUT的同名记录。新增工具的[本地验证](records/post-eq100-local-validation-20260926.json)与[独立集成复核](records/post-eq100-integration-review-independent-20260926.json)另行保存，所核工作区范围和时间见各原记录。
 
 [launch.md](launch.md)保留起跑前机制和本次实际展开值；[result.md](result.md)保存完整12节实测与SHA；[exit-record-audit.md](exit-record-audit.md)保留历史边界。四侧无损记录位于`records/{full-a,full-b,count-a,count-b}.records.tar.gz`，各自`*.archive_checks.json`绑定原始目录/manifest及解码校验；六份Git日志及检查链位于`logs/`。资源和控制器快照分别为`records/resources.jsonl`、`records/runtime-controller.json`。
 

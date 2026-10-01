@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "scope": "仅ignored normal300 perf schema2四MD候选与验证；无生产执行",
+  "implementation_head": "aec86db64e5178e63d9e7f77d3f5bc235db16390",
+  "deterministic20_beta": "c71d5255597db2f26930b7b5684a1d5b2994cf75",
+  "perf_train_head": null,
+  "deterministic20_complete_results": null,
+  "old_candidate": {
+    "launch.md": {
+      "bytes": 49061,
+      "sha256": "86b6140521928a2298391334abf377ebf73b4faec47d8c1db6347f0a080cca8c",
+      "unchanged": true
+    },
+    "README.md": {
+      "bytes": 3781,
+      "sha256": "3dd8a6337bdb5b02e8551f9d1357981873c9ff3d01567cbc0822c74b77341877",
+      "unchanged": true
+    },
+    "perf-orig80k-full-300-20260926T232339Z/README.md": {
+      "bytes": 11224,
+      "sha256": "b12aac4a9e4f229da2deecdc4e7b576cbb65deaa79820b9bf1f6f097ba6ac513",
+      "unchanged": true
+    },
+    "perf-orig80k-count-300-20260926T232339Z/README.md": {
+      "bytes": 11329,
+      "sha256": "6386e74802e1039d5092b4b65021b186d273b45b413a6c84a69272d199542a6d",
+      "unchanged": true
+    }
+  },
+  "new_documents": {
+    "README.md": {
+      "bytes": 3902,
+      "sha256": "70f38c5d76170826d9200646ab6414e2c1c93ba2e381f3a6cb53830a441601df"
+    },
+    "launch.md": {
+      "bytes": 54903,
+      "sha256": "7fa32825c58851874430d4fc236018beb4de96df4bd80ad70133dff10ad8f2f3"
+    },
+    "perf-orig80k-count-300-20260926T232339Z/README.md": {
+      "bytes": 12749,
+      "sha256": "4be74b6567a2bcd67cb13bb62ac877f9e08313a11d76d745e11fe4caa3a72ffe"
+    },
+    "perf-orig80k-full-300-20260926T232339Z/README.md": {
+      "bytes": 12644,
+      "sha256": "59c381fc7c275847b7aa1a0fb6a230548c333e8c29bf3d8402a4f4cf5e5e1d94"
+    }
+  },
+  "changes": [
+    "GPU_ENV/CPU_ENV在实际命令中增加-u ORIG80K_TIMING_EQ_PROFILE，其余环境条目不变",
+    "新增只读require_normal_perf_profile：GPU终态后核两side launch及speed起止schema2/normal/actual flags/source/argv；report后核唯一checkpoint_root对应段normal/actual flags",
+    "实现/兼容说明改锚aec与实际det Beta c71，未来perf独立Beta与实际结果仍待填；拒旧schema缺profile自动normal",
+    "八stage child入口、guard父适配、wrapper body及生成器、CPU恢复屏障、稳态/0.5采样、measurement、三margin/预算公式保持"
+  ],
+  "validation": {
+    "path": "validation.json",
+    "sha256": "4253263cdc24796e766fef0475dd558f66b8ebec2ca036cec97fb38e5b677e35",
+    "small_record_cases": 7,
+    "gpu_cpu_environment_checks": 2,
+    "launch_bash_blocks": 10,
+    "readme_bash_blocks": 2,
+    "python_ast_blocks": 3,
+    "links": 20,
+    "wall_seconds": 0.251943909,
+    "all_expected": true
+  },
+  "source_boundary": {
+    "aec_to_c71_equal": [
+      "scripts/training",
+      "src",
+      "pyproject.toml",
+      "uv.lock"
+    ],
+    "templates_or_guard_modified": false
+  },
+  "margins": {
+    "checkpoint_growth_margin_bytes": null,
+    "save_sampling_margin_bytes": null,
+    "logs_cache_margin_bytes": null
+  },
+  "prerequisites_pending": [
+    "两库det正式judge明确PASS及全部四run恢复/六独立退出完整证据",
+    "未来独立perf Beta及起跑现场资源/完整空间预算",
+    "真实perf后选择三项margin和固定basis/SHA"
+  ],
+  "final_readonly_state": {
+    "head": "c71d5255597db2f26930b7b5684a1d5b2994cf75",
+    "git_status_porcelain": "",
+    "old_four_md_sha_unchanged": true,
+    "future_run_doc_records_checkpoints_driver_paths_absent": 8
+  },
+  "restrictions": [
+    "未运行runner/completion/report/measurement/budget或tmux/GPU",
+    "未修改tracked/旧候选/两venv",
+    "未创建实际run产物",
+    "未提交"
+  ]
+}
+

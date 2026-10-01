@@ -1,0 +1,609 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  ✓ siglip_params          level=cheap   0.00s
+  ✓ paligemma_tokenizer    level=cheap   0.00s
+  ✓ pi05_base              level=cheap   0.03s
+ASSETS=PASS assets=3 mismatches=0
+=== EVAL_SHARD shard=w6 HEAD=1af91f9bf74533778cc4ca3fe9c979542a13d586 ckpt=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/v2-orig-16task-pub1600ep-modul-b64-80k/79999 run_kind=snapshot gpu=6 port=8057 seed=42 dataset=test tasks=BinFill,StopCube,PickXtimes,SwingXtimes,ButtonUnmask,VideoUnmask,VideoUnmaskSwap,ButtonUnmaskSwap,PickHighlight,VideoRepick,VideoPlaceButton,VideoPlaceOrder,MoveCube,InsertPeg,PatternLock,RouteStick ep_start=6 ep_stride=8 ep_count=0 policy_name=eval-orig80k-full16-w6 mem_fraction=0.28 start=2026-09-28 03:10:52 ===
+server pid=2709498 log=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/ev16full-w6.server.log
+server 端口就绪 03:11:44
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:42: UserWarning: Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.
+  warn("Failed to find system libvulkan. Fallback to SAPIEN builtin libvulkan.")
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/sapien/_vulkan_tricks.py:78: UserWarning: Failed to find Vulkan ICD file. This is probably due to an incorrect or partial installation of the NVIDIA driver. SAPIEN will attempt to provide an ICD file anyway but it may not work.
+  warn(
+/scratch/hongze/micromamba/envs/robomme/lib/python3.11/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+[robomme] task BinFill: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=BinFill ep=6 env_seed=540600 difficulty=medium
+
+[robomme] env for task BinFill episode 6 setup finished
+task_goal: put two blue cubes into the bin, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=BinFill ep=14 env_seed=541400 difficulty=medium
+
+[robomme] env for task BinFill episode 14 setup finished
+task_goal: put three red cubes into the bin, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=BinFill ep=22 env_seed=542200 difficulty=medium
+
+[robomme] env for task BinFill episode 22 setup finished
+task_goal: put four blue cubes into the bin, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=BinFill ep=30 env_seed=543000 difficulty=medium
+
+[robomme] env for task BinFill episode 30 setup finished
+task_goal: put three red cubes and one green cube into the bin, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=BinFill ep=38 env_seed=543800 difficulty=medium
+
+[robomme] env for task BinFill episode 38 setup finished
+task_goal: put three green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=BinFill ep=46 env_seed=544600 difficulty=medium
+
+[robomme] env for task BinFill episode 46 setup finished
+task_goal: put one blue cube and two green cubes into the bin, then press the button to stop
+exec_start_idx: 0
+[robomme] task StopCube: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=StopCube ep=6 env_seed=520600 difficulty=medium
+
+[robomme] env for task StopCube episode 6 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the third time
+exec_start_idx: 0
+EVAL_EPISODE split=test task=StopCube ep=14 env_seed=521400 difficulty=medium
+
+[robomme] env for task StopCube episode 14 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the second time
+exec_start_idx: 0
+EVAL_EPISODE split=test task=StopCube ep=22 env_seed=522200 difficulty=medium
+
+[robomme] env for task StopCube episode 22 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the second time
+exec_start_idx: 0
+EVAL_EPISODE split=test task=StopCube ep=30 env_seed=523000 difficulty=medium
+
+[robomme] env for task StopCube episode 30 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the third time
+exec_start_idx: 0
+EVAL_EPISODE split=test task=StopCube ep=38 env_seed=523800 difficulty=medium
+
+[robomme] env for task StopCube episode 38 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the third time
+exec_start_idx: 0
+EVAL_EPISODE split=test task=StopCube ep=46 env_seed=524600 difficulty=medium
+
+[robomme] env for task StopCube episode 46 setup finished
+task_goal: press the button to stop the cube just as it reaches the target for the fifth time
+exec_start_idx: 0
+[robomme] task PickXtimes: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=PickXtimes ep=6 env_seed=510600 difficulty=medium
+
+[robomme] env for task PickXtimes episode 6 setup finished
+task_goal: pick up the green cube and place it on the target, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickXtimes ep=14 env_seed=511400 difficulty=medium
+
+[robomme] env for task PickXtimes episode 14 setup finished
+task_goal: pick up the blue cube and place it on the target, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickXtimes ep=22 env_seed=512200 difficulty=medium
+
+[robomme] env for task PickXtimes episode 22 setup finished
+task_goal: pick up the blue cube and place it on the target, repeating this action three times, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickXtimes ep=30 env_seed=513000 difficulty=medium
+
+[robomme] env for task PickXtimes episode 30 setup finished
+task_goal: pick up the blue cube and place it on the target, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickXtimes ep=38 env_seed=513800 difficulty=medium
+
+[robomme] env for task PickXtimes episode 38 setup finished
+task_goal: pick up the red cube and place it on the target, repeating this action three times, then press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickXtimes ep=46 env_seed=514600 difficulty=medium
+
+[robomme] env for task PickXtimes episode 46 setup finished
+task_goal: pick up the red cube and place it on the target, repeating this action three times, then press the button to stop
+exec_start_idx: 0
+[robomme] task SwingXtimes: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=SwingXtimes ep=6 env_seed=530600 difficulty=medium
+
+[robomme] env for task SwingXtimes episode 6 setup finished
+task_goal: pick up the red cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=SwingXtimes ep=14 env_seed=531401 difficulty=medium
+
+[robomme] env for task SwingXtimes episode 14 setup finished
+task_goal: pick up the red cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=SwingXtimes ep=22 env_seed=532200 difficulty=medium
+
+[robomme] env for task SwingXtimes episode 22 setup finished
+task_goal: pick up the blue cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=SwingXtimes ep=30 env_seed=533000 difficulty=medium
+
+[robomme] env for task SwingXtimes episode 30 setup finished
+task_goal: pick up the blue cube, move it to the top of the right-side target, then move it to the top of the left-side target, repeating this back-and-forth motion two times, finally press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=SwingXtimes ep=38 env_seed=533800 difficulty=medium
+
+[robomme] env for task SwingXtimes episode 38 setup finished
+task_goal: pick up the blue cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop
+exec_start_idx: 0
+EVAL_EPISODE split=test task=SwingXtimes ep=46 env_seed=534600 difficulty=medium
+
+[robomme] env for task SwingXtimes episode 46 setup finished
+task_goal: pick up the red cube, move it to the top of the right-side target, then put it down on the left-side target, finally press the button to stop
+exec_start_idx: 0
+[robomme] task ButtonUnmask: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=ButtonUnmask ep=6 env_seed=580600 difficulty=medium
+
+[robomme] env for task ButtonUnmask episode 6 setup finished
+task_goal: first press the button, then pick up the container hiding the red cube
+exec_start_idx: 0
+EVAL_EPISODE split=test task=ButtonUnmask ep=14 env_seed=581400 difficulty=medium
+
+[robomme] env for task ButtonUnmask episode 14 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+EVAL_EPISODE split=test task=ButtonUnmask ep=22 env_seed=582200 difficulty=medium
+
+[robomme] env for task ButtonUnmask episode 22 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+EVAL_EPISODE split=test task=ButtonUnmask ep=30 env_seed=583000 difficulty=medium
+
+[robomme] env for task ButtonUnmask episode 30 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+EVAL_EPISODE split=test task=ButtonUnmask ep=38 env_seed=583800 difficulty=medium
+
+[robomme] env for task ButtonUnmask episode 38 setup finished
+task_goal: first press the button, then pick up the container hiding the blue cube
+exec_start_idx: 0
+EVAL_EPISODE split=test task=ButtonUnmask ep=46 env_seed=584600 difficulty=medium
+
+[robomme] env for task ButtonUnmask episode 46 setup finished
+task_goal: first press the button, then pick up the container hiding the green cube
+exec_start_idx: 0
+[robomme] task VideoUnmask: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=VideoUnmask ep=6 env_seed=560600 difficulty=medium
+
+[robomme] env for task VideoUnmask episode 6 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 66
+EVAL_EPISODE split=test task=VideoUnmask ep=14 env_seed=561400 difficulty=medium
+
+[robomme] env for task VideoUnmask episode 14 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 66
+EVAL_EPISODE split=test task=VideoUnmask ep=22 env_seed=562200 difficulty=medium
+
+[robomme] env for task VideoUnmask episode 22 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 66
+EVAL_EPISODE split=test task=VideoUnmask ep=30 env_seed=563000 difficulty=medium
+
+[robomme] env for task VideoUnmask episode 30 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 66
+EVAL_EPISODE split=test task=VideoUnmask ep=38 env_seed=563800 difficulty=medium
+
+[robomme] env for task VideoUnmask episode 38 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 66
+EVAL_EPISODE split=test task=VideoUnmask ep=46 env_seed=564600 difficulty=medium
+
+[robomme] env for task VideoUnmask episode 46 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 66
+[robomme] task VideoUnmaskSwap: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=6 env_seed=550600 difficulty=medium
+
+[robomme] env for task VideoUnmaskSwap episode 6 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 168
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=14 env_seed=551400 difficulty=medium
+
+[robomme] env for task VideoUnmaskSwap episode 14 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the blue cube
+exec_start_idx: 114
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=22 env_seed=552200 difficulty=medium
+
+[robomme] env for task VideoUnmaskSwap episode 22 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 114
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=30 env_seed=553000 difficulty=medium
+
+[robomme] env for task VideoUnmaskSwap episode 30 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the red cube
+exec_start_idx: 168
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=38 env_seed=553800 difficulty=medium
+
+[robomme] env for task VideoUnmaskSwap episode 38 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 168
+EVAL_EPISODE split=test task=VideoUnmaskSwap ep=46 env_seed=554600 difficulty=medium
+
+[robomme] env for task VideoUnmaskSwap episode 46 setup finished
+task_goal: watch the video carefully, then pick up the container hiding the green cube
+exec_start_idx: 168
+[robomme] task ButtonUnmaskSwap: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=6 env_seed=570600 difficulty=medium
+
+[robomme] env for task ButtonUnmaskSwap episode 6 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the red cube
+exec_start_idx: 0
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=14 env_seed=571400 difficulty=medium
+
+[robomme] env for task ButtonUnmaskSwap episode 14 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the blue cube
+exec_start_idx: 0
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=22 env_seed=572200 difficulty=medium
+
+[robomme] env for task ButtonUnmaskSwap episode 22 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the green cube
+exec_start_idx: 0
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=30 env_seed=573000 difficulty=medium
+
+[robomme] env for task ButtonUnmaskSwap episode 30 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the red cube
+exec_start_idx: 0
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=38 env_seed=573800 difficulty=medium
+
+[robomme] env for task ButtonUnmaskSwap episode 38 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the blue cube
+exec_start_idx: 0
+EVAL_EPISODE split=test task=ButtonUnmaskSwap ep=46 env_seed=574600 difficulty=medium
+
+[robomme] env for task ButtonUnmaskSwap episode 46 setup finished
+task_goal: first press both buttons on the table, then pick up the container hiding the red cube
+exec_start_idx: 0
+[robomme] task PickHighlight: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=PickHighlight ep=6 env_seed=620600 difficulty=medium
+
+[robomme] env for task PickHighlight episode 6 setup finished
+task_goal: first press the button, then pick up all cubes that have been highlighteted with white areas on the table
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickHighlight ep=14 env_seed=621400 difficulty=medium
+
+[robomme] env for task PickHighlight episode 14 setup finished
+task_goal: first press the button, then pick up all cubes that have been highlighteted with white areas on the table
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickHighlight ep=22 env_seed=622200 difficulty=medium
+
+[robomme] env for task PickHighlight episode 22 setup finished
+task_goal: first press the button, then pick up all cubes that have been highlighteted with white areas on the table
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickHighlight ep=30 env_seed=623000 difficulty=medium
+
+[robomme] env for task PickHighlight episode 30 setup finished
+task_goal: first press the button, then pick up all cubes that have been highlighteted with white areas on the table
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickHighlight ep=38 env_seed=623800 difficulty=medium
+
+[robomme] env for task PickHighlight episode 38 setup finished
+task_goal: first press the button, then pick up all cubes that have been highlighteted with white areas on the table
+exec_start_idx: 0
+EVAL_EPISODE split=test task=PickHighlight ep=46 env_seed=624600 difficulty=medium
+
+[robomme] env for task PickHighlight episode 46 setup finished
+task_goal: first press the button, then pick up all cubes that have been highlighteted with white areas on the table
+exec_start_idx: 0
+[robomme] task VideoRepick: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=VideoRepick ep=6 env_seed=590600 difficulty=medium
+
+[robomme] env for task VideoRepick episode 6 setup finished
+task_goal: watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop
+exec_start_idx: 351
+EVAL_EPISODE split=test task=VideoRepick ep=14 env_seed=591400 difficulty=medium
+
+[robomme] env for task VideoRepick episode 14 setup finished
+task_goal: watch the video carefully, then pick up the same block that was previously picked up again, finally put it down and press the button to stop
+exec_start_idx: 372
+EVAL_EPISODE split=test task=VideoRepick ep=22 env_seed=592200 difficulty=medium
+
+[robomme] env for task VideoRepick episode 22 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 377
+EVAL_EPISODE split=test task=VideoRepick ep=30 env_seed=593000 difficulty=medium
+
+[robomme] env for task VideoRepick episode 30 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 383
+EVAL_EPISODE split=test task=VideoRepick ep=38 env_seed=593800 difficulty=medium
+
+[robomme] env for task VideoRepick episode 38 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 308
+EVAL_EPISODE split=test task=VideoRepick ep=46 env_seed=594600 difficulty=medium
+
+[robomme] env for task VideoRepick episode 46 setup finished
+task_goal: watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for three times, finally put it down and press the button to stop
+exec_start_idx: 373
+[robomme] task VideoPlaceButton: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=VideoPlaceButton ep=6 env_seed=600601 difficulty=medium
+
+[robomme] env for task VideoPlaceButton episode 6 setup finished
+task_goal: watch the video carefully, then place the blue cube on the target right after the button was pressed
+exec_start_idx: 779
+EVAL_EPISODE split=test task=VideoPlaceButton ep=14 env_seed=601400 difficulty=medium
+
+[robomme] env for task VideoPlaceButton episode 14 setup finished
+task_goal: watch the video carefully, then place the red cube on the target right after the button was pressed
+exec_start_idx: 748
+EVAL_EPISODE split=test task=VideoPlaceButton ep=22 env_seed=602200 difficulty=medium
+
+[robomme] env for task VideoPlaceButton episode 22 setup finished
+task_goal: watch the video carefully, then place the blue cube on the target right before the button was pressed
+exec_start_idx: 738
+EVAL_EPISODE split=test task=VideoPlaceButton ep=30 env_seed=603000 difficulty=medium
+
+[robomme] env for task VideoPlaceButton episode 30 setup finished
+task_goal: watch the video carefully, then place the red cube on the target right before the button was pressed
+exec_start_idx: 761
+EVAL_EPISODE split=test task=VideoPlaceButton ep=38 env_seed=603800 difficulty=medium
+
+[robomme] env for task VideoPlaceButton episode 38 setup finished
+task_goal: watch the video carefully, then place the green cube on the target right before the button was pressed
+exec_start_idx: 797
+EVAL_EPISODE split=test task=VideoPlaceButton ep=46 env_seed=604600 difficulty=medium
+
+[robomme] env for task VideoPlaceButton episode 46 setup finished
+task_goal: watch the video carefully, then place the blue cube on the target right after the button was pressed
+exec_start_idx: 734
+[robomme] task VideoPlaceOrder: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=VideoPlaceOrder ep=6 env_seed=610601 difficulty=medium
+
+[robomme] env for task VideoPlaceOrder episode 6 setup finished
+task_goal: watch the video carefully, then place the blue cube on the first target it was previously placed on
+exec_start_idx: 994
+EVAL_EPISODE split=test task=VideoPlaceOrder ep=14 env_seed=611402 difficulty=medium
+
+[robomme] env for task VideoPlaceOrder episode 14 setup finished
+task_goal: watch the video carefully, then place the red cube on the first target it was previously placed on
+exec_start_idx: 761
+EVAL_EPISODE split=test task=VideoPlaceOrder ep=22 env_seed=612201 difficulty=medium
+
+[robomme] env for task VideoPlaceOrder episode 22 setup finished
+task_goal: watch the video carefully, then place the red cube on the second target it was previously placed on
+exec_start_idx: 750
+EVAL_EPISODE split=test task=VideoPlaceOrder ep=30 env_seed=613001 difficulty=medium
+
+[robomme] env for task VideoPlaceOrder episode 30 setup finished
+task_goal: watch the video carefully, then place the green cube on the second target it was previously placed on
+exec_start_idx: 761
+EVAL_EPISODE split=test task=VideoPlaceOrder ep=38 env_seed=613800 difficulty=medium
+
+[robomme] env for task VideoPlaceOrder episode 38 setup finished
+task_goal: watch the video carefully, then place the red cube on the second target it was previously placed on
+exec_start_idx: 927
+EVAL_EPISODE split=test task=VideoPlaceOrder ep=46 env_seed=614601 difficulty=medium
+
+[robomme] env for task VideoPlaceOrder episode 46 setup finished
+task_goal: watch the video carefully, then place the red cube on the second target it was previously placed on
+exec_start_idx: 1126
+[robomme] task MoveCube: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=MoveCube ep=6 env_seed=640600 difficulty=medium
+
+[robomme] env for task MoveCube episode 6 setup finished
+task_goal: watch the video carefully, then move the cube to the target in the same manner as before
+exec_start_idx: 246
+EVAL_EPISODE split=test task=MoveCube ep=14 env_seed=641400 difficulty=medium
+
+[robomme] env for task MoveCube episode 14 setup finished
+task_goal: watch the video carefully, then move the cube to the target in the same manner as before
+exec_start_idx: 164
+EVAL_EPISODE split=test task=MoveCube ep=22 env_seed=642200 difficulty=medium
+
+[robomme] env for task MoveCube episode 22 setup finished
+task_goal: watch the video carefully, then move the cube to the target in the same manner as before
+exec_start_idx: 165
+EVAL_EPISODE split=test task=MoveCube ep=30 env_seed=643000 difficulty=medium
+
+[robomme] env for task MoveCube episode 30 setup finished
+task_goal: watch the video carefully, then move the cube to the target in the same manner as before
+exec_start_idx: 258
+EVAL_EPISODE split=test task=MoveCube ep=38 env_seed=643800 difficulty=medium
+
+[robomme] env for task MoveCube episode 38 setup finished
+task_goal: watch the video carefully, then move the cube to the target in the same manner as before
+exec_start_idx: 158
+EVAL_EPISODE split=test task=MoveCube ep=46 env_seed=644600 difficulty=medium
+
+[robomme] env for task MoveCube episode 46 setup finished
+task_goal: watch the video carefully, then move the cube to the target in the same manner as before
+exec_start_idx: 163
+[robomme] task InsertPeg: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=InsertPeg ep=6 env_seed=630600 difficulty=medium
+
+[robomme] env for task InsertPeg episode 6 setup finished
+task_goal: watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box
+exec_start_idx: 238
+EVAL_EPISODE split=test task=InsertPeg ep=14 env_seed=631400 difficulty=medium
+
+[robomme] env for task InsertPeg episode 14 setup finished
+task_goal: watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box
+exec_start_idx: 377
+EVAL_EPISODE split=test task=InsertPeg ep=22 env_seed=632200 difficulty=medium
+
+[robomme] env for task InsertPeg episode 22 setup finished
+task_goal: watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box
+exec_start_idx: 203
+EVAL_EPISODE split=test task=InsertPeg ep=30 env_seed=633000 difficulty=medium
+
+[robomme] env for task InsertPeg episode 30 setup finished
+task_goal: watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box
+exec_start_idx: 227
+EVAL_EPISODE split=test task=InsertPeg ep=38 env_seed=633801 difficulty=medium
+
+[robomme] env for task InsertPeg episode 38 setup finished
+task_goal: watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box
+exec_start_idx: 230
+EVAL_EPISODE split=test task=InsertPeg ep=46 env_seed=634601 difficulty=medium
+
+[robomme] env for task InsertPeg episode 46 setup finished
+task_goal: watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box
+exec_start_idx: 255
+[robomme] task PatternLock: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=PatternLock ep=6 env_seed=650600 difficulty=medium
+
+[robomme] env for task PatternLock episode 6 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to retrace the same pattern
+exec_start_idx: 142
+EVAL_EPISODE split=test task=PatternLock ep=14 env_seed=651400 difficulty=medium
+
+[robomme] env for task PatternLock episode 14 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to retrace the same pattern
+exec_start_idx: 86
+EVAL_EPISODE split=test task=PatternLock ep=22 env_seed=652200 difficulty=medium
+
+[robomme] env for task PatternLock episode 22 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to retrace the same pattern
+exec_start_idx: 152
+EVAL_EPISODE split=test task=PatternLock ep=30 env_seed=653000 difficulty=medium
+
+[robomme] env for task PatternLock episode 30 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to retrace the same pattern
+exec_start_idx: 67
+EVAL_EPISODE split=test task=PatternLock ep=38 env_seed=653800 difficulty=medium
+
+[robomme] env for task PatternLock episode 38 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to retrace the same pattern
+exec_start_idx: 145
+EVAL_EPISODE split=test task=PatternLock ep=46 env_seed=654600 difficulty=medium
+
+[robomme] env for task PatternLock episode 46 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to retrace the same pattern
+exec_start_idx: 140
+[robomme] task RouteStick: 6 episodes [6, 14, 22, 30, 38, 46]
+EVAL_EPISODE split=test task=RouteStick ep=6 env_seed=660600 difficulty=medium
+
+[robomme] env for task RouteStick episode 6 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+EVAL_EPISODE split=test task=RouteStick ep=14 env_seed=661400 difficulty=medium
+
+[robomme] env for task RouteStick episode 14 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+EVAL_EPISODE split=test task=RouteStick ep=22 env_seed=662200 difficulty=medium
+
+[robomme] env for task RouteStick episode 22 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+EVAL_EPISODE split=test task=RouteStick ep=30 env_seed=663000 difficulty=medium
+
+[robomme] env for task RouteStick episode 30 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+EVAL_EPISODE split=test task=RouteStick ep=38 env_seed=663800 difficulty=medium
+
+[robomme] env for task RouteStick episode 38 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 250
+EVAL_EPISODE split=test task=RouteStick ep=46 env_seed=664600 difficulty=medium
+
+[robomme] env for task RouteStick episode 46 setup finished
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+Warning: link 'camera_link' material 'aluminum' undefined.
+         at line 85 in /workspace/urdfdom/urdf_parser/src/model.cpp
+task_goal: watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path
+exec_start_idx: 200
+EVAL_RC=0 end=2026-09-28 04:57:59
+TIMING_SUMMARY add_buffer(<=16帧) n=1718 mean=94 median=93 p90=134 max=1260 | add_buffer(首批>16帧) n=54 mean=6094 median=1807 p90=14816 max=30719 | infer n=1772 mean=194 median=180 p90=279 max=2889
+EXIT_CODE=0

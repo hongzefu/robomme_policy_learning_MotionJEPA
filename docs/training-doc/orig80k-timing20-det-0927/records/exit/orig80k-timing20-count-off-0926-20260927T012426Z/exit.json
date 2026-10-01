@@ -1,0 +1,91 @@
+{
+  "command_file": {
+    "bytes": 8032,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-count-off-0926-20260927T012426Z.command",
+    "sha256": "777a0bc23a963455e5be411273ca92239edef8ec22b1d66a93f47767ed3aa23b"
+  },
+  "identity": {
+    "bytes": 1530,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-count-off-0926-20260927T012426Z.identity.json",
+    "sha256": "3e7752a7c4a82454f15f3488d61f253bbf1b80fc932db286f9a1f12555604cc4"
+  },
+  "identity_snapshot": {
+    "command_file": {
+      "bytes": 8032,
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-count-off-0926-20260927T012426Z.command",
+      "sha256": "777a0bc23a963455e5be411273ca92239edef8ec22b1d66a93f47767ed3aa23b"
+    },
+    "enabled_mid_run": false,
+    "gate_channel": "orig80k-exit-guard-a8ebafc1945d43a181c29f2784dcfa6c",
+    "gate_exec_argv": [
+      "bash",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-count-off-0926-20260927T012426Z.command",
+      "777a0bc23a963455e5be411273ca92239edef8ec22b1d66a93f47767ed3aa23b"
+    ],
+    "initial_pane_dead": 0,
+    "label": "orig80k-timing20-count-off-0926-20260927T012426Z",
+    "pane_id": "%576",
+    "pane_pid": 1278787,
+    "pane_start_command": "/bin/sh -c \"\\\"$1\\\" wait-for \\\"$2\\\" || exit 2\\nexec bash \\\"$3\\\" \\\"$4\\\"\" tmux-exit-guard /usr/bin/tmux orig80k-exit-guard-a8ebafc1945d43a181c29f2784dcfa6c /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-count-off-0926-20260927T012426Z.command 777a0bc23a963455e5be411273ca92239edef8ec22b1d66a93f47767ed3aa23b",
+    "recorded_utc": "2026-09-27T01:42:29.970176+00:00",
+    "remain_on_exit": "on",
+    "schema": 1,
+    "session": "orig80k-timing20-count-off-0926-20260927T012426Z",
+    "tmux_version": "tmux 3.6a",
+    "train_head": "c71d5255597db2f26930b7b5684a1d5b2994cf75",
+    "window_id": "@576"
+  },
+  "observed_utc": "2026-09-27T01:53:14.310860+00:00",
+  "pane_query": {
+    "argv": [
+      "/usr/bin/tmux",
+      "list-panes",
+      "-s",
+      "-t",
+      "=orig80k-timing20-count-off-0926-20260927T012426Z",
+      "-f",
+      "#{==:#{pane_id},%576}",
+      "-F",
+      "#{session_name}\u001f#{window_id}\u001f#{pane_id}\u001f#{pane_pid}\u001f#{pane_dead}\u001f#{pane_dead_status}\u001f#{pane_dead_signal}\u001f#{pane_dead_time}\u001f#{pane_start_command}\u001f#{remain-on-exit}\u001e"
+    ],
+    "exception": null,
+    "returncode": 0,
+    "stderr": "",
+    "stderr_base64": "",
+    "stdout": "orig80k-timing20-count-off-0926-20260927T012426Z\u001f@576\u001f%576\u001f1278787\u001f1\u001f0\u001f\u001f1790473973\u001f/bin/sh -c \"\\\"$1\\\" wait-for \\\"$2\\\" || exit 2\\nexec bash \\\"$3\\\" \\\"$4\\\"\" tmux-exit-guard /usr/bin/tmux orig80k-exit-guard-a8ebafc1945d43a181c29f2784dcfa6c /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-count-off-0926-20260927T012426Z.command 777a0bc23a963455e5be411273ca92239edef8ec22b1d66a93f47767ed3aa23b\u001fon\u001e\n",
+    "stdout_base64": "b3JpZzgway10aW1pbmcyMC1jb3VudC1vZmYtMDkyNi0yMDI2MDkyN1QwMTI0MjZaH0A1NzYfJTU3Nh8xMjc4Nzg3HzEfMB8fMTc5MDQ3Mzk3Mx8vYmluL3NoIC1jICJcIiQxXCIgd2FpdC1mb3IgXCIkMlwiIHx8IGV4aXQgMlxuZXhlYyBiYXNoIFwiJDNcIiBcIiQ0XCIiIHRtdXgtZXhpdC1ndWFyZCAvdXNyL2Jpbi90bXV4IG9yaWc4MGstZXhpdC1ndWFyZC1hOGViYWZjMTk0NWQ0M2ExODFjMjlmMjc4NGRjZmE2YyAvc2NyYXRjaC9ob25nemUvcm9ib21tZV9wb2xpY3lfbGVhcm5pbmdfTW90aW9uSkVQQS92MS1zdG9yZS9iZW5jaC9vcmlnODBrLXRpbWluZzIwLWNvbW1hbmRzLTIwMjYwOTI3VDAxMjQyNlovb3JpZzgway10aW1pbmcyMC1jb3VudC1vZmYtMDkyNi0yMDI2MDkyN1QwMTI0MjZaLmNvbW1hbmQgNzc3YTBiYzIzYTk2MzQ1NWU1YmU0MTEyNzNjYTkyMjM5ZWRlZjhlYzIyYjFkNjZhOTNmNDc3NjdlZDNhYTIzYh9vbh4K"
+  },
+  "parsed": {
+    "pane_dead": "1",
+    "pane_dead_signal": "",
+    "pane_dead_status": "0",
+    "pane_dead_time": "1790473973",
+    "pane_id": "%576",
+    "pane_pid": "1278787",
+    "pane_start_command": "/bin/sh -c \"\\\"$1\\\" wait-for \\\"$2\\\" || exit 2\\nexec bash \\\"$3\\\" \\\"$4\\\"\" tmux-exit-guard /usr/bin/tmux orig80k-exit-guard-a8ebafc1945d43a181c29f2784dcfa6c /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260927T012426Z/orig80k-timing20-count-off-0926-20260927T012426Z.command 777a0bc23a963455e5be411273ca92239edef8ec22b1d66a93f47767ed3aa23b",
+    "remain_on_exit": "on",
+    "session": "orig80k-timing20-count-off-0926-20260927T012426Z",
+    "window_id": "@576"
+  },
+  "reason": "",
+  "schema": 1,
+  "status": "PASS",
+  "tmux_version": "tmux 3.6a",
+  "tool": {
+    "bytes": 20398,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+    "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+  },
+  "version_query": {
+    "argv": [
+      "/usr/bin/tmux",
+      "-V"
+    ],
+    "exception": null,
+    "returncode": 0,
+    "stderr": "",
+    "stderr_base64": "",
+    "stdout": "tmux 3.6a\n",
+    "stdout_base64": "dG11eCAzLjZhCg=="
+  }
+}

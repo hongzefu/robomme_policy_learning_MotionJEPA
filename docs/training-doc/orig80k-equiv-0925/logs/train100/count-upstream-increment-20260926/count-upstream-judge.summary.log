@@ -1,0 +1,31 @@
+SESSION=orig80k-eq100-count-upstream-judge-20260926T210415Z
+WRAPPER_PID=1085096
+BODY_PID=1085098
+TRAIN_HEAD=00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8
+COMMAND_FILE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-count-upstream-judge-20260926T210415Z.command
+COMMAND_FILE_SHA256_EXPECTED=c33b22c13aaa730dec50a498842b0b7362f8cb7b83715c5a1252fd2a7e58093e
+START_UTC=2026-09-26T22:50:02Z
+COMMAND_FILE_SHA256_ACTUAL=c33b22c13aaa730dec50a498842b0b7362f8cb7b83715c5a1252fd2a7e58093e
+COMMAND=env -u PYTHONPATH -u PYTHONHOME -u JAX_PLATFORMS -u JAX_PLATFORM_NAME -u JAX_COMPILATION_CACHE_DIR -u TRAIN_RECORD_DIR -u TRAIN_FINAL_RECORD_DIR -u TRAIN_TIMING_STEPS JAX_ENABLE_X64=0 PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 HF_HUB_OFFLINE=1 WORKTREE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c A_PYTHON=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/orig-ecf086c/.venv/bin/python UV_PROJECT_ENVIRONMENT=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv HEAD_A=ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b HEAD_B=00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8 STEPS=100 BATCH=64 FSDP=4 SAVE_INTERVAL=50 HISTORY_YAML=perceptual-framesamp-modul.yaml MODE=upstream EXPECT_TENTATIVE_A=12 EXPECT_STATE_STEPS=50\,99 ANCHOR_SHA256= CONCURRENT_PEER_DIR= RECORD_ROOT=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count RECORD_A=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/a RECORD_B=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/solo EXP_A=eq100-orig80k-count-a-20260926T210415Z EXP_B=eq100-orig80k-count-s3-20260926T210415Z DATA_A=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/source DATA_B=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/framesamp ASSETS_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/4task-counting-pub-400ep FRAMESAMP_SOURCE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/source FRAMESAMP_MANIFEST=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/4task-counting-pub-400ep/meta/episode_manifest.json CHECKPOINT_A=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/checkpoints/count-a CHECKPOINT_B=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/checkpoints/count-s3 JAX_CACHE_A=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/orig80k-eq100-20260926T210415Z/count-a MMEVLA_JAX_CACHE_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/jax/orig80k-eq100-20260926T210415Z/count-s3 JAX_PLATFORMS=cpu GPUS=4\,5\,6\,7 MODE=upstream HEAD_A=ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b HEAD_B=00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8 EXPECT_TENTATIVE_A=12 EXPECT_STATE_STEPS=50\,99 ANCHOR_SHA256= CONCURRENT_PEER_DIR= RECORD_A=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/a RECORD_B=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/count/solo bash /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/run_entry_equiv.sh judge
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+A_SIDE_SEGMENTS tentative_rows=12 main_rows=100
+B_SIDE_SEGMENTS tentative_rows=0 main_rows=100
+ENTRY_SCALARS steps=100 keys=5 hex_mismatch=0
+ENTRY_FINITE=PASS
+ENTRY_STATE_DIGEST rows=2 mismatch=0
+CFG_SPOTLIGHT field=ema_decay SAME
+CFG_SPOTLIGHT field=optimizer SAME
+CFG_SPOTLIGHT field=lr_schedule SAME
+ENTRY_RESOLVED_CFG mismatch=0 mode=upstream
+ENTRY_PROVENANCE=PASS
+A_SCALARS_SHA256 d37c6b4eb6aeb58207e92657d70a7d0b71d50d27fbcfc5dcefa881d2236904e9 anchor=SKIPPED
+B_SCALARS_SHA256 d37c6b4eb6aeb58207e92657d70a7d0b71d50d27fbcfc5dcefa881d2236904e9 anchor=SKIPPED
+ENTRY_EQ=PASS
+SESSION_END=orig80k-eq100-count-upstream-judge-20260926T210415Z
+TRAIN_HEAD_END=00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8
+END_UTC=2026-09-26T22:50:02Z
+COMMAND_EXIT=0
+TEE_EXIT=0
+FOOTER_PRINTF_EXIT=0
+FOOTER_TEE_EXIT=0
+EXIT_CODE=0

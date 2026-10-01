@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "session": "orig80k-eq100-full-same-judge-20260926T210415Z",
+  "actual_exit_code": 0,
+  "identity": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.identity.json",
+    "bytes": 1511,
+    "sha256": "984dd79f2c956f4f09c7528553762f2c59df08f14b3f1fbc262d31808f3ad286"
+  },
+  "receipt": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.exit.json",
+    "bytes": 5303,
+    "sha256": "d84602f71b940c2ea736cf7e9aba82d118ef9dc887fb99c90ffed3f5eafd3f00"
+  },
+  "guard_tool": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+    "bytes": 20398,
+    "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+  },
+  "stdout": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.exit.capture.stdout",
+    "bytes": 4927,
+    "sha256": "d4334aea7d5a8b0f36ee6dc8acd8f89dc4e9f79a0ec3599bd9bb30fcce9c0007"
+  },
+  "stderr": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.exit.capture.stderr",
+    "bytes": 187,
+    "sha256": "7b6db36a3d50259e768b8f2e89a12d3562b55c6a8e29a9fbc39daae906631060"
+  },
+  "argv": [
+    "uv",
+    "run",
+    "--no-sync",
+    "python",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+    "capture",
+    "--identity",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.identity.json",
+    "--identity-sha256",
+    "984dd79f2c956f4f09c7528553762f2c59df08f14b3f1fbc262d31808f3ad286",
+    "--out",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.exit.json"
+  ],
+  "observed_utc": "2026-09-26T23:10:52.306243+00:00",
+  "observer": "root subprocess.run.returncode"
+}

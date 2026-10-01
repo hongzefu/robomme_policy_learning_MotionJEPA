@@ -1,0 +1,17 @@
+case	launch_rc	wrapper_rc	action_rc	checker_rc	success_terminal_count	verdict	detail
+success	0	0	0	0	1	PASS	ok
+success_completion	0	0	0	0	1	PASS	ok
+task	0	7	7	1	0	PASS	ok
+body_tee	0	23	0	1	0	PASS	ok
+task_and_body_tee	0	23	7	1	0	PASS	ok
+footer_printf_before	0	31	0	1	0	PASS	ok
+footer_printf_after	0	31	0	1	0	PASS	ok
+footer_tee_before	0	29	0	1	0	PASS	ok
+footer_tee_after	0	29	0	1	0	PASS	ok
+append_open	0	1	0	1	0	PASS	ok
+append_before	0	1	0	1	0	PASS	ok
+append_after	0	1	0	0	1	DEFECT	failed_wrapper_has_success_log_or_checker_acceptance
+existing_log	2	not_started	missing	1	0	PASS	ok
+existing_command	2	not_started	missing	1	0	PASS	ok
+self_sha	0	2	missing	1	0	PASS	ok
+end_head	0	2	0	1	0	PASS	ok

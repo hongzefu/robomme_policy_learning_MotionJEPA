@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "scope": "0926原预检到0927新候选的最小差异清单；原文件保持不变",
+  "old_candidate": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/check_timing20_reuse_preflight_20260926.py",
+    "sha256": "2af9d5bd8ae07479d965b11f0f316b6811bf1e28d19b10646edb028f66cad155"
+  },
+  "new_candidate": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/check_timing20_reuse_preflight_20260927.py",
+    "sha256": "5aba6835f54937f04f014bcbd126f3c8c0f6739c03927e53350fdeadd75ef7b8"
+  },
+  "rules_head": "d710d8489b88aa75770af3452fd7c9b374deaef7",
+  "changed": [
+    "新增RULES_HEAD和三个根规则文件的BASE blob、批准blob及SHA256常量",
+    "新增check_rule_documents，只接受BASE→RULES_HEAD恰好三个M变更、固定100644/blob及新HEAD/工作树原字节一致",
+    "check_version新增RULES_HEAD为新HEAD祖先的检查，三个精确路径仅允许M并要求全部出现",
+    "version报告新增rule_documents；保留原fields与六工具/训练保护全部判据"
+  ],
+  "rule_paths": ["AGENTS.md", "CLAUDE.md", "greatlakes.md"],
+  "preserved": {
+    "BASE": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+    "existing_other_function_bytes_equal": 16,
+    "constant_values_equal": ["BASE", "NEW_SHA", "UNCHANGED", "GROUPS", "UP_HEAD", "INPUT_HEAD"],
+    "training_path_whitelist_expanded": false,
+    "general_root_markdown_allowed": false,
+    "input_113_refs_changed": false,
+    "runtime_asset_dependency_gpu_conflict_checks_changed": false,
+    "cli_unchanged": "--head <新Beta完整SHA> --tag <本轮TAG>"
+  },
+  "validation": {
+    "path": "v1-store/bench/orig80k-build-preflight-0925/timing20-reuse-rules-20260927-validation.json",
+    "sha256": "a973f6a2e19de8ac29bd25941086187219be89afe4993cfeaf4857c7a2c9c4a7"
+  },
+  "status": "小验证PASS；完整实测沿用预检由root另行记录，不由本差异清单宣称"
+}

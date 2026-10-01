@@ -1,0 +1,21 @@
+WRAPPER_SESSION=orig80k-perf-count-measure-20260926T232339Z
+WRAPPER_PID=1348730
+WRAPPER_BODY_PID=1348732
+WRAPPER_TRAIN_HEAD=70a641a827eb2559c3acb69430f55c1c53babaeb
+WRAPPER_COMMAND_FILE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-count-measure-20260926T232339Z.command
+WRAPPER_COMMAND_SHA256_EXPECTED=465bb4d782a9f1960b8b59edc58ebbb835b0695c0fead8cac2e15466bda0b63b
+WRAPPER_START_UTC=2026-09-27T02:31:43Z
+WRAPPER_COMMAND_SHA256_ACTUAL=465bb4d782a9f1960b8b59edc58ebbb835b0695c0fead8cac2e15466bda0b63b
+WRAPPER_COMMAND=env -u PYTHONPATH -u PYTHONHOME -u JAX_PLATFORM_NAME -u XLA_FLAGS -u TRAIN_TIMING_STEPS -u ORIG80K_SMOKE_EQ_MODE -u ORIG80K_TIMING_EQ_PROFILE CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu UV_PROJECT_ENVIRONMENT=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv UV_CACHE_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/uv OPENPI_DATA_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models XDG_CACHE_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/xdg HF_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/hf PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 TZ=UTC uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/orig80k_contract.py measure-checkpoint --group counting --run perf-orig80k-count-300-20260926T232339Z --head 70a641a827eb2559c3acb69430f55c1c53babaeb --report /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json --completion /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/completion.json --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/checkpoint_measurement.json 
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+CHECKPOINT_MEASURED=PASS run=perf-orig80k-count-300-20260926T232339Z step=299 allocated_bytes=11879923712 receipt_sha256=162f4fbf3dcbd0ee22bb80c08126f6bbd2d796c980d6f402c7264d122a116a4c
+MEASUREMENT_EXIT_CODE=0
+WRAPPER_HEAD_END=70a641a827eb2559c3acb69430f55c1c53babaeb
+WRAPPER_VERSION_EXIT_CODE=0
+WRAPPER_COMMAND_EXIT=0
+WRAPPER_TEE_EXIT=0
+MEASUREMENT_TEE_EXIT_CODE=0
+WRAPPER_END_UTC=2026-09-27T02:31:44Z
+WRAPPER_FOOTER_PRINTF_EXIT=0
+WRAPPER_FOOTER_TEE_EXIT=0
+WRAPPER_EXIT_CODE=0

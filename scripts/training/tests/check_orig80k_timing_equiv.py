@@ -19,7 +19,8 @@ from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[3]
 ENTRY = ROOT / "scripts/training/train.py"
-SCHEMA = 1
+# 新记录必须显式绑定档位；旧schema1由原提交的量具及归档解释。
+SCHEMA = 2
 STEPS = 20
 OWNED = ("metadata.json", "fetch_inputs.jsonl", "model_inputs.jsonl", "full_state.json")
 SPEED_FILES = ("speed_start.json", "speed_run.json", "step_timing.jsonl", "host_samples.jsonl", "disk_samples.jsonl")
@@ -84,6 +85,45 @@ def training_imports():
     import entry_equiv
     import final_record
     return config_record, final_record, entry_equiv
+
+
+def profile_contract():
+    """档位入口只导入中央轻量契约，不提前加载训练或模型。"""
+    path = str(Path(__file__).resolve().parents[1])
+    if path not in sys.path:
+        sys.path.insert(0, path)
+    import orig80k_contract
+    return orig80k_contract
+
+
+def validate_metadata_profile(metadata):
+    """只使用本次记录的档位和实际flags；判定进程的环境不能补字段。"""
+    require(metadata.get("timing") in {"off", "on"}, "共同取证缺off/on身份")
+    require("timing_eq_profile" in metadata, "共同取证缺显式计时对拍档位")
+    environment = metadata["fingerprint"]["environment"]
+    require("XLA_FLAGS" in environment, "运行指纹缺实际XLA_FLAGS记录")
+    return profile_contract().validate_timing_eq_profile_record(
+        metadata["timing_eq_profile"], mode="smoke", timing=metadata["timing"],
+        xla_flags=environment["XLA_FLAGS"])
+
+
+def validate_launch_profile(launch, metadata):
+    """把runner的显式选择、实际flags和observer声明闭合到同一档位。"""
+    environment = launch["environment"]
+    require({"XLA_FLAGS", "ORIG80K_TIMING_EQ_PROFILE", "ORIG80K_SMOKE_EQ_MODE"} <= set(environment),
+            "启动记录缺完整计时对拍环境")
+    require(environment["ORIG80K_SMOKE_EQ_MODE"] == metadata["timing"], "启动与共同取证off/on不同")
+    require("timing_eq_profile" in launch, "启动记录缺显式计时对拍档位")
+    profile = profile_contract().validate_timing_eq_profile_record(
+        launch["timing_eq_profile"], mode=launch["mode"], timing=environment["ORIG80K_SMOKE_EQ_MODE"],
+        xla_flags=environment["XLA_FLAGS"])
+    require(profile == validate_metadata_profile(metadata), "启动与共同取证计时档位不同")
+    expected_selector = "deterministic100" if profile["name"] == "deterministic100" else None
+    require(environment["ORIG80K_TIMING_EQ_PROFILE"] == expected_selector,
+            "启动记录的显式档位选择与声明不符")
+    require(environment["XLA_FLAGS"] == metadata["fingerprint"]["environment"]["XLA_FLAGS"],
+            "启动与运行指纹的实际XLA_FLAGS记录不同")
+    return profile
 
 
 def tree_record(tree):
@@ -301,7 +341,8 @@ def provenance(entry_equiv, head):
 def toolchain():
     names = ("scripts/training/tests/check_orig80k_timing_equiv.py", "scripts/training/tests/check_orig80k_speed.py",
              "scripts/training/tests/entry_equiv.py", "scripts/training/tests/check_orig80k_completion.py",
-             "scripts/training/prod/run_orig80k.sh", "scripts/training/config_record.py",
+             "scripts/training/prod/run_orig80k.sh", "scripts/training/orig80k_contract.py",
+             "scripts/training/config_record.py",
              "scripts/training/final_record.py", "scripts/training/train.py", "pyproject.toml", "uv.lock")
     return {name: record_file(ROOT / name) for name in names}
 
@@ -324,8 +365,8 @@ def run(args):
     require(args.timing in {"off", "on"} and os.environ.get("ORIG80K_MODE") == "smoke"
             and os.environ.get("ORIG80K_SMOKE_EQ_MODE") == args.timing, "仅允许显式smoke off/on入口")
     require(Path.cwd() == ROOT and Path(sys.prefix).resolve() == (ROOT / ".venv").resolve(), "必须用主仓独立uv环境")
-    require(not os.environ.get("XLA_FLAGS") and os.environ.get("TRAIN_TIMING_STEPS", "0") == "0",
-            "入口前不得继承确定性档或计时覆盖")
+    timing_eq_profile = profile_contract().resolve_timing_eq_profile("smoke")
+    require(os.environ.get("TRAIN_TIMING_STEPS", "0") == "0", "入口前不得继承计时覆盖")
     records = Path(args.records)
     require(records.is_absolute() and records == records.resolve(), "记录根必须为绝对实体路径")
     require(os.environ.get("TRAIN_RECORD_DIR") == str(records)
@@ -344,7 +385,8 @@ def run(args):
     directory.mkdir()  # 新子目录独占创建，不复用旧20步记录。
     observer = Observer(directory)
     previous_argv = sys.argv
-    metadata = {"schema": SCHEMA, "status": "FAIL", "timing": args.timing, "head": head, "run_name": name,
+    metadata = {"schema": SCHEMA, "status": "FAIL", "timing": args.timing,
+                "timing_eq_profile": timing_eq_profile, "head": head, "run_name": name,
                 "records": str(records), "pid": os.getpid(), "argv": argv, "toolchain": toolchain(),
                 "start_wall": time.time(), "observations": "两侧共同逐批device_get/CPU哈希及完整末步state读回；非吞吐测量"}
     try:
@@ -354,6 +396,9 @@ def run(args):
             observer.check_complete()
             metadata["provenance_end"] = provenance(entry_equiv, head)
             metadata["fingerprint"] = observer.fingerprint_start
+            require(validate_metadata_profile(metadata) == timing_eq_profile
+                    and profile_contract().resolve_timing_eq_profile("smoke") == timing_eq_profile,
+                    "运行期间计时对拍档位改变")
             require(entry_equiv._runtime_fingerprint(observer.config, ROOT) == metadata["fingerprint"],  # noqa: SLF001 -- 用相同量具复核起止指纹。
                     "起止环境/输入/资产指纹变化")
             metadata["complete"] = observer.identity["complete"]
@@ -415,7 +460,7 @@ def validate_state(state, identity):
                 for key, path in mapping.items()), "完整状态EMA组与恢复映射分离")
 
 
-def validate_fingerprint(fingerprint):
+def validate_fingerprint(fingerprint, profile, *, timing):
     fields = {"version", "python", "dependencies", "uv_lock_sha256", "devices", "environment", "jax",
               "history", "assets", "source", "dataset"}
     require(set(fingerprint) == fields and fingerprint["version"] == 1
@@ -424,8 +469,10 @@ def validate_fingerprint(fingerprint):
     require(len(devices) == 4 and len({item["uuid"] for item in devices}) == 4
             and all(set(item) == {"index", "uuid", "name", "driver"} and all(item.values()) for item in devices),
             "指纹没有四个不同物理GPU")
-    require(fingerprint["jax"]["enable_x64"] is False and not fingerprint["environment"]["XLA_FLAGS"],
-            "运行没有使用生产x64/确定性环境口径")
+    require(fingerprint["jax"]["enable_x64"] is False, "运行实际启用了x64")
+    require("XLA_FLAGS" in fingerprint["environment"], "运行指纹缺实际XLA_FLAGS记录")
+    profile_contract().validate_timing_eq_profile_record(
+        profile, mode="smoke", timing=timing, xla_flags=fingerprint["environment"]["XLA_FLAGS"])
     require(fingerprint["uv_lock_sha256"] == record_file(ROOT / "uv.lock")["sha256"], "依赖锁指纹不同")
     require(record_file(Path(fingerprint["history"]["path"])) == fingerprint["history"], "history内容不同")
     require({"episode_manifest", "stats", "input_manifest.json"} <= set(fingerprint["source"]["records"]),
@@ -504,6 +551,7 @@ def validate_completion(records, completion_path, identity, full_state):
     require(launch["head"] == head and launch["run_name"] == run and launch["mode"] == "smoke"
             and launch["actual"]["complete"] == start["complete"] == identity["complete"]
             and launch["actual"]["jax_enable_x64"] is False, "启动完整配置与真实配置不符")
+    validate_launch_profile(launch, identity)
     require((runtime["exp_name"], runtime["config_name"], runtime["seed"], runtime["device_count"],
              runtime["batch_size"], runtime["num_workers"], runtime["fsdp_devices"]) ==
             (run, "mme_vla_suite", 42, 4, 64, 4, 4), "实际runtime与本次身份/四卡配置不符")
@@ -519,12 +567,23 @@ def validate_completion(records, completion_path, identity, full_state):
                     for item in scalars]
 
 
-def validate_speed(records, timing, head):
+def validate_speed(records, timing, head, profile, *, xla_flags):
+    profile_contract().validate_timing_eq_profile_record(
+        profile, mode="smoke", timing=timing, xla_flags=xla_flags)
     if timing == "off":
         require(not any((records / name).exists() for name in SPEED_FILES), "off侧实际启用了测速包装")
         return None
     import check_orig80k_speed as speed
     meta = load(records / "speed_run.json")
+    start = load(records / "speed_start.json")
+    for snapshot in (start, meta):
+        require(snapshot.get("schema") == 2 and "timing_eq_profile" in snapshot and "xla_flags" in snapshot,
+                "测速记录缺schema2显式档位或实际flags")
+        require(snapshot.get("head") == head and snapshot.get("mode") == "smoke", "测速起止版本或模式不符")
+        observed = profile_contract().validate_timing_eq_profile_record(
+            snapshot["timing_eq_profile"], mode=snapshot["mode"], timing="on", xla_flags=snapshot["xla_flags"])
+        require(observed == profile and snapshot["xla_flags"] == xla_flags,
+                "测速起止与共同取证档位或实际flags不同")
     require(meta.get("head") == head and meta.get("mode") == "smoke" and meta.get("steps") == 20
             and meta.get("success") and meta.get("entry_calls") == 1 and meta.get("sampler_stopped")
             and not meta.get("sampling_error") and meta.get("profiler") is False, "on侧不是成功的真实smoke测速包装")
@@ -553,6 +612,7 @@ def read_side(records, completion_path, wrapper_path, timing, head):
     meta, state = load(directory / "metadata.json"), load(directory / "full_state.json")
     require(meta["schema"] == SCHEMA and meta["status"] == "PASS" and meta["timing"] == timing
             and meta["head"] == head and meta["records"] == str(records), "共同取证身份/状态不符")
+    profile = validate_metadata_profile(meta)
     require(records == ROOT / "v1-store/bench/orig80k" / meta["run_name"], "记录路径未绑定本run")
     require((meta["fetch_count"], meta["model_input_count"], meta["completed_calls"], meta["loader_iterations"],
              meta["jit_matches"], meta["save_calls"], meta["original_save_returned"]) == (21, 20, 20, 1, 1, 1, True),
@@ -565,7 +625,7 @@ def read_side(records, completion_path, wrapper_path, timing, head):
                                        "module": "openpi.training.checkpoints", "name": "save_state"},
             "没有绑定生产原始save_state")
     validate_provenance(meta, head)
-    validate_fingerprint(meta["fingerprint"])
+    validate_fingerprint(meta["fingerprint"], profile, timing=timing)
     require(set(meta["loader"]) == {"batch_size", "workers", "prefetch_factor", "persistent_workers", "drop_last"}
             and meta["loader"]["batch_size"] == 64 and meta["loader"]["workers"] == 4,
             "缺实际最终loader形制")
@@ -577,7 +637,7 @@ def read_side(records, completion_path, wrapper_path, timing, head):
     validate_state(state, meta)
     restored, scalars = validate_completion(records, completion_path, meta, state)
     wrapper = validate_wrapper(wrapper_path, meta, completion_path)
-    speed = validate_speed(records, timing, head)
+    speed = validate_speed(records, timing, head, profile, xla_flags=meta["fingerprint"]["environment"]["XLA_FLAGS"])
     return {"metadata": meta, "state": state, "fetches": fetches, "models": models, "scalars": scalars,
             "bindings": {"manifest": record_file(directory / "manifest.json"),
                          "completion": record_file(completion_path), "completion_files": restored["files"],
@@ -589,6 +649,7 @@ def compare_sides(off, on):
     left, right = off["metadata"], on["metadata"]
     require(left["head"] == right["head"] and left["run_name"] != right["run_name"]
             and left["run_uuid"] != right["run_uuid"] and left["records"] != right["records"], "对照必须是同HEAD的独立新run")
+    require(validate_metadata_profile(left) == validate_metadata_profile(right), "对照两侧计时档位不同")
     require(left["fingerprint"] == right["fingerprint"] and left["toolchain"] == right["toolchain"],
             "依赖/设备/种子/数据/资产/有效环境或工具不同")
     require(left["loader"] == right["loader"], "两侧实际loader形制不同")
@@ -614,7 +675,8 @@ def judge(args):
             and not any(output.is_relative_to(Path(side["metadata"]["records"])) for side in (off, on)),
             "独立judge结果不能写入任一run的取证目录")
     output.parent.mkdir(parents=True, exist_ok=True)
-    write_json(output, {"schema": SCHEMA, "status": "PASS", "head": args.head, "used_batches": 20,
+    write_json(output, {"schema": SCHEMA, "status": "PASS", "head": args.head,
+        "timing_eq_profile": off["metadata"]["timing_eq_profile"], "used_batches": 20,
         "fetched_batches": 21, "extra_unused_batches": 1, "scalar_steps": 20, "state_step": 20,
         "loop_step": 19, "config_identity_differences": changes,
         "off": off["bindings"], "on": on["bindings"],

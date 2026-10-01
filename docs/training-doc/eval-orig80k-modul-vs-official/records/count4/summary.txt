@@ -1,0 +1,222 @@
+EVAL_ORIG80K_COUNT4=DONE tasks=4 episodes=200/200 errors=0 BinFill=19/50 StopCube=34/50 PickXtimes=43/50 SwingXtimes=44/50 mean_rate=0.7000 timeout=1/200 fail=59/200
+SPLIT_SEED_MATCH=PASS split=test n=200 mismatch=0 unlogged=0
+
+| 任务 | 成功/集数 | 成功率 | timeout | fail | 按难度 成功/集数 | 缺集 | error |
+|---|---|---|---|---|---|---|---|
+| BinFill | 19/50 | 38.00% | 1 | 30 | easy 14/26, hard 1/12, medium 4/12 | 0 | 0 |
+| StopCube | 34/50 | 68.00% | 0 | 16 | easy 16/26, hard 11/12, medium 7/12 | 0 | 0 |
+| PickXtimes | 43/50 | 86.00% | 0 | 7 | easy 24/26, hard 7/12, medium 12/12 | 0 | 0 |
+| SwingXtimes | 44/50 | 88.00% | 0 | 6 | easy 25/26, hard 8/12, medium 11/12 | 0 | 0 |
+
+| 分片 | 集数 | 完成 | 墙钟 | add_buffer≤16帧 ms（mean/median/p90） | 首批 ms（mean/max） | infer ms（除首次 mean/median/p90） |
+|---|---|---|---|---|---|---|
+| w0 | 28 | 是 | 26.5 min | 99.4/98.0/136.6 | — | 209.4/179.6/280.3 |
+| w1 | 28 | 是 | 23.1 min | 98.8/94.0/137.3 | — | 211.9/179.6/279.9 |
+| w2 | 24 | 是 | 24.6 min | 101.6/100.5/140.1 | — | 204.8/179.4/279.9 |
+| w3 | 24 | 是 | 27.9 min | 99.2/94.4/138.8 | — | 220.4/180.2/280.5 |
+| w4 | 24 | 是 | 20.9 min | 100.9/97.2/140.5 | — | 218.6/180.1/281.0 |
+| w5 | 24 | 是 | 21.2 min | 99.2/95.2/134.9 | — | 209.7/179.8/280.2 |
+| w6 | 24 | 是 | 24.9 min | 97.1/92.9/135.8 | — | 204.9/179.6/279.9 |
+| w7 | 24 | 是 | 30.9 min | 104.4/102.4/144.8 | — | 222.2/180.3/280.9 |
+
+逐集（task ep seed difficulty result flag shard）：
+  BinFill  0 540000 easy True success w0
+  BinFill  1 540101 easy True success w1
+  BinFill  2 540201 medium False fail w2
+  BinFill  3 540302 hard False fail w3
+  BinFill  4 540400 easy True success w4
+  BinFill  5 540500 easy True success w5
+  BinFill  6 540600 medium True success w6
+  BinFill  7 540701 hard False timeout w7
+  BinFill  8 540800 easy False fail w0
+  BinFill  9 540900 easy False fail w1
+  BinFill 10 541000 medium False fail w2
+  BinFill 11 541100 hard False fail w3
+  BinFill 12 541200 easy True success w4
+  BinFill 13 541300 easy False fail w5
+  BinFill 14 541400 medium False fail w6
+  BinFill 15 541500 hard False fail w7
+  BinFill 16 541601 easy True success w0
+  BinFill 17 541700 easy True success w1
+  BinFill 18 541802 medium True success w2
+  BinFill 19 541900 hard False fail w3
+  BinFill 20 542001 easy False fail w4
+  BinFill 21 542100 easy False fail w5
+  BinFill 22 542200 medium False fail w6
+  BinFill 23 542300 hard True success w7
+  BinFill 24 542400 easy True success w0
+  BinFill 25 542500 easy True success w1
+  BinFill 26 542600 medium False fail w2
+  BinFill 27 542700 hard False fail w3
+  BinFill 28 542800 easy True success w4
+  BinFill 29 542900 easy False fail w5
+  BinFill 30 543000 medium True success w6
+  BinFill 31 543100 hard False fail w7
+  BinFill 32 543200 easy True success w0
+  BinFill 33 543300 easy False fail w1
+  BinFill 34 543400 medium False fail w2
+  BinFill 35 543501 hard False fail w3
+  BinFill 36 543600 easy False fail w4
+  BinFill 37 543700 easy True success w5
+  BinFill 38 543800 medium False fail w6
+  BinFill 39 543900 hard False fail w7
+  BinFill 40 544000 easy False fail w0
+  BinFill 41 544100 easy True success w1
+  BinFill 42 544200 medium True success w2
+  BinFill 43 544300 hard False fail w3
+  BinFill 44 544400 easy True success w4
+  BinFill 45 544500 easy False fail w5
+  BinFill 46 544600 medium False fail w6
+  BinFill 47 544700 hard False fail w7
+  BinFill 48 544800 easy False fail w0
+  BinFill 49 544900 easy False fail w1
+  StopCube  0 520000 easy True success w0
+  StopCube  1 520100 easy True success w1
+  StopCube  2 520200 medium False fail w2
+  StopCube  3 520300 hard True success w3
+  StopCube  4 520400 easy False fail w4
+  StopCube  5 520500 easy True success w5
+  StopCube  6 520600 medium True success w6
+  StopCube  7 520700 hard True success w7
+  StopCube  8 520800 easy False fail w0
+  StopCube  9 520901 easy True success w1
+  StopCube 10 521000 medium False fail w2
+  StopCube 11 521100 hard True success w3
+  StopCube 12 521200 easy False fail w4
+  StopCube 13 521300 easy False fail w5
+  StopCube 14 521400 medium False fail w6
+  StopCube 15 521500 hard True success w7
+  StopCube 16 521600 easy True success w0
+  StopCube 17 521700 easy False fail w1
+  StopCube 18 521800 medium True success w2
+  StopCube 19 521900 hard True success w3
+  StopCube 20 522001 easy False fail w4
+  StopCube 21 522100 easy True success w5
+  StopCube 22 522200 medium True success w6
+  StopCube 23 522300 hard True success w7
+  StopCube 24 522400 easy True success w0
+  StopCube 25 522501 easy True success w1
+  StopCube 26 522600 medium True success w2
+  StopCube 27 522700 hard True success w3
+  StopCube 28 522800 easy True success w4
+  StopCube 29 522900 easy True success w5
+  StopCube 30 523000 medium True success w6
+  StopCube 31 523100 hard False fail w7
+  StopCube 32 523200 easy False fail w0
+  StopCube 33 523300 easy True success w1
+  StopCube 34 523400 medium False fail w2
+  StopCube 35 523500 hard True success w3
+  StopCube 36 523600 easy True success w4
+  StopCube 37 523700 easy False fail w5
+  StopCube 38 523800 medium True success w6
+  StopCube 39 523900 hard True success w7
+  StopCube 40 524000 easy False fail w0
+  StopCube 41 524100 easy True success w1
+  StopCube 42 524200 medium False fail w2
+  StopCube 43 524300 hard True success w3
+  StopCube 44 524400 easy True success w4
+  StopCube 45 524500 easy True success w5
+  StopCube 46 524600 medium True success w6
+  StopCube 47 524700 hard True success w7
+  StopCube 48 524800 easy True success w0
+  StopCube 49 524900 easy False fail w1
+  PickXtimes  0 510000 easy True success w0
+  PickXtimes  1 510100 easy True success w1
+  PickXtimes  2 510200 medium True success w2
+  PickXtimes  3 510300 hard True success w3
+  PickXtimes  4 510400 easy True success w4
+  PickXtimes  5 510500 easy True success w5
+  PickXtimes  6 510600 medium True success w6
+  PickXtimes  7 510700 hard False fail w7
+  PickXtimes  8 510800 easy True success w0
+  PickXtimes  9 510900 easy True success w1
+  PickXtimes 10 511000 medium True success w2
+  PickXtimes 11 511100 hard False fail w3
+  PickXtimes 12 511200 easy False fail w4
+  PickXtimes 13 511300 easy True success w5
+  PickXtimes 14 511400 medium True success w6
+  PickXtimes 15 511501 hard True success w7
+  PickXtimes 16 511600 easy True success w0
+  PickXtimes 17 511700 easy True success w1
+  PickXtimes 18 511800 medium True success w2
+  PickXtimes 19 511900 hard True success w3
+  PickXtimes 20 512000 easy True success w4
+  PickXtimes 21 512100 easy True success w5
+  PickXtimes 22 512200 medium True success w6
+  PickXtimes 23 512300 hard False fail w7
+  PickXtimes 24 512400 easy True success w0
+  PickXtimes 25 512500 easy True success w1
+  PickXtimes 26 512600 medium True success w2
+  PickXtimes 27 512700 hard True success w3
+  PickXtimes 28 512800 easy True success w4
+  PickXtimes 29 512900 easy True success w5
+  PickXtimes 30 513000 medium True success w6
+  PickXtimes 31 513100 hard True success w7
+  PickXtimes 32 513200 easy True success w0
+  PickXtimes 33 513300 easy True success w1
+  PickXtimes 34 513400 medium True success w2
+  PickXtimes 35 513500 hard False fail w3
+  PickXtimes 36 513600 easy True success w4
+  PickXtimes 37 513700 easy False fail w5
+  PickXtimes 38 513800 medium True success w6
+  PickXtimes 39 513900 hard True success w7
+  PickXtimes 40 514000 easy True success w0
+  PickXtimes 41 514100 easy True success w1
+  PickXtimes 42 514200 medium True success w2
+  PickXtimes 43 514300 hard True success w3
+  PickXtimes 44 514400 easy True success w4
+  PickXtimes 45 514500 easy True success w5
+  PickXtimes 46 514600 medium True success w6
+  PickXtimes 47 514700 hard False fail w7
+  PickXtimes 48 514800 easy True success w0
+  PickXtimes 49 514900 easy True success w1
+  SwingXtimes  0 530000 easy True success w0
+  SwingXtimes  1 530100 easy True success w1
+  SwingXtimes  2 530200 medium True success w2
+  SwingXtimes  3 530300 hard True success w3
+  SwingXtimes  4 530400 easy True success w4
+  SwingXtimes  5 530500 easy True success w5
+  SwingXtimes  6 530600 medium True success w6
+  SwingXtimes  7 530700 hard True success w7
+  SwingXtimes  8 530800 easy True success w0
+  SwingXtimes  9 530900 easy True success w1
+  SwingXtimes 10 531000 medium True success w2
+  SwingXtimes 11 531100 hard False fail w3
+  SwingXtimes 12 531201 easy True success w4
+  SwingXtimes 13 531300 easy True success w5
+  SwingXtimes 14 531401 medium True success w6
+  SwingXtimes 15 531500 hard True success w7
+  SwingXtimes 16 531600 easy True success w0
+  SwingXtimes 17 531700 easy False fail w1
+  SwingXtimes 18 531800 medium True success w2
+  SwingXtimes 19 531901 hard True success w3
+  SwingXtimes 20 532000 easy True success w4
+  SwingXtimes 21 532100 easy True success w5
+  SwingXtimes 22 532200 medium True success w6
+  SwingXtimes 23 532300 hard False fail w7
+  SwingXtimes 24 532400 easy True success w0
+  SwingXtimes 25 532500 easy True success w1
+  SwingXtimes 26 532601 medium True success w2
+  SwingXtimes 27 532700 hard False fail w3
+  SwingXtimes 28 532800 easy True success w4
+  SwingXtimes 29 532900 easy True success w5
+  SwingXtimes 30 533000 medium True success w6
+  SwingXtimes 31 533100 hard False fail w7
+  SwingXtimes 32 533200 easy True success w0
+  SwingXtimes 33 533300 easy True success w1
+  SwingXtimes 34 533401 medium True success w2
+  SwingXtimes 35 533500 hard True success w3
+  SwingXtimes 36 533600 easy True success w4
+  SwingXtimes 37 533700 easy True success w5
+  SwingXtimes 38 533800 medium True success w6
+  SwingXtimes 39 533900 hard True success w7
+  SwingXtimes 40 534000 easy True success w0
+  SwingXtimes 41 534100 easy True success w1
+  SwingXtimes 42 534200 medium True success w2
+  SwingXtimes 43 534300 hard True success w3
+  SwingXtimes 44 534400 easy True success w4
+  SwingXtimes 45 534500 easy True success w5
+  SwingXtimes 46 534600 medium False fail w6
+  SwingXtimes 47 534700 hard True success w7
+  SwingXtimes 48 534800 easy True success w0
+  SwingXtimes 49 534900 easy True success w1

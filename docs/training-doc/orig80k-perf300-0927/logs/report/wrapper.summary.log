@@ -1,0 +1,21 @@
+WRAPPER_SESSION=orig80k-perf-report-20260926T232339Z
+WRAPPER_PID=1347836
+WRAPPER_BODY_PID=1347838
+WRAPPER_TRAIN_HEAD=70a641a827eb2559c3acb69430f55c1c53babaeb
+WRAPPER_COMMAND_FILE=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-commands-20260926T232339Z/orig80k-perf-report-20260926T232339Z.command
+WRAPPER_COMMAND_SHA256_EXPECTED=8ff77558cfab933d459a5f3fd8b443d4f5bb352dabd5f4a1a51d0c4c52a745b6
+WRAPPER_START_UTC=2026-09-27T02:30:47Z
+WRAPPER_COMMAND_SHA256_ACTUAL=8ff77558cfab933d459a5f3fd8b443d4f5bb352dabd5f4a1a51d0c4c52a745b6
+WRAPPER_COMMAND=env -u PYTHONPATH -u PYTHONHOME -u JAX_PLATFORM_NAME -u XLA_FLAGS -u TRAIN_TIMING_STEPS -u ORIG80K_SMOKE_EQ_MODE -u ORIG80K_TIMING_EQ_PROFILE CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu UV_PROJECT_ENVIRONMENT=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv UV_CACHE_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/uv OPENPI_DATA_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models XDG_CACHE_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/xdg HF_HOME=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/hf PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 TZ=UTC uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/check_orig80k_speed.py report --records /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z --gpu /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/gpu.csv --peer-records /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z --peer-gpu /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-count-300-20260926T232339Z/gpu.csv --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json 
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+ORIG80K_SPEED=PASS out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json
+REPORT_EXIT_CODE=0
+WRAPPER_HEAD_END=70a641a827eb2559c3acb69430f55c1c53babaeb
+WRAPPER_VERSION_EXIT_CODE=0
+WRAPPER_COMMAND_EXIT=0
+WRAPPER_TEE_EXIT=0
+REPORT_TEE_EXIT_CODE=0
+WRAPPER_END_UTC=2026-09-27T02:30:47Z
+WRAPPER_FOOTER_PRINTF_EXIT=0
+WRAPPER_FOOTER_TEE_EXIT=0
+WRAPPER_EXIT_CODE=0

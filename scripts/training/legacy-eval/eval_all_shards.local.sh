@@ -5,7 +5,7 @@
 #   stride（负载均衡）  ：WORKERS 个 worker，每个跑全部 4 任务、每任务取 ep ∈ {k, k+WORKERS, …}（8 worker 下 w0/w1 各 28 集、其余 24 集），
 #                         分片名 w<k>，GPU=k，端口 PORT_BASE+k。任务级耗时差异被均摊（留档 eval-official-framesamp-context/）。
 # 用法：[MODE=task|stride] [WORKERS=8] [ONLY=ButtonUnmask-0|w0] [EP_COUNT=…] [RUN_NAME=…] [CKPT_ID=…] [CKPT_DIR=…] [SEED=42]
-#       [DATASET=test|val] [LOG_PREFIX=ev40k] [PORT_BASE=8031] [DRY_RUN=1] bash scripts/training/legacy-eval/eval_all_shards.local.sh
+#       [DATASET=test|val] [LOG_PREFIX=ev40k] [PORT_BASE=8031] [POLICY_MEM_FRACTION=0.4] [DRY_RUN=1] bash scripts/training/legacy-eval/eval_all_shards.local.sh
 #   RUN_NAME / CKPT_ID / CKPT_DIR / SEED / DATASET / LOG_PREFIX 原样转给 eval_shard.sh（tmux 会话不继承调用方环境，必须显式写进命令）。
 #   多轮（换 SEED 或换 DATASET）必须同时换 LOG_PREFIX 与 PORT_BASE：会话名 / 日志名 / server.log 只含 LOG_PREFIX 与分片名，
 #   沿用同一个会让驱动日志 tee -a 追加成一份、merge 的墙钟与 TIMING 串轮。
@@ -27,6 +27,7 @@ SEED="${SEED:-42}"
 DATASET="${DATASET:-test}"           # benchmark split：test（默认，历史行为）/ val / train；原样转给 eval_shard.sh
 LOG_PREFIX="${LOG_PREFIX:-ev40k}"
 PORT_BASE="${PORT_BASE:-8031}"
+POLICY_MEM_FRACTION="${POLICY_MEM_FRACTION:-0.4}"  # 每个 policy server 的 XLA 显存比例；原样转给 eval_shard.sh（多模型同卡并发时调小）
 # task 口径分片表：TASK K GPU（一片一卡；端口 = PORT_BASE + 行号）
 TASK_SHARDS=(
   "ButtonUnmask 0 0"
@@ -62,7 +63,7 @@ while read -r SHARD GPU EXTRA; do
   if [[ -n "${ONLY}" && "${ONLY}" != "${SHARD}" ]]; then continue; fi
   if tmux has-session -t "=${SESSION}" 2>/dev/null; then echo "跳过 ${SESSION}（会话已存在）"; continue; fi
   LOG="${LOGS_DIR}/${LOG_PREFIX}-${SHARD}.log"
-  ENVS="${EXTRA} GPU=${GPU} PORT=${PORT} RUN_NAME=${RUN_NAME} CKPT_ID=${CKPT_ID} SEED=${SEED} DATASET=${DATASET} LOG_PREFIX=${LOG_PREFIX}"
+  ENVS="${EXTRA} GPU=${GPU} PORT=${PORT} RUN_NAME=${RUN_NAME} CKPT_ID=${CKPT_ID} SEED=${SEED} DATASET=${DATASET} LOG_PREFIX=${LOG_PREFIX} POLICY_MEM_FRACTION=${POLICY_MEM_FRACTION}"
   [[ -n "${CKPT_DIR}" ]] && ENVS="${ENVS} CKPT_DIR=${CKPT_DIR}"
   CMD="set -o pipefail; ${ENVS} bash scripts/training/legacy-eval/eval_shard.local.sh 2>&1 | tee -a ${LOG}; sleep 2"
   if [[ "${DRY_RUN}" == "1" ]]; then echo "DRY ${SESSION}: ${CMD}"; continue; fi

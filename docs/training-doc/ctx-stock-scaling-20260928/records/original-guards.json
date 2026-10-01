@@ -1,0 +1,33 @@
+{
+  "source_head": "6db0e0ab9ef266d0e80fc1dd8d4383705bd81ab0",
+  "cases": [
+    {
+      "budget": 512,
+      "integration_type": "context",
+      "status": "CONSTRUCTED",
+      "samples": 605611
+    },
+    {
+      "budget": 2048,
+      "integration_type": "context",
+      "status": "REJECTED",
+      "exception": "ValueError",
+      "message": "FrameSampDataset 形制断言失败: (budget,token_per_image,num_views)=(2048, 64, 1)（类型 ('int', 'int', 'int')）、integration_type='context'、motion_enabled=False 不在支持的 (512,16,1)/(512,64,1) 与 (1024/2048/4096,64,1)+modulation+无 motion 档位中"
+    },
+    {
+      "budget": 4096,
+      "integration_type": "context",
+      "status": "REJECTED",
+      "exception": "ValueError",
+      "message": "FrameSampDataset 形制断言失败: (budget,token_per_image,num_views)=(4096, 64, 1)（类型 ('int', 'int', 'int')）、integration_type='context'、motion_enabled=False 不在支持的 (512,16,1)/(512,64,1) 与 (1024/2048/4096,64,1)+modulation+无 motion 档位中"
+    },
+    {
+      "budget": 8192,
+      "integration_type": "context",
+      "status": "REJECTED",
+      "exception": "ValueError",
+      "message": "FrameSampDataset 形制断言失败: (budget,token_per_image,num_views)=(8192, 64, 1)（类型 ('int', 'int', 'int')）、integration_type='context'、motion_enabled=False 不在支持的 (512,16,1)/(512,64,1) 与 (1024/2048/4096,64,1)+modulation+无 motion 档位中"
+    }
+  ],
+  "meaning": "原构造器拒绝大预算；没有修改守卫，没有替换integration_type，没有运行GPU计算"
+}

@@ -1,0 +1,323 @@
+{
+  "schema": 1,
+  "origin": "audit_equiv追加off运行中只读首行取证；不是完整诊断比较",
+  "observation_actual_exit_code": 0,
+  "observation_wall_time_seconds": 0.000004102,
+  "cwd": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+  "invocation": [
+    ".venv/bin/python",
+    "-B",
+    "-"
+  ],
+  "output": {
+    "actual_new_head_observed": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+    "cause": "不作具体机制归因；当前初始完整state仍未记录",
+    "git_porcelain": "",
+    "hash_boundary": "bytes/SHA仅绑定含LF的首完整行，不代表仍在写的整文件终态SHA",
+    "observed_utc": "2026-09-27T00:58:44.245548+00:00",
+    "old_head": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+    "results": {
+      "count": {
+        "different_scalar_keys": [
+          "loss",
+          "grad_norm",
+          "llm_grad_norm",
+          "mem_enc_norm"
+        ],
+        "input_rng_comparison": {
+          "timing_eq/fetch_inputs.jsonl": {
+            "tree": {
+              "equal": true,
+              "new_canonical_sha256": "3338fb4f672216ff66051728691c138220087dd274171269c1634a092e72c5b3",
+              "old_canonical_sha256": "3338fb4f672216ff66051728691c138220087dd274171269c1634a092e72c5b3"
+            }
+          },
+          "timing_eq/model_inputs.jsonl": {
+            "rng": {
+              "equal": true,
+              "new_canonical_sha256": "206c104367a80cf6cb15a2d9b3bff6b961e5e84b6d695247d3bf206a4390d00a",
+              "old_canonical_sha256": "206c104367a80cf6cb15a2d9b3bff6b961e5e84b6d695247d3bf206a4390d00a"
+            },
+            "tree": {
+              "equal": true,
+              "new_canonical_sha256": "3338fb4f672216ff66051728691c138220087dd274171269c1634a092e72c5b3",
+              "old_canonical_sha256": "3338fb4f672216ff66051728691c138220087dd274171269c1634a092e72c5b3"
+            }
+          }
+        },
+        "scalar_values": {
+          "grad_norm": {
+            "hex_equal": false,
+            "new": {
+              "dec": 1.5001111030578613,
+              "hex": "0x1.8007480000000p+0"
+            },
+            "old": {
+              "dec": 1.5022308826446533,
+              "hex": "0x1.8092340000000p+0"
+            }
+          },
+          "llm_grad_norm": {
+            "hex_equal": false,
+            "new": {
+              "dec": 1.4872264862060547,
+              "hex": "0x1.7cbae00000000p+0"
+            },
+            "old": {
+              "dec": 1.48934006690979,
+              "hex": "0x1.7d45640000000p+0"
+            }
+          },
+          "loss": {
+            "hex_equal": false,
+            "new": {
+              "dec": 0.0913604125380516,
+              "hex": "0x1.7636560000000p-4"
+            },
+            "old": {
+              "dec": 0.09141584485769272,
+              "hex": "0x1.7670760000000p-4"
+            }
+          },
+          "mem_enc_norm": {
+            "hex_equal": false,
+            "new": {
+              "dec": 0.12651866674423218,
+              "hex": "0x1.031c380000000p-3"
+            },
+            "old": {
+              "dec": 0.12670262157917023,
+              "hex": "0x1.037caa0000000p-3"
+            }
+          },
+          "param_norm": {
+            "hex_equal": true,
+            "new": {
+              "dec": 1815.5465087890625,
+              "hex": "0x1.c5e2fa0000000p+10"
+            },
+            "old": {
+              "dec": 1815.5465087890625,
+              "hex": "0x1.c5e2fa0000000p+10"
+            }
+          }
+        },
+        "sources": {
+          "new": {
+            "first_lines": {
+              "metrics.jsonl": {
+                "bytes": 414,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/metrics.jsonl",
+                "sha256": "d7fa21b23aadc9aa87b0529977620c9150b800adad2b18105f88dc0fd400c6cf"
+              },
+              "timing_eq/fetch_inputs.jsonl": {
+                "bytes": 3404,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/timing_eq/fetch_inputs.jsonl",
+                "sha256": "4efb34a10d94f6fb3cb97c3e39bc2d9e060f111780cb4c863cb4dbab7ce45d8e"
+              },
+              "timing_eq/model_inputs.jsonl": {
+                "bytes": 3781,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260927T003051Z/timing_eq/model_inputs.jsonl",
+                "sha256": "891cd0725fa23b8398246ce2b7c70eecdad243f6cc9abc0c29761eece38f13e7"
+              }
+            },
+            "head": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+            "run": "timing20-count-off-0926-20260927T003051Z"
+          },
+          "old": {
+            "first_lines": {
+              "metrics.jsonl": {
+                "bytes": 414,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/metrics.jsonl",
+                "sha256": "d6a728fe4db6a9c673a6eb84c2682871c321e19c04d41c0af6a83bc8ec2d463d"
+              },
+              "timing_eq/fetch_inputs.jsonl": {
+                "bytes": 3404,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/timing_eq/fetch_inputs.jsonl",
+                "sha256": "5cfda6f4a06ae58bb688010eeb92b2cb6208c37523f7a20dbbaa09c151aee6ab"
+              },
+              "timing_eq/model_inputs.jsonl": {
+                "bytes": 3781,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-off-0926-20260926T231534Z/timing_eq/model_inputs.jsonl",
+                "sha256": "2b6b3ad337a9c9c192be302282d11860dd896e05316d695df2005b1e32cccbf8"
+              }
+            },
+            "head": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+            "run": "timing20-count-off-0926-20260926T231534Z"
+          }
+        },
+        "step": 0
+      },
+      "full": {
+        "different_scalar_keys": [
+          "loss",
+          "grad_norm",
+          "llm_grad_norm",
+          "mem_enc_norm"
+        ],
+        "input_rng_comparison": {
+          "timing_eq/fetch_inputs.jsonl": {
+            "tree": {
+              "equal": true,
+              "new_canonical_sha256": "662ab1fe550a41ff8939931380452467238e11eac9bc291104b8dd4eceb2da5b",
+              "old_canonical_sha256": "662ab1fe550a41ff8939931380452467238e11eac9bc291104b8dd4eceb2da5b"
+            }
+          },
+          "timing_eq/model_inputs.jsonl": {
+            "rng": {
+              "equal": true,
+              "new_canonical_sha256": "206c104367a80cf6cb15a2d9b3bff6b961e5e84b6d695247d3bf206a4390d00a",
+              "old_canonical_sha256": "206c104367a80cf6cb15a2d9b3bff6b961e5e84b6d695247d3bf206a4390d00a"
+            },
+            "tree": {
+              "equal": true,
+              "new_canonical_sha256": "662ab1fe550a41ff8939931380452467238e11eac9bc291104b8dd4eceb2da5b",
+              "old_canonical_sha256": "662ab1fe550a41ff8939931380452467238e11eac9bc291104b8dd4eceb2da5b"
+            }
+          }
+        },
+        "scalar_values": {
+          "grad_norm": {
+            "hex_equal": false,
+            "new": {
+              "dec": 1.5069143772125244,
+              "hex": "0x1.81c5240000000p+0"
+            },
+            "old": {
+              "dec": 1.5071771144866943,
+              "hex": "0x1.81d65c0000000p+0"
+            }
+          },
+          "llm_grad_norm": {
+            "hex_equal": false,
+            "new": {
+              "dec": 1.4916257858276367,
+              "hex": "0x1.7ddb300000000p+0"
+            },
+            "old": {
+              "dec": 1.491883397102356,
+              "hex": "0x1.7dec120000000p+0"
+            }
+          },
+          "loss": {
+            "hex_equal": false,
+            "new": {
+              "dec": 0.09992760419845581,
+              "hex": "0x1.994db00000000p-4"
+            },
+            "old": {
+              "dec": 0.09993819147348404,
+              "hex": "0x1.9958ca0000000p-4"
+            }
+          },
+          "mem_enc_norm": {
+            "hex_equal": false,
+            "new": {
+              "dec": 0.12973782420158386,
+              "hex": "0x1.09b3fc0000000p-3"
+            },
+            "old": {
+              "dec": 0.1297648549079895,
+              "hex": "0x1.09c2280000000p-3"
+            }
+          },
+          "param_norm": {
+            "hex_equal": true,
+            "new": {
+              "dec": 1815.5465087890625,
+              "hex": "0x1.c5e2fa0000000p+10"
+            },
+            "old": {
+              "dec": 1815.5465087890625,
+              "hex": "0x1.c5e2fa0000000p+10"
+            }
+          }
+        },
+        "sources": {
+          "new": {
+            "first_lines": {
+              "metrics.jsonl": {
+                "bytes": 416,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/metrics.jsonl",
+                "sha256": "d0a4f72211238160abf06e10d2251e338581f914bdb8a0d0c4758dccb1a9b2e3"
+              },
+              "timing_eq/fetch_inputs.jsonl": {
+                "bytes": 3403,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/timing_eq/fetch_inputs.jsonl",
+                "sha256": "3437e22ec11cf0150c1581b6f964b0c94ebae51a7fcae3efdb033db8d60f972f"
+              },
+              "timing_eq/model_inputs.jsonl": {
+                "bytes": 3780,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260927T003051Z/timing_eq/model_inputs.jsonl",
+                "sha256": "2113c733b256ed20527e46e7b7411ffcabb1814804d4c1054ecb11c8ced0c1fe"
+              }
+            },
+            "head": "b60ec2b59e0ba012cae0998c5f8713b2aef07b2e",
+            "run": "timing20-full-off-0926-20260927T003051Z"
+          },
+          "old": {
+            "first_lines": {
+              "metrics.jsonl": {
+                "bytes": 414,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/metrics.jsonl",
+                "sha256": "5f2a777b5b76b8d40a8428dbd3befe662e36481d8a78cf339bbfda3b6ade870a"
+              },
+              "timing_eq/fetch_inputs.jsonl": {
+                "bytes": 3404,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/timing_eq/fetch_inputs.jsonl",
+                "sha256": "298d2ff728ea5b93a3778cece3a2ec7d98eebe5de530bd0d9b1770ef732036aa"
+              },
+              "timing_eq/model_inputs.jsonl": {
+                "bytes": 3781,
+                "includes_final_lf": true,
+                "kind": "first_complete_line",
+                "line_number": 1,
+                "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-off-0926-20260926T231534Z/timing_eq/model_inputs.jsonl",
+                "sha256": "365aea06a0d3473e52882d4b7fc42802f93ca320cd1fe1a392a9fe057a0291f1"
+              }
+            },
+            "head": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+            "run": "timing20-full-off-0926-20260926T231534Z"
+          }
+        },
+        "step": 0
+      }
+    },
+    "schema": 1,
+    "scope": "仅读各自已完成首步的第一完整行；不是完整重复性诊断结论，不改变旧off/on FAIL或放行perf",
+    "status": "EARLY_OFF_REPEAT_OBSERVATION"
+  }
+}

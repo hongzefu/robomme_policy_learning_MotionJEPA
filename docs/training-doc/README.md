@@ -6,11 +6,36 @@
 
 ## 一、环境 B 现行（AWS 8×A100，2026-09-04 起）
 
+### context原入口八卡与双四卡诊断（2026-09-28）
+
+| 目录 | 内容 | 判定 |
+|---|---|---|
+| [`ctx-stock-scaling-20260928/`](ctx-stock-scaling-20260928/launch.md) | 原train.py、固定数据与超参；先512+motion160，再512，分别比较8卡与双4卡 | 八run均401步、保存及完整恢复通过；特征313.43GB完整哈希和初始化参考通过；大预算原入口仍阻断 |
+
 ### 原版80k公开全集与counting四卡并跑（2026-09-25）
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`orig80k-equiv-0925/`](orig80k-equiv-0925/README.md) | 两个公开库正式CPU INPUT_EQ：四侧并行，full/counting每侧6906/2400定点、104真实批及两epoch完整索引 | 两组INPUT_EQ PASS，实际INPUT_HEAD=`3a1582d`；P1/100步/新包装20步/perf未实跑，训练bitwise与后续闸门不被豁免 |
+| [`orig80k-prod-0927/`](orig80k-prod-0927/launch.md) | 两个原版normal80k共用Beta/预算的最终起跑前检查及f8启动 | 用户已授权确认无误后直接启动；V11.18Beta及最终现场检查待完成，当前未起跑 |
+| [`v2-orig-16task-pub1600ep-modul-b64-80k/`](v2-orig-16task-pub1600ep-modul-b64-80k/README.md) | full正式80000步，b64/fsdp4，GPU0–3，online | 未起跑；最终检查通过后与count按4+4直接启动 |
+| [`v2-orig-counting-pub400ep-modul-b64-80k/`](v2-orig-counting-pub400ep-modul-b64-80k/README.md) | counting正式80000步，b64/fsdp4，GPU4–7，online | 未起跑；共用B预算3653与同一正式Beta |
+| [`orig80k-perf300-0927/`](orig80k-perf300-0927/README.md) | normal档两库4+4并行300步perf、真实恢复、采样与预算 | normal300/恢复/report/measurement及B预算八阶段PASS；已获确认无误后直接起两80k授权，待正式Beta/最终预检 |
+| [`perf-orig80k-full-300-20260926T232339Z/`](perf-orig80k-full-300-20260926T232339Z/README.md) | full normal300，GPU0–3，online与末步299真保存 | normal300真实恢复/measure及独立退出PASS；共享B预算通过，正式80k待共同Beta/最终预检 |
+| [`perf-orig80k-count-300-20260926T232339Z/`](perf-orig80k-count-300-20260926T232339Z/README.md) | counting normal300，GPU4–7，与full并跑 | normal300真实恢复/measure及独立退出PASS；共享B预算通过，正式80k待共同Beta/最终预检 |
+| [`orig80k-timing20-det-0927/`](orig80k-timing20-det-0927/README.md) | 用户批准的两库确定性档off/on真保存20步，4+4独立库链 | 确定性档两库各100标量/201叶零差异，四run真实恢复及六原生退出PASS；旧normal FAIL保留，perf/预算待完成 |
+| [`timing20-full-off-0926-20260927T012426Z/`](timing20-full-off-0926-20260927T012426Z/README.md) | full确定性off，GPU0–3 | state20/checkpoint19、61EMA真实恢复及原生/父退出0；本库deterministic100逐位PASS |
+| [`timing20-full-on-0926-20260927T012426Z/`](timing20-full-on-0926-20260927T012426Z/README.md) | full确定性on，依赖本库off恢复和原生退出通过 | state20/checkpoint19、61EMA真实恢复及原生/父退出0；本库deterministic100逐位PASS |
+| [`timing20-count-off-0926-20260927T012426Z/`](timing20-count-off-0926-20260927T012426Z/README.md) | counting确定性off，GPU4–7 | state20/checkpoint19、61EMA真实恢复及原生/父退出0；本库deterministic100逐位PASS |
+| [`timing20-count-on-0926-20260927T012426Z/`](timing20-count-on-0926-20260927T012426Z/README.md) | counting确定性on，依赖本库off恢复和原生退出通过 | state20/checkpoint19、61EMA真实恢复及原生/父退出0；本库deterministic100逐位PASS |
+| [`orig80k-off-repeat-0927/`](orig80k-off-repeat-0927/README.md) | 两库同配置20步off重复性诊断，实际Beta=`b60ec2b`，4+4并行 | 两库DIFFER/FAIL，各80/100标量与147/201状态叶不等；已批准下一阶段确定性20闸门，尚未新实测，perf不放行 |
+| [`timing20-full-off-0926-20260927T003051Z/`](timing20-full-off-0926-20260927T003051Z/README.md) | full追加off，GPU0–3，与旧b0基线独立比较 | 单run真实恢复及原生退出PASS；与旧off重复比较FAIL |
+| [`timing20-count-off-0926-20260927T003051Z/`](timing20-count-off-0926-20260927T003051Z/README.md) | counting追加off，GPU4–7，与旧b0基线独立比较 | 单run真实恢复及原生退出PASS；与旧off重复比较FAIL |
+| [`orig80k-timing20-0926/`](orig80k-timing20-0926/README.md) | 两库各off/on真保存20步，实际Beta=`b0efbde` | 两库正式等价FAIL；输入/RNG相同，每库80/100标量和147/201状态叶不等；四run恢复及原生退出0通过，perf暂停，已批准追加off诊断 |
+| [`timing20-full-off-0926-20260926T231534Z/`](timing20-full-off-0926-20260926T231534Z/README.md) | full，GPU0–3，包装off，20步真实保存与完整取证 | 单run保存恢复及独立退出PASS；与on正式比较FAIL |
+| [`timing20-full-on-0926-20260926T231534Z/`](timing20-full-on-0926-20260926T231534Z/README.md) | full，GPU0–3，包装on；本库off通过后起跑 | 单run保存恢复及独立退出PASS；与off正式比较FAIL |
+| [`timing20-count-off-0926-20260926T231534Z/`](timing20-count-off-0926-20260926T231534Z/README.md) | counting，GPU4–7，包装off，20步真实保存与完整取证 | 单run保存恢复及独立退出PASS；与on正式比较FAIL |
+| [`timing20-count-on-0926-20260926T231534Z/`](timing20-count-on-0926-20260926T231534Z/README.md) | counting，GPU4–7，包装on；本库off通过后起跑 | 单run保存恢复及独立退出PASS；与off正式比较FAIL |
+| [`orig80k-equiv-0925/`](orig80k-equiv-0925/README.md) | 两库CPU输入、P1及100步上游/当前和单跑/并跑对拍 | INPUT PASS（`3a1582d`）；P1及100步四项judge PASS（B=`00bdabc`），每项500标量及2×201叶逐位一致；INPUT/P1历史退出限制保留，后续20失败见独立档案 |
 | [`smoke-orig80k-full-0925/`](smoke-orig80k-full-0925/README.md) | 公开16任务正式库20步四卡可读性、原版norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；INPUT另档已PASS，本档不覆盖100步/新包装20步/并跑/perf |
 | [`smoke-orig80k-count-0925/`](smoke-orig80k-count-0925/README.md) | 公开counting正式库20步四卡可读性、独立norm与真实EMA保存/恢复 | PASS：state20/末步19，61叶恢复一致；INPUT另档已PASS，本档不覆盖100步/新包装20步/并跑/perf |
 | [`orig80k-schema-0925/`](orig80k-schema-0925/result.md) | 既有40集库三样本CPU输入字段取证，保留dtype及精确数值摘要 | 共同字段精确数值相同；用户事后允许四键缺失/None等价，三样本按新规则通过，非正式全量验收 |
@@ -265,6 +290,8 @@ a批次仅执行配置基线和2048 before-20的部分前缀，其余预建验�
 | [`eval-3seed-context-vs-motion/`](eval-3seed-context-vs-motion/result.md) | 三 seed 四任务成功率对照：motion 24.2% ± 1.3 vs 官方 24.5% ± 0.5，无可辨别差异 |
 | [`eval-hard-patternlock-routestick/`](eval-hard-patternlock-routestick/result.md) / [`eval-medium-patternlock-routestick/`](eval-medium-patternlock-routestick/result.md) | PatternLock / RouteStick 难度分层评估 |
 | [`eval-binfill-pickxtimes/`](eval-binfill-pickxtimes/result.md) | BinFill / PickXTimes 评估 |
+| [`eval-orig80k-modul-vs-official/`](eval-orig80k-modul-vs-official/result.md) | 原版 80k 两 run（16 任务 / counting 4 任务）与官方 modul 80k 同口径 test 评估，8 卡 24 片并发，回放全保留 | full16 44.62% vs 官方 47.88%（−3.25pp，未检出差异；Behavior −8pp 显著）；count4 70.0% vs 官方 72.0% |
+| [`eval-orig40k-ckpt40000/`](eval-orig40k-ckpt40000/result.md) | 同两条原版 80k run 的第 40000 步 checkpoint，同口径 test 评估（16 任务 / counting 4 任务），回放全保留 | full16 40k 40.62%（→80k 44.62%，+4pp 显著）；count4 40k 67.0%（→80k 70.0%） |
 
 ## 五、已归档（`../archive/training-doc/`，34 项）
 

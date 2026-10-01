@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "scope": "仅新候选三规则版本登记的小验证与其余逻辑逐字核对；未执行完整沿用预检，不代表新Beta INPUT/100重跑或20通过",
+  "recorded_utc": "2026-09-27T00:09:47Z",
+  "run_evidence_base": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "rules_head": "d710d8489b88aa75770af3452fd7c9b374deaef7",
+  "root_actual_beta_for_later_preflight": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+  "old_candidate": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/check_timing20_reuse_preflight_20260926.py",
+    "sha256": "2af9d5bd8ae07479d965b11f0f316b6811bf1e28d19b10646edb028f66cad155",
+    "unchanged": true
+  },
+  "candidate": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/check_timing20_reuse_preflight_20260927.py",
+    "sha256": "5aba6835f54937f04f014bcbd126f3c8c0f6739c03927e53350fdeadd75ef7b8"
+  },
+  "tests": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/test_timing20_reuse_rules_20260927.py",
+    "sha256": "20233439a8d73cb40894d6b3fcafcaad11cb55f12844fe98147d076df882317f",
+    "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-reuse-rules-20260927-tests.log",
+    "log_sha256": "4250093b1abe115b9831f87a4f400dd946163a6899c63360e6569fcf06436bf2",
+    "command": "UV_CACHE_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/cache/uv PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -B v1-store/bench/orig80k-build-preflight-0925/test_timing20_reuse_rules_20260927.py",
+    "actual_test_process_exit": 0,
+    "actual_tee_exit": 0,
+    "unittest_methods": 3,
+    "unittest_reported_seconds": 0.026,
+    "cases": [
+      "三路径均为已批准blob/mode及工作树字节：通过，并验证RULES_HEAD祖先查询确已发生",
+      "AGENTS.md新HEAD错误blob：拒绝",
+      "CLAUDE.md新HEAD错误blob：拒绝",
+      "greatlakes.md新HEAD错误blob：拒绝",
+      "额外受保护训练源码变更：拒绝"
+    ],
+    "method": "Git查询结果由注入后端模拟；夹具只读固定RULES_HEAD和LOCAL=f7a9757656ae38391319c4001d823bc06e62621f，真实临时文件在/tmp中；不调用资源/资产/环境或完整main检查"
+  },
+  "preservation": {
+    "existing_functions_byte_equal_except_check_version": 16,
+    "only_new_function": "check_rule_documents",
+    "unchanged_constants": ["BASE", "NEW_SHA", "UNCHANGED", "GROUPS", "UP_HEAD", "INPUT_HEAD"],
+    "protected_runtime_scope_expanded": false,
+    "six_tool_sha_checks_changed": false,
+    "input_113_reference_checks_changed": false,
+    "ast_and_whitespace_checks": "PASS"
+  },
+  "repository": {
+    "head_at_finish": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+    "porcelain_at_finish": "",
+    "tracked_or_venv_modified_by_this_task": false,
+    "new_files_only_under_ignored_preflight": true
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "status": "PASS",
+  "mode": "same-entry",
+  "group": "full",
+  "train_head": "00bdabc4dc3db10a8bc9b0dc6766dbf69fee98f8",
+  "steps": 100,
+  "scalar_keys": 5,
+  "hex_mismatch": 0,
+  "state_rows": 2,
+  "state_mismatch": 0,
+  "state_steps": [
+    50,
+    99
+  ],
+  "state_leaves_per_row": 201,
+  "checked_utc": "2026-09-26T23:10:52.309639+00:00",
+  "log": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-eq100-full-same-judge-20260926T210415Z.log",
+    "bytes": 4714,
+    "sha256": "38fcf2cbdd556d8e9a073c46967ffb133bbd00450e5bf77474626c6b4f794543"
+  },
+  "identity": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.identity.json",
+    "bytes": 1511,
+    "sha256": "984dd79f2c956f4f09c7528553762f2c59df08f14b3f1fbc262d31808f3ad286"
+  },
+  "receipt": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.exit.json",
+    "bytes": 5303,
+    "sha256": "d84602f71b940c2ea736cf7e9aba82d118ef9dc887fb99c90ffed3f5eafd3f00"
+  },
+  "capture_sidecar": {
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-commands-20260926T210415Z/orig80k-eq100-full-same-judge-20260926T210415Z.exit.capture.json",
+    "bytes": 2421,
+    "sha256": "e05870ae68daf46e29ac1c118b01cea4362d3eaaf1d78ac3bace8b357c816885"
+  },
+  "capture_actual_exit": 0,
+  "scalar_projections": {
+    "A": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/solo/scalars_hex.tsv",
+      "bytes": 10968,
+      "sha256": "dac4e9e1ac5ab5e7308e9282cdf2fec140408c726c60b41b0a397158401cc5ec"
+    },
+    "B": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-eq100-20260926T210415Z/full/concurrent/scalars_hex.tsv",
+      "bytes": 10968,
+      "sha256": "dac4e9e1ac5ab5e7308e9282cdf2fec140408c726c60b41b0a397158401cc5ec"
+    }
+  },
+  "overlap": {
+    "begin": 1790463191.363476,
+    "complete_steps": [
+      90,
+      85
+    ],
+    "end": 1790463823.3560028,
+    "seconds": 631.9925267696381,
+    "window_steps": [
+      10,
+      99
+    ]
+  },
+  "verdict_lines": [
+    "A_SIDE_SEGMENTS tentative_rows=0 main_rows=100",
+    "B_SIDE_SEGMENTS tentative_rows=0 main_rows=100",
+    "ENTRY_SCALARS steps=100 keys=5 hex_mismatch=0",
+    "ENTRY_FINITE=PASS",
+    "ENTRY_STATE_DIGEST rows=2 mismatch=0",
+    "ENTRY_RESOLVED_CFG mismatch=0 mode=same-entry",
+    "ENTRY_PROVENANCE=PASS",
+    "ENTRY_EQ=PASS"
+  ],
+  "scope": "本机固定确定性档本组solo与concurrent前100步等价及真实4+4重叠；不代表20/perf/80k通过"
+}

@@ -1,0 +1,669 @@
+{
+  "schema": 1,
+  "group": "full",
+  "run_name": "perf-orig80k-full-300-20260926T232339Z",
+  "head": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+  "run_uuid": "9bc82a7e-1f03-496a-824c-600d5eabd6d6",
+  "checkpoint_step": 299,
+  "checkpoint_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z/299",
+  "checkpoint": {
+    "entries": [
+      {
+        "path": ".",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 6713227051,
+        "size": 78,
+        "blocks": 0,
+        "mtime_ns": 1790476014642528418
+      },
+      {
+        "path": "_CHECKPOINT_METADATA",
+        "kind": "file",
+        "device": 2304,
+        "inode": 6713227052,
+        "size": 327,
+        "blocks": 8,
+        "mtime_ns": 1790476014642528418
+      },
+      {
+        "path": "assets",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 6984546169,
+        "size": 29,
+        "blocks": 0,
+        "mtime_ns": 1790476003182441729
+      },
+      {
+        "path": "assets/robomme",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 7517235988,
+        "size": 37,
+        "blocks": 0,
+        "mtime_ns": 1790476003182441729
+      },
+      {
+        "path": "assets/robomme/norm_stats.json",
+        "kind": "file",
+        "device": 2304,
+        "inode": 7517235989,
+        "size": 2068,
+        "blocks": 8,
+        "mtime_ns": 1790476003182441729
+      },
+      {
+        "path": "params",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 7269289195,
+        "size": 145,
+        "blocks": 0,
+        "mtime_ns": 1790476014632528352
+      },
+      {
+        "path": "params/_METADATA",
+        "kind": "file",
+        "device": 2304,
+        "inode": 7269289197,
+        "size": 28136,
+        "blocks": 56,
+        "mtime_ns": 1790476014602528156
+      },
+      {
+        "path": "params/_sharding",
+        "kind": "file",
+        "device": 2304,
+        "inode": 7269289196,
+        "size": 18332,
+        "blocks": 40,
+        "mtime_ns": 1790476014592528090
+      },
+      {
+        "path": "params/array_metadatas",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 9195904202,
+        "size": 31,
+        "blocks": 0,
+        "mtime_ns": 1790476009702495505
+      },
+      {
+        "path": "params/array_metadatas/process_0",
+        "kind": "file",
+        "device": 2304,
+        "inode": 9195904203,
+        "size": 10863,
+        "blocks": 24,
+        "mtime_ns": 1790476009702495505
+      },
+      {
+        "path": "params/d",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 9427127252,
+        "size": 54,
+        "blocks": 0,
+        "mtime_ns": 1790476014612528222
+      },
+      {
+        "path": "params/d/d401ab850083d628ee86684055d5cc4d",
+        "kind": "file",
+        "device": 2304,
+        "inode": 9427127253,
+        "size": 30204,
+        "blocks": 64,
+        "mtime_ns": 1790476014602528156
+      },
+      {
+        "path": "params/manifest.ocdbt",
+        "kind": "file",
+        "device": 2304,
+        "inode": 7269289198,
+        "size": 120,
+        "blocks": 8,
+        "mtime_ns": 1790476014622528289
+      },
+      {
+        "path": "params/ocdbt.process_0",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 8592456121,
+        "size": 49,
+        "blocks": 0,
+        "mtime_ns": 1790476014592528090
+      },
+      {
+        "path": "params/ocdbt.process_0/d",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 8869536691,
+        "size": 4096,
+        "blocks": 8,
+        "mtime_ns": 1790476014592528090
+      },
+      {
+        "path": "params/ocdbt.process_0/d/1369c790285ef10ff31b80b49fe57579",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536700,
+        "size": 2167832459,
+        "blocks": 4234048,
+        "mtime_ns": 1790476011592508391
+      },
+      {
+        "path": "params/ocdbt.process_0/d/30abd274c4b730d53c438defbf0ecd26",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536692,
+        "size": 220,
+        "blocks": 8,
+        "mtime_ns": 1790476009682495341
+      },
+      {
+        "path": "params/ocdbt.process_0/d/39cbde83dcb83f9c8181dbee6c06d84f",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536699,
+        "size": 2159500738,
+        "blocks": 4217776,
+        "mtime_ns": 1790476010822503336
+      },
+      {
+        "path": "params/ocdbt.process_0/d/4358728044a19816befb2581c94026b7",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536693,
+        "size": 920,
+        "blocks": 8,
+        "mtime_ns": 1790476009682495341
+      },
+      {
+        "path": "params/ocdbt.process_0/d/45704ca59ed4506511c383259ff0206a",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869540288,
+        "size": 30190,
+        "blocks": 64,
+        "mtime_ns": 1790476014592528090
+      },
+      {
+        "path": "params/ocdbt.process_0/d/52391c1497e2154b6a4079277fe9fa81",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536695,
+        "size": 1161,
+        "blocks": 8,
+        "mtime_ns": 1790476009702495505
+      },
+      {
+        "path": "params/ocdbt.process_0/d/5a687d90d79106100089c7b047c379bc",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536694,
+        "size": 1066,
+        "blocks": 8,
+        "mtime_ns": 1790476009682495341
+      },
+      {
+        "path": "params/ocdbt.process_0/d/70581b8b6d4fb9a8cb038a7b982a98df",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536701,
+        "size": 2658961771,
+        "blocks": 5193288,
+        "mtime_ns": 1790476011912510492
+      },
+      {
+        "path": "params/ocdbt.process_0/d/7729e708ef2c408478b8fa39b3144c83",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536696,
+        "size": 1277,
+        "blocks": 8,
+        "mtime_ns": 1790476009702495505
+      },
+      {
+        "path": "params/ocdbt.process_0/d/b99bbd474dbe9bdec31194cebae33b2e",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536698,
+        "size": 412850105,
+        "blocks": 806352,
+        "mtime_ns": 1790476009922497319
+      },
+      {
+        "path": "params/ocdbt.process_0/d/bfc13c4415e2a0aa3d3e2cbe29840a03",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536697,
+        "size": 1881,
+        "blocks": 8,
+        "mtime_ns": 1790476009712495587
+      },
+      {
+        "path": "params/ocdbt.process_0/d/e957ebd0a6d06a0685584e4ce3646d83",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536702,
+        "size": 2240307303,
+        "blocks": 4375608,
+        "mtime_ns": 1790476012872516795
+      },
+      {
+        "path": "params/ocdbt.process_0/d/f9c6fa972dfbce67fef9d712162226c9",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536703,
+        "size": 2240308385,
+        "blocks": 4375608,
+        "mtime_ns": 1790476012912517060
+      },
+      {
+        "path": "params/ocdbt.process_0/manifest.ocdbt",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8592456122,
+        "size": 459,
+        "blocks": 8,
+        "mtime_ns": 1790476014592528090
+      }
+    ],
+    "entries_sha256": "17a93312925342ca438b10813bd211140d4a21755b7d21a4f0400b45da02b177",
+    "allocated_bytes": 11879944192,
+    "logical_bytes": 11879892504,
+    "unique_inodes": 29
+  },
+  "run_tree": {
+    "entries": [
+      {
+        "path": ".",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 20151050971,
+        "size": 4096,
+        "blocks": 8,
+        "mtime_ns": 1790476014642528418
+      },
+      {
+        "path": "299",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 6713227051,
+        "size": 78,
+        "blocks": 0,
+        "mtime_ns": 1790476014642528418
+      },
+      {
+        "path": "299/_CHECKPOINT_METADATA",
+        "kind": "file",
+        "device": 2304,
+        "inode": 6713227052,
+        "size": 327,
+        "blocks": 8,
+        "mtime_ns": 1790476014642528418
+      },
+      {
+        "path": "299/assets",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 6984546169,
+        "size": 29,
+        "blocks": 0,
+        "mtime_ns": 1790476003182441729
+      },
+      {
+        "path": "299/assets/robomme",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 7517235988,
+        "size": 37,
+        "blocks": 0,
+        "mtime_ns": 1790476003182441729
+      },
+      {
+        "path": "299/assets/robomme/norm_stats.json",
+        "kind": "file",
+        "device": 2304,
+        "inode": 7517235989,
+        "size": 2068,
+        "blocks": 8,
+        "mtime_ns": 1790476003182441729
+      },
+      {
+        "path": "299/params",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 7269289195,
+        "size": 145,
+        "blocks": 0,
+        "mtime_ns": 1790476014632528352
+      },
+      {
+        "path": "299/params/_METADATA",
+        "kind": "file",
+        "device": 2304,
+        "inode": 7269289197,
+        "size": 28136,
+        "blocks": 56,
+        "mtime_ns": 1790476014602528156
+      },
+      {
+        "path": "299/params/_sharding",
+        "kind": "file",
+        "device": 2304,
+        "inode": 7269289196,
+        "size": 18332,
+        "blocks": 40,
+        "mtime_ns": 1790476014592528090
+      },
+      {
+        "path": "299/params/array_metadatas",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 9195904202,
+        "size": 31,
+        "blocks": 0,
+        "mtime_ns": 1790476009702495505
+      },
+      {
+        "path": "299/params/array_metadatas/process_0",
+        "kind": "file",
+        "device": 2304,
+        "inode": 9195904203,
+        "size": 10863,
+        "blocks": 24,
+        "mtime_ns": 1790476009702495505
+      },
+      {
+        "path": "299/params/d",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 9427127252,
+        "size": 54,
+        "blocks": 0,
+        "mtime_ns": 1790476014612528222
+      },
+      {
+        "path": "299/params/d/d401ab850083d628ee86684055d5cc4d",
+        "kind": "file",
+        "device": 2304,
+        "inode": 9427127253,
+        "size": 30204,
+        "blocks": 64,
+        "mtime_ns": 1790476014602528156
+      },
+      {
+        "path": "299/params/manifest.ocdbt",
+        "kind": "file",
+        "device": 2304,
+        "inode": 7269289198,
+        "size": 120,
+        "blocks": 8,
+        "mtime_ns": 1790476014622528289
+      },
+      {
+        "path": "299/params/ocdbt.process_0",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 8592456121,
+        "size": 49,
+        "blocks": 0,
+        "mtime_ns": 1790476014592528090
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d",
+        "kind": "directory",
+        "device": 2304,
+        "inode": 8869536691,
+        "size": 4096,
+        "blocks": 8,
+        "mtime_ns": 1790476014592528090
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/1369c790285ef10ff31b80b49fe57579",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536700,
+        "size": 2167832459,
+        "blocks": 4234048,
+        "mtime_ns": 1790476011592508391
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/30abd274c4b730d53c438defbf0ecd26",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536692,
+        "size": 220,
+        "blocks": 8,
+        "mtime_ns": 1790476009682495341
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/39cbde83dcb83f9c8181dbee6c06d84f",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536699,
+        "size": 2159500738,
+        "blocks": 4217776,
+        "mtime_ns": 1790476010822503336
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/4358728044a19816befb2581c94026b7",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536693,
+        "size": 920,
+        "blocks": 8,
+        "mtime_ns": 1790476009682495341
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/45704ca59ed4506511c383259ff0206a",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869540288,
+        "size": 30190,
+        "blocks": 64,
+        "mtime_ns": 1790476014592528090
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/52391c1497e2154b6a4079277fe9fa81",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536695,
+        "size": 1161,
+        "blocks": 8,
+        "mtime_ns": 1790476009702495505
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/5a687d90d79106100089c7b047c379bc",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536694,
+        "size": 1066,
+        "blocks": 8,
+        "mtime_ns": 1790476009682495341
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/70581b8b6d4fb9a8cb038a7b982a98df",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536701,
+        "size": 2658961771,
+        "blocks": 5193288,
+        "mtime_ns": 1790476011912510492
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/7729e708ef2c408478b8fa39b3144c83",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536696,
+        "size": 1277,
+        "blocks": 8,
+        "mtime_ns": 1790476009702495505
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/b99bbd474dbe9bdec31194cebae33b2e",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536698,
+        "size": 412850105,
+        "blocks": 806352,
+        "mtime_ns": 1790476009922497319
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/bfc13c4415e2a0aa3d3e2cbe29840a03",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536697,
+        "size": 1881,
+        "blocks": 8,
+        "mtime_ns": 1790476009712495587
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/e957ebd0a6d06a0685584e4ce3646d83",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536702,
+        "size": 2240307303,
+        "blocks": 4375608,
+        "mtime_ns": 1790476012872516795
+      },
+      {
+        "path": "299/params/ocdbt.process_0/d/f9c6fa972dfbce67fef9d712162226c9",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8869536703,
+        "size": 2240308385,
+        "blocks": 4375608,
+        "mtime_ns": 1790476012912517060
+      },
+      {
+        "path": "299/params/ocdbt.process_0/manifest.ocdbt",
+        "kind": "file",
+        "device": 2304,
+        "inode": 8592456122,
+        "size": 459,
+        "blocks": 8,
+        "mtime_ns": 1790476014592528090
+      },
+      {
+        "path": "history_config.resolved.sha256",
+        "kind": "file",
+        "device": 2304,
+        "inode": 20151050975,
+        "size": 65,
+        "blocks": 8,
+        "mtime_ns": 1790475562118797931
+      },
+      {
+        "path": "history_config.resolved.yaml",
+        "kind": "file",
+        "device": 2304,
+        "inode": 20151050974,
+        "size": 405,
+        "blocks": 8,
+        "mtime_ns": 1790475562118797931
+      },
+      {
+        "path": "history_config.txt",
+        "kind": "file",
+        "device": 2304,
+        "inode": 20151050973,
+        "size": 31,
+        "blocks": 8,
+        "mtime_ns": 1790475562108797848
+      },
+      {
+        "path": "motion_provenance.json",
+        "kind": "file",
+        "device": 2304,
+        "inode": 20151050976,
+        "size": 675,
+        "blocks": 8,
+        "mtime_ns": 1790475562118797931
+      },
+      {
+        "path": "wandb_id.txt",
+        "kind": "file",
+        "device": 2304,
+        "inode": 20151050972,
+        "size": 8,
+        "blocks": 8,
+        "mtime_ns": 1790475561898796142
+      }
+    ],
+    "entries_sha256": "ee5ab155bb4a2b2b242b2ccef7f52e64fd0fa6fe09706555373e72e27ff9ef8b",
+    "allocated_bytes": 11879968768,
+    "logical_bytes": 11879897784,
+    "unique_inodes": 35
+  },
+  "evidence": {
+    "launch": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/launch.json",
+      "sha256": "1eb8623947f5cb0c3ea00ae240a9142c0832987b6f77ace55f79e56094f288a3"
+    },
+    "report": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-perf300-results-20260926T232339Z/paired-speed.json",
+      "sha256": "dd9bdf145be4642099e4b285b1e5fcd984f9feba5187a134441a4067b6b5f9d8"
+    },
+    "completion": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/completion.json",
+      "sha256": "c1a5cfd9a9fab18929ffcd9678777194f77f95cd22b4ee3a4dbeb5bda0599822"
+    },
+    "disk_samples": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/disk_samples.jsonl",
+      "sha256": "e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992"
+    },
+    "speed_run": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/perf-orig80k-full-300-20260926T232339Z/speed_run.json",
+      "sha256": "317fae89aaf82e886be5a82f299ca6eaa68e6043a541cbf2d0dc27e201956e4a"
+    }
+  },
+  "disk": {
+    "checkpoint_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/perf-orig80k-full-300-20260926T232339Z",
+    "scratch_path": "/scratch",
+    "sampling_interval_s": 0.5,
+    "samples": 1004,
+    "save_samples": 23,
+    "save_window_wall": [
+      1790476003.1377487,
+      1790476014.6460276
+    ],
+    "save_wait_done_wall": 1790476063.689062,
+    "checkpoint_init_timestamp_nsecs": 1790476003190446822,
+    "checkpoint_commit_timestamp_nsecs": 1790476014646027608,
+    "checkpoint_save_commit_seconds": 11.455580786,
+    "checkpoint_metadata_sha256": "1640b77c9d84f65e68b0d49bd57aab95950b350b50ed932cfdefa3fa4e84c5c5",
+    "wait_record_sha256": "2fb9774cbb8750788c61e54d3f7f361d0e630490970af7a064d1b9d640438fda",
+    "run_uuid": "9bc82a7e-1f03-496a-824c-600d5eabd6d6",
+    "start_allocated_bytes": 0,
+    "final_allocated_bytes": 11879968768,
+    "start_scratch_available_bytes": 732187693056,
+    "final_scratch_available_bytes": 708417351680,
+    "sampled_max_allocated_bytes": 16039718912,
+    "save_sampled_max_allocated_bytes": 16039718912,
+    "scratch_available_min_bytes": 702857707520,
+    "mean_interval_s": 0.5127820017355739,
+    "max_interval_s": 3.757910222746432,
+    "max_sampling_duration_s": 3.519036336801946,
+    "max_lateness_s": 3.2421908248215914,
+    "missed_ticks": 26,
+    "samples_with_path_races": 0,
+    "duplicate_inodes_observed": 0,
+    "samples_sha256": "e4e347a70892d902ab353a05a9a09aaf1629b0514298ce2a1d81259bc70fe992",
+    "note": "只读离散采样；扫描非原子，临时目录改名/消失可能少计；不是连续真实峰值，既定保守余量不缩减"
+  },
+  "metadata_snapshots": {
+    "_CHECKPOINT_METADATA": {
+      "text": "{\"item_handlers\": {\"assets\": \"openpi.training.checkpoints.CallbackHandler\", \"params\": \"orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler\"}, \"metrics\": {}, \"performance_metrics\": {}, \"init_timestamp_nsecs\": 1790476003190446822, \"commit_timestamp_nsecs\": 1790476014646027608, \"custom_metadata\": {}}",
+      "sha256": "1640b77c9d84f65e68b0d49bd57aab95950b350b50ed932cfdefa3fa4e84c5c5"
+    },
+    "params/_METADATA": {
+      "text": "{\"tree_metadata\": {\"('params', 'PaliGemma', 'img', 'Transformer', 'encoder_norm', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoder_norm\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [288]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoder_norm', 'scale', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoder_norm\", \"key_type\": 2}, {\"key\": \"scale\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [288]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'LayerNorm_0', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"LayerNorm_0\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 288]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'LayerNorm_0', 'scale', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"LayerNorm_0\", \"key_type\": 2}, {\"key\": \"scale\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 288]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'LayerNorm_1', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"LayerNorm_1\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 288]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'LayerNorm_1', 'scale', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"LayerNorm_1\", \"key_type\": 2}, {\"key\": \"scale\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 288]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MlpBlock_0', 'Dense_0', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MlpBlock_0\", \"key_type\": 2}, {\"key\": \"Dense_0\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 1076]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MlpBlock_0', 'Dense_0', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MlpBlock_0\", \"key_type\": 2}, {\"key\": \"Dense_0\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 1152, 1076]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MlpBlock_0', 'Dense_1', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MlpBlock_0\", \"key_type\": 2}, {\"key\": \"Dense_1\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 288]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MlpBlock_0', 'Dense_1', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MlpBlock_0\", \"key_type\": 2}, {\"key\": \"Dense_1\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 1076, 1152]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MultiHeadDotProductAttention_0', 'key', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MultiHeadDotProductAttention_0\", \"key_type\": 2}, {\"key\": \"key\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 4, 72]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MultiHeadDotProductAttention_0', 'key', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MultiHeadDotProductAttention_0\", \"key_type\": 2}, {\"key\": \"key\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 288, 16, 72]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MultiHeadDotProductAttention_0', 'out', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MultiHeadDotProductAttention_0\", \"key_type\": 2}, {\"key\": \"out\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 288]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MultiHeadDotProductAttention_0', 'out', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MultiHeadDotProductAttention_0\", \"key_type\": 2}, {\"key\": \"out\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 16, 72, 288]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MultiHeadDotProductAttention_0', 'query', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MultiHeadDotProductAttention_0\", \"key_type\": 2}, {\"key\": \"query\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 4, 72]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MultiHeadDotProductAttention_0', 'query', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MultiHeadDotProductAttention_0\", \"key_type\": 2}, {\"key\": \"query\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 288, 16, 72]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MultiHeadDotProductAttention_0', 'value', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MultiHeadDotProductAttention_0\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 4, 72]}}, \"('params', 'PaliGemma', 'img', 'Transformer', 'encoderblock', 'MultiHeadDotProductAttention_0', 'value', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"Transformer\", \"key_type\": 2}, {\"key\": \"encoderblock\", \"key_type\": 2}, {\"key\": \"MultiHeadDotProductAttention_0\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [27, 288, 16, 72]}}, \"('params', 'PaliGemma', 'img', 'embedding', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"embedding\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [288]}}, \"('params', 'PaliGemma', 'img', 'embedding', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"embedding\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [14, 14, 3, 288]}}, \"('params', 'PaliGemma', 'img', 'head', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"head\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [512]}}, \"('params', 'PaliGemma', 'img', 'head', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"head\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [1152, 512]}}, \"('params', 'PaliGemma', 'img', 'pos_embedding', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"img\", \"key_type\": 2}, {\"key\": \"pos_embedding\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [1, 64, 1152]}}, \"('params', 'PaliGemma', 'llm', 'embedder', 'input_embedding', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"embedder\", \"key_type\": 2}, {\"key\": \"input_embedding\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [64288, 2048]}}, \"('params', 'PaliGemma', 'llm', 'final_norm', 'scale', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"final_norm\", \"key_type\": 2}, {\"key\": \"scale\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [512]}}, \"('params', 'PaliGemma', 'llm', 'final_norm_1', 'Dense_0', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"final_norm_1\", \"key_type\": 2}, {\"key\": \"Dense_0\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [768]}}, \"('params', 'PaliGemma', 'llm', 'final_norm_1', 'Dense_0', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"final_norm_1\", \"key_type\": 2}, {\"key\": \"Dense_0\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [1024, 768]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'attn', 'attn_vec_einsum', 'w', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"attn\", \"key_type\": 2}, {\"key\": \"attn_vec_einsum\", \"key_type\": 2}, {\"key\": \"w\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 8, 256, 512]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'attn', 'attn_vec_einsum_1', 'w', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"attn\", \"key_type\": 2}, {\"key\": \"attn_vec_einsum_1\", \"key_type\": 2}, {\"key\": \"w\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 8, 256, 256]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'attn', 'kv_einsum', 'w', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"attn\", \"key_type\": 2}, {\"key\": \"kv_einsum\", \"key_type\": 2}, {\"key\": \"w\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 2, 1, 512, 256]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'attn', 'kv_einsum_1', 'w', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"attn\", \"key_type\": 2}, {\"key\": \"kv_einsum_1\", \"key_type\": 2}, {\"key\": \"w\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 2, 1, 256, 256]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'attn', 'q_einsum', 'w', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"attn\", \"key_type\": 2}, {\"key\": \"q_einsum\", \"key_type\": 2}, {\"key\": \"w\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 8, 512, 256]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'attn', 'q_einsum_1', 'w', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"attn\", \"key_type\": 2}, {\"key\": \"q_einsum_1\", \"key_type\": 2}, {\"key\": \"w\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 8, 256, 256]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'mem_attn', 'kv_einsum_mem', 'w', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"mem_attn\", \"key_type\": 2}, {\"key\": \"kv_einsum_mem\", \"key_type\": 2}, {\"key\": \"w\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 2, 1, 256, 256]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'mem_attn', 'mem_rms_norm', 'scale', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"mem_attn\", \"key_type\": 2}, {\"key\": \"mem_rms_norm\", \"key_type\": 2}, {\"key\": \"scale\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 256]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'mem_attn', 'out_einsum_mem', 'w', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"mem_attn\", \"key_type\": 2}, {\"key\": \"out_einsum_mem\", \"key_type\": 2}, {\"key\": \"w\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 4, 256, 256]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'mem_attn', 'q_einsum_mem', 'w', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"mem_attn\", \"key_type\": 2}, {\"key\": \"q_einsum_mem\", \"key_type\": 2}, {\"key\": \"w\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 4, 256, 256]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'mem_rms_norm_ffn', 'Dense_0', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"mem_rms_norm_ffn\", \"key_type\": 2}, {\"key\": \"Dense_0\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 512]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'mem_rms_norm_ffn', 'Dense_0', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"mem_rms_norm_ffn\", \"key_type\": 2}, {\"key\": \"Dense_0\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 1024, 512]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'mlp', 'gating_einsum', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"mlp\", \"key_type\": 2}, {\"key\": \"gating_einsum\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 2, 2048, 4096]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'mlp', 'linear', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"mlp\", \"key_type\": 2}, {\"key\": \"linear\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 4096, 2048]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'mlp_1', 'gating_einsum', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"mlp_1\", \"key_type\": 2}, {\"key\": \"gating_einsum\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 2, 1024, 1024]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'mlp_1', 'linear', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"mlp_1\", \"key_type\": 2}, {\"key\": \"linear\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 1024, 1024]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'pre_attention_norm', 'scale', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"pre_attention_norm\", \"key_type\": 2}, {\"key\": \"scale\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 512]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'pre_attention_norm_1', 'Dense_0', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"pre_attention_norm_1\", \"key_type\": 2}, {\"key\": \"Dense_0\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 768]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'pre_attention_norm_1', 'Dense_0', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"pre_attention_norm_1\", \"key_type\": 2}, {\"key\": \"Dense_0\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 1024, 768]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'pre_ffw_norm', 'scale', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"pre_ffw_norm\", \"key_type\": 2}, {\"key\": \"scale\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 512]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'pre_ffw_norm_1', 'Dense_0', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"pre_ffw_norm_1\", \"key_type\": 2}, {\"key\": \"Dense_0\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 768]}}, \"('params', 'PaliGemma', 'llm', 'layers', 'pre_ffw_norm_1', 'Dense_0', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"PaliGemma\", \"key_type\": 2}, {\"key\": \"llm\", \"key_type\": 2}, {\"key\": \"layers\", \"key_type\": 2}, {\"key\": \"pre_ffw_norm_1\", \"key_type\": 2}, {\"key\": \"Dense_0\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [18, 1024, 768]}}, \"('params', 'action_in_proj', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"action_in_proj\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [256]}}, \"('params', 'action_in_proj', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"action_in_proj\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [8, 1024]}}, \"('params', 'action_out_proj', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"action_out_proj\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [8]}}, \"('params', 'action_out_proj', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"action_out_proj\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [256, 32]}}, \"('params', 'mem_encoder', 'feature_encoder', 'encoder_static', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"mem_encoder\", \"key_type\": 2}, {\"key\": \"feature_encoder\", \"key_type\": 2}, {\"key\": \"encoder_static\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [256]}}, \"('params', 'mem_encoder', 'feature_encoder', 'encoder_static', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"mem_encoder\", \"key_type\": 2}, {\"key\": \"feature_encoder\", \"key_type\": 2}, {\"key\": \"encoder_static\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [704, 1024]}}, \"('params', 'mem_encoder', 'feature_encoder', 'pos_proj', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"mem_encoder\", \"key_type\": 2}, {\"key\": \"feature_encoder\", \"key_type\": 2}, {\"key\": \"pos_proj\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [192]}}, \"('params', 'mem_encoder', 'feature_encoder', 'pos_proj', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"mem_encoder\", \"key_type\": 2}, {\"key\": \"feature_encoder\", \"key_type\": 2}, {\"key\": \"pos_proj\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [192, 768]}}, \"('params', 'time_mlp_in', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"time_mlp_in\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [256]}}, \"('params', 'time_mlp_in', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"time_mlp_in\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [1024, 256]}}, \"('params', 'time_mlp_out', 'bias', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"time_mlp_out\", \"key_type\": 2}, {\"key\": \"bias\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [256]}}, \"('params', 'time_mlp_out', 'kernel', 'value')\": {\"key_metadata\": [{\"key\": \"params\", \"key_type\": 2}, {\"key\": \"time_mlp_out\", \"key_type\": 2}, {\"key\": \"kernel\", \"key_type\": 2}, {\"key\": \"value\", \"key_type\": 2}], \"value_metadata\": {\"value_type\": \"jax.Array\", \"skip_deserialize\": false, \"write_shape\": [1024, 256]}}}, \"use_zarr3\": false, \"store_array_data_equal_to_fill_value\": true, \"custom_metadata\": null}",
+      "sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65"
+    }
+  },
+  "measured_at": "2026-09-27T02:31:44.056263+00:00",
+  "measurement_tool_sha256": "2d65c06e37fa4fe36d80813b4758aa724a33ad205520b8e6871ff0fa16e0044a"
+}

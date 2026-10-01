@@ -1,0 +1,188 @@
+{
+  "status": "PASS",
+  "variant": "context512+motion160",
+  "source_head": "6db0e0ab9ef266d0e80fc1dd8d4383705bd81ab0",
+  "runs": {
+    "8before": "v1-store/bench/context-stock-scaling-20260928/ctx-stock-motion-8before-20260928",
+    "4left": "v1-store/bench/context-stock-scaling-20260928/ctx-stock-motion-4left-20260928",
+    "4right": "v1-store/bench/context-stock-scaling-20260928/ctx-stock-motion-4right-20260928",
+    "8after": "v1-store/bench/context-stock-scaling-20260928/ctx-stock-motion-8after-20260928"
+  },
+  "seconds_per_step": {
+    "8before": 1.9793991327285767,
+    "4left": 3.844594863653183,
+    "4right": 3.862700729370117,
+    "8after": 1.9793312764167785
+  },
+  "eight_reference_seconds": 1.9793652045726775,
+  "eight_relative_drift": -3.428126782323293e-05,
+  "single_job_time_ratio": {
+    "4left": 1.9423372982264724,
+    "4right": 1.9514846075128567
+  },
+  "combined_samples_per_second": 66.4309314980695,
+  "eight_reference_samples_per_second": 64.6671971924624,
+  "combined_throughput_ratio": 1.0272740180830457,
+  "equal_steps_pair_makespan_ratio": 0.9757423037564283,
+  "parallel_union": [
+    1790635441.102267,
+    1790636229.232484
+  ],
+  "parallel_progress_coverage": true,
+  "phase_order_verified": true,
+  "complete_config_comparison": true,
+  "source_and_packages_equal": true,
+  "all_native_and_restore_pass": true,
+  "physical_gpu_uuids": {
+    "8before": [
+      "GPU-191942f6-8212-df10-f8f9-aafa4d397152",
+      "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+      "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+      "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+      "GPU-8fb13753-84aa-f408-93f7-518b05582e9a",
+      "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+      "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe",
+      "GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5"
+    ],
+    "4left": [
+      "GPU-191942f6-8212-df10-f8f9-aafa4d397152",
+      "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+      "GPU-8fb13753-84aa-f408-93f7-518b05582e9a",
+      "GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5"
+    ],
+    "4right": [
+      "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+      "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+      "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+      "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe"
+    ],
+    "8after": [
+      "GPU-191942f6-8212-df10-f8f9-aafa4d397152",
+      "GPU-6a372ecb-a7e7-ec59-1605-35ea28eb49fd",
+      "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+      "GPU-871ee6f4-3787-4f9a-8272-61fd3ccd18c5",
+      "GPU-8fb13753-84aa-f408-93f7-518b05582e9a",
+      "GPU-a0fdedd6-a270-079c-a2ee-110d72b09dfd",
+      "GPU-bbf6a4e1-ee29-4372-915c-484798a601fe",
+      "GPU-d7e00ff3-679d-4f56-8902-372d79e03bc5"
+    ]
+  },
+  "first_step_scalars": {
+    "8before": {
+      "step": 0,
+      "wall_time": 1790633834.409125,
+      "grad_norm": {
+        "dec": 23.512990951538086,
+        "hex": "0x1.7835360000000p+4"
+      },
+      "llm_grad_norm": {
+        "dec": 16.77037239074707,
+        "hex": "0x1.0c53720000000p+4"
+      },
+      "loss": {
+        "dec": 0.6637594103813171,
+        "hex": "0x1.53d8460000000p-1"
+      },
+      "mem_enc_norm": {
+        "dec": 16.254541397094727,
+        "hex": "0x1.04129a0000000p+4"
+      },
+      "param_norm": {
+        "dec": 1803.462890625,
+        "hex": "0x1.c2dda00000000p+10"
+      }
+    },
+    "4left": {
+      "step": 0,
+      "wall_time": 1790635055.9113743,
+      "grad_norm": {
+        "dec": 23.654428482055664,
+        "hex": "0x1.7a788a0000000p+4"
+      },
+      "llm_grad_norm": {
+        "dec": 16.88623809814453,
+        "hex": "0x1.0e2e080000000p+4"
+      },
+      "loss": {
+        "dec": 0.6637637615203857,
+        "hex": "0x1.53d8d80000000p-1"
+      },
+      "mem_enc_norm": {
+        "dec": 16.339614868164062,
+        "hex": "0x1.056f100000000p+4"
+      },
+      "param_norm": {
+        "dec": 1803.462890625,
+        "hex": "0x1.c2dda00000000p+10"
+      }
+    },
+    "4right": {
+      "step": 0,
+      "wall_time": 1790635070.5159755,
+      "grad_norm": {
+        "dec": 23.39359474182129,
+        "hex": "0x1.764c2a0000000p+4"
+      },
+      "llm_grad_norm": {
+        "dec": 16.716638565063477,
+        "hex": "0x1.0b775a0000000p+4"
+      },
+      "loss": {
+        "dec": 0.6638227105140686,
+        "hex": "0x1.53e0920000000p-1"
+      },
+      "mem_enc_norm": {
+        "dec": 16.137245178222656,
+        "hex": "0x1.0232280000000p+4"
+      },
+      "param_norm": {
+        "dec": 1803.462890625,
+        "hex": "0x1.c2dda00000000p+10"
+      }
+    },
+    "8after": {
+      "step": 0,
+      "wall_time": 1790637042.0154338,
+      "grad_norm": {
+        "dec": 23.602508544921875,
+        "hex": "0x1.79a3e00000000p+4"
+      },
+      "llm_grad_norm": {
+        "dec": 16.832176208496094,
+        "hex": "0x1.0d50980000000p+4"
+      },
+      "loss": {
+        "dec": 0.6635990738868713,
+        "hex": "0x1.53c3420000000p-1"
+      },
+      "mem_enc_norm": {
+        "dec": 16.320234298706055,
+        "hex": "0x1.051fae0000000p+4"
+      },
+      "param_norm": {
+        "dec": 1803.462890625,
+        "hex": "0x1.c2dda00000000p+10"
+      }
+    }
+  },
+  "limits": [
+    "两个独立八卡主窗口等权平均，四卡各一个主窗口；没有统计置信区间",
+    "合计吞吐是两个相互覆盖的稳态速率之和；完整工期含启动/保存等额外成本",
+    "401步均处于原5000步预热；不证明完整收敛、策略成功率或数值逐位一致"
+  ],
+  "observed_gpu_pids": {
+    "8before": [
+      4118154
+    ],
+    "4left": [
+      4144763
+    ],
+    "4right": [
+      4144754
+    ],
+    "8after": [
+      4191795
+    ]
+  },
+  "recorded_environment_equal_except_per_run_output": true
+}

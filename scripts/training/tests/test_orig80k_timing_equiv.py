@@ -1,7 +1,8 @@
-"""测速包装20步对照的候选CPU测试；冻结期只准备，解冻应用后执行。"""
+"""测速包装20步对照的CPU测试；含显式档位、记录闭合与原对象转发。"""
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import functools
 import io
@@ -31,7 +32,7 @@ def identity(name="off"):
 
 
 def state_record(name="off"):
-    return {"schema": 1, "loop_step": 19, **identity(name), **eq.full_state_record(synthetic_state())}
+    return {"schema": eq.SCHEMA, "loop_step": 19, **identity(name), **eq.full_state_record(synthetic_state())}
 
 
 def test_tree_bytes_dtype_shape_and_none_are_strict_and_do_not_mutate():
@@ -225,8 +226,10 @@ def test_shared_state_observer_forwards_real_save_once_and_preserves_result(tmp_
 
 def side(name):
     fetched, used = input_rows()
-    return {"metadata": {**identity(name), "records": "/records/" + name,
-            "fingerprint": {"same": "environment"}, "toolchain": {"same": "files"},
+    return {"metadata": {**identity(name), "records": "/records/" + name, "timing": name,
+            "timing_eq_profile": {"name": "normal", "xla_flags": ""},
+            "fingerprint": {"same": "environment", "environment": {"XLA_FLAGS": None}},
+            "toolchain": {"same": "files"},
             "loader": {"batch_size": 64, "workers": 4}, "provenance_end": {"same": "modules"},
             "original_save": {"same": "save_state"},
             "complete": {"config_record_version": 2, "train_config": {"fields": {"exp_name": name, "seed": 42}},
@@ -308,6 +311,346 @@ def test_completion_pass_without_real_file_membership_rejected(tmp_path, monkeyp
     result.write_text(json.dumps({"status": "PASS", "files": []}))
     with pytest.raises(ValueError, match="文件证据集合"):
         eq.validate_completion(tmp_path, result, identity(), {})
+
+
+def profile(name="normal"):
+    flags = eq.profile_contract().TIMING_EQ_DETERMINISTIC_FLAGS if name == "deterministic100" else ""
+    return {"name": name, "xla_flags": flags}
+
+
+def profile_metadata(name="normal", timing="off"):
+    value = profile(name)
+    return {**identity(timing), "timing": timing, "timing_eq_profile": value,
+            "fingerprint": {"environment": {"XLA_FLAGS": value["xla_flags"] or None}}}
+
+
+def profile_launch(metadata):
+    value = metadata["timing_eq_profile"]
+    return {"mode": "smoke", "timing_eq_profile": copy.deepcopy(value), "environment": {
+        "XLA_FLAGS": metadata["fingerprint"]["environment"]["XLA_FLAGS"],
+        "ORIG80K_SMOKE_EQ_MODE": metadata["timing"],
+        "ORIG80K_TIMING_EQ_PROFILE": value["name"] if value["name"] == "deterministic100" else None}}
+
+
+@pytest.mark.parametrize("name", ["normal", "deterministic100"])
+@pytest.mark.parametrize("timing", ["off", "on"])
+def test_record_profile_uses_recorded_environment_only(monkeypatch, name, timing):
+    metadata = profile_metadata(name, timing)
+    launch = profile_launch(metadata)
+    monkeypatch.setenv("XLA_FLAGS", "不属于被判定运行的当前环境")
+    monkeypatch.setenv("ORIG80K_TIMING_EQ_PROFILE", "bad")
+    monkeypatch.setenv("ORIG80K_SMOKE_EQ_MODE", "bad")
+    assert eq.validate_metadata_profile(metadata) == profile(name)
+    assert eq.validate_launch_profile(launch, metadata) == profile(name)
+
+
+@pytest.mark.parametrize("fault", ["missing_metadata", "none_metadata", "extra_metadata", "missing_flags",
+    "wrong_flags", "missing_launch", "missing_selector", "wrong_selector", "wrong_timing", "mixed_profiles"])
+def test_profile_records_reject_missing_tampered_and_mixed_fields(fault):
+    metadata = profile_metadata("deterministic100")
+    launch = profile_launch(metadata)
+    if fault == "missing_metadata":
+        del metadata["timing_eq_profile"]
+    elif fault == "none_metadata":
+        metadata["timing_eq_profile"] = None
+    elif fault == "extra_metadata":
+        metadata["timing_eq_profile"]["unused"] = True
+    elif fault == "missing_flags":
+        del metadata["fingerprint"]["environment"]["XLA_FLAGS"]
+    elif fault == "wrong_flags":
+        metadata["fingerprint"]["environment"]["XLA_FLAGS"] += " --extra-flag"
+    elif fault == "missing_launch":
+        del launch["timing_eq_profile"]
+    elif fault == "missing_selector":
+        del launch["environment"]["ORIG80K_TIMING_EQ_PROFILE"]
+    elif fault == "wrong_selector":
+        launch["environment"]["ORIG80K_TIMING_EQ_PROFILE"] = None
+    elif fault == "wrong_timing":
+        launch["environment"]["ORIG80K_SMOKE_EQ_MODE"] = "on"
+    else:
+        launch = profile_launch(profile_metadata("normal"))
+    with pytest.raises((ValueError, KeyError)):
+        eq.validate_launch_profile(launch, metadata)
+
+
+def test_pair_profile_difference_is_not_a_config_identity_exception():
+    off, on = side("off"), side("on")
+    on["metadata"]["timing_eq_profile"] = profile("deterministic100")
+    on["metadata"]["fingerprint"]["environment"]["XLA_FLAGS"] = profile("deterministic100")["xla_flags"]
+    with pytest.raises(ValueError, match="两侧计时档位不同"):
+        eq.compare_sides(off, on)
+    config_record, _, _ = eq.training_imports()
+    assert config_record.IDENTITY_FIELDS == ("train_config.fields.exp_name", "derived.checkpoint_dir")
+
+
+def fingerprint_fixture(tmp_path, monkeypatch, name):
+    monkeypatch.setattr(eq, "ROOT", tmp_path)
+    files = {}
+    for filename in ("uv.lock", "history.yaml", "norm.json", "tokenizer", "init", "manifest", "stats", "input", "store"):
+        path = tmp_path / filename
+        path.write_text("本测试的小型固定资产\n")
+        files[filename] = eq.record_file(path)
+    return {"version": 1, "python": {"version": "fixture"}, "dependencies": {"fixture": "1"},
+            "uv_lock_sha256": files["uv.lock"]["sha256"],
+            "devices": [{"index": str(i), "uuid": f"GPU-{i}", "name": "fixture", "driver": "fixture"}
+                        for i in range(4)],
+            "environment": {"XLA_FLAGS": profile(name)["xla_flags"] or None}, "jax": {"enable_x64": False},
+            "history": files["history.yaml"], "assets": {"norm_stats": files["norm.json"],
+                "tokenizer": files["tokenizer"], "initialization": {"metadata": files["init"]}},
+            "source": {"records": {"episode_manifest": files["manifest"], "stats": files["stats"],
+                                   "input_manifest.json": files["input"]}},
+            "dataset": {"store_meta": files["store"]}}
+
+
+@pytest.mark.parametrize("name", ["normal", "deterministic100"])
+def test_fingerprint_closes_profile_to_actual_flags_and_keeps_x64_false(tmp_path, monkeypatch, name):
+    fingerprint = fingerprint_fixture(tmp_path, monkeypatch, name)
+    monkeypatch.setenv("XLA_FLAGS", "仅污染判定环境")
+    eq.validate_fingerprint(fingerprint, profile(name), timing="on")
+    altered = copy.deepcopy(fingerprint)
+    altered["environment"]["XLA_FLAGS"] = "" if name == "deterministic100" else profile("deterministic100")["xla_flags"]
+    with pytest.raises(ValueError, match="实际XLA_FLAGS"):
+        eq.validate_fingerprint(altered, profile(name), timing="on")
+    fingerprint["jax"]["enable_x64"] = True
+    with pytest.raises(ValueError, match="x64"):
+        eq.validate_fingerprint(fingerprint, profile(name), timing="on")
+
+
+@pytest.mark.parametrize("fault", ["missing", "none", "legacy_schema"])
+def test_read_side_rejects_missing_profile_even_with_rehashed_manifest(tmp_path, monkeypatch, fault):
+    monkeypatch.setattr(eq, "ROOT", tmp_path)
+    records = tmp_path / "v1-store/bench/orig80k/off"
+    directory = records / "timing_eq"
+    directory.mkdir(parents=True)
+    metadata = {**profile_metadata(), "schema": eq.SCHEMA, "status": "PASS", "records": str(records)}
+    if fault == "missing":
+        del metadata["timing_eq_profile"]
+    elif fault == "none":
+        metadata["timing_eq_profile"] = None
+    else:
+        metadata["schema"] = 1
+    for name in eq.OWNED:
+        (directory / name).write_text(json.dumps(metadata if name == "metadata.json" else {}))
+    eq.write_json(directory / "manifest.json", {"schema": eq.SCHEMA, "files": {
+        name: eq.record_file(directory / name) for name in eq.OWNED}})
+    with pytest.raises((ValueError, KeyError)):
+        eq.read_side(records, records / "completion.json", records / "wrapper.log", "off", "a" * 40)
+
+
+def speed_fixture(tmp_path, monkeypatch, name):
+    import check_orig80k_speed as speed
+    monkeypatch.setattr(speed, "summarize_disk", lambda *_: {"fixture": "保留原磁盘验收接口"})
+    flags = profile(name)["xla_flags"] or None
+    shared = {"schema": 2, "head": "a" * 40, "mode": "smoke", "timing_eq_profile": profile(name), "xla_flags": flags}
+    meta = {**shared, "steps": 20, "success": True, "entry_calls": 1, "sampler_stopped": True,
+            "sampling_error": None, "profiler": False,
+            "wrapper_sha256": eq.record_file(Path(speed.__file__).resolve())["sha256"],
+            "loader": {"batch_size": 64, "workers": 4}, "save_calls": [{"step": 19, "state_step": 20}]}
+    for filename in eq.SPEED_FILES:
+        (tmp_path / filename).write_text("{}\n")
+    (tmp_path / "speed_start.json").write_text(json.dumps(shared))
+    (tmp_path / "speed_run.json").write_text(json.dumps(meta))
+    (tmp_path / "step_timing.jsonl").write_text("".join(json.dumps({"step": i, "completed": True,
+        **({"sync": {"location": "before_final_save"}} if i == 19 else {})}) + "\n" for i in range(20)))
+    return flags
+
+
+@pytest.mark.parametrize("name", ["normal", "deterministic100"])
+def test_speed_start_and_run_profile_use_records_not_judge_environment(tmp_path, monkeypatch, name):
+    flags = speed_fixture(tmp_path, monkeypatch, name)
+    monkeypatch.setenv("XLA_FLAGS", "判定侧任意环境")
+    assert eq.validate_speed(tmp_path, "on", "a" * 40, profile(name), xla_flags=flags)["files"]
+
+
+@pytest.mark.parametrize("filename", ["speed_start.json", "speed_run.json"])
+@pytest.mark.parametrize("fault", ["missing", "none", "wrong_flags", "mixed", "legacy_schema"])
+def test_speed_profile_cannot_be_missing_or_disagree_between_records(tmp_path, monkeypatch, filename, fault):
+    flags = speed_fixture(tmp_path, monkeypatch, "deterministic100")
+    path = tmp_path / filename
+    value = eq.load(path)
+    if fault == "missing":
+        del value["timing_eq_profile"]
+    elif fault == "none":
+        value["timing_eq_profile"] = None
+    elif fault == "wrong_flags":
+        value["xla_flags"] = ""
+    elif fault == "mixed":
+        value.update(timing_eq_profile=profile(), xla_flags=None)
+    else:
+        value["schema"] = 1
+    path.write_text(json.dumps(value))
+    with pytest.raises((ValueError, KeyError)):
+        eq.validate_speed(tmp_path, "on", "a" * 40, profile("deterministic100"), xla_flags=flags)
+
+
+@pytest.mark.parametrize("name", ["normal", "deterministic100"])
+def test_off_profile_still_forbids_speed_artifacts(tmp_path, name):
+    flags = profile(name)["xla_flags"] or None
+    assert eq.validate_speed(tmp_path, "off", "a" * 40, profile(name), xla_flags=flags) is None
+    (tmp_path / "speed_start.json").write_text("{}\n")
+    with pytest.raises(ValueError, match="off侧"):
+        eq.validate_speed(tmp_path, "off", "a" * 40, profile(name), xla_flags=flags)
+
+
+def completion_profile_fixture(tmp_path, monkeypatch, name, timing):
+    import check_orig80k_completion as completion_tool
+    monkeypatch.setattr(eq, "ROOT", tmp_path)
+    # 底层恢复/采样已有独立测试；本夹具验证真实文件成员链中的档位绑定，不加载权重。
+    monkeypatch.setattr(completion_tool, "validate_records", lambda *_, **__: None)
+    monkeypatch.setattr(completion_tool, "validate_gpu_sampling", lambda *_: {"fixture": True})
+    metadata = profile_metadata(name, timing)
+    metadata["complete"] = {"fixture": "同一完整配置"}
+    run = metadata["run_name"]
+    records = tmp_path / "v1-store/bench/orig80k" / run
+    checkpoint = tmp_path / "v1-store/train-runs/mme_vla_suite" / run / "19"
+    (records / "final").mkdir(parents=True)
+    (checkpoint / "params").mkdir(parents=True)
+    driver = tmp_path / "v1-store/logs" / (run + ".driver.log")
+    driver.parent.mkdir(parents=True)
+    driver.write_text("\n".join(key + "=0" for key in
+        ("EXIT_CODE", "TRAIN_PIPE_EXIT", "TEE_EXIT", "FOOTER_PRINTF_EXIT", "FOOTER_TEE_EXIT")) + "\n")
+    launch = {**profile_launch(metadata), "run_name": run, "head": metadata["head"],
+              "actual": {"complete": metadata["complete"], "jax_enable_x64": False}}
+    launch["environment"]["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+    scalars = {key: {"dec": 1., "hex": 1.0.hex(), "finite": True} for key in completion_tool.SCALARS}
+    state = eq.full_state_record(synthetic_state())
+    contents = {"launch.json": launch,
+        "runtime.json": {"exp_name": run, "config_name": "mme_vla_suite", "seed": 42, "device_count": 4,
+                         "batch_size": 64, "num_workers": 4, "fsdp_devices": 4, "cuda_visible_devices": "0,1,2,3"},
+        "metrics.jsonl": {"step": 0, **scalars}, "gpu.csv": {}, "gpu.csv.err": {},
+        "final/start.json": {"complete": metadata["complete"]},
+        "final/final.json": {"ema_leaves": state["ema_leaves"],
+                             "tail": [{"step": i, "scalars": scalars} for i in range(1, 20)]},
+        "final/checkpoint_wait_done.json": {}}
+    for relative, value in contents.items():
+        (records / relative).write_text(json.dumps(value) + "\n")
+    for path in (checkpoint / "_CHECKPOINT_METADATA", checkpoint / "params/_METADATA"):
+        path.write_text("{}\n")
+    evidence = [records / name for name in contents] + [driver, checkpoint / "_CHECKPOINT_METADATA",
+                                                       checkpoint / "params/_METADATA"]
+    completion = records / "completion.json"
+    result = {**identity(run), "status": "PASS", "mode": "smoke", "state_step": 20,
+              "final": 19, "checkpoints": [19], "gpu_sampling": {"fixture": True},
+              "restored_leaves": state["ema_leaves"], "files": [eq.record_file(path) for path in evidence]}
+    completion.write_text(json.dumps(result))
+    return records, completion, metadata, state, evidence
+
+
+@pytest.mark.parametrize("name", ["normal", "deterministic100"])
+@pytest.mark.parametrize("timing", ["off", "on"])
+def test_completion_keeps_real_membership_and_accepts_matching_record_profile(tmp_path, monkeypatch, name, timing):
+    records, completion, metadata, state, _ = completion_profile_fixture(tmp_path, monkeypatch, name, timing)
+    monkeypatch.setenv("XLA_FLAGS", "判定进程不作为历史运行证据")
+    _, scalars = eq.validate_completion(records, completion, metadata, state)
+    assert len(scalars) == 20
+
+
+@pytest.mark.parametrize("fault", ["missing", "none", "mixed", "selector"])
+def test_completion_profile_rejects_self_consistent_rehash_of_wrong_launch(tmp_path, monkeypatch, fault):
+    records, completion, metadata, state, evidence = completion_profile_fixture(
+        tmp_path, monkeypatch, "deterministic100", "on")
+    path = records / "launch.json"
+    launch = eq.load(path)
+    if fault == "missing":
+        del launch["timing_eq_profile"]
+    elif fault == "none":
+        launch["timing_eq_profile"] = None
+    elif fault == "mixed":
+        launch["timing_eq_profile"] = profile()
+        launch["environment"].update(XLA_FLAGS=None, ORIG80K_TIMING_EQ_PROFILE=None)
+    else:
+        launch["environment"]["ORIG80K_TIMING_EQ_PROFILE"] = "normal"
+    path.write_text(json.dumps(launch))
+    receipt = eq.load(completion)
+    receipt["files"] = [eq.record_file(item) for item in evidence]
+    completion.write_text(json.dumps(receipt))
+    with pytest.raises((ValueError, KeyError)):
+        eq.validate_completion(records, completion, metadata, state)
+
+
+def run_environment(tmp_path, monkeypatch, name, timing):
+    monkeypatch.setattr(eq, "ROOT", tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, "prefix", str(tmp_path / ".venv"))
+    monkeypatch.setenv("ORIG80K_MODE", "smoke")
+    monkeypatch.setenv("ORIG80K_SMOKE_EQ_MODE", timing)
+    monkeypatch.setenv("TRAIN_TIMING_STEPS", "0")
+    monkeypatch.delenv("ORIG80K_TIMING_EQ_PROFILE", raising=False)
+    monkeypatch.delenv("XLA_FLAGS", raising=False)
+    if name == "deterministic100":
+        monkeypatch.setenv("ORIG80K_TIMING_EQ_PROFILE", name)
+        monkeypatch.setenv("XLA_FLAGS", profile(name)["xla_flags"])
+    records = tmp_path / "v1-store/bench/orig80k/fixture"
+    monkeypatch.setenv("TRAIN_RECORD_DIR", str(records))
+    monkeypatch.setenv("TRAIN_FINAL_RECORD_DIR", str(records / "final"))
+    monkeypatch.setenv("MMEVLA_EXPECTED_TRAIN_HEAD", "a" * 40)
+    return SimpleNamespace(timing=timing, records=str(records), train_args=["mme_vla_suite", "--num-train-steps", "20"])
+
+
+@pytest.mark.parametrize(("selector", "flags"), [("", ""), ("normal", ""), ("bad", ""),
+    (None, "--xla_gpu_deterministic_ops=true"), ("deterministic100", ""),
+    ("deterministic100", "--xla_gpu_autotune_level=0 --xla_gpu_deterministic_ops=true")])
+def test_run_rejects_unregistered_profile_before_creating_observer(tmp_path, monkeypatch, selector, flags):
+    args = run_environment(tmp_path, monkeypatch, "normal", "off")
+    if selector is not None:
+        monkeypatch.setenv("ORIG80K_TIMING_EQ_PROFILE", selector)
+    monkeypatch.setenv("XLA_FLAGS", flags)
+    with pytest.raises(ValueError, match="ORIG80K_TIMING_EQ_PROFILE|实际XLA_FLAGS"):
+        eq.run(args)
+    assert not Path(args.records).exists()
+
+
+@pytest.mark.parametrize("name", ["normal", "deterministic100"])
+@pytest.mark.parametrize("timing", ["off", "on"])
+@pytest.mark.parametrize("change_profile", [False, True])
+def test_run_records_profile_preserves_dispatch_and_rejects_drift(tmp_path, monkeypatch, name, timing, change_profile):
+    args = run_environment(tmp_path, monkeypatch, name, timing)
+    records = Path(args.records)
+    records.mkdir(parents=True)
+    complete = {"fixture": "同一完整配置"}
+    fingerprint = {"environment": {"XLA_FLAGS": os.environ.get("XLA_FLAGS")}}
+    calls = []
+    class FakeObserver:
+        def __init__(self, directory):
+            self.config = object()
+            self.identity = {**identity("fixture"), "complete": complete}
+            self.fingerprint_start = fingerprint
+            self.fetched, self.used = [None] * 21, [None] * 20
+            self.completed_calls, self.iterations, self.jit_matches, self.save_calls = 20, 1, 1, 1
+            self.save_returned = True
+            self.loader_contract = {"batch_size": 64, "workers": 4}
+            self.overhead = {}
+        def installed(self):
+            return contextlib.nullcontext()
+        def check_complete(self):
+            calls.append("checked")
+    monkeypatch.setattr(eq, "Observer", FakeObserver)
+    monkeypatch.setattr(eq, "training_imports", lambda: (
+        SimpleNamespace(complete_record=lambda _: complete), None,
+        SimpleNamespace(_runtime_fingerprint=lambda *_: fingerprint)))
+    monkeypatch.setattr(eq, "provenance", lambda *_: {"fixture": "相同来源"})
+    monkeypatch.setattr(eq, "toolchain", lambda: {"fixture": "相同工具"})
+    monkeypatch.setattr(eq.profile_contract(), "validate_argv", lambda *_: {"--exp-name": "fixture"})
+    def dispatch(mode, argv, directory):
+        calls.append((mode, argv, directory))
+        if change_profile:
+            if name == "normal":
+                monkeypatch.setenv("ORIG80K_TIMING_EQ_PROFILE", "deterministic100")
+            else:
+                monkeypatch.delenv("ORIG80K_TIMING_EQ_PROFILE")
+    monkeypatch.setattr(eq, "execute_entry", dispatch)
+    if change_profile:
+        with pytest.raises(ValueError, match="实际XLA_FLAGS"):
+            eq.run(args)
+    else:
+        eq.run(args)
+    metadata = eq.load(records / "timing_eq/metadata.json")
+    assert metadata["schema"] == eq.SCHEMA == 2
+    assert metadata["status"] == ("FAIL" if change_profile else "PASS")
+    assert metadata["timing_eq_profile"] == profile(name)
+    assert calls == [(timing, args.train_args, records), "checked"]
+    assert calls[0][1] is args.train_args
+    assert eq.load(records / "timing_eq/manifest.json")["schema"] == 2
 
 
 def runner_text():

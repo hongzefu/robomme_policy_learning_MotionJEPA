@@ -1,0 +1,50 @@
+{
+  "status": "PASS",
+  "files": {
+    "docs/training-doc/orig80k-prod-0927/checklist.md": {
+      "bytes": 6176,
+      "sha256": "75c34536bb87914bd65535d282e995706575b7e7e02a85a092ed6e39f05cecb4"
+    },
+    "docs/training-doc/orig80k-prod-0927/launch.md": {
+      "bytes": 26919,
+      "sha256": "d97d18145a8d0e9965c0e95e903a942406de5403ddc413e2a8ac3fe7c6872cc9"
+    },
+    "docs/training-doc/v2-orig-16task-pub1600ep-modul-b64-80k/README.md": {
+      "bytes": 16694,
+      "sha256": "2563e552665939fb86d987f6ff73f1b538f5718e5deee4edde2dae443da21a1a"
+    },
+    "docs/training-doc/v2-orig-counting-pub400ep-modul-b64-80k/README.md": {
+      "bytes": 16968,
+      "sha256": "d297b96eed22545e9c30f158a5939fc94e08406a6cc8cc4f9c028c57d4b9e2db"
+    }
+  },
+  "checks": {
+    "bash_blocks": 7,
+    "links": 38,
+    "readmes_12_sections": 2,
+    "git_apply_check": 0,
+    "preflight_main_executed": false,
+    "prod_launched": false
+  },
+  "scope": "原字段/命令/语法/路径与小测试；准备代理没有执行main/CPU/预算/资源或prod",
+  "head_at_check": "70a641a827eb2559c3acb69430f55c1c53babaeb",
+  "tracked_note": "root/dataset正在V11.17归档；本任务仅写ignored import-ready",
+  "artifacts": {
+    "documents.apply_patch.txt": {
+      "bytes": 68568,
+      "sha256": "f53493342c2f4d33b42990a3c151615c01991ab721f9ad09ea153a0fb41b06ea"
+    },
+    "check_prod_ready.py": {
+      "bytes": 17870,
+      "sha256": "af8f32b10f51ff9062db919443e5892f74a46f112bc268e027251f47c83ee12b"
+    },
+    "test_check_prod_ready.py": {
+      "bytes": 3244,
+      "sha256": "f8e00b69520032960ce74aab79b5681041557bb119f23a019e1bed070adebf10"
+    },
+    "preflight-small-tests.json": {
+      "bytes": 1007,
+      "sha256": "2f6b77ef30ad3c333ec270c611edd22db4e8ff1d3e24a4a59684ca8342b1356a"
+    }
+  }
+}

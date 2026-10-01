@@ -1,0 +1,2667 @@
+{
+  "archive_integrity": "PASS",
+  "exclusions": [
+    "权重/OCDBT块",
+    "源码/模板/.command",
+    "旧INPUT/P1/100递归引用",
+    "动态controller"
+  ],
+  "finished_utc": "2026-09-27T00:42:23.405159+00:00",
+  "head": "b0efbde61e38411fb1b9114eec8485d36a4ee9a0",
+  "judges": {
+    "count": {
+      "experiment_status": "FAIL",
+      "failure_line": "TIMING_EQ_JUDGE=FAIL reason=20步五标量不是逐位一致",
+      "log_checks": {
+        "bytes": 1618,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/count-judge/log_checks.json",
+        "sha256": "4b17e943c4546e6c5cfe02c400dee4470a9f04878e633ff0846a8303684b6961"
+      },
+      "native_exit": {
+        "capture.json": {
+          "copy": {
+            "bytes": 3961,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/capture.json",
+            "sha256": "62fc7fd6d990632d0bddd9319a40af10ff707b165673ce616122856f3ff2cb00"
+          },
+          "source": {
+            "bytes": 3961,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.capture.json",
+            "sha256": "62fc7fd6d990632d0bddd9319a40af10ff707b165673ce616122856f3ff2cb00"
+          }
+        },
+        "capture.stderr": {
+          "copy": {
+            "bytes": 0,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/capture.stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "source": {
+            "bytes": 0,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.capture.stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "capture.stdout": {
+          "copy": {
+            "bytes": 5025,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/capture.stdout",
+            "sha256": "7ea40c7b9f9048d83eae2914bcc15afe6c05ef8484bd7acb9a3fef91ce39b6ec"
+          },
+          "source": {
+            "bytes": 5025,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.capture.stdout",
+            "sha256": "7ea40c7b9f9048d83eae2914bcc15afe6c05ef8484bd7acb9a3fef91ce39b6ec"
+          }
+        },
+        "exit.json": {
+          "copy": {
+            "bytes": 5401,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/exit.json",
+            "sha256": "ab18c34751976a30e99b2dbdb93a831c4402da6879f5938fd795647aaaed002b"
+          },
+          "source": {
+            "bytes": 5401,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.json",
+            "sha256": "ab18c34751976a30e99b2dbdb93a831c4402da6879f5938fd795647aaaed002b"
+          }
+        },
+        "identity.json": {
+          "copy": {
+            "bytes": 1515,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/identity.json",
+            "sha256": "0752a5d674e9c7766b56b62cb14d7d1d84f2686bce75b7ad54df1537e65a06af"
+          },
+          "source": {
+            "bytes": 1515,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.identity.json",
+            "sha256": "0752a5d674e9c7766b56b62cb14d7d1d84f2686bce75b7ad54df1537e65a06af"
+          }
+        },
+        "launch.json": {
+          "copy": {
+            "bytes": 4167,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/launch.json",
+            "sha256": "435db7633a7da50bf5f47cc959c5648ffec76b082cb3cc67299b56c5ba67847f"
+          },
+          "source": {
+            "bytes": 4167,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.launch.process.json",
+            "sha256": "435db7633a7da50bf5f47cc959c5648ffec76b082cb3cc67299b56c5ba67847f"
+          }
+        },
+        "launch.stderr": {
+          "copy": {
+            "bytes": 0,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/launch.stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "source": {
+            "bytes": 0,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.launch.stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "launch.stdout": {
+          "copy": {
+            "bytes": 8964,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/launch.stdout",
+            "sha256": "f6c55e9f70588e2dacfdf634481aee27e2e53326bbc9a7f1f96ec485aeec50a2"
+          },
+          "source": {
+            "bytes": 8964,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.launch.stdout",
+            "sha256": "f6c55e9f70588e2dacfdf634481aee27e2e53326bbc9a7f1f96ec485aeec50a2"
+          }
+        }
+      },
+      "result_json_absent": true,
+      "result_json_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-results-20260926T231534Z/count.json"
+    },
+    "full": {
+      "experiment_status": "FAIL",
+      "failure_line": "TIMING_EQ_JUDGE=FAIL reason=20步五标量不是逐位一致",
+      "log_checks": {
+        "bytes": 1615,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/full-judge/log_checks.json",
+        "sha256": "77cb20f71f33e2523a91113047790ffddea7cd82a6da52eb8001c69cefb84492"
+      },
+      "native_exit": {
+        "capture.json": {
+          "copy": {
+            "bytes": 3954,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/capture.json",
+            "sha256": "445a8ec451b4f00c24fe8bee1e275cac6eda12e434c5d7aea2a45d1ee1585a9f"
+          },
+          "source": {
+            "bytes": 3954,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.capture.json",
+            "sha256": "445a8ec451b4f00c24fe8bee1e275cac6eda12e434c5d7aea2a45d1ee1585a9f"
+          }
+        },
+        "capture.stderr": {
+          "copy": {
+            "bytes": 0,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/capture.stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "source": {
+            "bytes": 0,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.capture.stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "capture.stdout": {
+          "copy": {
+            "bytes": 5013,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/capture.stdout",
+            "sha256": "d934bd703b6a92cecab0d6edf8bfa4aceee952b0341e3fdb9b0f0a6a8b80cffc"
+          },
+          "source": {
+            "bytes": 5013,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.capture.stdout",
+            "sha256": "d934bd703b6a92cecab0d6edf8bfa4aceee952b0341e3fdb9b0f0a6a8b80cffc"
+          }
+        },
+        "exit.json": {
+          "copy": {
+            "bytes": 5389,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/exit.json",
+            "sha256": "cf71e12c26af837cb9a03bedca56432de726f8a8ace92a79edd0425e52c99a44"
+          },
+          "source": {
+            "bytes": 5389,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.json",
+            "sha256": "cf71e12c26af837cb9a03bedca56432de726f8a8ace92a79edd0425e52c99a44"
+          }
+        },
+        "identity.json": {
+          "copy": {
+            "bytes": 1510,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/identity.json",
+            "sha256": "93b6902fcad440aa96b943ce7e86ffb30a35d44e7b48d8802358a0d16d7a8fa4"
+          },
+          "source": {
+            "bytes": 1510,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.identity.json",
+            "sha256": "93b6902fcad440aa96b943ce7e86ffb30a35d44e7b48d8802358a0d16d7a8fa4"
+          }
+        },
+        "launch.json": {
+          "copy": {
+            "bytes": 4158,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/launch.json",
+            "sha256": "7a73811f3748ddc31a796f676ab097f2f70a25e94aae5d91b6b9d00f41ef06c1"
+          },
+          "source": {
+            "bytes": 4158,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.launch.process.json",
+            "sha256": "7a73811f3748ddc31a796f676ab097f2f70a25e94aae5d91b6b9d00f41ef06c1"
+          }
+        },
+        "launch.stderr": {
+          "copy": {
+            "bytes": 0,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/launch.stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          "source": {
+            "bytes": 0,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.launch.stderr",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          }
+        },
+        "launch.stdout": {
+          "copy": {
+            "bytes": 8932,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/launch.stdout",
+            "sha256": "4f5d9b9fcfef975e3828b4b66a98c6e57abdc9122f9e3a25645c34e3dca14abe"
+          },
+          "source": {
+            "bytes": 8932,
+            "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.launch.stdout",
+            "sha256": "4f5d9b9fcfef975e3828b4b66a98c6e57abdc9122f9e3a25645c34e3dca14abe"
+          }
+        }
+      },
+      "result_json_absent": true,
+      "result_json_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-results-20260926T231534Z/full.json"
+    }
+  },
+  "old_off_index": {
+    "bytes": 46783,
+    "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/completed-off-archive-index.json",
+    "sha256": "675381991cd60dc00b521348f4ec93f27f853dab0c67fb52d585132baaaa37ee"
+  },
+  "schema": 1,
+  "scope": "两on及两FAIL判定最小增量；独立核验成功不等于实验成功",
+  "sides": {
+    "count": {
+      "archive": {
+        "bytes": 182302,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/count-on/core.records.tar.gz",
+        "sha256": "62b3dd17c8285b4f34ca446ff9f55141f126109074d77ed1506f5f0e162d1580"
+      },
+      "checks": {
+        "bytes": 17103,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/count-on/archive_checks.json",
+        "sha256": "8af4950768f668fe960bba5ff05744f510a06cbf5bbbae172228985e5cf7aaef"
+      },
+      "members": 22,
+      "payload_bytes": 1526850
+    },
+    "full": {
+      "archive": {
+        "bytes": 181840,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/full-on/core.records.tar.gz",
+        "sha256": "e008c02f8d85c2cf479c32f432f37af85eeb55ae2a3134cb77c1fb26f7408fdf"
+      },
+      "checks": {
+        "bytes": 17062,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/full-on/archive_checks.json",
+        "sha256": "088ff2090d17ab0da5699c2242cc4fdc3827d0c3c80f44319175031c897d572f"
+      },
+      "members": 22,
+      "payload_bytes": 1527045
+    }
+  },
+  "source_checks": [
+    {
+      "reference": {
+        "bytes": 46783,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/completed-off-archive-index.json",
+        "sha256": "675381991cd60dc00b521348f4ec93f27f853dab0c67fb52d585132baaaa37ee"
+      },
+      "stat": {
+        "bytes": 46783,
+        "ctime_ns": "1790468956504901408",
+        "device": 2304,
+        "inode": 538080788,
+        "mtime_ns": "1790468956504901408"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 35391,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-both-on-verification-independent-20260927.json",
+        "sha256": "41c6f5896de5247b5690ba2bc338e8c26d30de3658a181b4050f28b84851cb55"
+      },
+      "stat": {
+        "bytes": 35391,
+        "ctime_ns": "1790469292457677138",
+        "device": 2304,
+        "inode": 2689544391,
+        "mtime_ns": "1790469292457677138"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 35391,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/verification/both-on.independent-verification.json",
+        "sha256": "41c6f5896de5247b5690ba2bc338e8c26d30de3658a181b4050f28b84851cb55"
+      },
+      "stat": {
+        "bytes": 35391,
+        "ctime_ns": "1790469743071374047",
+        "device": 2304,
+        "inode": 8869536673,
+        "mtime_ns": "1790469743071374047"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 118391,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/timing20-final-comparison-independent-20260927.json",
+        "sha256": "113cec3b17a19e85bd55c7a2b4420f150eac17dbea69a2b3c3e6c38d62265e99"
+      },
+      "stat": {
+        "bytes": 118391,
+        "ctime_ns": "1790469389208467871",
+        "device": 2304,
+        "inode": 2689544392,
+        "mtime_ns": "1790469389208467871"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 118391,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/verification/final-comparison.independent.json",
+        "sha256": "113cec3b17a19e85bd55c7a2b4420f150eac17dbea69a2b3c3e6c38d62265e99"
+      },
+      "stat": {
+        "bytes": 118391,
+        "ctime_ns": "1790469743081374127",
+        "device": 2304,
+        "inode": 8869536674,
+        "mtime_ns": "1790469743081374127"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 20934,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/launch.json",
+        "sha256": "a6a245d47febc0b67bcf8bf3e20c336e3a0c99a98c7748e45097a05d7fda26cd"
+      },
+      "stat": {
+        "bytes": 20934,
+        "ctime_ns": "1790468545601553080",
+        "device": 2304,
+        "inode": 18617266131,
+        "mtime_ns": "1790468545601553080"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 347,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/runtime.json",
+        "sha256": "281147144211ed7b5f269036ece322a2aedc7779dbdf04a77e94b02740c2389e"
+      },
+      "stat": {
+        "bytes": 347,
+        "ctime_ns": "1790468557041643960",
+        "device": 2304,
+        "inode": 18617266139,
+        "mtime_ns": "1790468557041643960"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1240,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/run_meta.json",
+        "sha256": "ffc46659f0b0917a9bcd8f982942e5df80ba7373c2da668697858e69087000e0"
+      },
+      "stat": {
+        "bytes": 1240,
+        "ctime_ns": "1790469093376037500",
+        "device": 2304,
+        "inode": 18617266147,
+        "mtime_ns": "1790469093376037500"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 416,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/metrics.jsonl",
+        "sha256": "90cab971ddfc0bcdf7d00eeb9c38bef7d16dd051f920770c5eececaf775a8054"
+      },
+      "stat": {
+        "bytes": 416,
+        "ctime_ns": "1790468707262852002",
+        "device": 2304,
+        "inode": 18617266144,
+        "mtime_ns": "1790468707262852002"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 20682,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/completion.json",
+        "sha256": "a4c58d4225edba9a2f5f83ccf4c11089821aacf65d54e5fc954531e79247e2a0"
+      },
+      "stat": {
+        "bytes": 20682,
+        "ctime_ns": "1790469174536709326",
+        "device": 2304,
+        "inode": 18617266150,
+        "mtime_ns": "1790469174536709326"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 164300,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/gpu.csv",
+        "sha256": "1760d83c5798e1c19422d3d0c4c95d0def3e7d2176fc4155e9ac9be104e1b1f9"
+      },
+      "stat": {
+        "bytes": 164300,
+        "ctime_ns": "1790469105576139002",
+        "device": 2304,
+        "inode": 18617266134,
+        "mtime_ns": "1790469105576139002"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/gpu.csv.err",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790468545611553158",
+        "device": 2304,
+        "inode": 18617266135,
+        "mtime_ns": "1790468545611553158"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 16245,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/final/start.json",
+        "sha256": "592cff9b1981c010a0301ee6715ad0f80af65575a51cf4d338f2cf0edeadc975"
+      },
+      "stat": {
+        "bytes": 16245,
+        "ctime_ns": "1790468558501655557",
+        "device": 2304,
+        "inode": 23353891764,
+        "mtime_ns": "1790468558501655557"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 47603,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/final/final.json",
+        "sha256": "bd8015d646ead19e534b8c553a93166656fde41ae48d46a61a35700e6f718e67"
+      },
+      "stat": {
+        "bytes": 47603,
+        "ctime_ns": "1790469090386012622",
+        "device": 2304,
+        "inode": 23353891765,
+        "mtime_ns": "1790469090386012622"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 196,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/final/checkpoint_wait_done.json",
+        "sha256": "c57f40f63baa289acf55ab2c4442e37c91cff3061eebce92986f2aba217bac20"
+      },
+      "stat": {
+        "bytes": 196,
+        "ctime_ns": "1790469090396012708",
+        "device": 2304,
+        "inode": 23353891766,
+        "mtime_ns": "1790469090396012708"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 41333,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/timing_eq/metadata.json",
+        "sha256": "f76988c11996a7b0ba5eb967a831541a5a10a4ace83f12e51ae7c01f9f2ae7da"
+      },
+      "stat": {
+        "bytes": 41333,
+        "ctime_ns": "1790469095376054140",
+        "device": 2304,
+        "inode": 20151050957,
+        "mtime_ns": "1790469095376054140"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1064,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/timing_eq/manifest.json",
+        "sha256": "25bd2d5d41a5558d61d8c175ae9a52a4432bea8d8cad5a772faf440bbb4f4df7"
+      },
+      "stat": {
+        "bytes": 1064,
+        "ctime_ns": "1790469095376054140",
+        "device": 2304,
+        "inode": 20151050958,
+        "mtime_ns": "1790469095376054140"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 71484,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/timing_eq/fetch_inputs.jsonl",
+        "sha256": "3df402bee6c3ba15b1ed1b6b548b4cd0cbc31645f5eeac2ea48459d8d3b58a93"
+      },
+      "stat": {
+        "bytes": 71484,
+        "ctime_ns": "1790468778763417493",
+        "device": 2304,
+        "inode": 20151050954,
+        "mtime_ns": "1790468778763417493"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 75636,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/timing_eq/model_inputs.jsonl",
+        "sha256": "06cf04cda4d6323dbd5d79ebd089f7f13706ef02819812dfe54ced2e56bf5e03"
+      },
+      "stat": {
+        "bytes": 75636,
+        "ctime_ns": "1790468776113395410",
+        "device": 2304,
+        "inode": 20151050955,
+        "mtime_ns": "1790468776113395410"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 142433,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/timing_eq/full_state.json",
+        "sha256": "d75f72cea204becc1750ebe778919f122c1049c449b8a01364c905776750938a"
+      },
+      "stat": {
+        "bytes": 142433,
+        "ctime_ns": "1790469036275564619",
+        "device": 2304,
+        "inode": 20151050956,
+        "mtime_ns": "1790469036275564619"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1647,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/speed_start.json",
+        "sha256": "081035d3c16ab453918f929e50e392ba0af665d8882c7663c9bd543aa3ad005f"
+      },
+      "stat": {
+        "bytes": 1647,
+        "ctime_ns": "1790468551101596771",
+        "device": 2304,
+        "inode": 18617266136,
+        "mtime_ns": "1790468551101596771"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 2776,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/speed_run.json",
+        "sha256": "b9b3ec04f202494ecba251e7ffd6074a05ce6bef455703c2fd9867175bd540a6"
+      },
+      "stat": {
+        "bytes": 2776,
+        "ctime_ns": "1790469094456046486",
+        "device": 2304,
+        "inode": 18617266148,
+        "mtime_ns": "1790469094456046486"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4524,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/step_timing.jsonl",
+        "sha256": "df34dbe07bbdec7ac2a8b6283a763693d28e97265d4f6c11942b2308d62fe10b"
+      },
+      "stat": {
+        "bytes": 4524,
+        "ctime_ns": "1790469090386012622",
+        "device": 2304,
+        "inode": 18617266142,
+        "mtime_ns": "1790469090386012622"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 375816,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/host_samples.jsonl",
+        "sha256": "23f33c99135c1f6b7feb975b1537a31bc5471a3a5fdcb47956090a6628abe9b4"
+      },
+      "stat": {
+        "bytes": 375816,
+        "ctime_ns": "1790469094336045489",
+        "device": 2304,
+        "inode": 18617266138,
+        "mtime_ns": "1790469094336045489"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 509906,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/disk_samples.jsonl",
+        "sha256": "3202b54f603895fe6d814f2e18b3a79508b50bdbd02906f1874bbbc755f476e1"
+      },
+      "stat": {
+        "bytes": 509906,
+        "ctime_ns": "1790469094456046486",
+        "device": 2304,
+        "inode": 18617266137,
+        "mtime_ns": "1790469094456046486"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 327,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-full-on-0926-20260926T231534Z/19/_CHECKPOINT_METADATA",
+        "sha256": "ff3178cafd8dc3ef9ae8be787fb99dfbce230cb070d26ca4447044b687c7ece3"
+      },
+      "stat": {
+        "bytes": 327,
+        "ctime_ns": "1790469046395647286",
+        "device": 2304,
+        "inode": 5706356644,
+        "mtime_ns": "1790469046395647286"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 28136,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-full-on-0926-20260926T231534Z/19/params/_METADATA",
+        "sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65"
+      },
+      "stat": {
+        "bytes": 28136,
+        "ctime_ns": "1790469046345646875",
+        "device": 2304,
+        "inode": 6175150682,
+        "mtime_ns": "1790469046345646875"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 57348,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/timing20-full-on-0926-20260926T231534Z.driver.log",
+        "sha256": "2914a0f12faac424db2c78efde58d1a70fe39a5d8b2bf05ad5fd7cfc069f93d5"
+      },
+      "stat": {
+        "bytes": 57348,
+        "ctime_ns": "1790469105606139250",
+        "device": 2304,
+        "inode": 24969325776,
+        "mtime_ns": "1790469105606139250"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 181840,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/full-on/core.records.tar.gz",
+        "sha256": "e008c02f8d85c2cf479c32f432f37af85eeb55ae2a3134cb77c1fb26f7408fdf"
+      },
+      "stat": {
+        "bytes": 181840,
+        "ctime_ns": "1790469743171374860",
+        "device": 2304,
+        "inode": 9195918960,
+        "mtime_ns": "1790469743171374860"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 60347,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-on-0926-20260926T231534Z.wrapper.log",
+        "sha256": "9e9a60667823529168cf95659e671576be65694a16356595093e76daf3fa19e5"
+      },
+      "stat": {
+        "bytes": 60347,
+        "ctime_ns": "1790469175906720623",
+        "device": 2304,
+        "inode": 24969325775,
+        "mtime_ns": "1790469175906720623"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1130,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-full-on-0926-20260926T231534Z/completion.summary.log",
+        "sha256": "63439535b4835298a3f8f15bbb9ceec344d929ade3c9792973e59da69241bb8b"
+      },
+      "stat": {
+        "bytes": 1130,
+        "ctime_ns": "1790469174536709326",
+        "device": 2304,
+        "inode": 18617266149,
+        "mtime_ns": "1790469174536709326"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 55985,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/full-on/git-ready/driver.summary.log",
+        "sha256": "dae96137f3b428fde24743b2d8452bbf86353285342e84447c26f76291ebbb26"
+      },
+      "stat": {
+        "bytes": 55985,
+        "ctime_ns": "1790469743191375022",
+        "device": 2304,
+        "inode": 9664098780,
+        "mtime_ns": "1790469743191375022"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 58984,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/full-on/git-ready/wrapper.summary.log",
+        "sha256": "2205877f1a4dd6c1778e4a984234aefa20598afa254ea7d60c385f8346e75db6"
+      },
+      "stat": {
+        "bytes": 58984,
+        "ctime_ns": "1790469743201375102",
+        "device": 2304,
+        "inode": 9664098781,
+        "mtime_ns": "1790469743201375102"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1130,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/full-on/git-ready/completion.summary.log",
+        "sha256": "63439535b4835298a3f8f15bbb9ceec344d929ade3c9792973e59da69241bb8b"
+      },
+      "stat": {
+        "bytes": 1130,
+        "ctime_ns": "1790469743201375102",
+        "device": 2304,
+        "inode": 9664098782,
+        "mtime_ns": "1790469743201375102"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 12529,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/full-on/log_checks.json",
+        "sha256": "26cb4aa96848b2b0f1a54b0607fdaddafa5d1f8dadc2674cab3bdc715fb69b0f"
+      },
+      "stat": {
+        "bytes": 12529,
+        "ctime_ns": "1790469743201375102",
+        "device": 2304,
+        "inode": 9195918961,
+        "mtime_ns": "1790469743201375102"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1520,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.identity.json",
+        "sha256": "6e9ece4cd09bd1d85a849187becec7500ae9fffa3deed6a84a576484a6a2d2cb"
+      },
+      "stat": {
+        "bytes": 1520,
+        "ctime_ns": "1790468508871244215",
+        "device": 2304,
+        "inode": 20729703415,
+        "mtime_ns": "1790468508871244215"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5328,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.exit.json",
+        "sha256": "3fab6671b10fda090cccfbf6a85e0beddff9c4d2e208d8b04fed89d5a326b6e6"
+      },
+      "stat": {
+        "bytes": 5328,
+        "ctime_ns": "1790469213237025996",
+        "device": 2304,
+        "inode": 20738363334,
+        "mtime_ns": "1790469213237025996"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3968,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.exit.capture.json",
+        "sha256": "8090e1f23a63ced4048e5255caec0ea5f2d12ccdb9c1c21ede2986cfbd220d3e"
+      },
+      "stat": {
+        "bytes": 3968,
+        "ctime_ns": "1790469213237025996",
+        "device": 2304,
+        "inode": 20738363337,
+        "mtime_ns": "1790469213237025996"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4176,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.launch.process.json",
+        "sha256": "214a9a3849f94e989405235f5b3a1290cfbb5029516b8b2316a7b794c4540d8b"
+      },
+      "stat": {
+        "bytes": 4176,
+        "ctime_ns": "1790468508891244387",
+        "device": 2304,
+        "inode": 20729703418,
+        "mtime_ns": "1790468508891244387"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 20398,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-build-preflight-0925/tmux-exit-guard-candidate-20260926/tmux_exit_guard.py",
+        "sha256": "f8dada4025dc49f260697e2fb768e922cbea7b8f98afe5cc8b98555648bff52b"
+      },
+      "stat": {
+        "bytes": 20398,
+        "ctime_ns": "1790458259245796899",
+        "device": 2304,
+        "inode": 24222831252,
+        "mtime_ns": "1790458259245796899"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 7943,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.command",
+        "sha256": "3a7862f979d08524b5ff97d6253c1c0d0947d368b4ec7d08c26e2cbac9393c6f"
+      },
+      "stat": {
+        "bytes": 7943,
+        "ctime_ns": "1790468508751243190",
+        "device": 2304,
+        "inode": 20729703414,
+        "mtime_ns": "1790468508751243190"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4952,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.exit.capture.stdout",
+        "sha256": "398cf1a7814b0bf6b336667ca55e9967dff543c7e774c8566035481903b2bb0a"
+      },
+      "stat": {
+        "bytes": 4952,
+        "ctime_ns": "1790469213237025996",
+        "device": 2304,
+        "inode": 20738363335,
+        "mtime_ns": "1790469213237025996"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 8992,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.launch.stdout",
+        "sha256": "3bf109831d23c294ae6cac52b4be8f09d2c35fd33bb43f9f109dcb4ea0584c16"
+      },
+      "stat": {
+        "bytes": 8992,
+        "ctime_ns": "1790468508891244387",
+        "device": 2304,
+        "inode": 20729703416,
+        "mtime_ns": "1790468508891244387"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1520,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-on-0926-20260926T231534Z/identity.json",
+        "sha256": "6e9ece4cd09bd1d85a849187becec7500ae9fffa3deed6a84a576484a6a2d2cb"
+      },
+      "stat": {
+        "bytes": 1520,
+        "ctime_ns": "1790469743201375102",
+        "device": 2304,
+        "inode": 10206143773,
+        "mtime_ns": "1790469743201375102"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5328,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-on-0926-20260926T231534Z/exit.json",
+        "sha256": "3fab6671b10fda090cccfbf6a85e0beddff9c4d2e208d8b04fed89d5a326b6e6"
+      },
+      "stat": {
+        "bytes": 5328,
+        "ctime_ns": "1790469743201375102",
+        "device": 2304,
+        "inode": 10206143774,
+        "mtime_ns": "1790469743201375102"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3968,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-on-0926-20260926T231534Z/capture.json",
+        "sha256": "8090e1f23a63ced4048e5255caec0ea5f2d12ccdb9c1c21ede2986cfbd220d3e"
+      },
+      "stat": {
+        "bytes": 3968,
+        "ctime_ns": "1790469743211375185",
+        "device": 2304,
+        "inode": 10206143775,
+        "mtime_ns": "1790469743211375185"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4176,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-on-0926-20260926T231534Z/launch.json",
+        "sha256": "214a9a3849f94e989405235f5b3a1290cfbb5029516b8b2316a7b794c4540d8b"
+      },
+      "stat": {
+        "bytes": 4176,
+        "ctime_ns": "1790469743211375185",
+        "device": 2304,
+        "inode": 10206143776,
+        "mtime_ns": "1790469743211375185"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4952,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-on-0926-20260926T231534Z/capture.stdout",
+        "sha256": "398cf1a7814b0bf6b336667ca55e9967dff543c7e774c8566035481903b2bb0a"
+      },
+      "stat": {
+        "bytes": 4952,
+        "ctime_ns": "1790469743211375185",
+        "device": 2304,
+        "inode": 10206143777,
+        "mtime_ns": "1790469743211375185"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.exit.capture.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469213237025996",
+        "device": 2304,
+        "inode": 20738363336,
+        "mtime_ns": "1790469213237025996"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-on-0926-20260926T231534Z/capture.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469743211375185",
+        "device": 2304,
+        "inode": 10206143778,
+        "mtime_ns": "1790469743211375185"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 8992,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-on-0926-20260926T231534Z/launch.stdout",
+        "sha256": "3bf109831d23c294ae6cac52b4be8f09d2c35fd33bb43f9f109dcb4ea0584c16"
+      },
+      "stat": {
+        "bytes": 8992,
+        "ctime_ns": "1790469743211375185",
+        "device": 2304,
+        "inode": 10206143779,
+        "mtime_ns": "1790469743211375185"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-on-0926-20260926T231534Z.launch.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790468508891244387",
+        "device": 2304,
+        "inode": 20729703417,
+        "mtime_ns": "1790468508891244387"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-on-0926-20260926T231534Z/launch.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469743211375185",
+        "device": 2304,
+        "inode": 10206143780,
+        "mtime_ns": "1790469743211375185"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 17062,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/full-on/archive_checks.json",
+        "sha256": "088ff2090d17ab0da5699c2242cc4fdc3827d0c3c80f44319175031c897d572f"
+      },
+      "stat": {
+        "bytes": 17062,
+        "ctime_ns": "1790469743211375185",
+        "device": 2304,
+        "inode": 9195918962,
+        "mtime_ns": "1790469743211375185"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 21035,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/launch.json",
+        "sha256": "bf4161a15796da8e3d0843cbc17f46f6d42247b0eddf82c882342d40f7f3e9a9"
+      },
+      "stat": {
+        "bytes": 21035,
+        "ctime_ns": "1790468493371124626",
+        "device": 2304,
+        "inode": 12889873826,
+        "mtime_ns": "1790468493371124626"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 348,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/runtime.json",
+        "sha256": "32e264d3b540ded87dbead3e3680bc5c75830889723f38c3321109dcdab55bdf"
+      },
+      "stat": {
+        "bytes": 348,
+        "ctime_ns": "1790468508621242080",
+        "device": 2304,
+        "inode": 12889873832,
+        "mtime_ns": "1790468508621242080"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1274,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/run_meta.json",
+        "sha256": "e75da726df82725921fda4e5d081f8f63dd3cceff2b38ec0924bbd3115d7c934"
+      },
+      "stat": {
+        "bytes": 1274,
+        "ctime_ns": "1790469044165629070",
+        "device": 2304,
+        "inode": 12889873835,
+        "mtime_ns": "1790469044165629070"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 415,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/metrics.jsonl",
+        "sha256": "ca9db08f0cc700947e10c0b08d97299ca272a8c30f395b87b32d49d903110d3c"
+      },
+      "stat": {
+        "bytes": 415,
+        "ctime_ns": "1790468662802519217",
+        "device": 2304,
+        "inode": 12889873834,
+        "mtime_ns": "1790468662802519217"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 20697,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/completion.json",
+        "sha256": "a0d7f303df5ac4cfcd9b160def2e77be4dc0f3d145ce627a16b6795461075442"
+      },
+      "stat": {
+        "bytes": 20697,
+        "ctime_ns": "1790469118396245296",
+        "device": 2304,
+        "inode": 12889873838,
+        "mtime_ns": "1790469118396245296"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 163554,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/gpu.csv",
+        "sha256": "af63bec8256f097bbd62be6ba06c78f68cb967af17326c5b366a224c7a7a1c2a"
+      },
+      "stat": {
+        "bytes": 163554,
+        "ctime_ns": "1790469052385696213",
+        "device": 2304,
+        "inode": 12889873827,
+        "mtime_ns": "1790469052385696213"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/gpu.csv.err",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790468493391124778",
+        "device": 2304,
+        "inode": 12889873828,
+        "mtime_ns": "1790468493391124778"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 16306,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/final/start.json",
+        "sha256": "aff0584d4abb88c3deb3065372840c9f905ac2de1e67e67555194706f8c20ce1"
+      },
+      "stat": {
+        "bytes": 16306,
+        "ctime_ns": "1790468510751260280",
+        "device": 2304,
+        "inode": 18617266129,
+        "mtime_ns": "1790468510751260280"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 47662,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/final/final.json",
+        "sha256": "9e2c31adcf7850d2a05a82ac846e772448040de0eee89772956f5d6b4f8ff566"
+      },
+      "stat": {
+        "bytes": 47662,
+        "ctime_ns": "1790469041715609054",
+        "device": 2304,
+        "inode": 18617266145,
+        "mtime_ns": "1790469041715609054"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 196,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/final/checkpoint_wait_done.json",
+        "sha256": "0c5000e5862417ca69b17c99b9a743bdc5179b8367a5c8ef7ecd1c872ec1b0ce"
+      },
+      "stat": {
+        "bytes": 196,
+        "ctime_ns": "1790469041715609054",
+        "device": 2304,
+        "inode": 18617266146,
+        "mtime_ns": "1790469041715609054"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 41491,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/timing_eq/metadata.json",
+        "sha256": "b7702ded93380de9849515939540cb08cf636027d12b7b3748b7b8ca4aec8ece"
+      },
+      "stat": {
+        "bytes": 41491,
+        "ctime_ns": "1790469045865642954",
+        "device": 2304,
+        "inode": 17219367933,
+        "mtime_ns": "1790469045865642954"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1068,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/timing_eq/manifest.json",
+        "sha256": "9c2e82d379acfb1f31c923d2f830a15af6524d2090e2eb6f003972a420af10c3"
+      },
+      "stat": {
+        "bytes": 1068,
+        "ctime_ns": "1790469045865642954",
+        "device": 2304,
+        "inode": 17219367934,
+        "mtime_ns": "1790469045865642954"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 71483,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/timing_eq/fetch_inputs.jsonl",
+        "sha256": "8a6d6426911d70b960c853ac71a4d500c0959604e5274210ce35c4b76cce49c8"
+      },
+      "stat": {
+        "bytes": 71483,
+        "ctime_ns": "1790468734633053114",
+        "device": 2304,
+        "inode": 17219367901,
+        "mtime_ns": "1790468734633053114"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 75637,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/timing_eq/model_inputs.jsonl",
+        "sha256": "75c0bdf6da8910580b8d2a4aa1601dff1bbc1e29ce94f65a691dff302fc0abd1"
+      },
+      "stat": {
+        "bytes": 75637,
+        "ctime_ns": "1790468731933031545",
+        "device": 2304,
+        "inode": 17219367902,
+        "mtime_ns": "1790468731933031545"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 142434,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/timing_eq/full_state.json",
+        "sha256": "4082ef1d9cb5801e9179d93e529fd180bd34736dc8723e04625e03d348d2dafa"
+      },
+      "stat": {
+        "bytes": 142434,
+        "ctime_ns": "1790468978125083646",
+        "device": 2304,
+        "inode": 17219367930,
+        "mtime_ns": "1790468978125083646"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1682,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/speed_start.json",
+        "sha256": "03dc7d15cfbb66206074988e833ea9343800d96b2e4c48d1167365aaad3c06cc"
+      },
+      "stat": {
+        "bytes": 1682,
+        "ctime_ns": "1790468500631179280",
+        "device": 2304,
+        "inode": 12889873829,
+        "mtime_ns": "1790468500631179280"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 2816,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/speed_run.json",
+        "sha256": "42a0f735b5d6cfc14f5eab187425fd7b58d339d7b651223bc3595bbe1be322d0"
+      },
+      "stat": {
+        "bytes": 2816,
+        "ctime_ns": "1790469045265638056",
+        "device": 2304,
+        "inode": 12889873836,
+        "mtime_ns": "1790469045265638056"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4519,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/step_timing.jsonl",
+        "sha256": "c6ec291bdf8aa78324616a800671fcf5ea0cd647509868283d81d1174f5ca3de"
+      },
+      "stat": {
+        "bytes": 4519,
+        "ctime_ns": "1790469041715609054",
+        "device": 2304,
+        "inode": 12889873833,
+        "mtime_ns": "1790469041715609054"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 374409,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/host_samples.jsonl",
+        "sha256": "1862673275e6509d30140e1e8c88543560a3ad4d5ff0dc420d807cdeea408c4a"
+      },
+      "stat": {
+        "bytes": 374409,
+        "ctime_ns": "1790469045065636422",
+        "device": 2304,
+        "inode": 12889873831,
+        "mtime_ns": "1790469045065636422"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 511361,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/disk_samples.jsonl",
+        "sha256": "64d779dea540303b77184b9f746ba397341343f47e7463cd44429ca3ed0ac0e7"
+      },
+      "stat": {
+        "bytes": 511361,
+        "ctime_ns": "1790469045265638056",
+        "device": 2304,
+        "inode": 12889873830,
+        "mtime_ns": "1790469045265638056"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 327,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-count-on-0926-20260926T231534Z/19/_CHECKPOINT_METADATA",
+        "sha256": "ccd2058fee1d5b45db15aba28ad2bfaf7380b3228022581494c24a008d5fa043"
+      },
+      "stat": {
+        "bytes": 327,
+        "ctime_ns": "1790468989175176665",
+        "device": 2304,
+        "inode": 3493402513,
+        "mtime_ns": "1790468989175176665"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 28136,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite/timing20-count-on-0926-20260926T231534Z/19/params/_METADATA",
+        "sha256": "fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65"
+      },
+      "stat": {
+        "bytes": 28136,
+        "ctime_ns": "1790468989165176581",
+        "device": 2304,
+        "inode": 4027843852,
+        "mtime_ns": "1790468989165176581"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 57557,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/timing20-count-on-0926-20260926T231534Z.driver.log",
+        "sha256": "eb208bd6828428bda1da8140aabed25bc3a9175960af8044841c2cc45f687c65"
+      },
+      "stat": {
+        "bytes": 57557,
+        "ctime_ns": "1790469052415696461",
+        "device": 2304,
+        "inode": 24969325774,
+        "mtime_ns": "1790469052415696461"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 182302,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/count-on/core.records.tar.gz",
+        "sha256": "62b3dd17c8285b4f34ca446ff9f55141f126109074d77ed1506f5f0e162d1580"
+      },
+      "stat": {
+        "bytes": 182302,
+        "ctime_ns": "1790469743311375997",
+        "device": 2304,
+        "inode": 10474956530,
+        "mtime_ns": "1790469743311375997"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 60598,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-on-0926-20260926T231534Z.wrapper.log",
+        "sha256": "2a116da9431b49bcbba42b48bbd868c8496f8bb2db90ad667508317b784071b2"
+      },
+      "stat": {
+        "bytes": 60598,
+        "ctime_ns": "1790469119556254910",
+        "device": 2304,
+        "inode": 24969325773,
+        "mtime_ns": "1790469119556254910"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1136,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k/timing20-count-on-0926-20260926T231534Z/completion.summary.log",
+        "sha256": "9dc17c4544acc923128f9185be6add7c8bd429c5e1fdc80d25d82146424f1619"
+      },
+      "stat": {
+        "bytes": 1136,
+        "ctime_ns": "1790469118396245296",
+        "device": 2304,
+        "inode": 12889873837,
+        "mtime_ns": "1790469118396245296"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 56194,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/count-on/git-ready/driver.summary.log",
+        "sha256": "f37355cb1a391dd6d43108f2650e925035a32019ee35bc42a3111635782a6c25"
+      },
+      "stat": {
+        "bytes": 56194,
+        "ctime_ns": "1790469743321376077",
+        "device": 2304,
+        "inode": 11028312907,
+        "mtime_ns": "1790469743321376077"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 59235,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/count-on/git-ready/wrapper.summary.log",
+        "sha256": "ea77a4c722e99debe63b7971bcd7cfb62b89d316bdb08073e757c6dab79cdac3"
+      },
+      "stat": {
+        "bytes": 59235,
+        "ctime_ns": "1790469743331376160",
+        "device": 2304,
+        "inode": 11028312908,
+        "mtime_ns": "1790469743331376160"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1136,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/count-on/git-ready/completion.summary.log",
+        "sha256": "9dc17c4544acc923128f9185be6add7c8bd429c5e1fdc80d25d82146424f1619"
+      },
+      "stat": {
+        "bytes": 1136,
+        "ctime_ns": "1790469743331376160",
+        "device": 2304,
+        "inode": 11028312909,
+        "mtime_ns": "1790469743331376160"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 12538,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/count-on/log_checks.json",
+        "sha256": "96f263c84d5670194566bef4f9e506799fc58dc0bbf60dbc7b66443ebbdddf17"
+      },
+      "stat": {
+        "bytes": 12538,
+        "ctime_ns": "1790469743331376160",
+        "device": 2304,
+        "inode": 10474956531,
+        "mtime_ns": "1790469743331376160"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1525,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.identity.json",
+        "sha256": "87007de2ddc56fbb4d2a125c361a729811fd2d271fc6ae4aacb32ba521045b34"
+      },
+      "stat": {
+        "bytes": 1525,
+        "ctime_ns": "1790468457530824900",
+        "device": 2304,
+        "inode": 20729703406,
+        "mtime_ns": "1790468457530824900"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5344,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.exit.json",
+        "sha256": "952e669f55fd74682671ce8461fb1a4bde0780c4317f2162b1577d2d91d01967"
+      },
+      "stat": {
+        "bytes": 5344,
+        "ctime_ns": "1790469190456840214",
+        "device": 2304,
+        "inode": 20729703421,
+        "mtime_ns": "1790469190456840214"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3975,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.exit.capture.json",
+        "sha256": "fbcf6425364036d9ca363575d4d3ffbd6f6592d77fc4c52c5910e2366075f8d0"
+      },
+      "stat": {
+        "bytes": 3975,
+        "ctime_ns": "1790469190466840293",
+        "device": 2304,
+        "inode": 20738363328,
+        "mtime_ns": "1790469190466840293"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4185,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.launch.process.json",
+        "sha256": "646400b0cb9636f92f2ad0014c0062e65b7ce1703f00a221e6d6b7b4c1d30524"
+      },
+      "stat": {
+        "bytes": 4185,
+        "ctime_ns": "1790468457550825075",
+        "device": 2304,
+        "inode": 20729703409,
+        "mtime_ns": "1790468457550825075"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 7978,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.command",
+        "sha256": "2690031ef39e82bfde0359f69399fe16cd1c43ddda78b0eb9e97156def0f6f72"
+      },
+      "stat": {
+        "bytes": 7978,
+        "ctime_ns": "1790468457410823844",
+        "device": 2304,
+        "inode": 20729703405,
+        "mtime_ns": "1790468457410823844"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4968,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.exit.capture.stdout",
+        "sha256": "f9252f265f4eae585039e376ae2b82288877b11b4e401fcaa9ed942772d251b5"
+      },
+      "stat": {
+        "bytes": 4968,
+        "ctime_ns": "1790469190466840293",
+        "device": 2304,
+        "inode": 20729703422,
+        "mtime_ns": "1790469190466840293"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 9020,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.launch.stdout",
+        "sha256": "c674ea8913dfeb7bff5b2ca7a5a11162e7c0e64a87e97f217a00d62ce46392d6"
+      },
+      "stat": {
+        "bytes": 9020,
+        "ctime_ns": "1790468457550825075",
+        "device": 2304,
+        "inode": 20729703407,
+        "mtime_ns": "1790468457550825075"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1525,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-on-0926-20260926T231534Z/identity.json",
+        "sha256": "87007de2ddc56fbb4d2a125c361a729811fd2d271fc6ae4aacb32ba521045b34"
+      },
+      "stat": {
+        "bytes": 1525,
+        "ctime_ns": "1790469743341376239",
+        "device": 2304,
+        "inode": 11275791648,
+        "mtime_ns": "1790469743341376239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5344,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-on-0926-20260926T231534Z/exit.json",
+        "sha256": "952e669f55fd74682671ce8461fb1a4bde0780c4317f2162b1577d2d91d01967"
+      },
+      "stat": {
+        "bytes": 5344,
+        "ctime_ns": "1790469743341376239",
+        "device": 2304,
+        "inode": 11275791649,
+        "mtime_ns": "1790469743341376239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3975,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-on-0926-20260926T231534Z/capture.json",
+        "sha256": "fbcf6425364036d9ca363575d4d3ffbd6f6592d77fc4c52c5910e2366075f8d0"
+      },
+      "stat": {
+        "bytes": 3975,
+        "ctime_ns": "1790469743341376239",
+        "device": 2304,
+        "inode": 11275791650,
+        "mtime_ns": "1790469743341376239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4185,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-on-0926-20260926T231534Z/launch.json",
+        "sha256": "646400b0cb9636f92f2ad0014c0062e65b7ce1703f00a221e6d6b7b4c1d30524"
+      },
+      "stat": {
+        "bytes": 4185,
+        "ctime_ns": "1790469743341376239",
+        "device": 2304,
+        "inode": 11275791651,
+        "mtime_ns": "1790469743341376239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4968,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-on-0926-20260926T231534Z/capture.stdout",
+        "sha256": "f9252f265f4eae585039e376ae2b82288877b11b4e401fcaa9ed942772d251b5"
+      },
+      "stat": {
+        "bytes": 4968,
+        "ctime_ns": "1790469743341376239",
+        "device": 2304,
+        "inode": 11275791652,
+        "mtime_ns": "1790469743341376239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.exit.capture.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469190466840293",
+        "device": 2304,
+        "inode": 20729703423,
+        "mtime_ns": "1790469190466840293"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-on-0926-20260926T231534Z/capture.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469743341376239",
+        "device": 2304,
+        "inode": 11275791653,
+        "mtime_ns": "1790469743341376239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 9020,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-on-0926-20260926T231534Z/launch.stdout",
+        "sha256": "c674ea8913dfeb7bff5b2ca7a5a11162e7c0e64a87e97f217a00d62ce46392d6"
+      },
+      "stat": {
+        "bytes": 9020,
+        "ctime_ns": "1790469743341376239",
+        "device": 2304,
+        "inode": 11275791654,
+        "mtime_ns": "1790469743341376239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-on-0926-20260926T231534Z.launch.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790468457550825075",
+        "device": 2304,
+        "inode": 20729703408,
+        "mtime_ns": "1790468457550825075"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-on-0926-20260926T231534Z/launch.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469743341376239",
+        "device": 2304,
+        "inode": 11275791655,
+        "mtime_ns": "1790469743341376239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 17103,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/count-on/archive_checks.json",
+        "sha256": "8af4950768f668fe960bba5ff05744f510a06cbf5bbbae172228985e5cf7aaef"
+      },
+      "stat": {
+        "bytes": 17103,
+        "ctime_ns": "1790469743351376322",
+        "device": 2304,
+        "inode": 10474956532,
+        "mtime_ns": "1790469743351376322"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 2252,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-count-judge-20260926T231534Z.wrapper.log",
+        "sha256": "2bb099eaf911edd2066a7b61a8505a6a0f49005454dd5f6286ad5506d8f66749"
+      },
+      "stat": {
+        "bytes": 2252,
+        "ctime_ns": "1790469191286846980",
+        "device": 2304,
+        "inode": 24969325779,
+        "mtime_ns": "1790469191286846980"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 2252,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/count-judge/git-ready/wrapper.summary.log",
+        "sha256": "2bb099eaf911edd2066a7b61a8505a6a0f49005454dd5f6286ad5506d8f66749"
+      },
+      "stat": {
+        "bytes": 2252,
+        "ctime_ns": "1790469743351376322",
+        "device": 2304,
+        "inode": 12085908268,
+        "mtime_ns": "1790469743351376322"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1618,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/count-judge/log_checks.json",
+        "sha256": "4b17e943c4546e6c5cfe02c400dee4470a9f04878e633ff0846a8303684b6961"
+      },
+      "stat": {
+        "bytes": 1618,
+        "ctime_ns": "1790469743351376322",
+        "device": 2304,
+        "inode": 11569659705,
+        "mtime_ns": "1790469743351376322"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1515,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.identity.json",
+        "sha256": "0752a5d674e9c7766b56b62cb14d7d1d84f2686bce75b7ad54df1537e65a06af"
+      },
+      "stat": {
+        "bytes": 1515,
+        "ctime_ns": "1790469190746842577",
+        "device": 2304,
+        "inode": 20738363330,
+        "mtime_ns": "1790469190746842577"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5401,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.json",
+        "sha256": "ab18c34751976a30e99b2dbdb93a831c4402da6879f5938fd795647aaaed002b"
+      },
+      "stat": {
+        "bytes": 5401,
+        "ctime_ns": "1790469225517126802",
+        "device": 2304,
+        "inode": 20738363343,
+        "mtime_ns": "1790469225517126802"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3961,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.capture.json",
+        "sha256": "62fc7fd6d990632d0bddd9319a40af10ff707b165673ce616122856f3ff2cb00"
+      },
+      "stat": {
+        "bytes": 3961,
+        "ctime_ns": "1790469225517126802",
+        "device": 2304,
+        "inode": 20738363346,
+        "mtime_ns": "1790469225517126802"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4167,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.launch.process.json",
+        "sha256": "435db7633a7da50bf5f47cc959c5648ffec76b082cb3cc67299b56c5ba67847f"
+      },
+      "stat": {
+        "bytes": 4167,
+        "ctime_ns": "1790469190766842742",
+        "device": 2304,
+        "inode": 20738363333,
+        "mtime_ns": "1790469190766842742"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3410,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.command",
+        "sha256": "9d7524adc3928c235fe2bb9e528e51f97c8d59f0b28422d2a03f1bd013282d57"
+      },
+      "stat": {
+        "bytes": 3410,
+        "ctime_ns": "1790469190626841598",
+        "device": 2304,
+        "inode": 20738363329,
+        "mtime_ns": "1790469190626841598"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5025,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.capture.stdout",
+        "sha256": "7ea40c7b9f9048d83eae2914bcc15afe6c05ef8484bd7acb9a3fef91ce39b6ec"
+      },
+      "stat": {
+        "bytes": 5025,
+        "ctime_ns": "1790469225517126802",
+        "device": 2304,
+        "inode": 20738363344,
+        "mtime_ns": "1790469225517126802"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 8964,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.launch.stdout",
+        "sha256": "f6c55e9f70588e2dacfdf634481aee27e2e53326bbc9a7f1f96ec485aeec50a2"
+      },
+      "stat": {
+        "bytes": 8964,
+        "ctime_ns": "1790469190756842659",
+        "device": 2304,
+        "inode": 20738363331,
+        "mtime_ns": "1790469190756842659"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1515,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/identity.json",
+        "sha256": "0752a5d674e9c7766b56b62cb14d7d1d84f2686bce75b7ad54df1537e65a06af"
+      },
+      "stat": {
+        "bytes": 1515,
+        "ctime_ns": "1790469743351376322",
+        "device": 2304,
+        "inode": 12401808268,
+        "mtime_ns": "1790469743351376322"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5401,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/exit.json",
+        "sha256": "ab18c34751976a30e99b2dbdb93a831c4402da6879f5938fd795647aaaed002b"
+      },
+      "stat": {
+        "bytes": 5401,
+        "ctime_ns": "1790469743351376322",
+        "device": 2304,
+        "inode": 12401808269,
+        "mtime_ns": "1790469743351376322"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3961,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/capture.json",
+        "sha256": "62fc7fd6d990632d0bddd9319a40af10ff707b165673ce616122856f3ff2cb00"
+      },
+      "stat": {
+        "bytes": 3961,
+        "ctime_ns": "1790469743351376322",
+        "device": 2304,
+        "inode": 12401808270,
+        "mtime_ns": "1790469743351376322"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4167,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/launch.json",
+        "sha256": "435db7633a7da50bf5f47cc959c5648ffec76b082cb3cc67299b56c5ba67847f"
+      },
+      "stat": {
+        "bytes": 4167,
+        "ctime_ns": "1790469743351376322",
+        "device": 2304,
+        "inode": 12401808271,
+        "mtime_ns": "1790469743351376322"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5025,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/capture.stdout",
+        "sha256": "7ea40c7b9f9048d83eae2914bcc15afe6c05ef8484bd7acb9a3fef91ce39b6ec"
+      },
+      "stat": {
+        "bytes": 5025,
+        "ctime_ns": "1790469743351376322",
+        "device": 2304,
+        "inode": 12401808272,
+        "mtime_ns": "1790469743351376322"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.exit.capture.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469225517126802",
+        "device": 2304,
+        "inode": 20738363345,
+        "mtime_ns": "1790469225517126802"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/capture.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469743351376322",
+        "device": 2304,
+        "inode": 12401808273,
+        "mtime_ns": "1790469743351376322"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 8964,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/launch.stdout",
+        "sha256": "f6c55e9f70588e2dacfdf634481aee27e2e53326bbc9a7f1f96ec485aeec50a2"
+      },
+      "stat": {
+        "bytes": 8964,
+        "ctime_ns": "1790469743351376322",
+        "device": 2304,
+        "inode": 12401808274,
+        "mtime_ns": "1790469743351376322"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-count-judge-20260926T231534Z.launch.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469190766842742",
+        "device": 2304,
+        "inode": 20738363332,
+        "mtime_ns": "1790469190766842742"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-count-judge-20260926T231534Z/launch.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469743351376322",
+        "device": 2304,
+        "inode": 12401808275,
+        "mtime_ns": "1790469743351376322"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 2243,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig80k-timing20-full-judge-20260926T231534Z.wrapper.log",
+        "sha256": "d55f91c1a93ac438d9fabe28f8f1d71d343d7ec6b583b7f6bb66e74d62549e22"
+      },
+      "stat": {
+        "bytes": 2243,
+        "ctime_ns": "1790469214077032846",
+        "device": 2304,
+        "inode": 24969325780,
+        "mtime_ns": "1790469214077032846"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 2243,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/full-judge/git-ready/wrapper.summary.log",
+        "sha256": "d55f91c1a93ac438d9fabe28f8f1d71d343d7ec6b583b7f6bb66e74d62549e22"
+      },
+      "stat": {
+        "bytes": 2243,
+        "ctime_ns": "1790469743361376402",
+        "device": 2304,
+        "inode": 17220972736,
+        "mtime_ns": "1790469743361376402"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1615,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/full-judge/log_checks.json",
+        "sha256": "77cb20f71f33e2523a91113047790ffddea7cd82a6da52eb8001c69cefb84492"
+      },
+      "stat": {
+        "bytes": 1615,
+        "ctime_ns": "1790469743361376402",
+        "device": 2304,
+        "inode": 12656267925,
+        "mtime_ns": "1790469743361376402"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1510,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.identity.json",
+        "sha256": "93b6902fcad440aa96b943ce7e86ffb30a35d44e7b48d8802358a0d16d7a8fa4"
+      },
+      "stat": {
+        "bytes": 1510,
+        "ctime_ns": "1790469213527028360",
+        "device": 2304,
+        "inode": 20738363339,
+        "mtime_ns": "1790469213527028360"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5389,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.json",
+        "sha256": "cf71e12c26af837cb9a03bedca56432de726f8a8ace92a79edd0425e52c99a44"
+      },
+      "stat": {
+        "bytes": 5389,
+        "ctime_ns": "1790469225647127873",
+        "device": 2304,
+        "inode": 20738363347,
+        "mtime_ns": "1790469225647127873"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3954,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.capture.json",
+        "sha256": "445a8ec451b4f00c24fe8bee1e275cac6eda12e434c5d7aea2a45d1ee1585a9f"
+      },
+      "stat": {
+        "bytes": 3954,
+        "ctime_ns": "1790469225657127958",
+        "device": 2304,
+        "inode": 20738363350,
+        "mtime_ns": "1790469225657127958"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4158,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.launch.process.json",
+        "sha256": "7a73811f3748ddc31a796f676ab097f2f70a25e94aae5d91b6b9d00f41ef06c1"
+      },
+      "stat": {
+        "bytes": 4158,
+        "ctime_ns": "1790469213537028442",
+        "device": 2304,
+        "inode": 20738363342,
+        "mtime_ns": "1790469213537028442"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3405,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.command",
+        "sha256": "69ae38b006811d15fc6f847f1a7b48a2d68a81b3ce57cbdf570003a1b3c14ba3"
+      },
+      "stat": {
+        "bytes": 3405,
+        "ctime_ns": "1790469213397027302",
+        "device": 2304,
+        "inode": 20738363338,
+        "mtime_ns": "1790469213397027302"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5013,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.capture.stdout",
+        "sha256": "d934bd703b6a92cecab0d6edf8bfa4aceee952b0341e3fdb9b0f0a6a8b80cffc"
+      },
+      "stat": {
+        "bytes": 5013,
+        "ctime_ns": "1790469225657127958",
+        "device": 2304,
+        "inode": 20738363348,
+        "mtime_ns": "1790469225657127958"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 8932,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.launch.stdout",
+        "sha256": "4f5d9b9fcfef975e3828b4b66a98c6e57abdc9122f9e3a25645c34e3dca14abe"
+      },
+      "stat": {
+        "bytes": 8932,
+        "ctime_ns": "1790469213537028442",
+        "device": 2304,
+        "inode": 20738363340,
+        "mtime_ns": "1790469213537028442"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1510,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/identity.json",
+        "sha256": "93b6902fcad440aa96b943ce7e86ffb30a35d44e7b48d8802358a0d16d7a8fa4"
+      },
+      "stat": {
+        "bytes": 1510,
+        "ctime_ns": "1790469743361376402",
+        "device": 2304,
+        "inode": 17220972738,
+        "mtime_ns": "1790469743361376402"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5389,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/exit.json",
+        "sha256": "cf71e12c26af837cb9a03bedca56432de726f8a8ace92a79edd0425e52c99a44"
+      },
+      "stat": {
+        "bytes": 5389,
+        "ctime_ns": "1790469743361376402",
+        "device": 2304,
+        "inode": 17220972739,
+        "mtime_ns": "1790469743361376402"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3954,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/capture.json",
+        "sha256": "445a8ec451b4f00c24fe8bee1e275cac6eda12e434c5d7aea2a45d1ee1585a9f"
+      },
+      "stat": {
+        "bytes": 3954,
+        "ctime_ns": "1790469743361376402",
+        "device": 2304,
+        "inode": 17220972740,
+        "mtime_ns": "1790469743361376402"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4158,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/launch.json",
+        "sha256": "7a73811f3748ddc31a796f676ab097f2f70a25e94aae5d91b6b9d00f41ef06c1"
+      },
+      "stat": {
+        "bytes": 4158,
+        "ctime_ns": "1790469743361376402",
+        "device": 2304,
+        "inode": 17220972741,
+        "mtime_ns": "1790469743361376402"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5013,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/capture.stdout",
+        "sha256": "d934bd703b6a92cecab0d6edf8bfa4aceee952b0341e3fdb9b0f0a6a8b80cffc"
+      },
+      "stat": {
+        "bytes": 5013,
+        "ctime_ns": "1790469743361376402",
+        "device": 2304,
+        "inode": 17220972742,
+        "mtime_ns": "1790469743361376402"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.exit.capture.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469225657127958",
+        "device": 2304,
+        "inode": 20738363349,
+        "mtime_ns": "1790469225657127958"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/capture.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469743361376402",
+        "device": 2304,
+        "inode": 17220972743,
+        "mtime_ns": "1790469743361376402"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 8932,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/launch.stdout",
+        "sha256": "4f5d9b9fcfef975e3828b4b66a98c6e57abdc9122f9e3a25645c34e3dca14abe"
+      },
+      "stat": {
+        "bytes": 8932,
+        "ctime_ns": "1790469743361376402",
+        "device": 2304,
+        "inode": 17220972744,
+        "mtime_ns": "1790469743361376402"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-commands-20260926T231534Z/orig80k-timing20-full-judge-20260926T231534Z.launch.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469213537028442",
+        "device": 2304,
+        "inode": 20738363341,
+        "mtime_ns": "1790469213537028442"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/on-and-failed-judges-20260927/exit/orig80k-timing20-full-judge-20260926T231534Z/launch.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790469743361376402",
+        "device": 2304,
+        "inode": 17220972745,
+        "mtime_ns": "1790469743361376402"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 85740,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/count-off/core.records.tar.gz",
+        "sha256": "0f7f6dc225b6758644ca29f4da89a380bf5386a1dfd5298378c842279cbddbcd"
+      },
+      "stat": {
+        "bytes": 85740,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 2541828929,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 27906,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/count-off/archive_checks.json",
+        "sha256": "8835bda64dcca0c1eeb7f8ed170250120f50d90342d029cf1aa8d95e82b7c4a9"
+      },
+      "stat": {
+        "bytes": 27906,
+        "ctime_ns": "1790468956494901323",
+        "device": 2304,
+        "inode": 2541828931,
+        "mtime_ns": "1790468956494901323"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 58040,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/count-off/git-ready/driver.summary.log",
+        "sha256": "d5fad9147743b219b1a5f4ba14e601b77cd88faa6008443f113810518667daae"
+      },
+      "stat": {
+        "bytes": 58040,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 3015488448,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 61093,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/count-off/git-ready/wrapper.summary.log",
+        "sha256": "75dae2d0eabb303b016925176066c81dc9432ed0b968118cb9dcc0e45da1bde8"
+      },
+      "stat": {
+        "bytes": 61093,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 3015488449,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1142,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/count-off/git-ready/completion.summary.log",
+        "sha256": "ccc3962ff0d829ba197296efab72fdab09d0917e529884d6a509e2814ad83a4f"
+      },
+      "stat": {
+        "bytes": 1142,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 3015488450,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 12367,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/count-off/log_checks.json",
+        "sha256": "5f36aae86ea23693e4a0daa36a2e3c5ecfe60554cd6d4312710c3dbaf157886a"
+      },
+      "stat": {
+        "bytes": 12367,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 2541828930,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3982,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-count-off-0926-20260926T231534Z/capture.json",
+        "sha256": "4dc8e9f0a83f548a188e732e4e585ba6d77dbf904b66d025da4d4dac12cf75f1"
+      },
+      "stat": {
+        "bytes": 3982,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 3493402506,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-count-off-0926-20260926T231534Z/capture.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 3493402509,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4980,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-count-off-0926-20260926T231534Z/capture.stdout",
+        "sha256": "0c2c9d04e7a71032c08fc56bf0c57e101f8bc29e25bb2ddf7dedaeb4781beef5"
+      },
+      "stat": {
+        "bytes": 4980,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 3493402508,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5356,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-count-off-0926-20260926T231534Z/exit.json",
+        "sha256": "593ce3c522814386238fca98afa94499838948325cb9a204753a3c9bb82a61eb"
+      },
+      "stat": {
+        "bytes": 5356,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 3493402505,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1530,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-count-off-0926-20260926T231534Z/identity.json",
+        "sha256": "7ce407c5dc5a2c2a2aa374f4f519c905ea17a25c0a8b2a54dc4facc9eb61bc5d"
+      },
+      "stat": {
+        "bytes": 1530,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 3493402504,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4194,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-count-off-0926-20260926T231534Z/launch.json",
+        "sha256": "f2531f2ab7327481ea340112304260238d91c586d587979fdde32a3c7a8332e6"
+      },
+      "stat": {
+        "bytes": 4194,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 3493402507,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-count-off-0926-20260926T231534Z/launch.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 3493402511,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 9052,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-count-off-0926-20260926T231534Z/launch.stdout",
+        "sha256": "0c1fb8f7d27a4a6e65b19b615bf0670b845ee24098a9502b3235f94af111f158"
+      },
+      "stat": {
+        "bytes": 9052,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 3493402510,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 86714,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/full-off/core.records.tar.gz",
+        "sha256": "c3aeaa1711b43f936e905bb9e42b62abcdfaebfabc107675695aa731aa6e61fc"
+      },
+      "stat": {
+        "bytes": 86714,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 1345334694,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 27865,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/full-off/archive_checks.json",
+        "sha256": "298b947ed93a3a95b40edd283fc747d6933d940fc0ea9cd31346660e9a35c269"
+      },
+      "stat": {
+        "bytes": 27865,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 1345334696,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 57835,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/full-off/git-ready/driver.summary.log",
+        "sha256": "4914d34921751234d320c1fedd625fe10cf429d0a6a16345eee260be8154556a"
+      },
+      "stat": {
+        "bytes": 57835,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 2181065553,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 60846,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/full-off/git-ready/wrapper.summary.log",
+        "sha256": "f7919e852a1ccf8c8bfa67703b7a1ffe6ac9978e152252f30c5fd0349aaf8568"
+      },
+      "stat": {
+        "bytes": 60846,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 2181065555,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1136,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/full-off/git-ready/completion.summary.log",
+        "sha256": "167daf79af4fcae2a5568bedb92ada741ecc6e32e53ce8f16703494757f80350"
+      },
+      "stat": {
+        "bytes": 1136,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 2181065557,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 12362,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/full-off/log_checks.json",
+        "sha256": "cb9d1fc0172737343be7307fb88f4acf53af55fc41c6623b00daf0462881c8df"
+      },
+      "stat": {
+        "bytes": 12362,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 1345334695,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 3975,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-full-off-0926-20260926T231534Z/capture.json",
+        "sha256": "d34857227d867ffd7fef4040be05f342b6fb256fa10da18e4873e6826e7c6b4d"
+      },
+      "stat": {
+        "bytes": 3975,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 2181065561,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-full-off-0926-20260926T231534Z/capture.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 2181065564,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4968,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-full-off-0926-20260926T231534Z/capture.stdout",
+        "sha256": "9bedac0620d8ce89d2eeef25970c00d2514efc888f8e29d9f6219168d6a861d3"
+      },
+      "stat": {
+        "bytes": 4968,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 2181065563,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 5344,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-full-off-0926-20260926T231534Z/exit.json",
+        "sha256": "a0a4663b8962548a5e7d06352db41f59fba4fd2a895191ade615f7033fe18a60"
+      },
+      "stat": {
+        "bytes": 5344,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 2181065560,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 1525,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-full-off-0926-20260926T231534Z/identity.json",
+        "sha256": "f0dab1074638274ba71cb2739d44c6420d6ec2a01e792cd82afea8fea878e440"
+      },
+      "stat": {
+        "bytes": 1525,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 2181065559,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 4185,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-full-off-0926-20260926T231534Z/launch.json",
+        "sha256": "232e94400a7a2f6e7aa1fccdbdd59edf93a0f95885dacabfb002c3e3a9b0524c"
+      },
+      "stat": {
+        "bytes": 4185,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 2181065562,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 0,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-full-off-0926-20260926T231534Z/launch.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "stat": {
+        "bytes": 0,
+        "ctime_ns": "1790468956484901239",
+        "device": 2304,
+        "inode": 2181065566,
+        "mtime_ns": "1790468956484901239"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 9020,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/exit/orig80k-timing20-full-off-0926-20260926T231534Z/launch.stdout",
+        "sha256": "6020271688881b94c64557eb44c87cad5a272cc3b8c882f1f1743d9249754462"
+      },
+      "stat": {
+        "bytes": 9020,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 2181065565,
+        "mtime_ns": "1790468956474901153"
+      }
+    },
+    {
+      "reference": {
+        "bytes": 29666,
+        "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/bench/orig80k-timing20-archive-20260926T231534Z/group/both-off.independent-verification.json",
+        "sha256": "1a17d5e21c5960f912af96adf97abf79aa540981a13deb17faac66a821ffea61"
+      },
+      "stat": {
+        "bytes": 29666,
+        "ctime_ns": "1790468956474901153",
+        "device": 2304,
+        "inode": 806189907,
+        "mtime_ns": "1790468956474901153"
+      }
+    }
+  ],
+  "started_utc": "2026-09-27T00:42:23.078994+00:00",
+  "tag": "20260926T231534Z",
+  "timing_eq_verdict": "FAIL"
+}
