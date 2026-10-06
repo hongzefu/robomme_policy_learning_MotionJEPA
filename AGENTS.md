@@ -37,7 +37,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 
 下方标记块 `common-agents` 是 [AgentMetaRules-hongzefu](https://github.com/hongzefu/AgentMetaRules-hongzefu) 正本 `AGENTS.md`「强制规则」第 1–26 条与附录 A 的逐字副本（标记行 `src=` 记正本 commit、`blob=` 记块内容 blob id，**块内禁止手改**；同步核对命令 `uv run --no-project python /data/hongzefu/AgentMetaRules-hongzefu/scripts/sync_rules.py check --repo policy`）。上方「运行环境判定」是正本第 0 条的本仓库实例（判据表两列：环境 A = sled-vail 本机 + turbo 归档 + GreatLakes；环境 B = AWS 单机）。优先级：系统 / 开发者 / 用户当前指令 > 标记块外明确写出的覆盖项 > 标记块内的正本条目。平时只读本文件，不需要去读 GitHub 上的正本；正本改动经同步脚本回流。标记块之后是本仓库的覆盖项、占位符取值、项目 scope 与规则来源。
 
-<!-- AGENTMETARULES:BEGIN common-agents src=463eba236e1c5752e6f7491a7231f032dbffdf59 blob=a66fbe294b883c3fe7cc97343dff1295c68dbb9a -->
+<!-- AGENTMETARULES:BEGIN common-agents src=7c592e595cf4be977a1e94cf40565530bd7705f9 blob=951f00a2ee0d9af561a6834324ebf7bcb2b4a518 -->
 
 ## 强制规则（最高优先级）
 
@@ -52,7 +52,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
    来源：benchmark/AGENTS.md 规则 1；global CLAUDE.md「语言」；policy/AGENTS.md 规则 1；mjepa/AGENTS.md 规则 1。
 
 2. **所有计划必须用中文书写，计划与实施范围必须明确。** 仓库文档中的项目目标、未来 scope、roadmap、历史计划和示例命令都不等于当前实施授权；只执行用户本轮明确要求的工作，任何工具、回退机制或并行代理都不扩大这一范围。遇到范围、实现方式或破坏性操作存在歧义时，必须先询问用户，不得擅自扩展；已经明确的决定与授权沿用，不重复询问。计划默认分为两个部分（纯文档改动的计划例外，见下方第三条子项）：
-   - **第一部分（给人看）**：以可读叙述为主、结论先行，黑话仍应少用；但**关键机制与保证处必须给到代码级细节**——具体文件路径、命令、判定行、实测数字直接内联在叙述里，达到「读者不翻代码就能核对」的密度（2026-08-29 用户定标；标杆样例：robomme_policy_learning_MotionJEPA 仓库 `0829-destructive-restructure-plan.md` 第一部分「两条核心保证的原理」一节的分层写法——每层一段、层名点明结论、命令与判定行随层给出；项目可在 `<PLAN_EXEMPLAR>` 指定自己的标杆）；对文件的引用和对步骤的介绍必须精确，不能只在第二部分补足第一部分缺失的关键依据。「密度差不多」指每段的信息密度而非篇幅，不为凑长度灌水；对照标杆的六个特征写：
+   - **第一部分（给人看）**：以可读叙述为主、结论先行，黑话仍应少用；但**关键机制与保证处必须给到代码级细节**——具体文件路径、命令、判定行、实测数字直接内联在叙述里，达到「读者不翻代码就能核对」的密度（2026-08-29 用户定标；**标杆样例（2026-10-06 起所有仓库统一，用户原话「所有的密度的标杆都改成这个」）：robomme_benchmark_MotionJEPA 仓库 `docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md` 的第一部分**——先「要做什么与全部运行一览」（三句话 + ASCII 批次图 + 批次表 + 已定口径原话），再逐模型「原侧是哪份代码、和上游原版差在哪」每模型三四条，然后「我们这一侧要改什么」一行一块的表（先说为什么非改不可），最后验收判定行表、步骤表、子代理分工简述；第一部分只留决策信息（约 90～130 行），每节一张表加一两段话，逐文件逐函数的细节整段移到第二部分并在第一部分末尾一句话指向；此前的标杆 policy 仓库 `0829-destructive-restructure-plan.md` 不再作标杆；项目可在 `<PLAN_EXEMPLAR>` 指定自己的标杆）；对文件的引用和对步骤的介绍必须精确，不能只在第二部分补足第一部分缺失的关键依据。「密度差不多」指每段的信息密度而非篇幅，不为凑长度灌水；对照标杆的六个特征写：
      1. **文首引言块**先定死权威性、代码锚点 commit、工作副本路径、commit 编号体例、外部依赖锚点，以及「只规划不实施、每步须单独获批」的授权边界。
      2. **总览节**给「一句话方案」加编号的「已定死口径」清单，每条口径注明依据所在小节；用户拍板的原话逐字保留、不替用户改写。
      3. **每个机制小节**按「定义 → `文件::函数` 锚点与配置键 → 公式或代码块 → 数轴 / 示意图演示 → ⚠ 陷阱与反例 → 带实测数字的收益」展开。
@@ -62,9 +62,10 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
    - **第二部分（技术细节，供 agent 追踪）**：写清具体文件、函数、命令、参数、验证方式等实现细节，保证 agent 执行与核对时信息完整；第一部分已内联的细节可引用不重复。现有能力、拟新增接口、实测结果与待验证判据须明确区分。结构参照同一标杆文档的第二部分：〇 前置声明与红线（编号、可被正文引用）→ 按阶段 / 按文件的逐项改动清单 → 子代理分配表（含代码或配置改动时）→ 对拍闸门总表 → runbook → 风险登记 → 盲区诚实清单 → 留档与 commit 纪律。
    - **例外——纯文档改动的计划不分两部分**：本轮计划的产出物只有仓库内文档（Markdown 正文的重写、重排、补写、删改），不含任何代码、配置、数据或训练链路改动时，计划**不分第一部分 / 第二部分**，写成一篇单一连贯叙述：为什么改 → 改哪个文件的哪一段（替换范围精确到起止标题；编号规则精确到条目边界）→ 新正文按其自身组织顺序逐段说明要写成什么样（引用的代码锚点、实测数字随段给出）→ 验证命令与 commit 计划。上面两条关于细节密度与引用精确度的要求照旧适用，只是不再机械二分——纯文档任务里「给人看」与「供 agent 追踪」两侧内容高度重合，二分只会把同一份内容写两遍。
    - **两部分结构是硬性格式，不因「精简版」「重写版」「v2」「已做过的不再赘述」而豁免（2026-09-27 新增）**：只要计划涉及任何代码、配置、数据或训练链路改动，正文必须恰好含两个一级标题 `# 第一部分（给人看）` 与 `# 第二部分（技术细节，供 agent 追踪）`，各自按上面两条的结构展开；不得写成单篇平铺，不得用「§一～§八」之类自拟章节代替二分，也不得把两部分合并进同一节再声明「前半给人看、后半技术细节」。用户要求「简略」「只写最新版本」时，减的是篇幅与历史决策，**不减这两个标题与各自的骨架**（第一部分至少含总览／已定口径、机制、验收表、步骤表，含代码或配置改动时另含子代理分工与合并（简述）；第二部分至少含红线、逐文件改动清单、子代理分配表（含代码或配置改动时）、闸门、runbook、风险、盲区、留档纪律）。交付前自检 `grep -c '^# 第一部分\|^# 第二部分' <计划>` 必须等于 2，不等于 2 不得交付。实测踩坑：2026-09-27 benchmark 仓库把已按两部分写好的 §〇′ 方案改写成「精简定稿版」时写成了单篇八节，被用户当场指出「依旧是两段 第一部分 第二部分 为什么没有遵守规则」。
-   - **子代理分工与合并必须写进计划（2026-10-01 新增）**：计划涉及代码或配置改动、且执行宿主支持子代理时——**第一部分**加一小节「子代理分工与合并（简述）」，几句话讲清拆成哪几块、每块管哪些文件、按什么顺序合回工作分支、每次合并前后分别审什么，写给人看、不堆命令；**第二部分**加「子代理分配表」，列「子任务编号 / 目标 / 可写文件集合 / 禁触路径 / 接口契约与依赖 / 合并顺序 / 验收命令与判定行（在哪里、以什么环境跑） / 资源占用（GPU、端口、run_name、tmux 前缀） / 共享文件归属裁决」；切不开的部分也要列，写「主会话自做」及理由；受保护目录（第 21 条）的文件不进可写集合。该表经批准即构成写入型子代理的派发授权，表外子任务不派。执行机制按各宿主自己的规则（Claude Code：`CLAUDE.md`「计划执行模式」；Codex：第 26 条），本条只定计划里要写什么。用户原话（2026-10-01，语音转写）：「最好是查看这个任务这个任务本身最好就已经好了撒贝镇的分配。在第二部分就是任务的markdown的第二部分最好已经设计好怎么去分配这个SubAgent。」「在第一部份中减数怎么去分配。怎么去合并。简单的叙述让用户稍微能看懂」。
+   - **子代理分工与合并必须写进计划（2026-10-01 新增）**：计划涉及代码或配置改动、且执行宿主支持子代理时——**第一部分**加一小节「子代理分工与合并（简述）」，几句话讲清拆成哪几块、每块管哪些文件、按什么顺序合回工作分支、每次合并前后分别审什么，写给人看、不堆命令；**第二部分**加「子代理分配表」，列「子任务编号 / 目标 / 可写文件集合 / 禁触路径 / 接口契约与依赖 / 合并顺序 / 验收命令与判定行（在哪里、以什么环境跑） / 资源占用（GPU、端口、run_name、tmux 前缀） / 共享文件归属裁决」；切不开的部分也要列，写「主会话自做」及理由；受保护目录（第 21 条）的文件不进可写集合。该表经批准即构成写入型子代理的派发授权，表外子任务不派。需要由子代理启动长任务时（Claude Code 的运行型子代理，2026-10-04 新增，见 `CLAUDE.md`「运行型子代理」），同一张表另列运行型子任务：完整命令原文、运行位置、tmux 会话名或 JobID、日志路径、起跑成功的判据；表内写明才派，监听、预算账本与清理仍归主会话。执行机制按各宿主自己的规则（Claude Code：`CLAUDE.md`「计划执行模式」；Codex：第 26 条），本条只定计划里要写什么。用户原话（2026-10-01，语音转写）：「最好是查看这个任务这个任务本身最好就已经好了撒贝镇的分配。在第二部分就是任务的markdown的第二部分最好已经设计好怎么去分配这个SubAgent。」「在第一部份中减数怎么去分配。怎么去合并。简单的叙述让用户稍微能看懂」。
    - **计划文件命名（2026-09-16，美国东部时间，用户确认）**：根目录计划统一命名为 `MMDD-<主题>-plan.md`，使用四位创建日期替代 `v1-`、`v2-`、`v5.0-` 等版本前缀；`8frame` 等主题信息保留。新计划以 `America/New_York` 的创建日期为准，执行 `TZ=America/New_York date +%m%d` 取值，例如东部时间 9 月 16 日新建的计划均以 `0916-` 开头。后续修订不改变日期前缀；同日计划通过主题区分，禁止覆盖已有计划。历史文件迁移沿用首次新增 Git 提交自身时区所记录的月日，不按当前时区重新换算，也不使用最后修改时间。
    - **计划改名的引用维护**：同步更新现行 Markdown 链接、普通引用、源码注释/docstring 和配置注释中的完整文件名；保留历史用户原话、固定提交描述、原始记录与明确只读的源码快照，归档中的导航链接更新到现位置。不得顺带修改正文版本含义、commit 编号、分支名、run_name 或训练产物路径。
+   - **开工必须由用户明确、无歧义地说「开工」（2026-10-04 新增）**：计划获批、预算获批、资源到位（占位 job 排到、卡到手、下载完成）、用户说「同意」「放行」「都按推荐」「尽可能高效利用」「可以直接跑」等，**都不是开工令**；只有用户明确、无歧义地说出「开工」（或同样不可能被读成别的意思的指令，如「现在开始实施」），才允许开始改代码、下载、提交作业、运行。不得把任何其他事件或措辞当作开工条件，也不得在计划里设计「某条件满足即视为开工」的自动触发；拿不准时只问一句「是否开工」，不自行推断。开工令只覆盖它所指的那份计划与范围，不延伸到后续计划。开工前允许的只有：只读核实、改计划文件、以及用户单独点名要做的事。实测踩坑：2026-10-04 benchmark 仓库把「都同意……都可以直接跑……尽可能的早点开始占用卡」读成立即开工并提交了 9 个占位 job，被用户叫停（「不要现在开始计划！！！」）。用户原话（2026-10-04）：「所有的开工都是要我明确确认无歧义的说开工。任何其他都不能作为开工条件 这个写入agentmetarules」。
    - 是否进入或退出计划模式、能否写计划文件，以当前宿主指令为准；上述格式要求不授予实施或执行命令的权限。
 
    来源：policy/AGENTS.md 规则 2；mjepa/AGENTS.md 规则 8；benchmark/AGENTS.md 规则 10（六个特征）。
@@ -347,6 +348,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
       - 计划第二部分的「子代理分配表」（第 2 条）对 Codex 同样生效：按表的可写集合、禁触、接口契约与依赖派持久代理，验收在共享目录跑，「合并顺序」读作整合顺序；Codex 子代理仍不暂存、不提交、不 push。
     - **委派说明**：每项委派（含给持久代理的 `followup_task`）都要明确目标、上下文、可读与可写范围、禁止事项、依赖、交付内容和验收方式；依任务需要限制文件、目录、分支或工作区，避免子代理自行推断更大范围。
     - **模型档位**：子代理及递归子代理的模型档位不得高于本次用户主请求所用模型；默认继承父代理模型，轻量任务可酌情降档。若无法可靠比较档位，则沿用父代理模型。模型档位与推理强度是独立设置；本条只限制前者，推理强度按任务独立选择。
+      - **Aspen 固定为 GPT-5.6 家族（2026-10-06）**：Aspen 当前只使用 `gpt-5.6-sol`、`gpt-5.6-terra`、`gpt-5.6-luna`，禁止给 Codex 主代理或子代理配置 GPT-5.5、GPT-6、Claude `opus` / `sonnet` 或其他模型。主代理与通用兜底角色用 `gpt-5.6-sol/high`；规划角色用 `gpt-5.6-sol/xhigh`；审查角色用 `gpt-5.6-sol/high`；实现与测试角色用 `gpt-5.6-terra/high`；只读探索角色用 `gpt-5.6-luna/high`。具体角色文件及安装口径见 [`codex/aspen/agents/`](https://github.com/hongzefu/AgentMetaRules-hongzefu/tree/main/codex/aspen/agents) 与 [`docs/codex-aspen-gpt56-roles.md`](https://github.com/hongzefu/AgentMetaRules-hongzefu/blob/main/docs/codex-aspen-gpt56-roles.md)。任何指定档位不可用时必须停止并报告原始错误，不得静默切换模型；用户当前指令或宿主更高优先级要求另有规定时从其规定。
     - **整合与责任**：子代理交回结论、证据（第 22 条）、验证结果、改动文件清单和未解决事项；主代理负责整合、最终验收及经授权的提交（第 11 条），对用户的汇报按第 1 条用中文。
 
     来源：2026-09-26 用户要求「尽可能积极调用使用multi agent来实现 但是分隔要保持清晰」「子agent要小于等于主要请求agent的规格」（并澄清只限制模型档位、不限制推理强度），及同日补充「codex强调修改文件要保持subagent之间的任务的的清晰 尽可能多并发 完全是multi agent的处理流程」「而codex一般是持久化的运行多agent 几个agent互相通讯 不会因为单个任务结束就关闭这个agent」；OpenAI 官方文档 [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)；openai/codex `rust-v0.157.0` 源码 `codex-rs/prompts/src/multi_agent_instructions.rs`、`codex-rs/core/src/tools/handlers/multi_agents_spec.rs`、`codex-rs/core/src/agent/role.rs`、`codex-rs/core/src/tools/spec_plan.rs`、`codex-rs/core/src/agent/control/residency.rs`；本机实测 [`docs/codex-app-ssh-multiagent.md`](https://github.com/hongzefu/AgentMetaRules-hongzefu/blob/main/docs/codex-app-ssh-multiagent.md)。
@@ -370,11 +372,11 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 | `<COMMIT_SUBJECT_STYLE>` | commit subject 体例 | 第 11 条 |
 | `<PLAN_EXEMPLAR>` | 计划密度标杆文档 | 第 2 条 |
 
-<!-- AGENTMETARULES:END common-agents src=463eba236e1c5752e6f7491a7231f032dbffdf59 blob=a66fbe294b883c3fe7cc97343dff1295c68dbb9a -->
+<!-- AGENTMETARULES:END common-agents src=7c592e595cf4be977a1e94cf40565530bd7705f9 blob=951f00a2ee0d9af561a6834324ebf7bcb2b4a518 -->
 
 ## 对正本的覆盖项（按正本条号；未列出的条目按正本执行）
 
-- **覆盖第 2 条（计划密度标杆）**：`<PLAN_EXEMPLAR>` = 本仓库 `0829-destructive-restructure-plan.md` 第一部分「两条核心保证的原理」一节的分层写法；历史名称与现名的对应见 [计划文件命名迁移表](docs/README.md#计划文件命名迁移表)。
+- **覆盖第 2 条（计划密度标杆）**：`<PLAN_EXEMPLAR>` = benchmark 仓库 [`docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md`](https://github.com/hongzefu/robomme_benchmark_MotionJEPA/blob/newtaskRelease-taskV9/docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md) 的「第一部分（给人看）」（2026-10-06 用户原话「所有的密度的标杆都改成这个」，所有仓库统一；此前为本仓库 `0829-destructive-restructure-plan.md` 第一部分「两条核心保证的原理」一节）；历史名称与现名的对应见 [计划文件命名迁移表](docs/README.md#计划文件命名迁移表)。
 - **覆盖第 4 条（核心短测）**：本仓库尚未固化「任何机器都能跑」的核心短测命令清单；按第 4 条选覆盖改动的最小真实子集（`uv run python -m pytest <定向测试> -q`），纯文档改动至少 `git diff --check`。补齐清单后写回本条。
 - **覆盖第 8 条（集群提交按环境分叉）**：环境 A 向 GreatLakes 提交前遵守本仓库 `greatlakes.md`（正本副本 + 项目放行记录）；环境 B 无 `~/.ssh/config`、无 ControlMaster，禁止提交任何 Slurm 作业、禁止 ssh 集群、禁止运行 `scripts/training/gl_submit.py`，训练、建库、评估一律在本机 8×A100 上跑，集群留档只作只读存档。
 - **覆盖第 11 条（commit 体例与 push）**：`<COMMIT_SUBJECT_STYLE>` = 功能性改动 `commitV<大版本>.<小版本>: <中文描述>`，文档、修补、撤销用 `docs:`、`fix:`、`revert:`；commit 后立即 push 到 `origin`（`https://github.com/hongzefu/robomme_policy_learning_MotionJEPA.git`），凭据走 gh CLI；当前分支没有 upstream 时先问用户，不得自行 `git push -u`。
@@ -415,7 +417,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 | `<GL_ACCOUNT>` / `<GL_PARTITION>` / `<SSH_HOST>` | `chaijy2` / `spgpu` / `greatlakes` |
 | `<PROTECTED_DIRS>` | 无 |
 | `<COMMIT_SUBJECT_STYLE>` | `commitV<x>.<y>:` + `docs:` / `fix:` / `revert:` |
-| `<PLAN_EXEMPLAR>` | `0829-destructive-restructure-plan.md` |
+| `<PLAN_EXEMPLAR>` | benchmark 仓库 `docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md` 第一部分 |
 
 ## 项目 scope（未来工作，不代表当前实施授权）
 
