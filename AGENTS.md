@@ -405,7 +405,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 
 ## 对正本的覆盖项（按正本条号；未列出的条目按正本执行）
 
-- **覆盖第 2 条（计划密度标杆）**：`<PLAN_EXEMPLAR>` = 本仓库 `0829-destructive-restructure-plan.md` 第一部分「两条核心保证的原理」一节的分层写法；历史名称与现名的对应见 [计划文件命名迁移表](docs/README.md#计划文件命名迁移表)。
+- **覆盖第 2 条（计划密度标杆）**：`<PLAN_EXEMPLAR>` = benchmark 仓库 [`docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md`](https://github.com/hongzefu/robomme_benchmark_MotionJEPA/blob/newtaskRelease-taskV9/docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md) 的「第一部分（给人看）」（2026-10-06 用户原话「所有的密度的标杆都改成这个」，所有仓库统一；此前为本仓库 `0829-destructive-restructure-plan.md` 第一部分「两条核心保证的原理」一节）；历史名称与现名的对应见 [计划文件命名迁移表](docs/README.md#计划文件命名迁移表)。
 - **覆盖第 4 条（核心短测）**：本仓库尚未固化「任何机器都能跑」的核心短测命令清单；按第 4 条选覆盖改动的最小真实子集（`uv run python -m pytest <定向测试> -q`），纯文档改动至少 `git diff --check`。补齐清单后写回本条。
 - **覆盖第 8 条（集群提交按环境分叉）**：环境 A 向 GreatLakes 提交前遵守本仓库 `greatlakes.md`（正本副本 + 项目放行记录）；环境 B 无 `~/.ssh/config`、无 ControlMaster，禁止提交任何 Slurm 作业、禁止 ssh 集群、禁止运行 `scripts/training/gl_submit.py`，训练、建库、评估一律在本机 8×A100 上跑，集群留档只作只读存档。
 - **覆盖第 11 条（commit 体例与 push）**：`<COMMIT_SUBJECT_STYLE>` = 功能性改动 `commitV<大版本>.<小版本>: <中文描述>`，文档、修补、撤销用 `docs:`、`fix:`、`revert:`；commit 后立即 push 到 `origin`（`https://github.com/hongzefu/robomme_policy_learning_MotionJEPA.git`），凭据走 gh CLI；当前分支没有 upstream 时先问用户，不得自行 `git push -u`。
@@ -446,7 +446,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 | `<GL_ACCOUNT>` / `<GL_PARTITION>` / `<SSH_HOST>` | `chaijy2` / `spgpu` / `greatlakes` |
 | `<PROTECTED_DIRS>` | 无 |
 | `<COMMIT_SUBJECT_STYLE>` | `commitV<x>.<y>:` + `docs:` / `fix:` / `revert:` |
-| `<PLAN_EXEMPLAR>` | `0829-destructive-restructure-plan.md` |
+| `<PLAN_EXEMPLAR>` | benchmark 仓库 `docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md` 第一部分 |
 
 ## 项目 scope（未来工作，不代表当前实施授权）
 
