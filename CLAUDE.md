@@ -4,14 +4,14 @@
 
 @AGENTS.md
 
-<!-- AGENTMETARULES:BEGIN common-claude src=942efa027c922edc20c4f272cc419580a5408dec blob=f40a831f36282fc06be7ea01cdf921c9ee39b0a2 -->
+<!-- AGENTMETARULES:BEGIN common-claude src=12b4f0852d4f17b1dd4e643be7efff1da11459bb blob=e6dbd57737d115f044c2c4e04bfa864f614c8d73 -->
 
 ## 规则来源与优先级
 
-- `AGENTS.md` 是通用规则的唯一来源（第 0–26 条；仅第 20 条只对 Codex 生效，Claude Code 忽略；第 26 条统一两宿主子代理职责，宿主专节各自执行）。上面的 `@AGENTS.md` 会把它的正文内联进上下文。
+- `AGENTS.md` 是通用规则的唯一来源（第 0–27 条；仅第 20 条只对 Codex 生效，Claude Code 忽略；第 26 条统一两宿主子代理职责，宿主专节各自执行）。上面的 `@AGENTS.md` 会把它的正文内联进上下文。
 - **即便该导入失效，动手前也必须先完整读一遍 `AGENTS.md`。** 官方文档（2026-09-26 核实 code.claude.com/docs/en/memory）：工作目录或其上级存在 `CLAUDE.md` / `CLAUDE.local.md` 时，Claude Code 只读 `CLAUDE.md` 系文件、**不再自动读 `AGENTS.md`**——没有本文件的显式 `@AGENTS.md` 导入，`AGENTS.md` 不会进入会话上下文（早期实测于 Claude Code 2.1.232 时 memory 发现列表根本不含 `AGENTS.md`）。这一条是兜底，不可省略。
 - **动手前必须先按 `AGENTS.md` 第 0 条做运行环境判定**，并在当轮第一条回复里写明结论是环境 A 还是环境 B；判据矛盾或出现第三套硬件时按该条冲突即停。
-- 本文件只补 `AGENTS.md` 覆盖不到的 Claude Code 独有机制，共四块：Workflow 与 Agent 模型、Monitor 工具、Skill 调用、plan mode 与计划文件。两份文件的分工、冲突处理（一律以 `AGENTS.md` 为准）与跨宿主中立见 `AGENTS.md` 第 25 条。
+- 本文件只补 `AGENTS.md` 覆盖不到的 Claude Code 独有机制，共五块：Workflow 与 Agent 模型、Monitor 工具、会话交接、Skill 调用、plan mode 与计划文件。两份文件的分工、冲突处理（一律以 `AGENTS.md` 为准）与跨宿主中立见 `AGENTS.md` 第 25 条。
 
 ## Workflow 与 Agent 模型（强制）
 
@@ -94,6 +94,15 @@
 7. **静默空转作业**（`AGENTS.md` 第 23 条）：进程活着却永不产出、日志里也不会出现任何错误行，Monitor 的过滤器必须同时覆盖项目 `CLAUDE.md` 写明的缺陷特征字符串，不能只盯 `EXIT_CODE=`。
 8. Monitor 不可用时使用当前宿主支持的等待或输出通知机制，明确监听能力的限制；不声称不存在的工具已经挂载，也不让工具缺失阻止其他已授权工作。
 
+## 会话交接（`AGENTS.md` 第 27 条的 Claude Code 落地）
+
+- **开工第一条回复固定包含**：运行环境判定结论、`HANDOFF_READ=…` 判定行、接手摘要（自己任务的 `depends_on` 状态、`pending_decisions`、`next_steps` 第一条）。读到 `next_steps` 不等于开工令。
+- **收尾最后一条回复固定包含**：`handoff:` commit sha、`HANDOFF_WRITE=…` 判定行、给下一会话转发的一句话「读 `docs/handoff/current.json`，从 `<sha>` 接续」。
+- **句柄与 Monitor 绑定**：写进 `running_handles` / `long_tail` 的每份日志，在本会话里都必须已按 Monitor 节挂过监听；会话结束监听随之消失，下一会话按文件重新挂。
+- **会话标识**：`owner.session` 填本会话的 `Claude-Session:` 链接（宿主在会话内可见，也是 commit trailer 的来源）。
+- **auto-memory 只留指针**：不把任务状态写进 memory 文件，只写一行「状态看 `docs/handoff/current.json`」。
+- **本轮不挂 hook**：`SessionStart` 注入接手摘要、`SessionEnd` 记录退出状态的自动化未实测，暂不写进规则；读写都由会话按第 27 条手动完成。
+
 ## Skill 调用
 
 - **有集群访问的环境**：查集群账户占用（GPU / 内存 / CPU 配额余量、谁在用、我的 job、PENDING、分区全局 GPU 占用）**一律先调全局 skill `greatlakes-usage`**（本仓库 [`skills/greatlakes-usage/`](https://github.com/hongzefu/AgentMetaRules-hongzefu/blob/main/skills/greatlakes-usage/) 为其正本，安装到 `~/.claude/skills/`），不要手搓 `ssh` + `squeue` / `sacctmgr` 拼答案。
@@ -110,7 +119,7 @@
 - **写 HTML 计划不进 plan mode；进 plan mode 前先问用户（2026-10-12 新增）**：用户要的计划交付物是仓库内的 HTML 文件（`AGENTS.md` 第 2 条），而 plan mode 只允许写宿主的 `~/.claude/plans/<slug>.md`、写不了这份交付物，两者冲突。因此用户要求「写计划 / 出计划 / 写 HTML plan」时**直接在普通模式下写 HTML 计划并提交推送**，不调 `EnterPlanMode`；核实事实仍只读（探索子代理、`git show`、grep），写计划文件与画图子代理不算实施。计划呈现后按第 2 条「开工令」等用户对该 HTML 不改而直接认可（「同意」「开工」等）才动手，不用 `ExitPlanMode` 代替。只有用户明确要求使用 plan mode、或 agent 认为需要宿主 plan mode 的只读保护时，才**先问用户一句是否进入 plan mode**，得到同意再调 `EnterPlanMode`；上面两条 `ExitPlanMode` / `AskUserQuestion` 的约束只在真的处于 plan mode 时适用。实测踩坑：2026-10-12 benchmark 仓库在用户说「出个计划」后径自 `EnterPlanMode`，被用户两次叫停（「不要进入plan模式 只画这个图」「让我确认了之后再进入plan模式」），最后用户原话：「写html不要进入plan模式 把这个写入agentmetarules」。
 - plan mode 期间除该计划文件外一律只读：不改代码、不改配置、不 commit、不跑任何有副作用的命令。**在只读阶段把事实核实清楚**——仓库的坑（如 editable 指向、安装顺序、源码来源、已知缺陷）都是只读就能查清的，带着未经核实的假设进入实施阶段代价远高于多花几分钟查证。
 
-<!-- AGENTMETARULES:END common-claude src=942efa027c922edc20c4f272cc419580a5408dec blob=f40a831f36282fc06be7ea01cdf921c9ee39b0a2 -->
+<!-- AGENTMETARULES:END common-claude src=12b4f0852d4f17b1dd4e643be7efff1da11459bb blob=e6dbd57737d115f044c2c4e04bfa864f614c8d73 -->
 
 ## 项目专属补充
 
