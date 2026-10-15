@@ -39,7 +39,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 
 下方标记块 `common-agents` 是 [AgentMetaRules-hongzefu](https://github.com/hongzefu/AgentMetaRules-hongzefu) 正本 `AGENTS.md`「强制规则」第 1–26 条与附录 A 的逐字副本（标记行 `src=` 记正本 commit、`blob=` 记块内容 blob id，**块内禁止手改**；同步核对命令 `uv run --no-project python /data/hongzefu/AgentMetaRules-hongzefu/scripts/sync_rules.py check --repo policy`）。上方「运行环境判定」是正本第 0 条的本仓库实例（判据表两列：环境 A = sled-vail 本机 + turbo 归档 + GreatLakes；环境 B = AWS 单机）。优先级：系统 / 开发者 / 用户当前指令 > 标记块外明确写出的覆盖项 > 标记块内的正本条目。平时只读本文件，不需要去读 GitHub 上的正本；正本改动经同步脚本回流。标记块之后是本仓库的覆盖项、占位符取值、项目 scope 与规则来源。
 
-<!-- AGENTMETARULES:BEGIN common-agents src=12b4f0852d4f17b1dd4e643be7efff1da11459bb blob=4814c77dc261f8adbf07c013275277e6bf518d02 -->
+<!-- AGENTMETARULES:BEGIN common-agents src=c28e9e07fd9d821e19755aeeb3fd000235faaa16 blob=b3f24552ab26e66b953ba6f15214b48b9029ecaa -->
 
 ## 强制规则（最高优先级）
 
@@ -50,8 +50,9 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
    - **本约束对"给用户看的最终输出层"一视同仁，无任何例外**：无论经过多少层编排、subagent 或后台任务，最终落到用户眼前的叙述/总结/状态汇报/计划/提问必须是中文；代理协作的最终汇报同样遵守本条，内部素材的语言不改变对用户的交流语言（Claude Code 侧的展开细则见 [`CLAUDE.md`](CLAUDE.md)）。
    - **"上下文里全是英文"不是漂移成英文的借口。** 英文代码、工具输出、subagent 返回、PR/issue 正文都只是被处理的素材；你（主 agent）对用户的叙述层永远是中文。
    - 项目若有历史英文化遗留目录，在项目 `AGENTS.md` 里列明豁免清单，其既有内容保持原样；此后新增/修改的内容仍按本条走中文。
+   - **对用户报告时刻一律用美国东部时间，不用 UTC（2026-10-15 新增）**：进度汇报、预计完成时间、起止时刻、监听事件说明等给用户看的时间，一律换算成美国东部时间（`America/New_York`，夏令时 EDT = UTC−4、冬令时 EST = UTC−5，以 `TZ=America/New_York date` 为准），并写明「美东」；跨日时带上日期。日志、JSON、判定行与工具原样输出的 UTC 时间戳保持原样不改写，在叙述里引用时先换算成美东，必要时括注原 UTC 值。计划文件命名的 `MMDD-` 日期前缀本就按美东取值（第 2 条），不受影响。用户原话（2026-10-15）：「不要用utc 用美国东部时间报告几点」「写入agentmetarules和agentsmd」。
 
-   来源：benchmark/AGENTS.md 规则 1；global CLAUDE.md「语言」；policy/AGENTS.md 规则 1；mjepa/AGENTS.md 规则 1。
+   来源：benchmark/AGENTS.md 规则 1；global CLAUDE.md「语言」；policy/AGENTS.md 规则 1；mjepa/AGENTS.md 规则 1；2026-10-15 用户指令（美东时间报告）。
 
 2. **所有计划必须用中文书写，计划与实施范围必须明确。** 仓库文档中的项目目标、未来 scope、roadmap、历史计划和示例命令都不等于当前实施授权；只执行用户本轮明确要求的工作，任何工具、回退机制或并行代理都不扩大这一范围。遇到范围、实现方式或破坏性操作存在歧义时，必须先询问用户，不得擅自扩展；已经明确的决定与授权沿用，不重复询问。计划默认分为两个部分（纯文档改动的计划例外，见下方第三条子项）：
    - **第一部分（给人看）**：以可读叙述为主、结论先行，黑话仍应少用；但**关键机制与保证处必须给到代码级细节**——具体文件路径、命令、判定行、实测数字直接内联在叙述里，达到「读者不翻代码就能核对」的密度（2026-08-29 用户定标；**标杆样例（2026-10-06 起所有仓库统一，用户原话「所有的密度的标杆都改成这个」）：robomme_benchmark_MotionJEPA 仓库 `docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md` 的第一部分**——先「要做什么与全部运行一览」（三句话 + ASCII 批次图 + 批次表 + 已定口径原话），再逐模型「原侧是哪份代码、和上游原版差在哪」每模型三四条，然后「我们这一侧要改什么」一行一块的表（先说为什么非改不可），最后验收判定行表、步骤表、子代理分工简述；第一部分只留决策信息（约 90～130 行），每节一张表加一两段话，逐文件逐函数的细节整段移到第二部分并在第一部分末尾一句话指向；此前的标杆 policy 仓库 `0829-destructive-restructure-plan.md` 不再作标杆；项目可在 `<PLAN_EXEMPLAR>` 指定自己的标杆）；对文件的引用和对步骤的介绍必须精确，不能只在第二部分补足第一部分缺失的关键依据。「密度差不多」指每段的信息密度而非篇幅，不为凑长度灌水；对照标杆的六个特征写：
@@ -347,7 +348,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
       - **先改正本再回流**：通用条目的任何改动只在正本仓库改，commit 并 push 后再回流——`sync_rules.py check` 只读比对各目标标记块与正本 HEAD 块、报出漂移（末行 `SYNC_SUMMARY=PASS|FAIL`）；`sync_rules.py apply` 只替换标记块内容与标记行里的 sha，不碰标记外内容；目标仓库带着他人在途工作时用 [`scripts/land_rules_commit.py`](https://github.com/hongzefu/AgentMetaRules-hongzefu/blob/main/scripts/land_rules_commit.py)（远端侧只含规则文件的 plumbing 提交 + 本地侧合并提交，见第 11 条 push 例外）。回流提交同时更新项目「规则来源」段的 sha。脚本按第 3 条经 `uv run --no-project python` 运行。
       - **项目副本只改标记外内容**：标记块内禁止手改；在项目里发现正本需要修改时，回正本仓库改正本再 `apply`，不在副本里先改后补。项目对正本的偏离一律写成标记外的按条号覆盖项。
       - `apply` 写的是别的仓库：只写 `sync-targets.json` 登记的文件；目标工作区的在途改动、暂存、提交与推送按目标仓库自己的第 11 条口径（含声明式例外）处理。
-      - **每次开工核对同步（2026-10-14 新增）**：每次会话开工时，把正本 HEAD 与本机各仓库标记块的 `src=` 逐一比对（只读，可直接做）。有落后的列成清单交用户：仓库、分支、文件、落后几个 commit、块内容是否真的变了、工作区是否干净、是否处于冻结期（第 12 条打包冻结、计划写明的不 commit 期）。**用户批准后**才 `apply`、commit、push；处在冻结期的仓库不在冻结 HEAD 上提交，改为切独立 worktree 分支完成回流、冻结结束后再合并，并把待合并事项写进该仓库计划或进度文件。`sync-targets.json` 登记的路径在当前机器上不存在时（例如换了机器），自己扫工作盘下带 `AGENTMETARULES:BEGIN` 的文件，不得因此跳过核对。用户原话（2026-10-14）：「以后你每次都同步」「告诉我你要更新哪几个仓库 我批准后再更新」「这个也要写入agentmetarules」。
+      - **每次开工核对同步（2026-10-14 新增）**：每次会话开工时，把正本 HEAD 与本机各仓库标记块的 `src=` 逐一比对（只读，可直接做）。有落后的**直接** `apply`、commit、push，不再先列清单问用户（2026-10-15 修订，取代 10-14「批准后才回流」口径），事后在当轮汇报里列出：仓库、分支、文件、落后几个 commit、块内容是否真的变了、提交 sha；目标工作区有他人在途改动时只提交规则文件、绕开其余（第 11 条）；处在冻结期的仓库不在冻结 HEAD 上提交，改为切独立 worktree 分支完成回流、冻结结束后再合并，并把待合并事项写进该仓库计划或进度文件。`sync-targets.json` 登记的路径在当前机器上不存在时（例如换了机器），自己扫工作盘下带 `AGENTMETARULES:BEGIN` 的文件，不得因此跳过核对。用户原话（2026-10-14）：「以后你每次都同步」「告诉我你要更新哪几个仓库 我批准后再更新」「这个也要写入agentmetarules」。2026-10-15 修订原话：「都同步 以后不要问 都同步」。
 
     来源：benchmark 日志 2026-09-09（拆分口径、编号取舍、脚本搬运）；evalgl/AGENTS.md「规则来源」；mjepa/AGENTS.md 前言；2026-09-26 用户要求「每个仓库都要有一份agentsmd greatlake md等等 AgentMetaRules只负责每次同步的时候检查一下 平时只在仓库内交互 不要每次都读github太麻烦了」（标记块同步机制）。
 
@@ -423,7 +424,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 | `<COMMIT_SUBJECT_STYLE>` | commit subject 体例 | 第 11 条 |
 | `<PLAN_EXEMPLAR>` | 计划密度标杆文档 | 第 2 条 |
 
-<!-- AGENTMETARULES:END common-agents src=12b4f0852d4f17b1dd4e643be7efff1da11459bb blob=4814c77dc261f8adbf07c013275277e6bf518d02 -->
+<!-- AGENTMETARULES:END common-agents src=c28e9e07fd9d821e19755aeeb3fd000235faaa16 blob=b3f24552ab26e66b953ba6f15214b48b9029ecaa -->
 
 ## 对正本的覆盖项（按正本条号；未列出的条目按正本执行）
 
