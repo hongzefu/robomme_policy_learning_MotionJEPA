@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-15T03:46:34Z",
-    "america_new_york": "2026-10-14T23:46:34-0400"
+    "utc": "2026-10-16T04:41:08Z",
+    "america_new_york": "2026-10-16T00:41:08-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
@@ -13,5 +13,151 @@
     "main_path": null,
     "frozen_head": null
   },
-  "tasks": {}
+  "tasks": {
+    "mixed8-vla-build": {
+      "plan": {
+        "file": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html",
+        "sha": null
+      },
+      "state": "planned",
+      "state_changed_at": "2026-10-16T04:41:08Z",
+      "state_reason": "计划定稿 dev/mixed8-vla-plan@f77a06c，等用户开工令；A 阶段（代码+下包合并）可在 encoder 训练期间做，GPU 阶段待 encoder-train done",
+      "owner": {
+        "session": "https://claude.ai/code/session_01VQpEEQrogZVW3R6pEgJxEz",
+        "host": "claude-code"
+      },
+      "depends_on": [
+        {
+          "path": "/scratch/hongze/MotionJEPA",
+          "branch": "v7.0-mixed8",
+          "task": "mixed8-encoder-train"
+        }
+      ],
+      "pre_handoff": [
+        {
+          "what": "merge verify",
+          "evidence": "MERGE_VERIFY=PASS … tasks=16 episodes=3200 mismatches=0",
+          "where": "v1-store/raw-h5/16task-mixed8-200-20261014/",
+          "status": "pending"
+        },
+        {
+          "what": "窗口预算",
+          "evidence": "TRAIN_ES_BOUND=PASS episodes=3200 tasks=16 max_windows=<n> budget=160 headroom=<h>（建库前实算 PRE=PASS max_windows=123 headroom=37）",
+          "where": "v1-store/logs/m8v-esbound.log",
+          "status": "pending"
+        },
+        {
+          "what": "8×8 打包",
+          "evidence": "VERIFY_PACK=PASS … mismatches=0",
+          "where": "v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/framesamp-8x8/",
+          "status": "pending"
+        },
+        {
+          "what": "motion 表",
+          "evidence": "pack_motion_store verify PASS",
+          "where": "…/motion/",
+          "status": "pending"
+        },
+        {
+          "what": "preflight 与 4 卡短测",
+          "evidence": "preflight PASS；MOTION_4GPU_SMOKE=PASS|FAIL …（FAIL 则记串行决定）",
+          "where": "v1-store/logs/m8v-preflight-*.log",
+          "status": "pending"
+        },
+        {
+          "what": "20 步可读性试训",
+          "evidence": "EXIT_CODE=0",
+          "where": "v1-store/logs/m8v-read20.log",
+          "status": "pending"
+        },
+        {
+          "what": "建库档案",
+          "evidence": "docs/dataset-build-doc/16task-mixed8-200-3200ep-e3c7564f/{launch,result}.md",
+          "where": "policy git",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [
+        {
+          "what": "VLA 新库上传 HF",
+          "tmux": "m8v-trainset-upload",
+          "log": "v1-store/logs/m8v-trainset-upload.log",
+          "done_line": "RESULT=PASS",
+          "status": "pending"
+        }
+      ],
+      "running_handles": [],
+      "authorizations": [],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "开工令后执行计划 A 阶段",
+          "command": "见 1016 计划 runbook「训练结束前」",
+          "verdict_line": "PRE_MERGE_REVIEW=PASS"
+        }
+      ]
+    },
+    "mixed8-vla-train": {
+      "plan": {
+        "file": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html",
+        "sha": null
+      },
+      "state": "planned",
+      "state_changed_at": "2026-10-16T04:41:08Z",
+      "state_reason": "等 mixed8-vla-build done；两条 80k run 4+4 并行（短测 FAIL 自动串行）",
+      "owner": {
+        "session": "https://claude.ai/code/session_01VQpEEQrogZVW3R6pEgJxEz",
+        "host": "claude-code"
+      },
+      "depends_on": [
+        "mixed8-vla-build"
+      ],
+      "pre_handoff": [
+        {
+          "what": "512 训练",
+          "evidence": "EXIT_CODE=0 run=mixed8-200-m8x8-modul-b128-80k",
+          "where": "v1-store/logs/mixed8-200-m8x8-modul-b128-80k.log",
+          "status": "pending"
+        },
+        {
+          "what": "512+motion 训练",
+          "evidence": "EXIT_CODE=0 run=mixed8-200-m8x8-modul-motion-b128-80k",
+          "where": "v1-store/logs/mixed8-200-m8x8-modul-motion-b128-80k.log",
+          "status": "pending"
+        },
+        {
+          "what": "训练档案回写",
+          "evidence": "commitV11.24 / commitV11.25 result.md",
+          "where": "docs/training-doc/<run>/",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [
+        {
+          "what": "512 ckpt 上传 HF",
+          "tmux": "m8v-ckpt512-upload",
+          "log": "v1-store/logs/m8v-ckpt512-upload.log",
+          "done_line": "RESULT=PASS",
+          "status": "pending"
+        },
+        {
+          "what": "512+motion ckpt 上传 HF",
+          "tmux": "m8v-ckpt80k-upload",
+          "log": "v1-store/logs/m8v-ckpt80k-upload.log",
+          "done_line": "RESULT=PASS",
+          "status": "pending"
+        }
+      ],
+      "running_handles": [],
+      "authorizations": [],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "build done 后：Beta commit → preflight → 起跑",
+          "command": "见 1016 计划 runbook B4",
+          "verdict_line": "MOTION_4GPU_SMOKE="
+        }
+      ]
+    }
+  }
 }
