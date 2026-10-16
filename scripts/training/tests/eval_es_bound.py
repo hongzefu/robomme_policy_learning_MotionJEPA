@@ -1,4 +1,11 @@
-"""经真实 EnvRunner.reset 采集 test 集 demo 长度；任务分进程，聚合后才判预算。"""
+"""经真实 EnvRunner.reset 采集 sim test 集 demo 长度；任务分进程，聚合后才判预算。
+
+任务列表与每任务条数参数化（``--tasks`` / ``--episodes-per-task``）；不给 ``--tasks`` 时沿用历史四任务
+（mv2-evalbound 档案口径）。三个子命令：
+  check      只读 test metadata，判断 sim test 集是否齐备；缺失时输出 ``ES_BOUND=SKIP reason=no_sim_testset`` 并 0 退出
+  reset      单任务逐条 reset 采集 demo 长度（metadata 里该任务没有 episode 时同样 SKIP 并 0 退出）
+  aggregate  汇总各任务报告并判预算
+"""
 
 import argparse
 import hashlib
@@ -10,7 +17,30 @@ import subprocess
 import time
 
 ROOT=pathlib.Path(__file__).resolve().parents[3]
-TASKS=("BinFill","RouteStick","VideoRepick","VideoUnmaskSwap")
+TASKS=("BinFill","RouteStick","VideoRepick","VideoUnmaskSwap")   # 仅作 --tasks 缺省值（历史四任务口径）
+EPISODES_PER_TASK=50
+METADATA_ROOT=ROOT/"third_party/robomme_benchmark/src/robomme/env_metadata"
+SKIP_LINE="ES_BOUND=SKIP reason=no_sim_testset"
+
+
+def metadata_episodes(path, task):
+    """与 RoboMME load_episode_metadata 同口径：records[].task（缺省 env_id）== task 的 episode 编号集合。"""
+    if not path.is_file(): return set()
+    payload=json.loads(path.read_text(encoding="utf-8"))
+    default=str(payload.get("env_id") or "").strip()
+    return {int(r["episode"]) for r in payload.get("records",[])
+            if r.get("episode") is not None and str(r.get("task") or default).strip()==task}
+
+
+def check_testset(args):
+    root=args.metadata_dir or METADATA_ROOT/args.dataset
+    counts={task:len(metadata_episodes(root/f"record_dataset_{task}_metadata.json",task)) for task in args.tasks}
+    for task,count in counts.items(): print(f"ES_BOUND_TESTSET task={task} episodes={count} metadata_dir={root}",flush=True)
+    missing=[task for task,count in counts.items() if count<args.episodes_per_task]
+    if missing:
+        print(f"{SKIP_LINE} missing_tasks={','.join(missing)} need={args.episodes_per_task}",flush=True)
+        return
+    print(f"ES_BOUND_TESTSET=READY tasks={len(counts)} episodes_per_task={args.episodes_per_task} metadata_dir={root}",flush=True)
 
 
 def predicted_windows(es, max_steps=1300):
@@ -35,7 +65,10 @@ def reset_task(args):
     metadata_path=pathlib.Path(runner.env_builder._resolve_metadata_path())
     metadata_sha=hashlib.sha256(metadata_path.read_bytes()).hexdigest()
     count=runner.num_episodes
-    if count!=50: raise ValueError(f"{args.task} 的 test 集数 {count} != 50")
+    if count==0:
+        print(f"{SKIP_LINE} task={args.task} metadata={metadata_path}",flush=True)
+        return
+    if count!=args.episodes_per_task: raise ValueError(f"{args.task} 的 test 集数 {count} != {args.episodes_per_task}")
     indices=sorted(ep for task,ep in runner.env_builder.metadata_index if task==args.task)
     if indices!=list(range(count)): raise ValueError("test episode 编号与真实 eval 的 range 口径不同")
     selected=indices[:args.limit or None]
@@ -75,47 +108,59 @@ def reset_task(args):
 
 def aggregate(args):
     if args.out.exists(): raise FileExistsError(f"拒绝覆盖预算报告: {args.out}")
+    tasks=tuple(getattr(args,"tasks",None) or TASKS)
+    per_task=int(getattr(args,"episodes_per_task",None) or EPISODES_PER_TASK)
     reports=[json.loads(p.read_text()) for p in args.reports]
-    if len(reports)!=4 or {r["task"] for r in reports}!=set(TASKS):
-        raise ValueError("评估预检必须覆盖全部四任务，且没有重复报告")
-    if any(r["complete"] is not True or len(r["episodes"])!=50 for r in reports):
-        raise ValueError("评估预检没有完成全部 200 次 reset")
-    if any([row["episode"] for row in r["episodes"]] != list(range(50)) for r in reports):
+    if len(reports)!=len(tasks) or {r["task"] for r in reports}!=set(tasks):
+        raise ValueError(f"评估预检必须覆盖全部 {len(tasks)} 个任务，且没有重复报告")
+    if any(r["complete"] is not True or len(r["episodes"])!=per_task for r in reports):
+        raise ValueError(f"评估预检没有完成全部 {len(tasks)*per_task} 次 reset")
+    if any([row["episode"] for row in r["episodes"]] != list(range(per_task)) for r in reports):
         raise ValueError("评估预检的 episode 集合缺失、重复或乱序")
     for key in ("python","packages","env_runner_sha256","robomme_commit"):
         if len({json.dumps(r[key],sort_keys=True) for r in reports}) != 1:
-            raise ValueError(f"四任务 {key} 不一致")
+            raise ValueError(f"各任务 {key} 不一致")
     if any(r["budget"]!=args.budget or r["max_steps"]!=args.max_steps for r in reports):
         raise ValueError("各任务使用的预算或评估步数不一致")
     rows=[row for r in reports for row in r["episodes"]]
     maximum=max(row["es"] for row in rows)
     max_windows=max(predicted_windows(row["es"],args.max_steps) for row in rows)
     headroom=args.budget-max_windows
-    result={"tasks":4,"episodes":200,"es_max":maximum,"k_eval_max":max_windows,
+    result={"tasks":len(tasks),"episodes":len(rows),"es_max":maximum,"k_eval_max":max_windows,
             "budget":args.budget,"max_steps":args.max_steps,"headroom":headroom,
             "passed":headroom>=0,"reports":[str(p) for p in args.reports]}
     args.out.parent.mkdir(parents=True,exist_ok=True)
     with args.out.open("x") as f: json.dump(result,f,ensure_ascii=False,indent=2)
-    print(f"EVAL_ES_BOUND={'PASS' if headroom>=0 else 'FAIL'} tasks=4 episodes=200 es_max={maximum} budget={args.budget} headroom={headroom}",flush=True)
+    print(f"EVAL_ES_BOUND={'PASS' if headroom>=0 else 'FAIL'} tasks={len(tasks)} episodes={len(rows)} es_max={maximum} budget={args.budget} headroom={headroom}",flush=True)
     if headroom<0: raise SystemExit(1)
 
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     commands=parser.add_subparsers(dest="command",required=True)
-    for name in ("reset","aggregate"):
+    for name in ("check","reset","aggregate"):
         p=commands.add_parser(name)
+        p.add_argument("--episodes-per-task",type=int,default=EPISODES_PER_TASK,help="每任务 sim test 条数")
+        if name=="check":
+            p.add_argument("--tasks",nargs="+",default=list(TASKS))
+            p.add_argument("--dataset",choices=("train","val","test"),default="test")
+            p.add_argument("--metadata-dir",type=pathlib.Path,default=None,
+                           help="缺省为钉版 RoboMME 的 env_metadata/<dataset>/")
+            continue
         p.add_argument("--out",type=pathlib.Path,required=True)
         p.add_argument("--budget",type=int,default=160)
         p.add_argument("--max-steps",type=int,default=1300)
         if name=="reset":
-            p.add_argument("--task",choices=TASKS,required=True)
+            p.add_argument("--task",required=True)
             p.add_argument("--limit",type=int,default=0,help="仅供短测；部分结果不能通过 aggregate")
-        else: p.add_argument("--reports",type=pathlib.Path,nargs="+",required=True)
+        else:
+            p.add_argument("--tasks",nargs="+",default=list(TASKS))
+            p.add_argument("--reports",type=pathlib.Path,nargs="+",required=True)
     args=parser.parse_args()
-    if args.budget <= 0 or args.max_steps <= 0 or (args.command=="reset" and args.limit<0):
-        raise ValueError("预算、步数或短测数量非法")
-    reset_task(args) if args.command=="reset" else aggregate(args)
+    if args.episodes_per_task<=0 or (args.command!="check" and (args.budget <= 0 or args.max_steps <= 0)) \
+            or (args.command=="reset" and args.limit<0):
+        raise ValueError("预算、步数、条数或短测数量非法")
+    {"check":check_testset,"reset":reset_task,"aggregate":aggregate}[args.command](args)
 
 
 if __name__ == "__main__":
