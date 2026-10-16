@@ -1,0 +1,75 @@
+{
+  "_doc": [
+    "scan_hygiene.py 的裁决账本：MotionJEPA mixed8_200 建库产物 → 公开 bucket",
+    "robomme-16task-mixed8-200-motion-20261014-v1。照 hygiene_allowlist_motionjepa_full1600.json 体例新建。",
+    "每条命中都必须在这里有一条显式裁决，否则扫描器 exit 1 停机。expected_count 是 2026-10-16",
+    "对『stage 将含的全部文本文件』的实测值：control/ 去掉 content_hashes/（stage 里打成 tar、二进制不扫）",
+    "与 *.lock / run.lock，加 PUBLISHED.json、DATASET_NOTES.json、FINALIZE_DONE.json、",
+    "wan_chunk_latents/metadata.json 与本仓库 README，共 131 个文本文件（stage 实跑会多出无命中的",
+    "SHA256SUMS.pre.txt，为 132）。源侧或 README 若发生任何变化导致数量对不上，扫描器同样停机。",
+    "硬纪律：本库任何数据字节都不修改。PUBLISHED.json 的 acceptance_sha256 与它列的 4990 条",
+    "逐文件 sha256 是这批数据自己的锚点，所以只有『排除』与『披露』两种处置。",
+    "本账本没有 exclude 条目：不该公开的东西（*.bin.complete.json / *.bin.sha256 边车、data-raw/、",
+    "reference*/、smoke100/、logs/、.staging/、output-chunk-filter*/）是靠『stage 由 PUBLISHED.json",
+    "清单驱动』从根上不进 stage 的，不是靠扫描器事后剔除。",
+    "P5（凭据）实测 0 命中；P1/P2/P3、P4、P6、P8、P11 同样 0 命中，P7 在 control/ 0 命中，故无对应条目。"
+  ],
+  "entries": [
+    {
+      "pattern": "P9",
+      "path_glob": "control/*",
+      "expected_count": 40064,
+      "decision": "accept",
+      "scope": "source",
+      "reason": "control/ 下溯源 JSON 保留建库当时的本机绝对路径：preview.json 与 preview_equal_drop.json 各 5000 行，policies/equal-drop-p2_0149{,-dry}/ 下 before/ 与 reports/ 里同名的 6 份副本各 5000 行（合计 40000），其余 64 处在 timings.json、extract_attempt.json、policies/*/logs/preview.log、run_manifest.json、progress.md 等。路径对外不可达、不含凭据，而 control/ 的全部价值就是溯源；这些 JSON 还参与 policy 与 identity 的哈希绑定，改一字即断链。沿用 full1600 的裁决（用户 2026-09-14 拍板原样保留 + README 披露），本轮按『上次 latent bucket 体例』授权（2026-10-16「同意继续做」）。"
+    },
+    {
+      "pattern": "P10",
+      "path_glob": "control/*",
+      "expected_count": 1,
+      "decision": "accept",
+      "scope": "source",
+      "reason": "control/progress.md 1 处出现开发副本路径 /scratch/hongze/MotionJEPA-backup 里的仓库名。该名字在已公开的 robomme_policy_learning_MotionJEPA 仓库 AGENTS.md 正文里本就写着，泄露增量为零。沿用 full1600 裁决：原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "wan_chunk_latents/*",
+      "expected_count": 5000,
+      "decision": "accept",
+      "scope": "source",
+      "reason": "wan_chunk_latents/metadata.json 5000 条记录（含 14 个 N=0、无 .bin 的 PatternLock 变体）每条带 hostname 字段，值为构建机 AWS VPC 内部 DNS 名 ip-10-242-11-177.us-west-2.compute.internal。可复现性信息；10.x 是 RFC 1918 私有地址，对外不可路由、非凭据。该文件是发布清单必需件，排除它下游无法读 .bin；改字节会让 PUBLISHED.json 校验链失配。沿用 full1600 裁决（用户 2026-09-14 在被告知含私有 IP 与 region 后拍板『原样传 + README 披露』）。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "wan_chunk_latents/*",
+      "expected_count": 5000,
+      "decision": "accept",
+      "scope": "source",
+      "reason": "同一份 metadata.json 的同 5000 条记录里记着每段 latent 源 h5 的本机绝对路径。裁决同上：不可达、非凭据、属可复现性信息、且不能改字节。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "FINALIZE_DONE.json",
+      "expected_count": 18,
+      "decision": "accept",
+      "scope": "source",
+      "reason": "收尾统计里 18 处 .staging/ 下 metadata 分片 source/target 的本机绝对路径。与 control/ 同理，且该文件的 sha256 在 PUBLISHED.json 清单内，不可改。"
+    },
+    {
+      "pattern": "P10",
+      "path_glob": "README.md",
+      "expected_count": 1,
+      "decision": "accept",
+      "scope": "source",
+      "reason": "bucket README 的『已知事项』第 3 条为了披露上面那条 P10 裁决，必须写出 MotionJEPA 这个名字（同一行两次，按行计 1）。披露文本自身命中被披露的模式，是预期行为。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "README.md",
+      "expected_count": 1,
+      "decision": "accept",
+      "scope": "source",
+      "reason": "bucket README 的『已知事项』第 2 条为了披露 metadata.json 里的主机名，原样写出 ip-10-242-11-177.us-west-2.compute.internal 作为示例。披露文本命中被披露的模式是预期行为。"
+    }
+  ]
+}
