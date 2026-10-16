@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-16T04:41:08Z",
-    "america_new_york": "2026-10-16T00:41:08-0400"
+    "utc": "2026-10-16T07:18:43Z",
+    "america_new_york": "2026-10-16T03:18:43-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
@@ -17,112 +17,164 @@
     "mixed8-vla-build": {
       "plan": {
         "file": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html",
-        "sha": null
+        "sha": "45c3f9a"
       },
-      "state": "planned",
-      "state_changed_at": "2026-10-16T04:41:08Z",
-      "state_reason": "计划定稿 dev/mixed8-vla-plan@f77a06c，等用户开工令；A 阶段（代码+下包合并）可在 encoder 训练期间做，GPU 阶段待 encoder-train done",
+      "state": "running",
+      "state_changed_at": "2026-10-16T07:18:43Z",
+      "state_reason": "用户开工令（美东 2026-10-16 02:55）+ F1 裁决「a同意」；R0′ PLAN_CONSISTENCY_REVIEW=PASS；A 段进行中：A1-merge/A1b 写码、A1-train 已审 PASS 待合入",
       "owner": {
-        "session": "https://claude.ai/code/session_01VQpEEQrogZVW3R6pEgJxEz",
+        "session": "https://claude.ai/code/session_01TVXcR5Zdi5K11TXph2pZGw",
         "host": "claude-code"
       },
       "depends_on": [
         {
+          "level": "A",
+          "what": "写代码、下载、merge、manifest、TRAIN_ES_BOUND",
+          "needs": "本计划开工令；mixed8-encoder-train 处于 running 即可"
+        },
+        {
+          "level": "B1",
           "path": "/scratch/hongze/MotionJEPA",
           "branch": "v7.0-mixed8",
-          "task": "mixed8-encoder-train"
+          "task": "mixed8-encoder-train",
+          "gate": "不等 done（口径 26 第 27 条例外）：B1_GATE=PASS exit=0 epochs=72 ckpt_sha=<sha> manifest_sha=e3c7564f tmux_gone=1 gpu_idle=1 ema_only=1 @ /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-b1gate.log"
         }
       ],
       "pre_handoff": [
         {
           "what": "merge verify",
-          "evidence": "MERGE_VERIFY=PASS … tasks=16 episodes=3200 mismatches=0",
-          "where": "v1-store/raw-h5/16task-mixed8-200-20261014/",
+          "evidence": "MERGE_VERIFY=PASS level=full tasks=16 episodes=3200 … mismatches=0；timesteps=2,145,548",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-merge.log、/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-merge-verify.log",
           "status": "pending"
         },
         {
           "what": "窗口预算",
-          "evidence": "TRAIN_ES_BOUND=PASS episodes=3200 tasks=16 max_windows=<n> budget=160 headroom=<h>（建库前实算 PRE=PASS max_windows=123 headroom=37）",
-          "where": "v1-store/logs/m8v-esbound.log",
+          "evidence": "TRAIN_ES_BOUND=PASS episodes=3200 tasks=16 max_windows=<n≤123> budget=160 headroom=<h≥0>（PRE=PASS max_windows=123 headroom=37）",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-esbound.log",
           "status": "pending"
         },
         {
-          "what": "8×8 打包",
-          "evidence": "VERIFY_PACK=PASS … mismatches=0",
-          "where": "v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/framesamp-8x8/",
+          "what": "8×8 打包与 xgrid",
+          "evidence": "VERIFY_PACK=PASS … mismatches=0；IMAGE_NPY_SPOT=PASS frames=512 mismatches=0；MOTION_POS_XGRID=PASS",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-pack8.log",
           "status": "pending"
         },
         {
-          "what": "motion 表",
-          "evidence": "pack_motion_store verify PASS",
-          "where": "…/motion/",
+          "what": "motion 表与对拍",
+          "evidence": "VERIFY_MOTION=PASS；WAN_BITEXACT=PASS；ENCODER_BITEXACT=PASS；A6_SAMESOURCE/A7_BYTES/A9_INDEXSET/A10_ROWS/A11_PAD=PASS",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-motion.log",
           "status": "pending"
         },
         {
-          "what": "preflight 与 4 卡短测",
-          "evidence": "preflight PASS；MOTION_4GPU_SMOKE=PASS|FAIL …（FAIL 则记串行决定）",
-          "where": "v1-store/logs/m8v-preflight-*.log",
+          "what": "20 步试训兼 4 卡短测",
+          "evidence": "两次 EXIT_CODE=0；MOTION_4GPU_SMOKE=PASS|FAIL run=512|motion …×2 及并行/串行决定",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-try20-512.log、/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-try20-motion.log",
           "status": "pending"
         },
         {
-          "what": "20 步可读性试训",
-          "evidence": "EXIT_CODE=0",
-          "where": "v1-store/logs/m8v-read20.log",
+          "what": "数据身份",
+          "evidence": "DATA_IDENTITY=PASS norm_sha=<sha> steps=<n> samples=<m> manifest_sha=e3c7564f…（preflight 移到 mixed8-vla-train 开工前自检，口径 43）",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-identity.log",
           "status": "pending"
         },
         {
           "what": "建库档案",
-          "evidence": "docs/dataset-build-doc/16task-mixed8-200-3200ep-e3c7564f/{launch,result}.md",
-          "where": "policy git",
+          "evidence": "docs/dataset-build-doc/16task-mixed8-200-3200ep-e3c7564f/ 已提交",
+          "where": "policy git commit sha",
           "status": "pending"
         }
       ],
       "long_tail": [
         {
-          "what": "VLA 新库上传 HF",
+          "what": "encoder latent 库上传（原样驱动；闸门 4×4/8×8/xgrid PASS 且 features 已删；EXIT_CODE=0 后删其 verify 目录）",
+          "tmux": "m8v-latent-upload",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-latent-upload.log",
+          "done_line": "全部完成 + EXIT_CODE=0；RESULT=PASS、BUCKET_PUBLIC=True",
+          "status": "pending"
+        },
+        {
+          "what": "VLA 新库上传（分批回读；闸门 motion 对拍 PASS 且 latent verify 目录已删）",
           "tmux": "m8v-trainset-upload",
-          "log": "v1-store/logs/m8v-trainset-upload.log",
-          "done_line": "RESULT=PASS",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-trainset-upload.log",
+          "done_line": "全部完成 + EXIT_CODE=0；RESULT=PASS、SHA256_PRE_POST_DIFF=0、private==false、READBACK_PEAK_BYTES≤107374182400",
           "status": "pending"
         }
       ],
       "running_handles": [],
-      "authorizations": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-16",
+          "quote": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html 开工 有关键问题问用户但尽可能不要阻塞",
+          "scope": "1016 计划全部步骤（停点清单 11 项外不阻塞）"
+        },
+        {
+          "kind": "go",
+          "date": "2026-10-16",
+          "quote": "a同意",
+          "scope": "F1 选 (a)（口径 43）并以此回复作为改后计划 45c3f9a 的开工令；PLAN_CONSISTENCY_REVIEW=PASS base=110fcd7 tip=c83d151 blocking=0"
+        },
+        {
+          "kind": "exception-27",
+          "date": "2026-10-16",
+          "quote": "3 同意",
+          "scope": "口径 26：B1（拷 ckpt、mp4、SigLIP 及之后）不等 mixed8-encoder-train done，B1_GATE 六项判据全部满足即起"
+        }
+      ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "开工令后执行计划 A 阶段",
-          "command": "见 1016 计划 runbook「训练结束前」",
-          "verdict_line": "PRE_MERGE_REVIEW=PASS"
+          "what": "A1-merge 审查合入（commitV11.23）后起 A3 小样本与全量下载合并",
+          "command": "1016 计划 runbook「训练结束前（A 段）」",
+          "verdict_line": "MERGE_VERIFY=PASS"
+        },
+        {
+          "what": "接收的 latent 库上传：闸门满足后先 SMOKE=1 再全量",
+          "command": "tmux m8v-latent-upload-smoke / m8v-latent-upload（runbook 长尾段）",
+          "verdict_line": "全部完成 + EXIT_CODE=0"
+        },
+        {
+          "what": "build done 的 handoff commit 在 HEAD 冻结窗口之后、V11.24Beta 之前提交（口径 43）",
+          "command": "—",
+          "verdict_line": "pre_handoff 全部 pass"
         }
-      ]
+      ],
+      "received_handover": {
+        "line": "LATENT_UPLOAD_HANDOVER=CONFIRMED from=mixed8-encoder-train to=mixed8-vla-build",
+        "where": "/scratch/hongze/MotionJEPA docs/handoff/current.json @ fc78fb6",
+        "accepted_at": "2026-10-16T07:18:43Z"
+      }
     },
     "mixed8-vla-train": {
       "plan": {
         "file": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html",
-        "sha": null
+        "sha": "45c3f9a"
       },
       "state": "planned",
-      "state_changed_at": "2026-10-16T04:41:08Z",
-      "state_reason": "等 mixed8-vla-build done；两条 80k run 4+4 并行（短测 FAIL 自动串行）",
+      "state_changed_at": "2026-10-16T07:18:43Z",
+      "state_reason": "等 mixed8-vla-build done（handoff 在 V11.24Beta 之前）；开工前自检 512/motion preflight；两条 80k 4+4 并行，短测 FAIL 只串行失败那条",
       "owner": {
-        "session": "https://claude.ai/code/session_01VQpEEQrogZVW3R6pEgJxEz",
+        "session": "https://claude.ai/code/session_01TVXcR5Zdi5K11TXph2pZGw",
         "host": "claude-code"
       },
       "depends_on": [
-        "mixed8-vla-build"
+        {
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+          "branch": "v2-motionmem",
+          "task": "mixed8-vla-build"
+        }
       ],
       "pre_handoff": [
         {
           "what": "512 训练",
           "evidence": "EXIT_CODE=0 run=mixed8-200-m8x8-modul-b128-80k",
-          "where": "v1-store/logs/mixed8-200-m8x8-modul-b128-80k.log",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-modul-b128-80k.log",
           "status": "pending"
         },
         {
           "what": "512+motion 训练",
           "evidence": "EXIT_CODE=0 run=mixed8-200-m8x8-modul-motion-b128-80k",
-          "where": "v1-store/logs/mixed8-200-m8x8-modul-motion-b128-80k.log",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-modul-motion-b128-80k.log",
           "status": "pending"
         },
         {
@@ -134,28 +186,55 @@
       ],
       "long_tail": [
         {
-          "what": "512 ckpt 上传 HF",
+          "what": "512 ckpt 上传 HF（16 份）",
           "tmux": "m8v-ckpt512-upload",
-          "log": "v1-store/logs/m8v-ckpt512-upload.log",
-          "done_line": "RESULT=PASS",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-ckpt512-upload.log",
+          "done_line": "全部完成 + EXIT_CODE=0；RESULT=PASS、SHA256_PRE_POST_DIFF=0、private==false",
           "status": "pending"
         },
         {
-          "what": "512+motion ckpt 上传 HF",
-          "tmux": "m8v-ckpt80k-upload",
-          "log": "v1-store/logs/m8v-ckpt80k-upload.log",
-          "done_line": "RESULT=PASS",
+          "what": "512+motion ckpt 上传 HF（16 份）",
+          "tmux": "m8v-ckptmotion-upload",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-ckptmotion-upload.log",
+          "done_line": "全部完成 + EXIT_CODE=0；RESULT=PASS、SHA256_PRE_POST_DIFF=0、private==false",
           "status": "pending"
         }
       ],
       "running_handles": [],
-      "authorizations": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-16",
+          "quote": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html 开工 有关键问题问用户但尽可能不要阻塞",
+          "scope": "1016 计划全部步骤（停点清单 11 项外不阻塞）"
+        },
+        {
+          "kind": "go",
+          "date": "2026-10-16",
+          "quote": "a同意",
+          "scope": "F1 选 (a)（口径 43）并以此回复作为改后计划 45c3f9a 的开工令；PLAN_CONSISTENCY_REVIEW=PASS base=110fcd7 tip=c83d151 blocking=0"
+        }
+      ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "build done 后：Beta commit → preflight → 起跑",
-          "command": "见 1016 计划 runbook B4",
-          "verdict_line": "MOTION_4GPU_SMOKE="
+          "what": "build done 后：exclude → V11.24Beta → push → 512 preflight → 起 512；V11.25Beta → motion preflight → 起 motion；第一条起跑后上红线 18 只读锁",
+          "command": "1016 计划 runbook B4",
+          "verdict_line": "MOTION_4GPU_SMOKE= / preflight PASS"
+        }
+      ],
+      "pre_start_self_check": [
+        {
+          "what": "512 preflight（V11.24Beta 之后、起 512 之前；主检出 exclude 3 个精确路径、status 为空、不带 --launch-mode）",
+          "evidence": "preflight 判定行全 PASS",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-preflight-512.log",
+          "status": "pending"
+        },
+        {
+          "what": "motion preflight（V11.25Beta 之后、起 motion 之前）",
+          "evidence": "preflight 判定行全 PASS",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-preflight-motion.log",
+          "status": "pending"
         }
       ]
     }
