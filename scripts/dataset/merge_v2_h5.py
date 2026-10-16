@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""将有来源清单的单 episode H5 无损合并；仅 full 校验可以发布完成标记。"""
+"""将有来源清单的单 episode H5 无损合并；仅 full 校验可以发布完成标记。
+
+两种来源形制：
+  * 旧 4 任务 v2 源（HF repo）：source.json 含 repo_id/revision/manifest_sha256，MANIFEST 含 counts，
+    每任务 400 条 primary（LEGACY_SOURCE_COUNTS）。
+  * mixed8 16 任务 × 200（source_kind=local-benchmark）：source.json 无 repo_id，MANIFEST 无 counts，
+    任务集合与每任务（每难度格）集数取自 MANIFEST summary.cells，manifest sha256 钉死为 LOCAL_BENCHMARK_MANIFESTS。
+merge 字段一律逐字拷贝（h5py copy），不做任何字段映射。
+"""
 
 from __future__ import annotations
 
@@ -23,8 +31,14 @@ import numpy as np
 
 REPO = Path(__file__).resolve().parents[2]
 V1_STORE = REPO / "v1-store"
-SOURCE_COUNTS = dict.fromkeys(("BinFill", "RouteStick", "VideoRepick", "VideoUnmaskSwap"), 400)
-DIFFICULTY_ORDER = {"easy": 0, "medium": 1, "hard": 2, "xhard": 3}
+# 旧 4 任务源（MANIFEST 无 summary.cells）的固定全集；mixed8 源的全集取自 MANIFEST summary.cells。
+LEGACY_SOURCE_COUNTS = dict.fromkeys(("BinFill", "RouteStick", "VideoRepick", "VideoUnmaskSwap"), 400)
+# 排序只看相对次序：旧源的 xhard 与 mixed8 的 xhard12…xhard20 不会出现在同一份 MANIFEST 里。
+DIFFICULTY_ORDER = {"easy": 0, "medium": 1, "hard": 2, "xhard": 3,
+                    "xhard12": 4, "xhard14": 5, "xhard16": 6, "xhard18": 7, "xhard20": 8}
+LOCAL_BENCHMARK = "local-benchmark"
+# local-benchmark 来源没有 HF repo 可钉，身份只能靠 MANIFEST 字节摘要：mixed8 full200 快照。
+LOCAL_BENCHMARK_MANIFESTS = frozenset({"e3c7564f787781910f741d57b487d45565defbe8d3c2c17af9233c651093de11"})
 SORT_VERSION = "difficulty-episode-v1"
 ROW_KEYS = ("task", "difficulty", "episode", "seed", "role", "member", "h5_sha256", "h5_bytes", "timestep_count")
 
@@ -102,28 +116,59 @@ def load_manifest(snapshot, control):
     manifest_path = Path(snapshot) / "MANIFEST.json"
     require(sha256_file(manifest_path) == source["manifest_sha256"], "MANIFEST sha256 与 source.json 不符")
     manifest = read_json(manifest_path)
-    require(manifest["repo_id"] == source["repo_id"], "MANIFEST repo_id 不符")
     require(bool(re.fullmatch(r"[0-9a-f]{40}", source["revision"])), "revision 必须是完整提交")
-    return manifest, {k: source[k] for k in ("repo_id", "revision", "manifest_sha256")}
+    kind = source.get("source_kind")
+    if kind is None:
+        require(manifest["repo_id"] == source["repo_id"], "MANIFEST repo_id 不符")
+        return manifest, {k: source[k] for k in ("repo_id", "revision", "manifest_sha256")}
+    require(kind == LOCAL_BENCHMARK, f"未知 source_kind: {kind}")
+    require("repo_id" not in source and "repo_id" not in manifest, "local-benchmark 来源不应带 repo_id")
+    require(source["manifest_sha256"] in LOCAL_BENCHMARK_MANIFESTS, f"local-benchmark MANIFEST sha256 未登记: {source['manifest_sha256']}")
+    require(manifest.get("revision", source["revision"]) == source["revision"], "MANIFEST revision 与 source.json 不符")
+    return manifest, {k: source[k] for k in sorted(source)}
+
+
+def source_cells(manifest, primary):
+    """源全集期望：有 summary.cells 取它（每任务每难度格），否则旧 4 任务固定全集；返回每任务期望条数。"""
+    summary = manifest.get("summary") or {}
+    if "cells" not in summary:
+        require(dict(Counter(row["task"] for row in primary)) == LEGACY_SOURCE_COUNTS,
+                "源全集必须每任务 400 条，共 1600 条 primary")
+        return dict(LEGACY_SOURCE_COUNTS)
+    cells = summary["cells"]
+    got = Counter((row["task"], row["difficulty"]) for row in primary)
+    want = {(task, difficulty): n for task, row in cells.items() for difficulty, n in row.items()}
+    require(all(isinstance(n, int) and n > 0 for n in want.values()), "summary.cells 计数非法")
+    require(dict(got) == want, "primary 的 (task, difficulty) 分布与 summary.cells 不符")
+    expected = {task: sum(row.values()) for task, row in cells.items()}
+    if "per_task" in summary:
+        require(summary["per_task"] == expected, "summary.per_task 与 summary.cells 不符")
+    if "requested_per_task" in summary:
+        require(set(expected.values()) == {summary["requested_per_task"]}, "每任务集数与 requested_per_task 不符")
+    require(not summary.get("partial") and not summary.get("missing"), "MANIFEST summary 标记为不完整")
+    return expected
 
 
 def select_primary(manifest, tasks, per_group=None):
     episodes = manifest["episodes"]
     roles = Counter(row["role"] for row in episodes)
     require(set(roles) <= {"primary", "spare", "smoke"}, "未知 role")
-    # counts 同时含 videos/archives/files；role 只与三个对应计数字段比较。
-    require({role: roles[role] for role in ("primary", "spare", "smoke")}
-            == {role: manifest["counts"][role] for role in ("primary", "spare", "smoke")},
-            f"role 分布不符: {dict(roles)}")
+    if "counts" in manifest:
+        # counts 同时含 videos/archives/files；role 只与三个对应计数字段比较。
+        require({role: roles[role] for role in ("primary", "spare", "smoke")}
+                == {role: manifest["counts"][role] for role in ("primary", "spare", "smoke")},
+                f"role 分布不符: {dict(roles)}")
     primary = [row for row in episodes if row["role"] == "primary"]
-    require(dict(Counter(row["task"] for row in primary)) == SOURCE_COUNTS, "源全集必须每任务 400 条，共 1600 条 primary")
-    require(len(primary) == manifest["counts"]["primary"], "源全集 primary 总数不符")
-    require(len(tasks) == len(set(tasks)) and set(tasks) <= set(SOURCE_COUNTS) and tasks, "任务列表非法")
+    for row in primary:
+        require(row["difficulty"] in DIFFICULTY_ORDER, f"未知难度 {row['difficulty']}")
+    expected = source_cells(manifest, primary)
+    require(dict(Counter(row["task"] for row in primary)) == expected, "源全集每任务 primary 条数不符")
+    require(len(primary) == sum(expected.values()) == roles["primary"], "源全集 primary 总数不符")
+    require(len(tasks) == len(set(tasks)) and set(tasks) <= set(expected) and tasks, "任务列表非法")
     require(per_group is None or per_group > 0, "per-group 必须大于零")
     require(len({row["member"] for row in episodes}) == len(episodes), "源 member 重复或跨 role 重叠")
     require(len({(r["task"], r["difficulty"], r["episode"]) for r in primary}) == len(primary), "primary 三元身份重复")
     for row in primary:
-        require(row["difficulty"] in DIFFICULTY_ORDER, f"未知难度 {row['difficulty']}")
         require(isinstance(row["episode"], int) and row["episode"] >= 0, "原 episode 编号非法")
         require(0 < row["timestep_count"] < 4096, f"步数超出 MemoryBuffer 契约: {row['member']}")
         require(bool(re.fullmatch(r"[0-9a-f]{64}", row["h5_sha256"])), "源摘要格式非法")
@@ -183,12 +228,18 @@ def base_rows(rows):
     return [{k: v for k, v in row.items() if k != "h5_sha256_local"} for row in rows]
 
 
+def source_tasks(manifest):
+    return sorted({row["task"] for row in manifest["episodes"] if row["role"] == "primary"})
+
+
 def cmd_plan(args):
     out = output_path(args.out)
     manifest, pin = load_manifest(args.snapshot, args.control)
-    tasks = args.tasks.split(",")
+    tasks = args.tasks.split(",") if args.tasks else source_tasks(manifest)
     selected = select_primary(manifest, tasks, args.per_group)
-    all_rows = select_primary(manifest, list(SOURCE_COUNTS))
+    # 全局身份与全集计数照旧对全部任务校验；文件级预检只覆盖 --tasks 所选任务的全部 primary。
+    all_rows = select_primary(manifest, source_tasks(manifest))
+    precheck_rows = select_primary(manifest, tasks)
     plan = {"source_pin": pin, "tasks": tasks, "per_group": args.per_group, "sort_version": SORT_VERSION,
             "snapshot": str(real_path(args.snapshot)), "control": str(real_path(args.control)),
             "extracted": str(real_path(args.extracted))}
@@ -201,7 +252,7 @@ def cmd_plan(args):
         else:
             require({p.name for p in out.iterdir()} == {".merge.lock"}, "新计划拒绝使用非空输出目录")
         goals = defaultdict(set)
-        jobs = [(row, args.extracted) for rows in all_rows.values() for row in rows]
+        jobs = [(row, args.extracted) for rows in precheck_rows.values() for row in rows]
         for task, variants in parallel_map(precheck_source, jobs, args.procs):
             goals[task].update(variants)
         if not existing.exists():
@@ -212,7 +263,8 @@ def cmd_plan(args):
         write_json(out / "task_goal_variants.json", {task: sorted(values) for task, values in goals.items()})
     count = sum(map(len, selected.values()))
     maximum = max(row["timestep_count"] for rows in all_rows.values() for row in rows)
-    print(f"PLAN_OK tasks={len(tasks)} selected={count} role=primary:{count} max_timesteps={maximum} prechecks=PASS", flush=True)
+    print(f"PLAN_OK tasks={len(tasks)} selected={count} role=primary:{count} max_timesteps={maximum} "
+          f"prechecks=PASS precheck_files={len(jobs)}", flush=True)
 
 
 def load_plan(out, extracted):
@@ -414,7 +466,7 @@ def main(argv=None):
         if name == "plan":
             sub.add_argument("--snapshot", type=Path, required=True)
             sub.add_argument("--control", type=Path, required=True)
-            sub.add_argument("--tasks", default=",".join(SOURCE_COUNTS))
+            sub.add_argument("--tasks", help="逗号分隔任务子集；缺省为 MANIFEST 里的全部 primary 任务（按字母序）")
             sub.add_argument("--per-group", type=int)
         elif name == "merge":
             sub.add_argument("--check-source-sha256", action="store_true")
