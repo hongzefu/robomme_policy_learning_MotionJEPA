@@ -1,0 +1,68 @@
+{
+  "_doc": [
+    "scan_hygiene.py 的裁决账本：motion encoder run wan-mixed8-200-filter2-stop075-b88x8-72ep-a → 公开 bucket",
+    "motionjepa-wan-mixed8-200-72ep-v1（run_mixed8_200_encoder_ckpt_export.sh 阶段 3 扫 stage，在建 bucket 之前）。",
+    "stage 是显式白名单：36 个 .pt（二进制，不扫）、config.yaml、train_metrics_epoch.jsonl、sig_loss_epoch1.csv、",
+    "gpu_samples.csv、train.log（驱动现场清洗）、README.md、eval-mp4/videos/*.mp4（二进制）与 eval-mp4/reports/*。",
+    "2026-10-16 实扫（训练到 epoch 71 时）：config.yaml P9 5 处、其余 P* 0 处；三份指标文件 0 命中；两份 bucket README 0 命中",
+    "（README 刻意不写出被披露的样例原文）；清洗后的训练日志 P9 20 处、P10 18 处；run 目录里的 wandb/ 有 P6（私有仓库",
+    "GitHub remote）——wandb/ 不进 stage，这是驱动层的排除，不靠本账本。",
+    "config.yaml 训练开始就写定、不再变化，故写死 expected_count=5（多一处少一处都停）；train.log 在训练结束前还在增长、",
+    "eval-mp4/reports/ 在写本账本时还没生成，二者的命中数无从实测，条目不写 expected_count，只起『命中必须落在",
+    "已裁决的文件 × 模式里』这一层闸门。实测命中数见 logs/hygiene-stage.json 的 accept_entries[].got。",
+    "没有条目的文件（三份指标、README）与没有条目的模式（P1/P2/P3/P4/P6/P11，P5 凭据恒硬停）任何一处命中都会停机。",
+    "hygiene FAIL 时按计划口径 29：修本账本或剔除越界文件，经审查后从 SMOKE 重新起跑，不得靠重试放行。"
+  ],
+  "entries": [
+    {
+      "pattern": "P9",
+      "path_glob": "config.yaml",
+      "expected_count": 5,
+      "decision": "accept",
+      "scope": "both",
+      "reason": "训练配置的 data.data_root 与四个 data._*_dir/_path 派生键记着建库机上 latent 库的绝对路径。对外不可达、非凭据，是可复现性信息；config.yaml 的 sha256 进 SHA256SUMS.pre.txt，按『只排除与披露、不改字节』处置：原样保留 + README『已知事项』第 1 条披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "train.log",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "训练 stdout 的启动横幅回显数据集与 wandb key 文件的本机路径（key 内容不打印），以及 torch 警告行里的解释器 site-packages 路径。路径对外不可达、不含凭据；日志是训练过程的唯一原始记录，原样（仅去 tqdm 中间态）保留 + README 披露。"
+    },
+    {
+      "pattern": "P10",
+      "path_glob": "train.log",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "同上那些 torch 警告行的解释器路径里带 encoder 源码仓库目录名（独立引用）。仓库名在已公开的 VLA 仓库文档里本就写着，泄露增量为零；原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "eval-mp4/reports/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "交付报告（README、CHECKPOINT_SELECTION、provenance / selected_checkpoint / summary 等 JSON、CSV、summary.log）记录被评 run 目录、ckpt 与交付目录的本机绝对路径；它们是『哪一份 ckpt、在哪跑出这些 mp4』的溯源本身。上一轮同类交付（evaluteVLAencode0914 r1）实扫 P9 59 处、全部是这类路径。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P10",
+      "path_glob": "eval-mp4/reports/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "同上路径里的 encoder 源码仓库目录名（上一轮同类交付实扫 P10 60 处，与 P9 一一对应）。理由同 train.log 的 P10。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "eval-mp4/reports/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "交付报告的 provenance / performance 一类记录可能带评测机内部 DNS 名（AWS VPC 私有地址，对外不可路由、非凭据），属可复现性信息。上一轮同类交付实扫为 0，这里预先裁决为原样保留 + 披露。"
+    },
+    {
+      "pattern": "P8",
+      "path_glob": "eval-mp4/reports/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "同上，可能带评测所用 GPU 的 UUID（硬件标识、非凭据）。上一轮同类交付实扫为 0，预先裁决为原样保留 + 披露。"
+    }
+  ]
+}

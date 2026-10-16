@@ -1,0 +1,45 @@
+{
+  "_doc": [
+    "scan_hygiene.py 的裁决账本：VLA run mixed8-200-m8x8-modul-b128-80k → 公开 bucket robomme-vla-mixed8-200-modul-512-80k-v1",
+    "（run_mixed8_200_vla_512_80k_ckpt_export.sh 阶段 3 扫 stage，在建 bucket 之前）。",
+    "stage = run 目录全部文件（16 个 orbax step 目录 + run 根下的 history_config.* / motion_provenance.json / wandb_id.txt）",
+    "+ _run-meta/train.log（驱动现场清洗）+ README.md。",
+    "写本账本时（2026-10-16）这条 run 还没起跑，命中数无从实测，条目不写 expected_count，只起『命中必须落在已裁决的",
+    "文件 × 模式里』这一层闸门；实测命中数见 logs/hygiene-stage.json 的 accept_entries[].got。",
+    "参照：上一代同构 run 的训练日志（v2-1600ep-m8x8-modul-motion-b128-80k.log 与 …-modul-b128-60k.log，同一 runner 体例）",
+    "2026-10-16 实扫只有 P9（REPO= / V1_STORE= / DS= / TRAIN_CMD= 等回显的本机绝对路径）412 处与 P7（内部主机名）2 处，",
+    "其余模式 0 处。bucket README 0 命中（刻意不写出被披露的样例原文）。",
+    "orbax step 目录与没有条目的文件、模式（P1/P2/P3/P4/P6/P8/P10/P11，P5 凭据恒硬停）任何一处命中都会停机。",
+    "hygiene FAIL 时按计划口径 29：修本账本或剔除越界文件，经审查后从 SMOKE 重新起跑，不得靠重试放行。"
+  ],
+  "entries": [
+    {
+      "pattern": "P9",
+      "path_glob": "_run-meta/train.log",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "起跑脚本 _train_common.sh 回显的 REPO / DS / ASSETS_DIR / MME_VLA_SUITE_FILE 与 TRAIN_CMD= 整行命令里的训练机绝对路径，以及运行期警告行里的解释器路径。对外不可达、不含凭据；日志是这条 run 的唯一原始记录，原样（仅去 tqdm 中间态）保留 + README『已知事项』第 1 条披露。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "_run-meta/train.log",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "运行期日志可能带训练机的内部 DNS 名（AWS VPC 私有地址，对外不可路由、非凭据；上一代同构 run 日志实扫 2 处）。原样保留 + 披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "motion_provenance.json",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "train.py 写的 provenance 记录 framesamp_root 的训练机绝对路径。该文件被评估侧与 preflight 读取并做 sha 核对，改一字即断链；原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "history_config.resolved.yaml",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "训练实际使用的 history config 解析结果；若其中某个路径键被解析成绝对路径则会命中。该文件字节就是 history_config.resolved.sha256 与 motion_provenance.json 的 resolved_sha256 锚点，不能改；原样保留 + README 披露。"
+    }
+  ]
+}
