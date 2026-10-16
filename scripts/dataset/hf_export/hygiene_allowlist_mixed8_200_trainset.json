@@ -1,0 +1,217 @@
+{
+  "_doc": [
+    "scan_hygiene.py 的裁决账本：16task-mixed8-200-3200ep-e3c7564f 训练库 → 公开 bucket",
+    "robomme-16task-mixed8-200-trainset-20261016-v1（run_mixed8_200_trainset_export.sh 阶段 1 扫源库、阶段 6 扫 stage）。",
+    "照 hygiene_allowlist_v2_1600ep.json（同类 4 任务库，2026-09-20 实测裁决）体例新建：目录与模式一一沿用，裁决理由沿用原文。",
+    "与 v2_1600ep 的唯一差别：数据目录条目不写 expected_count。原因：本账本写于 2026-10-16 建库之前，库还不存在，",
+    "命中数无从实测；照抄 4 任务的计数会得到恒失败的假闸门，臆造数字更糟。因此这些条目只起『每一处命中都必须落在",
+    "已裁决的目录 × 模式里』这一层闸门——任何新目录、新模式（尤其 P5 凭据、P6 GitHub 地址、P11、以及不在下表的",
+    "目录 × 模式组合）照样 exit 1 / exit 2 停机。实测命中数见每次运行的 logs/hygiene-{source,stage}.json 的 accept_entries[].got，",
+    "主会话复核报告时据此判断是否与预期量级一致。",
+    "README.md 与 runner/ 只在 stage 侧存在，二者在 2026-10-16 实扫均为 0 命中（README 刻意不写出被披露的样例原文，",
+    "runner 取自 sub/A1-train 0a45420），所以没有对应 accept 条目：它们任何一处命中都会停机。",
+    "硬纪律：本库任何数据字节都不修改。episode_manifest.json 有自校验 sha256，各 store_meta 被两条 run 的",
+    "motion_provenance.json 引用。为掩掉一个路径或主机名而改字节，会让公开出去的库再也过不了自己的加载闸，",
+    "所以只有『排除』与『披露』两种处置。hygiene FAIL 时按计划口径 29：修本账本或剔除越界文件，经审查后从 SMOKE 重新起跑，",
+    "不得靠重试放行。"
+  ],
+  "entries": [
+    {
+      "path_glob": "logs/*",
+      "decision": "exclude",
+      "reason": "建库日志含完整 uv run --project 命令行与 venv 内部布局；不参与任何 sha 绑定、不被任何脚本读，验证价值为零而泄露密度最高。沿用 400ep 那轮的处置：不上传。"
+    },
+    {
+      "path_glob": "source/features/*",
+      "decision": "exclude",
+      "reason": "features 整目录已被 packed 表取代、建库后已删除，只剩 framesamp-8x8 的 source_spot_sha256 点名的 8 个 .npy（二进制，不被扫描）。在这里排除只是为了不让扫描器白走目录。"
+    },
+    {
+      "path_glob": "source/data/*",
+      "decision": "exclude",
+      "reason": "训练样本 .pkl 是二进制（is_text 快速路径本就跳过），在这里排除以免扫描器为它们逐个走一遍目录项。它们在 stage 侧已打成 tar。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "framesamp-8x8/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "packed store 的 store_meta.json 记录建库当时的 manifest_path / source_dataset_root / packer 主机名。这些字段整体进 store_meta 的 sha256，而该 sha256 被两条 run 的 motion_provenance.json 与两个 ckpt bucket 的 README 引用；改一个字节，这个库与那些 留档就对不上了。路径对外不可达、不含凭据。原样保留 + bucket README 第 4 条披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "framesamp-8x8/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "packed store 的 store_meta.json 记录建库当时的 manifest_path / source_dataset_root / packer 主机名。这些字段整体进 store_meta 的 sha256，而该 sha256 被两条 run 的 motion_provenance.json 与两个 ckpt bucket 的 README 引用；改一个字节，这个库与那些 留档就对不上了。路径对外不可达、不含凭据。原样保留 + bucket README 第 4 条披露。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "framesamp/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "packed store 的 store_meta.json 记录建库当时的 manifest_path / source_dataset_root / packer 主机名。这些字段整体进 store_meta 的 sha256，而该 sha256 被两条 run 的 motion_provenance.json 与两个 ckpt bucket 的 README 引用；改一个字节，这个库与那些 留档就对不上了。路径对外不可达、不含凭据。原样保留 + bucket README 第 4 条披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "framesamp/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "packed store 的 store_meta.json 记录建库当时的 manifest_path / source_dataset_root / packer 主机名。这些字段整体进 store_meta 的 sha256，而该 sha256 被两条 run 的 motion_provenance.json 与两个 ckpt bucket 的 README 引用；改一个字节，这个库与那些 留档就对不上了。路径对外不可达、不含凭据。原样保留 + bucket README 第 4 条披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "meta/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "episode_manifest.json / input_manifest.json 的 raw_dir 字段是建库机上合并 h5 的 绝对路径。episode_manifest.json 有自校验 sha256（剔 sha256 键后 canonical JSON 重算），加载时现场重比，**一个字节都不能改**。训练从不打开 raw_dir。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P1",
+      "path_glob": "motion/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "motion store 的 store_meta.json 除上述字段外还记录逐 worker 的 GPU UUID、主机名，以及 mj_repo_path（一个 NFS 路径与私有仓库名 MotionJEPA，匿名访问 404）。它们是 motion 表可复现性的全部依据，且整体进 motion_index_sha256 的绑定链。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P2",
+      "path_glob": "motion/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "motion store 的 store_meta.json 除上述字段外还记录逐 worker 的 GPU UUID、主机名，以及 mj_repo_path（一个 NFS 路径与私有仓库名 MotionJEPA，匿名访问 404）。它们是 motion 表可复现性的全部依据，且整体进 motion_index_sha256 的绑定链。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "motion/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "motion store 的 store_meta.json 除上述字段外还记录逐 worker 的 GPU UUID、主机名，以及 mj_repo_path（一个 NFS 路径与私有仓库名 MotionJEPA，匿名访问 404）。它们是 motion 表可复现性的全部依据，且整体进 motion_index_sha256 的绑定链。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P8",
+      "path_glob": "motion/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "motion store 的 store_meta.json 除上述字段外还记录逐 worker 的 GPU UUID、主机名，以及 mj_repo_path（一个 NFS 路径与私有仓库名 MotionJEPA，匿名访问 404）。它们是 motion 表可复现性的全部依据，且整体进 motion_index_sha256 的绑定链。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "motion/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "motion store 的 store_meta.json 除上述字段外还记录逐 worker 的 GPU UUID、主机名，以及 mj_repo_path（一个 NFS 路径与私有仓库名 MotionJEPA，匿名访问 404）。它们是 motion 表可复现性的全部依据，且整体进 motion_index_sha256 的绑定链。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P10",
+      "path_glob": "motion/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "motion store 的 store_meta.json 除上述字段外还记录逐 worker 的 GPU UUID、主机名，以及 mj_repo_path（一个 NFS 路径与私有仓库名 MotionJEPA，匿名访问 404）。它们是 motion 表可复现性的全部依据，且整体进 motion_index_sha256 的绑定链。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "source/meta/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "source/meta 下建库 provenance/stats 记录构建机主机名、GPU UUID 与绝对路径；它们的 sha256 记在 framesamp store_meta 的 source_provenance_sha256 里。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P8",
+      "path_glob": "source/meta/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "source/meta 下建库 provenance/stats 记录构建机主机名、GPU UUID 与绝对路径；它们的 sha256 记在 framesamp store_meta 的 source_provenance_sha256 里。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "source/meta/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "source/meta 下建库 provenance/stats 记录构建机主机名、GPU UUID 与绝对路径；它们的 sha256 记在 framesamp store_meta 的 source_provenance_sha256 里。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "motion-tokens/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "逐段 .metadata.json 每条记录带构建机内部 DNS 名 ip-10-242-11-177.us-west-2.compute.internal（RFC 1918 私有地址，对外不可路由、非凭据）、GPU UUID 与绝对路径。这些 metadata 是下游读每段 latent / token 的 shape、dtype、偏移的必需件，排除它等于让同目录的 .bin 无法使用。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P8",
+      "path_glob": "motion-tokens/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "逐段 .metadata.json 每条记录带构建机内部 DNS 名 ip-10-242-11-177.us-west-2.compute.internal（RFC 1918 私有地址，对外不可路由、非凭据）、GPU UUID 与绝对路径。这些 metadata 是下游读每段 latent / token 的 shape、dtype、偏移的必需件，排除它等于让同目录的 .bin 无法使用。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "motion-tokens/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "逐段 .metadata.json 每条记录带构建机内部 DNS 名 ip-10-242-11-177.us-west-2.compute.internal（RFC 1918 私有地址，对外不可路由、非凭据）、GPU UUID 与绝对路径。这些 metadata 是下游读每段 latent / token 的 shape、dtype、偏移的必需件，排除它等于让同目录的 .bin 无法使用。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P10",
+      "path_glob": "motion-tokens/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "逐段 .metadata.json 每条记录带构建机内部 DNS 名 ip-10-242-11-177.us-west-2.compute.internal（RFC 1918 私有地址，对外不可路由、非凭据）、GPU UUID 与绝对路径。这些 metadata 是下游读每段 latent / token 的 shape、dtype、偏移的必需件，排除它等于让同目录的 .bin 无法使用。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "wan-latents/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "逐段 .metadata.json 每条记录带构建机内部 DNS 名 ip-10-242-11-177.us-west-2.compute.internal（RFC 1918 私有地址，对外不可路由、非凭据）、GPU UUID 与绝对路径。这些 metadata 是下游读每段 latent / token 的 shape、dtype、偏移的必需件，排除它等于让同目录的 .bin 无法使用。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P8",
+      "path_glob": "wan-latents/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "逐段 .metadata.json 每条记录带构建机内部 DNS 名 ip-10-242-11-177.us-west-2.compute.internal（RFC 1918 私有地址，对外不可路由、非凭据）、GPU UUID 与绝对路径。这些 metadata 是下游读每段 latent / token 的 shape、dtype、偏移的必需件，排除它等于让同目录的 .bin 无法使用。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "wan-latents/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "逐段 .metadata.json 每条记录带构建机内部 DNS 名 ip-10-242-11-177.us-west-2.compute.internal（RFC 1918 私有地址，对外不可路由、非凭据）、GPU UUID 与绝对路径。这些 metadata 是下游读每段 latent / token 的 shape、dtype、偏移的必需件，排除它等于让同目录的 .bin 无法使用。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P10",
+      "path_glob": "wan-latents/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "逐段 .metadata.json 每条记录带构建机内部 DNS 名 ip-10-242-11-177.us-west-2.compute.internal（RFC 1918 私有地址，对外不可路由、非凭据）、GPU UUID 与绝对路径。这些 metadata 是下游读每段 latent / token 的 shape、dtype、偏移的必需件，排除它等于让同目录的 .bin 无法使用。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "oracle/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "oracle/wan-mj 下的独立重算记录带主机名、绝对路径与仓库名；它是「motion 表可被第三方独立复算」这一主张的唯一证据，抹掉等于抹掉它要记录的东西。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P8",
+      "path_glob": "oracle/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "oracle/wan-mj 下的独立重算记录带主机名、绝对路径与仓库名；它是「motion 表可被第三方独立复算」这一主张的唯一证据，抹掉等于抹掉它要记录的东西。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "oracle/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "oracle/wan-mj 下的独立重算记录带主机名、绝对路径与仓库名；它是「motion 表可被第三方独立复算」这一主张的唯一证据，抹掉等于抹掉它要记录的东西。原样保留 + README 披露。"
+    },
+    {
+      "pattern": "P10",
+      "path_glob": "oracle/*",
+      "decision": "accept",
+      "scope": "source",
+      "reason": "oracle/wan-mj 下的独立重算记录带主机名、绝对路径与仓库名；它是「motion 表可被第三方独立复算」这一主张的唯一证据，抹掉等于抹掉它要记录的东西。原样保留 + README 披露。"
+    }
+  ]
+}

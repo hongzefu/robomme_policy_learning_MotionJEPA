@@ -7,6 +7,8 @@
   gl-v1          环境 A 的 4task-gl + 4task-gl-framesamp（480 GB / 88 万小文件）
   motion400ep-v1 环境 B 的 4task-motion-400ep（130 GB / 22.9 万文件）
   v2-1600ep-v1   环境 B 的 4task-v2-1600ep-604f16da（669 GiB / 63.2 万文件）
+  mixed8-200-v1  环境 B 的 16task-mixed8-200-3200ep-e3c7564f（16 任务 × 200 集；产物布局与
+                 v2-1600ep-v1 相同，另加两道 mixed8 专属断言，见 build_jobs()）
 
 库路径、暂存根、目标 bucket 全部由 CLI 必填参数给出，**模块里不留任何硬编码路径**
 （AGENTS 第 13 条：/data/hongzefu 与 /nfs/turbo 不得写进新脚本的默认值；两条链路各自
@@ -350,7 +352,7 @@ def build_jobs(args, logs: Path, smoke: bool):
         data_prefix, feat_prefix = "source/data_tars", "source/features_tars"
         data_dir, feat_dir = lib / "source/data", lib / "source/features"
         num = fs_meta["num_exec_samples"]
-    elif args.layout == "v2-1600ep-v1":
+    elif args.layout in ("v2-1600ep-v1", "mixed8-200-v1"):
         # 环境 B：4task-v2-1600ep-604f16da（BinFill / RouteStick / VideoRepick /
         # VideoUnmaskSwap，1600 集）。与 motion400ep-v1 的三点不同：
         #   1. 同时带 framesamp-8x8（两条生产 run 训练直读）与 framesamp（4×4 对照）；
@@ -391,6 +393,19 @@ def build_jobs(args, logs: Path, smoke: bool):
         )
         if not spot_feats:
             raise SystemExit("错误: framesamp-8x8 的 source_spot_sha256 无 features/ 条目，请核对库")
+        if args.layout == "mixed8-200-v1":
+            # mixed8-200-v1（16task-mixed8-200-3200ep-e3c7564f）与 v2-1600ep-v1 布局相同，差别只在
+            # 两道断言：(1) 建库计划口径 29 写死「source 带 8 个抽样 features」，名单数不是 8 说明
+            # 库的抽样口径变了，停下核对而不是静默多传/少传；(2) source/features 在本库上传前已删
+            # （只留抽样件），这里逐个确认被点名的文件真在盘上，缺一个就在打包前停，而不是在
+            # 线程池里抛一个难读的 FileNotFoundError。
+            if len(spot_feats) != 8:
+                raise SystemExit(
+                    f"错误: mixed8-200-v1 的 source_spot_sha256 features/ 条目应为 8，实为 {len(spot_feats)}"
+                )
+            missing_spot = [r for r in spot_feats if not (lib / "source" / r).is_file()]
+            if missing_spot:
+                raise SystemExit(f"错误: 抽样 features 缺失 {missing_spot}")
         for relpath in spot_feats:
             copy_jobs.append((lib / "source" / relpath, f"source/{relpath}", "link"))
         if smoke:
@@ -462,13 +477,25 @@ def build_jobs(args, logs: Path, smoke: bool):
     return copy_jobs, tar_groups, expected_small, num
 
 
+def _repo_relative(p: Path) -> str:
+    """仓库相对路径；库不在仓库下（如合成测试库）时只留目录名，绝不写出构建机绝对路径。"""
+    rp = p.resolve()
+    try:
+        return str(rp.relative_to(REPO))
+    except ValueError:
+        return rp.name
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--lib", type=Path, required=True, help="数据集库根")
     ap.add_argument("--packed-lib", type=Path, default=None, help="仅 gl-v1：packed 库根")
     ap.add_argument("--stage-root", type=Path, required=True, help="暂存根（其下自动建 stage/ logs/）")
     ap.add_argument("--bucket", required=True, help="目标 bucket URI，写进 upload_manifest.json")
-    ap.add_argument("--layout", required=True, choices=("gl-v1", "motion400ep-v1", "v2-1600ep-v1"))
+    ap.add_argument(
+        "--layout", required=True,
+        choices=("gl-v1", "motion400ep-v1", "v2-1600ep-v1", "mixed8-200-v1"),
+    )
     ap.add_argument("--norm-stats", type=Path, default=None, help="额外带上的 norm_stats.json")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument(
@@ -569,7 +596,7 @@ def main() -> int:
             {
                 "bucket": args.bucket,
                 "created_from": {
-                    "lib": str(args.lib.resolve().relative_to(REPO)),
+                    "lib": _repo_relative(args.lib),
                     "layout": args.layout,
                 },
                 "data_per_shard": DATA_PER_SHARD,
