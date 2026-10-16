@@ -55,6 +55,10 @@ READBACK_BATCH_MAX_BYTES="${READBACK_BATCH_MAX_BYTES:-107374182400}"
 DF_MARGIN_BYTES=400000000000          # 0.4 TB（十进制，G12）
 TAR_MEMBER_OVERHEAD=1024              # 每个 tar 成员的头 + 对齐填充上界（512 B 头 + ≤511 B 填充）
 NPROC=16
+# 网络重试口径（计划口径 27「重试 3 次」）：首试 + 重试 UPLOAD_RETRIES 次，仍失败即非 0 退出并点名失败对象，
+# 由主会话写进 pending_decisions（status=fail）。上传、断点续传回读一律用这一个常量。
+UPLOAD_RETRIES=3
+MAX_ATTEMPTS=$((UPLOAD_RETRIES + 1))
 SMOKE="${SMOKE:-0}"
 
 for v in M8X_LIB M8X_NORM_STATS M8X_RUNNER_SRC M8X_EXPORT_ROOT; do
@@ -346,11 +350,12 @@ upload_batch() {  # $1 = stage 下的子目录（同时也是 bucket 内前缀�
   local sub="$1"; shift
   local args=() pat ok=0 attempt
   for pat in "$@"; do args+=(--include "$pat"); done
-  for attempt in 1 2 3 4 5 6 7 8; do
+  for ((attempt = 1; attempt <= MAX_ATTEMPTS; attempt++)); do
     if hf sync "$STAGE/$sub" "$BUCKET/$sub" "${args[@]}"; then ok=1; break; fi
-    echo "  批 [$sub] 第 $attempt 次中断，60s 后重试续传"; sleep 60
+    echo "  批 [$sub] 第 $attempt/$MAX_ATTEMPTS 次尝试中断"
+    if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then echo "  60s 后重试续传"; sleep 60; fi
   done
-  [ "$ok" = 1 ] || { echo "错误: 批 [$sub] 八次仍失败"; exit 1; }
+  [ "$ok" = 1 ] || { echo "UPLOAD_FAIL object=$sub/ files=$* attempts=$MAX_ATTEMPTS"; echo "错误: 批 [$sub] 首试 + 重试 $UPLOAD_RETRIES 次仍失败"; exit 1; }
   echo "  批完成: $sub"
 }
 
@@ -397,11 +402,12 @@ echo "  根下平文件 ${#ROOTFILES[@]} 个"
 for f in "${ROOTFILES[@]}"; do
   [ -f "$STAGE/$f" ] || { echo "错误: stage 缺少根文件 $f"; exit 1; }
   ok=0
-  for attempt in 1 2 3 4 5 6 7 8; do
+  for ((attempt = 1; attempt <= MAX_ATTEMPTS; attempt++)); do
     if hf buckets cp "$STAGE/$f" "$BUCKET/$f"; then ok=1; break; fi
-    echo "  $f 第 $attempt 次中断，60s 后重试"; sleep 60
+    echo "  $f 第 $attempt/$MAX_ATTEMPTS 次尝试中断"
+    if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then echo "  60s 后重试"; sleep 60; fi
   done
-  [ "$ok" = 1 ] || { echo "错误: $f 八次仍失败"; exit 1; }
+  [ "$ok" = 1 ] || { echo "UPLOAD_FAIL object=$f attempts=$MAX_ATTEMPTS"; echo "错误: 根文件 $f 首试 + 重试 $UPLOAD_RETRIES 次仍失败"; exit 1; }
 done
 echo "阶段7完成"
 
@@ -432,7 +438,7 @@ uv run --no-sync python scripts/dataset/hf_export/batched_readback.py run \
   --max-bytes "$READBACK_BATCH_MAX_BYTES" \
   --members-checksums "$STAGE/checksums/sha256-source-files.txt" \
   --sample-tars-per-batch 1 --seed 20261016 --nproc "$NPROC" \
-  --source hf --bucket "$BUCKET" --hf-cmd "$HF_CMD" --retries 3 --retry-sleep 60
+  --source hf --bucket "$BUCKET" --hf-cmd "$HF_CMD" --retries "$UPLOAD_RETRIES" --retry-sleep 60
 echo "RESULT=PASS"
 echo "阶段9完成"
 

@@ -308,3 +308,38 @@ def test_trainset_df_before_tar():
     assert code.index("batched_readback.py plan") < code.index("batched_readback.py run")
     assert "hf sync \"$BUCKET\" \"$VERIFY\"" not in code             # 整桶回读已改为分批
     assert code.rstrip().endswith('echo "全部完成"')
+
+
+# ------------------------------------------------------------------ 重试口径（计划口径 27：首试 + 重试 3 次）
+@pytest.mark.parametrize("p", [TRAINSET, ENCODER, COMMON], ids=lambda p: p.name)
+def test_retry_constant_is_three(p):
+    raw, code = p.read_text(), _code(p)
+    assert re.search(r"^UPLOAD_RETRIES=3$", raw, re.M)
+    assert re.search(r"^MAX_ATTEMPTS=\$\(\(UPLOAD_RETRIES \+ 1\)\)$", raw, re.M)
+    loops = re.findall(r"for \(\(attempt = 1; attempt <= MAX_ATTEMPTS; attempt\+\+\)\)", code)
+    assert loops                                                       # 所有重试循环都走这一个常量
+    assert not re.search(r"for attempt in [0-9 ]+;", code)             # 不再有写死次数的循环
+    n_fail = len(re.findall(r'echo "(UPLOAD|READBACK)_FAIL object=', code))
+    assert n_fail == len(loops)                                        # 每个重试循环最终失败都点名对象并非 0
+    if p == TRAINSET:
+        assert '--retries "$UPLOAD_RETRIES"' in code                    # 分批回读同一口径
+
+
+@pytest.mark.parametrize("p", [TRAINSET, ENCODER, COMMON], ids=lambda p: p.name)
+def test_retry_loop_behaviour(tmp_path, p):
+    """把驱动里真实的重试循环抽出来，用必失败的 hf 桩跑：恰 4 次尝试、最后一次之后不再 sleep、非 0、点名对象。"""
+    raw = p.read_text()
+    func = {"run_mixed8_200_trainset_export.sh": "upload_batch",
+            "run_mixed8_200_encoder_ckpt_export.sh": "sync_retry",
+            "_mixed8_200_vla_ckpt_export_common.sh": "sync_dir"}[p.name]
+    m = re.search(rf"^{func}\(\) \{{.*?^\}}$", raw, re.M | re.S)
+    assert m
+    calls = tmp_path / "calls"
+    script = (f"set -euo pipefail\nUPLOAD_RETRIES=3\nMAX_ATTEMPTS=$((UPLOAD_RETRIES + 1))\n"
+              f"STAGE=/s; BUCKET=hf://b\nhf() {{ echo x >> {calls}; return 1; }}\nsleep() {{ echo s >> {calls}.sleep; }}\n"
+              f"{m.group(0)}\n{func} obj-a f1 f2\n")
+    r = subprocess.run(["bash", "-c", script], capture_output=True, text=True, timeout=30)
+    assert r.returncode != 0
+    assert calls.read_text().count("x") == 4
+    assert Path(f"{calls}.sleep").read_text().count("s") == 3
+    assert "_FAIL object=" in r.stdout and "obj-a" in r.stdout and "重试 3 次仍失败" in r.stdout

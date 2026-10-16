@@ -222,3 +222,18 @@ def test_resume_skips_completed_batches(env):
 def test_guard_refuses_non_verify_dir(tmp_path):
     with pytest.raises(SystemExit):
         br.guard_verify_dir(tmp_path / "stage")
+
+
+def test_downloader_retries_first_plus_three(tmp_path):
+    """--retries 3 = 首试 + 重试 3 次（计划口径 27）；仍失败时点名对象并 SystemExit。"""
+    args = Namespace(source="local", bucket=None, local_root=tmp_path, hf_cmd="hf", retries=3, retry_sleep=0)
+    dl = br.Downloader(args)
+    n = []
+
+    def boom():
+        n.append(1)
+        raise OSError("模拟失败")
+
+    with pytest.raises(SystemExit) as ei:
+        dl._retry("对象X", boom)
+    assert len(n) == 4 and "重试 3 次仍失败" in str(ei.value)

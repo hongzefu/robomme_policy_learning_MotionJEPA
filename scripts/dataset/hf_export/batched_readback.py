@@ -23,7 +23,7 @@ sha256：新库回读总量 1.3–1.7 TB，整库一次回读会在上沿顶穿�
   READBACK=PASS batches=<n>
 
 下载源两种：`--source hf`（正式：`hf sync <bucket>/<sub> <verify>/<sub> --include ...`，根下平文件
-走 `hf buckets cp`，均断点续传重试 --retries 次）；`--source local`（单测：从一个本地目录拷贝，
+走 `hf buckets cp`，均断点续传：首试 + 重试 --retries 次，计划口径 27 取 3）；`--source local`（单测：从一个本地目录拷贝，
 模拟 bucket，不触网）。
 """
 
@@ -218,17 +218,19 @@ class Downloader:
             raise SystemExit("错误: --source local 需要存在的 --local-root")
 
     def _retry(self, what: str, fn) -> None:
-        for attempt in range(1, self.retries + 1):
+        attempts = self.retries + 1          # 首试 + 重试 retries 次
+        for attempt in range(1, attempts + 1):
             try:
                 if fn():
                     return
             except OSError as e:  # 本地拷贝的失败也按可重试处理
-                log(f"  {what} 第 {attempt} 次失败: {e}")
+                log(f"  {what} 第 {attempt}/{attempts} 次尝试失败: {e}")
             else:
-                log(f"  {what} 第 {attempt} 次中断")
-            if attempt < self.retries:
+                log(f"  {what} 第 {attempt}/{attempts} 次尝试中断")
+            if attempt < attempts:
                 time.sleep(self.sleep)
-        raise SystemExit(f"错误: {what} 重试 {self.retries} 次仍失败")
+        print(f"READBACK_FAIL object={what} attempts={attempts}", flush=True)
+        raise SystemExit(f"错误: {what} 首试 + 重试 {self.retries} 次仍失败")
 
     def fetch_unit(self, unit: dict, verify: Path) -> None:
         sub, inners = unit["sub"], [f["inner"] for f in unit["files"]]
@@ -467,7 +469,7 @@ def main(argv=None) -> int:
     r.add_argument("--bucket", default=None, help="hf://buckets/<id>")
     r.add_argument("--local-root", type=Path, default=None, help="仅 --source local：模拟 bucket 的目录")
     r.add_argument("--hf-cmd", default=DEFAULT_HF_CMD)
-    r.add_argument("--retries", type=int, default=3)
+    r.add_argument("--retries", type=int, default=3, help="首试之后的重试次数（口径 27：3）")
     r.add_argument("--retry-sleep", type=float, default=60.0)
 
     args = ap.parse_args(argv)
