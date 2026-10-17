@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-17T05:02:18Z",
-    "america_new_york": "2026-10-17T01:02:18-0400"
+    "utc": "2026-10-17T09:10:30Z",
+    "america_new_york": "2026-10-17T05:10:30-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
@@ -19,9 +19,9 @@
         "file": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html",
         "sha": "45c3f9a"
       },
-      "state": "done",
-      "state_changed_at": "2026-10-17T04:58:35Z",
-      "state_reason": "pre_handoff 7/7 pass；HEAD 冻结窗口（SigLIP→motion verify）全程 6ebeab5；build done 在 V11.24Beta 之前提交（口径 43）；long_tail：latent 上传已完成、VLA 新库上传进行中（不计入交接）",
+      "state": "closed",
+      "state_changed_at": "2026-10-17T09:10:30Z",
+      "state_reason": "pre_handoff 7/7 pass；long_tail 2/2 pass；口径 24 删除已执行（合并 H5 1.3 TB、wan-latents/motion-tokens/oracle、tar 实体约 0.7 TB），/scratch 空闲 4.1 TiB；建库档案 result.md 已提交",
       "owner": {
         "session": "https://claude.ai/code/session_01TVXcR5Zdi5K11TXph2pZGw",
         "host": "claude-code"
@@ -98,8 +98,8 @@
           "tmux": "m8v-trainset-upload",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-trainset-upload.log",
           "done_line": "全部完成 + EXIT_CODE=0；RESULT=PASS、SHA256_PRE_POST_DIFF=0、private==false、READBACK_PEAK_BYTES≤107374182400",
-          "status": "running",
-          "evidence": "SMOKE=PASS；全量 m8v-trainset-upload 美东 2026-10-17 00:52 起"
+          "status": "pass",
+          "evidence": "HongzeFu/robomme-16task-mixed8-200-trainset-20261016-v1：RESULT=PASS、SHA256_PRE_POST_DIFF=0、READBACK_PEAK_BYTES=106213810959（≤107374182400）、BUCKET_PUBLIC=True、全部完成、EXIT_CODE=0；bucket 544 文件 1,405,076,546,975 B（411 tar + 124 平文件 + 根文件）"
         }
       ],
       "running_handles": [],
@@ -124,13 +124,7 @@
         }
       ],
       "pending_decisions": [],
-      "next_steps": [
-        {
-          "what": "VLA 新库上传完成后删合并 H5、tar 实体、wan-latents/motion-tokens/oracle（口径 24），补写建库 result.md",
-          "command": "runbook 长尾 m8v-trainset-upload",
-          "verdict_line": "全部完成 + EXIT_CODE=0；READBACK_PEAK_BYTES≤107374182400"
-        }
-      ],
+      "next_steps": [],
       "received_handover": {
         "line": "LATENT_UPLOAD_HANDOVER=CONFIRMED from=mixed8-encoder-train to=mixed8-vla-build",
         "where": "/scratch/hongze/MotionJEPA docs/handoff/current.json @ fc78fb6",

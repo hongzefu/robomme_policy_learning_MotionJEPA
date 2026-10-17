@@ -1,0 +1,291 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+WINDOW_HEAD=6ebeab5632340328a3a62db836d1ab3b004eed57
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[run_local] 起 worker gpu4: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/16task-mixed8-200-20261014 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/source --worker-mode --worker-label gpu4 --worker-idx 0 --num-workers 4 --resume --report_every 2000
+[run_local] 起 worker gpu5: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/16task-mixed8-200-20261014 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/source --worker-mode --worker-label gpu5 --worker-idx 1 --num-workers 4 --resume --report_every 2000
+[run_local] 起 worker gpu6: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/16task-mixed8-200-20261014 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/source --worker-mode --worker-label gpu6 --worker-idx 2 --num-workers 4 --resume --report_every 2000
+[run_local] 起 worker gpu7: uv run --no-sync python /scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/build_shard.py --manifest /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/meta/episode_manifest.json --raw_dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/16task-mixed8-200-20261014 --out /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/source --worker-mode --worker-label gpu7 --worker-idx 3 --num-workers 4 --resume --report_every 2000
+[gpu4] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu6] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu5] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu7] warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[gpu6] [shard 2/4] episode=3200 timestep=2145548 raw_dir=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/16task-mixed8-200-20261014 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/source worker=gpu6
+[gpu7] [shard 3/4] episode=3200 timestep=2145548 raw_dir=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/16task-mixed8-200-20261014 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/source worker=gpu7
+[gpu5] [shard 1/4] episode=3200 timestep=2145548 raw_dir=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/16task-mixed8-200-20261014 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/source worker=gpu5
+[gpu4] [shard 0/4] episode=3200 timestep=2145548 raw_dir=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/16task-mixed8-200-20261014 out=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/source worker=gpu4
+[gpu6] Episode 1596: timesteps=1989, exec_start=0, kept_indices=1477, task_goal='pick up the red cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu6] EPISODE g=1596 record_dataset_PickXtimes.h5#196 steps=1989 took=335.9s rate=5.922 step/s worker=gpu6
+[gpu4] Episode 1573: timesteps=1830, exec_start=0, kept_indices=1301, task_goal='pick up the blue cube and place it on the target, repeating this action nine times, then press the button to stop'
+[gpu4] EPISODE g=1573 record_dataset_PickXtimes.h5#173 steps=1830 took=334.6s rate=5.469 step/s worker=gpu4
+[gpu7] Episode 180: timesteps=1874, exec_start=0, kept_indices=1686, task_goal='put three red cubes, three blue cubes and three green cubes into the bin, then press the button to stop'
+[gpu7] EPISODE g=180 record_dataset_BinFill.h5#180 steps=1874 took=337.6s rate=5.552 step/s worker=gpu7
+[gpu5] Episode 1568: timesteps=1939, exec_start=0, kept_indices=1354, task_goal='pick up the red cube and place it on the target, repeating this action nine times, then press the button to stop'
+[gpu5] EPISODE g=1568 record_dataset_PickXtimes.h5#168 steps=1939 took=339.9s rate=5.704 step/s worker=gpu5
+[gpu4] Episode 1593: timesteps=1786, exec_start=0, kept_indices=1367, task_goal='pick up the blue cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu4] PROGRESS steps=3616 elapsed=514.4s rate=7.030 step/s
+[gpu4] EPISODE g=1593 record_dataset_PickXtimes.h5#193 steps=1786 took=179.8s rate=9.936 step/s worker=gpu4
+[gpu6] Episode 178: timesteps=1814, exec_start=0, kept_indices=1995, task_goal='put four red cubes and five green cubes into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=3803 elapsed=518.5s rate=7.335 step/s
+[gpu6] EPISODE g=178 record_dataset_BinFill.h5#178 steps=1814 took=182.5s rate=9.938 step/s worker=gpu6
+[gpu7] Episode 195: timesteps=1780, exec_start=0, kept_indices=2048, task_goal='put five red cubes, one blue cube and three green cubes into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=3654 elapsed=516.8s rate=7.071 step/s
+[gpu7] EPISODE g=195 record_dataset_BinFill.h5#195 steps=1780 took=179.2s rate=9.935 step/s worker=gpu7
+[gpu5] Episode 186: timesteps=1774, exec_start=0, kept_indices=1938, task_goal='put two red cubes, three blue cubes and four green cubes into the bin, then press the button to stop'
+[gpu5] PROGRESS steps=3713 elapsed=518.7s rate=7.158 step/s
+[gpu5] EPISODE g=186 record_dataset_BinFill.h5#186 steps=1774 took=178.8s rate=9.922 step/s worker=gpu5
+[gpu4] Episode 194: timesteps=1773, exec_start=0, kept_indices=1823, task_goal='put five red cubes, two blue cubes and two green cubes into the bin, then press the button to stop'
+[gpu4] PROGRESS steps=5389 elapsed=692.7s rate=7.779 step/s
+[gpu4] EPISODE g=194 record_dataset_BinFill.h5#194 steps=1773 took=178.3s rate=9.941 step/s worker=gpu4
+[gpu6] Episode 199: timesteps=1773, exec_start=0, kept_indices=2048, task_goal='put two red cubes, three blue cubes and four green cubes into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=5576 elapsed=696.9s rate=8.001 step/s
+[gpu6] EPISODE g=199 record_dataset_BinFill.h5#199 steps=1773 took=178.4s rate=9.938 step/s worker=gpu6
+[gpu7] Episode 177: timesteps=1766, exec_start=0, kept_indices=2048, task_goal='put one red cube and eight green cubes into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=5420 elapsed=694.5s rate=7.804 step/s
+[gpu7] EPISODE g=177 record_dataset_BinFill.h5#177 steps=1766 took=177.7s rate=9.938 step/s worker=gpu7
+[gpu5] Episode 197: timesteps=1764, exec_start=0, kept_indices=2048, task_goal='put three red cubes, three blue cubes and three green cubes into the bin, then press the button to stop'
+[gpu5] PROGRESS steps=5477 elapsed=696.3s rate=7.866 step/s
+[gpu5] EPISODE g=197 record_dataset_BinFill.h5#197 steps=1764 took=177.6s rate=9.934 step/s worker=gpu5
+[gpu7] Episode 187: timesteps=1742, exec_start=0, kept_indices=2048, task_goal='put two red cubes, four blue cubes and three green cubes into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=7162 elapsed=869.7s rate=8.235 step/s
+[gpu7] EPISODE g=187 record_dataset_BinFill.h5#187 steps=1742 took=175.2s rate=9.942 step/s worker=gpu7
+[gpu4] Episode 182: timesteps=1761, exec_start=0, kept_indices=2048, task_goal='put two red cubes, three blue cubes and four green cubes into the bin, then press the button to stop'
+[gpu4] PROGRESS steps=7150 elapsed=870.0s rate=8.218 step/s
+[gpu4] EPISODE g=182 record_dataset_BinFill.h5#182 steps=1761 took=177.3s rate=9.934 step/s worker=gpu4
+[gpu6] Episode 189: timesteps=1755, exec_start=0, kept_indices=2048, task_goal='put four red cubes, two blue cubes and three green cubes into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=7331 elapsed=873.6s rate=8.391 step/s
+[gpu6] EPISODE g=189 record_dataset_BinFill.h5#189 steps=1755 took=176.7s rate=9.930 step/s worker=gpu6
+[gpu5] Episode 175: timesteps=1741, exec_start=0, kept_indices=1358, task_goal='put five red cubes, one blue cube and three green cubes into the bin, then press the button to stop'
+[gpu5] PROGRESS steps=7218 elapsed=871.8s rate=8.280 step/s
+[gpu5] EPISODE g=175 record_dataset_BinFill.h5#175 steps=1741 took=175.5s rate=9.923 step/s worker=gpu5
+[gpu7] Episode 179: timesteps=1740, exec_start=0, kept_indices=1850, task_goal='put two red cubes, five blue cubes and two green cubes into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=8902 elapsed=1044.5s rate=8.523 step/s
+[gpu7] EPISODE g=179 record_dataset_BinFill.h5#179 steps=1740 took=174.8s rate=9.955 step/s worker=gpu7
+[gpu4] Episode 1559: timesteps=1739, exec_start=0, kept_indices=1041, task_goal='pick up the blue cube and place it on the target, repeating this action nine times, then press the button to stop'
+[gpu4] PROGRESS steps=8889 elapsed=1044.9s rate=8.507 step/s
+[gpu4] EPISODE g=1559 record_dataset_PickXtimes.h5#159 steps=1739 took=174.9s rate=9.942 step/s worker=gpu4
+[gpu6] Episode 181: timesteps=1736, exec_start=0, kept_indices=2048, task_goal='put one red cube, five blue cubes and three green cubes into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=9067 elapsed=1048.4s rate=8.648 step/s
+[gpu6] EPISODE g=181 record_dataset_BinFill.h5#181 steps=1736 took=174.7s rate=9.935 step/s worker=gpu6
+[gpu5] Episode 193: timesteps=1733, exec_start=0, kept_indices=1739, task_goal='put two red cubes, five blue cubes and two green cubes into the bin, then press the button to stop'
+[gpu5] PROGRESS steps=8951 elapsed=1046.7s rate=8.552 step/s
+[gpu5] EPISODE g=193 record_dataset_BinFill.h5#193 steps=1733 took=174.9s rate=9.910 step/s worker=gpu5
+[gpu5] Episode 169: timesteps=1681, exec_start=0, kept_indices=1817, task_goal='put two red cubes, four blue cubes and two green cubes into the bin, then press the button to stop'
+[gpu5] PROGRESS steps=10632 elapsed=1215.9s rate=8.744 step/s
+[gpu5] EPISODE g=169 record_dataset_BinFill.h5#169 steps=1681 took=169.2s rate=9.934 step/s worker=gpu5
+[gpu6] Episode 1529: timesteps=1689, exec_start=0, kept_indices=963, task_goal='pick up the red cube and place it on the target, repeating this action eight times, then press the button to stop'
+[gpu6] PROGRESS steps=10756 elapsed=1218.4s rate=8.828 step/s
+[gpu6] EPISODE g=1529 record_dataset_PickXtimes.h5#129 steps=1689 took=170.0s rate=9.934 step/s worker=gpu6
+[gpu4] Episode 1575: timesteps=1711, exec_start=0, kept_indices=1452, task_goal='pick up the green cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu4] PROGRESS steps=10600 elapsed=1217.1s rate=8.709 step/s
+[gpu4] EPISODE g=1575 record_dataset_PickXtimes.h5#175 steps=1711 took=172.1s rate=9.941 step/s worker=gpu4
+[gpu7] Episode 185: timesteps=1725, exec_start=0, kept_indices=2026, task_goal='put one red cube, five blue cubes and three green cubes into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=10627 elapsed=1218.1s rate=8.724 step/s
+[gpu7] EPISODE g=185 record_dataset_BinFill.h5#185 steps=1725 took=173.6s rate=9.936 step/s worker=gpu7
+[gpu7] Episode 196: timesteps=1630, exec_start=0, kept_indices=1585, task_goal='put four red cubes, four blue cubes and one green cube into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=12257 elapsed=1382.2s rate=8.868 step/s
+[gpu7] EPISODE g=196 record_dataset_BinFill.h5#196 steps=1630 took=163.9s rate=9.943 step/s worker=gpu7
+[gpu5] Episode 191: timesteps=1665, exec_start=0, kept_indices=1589, task_goal='put one red cube, four blue cubes and four green cubes into the bin, then press the button to stop'
+[gpu5] PROGRESS steps=12297 elapsed=1383.5s rate=8.888 step/s
+[gpu5] EPISODE g=191 record_dataset_BinFill.h5#191 steps=1665 took=167.6s rate=9.933 step/s worker=gpu5
+[gpu6] Episode 198: timesteps=1664, exec_start=0, kept_indices=1841, task_goal='put three red cubes, five blue cubes and one green cube into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=12420 elapsed=1385.7s rate=8.963 step/s
+[gpu6] EPISODE g=198 record_dataset_BinFill.h5#198 steps=1664 took=167.2s rate=9.950 step/s worker=gpu6
+[gpu4] Episode 162: timesteps=1651, exec_start=0, kept_indices=2048, task_goal='put four red cubes and four blue cubes into the bin, then press the button to stop'
+[gpu4] PROGRESS steps=12251 elapsed=1382.9s rate=8.859 step/s
+[gpu4] EPISODE g=162 record_dataset_BinFill.h5#162 steps=1651 took=165.7s rate=9.961 step/s worker=gpu4
+[gpu4] Episode 1557: timesteps=1605, exec_start=0, kept_indices=1393, task_goal='pick up the red cube and place it on the target, repeating this action nine times, then press the button to stop'
+[gpu4] EPISODE g=1557 record_dataset_PickXtimes.h5#157 steps=1605 took=160.9s rate=9.975 step/s worker=gpu4
+[gpu6] Episode 183: timesteps=1606, exec_start=0, kept_indices=1857, task_goal='put five red cubes, two blue cubes and two green cubes into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=14026 elapsed=1547.4s rate=9.064 step/s
+[gpu6] EPISODE g=183 record_dataset_BinFill.h5#183 steps=1606 took=161.6s rate=9.936 step/s worker=gpu6
+[gpu5] Episode 167: timesteps=1611, exec_start=0, kept_indices=2048, task_goal='put two red cubes, three blue cubes and three green cubes into the bin, then press the button to stop'
+[gpu5] EPISODE g=167 record_dataset_BinFill.h5#167 steps=1611 took=162.3s rate=9.926 step/s worker=gpu5
+[gpu7] Episode 174: timesteps=1626, exec_start=0, kept_indices=1978, task_goal='put four red cubes and four blue cubes into the bin, then press the button to stop'
+[gpu7] EPISODE g=174 record_dataset_BinFill.h5#174 steps=1626 took=163.2s rate=9.966 step/s worker=gpu7
+[gpu4] Episode 153: timesteps=1595, exec_start=0, kept_indices=1730, task_goal='put five red cubes, two blue cubes and one green cube into the bin, then press the button to stop'
+[gpu4] PROGRESS steps=15451 elapsed=1704.4s rate=9.065 step/s
+[gpu4] EPISODE g=153 record_dataset_BinFill.h5#153 steps=1595 took=160.5s rate=9.935 step/s worker=gpu4
+[gpu6] Episode 155: timesteps=1594, exec_start=0, kept_indices=2048, task_goal='put four red cubes and four blue cubes into the bin, then press the button to stop'
+[gpu6] EPISODE g=155 record_dataset_BinFill.h5#155 steps=1594 took=160.1s rate=9.954 step/s worker=gpu6
+[gpu5] Episode 184: timesteps=1592, exec_start=0, kept_indices=1608, task_goal='put three red cubes, four blue cubes and two green cubes into the bin, then press the button to stop'
+[gpu5] PROGRESS steps=15500 elapsed=1706.2s rate=9.084 step/s
+[gpu5] EPISODE g=184 record_dataset_BinFill.h5#184 steps=1592 took=160.3s rate=9.933 step/s worker=gpu5
+[gpu7] Episode 192: timesteps=1591, exec_start=0, kept_indices=1694, task_goal='put three red cubes, five blue cubes and one green cube into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=15474 elapsed=1705.5s rate=9.073 step/s
+[gpu7] EPISODE g=192 record_dataset_BinFill.h5#192 steps=1591 took=160.1s rate=9.938 step/s worker=gpu7
+[gpu4] Episode 176: timesteps=1589, exec_start=0, kept_indices=1767, task_goal='put three red cubes, four blue cubes and two green cubes into the bin, then press the button to stop'
+[gpu4] PROGRESS steps=17040 elapsed=1864.2s rate=9.141 step/s
+[gpu4] EPISODE g=176 record_dataset_BinFill.h5#176 steps=1589 took=159.8s rate=9.942 step/s worker=gpu4
+[gpu6] Episode 190: timesteps=1589, exec_start=0, kept_indices=1626, task_goal='put three red cubes, two blue cubes and four green cubes into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=17209 elapsed=1867.6s rate=9.214 step/s
+[gpu6] EPISODE g=190 record_dataset_BinFill.h5#190 steps=1589 took=160.1s rate=9.927 step/s worker=gpu6
+[gpu7] Episode 151: timesteps=1585, exec_start=0, kept_indices=1947, task_goal='put two red cubes, one blue cube and five green cubes into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=17059 elapsed=1864.8s rate=9.148 step/s
+[gpu7] EPISODE g=151 record_dataset_BinFill.h5#151 steps=1585 took=159.2s rate=9.953 step/s worker=gpu7
+[gpu5] Episode 164: timesteps=1588, exec_start=0, kept_indices=1491, task_goal='put three red cubes, one blue cube and four green cubes into the bin, then press the button to stop'
+[gpu5] PROGRESS steps=17088 elapsed=1866.1s rate=9.157 step/s
+[gpu5] EPISODE g=164 record_dataset_BinFill.h5#164 steps=1588 took=159.9s rate=9.933 step/s worker=gpu5
+[gpu7] Episode 1540: timesteps=1554, exec_start=0, kept_indices=1152, task_goal='pick up the green cube and place it on the target, repeating this action eight times, then press the button to stop'
+[gpu7] PROGRESS steps=18613 elapsed=2021.1s rate=9.209 step/s
+[gpu7] EPISODE g=1540 record_dataset_PickXtimes.h5#140 steps=1554 took=156.3s rate=9.941 step/s worker=gpu7
+[gpu6] Episode 1585: timesteps=1557, exec_start=0, kept_indices=1685, task_goal='pick up the blue cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu6] PROGRESS steps=18766 elapsed=2024.4s rate=9.270 step/s
+[gpu6] EPISODE g=1585 record_dataset_PickXtimes.h5#185 steps=1557 took=156.7s rate=9.933 step/s worker=gpu6
+[gpu5] Episode 1584: timesteps=1554, exec_start=0, kept_indices=1301, task_goal='pick up the blue cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu5] PROGRESS steps=18642 elapsed=2022.8s rate=9.216 step/s
+[gpu5] EPISODE g=1584 record_dataset_PickXtimes.h5#184 steps=1554 took=156.7s rate=9.917 step/s worker=gpu5
+[gpu4] Episode 188: timesteps=1582, exec_start=0, kept_indices=1573, task_goal='put two red cubes, two blue cubes and five green cubes into the bin, then press the button to stop'
+[gpu4] PROGRESS steps=18622 elapsed=2023.3s rate=9.204 step/s
+[gpu4] EPISODE g=188 record_dataset_BinFill.h5#188 steps=1582 took=159.1s rate=9.942 step/s worker=gpu4
+[gpu7] Episode 1591: timesteps=1548, exec_start=0, kept_indices=2048, task_goal='pick up the red cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu7] PROGRESS steps=20161 elapsed=2176.7s rate=9.262 step/s
+[gpu7] EPISODE g=1591 record_dataset_PickXtimes.h5#191 steps=1548 took=155.6s rate=9.950 step/s worker=gpu7
+[gpu5] Episode 1583: timesteps=1540, exec_start=0, kept_indices=2048, task_goal='pick up the green cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu5] PROGRESS steps=20182 elapsed=2178.0s rate=9.266 step/s
+[gpu5] EPISODE g=1583 record_dataset_PickXtimes.h5#183 steps=1540 took=155.2s rate=9.924 step/s worker=gpu5
+[gpu6] Episode 173: timesteps=1546, exec_start=0, kept_indices=1447, task_goal='put three red cubes, two blue cubes and three green cubes into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=20312 elapsed=2180.1s rate=9.317 step/s
+[gpu6] EPISODE g=173 record_dataset_BinFill.h5#173 steps=1546 took=155.7s rate=9.930 step/s worker=gpu6
+[gpu4] Episode 1590: timesteps=1530, exec_start=0, kept_indices=1947, task_goal='pick up the red cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu4] PROGRESS steps=20152 elapsed=2177.4s rate=9.255 step/s
+[gpu4] EPISODE g=1590 record_dataset_PickXtimes.h5#190 steps=1530 took=153.9s rate=9.943 step/s worker=gpu4
+[gpu7] Episode 1553: timesteps=1523, exec_start=0, kept_indices=1367, task_goal='pick up the blue cube and place it on the target, repeating this action nine times, then press the button to stop'
+[gpu7] EPISODE g=1553 record_dataset_PickXtimes.h5#153 steps=1523 took=152.9s rate=9.961 step/s worker=gpu7
+[gpu5] Episode 1581: timesteps=1521, exec_start=0, kept_indices=1588, task_goal='pick up the green cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu5] EPISODE g=1581 record_dataset_PickXtimes.h5#181 steps=1521 took=152.9s rate=9.948 step/s worker=gpu5
+[gpu4] Episode 152: timesteps=1518, exec_start=0, kept_indices=1516, task_goal='put two red cubes, three blue cubes and three green cubes into the bin, then press the button to stop'
+[gpu4] EPISODE g=152 record_dataset_BinFill.h5#152 steps=1518 took=152.7s rate=9.940 step/s worker=gpu4
+[gpu6] Episode 1580: timesteps=1520, exec_start=0, kept_indices=1838, task_goal='pick up the blue cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu6] EPISODE g=1580 record_dataset_PickXtimes.h5#180 steps=1520 took=153.0s rate=9.934 step/s worker=gpu6
+[gpu4] Episode 166: timesteps=1506, exec_start=0, kept_indices=1775, task_goal='put three red cubes, three blue cubes and two green cubes into the bin, then press the button to stop'
+[gpu4] PROGRESS steps=23176 elapsed=2481.7s rate=9.339 step/s
+[gpu4] EPISODE g=166 record_dataset_BinFill.h5#166 steps=1506 took=151.6s rate=9.932 step/s worker=gpu4
+[gpu5] Episode 1599: timesteps=1512, exec_start=0, kept_indices=1571, task_goal='pick up the green cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu5] PROGRESS steps=23215 elapsed=2482.8s rate=9.350 step/s
+[gpu5] EPISODE g=1599 record_dataset_PickXtimes.h5#199 steps=1512 took=151.8s rate=9.959 step/s worker=gpu5
+[gpu6] Episode 1574: timesteps=1506, exec_start=0, kept_indices=1393, task_goal='pick up the blue cube and place it on the target, repeating this action nine times, then press the button to stop'
+[gpu6] PROGRESS steps=23338 elapsed=2484.9s rate=9.392 step/s
+[gpu6] EPISODE g=1574 record_dataset_PickXtimes.h5#174 steps=1506 took=151.7s rate=9.930 step/s worker=gpu6
+[gpu7] Episode 1589: timesteps=1515, exec_start=0, kept_indices=2048, task_goal='pick up the green cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu7] PROGRESS steps=23199 elapsed=2482.3s rate=9.346 step/s
+[gpu7] EPISODE g=1589 record_dataset_PickXtimes.h5#189 steps=1515 took=152.7s rate=9.919 step/s worker=gpu7
+[gpu6] Episode 133: timesteps=1499, exec_start=0, kept_indices=1881, task_goal='put two red cubes, one blue cube and four green cubes into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=24837 elapsed=2635.8s rate=9.423 step/s
+[gpu6] EPISODE g=133 record_dataset_BinFill.h5#133 steps=1499 took=150.9s rate=9.935 step/s worker=gpu6
+[gpu5] Episode 1594: timesteps=1500, exec_start=0, kept_indices=1952, task_goal='pick up the green cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu5] PROGRESS steps=24715 elapsed=2633.9s rate=9.384 step/s
+[gpu5] EPISODE g=1594 record_dataset_PickXtimes.h5#194 steps=1500 took=151.0s rate=9.932 step/s worker=gpu5
+[gpu4] Episode 154: timesteps=1504, exec_start=0, kept_indices=1459, task_goal='put three red cubes, two blue cubes and three green cubes into the bin, then press the button to stop'
+[gpu4] PROGRESS steps=24680 elapsed=2633.1s rate=9.373 step/s
+[gpu4] EPISODE g=154 record_dataset_BinFill.h5#154 steps=1504 took=151.4s rate=9.936 step/s worker=gpu4
+[gpu7] Episode 156: timesteps=1497, exec_start=0, kept_indices=1284, task_goal='put four red cubes, three blue cubes and one green cube into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=24696 elapsed=2633.2s rate=9.379 step/s
+[gpu7] EPISODE g=156 record_dataset_BinFill.h5#156 steps=1497 took=150.7s rate=9.933 step/s worker=gpu7
+[gpu4] Episode 158: timesteps=1475, exec_start=0, kept_indices=1588, task_goal='put four blue cubes and four green cubes into the bin, then press the button to stop'
+[gpu4] PROGRESS steps=26155 elapsed=2781.6s rate=9.403 step/s
+[gpu4] EPISODE g=158 record_dataset_BinFill.h5#158 steps=1475 took=148.3s rate=9.948 step/s worker=gpu4
+[gpu7] Episode 159: timesteps=1480, exec_start=0, kept_indices=1266, task_goal='put four red cubes and four blue cubes into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=26176 elapsed=2782.2s rate=9.409 step/s
+[gpu7] EPISODE g=159 record_dataset_BinFill.h5#159 steps=1480 took=148.9s rate=9.938 step/s worker=gpu7
+[gpu5] Episode 157: timesteps=1487, exec_start=0, kept_indices=1463, task_goal='put three red cubes and five green cubes into the bin, then press the button to stop'
+[gpu5] PROGRESS steps=26202 elapsed=2783.7s rate=9.413 step/s
+[gpu5] EPISODE g=157 record_dataset_BinFill.h5#157 steps=1487 took=149.8s rate=9.928 step/s worker=gpu5
+[gpu6] Episode 163: timesteps=1497, exec_start=0, kept_indices=1556, task_goal='put one red cube, five blue cubes and two green cubes into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=26334 elapsed=2786.2s rate=9.452 step/s
+[gpu6] EPISODE g=163 record_dataset_BinFill.h5#163 steps=1497 took=150.4s rate=9.955 step/s worker=gpu6
+[gpu4] Episode 1587: timesteps=1467, exec_start=0, kept_indices=2048, task_goal='pick up the red cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu4] EPISODE g=1587 record_dataset_PickXtimes.h5#187 steps=1467 took=147.2s rate=9.963 step/s worker=gpu4
+[gpu7] Episode 1578: timesteps=1465, exec_start=0, kept_indices=2048, task_goal='pick up the blue cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu7] EPISODE g=1578 record_dataset_PickXtimes.h5#178 steps=1465 took=147.6s rate=9.925 step/s worker=gpu7
+[gpu5] Episode 1592: timesteps=1465, exec_start=0, kept_indices=2048, task_goal='pick up the red cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu5] EPISODE g=1592 record_dataset_PickXtimes.h5#192 steps=1465 took=147.1s rate=9.960 step/s worker=gpu5
+[gpu6] Episode 1579: timesteps=1463, exec_start=0, kept_indices=2048, task_goal='pick up the green cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu6] EPISODE g=1579 record_dataset_PickXtimes.h5#179 steps=1463 took=147.0s rate=9.953 step/s worker=gpu6
+[gpu4] Episode 1582: timesteps=1461, exec_start=0, kept_indices=2048, task_goal='pick up the blue cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu4] PROGRESS steps=29083 elapsed=3075.8s rate=9.455 step/s
+[gpu4] EPISODE g=1582 record_dataset_PickXtimes.h5#182 steps=1461 took=147.0s rate=9.942 step/s worker=gpu4
+[gpu7] Episode 165: timesteps=1459, exec_start=0, kept_indices=1567, task_goal='put two red cubes, one blue cube and five green cubes into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=29100 elapsed=3076.7s rate=9.458 step/s
+[gpu7] EPISODE g=165 record_dataset_BinFill.h5#165 steps=1459 took=146.9s rate=9.934 step/s worker=gpu7
+[gpu5] Episode 1515: timesteps=1459, exec_start=0, kept_indices=848, task_goal='pick up the blue cube and place it on the target, repeating this action seven times, then press the button to stop'
+[gpu5] PROGRESS steps=29126 elapsed=3077.8s rate=9.463 step/s
+[gpu5] EPISODE g=1515 record_dataset_PickXtimes.h5#115 steps=1459 took=146.8s rate=9.936 step/s worker=gpu5
+[gpu6] Episode 1576: timesteps=1459, exec_start=0, kept_indices=2048, task_goal='pick up the blue cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu6] PROGRESS steps=29256 elapsed=3080.1s rate=9.498 step/s
+[gpu6] EPISODE g=1576 record_dataset_PickXtimes.h5#176 steps=1459 took=146.7s rate=9.946 step/s worker=gpu6
+[gpu4] Episode 160: timesteps=1456, exec_start=0, kept_indices=1762, task_goal='put five red cubes and three green cubes into the bin, then press the button to stop'
+[gpu4] PROGRESS steps=30539 elapsed=3222.3s rate=9.478 step/s
+[gpu4] EPISODE g=160 record_dataset_BinFill.h5#160 steps=1456 took=146.5s rate=9.941 step/s worker=gpu4
+[gpu7] Episode 137: timesteps=1454, exec_start=0, kept_indices=1799, task_goal='put five red cubes, one blue cube and one green cube into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=30554 elapsed=3223.0s rate=9.480 step/s
+[gpu7] EPISODE g=137 record_dataset_BinFill.h5#137 steps=1454 took=146.3s rate=9.941 step/s worker=gpu7
+[gpu6] Episode 1586: timesteps=1451, exec_start=0, kept_indices=2048, task_goal='pick up the red cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu6] PROGRESS steps=30707 elapsed=3226.0s rate=9.518 step/s
+[gpu6] EPISODE g=1586 record_dataset_PickXtimes.h5#186 steps=1451 took=146.0s rate=9.942 step/s worker=gpu6
+[gpu5] Episode 1588: timesteps=1453, exec_start=0, kept_indices=2048, task_goal='pick up the green cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu5] PROGRESS steps=30579 elapsed=3224.1s rate=9.485 step/s
+[gpu5] EPISODE g=1588 record_dataset_PickXtimes.h5#188 steps=1453 took=146.3s rate=9.932 step/s worker=gpu5
+[gpu4] Episode 172: timesteps=1449, exec_start=0, kept_indices=1471, task_goal='put two red cubes and six green cubes into the bin, then press the button to stop'
+[gpu4] EPISODE g=172 record_dataset_BinFill.h5#172 steps=1449 took=145.9s rate=9.929 step/s worker=gpu4
+[gpu6] Episode 1598: timesteps=1448, exec_start=0, kept_indices=2048, task_goal='pick up the red cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu7] Episode 168: timesteps=1448, exec_start=0, kept_indices=1699, task_goal='put four blue cubes and four green cubes into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=32155 elapsed=3371.6s rate=9.537 step/s
+[gpu6] EPISODE g=1598 record_dataset_PickXtimes.h5#198 steps=1448 took=145.6s rate=9.945 step/s worker=gpu6
+[gpu7] PROGRESS steps=32002 elapsed=3368.7s rate=9.500 step/s
+[gpu7] EPISODE g=168 record_dataset_BinFill.h5#168 steps=1448 took=145.7s rate=9.938 step/s worker=gpu7
+[gpu5] Episode 2471: timesteps=1448, exec_start=1247, kept_indices=2048, task_goal='watch the video carefully, then place the red cube on the third target it was previously placed on'
+[gpu5] PROGRESS steps=32027 elapsed=3370.0s rate=9.504 step/s
+[gpu5] EPISODE g=2471 record_dataset_VideoPlaceOrder.h5#71 steps=1448 took=145.9s rate=9.928 step/s worker=gpu5
+[gpu4] Episode 993: timesteps=1446, exec_start=253, kept_indices=2048, task_goal='watch the video carefully, then move the cube to the target in the same manner as before'
+[gpu4] PROGRESS steps=33434 elapsed=3513.6s rate=9.515 step/s
+[gpu4] EPISODE g=993 record_dataset_MoveCube.h5#193 steps=1446 took=145.4s rate=9.943 step/s worker=gpu4
+[gpu6] Episode 1597: timesteps=1446, exec_start=0, kept_indices=2048, task_goal='pick up the green cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu6] EPISODE g=1597 record_dataset_PickXtimes.h5#197 steps=1446 took=145.5s rate=9.936 step/s worker=gpu6
+[gpu7] Episode 797: timesteps=1445, exec_start=723, kept_indices=2048, task_goal='watch the video carefully, then grasp the same end of the same peg you've picked before and insert it into the same side of the box'
+[gpu7] EPISODE g=797 record_dataset_InsertPeg.h5#197 steps=1445 took=145.6s rate=9.926 step/s worker=gpu7
+[gpu5] Episode 1577: timesteps=1445, exec_start=0, kept_indices=2048, task_goal='pick up the red cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu5] EPISODE g=1577 record_dataset_PickXtimes.h5#177 steps=1445 took=145.6s rate=9.928 step/s worker=gpu5
+[gpu4] Episode 1563: timesteps=1434, exec_start=0, kept_indices=1984, task_goal='pick up the red cube and place it on the target, repeating this action nine times, then press the button to stop'
+[gpu4] PROGRESS steps=34868 elapsed=3657.8s rate=9.532 step/s
+[gpu4] EPISODE g=1563 record_dataset_PickXtimes.h5#163 steps=1434 took=144.2s rate=9.947 step/s worker=gpu4
+[gpu6] Episode 171: timesteps=1429, exec_start=0, kept_indices=1973, task_goal='put five red cubes and three green cubes into the bin, then press the button to stop'
+[gpu6] PROGRESS steps=35030 elapsed=3660.9s rate=9.569 step/s
+[gpu6] EPISODE g=171 record_dataset_BinFill.h5#171 steps=1429 took=143.7s rate=9.947 step/s worker=gpu6
+[gpu5] Episode 1570: timesteps=1424, exec_start=0, kept_indices=1389, task_goal='pick up the green cube and place it on the target, repeating this action nine times, then press the button to stop'
+[gpu5] PROGRESS steps=34896 elapsed=3658.9s rate=9.537 step/s
+[gpu5] EPISODE g=1570 record_dataset_PickXtimes.h5#170 steps=1424 took=143.3s rate=9.935 step/s worker=gpu5
+[gpu7] Episode 2501: timesteps=1428, exec_start=1138, kept_indices=1784, task_goal='watch the video carefully, then place the green cube on the third target it was previously placed on'
+[gpu7] PROGRESS steps=34875 elapsed=3658.2s rate=9.533 step/s
+[gpu7] EPISODE g=2501 record_dataset_VideoPlaceOrder.h5#101 steps=1428 took=143.8s rate=9.928 step/s worker=gpu7
+[gpu5] Episode 170: timesteps=1412, exec_start=0, kept_indices=1717, task_goal='put six blue cubes and two green cubes into the bin, then press the button to stop'
+[gpu5] PROGRESS steps=36308 elapsed=3801.0s rate=9.552 step/s
+[gpu5] EPISODE g=170 record_dataset_BinFill.h5#170 steps=1412 took=142.1s rate=9.936 step/s worker=gpu5
+[gpu7] Episode 148: timesteps=1410, exec_start=0, kept_indices=1557, task_goal='put four blue cubes and three green cubes into the bin, then press the button to stop'
+[gpu7] PROGRESS steps=36285 elapsed=3800.2s rate=9.548 step/s
+[gpu7] EPISODE g=148 record_dataset_BinFill.h5#148 steps=1410 took=141.9s rate=9.938 step/s worker=gpu7
+[gpu4] Episode 128: timesteps=1421, exec_start=0, kept_indices=1407, task_goal='put four red cubes and three blue cubes into the bin, then press the button to stop'
+[gpu4] PROGRESS steps=36289 elapsed=3800.7s rate=9.548 step/s
+[gpu4] EPISODE g=128 record_dataset_BinFill.h5#128 steps=1421 took=142.9s rate=9.945 step/s worker=gpu4
+[gpu6] Episode 1595: timesteps=1420, exec_start=0, kept_indices=2048, task_goal='pick up the blue cube and place it on the target, repeating this action ten times, then press the button to stop'
+[gpu6] PROGRESS steps=36450 elapsed=3803.7s rate=9.583 step/s
+[gpu6] EPISODE g=1595 record_dataset_PickXtimes.h5#195 steps=1420 took=142.9s rate=9.940 step/s worker=gpu6
+[gpu7] Episode 138: timesteps=1404, exec_start=0, kept_indices=1975, task_goal='put five red cubes, one blue cube and one green cube into the bin, then press the button to stop'
+[gpu7] EPISODE g=138 record_dataset_BinFill.h5#138 steps=1404 took=141.2s rate=9.941 step/s worker=gpu7
+[gpu4] Episode 1569: timesteps=1404, exec_start=0, kept_indices=1427, task_goal='pick up the red cube and place it on the target, repeating this action nine times, then press the button to stop'
+[gpu4] EPISODE g=1569 record_dataset_PickXtimes.h5#169 steps=1404 took=140.8s rate=9.969 step/s worker=gpu4
+[gpu6] Episode 2782: timesteps=1400, exec_start=997, kept_indices=1242, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop'
+[gpu6] EPISODE g=2782 record_dataset_VideoRepick.h5#182 steps=1400 took=141.0s rate=9.926 step/s worker=gpu6
+[gpu5] Episode 161: timesteps=1410, exec_start=0, kept_indices=1587, task_goal='put four red cubes, three blue cubes and one green cube into the bin, then press the button to stop'
+[gpu5] EPISODE g=161 record_dataset_BinFill.h5#161 steps=1410 took=142.0s rate=9.929 step/s worker=gpu5
+[gpu6] Episode 1552: timesteps=1387, exec_start=0, kept_indices=1382, task_goal='pick up the green cube and place it on the target, repeating this action nine times, then press the button to stop'
+[gpu6] PROGRESS steps=39237 elapsed=4084.3s rate=9.607 step/s
+[gpu6] EPISODE g=1552 record_dataset_PickXtimes.h5#152 steps=1387 took=139.3s rate=9.954 step/s worker=gpu6
+[gpu4] Episode 2783: timesteps=1392, exec_start=961, kept_indices=1565, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop'
+[gpu4] PROGRESS steps=39085 elapsed=4081.6s rate=9.576 step/s
+[gpu4] EPISODE g=2783 record_dataset_VideoRepick.h5#183 steps=1392 took=139.8s rate=9.955 step/s worker=gpu4
+[gpu7] Episode 1550: timesteps=1395, exec_start=0, kept_indices=1768, task_goal='pick up the green cube and place it on the target, repeating this action nine times, then press the button to stop'
+[gpu7] PROGRESS steps=39084 elapsed=4081.8s rate=9.575 step/s
+[gpu7] EPISODE g=1550 record_dataset_PickXtimes.h5#150 steps=1395 took=140.4s rate=9.937 step/s worker=gpu7
+[gpu5] Episode 2776: timesteps=1384, exec_start=975, kept_indices=1437, task_goal='watch the video carefully, then repeatedly pick up and put down the same block that was previously picked up for two times, finally put it down and press the button to stop'
+[gpu5] PROGRESS steps=39102 elapsed=4082.9s rate=9.577 step/s
+[gpu5] EPISODE g=2776 record_dataset_VideoRepick.h5#176 steps=1384 took=139.5s rate=9.918 step/s worker=gpu5

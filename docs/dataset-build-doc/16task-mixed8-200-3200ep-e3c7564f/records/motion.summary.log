@@ -1,0 +1,24 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[pack] episodes=3200 rows=128342 (exec 81611 + demo 46731) index_sha256=c10b77a006cacef2…
+[pack] 表 394,266,624 B / 128342 行 / 4995 段, sha256=aa9190bf6c569bdd…; meta 阶段1 落盘（status=packed）; 耗时 10.5s
+PACK_MOTION_DONE=1 raw_dir_match=1 （pack.lock 保留，verify 回填后才释放）
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[verify] meta 回填（status=verified）+ row_digests 落盘, 耗时 4.0s
+VERIFY_MOTION=PASS scanned=128342 mismatches=0
+MOTION_WINDOW_END_HEAD=6ebeab5632340328a3a62db836d1ab3b004eed57
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+WAN_BITEXACT=PASS compared=14480 padded_covered=1800 frame_mismatches=0 latent_mismatches=0 metadata_mismatches=0 oracle_windows=14480
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+ENCODER_BITEXACT=PASS compared=128342 mismatches=0 order_ok=1 state_sha_ok=1 prov_ok=1 ckpt_ok=1 no_latent_stats_call=1 finite=1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+A6_SAMESOURCE=PASS episodes=3200 manifest_sha_same=1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+A7_BYTES=PASS segments=4995 mismatches=0 table_rows=128342 table_ok=1
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+A9_INDEXSET=PASS samples=3700 cold=3200 mismatches=0
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+A10_ROWS=PASS rows=128342 exec=81611 demo=46731 episodes=3200 formula_or_rowbase_mismatches=0 expect=128342=81611+46731
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+A11_PAD=FAIL {'segments': 4995, 'rows': 128342, 'padded': 1800, 'eligible': 1800}
+EXIT_CODE=1

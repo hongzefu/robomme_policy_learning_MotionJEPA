@@ -10,7 +10,7 @@
 
 | 档案 | 库 | 内容 | 状态 |
 |---|---|---|---|
-| [`16task-mixed8-200-3200ep-e3c7564f/`](16task-mixed8-200-3200ep-e3c7564f/launch.md) | `v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f` | mixed8-200 公开 H5（MANIFEST `e3c7564f`）16 任务×200 共 3200 primary 全新建库：合并 H5、SigLIP、4×4/8×8 framesamp、独立 norm_stats、e72 EMA encoder 的 Wan/motion 表与独立 oracle 对拍 | 进行中：B1 判据、A3 小样本、全量下载 PASS，全量 merge 运行中；第一段 launch.md 已提交（SigLIP 前），result 待补 |
+| [`16task-mixed8-200-3200ep-e3c7564f/`](16task-mixed8-200-3200ep-e3c7564f/launch.md) | `v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f` | mixed8-200 公开 H5（MANIFEST `e3c7564f`）16 任务×200 共 3200 primary 全新建库：合并 H5、SigLIP、4×4/8×8 framesamp、独立 norm_stats、e72 EMA encoder 的 Wan/motion 表与独立 oracle 对拍 | 完成：3200 集/2145548 帧/1383846 样本，合并 full verify、finalize1024、两档 VERIFY_PACK、xgrid、motion 128342 行与独立 oracle 逐位对拍全部零失配，两条 4 卡 20 步短测 PASS；latent 库与 VLA 新库（1405.0 GB）上传读回零差并公开，合并 H5 等中间件已按口径 24 删除（[result](16task-mixed8-200-3200ep-e3c7564f/result.md)） |
 | [`16task-pub-smoke16-0925/`](16task-pub-smoke16-0925/result.md) | `v1-store/datasets/16task-pub-smoke16-0925` | 公开16文件重新hash/全集scan与来源绑定；每任务首集16集source及4×4冒烟 | 全部PASS：16集/7898帧/5018样本，finalize1024零差，verify7898零失配；两正式库剩余预算PASS，smoke约7.36GB保留 |
 | [`16task-pub-1600ep/`](16task-pub-1600ep/README.md) | `v1-store/datasets/16task-pub-1600ep` | 公开16任务×100集，source、4×4 packed及仅供比较的自算统计量 | PASS：1600集/768897帧/476857样本，finalize1024最大差0、verify零失配，full20保存恢复PASS |
 | [`4task-counting-pub-400ep/`](4task-counting-pub-400ep/README.md) | `v1-store/datasets/4task-counting-pub-400ep` | 同一公开全集的四counting任务×100集，独立统计量和全覆盖子集比较 | PASS：400集/189035样本，独立norm与严格SUBSET_EQ通过，count20保存恢复PASS |

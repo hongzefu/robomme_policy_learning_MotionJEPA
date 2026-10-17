@@ -1,0 +1,693 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[oracle-enc] ckpt=bec423fdfa0c9494… epoch=72 amp=bf16 tensors=77 affine_finite=True
+ORACLE_ENCODER=DONE rows=128342 elapsed=1281s
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1665, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1587, in get_hf_file_metadata
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1665, in _get_metadata_or_catch_error
+    response = _httpx_follow_relative_redirects_with_backoff(
+        Traceback (most recent call last):
+       ^  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1665, in _get_metadata_or_catch_error
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 685, in _httpx_follow_relative_redirects_with_backoff
+    metadata = get_hf_file_metadata(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1587, in get_hf_file_metadata
+    response = http_backoff(
+               ^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 559, in http_backoff
+    return next(
+            metadata = get_hf_file_metadata(
+^^^^^
+       File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 467, in _http_backoff_base
+          ^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    response = client.request(method=method, url=url, **kwargs)
+               ^^^^^^^^    response = _httpx_follow_relative_redirects_with_backoff(^^^
+ ^^^^   ^^^^   ^^^^   ^^^   ^^^  ^^^^^^^^^^^    return fn(*args, **kwargs)^^^^^^^
+^^^^^^^^^^^^^^^^^^
+^^^^^^  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 685, in _httpx_follow_relative_redirects_with_backoff
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1587, in get_hf_file_metadata
+    response = http_backoff(
+               ^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 559, in http_backoff
+    return next(
+           ^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 467, in _http_backoff_base
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^    response = client.request(method=method, url=url, **kwargs)
+^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    response = _httpx_follow_relative_redirects_with_backoff(
+               ^^^^^^^^^^^^^^^^^^^^^^^^    response = self._send_handling_auth(^^
+ ^^   ^^   ^^  ^^   ^^   ^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 685, in _httpx_follow_relative_redirects_with_backoff
+^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 977, in _send_handling_redirects
+    response = http_backoff(
+               ^^^^^^^^^^^^^
+    response = self._send_handling_auth(
+       File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 559, in http_backoff
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    hook(request)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 224, in hf_request_event_hook
+    raise OfflineModeIsEnabled(
+huggingface_hub.errors.OfflineModeIsEnabled: Cannot reach https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers/resolve/main/vae/config.json: offline mode is enabled. To disable it, please unset the `HF_HUB_OFFLINE` environment variable.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 424, in load_config
+    return next(
+     response = self._send_handling_redirects(
+                      ^   ^^^^^^^^^
+^^^^^^^^^^^^  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 467, in _http_backoff_base
+^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 977, in _send_handling_redirects
+    response = client.request(method=method, url=url, **kwargs)
+    hook(request)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 224, in hf_request_event_hook
+            config_file = hf_hub_download(
+         ^   ^   ^^   ^^      ^^ ^^^^^^^^^^^^^^^^^^^^    raise OfflineModeIsEnabled(
+^^^^^^^
+^^^  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+huggingface_hub.errors.^^^OfflineModeIsEnabled: Cannot reach https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers/resolve/main/vae/config.json: offline mode is enabled. To disable it, please unset the `HF_HUB_OFFLINE` environment variable.^^
+
+^^The above exception was the direct cause of the following exception:
+^^
+^^^Traceback (most recent call last):
+^^^^^^  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 424, in load_config
+^^^^^^^^
+    return fn(*args, **kwargs)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 995, in hf_hub_download
+    config_file = hf_hub_download(
+                  ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 995, in hf_hub_download
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+    return _hf_hub_download_to_cache_dir(
+           ^^^   ^^^  ^^^  ^^  ^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1146, in _hf_hub_download_to_cache_dir
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1146, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1781, in _raise_on_head_call_error
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1781, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors    response = self._send_handling_redirects(.LocalEntryNotFoundError
+ : An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+
+     During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+    ^  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 536, in <module>
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 977, in _send_handling_redirects
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 536, in <module>
+    main()
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 532, in main
+    hook(request)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 224, in hf_request_event_hook
+    main()
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 532, in main
+    raise OfflineModeIsEnabled(
+huggingface_hub.errors.OfflineModeIsEnabled: Cannot reach https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers/resolve/main/vae/config.json: offline mode is enabled. To disable it, please unset the `HF_HUB_OFFLINE` environment variable.    args.func(args)
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 424, in load_config
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 208, in cmd_vae
+    vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=W.VAE_STATE_SHA256_EXPECTED)
+                 ^^^^    config_file = hf_hub_download(^^
+^^^^^^^^^  ^^^   ^^^^    args.func(args)
+ ^^^  ^^^ ^^^  ^^^  ^^^  ^^^  ^^^^^^ ^^^^  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 208, in cmd_vae
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+  File "/scratch/hongze/MotionJEPA/scripts/inference-example/wan_motion_infer.py", line 222, in load_vae
+    return fn(*args, **kwargs)
+    vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=W.VAE_STATE_SHA256_EXPECTED)
+              ^^    ^^^   ^^   ^^    ^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 995, in hf_hub_download
+    vae = AutoencoderKLWan.from_pretrained(vae_id, subfolder="vae",
+^^^^^^^    ^^^   ^^^   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^  File "/scratch/hongze/MotionJEPA/scripts/inference-example/wan_motion_infer.py", line 222, in load_vae
+^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/models/modeling_utils.py", line 1127, in from_pretrained
+    vae = AutoencoderKLWan.from_pretrained(vae_id, subfolder="vae",
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/models/modeling_utils.py", line 1127, in from_pretrained
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1146, in _hf_hub_download_to_cache_dir
+    config, unused_kwargs, commit_hash = cls.load_config(
+                    config, unused_kwargs, commit_hash = cls.load_config(
+                                             ^^^    ^^^    ^^^   ^^^   ^^^^
+     File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+ ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+    return fn(*args, **kwargs)
+           ^^^^^^   ^^^^     ^^^   ^^^^^^^^^^^
+^^^^  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 451, in load_config
+^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 451, in load_config
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+    raise EnvironmentError(
+OSError:     raise EnvironmentError(Wan-AI/Wan2.1-T2V-1.3B-Diffusers does not appear to have a file named config.json.
+
+OSError: Wan-AI/Wan2.1-T2V-1.3B-Diffusers does not appear to have a file named config.json.
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1781, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 536, in <module>
+    main()
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 532, in main
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1665, in _get_metadata_or_catch_error
+    args.func(args)
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 208, in cmd_vae
+    vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=W.VAE_STATE_SHA256_EXPECTED)
+    metadata = get_hf_file_metadata(
+               ^^^^^^^^^^^^^^^^^^^^  ^
+        File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^    return fn(*args, **kwargs)^^
+^^^^^^^^^^^^^^^^^^^^^^^^   ^   ^^   ^^  ^^^^^^^^^^^^^^^
+^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1587, in get_hf_file_metadata
+  File "/scratch/hongze/MotionJEPA/scripts/inference-example/wan_motion_infer.py", line 222, in load_vae
+    vae = AutoencoderKLWan.from_pretrained(vae_id, subfolder="vae",
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    response = _httpx_follow_relative_redirects_with_backoff(
+      File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 685, in _httpx_follow_relative_redirects_with_backoff
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/models/modeling_utils.py", line 1127, in from_pretrained
+    response = http_backoff(
+               ^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 559, in http_backoff
+    return next(
+           ^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 467, in _http_backoff_base
+    response = client.request(method=method, url=url, **kwargs)
+               ^^^^^^    config, unused_kwargs, commit_hash = cls.load_config(^^^
+^^^^^^^^  ^^^  ^^^  ^^^  ^^^^  ^^^ ^^  ^^^ ^^^  ^^^  ^^^  ^
+      File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+                 ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+                    ^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 451, in load_config
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    raise EnvironmentError(
+OSError: Wan-AI/Wan2.1-T2V-1.3B-Diffusers does not appear to have a file named config.json.
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 977, in _send_handling_redirects
+    hook(request)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 224, in hf_request_event_hook
+    raise OfflineModeIsEnabled(
+huggingface_hub.errors.OfflineModeIsEnabled: Cannot reach https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers/resolve/main/vae/config.json: offline mode is enabled. To disable it, please unset the `HF_HUB_OFFLINE` environment variable.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 424, in load_config
+    config_file = hf_hub_download(
+                  ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 995, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1146, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1781, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 536, in <module>
+    main()
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 532, in main
+    args.func(args)
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 208, in cmd_vae
+    vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=W.VAE_STATE_SHA256_EXPECTED)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/scripts/inference-example/wan_motion_infer.py", line 222, in load_vae
+    vae = AutoencoderKLWan.from_pretrained(vae_id, subfolder="vae",
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/models/modeling_utils.py", line 1127, in from_pretrained
+    config, unused_kwargs, commit_hash = cls.load_config(
+                                         ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 451, in load_config
+    raise EnvironmentError(
+OSError: Wan-AI/Wan2.1-T2V-1.3B-Diffusers does not appear to have a file named config.json.
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1665, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1587, in get_hf_file_metadata
+    response = _httpx_follow_relative_redirects_with_backoff(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 685, in _httpx_follow_relative_redirects_with_backoff
+    response = http_backoff(
+               ^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 559, in http_backoff
+    return next(
+           ^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 467, in _http_backoff_base
+    response = client.request(method=method, url=url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 977, in _send_handling_redirects
+    hook(request)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 224, in hf_request_event_hook
+    raise OfflineModeIsEnabled(
+huggingface_hub.errors.OfflineModeIsEnabled: Cannot reach https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers/resolve/main/vae/config.json: offline mode is enabled. To disable it, please unset the `HF_HUB_OFFLINE` environment variable.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 424, in load_config
+    config_file = hf_hub_download(
+                  ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 995, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1146, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1781, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 536, in <module>
+    main()
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 532, in main
+    args.func(args)
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 208, in cmd_vae
+    vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=W.VAE_STATE_SHA256_EXPECTED)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/scripts/inference-example/wan_motion_infer.py", line 222, in load_vae
+    vae = AutoencoderKLWan.from_pretrained(vae_id, subfolder="vae",
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/models/modeling_utils.py", line 1127, in from_pretrained
+    config, unused_kwargs, commit_hash = cls.load_config(
+                                         ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 451, in load_config
+    raise EnvironmentError(
+OSError: Wan-AI/Wan2.1-T2V-1.3B-Diffusers does not appear to have a file named config.json.
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1665, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1587, in get_hf_file_metadata
+    response = _httpx_follow_relative_redirects_with_backoff(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 685, in _httpx_follow_relative_redirects_with_backoff
+    response = http_backoff(
+               ^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 559, in http_backoff
+    return next(
+           ^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 467, in _http_backoff_base
+    response = client.request(method=method, url=url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 977, in _send_handling_redirects
+    hook(request)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 224, in hf_request_event_hook
+    raise OfflineModeIsEnabled(
+huggingface_hub.errors.OfflineModeIsEnabled: Cannot reach https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers/resolve/main/vae/config.json: offline mode is enabled. To disable it, please unset the `HF_HUB_OFFLINE` environment variable.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 424, in load_config
+    config_file = hf_hub_download(
+                  ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 995, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1146, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1781, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 536, in <module>
+    main()
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 532, in main
+    args.func(args)
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 208, in cmd_vae
+    vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=W.VAE_STATE_SHA256_EXPECTED)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/scripts/inference-example/wan_motion_infer.py", line 222, in load_vae
+    vae = AutoencoderKLWan.from_pretrained(vae_id, subfolder="vae",
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/models/modeling_utils.py", line 1127, in from_pretrained
+    config, unused_kwargs, commit_hash = cls.load_config(
+                                         ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 451, in load_config
+    raise EnvironmentError(
+OSError: Wan-AI/Wan2.1-T2V-1.3B-Diffusers does not appear to have a file named config.json.
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1665, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1587, in get_hf_file_metadata
+    response = _httpx_follow_relative_redirects_with_backoff(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 685, in _httpx_follow_relative_redirects_with_backoff
+    response = http_backoff(
+               ^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 559, in http_backoff
+    return next(
+           ^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 467, in _http_backoff_base
+    response = client.request(method=method, url=url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 977, in _send_handling_redirects
+    hook(request)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 224, in hf_request_event_hook
+    raise OfflineModeIsEnabled(
+huggingface_hub.errors.OfflineModeIsEnabled: Cannot reach https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers/resolve/main/vae/config.json: offline mode is enabled. To disable it, please unset the `HF_HUB_OFFLINE` environment variable.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 424, in load_config
+    config_file = hf_hub_download(
+                  ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 995, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1146, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1781, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 536, in <module>
+    main()
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 532, in main
+    args.func(args)
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 208, in cmd_vae
+    vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=W.VAE_STATE_SHA256_EXPECTED)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/scripts/inference-example/wan_motion_infer.py", line 222, in load_vae
+    vae = AutoencoderKLWan.from_pretrained(vae_id, subfolder="vae",
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/models/modeling_utils.py", line 1127, in from_pretrained
+    config, unused_kwargs, commit_hash = cls.load_config(
+                                         ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 451, in load_config
+    raise EnvironmentError(
+OSError: Wan-AI/Wan2.1-T2V-1.3B-Diffusers does not appear to have a file named config.json.
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1665, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1587, in get_hf_file_metadata
+    response = _httpx_follow_relative_redirects_with_backoff(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 685, in _httpx_follow_relative_redirects_with_backoff
+    response = http_backoff(
+               ^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 559, in http_backoff
+    return next(
+           ^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 467, in _http_backoff_base
+    response = client.request(method=method, url=url, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/httpx/_client.py", line 977, in _send_handling_redirects
+    hook(request)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 224, in hf_request_event_hook
+    raise OfflineModeIsEnabled(
+huggingface_hub.errors.OfflineModeIsEnabled: Cannot reach https://huggingface.co/Wan-AI/Wan2.1-T2V-1.3B-Diffusers/resolve/main/vae/config.json: offline mode is enabled. To disable it, please unset the `HF_HUB_OFFLINE` environment variable.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 424, in load_config
+    config_file = hf_hub_download(
+                  ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 995, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1146, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1781, in _raise_on_head_call_error
+    raise LocalEntryNotFoundError(
+huggingface_hub.errors.LocalEntryNotFoundError: An error happened while trying to locate the file on the Hub and we cannot find the requested files in the local cache. Please check your connection and try again or make sure your Internet connection is on.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 536, in <module>
+    main()
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 532, in main
+    args.func(args)
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan/oracle_driver.py", line 208, in cmd_vae
+    vae, vinfo = W.load_vae(VAE_ID, device, expected_state_sha256=W.VAE_STATE_SHA256_EXPECTED)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/scripts/inference-example/wan_motion_infer.py", line 222, in load_vae
+    vae = AutoencoderKLWan.from_pretrained(vae_id, subfolder="vae",
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/models/modeling_utils.py", line 1127, in from_pretrained
+    config, unused_kwargs, commit_hash = cls.load_config(
+                                         ^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/MotionJEPA/.venv/lib/python3.12/site-packages/diffusers/configuration_utils.py", line 451, in load_config
+    raise EnvironmentError(
+OSError: Wan-AI/Wan2.1-T2V-1.3B-Diffusers does not appear to have a file named config.json.
+SHARD_EXIT_CODE=1 shard=0
+SHARD_EXIT_CODE=1 shard=7
+SHARD_EXIT_CODE=1 shard=4
+SHARD_EXIT_CODE=1 shard=3
+SHARD_EXIT_CODE=1 shard=6
+SHARD_EXIT_CODE=1 shard=2
+SHARD_EXIT_CODE=1 shard=1
+SHARD_EXIT_CODE=1 shard=5
+错误: SHARD_EXIT_CODE=0 只有 0/8 片
+SHARD_EXIT_CODE=1 shard=0
+SHARD_EXIT_CODE=1 shard=1
+SHARD_EXIT_CODE=1 shard=2
+SHARD_EXIT_CODE=1 shard=3
+SHARD_EXIT_CODE=1 shard=4
+SHARD_EXIT_CODE=1 shard=5
+SHARD_EXIT_CODE=1 shard=6
+SHARD_EXIT_CODE=1 shard=7
+EXIT_CODE=1
