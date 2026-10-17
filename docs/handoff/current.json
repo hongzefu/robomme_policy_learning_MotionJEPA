@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-16T07:18:43Z",
-    "america_new_york": "2026-10-16T03:18:43-0400"
+    "utc": "2026-10-17T04:58:35Z",
+    "america_new_york": "2026-10-17T00:58:35-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
@@ -19,9 +19,9 @@
         "file": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html",
         "sha": "45c3f9a"
       },
-      "state": "running",
-      "state_changed_at": "2026-10-16T07:18:43Z",
-      "state_reason": "用户开工令（美东 2026-10-16 02:55）+ F1 裁决「a同意」；R0′ PLAN_CONSISTENCY_REVIEW=PASS；A 段进行中：A1-merge/A1b 写码、A1-train 已审 PASS 待合入",
+      "state": "done",
+      "state_changed_at": "2026-10-17T04:58:35Z",
+      "state_reason": "pre_handoff 7/7 pass；HEAD 冻结窗口（SigLIP→motion verify）全程 6ebeab5；build done 在 V11.24Beta 之前提交（口径 43）；long_tail：latent 上传已完成、VLA 新库上传进行中（不计入交接）",
       "owner": {
         "session": "https://claude.ai/code/session_01TVXcR5Zdi5K11TXph2pZGw",
         "host": "claude-code"
@@ -43,45 +43,45 @@
       "pre_handoff": [
         {
           "what": "merge verify",
-          "evidence": "MERGE_VERIFY=PASS level=full tasks=16 episodes=3200 … mismatches=0；timesteps=2,145,548",
+          "evidence": "MERGE_VERIFY=PASS level=full tasks=16 episodes=3200 timesteps=2145548 role=primary:3200 mismatches=0",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-merge.log、/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-merge-verify.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "窗口预算",
-          "evidence": "TRAIN_ES_BOUND=PASS episodes=3200 tasks=16 max_windows=<n≤123> budget=160 headroom=<h≥0>（PRE=PASS max_windows=123 headroom=37）",
+          "evidence": "TRAIN_ES_BOUND=PASS episodes=3200 tasks=16 max_windows=123 budget=160 headroom=37",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-esbound.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "8×8 打包与 xgrid",
-          "evidence": "VERIFY_PACK=PASS … mismatches=0；IMAGE_NPY_SPOT=PASS frames=512 mismatches=0；MOTION_POS_XGRID=PASS",
+          "evidence": "VERIFY_PACK=PASS scanned=2145548 mismatches=0（8×8）；IMAGE_NPY_SPOT=PASS frames=512 mismatches=0；MOTION_POS_XGRID=PASS t=1989 npy=64 mismatches=0",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-pack8.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "motion 表与对拍",
-          "evidence": "VERIFY_MOTION=PASS；WAN_BITEXACT=PASS；ENCODER_BITEXACT=PASS；A6_SAMESOURCE/A7_BYTES/A9_INDEXSET/A10_ROWS/A11_PAD=PASS",
+          "evidence": "VERIFY_MOTION=PASS scanned=128342 mismatches=0；WAN_BITEXACT=PASS compared=14480 padded_covered=1800；ENCODER_BITEXACT=PASS compared=128342 mismatches=0；A6/A7/A9/A10/A11=PASS（A11 以 --expect-episodes 1800 重跑，用户「a」）",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-motion.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "20 步试训兼 4 卡短测",
-          "evidence": "两次 EXIT_CODE=0；MOTION_4GPU_SMOKE=PASS|FAIL run=512|motion …×2 及并行/串行决定",
+          "evidence": "EXIT_CODE=0 ×2；MOTION_4GPU_SMOKE=PASS run=512 peak_mem_gib=39.3；MOTION_4GPU_SMOKE=PASS run=motion peak_mem_gib=38.3 → 4+4 并行",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-try20-512.log、/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-try20-motion.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "数据身份",
-          "evidence": "DATA_IDENTITY=PASS norm_sha=<sha> steps=<n> samples=<m> manifest_sha=e3c7564f…（preflight 移到 mixed8-vla-train 开工前自检，口径 43）",
+          "evidence": "DATA_IDENTITY=PASS norm_sha=36ee9acd… steps=2145548 samples=1383846 manifest_sha=e3c7564f…",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-identity.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "建库档案",
-          "evidence": "docs/dataset-build-doc/16task-mixed8-200-3200ep-e3c7564f/ 已提交",
+          "evidence": "launch.md 6ebeab5（docs: 合入 sub/C0）+ records/verdicts-b1-b4.md（本次 docs 提交）",
           "where": "policy git commit sha",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [
@@ -90,14 +90,16 @@
           "tmux": "m8v-latent-upload",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-latent-upload.log",
           "done_line": "全部完成 + EXIT_CODE=0；RESULT=PASS、BUCKET_PUBLIC=True",
-          "status": "pending"
+          "status": "pass",
+          "evidence": "RESULT=PASS、SHA256_PRE_POST_DIFF=0、BUCKET_PUBLIC=True、全部完成、EXIT_CODE=0（5120 文件 1.139 TB）；回读目录已删"
         },
         {
           "what": "VLA 新库上传（分批回读；闸门 motion 对拍 PASS 且 latent verify 目录已删）",
           "tmux": "m8v-trainset-upload",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-trainset-upload.log",
           "done_line": "全部完成 + EXIT_CODE=0；RESULT=PASS、SHA256_PRE_POST_DIFF=0、private==false、READBACK_PEAK_BYTES≤107374182400",
-          "status": "pending"
+          "status": "running",
+          "evidence": "SMOKE=PASS；全量 m8v-trainset-upload 美东 2026-10-17 00:52 起"
         }
       ],
       "running_handles": [],
@@ -124,19 +126,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "A1-merge 审查合入（commitV11.23）后起 A3 小样本与全量下载合并",
-          "command": "1016 计划 runbook「训练结束前（A 段）」",
-          "verdict_line": "MERGE_VERIFY=PASS"
-        },
-        {
-          "what": "接收的 latent 库上传：闸门满足后先 SMOKE=1 再全量",
-          "command": "tmux m8v-latent-upload-smoke / m8v-latent-upload（runbook 长尾段）",
-          "verdict_line": "全部完成 + EXIT_CODE=0"
-        },
-        {
-          "what": "build done 的 handoff commit 在 HEAD 冻结窗口之后、V11.24Beta 之前提交（口径 43）",
-          "command": "—",
-          "verdict_line": "pre_handoff 全部 pass"
+          "what": "VLA 新库上传完成后删合并 H5、tar 实体、wan-latents/motion-tokens/oracle（口径 24），补写建库 result.md",
+          "command": "runbook 长尾 m8v-trainset-upload",
+          "verdict_line": "全部完成 + EXIT_CODE=0；READBACK_PEAK_BYTES≤107374182400"
         }
       ],
       "received_handover": {
@@ -152,7 +144,7 @@
       },
       "state": "planned",
       "state_changed_at": "2026-10-16T07:18:43Z",
-      "state_reason": "等 mixed8-vla-build done（handoff 在 V11.24Beta 之前）；开工前自检 512/motion preflight；两条 80k 4+4 并行，短测 FAIL 只串行失败那条",
+      "state_reason": "上游 mixed8-vla-build done；即将 exclude → V11.24Beta → 512 preflight → 起 512；V11.25Beta → motion preflight → 起 motion（4+4，短测 PASS）",
       "owner": {
         "session": "https://claude.ai/code/session_01TVXcR5Zdi5K11TXph2pZGw",
         "host": "claude-code"
