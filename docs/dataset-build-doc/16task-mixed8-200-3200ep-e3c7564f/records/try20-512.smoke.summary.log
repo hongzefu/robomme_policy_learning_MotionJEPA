@@ -1,0 +1,1 @@
+MOTION_4GPU_SMOKE=PASS run=512 steps=20 exit=0 finite_losses=20/20 peak_mem_gib=39.3 limit_gib=72 mesh=TRAIN_MESH shape=(1, 4) devices=4 fsdp_devices=4 batch_size=128 num_workers=8

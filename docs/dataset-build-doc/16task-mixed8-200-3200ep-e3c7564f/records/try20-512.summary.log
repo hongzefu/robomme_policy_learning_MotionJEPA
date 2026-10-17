@@ -1,0 +1,384 @@
+RUN=m8v-try20-512
+CONFIG=mme_vla_suite_b128_80k
+HC=perceptual-framesamp-modul-8frame-8x8.yaml
+REPO=/scratch/hongze/robomme_policy_learning_MotionJEPA
+DS=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f
+ASSETS_DIR=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/16task-mixed8-200-3200ep-e3c7564f
+FSDP_DEVICES=4
+NUM_WORKERS=8
+XLA_PYTHON_CLIENT_PREALLOCATE=false
+START_UTC=2026-10-17T04:50:33Z
+GIT_HEAD=6ebeab5632340328a3a62db836d1ab3b004eed57
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+MME_VLA_SUITE_FILE=/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/__init__.py
+TRAIN_CMD=uv run --no-sync python scripts/training/train.py mme_vla_suite_b128_80k --exp-name m8v-try20-512 --assets-base-dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets --data.assets.assets-dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/16task-mixed8-200-3200ep-e3c7564f --data.assets.asset-id robomme --checkpoint-base-dir /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs --dataset-path /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/framesamp-8x8 --model.history-config perceptual-framesamp-modul-8frame-8x8.yaml --fsdp-devices 4 --num-workers 8 --num-train-steps 20 --log-interval 1 --no-wandb-enabled
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+04:50:41.594 [I] Running on: ip-10-242-11-177.us-west-2.compute.internal                          (1406447:train.py:341)
+04:50:41.594 [I] TrainConfig: TrainConfig(name='mme_vla_suite_b128_80k', project_name='robomme-framesamp', exp_name='m8v-try20-512', model=HistoryPi0Config(action_dim=32, action_horizon=20, max_token_len=64, dtype='bfloat16', paligemma_variant='gemma_2b', action_expert_variant='gemma_300m', pi05=True, discrete_state_input=False, memory_expert_variant='gemma_150m', use_history=True, history_config='perceptual-framesamp-modul-8frame-8x8.yaml'), weight_loader=CheckpointWeightLoader(params_path='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params'), pytorch_weight_path=None, pytorch_training_precision='bfloat16', lr_schedule=CosineDecaySchedule(warmup_steps=5000, peak_lr=5e-05, decay_steps=80000, decay_lr=5e-05), optimizer=AdamW(b1=0.9, b2=0.95, eps=1e-08, weight_decay=1e-10, clip_gradient_norm=1.0), ema_decay=0.999, freeze_filter=PathRegex(pattern=re.compile('.*img.*'), sep='/'), data=RoboMMEDataConfig(repo_id='robomme', assets=AssetsConfig(assets_dir='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/16task-mixed8-200-3200ep-e3c7564f', asset_id='robomme'), base_config=DataConfig(repo_id=None, asset_id=None, norm_stats=None, repack_transforms=Group(inputs=(), outputs=()), data_transforms=Group(inputs=(), outputs=()), model_transforms=Group(inputs=(), outputs=()), use_quantile_norm=False, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None)), assets_base_dir='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets', checkpoint_base_dir='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs', seed=42, batch_size=128, num_workers=8, num_train_steps=20, log_interval=1, save_interval=5000, keep_period=5000, overwrite=False, resume=False, wandb_enabled=False, policy_metadata=None, fsdp_devices=4, resum_ckpt_id=None, dataset_path='/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/framesamp-8x8') (1406447:train.py:342)
+INFO:2026-10-17 04:50:43,249:jax._src.xla_bridge:925: Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig'
+04:50:43.249 [I] Unable to initialize backend 'rocm': module 'jaxlib.xla_extension' has no attribute 'GpuAllocatorConfig' (1406447:xla_bridge.py:925)
+INFO:2026-10-17 04:50:43,253:jax._src.xla_bridge:925: Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory
+04:50:43.253 [I] Unable to initialize backend 'tpu': INTERNAL: Failed to open libtpu.so: libtpu.so: cannot open shared object file: No such file or directory (1406447:xla_bridge.py:925)
+TRAIN_MESH shape=(1, 4) devices=4 fsdp_devices=4 batch_size=128 num_workers=8
+04:50:43.552 [I] Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x7f12a49a16d0> (1406447:base_pytree_checkpoint_handler.py:334)
+04:50:43.552 [I] [thread=MainThread] Failed to get flag value for EXPERIMENTAL_ORBAX_USE_DISTRIBUTED_PROCESS_ID. (1406447:multihost.py:390)
+04:50:43.552 [I] [process=0][thread=MainThread] CheckpointManager init: checkpointers=None, item_names=None, item_handlers={'assets': <openpi.training.checkpoints.CallbackHandler object at 0x7f1286990690>, 'params': <orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f12887140d0>}, handler_registry=None (1406447:checkpoint_manager.py:620)
+04:50:43.553 [I] Deferred registration for item: "assets". Adding handler `<openpi.training.checkpoints.CallbackHandler object at 0x7f1286990690>` for item "assets" and save args `<class 'openpi.training.checkpoints.CallbackSave'>` and restore args `<class 'openpi.training.checkpoints.CallbackRestore'>` to `_handler_registry`. (1406447:composite_checkpoint_handler.py:234)
+04:50:43.553 [I] Deferred registration for item: "params". Adding handler `<orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f12887140d0>` for item "params" and save args `<class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeSaveArgs'>` and restore args `<class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeRestoreArgs'>` to `_handler_registry`. (1406447:composite_checkpoint_handler.py:234)
+04:50:43.553 [I] Deferred registration for item: "metrics". Adding handler `<orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonCheckpointHandler object at 0x7f1286927890>` for item "metrics" and save args `<class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonSaveArgs'>` and restore args `<class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonRestoreArgs'>` to `_handler_registry`. (1406447:composite_checkpoint_handler.py:234)
+04:50:43.553 [I] Initialized registry DefaultCheckpointHandlerRegistry({('assets', <class 'openpi.training.checkpoints.CallbackSave'>): <openpi.training.checkpoints.CallbackHandler object at 0x7f1286990690>, ('assets', <class 'openpi.training.checkpoints.CallbackRestore'>): <openpi.training.checkpoints.CallbackHandler object at 0x7f1286990690>, ('params', <class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeSaveArgs'>): <orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f12887140d0>, ('params', <class 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeRestoreArgs'>): <orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler object at 0x7f12887140d0>, ('metrics', <class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonSaveArgs'>): <orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonCheckpointHandler object at 0x7f1286927890>, ('metrics', <class 'orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonRestoreArgs'>): <orbax.checkpoint._src.handlers.json_checkpoint_handler.JsonCheckpointHandler object at 0x7f1286927890>}). (1406447:composite_checkpoint_handler.py:502)
+04:50:43.553 [I] orbax-checkpoint version: 0.11.13                                                (1406447:abstract_checkpointer.py:35)
+04:50:43.553 [I] [process=0][thread=MainThread] Using barrier_sync_fn: <function get_barrier_sync_fn.<locals>.<lambda> at 0x7f12868e22a0> timeout: 7200 secs and primary_host=0 for async checkpoint writes (1406447:async_checkpointer.py:170)
+04:50:43.553 [I] Found 0 checkpoint steps in /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512 (1406447:checkpoint_manager.py:1701)
+04:50:43.553 [I] [process=0][thread=MainThread] CheckpointManager created,  primary_host=0, CheckpointManagerOptions=CheckpointManagerOptions(save_interval_steps=1, max_to_keep=1, keep_time_interval=None, keep_period=5000, should_keep_fn=None, best_fn=None, best_mode='max', keep_checkpoints_without_metrics=True, step_prefix=None, step_format_fixed_length=None, step_name_format=None, create=False, cleanup_tmp_directories=False, save_on_steps=frozenset(), single_host_load_and_broadcast=False, todelete_subdir=None, enable_background_delete=False, read_only=False, enable_async_checkpointing=True, async_options=AsyncOptions(timeout_secs=7200, barrier_sync_fn=None, post_finalization_callback=None, create_directories_asynchronously=True), multiprocessing_options=MultiprocessingOptions(primary_host=0, active_processes=None, barrier_sync_key_prefix=None), should_save_fn=None, file_options=FileOptions(path_permission_mode=None), save_root_metadata=True, temporary_path_class=None, save_decision_policy=None, prevent_write_metrics=False), root_directory=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512: <orbax.checkpoint.checkpoint_manager.CheckpointManager object at 0x7f1379891110> (1406447:checkpoint_manager.py:801)
+max_token_len: 64
+04:50:43.676 [I] Loaded norm stats from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/16task-mixed8-200-3200ep-e3c7564f/robomme (1406447:config.py:275)
+04:50:43.677 [I] data_config: DataConfig(repo_id='robomme', asset_id='robomme', norm_stats={'state': NormStats(mean=array([ 0.0090061 ,  0.32228199, -0.00717553, -2.17108059,  0.00464871,
+        2.48947001,  0.80087805,  0.02342946]), std=array([0.18576376, 0.2932502 , 0.14883906, 0.43157876, 0.09893519,
+       0.29650295, 0.55323052, 0.01611713]), q01=array([-0.38776772, -0.20737202, -0.39875665, -2.85669169, -0.23356429,
+        1.57079637, -0.6998084 ,  0.        ]), q99=array([ 0.45222837,  1.01588649,  0.31231316, -1.10168323,  0.28689328,
+        3.05341863,  2.33614843,  0.039992  ])), 'actions': NormStats(mean=array([ 5.56518207e-04,  7.15818768e-03, -2.63429945e-04, -1.25909103e-02,
+        3.43919737e-06,  1.93511322e-02,  7.40248186e-04, -1.31412983e-01]), std=array([0.06514814, 0.13155587, 0.04194167, 0.13382189, 0.04445889,
+       0.13274325, 0.11967187, 0.9913277 ]), q01=array([-0.22376731, -0.31863887, -0.14143636, -0.49549287, -0.14421437,
+       -0.28850751, -0.42347826, -1.        ]), q99=array([0.23461011, 0.36784868, 0.13114803, 0.42259512, 0.14422486,
+       0.4746945 , 0.43656102, 0.9996    ]))}, repack_transforms=Group(inputs=[RepackTransform(structure={'observation/image': 'image', 'observation/wrist_image': 'wrist_image', 'observation/state': 'state', 'actions': 'actions', 'prompt': 'prompt', 'static_image_emb': 'static_image_emb', 'static_pos_emb': 'static_pos_emb', 'static_state_emb': 'static_state_emb', 'static_mask': 'static_mask', 'motion_emb': 'motion_emb', 'motion_pos': 'motion_pos', 'motion_mask': 'motion_mask', 'mem_order': 'mem_order'})], outputs=()), data_transforms=Group(inputs=(RoboMMEInputs(model_type=<ModelType.PI05: 'pi05'>), DeltaActions(mask=(True, True, True, True, True, True, True, False))), outputs=(AbsoluteActions(mask=(True, True, True, True, True, True, True, False)), RoboMMEOutputs())), model_transforms=Group(inputs=[InjectDefaultPrompt(prompt=None), ResizeImages(height=224, width=224), TokenizePromptWithState(tokenizer=<mme_vla_suite.training.config.PaligemmaTokenizer object at 0x7f1286823ad0>, discrete_state_input=False), PadStatesAndActions(model_action_dim=32)], outputs=()), use_quantile_norm=True, action_sequence_keys=('actions',), prompt_from_task=True, rlds_data_dir=None, action_space=None, filter_dict_path=None) (1406447:train.py:415)
+04:50:43.740 [I] local_batch_size: 128                                                            (1406447:dataloader.py:134)
+04:51:38.571 [I] Initialized data loader:
+[0].images['base_0_rgb']: (128, 224, 224, 3)@float32
+[0].images['left_wrist_0_rgb']: (128, 224, 224, 3)@float32
+[0].image_masks['base_0_rgb']: (128,)@bool
+[0].image_masks['left_wrist_0_rgb']: (128,)@bool
+[0].state: (128, 32)@float32
+[0].tokenized_prompt: (128, 64)@int32
+[0].tokenized_prompt_mask: (128, 64)@bool
+[0].static_image_emb: (128, 512, 2048)@bfloat16
+[0].static_mask: (128, 512)@bool
+[0].static_pos_emb: (128, 512, 768)@float32
+[0].static_state_emb: (128, 512, 8)@float32
+[1]: (128, 20, 32)@float32 (1406447:train.py:430)
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+04:51:41.058 [I] Total Model Size: 3282.450698852539 MB                                           (1406447:train.py:211)
+04:51:41.058 [I] Trainable Model Size: 2886.863067626953 MB                                       (1406447:train.py:214)
+04:51:41.060 [I] Memory-related  Size: 84.366943359375 MB                                         (1406447:train.py:219)
+04:51:41.060 [I] Non-Memory Size: 2802.496124267578 MB                                            (1406447:train.py:222)
+04:51:41.092 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['kernel'].value of shape (27, 1152, 4304) (255.34 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.092 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['kernel'].value of shape (27, 4304, 1152) (255.34 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.092 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.092 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['kernel'].value of shape (27, 16, 72, 1152) (68.34 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.092 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.092 [I] Sharding .params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.092 [I] Sharding .params['PaliGemma']['img']['head']['kernel'].value of shape (1152, 2048) (4.50 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.092 [I] Sharding .params['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w'].value of shape (18, 4, 256, 1024) (72.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w'].value of shape (18, 4, 1024, 256) (72.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel'].value of shape (18, 1024, 2048) (144.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.093 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.094 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.094 [I] Sharding .params['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.094 [I] Sharding .params['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.094 [I] Sharding .params['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.094 [I] Sharding .params['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 1024) (11.00 MiB) along axis 0 (1406447:sharding.py:89)
+04:51:41.094 [I] Sharding .params['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.094 [I] Sharding .params['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.094 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (1406447:sharding.py:89)
+04:51:41.094 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.094 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.094 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.095 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.095 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.096 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.096 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.096 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.096 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w'].value of shape (18, 4, 256, 1024) (72.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.096 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w'].value of shape (18, 4, 1024, 256) (72.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.096 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel'].value of shape (18, 1024, 2048) (144.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.096 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.096 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.096 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.096 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].mu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].mu['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 1024) (11.00 MiB) along axis 0 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].mu['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].mu['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.097 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.098 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.098 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.098 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w'].value of shape (18, 4, 256, 1024) (72.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.098 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w'].value of shape (18, 4, 1024, 256) (72.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.098 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel'].value of shape (18, 1024, 2048) (144.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.098 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.098 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.098 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.098 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.098 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.098 [I] Sharding .opt_state[1][0].nu['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.099 [I] Sharding .opt_state[1][0].nu['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 1024) (11.00 MiB) along axis 0 (1406447:sharding.py:89)
+04:51:41.099 [I] Sharding .opt_state[1][0].nu['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.099 [I] Sharding .opt_state[1][0].nu['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.099 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['kernel'].value of shape (27, 1152, 4304) (255.34 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['kernel'].value of shape (27, 4304, 1152) (255.34 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['kernel'].value of shape (27, 16, 72, 1152) (68.34 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['kernel'].value of shape (27, 1152, 16, 72) (68.34 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['img']['head']['kernel'].value of shape (1152, 2048) (4.50 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['llm']['embedder']['input_embedding'].value of shape (257152, 2048) (2009.00 MiB) along axis 0 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value of shape (1024, 3072) (12.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value of shape (18, 8, 256, 2048) (288.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value of shape (18, 8, 256, 1024) (144.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value of shape (18, 2, 1, 2048, 256) (72.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.100 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.101 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value of shape (18, 8, 2048, 256) (288.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.101 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value of shape (18, 8, 1024, 256) (144.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.101 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w'].value of shape (18, 2, 1, 1024, 256) (36.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.101 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w'].value of shape (18, 4, 256, 1024) (72.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.101 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w'].value of shape (18, 4, 1024, 256) (72.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.101 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel'].value of shape (18, 1024, 2048) (144.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.101 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value of shape (18, 2, 2048, 16384) (4608.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.101 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp']['linear'].value of shape (18, 16384, 2048) (2304.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.101 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value of shape (18, 2, 1024, 4096) (576.00 MiB) along axis 3 (1406447:sharding.py:89)
+04:51:41.101 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['mlp_1']['linear'].value of shape (18, 4096, 1024) (288.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.102 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.102 [I] Sharding .ema_params['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value of shape (18, 1024, 3072) (216.00 MiB) along axis 2 (1406447:sharding.py:89)
+04:51:41.102 [I] Sharding .ema_params['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value of shape (2816, 1024) (11.00 MiB) along axis 0 (1406447:sharding.py:89)
+04:51:41.102 [I] Sharding .ema_params['time_mlp_in']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.102 [I] Sharding .ema_params['time_mlp_out']['kernel'].value of shape (1024, 1024) (4.00 MiB) along axis 1 (1406447:sharding.py:89)
+04:51:41.103 [I] Created BasePyTreeCheckpointHandler: use_ocdbt=True, use_zarr3=False, pytree_metadata_options=PyTreeMetadataOptions(support_rich_types=False), array_metadata_store=<orbax.checkpoint._src.metadata.array_metadata_store.Store object at 0x7f12a49a16d0> (1406447:base_pytree_checkpoint_handler.py:334)
+04:51:41.126 [I] Restoring checkpoint from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params. (1406447:checkpointer.py:298)
+04:51:47.760 [I] [process=0] /jax/checkpoint/read/bytes_per_sec: 1.9 GiB/s (total bytes: 12.5 GiB) (time elapsed: 6 seconds) (per-host) (1406447:base_pytree_checkpoint_handler.py:114)
+04:51:47.760 [I] Finished restoring checkpoint in 6.63 seconds from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params. (1406447:checkpointer.py:309)
+04:51:49.086 [I] Merging missing weight: PaliGemma/llm/layers/mem_rms_norm_ffn/Dense_0/bias, shape: (18, 2048), dtype: float32 (1406447:weight_loaders.py:103)
+04:51:49.086 [I] Merging missing weight: PaliGemma/llm/layers/mem_rms_norm_ffn/Dense_0/kernel, shape: (18, 1024, 2048), dtype: float32 (1406447:weight_loaders.py:103)
+04:51:49.086 [I] Merging missing weight: mem_encoder/feature_encoder/encoder_static/bias, shape: (1024,), dtype: float32 (1406447:weight_loaders.py:103)
+04:51:49.086 [I] Merging missing weight: PaliGemma/llm/layers/mem_attn/mem_rms_norm/scale, shape: (18, 1024), dtype: float32 (1406447:weight_loaders.py:103)
+04:51:49.086 [I] Merging missing weight: mem_encoder/feature_encoder/encoder_static/kernel, shape: (2816, 1024), dtype: float32 (1406447:weight_loaders.py:103)
+04:51:49.086 [I] Merging missing weight: mem_encoder/feature_encoder/pos_proj/kernel, shape: (768, 768), dtype: float32 (1406447:weight_loaders.py:103)
+04:51:49.087 [I] Merging missing weight: PaliGemma/llm/layers/mem_attn/out_einsum_mem/w, shape: (18, 4, 256, 1024), dtype: float32 (1406447:weight_loaders.py:103)
+04:51:49.087 [I] Merging missing weight: mem_encoder/feature_encoder/pos_proj/bias, shape: (768,), dtype: float32 (1406447:weight_loaders.py:103)
+04:51:49.087 [I] Merging missing weight: PaliGemma/llm/layers/mem_attn/q_einsum_mem/w, shape: (18, 4, 1024, 256), dtype: float32 (1406447:weight_loaders.py:103)
+04:51:49.087 [I] Merging missing weight: PaliGemma/llm/layers/mem_attn/kv_einsum_mem/w, shape: (18, 2, 1, 1024, 256), dtype: float32 (1406447:weight_loaders.py:103)
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+04:51:49.526 [I] Total Model Size: 3282.450698852539 MB                                           (1406447:train.py:211)
+04:51:49.527 [I] Trainable Model Size: 2886.863067626953 MB                                       (1406447:train.py:214)
+04:51:49.528 [I] Memory-related  Size: 84.366943359375 MB                                         (1406447:train.py:219)
+04:51:49.528 [I] Non-Memory Size: 2802.496124267578 MB                                            (1406447:train.py:222)
+/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/jax/_src/interpreters/mlir.py:1178: UserWarning: Some donated buffers were not usable: ShapedArray(bfloat16[27,1152,4304]), ShapedArray(bfloat16[27,4304,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,16,72,1152]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[27,1152,16,72]), ShapedArray(bfloat16[1152,2048]), ShapedArray(float32[257152,2048]), ShapedArray(float32[1024,3072]), ShapedArray(float32[18,8,256,2048]), ShapedArray(float32[18,8,256,1024]), ShapedArray(float32[18,2,1,2048,256]), ShapedArray(float32[18,2,1,1024,256]), ShapedArray(float32[18,8,2048,256]), ShapedArray(float32[18,8,1024,256]), ShapedArray(float32[18,2,2048,16384]), ShapedArray(float32[18,16384,2048]), ShapedArray(float32[18,2,1024,4096]), ShapedArray(float32[18,4096,1024]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[18,1024,3072]), ShapedArray(float32[1024,1024]), ShapedArray(float32[1024,1024]).
+See an explanation at https://jax.readthedocs.io/en/latest/faq.html#buffer-donation.
+  warnings.warn("Some donated buffers were not usable:"
+04:52:02.129 [I] Initialized train state:
+['PaliGemma']['img']['Transformer']['encoder_norm']['bias'].value: (1152,)@bfloat16
+['PaliGemma']['img']['Transformer']['encoder_norm']['scale'].value: (1152,)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_0']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_0']['scale'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_1']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['LayerNorm_1']['scale'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['bias'].value: (27, 4304)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_0']['kernel'].value: (27, 1152, 4304)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MlpBlock_0']['Dense_1']['kernel'].value: (27, 4304, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['key']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['bias'].value: (27, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['out']['kernel'].value: (27, 16, 72, 1152)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['query']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['bias'].value: (27, 16, 72)@bfloat16
+['PaliGemma']['img']['Transformer']['encoderblock']['MultiHeadDotProductAttention_0']['value']['kernel'].value: (27, 1152, 16, 72)@bfloat16
+['PaliGemma']['img']['embedding']['bias'].value: (1152,)@bfloat16
+['PaliGemma']['img']['embedding']['kernel'].value: (14, 14, 3, 1152)@bfloat16
+['PaliGemma']['img']['head']['bias'].value: (2048,)@bfloat16
+['PaliGemma']['img']['head']['kernel'].value: (1152, 2048)@bfloat16
+['PaliGemma']['img']['pos_embedding'].value: (1, 256, 1152)@bfloat16
+['PaliGemma']['llm']['embedder']['input_embedding'].value: (257152, 2048)@float32
+['PaliGemma']['llm']['final_norm']['scale'].value: (2048,)@float32
+['PaliGemma']['llm']['final_norm_1']['Dense_0']['bias'].value: (3072,)@float32
+['PaliGemma']['llm']['final_norm_1']['Dense_0']['kernel'].value: (1024, 3072)@float32
+['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum']['w'].value: (18, 8, 256, 2048)@float32
+['PaliGemma']['llm']['layers']['attn']['attn_vec_einsum_1']['w'].value: (18, 8, 256, 1024)@float32
+['PaliGemma']['llm']['layers']['attn']['kv_einsum']['w'].value: (18, 2, 1, 2048, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['kv_einsum_1']['w'].value: (18, 2, 1, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['q_einsum']['w'].value: (18, 8, 2048, 256)@float32
+['PaliGemma']['llm']['layers']['attn']['q_einsum_1']['w'].value: (18, 8, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['mem_attn']['kv_einsum_mem']['w'].value: (18, 2, 1, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['mem_attn']['mem_rms_norm']['scale'].value: (18, 1024)@float32
+['PaliGemma']['llm']['layers']['mem_attn']['out_einsum_mem']['w'].value: (18, 4, 256, 1024)@float32
+['PaliGemma']['llm']['layers']['mem_attn']['q_einsum_mem']['w'].value: (18, 4, 1024, 256)@float32
+['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['bias'].value: (18, 2048)@float32
+['PaliGemma']['llm']['layers']['mem_rms_norm_ffn']['Dense_0']['kernel'].value: (18, 1024, 2048)@float32
+['PaliGemma']['llm']['layers']['mlp']['gating_einsum'].value: (18, 2, 2048, 16384)@float32
+['PaliGemma']['llm']['layers']['mlp']['linear'].value: (18, 16384, 2048)@float32
+['PaliGemma']['llm']['layers']['mlp_1']['gating_einsum'].value: (18, 2, 1024, 4096)@float32
+['PaliGemma']['llm']['layers']['mlp_1']['linear'].value: (18, 4096, 1024)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm']['scale'].value: (18, 2048)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['bias'].value: (18, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_attention_norm_1']['Dense_0']['kernel'].value: (18, 1024, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm']['scale'].value: (18, 2048)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['bias'].value: (18, 3072)@float32
+['PaliGemma']['llm']['layers']['pre_ffw_norm_1']['Dense_0']['kernel'].value: (18, 1024, 3072)@float32
+['action_in_proj']['bias'].value: (1024,)@float32
+['action_in_proj']['kernel'].value: (32, 1024)@float32
+['action_out_proj']['bias'].value: (32,)@float32
+['action_out_proj']['kernel'].value: (1024, 32)@float32
+['mem_encoder']['feature_encoder']['encoder_static']['bias'].value: (1024,)@float32
+['mem_encoder']['feature_encoder']['encoder_static']['kernel'].value: (2816, 1024)@float32
+['mem_encoder']['feature_encoder']['pos_proj']['bias'].value: (768,)@float32
+['mem_encoder']['feature_encoder']['pos_proj']['kernel'].value: (768, 768)@float32
+['time_mlp_in']['bias'].value: (1024,)@float32
+['time_mlp_in']['kernel'].value: (1024, 1024)@float32
+['time_mlp_out']['bias'].value: (1024,)@float32
+['time_mlp_out']['kernel'].value: (1024, 1024)@float32 (1406447:train.py:449)
+04:52:02.141 [I] Progress on: -/20 rate:- remaining:? elapsed:00:00 postfix:-                     (1406447:tqdm_logging.py:145)
+2026-10-17 04:52:07.228499: E external/xla/xla/service/slow_operation_alarm.cc:73] Constant folding an instruction is taking > 1s:
+
+  %reduce-window.12 = s32[128,596]{1,0} reduce-window(%broadcast.4952, %constant.2809), window={size=1x596 pad=0_0x595_0}, to_apply=%region_33.10933, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2026-10-17 04:52:16.289320: E external/xla/xla/service/slow_operation_alarm.cc:140] The operation took 10.060927105s
+Constant folding an instruction is taking > 1s:
+
+  %reduce-window.12 = s32[128,596]{1,0} reduce-window(%broadcast.4952, %constant.2809), window={size=1x596 pad=0_0x595_0}, to_apply=%region_33.10933, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2026-10-17 04:52:18.289701: E external/xla/xla/service/slow_operation_alarm.cc:73] Constant folding an instruction is taking > 2s:
+
+  %reduce-window.13 = s32[128,596]{1,0} reduce-window(%broadcast.4957, %constant.2810), window={size=1x596 pad=0_0x595_0}, to_apply=%region_33.10892, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+2026-10-17 04:52:25.809419: E external/xla/xla/service/slow_operation_alarm.cc:140] The operation took 9.519799994s
+Constant folding an instruction is taking > 2s:
+
+  %reduce-window.13 = s32[128,596]{1,0} reduce-window(%broadcast.4957, %constant.2810), window={size=1x596 pad=0_0x595_0}, to_apply=%region_33.10892, metadata={op_name="jit(<unnamed wrapped function>)/jit(main)/jvp(jit(cumsum))/reduce_window_sum" source_file="/scratch/hongze/robomme_policy_learning_MotionJEPA/src/mme_vla_suite/models/integration/history_pi0.py" source_line=57}
+
+This isn't necessarily a bug; constant-folding is inherently a trade-off between compilation time and speed at runtime. XLA has some guards that attempt to keep constant folding from taking too long, but fundamentally you'll always be able to come up with an input program that takes a long time.
+
+If you'd like to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+
+
+Step 0: grad_norm=1.3986, llm_grad_norm=1.3857, loss=0.0874, mem_enc_norm=0.1189, param_norm=1815.5465
+04:54:18.163 [I] Progress on: -/20 rate:- remaining:? elapsed:02:16 postfix:-                     (1406447:tqdm_logging.py:145)
+
+
+Step 1: grad_norm=1.4770, llm_grad_norm=1.4651, loss=0.0920, mem_enc_norm=0.1243, param_norm=1815.5465
+
+
+Step 2: grad_norm=1.4822, llm_grad_norm=1.4694, loss=0.0911, mem_enc_norm=0.1246, param_norm=1815.5465
+
+
+Step 3: grad_norm=1.4668, llm_grad_norm=1.4526, loss=0.0915, mem_enc_norm=0.1266, param_norm=1815.5465
+
+
+Step 4: grad_norm=1.3229, llm_grad_norm=1.3112, loss=0.0880, mem_enc_norm=0.1123, param_norm=1815.5465
+
+
+Step 5: grad_norm=1.3558, llm_grad_norm=1.3432, loss=0.0968, mem_enc_norm=0.1147, param_norm=1815.5465
+
+
+Step 6: grad_norm=1.3768, llm_grad_norm=1.3658, loss=0.0859, mem_enc_norm=0.1156, param_norm=1815.5465
+04:54:29.459 [I] Progress on: 6.00it/20.0it rate:9.6s/it remaining:02:13 elapsed:02:27 postfix:-  (1406447:tqdm_logging.py:145)
+
+
+Step 7: grad_norm=1.3195, llm_grad_norm=1.3077, loss=0.0857, mem_enc_norm=0.1130, param_norm=1815.5465
+
+
+Step 8: grad_norm=1.3294, llm_grad_norm=1.3181, loss=0.0845, mem_enc_norm=0.1128, param_norm=1815.5465
+
+
+Step 9: grad_norm=1.4520, llm_grad_norm=1.4397, loss=0.0969, mem_enc_norm=0.1227, param_norm=1815.5465
+
+
+Step 10: grad_norm=1.4289, llm_grad_norm=1.4177, loss=0.0970, mem_enc_norm=0.1201, param_norm=1815.5465
+
+
+Step 11: grad_norm=1.3456, llm_grad_norm=1.3347, loss=0.0948, mem_enc_norm=0.1132, param_norm=1815.5465
+
+
+Step 12: grad_norm=1.2835, llm_grad_norm=1.2718, loss=0.0880, mem_enc_norm=0.1077, param_norm=1815.5465
+04:54:40.379 [I] Progress on: 12.0it/20.0it rate:2.6s/it remaining:00:21 elapsed:02:38 postfix:-  (1406447:tqdm_logging.py:145)
+
+
+Step 13: grad_norm=1.2141, llm_grad_norm=1.2039, loss=0.0928, mem_enc_norm=0.1020, param_norm=1815.5465
+
+
+Step 14: grad_norm=1.2183, llm_grad_norm=1.2077, loss=0.0843, mem_enc_norm=0.1009, param_norm=1815.5465
+
+
+Step 15: grad_norm=1.1462, llm_grad_norm=1.1352, loss=0.0808, mem_enc_norm=0.0971, param_norm=1815.5465
+
+
+Step 16: grad_norm=1.1563, llm_grad_norm=1.1465, loss=0.0821, mem_enc_norm=0.0966, param_norm=1815.5465
+
+
+Step 17: grad_norm=1.1394, llm_grad_norm=1.1299, loss=0.0871, mem_enc_norm=0.0953, param_norm=1815.5465
+
+
+Step 18: grad_norm=1.0238, llm_grad_norm=1.0150, loss=0.0795, mem_enc_norm=0.0857, param_norm=1815.5465
+04:54:51.498 [I] Progress on: 18.0it/20.0it rate:1.9s/it remaining:00:03 elapsed:02:49 postfix:-  (1406447:tqdm_logging.py:145)
+
+
+Step 19: grad_norm=1.0304, llm_grad_norm=1.0219, loss=0.0779, mem_enc_norm=0.0866, param_norm=1815.5465
+04:54:53.527 [I] [process=0][thread=MainThread][wait_until_finished] No Save Finalize thread to wait for. Returning. (1406447:checkpoint_manager.py:1987)
+04:54:53.527 [I] [process=0] Saving checkpoint at step 19                                         (1406447:checkpoint_manager.py:1408)
+04:54:53.528 [I] [process=0] Started async saving checkpoint to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19. (1406447:async_checkpointer.py:439)
+04:54:53.529 [I] Using ThreadSafeKeyValueSignalingClient                                          (1406447:signaling_client.py:332)
+04:54:53.542 [I] Transferring arrays to host memory with options: use_replica_parallel=True, enable_pinned_host_transfer=False (1406447:replica_slices.py:341)
+04:54:53.552 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0 (1406447:atomicity.py:144)
+04:54:53.554 [I] Wrote Metadata={'item_handlers': None, 'metrics': {}, 'performance_metrics': {}, 'init_timestamp_nsecs': 1792212893553299705, 'commit_timestamp_nsecs': None, 'custom_metadata': {}}, json={"item_handlers": null, "metrics": {}, "performance_metrics": {}, "init_timestamp_nsecs": 1792212893553299705, "commit_timestamp_nsecs": null, "custom_metadata": {}} to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0/_CHECKPOINT_METADATA (1406447:checkpoint.py:186)
+04:54:53.555 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0/assets.orbax-checkpoint-tmp-1 (1406447:atomicity.py:144)
+04:54:53.555 [I] Creating tmp directory /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0/params.orbax-checkpoint-tmp-2 (1406447:atomicity.py:144)
+04:55:22.610 [I] [process=0] /jax/checkpoint/write/blocking_bytes_per_sec: 424.3 MiB/s (total bytes: 12.0 GiB) (time elapsed: 29 seconds) (per-host) (1406447:base_pytree_checkpoint_handler.py:114)
+04:55:22.620 [I] [process=0][thread=async_save] Background save thread started.                   (1406447:async_checkpointer.py:77)
+04:55:22.621 [I] Finished blocking save in 29.09 seconds. Continuing to save asynchronously to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19. (1406447:async_checkpointer.py:548)
+04:55:22.621 [I] [process=0][thread=MainThread][step=19] Starting CheckpointManager Save Finalize thread=save_finalize (1406447:checkpoint_manager.py:1453)
+04:55:22.621 [I] [process=0][thread=save_finalize] Waiting for background save thread=async_save. (1406447:async_checkpointer.py:258)
+04:55:22.621 [I] {'step': 19, 'event_type': 'save', 'directory': '/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512', 'reached_preemption': False, 'preemption_received_at': None, 'synchronous': False, 'wait_for_prev_start_time': 1792212893.527504, 'wait_for_prev_duration_secs': 0.00015616416931152344, 'checkpointer_blocking_start_time': 1792212893.5280077, 'checkpointer_blocking_duration_secs': 29.093261241912842, 'get_old_steps_start_time': 1792212922.6213155, 'get_old_steps_duration_secs': 5.7220458984375e-06, 'checkpoint_manager_blocking_start_time': 1792212893.5272775, 'checkpoint_manager_blocking_duration_secs': 29.09462308883667} (1406447:standard_logger.py:34)
+04:55:22.622 [I] Progress on: 20.0it/20.0it rate:10.7s/it remaining:00:00 elapsed:03:20 postfix:- (1406447:tqdm_logging.py:145)
+04:55:22.622 [I] Progress on: 20.0it/20.0it rate:10.7s/it remaining:00:00 elapsed:03:20 postfix:- (1406447:tqdm_logging.py:145)
+04:55:22.622 [I] Waiting for checkpoint manager to finish                                         (1406447:train.py:516)
+04:55:22.622 [I] [process=0][thread=MainThread][step=19][wait_until_finished] Waiting for Save Finalize thread (save_finalize) to complete. (1406447:checkpoint_manager.py:1998)
+04:55:22.651 [I] [process=0][thread=array_type_handler] Wrote 61 array_metadata.ArrayMetadata to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0/params.orbax-checkpoint-tmp-2/array_metadatas/process_0 (1406447:array_metadata_store.py:198)
+04:55:47.358 [I] [process=0] /jax/checkpoint/write/bytes_per_sec: 229.2 MiB/s (total bytes: 12.0 GiB) (time elapsed: 53 seconds) (per-host) (1406447:base_pytree_checkpoint_handler.py:114)
+04:55:47.358 [I] [process=0][thread=async_save] 4 Handler Commit operations completed.            (1406447:async_checkpointer.py:87)
+04:55:47.358 [I] Read Metadata={'item_handlers': None, 'metrics': {}, 'performance_metrics': {}, 'init_timestamp_nsecs': 1792212893553299705, 'commit_timestamp_nsecs': None, 'custom_metadata': {}} from /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0/_CHECKPOINT_METADATA (1406447:checkpoint.py:226)
+04:55:47.359 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0/assets.orbax-checkpoint-tmp-1 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0/assets (1406447:atomicity.py:289)
+04:55:47.360 [I] Updated Metadata={'item_handlers': {'assets': 'openpi.training.checkpoints.CallbackHandler', 'params': 'orbax.checkpoint._src.handlers.pytree_checkpoint_handler.PyTreeCheckpointHandler'}, 'metrics': {}, 'performance_metrics': {}, 'init_timestamp_nsecs': 1792212893553299705, 'commit_timestamp_nsecs': None, 'custom_metadata': {}} to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0/_CHECKPOINT_METADATA (1406447:checkpoint.py:245)
+04:55:47.361 [I] [process=0][thread=async_save] Skipped cross-host ArrayMetadata validation because only one process is found: process_index=0. (1406447:array_metadata_store.py:362)
+04:55:47.365 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0/params.orbax-checkpoint-tmp-2 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0/params (1406447:atomicity.py:289)
+04:55:47.365 [I] Renaming /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19.orbax-checkpoint-tmp-0 to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19 (1406447:atomicity.py:289)
+04:55:47.365 [I] [process=0][thread=async_save] Finished saving checkpoint (finalized tmp dir) to `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19`. (1406447:atomicity.py:573)
+04:55:47.365 [I] Finished asynchronous save (blocking + background) in 53.84 seconds to /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/m8v-try20-512/19 (1406447:async_checkpointer.py:412)
+04:55:47.365 [I] [process=0][thread=async_save] Background save thread done.                      (1406447:async_checkpointer.py:143)
+04:55:47.366 [I] [process=0][thread=save_finalize] Done with waiting for background save thread=async_save. (1406447:async_checkpointer.py:266)
+04:55:47.366 [I] [process=0][thread=save_finalize] No errors found in background save thread=async_save. (1406447:async_checkpointer.py:276)
+04:55:47.366 [I] [process=0][thread=save_finalize][step=19] CheckpointManager Save Finalize is syncing with other hosts... (1406447:checkpoint_manager.py:2095)
+04:55:47.366 [I] [process=0][thread=save_finalize][step=19] CheckpointManager Save Finalize is done on all hosts. (1406447:checkpoint_manager.py:2110)
+04:55:47.366 [I] [process=0][thread=MainThread][step=19][wait_until_finished] Done waiting for Save Finalize thread (save_finalize) running at step=19. (1406447:checkpoint_manager.py:2010)
+END_UTC=2026-10-17T04:55:54Z
+EXIT_CODE=0

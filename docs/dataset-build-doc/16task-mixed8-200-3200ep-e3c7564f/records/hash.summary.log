@@ -1,0 +1,44 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[scan] 原始目录: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/raw-h5/16task-mixed8-200-20261014
+[scan] 规范序: ['record_dataset_BinFill.h5', 'record_dataset_ButtonUnmask.h5', 'record_dataset_ButtonUnmaskSwap.h5', 'record_dataset_InsertPeg.h5', 'record_dataset_MoveCube.h5', 'record_dataset_PatternLock.h5', 'record_dataset_PickHighlight.h5', 'record_dataset_PickXtimes.h5', 'record_dataset_RouteStick.h5', 'record_dataset_StopCube.h5', 'record_dataset_SwingXtimes.h5', 'record_dataset_VideoPlaceButton.h5', 'record_dataset_VideoPlaceOrder.h5', 'record_dataset_VideoRepick.h5', 'record_dataset_VideoUnmask.h5', 'record_dataset_VideoUnmaskSwap.h5']（tasks=['BinFill', 'ButtonUnmask', 'ButtonUnmaskSwap', 'InsertPeg', 'MoveCube', 'PatternLock', 'PickHighlight', 'PickXtimes', 'RouteStick', 'StopCube', 'SwingXtimes', 'VideoPlaceButton', 'VideoPlaceOrder', 'VideoRepick', 'VideoUnmask', 'VideoUnmaskSwap'], episodes_per_task=200）
+  扫完 record_dataset_BinFill.h5: 累计 200 episode, 215622 timestep, 215622 执行样本 (0.8s)
+  扫完 record_dataset_ButtonUnmask.h5: 累计 400 episode, 283487 timestep, 283487 执行样本 (1.2s)
+  扫完 record_dataset_ButtonUnmaskSwap.h5: 累计 600 episode, 404502 timestep, 404502 执行样本 (2.0s)
+  扫完 record_dataset_InsertPeg.h5: 累计 800 episode, 503617 timestep, 453661 执行样本 (17.5s)
+  扫完 record_dataset_MoveCube.h5: 累计 1000 episode, 585423 timestep, 490656 执行样本 (32.6s)
+  扫完 record_dataset_PatternLock.h5: 累计 1200 episode, 671115 timestep, 533502 执行样本 (45.0s)
+  扫完 record_dataset_PickHighlight.h5: 累计 1400 episode, 794980 timestep, 657367 执行样本 (45.7s)
+  扫完 record_dataset_PickXtimes.h5: 累计 1600 episode, 996696 timestep, 859083 执行样本 (46.5s)
+  扫完 record_dataset_RouteStick.h5: 累计 1800 episode, 1127796 timestep, 924633 执行样本 (62.2s)
+  扫完 record_dataset_StopCube.h5: 累计 2000 episode, 1200212 timestep, 997049 执行样本 (63.0s)
+  扫完 record_dataset_SwingXtimes.h5: 累计 2200 episode, 1331580 timestep, 1128417 执行样本 (63.3s)
+  扫完 record_dataset_VideoPlaceButton.h5: 累计 2400 episode, 1544559 timestep, 1169229 执行样本 (100.6s)
+  扫完 record_dataset_VideoPlaceOrder.h5: 累计 2600 episode, 1780930 timestep, 1210198 执行样本 (144.0s)
+  扫完 record_dataset_VideoRepick.h5: 累计 2800 episode, 1975634 timestep, 1292316 执行样本 (168.6s)
+  扫完 record_dataset_VideoUnmask.h5: 累计 3000 episode, 2033857 timestep, 1337339 执行样本 (171.5s)
+  扫完 record_dataset_VideoUnmaskSwap.h5: 累计 3200 episode, 2145548 timestep, 1383846 执行样本 (185.3s)
+[scan] 写出 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/meta/episode_manifest.json
+  episode=3200  timestep=2145548  执行样本=1383846
+  分片负载(timestep)=[2145548]  极差=0.00%
+  sha256=d6a3ddb2b579b5cf50cd66fbefedd36478766e2b4cc07833a7efae29769742ad
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  record_dataset_BinFill.h5 size=143109231092 sha256=af14033f6697cf5c75230c130cb4c35223c946373171c24eedd2f37aa8d92855 (342s)
+  record_dataset_ButtonUnmask.h5 size=45045942904 sha256=b98509401031959cbd144f878bd71e3d64956e4aaa0bfdca91ff0d881974929a (452s)
+  record_dataset_ButtonUnmaskSwap.h5 size=80322301368 sha256=89bd3f3b2a2cf357d9cc08ce4c7fdd9581c062082f1c904b799387b85258b0e2 (649s)
+  record_dataset_InsertPeg.h5 size=65789716808 sha256=cd3c4e8ee139290832864d61337aec8ce46298f3ba4b476cce1f98b6cb20fb4e (812s)
+  record_dataset_MoveCube.h5 size=54297000308 sha256=d13cc55ac887ba3a2d6f643246e3993ddaf5f762920c55c875c0e2719a55c7a3 (947s)
+  record_dataset_PatternLock.h5 size=56869960384 sha256=dbb35939caa765598fb683ff151b96a45acc35c88487d1e32dd76585649b4ddb (1088s)
+  record_dataset_PickHighlight.h5 size=82216821200 sha256=edb4dce0ee1b98139592976472be2f20925f388d45f5a41e888585d043b61728 (1292s)
+  record_dataset_PickXtimes.h5 size=133889945072 sha256=7b7df09f524c1836b8745934743cbf73b1c0590a5c5c42df63044c38770d8482 (1620s)
+  record_dataset_RouteStick.h5 size=87034786304 sha256=30ff203d962f499e4e222d52250c7d4f32297cca67f8e0f4ed7f8a8d2de38871 (1836s)
+  record_dataset_StopCube.h5 size=48061288672 sha256=124f7dd3d2fbc6283b6c054d001eba688c819ec6cfdf5e501cce8c405f45fa5b (1955s)
+  record_dataset_SwingXtimes.h5 size=87200106596 sha256=80be83c71d832055ca0160b15fe9b99d4a3919bbd6722a51951d02d2f089ecf4 (2172s)
+  record_dataset_VideoPlaceButton.h5 size=141348098572 sha256=ce6aa6def43f1f0aec6ebc589be395e234befc8a6c62d6ff61539a9da893fbf6 (2521s)
+  record_dataset_VideoPlaceOrder.h5 size=156872559684 sha256=cc6601a9f185711e5bf28a89ad72875fd81d6b6eb680bb912354481e511392e9 (2912s)
+  record_dataset_VideoRepick.h5 size=129216743128 sha256=a76811f3ac5816c60d75fe7ae1c9817dba2e5aad5c5fd521235790944759e137 (3232s)
+  record_dataset_VideoUnmask.h5 size=38644964632 sha256=ff891ddad7be08a120b7c560ea5ffed01790b756aa904e20f67bd465bd980a7e (3327s)
+  record_dataset_VideoUnmaskSwap.h5 size=74124347996 sha256=3bb91ca073e8bdbb21288541adf47757a3a44185f73c5a8499d0230c72b89008 (3509s)
+[hash-inputs] 16 个 H5 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/meta/input_manifest.json
+全部完成 m8v-hash
+EXIT_CODE=0

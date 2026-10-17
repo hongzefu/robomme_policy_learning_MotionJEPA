@@ -1,0 +1,50 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+=== [1/5] 输入 H5 同源核验（level=sha256）===
+  ✓ record_dataset_BinFill.h5 sha256 同源
+  ✓ record_dataset_ButtonUnmask.h5 sha256 同源
+  ✓ record_dataset_ButtonUnmaskSwap.h5 sha256 同源
+  ✓ record_dataset_InsertPeg.h5 sha256 同源
+  ✓ record_dataset_MoveCube.h5 sha256 同源
+  ✓ record_dataset_PatternLock.h5 sha256 同源
+  ✓ record_dataset_PickHighlight.h5 sha256 同源
+  ✓ record_dataset_PickXtimes.h5 sha256 同源
+  ✓ record_dataset_RouteStick.h5 sha256 同源
+  ✓ record_dataset_StopCube.h5 sha256 同源
+  ✓ record_dataset_SwingXtimes.h5 sha256 同源
+  ✓ record_dataset_VideoPlaceButton.h5 sha256 同源
+  ✓ record_dataset_VideoPlaceOrder.h5 sha256 同源
+  ✓ record_dataset_VideoRepick.h5 sha256 同源
+  ✓ record_dataset_VideoUnmask.h5 sha256 同源
+  ✓ record_dataset_VideoUnmaskSwap.h5 sha256 同源
+=== [2/5] 产物完整性核验 ===
+  ...已核 200/3200 个 episode (0s)
+  ...已核 400/3200 个 episode (0s)
+  ...已核 600/3200 个 episode (1s)
+  ...已核 800/3200 个 episode (1s)
+  ...已核 1000/3200 个 episode (1s)
+  ...已核 1200/3200 个 episode (1s)
+  ...已核 1400/3200 个 episode (1s)
+  ...已核 1600/3200 个 episode (1s)
+  ...已核 1800/3200 个 episode (1s)
+  ...已核 2000/3200 个 episode (2s)
+  ...已核 2200/3200 个 episode (2s)
+  ...已核 2400/3200 个 episode (2s)
+  ...已核 2600/3200 个 episode (2s)
+  ...已核 2800/3200 个 episode (3s)
+  ...已核 3000/3200 个 episode (3s)
+  ...已核 3200/3200 个 episode (3s)
+  feature 目录缺失=0  pkl 实得=1383846 期望=1383846
+=== [3/5] 分片 sidecar 汇总 ===
+  sidecar=32 覆盖 episode=3200 残留 claim=0
+=== [4/5] 同架构零容差抽检（1024 条）===
+  抽检 1024/1024 条，全体 max|diff|=0.000e+00
+  ✓ 同架构复算全部逐位一致 PASS（1024 条）
+=== [5/5] 写 stats.json 与 provenance.json ===
+  stats={'execution_samples': 1383846, 'total_samples': 2145548}
+  provenance(finalize 节点): host=ip-10-242-11-177.us-west-2.compute.internal gpu=NVIDIA A100-SXM4-80GB jax=0.5.3
+  provenance(构建分片): gpu=NVIDIA A100-SXM4-80GB jax=0.5.3 commit=6ebeab563234 节点=32 个 全体同源 ✓
+全部检查通过 PASS
+FINALIZE_EXIT_CODE=0
+全部完成 m8v-finalize
+EXIT_CODE=0
