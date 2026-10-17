@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-17T04:58:35Z",
-    "america_new_york": "2026-10-17T00:58:35-0400"
+    "utc": "2026-10-17T05:02:18Z",
+    "america_new_york": "2026-10-17T01:02:18-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
@@ -142,9 +142,9 @@
         "file": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html",
         "sha": "45c3f9a"
       },
-      "state": "planned",
-      "state_changed_at": "2026-10-16T07:18:43Z",
-      "state_reason": "上游 mixed8-vla-build done；即将 exclude → V11.24Beta → 512 preflight → 起 512；V11.25Beta → motion preflight → 起 motion（4+4，短测 PASS）",
+      "state": "running",
+      "state_changed_at": "2026-10-17T05:02:18Z",
+      "state_reason": "两条 80k 4+4 并行：512 美东 2026-10-17 01:00（V11.24Beta 62a8ef1，GPU 0–3），512+motion 01:01（V11.25Beta ae6e9cd，GPU 4–7）；短测稳态 1.84 / 1.90 s/步，预计约 41 / 42 h；红线 18 只读锁 01:01:55 已上（385 文件）",
       "owner": {
         "session": "https://claude.ai/code/session_01TVXcR5Zdi5K11TXph2pZGw",
         "host": "claude-code"
@@ -192,7 +192,18 @@
           "status": "pending"
         }
       ],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "m8v-train-512",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-modul-b128-80k.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "m8v-train-motion",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-modul-motion-b128-80k.log",
+          "done_line": "EXIT_CODE=0"
+        }
+      ],
       "authorizations": [
         {
           "kind": "go",
@@ -210,23 +221,28 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "build done 后：exclude → V11.24Beta → push → 512 preflight → 起 512；V11.25Beta → motion preflight → 起 motion；第一条起跑后上红线 18 只读锁",
-          "command": "1016 计划 runbook B4",
-          "verdict_line": "MOTION_4GPU_SMOKE= / preflight PASS"
+          "what": "两条训练各自 EXIT_CODE=0 后起对应 ckpt 上传（先 SMOKE），回写 result.md 与 commitV11.24 / V11.25；全部结束后按 m8v-chmod-before.txt 恢复权限",
+          "command": "1016 计划 runbook B4 长尾段",
+          "verdict_line": "EXIT_CODE=0 ×2"
+        },
+        {
+          "what": "运行期崩溃、NaN、OOM、掉卡：停下问用户，不 resume（口径 32）",
+          "command": "—",
+          "verdict_line": "—"
         }
       ],
       "pre_start_self_check": [
         {
           "what": "512 preflight（V11.24Beta 之后、起 512 之前；主检出 exclude 3 个精确路径、status 为空、不带 --launch-mode）",
-          "evidence": "preflight 判定行全 PASS",
+          "evidence": "PREFLIGHT=PASS n=25；EXIT_CODE=0；HEAD=62a8ef15b4be267b56612d50562fc445160d041f；git status --porcelain 空",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-preflight-512.log",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "motion preflight（V11.25Beta 之后、起 motion 之前）",
-          "evidence": "preflight 判定行全 PASS",
+          "evidence": "PREFLIGHT=PASS n=30；EXIT_CODE=0；HEAD=ae6e9cdee494e0cfa815c5cde04d255e0cb14cfd；git diff --stat 62a8ef1..HEAD -- src pyproject.toml uv.lock 为空",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-preflight-motion.log",
-          "status": "pending"
+          "status": "pass"
         }
       ]
     }
