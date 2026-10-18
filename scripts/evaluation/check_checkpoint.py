@@ -81,16 +81,17 @@ RUNS = {
     # bucket HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1，run mixed8-200-m8x8-modul-b128-80k，motion 关闭。
     # resolved sha 与上面 robomme-vla-modul-60k-v1 相同（budget 512、modulation、token_per_image 64，NFS 本地快照只读核过）。
     'robomme-vla-mixed8-200-modul-512-80k-v1': dict(
-        steps=('60000',), motion=False, config='mme_vla_suite_b128_80k', budget=512,
+        steps=('60000', '79999'), motion=False, config='mme_vla_suite_b128_80k', budget=512,
         resolved_sha256='804b25382af668d67c8f8ea2d1cca414aee9a184ec737dcad704bdff253a2f92',
         norm_stats_sha256='36ee9acdea4c8383b50c7b07b45a740efb3fa073f6e60455977d5a6fb3204394',
     ),
     # bucket HongzeFu/robomme-vla-mixed8-200-modul-motion-80k-v1，run mixed8-200-m8x8-modul-motion-b128-80k，motion 开启；
-    # 10000 供 10k 冒烟、60000 供正式轮。motion_budget 160 是计划 T13 定值；motion_source_run 已登记：主会话 2026-10-18
+    # 10000 供 10k 冒烟、60000 供正式轮、79999 供 80k 评估（训练侧确认 run 级快照与 norm_stats 不随 step 变）。
+    # motion_budget 160 是计划 T13 定值；motion_source_run 已登记：主会话 2026-10-18
     # 从 bucket 根 history_config.resolved.yaml 读出原文（同文件 motion.budget=160、demo_min_real_frames=17、
     # demo_tail_pad=repeat_last、stride=16、window_frames=33、online_gpu=4）。
     'robomme-vla-mixed8-200-modul-motion-80k-v1': dict(
-        steps=('60000', '10000'), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        steps=('60000', '10000', '79999'), motion=True, config='mme_vla_suite_b128_80k', budget=512,
         resolved_sha256='53f070ff5363efff6bc4dc3c6c0ee602095bc1fa6ebcd0651dd7bf3f9ca0d0c3',
         norm_stats_sha256='36ee9acdea4c8383b50c7b07b45a740efb3fa073f6e60455977d5a6fb3204394',
         motion_budget=160,
