@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-18T20:35:52Z",
-    "america_new_york": "2026-10-18T16:35:52-0400"
+    "utc": "2026-10-18T20:41:48Z",
+    "america_new_york": "2026-10-18T16:41:48-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "1d7417295bc94da2bf2969856a9f6deebfb99862"
+    "base_head": "fa14d0acfcba54413aa83c0a6bf486f483506270"
   },
   "freeze": {
     "active": false,
@@ -264,11 +264,11 @@
     "mixed8-2048-train": {
       "plan": {
         "file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1018-mixed8-2048-context-modul-plan.md",
-        "sha": null
+        "sha": "fa14d0a"
       },
-      "state": "planned",
-      "state_changed_at": "2026-10-18T20:35:52Z",
-      "state_reason": "计划已写、用户裁决 A–E 已回写，等开工前审查与开工令",
+      "state": "running",
+      "state_changed_at": "2026-10-18T20:41:48Z",
+      "state_reason": "用户开工令，步骤 1：派 S1、S2 写入子代理",
       "owner": {
         "session": "https://claude.ai/code/session_019xZ3hfywh5yTmomPnhXryG",
         "host": "claude-code"
@@ -326,13 +326,20 @@
         }
       ],
       "running_handles": [],
-      "authorizations": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-18",
+          "quote": "开工",
+          "scope": "1018-mixed8-2048-context-modul-plan.md @ fa14d0a 步骤 1–8 全部（G4/G5 通过后直接 Beta 起跑；OOM 即停报错；步时慢不停）"
+        }
+      ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "开工前 PLAN_CONSISTENCY_REVIEW，然后等用户开工令",
+          "what": "S1、S2 并行写入 → 合并前后审查 → commitV11.26",
           "command": "—",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS"
+          "verdict_line": "PRE_MERGE_REVIEW=PASS / POST_MERGE_REVIEW=PASS"
         }
       ]
     }
