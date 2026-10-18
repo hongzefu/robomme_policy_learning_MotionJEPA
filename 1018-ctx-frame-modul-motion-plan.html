@@ -1,0 +1,1271 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1018 帧记忆走 context、motion 走 modulation 分路训练计划</title>
+<style>
+:root { --fg:#1f2328; --muted:#59636e; --bg:#ffffff; --border:#d1d9e0; --code:#f6f8fa; --accent:#0969da; --quote:#eef4fb; --warn:#fff4e5; --stripe:#fafbfc; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --fg:#e6edf3; --muted:#9198a1; --bg:#0d1117; --border:#3d444d; --code:#161b22; --accent:#4493f8; --quote:#122033; --warn:#2b2111; --stripe:#11161d; } }
+:root[data-theme="dark"] { --fg:#e6edf3; --muted:#9198a1; --bg:#0d1117; --border:#3d444d; --code:#161b22; --accent:#4493f8; --quote:#122033; --warn:#2b2111; --stripe:#11161d; }
+html { scroll-behavior:smooth; }
+body { margin:0; padding:24px 16px 64px; background:var(--bg); color:var(--fg); font:15px/1.65 -apple-system,"Segoe UI","PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif; }
+.wrap { max-width:1180px; margin:0 auto; }
+h1 { font-size:26px; margin:40px 0 16px; padding-bottom:8px; border-bottom:2px solid var(--border); }
+h2 { font-size:21px; margin:32px 0 12px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+h3 { font-size:17px; margin:22px 0 8px; }
+p, li { max-width:100ch; }
+code { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; background:var(--code); padding:1px 5px; border-radius:4px; }
+pre { background:var(--code); border:1px solid var(--border); border-radius:6px; padding:12px 14px; overflow:auto; }
+pre code { background:none; padding:0; }
+blockquote { margin:12px 0; padding:8px 14px; background:var(--quote); border-left:4px solid var(--accent); }
+.warn { padding:8px 14px; background:var(--warn); border-left:4px solid #d4a72c; }
+.tbl { border-collapse:collapse; width:100%; margin:12px 0 18px; font-size:14px; }
+.tbl th, .tbl td { border:1px solid var(--border); padding:6px 9px; vertical-align:top; text-align:left; }
+.tbl th { background:var(--code); }
+.tbl tr:nth-child(even) td { background:var(--stripe); }
+.tw { overflow-x:auto; }
+.fig { margin:18px 0 8px; padding:10px; border:1px solid var(--border); border-radius:6px; background:#ffffff; overflow-x:auto; }
+.fig svg { display:block; max-width:100%; height:auto; }
+.cap { color:var(--muted); font-size:13.5px; margin:4px 0 16px; }
+.small { font-size:13px; color:var(--muted); }
+.toc { background:var(--code); border:1px solid var(--border); border-radius:6px; padding:12px 18px; }
+.toc ul { margin:4px 0; padding-left:20px; }
+</style>
+</head>
+<body><div class="wrap">
+<h1 style="border-bottom:none;margin-top:8px">1018 帧记忆走 context、motion 走 modulation 分路训练计划</h1>
+<p class="small">创建：美东 2026-10-18 19:20 · 代码锚点 <code>c27514a</code>（分支 <code>v2-motionmem</code>）· 文件 <code>1018-ctx-frame-modul-motion-plan.html</code> · 只规划不实施</p>
+<div class="toc"><b>目录</b>
+<ul>
+<li><a href="#p1">第一部分（给人看）</a>
+<ul>
+<li><a href="#s0">〇 引言</a></li>
+<li><a href="#s1">一、总览与已定口径</a></li>
+<li><a href="#s2">二、原版与新版数据流（本计划重点）</a></li>
+<li><a href="#s3">三、机制细节</a></li>
+<li><a href="#s4">四、最大风险与资源</a></li>
+<li><a href="#s5">五、步骤总览</a></li>
+<li><a href="#s6">六、用户待裁决项</a></li>
+<li><a href="#s7">七、子代理分工与合并（简述）</a></li>
+<li><a href="#s8">八、验收判定行一览</a></li>
+<li><a href="#s9">九、交接顺序与状态机登记</a></li>
+</ul></li>
+<li><a href="#p2">第二部分（技术细节，供 agent 追踪）</a>
+<ul>
+<li><a href="#t0">〇 前置声明与红线</a></li>
+<li><a href="#t1">1. 逐文件改动清单</a></li>
+<li><a href="#t2">2. 子代理分配表</a></li>
+<li><a href="#t3">3. 闸门总表</a></li>
+<li><a href="#t4">4. runbook</a></li>
+<li><a href="#t5">5. 风险登记</a></li>
+<li><a href="#t6">6. 盲区诚实清单</a></li>
+<li><a href="#t7">7. 交接顺序与状态机登记</a></li>
+<li><a href="#t8">8. 留档与 commit 纪律</a></li>
+</ul></li>
+</ul></div>
+
+<h1 id="p1">第一部分（给人看）</h1>
+
+<h2 id="s0">〇 引言</h2>
+<blockquote>
+<p><b>权威性与授权边界</b>：本文件是「帧记忆只走 context、motion 记忆只走 modulation」（下称「分路」）训练的唯一计划。<b>当前只规划、不实施</b>：未改代码、未起短测、未起训练。开工令按 AGENTS 第 2 条逐计划由用户给：完整计划呈现后用户不改而直接认可才算开工；开工后、动手前先派一个 sonnet 只读审查计划自洽性，判定行 <code>PLAN_CONSISTENCY_REVIEW=PASS|FAIL base=&lt;sha&gt; findings=&lt;n&gt; blocking=&lt;n&gt;</code>，<code>blocking=0</code> 才动手。本计划的开工令不覆盖评估（评估另立计划）。</p>
+<p><b>代码锚点</b>：仓库 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code>（环境 B，AWS p4de 单机 8×A100-80GB），分支 <code>v2-motionmem</code>，起草时 HEAD <code>c27514a</code>（全 sha <code>c27514a331c5727a5b42fa586e979f12752e0786</code>，工作区 clean）。开工时以实际 HEAD 为准。</p>
+<p><b>commit 编号体例</b>：代码合并提交 <code>commitV11.29</code>（S1、S2 两次 <code>--no-ff</code> 合并同号，照 V11.26 先例）；起跑前档案 <code>commitV11.30Beta</code>；训练结束回写 <code>commitV11.30</code>。（V11.28 已被在跑的 modulation 2048 Beta 占用，其正式回写由另一会话做，本计划不碰。）</p>
+<p><b>外部依赖锚点</b>：</p>
+<ul>
+<li>帧记忆库：<code>v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/framesamp-8x8</code>（16 任务 × 200 集 = 3200 集，2145548 帧，1383846 执行样本）。</li>
+<li>motion 库：同目录 <code>motion/</code>，layout <code>motion-768-grid16-demopad17-v1</code>，<code>motion_token.f32.bin</code> 128342 行 × 768 f32 = 394266624 B（exec 81611 + demo 46731），status verified。</li>
+<li>motion encoder：<code>wan-mixed8-200-filter2-stop075-b88x8-72ep-a/checkpoint_epoch_72.pt#encoder</code>（yaml 键 <code>motion.source_run</code>，由 <code>dataloader.py::_motion_gates</code> 与库 provenance 逐项比对）。</li>
+<li>初始化权重：<code>pi05_base</code>（<code>OPENPI_DATA_HOME/openpi-assets/checkpoints/pi05_base/params</code>，经 <code>CheckpointWeightLoader</code>）。</li>
+</ul>
+<p><b>创建</b>：美东 2026-10-18 19:20 起草。计划文件 <code>1018-ctx-frame-modul-motion-plan.html</code>（仓库根）。</p>
+</blockquote>
+
+<p>用户原话（美东 2026-10-18 19:0x–19:1x，按时间顺序，逐字）：</p>
+<ol>
+<li><blockquote>能否实现 context 512 8frame8*8 modulation用现在的106 motion？纯探索</blockquote></li>
+<li><blockquote>我的意思就是两个同时接入。</blockquote></li>
+<li><blockquote>，帧记忆只走context mootion走modulation</blockquote></li>
+<li><blockquote>编写计划，然后这一套数据流你需要把原版是怎么样的，然后新版是怎么样的都写的非常清楚。</blockquote></li>
+</ol>
+<p class="warn">⚠ 假设声明：「106」在全库 grep 无任何 motion 相关命中；本计划按 mixed8 motion yaml 的 <code>motion.budget: 160</code> 的笔误理解，即「现在的 motion」= 上一轮 512+motion run 用的那份 motion 库与 budget 160。若用户本意不是 160，请在开工前指出，本计划第 2、8 节的形状随之改写。</p>
+
+<h2 id="s1">一、总览与已定口径</h2>
+<p><b>一句话方案</b>：在上一轮 mixed8-200 两条 512 run（commitV11.24 纯 512 modulation、commitV11.25 512+motion modulation）的同一套库、同一套超参、同样 4 卡上，新增一种记忆接入模式：8 帧 × 64 token = 512 位的帧记忆拼进 PaliGemma 主干前缀（context，宽 2048），160 位 motion 记忆送进动作专家每层的 <code>MemoryAttention</code> 交叉注意力（modulation，宽 1024），训一条 80k。</p>
+<table class="tbl">
+<tr><th>#</th><th>已定口径</th><th>依据</th></tr>
+<tr><td>1</td><td>数据、超参、卡数与上一轮 512 两条 run 完全一致：<code>mme_vla_suite_b128_80k</code>（80000 步、global batch 128、warmup 5000、lr 5e-5、AdamW clip 1.0、EMA 0.999、每 5000 步保存、seed 42、<code>pi05_base</code> 初始化），4 卡 FSDP4、<code>NUM_WORKERS=8</code>；只改接入方式</td><td>§2.1、§2.3、facts §4</td></tr>
+<tr><td>2</td><td>帧路走 context，输出宽 <code>memory_token_dim: 2048</code>，前缀与纯 context 512 完全同形</td><td>§2.4</td></tr>
+<tr><td>3</td><td>motion 路走 modulation，输出宽固定 1024（<code>MemoryAttention</code> 宽度断言要求）</td><td>§3.2</td></tr>
+<tr><td>4</td><td>配置方式（裁决 D1）：不新增 <code>integration_type</code> 枚举值，而在 history yaml 的 motion 节加键 <code>motion.integration: modulation</code>；缺省 = 跟随帧路，旧 yaml 与旧 ckpt 逐位不变；不做「新增枚举值」的替代方案</td><td>§3.1</td></tr>
+<tr><td>5</td><td>新 yaml：<code>perceptual-framesamp-ctxframe-modulmotion-8frame-8x8-mixed8.yaml</code>（顶层 <code>integration_type: context</code>、<code>memory_token_dim: 2048</code>，motion 节照抄 mixed8 modulation+motion 版再加 <code>integration: modulation</code>）</td><td>§2.4</td></tr>
+<tr><td>6</td><td>run 名（推荐 D3）<code>mixed8-200-m8x8-ctxframe-modulmotion-b128-80k</code>；公开 bucket（推荐 D4）<code>HongzeFu/robomme-vla-mixed8-200-ctxframe-modulmotion-80k-v1</code>，训练中增量上传，结束后正式驱动全量回读</td><td>§6 Q3</td></tr>
+<tr><td>7</td><td>tmux 前缀 <code>cfm-</code>：<code>cfm-smoke</code>、<code>cfm-smoke-nvml</code>、<code>cfm-ckpt100</code>、<code>cfm-train</code>、<code>cfm-inc</code>、<code>cfm-upload</code>（G2–G4 单条超 5 分钟另加 <code>cfm-cpucheck</code>）；不动在跑的 <code>m2k-train-modul</code>、<code>m2k-inc-modul</code></td><td>§4</td></tr>
+<tr><td>8</td><td>GPU 推荐 0–3（D2）；GPU 4–7 被 2048 modulation 训练占用，不得占用</td><td>§4、§6 Q1</td></tr>
+<tr><td>9</td><td>新参数树与任何现有 ckpt 都不同形，<b>不能热启动</b>，照旧从 <code>pi05_base</code> 初始化</td><td>§2.5</td></tr>
+<tr><td>10</td><td>评估另立计划（第三方 benchmark server，在线 motion sidecar 与上一轮 512+motion 相同）；本计划只训练</td><td>facts §5</td></tr>
+<tr><td>11</td><td><code>mem_order</code> 字段保留：dataloader、推理侧、<code>HistAugObservation</code> 照旧生成与透传，分路模式下模型不读</td><td>§3.4</td></tr>
+<tr><td>12</td><td>数据侧字节不改：库、motion 库、<code>FrameSampDataset.__getitem__</code> 产出八键一个字节不变；<code>framesamp_dataset.py</code> 只在 motion 专属守卫里接受并校验新键</td><td>§2.1</td></tr>
+</table>
+
+<h2 id="s2">二、原版与新版数据流（本计划重点）</h2>
+<p>三种模式的数据侧完全相同（2.1），分叉点只在模型里：记忆编码器 <code>percep_mem.py::PerceptualMemory</code> 把两路编到多宽、<code>history_pi0.py::HistoryPi0.embed_memory</code> 是否合并重排、合并后的记忆进前缀还是进动作专家的交叉注意力。</p>
+
+<h3>2.1 共用数据侧链路（三者相同，本计划零改动）</h3>
+<p>帧路：<code>framesamp_dataset.py::FrameSampDataset.__getitem__</code> 用 <code>even_sampling_indices(step, 8)</code> 选帧（<code>step&lt;8</code> 取 <code>range(step+1)</code>，否则 <code>linspace(0,step,8)</code>），不足 8 帧由 <code>_pad</code> 补零、mask 前 n 位 True。motion 路：<code>motion_store.py</code> 的 <code>visible_motion_rows(entry, step)</code> 只放行窗口已完整落在当前帧之前的网格位置（demo 段起点 <code>s=16m</code> 且 <code>s+17-1 ≤ es-1</code>；exec 段 <code>u=16m</code> 且 <code>u+32 ≤ t-es</code>，起点 <code>f=es+u</code>，按 f 升序；33 帧前视窗口尾端 ≤ 当前帧），<code>_pad_motion</code> 补到 160，可见数超 160 直接 raise 不截断（<code>__init__</code> 已预检每集最大可见数 ≤ budget，实测最大 123）。</p>
+<table class="tbl">
+<tr><th>跳</th><th>形状 / dtype / 单样本字节</th><th>来源函数</th><th>这一跳有没有改数</th></tr>
+<tr><td>库行 <code>image_emb_8x8</code></td><td>每帧 (64,2048) bf16</td><td><code>store.read_image_rows</code></td><td>否</td></tr>
+<tr><td><code>static_image_emb</code></td><td>(512,2048) bf16，2,097,152 B</td><td><code>__getitem__</code>：<code>img.reshape(-1, 2048)</code></td><td>选帧 + 补零</td></tr>
+<tr><td><code>static_pos_emb</code></td><td>(512,768) f32，1,572,864 B</td><td><code>store.pos_rows(frames)</code></td><td>选帧 + 补零</td></tr>
+<tr><td><code>static_state_emb</code></td><td>(512,8) f64，32,768 B</td><td><code>_normalize_state(np.repeat(stt, 64, 0))</code></td><td>归一化（既有）</td></tr>
+<tr><td><code>static_mask</code></td><td>(512,) bool，512 B</td><td><code>np.repeat(mask, 64)</code></td><td>否</td></tr>
+<tr><td><code>motion_emb</code></td><td>(160,768) f32，491,520 B</td><td><code>mstore.rows(rows_m)</code> + <code>_pad_motion</code></td><td>可见过滤 + 补零</td></tr>
+<tr><td><code>motion_pos</code></td><td>(160,256) f32，163,840 B</td><td><code>store.pos_rows(f_m)[:, 0, :256]</code>（PosEmb3D 前 256 维时间码）</td><td>取窗口起点时间码</td></tr>
+<tr><td><code>motion_mask</code></td><td>(160,) bool，160 B</td><td><code>_pad_motion</code></td><td>否</td></tr>
+<tr><td><code>mem_order</code></td><td>(672,) int32，2,688 B</td><td><code>memory_order(pad_times(frames, 8), 64, mtimes)</code>：按（全域时刻×2+类型）稳定排序的 0..671 置换，帧为 0、motion 为 1</td><td>否（只是索引）</td></tr>
+<tr><td>collate</td><td>八键各加前导 batch 维；单样本约 4.36 MB，batch 128 约 532 MiB</td><td><code>RoboMMEDataConfig.create</code> 的八键原名映射</td><td>否</td></tr>
+<tr><td><code>HistAugObservation</code></td><td>八个 Optional 字段原样透传</td><td><code>history_observation.py::HistAugObservation.from_dict</code> / <code>preprocess_observation</code></td><td>否</td></tr>
+</table>
+<p>推理侧同构：<code>policies/policy.py::MME_VLA_Policy._prepare_history</code> 与 <code>framesamp_memory.py::FrameSampMemory._prepare_motion</code> 以同式生成八键（含 <code>mem_order</code>），在线 motion 由 <code>motion_client.py::MotionEncoderClient</code> 起 sidecar 编码。策略层无任何 <code>integration_type</code> 分支，分路模式下推理侧不改。</p>
+
+<h3>2.2 原版 A：context + motion 同路（都进前缀）</h3>
+<p>yaml <code>perceptual-framesamp-context-8frame-8x8-motion.yaml</code>（指 4 任务 40ep 库、budget 96，本计划不能直接用，只作机制参照）。<code>PerceptualMemory.__call__</code>：帧路 <code>FeatureEncoder.encode_perceptual_memory</code> 把 <code>concat(image_emb, silu(pos_proj(pos_emb)))</code> 的 2816 维经 <code>encoder_static</code> 投到 2048 → (b,512,2048)；motion 路 <code>motion_pos_proj</code>（256→768，silu）与 <code>motion_emb</code> 拼成 1536 维，经 <code>motion_encoder_static</code> 投到 2048 → (b,160,2048)；两段 concat → (b,672,2048)。<code>embed_memory</code> 把 mask 拼成 (b,672) 后与 token 一起按 <code>mem_order</code> 做 <code>take_along_axis</code>，帧与 motion 按时刻交错，ar/na 全 False。<code>embed_prefix</code> 的 context 分支把 672 位放在前缀最前：<code>[memory 672 | img | text]</code>；<code>make_attn_mask(input_mask, ar_mask, na_mask)</code> 三参数版使图像 token 看不到记忆，文本与动作 token 看得到（§3.3）。PaliGemma 主干与动作专家都不建 <code>mem_attn</code>。参数 59 叶（纯 context 55 叶 + motion 4 叶）。0928 实测（4 任务 1600ep 8×8 库，batch 128）：8 卡 1.979 s/步、峰值约 41.8 GiB/卡；4 卡 3.845 / 3.863 s/步、峰值约 72 GiB/卡。</p>
+<p>图 1 说明：从左到右画数据侧八键 → <code>PerceptualMemory</code> 两路各自投到 2048 → concat 672 → <code>mem_order</code> 交错 → 拼进前缀最前 → 主干 18 层 → 动作专家。看两处：记忆只出现在主干前缀里；动作专家没有交叉注意力分支。</p>
+<div class="fig"><svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1041" viewBox="0 0 1400 1041" role="img" aria-label="原版 A 数据流：帧记忆与 motion 记忆编码到 2048 维后沿序列合并为 672 个 token，按 mem_order 交错，全部拼进 PaliGemma 主干前缀；动作专家无交叉注意力。" font-family="sans-serif">
+<title>图 1 原版 A：context + motion 同路</title>
+<defs><marker id="arr-2B6CB0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2B6CB0"/></marker><marker id="arr-C05621" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#C05621"/></marker><marker id="arr-2F855A" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2F855A"/></marker><marker id="arr-6B7280" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/></marker><marker id="arr-6D28D9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6D28D9"/></marker><marker id="arr-374151" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker><marker id="arr-C53030" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#C53030"/></marker></defs>
+<rect x="0" y="0" width="1400" height="1041" fill="#FFFFFF"/>
+<text x="16.0" y="30.0" font-size="16" text-anchor="start" fill="#1F2937" font-weight="bold">图 1　原版 A：context + motion 同路 —— 帧记忆 512 与 motion 记忆 160 合成 672 个 token，全部拼进 PaliGemma 主干前缀（宽 2048）</text>
+<rect x="16" y="49" width="14" height="14" rx="3" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="36.0" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">帧路</text>
+<rect x="83.0" y="49" width="14" height="14" rx="3" fill="#FDEBD3" stroke="#C05621" stroke-width="1.3"/>
+<text x="103.0" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">motion 路</text>
+<rect x="190.0" y="49" width="14" height="14" rx="3" fill="#E6F4EA" stroke="#2F855A" stroke-width="1.3"/>
+<text x="210.0" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">合并记忆 672</text>
+<rect x="312.0" y="49" width="14" height="14" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.3"/>
+<text x="332.0" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">索引 / mask</text>
+<rect x="431.5" y="49" width="14" height="14" rx="3" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="451.5" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">模型</text>
+<rect x="498.5" y="49" width="14" height="14" rx="3" fill="#FFF8E1" stroke="#B7791F" stroke-width="1.3"/>
+<text x="518.5" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">配置</text>
+<rect x="565.5" y="49" width="14" height="14" rx="3" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="585.5" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">说明</text>
+<rect x="16" y="88" width="290" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="161.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">① 数据侧（训练与推理相同）</text>
+<rect x="340" y="88" width="270" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="475.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">② 记忆编码 PerceptualMemory</text>
+<rect x="644" y="88" width="200" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="744.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">③ HistoryPi0.embed_memory</text>
+<rect x="878" y="88" width="230" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="993.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">④ embed_prefix 前缀</text>
+<rect x="1142" y="88" width="240" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="1262.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">⑤ 模型</text>
+<rect x="16" y="134" width="290" height="103" rx="6" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="28.0" y="156.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">framesamp-8x8 库行</text>
+<text x="28.0" y="173.0" font-size="13" text-anchor="start" fill="#1F2937">每帧 64 token</text>
+<text x="28.0" y="190.0" font-size="13" text-anchor="start" fill="#1F2937">image_emb_8x8 (64,2048) bf16</text>
+<text x="28.0" y="207.0" font-size="13" text-anchor="start" fill="#1F2937">pos (64,768) f32</text>
+<text x="28.0" y="224.0" font-size="13" text-anchor="start" fill="#1F2937">state (8,) f32</text>
+<rect x="16" y="267" width="290" height="154" rx="6" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="28.0" y="289.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">帧路</text>
+<text x="28.0" y="306.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">FrameSampDataset.__getitem__</text>
+<text x="28.0" y="323.0" font-size="13" text-anchor="start" fill="#1F2937">even_sampling_indices(step, 8) 选</text>
+<text x="28.0" y="340.0" font-size="13" text-anchor="start" fill="#1F2937">≤8 帧，补零到 8 帧</text>
+<text x="28.0" y="357.0" font-size="13" text-anchor="start" fill="#1F2937">static_image_emb (512,2048) bf16</text>
+<text x="28.0" y="374.0" font-size="13" text-anchor="start" fill="#1F2937">static_pos_emb (512,768) f32</text>
+<text x="28.0" y="391.0" font-size="13" text-anchor="start" fill="#1F2937">static_state_emb (512,8)</text>
+<text x="28.0" y="408.0" font-size="13" text-anchor="start" fill="#1F2937">static_mask (512,) bool</text>
+<path d="M 161.0 237.0 L 161.0 267.0" fill="none" stroke="#2B6CB0" stroke-width="1.6" marker-end="url(#arr-2B6CB0)"/>
+<rect x="16" y="451" width="290" height="86" rx="6" fill="#FDEBD3" stroke="#C05621" stroke-width="1.3"/>
+<text x="28.0" y="473.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">motion 库行（motion-768-grid16-</text>
+<text x="28.0" y="490.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">demopad17-v1）</text>
+<text x="28.0" y="507.0" font-size="13" text-anchor="start" fill="#1F2937">motion_token (768,) f32（128342 行</text>
+<text x="28.0" y="524.0" font-size="13" text-anchor="start" fill="#1F2937">）</text>
+<rect x="16" y="567" width="290" height="171" rx="6" fill="#FDEBD3" stroke="#C05621" stroke-width="1.3"/>
+<text x="28.0" y="589.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">motion 路</text>
+<text x="28.0" y="606.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">visible_motion_rows(entry,</text>
+<text x="28.0" y="623.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">step)</text>
+<text x="28.0" y="640.0" font-size="13" text-anchor="start" fill="#1F2937">stride 16，窗口前视 33 帧，</text>
+<text x="28.0" y="657.0" font-size="13" text-anchor="start" fill="#1F2937">_pad_motion 到 160</text>
+<text x="28.0" y="674.0" font-size="13" text-anchor="start" fill="#1F2937">motion_emb (160,768) f32</text>
+<text x="28.0" y="691.0" font-size="13" text-anchor="start" fill="#1F2937">motion_pos (160,256) f32（时间码</text>
+<text x="28.0" y="708.0" font-size="13" text-anchor="start" fill="#1F2937">sin/cos）</text>
+<text x="28.0" y="725.0" font-size="13" text-anchor="start" fill="#1F2937">motion_mask (160,) bool</text>
+<path d="M 161.0 537.0 L 161.0 567.0" fill="none" stroke="#C05621" stroke-width="1.6" marker-end="url(#arr-C05621)"/>
+<rect x="16" y="768" width="290" height="103" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.3"/>
+<text x="28.0" y="790.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">memory_order(ftimes, 64,</text>
+<text x="28.0" y="807.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">mtimes)</text>
+<text x="28.0" y="824.0" font-size="13" text-anchor="start" fill="#1F2937">mem_order (672,) int32：按（时刻×2+</text>
+<text x="28.0" y="841.0" font-size="13" text-anchor="start" fill="#1F2937">类型）稳定排序的 0..671 置换，帧 0 /</text>
+<text x="28.0" y="858.0" font-size="13" text-anchor="start" fill="#1F2937">motion 1</text>
+<rect x="340" y="134" width="270" height="120" rx="6" fill="#FFF8E1" stroke="#B7791F" stroke-width="1.3"/>
+<text x="352.0" y="156.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">yaml（原版 A）</text>
+<text x="352.0" y="173.0" font-size="13" text-anchor="start" fill="#1F2937">perceptual-framesamp-context-</text>
+<text x="352.0" y="190.0" font-size="13" text-anchor="start" fill="#1F2937">8frame-8x8-motion.yaml</text>
+<text x="352.0" y="207.0" font-size="13" text-anchor="start" fill="#1F2937">integration_type: context</text>
+<text x="352.0" y="224.0" font-size="13" text-anchor="start" fill="#1F2937">memory_token_dim: 2048（帧路与</text>
+<text x="352.0" y="241.0" font-size="13" text-anchor="start" fill="#1F2937">motion 路共用）</text>
+<rect x="340" y="275.5" width="270" height="137" rx="6" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="352.0" y="297.5" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">帧路 FeatureEncoder</text>
+<text x="352.0" y="314.5" font-size="13" text-anchor="start" fill="#1F2937">pos = silu(pos_proj 768→768)</text>
+<text x="352.0" y="331.5" font-size="13" text-anchor="start" fill="#1F2937">concat(img 2048, pos 768) =</text>
+<text x="352.0" y="348.5" font-size="13" text-anchor="start" fill="#1F2937">2816</text>
+<text x="352.0" y="365.5" font-size="13" text-anchor="start" fill="#1F2937">encoder_static 2816→2048（无激活</text>
+<text x="352.0" y="382.5" font-size="13" text-anchor="start" fill="#1F2937">）</text>
+<text x="352.0" y="399.5" font-size="13" text-anchor="start" fill="#1F2937">输出 (512,2048)</text>
+<rect x="340" y="575.5" width="270" height="154" rx="6" fill="#FDEBD3" stroke="#C05621" stroke-width="1.3"/>
+<text x="352.0" y="597.5" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">motion 路</text>
+<text x="352.0" y="614.5" font-size="13" text-anchor="start" fill="#1F2937">pos = silu(motion_pos_proj 256</text>
+<text x="352.0" y="631.5" font-size="13" text-anchor="start" fill="#1F2937">→768)</text>
+<text x="352.0" y="648.5" font-size="13" text-anchor="start" fill="#1F2937">concat(motion_emb 768, pos 768)</text>
+<text x="352.0" y="665.5" font-size="13" text-anchor="start" fill="#1F2937">= 1536</text>
+<text x="352.0" y="682.5" font-size="13" text-anchor="start" fill="#1F2937">motion_encoder_static 1536→</text>
+<text x="352.0" y="699.5" font-size="13" text-anchor="start" fill="#1F2937">2048</text>
+<text x="352.0" y="716.5" font-size="13" text-anchor="start" fill="#1F2937">输出 (160,2048)</text>
+<path d="M 306.0 344.0 L 340.0 344.0" fill="none" stroke="#2B6CB0" stroke-width="1.6" marker-end="url(#arr-2B6CB0)"/>
+<path d="M 306.0 652.5 L 340.0 652.5" fill="none" stroke="#C05621" stroke-width="1.6" marker-end="url(#arr-C05621)"/>
+<rect x="340" y="451.0" width="270" height="86" rx="6" fill="#E6F4EA" stroke="#2F855A" stroke-width="1.3"/>
+<text x="352.0" y="473.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">沿序列 concat</text>
+<text x="352.0" y="490.0" font-size="13" text-anchor="start" fill="#1F2937">[帧 512 | motion 160] →</text>
+<text x="352.0" y="507.0" font-size="13" text-anchor="start" fill="#1F2937">(672,2048)</text>
+<text x="352.0" y="524.0" font-size="13" text-anchor="start" fill="#1F2937">ar_mask / na_mask 恒 False</text>
+<path d="M 475.0 412.5 L 475.0 451.0" fill="none" stroke="#2B6CB0" stroke-width="1.6" marker-end="url(#arr-2B6CB0)"/>
+<path d="M 475.0 575.5 L 475.0 537.0" fill="none" stroke="#C05621" stroke-width="1.6" marker-end="url(#arr-C05621)"/>
+<rect x="644" y="408.5" width="200" height="171" rx="6" fill="#E6F4EA" stroke="#2F855A" stroke-width="1.3"/>
+<text x="656.0" y="430.5" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">按 mem_order 交错重排</text>
+<text x="656.0" y="447.5" font-size="13" text-anchor="start" fill="#1F2937">mask =</text>
+<text x="656.0" y="464.5" font-size="13" text-anchor="start" fill="#1F2937">concat(static_mask,</text>
+<text x="656.0" y="481.5" font-size="13" text-anchor="start" fill="#1F2937">motion_mask) (672,)</text>
+<text x="656.0" y="498.5" font-size="13" text-anchor="start" fill="#1F2937">token 与 mask 按</text>
+<text x="656.0" y="515.5" font-size="13" text-anchor="start" fill="#1F2937">mem_order 做</text>
+<text x="656.0" y="532.5" font-size="13" text-anchor="start" fill="#1F2937">take_along_axis</text>
+<text x="656.0" y="549.5" font-size="13" text-anchor="start" fill="#1F2937">帧与 motion 按时刻交错</text>
+<text x="656.0" y="566.5" font-size="13" text-anchor="start" fill="#1F2937">输出 记忆段 672×2048</text>
+<path d="M 610.0 494.0 L 644.0 494.0" fill="none" stroke="#2F855A" stroke-width="1.6" marker-end="url(#arr-2F855A)"/>
+<path d="M 306.0 819.5 L 744.0 819.5 L 744.0 579.5" fill="none" stroke="#6B7280" stroke-width="1.6" marker-end="url(#arr-6B7280)"/>
+<text x="752.0" y="811.5" font-size="12" text-anchor="start" fill="#6B7280">mem_order</text>
+<rect x="878" y="134" width="230" height="52" rx="6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="890.0" y="156.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">当前观测（三图相同，略）</text>
+<text x="890.0" y="173.0" font-size="13" text-anchor="start" fill="#1F2937">图像 token + 文本 token</text>
+<rect x="878.0" y="214" width="92.0" height="46" fill="#E6F4EA" stroke="#2F855A" stroke-width="1.3"/>
+<text x="924.0" y="233.0" font-size="12.5" text-anchor="middle" fill="#1F2937" font-weight="bold">记忆</text>
+<text x="924.0" y="250.0" font-size="12.5" text-anchor="middle" fill="#1F2937">672 token</text>
+<rect x="970.0" y="214" width="73.6" height="46" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="1006.8" y="233.0" font-size="12.5" text-anchor="middle" fill="#1F2937" font-weight="bold">图像</text>
+<text x="1006.8" y="250.0" font-size="12.5" text-anchor="middle" fill="#1F2937">token</text>
+<rect x="1043.6" y="214" width="64.4" height="46" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="1075.8" y="233.0" font-size="12.5" text-anchor="middle" fill="#1F2937" font-weight="bold">文本</text>
+<text x="1075.8" y="250.0" font-size="12.5" text-anchor="middle" fill="#1F2937">token</text>
+<path d="M 993.0 186.0 L 993.0 214.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arr-374151)"/>
+<rect x="878" y="284" width="230" height="103" rx="6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="890.0" y="306.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">make_attn_mask 三参数</text>
+<text x="890.0" y="323.0" font-size="13" text-anchor="start" fill="#1F2937">(input_mask, ar_mask,</text>
+<text x="890.0" y="340.0" font-size="13" text-anchor="start" fill="#1F2937">na_mask)</text>
+<text x="890.0" y="357.0" font-size="13" text-anchor="start" fill="#1F2937">图像不看记忆（na_mask）</text>
+<text x="890.0" y="374.0" font-size="13" text-anchor="start" fill="#1F2937">文本 / 动作 token 看记忆</text>
+<path d="M 844.0 494.0 L 861.0 494.0 L 861.0 237.0 L 878.0 237.0" fill="none" stroke="#2F855A" stroke-width="1.6" marker-end="url(#arr-2F855A)"/>
+<rect x="1142" y="202.5" width="240" height="69" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1154.0" y="224.5" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">PaliGemma 主干</text>
+<text x="1154.0" y="241.5" font-size="13" text-anchor="start" fill="#1F2937">宽 2048，18 层，联合注意力</text>
+<text x="1154.0" y="258.5" font-size="13" text-anchor="start" fill="#1F2937">前缀 = 记忆 672 + 图像 + 文本</text>
+<path d="M 1108.0 237.0 L 1142.0 237.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arr-374151)"/>
+<rect x="1142" y="420" width="240" height="137" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1154.0" y="442.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">动作专家（宽 1024，18 层）</text>
+<text x="1154.0" y="459.0" font-size="13" text-anchor="start" fill="#1F2937">无 mem_attn /</text>
+<text x="1154.0" y="476.0" font-size="13" text-anchor="start" fill="#1F2937">mem_rms_norm_ffn</text>
+<text x="1154.0" y="493.0" font-size="13" text-anchor="start" fill="#1F2937">compute_loss /</text>
+<text x="1154.0" y="510.0" font-size="13" text-anchor="start" fill="#1F2937">sample_actions 不传 mem_seq</text>
+<text x="1154.0" y="527.0" font-size="13" text-anchor="start" fill="#1F2937">记忆只经主干前缀 kv 影响动作</text>
+<text x="1154.0" y="544.0" font-size="13" text-anchor="start" fill="#1F2937">token</text>
+<path d="M 1262.0 271.5 L 1262.0 420.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<text x="1270.0" y="342.2" font-size="12" text-anchor="start" fill="#6B7280">前缀 kv</text>
+<text x="1270.0" y="357.2" font-size="12" text-anchor="start" fill="#6B7280">（含记忆）</text>
+<rect x="1142" y="587" width="240" height="52" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1154.0" y="609.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">动作 chunk</text>
+<text x="1154.0" y="626.0" font-size="13" text-anchor="start" fill="#1F2937">action_horizon 20</text>
+<path d="M 1262.0 557.0 L 1262.0 587.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<rect x="16" y="905" width="1368" height="120" rx="6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="28.0" y="927.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">备注（原版 A）</text>
+<text x="28.0" y="944.0" font-size="13" text-anchor="start" fill="#1F2937">参数叶 59 = 23 冻结图像 bf16 + 32 可训练（主干 / 动作专家 / 帧路 FeatureEncoder，encoder_static (2816,2048)）+ 4 motion（motion_pos_proj (256,768)+(768,)、motion_encoder_static</text>
+<text x="28.0" y="961.0" font-size="13" text-anchor="start" fill="#1F2937">(1536,2048)+(2048,)）。</text>
+<text x="28.0" y="978.0" font-size="13" text-anchor="start" fill="#1F2937">0928 实测（4 任务 1600ep 8×8 库，batch 128）：4 卡 FSDP4 3.845 / 3.863 s/步、峰值约 72 GiB/卡；8 卡 1.979 s/步、约 41.8 GiB/卡。yaml 现指 4 任务 40ep 库、budget 96，不能直接用于</text>
+<text x="28.0" y="995.0" font-size="13" text-anchor="start" fill="#1F2937">mixed8。</text>
+<text x="28.0" y="1012.0" font-size="13" text-anchor="start" fill="#1F2937">推理：记忆在前缀里随 kv_cache 一次算完，去噪步内不再触碰记忆。</text>
+</svg></div>
+<p>读图要点：A 的前缀比纯 context 512 长 160 位，主干每层自注意力都要算这 160 位，这是它 4 卡比纯 context 512 慢约 0.6 s/步的来源。</p>
+
+<h3>2.3 原版 B：modulation + motion 同路（都进交叉注意力）—— 上一轮 V11.25 已训</h3>
+<p>yaml <code>perceptual-framesamp-modul-8frame-8x8-motion-mixed8.yaml</code>：<code>integration_type: modulation</code>、<code>memory_token_dim: 1024</code>，motion 节 enabled / dim 768 / budget 160 / demo_min_real_frames 17 / demo_tail_pad repeat_last / stride 16 / window_frames 33 / forward / segment_start / <code>store_path</code> / <code>source_run</code> / pos_dim 256 / frame_size 256 / online_gpu 4。<code>PerceptualMemory</code> 两路都投到 1024，concat (b,672,1024)，<code>embed_memory</code> 同样按 <code>mem_order</code> 交错。记忆<b>不进前缀</b>：<code>compute_loss</code> 的 modulation 分支调用 <code>self.PaliGemma.llm([prefix, suffix], ..., mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])</code>，<code>lazy_init(mem_mods=[False, True])</code>。<code>history_gemma.py::HistoryBlock</code> 在 <code>integration_type == "modulation"</code> 时创建 <code>MemoryAttention(name="mem_attn")</code>，只对最后一个流（动作专家）在 attention 残差之后、FFN 之前做：</p>
+<pre>mem_mod_vec = mem_attn(x, mem_seq[-1], mem_mask[-1])          # 4 头 / 1 kv 头 / head_dim 256 / 宽 1024，RoPE，按 mem_mask 屏蔽
+x = MemoryRMSNorm(name="mem_rms_norm_ffn")(x, mem_mod_vec)     # Dense(1024→2048) 拆 scale/shift：normed*(1+scale)+shift</pre>
+<p><code>sample_actions</code>：前缀（无记忆）写 kv_cache，记忆只编码一次，每个去噪步把同一份 <code>mem_seq</code> 传进 step 重算交叉注意力，不写 cache。参数 65 叶（23 冻结 + 32 + 4 motion + 6 modulation）。上一轮实测（mixed8 库，4 卡 FSDP4 w8，batch 128）：稳态 1.7346 s/步（5000→75000 窗口），80k 总 38 h 37 min，<code>EXIT_CODE=0</code>。</p>
+<p>图 2 说明：同样从数据侧画起，<code>PerceptualMemory</code> 两路都投到 1024 → concat 672 → 交错 → 绕过主干前缀，作为 <code>mem_seq</code> 广播到动作专家 18 层每层的 <code>mem_attn</code> → <code>mem_rms_norm_ffn</code> 调制 FFN 输入。看两处：主干前缀里没有记忆；记忆宽度在动作专家一侧固定为 1024。</p>
+<div class="fig"><svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1229" viewBox="0 0 1400 1229" role="img" aria-label="原版 B 数据流：帧记忆与 motion 记忆编码到 1024 维后合并为 672 个 token，按 mem_order 交错，作为 mem_seq 送入动作专家每层的 MemoryAttention 交叉注意力并调制 FFN；前缀不含记忆。" font-family="sans-serif">
+<title>图 2 原版 B：modulation + motion 同路</title>
+<defs><marker id="arr-2B6CB0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2B6CB0"/></marker><marker id="arr-C05621" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#C05621"/></marker><marker id="arr-2F855A" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2F855A"/></marker><marker id="arr-6B7280" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/></marker><marker id="arr-6D28D9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6D28D9"/></marker><marker id="arr-374151" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker><marker id="arr-C53030" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#C53030"/></marker></defs>
+<rect x="0" y="0" width="1400" height="1229" fill="#FFFFFF"/>
+<rect x="1142" y="420" width="240" height="574.0" rx="8" fill="#EDE9FE" fill-opacity="0.45" stroke="#6D28D9" stroke-width="1.3" stroke-dasharray="7 4"/>
+<text x="1154.0" y="442.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">动作专家（宽 1024）每层</text>
+<text x="1154.0" y="459.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">HistoryBlock ×18</text>
+<text x="16.0" y="30.0" font-size="16" text-anchor="start" fill="#1F2937" font-weight="bold">图 2　原版 B：modulation + motion 同路 —— 帧记忆 512 与 motion 记忆 160 合成 672 个 token（宽 1024），全部进动作专家交叉注意力</text>
+<rect x="16" y="49" width="14" height="14" rx="3" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="36.0" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">帧路</text>
+<rect x="83.0" y="49" width="14" height="14" rx="3" fill="#FDEBD3" stroke="#C05621" stroke-width="1.3"/>
+<text x="103.0" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">motion 路</text>
+<rect x="190.0" y="49" width="14" height="14" rx="3" fill="#E6F4EA" stroke="#2F855A" stroke-width="1.3"/>
+<text x="210.0" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">合并记忆 672</text>
+<rect x="312.0" y="49" width="14" height="14" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.3"/>
+<text x="332.0" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">索引 / mask</text>
+<rect x="431.5" y="49" width="14" height="14" rx="3" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="451.5" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">模型</text>
+<rect x="498.5" y="49" width="14" height="14" rx="3" fill="#FFF8E1" stroke="#B7791F" stroke-width="1.3"/>
+<text x="518.5" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">配置</text>
+<rect x="565.5" y="49" width="14" height="14" rx="3" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="585.5" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">说明</text>
+<rect x="16" y="88" width="290" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="161.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">① 数据侧（训练与推理相同）</text>
+<rect x="340" y="88" width="270" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="475.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">② 记忆编码 PerceptualMemory</text>
+<rect x="644" y="88" width="200" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="744.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">③ HistoryPi0.embed_memory</text>
+<rect x="878" y="88" width="230" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="993.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">④ embed_prefix 前缀</text>
+<rect x="1142" y="88" width="240" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="1262.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">⑤ 模型</text>
+<rect x="16" y="134" width="290" height="103" rx="6" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="28.0" y="156.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">framesamp-8x8 库行</text>
+<text x="28.0" y="173.0" font-size="13" text-anchor="start" fill="#1F2937">每帧 64 token</text>
+<text x="28.0" y="190.0" font-size="13" text-anchor="start" fill="#1F2937">image_emb_8x8 (64,2048) bf16</text>
+<text x="28.0" y="207.0" font-size="13" text-anchor="start" fill="#1F2937">pos (64,768) f32</text>
+<text x="28.0" y="224.0" font-size="13" text-anchor="start" fill="#1F2937">state (8,) f32</text>
+<rect x="16" y="267" width="290" height="154" rx="6" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="28.0" y="289.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">帧路</text>
+<text x="28.0" y="306.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">FrameSampDataset.__getitem__</text>
+<text x="28.0" y="323.0" font-size="13" text-anchor="start" fill="#1F2937">even_sampling_indices(step, 8) 选</text>
+<text x="28.0" y="340.0" font-size="13" text-anchor="start" fill="#1F2937">≤8 帧，补零到 8 帧</text>
+<text x="28.0" y="357.0" font-size="13" text-anchor="start" fill="#1F2937">static_image_emb (512,2048) bf16</text>
+<text x="28.0" y="374.0" font-size="13" text-anchor="start" fill="#1F2937">static_pos_emb (512,768) f32</text>
+<text x="28.0" y="391.0" font-size="13" text-anchor="start" fill="#1F2937">static_state_emb (512,8)</text>
+<text x="28.0" y="408.0" font-size="13" text-anchor="start" fill="#1F2937">static_mask (512,) bool</text>
+<path d="M 161.0 237.0 L 161.0 267.0" fill="none" stroke="#2B6CB0" stroke-width="1.6" marker-end="url(#arr-2B6CB0)"/>
+<rect x="16" y="451" width="290" height="86" rx="6" fill="#FDEBD3" stroke="#C05621" stroke-width="1.3"/>
+<text x="28.0" y="473.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">motion 库行（motion-768-grid16-</text>
+<text x="28.0" y="490.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">demopad17-v1）</text>
+<text x="28.0" y="507.0" font-size="13" text-anchor="start" fill="#1F2937">motion_token (768,) f32（128342 行</text>
+<text x="28.0" y="524.0" font-size="13" text-anchor="start" fill="#1F2937">）</text>
+<rect x="16" y="567" width="290" height="171" rx="6" fill="#FDEBD3" stroke="#C05621" stroke-width="1.3"/>
+<text x="28.0" y="589.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">motion 路</text>
+<text x="28.0" y="606.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">visible_motion_rows(entry,</text>
+<text x="28.0" y="623.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">step)</text>
+<text x="28.0" y="640.0" font-size="13" text-anchor="start" fill="#1F2937">stride 16，窗口前视 33 帧，</text>
+<text x="28.0" y="657.0" font-size="13" text-anchor="start" fill="#1F2937">_pad_motion 到 160</text>
+<text x="28.0" y="674.0" font-size="13" text-anchor="start" fill="#1F2937">motion_emb (160,768) f32</text>
+<text x="28.0" y="691.0" font-size="13" text-anchor="start" fill="#1F2937">motion_pos (160,256) f32（时间码</text>
+<text x="28.0" y="708.0" font-size="13" text-anchor="start" fill="#1F2937">sin/cos）</text>
+<text x="28.0" y="725.0" font-size="13" text-anchor="start" fill="#1F2937">motion_mask (160,) bool</text>
+<path d="M 161.0 537.0 L 161.0 567.0" fill="none" stroke="#C05621" stroke-width="1.6" marker-end="url(#arr-C05621)"/>
+<rect x="16" y="768" width="290" height="103" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.3"/>
+<text x="28.0" y="790.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">memory_order(ftimes, 64,</text>
+<text x="28.0" y="807.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">mtimes)</text>
+<text x="28.0" y="824.0" font-size="13" text-anchor="start" fill="#1F2937">mem_order (672,) int32：按（时刻×2+</text>
+<text x="28.0" y="841.0" font-size="13" text-anchor="start" fill="#1F2937">类型）稳定排序的 0..671 置换，帧 0 /</text>
+<text x="28.0" y="858.0" font-size="13" text-anchor="start" fill="#1F2937">motion 1</text>
+<rect x="340" y="134" width="270" height="120" rx="6" fill="#FFF8E1" stroke="#B7791F" stroke-width="1.3"/>
+<text x="352.0" y="156.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">yaml（原版 B）</text>
+<text x="352.0" y="173.0" font-size="13" text-anchor="start" fill="#1F2937">perceptual-framesamp-modul-</text>
+<text x="352.0" y="190.0" font-size="13" text-anchor="start" fill="#1F2937">8frame-8x8-motion-mixed8.yaml</text>
+<text x="352.0" y="207.0" font-size="13" text-anchor="start" fill="#1F2937">integration_type: modulation</text>
+<text x="352.0" y="224.0" font-size="13" text-anchor="start" fill="#1F2937">memory_token_dim: 1024（帧路与</text>
+<text x="352.0" y="241.0" font-size="13" text-anchor="start" fill="#1F2937">motion 路共用）</text>
+<rect x="340" y="275.5" width="270" height="137" rx="6" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="352.0" y="297.5" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">帧路 FeatureEncoder</text>
+<text x="352.0" y="314.5" font-size="13" text-anchor="start" fill="#1F2937">pos = silu(pos_proj 768→768)</text>
+<text x="352.0" y="331.5" font-size="13" text-anchor="start" fill="#1F2937">concat(img 2048, pos 768) =</text>
+<text x="352.0" y="348.5" font-size="13" text-anchor="start" fill="#1F2937">2816</text>
+<text x="352.0" y="365.5" font-size="13" text-anchor="start" fill="#1F2937">encoder_static 2816→1024（无激活</text>
+<text x="352.0" y="382.5" font-size="13" text-anchor="start" fill="#1F2937">）</text>
+<text x="352.0" y="399.5" font-size="13" text-anchor="start" fill="#1F2937">输出 (512,1024)</text>
+<rect x="340" y="575.5" width="270" height="154" rx="6" fill="#FDEBD3" stroke="#C05621" stroke-width="1.3"/>
+<text x="352.0" y="597.5" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">motion 路</text>
+<text x="352.0" y="614.5" font-size="13" text-anchor="start" fill="#1F2937">pos = silu(motion_pos_proj 256</text>
+<text x="352.0" y="631.5" font-size="13" text-anchor="start" fill="#1F2937">→768)</text>
+<text x="352.0" y="648.5" font-size="13" text-anchor="start" fill="#1F2937">concat(motion_emb 768, pos 768)</text>
+<text x="352.0" y="665.5" font-size="13" text-anchor="start" fill="#1F2937">= 1536</text>
+<text x="352.0" y="682.5" font-size="13" text-anchor="start" fill="#1F2937">motion_encoder_static 1536→</text>
+<text x="352.0" y="699.5" font-size="13" text-anchor="start" fill="#1F2937">1024</text>
+<text x="352.0" y="716.5" font-size="13" text-anchor="start" fill="#1F2937">输出 (160,1024)</text>
+<path d="M 306.0 344.0 L 340.0 344.0" fill="none" stroke="#2B6CB0" stroke-width="1.6" marker-end="url(#arr-2B6CB0)"/>
+<path d="M 306.0 652.5 L 340.0 652.5" fill="none" stroke="#C05621" stroke-width="1.6" marker-end="url(#arr-C05621)"/>
+<rect x="340" y="451.0" width="270" height="86" rx="6" fill="#E6F4EA" stroke="#2F855A" stroke-width="1.3"/>
+<text x="352.0" y="473.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">沿序列 concat</text>
+<text x="352.0" y="490.0" font-size="13" text-anchor="start" fill="#1F2937">[帧 512 | motion 160] →</text>
+<text x="352.0" y="507.0" font-size="13" text-anchor="start" fill="#1F2937">(672,1024)</text>
+<text x="352.0" y="524.0" font-size="13" text-anchor="start" fill="#1F2937">ar_mask / na_mask 恒 False</text>
+<path d="M 475.0 412.5 L 475.0 451.0" fill="none" stroke="#2B6CB0" stroke-width="1.6" marker-end="url(#arr-2B6CB0)"/>
+<path d="M 475.0 575.5 L 475.0 537.0" fill="none" stroke="#C05621" stroke-width="1.6" marker-end="url(#arr-C05621)"/>
+<rect x="644" y="408.5" width="200" height="171" rx="6" fill="#E6F4EA" stroke="#2F855A" stroke-width="1.3"/>
+<text x="656.0" y="430.5" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">按 mem_order 交错重排</text>
+<text x="656.0" y="447.5" font-size="13" text-anchor="start" fill="#1F2937">mask =</text>
+<text x="656.0" y="464.5" font-size="13" text-anchor="start" fill="#1F2937">concat(static_mask,</text>
+<text x="656.0" y="481.5" font-size="13" text-anchor="start" fill="#1F2937">motion_mask) (672,)</text>
+<text x="656.0" y="498.5" font-size="13" text-anchor="start" fill="#1F2937">token 与 mask 按</text>
+<text x="656.0" y="515.5" font-size="13" text-anchor="start" fill="#1F2937">mem_order 做</text>
+<text x="656.0" y="532.5" font-size="13" text-anchor="start" fill="#1F2937">take_along_axis</text>
+<text x="656.0" y="549.5" font-size="13" text-anchor="start" fill="#1F2937">mem_seq (672,1024)</text>
+<text x="656.0" y="566.5" font-size="13" text-anchor="start" fill="#1F2937">mem_mask (672,) bool</text>
+<path d="M 610.0 494.0 L 644.0 494.0" fill="none" stroke="#2F855A" stroke-width="1.6" marker-end="url(#arr-2F855A)"/>
+<path d="M 306.0 819.5 L 744.0 819.5 L 744.0 579.5" fill="none" stroke="#6B7280" stroke-width="1.6" marker-end="url(#arr-6B7280)"/>
+<text x="752.0" y="811.5" font-size="12" text-anchor="start" fill="#6B7280">mem_order</text>
+<rect x="878" y="134" width="230" height="52" rx="6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="890.0" y="156.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">当前观测（三图相同，略）</text>
+<text x="890.0" y="173.0" font-size="13" text-anchor="start" fill="#1F2937">图像 token + 文本 token</text>
+<rect x="878.0" y="214" width="119.6" height="46" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="937.8" y="233.0" font-size="12.5" text-anchor="middle" fill="#1F2937" font-weight="bold">图像</text>
+<text x="937.8" y="250.0" font-size="12.5" text-anchor="middle" fill="#1F2937">token</text>
+<rect x="997.6" y="214" width="110.4" height="46" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="1052.8" y="233.0" font-size="12.5" text-anchor="middle" fill="#1F2937" font-weight="bold">文本</text>
+<text x="1052.8" y="250.0" font-size="12.5" text-anchor="middle" fill="#1F2937">token</text>
+<path d="M 993.0 186.0 L 993.0 214.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arr-374151)"/>
+<rect x="878" y="284" width="230" height="86" rx="6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="890.0" y="306.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">make_attn_mask 两参数</text>
+<text x="890.0" y="323.0" font-size="13" text-anchor="start" fill="#1F2937">(input_mask, ar_mask)</text>
+<text x="890.0" y="340.0" font-size="13" text-anchor="start" fill="#1F2937">前缀不含记忆</text>
+<text x="890.0" y="357.0" font-size="13" text-anchor="start" fill="#1F2937">图像 / 文本 token 看不到记忆</text>
+<rect x="1142" y="202.5" width="240" height="69" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1154.0" y="224.5" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">PaliGemma 主干</text>
+<text x="1154.0" y="241.5" font-size="13" text-anchor="start" fill="#1F2937">宽 2048，18 层，联合注意力</text>
+<text x="1154.0" y="258.5" font-size="13" text-anchor="start" fill="#1F2937">前缀 = 图像 + 文本（无记忆）</text>
+<path d="M 1108.0 237.0 L 1142.0 237.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arr-374151)"/>
+<rect x="1152" y="469" width="220" height="69" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1164.0" y="491.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">自注意力 + 残差</text>
+<text x="1164.0" y="508.0" font-size="13" text-anchor="start" fill="#1F2937">q/k/v 含前缀 kv（动作 token</text>
+<text x="1164.0" y="525.0" font-size="13" text-anchor="start" fill="#1F2937">看前缀）</text>
+<rect x="1152" y="567.0" width="220" height="171" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1164.0" y="589.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">MemoryAttention</text>
+<text x="1164.0" y="606.0" font-size="13" text-anchor="start" fill="#1F2937">(mem_attn) q ← 动作 token</text>
+<text x="1164.0" y="623.0" font-size="13" text-anchor="start" fill="#1F2937">；k/v ← mem_seq (672×</text>
+<text x="1164.0" y="640.0" font-size="13" text-anchor="start" fill="#1F2937">1024)</text>
+<text x="1164.0" y="657.0" font-size="13" text-anchor="start" fill="#1F2937">4 头 / 1 kv 头 / head_dim</text>
+<text x="1164.0" y="674.0" font-size="13" text-anchor="start" fill="#1F2937">256 / 宽 1024</text>
+<text x="1164.0" y="691.0" font-size="13" text-anchor="start" fill="#1F2937">RoPE；mem_mask 屏蔽</text>
+<text x="1164.0" y="708.0" font-size="13" text-anchor="start" fill="#1F2937">padding；assert 宽 ==</text>
+<text x="1164.0" y="725.0" font-size="13" text-anchor="start" fill="#1F2937">1024</text>
+<path d="M 1262.0 538.0 L 1262.0 567.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<rect x="1152" y="756.0" width="220" height="103" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1164.0" y="778.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">MemoryRMSNorm</text>
+<text x="1164.0" y="795.0" font-size="13" text-anchor="start" fill="#1F2937">(mem_rms_norm_ffn) Dense</text>
+<text x="1164.0" y="812.0" font-size="13" text-anchor="start" fill="#1F2937">1024→2048</text>
+<text x="1164.0" y="829.0" font-size="13" text-anchor="start" fill="#1F2937">→ scale / shift 调制 FFN</text>
+<text x="1164.0" y="846.0" font-size="13" text-anchor="start" fill="#1F2937">输入</text>
+<path d="M 1262.0 738.0 L 1262.0 756.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<rect x="1152" y="877.0" width="220" height="52" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1164.0" y="899.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">pre_ffw_norm → FFN +</text>
+<text x="1164.0" y="916.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">残差</text>
+<path d="M 1262.0 859.0 L 1262.0 877.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<text x="1152.0" y="950.0" font-size="12" text-anchor="start" fill="#6B7280">推理：embed_memory 只算一次；</text>
+<text x="1152.0" y="965.0" font-size="12" text-anchor="start" fill="#6B7280">每个去噪步重算交叉注意力，</text>
+<text x="1152.0" y="980.0" font-size="12" text-anchor="start" fill="#6B7280">不进 kv_cache</text>
+<path d="M 1262.0 271.5 L 1262.0 420.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<text x="1270.0" y="349.8" font-size="12" text-anchor="start" fill="#6B7280">前缀 kv（无记忆）</text>
+<rect x="1142" y="1024.0" width="240" height="52" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1154.0" y="1046.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">动作 chunk</text>
+<text x="1154.0" y="1063.0" font-size="13" text-anchor="start" fill="#1F2937">action_horizon 20</text>
+<path d="M 1262.0 994.0 L 1262.0 1024.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<path d="M 844.0 494.0 L 861.0 494.0 L 861.0 652.5 L 1152.0 652.5" fill="none" stroke="#2F855A" stroke-width="1.6" marker-end="url(#arr-2F855A)"/>
+<text x="993.0" y="644.5" font-size="12" text-anchor="middle" fill="#6B7280">mem_seq / mem_mask</text>
+<rect x="16" y="1110.0" width="1368" height="103" rx="6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="28.0" y="1132.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">备注（原版 B，上一轮已训 V11.25）</text>
+<text x="28.0" y="1149.0" font-size="13" text-anchor="start" fill="#1F2937">参数叶 65 = 23 冻结图像 bf16 + 32 可训练（encoder_static (2816,1024)）+ 4 motion（motion_encoder_static (1536,1024)）+ 6 modulation（mem_attn/{q,kv,out}_einsum_mem/w、</text>
+<text x="28.0" y="1166.0" font-size="13" text-anchor="start" fill="#1F2937">mem_attn/mem_rms_norm/scale、mem_rms_norm_ffn/Dense_0/{kernel,bias}，均带前导 18 层维）。</text>
+<text x="28.0" y="1183.0" font-size="13" text-anchor="start" fill="#1F2937">上一轮实测（mixed8 库，4 卡 FSDP4 w8，batch 128）：稳态 1.7346 s/步（5000→75000），80k 共 38 h 37 min，EXIT_CODE=0。lazy_init(mem_mods=[False, True])。</text>
+<text x="28.0" y="1200.0" font-size="13" text-anchor="start" fill="#1F2937">推理：kv_cache 用无记忆前缀；embed_memory 只算一次；每个去噪步传 mem_seq / mem_mask 重算交叉注意力。</text>
+</svg></div>
+<p>读图要点：B 的主干前缀最短（只有图像 + 文本），所以 4 卡步时只有 A 的一半左右；代价是记忆只能通过动作专家每层一次的低秩交叉注意力影响动作，主干看不到任何历史。</p>
+
+<h3>2.4 新版：分路（帧走 context、motion 走 modulation）</h3>
+<p>逐跳写清（形状以单卡 batch 维 b 记）：</p>
+<ol>
+<li><b>数据侧</b>：零改动，八键同 2.1，<code>mem_order</code> 照旧产出。</li>
+<li><b><code>PerceptualMemory</code></b>：读 <code>motion.integration</code>；为 <code>modulation</code> 时帧路仍按 <code>memory_token_dim</code> 投到 2048 → (b,512,2048)，motion 路 <code>motion_encoder_static</code> 输出维固定 <b>1024</b> → (b,160,1024)；<code>__call__</code> 返回两段、不 concat。两个 motion 模块仍在 <code>__init__</code> 按开关创建，叶名不变。</li>
+<li><b><code>embed_memory</code></b>：返回帧段（tokens (b,512,2048)、<code>static_mask</code>、ar/na 各 512 个 False）与 motion 段（(b,160,1024)、<code>motion_mask</code>）两组；不读 <code>mem_order</code>，motion 段保持库内时刻升序、有效位在前补零在后。</li>
+<li><b><code>embed_prefix</code></b>：context 分支只拼帧段：<code>[帧 512 | img | text]</code>，与纯 context 512 完全同形、前缀长度相同。</li>
+<li><b><code>compute_loss</code></b>：三参数 <code>make_attn_mask</code>（帧段 na=False，图像 na=True）+ <code>self.PaliGemma.llm([prefix, suffix], mask, positions, adarms_cond=[None, cond], mem_seq=[None, motion_tokens], mem_mask=[None, motion_mask])</code>。</li>
+<li><b><code>sample_actions</code></b>：kv_cache 用带帧记忆的前缀（三参数 mask），step 内像 B 一样每个去噪步传 motion 的 <code>mem_seq</code>/<code>mem_mask</code>。</li>
+<li><b><code>HistoryBlock</code> / <code>_gemma.Module</code></b>：新增布尔字段 <code>motion_modulation</code>（S2 检查脚本按此名读接口，S1 不得改名），创建 <code>mem_attn</code> 的条件改为「<code>integration_type == "modulation"</code> 或 <code>motion_modulation</code>」，调用条件同步；<code>HistoryPi0.__init__</code> 的 <code>lazy_init</code> 在分路时传 <code>mem_mods=[False, True]</code>。</li>
+</ol>
+<p>图 3 说明：数据侧同前；<code>PerceptualMemory</code> 处分成上下两条：上路帧段 (b,512,2048) 进主干前缀最前，下路 motion 段 (b,160,1024) 作为 <code>mem_seq</code> 进动作专家每层 <code>mem_attn</code>；图中用虚线标出 <code>mem_order</code> 仍被生成但在模型入口处被丢弃。看两处：上路与纯 context 512 完全一样；下路与 B 的交叉注意力完全一样，只是序列从 672 缩到 160。</p>
+<div class="fig"><svg xmlns="http://www.w3.org/2000/svg" width="1400" height="1298" viewBox="0 0 1400 1298" role="img" aria-label="新版数据流：数据侧不变；帧记忆编码到 2048 维拼进主干前缀，motion 记忆编码到 1024 维送入动作专家每层 MemoryAttention 交叉注意力；不再 concat、不读 mem_order。" font-family="sans-serif">
+<title>图 3 新版分路：帧走 context、motion 走 modulation</title>
+<defs><marker id="arr-2B6CB0" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2B6CB0"/></marker><marker id="arr-C05621" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#C05621"/></marker><marker id="arr-2F855A" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2F855A"/></marker><marker id="arr-6B7280" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6B7280"/></marker><marker id="arr-6D28D9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#6D28D9"/></marker><marker id="arr-374151" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker><marker id="arr-C53030" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#C53030"/></marker></defs>
+<rect x="0" y="0" width="1400" height="1298" fill="#FFFFFF"/>
+<rect x="1142" y="420" width="240" height="626.0" rx="8" fill="#EDE9FE" fill-opacity="0.45" stroke="#6D28D9" stroke-width="1.3" stroke-dasharray="7 4"/>
+<text x="1154.0" y="442.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">动作专家（宽 1024）每层</text>
+<text x="1154.0" y="459.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">HistoryBlock ×18</text>
+<text x="16.0" y="30.0" font-size="16" text-anchor="start" fill="#1F2937" font-weight="bold">图 3　新版「分路」：帧记忆 512 只走 context（主干前缀，宽 2048）；motion 记忆 160 只走 modulation（动作专家交叉注意力，宽 1024）</text>
+<rect x="16" y="49" width="14" height="14" rx="3" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="36.0" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">帧路</text>
+<rect x="83.0" y="49" width="14" height="14" rx="3" fill="#FDEBD3" stroke="#C05621" stroke-width="1.3"/>
+<text x="103.0" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">motion 路</text>
+<rect x="190.0" y="49" width="14" height="14" rx="3" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.3"/>
+<text x="210.0" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">索引 / mask</text>
+<rect x="309.5" y="49" width="14" height="14" rx="3" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="329.5" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">模型</text>
+<rect x="376.5" y="49" width="14" height="14" rx="3" fill="#FFF8E1" stroke="#B7791F" stroke-width="1.3"/>
+<text x="396.5" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">配置</text>
+<rect x="443.5" y="49" width="14" height="14" rx="3" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="463.5" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">说明</text>
+<rect x="510.5" y="49" width="14" height="14" rx="3" fill="#FFFFFF" stroke="#C53030" stroke-width="2.4"/>
+<text x="530.5" y="60.0" font-size="12.5" text-anchor="start" fill="#1F2937">红框 + 「改」= 新版相对原版的改动点</text>
+<rect x="16" y="88" width="290" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="161.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">① 数据侧（零改动，与原版相同）</text>
+<rect x="340" y="88" width="270" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="475.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">② 记忆编码 PerceptualMemory</text>
+<rect x="644" y="88" width="200" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="744.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">③ HistoryPi0.embed_memory</text>
+<rect x="878" y="88" width="230" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="993.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">④ embed_prefix 前缀</text>
+<rect x="1142" y="88" width="240" height="28" rx="5" fill="#E5E7EB" stroke="none"/>
+<text x="1262.0" y="107.0" font-size="14" text-anchor="middle" fill="#111827" font-weight="bold">⑤ 模型</text>
+<rect x="16" y="134" width="290" height="103" rx="6" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="28.0" y="156.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">framesamp-8x8 库行</text>
+<text x="28.0" y="173.0" font-size="13" text-anchor="start" fill="#1F2937">每帧 64 token</text>
+<text x="28.0" y="190.0" font-size="13" text-anchor="start" fill="#1F2937">image_emb_8x8 (64,2048) bf16</text>
+<text x="28.0" y="207.0" font-size="13" text-anchor="start" fill="#1F2937">pos (64,768) f32</text>
+<text x="28.0" y="224.0" font-size="13" text-anchor="start" fill="#1F2937">state (8,) f32</text>
+<rect x="16" y="319" width="290" height="154" rx="6" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="28.0" y="341.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">帧路</text>
+<text x="28.0" y="358.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">FrameSampDataset.__getitem__</text>
+<text x="28.0" y="375.0" font-size="13" text-anchor="start" fill="#1F2937">even_sampling_indices(step, 8) 选</text>
+<text x="28.0" y="392.0" font-size="13" text-anchor="start" fill="#1F2937">≤8 帧，补零到 8 帧</text>
+<text x="28.0" y="409.0" font-size="13" text-anchor="start" fill="#1F2937">static_image_emb (512,2048) bf16</text>
+<text x="28.0" y="426.0" font-size="13" text-anchor="start" fill="#1F2937">static_pos_emb (512,768) f32</text>
+<text x="28.0" y="443.0" font-size="13" text-anchor="start" fill="#1F2937">static_state_emb (512,8)</text>
+<text x="28.0" y="460.0" font-size="13" text-anchor="start" fill="#1F2937">static_mask (512,) bool</text>
+<path d="M 161.0 237.0 L 161.0 319.0" fill="none" stroke="#2B6CB0" stroke-width="1.6" marker-end="url(#arr-2B6CB0)"/>
+<rect x="16" y="503" width="290" height="86" rx="6" fill="#FDEBD3" stroke="#C05621" stroke-width="1.3"/>
+<text x="28.0" y="525.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">motion 库行（motion-768-grid16-</text>
+<text x="28.0" y="542.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">demopad17-v1）</text>
+<text x="28.0" y="559.0" font-size="13" text-anchor="start" fill="#1F2937">motion_token (768,) f32（128342 行</text>
+<text x="28.0" y="576.0" font-size="13" text-anchor="start" fill="#1F2937">）</text>
+<rect x="16" y="619" width="290" height="171" rx="6" fill="#FDEBD3" stroke="#C05621" stroke-width="1.3"/>
+<text x="28.0" y="641.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">motion 路</text>
+<text x="28.0" y="658.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">visible_motion_rows(entry,</text>
+<text x="28.0" y="675.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">step)</text>
+<text x="28.0" y="692.0" font-size="13" text-anchor="start" fill="#1F2937">stride 16，窗口前视 33 帧，</text>
+<text x="28.0" y="709.0" font-size="13" text-anchor="start" fill="#1F2937">_pad_motion 到 160</text>
+<text x="28.0" y="726.0" font-size="13" text-anchor="start" fill="#1F2937">motion_emb (160,768) f32</text>
+<text x="28.0" y="743.0" font-size="13" text-anchor="start" fill="#1F2937">motion_pos (160,256) f32（时间码</text>
+<text x="28.0" y="760.0" font-size="13" text-anchor="start" fill="#1F2937">sin/cos）</text>
+<text x="28.0" y="777.0" font-size="13" text-anchor="start" fill="#1F2937">motion_mask (160,) bool</text>
+<path d="M 161.0 589.0 L 161.0 619.0" fill="none" stroke="#C05621" stroke-width="1.6" marker-end="url(#arr-C05621)"/>
+<rect x="16" y="820" width="290" height="103" rx="6" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.3" stroke-dasharray="6 4"/>
+<text x="28.0" y="842.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">memory_order(ftimes, 64,</text>
+<text x="28.0" y="859.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">mtimes)</text>
+<text x="28.0" y="876.0" font-size="13" text-anchor="start" fill="#1F2937">mem_order (672,) int32</text>
+<text x="28.0" y="893.0" font-size="13" text-anchor="start" fill="#6B7280">仍照旧产出，新版模型不读（observation</text>
+<text x="28.0" y="910.0" font-size="13" text-anchor="start" fill="#6B7280">契约不变）</text>
+<rect x="340" y="134" width="270" height="154" rx="6" fill="#FFF8E1" stroke="#C53030" stroke-width="2.4"/>
+<text x="352.0" y="156.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">新 yaml（新版分路）</text>
+<text x="352.0" y="173.0" font-size="13" text-anchor="start" fill="#1F2937">perceptual-framesamp-ctxframe-</text>
+<text x="352.0" y="190.0" font-size="13" text-anchor="start" fill="#1F2937">modulmotion-8frame-8x8-</text>
+<text x="352.0" y="207.0" font-size="13" text-anchor="start" fill="#1F2937">mixed8.yaml</text>
+<text x="352.0" y="224.0" font-size="13" text-anchor="start" fill="#1F2937">integration_type: context，</text>
+<text x="352.0" y="241.0" font-size="13" text-anchor="start" fill="#1F2937">memory_token_dim: 2048</text>
+<text x="352.0" y="258.0" font-size="13" text-anchor="start" fill="#1F2937">motion.integration: modulation</text>
+<text x="352.0" y="275.0" font-size="13" text-anchor="start" fill="#1F2937">（新键；缺省 = 跟随帧路）</text>
+<rect x="592" y="125" width="24" height="18" rx="4" fill="#C53030"/>
+<text x="604.0" y="138.0" font-size="12" text-anchor="middle" fill="#FFFFFF" font-weight="bold">改</text>
+<rect x="340" y="327.5" width="270" height="137" rx="6" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="352.0" y="349.5" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">帧路 FeatureEncoder</text>
+<text x="352.0" y="366.5" font-size="13" text-anchor="start" fill="#1F2937">pos = silu(pos_proj 768→768)</text>
+<text x="352.0" y="383.5" font-size="13" text-anchor="start" fill="#1F2937">concat(img 2048, pos 768) =</text>
+<text x="352.0" y="400.5" font-size="13" text-anchor="start" fill="#1F2937">2816</text>
+<text x="352.0" y="417.5" font-size="13" text-anchor="start" fill="#1F2937">encoder_static 2816→2048（无激活</text>
+<text x="352.0" y="434.5" font-size="13" text-anchor="start" fill="#1F2937">）</text>
+<text x="352.0" y="451.5" font-size="13" text-anchor="start" fill="#1F2937">输出 (512,2048)</text>
+<rect x="340" y="619.0" width="270" height="171" rx="6" fill="#FDEBD3" stroke="#C53030" stroke-width="2.4"/>
+<text x="352.0" y="641.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">motion 路</text>
+<text x="352.0" y="658.0" font-size="13" text-anchor="start" fill="#1F2937">pos = silu(motion_pos_proj 256</text>
+<text x="352.0" y="675.0" font-size="13" text-anchor="start" fill="#1F2937">→768)</text>
+<text x="352.0" y="692.0" font-size="13" text-anchor="start" fill="#1F2937">concat(motion_emb 768, pos 768)</text>
+<text x="352.0" y="709.0" font-size="13" text-anchor="start" fill="#1F2937">= 1536</text>
+<text x="352.0" y="726.0" font-size="13" text-anchor="start" fill="#1F2937">motion_encoder_static 1536→</text>
+<text x="352.0" y="743.0" font-size="13" text-anchor="start" fill="#1F2937">1024（固定 1024，不跟</text>
+<text x="352.0" y="760.0" font-size="13" text-anchor="start" fill="#1F2937">memory_token_dim）</text>
+<text x="352.0" y="777.0" font-size="13" text-anchor="start" fill="#1F2937">输出 (160,1024)</text>
+<rect x="592" y="610.0" width="24" height="18" rx="4" fill="#C53030"/>
+<text x="604.0" y="623.0" font-size="12" text-anchor="middle" fill="#FFFFFF" font-weight="bold">改</text>
+<path d="M 306.0 396.0 L 340.0 396.0" fill="none" stroke="#2B6CB0" stroke-width="1.6" marker-end="url(#arr-2B6CB0)"/>
+<path d="M 306.0 704.5 L 340.0 704.5" fill="none" stroke="#C05621" stroke-width="1.6" marker-end="url(#arr-C05621)"/>
+<rect x="340" y="490.25" width="270" height="103" rx="6" fill="#FFFFFF" stroke="#C53030" stroke-width="2.4"/>
+<text x="352.0" y="512.2" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">不再 concat</text>
+<text x="352.0" y="529.2" font-size="13" text-anchor="start" fill="#1F2937">__call__ 返回两段（替代原版 concat</text>
+<text x="352.0" y="546.2" font-size="13" text-anchor="start" fill="#1F2937">框）：</text>
+<text x="352.0" y="563.2" font-size="13" text-anchor="start" fill="#1F2937">(hidden_states (512,2048),</text>
+<text x="352.0" y="580.2" font-size="13" text-anchor="start" fill="#1F2937">motion_tokens (160,1024))</text>
+<rect x="592" y="481.25" width="24" height="18" rx="4" fill="#C53030"/>
+<text x="604.0" y="494.2" font-size="12" text-anchor="middle" fill="#FFFFFF" font-weight="bold">改</text>
+<rect x="644" y="353.0" width="200" height="86" rx="6" fill="#E3F0FB" stroke="#C53030" stroke-width="2.4"/>
+<text x="656.0" y="375.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">帧段（分路返回）</text>
+<text x="656.0" y="392.0" font-size="13" text-anchor="start" fill="#1F2937">tokens (512,2048)</text>
+<text x="656.0" y="409.0" font-size="13" text-anchor="start" fill="#1F2937">static_mask (512,)</text>
+<text x="656.0" y="426.0" font-size="13" text-anchor="start" fill="#1F2937">ar / na 全 False</text>
+<rect x="826" y="344.0" width="24" height="18" rx="4" fill="#C53030"/>
+<text x="838.0" y="357.0" font-size="12" text-anchor="middle" fill="#FFFFFF" font-weight="bold">改</text>
+<rect x="644" y="653.0" width="200" height="103" rx="6" fill="#FDEBD3" stroke="#C53030" stroke-width="2.4"/>
+<text x="656.0" y="675.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">motion 段（分路返回）</text>
+<text x="656.0" y="692.0" font-size="13" text-anchor="start" fill="#1F2937">motion_tokens</text>
+<text x="656.0" y="709.0" font-size="13" text-anchor="start" fill="#1F2937">(160,1024)</text>
+<text x="656.0" y="726.0" font-size="13" text-anchor="start" fill="#1F2937">motion_mask (160,)</text>
+<text x="656.0" y="743.0" font-size="13" text-anchor="start" fill="#1F2937">不读 mem_order</text>
+<rect x="826" y="644.0" width="24" height="18" rx="4" fill="#C53030"/>
+<text x="838.0" y="657.0" font-size="12" text-anchor="middle" fill="#FFFFFF" font-weight="bold">改</text>
+<path d="M 610.0 396.0 L 644.0 396.0" fill="none" stroke="#2B6CB0" stroke-width="1.6" marker-end="url(#arr-2B6CB0)"/>
+<path d="M 610.0 704.5 L 644.0 704.5" fill="none" stroke="#C05621" stroke-width="1.6" marker-end="url(#arr-C05621)"/>
+<rect x="878" y="134" width="230" height="52" rx="6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="890.0" y="156.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">当前观测（三图相同，略）</text>
+<text x="890.0" y="173.0" font-size="13" text-anchor="start" fill="#1F2937">图像 token + 文本 token</text>
+<rect x="878.0" y="214" width="92.0" height="46" fill="#E3F0FB" stroke="#2B6CB0" stroke-width="1.3"/>
+<text x="924.0" y="233.0" font-size="12.5" text-anchor="middle" fill="#1F2937" font-weight="bold">帧记忆</text>
+<text x="924.0" y="250.0" font-size="12.5" text-anchor="middle" fill="#1F2937">512 token</text>
+<rect x="970.0" y="214" width="73.6" height="46" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="1006.8" y="233.0" font-size="12.5" text-anchor="middle" fill="#1F2937" font-weight="bold">图像</text>
+<text x="1006.8" y="250.0" font-size="12.5" text-anchor="middle" fill="#1F2937">token</text>
+<rect x="1043.6" y="214" width="64.4" height="46" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="1075.8" y="233.0" font-size="12.5" text-anchor="middle" fill="#1F2937" font-weight="bold">文本</text>
+<text x="1075.8" y="250.0" font-size="12.5" text-anchor="middle" fill="#1F2937">token</text>
+<rect x="876.5" y="212.5" width="233" height="49" rx="3" fill="none" stroke="#C53030" stroke-width="2.4"/>
+<rect x="1090" y="205" width="24" height="18" rx="4" fill="#C53030"/>
+<text x="1102.0" y="218.0" font-size="12" text-anchor="middle" fill="#FFFFFF" font-weight="bold">改</text>
+<path d="M 993.0 186.0 L 993.0 214.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arr-374151)"/>
+<rect x="878" y="284" width="230" height="120" rx="6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="890.0" y="306.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">make_attn_mask 三参数</text>
+<text x="890.0" y="323.0" font-size="13" text-anchor="start" fill="#1F2937">(input_mask, ar_mask,</text>
+<text x="890.0" y="340.0" font-size="13" text-anchor="start" fill="#1F2937">na_mask)</text>
+<text x="890.0" y="357.0" font-size="13" text-anchor="start" fill="#1F2937">图像不看帧记忆（na_mask）</text>
+<text x="890.0" y="374.0" font-size="13" text-anchor="start" fill="#1F2937">文本 / 动作 token 看帧记忆</text>
+<text x="890.0" y="391.0" font-size="13" text-anchor="start" fill="#1F2937">前缀长度 == 纯 context 512</text>
+<path d="M 844.0 396.0 L 861.0 396.0 L 861.0 237.0 L 878.0 237.0" fill="none" stroke="#2B6CB0" stroke-width="1.6" marker-end="url(#arr-2B6CB0)"/>
+<rect x="1142" y="202.5" width="240" height="69" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1154.0" y="224.5" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">PaliGemma 主干</text>
+<text x="1154.0" y="241.5" font-size="13" text-anchor="start" fill="#1F2937">宽 2048，18 层，联合注意力</text>
+<text x="1154.0" y="258.5" font-size="13" text-anchor="start" fill="#1F2937">前缀 = 帧 512 + 图像 + 文本</text>
+<path d="M 1108.0 237.0 L 1142.0 237.0" fill="none" stroke="#374151" stroke-width="1.6" marker-end="url(#arr-374151)"/>
+<rect x="1152" y="469" width="220" height="69" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1164.0" y="491.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">自注意力 + 残差</text>
+<text x="1164.0" y="508.0" font-size="13" text-anchor="start" fill="#1F2937">q/k/v 含前缀 kv（动作 token</text>
+<text x="1164.0" y="525.0" font-size="13" text-anchor="start" fill="#1F2937">看前缀）</text>
+<rect x="1152" y="619.0" width="220" height="171" rx="6" fill="#EDE9FE" stroke="#C53030" stroke-width="2.4"/>
+<text x="1164.0" y="641.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">MemoryAttention</text>
+<text x="1164.0" y="658.0" font-size="13" text-anchor="start" fill="#1F2937">(mem_attn) q ← 动作 token</text>
+<text x="1164.0" y="675.0" font-size="13" text-anchor="start" fill="#1F2937">；k/v ← motion 段 (160×</text>
+<text x="1164.0" y="692.0" font-size="13" text-anchor="start" fill="#1F2937">1024)</text>
+<text x="1164.0" y="709.0" font-size="13" text-anchor="start" fill="#1F2937">4 头 / 1 kv 头 / head_dim</text>
+<text x="1164.0" y="726.0" font-size="13" text-anchor="start" fill="#1F2937">256 / 宽 1024</text>
+<text x="1164.0" y="743.0" font-size="13" text-anchor="start" fill="#1F2937">RoPE；mem_mask 屏蔽</text>
+<text x="1164.0" y="760.0" font-size="13" text-anchor="start" fill="#1F2937">padding；assert 宽 ==</text>
+<text x="1164.0" y="777.0" font-size="13" text-anchor="start" fill="#1F2937">1024</text>
+<rect x="1354" y="610.0" width="24" height="18" rx="4" fill="#C53030"/>
+<text x="1366.0" y="623.0" font-size="12" text-anchor="middle" fill="#FFFFFF" font-weight="bold">改</text>
+<path d="M 1262.0 538.0 L 1262.0 619.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<rect x="1152" y="808.0" width="220" height="103" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1164.0" y="830.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">MemoryRMSNorm</text>
+<text x="1164.0" y="847.0" font-size="13" text-anchor="start" fill="#1F2937">(mem_rms_norm_ffn) Dense</text>
+<text x="1164.0" y="864.0" font-size="13" text-anchor="start" fill="#1F2937">1024→2048</text>
+<text x="1164.0" y="881.0" font-size="13" text-anchor="start" fill="#1F2937">→ scale / shift 调制 FFN</text>
+<text x="1164.0" y="898.0" font-size="13" text-anchor="start" fill="#1F2937">输入</text>
+<path d="M 1262.0 790.0 L 1262.0 808.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<rect x="1152" y="929.0" width="220" height="52" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1164.0" y="951.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">pre_ffw_norm → FFN +</text>
+<text x="1164.0" y="968.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">残差</text>
+<path d="M 1262.0 911.0 L 1262.0 929.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<text x="1152.0" y="1002.0" font-size="12" text-anchor="start" fill="#6B7280">推理：embed_memory 只算一次；</text>
+<text x="1152.0" y="1017.0" font-size="12" text-anchor="start" fill="#6B7280">每个去噪步重算交叉注意力，</text>
+<text x="1152.0" y="1032.0" font-size="12" text-anchor="start" fill="#6B7280">不进 kv_cache</text>
+<path d="M 1262.0 271.5 L 1262.0 420.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<text x="1270.0" y="349.8" font-size="12" text-anchor="start" fill="#6B7280">前缀 kv（含帧记忆）</text>
+<rect x="1142" y="1076.0" width="240" height="52" rx="6" fill="#EDE9FE" stroke="#6D28D9" stroke-width="1.3"/>
+<text x="1154.0" y="1098.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">动作 chunk</text>
+<text x="1154.0" y="1115.0" font-size="13" text-anchor="start" fill="#1F2937">action_horizon 20</text>
+<path d="M 1262.0 1046.0 L 1262.0 1076.0" fill="none" stroke="#6D28D9" stroke-width="1.6" marker-end="url(#arr-6D28D9)"/>
+<path d="M 844.0 704.5 L 1152.0 704.5" fill="none" stroke="#C05621" stroke-width="1.6" marker-end="url(#arr-C05621)"/>
+<text x="993.0" y="696.5" font-size="12" text-anchor="middle" fill="#6B7280">motion_tokens / motion_mask</text>
+<rect x="16" y="1162.0" width="1368" height="120" rx="6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="1.3"/>
+<text x="28.0" y="1184.0" font-size="13.5" text-anchor="start" fill="#1F2937" font-weight="bold">备注（新版分路）</text>
+<text x="28.0" y="1201.0" font-size="13" text-anchor="start" fill="#1F2937">参数叶 65 = 23 冻结 + 32（帧路 context，encoder_static (2816,2048)）+ 4 motion（motion_encoder_static (1536,1024)）+ 6 modulation；叶名集合与原版 B 完全相同，仅 encoder_static 形状</text>
+<text x="28.0" y="1218.0" font-size="13" text-anchor="start" fill="#1F2937">不同 → 与任何现有 ckpt 不同形，不能热启动，照旧 pi05_base 初始化。</text>
+<text x="28.0" y="1235.0" font-size="13" text-anchor="start" fill="#1F2937">改动点：PerceptualMemory 分路输出；HistoryPi0.__init__ 在 context 下也创建 mem_attn（HistoryBlock 创建条件加 motion_modulation）、lazy_init(mem_mods=[False, True])；embed_memory 分</text>
+<text x="28.0" y="1252.0" font-size="13" text-anchor="start" fill="#1F2937">路返回、不读 mem_order；embed_prefix 只拼帧段；compute_loss / sample_actions 传 mem_seq=[None, motion_tokens]。数据侧与推理策略层零改动。</text>
+<text x="28.0" y="1269.0" font-size="13" text-anchor="start" fill="#1F2937">预估（推断，未实测）：介于纯 context 512（4 卡 3.25 s/步、73 GiB）与原版 A（4 卡 3.85 s/步、72 GiB）之间，约 4 卡 3.3–3.5 s/步、约 73 GiB/卡。</text>
+</svg></div>
+<p>读图要点：分路 = 「纯 context 512 的主干」+「B 的动作专家交叉注意力，但只喂 motion」。改动前后链路如下表（「改动前」取原版 A，因为新 yaml 的顶层与 A 同为 context）。</p>
+<table class="tbl">
+<tr><th>跳</th><th>改动前（A）</th><th>改动后（分路）</th><th>可训练参数</th><th>这一跳有没有改数</th></tr>
+<tr><td>数据侧八键</td><td>见 2.1，约 4.36 MB / 样本</td><td>同左</td><td>无</td><td>否</td></tr>
+<tr><td>帧路编码</td><td>(b,512,2048) f32</td><td>同左</td><td><code>pos_proj</code> (768,768)、<code>encoder_static</code> (2816,2048)</td><td>否</td></tr>
+<tr><td>motion 路编码</td><td>(b,160,2048) f32</td><td>(b,160,1024) f32</td><td><code>motion_pos_proj</code> (256,768)、<code>motion_encoder_static</code> (1536,2048) → (1536,1024)</td><td>是：输出宽 2048 → 1024</td></tr>
+<tr><td>合并 / 重排</td><td>concat (b,672,2048)，按 <code>mem_order</code> 交错</td><td>不合并、不重排</td><td>无</td><td>是：不再交错</td></tr>
+<tr><td>主干前缀</td><td><code>[672 | img | text]</code></td><td><code>[512 | img | text]</code></td><td>主干与纯 context 同</td><td>是：前缀少 160 位</td></tr>
+<tr><td>动作专家</td><td>无交叉注意力</td><td>每层 <code>mem_attn</code> 看 (b,160,1024) + <code>mem_rms_norm_ffn</code> 调制</td><td>新增 6 叶（均带前导 18 层维），约 339,959,808 B f32（按形状推算）</td><td>是：新增分支</td></tr>
+<tr><td>参数树</td><td>59 叶</td><td>65 叶，叶名集合与 B 相同</td><td>23 冻结 bf16 + 42 可训练 f32</td><td>不能热启动</td></tr>
+</table>
+
+<h3>2.5 三者对照</h3>
+<table class="tbl">
+<tr><th>项</th><th>原版 A（context 同路）</th><th>原版 B（modulation 同路）</th><th>新版（分路）</th></tr>
+<tr><td>主干前缀</td><td>672 + 图像 + 文本</td><td>图像 + 文本</td><td>512 + 图像 + 文本（与纯 context 512 相同）</td></tr>
+<tr><td><code>mem_seq</code></td><td>无</td><td>(b,672,1024)</td><td>(b,160,1024)</td></tr>
+<tr><td>记忆经过的层</td><td>主干 18 层自注意力（再经 kv 被动作专家间接读到）</td><td>只动作专家 18 层交叉注意力</td><td>帧：主干 18 层；motion：动作专家 18 层</td></tr>
+<tr><td>是否读 <code>mem_order</code></td><td>是</td><td>是</td><td>否</td></tr>
+<tr><td>参数叶</td><td>59</td><td>65</td><td>65；与 B 叶名集合相同，形状差异只在 <code>mem_encoder/feature_encoder/encoder_static/{kernel,bias}</code>（(2816,2048)/(2048,) vs (2816,1024)/(1024,)）；<code>motion_encoder_static</code> 两者同为 (1536,1024)</td></tr>
+<tr><td>注意力复杂度</td><td>主干自注意力按前缀长度平方，记忆贡献 672 位</td><td>动作专家 4 头 × 动作 token × 672</td><td>主干记忆贡献 512 位 + 动作专家 4 头 × 动作 token × 160</td></tr>
+<tr><td>能否热启动</td><td>—</td><td>—</td><td>否（与 A、B、纯 context 512 均不同形）</td></tr>
+<tr><td>4 卡步时 / 显存</td><td>实测 3.845–3.863 s/步，约 72 GiB/卡（0928，4 任务库）</td><td>实测 1.7346 s/步（mixed8 库）；显存事实未登记</td><td><b>推断</b> 3.3–3.5 s/步、约 73 GiB/卡，80k 约 73–78 h</td></tr>
+</table>
+
+<h2 id="s3">三、机制细节</h2>
+
+<h3>3.1 配置键 <code>motion.integration</code></h3>
+<p><b>定义</b>：history yaml motion 节的可选键，决定 motion 记忆走哪条路。缺省 = 跟随顶层 <code>integration_type</code>（即 A、B 的现有行为）；唯一允许的显式值是在顶层 <code>integration_type: context</code> 下写 <code>modulation</code>。<b>锚点</b>：读取在 <code>percep_mem.py::PerceptualMemory.__init__</code> 与 <code>history_pi0.py::HistoryPi0.__init__</code>（拟沿用 <code>_motion_enabled</code> 的 <code>getattr(hc, "motion", None)</code> 写法），校验两处、语义相同：模型侧 <code>history_pi0.py::HistoryPi0.__init__</code>，数据侧 <code>framesamp_dataset.py::FrameSampDataset.__init__</code> 的 motion 专属守卫。</p>
+<pre>motion_integration = mcfg.get("integration", None) if motion_enabled else None
+split = (integration_type == "context" and motion_integration == "modulation")
+# 守卫（拟）：integration ∉ {缺省, "modulation"} → 拒；顶层非 context 却写了 integration → 拒；motion.enabled=false 却写了 integration → 拒</pre>
+<p class="warn">⚠ 陷阱：<code>(context, 2048)</code> 与 legacy 形制 <code>(512,64,1)</code> 在现有白名单里早已放行，所以守卫<b>不需要</b>新白名单项；若误把 <code>integration</code> 写成第二个顶层枚举，会同时动白名单、<code>integration_type</code> 单值断言与 <code>lazy_init</code> 条件，改动面翻倍。反例：顶层 <code>modulation</code> 下写 <code>integration: modulation</code> 是同一行为的第二种写法，必须拒，否则 resolved yaml 的 sha256 不同却训练同一模型。</p>
+
+<h3>3.2 为什么 motion 路必须固定 1024</h3>
+<p><code>history_gemma.py::MemoryAttention.__call__</code> 硬编码 <code>num_heads, num_kv_heads, head_dim, width = 4, 1, 256, 1024</code> 并断言 <code>assert mem_width == x_width == width</code>；x 是动作专家流（宽 1024），所以送进来的 <code>mem_seq[-1]</code> 必须是 1024。帧路为 context 又必须是主干宽 2048。现有 <code>memory_token_dim</code> 是两路共用的单一输出维，表达不了「帧 2048 + motion 1024」，这正是 <code>PerceptualMemory</code> 要在分路时把 motion 输出维从 <code>memory_token_dim</code> 解绑的原因。</p>
+<p class="warn">⚠ 陷阱：<code>_gemma.Module.init</code> 用 <code>mem_mods</code> 生成 dummy <code>mem_seq=(1,4,c.width)</code>，c 为动作专家配置，宽 1024，与分路一致；若分路时 <code>lazy_init</code> 漏传 <code>mem_mods=[False, True]</code>，<code>mem_attn</code> 参数不会初始化，前向直接报缺参。</p>
+
+<h3>3.3 <code>make_attn_mask</code> 的 na 语义</h3>
+<p><code>history_pi0.py::make_attn_mask(input_mask, mask_ar, mask_na=None)</code>：<code>cumsum(mask_ar)</code> 构因果块，<code>input_mask ⊗ input_mask</code> 排除 padding；给了 <code>mask_na</code> 时额外屏蔽「查询或键任一为 na，且键位于首个 na 之前」的对。context 模式下记忆位于首个图像 token（na=True）之前，于是<b>图像 token 不看记忆、记忆不看图像，文本与动作 token 看记忆</b>。分路的前缀与纯 context 512 逐位同形，掩码自然相同（逻辑推导，由 §3.5 的结构检查与关闭态逐位核对兜底）。</p>
+<p class="warn">⚠ 陷阱：B 的 <code>sample_actions</code> 写 kv_cache 用的是两参数版（前缀无记忆）；分路必须改走三参数版（带 <code>prefix_na_mask</code>），否则图像 token 会看到帧记忆，训练与推理掩码不一致。另一个坑：<code>embed_prefix</code> 内部会调用 <code>embed_memory</code>，若 <code>compute_loss</code> 为拿 motion 段再调一次，会让帧路编码器跑两遍；应设计为一次编码、两段分发。</p>
+
+<h3>3.4 为什么 <code>mem_order</code> 可以保留字段但模型不读</h3>
+<p><code>mem_order</code> 被 <code>RoboMMEInputs.__call__</code>、RepackTransform 字段映射、<code>HistAugObservation</code>、<code>HistoryPi0.inputs_spec</code>（<code>_motion_specs</code> 里 (B,672) int32）与 <code>policy.py::_prepare_history</code> 共同引用。分路下帧段进前缀、motion 段进交叉注意力，两段不在同一序列里，交错没有意义；但删字段要同时改 dataloader、推理侧与 observation 契约，还会让旧 ckpt 的 <code>inputs_spec</code> 变形。保留字段、模型分路分支不读，是改动最小且对旧路径零影响的做法。</p>
+<p class="warn">⚠ 反例：motion 段的 RoPE 位置在 <code>MemoryAttention</code> 里是 <code>arange(mem_len)</code>，即 motion 段内部下标；不重排时下标顺序 = 库内时刻升序，有效位在前、补零在后并由 <code>mem_mask</code> 屏蔽，语义正确；若有人在分路里也套 <code>mem_order</code>，会拿 672 位置换去索引 160 位序列而越界。</p>
+
+<h3>3.5 第 18 条两块一致性怎么证明</h3>
+<table class="tbl">
+<tr><th>块</th><th>查什么</th><th>为什么能逐位 / 能成立</th><th>判定行</th></tr>
+<tr><td>CPU ①（G2）</td><td>新 yaml 去掉 <code>integration</code> 键且 <code>motion.enabled=false</code>：参数叶与前向输出对纯 context 512 关闭态逐位</td><td>缺省分支走原代码路径，模块创建顺序不变 → nnx rng 拆分顺序不变 → 初值逐位相同</td><td><code>CLOSED_BITEXACT=PASS leaves=55 frame_keys_equal=1</code></td></tr>
+<tr><td>CPU ②（G3）</td><td>旧两份 motion yaml（context 同路、modulation 同路）在改后代码下叶数、形状、前向逐位不变</td><td>缺省 = 跟随，<code>motion_modulation</code> 恒 False，<code>HistoryBlock</code> 条件化简为原式</td><td><code>LEGACY_YAML_BITEXACT=PASS yaml=2</code></td></tr>
+<tr><td>CPU ③（G4）</td><td>分路开启态：前缀长度等于纯 context 512；<code>mem_seq</code> 为 (b,160,1024)；65 叶，叶名集合与 B 相同，<code>encoder_static</code> (2816,2048)、<code>motion_encoder_static</code> (1536,1024)；另把 <code>motion_mask</code> 全置 False 前向一次，结果有限（只测、不加守卫）</td><td>结构等式直接核对</td><td><code>SPLIT_STRUCT=PASS prefix_len=&lt;n&gt; mem_seq=160x1024 leaves=65 empty_motion_finite=1</code></td></tr>
+<tr><td>GPU ④（G5）</td><td>GPU 0–3 跑 20 步，NVML 500 ms 采样</td><td>只确认能起跑并记录资源，不设步时门槛</td><td><code>SMOKE20=PASS oom=0 loss_finite=1 peak_mib=&lt;n&gt; steady_s_per_step=&lt;x&gt;</code></td></tr>
+<tr><td>GPU ⑤（G6）</td><td>100 步保存 → <code>create_trained_policy</code> 严格加载 → 固定 noise 动作一致</td><td>加载走 <code>_assert_param_tree_exact</code>，history_config 取自 run 目录快照</td><td><code>CKPT_LOAD_SPLIT=PASS leaves_equal=1 mem_leaves_changed=&lt;n&gt; actions_match=1</code></td></tr>
+</table>
+<p class="warn">⚠ 陷阱：①② 能逐位的前提是新增模块只在分路条件下创建、且不插在已有模块之前改变 rng 消费顺序；在 <code>__init__</code> 里无条件新建任何模块都会让①②失败。</p>
+
+<h2 id="s4">四、最大风险与资源</h2>
+<ul>
+<li><b>显存与步时（推断，未实测）</b>：0928 实测 4 卡纯 context 512 为 3.25 s/步、约 73 GiB/卡，context+motion160 同路为 3.845–3.863 s/步、约 72 GiB/卡（均为 4 任务 1600ep 库）。分路前缀与纯 context 512 同长、交叉注意力只有 160 位，<b>推断</b> 4 卡 3.3–3.5 s/步 → 80k 约 73–78 h；8 卡约 1.75–1.85 s/步 → 39–41 h。显存约 73 GiB/卡，推断不 OOM。沿用上一轮用户口径「太慢就不要管了」「OOM 就报错」：短测不设步时门槛，OOM 即停下报错，不自行换卡数。</li>
+<li><b>只读锁与在跑 2048 训练</b>：<code>src/ scripts/ packages/</code> 当前被 1018 计划红线 18 只读锁锁住（权限原件 <code>v1-store/m8v-scripts/m2k-chmod-before.txt</code>）。worktree 子代理不受影响，合并到主检出受影响。在跑进程已把 <code>history_pi0.py</code> / <code>percep_mem.py</code> / <code>history_gemma.py</code> 加载进内存，不会重新 import；但 dataloader worker 若重建是否会重新 import <code>framesamp_dataset.py</code>，<b>主会话未核实</b>，所以该文件的改动必须保证旧 yaml 行为逐位不变。处置方式待用户裁决（§6 Q2）。</li>
+<li><b>不能热启动</b>：65 叶新参数树与任何现有 ckpt 不同形，必须从 <code>pi05_base</code> 冷启动 80k；中途崩溃不 resume、不自动重跑。</li>
+<li><b>既有测试缺口</b>：<code>scripts/training/tests/test_pack_guards.py</code> 的 fixture 依赖 <code>v1-store/datasets/ref-shard</code> 与 <code>v1-store/episode_manifest.json</code>，环境 B 缺失时会出 40 errors（上一轮 G0 记录 <code>FileNotFoundError</code>）；这是既有情况，不算本计划引入；本计划的守卫验收由 S2 在该文件新增的 5 个不依赖 fixture 的用例（<code>test_split_integration_accept</code> / <code>test_split_integration_reject</code>）承担，G0 判定行 <code>GUARD_SPLIT=PASS new_passed=5 failed=0 errors=&lt;与改前同环境同数&gt;</code>。</li>
+</ul>
+
+<h2 id="s5">五、步骤总览</h2>
+<table class="tbl">
+<tr><th>步</th><th>做什么</th><th>谁做</th><th>判定</th><th>预计</th></tr>
+<tr><td>S1</td><td>模型侧：<code>percep_mem.py</code> 分路输出、<code>history_pi0.py</code> 分路分支（<code>__init__</code>/<code>embed_memory</code>/<code>embed_prefix</code>/<code>compute_loss</code>/<code>sample_actions</code>）、<code>history_gemma.py</code> 加 <code>motion_modulation</code>、<code>framesamp_dataset.py</code> 守卫接受新键、新建 yaml</td><td>写入子代理 S1（opus，worktree）</td><td>worktree 内 CPU：四个 py 文件 <code>py_compile</code>；<code>S1_LEAVES=PASS closed=55 follow_ctx=59 follow_modul=65 split=65 encoder_static=2816x2048 motion_static=1536x1024</code>；<code>test_pack_guards.py</code> failed=0</td><td>60 min</td></tr>
+<tr><td>S2</td><td>入口与测试：runner <code>train-ctxframe-modulmotion-80k.sh</code>（拟名，照 <code>train-motion-80k.sh</code>）、守卫用例 <code>test_pack_guards.py</code>（新增 5 例）、守卫 / 结构 / 一致性脚本 <code>check_ctxframe_modulmotion.py</code>、上传驱动 + allowlist + bucket README</td><td>写入子代理 S2（opus，worktree），与 S1 并行；功能依赖 S1 代码，worktree 内只做静态验收</td><td><code>UPLOAD_LINT=PASS</code>；<code>S2_STATIC=PASS collected=5 subcommands=5</code></td><td>45 min</td></tr>
+<tr><td>3</td><td>S1 先、S2 后逐个走：合并前审查 → 按 Q2 处置只读锁 → <code>--no-ff</code> 合并（两次同号 <code>commitV11.29</code>）→ 合并后审查 → push → 重新上锁；合一个、审一个、push 一个</td><td>审查 RV1（sonnet）；主会话合并</td><td><code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code>、<code>RELOCK=OK writable=0</code>（Q2 方案 a）</td><td>40 min</td></tr>
+<tr><td>4</td><td>两次合并后在主检出跑：G0 守卫用例、G1 runner 干跑、CPU 一致性闸门 G2–G4（①②③）</td><td>主会话</td><td><code>GUARD_SPLIT</code>、<code>DRY_RUN_CFM=PASS runs=2</code>、<code>CLOSED_BITEXACT</code>、<code>LEGACY_YAML_BITEXACT</code>、<code>SPLIT_STRUCT</code></td><td>15 min</td></tr>
+<tr><td>5</td><td>G5：GPU 0–3 20 步短测（<code>cfm-smoke</code> + <code>cfm-smoke-nvml</code>）；G6：100 步保存加载（<code>cfm-ckpt100</code>）</td><td>运行子代理 X1（opus）</td><td><code>SMOKE20=PASS</code>、<code>CKPT_LOAD_SPLIT=PASS</code></td><td>40–60 min</td></tr>
+<tr><td>6</td><td>打 <code>commitV11.30Beta</code>（起跑前档案 <code>launch.md</code>，只动 <code>docs/</code>）</td><td>主会话</td><td>G7 <code>BETA_CLEAN=PASS</code>（clean HEAD）</td><td>10 min</td></tr>
+<tr><td>7</td><td>起跑 80k（<code>cfm-train</code>，GPU 0–3，FSDP4 w8）+ 增量上传会话 <code>cfm-inc</code></td><td>X1 起跑；主会话挂 Monitor、起上传</td><td>起跑后 loss 有限、步数推进</td><td>推断 73–78 h</td></tr>
+<tr><td>8</td><td>收尾：核 <code>EXIT_CODE=0</code> → 正式驱动先 <code>SMOKE=1</code> 再全量回读（<code>cfm-upload</code>）→ 权限恢复 → <code>result.md</code> 回写 <code>commitV11.30</code> → 状态机 done</td><td>主会话</td><td>G8 <code>TRAIN_DONE=PASS exit=0 ckpts=16</code>、G9 <code>SHA256_PRE_POST_DIFF=0</code>、<code>PERM_RESTORED=OK</code></td><td>数小时</td></tr>
+</table>
+
+<h2 id="s6">六、用户待裁决项</h2>
+<table class="tbl">
+<tr><th>编号</th><th>问题</th><th>选项</th><th>推荐</th></tr>
+<tr><td>Q1</td><td>GPU</td><td>a. GPU 0–3 立即起，4 卡 FSDP4 w8；b. 等 2048 训练结束后 8 卡</td><td>a：与上一轮两条 512 run 同为 4 卡，可直接比</td></tr>
+<tr><td>Q2</td><td>合并时 1018 只读锁仍在</td><td>a. 每次合并前只给本次要被改写的已跟踪文件 <code>chmod u+w</code>，合并后先把新增文件原权限登记进 <code>cfm-chmod-added.txt</code>，再把本次 diff 涉及的全部文件 <code>a-w</code>（<code>RELOCK=OK writable=0</code>），并在 1018 计划进展登记追加一行；最终恢复按 <code>m2k-chmod-before.txt</code> 与 <code>cfm-chmod-added.txt</code> 合并清单，由谁、何时恢复一并裁决；b. 等 2048 训练结束解锁后再合并（约美东 10-20 中午前后）</td><td>a：选训练稳定、无 worker 重建的时段合并；<code>framesamp_dataset.py</code> 改动须对旧 yaml 逐位不变</td></tr>
+<tr><td>Q3</td><td>run 名 / bucket 名 / 配置键名</td><td>见第一节口径 4、6，用户可改</td><td>按推荐</td></tr>
+<tr><td>Q4</td><td>是否登记进状态机 <code>docs/handoff/current.json</code></td><td>任务 id <code>mixed8-ctxframe-modulmotion-train</code></td><td>登记，状态 <code>planned</code></td></tr>
+</table>
+
+<h2 id="s7">七、子代理分工与合并（简述）</h2>
+<p>改动拆成两块并行写：S1 管模型侧（三个模型文件、数据守卫、新 yaml），S2 管入口与测试（runner、守卫用例 <code>test_pack_guards.py</code>、核对脚本、上传驱动与 allowlist、bucket README），各在独立 worktree，用 opus，互不碰对方文件。每块合并前由一个 sonnet 审查者 RV1 钉死 BASE/TIP 看 diff，合并后再审一次合并结果；S1 先合、S2 后合，合一个、审一个、push 一个，两次合并同号 <code>commitV11.29</code>。S2 的功能依赖 S1 代码，worktree 内只做静态验收（<code>UPLOAD_LINT</code>、<code>S2_STATIC</code>），G0、G1 与 G2–G4 由主会话在两次合并之后于主检出跑。短测、保存加载与正式起跑由一个 opus 运行子代理 X1 在主检出执行，只跑已合并的脚本、核起跑、交回 tmux 名，不改任何文件。G0–G4、Beta、只读锁、Monitor 监听、增量与正式上传、收尾由主会话负责。逐文件清单与分配表见第二部分。</p>
+
+<h2 id="s8">八、验收判定行一览</h2>
+<table class="tbl">
+<tr><th>判定</th><th>通过条件</th></tr>
+<tr><td><code>S1_LEAVES=PASS closed=55 follow_ctx=59 follow_modul=65 split=65 encoder_static=2816x2048 motion_static=1536x1024</code></td><td>S1 worktree 内自检：四档 yaml 叶数与两处形状</td></tr>
+<tr><td><code>UPLOAD_LINT=PASS</code> / <code>S2_STATIC=PASS collected=5 subcommands=5</code></td><td>S2 worktree 内静态验收：驱动与 runner <code>bash -n</code>、allowlist 可解析、上传侧无旧 run 残名；检查脚本列出 5 个子命令；新增守卫用例收集到 5 例</td></tr>
+<tr><td><code>GUARD_SPLIT=PASS new_passed=5 failed=0 errors=&lt;与改前同环境同数&gt;</code></td><td>（G0）新 yaml 放行；非法 <code>integration</code> 值、顶层 modulation 下写 <code>integration</code>、motion 关闭却写 <code>integration</code> 全拒；旧 512 两档与 motion 两份 yaml 接受条件不变</td></tr>
+<tr><td><code>DRY_RUN_CFM=PASS runs=2</code></td><td>（G1）runner 正式 run 名与短测 run 名两条干跑命令正确</td></tr>
+<tr><td><code>CLOSED_BITEXACT=PASS leaves=55 frame_keys_equal=1</code></td><td>（G2）关闭态参数叶与前向对纯 context 512 逐位相同</td></tr>
+<tr><td><code>LEGACY_YAML_BITEXACT=PASS yaml=2</code></td><td>（G3）旧 context 同路、modulation 同路两份 yaml 叶数、形状、前向逐位不变</td></tr>
+<tr><td><code>SPLIT_STRUCT=PASS prefix_len=&lt;n&gt; mem_seq=160x1024 leaves=65 empty_motion_finite=1</code></td><td>（G4）<code>prefix_len</code> 等于纯 context 512；叶名集合等于 B，两处形状差异如 §2.5</td></tr>
+<tr><td><code>SMOKE20=PASS oom=0 loss_finite=1 peak_mib=&lt;n&gt; steady_s_per_step=&lt;x&gt;</code></td><td>（G5）20 步无 OOM、loss 有限；峰值与步时只记录不设门槛</td></tr>
+<tr><td><code>CKPT_LOAD_SPLIT=PASS leaves_equal=1 mem_leaves_changed=&lt;n&gt; actions_match=1</code></td><td>（G6）100 步 ckpt 严格加载叶相等，固定 noise 动作一致</td></tr>
+<tr><td><code>PRE_MERGE_REVIEW=PASS|FAIL base=&lt;sha&gt; tip=&lt;sha&gt; files=&lt;n&gt; commits=&lt;n&gt; findings=&lt;n&gt;</code> / <code>POST_MERGE_REVIEW=PASS|FAIL merge=&lt;sha&gt; tests=&lt;结果&gt; files=&lt;n&gt;</code></td><td>S1、S2 各一次合并前、合并后审查，均须 PASS</td></tr>
+<tr><td><code>RELOCK=OK writable=0</code></td><td>每次合并后重新上锁，<code>src/ scripts/ packages/</code> 已跟踪文件无可写位</td></tr>
+<tr><td><code>BETA_CLEAN=PASS head=&lt;commitV11.30Beta sha&gt;</code></td><td>（G7）Beta 锚点后 <code>git status --porcelain</code> 为空</td></tr>
+<tr><td><code>TRAIN_DONE=PASS exit=0 ckpts=16</code></td><td>（G8）日志末行 <code>EXIT_CODE=0</code>，80000 步跑完，16 份 ckpt（5000…75000、79999）</td></tr>
+<tr><td><code>SHA256_PRE_POST_DIFF=0</code></td><td>（G9）正式驱动全量回读一致（增量会话的 <code>INC_END</code> 不算上传完成）</td></tr>
+<tr><td><code>PERM_RESTORED=OK</code></td><td>临时解锁后按权限清单逐行恢复，diff 为空</td></tr>
+</table>
+
+<h2 id="s9">九、交接顺序与状态机登记</h2>
+<ul>
+<li><b>任务 id</b>：<code>mixed8-ctxframe-modulmotion-train</code>。</li>
+<li><b>交接前必须完成</b>：S1/S2 合并并 push（<code>commitV11.29</code>）、CPU 闸门四行 PASS、<code>SMOKE20</code> 与 <code>CKPT_LOAD_SPLIT</code> PASS、<code>PERM_RESTORED=OK</code>、<code>commitV11.30Beta</code> 已打、<code>cfm-train</code> 与 <code>cfm-inc</code> 起跑并登记句柄。</li>
+<li><b>长尾</b>：<code>cfm-train</code> 跑完 80k 核 <code>EXIT_CODE=0</code>；<code>cfm-inc</code> 打 <code>INC_END</code>；<code>cfm-upload</code> 正式驱动 <code>SHA256_PRE_POST_DIFF=0</code>；<code>result.md</code> 回写 <code>commitV11.30</code>。</li>
+<li><b>上游依赖</b>：<code>mixed8-vla-build</code>（closed，提供帧库与 motion 库）。与 <code>mixed8-2048-train</code> 无数据或代码依赖，只共享机器（GPU 4–7）与只读锁。</li>
+<li><b>下游</b>：本任务 done 后可开工的是本 run 的评估计划（另立）。</li>
+</ul>
+<p>计划写完后先问用户是否登记进状态机（§6 Q4），用户同意后才写 <code>docs/handoff/current.json</code>。</p>
+
+<h1 id="p2">第二部分（技术细节，供 agent 追踪）</h1>
+
+<p>本部分路径一律相对仓库根 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code>（下文记作 <code>$REPO</code>），代码锚点一律写成 <code>文件::类.方法</code> 或配置键，不写行号（第 9 条）。三种状态的叫法全文统一：</p>
+<table class="tbl">
+<thead><tr><th>状态</th><th>判定</th><th>现有实例</th></tr></thead>
+<tbody>
+<tr><td>关闭态</td><td>无 <code>motion</code> 节，或 <code>motion.enabled: false</code></td><td><code>perceptual-framesamp-context-8frame-8x8.yaml</code>、<code>perceptual-framesamp-modul-8frame-8x8.yaml</code>、2048 两份 yaml</td></tr>
+<tr><td>跟随态</td><td><code>motion.enabled: true</code> 且无 <code>motion.integration</code> 键：motion 跟随帧路的 <code>integration_type</code>（改前唯一的开启态）</td><td><code>perceptual-framesamp-context-8frame-8x8-motion.yaml</code>（context 同路）、<code>perceptual-framesamp-modul-8frame-8x8-motion-mixed8.yaml</code>（modulation 同路，V11.25 已训）</td></tr>
+<tr><td>分路态</td><td><code>motion.enabled: true</code> 且 <code>motion.integration: modulation</code>，并且顶层 <code>integration_type: context</code></td><td>本计划新建的 <code>perceptual-framesamp-ctxframe-modulmotion-8frame-8x8-mixed8.yaml</code></td></tr>
+</tbody>
+</table>
+
+<h2 id="t0">〇 前置声明与红线</h2>
+<ul>
+<li><strong>R1</strong> 只改第二部分 §1 列出的文件（S1 五个、S2 六个、主会话的 <code>docs/</code> 档案）；不改训练计算、dataloader 读取逻辑、sampler、collate、优化器、全局默认超参（<code>src/mme_vla_suite/training/config.py</code> 的 <code>mme_vla_suite_b128_80k</code> 条目不动）；长期文档只用符号锚点，不写行号。</li>
+<li><strong>R2</strong> <code>motion.integration</code> 键缺省时必须逐位保持旧行为：关闭态 yaml 与两份旧 motion yaml（跟随态）在改后代码下的参数叶名、形状、初值与固定输入前向逐位不变。由 G2（<code>CLOSED_BITEXACT</code>）与 G3（<code>LEGACY_YAML_BITEXACT</code>）证明，任一不过不得合并。</li>
+<li><strong>R3</strong> 不新增任何计划外的守卫、兜底或开关，禁止叠加保护层：只允许 §1 写明的两处取值校验（<code>HistoryPi0.__init__</code> 一处、<code>FrameSampDataset.__init__</code> 的 motion 段一处，语义相同、各管模型侧与数据侧）和一个布尔字段 <code>motion_modulation</code>；不加 try/except 回退、不加环境变量开关、不对「motion 掩码全空」做特判、不删 <code>mem_order</code> 字段。</li>
+<li><strong>R4</strong> 不动 <code>scripts/dataset/hf_export/mixed8_200_runner/_train_common.sh</code>、<code>scripts/dataset/hf_export/_mixed8_200_vla_ckpt_export_common.sh</code>、<code>v1-store/m8v-scripts/m8v-ckpt-inc.sh</code>；数据库 <code>v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/framesamp-8x8</code> 与 motion 库 <code>…/motion</code> 只读，一个字节不改。</li>
+<li><strong>R5</strong> 不占 GPU 4–7，不动 tmux <code>m2k-train-modul</code>、<code>m2k-inc-modul</code> 及任何 <code>m2k-*</code> 会话。主检出上一切会初始化 JAX 的命令必须显式写 <code>CUDA_VISIBLE_DEVICES=0,1,2,3</code>（或其子集）或 <code>JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES=</code>，否则 JAX 会在 GPU 4–7 上预分配显存；<code>ckpt</code> 子命令以 <code>motion_stub=True</code> 调 <code>create_trained_policy</code>，不在 yaml 的 <code>online_gpu: 4</code> 上起真 sidecar。</li>
+<li><strong>R6</strong> 只读锁：<code>src/ scripts/ packages/</code> 现处于 1018 计划的只读锁下（原权限 <code>v1-store/m8v-scripts/m2k-chmod-before.txt</code>）。worktree 写代码不受影响；合并进主检出按用户对 Q2 的裁决执行（§4.6 方案 a / 方案 b），裁决前不合并。</li>
+<li><strong>R7</strong> tmux 前缀 <code>cfm-</code>：本计划只起 <code>cfm-smoke</code>、<code>cfm-smoke-nvml</code>、<code>cfm-ckpt100</code>、<code>cfm-train</code>、<code>cfm-inc</code>、<code>cfm-upload</code>；清理只用 <code>tmux kill-session -t '=确切会话名'</code> 一次一个，删前删后各 <code>tmux ls</code> 核对，禁止 <code>kill-server</code>、<code>-a</code>、通配与批量。</li>
+<li><strong>R8</strong> worktree 内只跑 ≤5 分钟的 CPU 测试（<code>JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES=</code>），不在 worktree 建 <code>v1-store</code> 链接；GPU 闸门 G5、G6 在合并 push 之后由 X1 在主检出跑。</li>
+<li><strong>R9</strong> 范围边界：评估另立计划，本计划不起 <code>serve_policy.py</code>、不连 benchmark。80k 中途崩溃停下问用户，不自动 resume、不改参数；任一 OOM 停下报错交用户，不自行换卡数；步时慢不算失败。run 名全新，<code>_train_common.sh</code> 的「拒绝覆盖已有日志」保留。</li>
+<li><strong>R10</strong> commit 编号：S1、S2 两次 <code>--no-ff</code> 合并提交都用 <code>commitV11.29</code>（照 V11.26 两次合并同号的先例）；正式起跑锚点 <code>commitV11.30Beta</code>；结论回写 <code>commitV11.30</code>。Beta 与回写是两个独立 commit，禁止 squash 或 amend。</li>
+</ul>
+
+<h2 id="t1">1. 逐文件改动清单</h2>
+
+<h3>S1（模型与配置）</h3>
+
+<h4>S1-a <code>src/mme_vla_suite/models/representation/percep_mem.py</code></h4>
+<table class="tbl">
+<thead><tr><th>锚点</th><th>改什么</th><th>关闭态</th><th>跟随态</th><th>分路态</th></tr></thead>
+<tbody>
+<tr><td><code>percep_mem.py</code> 模块级</td><td>新增常量 <code>MOTION_MODULATION_WIDTH = 1024</code>，注释写明等于 <code>history_gemma.py::MemoryAttention.__call__</code> 里硬编码的 <code>width</code></td><td>不读</td><td>不读</td><td>决定 motion 路输出宽</td></tr>
+<tr><td><code>PerceptualMemory.__init__</code></td><td>在 <code>self.motion_enabled</code> 赋值之后读 <code>motion.integration</code>：<code>self.motion_split = bool(self.motion_enabled and mcfg.get("integration", None) == "modulation")</code>；<code>motion_encoder_static</code> 输出维改为「分路时 <code>MOTION_MODULATION_WIDTH</code>，否则 <code>memory_token_dim</code>」。两个 motion 模块仍在 <code>feature_encoder</code> 之后、按原顺序创建（RNG 顺序不变）；取值校验不在这里做（归 <code>HistoryPi0.__init__</code>）</td><td><code>motion_split=False</code>，motion 模块不创建，参数树不变</td><td><code>motion_split=False</code>，<code>motion_encoder_static</code> 仍为 1536→<code>memory_token_dim</code>（context 2048 / modulation 1024），初值不变</td><td><code>motion_encoder_static</code> 为 1536→1024，叶名不变</td></tr>
+<tr><td><code>PerceptualMemory.__call__</code></td><td>末尾按 <code>motion_split</code> 二选一返回；其余输入检查原样</td><td>早返回 <code>(hidden_states, None, None)</code> 原样</td><td><code>(concat([hidden_states, motion_tokens], 1), None, None)</code> 原样</td><td><code>(hidden_states, motion_tokens, None)</code>：<code>(b,512,2048)</code> 与 <code>(b,160,1024)</code> 两段，不 concat</td></tr>
+</tbody>
+</table>
+<p>建议写法（返回契约：三元组位置不变，第二位在分路态承载 motion 段，在另两态恒为 <code>None</code>，所以关闭态、跟随态的调用方看到的返回值与改前逐位相同）：</p>
+<pre><code># __init__：紧接 self.motion_enabled 之后
+self.motion_split = bool(self.motion_enabled and mcfg.get("integration", None) == "modulation")
+if self.motion_enabled:
+    ...                                   # motion_budget / motion_dim / motion_pos_dim / motion_pos_proj 原样
+    out_dim = MOTION_MODULATION_WIDTH if self.motion_split else int(self.config.memory_token_dim)
+    self.motion_encoder_static = nnx.Linear(
+        self.motion_dim + pos_hidden, out_dim, rngs=rngs, dtype=dtype, kernel_init=kernel_init)
+
+# __call__ 末尾
+motion_tokens = self.motion_encoder_static(jnp.concatenate([motion_emb, pos_h], axis=-1))
+if self.motion_split:
+    return hidden_states, motion_tokens, None                                  # 分路态
+return jnp.concatenate([hidden_states, motion_tokens], axis=1), None, None    # 跟随态，原样
+</code></pre>
+
+<h4>S1-b <code>src/mme_vla_suite/models/integration/history_gemma.py</code></h4>
+<table class="tbl">
+<thead><tr><th>锚点</th><th>改什么</th><th>关闭态</th><th>跟随态</th><th>分路态</th></tr></thead>
+<tbody>
+<tr><td><code>HistoryBlock</code> 字段</td><td>新增 <code>motion_modulation: bool = False</code></td><td>默认 False</td><td>默认 False</td><td>True</td></tr>
+<tr><td><code>HistoryBlock.__call__</code> 的 <code>mem_attn</code> 创建</td><td>条件由 <code>self.integration_type == "modulation"</code> 改为 <code>self.integration_type == "modulation" or self.motion_modulation</code></td><td>同改前</td><td>同改前</td><td>context 下也创建 <code>MemoryAttention(name="mem_attn")</code></td></tr>
+<tr><td><code>HistoryBlock.__call__</code> 的 FFN 前调用</td><td>条件 <code>i == len(xs) - 1 and (self.integration_type == "modulation" or self.motion_modulation)</code>，调用体 <code>mem_attn(x, mem_seq[-1], mem_mask[-1])</code> 与 <code>MemoryRMSNorm(name="mem_rms_norm_ffn")</code> 原样</td><td>同改前</td><td>同改前</td><td>动作专家流在 FFN 前做 motion 交叉注意力</td></tr>
+<tr><td><code>Module</code> 字段与 <code>Module.setup</code></td><td>新增 <code>motion_modulation: bool = False</code>；<code>setup</code> 里 <code>nn.scan(block_cls, …)(…)</code> 的关键字参数加 <code>motion_modulation=self.motion_modulation</code></td><td>同改前</td><td>同改前</td><td>18 层共享开关</td></tr>
+<tr><td><code>Module.init</code></td><td>不改。dummy <code>mem_seq</code> 宽取 <code>c.width</code>，动作专家 <code>gemma_300m</code> 的 width 为 1024，恰好等于 <code>MemoryAttention</code> 的硬编码宽</td><td>—</td><td>—</td><td>lazy_init 可直接用</td></tr>
+</tbody>
+</table>
+
+<h4>S1-c <code>src/mme_vla_suite/models/integration/history_pi0.py</code></h4>
+<table class="tbl">
+<thead><tr><th>锚点</th><th>改什么</th><th>关闭态</th><th>跟随态</th><th>分路态</th></tr></thead>
+<tbody>
+<tr><td><code>HistoryPi0.__init__</code>（use_history 分支，<code>self.mem_encoder</code> 创建与既有一致性检查之后）</td><td>motion 开启时读 <code>motion.integration</code>：取值不在 <code>{缺省, "modulation"}</code> 即 <code>raise ValueError</code>；为 <code>"modulation"</code> 而 <code>integration_type != "context"</code> 即 <code>raise ValueError</code>；<code>self.motion_split = bool(self.mem_encoder.motion_split)</code>。no-history 分支同时置 <code>self.motion_split = False</code></td><td>不读键，<code>motion_split=False</code></td><td>键缺省，通过，<code>False</code></td><td><code>True</code></td></tr>
+<tr><td><code>HistoryPi0.__init__</code> 非 expert 分支的 <code>_gemma.Module(...)</code> 与 <code>llm.lazy_init(...)</code></td><td><code>_gemma.Module(..., integration_type=self.integration_type, motion_modulation=self.motion_split)</code>；<code>mem_mods=[False, True] if (self.integration_type == "modulation" or self.motion_split) else [False, False]</code>。expert 分支与 no-history 分支不改</td><td>同改前</td><td>同改前</td><td>context 树上多出 6 个 modulation 叶</td></tr>
+<tr><td><code>HistoryPi0.embed_memory</code></td><td>首行解包改为 <code>tokens, motion_part, _ = self.mem_encoder(...)</code>；开启态既有两处检查（observation 缺键含 <code>mem_order</code>、<code>motion_emb</code> 长度）原样保留，紧随其后、在 <code>concatenate</code> 与 <code>take_along_axis</code> 之前分出分路返回</td><td>早返回原样</td><td>concat + 按 <code>mem_order</code> 重排原样</td><td>返回两组：<code>((tokens, obs.static_mask, [False]*512, [False]*512), (motion_part, obs.motion_mask))</code>，不读 <code>mem_order</code></td></tr>
+<tr><td><code>HistoryPi0.embed_prefix</code></td><td>context 分支：<code>mem = self.embed_memory(obs)</code>；<code>if self.motion_split: mem = mem[0]</code>；再按原四元组解包追加</td><td>同改前</td><td>同改前</td><td>前缀只拼帧段 512 位：<code>[帧记忆 512 | 图像 | 文本]</code>，形状与纯 context 512 相同</td></tr>
+<tr><td><code>HistoryPi0.compute_loss</code></td><td>把 <code>elif self.integration_type == "modulation":</code> 改为 <code>elif self.integration_type == "modulation" or self.motion_split:</code>；分支内取 <code>mem_seq, mem_mask</code>：分路态 <code>_, (mem_seq, mem_mask) = self.embed_memory(observation)</code>，否则原四元组写法；<code>self.PaliGemma.llm([prefix, suffix], mask, positions, adarms_cond=[None, cond], mem_seq=[None, mem_seq], mem_mask=[None, mem_mask])</code> 原样</td><td>走原 else 分支</td><td>context 同路走 else、modulation 同路走原分支，均不变</td><td>前缀含帧段 + 三参数 <code>make_attn_mask</code>（use_history 本就三参数），动作专家收 motion 段</td></tr>
+<tr><td><code>HistoryPi0.sample_actions</code></td><td>前缀段：仍走 else 分支（context 用三参数 <code>make_attn_mask(prefix_mask, prefix_ar_mask, prefix_na_mask)</code> 写 kv_cache），其后加 <code>if self.motion_split: _, (mem_seq, mem_mask) = self.embed_memory(observation)</code>；<code>step</code> 内 <code>elif self.integration_type == "modulation":</code> 改为 <code>elif self.integration_type == "modulation" or self.motion_split:</code></td><td>同改前</td><td>同改前</td><td>kv_cache 来自 context 前缀，每个去噪步传 <code>mem_seq=[None, mem_seq]</code>、<code>mem_mask=[None, mem_mask]</code></td></tr>
+<tr><td><code>_motion_enabled</code>、<code>_motion_specs</code>、<code>HistoryPi0Config.inputs_spec</code>、<code>get_freeze_filter</code></td><td>不改（<code>mem_order</code> 仍在 spec 中，observation 契约不变）</td><td colspan="3">不变</td></tr>
+</tbody>
+</table>
+<pre><code># HistoryPi0.__init__（use_history 分支）
+mi = self.history_config.motion.get("integration", None) if self.mem_encoder.motion_enabled else None
+if mi not in (None, "modulation"):
+    raise ValueError(f"motion.integration 只允许缺省或 'modulation'（当前 {mi!r}）")
+if mi == "modulation" and self.integration_type != "context":
+    raise ValueError(f"motion.integration=modulation 只允许与 integration_type=context 同用（当前 {self.integration_type!r}）")
+self.motion_split = bool(self.mem_encoder.motion_split)
+
+# HistoryPi0.embed_memory（开启态既有检查之后）
+if self.motion_split:
+    n = tokens.shape[1]
+    return (tokens, obs.static_mask, [False] * n, [False] * n), (motion_part, obs.motion_mask)
+</code></pre>
+
+<h4>S1-d <code>src/mme_vla_suite/training/framesamp_dataset.py</code></h4>
+<table class="tbl">
+<thead><tr><th>锚点</th><th>改什么</th><th>关闭态</th><th>跟随态</th><th>分路态</th></tr></thead>
+<tbody>
+<tr><td><code>FrameSampDataset.__init__</code> 的 motion 专属守卫（<code>if self._motion_enabled:</code> 段开头，在 <code>motion_root</code> 必填检查之前）</td><td>加两条 <code>_req</code>：<code>motion.integration ∈ {缺省, "modulation"}</code>；为 <code>"modulation"</code> 时要求 <code>integration_type == "context"</code>。报错文字含 <code>motion.integration</code>。白名单 <code>(integration_type, memory_token_dim)</code>、形制 <code>legacy_shape</code>/<code>new_shape</code>/<code>ctx_shape</code>、<code>__getitem__</code> 一律不改</td><td>不进该段，逐位不变（2048 在跑 run 即此态）</td><td>键缺省，两条均通过</td><td><code>(context,2048)</code> + <code>(512,64,1)</code> legacy 原样放行，新增两条通过；产出字段与 V11.25 完全相同</td></tr>
+</tbody>
+</table>
+<pre><code>if self._motion_enabled:
+    mi = mcfg.get("integration", None)
+    _req(mi in (None, "modulation"), f"motion.integration={mi!r} 只允许缺省或 'modulation'")
+    _req(mi != "modulation" or str(hc.integration_type) == "context",
+         f"motion.integration=modulation 只允许与 integration_type=context 同用（当前 {hc.integration_type!r}）")
+    ...   # 既有 dim / budget / pos_dim / stride / window / direction / origin / frame_size / motion_root 原样
+</code></pre>
+
+<h4>S1-e 新建 <code>src/mme_vla_suite/models/config/robomme/perceptual-framesamp-ctxframe-modulmotion-8frame-8x8-mixed8.yaml</code></h4>
+<table class="tbl">
+<thead><tr><th>锚点</th><th>改什么</th><th>关闭态</th><th>跟随态</th><th>分路态</th></tr></thead>
+<tbody>
+<tr><td>整文件</td><td>帧路键与 <code>perceptual-framesamp-context-8frame-8x8.yaml</code> 逐键相同；motion 节照抄 <code>perceptual-framesamp-modul-8frame-8x8-motion-mixed8.yaml</code>，只多 <code>integration: modulation</code></td><td>G2 去掉 <code>integration</code> 并置 <code>enabled: false</code> 后须与纯 context 512 逐位相同</td><td>—</td><td>本 run 唯一配置</td></tr>
+</tbody>
+</table>
+<pre><code># 分路接入（1018-ctx-frame-modul-motion-plan.html）：帧记忆只走 context（拼 PaliGemma 前缀，宽 2048），
+# motion 记忆只走 modulation（动作专家 MemoryAttention 交叉注意力，宽 1024）。
+# 帧路键与 perceptual-framesamp-context-8frame-8x8.yaml 逐键相同；motion 节照抄
+# perceptual-framesamp-modul-8frame-8x8-motion-mixed8.yaml，只多一个 integration 键。
+budget: 512
+num_views: 1
+token_per_image: 64
+streaming_obs_horizon: 16
+pool_type: mean
+use_pos_emb: true
+use_state_emb: false
+memory_feature:
+  img:
+    net: identity
+    input_dim: 2048
+  pos:
+    input_dim: 768
+    hidden_dim: 768
+  state:
+    input_dim: 8
+    hidden_dim: 512
+integration_type: context
+memory_token_dim: 2048      # 只决定帧路输出宽；分路时 motion 路输出宽固定 1024（= MemoryAttention 宽）
+representation_type: perceptual
+perceptual_memory:
+  type: frame_sampling
+motion:
+  enabled: true
+  integration: modulation   # 缺省 = 跟随帧路（旧 yaml 行为）；modulation = motion 只走动作专家交叉注意力，只允许与 integration_type: context 同用
+  dim: 768
+  budget: 160               # 模型语义参数，训练、评估与在线侧必须一致；超限直接报错。
+  demo_min_real_frames: 17
+  demo_tail_pad: repeat_last
+  stride: 16
+  window_frames: 33
+  window_direction: forward
+  grid_origin: segment_start
+  store_path: v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/motion
+  source_run: wan-mixed8-200-filter2-stop075-b88x8-72ep-a/checkpoint_epoch_72.pt#encoder
+  pos_dim: 256
+  frame_size: 256
+  online_gpu: 4             # 只供在线 sidecar 使用，训练不读取；评估计划另定。
+</code></pre>
+<p class="warn">S1 不碰 S2 的任何文件；<code>history_gemma.py</code> 的新字段名与 <code>HistoryPi0.motion_split</code>、<code>PerceptualMemory.motion_split</code> 三个名字是 S2 检查脚本要读的接口，S1 不得改名（S2 按本表名字写）。</p>
+
+<h3>S2（入口、测试、上传）</h3>
+<table class="tbl">
+<thead><tr><th>文件</th><th>改动</th><th>判定行</th></tr></thead>
+<tbody>
+<tr><td><code>scripts/dataset/hf_export/mixed8_200_runner/train-ctxframe-modulmotion-80k.sh</code>（新建，git 模式 100755，与同目录各 runner 一致）</td><td>照 <code>train-motion-80k.sh</code> 全文，只换头注释与 <code>HC=perceptual-framesamp-ctxframe-modulmotion-8frame-8x8-mixed8.yaml</code>、用法提示里的脚本名；仍 <code>source _train_common.sh</code></td><td>G1</td></tr>
+<tr><td><code>scripts/training/tests/test_pack_guards.py</code></td><td>新增两个不依赖 fixture 的用例（守卫全部在 <code>FrameSampDataset.__init__</code> 打开库之前执行，故 <code>dataset_path</code> 可传不存在的路径，环境 B 缺 <code>ref-shard</code> 也能跑）：<br>① <code>test_split_integration_accept</code>：新 yaml、<code>motion_root=None</code>，断言抛出的是 <code>未给 motion_root</code>（证明两条 <code>motion.integration</code> 校验已通过、走到 motion 段末）；<br>② <code>test_split_integration_reject</code>（参数化 4 例）：新 yaml 上改 <code>integration_type: modulation, memory_token_dim: 1024</code> → 匹配 <code>motion.integration</code>；<code>motion.integration: context</code> → 匹配 <code>motion.integration</code>；<code>motion.integration: Modulation</code>（非法大小写）→ 匹配 <code>motion.integration</code>；<code>budget: 2048</code> + 分路 → 匹配 <code>不在支持的</code>（现有 <code>ctx_shape</code> 要求 motion 关闭）。既有用例一个不动</td><td>G0</td></tr>
+<tr><td><code>scripts/training/tests/check_ctxframe_modulmotion.py</code>（新建，照 <code>check_32frame_context.py</code> 体例）</td><td>见下表五个子命令；模块顶部不得无条件 <code>sys.path.insert(0, ROOT/"src")</code>，改为读 <code>--src</code>（缺省为本脚本所在树的 <code>src</code>），并在每个子命令开头打印 <code>SRC_TREE=&lt;mme_vla_suite.__file__&gt;</code> 且核对落在 <code>--src</code> 之下</td><td>G2–G6</td></tr>
+<tr><td><code>scripts/dataset/hf_export/run_mixed8_200_vla_ctxframe_modulmotion_80k_ckpt_export.sh</code>（新建，100755）</td><td>照 <code>run_mixed8_200_vla_motion_80k_ckpt_export.sh</code>：<code>RUN_NAME="mixed8-200-m8x8-ctxframe-modulmotion-b128-80k"</code>、<code>BUCKET_ID="HongzeFu/robomme-vla-mixed8-200-ctxframe-modulmotion-80k-v1"</code>、<code>EXPORT_NAME="hf-ckpt-mixed8-200-vla-ctxframe-modulmotion-80k"</code>、<code>README_SRC</code>/<code>ALLOWLIST</code> 指向下两行新文件、<code>EXPECT_MOTION=true</code>、<code>DRIVER_NAME="run_mixed8_200_vla_ctxframe_modulmotion_80k_ckpt_export.sh"</code>；头注释改写为本 run</td><td>G9</td></tr>
+<tr><td><code>scripts/dataset/hf_export/hygiene_allowlist_mixed8_200_vla_ctxframe_modulmotion_80k.json</code>（新建）</td><td>照 <code>hygiene_allowlist_mixed8_200_vla_motion_80k.json</code> 全文，<code>_doc</code> 与 <code>entries[].reason</code> 里的 run 名、bucket 名、驱动名换成本 run；条目集合（P9、P7 等）不增不减</td><td>G9</td></tr>
+<tr><td><code>scripts/dataset/hf_export/mixed8_200_vla_ctxframe_modulmotion_80k_bucket_README.md</code>（新建）</td><td>照 <code>mixed8_200_vla_motion_80k_bucket_README.md</code>，写明分路接入（帧走 context 2048、motion 走 modulation 1024）、yaml 名、65 叶且与任何现有 ckpt 不同形；评估须用含 V11.29 的代码（旧代码读 <code>history_config.resolved.yaml</code> 会忽略 <code>motion.integration</code> 并在严格参数树校验处报错）；<code>@@…@@</code> 占位原样交驱动填</td><td>G9</td></tr>
+</tbody>
+</table>
+
+<p><code>check_ctxframe_modulmotion.py</code> 子命令（降配变体 = <code>paligemma_variant="gemma_150m"</code>、<code>action_expert_variant="gemma_300m"</code>，照 <code>motion_gates_model.py</code> 先例；context 类 yaml 在降配下把 <code>memory_token_dim</code> 改为 PaliGemma 宽 1024，分路 motion 宽本就固定 1024；真实变体 = <code>mme_vla_suite_b128_80k</code> 条目的 <code>gemma_2b</code> + <code>gemma_300m</code>，只用 <code>nnx.eval_shape</code> 取形状、不实体化）：</p>
+<table class="tbl">
+<thead><tr><th>子命令</th><th>做什么</th><th>一致性层级（第 18 条）</th><th>末行判定行</th></tr></thead>
+<tbody>
+<tr><td><code>closed-bitexact</code></td><td>同一进程、改后代码：A = 新 yaml 删 <code>motion.integration</code> 并置 <code>motion.enabled=false</code>；B = <code>perceptual-framesamp-context-8frame-8x8.yaml</code>。① 两份 yaml 除 <code>motion</code> 节外逐键相等（<code>frame_keys_equal=1</code>）；② 真实变体参数叶名与形状、dtype 相等且叶数 55；③ 降配变体 <code>jax.random.key(0)</code> 现场 init 后全部叶 sha256 相等；④ 固定输入（按 <code>inputs_spec(batch_size=1)</code> 逐键用 <code>np.random.default_rng(0)</code> 生成，mask 前若干位 True）下 <code>embed_prefix</code> 四返回与 <code>compute_loss(jax.random.key(7), …)</code> 的字节 sha256 相等</td><td>结构一致（真实变体）+ 字节级一致（降配变体）</td><td><code>CLOSED_BITEXACT=PASS leaves=55 frame_keys_equal=1</code></td></tr>
+<tr><td><code>legacy-bitexact --base &lt;基线 worktree 绝对路径&gt;</code></td><td>两份旧 motion yaml（<code>perceptual-framesamp-context-8frame-8x8-motion.yaml</code>、<code>perceptual-framesamp-modul-8frame-8x8-motion-mixed8.yaml</code>）各在「改前」「改后」两棵树上各 dump 一次再逐键比较。脚本内部用 <code>sys.executable</code> 两次调用自身隐藏子命令 <code>_dump</code>：一次 <code>cwd=&lt;基线&gt;</code>、<code>PYTHONPATH=&lt;基线&gt;/src</code>、<code>--src &lt;基线&gt;/src</code>，一次对当前树同样三项；两次都强制 <code>JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES=</code>。dump 内容同 closed-bitexact 的 ②③④（真实变体叶名形状、降配变体初值 sha、固定输入前向 sha），另记 <code>mem_order</code> 重排后记忆段 sha。改前树 = <code>git worktree add --detach</code> 出的 BASE 检出（§4.3）</td><td>结构一致 + 字节级一致</td><td><code>LEGACY_YAML_BITEXACT=PASS yaml=2</code>（附细节行 <code>LEGACY_DETAIL context_motion_leaves=59 modul_motion_leaves=65</code>）</td></tr>
+<tr><td><code>split-struct</code></td><td>改后代码、分路 yaml：① 真实变体叶数 65，叶名集合与 <code>perceptual-framesamp-modul-8frame-8x8-motion-mixed8.yaml</code> 完全相同，<code>mem_encoder/feature_encoder/encoder_static/kernel</code> 为 (2816,2048)、<code>mem_encoder/motion_encoder_static/kernel</code> 为 (1536,1024)，6 个 modulation 叶（<code>PaliGemma/llm/layers/mem_attn/{q,kv,out}_einsum_mem/w</code>、<code>…/mem_attn/mem_rms_norm/scale</code>、<code>PaliGemma/llm/layers/mem_rms_norm_ffn/Dense_0/{kernel,bias}</code>）与 4 个 motion 叶（<code>mem_encoder/motion_pos_proj/{kernel,bias}</code>、<code>mem_encoder/motion_encoder_static/{kernel,bias}</code>）逐个在；② 降配变体同一固定输入：分路 <code>embed_prefix</code> 前缀长度 == 关闭态 context 512 的前缀长度；<code>embed_memory</code> 第二组 <code>mem_seq</code> 形状 (1,160,1024)；<code>compute_loss</code> 有限；③ 把 <code>motion_mask</code> 全置 False 再前向一次，结果有限（只测、不加守卫）</td><td>结构一致 + 行为检查</td><td><code>SPLIT_STRUCT=PASS prefix_len=&lt;n&gt; mem_seq=160x1024 leaves=65 empty_motion_finite=1</code></td></tr>
+<tr><td><code>smoke-summary --log &lt;日志&gt; --nvml &lt;csv&gt; --gpus 0,1,2,3</code></td><td>与 <code>check_32frame_context.py::smoke_summary</code> 同逻辑：OOM 关键词、<code>^Step N:</code> 行 loss 有限、末行 <code>EXIT_CODE=0</code>、每卡 NVML 峰值、n≥5 后稳态步时</td><td>—</td><td><code>SMOKE20=PASS oom=0 loss_finite=1 peak_mib=&lt;…&gt; steady_s_per_step=&lt;…&gt;</code></td></tr>
+<tr><td><code>ckpt --run &lt;run 名&gt;</code></td><td>照 <code>check_32frame_context.py::ckpt</code>：读 <code>v1-store/train-runs/mme_vla_suite_b128_80k/&lt;run&gt;/</code> 最新 step；<code>_load_resolved_snapshot</code> 须为 context/2048/motion 开启且 <code>motion.integration == "modulation"</code>；<code>create_trained_policy(…, motion_stub=True)</code>；加载叶与保存叶（bf16）逐位相等；含 <code>mem</code> 的叶全部区别于初态（预期 14 = 帧路 4 + motion 4 + modulation 6）；数据样本经 <code>FrameSampDataset(…, motion_root=&lt;库&gt;/motion)</code> 取；固定 noise <code>sample_actions(num_steps=10)</code> 两模型 rms ≤ 6.8e-5；<code>embed_memory</code> 按两组解包，帧段长 512、motion 段 (1,160,1024)</td><td>字节级一致（叶）+ 数值容差内一致（动作）</td><td><code>CKPT_LOAD_SPLIT=PASS leaves_equal=1 mem_leaves_changed=&lt;n&gt; actions_match=1</code>（附 <code>CKPT_SPLIT_DETAIL mem_len=512 mem_seq=160x1024</code>）</td></tr>
+</tbody>
+</table>
+
+<h3>主会话（文档）</h3>
+<table class="tbl">
+<thead><tr><th>文件</th><th>改动</th><th>时点</th></tr></thead>
+<tbody>
+<tr><td><code>docs/training-doc/mixed8-200-m8x8-ctxframe-modulmotion-b128-80k/launch.md</code>（新建）</td><td>照 <code>docs/training-doc/mixed8-200-m8x8-modul-motion-b128-80k/launch.md</code> 结构：起跑前档案声明、与 V11.25（modulation 同路）及纯 context 512 的差异表、yaml 与 sha256、G0–G7 判定行原文、启动命令块、inc 句柄、本轮 tmux 清单、盯盘项、只读锁处置记录</td><td><code>commitV11.30Beta</code> 之前</td></tr>
+<tr><td><code>docs/training-doc/README.md</code></td><td><code>## 一、环境 B 现行</code> 一览表加一行：<code>| [`mixed8-200-m8x8-ctxframe-modulmotion-b128-80k/`](mixed8-200-m8x8-ctxframe-modulmotion-b128-80k/launch.md) | 分路：帧 context 2048 + motion modulation 1024；yaml perceptual-framesamp-ctxframe-modulmotion-8frame-8x8-mixed8.yaml；GPU 0–3 fsdp4/w8；batch 128；16task-mixed8-200-3200ep-e3c7564f | 运行中（commitV11.30Beta &lt;sha&gt;） |</code></td><td>同上；回写时改判定列</td></tr>
+<tr><td><code>docs/training-doc/mixed8-200-m8x8-ctxframe-modulmotion-b128-80k/result.md</code>、<code>records/</code></td><td>训练结束后第二段（§8）</td><td><code>commitV11.30</code></td></tr>
+</tbody>
+</table>
+
+<h2 id="t2">2. 子代理分配表</h2>
+<p>派发前主会话核对：<code>jq -r '.worktree.baseRef' ~/.claude-personal/settings.json</code> 为 <code>head</code>；<code>BASE=$(git rev-parse HEAD)</code>（起草时为 <code>c27514a331c5727a5b42fa586e979f12752e0786</code>，以开工时实值为准）；<code>git status --short --ignore-submodules=dirty -- . ':!docs/subagent-stats'</code> 无非预期改动；<code>git worktree list</code> 存档，已有 worktree 一律不动。worktree 统一环境取法（下表「验收」列都以此为前提）：</p>
+<pre><code>WT=&lt;子代理 worktree 绝对路径&gt;; cd "$WT"
+export UV_PROJECT_ENVIRONMENT=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv
+export PYTHONPATH="$WT/src" JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES=
+uv run --no-sync python -c "import mme_vla_suite; print(mme_vla_suite.__file__)"   # 必须落在 $WT/src 下
+</code></pre>
+<table class="tbl">
+<thead><tr><th>编号</th><th>目标</th><th>模型 / 隔离</th><th>可写集合</th><th>禁触</th><th>依赖与合并顺序</th><th>验收命令与判定行（worktree，uv 环境取法）</th><th>资源</th></tr></thead>
+<tbody>
+<tr><td>S1</td><td>模型与配置：§1 S1-a 至 S1-e</td><td><code>opus</code>，<code>isolation: "worktree"</code>，基线 BASE</td><td><code>src/mme_vla_suite/models/representation/percep_mem.py</code>、<code>src/mme_vla_suite/models/integration/history_gemma.py</code>、<code>src/mme_vla_suite/models/integration/history_pi0.py</code>、<code>src/mme_vla_suite/training/framesamp_dataset.py</code>、新 yaml（共 5 个）</td><td>其余一切；尤其 <code>_train_common.sh</code>、<code>policies/</code>、<code>training/config.py</code>、<code>dataloader.py</code>、S2 的 6 个文件、<code>docs/</code>、主检出任何路径</td><td>无依赖，与 S2 并行写；<strong>第 1 个合</strong></td><td>① <code>uv run --no-sync python -m py_compile</code> 四个 py 文件；② 下方 S1 自检脚本 → <code>S1_LEAVES=PASS closed=55 follow_ctx=59 follow_modul=65 split=65 encoder_static=2816x2048 motion_static=1536x1024</code>；③ <code>uv run --no-sync python -m pytest scripts/training/tests/test_pack_guards.py -q</code> 的 failed 数为 0（errors 为 fixture 缺失的既有数）</td><td>CPU，约 1–2 分钟（未实测）</td></tr>
+<tr><td>S2</td><td>入口、测试、上传：§1 S2 表 6 个文件</td><td><code>opus</code>，<code>isolation: "worktree"</code>，基线 BASE</td><td><code>train-ctxframe-modulmotion-80k.sh</code>、<code>test_pack_guards.py</code>、<code>check_ctxframe_modulmotion.py</code>、上传驱动、allowlist、bucket README（共 6 个）</td><td>其余一切；尤其 <code>_mixed8_200_vla_ckpt_export_common.sh</code>、<code>m8v-ckpt-inc.sh</code>、既有测试用例、S1 的 5 个文件、<code>docs/</code></td><td>无依赖，与 S1 并行写；S1 合并 push 之后<strong>第 2 个合</strong>。S2 的功能性验收依赖 S1 代码，worktree 内只做静态验收，功能闸门 G0、G2–G4 由主会话在两次合并之后跑</td><td>① <code>UPLOAD_LINT=PASS</code> = 驱动与 runner 两个 <code>bash -n</code> 通过 + allowlist <code>json.load</code> 通过 + 三个上传侧新文件 <code>grep -c 'robomme-vla-mixed8-200-modul-motion-80k-v1\|run_mixed8_200_vla_motion_80k_ckpt_export.sh\|hygiene_allowlist_mixed8_200_vla_motion_80k'</code> 均为 0；② <code>uv run --no-sync python scripts/training/tests/check_ctxframe_modulmotion.py --help</code> 列出 5 个子命令；③ <code>uv run --no-sync python -m pytest scripts/training/tests/test_pack_guards.py -q --collect-only -k split_integration</code> 收集到 5 例 → <code>S2_STATIC=PASS collected=5 subcommands=5</code></td><td>CPU，&lt;1 分钟</td></tr>
+<tr><td>RV1</td><td>S1、S2 各一次合并前审查与合并后审查</td><td><code>sonnet</code>，只读，不加 isolation</td><td>无</td><td>全部；只许 <code>git diff/log &lt;REVIEW_BASE&gt;..&lt;REVIEW_TIP&gt;</code>、<code>git show &lt;sha&gt;:&lt;path&gt;</code></td><td>每次钉死 <code>REVIEW_BASE</code>/<code>REVIEW_TIP</code> 两个完整 sha；同一分支一轮只派一个审查者；审查项：§1 条目完成度、R2/R3 是否守住（关闭态与跟随态分支是否一字未动、有无计划外守卫）、接口名是否与 §1 一致、<code>sub/</code> 前缀与 body、有无凭据日志大文件</td><td><code>PRE_MERGE_REVIEW=PASS|FAIL base=&lt;sha&gt; tip=&lt;sha&gt; files=&lt;n&gt; commits=&lt;n&gt; findings=&lt;n&gt;</code>；<code>POST_MERGE_REVIEW=PASS|FAIL merge=&lt;sha&gt; tests=&lt;结果&gt; files=&lt;n&gt;</code></td><td>—</td></tr>
+<tr><td>X1</td><td>运行型：G5 20 步短测、G6 100 步保存 + <code>ckpt</code> 子命令、正式起跑</td><td><code>opus</code>，主检出，不加 worktree</td><td>无代码写权；只写 <code>v1-store/logs/</code>、<code>v1-store/train-runs/</code>、<code>v1-store/cache/jax/</code> 下本轮 run 的产物</td><td>任何代码、配置、脚本、依赖、参数；<code>m2k-*</code> 会话；GPU 4–7；不得自行取消、清理会话或派修复代理</td><td>两次合并 push 且 G0–G4 PASS 之后跑 G5、G6；正式起跑在主会话打 <code>commitV11.30Beta</code> 且 G7 PASS 之后</td><td>G5 <code>SMOKE20=PASS …</code>；G6 <code>CKPT_LOAD_SPLIT=PASS …</code>；起跑判据：日志出现首条 <code>^Step </code> 行且 300 步内无 <code>Traceback</code>/<code>RESOURCE_EXHAUSTED</code>、loss 有限；交回 tmux 名、日志绝对路径、启动时间（美东）、<code>tmux ls</code> 原文</td><td>GPU 0–3；tmux <code>cfm-smoke</code>、<code>cfm-smoke-nvml</code>、<code>cfm-ckpt100</code>、<code>cfm-train</code></td></tr>
+<tr><td>主会话</td><td>派发、合并、G0–G4、只读锁处置、建档与 Beta、Monitor、<code>cfm-inc</code>、正式上传驱动、result.md、handoff</td><td>—</td><td><code>docs/training-doc/mixed8-200-m8x8-ctxframe-modulmotion-b128-80k/</code>、<code>docs/training-doc/README.md</code>、<code>docs/handoff/current.json</code>（若用户同意登记）、<code>v1-store/m8v-scripts/cfm-*</code>、<code>v1-store/worktrees/cfm-base-*</code></td><td>S1、S2 的可写集合（合并以外不手改）</td><td>串行：S1 合并 → S2 合并 → G0–G4 → X1 G5/G6 → Beta → X1 起跑 → <code>cfm-inc</code></td><td>每次合并 <code>POST_MERGE_REVIEW=PASS</code> 后 push；G0–G4、G7–G9 判定行见 §3</td><td>CPU；tmux <code>cfm-inc</code>、<code>cfm-upload</code></td></tr>
+</tbody>
+</table>
+<p>共享文件归属：S1 与 S2 可写集合无重叠；<code>docs/</code> 全部归主会话，S1、S2 不写任何文档。S1、S2 的 commit subject 固定前缀 <code>sub/S1: </code> / <code>sub/S2: </code> + 中文描述，body 三项（目标、改动文件、验证命令与判定行），可多次 commit、全部保留；不 push、不合主分支、不 <code>--amend</code>、不 <code>reset --hard</code>；每条 git 命令单独一次 Bash。提示词须写「代码库里不只你一个在改：不碰集合外文件、不回滚他人改动、不改验收命令与判据文件」。交回：worktree 路径、分支、BASE、HEAD sha、<code>git diff --name-only BASE..HEAD</code>、<code>git log --oneline BASE..HEAD</code>、验收原文与判定行、未 push 声明。</p>
+<p>S1 自检脚本（worktree 根目录执行，<code>get_history_config</code> 按 cwd 找 yaml）：</p>
+<pre><code>uv run --no-sync python - &lt;&lt;'PY'
+import dataclasses, jax
+from flax import nnx, traverse_util
+import mme_vla_suite
+from mme_vla_suite.models.config.utils import get_history_config
+from mme_vla_suite.training.config import get_config
+print("SRC_TREE=" + mme_vla_suite.__file__)
+base = get_config("mme_vla_suite_b128_80k").model
+def tree(name):
+    cfg = dataclasses.replace(base, history_config=get_history_config(name), use_history=True)
+    m = nnx.eval_shape(cfg.create, jax.random.key(0))
+    flat = traverse_util.flatten_dict(nnx.state(m, nnx.Param).to_pure_dict())
+    return {"/".join(str(p) for p in k): tuple(v.shape) for k, v in flat.items()}
+c = tree("perceptual-framesamp-context-8frame-8x8.yaml")
+fc = tree("perceptual-framesamp-context-8frame-8x8-motion.yaml")
+fm = tree("perceptual-framesamp-modul-8frame-8x8-motion-mixed8.yaml")
+s = tree("perceptual-framesamp-ctxframe-modulmotion-8frame-8x8-mixed8.yaml")
+es = s["mem_encoder/feature_encoder/encoder_static/kernel"]
+mo = s["mem_encoder/motion_encoder_static/kernel"]
+ok = (len(c), len(fc), len(fm), len(s)) == (55, 59, 65, 65) and set(s) == set(fm) and es == (2816, 2048) and mo == (1536, 1024)
+print(f"S1_LEAVES={'PASS' if ok else 'FAIL'} closed={len(c)} follow_ctx={len(fc)} follow_modul={len(fm)} split={len(s)} "
+      f"encoder_static={es[0]}x{es[1]} motion_static={mo[0]}x{mo[1]}")
+PY
+</code></pre>
+
+<h2 id="t3">3. 闸门总表</h2>
+<table class="tbl">
+<thead><tr><th>编号</th><th>内容</th><th>判定行</th><th>时机</th></tr></thead>
+<tbody>
+<tr><td>G0</td><td>守卫正反例：<code>JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES= uv run --no-sync python -m pytest scripts/training/tests/test_pack_guards.py -q</code>。环境 B 缺 <code>v1-store/datasets/ref-shard</code> 与 <code>v1-store/episode_manifest.json</code>，依赖 fixture 的既有用例报 errors（1018 计划同环境记录为 40 errors，口径一致）；本计划新增 5 例不依赖 fixture，必须全部 passed</td><td><code>GUARD_SPLIT=PASS new_passed=5 failed=0 errors=&lt;与改前同环境同数&gt;</code>（主会话由 pytest 摘要行整理，改前数在 BASE 上同命令先跑一次留证）</td><td>两次合并后，主检出</td></tr>
+<tr><td>G1</td><td>runner 干跑两条：正式 run 名一条；短测 run 名 + <code>--num-train-steps 20 --no-wandb-enabled</code> 一条</td><td>两条输出都含 <code>HC=perceptual-framesamp-ctxframe-modulmotion-8frame-8x8-mixed8.yaml</code>，<code>TRAIN_CMD=</code> 含 <code>--dataset-path …/framesamp-8x8</code>、<code>--model.history-config perceptual-framesamp-ctxframe-modulmotion-8frame-8x8-mixed8.yaml</code>、<code>--fsdp-devices 4 --num-workers 8</code>，第二条末尾带两个透传参数 → <code>DRY_RUN_CFM=PASS runs=2</code></td><td>两次合并后</td></tr>
+<tr><td>G2</td><td>关闭态逐位（第 18 条第一块 ①）</td><td><code>CLOSED_BITEXACT=PASS leaves=55 frame_keys_equal=1</code></td><td>两次合并后，CPU</td></tr>
+<tr><td>G3</td><td>旧两份 motion yaml 改前改后逐位（第 18 条第一块 ②）</td><td><code>LEGACY_YAML_BITEXACT=PASS yaml=2</code></td><td>两次合并后，CPU，需 §4.3 基线 worktree</td></tr>
+<tr><td>G4</td><td>分路开启态结构（第 18 条第一块 ③）</td><td><code>SPLIT_STRUCT=PASS prefix_len=&lt;n&gt; mem_seq=160x1024 leaves=65 empty_motion_finite=1</code></td><td>两次合并后，CPU</td></tr>
+<tr><td>G5</td><td>20 步短测（第 18 条第二块）：GPU 0–3、<code>FSDP_DEVICES=4 NUM_WORKERS=8</code>、<code>XLA_PYTHON_CLIENT_PREALLOCATE=false</code>，NVML 500 ms 采样只采 GPU 0–3</td><td><code>SMOKE20=PASS oom=0 loss_finite=1 peak_mib=&lt;…&gt; steady_s_per_step=&lt;…&gt;</code>（只记录步时与峰值，不设门槛）</td><td>G0–G4 全 PASS 后，X1</td></tr>
+<tr><td>G6</td><td>100 步保存 + <code>create_trained_policy</code> 加载 + 固定 noise 动作一致</td><td><code>CKPT_LOAD_SPLIT=PASS leaves_equal=1 mem_leaves_changed=&lt;n&gt; actions_match=1</code>（预期 n=14）</td><td>G5 通过后，X1</td></tr>
+<tr><td>G7</td><td>Beta 锚点后工作区 clean</td><td><code>git status --porcelain</code> 输出为空 → <code>BETA_CLEAN=PASS head=&lt;commitV11.30Beta sha&gt;</code></td><td>起跑前，主会话</td></tr>
+<tr><td>G8</td><td>训练结束</td><td>日志末行 <code>EXIT_CODE=0</code>，且 <code>v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-ctxframe-modulmotion-b128-80k/</code> 下纯数字 step 目录恰 16 个（5000…75000 + 79999）→ <code>TRAIN_DONE=PASS exit=0 ckpts=16</code></td><td>训练末</td></tr>
+<tr><td>G9</td><td>上传：先 <code>SMOKE=1</code> 驱动，再全量驱动</td><td><code>SMOKE=PASS</code>；全量 <code>SHA256_PRE_POST_DIFF=0</code>、<code>RESULT=PASS</code>、<code>SRC_UNCHANGED=OK</code>、<code>BUCKET_PUBLIC=True</code>、<code>PUBLIC_ANON_READ=OK</code>、<code>EXIT_CODE=0</code>；收尾恢复权限 <code>PERM_RESTORED=OK</code></td><td>收尾</td></tr>
+</tbody>
+</table>
+<p class="warn">任一 FAIL（含 OOM）即停，原文交用户；步时慢不算 FAIL。G2/G3 不过说明关闭态或跟随态被改动，必须退回 S1 续改，不得放宽比较口径。</p>
+
+<h2 id="t4">4. runbook</h2>
+
+<h3>4.1 开工前核对（主会话）</h3>
+<pre><code>cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+git rev-parse HEAD; git status --short --ignore-submodules=dirty -- . ':!docs/subagent-stats'
+tmux has-session -t '=m2k-train-modul' &amp;&amp; echo M2K_TRAIN_ALIVE=1
+stat -c '%A %n' src/mme_vla_suite/models/integration/history_pi0.py   # 锁在时为 -r--r--r--
+nvidia-smi --query-gpu=index,memory.used --format=csv                # GPU 0–3 须空闲
+jq -r '.worktree.baseRef' ~/.claude-personal/settings.json           # head
+</code></pre>
+
+<h3>4.2 worktree 内验收（S1、S2 各自）</h3>
+<p>环境取法见 §2 代码块；S1 跑自检脚本与 pytest，S2 跑静态三项。任何一步要 GPU 或 <code>v1-store</code> 产物的，一律不在 worktree 跑。</p>
+
+<h3>4.3 基线 worktree 与 G0、G2–G4（主会话，两次合并之后，主检出，CPU）</h3>
+<pre><code>cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+BASE=&lt;开工时 BASE 完整 sha&gt;
+git worktree add --detach v1-store/worktrees/cfm-base-${BASE:0:7} "$BASE"
+export JAX_PLATFORMS=cpu CUDA_VISIBLE_DEVICES=
+# G0（改前数先在基线上跑一次留证）
+(cd v1-store/worktrees/cfm-base-${BASE:0:7} &amp;&amp; UV_PROJECT_ENVIRONMENT=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv PYTHONPATH=$PWD/src uv run --no-sync python -m pytest scripts/training/tests/test_pack_guards.py -q | tail -n 3)
+uv run --no-sync python -m pytest scripts/training/tests/test_pack_guards.py -q | tail -n 3
+# G2 / G3 / G4
+uv run --no-sync python scripts/training/tests/check_ctxframe_modulmotion.py closed-bitexact
+UV_PROJECT_ENVIRONMENT=/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv \
+  uv run --no-sync python scripts/training/tests/check_ctxframe_modulmotion.py legacy-bitexact \
+  --base /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/worktrees/cfm-base-${BASE:0:7}
+uv run --no-sync python scripts/training/tests/check_ctxframe_modulmotion.py split-struct
+</code></pre>
+<p>G2–G4 每条预计 1–4 分钟（未实测）；若单条超过 5 分钟，改放 detached tmux <code>cfm-cpucheck</code> 并按第 17 条在 launch.md 记录。基线 worktree 在 G3 PASS 且 launch.md 记录后按 <code>git worktree list</code> → <code>git worktree remove</code> → <code>git worktree list</code> 清理。</p>
+
+<h3>4.4 G1 干跑</h3>
+<pre><code>cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+R=scripts/dataset/hf_export/mixed8_200_runner
+DRY_RUN=1 FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-ctxframe-modulmotion-80k.sh mixed8-200-m8x8-ctxframe-modulmotion-b128-80k
+DRY_RUN=1 FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-ctxframe-modulmotion-80k.sh cfm-smoke20-&lt;YYYYMMDD&gt; --num-train-steps 20 --no-wandb-enabled
+</code></pre>
+
+<h3>4.5 G5 短测与 G6 保存加载（X1 在主检出起，主会话挂 Monitor）</h3>
+<pre><code>cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+R=scripts/dataset/hf_export/mixed8_200_runner
+S=cfm-smoke20-&lt;YYYYMMDD&gt;
+tmux new-session -d -s cfm-smoke-nvml "nvidia-smi -i 0,1,2,3 --query-gpu=index,memory.used,utilization.gpu --format=csv -lms 500 &gt; /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/$S-nvml.csv"
+tmux new-session -d -s cfm-smoke "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; CUDA_VISIBLE_DEVICES=0,1,2,3 XLA_PYTHON_CLIENT_PREALLOCATE=false FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-ctxframe-modulmotion-80k.sh $S --num-train-steps 20 --no-wandb-enabled"
+# _train_common.sh 自带 tee 到 v1-store/logs/$S.log 与末尾 EXIT_CODE= 行，tmux 命令里不再套 tee
+# 短测日志 Monitor：
+#   tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/$S.log | stdbuf -oL tr '\r' '\n' \
+#     | grep --line-buffered -E "EXIT_CODE=|Traceback|out of memory|RESOURCE_EXHAUSTED|nan|NaN|Killed"
+# 出现 EXIT_CODE= 后：
+tmux kill-session -t '=cfm-smoke-nvml'
+CUDA_VISIBLE_DEVICES= JAX_PLATFORMS=cpu uv run --no-sync python scripts/training/tests/check_ctxframe_modulmotion.py smoke-summary \
+  --log v1-store/logs/$S.log --nvml v1-store/logs/$S-nvml.csv --gpus 0,1,2,3
+
+# G6：101 步、每 100 步保存
+C=cfm-ckpt100-&lt;YYYYMMDD&gt;
+tmux new-session -d -s cfm-ckpt100 "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; CUDA_VISIBLE_DEVICES=0,1,2,3 FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-ctxframe-modulmotion-80k.sh $C --num-train-steps 101 --save-interval 100 --no-wandb-enabled"
+# 同一过滤管道挂 Monitor；EXIT_CODE=0 后：
+CUDA_VISIBLE_DEVICES=0 uv run --no-sync python scripts/training/tests/check_ctxframe_modulmotion.py ckpt --run $C
+</code></pre>
+<p>短测 run 跑完即删（只删本轮核实属于自己的两个 run 目录 <code>v1-store/train-runs/mme_vla_suite_b128_80k/$S</code>、<code>…/$C</code> 与 <code>v1-store/cache/jax/$S</code>、<code>…/$C</code>；日志保留）。<code>$C</code> 预计 101 步 × 约 3.4 s 加编译超过 5 分钟，按第 17 条：其启动 HEAD（= 两次合并后的 clean HEAD）、命令、判定行写进正式 run 的 launch.md「起跑前闸门」节，ckpt 权重不归档。</p>
+
+<h3>4.6 只读锁处置（Q2，用户裁决二选一）</h3>
+<table class="tbl">
+<thead><tr><th>方案</th><th>做法</th><th>判定行</th></tr></thead>
+<tbody>
+<tr><td>a（推荐）：2048 训练中合并</td><td>每次合并前只给本次要被改写的已跟踪文件加 <code>u+w</code>；合并后先登记新增文件原权限，再把本次 diff 涉及的全部文件 <code>a-w</code>；在 1018 计划进展登记追加一行（时刻美东、文件清单、<code>RELOCK</code> 判定行）。合并时机选 2048 日志稳态、无 dataloader worker 重建报文的时段</td><td><code>RELOCK=OK writable=0</code></td></tr>
+<tr><td>b：等 2048 结束</td><td>等 <code>m2k-train-modul</code> 退出且其日志 <code>EXIT_CODE=0</code>、1018 owner 恢复权限 <code>PERM_RESTORED=OK</code> 之后再正常合并；本计划起跑前另行上锁并写 <code>v1-store/m8v-scripts/cfm-chmod-before.txt</code></td><td>1018 的 <code>PERM_RESTORED=OK</code>；本计划上锁后 <code>RELOCK=OK writable=0</code></td></tr>
+</tbody>
+</table>
+<pre><code># 方案 a，S1 合并（S2 合并同理，u+w 的已跟踪文件只有 scripts/training/tests/test_pack_guards.py）
+cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+M=v1-store/m8v-scripts
+PRE=$(git rev-parse HEAD)
+chmod u+w src/mme_vla_suite/models/representation/percep_mem.py src/mme_vla_suite/models/integration/history_gemma.py \
+  src/mme_vla_suite/models/integration/history_pi0.py src/mme_vla_suite/training/framesamp_dataset.py
+git merge --no-ff &lt;S1_TIP 完整 sha&gt; -F &lt;scratchpad&gt;/merge-s1.txt
+git diff --name-only --diff-filter=A "$PRE" HEAD -- src scripts packages | xargs -r stat -c '%a %n' &gt;&gt; $M/cfm-chmod-added.txt
+git diff --name-only "$PRE" HEAD -- src scripts packages | xargs -r chmod a-w
+echo "RELOCK=OK writable=$(git ls-files -z src scripts packages | xargs -0 stat -c '%A' | grep -c w)"   # 必须为 0，否则判 FAIL
+</code></pre>
+<p class="warn">方案 a 的前提：§1 S1-d 改动只在 <code>if self._motion_enabled:</code> 段内，2048 run（motion 关闭）即使 dataloader worker 重新 import <code>framesamp_dataset.py</code> 也走不到新代码；<code>history_pi0.py</code> 等模型文件训练进程已加载、不会重新 import。worker 是否会重建未实测（§6）。恢复权限时须把 <code>cfm-chmod-added.txt</code> 与 <code>m2k-chmod-before.txt</code> 合并为一份清单；2048 先结束时 1018 owner 若照常恢复权限，<code>cfm-train</code> 剩余时段将失去只读保护——由谁、何时恢复，写进 Q2 一并交用户裁决。</p>
+
+<h3>4.7 Beta 与正式起跑</h3>
+<pre><code>cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+# 主会话：写 launch.md 与 README 索引行后
+git status --short
+git add docs/training-doc/mixed8-200-m8x8-ctxframe-modulmotion-b128-80k/launch.md
+git add docs/training-doc/README.md
+git commit -F &lt;scratchpad&gt;/beta-v11.30.txt        # subject：commitV11.30Beta: mixed8-200 8×8 分路接入（帧 context 512 + motion modulation 160）80k 正式训练起跑锚点（GPU 0–3 fsdp4/w8，batch 128）
+git push
+git status --porcelain                             # 必须为空 → G7
+git rev-parse HEAD &gt; v1-store/m8v-scripts/beta-v11.30.sha
+# X1：
+tmux new-session -d -s cfm-train "cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; CUDA_VISIBLE_DEVICES=0,1,2,3 FSDP_DEVICES=4 NUM_WORKERS=8 bash scripts/dataset/hf_export/mixed8_200_runner/train-ctxframe-modulmotion-80k.sh mixed8-200-m8x8-ctxframe-modulmotion-b128-80k"
+tmux has-session -t '=cfm-train' &amp;&amp; tmux ls
+</code></pre>
+
+<h3>4.8 Monitor（主会话，一份日志一个）</h3>
+<pre><code>tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-ctxframe-modulmotion-b128-80k.log \
+  | stdbuf -oL tr '\r' '\n' \
+  | grep --line-buffered -E "EXIT_CODE=|Traceback|out of memory|RESOURCE_EXHAUSTED|nan|NaN|Killed"
+</code></pre>
+
+<h3>4.9 训练中增量上传 <code>cfm-inc</code>（主会话，起跑确认后）</h3>
+<pre><code>cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+tmux new-session -d -s cfm-inc "set -o pipefail; cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; bash v1-store/m8v-scripts/m8v-ckpt-inc.sh mixed8-200-m8x8-ctxframe-modulmotion-b128-80k HongzeFu/robomme-vla-mixed8-200-ctxframe-modulmotion-80k-v1 hf-ckpt-mixed8-200-vla-ctxframe-modulmotion-80k scripts/dataset/hf_export/hygiene_allowlist_mixed8_200_vla_ctxframe_modulmotion_80k.json cfm-train 2&gt;&amp;1 | tee v1-store/logs/cfm-inc.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/cfm-inc.log"
+# Monitor：
+#   tail -n +1 -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/cfm-inc.log | stdbuf -oL tr '\r' '\n' \
+#     | grep --line-buffered -E "INC_UPLOADED|INC_END|UPLOAD_FAIL|HYGIENE=FAIL|错误|Traceback|EXIT_CODE="
+</code></pre>
+
+<h3>4.10 收尾：正式上传驱动、权限恢复</h3>
+<pre><code>cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+D=scripts/dataset/hf_export/run_mixed8_200_vla_ctxframe_modulmotion_80k_ckpt_export.sh
+# 前提：G8 PASS，cfm-inc 已打 INC_END 且会话退出
+SMOKE=1 bash $D 2&gt;&amp;1 | tee v1-store/logs/cfm-upload-smoke.log          # 末段须见 SMOKE=PASS
+tmux new-session -d -s cfm-upload "set -o pipefail; cd /scratch/hongze/robomme_policy_learning_MotionJEPA &amp;&amp; bash $D 2&gt;&amp;1 | tee v1-store/logs/cfm-upload.log; echo \"EXIT_CODE=\$?\" &gt;&gt; v1-store/logs/cfm-upload.log"
+# Monitor 过滤：SHA256_PRE_POST_DIFF|RESULT=|BUCKET_PUBLIC|PUBLIC_ANON_READ|全部完成|错误|Traceback|EXIT_CODE=
+# 权限恢复（由最后结束的一方执行，见 4.6）
+sort -u v1-store/m8v-scripts/m2k-chmod-before.txt v1-store/m8v-scripts/cfm-chmod-added.txt &gt; /tmp/cfm-perm-want.txt
+while read -r p f; do chmod "$p" "$f"; done &lt; /tmp/cfm-perm-want.txt
+git ls-files src scripts packages | xargs stat -c '%a %n' | sort | diff - /tmp/cfm-perm-want.txt &amp;&amp; echo PERM_RESTORED=OK
+</code></pre>
+
+<h3>4.11 日志清洗（回写 result.md 前）</h3>
+<pre><code>cd /scratch/hongze/robomme_policy_learning_MotionJEPA
+DOC=docs/training-doc/mixed8-200-m8x8-ctxframe-modulmotion-b128-80k
+mkdir -p $DOC/records
+tr '\r' '\n' &lt; v1-store/logs/mixed8-200-m8x8-ctxframe-modulmotion-b128-80k.log | grep -vE '%\|' | sed -e 's/[[:space:]]*$//' &gt; $DOC/records/train.summary.log
+grep -c '^Step ' $DOC/records/train.summary.log      # 须等于原日志 grep -c '^Step ' 的值
+tr '\r' '\n' &lt; v1-store/logs/cfm-inc.log | grep -vE '%\||^\s*$' &gt; $DOC/records/inc.summary.log
+tr '\r' '\n' &lt; v1-store/logs/cfm-upload-smoke.log | grep -vE '%\||^\s*$' &gt; $DOC/records/upload-smoke.summary.log
+tr '\r' '\n' &lt; v1-store/logs/cfm-upload.log | grep -vE '%\||^\s*$' &gt; $DOC/records/upload.summary.log
+</code></pre>
+
+<h2 id="t5">5. 风险登记</h2>
+<table class="tbl">
+<thead><tr><th>编号</th><th>风险</th><th>应对</th></tr></thead>
+<tbody>
+<tr><td>K1</td><td><code>history_gemma.py::MemoryAttention.__call__</code> 硬断言 <code>mem_width == x_width == width</code>（width 1024）：若 motion 路输出沿用 <code>memory_token_dim</code>（2048），lazy_init 用的 dummy 宽 1024 能过，第一次真实前向才断言失败。另：分路态 <code>mem_seq</code> 只含 motion，执行早期（无 demo 段且 exec 不足 33 帧）可能 160 位全为填充，<code>where(mask, logits, -2.38e38)</code> 全等值，softmax 退化为对填充位均匀平均，数值有限但输出为常向量；V11.25 同路 modulation 因帧段至少 1 帧有效而从未出现此情形，是本计划新引入的行为</td><td>S1-a 固定 <code>MOTION_MODULATION_WIDTH = 1024</code>；G4 实跑降配前向（motion 宽 1024）并测 <code>empty_motion_finite=1</code>；按 R3 不加特判，全空样本占比只在 result.md 里作为盲区说明</td></tr>
+<tr><td>K2</td><td><code>history_gemma.py::Module.init</code> 的 dummy <code>mem_seq</code> 宽取 <code>c.width</code>：动作专家 <code>gemma_300m</code> width 为 1024，恰好匹配；PaliGemma 一路 <code>mem_mods</code> 为 False 不建</td><td>已读代码核实（<code>openpi/models/gemma.py::get_config</code> 的 <code>gemma_300m</code>）；本计划不换变体。G4 叶名与形状、G5 首步前向双重确认</td></tr>
+<tr><td>K3</td><td>run 根 <code>history_config.resolved.yaml</code> 带新键 <code>motion.integration</code>；<code>policies/policy_config.py::create_trained_policy</code> 按快照建模后做严格参数树校验（<code>remove_extra_params=False</code> + <code>_assert_param_tree_exact</code>）。新代码建出 65 叶分路树，与 ckpt 一致；V11.29 之前的任何检出、<code>scripts/training/legacy-eval/</code> 下的旧副本会忽略该键，建出 59 叶 context 同路树（<code>motion_encoder_static</code> 1536→2048、无 <code>mem_attn</code>），在严格校验处显式报错而非静默错配</td><td>G6 用新代码走 <code>create_trained_policy</code> 加载核对；bucket README 写明评估须用含 V11.29 的代码；评估计划另行核对</td></tr>
+<tr><td>K4</td><td>只读锁：合并要改写被锁文件；dataloader worker 重建时可能重新 import <code>framesamp_dataset.py</code>（未核实）；两条 run 交叠使锁的恢复时点不唯一</td><td>Q2 方案 a/b（§4.6）；S1-d 改动限于 motion 开启段，2048 run 不触达；恢复清单合并 <code>cfm-chmod-added.txt</code>；恢复责任方交用户裁决</td></tr>
+<tr><td>K5</td><td>显存：4 卡 FSDP4 b128 下预计约 73 GiB/卡（介于纯 context 512 的 73 GiB 与 context 同路 motion 160 的 72 GiB 之间，另加 6 个 modulation 叶与交叉注意力激活），无原入口实测</td><td>G5 NVML 500 ms 实测峰值；OOM 即停交用户（R9），不自行换卡数或改 batch</td></tr>
+<tr><td>K6</td><td>步时：预计 4 卡 3.3–3.5 s/步、80k 约 73–78 h。分路态帧路编码器在 <code>embed_prefix</code> 与 <code>compute_loss</code> 各调用一次 <code>mem_encoder</code>（照现有 modulation 分支的写法），XLA 是否合并重复计算未核实；帧路编码只是 512×2816→2048 的一次线性层，占比预计很小</td><td>G5 记录稳态步时；步时慢不停（用户上一轮口径「太慢就不要管了」）；不为步时改代码结构</td></tr>
+<tr><td>K7</td><td>与 2048 训练共机：两条同读 <code>framesamp-8x8</code> 库（本 run 另读 394 MB motion 表），dataloader worker 8 + 8，加上两路增量上传，IO 与 CPU 争用</td><td>上一轮 512 与 512+motion 两条 4+4 同库并行无异常；G5 看本 run 步时，并只读核对 <code>m2k-train-modul</code> 日志稳态步时是否明显劣化（只读，不动该会话）；两路 inc 均 <code>ionice -c 3 nice -n 19</code></td></tr>
+</tbody>
+</table>
+
+<h2 id="t6">6. 盲区诚实清单</h2>
+<ul>
+<li>分路态 4 卡 b128 的步时与显存没有任何实测，§5 K5、K6 的数字全部由 0928 纯 context 512、context 同路 motion 与 V11.25 modulation 同路三组实测推算。</li>
+<li>2048 训练结束时间是推算：按稳态 1.84–1.9 s/步约在美东 10-20 上午 10:40 至中午之间，影响方案 b 的等待时长与方案 a 的锁恢复顺序。</li>
+<li>分路接入的效果（相对 V11.25 modulation 同路与纯 context 512）只能等训练结束并评估后才知道；评估另立计划，本计划不做任何在线评估。</li>
+<li>G2–G4 的「字节级一致」在降配变体（<code>gemma_150m</code> + <code>gemma_300m</code>）上成立，真实变体只做结构一致（叶名、形状、dtype）；真实变体的逐位前向未比较。</li>
+<li>G2–G4 各自耗时未实测，按 1–4 分钟估计。</li>
+<li>dataloader worker 是否会在训练中重建并重新 import 模块未核实（K4）。</li>
+<li>分路态下 motion 掩码全空样本的占比未统计（K1）。</li>
+<li>用户原话的「106」全库无 motion 相关命中，本计划按 160（mixed8 motion yaml 的 <code>motion.budget</code>）理解，属假设。</li>
+<li>新 yaml 照抄 <code>online_gpu: 4</code>，训练不读；评估时 sidecar 用哪张卡由评估计划另定。</li>
+<li>git 合并对只读文件的处理（是否先删后建从而改变权限）未实测；方案 a 先 <code>u+w</code> 再合并、合并后统一 <code>a-w</code>，以 <code>RELOCK</code> 判定行为准。</li>
+</ul>
+
+<h2 id="t7">7. 交接顺序与状态机登记</h2>
+<ul>
+<li><strong>任务 id</strong>：<code>mixed8-ctxframe-modulmotion-train</code>。</li>
+<li><strong>依赖的上游</strong>：<code>mixed8-vla-build</code>（closed）。对上游产物的假设：<code>v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/framesamp-8x8</code> 为 <code>status verified</code>、<code>num_rows 2145548</code>；<code>…/motion</code> 为 layout <code>motion-768-grid16-demopad17-v1</code>、<code>status verified</code>、<code>motion_token.f32.bin</code> 128342 行 × 768 f32（394266624 B）。与 <code>mixed8-2048-train</code>（running）无数据依赖，但共享只读锁与机器（K4、K7）。</li>
+<li><strong>交接前必须完成（pre_handoff）</strong>：
+  <ol>
+  <li>训练 <code>EXIT_CODE=0</code> 且 16 份 ckpt：<code>TRAIN_DONE=PASS exit=0 ckpts=16</code> @ <code>/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-ctxframe-modulmotion-b128-80k.log</code>；</li>
+  <li><code>result.md</code> 回写并以 <code>commitV11.30</code> push（evidence 为该 commit sha，<code>origin/v2-motionmem</code> 可查）；</li>
+  <li>只读锁恢复 <code>PERM_RESTORED=OK</code>（按 §4.6 裁决的责任方与清单）。</li>
+  </ol></li>
+<li><strong>长尾（long_tail）</strong>：<code>cfm-inc</code>（日志 <code>v1-store/logs/cfm-inc.log</code>，完成行 <code>INC_END run=mixed8-200-m8x8-ctxframe-modulmotion-b128-80k done=16</code>，只表示会话结束）；<code>cfm-upload</code> 正式驱动（日志 <code>v1-store/logs/cfm-upload.log</code>，完成行 <code>SHA256_PRE_POST_DIFF=0</code>，这才是上传完成的判据）。</li>
+<li><strong>下游</strong>：本任务 <code>done</code> 后可开分路 run 的在线评估（另立计划）。</li>
+<li><strong>是否登记进状态机</strong>：待用户答（Q4）。用户同意则计划 commit 时在 <code>docs/handoff/current.json</code> 写入该任务、状态 <code>planned</code>；不同意则不进文件，交接走人工。</li>
+</ul>
+
+<h2 id="t8">8. 留档与 commit 纪律</h2>
+<ul>
+<li>S1、S2 两次 <code>git merge --no-ff &lt;TIP 完整 sha&gt; -F &lt;消息文件&gt;</code>，subject 分别为 <code>commitV11.29: 合入 sub/S1——…</code>、<code>commitV11.29: 合入 sub/S2——…</code>（照 V11.26 先例），body 按第 11 条六项详写并摘录 <code>PRE_MERGE_REVIEW</code> 行；<code>sub/S1: </code>、<code>sub/S2: </code> 提交原样进历史。合一个、审一个、push 一个；合并后审查 FAIL 则停止后续合并、不 push、交用户。</li>
+<li>起跑前写 <code>docs/training-doc/mixed8-200-m8x8-ctxframe-modulmotion-b128-80k/launch.md</code>（第 12 条两段式第一段：版本与代码状态、启动与配置还原、G0–G7 判定行原文、完整启动命令、产物路径、盯盘项、本轮 tmux 会话清单）与 <code>docs/training-doc/README.md</code> 索引行，以 <code>commitV11.30Beta</code> 提交并 push，<code>git status --porcelain</code> 为空后才起跑。</li>
+<li>训练结束写 <code>result.md</code>（一句话结论与指标速览、训练过程行为、用户决策原话、计划外事件、结论与下一步、归档文件清单）与 <code>records/</code>（只放 §4.11 清洗后的 <code>train.summary.log</code>、<code>inc.summary.log</code>、<code>upload-smoke.summary.log</code>、<code>upload.summary.log</code> 及逐 1k 步 loss 摘要等 git 还原不出的实测数据），以 <code>commitV11.30</code> 提交——与 Beta 同号、两个独立 commit。</li>
+<li>禁止归档任何 yaml、sh 拷贝与 ckpt 权重；配置还原写成 <code>git show &lt;commitV11.30Beta sha&gt;:src/mme_vla_suite/models/config/robomme/perceptual-framesamp-ctxframe-modulmotion-8frame-8x8-mixed8.yaml</code> 与 runner 覆盖项；<code>docs/training-doc/</code> 下保持零 .sh、零 .yaml。</li>
+<li>一律 <code>git add &lt;逐个路径&gt;</code>，禁止 <code>git add -A</code>、<code>git add .</code>、<code>git commit -a</code>；提交前 <code>git status --short</code> 核对，他人在途改动一律绕开；commit 后立即裸 <code>git push</code>，禁止 force。</li>
+<li>本轮 tmux 会话清单（launch.md 与当轮回复都要列）：<code>cfm-smoke</code>、<code>cfm-smoke-nvml</code>、<code>cfm-ckpt100</code>、<code>cfm-train</code>、<code>cfm-inc</code>、<code>cfm-upload</code>（如 G2–G4 超时另加 <code>cfm-cpucheck</code>）。</li>
+<li>若用户同意登记状态机：开工令到达时写 <code>authorizations[]</code>（<code>kind: go</code>），开工时 <code>planned → running</code>，收尾按第 27 条写 <code>handoff:</code> 提交与 <code>HANDOFF_WRITE=PASS|FAIL task=mixed8-ctxframe-modulmotion-train state=&lt;state&gt; pre_handoff_pass=&lt;n&gt; pre_handoff_total=3 long_tail=2</code>。</li>
+</ul>
+
+</div></body>
+</html>
