@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-18T21:45:49Z",
-    "america_new_york": "2026-10-18T17:45:49-0400"
+    "utc": "2026-10-18T23:10:55Z",
+    "america_new_york": "2026-10-18T19:10:55-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "1c95c0606885df167bcfb7eb6bce73d7ae060b9f"
+    "base_head": "e61259941683bf25b32a723aa1cd8343a90811e8"
   },
   "freeze": {
     "active": false,
@@ -268,7 +268,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-18T20:41:48Z",
-      "state_reason": "两条 80k 已起跑：context V11.27Beta 42b2523（美东 17:43:57，GPU0–3），modulation V11.28Beta 1c95c06（美东 17:45:01，GPU4–7）；增量上传会话已起",
+      "state_reason": "context 2048 已按用户「停止context2048 作为测速留档 大产物删除」于 455/80k 停止并留档（commitV11.27）；modulation 2048（V11.28Beta 1c95c06，GPU4–7）继续",
       "owner": {
         "session": "https://claude.ai/code/session_019xZ3hfywh5yTmomPnhXryG",
         "host": "claude-code"
@@ -278,19 +278,13 @@
       ],
       "pre_handoff": [
         {
-          "what": "context 2048 80k 训练结束",
-          "evidence": "EXIT_CODE=0",
-          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m32x8x8-context-b128-80k.log",
-          "status": "pending"
-        },
-        {
           "what": "modulation 2048 80k 训练结束",
           "evidence": "EXIT_CODE=0",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m32x8x8-modul-b128-80k.log",
           "status": "pending"
         },
         {
-          "what": "两条 result.md 回写 commitV11.27 / commitV11.28 并 push",
+          "what": "context 测速 result.md（commitV11.27，已提交）与 modulation result.md（commitV11.28）回写并 push",
           "evidence": "commit sha",
           "where": "origin/v2-motionmem",
           "status": "pending"
@@ -304,13 +298,6 @@
       ],
       "long_tail": [
         {
-          "what": "context 增量上传",
-          "tmux": "m2k-inc-ctx",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m2k-inc-ctx.log",
-          "done_line": "INC_END",
-          "status": "pending"
-        },
-        {
           "what": "modulation 增量上传",
           "tmux": "m2k-inc-modul",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m2k-inc-modul.log",
@@ -318,7 +305,7 @@
           "status": "pending"
         },
         {
-          "what": "两条正式上传驱动（先 SMOKE=1 再全量）全量回读",
+          "what": "modulation 正式上传驱动（先 SMOKE=1 再全量）全量回读",
           "tmux": "—",
           "log": "—",
           "done_line": "SHA256_PRE_POST_DIFF=0",
@@ -326,11 +313,6 @@
         }
       ],
       "running_handles": [
-        {
-          "tmux": "m2k-train-ctx",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m32x8x8-context-b128-80k.log",
-          "done_line": "EXIT_CODE="
-        },
         {
           "tmux": "m2k-train-modul",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m32x8x8-modul-b128-80k.log",
@@ -343,6 +325,12 @@
           "date": "2026-10-18",
           "quote": "开工",
           "scope": "1018-mixed8-2048-context-modul-plan.md @ fa14d0a 步骤 1–8 全部（G4/G5 通过后直接 Beta 起跑；OOM 即停报错；步时慢不停）"
+        },
+        {
+          "kind": "scope",
+          "date": "2026-10-18",
+          "quote": "停止context2048 作为测速留档 大产物删除",
+          "scope": "停 m2k-train-ctx、写测速 result.md、删本计划短测 ckpt；context 上传取消"
         }
       ],
       "pending_decisions": [],
@@ -353,8 +341,8 @@
           "verdict_line": "EXIT_CODE=0"
         },
         {
-          "what": "训练结束、INC_END 且 inc 会话退出后：按 m2k-chmod-before.txt 恢复权限；跑 run_mixed8_200_vla_{ctx,modul}2048_80k_ckpt_export.sh（SMOKE=1→全量）；回写 result.md 与 commitV11.27/V11.28",
-          "command": "bash scripts/dataset/hf_export/run_mixed8_200_vla_ctx2048_80k_ckpt_export.sh",
+          "what": "modulation 训练结束、INC_END 且 m2k-inc-modul 退出后：按 m2k-chmod-before.txt 恢复权限；跑 run_mixed8_200_vla_modul2048_80k_ckpt_export.sh（SMOKE=1→全量）；回写 result.md 与 commitV11.28",
+          "command": "bash scripts/dataset/hf_export/run_mixed8_200_vla_modul2048_80k_ckpt_export.sh",
           "verdict_line": "RESULT=PASS SHA256_PRE_POST_DIFF=0"
         }
       ],
