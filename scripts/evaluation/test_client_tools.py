@@ -44,7 +44,7 @@ def _record_episode(save_dir, steps_dir, task, ep, n_demo, n_exec, flag, long_te
     if flag is None:
         rec.discard()
     else:
-        rec.save_video(f"{task}_ep{ep}_{flag}_goal {task}_{'easy' if ep < 50 else 'xhard14'}.mp4")
+        rec.save_video(f"{task}_ep{ep}_{flag}_{'easy' if ep < 50 else 'xhard14'}.mp4")
     return n_demo + n_exec
 
 
@@ -103,11 +103,73 @@ def test_recorder_broken_pipe_marks_failed(tmp_path, monkeypatch):
     img = _frames(1, 512, 512)[0]                                     # 一帧 > 64 KiB 管道，进程已退出必断
     for _ in range(3):
         rec.record(image=img, wrist_image=img, state=np.zeros(8))
-    rec.save_video("x_ep0_fail_g_easy.mp4")
+    rec.save_video("x_ep0_fail_easy.mp4")
     assert rec.failed
     assert client_utils.finalize_all() == (1, 1)
     assert not list(tmp_path.glob("*.mp4")) and not list(tmp_path.glob("*.part"))
 
+
+
+def test_long_goal_video_name_fits(tmp_path):
+    """xhard 的 task goal 很长：走 eval.py::EpisodeEvaluator._rollout 的真实拼名与真实 RolloutRecorder，
+    名字须 ≤255 字节、符合 summarize.VIDEO_RE 与 check_shard 前后缀规则，finalize_all 不再抛 ENAMETOOLONG。"""
+    import collections
+    import typing
+    import imageio.v2 as imageio
+    import summarize
+    tree = ast.parse((CLIENT / "eval.py").read_text())
+    tree.body = [n for n in tree.body if getattr(n, "name", None) in {"Args", "EpisodeWallClockTimeout", "EpisodeEvaluator"}]
+    import dataclasses
+    ns = dict(dataclasses=dataclasses, Path=Path, time=__import__("time"), Optional=typing.Optional,
+              Any=typing.Any, Tuple=typing.Tuple, RolloutRecorder=client_utils.RolloutRecorder,
+              EpisodeState=object, np=np)
+    exec(compile(tree, "eval.py", "exec"), ns)
+    goal = ("pick up the red cube and put it on the green target then " * 8)[:400]
+    assert len(goal) == 400
+    imgs = _frames(6)
+
+    class EpState:
+        count = 0
+        motion_k_last = None
+        def __init__(self):
+            self.action_plan = collections.deque()
+        def get_current_obs(self):
+            return imgs[0], imgs[0], np.zeros(8, np.float32)
+        def clear_buffers(self): pass
+        def add_observation(self, *a): pass
+    ns["EpisodeState"] = EpState                                       # _rollout 运行时才查全局名
+
+    class Runner:
+        env_id, episode_id, difficulty = "PickXtimes", 57, "xhard14"
+        n = 0
+        def step(self, action):
+            self.n += 1
+            return (imgs[self.n], imgs[self.n], np.zeros(8, np.float32)), self.n >= 4, "success"
+
+    class Client:
+        def reset(self):
+            return {"reset_finished": True}
+
+    videos = tmp_path / "videos"
+    ev = ns["EpisodeEvaluator"](ns["Args"](), tmp_path)
+
+    def init_episode(env_runner, epstate, video_save_dir):
+        rec = client_utils.RolloutRecorder(video_save_dir, goal, fps=30, steps_path=tmp_path / "steps" / "s.jsonl")
+        rec.record(image=imgs[0], wrist_image=imgs[0], state=np.zeros(8, np.float32))
+        return goal, rec
+    ev.init_episode = init_episode
+    ev.get_action_chunk = lambda *a, **k: [np.zeros(8, np.float32)] * 8
+    assert ev._rollout(Client(), Runner(), videos) == "success"
+    assert client_utils.finalize_all() == (1, 0)
+    out = sorted(videos.glob("*.mp4"))
+    assert [v.name for v in out] == ["PickXtimes_ep57_success_xhard14.mp4"]
+    name = out[0].name
+    assert len(name.encode()) <= 255 and goal not in name
+    m = summarize.VIDEO_RE.match(name)
+    assert m and (m["task"], m["ep"], m["flag"]) == ("PickXtimes", "57", "success")
+    assert name.startswith("PickXtimes_ep57_") and name.endswith("_xhard14.mp4")
+    with imageio.get_reader(out[0]) as reader:
+        assert len([f for f in reader]) == 5
 
 # ── SpecEnvRunner 分流（桩 robomme）────────────────────────────────────────────────
 class _Env:
@@ -248,7 +310,7 @@ def test_summarize(tmp_path, capsys):
                     if v == "error":
                         continue
                     flag = "success" if v else ("timeout" if e == "50" else "fail")
-                    (root / "videos" / f"BinFill_ep{e}_{flag}_goal_{g.split('/')[1]}.mp4").write_bytes(b"")
+                    (root / "videos" / f"BinFill_ep{e}_{flag}_{g.split('/')[1]}.mp4").write_bytes(b"")
         specs += ["--model", f"{label}={run}:pol:1"]
     sys.argv = ["summarize.py", str(manifest), *specs, "--out-dir", str(tmp_path / "sum")]
     summarize.main()
