@@ -2,7 +2,7 @@
 
 > 创建：2026-10-18 美东 16:30。权威工作副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，环境 B，分支 `v2-motionmem`，起草时 HEAD `4fd7271`（工作区 clean，`docs/handoff/current.json` 中 `mixed8-vla-train` 已 closed、无在跑句柄）。
 >
-> **当前状态：只是计划，未改代码、未起任何短测或训练。** 第 6 节待定项已于 2026-10-18 美东 16:35 全部由用户裁决；开工须等用户开工令。
+> **当前状态：只是计划，未改代码、未起任何短测或训练。** 第一部分第 6 节各项已于 2026-10-18 美东 16:35 由用户裁决。**用户的一次开工令覆盖步骤 1–8 全部**：G4、G5 通过后直接打 Beta、起跑正式训练，不再二次请示；只有闸门 FAIL（含 OOM）才停下报错。开工前审查 `PLAN_CONSISTENCY_REVIEW=FAIL base=80a2919 findings=11 blocking=1` 已按第一部分第 9 节逐条修订。
 
 用户原话（按时间顺序）：
 
@@ -29,7 +29,7 @@
 | 数据 | `v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/framesamp-8x8`（16 任务 × 200 集 = 3200 集，2145548 帧，1383846 执行样本），norm stats 同上一轮 | 同左 |
 | 上传（裁决 C） | 训练中增量上传到公开 bucket `HongzeFu/robomme-vla-mixed8-200-context-2048-80k-v1`，结束后正式驱动全量回读 | `HongzeFu/robomme-vla-mixed8-200-modul-2048-80k-v1`，同左 |
 
-**除接入方式及其必然附带的 `memory_token_dim` 外，两条 run 的数据、超参、卡数、workers、seed 全部一致，也和上一轮 512 一致（只差 budget）。**
+**除接入方式及其必然附带的 `memory_token_dim` 外，两条 run 的数据、超参、卡数、workers、seed 全部一致，也和上一轮 512 一致（只差 budget）。** 两份 history yaml 另有一处无效差异：context 版沿用 8 帧 context yaml 里 `motion.enabled: false` 的整节（守卫只看 `enabled`，不影响训练），modulation 版没有 motion 节，所以两份 resolved yaml 的 sha256 不同。wandb 与上一轮相同：`v1-store/secrets/wandb.env` 在位即开启。
 
 ## 2. 子代理核查结论（2026-10-18 美东 16:20–16:28，三路 Haiku 只读）
 
@@ -63,14 +63,14 @@
 
 | 步 | 做什么 | 谁做 | 判定 | 预计 |
 |---|---|---|---|---|
-| 1 | 写入：放开 context 2048 守卫分支、新建 context 32 帧 yaml、补守卫测试、新增两个 mixed8 runner | 写入子代理 S1（worktree） | 守卫测试全过、两条 `DRY_RUN=1` 打印正确命令 | 30 min |
-| 2 | 写入：两条上传驱动、hygiene allowlist、bucket README | 写入子代理 S2（worktree） | `bash -n`、allowlist JSON 可解析、`SMOKE` 干跑 | 30 min |
-| 3 | 合并前审查 → 合并 → 合并后审查 → push，记 `commitV11.26`；同时只读核 mixed8 短历史样本数与 context 在线装配（CPU） | 审查 R1；只读 Haiku | `PRE/POST_MERGE_REVIEW=PASS`；`SHORT_HIST=… ` 与 `ONLINE_ASM_CTX2048=PASS` | 30 min |
+| 1 | 写入：放开 context 2048 守卫分支、新建 context 32 帧 yaml、补守卫测试、新增两个 mixed8 runner、新增核对脚本 `check_32frame_context.py`（短历史统计、在线装配、20 步短测汇总、100 步保存加载） | 写入子代理 S1（worktree） | 守卫测试全过、两条 `DRY_RUN=1` 打印正确命令、核对脚本 CPU 子命令可跑 | 45 min |
+| 2 | 写入：两条上传驱动、hygiene allowlist、bucket README | 写入子代理 S2（worktree），与 S1 并行 | `UPLOAD_LINT=PASS`（`bash -n` + 两个 JSON 可解析 + 无 512 残留）；`SMOKE=1` 要训练产物，挪到步骤 8 | 30 min |
+| 3 | S1、S2 各做合并前审查 → `--no-ff` 合并 → 合并后审查 → push（S1 先、S2 后，合并提交 `commitV11.26`）；主会话跑核对脚本的短历史统计与 context 在线装配（CPU） | 审查 RV1；主会话 | `PRE/POST_MERGE_REVIEW=PASS` ×2；`SHORT_HIST=…`；`ONLINE_ASM_CTX2048=PASS` | 40 min |
 | 4 | 4+4 同时 20 步短测（`XLA_PYTHON_CLIENT_PREALLOCATE=false`，NVML 500 ms 采样） | 运行子代理 X1 | 两条均无 OOM，读峰值显存与稳态步时 | 15–30 min |
 | 5 | context 2048 再做 100 步 + 保存 + `create_trained_policy` 加载（mem_len=2048） | X1 | 保存加载叶相等、动作一致 | 30–40 min |
-| 6 | 打 Beta 锚点（V11.27Beta context / V11.28Beta modulation）、建档 `launch.md`，实测步时与推算工期只记录并告知，不再等用户确认 | 主会话 | G4、G5 通过 | 10 min |
-| 7 | 两条 80k 起跑 + 两条增量上传会话 | X1 起跑；主会话挂 Monitor | 起跑后 300 步内 loss 有限、无 OOM | context 待测；modul 约 43–45 h（推断） |
-| 8 | 收尾：核 `EXIT_CODE=0` → 正式上传驱动全量回读 `SHA256_PRE_POST_DIFF=0` → `result.md` 回写 → handoff closed | 主会话 + 写入子代理 | 同上一轮验收 | 数小时 |
+| 6 | 主会话先存权限清单并对 `src/ scripts/ packages/` 上只读锁（R4）→ 打 `commitV11.27Beta`（context 档案 `launch.md`，只动 `docs/`，不受锁影响）→ 起 context → 打 `commitV11.28Beta`（modulation 档案）→ 起 modulation；实测步时与推算工期只记录并告知 | 主会话 | G4、G5 通过 | 10 min |
+| 7 | 两条 80k 起跑（各在对应 Beta 之后立即起）+ 两条增量上传会话 | X1 起跑；主会话挂 Monitor、起上传会话 | G6 | context 待测；modul 约 43–45 h（推断） |
+| 8 | 收尾：核 `EXIT_CODE=0` → 恢复只读锁 → 正式上传驱动先 `SMOKE=1` 再全量回读 `SHA256_PRE_POST_DIFF=0` → `result.md` 回写 → handoff done/closed | 主会话 | G7、G8 | 数小时 |
 
 ## 6. 用户裁决（2026-10-18 美东 16:35）
 
@@ -83,7 +83,7 @@
 
 ## 7. 子代理分工与合并（简述）
 
-改动拆成两块：S1 管训练侧（守卫、context yaml、测试、两个 runner），S2 管上传侧（两条导出驱动、allowlist、README），各在独立 worktree、互不碰对方文件。S1 先合、S2 后合，每次合并前由一个 Sonnet 审查者钉死 BASE/TIP 看 diff，合并后再审一次合并结果，然后 push。短测与起跑由一个 Opus 运行子代理在主检出执行，只启动、核起跑、交回 tmux 名，不改任何文件；监听、上传会话和收尾由主会话负责。
+改动拆成两块，并行写：S1 管训练侧（守卫、context yaml、测试、两个 runner、核对脚本），S2 管上传侧（两条导出驱动、allowlist、README），各在独立 worktree、互不碰对方文件。S1 先合、S2 后合，每块合并前由一个 Sonnet 审查者 RV1 钉死 BASE/TIP 看 diff，合并后再审一次合并结果，然后 push。短测、保存加载与正式起跑由一个 Opus 运行子代理 X1 在主检出执行，只跑已合并的脚本、核起跑、交回 tmux 名，不改任何文件；Beta、只读锁、监听、上传会话和收尾由主会话负责。
 
 ## 8. 验收表
 
@@ -93,13 +93,31 @@
 | 短测 | 两条 20 步无 OOM、loss 有限；记录每卡 NVML 峰值与稳态步时 |
 | context 保存加载 | 100 步 ckpt 加载后叶与保存现场一致、记忆相关叶不同于初态、固定 noise 动作一致、`mem_len=2048` |
 | 正式训练 | 两条各 80000 步 `EXIT_CODE=0`，16 份 ckpt（5000…75000、79999） |
-| 上传 | 每条 16 份 ckpt 公开、全量回读 `SHA256_PRE_POST_DIFF=0` |
+| 上传 | 每条 16 份 ckpt 公开、全量回读 `SHA256_PRE_POST_DIFF=0`（增量会话的 `INC_END` 只表示该会话已结束，不算上传完成） |
+
+## 9. 开工前审查与修订（2026-10-18 美东 16:50）
+
+审查子代理（sonnet，只读，锚定 `80a2919`）判 `PLAN_CONSISTENCY_REVIEW=FAIL base=80a2919 findings=11 blocking=1`，主会话逐条回原文和代码核实后全部成立，均为文字或分工修订，不改失败处理、接口与验收判据：
+
+| 编号 | 问题 | 修订 |
+|---|---|---|
+| F1（blocking） | G2–G5 的判定行没有脚本负责人，X1 又不许写脚本 | S1 可写集合加 `scripts/training/tests/check_32frame_context.py`（照 `check_32frame_modul.py`），G2/G3 改由主会话跑、G4/G5 由 X1 跑该脚本；删去 Q1 |
+| F2 | runbook 重复写 `EXIT_CODE`（`_train_common.sh` 已 tee 并写） | 删去 runbook 的 `echo EXIT_CODE` |
+| F3 | 开工令覆盖范围几处说法不一 | 文首钉死「一次开工令覆盖步骤 1–8」，删去 X1、G6、runbook 里的「等用户开工令」 |
+| F4 | 测试用例描述不符 | 改成从 `test_2048_reject_type_and_combination` 的拒绝参数里删去 context/2048 一条，另加 context-32frame 接受用例与反例 |
+| F5 | S2 的 `SMOKE` 干跑训练前跑不了、`UPLOAD_LINT` 未定义 | 定义 `UPLOAD_LINT`，`SMOKE=1` 挪到步骤 8 |
+| F6 | CLI 名「待核实」已陈旧、wandb 未写 | 改为已核实；总览写明 wandb 与上一轮相同 |
+| F7 | 「第 1 节」与「R1」重名 | 改成「第二部分 §1」，审查代理改名 RV1 |
+| F8 | 步骤表与分配表分工不一、tmux 清单缺 `m2k-smoke-nvml` | 步骤 3 写明 S1、S2 各前审后审，步骤 8 改为主会话，补 tmux 名 |
+| F9 | 只读锁没进步骤表 | 写进步骤 6 与 runbook |
+| F10 | 两份 yaml 另有 inert 的 motion 节差异 | 总览与 S1 清单写明 |
+| F11 | `INC_END` 不等于上传完整 | 长尾完成行改为正式驱动的 `SHA256_PRE_POST_DIFF=0` |
 
 # 第二部分（技术细节，供 agent 追踪）
 
 ## 〇 前置声明与红线
 
-- **R1** 只改第 1 节列出的文件；不改训练计算、dataloader 读取逻辑、sampler、collate、优化器、全局默认超参（`training/config.py::_CONFIGS` 不动）。
+- **R1** 只改第二部分 §1 列出的文件；不改训练计算、dataloader 读取逻辑、sampler、collate、优化器、全局默认超参（`training/config.py::_CONFIGS` 不动）。
 - **R2** 守卫只新增一个精确分支：`raw == (2048,64,1)`、三元组每项 `type(v) is int`、`integration_type == "context"`、`memory_token_dim == 2048`、motion 关闭。不放行 context 1024/4096/8192、不放行 context+motion、不放行 4×4。
 - **R3** run 名全新、不覆盖；`_train_common.sh` 的「拒绝覆盖日志」保留。
 - **R4** 正式训练从 clean HEAD 起跑，起跑前打 Beta 锚点；起跑后到训练结束，被跟踪的 `src/ scripts/ packages/` 照上一轮红线 18 做 `chmod a-w` 只读锁，原权限另存 `v1-store/m8v-scripts/m2k-chmod-before.txt`，结束后恢复。
@@ -115,8 +133,9 @@
 | 文件 | 改动 |
 |---|---|
 | `src/mme_vla_suite/training/framesamp_dataset.py` | `FrameSampDataset.__init__` 形制守卫：在 `new_shape` 之外新增 `ctx_shape`（R2 条件），`_req(legacy_shape or new_shape or ctx_shape, …)`；报错文字补上新档位。不动守卫之后任何计算 |
-| `src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-32frame-8x8.yaml`（新建） | 复制 `perceptual-framesamp-context-8frame-8x8.yaml`，只改 `budget: 2048`；头注释写明来源与唯一差异 |
-| `scripts/training/tests/test_pack_guards.py` | 现有「context 大预算应拒」的用例改为：2048 接受、1024/4096 拒；新增类型反例（`2048.0` / `"2048"` / `num_views: true`）与组合反例（+motion、+4×4、多视角、`memory_token_dim 1024`）；旧用例保留 |
+| `src/mme_vla_suite/models/config/robomme/perceptual-framesamp-context-32frame-8x8.yaml`（新建） | 复制 `perceptual-framesamp-context-8frame-8x8.yaml`，只改 `budget: 2048`；头注释写「相对 8 帧 context 版只改 budget；相对 modul-32frame 版另含 `motion.enabled: false` 的无效 motion 节」 |
+| `scripts/training/tests/test_pack_guards.py` | 从 `test_2048_reject_type_and_combination` 的拒绝参数里删去 `{"integration_type": "context", "memory_token_dim": 2048}`（放行后它会变成接受）；仿 `test_2048_real_rows_and_spawn` 新增 context-32frame 接受用例；在 context-32frame yaml 上新增反例：budget 1024/4096、+motion、+4×4、多视角、`memory_token_dim 1024`、类型反例（`2048.0` / `"2048"` / `num_views: true`）；`test_g13_integration_dim_pairs` 等旧用例不动 |
+| `scripts/training/tests/check_32frame_context.py`（新建） | 照 `check_32frame_modul.py` 的写法，YAML 换成 context-32frame，数据换 mixed8 库；子命令 `short-hist`（G2）、`online`（G3）、`smoke-summary --log <训练日志> --nvml <csv>`（G4，汇总 OOM、loss 有限、每卡峰值、稳态步时）、`ckpt --run <100 步 run>`（G5，`create_trained_policy` 加载、叶相等、记忆叶不同于初态、固定 noise 动作一致、`mem_len=2048`）；各自末行打印第二部分 §3 的判定行 |
 | `scripts/dataset/hf_export/mixed8_200_runner/train-ctx2048-80k.sh`（新建） | 照 `train-512-80k.sh`，`HC=perceptual-framesamp-context-32frame-8x8.yaml` |
 | `scripts/dataset/hf_export/mixed8_200_runner/train-modul2048-80k.sh`（新建） | 照 `train-512-80k.sh`，`HC=perceptual-framesamp-modul-32frame-8x8.yaml` |
 
@@ -126,9 +145,9 @@
 
 | 文件 | 改动 |
 |---|---|
-| `scripts/dataset/hf_export/run_mixed8_200_vla_ctx2048_80k_ckpt_export.sh`、`…_modul2048_80k_ckpt_export.sh`（新建） | 照 `run_mixed8_200_vla_512_80k_ckpt_export.sh`，改 RUN_NAME、BUCKET_ID、EXPORT_NAME（`hf-ckpt-mixed8-200-vla-{ctx,modul}2048-80k`）、allowlist、README |
-| `scripts/dataset/hf_export/hygiene_allowlist_mixed8_200_vla_{ctx,modul}2048_80k.json`（新建） | 照 512 版改 run 名 |
-| `scripts/dataset/hf_export/mixed8_200_vla_{ctx,modul}2048_80k_bucket_README.md`（新建） | 照 512 版，写明 2048、接入方式、yaml 名与 sha256（合并后回填） |
+| `scripts/dataset/hf_export/run_mixed8_200_vla_ctx2048_80k_ckpt_export.sh`、`…_modul2048_80k_ckpt_export.sh`（新建） | 照 `run_mixed8_200_vla_512_80k_ckpt_export.sh`，改 RUN_NAME、BUCKET_ID、EXPORT_NAME（`hf-ckpt-mixed8-200-vla-{ctx,modul}2048-80k`）、ALLOWLIST、README_SRC、DRIVER_NAME；`EXPECT_MOTION=false` 保留 |
+| `scripts/dataset/hf_export/hygiene_allowlist_mixed8_200_vla_{ctx,modul}2048_80k.json`（新建） | 照 512 版全文替换 run 名、bucket 名、驱动名（含 `_doc` 字段） |
+| `scripts/dataset/hf_export/mixed8_200_vla_{ctx,modul}2048_80k_bucket_README.md`（新建） | 照 512 版全文替换 run 名、bucket 名、驱动名，写明 2048、接入方式、yaml 名；sha 与字节数沿用 `@@…@@` 占位由驱动自动填 |
 
 `_mixed8_200_vla_ckpt_export_common.sh` 不改。增量上传沿用不进 git 的 `v1-store/m8v-scripts/m8v-ckpt-inc.sh`（参数 `<RUN_NAME> <BUCKET_ID> <EXPORT_NAME> <ALLOWLIST> <训练 tmux 名>`，内含 `EXPECT_STEPS=5000…75000 79999`，适用 80k）。
 
@@ -136,12 +155,11 @@
 
 | 编号 | 目标 | 模型 / 隔离 | 可写集合 | 禁触 | 依赖与合并顺序 | 验收命令与判定行（主检出外的 worktree，uv 环境） | 资源 |
 |---|---|---|---|---|---|---|---|
-| S1 | 训练侧改动 | `opus`，worktree，基线为开工时 HEAD | 第 1 节 S1 表 5 个文件 | 其他一切；`_train_common.sh` | 无依赖；第 1 个合 | `uv run python -m pytest scripts/training/tests/test_pack_guards.py -q` 全过；两 runner `DRY_RUN=1` 输出 `HC=` 与 `TRAIN_CMD=` 正确；`GUARD_CTX2048=PASS accept=1 reject_type=3 reject_combo≥4 legacy_accept 不变` | CPU |
-| S2 | 上传侧改动 | `opus`，worktree，同基线 | 第 1 节 S2 表 6 个文件 | 其他一切；`_mixed8_200_vla_ckpt_export_common.sh` | 无依赖；S1 之后合 | `bash -n` 两驱动；`python -I -c json.load` 两 allowlist；`UPLOAD_LINT=PASS` | CPU |
-| R1 | 合并前后审查（S1、S2 各一次前审、一次后审） | `sonnet`，只读 | 无 | 全部 | 钉死 `REVIEW_BASE`/`REVIEW_TIP` | `PRE_MERGE_REVIEW=PASS|FAIL …`、`POST_MERGE_REVIEW=PASS|FAIL …` | — |
-| Q1 | 只读核 mixed8 库 `step<31` 执行样本数；context 2048 在线装配（`FrameSampMemory` + `policy.py`，CPU） | `haiku`，只读 | 无（输出到 scratch） | 全部 | S1 合并后 | `SHORT_HIST=<n>/<1383846>`；`ONLINE_ASM_CTX2048=PASS steps=5 mem_len=2048` | CPU |
-| X1 | 短测（步骤 4–5）与正式起跑（步骤 7） | `opus`，主检出，不加 worktree | 无（只写 `v1-store/` 产物与日志） | 任何代码、配置、脚本、参数 | 合并 push 后；正式起跑等用户开工令 | 见第 4 节 runbook 判定行 | 8 卡；tmux `m2k-smoke-ctx`/`m2k-smoke-modul`/`m2k-train-ctx`/`m2k-train-modul` |
-| 主会话 | Beta 锚点、建档、只读锁、增量上传会话、Monitor、收尾、handoff | — | `docs/training-doc/<run>/`、`docs/handoff/current.json`、`v1-store/m8v-scripts/m2k-*` | — | — | — | tmux `m2k-inc-ctx`/`m2k-inc-modul` |
+| S1 | 训练侧改动 | `opus`，worktree，基线为开工时 HEAD | 第二部分 §1 S1 表 6 个文件 | 其他一切；`_train_common.sh` | 无依赖；第 1 个合 | `uv run python -m pytest scripts/training/tests/test_pack_guards.py -q` 全过；两 runner `DRY_RUN=1` 输出 `HC=` 与 `TRAIN_CMD=` 正确；`GUARD_CTX2048=PASS accept=1 reject_type=3 reject_combo≥4 legacy_accept 不变`；`uv run python scripts/training/tests/check_32frame_context.py --help` 列出四个子命令 | CPU |
+| S2 | 上传侧改动 | `opus`，worktree，同基线，与 S1 并行写 | 第二部分 §1 S2 表 6 个文件 | 其他一切；`_mixed8_200_vla_ckpt_export_common.sh` | 无依赖；S1 之后合 | `UPLOAD_LINT=PASS` = 两驱动 `bash -n` 通过 + 两 allowlist `json.load` 通过 + 6 个新文件 `grep -c '512-80k\|modul-512'` 均为 0 | CPU |
+| RV1 | 合并前后审查（S1、S2 各一次前审、一次后审） | `sonnet`，只读 | 无 | 全部 | 钉死 `REVIEW_BASE`/`REVIEW_TIP` | `PRE_MERGE_REVIEW=PASS|FAIL …`、`POST_MERGE_REVIEW=PASS|FAIL …` | — |
+| X1 | 短测与保存加载（步骤 4–5，跑 `check_32frame_context.py smoke-summary` / `ckpt` 出 G4、G5）、正式起跑（步骤 7） | `opus`，主检出，不加 worktree | 无（只写 `v1-store/` 产物与日志） | 任何代码、配置、脚本、参数 | 合并 push 后；正式起跑在主会话打对应 Beta 之后 | 第二部分 §3 G4–G6 | 8 卡；tmux `m2k-smoke-ctx`/`m2k-smoke-modul`/`m2k-smoke-nvml`/`m2k-ckpt100-ctx`/`m2k-train-ctx`/`m2k-train-modul` |
+| 主会话 | G2/G3（跑 `check_32frame_context.py short-hist` / `online`）、Beta 锚点、建档、只读锁、增量上传会话、Monitor、收尾、handoff | — | `docs/training-doc/<run>/`、`docs/handoff/current.json`、`v1-store/m8v-scripts/m2k-*` | — | — | — | tmux `m2k-inc-ctx`/`m2k-inc-modul` |
 
 共享文件归属：`docs/handoff/current.json` 只由主会话写。S1/S2 commit subject 前缀 `sub/S1: ` / `sub/S2: `，不 push、不合主分支。
 
@@ -151,15 +169,15 @@
 |---|---|---|---|
 | G0 | 守卫正反例 | `GUARD_CTX2048=PASS …`；pytest 全过 | S1 内 + 合并后主检出复跑 |
 | G1 | runner 干跑 | 两条 `DRY_RUN=1` 的 `HC=`、`--dataset-path …/framesamp-8x8`、`--fsdp-devices 4 --num-workers 8` | 合并后 |
-| G2 | 短历史统计 | `SHORT_HIST=…`（只记录，不设门槛） | 合并后 |
-| G3 | context 在线装配 | `ONLINE_ASM_CTX2048=PASS` | 合并后 |
-| G4 | 20 步短测 ×2（同时，4+4） | 每条 `SMOKE20=PASS oom=0 loss_finite=1 peak_mib=<…> steady_s_per_step=<…>` | 合并后 |
-| G5 | context 100 步保存加载 | `CKPT_LOAD_CTX2048=PASS leaves_equal=1 mem_leaves_changed≥1 actions_match=1 mem_len=2048` | G4 通过后 |
-| G6 | 起跑 | 两条日志 300 步内无 `Traceback`/`RESOURCE_EXHAUSTED`，loss 有限 | 用户开工令后 |
+| G2 | 短历史统计（`check_32frame_context.py short-hist`，主会话） | `SHORT_HIST=<n>/1383846`（只记录，不设门槛） | 合并后 |
+| G3 | context 在线装配（`… online`，主会话，CPU） | `ONLINE_ASM_CTX2048=PASS steps=5 mem_len=2048` | 合并后 |
+| G4 | 20 步短测 ×2（同时，4+4；`… smoke-summary`，X1） | 每条 `SMOKE20=PASS oom=0 loss_finite=1 peak_mib=<…> steady_s_per_step=<…>` | 合并后 |
+| G5 | context 100 步保存加载（`… ckpt`，X1） | `CKPT_LOAD_CTX2048=PASS leaves_equal=1 mem_leaves_changed≥1 actions_match=1 mem_len=2048` | G4 通过后 |
+| G6 | 起跑 | 两条日志 300 步内无 `Traceback`/`RESOURCE_EXHAUSTED`，loss 有限 | 对应 Beta 之后 |
 | G7 | 训练结束 | `EXIT_CODE=0`、16 份 ckpt | 训练末 |
 | G8 | 上传 | `SHA256_PRE_POST_DIFF=0`、bucket `private=False` | 收尾 |
 
-任一 FAIL 即停，原文交用户。
+任一 FAIL（含 OOM）即停，原文交用户；步时慢不算 FAIL。
 
 ## 4. runbook
 
@@ -170,10 +188,16 @@ R=scripts/dataset/hf_export/mixed8_200_runner
 DRY_RUN=1 FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-ctx2048-80k.sh  mixed8-200-m32x8x8-context-b128-80k
 DRY_RUN=1 FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-modul2048-80k.sh mixed8-200-m32x8x8-modul-b128-80k
 # G4：短测 run 名带 smoke 后缀，结束即删（≤5 min 的部分不留档；超时按第 17 条补档）
-tmux new-session -d -s m2k-smoke-ctx "cd $PWD && CUDA_VISIBLE_DEVICES=0,1,2,3 XLA_PYTHON_CLIENT_PREALLOCATE=false FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-ctx2048-80k.sh m2k-smoke-ctx-<UTC> --num-train-steps 20 --no-wandb-enabled; echo EXIT_CODE=\$? >> v1-store/logs/m2k-smoke-ctx-<UTC>.log"
-tmux new-session -d -s m2k-smoke-modul "cd $PWD && CUDA_VISIBLE_DEVICES=4,5,6,7 XLA_PYTHON_CLIENT_PREALLOCATE=false FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-modul2048-80k.sh m2k-smoke-modul-<UTC> --num-train-steps 20 --no-wandb-enabled; echo EXIT_CODE=\$? >> v1-store/logs/m2k-smoke-modul-<UTC>.log"
+tmux new-session -d -s m2k-smoke-ctx "cd $PWD && CUDA_VISIBLE_DEVICES=0,1,2,3 XLA_PYTHON_CLIENT_PREALLOCATE=false FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-ctx2048-80k.sh m2k-smoke-ctx-<UTC> --num-train-steps 20 --no-wandb-enabled"
+tmux new-session -d -s m2k-smoke-modul "cd $PWD && CUDA_VISIBLE_DEVICES=4,5,6,7 XLA_PYTHON_CLIENT_PREALLOCATE=false FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-modul2048-80k.sh m2k-smoke-modul-<UTC> --num-train-steps 20 --no-wandb-enabled"
 nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv -lms 500 > v1-store/logs/m2k-smoke-nvml-<UTC>.csv   # 另起 tmux m2k-smoke-nvml
-# 步骤 7（用户开工令 + Beta 锚点之后）
+uv run python scripts/training/tests/check_32frame_context.py smoke-summary --log v1-store/logs/m2k-smoke-ctx-<UTC>.log --nvml v1-store/logs/m2k-smoke-nvml-<UTC>.csv --gpus 0,1,2,3
+uv run python scripts/training/tests/check_32frame_context.py smoke-summary --log v1-store/logs/m2k-smoke-modul-<UTC>.log --nvml v1-store/logs/m2k-smoke-nvml-<UTC>.csv --gpus 4,5,6,7
+# G5：context 100 步 + 保存（save_interval 由 CLI 覆盖为 100），再加载核对
+tmux new-session -d -s m2k-ckpt100-ctx "cd $PWD && CUDA_VISIBLE_DEVICES=0,1,2,3 FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-ctx2048-80k.sh m2k-ckpt100-ctx-<UTC> --num-train-steps 101 --save-interval 100 --no-wandb-enabled"
+uv run python scripts/training/tests/check_32frame_context.py ckpt --run m2k-ckpt100-ctx-<UTC>
+# 步骤 6–7：存权限、只读锁 → commitV11.27Beta（只动 docs/）→ 起 context → commitV11.28Beta → 起 modulation
+# 只读锁：git ls-files src scripts packages | xargs stat -c '%a %n' > v1-store/m8v-scripts/m2k-chmod-before.txt; git ls-files src scripts packages | xargs chmod a-w
 tmux new-session -d -s m2k-train-ctx   "cd $PWD && CUDA_VISIBLE_DEVICES=0,1,2,3 FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-ctx2048-80k.sh  mixed8-200-m32x8x8-context-b128-80k"
 tmux new-session -d -s m2k-train-modul "cd $PWD && CUDA_VISIBLE_DEVICES=4,5,6,7 FSDP_DEVICES=4 NUM_WORKERS=8 bash $R/train-modul2048-80k.sh mixed8-200-m32x8x8-modul-b128-80k"
 # 增量上传（每条一个会话）
@@ -181,7 +205,7 @@ tmux new-session -d -s m2k-inc-ctx   "bash v1-store/m8v-scripts/m8v-ckpt-inc.sh 
 tmux new-session -d -s m2k-inc-modul "bash v1-store/m8v-scripts/m8v-ckpt-inc.sh mixed8-200-m32x8x8-modul-b128-80k HongzeFu/robomme-vla-mixed8-200-modul-2048-80k-v1 hf-ckpt-mixed8-200-vla-modul2048-80k scripts/dataset/hf_export/hygiene_allowlist_mixed8_200_vla_modul2048_80k.json m2k-train-modul 2>&1 | tee v1-store/logs/m2k-inc-modul.log"
 ```
 
-`--num-train-steps` 与 `--no-wandb-enabled` 的确切 CLI 名由 S1 在 DRY_RUN 中对照 `train.py` 的 tyro 参数核实；G5 的 100 步保存加载复用 0920 计划 V8 的加载核对写法（`create_trained_policy`），由 X1 执行前把命令写进 `launch.md`。每个日志各挂一个 Monitor，过滤 `EXIT_CODE=|Traceback|RESOURCE_EXHAUSTED|out of memory|nan`。
+`--num-train-steps`、`--no-wandb-enabled` 已由开工前审查对照 `TrainConfig` 核实；`--save-interval` 由 S1 在 DRY_RUN 中核实字段名。G5 的加载核对写进 `check_32frame_context.py ckpt`，写法照 `check_32frame_modul.py` 的 `ckpt` 子命令。每个日志各挂一个 Monitor，过滤 `EXIT_CODE=|Traceback|RESOURCE_EXHAUSTED|out of memory|nan`。
 
 ## 5. 风险登记
 
@@ -206,7 +230,7 @@ tmux new-session -d -s m2k-inc-modul "bash v1-store/m8v-scripts/m8v-ckpt-inc.sh 
 - **任务 id**：`mixed8-2048-train`（用户裁决登记，`planned`）。
 - **依赖的上游**：`mixed8-vla-build`（closed；假设库 `16task-mixed8-200-3200ep-e3c7564f` 的 `framesamp-8x8` 为 `status verified`、`num_rows 2145548`、`VERIFY_PACK … mismatches=0`）。不依赖 `mixed8-vla-train`。
 - **交接前必须完成（pre_handoff）**：两条训练 `EXIT_CODE=0`（日志 `v1-store/logs/<run>.log`）；两条 `result.md` 回写并以 `commitV11.27` / `commitV11.28` push；只读锁按 `m2k-chmod-before.txt` 恢复 `PERM_RESTORED=OK`。
-- **长尾（long_tail）**：`m2k-inc-ctx`、`m2k-inc-modul` 增量上传（完成行 `INC_END`）；两条正式上传驱动全量回读（完成行 `SHA256_PRE_POST_DIFF=0`）。
+- **长尾（long_tail）**：`m2k-inc-ctx`、`m2k-inc-modul` 增量上传会话（`INC_END` 只表示会话结束）；两条正式上传驱动全量回读，完成行 `SHA256_PRE_POST_DIFF=0`，这才是上传完成的判据。
 - **下游**：本任务 `done` 后可开两条 2048 run 的在线评估（另立计划）。
 
 ## 8. 留档与 commit 纪律
