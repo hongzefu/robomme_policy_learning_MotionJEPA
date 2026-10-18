@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-18T20:11:26Z",
-    "america_new_york": "2026-10-18T16:11:26-0400"
+    "utc": "2026-10-18T20:20:18Z",
+    "america_new_york": "2026-10-18T16:20:18-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "b42f16558665d33e11ee1755c60f26dbbfda91d0"
+    "base_head": "a2c204fb853fdf85466976ab756d83d44991a109"
   },
   "freeze": {
     "active": false,
@@ -165,14 +165,14 @@
         },
         {
           "what": "训练档案回写",
-          "evidence": "commitV11.24 / V11.25 合并提交（由主会话合并时生成）：docs/training-doc/mixed8-200-m8x8-modul-b128-80k/result.md 与 docs/training-doc/mixed8-200-m8x8-modul-motion-b128-80k/result.md + records/，训练档案索引已更新",
+          "evidence": "commitV11.24 f1d3ab8e88ba91082934a0bc7c7106d5374b3f4f（512 result.md + records）/ commitV11.25 a2c204fb853fdf85466976ab756d83d44991a109（512+motion result.md + records、训练档案索引）均已 push 到 origin/v2-motionmem",
           "where": "docs/training-doc/mixed8-200-m8x8-modul-b128-80k/、docs/training-doc/mixed8-200-m8x8-modul-motion-b128-80k/",
           "status": "pass"
         }
       ],
       "long_tail": [
         {
-          "what": "512 ckpt 训练中增量上传（v1-store/m8v-scripts/m8v-ckpt-inc.sh，不进 git；同 bucket 同路径，每份写驱动阶段 5 的 .done；截至美东 2026-10-17 20:29 已传 5000…40000 共 8 份，余下每 5000 步自动传）",
+          "what": "512 ckpt 训练中增量上传（v1-store/m8v-scripts/m8v-ckpt-inc.sh，不进 git；同 bucket 同路径，每份写驱动阶段 5 的 .done；训练中每 5000 步逐份增量上传，共 16 份）",
           "tmux": "m8v-inc-512",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-inc-512.log",
           "done_line": "INC_END run=mixed8-200-m8x8-modul-b128-80k done=16 + EXIT_CODE=0（inc 不打「全部完成」；之后由正式驱动完成最终验收）",
@@ -188,7 +188,7 @@
           "evidence": "RESULT=PASS SHA256_PRE_POST_DIFF=0 SRC_UNCHANGED=OK checked=339 BUCKET_FILES=342 BUCKET_BYTES=190054069413 BUCKET_PUBLIC=True PUBLIC_ANON_READ=OK 全部完成 EXIT_CODE=0（先 m8v-ckpt512-upload-smoke：SMOKE=PASS EXIT_CODE=0）"
         },
         {
-          "what": "512+motion ckpt 训练中增量上传（v1-store/m8v-scripts/m8v-ckpt-inc.sh，不进 git；同 bucket 同路径，每份写驱动阶段 5 的 .done；截至美东 2026-10-17 20:29 已传 5000…40000 共 8 份，余下每 5000 步自动传）",
+          "what": "512+motion ckpt 训练中增量上传（v1-store/m8v-scripts/m8v-ckpt-inc.sh，不进 git；同 bucket 同路径，每份写驱动阶段 5 的 .done；训练中每 5000 步逐份增量上传，共 16 份）",
           "tmux": "m8v-inc-motion",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-inc-motion.log",
           "done_line": "INC_END run=mixed8-200-m8x8-modul-motion-b128-80k done=16 + EXIT_CODE=0（inc 不打「全部完成」；之后由正式驱动完成最终验收）",
