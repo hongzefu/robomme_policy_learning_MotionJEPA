@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-18T00:33:12Z",
-    "america_new_york": "2026-10-17T20:33:12-0400"
+    "utc": "2026-10-18T00:38:55Z",
+    "america_new_york": "2026-10-17T20:38:55-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
@@ -16,7 +16,7 @@
   "tasks": {
     "mixed8-vla-build": {
       "plan": {
-        "file": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html",
+        "file": "/scratch/hongze/MotionJEPA/1016-mixed8-vla-plan.html",
         "sha": "45c3f9a"
       },
       "state": "closed",
@@ -133,12 +133,12 @@
     },
     "mixed8-vla-train": {
       "plan": {
-        "file": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html",
+        "file": "/scratch/hongze/MotionJEPA/1016-mixed8-vla-plan.html",
         "sha": "45c3f9a"
       },
       "state": "running",
       "state_changed_at": "2026-10-17T05:02:18Z",
-      "state_reason": "两条 80k 4+4 并行在跑（实测 1.7 s/it，美东 2026-10-17 20:29 时 512 40.7k、motion 40.2k）；用户 10-17 19:00 要求训练中上传，ckpt 已由 m8v-inc-512 / m8v-inc-motion 增量上传 8/16（5000…40000）；正式驱动收尾（SMOKE=1 → 全量，最终验收）待训练 EXIT_CODE=0 且 inc INC_END 后再起",
+      "state_reason": "两条 80k 4+4 并行在跑（实测 1.7 s/it，美东 2026-10-17 20:29 时 512 40.7k、motion 40.2k）；用户 10-17 19:00 要求训练中上传，ckpt 已由 m8v-inc-512 / m8v-inc-motion 增量上传 8/16（5000…40000）；正式驱动收尾（SMOKE=1 → 全量，最终验收）待训练 EXIT_CODE=0 且 inc INC_END 后再起；Beta 62a8ef1（512）/ ae6e9cd（motion），GPU 0–3 / 4–7，红线 18 只读锁 美东 2026-10-17 01:01:55 上锁 385 个文件",
       "owner": {
         "session": "https://claude.ai/code/session_01TVXcR5Zdi5K11TXph2pZGw",
         "host": "claude-code"
