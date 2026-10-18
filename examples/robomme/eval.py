@@ -198,7 +198,9 @@ class EpisodeEvaluator:
         if success_flag == "unknown":
             return "unknown"
 
-        video_filename = f"{env_runner.env_id}_ep{env_runner.episode_id}_{success_flag}_{task_goal}_{env_runner.difficulty}.mp4"
+        # 计划格式 <Task>_ep<n>_<终态>_<难度>.mp4；不拼 task goal——xhard 的 goal 很长，拼进去单个文件名超 255 字节，
+        # finalize_all 的 os.replace 抛 ENAMETOOLONG（goal 本身已烧进视频文字条）
+        video_filename = f"{env_runner.env_id}_ep{env_runner.episode_id}_{success_flag}_{env_runner.difficulty}.mp4"
         recorder.save_video(video_filename)
 
         return success_flag
