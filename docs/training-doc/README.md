@@ -6,6 +6,13 @@
 
 ## 一、环境 B 现行（AWS 8×A100，2026-09-04 起）
 
+### mixed8-200 新库 8×8 modulation 512 与 512+motion 80k 正式训练（2026-10-17，4+4 并行）
+
+| 目录 | 内容 | 判定 |
+|---|---|---|
+| [`mixed8-200-m8x8-modul-b128-80k/`](mixed8-200-m8x8-modul-b128-80k/result.md) | 512（无 motion）80k，V11.24Beta `62a8ef1`，GPU 0–3 fsdp4/w8，batch 128，新库 `16task-mixed8-200-3200ep-e3c7564f`；起跑档案见 [launch.md](mixed8-200-m8x8-modul-b128-80k/launch.md) | 已完成：美东 10-18 15:15:45 结束、`EXIT_CODE=0`；16 份 ckpt 训练中增量上传、正式驱动 `RESULT=PASS SHA256_PRE_POST_DIFF=0 BUCKET_PUBLIC=True`，公开于 `HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1`；评估由 sled-aspen 评估会话另档 |
+| [`mixed8-200-m8x8-modul-motion-b128-80k/`](mixed8-200-m8x8-modul-motion-b128-80k/result.md) | 512+motion 80k，V11.25Beta `ae6e9cd`，GPU 4–7，motion 表 128342 行、encoder e72 EMA `bec423fd…`；起跑档案见 [launch.md](mixed8-200-m8x8-modul-motion-b128-80k/launch.md) | 已完成：美东 10-18 15:39:03 结束、`EXIT_CODE=0`，38 小时 37 分，稳态 1.735 s/步；训练 loss 末 1k 步均值 0.00142（同步数比 512 低约 25%，仅训练 loss）；正式驱动 `RESULT=PASS SHA256_PRE_POST_DIFF=0 BUCKET_PUBLIC=True PUBLIC_ANON_READ=OK`，公开于 `HongzeFu/robomme-vla-mixed8-200-modul-motion-80k-v1`；评估由 sled-aspen 评估会话另档 |
+
 ### context原入口八卡与双四卡诊断（2026-09-28）
 
 | 目录 | 内容 | 判定 |

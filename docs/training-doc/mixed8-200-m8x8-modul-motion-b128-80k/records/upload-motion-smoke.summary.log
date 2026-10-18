@@ -1,0 +1,23 @@
+阶段0开始：预检（run_mixed8_200_vla_motion_80k_ckpt_export.sh；run=mixed8-200-m8x8-modul-motion-b128-80k motion=true）
+  训练日志: 末行 EXIT_CODE=0，RUN=mixed8-200-m8x8-modul-motion-b128-80k，GIT_HEAD=ae6e9cdee494e0cfa815c5cde04d255e0cb14cfd
+  16 个 step 目录齐全且均已提交: 5000 10000 15000 20000 25000 30000 35000 40000 45000 50000 55000 60000 65000 70000 75000 79999
+PROVENANCE_MATCH=PASS motion=True fs8_store_meta=ace85246419836d3 resolved=53f070ff5363efff encoder=bec423fdfa0c9494
+阶段0完成
+阶段1开始：搭 stage 树（ckpt 走硬链接，不复制）+ _run-meta/train.log 清洗 + README
+  run 根下平文件 5 个: history_config.resolved.sha256 history_config.resolved.yaml history_config.txt motion_provenance.json wandb_id.txt
+  _run-meta/train.log 清洗: 2050777 B → 2050777 B
+README_RENDERED steps=16 ckpt_bytes=190164311721 git_head=ae6e9cdee494
+阶段1完成
+阶段2开始：上传前 sha256
+LOCAL_FILES=337 LOCAL_BYTES=190166411781 PRE_LINES=336 SRC_FILES=334
+阶段2完成
+阶段3开始：公开前体检（扫 stage，在建 bucket 之前）
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  扫描 88 个文本文件，排除 0 个（[]）
+  P7 构建机内部主机名: 1 处命中
+  P9 构建机绝对路径 / 仓库名: 216 处命中
+HYGIENE=PASS scanned=88 hits=217 ungated=0
+阶段3完成
+SMOKE=PASS（到阶段 3 为止，未碰网络与凭据）
+全部完成
+EXIT_CODE=0
