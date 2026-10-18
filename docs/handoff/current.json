@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-18T20:41:48Z",
-    "america_new_york": "2026-10-18T16:41:48-0400"
+    "utc": "2026-10-18T21:45:49Z",
+    "america_new_york": "2026-10-18T17:45:49-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "fa14d0acfcba54413aa83c0a6bf486f483506270"
+    "base_head": "1c95c0606885df167bcfb7eb6bce73d7ae060b9f"
   },
   "freeze": {
     "active": false,
@@ -268,7 +268,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-18T20:41:48Z",
-      "state_reason": "用户开工令，步骤 1：派 S1、S2 写入子代理",
+      "state_reason": "两条 80k 已起跑：context V11.27Beta 42b2523（美东 17:43:57，GPU0–3），modulation V11.28Beta 1c95c06（美东 17:45:01，GPU4–7）；增量上传会话已起",
       "owner": {
         "session": "https://claude.ai/code/session_019xZ3hfywh5yTmomPnhXryG",
         "host": "claude-code"
@@ -318,14 +318,25 @@
           "status": "pending"
         },
         {
-          "what": "两条正式上传驱动全量回读",
+          "what": "两条正式上传驱动（先 SMOKE=1 再全量）全量回读",
           "tmux": "—",
           "log": "—",
           "done_line": "SHA256_PRE_POST_DIFF=0",
           "status": "pending"
         }
       ],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "m2k-train-ctx",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m32x8x8-context-b128-80k.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "m2k-train-modul",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m32x8x8-modul-b128-80k.log",
+          "done_line": "EXIT_CODE="
+        }
+      ],
       "authorizations": [
         {
           "kind": "go",
@@ -337,10 +348,23 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "S1、S2 并行写入 → 合并前后审查 → commitV11.26",
+          "what": "Monitor 两条训练与两条增量上传；任一 OOM/崩溃/NaN 停下报错交用户",
           "command": "—",
-          "verdict_line": "PRE_MERGE_REVIEW=PASS / POST_MERGE_REVIEW=PASS"
+          "verdict_line": "EXIT_CODE=0"
+        },
+        {
+          "what": "训练结束、INC_END 且 inc 会话退出后：按 m2k-chmod-before.txt 恢复权限；跑 run_mixed8_200_vla_{ctx,modul}2048_80k_ckpt_export.sh（SMOKE=1→全量）；回写 result.md 与 commitV11.27/V11.28",
+          "command": "bash scripts/dataset/hf_export/run_mixed8_200_vla_ctx2048_80k_ckpt_export.sh",
+          "verdict_line": "RESULT=PASS SHA256_PRE_POST_DIFF=0"
         }
+      ],
+      "pre_start_self_check": [
+        "GUARD_CTX2048_POSTMERGE=PASS accept=1 reject_type=3/3 reject_combo=7/7 legacy_accept=5/5 modul32_reject=3/3",
+        "SHORT_HIST=43413/1383846",
+        "ONLINE_ASM_CTX2048=PASS steps=5 mem_len=2048",
+        "SMOKE20_CTX=PASS oom=0 loss_finite=1 exit_code=0 peak_mib=79445 steady_s_per_step=10.07",
+        "SMOKE20_MODUL=PASS oom=0 loss_finite=1 exit_code=0 peak_mib=67907 steady_s_per_step=1.84",
+        "CKPT_LOAD_CTX2048=PASS leaves_equal=1 mem_leaves_changed=4 actions_match=1 mem_len=2048"
       ]
     }
   }
