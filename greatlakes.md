@@ -444,3 +444,31 @@ gl1514 + T2/T3 实际节点）单独提交——四个同时跑超 chaijy2 配�
 CPU 82>80），CH 天然要等 T1 退出，故不损失时间。**逐 job 资源包络与上表完全一致、
 未扩**，仅调度方式变化。评估细节（配额账/节点现状/共驻风险/暖缓存口径/NFS 交叉
 负载）见 `docs/training-doc/v1-framesamp-e2e/launch.md` 二次拍板一节。
+
+## 放行记录（1017 test 布局 xhard 三模型评估，2026-10-17／18）
+
+权威计划在 benchmark 仓库 `hongzefu/robomme_benchmark_MotionJEPA` 分支 `newtask-v3-MotionJepa1006` 的 `1017-test-xhard5-12per-plan.html`（2.153 版，T8／T24／T27）；本分支 `v2-motionmem-eval-test1017` 只实现其评估侧，留档见 `docs/training-doc/eval-testx-1017/launch.md`，状态机见 `docs/handoff/current.json`。
+
+**用户原话**：
+
+- 2026-10-17：「所有的任务改为在 Great Lakes 上评估，每个都是单卡」「放行 8 个占位 job（各 1 × A40）；其余按你建议」「不要使用一 CPU，任务改为使用四 CPU。」
+- 2026-10-18：「2同意现在交」「同意你再追加四个 job 去并行。」
+
+**规格**（12 个占位 job 逐个相同）：
+
+```bash
+sbatch --account=chaijy2 --partition=spgpu --gres=gpu:1 --gpu_cmode=shared \
+  --cpus-per-task=4 --mem=24G --time=48:00:00 --wrap='sleep infinity'
+```
+
+卡型 A40。每个评估单元以 `srun --jobid=<hold> --overlap --exact --cpus-per-task=4 …` 塞进占位 job，模型进程与仿真进程同卡。
+
+| 批次 | JobID | 提交（美东） | RUNNING（美东） |
+|---|---|---|---|
+| 首批 8 个 | 64233473–64233480 | 2026-10-18 00:1x | 2026-10-18 00:20 全部 RUNNING |
+| 追加 4 个 | 64233525–64233528 | 2026-10-18 00:21 | 2026-10-18 00:22 全部 RUNNING |
+
+- **scancel 唯一依据**：`v1-store/logs/hold-jobs-testx.txt`（12 行）；只按该清单逐个 `scancel`，绝不 `scancel -u`。
+- **超出默认的部分均为用户事先放行**：数量超出默认 4 个（先 8 个、后增至 12 个）与规格超出默认 1 CPU（改为 4 CPU），分别对应上面的原话。
+- 登录节点 `gl-login2` 上每个占位 job 对应一个 worker tmux 会话 `xh-testx-pool-<jobid>`，日志在 `v1-store/logs/policy-eval/`。
+- 另有一个 HF 读回校验纯 CPU job（`standard` 分区、4 CPU、8G、12h，直接 sbatch 跑完即退），将由 benchmark 仓库侧按其 `AGENTS.md` 覆盖第 8 条提交，不属本分支的占位 job 清单。

@@ -1,0 +1,179 @@
+{
+  "schema_version": 1,
+  "written_at": {
+    "utc": "2026-10-18T07:19:57Z",
+    "america_new_york": "2026-10-18T03:19:57-04:00"
+  },
+  "repo": {
+    "branch": "v2-motionmem-eval-test1017",
+    "base_head": "52a5f5ba"
+  },
+  "freeze": {
+    "active": false,
+    "main_path": null,
+    "frozen_head": null
+  },
+  "tasks": {
+    "eval-testx-3models": {
+      "plan": {
+        "file": "1017-eval-testx-plan.html（短页，指向 benchmark 仓库 1017-test-xhard5-12per-plan.html）",
+        "sha": "52a5f5ba"
+      },
+      "state": "running",
+      "state_changed_at": {
+        "utc": "2026-10-18T07:19:57Z",
+        "america_new_york": "2026-10-18T03:19:57-04:00"
+      },
+      "state_reason": "两次冒烟通过，等两条 run 的 60000 写出后起正式 30 单元",
+      "owner": {
+        "session": "https://claude.ai/code/session_01LMCMAVs6vXp1XMWZZALH3N",
+        "host": "sled-aspen"
+      },
+      "depends_on": [
+        {
+          "path": "/data/hongzefu/robomme_benchmark_newtask-v3-MotionJepa1006",
+          "branch": "newtask-v3-MotionJepa1006",
+          "task": "test-xhard5-12per"
+        }
+      ],
+      "pre_handoff": [
+        {
+          "what": "环境钉死（ASSETS_LOCK 指新 encoder wan-mixed8-200-filter2-stop075-b88x8-72ep-a）",
+          "evidence": "ENC_SUMS=PASS；commitV11.25Beta 52a5f5ba",
+          "where": "docs/training-doc/eval-testx-1017/launch.md",
+          "status": "pass"
+        },
+        {
+          "what": "评估清单 1200 局与冒烟子集",
+          "evidence": "MANIFEST=PASS rows=1200 cells=100 sha256=20d4fbfb…；SMOKE_SUBSET=PASS rows=2 sha256=bb77d3a0…；XHARD_METADATA=PASS tasks=14 records=624",
+          "where": "docs/training-doc/eval-testx-1017/launch.md",
+          "status": "pass"
+        },
+        {
+          "what": "官方 79999 链路冒烟（job 64233474 gl1505）",
+          "evidence": "error 0；VIDEO_ENCODE／ACTION_LOG／SHARD_PASS；RESET_CLEAN=PASS pairs=1 steps=277 max_abs_diff=0",
+          "where": "v1-store/logs/policy-eval/",
+          "status": "pass"
+        },
+        {
+          "what": "512+motion@10k 冒烟（V11.25Beta，job 64233473 gl1500）",
+          "evidence": "error 0；MOTION_WINDOWS=PASS k_max=78；RESET_CLEAN=PASS pairs=1 steps=427 max_abs_diff=0",
+          "where": "v1-store/logs/policy-eval/",
+          "status": "pass"
+        },
+        {
+          "what": "512 run @60000 正式评估",
+          "evidence": "EVAL_512_60K=DONE episodes=1200",
+          "where": "v1-store/evaluation/",
+          "status": "pending"
+        },
+        {
+          "what": "512+motion run @60000 正式评估",
+          "evidence": "EVAL_512M_60K=DONE episodes=1200",
+          "where": "v1-store/evaluation/",
+          "status": "pending"
+        },
+        {
+          "what": "官方 FrameSamp 79999 正式评估",
+          "evidence": "EVAL_OFFICIAL=DONE episodes=1200",
+          "where": "v1-store/evaluation/",
+          "status": "pending"
+        },
+        {
+          "what": "三模型共用清单一致性",
+          "evidence": "MANIFEST_SHARED",
+          "where": "v1-store/evaluation/",
+          "status": "pending"
+        },
+        {
+          "what": "三模型对比表",
+          "evidence": "EVAL_TABLE",
+          "where": "docs/training-doc/eval-testx-1017/result.md",
+          "status": "pending"
+        },
+        {
+          "what": "留档 commit（result.md 与 records/）",
+          "evidence": "commit sha（待填）",
+          "where": "origin/v2-motionmem-eval-test1017",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "notes": "12 个 GL 占位 job（1×A40／4 CPU／24G／48h／gpu_cmode=shared）：64233473–64233480、64233525–64233528，清单 v1-store/logs/hold-jobs-testx.txt 为 scancel 唯一依据；登录节点 gl-login2 worker tmux 名 xh-testx-pool-<jobid>，日志 v1-store/logs/policy-eval/。占位 job 不是评估进程句柄，故不写进 running_handles。",
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-18",
+          "quote": "/data/hongzefu/robomme_benchmark_newtask-v3-MotionJepa1006/1017-test-xhard5-12per-plan.html 开工 有问题问用户 尽可能不要阻塞",
+          "scope": "benchmark 仓库 1017-test-xhard5-12per-plan.html（2.153）全部，含本分支评估侧"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-17",
+          "quote": "所有的任务改为在 Great Lakes 上评估，每个都是单卡",
+          "scope": "评估一律 GL 单卡"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-17",
+          "quote": "放行 8 个占位 job（各 1 × A40）；其余按你建议",
+          "scope": "首批 8 个占位 job 64233473–64233480"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-17",
+          "quote": "不要使用一 CPU，任务改为使用四 CPU。",
+          "scope": "占位 job 与每单元 srun step 均 --cpus-per-task=4"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-18",
+          "quote": "1a",
+          "scope": "开工审查 F1 裁决 (a)"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-18",
+          "quote": "2同意现在交",
+          "scope": "占位 job 现在提交"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-18",
+          "quote": "同意你再追加四个 job 去并行。",
+          "scope": "追加占位 job 64233525–64233528，共 12 个，清单 v1-store/logs/hold-jobs-testx.txt"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-18",
+          "quote": "10k 100 局冒烟降低到和官方一样的2局 尽快启动2个60k的eval",
+          "scope": "512+motion@10k 冒烟改 2 局；60k 到位后尽快起正式评估"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "两条 run 的 step 60000 写出后拉取并逐文件核 sha",
+          "command": "SUMS_FILE=<训练侧逐文件清单> bash fetch_ckpt.sh run（512 与 512+motion 各一次）",
+          "verdict_line": "CKPT_SHA=PASS"
+        },
+        {
+          "what": "三 run 各切 10 片",
+          "command": "make_shard_plan（512@60000、512+motion@60000、官方 79999 各 10 片）",
+          "verdict_line": "分片计划覆盖 1200 局×3"
+        },
+        {
+          "what": "写正式 30 单元 manifest，顺序 512 → 512+motion → 官方",
+          "command": "make_manifest units --stage formal",
+          "verdict_line": "30 个单元入队"
+        },
+        {
+          "what": "重起 12 个 worker 领取正式单元",
+          "command": "登录节点 gl-login2 tmux xh-testx-pool-<jobid>",
+          "verdict_line": "QUEUE_DONE failed=0；EVAL_512_60K／EVAL_512M_60K／EVAL_OFFICIAL=DONE episodes=1200"
+        }
+      ]
+    }
+  }
+}
