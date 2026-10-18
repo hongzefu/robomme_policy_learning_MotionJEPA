@@ -12,6 +12,7 @@
 |---|---|---|
 | [`mixed8-200-m8x8-modul-b128-80k/`](mixed8-200-m8x8-modul-b128-80k/result.md) | 512（无 motion）80k，V11.24Beta `62a8ef1`，GPU 0–3 fsdp4/w8，batch 128，新库 `16task-mixed8-200-3200ep-e3c7564f`；起跑档案见 [launch.md](mixed8-200-m8x8-modul-b128-80k/launch.md) | 已完成：美东 10-18 15:15:45 结束、`EXIT_CODE=0`；16 份 ckpt 训练中增量上传、正式驱动 `RESULT=PASS SHA256_PRE_POST_DIFF=0 BUCKET_PUBLIC=True`，公开于 `HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1`；评估由 sled-aspen 评估会话另档 |
 | [`mixed8-200-m8x8-modul-motion-b128-80k/`](mixed8-200-m8x8-modul-motion-b128-80k/result.md) | 512+motion 80k，V11.25Beta `ae6e9cd`，GPU 4–7，motion 表 128342 行、encoder e72 EMA `bec423fd…`；起跑档案见 [launch.md](mixed8-200-m8x8-modul-motion-b128-80k/launch.md) | 已完成：美东 10-18 15:39:03 结束、`EXIT_CODE=0`，38 小时 37 分，稳态 1.735 s/步；训练 loss 末 1k 步均值 0.00142（同步数比 512 低约 25%，仅训练 loss）；正式驱动 `RESULT=PASS SHA256_PRE_POST_DIFF=0 BUCKET_PUBLIC=True PUBLIC_ANON_READ=OK`，公开于 `HongzeFu/robomme-vla-mixed8-200-modul-motion-80k-v1`；评估由 sled-aspen 评估会话另档 |
+| [`mixed8-200-m32x8x8-context-b128-80k/`](mixed8-200-m32x8x8-context-b128-80k/launch.md) | context 2048（32 帧×8×8，无 motion）80k，V11.27Beta，GPU 0–3 fsdp4/w8，batch 128，新库 `16task-mixed8-200-3200ep-e3c7564f`；起跑档案见 [launch.md](mixed8-200-m32x8x8-context-b128-80k/launch.md) | 运行中：美东 2026-10-18 起跑；短测稳态 10.07 s/步、每卡峰值 79445 MiB；训练中增量上传 `HongzeFu/robomme-vla-mixed8-200-context-2048-80k-v1` |
 
 ### context原入口八卡与双四卡诊断（2026-09-28）
 
