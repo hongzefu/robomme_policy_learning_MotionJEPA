@@ -587,7 +587,7 @@ def test_config_layout_mismatch(mini_stores, layout, yaml):
 
 @pytest.mark.parametrize("change", [
     {"budget": 2048.5}, {"budget": "2048"}, {"num_views": True},
-    {"integration_type": "context", "memory_token_dim": 2048}, {"motion": {"enabled": True}},
+    {"motion": {"enabled": True}},
     {"token_per_image": 16}, {"num_views": 2}, {"memory_token_dim": 2048},
 ])
 def test_2048_reject_type_and_combination(mini_stores, change):
@@ -642,6 +642,74 @@ def test_2048_real_rows_and_spawn(mini_stores,budget):
             child.join()
         q.close()
         q.join_thread()
+
+
+CTX2048_YAML = "perceptual-framesamp-context-32frame-8x8.yaml"
+
+
+def test_ctx2048_real_rows_and_spawn(mini_stores):
+    """context 2048 档（1018 计划 R2）：带无效 motion 节与删去 motion 节两种写法都放行，spawn 子进程懒构造照常。"""
+    import multiprocessing
+    from omegaconf import OmegaConf
+    from mme_vla_suite.models.config.utils import get_history_config
+    from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+    root = mini_stores["framesamp-8x8-v1"]
+    budget = 2048
+    for drop_motion in (False, True):
+        hc = get_history_config(CTX2048_YAML)
+        assert str(hc.integration_type) == "context" and int(hc.memory_token_dim) == 2048
+        if drop_motion:
+            raw = OmegaConf.to_container(hc)
+            raw.pop("motion")
+            hc = OmegaConf.create(raw)
+        ds = FrameSampDataset(str(root), _fake_data_config(), hc, 20,
+                             source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
+        try:
+            assert ds._max_frames == budget // 64
+            sample = ds[0]
+            assert sample["static_image_emb"].shape == (budget, 2048)
+            assert sample["static_pos_emb"].shape == (budget, 768)
+            assert sample["static_state_emb"].shape == (budget, 8)
+            assert sample["static_mask"].shape == (budget,)
+            assert str(sample["static_image_emb"].dtype) == "bfloat16"
+            assert all(sample[k] is None for k in ("motion_emb", "motion_pos", "motion_mask", "mem_order"))
+        finally:
+            ds.close()
+    ds = _make_dataset(root, CTX2048_YAML)
+    meta = fs.StoreMeta.load(root)
+    ctx = multiprocessing.get_context("spawn")
+    q = ctx.Queue()
+    child = ctx.Process(target=_g10_child, args=(ds, meta.raw["tables"][meta.spec.pos_key]["byte_count"],
+                        meta.raw["tables"][fs.STATE_KEY]["byte_count"], q, budget))
+    child.start()
+    try:
+        result = q.get(timeout=180)
+        child.join(30)
+        assert child.exitcode == 0 and result.get("ok") and all(result.values()), result
+        assert ds._store is None
+    finally:
+        if child.is_alive():
+            child.terminate()
+            child.join()
+        q.close()
+        q.join_thread()
+
+
+@pytest.mark.parametrize("kind,change", [
+    ("type", {"budget": 2048.0}), ("type", {"budget": "2048"}), ("type", {"num_views": True}),
+    ("combo", {"budget": 1024}), ("combo", {"budget": 4096}), ("combo", {"motion": {"enabled": True}}),
+    ("combo", {"token_per_image": 16}), ("combo", {"num_views": 2}), ("combo", {"memory_token_dim": 1024}),
+])
+def test_ctx2048_reject_type_and_combination(mini_stores, kind, change):
+    """context-32frame yaml 上逐项改一键：类型反例与组合反例都必须被形制守卫拒绝。"""
+    from omegaconf import OmegaConf
+    from mme_vla_suite.models.config.utils import get_history_config
+    from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+    hc = get_history_config(CTX2048_YAML)
+    hc = OmegaConf.create({**OmegaConf.to_container(hc), **change})
+    with pytest.raises(ValueError, match="形制断言"):
+        FrameSampDataset(str(mini_stores["framesamp-8x8-v1"]), _fake_data_config(), hc, 20,
+                         source_root=str(REF_SHARD), manifest_path=str(MANIFEST))
 
 
 @pytest.mark.parametrize("budget", [512, 512.5, "512"])
