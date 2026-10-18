@@ -1,0 +1,117 @@
+阶段0开始：预检（run_mixed8_200_vla_512_80k_ckpt_export.sh；run=mixed8-200-m8x8-modul-b128-80k motion=false）
+  训练日志: 末行 EXIT_CODE=0，RUN=mixed8-200-m8x8-modul-b128-80k，GIT_HEAD=62a8ef15b4be267b56612d50562fc445160d041f
+  16 个 step 目录齐全且均已提交: 5000 10000 15000 20000 25000 30000 35000 40000 45000 50000 55000 60000 65000 70000 75000 79999
+PROVENANCE_MATCH=PASS motion=False fs8_store_meta=ace85246419836d3 resolved=804b25382af668d6
+阶段0完成
+阶段1开始：搭 stage 树（ckpt 走硬链接，不复制）+ _run-meta/train.log 清洗 + README
+  run 根下平文件 5 个: history_config.resolved.sha256 history_config.resolved.yaml history_config.txt motion_provenance.json wandb_id.txt
+  _run-meta/train.log 清洗: 2047760 B → 2047760 B
+README_RENDERED steps=16 ckpt_bytes=190051975877 git_head=62a8ef15b4be
+阶段1完成
+阶段2开始：上传前 sha256
+LOCAL_FILES=342 LOCAL_BYTES=190054069413 PRE_LINES=341 SRC_FILES=339
+阶段2完成
+阶段3开始：公开前体检（扫 stage，在建 bucket 之前）
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+  扫描 88 个文本文件，排除 0 个（[]）
+  P7 构建机内部主机名: 1 处命中
+  P9 构建机绝对路径 / 仓库名: 213 处命中
+HYGIENE=PASS scanned=88 hits=214 ungated=0
+阶段3完成
+阶段4开始：凭据与身份 + 创建公开 bucket HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1
+  whoami: user=HongzeFu orgs=umich
+HF_WHOAMI=HongzeFu
+  bucket 已存在，跳过创建（幂等重跑）
+✓ Bucket settings updated
+  bucket_id: HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1
+  private: False
+Hint: Run `hf buckets info HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1` to view bucket details.
+BUCKET_CREATED=HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1 private=False
+BUCKET_FILES_AT_START=337 BUCKET_BYTES_AT_START=190051977053
+阶段4完成
+阶段5开始：按 step 目录分 16 批 + _run-meta/ + 根下平文件
+  [1/17] 5000 已完成，跳过
+  [2/17] 10000 已完成，跳过
+  [3/17] 15000 已完成，跳过
+  [4/17] 20000 已完成，跳过
+  [5/17] 25000 已完成，跳过
+  [6/17] 30000 已完成，跳过
+  [7/17] 35000 已完成，跳过
+  [8/17] 40000 已完成，跳过
+  [9/17] 45000 已完成，跳过
+  [10/17] 50000 已完成，跳过
+  [11/17] 55000 已完成，跳过
+  [12/17] 60000 已完成，跳过
+  [13/17] 65000 已完成，跳过
+  [14/17] 70000 已完成，跳过
+  [15/17] 75000 已完成，跳过
+  [16/17] 79999 已完成，跳过
+  [17/17] _run-meta  1 件 / 2047760 字节
+Sync plan: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/stage/_run-meta -> hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1/_run-meta
+  Uploads: 1
+  Downloads: 0
+  Deletes: 0
+  Skips: 0
+Syncing...
+Sync completed.
+  根下平文件 7 个
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/stage/README.md
+  dst: hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1/README.md
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/stage/SHA256SUMS.pre.txt
+  dst: hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1/SHA256SUMS.pre.txt
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/stage/history_config.resolved.sha256
+  dst: hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1/history_config.resolved.sha256
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/stage/history_config.resolved.yaml
+  dst: hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1/history_config.resolved.yaml
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/stage/history_config.txt
+  dst: hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1/history_config.txt
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/stage/motion_provenance.json
+  dst: hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1/motion_provenance.json
+✓ Uploaded
+  src: /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/stage/wandb_id.txt
+  dst: hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1/wandb_id.txt
+UPLOAD_DONE batches=17 root_files=7
+阶段5完成
+阶段6开始：计数层核对
+  首次不符（files=341 bytes=190054069405），统计接口可能异步滞后，120s 后复查
+BUCKET_FILES=342 BUCKET_BYTES=190054069413
+阶段6完成
+阶段7开始：df 余量断言 + 全量回读到 /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/verify
+DF_CHECK avail=4149691445248 readback_need=190054069413 verify_have=0 margin=400000000000
+Sync plan: hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/verify
+  Uploads: 0
+  Downloads: 342
+  Deletes: 0
+  Skips: 0
+Syncing...
+Sync completed.
+阶段7完成
+阶段8开始：上传后 sha256（POST）+ 与上传前逐行对照
+SHA256_PRE_POST_DIFF=0
+  sha256sum -c 校验行数: 341
+RESULT=PASS
+阶段8完成
+阶段9开始：收尾断言（源侧第三遍 sha256，证明硬链接未改动原件）
+SRC_UNCHANGED=OK checked=339
+  训练日志重新清洗一致
+阶段9完成
+阶段10开始：公开性确认（private==false + 匿名读）
+BUCKET_PUBLIC_FINAL private=False
+BUCKET_PUBLIC=True
+Sync plan: hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1 -> /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/tmp/anon
+  Uploads: 0
+  Downloads: 1
+  Deletes: 0
+  Skips: 0
+Syncing...
+Sync completed.
+PUBLIC_ANON_READ=OK
+阶段10完成
+全部完成
+EXIT_CODE=0
