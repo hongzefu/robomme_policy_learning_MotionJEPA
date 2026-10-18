@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-18T07:19:57Z",
-    "america_new_york": "2026-10-18T03:19:57-04:00"
+    "utc": "2026-10-18T16:58:24Z",
+    "america_new_york": "2026-10-18T12:58:24-04:00"
   },
   "repo": {
     "branch": "v2-motionmem-eval-test1017",
-    "base_head": "52a5f5ba"
+    "base_head": "4aea1b29"
   },
   "freeze": {
     "active": false,
@@ -21,10 +21,10 @@
       },
       "state": "running",
       "state_changed_at": {
-        "utc": "2026-10-18T07:19:57Z",
-        "america_new_york": "2026-10-18T03:19:57-04:00"
+        "utc": "2026-10-18T16:58:24Z",
+        "america_new_york": "2026-10-18T12:58:24-04:00"
       },
-      "state_reason": "两次冒烟通过，等两条 run 的 60000 写出后起正式 30 单元",
+      "state_reason": "512@60k 与 512+motion@60k 两模型 1200 局全部完成，五项判定 PASS；官方 79999 按用户决定中止（s0–s4 完成、s9 ABANDONED）；12 个占位 job 已全部 CANCELLED。留档提交待主会话合并 push 后由主会话改 done",
       "owner": {
         "session": "https://claude.ai/code/session_01LMCMAVs6vXp1XMWZZALH3N",
         "host": "sled-aspen"
@@ -63,44 +63,44 @@
         },
         {
           "what": "512 run @60000 正式评估",
-          "evidence": "EVAL_512_60K=DONE episodes=1200",
-          "where": "v1-store/evaluation/",
-          "status": "pending"
+          "evidence": "EVAL_512@60k=DONE episodes=1200 success=309 fail=797 timeout=94 error=0 downsampled=0；SHARDS_UNION=PASS total=1200；SEED_MATCH=PASS rows=1200；EVAL_VIDEO=PASS videos=1200",
+          "where": "v1-store/evaluation/testx-512-60k/；v1-store/evaluation/testx/summary-512-vs-512m/",
+          "status": "pass"
         },
         {
           "what": "512+motion run @60000 正式评估",
-          "evidence": "EVAL_512M_60K=DONE episodes=1200",
-          "where": "v1-store/evaluation/",
-          "status": "pending"
+          "evidence": "EVAL_512+motion@60k=DONE episodes=1200 success=384 fail=736 timeout=80 error=0 downsampled=1；SHARDS_UNION=PASS total=1200；SEED_MATCH=PASS rows=1200；EVAL_VIDEO=PASS videos=1200",
+          "where": "v1-store/evaluation/testx-512m-60k/；v1-store/evaluation/testx/summary-512-vs-512m/",
+          "status": "pass"
         },
         {
           "what": "官方 FrameSamp 79999 正式评估",
-          "evidence": "EVAL_OFFICIAL=DONE episodes=1200",
-          "where": "v1-store/evaluation/",
-          "status": "pending"
+          "evidence": "用户 2026-10-18 原话「512+motion可以优先跑吗 官方的放弃不跑了」；s0–s4 完成（600 局 rc=0），s5–s8 中途停止，s9 以 queue/claims/testx-official-s9/ABANDONED 挡住；不出官方完整成功率",
+          "where": "v1-store/evaluation/testx-official/；v1-store/evaluation/testx/queue/",
+          "status": "skipped"
         },
         {
-          "what": "三模型共用清单一致性",
-          "evidence": "MANIFEST_SHARED",
-          "where": "v1-store/evaluation/",
-          "status": "pending"
+          "what": "共用清单一致性（实际两模型）",
+          "evidence": "MANIFEST_SHARED=PASS models=2 manifest_sha256=20d4fbfb8430",
+          "where": "v1-store/evaluation/testx/summary-512-vs-512m/summary.json",
+          "status": "pass"
         },
         {
-          "what": "三模型对比表",
-          "evidence": "EVAL_TABLE",
-          "where": "docs/training-doc/eval-testx-1017/result.md",
-          "status": "pending"
+          "what": "对比表（实际两模型）",
+          "evidence": "EVAL_TABLE=DONE models=2 cells=100",
+          "where": "docs/training-doc/eval-testx-1017/result.md；v1-store/evaluation/testx/summary-512-vs-512m/summary.md",
+          "status": "pass"
         },
         {
-          "what": "留档 commit（result.md 与 records/）",
-          "evidence": "commit sha（待填）",
+          "what": "留档 commit（result.md、launch.md 补记）",
+          "evidence": "本次 sub/E2-A 提交（worktree-e2 分支，待主会话 --no-ff 合入 v2-motionmem-eval-test1017 并 push）",
           "where": "origin/v2-motionmem-eval-test1017",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [],
       "running_handles": [],
-      "notes": "12 个 GL 占位 job（1×A40／4 CPU／24G／48h／gpu_cmode=shared）：64233473–64233480、64233525–64233528，清单 v1-store/logs/hold-jobs-testx.txt 为 scancel 唯一依据；登录节点 gl-login2 worker tmux 名 xh-testx-pool-<jobid>，日志 v1-store/logs/policy-eval/。占位 job 不是评估进程句柄，故不写进 running_handles。",
+      "notes": "12 个 GL 占位 job（64233473–64233480、64233525–64233528，清单 v1-store/logs/hold-jobs-testx.txt）已全部 CANCELLED：先 64233478、64233526–64233528 在停官方时释放，其余 8 个在用户「站位的卡可以停了。」「跑完了就可以停。」后、全部 worker 退出且无 srun step 时释放。结果见 docs/training-doc/eval-testx-1017/result.md。",
       "authorizations": [
         {
           "kind": "go",
@@ -149,29 +149,138 @@
           "date": "2026-10-18",
           "quote": "10k 100 局冒烟降低到和官方一样的2局 尽快启动2个60k的eval",
           "scope": "512+motion@10k 冒烟改 2 局；60k 到位后尽快起正式评估"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-18",
+          "quote": "512+motion可以优先跑吗 官方的放弃不跑了",
+          "scope": "官方 79999 正式评估中止，512+motion 优先"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-18",
+          "quote": "不许cancel",
+          "scope": "其余 8 个占位 job 当时不释放"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-18",
+          "quote": "那不动了",
+          "scope": "同上"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-18",
+          "quote": "站位的卡可以停了。",
+          "scope": "释放其余 8 个占位 job"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-18",
+          "quote": "跑完了就可以停。",
+          "scope": "两模型跑完后释放占位 job"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "两条 run 的 step 60000 写出后拉取并逐文件核 sha",
-          "command": "SUMS_FILE=<训练侧逐文件清单> bash fetch_ckpt.sh run（512 与 512+motion 各一次）",
+          "what": "主会话合并 sub/E2-A 并 push 后，把本任务改 done",
+          "command": "git merge --no-ff <E2-A sha>；git push",
+          "verdict_line": "HANDOFF_WRITE=PASS task=eval-testx-3models state=done"
+        }
+      ]
+    },
+    "eval-testx-80k": {
+      "plan": {
+        "file": "1017-eval-testx-plan.html（同一评估链路，换 step 79999）",
+        "sha": null
+      },
+      "state": "planned",
+      "state_changed_at": {
+        "utc": "2026-10-18T16:58:24Z",
+        "america_new_york": "2026-10-18T12:58:24-04:00"
+      },
+      "state_reason": "已登记；等训练侧两条 run 的 step 79999 上传到 HF",
+      "owner": {
+        "session": "https://claude.ai/code/session_01LMCMAVs6vXp1XMWZZALH3N",
+        "host": "sled-aspen"
+      },
+      "depends_on": [
+        {
+          "path": "HF HongzeFu/robomme-vla-mixed8-200-modul-motion-80k-v1",
+          "branch": null,
+          "task": "训练 session：512+motion run step 79999 上传"
+        },
+        {
+          "path": "HF HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1",
+          "branch": null,
+          "task": "训练 session：512 run step 79999 上传"
+        },
+        "eval-testx-3models"
+      ],
+      "pre_handoff": [
+        {
+          "what": "两条 run 的 79999 拉取并逐文件核 sha",
+          "evidence": "CKPT_SHA=PASS（每 run 一行）",
+          "where": "v1-store/models/",
+          "status": "pending"
+        },
+        {
+          "what": "512+motion@79999 正式评估",
+          "evidence": "EVAL_512+motion@80k=DONE episodes=1200",
+          "where": "v1-store/evaluation/testx-512m-80k/",
+          "status": "pending"
+        },
+        {
+          "what": "512@79999 正式评估",
+          "evidence": "EVAL_512@80k=DONE episodes=1200",
+          "where": "v1-store/evaluation/testx-512-80k/",
+          "status": "pending"
+        },
+        {
+          "what": "共用清单一致性与对比表",
+          "evidence": "MANIFEST_SHARED=PASS；EVAL_TABLE=DONE",
+          "where": "v1-store/evaluation/testx/",
+          "status": "pending"
+        },
+        {
+          "what": "留档 commit",
+          "evidence": "commit sha（待填）",
+          "where": "origin/v2-motionmem-eval-test1017",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "decision",
+          "date": "2026-10-18",
+          "quote": "80k的两组也要跑 优先跑motion跑完了再跑512 用10卡 发信息和训练session沟通等预估马上跑完之前开始排队job提前15分钟",
+          "scope": "80k 两组评估：512+motion 在前、512 在后；10 个占位 job；训练预计写出前 15 分钟排队"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "美东 2026-10-18 15:21 提交 10 个占位 job（规格同 60k 一轮）",
+          "command": "sbatch --account=chaijy2 --partition=spgpu --gres=gpu:1 --gpu_cmode=shared --cpus-per-task=4 --mem=24G --time=48:00:00 --wrap='sleep infinity'（×10，JobID 记入清单）",
+          "verdict_line": "10 个 JobID 入清单"
+        },
+        {
+          "what": "两条 run 的 79999 写出后拉取并核 sha",
+          "command": "SUMS_FILE=<训练侧逐文件清单> bash fetch_ckpt.sh run（motion 与 512 各一次）",
           "verdict_line": "CKPT_SHA=PASS"
         },
         {
-          "what": "三 run 各切 10 片",
-          "command": "make_shard_plan（512@60000、512+motion@60000、官方 79999 各 10 片）",
-          "verdict_line": "分片计划覆盖 1200 局×3"
+          "what": "写 manifest：在现有 32 行后追加 testx-512m-80k 10 片（motion 在前）与 testx-512-80k 10 片",
+          "command": "make_manifest units --stage any",
+          "verdict_line": "20 个单元入队，motion 在前"
         },
         {
-          "what": "写正式 30 单元 manifest，顺序 512 → 512+motion → 官方",
-          "command": "make_manifest units --stage formal",
-          "verdict_line": "30 个单元入队"
-        },
-        {
-          "what": "重起 12 个 worker 领取正式单元",
+          "what": "起 worker 领取单元",
           "command": "登录节点 gl-login2 tmux xh-testx-pool-<jobid>",
-          "verdict_line": "QUEUE_DONE failed=0；EVAL_512_60K／EVAL_512M_60K／EVAL_OFFICIAL=DONE episodes=1200"
+          "verdict_line": "QUEUE_DONE failed=0；EVAL_512+motion@80k／EVAL_512@80k=DONE episodes=1200"
         }
       ]
     }

@@ -65,3 +65,16 @@ Motion encoder：`wan-mixed8-200-filter2-stop075-b88x8-72ep-a`（`bec423fd`）�
 ## 八、下一步
 
 两条 run 的 step 60000 写出后：`SUMS_FILE=<训练侧逐文件清单> fetch_ckpt.sh run` 拉取并核 sha → `make_shard_plan` 三 run 各 10 片 → `make_manifest units --stage formal`（512 → 512+motion → 官方）→ 重起 worker；判据 `QUEUE_DONE failed=0`、`EVAL_512_60K`／`EVAL_512M_60K`／`EVAL_OFFICIAL=DONE episodes=1200`、`MANIFEST_SHARED`、`EVAL_TABLE`。
+
+## 九、实施中调整（补记）
+
+本节在 60k 两模型评估完成后补记，不改上文已有内容；详情与证据见 [`result.md`](result.md) 七节。
+
+1. **10k 冒烟 sidecar 锁旧 encoder**（V11.24Beta → V11.25Beta）：`ASSETS_LOCK` 改指新 encoder，`ADJUST_REVIEW=PASS`。
+2. **官方 sha 判据前缀**：计划误抄的 `387d4bd5`（context 版）改核 `86ef2b63`。
+3. **视频名 ENAMETOOLONG**（V11.26Beta → V11.27Beta `4aea1b29`）：视频名去掉 task goal、改计划格式 `<Task>_ep<n>_<终态>_<难度>.mp4`，`ADJUST_REVIEW=PASS`；停 12 个 worker，15 个已领取单元改名 `.abort-v1126beta` 保留，正式单元从头重跑。上文三节版本表与八节「下一步」的正式锚点因此由 V11.25Beta 变为 V11.27Beta。
+4. **跨主机改名与登录节点 NFS 缓存**：部分新 done 标记与单元日志写进改名后的旧文件；done 标记已在 GL 侧补回，结果目录不受影响。
+5. **10k 冒烟改 2 局**：用户「10k 100 局冒烟降低到和官方一样的2局」。
+6. **占位 job 8 → 12**：用户「同意你再追加四个 job 去并行。」
+7. **官方 79999 中止**：用户「512+motion可以优先跑吗 官方的放弃不跑了」；s0–s4 完成、s5–s8 中途停止、s9 以 `ABANDONED` 挡住，不出官方完整成功率。
+8. **占位 job 全部释放**：先 4 个（64233478、64233526–64233528），用户「不许cancel」「那不动了」后保留其余，再按「站位的卡可以停了。」「跑完了就可以停。」释放其余 8 个，均在 worker 退出、无 srun step 后执行。
