@@ -90,7 +90,9 @@ RUNS = {
     # 官方 FrameSamp+Modulation 79999（NFS v1-store/models/official-mme-vla/perceptual-framesamp-modul/79999）。
     # history_config.txt 内容与 sha 取自 aspen 本机 memER 副本（2026-10-18 只读实测，31 字节）；
     # 逐文件 sha256 为空 = 未登记，本脚本对官方权重直接拒绝，直到主会话把 NFS 副本经 OFFICIAL_CKPT_SHA 核对后的值填入
-    # （aspen 本机那份 79999.zip 实测 sha256 86ef2b63…、11,878,954,899 B，与计划记的 HF 前缀 387d4bd5 不符，不能当登记源）。
+    # 官方 modul zip sha256 86ef2b63…（HF Yinpei/mme_vla_suite perceptual-framesamp-modul/79999.zip LFS，与
+    # Yinpei/perceptual-framesamp-modul@c0f565dd 的 2bfde48a… 为同一权重的不同打包，18 个条目 CRC32 与大小逐条相同），
+    # 逐文件 sha 由主会话登记。
     'perceptual-framesamp-modul': dict(
         official=True, steps=('79999',), motion=False, config='mme_vla_suite', budget=512,
         history_config_txt='perceptual-framesamp-modul.yaml',

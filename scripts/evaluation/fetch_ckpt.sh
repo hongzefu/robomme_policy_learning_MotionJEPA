@@ -6,8 +6,8 @@
 #   fetch_ckpt.sh run <bucket_id> <run_dir_name> <step>
 #       自家 run（512 / 512+motion）：落点 $MODELS_ROOT/<run_dir_name>/（MODELS_ROOT 默认 $EVAL_REPO/v1-store/models）。顺序：
 #       ① `hf buckets list <bucket> -R` 断言含 <step>/、history_config.resolved.yaml、history_config.resolved.sha256、
-#          SHA256SUMS.pre.txt，motion run 另需 motion_provenance.json（缺任一即停）；
-#          motion run 的判法沿用仓库约定：run 目录名含 `-motion-`（如 mixed8-200-m8x8-modul-motion-b128-80k、robomme-vla-modul-motion-80k-v1）；
+#          motion_provenance.json、SHA256SUMS.pre.txt（缺任一即停）；motion_provenance.json 对所有 run 都必需——
+#          policy_config._load_resolved_snapshot 对任何带 resolved 快照的 run 都要读它（非 motion run 里 motion_enabled=false）；
 #       ② `hf buckets sync hf://buckets/<bucket> <落点> --include … --dry-run`；③ 同一命令去掉 --dry-run 实际下载；
 #       ④ 本次 <step>/ 下每个文件都必须在 SHA256SUMS.pre.txt 里并 `sha256sum --check --strict`（覆盖不全即失败）；
 #          run 级根文件（history_config.resolved.*、motion_provenance.json）在清单里就核，不在清单里则列为豁免并打印；
@@ -56,8 +56,7 @@ run)
     [[ "$RUN" =~ ^[A-Za-z0-9_.-]+$ && "$STEP" =~ ^[0-9]+$ ]] || exit 2
     DST="$MODELS_ROOT/$RUN"
     [[ ! -e "$DST/$STEP" ]] || { echo "step 目录已存在，拒绝覆盖：$DST/$STEP"; exit 2; }
-    ROOT_FILES=(history_config.resolved.yaml history_config.resolved.sha256)
-    [[ "$RUN" != *-motion-* ]] || ROOT_FILES+=(motion_provenance.json)
+    ROOT_FILES=(history_config.resolved.yaml history_config.resolved.sha256 motion_provenance.json)
     mkdir -p "$DST"
     LISTING="$DST/bucket-list.$STEP.txt"
     "$HF_BIN" buckets list "$BUCKET_ID" -R > "$LISTING"

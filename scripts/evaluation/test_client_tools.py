@@ -310,7 +310,7 @@ STEP = {"60000/params/a": b"aa", "60000/assets/robomme/norm_stats.json": b"{}"}
 @pytest.mark.parametrize("run,motion", [("mixed8-200-m8x8-modul-b128-80k", False),
                                         ("mixed8-200-m8x8-modul-motion-b128-80k", True)])
 def test_fetch_ckpt_run_mode(tmp_path, run, motion):
-    files = {**ROOT, **STEP, **({"motion_provenance.json": b"{}"} if motion else {})}
+    files = {**ROOT, **STEP, "motion_provenance.json": b"{}"}
     env = _fetch_env(tmp_path, files, list(STEP))                  # run 级根文件不在 SHA256SUMS 里 → 豁免并打印
     proc = subprocess.run(["bash", str(HERE / "fetch_ckpt.sh"), "run", "HongzeFu/x", run, "60000"],
                           capture_output=True, text=True, env=env)
@@ -318,12 +318,13 @@ def test_fetch_ckpt_run_mode(tmp_path, run, motion):
     assert f"CKPT_SHA=PASS run={run} step=60000 files=2" in proc.stdout
     assert "SHA_EXEMPT file=history_config.resolved.yaml" in proc.stderr
     log = (tmp_path / "hf.log").read_text()
-    assert ("motion_provenance.json" in log) == motion
+    assert "--include motion_provenance.json" in log                # 两种 run 都必须带上（非 motion run 里 motion_enabled=false）
+    assert "SHA_EXEMPT file=motion_provenance.json" in proc.stderr
     assert "buckets list HongzeFu/x -R" in log and "buckets sync hf://buckets/HongzeFu/x" in log
 
 
 def test_fetch_ckpt_requires_full_coverage(tmp_path):
-    env = _fetch_env(tmp_path, {**ROOT, **STEP}, ["60000/params/a"])   # norm_stats.json 不在 SHA256SUMS 里
+    env = _fetch_env(tmp_path, {**ROOT, **STEP, "motion_provenance.json": b"{}"}, ["60000/params/a"])   # norm_stats.json 不在 SHA256SUMS 里
     proc = subprocess.run(["bash", str(HERE / "fetch_ckpt.sh"), "run", "HongzeFu/x", "mixed8-200-m8x8-modul-b128-80k", "60000"],
                           capture_output=True, text=True, env=env)
     assert proc.returncode != 0 and "CKPT_SHA=PASS" not in proc.stdout
