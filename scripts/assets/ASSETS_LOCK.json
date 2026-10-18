@@ -202,30 +202,27 @@
     },
     "motionjepa_ckpt": {
       "kind": "file",
-      "dest": "v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt",
-      "bytes": 477432433,
-      "sha256": "0c1986297ccc0ab1913910f33a09ec74ba4c208844d0f5d72dd7ba59e0d9e3ca",
-      "headtail": "91834dfbaf50c90cb0c32bf9332c8f12",
-      "needs_token": true,
+      "dest": "v1-store/external/motionjepa/wan-mixed8-200-filter2-stop075-b88x8-72ep-a/checkpoint_epoch_72.pt",
+      "bytes": 477433329,
+      "sha256": "bec423fdfa0c9494690a5118ab10f2cb6fec58eba4b8362b4af90c71cbcd9e04",
+      "headtail": "d7139efb5090e4aa778adc707ac5b064",
+      "needs_token": false,
       "source": {
-        "type": "hf_file",
-        "repo_id": "HongzeFu/MotionJEPA",
-        "repo_type": "model",
-        "revision": "749224110f91c82f5fc5d3007281d07a5d5c944e",
-        "tag": "wan-v8-filter10-72ep-a-e72",
-        "filename": "wan-full1600-filter2-b176x4-72ep-a/checkpoint_epoch_72.pt",
-        "private": true,
-        "token_env": "HF_TOKEN",
-        "pending_upload": true,
-        "note": "新资产尚未上传；revision/tag 仍为历史定位，不可据此复刻新文件。本轮只使用已核验的本地原件，上传另行处理。"
+        "type": "bucket_file",
+        "uri": "hf://buckets/HongzeFu/motionjepa-wan-mixed8-200-72ep-v1/checkpoint_epoch_72.pt",
+        "bucket_id": "HongzeFu/motionjepa-wan-mixed8-200-72ep-v1",
+        "path": "checkpoint_epoch_72.pt",
+        "private": false,
+        "checksums": "SHA256SUMS.pre.txt",
+        "note": "公开 HF Storage Bucket；sha256 与 bucket 内 SHA256SUMS.pre.txt、训练侧报值、motion run 快照 motion_provenance.json（encoder.checkpoint_sha256）三方一致。2026-10-18 为 1017 test xhard 评估由 wan-full1600-filter2-b176x4-72ep-a 改指本条。fetch_assets.py 尚不支持 bucket 来源取回，本轮只使用已核验的本地副本。"
       },
       "related": {
         "mj_repo_commit": "2a484ad960ed6155321dc34def9011eb119f857f",
         "mj_train_commit": "660cee10a86d02ae03a73db95fac6f0b8dbd28a6",
         "source_pin_ref": "scripts/dataset/wan/SOURCE_PIN.json",
-        "run_name": "wan-full1600-filter2-b176x4-72ep-a",
+        "run_name": "wan-mixed8-200-filter2-stop075-b88x8-72ep-a",
         "epoch": 72,
-        "note": "mj_repo_commit 钉住推理复制件；mj_train_commit 是新 encoder 的训练 Beta。推理脚本 SHA 保持不变，不声称两次训练代码完全相同。"
+        "note": "mj_repo_commit 钉住推理复制件（与 SOURCE_PIN.json 同值，未改）；mj_train_commit 仍为改指前的旧值，未核对本 encoder（wan-mixed8-200-filter2-stop075-b88x8-72ep-a）的训练 Beta。推理脚本 SHA 保持不变，不声称两次训练代码完全相同。"
       },
       "consumers": [
         "scripts/dataset/wan/wan_motion_infer.py::load_encoder"
@@ -233,35 +230,32 @@
     },
     "motionjepa_config": {
       "kind": "file",
-      "dest": "v1-store/external/motionjepa/wan-full1600-filter2-b176x4-72ep-a/config.yaml",
-      "bytes": 2008,
-      "sha256": "4a505440b7c5ff0f1b0d7ec4680800e9296f5ede1df622767be3d5c3aee4c9b4",
-      "headtail": "9235775eafec313b22b6dc258a633188",
-      "needs_token": true,
+      "dest": "v1-store/external/motionjepa/wan-mixed8-200-filter2-stop075-b88x8-72ep-a/config.yaml",
+      "bytes": 2816,
+      "sha256": "bdd8bb04a3761bc37076a8ed1d2fc08c7225ac92902c7b401d48896be437de51",
+      "headtail": "a9357aaf3ecc0bd9a42e71ca45a45135",
+      "needs_token": false,
       "source": {
-        "type": "hf_file",
-        "repo_id": "HongzeFu/MotionJEPA",
-        "repo_type": "model",
-        "revision": "749224110f91c82f5fc5d3007281d07a5d5c944e",
-        "tag": "wan-v8-filter10-72ep-a-e72",
-        "filename": "wan-full1600-filter2-b176x4-72ep-a/config.yaml",
-        "private": true,
-        "token_env": "HF_TOKEN",
-        "pending_upload": true,
-        "note": "新资产尚未上传；revision/tag 仍为历史定位，不可据此复刻新文件。本轮只使用已核验的本地原件，上传另行处理。"
+        "type": "bucket_file",
+        "uri": "hf://buckets/HongzeFu/motionjepa-wan-mixed8-200-72ep-v1/config.yaml",
+        "bucket_id": "HongzeFu/motionjepa-wan-mixed8-200-72ep-v1",
+        "path": "config.yaml",
+        "private": false,
+        "checksums": "SHA256SUMS.pre.txt",
+        "note": "公开 HF Storage Bucket；sha256 与 bucket 内 SHA256SUMS.pre.txt、训练侧报值、motion run 快照 motion_provenance.json（encoder.checkpoint_sha256）三方一致。2026-10-18 为 1017 test xhard 评估由 wan-full1600-filter2-b176x4-72ep-a 改指本条。fetch_assets.py 尚不支持 bucket 来源取回，本轮只使用已核验的本地副本。"
       },
       "related": {
         "mj_repo_commit": "2a484ad960ed6155321dc34def9011eb119f857f",
         "mj_train_commit": "660cee10a86d02ae03a73db95fac6f0b8dbd28a6",
         "source_pin_ref": "scripts/dataset/wan/SOURCE_PIN.json",
-        "run_name": "wan-full1600-filter2-b176x4-72ep-a",
+        "run_name": "wan-mixed8-200-filter2-stop075-b88x8-72ep-a",
         "epoch": 72,
-        "note": "mj_repo_commit 钉住推理复制件；mj_train_commit 是新 encoder 的训练 Beta。推理脚本 SHA 保持不变，不声称两次训练代码完全相同。"
+        "note": "mj_repo_commit 钉住推理复制件（与 SOURCE_PIN.json 同值，未改）；mj_train_commit 仍为改指前的旧值，未核对本 encoder（wan-mixed8-200-filter2-stop075-b88x8-72ep-a）的训练 Beta。推理脚本 SHA 保持不变，不声称两次训练代码完全相同。"
       },
       "consumers": [
         "scripts/dataset/wan/wan_motion_infer.py::load_encoder"
       ]
     }
   },
-  "sha256": "0a654077426d65a23d8e47c4ac98434bf47b34653c071e2d4768a332d245b27c"
+  "sha256": "9c637bfc6158464246bcf1f21853fab52b0d0691568a67328681f56aa9bf9416"
 }
