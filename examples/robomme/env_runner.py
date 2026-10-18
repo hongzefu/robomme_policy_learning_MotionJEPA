@@ -3,23 +3,30 @@ RoboMME environment runing wrapper: build envs, get observations, and step with 
 
 两个 runner 共用同一套观测/步进接口，只有「环境从哪来」不同：
 * ``EnvRunner``——官方 ``env_metadata/<split>/`` 的 episode（seed 与 difficulty 由 metadata 给）；
-* ``SpecEnvRunner``——fork 注入流水线的 test/primary 候选（seed / difficulty / episode_spec /
-  sampling_config 全部来自 ``candidates.jsonl``，这些候选不在 metadata 里，官方 builder 走不到）。
+* ``SpecEnvRunner``——1200 局清单（1017-test-xhard5-12per）的一个「任务/难度」组，按难度分流建环境：
+  xhard 行建 ``<Task>XHard`` 并读 ``XHARD_METADATA_DIR`` 里的 XHard metadata 副本，
+  easy / medium / hard 行（含 MoveCube / InsertPeg）建原任务、读官方 test metadata 并断言 episode < 50。
 """
 from __future__ import annotations
+import os
+from pathlib import Path
 from typing import Any, Mapping
 import numpy as np
 
 from robomme.robomme_env import *  # noqa: F401, F403 - env registration
-from robomme.env_record_wrapper import BenchmarkEnvBuilder, make_env_for_spec
+from robomme.env_record_wrapper import BenchmarkEnvBuilder
 
 from utils import TASK_NAME_LIST
 from demo_prefix import DemoPrefixStore
 
 np.set_printoptions(precision=4, suppress=True)
 
-#: 注入候选只覆盖这四个任务（fork 的 14 个「任务/难度」组都落在其中）
-SPEC_TASKS = ("BinFill", "RouteStick", "VideoUnmaskSwap", "VideoRepick")
+#: 官方 test metadata 里 base 档（easy / medium / hard）的 episode 上界；本次追加的 xhard 从 ep50 起
+BASE_EPISODE_LIMIT = 50
+
+
+def is_xhard(difficulty: str) -> bool:
+    return str(difficulty).startswith("xhard")
 
 
 def pack_state(joint_state: np.ndarray, gripper_state: np.ndarray) -> np.ndarray:
@@ -123,28 +130,42 @@ class EnvRunner(BaseEnvRunner):
 
 
 class SpecEnvRunner(BaseEnvRunner):
-    """按 ``candidates.jsonl`` 的一条候选建环境。
+    """按 1200 局清单的一行建环境；一个 runner 绑定一个「任务/难度」组。
 
-    与 ``EnvRunner`` 的区别只在 ``make_env``：这里的 seed / difficulty / episode_spec 全部来自
-    候选行本身，不查 ``env_metadata``——注入候选的 episode 号落在官方实跑区间之后（ep115+/153+/155+），
-    难度还可能是 ``xhard``（用户决定不纳入 env_metadata 评测链），官方 builder 取不到它们。
-
-    一个 runner 绑定一个「任务/难度」组，``sampling_config`` 是候选 header 里该任务那一份。
+    分流（计划 4.3 第 4 项）：
+    * xhard 行：``BenchmarkEnvBuilder(f"{task}XHard", override_metadata_path=XHARD_METADATA_DIR)``——
+      追加后的 test metadata 里 ep≥50 的难度是 ``xhard14`` 这类值，只有 ``<Task>XHard`` 子类接受；
+      XHard 副本由 ``make_manifest.py export`` 从子模块 test metadata 导出（记录的 task 改成 ``<Task>XHard``）。
+    * base 行（含 MoveCube / InsertPeg）：原任务名 + 官方 test metadata，断言 episode < 50。
+    建成后断言 metadata 给出的 seed 与清单行相同、``env.unwrapped.difficulty`` 与清单难度相同，打一行 ``ENV_ROUTE``。
+    ``env_id`` 始终是原任务名（视频名、``TASK_WITH_VIDEO_DEMO`` 判断都按原任务名）。
     """
 
-    def __init__(self, task: str, difficulty: str, sampling_config: Mapping[str, Any],
-                 video_save_dir: str, max_steps: int = 2000,
+    def __init__(self, task: str, difficulty: str, video_save_dir: str, max_steps: int = 2000,
                  demo_prefix_store: str = "") -> None:
-        if task not in SPEC_TASKS:
-            raise ValueError(f"注入候选不覆盖任务 {task}，只有 {SPEC_TASKS}")
+        if task not in TASK_NAME_LIST:
+            raise ValueError(f"未知任务 {task}，只有 {TASK_NAME_LIST}")
         super().__init__(task, video_save_dir)
         self.group_difficulty = difficulty
-        self.sampling_config = sampling_config
         self.max_steps = max_steps
-        # 守卫①：注入只对 BinFill 有定义——其余三任务的 reset() 本来就返回 planner 演示帧，
-        # 再拼一段会双重叠加。692 条混合计划里非 BinFill 的 runner 也会收到 store 路径，
-        # 这里**显式关掉并打一行日志**，不是静默忽略；eval.py 侧另有「BinFill 集必须全部命中 store」的硬校验，
-        # check_shard.py 再核一遍「BinFill 集有 DEMO_PREFIX_INJECTED、非 BinFill 集没有」。
+        if is_xhard(difficulty):
+            import robomme_xhard  # noqa: F401 - 注册 <Task>XHard 子类；必须在 import robomme.robomme_env 之后
+            xhard_dir = os.environ.get("XHARD_METADATA_DIR", "")
+            if not xhard_dir or not Path(xhard_dir).is_dir():
+                raise ValueError(f"xhard 组 {task}/{difficulty} 需要 XHARD_METADATA_DIR 指向 XHard metadata 副本，得到 {xhard_dir!r}")
+            self.route = "xhard"
+            self.build_id = f"{task}XHard"
+            self.env_builder = BenchmarkEnvBuilder(
+                env_id=self.build_id, dataset="test", action_space="joint_angle", gui_render=False,
+                override_metadata_path=Path(xhard_dir), max_steps=max_steps)
+        else:
+            self.route = "base"
+            self.build_id = task
+            self.env_builder = BenchmarkEnvBuilder(
+                env_id=task, dataset="test", action_space="joint_angle", gui_render=False,
+                max_steps=max_steps)
+        # 守卫①：注入只对 BinFill 有定义——其余任务的 reset() 本来就返回 planner 演示帧，
+        # 再拼一段会双重叠加。本轮 EXPECT_DEMO_INJECT=0、不传 store；保留开关只为与 0918 客户端同构。
         if demo_prefix_store and task != "BinFill":
             print(f"DEMO_PREFIX_DISABLED task={task} difficulty={difficulty} reason=not-BinFill", flush=True)
             demo_prefix_store = ""
@@ -153,29 +174,32 @@ class SpecEnvRunner(BaseEnvRunner):
         self.demo_prefix_len = 0
 
     def make_env(self, candidate: Mapping[str, Any]) -> None:
-        """``candidate`` 是候选行（已经过 load_candidates 校验）。"""
+        """``candidate`` 是清单行 ``{"task","episode","seed","difficulty"}``。"""
         if candidate["task"] != self.env_id or candidate["difficulty"] != self.group_difficulty:
             raise ValueError(
-                f"候选 {candidate['task']}/{candidate['difficulty']} 不属于本 runner "
+                f"清单行 {candidate['task']}/{candidate['difficulty']} 不属于本 runner "
                 f"{self.env_id}/{self.group_difficulty}"
             )
-        self.env = make_env_for_spec(
-            self.env_id,
-            candidate["seed"],
-            candidate["difficulty"],
-            candidate["spec"],
-            self.sampling_config,
-            max_steps=self.max_steps,
-        )
-        self.episode_id = candidate["episode"]
-        self._demo_key = (candidate["task"], candidate["difficulty"], int(candidate["episode"]))
+        episode = int(candidate["episode"])
+        if self.route == "base" and episode >= BASE_EPISODE_LIMIT:
+            raise ValueError(f"base 档 {self.env_id}/{self.group_difficulty} 的 episode {episode} 不在官方 ep0–49 内")
+        seed, difficulty_hint = self.env_builder.resolve_episode(episode)
+        if seed != int(candidate["seed"]) or difficulty_hint != candidate["difficulty"]:
+            raise ValueError(
+                f"metadata 与清单不符：{self.build_id} ep{episode} metadata=({seed}, {difficulty_hint}) "
+                f"清单=({candidate['seed']}, {candidate['difficulty']})")
+        self.env = self.env_builder.make_env_for_episode(episode)
+        self.episode_id = episode
+        self._demo_key = (candidate["task"], candidate["difficulty"], episode)
         self.demo_prefix_len = 0
         self.difficulty = self.env.unwrapped.difficulty
-        # 难度必须原样传到环境里：xhard 走错分支会静默退化成 easy（RouteStick 的兜底分支有这个老 bug）
+        # 难度必须原样传到环境里：xhard 走错分支会静默退化成别的档
         if self.difficulty != self.group_difficulty:
             raise ValueError(
-                f"难度未按规格生效：期望 {self.group_difficulty}，实际 {self.difficulty}"
+                f"难度未按清单生效：期望 {self.group_difficulty}，实际 {self.difficulty}"
             )
+        print(f"ENV_ROUTE route={self.route} env={self.build_id} task={self.env_id} episode={episode} "
+              f"seed={seed} difficulty={self.difficulty}", flush=True)
 
     def get_init_obs(self) -> dict[str, Any]:
         """在干净 env 的 reset 观测前面拼上离线生成的 demo 前缀（0922-binfill-demo-prefix-plan.md B 节）。

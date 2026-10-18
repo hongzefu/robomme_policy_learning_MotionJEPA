@@ -1,5 +1,6 @@
 import contextlib
 import dataclasses
+import hashlib
 import json
 import os
 import shutil
@@ -18,7 +19,7 @@ from utils import (
     TASK_WITH_VIDEO_DEMO,
     EpisodeState,
 )
-from utils import RolloutRecorder
+from utils import RolloutRecorder, finalize_all
 from env_runner import EnvRunner, SpecEnvRunner
 
 
@@ -63,7 +64,7 @@ class Args:
     obs_horizon: int = 16
     # 默认保持 1300：官方 env_metadata 路径（run.sh 的单回合验收）不传这个参数，
     # 改默认值会把 docs/training-doc/vail-eval-gl-20260918T0400Z 的口径悄悄换掉。
-    # 注入候选路径由 run_shard.sh 显式传 --args.max_steps=2000。
+    # 清单路径由 run_shard.sh 显式传 --args.max_steps=2000（写死 MAX_STEPS=2000）。
     max_steps: int = 1300
     save_dir: str = "v1-store/evaluation"
     overwrite: bool = False
@@ -79,9 +80,9 @@ class Args:
     exclude_tasks: str = "" # tasks split by comma
     max_episodes: int = 0 # 每任务最多评几集（0 = 环境提供的全部；T3_EVAL_OBS 用 10）
 
-    # 注入候选路径（fork 的 test/primary）：给了 episode_plan 就走这条，与上面的 task control 互斥
-    episode_plan: str = ""      # 分片计划 json；{"shard_tag":..., "candidates":..., "groups":{"任务/难度":[episode...]}}
-    candidates: str = ""        # candidates.jsonl 路径；留空则用 plan 里记的那个
+    # 清单路径（1017-test-xhard5-12per 的 1200 局清单）：给了 episode_plan 就走这条，与上面的 task control 互斥
+    episode_plan: str = ""      # 分片计划 json；{"shard_tag":..., "manifest":..., "manifest_sha256":..., "groups":{"任务/难度":[episode...]}}
+    manifest: str = ""          # 清单 jsonl 路径；留空则用 plan 里记的那个
     max_new_episodes: int = 0   # 本进程最多「新评」几集（0 = 不限）；用于把 make_env 次数压在 Vulkan TLS 红线下
     shard_tag: str = ""         # 分片标识，只写进 plan.json 便于追溯
     episode_wall_s: int = 900   # 单集墙钟上限，超时记 "error"
@@ -124,6 +125,7 @@ class EpisodeEvaluator:
         video_save_dir: Path,
     ) -> str:
         self._epstate = None
+        self._recorder = None
         self.last_motion_stat = None
         client = _websocket_client_policy.MMEVLAWebsocketClientPolicy(
             self.args.host, self.args.port
@@ -131,6 +133,9 @@ class EpisodeEvaluator:
         try:
             return self._rollout(client, env_runner, video_save_dir)
         finally:
+            # error / unknown 路径没有 save_video：关管道、丢临时文件、关动作日志；已 save_video 的局这里不动
+            if self._recorder is not None:
+                self._recorder.discard()
             # 统计必须在 finally 里取：墙钟超时 / step 异常那两条路径同样要留下已跑部分的窗数
             self.last_motion_stat = motion_stat_of(self._epstate)
             # 每集一个新 client，不关会在 server 侧攒下同样多的常驻 handler
@@ -147,6 +152,7 @@ class EpisodeEvaluator:
         epstate = EpisodeState()
         self._epstate = epstate
         task_goal, recorder = self.init_episode(env_runner, epstate, video_save_dir)
+        self._recorder = recorder
 
         img, wrist_img, robot_state = epstate.get_current_obs()
         prompt = task_goal
@@ -183,6 +189,7 @@ class EpisodeEvaluator:
                 wrist_image=wrist_img.copy(),
                 state=robot_state.copy(),
                 action=action.copy(),
+                motion_k=epstate.motion_k_last,
             )
 
             if stop_flag:
@@ -206,7 +213,9 @@ class EpisodeEvaluator:
         pre_traj = env_runner.get_init_obs()
         task_goal = pre_traj["task_goal"]
 
-        recorder = RolloutRecorder(video_save_dir, task_goal, fps=30)
+        # 逐步动作日志：每局一份 steps/<Task>_ep<n>.jsonl，行数 = record() 次数（含 demo 前缀帧）
+        steps_path = self.save_dir / "steps" / f"{env_runner.env_id}_ep{env_runner.episode_id}.jsonl"
+        recorder = RolloutRecorder(video_save_dir, task_goal, fps=30, steps_path=steps_path)
 
         print(f"task_goal: {task_goal}")
 
@@ -262,6 +271,7 @@ class EpisodeEvaluator:
         if "motion_k" in resp:
             state.motion_infers += 1
             state.motion_k_max = max(state.motion_k_max, int(resp["motion_k"]))
+            state.motion_k_last = int(resp["motion_k"])
             # 服务端侧是 episode 内累计值（FrameSampMemory 每 episode 随 reset 重建），取最大即本集总数
             state.motion_downsample_steps = max(
                 state.motion_downsample_steps, int(resp["motion_downsample_steps"]))
@@ -352,15 +362,26 @@ def summarize(log_dict: dict, save_dir: Path) -> None:
 
 
 def load_plan(args: Args):
-    """读分片计划与候选库，返回 (组 -> [episode...], (task,difficulty,episode) -> 候选行)。"""
-    import robomme
-    from robomme.injection_candidates import load_candidates, candidate_key
+    """读分片计划与 1200 局清单，返回 (plan, header, 组 -> [清单行...])。
 
+    清单 jsonl 每行 ``{"task","episode","seed","difficulty"}``，唯一键 (task, difficulty, episode)；
+    plan 里记了清单的 sha256，读到的字节不符即拒绝起跑。
+    """
     plan = json.loads(Path(args.episode_plan).read_text(encoding="utf-8"))
-    jsonl = args.candidates or plan["candidates"]
-    benchmark_root = Path(robomme.__file__).resolve().parents[2]
-    header, rows = load_candidates(jsonl, repo_root=benchmark_root)
-    index = {candidate_key(row): row for row in rows}
+    manifest_path = Path(args.manifest or plan["manifest"])
+    raw = manifest_path.read_bytes()
+    sha = hashlib.sha256(raw).hexdigest()
+    if plan.get("manifest_sha256") and plan["manifest_sha256"] != sha:
+        raise ValueError(f"清单 sha256 {sha[:12]} 与计划记录 {plan['manifest_sha256'][:12]} 不符：{manifest_path}")
+    index = {}
+    for line in raw.decode("utf-8").splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        key = (row["task"], row["difficulty"], int(row["episode"]))
+        if key in index:
+            raise ValueError(f"清单里有重复行：{key}")
+        index[key] = row
 
     groups = {}
     for group, episodes in plan["groups"].items():
@@ -370,12 +391,18 @@ def load_plan(args: Args):
             key = (task, difficulty, int(episode))
             row = index.get(key)
             if row is None:
-                raise ValueError(f"计划里的候选不在候选库中：{key}")
-            if row["split"] != "test" or row["role"] != "primary":
-                raise ValueError(f"计划里的候选不是 test/primary：{key} -> {row['split']}/{row['role']}")
+                raise ValueError(f"计划里的局不在清单中：{key}")
             picked.append(row)
         groups[group] = picked
+    header = {"manifest": str(manifest_path), "manifest_sha256": sha}
     return plan, header, groups
+
+
+def report_video_encodes() -> None:
+    """回收本进程全部 ffmpeg 子进程（wait、rc=0 才改成最终名），打 VIDEO_ENCODE 判定行。"""
+    finalized, failed = finalize_all()
+    print(f"VIDEO_ENCODE={'PASS' if failed == 0 else 'FAIL'} pending=0 finalized={finalized} failed={failed}",
+          flush=True)
 
 
 def evaluate(args: Args):
@@ -416,11 +443,12 @@ def evaluate(args: Args):
             n_binfill = sum(len(rows_) for g, rows_ in groups.items() if g.startswith("BinFill/"))
             n_other = sum(len(rows_) for g, rows_ in groups.items() if not g.startswith("BinFill/"))
             print(f"DEMO_PREFIX_PLAN binfill={n_binfill}（全部命中 store）other={n_other}（不注入）", flush=True)
-        sampling = header["sampling_config"]
         (save_dir / "plan.json").write_text(json.dumps(
             {"shard_tag": args.shard_tag or plan.get("shard_tag", ""),
-             "candidates": args.candidates or plan["candidates"],
-             "identity_sha256": header["identity_sha256"],
+             "manifest": header["manifest"],
+             "manifest_sha256": header["manifest_sha256"],
+             "identity_sha256": header["manifest_sha256"],
+             "max_steps": args.max_steps,
              "groups": {g: [row["episode"] for row in rows] for g, rows in groups.items()}},
             indent=2, ensure_ascii=False), encoding="utf-8")
 
@@ -430,9 +458,7 @@ def evaluate(args: Args):
             if not pending:
                 continue
             task, difficulty = group.split("/")
-            per_task = {"parameters": sampling["parameters"][task],
-                        "positions": sampling["positions"][task]}
-            env_runner = SpecEnvRunner(task, difficulty, per_task, video_save_dir,
+            env_runner = SpecEnvRunner(task, difficulty, video_save_dir,
                                        max_steps=args.max_steps,
                                        demo_prefix_store=args.demo_prefix_store)
             for row in pending:
@@ -470,8 +496,10 @@ def evaluate(args: Args):
             time.sleep(1)
             if args.max_new_episodes and evaluated >= args.max_new_episodes:
                 print(f"[robomme] 本进程已新评 {evaluated} 集，达到 max_new_episodes，正常退出")
+                report_video_encodes()
                 return
 
+        report_video_encodes()
         summarize(log_dict, save_dir)
         return
 
@@ -526,6 +554,7 @@ def evaluate(args: Args):
         del env_runner
         time.sleep(1)
 
+    report_video_encodes()
     summarize(log_dict, save_dir)
 
 

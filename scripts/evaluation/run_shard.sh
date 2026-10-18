@@ -11,6 +11,9 @@
 #        MMEVLA_ENC_CHUNK（SigLIP 编码分批尺寸，0/不设 = 一次编完，与改动前逐字等价）
 #        MMEVLA_MOTION_OVERFLOW（raise|resample，默认 raise；补 demo 后 motion 轮须设 resample）
 #        EXPECT_MOTION_STATS=1（本轮 motion run 缺 motion_stats.json 即判 FAIL，不许走 SKIP）
+#        XHARD_METADATA_DIR（1017 清单的 XHard metadata 副本目录绝对路径；计划含 xhard 组时必须给，由 env_runner.py 读）
+#        RESET_CHECK=1（只在 10k 冒烟用：全部块跑完后，同一 server 进程内把本片计划的第一局再评一次，
+#                      写到 $RUN_DIR/reset-check/，再用 reset_clean.py 对拍两份逐步动作日志，打 RESET_CLEAN 判定行）
 #   motion 轮示例：POLICY=perceptual-framesamp-modul-8frame-8x8-motion POLICY_CONFIG=mme_vla_suite_b128_80k EXPECT_CKPT_ID=50000
 #                 EPISODE_WALL_S=2400 MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count
 set -euo pipefail
@@ -45,6 +48,11 @@ fi
 [[ -z "${MMEVLA_ENC_CHUNK:-}" || "$MMEVLA_ENC_CHUNK" =~ ^[0-9]+$ ]] || { echo 'MMEVLA_ENC_CHUNK 必须是非负整数'; exit 2; }
 [[ -z "${MMEVLA_MOTION_OVERFLOW:-}" || "$MMEVLA_MOTION_OVERFLOW" =~ ^(raise|resample)$ ]] || { echo 'MMEVLA_MOTION_OVERFLOW 只能是 raise / resample'; exit 2; }
 [[ -z "${EXPECT_MOTION_STATS:-}" || "$EXPECT_MOTION_STATS" =~ ^[01]$ ]] || { echo 'EXPECT_MOTION_STATS 只能是 0 / 1'; exit 2; }
+[[ -z "${RESET_CHECK:-}" || "$RESET_CHECK" =~ ^[01]$ ]] || { echo 'RESET_CHECK 只能是 0 / 1'; exit 2; }
+if [[ -n "${XHARD_METADATA_DIR:-}" ]]; then
+    [[ "$XHARD_METADATA_DIR" == /* && -d "$XHARD_METADATA_DIR" ]] || { echo "XHARD_METADATA_DIR 必须是存在的绝对路径：$XHARD_METADATA_DIR"; exit 2; }
+    export XHARD_METADATA_DIR
+fi
 # 这三个要被子进程读到：前两个由 server 侧的 framesamp_memory.py / policy.py 读，
 # EXPECT_MOTION_STATS 由客户端 uv 起的 check_shard.py 读。经 env 传进来时本已 exported，这里显式化以防漏。
 [[ -z "${MMEVLA_ENC_CHUNK:-}" ]] || export MMEVLA_ENC_CHUNK
@@ -147,6 +155,7 @@ export MMEVLA_MOTION_ONLINE_GPU="${CUDA_VISIBLE_DEVICES%%,*}"
 [[ -n "$MMEVLA_MOTION_ONLINE_GPU" ]] || export MMEVLA_MOTION_ONLINE_GPU=0
 echo "EVAL_PARAMS policy=$POLICY config=$POLICY_CONFIG ckpt=$CKPT_ID seed=$SEED max_steps=$MAX_STEPS wall=${EPISODE_WALL_S:-default} online_gpu=$MMEVLA_MOTION_ONLINE_GPU prov_relax=${MMEVLA_MOTION_PROV_RELAX:-none}"
 echo "EVAL_PARAMS_DEMO demo_prefix_store=${DEMO_PREFIX_STORE:-none} enc_chunk=${MMEVLA_ENC_CHUNK:-0} motion_overflow=${MMEVLA_MOTION_OVERFLOW:-raise} expect_motion_stats=${EXPECT_MOTION_STATS:-0}"
+echo "EVAL_PARAMS_XHARD xhard_metadata_dir=${XHARD_METADATA_DIR:-none} reset_check=${RESET_CHECK:-0}"
 "${SERVER_UV[@]}" scripts/training/serve_policy.py --seed="$SEED" --port="$PORT" policy:checkpoint \
     --policy.dir="$CKPT" --policy.config="$POLICY_CONFIG" > "$RUN_DIR/server.log" 2>&1 &
 SERVER_PID=$!
@@ -197,4 +206,28 @@ for ((CHUNK=1; CHUNK<=CHUNKS; CHUNK++)); do
 done
 
 "${CLIENT_UV[@]}" scripts/evaluation/check_shard.py "$RUN_DIR" "$POLICY" "$CKPT_ID" "$SEED" "$PLAN"
+
+# reset 干净实测（计划 T23、4.3 第 11 项）：同一 server 进程内把本片第一局再评一次，写独立目录，不与首评同名覆盖
+if [[ "${RESET_CHECK:-0}" == 1 ]]; then
+    RESET_PLAN="$RUN_DIR/reset-check-plan.json"
+    "${CLIENT_UV[@]}" -c "
+import json,sys
+plan=json.load(open(sys.argv[1]))
+group=sorted(plan['groups'])[0]
+plan['shard_tag']='reset-check'
+plan['groups']={group:[sorted(plan['groups'][group])[0]]}
+open(sys.argv[2],'w').write(json.dumps(plan,indent=2,ensure_ascii=False)+'\n')
+" "$PLAN" "$RESET_PLAN"
+    echo "RESET_CHECK_START plan=$RESET_PLAN"
+    timeout --signal=TERM --kill-after=20s "${EVAL_TIMEOUT}s" \
+        env "GLIBC_TUNABLES=$TLS_TUNABLE" "${CLIENT_UV[@]}" examples/robomme/eval.py \
+        --args.host=127.0.0.1 --args.port="$PORT" --args.model_seed="$SEED" \
+        --args.policy_name="$POLICY" --args.model_ckpt_id="$CKPT_ID" \
+        --args.max_steps="$MAX_STEPS" --args.save_dir="$RUN_DIR/reset-check" \
+        --args.episode_plan="$RESET_PLAN" --args.shard_tag=reset-check \
+        ${EPISODE_WALL_S:+--args.episode_wall_s="$EPISODE_WALL_S"} \
+        2>&1 | tee -a "$RUN_DIR/client-reset-check.log"
+    "${CLIENT_UV[@]}" scripts/evaluation/reset_clean.py \
+        "$RUN_DIR/$POLICY/ckpt$CKPT_ID/seed$SEED/steps" "$RUN_DIR/reset-check/$POLICY/ckpt$CKPT_ID/seed$SEED/steps"
+fi
 echo "SHARD_DONE run=$RUN_NAME shard=$SHARD_TAG episodes=$PLAN_EPISODES"

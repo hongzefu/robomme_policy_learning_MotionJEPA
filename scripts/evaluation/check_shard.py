@@ -6,7 +6,14 @@
 2. episode 号来自计划、不是 range(N)；
 3. **视频数 == 非 error 集数**，不是 == 总集数——eval.py 在 success_flag=="unknown" 时提前
    return 不落视频，抛异常那条路同样没有视频，这两种都记 "error"。
+
+1017-test-xhard5-12per 增补三道：
+* ``EVAL_PARAMS``：客户端写进 plan.json 的 max_steps 必须等于 ``EXPECT_MAX_STEPS``（默认 2000）；
+* 难度期望改读清单：结果里每个 (task, episode) 回查 plan 记录的 1200 局清单，组键里的难度必须等于清单难度，
+  清单 sha256 必须等于计划记录值；
+* ``ACTION_LOG``：每个非 error 局的 ``steps/<Task>_ep<n>.jsonl`` 行数等于该局视频解码帧数（= record() 次数，含 demo 前缀帧）。
 """
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -157,10 +164,57 @@ def check_demo_injection(run_dir, progress: dict) -> dict:
     return summary
 
 
+def check_eval_params(root: Path) -> int:
+    """EVAL_PARAMS 闸：客户端实际使用的 max_steps（eval.py 写进 plan.json）必须等于期望值。"""
+    expect = int(os.environ.get("EXPECT_MAX_STEPS", "2000"))
+    written = json.loads((root / "plan.json").read_text(encoding="utf-8"))
+    actual = written.get("max_steps")
+    assert actual == expect, f"EVAL_PARAMS=FAIL max_steps={actual} != 期望 {expect}"
+    print(f"EVAL_PARAMS=PASS max_steps={actual}", flush=True)
+    return actual
+
+
+def check_manifest_difficulty(plan: dict, progress: dict) -> dict:
+    """难度期望读清单：每个结果键的 (task, episode) 回查清单，难度必须一致。"""
+    manifest = Path(plan["manifest"])
+    raw = manifest.read_bytes()
+    sha = hashlib.sha256(raw).hexdigest()
+    assert sha == plan["manifest_sha256"], f"MANIFEST_DIFFICULTY=FAIL 清单 sha {sha[:12]} != 计划 {plan['manifest_sha256'][:12]}"
+    by_episode = {}
+    for line in raw.decode("utf-8").splitlines():
+        if line.strip():
+            row = json.loads(line)
+            by_episode[(row["task"], int(row["episode"]))] = row["difficulty"]
+    checked = 0
+    for group, entries in progress.items():
+        task, difficulty = group.split("/")
+        for episode in entries:
+            want = by_episode.get((task, int(episode)))
+            assert want == difficulty, f"MANIFEST_DIFFICULTY=FAIL {task} ep{episode} 结果难度 {difficulty} != 清单 {want}"
+            checked += 1
+    print(f"MANIFEST_DIFFICULTY=PASS checked={checked} manifest_sha256={sha[:12]}", flush=True)
+    return {"verdict": "PASS", "checked": checked, "manifest_sha256": sha}
+
+
+def check_action_log(root: Path, records: list) -> dict:
+    """ACTION_LOG 闸：非 error 局的逐步动作日志行数 == 视频帧数。"""
+    for rec in records:
+        task = rec["group"].split("/")[0]
+        path = root / "steps" / f"{task}_ep{rec['episode']}.jsonl"
+        assert path.is_file(), f"ACTION_LOG=FAIL 缺 {path}"
+        with path.open(encoding="utf-8") as f:
+            rows = sum(1 for line in f if line.strip())
+        assert rows == rec["frames"], f"ACTION_LOG=FAIL {path.name} 行数 {rows} != 视频帧数 {rec['frames']}"
+    print(f"ACTION_LOG=PASS episodes={len(records)} rows_eq_steps=yes", flush=True)
+    return {"verdict": "PASS", "episodes": len(records)}
+
+
 def check_shard(run_dir, policy, ckpt, seed, plan_path):
     root = Path(run_dir) / policy / f"ckpt{ckpt}" / f"seed{seed}"
     plan = json.loads(Path(plan_path).read_text(encoding="utf-8"))
     progress = json.loads((root / "progress.json").read_text(encoding="utf-8"))
+    max_steps = check_eval_params(root)
+    manifest_check = check_manifest_difficulty(plan, progress)
 
     planned = {(g, int(e)) for g, eps in plan["groups"].items() for e in eps}
     done = {(g, int(e)) for g, entries in progress.items() for e in entries}
@@ -199,16 +253,21 @@ def check_shard(run_dir, policy, ckpt, seed, plan_path):
         records.append({"group": f"{task}/{difficulty}", "episode": episode,
                         "path": str(video), "frames": count, "bytes": video.stat().st_size})
 
+    action_log = check_action_log(root, records)
     motion = check_motion_windows(root, progress)
     demo = check_demo_injection(run_dir, progress)
 
     total = len(planned)
     summary = {
         "pipeline_pass": True,
+        "max_steps": max_steps,
+        "manifest_difficulty": manifest_check,
+        "action_log": action_log,
         "motion_windows": motion,
         "demo_inject": demo,
         "shard_tag": plan.get("shard_tag", ""),
         "identity_sha256": plan.get("identity_sha256", ""),
+        "manifest_sha256": plan.get("manifest_sha256", ""),
         "episodes": total,
         "evaluated": total - len(errors),
         "successes": successes,

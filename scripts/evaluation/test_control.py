@@ -16,7 +16,7 @@ SOURCE = Path(__file__).resolve().parents[2] / 'examples/robomme/eval.py'
 class ControlTests(unittest.TestCase):
     def setUp(self):
         tree = ast.parse(SOURCE.read_text())
-        tree.body = [node for node in tree.body if getattr(node, 'name', None) in {'Args', 'setup_save_directory', 'setup_log_dict', 'evaluate', 'summarize', 'load_plan', 'episode_deadline'}]
+        tree.body = [node for node in tree.body if getattr(node, 'name', None) in {'Args', 'setup_save_directory', 'setup_log_dict', 'evaluate', 'summarize', 'load_plan', 'episode_deadline', 'report_video_encodes'}]
         self.visited = []
         self.closed = 0
         self.outcomes = {}
@@ -38,7 +38,8 @@ class ControlTests(unittest.TestCase):
                 return value
         self.ns = dict(dataclasses=dataclasses, json=json, os=os, shutil=shutil, Path=Path, contextlib=contextlib, signal=signal,
                        check_args=lambda _: None, TASK_NAME_LIST=['RouteStick'], EnvRunner=Runner,
-                       EpisodeEvaluator=Evaluator, time=SimpleNamespace(sleep=lambda _: None))
+                       EpisodeEvaluator=Evaluator, time=SimpleNamespace(sleep=lambda _: None),
+                       hashlib=__import__('hashlib'), finalize_all=lambda: (0, 0))
         exec(compile(tree, str(SOURCE), 'exec'), self.ns)
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
