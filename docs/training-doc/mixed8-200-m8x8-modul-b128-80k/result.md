@@ -96,7 +96,7 @@ PUBLIC_ANON_READ=OK
 EXIT_CODE=0
 ```
 
-计数对账：16 个 step 目录在源侧共 334 个文件（各 step 文件数见 ⑩ 表），加训练前提前公开的 3 个根文件（`history_config.resolved.yaml`、`history_config.resolved.sha256`、`motion_provenance.json`，见 ⑩）即驱动起跑时 bucket 内的 337 个；`BUCKET_BYTES_AT_START` 比 `ckpt_bytes` 多出的 1,176 B 正是这 3 个文件 405 + 65 + 706 B。驱动补传 `_run-meta/train.log` 1 个与根下平文件 7 个（其中 3 个内容相同、重传覆盖）后为 342 个；`SRC_FILES=339` 是 334 个 step 文件加 5 个源 run 根下平文件，`PRE_LINES=341` 是 342 个文件除去 `SHA256SUMS.pre.txt` 自身。
+计数对账：16 个 step 目录在源侧共 334 个文件（各 step 文件数见 ⑩ 表），加训练进行中（美东 10-18 01:06 与 01:20）提前公开的 3 个根文件（`history_config.resolved.yaml`、`history_config.resolved.sha256`、`motion_provenance.json`，见 ⑩）即驱动起跑时 bucket 内的 337 个；`BUCKET_BYTES_AT_START` 比 `ckpt_bytes` 多出的 1,176 B 正是这 3 个文件 405 + 65 + 706 B。驱动补传 `_run-meta/train.log` 1 个与根下平文件 7 个（其中 3 个内容相同、重传覆盖）后为 342 个；`SRC_FILES=339` 是 334 个 step 文件加 5 个源 run 根下平文件，`PRE_LINES=341` 是 342 个文件除去 `SHA256SUMS.pre.txt` 自身。
 
 ## ⑦ 训练过程行为
 
