@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-18T20:20:18Z",
-    "america_new_york": "2026-10-18T16:20:18-0400"
+    "utc": "2026-10-18T20:35:52Z",
+    "america_new_york": "2026-10-18T16:35:52-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "a2c204fb853fdf85466976ab756d83d44991a109"
+    "base_head": "1d7417295bc94da2bf2969856a9f6deebfb99862"
   },
   "freeze": {
     "active": false,
@@ -227,20 +227,11 @@
       ],
       "pending_decisions": [
         {
-          "what": "两个回读副本 v1-store/exports/hf-ckpt-mixed8-200-vla-512-80k/verify 与 v1-store/exports/hf-ckpt-mixed8-200-vla-motion-80k/verify（各约 190 GB）是否删除",
-          "status": "待用户定"
-        },
-        {
           "what": "是否另起 100k（用户 10-18 约 12:45 问「是否可以让带motion的继续训练下去到100k」，答「先不管了」；不能原地续训，方案 A 从 79999 热启动 20k、方案 B 从头 100k，均需新计划与新 run 名）",
           "status": "待用户定"
         }
       ],
       "next_steps": [
-        {
-          "what": "用户裁决两个 verify 回读副本（各约 190 GB）是否删除；删除前 ls -ld 确认是本轮导出目录下的实体目录，只删 verify 子目录",
-          "command": "—（待用户定）",
-          "verdict_line": "—"
-        },
         {
           "what": "用户裁决 100k 是否另起；若起需新计划、新 run 名与开工令",
           "command": "—（待用户定）",
@@ -259,6 +250,89 @@
           "evidence": "PREFLIGHT=PASS n=30；EXIT_CODE=0；HEAD=ae6e9cdee494e0cfa815c5cde04d255e0cb14cfd；git diff --stat 62a8ef1..HEAD -- src pyproject.toml uv.lock 为空",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-preflight-motion.log",
           "status": "pass"
+        }
+      ],
+      "resolved_notes": [
+        {
+          "what": "两个 verify 回读副本已删除",
+          "date": "2026-10-18",
+          "quote": "上一轮回读副本删除",
+          "evidence": "rm -rf v1-store/exports/hf-ckpt-mixed8-200-vla-{512,motion}-80k/verify；df /scratch 可用 3.5T→3.8T"
+        }
+      ]
+    },
+    "mixed8-2048-train": {
+      "plan": {
+        "file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1018-mixed8-2048-context-modul-plan.md",
+        "sha": null
+      },
+      "state": "planned",
+      "state_changed_at": "2026-10-18T20:35:52Z",
+      "state_reason": "计划已写、用户裁决 A–E 已回写，等开工前审查与开工令",
+      "owner": {
+        "session": "https://claude.ai/code/session_019xZ3hfywh5yTmomPnhXryG",
+        "host": "claude-code"
+      },
+      "depends_on": [
+        "mixed8-vla-build"
+      ],
+      "pre_handoff": [
+        {
+          "what": "context 2048 80k 训练结束",
+          "evidence": "EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m32x8x8-context-b128-80k.log",
+          "status": "pending"
+        },
+        {
+          "what": "modulation 2048 80k 训练结束",
+          "evidence": "EXIT_CODE=0",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m32x8x8-modul-b128-80k.log",
+          "status": "pending"
+        },
+        {
+          "what": "两条 result.md 回写 commitV11.27 / commitV11.28 并 push",
+          "evidence": "commit sha",
+          "where": "origin/v2-motionmem",
+          "status": "pending"
+        },
+        {
+          "what": "只读锁按 m2k-chmod-before.txt 恢复",
+          "evidence": "PERM_RESTORED=OK",
+          "where": "v1-store/m8v-scripts/m2k-chmod-before.txt",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [
+        {
+          "what": "context 增量上传",
+          "tmux": "m2k-inc-ctx",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m2k-inc-ctx.log",
+          "done_line": "INC_END",
+          "status": "pending"
+        },
+        {
+          "what": "modulation 增量上传",
+          "tmux": "m2k-inc-modul",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m2k-inc-modul.log",
+          "done_line": "INC_END",
+          "status": "pending"
+        },
+        {
+          "what": "两条正式上传驱动全量回读",
+          "tmux": "—",
+          "log": "—",
+          "done_line": "SHA256_PRE_POST_DIFF=0",
+          "status": "pending"
+        }
+      ],
+      "running_handles": [],
+      "authorizations": [],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "开工前 PLAN_CONSISTENCY_REVIEW，然后等用户开工令",
+          "command": "—",
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS"
         }
       ]
     }

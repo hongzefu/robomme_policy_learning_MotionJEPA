@@ -2,7 +2,7 @@
 
 > 创建：2026-10-18 美东 16:30。权威工作副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，环境 B，分支 `v2-motionmem`，起草时 HEAD `4fd7271`（工作区 clean，`docs/handoff/current.json` 中 `mixed8-vla-train` 已 closed、无在跑句柄）。
 >
-> **当前状态：只是计划，未改代码、未起任何短测或训练。** 开工须等用户对第一部分第 6 节「待定项」答复并给出开工令。
+> **当前状态：只是计划，未改代码、未起任何短测或训练。** 第 6 节待定项已于 2026-10-18 美东 16:35 全部由用户裁决；开工须等用户开工令。
 
 用户原话（按时间顺序）：
 
@@ -10,6 +10,7 @@
 2. 「然后也是边训练边上传。」
 3. 「本次不再需要建 HTML 计划，直接建 Markdown 计划。还是写在policy库的根目录」
 4. 「都是三十二帧的八乘八。」
+5. 「再审查一下，RAM 名和 GPU 名和上传位置都你定，太慢或太慢就不要管了。然后 OOM 是不可能的，应该是都会在的我之前跑过。如果oom就报错。上一轮回读副本删除，状态机登登记。」（「RAM 名」「GPU 名」按语境为 run 名、GPU 分配）
 
 # 第一部分（给人看）
 
@@ -22,11 +23,11 @@
 | 记忆形制 | 32 帧 × 8×8（每帧 64 token），无 motion | 同左 |
 | 接入方式 | `integration_type: context`，记忆 token 拼进主干前缀，`memory_token_dim 2048` | `integration_type: modulation`，`memory_token_dim 1024` |
 | history yaml | **新建** `perceptual-framesamp-context-32frame-8x8.yaml` | 现成 `perceptual-framesamp-modul-32frame-8x8.yaml`（不改） |
-| 拟 run 名（待定项 A） | `mixed8-200-m32x8x8-context-b128-80k` | `mixed8-200-m32x8x8-modul-b128-80k` |
-| GPU（待定项 B） | GPU0–3，`FSDP_DEVICES=4 NUM_WORKERS=8` | GPU4–7，同左 |
+| run 名（裁决 A） | `mixed8-200-m32x8x8-context-b128-80k` | `mixed8-200-m32x8x8-modul-b128-80k` |
+| GPU（裁决 B） | GPU0–3，`FSDP_DEVICES=4 NUM_WORKERS=8` | GPU4–7，同左 |
 | 训练配置 | `mme_vla_suite_b128_80k`：80000 步、global batch 128（每卡 32）、warmup 5000、lr 5e-5、AdamW clip 1.0、EMA 0.999、每 5000 步保存、seed 42、`pi05_base` 初始化 | 同左 |
 | 数据 | `v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/framesamp-8x8`（16 任务 × 200 集 = 3200 集，2145548 帧，1383846 执行样本），norm stats 同上一轮 | 同左 |
-| 上传（待定项 C） | 训练中增量上传到新公开 bucket，结束后正式驱动全量回读 | 同左 |
+| 上传（裁决 C） | 训练中增量上传到公开 bucket `HongzeFu/robomme-vla-mixed8-200-context-2048-80k-v1`，结束后正式驱动全量回读 | `HongzeFu/robomme-vla-mixed8-200-modul-2048-80k-v1`，同左 |
 
 **除接入方式及其必然附带的 `memory_token_dim` 外，两条 run 的数据、超参、卡数、workers、seed 全部一致，也和上一轮 512 一致（只差 budget）。**
 
@@ -43,7 +44,7 @@
 - 9-28 的唯一数据是**候选 mask**（非原入口）下 4 卡、每卡 32 样本、2 步探针：context 2048 每卡峰值 79439–79453 MiB，几乎顶满 80 GiB；同条件 context 512 是 73 GiB。原 mask 在 4 卡的 240 s 探针时限内未完成编译（512 也一样，所以这更像探针时限不够，不是容量结论）。
 - context 把 2048 个记忆 token 拼进前缀，前缀从约 1108 变为约 2644，注意力项按平方粗估约 5.7 倍；**整步时间不能外推**，必须实测。
 - modulation 2048 在 4 卡上同样没有实测：旧 4 任务库 8 卡 1.031 s/步（22 h 59 min），按 0928 实测「四卡单任务约为八卡 1.88 倍」推算 4 卡约 1.9–2.0 s/步、约 43–45 h，**只是推断**。
-- 所以本计划先让两条在各自 4 卡上做短测（第 5 节步骤 4–5），**以实测判定是否能 4+4 并行**；context 若 OOM，停下问用户（待定项 D），不自行改训练计算机制。
+- 用户裁决（第 6 节 D）：「OOM 是不可能的……我之前跑过。如果oom就报错」「太慢……就不要管了」。所以短测（第 5 节步骤 4–5）只用来确认能起跑、记录显存与步时，**不以步时设门槛**；若真 OOM，停下报错交用户，不自行换卡数、不改训练计算机制。
 
 ## 4. 机制（数据链路，两条 run 共用）
 
@@ -67,20 +68,18 @@
 | 3 | 合并前审查 → 合并 → 合并后审查 → push，记 `commitV11.26`；同时只读核 mixed8 短历史样本数与 context 在线装配（CPU） | 审查 R1；只读 Haiku | `PRE/POST_MERGE_REVIEW=PASS`；`SHORT_HIST=… ` 与 `ONLINE_ASM_CTX2048=PASS` | 30 min |
 | 4 | 4+4 同时 20 步短测（`XLA_PYTHON_CLIENT_PREALLOCATE=false`，NVML 500 ms 采样） | 运行子代理 X1 | 两条均无 OOM，读峰值显存与稳态步时 | 15–30 min |
 | 5 | context 2048 再做 100 步 + 保存 + `create_trained_policy` 加载（mem_len=2048） | X1 | 保存加载叶相等、动作一致 | 30–40 min |
-| 6 | 交用户：实测步时 → 两条工期；用户确认后打 Beta 锚点（V11.27Beta context / V11.28Beta modulation）、建档 `launch.md` | 主会话 | 用户开工令 | — |
+| 6 | 打 Beta 锚点（V11.27Beta context / V11.28Beta modulation）、建档 `launch.md`，实测步时与推算工期只记录并告知，不再等用户确认 | 主会话 | G4、G5 通过 | 10 min |
 | 7 | 两条 80k 起跑 + 两条增量上传会话 | X1 起跑；主会话挂 Monitor | 起跑后 300 步内 loss 有限、无 OOM | context 待测；modul 约 43–45 h（推断） |
 | 8 | 收尾：核 `EXIT_CODE=0` → 正式上传驱动全量回读 `SHA256_PRE_POST_DIFF=0` → `result.md` 回写 → handoff closed | 主会话 + 写入子代理 | 同上一轮验收 | 数小时 |
 
-## 6. 待定项（需用户答复）
+## 6. 用户裁决（2026-10-18 美东 16:35）
 
-- **A. run 名**：拟 `mixed8-200-m32x8x8-context-b128-80k` 与 `mixed8-200-m32x8x8-modul-b128-80k`（沿用旧 4 任务 2048 的 `m32x8x8` 体例）。
-- **B. GPU 分配**：拟 context GPU0–3、modulation GPU4–7。
-- **C. bucket**：拟新建两个公开 bucket `HongzeFu/robomme-vla-mixed8-200-context-2048-80k-v1`、`HongzeFu/robomme-vla-mixed8-200-modul-2048-80k-v1`（与上一轮同为公开）。
-- **D. context 4 卡短测 OOM 或步时过慢时**怎么办，三选一：
-  1. context 改 8 卡（每卡 16 样本），与 modulation 串行——先跑哪条由用户定；
-  2. modulation 照常 4 卡先起，context 等它跑完再上 8 卡；
-  3. 授权降显存改动（候选一维前缀和 mask 或梯度累积）——属于改训练计算机制，须单独授权、单独对拍，本计划不含。
-- **E.（遗留，与本计划无关但影响磁盘）** 上一轮两个回读副本 `v1-store/exports/hf-ckpt-mixed8-200-vla-{512,motion}-80k/verify` 各 178G 是否删。不删磁盘也够（见第二部分风险 R5）。
+- **A. run 名**（用户「你定」）：`mixed8-200-m32x8x8-context-b128-80k` 与 `mixed8-200-m32x8x8-modul-b128-80k`（沿用旧 4 任务 2048 的 `m32x8x8` 体例）。
+- **B. GPU 分配**（用户「你定」）：context GPU0–3、modulation GPU4–7。
+- **C. bucket**（用户「你定」）：新建两个公开 bucket `HongzeFu/robomme-vla-mixed8-200-context-2048-80k-v1`、`HongzeFu/robomme-vla-mixed8-200-modul-2048-80k-v1`（与上一轮同为公开）。
+- **D. 显存与速度**：用户「OOM 是不可能的，应该是都会在的我之前跑过。如果oom就报错」「太慢……就不要管了」。短测不设步时门槛；任一条 OOM 即停下报错交用户，不自行回退。
+- **E. 上一轮回读副本**：用户「上一轮回读副本删除」。已于 2026-10-18 美东 16:33 删除 `v1-store/exports/hf-ckpt-mixed8-200-vla-{512,motion}-80k/verify`（各 178G；原 ckpt 仍在 `train-runs`，HF 上传已全量回读 PASS），`/scratch` 可用 3.5T → 3.8T。
+- **状态机**：用户「状态机登登记」，登记任务 `mixed8-2048-train`，状态 `planned`。
 
 ## 7. 子代理分工与合并（简述）
 
@@ -105,7 +104,7 @@
 - **R3** run 名全新、不覆盖；`_train_common.sh` 的「拒绝覆盖日志」保留。
 - **R4** 正式训练从 clean HEAD 起跑，起跑前打 Beta 锚点；起跑后到训练结束，被跟踪的 `src/ scripts/ packages/` 照上一轮红线 18 做 `chmod a-w` 只读锁，原权限另存 `v1-store/m8v-scripts/m2k-chmod-before.txt`，结束后恢复。
 - **R5** 80k 中途崩溃：停下问用户，不自动 resume、不自动改参数。
-- **R6** context OOM 或步时超预期：停在待定项 D，不自行换卡数、不改 mask。
+- **R6** 任一条 OOM：停下报错交用户（裁决 D），不自行换卡数、不改 mask；步时慢不停。
 - **R7** tmux 前缀 `m2k-`；只按本轮会话名清单清理，禁止任何批量杀 tmux。
 - **R8** 长期文档不写代码行号，用符号锚点。
 
@@ -188,11 +187,11 @@ tmux new-session -d -s m2k-inc-modul "bash v1-store/m8v-scripts/m8v-ckpt-inc.sh 
 
 | 编号 | 风险 | 应对 |
 |---|---|---|
-| K1 | context 2048 4 卡 OOM（候选 mask 下已 79.4 GiB） | G4 实测；OOM 停在待定项 D |
-| K2 | context 步时远超 modulation，两条结束时间差很大 | G4 后给用户两条工期；先结束的那条 4 卡空出不自动挪用 |
+| K1 | context 2048 4 卡 OOM（候选 mask 下已 79.4 GiB；用户称以前跑过不会 OOM） | G4 实测；OOM 即停下报错（裁决 D） |
+| K2 | context 步时远超 modulation，两条结束时间差很大 | 用户裁决不管；G4 后只告知两条工期；先结束的那条 4 卡空出不自动挪用 |
 | K3 | 原 mask 首次编译很慢 | 短测不设 240 s 时限；Monitor 过滤词含编译卡死特征（长时间无 step 行时人工核） |
 | K4 | 两条同时读同一份 525G 库，IO 争用 | 上一轮 512+motion 4+4 已同库并行无异常；G4 看步时 |
-| K5 | 磁盘：两条 ckpt 约 360G + 回读副本约 360G | 可用 3.5T，足够；verify 副本删除另由待定项 E 决定 |
+| K5 | 磁盘：两条 ckpt 约 360G + 两条新回读副本约 360G | 上一轮回读副本已删，可用 3.8T，足够 |
 | K6 | 增量上传与训练抢 IO | `m8v-ckpt-inc.sh` 已 `ionice -c 3 nice -n 19` |
 
 ## 6. 盲区诚实清单
@@ -204,7 +203,7 @@ tmux new-session -d -s m2k-inc-modul "bash v1-store/m8v-scripts/m8v-ckpt-inc.sh 
 
 ## 7. 交接顺序与状态机登记
 
-- **任务 id**：`mixed8-2048-train`（是否登记进 `docs/handoff/current.json` 待用户答复）。
+- **任务 id**：`mixed8-2048-train`（用户裁决登记，`planned`）。
 - **依赖的上游**：`mixed8-vla-build`（closed；假设库 `16task-mixed8-200-3200ep-e3c7564f` 的 `framesamp-8x8` 为 `status verified`、`num_rows 2145548`、`VERIFY_PACK … mismatches=0`）。不依赖 `mixed8-vla-train`。
 - **交接前必须完成（pre_handoff）**：两条训练 `EXIT_CODE=0`（日志 `v1-store/logs/<run>.log`）；两条 `result.md` 回写并以 `commitV11.27` / `commitV11.28` push；只读锁按 `m2k-chmod-before.txt` 恢复 `PERM_RESTORED=OK`。
 - **长尾（long_tail）**：`m2k-inc-ctx`、`m2k-inc-modul` 增量上传（完成行 `INC_END`）；两条正式上传驱动全量回读（完成行 `SHA256_PRE_POST_DIFF=0`）。
