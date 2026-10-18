@@ -22,7 +22,10 @@ import robomme
 import openpi_client
 
 # robomme_xhard 只查落点、不导入：它的 __init__ 会注册 <Task>XHard 子类并连带导入仿真栈（应在建环境的进程里按需导入）
-XHARD_ORIGIN = Path(importlib.util.find_spec('robomme_xhard').origin).resolve()
+_XHARD_SPEC = importlib.util.find_spec('robomme_xhard')
+assert _XHARD_SPEC is not None and _XHARD_SPEC.origin, (
+    'robomme_xhard 不可导入：子模块未指向 tag v2-motionmem-eval-test1017-metadata 或客户端环境未按新 gitlink 重装')
+XHARD_ORIGIN = Path(_XHARD_SPEC.origin).resolve()
 
 BENCHMARK = repo / 'third_party/robomme_benchmark'
 TAG = 'v2-motionmem-eval-test1017-metadata'

@@ -259,3 +259,81 @@ def test_summarize(tmp_path, capsys):
         assert line in out, out
     table = (tmp_path / "sum" / "summary.md").read_text()
     assert "| BinFill | easy | 2 | 1/2 | 1/2（err 1） |" in table
+
+
+# ── 合并前审查续改：es_bound 索引键、fetch_ckpt run 模式、verify_sources 报错 ───────────────
+def test_es_bound_keys_by_task_and_seed(tmp_path):
+    import h5py
+    import es_bound
+    d = tmp_path / "g"
+    d.mkdir()
+    for name, demo in (("PickXtimes_ep50_seed515000.h5", 10), ("record_dataset_StopCubeXHard.h5", 40)):
+        with h5py.File(d / name, "w") as f:
+            g = f.create_group("episode_50")
+            g["setup/seed"] = 515000                     # 同一个 seed 出现在两个任务里，不得互相顶替
+            g["setup/difficulty"] = "xhard12"
+            for i in range(demo + 1):
+                g[f"timestep_{i}/info/is_video_demo"] = i < demo
+    index = es_bound.index_h5([d])
+    assert index[("PickXtimes", 515000)]["demo"] == 10 and index[("StopCube", 515000)]["demo"] == 40
+    with h5py.File(d / "weird.h5", "w"):
+        pass
+    with pytest.raises(SystemExit):
+        es_bound.index_h5([d])
+
+
+def _fetch_env(tmp_path, bucket_files, sums):
+    bucket = tmp_path / "bucket"
+    for rel, data in bucket_files.items():
+        (bucket / rel).parent.mkdir(parents=True, exist_ok=True)
+        (bucket / rel).write_bytes(data)
+    lines = [f"{hashlib.sha256(bucket_files[r]).hexdigest()}  {r}" for r in sums]
+    (bucket / "SHA256SUMS.pre.txt").write_text("\n".join(lines) + "\n")
+    stub = tmp_path / "bin"
+    stub.mkdir()
+    (stub / "hf").write_text(
+        '#!/bin/bash\necho "$@" >> "$HF_LOG"\n'
+        'if [[ "$1 $2" == "buckets list" ]]; then (cd "$FAKE_BUCKET" && find . -type f | sed "s#^./##"); exit 0; fi\n'
+        'if [[ "$1 $2" == "buckets sync" ]]; then for a in "$@"; do [[ "$a" == --dry-run ]] && exit 0; done; '
+        'cp -r "$FAKE_BUCKET"/. "$4"/; exit 0; fi\nexit 9\n')
+    (stub / "uv").write_text("#!/bin/bash\nexit 0\n")              # check_checkpoint.py 这一步不在单测里跑
+    for f in ("hf", "uv"):
+        (stub / f).chmod(0o755)
+    return {**os.environ, "PATH": f"{stub}:{os.environ['PATH']}", "HF_LOG": str(tmp_path / "hf.log"),
+            "FAKE_BUCKET": str(bucket), "MODELS_ROOT": str(tmp_path / "models")}
+
+
+ROOT = {"history_config.resolved.yaml": b"y", "history_config.resolved.sha256": b"s"}
+STEP = {"60000/params/a": b"aa", "60000/assets/robomme/norm_stats.json": b"{}"}
+
+
+@pytest.mark.parametrize("run,motion", [("mixed8-200-m8x8-modul-b128-80k", False),
+                                        ("mixed8-200-m8x8-modul-motion-b128-80k", True)])
+def test_fetch_ckpt_run_mode(tmp_path, run, motion):
+    files = {**ROOT, **STEP, **({"motion_provenance.json": b"{}"} if motion else {})}
+    env = _fetch_env(tmp_path, files, list(STEP))                  # run 级根文件不在 SHA256SUMS 里 → 豁免并打印
+    proc = subprocess.run(["bash", str(HERE / "fetch_ckpt.sh"), "run", "HongzeFu/x", run, "60000"],
+                          capture_output=True, text=True, env=env)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert f"CKPT_SHA=PASS run={run} step=60000 files=2" in proc.stdout
+    assert "SHA_EXEMPT file=history_config.resolved.yaml" in proc.stderr
+    log = (tmp_path / "hf.log").read_text()
+    assert ("motion_provenance.json" in log) == motion
+    assert "buckets list HongzeFu/x -R" in log and "buckets sync hf://buckets/HongzeFu/x" in log
+
+
+def test_fetch_ckpt_requires_full_coverage(tmp_path):
+    env = _fetch_env(tmp_path, {**ROOT, **STEP}, ["60000/params/a"])   # norm_stats.json 不在 SHA256SUMS 里
+    proc = subprocess.run(["bash", str(HERE / "fetch_ckpt.sh"), "run", "HongzeFu/x", "mixed8-200-m8x8-modul-b128-80k", "60000"],
+                          capture_output=True, text=True, env=env)
+    assert proc.returncode != 0 and "CKPT_SHA=PASS" not in proc.stdout
+    assert "CKPT_SHA=FAIL reason=not-in-SHA256SUMS.pre.txt files=1" in proc.stderr
+
+
+def test_verify_sources_reports_missing_xhard(tmp_path):
+    for pkg in ("robomme", "openpi_client"):
+        (tmp_path / pkg).mkdir()
+        (tmp_path / pkg / "__init__.py").write_text("")
+    proc = subprocess.run([sys.executable, str(HERE / "verify_sources.py")], capture_output=True, text=True,
+                          env={**os.environ, "PYTHONPATH": str(tmp_path)})
+    assert proc.returncode != 0 and "robomme_xhard 不可导入" in proc.stderr

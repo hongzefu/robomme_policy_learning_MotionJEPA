@@ -3,7 +3,9 @@
 # 机制：队列目录含 items.txt（行格式 "<nomotion|motion> <shard_index>"，按「长任务先、短任务填尾」排好序）；抢单靠 NFS 上服务端原子的
 # `mkdir claims/<model>-s<K>`，成功即归自己、失败即别人已抢；跑完写 done/<item>（rc、起止 UTC、作业、节点）。每轮重扫 items.txt，
 # 后加入的 worker（如起跑时还在 PENDING 的作业）直接从当前未抢项接着抢。rc≠0 不自动重试，留给合并阶段按 retry_plan.json 处理。
-# 「一致的调用」：两轮共用的一切写死在本脚本（EXPECT_CKPT_ID / EPISODE_WALL_S / EVAL_TIMEOUT / SEED / CHUNK_EPISODES / STEP_TIME /
+# 1017-test-xhard5-12per 本轮一律走 MANIFEST 模式（manifest.tsv 由 make_manifest.py units 写入：冒烟 3 单元，正式 30 单元按
+# 512 → 512+motion → 官方 的顺序，worker 自上而下优先领取）；下面 items.txt / nomotion|motion / primary700 默认值是 0918 轮的旧口径，仅留作兼容。
+# 「一致的调用」：各轮共用的一切写死在本脚本（EXPECT_CKPT_ID / EPISODE_WALL_S / EVAL_TIMEOUT / SEED / CHUNK_EPISODES / STEP_TIME /
 # MMEVLA_MOTION_PROV_RELAX——无 motion 轮没有 sidecar、无人读取，为环境逐字相同照样传），两轮只差 RUN_NAME / CKPT / POLICY / POLICY_CONFIG。
 # 每个单元仍走既有链：gl_hold_queue.sh → srun --jobid --overlap --exact → gl_eval_shard.sbatch → run_shard.sh。
 # 用法（登录节点）：gl_hold_pool.sh <jobid>

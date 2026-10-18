@@ -4,11 +4,16 @@
 #
 # 用法：
 #   fetch_ckpt.sh run <bucket_id> <run_dir_name> <step>
-#       自家 run（512 / 512+motion）：落点 $EVAL_REPO/v1-store/models/<run_dir_name>/。顺序：
+#       自家 run（512 / 512+motion）：落点 $MODELS_ROOT/<run_dir_name>/（MODELS_ROOT 默认 $EVAL_REPO/v1-store/models）。顺序：
 #       ① `hf buckets list <bucket> -R` 断言含 <step>/、history_config.resolved.yaml、history_config.resolved.sha256、
-#          motion_provenance.json、SHA256SUMS.pre.txt（缺任一即停）；② `hf sync --dry-run`；③ `hf sync … --include`
-#          只取根文件与 <step>/；④ 按 SHA256SUMS.pre.txt 只核本次文件 `sha256sum --check --strict`；
-#          ⑤ check_checkpoint.py（RUNS 未登记该 run 时这一步会失败——先登记再重跑本步即可，前四步不重下）。
+#          SHA256SUMS.pre.txt，motion run 另需 motion_provenance.json（缺任一即停）；
+#          motion run 的判法沿用仓库约定：run 目录名含 `-motion-`（如 mixed8-200-m8x8-modul-motion-b128-80k、robomme-vla-modul-motion-80k-v1）；
+#       ② `hf buckets sync hf://buckets/<bucket> <落点> --include … --dry-run`；③ 同一命令去掉 --dry-run 实际下载；
+#       ④ 本次 <step>/ 下每个文件都必须在 SHA256SUMS.pre.txt 里并 `sha256sum --check --strict`（覆盖不全即失败）；
+#          run 级根文件（history_config.resolved.*、motion_provenance.json）在清单里就核，不在清单里则列为豁免并打印；
+#       ⑤ check_checkpoint.py（RUNS 未登记该 run 时这一步会失败——先登记再重跑本步即可，前四步不重下）。
+#       hf CLI 写法按 huggingface_hub 1.30.0 `hf buckets {list,sync} --help` 核过：`hf buckets list <id> -R`、
+#       `hf buckets sync <src> <dst> --include <pat> [--dry-run]`。
 #       判定行：CKPT_SHA=PASS run=<r> step=<s> files=<n>（之后 check_checkpoint.py 打 PARAM_TREE_EXACT 等）。
 #   fetch_ckpt.sh encoder <bucket_id> <encoder_run_name> <文件白名单,逗号分隔>
 #       motion 模型的 encoder run 目录：落点 $EVAL_REPO/v1-store/external/motionjepa/<encoder_run_name>/，只取白名单根文件
@@ -24,13 +29,24 @@
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 HF_BIN="${HF_BIN:-hf}"
+MODELS_ROOT="${MODELS_ROOT:-$EVAL_REPO/v1-store/models}"
 MODE="${1:?需要模式 run|encoder|official|prov-dryrun}"; shift
 
-verify_sums() {   # $1 = 落点；$2 = 本次文件清单
-    local dst="$1" list="$2" selected="$dst/SHA256SUMS.selected.$$.txt"
-    awk 'NR==FNR{want[$0]=1; next} ($2 in want){print}' "$list" "$dst/SHA256SUMS.pre.txt" > "$selected"
+verify_sums() {   # $1 = 落点；$2 = 必须被 SHA256SUMS.pre.txt 覆盖的文件清单；$3 = 豁免清单（在清单里就核，不在只打印）
+    local dst="$1" list="$2" exempt="${3:-/dev/null}" selected missing
+    selected="$dst/SHA256SUMS.selected.$$.txt"
+    missing="$(awk 'NR==FNR{have[$2]=1; next} !($0 in have){print}' "$dst/SHA256SUMS.pre.txt" "$list")"
+    if [[ -n "$missing" ]]; then
+        echo "CKPT_SHA=FAIL reason=not-in-SHA256SUMS.pre.txt files=$(printf '%s\n' "$missing" | wc -l)" >&2
+        printf '  %s\n' $missing >&2
+        exit 2
+    fi
+    while IFS= read -r f; do
+        grep -q -- "  $f\$" "$dst/SHA256SUMS.pre.txt" || echo "SHA_EXEMPT file=$f（run 级根文件，不在 SHA256SUMS.pre.txt 里）" >&2
+    done < "$exempt"
+    cat "$list" "$exempt" | awk 'NR==FNR{want[$0]=1; next} ($2 in want){print}' - "$dst/SHA256SUMS.pre.txt" > "$selected"
     [[ -s "$selected" ]] || { echo 'SHA256SUMS.pre.txt 里没有本次文件'; exit 2; }
-    (cd "$dst" && sha256sum --check --strict "$selected")
+    (cd "$dst" && sha256sum --check --strict "$selected") >&2
     wc -l < "$selected"
 }
 
@@ -38,21 +54,24 @@ case "$MODE" in
 run)
     BUCKET_ID="${1:?需要 bucket id}"; RUN="${2:?需要 run 目录名}"; STEP="${3:?需要 step}"
     [[ "$RUN" =~ ^[A-Za-z0-9_.-]+$ && "$STEP" =~ ^[0-9]+$ ]] || exit 2
-    DST="$EVAL_REPO/v1-store/models/$RUN"
+    DST="$MODELS_ROOT/$RUN"
     [[ ! -e "$DST/$STEP" ]] || { echo "step 目录已存在，拒绝覆盖：$DST/$STEP"; exit 2; }
+    ROOT_FILES=(history_config.resolved.yaml history_config.resolved.sha256)
+    [[ "$RUN" != *-motion-* ]] || ROOT_FILES+=(motion_provenance.json)
     mkdir -p "$DST"
     LISTING="$DST/bucket-list.$STEP.txt"
     "$HF_BIN" buckets list "$BUCKET_ID" -R > "$LISTING"
-    for need in "$STEP/" history_config.resolved.yaml history_config.resolved.sha256 motion_provenance.json SHA256SUMS.pre.txt; do
+    for need in "$STEP/" "${ROOT_FILES[@]}" SHA256SUMS.pre.txt; do
         grep -q -- "$need" "$LISTING" || { echo "bucket $BUCKET_ID 缺 $need，停止"; exit 2; }
     done
-    INCLUDES=(--include "$STEP/*" --include history_config.resolved.yaml --include history_config.resolved.sha256
-              --include motion_provenance.json --include SHA256SUMS.pre.txt)
-    "$HF_BIN" sync "hf://buckets/$BUCKET_ID" "$DST" "${INCLUDES[@]}" --dry-run
-    "$HF_BIN" sync "hf://buckets/$BUCKET_ID" "$DST" "${INCLUDES[@]}"
-    LIST="$DST/fetch-list.$STEP.txt"
-    (cd "$DST" && find "$STEP" -type f | sort; printf '%s\n' history_config.resolved.yaml history_config.resolved.sha256 motion_provenance.json) > "$LIST"
-    N="$(verify_sums "$DST" "$LIST" | tail -n 1)"
+    INCLUDES=(--include "$STEP/*" --include SHA256SUMS.pre.txt)
+    for f in "${ROOT_FILES[@]}"; do INCLUDES+=(--include "$f"); done
+    "$HF_BIN" buckets sync "hf://buckets/$BUCKET_ID" "$DST" "${INCLUDES[@]}" --dry-run
+    "$HF_BIN" buckets sync "hf://buckets/$BUCKET_ID" "$DST" "${INCLUDES[@]}"
+    LIST="$DST/fetch-list.$STEP.txt"; EXEMPT="$DST/fetch-exempt.$STEP.txt"
+    (cd "$DST" && find "$STEP" -type f | sort) > "$LIST"
+    printf '%s\n' "${ROOT_FILES[@]}" > "$EXEMPT"
+    N="$(verify_sums "$DST" "$LIST" "$EXEMPT" | tail -n 1)"
     echo "CKPT_SHA=PASS run=$RUN step=$STEP files=$N"
     JAX_PLATFORMS=cpu "${SERVER_UV[@]}" "$EVAL_REPO/scripts/evaluation/check_checkpoint.py" "$DST/$STEP"
     ;;
@@ -67,8 +86,8 @@ encoder)
         [[ ! -e "$DST/$f" ]] || { echo "已存在，拒绝覆盖：$DST/$f"; exit 2; }
         INCLUDES+=(--include "$f")
     done
-    "$HF_BIN" sync "hf://buckets/$BUCKET_ID" "$DST" "${INCLUDES[@]}" --dry-run
-    "$HF_BIN" sync "hf://buckets/$BUCKET_ID" "$DST" "${INCLUDES[@]}"
+    "$HF_BIN" buckets sync "hf://buckets/$BUCKET_ID" "$DST" "${INCLUDES[@]}" --dry-run
+    "$HF_BIN" buckets sync "hf://buckets/$BUCKET_ID" "$DST" "${INCLUDES[@]}"
     if [[ -f "$DST/SHA256SUMS.pre.txt" ]]; then
         LIST="$DST/fetch-list.encoder.txt"; printf '%s\n' "${FILES[@]}" | grep -vx SHA256SUMS.pre.txt > "$LIST"
         N="$(verify_sums "$DST" "$LIST" | tail -n 1)"
@@ -84,7 +103,7 @@ official)
     if [[ "$GOT" != "$PREFIX"* ]]; then
         echo "OFFICIAL_CKPT_SHA=FAIL zip_sha256=$GOT expect_prefix=$PREFIX"; exit 1
     fi
-    DST="$EVAL_REPO/v1-store/models/official-mme-vla/perceptual-framesamp-modul"
+    DST="$MODELS_ROOT/official-mme-vla/perceptual-framesamp-modul"
     [[ ! -e "$DST/79999" ]] || { echo "已存在，拒绝覆盖：$DST/79999"; exit 2; }
     mkdir -p "$DST"
     rsync -a "$SRC/history_config.txt" "$SRC/79999" "$DST/"

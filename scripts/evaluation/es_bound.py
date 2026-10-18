@@ -7,11 +7,14 @@ reset 返回 demo 帧 + 1 帧复位观测，es = demo 帧数）。窗数与 ``ch
 超 160 的局不剔除，评估时走 ``MMEVLA_MOTION_OVERFLOW=resample``，这里只记录。
 
 用法：``es_bound.py <清单 jsonl> <h5 目录>... [--out <json>] [--max-steps 2000] [--budget 160]``；
-h5 目录递归找 ``*.h5``，按 ``episode_*/setup/seed`` 对上清单行（seed 在 test 布局内逐任务唯一），再核难度一致。
+h5 目录递归找 ``*.h5``，按 (任务名, ``episode_*/setup/seed``) 对上清单行，再核难度一致；任务名取自文件名
+（生成器单卡产物 ``<Task>_ep<E>_seed<S>.h5`` 或合并产物 ``record_dataset_<Task>.h5``，``<Task>XHard`` 去掉后缀），
+认不出任务名的 h5 直接报错。
 判定行：``EVAL_ES_BOUND=DONE scope=xhard episodes=<n> max_windows=<k> over=<j> max_step_idx=<m> over4096=<i>``。
 """
 import argparse
 import json
+import re
 from pathlib import Path
 
 import h5py
@@ -31,11 +34,23 @@ def _str(value) -> str:
     return value.decode("utf-8") if isinstance(value, bytes) else str(value)
 
 
+H5_NAME = (re.compile(r"^(?P<task>[A-Za-z]+)_ep\d+_seed\d+\.h5$"), re.compile(r"^record_dataset_(?P<task>[A-Za-z]+)\.h5$"))
+
+
+def task_of(path: Path) -> str:
+    for pattern in H5_NAME:
+        m = pattern.match(path.name)
+        if m:
+            return m["task"].removesuffix("XHard")
+    raise SystemExit(f"EVAL_ES_BOUND=FAIL 认不出 h5 的任务名：{path}")
+
+
 def index_h5(dirs):
-    """seed -> {file, episode, difficulty, demo}。"""
+    """(task, seed) -> {file, episode, difficulty, demo}。"""
     index = {}
     for d in dirs:
         for path in sorted(Path(d).rglob("*.h5")):
+            task = task_of(path)
             with h5py.File(path, "r") as f:
                 for name in f:
                     if not name.startswith("episode_"):
@@ -49,9 +64,9 @@ def index_h5(dirs):
                             info = group[key].get("info")
                             if info is not None and "is_video_demo" in info and bool(info["is_video_demo"][()]):
                                 demo += 1
-                    if seed in index:
-                        raise SystemExit(f"seed {seed} 在多个 h5 里出现：{index[seed]['file']} / {path}")
-                    index[seed] = {"file": str(path), "episode": name, "difficulty": difficulty, "demo": demo}
+                    if (task, seed) in index:
+                        raise SystemExit(f"{task} seed {seed} 在多个 h5 里出现：{index[(task, seed)]['file']} / {path}")
+                    index[(task, seed)] = {"file": str(path), "episode": name, "difficulty": difficulty, "demo": demo}
     return index
 
 
@@ -69,7 +84,7 @@ def main():
     index = index_h5(args.h5_dirs)
     results = []
     for r in xhard:
-        hit = index.get(int(r["seed"]))
+        hit = index.get((r["task"], int(r["seed"])))
         if hit is None:
             raise SystemExit(f"EVAL_ES_BOUND=FAIL 找不到 {r['task']}/{r['difficulty']} ep{r['episode']} seed={r['seed']} 的 h5")
         if hit["difficulty"] != r["difficulty"]:
