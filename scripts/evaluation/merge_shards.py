@@ -164,6 +164,12 @@ def main():
                     break
         retry = {"shard_tag": "retry", "candidates": candidates,
                  "groups": {g: sorted(v) for g, v in sorted(groups.items())}}
+        # 1017 清单路径：plan.json 记的是 manifest / manifest_sha256（eval.py::load_plan 读这两个键），一并带进补跑计划
+        for payload in shards.values():
+            if payload["plan"] and payload["plan"].get("manifest"):
+                retry["manifest"] = payload["plan"]["manifest"]
+                retry["manifest_sha256"] = payload["plan"].get("manifest_sha256", "")
+                break
         (merged_dir / "retry_plan.json").write_text(
             json.dumps(retry, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
