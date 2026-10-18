@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-17T09:10:30Z",
-    "america_new_york": "2026-10-17T05:10:30-0400"
+    "utc": "2026-10-18T00:38:55Z",
+    "america_new_york": "2026-10-17T20:38:55-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
@@ -16,7 +16,7 @@
   "tasks": {
     "mixed8-vla-build": {
       "plan": {
-        "file": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html",
+        "file": "/scratch/hongze/MotionJEPA/1016-mixed8-vla-plan.html",
         "sha": "45c3f9a"
       },
       "state": "closed",
@@ -133,12 +133,12 @@
     },
     "mixed8-vla-train": {
       "plan": {
-        "file": "/scratch/hongze/MotionJEPA-backup/1016-mixed8-vla-plan.html",
+        "file": "/scratch/hongze/MotionJEPA/1016-mixed8-vla-plan.html",
         "sha": "45c3f9a"
       },
       "state": "running",
       "state_changed_at": "2026-10-17T05:02:18Z",
-      "state_reason": "两条 80k 4+4 并行：512 美东 2026-10-17 01:00（V11.24Beta 62a8ef1，GPU 0–3），512+motion 01:01（V11.25Beta ae6e9cd，GPU 4–7）；短测稳态 1.84 / 1.90 s/步，预计约 41 / 42 h；红线 18 只读锁 01:01:55 已上（385 文件）",
+      "state_reason": "两条 80k 4+4 并行在跑（实测 1.7 s/it，美东 2026-10-17 20:29 时 512 40.7k、motion 40.2k）；用户 10-17 19:00 要求训练中上传，ckpt 已由 m8v-inc-512 / m8v-inc-motion 增量上传 8/16（5000…40000）；正式驱动收尾（SMOKE=1 → 全量，最终验收）待训练 EXIT_CODE=0 且 inc INC_END 后再起；Beta 62a8ef1（512）/ ae6e9cd（motion），GPU 0–3 / 4–7，红线 18 只读锁 美东 2026-10-17 01:01:55 上锁 385 个文件",
       "owner": {
         "session": "https://claude.ai/code/session_01TVXcR5Zdi5K11TXph2pZGw",
         "host": "claude-code"
@@ -172,11 +172,25 @@
       ],
       "long_tail": [
         {
+          "what": "512 ckpt 训练中增量上传（v1-store/m8v-scripts/m8v-ckpt-inc.sh，不进 git；同 bucket 同路径，每份写驱动阶段 5 的 .done；截至美东 2026-10-17 20:29 已传 5000…40000 共 8 份，余下每 5000 步自动传）",
+          "tmux": "m8v-inc-512",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-inc-512.log",
+          "done_line": "INC_END run=mixed8-200-m8x8-modul-b128-80k done=16 + EXIT_CODE=0（inc 不打「全部完成」；之后由正式驱动完成最终验收）",
+          "status": "running"
+        },
+        {
           "what": "512 ckpt 上传 HF（16 份）",
           "tmux": "m8v-ckpt512-upload",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-ckpt512-upload.log",
           "done_line": "全部完成 + EXIT_CODE=0；RESULT=PASS、SHA256_PRE_POST_DIFF=0、private==false",
           "status": "pending"
+        },
+        {
+          "what": "512+motion ckpt 训练中增量上传（v1-store/m8v-scripts/m8v-ckpt-inc.sh，不进 git；同 bucket 同路径，每份写驱动阶段 5 的 .done；截至美东 2026-10-17 20:29 已传 5000…40000 共 8 份，余下每 5000 步自动传）",
+          "tmux": "m8v-inc-motion",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/m8v-inc-motion.log",
+          "done_line": "INC_END run=mixed8-200-m8x8-modul-motion-b128-80k done=16 + EXIT_CODE=0（inc 不打「全部完成」；之后由正式驱动完成最终验收）",
+          "status": "running"
         },
         {
           "what": "512+motion ckpt 上传 HF（16 份）",
@@ -210,19 +224,30 @@
           "date": "2026-10-16",
           "quote": "a同意",
           "scope": "F1 选 (a)（口径 43）并以此回复作为改后计划 45c3f9a 的开工令；PLAN_CONSISTENCY_REVIEW=PASS base=110fcd7 tip=c83d151 blocking=0"
+        },
+        {
+          "kind": "adjust",
+          "date": "2026-10-17",
+          "quote": "「你现在就可以开始上传了。」「有一个 checkpoint 就上传。」",
+          "scope": "训练中增量上传已提交 step（m8v-inc-512 / m8v-inc-motion），正式驱动收尾验收不变；ADJUST_REVIEW=PASS scale=same findings=5"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "两条训练各自 EXIT_CODE=0 后起对应 ckpt 上传（先 SMOKE），回写 result.md 与 commitV11.24 / V11.25；全部结束后按 m8v-chmod-before.txt 恢复权限",
-          "command": "1016 计划 runbook B4 长尾段",
-          "verdict_line": "EXIT_CODE=0 ×2"
+          "what": "两条训练 EXIT_CODE=0 且 inc 日志 INC_END、inc tmux 已退出后起正式驱动 SMOKE=1 → 全量（F4）（m8v-ckpt512-upload-smoke / m8v-ckpt512-upload、m8v-ckptmotion-upload-smoke / m8v-ckptmotion-upload，跳过已 .done 的 step、补传其余与 _run-meta/、根下平文件）；回写 result.md 与 commitV11.24 / V11.25；全部结束后按 m8v-chmod-before.txt 恢复权限",
+          "command": "tmux has-session -t '=m8v-inc-512' / '=m8v-inc-motion' 均为假后，按 1016 计划 runbook B4 长尾段起正式驱动",
+          "verdict_line": "RESULT=PASS、SHA256_PRE_POST_DIFF=0、SRC_UNCHANGED=OK、BUCKET_PUBLIC=True、PUBLIC_ANON_READ=OK、全部完成、EXIT_CODE=0（每条各一套）"
         },
         {
           "what": "运行期崩溃、NaN、OOM、掉卡：停下问用户，不 resume（口径 32）",
           "command": "—",
           "verdict_line": "—"
+        },
+        {
+          "what": "F5：训练崩溃时公开 bucket 停在部分 step、无 README/校验，正式驱动会拒绝运行；把 bucket 部分状态与 INC_END done=<n> 写进 pending_decisions 交用户裁决（保留或清理）",
+          "command": "grep INC_END <inc 日志>；不 resume（口径 32）",
+          "verdict_line": "INC_END run=<run> done=<n>"
         }
       ],
       "pre_start_self_check": [
