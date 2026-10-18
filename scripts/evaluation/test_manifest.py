@@ -72,7 +72,7 @@ def exported(tmp_path):
 def test_export_counts_and_groups(exported):
     _, _, out, stdout = exported
     assert "MANIFEST=PASS rows=1200 cells=100" in stdout
-    assert "SMOKE_SUBSET=PASS rows=100 subset_of_full=yes" in stdout
+    assert "SMOKE_SUBSET=PASS rows=2 subset_of_full=yes" in stdout
     rows = read_jsonl(out / make_manifest.FULL_NAME)
     cells = collections.Counter((r["task"], r["difficulty"]) for r in rows)
     assert len(rows) == 1200 and len(cells) == 100 and set(cells.values()) == {12}
@@ -101,7 +101,9 @@ def test_smoke_subset_and_xhard_metadata(exported):
     _, meta, out, _ = exported
     full = {make_manifest.row_key(r) for r in read_jsonl(out / make_manifest.FULL_NAME)}
     smoke = read_jsonl(out / make_manifest.SMOKE_NAME)
-    assert len(smoke) == 100 and {make_manifest.row_key(r) for r in smoke} <= full
+    assert len(smoke) == 2 and {make_manifest.row_key(r) for r in smoke} <= full
+    # 两次冒烟共用：一局 base、一局 xhard（两条分流路径各一局）
+    assert [(r["task"], r["difficulty"], r["episode"]) for r in smoke] == [("BinFill", "easy", 0), ("BinFill", "xhard12", 50)]
     copies = sorted((out / "metadata").glob("record_dataset_*XHard_metadata.json"))
     assert len(copies) == 14
     sc = json.loads((out / "metadata" / "record_dataset_StopCubeXHard_metadata.json").read_text())
@@ -140,8 +142,9 @@ def test_shards_ten_by_120(exported, capsys):
 def test_smoke_plans_and_units(exported):
     tmp, _, out, _ = exported
     root = tmp / "evaluation"
-    make_shard_plan.make_shards(out / make_manifest.SMOKE_NAME, root / "testx-official-smoke" / "plans", 1, rows_limit=2)
-    make_shard_plan.make_shards(out / make_manifest.SMOKE_NAME, root / "testx-512m-10k-smoke" / "plans", 2)
+    a = make_shard_plan.make_shards(out / make_manifest.SMOKE_NAME, root / "testx-official-smoke" / "plans", 1)
+    b = make_shard_plan.make_shards(out / make_manifest.SMOKE_NAME, root / "testx-512m-10k-smoke" / "plans", 1)
+    assert a["sizes"] == b["sizes"] == [2] and a["manifest_sha256"] == b["manifest_sha256"]
     for run in ("testx-512-60k", "testx-512m-60k", "testx-official-79999"):
         make_shard_plan.make_shards(out / make_manifest.FULL_NAME, root / run / "plans", 10, expect_per_shard=120)
     tsv = root / "testx" / "manifest.tsv"
@@ -149,21 +152,21 @@ def test_smoke_plans_and_units(exported):
     off = "/m/official-mme-vla/perceptual-framesamp-modul/79999"
     smoke = script + ["--stage", "smoke",
                       "--run", f"testx-official-smoke|{off}|official-framesamp-modul|mme_vla_suite|79999|1|0",
-                      "--run", "testx-512m-10k-smoke|/m/mixed8-motion/10000|mixed8-512-motion|mme_vla_suite_b128_80k|10000|2|1"]
+                      "--run", "testx-512m-10k-smoke|/m/mixed8-motion/10000|mixed8-512-motion|mme_vla_suite_b128_80k|10000|1|1"]
     proc = subprocess.run(smoke, capture_output=True, text=True)
-    assert proc.returncode == 0 and "UNITS=PASS stage=smoke added=3 total=3" in proc.stdout, proc.stderr
+    assert proc.returncode == 0 and "UNITS=PASS stage=smoke added=2 total=2" in proc.stdout, proc.stderr
     formal = script + ["--stage", "formal",
                        "--run", "testx-512-60k|/m/mixed8/60000|mixed8-512|mme_vla_suite_b128_80k|60000|10|0",
                        "--run", "testx-512m-60k|/m/mixed8-motion/60000|mixed8-512-motion|mme_vla_suite_b128_80k|60000|10|1",
                        "--run", f"testx-official-79999|{off}|official-framesamp-modul|mme_vla_suite|79999|10|0"]
     proc = subprocess.run(formal, capture_output=True, text=True)
-    assert proc.returncode == 0 and "UNITS=PASS stage=formal added=30 total=33" in proc.stdout, proc.stderr
+    assert proc.returncode == 0 and "UNITS=PASS stage=formal added=30 total=32" in proc.stdout, proc.stderr
     lines = [l.split("\t") for l in tsv.read_text().splitlines()]
-    assert len(lines) == 33 and all(len(l) == 6 for l in lines)
+    assert len(lines) == 32 and all(len(l) == 6 for l in lines)
     order = [l[0] for l in lines]
-    assert order[:3] == ["testx-official-smoke", "testx-512m-10k-smoke", "testx-512m-10k-smoke"]
-    assert order[3:13] == ["testx-512-60k"] * 10 and order[13:23] == ["testx-512m-60k"] * 10
-    assert order[23:] == ["testx-official-79999"] * 10
+    assert order[:2] == ["testx-official-smoke", "testx-512m-10k-smoke"]
+    assert order[2:12] == ["testx-512-60k"] * 10 and order[12:22] == ["testx-512m-60k"] * 10
+    assert order[22:] == ["testx-official-79999"] * 10
     for run, _, policy, *_ in lines:
         assert policy.endswith("-motion") == ("512m" in run)
     # 重复写入、motion 列与 policy 后缀不一致、formal 顺序不对，都拒绝

@@ -338,3 +338,21 @@ def test_verify_sources_reports_missing_xhard(tmp_path):
     proc = subprocess.run([sys.executable, str(HERE / "verify_sources.py")], capture_output=True, text=True,
                           env={**os.environ, "PYTHONPATH": str(tmp_path)})
     assert proc.returncode != 0 and "robomme_xhard 不可导入" in proc.stderr
+
+
+def test_fetch_ckpt_external_sums_file(tmp_path):
+    files = {**ROOT, **STEP, "motion_provenance.json": b"{}"}
+    env = _fetch_env(tmp_path, files, [])                         # bucket 里的正式清单为空、也不会被用到
+    (tmp_path / "bucket" / "SHA256SUMS.pre.txt").unlink()           # 训练结束前 bucket 没有正式清单
+    ext = tmp_path / "step-sums.txt"
+    ext.write_text("".join(f"{hashlib.sha256(STEP[r]).hexdigest()}  {r}\n" for r in STEP))
+    run = ["bash", str(HERE / "fetch_ckpt.sh"), "run", "HongzeFu/x", "robomme-vla-mixed8-200-modul-512-80k-v1", "60000"]
+    proc = subprocess.run(run, capture_output=True, text=True, env={**env, "SUMS_FILE": str(ext)})
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "SUMS_SOURCE=external" in proc.stdout and "CKPT_SHA=PASS run=robomme-vla-mixed8-200-modul-512-80k-v1 step=60000 files=2" in proc.stdout
+    assert "--include SHA256SUMS.pre.txt" not in (tmp_path / "hf.log").read_text()
+    ext.write_text(f"{hashlib.sha256(STEP['60000/params/a']).hexdigest()}  60000/params/a\n")   # 覆盖不全照样 FAIL
+    import shutil
+    shutil.rmtree(tmp_path / "models")
+    proc = subprocess.run(run, capture_output=True, text=True, env={**env, "SUMS_FILE": str(ext)})
+    assert proc.returncode != 0 and "CKPT_SHA=FAIL reason=not-in-SHA256SUMS.pre.txt files=1" in proc.stderr

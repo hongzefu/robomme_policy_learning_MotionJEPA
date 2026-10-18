@@ -12,6 +12,9 @@
 #       ④ 本次 <step>/ 下每个文件都必须在 SHA256SUMS.pre.txt 里并 `sha256sum --check --strict`（覆盖不全即失败）；
 #          run 级根文件（history_config.resolved.*、motion_provenance.json）在清单里就核，不在清单里则列为豁免并打印；
 #       ⑤ check_checkpoint.py（RUNS 未登记该 run 时这一步会失败——先登记再重跑本步即可，前四步不重下）。
+#       SUMS_FILE=<路径>（可选）：训练结束前 bucket 还没有 SHA256SUMS.pre.txt 时，用调用方给定的 step 级清单
+#          （格式「sha256␣␣<step>/相对路径」，训练侧逐文件清单经跨会话传来）代替它：bucket 不再要求 SHA256SUMS.pre.txt、
+#          也不下载它，覆盖判据与 sha256 核对照旧（覆盖不全即 FAIL）；不给时行为不变。
 #       hf CLI 写法按 huggingface_hub 1.30.0 `hf buckets {list,sync} --help` 核过：`hf buckets list <id> -R`、
 #       `hf buckets sync <src> <dst> --include <pat> [--dry-run]`。
 #       判定行：CKPT_SHA=PASS run=<r> step=<s> files=<n>（之后 check_checkpoint.py 打 PARAM_TREE_EXACT 等）。
@@ -32,19 +35,19 @@ HF_BIN="${HF_BIN:-hf}"
 MODELS_ROOT="${MODELS_ROOT:-$EVAL_REPO/v1-store/models}"
 MODE="${1:?需要模式 run|encoder|official|prov-dryrun}"; shift
 
-verify_sums() {   # $1 = 落点；$2 = 必须被 SHA256SUMS.pre.txt 覆盖的文件清单；$3 = 豁免清单（在清单里就核，不在只打印）
-    local dst="$1" list="$2" exempt="${3:-/dev/null}" selected missing
+verify_sums() {   # $1 = 落点；$2 = 必须被清单覆盖的文件清单；$3 = 豁免清单（在清单里就核，不在只打印）；$4 = sha 清单（默认 SHA256SUMS.pre.txt）
+    local dst="$1" list="$2" exempt="${3:-/dev/null}" sums="${4:-$1/SHA256SUMS.pre.txt}" selected missing
     selected="$dst/SHA256SUMS.selected.$$.txt"
-    missing="$(awk 'NR==FNR{have[$2]=1; next} !($0 in have){print}' "$dst/SHA256SUMS.pre.txt" "$list")"
+    missing="$(awk 'NR==FNR{have[$2]=1; next} !($0 in have){print}' "$sums" "$list")"
     if [[ -n "$missing" ]]; then
         echo "CKPT_SHA=FAIL reason=not-in-SHA256SUMS.pre.txt files=$(printf '%s\n' "$missing" | wc -l)" >&2
         printf '  %s\n' $missing >&2
         exit 2
     fi
     while IFS= read -r f; do
-        grep -q -- "  $f\$" "$dst/SHA256SUMS.pre.txt" || echo "SHA_EXEMPT file=$f（run 级根文件，不在 SHA256SUMS.pre.txt 里）" >&2
+        grep -q -- "  $f\$" "$sums" || echo "SHA_EXEMPT file=$f（run 级根文件，不在 SHA256SUMS.pre.txt 里）" >&2
     done < "$exempt"
-    cat "$list" "$exempt" | awk 'NR==FNR{want[$0]=1; next} ($2 in want){print}' - "$dst/SHA256SUMS.pre.txt" > "$selected"
+    cat "$list" "$exempt" | awk 'NR==FNR{want[$0]=1; next} ($2 in want){print}' - "$sums" > "$selected"
     [[ -s "$selected" ]] || { echo 'SHA256SUMS.pre.txt 里没有本次文件'; exit 2; }
     (cd "$dst" && sha256sum --check --strict "$selected") >&2
     wc -l < "$selected"
@@ -60,17 +63,25 @@ run)
     mkdir -p "$DST"
     LISTING="$DST/bucket-list.$STEP.txt"
     "$HF_BIN" buckets list "$BUCKET_ID" -R > "$LISTING"
-    for need in "$STEP/" "${ROOT_FILES[@]}" SHA256SUMS.pre.txt; do
+    SUMS="${SUMS_FILE:-}"
+    if [[ -n "$SUMS" ]]; then
+        [[ "$SUMS" == /* && -s "$SUMS" ]] || { echo "SUMS_FILE 必须是非空文件的绝对路径：$SUMS"; exit 2; }
+        NEEDS=("$STEP/" "${ROOT_FILES[@]}"); INCLUDES=(--include "$STEP/*")
+        echo "SUMS_SOURCE=external file=$SUMS"
+    else
+        SUMS="$DST/SHA256SUMS.pre.txt"
+        NEEDS=("$STEP/" "${ROOT_FILES[@]}" SHA256SUMS.pre.txt); INCLUDES=(--include "$STEP/*" --include SHA256SUMS.pre.txt)
+    fi
+    for need in "${NEEDS[@]}"; do
         grep -q -- "$need" "$LISTING" || { echo "bucket $BUCKET_ID 缺 $need，停止"; exit 2; }
     done
-    INCLUDES=(--include "$STEP/*" --include SHA256SUMS.pre.txt)
     for f in "${ROOT_FILES[@]}"; do INCLUDES+=(--include "$f"); done
     "$HF_BIN" buckets sync "hf://buckets/$BUCKET_ID" "$DST" "${INCLUDES[@]}" --dry-run
     "$HF_BIN" buckets sync "hf://buckets/$BUCKET_ID" "$DST" "${INCLUDES[@]}"
     LIST="$DST/fetch-list.$STEP.txt"; EXEMPT="$DST/fetch-exempt.$STEP.txt"
     (cd "$DST" && find "$STEP" -type f | sort) > "$LIST"
     printf '%s\n' "${ROOT_FILES[@]}" > "$EXEMPT"
-    N="$(verify_sums "$DST" "$LIST" "$EXEMPT" | tail -n 1)"
+    N="$(verify_sums "$DST" "$LIST" "$EXEMPT" "$SUMS" | tail -n 1)"
     echo "CKPT_SHA=PASS run=$RUN step=$STEP files=$N"
     JAX_PLATFORMS=cpu "${SERVER_UV[@]}" "$EVAL_REPO/scripts/evaluation/check_checkpoint.py" "$DST/$STEP"
     ;;

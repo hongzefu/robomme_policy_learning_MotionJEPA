@@ -4,7 +4,7 @@
 
 1017-test-xhard5-12per：
 * 两条新 run（512 = mixed8-200-m8x8-modul-b128-80k 登记 60000；512+motion = mixed8-200-m8x8-modul-motion-b128-80k
-  登记 10000 / 60000）的条目**由主会话在训练侧 bucket 交付、fetch_ckpt.sh 核验后登记**，此前留空不编造；
+  登记 10000 / 60000）按主会话 2026-10-18 给定值预登记（键为 bucket 名）；motion run 的 motion_source_run 尚未登记；
 * 官方 79999（无 history_config.resolved.yaml）走 ``official=True`` 分支：核 run 根 ``history_config.txt`` 的内容与 sha256、
   step 目录逐文件 sha256（登记值同样由主会话在 NFS 副本经 ``OFFICIAL_CKPT_SHA`` 核对后填入），再以
   ``history_config`` 字符串建模型做同一套参数树校验。"""
@@ -77,16 +77,24 @@ RUNS = {
         resolved_sha256='9df78b4dac2acdc43fbce5040a88014805df1b50bb803feba027559fc31f96a3',
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
     ),
-    # ── 1017-test-xhard5-12per 待登记（主会话在 bucket 交付后登记；bucket 名、resolved / norm_stats sha 均未知，禁止编造）──
-    # 'mixed8-200-m8x8-modul-b128-80k': dict(
-    #     steps=('60000',), motion=False, config='mme_vla_suite_b128_80k', budget=512,
-    #     resolved_sha256='<待登记>', norm_stats_sha256='<待登记>',
-    # ),
-    # 'mixed8-200-m8x8-modul-motion-b128-80k': dict(
-    #     steps=('10000', '60000'), motion=True, config='mme_vla_suite_b128_80k', budget=512,
-    #     resolved_sha256='<待登记>', norm_stats_sha256='<待登记>',
-    #     motion_budget=160, motion_source_run='<待登记：快照 motion.source_run>',
-    # ),
+    # ── 1017-test-xhard5-12per（主会话 2026-10-18 预登记；键 = bucket 名 = 本地落点 v1-store/models/<bucket 名>/<step>）──
+    # bucket HongzeFu/robomme-vla-mixed8-200-modul-512-80k-v1，run mixed8-200-m8x8-modul-b128-80k，motion 关闭。
+    # resolved sha 与上面 robomme-vla-modul-60k-v1 相同（budget 512、modulation、token_per_image 64，NFS 本地快照只读核过）。
+    'robomme-vla-mixed8-200-modul-512-80k-v1': dict(
+        steps=('60000',), motion=False, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256='804b25382af668d67c8f8ea2d1cca414aee9a184ec737dcad704bdff253a2f92',
+        norm_stats_sha256='36ee9acdea4c8383b50c7b07b45a740efb3fa073f6e60455977d5a6fb3204394',
+    ),
+    # bucket HongzeFu/robomme-vla-mixed8-200-modul-motion-80k-v1，run mixed8-200-m8x8-modul-motion-b128-80k，motion 开启；
+    # 10000 供 10k 冒烟、60000 供正式轮。motion_budget 160 是计划 T13 定值；motion_source_run 未拿到值，留 None = 未登记，
+    # 下方断言会打印快照里的实际值并拒绝，由主会话核对后填入（不编造）。
+    'robomme-vla-mixed8-200-modul-motion-80k-v1': dict(
+        steps=('60000', '10000'), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+        resolved_sha256='53f070ff5363efff6bc4dc3c6c0ee602095bc1fa6ebcd0651dd7bf3f9ca0d0c3',
+        norm_stats_sha256='36ee9acdea4c8383b50c7b07b45a740efb3fa073f6e60455977d5a6fb3204394',
+        motion_budget=160,
+        motion_source_run=None,
+    ),
     # 官方 FrameSamp+Modulation 79999（NFS v1-store/models/official-mme-vla/perceptual-framesamp-modul/79999）。
     # history_config.txt 内容与 sha 取自 aspen 本机 memER 副本（2026-10-18 只读实测，31 字节）；
     # 逐文件 sha256 为空 = 未登记，本脚本对官方权重直接拒绝，直到主会话把 NFS 副本经 OFFICIAL_CKPT_SHA 核对后的值填入
@@ -163,6 +171,7 @@ assert hashlib.sha256((checkpoint / 'assets/robomme/norm_stats.json').read_bytes
 if run['motion']:
     # budget 是模型语义参数（决定 mem_len=512+budget 与 RoPE 位置号），参数树形状对它失明，必须显式钉死
     assert int(cfg.motion.budget) == run['motion_budget'], cfg.motion.budget
+    assert run['motion_source_run'] is not None, f"motion_source_run 未登记；快照里是 {cfg.motion.source_run!r}，核对后填入 RUNS"
     assert str(cfg.motion.source_run) == run['motion_source_run'], cfg.motion.source_run
     assert int(cfg.motion.stride) == 16 and int(cfg.motion.window_frames) == 33 and int(cfg.motion.frame_size) == 256
     print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} source_run={cfg.motion.source_run}', flush=True)

@@ -7,7 +7,7 @@
 每片写 ``<out_dir>/shard<i>.json``：
 ``{"shard_tag","manifest","manifest_sha256","identity_sha256","groups":{"任务/难度":[episode...]}}``，
 ``identity_sha256`` 与 ``manifest_sha256`` 相同（``merge_shards.py`` 沿用这个键做三模型清单一致性核对）。
-``--rows N`` 只取排序后前 N 行（官方 2 局链路冒烟用）。
+``--rows N`` 只取排序后前 N 行（目前两次冒烟都直接用 2 局子清单 ``--shards 1``，不再需要它）。
 
 判定行：``SHARD_PLAN=PASS shards=<n> per_shard=<m> total=<t> cells=<c>``（各片总数不全相等时 per_shard 写成 min-max）。
 """
@@ -97,10 +97,10 @@ def make_shards(manifest: Path, out: Path, shards: int, rows_limit: int = 0, exp
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("mode", choices=("shards",))
-    parser.add_argument("manifest", help="make_manifest.py export 产出的 jsonl（1200 局或 100 局冒烟子清单）")
+    parser.add_argument("manifest", help="make_manifest.py export 产出的 jsonl（1200 局清单或 2 局冒烟子清单）")
     parser.add_argument("out_dir", help="通常是 v1-store/evaluation/<run>/plans")
     parser.add_argument("--shards", type=int, default=10)
-    parser.add_argument("--rows", type=int, default=0, help="只取排序后前 N 行（官方 2 局链路冒烟）")
+    parser.add_argument("--rows", type=int, default=0, help="只取排序后前 N 行")
     parser.add_argument("--expect-per-shard", type=int, default=0, help="给出则断言每片恰为该数（正式轮 120）")
     args = parser.parse_args()
     make_shards(Path(args.manifest), Path(args.out_dir), args.shards, args.rows, args.expect_per_shard)

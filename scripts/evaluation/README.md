@@ -176,14 +176,14 @@ EPISODE_WALL_S=2400,EVAL_TIMEOUT=14400,CHUNK_EPISODES=20 \
 
 | 步 | 命令 | 判定行 |
 |---|---|---|
-| 导清单 | `make_manifest.py export <out>`（默认读子模块 `src/robomme/env_metadata/test`） | `MANIFEST=PASS rows=1200 cells=100`、`SMOKE_SUBSET=PASS`、`XHARD_METADATA=PASS tasks=14` |
+| 导清单 | `make_manifest.py export <out>`（默认读子模块 `src/robomme/env_metadata/test`） | `MANIFEST=PASS rows=1200 cells=100`、`SMOKE_SUBSET=PASS rows=2`、`XHARD_METADATA=PASS tasks=14` |
 | 窗数预算 | `es_bound.py <out>/eval-testx-1200.jsonl <h5 目录>...`（在生成机上跑） | `EVAL_ES_BOUND=DONE scope=xhard …` |
-| 分片 | `make_shard_plan.py shards <清单> v1-store/evaluation/<run>/plans --shards 10 --expect-per-shard 120`；官方 2 局冒烟 `--shards 1 --rows 2`（冒烟子清单），512+motion@10k 冒烟 `--shards 2` | `SHARD_PLAN=PASS shards=10 per_shard=120` |
+| 分片 | `make_shard_plan.py shards <清单> v1-store/evaluation/<run>/plans --shards 10 --expect-per-shard 120`；两次冒烟（官方 79999、512+motion@10000）都用同一份 `eval-testx-smoke2.jsonl` `--shards 1`（用户 2026-10-18「10k 100 局冒烟降低到和官方一样的2局」） | `SHARD_PLAN=PASS shards=10 per_shard=120` |
 | 写单元 | `make_manifest.py units <manifest.tsv> --stage smoke|formal --run 'run|ckpt|policy|config|step|分片数|motion' …`（formal 顺序 512 → 512+motion → 官方） | `UNITS=PASS` |
 | 抢单 | worker 环境加 `XHARD_METADATA_DIR=<out>/metadata`（冒烟轮另加 `RESET_CHECK=1`）后 `gl_hold_pool.sh <jobid>` | `CLAIM` / `QUEUE_DONE failed=0` |
 | 每片验收 | `run_shard.sh` 末尾自动跑 `check_shard.py` | `EVAL_PARAMS=PASS max_steps=2000`、`MANIFEST_DIFFICULTY=PASS`、`ACTION_LOG=PASS`、`SHARD_PASS`；客户端每块 `VIDEO_ENCODE=PASS` |
 | 汇总 | `merge_shards.py <run 根> --expect-total 1200 …` 后 `summarize.py <清单> --model 标签=<run 根>:<policy>:<ckpt> …` | `SHARDS_UNION`、`SEED_MATCH`、`EVAL_VIDEO`、`MANIFEST_SHARED`、`EVAL_TABLE=DONE models=3 cells=100` |
-| ckpt | `fetch_ckpt.sh run|encoder|official|prov-dryrun …`（bucket 名从参数读入） | `CKPT_SHA`、`OFFICIAL_CKPT_SHA`、`MOTION_PROV` |
+| ckpt | `fetch_ckpt.sh run|encoder|official|prov-dryrun …`（bucket 名从参数读入；正式 SHA256SUMS.pre.txt 未到时 run 模式可用 `SUMS_FILE=<step 级清单>` 代替） | `CKPT_SHA`、`OFFICIAL_CKPT_SHA`、`MOTION_PROV` |
 
 `SpecEnvRunner` 按清单行难度分流：xhard 行建 `<Task>XHard` 并读 `XHARD_METADATA_DIR`，base 行建原任务、读官方 test metadata、
 断言 episode < 50；建成后核 metadata seed 与难度。视频改为 ffmpeg 子进程流式压缩（`.part` 临时名，进程退出前

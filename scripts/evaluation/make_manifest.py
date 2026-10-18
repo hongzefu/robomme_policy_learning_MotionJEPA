@@ -8,19 +8,21 @@
 * ``eval-testx-1200.jsonl``：每任务每档按 episode 升序取前 12 条（easy／medium／hard 取官方 ep0–49，
   xhard 五档取本次追加的 ep50 起）；行 ``{"task","episode","seed","difficulty"}``，
   按 (task, difficulty, episode) 排序；断言 rows=1200、cells=100、每格 ≥12；
-* ``eval-testx-smoke100.jsonl``：每格第 1 条，共 100 局，断言为全量清单的子集；
+* ``eval-testx-smoke2.jsonl``：两次冒烟（官方 79999 与 512+motion@10000）共用的同一份 2 局子清单
+  （用户 2026-10-18「10k 100 局冒烟降低到和官方一样的2局」）：按排序取第一个 base 格与第一个 xhard 格的各第 1 条
+  （合成与真实清单里都是 BinFill/easy ep0 与 BinFill/xhard12 ep50），两条分流路径各一局；断言为全量清单的子集；
 * ``metadata/record_dataset_<Task>XHard_metadata.json``：14 个有 xhard 档的任务各一份 XHard 副本，
   只含 xhard 记录、记录的 task 改成 ``<Task>XHard``（``BenchmarkEnvBuilder`` 按 (task, episode) 查表，
   原任务名查不到 ``<Task>XHard`` 的键）；评估时经 ``XHARD_METADATA_DIR`` 指向这里；
 * ``manifest_meta.json``：源 metadata 逐文件 sha256 与计数。
-判定行 ``MANIFEST=PASS rows=1200 cells=100``、``SMOKE_SUBSET=PASS rows=100 subset_of_full=yes``、``XHARD_METADATA=PASS``。
+判定行 ``MANIFEST=PASS rows=1200 cells=100``、``SMOKE_SUBSET=PASS rows=2 subset_of_full=yes``、``XHARD_METADATA=PASS``。
 
 ``units``——往 ``manifest.tsv``（``gl_hold_pool.sh`` 的六列 TAB 格式：run_name / ckpt / policy /
 policy_config / expect_ckpt_id / shard_index）追加单元。每个 ``--run`` 是
 ``run_name|ckpt绝对路径|policy|policy_config|step|分片数|motion(0/1)``，按给出的顺序逐 run 写 s0..s(n-1)；
 worker 自上而下抢单，所以写入顺序就是领取优先级（计划 T9：正式轮 512 → 512+motion → 官方）。
 ``motion`` 列与 policy 名是否以 ``-motion`` 结尾必须一致——``gl_hold_pool.sh`` 靠这个后缀决定 resample 与
-EXPECT_MOTION_STATS。``--stage smoke`` 要求本次恰好 3 个单元（官方 2 局 1 个 + 512+motion@10k 100 局 2 个）；
+EXPECT_MOTION_STATS。``--stage smoke`` 要求本次恰好 2 个单元（官方 2 局 1 个 + 512+motion@10k 同 2 局 1 个）；
 ``--stage formal`` 要求恰好 3 个 run、各 10 片、motion 依次为 0 / 1 / 0。已存在的单元名拒绝重复写入。
 判定行 ``UNITS=PASS stage=<s> added=<n> total=<m>``。
 """
@@ -43,7 +45,7 @@ DIFFICULTY_ORDER = BASE_DIFFICULTIES + XHARD_DIFFICULTIES
 BASE_EPISODE_LIMIT = 50
 DEFAULT_METADATA_DIR = "third_party/robomme_benchmark/src/robomme/env_metadata/test"
 FULL_NAME = "eval-testx-1200.jsonl"
-SMOKE_NAME = "eval-testx-smoke100.jsonl"
+SMOKE_NAME = "eval-testx-smoke2.jsonl"
 
 
 def row_key(row):
@@ -114,6 +116,8 @@ def cmd_export(args):
 
     full.sort(key=row_key)
     smoke.sort(key=row_key)
+    smoke = [next(r for r in smoke if r["difficulty"] not in XHARD_DIFFICULTIES),
+             next(r for r in smoke if r["difficulty"] in XHARD_DIFFICULTIES)]
     keys = [row_key(r) for r in full]
     if len(set(keys)) != len(keys):
         raise SystemExit("清单里有重复的 (task, difficulty, episode)")
@@ -124,7 +128,7 @@ def cmd_export(args):
         raise SystemExit(f"MANIFEST=FAIL 每格条数不全是 {args.per_cell}：{dict(cells)}")
     full_set = set(keys)
     smoke_keys = {row_key(r) for r in smoke}
-    if len(smoke) != len(cells) or not smoke_keys <= full_set:
+    if len(smoke) != 2 or not smoke_keys <= full_set:
         raise SystemExit(f"SMOKE_SUBSET=FAIL rows={len(smoke)} subset_of_full={'yes' if smoke_keys <= full_set else 'no'}")
 
     full_sha = dump_jsonl(out / FULL_NAME, full)
@@ -174,8 +178,8 @@ def cmd_units(args):
         if [r["motion"] for r in runs] != [False, True, False] or any(r["nshards"] != 10 for r in runs):
             raise SystemExit("formal 轮必须恰好 3 个 run、各 10 片，顺序 512 → 512+motion → 官方（motion 0/1/0）")
     elif args.stage == "smoke":
-        if sum(r["nshards"] for r in runs) != 3 or sum(r["motion"] for r in runs) != 1:
-            raise SystemExit("smoke 轮必须恰好 3 个单元（官方 1 片 + 512+motion@10k 2 片）")
+        if len(runs) != 2 or any(r["nshards"] != 1 for r in runs) or [r["motion"] for r in runs] != [False, True]:
+            raise SystemExit("smoke 轮必须恰好 2 个单元（官方 1 片 + 512+motion@10k 1 片，同一份 2 局子清单）")
     tsv = Path(args.tsv)
     existing = []
     if tsv.exists():
