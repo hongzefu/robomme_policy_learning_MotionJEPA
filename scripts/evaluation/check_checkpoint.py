@@ -106,7 +106,28 @@ RUNS = {
         official=True, steps=('79999',), motion=False, config='mme_vla_suite', budget=512,
         history_config_txt='perceptual-framesamp-modul.yaml',
         history_config_sha256='a675d785d239e7e142be25318313c20bae66be5db6a525c589dce9a95f20e1fc',
-        file_sha256={},   # 相对 step 目录的路径 -> sha256；待登记
+        # 2026-10-18 主会话登记：aspen 本机 memER 副本 rsync 到 NFS 后两侧逐文件 sha256 一致（OFFICIAL_CKPT_SHA=PASS files=19
+        # zip=86ef2b63 history_config_oid=8809f0cf）；以下 18 项为 79999/ 下全部文件。
+        file_sha256={
+            '_CHECKPOINT_METADATA': '255303f6829aee24dbcf825de1d34d764b4ec62c8981e58f46efc0037b4aed7d',
+            'assets/robomme/norm_stats.json': '0c3abe8facfb35309b86737ca13f5dbdd16c039611498b305f33b9f3d0ed2175',
+            'params/_METADATA': 'fde889309f78d095406b69f77dd938736b94078d54bc00399232b12158750a65',
+            'params/_sharding': 'ebaea4e67bd4885dc03c1c6b66e389854d329b8825e0173fe9b1fde9c21cdade',
+            'params/array_metadatas/process_0': '0fd971782ffec3e7ac8acbe0623c9fe2435c89b2fae08d1bd0f6eb16c5b36a87',
+            'params/d/752ca7a506429a869bf6564d00065319': '6e77c20c8cb72cf14eabeb6368e25df415450eee50b91c81eae203f25b1234dd',
+            'params/manifest.ocdbt': '8ac872b25385d90801c63c9b4778dddf6a968546c6a057f3f96fa9882091b8d4',
+            'params/ocdbt.process_0/d/066523fb731284524447207c4a356a67': '73b51a475dec7ef2b16d65634f3f30e0df961594bc584d917786a5f9afb91bcb',
+            'params/ocdbt.process_0/d/2590f713aa3b79ba96fb14011406cef2': 'd38618063ad8f5cc6c53c600bd9804143d27b022d0194963e63cc9734a873bb0',
+            'params/ocdbt.process_0/d/4d08fa7ea220fea3766d5c8823716949': '19d53d323b68e981c4b98044e2e19e27c7f13a9fc65c945e651b1767eb4e550c',
+            'params/ocdbt.process_0/d/5878cd22780c25ad2b068813135140a1': '4ed426b07473b23e6e9da3a32d151acc1539e290934fefea02beac15be7b80f5',
+            'params/ocdbt.process_0/d/63f926a0b36250293f84e95963778283': 'e750a47dd7c31c89ef2a50df69e12e595b3e1cf3e7ea9b2d64d4474235df012a',
+            'params/ocdbt.process_0/d/8798615c3cf67a4c7386bd0e54f559e4': 'f00643b19d2da8c2baad0642ea457d77b71358b43d89766361d983368c3d8b80',
+            'params/ocdbt.process_0/d/b6117379ff617c0709a34e86a1c11d9f': '2500e760b80c16e5eabbaa846fef05785fd1fdc83e3d1620f06c205f0b7beaaf',
+            'params/ocdbt.process_0/d/b8a280a4ed11b10130bced1c73d043ec': '034c510b6b4a7b7a01bff53cd076593b5f8e993f6497015f311517b1feced6d7',
+            'params/ocdbt.process_0/d/da7b3993fa08df1f808653e316c007e6': '2a7efa62071d5a0c2dfbe47a42fe9120494f09e9b1d9243c3d073be8615d61e9',
+            'params/ocdbt.process_0/d/dd618c57506684fd63822bc0394634ba': '861614ea04a069e23ffb6ed7844163d18de0c1336503c3935b6ce8cff57575b7',
+            'params/ocdbt.process_0/manifest.ocdbt': 'b8e026e45e28a4b404baab66c6c3ada7d8e88ad726a94389730f773e6119703d',
+        },
     ),
 }
 
