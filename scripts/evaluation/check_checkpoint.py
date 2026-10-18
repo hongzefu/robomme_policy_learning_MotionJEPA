@@ -1,6 +1,13 @@
 """不加载大数组，先核对冻结配置、归一化与完整参数形状。
 按 run 根目录名（checkpoint 的父目录名）查 RUNS 表，决定允许的 step 集合、motion 开关、config 名、budget 与两个 sha256 的期望值；
-不在表里的 run 直接拒绝——评估只认这张表里登记过的权重。"""
+不在表里的 run 直接拒绝——评估只认这张表里登记过的权重。
+
+1017-test-xhard5-12per：
+* 两条新 run（512 = mixed8-200-m8x8-modul-b128-80k 登记 60000；512+motion = mixed8-200-m8x8-modul-motion-b128-80k
+  登记 10000 / 60000）的条目**由主会话在训练侧 bucket 交付、fetch_ckpt.sh 核验后登记**，此前留空不编造；
+* 官方 79999（无 history_config.resolved.yaml）走 ``official=True`` 分支：核 run 根 ``history_config.txt`` 的内容与 sha256、
+  step 目录逐文件 sha256（登记值同样由主会话在 NFS 副本经 ``OFFICIAL_CKPT_SHA`` 核对后填入），再以
+  ``history_config`` 字符串建模型做同一套参数树校验。"""
 import dataclasses
 import hashlib
 from pathlib import Path
@@ -70,12 +77,78 @@ RUNS = {
         resolved_sha256='9df78b4dac2acdc43fbce5040a88014805df1b50bb803feba027559fc31f96a3',
         norm_stats_sha256='856c75ea504bd104c552027987b98a512d2d0b406738a7a8a500ada96d8ed173',
     ),
+    # ── 1017-test-xhard5-12per 待登记（主会话在 bucket 交付后登记；bucket 名、resolved / norm_stats sha 均未知，禁止编造）──
+    # 'mixed8-200-m8x8-modul-b128-80k': dict(
+    #     steps=('60000',), motion=False, config='mme_vla_suite_b128_80k', budget=512,
+    #     resolved_sha256='<待登记>', norm_stats_sha256='<待登记>',
+    # ),
+    # 'mixed8-200-m8x8-modul-motion-b128-80k': dict(
+    #     steps=('10000', '60000'), motion=True, config='mme_vla_suite_b128_80k', budget=512,
+    #     resolved_sha256='<待登记>', norm_stats_sha256='<待登记>',
+    #     motion_budget=160, motion_source_run='<待登记：快照 motion.source_run>',
+    # ),
+    # 官方 FrameSamp+Modulation 79999（NFS v1-store/models/official-mme-vla/perceptual-framesamp-modul/79999）。
+    # history_config.txt 内容与 sha 取自 aspen 本机 memER 副本（2026-10-18 只读实测，31 字节）；
+    # 逐文件 sha256 为空 = 未登记，本脚本对官方权重直接拒绝，直到主会话把 NFS 副本经 OFFICIAL_CKPT_SHA 核对后的值填入
+    # （aspen 本机那份 79999.zip 实测 sha256 86ef2b63…、11,878,954,899 B，与计划记的 HF 前缀 387d4bd5 不符，不能当登记源）。
+    'perceptual-framesamp-modul': dict(
+        official=True, steps=('79999',), motion=False, config='mme_vla_suite', budget=512,
+        history_config_txt='perceptual-framesamp-modul.yaml',
+        history_config_sha256='a675d785d239e7e142be25318313c20bae66be5db6a525c589dce9a95f20e1fc',
+        file_sha256={},   # 相对 step 目录的路径 -> sha256；待登记
+    ),
 }
 
 checkpoint = Path(sys.argv[1]).resolve()
 run = RUNS.get(checkpoint.parent.name)
 assert run is not None, f'未登记的 run 根目录 {checkpoint.parent.name}，已登记: {sorted(RUNS)}'
 assert checkpoint.name in run['steps'], (checkpoint, run['steps'])
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open('rb') as f:
+        for block in iter(lambda: f.read(1 << 24), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def check_param_tree(model_config) -> list:
+    model = nnx.eval_shape(model_config.create, jax.random.key(0))
+    expected = flatten_dict(nnx.state(model, nnx.Param).to_pure_dict())
+    with ocp.PyTreeCheckpointer() as reader:
+        metadata = reader.metadata(checkpoint / 'params')
+    assert set(metadata.tree) == {'params'}
+    actual = flatten_dict(metadata.tree['params'])
+    if all(key[-1] == 'value' for key in actual):
+        actual = {key[:-1]: value for key, value in actual.items()}
+    assert set(actual) == set(expected), (set(expected) - set(actual), set(actual) - set(expected))
+    for key, value in expected.items():
+        assert value.shape == actual[key].shape, (key, value.shape, actual[key].shape)
+    motion_leaves = sorted('/'.join(map(str, k)) for k in actual if 'motion_pos_proj' in '/'.join(map(str, k)) or 'motion_encoder_static' in '/'.join(map(str, k)))
+    assert bool(motion_leaves) == run['motion'], motion_leaves
+    print(f'PARAM_TREE_EXACT=PASS n_model={len(expected)} n_ckpt={len(actual)} missing=0 extra=0 shape_mismatch=0 motion_leaves={len(motion_leaves)}', flush=True)
+    return motion_leaves
+
+
+if run.get('official'):
+    # 官方权重：没有 resolved 快照，serve_policy 走 history_config.txt 兼容路径（policy_config.create_trained_policy 非 strict 分支）
+    assert not (checkpoint.parent / 'history_config.resolved.yaml').exists(), '官方权重不应带 resolved 快照'
+    txt = checkpoint.parent / 'history_config.txt'
+    raw = txt.read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == run['history_config_sha256'], 'history_config.txt sha256 不符'
+    assert raw.decode('utf-8') == run['history_config_txt'], raw
+    assert run['file_sha256'], '官方 79999 的逐文件 sha256 尚未登记（主会话核 OFFICIAL_CKPT_SHA 后填入 RUNS），拒绝放行'
+    files = sorted(str(p.relative_to(checkpoint)) for p in checkpoint.rglob('*') if p.is_file())
+    assert files == sorted(run['file_sha256']), (sorted(set(run['file_sha256']) ^ set(files)))
+    for rel in files:
+        assert sha256_file(checkpoint / rel) == run['file_sha256'][rel], rel
+    print(f'OFFICIAL_CKPT_FILES=PASS files={len(files)}', flush=True)
+    model_config = dataclasses.replace(get_config(run['config']).model, history_config=run['history_config_txt'], use_history=True)
+    check_param_tree(model_config)
+    print(f"HISTORY_CONFIG=PASS MOTION_DISABLED=PASS official=1 config={run['config']} step={checkpoint.name} history_config={run['history_config_txt']}", flush=True)
+    sys.exit(0)
+
 cfg, motion_enabled = _load_resolved_snapshot(checkpoint.parent)
 assert motion_enabled == run['motion'], (motion_enabled, run['motion'])
 # budget 逐 run 钉死：它是模型语义参数（决定 static_image_emb 的序列长度与取帧数 budget//token_per_image），
@@ -92,18 +165,5 @@ if run['motion']:
     assert int(cfg.motion.stride) == 16 and int(cfg.motion.window_frames) == 33 and int(cfg.motion.frame_size) == 256
     print(f'BUDGET_CONSISTENT=PASS budget={int(cfg.motion.budget)} source_run={cfg.motion.source_run}', flush=True)
 model_config = dataclasses.replace(get_config(run['config']).model, history_config=cfg, use_history=True)
-model = nnx.eval_shape(model_config.create, jax.random.key(0))
-expected = flatten_dict(nnx.state(model, nnx.Param).to_pure_dict())
-with ocp.PyTreeCheckpointer() as reader:
-    metadata = reader.metadata(checkpoint / 'params')
-assert set(metadata.tree) == {'params'}
-actual = flatten_dict(metadata.tree['params'])
-if all(key[-1] == 'value' for key in actual):
-    actual = {key[:-1]: value for key, value in actual.items()}
-assert set(actual) == set(expected), (set(expected) - set(actual), set(actual) - set(expected))
-for key, value in expected.items():
-    assert value.shape == actual[key].shape, (key, value.shape, actual[key].shape)
-motion_leaves = sorted('/'.join(map(str, k)) for k in actual if 'motion_pos_proj' in '/'.join(map(str, k)) or 'motion_encoder_static' in '/'.join(map(str, k)))
-assert bool(motion_leaves) == run['motion'], motion_leaves
-print(f'PARAM_TREE_EXACT=PASS n_model={len(expected)} n_ckpt={len(actual)} missing=0 extra=0 shape_mismatch=0 motion_leaves={len(motion_leaves)}', flush=True)
+check_param_tree(model_config)
 print(f"HISTORY_CONFIG=PASS NORM_STATS=PASS {'MOTION_ENABLED=PASS' if run['motion'] else 'MOTION_DISABLED=PASS'} config={run['config']} step={checkpoint.name} budget={int(cfg.budget)}", flush=True)

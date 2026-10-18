@@ -167,3 +167,26 @@ EPISODE_WALL_S=2400,EVAL_TIMEOUT=14400,CHUNK_EPISODES=20 \
 ```
 
 各任务日志仍是 `v1-store/logs/<job-name>-<arrayjobid>_<task>.log`，每行 `MANIFEST_TASK line=… run=… shard=…` 标明它跑的是哪一片。
+
+## 1017 test 布局 xhard 五档 1200 局清单评估（分支 v2-motionmem-eval-test1017）
+
+权威计划在 benchmark 仓库 `1017-test-xhard5-12per-plan.html`（第一部分四节、第二部分二节）。本目录自 `v2-eval-0918-motion`
+（`ba52d79a`）整目录移植（不含 BinFill demo 注入的 `pregen_binfill_demo.py`、`smoke_demo_inject.py`、`gl_demo_pool.sh`、
+`run_demo_shard.sh`），改动只在「评哪些局」「建哪个环境」与视频 / 动作日志：
+
+| 步 | 命令 | 判定行 |
+|---|---|---|
+| 导清单 | `make_manifest.py export <out>`（默认读子模块 `src/robomme/env_metadata/test`） | `MANIFEST=PASS rows=1200 cells=100`、`SMOKE_SUBSET=PASS`、`XHARD_METADATA=PASS tasks=14` |
+| 窗数预算 | `es_bound.py <out>/eval-testx-1200.jsonl <h5 目录>...`（在生成机上跑） | `EVAL_ES_BOUND=DONE scope=xhard …` |
+| 分片 | `make_shard_plan.py shards <清单> v1-store/evaluation/<run>/plans --shards 10 --expect-per-shard 120`；官方 2 局冒烟 `--shards 1 --rows 2`（冒烟子清单），512+motion@10k 冒烟 `--shards 2` | `SHARD_PLAN=PASS shards=10 per_shard=120` |
+| 写单元 | `make_manifest.py units <manifest.tsv> --stage smoke|formal --run 'run|ckpt|policy|config|step|分片数|motion' …`（formal 顺序 512 → 512+motion → 官方） | `UNITS=PASS` |
+| 抢单 | worker 环境加 `XHARD_METADATA_DIR=<out>/metadata`（冒烟轮另加 `RESET_CHECK=1`）后 `gl_hold_pool.sh <jobid>` | `CLAIM` / `QUEUE_DONE failed=0` |
+| 每片验收 | `run_shard.sh` 末尾自动跑 `check_shard.py` | `EVAL_PARAMS=PASS max_steps=2000`、`MANIFEST_DIFFICULTY=PASS`、`ACTION_LOG=PASS`、`SHARD_PASS`；客户端每块 `VIDEO_ENCODE=PASS` |
+| 汇总 | `merge_shards.py <run 根> --expect-total 1200 …` 后 `summarize.py <清单> --model 标签=<run 根>:<policy>:<ckpt> …` | `SHARDS_UNION`、`SEED_MATCH`、`EVAL_VIDEO`、`MANIFEST_SHARED`、`EVAL_TABLE=DONE models=3 cells=100` |
+| ckpt | `fetch_ckpt.sh run|encoder|official|prov-dryrun …`（bucket 名从参数读入） | `CKPT_SHA`、`OFFICIAL_CKPT_SHA`、`MOTION_PROV` |
+
+`SpecEnvRunner` 按清单行难度分流：xhard 行建 `<Task>XHard` 并读 `XHARD_METADATA_DIR`，base 行建原任务、读官方 test metadata、
+断言 episode < 50；建成后核 metadata seed 与难度。视频改为 ffmpeg 子进程流式压缩（`.part` 临时名，进程退出前
+`finalize_all()` 回收改名），每局另写 `steps/<Task>_ep<n>.jsonl`。`RESET_CHECK=1` 时 `run_shard.sh` 在同一 server
+进程内把本片第一局再评一次写到 `reset-check/`，`reset_clean.py` 对拍打 `RESET_CLEAN`。
+`check_checkpoint.py::RUNS` 里两条新 run 与官方 79999 的逐文件 sha256 由主会话在 bucket 交付 / NFS 副本核对后登记。

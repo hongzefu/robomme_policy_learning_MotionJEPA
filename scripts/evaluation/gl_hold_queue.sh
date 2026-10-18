@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 在**既有** GreatLakes 作业（如 gpu-hold-0K：1×A40 / 1 CPU / 24G）里串行跑若干分片，不提交新 job。
+# 在**既有** GreatLakes 作业（如 gpu-hold-0K：1×A40 / 4 CPU / 24G）里串行跑若干分片，不提交新 job。
 # 机制：从登录节点 `srun --jobid=<既有作业> --overlap --exact` 开 step，复用该作业已分配的卡；本脚本本身跑在登录节点
 # 的 detached tmux 里（用户 ssh 断开不影响），每个分片一个 step，日志 tee 到 NFS 供本机 Monitor 跟踪。
 # 用法（登录节点）：gl_hold_queue.sh <jobid> <run_name> <ckpt绝对路径> <plan_dir> <expected_git_head> <shard_index>...
@@ -9,6 +9,8 @@
 #   透传给 gl_eval_shard.sbatch 的变量（有值才传）：POLICY POLICY_CONFIG EXPECT_CKPT_ID EPISODE_WALL_S EVAL_TIMEOUT
 #   CHUNK_EPISODES SEED ALLOW_RESUME MMEVLA_MOTION_PROV_RELAX DEMO_PREFIX_STORE MMEVLA_ENC_CHUNK
 #   MMEVLA_MOTION_OVERFLOW EXPECT_MOTION_STATS EXPECT_DEMO_INJECT（2026-09-25 补：此前靠 srun 默认带环境才到达计算节点）；STEP_TIME（每个 step 的 --time，默认 12:00:00）
+#   XHARD_METADATA_DIR（1017 清单 xhard 行建 <Task>XHard 用的 metadata 副本）、RESET_CHECK（10k 冒烟的 reset 干净实测开关）（2026-10-18 补）
+#   每个 step 4 CPU（用户 2026-10-17「不要使用一 CPU，任务改为使用四 CPU」，与占位 job 的 --cpus-per-task=4 一致）
 # 判定行：每片 `QUEUE_SHARD_DONE job=<jobid> shard=<k> rc=<rc>`，结束 `QUEUE_DONE job=<jobid> failed=<n>`
 set -uo pipefail
 REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA
@@ -22,7 +24,8 @@ mkdir -p "$LOG_DIR"
 squeue -j "$JOB" -h -o '%T %N' | grep -q '^RUNNING' || { echo "作业 $JOB 不在 RUNNING"; exit 2; }
 PASS=(RUN_NAME="$RUN_NAME" CKPT="$CKPT" PLAN_DIR="$PLAN_DIR" EXPECTED_GIT_HEAD="$EXPECTED_GIT_HEAD")
 for V in POLICY POLICY_CONFIG EXPECT_CKPT_ID EPISODE_WALL_S EVAL_TIMEOUT CHUNK_EPISODES SEED ALLOW_RESUME MMEVLA_MOTION_PROV_RELAX \
-         DEMO_PREFIX_STORE MMEVLA_ENC_CHUNK MMEVLA_MOTION_OVERFLOW EXPECT_MOTION_STATS EXPECT_DEMO_INJECT; do
+         DEMO_PREFIX_STORE MMEVLA_ENC_CHUNK MMEVLA_MOTION_OVERFLOW EXPECT_MOTION_STATS EXPECT_DEMO_INJECT \
+         XHARD_METADATA_DIR RESET_CHECK; do
     [[ -z "${!V:-}" ]] || PASS+=("$V=${!V}")
 done
 FAILED=0
@@ -32,7 +35,7 @@ for K in "$@"; do
     LOG="$LOG_DIR/$RUN_NAME-s$K.log"
     echo "QUEUE_SHARD_START job=$JOB shard=$K log=$LOG $(date -u +%FT%TZ)"
     srun --jobid="$JOB" --account=chaijy2 --partition=spgpu --gpu_cmode=shared --overlap --exact \
-        --nodes=1 --ntasks=1 --cpus-per-task=1 --gpus-per-node=1 --time="$STEP_TIME" --chdir="$REPO" \
+        --nodes=1 --ntasks=1 --cpus-per-task=4 --gpus-per-node=1 --time="$STEP_TIME" --chdir="$REPO" \
         /usr/bin/env -u ROBOMME_GPU_RASTER -u SAPIEN_DISABLE_RAY_TRACING -u MANIFEST PYTHONUNBUFFERED=1 "${PASS[@]}" SHARD_INDEX="$K" \
         /usr/bin/bash "$REPO/scripts/evaluation/gl_eval_shard.sbatch" 2>&1 | tee -a "$LOG"
     RC=${PIPESTATUS[0]}

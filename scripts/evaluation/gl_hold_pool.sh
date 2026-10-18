@@ -35,8 +35,11 @@ DRY="${DRY_RUN:-0}"
 HEAD="$(git -C "$REPO" rev-parse HEAD)"
 # clean-HEAD 闸：正式/冒烟必须 clean；DRY_RUN 只测抢单逻辑、不跑任何评测，允许带未提交改动（提交前本机自测用）
 [[ "$DRY" == 1 || -z "$(git -C "$REPO" status --porcelain)" ]] || { echo '必须从 clean HEAD 启动'; exit 2; }
+# MMEVLA_MOTION_PROV_RELAX：硬件四键豁免（1017 计划 T13：离线库在 A100 建、评估卡是 A40，vae 与 encoder 两段都豁免，
+# 其余 sha、版本照比）；EXPECT_DEMO_INJECT=0：本轮不注入 BinFill demo（P4，与 mixed8 训练一致）
 export STEP_TIME=12:00:00 EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 SEED=7 \
-       MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count CHUNK_EPISODES="${CHUNK_EPISODES:-20}"
+       MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count,driver EXPECT_DEMO_INJECT=0 \
+       CHUNK_EPISODES="${CHUNK_EPISODES:-20}"
 # 非 MANIFEST 模式沿用写死的 50000；MANIFEST 模式下逐行取
 [[ -n "${MANIFEST:-}" ]] || export EXPECT_CKPT_ID=50000
 # run_name 后缀：正式 -gl（primary700-nomotion50k-gl / primary700-motion50k-gl），冒烟传 -smoke-gl
