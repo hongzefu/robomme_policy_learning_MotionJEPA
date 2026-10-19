@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-19T04:34:30Z",
-    "america_new_york": "2026-10-19T00:34:30-0400"
+    "utc": "2026-10-19T04:50:58Z",
+    "america_new_york": "2026-10-19T00:50:58-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "92437d060bf8dfdf69b9fe0bdb6be4c3be7c3962"
+    "base_head": "34a7bad967c8cd58d3f68ebf8a747949d42a37e2"
   },
   "freeze": {
     "active": false,
@@ -362,7 +362,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-19T04:34:30Z",
-      "state_reason": "PLAN_CONSISTENCY_REVIEW=PASS base=222e08e findings=12 blocking=0，已按文字修订；开工：派 S1 写 5 个新文件",
+      "state_reason": "V11.29 合入（34a7bad）、G1–G4 PASS；commitV11.30Beta 后跑 G5 preflight 并起跑 cmo-train",
       "owner": {
         "session": "https://claude.ai/code/session_01GyRC8vNRTr8vC9GRqdry1n",
         "host": "claude-code"
@@ -418,15 +418,30 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "S1 写 5 个新文件 → RV1 前审 → --no-ff 合并 commitV11.29 → RV1 后审 → push → 新文件 chmod a-w 登记 cmo-chmod-added.txt",
-          "command": "—",
-          "verdict_line": "POST_MERGE_REVIEW=PASS; LOCK_ADDED=OK files=5"
+          "what": "G5 起跑前自检（HEAD=V11.30Beta、clean）",
+          "command": "bash v1-store/m8v-scripts/cmo-preflight.sh",
+          "verdict_line": "PREFLIGHT=PASS"
         },
         {
-          "what": "G1–G3 CPU 闸门 → G4 短测（GPU0–3）→ commitV11.30Beta → G5 preflight → 起跑 cmo-train → G6 后起 cmo-inc",
-          "command": "见计划第二部分 §4 runbook",
-          "verdict_line": "SMOKE20=PASS; PREFLIGHT=PASS"
+          "what": "起跑 cmo-train（GPU0–3）；G6 后、run 目录出现时起 cmo-inc",
+          "command": "见 docs/training-doc/mixed8-200-m8x8-context-motion-b128-80k/launch.md",
+          "verdict_line": "300 步内无 Traceback/RESOURCE_EXHAUSTED、loss 有限"
+        },
+        {
+          "what": "训练 EXIT_CODE=0 且 INC_END 后：正式上传驱动 SMOKE=1 → 全量；result.md 回写 commitV11.30；按 m2k-chmod-before.txt + cmo-chmod-added.txt 恢复权限",
+          "command": "bash scripts/dataset/hf_export/run_mixed8_200_vla_ctx_motion_80k_ckpt_export.sh",
+          "verdict_line": "RESULT=PASS SHA256_PRE_POST_DIFF=0; PERM_RESTORED=OK"
         }
+      ],
+      "pre_start_self_check": [
+        "S1_STATIC=PASS yaml_diff=2 bash_n=0 json=0 stale=0",
+        "PRE_MERGE_REVIEW=PASS base=d943547 tip=99bd38f files=5 commits=1 findings=1 blocking=0",
+        "POST_MERGE_REVIEW=PASS merge=34a7bad tests=pytest25passed,G1,G2 files=5 blocking=0",
+        "LOCK_ADDED=OK files=5",
+        "DRY_RUN_CMO=PASS",
+        "YAML_DIFF=PASS lines=2",
+        "DATASET_BUILD=PASS samples=1383846 motion=1",
+        "SMOKE20=PASS oom=0 loss_finite=1 peak_mib=71983 steady_s_per_step=7.500"
       ]
     }
   }

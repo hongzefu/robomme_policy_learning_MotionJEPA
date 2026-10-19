@@ -109,6 +109,8 @@
 
 1. 2026-10-19 用户「1234都按照推荐的」「再审查一遍 没问题就开始」：Q1–Q4 按推荐；状态机登记 `mixed8-ctxmotion-train`（含 `kind: go`）；`1018-ctx-frame-modul-motion-plan.html` 文件头加作废标注；Q3 已通知 `mixed8-2048-train` 的 owner 会话，对方回「收到」并在 handoff 移交（`b573f7e`）。
 2. 开工审查 `PLAN_CONSISTENCY_REVIEW=PASS base=222e08e findings=12 blocking=0`（sonnet 只读）：12 条均为文字统一或执行细节补全，不改口径，已逐条回原文与代码核实后修订——F1 G4→Beta→G5→起跑顺序；F2 交叉引用 §8；F3 Q2/Q3 已裁决措辞；F4 yaml 差异统一按去注释后 `<`/`>` 各 2 行判；F5 allowlist `_doc` 旧 run 参照可改写；F6 两条上传命令补 pipefail 与 `EXIT_CODE=` 尾行；F7 `cmo-inc` 在 run 目录出现后再起；F8 Beta 提交含 handoff 与 §9、之后到起跑不再提交，preflight `--` 参数与 `TRAIN_CMD=` 逐字一致；F9 G3 补全 `FrameSampDataset` 构造参数；F10 smoke-summary/清理由主会话执行；F11 已由 2048 owner 处理（`b573f7e`）；F12 R8 限定为用 GPU 的命令。
+3. 美东 00:3x–00:40：S1（opus worktree）新增 5 文件 `S1_STATIC=PASS yaml_diff=2 bash_n=0 json=0 stale=0`；`PRE_MERGE_REVIEW=PASS base=d943547 tip=99bd38f files=5 commits=1 findings=1 blocking=0` → `--no-ff` 合并 `commitV11.29`（`34a7bad`）→ `POST_MERGE_REVIEW=PASS merge=34a7bad tests=pytest25passed,G1,G2 files=5 blocking=0` → push；`LOCK_ADDED=OK files=5`（`cmo-chmod-added.txt`）。
+4. 美东 00:40–00:49：G1 `DRY_RUN_CMO=PASS`；G2 `YAML_DIFF=PASS lines=2`；G3 `DATASET_BUILD=PASS samples=1383846 motion=1`；G4（X1 起，GPU0–3）`SMOKE20=PASS oom=0 loss_finite=1 peak_mib=71983 steady_s_per_step=7.500`（该步时取自含编译的末条 rate，非稳态）；`cmo-smoke-nvml` 已清理、短测 ckpt 已删。下一步 commitV11.30Beta → G5 → 起跑。
 
 第二部分是逐文件清单、分配表、闸门、runbook、风险、盲区与交接登记。
 
