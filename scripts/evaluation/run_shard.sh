@@ -12,6 +12,7 @@
 #        MMEVLA_MOTION_OVERFLOW（raise|resample，默认 raise；补 demo 后 motion 轮须设 resample）
 #        EXPECT_MOTION_STATS=1（本轮 motion run 缺 motion_stats.json 即判 FAIL，不许走 SKIP）
 #        XHARD_METADATA_DIR（1017 清单的 XHard metadata 副本目录绝对路径；计划含 xhard 组时必须给，由 env_runner.py 读）
+#        EVAL_MAX_STEPS（单局 max_steps，默认 2000；同时导出为 check_shard.py 的 EXPECT_MAX_STEPS，1019 官方 800 局传 1300）
 #        RESET_CHECK=1（只在 10k 冒烟用：全部块跑完后，同一 server 进程内把本片计划的第一局再评一次，
 #                      写到 $RUN_DIR/reset-check/，再用 reset_clean.py 对拍两份逐步动作日志，打 RESET_CLEAN 判定行）
 #   motion 轮示例：POLICY=perceptual-framesamp-modul-8frame-8x8-motion POLICY_CONFIG=mme_vla_suite_b128_80k EXPECT_CKPT_ID=50000
@@ -28,7 +29,7 @@ POLICY="${POLICY:-perceptual-framesamp-modul-8frame-8x8}"
 POLICY_CONFIG="${POLICY_CONFIG:-mme_vla_suite}"
 EXPECT_CKPT_ID="${EXPECT_CKPT_ID:-59999}"
 EPISODE_WALL_S="${EPISODE_WALL_S:-}"
-MAX_STEPS=2000
+MAX_STEPS="${EVAL_MAX_STEPS:-2000}"
 EVAL_TIMEOUT="${EVAL_TIMEOUT:-7200}"
 CHUNK_EPISODES="${CHUNK_EPISODES:-20}"
 # Vulkan 静态 TLS：每次 make_env+close_env 净泄漏 64 字节，默认 512 档第 28 次必崩
@@ -37,7 +38,8 @@ CHUNK_EPISODES="${CHUNK_EPISODES:-20}"
 TLS_TUNABLE="glibc.rtld.optional_static_tls=65536"
 
 [[ "$RUN_NAME" =~ ^[a-zA-Z0-9_-]+$ && "$SEED" =~ ^[0-9]+$ && "$SHARD_TAG" =~ ^[a-zA-Z0-9_-]+$ ]] || exit 2
-[[ "$EVAL_TIMEOUT" =~ ^[1-9][0-9]*$ && "$CHUNK_EPISODES" =~ ^[1-9][0-9]*$ ]] || exit 2
+[[ "$EVAL_TIMEOUT" =~ ^[1-9][0-9]*$ && "$CHUNK_EPISODES" =~ ^[1-9][0-9]*$ && "$MAX_STEPS" =~ ^[1-9][0-9]*$ ]] || exit 2
+export EXPECT_MAX_STEPS="$MAX_STEPS"
 [[ "$POLICY" =~ ^[a-zA-Z0-9_.-]+$ && "$POLICY_CONFIG" =~ ^[a-zA-Z0-9_]+$ && "$EXPECT_CKPT_ID" =~ ^[0-9]+$ && "$SHARD_INDEX" =~ ^[a-zA-Z0-9_-]+$ ]] || exit 2
 [[ -z "$EPISODE_WALL_S" || "$EPISODE_WALL_S" =~ ^[1-9][0-9]*$ ]] || exit 2
 DEMO_PREFIX_STORE="${DEMO_PREFIX_STORE:-}"

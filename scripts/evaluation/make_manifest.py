@@ -25,12 +25,20 @@ worker 自上而下抢单，所以写入顺序就是领取优先级（计划 T9�
 EXPECT_MOTION_STATS。``--stage smoke`` 要求本次恰好 2 个单元（官方 2 局 1 个 + 512+motion@10k 同 2 局 1 个）；
 ``--stage formal`` 要求恰好 3 个 run、各 10 片、motion 依次为 0 / 1 / 0。已存在的单元名拒绝重复写入。
 判定行 ``UNITS=PASS stage=<s> added=<n> total=<m>``。
+
+``export-official``——官方 800 局口径（1019，用户「a 同意开工」；与历史 eval-orig80k / eval-orig40k 同口径：
+16 任务 × test split ep0–49）。读同一份 test metadata，每任务只取 ``episode < --episodes``（默认 50）的记录，
+沿用 ``load_task`` 的「base 档必须 ep<50」断言，所以 ep50 起追加的 xhard 记录一律排除；断言每任务恰 50 条、
+episode 恰为 0..49、总行数 = ``--expect-rows``（默认 800）。产出 ``eval-official-800.jsonl``（字段与排序同
+``eval-testx-1200.jsonl``）与 ``manifest_meta.json``（metadata 目录、子模块 HEAD、逐文件 sha256、行数、清单 sha256）。
+判定行 ``MANIFEST_OFFICIAL=PASS rows=800 tasks=16``。分片与单元沿用 ``make_shard_plan.py shards`` 与 ``units --stage any``。
 """
 import argparse
 import collections
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 
 #: 官网 Task 编号顺序（benchmark 仓库 P6）
 TASK_ORDER = (
@@ -46,6 +54,7 @@ BASE_EPISODE_LIMIT = 50
 DEFAULT_METADATA_DIR = "third_party/robomme_benchmark/src/robomme/env_metadata/test"
 FULL_NAME = "eval-testx-1200.jsonl"
 SMOKE_NAME = "eval-testx-smoke2.jsonl"
+OFFICIAL_NAME = "eval-official-800.jsonl"
 
 
 def row_key(row):
@@ -158,6 +167,42 @@ def cmd_export(args):
     print(f"XHARD_METADATA=PASS tasks={len(xhard_copies)} records={n_xhard} dir={meta_dir}", flush=True)
 
 
+def git_head(path: Path):
+    """metadata 目录所在 git 仓库（子模块）的 HEAD；取不到写 None，只作留档。"""
+    proc = subprocess.run(["git", "rev-parse", "HEAD"], cwd=path, capture_output=True, text=True)
+    return proc.stdout.strip() if proc.returncode == 0 else None
+
+
+def cmd_export_official(args):
+    metadata_dir = Path(args.metadata_dir)
+    out = Path(args.out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    existing = [str(p) for p in (out / OFFICIAL_NAME, out / "manifest_meta.json") if p.exists()]
+    if existing:
+        raise SystemExit(f"拒绝覆盖已有产物：{existing}")
+    rows, sources = [], {}
+    for task in TASK_ORDER:
+        records, sha = load_task(metadata_dir, task)
+        picked = sorted((r for r in records if int(r["episode"]) < args.episodes), key=lambda r: int(r["episode"]))
+        eps = [int(r["episode"]) for r in picked]
+        if eps != list(range(args.episodes)):
+            raise SystemExit(f"MANIFEST_OFFICIAL=FAIL {task} 的 ep<{args.episodes} 记录不是恰好 0..{args.episodes - 1}："
+                             f"{len(eps)} 条")
+        sources[task] = {"sha256": sha, "records": len(records), "picked": len(picked)}
+        rows += [{"task": task, "episode": int(r["episode"]), "seed": int(r["seed"]), "difficulty": r["difficulty"]}
+                 for r in picked]
+    rows.sort(key=row_key)
+    if len(rows) != args.expect_rows:
+        raise SystemExit(f"MANIFEST_OFFICIAL=FAIL rows={len(rows)}（期望 {args.expect_rows}）")
+    sha = dump_jsonl(out / OFFICIAL_NAME, rows)
+    meta = {"metadata_dir": str(metadata_dir.resolve()), "metadata_git_head": git_head(metadata_dir),
+            "episodes_per_task": args.episodes, "sources": sources, "rows": len(rows), "tasks": len(TASK_ORDER),
+            "difficulties": dict(collections.Counter(r["difficulty"] for r in rows)),
+            "official": {"file": OFFICIAL_NAME, "sha256": sha}}
+    (out / "manifest_meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    print(f"MANIFEST_OFFICIAL=PASS rows={len(rows)} tasks={len(TASK_ORDER)} sha256={sha}", flush=True)
+
+
 def parse_run(spec: str):
     parts = spec.split("|")
     if len(parts) != 7:
@@ -214,13 +259,18 @@ def main():
     p.add_argument("--expect-rows", type=int, default=1200)
     p.add_argument("--expect-cells", type=int, default=100)
     p.add_argument("--expect-xhard-tasks", type=int, default=14)
+    o = sub.add_parser("export-official")
+    o.add_argument("out_dir")
+    o.add_argument("--metadata-dir", default=DEFAULT_METADATA_DIR)
+    o.add_argument("--episodes", type=int, default=BASE_EPISODE_LIMIT)
+    o.add_argument("--expect-rows", type=int, default=800)
     u = sub.add_parser("units")
     u.add_argument("tsv")
     u.add_argument("--stage", choices=("smoke", "formal", "any"), required=True)
     u.add_argument("--run", action="append", required=True)
     u.add_argument("--eval-root", default="", help="给出则断言 <eval-root>/<run>/plans/shard<k>.json 存在")
     args = parser.parse_args()
-    cmd_export(args) if args.cmd == "export" else cmd_units(args)
+    {"export": cmd_export, "export-official": cmd_export_official, "units": cmd_units}[args.cmd](args)
 
 
 if __name__ == "__main__":

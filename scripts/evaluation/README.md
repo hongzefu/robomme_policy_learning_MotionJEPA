@@ -190,3 +190,21 @@ EPISODE_WALL_S=2400,EVAL_TIMEOUT=14400,CHUNK_EPISODES=20 \
 `finalize_all()` 回收改名），每局另写 `steps/<Task>_ep<n>.jsonl`。`RESET_CHECK=1` 时 `run_shard.sh` 在同一 server
 进程内把本片第一局再评一次写到 `reset-check/`，`reset_clean.py` 对拍打 `RESET_CLEAN`。
 `check_checkpoint.py::RUNS` 里两条新 run 与官方 79999 的逐文件 sha256 由主会话在 bucket 交付 / NFS 副本核对后登记。
+
+## 官方 800 局口径（1019）
+
+用户 2026-10-19「a 同意开工」：在官方 eval seed 上评 512+motion 的 80k 与 40k，口径与历史
+`docs/training-doc/eval-orig80k-modul-vs-official/`、`eval-orig40k-ckpt40000/` 一致——16 任务 × test split ep0–49、
+策略 seed 42、max_steps 1300。流水线沿用上节 1017 的占卡 worker，只多两个环境变量与一个导出子命令，默认值不变：
+
+| 步 | 命令 | 判定行 |
+|---|---|---|
+| 导清单 | `make_manifest.py export-official <out>`（默认读子模块 test metadata；每任务只取 ep<50，ep50 起的 xhard 追加记录排除） | `MANIFEST_OFFICIAL=PASS rows=800 tasks=16` |
+| 分片 | `make_shard_plan.py shards <out>/eval-official-800.jsonl v1-store/evaluation/<run>/plans --shards 10 --expect-per-shard 80` | `SHARD_PLAN=PASS shards=10 per_shard=80` |
+| 写单元 | `make_manifest.py units <manifest.tsv> --stage any --run 'run|ckpt|policy|config|step|10|motion' …` | `UNITS=PASS stage=any` |
+| 抢单 | worker 环境加 `EVAL_SEED=42 EVAL_MAX_STEPS=1300` 后 `gl_hold_pool.sh <jobid>`；不需要 `XHARD_METADATA_DIR` | `WORKER_START … seed=42 max_steps=1300` |
+| 每片验收 | 同上节 | `EVAL_PARAMS=PASS max_steps=1300` |
+
+`EVAL_SEED`（默认 7）在 `gl_hold_pool.sh` 里成为 `SEED`，经 `gl_hold_queue.sh` 白名单到 `gl_eval_shard.sbatch`、再作
+`run_shard.sh` 第 4 参数；`EVAL_MAX_STEPS`（默认 2000）同样透传，`run_shard.sh` 用它作 `MAX_STEPS` 并导出为
+`check_shard.py` 的 `EXPECT_MAX_STEPS`，两处取同一值。

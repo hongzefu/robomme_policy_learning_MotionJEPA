@@ -17,6 +17,9 @@
 #             这样同一套占卡 worker 能跑任意多个 run 的任意 step，加新 run 只改 manifest、不改脚本。
 #             MANIFEST 模式下按 policy 名是否以 -motion 结尾自动设 MMEVLA_MOTION_OVERFLOW 与
 #             EXPECT_MOTION_STATS（motion run 用 resample + 期望统计，其余两者关闭）。
+#   EVAL_SEED（策略 seed，默认 7）、EVAL_MAX_STEPS（单局 max_steps，默认 2000）：1019 官方 800 局口径传 42 / 1300
+#             （与历史 eval-orig80k / eval-orig40k 一致）；SEED 经 gl_hold_queue.sh 白名单到 run_shard.sh 第 4 参数，
+#             EVAL_MAX_STEPS 同样透传，run_shard.sh 用它作 MAX_STEPS 并导出成 check_shard.py 的 EXPECT_MAX_STEPS。
 #   DEMO_PREFIX_STORE：起 worker 前 export 即可，经 gl_hold_queue.sh 的 PASS 白名单透传到 run_shard.sh。
 #   MMEVLA_ENC_CHUNK：同上，SigLIP 编码分批尺寸（0/不设 = 一次编完）。
 # 判定行：WORKER_START job= node= / CLAIM item= job= node= / （gl_hold_queue.sh 的 QUEUE_SHARD_DONE … rc=）/ ITEM_DONE item= rc= /
@@ -34,12 +37,14 @@ else
     [[ -f "$QUEUE_DIR/items.txt" ]] || { echo "队列不存在：$QUEUE_DIR/items.txt"; exit 2; }
 fi
 DRY="${DRY_RUN:-0}"
+EVAL_SEED="${EVAL_SEED:-7}"; EVAL_MAX_STEPS="${EVAL_MAX_STEPS:-2000}"
+[[ "$EVAL_SEED" =~ ^[0-9]+$ && "$EVAL_MAX_STEPS" =~ ^[1-9][0-9]*$ ]] || { echo 'EVAL_SEED / EVAL_MAX_STEPS 必须是数字'; exit 2; }
 HEAD="$(git -C "$REPO" rev-parse HEAD)"
 # clean-HEAD 闸：正式/冒烟必须 clean；DRY_RUN 只测抢单逻辑、不跑任何评测，允许带未提交改动（提交前本机自测用）
 [[ "$DRY" == 1 || -z "$(git -C "$REPO" status --porcelain)" ]] || { echo '必须从 clean HEAD 启动'; exit 2; }
 # MMEVLA_MOTION_PROV_RELAX：硬件四键豁免（1017 计划 T13：离线库在 A100 建、评估卡是 A40，vae 与 encoder 两段都豁免，
 # 其余 sha、版本照比）；EXPECT_DEMO_INJECT=0：本轮不注入 BinFill demo（P4，与 mixed8 训练一致）
-export STEP_TIME=12:00:00 EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 SEED=7 \
+export STEP_TIME=12:00:00 EPISODE_WALL_S=2400 EVAL_TIMEOUT=14400 SEED="$EVAL_SEED" EVAL_MAX_STEPS="$EVAL_MAX_STEPS" EXPECT_MAX_STEPS="$EVAL_MAX_STEPS" \
        MMEVLA_MOTION_PROV_RELAX=gpu_name,compute_cap,sm_count,driver EXPECT_DEMO_INJECT=0 \
        CHUNK_EPISODES="${CHUNK_EPISODES:-20}"
 # 非 MANIFEST 模式沿用写死的 50000；MANIFEST 模式下逐行取
@@ -51,7 +56,7 @@ mkdir -p "$QUEUE_DIR/claims" "$QUEUE_DIR/done"
 # 等作业 RUNNING（起跑时还 PENDING 的作业也可先起 worker，它自己等）；DRY_RUN 跳过
 until [[ "$DRY" == 1 ]] || squeue -j "$JOB" -h -o %T | grep -qx RUNNING; do sleep 60; done
 if [[ "$DRY" == 1 ]]; then NODE="$(hostname)"; else NODE="$(squeue -j "$JOB" -h -o %N)"; fi
-echo "WORKER_START job=$JOB node=$NODE head=$HEAD queue=$QUEUE_DIR manifest=${MANIFEST:-none} suffix=${SUF:-none} chunk=$CHUNK_EPISODES $(date -u +%FT%TZ)"
+echo "WORKER_START job=$JOB node=$NODE head=$HEAD queue=$QUEUE_DIR manifest=${MANIFEST:-none} suffix=${SUF:-none} chunk=$CHUNK_EPISODES seed=$SEED max_steps=$EVAL_MAX_STEPS $(date -u +%FT%TZ)"
 RAN=0; FAILED=0
 while true; do
     ITEM=""; MODEL=""; K=""; RUN=""; CKPT=""
