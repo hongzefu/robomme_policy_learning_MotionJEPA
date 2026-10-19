@@ -292,6 +292,7 @@ a批次仅执行配置基线和2048 before-20的部分前缀，其余预建验�
 | [`eval-binfill-pickxtimes/`](eval-binfill-pickxtimes/result.md) | BinFill / PickXTimes 评估 |
 | [`eval-orig80k-modul-vs-official/`](eval-orig80k-modul-vs-official/result.md) | 原版 80k 两 run（16 任务 / counting 4 任务）与官方 modul 80k 同口径 test 评估，8 卡 24 片并发，回放全保留 | full16 44.62% vs 官方 47.88%（−3.25pp，未检出差异；Behavior −8pp 显著）；count4 70.0% vs 官方 72.0% |
 | [`eval-orig40k-ckpt40000/`](eval-orig40k-ckpt40000/result.md) | 同两条原版 80k run 的第 40000 步 checkpoint，同口径 test 评估（16 任务 / counting 4 任务），回放全保留 | full16 40k 40.62%（→80k 44.62%，+4pp 显著）；count4 40k 67.0%（→80k 70.0%） |
+| [`eval-off800-1019/`](eval-off800-1019/launch.md) | 自训 mixed8 512+motion run 的 79999 与 40000，官方 eval seed 800 局（16 任务 × test ep0–49、策略 seed 42、max_steps 1300），GL 10 卡 | 进行中 |
 
 ## 五、已归档（`../archive/training-doc/`，34 项）
 
