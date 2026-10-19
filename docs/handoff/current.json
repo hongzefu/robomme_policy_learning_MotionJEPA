@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-19T04:28:21Z",
-    "america_new_york": "2026-10-19T00:28:21-0400"
+    "utc": "2026-10-19T04:30:17Z",
+    "america_new_york": "2026-10-19T00:30:17-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "222e08e8065a79d53a283ebe8118ea12160adad9"
+    "base_head": "24bf7ad1a8b7ddbdc6d72cb2fd1852094ed1bb6d"
   },
   "freeze": {
     "active": false,
@@ -290,10 +290,10 @@
           "status": "pending"
         },
         {
-          "what": "只读锁按 m2k-chmod-before.txt 恢复",
-          "evidence": "PERM_RESTORED=OK",
+          "what": "只读锁恢复：移交 mixed8-ctxmotion-train（用户裁决 1019 计划 Q3：GPU0–3 context+motion 训练期间沿用本锁，结束后按 m2k-chmod-before.txt + cmo-chmod-added.txt 一次恢复），本任务收尾跳过",
+          "evidence": "1019-mixed8-ctxmotion 计划 Q3 裁决；handoff 24bf7ad",
           "where": "v1-store/m8v-scripts/m2k-chmod-before.txt",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [
@@ -341,7 +341,7 @@
           "verdict_line": "EXIT_CODE=0"
         },
         {
-          "what": "modulation 训练结束、INC_END 且 m2k-inc-modul 退出后：按 m2k-chmod-before.txt 恢复权限；跑 run_mixed8_200_vla_modul2048_80k_ckpt_export.sh（SMOKE=1→全量）；回写 result.md 与 commitV11.28",
+          "what": "modulation 训练结束、INC_END 且 m2k-inc-modul 退出后：**不恢复权限**（移交 mixed8-ctxmotion-train）；跑 run_mixed8_200_vla_modul2048_80k_ckpt_export.sh（SMOKE=1→全量）；回写 result.md 与 commitV11.28",
           "command": "bash scripts/dataset/hf_export/run_mixed8_200_vla_modul2048_80k_ckpt_export.sh",
           "verdict_line": "RESULT=PASS SHA256_PRE_POST_DIFF=0"
         }
