@@ -129,3 +129,39 @@ timeout 集中在 BinFill 高档、PickHighlight xhard16／xhard18、ButtonUnmas
 | `testx-official/s0`–`s4` | 官方已完成的 5 片（不进统计）；`s5`–`s8` 为中止半成品 |
 | `../logs/policy-eval/` | worker 与单元日志 |
 | `../logs/hold-jobs-testx.txt` | 12 个占位 JobID 清单 |
+
+## 十一、80k 与 40k 补充结果（2026-10-19 补写）
+
+同一份 1200 局清单（`MANIFEST_SHARED=PASS models=6 manifest_sha256=20d4fbfb8430`）、同一链路（seed 7、max_steps 2000），在 10 个占位 job 64243171–64243180 上依次跑完四组，40 个单元全部 `rc=0`：
+
+| 组 | 起止（美东，括注 UTC） | 判定行 |
+|---|---|---|
+| 512+motion@80k（V11.28Beta `a8c9f03`） | 10-18 16:06 → 19:47（20:06:16Z → 23:47:24Z） | `EVAL_512+motion@80k=DONE episodes=1200 error=0` |
+| 512@80k | 10-18 19:13 → 20:55（23:13:59Z → 00:55:39Z） | `EVAL_512@80k=DONE episodes=1200 success=321 fail=790 timeout=89 error=0` |
+| 512+motion@40k（V11.29Beta `f98a988`） | 10-18 20:56 → 10-19 00:23（00:56:51Z → 04:23:04Z） | `EVAL_512+motion@40k=DONE episodes=1200 success=366 fail=770 timeout=64 error=0 downsampled=1` |
+| 512@40k | 10-18 23:58 → 10-19 01:35（03:58:51Z → 05:35:03Z） | `EVAL_512@40k=DONE episodes=1200 success=276 fail=829 timeout=95 error=0` |
+
+四组均 `SHARDS_UNION=PASS total=1200`、`SEED_MATCH=PASS rows=1200`、`EVAL_VIDEO=PASS videos=1200`；`EVAL_TABLE=DONE models=6 cells=100`。
+
+六模型按档成功率（%；局数 easy／medium／hard 各 192，xhard12 132、xhard14 144、xhard16 与 xhard18 各 120、xhard20 108）：
+
+| 档 | 512@40k | 512@60k | 512@80k | 512+motion@40k | 512+motion@60k | 512+motion@80k |
+|---|---|---|---|---|---|---|
+| easy | 47.9 | 44.8 | 43.2 | 47.9 | 51.0 | 50.0 |
+| medium | 31.2 | 37.0 | 40.1 | 43.8 | 43.2 | 40.6 |
+| hard | 20.8 | 25.0 | 22.4 | 26.6 | 28.6 | 29.7 |
+| xhard12 | 13.6 | 15.9 | 21.2 | 27.3 | 28.0 | 24.2 |
+| xhard14 | 18.1 | 16.0 | 19.4 | 21.5 | 27.1 | 25.7 |
+| xhard16 | 9.2 | 17.5 | 20.0 | 17.5 | 20.0 | 26.7 |
+| xhard18 | 11.7 | 15.8 | 15.8 | 23.3 | 22.5 | 26.7 |
+| xhard20 | 13.9 | 18.5 | 17.6 | 21.3 | 19.4 | 16.7 |
+| base 三档 | 33.3 | 35.6 | 35.2 | 39.4 | 41.0 | 40.1 |
+| xhard 五档 | 13.5 | 16.7 | 18.9 | 22.3 | 23.7 | 24.2 |
+| **全部** | **23.0** | **25.8** | **26.8** | **30.5** | **32.0** | **31.8** |
+| easy 加权两倍 | 26.4 | 28.4 | 29.0 | 32.9 | 34.6 | 34.3 |
+
+结论：三个 step 上 motion 都领先（全部 +7.5／+6.2／+5.0 pp，xhard +8.8／+7.0／+5.3 pp）；512 随步数单调上升（23.0 → 25.8 → 26.8），motion 在 60k 与 80k 持平（32.0 对 31.8）、40k 已到 30.5。逐格表见 `v1-store/evaluation/testx/summary-6models/summary.md`。
+
+用户决策原话：2026-10-18「这两个评估完了之后，再跑四十 K 的两个」「必须先跑这个带 motion 的。」
+
+下一步：官方 eval seed 800 局（seed 42、max_steps 1300）评 512+motion 的 80k 与 40k，见 `docs/training-doc/eval-off800-1019/`。
