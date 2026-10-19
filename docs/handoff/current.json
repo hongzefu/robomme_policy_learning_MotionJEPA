@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-19T06:00:00Z",
-    "america_new_york": "2026-10-19T02:00:00-04:00"
+    "utc": "2026-10-19T13:15:00Z",
+    "america_new_york": "2026-10-19T09:15:00-04:00"
   },
   "repo": {
     "branch": "v2-motionmem-eval-test1017",
-    "base_head": "HEAD 前一 commit（docs 规则回流）"
+    "base_head": "f8138e0"
   },
   "freeze": {
     "active": false,
@@ -320,14 +320,14 @@
     "eval-off800": {
       "plan": {
         "file": "docs/training-doc/eval-off800-1019/launch.md（方案见会话 2026-10-19 口径 (a)）",
-        "sha": "commitV11.31Beta"
+        "sha": "f8138e0"
       },
-      "state": "running",
+      "state": "closed",
       "state_changed_at": {
-        "utc": "2026-10-19T06:00:00Z",
-        "america_new_york": "2026-10-19T02:00:00-04:00"
+        "utc": "2026-10-19T13:15:00Z",
+        "america_new_york": "2026-10-19T09:15:00-04:00"
       },
-      "state_reason": "V11.31Beta 起跑：512+motion 80k 在前、40k 在后，10 个占位 job",
+      "state_reason": "40k/60k/80k 三组官方 800 局完成，占位 job 已释放，结果回写 commitV11.31",
       "owner": {
         "session": "https://claude.ai/code/session_01LMCMAVs6vXp1XMWZZALH3N",
         "host": "sled-aspen"
@@ -338,98 +338,53 @@
       "pre_handoff": [
         {
           "what": "512+motion@79999 官方 800 局",
-          "evidence": "EVAL_off800@80k=DONE episodes=800 error=0",
+          "evidence": "EVAL_512+motion@80k=DONE episodes=800 success=345 error=0",
           "where": "v1-store/evaluation/off800-512m-80k/",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "512+motion@40000 官方 800 局",
-          "evidence": "EVAL_off800@40k=DONE episodes=800 error=0",
+          "evidence": "EVAL_512+motion@40k=DONE episodes=800 success=325 error=0",
           "where": "v1-store/evaluation/off800-512m-40k/",
-          "status": "pending"
+          "status": "pass"
+        },
+        {
+          "what": "512+motion@60000 官方 800 局（用户追加）",
+          "evidence": "EVAL_512+motion@60k=DONE episodes=800 success=340 error=0",
+          "where": "v1-store/evaluation/off800-512m-60k/",
+          "status": "pass"
         },
         {
           "what": "result.md 与留档 commit",
           "evidence": "commitV11.31",
           "where": "origin/v2-motionmem-eval-test1017",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "释放 10 个占位 job",
-          "evidence": "squeue 前后对比",
+          "evidence": "scancel 64243171–64243180 后 squeue -u hongzefu 为空",
           "where": "v1-store/logs/hold-jobs-testx80k.txt",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "gl-login2:xh-off800-pool-64243171",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-pool-64243171.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "gl-login2:xh-off800-pool-64243172",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-pool-64243172.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "gl-login2:xh-off800-pool-64243173",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-pool-64243173.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "gl-login2:xh-off800-pool-64243174",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-pool-64243174.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "gl-login2:xh-off800-pool-64243175",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-pool-64243175.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "gl-login2:xh-off800-pool-64243176",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-pool-64243176.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "gl-login2:xh-off800-pool-64243177",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-pool-64243177.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "gl-login2:xh-off800-pool-64243178",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-pool-64243178.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "gl-login2:xh-off800-pool-64243179",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-pool-64243179.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "gl-login2:xh-off800-pool-64243180",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-pool-64243180.log",
-          "done_line": "EXIT_CODE="
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
           "date": "2026-10-19",
           "quote": "a 同意开工",
           "scope": "官方 eval seed 800 局（seed 42、max_steps 1300）评 512+motion 80k 再 40k；改 gl_hold_pool/run_shard/gl_hold_queue/make_manifest 加覆盖开关；复用 10 个占位 job"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-19",
+          "quote": "40k跑完把60k也跑了",
+          "scope": "官方 800 局追加 512+motion@60000，排在 40k 之后"
         }
       ],
       "pending_decisions": [],
-      "next_steps": [
-        {
-          "what": "两组跑完后合并分片、出 16 任务表并与历史 800 局对照",
-          "command": "merge_shards.py <run 根> --expect-total 800；summarize.py",
-          "verdict_line": "EVAL_off800@80k=DONE / EVAL_off800@40k=DONE"
-        }
-      ]
+      "next_steps": []
     }
   }
 }
