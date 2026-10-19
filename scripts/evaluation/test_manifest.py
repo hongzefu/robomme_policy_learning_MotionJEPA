@@ -178,3 +178,50 @@ def test_smoke_plans_and_units(exported):
                       "--run", "b|/m/a/60000|mixed8-512|c|60000|10|0",
                       "--run", "c|/m/o/79999|official|c|79999|10|0"]
     assert subprocess.run(swapped, capture_output=True, text=True).returncode != 0
+
+
+def run_official(meta: Path, out: Path):
+    return subprocess.run([sys.executable, str(HERE / "make_manifest.py"), "export-official", str(out),
+                           "--metadata-dir", str(meta)], capture_output=True, text=True)
+
+
+def test_export_official_excludes_xhard(tmp_path, capsys):
+    """1019 官方 800 局口径：每任务只取 ep0–49，ep50 起追加的 xhard 一律排除；可直接切 10×80 片。"""
+    meta = build_metadata(tmp_path)
+    out = tmp_path / "official800"
+    proc = run_official(meta, out)
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    assert "MANIFEST_OFFICIAL=PASS rows=800 tasks=16" in proc.stdout
+    rows = read_jsonl(out / make_manifest.OFFICIAL_NAME)
+    assert len(rows) == 800 and set(rows[0]) == {"task", "episode", "seed", "difficulty"}
+    assert {r["difficulty"] for r in rows} <= set(make_manifest.BASE_DIFFICULTIES)
+    per_task = collections.defaultdict(list)
+    for r in rows:
+        per_task[r["task"]].append(r["episode"])
+    assert set(per_task) == set(make_manifest.TASK_ORDER)
+    assert all(sorted(v) == list(range(50)) for v in per_task.values())
+    assert [make_manifest.row_key(r) for r in rows] == sorted(make_manifest.row_key(r) for r in rows)
+    meta_json = json.loads((out / "manifest_meta.json").read_text())
+    assert meta_json["rows"] == 800 and meta_json["sources"]["BinFill"]["picked"] == 50
+    assert run_official(meta, out).returncode != 0          # 拒绝覆盖已有产物
+    summary = make_shard_plan.make_shards(out / make_manifest.OFFICIAL_NAME, tmp_path / "off" / "plans", 10,
+                                          expect_per_shard=80)
+    assert summary["sizes"] == [80] * 10
+    assert "SHARD_PLAN=PASS shards=10 per_shard=80" in capsys.readouterr().out
+
+
+def test_export_official_missing_episode_fails(tmp_path):
+    meta = build_metadata(tmp_path)
+    path = meta / "record_dataset_RouteStick_metadata.json"
+    payload = json.loads(path.read_text())
+    payload["records"] = [r for r in payload["records"] if r["episode"] != 17]
+    payload["record_count"] = len(payload["records"])
+    path.write_text(json.dumps(payload))
+    proc = run_official(meta, tmp_path / "official800")
+    assert proc.returncode != 0 and "MANIFEST_OFFICIAL=FAIL RouteStick" in proc.stderr
+
+
+def test_eval_scripts_bash_syntax():
+    for name in ("gl_hold_pool.sh", "gl_hold_queue.sh", "run_shard.sh", "gl_eval_shard.sbatch"):
+        proc = subprocess.run(["bash", "-n", str(HERE / name)], capture_output=True, text=True)
+        assert proc.returncode == 0, name + proc.stderr
