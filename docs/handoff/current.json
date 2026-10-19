@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-19T04:30:17Z",
-    "america_new_york": "2026-10-19T00:30:17-0400"
+    "utc": "2026-10-19T04:34:30Z",
+    "america_new_york": "2026-10-19T00:34:30-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "24bf7ad1a8b7ddbdc6d72cb2fd1852094ed1bb6d"
+    "base_head": "92437d060bf8dfdf69b9fe0bdb6be4c3be7c3962"
   },
   "freeze": {
     "active": false,
@@ -360,9 +360,9 @@
         "file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1019-mixed8-ctx512-motion-plan.md",
         "sha": "222e08e"
       },
-      "state": "planned",
-      "state_changed_at": "2026-10-19T04:28:21Z",
-      "state_reason": "用户裁决 Q1–Q4 按推荐并给开工令；待开工审查 PLAN_CONSISTENCY_REVIEW blocking=0 后转 running",
+      "state": "running",
+      "state_changed_at": "2026-10-19T04:34:30Z",
+      "state_reason": "PLAN_CONSISTENCY_REVIEW=PASS base=222e08e findings=12 blocking=0，已按文字修订；开工：派 S1 写 5 个新文件",
       "owner": {
         "session": "https://claude.ai/code/session_01GyRC8vNRTr8vC9GRqdry1n",
         "host": "claude-code"
@@ -418,14 +418,14 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "开工审查",
-          "command": "sonnet 只读审查 1019 计划 @ 222e08e",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS blocking=0"
+          "what": "S1 写 5 个新文件 → RV1 前审 → --no-ff 合并 commitV11.29 → RV1 后审 → push → 新文件 chmod a-w 登记 cmo-chmod-added.txt",
+          "command": "—",
+          "verdict_line": "POST_MERGE_REVIEW=PASS; LOCK_ADDED=OK files=5"
         },
         {
-          "what": "S1 写 5 个新文件 → 审查 → --no-ff 合并 commitV11.29",
-          "command": "—",
-          "verdict_line": "POST_MERGE_REVIEW=PASS"
+          "what": "G1–G3 CPU 闸门 → G4 短测（GPU0–3）→ commitV11.30Beta → G5 preflight → 起跑 cmo-train → G6 后起 cmo-inc",
+          "command": "见计划第二部分 §4 runbook",
+          "verdict_line": "SMOKE20=PASS; PREFLIGHT=PASS"
         }
       ]
     }
