@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-19T04:50:58Z",
-    "america_new_york": "2026-10-19T00:50:58-0400"
+    "utc": "2026-10-19T05:00:55Z",
+    "america_new_york": "2026-10-19T01:00:55-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "34a7bad967c8cd58d3f68ebf8a747949d42a37e2"
+    "base_head": "0645d14f4863e0b91d2fc13923df896672f5f0cb"
   },
   "freeze": {
     "active": false,
@@ -362,7 +362,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-19T04:34:30Z",
-      "state_reason": "V11.29 合入（34a7bad）、G1–G4 PASS；commitV11.30Beta 后跑 G5 preflight 并起跑 cmo-train",
+      "state_reason": "80k 自 commitV11.30Beta 0645d14 于美东 2026-10-19 00:52:22 起跑（GPU0–3 fsdp4/w8），G6 PASS：50 步无报错、稳态 3.9 s/步、预计约 86 h；cmo-inc 已于 01:00 起",
       "owner": {
         "session": "https://claude.ai/code/session_01GyRC8vNRTr8vC9GRqdry1n",
         "host": "claude-code"
@@ -396,7 +396,7 @@
           "tmux": "cmo-inc",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/cmo-inc.log",
           "done_line": "INC_END",
-          "status": "pending"
+          "status": "running"
         },
         {
           "what": "正式上传驱动全量回读",
@@ -406,7 +406,13 @@
           "status": "pending"
         }
       ],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "cmo-train",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-context-motion-b128-80k.log",
+          "done_line": "EXIT_CODE="
+        }
+      ],
       "authorizations": [
         {
           "kind": "go",
@@ -418,19 +424,14 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "G5 起跑前自检（HEAD=V11.30Beta、clean）",
-          "command": "bash v1-store/m8v-scripts/cmo-preflight.sh",
-          "verdict_line": "PREFLIGHT=PASS"
+          "what": "Monitor cmo-train 与 cmo-inc；任一 OOM/崩溃/NaN 停下报错交用户，不 resume",
+          "command": "—",
+          "verdict_line": "EXIT_CODE=0"
         },
         {
-          "what": "起跑 cmo-train（GPU0–3）；G6 后、run 目录出现时起 cmo-inc",
-          "command": "见 docs/training-doc/mixed8-200-m8x8-context-motion-b128-80k/launch.md",
-          "verdict_line": "300 步内无 Traceback/RESOURCE_EXHAUSTED、loss 有限"
-        },
-        {
-          "what": "训练 EXIT_CODE=0 且 INC_END 后：正式上传驱动 SMOKE=1 → 全量；result.md 回写 commitV11.30；按 m2k-chmod-before.txt + cmo-chmod-added.txt 恢复权限",
+          "what": "训练 EXIT_CODE=0、16 份 ckpt、INC_END 且 cmo-inc 退出后：正式驱动 SMOKE=1 → 全量；result.md 回写 commitV11.30；按 m2k-chmod-before.txt + cmo-chmod-added.txt 恢复权限",
           "command": "bash scripts/dataset/hf_export/run_mixed8_200_vla_ctx_motion_80k_ckpt_export.sh",
-          "verdict_line": "RESULT=PASS SHA256_PRE_POST_DIFF=0; PERM_RESTORED=OK"
+          "verdict_line": "TRAIN_DONE=PASS exit=0 ckpts=16; RESULT=PASS SHA256_PRE_POST_DIFF=0; PERM_RESTORED=OK"
         }
       ],
       "pre_start_self_check": [
@@ -441,7 +442,9 @@
         "DRY_RUN_CMO=PASS",
         "YAML_DIFF=PASS lines=2",
         "DATASET_BUILD=PASS samples=1383846 motion=1",
-        "SMOKE20=PASS oom=0 loss_finite=1 peak_mib=71983 steady_s_per_step=7.500"
+        "SMOKE20=PASS oom=0 loss_finite=1 peak_mib=71983 steady_s_per_step=7.500",
+        "PREFLIGHT=PASS n=30",
+        "G6: Step 0 loss=0.5756; 50it rate 3.9s/it; 无 Traceback/OOM/NaN"
       ]
     }
   }
