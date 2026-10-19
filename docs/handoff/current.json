@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-18T23:10:55Z",
-    "america_new_york": "2026-10-18T19:10:55-0400"
+    "utc": "2026-10-19T04:28:21Z",
+    "america_new_york": "2026-10-19T00:28:21-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "e61259941683bf25b32a723aa1cd8343a90811e8"
+    "base_head": "222e08e8065a79d53a283ebe8118ea12160adad9"
   },
   "freeze": {
     "active": false,
@@ -353,6 +353,80 @@
         "SMOKE20_CTX=PASS oom=0 loss_finite=1 exit_code=0 peak_mib=79445 steady_s_per_step=10.07",
         "SMOKE20_MODUL=PASS oom=0 loss_finite=1 exit_code=0 peak_mib=67907 steady_s_per_step=1.84",
         "CKPT_LOAD_CTX2048=PASS leaves_equal=1 mem_leaves_changed=4 actions_match=1 mem_len=2048"
+      ]
+    },
+    "mixed8-ctxmotion-train": {
+      "plan": {
+        "file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1019-mixed8-ctx512-motion-plan.md",
+        "sha": "222e08e"
+      },
+      "state": "planned",
+      "state_changed_at": "2026-10-19T04:28:21Z",
+      "state_reason": "用户裁决 Q1–Q4 按推荐并给开工令；待开工审查 PLAN_CONSISTENCY_REVIEW blocking=0 后转 running",
+      "owner": {
+        "session": "https://claude.ai/code/session_01GyRC8vNRTr8vC9GRqdry1n",
+        "host": "claude-code"
+      },
+      "depends_on": [
+        "mixed8-vla-build"
+      ],
+      "pre_handoff": [
+        {
+          "what": "80k 训练完成",
+          "evidence": "TRAIN_DONE=PASS exit=0 ckpts=16",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-context-motion-b128-80k.log",
+          "status": "pending"
+        },
+        {
+          "what": "result.md 回写并以 commitV11.30 push",
+          "evidence": "commitV11.30 sha",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/docs/training-doc/mixed8-200-m8x8-context-motion-b128-80k/result.md",
+          "status": "pending"
+        },
+        {
+          "what": "按 Q3 恢复权限（m2k-chmod-before.txt + cmo-chmod-added.txt）",
+          "evidence": "PERM_RESTORED=OK",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/m8v-scripts/",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [
+        {
+          "what": "增量上传",
+          "tmux": "cmo-inc",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/cmo-inc.log",
+          "done_line": "INC_END",
+          "status": "pending"
+        },
+        {
+          "what": "正式上传驱动全量回读",
+          "tmux": "cmo-upload",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/cmo-upload.log",
+          "done_line": "SHA256_PRE_POST_DIFF=0",
+          "status": "pending"
+        }
+      ],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-19",
+          "quote": "1234都按照推荐的 / 再审查一遍 没问题就开始",
+          "scope": "1019-mixed8-ctx512-motion-plan.md @ 222e08e 步骤 1–7 全部（开工审查 blocking=0 才动手；G4/G5 通过后直接 Beta 起跑；OOM 即停报错；步时慢不停）"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "开工审查",
+          "command": "sonnet 只读审查 1019 计划 @ 222e08e",
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS blocking=0"
+        },
+        {
+          "what": "S1 写 5 个新文件 → 审查 → --no-ff 合并 commitV11.29",
+          "command": "—",
+          "verdict_line": "POST_MERGE_REVIEW=PASS"
+        }
       ]
     }
   }
