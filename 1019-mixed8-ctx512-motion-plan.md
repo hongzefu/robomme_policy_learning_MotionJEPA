@@ -2,7 +2,7 @@
 
 > 创建：2026-10-19 美东 00:40。权威工作副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，环境 B（AWS p4de，8×A100-80GB），分支 `v2-motionmem`，起草时 HEAD `f6a57ff`（代码最后一次改动在 `c27514a` commitV11.27；工作区 clean）。
 >
-> **当前状态：只是计划，未改代码、未起任何短测或训练。** 开工令按 AGENTS 第 2 条由用户对本文件不改而直接认可给出；开工后、动手前先派一个 sonnet 只读审查计划自洽性，`PLAN_CONSISTENCY_REVIEW=PASS … blocking=0` 才动手。
+> **当前状态：第一部分第 6 节 Q1–Q4 已于 2026-10-19 由用户裁决「1234都按照推荐的」；开工令「再审查一遍 没问题就开始」——开工审查 `PLAN_CONSISTENCY_REVIEW=PASS … blocking=0` 后即动手，有阻断项则停下交用户。** 进展见第一部分第 9 节。
 >
 > **计划格式**：用户本轮明确要求「直接用 plan 模式的 md 不用再写 html 但是要留在根目录」，按用户当前指令覆盖 AGENTS 第 2 条「根目录计划一律 HTML」，与 `1018-mixed8-2048-context-modul-plan.md` 的先例相同。
 >
@@ -14,6 +14,7 @@
 
 1. 「gpu0-3跑context 512+motion 写计划 直接用plan模式的md 不用再写html 但是要留在根目录」
 2. 「不是！」「我的意思是全部走conetxxt」「现在已经实现过了」（针对分路理解的纠正）
+3. 「1234都按照推荐的」「再审查一遍 没问题就开始」
 
 # 第一部分（给人看）
 
@@ -79,9 +80,9 @@
 
 **开工令覆盖范围**：一次开工令覆盖步骤 1–7；G4、G5 通过后直接打 Beta 起跑，不再二次请示；只有闸门 FAIL（含 OOM）才停下报错。
 
-## 6. 用户待裁决项
+## 6. 用户裁决（2026-10-19，「1234都按照推荐的」，四项均按下表「推荐」列执行）
 
-| 编号 | 问题 | 推荐 |
+| 编号 | 问题 | 推荐（已采纳） |
 |---|---|---|
 | Q1 | run 名 / bucket 名 | 按口径 6：`mixed8-200-m8x8-context-motion-b128-80k`、`HongzeFu/robomme-vla-mixed8-200-context-motion-80k-v1`（公开） |
 | Q2 | 是否登记进状态机 `docs/handoff/current.json` | 登记，任务 id `mixed8-ctxmotion-train`，状态 `planned` |
@@ -103,6 +104,10 @@
 | `PREFLIGHT=PASS n=<k>` | `preflight_train_launch.py` 钉 Beta sha、yaml sha、norm sha、motion 库四项 | 起跑时 HEAD、配置、数据身份全部钉死 |
 | `TRAIN_DONE=PASS exit=0 ckpts=16` | 日志末行 `EXIT_CODE=0`，step 5000…75000 与 79999 共 16 份 | 训练完整 |
 | `SHA256_PRE_POST_DIFF=0`、`BUCKET_PUBLIC=True` | 正式驱动全量回读、上传前后 sha256 逐行对照 | 上传完成（`INC_END` 不算） |
+
+## 9. 实施进展登记
+
+1. 2026-10-19 用户「1234都按照推荐的」「再审查一遍 没问题就开始」：Q1–Q4 按推荐；状态机登记 `mixed8-ctxmotion-train`（含 `kind: go`）；`1018-ctx-frame-modul-motion-plan.html` 文件头加作废标注；Q3 已通知 `mixed8-2048-train` 的 owner 会话。
 
 第二部分是逐文件清单、分配表、闸门、runbook、风险、盲区与交接登记。
 
