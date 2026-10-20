@@ -1,0 +1,63 @@
+{
+  "_doc": [
+    "v9-st 公开导出裁决账本：wan-mixed8-200-st512q16-b88x8-60ep-a。",
+    "仅最终驱动对整包 stage 扫描；增量不对被二进制扫描器跳过的 .pt 做空扫描。",
+    "stage 含 30 个 EMA 检查点、5 份训练档案、192 段视频、5+k 份报告、README 与 SHA 清单，共 234+k 件。",
+    "config.yaml 的 P9 初值由 2fbf980:configs/default.yaml 合成实际路径派生键后扫描，按命中行计数为 5。",
+    "正式导出前仍须对真实冻结配置重扫；计数不符即停止。",
+    "train.log 与 eval-fourarm/reports 的路径是运行与评估溯源，命中数按实际报告留档，不设预计值。",
+    "其余未裁决模式停止；P5 疑似凭据始终硬停。"
+  ],
+  "entries": [
+    {
+      "pattern": "P9",
+      "path_glob": "config.yaml",
+      "expected_count": 5,
+      "decision": "accept",
+      "scope": "both",
+      "reason": "训练配置的 data.data_root 与四个 data._*_dir/_path 派生键记着建库机上 latent 库的绝对路径。对外不可达、非凭据，是可复现性信息；config.yaml 的 sha256 进 SHA256SUMS.pre.txt，按『只排除与披露、不改字节』处置：原样保留 + README『文件布局与复核』披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "train.log",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "训练 stdout 的启动横幅回显数据集与 wandb key 文件的本机路径（key 内容不打印），以及 torch 警告行里的解释器 site-packages 路径。路径对外不可达、不含凭据；日志是训练过程的唯一原始记录，原样（仅去 tqdm 中间态）保留 + README 披露。"
+    },
+    {
+      "pattern": "P10",
+      "path_glob": "train.log",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "训练诊断与警告中的编码器源码路径用于溯源，非凭据；原样保留并在 README 披露。"
+    },
+    {
+      "pattern": "P9",
+      "path_glob": "eval-fourarm/reports/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "四臂、RGB 与成功中途诊断报告中的本机输入、检查点及代码路径用于溯源；外部不可访问且非凭据，原样保留并在 README 披露。"
+    },
+    {
+      "pattern": "P10",
+      "path_glob": "eval-fourarm/reports/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "上述溯源路径可能包含编码器源码目录名；原样保留并披露。"
+    },
+    {
+      "pattern": "P7",
+      "path_glob": "eval-fourarm/reports/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "评估报告可能记录内部主机名，外部不可路由且非凭据；原样保留并披露。"
+    },
+    {
+      "pattern": "P8",
+      "path_glob": "eval-fourarm/reports/*",
+      "decision": "accept",
+      "scope": "both",
+      "reason": "评估报告可能记录 GPU 硬件标识，非凭据；原样保留并披露。"
+    }
+  ]
+}
