@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-19T05:00:55Z",
-    "america_new_york": "2026-10-19T01:00:55-0400"
+    "utc": "2026-10-20T15:50:00Z",
+    "america_new_york": "2026-10-20T11:50:00-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
@@ -360,9 +360,9 @@
         "file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1019-mixed8-ctx512-motion-plan.md",
         "sha": "222e08e"
       },
-      "state": "running",
-      "state_changed_at": "2026-10-19T04:34:30Z",
-      "state_reason": "80k 自 commitV11.30Beta 0645d14 于美东 2026-10-19 00:52:22 起跑（GPU0–3 fsdp4/w8），G6 PASS：50 步无报错、稳态 3.9 s/步、预计约 86 h；cmo-inc 已于 01:00 起",
+      "state": "closed",
+      "state_changed_at": "2026-10-20T15:44:33Z",
+      "state_reason": "用户 2026-10-20 美东 11:4x「取消 GPU 零零到三的这个任务，留档把只把文件关键文件 log 留档这些大的ckpt都删掉」：cmo-train 于 32.4k/80k（美东 10-20 11:44）kill，日志尾行 EXIT_CODE=CANCELLED；cmo-inc 同时 kill（最后 INC_UPLOADED step=30000，09:14 美东）；本地 ckpt 5000–30000（6×约11G）已删，run 目录只留配置与 ARCHIVE_NOTE.txt；HF 已上传副本未动；用户「统一恢复状态记录也要更新」：按 Q3 以 m2k-chmod-before.txt + cmo-chmod-added.txt 恢复权限 PERM_RESTORED=OK files=400",
       "owner": {
         "session": "https://claude.ai/code/session_01GyRC8vNRTr8vC9GRqdry1n",
         "host": "claude-code"
@@ -373,21 +373,21 @@
       "pre_handoff": [
         {
           "what": "80k 训练完成",
-          "evidence": "TRAIN_DONE=PASS exit=0 ckpts=16",
+          "evidence": "EXIT_CODE=CANCELLED step≈32.4k ckpts_local=0",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-context-motion-b128-80k.log",
-          "status": "pending"
+          "status": "cancelled"
         },
         {
           "what": "result.md 回写并以 commitV11.30 push",
           "evidence": "commitV11.30 sha",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/docs/training-doc/mixed8-200-m8x8-context-motion-b128-80k/result.md",
-          "status": "pending"
+          "status": "cancelled"
         },
         {
           "what": "按 Q3 恢复权限（m2k-chmod-before.txt + cmo-chmod-added.txt）",
-          "evidence": "PERM_RESTORED=OK",
+          "evidence": "PERM_RESTORED=OK files=400",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/m8v-scripts/",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [
@@ -396,42 +396,37 @@
           "tmux": "cmo-inc",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/cmo-inc.log",
           "done_line": "INC_END",
-          "status": "running"
+          "status": "cancelled"
         },
         {
           "what": "正式上传驱动全量回读",
           "tmux": "cmo-upload",
           "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/cmo-upload.log",
           "done_line": "SHA256_PRE_POST_DIFF=0",
-          "status": "pending"
+          "status": "cancelled"
         }
       ],
-      "running_handles": [
-        {
-          "tmux": "cmo-train",
-          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-context-motion-b128-80k.log",
-          "done_line": "EXIT_CODE="
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
           "date": "2026-10-19",
           "quote": "1234都按照推荐的 / 再审查一遍 没问题就开始",
           "scope": "1019-mixed8-ctx512-motion-plan.md @ 222e08e 步骤 1–7 全部（开工审查 blocking=0 才动手；G4/G5 通过后直接 Beta 起跑；OOM 即停报错；步时慢不停）"
+        },
+        {
+          "kind": "scope",
+          "date": "2026-10-20",
+          "quote": "取消 GPU 零零到三的这个任务，留档把只把文件关键文件 log 留档这些大的ckpt都删掉 / 统一恢复状态记录也要更新",
+          "scope": "kill cmo-train/cmo-inc、删本地 ckpt、留日志与配置、按 Q3 恢复权限、更新 handoff"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "Monitor cmo-train 与 cmo-inc；任一 OOM/崩溃/NaN 停下报错交用户，不 resume",
+          "what": "无；HF 上已增量上传的 ckpt（≤step 30000）是否删除待用户决定",
           "command": "—",
-          "verdict_line": "EXIT_CODE=0"
-        },
-        {
-          "what": "训练 EXIT_CODE=0、16 份 ckpt、INC_END 且 cmo-inc 退出后：正式驱动 SMOKE=1 → 全量；result.md 回写 commitV11.30；按 m2k-chmod-before.txt + cmo-chmod-added.txt 恢复权限",
-          "command": "bash scripts/dataset/hf_export/run_mixed8_200_vla_ctx_motion_80k_ckpt_export.sh",
-          "verdict_line": "TRAIN_DONE=PASS exit=0 ckpts=16; RESULT=PASS SHA256_PRE_POST_DIFF=0; PERM_RESTORED=OK"
+          "verdict_line": "—"
         }
       ],
       "pre_start_self_check": [
