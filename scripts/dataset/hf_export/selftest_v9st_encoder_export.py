@@ -217,9 +217,26 @@ def main():
         text=run(argv,env|dict(M8X_EXPORT_ROOT=str(export)),out/f"{label}.log",1)
         assert "无本轮上传标记" in text
         assert not any(e["kind"] in ("public","create","upload") for e in events()[before:])
+    marker=export/"logs/uploaded.marker"
+    marker_identity=dict(schema_version=1,run_name=RUN,bucket_id=BUCKET)
+    for label,identity in (
+        ("wrong_bucket",marker_identity|dict(bucket_id=BUCKET+"-other")),
+        ("wrong_run",marker_identity|dict(run_name=RUN+"-other")),
+        ("empty",None),
+        ("malformed",{}),
+    ):
+        if identity is None: marker.write_text("")
+        else: dump(marker,identity)
+        for driver,argv in (("final",["bash",str(dst/FINAL)]),("inc",["bash",str(dst/INC),RUN,BUCKET,EXPORT,"fake-train"])):
+            before=len(events())
+            text=run(argv,env|dict(M8X_EXPORT_ROOT=str(export)),out/f"{driver}_marker_{label}.log",1)
+            assert "UPLOAD_MARKER_MISMATCH" in text
+            assert not any(e["kind"] in ("public","create","upload","upload_batch") for e in events()[before:])
+    marker.unlink()
     (fake/"bucket/foreign.bin").unlink(); dump(fake/"state.json",dict(exists=False,private=True))
     text=run(["bash",str(dst/INC),RUN,BUCKET,EXPORT,"fake-train"],env,out/"inc_real_fake_hf.log",1)
     assert "FIRST_READBACK=PASS epoch=2" in text and "INC_END_INCOMPLETE" in text
+    assert json.loads(marker.read_text())==marker_identity
     done=export/"logs/uploaded/ckpt-epoch-2.done"
     assert done.read_text().strip()==sha(source/"checkpoint_epoch_2.pt")
     # 已有 done 却丢失清单时，重启应从标记恢复完整清单。
@@ -234,6 +251,12 @@ def main():
     assert next(i for i,e in enumerate(later) if e["kind"]=="list") < next(i for i,e in enumerate(later) if e["kind"]=="public")
     assert not any(e.get("name")=="checkpoint_epoch_2.pt" for e in later)
     assert len([p for p in (fake/"bucket").rglob("*") if p.is_file()])==235
+    # 全部 done 已存在时也必须核身份，不能跳过 ensure_bucket 后误报 INC_END。
+    dump(marker,marker_identity|dict(bucket_id=BUCKET+"-other"))
+    before=len(events())
+    text=run(["bash",str(dst/INC),RUN,BUCKET,EXPORT,"fake-train"],env,out/"inc_marker_all_done.log",1)
+    assert "UPLOAD_MARKER_MISMATCH" in text and len(events())==before
+    dump(marker,marker_identity)
     old_status=(mid/"e20.status.json").read_text()
     dump(mid/"e20.status.json",dict(epoch=20,status="ok",terminal=True))
     before=len(events())
@@ -257,7 +280,7 @@ def main():
     ):
         retry_export=repo/"v1-store/exports"/label
         (retry_export/"logs").mkdir(parents=True)
-        (retry_export/"logs/uploaded.marker").touch()
+        dump(retry_export/"logs/uploaded.marker",marker_identity)
         state=json.loads((fake/"state.json").read_text()); state["readbacks"]=0; dump(fake/"state.json",state)
         text=run(["bash",str(dst/INC),RUN,BUCKET,label,"fake-train"],env|extra,out/f"inc_{label}.log",1)
         assert ("FIRST_READBACK=PASS" in text)==passed
@@ -266,7 +289,8 @@ def main():
     report=dict(status="PASS",synthetic_video=True,network=False,real_credentials=False,
                 checks=["日志阶段1与9一致，保留两条MOTION_MON","k=0/1/5文件数234/235/239", "四臂FAIL允许，RGB FAIL拒绝",
                         "失败/缺失/未终态及e60不冒充成功probe", "增量两轮旧e2通过/新e4跳过/坏arch e6拒绝", "正式模式拒绝干跑覆盖",
-                        "两个驱动非空无marker均不设public", "e2匿名读回SHA与最终逐件done衔接", "末尾全部源映射含任务下划线",
+                        "两个驱动非空无marker均不设public", "两个驱动均拒绝其他bucket的有效marker", "两个驱动均拒绝其他run的有效marker",
+                        "两个驱动均拒绝空或无效marker", "全部done存在时仍核验marker身份", "e2匿名读回SHA与最终逐件done衔接", "末尾全部源映射含任务下划线",
                         "错误done SHA拒绝", "读回篡改拒绝且不提前RESULT=PASS", "API失败不创建或公开",
                         "增量中断后从done恢复SHA清单", "评估产物变化在联网前拒绝复用旧计划",
                         "匿名读取使用隔离HF_HOME", "首读回三失败后成功/四失败耗尽/坏SHA均按契约落标记"])

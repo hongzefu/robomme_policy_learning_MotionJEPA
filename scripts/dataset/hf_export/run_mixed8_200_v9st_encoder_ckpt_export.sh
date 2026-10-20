@@ -82,6 +82,35 @@ assert_public() {  # $1 = 判定行前缀
   esac
 }
 
+upload_marker() {
+  # 两个驱动共用严格身份格式；旧空标记和其他 run/bucket 的标记均不得迁移为本轮归属。
+  "$MJ/.venv/bin/python" - "$1" "$EXPORT_ROOT/logs/uploaded.marker" "$RUN_NAME" "$BUCKET_ID" <<'PYMARKER'
+import json, os, sys, tempfile
+from pathlib import Path
+mode, filename, run_name, bucket_id = sys.argv[1:]
+path = Path(filename)
+expected = dict(schema_version=1, run_name=run_name, bucket_id=bucket_id)
+if mode == "check":
+    try:
+        actual = json.loads(path.read_text())
+    except (OSError, ValueError):
+        sys.exit(1)
+    matches = isinstance(actual, dict) and type(actual.get("schema_version")) is int and actual == expected
+    sys.exit(0 if matches else 1)
+if mode != "write":
+    sys.exit(2)
+fd, temporary = tempfile.mkstemp(prefix=path.name + ".tmp.", dir=path.parent)
+try:
+    with os.fdopen(fd, "w") as stream:
+        json.dump(expected, stream, ensure_ascii=False, sort_keys=True)
+        stream.write("\n")
+    os.replace(temporary, path)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PYMARKER
+}
+
 clean_train_log() {
   tr '\r' '\n' < "$TRAIN_LOG" | sed -E 's/^Epoch .*\](MOTION_)/\1/' | grep -vE '%\|'
 }
@@ -311,6 +340,9 @@ if [ "$SMOKE" = 1 ]; then echo "SMOKE=PASS（到阶段 3 为止，未碰网络�
 
 # ---------------------------------------------------------------- 阶段 4：凭据 + 建 bucket（公开）
 echo "阶段4开始：凭据与身份 + 创建公开 bucket $BUCKET_ID"
+if { [ -e "$EXPORT_ROOT/logs/uploaded.marker" ] || [ -L "$EXPORT_ROOT/logs/uploaded.marker" ]; } && ! upload_marker check; then
+  echo "UPLOAD_MARKER_MISMATCH 本地标记无效或属于其他 run/bucket，停止"; exit 1
+fi
 [ -f "$REPO/v1-store/secrets/hf.env" ] || { echo "错误: 缺少 v1-store/secrets/hf.env"; exit 1; }
 set -a; . "$REPO/v1-store/secrets/hf.env"; set +a
 [ -n "${HF_TOKEN:-}" ] || { echo "错误: hf.env 未提供 HF_TOKEN"; exit 1; }
@@ -322,7 +354,7 @@ echo "HF_WHOAMI=HongzeFu"
 # 先核归属/非空，确认可以操作后才设置公开；查询失败不等同于 bucket 不存在。
 if pre_files="$(bucket_stat totalFiles)"; then
   [[ "$pre_files" =~ ^[0-9]+$ ]] || { echo "错误: bucket 文件数无效"; exit 1; }
-  if [ "$pre_files" != 0 ] && [ ! -f "$EXPORT_ROOT/logs/uploaded.marker" ]; then
+  if [ "$pre_files" != 0 ] && ! upload_marker check; then
     echo "错误: 目标 bucket 非空且本地无本轮上传标记，停止"; exit 1
   fi
 else
@@ -332,13 +364,12 @@ else
 fi
 hf buckets settings "$BUCKET_ID" --public
 assert_public "BUCKET_CREATED=$BUCKET_ID"
-touch "$EXPORT_ROOT/logs/uploaded.marker"
+upload_marker write
 echo "BUCKET_FILES_AT_START=$(bucket_stat totalFiles) BUCKET_BYTES_AT_START=$(bucket_stat size)"
 echo "阶段4完成"
 
 # ---------------------------------------------------------------- 阶段 5：分批上传
 echo "阶段5开始：30 个 ckpt 逐件核 SHA + eval-fourarm/ 按装箱计划 + 根下小文件"
-touch "$EXPORT_ROOT/logs/uploaded.marker"
 sync_retry() {  # $1 = 标签；其余 = hf sync 参数
   local tag="$1"; shift
   local ok=0 attempt

@@ -52,13 +52,44 @@ assert_public() {
   echo "$1 private=$private"
   case "$private" in False|false) : ;; *) echo "错误: bucket 未公开"; exit 1 ;; esac
 }
+upload_marker() {
+  # 两个驱动共用严格身份格式；旧空标记和其他 run/bucket 的标记均不得迁移为本轮归属。
+  "$PY" - "$1" "$EXPORT_ROOT/logs/uploaded.marker" "$RUN_NAME" "$BUCKET_ID" <<'PYMARKER'
+import json, os, sys, tempfile
+from pathlib import Path
+mode, filename, run_name, bucket_id = sys.argv[1:]
+path = Path(filename)
+expected = dict(schema_version=1, run_name=run_name, bucket_id=bucket_id)
+if mode == "check":
+    try:
+        actual = json.loads(path.read_text())
+    except (OSError, ValueError):
+        sys.exit(1)
+    matches = isinstance(actual, dict) and type(actual.get("schema_version")) is int and actual == expected
+    sys.exit(0 if matches else 1)
+if mode != "write":
+    sys.exit(2)
+fd, temporary = tempfile.mkstemp(prefix=path.name + ".tmp.", dir=path.parent)
+try:
+    with os.fdopen(fd, "w") as stream:
+        json.dump(expected, stream, ensure_ascii=False, sort_keys=True)
+        stream.write("\n")
+    os.replace(temporary, path)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PYMARKER
+}
 BUCKET_READY=0
 ensure_bucket() {
   [ "$BUCKET_READY" = 1 ] && return 0
   local count rc
+  if { [ -e "$EXPORT_ROOT/logs/uploaded.marker" ] || [ -L "$EXPORT_ROOT/logs/uploaded.marker" ]; } && ! upload_marker check; then
+    echo "UPLOAD_MARKER_MISMATCH 本地标记无效或属于其他 run/bucket，停止"; exit 1
+  fi
   if count="$(bucket_stat totalFiles)"; then
     [[ "$count" =~ ^[0-9]+$ ]] || { echo "错误: bucket 文件数无效"; exit 1; }
-    if [ "$count" != 0 ] && [ ! -f "$EXPORT_ROOT/logs/uploaded.marker" ]; then
+    if [ "$count" != 0 ] && ! upload_marker check; then
       echo "错误: 目标 bucket 非空且本地无本轮上传标记，停止"; exit 1
     fi
   else
@@ -68,7 +99,7 @@ ensure_bucket() {
   fi
   hf buckets settings "$BUCKET_ID" --public
   assert_public "BUCKET_CREATED=$BUCKET_ID"
-  touch "$EXPORT_ROOT/logs/uploaded.marker"
+  upload_marker write
   BUCKET_READY=1
 }
 validate_ckpt() {
@@ -121,6 +152,10 @@ for d in "$(dirname "$EXPORT_ROOT")" "$EXPORT_ROOT"; do
 done
 mkdir -p "$EXPORT_ROOT/logs/uploaded"
 if [ "$DRY_RUN" = 0 ]; then
+  # 启动即核身份，已有全部 done 的重跑也不能把另一 run/bucket 的完成记录据为己有。
+  if { [ -e "$EXPORT_ROOT/logs/uploaded.marker" ] || [ -L "$EXPORT_ROOT/logs/uploaded.marker" ]; } && ! upload_marker check; then
+    echo "UPLOAD_MARKER_MISMATCH 本地标记无效或属于其他 run/bucket，停止"; exit 1
+  fi
   set -a; . "$REPO/v1-store/secrets/hf.env"; set +a
   [ -n "${HF_TOKEN:-}" ] || { echo "错误: hf.env 未提供 HF_TOKEN"; exit 1; }
   WHO="$(hf auth whoami --format agent)"
