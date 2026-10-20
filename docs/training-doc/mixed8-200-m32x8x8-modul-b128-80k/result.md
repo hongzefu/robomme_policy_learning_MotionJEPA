@@ -132,9 +132,9 @@ EXIT_CODE=0
 
 1. 约 11:42「检查现在正在跑的两个训练 跑完了吗」——本 run 已于 11:03:31 `EXIT_CODE=0` 结束、inc 已 `INC_END`。
 2. 约 11:4x（GPU 0–3 那条）「取消 GPU 零零到三的这个任务，留档把只把文件关键文件 log 留档这些大的ckpt都删掉」——context+motion run 于 11:44:33 取消（原话据 handoff `mixed8-ctxmotion-train`）。
-3. 「统一恢复状态记录也要更新。」——主会话按 Q3 以 400 行原权限逐文件恢复，`PERM_RESTORED=OK files=400`，并更新 handoff（`7eb95e8`，美东 11:46:12 提交）。
-4. 「Modulation 2048这个 Hugging Face 都上传完毕了吗？」——主会话只读核查：16 份 ckpt 都在 bucket，逐 step 文件数与字节和本地一致（`LOCAL_EQ_HF=PASS`），但正式驱动未跑、bucket 缺 README / 校验清单 / 训练日志。该判定行出自主会话核查，本档案未在日志文件中复核；提问时刻未核实（主会话转述为约 12:0x，但正式驱动 SMOKE 日志已于 11:50:51 写完，提问应早于 SMOKE 起跑）。
-5. 随后「做好这个收尾的上传驱动，全部做好。」——主会话跑 SMOKE=1 → 全量，判定行见 ①。
+3. 约 11:45「统一恢复状态记录也要更新。」——主会话按 Q3 以 400 行原权限逐文件恢复，`PERM_RESTORED=OK files=400`，并更新 handoff（`7eb95e8`，美东 11:46:12 提交）。
+4. 约 11:46（晚于 handoff `7eb95e8` 提交、早于 SMOKE 起跑）「Modulation 2048这个 Hugging Face 都上传完毕了吗？」——主会话只读核查：16 份 ckpt 都在 bucket，逐 step 文件数与字节和本地一致（`LOCAL_EQ_HF=PASS`，主会话现场比对 `hf buckets ls -R` 逐 step 文件数与字节 vs 本地 `find`，不在日志文件中），但正式驱动未跑、bucket 缺 README / 校验清单 / 训练日志。
+5. 约 11:46「做好这个收尾的上传驱动，全部做好。」——主会话跑 SMOKE=1 → 全量，判定行见 ①。
 
 ## ⑩ 计划外事件与处置
 
