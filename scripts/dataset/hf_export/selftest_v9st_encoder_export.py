@@ -102,12 +102,55 @@ else: raise AssertionError(name)
 '''.replace('b"读回篡改"', '"读回篡改".encode()')
 
 
+def missing_marker_cases(out):
+    """只核已有 done 丢失身份标记的启动门，不执行上传或重复全套回归。"""
+    out.mkdir(parents=True, exist_ok=True)
+    repo, source, commands = out/"repo", out/"source", out/"bin"
+    source.mkdir(); commands.mkdir()
+    target = repo/"scripts/dataset/hf_export"/INC
+    target.parent.mkdir(parents=True)
+    original = (Path(__file__).resolve().parent/INC).read_text()
+    needle = 'SRC="/scratch/hongze/MotionJEPA/runs/$RUN_NAME"'
+    assert original.count(needle) == 1
+    target.write_text(original.replace(needle, f'SRC="{source}"'))
+    secrets = repo/"v1-store/secrets/hf.env"
+    secrets.parent.mkdir(parents=True)
+    secrets.write_text('printf read >> "$TEST_CREDENTIAL_READ"\nHF_TOKEN=offline_test_fixture\n')
+    for name, tail in (("uvx", "echo HongzeFu"), ("tmux", "exit 1"), ("curl", "exit 99")):
+        command = commands/name
+        command.write_text('#!/usr/bin/env bash\nprintf call >> "$TEST_HF_EVENTS"\n' + tail + '\n')
+        command.chmod(0o755)
+    env = os.environ.copy()
+    for key in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "SRC_OVERRIDE", "DRYRUN_ALIVE"):
+        env.pop(key, None)
+    env.update(PATH=str(commands)+os.pathsep+env["PATH"],
+               TEST_HF_EVENTS=str(out/"hf-events"), TEST_CREDENTIAL_READ=str(out/"credential-read"))
+    for label, epochs in (("all-done", range(2, 61, 2)), ("partial-done", (2,))):
+        logs = repo/"v1-store/exports"/label/"logs"
+        (logs/"uploaded").mkdir(parents=True)
+        for epoch in epochs:
+            (logs/"uploaded"/f"ckpt-epoch-{epoch}.done").write_text("a"*64 + "\n")
+        (logs/"first-readback.done").write_text("a"*64 + "\n")
+        text = run(["bash", str(target), RUN, BUCKET+"-changed", label, "fake-train"],
+                   env, out/f"{label}.log", expected=1)
+        assert "UPLOAD_MARKER_MISMATCH" in text and "INC_END" not in text
+        assert not (logs/"uploaded.marker").exists()
+        assert not (out/"hf-events").exists() and not (out/"credential-read").exists()
+    dump(out/"result.json", dict(status="PASS", cases=2, hf_calls=0, credential_reads=0,
+                                checks=["all-done+missing-marker", "partial-done+missing-marker"]))
+    print(f"MISSING_MARKER_SELFTEST=PASS cases=2 out={out}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--missing-marker-only", action="store_true", help="只跑已有 done 丢失 marker 的两个启动反例")
     args = parser.parse_args()
     out = args.out.resolve()
     out.mkdir(parents=True, exist_ok=False)
+    if args.missing_marker_only:
+        missing_marker_cases(out)
+        return
     here = Path(__file__).resolve().parent
     mj = Path("/scratch/hongze/MotionJEPA")
     source = out/"source"
@@ -286,6 +329,7 @@ def main():
         assert ("FIRST_READBACK=PASS" in text)==passed
         assert (retry_export/"logs/uploaded/ckpt-epoch-2.done").exists()==passed
         if label!="bad_first_sha": assert json.loads((fake/"state.json").read_text())["readbacks"]==4
+    missing_marker_cases(out/"missing-marker")
     report=dict(status="PASS",synthetic_video=True,network=False,real_credentials=False,
                 checks=["日志阶段1与9一致，保留两条MOTION_MON","k=0/1/5文件数234/235/239", "四臂FAIL允许，RGB FAIL拒绝",
                         "失败/缺失/未终态及e60不冒充成功probe", "增量两轮旧e2通过/新e4跳过/坏arch e6拒绝", "正式模式拒绝干跑覆盖",
@@ -293,7 +337,8 @@ def main():
                         "两个驱动均拒绝空或无效marker", "全部done存在时仍核验marker身份", "e2匿名读回SHA与最终逐件done衔接", "末尾全部源映射含任务下划线",
                         "错误done SHA拒绝", "读回篡改拒绝且不提前RESULT=PASS", "API失败不创建或公开",
                         "增量中断后从done恢复SHA清单", "评估产物变化在联网前拒绝复用旧计划",
-                        "匿名读取使用隔离HF_HOME", "首读回三失败后成功/四失败耗尽/坏SHA均按契约落标记"])
+                        "匿名读取使用隔离HF_HOME", "首读回三失败后成功/四失败耗尽/坏SHA均按契约落标记",
+                        "全部done且缺marker时启动拒绝", "部分done且缺marker时启动拒绝"])
     dump(out/"result.json",report)
     print(f"EXPORT_SELFTEST=PASS checks={len(report['checks'])} out={out}")
 

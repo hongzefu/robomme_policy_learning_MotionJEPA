@@ -153,8 +153,14 @@ done
 mkdir -p "$EXPORT_ROOT/logs/uploaded"
 if [ "$DRY_RUN" = 0 ]; then
   # 启动即核身份，已有全部 done 的重跑也不能把另一 run/bucket 的完成记录据为己有。
-  if { [ -e "$EXPORT_ROOT/logs/uploaded.marker" ] || [ -L "$EXPORT_ROOT/logs/uploaded.marker" ]; } && ! upload_marker check; then
-    echo "UPLOAD_MARKER_MISMATCH 本地标记无效或属于其他 run/bucket，停止"; exit 1
+  inc_has_done=0
+  for epoch in $(seq 2 2 60); do
+    if [ -e "$EXPORT_ROOT/logs/uploaded/ckpt-epoch-$epoch.done" ] || [ -L "$EXPORT_ROOT/logs/uploaded/ckpt-epoch-$epoch.done" ]; then
+      inc_has_done=1; break
+    fi
+  done
+  if { [ -e "$EXPORT_ROOT/logs/uploaded.marker" ] || [ -L "$EXPORT_ROOT/logs/uploaded.marker" ] || [ "$inc_has_done" = 1 ]; } && ! upload_marker check; then
+    echo "UPLOAD_MARKER_MISMATCH 本地标记缺失、无效或属于其他 run/bucket，停止"; exit 1
   fi
   set -a; . "$REPO/v1-store/secrets/hf.env"; set +a
   [ -n "${HF_TOKEN:-}" ] || { echo "错误: hf.env 未提供 HF_TOKEN"; exit 1; }
