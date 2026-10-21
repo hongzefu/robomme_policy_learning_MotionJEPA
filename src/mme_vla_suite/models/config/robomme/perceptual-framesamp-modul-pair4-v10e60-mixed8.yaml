@@ -1,0 +1,47 @@
+# 正式四对 modulation（v10 e60 encoder，mixed8 3200 集）：除 motion 三个来源字段外，
+# 与已验 perceptual-framesamp-modul-pair4-epoch6-original-smoke.yaml 逐项相同。
+# 三个来源字段在 S5-B 新库 MOTION_BUILD=PASS 后才能填写真实值；占位值会被
+# scripts/training/check_mixed8_pair4_launch.py 拒绝，禁止带占位起跑。
+budget: 512
+num_views: 1
+token_per_image: 64
+streaming_obs_horizon: 16
+pool_type: mean
+use_pos_emb: true
+use_state_emb: false
+memory_feature:
+  img:
+    net: identity
+    input_dim: 2048
+  pos:
+    input_dim: 768
+    hidden_dim: 768
+  state:
+    input_dim: 8
+    hidden_dim: 512
+integration_type: modulation
+memory_token_dim: 1024
+representation_type: perceptual
+perceptual_memory:
+  type: frame_sampling
+motion:
+  enabled: true
+  source_shape: [8, 256]
+  readout: adjacent_pair_v1
+  num_tokens: 4
+  dim: 512
+  budget: 640
+  pos_dim: 256
+  demo_min_real_frames: 17
+  demo_tail_pad: repeat_last
+  stride: 16
+  window_frames: 33
+  window_direction: forward
+  grid_origin: segment_start
+  frame_size: 256
+  # S5-B 后填写：相对仓库根的新库 motion 目录（拟 v1-store/datasets/16task-mixed8-200-v10e60-pair4-20261020-a/motion）
+  store_path: __FILL_AFTER_S5B__
+  # S5-B 后填写：<注册run名>/checkpoint_epoch_60.pt#encoder（拟 wan-mixed8-200-v10-inseq256q8-b352x8-60ep-20261020-a-final-e60）
+  source_run: __FILL_AFTER_S5B__
+  # S5-B 后填写：注册 e60 原字节的 SHA256，须与新库 provenance.encoder.checkpoint_sha256 相同
+  checkpoint_sha256: __FILL_AFTER_S5B__
