@@ -4,7 +4,7 @@
 
 @AGENTS.md
 
-<!-- AGENTMETARULES:BEGIN common-claude src=43ff59ede560f7b2812f16b930b7427a0b49809b blob=2e5584c32c4dd3f38fe92c5a9fc46d90135403e5 -->
+<!-- AGENTMETARULES:BEGIN common-claude src=917bb7b2dcdcc90ab4feaf75c0a23fca88fe7ab2 blob=3952398b724b98384c8725d0b8d1b4882e5a6fcc -->
 
 ## 规则来源与优先级
 
@@ -84,6 +84,7 @@
 ## 会话交接（`AGENTS.md` 第 27 条的 Claude Code 落地）
 
 - **开工第一条回复固定包含**：运行环境判定结论、`AGENTS.md` 第 29 条 `repo_guard.py start` 的三行判定行（`REPO_SYNC=…`、`PUSH_STATE=…`、`RULES_SYNC=…`，由 `SessionStart` hook 注入，原样照抄；hook 未注入时手动跑 `start`）及随后 `fix` 的 `GUARD_FIX=…` 行、`HANDOFF_READ=…` 判定行、接手摘要（自己任务的 `depends_on` 状态、`pending_decisions`、`next_steps` 第一条）。读到 `next_steps` 不等于开工令。
+- **被其他会话的消息唤醒时不走开工流程（2026-10-20 新增）**：宿主以 `<cross-session-message>` 等形式送来的会话间消息不是新会话开工，不执行上一条的「接手摘要 → 开工」，只按 `AGENTS.md` 第 28 条「唤醒范围」答复并保持收信前状态（执行中继续、等待中保留全部句柄与 Monitor 继续等、停工与空闲答完即结束本轮）。
 - **收尾最后一条回复固定包含**：`handoff:` commit sha、`HANDOFF_WRITE=…` 判定行、给下一会话转发的一句话「读 `docs/handoff/current.json`，从 `<sha>` 接续」。
 - **句柄与 Monitor 绑定**：写进 `running_handles` / `long_tail` 的每份日志，在本会话里都必须已按 Monitor 节挂过监听；会话结束监听随之消失，下一会话按文件重新挂。
 - **会话标识**：`owner.session` 填本会话的 `Claude-Session:` 链接（宿主在会话内可见，也是 commit trailer 的来源）。
@@ -125,7 +126,7 @@
 - **写 HTML 计划不进 plan mode；进 plan mode 前先问用户（2026-10-12 新增）**：用户要的计划交付物是仓库内的 HTML 文件（`AGENTS.md` 第 2 条），而 plan mode 只允许写宿主的 `~/.claude/plans/<slug>.md`、写不了这份交付物，两者冲突。因此用户要求「写计划 / 出计划 / 写 HTML plan」时**直接在普通模式下写 HTML 计划并提交推送**，不调 `EnterPlanMode`；核实事实仍只读（探索子代理、`git show`、grep），写计划文件与画图子代理不算实施。计划呈现后按第 2 条「开工令」等用户对该 HTML 不改而直接认可（「同意」「开工」等）才动手，不用 `ExitPlanMode` 代替。只有用户明确要求使用 plan mode、或 agent 认为需要宿主 plan mode 的只读保护时，才**先问用户一句是否进入 plan mode**，得到同意再调 `EnterPlanMode`；上面两条 `ExitPlanMode` / `AskUserQuestion` 的约束只在真的处于 plan mode 时适用。实测踩坑：2026-10-12 benchmark 仓库在用户说「出个计划」后径自 `EnterPlanMode`，被用户两次叫停（「不要进入plan模式 只画这个图」「让我确认了之后再进入plan模式」），最后用户原话：「写html不要进入plan模式 把这个写入agentmetarules」。
 - plan mode 期间除该计划文件外一律只读：不改代码、不改配置、不 commit、不跑任何有副作用的命令。**在只读阶段把事实核实清楚**——仓库的坑（如 editable 指向、安装顺序、源码来源、已知缺陷）都是只读就能查清的，带着未经核实的假设进入实施阶段代价远高于多花几分钟查证。
 
-<!-- AGENTMETARULES:END common-claude src=43ff59ede560f7b2812f16b930b7427a0b49809b blob=2e5584c32c4dd3f38fe92c5a9fc46d90135403e5 -->
+<!-- AGENTMETARULES:END common-claude src=917bb7b2dcdcc90ab4feaf75c0a23fca88fe7ab2 blob=3952398b724b98384c8725d0b8d1b4882e5a6fcc -->
 
 ## 项目专属补充
 
