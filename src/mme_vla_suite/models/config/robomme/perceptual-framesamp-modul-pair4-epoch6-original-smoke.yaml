@@ -1,0 +1,41 @@
+# 单窗训练冒烟：v10 原始八槽由 loader 相邻配成四对，原模型由配置自动确定输入规格。
+budget: 512
+num_views: 1
+token_per_image: 64
+streaming_obs_horizon: 16
+pool_type: mean
+use_pos_emb: true
+use_state_emb: false
+memory_feature:
+  img:
+    net: identity
+    input_dim: 2048
+  pos:
+    input_dim: 768
+    hidden_dim: 768
+  state:
+    input_dim: 8
+    hidden_dim: 512
+integration_type: modulation
+memory_token_dim: 1024
+representation_type: perceptual
+perceptual_memory:
+  type: frame_sampling
+motion:
+  enabled: true
+  source_shape: [8, 256]
+  readout: adjacent_pair_v1
+  num_tokens: 4
+  dim: 512
+  budget: 640
+  pos_dim: 256
+  demo_min_real_frames: 17
+  demo_tail_pad: repeat_last
+  stride: 16
+  window_frames: 33
+  window_direction: forward
+  grid_origin: segment_start
+  frame_size: 256
+  store_path: v1-store/smoke/paired4-epoch6-20261020-a/fixture/motion
+  source_run: wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_epoch_6.pt#encoder
+  checkpoint_sha256: 146efd425f7923428d630dfb7ee2a8f010f19b207d36519dba49454aaa373d30
