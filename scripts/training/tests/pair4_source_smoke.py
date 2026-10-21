@@ -169,6 +169,7 @@ def run_source(root: Path, *, encoder_run_dir: Path, checkpoint: str,
         raise ValueError("本次离线阶段必须仅暴露一张CUDA卡")
     torch.manual_seed(0)
     device = torch.device("cuda:0")
+    torch.cuda.init()  # 设备枚举不初始化上下文；显存统计要求CUDA已初始化。
     torch.cuda.reset_peak_memory_stats(device)
     fingerprint = wc.worker_fingerprint(REPO, pin["mj_repo_commit"],
                                         extra={"worker": "paired4-one-window", "module_sha256": pin["source_sha256"]})
