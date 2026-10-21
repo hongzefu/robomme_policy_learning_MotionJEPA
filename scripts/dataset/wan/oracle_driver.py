@@ -10,8 +10,9 @@
            ``(segment, m, start_global_frame)``，逐项反查被测 ``wan-latents/metadata.json``（集合、num_grid、seg_len、
            起点）；从官方 h5 读期望的 33 帧，送入原版 ``encode_chunk`` 前把 uint8 sha256 与被测记录的
            ``input_frames_sha256`` 逐窗比较；落 ``<out>/<段>.bin``（同构、同 chunk 序）+ ``vae_report.json``
-  encoder  对**我方** ``wan-latents/<段>.bin`` 跑原版 ``motion_token``，按行序契约落
-           ``<out>/motion_token.f32.bin`` + ``encoder_report.json``（含 77 张量 sha256 清单与 provenance）
+  encoder  对**我方** ``wan-latents/<段>.bin`` 跑原版 ``motion_token``（上游 flat2048），按行序契约落
+           ``<out>/motion_token.f32.bin``（raw8×256 = 2048 个 f32、8,192 B/行）+ ``encoder_report.json``
+           （张量 sha256 清单、provenance、token 合同、上游原件/适配件源码 SHA 分别钉 SOURCE_PIN）
   aggregate 多卡分片收拢：``vae`` / ``encoder`` 加 ``--shard-idx i --num-shards n`` 时按 ``expected_segments`` 稳定序
            取 ``segs[i::n]``，各片只写自己的段文件与 ``*_report.shard<i>of<n>.json``（encoder 片另写
            ``motion_token.shard<i>of<n>.f32.bin``）；``aggregate --manifest … --out …`` 核片数齐全、口径一致后合成
@@ -68,8 +69,12 @@ WINDOW = 33
 FRAME_SIZE = 256
 LAT_SHAPE = (9, 16, 32, 32)
 CHUNK_BYTES = 9 * 16 * 32 * 32 * 4
-TOKEN_DIM = 768
-TOKEN_BYTES = TOKEN_DIM * 4          # f32 一行
+# v10 原始八槽合同：上游原件输出行优先 flat2048，适配件恢复为 (8,256)；两者字节相同，行 8,192 B。
+TOKEN_SHAPE = (8, 256)
+TOKEN_DIM = 8 * 256                  # 2048 个 f32 元素
+TOKEN_BYTES = TOKEN_DIM * 4          # 8,192 B 一行
+TOKEN_CONTRACT = {"upstream_shape": [TOKEN_DIM], "row_shape": list(TOKEN_SHAPE), "row_elems": TOKEN_DIM,
+                  "row_bytes": TOKEN_BYTES, "dtype": "float32", "order": "row_major"}
 
 for _name in ("mme_vla_suite", "jax", "openpi"):
     if _name in sys.modules:
@@ -83,6 +88,26 @@ def import_orig(mj_repo: str):
     sys.path.insert(0, str(d))
     import wan_motion_infer as W  # noqa: E402
     return W
+
+
+def source_identity(W) -> dict:
+    """上游原件与 policy 适配件分别钉 SOURCE_PIN（D6）：原件全文 SHA == upstream_source_sha256，
+    适配件全文 SHA == source_sha256，安装的 motion-jepa 提交 == mj_repo_commit。只读 JSON，不导入被测实现。"""
+    import importlib.metadata as md
+    pin = json.loads((_HERE / "SOURCE_PIN.json").read_text(encoding="utf-8"))
+    upstream = sha_file(W.__file__)
+    adapter = sha_file(_HERE / "wan_motion_infer.py")
+    if upstream != pin.get("upstream_source_sha256"):
+        raise SystemExit(f"oracle 上游原件 {W.__file__} SHA {upstream[:16]}… != SOURCE_PIN.upstream_source_sha256")
+    if adapter != pin["source_sha256"]:
+        raise SystemExit("policy 适配件 wan_motion_infer.py 与 SOURCE_PIN.source_sha256 不符")
+    direct = json.loads(md.distribution("motion-jepa").read_text("direct_url.json") or "{}")
+    commit = direct.get("vcs_info", {}).get("commit_id")
+    if commit != pin["mj_repo_commit"]:
+        raise SystemExit(f"oracle 环境的 motion-jepa 提交 {commit} != SOURCE_PIN.mj_repo_commit")
+    return {"upstream_module_sha256": upstream, "adapter_module_sha256": adapter,
+            "mj_install_commit": commit, "source_pin_sha256": sha_file(_HERE / "SOURCE_PIN.json"),
+            "encoder_source_sha256": pin.get("encoder_source_sha256")}
 
 
 def manifest_sha256(payload: dict) -> str:
@@ -303,12 +328,24 @@ def cmd_encoder(args):
     torch.manual_seed(0)
     device = torch.device("cuda")
     manifest = load_manifest(args.manifest)
-    segs = _shard(expected_segments(manifest, demo_min_real=args.demo_min_real, exec_min_real=args.exec_min_real), args)
+    segs = expected_segments(manifest, demo_min_real=args.demo_min_real, exec_min_real=args.exec_min_real)
+    if args.segments:
+        # 仅冒烟：按清单序保留指定段；带过滤的报告 aggregate 一律拒收，不能冒充全量。
+        want = set(args.segments)
+        segs = [s for s in segs if s["key"] in want]
+        if {s["key"] for s in segs} != want:
+            raise SystemExit("--segments 含清单重算集合之外的段")
+    segs = _shard(segs, args)
+    src_ident = source_identity(W)
     lat_root = pathlib.Path(args.latents)
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     encoder, einfo, use_amp = W.load_encoder(args.encoder_run_dir, args.checkpoint, device,
                                              expected_sha256=_expected_ckpt(args))
+    if einfo.get("encoder_src_sha256") != src_ident["encoder_source_sha256"]:
+        raise SystemExit("oracle 加载的 encoder 源码与 SOURCE_PIN.encoder_source_sha256 不符")
+    if einfo.get("motion_dims") is not None and list(einfo["motion_dims"]) != list(TOKEN_SHAPE):
+        raise SystemExit(f"oracle encoder motion_dims {einfo['motion_dims']} 不是 raw8×256")
     sd = encoder.state_dict()
     state_sha = {k: hashlib.sha256(sd[k].detach().cpu().contiguous().numpy().tobytes()).hexdigest()
                  for k in sorted(sd)}
@@ -329,17 +366,22 @@ def cmd_encoder(args):
         for m in range(len(s["starts"])):
             blk = W.read_latent_block(str(p), m)
             W.pin_numerics()
-            tok = W.motion_token(encoder, blk, use_amp, device)          # 原版
-            table += tok.astype(np.float32).tobytes()
+            tok = W.motion_token(encoder, blk, use_amp, device)          # 原版，flat2048
+            if tok.dtype != np.float32 or tok.shape != (TOKEN_DIM,):
+                raise SystemExit(f"上游 motion_token 输出 {tok.shape} {tok.dtype} 不是 flat{TOKEN_DIM} float32")
+            table += tok.tobytes()
             row_map.append({"row": n, "segment": s["key"], "m": m, "g": s["g"], "seg": s["seg"]})
             n += 1
+    common = {"token_contract": TOKEN_CONTRACT, "source_identity": src_ident,
+              "segments_filter": sorted(args.segments) if args.segments else None,
+              "manifest_sha256": manifest["sha256"]}
     if args.num_shards > 1:
         tbl = out / _shard_name("motion_token", args, ".f32.bin")
         atomic_write(tbl, bytes(table))
         report = {"rows": n, "table_sha256": sha_file(tbl), "row_map": row_map,
                   "encoder_provenance": einfo, "encoder_state_sha256": state_sha,
                   "elapsed_s": time.perf_counter() - t_all, "orig_module_sha256": W.sha256_file(W.__file__),
-                  "shard": {"idx": args.shard_idx, "num": args.num_shards}}
+                  "shard": {"idx": args.shard_idx, "num": args.num_shards}, **common}
         (out / _shard_name("encoder_report", args, ".json")).write_text(
             json.dumps(report, ensure_ascii=False, indent=1, default=str))
         print(f"ORACLE_ENCODER=DONE shard={args.shard_idx}/{args.num_shards} rows={n} "
@@ -348,7 +390,7 @@ def cmd_encoder(args):
     atomic_write(out / "motion_token.f32.bin", bytes(table))
     report = {"rows": n, "table_sha256": sha_file(out / "motion_token.f32.bin"), "row_map": row_map,
               "encoder_provenance": einfo, "encoder_state_sha256": state_sha,
-              "elapsed_s": time.perf_counter() - t_all, "orig_module_sha256": W.sha256_file(W.__file__)}
+              "elapsed_s": time.perf_counter() - t_all, "orig_module_sha256": W.sha256_file(W.__file__), **common}
     (out / "encoder_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str))
     print(f"ORACLE_ENCODER=DONE rows={n} elapsed={report['elapsed_s']:.0f}s", flush=True)
 
@@ -452,6 +494,12 @@ def cmd_aggregate(args):
             raise SystemExit(1)
     if args.kind in ("encoder", "both"):
         reps = _load_shards(out, "encoder_report", n)
+        if any(r.get("segments_filter") for r in reps):
+            raise SystemExit("encoder: 分片报告带 --segments 过滤（冒烟），不能聚合为全量")
+        if _same_across(reps, "token_contract", "encoder") != TOKEN_CONTRACT:
+            raise SystemExit("encoder: 分片 token 合同不是 raw8×256 / 8192 B")
+        if _same_across(reps, "manifest_sha256", "encoder") != manifest["sha256"]:
+            raise SystemExit("encoder: 分片报告的 manifest_sha256 与 --manifest 不同")
         # 各片的 (segment, m) → token 字节；按清单序 demo 先 exec 后重排回单进程行序
         tok = {}
         for i, r in enumerate(reps):
@@ -485,6 +533,9 @@ def cmd_aggregate(args):
                   "elapsed_s": max(float(r["elapsed_s"]) for r in reps),
                   "elapsed_s_sum": sum(float(r["elapsed_s"]) for r in reps),
                   "orig_module_sha256": _same_across(reps, "orig_module_sha256", "encoder"),
+                  "token_contract": TOKEN_CONTRACT,
+                  "source_identity": _same_across(reps, "source_identity", "encoder"),
+                  "segments_filter": None, "manifest_sha256": manifest["sha256"],
                   "aggregated_from_shards": n}
         (out / "encoder_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str))
         print(f"ORACLE_ENCODER=DONE rows={report['rows']} elapsed={report['elapsed_s']:.0f}s shards={n}", flush=True)
@@ -519,6 +570,7 @@ def main():
     p.add_argument("--num-shards", type=int, default=1)
     p.add_argument("--demo-min-real", type=int, required=True)
     p.add_argument("--exec-min-real", type=int, required=True)
+    p.add_argument("--segments", nargs="*", default=None, help="仅冒烟：只算这些段（报告标记 segments_filter）")
     p.set_defaults(func=cmd_encoder)
     p = sub.add_parser("aggregate", help="把 --num-shards 片的 vae / encoder 产物合成单进程同构产物")
     p.add_argument("--manifest", required=True)

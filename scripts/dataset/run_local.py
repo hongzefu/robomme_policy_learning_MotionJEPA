@@ -47,6 +47,9 @@ V1_STORE = _REPO_ROOT / "v1-store"
 # 每个 stage 起手要校的资产（ASSETS_LOCK.json 里的名字）
 STAGE_ASSETS = {"siglip": ["siglip_params"], "wan": ["wan_vae"],
                 "encode": ["wan_vae", "motionjepa_ckpt", "motionjepa_config"]}
+# 显式新 encoder 身份（--expected-ckpt-sha256 + --encoder-run-dir）时只校公共 VAE 资产；encoder 由显式 SHA、
+# 冻结 config 与 SOURCE_PIN 在 encoder_cache_identity 中核验，不再隐含要求旧 full1600 encoder（D7）。不设 SKIP。
+EXPLICIT_ENCODER_ASSETS = ["wan_vae"]
 # 环境 A 默认本机 16 任务全集；环境 B 由 paths.sh 导出的 RAW_H5_DIR 覆盖（/scratch/hongze/robomme_data_h5）
 RAW_H5_DEFAULT = os.environ.get("RAW_H5_DIR", "/data/hongzefu/robomme_data_h5")
 ENCODER_RUN_DIR_DEFAULT = V1_STORE / "external" / "motionjepa" / "wan-full1600-filter2-b176x4-72ep-a"
@@ -78,6 +81,12 @@ def gpu_free_mib() -> dict[int, int]:
     return res
 
 
+def latents_dir(args) -> pathlib.Path:
+    """encode 读的 latent 目录：默认 <lib>/wan-latents；S5-B 指向 S5-A 恢复目录（只读）。"""
+    return pathlib.Path(args.latents).resolve() if getattr(args, "latents", None) \
+        else pathlib.Path(args.lib).resolve() / "wan-latents"
+
+
 def worker_cmd(stage: str, gpu: int, k: int, n: int, args, env: dict) -> tuple[list[str], dict, pathlib.Path]:
     lib = pathlib.Path(args.lib).resolve()
     label = f"gpu{gpu}"
@@ -101,7 +110,7 @@ def worker_cmd(stage: str, gpu: int, k: int, n: int, args, env: dict) -> tuple[l
         else:
             out = lib / "motion-tokens"
             cmd = [*uvrun, str(_HERE / "wan" / "encode_motion.py"), "--manifest", manifest,
-                   "--latents", str(lib / "wan-latents"), "--out", str(out), "--worker", label,
+                   "--latents", str(latents_dir(args)), "--out", str(out), "--worker", label,
                    "--encoder-run-dir", str(args.encoder_run_dir), "--checkpoint", args.checkpoint,
                    "--expected-ckpt-sha256", args.expected_ckpt_sha256]
     return cmd, env, out
@@ -185,10 +194,14 @@ def main() -> None:
     ap.add_argument("--encoder-run-dir", default=str(ENCODER_RUN_DIR_DEFAULT))
     ap.add_argument("--checkpoint", default=CKPT_DEFAULT)
     ap.add_argument("--expected-ckpt-sha256", default="")
+    ap.add_argument("--latents", default=None, help="encode 读取的 latent 目录（默认 <lib>/wan-latents）")
     args = ap.parse_args()
+    if args.latents and args.stage != "encode":
+        raise SystemExit("--latents 只用于 encode 阶段")
 
     # 建库域真正的资产前置：本文件是 Python、不 source paths.sh，那两个 v1_require_* 在本域零调用
-    al.require(STAGE_ASSETS[args.stage], level="cheap")
+    explicit_encoder = args.stage == "encode" and bool(args.expected_ckpt_sha256)
+    al.require(EXPLICIT_ENCODER_ASSETS if explicit_encoder else STAGE_ASSETS[args.stage], level="cheap")
 
     lib = pathlib.Path(args.lib).resolve()
     if lib.is_symlink():
@@ -205,6 +218,9 @@ def main() -> None:
         source_pin = json.loads((_HERE / "wan" / "SOURCE_PIN.json").read_text(encoding="utf-8"))
         encoder_identity = encoder_cache_identity(pathlib.Path(args.encoder_run_dir), args.checkpoint,
                                                   args.expected_ckpt_sha256, source_pin)
+        print(f"[run_local] encoder 身份 ckpt={encoder_identity['checkpoint_sha256'][:16]}… "
+              f"epoch={encoder_identity['checkpoint_epoch']} config={encoder_identity['config_sha256'][:16]}… "
+              f"latents={latents_dir(args)}", flush=True)
     initial_keys = set()
     if args.stage in ("wan", "encode"):
         import wan_common as wc
@@ -221,7 +237,7 @@ def main() -> None:
                     require_row_keys=("real_frames", "pad_frames", "pad_source_frame"))
             else:
                 complete = token_outputs_complete(lib / "motion-tokens", key, item["num_grid"],
-                                                  lib / "wan-latents" / f"{key}.bin",
+                                                  latents_dir(args) / f"{key}.bin",
                                                   encoder_info=encoder_identity, source_pin=source_pin)
             if complete:
                 initial_keys.add(key)
