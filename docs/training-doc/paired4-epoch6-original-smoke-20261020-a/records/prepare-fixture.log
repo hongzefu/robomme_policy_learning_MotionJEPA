@@ -1,0 +1,16 @@
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[pack] pos 表：episode_0（33 帧）逐位抽取拼装
+[pack] state 表：1 进程 decode 1 episode / 33 帧
+[pack] state 表进度 1/1 episode (0s)
+[pack] 小表落盘: pos 6,488,064 B / state 1,056 B
+[pack] image part: 共 1 个, 跳过已完好 0 个, 本轮 1 个 × 1 进程
+[pack] part_000 完成 rows=33 (0.1s), 进度 1/1
+[pack] meta 阶段1 落盘（status=packed）; 总耗时 0s
+PACK_DONE=1 （pack.lock 保留，verify 回填后才释放——A.2）
+[verify] part_000 扫 33 行, 失配 0, 进度 1/1 (0s)
+[verify] meta 回填（status=verified）+ row_digests 落盘, 总耗时 0s
+VERIFY_PACK=PASS scanned=33 mismatches=0
+H5_PKL=PASS
+FRAME_FIXTURE=PASS
+REGISTERED_SOURCE=PASS
+PAIR4_SUITE=PASS suite=prepare-fixture elapsed_seconds=3.835

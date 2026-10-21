@@ -1,0 +1,65 @@
+PAIR4_RUN_STAGE=source remaining_seconds=1736
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:205: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+SOURCE_FRESH=PASS checked_windows=1 raw8_bytes=8192 elapsed_s=14.333
+PAIR4_RUN_STAGE=finalize remaining_seconds=1720
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+[pack] episodes=1 rows=1 (exec 1 + demo 0) index_sha256=cc7a1ab5f21b645a…
+[pack] 表 8,192 B / 1 行 / 1 段, sha256=c9cbee080e2e4774…; meta 阶段1 落盘（status=packed）; 耗时 0.5s
+PACK_MOTION_DONE=1 raw_dir_match=1 （pack.lock 保留，verify 回填后才释放）
+[verify] meta 回填（status=verified）+ row_digests 落盘, 耗时 0.0s
+VERIFY_MOTION=PASS scanned=1 mismatches=0
+RAW_CONTRACT=PASS
+SOURCE_FRESH=PASS
+PAIR4_SUITE=PASS suite=finalize-fixture elapsed_seconds=0.974
+PAIR4_RUN_STAGE=model remaining_seconds=1719
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+max_token_len: 64
+max_token_len: 64
+PAIR4_MODEL_STAGE=initialize
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+2026-10-21 02:22:09.344778: W external/xla/xla/hlo/transforms/simplifiers/hlo_rematerialization.cc:3021] Can't reduce memory use below 12.12GiB (13019020191 bytes) by rematerialization; only reduced to 46.67GiB (50116910304 bytes), down from 46.67GiB (50116920764 bytes) originally
+PAIR4_MODEL_STAGE=gradient_diagnostics
+PAIR4_MODEL_STAGE=original_train_step
+2026-10-21 02:23:22.269448: W external/xla/xla/hlo/transforms/simplifiers/hlo_rematerialization.cc:3021] Can't reduce memory use below 12.12GiB (13012513620 bytes) by rematerialization; only reduced to 59.89GiB (64311143468 bytes), down from 59.90GiB (64314403184 bytes) originally
+PAIR4_MODEL_STAGE=save_weights
+PAIR4_MODEL_STAGE=strict_restore
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+max_token_len:  64
+====== Using History, Representation Type: perceptual , Integration Type: modulation ======
+Perceptual Memory using frame_sampling type
+
+PAIR4_MODEL_STAGE=complete
+REAL_FORWARD=PASS
+SAVE_LOAD=PASS
+PAIR4_SUITE=PASS suite=model elapsed_seconds=500.806
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+TRAIN_SMOKE=PASS
+PAIR4_SUITE=PASS suite=summary elapsed_seconds=27.594
+EXIT_CODE=0 stage=complete elapsed_seconds=603

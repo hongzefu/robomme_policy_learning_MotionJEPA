@@ -1,0 +1,15 @@
+PAIR4_RUN_STAGE=source remaining_seconds=1790
+SOURCE_FRESH=FAIL stage=preflight reason=RuntimeError: Invalid device argument
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/pair4_source_smoke.py", line 323, in <module>
+    main()
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/pair4_source_smoke.py", line 303, in main
+    result = run_source(**vars(args), progress=progress)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/training/tests/pair4_source_smoke.py", line 172, in run_source
+    torch.cuda.reset_peak_memory_stats(device)
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan/lib/python3.11/site-packages/torch/cuda/memory.py", line 376, in reset_peak_memory_stats
+    return torch._C._cuda_resetPeakMemoryStats(device)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Invalid device argument
+EXIT_CODE=1 stage=source elapsed_seconds=3
