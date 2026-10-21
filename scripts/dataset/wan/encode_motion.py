@@ -41,6 +41,35 @@ sys.path.insert(0, str(_HERE))
 import wan_common as wc  # noqa: E402
 
 METADATA_SCHEMA = 1
+CACHE_IDENTITY_KEYS = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", "state_key",
+                       "motion_dims", "precision", "amp", "tf32", "batch", "module_sha256",
+                       "encoder_src_sha256", "config_sha256")
+
+
+def encoder_cache_identity(run_dir: pathlib.Path, checkpoint_name: str, expected_sha256: str,
+                           source_pin: dict) -> dict:
+    """供 CPU 调度器构造与 worker 同字段的期望身份，不导入 Torch 或加载模型。"""
+    import yaml
+
+    run_dir = pathlib.Path(run_dir)
+    checkpoint = run_dir / checkpoint_name
+    if not expected_sha256 or wc.sha256_file(checkpoint) != expected_sha256:
+        raise ValueError("encoder checkpoint 实际 SHA 与显式期望身份不同")
+    if wc.sha256_file(_HERE / "wan_motion_infer.py") != source_pin["source_sha256"]:
+        raise ValueError("encoder 适配源码与 SOURCE_PIN 不同")
+    config_path = run_dir / "config.yaml"
+    cfg = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    dims = [int(cfg["motion"]["num_tokens"]), int(cfg["motion"]["dim"])]
+    if dims != list(wc.TOKEN_SHAPE):
+        raise ValueError("encoder 冻结配置不是 raw8×256")
+    epoch = int(checkpoint_name.replace("checkpoint_epoch_", "").replace(".pt", ""))
+    precision = cfg["training"].get("precision")
+    return {"checkpoint": checkpoint_name, "checkpoint_sha256": expected_sha256,
+            "checkpoint_epoch": epoch, "arch": "wan-latent-v10-st", "state_key": "encoder",
+            "motion_dims": dims, "precision": precision, "amp": "bf16" if precision == "bf16" else "off",
+            "tf32": "off", "batch": 1, "module_sha256": source_pin["source_sha256"],
+            "encoder_src_sha256": source_pin["encoder_source_sha256"],
+            "config_sha256": wc.sha256_file(config_path)}
 
 
 def load_infer_module():
@@ -65,9 +94,12 @@ def read_latent_bin(path: pathlib.Path, num_grid: int) -> np.ndarray:
 
 
 def token_outputs_complete(out_dir: pathlib.Path, key: str, num_grid: int,
-                           latent_path: pathlib.Path, *, encoder_info: dict,
-                           source_pin: dict) -> bool:
+                           latent_path: pathlib.Path, *, encoder_info: dict | None = None,
+                           source_pin: dict | None = None) -> bool:
     """续跑同时绑定 latent、encoder 权重、源码及原始槽形状；换 encoder 必须重算。"""
+    # 缺期望身份不认可缓存；调度器与 worker 均须显式传入同一合同。
+    if encoder_info is None or source_pin is None:
+        return False
     if not wc.segment_outputs_complete(out_dir, key, num_grid * wc.TOKEN_BYTES,
                                        bin_stem=key + ".f32", expect_schema=METADATA_SCHEMA,
                                        require_keys=("input_latent_sha256", "encoder", "worker",
@@ -80,9 +112,8 @@ def token_outputs_complete(out_dir: pathlib.Path, key: str, num_grid: int,
         return False
     if not latent_path.is_file() or meta["input_latent_sha256"] != wc.sha256_file(latent_path):
         return False
-    ident = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", "state_key",
-             "motion_dims", "precision", "amp", "tf32", "batch", "module_sha256", "encoder_src_sha256")
-    if any(meta["encoder"].get(k) != encoder_info.get(k) for k in ident):
+    if any(k not in encoder_info or k not in meta["encoder"]
+           or meta["encoder"][k] != encoder_info[k] for k in CACHE_IDENTITY_KEYS):
         return False
     return (meta["encoder"].get("module_sha256") == source_pin["source_sha256"]
             and meta["worker"].get("mj_commit") == source_pin["mj_repo_commit"])

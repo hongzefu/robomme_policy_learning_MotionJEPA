@@ -431,6 +431,8 @@ class MotionMeta:
         if int(need("schema")) != META_SCHEMA:
             raise ValueError(f"schema={raw['schema']} != {META_SCHEMA}")
         spec = layout_spec(raw, str(meta_path))
+        if raw["layout"] == LAYOUT and need("manifest_scope") != "full":
+            raise ValueError("raw8 motion 表必须完整覆盖绑定清单（manifest_scope=full）")
         if need("byte_order") != BYTE_ORDER or need("array_order") != ARRAY_ORDER:
             raise ValueError("byte_order/array_order 与格式常量不符")
         for key, want in (("grid_stride", GRID_STRIDE), ("window_frames", WINDOW_FRAMES),

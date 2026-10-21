@@ -309,6 +309,7 @@ def load_encoder(run_dir, checkpoint_name, device, expected_sha256=None, strict_
         "run_dir": os.path.abspath(run_dir),
         "checkpoint": checkpoint_name,
         "checkpoint_sha256": ckpt_sha,
+        "config_sha256": sha256_file(os.path.join(run_dir, "config.yaml")),
         "checkpoint_epoch": int(ckpt.get("epoch", -1)),
         "arch": ARCH_TAG,
         "state_key": "encoder",

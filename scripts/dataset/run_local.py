@@ -196,6 +196,15 @@ def main() -> None:
     manifest_path = lib / "meta" / "episode_manifest.json"
     if not manifest_path.is_file():
         raise SystemExit(f"缺清单: {manifest_path}（先跑 scan_manifest.py build）")
+    if args.stage == "encode":
+        if not args.expected_ckpt_sha256:
+            # 期望值仍取自资产锁，不能将实际文件哈希充当批准身份。
+            args.expected_ckpt_sha256 = al.expected_sha256("motionjepa_ckpt")
+            print(f"[run_local] ckpt sha256={args.expected_ckpt_sha256}（来源 ASSETS_LOCK.json）", flush=True)
+        from encode_motion import encoder_cache_identity, token_outputs_complete
+        source_pin = json.loads((_HERE / "wan" / "SOURCE_PIN.json").read_text(encoding="utf-8"))
+        encoder_identity = encoder_cache_identity(pathlib.Path(args.encoder_run_dir), args.checkpoint,
+                                                  args.expected_ckpt_sha256, source_pin)
     initial_keys = set()
     if args.stage in ("wan", "encode"):
         import wan_common as wc
@@ -211,9 +220,9 @@ def main() -> None:
                     expect_schema=3, require_keys=("min_real",),
                     require_row_keys=("real_frames", "pad_frames", "pad_source_frame"))
             else:
-                from encode_motion import token_outputs_complete
                 complete = token_outputs_complete(lib / "motion-tokens", key, item["num_grid"],
-                                                  lib / "wan-latents" / f"{key}.bin")
+                                                  lib / "wan-latents" / f"{key}.bin",
+                                                  encoder_info=encoder_identity, source_pin=source_pin)
             if complete:
                 initial_keys.add(key)
         print(f"STAGE_START stage={args.stage} initial_complete={len(initial_keys)} items={len(expected_items)}", flush=True)
@@ -226,11 +235,6 @@ def main() -> None:
             raise SystemExit(f"GPU {g} 不存在（nvidia-smi 列出 {sorted(free)}）")
         if free[g] < args.require_free_mib:
             raise SystemExit(f"GPU {g} 空闲显存 {free[g]} MiB < 要求 {args.require_free_mib} MiB")
-    if args.stage == "encode" and not args.expected_ckpt_sha256:
-        # 期望值取自仓库钉死的 ASSETS_LOCK.json。此处**刻意不**现场哈希「即将被使用的那份 ckpt」——
-        # 那是自证循环，只能证明 N 个 worker 用同一份字节，挡不住「这份文件本身就是错的」。
-        args.expected_ckpt_sha256 = al.expected_sha256("motionjepa_ckpt")
-        print(f"[run_local] ckpt sha256={args.expected_ckpt_sha256}（来源 ASSETS_LOCK.json）", flush=True)
     if shutil.which("uv") is None:
         raise SystemExit("缺 uv")
 

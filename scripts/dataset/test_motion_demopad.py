@@ -135,6 +135,7 @@ def test_token_resume_two_segments_and_changed_input(tmp_path):
     encoder = dict(checkpoint="checkpoint_epoch_6.pt", checkpoint_sha256="a"*64, checkpoint_epoch=6,
                    arch="wan-latent-v10-st", state_key="encoder", motion_dims=[8,256], precision="bf16",
                    amp="bf16", tf32="off", batch=1, module_sha256="b"*64, encoder_src_sha256="c"*64)
+    encoder["config_sha256"] = "f"*64
     pin = dict(source_sha256="b"*64, mj_repo_commit="d"*40)
     for key in ("T_ep0_demo","T_ep0_exec"):
         latent=tmp_path/f"{key}.bin"; latent.write_bytes(bytes(wc.CHUNK_BYTES))
@@ -147,6 +148,7 @@ def test_token_resume_two_segments_and_changed_input(tmp_path):
                     token_bytes=wc.TOKEN_BYTES)
         metadata.write_text(json.dumps(meta))
         assert token_outputs_complete(tmp_path,key,1,latent,encoder_info=encoder,source_pin=pin)
+        assert not token_outputs_complete(tmp_path,key,1,latent)
         changed = {**encoder, "checkpoint_sha256":"e"*64}
         assert not token_outputs_complete(tmp_path,key,1,latent,encoder_info=changed,source_pin=pin)
         metadata.write_text(json.dumps({**meta, "row_shape":[4,512]}))
@@ -157,6 +159,28 @@ def test_token_resume_two_segments_and_changed_input(tmp_path):
         latent.write_bytes(bytes(wc.CHUNK_BYTES))
         metadata.rename(tmp_path/f"{key}.f32.metadata.json")
         assert not token_outputs_complete(tmp_path,key,1,latent,encoder_info=encoder,source_pin=pin)
+
+
+def test_encoder_scheduler_cache_identity_without_model(tmp_path):
+    from encode_motion import encoder_cache_identity
+    pin = json.loads((ROOT/"scripts/dataset/wan/SOURCE_PIN.json").read_text())
+    checkpoint = tmp_path/"checkpoint_epoch_6.pt"
+    checkpoint.write_bytes(b"synthetic-checkpoint")
+    expected_sha = hashlib.sha256(b"synthetic-checkpoint").hexdigest()
+    config = tmp_path/"config.yaml"
+    cfg = dict(motion=dict(num_tokens=8, dim=256), training=dict(precision="bf16"))
+    config.write_text(json.dumps(cfg))
+    identity = encoder_cache_identity(tmp_path, checkpoint.name, expected_sha, pin)
+    assert identity["checkpoint_sha256"] == expected_sha
+    assert identity["checkpoint_epoch"] == 6 and identity["motion_dims"] == [8,256]
+    assert identity["amp"] == "bf16" and identity["module_sha256"] == pin["source_sha256"]
+    assert identity["config_sha256"] == hashlib.sha256(config.read_bytes()).hexdigest()
+    with pytest.raises(ValueError, match="SHA"):
+        encoder_cache_identity(tmp_path, checkpoint.name, "0"*64, pin)
+    cfg["training"]["precision"] = "fp32"
+    config.write_text(json.dumps(cfg))
+    changed = encoder_cache_identity(tmp_path, checkpoint.name, expected_sha, pin)
+    assert changed["amp"] == "off" and changed["config_sha256"] != identity["config_sha256"]
 
 
 def test_extract_real_h5_padding_aggregate_and_a11(tmp_path):
@@ -234,6 +258,7 @@ def test_motion_meta_requires_matching_contract(tmp_path, layout):
     values = np.arange(np.prod(spec.row_shape), dtype=np.float32).reshape((1,) + spec.row_shape)
     (tmp_path/ms.MOTION_TABLE_RELPATH).write_bytes(values.tobytes())
     raw=dict(schema=1,layout=layout,status="packed",byte_order="little",array_order="C",
+             manifest_scope="full",
              grid_stride=16,window_frames=33,grid_origin="segment_start",window_direction="forward",
              truncation_policy="none",frame_size=256,num_rows=1,manifest_sha256=manifest["sha256"],
              manifest_path=str(manifest_path),motion_index_sha256=ms.sha256_file(index_path),provenance={},
@@ -245,6 +270,17 @@ def test_motion_meta_requires_matching_contract(tmp_path, layout):
     with ms.MotionStore(tmp_path) as store:
         assert store.rows([0]).shape == values.shape
         assert store.rows([0]).tobytes() == values.tobytes()
+    missing_scope = copy.deepcopy(raw)
+    del missing_scope["manifest_scope"]
+    meta_path.write_text(json.dumps(missing_scope))
+    if layout == ms.LAYOUT:
+        with pytest.raises(ValueError, match="manifest_scope"):
+            ms.MotionMeta.load(tmp_path)
+        meta_path.write_text(json.dumps({**raw, "manifest_scope":"subset_prefix"}))
+        with pytest.raises(ValueError, match="manifest_scope"):
+            ms.MotionMeta.load(tmp_path)
+    else:
+        assert ms.MotionMeta.load(tmp_path).spec == spec
     for key in spec.fields():
         bad=copy.deepcopy(raw); del bad[key]
         meta_path.write_text(json.dumps(bad))

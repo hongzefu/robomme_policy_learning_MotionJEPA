@@ -190,7 +190,7 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
     same_keys_vae = ("vae_id", "vae_state_sha256", "vae_dtype", "latent_mode", "batch", "tf32", "amp",
                      "torch", "cuda", "cudnn", "diffusers", "cublas_pkg", "cudnn_pkg", "module_sha256",
                      "encoder_src_sha256", "flags", "env", "gpu_name", "compute_cap", "sm_count", "driver")
-    same_keys_enc = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", "state_key", "precision",
+    same_keys_enc = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "config_sha256", "arch", "state_key", "precision",
                      "amp", "tf32", "batch", "vae_id", "motion_dims", "torch", "cuda", "cudnn", "diffusers",
                      "cublas_pkg", "cudnn_pkg", "module_sha256", "encoder_src_sha256", "env", "gpu_name",
                      "compute_cap", "sm_count", "driver")
@@ -250,6 +250,8 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
     checkpoint_path = encoder_run_dir / ckpt_name
     if not checkpoint_path.is_file() or ms.sha256_file(checkpoint_path) != enc["checkpoint_sha256"]:
         raise ValueError("encoder 目录中的 checkpoint 与逐段 provenance 不符")
+    if ms.sha256_file(encoder_run_dir / "config.yaml") != enc["config_sha256"]:
+        raise ValueError("encoder 冻结 config 与逐段 provenance 不符")
     epoch = int(ckpt_name.replace("checkpoint_epoch_", "").replace(".pt", ""))
     if epoch != int(enc["checkpoint_epoch"]):
         raise ValueError(f"checkpoint 名解析出的 epoch {epoch} != ckpt 内记录 {enc['checkpoint_epoch']}")
