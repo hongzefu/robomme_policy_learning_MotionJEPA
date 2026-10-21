@@ -15,7 +15,7 @@ import openpi.training.config as _config
 
 from mme_vla_suite.datastore import StoreMeta, load_manifest, require_no_pack_lock, require_verified
 from mme_vla_suite.datastore import motion_store as ms
-from mme_vla_suite.training.framesamp_dataset import FrameSampDataset
+from mme_vla_suite.training.framesamp_dataset import FrameSampDataset, check_motion_contract
 from mme_vla_suite.models.integration.history_observation import HistAugObservation
 from mme_vla_suite.models.config.utils import get_history_config
 
@@ -36,7 +36,7 @@ def _parse_source_run(spec: str) -> dict:
 
 
 def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
-    """motion.enabled=true 时的 fail-loud 闸：锁 / MotionMeta / verified / stride / 同源 / source_run 绑定；关闭态返回 None 且什么都不读。"""
+    """开启时核锁、raw/policy 合同与 encoder 身份；关闭态返回 None 且不读取 motion 表。"""
     mcfg = getattr(history_config, "motion", None) if history_config is not None else None
     if not (mcfg is not None and mcfg.get("enabled", False)):
         return None
@@ -47,6 +47,7 @@ def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
     ms.require_no_pack_lock(motion_root)
     mmeta = ms.MotionMeta.load(motion_root)                # 不得拿 StoreMeta.load 解析 motion layout
     ms.require_verified(mmeta)
+    check_motion_contract(mcfg, mmeta)
     if int(mcfg.stride) != ms.GRID_STRIDE:
         raise ValueError(f"motion.stride={mcfg.stride} != motion store GRID_STRIDE {ms.GRID_STRIDE}")
     manifest = load_manifest(os.environ.get("MMEVLA_FRAMESAMP_MANIFEST") or frame_meta.manifest_path)

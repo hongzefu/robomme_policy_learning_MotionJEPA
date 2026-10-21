@@ -1,8 +1,11 @@
 {
-  "mj_repo_commit": "2a484ad960ed6155321dc34def9011eb119f857f",
-  "mj_repo_path": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/MotionJEPA",
+  "mj_repo_commit": "ee719fbedea88f8a6c8e6a0c280fd332c0a36af9",
+  "mj_repo_path": "/scratch/hongze/MotionJEPA",
   "source_path": "scripts/inference-example/wan_motion_infer.py",
-  "source_sha256": "af67fdd913543aee416a9fe5df797f707ff159165c468d687fcf8e7347941b34",
-  "copied_at": "2026-09-03T11:48:13-04:00",
-  "note": "整文件逐字节复制件；本仓库脚本只调用其 encode_chunk / motion_token / load_vae / load_encoder，不复写任何数值语句"
+  "source_sha256": "f74dbf4bc894b9d48b8a8cb98ad333e6a4e2f3f942a7b8244519054d359fa7c7",
+  "upstream_source_sha256": "6d8cce62d9301b1e360d8d6aa3191b2a2862d434727f711ed406f1cbdd52b22b",
+  "encoder_source_sha256": "40d8a33bee391c3c1b793a2e27f7fe26ba484c18bbb8407e9dc8e891f569470e",
+  "factory_source_sha256": "6d9ab27d30da6fc867a69950b542c52faad5ceff515bcf0798021224331c1d8d",
+  "copied_at": "2026-10-20T22:18:02-04:00",
+  "note": "锁定上游 v10 VAE/encoder 数值路径；本地额外检查 v10 架构、归一化 buffer 有限且 std 为正，记录冻结 config 字节 SHA，并把上游 flat2048 按行优先恢复为 raw8×256。source_sha256 为本地适配件，upstream_source_sha256 为原文；不兼容旧 encoder。"
 }

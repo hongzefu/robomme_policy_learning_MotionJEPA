@@ -27,6 +27,7 @@ import logging
 import os
 import pathlib
 import pickle
+import re
 
 import numpy as np
 from omegaconf import DictConfig
@@ -43,6 +44,7 @@ from mme_vla_suite.datastore import (
     run_full_checks,
 )
 from mme_vla_suite.datastore import motion_store as ms
+from mme_vla_suite.datastore.motion_adapter import PAIRING, motion_policy_spec, pair_adjacent_tokens
 from mme_vla_suite.shared.sampling import MEM_ORDER_SENTINEL, even_sampling_indices, memory_order, pad_times
 
 logger = logging.getLogger(__name__)
@@ -61,6 +63,27 @@ _NONE_KEYS = (
     "motion_mask",
     "mem_order",
 )
+
+
+def check_motion_contract(mcfg, meta: ms.MotionMeta):
+    """核对落盘原始形状与训练消费合同；新四对必须绑定确定的 encoder 身份。"""
+    spec = motion_policy_spec(mcfg)
+    if meta.raw["layout"] not in spec.layouts or meta.row_shape != spec.source_shape:
+        raise ValueError(
+            f"motion 配置要求 layout∈{spec.layouts}、原始形状 {spec.source_shape}，"
+            f"实际表为 {meta.raw['layout']!r}、{meta.row_shape}")
+    enc = meta.provenance.get("encoder", {})
+    if spec.readout == PAIRING:
+        sha = mcfg.get("checkpoint_sha256")
+        if not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{64}", sha) is None:
+            raise ValueError("四对 motion.checkpoint_sha256 必须显式提供 64 位小写十六进制 SHA256")
+        if enc.get("arch") != "wan-latent-v10-st" or enc.get("state_key") != "encoder":
+            raise ValueError("四对 motion 表必须来自 wan-latent-v10-st 的 encoder 状态")
+    if "checkpoint_sha256" in mcfg and mcfg["checkpoint_sha256"] != enc.get("checkpoint_sha256"):
+        raise ValueError(
+            f"motion.checkpoint_sha256={mcfg['checkpoint_sha256']!r} 与 "
+            f"motion store provenance.encoder.checkpoint_sha256={enc.get('checkpoint_sha256')!r} 不符")
+    return spec
 
 
 class FrameSampDataset(Dataset):
@@ -126,9 +149,7 @@ class FrameSampDataset(Dataset):
         mcfg = getattr(hc, "motion", None)
         self._motion_enabled = bool(mcfg is not None and mcfg.get("enabled", False))
         if self._motion_enabled:
-            _req(int(mcfg.dim) == ms.MOTION_ROW_SHAPE[0], f"motion.dim={mcfg.dim} != {ms.MOTION_ROW_SHAPE[0]}")
-            _req(int(mcfg.budget) >= 16 and int(mcfg.budget) % 16 == 0,
-                 f"motion.budget={mcfg.budget} 必须为至少 16 的 16 倍数")
+            motion_spec = motion_policy_spec(mcfg)
             _req(int(mcfg.pos_dim) == int(hc.memory_feature.pos.input_dim) // 3,
                  f"motion.pos_dim={mcfg.pos_dim} != pos.input_dim // 3 = {int(hc.memory_feature.pos.input_dim) // 3}")
             _req(int(mcfg.stride) >= 1, f"motion.stride={mcfg.stride} < 1")
@@ -183,6 +204,7 @@ class FrameSampDataset(Dataset):
         if self._motion_enabled:
             self._motion_root = pathlib.Path(motion_root)
             self._motion_meta = ms.MotionMeta.load(self._motion_root)
+            check_motion_contract(mcfg, self._motion_meta)
             has_min, has_pad = "demo_min_real_frames" in mcfg, "demo_tail_pad" in mcfg
             _req(has_min == has_pad, "demo_min_real_frames 与 demo_tail_pad 必须同时提供或同时缺省")
             got_min = mcfg.get("demo_min_real_frames", 33)
@@ -196,15 +218,19 @@ class FrameSampDataset(Dataset):
             if num_eps is not None:
                 raise ValueError("motion memory 不支持 subset 迷你库（motion_index 覆盖全清单）")
             self._motion_entries = self._motion_meta.entries
-            self._motion_budget = int(mcfg.budget)
+            self._motion_budget = motion_spec.budget
+            self._motion_window_budget = motion_spec.window_budget
+            self._motion_num_tokens = motion_spec.num_tokens
+            self._motion_readout = motion_spec.readout
             self._motion_pos_dim = int(mcfg.pos_dim)
             # 零截断契约的预检：每 episode 的最大合法起点数 ≤ 预算，超过即报 episode 身份（禁止静默裁剪）
             for e in self._motion_entries:
                 mx = ms.max_visible_count(e)
-                if mx > self._motion_budget:
+                if mx > self._motion_window_budget:
                     raise ValueError(
-                        f"episode g={e.g} ({e.h5_file}#{e.raw_ep_idx}) 最大合法起点数 {mx} > motion.budget "
-                        f"{self._motion_budget}——零截断契约要求按全集重新定标，不做最近 N 裁剪")
+                        f"episode g={e.g} ({e.h5_file}#{e.raw_ep_idx}) 最大合法起点数 {mx} > 窗口容量 "
+                        f"{self._motion_window_budget}（motion.budget={self._motion_budget}，"
+                        f"每窗 {self._motion_num_tokens} 个 token）——零截断契约要求按全集重新定标，不做最近 N 裁剪")
 
     # ―― spawn 生命周期（B.2）――
     def __getstate__(self):
@@ -292,14 +318,14 @@ class FrameSampDataset(Dataset):
         return out_img, out_pos, out_stt, mask
 
     def _pad_motion(self, emb, pos, frames, k: int):
-        """运动路右填充（另写、不复用 _pad：目标长度是 motion.budget、签名是 emb/pos 两键并附带每行全域时刻）。
+        """先按完整窗口右填充，再展开每窗 token；PE、mask、时刻按窗口重复。
 
-        只负责 padding、绝不裁剪：k > 预算即 raise（__init__ 已按 index 预检，此处是防御性 overflow 闸）。
-        返回 (emb (B,768) f32, pos (B,256) f32, mask (B,) bool, times (B,) int64 padding 记哨兵)。
+        只负责 padding、绝不裁剪：k > 窗口容量即 raise。四对输入 emb 为 (k,4,512)，
+        旧配置输入仍为 (k,768)；输出第一维均为 motion.budget，padding 时刻沿用原哨兵。
         """
-        B = self._motion_budget
+        B = self._motion_window_budget
         if k > B:
-            raise ValueError(f"合法 motion 起点数 {k} > motion.budget {B}（零截断契约被破坏）")
+            raise ValueError(f"合法 motion 起点数 {k} > 窗口容量 {B}（零截断契约被破坏）")
         out_emb = np.zeros((B,) + emb.shape[1:], dtype=np.float32)
         out_pos = np.zeros((B,) + pos.shape[1:], dtype=np.float32)
         out_emb[:k] = emb
@@ -307,6 +333,11 @@ class FrameSampDataset(Dataset):
         mask = np.zeros(B, dtype=np.bool_)
         mask[:k] = True
         times = pad_times(frames, B)
+        if self._motion_num_tokens > 1:
+            out_emb = out_emb.reshape(self._motion_budget, emb.shape[-1])
+            out_pos = np.repeat(out_pos, self._motion_num_tokens, axis=0)
+            mask = np.repeat(mask, self._motion_num_tokens)
+            times = np.repeat(times, self._motion_num_tokens)
         return out_emb, out_pos, mask, times
 
     def __getitem__(self, idx):
@@ -353,12 +384,14 @@ class FrameSampDataset(Dataset):
             entry = self._motion_entries[g]
             rows_m, f_m = ms.visible_motion_rows(entry, step)
             k = int(len(rows_m))
-            if k > self._motion_budget:
+            if k > self._motion_window_budget:
                 raise ValueError(
-                    f"样本 idx={idx} (g={g}, t={step}) 合法 motion 起点数 {k} > motion.budget {self._motion_budget}")
+                    f"样本 idx={idx} (g={g}, t={step}) 合法 motion 起点数 {k} > 窗口容量 {self._motion_window_budget}")
             mstore = self._ensure_motion_store()
-            # ②′ 查表：motion 行 (k,768) f32；起点帧 pos 行第 0 行前 pos_dim 维（时间码，纯切片）
-            memb = mstore.rows(rows_m) if k else np.zeros((0, ms.MOTION_ROW_SHAPE[0]), np.float32)
+            # ②′ 先查原始窗口，再只配对一次；时间码仍取起点帧 pos 第 0 行前 pos_dim 维。
+            memb = mstore.rows(rows_m) if k else np.zeros((0,) + self._motion_meta.row_shape, np.float32)
+            if self._motion_readout == PAIRING:
+                memb = pair_adjacent_tokens(memb)
             mpos = (np.ascontiguousarray(store.pos_rows(f_m)[:, 0, : self._motion_pos_dim])
                     if k else np.zeros((0, self._motion_pos_dim), np.float32))
             # ③′ 右填充 + ④′ 两路按 (全域时刻, 类型) 交错

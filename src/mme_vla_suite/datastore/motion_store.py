@@ -5,21 +5,21 @@
 在线侧（S3）与对拍工具一律从这里 import，绝不复制；``framesamp_store.py`` 一字不动（两套索引公式不同，
 帧路按 ``row_of()`` 逐帧、运动路按段内网格，混放会互相污染）。
 
-支持历史 ``motion-768-grid16-v1`` 与 demo 补帧 ``motion-768-grid16-demopad17-v1``：
+写入 ``motion-v10-8x256-grid16-demopad17-v1``，同时保留两个历史 768 布局的读取：
 
     <motion_root>/
     ├── meta/store_meta.json          唯一契约，两阶段写：pack→"packed"、verify→"verified"
     ├── meta/motion_index.json        段基址表（唯一身份来源），store_meta 记其 sha256、加载时现场重算
     ├── meta/row_digests.blake2b.bin  逐行 blake2b-128（verify 产出）
     ├── meta/pack_progress.jsonl      断点续跑记录
-    └── motion_token.f32.bin          (rows, 768) f32 裸字节；行序 = 清单 canonical_order 逐 episode，
+    └── motion_token.f32.bin          (rows, *row_shape) f32 裸字节；行序 = 清单 canonical_order 逐 episode，
                                       每 episode 先 demo 段后 exec 段，段内按网格序 0,16,32,… 升序
 
 起点钉在段内网格 ``0,16,32,…``，demo / exec 各自起算。历史布局两段均要求 33 个真实帧；
 新布局 demo 至少 17 个真实帧，不足 33 时重复本段最后一帧，exec 始终要求 33 帧。
 窗口契约随 ``IndexEntry.spec`` 与 ``MotionMeta.spec`` 传递，禁止用最新布局替代旧表契约。
 
-读取实现：1600 集新表约 219 MB，每进程整表 ``np.fromfile`` 读入，
+读取实现：每进程按该布局的 ``prod(row_shape)`` 整表 ``np.fromfile`` 读入，
 仍照抄 FrameSampStore 的三条纪律——记录 ``owner_pid``、``__reduce__`` 直接 raise 禁 pickle、跨进程懒构造
 （懒构造由 FrameSampDataset 负责）。本模块不 import 任何 training/model 模块（单向依赖）。
 
@@ -42,14 +42,14 @@ from mme_vla_suite.datastore.manifest import load_manifest
 logger = logging.getLogger(__name__)
 
 # ── 布局常量 ──────────────────────────────────────────────────────────────────
-LAYOUT = "motion-768-grid16-demopad17-v1"
+LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
 META_SCHEMA = 1
 INDEX_SCHEMA = 1
 
 MOTION_KEY = "motion_token"
-MOTION_ROW_SHAPE = (768,)
+MOTION_ROW_SHAPE = (8, 256)
 MOTION_DTYPE = np.float32
-MOTION_ROW_BYTES = 768 * 4              # 3,072
+MOTION_ROW_BYTES = int(np.prod(MOTION_ROW_SHAPE)) * np.dtype(MOTION_DTYPE).itemsize
 
 WINDOW_FRAMES = 33                      # 与 MotionJEPA 的 WINDOW = 4*K+1 同值，verify 时核对
 GRID_STRIDE = 16                        # 段内绝对网格步长；加载时须 == yaml motion.stride
@@ -81,6 +81,11 @@ class LayoutSpec:
     demo_min_real: int
     exec_min_real: int
     demo_tail_pad: str
+    row_shape: tuple[int, ...] = (768,)
+
+    @property
+    def row_bytes(self) -> int:
+        return int(np.prod(self.row_shape)) * np.dtype(MOTION_DTYPE).itemsize
 
     def min_real(self, segment: str) -> int:
         if segment not in SEGMENTS:
@@ -96,6 +101,7 @@ class LayoutSpec:
 LAYOUT_SPECS = {
     "motion-768-grid16-v1": LayoutSpec(33, 33, "none"),
     "motion-768-grid16-demopad17-v1": LayoutSpec(17, 33, "repeat_last"),
+    "motion-v10-8x256-grid16-demopad17-v1": LayoutSpec(17, 33, "repeat_last", (8, 256)),
 }
 if LAYOUT not in LAYOUT_SPECS or any(
     f"-{LAYOUT_GRID_SUFFIX}-" not in name or not name.endswith("-v1") for name in LAYOUT_SPECS
@@ -398,6 +404,14 @@ class MotionMeta:
     provenance: dict
     spec: LayoutSpec
 
+    @property
+    def row_shape(self) -> tuple[int, ...]:
+        return self.spec.row_shape
+
+    @property
+    def row_bytes(self) -> int:
+        return self.spec.row_bytes
+
     @classmethod
     def load(cls, store_root: str | pathlib.Path) -> "MotionMeta":
         root = pathlib.Path(store_root)
@@ -417,6 +431,8 @@ class MotionMeta:
         if int(need("schema")) != META_SCHEMA:
             raise ValueError(f"schema={raw['schema']} != {META_SCHEMA}")
         spec = layout_spec(raw, str(meta_path))
+        if raw["layout"] == LAYOUT and need("manifest_scope") != "full":
+            raise ValueError("raw8 motion 表必须完整覆盖绑定清单（manifest_scope=full）")
         if need("byte_order") != BYTE_ORDER or need("array_order") != ARRAY_ORDER:
             raise ValueError("byte_order/array_order 与格式常量不符")
         for key, want in (("grid_stride", GRID_STRIDE), ("window_frames", WINDOW_FRAMES),
@@ -430,11 +446,11 @@ class MotionMeta:
         t = need("tables").get(MOTION_KEY)
         if t is None:
             raise ValueError(f"tables 缺 {MOTION_KEY}")
-        if tuple(t["row_shape"]) != MOTION_ROW_SHAPE or t["dtype"] != "float32" \
-                or int(t["row_bytes"]) != MOTION_ROW_BYTES or t["relpath"] != MOTION_TABLE_RELPATH:
+        if any(type(d) is not int for d in t["row_shape"]) or tuple(t["row_shape"]) != spec.row_shape or t["dtype"] != "float32" \
+                or int(t["row_bytes"]) != spec.row_bytes or t["relpath"] != MOTION_TABLE_RELPATH:
             raise ValueError(f"tables[{MOTION_KEY}] 形制与格式常量不符: {t}")
         num_rows = int(need("num_rows"))
-        if int(t["num_rows"]) != num_rows or int(t["byte_count"]) != num_rows * MOTION_ROW_BYTES:
+        if num_rows < 0 or int(t["num_rows"]) != num_rows or int(t["byte_count"]) != num_rows * spec.row_bytes:
             raise ValueError("tables.num_rows / byte_count 与 num_rows 不符")
 
         # motion_index.json：现场重算 sha256，不等立即拒绝（R23 / 红线：唯一身份来源）
@@ -477,8 +493,8 @@ def run_fast_checks(meta: MotionMeta, *, manifest_path: str | None = None) -> No
     if not table.is_file():
         raise FileNotFoundError(f"motion 表缺失: {table}")
     st = table.stat().st_size
-    if st != meta.num_rows * MOTION_ROW_BYTES:
-        raise ValueError(f"motion 表大小不符: {st} != {meta.num_rows} × {MOTION_ROW_BYTES}")
+    if st != meta.num_rows * meta.row_bytes:
+        raise ValueError(f"motion 表大小不符: {st} != {meta.num_rows} × {meta.row_bytes}")
 
 
 def run_full_checks(meta: MotionMeta) -> None:
@@ -538,9 +554,9 @@ class MotionStore:
         if verify_level == "full":
             run_full_checks(self._meta)
         table = np.fromfile(self._root / MOTION_TABLE_RELPATH, dtype=MOTION_DTYPE)
-        if table.size != self._meta.num_rows * MOTION_ROW_SHAPE[0]:
+        if table.size != self._meta.num_rows * int(np.prod(self._meta.row_shape)):
             raise ValueError("motion 表元素数与 num_rows 不符")
-        table.shape = (self._meta.num_rows,) + MOTION_ROW_SHAPE
+        table.shape = (self._meta.num_rows,) + self._meta.row_shape
         self._table = table
         self._owner_pid = os.getpid()
 
@@ -570,7 +586,7 @@ class MotionStore:
             "由 FrameSampDataset 在 worker 内按 pid 懒构造")
 
     def rows(self, rows) -> np.ndarray:
-        """按全局行号取 (n, 768) f32（进程内副本切片）。"""
+        """按全局行号取 (n, *row_shape) f32（进程内副本切片）。"""
         r = np.asarray(rows, dtype=np.int64)
         if len(r) and (int(r.min()) < 0 or int(r.max()) >= self._meta.num_rows):
             raise IndexError(f"motion 行号越界: [{r.min()}, {r.max()}] ∉ [0, {self._meta.num_rows})")

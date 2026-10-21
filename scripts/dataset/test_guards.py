@@ -451,7 +451,8 @@ def test_wan_common_constants_match_motion_store() -> None:
     wc = _wan_common()
     for k in ("GRID_STRIDE", "WINDOW_FRAMES", "GRID_ORIGIN", "WINDOW_DIRECTION", "TRUNCATION_POLICY", "FRAME_SIZE"):
         assert getattr(wc, k) == getattr(ms, k), k
-    assert wc.TOKEN_BYTES == ms.MOTION_ROW_BYTES and wc.TOKEN_DIM == ms.MOTION_ROW_SHAPE[0]
+    assert wc.TOKEN_BYTES == ms.MOTION_ROW_BYTES and wc.TOKEN_DIM == np.prod(ms.MOTION_ROW_SHAPE)
+    assert wc.TOKEN_SHAPE == ms.MOTION_ROW_SHAPE == (8, 256)
     for minimum in (17, 33):
         for L in range(0, 1300):
             assert wc.seg_num_chunks(L, minimum) == ms.seg_num_chunks(L, minimum), (L, minimum)
@@ -470,7 +471,8 @@ def test_source_pin_matches_copied_module() -> None:
     pin = json.loads((_HERE / "wan" / "SOURCE_PIN.json").read_text(encoding="utf-8"))
     got = hashlib.sha256((_HERE / "wan" / "wan_motion_infer.py").read_bytes()).hexdigest()
     assert got == pin["source_sha256"], "复制件 wan_motion_infer.py 与 SOURCE_PIN.source_sha256 不符（复制件被改动）"
-    assert pin["mj_repo_commit"] == "2a484ad960ed6155321dc34def9011eb119f857f"
+    assert pin["mj_repo_commit"] == "ee719fbedea88f8a6c8e6a0c280fd332c0a36af9"
+    assert pin["upstream_source_sha256"] == "6d8cce62d9301b1e360d8d6aa3191b2a2862d434727f711ed406f1cbdd52b22b"
 
 
 def _mini_manifest_for_motion(specs):
