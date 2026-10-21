@@ -381,7 +381,7 @@ def cmd_pack(args) -> None:
                                        "sha256": table_sha}},
             "num_rows": totals["rows"], "totals": totals,
             "row_order": index["row_order"],
-            "manifest_sha256": manifest["sha256"],
+            "manifest_sha256": manifest["sha256"], "manifest_scope": "full",
             "manifest_path": str(pathlib.Path(args.manifest).resolve()),
             "motion_index_relpath": ms.INDEX_RELPATH, "motion_index_sha256": index_sha,
             "provenance": prov,
