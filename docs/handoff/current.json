@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-21T02:13:32Z",
-    "america_new_york": "2026-10-20T22:13:32-0400"
+    "utc": "2026-10-21T02:32:07Z",
+    "america_new_york": "2026-10-20T22:32:07-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "2b2954cf7d04f10f1b0826a3e72a0324bdda08d2"
+    "base_head": "ac80bf81dba87081204cff77e8c2515ad05c6a92"
   },
   "freeze": {
     "active": false,
@@ -19,9 +19,9 @@
         "file": "/scratch/hongze/MotionJEPA/1020-paired4-modulation-plan.html",
         "sha": "ee719fbedea88f8a6c8e6a0c280fd332c0a36af9"
       },
-      "state": "running",
-      "state_changed_at": "2026-10-21T02:13:32Z",
-      "state_reason": "用户已批准开始实施；开工一致性审查通过，独立工作树并行实现离线数据、训练装配、夹具与模型验证。",
+      "state": "done",
+      "state_changed_at": "2026-10-21T02:32:07Z",
+      "state_reason": "训练链路冒烟全部通过；最终代码4c83a70，单窗新提取、原完整模型1152容量一步更新及65叶EMA严格回读，固定输入损失差0；含首次3秒初始化失败及修复累计603秒，EXIT_CODE=0。独立数据/模型证据审查通过，自有进程、tmux和监听已退出，无长尾。",
       "owner": {
         "session": "",
         "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"
@@ -30,21 +30,21 @@
       "pre_handoff": [
         {
           "what": "原始数据格式、唯一相邻配对与窗口装配",
-          "evidence": "RAW_CONTRACT / PAIRING / WINDOW_BUDGET / MASK_ORDER",
+          "evidence": "RAW_CONTRACT=PASS rows=1 bytes=8192；PAIRING=PASS；WINDOW_BUDGET=PASS cases=0,1,159,160 reject=161；MASK_ORDER=PASS tokens=1152；CPU定向79passed/2skipped（缺历史库）。",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "真实单窗提取与已批准权重注册",
-          "evidence": "SOURCE_FRESH / REGISTERED_SOURCE",
+          "evidence": "SOURCE_FRESH=PASS frames=33 windows=1 frame_mismatches=0 metadata_mismatches=0 latent_mismatches=0 encoder_mismatches=0；REGISTERED_SOURCE=PASS sha256=146efd425f7923428d630dfb7ee2a8f010f19b207d36519dba49454aaa373d30；DATA_EVIDENCE_REVIEW=PASS checks=446 defects=0。",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "完整模型单步、严格权重回读与范围审查",
-          "evidence": "REAL_FORWARD / SAVE_LOAD / ORIGINAL_IMPL_UNCHANGED / SCOPE / TRAIN_SMOKE",
+          "evidence": "REAL_FORWARD=PASS loss=0.0919426679611206 grad_norm=3.894103527069092 updated_fp32_values=1395724；SAVE_LOAD=PASS export=ema leaves=65 max_abs=0；ORIGINAL_IMPL_UNCHANGED=PASS；SCOPE=PASS；MODEL_EVIDENCE_REVIEW=PASS；TRAIN_SMOKE=PASS；RUN_PROCESS_CLOSED=PASS；EXIT_CODE=0 elapsed_seconds=603。",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/docs/training-doc/paired4-epoch6-original-smoke-20261020-a",
-          "status": "pending"
+          "status": "pass"
         }
       ],
       "long_tail": [],
@@ -64,13 +64,7 @@
         }
       ],
       "pending_decisions": [],
-      "next_steps": [
-        {
-          "what": "整合四个独立实现工作树，完成CPU合同后串行执行GPU1单窗提取与GPU0模型验证",
-          "command": "见计划第二部分6.2",
-          "verdict_line": "TRAIN_SMOKE=PASS"
-        }
-      ]
+      "next_steps": []
     },
     "mixed8-vla-build": {
       "plan": {
