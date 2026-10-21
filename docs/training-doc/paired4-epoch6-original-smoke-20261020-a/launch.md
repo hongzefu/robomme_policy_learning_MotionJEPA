@@ -6,7 +6,7 @@
 
 ## 版本、环境与分工
 
-实施前 policy 代码为 `84cef6af56df77eceef6f6f685a9e9c3d865b337`；规则同步后基线为 `2b2954cf7d04f10f1b0826a3e72a0324bdda08d2`，分支 `v2-motionmem`。代码整合后的实际运行提交由运行记录保存；本文件建立时尚未启动 GPU。
+实施前 policy 代码为 `84cef6af56df77eceef6f6f685a9e9c3d865b337`；规则同步后基线为 `2b2954cf7d04f10f1b0826a3e72a0324bdda08d2`，分支 `v2-motionmem`。本文件建立时尚未启动 GPU；最终运行代码为 `4c83a702878ef6c601e30a5103d02e1cbb1fe8f9`，结果及首次初始化修复见 [result.md](result.md)。
 
 环境为 AWS 单机，`/scratch` 位于 `/dev/md0` 的 XFS 本地 NVMe RAID；8 张 A100-SXM4-80GB。开工时八卡显存使用均为 0 MiB，磁盘空闲约 3.4 TiB。不存在历史 `/data/hongzefu`、NFS 或集群连接。主环境和 Wan 子环境分开，保持根依赖锁不变。
 
@@ -49,6 +49,16 @@ JAX_PLATFORMS=cpu uv run --frozen --no-sync python "$CHECK" --suite summary --ro
 ```
 
 长阶段放入 detached tmux，计划会话名 `paired4-epoch6-original-smoke-20261020-a`，日志 `reports/smoke.log`；实际创建的会话与精确 PID 写入运行记录。使用 `PYTHONUNBUFFERED=1`、`set -o pipefail`、`tee` 和 `EXIT_CODE=` 保证日志与退出状态一致。只清理本次登记的进程。
+
+实际使用上述唯一tmux，原尝试wrapper PID为350702，成功重试wrapper PID为352601、pane PID为352599、Torch PID为352652、模型PID为353235；全部已退出。运行脚本保留在产物根 `reports/run_gpu.sh`，使用首次起点1792549237和固定1790秒计算截止，另留10秒终止余量，重试不重置。美东22:30:40正常结束。Wan依赖同步使用以下命令级本地Git传输，固定远端URL/revision保持：
+
+```bash
+UV_CACHE_DIR=/scratch/hongze/.cache/uv \
+UV_PROJECT_ENVIRONMENT="$PWD/v1-store/venvs/wan" \
+GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.file:///scratch/hongze/MotionJEPA.insteadOf \
+GIT_CONFIG_VALUE_0=https://github.com/hongzefu/MotionJEPA \
+uv sync --project scripts/dataset/wan --frozen
+```
 
 ## 验收与停止点
 

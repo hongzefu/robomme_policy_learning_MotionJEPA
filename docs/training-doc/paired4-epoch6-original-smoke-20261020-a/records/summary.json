@@ -1,0 +1,72 @@
+{
+  "status": "PASS",
+  "gates": {
+    "TRAIN_SMOKE": {
+      "status": "PASS",
+      "details": {
+        "cpu": {
+          "status": "PASS",
+          "report_sha256": "591c1d03abc478eb40d76fa1415e778168a62a5adec6fac2a14c97aad4676b33",
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports/cpu.json"
+        },
+        "prepare-fixture": {
+          "status": "PASS",
+          "report_sha256": "52d7c021600827f5d205482c7387febc9080882d6e4036f40d85a588189d32bb",
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports/prepare-fixture.json"
+        },
+        "source-smoke": {
+          "status": "PASS",
+          "report_sha256": "587697bae032f26cb2499f3c520b2bc63e85208ae36390b4bf404af725cfa93a",
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports/source-smoke.json"
+        },
+        "finalize-fixture": {
+          "status": "PASS",
+          "report_sha256": "bf0c3e5a84db67ab909088a8e54871c0979702f683ee8eaa5e3f582142af11c5",
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports/finalize-fixture.json"
+        },
+        "model": {
+          "status": "PASS",
+          "report_sha256": "7fb9acc2da47d7b04093cdd7b831aaeacf54a7ea53792a87f0fa04dd3bbaf5d9",
+          "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports/model.json"
+        }
+      }
+    }
+  },
+  "reports": {
+    "cpu": {
+      "status": "PASS",
+      "report_sha256": "591c1d03abc478eb40d76fa1415e778168a62a5adec6fac2a14c97aad4676b33",
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports/cpu.json"
+    },
+    "prepare-fixture": {
+      "status": "PASS",
+      "report_sha256": "52d7c021600827f5d205482c7387febc9080882d6e4036f40d85a588189d32bb",
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports/prepare-fixture.json"
+    },
+    "source-smoke": {
+      "status": "PASS",
+      "report_sha256": "587697bae032f26cb2499f3c520b2bc63e85208ae36390b4bf404af725cfa93a",
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports/source-smoke.json"
+    },
+    "finalize-fixture": {
+      "status": "PASS",
+      "report_sha256": "bf0c3e5a84db67ab909088a8e54871c0979702f683ee8eaa5e3f582142af11c5",
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports/finalize-fixture.json"
+    },
+    "model": {
+      "status": "PASS",
+      "report_sha256": "7fb9acc2da47d7b04093cdd7b831aaeacf54a7ea53792a87f0fa04dd3bbaf5d9",
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports/model.json"
+    }
+  },
+  "limitations": [
+    "仅单窗训练冒烟",
+    "未恢复optimizer、step或RNG",
+    "未验证在线推理、评估或全量训练"
+  ],
+  "suite": "summary",
+  "root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a",
+  "elapsed_seconds": 27.59370697196573,
+  "code_sha256": "cca780e9f770315eb6684f56f284014ff3d7d45b8352636df909f73167edeee8",
+  "git_commit": "4c83a702878ef6c601e30a5103d02e1cbb1fe8f9"
+}

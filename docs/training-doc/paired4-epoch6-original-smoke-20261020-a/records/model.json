@@ -1,0 +1,336 @@
+{
+  "status": "PASS",
+  "gates": {
+    "REAL_FORWARD": {
+      "status": "PASS",
+      "details": {
+        "metrics": {
+          "grad_norm": 3.894103527069092,
+          "llm_grad_norm": 3.8438758850097656,
+          "loss": 0.0919426679611206,
+          "mem_enc_norm": 0.28278714418411255,
+          "param_norm": 1815.712646484375
+        },
+        "gradients": {
+          "all_parameter_gradients_finite": true,
+          "loss": 0.0919426679611206,
+          "motion_input_gradient_finite": true,
+          "padding_motion_emb_grad_norm": 0.0,
+          "position_projection_grad_norm": 0.0006773812929168344,
+          "projection_content_grad_norm": 0.004958550911396742,
+          "projection_position_grad_norm": 0.0007125927950255573,
+          "valid_motion_emb_grad_norm": 4.970556983607821e-05,
+          "valid_motion_pos_grad_norm": 8.648688890389167e-06
+        },
+        "updated_fp32_motion_values": {
+          "['mem_encoder']['motion_encoder_static']['bias']": 1024,
+          "['mem_encoder']['motion_encoder_static']['kernel']": 1295657,
+          "['mem_encoder']['motion_pos_proj']['bias']": 768,
+          "['mem_encoder']['motion_pos_proj']['kernel']": 98275
+        },
+        "step": 1,
+        "full_model": true,
+        "memory_tokens": 1152
+      }
+    },
+    "SAVE_LOAD": {
+      "status": "PASS",
+      "details": {
+        "export_kind": "ema",
+        "save_step": 1,
+        "parameter_leaves": 65,
+        "parameter_reference_sha256": "1c175c8a8fecf0e615a0693c872bb1697f0d0b1b262ae1e47bac14a7fb4ddeb0",
+        "contract": {
+          "config_record_sha256": "a3191489818bbb6b82740ea183a7b048c24f8935e7133b5bec8f2fb90e412a75",
+          "resolved_sha256": "cc7eacd1cd938e259bf936b4f1901fd0e1b98d4519c95efa38b45dca2d4a1843",
+          "provenance_sha256": "5c7b21e80a92a229db8928d3f57338feeaf222601f11b0e1c93125b43c95065f",
+          "manifest_sha256": "878c118e66fbe2afeeefefbe2e54ba391added88e4ce6dcf8113ef5a10004bf8",
+          "source_run": "wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_epoch_6.pt#encoder"
+        },
+        "loss_max_abs": 0.0,
+        "reference_loss": {
+          "shape": [
+            1,
+            20
+          ],
+          "dtype": "float32",
+          "sha256": "f250c6a0a4f8f6cd609b1967041e322aa045d5abdda50370ddd2596a501063a0"
+        },
+        "loaded_loss": {
+          "shape": [
+            1,
+            20
+          ],
+          "dtype": "float32",
+          "sha256": "f250c6a0a4f8f6cd609b1967041e322aa045d5abdda50370ddd2596a501063a0"
+        },
+        "backend": "gpu",
+        "fixed_rng": [
+          2516395431,
+          1901921421
+        ],
+        "optimizer_restored": false
+      }
+    }
+  },
+  "stage": "complete",
+  "root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a",
+  "code_sha256": "cca780e9f770315eb6684f56f284014ff3d7d45b8352636df909f73167edeee8",
+  "timings": {
+    "initialize": 16.338900342583656,
+    "gradient_diagnostics": 56.5175275253132,
+    "original_train_step": 49.678752889856696,
+    "save_weights": 165.79788110312074,
+    "strict_restore_and_loss": 172.38263999857008
+  },
+  "input_report_sha256": {
+    "reports/cpu.json": "591c1d03abc478eb40d76fa1415e778168a62a5adec6fac2a14c97aad4676b33",
+    "reports/prepare-fixture.json": "52d7c021600827f5d205482c7387febc9080882d6e4036f40d85a588189d32bb",
+    "reports/source-smoke.json": "587697bae032f26cb2499f3c520b2bc63e85208ae36390b4bf404af725cfa93a",
+    "reports/finalize-fixture.json": "bf0c3e5a84db67ab909088a8e54871c0979702f683ee8eaa5e3f582142af11c5"
+  },
+  "batch": {
+    "sample_idx": 32,
+    "batch_size": 1,
+    "valid_motion_tokens": 4,
+    "frame_times": [
+      0,
+      4,
+      9,
+      13,
+      18,
+      22,
+      27,
+      32
+    ],
+    "motion_window_starts": [
+      0
+    ],
+    "arrays": {
+      "motion_emb": {
+        "shape": [
+          1,
+          640,
+          512
+        ],
+        "dtype": "float32",
+        "sha256": "2e3bbb0725c9ad5e435fee127e7be60c7fea54eaf6ee2dcd41a09f0237ea8383"
+      },
+      "motion_pos": {
+        "shape": [
+          1,
+          640,
+          256
+        ],
+        "dtype": "float32",
+        "sha256": "54ab77e02383e171d0279be1129f0ebee73121312e68d44d8aa4be2f4f18bcc6"
+      },
+      "motion_mask": {
+        "shape": [
+          1,
+          640
+        ],
+        "dtype": "bool",
+        "sha256": "979a118a50d13342cdd7f09bfdab23e958b808df1ab4955e1c1ed206904e0269"
+      },
+      "mem_order": {
+        "shape": [
+          1,
+          1152
+        ],
+        "dtype": "int32",
+        "sha256": "48732731d987ba704a72c903341ab32e86e0fe30d6a5bd952885dafbdb5151ca"
+      },
+      "static_image_emb": {
+        "shape": [
+          1,
+          512,
+          2048
+        ],
+        "dtype": "bfloat16",
+        "sha256": "d6f34a3799008db83f56c80cc66a11da6bde57d3bd235c8f4237a8d468dc430d"
+      },
+      "actions": {
+        "shape": [
+          1,
+          20,
+          32
+        ],
+        "dtype": "float32",
+        "sha256": "283eff3752391d7e4d88fb0fa4b574737ef364d5084c4d09c6eb6bdab578bf45"
+      }
+    }
+  },
+  "configuration": {
+    "base_config": "mme_vla_suite_b128_80k",
+    "run_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/policy/mme_vla_suite_b128_80k/paired4-epoch6-original-smoke-20261020-a",
+    "initial_lr": 9.997165761888027e-09,
+    "norm_stats": {
+      "path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/16task-mixed8-200-3200ep-e3c7564f/robomme/norm_stats.json",
+      "bytes": 2068,
+      "sha256": "36ee9acdea4c8383b50c7b07b45a740efb3fa073f6e60455977d5a6fb3204394"
+    },
+    "contract": {
+      "config_record_sha256": "a3191489818bbb6b82740ea183a7b048c24f8935e7133b5bec8f2fb90e412a75",
+      "resolved_sha256": "cc7eacd1cd938e259bf936b4f1901fd0e1b98d4519c95efa38b45dca2d4a1843",
+      "provenance_sha256": "5c7b21e80a92a229db8928d3f57338feeaf222601f11b0e1c93125b43c95065f",
+      "manifest_sha256": "878c118e66fbe2afeeefefbe2e54ba391added88e4ce6dcf8113ef5a10004bf8",
+      "source_run": "wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_epoch_6.pt#encoder"
+    }
+  },
+  "resources": {
+    "elapsed_seconds": 499.414865847677,
+    "host_max_rss_bytes": 65309065216,
+    "gpu_peak_scope": "JAX分配器的peak_bytes_in_use；不是驱动或全进程显存峰值",
+    "devices": [
+      {
+        "kind": "NVIDIA A100-SXM4-80GB",
+        "platform": "gpu",
+        "id": 0,
+        "memory_stats": {
+          "num_allocs": 10460,
+          "bytes_in_use": 12952986112,
+          "peak_bytes_in_use": 62221886208,
+          "largest_alloc_size": 12095399936,
+          "bytes_limit": 63821119488,
+          "bytes_reserved": 0,
+          "peak_bytes_reserved": 0,
+          "largest_free_block_bytes": 0,
+          "pool_bytes": 63821119488,
+          "peak_pool_bytes": 63821119488
+        }
+      }
+    ]
+  },
+  "gradient_diagnostics": {
+    "all_parameter_gradients_finite": true,
+    "loss": 0.0919426679611206,
+    "motion_input_gradient_finite": true,
+    "padding_motion_emb_grad_norm": 0.0,
+    "position_projection_grad_norm": 0.0006773812929168344,
+    "projection_content_grad_norm": 0.004958550911396742,
+    "projection_position_grad_norm": 0.0007125927950255573,
+    "valid_motion_emb_grad_norm": 4.970556983607821e-05,
+    "valid_motion_pos_grad_norm": 8.648688890389167e-06
+  },
+  "saved_artifacts": {
+    "schema": 1,
+    "run_root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/policy/mme_vla_suite_b128_80k/paired4-epoch6-original-smoke-20261020-a",
+    "save_step": 1,
+    "contract_files": {
+      "config_record.json": {
+        "bytes": 16881,
+        "sha256": "a3191489818bbb6b82740ea183a7b048c24f8935e7133b5bec8f2fb90e412a75"
+      },
+      "history_config.resolved.yaml": {
+        "bytes": 1012,
+        "sha256": "cc7eacd1cd938e259bf936b4f1901fd0e1b98d4519c95efa38b45dca2d4a1843"
+      },
+      "history_config.resolved.sha256": {
+        "bytes": 65,
+        "sha256": "f2e3d56b20d378ada7364b72988e3ad9f33e2d2f490b32cc4a97bae9c35c3b72"
+      },
+      "history_config.txt": {
+        "bytes": 59,
+        "sha256": "84a684927ca949d5ee6793506f62e2018d7ddbbfc7655a16f16d9f78024ea939"
+      },
+      "motion_provenance.json": {
+        "bytes": 3819,
+        "sha256": "5c7b21e80a92a229db8928d3f57338feeaf222601f11b0e1c93125b43c95065f"
+      },
+      "exported_parameter_reference.json": {
+        "bytes": 15925,
+        "sha256": "1c175c8a8fecf0e615a0693c872bb1697f0d0b1b262ae1e47bac14a7fb4ddeb0"
+      }
+    },
+    "checkpoint_files": {
+      "_CHECKPOINT_METADATA": {
+        "bytes": 327,
+        "sha256": "bd45be449e272f0915f300e60e7bcdaef05bf79b1cf6471b33ecd9ebb52095e7"
+      },
+      "assets/robomme/norm_stats.json": {
+        "bytes": 2068,
+        "sha256": "36ee9acdea4c8383b50c7b07b45a740efb3fa073f6e60455977d5a6fb3204394"
+      },
+      "params/_METADATA": {
+        "bytes": 29683,
+        "sha256": "73bbaa420efac3f32e3c1786d5ebafcb374147e1e4ec583e583c024c77abda6a"
+      },
+      "params/_sharding": {
+        "bytes": 16273,
+        "sha256": "bf51804997e5df97b015ede036eb956f8b5fc8573238f377eb8bd956b52c1ef7"
+      },
+      "params/array_metadatas/process_0": {
+        "bytes": 11615,
+        "sha256": "8781758ee8d4e8b3d9e48e53410c6a0e046184d9e182396d9cbeb913efd79285"
+      },
+      "params/d/55b198069063dcdf92b508ec07eaf441": {
+        "bytes": 2464,
+        "sha256": "53956a31c26fb57a00cc031c87b1dbfdd598a483f44d78273b632bc320e66690"
+      },
+      "params/manifest.ocdbt": {
+        "bytes": 118,
+        "sha256": "f7f471558291ffb28a338362cabda53c3980066afd165be800164f3583c40da4"
+      },
+      "params/ocdbt.process_0/d/03a3e994817adb4d906c809b5e96ae82": {
+        "bytes": 1211,
+        "sha256": "354344df3f965ed2837ca5e84ca78bcbcd859dac6612193a3a9a86c41673ed12"
+      },
+      "params/ocdbt.process_0/d/08f69b27e6caa994bc02dc526e3fa4d0": {
+        "bytes": 796,
+        "sha256": "4ebc0b2cffb06b984ae9804447655712ee6155d0d438f6275a1496470abdfac0"
+      },
+      "params/ocdbt.process_0/d/0a15b23d83205326c5ef534538d058e3": {
+        "bytes": 2522263524,
+        "sha256": "7f7f79966b0100d69c395a766903c596d50ea11b71e3376ed04f04f900c3484c"
+      },
+      "params/ocdbt.process_0/d/0caf5462876700eb4c9b9e90adbdc79b": {
+        "bytes": 2240585900,
+        "sha256": "355aaa1fae0e192173447a1d34bc3abfbce2bb5d54deac8ada7bc0d7c42f19cc"
+      },
+      "params/ocdbt.process_0/d/25e1f2b47d5c41cf0ad9cb220d319b31": {
+        "bytes": 2240300106,
+        "sha256": "0a1fbda1a4c3f66261a3018004178a1ba656d16534a0f3e79d4500a31001b62e"
+      },
+      "params/ocdbt.process_0/d/34b050a0027928d5dd55d883cbc7abb0": {
+        "bytes": 21537650,
+        "sha256": "fee55599ad9215f833c69fd808456955f8e57cedf95fc4cd7730964c0f96a4b2"
+      },
+      "params/ocdbt.process_0/d/503100dae8dba1ad224e9beca5dc9a26": {
+        "bytes": 2240312489,
+        "sha256": "b6c79ab86ad1d0e104e0d63af676d1b216f735fbc11b9a709fc923507ac3797b"
+      },
+      "params/ocdbt.process_0/d/5084dac6c9d53e45743275f8a1e0b311": {
+        "bytes": 1288,
+        "sha256": "8821749b194f3f98dde4c8e5f6ba4f2590804270d2232209a2ed4539b725b354"
+      },
+      "params/ocdbt.process_0/d/749676b561a1db2518e84948ca93429f": {
+        "bytes": 1957005621,
+        "sha256": "2e867e4df0e27ba02a7b41e29b32091228077666a1742756d57242bcb9dcce21"
+      },
+      "params/ocdbt.process_0/d/ab6af9a50e7fce57ed961987e445454e": {
+        "bytes": 1031,
+        "sha256": "a6b93a6b622e8f4b4bec5777a8fffba2a3fb2ea5210c491d75bdcf3dee6df193"
+      },
+      "params/ocdbt.process_0/d/d03a9c054717649a6b5bde170e5b6fe8": {
+        "bytes": 664404006,
+        "sha256": "80dca5fbb730a491c21edc559e94cd608e6440c7f83d6008d2a5942719941f50"
+      },
+      "params/ocdbt.process_0/d/d04fb50f1a46deb592531c5aa817a1bc": {
+        "bytes": 3191,
+        "sha256": "bc6ac202e5d4fd89237ade9e30809cc9f537cc2eb80abd67a34a5bad16bdfadd"
+      },
+      "params/ocdbt.process_0/d/fbd9cf5cfecba8966083b3c19b6870ac": {
+        "bytes": 217,
+        "sha256": "e94b6f05ceef55173200b9a654bc6d84fae3656f3c7e168fafc6291a2847bc7a"
+      },
+      "params/ocdbt.process_0/manifest.ocdbt": {
+        "bytes": 505,
+        "sha256": "42a48ea0b82733778fbb7a82931ff23a5d1ca226fff0763a815c2739539bf748"
+      }
+    }
+  },
+  "suite": "model",
+  "elapsed_seconds": 500.8062174310908,
+  "git_commit": "4c83a702878ef6c601e30a5103d02e1cbb1fe8f9"
+}

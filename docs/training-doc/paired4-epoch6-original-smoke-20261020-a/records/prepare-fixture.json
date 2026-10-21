@@ -1,0 +1,50 @@
+{
+  "status": "PASS",
+  "gates": {
+    "H5_PKL": {
+      "status": "PASS",
+      "frames": 33,
+      "mismatches": 0
+    },
+    "FRAME_FIXTURE": {
+      "status": "PASS",
+      "scanned": 33,
+      "manifest_scope": "full"
+    },
+    "REGISTERED_SOURCE": {
+      "status": "PASS",
+      "purpose": "paired4_training_smoke",
+      "original_checkpoint": "/scratch/hongze/MotionJEPA/runs/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_final.pt",
+      "registered_checkpoint": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_epoch_6.pt",
+      "original_config": "/scratch/hongze/MotionJEPA/runs/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/config.yaml",
+      "registered_config": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/config.yaml",
+      "checkpoint_sha256": "146efd425f7923428d630dfb7ee2a8f010f19b207d36519dba49454aaa373d30",
+      "config_sha256": "6f5ccbbdbfca59d2b863c8bf5eb49ba8b3c1968c76839ececea8890b5485d1c3",
+      "checkpoint_epoch": 6,
+      "arch": "wan-latent-v10-st",
+      "state_key": "encoder",
+      "source_run": "wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_epoch_6.pt#encoder"
+    }
+  },
+  "paths": {
+    "fixture": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture",
+    "manifest": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/meta/episode_manifest.json",
+    "raw_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/raw",
+    "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/source",
+    "frames": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/framesamp-8x8",
+    "latents": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/wan-latents",
+    "raw8": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/raw8",
+    "oracle": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/oracle",
+    "motion": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/motion",
+    "encoder_run_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a"
+  },
+  "fixture_manifest_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/fixture_manifest.json",
+  "manifest_sha256": "878c118e66fbe2afeeefefbe2e54ba391added88e4ce6dcf8113ef5a10004bf8",
+  "frame_count": 33,
+  "window_count": 1,
+  "suite": "prepare-fixture",
+  "root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a",
+  "elapsed_seconds": 3.834856428205967,
+  "code_sha256": "cca780e9f770315eb6684f56f284014ff3d7d45b8352636df909f73167edeee8",
+  "git_commit": "4c83a702878ef6c601e30a5103d02e1cbb1fe8f9"
+}

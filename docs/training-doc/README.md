@@ -10,7 +10,7 @@
 
 | 目录 | 内容 | 判定 |
 |---|---|---|
-| [`paired4-epoch6-original-smoke-20261020-a/`](paired4-epoch6-original-smoke-20261020-a/launch.md) | 单窗 raw8 新提取、相邻配对、原完整模型一次更新与严格权重回读；总 memory 容量 1152 | 实施中，运行结果待验证 |
+| [`paired4-epoch6-original-smoke-20261020-a/`](paired4-epoch6-original-smoke-20261020-a/result.md) | 单窗 raw8 新提取、相邻配对、原完整模型一次更新与严格权重回读；总 memory 容量 1152 | `TRAIN_SMOKE=PASS`；65叶EMA严格回读、固定损失差0；累计603秒，JAX分配器峰值57.949GiB，进程全部退出 |
 
 ### mixed8-200 新库 8×8 modulation 512 与 512+motion 80k 正式训练（2026-10-17，4+4 并行）
 

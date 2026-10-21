@@ -1,0 +1,91 @@
+{
+  "status": "PASS",
+  "manifest_sha256": "878c118e66fbe2afeeefefbe2e54ba391added88e4ce6dcf8113ef5a10004bf8",
+  "artifacts_sha256": {
+    "fixture/wan-latents/BinFill_ep0_exec.bin": "3d89fd9f578a283fdeba9b5bd2282b6163d857e2637ce1839b0fdb2821df56ae",
+    "fixture/wan-latents/BinFill_ep0_exec.bin.sha256": "1267579e030883ba8bffa70c757195d7e4f6feb1bd4fe8dbb5d692b6fd35c5fb",
+    "fixture/wan-latents/BinFill_ep0_exec.metadata.json": "85aa846f2e214adab0765291f11267e19d2ceb13804b5fe14061ac6185ef4639",
+    "fixture/wan-latents/metadata.json": "75a65bab6fa2992b8d55b22ce80dd083bd272d50b1a0e03872495831213619e6",
+    "raw8/BinFill_ep0_exec.f32.bin": "c9cbee080e2e47746faecfe220638ce4eae6d0952b77a21da98b0aece7d0f238",
+    "raw8/BinFill_ep0_exec.f32.bin.sha256": "482d1dde65467076f975a7e58bc9c6f4d88d08385e9bd6ed65086f8b7aa15b2f",
+    "raw8/BinFill_ep0_exec.metadata.json": "b0296d0294f372948f48f95c54cfb28f0ecb10535d3f44b07dd84575dec3a754",
+    "raw8/metadata.json": "8bcc82bf3db671edf71506b4236a761be5ec13fa61e7455940d1596aebee6abf",
+    "fixture/oracle/BinFill_ep0_exec.bin": "3d89fd9f578a283fdeba9b5bd2282b6163d857e2637ce1839b0fdb2821df56ae",
+    "fixture/oracle/motion_token.f32.bin": "c9cbee080e2e47746faecfe220638ce4eae6d0952b77a21da98b0aece7d0f238",
+    "fixture/oracle/vae_report.json": "144128448b40edcbbfc1fbd74d5fd1995ae397559ffb5a713f6322aba1bbd4bf",
+    "fixture/fixture_manifest.json": "6b13bdb504fb3dfe030e2b38b8a29343353498a25e2bb33193b9743130b50a7d"
+  },
+  "gates": {
+    "REGISTERED_SOURCE": {
+      "status": "PASS",
+      "purpose": "paired4_training_smoke",
+      "original_checkpoint": "/scratch/hongze/MotionJEPA/runs/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_final.pt",
+      "registered_checkpoint": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_epoch_6.pt",
+      "original_config": "/scratch/hongze/MotionJEPA/runs/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/config.yaml",
+      "registered_config": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/config.yaml",
+      "checkpoint_sha256": "146efd425f7923428d630dfb7ee2a8f010f19b207d36519dba49454aaa373d30",
+      "config_sha256": "6f5ccbbdbfca59d2b863c8bf5eb49ba8b3c1968c76839ececea8890b5485d1c3",
+      "checkpoint_epoch": 6,
+      "arch": "wan-latent-v10-st",
+      "state_key": "encoder",
+      "source_run": "wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_epoch_6.pt#encoder"
+    },
+    "SOURCE_FRESH": {
+      "status": "PASS",
+      "checked_windows": 1,
+      "frame_mismatches": 0,
+      "metadata_mismatches": 0,
+      "checked_frames": 33,
+      "metadata_checks": 151,
+      "metadata_rows_checked": 1,
+      "input_frames_sha256": "ffbea3422d40c2fd8120ee9a379d70b818734e73ccda7d327cecbade2a67ac7a",
+      "latent_mismatches": 0,
+      "encoder_mismatches": 0
+    }
+  },
+  "input_frames_sha256": "ffbea3422d40c2fd8120ee9a379d70b818734e73ccda7d327cecbade2a67ac7a",
+  "latent_sha256": "3d89fd9f578a283fdeba9b5bd2282b6163d857e2637ce1839b0fdb2821df56ae",
+  "raw8_sha256": "c9cbee080e2e47746faecfe220638ce4eae6d0952b77a21da98b0aece7d0f238",
+  "source_pin": {
+    "mj_repo_commit": "ee719fbedea88f8a6c8e6a0c280fd332c0a36af9",
+    "mj_repo_path": "/scratch/hongze/MotionJEPA",
+    "source_path": "scripts/inference-example/wan_motion_infer.py",
+    "source_sha256": "f74dbf4bc894b9d48b8a8cb98ad333e6a4e2f3f942a7b8244519054d359fa7c7",
+    "upstream_source_sha256": "6d8cce62d9301b1e360d8d6aa3191b2a2862d434727f711ed406f1cbdd52b22b",
+    "encoder_source_sha256": "40d8a33bee391c3c1b793a2e27f7fe26ba484c18bbb8407e9dc8e891f569470e",
+    "factory_source_sha256": "6d9ab27d30da6fc867a69950b542c52faad5ceff515bcf0798021224331c1d8d",
+    "copied_at": "2026-10-20T22:18:02-04:00",
+    "note": "锁定上游 v10 VAE/encoder 数值路径；本地额外检查 v10 架构、归一化 buffer 有限且 std 为正，记录冻结 config 字节 SHA，并把上游 flat2048 按行优先恢复为 raw8×256。source_sha256 为本地适配件，upstream_source_sha256 为原文；不兼容旧 encoder。"
+  },
+  "worker": {
+    "gpu_name": "NVIDIA A100-SXM4-80GB",
+    "compute_cap": "8.0",
+    "sm_count": 108,
+    "gpu_uuid": "GPU-8679f0ec-e14f-351d-b6f5-65b7930fbb2b",
+    "driver_version": "595.71.05",
+    "torch": "2.9.0+cu128",
+    "cudnn_version": 91002,
+    "python": "3.11.15",
+    "hostname": "ip-10-242-11-177.us-west-2.compute.internal",
+    "cuda_visible_devices": "1",
+    "git_commit": "4c83a702878ef6c601e30a5103d02e1cbb1fe8f9",
+    "mj_commit": "ee719fbedea88f8a6c8e6a0c280fd332c0a36af9",
+    "pid": 352652,
+    "worker": "paired4-one-window",
+    "module_sha256": "f74dbf4bc894b9d48b8a8cb98ad333e6a4e2f3f942a7b8244519054d359fa7c7"
+  },
+  "elapsed_s": 14.332827839069068,
+  "peak_cuda_mib": 1445.6357421875,
+  "paths": {
+    "fixture": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture",
+    "manifest": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/meta/episode_manifest.json",
+    "raw_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/raw",
+    "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/source",
+    "frames": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/framesamp-8x8",
+    "latents": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/wan-latents",
+    "raw8": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/raw8",
+    "oracle": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/oracle",
+    "motion": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/motion",
+    "encoder_run_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a"
+  }
+}

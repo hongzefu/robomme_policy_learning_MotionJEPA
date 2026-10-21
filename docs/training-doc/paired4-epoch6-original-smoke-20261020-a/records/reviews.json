@@ -1,0 +1,51 @@
+{
+  "agent_model": "gpt-6-astra",
+  "reasoning_effort": "ultra",
+  "plan": {
+    "status": "PASS",
+    "base": "ee719fbedea88f8a6c8e6a0c280fd332c0a36af9",
+    "findings": 0,
+    "blocking": 0
+  },
+  "implementation": {
+    "base": "2b2954cf7d04f10f1b0826a3e72a0324bdda08d2",
+    "T1": {"tip": "d9995861c6718cf104ec27b48988cb3a5d5660fc", "status": "PASS", "blocking": 0},
+    "T2a": {"tip": "00fc97a22819e8671ffbda180d5a01d4233cc3ee", "status": "PASS", "blocking": 0},
+    "T1b": {"tip": "6206b61cf3e99f0082189b36b8a2a5dbf9bc8065", "status": "PASS", "blocking": 0},
+    "T2b": {"tip": "99b42c189ce5d49d457fb153ab95ca1769229c27", "status": "PASS", "blocking": 0},
+    "merge": {"tip": "5428d98bbaddcae5fb70371f576e0dee147661dd", "status": "PASS", "files": 19, "blocking": 0},
+    "cuda_initialization_fix": {"tip": "b0c7615a0dd3f6b5c8d38c811434233325c0606c", "status": "PASS", "blocking": 0}
+  },
+  "corrected_findings": [
+    "离线调度器与worker统一显式缓存身份，保留完整段集合校验",
+    "新raw8布局写入并读取校验manifest_scope=full",
+    "模型成功报告封口实际权重及合同文件，summary复核文件集合、大小和SHA",
+    "回读前释放整套live参数引用",
+    "真实GPU前置统计前显式初始化CUDA，失败记录保留且预算不重置"
+  ],
+  "model_evidence": {
+    "status": "PASS",
+    "head": "4c83a702878ef6c601e30a5103d02e1cbb1fe8f9",
+    "blocking": 0,
+    "unchanged_protected_files": 16,
+    "report_sha_links": 9,
+    "parameter_leaves": 65,
+    "bfloat16_leaves": 23,
+    "float32_leaves": 42,
+    "updated_float32_values": 1395724,
+    "checkpoint_files": 21,
+    "loss_max_abs": 0,
+    "scope": "CPU独立核对真实输入摘要、参数元数据、报告及合同、小文件SHA；六个大权重文件沿用已完成summary全量SHA验证，未重跑GPU"
+  },
+  "data_evidence": {
+    "status": "PASS",
+    "head": "4c83a702878ef6c601e30a5103d02e1cbb1fe8f9",
+    "checks": 446,
+    "defects": 0,
+    "frames": 33,
+    "windows": 1,
+    "manifest_sha256": "878c118e66fbe2afeeefefbe2e54ba391added88e4ce6dcf8113ef5a10004bf8",
+    "raw8_sha256": "c9cbee080e2e47746faecfe220638ce4eae6d0952b77a21da98b0aece7d0f238",
+    "scope": "CPU只读重算真实父输入、三键帧特征、12份封口产物和所有来源绑定；未运行额外模型"
+  }
+}

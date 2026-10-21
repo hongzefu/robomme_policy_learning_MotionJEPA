@@ -1,0 +1,232 @@
+{
+  "status": "PASS",
+  "gates": {
+    "PAIRING": {
+      "status": "PASS",
+      "details": {
+        "inverse_bitexact": true,
+        "noncontiguous": true,
+        "negative_cases": [
+          {
+            "case": "禁止二次配对",
+            "error": "ValueError",
+            "reason": "原始 motion 末两维必须为 (8, 256)，得到 (4, 512)；禁止重复配对"
+          },
+          {
+            "case": "禁止float64",
+            "error": "ValueError",
+            "reason": "原始 motion 必须为 float32，得到 float64"
+          },
+          {
+            "case": "禁止旧768输入",
+            "error": "ValueError",
+            "reason": "原始 motion 末两维必须为 (8, 256)，得到 (768,)；禁止重复配对"
+          }
+        ]
+      }
+    },
+    "ATTENTION_COUNTEREXAMPLE": {
+      "status": "PASS",
+      "details": {
+        "raw_scalar_output": 6.420707894737403,
+        "paired_scalar_output": 6.189649316107398,
+        "scope": "局部数学反例；不代表模型性能或任务收益"
+      }
+    },
+    "WINDOW_BUDGET": {
+      "status": "PASS",
+      "details": {
+        "cases": [
+          {
+            "windows": 0,
+            "valid_tokens": 0,
+            "order_sha256": "df759338d409cd9b31d48c2e01171030087eb878b86a8c25a0a46638641ed44b"
+          },
+          {
+            "windows": 1,
+            "valid_tokens": 4,
+            "order_sha256": "48732731d987ba704a72c903341ab32e86e0fe30d6a5bd952885dafbdb5151ca"
+          },
+          {
+            "windows": 159,
+            "valid_tokens": 636,
+            "order_sha256": "e2a62ba6a69d631b3af19763918d241108e8412d7da6d3fedae040c8a9d9ad13"
+          },
+          {
+            "windows": 160,
+            "valid_tokens": 640,
+            "order_sha256": "f6e5f47c482353f5983139fb62fe60e65172bb8dd9b24049ba734285ad92c3d9"
+          }
+        ],
+        "overflow": {
+          "case": "161窗溢出",
+          "error": "ValueError",
+          "reason": "合法 motion 起点数 161 > 窗口容量 160（零截断契约被破坏）"
+        }
+      }
+    },
+    "MASK_ORDER": {
+      "status": "PASS",
+      "details": {
+        "total_tokens": 1152,
+        "oracle": "独立Python三元组排序",
+        "cases": [
+          {
+            "windows": 0,
+            "valid_tokens": 0,
+            "order_sha256": "df759338d409cd9b31d48c2e01171030087eb878b86a8c25a0a46638641ed44b"
+          },
+          {
+            "windows": 1,
+            "valid_tokens": 4,
+            "order_sha256": "48732731d987ba704a72c903341ab32e86e0fe30d6a5bd952885dafbdb5151ca"
+          },
+          {
+            "windows": 159,
+            "valid_tokens": 636,
+            "order_sha256": "e2a62ba6a69d631b3af19763918d241108e8412d7da6d3fedae040c8a9d9ad13"
+          },
+          {
+            "windows": 160,
+            "valid_tokens": 640,
+            "order_sha256": "f6e5f47c482353f5983139fb62fe60e65172bb8dd9b24049ba734285ad92c3d9"
+          }
+        ]
+      }
+    },
+    "RAW_FORMAT_CPU": {
+      "status": "PASS",
+      "details": {
+        "scope": "synthetic_format_test",
+        "rows": 1,
+        "raw_shape": [
+          8,
+          256
+        ],
+        "row_bytes": 8192,
+        "raw_sha256": "4b5d38108a9fe57896cb94b2895a194533356f24e9d5e33a5bbac5d0636c2b49",
+        "verified": "verified",
+        "negative_cases": [
+          {
+            "case": "同字节错误raw shape",
+            "error": "ValueError",
+            "reason": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports/pair4-cpu-82iffw23/tokens/Synthetic_ep0_exec.f32.bin 原始 motion 合同不符，期望 {'layout': 'motion-v10-8x256-grid16-demopad17-v1', 'row_shape': [8, 256], 'dtype': 'float32', 'token_dim': 2048, 'token_bytes': 8192, 'bytes': 8192}"
+          },
+          {
+            "case": "表metadata伪shape",
+            "error": "ValueError",
+            "reason": "tables[motion_token] 形制与格式常量不符: {'row_shape': [4, 512], 'dtype': 'float32', 'row_bytes': 8192, 'num_rows': 1, 'relpath': 'motion_token.f32.bin', 'byte_count': 8192, 'sha256': '4b5d38108a9fe57896cb94b2895a194533356f24e9d5e33a5bbac5d0636c2b49'}"
+          }
+        ]
+      }
+    },
+    "SOURCE_REJECTION": {
+      "status": "PASS",
+      "details": {
+        "negative_cases": [
+          {
+            "case": "错误encoder checkpoint SHA",
+            "error": "ValueError",
+            "reason": "motion.checkpoint_sha256='146efd425f7923428d630dfb7ee2a8f010f19b207d36519dba49454aaa373d30' 与 motion store provenance.encoder.checkpoint_sha256='99c81e940209c62241f02b82e054e3c0807519c37ba7ed930ad41677ac1d4ee2' 不符"
+          },
+          {
+            "case": "新配置拒绝旧768表",
+            "error": "ValueError",
+            "reason": "motion 配置要求 layout∈('motion-v10-8x256-grid16-demopad17-v1',)、原始形状 (8, 256)，实际表为 'motion-768-grid16-demopad17-v1'、(768,)"
+          },
+          {
+            "case": "错误配置source_shape",
+            "error": "ValueError",
+            "reason": "motion.source_shape 必须为 (8, 256)，得到 (4, 512)"
+          },
+          {
+            "case": "错误配置readout",
+            "error": "ValueError",
+            "reason": "新 motion 必须使用 adjacent_pair_v1、num_tokens=4、dim=512"
+          },
+          {
+            "case": "错误配置budget",
+            "error": "ValueError",
+            "reason": "新 motion.budget 必须为正数且能被 num_tokens=4 整除"
+          },
+          {
+            "case": "错误配置num_tokens",
+            "error": "ValueError",
+            "reason": "新 motion 必须使用 adjacent_pair_v1、num_tokens=4、dim=512"
+          }
+        ]
+      }
+    },
+    "ORIGINAL_IMPL_UNCHANGED": {
+      "status": "PASS",
+      "details": {
+        "baseline": "2b2954cf7d04f10f1b0826a3e72a0324bdda08d2",
+        "sha256": {
+          "src/mme_vla_suite/models/representation/percep_mem.py": "f96a3cd6b523ffdca2e8b3d87892a712149a511aca031d0b7440c8c7def5419f",
+          "src/mme_vla_suite/models/integration/history_pi0.py": "d84824e535f6c34b8b376508e1a54f4df3eba57bcb2bb64940b84b9c83fbada8",
+          "src/mme_vla_suite/models/integration/history_gemma.py": "a4882087a74b52b08a7a002a2a8bf7d64324af3ff05daf99c15a17f30bab60d1",
+          "src/mme_vla_suite/models/integration/history_observation.py": "af2feb5cd626a1ab9418a823ae358797875d904fd7a12a8948eff26344ac4133",
+          "src/mme_vla_suite/training/config.py": "646421ba786ab0d4673d1fee8b06931f3795b7dd0fa898404be8d4367d4d9c62",
+          "src/mme_vla_suite/policies/robomme_policy.py": "8b09058ef6f5c8a3097ce6d476ad6e29bf60fca1bdf6838362771aaf118bac0d"
+        }
+      }
+    },
+    "SCOPE": {
+      "status": "PASS",
+      "details": {
+        "baseline": "2b2954cf7d04f10f1b0826a3e72a0324bdda08d2",
+        "protected_sha256": {
+          "src/mme_vla_suite/policies/motion_protocol.py": "ad423c98dc2fadacb4aacd5571d8fb7951e7e0dbfe35d505bc960dbfa616a6bd",
+          "src/mme_vla_suite/policies/motion_client.py": "d46fc1433188d35a9f11eb6a99f378e65e6033f6642a900971ce9632218ff2f3",
+          "src/mme_vla_suite/policies/framesamp_memory.py": "5168db1a9e4b044a5996097b51b5e9d3ddc14b9a8b3a7ba5d1ed9934b7acb558",
+          "src/mme_vla_suite/policies/policy.py": "e1ac761594f8e2105a0a284714f6d2e3fa80af8476322ec682dfa0ed6482a919",
+          "src/mme_vla_suite/policies/policy_config.py": "4d2c2b7fc81983ce955d80d8fcfd842f7b25d9048e758dc7e5e6b9c8b20aef7d",
+          "scripts/dataset/wan/motion_sidecar.py": "a58d7ed8f2771df1a60566a659ad0cbfbc709a2fb2d875b9c9b9fbc5042c62de",
+          "scripts/assets/ASSETS_LOCK.json": "c2d140c1d934b9c7aadc49996c978697cb008a7ef9c8f6fa66892801a64cb032",
+          "scripts/training/train.py": "5612c5f6f91b41179ce1193e9a04740253e8a4bd188511b8e8b04629e33dda18",
+          "pyproject.toml": "8e81d8e09b4ac9f9e3fd8831bb7e142f354ffa0ec2080d2d5ee26954607bd528",
+          "uv.lock": "02cbc3ba67a9024f8afb9e31f60661c9abdcc3eb680ae80a8ee464c639327221"
+        },
+        "forbidden_prefixes": [
+          "src/mme_vla_suite/policies/",
+          "src/openpi/policies/",
+          "challenge_interface/",
+          "scripts/eval/",
+          "scripts/training/legacy-eval/",
+          "scripts/training/eval.sh",
+          "third_party/robomme_benchmark"
+        ],
+        "changed_paths": [
+          "docs/handoff/current.json",
+          "docs/training-doc/README.md",
+          "docs/training-doc/paired4-epoch6-original-smoke-20261020-a/launch.md",
+          "scripts/dataset/pack_motion_store.py",
+          "scripts/dataset/run_local.py",
+          "scripts/dataset/test_guards.py",
+          "scripts/dataset/test_motion_demopad.py",
+          "scripts/dataset/wan/SOURCE_PIN.json",
+          "scripts/dataset/wan/encode_motion.py",
+          "scripts/dataset/wan/pyproject.toml",
+          "scripts/dataset/wan/uv.lock",
+          "scripts/dataset/wan/wan_common.py",
+          "scripts/dataset/wan/wan_motion_infer.py",
+          "scripts/training/tests/check_pair4_contract.py",
+          "scripts/training/tests/pair4_fixture.py",
+          "scripts/training/tests/pair4_model.py",
+          "scripts/training/tests/pair4_source_smoke.py",
+          "src/mme_vla_suite/datastore/motion_adapter.py",
+          "src/mme_vla_suite/datastore/motion_store.py",
+          "src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-pair4-epoch6-original-smoke.yaml",
+          "src/mme_vla_suite/training/dataloader.py",
+          "src/mme_vla_suite/training/framesamp_dataset.py"
+        ]
+      }
+    }
+  },
+  "scope": "CPU合成合同；不证明真实提取或完整模型",
+  "suite": "cpu",
+  "root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a",
+  "elapsed_seconds": 5.094923021271825,
+  "code_sha256": "cca780e9f770315eb6684f56f284014ff3d7d45b8352636df909f73167edeee8",
+  "git_commit": "4c83a702878ef6c601e30a5103d02e1cbb1fe8f9"
+}

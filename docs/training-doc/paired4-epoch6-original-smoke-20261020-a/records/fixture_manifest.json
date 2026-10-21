@@ -1,0 +1,227 @@
+{
+  "schema": 1,
+  "purpose": "smoke",
+  "root": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a",
+  "parent_dataset": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f",
+  "parent_manifest_sha256": "d6a3ddb2b579b5cf50cd66fbefedd36478766e2b4cc07833a7efae29769742ad",
+  "parent_g": 0,
+  "frame_range": [
+    0,
+    33
+  ],
+  "supervision": "原PKL字节；观测前缀不改变原任务终止点或未来20步动作",
+  "sample_idx": 32,
+  "manifest_sha256": "878c118e66fbe2afeeefefbe2e54ba391added88e4ce6dcf8113ef5a10004bf8",
+  "manifest_file_sha256": "3f7643846dc5760bb0613ca8264cff26f0d2534cd1d2ed224601cc0bec54813f",
+  "input_manifest_sha256": "c51259f68932fad558951cd0efc1d0302e466c935d68ec0c4a9c413210c910bb",
+  "frames_meta_sha256": "7cca617c91be4a0adf3969d5f8e3e5e9f37f9c583dd56478c22b6441b0f49137",
+  "registration": {
+    "purpose": "paired4_training_smoke",
+    "original_checkpoint": "/scratch/hongze/MotionJEPA/runs/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_final.pt",
+    "registered_checkpoint": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_epoch_6.pt",
+    "original_config": "/scratch/hongze/MotionJEPA/runs/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/config.yaml",
+    "registered_config": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/config.yaml",
+    "checkpoint_sha256": "146efd425f7923428d630dfb7ee2a8f010f19b207d36519dba49454aaa373d30",
+    "config_sha256": "6f5ccbbdbfca59d2b863c8bf5eb49ba8b3c1968c76839ececea8890b5485d1c3",
+    "checkpoint_epoch": 6,
+    "arch": "wan-latent-v10-st",
+    "state_key": "encoder",
+    "source_run": "wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_epoch_6.pt#encoder"
+  },
+  "features": {
+    "parent_store": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/framesamp-8x8",
+    "parent_meta_sha256": "ace85246419836d343b925ac45591e3fd75eb2f054c16eaafafb3b35d6ca9b79",
+    "parent_row_digests_sha256": "add8d55702260d161645ef4f515230fe5d4258eb15cbbb52a270c660a70c38d6",
+    "rows": [
+      {
+        "t": 0,
+        "npy_sha256": "d35976065c817944b5ac37b2141b295c428e73114f6f4a25517741c827b6c5f0",
+        "parent_row_blake2b": "a8ad97d81cf453a8a7b151488bb2fc64"
+      },
+      {
+        "t": 1,
+        "npy_sha256": "3a84337bbe6a9bd0b987454b59aabc7df092df7f118bee48e7ec4d65556a2b1a",
+        "parent_row_blake2b": "3d937be9632f34a5a1da8d530a9e2fed"
+      },
+      {
+        "t": 2,
+        "npy_sha256": "bc845f8ed4550e2b5a55fba7653cba17d6f615de7c7a0a32050c5f1f3edeb5cd",
+        "parent_row_blake2b": "b15ab3290334b47df94bb5d8f0c95ed3"
+      },
+      {
+        "t": 3,
+        "npy_sha256": "3906de0baf70b7b34921cab402837c49109543cfce01503c8d895b09b22f0187",
+        "parent_row_blake2b": "db6bd3f4cd4caab01ccc278fc3257218"
+      },
+      {
+        "t": 4,
+        "npy_sha256": "40ceb96d280aabe6a9fdcad954bf0f9ebb93eca58c23e7670b10974993fc98ef",
+        "parent_row_blake2b": "8285b144f683a8c647d0487eecd4cd1d"
+      },
+      {
+        "t": 5,
+        "npy_sha256": "205fa8234f4d7187f140971d01ed9f8c9370739c8f2468c1d9861665c90e357c",
+        "parent_row_blake2b": "4059fc782b8b1a93a257edaa554844cf"
+      },
+      {
+        "t": 6,
+        "npy_sha256": "8f240dfc1893e3c6503e2721e29c208ef236a8cd2f855996ee7be8082edfcca2",
+        "parent_row_blake2b": "130c5f868621e0a0301cf2f4fce21ec1"
+      },
+      {
+        "t": 7,
+        "npy_sha256": "e3b9c9e033ed2f1e39417de49fc27333b0c4e8080ffc33dc144128427ad61397",
+        "parent_row_blake2b": "8f1aadab65cea8d976310197e0949ef3"
+      },
+      {
+        "t": 8,
+        "npy_sha256": "e580abcbd4368a7b2a9ef96040ae2d3bb01f353d0b62e0ca6d780b61495a8683",
+        "parent_row_blake2b": "c36cf5b5457d35e571e5bbf0ea7f1d32"
+      },
+      {
+        "t": 9,
+        "npy_sha256": "b25ff990322ef58b4c50fe6ebbba41ce27378b82df7a24f886c936106a785d89",
+        "parent_row_blake2b": "e9ce709657f4a65692e61ff8d4c452c3"
+      },
+      {
+        "t": 10,
+        "npy_sha256": "d68c3e095903661e52ec68ea16ee22495f5a7763a7382f6b97dc1d09204bc795",
+        "parent_row_blake2b": "1a600e5fbf3489fadf70197862c4a83f"
+      },
+      {
+        "t": 11,
+        "npy_sha256": "af9aee9f95949f561520098f1503cb2e59662d9342dafb903a4c0db0bd50ab11",
+        "parent_row_blake2b": "12f9d9ac5d6e4f2461f9914cb7dbe79a"
+      },
+      {
+        "t": 12,
+        "npy_sha256": "97de8721ec61486a590c108e5a167946e8d41d40456d9cd9f169c3a0f21cd2d1",
+        "parent_row_blake2b": "e90f3a0eace61c1201e7f38787334c9e"
+      },
+      {
+        "t": 13,
+        "npy_sha256": "270e30c7018949e18e78cd50400a33f18e5982f63c1b5614ff403c459fcb8b0e",
+        "parent_row_blake2b": "576b8452e021883f0e0f2c83382e028f"
+      },
+      {
+        "t": 14,
+        "npy_sha256": "73c7fa336b12c00891582d4e24a349a8429b213115a9115c3cbcbb7c23028a16",
+        "parent_row_blake2b": "7bb3666826806658cb6f79f27e7026cd"
+      },
+      {
+        "t": 15,
+        "npy_sha256": "f7438b93d138bf8a845ed8ad72bf7a056bdd139c16e5dfd5bc596f9d20ecf94c",
+        "parent_row_blake2b": "198f22c1b739d2c9a748d419a1324c19"
+      },
+      {
+        "t": 16,
+        "npy_sha256": "0373f90556557e76bbf188667b618438a81c0c0c4206c2c58ac5bf61d36a52be",
+        "parent_row_blake2b": "02fdce12a7ebd930ea11919ca51f97b9"
+      },
+      {
+        "t": 17,
+        "npy_sha256": "5786131799a7e9fdebef6058318cb26a805ae23582c3f2dc0ed97d629fe9ab99",
+        "parent_row_blake2b": "49f7c156fc370bf0e02a741208d2336f"
+      },
+      {
+        "t": 18,
+        "npy_sha256": "d08a4327e441b86e361525886b6637d197eb10e1d495799c2944a7bc69287621",
+        "parent_row_blake2b": "40c4eef4ab49b42e7a5d5708ba53c5d8"
+      },
+      {
+        "t": 19,
+        "npy_sha256": "66c345180583685de2a7f99f7a10071733b05ea7d4083ac91dddff9e11e0f40d",
+        "parent_row_blake2b": "1cdc959d2d487c7b10839e4a1a203ae0"
+      },
+      {
+        "t": 20,
+        "npy_sha256": "5ff51b5c9e010fb77f35b192f167dac568806b48c1b943af5f58ccf3c2087346",
+        "parent_row_blake2b": "7e8efbc7bdac52bdbb202d955f77291a"
+      },
+      {
+        "t": 21,
+        "npy_sha256": "90db71a3dfe7712a803f6dad04762305a5a493e236b195d539cac24ba455f404",
+        "parent_row_blake2b": "8f19a64b4278117b1c4e28a2fb03a90b"
+      },
+      {
+        "t": 22,
+        "npy_sha256": "163aff1a23d639003629cd6bd5e1b4fc909d7078feb55f15e4d889e53f5fc170",
+        "parent_row_blake2b": "8c6894ff311c302972eace7a3712bd57"
+      },
+      {
+        "t": 23,
+        "npy_sha256": "de3c91b5dcc3f28afe6b2e2f50fd9692ec0d17dc9a82e91e10ddb49eea591286",
+        "parent_row_blake2b": "70c9bf125de728032fbc16229d53c4c7"
+      },
+      {
+        "t": 24,
+        "npy_sha256": "8f10603354a5aa1e8daf011579117f41226deb08c936b7e35e86383eedaa5da1",
+        "parent_row_blake2b": "5d3d110cebbb7e9c8fa8918c3f2ecfeb"
+      },
+      {
+        "t": 25,
+        "npy_sha256": "c071d290e025600a04522cc4cd918bc1340ef5a8aec169dace3cb36f07b13e0b",
+        "parent_row_blake2b": "27fdb41da699da7cb0e490ea1d508690"
+      },
+      {
+        "t": 26,
+        "npy_sha256": "aefe51557caf533459b156eb92964bdff15c25dfbcbc407142acbc6e606a3925",
+        "parent_row_blake2b": "a123ab664affe5d74c5fc436f29eab2d"
+      },
+      {
+        "t": 27,
+        "npy_sha256": "f4ea805b646c84d1a411e15c1c3803e4713b416c019cf8c173503c27da82d56c",
+        "parent_row_blake2b": "1dd53bc11e3ce3b7cd1be98603b037e7"
+      },
+      {
+        "t": 28,
+        "npy_sha256": "8ada217f942944eb2cb31a129698a6d498cbaf2f80633cc3ea69c16870d19b05",
+        "parent_row_blake2b": "4a0b3b66dcab1c8209b1349443a4c239"
+      },
+      {
+        "t": 29,
+        "npy_sha256": "1d6331eb9c0ad6d82a05109908bbe78d61562892441b4ba9781a471fb62af7aa",
+        "parent_row_blake2b": "12f872462063fafd6ab423915c0acdbf"
+      },
+      {
+        "t": 30,
+        "npy_sha256": "dad628369929910e1f45b7f21ee22da9ce045d39c585f2412c57977d3766fe89",
+        "parent_row_blake2b": "009a4096819e0ecbc578329350eaf572"
+      },
+      {
+        "t": 31,
+        "npy_sha256": "8d39ee7b08aca04f5d1b5bd61613895c05ef62473677bc0d572cb2f1a32435dc",
+        "parent_row_blake2b": "0328e7ec2f9f2355cb8ae63a71ea49ab"
+      },
+      {
+        "t": 32,
+        "npy_sha256": "b9dcb379dc76b3203f28c92150fdd904617838d447a01f42d8e96b8946b1ac30",
+        "parent_row_blake2b": "4e79d9a1712a5330c7b347403d6a5705"
+      }
+    ]
+  },
+  "actions_idx32": {
+    "t": 32,
+    "parent_pkl": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/source/data/32.pkl",
+    "parent_pkl_sha256": "f14a2d9f6357b7dde8d42578bed0a7449373b8d1cb9a237820f36ee303567356",
+    "image_sha256": "0ecd18704bf248f62e4f2c11062288c379a5b4d92dac9f6312dac527d86c6e06",
+    "actions_sha256": "9b14e3526c1b74814d58b9a52383ece30ce51ace17799e4e81c354f934a1f5aa",
+    "actions_shape": [
+      20,
+      8
+    ],
+    "actions_dtype": "float64"
+  },
+  "paths": {
+    "fixture": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture",
+    "manifest": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/meta/episode_manifest.json",
+    "raw_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/raw",
+    "source": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/source",
+    "frames": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/framesamp-8x8",
+    "latents": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/wan-latents",
+    "raw8": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/raw8",
+    "oracle": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/oracle",
+    "motion": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/fixture/motion",
+    "encoder_run_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a"
+  }
+}

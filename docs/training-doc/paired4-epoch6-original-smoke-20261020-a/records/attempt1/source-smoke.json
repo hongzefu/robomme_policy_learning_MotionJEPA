@@ -1,0 +1,27 @@
+{
+  "status": "FAIL",
+  "stage": "preflight",
+  "gates": {
+    "REGISTERED_SOURCE": {
+      "status": "PASS",
+      "purpose": "paired4_training_smoke",
+      "original_checkpoint": "/scratch/hongze/MotionJEPA/runs/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_final.pt",
+      "registered_checkpoint": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_epoch_6.pt",
+      "original_config": "/scratch/hongze/MotionJEPA/runs/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/config.yaml",
+      "registered_config": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/external/motionjepa/wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/config.yaml",
+      "checkpoint_sha256": "146efd425f7923428d630dfb7ee2a8f010f19b207d36519dba49454aaa373d30",
+      "config_sha256": "6f5ccbbdbfca59d2b863c8bf5eb49ba8b3c1968c76839ececea8890b5485d1c3",
+      "checkpoint_epoch": 6,
+      "arch": "wan-latent-v10-st",
+      "state_key": "encoder",
+      "source_run": "wan-mixed8-200-v10-inseq256q8-b352x8-trend-20261020-a/checkpoint_epoch_6.pt#encoder"
+    },
+    "SOURCE_FRESH": {
+      "status": "FAIL",
+      "reason": "RuntimeError: Invalid device argument "
+    }
+  },
+  "reason": "RuntimeError: Invalid device argument ",
+  "elapsed_s": 1.9508412471041083,
+  "peak_cuda_mib": null
+}
