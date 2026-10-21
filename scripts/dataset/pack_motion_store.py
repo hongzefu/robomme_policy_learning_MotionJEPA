@@ -3,7 +3,7 @@
 
 把 encoder 阶段落在 ``<lib>/motion-tokens/<段>.f32.bin`` 的逐段 token 按**行序契约**拼成一张表：
 
-  <out>/motion_token.f32.bin        (rows, 768) f32 裸字节；行序 = 清单 canonical_order 逐 episode，
+  <out>/motion_token.f32.bin        (rows, 8, 256) f32 裸字节（8,192 B/行）；行序 = 清单 canonical_order 逐 episode，
                                     每 episode 先 demo 后 exec，段内网格升序（motion_store.build_index_entries 派生）
   <out>/meta/motion_index.json      段基址表（唯一身份来源），store_meta 记其 sha256
   <out>/meta/store_meta.json        唯一契约，两阶段写：pack→"packed"、verify→"verified"
@@ -13,6 +13,10 @@
 子命令：
   pack     逐段读 token 文件（核 sidecar sha256 + 字节数）→ 顺序写表 + read-after-write → 写 index / meta 阶段 1
   verify   经真实读 API ``MotionStore.rows`` 全表逐行对源 token 文件 memcmp（零遗漏）+ row_digests + meta 回填
+
+历史 VAE 兼容（S5-B）：``pack --restore-receipt <S5-A receipt> --expected-ckpt-sha256 <final>`` 时 VAE 与新 encoder
+分两组校验（见 ``load_vae_compat`` / ``check_vae_group``），写表前预检；此模式下 ``verify`` 还要求
+``compare_wan.py tokens`` 已对本张 packed 表写下 ``meta/encoder_bitexact.json`` PASS，否则拒绝进入 verified。
   report   打印 meta 摘要
 
 事务协议照 ``pack_framesamp_store.py``（同一份 meta/pack.lock 语义：O_CREAT|O_EXCL；残锁 --resume 接管、
@@ -23,6 +27,7 @@ import 自 ``mme_vla_suite.datastore.motion_store``，绝不复制。本模块�
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import datetime
 import hashlib
 import json
@@ -177,48 +182,202 @@ def _load_json(p: pathlib.Path) -> dict:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
+# ══ 历史 VAE 兼容（S5-B，对抗检查 D3/D4）════════════════════════════════════════
+#
+# 历史 VLA latent 由 S5-A 的 restore_mixed8_vla_latents.py 恢复并封口（restore_receipt.json）。这些 latent 的
+# VAE 记录是当时的适配件/源提交，与本次 encoder 的 SOURCE_PIN 必然不同。因此 provenance 分两组：
+#   VAE 组     ：组内跨段/跨 worker 严格唯一，且逐字段等于 receipt 记录的**历史值**（精确匹配，不通用放宽）；
+#   encoder 组 ：组内严格唯一，且等于当前 SOURCE_PIN、显式 ckpt SHA、冻结 config 与同一份 state 摘要。
+# 不传 receipt 时行为与旧版相同（两组共用 SOURCE_PIN、全体 worker 唯一）。
+
+RECEIPT_SCHEMA = "mixed8-vla-latent-restore/v1"
+VAE_IDENTITY_KEYS = ("vae_id", "vae_state_sha256", "vae_dtype", "latent_mode", "batch", "tf32", "amp",
+                     "torch", "cuda", "cudnn", "diffusers", "module_sha256", "encoder_src_sha256")
+SAME_KEYS_VAE = ("vae_id", "vae_state_sha256", "vae_dtype", "latent_mode", "batch", "tf32", "amp",
+                 "torch", "cuda", "cudnn", "diffusers", "cublas_pkg", "cudnn_pkg", "module_sha256",
+                 "encoder_src_sha256", "flags", "env", "gpu_name", "compute_cap", "sm_count", "driver")
+SAME_KEYS_ENC = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "config_sha256", "arch", "state_key", "precision",
+                 "amp", "tf32", "batch", "vae_id", "motion_dims", "torch", "cuda", "cudnn", "diffusers",
+                 "cublas_pkg", "cudnn_pkg", "module_sha256", "encoder_src_sha256", "env", "gpu_name",
+                 "compute_cap", "sm_count", "driver")
+WORKER_UNIQUE_KEYS = ("gpu_name", "compute_cap", "driver_version", "torch", "cudnn_version", "git_commit", "mj_commit")
+CHUNK_BYTES = 9 * 16 * 32 * 32 * np.dtype(np.float32).itemsize
+BITEXACT_RELPATH = "meta/encoder_bitexact.json"     # compare_wan.py tokens 在 packed 阶段写；兼容模式 verify 必需
+
+
+@dataclasses.dataclass(frozen=True)
+class HistoricalPins:
+    """历史缓存的钉死期望值（计划第二部分 0.1 / S5-A）。CLI 不提供覆盖，测试可传合成值。"""
+    total_metadata_sha256: str = "bda20fd101f57271a9b18db295679256cbf12d1d5c52e1fab80b936f7d9f1061"
+    vae_state_sha256: str = "9980d252230c265cc2869466a74f85f5ee45b01ea9521bbb31159f90b75fe6d0"
+    episode_manifest_sha256: str = "c6a063dfbfc6da404dd8f1d3ddc38e9ba6e25abca81417fe742872401e7f97df"
+    input_manifest_sha256: str = "d7dd651edb8cb9652fa647a73a2d0d3c4be64d6876e1d7a186a5e8c75b02aafb"
+    manifest_canonical_sha256: str = "d6a3ddb2b579b5cf50cd66fbefedd36478766e2b4cc07833a7efae29769742ad"
+
+
+def load_vae_compat(receipt_path: pathlib.Path, latents_root: pathlib.Path, *,
+                    manifest_path: pathlib.Path | None = None, oracle_report: pathlib.Path | None = None,
+                    pins: HistoricalPins = HistoricalPins()) -> dict:
+    """核验 S5-A restore_receipt.json 并返回历史 VAE 兼容记录（不读 Torch）。
+
+    只认 receipt 的完整封口：schema/状态/无新 encoder 身份、恢复目录 == latents_root 的上级、总 metadata 文件
+    SHA 等于钉死值且等于 receipt、全量文件清单 SHA 现场重算一致、VAE 历史身份字段齐全且自洽、父库 manifest
+    文件字节 SHA 一致。任一不符即 ValueError。返回值不含可伪造的“兼容开关”，只含经核实的历史身份。
+    """
+    receipt_path = pathlib.Path(receipt_path).resolve()
+    latents_root = pathlib.Path(latents_root).resolve()
+    rc = _load_json(receipt_path)
+    if rc.get("schema_version") != RECEIPT_SCHEMA or rc.get("status") != "PASS":
+        raise ValueError("restore receipt 的 schema_version 或 status 不符")
+    if rc.get("new_encoder_identity") is not None:
+        raise ValueError("restore receipt 不得携带新 encoder 身份")
+    out_dir = pathlib.Path(rc.get("out_dir", "/nonexistent")).resolve()
+    layout = rc.get("layout") or {}
+    if out_dir != receipt_path.parent or (out_dir / str(layout.get("latents", "?"))).resolve() != latents_root:
+        raise ValueError("restore receipt 指向的恢复目录与 --latents 不同")
+    total_meta = latents_root / "metadata.json"
+    total_sha = ms.sha256_file(total_meta)
+    lat = rc.get("latents") or {}
+    if not (total_sha == lat.get("total_metadata_sha256") == pins.total_metadata_sha256):
+        raise ValueError("恢复的总 metadata SHA 与 receipt/钉死值不符")
+    files_list = out_dir / str(lat.get("files_list", "restore_files.sha256"))
+    if not files_list.is_file() or ms.sha256_file(files_list) != lat.get("files_list_sha256"):
+        raise ValueError("restore 文件清单缺失或 SHA 与 receipt 不符")
+    listed = {}
+    for line in files_list.read_text(encoding="utf-8").splitlines():
+        sha, _, rel = line.partition("  ")
+        listed[rel] = sha
+    if listed.get(f"{layout.get('latents')}/metadata.json") != total_sha:
+        raise ValueError("restore 文件清单中的总 metadata SHA 不符")
+    vae = rc.get("vae") or {}
+    ident = vae.get("identity") or {}
+    if set(ident) != set(VAE_IDENTITY_KEYS) or any(ident.get(k) in (None, "") for k in VAE_IDENTITY_KEYS):
+        raise ValueError("receipt 的历史 VAE 身份字段不全")
+    if not (ident["vae_state_sha256"] == vae.get("vae_state_sha256") == pins.vae_state_sha256):
+        raise ValueError("receipt 的 VAE state SHA 与钉死值不符")
+    if (vae.get("historical_module_sha256") != ident["module_sha256"]
+            or vae.get("historical_encoder_src_sha256") != ident["encoder_src_sha256"]):
+        raise ValueError("receipt 的历史源码 SHA 与身份字段不自洽")
+    gits, mjs = vae.get("worker_git_commits"), vae.get("worker_mj_commits")
+    if not (isinstance(gits, list) and len(gits) == 1 and isinstance(mjs, list) and len(mjs) == 1):
+        raise ValueError("receipt 的历史 VAE worker 提交必须各自唯一")
+    parent = rc.get("parent") or {}
+    if (parent.get("episode_manifest_sha256") != pins.episode_manifest_sha256
+            or parent.get("input_manifest_sha256") != pins.input_manifest_sha256
+            or parent.get("manifest_canonical_sha256") != pins.manifest_canonical_sha256):
+        raise ValueError("receipt 的父库 manifest SHA 与钉死值不符")
+    if manifest_path is not None:
+        manifest_path = pathlib.Path(manifest_path)
+        if ms.sha256_file(manifest_path) != pins.episode_manifest_sha256:
+            raise ValueError("episode_manifest.json 不是父库原字节")
+        if ms.sha256_file(manifest_path.parent / "input_manifest.json") != pins.input_manifest_sha256:
+            raise ValueError("input_manifest.json 不是父库原字节")
+    if oracle_report is not None:
+        want = (rc.get("oracle") or {}).get("vae_report_sha256")
+        if want is None or ms.sha256_file(oracle_report) != want:
+            raise ValueError("历史 VAE oracle 报告与 receipt 记录不符")
+    return {"mode": "historical-restore-receipt", "receipt_path": str(receipt_path),
+            "receipt_sha256": ms.sha256_file(receipt_path), "schema_version": RECEIPT_SCHEMA,
+            "total_metadata_sha256": total_sha, "identity": dict(ident),
+            "historical_module_sha256": ident["module_sha256"],
+            "historical_encoder_src_sha256": ident["encoder_src_sha256"],
+            "worker_git_commits": list(gits), "worker_mj_commits": list(mjs),
+            "oracle_coverage": (rc.get("oracle") or {}).get("coverage")}
+
+
+def _worker_id(w: dict) -> str:
+    return f"{w.get('hostname')}:{w.get('gpu_uuid')}:{w.get('worker')}:{w.get('pid')}"
+
+
+def _unique_workers(workers: dict, what: str) -> None:
+    for k in WORKER_UNIQUE_KEYS:
+        vals = {str(w.get(k)) for w in workers.values()}
+        if len(vals) != 1:
+            raise ValueError(f"{what}跨 worker {k} 不唯一: {sorted(vals)}")
+
+
+def check_vae_group(latents_root: pathlib.Path, keys: list[str], compat: dict) -> tuple[dict, list[dict]]:
+    """历史 VAE 组：总 metadata（钉死 SHA）逐段 sha/bytes ↔ 段 metadata ↔ sidecar；组内身份严格唯一并
+    逐字段等于 receipt 历史值；worker 组内硬件/提交唯一且等于 receipt。不读 bin（bin 由 gather 单遍核验）。"""
+    if ms.sha256_file(latents_root / "metadata.json") != compat["total_metadata_sha256"]:
+        raise ValueError("总 metadata 在兼容核验后被改动")
+    total = _load_json(latents_root / "metadata.json")
+    vae_infos: dict[str, dict] = {}
+    workers: dict[str, dict] = {}
+    for key in keys:
+        seg = total["segments"].get(key)
+        lm = _load_json(latents_root / f"{key}.metadata.json")
+        side = (latents_root / f"{key}.bin.sha256").read_text(encoding="utf-8").split()[0]
+        if seg is None or not (seg["sha256"] == lm.get("sha256") == side) or seg["bytes"] != lm.get("bytes"):
+            raise ValueError(f"{key} 段 metadata/sidecar 与固定总 metadata 不符")
+        v = {k: lm["vae"].get(k) for k in SAME_KEYS_VAE}
+        vae_infos[json.dumps(v, sort_keys=True, default=str)] = v
+        workers[_worker_id(lm["worker"])] = lm["worker"]
+    if len(vae_infos) != 1:
+        raise ValueError(f"跨段 VAE provenance 不唯一（{len(vae_infos)} 种）")
+    vae = next(iter(vae_infos.values()))
+    diff = [k for k in VAE_IDENTITY_KEYS if vae.get(k) != compat["identity"][k]]
+    if diff:
+        raise ValueError(f"VAE 组身份与 restore receipt 历史值不符: {diff}")
+    _unique_workers(workers, "VAE 组")
+    w0 = next(iter(workers.values()))
+    if [w0.get("git_commit")] != compat["worker_git_commits"] or [w0.get("mj_commit")] != compat["worker_mj_commits"]:
+        raise ValueError("VAE 组 worker 的 git/mj 提交与 restore receipt 不符")
+    return vae, list(workers.values())
+
+
 def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, entries: list[ms.IndexEntry],
                       manifest: dict, index_sha: str, *, encoder_run_dir: pathlib.Path,
-                      raw_dir: pathlib.Path, input_manifest_path: pathlib.Path) -> dict:
+                      raw_dir: pathlib.Path, input_manifest_path: pathlib.Path,
+                      vae_compat: dict | None = None, expected_ckpt_sha256: str | None = None) -> dict:
     """store_meta.provenance：SOURCE_PIN、VAE info、encoder info（各取自逐段 metadata 并断言跨段唯一）、
-    逐 worker 指纹、encoder_state_sha256 清单、wan-latents/metadata.json sha。"""
+    逐 worker 指纹、encoder_state_sha256 清单、wan-latents/metadata.json sha。
+
+    ``vae_compat``（load_vae_compat 的返回）给出时 VAE 与 encoder 分组校验，见上方说明；此时
+    ``expected_ckpt_sha256`` 必填。cmd_pack 在写表之前调用（预检），不等写完整张表才发现不兼容。"""
     pin = _load_json(_WAN_DIR / "SOURCE_PIN.json")
+    if vae_compat is not None and not expected_ckpt_sha256:
+        raise ValueError("历史 VAE 兼容模式必须显式给出最终 encoder ckpt SHA")
+    keys = [key for _e, _seg, key, _, _ng in iter_rows_in_order(entries)]
+    total_segments = None
+    vae_hist = workers_vae_hist = None
+    if vae_compat is not None:
+        vae_hist, workers_vae_hist = check_vae_group(latents_root, keys, vae_compat)
+        total_segments = _load_json(latents_root / "metadata.json")["segments"]
     vae_infos: dict[str, dict] = {}
     enc_infos: dict[str, dict] = {}
     workers: dict[str, dict] = {}
+    workers_enc: dict[str, dict] = {}
     state_sha: dict | None = None
-    same_keys_vae = ("vae_id", "vae_state_sha256", "vae_dtype", "latent_mode", "batch", "tf32", "amp",
-                     "torch", "cuda", "cudnn", "diffusers", "cublas_pkg", "cudnn_pkg", "module_sha256",
-                     "encoder_src_sha256", "flags", "env", "gpu_name", "compute_cap", "sm_count", "driver")
-    same_keys_enc = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "config_sha256", "arch", "state_key", "precision",
-                     "amp", "tf32", "batch", "vae_id", "motion_dims", "torch", "cuda", "cudnn", "diffusers",
-                     "cublas_pkg", "cudnn_pkg", "module_sha256", "encoder_src_sha256", "env", "gpu_name",
-                     "compute_cap", "sm_count", "driver")
     for _e, _seg, key, _, _ng in iter_rows_in_order(entries):
         lm = _load_json(latents_root / f"{key}.metadata.json")
         tm = _load_json(tokens_root / f"{key}.metadata.json")
         latent_path = latents_root / f"{key}.bin"
-        if tm.get("input_latent_sha256") != ms.sha256_file(latent_path):
-            raise ValueError(f"{key} 的 motion 未绑定当前 latent 字节")
-        chunk_bytes = 9 * 16 * 32 * 32 * np.dtype(np.float32).itemsize
         blocks = tm.get("input_block_sha256")
-        if not isinstance(blocks, list) or len(blocks) != _ng or latent_path.stat().st_size != _ng * chunk_bytes:
+        if not isinstance(blocks, list) or len(blocks) != _ng or latent_path.stat().st_size != _ng * CHUNK_BYTES:
             raise ValueError(f"{key} latent 块数或每块指纹数量不符")
+        whole = hashlib.sha256()                   # 单遍：整文件 SHA 与逐块指纹同时核
         with latent_path.open("rb") as stream:
             for expected in blocks:
-                if hashlib.sha256(stream.read(chunk_bytes)).hexdigest() != expected:
+                buf = stream.read(CHUNK_BYTES)
+                whole.update(buf)
+                if hashlib.sha256(buf).hexdigest() != expected:
                     raise ValueError(f"{key} latent 逐块指纹不符")
+        if tm.get("input_latent_sha256") != whole.hexdigest():
+            raise ValueError(f"{key} 的 motion 未绑定当前 latent 字节")
+        if total_segments is not None and total_segments[key]["sha256"] != whole.hexdigest():
+            raise ValueError(f"{key} latent 字节与固定总 metadata 记录不符")
         actual_run = pathlib.Path(tm["encoder"]["run_dir"]).resolve()
         if actual_run != encoder_run_dir.resolve():
             raise ValueError(f"{key} 的 encoder 目录与 --encoder-run-dir 不同")
-        v = {k: lm["vae"].get(k) for k in same_keys_vae}
+        v = {k: lm["vae"].get(k) for k in SAME_KEYS_VAE}
         vae_infos[json.dumps(v, sort_keys=True, default=str)] = v
-        enc = {k: tm["encoder"].get(k) for k in same_keys_enc}
+        enc = {k: tm["encoder"].get(k) for k in SAME_KEYS_ENC}
         enc["flags"] = tm.get("encoder_flags")
         enc_infos[json.dumps(enc, sort_keys=True, default=str)] = enc
-        for w in (lm["worker"], tm["worker"]):
-            wid = f"{w.get('hostname')}:{w.get('gpu_uuid')}:{w.get('worker')}:{w.get('pid')}"
-            workers[wid] = w
+        workers[_worker_id(lm["worker"])] = lm["worker"]
+        workers[_worker_id(tm["worker"])] = tm["worker"]
+        workers_enc[_worker_id(tm["worker"])] = tm["worker"]
         if state_sha is None:
             state_sha = tm["encoder_state_sha256"]
         elif state_sha != tm["encoder_state_sha256"]:
@@ -229,22 +388,29 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
         raise ValueError(f"跨段 encoder provenance 不唯一（{len(enc_infos)} 种）：{list(enc_infos.values())}")
     vae = next(iter(vae_infos.values()))
     enc = next(iter(enc_infos.values()))
-    if vae["module_sha256"] != pin["source_sha256"] or enc["module_sha256"] != pin["source_sha256"]:
-        raise ValueError("逐段 provenance 的 module_sha256 != SOURCE_PIN.source_sha256")
+    if vae_compat is None:
+        if vae["module_sha256"] != pin["source_sha256"] or enc["module_sha256"] != pin["source_sha256"]:
+            raise ValueError("逐段 provenance 的 module_sha256 != SOURCE_PIN.source_sha256")
+    else:
+        if vae != vae_hist:
+            raise ValueError("VAE 组预检与逐段复核结果不同")
+        if enc["module_sha256"] != pin["source_sha256"]:
+            raise ValueError("encoder 组 module_sha256 != 当前 SOURCE_PIN.source_sha256")
+        if enc["checkpoint_sha256"] != expected_ckpt_sha256:
+            raise ValueError("encoder 组 checkpoint SHA 与显式最终 ckpt SHA 不同")
     if ms.sha256_file(_WAN_DIR / "wan_motion_infer.py") != pin["source_sha256"]:
         raise ValueError("当前推理源码与 SOURCE_PIN.source_sha256 不符")
     if enc["arch"] != "wan-latent-v10-st" or enc["motion_dims"] != list(ms.MOTION_ROW_SHAPE) or enc["state_key"] != "encoder":
         raise ValueError("encoder 架构、原始槽形状或 EMA state_key 与 v10 raw8 合同不符")
+    src_groups = (vae, enc) if vae_compat is None else (enc,)
     if pin.get("encoder_source_sha256") and any(
-            info["encoder_src_sha256"] != pin["encoder_source_sha256"] for info in (vae, enc)):
+            info["encoder_src_sha256"] != pin["encoder_source_sha256"] for info in src_groups):
         raise ValueError("VAE/encoder 记录的 encoder 源码与 SOURCE_PIN 不符")
     # 跨 worker 硬件/软件唯一性（1.3）：gpu_name / compute_cap / driver / torch / cudnn / git_commit / mj_commit
-    uniq_keys = ("gpu_name", "compute_cap", "driver_version", "torch", "cudnn_version", "git_commit", "mj_commit")
-    for k in uniq_keys:
-        vals = {str(w.get(k)) for w in workers.values()}
-        if len(vals) != 1:
-            raise ValueError(f"跨 worker {k} 不唯一: {sorted(vals)}")
-    if any(w.get("mj_commit") != pin["mj_repo_commit"] for w in workers.values()):
+    uniq_keys = WORKER_UNIQUE_KEYS
+    group = workers if vae_compat is None else workers_enc
+    _unique_workers(group, "" if vae_compat is None else "encoder 组")
+    if any(w.get("mj_commit") != pin["mj_repo_commit"] for w in group.values()):
         raise ValueError("worker 的 MotionJEPA 源提交与 SOURCE_PIN 不符")
     ckpt_name = enc["checkpoint"]
     checkpoint_path = encoder_run_dir / ckpt_name
@@ -256,7 +422,7 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
     if epoch != int(enc["checkpoint_epoch"]):
         raise ValueError(f"checkpoint 名解析出的 epoch {epoch} != ckpt 内记录 {enc['checkpoint_epoch']}")
     latents_meta = latents_root / "metadata.json"
-    return {
+    prov = {
         "manifest_sha256": manifest["sha256"],
         "motion_index_sha256": index_sha,
         "mj_repo_commit": pin["mj_repo_commit"],
@@ -273,6 +439,15 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
         "raw_dir": str(raw_dir.resolve()),
         "input_manifest_sha256": ms.sha256_file(input_manifest_path),
     }
+    if vae_compat is not None:
+        # 兼容记录旁挂在新 store；历史 latent metadata 原样不动，历史日期/源码 SHA 不改写成本次值。
+        prov["vae_compat"] = vae_compat
+        prov["workers_vae"] = workers_vae_hist
+        prov["workers_encoder"] = list(workers_enc.values())
+        prov["worker_unique_scope"] = "per_group"
+        prov["encoder_state_digest"] = hashlib.sha256(
+            json.dumps(state_sha, sort_keys=True).encode()).hexdigest()
+    return prov
 
 
 # ══ 子命令 ════════════════════════════════════════════════════════════════════
@@ -313,9 +488,18 @@ def cmd_pack(args) -> None:
     latents_root = pathlib.Path(args.latents).resolve()
     raw_dir = pathlib.Path(args.raw_dir).resolve()
     encoder_run_dir = pathlib.Path(args.encoder_run_dir).resolve()
+    oracle_report = (pathlib.Path(args.oracle_report) if args.oracle_report
+                     else latents_root.parent / "oracle/wan-mj/vae_report.json")
     input_manifest_path = check_raw_sources(
-        pathlib.Path(args.manifest).resolve(), latents_root, raw_dir,
-        pathlib.Path(args.oracle_report) if args.oracle_report else latents_root.parent / "oracle/wan-mj/vae_report.json")
+        pathlib.Path(args.manifest).resolve(), latents_root, raw_dir, oracle_report)
+    vae_compat = None
+    if getattr(args, "restore_receipt", None):
+        if not args.expected_ckpt_sha256:
+            raise RuntimeError("--restore-receipt 必须同时给出 --expected-ckpt-sha256")
+        vae_compat = load_vae_compat(pathlib.Path(args.restore_receipt), latents_root,
+                                     manifest_path=pathlib.Path(args.manifest), oracle_report=oracle_report)
+    elif getattr(args, "expected_ckpt_sha256", None):
+        raise RuntimeError("--expected-ckpt-sha256 仅用于历史 VAE 兼容模式（须配 --restore-receipt）")
     store_root = pathlib.Path(args.out).resolve()
     if store_root.is_symlink():
         raise RuntimeError(f"输出根是符号链接，拒绝写入: {store_root}")
@@ -332,6 +516,14 @@ def cmd_pack(args) -> None:
         index_sha = hashlib.sha256(index_bytes).hexdigest()
         print(f"[pack] episodes={len(entries)} rows={totals['rows']} (exec {totals['exec_rows']} + "
               f"demo {totals['demo_rows']}) index_sha256={index_sha[:16]}…", flush=True)
+        # 写表前预检全部来源（兼容模式含 VAE/encoder 分组）；旧 compare 记录作废，须对新表重做。
+        (store_root / BITEXACT_RELPATH).unlink(missing_ok=True)
+        prov = gather_provenance(latents_root, tokens_root, entries, manifest, index_sha,
+                                 encoder_run_dir=encoder_run_dir, raw_dir=raw_dir,
+                                 input_manifest_path=input_manifest_path, vae_compat=vae_compat,
+                                 expected_ckpt_sha256=getattr(args, "expected_ckpt_sha256", None))
+        print(f"PACK_PROVENANCE_PRECHECK=PASS mode={'vae_compat' if vae_compat else 'single_pin'} "
+              f"segments={sum(1 for _ in iter_rows_in_order(entries))}", flush=True)
 
         table_path = store_root / ms.MOTION_TABLE_RELPATH
         tmp = table_path.with_name(table_path.name + ".tmp")
@@ -364,9 +556,6 @@ def cmd_pack(args) -> None:
             raise RuntimeError("表落盘后 sha256 与写入流不符")
 
         atomic_write_bytes(store_root / ms.INDEX_RELPATH, index_bytes)
-        prov = gather_provenance(latents_root, tokens_root, entries, manifest, index_sha,
-                                 encoder_run_dir=encoder_run_dir, raw_dir=raw_dir,
-                                 input_manifest_path=input_manifest_path)
         git_head = subprocess.run(["git", "-C", str(_REPO_ROOT), "rev-parse", "HEAD"],
                                   capture_output=True, text=True, check=False).stdout.strip()
         import importlib.metadata as md
@@ -414,6 +603,8 @@ def cmd_verify(args) -> None:
     entries = ms.build_index_entries(manifest, meta.spec)
     if [dataclass_tuple(e) for e in entries] != [dataclass_tuple(e) for e in meta.entries]:
         raise RuntimeError("verify: 现场按清单重算的 index 与 meta 内 motion_index 不同")
+    if meta.provenance.get("vae_compat") is not None:
+        check_bitexact_record(store_root, meta.raw)
     started_at = _now()
     had_lock = (store_root / ms.LOCK_RELPATH).exists()
     acquire_lock(store_root, resume=(args.resume if had_lock else False),
@@ -458,6 +649,22 @@ def cmd_verify(args) -> None:
     print(f"VERIFY_MOTION=PASS scanned={scanned} mismatches=0")
 
 
+def check_bitexact_record(store_root: pathlib.Path, raw_meta: dict) -> dict:
+    """兼容模式 verify 前置：必须已有 compare_wan.py tokens 对**本张 packed 表**写下的 PASS 记录（R2）。"""
+    path = store_root / BITEXACT_RELPATH
+    if not path.is_file():
+        raise RuntimeError("verify: 缺 compare_wan.py tokens 的逐位比较记录，拒绝进入 verified")
+    rec = _load_json(path)
+    table = raw_meta["tables"][ms.MOTION_KEY]
+    want = {"status": "PASS", "compared": int(raw_meta["num_rows"]), "mismatches": 0,
+            "store_table_sha256": table["sha256"], "motion_index_sha256": raw_meta["motion_index_sha256"],
+            "checkpoint_sha256": raw_meta["provenance"]["encoder"]["checkpoint_sha256"]}
+    bad = [k for k, v in want.items() if rec.get(k) != v]
+    if bad:
+        raise RuntimeError(f"verify: 逐位比较记录与当前表不符 {bad}")
+    return rec
+
+
 def dataclass_tuple(e: ms.IndexEntry) -> tuple:
     return (e.g, e.h5_file, e.raw_ep_idx, e.num_timesteps, e.exec_start_idx, e.spec,
             (e.demo.row_base, e.demo.num_grid, e.demo.num_chunks, e.demo.seg_len),
@@ -485,6 +692,9 @@ def main() -> None:
     p.add_argument("--encoder-run-dir", required=True)
     p.add_argument("--raw-dir", required=True)
     p.add_argument("--oracle-report", default=None, help="默认 <lib>/oracle/wan-mj/vae_report.json")
+    p.add_argument("--restore-receipt", default=None,
+                   help="S5-A restore_receipt.json：历史 VAE 与新 encoder 分组校验（须配 --expected-ckpt-sha256）")
+    p.add_argument("--expected-ckpt-sha256", default=None, help="兼容模式下新 encoder 最终 ckpt 的显式 SHA256")
     p.add_argument("--resume", action="store_true")
     p.add_argument("--force-break-lock", action="store_true")
     p.set_defaults(func=cmd_pack)

@@ -5,7 +5,8 @@
           另与 MotionJEPA v7 data-raw `video_exec.h5` / `video_demo.h5` 的 `frames` 逐帧比（截尾处以内）。
   a6      清单一致：新清单 40 条 vs 旧 400 ep 清单同身份条目五字段相同；framesamp meta / motion meta / motion index
           三处 manifest sha 相同；index 原始字节 sha 命中 store_meta.motion_index_sha256。
-  a7      字节数账：每段 wan-latents `.bin == num_grid × 589,824`；motion 表 == rows × 3,072；motion-tokens 每段 == num_grid × 3,072。
+  a7      字节数账：每段 wan-latents `.bin == num_grid × 589,824`；motion 表 == rows × 行字节；motion-tokens 每段 ==
+          num_grid × 行字节（行字节取 store 布局：v10 raw8×256 为 8,192，历史 768 布局为 3,072）。
   a9set   索引映射（集合半）：随机 500 个 (g, t)，`visible_motion_rows` 解出的起点集合 == 独立实现（直接遍历 wan-latents 目录
           的 metadata + 清单现算）解出的集合；row 与 (段, m) 反查一致。
   a10     行数账：表行数 == 772 = exec 658 + demo 114；逐段 num_grid == len(range(0, max(0, L−32), 16))；row_base 连续、totals 覆盖整表。
@@ -134,13 +135,14 @@ def cmd_a7(args):
             if (lat / f"{key}.bin").stat().st_size != s.num_grid * CHUNK_BYTES:
                 bad += 1
                 print(f"  ✗ {key}.bin 字节数 != {s.num_grid} × {CHUNK_BYTES}")
-            if (tok / f"{key}.f32.bin").stat().st_size != s.num_grid * ms.MOTION_ROW_BYTES:
+            if (tok / f"{key}.f32.bin").stat().st_size != s.num_grid * meta.row_bytes:
                 bad += 1
-                print(f"  ✗ {key}.f32.bin 字节数 != {s.num_grid} × {ms.MOTION_ROW_BYTES}")
+                print(f"  ✗ {key}.f32.bin 字节数 != {s.num_grid} × {meta.row_bytes}")
     meta = ms.MotionMeta.load(args.motion)
-    table_ok = (pathlib.Path(args.motion) / ms.MOTION_TABLE_RELPATH).stat().st_size == meta.num_rows * ms.MOTION_ROW_BYTES
+    table_ok = (pathlib.Path(args.motion) / ms.MOTION_TABLE_RELPATH).stat().st_size == meta.num_rows * meta.row_bytes
     ok = bad == 0 and table_ok
-    print(f"A7_BYTES={'PASS' if ok else 'FAIL'} segments={n_seg} mismatches={bad} table_rows={meta.num_rows} table_ok={int(table_ok)}")
+    print(f"A7_BYTES={'PASS' if ok else 'FAIL'} segments={n_seg} mismatches={bad} table_rows={meta.num_rows} "
+          f"table_ok={int(table_ok)} row_bytes={meta.row_bytes}")
     if not ok:
         raise SystemExit(1)
 
