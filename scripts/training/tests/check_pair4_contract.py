@@ -22,6 +22,10 @@ REPO = Path(__file__).resolve().parents[3]
 BASELINE = "2b2954cf7d04f10f1b0826a3e72a0324bdda08d2"
 HISTORY_CONFIG = "perceptual-framesamp-modul-pair4-epoch6-original-smoke.yaml"
 ENCODER_SHA = "146efd425f7923428d630dfb7ee2a8f010f19b207d36519dba49454aaa373d30"
+SAVED_CONTRACT_FILES = (
+    "config_record.json", "history_config.resolved.yaml", "history_config.resolved.sha256",
+    "history_config.txt", "motion_provenance.json", "exported_parameter_reference.json",
+)
 ORIGINAL_FILES = (
     "src/mme_vla_suite/models/representation/percep_mem.py",
     "src/mme_vla_suite/models/integration/history_pi0.py",
@@ -69,6 +73,42 @@ def write_json(path, payload):
     temporary = path.with_name(path.name + ".tmp")
     temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
     temporary.replace(path)
+
+
+def saved_artifact_manifest(run_root):
+    """封口必要合同文件和step1全部文件；只记大小与摘要，不读取模型。"""
+    run_root = Path(run_root)
+    require(run_root.is_dir() and not run_root.is_symlink(), "保存run目录缺失或被符号链接替换")
+    contracts = {}
+    for name in SAVED_CONTRACT_FILES:
+        path = run_root / name
+        require(path.is_file() and not path.is_symlink(), f"必要保存合同文件缺失或不是常规文件：{name}")
+        contracts[name] = {"bytes": path.stat().st_size, "sha256": sha(path)}
+    step_dir = run_root / "1"
+    require(step_dir.is_dir() and not step_dir.is_symlink(), "保存step1目录缺失或被符号链接替换")
+    for name in ("params", "assets"):
+        require((step_dir / name).is_dir(), f"保存step1缺少{name}目录")
+    files = {}
+    for path in sorted(step_dir.rglob("*")):
+        require(not path.is_symlink() and (path.is_dir() or path.is_file()), f"step1含非正常路径：{path}")
+        if path.is_file():
+            files[path.relative_to(step_dir).as_posix()] = {"bytes": path.stat().st_size, "sha256": sha(path)}
+    require(any(name.startswith("params/") for name in files)
+            and any(name.startswith("assets/") for name in files), "保存参数或assets文件集合为空")
+    return {"schema": 1, "run_root": str(run_root.resolve()), "save_step": 1,
+            "contract_files": contracts, "checkpoint_files": files}
+
+
+def verify_saved_artifacts(expected, run_root):
+    """汇总时仅CPU重算落盘集合，删除、替换、改名和增加文件都拒绝。"""
+    actual = saved_artifact_manifest(run_root)
+    require(expected.get("schema") == 1 and expected.get("save_step") == 1, "保存产物清单版本或step不符")
+    require(expected.get("run_root") == actual["run_root"], "保存run目录身份不符")
+    for group in ("contract_files", "checkpoint_files"):
+        wanted, found = expected.get(group, {}), actual[group]
+        require(wanted.keys() == found.keys(), f"{group}文件集合改变：缺{sorted(wanted.keys() - found.keys())}，多{sorted(found.keys() - wanted.keys())}")
+        for name, record in wanted.items():
+            require(record == found[name], f"保存产物大小或SHA改变：{group}/{name}")
 
 
 def gate(details):
@@ -312,6 +352,9 @@ def summary_suite(root):
         model_report = json.loads((root / "reports/model.json").read_text())
         for relative, digest in model_report["input_report_sha256"].items():
             require(sha(root / relative) == digest, f"模型验证后前置报告被替换：{relative}")
+        run_root = Path(model_report["configuration"]["run_root"])
+        require(run_root.resolve().is_relative_to((root / "policy").resolve()), "保存run不在本次policy产物目录中")
+        verify_saved_artifacts(model_report["saved_artifacts"], run_root)
     return {"status": status, "gates": {"TRAIN_SMOKE": {"status": status, "details": reports}}, "reports": reports,
             "limitations": ["仅单窗训练冒烟", "未恢复optimizer、step或RNG", "未验证在线推理、评估或全量训练"]}
 

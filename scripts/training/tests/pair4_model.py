@@ -18,6 +18,7 @@ from check_pair4_contract import REPO
 from check_pair4_contract import code_identity
 from check_pair4_contract import gate
 from check_pair4_contract import require
+from check_pair4_contract import saved_artifact_manifest
 from check_pair4_contract import scope_checks
 from check_pair4_contract import sha
 from check_pair4_contract import write_json
@@ -412,6 +413,7 @@ def model_suite(root, history_name):
             "loss_max_abs": maximum, "reference_loss": _array_record(reference_loss), "loaded_loss": _array_record(loaded_loss),
             "backend": jax.default_backend(), "fixed_rng": np.asarray(jax.random.key_data(fixed_rng)).tolist(),
             "optimizer_restored": False})
+        report["saved_artifacts"] = saved_artifact_manifest(run_root)
         report["status"] = "PASS"
         persist("complete")
     except (Exception, SystemExit) as error:
