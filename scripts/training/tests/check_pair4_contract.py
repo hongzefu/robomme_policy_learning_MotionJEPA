@@ -149,11 +149,13 @@ def _synthetic_raw_store(directory):
     raw_sha = sha(d / "tokens" / f"{key}.f32.bin")
     (d / "tokens" / f"{key}.f32.bin.sha256").write_text(raw_sha + "\n")
     (d / "encoder-synthetic/checkpoint_epoch_6.pt").write_bytes(b"synthetic-format-contract-only\n")
+    (d / "encoder-synthetic/config.yaml").write_text("purpose: synthetic_format_test\n")
     pin = json.loads((REPO / "scripts/dataset/wan/SOURCE_PIN.json").read_text())
     shared = {"module_sha256": pin["source_sha256"], "encoder_src_sha256": pin.get("encoder_source_sha256"),
               "batch": 1, "vae_id": "synthetic_format_test"}
     encoder = {**shared, "run_dir": str(d / "encoder-synthetic"), "checkpoint": "checkpoint_epoch_6.pt",
                "checkpoint_sha256": sha(d / "encoder-synthetic/checkpoint_epoch_6.pt"),
+               "config_sha256": sha(d / "encoder-synthetic/config.yaml"),
                "checkpoint_epoch": 6, "arch": "wan-latent-v10-st", "state_key": "encoder", "motion_dims": [8, 256]}
     worker = {"hostname": "synthetic", "worker": 0, "pid": os.getpid(), "mj_commit": pin["mj_repo_commit"]}
     write_json(d / "latents" / f"{key}.metadata.json", {"vae": shared, "worker": worker, "sha256": latent_sha})

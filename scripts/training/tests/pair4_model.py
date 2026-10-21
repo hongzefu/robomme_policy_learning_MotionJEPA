@@ -354,6 +354,7 @@ def model_suite(root, history_name):
         require(int(state.step) == 1 and metric_values["grad_norm"] > 0, "原train_step未完成一次有效更新")
         after = _flatten(state.params.to_pure_dict())
         updates = {path: int(np.count_nonzero(value.view(np.uint32) != np.asarray(jax.device_get(after[path])).view(np.uint32))) for path, value in before.items()}
+        del after
         require(sum(updates.values()) > 0, "没有fp32 motion参数真实改变")
         report["timings"]["original_train_step"] = time.perf_counter() - start
         report["gates"]["REAL_FORWARD"] = gate({"metrics": metric_values, "gradients": diagnostic,
