@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-20T16:40:00Z",
-    "america_new_york": "2026-10-20T12:40:00-0400"
+    "utc": "2026-10-21T02:13:32Z",
+    "america_new_york": "2026-10-20T22:13:32-0400"
   },
   "repo": {
     "branch": "v2-motionmem",
-    "base_head": "037673a12f43017868aa310cc0647ee5faea1272"
+    "base_head": "2b2954cf7d04f10f1b0826a3e72a0324bdda08d2"
   },
   "freeze": {
     "active": false,
@@ -14,6 +14,58 @@
     "frozen_head": null
   },
   "tasks": {
+    "paired4-training-smoke": {
+      "plan": {
+        "file": "/scratch/hongze/MotionJEPA/1020-paired4-modulation-plan.html",
+        "sha": "ee719fbedea88f8a6c8e6a0c280fd332c0a36af9"
+      },
+      "state": "running",
+      "state_changed_at": "2026-10-21T02:13:32Z",
+      "state_reason": "用户已批准开始实施；开工一致性审查通过，独立工作树并行实现离线数据、训练装配、夹具与模型验证。",
+      "owner": {
+        "session": "",
+        "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "原始数据格式、唯一相邻配对与窗口装配",
+          "evidence": "RAW_CONTRACT / PAIRING / WINDOW_BUDGET / MASK_ORDER",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports",
+          "status": "pending"
+        },
+        {
+          "what": "真实单窗提取与已批准权重注册",
+          "evidence": "SOURCE_FRESH / REGISTERED_SOURCE",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/smoke/paired4-epoch6-20261020-a/reports",
+          "status": "pending"
+        },
+        {
+          "what": "完整模型单步、严格权重回读与范围审查",
+          "evidence": "REAL_FORWARD / SAVE_LOAD / ORIGINAL_IMPL_UNCHANGED / SCOPE / TRAIN_SMOKE",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/docs/training-doc/paired4-epoch6-original-smoke-20261020-a",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-20",
+          "quote": "/scratch/hongze/MotionJEPA/1020-paired4-modulation-plan.html 开始实施 有问题问用户",
+          "scope": "仅计划中的训练链路冒烟：一窗新提取、真实小表、完整模型一次更新及权重严格保存回读；GPU阶段合计30分钟；不做在线、评估、全量或长训。"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "整合四个独立实现工作树，完成CPU合同后串行执行GPU1单窗提取与GPU0模型验证",
+          "command": "见计划第二部分6.2",
+          "verdict_line": "TRAIN_SMOKE=PASS"
+        }
+      ]
+    },
     "mixed8-vla-build": {
       "plan": {
         "file": "/scratch/hongze/MotionJEPA/1016-mixed8-vla-plan.html",
