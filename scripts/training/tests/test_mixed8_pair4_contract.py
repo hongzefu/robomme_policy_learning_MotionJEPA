@@ -77,8 +77,14 @@ def filled(formal, **values):
 
 
 def test_yaml_placeholder_rejected(yamls):
-    got = rows(L.check_history, *yamls)
+    placeholder = filled(yamls[0], **{k: L.PLACEHOLDER for k in L.SOURCE_FIELDS})
+    got = rows(L.check_history, placeholder, yamls[1])
     assert got["YAML_EQUALS_SMOKE"] and not got["YAML_NO_PLACEHOLDER"]
+
+
+def test_committed_yaml_formal_fields_pass(yamls):
+    assert all(rows(L.check_history, *yamls).values())
+    assert yamls[0]["motion"]["checkpoint_sha256"] == "06289905ba9ca7c5879aa32a6e1e88f32d45fc371d506e5a8e5735535a6a20c8"
 
 
 def test_yaml_filled_passes(yamls):

@@ -264,9 +264,13 @@ def check_parent(rec, store, contract):
 
 
 def check_motion(rec, repo, store, fields, match, contract):
-    """新库 motion 元数据；store_path 按 dataloader 口径相对代码仓库根解析。"""
+    """新库 motion 元数据；相对 store_path 按 v1-store 所在仓库根解析。
+
+    dataloader 相对代码仓库根解析；正式入口 REPO_CWD/REPO_PACKAGE 已要求代码根即主检出，
+    两者在正式起跑时相同。按 store 根解析使 worktree 演练也能核对真实新库。
+    """
     raw = str(fields["store_path"])
-    root = Path(raw) if Path(raw).is_absolute() else Path(repo) / raw
+    root = Path(raw) if Path(raw).is_absolute() else Path(store) / raw
     root = root.resolve()
     parent_motion = (store / contract.parent_rel / "motion").resolve()
     rec("MOTION_PATH", root.is_dir() and root != parent_motion
