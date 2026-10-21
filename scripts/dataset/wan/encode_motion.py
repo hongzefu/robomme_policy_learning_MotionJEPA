@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """MotionJEPA encoder 编码 worker：按段领任务，读 ``wan-latents/<段>.bin`` 每块 → 复制件 ``motion_token`` →
-``motion-tokens/<段>.f32.bin``（num_grid × 768 f32）。
+``motion-tokens/<段>.f32.bin``（num_grid × 8 × 256 f32）。
 
 对应 0901-motion-memory-plan.md 第一部分 4.2 第 5 步与第二部分 1.5。只做「读 latent → 调复制件 ``motion_token`` → 落盘」，
 不复写任何 🔒 数值语句；起手 ``check_env()`` + ``pin_numerics()`` + ``check_versions()``；
-``load_encoder(run_dir, ckpt, expected_sha256=…)`` 整份 strict（affine buffer 从 ckpt 带入，禁 ``load_wan_latent_stats``）；
+``load_encoder(run_dir, ckpt, expected_sha256=…)`` 经上游工厂构造并整份 strict，最终 affine buffer 以 ckpt 为准；
 B=1 硬约束；autocast 由 run 配置决定（bf16）。CLI 刻意不设 ``--encoder-key`` / ``--tf32`` / ``--amp``。
 
 产物（每段三件，原子落盘）：
-  <out>/<段>.f32.bin            num_grid × 3,072 B，行序 = 网格序
+  <out>/<段>.f32.bin            num_grid × 8,192 B，行序 = 网格序
   <out>/<段>.f32.bin.sha256
   <out>/<段>.metadata.json      输入 .bin sha256、每行 latent 块 sha256、encoder info、worker 指纹
 
@@ -65,14 +65,27 @@ def read_latent_bin(path: pathlib.Path, num_grid: int) -> np.ndarray:
 
 
 def token_outputs_complete(out_dir: pathlib.Path, key: str, num_grid: int,
-                           latent_path: pathlib.Path) -> bool:
-    """token 文件名带 .f32，metadata 不带；必须同时绑定实际 latent 输入。"""
+                           latent_path: pathlib.Path, *, encoder_info: dict,
+                           source_pin: dict) -> bool:
+    """续跑同时绑定 latent、encoder 权重、源码及原始槽形状；换 encoder 必须重算。"""
     if not wc.segment_outputs_complete(out_dir, key, num_grid * wc.TOKEN_BYTES,
                                        bin_stem=key + ".f32", expect_schema=METADATA_SCHEMA,
-                                       require_keys=("input_latent_sha256",)):
+                                       require_keys=("input_latent_sha256", "encoder", "worker",
+                                                     "layout", "row_shape", "dtype", "token_bytes")):
         return False
     meta = json.loads((out_dir / f"{key}.metadata.json").read_text(encoding="utf-8"))
-    return latent_path.is_file() and meta["input_latent_sha256"] == wc.sha256_file(latent_path)
+    if (meta["layout"] != wc.TOKEN_LAYOUT or meta["row_shape"] != list(wc.TOKEN_SHAPE)
+            or meta["dtype"] != "float32" or meta["token_bytes"] != wc.TOKEN_BYTES
+            or meta.get("token_dim") != wc.TOKEN_DIM):
+        return False
+    if not latent_path.is_file() or meta["input_latent_sha256"] != wc.sha256_file(latent_path):
+        return False
+    ident = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", "state_key",
+             "motion_dims", "precision", "amp", "tf32", "batch", "module_sha256", "encoder_src_sha256")
+    if any(meta["encoder"].get(k) != encoder_info.get(k) for k in ident):
+        return False
+    return (meta["encoder"].get("module_sha256") == source_pin["source_sha256"]
+            and meta["worker"].get("mj_commit") == source_pin["mj_repo_commit"])
 
 
 def main() -> None:
@@ -81,7 +94,7 @@ def main() -> None:
     ap.add_argument("--latents", required=True, help="<lib>/wan-latents")
     ap.add_argument("--out", required=True, help="<lib>/motion-tokens")
     ap.add_argument("--encoder-run-dir", required=True)
-    ap.add_argument("--checkpoint", default="checkpoint_epoch_72.pt")
+    ap.add_argument("--checkpoint", default="checkpoint_epoch_6.pt")
     ap.add_argument("--expected-ckpt-sha256", required=True)
     ap.add_argument("--worker", required=True)
     ap.add_argument("--segments", nargs="*", default=None)
@@ -110,7 +123,7 @@ def main() -> None:
 
     encoder, einfo, use_amp = W.load_encoder(args.encoder_run_dir, args.checkpoint, device,
                                              expected_sha256=args.expected_ckpt_sha256)
-    # 77 张量 sha256 清单（D3 附加判据：两侧逐键相等）
+    # 完整张量 sha256 清单，包含 checkpoint 里的归一化 buffer。
     sd = encoder.state_dict()
     state_sha = {k: hashlib.sha256(sd[k].detach().cpu().contiguous().numpy().tobytes()).hexdigest()
                  for k in sorted(sd)}
@@ -127,27 +140,30 @@ def main() -> None:
         ng = it["num_grid"]
         final = out_dir / f"{key}.f32.bin"
         lat_path = lat_dir / f"{key}.bin"
-        if token_outputs_complete(out_dir, key, ng, lat_path):
+        if token_outputs_complete(out_dir, key, ng, lat_path, encoder_info=einfo, source_pin=pin):
             skipped += 1
             continue
         if not wc.try_claim(claims, key, args.worker):
             continue
         try:
             # 先复核、后清残件，防止领取到刚由另一 worker 完成的段。
-            if token_outputs_complete(out_dir, key, ng, lat_path):
+            if token_outputs_complete(out_dir, key, ng, lat_path, encoder_info=einfo, source_pin=pin):
                 skipped += 1
                 continue
             for suffix in (".f32.bin", ".f32.bin.sha256", ".metadata.json"):
                 (out_dir / f"{key}{suffix}").unlink(missing_ok=True)
             t0 = time.perf_counter()
             lats = read_latent_bin(lat_path, ng)
-            toks = np.empty((ng, wc.TOKEN_DIM), dtype=np.float32)
+            toks = np.empty((ng,) + wc.TOKEN_SHAPE, dtype=np.float32)
             block_sha = []
             for m in range(ng):
                 blk = torch.from_numpy(np.ascontiguousarray(lats[m]))      # (9,16,32,32) f32
                 block_sha.append(wc.sha256_bytes(lats[m]))
                 W.pin_numerics()
-                toks[m] = W.motion_token(encoder, blk, use_amp, device)     # 🔒 复制件；B=1
+                raw = W.motion_token(encoder, blk, use_amp, device)       # 🔒 锁定上游数值路径；B=1
+                if raw.shape != wc.TOKEN_SHAPE or raw.dtype != np.float32:
+                    raise RuntimeError(f"encoder 输出不是原始 {wc.TOKEN_SHAPE} float32: {raw.shape} {raw.dtype}")
+                toks[m] = raw
             blob = np.ascontiguousarray(toks).tobytes()
             if len(blob) != ng * wc.TOKEN_BYTES:
                 raise RuntimeError(f"{key} token 字节数 {len(blob)} != {ng} × {wc.TOKEN_BYTES}")
@@ -157,6 +173,7 @@ def main() -> None:
             wc.write_json(out_dir / f"{key}.metadata.json", {
                 "schema": METADATA_SCHEMA, "segment": key, "g": it["g"], "segment_kind": it["segment"],
                 "num_grid": ng, "token_dim": wc.TOKEN_DIM, "token_bytes": wc.TOKEN_BYTES,
+                "layout": wc.TOKEN_LAYOUT, "row_shape": list(wc.TOKEN_SHAPE), "dtype": "float32",
                 "input_latent_bin": str(lat_path), "input_latent_sha256": wc.sha256_file(lat_path),
                 "input_block_sha256": block_sha, "sha256": sha, "bytes": len(blob),
                 "encoder": {k: v for k, v in einfo.items() if k != "flags"},

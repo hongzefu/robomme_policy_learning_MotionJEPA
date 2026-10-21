@@ -133,14 +133,16 @@ def _segment_key(entry: ms.IndexEntry, seg: str) -> str:
     return ms.segment_key(entry.h5_file, entry.raw_ep_idx, seg)
 
 
-def read_segment_tokens(tokens_root: pathlib.Path, key: str, num_grid: int) -> tuple[bytes, dict]:
+def read_segment_tokens(tokens_root: pathlib.Path, key: str, num_grid: int, *,
+                        spec: ms.LayoutSpec | None = None) -> tuple[bytes, dict]:
     """读一段 token 文件：核字节数 + sidecar sha256 + metadata 可解析；返回 (原始字节, metadata)。"""
+    spec = ms.LAYOUT_SPECS[ms.LAYOUT] if spec is None else spec
     p = tokens_root / f"{key}.f32.bin"
     if not p.is_file():
         raise FileNotFoundError(f"缺段 token 文件: {p}")
     size = p.stat().st_size
-    if size != num_grid * ms.MOTION_ROW_BYTES:
-        raise ValueError(f"{p} 字节数 {size} != {num_grid} × {ms.MOTION_ROW_BYTES}")
+    if size != num_grid * spec.row_bytes:
+        raise ValueError(f"{p} 字节数 {size} != {num_grid} × {spec.row_bytes}")
     want = (tokens_root / f"{key}.f32.bin.sha256").read_text().split()[0]
     data = p.read_bytes()
     got = hashlib.sha256(data).hexdigest()
@@ -149,6 +151,12 @@ def read_segment_tokens(tokens_root: pathlib.Path, key: str, num_grid: int) -> t
     meta = json.loads((tokens_root / f"{key}.metadata.json").read_text(encoding="utf-8"))
     if int(meta.get("num_grid", -1)) != num_grid or meta.get("sha256") != want:
         raise ValueError(f"{p} metadata 与文件不符（num_grid / sha256）")
+    if spec.row_shape == ms.MOTION_ROW_SHAPE:
+        contract = {"layout": ms.LAYOUT, "row_shape": list(spec.row_shape), "dtype": "float32",
+                    "token_dim": int(np.prod(spec.row_shape)), "token_bytes": spec.row_bytes,
+                    "bytes": size}
+        if any(meta.get(k) != v for k, v in contract.items()):
+            raise ValueError(f"{p} 原始 motion 合同不符，期望 {contract}")
     arr = np.frombuffer(data, dtype=np.float32)
     if not np.isfinite(arr).all():
         raise ValueError(f"{p} 含非有限值")
@@ -189,6 +197,17 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
     for _e, _seg, key, _, _ng in iter_rows_in_order(entries):
         lm = _load_json(latents_root / f"{key}.metadata.json")
         tm = _load_json(tokens_root / f"{key}.metadata.json")
+        latent_path = latents_root / f"{key}.bin"
+        if tm.get("input_latent_sha256") != ms.sha256_file(latent_path):
+            raise ValueError(f"{key} 的 motion 未绑定当前 latent 字节")
+        chunk_bytes = 9 * 16 * 32 * 32 * np.dtype(np.float32).itemsize
+        blocks = tm.get("input_block_sha256")
+        if not isinstance(blocks, list) or len(blocks) != _ng or latent_path.stat().st_size != _ng * chunk_bytes:
+            raise ValueError(f"{key} latent 块数或每块指纹数量不符")
+        with latent_path.open("rb") as stream:
+            for expected in blocks:
+                if hashlib.sha256(stream.read(chunk_bytes)).hexdigest() != expected:
+                    raise ValueError(f"{key} latent 逐块指纹不符")
         actual_run = pathlib.Path(tm["encoder"]["run_dir"]).resolve()
         if actual_run != encoder_run_dir.resolve():
             raise ValueError(f"{key} 的 encoder 目录与 --encoder-run-dir 不同")
@@ -212,12 +231,21 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
     enc = next(iter(enc_infos.values()))
     if vae["module_sha256"] != pin["source_sha256"] or enc["module_sha256"] != pin["source_sha256"]:
         raise ValueError("逐段 provenance 的 module_sha256 != SOURCE_PIN.source_sha256")
+    if ms.sha256_file(_WAN_DIR / "wan_motion_infer.py") != pin["source_sha256"]:
+        raise ValueError("当前推理源码与 SOURCE_PIN.source_sha256 不符")
+    if enc["arch"] != "wan-latent-v10-st" or enc["motion_dims"] != list(ms.MOTION_ROW_SHAPE) or enc["state_key"] != "encoder":
+        raise ValueError("encoder 架构、原始槽形状或 EMA state_key 与 v10 raw8 合同不符")
+    if pin.get("encoder_source_sha256") and any(
+            info["encoder_src_sha256"] != pin["encoder_source_sha256"] for info in (vae, enc)):
+        raise ValueError("VAE/encoder 记录的 encoder 源码与 SOURCE_PIN 不符")
     # 跨 worker 硬件/软件唯一性（1.3）：gpu_name / compute_cap / driver / torch / cudnn / git_commit / mj_commit
     uniq_keys = ("gpu_name", "compute_cap", "driver_version", "torch", "cudnn_version", "git_commit", "mj_commit")
     for k in uniq_keys:
         vals = {str(w.get(k)) for w in workers.values()}
         if len(vals) != 1:
             raise ValueError(f"跨 worker {k} 不唯一: {sorted(vals)}")
+    if any(w.get("mj_commit") != pin["mj_repo_commit"] for w in workers.values()):
+        raise ValueError("worker 的 MotionJEPA 源提交与 SOURCE_PIN 不符")
     ckpt_name = enc["checkpoint"]
     checkpoint_path = encoder_run_dir / ckpt_name
     if not checkpoint_path.is_file() or ms.sha256_file(checkpoint_path) != enc["checkpoint_sha256"]:
@@ -394,11 +422,11 @@ def cmd_verify(args) -> None:
     mismatches: list[tuple[int, str]] = []
     digests = bytearray()
     for _e, _seg, key, row_base, ng in iter_rows_in_order(entries):
-        src, _ = read_segment_tokens(tokens_root, key, ng)
+        src, _ = read_segment_tokens(tokens_root, key, ng, spec=meta.spec)
         rows = store.rows(np.arange(row_base, row_base + ng))          # 真实读 API
         for m in range(ng):
             st = rows[m].tobytes()
-            if st != src[m * ms.MOTION_ROW_BYTES:(m + 1) * ms.MOTION_ROW_BYTES]:
+            if st != src[m * meta.row_bytes:(m + 1) * meta.row_bytes]:
                 mismatches.append((row_base + m, key))
             h = hashlib.blake2b(digest_size=ms.ROW_DIGEST_BYTES)
             h.update(st)

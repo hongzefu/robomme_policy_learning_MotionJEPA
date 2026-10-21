@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import datetime
 import hashlib
+import importlib.metadata
 import json
 import os
 import pathlib
@@ -35,8 +36,10 @@ EXEC_MIN_REAL_FRAMES = 33
 DEMO_TAIL_PAD = "repeat_last"
 LAT_SHAPE = (9, 16, 32, 32)                 # 组优先 latent，f32
 CHUNK_BYTES = int(np.prod(LAT_SHAPE)) * 4    # 589,824
-TOKEN_DIM = 768
-TOKEN_BYTES = TOKEN_DIM * 4                 # 3,072
+TOKEN_SHAPE = (8, 256)
+TOKEN_DIM = int(np.prod(TOKEN_SHAPE))
+TOKEN_BYTES = TOKEN_DIM * np.dtype(np.float32).itemsize  # 8,192
+TOKEN_LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
 SEGMENTS = ("demo", "exec")
 
 
@@ -275,6 +278,16 @@ def load_source_pin(here: pathlib.Path) -> dict:
     if got != pin["source_sha256"]:
         raise SystemExit(f"复制件 wan_motion_infer.py sha256 {got[:16]}… != SOURCE_PIN.source_sha256 "
                          f"{pin['source_sha256'][:16]}…（复制件被改动）")
+    # 安装来源与源码一并核对，避免新适配件悄悄调用旧环境中的 encoder。
+    dist = importlib.metadata.distribution("motion-jepa")
+    direct = json.loads(dist.read_text("direct_url.json") or "{}")
+    if direct.get("vcs_info", {}).get("commit_id") != pin["mj_repo_commit"]:
+        raise SystemExit("已安装 motion-jepa 的 Git 提交与 SOURCE_PIN 不同；先同步独立 Wan 环境")
+    for filename, key in (("wan_latent_encoder.py", "encoder_source_sha256"),
+                          ("factory.py", "factory_source_sha256")):
+        source = pathlib.Path(dist.locate_file(f"motion_jepa/models/{filename}"))
+        if not source.is_file() or sha256_file(source) != pin[key]:
+            raise SystemExit(f"已安装 MotionJEPA 的 {filename} 与 SOURCE_PIN 不同")
     return pin
 
 

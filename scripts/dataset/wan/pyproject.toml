@@ -6,8 +6,9 @@
 # 所以 torch 侧全部走本子项目：独立 `uv.lock`（进 git）、独立 venv（`UV_PROJECT_ENVIRONMENT=$V1_STORE/venvs/wan`）。
 # 刻意不用 uv workspace（全局规则：workspace 成员共享根 lock，会把冲突依赖拉回主项目解析图）。
 #
-# 版本钉法：与 MotionJEPA `2a484ad` 的 uv.lock 逐项同值（torch 2.9.0 / diffusers 0.39.0 / numpy 2.4.4 /
-# h5py 3.16.0 / pyyaml 6.0.3 / einops 0.8.2），保证 A4 双 venv 探针的 `check_versions()` 与 provenance 逐键相等。
+# 版本钉法：数值核心沿用 torch 2.9.0 / diffusers 0.39.0 / numpy 2.4.4 /
+# h5py 3.16.0 / pyyaml 6.0.3 / einops 0.8.2；MotionJEPA v10 钉在 SOURCE_PIN 的同一提交。
+# 其余传递依赖以本子项目锁文件及实际 provenance 为准，不声称和上游环境全部相同。
 # torch 2.9.0 的 PyPI Linux wheel 即 cu128 版（`torch.__version__ == "2.9.0+cu128"`），无需额外 index。
 #
 # 建环境（在仓库根执行；NFS 上须 UV_LINK_MODE=copy）：
@@ -28,7 +29,7 @@ dependencies = [
     "einops==0.8.2",
     # WanLatentMotionEncoder 类：以 git 依赖钉死 MotionJEPA 锚点 commit（红线 2）。
     # 不做 path 依赖——setuptools 会往只读的 MotionJEPA 树里写 build/ 与 egg-info。
-    "motion-jepa @ git+https://github.com/hongzefu/MotionJEPA@2a484ad960ed6155321dc34def9011eb119f857f",
+    "motion-jepa @ git+https://github.com/hongzefu/MotionJEPA@ee719fbedea88f8a6c8e6a0c280fd332c0a36af9",
 ]
 
 [tool.uv]

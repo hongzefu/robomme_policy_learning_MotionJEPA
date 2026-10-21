@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """口径 A 的最小自包含前向：Wan VAE 帧→latent（VAE 段）+ WanLatentMotionEncoder latent→motion token（encoder 段）。
 
-这是 `scripts/evaluateLabelData-v4/swapclip_common.py` 里 `load_vae / encode_chunk / load_encoder / motion_token`
-四个函数的逐字复刻，去掉了 benchmark 数据源 pin 校验与 dataset 依赖，只留数值路径；供 policy 仓库
-（robomme_policy_learning_MotionJEPA）的 `extract_wan.py` / `encode_motion.py` 照抄，目标是**同硬件逐位一致**
-（跨硬件允许不一致——A40 vs Ada 差 ~1e-5 级，隔离在 VAE `conv_out`，见 docs/dataset-build-doc/slurm-wan-extract-v1）。
+源于 SOURCE_PIN 锁定的 MotionJEPA `scripts/inference-example/wan_motion_infer.py`，
+沿用其 VAE 与 v10 encoder 数值路径；本地增加来源/形状断言，并将 flat2048 恢复为 raw8×256。
+上下游文件指纹分开记录，不声明适配件与上游全文相同。同硬件逐位结果以本次一窗 oracle 为准，
+历史跨硬件差异不构成本次通过证据。
 
 两类标记：
   🔒 数值语句——改一个字就会改位，照抄。
@@ -49,7 +49,6 @@ import yaml
 
 # ---------------- 常量（照抄 swapclip_common / 抽取器，一字不动） ----------------
 
-ARCH_TAG = "wan-latent-v7"
 K = 8                                   # 未来组数（= 训练 data.max_horizon）
 WINDOW = 4 * K + 1                      # 33 帧窗口 [t, t+32]
 FRAME_SIZE = 256
@@ -258,53 +257,52 @@ def encode_chunk(vae, frames_window, device):
     return lat
 
 
-# ---------------- encoder 段：latent (9,16,32,32) → motion token (768,) ----------------
+# ---------------- encoder 段：latent (9,16,32,32) → 原始 motion (8,256) ----------------
 
 def load_encoder(run_dir, checkpoint_name, device, expected_sha256=None, strict_versions=True):
     """按 run 冻结 config 重建 WanLatentMotionEncoder 并整份 strict 加载主键 `encoder`（EMA）。
 
-    返回 (encoder, info, use_amp)。affine 常数构造时传 None（NaN 占位），由 strict load 从 checkpoint 的
-    persistent buffer 带入，**不读 VAE config**（EMA 已把 buffer 凸组合过，手填真值反而不逐位）。
+    返回 (encoder, info, use_amp)。构造走 `motion_jepa.models.build_encoder_from_cfg`（缺键 KeyError，
+    dropout=0.0、activation_checkpoint=False）；factory 构造时读到的 VAE config affine 常数随后被 strict load
+    以 checkpoint 的 persistent buffer 覆盖，不在加载后重写归一化常数。
+    arch 指纹经 `check_arch` 校验，旧架构不兼容。
     """
     check_versions(strict=strict_versions, with_diffusers=False)
-    from motion_jepa.models import WanLatentMotionEncoder
+    from motion_jepa.models import ARCH_TAG, build_encoder_from_cfg, check_arch
     device = torch.device(device)
 
     with open(os.path.join(run_dir, "config.yaml")) as f:
         cfg = yaml.safe_load(f)
-    assert cfg.get("wan"), f"{run_dir} 冻结 config 无 wan: 节——非 v7 run"
+    assert cfg.get("wan"), f"{run_dir} 冻结 config 无 wan: 节"
     ckpt_path = os.path.join(run_dir, checkpoint_name)
     ckpt_sha = sha256_file(ckpt_path)
     if expected_sha256 is not None:
         assert ckpt_sha == expected_sha256, \
             f"checkpoint sha256 {ckpt_sha[:16]}… ≠ 期望 {expected_sha256[:16]}…"
     ckpt = torch.load(ckpt_path, map_location=device, weights_only=False)
-    assert ckpt.get("arch") == ARCH_TAG, f"{ckpt_path} arch={ckpt.get('arch')!r} ≠ {ARCH_TAG!r}"
+    check_arch(ckpt)
+    if ARCH_TAG != "wan-latent-v10-st":
+        raise RuntimeError(f"安装的 encoder 架构 {ARCH_TAG!r} 不是本次锁定的 v10")
 
     # 原 A 硬用常量 K 建 seq_len；这里多一句核对（loss_common.load_models 同款），数值无关
-    K_cfg = int(cfg["data"].get("max_horizon", 8))
+    K_cfg = int(cfg["data"]["max_horizon"])
     assert K_cfg == K, f"run 的 data.max_horizon={K_cfg} ≠ 本模块窗口口径 K={K}"
 
-    M = int((cfg.get("motion") or {}).get("num_tokens", 1))
+    M = int(cfg["motion"]["num_tokens"])
     D = int(cfg["motion"]["dim"])
-    enc_cfg = cfg["motion"].get("encoder") or {}
-    encoder = WanLatentMotionEncoder(
-        latent_channels=int(cfg["wan"]["latent_channels"]),
-        latent_size=int(cfg["wan"]["latent_size"]),
-        hidden_dim=int(enc_cfg.get("hidden_dim", 768)), motion_dim=D, num_tokens=M,
-        seq_len=K + 1, depth=int(enc_cfg.get("depth", 8)),
-        heads=int(enc_cfg.get("heads", 12)), dim_head=int(enc_cfg.get("dim_head", 64)),
-        mlp_ratio=int(enc_cfg.get("mlp_ratio", 4)), dropout=0.0,
-    ).to(device)
+    if (M, D) != (8, 256):
+        raise ValueError(f"冻结配置 motion 维度必须为 (8,256)，实际 {(M, D)}")
+    encoder = build_encoder_from_cfg(cfg, dropout=0.0, activation_checkpoint=False).to(device)
 
     state = {}
     for key, value in ckpt["encoder"].items():                 # 🔒 主键 encoder（EMA），不读 encoder_live
         while key.startswith("module.") or key.startswith("_orig_mod."):
             key = key.split(".", 1)[1]
         state[key] = value
-    encoder.load_state_dict(state, strict=True)                # 🔒 整份 strict，含 EMA 过的 affine buffer 与 RoPE cache
-    assert torch.isfinite(encoder.latents_std).all(), \
-        "encoder affine buffer 仍是 NaN 占位（checkpoint 缺归一化常数）"
+    encoder.load_state_dict(state, strict=True)                # 🔒 含 EMA affine buffer；非持久位置表按配置重建
+    assert torch.isfinite(encoder.latents_mean).all() and torch.isfinite(encoder.latents_std).all(), \
+        "encoder affine buffer 非有限（checkpoint 归一化常数异常）"
+    assert (encoder.latents_std > 0).all(), "encoder latents_std 必须为正数"
     encoder.eval()
     use_amp = cfg["training"].get("precision") == "bf16" and device.type == "cuda"   # 🔒 同原 A / B / train.py
     info = {
@@ -327,7 +325,9 @@ def load_encoder(run_dir, checkpoint_name, device, expected_sha256=None, strict_
 
 @torch.no_grad()
 def motion_token(encoder, latent_block, use_amp, device):
-    """(9,16,32,32) 未归一化 latent → motion token (M*D,)=(768,) fp32 numpy。B=1 硬约束。
+    """(9,16,32,32) 未归一化 latent → 原始 motion (8,256) fp32 numpy。B=1 硬约束。
+
+    上游行优先 flat2048 在此恢复原始八槽；配对仅由训练 loader 的 motion_adapter 完成。
 
     与 runtime.encode ≡ train.py 的 encoder(cat([cur, fut])) 同算法；bf16 run 挂 autocast（训练态读数）。
     调用前须已 `pin_numerics()`（实测 bf16 autocast 下 TF32 与 seed 都不改位，钉住只为卫生）。
@@ -339,10 +339,12 @@ def motion_token(encoder, latent_block, use_amp, device):
     x = latent_block.unsqueeze(0).to(device)                   # 🔒 (1,9,16,32,32)，B=1
     torch.clear_autocast_cache()                               # 🛡 清掉调用方外层 autocast 可能留下的别种 dtype 权重缓存
     with torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=use_amp):   # 🔒 内层显式 autocast
-        m = encoder(x)                                         # (1, M, D)，内部做入口 affine 归一化
+        m = encoder(x)                                         # (1,8,256)，内部做入口 affine 归一化
+    if tuple(m.shape) != (1, 8, 256):
+        raise ValueError(f"encoder 输出必须为 (1,8,256)，实际 {tuple(m.shape)}")
     out = m.reshape(-1).float().cpu().numpy()
     assert np.isfinite(out).all()
-    return out
+    return out.reshape(8, 256)
 
 
 # ---------------- 读输入的辅助（CLI / crosscheck 用） ----------------
