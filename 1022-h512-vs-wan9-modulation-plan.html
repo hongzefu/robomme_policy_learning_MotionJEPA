@@ -49,7 +49,7 @@
 </ol></details>
 
 <h2 id="sources">二、使用哪份 512 与哪套 Wan latent</h2>
-<p>A 绑定正在训练的 <code>wan-mixed8-v11-h512-flat-full60-20261021-a</code>。本次重写时只读核到 e42 checkpoint，最终文件尚未生成；该观察只说明进度，不替代最终交付，开工时重新核实终态。模型架构字符串仍为 <code>wan-latent-v10-st</code>，必须另外检查宽度 512、8 个 query、8 头和实际参数形状，不能只凭架构名放行。</p>
+<p>A绑定由原会话管理的 <code>wan-mixed8-v11-h512-flat-full60-20261021-a</code>。本次对抗审查不以历史中途轮数替代终态，也不读取正在写入的checkpoint；起跑前现场核实下述完整e60身份。模型架构字符串仍为 <code>wan-latent-v10-st</code>，必须另外检查宽度512、8个query、8头和实际参数形状，不能只凭架构名放行。</p>
 <p><b>最终来源条件：</b><code>/scratch/hongze/MotionJEPA/runs/wan-mixed8-v11-h512-flat-full60-20261021-a/checkpoint_final.pt</code>；完整 e60、<code>global_step=25140</code>、<code>samples_seen_global=106191360</code>、<code>epoch_completed=true</code>；严格加载 <code>checkpoint['encoder']</code> 的 EMA 参数与 buffer，锁最终文件 SHA256 和冻结配置。不上中途权重、不用容量短测权重，也不从旧 256/768 run 取代它。最终训练权重稳定交接且GPU资源可用后才能使用；上游其他任务由原会话管理，本页不调用上游控制器。</p>
 <div class="scroll"><table><thead><tr><th>共同资产</th><th>具体来源与约束</th></tr></thead><tbody>
 <tr><td>policy 父库</td><td><code>v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f</code>；16 任务、3,200 集。两组共用 framesamp-8x8、source 和既有 norm_stats，不复制第二份帧库。</td></tr>
@@ -604,7 +604,7 @@ for s in demo_starts:
 <li>本文件是新增实验方案；现行8×256→4×512和768格式继续保留，不能让旧配置静默变成新语义。当前正式入口绑定旧e60/8×256，不能仅换checkpoint路径后复用。</li>
 <li>A最终文件SHA必须来自完成后稳定的原件；注册副本逐字节相同，所有来源变化触发重新编码。B归一化manifest仅携带固定EMA统计与来源，不携带可训练Wan投影。</li>
 <li>所有持久新资产写在policy <code>v1-store/</code>；原latent、帧库、旧表和checkpoint不覆盖。根环境不安装Wan依赖；离线编码使用已有Wan子环境并显式锁来源更新。</li>
-<li>本机当前encoder占用八卡；未来GPU工作先核上游退出与显存。主会话不得停止上游、改其配额或同时抢跑。</li>
+<li>上游encoder的八卡运行由原会话管理；本任务GPU工作先核上游退出与显存。主会话不得停止上游、改其配额或同时抢跑。</li>
 <li>沿用原memory attention、原RoPE、原mask和原FFN残差。验收包括zero motion但有效frame；不引入全空memory新定义。</li>
 <li>本轮不改在线sidecar、socket协议、在线memory缓存、policy服务、评估入口或benchmark；训练链路不依赖这些改造。保存回读直接使用训练模型构造与参数树，不借用在线加载入口。</li>
 </ol>
@@ -680,7 +680,7 @@ demo = {"row_base": K, "num_grid": 3, "num_chunks": 49,
 # selection manifest每行另记录：
 # g / segment / seg_offset / global_start / source_chunk / source_byte_offset /
 # real_frames / pad_frames / pad_source_frame / source_input_frames_sha256。</code></pre>
-<p>解析器独立从seg_len和固定selection重新推导starts，再逐项比较输入数组；不能仅检查递增或数量。starts、row_base、num_grid、帧数、source_chunk等新schema2整数项严格要求type为int且非bool，拒绝浮点数、数字字符串及负值，不用int(...)悄悄转换。目标行号严格为row_base+j，时间/PE严格取seg_start+starts[j]。source_byte_offset按旧source_chunk×589824；real/pad从真实段长计算，有pad时pad_source必须是段末帧，无pad时必须null。索引SHA、选择清单SHA与每行源帧指纹一起绑定；源缓存schema3及receipt不改写。</p>
+<p>解析器独立从seg_len和固定selection重新推导starts，再逐项比较输入数组；不能仅检查递增或数量。starts元素、num_grid、帧数、source_chunk以及非空段row_base等新schema2整数项严格要求type为int且非bool，拒绝浮点数、数字字符串及负值，不用int(...)悄悄转换。空段必须num_grid=0、starts=[]、row_base=null；非空段row_base必须为连续累计的非负int。目标行号严格为row_base+j，时间/PE严格取seg_start+starts[j]。source_byte_offset按旧source_chunk×589824；real/pad从真实段长计算，有pad时pad_source必须是段末帧，无pad时必须null。索引SHA、选择清单SHA与每行源帧指纹一起绑定；源缓存schema3及receipt不改写。</p>
 
 <h2>三、子代理派发表</h2>
 <p>所有代理及递归代理为 <code>gpt-6-astra / ultra</code>。下表是未来实施分工，不授权当前提前改代码；执行前填最终分支与Beta全SHA。修改代理各用独立工作树；公共文件由明确所有者合入，不能并发改同一文件。</p>
@@ -754,7 +754,7 @@ TRAIN_HEAD=IMPLEMENTATION_BETA_SHA bash scripts/training/run_h512_wan9_pair.sh \
 
 <h2>六、风险、盲区与结果解释</h2>
 <div class="scroll"><table><thead><tr><th>风险或尚未验证</th><th>本方案处理</th></tr></thead><tbody>
-<tr><td>512最终权重还没产出</td><td>等待本run最终交接；当前e42仅进度证据，不用于正式表或policy训练。</td></tr>
+<tr><td>512最终权重尚未在本轮验证</td><td>起跑前核本run完整e60交接与原件SHA；任何历史中途权重均不能替代最终来源。</td></tr>
 <tr><td>可训练压缩仍有损</td><td>完整展平保留空间值和固定坐标顺序，Linear16384→512最多保留512个独立线性组合；不能把“没有平均”写成“最终特征无损”。</td></tr>
 <tr><td>不同槽数及RoPE坐标</td><td>披露已定80窗、640/720 motion容量、1152/1232长度与坐标；不把两组差值解释为纯预训练目标增益。</td></tr>
 <tr><td>投影初始尺度、随机流</td><td>暂沿std0.02与共享公共初值；fan-in大幅增加后测输入/投影RMS、内容位置比例、有效梯度。若不稳定，先修订方案再改初始化，不静默沿用均值分支的结论。</td></tr>
@@ -765,7 +765,9 @@ TRAIN_HEAD=IMPLEMENTATION_BETA_SHA bash scripts/training/run_h512_wan9_pair.sh \
 
 <h2>七、留档与本轮交付检查</h2>
 <p>实施后分别留档到 <code>docs/training-doc/&lt;run_name&gt;/</code> 的launch/result/records，比较总报告放 <code>docs/training-doc/h512-wan9-g32-tail16-w80-compare-1022-a/</code>。保存用户最终开工原话、完整方案commit、实现Beta、各权重/统计/数据/样本顺序摘要SHA、公共初值摘要、所有具名判定、真实美东起止、预算和退出码；不把大checkpoint、原始latent或整份大日志加入git。两组训练结果无论高低均完整交付，不选择性保留曲线。</p>
-<p>本轮只做HTML结构、相对链接、SVG渲染与文字/箭头/边界目视检查，再做 <code>git diff --check</code>。计划中的新实现判定均未运行，不写成PASS。按用户选择，不新增 <code>docs/handoff/current.json</code> 条目；该计划以后不会自动触发训练。</p>
+<p>本轮包含计划修订、三路固定版本的独立对抗审查，以及独立CPU规格/metadata/尾窗字节探针；没有启动模型、建库、训练或评估。新生产实现判据均未运行，不写成PASS。按用户选择，不新增 <code>docs/handoff/current.json</code> 条目；该计划不会自动触发训练。</p>
+<h3>本轮对抗审查与可复现证据</h3>
+<p>详见 <a href="docs/audits/h512-wan9-plan-20261022/report.md">完整对抗审查报告</a>。首轮发现1项P1及4项P2，均已回写并完成独立闭合复核，另补空段row_base=null的类型边界。CPU规格检查覆盖16,386种长度/段类型、4,995段源metadata／128,342源窗、66,470目标窗及131,081个因果边界，38种错误变体被规格探针拒绝；1800个demo尾窗的实际latent字节均与既有输入块SHA匹配。报告区分计划验证、独立规格探针和未来实现验收，不将这些结果称为GPU训练通过。</p>
 <p class="small">依据：<a href="../MotionJEPA/1021-v11-h512-60ep-training-plan.html">当前512完整训练计划</a>；<a href="../MotionJEPA/1020-paired4-modulation-plan.html">原四对接入与完整调制图</a>；<a href="src/mme_vla_suite/models/representation/percep_mem.py">最新PerceptualMemory</a>；<a href="src/mme_vla_suite/models/integration/history_gemma.py">最新HistoryBlock</a>；<a href="src/mme_vla_suite/datastore/motion_adapter.py">现行配对合同</a>；<a href="scripts/training/run_mixed8_pair4_80k.sh">现行训练入口参照</a>。本页中的“拟新增”名称是实施接口设计，不能与已存在能力混淆。</p>
 </body>
 </html>

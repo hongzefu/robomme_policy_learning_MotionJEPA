@@ -1,0 +1,196 @@
+{
+  "scope": "计划规格与只读metadata；不导入生产代码、不做模型/训练/VAE数值验证",
+  "inputs": {
+    "v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/meta/episode_manifest.json": "c6a063dfbfc6da404dd8f1d3ddc38e9ba6e25abca81417fe742872401e7f97df",
+    "v1-store/datasets/16task-mixed8-200-v10e60-pair4-20261020-a/motion/meta/motion_index.json": "d9ec1feed44a7ca3a7a8d7adf5fea5abd2eaf0b6e889558bf2065786d152f67c",
+    "v1-store/restore/mixed8-200-vla-latents-20261021-a/restore_receipt.json": "4c15697559bcbf94f8a6f32209d2c4264d620e346460b9795343af70cf8cf342"
+  },
+  "checks": {
+    "length_exhaustion": {
+      "lengths": 8193,
+      "kinds": 2,
+      "cases": 16386,
+      "pass": true,
+      "examples": {
+        "17": {
+          "starts": [
+            0
+          ],
+          "last_real": 17,
+          "last_pad": 16
+        },
+        "32": {
+          "starts": [
+            0
+          ],
+          "last_real": 32,
+          "last_pad": 1
+        },
+        "33": {
+          "starts": [
+            0,
+            16
+          ],
+          "last_real": 17,
+          "last_pad": 16
+        },
+        "34": {
+          "starts": [
+            0,
+            16
+          ],
+          "last_real": 18,
+          "last_pad": 15
+        },
+        "48": {
+          "starts": [
+            0,
+            16
+          ],
+          "last_real": 32,
+          "last_pad": 1
+        },
+        "49": {
+          "starts": [
+            0,
+            32
+          ],
+          "last_real": 17,
+          "last_pad": 16
+        },
+        "64": {
+          "starts": [
+            0,
+            32
+          ],
+          "last_real": 32,
+          "last_pad": 1
+        },
+        "65": {
+          "starts": [
+            0,
+            32,
+            48
+          ],
+          "last_real": 17,
+          "last_pad": 16
+        },
+        "96": {
+          "starts": [
+            0,
+            32,
+            64
+          ],
+          "last_real": 32,
+          "last_pad": 1
+        },
+        "97": {
+          "starts": [
+            0,
+            32,
+            64,
+            80
+          ],
+          "last_real": 17,
+          "last_pad": 16
+        }
+      }
+    },
+    "full_metadata": {
+      "pass": true,
+      "old_demo": 46731,
+      "new_demo": 24791,
+      "empty_segments": 1405,
+      "old_exec": 81611,
+      "new_exec": 41679,
+      "segments": 4995,
+      "source_rows_checked": 128342,
+      "new_padded": 1800,
+      "demo_segments": 1800,
+      "additional_tail": 1051,
+      "strict_grid32_padded": 749,
+      "strict_grid32_missing_tail_segments": 1009,
+      "strict_grid32_exact_end_no_pad": 42,
+      "rows": 66470,
+      "max_visible": 62,
+      "max_owner": 1596,
+      "causal_boundary_events": 131081,
+      "selected_identity_sha256": "539d1fa323d32a08a6ca09faf69b8c7a9e6ab4439fb716ea7d9069f715238199",
+      "source_metadata_aggregate_sha256": "b785d9d4cdba04d3eb4f95b046bf8a2dabac083dde2d5b6728e3a3d12742e08f",
+      "missing_tail_example": {
+        "g": 600,
+        "L": 238,
+        "strict_last_start": 192,
+        "gap": 13,
+        "retained_tail": 208
+      },
+      "latent_payloads_rehashed": false,
+      "source_bin_size_only": true
+    },
+    "mutations": {
+      "pass": true,
+      "rejected": 38,
+      "names": [
+        "missing_tail",
+        "duplicate_tail",
+        "reverse_order",
+        "extra_interior16",
+        "wrong_s",
+        "wrong_source_chunk",
+        "wrong_source_byte_offset",
+        "wrong_global_start",
+        "wrong_real_frames",
+        "wrong_pad_frames",
+        "wrong_pad_source_frame",
+        "schema1_new_layout",
+        "wrong_selection_kind",
+        "short_demo_force_window",
+        "exec_tail_padding",
+        "target_ordinal_times32",
+        "global_frame_mod32",
+        "demo_nominal_endpoint_visibility",
+        "repeat_exec_frame",
+        "repeat_penultimate_demo",
+        "mask_real_tail_window",
+        "mask_padding_latent_slots",
+        "capacity81_truncate",
+        "global_table_even_rows",
+        "sequential_source_rows",
+        "type_s_bool",
+        "type_s_float",
+        "type_s_str",
+        "type_source_chunk_bool",
+        "type_source_byte_offset_float",
+        "type_global_start_int",
+        "type_real_frames_float",
+        "type_pad_frames_bool",
+        "empty_segment_base_zero",
+        "nonempty_segment_base_null",
+        "nonempty_segment_base_bool",
+        "starts_bool_zero",
+        "num_grid_bool_one"
+      ],
+      "scope": "独立规格探针拒绝，非生产解析器已实现"
+    },
+    "dimensions": {
+      "pass": true,
+      "flatten_non_square_cases": 105,
+      "a_row_bytes": 16384,
+      "b_row_bytes": 589824,
+      "a_table_bytes": 1089044480,
+      "b_table_bytes": 39205601280,
+      "window_budget": 80,
+      "a_memory": 1152,
+      "b_memory": 1232,
+      "wan_projection_params": 8389120,
+      "memory_total_a": 89974272,
+      "memory_total_b": 98363392,
+      "b_batch128_fp32_bytes": 6039797760,
+      "b_per_gpu4_fp32_bytes": 1509949440,
+      "samples_per_arm": 7680000,
+      "steps_per_arm": 60000
+    }
+  },
+  "elapsed_seconds": 22.406,
+  "status": "PASS"
+}
