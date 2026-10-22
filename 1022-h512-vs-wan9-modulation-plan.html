@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1022｜512 MotionJEPA 与 Wan 九时间槽：memory modulation 对比方案</title>
+<style>
+:root{--ink:#17263b;--muted:#536277;--line:#ccd7e2;--soft:#f4f7fb;--blue:#235eae;--green:#087f6c;--purple:#7843a7;--orange:#bd641c}
+*{box-sizing:border-box}body{max-width:1180px;margin:30px auto;padding:0 22px 60px;color:var(--ink);font:15px/1.75 Arial,"Droid Sans Fallback","Microsoft YaHei",sans-serif;background:#fff}h1{font-size:28px;border-bottom:3px solid var(--ink);padding-bottom:10px;margin:46px 0 24px}h2{font-size:22px;margin:36px 0 16px}h3{font-size:17px;margin:26px 0 12px}p{margin:12px 0}a{color:var(--blue)}code{font:13px/1.6 ui-monospace,monospace;background:#edf2f7;padding:2px 4px;overflow-wrap:anywhere}pre{padding:18px;border:1px solid var(--line);background:var(--soft);overflow-x:auto;font:13px/1.65 ui-monospace,monospace}pre code{padding:0;background:none;white-space:pre}table{border-collapse:collapse;width:100%;font-size:13px;line-height:1.65;margin:16px 0}th,td{border:1px solid var(--line);padding:9px 11px;vertical-align:top;text-align:left;overflow-wrap:anywhere}th{background:#eaf0f7}tr:nth-child(even) td{background:#fafbfd}.scroll{overflow-x:auto}.intro{padding:22px 25px;background:#eef4fc;border:1px solid #c0d3ec}.notice{padding:14px 18px;background:#fff5e8;border-left:4px solid var(--orange)}.small,figcaption{font-size:13px;color:var(--muted)}.tag{display:inline-block;border:1px solid #abc0d8;border-radius:5px;padding:3px 9px;margin:0 8px 8px 0;font-size:12px}.formula{padding:14px 18px;background:#f3f1f8;font-family:ui-monospace,monospace;overflow-wrap:anywhere}figure{margin:22px 0;overflow-x:auto}figure svg{display:block;min-width:900px;width:100%;height:auto}figcaption{margin-top:10px}nav{display:flex;gap:18px;flex-wrap:wrap;margin:20px 0;padding:12px;background:var(--soft)}ul,ol{padding-left:25px}.blue{color:var(--blue)}.green{color:var(--green)}details{border:1px solid var(--line);padding:12px 16px;margin:18px 0}summary{cursor:pointer;font-weight:600}@media(max-width:700px){body{padding:0 14px;font-size:14px}h1{font-size:24px}.scroll table{min-width:780px}}@media print{body{max-width:none;font-size:11px}nav{display:none}figure svg{min-width:0}h2,h3{break-after:avoid}tr{break-inside:avoid}pre{white-space:pre-wrap}}
+</style>
+</head>
+<body>
+<div class="intro">
+<span class="tag">只写方案 · 未实施</span><span class="tag">8×512 对 9×512</span><span class="tag">空间平均已由用户确定</span><span class="tag">不登记状态机</span>
+<p><b>要回答的问题：</b>在相同历史窗口、相同帧记忆与相同 policy 训练协议下，当前训练的 512 维 MotionJEPA 表征，是否比直接对 Wan VAE latent 做空间平均更有助于动作预测训练？两组都通过现有 memory modulation 注入动作专家；本页完整展开其内部结构。</p>
+<p><b>本轮交付：</b>这份 HTML 与内嵌图。用户确认了两组表征和“不登记”；训练步数与资源是本页提出的方案，需在完整计划定稿后取得明确开工令。用户进一步要求“eval暂时不管 先只做trainingg”，本计划仅覆盖离线数据与训练，评估和在线接入不在范围内。当前不改实现、不启动抽取或训练，也不接续历史授权。</p>
+<p><b>代码锚点：</b>policy <code>v3-motionmem-pair4@6ac64f1bb32d8aebeadfa7c2cd1aa74369a0c96a</code>；本次规则同步后 HEAD 为 <code>537f4f2197b82e20fb73f6d65c0f39208d5861ef</code>，实现代码未变化。MotionJEPA <code>v11-3drope-768@c20b866e239fae97b04b6b926836fc971c27edac</code>；当前 512 训练 Beta 为 <code>c75a9014c44b3cb0c6fd15e746721fdd9d5e692b</code>。</p>
+<p class="small">创建日期：2026-10-22 美东。工作副本：<code>/scratch/hongze/robomme_policy_learning_MotionJEPA</code>；环境 B，AWS 本地 NVMe/XFS、8×A100 80GB。计划提交用 <code>docs:</code>；后续实现沿仓库版本号体例，正式运行前固定干净 Beta 全 SHA。当前正在运行的 encoder 由原会话管理，本方案不改其进程、参数或产物。</p>
+</div>
+<nav><a href="#arms">两组与公平性</a><a href="#sources">512 权重与同源数据</a><a href="#overview">输入与投影图</a><a href="#modulation">完整 modulation 图</a><a href="#experiment">训练与成本比较</a><a href="#implementation">实现清单</a><a href="#gates">验收</a><a href="#runbook">运行手册</a></nav>
+
+<h1>第一部分（给人看）</h1>
+<h2 id="arms">一、确定两组：保留相同历史，比较两种表征</h2>
+<p><b>A 组：</b>冻结本次 512 MotionJEPA 最终 EMA encoder，每个 33 帧窗口输出 8×512，直接使用全部 8 个 token。<b>B 组：</b>同一个窗口的 Wan VAE latent 保留 9 个时间槽，每槽先对 32×32 空间平均，得到 16 维，再由 policy 内共享、可训练的 Linear(16→512) 得到 9×512。</p>
+<div class="scroll"><table><thead><tr><th>项目</th><th>A：MotionJEPA 512</th><th>B：Wan 空间均值九槽</th></tr></thead><tbody>
+<tr><td>同源输入</td><td colspan="2">同一 33 帧 RGB 窗口、同一冻结 Wan2.1 VAE、同一份 raw latent；时间网格、补帧、可见窗口集合、父库与动作标签完全一致。</td></tr>
+<tr><td>离线落盘，一行一窗</td><td>8×512 FP32，16,384 B</td><td>归一化后空间均值 9×16 FP32，576 B</td></tr>
+<tr><td>policy 内表征</td><td>8×512；不配对、不再降维</td><td>9×16 → Linear(16→512) → 9×512；无额外激活</td></tr>
+<tr><td>160 窗容量</td><td>1,280 个 motion token</td><td>1,440 个 motion token</td></tr>
+<tr><td>帧记忆</td><td colspan="2">8 帧×8×8＝512 个 frame token，帧采样方式与图像特征不变。</td></tr>
+<tr><td>总 memory 形状</td><td>(B,1792,1024)</td><td>(B,1952,1024)</td></tr>
+<tr><td>共同 motion 适配器</td><td colspan="2">窗口起点 PE：256→768+SiLU；与 512 维内容拼接为 1280，再经共享 Linear(1280→1024)。两组同形状公共参数初值相同，各组随后独立训练。</td></tr>
+<tr><td>新增可训练参数</td><td>沿用内容/位置适配器，共 1,509,120 个参数</td><td>上述相同适配器，加 Wan Linear 的 16×512+512＝8,704 个参数</td></tr>
+<tr><td>动作专家</td><td colspan="2">pi05、20 个动作 token、18 层；每层独立 memory attention 与 scale/shift；语言主干和动作专家按现行过滤器训练，图像参数冻结。</td></tr>
+</tbody></table></div>
+<p class="notice"><b>比较的边界：</b>本实验比较“训练过的 8 槽运动表征”和“空间均值的 9 槽 Wan 表征”这两种完整方案。B 的有效 token 更多、额外多 8,704 个参数，空间平均丢弃位置布局；A 使用额外的 MotionJEPA 预训练。不能把结果归因成仅有一个因素，也不能把 16→512 的线性扩维解释为新增了信息。</p>
+<details><summary>用户已确认的口径（原话）</summary><ol>
+<li>“给出一个方案 写在policy learning内 用现在训练的512 对比 直接拿wan来变成9个token”</li>
+<li>“然后这个memory modulation也是要展开出图”</li>
+<li>Wan：“每片先做空间平均，再投影到512”。</li>
+<li>A：“使用8×512直接对比9×512（推荐）”。</li>
+<li>登记：“先只写HTML计划（推荐）”。</li>
+<li>范围更正：“eval暂时不管 先只做trainingg”。</li>
+</ol></details>
+
+<h2 id="sources">二、使用哪份 512 与哪套 Wan latent</h2>
+<p>A 绑定正在训练的 <code>wan-mixed8-v11-h512-flat-full60-20261021-a</code>。查证时已保存完整 e41（step 17,179、samples 72,564,096），最终权重尚未生成；该观察只说明进度，不替代最终交付。模型架构字符串仍为 <code>wan-latent-v10-st</code>，必须另外检查宽度 512、8 个 query、8 头和实际参数形状，不能只凭架构名放行。</p>
+<p><b>最终来源条件：</b><code>/scratch/hongze/MotionJEPA/runs/wan-mixed8-v11-h512-flat-full60-20261021-a/checkpoint_final.pt</code>；完整 e60、<code>global_step=25140</code>、<code>samples_seen_global=106191360</code>、<code>epoch_completed=true</code>；严格加载 <code>checkpoint['encoder']</code> 的 EMA 参数与 buffer，锁最终文件 SHA256 和冻结配置。不上中途权重、不用容量短测权重，也不从旧 256/768 run 取代它。最终训练权重稳定交接且GPU资源可用后才能使用；上游其他任务由原会话管理，本页不调用上游控制器。</p>
+<div class="scroll"><table><thead><tr><th>共同资产</th><th>具体来源与约束</th></tr></thead><tbody>
+<tr><td>policy 父库</td><td><code>v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f</code>；16 任务、3,200 集。两组共用 framesamp-8x8、source 和既有 norm_stats，不复制第二份帧库。</td></tr>
+<tr><td>VLA 专用 latent</td><td><code>v1-store/restore/mixed8-200-vla-latents-20261021-a/restore_receipt.json</code>；receipt SHA <code>4c15697559bcbf94f8a6f32209d2c4264d620e346460b9795343af70cf8cf342</code>。两组读同一恢复资产；不是 encoder 训练用的 stride1 窗口库。</td></tr>
+<tr><td>窗口总量</td><td>128,342＝81,611 exec＋46,731 demo；4,995 段、1,800 个 demo 补帧窗。恢复合同及逐行对应须重新核对，数量相同不等于同源。</td></tr>
+<tr><td>冻结 VAE</td><td>参数指纹 <code>9980d252230c265cc2869466a74f85f5ee45b01ea9521bbb31159f90b75fe6d0</code>；每窗 raw latent 为 (9,16,32,32) FP32，589,824 B；轴序严格为时间、通道、高、宽。</td></tr>
+<tr><td>两组共用统计量</td><td>从最终 A 的 EMA encoder buffer 提取 16 通道 <code>latents_mean/std</code>，写入独立归一化 manifest 并锁 SHA。B 只依赖这份固定统计，不执行 JEPA encoder；不能用 VAE config 或 live buffer 替换。</td></tr>
+</tbody></table></div>
+<p>现有恢复证据覆盖全量帧/metadata 身份，以及 14,480 窗 VAE 数值对拍（包含全部 1,800 补帧窗）；它不等于“128,342 窗均已数值重算”。本计划沿用已验原件并保留此证据边界，增加本次所需源身份与两种读出校验。</p>
+<p class="formula">B 的固定顺序：Ẑ[g,c,h,w] = (Z[g,c,h,w] − μ[c]) / σ[c]；p[g,c] = mean<sub>h,w</sub>(Ẑ[g,c,h,w])（FP32）；q[g,:] = p[g,:] W<sub>wan</sub> + b<sub>wan</sub>（policy 内训练）。</p>
+<p class="small">空间平均只消去 H/W，不平均时间或通道。归一化与平均在实数代数上可交换，但 FP32 舍入可能不同，本计划固定“先归一化、再平均”。A 沿用实际 encoder 前向精度并记录数值 flags；B 的 normalize/mean 固定 FP32，跨路径比较使用明确容差，不能声称与 A 内部 BF16 数值逐位相同。</p>
+
+<h2 id="overview">三、从窗口到 memory：哪些地方改数、哪些权重共享</h2>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="2390" viewBox="0 0 1100 2390" role="img" aria-labelledby="title desc">
+<title id="title">H512 直接特征与 Wan VAE 9-token 均值特征的 policy 对照</title>
+<desc id="desc">现有四对基线仅作代码对照。拟比较的两组使用同一窗口的33帧RGB和冻结Wan VAE。A使用当前冻结MotionJEPA h512 encoder的8乘512输出，B使用相同channel affine normalization后对空间维以FP32求均值，缓存9乘16特征，并在policy内通过新增可训练Linear16到512投影。每组160历史窗，分别构成1280和1440个motion tokens，与相同512个frame tokens按相同memory_order合并，得到1792和1952个1024维memory tokens，进入18层动作专家的memory modulation。公共架构与初始权重一致，两组分别训练。</desc>
+<defs>
+  <marker id="arrowA" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L9 4.5 L0 9 Z" fill="#2563eb"/></marker>
+  <marker id="arrowB" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L9 4.5 L0 9 Z" fill="#168765"/></marker>
+  <marker id="arrowP" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L9 4.5 L0 9 Z" fill="#8250c8"/></marker>
+  <marker id="arrowG" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L9 4.5 L0 9 Z" fill="#65758b"/></marker>
+</defs>
+<style>
+  text { font-family: 'Droid Sans Fallback', sans-serif; fill: #172338; }
+  .line { fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+</style>
+<rect x="0" y="0" width="1100" height="2390" fill="#f8fafc"/>
+
+<text x="35" y="42" font-size="27" font-weight="bold" text-anchor="start" style="fill:#172338">H512 直接特征 vs Wan VAE 9-token 均值特征</text>
+<text x="35" y="73" font-size="16" font-weight="normal" text-anchor="start" style="fill:#65758b">160 个历史窗 · 相同的 512 个 frame tokens · 每窗 33 RGB 帧</text>
+<rect x="35" y="94" width="16" height="16" rx="3" fill="#2563eb" stroke="#2563eb" stroke-width="0"/>
+<text x="61" y="108" font-size="15" font-weight="normal" text-anchor="start" style="fill:#2563eb">A：h512</text>
+<rect x="210" y="94" width="16" height="16" rx="3" fill="#168765" stroke="#168765" stroke-width="0"/>
+<text x="236" y="108" font-size="15" font-weight="normal" text-anchor="start" style="fill:#168765">B：Wan9</text>
+<rect x="390" y="94" width="16" height="16" rx="3" fill="#8250c8" stroke="#8250c8" stroke-width="0"/>
+<text x="416" y="108" font-size="15" font-weight="normal" text-anchor="start" style="fill:#8250c8">位置编码</text>
+<rect x="570" y="94" width="16" height="16" rx="3" fill="#c46b08" stroke="#c46b08" stroke-width="0"/>
+<text x="596" y="108" font-size="15" font-weight="normal" text-anchor="start" style="fill:#c46b08">新增可训练模块</text>
+<rect x="820" y="94" width="16" height="16" rx="3" fill="#65758b" stroke="#65758b" stroke-width="0"/>
+<text x="846" y="108" font-size="15" font-weight="normal" text-anchor="start" style="fill:#65758b">既有模块</text>
+<rect x="30" y="128" width="1040" height="140" rx="12" fill="#eef2f6" stroke="#cbd5e1" stroke-width="1.5"/>
+<text x="50" y="155" font-size="18" font-weight="bold" text-anchor="start" style="fill:#65758b">现有四对基线（仅代码对照，不新增训练臂）</text>
+<rect x="50" y="177" width="260" height="68" rx="8" fill="#fff" stroke="#c6d0dd" stroke-width="1.5"/>
+<rect x="355" y="177" width="290" height="68" rx="8" fill="#fff" stroke="#c6d0dd" stroke-width="1.5"/>
+<rect x="690" y="177" width="360" height="68" rx="8" fill="#fff" stroke="#c6d0dd" stroke-width="1.5"/>
+<text x="180" y="204" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#65758b">既有 motion 编码输出</text>
+<text x="180" y="231" font-size="22" font-weight="bold" text-anchor="middle" style="fill:#172338">8×256</text>
+<text x="500" y="204" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#65758b">相邻 token 配对</text>
+<text x="500" y="231" font-size="22" font-weight="bold" text-anchor="middle" style="fill:#172338">4×512</text>
+<text x="870" y="203" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#172338">160 窗：640 motion + 512 frame</text>
+<text x="870" y="231" font-size="20" font-weight="bold" text-anchor="middle" style="fill:#172338">合计 1152 tokens</text>
+<path d="M 310 211 L 355 211" class="line" stroke="#65758b" marker-end="url(#arrowG)"/>
+<path d="M 645 211 L 690 211" class="line" stroke="#65758b" marker-end="url(#arrowG)"/>
+<text x="35" y="307" font-size="21" font-weight="bold" text-anchor="start" style="fill:#172338">拟比较的两条路径</text>
+<rect x="425" y="330" width="250" height="56" rx="10" fill="#fff" stroke="#bec9d8" stroke-width="1.5"/>
+<text x="550" y="365" font-size="18" font-weight="bold" text-anchor="middle" style="fill:#172338">同一窗口：33 RGB 帧</text>
+<path d="M 550 386 L 550 417" class="line" stroke="#65758b" marker-end="url(#arrowG)"/>
+<rect x="390" y="417" width="320" height="65" rx="10" fill="#edf1f6" stroke="#b8c4d4" stroke-width="1.5"/>
+<text x="550" y="445" font-size="19" font-weight="bold" text-anchor="middle" style="fill:#172338">冻结的同一 Wan VAE</text>
+<text x="550" y="470" font-size="15" font-weight="normal" text-anchor="middle" style="fill:#65758b">相同提取流程与原始 latent</text>
+<path d="M 550 482 L 550 511" class="line" stroke="#65758b" marker-end="url(#arrowG)"/>
+<rect x="275" y="511" width="550" height="86" rx="10" fill="#e7edf5" stroke="#9faec2" stroke-width="1.5"/>
+<text x="550" y="537" font-size="20" font-weight="bold" text-anchor="middle" style="fill:#172338">共享 raw Z（FP32）</text>
+<text x="550" y="561" font-size="18" font-weight="normal" text-anchor="middle" style="fill:#172338">T×C×H×W = 9×16×32×32</text>
+<text x="550" y="584" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#65758b">589,824 B / 窗</text>
+<rect x="30" y="650" width="510" height="996" rx="14" fill="#fff" stroke="#bdd2fb" stroke-width="2"/>
+<rect x="560" y="650" width="510" height="996" rx="14" fill="#fff" stroke="#b5ddcf" stroke-width="2"/>
+<text x="285" y="683" font-size="20" font-weight="bold" text-anchor="middle" style="fill:#2563eb">A · 当前 MotionJEPA h512</text>
+<text x="815" y="683" font-size="20" font-weight="bold" text-anchor="middle" style="fill:#168765">B · 同 Wan VAE 的空间均值</text>
+<path d="M 550 597 L 550 625" class="line" stroke="#65758b"/>
+<path d="M 550 625 L 75 625 L 75 710" class="line" stroke="#65758b" marker-end="url(#arrowG)"/>
+<path d="M 550 625 L 1025 625 L 1025 710" class="line" stroke="#65758b" marker-end="url(#arrowG)"/>
+<rect x="55" y="710" width="460" height="151" rx="10" fill="#f1f5fa" stroke="#a5b6cf" stroke-width="1.5"/>
+<text x="285" y="744" font-size="20" font-weight="bold" text-anchor="middle" style="fill:#172338">冻结当前 h512 encoder</text>
+<text x="285" y="778" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#172338">内部：channel affine normalization</text>
+<text x="285" y="809" font-size="21" font-weight="bold" text-anchor="middle" style="fill:#2563eb">直接输出 8×512</text>
+<text x="285" y="839" font-size="15" font-weight="normal" text-anchor="middle" style="fill:#65758b">沿用当前 MotionJEPA 表征</text>
+<rect x="585" y="710" width="460" height="65" rx="10" fill="#f1f5fa" stroke="#a5b6cf" stroke-width="1.5"/>
+<text x="815" y="737" font-size="17" font-weight="normal" text-anchor="middle" style="fill:#172338">相同的 channel affine normalization</text>
+<text x="815" y="760" font-size="14" font-weight="normal" text-anchor="middle" style="fill:#65758b">同一通道仿射归一化</text>
+<path d="M 815 775 L 815 805" class="line" stroke="#168765" marker-end="url(#arrowB)"/>
+<rect x="585" y="805" width="460" height="56" rx="10" fill="#effaf5" stroke="#8ac5af" stroke-width="1.5"/>
+<text x="815" y="839" font-size="19" font-weight="bold" text-anchor="middle" style="fill:#168765">FP32 mean(H, W) → 9×16</text>
+<path d="M 285 861 L 285 890" class="line" stroke="#2563eb" marker-end="url(#arrowA)"/>
+<path d="M 815 861 L 815 890" class="line" stroke="#168765" marker-end="url(#arrowB)"/>
+<rect x="55" y="890" width="460" height="82" rx="10" fill="#eaf1ff" stroke="#7ba5ed" stroke-width="2"/>
+<text x="285" y="922" font-size="20" font-weight="bold" text-anchor="middle" style="fill:#2563eb">离线落表：8×512 · FP32</text>
+<text x="285" y="951" font-size="17" font-weight="normal" text-anchor="middle" style="fill:#172338">16,384 B / 窗</text>
+<rect x="585" y="890" width="460" height="82" rx="10" fill="#e8f7f0" stroke="#6fb79a" stroke-width="2"/>
+<text x="815" y="922" font-size="20" font-weight="bold" text-anchor="middle" style="fill:#168765">离线落表：9×16 · FP32</text>
+<text x="815" y="951" font-size="17" font-weight="normal" text-anchor="middle" style="fill:#172338">576 B / 窗</text>
+<path d="M 285 972 L 285 990 L 177.5 990 L 177.5 1040" class="line" stroke="#2563eb" marker-end="url(#arrowA)"/>
+<path d="M 815 972 L 815 990 L 707.5 990 L 707.5 1040" class="line" stroke="#168765" marker-end="url(#arrowB)"/>
+<path d="M 38 1005 L 1062 1005" class="line" stroke="#b2bdcc" stroke-dasharray="7 7"/>
+<rect x="410" y="987" width="280" height="34" rx="6" fill="#f8fafc" stroke="#f8fafc" stroke-width="0"/>
+<text x="550" y="1010" font-size="15" font-weight="bold" text-anchor="middle" style="fill:#65758b">离线建库 ↑   /   policy 训练 ↓</text>
+<rect x="55" y="1040" width="245" height="110" rx="10" fill="#eef4ff" stroke="#a4bef0" stroke-width="1.5"/>
+<text x="177.5" y="1068" font-size="17" font-weight="bold" text-anchor="middle" style="fill:#2563eb">直接读取 h512 缓存</text>
+<text x="177.5" y="1097" font-size="20" font-weight="bold" text-anchor="middle" style="fill:#172338">每窗 8×512</text>
+<text x="177.5" y="1128" font-size="14" font-weight="normal" text-anchor="middle" style="fill:#65758b">policy 使用冻结编码结果</text>
+<rect x="585" y="1040" width="245" height="110" rx="10" fill="#fff2df" stroke="#d99539" stroke-width="2"/>
+<text x="707.5" y="1065" font-size="17" font-weight="bold" text-anchor="middle" style="fill:#c46b08">新增 Linear 16→512</text>
+<text x="707.5" y="1091" font-size="14" font-weight="normal" text-anchor="middle" style="fill:#172338">8,704 params · W std=0.02</text>
+<text x="707.5" y="1113" font-size="14" font-weight="normal" text-anchor="middle" style="fill:#172338">b=0 · policy 内可训练</text>
+<text x="707.5" y="1135" font-size="14" font-weight="bold" text-anchor="middle" style="fill:#c46b08">512 维投影不落表</text>
+<rect x="325" y="1040" width="190" height="70" rx="10" fill="#f3edfc" stroke="#b49ad8" stroke-width="1.5"/>
+<text x="420" y="1068" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#8250c8">160 窗的起点</text>
+<text x="420" y="1096" font-size="18" font-weight="bold" text-anchor="middle" style="fill:#8250c8">256 维 PE</text>
+<path d="M 420 1110 L 420 1140" class="line" stroke="#8250c8" marker-end="url(#arrowP)"/>
+<rect x="325" y="1140" width="190" height="80" rx="10" fill="#f3edfc" stroke="#b49ad8" stroke-width="1.5"/>
+<text x="420" y="1170" font-size="16" font-weight="bold" text-anchor="middle" style="fill:#8250c8">每窗 repeat 8 次</text>
+<text x="420" y="1197" font-size="15" font-weight="normal" text-anchor="middle" style="fill:#8250c8">1280×256</text>
+<path d="M 420 1220 L 420 1250" class="line" stroke="#8250c8" marker-end="url(#arrowP)"/>
+<rect x="325" y="1250" width="190" height="65" rx="10" fill="#f3edfc" stroke="#b49ad8" stroke-width="1.5"/>
+<text x="420" y="1277" font-size="15" font-weight="normal" text-anchor="middle" style="fill:#8250c8">Linear 256→768</text>
+<text x="420" y="1302" font-size="16" font-weight="bold" text-anchor="middle" style="fill:#8250c8">+ SiLU：1280×768</text>
+<path d="M 420 1315 L 420 1350" class="line" stroke="#8250c8" marker-end="url(#arrowP)"/>
+<rect x="855" y="1040" width="190" height="70" rx="10" fill="#f3edfc" stroke="#b49ad8" stroke-width="1.5"/>
+<text x="950" y="1068" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#8250c8">160 窗的起点</text>
+<text x="950" y="1096" font-size="18" font-weight="bold" text-anchor="middle" style="fill:#8250c8">256 维 PE</text>
+<path d="M 950 1110 L 950 1140" class="line" stroke="#8250c8" marker-end="url(#arrowP)"/>
+<rect x="855" y="1140" width="190" height="80" rx="10" fill="#f3edfc" stroke="#b49ad8" stroke-width="1.5"/>
+<text x="950" y="1170" font-size="16" font-weight="bold" text-anchor="middle" style="fill:#8250c8">每窗 repeat 9 次</text>
+<text x="950" y="1197" font-size="15" font-weight="normal" text-anchor="middle" style="fill:#8250c8">1440×256</text>
+<path d="M 950 1220 L 950 1250" class="line" stroke="#8250c8" marker-end="url(#arrowP)"/>
+<rect x="855" y="1250" width="190" height="65" rx="10" fill="#f3edfc" stroke="#b49ad8" stroke-width="1.5"/>
+<text x="950" y="1277" font-size="15" font-weight="normal" text-anchor="middle" style="fill:#8250c8">Linear 256→768</text>
+<text x="950" y="1302" font-size="16" font-weight="bold" text-anchor="middle" style="fill:#8250c8">+ SiLU：1440×768</text>
+<path d="M 950 1315 L 950 1350" class="line" stroke="#8250c8" marker-end="url(#arrowP)"/>
+<path d="M 177.5 1150 L 177.5 1185" class="line" stroke="#2563eb" marker-end="url(#arrowA)"/>
+<rect x="55" y="1185" width="245" height="80" rx="10" fill="#f4f8fc" stroke="#2563eb" stroke-width="1.5"/>
+<text x="177.5" y="1215" font-size="17" font-weight="normal" text-anchor="middle" style="fill:#172338">160 历史窗 × 8</text>
+<text x="177.5" y="1244" font-size="22" font-weight="bold" text-anchor="middle" style="fill:#2563eb">1280×512</text>
+<path d="M 177.5 1265 L 177.5 1350" class="line" stroke="#2563eb" marker-end="url(#arrowA)"/>
+<path d="M 707.5 1150 L 707.5 1185" class="line" stroke="#168765" marker-end="url(#arrowB)"/>
+<rect x="585" y="1185" width="245" height="80" rx="10" fill="#f4f8fc" stroke="#168765" stroke-width="1.5"/>
+<text x="707.5" y="1215" font-size="17" font-weight="normal" text-anchor="middle" style="fill:#172338">160 历史窗 × 9</text>
+<text x="707.5" y="1244" font-size="22" font-weight="bold" text-anchor="middle" style="fill:#168765">1440×512</text>
+<path d="M 707.5 1265 L 707.5 1350" class="line" stroke="#168765" marker-end="url(#arrowB)"/>
+<rect x="55" y="1350" width="460" height="72" rx="10" fill="#fafbfe" stroke="#aab6c8" stroke-width="1.5"/>
+<text x="285" y="1379" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#172338">逐 token 拼接：motion 512 + 起点 pos 768</text>
+<text x="285" y="1407" font-size="18" font-weight="bold" text-anchor="middle" style="fill:#172338">每 token 得到 1280 维</text>
+<path d="M 285 1422 L 285 1450" class="line" stroke="#2563eb" marker-end="url(#arrowA)"/>
+<rect x="55" y="1450" width="460" height="88" rx="10" fill="#eef2f7" stroke="#aab6c8" stroke-width="1.5"/>
+<text x="285" y="1480" font-size="20" font-weight="bold" text-anchor="middle" style="fill:#172338">既有 Linear 1280→1024</text>
+<text x="285" y="1506" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#172338">同一模型内，所有 motion token 共享此层</text>
+<text x="285" y="1528" font-size="14" font-weight="normal" text-anchor="middle" style="fill:#65758b">公共部分参数在 A / B 中各自训练</text>
+<path d="M 285 1538 L 285 1570" class="line" stroke="#2563eb" marker-end="url(#arrowA)"/>
+<rect x="55" y="1570" width="460" height="62" rx="10" fill="#f5f8fc" stroke="#2563eb" stroke-width="2"/>
+<text x="285" y="1609" font-size="22" font-weight="bold" text-anchor="middle" style="fill:#2563eb">1280×1024 motion</text>
+<rect x="585" y="1350" width="460" height="72" rx="10" fill="#fafbfe" stroke="#aab6c8" stroke-width="1.5"/>
+<text x="815" y="1379" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#172338">逐 token 拼接：motion 512 + 起点 pos 768</text>
+<text x="815" y="1407" font-size="18" font-weight="bold" text-anchor="middle" style="fill:#172338">每 token 得到 1280 维</text>
+<path d="M 815 1422 L 815 1450" class="line" stroke="#168765" marker-end="url(#arrowB)"/>
+<rect x="585" y="1450" width="460" height="88" rx="10" fill="#eef2f7" stroke="#aab6c8" stroke-width="1.5"/>
+<text x="815" y="1480" font-size="20" font-weight="bold" text-anchor="middle" style="fill:#172338">既有 Linear 1280→1024</text>
+<text x="815" y="1506" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#172338">同一模型内，所有 motion token 共享此层</text>
+<text x="815" y="1528" font-size="14" font-weight="normal" text-anchor="middle" style="fill:#65758b">公共部分参数在 A / B 中各自训练</text>
+<path d="M 815 1538 L 815 1570" class="line" stroke="#168765" marker-end="url(#arrowB)"/>
+<rect x="585" y="1570" width="460" height="62" rx="10" fill="#f5f8fc" stroke="#168765" stroke-width="2"/>
+<text x="815" y="1609" font-size="22" font-weight="bold" text-anchor="middle" style="fill:#168765">1440×1024 motion</text>
+<path d="M 285 1632 L 285 1655 L 175 1655 L 175 2070" class="line" stroke="#2563eb" marker-end="url(#arrowA)"/>
+<path d="M 815 1632 L 815 1655 L 935 1655 L 935 2070" class="line" stroke="#168765" marker-end="url(#arrowB)"/>
+<rect x="330" y="1665" width="440" height="350" rx="14" fill="#fff" stroke="#c7d1dd" stroke-width="1.5"/>
+<text x="550" y="1695" font-size="19" font-weight="bold" text-anchor="middle" style="fill:#65758b">相同的 512 个 frame tokens</text>
+<rect x="350" y="1715" width="185" height="74" rx="10" fill="#eef2f7" stroke="#aab6c8" stroke-width="1.5"/>
+<text x="442.5" y="1744" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#172338">图像特征</text>
+<text x="442.5" y="1772" font-size="19" font-weight="bold" text-anchor="middle" style="fill:#172338">512×2048</text>
+<rect x="565" y="1715" width="180" height="74" rx="10" fill="#f3edfc" stroke="#b49ad8" stroke-width="1.5"/>
+<text x="655" y="1744" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#8250c8">frame 位置投影后</text>
+<text x="655" y="1772" font-size="19" font-weight="bold" text-anchor="middle" style="fill:#8250c8">512×768</text>
+<path d="M 442.5 1789 L 442.5 1823" class="line" stroke="#65758b" marker-end="url(#arrowG)"/>
+<path d="M 655 1789 L 655 1823" class="line" stroke="#8250c8" marker-end="url(#arrowP)"/>
+<rect x="350" y="1823" width="395" height="80" rx="10" fill="#eef2f7" stroke="#aab6c8" stroke-width="1.5"/>
+<text x="547.5" y="1854" font-size="17" font-weight="normal" text-anchor="middle" style="fill:#172338">concat：2048 + 768 = 2816</text>
+<text x="547.5" y="1882" font-size="19" font-weight="bold" text-anchor="middle" style="fill:#172338">既有 Linear 2816→1024</text>
+<path d="M 547.5 1903 L 547.5 1933" class="line" stroke="#65758b" marker-end="url(#arrowG)"/>
+<rect x="350" y="1933" width="395" height="64" rx="10" fill="#f5f7fa" stroke="#a0aec0" stroke-width="2"/>
+<text x="547.5" y="1973" font-size="21" font-weight="bold" text-anchor="middle" style="fill:#65758b">512×1024 frame</text>
+<path d="M 547.5 1997 L 547.5 2037" class="line" stroke="#65758b"/>
+<path d="M 547.5 2037 L 405 2037 L 405 2070" class="line" stroke="#65758b" marker-end="url(#arrowG)"/>
+<path d="M 547.5 2037 L 695 2037 L 695 2070" class="line" stroke="#65758b" marker-end="url(#arrowG)"/>
+<rect x="55" y="2070" width="460" height="110" rx="10" fill="#fff" stroke="#2563eb" stroke-width="2.2"/>
+<text x="285" y="2099" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#172338">按相同 memory_order concat / gather</text>
+<text x="285" y="2128" font-size="18" font-weight="normal" text-anchor="middle" style="fill:#172338">1280 motion + 512 frame</text>
+<text x="285" y="2159" font-size="25" font-weight="bold" text-anchor="middle" style="fill:#2563eb">A：1792×1024</text>
+<path d="M 285 2180 L 285 2220" class="line" stroke="#2563eb" marker-end="url(#arrowA)"/>
+<rect x="55" y="2220" width="460" height="80" rx="10" fill="#eef2f7" stroke="#98a7bb" stroke-width="1.8"/>
+<text x="285" y="2252" font-size="22" font-weight="bold" text-anchor="middle" style="fill:#172338">18 层动作专家</text>
+<text x="285" y="2281" font-size="18" font-weight="normal" text-anchor="middle" style="fill:#172338">memory modulation</text>
+<rect x="585" y="2070" width="460" height="110" rx="10" fill="#fff" stroke="#168765" stroke-width="2.2"/>
+<text x="815" y="2099" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#172338">按相同 memory_order concat / gather</text>
+<text x="815" y="2128" font-size="18" font-weight="normal" text-anchor="middle" style="fill:#172338">1440 motion + 512 frame</text>
+<text x="815" y="2159" font-size="25" font-weight="bold" text-anchor="middle" style="fill:#168765">B：1952×1024</text>
+<path d="M 815 2180 L 815 2220" class="line" stroke="#168765" marker-end="url(#arrowB)"/>
+<rect x="585" y="2220" width="460" height="80" rx="10" fill="#eef2f7" stroke="#98a7bb" stroke-width="1.8"/>
+<text x="815" y="2252" font-size="22" font-weight="bold" text-anchor="middle" style="fill:#172338">18 层动作专家</text>
+<text x="815" y="2281" font-size="18" font-weight="normal" text-anchor="middle" style="fill:#172338">memory modulation</text>
+<text x="550" y="2340" font-size="17" font-weight="bold" text-anchor="middle" style="fill:#65758b">后续 policy 主干架构一致；共同部分使用相同初始权重。</text>
+<text x="550" y="2369" font-size="16" font-weight="normal" text-anchor="middle" style="fill:#65758b">A / B 分别训练，训练后权重不共享。</text>
+</svg>
+<figcaption>图 1。顶部为当前四对实现的参照；下方为本次两组。离线只缓存固定特征，B 的 16→512 投影属于 policy 参数，随动作损失训练。图中的 B 表示 batch 时会与“B 组”按上下文区分。</figcaption>
+</figure>
+<p>代码锚点：<code>representation/percep_mem.py::PerceptualMemory.__init__/__call__</code>。每个模型只创建一份 <code>motion_encoder_static</code>；所有窗口、槽位和 batch 样本共用同一个 1280×1024 kernel 和 1024 bias。B 的 <code>wan_pool_proj</code>同样逐槽共享，不为 9 个时间槽建立 9 套参数。两者采用现有 <code>representation/utils.py::kernel_init</code>（std=0.02、bias=0）；B 不加第二个隐藏层或 SiLU。已有位置投影的 SiLU 保留。</p>
+<p><b>padding 在原始特征一侧完成。</b>A 输入 observation 为 (B,1280,512)，B 为 (B,1440,16)；B 的 512 维由 JAX 模型实时生成。padding 过线性层可能变为非零，必须仍由 memory mask 屏蔽；不能靠“原输入是零”替代 mask，也不能把已训练的 B 投影输出写回离线固定表。</p>
+<p><b>窗口时间与可见性：</b>沿用 <code>motion_store::visible_motion_rows</code>。exec 在当前帧 t 只读取整个 33 帧已完成的窗口；demo 在 exec 开始后可见，尾段至少 17 个真实帧，其余只重复本段末帧。两个实验用完全相同的窗口 ID 集合，先按 160 窗补齐，再分别展开 8/9 槽，mask、窗口起点 PE 和时间键也 repeat8/repeat9。<code>shared/sampling.py::memory_order</code>按“全域时刻、帧先于 motion”的稳定排序一起重排 token 与 mask。</p>
+<p class="notice">A 的 8 个 query 是学习得到的槽位，不是 8 个时间点。B 的 9 槽是 VAE 的有序时间 latent，各槽有时序感受野，也不是 9 张独立原图。本轮两组都沿用窗口起点时间码，B 槽内次序按 g=0…8 保留；不额外给 B 换成逐槽物理帧时间码。超过 160 窗就明确失败，不静默裁剪两组的历史。</p>
+
+<h2 id="modulation">四、memory modulation 完整展开</h2>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" id="policy-h512-wan9-memory" width="1100" height="2200" viewBox="0 0 1100 2200" role="img" aria-labelledby="policy-h512-wan9-memory-title policy-h512-wan9-memory-desc">
+  <title id="policy-h512-wan9-memory-title">单层动作专家完整链路：原 self-attention、memory attention、memory modulation 与原 FFN 残差</title>
+  <desc id="policy-h512-wan9-memory-desc">A 组使用每窗 8 个 512 维 MotionJEPA token，160 窗加 512 个帧 token 后 memory 长度为 1792。B 组将 Wan 每时间切片做空间均值，得到每窗 9 个 16 维 token，经共享可训练 Linear 投到 512 维；160 窗加 512 帧 token 后 memory 长度为 1952。每个动作专家层先按原时间条件归一化、联合 self-attention、dropout 和门控残差得到 x。该层 memory attention 对 x 和 memory 分别用同一个 MemoryRMSNorm 归一化，按原行号 RoPE 生成 Q、K，使用遮罩和 FP32 softmax 读取 V，得到 C。C 经过小随机初始化 Dense 生成逐动作 token 的 gamma 和 beta，调制独立 RMS 归一化后的 x。调制结果继续经过原时间条件 pre_ffw_norm、原门控 FFN、dropout 和 gate_ffn，末端残差始终加回原 x。18 层参数各自独立，读取同一份 memory。</desc>
+  <defs>
+    <marker id="phwm-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#586879"/></marker>
+    <marker id="phwm-arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#087f71"/></marker>
+    <marker id="phwm-arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#ad6819"/></marker>
+  </defs>
+  <style>
+    #policy-h512-wan9-memory text{font-family:"Droid Sans Fallback","Noto Sans CJK SC","Microsoft YaHei",sans-serif;fill:#203142;font-size:16px}
+    #policy-h512-wan9-memory .heading{font-size:23px;font-weight:700}
+    #policy-h512-wan9-memory .section{font-size:18px;font-weight:700}
+    #policy-h512-wan9-memory .title{font-size:17px;font-weight:700}
+    #policy-h512-wan9-memory .note{font-size:14px;fill:#536679}
+    #policy-h512-wan9-memory .shape{font-size:16px}
+    #policy-h512-wan9-memory .smallshape{font-size:14px}
+    #policy-h512-wan9-memory .teal{fill:#087f71}
+    #policy-h512-wan9-memory .purple{fill:#7243a5}
+    #policy-h512-wan9-memory .amber{fill:#9a5b13}
+    #policy-h512-wan9-memory .orig{fill:#fff;stroke:#9fadb9;stroke-width:1.4}
+    #policy-h512-wan9-memory .mem{fill:#eff9f6;stroke:#72b8aa;stroke-width:1.4}
+    #policy-h512-wan9-memory .rope{fill:#f7f2fc;stroke:#a68ac3;stroke-width:1.4}
+    #policy-h512-wan9-memory .mod{fill:#fff8eb;stroke:#ceaa74;stroke-width:1.4}
+    #policy-h512-wan9-memory .line{fill:none;stroke:#586879;stroke-width:1.7;stroke-linejoin:round;marker-end:url(#phwm-arrow)}
+    #policy-h512-wan9-memory .memline{fill:none;stroke:#087f71;stroke-width:1.9;stroke-linejoin:round;marker-end:url(#phwm-arrow-teal)}
+    #policy-h512-wan9-memory .resline{fill:none;stroke:#ad6819;stroke-width:1.9;stroke-linejoin:round;marker-end:url(#phwm-arrow-amber)}
+  </style>
+
+  <rect x="0" y="0" width="1100" height="2200" fill="#f5f7fa"/>
+  <text x="26" y="35" class="heading">单层动作专家：原注意力 → memory 读出 → 原调制与 FFN</text>
+  <text x="26" y="62" class="note">动作序列长 20，宽度 1024；A：S=1792，B：S=1952；展开任意一层，全部 18 层均走此链路。</text>
+
+  <text x="28" y="101" class="section">① 原动作专家入口与时间条件 self-attention</text>
+  <rect x="120" y="125" width="480" height="56" rx="7" class="orig"/>
+  <text x="360" y="148" text-anchor="middle" class="title">动作专家本层入口 h</text>
+  <text x="360" y="170" text-anchor="middle" class="shape">(B,20,1024)</text>
+
+  <rect x="620" y="125" width="100" height="56" rx="7" class="orig"/>
+  <text x="670" y="148" text-anchor="middle" class="note">时间条件</text>
+  <text x="670" y="169" text-anchor="middle" class="smallshape">time_cond</text>
+
+  <rect x="120" y="205" width="480" height="72" rx="7" class="orig"/>
+  <text x="360" y="230" text-anchor="middle" class="title">原 pre_attention_norm(h, time_cond)</text>
+  <text x="360" y="253" text-anchor="middle" class="shape">输出 z；同时生成 gate_attn (B,1,1024)</text>
+  <text x="360" y="271" text-anchor="middle" class="note">gate 沿 20 个动作 token 广播</text>
+  <path d="M360 181 V205" class="line"/>
+  <path d="M670 181 V217 H600" class="line"/>
+
+  <rect x="120" y="302" width="480" height="67" rx="7" class="orig"/>
+  <text x="360" y="326" text-anchor="middle" class="title">原联合 self-attention</text>
+  <text x="360" y="349" text-anchor="middle" class="note">与图像 / 文本前缀交互；沿用原 positions、attn_mask</text>
+  <text x="360" y="366" text-anchor="middle" class="note">各专家投影独立；此处不是额外 memory attention</text>
+  <path d="M360 277 V302" class="line"/>
+
+  <rect x="120" y="395" width="480" height="46" rx="7" class="orig"/>
+  <text x="360" y="424" text-anchor="middle" class="title">原 dropout → a_attn (B,20,1024)</text>
+  <path d="M360 369 V395" class="line"/>
+
+  <rect x="120" y="466" width="480" height="66" rx="7" class="orig"/>
+  <text x="360" y="490" text-anchor="middle" class="title">原门控残差：x = h + gate_attn ⊙ a_attn</text>
+  <text x="360" y="514" text-anchor="middle" class="shape">x (B,20,1024)；后续末端残差保留此 x</text>
+  <path d="M360 441 V466" class="line"/>
+  <path d="M120 153 H75 V499 H120" class="line"/>
+  <text x="66" y="291" text-anchor="end" class="note">原 h</text>
+  <path d="M600 250 H650 V499 H600" class="line"/>
+  <text x="658" y="290" class="smallshape">gate_attn</text>
+
+  <rect x="750" y="125" width="300" height="407" rx="7" class="mem"/>
+  <text x="900" y="151" text-anchor="middle" class="title teal">本层完整 memory M</text>
+  <text x="900" y="178" text-anchor="middle" class="shape">M (B,S,1024)；mask (B,S)</text>
+  <text x="900" y="201" text-anchor="middle" class="note">S 含 padding；键遮罩不重编号</text>
+  <path d="M768 217 H1032" stroke="#b5d7cf" stroke-width="1"/>
+  <text x="768" y="244" class="title teal">A：MotionJEPA 8×512 / 窗</text>
+  <text x="768" y="270" class="smallshape">160×8 motion + 512 frame</text>
+  <text x="768" y="297" class="title teal">S_A = 1792</text>
+  <path d="M768 315 H1032" stroke="#b5d7cf" stroke-width="1"/>
+  <text x="768" y="342" class="title teal">B：Wan 每时间切片空间 mean</text>
+  <text x="768" y="367" class="smallshape">(9,16,32,32) → (9,16)</text>
+  <text x="768" y="392" class="smallshape">共享可训练 Linear 16→512</text>
+  <text x="768" y="417" class="smallshape">160×9 motion + 512 frame</text>
+  <text x="768" y="444" class="title teal">S_B = 1952</text>
+  <path d="M768 463 H1032" stroke="#b5d7cf" stroke-width="1"/>
+  <text x="900" y="489" text-anchor="middle" class="note">两组投影 / 排序后宽度均为 1024</text>
+  <text x="900" y="514" text-anchor="middle" class="note">同一份 M / mask 广播给全部 18 层</text>
+
+  <text x="550" y="582" text-anchor="middle" class="section teal">② MemoryAttention</text>
+  <path d="M360 532 V600 H300 V620" class="memline"/>
+  <path d="M900 532 V600 H820 V620" class="memline"/>
+
+  <rect x="100" y="620" width="400" height="105" rx="7" class="mem"/>
+  <text x="300" y="645" text-anchor="middle" class="title">MemoryRMSNorm(x)</text>
+  <text x="300" y="668" text-anchor="middle" class="shape">RMS(x) ⊙ (1 + scale)</text>
+  <text x="300" y="691" text-anchor="middle" class="note">同层 mem_attn/mem_rms_norm</text>
+  <text x="300" y="714" text-anchor="middle" class="note">FP32 均方、ε=10⁻⁶；转回 x.dtype</text>
+  <rect x="600" y="620" width="440" height="105" rx="7" class="mem"/>
+  <text x="820" y="645" text-anchor="middle" class="title">MemoryRMSNorm(M)</text>
+  <text x="820" y="668" text-anchor="middle" class="shape">RMS(M) ⊙ (1 + scale)</text>
+  <text x="820" y="691" text-anchor="middle" class="note">与左侧共享 scale(1024)，各自计算 RMS</text>
+  <text x="820" y="714" text-anchor="middle" class="note">FP32 均方、ε=10⁻⁶；转回 M.dtype</text>
+
+  <rect x="100" y="746" width="400" height="65" rx="7" class="mem"/>
+  <text x="300" y="771" text-anchor="middle" class="title">W_Q (4,1024,256)</text>
+  <text x="300" y="796" text-anchor="middle" class="shape">Q (B,20,4,256)</text>
+  <rect x="600" y="746" width="440" height="65" rx="7" class="mem"/>
+  <text x="820" y="771" text-anchor="middle" class="title">W_KV (2,1,1024,256)</text>
+  <text x="820" y="796" text-anchor="middle" class="shape">K、V 各为 (B,S,1,256)</text>
+  <path d="M300 725 V746" class="memline"/>
+  <path d="M820 725 V746" class="memline"/>
+
+  <rect x="100" y="840" width="400" height="100" rx="7" class="rope"/>
+  <text x="300" y="864" text-anchor="middle" class="title purple">Q 的原 memory RoPE</text>
+  <text x="300" y="887" text-anchor="middle" class="shape">positions = S + arange(20)</text>
+  <text x="300" y="909" text-anchor="middle" class="shape">旋转后 Q × 1/√256 = Q × 1/16</text>
+  <text x="300" y="931" text-anchor="middle" class="note">再重排为 (B,20,1,4,256)</text>
+  <rect x="600" y="840" width="400" height="100" rx="7" class="rope"/>
+  <text x="800" y="864" text-anchor="middle" class="title purple">K 的原 memory RoPE</text>
+  <text x="800" y="887" text-anchor="middle" class="shape">positions = arange(S)</text>
+  <text x="800" y="909" text-anchor="middle" class="shape">K 仍为 (B,S,1,256)</text>
+  <text x="800" y="931" text-anchor="middle" class="note">只旋转 Q、K；V 沿右侧直接参与加权</text>
+  <path d="M300 811 V840" class="memline"/>
+  <path d="M820 811 V827 H800 V840" class="memline"/>
+  <path d="M1040 778 H1065 V1282 H1000" class="memline"/>
+  <text x="1056" y="835" text-anchor="end" class="note teal">V</text>
+
+  <rect x="100" y="975" width="900" height="70" rx="7" class="mem"/>
+  <text x="550" y="1003" text-anchor="middle" class="title">QKᵀ → logits (B,1,4,20,S)，累加输出为 FP32</text>
+  <text x="550" y="1028" text-anchor="middle" class="note">Q 已乘 1/√256；4 个 Q heads 共享 1 个 KV head</text>
+  <path d="M300 940 V975" class="memline"/>
+  <path d="M800 940 V975" class="memline"/>
+
+  <rect x="100" y="1070" width="900" height="70" rx="7" class="mem"/>
+  <text x="550" y="1098" text-anchor="middle" class="title">memory_mask：(B,S) → (B,1,1,1,S)</text>
+  <text x="550" y="1123" text-anchor="middle" class="note">无效键的 logits 置 −2.3819763×10³⁸；沿用原 mask 路径</text>
+  <path d="M550 1045 V1070" class="memline"/>
+
+  <rect x="100" y="1165" width="900" height="60" rx="7" class="mem"/>
+  <text x="550" y="1190" text-anchor="middle" class="title">softmax(axis=−1)：FP32 → cast 回 x.dtype</text>
+  <text x="550" y="1213" text-anchor="middle" class="shape">probs (B,1,4,20,S)</text>
+  <path d="M550 1140 V1165" class="memline"/>
+
+  <rect x="100" y="1250" width="900" height="65" rx="7" class="mem"/>
+  <text x="550" y="1276" text-anchor="middle" class="title">probs × V → (B,20,1,4,256)</text>
+  <text x="550" y="1301" text-anchor="middle" class="shape">合并 Q heads → encoded (B,20,4,256)</text>
+  <path d="M550 1225 V1250" class="memline"/>
+
+  <rect x="100" y="1340" width="900" height="65" rx="7" class="mem"/>
+  <text x="550" y="1366" text-anchor="middle" class="title">W_out (4,256,1024) → 上下文 C (B,20,1024)</text>
+  <text x="550" y="1391" text-anchor="middle" class="note">Q / KV / out 均为本层独立可训练投影；每层各自读取整份 M</text>
+  <path d="M550 1315 V1340" class="memline"/>
+
+  <text x="100" y="1452" class="section amber">③ 原 memory modulation 与原 FFN</text>
+  <path d="M550 1405 V1430 H780 V1470" class="memline"/>
+  <rect x="560" y="1470" width="440" height="76" rx="7" class="mod"/>
+  <text x="780" y="1497" text-anchor="middle" class="title">C → Dense 1024→2048</text>
+  <text x="780" y="1520" text-anchor="middle" class="smallshape">kernel：Normal(std=0.002)；bias：0</text>
+  <text x="780" y="1540" text-anchor="middle" class="note">原小随机 kernel 初始化，非 zero-init</text>
+
+  <rect x="560" y="1574" width="440" height="64" rx="7" class="mod"/>
+  <text x="780" y="1599" text-anchor="middle" class="title">沿最后一维 split → γ、β</text>
+  <text x="780" y="1624" text-anchor="middle" class="shape">各为 (B,20,1024)，逐动作 token 生成</text>
+  <path d="M780 1546 V1574" class="resline"/>
+
+  <rect x="100" y="1668" width="400" height="88" rx="7" class="mod"/>
+  <text x="300" y="1694" text-anchor="middle" class="title">独立 mem_rms_norm_ffn 的 RMS(x)</text>
+  <text x="300" y="1718" text-anchor="middle" class="note">FP32 均方、ε=10⁻⁶；此处分支不另设 scale</text>
+  <text x="300" y="1742" text-anchor="middle" class="note">使用 self-attention 后、未调制的原 x</text>
+  <rect x="560" y="1668" width="440" height="88" rx="7" class="mod"/>
+  <text x="780" y="1694" text-anchor="middle" class="title">u = RMS(x) ⊙ (1 + γ) + β</text>
+  <text x="780" y="1718" text-anchor="middle" class="shape">u (B,20,1024)，转回 x.dtype</text>
+  <text x="780" y="1742" text-anchor="middle" class="note">γ、β 是逐 token 的 scale / shift</text>
+  <path d="M780 1638 V1668" class="resline"/>
+  <path d="M500 1712 H560" class="resline"/>
+  <path d="M120 515 H55 V1712 H100" class="resline"/>
+  <text x="48" y="1575" text-anchor="end" class="note amber">原 x</text>
+
+  <rect x="100" y="1790" width="900" height="80" rx="7" class="orig"/>
+  <text x="550" y="1816" text-anchor="middle" class="title">原 pre_ffw_norm(u, time_cond)</text>
+  <text x="550" y="1840" text-anchor="middle" class="shape">输出 z_ffn；同时生成 gate_ffn (B,1,1024)，沿动作序列广播</text>
+  <text x="550" y="1861" text-anchor="middle" class="note">仍使用原时间条件；额外 memory RMS / modulation 不替代此步骤</text>
+  <path d="M780 1756 V1774 H550 V1790" class="line"/>
+
+  <rect x="100" y="1900" width="900" height="70" rx="7" class="orig"/>
+  <text x="550" y="1928" text-anchor="middle" class="title">原门控 FFN：两路 1024→4096，GELU(a) ⊙ b，再 4096→1024</text>
+  <text x="550" y="1953" text-anchor="middle" class="shape">输入 z_ffn (B,20,1024) → 输出 (B,20,1024)</text>
+  <path d="M550 1870 V1900" class="line"/>
+
+  <rect x="100" y="1995" width="900" height="50" rx="7" class="orig"/>
+  <text x="550" y="2026" text-anchor="middle" class="title">原 dropout → a_ffn (B,20,1024)</text>
+  <path d="M550 1970 V1995" class="line"/>
+
+  <rect x="100" y="2070" width="900" height="70" rx="7" class="mod"/>
+  <text x="550" y="2098" text-anchor="middle" class="title amber">本层输出 y = 原 x + gate_ffn ⊙ a_ffn</text>
+  <text x="550" y="2123" text-anchor="middle" class="shape">y (B,20,1024)；残差加回 self-attention 后原 x，不能改为 u</text>
+  <path d="M550 2045 V2070" class="line"/>
+  <path d="M55 1712 V2105 H100" class="resline"/>
+  <circle cx="55" cy="1712" r="3.3" fill="#ad6819"/>
+  <text x="48" y="2058" text-anchor="end" class="note amber">原 x</text>
+  <path d="M1000 1830 H1030 V2105 H1000" class="line"/>
+  <text x="1022" y="1891" text-anchor="end" class="smallshape">gate_ffn</text>
+
+  <text x="26" y="2164" class="note">18 层参数各自独立：每层独立的 Q / KV / out、调制 Dense 与归一化参数；共享输入 M / mask。</text>
+  <text x="26" y="2187" class="note">原 memory RoPE 规则不改；S 不同会改变 memory attention 的 Q 坐标与计算规模，不声明等算力。</text>
+</svg>
+<figcaption>图 2。现行 <code>history_gemma.py::HistoryBlock / MemoryAttention / MemoryRMSNorm</code> 的逐模块展开。每层的 Q、KV、out 与调制 Dense 都有独立参数；同层 Q/KV 输入共享同一 MemoryRMSNorm，FFN 前的条件 MemoryRMSNorm 是另一模块。两组只改变 memory 的来源与 S，保留原模型的调制位置、RoPE、mask 和残差。</figcaption>
+</figure>
+<div class="formula">Cᵢ = Out(softmax(QᵢKᵀ/√256 + mask)V)<br>[γᵢ, βᵢ] = Dense(Cᵢ)<br>uᵢ = RMS(xᵢ) ⊙ (1+γᵢ) + βᵢ<br>yᵢ = xᵢ + gate<sub>ffn</sub>(τ) ⊙ dropout(FFN(pre_ffw_norm(uᵢ,τ)))</div>
+<p><code>xᵢ</code>是本层 self-attention 残差后的动作状态；最后残差加回它。γ/β 是 memory 产生的 scale/shift，不是原 FFN residual gate。调制 Dense 的 std 为 <b>0.002</b>，与输入适配器的 <b>0.02</b> 区分；现实现是小随机初始化，不能宣称初始状态与无 memory 模型相同。</p>
+<div class="scroll"><table><thead><tr><th>量</th><th>A：S=1792</th><th>B：S=1952</th><th>解释</th></tr></thead><tbody>
+<tr><td>BF16 memory／样本</td><td>3,670,016 B（3.5 MiB）</td><td>3,997,696 B（3.8125 MiB）</td><td>仅该张量，不含反向、副本、18 层激活；实际 dtype 以 trace 为准。</td></tr>
+<tr><td>FP32 attention logits／层／样本</td><td>4×20×1792×4＝573,440 B</td><td>4×20×1952×4＝624,640 B</td><td>4 个 Q 头、1 个 KV 头、head_dim256；B 为 A 的 61/56≈1.0893 倍。</td></tr>
+<tr><td>原 RoPE</td><td>K位置0…1791，Q位置1792…1811</td><td>K位置0…1951，Q位置1952…1971</td><td>仅旋转 Q/K；顺序来自重排后序列行号，包含 padding 容量，不按有效 token 重新压缩。</td></tr>
+</tbody></table></div>
+<p>因此本轮保持的是原 RoPE <em>算法</em>；长度变化仍会改变坐标与相对距离。这是 8 槽与 9 槽方案的组成差异，报告必须披露。首轮不追加第三组、不另改位置算法；若需要隔离 token 数或位置影响，再单独设计等长对照。</p>
+
+<h2 id="experiment">五、训练与比较怎么做</h2>
+<p><b>建议主实验：</b>两条 policy 从同一 <code>pi05_base</code> 开始，各训练 80,000 步，固定 seed42。公共参数的初始字节相同，样本顺序、动作噪声和 flow 时间随机流使用独立于模型构造的相同种子；B 新增投影使用独立命名随机 key，避免它消耗 RNG 后使后续公共层初值整体错位。两次运行的公共参数不会在训练中相互共享。</p>
+<div class="scroll"><table><thead><tr><th>项目</th><th>本页建议配置</th><th>核对方式</th></tr></thead><tbody>
+<tr><td>模型与输入</td><td>pi05、action_horizon20、8 帧×64、同一 160 窗上限；冻结图像，其余按原过滤器。</td><td>固定解析配置与参数叶清单；同一批源样本的动作、frame、窗口 ID 校验相同。</td></tr>
+<tr><td>训练</td><td>全局 batch128，单 JAX 进程 FSDP8，workers16，80k 步，EMA0.999；两个实验串行独占八卡。</td><td>先分别按完整 S 与真实数据做同口径容量预检。B128 未实测；失败就修订共同 batch 并重新呈现方案，不只降低其中一组。</td></tr>
+<tr><td>优化器</td><td>沿 <code>mme_vla_suite_b128_80k</code>：AdamW、clip1.0、warmup5000、peak_lr=decay_lr=5e−5；每5000步存权重。</td><td>采用新的实验配置/入口承载差异，正式启动前比较所有非表征字段。现行配置其余默认值一并冻结，不凭文字漏项补写。</td></tr>
+<tr><td>样本量</td><td>每组 128×80,000＝10,240,000 次样本呈现。</td><td>进度记录与 step/sample 计数相符；中断或预算结束未满80k时标未完成。</td></tr>
+<tr><td>训练期检查</td><td>公共参数初值哈希相等；真实有效内容梯度/参数更新、padding梯度屏蔽；记录各组输入/投影范数与逐槽统计。</td><td>不根据训练 loss 临时调一组学习率、归一化或初始化尺度。均值压缩造成的信息损失保留为该基线定义。</td></tr>
+<tr><td>最终权重</td><td>两组只比较完整80k导出的 EMA；记录真实保存目录与 step，不用旧脚本里的硬编码79999冒充最终身份。</td><td>严格参数加载，保存前序列化参考与读回同输入/同RNG数值一致；按固定训练终点交付checkpoint。</td></tr>
+</tbody></table></div>
+<p><b>本轮比较指标只来自训练：</b>记录原训练loss、相同step/样本呈现数下的曲线、训练滑动均值、梯度范数；内容与位置投影范数在预检中记录，正式运行沿既有日志频率记录可获得的指标、学习率、首批样本标识与采样随机流摘要。两组采用相同日志频率和归约口径；曲线按真实step对齐。训练loss可以说明优化过程，不能替代未见数据泛化或任务成功率。</p>
+<p><b>成本指标：</b>预检计时窗口两端同步后的平均训练步时、显存峰值、有效窗/样本吞吐，离线建库时间和最终表字节量；均记录GPU、NVMe介质、batch、workers、warmup及统计窗口。单个seed42只作首轮训练比较，不自动补种子、补训或追加验证集。</p>
+<p class="notice"><b>时间与资源是待批准的提案，不是已测结论。</b>先完成同形状预检后用 <code>80000×稳态秒/步</code> 分别估时。暂定数据/预检总上限6小时、每组训练40小时，总上限86小时；不含等待当前encoder结束。正式运行前以预检估时校验预算，明显不够就修订方案，不自动提高上限。每组预算内给保存收尾留15分钟；用尽但未跑满如实交付部分结果。</p>
+
+<p><b>磁盘与主机内存预算：</b>保存16个5000步checkpoint/组，按既有完整policy参数约12.94GB/份估计，两组约414GB，另预留临时存盘、最终副本、日志与新表；正式启动前要求scratch至少600GiB可用，不能删除旧产物腾空间。当前MotionStore在worker中整表读入，16 workers下A仅motion表约33.6GB、B约1.18GB，主机还需帧库、模型与进程内存；预检记录实际主机新增RSS峰值，起跑可用内存须至少覆盖该实测增量的1.2倍。表大小不是完整训练内存估计。</p>
+<h2>六、步骤、验收与分工</h2>
+<div class="scroll"><table><thead><tr><th>阶段</th><th>工作与产物</th><th>必须满足的判据</th></tr></thead><tbody>
+<tr><td>S0 来源封口</td><td>等最终512交接；锁checkpoint、统计量、VAE receipt与父库；保留固定训练样本顺序。</td><td><code>SOURCE512</code>、<code>COMMON_LATENT</code></td></tr>
+<tr><td>S1 实现与数据</td><td>两种独立layout、通用多token装配、B模型内投影、生成A/B离线表。</td><td><code>READOUT</code>、<code>STORE_PAIR</code>、<code>CAUSAL_MASK</code>、<code>INIT_EQUAL</code></td></tr>
+<tr><td>S2 真实预检</td><td>完整两组形状的真实forward/backward、保存回读、八卡容量与耗时。</td><td><code>TRAIN_SMOKE_AB</code>、<code>SAVE_LOAD_AB</code>、<code>CAPACITY_AB</code></td></tr>
+<tr><td>S3 两条训练</td><td>A→B串行，各自新目录、从同一初始公共参数开始；固定80k。</td><td><code>TRAIN_A</code>、<code>TRAIN_B</code>、<code>FINAL_POLICY_AB</code></td></tr>
+<tr><td>S4 训练收尾</td><td>统一训练损失曲线、梯度/范数统计、吞吐/显存/存储成本；严格回读最终EMA并清理本次进程。</td><td><code>REPORT_AB</code>、<code>RUN_CLOSED</code></td></tr>
+</tbody></table></div>
+<h3>子代理分工与合并（简述）</h3>
+<p>全部 AWS 代理按仓库规则使用 Astra ultra。D1负责来源与离线读出，D2负责store/loader合同，D3负责模型投影及初始化公平性；独立工作树提交。主会话先锁接口，再按D1→D2→D3合回，逐次检查旧格式与新格式。D4独立审查，D5只执行已冻结命令；资源、预算、监听和清理由主会话管理。具体文件归属与验收见第二部分。</p>
+<p><b>人工交接：</b>上游最终512完成→本计划来源核验→双表与训练预检→两组80k→训练报告。用户已选不登记 <code>docs/handoff/current.json</code>；没有自动唤醒、自动续跑或上传长尾。计划审阅与本轮HTML提交不构成训练授权。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+<h2>〇、边界与固定合同</h2>
+<ol>
+<li>本文件是新增实验方案；现行8×256→4×512和768格式继续保留，不能让旧配置静默变成新语义。当前正式入口绑定旧e60/8×256，不能仅换checkpoint路径后复用。</li>
+<li>A最终文件SHA必须来自完成后稳定的原件；注册副本逐字节相同，所有来源变化触发重新编码。B归一化manifest仅携带固定EMA统计与来源，不携带可训练Wan投影。</li>
+<li>所有持久新资产写在policy <code>v1-store/</code>；原latent、帧库、旧表和checkpoint不覆盖。根环境不安装Wan依赖；离线/sidecar使用已有Wan子环境并显式锁来源更新。</li>
+<li>本机当前encoder占用八卡；未来GPU工作先核上游退出与显存。主会话不得停止上游、改其配额或同时抢跑。</li>
+<li>沿用原memory attention、原RoPE、原mask和原FFN残差。验收包括zero motion但有效frame；不引入全空memory新定义。</li>
+<li>本轮不改在线sidecar、socket协议、在线memory缓存、policy服务、评估入口或benchmark；训练链路不依赖这些改造。保存回读直接使用训练模型构造与参数树，不借用在线加载入口。</li>
+</ol>
+
+<h2 id="implementation">一、逐文件改造与接口</h2>
+<div class="scroll"><table><thead><tr><th>文件／稳定符号</th><th>当前实现</th><th>拟新增或修改</th><th>归属</th></tr></thead><tbody>
+<tr><td><code>scripts/dataset/wan/wan_motion_infer.py::load_encoder / motion_token</code>；<code>SOURCE_PIN.json</code>、子环境依赖锁</td><td>当前离线来源锁v10/8×256，存在固定维数。</td><td>A按本次最终512完整配置strict-load并返回raw8×512；新增B固定normalize/mean函数，明确禁止调用encoder forward。VAE与encoder分别记来源指纹；更新实际需要的子环境源码锁。</td><td>D1</td></tr>
+<tr><td><code>scripts/dataset/wan/encode_motion.py</code>；<code>wan_common.py</code></td><td>窗口装配已有，但输出合同仍偏旧8×256。</td><td>按明确kind选择8×512或9×16，行长度用shape乘积；完成判据核来源/shape/dtype/identity，避免旧缓存被误判完成。</td><td>D1</td></tr>
+<tr><td><code>scripts/dataset/build_h512_wan9_compare.py</code>（拟新增）</td><td>现 <code>build_mixed8_v10_motion.py</code> 固定旧256身份和row_bytes。</td><td>独立薄驱动，复用已验恢复资产与行序；生成normalization manifest、两组table/index/provenance和共同窗口清单。旧驱动保持原合同。</td><td>D1</td></tr>
+<tr><td><code>scripts/dataset/pack_motion_store.py::gather_provenance / check_raw_sources</code>；<code>motion_checks.py</code></td><td>存在encoder必有、特定shape与row byte假设。</td><td>按kind定义来源schema；A核encoder SHA，B核VAE/normalize/pooling实现SHA且明确encoder_forward=false。保留逐行digest、same-source、verify→publish顺序。</td><td>D1</td></tr>
+<tr><td><code>src/mme_vla_suite/datastore/motion_store.py::LayoutSpec / LAYOUT_SPECS / MotionMeta</code></td><td>只注册768与8×256。</td><td>新增 <code>motion-jepa8-h512-grid16-demopad17-v1</code>：(8,512)；<code>motion-wan9-mean16-grid16-demopad17-v1</code>：(9,16)。继承同一窗口规则，row_bytes分别16384/576；不改已有默认layout含义。</td><td>D2</td></tr>
+<tr><td><code>datastore/motion_adapter.py::MotionPolicySpec / motion_policy_spec</code></td><td>显式shape/readout只接受adjacent_pair_v1。</td><td>新增两个严格identity token合同；<code>dim</code>仍表示observation输入宽：A512、B16；<code>feature_dim</code>表示内容投影后宽512。layout、kind、num_tokens、dim、feature_dim必须组合匹配。</td><td>D2</td></tr>
+<tr><td><code>training/framesamp_dataset.py::check_motion_contract / _pad_motion / __getitem__</code>；<code>training/dataloader.py::_motion_gates</code></td><td>按完整窗口padding、pair4后展开，部分来源检查固定encoder。</td><td>identity路径保留raw形状；repeat数量取8/9，因果、mask、stable mem_order不改；B不错误索取encoder forward来源；同一组窗口ID可对拍。另扩展 <code>_parse_source_run</code> 与 <code>_motion_gates</code> 两处文件名校验：仅新A kind允许 <code>checkpoint_final.pt</code>，必须同时核显式 <code>checkpoint_epoch=60</code>、完整epoch、最终SHA及表中来源；旧checkpoint_epoch_N合同保持。</td><td>D2</td></tr>
+<tr><td><code>models/representation/percep_mem.py::PerceptualMemory</code></td><td>内容宽直接为motion.dim，位置256→768，concat后Linear。</td><td>仅B新建 <code>wan_pool_proj</code>：16→512；按feature_dim构建共用内容Linear；B投影在concat前。新模块用独立RNG流创建，保持所有原有公共参数构造顺序；仅明确新kind触发。</td><td>D3</td></tr>
+<tr><td><code>models/integration/history_pi0.py::_motion_specs / embed_memory</code>；<code>history_observation.py</code></td><td>多数shape已从配置读取，部分注释/检查仍768。</td><td>确认输入实际宽16/512、预算1440/1280全链一致；仍使用四字段motion_emb/pos/mask/mem_order。HistoryBlock/MemoryAttention数值实现不需改变。</td><td>D3</td></tr>
+<tr><td><code>models/config/robomme/perceptual-framesamp-modul-jepa8-h512-mixed8.yaml</code>、<code>perceptual-framesamp-modul-wan9-mean-mixed8.yaml</code>（拟新增）</td><td>当前pair4 YAML绑定旧encoder。</td><td>以相同帧路为底分别写两组；来源字段只有最终资产产生后才能填，不复制旧epoch60 SHA。</td><td>D3</td></tr>
+<tr><td><code>scripts/training/run_h512_wan9_compare.sh</code>、<code>check_h512_wan9_compare.py</code>（拟新增）</td><td>旧pair4 launcher写死YAML、14记忆叶与shape。</td><td>新入口核公共超参、A/B身份与差异白名单；A标准记忆14叶，B另有2个Wan投影叶（以实际参数树验证）；共同初始化清单、预算、新目录、最终身份均显式检查。</td><td>主会话</td></tr>
+<tr><td><code>scripts/training/train.py::train_step / main</code>；<code>scripts/training/step_timing.py</code></td><td>现行训练日志可复用；StepTiming是异步主线程计时，不能当逐步GPU墙钟分位数。</td><td>仅新比较入口的预检模式增加两端 <code>jax.block_until_ready</code>：10步预热后同步、计时20个更新后同步，报告窗口总秒/20和样本吞吐；正式训练数值与同步方式沿原实现，另记录总体起止时间及既有loss/梯度日志。记录首批样本和随机流摘要，不新增每步同步。</td><td>主会话</td></tr>
+<tr><td><code>scripts/training/tests/test_h512_wan9_contract.py</code>、<code>scripts/analysis/report_h512_wan9.py</code>（拟新增）</td><td>旧测试与报告没有本次两组训练合同。</td><td>仅添加真实新合同、数值/因果/初始化/回读测试；聚合逐步训练loss、成本与完整性。</td><td>D4测试契约；主会话报告</td></tr>
+</tbody></table></div>
+
+<h2>二、形状、数值与数据合同</h2>
+<pre><code># 拟新增 YAML 的差异；两组帧路 budget=512、memory_token_dim=1024。
+# A：observation 接收 512 维，不做两两拼接。
+motion:
+  kind: jepa8_h512
+  source_shape: [8, 512]
+  readout: identity_tokens_v1
+  num_tokens: 8
+  dim: 512
+  feature_dim: 512
+  checkpoint_epoch: 60  # final文件名不含epoch，另与最终SHA和provenance核对
+  budget: 1280
+  pos_dim: 256
+# B：observation 接收空间均值16维，投影在模型内训练。
+motion:
+  kind: wan9_spatial_mean
+  source_shape: [9, 16]
+  readout: identity_tokens_v1
+  num_tokens: 9
+  dim: 16
+  feature_dim: 512
+  budget: 1440
+  pos_dim: 256
+# 两组都显式 window_frames=33、stride=16、grid_origin=segment_start、
+# window_direction=forward、demo_min_real_frames=17、demo_tail_pad=repeat_last。
+# source_run/store_path/checkpoint_sha256 或 normalization_manifest_sha256 按kind绑定。</code></pre>
+<p><b>唯一轴语义：</b>A每窗 (query,feature)＝(8,512)；B每窗 (time,channel)＝(9,16)。两者pack仍一行一窗；loader选择窗口→pad160窗→flatten前两轴，不得先flatten再从token中截取预算。B空间均值由独立参考逐通道验证，可用FP64求均值作误差参考，但正式输出固定FP32顺序；测试同时覆盖非方形合成轴、防止把通道轴误平均，真实路径严格32×32。</p>
+<p><b>provenance：</b>公共部分记录父manifest、window manifest、VAE/latent receipt及原始轴序；A记录完整encoder SHA/config/EMA/输出合同/数值flags；B记录normalization manifest/16通道stats SHA、mean维度(2,3)、FP32、实现SHA，明确不含JEPA前向。二者交叉核对窗口行序、段、起点、补帧与可见性。任何配置/权重/schema身份不符都拒绝复用。</p>
+<div class="scroll"><table><thead><tr><th>产物（不含索引/校验开销）</th><th>预计原始字节</th><th>路径建议</th></tr></thead><tbody>
+<tr><td>A全量8×512表</td><td>128342×16384＝2,102,755,328 B</td><td><code>v1-store/datasets/mixed8-jepa8-h512-1022-a/</code></td></tr>
+<tr><td>B全量9×16表</td><td>128342×576＝73,924,992 B</td><td><code>v1-store/datasets/mixed8-wan9-mean16-1022-a/</code></td></tr>
+<tr><td>共用身份与初始化</td><td>清单/统计很小；公共参数初值摘要以逐叶SHA保存，不复制完整随机权重集。</td><td><code>v1-store/comparisons/h512-wan9-1022-a/</code></td></tr>
+</tbody></table></div>
+<p><b>公共参数初始化：</b>相同模型seed先完成两组共有模块构造和基础权重加载；B的Wan投影使用由“wan_pool_proj”固定标签派生的独立key，不从公共rngs继续取key。同名同shape公共叶做逐字节摘要，必须全部一致；训练和数据随机流从独立seed派生。新增层也不得改变 <code>train.py::params_split</code> 的memory归属，其参数路径必须进入memory组且不能含img。</p>
+<p><b>回归：</b>旧768与pair4配置的模块集合、参数叶、初始化、固定输入输出、输入合同仍按旧规格通过。新路径不得通过放宽旧shape/来源断言来实现；按kind分支明确验证。两组同框架/设备的重复调用与保存回读可要求逐位；A/B不同表征输出当然不要求相等。</p>
+
+<h2>三、子代理派发表</h2>
+<p>所有代理及递归代理为 <code>gpt-6-astra / ultra</code>。下表是未来实施分工，不授权当前提前改代码；执行前填最终分支与Beta全SHA。修改代理各用独立工作树；公共文件由明确所有者合入，不能并发改同一文件。</p>
+<div class="scroll"><table><thead><tr><th>任务</th><th>可写集合／禁触</th><th>接口与依赖／合并</th><th>验收与资源</th></tr></thead><tbody>
+<tr><td>D1来源/离线</td><td>第一节D1文件；禁改loader/model/在线/旧产物。</td><td>先交两种固定layout、normalization manifest与一窗oracle；第1批合入。</td><td>SOURCE512、COMMON_LATENT、READOUT、STORE_PAIR；开发CPU。GPU抽取由D5统一执行，D1不自起。</td></tr>
+<tr><td>D2数据合同</td><td>motion_store/adapter、framesamp_dataset、dataloader；禁改模型/来源锁。</td><td>按D1 schema；dim是输入宽，feature_dim是模型内容宽；第2批。</td><td>pytest新合同数据子集、CAUSAL_MASK；CPU，无端口/run。</td></tr>
+<tr><td>D3模型</td><td>percep_mem、history_pi0规格及两YAML；禁改HistoryBlock数值、第三方。</td><td>D2输入合同定稿后；独立RNG与公共叶hash；第3批。</td><td>INIT_EQUAL、训练参数归属、完整形状trace；开发CPU，真实GPU交D5。</td></tr>
+<tr><td>D4独立验证</td><td>新合同测试；对实现只读，不替作者修代码。</td><td>每批合并前审接口/数值/范围，合并后审整合结果。</td><td>新测试、旧相关回归与PLAN/IMPLEMENTATION_REVIEW；CPU。</td></tr>
+<tr><td>主会话</td><td>launcher/checker/report、档案、预算；共享配置/文件归属最终裁决。</td><td>逐批合并、提交推送、锁Beta与运行身份；不同时修改代理可写集合。</td><td>全部判定项，git diff检查与最终清理。</td></tr>
+<tr><td>D5运行</td><td>只写已授权的run/log/metrics，不改代码/参数/依赖。</td><td>依S0→S4，收到具体命令、Beta、资源/预算后运行；错误回报主会话。</td><td>抽取/训练GPU0–7串行；无服务端口。run_name与tmux按运行手册锁定，自有进程逐项登记。</td></tr>
+</tbody></table></div>
+
+<h2 id="gates">四、验收闸门：查什么、怎么查、通过说明什么</h2>
+<div class="scroll"><table><thead><tr><th>判定</th><th>核对内容与方法</th><th>通过含义／限制</th></tr></thead><tbody>
+<tr><td>SOURCE512=PASS</td><td>最终原件稳定SHA、e60/25140/106191360/完整epoch；strict EMA，8×512/heads8/flat配置，normalization manifest来源。</td><td>绑定本次最终512；架构字符串相同不构成替代证据。</td></tr>
+<tr><td>COMMON_LATENT=PASS</td><td>恢复receipt与VAE身份、父manifest、128342窗身份/行序/补帧、同一raw latent字节来源。</td><td>两臂同输入；明确区分已有全量身份校验与部分VAE数值对拍。</td></tr>
+<tr><td>READOUT=PASS</td><td>A固定真实窗独立原encoder参考；B逐通道FP32 normalize/mean与独立FP64参考用预先固定误差界比较（atol1e−5、rtol1e−5）；B路径spy确认不调用encoder；输出shape/dtype/finite。</td><td>读出符合定义；误差超界定位，不事后放宽。逐位pack回读另外检查，不混用浮点容差。</td></tr>
+<tr><td>STORE_PAIR=PASS</td><td>全部row digest、行数/字节数/索引覆盖；A/B同window-ID集；raw写入与pack回读逐位一致；错误SHA/kind/layout拒绝。</td><td>表可消费且同一源集合，不证明表征效果。</td></tr>
+<tr><td>CAUSAL_MASK=PASS</td><td>0/1/159/160/161窗、exec t31/32/48边界、demo16/17/32/33真实帧；两组visible集合一致；repeat8/9、padding sentinel、合法mem_order置换与同刻顺序。</td><td>完整窗可见且无未来泄漏；161窗必须失败，不能截断。</td></tr>
+<tr><td>INIT_EQUAL=PASS</td><td>基础权重身份；同名公共参数全叶SHA相同；B仅新增8704参数；冻结/梯度/优化器归属；首批数据与噪声/时间种子一致。</td><td>公共起点相同；不承诺不同shape引起的后续数值结果相同。</td></tr>
+<tr><td>TRAIN_SMOKE_AB=PASS</td><td>每臂原完整模型真实B1有效窗口一步更新；loss/梯度有限，内容投影及B Wan投影有非零梯度与实际更新，masked padding无有效贡献；旧768/pair4回归。</td><td>新输入真实参与学习；不使用缩小模型或假张量替代。</td></tr>
+<tr><td>SAVE_LOAD_AB=PASS</td><td>真实EMA导出等待完成、参数叶shape/dtype/值严格读回；固定batch/RNG/同dtype，参考序列化参数与加载模型的loss逐项相等。</td><td>训练模型能严格恢复保存的参数；B额外两个叶不可缺失或随机补齐。</td></tr>
+<tr><td>CAPACITY_AB=PASS</td><td>八卡各组完整预算B128，30更新（10预热、20计时），计时窗口前后均同步完成态，一次保存；逐卡保守峰值与余量≥2GiB，记录本机NVMe、workers、吞吐；检查600GiB磁盘余量与上述主机内存裕量。</td><td>覆盖所测容量与保存阶段；不以短测承诺80k全程稳定。两组共用batch，若失败先修订计划。</td></tr>
+<tr><td>TRAIN_A/B、FINAL_POLICY_AB=PASS</td><td>各80k/10240000样本、完整日志与EMA保存/加载、固定config/来源，退出码0；最终权重SHA锁定。</td><td>达到拟定训练终点，不根据loss高低改完成判据。</td></tr>
+<tr><td>REPORT_AB、RUN_CLOSED=PASS</td><td>训练曲线、逐步训练统计、成本、失败记录、配置与权重链接；本次tmux/worker全部退出。</td><td>结论可复查；只清理本任务已登记句柄，不操作其他训练。</td></tr>
+</tbody></table></div>
+
+<h2 id="runbook">五、未来批准后的运行手册</h2>
+<p><b>以下入口均为拟新增，当前不存在，不能直接执行。</b>所有持久路径必须是policy根下真实目录；正式run_name先核不存在。短测与正式输出隔离。最后完整计划获批后，主会话填真实最终encoder SHA和实现Beta SHA；这些是身份占位符，不能用当前中途权重填充。</p>
+<pre><code># 1. 新驱动依次执行身份预检、两表编码/mean、打包与验收。
+uv run --frozen --no-sync python scripts/dataset/build_h512_wan9_compare.py \
+  --stage all \
+  --encoder-checkpoint /scratch/hongze/MotionJEPA/runs/wan-mixed8-v11-h512-flat-full60-20261021-a/checkpoint_final.pt \
+  --encoder-sha256 FINAL_ENCODER_SHA256 \
+  --restore-receipt v1-store/restore/mixed8-200-vla-latents-20261021-a/restore_receipt.json \
+  --jepa-store v1-store/datasets/mixed8-jepa8-h512-1022-a \
+  --wan-store v1-store/datasets/mixed8-wan9-mean16-1022-a \
+  --output-root v1-store/comparisons/h512-wan9-1022-a
+
+# 2. 主会话在detached tmux内调用；入口先做CPU合同检查，再起单JAX进程八卡。
+# --mode smoke 保持80k学习率日程，只限制实际更新数；正式train不得继承短测参数。
+TRAIN_HEAD=IMPLEMENTATION_BETA_SHA bash scripts/training/run_h512_wan9_compare.sh \
+  --arm jepa8 --mode smoke --run-name cmp-jepa8-h512-smoke-1022-a
+TRAIN_HEAD=IMPLEMENTATION_BETA_SHA bash scripts/training/run_h512_wan9_compare.sh \
+  --arm wan9 --mode smoke --run-name cmp-wan9-mean-smoke-1022-a
+TRAIN_HEAD=IMPLEMENTATION_BETA_SHA bash scripts/training/run_h512_wan9_compare.sh \
+  --arm jepa8 --mode train --run-name cmp-jepa8-h512-80k-1022-a
+TRAIN_HEAD=IMPLEMENTATION_BETA_SHA bash scripts/training/run_h512_wan9_compare.sh \
+  --arm wan9 --mode train --run-name cmp-wan9-mean-80k-1022-a
+</code></pre>
+<p>新增launcher必须实现上述接口、固定参数白名单、同一参数数组的预检与启动、全新输出目录、总预算账本以及正常/异常退出码记录；无实现不得把该命令标为已可用。D5每次委派另附完整展开命令、最终Beta、绝对日志路径、GPU、T0/截止、起跑判据与零训练自动重试上限。</p>
+<p>建议tmux前缀 <code>cmp512-wan9-build / cmp512-wan9-smoke / cmp512-wan9-train-a / cmp512-wan9-train-b</code>；日志 <code>v1-store/logs/&lt;run_name&gt;.log</code>，权重 <code>v1-store/train-runs/mme_vla_suite_b128_80k/&lt;run_name&gt;</code>，结果 <code>v1-store/comparisons/h512-wan9-1022-a</code>。新驱动记录输出路径映射并拒绝重名；八卡训练前确认上游退出与GPU可用。两组日志、权重与指标各自独立，report只读取本次身份匹配的文件。</p>
+
+<h2>六、风险、盲区与结果解释</h2>
+<div class="scroll"><table><thead><tr><th>风险或尚未验证</th><th>本方案处理</th></tr></thead><tbody>
+<tr><td>512最终权重还没产出</td><td>等待本run最终交接；当前e41仅进度证据，不用于正式表或policy训练。</td></tr>
+<tr><td>空间平均丢失几何布局</td><td>B定义保留此损失；9×512中的内容来自9×16，线性扩维的信息秩不超过16，不能称“与A相同信息容量”。</td></tr>
+<tr><td>不同槽数及RoPE坐标</td><td>披露1280/1440有效motion容量、1792/1952长度与坐标；不把两组差值解释为纯预训练目标增益。</td></tr>
+<tr><td>投影初始尺度、随机流</td><td>固定现std0.02与共享公共初值；报告激活范数、有效内容梯度，未获准不单独调B尺度。</td></tr>
+<tr><td>实际容量/墙钟未知</td><td>按同形状30步预检与一次存盘估时；B128、八卡、86h上限均为建议，当前未测新组合。</td></tr>
+<tr><td>单训练seed与训练指标</td><td>报告seed42下完整训练轨迹和成本；不从训练loss推出任务成功率或训练seed稳健性，评估以后另立方案。</td></tr>
+</tbody></table></div>
+
+<h2>七、留档与本轮交付检查</h2>
+<p>实施后分别留档到 <code>docs/training-doc/&lt;run_name&gt;/</code> 的launch/result/records，比较总报告放 <code>docs/training-doc/h512-wan9-compare-1022-a/</code>。保存用户最终开工原话、完整方案commit、实现Beta、各权重/统计/数据/样本顺序摘要SHA、公共初值摘要、所有具名判定、真实美东起止、预算和退出码；不把大checkpoint、原始latent或整份大日志加入git。两组训练结果无论高低均完整交付，不选择性保留曲线。</p>
+<p>本轮只做HTML结构、相对链接、SVG渲染与文字/箭头/边界目视检查，再做 <code>git diff --check</code>。计划中的新实现判定均未运行，不写成PASS。按用户选择，不新增 <code>docs/handoff/current.json</code> 条目；该计划以后不会自动触发训练。</p>
+<p class="small">依据：<a href="../MotionJEPA/1021-v11-h512-60ep-training-plan.html">当前512完整训练计划</a>；<a href="../MotionJEPA/1020-paired4-modulation-plan.html">原四对接入与完整调制图</a>；<a href="src/mme_vla_suite/models/representation/percep_mem.py">最新PerceptualMemory</a>；<a href="src/mme_vla_suite/models/integration/history_gemma.py">最新HistoryBlock</a>；<a href="src/mme_vla_suite/datastore/motion_adapter.py">现行配对合同</a>；<a href="scripts/training/run_mixed8_pair4_80k.sh">现行训练入口参照</a>。本页中的“拟新增”名称是实施接口设计，不能与已存在能力混淆。</p>
+</body>
+</html>
