@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-26T18:04:54Z",
-    "america_new_york": "2026-10-26T14:04:54-0400"
+    "utc": "2026-10-26T18:25:12Z",
+    "america_new_york": "2026-10-26T14:25:12-0400"
   },
   "repo": {
     "branch": "worktree-agent-vla-s2-state-20261026",
-    "base_head": "7ff55d61640f6b5d983571ea5f23daf227a129cb",
+    "base_head": "d819b653d47498c0260a3f458427346e8bcc6f28",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -20,9 +20,9 @@
         "file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md",
         "sha": "1383aba0fd77b259f0b32eadb47ea7792190145e"
       },
-      "state": "running",
-      "state_changed_at": "2026-10-26T18:04:54Z",
-      "state_reason": "S1至S4全部合审并推送；分组合后446项CPU测试通过。真实G0、4段128窗GPU冒烟与G1通过；全量抽取在GPU0运行，之后自动G2/G3；MJ两源本地SMOKE并行。正式VLA尚未启动。",
+      "state": "stopped",
+      "state_changed_at": "2026-10-26T18:20:42Z",
+      "state_reason": "全量4995段65419窗及G1通过；G2第8样本归一化max=0.013544513720267467超过0.01，MSE=1.747542904391321e-7通过1e-6。按R11停止；G3、打包和训练未运行。G10两源35文件7545592817字节匿名回读通过。全部本轮tmux已自然退出、GPU释放，等待用户决定单窗诊断。",
       "owner": {"session": "", "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"},
       "depends_on": [{
         "path": "/scratch/hongze/MotionJEPA",
@@ -32,16 +32,13 @@
       }],
       "pre_handoff": [
         {"what": "计划一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=1383aba0fd77b259f0b32eadb47ea7792190145e findings=0 blocking=0", "where": "独立Astra high审查；计划固定提交1383aba", "status": "pass"},
-        {"what": "G0至G6建库与在线对拍", "evidence": "RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail=16 sha_mismatches=0；STAGE2_EXPORT=PASS scope=smoke segments=4 rows=128；DROPOUT_OFF=PASS windows=64 eval_repeat_max_abs=0.0 train_vs_eval_max_abs=1.684738039970398；G2至G6待运行。", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"},
+        {"what": "G0至G6建库与在线对拍", "evidence": "RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail=16 sha_mismatches=0；STAGE2_EXPORT=PASS segments=4995 rows=65419；DROPOUT_OFF=PASS windows=64 eval_repeat_max_abs=0.0 train_vs_eval_max_abs=1.684738039970398；G2=FAIL ButtonUnmask_ep178_exec source_grid=10 max=0.013544513720267467；EXIT_CODE=1；G3至G6未运行。", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/export.log", "status": "fail"},
         {"what": "G7八卡短测与严格保存回读", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/smoke/", "status": "pending"},
         {"what": "G8正式80k训练及16份checkpoint", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/", "status": "pending"},
         {"what": "G12远端60k依赖回读及严格恢复", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"}
       ],
-      "long_tail": [],
-      "running_handles": [
-        {"tmux": "cc-vla-s2-export", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/export.log", "done_line": "EXPORT_VALIDATION=PASS 且 EXIT_CODE=0", "pid": 2568849, "gpu": "0", "started_at": "2026-10-26T18:03:19Z", "budget": "抽取7200秒；G2/G3/G4累计7200秒，后两门完成后numeric-budget.json记已用量"},
-        {"tmux": "cc-vla-s2-mjup", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/mjup.log", "done_line": "MJ_CKPT_UPLOAD=PASS 且最外层 EXIT_CODE=0", "pid": 2569641, "gpu": "无", "started_at": "2026-10-26T18:03:55Z", "budget": "24小时；当前本地SMOKE，网络仅同对象最多3次既定尝试"}
-      ],
+      "long_tail": [{"what": "G10 MJ阶段II/III公开备份", "tmux": "cc-vla-s2-mjup", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/mjup.log", "done_line": "MJ_CKPT_UPLOAD=PASS source_runs=2 files=35 bytes=7545592817 sha256_mismatch=0 public=1", "status": "pass", "evidence": "2026-10-26T18:21:20Z最外层EXIT_CODE=0，tmux自然退出；bucket=HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1"}],
+      "running_handles": [],
       "authorizations": [{
         "kind": "go", "date": "2026-10-26",
         "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md 开工 有问题问用户 所有subagebt必须全部astra high",
@@ -51,11 +48,11 @@
         "quote": "同意推送 要和github同步",
         "scope": "建立origin/v4-256concat1跟踪并推送；后续本次实施提交通过审查后持续同步GitHub。"
       }],
-      "pending_decisions": [],
+      "pending_decisions": [{"what": "是否授权GPU0最多10分钟的失败单窗诊断，保持阈值，分离FP32缓存复现、同FP16路径、实际B2/max-autotune及跨精度差；不重抽全库、不启动训练。", "reason": "计划R11要求任一闸门FAIL交用户；异步选择题尚待回答。"}],
       "next_steps": [
-        {"what": "监听全量抽取→G2→G3，任一失败不重试；G3通过后打包→全表独立重算→verify", "command": "运行入口为主仓v1-store/logs/vla-s2-20261026/run-export.sh；下一步按计划pack/runbook", "verdict_line": "STAGE2_EXPORT=PASS segments=4995 rows=65419；WAN_EQUIV=PASS；EMA_SOURCE=PASS；EXPORT_PARITY=PASS"},
-        {"what": "完成G5/G6后解除数据构建冻结、填yaml真实SHA，注册encoder副本并G4；G7短测和恢复通过才训练Beta", "command": "按计划第二部分runbook；数值总预算读主仓validation/stage2-memory/numeric-budget.json", "verdict_line": "ONLINE_OFFLINE_PARITY=PASS；LAUNCH_CONTRACT=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"},
-        {"what": "冻结期只更新本开发副本状态，不改主检出；两份监控均由主会话管理", "command": "主仓HOLD=freeze 7ff55d6；开发副本无venv/v1-store链接，仅状态写入", "verdict_line": "HANDOFF_WRITE=PASS task=mixed8-vla-stage2-1024-train state=running"}
+        {"what": "等待用户诊断决定；未经确认不新增采样/测试、不改阈值、不自动续跑", "command": "主仓validation/stage2-memory/G2.json；G0第7索引（第8窗）ButtonUnmask_ep178_exec旧格10、帧160至192", "verdict_line": "用户明确决定"},
+        {"what": "保留全量token与失败报告；获批后诊断另建目录，不覆盖既有证据", "command": "export_record SHA=3d97062cbd904dbc96a6184867f43f912429cb2584f842878d9a917248c9b97e；G2 SHA=88cc88fb69827f00763b5499e3aa3d39bdb411db3e186660eed596716d6dce72", "verdict_line": "来源证据不变"},
+        {"what": "主检出保留Beta及HOLD，本开发副本为状态真源；run-pack.sh已准备但未启动，训练yaml仍SHA占位", "command": "主仓HOLD=freeze 7ff55d6", "verdict_line": "HANDOFF_WRITE=PASS task=mixed8-vla-stage2-1024-train state=stopped"}
       ]
     },
     "paired4-training-smoke": {
