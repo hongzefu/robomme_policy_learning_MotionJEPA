@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-26T19:29:04Z",
-    "america_new_york": "2026-10-26T15:29:04-0400"
+    "utc": "2026-10-26T20:01:46Z",
+    "america_new_york": "2026-10-26T16:01:46-0400"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "7ff55d61640f6b5d983571ea5f23daf227a129cb",
+    "base_head": "a4817eedff440c888bec39c2aeb69d8f8609150a",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -22,7 +22,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-26T19:23:32Z",
-      "state_reason": "用户明确「可以忽略 继续做」，接受本次G2数值例外；原FAIL保留。G3单次32秒通过，65EMA状态逐位一致、32窗max_abs=0，GPU已释放。例外消费链和生成CLI合前审查均PASS，准备解除当前数据Beta冻结并合入复测、生成WAIVED来源记录后pack。其余门槛不变，正式VLA未起跑。",
+      "state_reason": "用户批准CPU全量完整性+encoder1024窗并继续。原全量比较按指令停止130，packed表保留。抽样消费合同和比较器两份合前审查PASS，准备解除当前冻结合入CPU复测；真实索引跨主/torch环境得到相同1024样本SHA、16任务各64、demo332/exec692/pad68。G2例外/G3保持，正式VLA未起跑。",
       "owner": {"session": "", "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"},
       "depends_on": [{
         "path": "/scratch/hongze/MotionJEPA",
@@ -51,11 +51,19 @@
         "kind": "go", "date": "2026-10-26",
         "quote": "可以忽略 继续做",
         "scope": "明确接受已报告G2跨精度数值失败并继续原主run；原G2.json保留FAIL，新WAIVED记录限定原失败SHA/本次ckpt/G0清单，身份和其余闸门不放松。不再进行此前建议的单窗诊断。"
+      }, {
+        "kind": "decision", "date": "2026-10-26",
+        "quote": "同意按照你说过的更省时方案 做\nencoder只抽机小部分",
+        "scope": "G5改为CPU全量字节/文件SHA核验加encoder分层1024窗（承接前一问gpu只算1024个），不再全量GPU重算。原packed表保留，只声明encoder抽样一致；其余门槛保持。"
+      }, {
+        "kind": "go", "date": "2026-10-26",
+        "quote": "同意继续",
+        "scope": "按上述CPU全量+GPU1024窗方案继续原主run，无需重复确认。"
       }],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "G3已通过；合入两份已审例外代码，原报告不改，新建G2-waiver.json只核身份不重跑数值", "command": "消费TIP af64a8981bb33ee1933742e21d0a403f0612b333；生成TIP e4350bc5ffbfe29db527b07b758370e4e5c50a82；设计及合前审均PASS", "verdict_line": "G2_USER_EXCEPTION=ACCEPTED"},
-        {"what": "G3结束后合回本状态分支并整合例外处理，形成新确定版本再pack→独立全表重算→verify", "command": "更新运行入口版本与G2选择规则，不重抽65,419窗；保持S1 b5d23a5及全部输入SHA不变", "verdict_line": "ENCODER_BITEXACT=PASS；VERIFY_MOTION=PASS"},
+        {"what": "完成sampled比较器/消费合同合审并合入；仅恢复sampled→verify，不再次启动run-pack.sh", "command": "合同主仓validation/stage2-memory/sampled-g5-contract.md；固定seed0/16任务每64/总1024；SAMPLED_G5_DESIGN_REVIEW=PASS", "verdict_line": "PACKED_TOKEN_BYTES=PASS compared=65419；ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=65419；VERIFY_MOTION=PASS"},
+        {"what": "保留packed表和原中断日志；抽样认证随stage2_compat完整传递；完成后绑定yaml SHA、注册encoder并G6/G4", "command": "table SHA=8de36e670d58c60859d48b37f29c989f2eed45344f5cd5fb2f7a96126394ee5c；index SHA=de388cb42f1fbb27e39dc429a6252cd755d6f67324c4eb8f236c4f60bf68e1ec；G4剩7126秒", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS"},
         {"what": "G6、G4、20步与保存恢复通过后才正式80k；G2的用户例外须完整随快照和交付传递", "command": "按原计划主run，备选B和benchmark不启动", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"}
       ]
     },

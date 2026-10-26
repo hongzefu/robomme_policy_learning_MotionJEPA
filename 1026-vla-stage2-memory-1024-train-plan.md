@@ -1,5 +1,6 @@
 # 1026-vla-stage2-memory-1024-train-plan.md — 用阶段 III 最后 ckpt（EMA）把每窗 4×256 拼成 1 个 1024 维 memory token，窗 33／步长 32，训一条 mixed8 VLA 80k
 
+> **G5实施裁决更新**：用户明确「同意按照你说过的更省时方案 做」「encoder只抽机小部分」，随后「同意继续」。本次改为CPU全量字节/文件SHA核验＋GPU分层1,024窗，不再执行全库encoder重算；只声明抽样encoder一致，其他闸门及已接受的G2例外保持。
 > **实施授权补记（2026-10-26）**：用户已明确「开工 有问题问用户 所有subagebt必须全部astra high」「同意推送 要和github同步」；在G2报告本次跨FP32/FP16最大误差0.013544513720267467超过0.01后，又明确裁决「可以忽略 继续做」。据此继续原主run，限定接受本次G2数值例外；原FAIL证据不变，另以WAIVED记录绑定原失败SHA、ep105和G0清单，完整来源身份及其余闸门仍严格。下文r3的“只规划”是编写时的历史状态，不撤销本次实施授权。具体记录见本文末节与训练档案。
 
 > **权威与授权**：只规划不实施。本版 r3 吸收固定版本对抗审查的 8 组阻断问题及验收订正；用户本轮确认「确定修改md demo原始帧是什么意思」，授权仅修改本文，不是代码实施、下载、建库、训练或上传的开工令。保留用户要求的 Markdown 与第一部分／第二部分结构。此前结构裁决为「你这个计划是什么情况？为什么写成现在这么乱七八糟的？我在这个仓库里面有 agent markdown，要求了你要第一部分、第二部分」，格式裁决为「你写一个 Markdown 的计划，然后我确认了再开始。」。
@@ -15,18 +16,18 @@
 
 **一句话**：用 MotionJEPA 阶段 III 最后一份 ckpt（ep105）的 EMA encoder，把 mixed8-200 每个 33 帧窗的 4×256 输出按源时间片 [0,3,5,8] 拼成 1 个 1024 维 token，步长从 16 改为 32、demo 尾窗补帧规则与原来一样、motion budget 96，离线建新 motion 库，训一条 8 卡 80k VLA（`mme_vla_suite_b128_80k`，测试直接取 60k）；边训边传 VLA ckpt，encoder／decoder ckpt 同期上传。不重过 Wan、不跑 4 token 对照臂；「帧路 1 帧＋motion」只作备选 run B 写进计划，不排进本次运行。
 
-执行顺序：先冻结 S1／S2／S4 共用来源 schema，明确 G0 抽样原帧来源；S1、S2、S3 并行开发，S1 合并推送后实施 S4。G0 通过后才全量抽取；打包后增加独立全表 encoder 比对，再接管 verify 锁；真实客户端对拍及20步保存回读通过后，才正式训练。MJ 上传可与准备阶段并行；VLA 60k 的交付以远端回读和严格恢复通过为准。
+执行顺序：先冻结 S1／S2／S4 共用来源 schema，明确 G0 抽样原帧来源；S1、S2、S3 并行开发，S1 合并推送后实施 S4。G0 通过后才全量抽取；打包后增加CPU全表字节/哈希核验及独立encoder 1,024窗抽样，再接管 verify 锁；真实客户端对拍及20步保存回读通过后，才正式训练。MJ 上传可与准备阶段并行；VLA 60k 的交付以远端回读和严格恢复通过为准。
 
 | 运行 | 内容 | 资源 | tmux | 判据 |
 |---|---|---|---|---|
-| 抽取＋打包 | 4,995 段恢复副本的偶数格窗；全表独立重算后 `verify --resume --check-padding` | GPU0，65,419 窗；打包 CPU | `cc-vla-s2-export`、`cc-vla-s2-pack` | G0–G3、G5、G6 |
+| 抽取＋打包 | 4,995 段恢复副本的偶数格窗；CPU全表核验及1,024窗encoder抽样后 `verify --resume --check-padding` | GPU0，65,419 窗；打包 CPU | `cc-vla-s2-export`、`cc-vla-s2-pack` | G0–G3、G5、G6 |
 | 短测 | 同配置 `MAX_STEPS=20`，随后严格恢复保存的 EMA 并推理 | 8 卡，运行预算见第二部分；超过5分钟保留诊断档案 | `cc-vla-s2-smoke` | G7 |
 | 正式训练 | run `mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k` | 8 卡 fsdp 8、batch 128 | `cc-vla-s2-train` | G8 |
 | VLA 上传 | 新 stage2 增量驱动先传根快照，再传 step；bucket `HongzeFu/robomme-vla-mixed8-200-modul-motion-stage2-1024-80k-v1` | CPU/网络；恢复测试另计 GPU | `cc-vla-s2-inc`、`cc-vla-s2-ckptup` | G9、G12 |
 | MJ 上传 | 阶段 II＋III ckpt → `HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1` | CPU/网络 | `cc-vla-s2-mjup` | G10 |
 | 备选 B（不在本次） | 帧路 1 帧／demo 任务 2 帧＋同一 motion 路，run `mixed8-200-m1x8x8-modul-motion-stage2-1024-b128-80k` | 8 卡 | — | G11 |
 
-**测速实测（2026-10-26 美东 12:43 起跑，`cc-speed8-motion-b128-20261026-a`，现有 motion 160×768 配置，8 卡 fsdp 8、batch 128）**：编译约 2 min，第 12→111 步 99 步95.3 s＝**0.96 s/步**，对4卡1.73 s/步加速1.80×。从正式训练起跑推算，60k约16.0 h、80k约21.4 h，不含编译、存盘和上传。准备阶段新增 G0 原帧来源与全表重算，耗时未知，原先“开工后20小时可取60k”的承诺撤回；交付时间还须加 G12 回读及恢复时间，以 G7 新配置测速更新。
+**测速实测（2026-10-26 美东 12:43 起跑，`cc-speed8-motion-b128-20261026-a`，现有 motion 160×768 配置，8 卡 fsdp 8、batch 128）**：编译约 2 min，第 12→111 步 99 步95.3 s＝**0.96 s/步**，对4卡1.73 s/步加速1.80×。从正式训练起跑推算，60k约16.0 h、80k约21.4 h，不含编译、存盘和上传。准备阶段新增 G0 原帧来源、CPU全表核验及encoder抽样，耗时未知，原先“开工后20小时可取60k”的承诺撤回；交付时间还须加 G12 回读及恢复时间，以 G7 新配置测速更新。
 
 **用户原话（逐字，2026-10-26）**：①「给出方案 用现在的最后一个ckpt训vla 4个256合并成1个token输入 然后窗口是32 不要再16重叠了 给出方案 然后注意 encoder inference 的时候别忘了 dropout 关掉 然后这个memory本身是不是不再做增强了 robomme官方policy repo怎么做的 然后再看一下wan是不是已经有缓存了」②「然后你一边训练，一边还要把现有的这个 encoder、decoder 的这个 checkpoint 是不是看一下是不是都上传了，然后边训练边上传 VIA 的 checkpoint。」③「你写一个 Markdown 的计划，然后我确认了再开始。」④「你写在 policy learning 的仓库里面，不要写在 motion Java 仓库，因为这个完全是 policy learning 仓库的事情。」⑤「然后这个 memory token 的预算是是九十六还是八十？然后我我然后我确认是用 EMA 权重，然后不跑这个不拼接的这个作为四个 token 的这么一个对照。」⑥「好的，先定为这个九十六，然后你要看一下现在这个 execution，就是 Robo M E 官方仓库的这个 evaluate 是最多是一千三百步，我记得是，然后这一千三百步会怎么影响我们的这个 evaluate 的情况？」⑦「然后你这个 padding 的这个工作还是要做的，就是 demo 的需要有 padding，还是要有一样的。」「你超过十六帧还是十七帧要有一个 padding 的这个，你也要写在这个计划里面。」⑧「计划写在根目录，bucket 随便你定，以后不要再来问了。」⑨「然后这次的这个修改从branch v4-256concat1开始」⑩「现在这个八十 K step 对应的是多少个小时？」「如果我只要这个六十 K 的这个位置，那么八卡会慢多少？然后四四卡会是什么情况？训训练我要训到八十 K，但是我测试我直接拿60k你什么时候能得到？」⑪「然后你可以现在就做一些简短的测试，然后把速度测测速的问题先告诉我，在 work tree 里面去实现。」⑫「然后这个巴卡的收益是多少？就是巴卡的收益达到两倍了吗？差了多少？」⑬「你再测一下，如果我同意把 batch size 拉满翻倍，就是会是什么样的情况？」「巴卡一二八现在这样可以解锁，你不用再测这个 batch 二五六了。然后这个再加一条 run，只作为备选，就先8卡跑。」「现在这个速度可以接受。」⑭「然后我之前说的这个 demo padding 的这个问题，就是填充填充帧的问题，你也要说一下，确保它实现了。我说的 fable 化的这个图是指的这个 memory token 没有满九十六的情况下，它是怎么影响计算的？」⑮「demo 补帧这个机制，不需要直接画，不需要画图，你只需要说一下它和原来是一样的就可以了。然后简单画一个数轴就可以，不用画 SVG」⑯「然后我还需要再加一个，再加一条跑，就是现在是八帧的八乘八的这个呃情况。然后我们相当于把这个八帧降到只有一帧。如果是 demo 的话，有 demo 的任务的话就是两帧。」
 
@@ -92,7 +93,7 @@ exec 段 len=100，min_real=33 → 合法起点 < 68：stride32 = 0 32 64，三�
 | MJ `src/motion_jepa/export/stage2_memory.py`（新）＋`scripts/stage2_memory_export.py`（CLI） | `load_ema_encoder`、`encode_windows` | 读恢复副本偶数格窗 → EMA encoder → (n,1024) 按 pack 契约落盘 | 不存在 | 产出 `motion-tokens-stage2/` |
 | `datastore/motion_store.py` | `LayoutSpec`、索引读写、`MotionMeta.load` | spec贯穿枚举、序列化、解析、metadata加载 | 旧三 layout 逐字节不变 | stride32，(1,1024)，每行4096 B |
 | `datastore/motion_adapter.py`、`training/framesamp_dataset.py`、`training/dataloader.py` | `motion_policy_spec`、`check_motion_contract`、stride 断言 | 新 readout `stage2_pool4_concat_v1`；stride 与 spec 比；绑 arch／state_key／sha | 不变 | 校验 stage2 身份 |
-| `scripts/dataset/pack_motion_store.py` | `cmd_pack`、`gather_provenance`、`cmd_verify` | 新layout覆盖行字节、SHA、来源schema；全表认证后接管锁 | 原合同 | 只取偶数格；完整来源链 |
+| `scripts/dataset/pack_motion_store.py` | `cmd_pack`、`gather_provenance`、`cmd_verify` | 新layout覆盖行字节、SHA、来源schema；CPU全表与encoder抽样认证后接管锁 | 原合同 | 只取偶数格；完整来源链 |
 | 新 yaml＋启动检查器＋专用导出驱动 | 新run合同 | 检查ep105／`#model`／新参数形状；两源MJ分目录；VLA传根快照 | 旧驱动原样 | 新run可启动、可恢复 |
 | 新 `wan_stage2/`＋`motion_protocol.py`、`motion_client.py`、`policy_config.py` | 协议与sidecar | 响应长度参数化；独立venv；历史VAE与当前encoder分组核验 | 旧协议默认3072 B、旧venv与比较规则 | 双端4096 B，真实非stub握手 |
 | `scripts/training/train.py` | `init_history_config` | stage2兼容身份随run快照保存 | 旧快照结构保留 | 验证所需来源证据可恢复 |
@@ -108,7 +109,7 @@ exec 段 len=100，min_real=33 → 合法起点 < 68：stride32 = 0 32 64，三�
 | G2 `WAN_EQUIV` | 恢复副本与训练输入数值一致 | 使用G0绑定的64窗，经MJ整33帧fp16路径重编 | 归一化误差在原K4阈内 |
 | G3 `EMA_SOURCE`、`EXPORT_PARITY` | 真加载EMA且导出路径相同 | 65个状态项核对及live负控；32个val aug0窗正确派生32×32掩码 | 权重身份与数值两条证据独立 |
 | G4 `ONLINE_OFFLINE_PARITY` | 完整在线链可用 | 非stub客户端实际venv／握手／IPC；64窗数值及增量窗口边界 | 同latent逐位；端到端≤1e-5；无协议截断、身份错配 |
-| G5 `ENCODER_BITEXACT`、`VERIFY_MOTION` | 库完整且编码正确 | 独立全表重算→认证→`verify --resume --check-padding` | 65,419行；749个demo补帧窗；段集合、SHA、padding全对 |
+| G5 `PACKED_TOKEN_BYTES`、`ENCODER_SAMPLE_BITEXACT`、`VERIFY_MOTION` | 库完整且抽样编码正确 | CPU全表字节/SHA＋每任务64窗共1024窗encoder独立重算→认证→verify | 65,419行存储完整、749尾窗与padding全对；encoder仅声明1024窗逐位一致 |
 | G6 `TRAIN_ES_BOUND` | 预算够 | 训练集与评估 1300 上限 | 最坏 ≤96 ⇒ 零截断 |
 | G7 `LAUNCH_CONTRACT`、`SMOKE_TRAIN`、`SAVE_LOAD` | 能训、能保存恢复 | 新合同预检；8卡20步；独立进程严格恢复EMA与一次在线推理 | 参数树完整、权重无丢项、快照／在线来源闭环 |
 | G8 训练 `EXIT_CODE=0` | 训完 | 日志尾行＋16 个 step 目录 | 80k 全部存盘，60k（测试用）与 79999 都在 |
@@ -121,13 +122,13 @@ exec 段 len=100，min_real=33 → 合法起点 < 68：stride32 = 0 32 64，三�
 |---|---|---|
 | 0 | 实施开工令；独立Astra high审查；锁定来源schema及G0样本来源 | 计划结构审查通过；来源缺口有明确处理状态 |
 | 1 | S1／S2／S3开发；S1 push后S4接线；逐块合审；MJ新导出预检后上传 | `PRE/POST_MERGE_REVIEW=PASS`；G10可并行 |
-| 2 | G0→抽取与G1–G3→pack→全表比较→verify→预算→真实在线对拍 | G0–G6通过 |
+| 2 | G0→抽取与G1–G3→pack→CPU全表核验与1,024窗encoder抽样→verify→预算→真实在线对拍 | G0–G6通过 |
 | 3 | 启动预检、20步训练及保存回读→Beta→正式训练并传根快照及step | G7通过才起跑，G8为正式完成 |
 | 4 | 60k上传后回读；资源条件满足时恢复验证；80k后全量验收与留档 | G12后交测试；G9、`HANDOFF_WRITE=PASS` |
 
 ## 六、子代理分工与合并（简述）
 
-拆四块，修改与审查代理均为Astra high：S1负责MJ导出；S2负责存储、来源schema及训练快照；S3负责新配置、启动和两类专用上传；S4负责协议、sidecar、全表比较及在线恢复验证。先确定共同schema，S1推送后S4锁定依赖；合并顺序S1→S2→S3→S4。每块独立worktree，合前审固定BASE/TIP，合后定向验证。运行另派Astra high且不改代码；备选S5不派。逐文件写集、验证入口、资源和运行顺序见第二部分。
+拆四块，修改与审查代理均为Astra high：S1负责MJ导出；S2负责存储、来源schema及训练快照；S3负责新配置、启动和两类专用上传；S4负责协议、sidecar、CPU全表核验/encoder抽样及在线恢复验证。先确定共同schema，S1推送后S4锁定依赖；合并顺序S1→S2→S3→S4。每块独立worktree，合前审固定BASE/TIP，合后定向验证。运行另派Astra high且不改代码；备选S5不派。逐文件写集、验证入口、资源和运行顺序见第二部分。
 
 # 第二部分（技术细节，供 agent 追踪）
 
@@ -218,8 +219,8 @@ def encode_windows(encoder, latents: torch.Tensor) -> torch.Tensor:
 - CLI新增`--layout {legacy,stage2}`、`--latent-grid-subsample`、`--stage2-validation`、`--stage2-source-pin`；legacy默认值及旧行为不变，stage2强制subsample=2及有效G0/G2/G3记录、来源pin。所选`layout/spec`贯穿`cmd_pack`、索引、`read_segment_tokens`、写游标、总字节检查、metadata；所有stage2行使用`spec.row_bytes=4096`，不能再用全局`MOTION_ROW_BYTES=8192`或旧行形状。
 - `gather_provenance`按上表新增stage2分支：全文件SHA覆盖全部latent块，单独核偶数块SHA和`source_grid`；历史VAE继续用`load_vae_compat`，encoder改绑S1 pin及EMA状态，不再经过旧`wan-latent-v10-st/#encoder`断言。原始`raw_dir`作为历史身份保留；本轮原帧来源另列G0清单，不能把分段H5目录伪写成原`raw_dir`。
 - `verify --check-padding`：新行j转抄旧`rows[2*j]`；`real+pad==33`；pad>0只在demo末窗且补源为全域段末帧；pad=0要求补源null；demo至少17真实帧，exec全33帧。段键集合必须精确等于manifest推导的非零段集合，5个合法零窗episode仍保留索引。
-- 不删`check_bitexact_record`：pack清除旧认证后，由S4新全表比较器独立读取latent、重算encoder并比较当前packed表，写绑定当前table/index/ckpt SHA、layout和source-grid的`meta/encoder_bitexact.json`。缺记录、记录只覆盖样本、SHA过期均拒绝verified。
-- 顺序必须为`pack → compare_stage2.py --scope full → verify --resume --check-padding`。`--resume`只用于已完成pack留下的同机锁阶段交接；存活pack进程、异机锁仍拒绝，不使用强制破锁。
+- 不删`check_bitexact_record`：pack清除旧认证后，由S4新比较器先在CPU核全部token字节/文件SHA，再独立读取分层1,024窗latent重算encoder并比较对应packed行，写绑定当前table/index/ckpt SHA、layout和source-grid的`meta/encoder_bitexact.json`。缺记录、未按新schema明确标记抽样、CPU未覆盖全表或SHA过期均拒绝verified。
+- 顺序必须为`pack → compare_stage2.py --scope sampled → verify --resume --check-padding`。`--resume`只用于已完成pack留下的同机锁阶段交接；存活pack进程、异机锁仍拒绝，不使用强制破锁。
 - 测试新增`tests/dataset/test_pack_motion_stage2.py`：至少两个非空段的真实pack/compare记录校验/verify/load链，含demo100的3行及4096B偏移；旧三layout输出逐字节回归；错SHA、少段、多段、错误padding、部分认证均失败。
 
 **S2 `scripts/training/train.py`**：在`init_history_config`的stage2分支保存上述六组完整来源及引用验证记录，根快照写毕再以原子标记`motion_snapshot.ready.json`发布各文件SHA（该清单不含自身，上传外层manifest再记录它的SHA）；S3增量驱动等待此标记且不上传半写文件。另在`main`保存checkpoint的stage2短测记录分支，使用保存前的内存EMA生成fp32状态摘要与固定输入／seed／推理精度参考，写入`FINAL_RECORD_DIR`，供S4独立恢复检查；参考不能从已恢复权重反算，不能只依赖正式训练最后一步的`_finalize_record`。正式60000不要求新增此参考钩子，G12用发布清单核SHA和严格恢复。旧run快照与训练数学路径不变。新增`tests/training/test_stage2_snapshot.py`验证六组来源无丢失、缺字段失败、原子清单和短测参考SHA一致。
@@ -265,7 +266,7 @@ motion:
 - `src/mme_vla_suite/policies/motion_client.py`：`MotionEncoderClient.__init__` 增 `encoder_kind: str = "v10"`。现有`MotionEncoderClient.__init__`用正则 `([A-Za-z0-9][A-Za-z0-9_.-]*)/(checkpoint_epoch_\d+\.pt)#encoder` 解析 `source_run`，并把 encoder 目录强制推成 `v1-store/external/motionjepa/<run>`。`"stage2_pool4_concat"` 分支：正则尾部改为接受 `#model`；目录同样推为 `v1-store/external/motionjepa/stage2-full144-1025-a`，该目录是注册副本（R15：实体复制 `checkpoint_epoch_105.pt` 与 `config.yaml`，sha256 与 MJ 原件一致，与现有 `wan-mixed8-200-filter2-stop075-b88x8-72ep-a/` 等目录同体例）；argv 用 `--project scripts/dataset/wan_stage2 … stage2_sidecar.py --ckpt <注册副本>/checkpoint_epoch_105.pt --expected-sha256 <sha>`，期望回包维度 1024。`"v10"` 分支逐字不变。
 - stage2客户端同时设置`UV_PROJECT_ENVIRONMENT=<v1-store>/venvs/wan-stage2`，核对实际导入的S1提交；仅换`--project`而沿用旧venv会失败。`check_provenance`按encoder_kind选择必填字段集合，历史VAE→当前实现的启动兼容合同由固定receipt／当前pin／G2证据建立，最终由G4验证实际在线路径；G2不能单独证明在线端到端一致。禁止篡改历史SHA或全局跳过比较。
 - `policy_config.py::create_trained_policy`传`encoder_kind`及完整stage2兼容合同，不再只保留vae/encoder两组。`framesamp_memory.py`、`policy.py`、`examples/robomme/utils.py::pack_buffer`维持主run原实现；其stride、维度、增量保留共享边界帧已参数化，新增测试覆盖而不重复实现窗口算法。
-- 新`wan_stage2/compare_stage2.py`独立重算65,419行，CLI为`--store --latents --ckpt --expected-sha256 --scope full --batch 1`；只读packed表和源latent，不以token文件对表的memcmp冒充encoder重算。全表通过才原子写`meta/encoder_bitexact.json`；失败不得保留PASS认证。
+- `wan_stage2/compare_stage2.py`本次使用`--scope sampled --batch 1`：CPU逐行比较全部65,419行与S1 token并核所有文件SHA，GPU固定seed0、16任务各64窗共1,024窗独立重算；使用`motion_store.stage2_encoder_sample_plan`统一选择，优先各段类型首末、补帧与非补帧demo/exec。认证为`stage2-encoder-sampled-v1`、scope=sampled，记录全CPU覆盖、样本集合/SHA/覆盖及来源绑定；失败不得保留PASS。原full能力保留但本次不执行。verify将认证原文及SHA写入stage2_compat.encoder_validation，随既有12文件快照交付。
 - 新`wan_stage2/validate_stage2.py --gate G2|G3 --samples --ckpt --expected-sha256 --out`在torch子环境运行数值对拍；G3额外接`--rgb-root`。新主环境入口`scripts/training/check_stage2_online.py --store --samples --history --online-gpu 0 --out`经真实`MotionEncoderClient(stub=False)`完成G4；对拍GPU覆盖只用于内存配置副本，原yaml及SHA不改。需要torch的同latent子检查由锁定子环境执行，不能在主JAX环境临时安装torch依赖。
 - 新`scripts/training/check_stage2_checkpoint.py`分两模式：`--mode smoke --checkpoint --reference --out`用于G7，必须与保存前EMA摘要及同精度／seed／输入的参考输出精确比较；`--mode delivery --checkpoint --expected-manifest --out`用于G12，对发布清单全部文件核SHA、完整参数树／来源／有限值核验与真实推理，不声称60000做了不存在的保存前对拍。两模式都实际调用`create_trained_policy`、原`pack_buffer`、首批demo、连续两批exec、reset和一次infer；均接受`--online-gpu`。G7/G12在训练释放资源后，父进程`CUDA_VISIBLE_DEVICES=0`、sidecar显式`--online-gpu 1`，记录并核实际物理卡号；若在独立获准机器执行则同样明确分配。需要的来源记录和权重由交付清单提供。
 - 测试`tests/policies/test_motion_client_stage2.py`覆盖连续至少3窗完整IPC、4096B无残包、3072/4096混接拒绝、非stub来源字段缺失／错SHA拒绝、stage2环境选择；`tests/policies/test_stage2_restore.py`覆盖快照恢复及窗口状态机。旧默认argv与协议字节保持与BASE相同。
@@ -292,17 +293,17 @@ motion:
 | S1 | MJ新`export/__init__.py`、`stage2_memory.py`、CLI、`test_stage2_memory_export.py` | 其余MJ文件及runs | EMA加载、encode_windows、stage2来源schema | 1，主会话推送新分支 | MJ worktree，R12环境：对应pytest；导入不依赖scripts | CPU；唯一写者 |
 | S2 | `motion_store.py`、`motion_adapter.py`、`framesamp_dataset.py`、`dataloader.py`、`pack_motion_store.py`、`train.py`；新原帧前置检查CLI；一节B所列存储／loader／pack／snapshot测试 | R8及表外文件 | spec全链路、来源schema、run快照原子ready清单、G0 | 2 | policy worktree，R12：新测试＋旧datastore定向回归；pack→verify→loader夹具PASS | CPU；全部存储与train.py唯一写者 |
 | S3 | 新yaml、启动sh与检查器；一节B所列新VLA增量／最终／公共体、MJ驱动、两README／allowlist、`test_stage2_export_contract.py` | R8；其它src代码；旧导出公共体 | S2来源字段与ready清单，S4恢复检查CLI | 3；依赖S2 | policy worktree：新sh全部bash -n；合同测试；合入后真实启动预检及两个SMOKE=1 | CPU；配置与新导出目录文件唯一写者 |
-| S4 | 新`wan_stage2/**`；`motion_protocol.py`、`motion_client.py`、`policy_config.py`；新`check_stage2_online.py`、`check_stage2_checkpoint.py`；两份policy测试 | R8；framesamp_memory.py／policy.py原实现 | S1已推送提交、S2完整schema；协议双端4096B；G2/G3/G4及全表比较 | 4 | policy worktree：IPC／恢复测试；独立子项目uv lock；真实GPU闸门由运行代理跑 | CPU开发；客户端、协议与恢复检查唯一写者 |
+| S4 | 新`wan_stage2/**`；`motion_protocol.py`、`motion_client.py`、`policy_config.py`；新`check_stage2_online.py`、`check_stage2_checkpoint.py`；两份policy测试 | R8；framesamp_memory.py／policy.py原实现 | S1已推送提交、S2完整schema；协议双端4096B；G2/G3/G4及CPU全表核验/encoder抽样 | 4 | policy worktree：IPC／恢复测试；独立子项目uv lock；真实GPU闸门由运行代理跑 | CPU开发；客户端、协议与恢复检查唯一写者 |
 | S5 | 备选B，见九节 | 未获授权不派 | 不在主run范围 | 另行授权 | G11 | 无 |
 | RV-S1…S4 | 只读合前审 | 全部写入 | 固定REVIEW_BASE／REVIEW_TIP | 每块合前 | PRE_MERGE_REVIEW；合后主会话POST_MERGE_REVIEW | 不占GPU |
 | 主会话 | yaml最终SHA、launch/result/records、获准的handoff | 不替运行代理静默改代码 | 实际闸门证据、权限清单、资源账目 | 分阶段 | 范围检查、判定行、提交记录 | 共享写权归属裁决 |
-| X1 | G0、抽取、数值对拍、pack／全表比较／verify、注册副本；只写validation、tokens、motion-stage2-1024、external注册目录、日志与records | 所有代码和源数据 | 四节0–4，S1–S4已合入对应阶段 | 正式训练前串行 | 首份metadata／首个判定行；G0–G6 | GPU0；主会话管预算 |
+| X1 | G0、抽取、数值对拍、pack／CPU全表核验与encoder抽样／verify、注册副本；只写validation、tokens、motion-stage2-1024、external注册目录、日志与records | 所有代码和源数据 | 四节0–4，S1–S4已合入对应阶段 | 正式训练前串行 | 首份metadata／首个判定行；G0–G6 | GPU0；主会话管预算 |
 | X2 | 短测、保存回读、正式训练、VLA增量／最终上传、G12；只写专属run／records／exports | 所有代码、旧run | 四节5–9；训练step1 loss有限为起跑判据 | G0–G6后 | G7／G8／G9／G12 | 短测和正式训练GPU0–7；恢复按R16排队 |
 | X3 | MJ新驱动预检与上传；只写专属export与日志 | 所有代码、源checkpoint | 四节1，两源manifest固定 | S3后可并行 | MJ_CKPT_UPLOAD；SMOKE通过后才触网 | CPU／网络 |
 
 合并前后均核写集与R5旧文件零diff；`--no-ff`保留子提交。所有接口改动和新增入口必须在表内；实现中发现共同schema不足时先同步相关块并重新审查，不能由运行代理临时补代码。
 
-运行预算：X1先4段抽取冒烟≤5分钟，完整抽取与全表重算各上限2小时，G2–G4合计上限2小时；X2短测训练与保存回读合计上限30分钟，正式训练上限30小时；X3／VLA最终上传最长24小时。均是拟定预算而非耗时承诺；长任务在列名tmux内跑，记录确定commit／命令／资源／日志／退出码。阶段预算将到时报告，不自动扩大；失败不自动重跑训练或抽取，网络仅对已定同一对象最多3次尝试、每次间隔60秒，超限留证停止。运行代理起跑后交回句柄，监听及清理由主会话负责。
+运行预算：X1先4段抽取冒烟≤5分钟，完整抽取上限2小时；CPU全表核验与encoder抽样沿用原2小时上限（不扩大预算，GPU仅1,024窗），G2–G4合计上限2小时；X2短测训练与保存回读合计上限30分钟，正式训练上限30小时；X3／VLA最终上传最长24小时。均是拟定预算而非耗时承诺；长任务在列名tmux内跑，记录确定commit／命令／资源／日志／退出码。阶段预算将到时报告，不自动扩大；失败不自动重跑训练或抽取，网络仅对已定同一对象最多3次尝试、每次间隔60秒，超限留证停止。运行代理起跑后交回句柄，监听及清理由主会话负责。
 
 ## 三、闸门总表
 
@@ -315,7 +316,7 @@ motion:
 | G2 | 新`validate_stage2.py --gate G2`按MJ `wan_fp16_full33.py`真实整33帧fp16编码口径，对G0样本与恢复副本按latents_std归一化比较 | `WAN_EQUIV=PASS windows=64 demo_tail=<n> worst_mse=<x> worst_max=<y>`；x≤1e-6、y≤0.01；阈值不放宽 |
 | G3 | `--gate G3`：val aug0、seed0取32窗；reader返回common_valid／xyz_valid后经`derive_geometry_masks`生成32×32 bool geometry_valid并断言全真；两路径对拍 | `EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1`；`EXPORT_PARITY=PASS windows=32 seed=0 max_abs=0 geometry_all_true=1 ckpt_sha256=<64>` |
 | G4 | `check_stage2_online.py`：真实非stub客户端；同latent编码子检查；G0原图端到端；stub反推frame_ids；demo首批＋连续exec＋reset状态机 | `ONLINE_OFFLINE_PARITY=PASS windows=64 handshake=1 response_bytes=4096 encoder_max_abs=0 e2e_max_abs=<x> frame_ids_mismatch=0 state_machine_mismatch=0`；x≤1e-5 |
-| G5a | `compare_stage2.py --scope full`独立重算packed表，绑定table/index/ckpt/source-grid | `ENCODER_BITEXACT=PASS compared=65419 mismatches=0`；只有全表成功才写认证记录 |
+| G5a | `compare_stage2.py --scope sampled`：CPU全量字节/SHA；GPU独立重算分层1,024窗，绑定table/index/ckpt/source-grid | `PACKED_TOKEN_BYTES=PASS compared=65419 mismatches=0`；`ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=65419 mismatches=0 seed=0`；两项均成功才写scope=sampled认证 |
 | G5b | `pack_motion_store.py verify --resume --check-padding` | `VERIFY_MOTION=PASS scanned=65419 mismatches=0 nonfinite=0 segment_set_mismatch=0 real_plus_pad_ne_33=0 exec_padded=0 pad_not_last_demo=0 pad_source_mismatch=0 demo_tail_padded=749`；记录≤16帧丢弃的尾部数量，合法零窗5段按身份核对 |
 | G6 | 新loader零截断预检＋manifest精确公式复算 | `TRAIN_ES_BOUND=PASS train_max=62 eval_max=79 budget=96`；任何输入变化需重算，不改预算逃避超窗 |
 | G7 | 新启动检查→8卡20步→`check_stage2_checkpoint.py`恢复step19；保存前生成EMA参数及固定输入参考 | `LAUNCH_CONTRACT=PASS`；`SMOKE_TRAIN=PASS steps=20 loss_finite=1 oom=0 sec_per_step=<x>`；`SAVE_LOAD=PASS missing=0 extra=0 shape_mismatch=0 ema_mismatch=0 reference_output_max_abs=0 online_infer=1`；参考两侧同精度／seed／输入 |
@@ -349,7 +350,7 @@ export UV_CACHE_DIR=/scratch/hongze/.cache/uv
 0. **G0与身份固定**：S2入口读取`$D/meta/episode_manifest.json`、`$LAT`、`$D/source`与一节C的demo根，写`$VALID/windows.json`；逐窗输入SHA全部通过后才全量抽取。先算上面的checkpoint SHA，G3重复核验并写入yaml，避免抽取入口要求SHA但计划到G3才首次计算。源文件缺失只报告，不自动下载。
 1. **依赖安装与MJ上传**：S1推送新分支后S4锁定40位提交；`UV_PROJECT_ENVIRONMENT="$V/venvs/wan-stage2" uv sync --project scripts/dataset/wan_stage2`，先核import来源。S3的两个`SMOKE=1`驱动完成本地合同预检；MJ新bucket检查不存在后，`cc-vla-s2-mjup`运行`run_stage2_pool4_encoder_ckpt_export.sh`并监听G10。VLA驱动的全量预检在其源step齐全后执行，训练前只演练夹具与根文件合同，不要求尚不存在的16份正式ckpt。
 2. **抽取、G1–G3**：在MJ路径运行`uv run --no-sync python scripts/stage2_memory_export.py --ckpt "$CKPT" --expected-sha256 "$CKPT_SHA" --latents "$LAT" --manifest "$D/meta/episode_manifest.json" --out "$D/motion-tokens-stage2" --grid-subsample 2 --batch 1 --check-dropout 64`，GPU0、tmux `cc-vla-s2-export`。4段冒烟先使用不同输出根。随后在锁定torch子环境执行`validate_stage2.py --gate G2`及`--gate G3`；前者引用`$VALID/windows.json`，后者读`/scratch/hongze/dataset-rgb-gtxyz-16views-stride2-v1`。两门输出`$VALID/G2.json`／`G3.json`并固定SHA；G3几何掩码按三节派生，禁止从错误masks目录取32×32数据。
-3. **打包→全表比较→verify**：主环境执行`pack_motion_store.py pack --layout stage2 --latent-grid-subsample 2 --manifest "$D/meta/episode_manifest.json" --tokens "$D/motion-tokens-stage2" --latents "$LAT" --out "$D/motion-stage2-1024" --encoder-run-dir "$MJ/runs/stage2-full144-1025-a" --raw-dir <历史receipt绑定的原目录标识> --restore-receipt "$RESTORE/restore_receipt.json" --expected-ckpt-sha256 "$CKPT_SHA" --stage2-validation "$VALID" --stage2-source-pin scripts/dataset/wan_stage2/SOURCE_PIN.json`；后两个是S2新增stage2专用参数。pack成功退出后，在torch子环境用S4 `compare_stage2.py --store "$D/motion-stage2-1024" --latents "$LAT" --ckpt "$CKPT" --expected-sha256 "$CKPT_SHA" --scope full --batch 1`写认证；回主环境`verify --store "$D/motion-stage2-1024" --resume --check-padding`。同一`cc-vla-s2-pack`顺序执行，任一失败不进入下一步；随后G6。
+3. **打包→CPU全表核验＋encoder抽样→verify**：主环境执行`pack_motion_store.py pack --layout stage2 --latent-grid-subsample 2 --manifest "$D/meta/episode_manifest.json" --tokens "$D/motion-tokens-stage2" --latents "$LAT" --out "$D/motion-stage2-1024" --encoder-run-dir "$MJ/runs/stage2-full144-1025-a" --raw-dir <历史receipt绑定的原目录标识> --restore-receipt "$RESTORE/restore_receipt.json" --expected-ckpt-sha256 "$CKPT_SHA" --stage2-validation "$VALID" --stage2-source-pin scripts/dataset/wan_stage2/SOURCE_PIN.json`；后两个是S2新增stage2专用参数。pack成功退出后，在torch子环境用S4 `compare_stage2.py --store "$D/motion-stage2-1024" --latents "$LAT" --ckpt "$CKPT" --expected-sha256 "$CKPT_SHA" --scope sampled --batch 1`写认证；回主环境`verify --store "$D/motion-stage2-1024" --resume --check-padding`。同一`cc-vla-s2-pack`顺序执行，任一失败不进入下一步；随后G6。
 4. **注册副本与G4**：实体复制ep105和config到`$V/external/motionjepa/stage2-full144-1025-a/`并核SHA；禁止覆盖已有不同身份副本。主环境执行`check_stage2_online.py --store "$D/motion-stage2-1024" --samples "$VALID/windows.json" --history <新yaml绝对路径> --online-gpu 0 --out "$VALID/G4.json"`，tmux `cc-vla-s2-parity`；父进程也仅暴露GPU0，核对sidecar实际物理卡号，不能仅依赖父进程环境覆盖yaml的online_gpu=4。主会话填yaml SHA并提交，准备clean HEAD短测。
 5. **G7短测与保存回读**：`RUN_NAME=cc-vla-s2-smoke-<美东MMDDHHMM> MAX_STEPS=20 TRAIN_HEAD=<40位clean HEAD> FINAL_RECORD_DIR="$V/validation/stage2-memory/smoke/final-record" bash scripts/training/run_mixed8_stage2_1024_80k.sh`，tmux `cc-vla-s2-smoke`。训练退出后释放8卡，独立进程用`check_stage2_checkpoint.py --mode smoke --checkpoint <step19绝对路径> --reference <保存前参考清单> --online-gpu 1 --out <报告路径>`，父JAX卡为物理GPU0，完成真实online推理再记G7。保留判定与摘要；总运行≤5分钟且验收结束才能删除自有临时run，超过5分钟按诊断run留档，不无条件删除。
 6. **Beta与正式起跑**：建launch与tmux清单，完成G0–G7及导出合同测试后打Beta；填写真实SHA，clean HEAD、HOLD及只读锁就绪后，以`RUN_NAME="$RUN" TRAIN_HEAD=<Beta完整SHA> FINAL_RECORD_DIR="$V/validation/stage2-memory/$RUN/final-record" bash scripts/training/run_mixed8_stage2_1024_80k.sh`在`cc-vla-s2-train`起跑。首个loss有限才确认启动。短测的CUDA／数据／模型参数与正式相同，仅run、步数和记录路径不同。
@@ -357,7 +358,7 @@ export UV_CACHE_DIR=/scratch/hongze/.cache/uv
 8. **60k回读与G12**：`cc-vla-s2-ready60`等待step60000及根清单，按依赖清单回读到隔离目录，验证SHA。GPU恢复检查遵守R16，不占用正式训练8卡；有已授权独立空闲资源则可提前，否则G8后执行。`check_stage2_checkpoint.py --mode delivery --checkpoint <回读step60000> --expected-manifest <发布清单> --online-gpu 1 --out <报告路径>`严格恢复并真实推理通过才写G12、通知可测试；父JAX卡为物理GPU0。依赖清单须包含可取得的encoder注册件、源码pin与VAE身份，不能依赖上传机器隐藏文件。benchmark任务另行授权。
 9. **正式收尾与全量上传**：G8后解除冻结与权限锁；`cc-vla-s2-ckptup`跑VLA最终驱动`SMOKE=1`再全量，复用同一EXPORT_NAME及上传标记。G9对16步与根文件全量匿名SHA回读。写result与records，依R13清理已核自有测速残留；状态机按十节交接。
 
-每份日志一个事件监听：训练关注`EXIT_CODE=|Traceback|out of memory|Killed|NaN|step [0-9]+000`；数据关注`RAW_WINDOWS_READY=|STAGE2_EXPORT=|EMA_SOURCE=|ENCODER_BITEXACT=|VERIFY_MOTION=|FAIL`；上传与恢复关注`ROOT_UPLOAD=|INC_END|CKPT_60K_READY=|CKPT_UPLOAD=|MJ_CKPT_UPLOAD=|EXIT_CODE=|FAIL`。监听进程不负责修代码或静默重试。
+每份日志一个事件监听：训练关注`EXIT_CODE=|Traceback|out of memory|Killed|NaN|step [0-9]+000`；数据关注`RAW_WINDOWS_READY=|STAGE2_EXPORT=|EMA_SOURCE=|PACKED_TOKEN_BYTES=|ENCODER_SAMPLE_BITEXACT=|VERIFY_MOTION=|FAIL`；上传与恢复关注`ROOT_UPLOAD=|INC_END|CKPT_60K_READY=|CKPT_UPLOAD=|MJ_CKPT_UPLOAD=|EXIT_CODE=|FAIL`。监听进程不负责修代码或静默重试。
 
 ## 五、风险登记
 
@@ -380,10 +381,10 @@ export UV_CACHE_DIR=/scratch/hongze/.cache/uv
 - `mem_encoder.py` 的 `FeatureEncoder.encoder_static` 为 Linear(2048+768→1024) 是读代码推断，未运行核对；motion 路 Linear(1792→1024) 同样未实例化验证，由 G7 的参数树打印核对。
 - encoder 在 mixed8 上的表征质量未知（域外，见风险）。
 - 原始帧当前只验证了2个demo尾窗；完整G0的64窗、G2/G4数值对拍仍未执行，本地1800份H5数量不替代逐窗同源验证。
-- 抽取与新增全表重算耗时未实测；各65,419窗、B=1，准备ETA须实测后更新。
+- 全量抽取已实测1,010秒；原全量encoder复核按用户裁决停止（退出130，日志已记录至少17,408行一致），不作全量PASS。新CPU全表＋1,024窗encoder抽样耗时待实测。
 - G4(b) 端到端阈值 1e-5 沿用草稿，未在 stage2 encoder 上实测；若 FAIL 先查 VAE 段，不改阈值。
 - G3几何掩码必须经`derive_geometry_masks(common_valid, xyz_valid)`转换；真实库的共同几何位图在shards，`masks/`只有source_valid。不能把reader返回的256×256掩码直接送给32×32的encoder接口。
-- 本轮改的是实施计划；新增来源schema、协议、全表比较、启动与导出驱动均未实现，不能宣称8组代码阻断已修复或G0–G12已通过。
+- 原r3的未实施说明属于历史；当前以运行档案与最新用户裁决为准。新抽样承接仍须合审实跑，不能把代码已实现当作G4/G5/G6/G7/G8/G9/G12已通过。
 - 补位调制：MemoryAttention 输出 `mem_mod_vec` 经 `MemoryRMSNorm`（`history_gemma.py`）作用于 action expert FFN 前后，紧随其后的 `pre_ffw_norm`（`pre_ffw_norm`）再做一次 RMS 归一化，调制效果受二次归一化影响；这是既有设计，本计划不改、不实测。
 - **草稿订正**：① qstats 是 state decoder 的分位数统计（MJ `dataset_paired_wan.py::fit_state_qstats`），encoder affine 用 ckpt 内 `latents_mean/std` buffer；② 客户端 `pack_buffer` 只打包帧，窗口枚举在服务端且已读 yaml，零改动；③ 6.9e-8 的出处是 `1024-rgb-gtxyz-16views-stride2-plan.md` 的K4数值对拍记录，不是 `round4-fp16.md`；④ stage2 encoder `forward` 需要 `geometry_valid`，定为全 True；⑤（r2）抽取函数放 `src/motion_jepa/export/`，因 `scripts/` 不进包；⑥（r2）encoder 目录用注册副本而非软链（R15）。
 
@@ -435,7 +436,7 @@ export UV_CACHE_DIR=/scratch/hongze/.cache/uv
 ## 十一、留档与 commit 纪律
 
 - S1–S4 各经 `--no-ff` 合并占一个项目号（policy `commitV11.38` 起；MJ 接续其 `commitV*` 最近号），子代理提交 `sub/S<n>: <中文>`、body 三项；合并提交 body 按第 11 条六项，含本计划一节全部用户原话。
-- 训练留档`docs/training-doc/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/{launch.md,result.md,records/}`；records保存G0–G10／G12摘要、G0样本来源与SHA、全表认证、抽取记录、清洗日志及测速表，不放原图／中间张量／权重／脚本／yaml。运行时恢复所需快照与验证证据留在run及export中，随交付清单上传。launch记录全部预算、tmux、真实起跑版本及测速残留删除条件。MJ仓不由本会话写状态。
+- 训练留档`docs/training-doc/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/{launch.md,result.md,records/}`；records保存G0–G10／G12摘要、G0样本来源与SHA、CPU全表与encoder抽样认证、抽取记录、清洗日志及测速表，不放原图／中间张量／权重／脚本／yaml。运行时恢复所需快照与验证证据留在run及export中，随交付清单上传。launch记录全部预算、tmux、真实起跑版本及测速残留删除条件。MJ仓不由本会话写状态。
 - Beta与正式commit同小版本号、两个独立commit，禁止squash/amend；提交按仓库规则推送。当前policy分支无upstream，首次建立远端跟踪须确认；纯MD修订不因此变成实施开工令。
 - 本轮 tmux 清单（R7）写进 `launch.md`；结束按清单逐个清理。
 
@@ -447,3 +448,5 @@ export UV_CACHE_DIR=/scratch/hongze/.cache/uv
 - pack、在线、快照、上传与恢复显式识别同一例外；快照沿用G2证据键与原12文件结构，保存WAIVED原字节及嵌入的FAIL原文，不能伪写PASS。`G2_EXCEPTION_DESIGN_REVIEW=PASS`。
 - G3已于美东15:23:32至15:24:04单次通过：`EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1`；`EXPORT_PARITY=PASS windows=32 seed=0 max_abs=0 geometry_all_true=1`，退出0。G10两源35文件7.55GB已匿名SHA回读通过。
 - 初始数据Beta `7ff55d6` 与S1源 `b5d23a5` 保留；后续例外处理另经合前/合后验收形成新版本，不改已抽取token或S1数值代码。备选B与benchmark仍不在范围内。
+
+- **G5省时裁决**：用户原话「同意按照你说过的更省时方案 做\nencoder只抽机小部分」「同意继续」。原全量比较已按精确PID停止，退出130、GPU和encoder锁释放；packed表SHA `8de36e670d58c60859d48b37f29c989f2eed45344f5cd5fb2f7a96126394ee5c` 保留，不重pack或重抽。新策略固定seed0、16任务各64个唯一样本；补帧8是优先配额，随机补齐可选更多尾窗。`SAMPLED_G5_DESIGN_REVIEW=PASS`；认证内容、SHA、抽样范围随run与交付保留，不能冒充全表encoder数值验证。
