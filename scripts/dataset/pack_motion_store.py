@@ -877,8 +877,13 @@ def cmd_verify(args) -> None:
             raise ValueError("verify source_grid 摘要与当前索引不符")
         if ms.sha256_file(pathlib.Path(meta.provenance["latents_root"]) / "metadata.json") != meta.provenance["latents_metadata_sha256"]:
             raise ValueError("verify 历史总 metadata 已变动")
+    certification = certification_bytes = None
     if stage2 or meta.provenance.get("vae_compat") is not None:
-        check_bitexact_record(store_root, meta.raw)
+        certification = check_bitexact_record(store_root, meta.raw)
+        if stage2:
+            certification_bytes = (store_root / BITEXACT_RELPATH).read_bytes()
+            if json.loads(certification_bytes) != certification:
+                raise RuntimeError("verify: encoder认证在读取期间改变")
     if stage2:
         for label, evidence in meta.provenance["stage2_compat"]["evidence"].items():
             if ms.sha256_file(evidence["path"]) != evidence["sha256"]:
@@ -920,6 +925,12 @@ def cmd_verify(args) -> None:
                      "conclusion": f"VERIFY_MOTION=PASS scanned={scanned} mismatches=0"}
     if stage2:
         raw["verify"].update(padding, nonfinite=0, segment_set_mismatch=0)
+        if (store_root / BITEXACT_RELPATH).read_bytes() != certification_bytes:
+            raise RuntimeError("verify: encoder认证在全表CPU校验期间改变")
+        summary = _encoder_validation_summary(certification_bytes, certification, meta.num_rows, scanned)
+        ms.validate_stage2_encoder_validation(summary, raw["provenance"], total_rows=meta.num_rows,
+                                              table_sha256=meta.table_sha256, index_sha256=meta.motion_index_sha256)
+        raw["provenance"]["stage2_compat"]["encoder_validation"] = summary
     raw["row_digests"] = {"relpath": ms.ROW_DIGESTS_RELPATH, "algo": "blake2b-128", "covered_rows": scanned,
                           "coverage": ms.ROW_DIGEST_COVERAGE, "byte_count": len(digests),
                           "sha256": hashlib.sha256(bytes(digests)).hexdigest()}
@@ -930,6 +941,17 @@ def cmd_verify(args) -> None:
           flush=True)
     details = " nonfinite=0 segment_set_mismatch=0 " + " ".join(f"{k}={v}" for k, v in padding.items()) if stage2 else ""
     print(f"VERIFY_MOTION=PASS scanned={scanned} mismatches=0{details}")
+
+
+def _encoder_validation_summary(raw_bytes, record, total_rows, packed_compared):
+    """保留认证完整UTF8原文；CPU覆盖来自verify实际扫描计数。"""
+    summary = dict(scope=record["scope"], encoder_compared=record["compared"], total_rows=total_rows,
+                   packed_compared=packed_compared, record_sha256=ms.sha256_bytes(raw_bytes),
+                   record_json=raw_bytes.decode("utf-8"))
+    if record["scope"] == "sampled":
+        summary.update(sample_indices_sha256=record["sample_indices_sha256"],
+                       authorization_quote=record["authorization_quote"])
+    return summary
 
 
 def check_bitexact_record(store_root: pathlib.Path, raw_meta: dict) -> dict:
@@ -949,9 +971,38 @@ def check_bitexact_record(store_root: pathlib.Path, raw_meta: dict) -> dict:
             raise RuntimeError("verify: 当前表与认证所绑定的 SHA 不符")
         if ms.sha256_file(store_root / ms.INDEX_RELPATH) != raw_meta["motion_index_sha256"]:
             raise RuntimeError("verify: 当前索引与认证所绑定的 SHA 不符")
+        if rec.get("scope") == "sampled":
+            entries = ms.parse_index(_load_json(store_root / ms.INDEX_RELPATH))
+            plan = ms.stage2_encoder_sample_plan(entries)
+            prov = raw_meta["provenance"]
+            metadata_path = pathlib.Path(prov["latents_root"]) / "metadata.json"
+            if ms.sha256_file(metadata_path) != prov["latents_metadata_sha256"]:
+                raise RuntimeError("verify: 当前源metadata与抽样认证不同")
+            want.update(schema="stage2-encoder-sampled-v1", scope="sampled", compared=1024,
+                        total_rows=int(raw_meta["num_rows"]), packed_compared=int(raw_meta["num_rows"]),
+                        packed_mismatches=0, source_metadata_sha256=prov["latents_metadata_sha256"],
+                        source_tokens_manifest_sha256=ms.sha256_file(pathlib.Path(prov["tokens_root"]) / "export_record.json"),
+                        segments=sum(1 for _ in iter_rows_in_order(entries)),
+                        authorization_quote=ms.STAGE2_SAMPLE_AUTHORIZATION, **plan)
+            for group in ("encoder_state_sha256", "numerics"):
+                if ms.canonical_json_bytes(rec.get(group)) != ms.canonical_json_bytes(prov[group]):
+                    raise RuntimeError(f"verify: 抽样认证{group}与当前来源不符")
     bad = [k for k, v in want.items() if type(rec.get(k)) is not type(v) or rec[k] != v]
     if bad:
         raise RuntimeError(f"verify: 逐位比较记录与当前表不符 {bad}")
+    if raw_meta["layout"] == ms.STAGE2_LAYOUT and rec.get("scope") == "sampled":
+        summary = _encoder_validation_summary(path.read_bytes(), rec, int(raw_meta["num_rows"]), int(raw_meta["num_rows"]))
+        try:
+            ms.validate_stage2_encoder_validation(summary, raw_meta["provenance"], total_rows=int(raw_meta["num_rows"]),
+                                                  table_sha256=table["sha256"], index_sha256=raw_meta["motion_index_sha256"])
+        except ValueError as exc:
+            raise RuntimeError(f"verify: 抽样认证不自洽: {exc}") from exc
+    if raw_meta["layout"] == ms.STAGE2_LAYOUT:
+        carried = raw_meta["provenance"]["stage2_compat"].get("encoder_validation")
+        if carried is not None and carried.get("record_sha256") != ms.sha256_file(path):
+            raise RuntimeError("verify: 携带的encoder认证与当前认证文件不同")
+        if raw_meta["status"] == "verified" and rec.get("scope") == "sampled" and carried is None:
+            raise RuntimeError("verify: 已verified的抽样库缺可携带encoder认证")
     return rec
 
 

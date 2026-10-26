@@ -142,6 +142,10 @@ def test_real_pack_verify_load(stage2_fx):
     with pytest.raises(RuntimeError,match="比较记录"): pack.cmd_verify(verify_args(s))
     certify(s);pack.cmd_verify(verify_args(s))
     meta=ms.MotionMeta.load(root);assert meta.status=="verified"
+    summary=meta.provenance["stage2_compat"]["encoder_validation"]
+    assert summary["scope"]=="full" and summary["encoder_compared"]==summary["packed_compared"]==meta.num_rows
+    assert "sample_indices_sha256" not in summary and "authorization_quote" not in summary
+    assert summary["record_json"].encode()==(root/pack.BITEXACT_RELPATH).read_bytes()
     assert meta.provenance["episode_manifest_file_sha256"]==ms.sha256_file(s.fx.manifest_path)
     assert meta.manifest_sha256==s.fx.manifest["sha256"]
     assert meta.provenance["episode_manifest_file_sha256"]!=meta.manifest_sha256
