@@ -1,0 +1,99 @@
+{
+  "schema": "stage2-startup-audit-v1",
+  "status": "PASS",
+  "blocking": 0,
+  "observed_at_utc": "2026-10-26T21:15:19.495505+00:00",
+  "beta": "5730a0cfc7a62036585362a03a8c922f14b4d94f",
+  "run": "mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k",
+  "training_pid": 2780633,
+  "startup_contract": "LAUNCH_CONTRACT=PASS checks=77 failed=0",
+  "runtime": {
+    "mesh": {
+      "batch": 1,
+      "fsdp": 8
+    },
+    "device_count": 8,
+    "fsdp_devices": 8,
+    "batch_size": 128,
+    "num_workers": 16,
+    "seed": 42,
+    "cuda_visible_devices": "0,1,2,3,4,5,6,7",
+    "config_name": "mme_vla_suite_b128_80k",
+    "exp_name": "mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k",
+    "devices": [
+      "cuda:0",
+      "cuda:1",
+      "cuda:2",
+      "cuda:3",
+      "cuda:4",
+      "cuda:5",
+      "cuda:6",
+      "cuda:7"
+    ]
+  },
+  "last_logged_metrics": {
+    "step": 100,
+    "values": "grad_norm=0.5207, llm_grad_norm=0.5142, loss=0.0569, mem_enc_norm=0.0427, param_norm=1815.7701"
+  },
+  "steady_seconds_per_step_observed": 0.9634242424242425,
+  "wandb": {
+    "entity": "hongzefu-university-of-michigan",
+    "username": "hongzefu",
+    "project": "robomme-framesamp",
+    "id": "al3p8t77"
+  },
+  "data": {
+    "tasks": 16,
+    "episodes": 3200,
+    "execution_samples": 1383846,
+    "motion_rows": 65419,
+    "motion_budget": 96,
+    "motion_dim": 1024,
+    "frame_tokens": 512,
+    "encoder_checkpoint_sha256": "27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035",
+    "encoder_state_key": "model"
+  },
+  "reviews": [
+    "STARTUP_CONFIG_AUDIT=PASS blocking=0",
+    "STARTUP_DATA_SNAPSHOT_AUDIT=PASS blocking=0"
+  ],
+  "exceptions": {
+    "G2": "WAIVED，用户精确批准；原FAIL保留",
+    "G5": "CPU全表65419行；encoder抽样1024行",
+    "G7": "同一训练编译缓存下原EMA及动作输出逐位一致"
+  },
+  "root_upload": "ROOT_UPLOAD=PASS files=17",
+  "save": {
+    "interval": 5000,
+    "keep_period": 5000,
+    "expected_steps": [
+      5000,
+      10000,
+      15000,
+      20000,
+      25000,
+      30000,
+      35000,
+      40000,
+      45000,
+      50000,
+      55000,
+      60000,
+      65000,
+      70000,
+      75000,
+      79999
+    ]
+  },
+  "freeze": {
+    "readonly_files": 432,
+    "git_clean": true,
+    "github_synced": true
+  },
+  "pending": [
+    "正式5000步checkpoint与逐份上传",
+    "G8正式80000步完成",
+    "G9最终全量导出验收",
+    "G12远端60000步严格恢复，待训练释放GPU"
+  ]
+}

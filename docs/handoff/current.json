@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-26T21:07:55Z",
-    "america_new_york": "2026-10-26T17:07:55.798463-04:00"
+    "utc": "2026-10-26T21:15:19Z",
+    "america_new_york": "2026-10-26T17:15:19.495505-04:00"
   },
   "repo": {
-    "branch": "v4-256concat1",
-    "base_head": "50805050ef0b940cb75417028a9ff24abc59a704",
+    "branch": "worktree-agent-vla-s2-state-20261026",
+    "base_head": "5730a0cfc7a62036585362a03a8c922f14b4d94f",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
-    "active": false,
-    "main_path": null,
-    "frozen_head": null
+    "active": true,
+    "main_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+    "frozen_head": "5730a0cfc7a62036585362a03a8c922f14b4d94f"
   },
   "tasks": {
     "mixed8-vla-stage2-1024-train": {
@@ -21,8 +21,8 @@
         "sha": "1383aba0fd77b259f0b32eadb47ea7792190145e"
       },
       "state": "running",
-      "state_changed_at": "2026-10-26T19:23:32Z",
-      "state_reason": "G0/G1/G3/G4/G5/G6/G7已PASS，G2按用户裁决WAIVED。20步训练成功，65叶EMA和动作参考逐位一致，真实在线infer通过。首次恢复遗漏JAX编译缓存，固定相同缓存后复验119秒PASS，总G7用628/1800秒。正式80k即从下一clean Beta起跑，W&B固定hongzefu，随后启动增量上传。",
+      "state_changed_at": "2026-10-26T21:08:59Z",
+      "state_reason": "正式80k已于美东17:08:59从clean Beta5730a0c起跑，17:13:20首个loss0.0871有限。启动后配置及数据/快照两路只读审查均PASS，无阻断；实际8卡FSDP8/B128/W16/80000步，pi05_base初始化，hongzefu W&B run al3p8t77。根17文件上传与匿名回读PASS；增量等待5000步。G2保持用户WAIVED，G5明确1024窗encoder抽样；主HEAD/432文件只读冻结。",
       "owner": {
         "session": "",
         "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"
@@ -56,7 +56,7 @@
         },
         {
           "what": "G8正式80k训练及16份checkpoint",
-          "evidence": "",
+          "evidence": "LAUNCH_CONTRACT=PASS checks=77 failed=0；Step 0 loss=0.0871有限；正式80000步仍进行，不能标G8 PASS。",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/",
           "status": "pending"
         },
@@ -77,7 +77,24 @@
           "evidence": "2026-10-26T18:21:20Z最外层EXIT_CODE=0，tmux自然退出；bucket=HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1"
         }
       ],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "cc-vla-s2-train",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k.log",
+          "done_line": "EXIT_CODE=0",
+          "pid": 2780633,
+          "wrapper_pid": 2779985,
+          "started_at": "2026-10-26T21:08:59Z"
+        },
+        {
+          "tmux": "cc-vla-s2-inc",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/vla-inc.log",
+          "done_line": "INC_END run=mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k done=16",
+          "pid": 2781330,
+          "wrapper_pid": 2781305,
+          "started_at": "2026-10-26T21:09:19Z"
+        }
+      ],
       "authorizations": [
         {
           "kind": "go",
@@ -119,11 +136,39 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "正式Beta起跑80k及增量上传；首个loss有限确认启动",
-          "command": "STAGE2_FORMAL_HEAD=<正式Beta完整SHA> bash v1-store/logs/vla-s2-20261026/run-formal80k.sh",
-          "verdict_line": "LAUNCH_CONTRACT=PASS；Step 0 loss有限；ROOT_UPLOAD=PASS"
+          "what": "监听正式训练与增量上传，不改冻结主源码；60000交付不能仅看done标记",
+          "command": "tail -F /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k.log /scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/vla-inc.log",
+          "verdict_line": "Step loss有限；INC_UPLOADED step=5000...75000/79999；EXIT_CODE=0"
+        },
+        {
+          "what": "G8完成且增量会话释放锁后最终导出，先SMOKE再正式；两次各限定既定24小时预算内",
+          "command": "SMOKE=1 bash scripts/dataset/hf_export/run_mixed8_200_vla_stage2_1024_80k_ckpt_export.sh；随后去掉SMOKE运行同入口",
+          "verdict_line": "SMOKE=PASS；CKPT_UPLOAD=PASS steps=16 sha256_mismatch=0 public=1"
+        },
+        {
+          "what": "远端60000及根依赖清单隔离回读核SHA，训练释放8卡后执行G12",
+          "command": "scripts/training/check_stage2_checkpoint.py --mode delivery --checkpoint <远端回读60000实体目录> --expected-manifest <发布清单> --online-gpu 1 --out <G12.json>",
+          "verdict_line": "CKPT_60K_READY=PASS step=60000 root_complete=1 sha256_mismatch=0 strict_restore=1 online_infer=1"
+        },
+        {
+          "what": "G8/G9/G12后恢复源码原权限、解除HOLD、合回开发副本留档，再按精确授权清理旧测速step119",
+          "command": "按formal-readonly-modes.json恢复权限；只处理本任务锁和产物",
+          "verdict_line": "训练/交付全部PASS后才将任务done/closed"
         }
-      ]
+      ],
+      "pre_start_self_check": [
+        {
+          "what": "启动后全链只读审查",
+          "evidence": "STARTUP_CONFIG_AUDIT=PASS blocking=0；STARTUP_DATA_SNAPSHOT_AUDIT=PASS blocking=0；ROOT_UPLOAD=PASS files=17",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/docs/training-doc/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/records/startup-audit.json",
+          "status": "pass"
+        }
+      ],
+      "monitoring": {
+        "training_exec_session": 87069,
+        "upload_exec_session": 13842,
+        "mode": "每日志单个行缓冲事件监听，日志和tmux为持久事实源；不声称已提供自动唤醒"
+      }
     },
     "paired4-training-smoke": {
       "plan": {

@@ -1,6 +1,6 @@
 # mixed8 阶段二单 token VLA：实施与起跑档案
 
-当前G0/G1/G3/G4/G5/G6已通过，G2按用户裁决明确WAIVED；20步训练与G7保存回读全部通过，正在冻结正式训练Beta。计划为根目录 `1026-vla-stage2-memory-1024-train-plan.md`，开工锚点 `1383aba0fd77b259f0b32eadb47ea7792190145e`。下面按时间保留实施记录，最新实测见末节；正式训练须G7通过后从clean Beta启动。
+当前G0/G1/G3/G4/G5/G6已通过，G2按用户裁决明确WAIVED；20步训练与G7保存回读全部通过；正式训练已于美东17:08:59启动，17:13:20首个loss有限。计划为根目录 `1026-vla-stage2-memory-1024-train-plan.md`，开工锚点 `1383aba0fd77b259f0b32eadb47ea7792190145e`。下面按时间保留实施记录，最新实测见末节；正式训练须G7通过后从clean Beta启动。
 
 ## 用户授权与范围
 
@@ -183,3 +183,7 @@ bash scripts/dataset/hf_export/run_mixed8_stage2_1024_ckpt_inc.sh
 ```
 
 正式会话`cc-vla-s2-train`，训练日志`v1-store/logs/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k.log`；增量会话`cc-vla-s2-inc`，日志`v1-store/logs/vla-s2-20261026/vla-inc.log`。实际完整Beta、进程和时间由日志及冻结开发副本状态记录。首次有限loss才报告正式起跑；训练上限30小时，G12 GPU恢复等训练释放8卡后执行。
+
+## 正式起跑实测
+
+正式Beta为`5730a0cfc7a62036585362a03a8c922f14b4d94f`，已同步GitHub。美东2026-10-26 17:08:59启动，实际Python PID2780633，tmux `cc-vla-s2-train`；首个loss在17:13:20为0.0871，梯度有限。W&B正式ID `al3p8t77`，账号hongzefu。`cc-vla-s2-inc`在17:09:19启动，根17文件上传及匿名回读PASS。432份跟踪源码/脚本已只读冻结。启动后两路独立只读审计均PASS，完整现场记录见`records/startup-audit.json`；5k/60k/80k产物尚未到达验收时机。
