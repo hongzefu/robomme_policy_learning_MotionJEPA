@@ -22,7 +22,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-26T19:23:32Z",
-      "state_reason": "用户接受的G2例外已严格贯通，合后235+17CPU测试通过并push；G2-waiver身份重验9秒成功，原FAIL保持。G3已PASS。数据续接Beta=a4817ee；cc-vla-s2-pack于美东15:35:18起跑，正在pack→GPU0全表重算→verify。其余门槛不变，正式VLA未起跑。",
+      "state_reason": "用户明确改为CPU全量字节/文件SHA加encoder小部分抽样，并再次「同意继续」。已停止原全量encoder比较：精确PID2651048收到SIGINT，退出130，日志记录至少17408行一致；GPU释放、encoder锁清理，无PASS认证。packed表完整保留，正实现分层1024窗认证与消费合同，不重pack或重抽。G2例外和G3通过状态保留，正式VLA未起跑。",
       "owner": {"session": "", "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"},
       "depends_on": [{
         "path": "/scratch/hongze/MotionJEPA",
@@ -38,7 +38,7 @@
         {"what": "G12远端60k依赖回读及严格恢复", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"}
       ],
       "long_tail": [{"what": "G10 MJ阶段II/III公开备份", "tmux": "cc-vla-s2-mjup", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/mjup.log", "done_line": "MJ_CKPT_UPLOAD=PASS source_runs=2 files=35 bytes=7545592817 sha256_mismatch=0 public=1", "status": "pass", "evidence": "2026-10-26T18:21:20Z最外层EXIT_CODE=0，tmux自然退出；bucket=HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1"}],
-      "running_handles": [{"tmux": "cc-vla-s2-pack", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/pack.log", "done_line": "ENCODER_BITEXACT=PASS、VERIFY_MOTION=PASS、PACK_VALIDATION=PASS 且 EXIT_CODE=0", "pid": 2646655, "gpu": "比较阶段仅0，pack/verify为CPU", "started_at": "2026-10-26T19:35:18Z", "budget": "全表比较7200秒；数值累计74秒，G4剩7126秒"}],
+      "running_handles": [],
       "authorizations": [{
         "kind": "go", "date": "2026-10-26",
         "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md 开工 有问题问用户 所有subagebt必须全部astra high",
@@ -51,11 +51,19 @@
         "kind": "go", "date": "2026-10-26",
         "quote": "可以忽略 继续做",
         "scope": "明确接受已报告G2跨精度数值失败并继续原主run；原G2.json保留FAIL，新WAIVED记录限定原失败SHA/本次ckpt/G0清单，身份和其余闸门不放松。不再进行此前建议的单窗诊断。"
+      }, {
+        "kind": "decision", "date": "2026-10-26",
+        "quote": "同意按照你说过的更省时方案 做\nencoder只抽机小部分",
+        "scope": "G5改为CPU全量字节/文件SHA核验加encoder分层1024窗（承接前一问gpu只算1024个），不再全量GPU重算。原packed表保留，只声明encoder抽样一致；其余门槛保持。"
+      }, {
+        "kind": "go", "date": "2026-10-26",
+        "quote": "同意继续",
+        "scope": "按上述CPU全量+GPU1024窗方案继续原主run，无需重复确认。"
       }],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "监听当前pack→独立全表比较→verify，失败不自动重试；原G2报告和token保持", "command": "run-pack.sh SHA=7aadd167c3bc5194c01b62980607818e82722fc5e642422c5b4256c3b9cea821；例外记录SHA=3a3bf86e122ea8ffa538e0b6e8fedfe4525dc8663be26beb62b5b1c9720b999a", "verdict_line": "ENCODER_BITEXACT=PASS；VERIFY_MOTION=PASS；EXIT_CODE=0"},
-        {"what": "全表验收后解除续接冻结、合回本状态分支、绑定yaml SHA并注册encoder实体，随后G6/G4", "command": "保持S1 b5d23a5与全部原数据SHA；G4剩余预算读取numeric-budget.json", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS"},
+        {"what": "完成sampled比较器/消费合同合审并合入；仅恢复sampled→verify，不再次启动run-pack.sh", "command": "合同主仓validation/stage2-memory/sampled-g5-contract.md；固定seed0/16任务每64/总1024；SAMPLED_G5_DESIGN_REVIEW=PASS", "verdict_line": "PACKED_TOKEN_BYTES=PASS compared=65419；ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=65419；VERIFY_MOTION=PASS"},
+        {"what": "保留packed表和原中断日志；抽样认证随stage2_compat完整传递；完成后绑定yaml SHA、注册encoder并G6/G4", "command": "table SHA=8de36e670d58c60859d48b37f29c989f2eed45344f5cd5fb2f7a96126394ee5c；index SHA=de388cb42f1fbb27e39dc429a6252cd755d6f67324c4eb8f236c4f60bf68e1ec；G4剩7126秒", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS"},
         {"what": "G6、G4、20步与保存恢复通过后才正式80k；G2的用户例外须完整随快照和交付传递", "command": "按原计划主run，备选B和benchmark不启动", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"}
       ]
     },
