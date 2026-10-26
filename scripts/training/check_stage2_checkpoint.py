@@ -149,7 +149,12 @@ def verify_snapshot(root, delivery=None):
         if files.get(item["path"]) != item["sha256"]:
             raise ValueError(f"来源证据未被根快照绑定: {role}")
         record = read_json(path)
-        if role in ("G0", "G2", "G3") and (record.get("gate") != role or record.get("status") != "PASS"):
+        if role == "G2":
+            motion_store.validate_stage2_g2_evidence(
+                record, checkpoint_sha256=provenance["encoder"]["checkpoint_sha256"],
+                samples_sha256=evidence["G0"]["sha256"], source_pin=provenance["source_pin"],
+                numerics=provenance["numerics"], online_vae=provenance["stage2_compat"]["online_vae"])
+        if role in ("G0", "G3") and (record.get("gate") != role or record.get("status") != "PASS"):
             raise ValueError(f"来源证据未通过: {role}")
         if role in ("G2", "G3") and (
                 record.get("checkpoint_sha256") != provenance["encoder"]["checkpoint_sha256"]

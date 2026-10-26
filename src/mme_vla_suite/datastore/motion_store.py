@@ -47,6 +47,9 @@ LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
 STAGE2_LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
 STAGE2_ARCH = "wan-latent-stage2-blockwise-pool4-three-decoder"
 STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
+STAGE2_G2_WAIVER_CHECKPOINT_SHA256 = "27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035"
+STAGE2_G2_WAIVER_SAMPLES_SHA256 = "4cb05b6b3097b22a8594576def1505957399a924d4189591980292e3bd320d30"
+STAGE2_G2_WAIVER_FAILURE_SHA256 = "88cc88fb69827f00763b5499e3aa3d39bdb411db3e186660eed596716d6dce72"
 META_SCHEMA = 1
 INDEX_SCHEMA = 1
 
@@ -237,6 +240,87 @@ def require_sha256(value, ctx: str) -> str:
     if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
         raise ValueError(f"{ctx} 必须为 64 位小写 SHA256")
     return value
+
+
+def validate_stage2_g2_evidence(record, *, checkpoint_sha256, samples_sha256,
+                               source_pin, numerics, online_vae, demo_tail=None) -> str:
+    """只接受严格数值PASS，或用户针对固定三份身份授权的数值例外；来源检查始终执行。"""
+    require_sha256(checkpoint_sha256, "G2.checkpoint_sha256")
+    require_sha256(samples_sha256, "G2.samples_sha256")
+    if (not isinstance(record, dict) or record.get("schema") != "stage2-validation-gate-v1"
+            or record.get("gate") != "G2" or record.get("checkpoint_sha256") != checkpoint_sha256
+            or record.get("samples_sha256") != samples_sha256):
+        raise ValueError("G2 证据未绑定同一checkpoint与G0清单")
+    pin_keys = {"mj_repo_commit", "export_source_sha256", "encoder_source_sha256",
+                "vae_adapter_sha256", "dependency_lock_sha256"}
+    if (not isinstance(source_pin, dict) or set(source_pin) != pin_keys
+            or not isinstance(source_pin.get("mj_repo_commit"), str)
+            or re.fullmatch(r"[0-9a-f]{40}", source_pin["mj_repo_commit"]) is None):
+        raise ValueError("G2 来源必须为完整五键SOURCE_PIN")
+    for key in pin_keys - {"mj_repo_commit"}:
+        require_sha256(source_pin[key], f"G2.source_pin.{key}")
+    if not isinstance(numerics, dict):
+        raise ValueError("G2 数值环境必须为对象")
+    for key, value in {"dtype": "float32", "autocast": False, "matmul_allow_tf32": False,
+                       "cudnn_allow_tf32": False, "batch": 1}.items():
+        if type(numerics.get(key)) is not type(value) or numerics[key] != value:
+            raise ValueError(f"G2 实际encoder数值合同不符: {key}")
+    if (any(not isinstance(numerics.get(k), str) or not numerics[k]
+            for k in ("torch", "cuda", "numpy", "gpu_name", "driver"))
+            or type(numerics.get("cudnn")) is not int or numerics["cudnn"] <= 0):
+        raise ValueError("G2 实际encoder环境身份不完整")
+    if not isinstance(online_vae, dict):
+        raise ValueError("G2 在线VAE身份必须为对象")
+    vae_fixed = {"vae_id": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers", "vae_dtype": "float32",
+                 "latent_mode": "mode", "batch": 1, "tf32": "off", "amp": "off"}
+    if any(type(online_vae.get(k)) is not type(v) or online_vae[k] != v for k, v in vae_fixed.items()):
+        raise ValueError("G2 在线VAE固定模型或数值合同不符")
+    require_sha256(online_vae.get("vae_state_sha256"), "G2.online_vae.vae_state_sha256")
+    preprocess = dict(frame_size=256, input_dtype="uint8", input_layout="THWC", window_frames=33)
+    if (online_vae.get("adapter_sha256") != source_pin["vae_adapter_sha256"]
+            or canonical_json_bytes(online_vae.get("preprocess")) != canonical_json_bytes(preprocess)
+            or canonical_json_bytes(online_vae.get("numerics")) != canonical_json_bytes(numerics)):
+        raise ValueError("G2 在线VAE未绑定当前适配件、预处理或数值环境")
+    for key, expected in (("source_pin", source_pin), ("numerics", numerics), ("online_vae", online_vae)):
+        if canonical_json_bytes(record.get(key)) != canonical_json_bytes(expected):
+            raise ValueError(f"G2 证据的{key}与实际来源不同")
+    status = record.get("status")
+    if status == "PASS":
+        if "exception" in record or record.get("producer") == "stage2-g2-user-exception-v1":
+            raise ValueError("G2 用户例外不能改标为PASS")
+        metrics = record.get("metrics")
+        if (not isinstance(metrics, dict) or type(metrics.get("windows")) is not int or metrics["windows"] != 64
+                or type(metrics.get("demo_tail")) is not int or metrics["demo_tail"] < 16
+                or (demo_tail is not None and metrics["demo_tail"] != demo_tail)
+                or type(metrics.get("worst_mse")) not in (int, float) or not 0 <= metrics["worst_mse"] <= 1e-6
+                or type(metrics.get("worst_max")) not in (int, float) or not 0 <= metrics["worst_max"] <= 0.01):
+            raise ValueError("G2 数值证据不完整或超过原阈值")
+        return "PASS"
+    if status != "WAIVED" or record.get("producer") != "stage2-g2-user-exception-v1":
+        raise ValueError("G2 未通过且不属于用户明确授权的例外")
+    allowed = {"schema", "gate", "status", "producer", "checkpoint_sha256", "samples_sha256",
+               "source_pin", "numerics", "online_vae", "exception", "metrics"}
+    if set(record) - allowed or record.get("metrics") is not None:
+        raise ValueError("G2 例外不得携带伪造的数值完成指标")
+    if checkpoint_sha256 != STAGE2_G2_WAIVER_CHECKPOINT_SHA256 or samples_sha256 != STAGE2_G2_WAIVER_SAMPLES_SHA256:
+        raise ValueError("G2 例外只能用于本次固定checkpoint和G0清单")
+    exception = record.get("exception")
+    fixed = dict(schema="stage2-g2-user-exception-v1", authorized_by="user", user_quote="可以忽略 继续做",
+                 authorized_at="2026-10-26T19:21:45Z", scope="g2_cross_precision_numerics_only",
+                 numeric_validation_complete=False, original_failure_sha256=STAGE2_G2_WAIVER_FAILURE_SHA256)
+    if (not isinstance(exception, dict) or set(exception) != set(fixed) | {"original_failure_json"}
+            or any(canonical_json_bytes(exception.get(k)) != canonical_json_bytes(v) for k, v in fixed.items())):
+        raise ValueError("G2 用户原话、授权范围或固定失败身份不符")
+    original = exception.get("original_failure_json")
+    if not isinstance(original, str) or sha256_bytes(original.encode("utf-8")) != STAGE2_G2_WAIVER_FAILURE_SHA256:
+        raise ValueError("G2 原始失败UTF8字节不保真")
+    try:
+        failure = json.loads(original)
+    except json.JSONDecodeError as exc:
+        raise ValueError("G2 原始失败不是完整JSON") from exc
+    if not isinstance(failure, dict) or failure.get("gate") != "G2" or failure.get("status") != "FAIL":
+        raise ValueError("G2 例外只能引用原始G2失败")
+    return "WAIVED"
 
 
 def validate_stage2_provenance(provenance: dict) -> None:

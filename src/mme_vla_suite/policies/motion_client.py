@@ -118,8 +118,15 @@ def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None) -> Non
                                  ("latents_metadata_sha256", "latent_metadata_sha256")):
         if prov_key in provenance and provenance[prov_key] != g0.get(record_key):
             raise ValueError(f"阶段二 G0 输入身份不符: {prov_key}")
+    from mme_vla_suite.datastore.motion_store import validate_stage2_g2_evidence
     for gate in ("G2", "G3"):
         record = records[gate]
+        if gate == "G2":
+            validate_stage2_g2_evidence(
+                record, checkpoint_sha256=provenance["encoder"]["checkpoint_sha256"],
+                samples_sha256=evidence["G0"]["sha256"], source_pin=provenance["source_pin"],
+                numerics=provenance["numerics"], online_vae=compat["online_vae"], demo_tail=counts["demo_tail"])
+            continue
         if (record.get("schema") != "stage2-validation-gate-v1" or record.get("gate") != gate
                 or record.get("status") != "PASS"
                 or record.get("checkpoint_sha256") != provenance["encoder"]["checkpoint_sha256"]
@@ -129,16 +136,7 @@ def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None) -> Non
         for group in ("source_pin", "numerics"):
             if record.get(group) != provenance[group]:
                 raise ValueError(f"阶段二 {gate} 验证环境的 {group} 与来源不符")
-        if gate == "G2":
-            if record.get("online_vae") != compat["online_vae"]:
-                raise ValueError("阶段二 G2 未绑定当前在线 VAE 身份")
-            if (metrics.get("windows") != 64 or metrics.get("demo_tail", 0) < 16
-                    or type(metrics.get("worst_mse")) not in (float, int)
-                    or not 0 <= metrics["worst_mse"] <= 1e-6
-                    or type(metrics.get("worst_max")) not in (float, int)
-                    or not 0 <= metrics["worst_max"] <= 0.01):
-                raise ValueError("阶段二 G2 数值证据不完整或超差")
-        elif any(metrics.get(k) != v for k, v in dict(
+        if any(metrics.get(k) != v for k, v in dict(
                 windows=32, seed=0, max_abs=0, geometry_all_true=1, leaves=65,
                 state_key="model", exact=1, live_negative_rejected=1).items()):
             raise ValueError("阶段二 G3 证据未覆盖完整 EMA 核验")

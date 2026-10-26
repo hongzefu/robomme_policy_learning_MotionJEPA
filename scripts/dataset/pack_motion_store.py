@@ -575,25 +575,23 @@ def _stage2_validation(validation_root, *, manifest, latent_sha, checkpoint_sha,
     evidence = {"G0": {"path": str(samples_path.resolve()), "sha256": samples_sha}}
     for gate in ("G2", "G3"):
         path = validation_root / f"{gate}.json"
+        if gate == "G2" and (validation_root / "G2-waiver.json").exists():
+            # 显式例外存在但无效时直接失败，禁止静默退回另一份证据。
+            path = validation_root / "G2-waiver.json"
         record = _load_json(path)
-        if (record.get("schema") != "stage2-validation-gate-v1" or record.get("gate") != gate
-                or record.get("status") != "PASS" or record.get("checkpoint_sha256") != checkpoint_sha
-                or record.get("samples_sha256") != samples_sha):
-            raise ValueError(f"stage2 {gate} 证据缺失、失败或 SHA 绑定不符")
-        if (ms.canonical_json_bytes(record.get("source_pin")) != ms.canonical_json_bytes(source_pin)
-                or ms.canonical_json_bytes(record.get("numerics")) != ms.canonical_json_bytes(numerics)):
-            raise ValueError(f"stage2 {gate} 与当前实际源码或数值环境不同源")
-        metrics = record.get("metrics", {})
         if gate == "G2":
-            if (ms.canonical_json_bytes(record.get("online_vae")) != ms.canonical_json_bytes(online_vae)
-                    or metrics.get("windows") != 64
-                    or metrics.get("demo_tail") != counts["demo_tail"]
-                    or not isinstance(metrics.get("worst_mse"), (int, float))
-                    or not 0 <= metrics["worst_mse"] <= 1e-6
-                    or not isinstance(metrics.get("worst_max"), (int, float))
-                    or not 0 <= metrics["worst_max"] <= 0.01):
-                raise ValueError("stage2 G2 数值指标不完整或超过阈值")
+            ms.validate_stage2_g2_evidence(record, checkpoint_sha256=checkpoint_sha, samples_sha256=samples_sha,
+                                          source_pin=source_pin, numerics=numerics, online_vae=online_vae,
+                                          demo_tail=counts["demo_tail"])
         else:
+            if (record.get("schema") != "stage2-validation-gate-v1" or record.get("gate") != gate
+                    or record.get("status") != "PASS" or record.get("checkpoint_sha256") != checkpoint_sha
+                    or record.get("samples_sha256") != samples_sha):
+                raise ValueError(f"stage2 {gate} 证据缺失、失败或 SHA 绑定不符")
+            if (ms.canonical_json_bytes(record.get("source_pin")) != ms.canonical_json_bytes(source_pin)
+                    or ms.canonical_json_bytes(record.get("numerics")) != ms.canonical_json_bytes(numerics)):
+                raise ValueError(f"stage2 {gate} 与当前实际源码或数值环境不同源")
+            metrics = record.get("metrics", {})
             want = dict(windows=32, seed=0, max_abs=0, geometry_all_true=1, leaves=65,
                         state_key="model", exact=1, live_negative_rejected=1)
             if any(metrics.get(k) != v for k, v in want.items()):
