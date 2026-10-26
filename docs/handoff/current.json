@@ -10,9 +10,9 @@
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
-    "active": true,
-    "main_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
-    "frozen_head": "a4817eedff440c888bec39c2aeb69d8f8609150a"
+    "active": false,
+    "main_path": null,
+    "frozen_head": null
   },
   "tasks": {
     "mixed8-vla-stage2-1024-train": {
@@ -22,7 +22,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-26T19:23:32Z",
-      "state_reason": "用户明确改为CPU全量字节/文件SHA加encoder小部分抽样，并再次「同意继续」。已停止原全量encoder比较：精确PID2651048收到SIGINT，退出130，日志记录至少17408行一致；GPU释放、encoder锁清理，无PASS认证。packed表完整保留，正实现分层1024窗认证与消费合同，不重pack或重抽。G2例外和G3通过状态保留，正式VLA未起跑。",
+      "state_reason": "用户批准CPU全量完整性+encoder1024窗并继续。原全量比较按指令停止130，packed表保留。抽样消费合同和比较器两份合前审查PASS，准备解除当前冻结合入CPU复测；真实索引跨主/torch环境得到相同1024样本SHA、16任务各64、demo332/exec692/pad68。G2例外/G3保持，正式VLA未起跑。",
       "owner": {"session": "", "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"},
       "depends_on": [{
         "path": "/scratch/hongze/MotionJEPA",
