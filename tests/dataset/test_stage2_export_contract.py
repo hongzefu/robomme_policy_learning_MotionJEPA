@@ -55,11 +55,19 @@ def snapshot(tmp_path, export):
     pin = {"mj_repo_commit": "a" * 40, "export_source_sha256": "b" * 64,
            "encoder_source_sha256": "c" * 64, "vae_adapter_sha256": "d" * 64,
            "dependency_lock_sha256": "e" * 64}
+    numerics = dict(dtype="float32", autocast=False, matmul_allow_tf32=False, cudnn_allow_tf32=False,
+                    batch=1, torch="2.9.0", cuda="12.8", cudnn=91002, numpy="2.4.4", gpu_name="A100", driver="595")
+    online_vae = dict(vae_id="Wan-AI/Wan2.1-T2V-1.3B-Diffusers", vae_state_sha256="f"*64, vae_dtype="float32",
+                      latent_mode="mode", batch=1, tf32="off", amp="off", adapter_sha256=pin["vae_adapter_sha256"],
+                      numerics=numerics, preprocess=dict(frame_size=256,input_dtype="uint8",input_layout="THWC",window_frames=33))
     evidence = {}
     for gate in ("G0", "G2", "G3", "restore_receipt"):
         content = {"gate": gate, "status": "PASS", "checkpoint_sha256": sha}
         if gate in ("G2", "G3"):
             content["samples_sha256"] = evidence["G0"]["sha256"]
+        if gate == "G2":
+            content.update(schema="stage2-validation-gate-v1", source_pin=pin, numerics=numerics, online_vae=online_vae,
+                           metrics=dict(windows=64,demo_tail=16,worst_mse=0,worst_max=0))
         path = write(run / f"motion_evidence/{gate}.json", content)
         evidence[gate] = {"path": path.relative_to(run).as_posix(), "sha256": digest(path)}
     pin_path = write(run / "motion_evidence/SOURCE_PIN.json", pin)
@@ -77,8 +85,8 @@ def snapshot(tmp_path, export):
     write(run / "history_config.txt", e.HISTORY)
     prov = {"motion_enabled": True, "resolved_sha256": digest(resolved), "encoder": encoder,
         "encoder_state_sha256": {"algorithm": "named-tensors-v1"}, "source_pin": pin,
-        "numerics": {"dtype": "float32", "autocast": False}, "vae": {"vae_id": "fixture"},
-        "stage2_compat": {"schema": "stage2-compat-v1", "evidence": evidence,
+        "numerics": numerics, "vae": {"vae_id": "fixture"},
+        "stage2_compat": {"schema": "stage2-compat-v1", "evidence": evidence, "online_vae": online_vae,
                           "restore_receipt_sha256": evidence["restore_receipt"]["sha256"]}}
     write(run / "motion_provenance.json", prov)
     deps = {"schema": "stage2-encoder-dependencies-v1", "encoder": encoder, "source_pin": pin,

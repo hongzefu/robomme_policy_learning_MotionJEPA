@@ -204,7 +204,15 @@ def snapshot_sources(run, registered):
         referenced.add(name)
         if key in ("G0", "G2", "G3"):
             gate = json_file(sources[name])
-            need(gate.get("gate") == key and gate.get("status") == "PASS", f"证据未通过: {key}")
+            if key == "G2":
+                from mme_vla_suite.datastore.motion_store import validate_stage2_g2_evidence
+                validate_stage2_g2_evidence(
+                    gate, checkpoint_sha256=sha, samples_sha256=evidence["G0"]["sha256"],
+                    source_pin=prov["source_pin"], numerics=prov["numerics"],
+                    online_vae=prov["stage2_compat"]["online_vae"],
+                    demo_tail=json_file(sources[EVIDENCE_FILES["G0"]]).get("counts", {}).get("demo_tail"))
+            else:
+                need(gate.get("gate") == key and gate.get("status") == "PASS", f"证据未通过: {key}")
             if key != "G0":
                 need(gate.get("checkpoint_sha256") == sha, f"证据encoder不符: {key}")
     # 引用、固定发布路径与内容三者必须同时匹配，不能另并入一份未引用的pin。
