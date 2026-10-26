@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-21T16:31:28Z",
-    "america_new_york": "2026-10-21T12:31:28-0400"
+    "utc": "2026-10-26T17:28:38Z",
+    "america_new_york": "2026-10-26T13:28:38-0400"
   },
   "repo": {
-    "branch": "v3-motionmem-pair4",
-    "base_head": "4272f5945e83585201fd238883cc3a5fff25a1dc",
+    "branch": "v4-256concat1",
+    "base_head": "1383aba0fd77b259f0b32eadb47ea7792190145e",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -15,6 +15,41 @@
     "frozen_head": null
   },
   "tasks": {
+    "mixed8-vla-stage2-1024-train": {
+      "plan": {
+        "file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md",
+        "sha": "1383aba0fd77b259f0b32eadb47ea7792190145e"
+      },
+      "state": "running",
+      "state_changed_at": "2026-10-26T17:28:38Z",
+      "state_reason": "开工一致性审查通过，S1/S2/S3独立工作树开发中；尚未运行G0至G12或启动训练。",
+      "owner": {"session": "", "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"},
+      "depends_on": [{
+        "path": "/scratch/hongze/MotionJEPA",
+        "branch": "v12-3decoder",
+        "task": "stage3-formal-training-v1",
+        "gate": "按本次计划只读消费已产出ep105；上游按用户指令第106轮停训，状态仍running，不等待原144轮。ep105 SHA256=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035；G3仍须核EMA。"
+      }],
+      "pre_handoff": [
+        {"what": "计划一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=1383aba0fd77b259f0b32eadb47ea7792190145e findings=0 blocking=0", "where": "独立Astra high审查；计划固定提交1383aba", "status": "pass"},
+        {"what": "G0至G6建库与在线对拍", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"},
+        {"what": "G7八卡短测与严格保存回读", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/smoke/", "status": "pending"},
+        {"what": "G8正式80k训练及16份checkpoint", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/", "status": "pending"},
+        {"what": "G12远端60k依赖回读及严格恢复", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"}
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [{
+        "kind": "go", "date": "2026-10-26",
+        "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md 开工 有问题问用户 所有subagebt必须全部astra high",
+        "scope": "计划1383aba主run实施、建库、短测、80k训练、VLA及MJ上传与60k交付验收；全部子代理Astra high。备选B与benchmark不在范围内。"
+      }],
+      "pending_decisions": [{"what": "本分支无upstream，首次建立origin/v4-256concat1跟踪按AGENTS第11条待确认；开发继续。"}],
+      "next_steps": [
+        {"what": "S1至S4逐块合前审查、合并后验证；S1推送后S4锁依赖", "command": "按计划第二部分子代理分配表", "verdict_line": "PRE_MERGE_REVIEW=PASS；POST_MERGE_REVIEW=PASS"},
+        {"what": "实现后按G0至G7次序验证，全部通过才正式起跑", "command": "按计划第二部分runbook", "verdict_line": "LAUNCH_CONTRACT=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"}
+      ]
+    },
     "paired4-training-smoke": {
       "plan": {
         "file": "/scratch/hongze/MotionJEPA/1020-paired4-modulation-plan.html",
