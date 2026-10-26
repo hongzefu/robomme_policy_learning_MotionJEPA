@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from types import SimpleNamespace
 
 import ml_dtypes
 import numpy as np
@@ -257,6 +258,26 @@ def test_cpu_cli_records_failure_without_real_restore(tmp_path, monkeypatch, cap
     assert not list(tmp_path.glob("*.tmp"))
 
 
+def test_restore_uses_verified_worker_instead_of_uv_launcher():
+    client = SimpleNamespace(worker_pid=11, _proc=SimpleNamespace(pid=10),
+                             provenance={"pid": 11, "cuda_visible_devices": "1", "gpu_uuid": "GPU-B"})
+    inventory = {1: {"uuid": "GPU-B"}}
+    assert restore.verified_sidecar_pid(client, 1, inventory) == 11
+    client.provenance["pid"] = 10
+    with pytest.raises(ValueError, match="PID"):
+        restore.verified_sidecar_pid(client, 1, inventory)
+
+
+def test_restore_propagates_worker_ownership_rejection():
+    class Client:
+        provenance = {"pid": 11, "cuda_visible_devices": "1", "gpu_uuid": "GPU-B"}
+        @property
+        def worker_pid(self):
+            raise ValueError("实际 worker 不属于本次启动器")
+    with pytest.raises(ValueError, match="不属于"):
+        restore.verified_sidecar_pid(Client(), 1, {1: {"uuid": "GPU-B"}})
+
+
 @pytest.mark.parametrize("mode,extra", [("smoke", []), ("delivery", ["--reference", "r"]),
                                        ("smoke", ["--reference", "r", "--expected-manifest", "m"])])
 def test_cli_modes_cannot_mix_reference_and_delivery(tmp_path, mode, extra):
@@ -341,3 +362,16 @@ def test_json_duplicate_keys_and_nonfinite_metadata_are_rejected(tmp_path):
         path.write_text(text)
         with pytest.raises(ValueError):
             restore.read_json(path)
+
+
+@pytest.mark.parametrize("uuid", ["GPU-B", "B"])
+def test_restore_uuid_prefix_is_format_only(uuid):
+    client = SimpleNamespace(worker_pid=11,
+                             provenance={"pid": 11, "cuda_visible_devices": "1", "gpu_uuid": uuid})
+    inventory = {0: {"uuid": "GPU-A"}, 1: {"uuid": "GPU-B"}}
+    assert restore.verified_sidecar_pid(client, 1, inventory) == 11
+    result = restore.verify_process_gpus(10, 11, inventory, 1, f"10, A\n11, {uuid}\n")
+    assert result["sidecar"]["pid"] == 11
+    client.provenance["gpu_uuid"] = "GPU-C"
+    with pytest.raises(ValueError, match="GPU/PID"):
+        restore.verified_sidecar_pid(client, 1, inventory)
