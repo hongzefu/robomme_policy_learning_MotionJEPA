@@ -6,6 +6,12 @@
 
 ## 一、环境 B 现行（AWS 8×A100，2026-09-04 起）
 
+### mixed8 阶段二单 token VLA（2026-10-26）
+
+| 目录 | 内容 | 状态 |
+|---|---|---|
+| [mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k](mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/launch.md) | ep105 EMA，4×256拼1×1024，窗33／stride32／budget96；8卡batch128，计划80k | 已授权实施；独立开工审查PASS，运行闸门与正式训练尚未开始 |
+
 ### 四对运动 token 训练接入冒烟（2026-10-20）
 
 | 目录 | 内容 | 判定 |
