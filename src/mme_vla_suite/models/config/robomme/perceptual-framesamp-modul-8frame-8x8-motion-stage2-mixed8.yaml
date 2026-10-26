@@ -1,0 +1,43 @@
+# modulation 8×8 开启 motion：帧路与关闭态 YAML 相同，仅增加 motion 节。
+budget: 512
+num_views: 1
+token_per_image: 64
+streaming_obs_horizon: 16
+pool_type: mean
+use_pos_emb: true
+use_state_emb: false
+memory_feature:
+  img:
+    net: identity
+    input_dim: 2048
+  pos:
+    input_dim: 768
+    hidden_dim: 768
+  state:
+    input_dim: 8
+    hidden_dim: 512
+integration_type: modulation
+memory_token_dim: 1024
+representation_type: perceptual
+perceptual_memory:
+  type: frame_sampling
+motion:
+  enabled: true
+  source_shape: [1, 1024]
+  readout: stage2_pool4_concat_v1
+  num_tokens: 1
+  dim: 1024
+  budget: 96
+  pos_dim: 256
+  demo_min_real_frames: 17
+  demo_tail_pad: repeat_last
+  stride: 32
+  window_frames: 33
+  window_direction: forward
+  grid_origin: segment_start
+  frame_size: 256
+  store_path: v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/motion-stage2-1024
+  source_run: stage2-full144-1025-a/checkpoint_epoch_105.pt#model
+  checkpoint_sha256: __FILL_AFTER_G3__
+  encoder_kind: stage2_pool4_concat
+  online_gpu: 4
