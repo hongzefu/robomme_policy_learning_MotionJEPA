@@ -32,6 +32,28 @@ def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()
 
 
+def configure_compilation_cache(jax_config):
+    """在首次编译前沿用训练缓存；自定义环境变量不会被 JAX 自动读取。"""
+    paths = {}
+    for name in ("MMEVLA_JAX_CACHE_DIR", "JAX_COMPILATION_CACHE_DIR"):
+        value = os.environ.get(name)
+        if value:
+            path = Path(value).expanduser()
+            if not path.is_absolute() or not path.is_dir():
+                raise ValueError(f"{name} 必须指向已存在的绝对编译缓存目录")
+            paths[name] = str(path.resolve())
+    if len(set(paths.values())) > 1:
+        raise ValueError("MMEVLA_JAX_CACHE_DIR 与 JAX_COMPILATION_CACHE_DIR 指向不同缓存")
+    if paths:
+        if not jax_config.jax_enable_compilation_cache:
+            raise ValueError("已指定编译缓存，但 JAX 编译缓存开关被关闭")
+        jax_config.update("jax_compilation_cache_dir", next(iter(paths.values())))
+    return {"path": jax_config.jax_compilation_cache_dir,
+            "enabled": bool(jax_config.jax_compilation_cache_dir and jax_config.jax_enable_compilation_cache),
+            "environment": paths,
+            "xla_caches": jax_config.jax_persistent_cache_enable_xla_caches}
+
+
 def sha256_file(path):
     digest = hashlib.sha256()
     with Path(path).open("rb") as stream:
@@ -491,6 +513,7 @@ def restore_and_check(args, report):
                 or inference.get("sharding", {}).get("batch_size") != 1):
             raise ValueError("保存前参考精度、seed 或单卡分片合同不符")
     import jax
+    report["compilation_cache"] = configure_compilation_cache(jax.config)
     import jax.numpy as jnp
     from flax import nnx
     from mme_vla_suite.models.integration.history_observation import HistAugObservation

@@ -364,6 +364,55 @@ def test_json_duplicate_keys_and_nonfinite_metadata_are_rejected(tmp_path):
             restore.read_json(path)
 
 
+@pytest.mark.parametrize("variables", [("MMEVLA_JAX_CACHE_DIR",), ("JAX_COMPILATION_CACHE_DIR",),
+                                       ("MMEVLA_JAX_CACHE_DIR", "JAX_COMPILATION_CACHE_DIR"), ()])
+def test_restore_activates_requested_training_compilation_cache(tmp_path, monkeypatch, variables):
+    import jax
+
+    previous = jax.config.jax_compilation_cache_dir
+    for name in ("MMEVLA_JAX_CACHE_DIR", "JAX_COMPILATION_CACHE_DIR"):
+        monkeypatch.delenv(name, raising=False)
+    for name in variables:
+        monkeypatch.setenv(name, str(tmp_path))
+    try:
+        jax.config.update("jax_compilation_cache_dir", None)
+        report = restore.configure_compilation_cache(jax.config)
+        expected = str(tmp_path) if variables else None
+        assert jax.config.jax_compilation_cache_dir == expected
+        assert report["path"] == expected
+        assert report["enabled"] == bool(variables)
+        assert report["environment"] == {name: str(tmp_path) for name in variables}
+        assert report["xla_caches"] == jax.config.jax_persistent_cache_enable_xla_caches
+    finally:
+        jax.config.update("jax_compilation_cache_dir", previous)
+
+
+@pytest.mark.parametrize("invalid", ["conflict", "missing", "relative", "disabled"])
+def test_restore_rejects_ambiguous_or_unusable_compilation_cache(tmp_path, monkeypatch, invalid):
+    import jax
+
+    previous = jax.config.jax_compilation_cache_dir
+    enabled = jax.config.jax_enable_compilation_cache
+    monkeypatch.setenv("MMEVLA_JAX_CACHE_DIR", str(tmp_path))
+    monkeypatch.delenv("JAX_COMPILATION_CACHE_DIR", raising=False)
+    if invalid == "conflict":
+        other = tmp_path / "other"
+        other.mkdir()
+        monkeypatch.setenv("JAX_COMPILATION_CACHE_DIR", str(other))
+    elif invalid == "missing":
+        monkeypatch.setenv("MMEVLA_JAX_CACHE_DIR", str(tmp_path / "missing"))
+    elif invalid == "relative":
+        monkeypatch.setenv("MMEVLA_JAX_CACHE_DIR", ".")
+    else:
+        jax.config.update("jax_enable_compilation_cache", False)
+    try:
+        with pytest.raises(ValueError):
+            restore.configure_compilation_cache(jax.config)
+        assert jax.config.jax_compilation_cache_dir == previous
+    finally:
+        jax.config.update("jax_enable_compilation_cache", enabled)
+
+
 @pytest.mark.parametrize("uuid", ["GPU-B", "B"])
 def test_restore_uuid_prefix_is_format_only(uuid):
     client = SimpleNamespace(worker_pid=11,
