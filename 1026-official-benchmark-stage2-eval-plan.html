@@ -308,7 +308,7 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
   logs/                    # hold / worker / server / sidecar / sim
   hold-jobs.txt            # 本轮八个确切 JobID，不从账号现状猜
 </code></pre>
-<p>所有产物落新 eval 副本自己的 <code>v1-store</code>，不写训练 run 目录。NFS 原子保证只采用同一文件系统内的 <code>mkdir</code> 与 rename；跨文件系统 move、覆盖现有 accepted、多个控制器同时写同一 JSON 都禁止。写入先关闭并同步，再发布最终 manifest；恢复时验 schema、长度、SHA 和成员集合。</p>
+<p>所有产物落新 eval 副本自己的 <code>v1-store</code>，不写训练 run 目录。NFS 原子操作采用同一文件系统内的 <code>mkdir</code>、rename 与经验证的无覆盖 link 发布；跨文件系统 move、覆盖现有 accepted、多个控制器同时写同一 JSON 都禁止。写入先关闭并同步，再发布最终 manifest；恢复时验 schema、长度、SHA 和成员集合。</p>
 <h3>5.3 claim、owner 与不可见窗口</h3>
 <p>worker 按稳定 chunk 顺序尝试 <code>mkdir(queue/claims/chunk_id)</code>；仅成功者可创建独立 attempt。owner 写入临时文件，再 rename 为 <code>owner.json</code>，至少包含 task identity、generation、attempt_id、worker UUID、JobID、StepID、PID、启动时间和 hostname。</p>
 <p><strong>mkdir 成功而 owner 未写的崩溃窗口必须单独处理。</strong>控制器将其标为 ownerless，关联 worker 启动登记、Slurm step 与日志核实；不能因为目录空、mtime 老或 heartbeat 超时就抢占。无法唯一归属时保留 claim，必要时 drain 本池全部 worker steps，确认全部相关 step 已终止后才能 generation++ 重发未提交局；复用原八 hold，并计入重试上限。</p>
@@ -317,7 +317,7 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 <p>controller 先通过独占控制目录取得写权，记录自身身份与控制 generation；若控制器异常退出，接替者必须确认旧进程／Slurm step 已终止，才进入恢复。不能仅凭控制锁年龄新建第二个控制器。</p>
 <p>回收某 chunk 时，先确认旧 worker／sim 所属 Slurm step 为终态，并验证节点上的相关 PID 已不再运行；然后将 chunk generation 加一、旧 claim 移入隔离记录、生成新 attempt。增加 generation 是拒绝迟到结果的逻辑栅栏，不能替代杀死／确认旧计算停止。</p>
 <p>worker 仅向自己的 <code>attempts/chunk/attempt</code> 写入，不直接写 canonical／accepted 或总表。每局日志／视频关闭、SHA 核验完成后发布独立 sealed receipt；chunk completed 清单只是汇总，不能成为已完成单局的唯一入口。controller 核身份、generation、局集合、SHA、终态与唯一性后接受；崩溃块的 sealed 单局在确认旧 step 死亡后仍可逐局接受。</p>
-<p>canonical 建议以 <code>os.link(已完整descriptor,唯一目标)</code> 原子创建且拒绝覆盖，先在目标 NFS 挂载验证硬链接原子性；即使单控制器也不能用 replace 覆盖已存在 accepted。完成以逐集 canonical 集合为准。这里只保证权威结果一次，不承诺故障条件下物理计算恰好一次。</p>
+<p>canonical 建议以 <code>os.link(控制器生成的不可变descriptor,唯一目标)</code> 原子创建且拒绝覆盖，先在目标 NFS 挂载验证硬链接原子性；源descriptor由控制器核验后生成并封存，不能链接worker仍可修改的结果文件。即使单控制器也不能用 replace 覆盖已存在 accepted。完成以逐集 canonical 集合为准。这里只保证权威结果一次，不承诺故障条件下物理计算恰好一次。</p>
 <p>旧 attempt 在被 fencing 后到达，仍保留为可追溯隔离证据，不能覆写 canonical。若 controller 在接受记录发布后、总表更新前崩溃，重启从 accepted 重建总表；总表不是真源，避免“写总表一半”丢失局。</p>
 <h3>5.5 部分完成、错误与一次重试</h3>
 <p>每局结果原子落地；chunk completed 清单列出全部五局终态。若进程在第三局崩溃，控制器可核验已完整落地的前两局并记录，不重跑正常终局；剩余未完成局组成重试成员集合，仍绑定原官方 episode 和 model seed。重试拆块不改变母集。</p>
