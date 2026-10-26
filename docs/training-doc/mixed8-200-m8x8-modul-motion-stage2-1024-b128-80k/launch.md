@@ -151,3 +151,11 @@ uv run --frozen --no-sync --project "$P/scripts/dataset/wan_stage2" python \
 4. 主环境 `pack_motion_store.py verify --store "$D/motion-stage2-1024" --resume --check-padding`，只有当前全表认证成功才接管已结束pack进程的锁。
 
 上述路径变量与上一节相同，CPU阶段不暴露GPU、GPU阶段只用物理0；日志统一 `v1-store/logs/vla-s2-20261026/pack.log`，目标motion-stage2-1024必须全新。WAIVED证据沿用G2键进入原12文件快照并随交付发布；其他来源检查、G4/G5/G6/G7门槛不变。
+
+## 用户G5省时裁决后的实际续接
+
+用户明确「同意按照你说过的更省时方案 做」「encoder只抽机小部分」，随后「同意继续」。原全量encoder比较已按精确PID停止，退出130，不计为验证失败或全表PASS；packed表保留。新合同与比较器独立合前PASS、合后95＋53项CPU测试通过。真实index在主NumPy1.26.4和独立torch NumPy2.4.4均生成相同样本SHA `3d9a162d3528184a638750abbf69cdd385a21968349459964409a5baf7477936`：16任务各64，共1,024窗，demo332、exec692、补帧68。
+
+`commitV11.51Beta` 固定本次抽样续接版本；只运行已有表上的 `compare_stage2.py --scope sampled --batch 1 --device cuda:0`（其余store/latents/ckpt/SHA同上），随后主环境 `pack_motion_store.py verify --store "$D/motion-stage2-1024" --resume --check-padding`。不再次执行pack或抽取。入口 `v1-store/logs/vla-s2-20261026/run-sampled-verify.sh`，调用方显式传完整 `STAGE2_VERIFY_HEAD`；tmux仍用已结束可复用的 `cc-vla-s2-pack`，新日志为 `sampled-verify.log`，保留旧pack.log。
+
+CPU全量memcmp表与所有S1 token并核文件/metadata/sidecar/latent SHA，最多4个散列线程；GPU只计算1024个选中窗口。分别出 `PACKED_TOKEN_BYTES=PASS compared=65419` 与 `ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=65419`；认证明确scope=sampled，原文/SHA/覆盖随stage2_compat进入run与交付，不能宣称全表encoder数值一致。verify仍全表padding/行摘要，原pack死进程锁只用resume接管。沿用原2小时总验证上限，不扩大预算；首错停止，不自动重试。
