@@ -253,6 +253,7 @@ def test_nonstub_rejects_each_missing_group(provenance, tmp_path, group, monkeyp
 
 def _handshake_client(provenance, root):
     client = object.__new__(C.MotionEncoderClient)
+    client.encoder_kind = C.STAGE2_KIND
     client._provenance_root = root
     client._online_gpu = "0"
     client.provenance = {k: copy.deepcopy(provenance[k]) for k in
@@ -260,6 +261,12 @@ def _handshake_client(provenance, root):
     client.provenance.update(online_vae=copy.deepcopy(provenance["stage2_compat"]["online_vae"]),
                              pid=123, gpu_uuid="GPU-test", cuda_visible_devices="0")
     client._proc = SimpleNamespace(pid=123, poll=lambda: 0)
+    # 本夹具只隔离来源比较；真实进程归属由下方实际 uv 测试覆盖。
+    def identity():
+        if client.provenance.get("pid") != 123:
+            raise ValueError("阶段二 worker 进程身份不符")
+        return 123, 0
+    client._stage2_worker_identity = identity
     return client
 
 
@@ -319,6 +326,7 @@ def test_nonstub_launch_uses_independent_project_and_registered_source(provenanc
         return SimpleNamespace(pid=123, poll=lambda: 0)
     monkeypatch.setattr(C.subprocess, "Popen", spawn)
     monkeypatch.setattr(P, "recv_handshake", lambda *args: handshake)
+    monkeypatch.setattr(C.MotionEncoderClient, "_stage2_worker_identity", lambda self: (123, 0))
     client = C.MotionEncoderClient(online_gpu=0, encoder_kind=C.STAGE2_KIND, source_run=SOURCE_RUN,
                                    store_provenance=provenance, provenance_root=tmp_path, v1_store=tmp_path,
                                    expected_ckpt_sha256=provenance["encoder"]["checkpoint_sha256"])
@@ -403,3 +411,147 @@ def test_policy_passes_full_sources_and_overrides_gpu_in_copy(provenance, tmp_pa
     assert captured["client"]["online_gpu"] == 0
     assert captured["history"].motion.online_gpu == 0 and original.motion.online_gpu == 4
     assert (tmp_path / "history_config.resolved.yaml").read_bytes() == raw
+
+
+def _wait_process_gone(pid):
+    deadline = time.monotonic() + 3
+    while time.monotonic() < deadline:
+        try:
+            C._live_process(pid)
+        except ValueError:
+            return
+        time.sleep(0.01)
+    pytest.fail(f"客户端清理后仍有存活进程 PID={pid}")
+
+
+@pytest.fixture
+def real_uv_client():
+    """直接使用已安装的独立环境和真实 uv，不替换 Popen 或解释器。"""
+    selected = os.environ.get("MMEVLA_STAGE2_IMPORT_ENV")
+    if not selected:
+        pytest.skip("实际 uv 进程链验收需 MMEVLA_STAGE2_IMPORT_ENV 指向已安装环境")
+    environment = Path(selected).resolve(strict=True)
+    assert environment.name == "wan-stage2" and environment.parent.name == "venvs"
+    client = C.MotionEncoderClient(online_gpu="", encoder_kind=C.STAGE2_KIND, source_run=SOURCE_RUN,
+                                   stub=True, v1_store=environment.parents[1], handshake_timeout=20)
+    launcher, worker = client._proc.pid, client.worker_pid
+    try:
+        yield client
+    finally:
+        client.close()
+        _wait_process_gone(launcher)
+        _wait_process_gone(worker)
+
+
+def test_real_uv_worker_three_windows_and_cleanup(real_uv_client):
+    client = real_uv_client
+    assert client.worker_pid == client.provenance["pid"]
+    for start, real in ((0, 33), (32, 33), (64, 17)):
+        ids = list(range(start, start + real)) + [start + real - 1] * (33 - real)
+        token = client(np.stack([P.stub_frame(i) for i in ids]), start)
+        assert token.nbytes == 4096
+        np.testing.assert_array_equal(token, np.full(1024, start, np.float32))
+    assert client.n_calls == 3
+
+
+@pytest.mark.parametrize("pid", [None, True, 0, -1, "123"])
+def test_real_uv_worker_rejects_invalid_pid(real_uv_client, pid):
+    real_uv_client.provenance["pid"] = pid
+    with pytest.raises(ValueError, match="身份"):
+        real_uv_client.worker_pid
+
+
+def test_real_uv_worker_rejects_unrelated_live_pid(real_uv_client):
+    real_uv_client.provenance["pid"] = os.getpid()
+    with pytest.raises(ValueError, match="身份"):
+        real_uv_client.worker_pid
+
+
+def test_real_uv_worker_rejects_exited_pid(real_uv_client):
+    process = subprocess.Popen([sys.executable, "-c", "pass"])
+    process.wait(timeout=5)
+    real_uv_client.provenance["pid"] = process.pid
+    with pytest.raises(ValueError, match="身份"):
+        real_uv_client.worker_pid
+
+
+def test_real_uv_worker_rejects_changed_script_and_start_time(real_uv_client):
+    client = real_uv_client
+    expected = client.argv[6]
+    client.argv[6] = str(Path(expected).with_name("unrelated.py"))
+    with pytest.raises(ValueError, match="脚本身份"):
+        client.worker_pid
+    client.argv[6] = expected
+    identity = client._worker_identity
+    client._worker_identity = (identity[0], identity[1] + 1)
+    with pytest.raises(ValueError, match="被替换"):
+        client.worker_pid
+    client._worker_identity = identity
+
+
+def test_real_uv_worker_cleanup_after_launcher_exits(real_uv_client):
+    client = real_uv_client
+    client._proc.terminate()
+    client._proc.wait(timeout=5)
+    with pytest.raises(ValueError, match="启动器已退出"):
+        client.worker_pid
+    client.close()
+
+
+def test_real_uv_rejects_forged_handshake_and_reaps_actual_worker(monkeypatch):
+    selected = os.environ.get("MMEVLA_STAGE2_IMPORT_ENV")
+    if not selected:
+        pytest.skip("实际 uv 进程链验收需指定已安装环境")
+    real_popen, receive = subprocess.Popen, P.recv_handshake
+    observed = {}
+    def spawn(*args, **kwargs):
+        process = real_popen(*args, **kwargs)
+        observed["process"] = process
+        return process
+    def handshake(*args):
+        result = receive(*args)
+        observed["worker"] = result["pid"]
+        result["pid"] = os.getpid()
+        return result
+    monkeypatch.setattr(C.subprocess, "Popen", spawn)
+    monkeypatch.setattr(P, "recv_handshake", handshake)
+    with pytest.raises(ValueError, match="身份"):
+        C.MotionEncoderClient(online_gpu="", encoder_kind=C.STAGE2_KIND, source_run=SOURCE_RUN, stub=True,
+                              v1_store=Path(selected).resolve().parents[1], handshake_timeout=20)
+    assert observed["process"].poll() is not None
+    _wait_process_gone(observed["worker"])
+
+
+def test_group_cleanup_requires_created_and_owned_session(monkeypatch):
+    client = object.__new__(C.MotionEncoderClient)
+    client._proc = SimpleNamespace(pid=123, poll=lambda: None)
+    signals = []
+    monkeypatch.setattr(C.os, "killpg", lambda *args: signals.append(args))
+    client._signal_stage2_group(15)
+    assert signals == []
+    client._stage2_owns_session = True
+    monkeypatch.setattr(C.os, "getpgid", lambda pid: 999)
+    monkeypatch.setattr(C.os, "getsid", lambda pid: 999)
+    client._signal_stage2_group(15)
+    assert signals == []
+    client._proc = None
+
+
+def test_real_uv_rejects_other_launchers_worker_even_with_matching_script(real_uv_client):
+    client = real_uv_client
+    other = C.MotionEncoderClient(online_gpu="", encoder_kind=C.STAGE2_KIND, source_run=SOURCE_RUN, stub=True,
+                                  v1_store=Path(os.environ["MMEVLA_STAGE2_IMPORT_ENV"]).resolve().parents[1],
+                                  handshake_timeout=20)
+    original = (client.provenance["pid"], client._worker_identity, client.argv)
+    other_pid = other.worker_pid
+    try:
+        # 模拟首次握手，给足真实脚本与参数；仍必须由父子归属链拒绝另一启动器的 worker。
+        del client._worker_identity
+        client.provenance["pid"] = other_pid
+        client.argv = list(other.argv)
+        with pytest.raises(ValueError, match="不属于本次启动器"):
+            client.worker_pid
+    finally:
+        client.provenance["pid"], client._worker_identity, client.argv = original
+        other.close()
+        _wait_process_gone(other_pid)

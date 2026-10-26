@@ -16,6 +16,7 @@ import json
 import os
 import pathlib
 import re
+import signal
 import socket
 import subprocess
 import sys
@@ -41,6 +42,19 @@ PROV_SAME_ENC = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", 
 
 STAGE2_KIND = "stage2_pool4_concat"
 STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
+
+
+def _live_process(pid: int) -> tuple[int, int]:
+    """读取 Linux 进程父 PID 与启动时钟；退出、僵尸和非法 PID 均不算存活。"""
+    if type(pid) is not int or pid <= 0:
+        raise ValueError("阶段二 worker 进程身份必须为正整数 PID")
+    try:
+        fields = pathlib.Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+        if fields[0] in ("Z", "X", "x"):
+            raise ValueError("阶段二 worker 进程身份已退出")
+        return int(fields[1]), int(fields[19])
+    except (OSError, IndexError) as exc:
+        raise ValueError("阶段二 worker 进程身份不存在或不可读") from exc
 
 
 def _sha256(path: pathlib.Path) -> str:
@@ -312,7 +326,9 @@ class MotionEncoderClient:
         self.argv = argv
         try:
             self._proc = subprocess.Popen(argv, env=child_env, pass_fds=[child_sock.fileno()], cwd=str(_REPO_ROOT),
-                                          stdin=subprocess.DEVNULL, stdout=sys.stderr, stderr=sys.stderr)
+                                          stdin=subprocess.DEVNULL, stdout=sys.stderr, stderr=sys.stderr,
+                                          start_new_session=True)
+            self._stage2_owns_session = True
         except Exception:
             parent_sock.close()
             self._sock = None
@@ -328,6 +344,7 @@ class MotionEncoderClient:
             for key, value in expected.items():
                 if type(self.provenance.get(key)) is not type(value) or self.provenance[key] != value:
                     raise RuntimeError(f"阶段二握手 {key} 不匹配")
+            self._worker_identity = self._stage2_worker_identity()
             if not self.stub:
                 self.check_provenance(store_provenance)
         except Exception:
@@ -335,6 +352,46 @@ class MotionEncoderClient:
             raise
         self.n_calls = 0
         self.total_s = 0.0
+
+    def _stage2_worker_identity(self) -> tuple[int, int]:
+        """核上报 PID 属于启动器的存活后代，且运行本次指定脚本与完整参数。"""
+        pid = self.provenance.get("pid")
+        if self._proc.poll() is not None:
+            raise ValueError("阶段二 worker 进程身份的启动器已退出")
+        snapshot = _live_process(pid)
+        parent, started = snapshot
+        identity = (pid, started)
+        if getattr(self, "_worker_identity", identity) != identity:
+            raise ValueError("阶段二 worker 进程身份已被替换")
+        try:
+            command = pathlib.Path(f"/proc/{pid}/cmdline").read_bytes().rstrip(b"\0").split(b"\0")
+            executable = pathlib.Path(f"/proc/{pid}/exe").resolve(strict=True).name
+        except OSError as exc:
+            raise ValueError("阶段二 worker 脚本身份不可读") from exc
+        if (re.fullmatch(r"python(?:\d+(?:\.\d+)*)?", executable) is None
+                or [os.fsdecode(arg) for arg in command[1:]] != self.argv[6:]):
+            raise ValueError("阶段二 worker 脚本身份与启动参数不符")
+        ancestors = {pid}
+        current = pid
+        while current != self._proc.pid:
+            current = parent
+            if current in ancestors or current <= 1 or len(ancestors) >= 128:
+                raise ValueError("阶段二 worker 进程身份不属于本次启动器")
+            ancestors.add(current)
+            parent, _ = _live_process(current)
+        # 前后复核避免读取归属链期间退出或被替换。
+        if _live_process(pid) != snapshot:
+            raise ValueError("阶段二 worker 进程身份在校验中变化")
+        if self._proc.poll() is not None:
+            raise ValueError("阶段二 worker 进程身份的启动器已退出")
+        return identity
+
+    @property
+    def worker_pid(self) -> int:
+        """返回经归属、脚本与启动时钟复核的实际阶段二 worker PID。"""
+        if self.encoder_kind != STAGE2_KIND:
+            raise ValueError("worker_pid 仅用于阶段二客户端")
+        return self._stage2_worker_identity()[0]
 
     def _check_stage2_provenance(self, store_prov: dict) -> None:
         from mme_vla_suite.datastore.motion_store import validate_stage2_provenance
@@ -349,7 +406,8 @@ class MotionEncoderClient:
                 raise ValueError(f"阶段二真实握手的 {group} 与离线来源不同")
         if self.provenance.get("online_vae") != store_prov["stage2_compat"]["online_vae"]:
             raise ValueError("阶段二真实 VAE 与兼容合同的 online_vae 不同")
-        if (type(self.provenance.get("pid")) is not int or self.provenance["pid"] != self._proc.pid
+        worker_pid = self.worker_pid
+        if (worker_pid != self.provenance.get("pid")
                 or not self.provenance.get("gpu_uuid") or not self.provenance.get("cuda_visible_devices")
                 or self.provenance["cuda_visible_devices"] != self._online_gpu):
             raise ValueError("阶段二真实握手缺实际进程或 GPU 身份")
@@ -397,6 +455,9 @@ class MotionEncoderClient:
         return np.frombuffer(raw, dtype=np.float32).copy()
 
     def close(self) -> None:
+        if getattr(self, "encoder_kind", None) == STAGE2_KIND:
+            self._close_stage2()
+            return
         try:
             if getattr(self, "_sock", None) is not None:
                 try:
@@ -417,6 +478,52 @@ class MotionEncoderClient:
                     except subprocess.TimeoutExpired:
                         p.kill()
                         p.wait()
+
+    def _close_stage2(self) -> None:
+        """先按协议结束 worker；超时只清理本客户端独立会话中的进程组。"""
+        sock = getattr(self, "_sock", None)
+        if sock is not None:
+            try:
+                P.send_all(sock, P.encode_shutdown())
+            except Exception:
+                pass
+            finally:
+                sock.close()
+                self._sock = None
+        process = getattr(self, "_proc", None)
+        if process is None:
+            return
+        if process.poll() is None:
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                for sig in (signal.SIGTERM, signal.SIGKILL):
+                    self._signal_stage2_group(sig)
+                    try:
+                        process.wait(timeout=5)
+                        break
+                    except subprocess.TimeoutExpired:
+                        continue
+        self._signal_stage2_group(signal.SIGKILL)
+
+    def _signal_stage2_group(self, sig: int) -> None:
+        """只向本次创建且现场复核归属的会话组发信号，不使用未验证的上报 PID。"""
+        if not getattr(self, "_stage2_owns_session", False):
+            return
+        process = self._proc
+        identity = getattr(self, "_worker_identity", None)
+        candidates = [(process.pid, None)] if process.poll() is None else []
+        if identity is not None:
+            candidates.append(identity)
+        for pid, started in candidates:
+            try:
+                if started is not None and _live_process(pid)[1] != started:
+                    continue
+                if os.getpgid(pid) == process.pid and os.getsid(pid) == process.pid:
+                    os.killpg(process.pid, sig)
+                    return
+            except (ValueError, ProcessLookupError):
+                continue
 
     @property
     def alive(self) -> bool:

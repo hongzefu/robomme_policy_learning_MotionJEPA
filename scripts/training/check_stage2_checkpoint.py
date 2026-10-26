@@ -388,12 +388,24 @@ def verify_process_gpus(parent_pid, sidecar_pid, inventory, online_gpu, output=N
     for line in output.splitlines():
         pid, uuid = [item.strip() for item in line.split(",", 1)]
         if int(pid) in observed:
-            observed[int(pid)].add(uuid)
-    expected = {parent_pid: {inventory[0]["uuid"]}, sidecar_pid: {inventory[online_gpu]["uuid"]}}
+            observed[int(pid)].add(uuid.removeprefix("GPU-"))
+    expected = {parent_pid: {inventory[0]["uuid"].removeprefix("GPU-")},
+                sidecar_pid: {inventory[online_gpu]["uuid"].removeprefix("GPU-")}}
     if parent_pid == sidecar_pid or observed != expected:
         raise ValueError(f"实际 GPU 进程映射不符: expected={expected}, actual={observed}")
     return {"parent": {"pid": parent_pid, "physical_index": 0, **inventory[0]},
             "sidecar": {"pid": sidecar_pid, "physical_index": online_gpu, **inventory[online_gpu]}}
+
+
+def verified_sidecar_pid(client, online_gpu, inventory):
+    """使用客户端重新验证的实际 worker，不能把 uv 启动器 PID 当成编码进程。"""
+    identity = client.provenance
+    sidecar_pid = client.worker_pid
+    if (type(sidecar_pid) is not int or sidecar_pid <= 0 or sidecar_pid != identity.get("pid")
+            or str(identity.get("cuda_visible_devices")) != str(online_gpu)
+            or str(identity.get("gpu_uuid", "")).removeprefix("GPU-") != inventory[online_gpu]["uuid"].removeprefix("GPU-")):
+        raise ValueError("sidecar 握手物理 GPU/PID 与指定分配不一致")
+    return sidecar_pid
 
 
 def run_online(policy, record, arrays, online_gpu, inventory):
@@ -405,11 +417,7 @@ def run_online(policy, record, arrays, online_gpu, inventory):
     if client is None or client.stub or not client.alive:
         raise ValueError("恢复验收必须使用存活的真实 sidecar")
     identity = client.provenance
-    sidecar_pid = identity.get("pid")
-    if (type(sidecar_pid) is not int or sidecar_pid != client._proc.pid
-            or str(identity.get("cuda_visible_devices")) != str(online_gpu)
-            or identity.get("gpu_uuid") != inventory[online_gpu]["uuid"]):
-        raise ValueError("sidecar 握手物理 GPU/PID 与指定分配不一致")
+    sidecar_pid = verified_sidecar_pid(client, online_gpu, inventory)
     policy.reset()
     es = record["exec_start_idx"]
     demo_starts = list(range(0, es - 16, 32))
