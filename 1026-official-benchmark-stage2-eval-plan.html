@@ -241,6 +241,7 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 <p>不能改训练 JSON 中的 A100 为 A40，不能覆写 <code>history_config.resolved.yaml</code>，也不能全局删掉 numerics 比较。这会消失训练身份并使任何硬件都能自称兼容。应新增一个只属于 eval 的目标合同分支，默认保持现有严格模式。</p>
 <h3>3.3 拟新增 eval_target_contract.json</h3>
 <p>身份分层避免 SHA 循环，也避免 60k 尚未到位阻塞阶段 II 与排队。<code>runtime_contract.py</code> 规范化所有 descriptor：<code>motion_identity_sha256</code> 只绑定 MJ／VAE／source_pin／软件数值／fixture／阈值；A40 证书绑定 motion identity 与验证代码 SHA。<code>model_identity_sha256</code> 在 60000 到位后绑定 VLA 文件 SHA、resolved config、normstats 与 motion identity；最终 <code>run_identity_sha256</code> 再绑定 model identity、证书 SHA、benchmark／metadata／seed／eval 参数。证书不反向绑定 final run SHA。</p>
+<p>阶段II的早期同架构checkpoint单独生成 <code>validation_model_identity_sha256</code> 与 <code>validation_run_identity_sha256</code>，绑定早期checkpoint真实文件SHA、其resolved／normstats、同一motion identity和已核架构；server仍通过标准 <code>run_identity_sha256</code> 字段传递这份验证run身份。验证目录、purpose与结果母集独立，只能用于profile，不能进入正式60000的accepted或score；正式model／run身份仍等60000完整到位后生成。</p>
 <p><code>schedule_identity_sha256</code> 单独绑定训练 run、目标 step=60000、eval 代码、benchmark、八 job 规格与 motion identity，用于 T−2h 的批准记录和 hold ledger；它不依赖尚不存在的 VLA60k 文件、A40 证书或 final run SHA。排队和正式 launch 是两条门槛。</p>
 <pre><code>{
   "schema_version": 1,
@@ -344,15 +345,21 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 EVAL_REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval
 EVAL_PY="$EVAL_REPO/.venv/bin/python"
 EVAL_RUN="$EVAL_REPO/v1-store/evaluation/official-stage2-1026/stage2-60k-seed42"
-EVAL_MODELS="$EVAL_RUN/inputs/models.json"
 cd "$EVAL_REPO"
 
 # 拟新增：仅生成静态800清单，不reset环境、不起GPU、不提交job
-"$EVAL_PY" scripts/evaluation/manifest.py \
-  --models "$EVAL_MODELS" --benchmark-commit 856bc3a189d4172f3f47dbee4424d585f8d78db3 \
-  --dataset test --episodes-per-task 50 --chunk-size 5 --model-seed 42 \
+"$EVAL_PY" scripts/evaluation/manifest.py episodes \
+  --benchmark-commit 856bc3a189d4172f3f47dbee4424d585f8d78db3 \
+  --dataset test --episodes-per-task 50 --chunk-size 5 \
+  --out "$EVAL_RUN/inputs/episodes.json"
+
+# 拟新增：仅在60000完整就绪与证书核验后绑定正式模型，生成最终run清单
+"$EVAL_PY" scripts/evaluation/manifest.py bind-model \
+  --episodes "$EVAL_RUN/inputs/episodes.json" \
+  --models "$EVAL_RUN/inputs/models.json" --model-seed 42 \
+  --target-contract "$EVAL_RUN/contracts/eval_target_contract.json" \
   --max-steps 1300 --conservative-max-q 1301 --motion-budget 96 \
-  --position-limit 4096 --out "$EVAL_RUN/inputs"
+  --position-limit 4096 --out "$EVAL_RUN/inputs/run.json"
 
 # 拟新增：CPU 独立测试，无仿真／GPU
 "$EVAL_PY" -m pytest tests/evaluation/test_official_contract.py \
