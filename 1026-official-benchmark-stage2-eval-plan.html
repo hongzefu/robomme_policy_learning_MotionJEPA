@@ -334,6 +334,7 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 <p>所有产物落新 eval 副本自己的 <code>v1-store</code>，不写训练 run 目录。NFS 原子操作采用同一文件系统内的 <code>mkdir</code>、rename 与经验证的无覆盖 link 发布；跨文件系统 move、覆盖现有 accepted、多个控制器同时写同一 JSON 都禁止。写入先关闭并同步，再发布最终 manifest；恢复时验 schema、长度、SHA 和成员集合。</p>
 <h3>5.3 claim、owner 与不可见窗口</h3>
 <p>worker按稳定chunk顺序向唯一controller请求claim；controller在串行事务内先核pool状态／revision／成员资格，再执行 <code>mkdir(queue/claims/chunk_id)</code> 并授予唯一attempt，worker不能绕过冻结状态自行mkdir。owner以临时文件rename发布，含task identity、generation、attempt_id、worker UUID、slot_instance、JobID incarnation、StepID、PID与hostname；mkdir后owner前崩溃仍按下述ownerless规则处理。</p>
+<p>claim授权本身使用持久 <code>claim_request_id</code> 幂等：每个slot_instance最多一个未终态assignment，同一请求重试返回原grant与同一attempt。若授权回执丢失，worker先query原grant，不能改request_id再领新任务；未查清之前保持原assignment占用。负控注入“controller已授予但回执丢失”，确认重试／query只返回同attempt且不会产生第二个未终态assignment。</p>
 <p><strong>mkdir成功而owner未写的崩溃窗口必须单独处理。</strong>控制器将其标为ownerless，关联启动登记、Slurm step与日志；不能因空目录、mtime或heartbeat超时抢占。无法唯一归属时保留claim，冻结本pool的membership快照并暂停扩缩容，drain快照内全部相关worker steps（包括已标retiring但尚未确认终态者）；确认全部相关step终态后才generation++重发未提交局，再恢复伸缩。不能只检查当前RUNNING个数；恢复复用已登记hold，并计入重试上限。</p>
 <p>worker 的 heartbeat 可记录当前 episode、最近动作步、last_progress、PID 与资源，但只用于诊断。慢仿真、NFS 暂停、模型编译或日志停更不等于进程已死；TTL 不构成重试授权。</p>
 <h3>5.4 单控制器、fencing 与唯一接受</h3>
@@ -372,10 +373,11 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 <tr><td>官方仿真／client</td><td>torch <code>2.9.1</code>；<code>$EVAL_ROOT/v1-store/envs/official-sim/bin/python</code>。</td><td>official benchmark／ManiSkill／SAPIEN／client的实际import路径与独立锁；验证Vulkan与资产可见性。</td></tr>
 </tbody></table>
 <p>具体锁文件必须从各自已核源码与环境合同固定，不能临时统一torch版本。worker通过明确解释器启动server、sidecar和sim，副进程回报自身 <code>sys.executable</code>、模块 <code>__file__</code>、环境SHA、GPU UUID与driver；每个新入池节点都核对，首台A40证书不能覆盖异driver／异import环境。只在eval内存配置中覆盖解释器路径，训练resolved文件不写回。</p>
+<p>三环境逐一核 <code>realpath(sys.executable)</code> 与 <code>sys.prefix</code> 均为已声明、计算节点可见的NFS路径，避免venv软链接指向仅登录机存在的解释器。<code>MMEVLA_V1_STORE</code>、<code>OPENPI_DATA_HOME</code>、<code>HF_HOME</code>、<code>HF_HUB_CACHE</code>及各库缓存路径由运行合同显式固定，发现外部覆盖即拒绝。VAE／tokenizer／benchmark资产逐件SHA与离线引用必须闭合；计算节点执行offline预检，禁止退回默认HOME缓存或借外部PYTHONPATH补包，不临时联网下载缺件。</p>
 <h3>6.1a 不可变执行release与60000交付边界</h3>
 <p>发布顺序单向固定为：aspen／vail开发树 → 独立审定代码commit C → NFS独立执行release C → 实测报告 → 目标证书 → 最终run identity。执行release固定checkout C，报告和证书只写产物目录；随后文档／handoff commit不移动执行树，也不要求证书反向绑定未来文档commit。上游修复逐项登记commit／hunk／受影响门并重新验收，不merge整条活动训练分支导致源码漂移。</p>
 <p>固定基线默认YAML仍可能含 <code>__FILL_AFTER_G3__</code>，生产入口必须消费已交付、SHA锁定的 <code>history_config.resolved.yaml</code> 及normstats／motion provenance；发现占位符或默认模板即拒绝。config name仅用于定位模型结构，不能用默认YAML替代训练快照。</p>
-<p>60000就绪只依赖<strong>已封口root清单＋<code>manifests/step-60000.json</code></strong>，不等待全部16份checkpoint完成后的final <code>delivery_manifest.json</code>。从既有只读交付源下载到NFS staging，完整核成员集合、大小、SHA、相对路径闭合与禁止路径逃逸／符号链接；通过后发布以manifest摘要命名的不可变实体目录，并最后写READY。</p>
+<p>60000就绪只依赖<strong>已封口root清单＋<code>manifests/step-60000.json</code></strong>，不等待全部16份checkpoint完成后的final <code>delivery_manifest.json</code>。从既有只读交付源下载到NFS staging，完整核成员集合、大小、SHA、相对路径闭合与禁止路径逃逸／符号链接；通过后发布以manifest摘要命名的不可变实体目录，所有文件关闭并同步后，将完整READY临时文件在同一文件系统内原子rename为READY作为最后一步，禁止提前或逐字段写出可见READY。</p>
 <p>worker仅消费READY对应的具体manifest SHA与实体目录，不跟随latest等可变别名，不读取仍在下载或训练写入的目录。早期validation checkpoint使用独立交付清单和目录；60000 arrival不覆盖它们。ready发布失败、成员缺失或SHA不符保持blocked，不让“目录存在”或“step已到60000”替代交付完成。</p>
 <table><thead><tr><th>条目</th><th>值</th><th>状态</th></tr></thead><tbody>
 <tr><td>占位job</td><td><code>target_jobs=N</code>显式设定且无默认；每job建议1 node／1 task／1 GPU／4 CPU／24 GiB／48h。</td><td>N可大可小并运行中调整；具体单job规格和总资源上限须批准，GPU型号现场核A40。</td></tr>
