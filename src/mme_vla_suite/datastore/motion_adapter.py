@@ -11,6 +11,9 @@ import numpy as np
 RAW_SHAPE = (8, 256)
 PAIR_SHAPE = (4, 512)
 PAIRING = "adjacent_pair_v1"
+STAGE2_READOUT = "stage2_pool4_concat_v1"
+STAGE2_SHAPE = (1, 1024)
+STAGE2_LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
 RAW_LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
 LEGACY_LAYOUTS = ("motion-768-grid16-v1", "motion-768-grid16-demopad17-v1")
 
@@ -50,6 +53,17 @@ def motion_policy_spec(cfg: Mapping) -> MotionPolicySpec:
     """解析 motion 节；新四对必须显式声明全部形状键，旧配置保持单个 768 维槽。"""
     if not isinstance(cfg, Mapping):
         raise TypeError("motion 配置必须为映射")
+    if cfg.get("readout") == STAGE2_READOUT:
+        required = {"source_shape", "num_tokens", "dim", "budget"}
+        if required - cfg.keys():
+            raise ValueError(f"stage2 motion 缺字段 {sorted(required - cfg.keys())}")
+        shape = tuple(cfg["source_shape"])
+        budget = _integer(cfg, "budget", 96)
+        if (any(isinstance(v, bool) or not isinstance(v, Integral) for v in shape)
+                or shape != STAGE2_SHAPE or _integer(cfg, "num_tokens", 1) != 1
+                or _integer(cfg, "dim", 1024) != 1024 or budget <= 0):
+            raise ValueError("stage2 motion 必须为 source_shape=[1,1024]、num_tokens=1、dim=1024、budget>0")
+        return MotionPolicySpec(STAGE2_SHAPE, STAGE2_READOUT, 1, 1024, budget, budget, (STAGE2_LAYOUT,))
     paired = "source_shape" in cfg or "readout" in cfg
     if paired:
         budget = _integer(cfg, "budget", 160)

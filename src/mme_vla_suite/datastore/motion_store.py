@@ -34,6 +34,7 @@ import json
 import logging
 import os
 import pathlib
+import re
 
 import numpy as np
 
@@ -43,6 +44,9 @@ logger = logging.getLogger(__name__)
 
 # ── 布局常量 ──────────────────────────────────────────────────────────────────
 LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
+STAGE2_LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
+STAGE2_ARCH = "wan-latent-stage2-blockwise-pool4-three-decoder"
+STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
 META_SCHEMA = 1
 INDEX_SCHEMA = 1
 
@@ -82,6 +86,7 @@ class LayoutSpec:
     exec_min_real: int
     demo_tail_pad: str
     row_shape: tuple[int, ...] = (768,)
+    grid_stride: int = 16
 
     @property
     def row_bytes(self) -> int:
@@ -102,9 +107,10 @@ LAYOUT_SPECS = {
     "motion-768-grid16-v1": LayoutSpec(33, 33, "none"),
     "motion-768-grid16-demopad17-v1": LayoutSpec(17, 33, "repeat_last"),
     "motion-v10-8x256-grid16-demopad17-v1": LayoutSpec(17, 33, "repeat_last", (8, 256)),
+    STAGE2_LAYOUT: LayoutSpec(17, 33, "repeat_last", (1, 1024), grid_stride=32),
 }
 if LAYOUT not in LAYOUT_SPECS or any(
-    f"-{LAYOUT_GRID_SUFFIX}-" not in name or not name.endswith("-v1") for name in LAYOUT_SPECS
+    f"-grid{spec.grid_stride}-" not in name or not name.endswith("-v1") for name, spec in LAYOUT_SPECS.items()
 ):
     raise RuntimeError(f"motion 布局名与 GRID_STRIDE={GRID_STRIDE} 不符")
 
@@ -140,9 +146,11 @@ def seg_num_chunks(seg_len: int, min_real: int = 33) -> int:
     return max(0, int(seg_len) - (min_real - 1))
 
 
-def seg_num_grid(seg_len: int, min_real: int = 33) -> int:
-    """段内网格起点数 = ``len(range(0, num_chunks, GRID_STRIDE))``。"""
-    return len(range(0, seg_num_chunks(seg_len, min_real), GRID_STRIDE))
+def seg_num_grid(seg_len: int, min_real: int = 33, stride: int = GRID_STRIDE) -> int:
+    """段内网格起点数；默认步长16保留旧调用口径。"""
+    if type(stride) is not int or stride <= 0:
+        raise ValueError("网格步长必须为正整数")
+    return len(range(0, seg_num_chunks(seg_len, min_real), stride))
 
 
 def segment_lengths(num_timesteps: int, exec_start_idx: int) -> dict[str, int]:
@@ -154,9 +162,11 @@ def segment_lengths(num_timesteps: int, exec_start_idx: int) -> dict[str, int]:
     return {"demo": es, "exec": nt - es}
 
 
-def segment_grid_starts(seg_len: int, min_real: int = 33) -> list[int]:
-    """段内网格起点偏移列表 ``[0, 16, 32, …]``（长度 = seg_num_grid）。"""
-    return list(range(0, seg_num_chunks(seg_len, min_real), GRID_STRIDE))
+def segment_grid_starts(seg_len: int, min_real: int = 33, stride: int = GRID_STRIDE) -> list[int]:
+    """按指定步长返回段内起点列表；默认步长16。"""
+    if type(stride) is not int or stride <= 0:
+        raise ValueError("网格步长必须为正整数")
+    return list(range(0, seg_num_chunks(seg_len, min_real), stride))
 
 
 def visible_motion_rows(entry: "IndexEntry", t: int) -> tuple[np.ndarray, np.ndarray]:
@@ -176,13 +186,13 @@ def visible_motion_rows(entry: "IndexEntry", t: int) -> tuple[np.ndarray, np.nda
     frames: list[int] = []
     if entry.demo.row_base is not None:
         for m in range(entry.demo.num_grid):
-            s = GRID_STRIDE * m
+            s = entry.spec.grid_stride * m
             if s + (entry.spec.demo_min_real - 1) <= es - 1:
                 rows.append(entry.demo.row_base + m)
                 frames.append(s)
     if entry.exec.row_base is not None:
         for m in range(entry.exec.num_grid):
-            u = GRID_STRIDE * m
+            u = entry.spec.grid_stride * m
             if u + (WINDOW_FRAMES - 1) <= t - es:
                 rows.append(entry.exec.row_base + m)
                 frames.append(es + u)
@@ -194,8 +204,10 @@ def visible_motion_rows(entry: "IndexEntry", t: int) -> tuple[np.ndarray, np.nda
     return r, f
 
 
-def max_visible_count(entry: "IndexEntry") -> int:
+def max_visible_count(entry: "IndexEntry", stride: int | None = None) -> int:
     """该 episode 任一 exec 样本的合法起点数上界（t = 最后一帧时取到）。"""
+    if stride is not None and stride != entry.spec.grid_stride:
+        raise ValueError("max_visible_count 的显式步长与索引布局不同")
     r, _ = visible_motion_rows(entry, entry.num_timesteps - 1)
     return int(len(r))
 
@@ -213,6 +225,109 @@ def sha256_file(p: str | pathlib.Path) -> str:
 
 def sha256_bytes(b: bytes) -> str:
     return hashlib.sha256(b).hexdigest()
+
+
+def canonical_json_bytes(value) -> bytes:
+    """跨进程身份的唯一 JSON 编码；拒绝非有限数。"""
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+                      allow_nan=False).encode("utf-8")
+
+
+def require_sha256(value, ctx: str) -> str:
+    if not isinstance(value, str) or re.fullmatch(r"[0-9a-f]{64}", value) is None:
+        raise ValueError(f"{ctx} 必须为 64 位小写 SHA256")
+    return value
+
+
+def validate_stage2_provenance(provenance: dict) -> None:
+    """严格检查 stage2 六组来源；只验证身份，不依赖建库机器的绝对路径。"""
+    if not isinstance(provenance, dict):
+        raise ValueError("stage2 provenance 必须为对象")
+    for group in STAGE2_GROUPS:
+        if not isinstance(provenance.get(group), dict) or not provenance[group]:
+            raise ValueError(f"stage2 provenance 缺完整 {group}")
+    enc = provenance["encoder"]
+    fields = ("run_name", "checkpoint_name", "epoch", "global_step", "state_key", "weight_type",
+              "arch", "checkpoint_sha256", "config_sha256", "fingerprint_sha256", "source_times", "output_shape")
+    if any(k not in enc or enc[k] is None for k in fields):
+        raise ValueError("stage2 encoder 必填字段不全")
+    fixed = {"state_key": "model", "weight_type": "ema", "arch": STAGE2_ARCH,
+             "source_times": [0, 3, 5, 8], "output_shape": [1, 1024]}
+    if any(canonical_json_bytes(enc[k]) != canonical_json_bytes(v) for k, v in fixed.items()):
+        raise ValueError("stage2 encoder 架构、EMA 键或输出槽序不符")
+    if (not isinstance(enc["run_name"], str) or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", enc["run_name"]) is None
+            or type(enc["epoch"]) is not int or enc["epoch"] < 0
+            or type(enc["global_step"]) is not int or enc["global_step"] < 0
+            or enc["checkpoint_name"] != f"checkpoint_epoch_{enc['epoch']}.pt"):
+        raise ValueError("stage2 encoder 轮次或名称不自洽")
+    for k in ("checkpoint_sha256", "config_sha256", "fingerprint_sha256"):
+        require_sha256(enc[k], f"encoder.{k}")
+    state = provenance["encoder_state_sha256"]
+    leaves = state.get("leaves")
+    if state.get("algorithm") != "named-tensors-v1" or not isinstance(leaves, dict) or len(leaves) != 65:
+        raise ValueError("stage2 encoder 状态摘要必须含 named-tensors-v1 的完整 65 项")
+    for name, leaf in leaves.items():
+        if (not isinstance(name, str) or not name or name.startswith("encoder.")
+                or not isinstance(leaf, dict) or leaf.get("dtype") != "float32"
+                or not isinstance(leaf.get("shape"), list)
+                or any(type(d) is not int or d < 0 for d in leaf["shape"])):
+            raise ValueError(f"stage2 encoder 状态项不合法: {name}")
+        require_sha256(leaf.get("sha256"), f"encoder_state.{name}")
+    if state.get("sha256") != sha256_bytes(canonical_json_bytes(leaves)):
+        raise ValueError("stage2 encoder 状态清单摘要不自洽")
+    pin = provenance["source_pin"]
+    if not isinstance(pin.get("mj_repo_commit"), str) or re.fullmatch(r"[0-9a-f]{40}", pin["mj_repo_commit"]) is None:
+        raise ValueError("stage2 source_pin 缺 40 位 MJ 提交")
+    for k in ("export_source_sha256", "encoder_source_sha256", "vae_adapter_sha256", "dependency_lock_sha256"):
+        require_sha256(pin.get(k), f"source_pin.{k}")
+    numerics = provenance["numerics"]
+    for k, value in {"dtype": "float32", "autocast": False, "matmul_allow_tf32": False,
+                     "cudnn_allow_tf32": False, "batch": 1}.items():
+        if type(numerics.get(k)) is not type(value) or numerics[k] != value:
+            raise ValueError(f"stage2 numerics.{k} 不符")
+    for k in ("torch", "cuda", "cudnn", "numpy", "gpu_name", "driver"):
+        if numerics.get(k) in (None, ""):
+            raise ValueError(f"stage2 numerics 缺 {k}")
+    if type(numerics["cudnn"]) is not int or numerics["cudnn"] <= 0:
+        raise ValueError("stage2 numerics.cudnn 必须为正整数版本")
+    compat = provenance["stage2_compat"]
+    if compat.get("schema") != "stage2-compat-v1":
+        raise ValueError("stage2_compat schema 不符")
+    require_sha256(compat.get("restore_receipt_sha256"), "stage2_compat.restore_receipt_sha256")
+    historical, online = compat.get("historical_vae"), compat.get("online_vae")
+    if not isinstance(historical, dict) or not isinstance(online, dict) or not historical or not online:
+        raise ValueError("stage2_compat 缺历史或在线 VAE 身份")
+    vae_fixed = {"vae_id": "Wan-AI/Wan2.1-T2V-1.3B-Diffusers", "vae_dtype": "float32",
+                 "latent_mode": "mode", "batch": 1, "tf32": "off", "amp": "off"}
+    if any(type(historical.get(k)) is not type(v) or historical[k] != v for k, v in vae_fixed.items()):
+        raise ValueError("stage2_compat 历史 VAE 的固定模型、精度或数值合同不符")
+    for k in ("vae_id", "vae_state_sha256", "vae_dtype", "latent_mode", "batch", "tf32", "amp"):
+        if (k not in historical or canonical_json_bytes(historical[k]) != canonical_json_bytes(provenance["vae"].get(k))
+                or canonical_json_bytes(historical[k]) != canonical_json_bytes(online.get(k))):
+            raise ValueError(f"stage2_compat 的历史、在线 VAE {k} 不一致")
+    require_sha256(historical["vae_state_sha256"], "vae.vae_state_sha256")
+    for k in ("torch", "cuda", "cudnn", "diffusers", "module_sha256", "encoder_src_sha256"):
+        if historical.get(k) in (None, "") or historical[k] != provenance["vae"].get(k):
+            raise ValueError(f"stage2_compat 历史 VAE 缺少或不匹配 {k}")
+    for k in ("module_sha256", "encoder_src_sha256"):
+        require_sha256(historical[k], f"historical_vae.{k}")
+    if online.get("adapter_sha256") != pin["vae_adapter_sha256"]:
+        raise ValueError("stage2_compat 在线 VAE 适配件未绑定 source_pin")
+    if online.get("preprocess") != {"frame_size": 256, "input_dtype": "uint8", "input_layout": "THWC", "window_frames": 33}:
+        raise ValueError("stage2_compat 在线 VAE 预处理不符")
+    if canonical_json_bytes(online.get("numerics")) != canonical_json_bytes(numerics):
+        raise ValueError("stage2_compat 在线 VAE 的锁定环境与 encoder 数值环境不一致")
+    evidence = compat.get("evidence")
+    if not isinstance(evidence, dict):
+        raise ValueError("stage2_compat 缺 evidence")
+    for gate in ("G0", "G2", "G3", "restore_receipt", "SOURCE_PIN"):
+        record = evidence.get(gate)
+        if not isinstance(record, dict) or not isinstance(record.get("path"), str) or not record["path"]:
+            raise ValueError(f"stage2_compat 缺 {gate} 文件引用")
+        require_sha256(record.get("sha256"), f"evidence.{gate}")
+    if evidence["restore_receipt"]["sha256"] != compat["restore_receipt_sha256"]:
+        raise ValueError("stage2_compat receipt 引用与身份不同")
+    canonical_json_bytes(provenance)
 
 
 def task_of_h5(h5_file: str) -> str:
@@ -271,7 +386,7 @@ def build_index_entries(manifest: dict, spec: LayoutSpec) -> list[IndexEntry]:
         for seg in SEGMENTS:
             L = lens[seg]
             min_real = spec.min_real(seg)
-            ng = seg_num_grid(L, min_real)
+            ng = seg_num_grid(L, min_real, spec.grid_stride)
             segs[seg] = SegmentInfo(row_base=(cursor if ng > 0 else None), num_grid=ng,
                                     num_chunks=seg_num_chunks(L, min_real), seg_len=L)
             cursor += ng
@@ -300,7 +415,7 @@ def index_payload(manifest: dict, entries: list[IndexEntry], *, spec: LayoutSpec
         "schema": INDEX_SCHEMA,
         "layout": layout,
         **spec.fields(),
-        "grid_stride": GRID_STRIDE,
+        "grid_stride": spec.grid_stride,
         "window_frames": WINDOW_FRAMES,
         "grid_origin": GRID_ORIGIN,
         "window_direction": WINDOW_DIRECTION,
@@ -326,10 +441,10 @@ def parse_index(raw: dict, ctx: str = "motion_index.json") -> list[IndexEntry]:
     if int(need("schema")) != INDEX_SCHEMA:
         raise ValueError(f"{ctx} schema={raw['schema']} != {INDEX_SCHEMA}")
     spec = layout_spec(raw, ctx)
-    for key, want in (("grid_stride", GRID_STRIDE), ("window_frames", WINDOW_FRAMES),
+    for key, want in (("grid_stride", spec.grid_stride), ("window_frames", WINDOW_FRAMES),
                       ("grid_origin", GRID_ORIGIN), ("window_direction", WINDOW_DIRECTION),
                       ("truncation_policy", TRUNCATION_POLICY)):
-        if need(key) != want:
+        if need(key) != want or (raw["layout"] == STAGE2_LAYOUT and type(raw[key]) is not type(want)):
             raise ValueError(f"{ctx} {key}={raw[key]!r} != 格式常量 {want!r}")
     entries: list[IndexEntry] = []
     cursor = 0
@@ -344,10 +459,10 @@ def parse_index(raw: dict, ctx: str = "motion_index.json") -> list[IndexEntry]:
             if int(s["seg_len"]) != L:
                 raise ValueError(f"{ctx} g={g} {seg}.seg_len={s['seg_len']} != {L}")
             min_real = spec.min_real(seg)
-            if int(s["num_chunks"]) != seg_num_chunks(L, min_real) or int(s["num_grid"]) != seg_num_grid(L, min_real):
+            if int(s["num_chunks"]) != seg_num_chunks(L, min_real) or int(s["num_grid"]) != seg_num_grid(L, min_real, spec.grid_stride):
                 raise ValueError(
                     f"{ctx} g={g} {seg} num_chunks/num_grid={s['num_chunks']}/{s['num_grid']} "
-                    f"!= 公式 {seg_num_chunks(L, min_real)}/{seg_num_grid(L, min_real)}")
+                    f"!= 公式 {seg_num_chunks(L, min_real)}/{seg_num_grid(L, min_real, spec.grid_stride)}")
             ng = int(s["num_grid"])
             if ng == 0:
                 if s["row_base"] is not None:
@@ -431,14 +546,14 @@ class MotionMeta:
         if int(need("schema")) != META_SCHEMA:
             raise ValueError(f"schema={raw['schema']} != {META_SCHEMA}")
         spec = layout_spec(raw, str(meta_path))
-        if raw["layout"] == LAYOUT and need("manifest_scope") != "full":
+        if raw["layout"] in (LAYOUT, STAGE2_LAYOUT) and need("manifest_scope") != "full":
             raise ValueError("raw8 motion 表必须完整覆盖绑定清单（manifest_scope=full）")
         if need("byte_order") != BYTE_ORDER or need("array_order") != ARRAY_ORDER:
             raise ValueError("byte_order/array_order 与格式常量不符")
-        for key, want in (("grid_stride", GRID_STRIDE), ("window_frames", WINDOW_FRAMES),
+        for key, want in (("grid_stride", spec.grid_stride), ("window_frames", WINDOW_FRAMES),
                           ("grid_origin", GRID_ORIGIN), ("window_direction", WINDOW_DIRECTION),
                           ("truncation_policy", TRUNCATION_POLICY), ("frame_size", FRAME_SIZE)):
-            if need(key) != want:
+            if need(key) != want or (raw["layout"] == STAGE2_LAYOUT and type(raw[key]) is not type(want)):
                 raise ValueError(f"store_meta {key}={raw[key]!r} != 格式常量 {want!r}")
         status = need("status")
         if status not in ("packed", "verified"):
@@ -475,6 +590,8 @@ class MotionMeta:
         provenance = need("provenance")
         if not isinstance(provenance, dict):
             raise ValueError("provenance 须为对象")
+        if raw["layout"] == STAGE2_LAYOUT:
+            validate_stage2_provenance(provenance)
         return cls(root=root, raw=raw, status=status, num_rows=num_rows,
                    manifest_sha256=need("manifest_sha256"), manifest_path=need("manifest_path"),
                    motion_index_sha256=raw["motion_index_sha256"], table_sha256=t.get("sha256"),
