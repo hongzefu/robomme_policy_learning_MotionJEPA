@@ -154,21 +154,82 @@ def test_parameter_tree_rejects_drift(launch, real_trees, kind):
     assert record.failed
 
 
-def test_bitexact_checker_uses_pack_script_and_raw_metadata(launch, tmp_path):
+@pytest.mark.parametrize("fault", [None, "missing", "table_bytes", "index_bytes", "table_sha",
+                                  "index_sha", "checkpoint_sha", "scope", "schema", "source_grid",
+                                  "missing_field", "compared"])
+def test_bitexact_checker_uses_pack_script_and_raw_metadata(launch, tmp_path, fault):
+    import numpy as np
+    from mme_vla_suite.datastore import motion_store as ms
+
     pack = launch.load_script(REPO, "scripts/dataset/pack_motion_store.py")
-    raw = {"num_rows": 7, "tables": {"motion_token": {"sha256": "a" * 64}},
-           "motion_index_sha256": "b" * 64,
-           "provenance": {"encoder": {"checkpoint_sha256": "c" * 64}}}
-    record = {"status": "PASS", "compared": 7, "mismatches": 0,
-              "store_table_sha256": "a" * 64, "motion_index_sha256": "b" * 64,
-              "checkpoint_sha256": "c" * 64}
-    path = tmp_path / "meta/encoder_bitexact.json"
-    path.parent.mkdir()
+    fixtures = launch.load_script(REPO, "tests/datastore/test_motion_store_stage2.py")
+    manifest = fixtures.manifest_for([(165, 100), (82, 50), (32, 0)])
+    provenance = fixtures.stage2_identity()
+    spec = ms.LAYOUT_SPECS[ms.STAGE2_LAYOUT]
+    entries = ms.build_index_entries(manifest, spec)
+    totals = ms.index_totals(entries)
+    assert totals["rows"] == 7
+    source_grid = {key: list(range(0, num_grid * 2, 2))
+                   for _, _, key, _, num_grid in pack.iter_rows_in_order(entries)}
+    provenance["source_grid_sha256"] = ms.sha256_bytes(ms.canonical_json_bytes(source_grid))
+    (tmp_path / "meta").mkdir()
+    manifest_path = tmp_path / "meta/episode_manifest.json"
+    manifest_path.write_bytes(ms.canonical_json_bytes(manifest))
+    index_path = tmp_path / ms.INDEX_RELPATH
+    index_path.write_bytes(ms.canonical_json_bytes(ms.index_payload(
+        manifest, entries, spec=spec, layout=ms.STAGE2_LAYOUT,
+        mj_repo_commit=provenance["source_pin"]["mj_repo_commit"])))
+    table_path = tmp_path / ms.MOTION_TABLE_RELPATH
+    table_path.write_bytes(np.arange(totals["rows"] * 1024, dtype="<f4").reshape(-1, 1, 1024).tobytes())
+    raw = {"schema": ms.META_SCHEMA, "layout": ms.STAGE2_LAYOUT, "status": "packed",
+           "manifest_scope": "full", "manifest_sha256": manifest["sha256"],
+           "manifest_path": str(manifest_path), "motion_index_sha256": launch.sha256_file(index_path),
+           "grid_stride": 32, "window_frames": 33, "grid_origin": "segment_start",
+           "window_direction": "forward", "truncation_policy": "none", "frame_size": 256,
+           "byte_order": "little", "array_order": "C", **spec.fields(),
+           "num_rows": totals["rows"], "totals": totals, "provenance": provenance,
+           "tables": {"motion_token": {"relpath": ms.MOTION_TABLE_RELPATH,
+                       "row_shape": [1, 1024], "dtype": "float32", "row_bytes": 4096,
+                       "num_rows": totals["rows"], "byte_count": table_path.stat().st_size,
+                       "sha256": launch.sha256_file(table_path)}}}
+    (tmp_path / ms.META_RELPATH).write_bytes(ms.canonical_json_bytes(raw))
+    # 实际元数据读取与 fast 检查先通过，避免只凑认证器读取的几个字段。
+    loaded = ms.MotionMeta.load(tmp_path)
+    ms.run_fast_checks(loaded)
+    assert loaded.row_shape == (1, 1024) and loaded.spec.grid_stride == 32
+    record = {"schema": "stage2-encoder-bitexact-v1", "scope": "full", "layout": ms.STAGE2_LAYOUT,
+              "status": "PASS", "compared": totals["rows"], "mismatches": 0,
+              "store_table_sha256": raw["tables"]["motion_token"]["sha256"],
+              "motion_index_sha256": raw["motion_index_sha256"],
+              "checkpoint_sha256": provenance["encoder"]["checkpoint_sha256"],
+              "source_grid_sha256": provenance["source_grid_sha256"]}
+    path = tmp_path / pack.BITEXACT_RELPATH
     path.write_text(json.dumps(record))
-    assert pack.check_bitexact_record(tmp_path, raw) == record
-    raw["tables"]["motion_token"]["sha256"] = "d" * 64
-    with pytest.raises(RuntimeError, match="不符"):
-        pack.check_bitexact_record(tmp_path, raw)
+    assert pack.check_bitexact_record(tmp_path, loaded.raw) == record
+    if fault is None:
+        return
+    if fault == "missing":
+        path.unlink()
+    elif fault == "table_bytes":
+        blob = bytearray(table_path.read_bytes())
+        blob[0] ^= 1
+        table_path.write_bytes(blob)
+    elif fault == "index_bytes":
+        index_path.write_bytes(index_path.read_bytes() + b"\n")
+    else:
+        if fault == "missing_field":
+            del record["source_grid_sha256"]
+        else:
+            field, value = {"table_sha": ("store_table_sha256", "0" * 64),
+                            "index_sha": ("motion_index_sha256", "0" * 64),
+                            "checkpoint_sha": ("checkpoint_sha256", "0" * 64),
+                            "scope": ("scope", "sample"), "schema": ("schema", "wrong-schema"),
+                            "source_grid": ("source_grid_sha256", "0" * 64),
+                            "compared": ("compared", totals["rows"] - 1)}[fault]
+            record[field] = value
+        path.write_text(json.dumps(record))
+    with pytest.raises(RuntimeError, match="不符|比较记录"):
+        pack.check_bitexact_record(tmp_path, loaded.raw)
 
 
 def shell_fixture(tmp_path):
