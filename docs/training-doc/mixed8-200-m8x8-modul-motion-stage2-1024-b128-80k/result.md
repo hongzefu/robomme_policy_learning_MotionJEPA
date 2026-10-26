@@ -1,5 +1,9 @@
 # 阶段结果：G2超阈值，正式VLA尚未起跑
 
+**最新实测（美东16:16）**：用户批准的省时G5已完成。`PACKED_TOKEN_BYTES=PASS compared=65419 mismatches=0`、`ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=65419 mismatches=0 seed=0`、`VERIFY_MOTION=PASS scanned=65419 mismatches=0`；749个补帧窗、1051个丢弃短尾、5个合法零窗均核对通过。CPU完整性＋GPU抽样98秒，verify约10.8秒，总计109秒，退出0；库为verified。随后注册encoder/config两实体并通过G6：`TRAIN_ES_BOUND=PASS train_max=62 eval_max=79 budget=96`，2秒、退出0。认证明确scope=sampled，SHA为 `4345250e7a03244ca28162a870041e1648a708ebe7e28a79c50d9cfbcb22a4eb`，不代表全量encoder重算。下一步G4与20步/恢复，正式训练仍未起跑。
+
+用户新增要求：「注意你的wandb 不要用tri的账号 用hongzefu的账号 正式训练」。已用现有凭据只读核API viewer=`hongzefu`、entity=`hongzefu-university-of-michigan`，当前训练配置project=`robomme-framesamp`；凭据不进入日志或git。
+
 **G5最新裁决**：用户明确「同意按照你说过的更省时方案 做」「encoder只抽机小部分」，随后「同意继续」。CPU打包已完成：65,419行、267,956,224字节，table SHA为 `8de36e670d58c60859d48b37f29c989f2eed45344f5cd5fb2f7a96126394ee5c`。原全量GPU比较已按用户指令于美东15:43:53停止（退出130，最后进度至少17,408行一致），GPU释放且无PASS认证。后续改用CPU全量字节/文件SHA＋encoder分层1,024窗，每任务64、seed0，认证明确scope=sampled，不重pack或重抽、不声明全表encoder一致。
 
 **最新裁决（2026-10-26美东15:21）**：用户明确「可以忽略 继续做」，接受本次G2数值例外并恢复原主run。原始FAIL证据保留，例外按精确失败/ckpt/G0三SHA以WAIVED记录传递，不降低其他验收要求。G3随后单次通过：65项EMA原张量精确一致、live负控被拒，32窗对拍max_abs=0，32秒、退出0。当前继续准备pack与全表独立重算，正式训练仍未起跑。以下14:23停工记录作为历史证据保留。
