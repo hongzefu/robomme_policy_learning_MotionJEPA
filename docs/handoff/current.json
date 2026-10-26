@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-26T19:29:04Z",
-    "america_new_york": "2026-10-26T15:29:04-0400"
+    "utc": "2026-10-26T19:36:24Z",
+    "america_new_york": "2026-10-26T15:36:24-0400"
   },
   "repo": {
-    "branch": "v4-256concat1",
-    "base_head": "7ff55d61640f6b5d983571ea5f23daf227a129cb",
+    "branch": "worktree-agent-vla-s2-state-20261026",
+    "base_head": "a4817eedff440c888bec39c2aeb69d8f8609150a",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
-    "active": false,
-    "main_path": null,
-    "frozen_head": null
+    "active": true,
+    "main_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+    "frozen_head": "a4817eedff440c888bec39c2aeb69d8f8609150a"
   },
   "tasks": {
     "mixed8-vla-stage2-1024-train": {
@@ -22,7 +22,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-26T19:23:32Z",
-      "state_reason": "用户明确「可以忽略 继续做」，接受本次G2数值例外；原FAIL保留。G3单次32秒通过，65EMA状态逐位一致、32窗max_abs=0，GPU已释放。例外消费链和生成CLI合前审查均PASS，准备解除当前数据Beta冻结并合入复测、生成WAIVED来源记录后pack。其余门槛不变，正式VLA未起跑。",
+      "state_reason": "用户接受的G2例外已严格贯通，合后235+17CPU测试通过并push；G2-waiver身份重验9秒成功，原FAIL保持。G3已PASS。数据续接Beta=a4817ee；cc-vla-s2-pack于美东15:35:18起跑，正在pack→GPU0全表重算→verify。其余门槛不变，正式VLA未起跑。",
       "owner": {"session": "", "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"},
       "depends_on": [{
         "path": "/scratch/hongze/MotionJEPA",
@@ -38,7 +38,7 @@
         {"what": "G12远端60k依赖回读及严格恢复", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"}
       ],
       "long_tail": [{"what": "G10 MJ阶段II/III公开备份", "tmux": "cc-vla-s2-mjup", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/mjup.log", "done_line": "MJ_CKPT_UPLOAD=PASS source_runs=2 files=35 bytes=7545592817 sha256_mismatch=0 public=1", "status": "pass", "evidence": "2026-10-26T18:21:20Z最外层EXIT_CODE=0，tmux自然退出；bucket=HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1"}],
-      "running_handles": [],
+      "running_handles": [{"tmux": "cc-vla-s2-pack", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/pack.log", "done_line": "ENCODER_BITEXACT=PASS、VERIFY_MOTION=PASS、PACK_VALIDATION=PASS 且 EXIT_CODE=0", "pid": 2646655, "gpu": "比较阶段仅0，pack/verify为CPU", "started_at": "2026-10-26T19:35:18Z", "budget": "全表比较7200秒；数值累计74秒，G4剩7126秒"}],
       "authorizations": [{
         "kind": "go", "date": "2026-10-26",
         "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md 开工 有问题问用户 所有subagebt必须全部astra high",
@@ -54,8 +54,8 @@
       }],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "G3已通过；合入两份已审例外代码，原报告不改，新建G2-waiver.json只核身份不重跑数值", "command": "消费TIP af64a8981bb33ee1933742e21d0a403f0612b333；生成TIP e4350bc5ffbfe29db527b07b758370e4e5c50a82；设计及合前审均PASS", "verdict_line": "G2_USER_EXCEPTION=ACCEPTED"},
-        {"what": "G3结束后合回本状态分支并整合例外处理，形成新确定版本再pack→独立全表重算→verify", "command": "更新运行入口版本与G2选择规则，不重抽65,419窗；保持S1 b5d23a5及全部输入SHA不变", "verdict_line": "ENCODER_BITEXACT=PASS；VERIFY_MOTION=PASS"},
+        {"what": "监听当前pack→独立全表比较→verify，失败不自动重试；原G2报告和token保持", "command": "run-pack.sh SHA=7aadd167c3bc5194c01b62980607818e82722fc5e642422c5b4256c3b9cea821；例外记录SHA=3a3bf86e122ea8ffa538e0b6e8fedfe4525dc8663be26beb62b5b1c9720b999a", "verdict_line": "ENCODER_BITEXACT=PASS；VERIFY_MOTION=PASS；EXIT_CODE=0"},
+        {"what": "全表验收后解除续接冻结、合回本状态分支、绑定yaml SHA并注册encoder实体，随后G6/G4", "command": "保持S1 b5d23a5与全部原数据SHA；G4剩余预算读取numeric-budget.json", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS"},
         {"what": "G6、G4、20步与保存恢复通过后才正式80k；G2的用户例外须完整随快照和交付传递", "command": "按原计划主run，备选B和benchmark不启动", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"}
       ]
     },
