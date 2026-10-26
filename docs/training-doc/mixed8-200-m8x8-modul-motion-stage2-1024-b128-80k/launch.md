@@ -138,3 +138,16 @@ uv run --frozen --no-sync --project "$P/scripts/dataset/wan_stage2" python \
 ```
 
 打包和全表比较在前述阶段完成后，于 `cc-vla-s2-pack` 串行执行；实际命令和闸门记录随后补入。当前训练yaml的SHA仍保留占位，须G3与新库验证后填入，不能提前启动VLA。
+
+## 用户G2例外后的打包续接
+
+用户于美东15:21明确「可以忽略 继续做」，仅接受已报告的G2数值失败；原G2.json和阈值不改，新WAIVED记录保持原失败UTF8字节和精确三SHA。G3随后单次32秒通过，65项EMA和32窗两路调用均精确一致。消费链合后235项CPU测试、记录CLI合后17项CPU测试及独立torch环境入口导入通过；两块均独立合前审查PASS。
+
+本节随 `commitV11.48Beta` 固定后续版本，原S1 `b5d23a5`、全量token、恢复latent和G0均不变。此Beta仅续接打包验收，不是正式VLA训练Beta。运行代理在 `cc-vla-s2-pack` 以明确完整 `STAGE2_PACK_HEAD` 执行主仓 `v1-store/logs/vla-s2-20261026/run-pack.sh`；该脚本固定下列顺序，首个失败停止，不自动重试或重抽：
+
+1. 锁定torch环境运行 `accept_stage2_g2_exception.py --failure "$VALID/G2.json" --samples "$VALID/windows.json" --ckpt "$CKPT" --expected-sha256 "$CKPT_SHA" --out "$VALID/G2-waiver.json" --device cuda:0`，只加载并核来源身份，不执行窗编码；打印 `G2_USER_EXCEPTION=ACCEPTED original_status=FAIL numeric_validation_complete=0`。耗时计入G2–G4原7200秒预算，G2/G3已有65秒。
+2. 主环境 `pack_motion_store.py pack --layout stage2 --latent-grid-subsample 2 --manifest "$D/meta/episode_manifest.json" --tokens "$D/motion-tokens-stage2" --latents "$LAT" --out "$D/motion-stage2-1024" --encoder-run-dir /scratch/hongze/MotionJEPA/runs/stage2-full144-1025-a --raw-dir "$P/v1-store/raw-h5/16task-mixed8-200-20261014" --restore-receipt "$P/v1-store/restore/mixed8-200-vla-latents-20261021-a/restore_receipt.json" --expected-ckpt-sha256 "$CKPT_SHA" --stage2-validation "$VALID" --stage2-source-pin "$P/scripts/dataset/wan_stage2/SOURCE_PIN.json"`。
+3. GPU0锁定子环境 `compare_stage2.py --store "$D/motion-stage2-1024" --latents "$LAT" --ckpt "$CKPT" --expected-sha256 "$CKPT_SHA" --scope full --batch 1 --device cuda:0`，独立重算65419行，上限7200秒。
+4. 主环境 `pack_motion_store.py verify --store "$D/motion-stage2-1024" --resume --check-padding`，只有当前全表认证成功才接管已结束pack进程的锁。
+
+上述路径变量与上一节相同，CPU阶段不暴露GPU、GPU阶段只用物理0；日志统一 `v1-store/logs/vla-s2-20261026/pack.log`，目标motion-stage2-1024必须全新。WAIVED证据沿用G2键进入原12文件快照并随交付发布；其他来源检查、G4/G5/G6/G7门槛不变。
