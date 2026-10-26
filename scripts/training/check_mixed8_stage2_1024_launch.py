@@ -345,8 +345,9 @@ def check_motion(rec, repo, store, fields, contract):
     rec("ENCODER_CONFIG_REGISTERED", config_file.is_file() and not config_file.is_symlink()
         and sha256_file(config_file) == encoder["config_sha256"], "注册配置字节与来源一致")
     pack = load_script(repo, "scripts/dataset/pack_motion_store.py")
-    pack.check_bitexact_record(root, meta)
-    rec("MOTION_PROVENANCE", True, "六组来源与全表认证已核验")
+    certification = pack.check_bitexact_record(root, meta)
+    rec("MOTION_PROVENANCE", True, f"六组来源与CPU全表完整性已核验；encoder_scope={certification['scope']} "
+        f"encoder_compared={certification['compared']} total_rows={loaded.num_rows}")
     manifest_path = store / contract.parent_rel / "meta/episode_manifest.json"
     manifest = load_manifest(manifest_path)
     ms.run_fast_checks(loaded, manifest_path=manifest_path)

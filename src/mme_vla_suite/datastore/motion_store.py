@@ -34,6 +34,7 @@ import json
 import logging
 import os
 import pathlib
+import random
 import re
 
 import numpy as np
@@ -47,6 +48,8 @@ LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
 STAGE2_LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
 STAGE2_ARCH = "wan-latent-stage2-blockwise-pool4-three-decoder"
 STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
+STAGE2_SAMPLE_STRATEGY = "task64-endpoints-pad8-seed0-v1"
+STAGE2_SAMPLE_AUTHORIZATION = "同意按照你说过的更省时方案 做\nencoder只抽机小部分"
 STAGE2_G2_WAIVER_CHECKPOINT_SHA256 = "27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035"
 STAGE2_G2_WAIVER_SAMPLES_SHA256 = "4cb05b6b3097b22a8594576def1505957399a924d4189591980292e3bd320d30"
 STAGE2_G2_WAIVER_FAILURE_SHA256 = "88cc88fb69827f00763b5499e3aa3d39bdb411db3e186660eed596716d6dce72"
@@ -411,7 +414,78 @@ def validate_stage2_provenance(provenance: dict) -> None:
         require_sha256(record.get("sha256"), f"evidence.{gate}")
     if evidence["restore_receipt"]["sha256"] != compat["restore_receipt_sha256"]:
         raise ValueError("stage2_compat receipt 引用与身份不同")
+    if "encoder_validation" in compat:
+        validate_stage2_encoder_validation(compat["encoder_validation"], provenance)
     canonical_json_bytes(provenance)
+
+
+def validate_stage2_encoder_validation(summary, provenance, *, total_rows=None,
+                                       table_sha256=None, index_sha256=None):
+    """校验随快照携带的认证原文与覆盖范围；交付环境不依赖原机器索引。"""
+    if not isinstance(summary, dict) or not isinstance(summary.get("record_json"), str):
+        raise ValueError("encoder认证摘要缺完整UTF8原文")
+    if sha256_bytes(summary["record_json"].encode("utf-8")) != require_sha256(summary.get("record_sha256"), "encoder认证原文SHA"):
+        raise ValueError("encoder认证原文SHA不符")
+    try:
+        record = json.loads(summary["record_json"])
+    except json.JSONDecodeError as exc:
+        raise ValueError("encoder认证原文不可解析") from exc
+    scope = summary.get("scope")
+    rows = summary.get("total_rows")
+    if (not isinstance(record, dict) or scope not in ("full", "sampled") or record.get("scope") != scope
+            or record.get("status") != "PASS" or record.get("layout") != STAGE2_LAYOUT
+            or type(rows) is not int or rows <= 0 or (total_rows is not None and rows != total_rows)
+            or type(summary.get("packed_compared")) is not int or summary["packed_compared"] != rows
+            or type(record.get("mismatches")) is not int or record["mismatches"] != 0):
+        raise ValueError("encoder认证范围、总行数或全表CPU覆盖不符")
+    expected = {"checkpoint_sha256": provenance["encoder"]["checkpoint_sha256"]}
+    bindings = {"store_table_sha256": table_sha256 or provenance.get("motion_table_sha256"),
+                "motion_index_sha256": index_sha256 or provenance.get("motion_index_sha256"),
+                "source_grid_sha256": provenance.get("source_grid_sha256"),
+                "source_metadata_sha256": provenance.get("latents_metadata_sha256")}
+    expected.update({key: value for key, value in bindings.items() if value is not None})
+    for key in ("store_table_sha256", "motion_index_sha256", "checkpoint_sha256", "source_grid_sha256"):
+        require_sha256(record.get(key), f"encoder认证.{key}")
+    for key, value in expected.items():
+        if record.get(key) != value and (scope == "sampled" or key != "source_metadata_sha256" or key in record):
+            raise ValueError(f"encoder认证与来源绑定不同: {key}")
+    count = 1024 if scope == "sampled" else rows
+    if (type(summary.get("encoder_compared")) is not int or summary["encoder_compared"] != count
+            or type(record.get("compared")) is not int or record["compared"] != count):
+        raise ValueError("encoder认证比较数不符合声明范围")
+    if scope == "full":
+        if (record.get("schema") != "stage2-encoder-bitexact-v1"
+                or any(key in summary or key in record for key in ("sample_indices", "sample_indices_sha256", "authorization_quote"))):
+            raise ValueError("全量encoder认证不能混入抽样声明")
+    else:
+        if (record.get("schema") != "stage2-encoder-sampled-v1"
+                or type(record.get("total_rows")) is not int or record["total_rows"] != rows
+                or type(record.get("packed_compared")) is not int or record["packed_compared"] != rows
+                or type(record.get("packed_mismatches")) is not int or record["packed_mismatches"] != 0
+                or record.get("strategy") != STAGE2_SAMPLE_STRATEGY
+                or type(record.get("seed")) is not int or record["seed"] != 0
+                or summary.get("authorization_quote") != STAGE2_SAMPLE_AUTHORIZATION
+                or record.get("authorization_quote") != STAGE2_SAMPLE_AUTHORIZATION):
+            raise ValueError("抽样encoder认证缺精确范围、全表CPU覆盖或用户授权")
+        indices, counts = record.get("sample_indices"), record.get("task_counts")
+        if (not isinstance(indices, list) or len(indices) != 1024
+                or any(type(i) is not int or not 0 <= i < rows for i in indices)
+                or indices != sorted(set(indices)) or not isinstance(counts, dict) or len(counts) != 16
+                or any(not isinstance(k, str) or not k or type(v) is not int or v != 64 for k, v in counts.items())):
+            raise ValueError("抽样encoder认证缺1024个唯一升序行或每任务64窗")
+        digest = sha256_bytes(canonical_json_bytes(indices))
+        if record.get("sample_indices_sha256") != digest or summary.get("sample_indices_sha256") != digest:
+            raise ValueError("抽样encoder认证样本集合SHA不符")
+        if (any(type(record.get(k)) is not int or record[k] < 0 for k in ("padded_count", "demo_count", "exec_count"))
+                or record["demo_count"] + record["exec_count"] != 1024 or record["padded_count"] > record["demo_count"]
+                or type(record.get("segments")) is not int or record["segments"] <= 0):
+            raise ValueError("抽样encoder认证分类覆盖或段数不符")
+        for key in ("source_metadata_sha256", "source_tokens_manifest_sha256"):
+            require_sha256(record.get(key), f"encoder认证.{key}")
+    for key in ("encoder_state_sha256", "numerics"):
+        if (scope == "sampled" or key in record) and canonical_json_bytes(record.get(key)) != canonical_json_bytes(provenance[key]):
+            raise ValueError(f"encoder认证的{key}与来源不同")
+    return record
 
 
 def task_of_h5(h5_file: str) -> str:
@@ -450,6 +524,56 @@ class IndexEntry:
     demo: SegmentInfo
     exec: SegmentInfo
     spec: LayoutSpec
+
+
+def stage2_encoder_sample_plan(entries):
+    """任务名排序、同一seed0随机源的分层1024窗；pad8是优先配额，随机余量仍可选更多pad。"""
+    grouped, cursor = {}, 0
+    for entry in entries:
+        if entry.spec != LAYOUT_SPECS[STAGE2_LAYOUT]:
+            raise ValueError("encoder抽样只能消费stage2索引")
+        pools = grouped.setdefault(task_of_h5(entry.h5_file), {"demo": [], "exec": [], "padded": [], "plain_demo": []})
+        for kind in SEGMENTS:
+            segment = getattr(entry, kind)
+            if not segment.num_grid:
+                continue
+            if segment.row_base != cursor:
+                raise ValueError("encoder抽样索引必须连续覆盖全表")
+            for j in range(segment.num_grid):
+                row = cursor + j
+                pools[kind].append(row)
+                if kind == "demo":
+                    pools["padded" if segment.seg_len - j * entry.spec.grid_stride < WINDOW_FRAMES else "plain_demo"].append(row)
+            cursor += segment.num_grid
+    if len(grouped) != 16:
+        raise ValueError("encoder抽样必须恰有16个任务")
+    rng, selected_all, task_counts = random.Random(0), [], {}
+    padded_count = demo_count = exec_count = 0
+    for task, pools in sorted(grouped.items()):
+        all_rows = sorted(pools["demo"] + pools["exec"])
+        if len(all_rows) < 64:
+            raise ValueError(f"encoder抽样任务{task}不足64行")
+        selected = set()
+        for kind in SEGMENTS:
+            if pools[kind]:
+                selected.update((pools[kind][0], pools[kind][-1]))
+        for name, quota in (("padded", 8), ("exec", 16), ("plain_demo", 16)):
+            available = sorted(set(pools[name]) - selected)
+            needed = min(quota, len(pools[name])) - len(selected.intersection(pools[name]))
+            if needed > 0:
+                selected.update(rng.sample(available, needed))
+        selected.update(rng.sample(sorted(set(all_rows) - selected), 64 - len(selected)))
+        task_counts[task] = len(selected)
+        selected_all.extend(selected)
+        padded_count += len(selected.intersection(pools["padded"]))
+        demo_count += len(selected.intersection(pools["demo"]))
+        exec_count += len(selected.intersection(pools["exec"]))
+    indices = sorted(selected_all)
+    if len(indices) != 1024 or len(set(indices)) != 1024:
+        raise ValueError("encoder抽样未产生1024个唯一行")
+    return dict(strategy=STAGE2_SAMPLE_STRATEGY, seed=0, sample_indices=indices,
+                sample_indices_sha256=sha256_bytes(canonical_json_bytes(indices)), task_counts=task_counts,
+                padded_count=padded_count, demo_count=demo_count, exec_count=exec_count)
 
 
 def build_index_entries(manifest: dict, spec: LayoutSpec) -> list[IndexEntry]:
@@ -676,6 +800,10 @@ class MotionMeta:
             raise ValueError("provenance 须为对象")
         if raw["layout"] == STAGE2_LAYOUT:
             validate_stage2_provenance(provenance)
+            if "encoder_validation" in provenance["stage2_compat"]:
+                validate_stage2_encoder_validation(provenance["stage2_compat"]["encoder_validation"], provenance,
+                                                   total_rows=num_rows, table_sha256=t.get("sha256"),
+                                                   index_sha256=raw["motion_index_sha256"])
         return cls(root=root, raw=raw, status=status, num_rows=num_rows,
                    manifest_sha256=need("manifest_sha256"), manifest_path=need("manifest_path"),
                    motion_index_sha256=raw["motion_index_sha256"], table_sha256=t.get("sha256"),
