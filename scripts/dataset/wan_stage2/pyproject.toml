@@ -1,0 +1,21 @@
+# 阶段二独立 torch 子项目；锁与环境不复用旧 wan 或主项目。
+[project]
+name = "mme-vla-wan-stage2"
+version = "0.1.0"
+description = "MME-VLA motion memory：Wan VAE 抽取与 MotionJEPA encoder 编码的 torch 侧子项目（与主 venv 隔离）"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "torch==2.9.0",
+    "diffusers==0.39.0",
+    "numpy==2.4.4",
+    "h5py==3.16.0",
+    "pyyaml==6.0.3",
+    "einops==0.8.2",
+    # 阶段二共享导出模块：以 git 依赖钉死 MotionJEPA 锚点 commit（红线 2）。
+    # 不做 path 依赖——setuptools 会往只读的 MotionJEPA 树里写 build/ 与 egg-info。
+    "motion-jepa @ git+https://github.com/hongzefu/MotionJEPA@b5d23a5fab55be16e580c5b77a8f04d68b3170c2",
+]
+
+[tool.uv]
+# 本目录只是脚本集合，不打包成可安装项目
+package = false

@@ -8,6 +8,7 @@
   请求（父 → 子）：8 字节 magic `MMEMOT01`（直接编码版本）+ uint32 length（= 8 + payload）+ int64 起点全域帧号 + payload
                  payload = 33×256×256×3 uint8 原始字节（精确 6,488,064 B）
   响应（子 → 父）：uint32 status（0 = OK）+ 768×4 字节 f32（精确 3,072 B）；status ≠ 0 时后随 uint32 length + JSON 错误
+  阶段二显式分支：成功 status 后增加 uint32 length（固定 4,096）再发 1024×4 字节；默认旧分支不变。
 发送统一 `sendall`；接收双方共用 `recv_exact(sock, n, deadline)`：按同一个 monotonic 总 deadline 循环 `recv_into` 直到恰好 n 字节，
 禁止假设一次 `recv(n)` 能收到 6.3 MB。EOF、短包、错误 magic / 版本 / status、超长 length、整次请求超过 `REQUEST_TIMEOUT_S` 均 fail-loud。
 """
@@ -110,9 +111,13 @@ def recv_request(sock: socket.socket, deadline: float) -> tuple[int, bytes] | No
     return int(start), payload
 
 
-def encode_response(token_bytes: bytes) -> bytes:
-    if len(token_bytes) != RESPONSE_BYTES:
-        raise ProtocolError(f"token {len(token_bytes)} B != {RESPONSE_BYTES}")
+def encode_response(token_bytes: bytes, response_bytes: int = RESPONSE_BYTES) -> bytes:
+    if type(response_bytes) is not int or response_bytes not in (RESPONSE_BYTES, 4096):
+        raise ProtocolError(f"响应长度不支持: {response_bytes}")
+    if len(token_bytes) != response_bytes:
+        raise ProtocolError(f"token {len(token_bytes)} B != {response_bytes}")
+    if response_bytes == 4096:
+        return struct.pack("<II", STATUS_OK, response_bytes) + token_bytes
     return struct.pack("<I", STATUS_OK) + token_bytes
 
 
@@ -121,10 +126,16 @@ def encode_error(msg: str) -> bytes:
     return struct.pack("<I", STATUS_ERROR) + struct.pack("<I", len(raw)) + raw
 
 
-def recv_response(sock: socket.socket, deadline: float) -> bytes:
+def recv_response(sock: socket.socket, deadline: float, response_bytes: int = RESPONSE_BYTES) -> bytes:
+    if type(response_bytes) is not int or response_bytes not in (RESPONSE_BYTES, 4096):
+        raise ProtocolError(f"响应长度不支持: {response_bytes}")
     (status,) = struct.unpack("<I", recv_exact(sock, 4, deadline))
     if status == STATUS_OK:
-        return recv_exact(sock, RESPONSE_BYTES, deadline)
+        if response_bytes == 4096:
+            (length,) = struct.unpack("<I", recv_exact(sock, 4, deadline))
+            if length != response_bytes:
+                raise ProtocolError(f"响应 length {length} != {response_bytes}")
+        return recv_exact(sock, response_bytes, deadline)
     if status == STATUS_ERROR:
         (n,) = struct.unpack("<I", recv_exact(sock, 4, deadline))
         if n > MAX_JSON:

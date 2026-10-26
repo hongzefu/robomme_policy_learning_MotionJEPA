@@ -73,12 +73,14 @@ def create_trained_policy(
     default_prompt: str | None = None,
     norm_stats: dict[str, transforms.NormStats] | None = None,
     motion_stub: bool = False,
+    motion_online_gpu: int | str | None = None,
 ) -> _policy.MME_VLA_Policy:
     
     repack_transforms = repack_transforms or transforms.Group()
     
     logging.info(f"Checking history config")
-    run_root = pathlib.Path(checkpoint_dir).parent
+    checkpoint_dir = pathlib.Path(checkpoint_dir)
+    run_root = checkpoint_dir.parent
     history_config = None
     history_config_path = run_root / "history_config.txt"
     if history_config_path.exists():
@@ -95,6 +97,11 @@ def create_trained_policy(
     ckpt_has_motion = _params_have_motion(params)
     if resolved_path.exists():
         resolved_history_config, snapshot_enabled = _load_resolved_snapshot(run_root)
+        if motion_online_gpu is not None and snapshot_enabled:
+            from omegaconf import OmegaConf
+            # 只调整推理配置副本；已核 SHA 的原快照及调用方配置保持原样。
+            resolved_history_config = OmegaConf.create(OmegaConf.to_container(resolved_history_config, resolve=True))
+            resolved_history_config.motion.online_gpu = motion_online_gpu
         if snapshot_enabled != ckpt_has_motion:
             raise ValueError(
                 f"run 快照 motion.enabled={snapshot_enabled} 与 checkpoint 参数树含 motion 参数={ckpt_has_motion} 不符: {run_root}")
@@ -137,12 +144,17 @@ def create_trained_policy(
         from mme_vla_suite.policies.motion_client import MotionEncoderClient
         prov_path = run_root / "motion_provenance.json"
         prov = json.loads(prov_path.read_text(encoding="utf-8")) if prov_path.is_file() else {}
-        store_prov = {"vae": prov.get("vae"), "encoder": prov.get("encoder")}
-        if not motion_stub and (store_prov["vae"] is None or store_prov["encoder"] is None):
+        encoder_kind = str(mcfg.get("encoder_kind", "v10"))
+        if encoder_kind == "stage2_pool4_concat":
+            store_prov = prov
+        else:
+            store_prov = {"vae": prov.get("vae"), "encoder": prov.get("encoder")}
+        if not motion_stub and (store_prov.get("vae") is None or store_prov.get("encoder") is None):
             raise ValueError(f"开启态 run 缺 motion_provenance.json 的 vae / encoder 字段，无法核对 sidecar 同源: {run_root}")
         motion_enc_fn = MotionEncoderClient(
             source_run=str(mcfg.source_run),
             online_gpu=mcfg.get("online_gpu", 1), stub=motion_stub, store_provenance=store_prov,
+            encoder_kind=encoder_kind, provenance_root=run_root,
             expected_ckpt_sha256=(store_prov["encoder"] or {}).get("checkpoint_sha256") if not motion_stub else None)
 
     return _policy.MME_VLA_Policy(
