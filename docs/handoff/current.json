@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-26T17:28:38Z",
-    "america_new_york": "2026-10-26T13:28:38-0400"
+    "utc": "2026-10-26T19:29:04Z",
+    "america_new_york": "2026-10-26T15:29:04-0400"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "1383aba0fd77b259f0b32eadb47ea7792190145e",
+    "base_head": "7ff55d61640f6b5d983571ea5f23daf227a129cb",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -21,8 +21,8 @@
         "sha": "1383aba0fd77b259f0b32eadb47ea7792190145e"
       },
       "state": "running",
-      "state_changed_at": "2026-10-26T17:28:38Z",
-      "state_reason": "开工一致性审查通过，S1/S2/S3独立工作树开发中；尚未运行G0至G12或启动训练。",
+      "state_changed_at": "2026-10-26T19:23:32Z",
+      "state_reason": "用户明确「可以忽略 继续做」，接受本次G2数值例外；原FAIL保留。G3单次32秒通过，65EMA状态逐位一致、32窗max_abs=0，GPU已释放。例外消费链和生成CLI合前审查均PASS，准备解除当前数据Beta冻结并合入复测、生成WAIVED来源记录后pack。其余门槛不变，正式VLA未起跑。",
       "owner": {"session": "", "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"},
       "depends_on": [{
         "path": "/scratch/hongze/MotionJEPA",
@@ -32,12 +32,12 @@
       }],
       "pre_handoff": [
         {"what": "计划一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=1383aba0fd77b259f0b32eadb47ea7792190145e findings=0 blocking=0", "where": "独立Astra high审查；计划固定提交1383aba", "status": "pass"},
-        {"what": "G0至G6建库与在线对拍", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"},
+        {"what": "G0至G6建库与在线对拍", "evidence": "G0/G1及全量4995段65419窗PASS；G2原FAIL由用户「可以忽略 继续做」明确接受，来源例外记录待生成；EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1；EXPORT_PARITY=PASS windows=32 seed=0 max_abs=0 geometry_all_true=1；G3退出0，G4至G6待运行。", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"},
         {"what": "G7八卡短测与严格保存回读", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/smoke/", "status": "pending"},
         {"what": "G8正式80k训练及16份checkpoint", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/", "status": "pending"},
         {"what": "G12远端60k依赖回读及严格恢复", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"}
       ],
-      "long_tail": [],
+      "long_tail": [{"what": "G10 MJ阶段II/III公开备份", "tmux": "cc-vla-s2-mjup", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/mjup.log", "done_line": "MJ_CKPT_UPLOAD=PASS source_runs=2 files=35 bytes=7545592817 sha256_mismatch=0 public=1", "status": "pass", "evidence": "2026-10-26T18:21:20Z最外层EXIT_CODE=0，tmux自然退出；bucket=HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1"}],
       "running_handles": [],
       "authorizations": [{
         "kind": "go", "date": "2026-10-26",
@@ -47,11 +47,16 @@
         "kind": "decision", "date": "2026-10-26",
         "quote": "同意推送 要和github同步",
         "scope": "建立origin/v4-256concat1跟踪并推送；后续本次实施提交通过审查后持续同步GitHub。"
+      }, {
+        "kind": "go", "date": "2026-10-26",
+        "quote": "可以忽略 继续做",
+        "scope": "明确接受已报告G2跨精度数值失败并继续原主run；原G2.json保留FAIL，新WAIVED记录限定原失败SHA/本次ckpt/G0清单，身份和其余闸门不放松。不再进行此前建议的单窗诊断。"
       }],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "S1至S4逐块合前审查、合并后验证；S1推送后S4锁依赖", "command": "按计划第二部分子代理分配表", "verdict_line": "PRE_MERGE_REVIEW=PASS；POST_MERGE_REVIEW=PASS"},
-        {"what": "实现后按G0至G7次序验证，全部通过才正式起跑", "command": "按计划第二部分runbook", "verdict_line": "LAUNCH_CONTRACT=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"}
+        {"what": "G3已通过；合入两份已审例外代码，原报告不改，新建G2-waiver.json只核身份不重跑数值", "command": "消费TIP af64a8981bb33ee1933742e21d0a403f0612b333；生成TIP e4350bc5ffbfe29db527b07b758370e4e5c50a82；设计及合前审均PASS", "verdict_line": "G2_USER_EXCEPTION=ACCEPTED"},
+        {"what": "G3结束后合回本状态分支并整合例外处理，形成新确定版本再pack→独立全表重算→verify", "command": "更新运行入口版本与G2选择规则，不重抽65,419窗；保持S1 b5d23a5及全部输入SHA不变", "verdict_line": "ENCODER_BITEXACT=PASS；VERIFY_MOTION=PASS"},
+        {"what": "G6、G4、20步与保存恢复通过后才正式80k；G2的用户例外须完整随快照和交付传递", "command": "按原计划主run，备选B和benchmark不启动", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"}
       ]
     },
     "paired4-training-smoke": {

@@ -1,0 +1,43 @@
+POLICY_HEAD=7ff55d61640f6b5d983571ea5f23daf227a129cb
+MJ_HEAD=b5d23a5fab55be16e580c5b77a8f04d68b3170c2
+START_UTC=2026-10-26T18:03:19Z
+PHASE=export
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/torch/backends/__init__.py:46: UserWarning: Please use the new API settings to control TF32 behavior, such as torch.backends.cudnn.conv.fp32_precision = 'tf32' or torch.backends.cuda.matmul.fp32_precision = 'ieee'. Old settings, e.g, torch.backends.cuda.matmul.allow_tf32 = True, torch.backends.cudnn.allow_tf32 = True, allowTF32CuDNN() and allowTF32CuBLAS() will be deprecated after Pytorch 2.9. Please see https://pytorch.org/docs/main/notes/cuda.html#tensorfloat-32-tf32-on-ampere-and-later-devices (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:80.)
+  self.setter(val)
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+DROPOUT_OFF=PASS windows=64 eval_repeat_max_abs=0.0 train_vs_eval_max_abs=1.684738039970398
+STAGE2_EXPORT=PASS segments=4995 rows=65419
+PHASE_DONE=export elapsed_seconds=1010
+PHASE=G2
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+Cannot initialize model with low cpu memory usage because `accelerate` was not found in the environment. Defaulting to `low_cpu_mem_usage=False`. It is strongly recommended to install `accelerate` for faster and less memory-intense model loading. You can do so with:
+```
+pip install accelerate
+```
+.
+Traceback (most recent call last):
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan_stage2/validate_stage2.py", line 452, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan_stage2/validate_stage2.py", line 429, in main
+    result = {"G2": gate_g2, "G3": gate_g3, "G4-reference": reference_g4}[args.gate](args, samples, runtime)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/scratch/hongze/robomme_policy_learning_MotionJEPA/scripts/dataset/wan_stage2/validate_stage2.py", line 294, in gate_g2
+    raise ValueError(f"G2 超阈值：{window['key']}:{window['source_grid']} mse={mse} max={maximum}")
+ValueError: G2 超阈值：ButtonUnmask_ep178_exec:10 mse=1.747542904391321e-07 max=0.013544513720267467
+END_UTC=2026-10-26T18:20:42Z
+EXIT_CODE=1

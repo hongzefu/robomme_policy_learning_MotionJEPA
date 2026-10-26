@@ -1,5 +1,7 @@
 # 1026-vla-stage2-memory-1024-train-plan.md — 用阶段 III 最后 ckpt（EMA）把每窗 4×256 拼成 1 个 1024 维 memory token，窗 33／步长 32，训一条 mixed8 VLA 80k
 
+> **实施授权补记（2026-10-26）**：用户已明确「开工 有问题问用户 所有subagebt必须全部astra high」「同意推送 要和github同步」；在G2报告本次跨FP32/FP16最大误差0.013544513720267467超过0.01后，又明确裁决「可以忽略 继续做」。据此继续原主run，限定接受本次G2数值例外；原FAIL证据不变，另以WAIVED记录绑定原失败SHA、ep105和G0清单，完整来源身份及其余闸门仍严格。下文r3的“只规划”是编写时的历史状态，不撤销本次实施授权。具体记录见本文末节与训练档案。
+
 > **权威与授权**：只规划不实施。本版 r3 吸收固定版本对抗审查的 8 组阻断问题及验收订正；用户本轮确认「确定修改md demo原始帧是什么意思」，授权仅修改本文，不是代码实施、下载、建库、训练或上传的开工令。保留用户要求的 Markdown 与第一部分／第二部分结构。此前结构裁决为「你这个计划是什么情况？为什么写成现在这么乱七八糟的？我在这个仓库里面有 agent markdown，要求了你要第一部分、第二部分」，格式裁决为「你写一个 Markdown 的计划，然后我确认了再开始。」。
 > **代码锚点**：policy `v4-256concat1@3861154`（从 `v3-motionmem-pair4@8c319aa` 切出；用户：「然后这次的这个修改从branch v4-256concat1开始」），工作副本 `/scratch/hongze/robomme_policy_learning_MotionJEPA`；MotionJEPA `v12-3decoder@6c79ebb`，工作副本 `/scratch/hongze/MotionJEPA`（只新增一个模块＋一个 CLI 脚本，另开分支 `v12-3decoder-memexport`，不动 `v12-3decoder`／`main`）。
 > **commit 体例**：两仓功能改动 `commitV<x>.<y>: <中文>`（policy 接续 `commitV11.37` → 本轮从 `commitV11.38` 起），文档 `docs:`，交接 `handoff:`；子代理提交 `sub/<编号>: <中文>`，经主会话 `git merge --no-ff <TIP sha>` 合入，合并提交占项目号。
@@ -436,3 +438,12 @@ export UV_CACHE_DIR=/scratch/hongze/.cache/uv
 - 训练留档`docs/training-doc/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/{launch.md,result.md,records/}`；records保存G0–G10／G12摘要、G0样本来源与SHA、全表认证、抽取记录、清洗日志及测速表，不放原图／中间张量／权重／脚本／yaml。运行时恢复所需快照与验证证据留在run及export中，随交付清单上传。launch记录全部预算、tmux、真实起跑版本及测速残留删除条件。MJ仓不由本会话写状态。
 - Beta与正式commit同小版本号、两个独立commit，禁止squash/amend；提交按仓库规则推送。当前policy分支无upstream，首次建立远端跟踪须确认；纯MD修订不因此变成实施开工令。
 - 本轮 tmux 清单（R7）写进 `launch.md`；结束按清单逐个清理。
+
+## 十二、实施中的用户裁决与验收状态
+
+- 用户原话：「可以忽略 继续做」。这是对已报告G2失败的明确例外与继续授权，不要求重新运行之前建议的单窗诊断。
+- 全量抽取已成功：4,995段、65,419窗，1,010秒；G0与G1通过。G2在第8样本 `ButtonUnmask_ep178_exec` 旧格10失败，归一化MSE为1.747542904391321e-7，最大差0.013544513720267467；原阈值和原FAIL文件不改，不宣称64窗数值验收通过。
+- 新例外记录命名 `G2-waiver.json`，`status=WAIVED`，包含完整来源身份、用户原话与原失败JSON原始UTF8内容。固定原失败SHA `88cc88fb69827f00763b5499e3aa3d39bdb411db3e186660eed596716d6dce72`、checkpoint SHA `27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035`、G0清单SHA `4cb05b6b3097b22a8594576def1505957399a924d4189591980292e3bd320d30`。只豁免此G2数值门；源码、环境、VAE/EMA身份、G3/G4/G5/G6/G7与交付完整性不豁免。
+- pack、在线、快照、上传与恢复显式识别同一例外；快照沿用G2证据键与原12文件结构，保存WAIVED原字节及嵌入的FAIL原文，不能伪写PASS。`G2_EXCEPTION_DESIGN_REVIEW=PASS`。
+- G3已于美东15:23:32至15:24:04单次通过：`EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1`；`EXPORT_PARITY=PASS windows=32 seed=0 max_abs=0 geometry_all_true=1`，退出0。G10两源35文件7.55GB已匿名SHA回读通过。
+- 初始数据Beta `7ff55d6` 与S1源 `b5d23a5` 保留；后续例外处理另经合前/合后验收形成新版本，不改已抽取token或S1数值代码。备选B与benchmark仍不在范围内。

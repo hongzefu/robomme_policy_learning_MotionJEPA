@@ -1,0 +1,16 @@
+POLICY_HEAD=7ff55d61640f6b5d983571ea5f23daf227a129cb
+START_UTC=2026-10-26T18:03:55Z
+PHASE=MJ_LOCAL_SMOKE
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+HYGIENE=PASS files=32
+HYGIENE=PASS files=35
+SMOKE=PASS kind=encoder source_runs=2 checkpoints=24 files=35
+EXIT_CODE=0
+PHASE=MJ_UPLOAD
+warning: The `tool.uv.dev-dependencies` field (used in `packages/openpi-client/pyproject.toml`) is deprecated and will be removed in a future release; use `dependency-groups.dev` instead
+HYGIENE=PASS files=32
+HYGIENE=PASS files=35
+MJ_CKPT_UPLOAD=PASS source_runs=2 files=35 bytes=7545592817 sha256_mismatch=0 public=1
+EXIT_CODE=0
+END_UTC=2026-10-26T18:21:20Z
+EXIT_CODE=0
