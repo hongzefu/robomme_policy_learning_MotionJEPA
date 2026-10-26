@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>1026 官方 Stage2 评估：对抗审查记录</title>
+<style>
+:root{--ink:#172b3d;--muted:#526577;--line:#d4dfe8;--blue:#17639a;--bg:#edf3f8}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.75 system-ui,-apple-system,"Noto Sans CJK SC","Microsoft YaHei",sans-serif}main{max-width:1150px;margin:26px auto;padding:32px 44px;background:white;border-radius:12px}h1{font-size:30px;color:#154c73}h2{font-size:24px;margin-top:36px;border-bottom:2px solid var(--line);padding-bottom:8px}h3{font-size:19px;color:#154c73;margin-top:26px}p{margin:10px 0}a{color:#155f94}code{background:#eff3f7;padding:1px 4px;border-radius:3px;overflow-wrap:anywhere;font-size:.9em}pre{background:#122c40;color:#edf7ff;padding:16px;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:7px;font-size:13px}table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:14px;margin:16px 0}th,td{border:1px solid var(--line);padding:10px;vertical-align:top;overflow-wrap:anywhere}th{background:#eaf1f7}section.issue{border-top:1px solid var(--line);padding-top:4px;margin-top:18px}.lead,.warn{padding:16px 20px;border-left:5px solid var(--blue);background:#e9f4ff;margin:18px 0}.warn{border-color:#bd8625;background:#fff4d7}.meta{font-size:14px;color:var(--muted)}.level{font-size:13px;border-radius:12px;padding:2px 8px;background:#fff0df;color:#8c5300}.level.p2{background:#eaf2fa;color:#255a82}ul{padding-left:24px}li{margin:6px 0}@media(max-width:760px){main{margin:0;padding:20px 15px;border-radius:0}table{font-size:12px}th,td{padding:6px}}@media print{body{background:white}main{padding:0;margin:0;max-width:none}h2,h3{break-after:avoid}.issue{break-inside:avoid}}
+</style>
+</head>
+<body><main>
+<div class="meta">2026-10-26（美东） · 仅设计与源码对抗审查 · 所有审查子代理均为 Astra high</div>
+<h1>官方 Stage2 评估：还可能在哪些地方出错</h1>
+<div class="lead"><strong>结论：</strong>方案可以按“aspen／vail 统一实现与验证 → checkpoint 到位前排队并评估”推进，但原方案确实遗漏了传输重放、终局与视频故障、实际交付材料、资源池修订以及恢复事务等边界。下面整理为 <strong>24 项风险与落实点</strong>，并给出具体失败过程、最小修法和未来验收。</div>
+<p>本记录与<a href="1026-official-benchmark-stage2-eval-plan.html">修订后的 HTML 计划</a>配套。未来实现与调度均从 <strong>sled-aspen／sled-vail</strong> 发起；GL 计算在获分配的计算节点内执行。并发 job 数为可配置、可增减的 <strong>N</strong>，没有固定 8 个或默认 8 个的限制。修改计划和推送文档已经获准，代码实施、GPU 验证和提交 job 尚未开工。</p>
+<div class="warn"><strong>证据边界：</strong>这里的“补齐”指设计中明确了输入、状态转换和验收方法，不表示代码已实现或故障测试已通过。本轮只做源码／文档核查与一个隔离的 CPU 控制逻辑实验；没有运行模型、仿真、NFS 现场测试、SSH 或 Slurm。此前被误启动的代码草稿未合入评估分支。</div>
+
+<h2 id="scope">一、怎么审，哪些不是新问题</h2>
+<p>三路独立审查分别检查 motion／官方语义、任务队列／资源恢复、交付依赖／跨机器环境。主要对抗基线为计划提交 <code>64cbdbf712a998095ffdf24399b5c93e2c4836c0</code>；源码固定于 policy <code>d7912e4d4ccd6a158d2e0b64ccd657fc989d1a24</code>。作者随后按汇总修订；本报告记录的是原风险与已补入设计的修法，真实实现和实测仍待开工。最终文档复核提交在交付核验段记录，不能把旧快照中的问题当成最新版仍存在的漏洞。</p>
+<table><thead><tr><th style="width:25%">来源</th><th>固定锚点与用途</th></tr></thead><tbody>
+<tr><td>当前 policy 源码</td><td><a href="https://github.com/hongzefu/robomme_policy_learning_MotionJEPA/tree/d7912e4d4ccd6a158d2e0b64ccd657fc989d1a24">d7912e4</a>：恢复、缓存、IPC、训练证据与发布器。</td></tr>
+<tr><td>官方 policy</td><td><a href="https://github.com/RoboMME/robomme_policy_learning/tree/ac846a9a4aec841e483b1dc5d620dfe426bde853">ac846a9</a>：普通 test 800 局、1300 参数、20 步预测／16 步执行与终止顺序。</td></tr>
+<tr><td>官方 benchmark</td><td>实际锁定 <a href="https://github.com/RoboMME/robomme_benchmark/tree/856bc3a189d4172f3f47dbee4424d585f8d78db3">856bc3a</a>；调研 HEAD <code>53673b3</code> 的 <code>src/robomme</code> 102 个文件与其同字节。</td></tr>
+<tr><td>MotionJEPA</td><td><a href="https://github.com/hongzefu/MotionJEPA/tree/b5d23a5fab55be16e580c5b77a8f04d68b3170c2">b5d23a5</a>：Stage2 导出、EMA、latent 与数值来源。</td></tr>
+<tr><td>旧评估分支</td><td><code>2f9cd469dbf92a3c25bc27f0aceae9088e781815</code>：仅参考过去的端口、Vulkan 与调度事故；不继承私有任务或旧步数。</td></tr>
+</tbody></table>
+<p>没有发现以下公式本身的新算术错误：33 帧窗／步长 32、demo 最少 17 真帧、D=48／49 的尾窗差异、q=31／32 的成熟边界、demo 和 exec 分别从 0 和 D 起网格，以及同刻 frame token 先于 motion token 的稳定排序。官方 <code>count &gt; 1300</code> 的执行顺序、20 输出／16 执行、模型 seed 与环境 seed 的区别也已核实。</p>
+<p>同样不能误报：本次 Stage2 paired 数据使用独立完整 33 帧窗口，不能套用旧 v10 的长视频 latent 切片经验，声称已发现长视频缓存错配。G2 的既有受限来源例外应继续如实保留；它不等于其他数值检查通过。</p>
+<p>严重程度：<strong>P1</strong> 表示应在实施前写清合同，否则可能污染动作／成绩、漏任务或重复占用资源；<strong>P2</strong> 表示可执行性、可复现性或长时间运行风险。这里只评设计风险，不把尚未运行的假设称为已发生的事故。</p>
+
+<h2 id="motion">二、motion、官方协议与成绩</h2>
+<section class="issue" id="r01"><h3>R01 <span class="level">P1</span> 确认包丢失后重发，会改变历史或随机数</h3>
+<p><strong>反例：</strong>16 帧已被 server 加入历史，但 ACK 丢失；客户端把原批次重发。现有 <code>policy.py::add_buffer</code> 根据 <code>len(images)</code> 自行分配新帧号，同一批像素会成为后续 16 帧。<code>infer</code> 每次调用还会 split RNG，响应丢失后重发也会改变采样噪声。</p>
+<p><strong>证据：</strong><a href="https://github.com/hongzefu/robomme_policy_learning_MotionJEPA/blob/d7912e4/src/mme_vla_suite/policies/policy.py">policy.py 的 add_buffer／infer</a>；历史请求没有 episode／batch 序号。下方 CPU 实验验证了这个控制逻辑缺口，但没有运行实际编码器。</p>
+<p><strong>最小修法：</strong>增加 episode nonce、batch_seq、first_global_frame、payload SHA 与 replanning_seq 做校验／审计。首版不做跨断线 ACK 缓存；不确定提交就废弃该局 attempt，禁止在原 memory／RNG 上重发。确认旧 client、server 内 RPC 和 sidecar 请求全部结束；不能确认时重启 server＋sidecar，然后同环境 seed／model seed 整局重跑。重试额度按原 episode 累计，最多额外一次。</p>
+<p><strong>验收：</strong>丢 ACK、重复批次、同序号不同 payload、丢 infer 响应、编码中途异常；不得把重复帧变成新帧，不得在半更新缓存上继续。改变 N 或领取顺序不能改变一局的 PRNG 调用序列。</p></section>
+
+<section class="issue" id="r02"><h3>R02 <span class="level">P1</span> 两个合法客户端可以互相 reset 同一个 policy</h3>
+<p><strong>反例：</strong>旧 sim 尚未退出，新 sim 已连上相同 server；两者都具有正确 run identity，交错调用 reset／add_buffer。现有 websocket handler 共用 <code>self._policy</code>，仅核 server nonce 挡不住合法连接之间的状态污染。</p>
+<p><strong>最小修法：</strong>每个 server 同时只允许一个活动 attempt 会话；第二连接在 reset 前拒绝。worker 确认上一个 sim 及其子树退出后才创建下一个，slot 在 GPU 初始化前还须取得独占启动许可。端口以真实 bind 结果为准。</p>
+<p><strong>验收：</strong>两个 client 交错 reset、同 slot 重复启动 worker、旧 client 延迟退出；只能一个会话修改历史和 RNG，不能以最终结果唯一掩盖推理过程已受污染。</p></section>
+
+<section class="issue" id="r03"><h3>R03 <span class="level">P1</span> 视频故障不能使已经失败的任务获得重跑机会</h3>
+<p><strong>反例：</strong>环境正常返回 fail，随后视频编码或 NFS 写入失败；若必须视频闭合后才记录终局，controller 会把整局当 infra error 重跑。重试可能 success，形成与产物故障相关的选择性重跑偏差。同 seed 并不证明整个模拟器／planner 逐位确定。</p>
+<p><strong>最小修法：</strong>terminal outcome 与 artifact receipt 分开。环境终态一确定，先持久化小型不可变结果；视频、日志关闭与 SHA 是后续产物验收。已有 terminal 的局只能修复已有采集材料，不能重跑 policy 改结果。终态未能持久化而发生崩溃时，明确标为 <code>uncertain_terminal</code>，不能宣称不存在重复执行风险。</p>
+<p><strong>验收：</strong>在终态后、视频中、close 中、receipt 发布前注入错误；原 success／fail／timeout 不变。执行覆盖和产物覆盖分别报告；缺失产物不能通过删除该局或重跑挑结果解决。</p></section>
+
+<section class="issue" id="r04"><h3>R04 <span class="level">P1</span> D 与 q 必须是官方返回观测的序号</h3>
+<p><strong>反例：</strong>从底层视频帧或物理 step 重建 fixture，却忽略 wrapper 的 <code>NO RECORD</code> 过滤、reset 内初始动作以及 terminal 时的内部附加 step。窗口 oracle 仍可算得完全自洽，但使用的不是官方 client 实际收到的历史。</p>
+<p><strong>证据：</strong>官方 <code>DemonstrationWrapper.reset</code> 与 <code>_step_batch</code>、<code>EnvRunner.get_init_obs/step</code>。front 图像与状态的读取时刻也应进入来源 trace。</p>
+<p><strong>最小修法：</strong>fixture 记录过滤前后映射、reset 附加观测、终止处理与 front／state 配对，保留官方行为，不修改 benchmark。合法首包必须原子包含 D 个 demo＋exec0；“不同拆包等价”只针对首包后的 exec 续包，partial-demo 首包应明确拒绝。</p>
+<p><strong>验收：</strong>D=0／16／17／48／49／50、首包缺尾、q=31／32／63／64、内部多步／过滤 trace；逐帧核来源，而非只核长度。</p></section>
+
+<section class="issue" id="r05"><h3>R05 <span class="level">P1</span> PASS 日志不能代替可迁移的参考数组</h3>
+<p><strong>事实：</strong><code>check_stage2_online.py</code> 的 <code>references.npy</code> 在临时目录中生成，退出即删除；训练根快照也不会自动封入全部 G4／G6／G7／G12 材料。只有误差或 SHA，不能恢复原张量。</p>
+<p><strong>最小修法：</strong>列出 reference bundle：原始 RGB、33 个帧号与像素摘要、latent、认证 packed 行和索引、训练 pos／视觉／state、EMA 来源与固定噪声等。若保留了原 G0 映射与已认证 packed 表，可用 CPU 按映射抽取 <em>packed-reference</em>；源码已有同 latent 输出与 packed 行逐位一致的依据。它不等于找回旧 A100 在线 RGB 输出，不能扩大 G2 例外。</p>
+<p><strong>验收：</strong>移走原机器路径后离线使用；缺数组、错行号、变更一个像素、替换表、空集合、NaN、自填全零误差均拒绝。约 64 个原图窗为 396 MiB、64 份 latent 为 36 MiB，只是材料量级估算，不代表这些文件当前已存在。</p>
+<p><strong>未决边界：</strong>没有现成可交付原材料时保持 pending，不能为完成本计划擅自在 AWS GPU 上重算，也不能拿 A40 自己生成的参考冒充训练参考。</p></section>
+
+<section class="issue" id="r06"><h3>R06 <span class="level">P1</span> motion 数值通过不等于整个 VLA 在 A40 数值通过</h3>
+<p><strong>反例：</strong>motion encoder 输出在阈值内，但 JAX 的 SigLIP、在线重算的位置码、state 归一化或 bf16 参数恢复不同。只检查动作 shape=(20,8) 和 finite 仍会漏掉实际差异。现有位置表工具已记录 CPU 与旧表约 7e−7 的差异，不能用“同一函数”代替实物对拍。</p>
+<p><strong>最小修法：</strong>增加具名 <code>vla_stack_numeric</code> 门：使用一份确实存在、与正式推理配置相容的 A100 参考 checkpoint，锁配置、normstats、完整 obs／noise、<code>num_steps=10</code> 和目标环境，对 pos／视觉／state／memory／全20×8动作及执行16×8动作分别报告。动作误差须明确归一化与物理单位，阈值在运行前冻结，不能验证后调宽。</p>
+<p><strong>60k 证据边界：</strong>现有自动动作参考主要来自20步短测的step19，不应假定60000自动有A100动作真值。60000必须做严格恢复、明确bf16转换后的逐叶核验与固定输入重复性；缺少同checkpoint跨卡真值时写 <code>cross_gpu_same_checkpoint=NOT_AVAILABLE</code>。推荐结论限定为“目标栈参考数值通过＋60k严格恢复／重复性”，不能推导60k跨卡动作误差上界。若要求更强结论，则真值缺失是额外硬阻断。</p>
+<p><strong>未决边界：</strong>真实参考或预先动作阈值不齐，<code>vla_stack_numeric=PENDING</code>；门表必须消费此状态，不能出现正文待定而启动器全PASS的旁路。</p></section>
+
+<section class="issue" id="r07"><h3>R07 <span class="level p2">P2</span> mask 需要验证实际被 attention 消费</h3>
+<p><strong>反例：</strong>容量 padding 输入全零且 mask 正确，但线性层 bias 将零行投影成非零；若后端未使用对应 mask，仍会影响动作。只对装配 tensor 做比较不足以证明最终屏蔽。</p>
+<p><strong>最小修法与验收：</strong>对被 masked 的槽位施加有限大值扰动，memory attention／动作不应改变；D=0、q=0或16时全部motion为空也应无NaN。用可控、已知敏感的 attention 参数做解除屏蔽正控。不能强制真实 checkpoint 翻转任意 motion mask 后动作必须变化，因为模型可能合法地对该输入不敏感。</p></section>
+
+<h2 id="delivery">三、交付、环境和数值来源</h2>
+<section class="issue" id="r08"><h3>R08 <span class="level">P1</span> 三个进程需要三个受控环境</h3>
+<p><strong>事实：</strong>policy 主环境为torch2.7.1／numpy&lt;2；stage2为torch2.9.0／numpy2.4.4；官方sim另有torch2.9.1等要求。一个 <code>EVAL_PY</code> 无法代表全部运行栈。</p>
+<p><strong>反例：</strong>NFS venv解释器指向aspen本地/data；editable或.pth导入旧树；HF_HUB_CACHE覆盖HF_HOME；离线VAE缺revision引用。登录节点测试能过，GL才报错或加载不同资产。</p>
+<p><strong>最小修法：</strong>逐进程列解释器realpath、sys.prefix、锁摘要、实际包__file__、启动命令、显式缓存根及VAE／tokenizer／benchmark资产清单。使用NFS可见解释器，在计算节点禁默认HOME缓存和PYTHONPATH注入做离线预检；不用AWS venv复制品。</p>
+<p><strong>验收：</strong>错解释器、旧editable包、外部缓存覆盖、缺离线引用应失败。实际安装和资产齐备仍是现场待验，不以文档矩阵替代。</p></section>
+
+<section class="issue" id="r09"><h3>R09 <span class="level">P1</span> 旧恢复脚本硬编码两张GPU和特定step</h3>
+<p><strong>反例：</strong>在单A40分配中使用原 <code>check_stage2_checkpoint.py</code>：它要求父GPU0和sidecar GPU1，delivery仅60000、smoke仅19，早期5000也不能直接验证。</p>
+<p><strong>最小修法：</strong>新eval专用 <code>check_runtime.py</code> 接收实际分配GPU token／UUID、明确验证step与目标证书，复用参数树／shape／dtype／finite／文件闭合的验证逻辑。旧训练G12入口保持原语义，不把旧G12或上传.done改名为新单A40通过。</p>
+<p><strong>验收：</strong>CPU mock覆盖单GPU、早期step、60000、错误step和缺叶／多叶／错shape；随后在获准A40席位实测恢复与启动。</p></section>
+
+<section class="issue" id="r10"><h3>R10 <span class="level">P1</span> 60k不能等待final总清单，也不能从可变目录加载</h3>
+<p><strong>事实：</strong>增量发布器提供 <code>manifests/step-60000.json</code>；<code>delivery_manifest.json</code> 的final生成可能要等全部16份checkpoint齐全。</p>
+<p><strong>反例：</strong>等final清单导致60k即测变成等80k；或者先校验60000目录，下载器随后覆盖同名文件，模型实际加载了另一份内容。</p>
+<p><strong>最小修法：</strong>消费封口root清单＋step-60000清单的可信发布身份。下载到新staging，核成员集合、大小、SHA和路径闭合，拒绝外逃及未声明符号链接；发布到manifest摘要命名的不可变实体目录并原子写READY。worker不跟随latest或可被覆盖的同名别名。</p>
+<p><strong>验收：</strong>缺最后分片、root错配、清单中途改变、同名替换、未封口下载和发布后改文件均失败。60000的稳定可用性与训练任务running／done分开判定。</p></section>
+
+<section class="issue" id="r11"><h3>R11 <span class="level p2">P2</span> 文档提交不能移动已经验证的执行源码</h3>
+<p><strong>反例：</strong>commit C签发证书，再在同一NFS执行checkout提交报告变成D；严格核HEAD会无谓失效，忽略HEAD又可能漏掉真正源码改变。开发时rsync进运行树还会让后续client读取新代码。</p>
+<p><strong>最小修法：</strong>开发树→审定代码C→独立NFS执行release C→测量报告→证书→最终run identity。报告放run产物，文档提交不移动执行release。修复创建新release并按影响矩阵重验；motion报告不能反向引用尚未生成的证书摘要。</p>
+<p><strong>验收：</strong>开发树变化不改变执行release；执行树实际import／锁／源码变化被拒。证据依赖图必须可以拓扑排序，不含自摘要或未来依赖。</p></section>
+
+<section class="issue" id="r12"><h3>R12 <span class="level p2">P2</span> 固定基线中的默认配置仍可能有占位符</h3>
+<p><strong>事实：</strong>基线Stage2 YAML的checkpoint摘要仍曾为 <code>__FILL_AFTER_G3__</code>，后续上游提交才填入真实值。正式恢复读取交付resolved snapshot可避免它，但fixture或默认入口未必如此。</p>
+<p><strong>最小修法：</strong>生产一律核验交付快照，不用源码默认YAML覆盖；入口拒绝占位符。确需上游修复时记录具体commit／hunk、理由、身份变化和重跑门，不整分支漂移。</p>
+<p><strong>验收：</strong>默认文件与交付快照冲突时明确选已核快照或失败；移植后只声明实际重验的门通过。</p></section>
+
+<section class="issue" id="r13"><h3>R13 <span class="level p2">P2</span> ETA公式正确，仍可能没有跨机可读的进度来源</h3>
+<p><strong>反例：</strong>aspen watcher配置AWS绝对日志路径，永远读不到；只用很久前的5000步发布，又无法识别训练暂停或速度改变。</p>
+<p><strong>最小修法：</strong>只读使用已有、具名的W&amp;B run或既有交付事件，记录training_run_id／step／事件时间／接收时间与新鲜度，不静默改训练流程或SSH训练机。<code>ETA_ready</code>包含训练剩余、保存、发布、传输和校验估时；无可信来源则UNKNOWN或用户显式给到位时间。实际ready仍以文件封口硬门为准。</p>
+<p><strong>验收：</strong>错run、步数回退、训练重启、乱序、陈旧及未来时间戳不得触发盲提交；可信事件恢复后只幂等触发一次。</p></section>
+
+<h2 id="pool">四、弹性N池与故障恢复</h2>
+<section class="issue" id="r14"><h3>R14 <span class="level">P1</span> 只把N移出身份，还不能防止重复申请整池</h3>
+<p><strong>反例：</strong>C0已申请N个hold；A40验证发现问题，修代码C1或改CPU规格。如果schedule摘要包含这些字段，新watcher得到新schedule和空账本，再申请N个，旧资源仍活着。</p>
+<p><strong>最小修法：</strong>稳定pool／schedule intent与代码、模型、证据、资源revision分离。修订必须接管旧membership和全部UNKNOWN；改变评估语义需要新evaluation identity并排空旧负载，但可复用原pool持有的资源。禁止靠新目录隐藏旧job。</p>
+<p><strong>验收：</strong>RUNNING／PENDING／UNKNOWN均存在时修改代码或规格，旧job仍全部在账，不自动重新申请整池。</p></section>
+
+<section class="issue" id="r15"><h3>R15 <span class="level">P1</span> 恢复冻结必须包含迟到的submit／launch</h3>
+<p><strong>交错：</strong>controller冻结members={w1,w2}；此前发出的srun回执还未登记，w3随后启动。controller确认w1／w2死亡便提升generation，w3却仍拿旧许可计算。</p>
+<p><strong>最小修法：</strong>submit、launch、resize和reclaim由同一控制者串行登记。RECOVERING纳入SUBMITTING／UNKNOWN／STARTING／DRAINING／CANCEL_REQUESTED实例，冻结新入池；迟到回执只能补记存在，不能绕过恢复。死亡证明绑定membership revision、不可复用slot_instance、JobID incarnation与StepID。</p>
+<p><strong>验收：</strong>暂停srun回执后启动恢复，再释放回执；迟到worker在加载模型／领取前被拒，旧membership证明不得沿用。</p></section>
+
+<section class="issue" id="r16"><h3>R16 <span class="level">P1</span> 先提升generation，可能把应该保留的正常结果判成过期</h3>
+<p><strong>反例：</strong>五局块前两局已封口、第三局崩溃；先generation++再检查旧sealed结果，会丢掉前两局。若第一次infra error已写无覆盖canonical，重试success又无法替换；按新chunk计retry还会重新领取额度。</p>
+<p><strong>最小修法：</strong>冻结→确认旧执行停止→先接受旧代已持久正常terminal→持久化原episode剩余集合和累计额度→提升generation并发ready。首次infra error只进attempt历史，不能先占正常accepted；整个恢复事务可重放。</p>
+<p><strong>验收：</strong>每个写点崩溃后恢复，前两局不重跑，余项最多额外一次，拆块或worker重启不重置额度。</p></section>
+
+<section class="issue" id="r17"><h3>R17 <span class="level p2">P2</span> controller自身也有ownerless窗口</h3>
+<p><strong>反例：</strong>创建NFS控制锁目录后、写owner前崩溃；两个接替者同时确认旧PID死亡，第二个可能误删第一个刚建立的新锁。网络失联也不等于旧主已经停止写入。</p>
+<p><strong>最小方案：</strong>首版选择aspen或vail的一台明确 <code>controller_host</code>，使用宿主进程生命周期锁，NFS只记审计与状态。不做自动跨机主备；迁移宿主先停止旧主并确认退出，不确定则停写。</p>
+<p><strong>验收：</strong>空锁崩溃、双接替、旧主失联恢复；永远只允许一个控制者。自动高可用不属于本轮弹性job数量要求。</p></section>
+
+<section class="issue" id="r18"><h3>R18 <span class="level">P1</span> UNKNOWN提交和重复srun都需要实例身份</h3>
+<p><strong>反例：</strong>sbatch成功但回执丢失，accounting暂时查不到，于是重复提交；或者同一hold被两个launcher同时srun，chunk claim各自成功却在同GPU加载两套模型。</p>
+<p><strong>最小修法：</strong>提交前持久化pool／slot_instance／submission_id，写入可查询标签并使用可解析回执；核cluster、user、account、标签、提交时间及执行实例。零结果或查询失败仍为UNKNOWN，不能等固定秒数就认定未提交。启动还需要独立launch_id和slot独占；requeue／restart视为新执行实例重新核验。</p>
+<p><strong>领取回执也要幂等：</strong>controller已持久化assignment却丢失回复时，worker不能重试后再领下一块。每个slot_instance最多一个未终态assignment；claim_request_id重试返回同一个attempt，不确定先查询原grant。</p>
+<p><strong>验收：</strong>丢提交／领取回执、延迟记录、同标签多条、旧JobID、重排队和双srun；不得补交、额外授权第二块或接管错误资源。Slurm记录可能有重复JobID，见<a href="https://slurm.schedmd.com/sacct.html">sacct官方文档</a>；实际字段能力仍需现场确认。</p></section>
+
+<section class="issue" id="r19"><h3>R19 <span class="level">P1</span> 缩容不能凭进度文件猜测“这局还没开始”</h3>
+<p><strong>交错：</strong>worker缓存ACTIVE，controller已标retiring；worker随后抢块。另一种情况是sim已开始第四局，但controller看到旧进度，以为第四、五局未开始并重发。</p>
+<p><strong>最小修法：</strong>retiring单调，领取后启动前复核当前实例许可。worker明确handback已终局、当前局和未开始成员；controller在sim／step退出后才重新发布余项。正常缩容未开始项不扣infra retry。N=0只是drain，不是评估完成。</p>
+<p><strong>验收：</strong>把缩容卡在claim前后、下一局启动前后；归还集合与已执行集合不得重叠。N大于剩余任务数不能制造额外任务或重复计算。</p></section>
+
+<section class="issue" id="r20"><h3>R20 <span class="level">P1</span> desiredN不能成为无限续48小时的理由</h3>
+<p><strong>反例：</strong>target N不变，一个hold自然TIMEOUT；对账器发现容量少一份又申请48h。并发从未超N，累计GPU小时却无限增长。第47小时扩容也可能把整轮延长到95小时。</p>
+<p><strong>最小修法：</strong>自然到期、显式扩容和续批是不同事件。默认到期只drain留队列，不由desiredN自动补交；启动前记录允许的并发、单job规格、累计GPU小时及campaign截止边界。每hold按自身StartTime／EndTime计时；检测requeue或实例改变重新验证，不假定站点默认策略。</p>
+<p><strong>验收：</strong>未获续批授权时，自然TIMEOUT不得因desiredN对账自动补交；只增加revision不是续批授权。迟起PENDING和晚期扩容不越过本轮预算。资源包络在未来启动时由用户明确，计划不替用户填固定数量。参见<a href="https://slurm.schedmd.com/sbatch.html">sbatch官方文档</a>。</p></section>
+
+<section class="issue" id="r21"><h3>R21 <span class="level p2">P2</span> 同一宿主的N个进程不足以验证跨节点NFS</h3>
+<p><strong>反例：</strong>aspen同机并发测试通过，GL计算节点却读到旧目录／属性缓存；或者canonical直接指向仍会被worker覆盖的结果文件。</p>
+<p><strong>最小修法：</strong>至少两个独立NFS客户端，其中包括正式计算节点挂载；测试重开、暂停读取、EEXIST、旧目录视图和断开恢复。controller生成自身不可变descriptor，再无覆盖发布；不把可变worker文件硬链接为权威对象。产物内容仍由SHA回读核验。</p>
+<p><strong>验收：</strong>发布后worker改原结果，canonical不变且artifact SHA不符被发现。不能用sleep若干秒或“目录看起来空”作安全判据；不能承诺防住同UID恶意篡改。缓存语义见<a href="https://man7.org/linux/man-pages/man5/nfs.5.html">NFS文档</a>。</p></section>
+
+<section class="issue" id="r22"><h3>R22 <span class="level p2">P2</span> 五局能放下模型，不等于任意N能在48小时完成</h3>
+<p><strong>上限核算：</strong>按每局2400秒、每五局另1800秒，800局合计 <code>800×2400+160×1800=613.33 worker小时</code>。这是建议超时上界推导，不是实测平均耗时，不应用来直接决定N。</p>
+<p><strong>最小修法：</strong>根据profile、剩余任务与各hold实际EndTime报告完成区间和剩余worker小时；不要求全部N同时RUNNING，已就绪者可先计算。限制同时冷启动数，防NFS加载风暴；跨至少两次sim生命周期观察常驻server／sidecar的FD、RSS、显存。记录输出量、配额和receipt保留空间，ENOSPC停止领取，不重复启动计算。</p>
+<p><strong>验收：</strong>晚到席位、N下降、加载拥塞、视频短写和跨块泄漏；要么有界完成，要么明确留下未完成任务，不能临时缩短官方步数来赶时间。</p></section>
+
+<section class="issue" id="r23"><h3>R23 <span class="level">P1</span> 持久step与短命sim的死亡边界不能混用</h3>
+<p><strong>反例：</strong>sim崩溃，resident worker却仍活着等下一块；controller坚持等整个step终态才重发，双方互等。drain若只在局间检查，卡死sim永远到不了检查点。</p>
+<p><strong>最小方案：</strong>正常chunk只回收sim，模型常驻；infra故障时首版worker封口已有结果并退出整个resident step，controller确认后再恢复。清理有独立本地deadline，按已登记进程／step实例逐级TERM、KILL；无法确认退出不重发。取消step不等于释放hold，最终job另核。</p>
+<p><strong>验收：</strong>sim忽略TERM、sidecar关闭卡住、NFS失联、PID重用；只能进入已终止或明确未确认，不能误杀其他scope，也不能假报资源释放。参见<a href="https://slurm.schedmd.com/scancel.html">scancel官方文档</a>。</p></section>
+
+<section class="issue" id="r24"><h3>R24 <span class="level">P1</span> 首个A40通过不能替全部新增节点背书</h3>
+<p><strong>反例：</strong>扩容加入另一driver或不同实际import路径的节点；它只复制首节点的PASS证书，模型实际软件栈已不同。或者证书仅验report SHA和status，report自填全零误差也能通过。</p>
+<p><strong>最小修法：</strong>每个新slot实例核GPU UUID／家族、driver、实际包路径、锁、资产和模型身份；不在证书适用环境内则重新验证或拒绝入池。验证器从锁定reference与实际测量数组独立重算指标和样本集合，不能只信自报PASS。</p>
+<p><strong>验收：</strong>错driver、错import、漏样本、NaN、空报告、自填max_abs=0或修改报告后重算自身hash均拒绝。这里防的是错误配置和不完整证据，不引入额外签名基础设施。</p></section>
+
+<h2 id="evidence">五、本轮确实运行了什么</h2>
+<p>使用Python标准库从固定源码AST提取真实 <code>MME_VLA_Policy.add_buffer</code> 方法，移除装饰器，只替换memory下游为记录调用的stub；没有导入JAX、PyTorch或sim。手动初始化step_idx为−1，先送代表exec0（全域帧号0）的占位观测，再将同一组16个观测标签送入两次；没有调用真实reset或编码器，得到：</p>
+<pre>STATIC_REPLAY_PROBE input_equal=True
+first_assigned_steps=[1,16]
+duplicate_assigned_steps=[17,32]
+raised=False</pre>
+<p>这证明现有policy层没有wire级重放身份，不能证明实际motion输出或模拟器结果；当前正常client也未必会主动重发。风险来自未来恢复实现若增加重发而没有合同。</p>
+<p>另独立枚举demo起点核对公式，得到下表；q取保守1301时exec均40窗。它验证公式边界，不代表官方800局真实D已测。</p>
+<table><thead><tr><th>D</th><th>demo窗</th><th>合计窗</th><th>含义</th></tr></thead><tbody>
+<tr><td>0／16</td><td>0</td><td>40</td><td>不足17真帧不产生demo窗。</td></tr>
+<tr><td>17／32／33／48</td><td>1</td><td>41</td><td>D=48第二候选仅16真帧，必须舍弃。</td></tr>
+<tr><td>49／50／64／65</td><td>2</td><td>42</td><td>第二窗末帧重复数依次16／15／1／0。</td></tr>
+<tr><td>1247</td><td>39</td><td>79</td><td>历史例子，不是新官方最大值证明。</td></tr>
+<tr><td>1808</td><td>56</td><td>96</td><td>恰好达到预算。</td></tr>
+<tr><td>1809</td><td>57</td><td>97</td><td>应拒绝，不能截断、抽稀或换预算。</td></tr>
+</tbody></table>
+
+<h2 id="pending">六、修订后仍不能替用户或现场决定的事项</h2>
+<table><thead><tr><th style="width:24%">事项</th><th style="width:43%">需要什么</th><th>缺失时怎么处理</th></tr></thead><tbody>
+<tr><td>弹性资源包络</td><td>初始／目标N、允许扩缩范围、单job CPU／内存、累计GPU小时及campaign截止。N不是固定8。</td><td>不启动或扩大未明确的资源；自然到期不自动续批。</td></tr>
+<tr><td>真实参考材料</td><td>现存且可交付的RGB／latent／packed／训练张量／具名VLA参考；每项来源和摘要可核。</td><td>PENDING；不扰AWS训练补GPU计算，不用目标卡自生成真值。</td></tr>
+<tr><td>VLA数值判据</td><td>完整固定noise、10步采样、单位与事前阈值；区分目标栈验证和60k同checkpoint跨卡证明。</td><td>目标栈门不齐不launch；无60k跨卡真值如实标NOT_AVAILABLE。</td></tr>
+<tr><td>目标环境与资产</td><td>三环境实际import／锁／解释器、离线资产、两个独立NFS客户端、A40实际资源与driver。</td><td>保留对应门待验；无法复用席位时等提前排队的首个hold。</td></tr>
+<tr><td>可用的到位时间估算</td><td>跨机只读遥测与发布／传输耗时，或用户给定ETA_ready。</td><td>UNKNOWN；不以过期5000步事件或AWS本地路径盲提交。</td></tr>
+<tr><td>无法恢复的结果产物</td><td>确定是否允许缺失视频等产物；已有terminal不能重跑挑成绩。</td><td>保留artifact_error和真实terminal，待修复或明确接受缺失。</td></tr>
+</tbody></table>
+<p>推荐先按修订计划实现这些最小合同，再运行具名负控和现场检查；不引入自动跨机主备、TTL抢占、大型ACK缓存或物理计算“恰好一次”的承诺。当前只把设计补齐，后续每项真正通过都须有固定输入、代码、环境和原始结果证据。</p>
+<h2 id="closure">七、最终文档复核</h2>
+<p>独立复核的计划提交为 <code>494d7428cabb18ed7a0c3cba59fc9292ef3ce182</code>，计划文件SHA256为 <code>bd2ce0dddbbd6bffcdb6c56f14c77e9baa2116bcabf021237906d69d417fe93c</code>。判定：<code>ADVERSARIAL_DESIGN_CLOSURE=PASS scope=plan_and_report blocking=0</code>。原风险均已落实为明确合同或必要的待验条件，没有剩余阻断级设计问题；这不等于代码实现、数值实验或集群验收通过。</p>
+<p>文档自检：计划两个h1、三张机制图；本报告24个风险条目；内部ID无重复、页内锚点有效、无外部脚本或字体资源。弹性N池新图已用禁GPU无头浏览器渲染并目视核对。当前提交只包含文档；代码实施继续等待后续明确开工。</p>
+</main></body></html>
