@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-26T20:01:46Z",
-    "america_new_york": "2026-10-26T16:01:46-0400"
+    "utc": "2026-10-26T20:16:58Z",
+    "america_new_york": "2026-10-26T16:16:58-0400"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "a4817eedff440c888bec39c2aeb69d8f8609150a",
+    "base_head": "d7912e4d4ccd6a158d2e0b64ccd657fc989d1a24",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -22,7 +22,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-26T19:23:32Z",
-      "state_reason": "用户批准CPU全量完整性+encoder1024窗并继续。原全量比较按指令停止130，packed表保留。抽样消费合同和比较器两份合前审查PASS，准备解除当前冻结合入CPU复测；真实索引跨主/torch环境得到相同1024样本SHA、16任务各64、demo332/exec692/pad68。G2例外/G3保持，正式VLA未起跑。",
+      "state_reason": "CPU65419行完整性+GPU1024窗抽样+全表verify全部PASS，库已verified，G5证据明确sampled；G6 train62/eval79/budget96 PASS，encoder两实体注册完成。G2用户例外保留，G3已PASS。当前准备绑定yaml真实SHA后G4，再20步及严格恢复。正式训练WandB已只读核viewer=hongzefu、entity=hongzefu-university-of-michigan、project=robomme-framesamp，训练未起跑。",
       "owner": {"session": "", "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"},
       "depends_on": [{
         "path": "/scratch/hongze/MotionJEPA",
@@ -59,11 +59,15 @@
         "kind": "go", "date": "2026-10-26",
         "quote": "同意继续",
         "scope": "按上述CPU全量+GPU1024窗方案继续原主run，无需重复确认。"
+      }, {
+        "kind": "decision", "date": "2026-10-26",
+        "quote": "注意你的wandb 不要用tri的账号 用hongzefu的账号 正式训练",
+        "scope": "正式训练使用hongzefu账号；现有凭据API viewer已核hongzefu，配置entity为hongzefu-university-of-michigan，project为robomme-framesamp。凭据不写入日志或git。"
       }],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "完成sampled比较器/消费合同合审并合入；仅恢复sampled→verify，不再次启动run-pack.sh", "command": "合同主仓validation/stage2-memory/sampled-g5-contract.md；固定seed0/16任务每64/总1024；SAMPLED_G5_DESIGN_REVIEW=PASS", "verdict_line": "PACKED_TOKEN_BYTES=PASS compared=65419；ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=65419；VERIFY_MOTION=PASS"},
-        {"what": "保留packed表和原中断日志；抽样认证随stage2_compat完整传递；完成后绑定yaml SHA、注册encoder并G6/G4", "command": "table SHA=8de36e670d58c60859d48b37f29c989f2eed45344f5cd5fb2f7a96126394ee5c；index SHA=de388cb42f1fbb27e39dc429a6252cd755d6f67324c4eb8f236c4f60bf68e1ec；G4剩7126秒", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS"},
+        {"what": "G5/G6已通过；解除当前冻结，合回此状态分支并绑定yaml真实ep105 SHA，运行G4", "command": "check_stage2_online.py --store新verified库 --samples原G0 --history新yaml --online-gpu 0 --out validation/stage2-memory/G4.json；G4剩7126秒", "verdict_line": "ONLINE_OFFLINE_PARITY=PASS"},
+        {"what": "抽样认证4345250e7a03244ca28162a870041e1648a708ebe7e28a79c50d9cfbcb22a4eb完整随stage2_compat携带；保留原中断与G2失败证据", "command": "sampled-verify.log美东16:07:27至16:09:16，EXIT_CODE=0；register-budget.log美东16:15:12至16:15:14，EXIT_CODE=0", "verdict_line": "PACKED_TOKEN_BYTES=PASS；ENCODER_SAMPLE_BITEXACT=PASS；VERIFY_MOTION=PASS；TRAIN_ES_BOUND=PASS"},
         {"what": "G6、G4、20步与保存恢复通过后才正式80k；G2的用户例外须完整随快照和交付传递", "command": "按原计划主run，备选B和benchmark不启动", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"}
       ]
     },
