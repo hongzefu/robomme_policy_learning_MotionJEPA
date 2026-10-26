@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import pathlib
 import re
@@ -38,12 +39,167 @@ PROV_SAME_ENC = ("checkpoint", "checkpoint_sha256", "checkpoint_epoch", "arch", 
                  "cublas_pkg", "cudnn_pkg", "module_sha256", "encoder_src_sha256", "env", "gpu_name",
                  "compute_cap", "sm_count", "driver", "flags")
 
+STAGE2_KIND = "stage2_pool4_concat"
+STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
+
+
+def _sha256(path: pathlib.Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _evidence_path(value: str, root: pathlib.Path | None) -> pathlib.Path:
+    """绝对路径仅供本地建库；交付引用必须在根目录内解析。"""
+    path = pathlib.Path(value)
+    if ".." in path.parts:
+        raise ValueError("阶段二证据路径禁止 ..")
+    if path.is_absolute():
+        return path.resolve(strict=True)
+    if root is None:
+        raise ValueError("相对证据路径必须指定 provenance_root")
+    resolved = (root / path).resolve(strict=True)
+    if not resolved.is_relative_to(root.resolve()):
+        raise ValueError("阶段二证据路径越过 provenance_root")
+    return resolved
+
+
+def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None) -> None:
+    """实际读取引用证据并核内容身份；历史 VAE 身份不改写成当前源码。"""
+    compat = provenance["stage2_compat"]
+    evidence = compat["evidence"]
+    records = {}
+    for key in ("G0", "G2", "G3", "restore_receipt", "SOURCE_PIN"):
+        ref = evidence[key]
+        path = _evidence_path(ref["path"], root)
+        if _sha256(path) != ref["sha256"]:
+            raise ValueError(f"阶段二证据 SHA 不符: {key}")
+        records[key] = json.loads(path.read_text(encoding="utf-8"))
+    if records["SOURCE_PIN"] != provenance["source_pin"]:
+        raise ValueError("证据 SOURCE_PIN 与来源不一致")
+    if evidence["restore_receipt"]["sha256"] != compat["restore_receipt_sha256"]:
+        raise ValueError("恢复 receipt 与兼容合同不一致")
+    receipt = records["restore_receipt"]
+    historical = receipt.get("vae", {})
+    if any(provenance["vae"].get(key) != value for key, value in compat["historical_vae"].items()):
+        raise ValueError("阶段二 vae 来源与历史 receipt 身份不一致")
+    if (receipt.get("schema_version") != "mixed8-vla-latent-restore/v1"
+            or receipt.get("status") != "PASS" or receipt.get("new_encoder_identity") is not None
+            or historical.get("identity") != compat["historical_vae"]
+            or historical.get("vae_state_sha256") != compat["historical_vae"]["vae_state_sha256"]
+            or historical.get("historical_module_sha256") != compat["historical_vae"].get("module_sha256")
+            or historical.get("historical_encoder_src_sha256") != compat["historical_vae"].get("encoder_src_sha256")):
+        raise ValueError("恢复 receipt 未绑定原始历史 VAE 身份")
+    g0 = records["G0"]
+    counts = g0.get("counts", {})
+    windows = g0.get("windows", [])
+    if (g0.get("schema") != "stage2-validation-inputs-v1" or g0.get("gate") != "G0"
+            or g0.get("status") != "PASS" or g0.get("seed") != 0
+            or counts.get("windows") != 64 or len(windows) != 64
+            or counts.get("tasks") != 16 or counts.get("sha_mismatches") != 0
+            or counts.get("demo_tail", 0) < 16):
+        raise ValueError("阶段二 G0 证据不完整")
+    if (g0.get("latent_metadata_sha256") != receipt.get("latents", {}).get("total_metadata_sha256")
+            or g0.get("manifest_sha256") != receipt.get("parent", {}).get("manifest_canonical_sha256")):
+        raise ValueError("阶段二 G0 与恢复 receipt 的输入身份不符")
+    tasks = {}
+    for window in windows:
+        tasks[window["task"]] = tasks.get(window["task"], 0) + 1
+        if (len(window.get("frame_ids", [])) != 33
+                or len(window.get("source_frame_indices", [])) != 33
+                or not window.get("sources") or type(window.get("source_grid")) is not int
+                or window["source_grid"] % 2):
+            raise ValueError("阶段二 G0 窗口来源不完整")
+    if len(tasks) != 16 or set(tasks.values()) != {4}:
+        raise ValueError("阶段二 G0 必须每任务四窗")
+    for prov_key, record_key in (("manifest_sha256", "manifest_sha256"),
+                                 ("latents_metadata_sha256", "latent_metadata_sha256")):
+        if prov_key in provenance and provenance[prov_key] != g0.get(record_key):
+            raise ValueError(f"阶段二 G0 输入身份不符: {prov_key}")
+    for gate in ("G2", "G3"):
+        record = records[gate]
+        if (record.get("schema") != "stage2-validation-gate-v1" or record.get("gate") != gate
+                or record.get("status") != "PASS"
+                or record.get("checkpoint_sha256") != provenance["encoder"]["checkpoint_sha256"]
+                or record.get("samples_sha256") != evidence["G0"]["sha256"]):
+            raise ValueError(f"阶段二 {gate} 身份不符或未通过")
+        metrics = record.get("metrics", {})
+        for group in ("source_pin", "numerics"):
+            if record.get(group) != provenance[group]:
+                raise ValueError(f"阶段二 {gate} 验证环境的 {group} 与来源不符")
+        if gate == "G2":
+            if record.get("online_vae") != compat["online_vae"]:
+                raise ValueError("阶段二 G2 未绑定当前在线 VAE 身份")
+            if (metrics.get("windows") != 64 or metrics.get("demo_tail", 0) < 16
+                    or type(metrics.get("worst_mse")) not in (float, int)
+                    or not 0 <= metrics["worst_mse"] <= 1e-6
+                    or type(metrics.get("worst_max")) not in (float, int)
+                    or not 0 <= metrics["worst_max"] <= 0.01):
+                raise ValueError("阶段二 G2 数值证据不完整或超差")
+        elif any(metrics.get(k) != v for k, v in dict(
+                windows=32, seed=0, max_abs=0, geometry_all_true=1, leaves=65,
+                state_key="model", exact=1, live_negative_rejected=1).items()):
+            raise ValueError("阶段二 G3 证据未覆盖完整 EMA 核验")
+
+
+def resolve_stage2_dependencies(run_root: pathlib.Path, provenance: dict) -> pathlib.Path | None:
+    """交付包只凭相对路径定位 encoder 两实体，拒绝越界与身份漂移。"""
+    dependency_path = run_root / "encoder_dependencies.json"
+    if not dependency_path.exists():
+        return None
+    record = json.loads(dependency_path.read_text(encoding="utf-8"))
+    if record.get("schema") != "stage2-encoder-dependencies-v1":
+        raise ValueError("encoder_dependencies schema 不符")
+    for group in ("encoder", "source_pin", "vae"):
+        expected = {k: v for k, v in provenance[group].items() if k != "run_dir"}
+        actual = {k: v for k, v in record.get(group, {}).items() if k != "run_dir"}
+        if actual != expected:
+            raise ValueError(f"encoder_dependencies 的 {group} 不同源")
+    paths = {}
+    # 本机 run 只写依赖清单，实体在标准注册目录；交付包则带完整实体子目录。
+    delivered = (run_root / "encoder_dependencies").exists()
+    for item in record.get("files", []):
+        role = item.get("role")
+        if role not in ("encoder_checkpoint", "encoder_config") or role in paths:
+            raise ValueError("encoder_dependencies 的文件角色非法或重复")
+        relative = pathlib.Path(item["relative_path"])
+        enc = provenance["encoder"]
+        expected_name = enc["checkpoint_name"] if role == "encoder_checkpoint" else "config.yaml"
+        if relative != pathlib.Path("encoder_dependencies") / enc["run_name"] / expected_name:
+            raise ValueError("encoder_dependencies 必须使用交付相对路径")
+        expected_sha = provenance["encoder"]["checkpoint_sha256" if role == "encoder_checkpoint" else "config_sha256"]
+        if item.get("sha256") != expected_sha or type(item.get("bytes")) is not int or item["bytes"] <= 0:
+            raise ValueError(f"encoder_dependencies 清单不符: {role}")
+        path = _evidence_path(str(relative), run_root) if delivered else run_root / relative
+        if delivered and (_sha256(path) != expected_sha or item["bytes"] != path.stat().st_size):
+            raise ValueError(f"encoder_dependencies 实体不符: {role}")
+        paths[role] = path
+    if set(paths) != {"encoder_checkpoint", "encoder_config"}:
+        raise ValueError("encoder_dependencies 缺 encoder 两实体")
+    checkpoint, config = paths["encoder_checkpoint"], paths["encoder_config"]
+    if (checkpoint.name != provenance["encoder"]["checkpoint_name"]
+            or config.name != "config.yaml" or config.parent != checkpoint.parent):
+        raise ValueError("encoder_dependencies 两实体名称或同目录关系不符")
+    return checkpoint.parent if delivered else None
+
 
 class MotionEncoderClient:
     def __init__(self, *, online_gpu: int | str, encoder_run_dir: str | None = None, checkpoint: str = "checkpoint_epoch_72.pt",
                  expected_ckpt_sha256: str | None = None, store_provenance: dict | None = None, stub: bool = False,
                  v1_store: str | pathlib.Path | None = None, handshake_timeout: float = P.HANDSHAKE_TIMEOUT_S,
-                 source_run: str | None = None):
+                 source_run: str | None = None, encoder_kind: str = "v10",
+                 provenance_root: str | pathlib.Path | None = None):
+        self.encoder_kind = encoder_kind
+        if encoder_kind == STAGE2_KIND:
+            self._init_stage2(online_gpu=online_gpu, encoder_run_dir=encoder_run_dir,
+                             expected_ckpt_sha256=expected_ckpt_sha256, store_provenance=store_provenance,
+                             stub=stub, v1_store=v1_store, handshake_timeout=handshake_timeout,
+                             source_run=source_run, provenance_root=provenance_root)
+            return
+        if encoder_kind != "v10":
+            raise ValueError(f"未知 motion.encoder_kind: {encoder_kind}")
         self._lock = threading.Lock()
         self.stub = bool(stub)
         # v1-store 根：显式参数 > MMEVLA_V1_STORE（worktree 开发时指到主树）> 仓库内 v1-store
@@ -103,7 +259,111 @@ class MotionEncoderClient:
         self.n_calls = 0
         self.total_s = 0.0
 
+    def _init_stage2(self, *, online_gpu, encoder_run_dir, expected_ckpt_sha256, store_provenance,
+                     stub, v1_store, handshake_timeout, source_run, provenance_root) -> None:
+        self._lock = threading.Lock()
+        self.stub = bool(stub)
+        self._online_gpu = str(online_gpu)
+        self._provenance_root = pathlib.Path(provenance_root) if provenance_root is not None else None
+        if not self.stub:
+            if store_provenance is None:
+                raise ValueError("真实阶段二编码必须提供完整 store_provenance")
+            from mme_vla_suite.datastore.motion_store import validate_stage2_provenance
+            validate_stage2_provenance(store_provenance)
+            validate_stage2_evidence(store_provenance, self._provenance_root)
+            if expected_ckpt_sha256 != store_provenance["encoder"]["checkpoint_sha256"]:
+                raise ValueError("阶段二 expected_ckpt_sha256 与来源不一致")
+        match = re.fullmatch(r"([A-Za-z0-9][A-Za-z0-9_.-]*)/(checkpoint_epoch_\d+\.pt)#model", source_run or "")
+        if match is None:
+            raise ValueError("阶段二 source_run 必须为 <run>/checkpoint_epoch_<n>.pt#model")
+        run, checkpoint = match.groups()
+        if not self.stub and (run != store_provenance["encoder"]["run_name"]
+                              or checkpoint != store_provenance["encoder"]["checkpoint_name"]):
+            raise ValueError("阶段二 source_run 与完整来源不同")
+        v1 = pathlib.Path(v1_store or os.environ.get("MMEVLA_V1_STORE") or (_REPO_ROOT / "v1-store")).resolve()
+        registered = v1 / "external/motionjepa" / run
+        delivered = (resolve_stage2_dependencies(self._provenance_root, store_provenance)
+                     if not self.stub and self._provenance_root is not None else None)
+        expected_dir = delivered or registered
+        if encoder_run_dir is not None and pathlib.Path(encoder_run_dir).resolve() != expected_dir.resolve():
+            raise ValueError("阶段二 encoder_run_dir 与注册或交付身份不同")
+        project = _REPO_ROOT / "scripts/dataset/wan_stage2"
+        local_pin = json.loads((project / "SOURCE_PIN.json").read_text())
+        for key, path in (("dependency_lock_sha256", project / "uv.lock"),
+                          ("vae_adapter_sha256", project.parent / "wan/wan_motion_infer.py")):
+            if _sha256(path) != local_pin[key]:
+                raise ValueError(f"阶段二本地文件不符合 SOURCE_PIN: {key}")
+        if not self.stub and store_provenance["source_pin"] != local_pin:
+            raise ValueError("阶段二 store 与当前 SOURCE_PIN 不同源")
+        child_env = dict(os.environ)
+        child_env.update(UV_LINK_MODE="copy", UV_PROJECT_ENVIRONMENT=str(v1 / "venvs/wan-stage2"),
+                         HF_HOME=str(v1 / "cache/hf"), HF_HUB_OFFLINE="1",
+                         CUDA_VISIBLE_DEVICES=str(online_gpu), PYTHONUNBUFFERED="1")
+        # 子环境必须从锁定安装包 import，不能继承主环境的 Python 注入路径。
+        child_env.pop("PYTHONPATH", None)
+        child_env.pop("PYTHONHOME", None)
+        parent_sock, child_sock = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+        self._sock = parent_sock
+        argv = ["uv", "run", "--project", str(project), "--no-sync", "python",
+                str(project / "stage2_sidecar.py"), "--fd", str(child_sock.fileno())]
+        if self.stub:
+            argv.append("--stub")
+        else:
+            argv += ["--ckpt", str(expected_dir / checkpoint), "--expected-sha256", expected_ckpt_sha256,
+                     "--expected-vae-sha256", store_provenance["vae"]["vae_state_sha256"]]
+        self.argv = argv
+        try:
+            self._proc = subprocess.Popen(argv, env=child_env, pass_fds=[child_sock.fileno()], cwd=str(_REPO_ROOT),
+                                          stdin=subprocess.DEVNULL, stdout=sys.stderr, stderr=sys.stderr)
+        except Exception:
+            parent_sock.close()
+            self._sock = None
+            raise
+        finally:
+            child_sock.close()
+        try:
+            self.provenance = P.recv_handshake(self._sock, time.monotonic() + handshake_timeout)
+            if "error" in self.provenance:
+                raise RuntimeError(f"阶段二 sidecar 启动失败: {self.provenance['error']}")
+            expected = {"encoder_kind": STAGE2_KIND, "dtype": "float32", "shape": [1024],
+                        "response_bytes": 4096, "stub": self.stub, "protocol_sha256": P.protocol_sha256()}
+            for key, value in expected.items():
+                if type(self.provenance.get(key)) is not type(value) or self.provenance[key] != value:
+                    raise RuntimeError(f"阶段二握手 {key} 不匹配")
+            if not self.stub:
+                self.check_provenance(store_provenance)
+        except Exception:
+            self.close()
+            raise
+        self.n_calls = 0
+        self.total_s = 0.0
+
+    def _check_stage2_provenance(self, store_prov: dict) -> None:
+        from mme_vla_suite.datastore.motion_store import validate_stage2_provenance
+        validate_stage2_provenance(store_prov)
+        validate_stage2_evidence(store_prov, self._provenance_root)
+        for group in ("encoder", "encoder_state_sha256", "source_pin", "numerics"):
+            actual, expected = self.provenance.get(group), store_prov[group]
+            if group == "encoder" and isinstance(actual, dict):
+                actual = {key: value for key, value in actual.items() if key != "run_dir"}
+                expected = {key: value for key, value in expected.items() if key != "run_dir"}
+            if actual != expected:
+                raise ValueError(f"阶段二真实握手的 {group} 与离线来源不同")
+        if self.provenance.get("online_vae") != store_prov["stage2_compat"]["online_vae"]:
+            raise ValueError("阶段二真实 VAE 与兼容合同的 online_vae 不同")
+        if (type(self.provenance.get("pid")) is not int or self.provenance["pid"] != self._proc.pid
+                or not self.provenance.get("gpu_uuid") or not self.provenance.get("cuda_visible_devices")
+                or self.provenance["cuda_visible_devices"] != self._online_gpu):
+            raise ValueError("阶段二真实握手缺实际进程或 GPU 身份")
+
     def check_provenance(self, store_prov: dict) -> None:
+        if self.encoder_kind == STAGE2_KIND:
+            try:
+                self._check_stage2_provenance(store_prov)
+            except Exception:
+                self.close()
+                raise
+            return
         diffs = []
         for section, keys in (("vae", PROV_SAME_VAE), ("encoder", PROV_SAME_ENC)):
             a, b = self.provenance.get(section, {}), store_prov.get(section, {})
@@ -124,8 +384,16 @@ class MotionEncoderClient:
                 raise RuntimeError(f"sidecar 已退出（rc={self._proc.returncode}）")
             deadline = time.monotonic() + P.REQUEST_TIMEOUT_S
             t0 = time.perf_counter()
-            P.send_all(self._sock, P.encode_request(start_frame, payload))
-            raw = P.recv_response(self._sock, deadline)
+            if self.encoder_kind == STAGE2_KIND:
+                try:
+                    P.send_all(self._sock, P.encode_request(start_frame, payload))
+                    raw = P.recv_response(self._sock, deadline, response_bytes=4096)
+                except (P.ProtocolError, OSError):
+                    self.close()
+                    raise
+            else:
+                P.send_all(self._sock, P.encode_request(start_frame, payload))
+                raw = P.recv_response(self._sock, deadline)
             self.total_s += time.perf_counter() - t0
             self.n_calls += 1
         return np.frombuffer(raw, dtype=np.float32).copy()
