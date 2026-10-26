@@ -316,6 +316,7 @@ class MotionEncoderClient:
         child_env.pop("PYTHONHOME", None)
         parent_sock, child_sock = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
         self._sock = parent_sock
+        self._stage2_socket_identity = (child_sock.fileno(), os.fstat(child_sock.fileno()).st_ino)
         argv = ["uv", "run", "--project", str(project), "--no-sync", "python",
                 str(project / "stage2_sidecar.py"), "--fd", str(child_sock.fileno())]
         if self.stub:
@@ -329,9 +330,11 @@ class MotionEncoderClient:
                                           stdin=subprocess.DEVNULL, stdout=sys.stderr, stderr=sys.stderr,
                                           start_new_session=True)
             self._stage2_owns_session = True
+            self._capture_stage2_session()
         except Exception:
             parent_sock.close()
             self._sock = None
+            self.close()
             raise
         finally:
             child_sock.close()
@@ -353,6 +356,20 @@ class MotionEncoderClient:
         self.n_calls = 0
         self.total_s = 0.0
 
+    def _capture_stage2_session(self) -> None:
+        """首次 poll/reap 前记录自有会话与启动时钟；已退出启动器的 stat 仍可核验。"""
+        pid = self._proc.pid
+        fields = pathlib.Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+        if (int(fields[2]), int(fields[3])) != (pid, pid):
+            raise ValueError("阶段二启动器未建立本次独立会话与进程组")
+        self._stage2_session_identity = (pid, int(fields[19]))
+
+    def _stage2_script_matches(self, pid: int) -> bool:
+        command = pathlib.Path(f"/proc/{pid}/cmdline").read_bytes().rstrip(b"\0").split(b"\0")
+        executable = pathlib.Path(f"/proc/{pid}/exe").resolve(strict=True).name
+        return (re.fullmatch(r"python(?:\d+(?:\.\d+)*)?", executable) is not None
+                and [os.fsdecode(arg) for arg in command[1:]] == self.argv[6:])
+
     def _stage2_worker_identity(self) -> tuple[int, int]:
         """核上报 PID 属于启动器的存活后代，且运行本次指定脚本与完整参数。"""
         pid = self.provenance.get("pid")
@@ -364,12 +381,10 @@ class MotionEncoderClient:
         if getattr(self, "_worker_identity", identity) != identity:
             raise ValueError("阶段二 worker 进程身份已被替换")
         try:
-            command = pathlib.Path(f"/proc/{pid}/cmdline").read_bytes().rstrip(b"\0").split(b"\0")
-            executable = pathlib.Path(f"/proc/{pid}/exe").resolve(strict=True).name
+            matches = self._stage2_script_matches(pid)
         except OSError as exc:
             raise ValueError("阶段二 worker 脚本身份不可读") from exc
-        if (re.fullmatch(r"python(?:\d+(?:\.\d+)*)?", executable) is None
-                or [os.fsdecode(arg) for arg in command[1:]] != self.argv[6:]):
+        if not matches:
             raise ValueError("阶段二 worker 脚本身份与启动参数不符")
         ancestors = {pid}
         current = pid
@@ -515,6 +530,8 @@ class MotionEncoderClient:
         candidates = [(process.pid, None)] if process.poll() is None else []
         if identity is not None:
             candidates.append(identity)
+        elif process.poll() is not None:
+            candidates.extend(self._unhandshaken_stage2_workers())
         for pid, started in candidates:
             try:
                 if started is not None and _live_process(pid)[1] != started:
@@ -524,6 +541,31 @@ class MotionEncoderClient:
                     return
             except (ValueError, ProcessLookupError):
                 continue
+
+    def _unhandshaken_stage2_workers(self) -> list[tuple[int, int]]:
+        """启动器先退出时，凭自有会话、时钟、脚本与继承 socket 重新找待清理进程。"""
+        session = getattr(self, "_stage2_session_identity", None)
+        endpoint = getattr(self, "_stage2_socket_identity", None)
+        if session is None or endpoint is None:
+            return []
+        group, launched = session
+        descriptor, inode = endpoint
+        workers = []
+        for directory in pathlib.Path("/proc").iterdir():
+            if not directory.name.isdecimal():
+                continue
+            pid = int(directory.name)
+            try:
+                snapshot = _live_process(pid)
+                if (snapshot[1] < launched or os.getpgid(pid) != group or os.getsid(pid) != group
+                        or not self._stage2_script_matches(pid)
+                        or os.readlink(directory / "fd" / str(descriptor)) != f"socket:[{inode}]"
+                        or _live_process(pid) != snapshot):
+                    continue
+                workers.append((pid, snapshot[1]))
+            except (ValueError, OSError):
+                continue
+        return workers
 
     @property
     def alive(self) -> bool:

@@ -327,6 +327,7 @@ def test_nonstub_launch_uses_independent_project_and_registered_source(provenanc
     monkeypatch.setattr(C.subprocess, "Popen", spawn)
     monkeypatch.setattr(P, "recv_handshake", lambda *args: handshake)
     monkeypatch.setattr(C.MotionEncoderClient, "_stage2_worker_identity", lambda self: (123, 0))
+    monkeypatch.setattr(C.MotionEncoderClient, "_capture_stage2_session", lambda self: None)
     client = C.MotionEncoderClient(online_gpu=0, encoder_kind=C.STAGE2_KIND, source_run=SOURCE_RUN,
                                    store_provenance=provenance, provenance_root=tmp_path, v1_store=tmp_path,
                                    expected_ckpt_sha256=provenance["encoder"]["checkpoint_sha256"])
@@ -555,3 +556,74 @@ def test_real_uv_rejects_other_launchers_worker_even_with_matching_script(real_u
         client.provenance["pid"], client._worker_identity, client.argv = original
         other.close()
         _wait_process_gone(other_pid)
+
+
+def test_real_uv_launcher_exits_before_handshake_with_unresponsive_worker(monkeypatch):
+    """首次握手读取前杀掉 uv 并暂停 worker；关闭 socket 本身不能清掉暂停进程。"""
+    selected = os.environ.get("MMEVLA_STAGE2_IMPORT_ENV")
+    if not selected:
+        pytest.skip("实际 uv 进程链验收需指定已安装环境")
+    real_popen = subprocess.Popen
+    original_close = C.MotionEncoderClient._close_stage2
+    observed = {}
+    def spawn(*args, **kwargs):
+        process = real_popen(*args, **kwargs)
+        observed["process"] = process
+        return process
+    def before_handshake(*args):
+        process = observed["process"]
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            # uv 可由工作线程创建子进程；children 是逐线程记录，不能只读主线程。
+            values = {value for children in Path(f"/proc/{process.pid}/task").glob("*/children")
+                      for value in children.read_text().split()}
+            for value in values:
+                pid = int(value)
+                command = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0")
+                if any(arg.endswith(b"/stage2_sidecar.py") for arg in command):
+                    observed["worker"] = pid
+                    os.kill(pid, C.signal.SIGSTOP)
+                    process.kill()
+                    process.wait(timeout=3)
+                    raise P.ProtocolError("握手前启动器退出，worker 已暂停")
+            time.sleep(0.01)
+        pytest.fail("真实 uv 未产生可验证的 Python worker")
+    def close(self):
+        if not observed.get("closed"):
+            assert getattr(self, "_worker_identity", None) is None
+            observed["closed"] = True
+        return original_close(self)
+    monkeypatch.setattr(C.subprocess, "Popen", spawn)
+    monkeypatch.setattr(P, "recv_handshake", before_handshake)
+    monkeypatch.setattr(C.MotionEncoderClient, "_close_stage2", close)
+    try:
+        with pytest.raises(P.ProtocolError, match="握手前启动器退出"):
+            C.MotionEncoderClient(online_gpu="", encoder_kind=C.STAGE2_KIND, source_run=SOURCE_RUN, stub=True,
+                                  v1_store=Path(selected).resolve().parents[1], handshake_timeout=5)
+        assert observed["closed"] and observed["process"].poll() is not None
+        _wait_process_gone(observed["worker"])
+    finally:
+        # 即使实现回归使断言失败，负例也不留下测试自身的暂停进程。
+        if observed.get("worker"):
+            try:
+                os.kill(observed["worker"], C.signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+
+@pytest.mark.parametrize("field", ["socket", "script", "clock"])
+def test_unhandshaken_cleanup_requires_all_captured_identities(real_uv_client, field):
+    client = real_uv_client
+    original = (client._stage2_socket_identity, client._stage2_session_identity, list(client.argv))
+    assert (client.worker_pid, client._worker_identity[1]) in client._unhandshaken_stage2_workers()
+    try:
+        if field == "socket":
+            fd, inode = client._stage2_socket_identity
+            client._stage2_socket_identity = (fd, inode + 1)
+        elif field == "clock":
+            client._stage2_session_identity = (client._proc.pid, client._worker_identity[1] + 1)
+        else:
+            client.argv[6] = str(Path(client.argv[6]).with_name("unrelated.py"))
+        assert client._unhandshaken_stage2_workers() == []
+    finally:
+        client._stage2_socket_identity, client._stage2_session_identity, client.argv = original
