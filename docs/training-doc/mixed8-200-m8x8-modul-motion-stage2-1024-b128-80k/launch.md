@@ -1,6 +1,6 @@
 # mixed8 阶段二单 token VLA：实施与起跑档案
 
-当前处于实施阶段，正式训练尚未启动。计划为根目录 `1026-vla-stage2-memory-1024-train-plan.md`，开工锚点 `1383aba0fd77b259f0b32eadb47ea7792190145e`。实际训练 Beta、完整命令和启动时间将在通过 G0–G7 后填写，不能以本档案创建时间代替起跑时间。
+当前处于实施阶段，G0已通过，正式训练尚未启动。计划为根目录 `1026-vla-stage2-memory-1024-train-plan.md`，开工锚点 `1383aba0fd77b259f0b32eadb47ea7792190145e`。实际训练 Beta、完整命令和启动时间将在通过 G0–G7 后填写，不能以本档案创建时间代替起跑时间。
 
 ## 用户授权与范围
 
@@ -16,6 +16,8 @@
 | 独立开工审查 | `PLAN_CONSISTENCY_REVIEW=PASS base=1383aba0fd77b259f0b32eadb47ea7792190145e findings=0 blocking=0` |
 | 共享字段 | 按计划具体化并经独立审查；协调文档在 `v1-store/validation/stage2-memory/contracts-20261026.md`，生产代码不依赖它 |
 | 正式训练 Beta | 尚未生成 |
+
+S1已合入并推送 MotionJEPA `v12-3decoder-memexport@b5d23a5fab55be16e580c5b77a8f04d68b3170c2`；合前独立审查通过，合后CPU `34 passed`。主MJ检出保持原分支。G0入口已合入并推送policy `e44ee413beedbf38dbf56f1a75bc17a50eadc627`，合后CPU `39 passed`。
 
 全部子代理使用 `gpt-6-astra`、`high`。代码代理独立worktree，运行代理不改代码；合并保留子提交，合前固定BASE/TIP审查、合后定向验证。
 
@@ -75,3 +77,16 @@ G0原帧核验 → 4段抽取冒烟 → 全量抽取与G1/G2/G3 → pack → 独
 新token根 `motion-tokens-stage2/`、新表根 `motion-stage2-1024/` 均位于数据父目录。验证证据在 `v1-store/validation/stage2-memory/`。正式run在 `v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/`。交付bucket分别为 `HongzeFu/robomme-vla-mixed8-200-modul-motion-stage2-1024-80k-v1` 和 `HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1`。
 
 本目录records只保存无法由git还原的清洗日志与验证摘要，不复制脚本、YAML或权重。历史测速run `cc-speed8-motion-b128-20261026-a` 的step119仅在本次收尾按已批准精确路径清理；此时尚未删除。
+
+## G0实际核验
+
+从clean `e44ee413beedbf38dbf56f1a75bc17a50eadc627` 单次CPU运行，美东2026-10-26 13:41:06–13:41:19，耗时13秒，`EXIT_CODE=0`。原始日志 `v1-store/logs/vla-s2-20261026/g0.log`；实际判定：`RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail=16 sha_mismatches=0`。64个唯一偶数格窗，demo22、exec42，16任务各4窗；无缺件、未重试。
+
+入口为 `scripts/dataset/check_stage2_validation_inputs.py`，参数按本档案列出的manifest、恢复latent、source和demo根，输出 `v1-store/validation/stage2-memory/windows.json`。清单430170字节，SHA256 `4cb05b6b3097b22a8594576def1505957399a924d4189591980292e3bd320d30`；完整样本身份与SHA存入本档案 `records/windows.json`。该结果只证明原始样本来源，不替代G2/G4数值对拍或G5全表验证。
+
+## 实施中的具体化
+
+- G0检查与启动检查拆成独立不相交工作树，S2/S3保留其余写集；S4按在线、数值、恢复拆分，模型均Astra high。
+- stage2成功响应新增小端uint32长度字段，4096只指载荷；默认3072分支和公共错误格式不变。`PROTOCOL_ADJUSTMENT_REVIEW=PASS`，数值判据不变；不把流式socket误述成能立即识别任意尾随字节。
+- G4通过后生成便携真实demo/exec输入，S2随run快照保存、S3随清单发布；恢复不依赖原机隐藏pkl/H5。VAE与tokenizer来源身份显式记录，不另复制整VAE。
+- 旧motion metadata测试的旧三layout参数集显式固定，避免自动把stride16夹具套给stage2；`TEST_ADJUSTMENT_REVIEW=PASS`，新stage2仍保留独立完整正负例。
