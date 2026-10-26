@@ -372,7 +372,7 @@ cd "$EVAL_REPO"
 </code></pre>
 <p>阶段 I／II 先固定 schedule 与 motion 身份；60000 到位后才生成最终 <code>models.json</code>，含精确 checkpoint 路径、完整文件 SHA、resolved／normstats、model seed 和 motion identity。目标就是当前 Stage2 60k，不接受自动搜索“最近 checkpoint”替代。</p>
 <h3>6.3 T−2h 排队门与正式启动门</h3>
-<p><code>watch_60k.py</code> 只读训练实际 step／时间证据，按近期稳态秒／步计算 <code>ETA60k=观测时刻+(60000-step)×秒/步</code>，排队触发时刻为 ETA−7200 秒。周期更新 ETA，日志陈旧／训练暂停／速率异常时报告未知，不凭旧估计盲提交；不打开或改写仍在写入的 checkpoint。</p>
+<p><code>watch_60k.py</code> 只读实际step／时间证据，先算 <code>ETA_train=观测时刻+(60000-step)×近期稳态秒/步</code>，再按同run早期checkpoint真实记录加入保存、发布、传输至目标NFS和校验的估时，得到 <code>ETA_ready</code>；也可消费用户明确指定的到位时间。排队触发为 <code>ETA_ready−7200秒</code>，不是训练到step60000前两小时。缺可信交付估时、日志陈旧、训练暂停或速率异常时标UNKNOWN，不把训练step当NFSready；不打开或改写仍在写入的checkpoint。实际ready始终以完整manifest／SHA硬门为准。</p>
 <p>未来提交占位的最小条件是：已经获得明确开工令，身处环境 A，现存 SSH ControlMaster 可用，NFS 路径和真实解释器可用，账号／分区／资源规格及八 job 数量批准，固定 schedule identity，T−2h 到达，独占提交锁和 ledger 可用。此时不要求 60k 文件、A40 数值证书或 final run identity 已存在。</p>
 <p>阶段II先完成SSH／NFS／CPU组件；若没有已授权可复用A40，<code>a40_motion_numeric</code> 与 <code>resource_fit</code> 保持pending，转在阶段III首个hold RUNNING后优先完成。不得把“九门齐”误用为占位提交前提，也不得因此绕过T−2h时机额外申请验证job；九门只约束正式worker启动。</p>
 <p>ledger 每个 slot 至少记录 <code>UNSUBMITTED／SUBMITTING／UNKNOWN／SUBMITTED</code> 和独立提交标识；先落 SUBMITTING 再 sbatch，返回后立即记录 JobID。若返回前后崩溃或网络结果不明，标 UNKNOWN，必须用唯一 schedule／slot 标签查询 Slurm 对账；UNKNOWN 绝不是“未提交”，禁止直接补交。只有已证明未产生 job 的 slot 才能提交。</p>
