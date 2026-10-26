@@ -12,22 +12,22 @@
 <body><main>
 <div class="eyebrow">计划日期：2026-10-26（美东） · 任务标识：official-benchmark-stage2-eval · 当前状态：仅计划方案，两阶段均未开工；已获文档推送授权</div>
 <h1>第一部分（给人看）</h1>
-<div class="lead"><strong>目标：</strong>在从 policy 固定基线分出的独立 eval 分支中，沿用官方 RoboMME 的环境、测试集与动作执行口径，接入现有 Stage2 motion 在线记忆；后续在 Great Lakes 用八个持久 GPU worker 动态领取任务，完成每个选定 checkpoint 的 800 局官方评估。</div>
-<p><strong>这份方案分为恰好两个未来阶段，均待用户后续明确开工：</strong>阶段 I 合并源码实现与组件验证，全部从 sled-aspen／sled-vail 的独立 eval 工作区完成开发、CPU 测试、SSH／NFS／队列验证，并在可用的已授权 A40 席位上完成真实 motion 与资源验证；阶段 II 在当前 Stage2 60k checkpoint 预计到达目标 NFS 前两小时提交八个占位 job，先补可能未完成的 A40 门，待完整就绪和九门通过后正式评估收官。</p>
+<div class="lead"><strong>目标：</strong>在从 policy 固定基线分出的独立 eval 分支中，沿用官方 RoboMME 的环境、测试集与动作执行口径，接入现有 Stage2 motion 在线记忆；后续在 Great Lakes 用数量可变的持久GPU worker 动态领取任务，完成每个选定 checkpoint 的 800 局官方评估。</div>
+<p><strong>这份方案分为恰好两个未来阶段，均待用户后续明确开工：</strong>阶段 I 合并源码实现与组件验证，全部从 sled-aspen／sled-vail 的独立 eval 工作区完成开发、CPU 测试、SSH／NFS／队列验证，并在可用的已授权 A40 席位上完成真实 motion 与资源验证；阶段 II 在当前 Stage2 60k checkpoint 预计到达目标 NFS 前两小时按显式目标N配置占位job池，先补可能未完成的 A40 门，待完整就绪和九门通过后正式评估收官。</p>
 <p><strong>本轮只交付 HTML 计划。</strong>不实现代码、不启动 GPU／仿真、不连接 Great Lakes、不提交 Slurm，不改训练目录、环境或数据；代码草稿不合入 eval 分支。下文命令和 PASS 行是未来实施合同，不是开工令、实测结果或通过证明。</p>
 <p class="stop">授权边界：本轮只修订计划，用户已明确同意推送 <code>v4-eval-official-1026</code>；两个阶段的代码、验证和提交 job 仍需后续明确开工。推送和设计审查均不构成开工令，状态机登记也尚未获得明确同意。</p>
 <p>工作分支为 <code>v4-eval-official-1026</code>，源码起点固定为 <code>d7912e4d4ccd6a158d2e0b64ccd657fc989d1a24</code>。现有 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA-eval</code> 仅为本文编写和交付位置，未来不在 AWS 开发、测试或运行评估 GPU；AWS 只承担训练并产出只读交付资产，不操作其训练环境。</p>
-<p>未来开发检出建议为 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA-eval</code>，实际位置在 sled-aspen／sled-vail 现场确认；跨节点执行使用后文独立 NFS 副本。全部命令与资源监督从 aspen／vail 发起，模型／VAE／仿真计算在 Great Lakes 节点，不把八个 job 跑在 aspen 本地。上游后续修复须按具体 commit 移植、重新审查，不移动本计划基线。</p>
+<p>未来开发检出建议为 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA-eval</code>，实际位置在 sled-aspen／sled-vail 现场确认；跨节点执行使用后文独立 NFS 副本。全部命令与资源监督从 aspen／vail 发起，模型／VAE／仿真计算在 Great Lakes 节点，不把这些job跑在aspen本地。上游后续修复须按具体 commit 移植、重新审查，不移动本计划基线。</p>
 <p>官方 policy 锚点 <code>ac846a9a4aec841e483b1dc5d620dfe426bde853</code>；其 benchmark gitlink 与本地现有 gitlink 均为 <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>。官方 benchmark 调研 HEAD <code>53673b3c94a723d757e9c235f1961e398950e5e3</code> 的 <code>src/robomme</code> 102 个文件与 gitlink 版本同字节，建议继续钉住 gitlink 以贴合官方 policy。</p>
-<nav class="toc"><a href="#overview">运行总览</a><a href="#motion-human">窗口与 padding</a><a href="#target-human">A40 阻断</a><a href="#queue-human">八 worker 队列</a><a href="#gates-human">验收与步骤</a><a href="#details">完整技术细节</a></nav>
+<nav class="toc"><a href="#overview">运行总览</a><a href="#motion-human">窗口与 padding</a><a href="#target-human">A40 阻断</a><a href="#queue-human">弹性worker队列</a><a href="#gates-human">验收与步骤</a><a href="#details">完整技术细节</a></nav>
 <h2 id="overview">一、要做什么，哪些已经定了</h2>
 <table><thead><tr><th style="width:19%">项目</th><th style="width:48%">本计划口径</th><th>状态与依据</th></tr></thead><tbody>
 <tr><td>评估范围</td><td>官方 16 任务，每任务 test 50 局，共 800 局；完整保留 episode 清单与官方难度分配。</td><td><span class="pill confirmed">已定</span> 官方 policy 与 benchmark，见第二部分来源表。</td></tr>
 <tr><td>首轮模型</td><td>当前 Stage2 motion VLA 的 <code>60000</code> checkpoint、model seed 42；就绪后锁精确路径与完整 SHA 清单。</td><td><span class="pill confirmed">已定</span> 不自动加入无 motion 或官方基线；当前文件尚未到位不阻塞阶段 I 或阶段 II 排队。</td></tr>
 <tr><td>官方动作协议</td><td><code>joint_angle</code>；<code>obs_horizon=16</code>；模型输出 <code>(20,8)</code>，每次执行前 16 动作；当前观测双视，历史仅 front。</td><td><span class="pill confirmed">已定</span> <code>examples/robomme/{eval.py,env_runner.py,utils.py}</code>。</td></tr>
 <tr><td>官方终止边界</td><td><code>max_steps=1300</code>，先 step、再 count 加一、再判断 <code>count&gt;1300</code>；第 1301 步 timeout 会覆盖该步 success。</td><td><span class="pill confirmed">已定</span> 保留顺序并对拍；benchmark 内部另有 <code>+2</code>，不能改成 <code>&gt;=</code>。</td></tr>
-<tr><td>集群数量与规格</td><td>用户指定 8 个 job；建议每个 1×A40、4 CPU、24 GiB、48 小时，合计 8 GPU／32 CPU／192 GiB。</td><td>数量已定；4 CPU 为本计划待批准规格，仓库通常默认 1 CPU／24 GiB，历史 4 CPU 不等于本轮授权。</td></tr>
-<tr><td>工作划分</td><td>每个模型一个阶段；800 局切为 160 个 5 局 chunk，8 worker 做完就领取下一块，模型阶段顺序可配置。</td><td><span class="pill pending">设计建议</span> 不固定八等分；每块新建仿真进程，模型与 sidecar 常驻。</td></tr>
+<tr><td>集群数量与规格</td><td><code>target_jobs=N</code> 显式配置，无固定默认数量，可运行中增减；建议每job为1×A40、4 CPU、24 GiB、48h。</td><td>实际N受已批准资源包络和账号配额约束；4 CPU仍为待批准规格，不能无限申请或把历史规格当授权。</td></tr>
+<tr><td>工作划分</td><td>每个模型一批；800局固定切160个5局chunk，与N无关。N个worker做完领取下一块，扩容即加入领取，缩容先逐局drain。</td><td><span class="pill confirmed">弹性数量已定</span> 不固定按worker分片；每块新仿真进程，模型与sidecar常驻。</td></tr>
 <tr><td>正式成功率</td><td>每任务成功数／50，16 任务均值即成功总数／800；error 与 coverage 一起保留。</td><td><span class="pill confirmed">已定</span> 未解决 error 时不发布正式完整 score，不丢母集、不换 seed。</td></tr>
 </tbody></table>
 <p>目录沿用官方结构：评估主体留在 <code>examples/robomme/</code>；模型入口沿用本 fork 的 <code>scripts/training/serve_policy.py</code>（官方原版是 <code>scripts/serve_policy.py</code>）；仅 Great Lakes 调度、队列、清单与汇总工具新增到 <code>scripts/evaluation/</code>。benchmark 继续作为官方子模块使用。</p>
@@ -69,30 +69,26 @@ q = 0, 16, 32, 48, 64  →  exec 窗口数 = 0, 0, 1, 1, 2
 <h2 id="target-human">三、A100 训练产物不能直接宣称已经能在 A40 跑</h2>
 <p>当前 <code>motion_client.py::_check_stage2_provenance</code> 逐字比较 <code>numerics</code> 与 <code>stage2_compat.online_vae</code>，其中含 GPU 名称、driver；A40 与训练 A100 不同，会被拒绝。计划新增独立 <code>eval_target_contract.json</code>：保留训练 provenance 原样，只允许明确列出的 <code>gpu_name</code>、<code>driver</code> 硬件差异，其他软件、精度、source、EMA、VAE 身份仍严格匹配。</p>
 <p>目标证书必须先在 A40 通过固定 reference 验证，绑定权重／源码／目标环境／GPU 家族／fixture／阈值／eval 代码；driver 变化重新验收。跨卡不承诺逐位相等；建议 encoder 与端到端最大绝对误差均 ≤<code>1e-5</code>，同时记录相对误差和 cosine，阈值须事前固定，失败不能放宽再报通过。已有 G2 来源例外不代表 G4、真实 16 帧节奏或 A40 合格。</p>
-<h2 id="queue-human">四、八个 job 动态领取，不让短任务等长任务</h2>
+<h2 id="queue-human">四、弹性 job 池动态领取，运行中可增减数量</h2>
 <p>每个 worker 只在自己的占位 job 内启动一个常驻 server 与 sidecar；领取一个 5 局 chunk 后，启动独立官方 eval 仿真子进程，结束即回收仿真资源，再领下一块。固定 round-robin 混排 16 任务，无需预跑估计长短；模型阶段依次推进，worker 不跨模型阶段抢任务。</p>
-<figure><svg id="eight-worker-dynamic-queue" viewBox="0 0 1120 490" role="img" aria-labelledby="queue-title queue-desc">
-<title id="queue-title">八个持久 GPU worker 从共享队列动态领取工作</title><desc id="queue-desc">不可变的 160 块清单由 NFS 原子 mkdir 领取，八个 worker 各写独立 attempt 结果；单控制器验证 generation 与 coverage 后接受结果并汇总。领取和结果通路为上下两条独立的水平总线。</desc>
+<figure><svg id="elastic-worker-dynamic-queue" viewBox="0 0 1120 490" role="img" aria-labelledby="queue-title queue-desc">
+<title id="queue-title">N个持久GPU worker从共享队列动态领取，可按资源伸缩</title><desc id="queue-desc">不可变160块清单由NFS原子mkdir领取。worker1、worker2、省略项和workerN表示可变规模，各写独立attempt结果；单控制器验证generation与coverage。新增worker领取ready；缩容worker停止领取并封口当前局后退出。</desc>
 <defs><marker id="queue-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#52778e"/></marker></defs>
 <rect class="box" x="20" y="20" width="285" height="90" rx="7"/><text x="36" y="48" class="label">不可变任务清单</text><text x="36" y="74" class="detail">1 模型 × 800 局 = 160 块</text><text x="36" y="96" class="detail">每块 5 局，任务固定混排</text>
 <rect class="motion" x="390" y="20" width="360" height="90" rx="7"/><text x="408" y="48" class="label">共享 ready 队列／原子 claim</text><text x="408" y="74" class="detail">mkdir 胜出者领取，写 owner＋generation</text><text x="408" y="96" class="detail">做完再领；空队列且仍有 running 时等待</text>
-<path class="arrow" d="M305 65 H390" marker-end="url(#queue-arrow)"/><path class="arrow" d="M570 110 V150 H85 M570 150 H1030"/>
-<path class="arrow" d="M85 150 V195" marker-end="url(#queue-arrow)"/><path class="arrow" d="M220 150 V195" marker-end="url(#queue-arrow)"/><path class="arrow" d="M355 150 V195" marker-end="url(#queue-arrow)"/><path class="arrow" d="M490 150 V195" marker-end="url(#queue-arrow)"/>
-<path class="arrow" d="M625 150 V195" marker-end="url(#queue-arrow)"/><path class="arrow" d="M760 150 V195" marker-end="url(#queue-arrow)"/><path class="arrow" d="M895 150 V195" marker-end="url(#queue-arrow)"/><path class="arrow" d="M1030 150 V195" marker-end="url(#queue-arrow)"/>
-<g><rect class="box" x="25" y="195" width="120" height="95" rx="6"/><text x="42" y="223" class="label">worker 1</text><text x="41" y="248" class="detail">1×A40</text><text x="41" y="272" class="tiny">常驻模型</text></g>
-<g><rect class="box" x="160" y="195" width="120" height="95" rx="6"/><text x="177" y="223" class="label">worker 2</text><text x="176" y="248" class="detail">1×A40</text><text x="176" y="272" class="tiny">常驻模型</text></g>
-<g><rect class="box" x="295" y="195" width="120" height="95" rx="6"/><text x="312" y="223" class="label">worker 3</text><text x="311" y="248" class="detail">1×A40</text><text x="311" y="272" class="tiny">常驻模型</text></g>
-<g><rect class="box" x="430" y="195" width="120" height="95" rx="6"/><text x="447" y="223" class="label">worker 4</text><text x="446" y="248" class="detail">1×A40</text><text x="446" y="272" class="tiny">常驻模型</text></g>
-<g><rect class="box" x="565" y="195" width="120" height="95" rx="6"/><text x="582" y="223" class="label">worker 5</text><text x="581" y="248" class="detail">1×A40</text><text x="581" y="272" class="tiny">常驻模型</text></g>
-<g><rect class="box" x="700" y="195" width="120" height="95" rx="6"/><text x="717" y="223" class="label">worker 6</text><text x="716" y="248" class="detail">1×A40</text><text x="716" y="272" class="tiny">常驻模型</text></g>
-<g><rect class="box" x="835" y="195" width="120" height="95" rx="6"/><text x="852" y="223" class="label">worker 7</text><text x="851" y="248" class="detail">1×A40</text><text x="851" y="272" class="tiny">常驻模型</text></g>
-<g><rect class="box" x="970" y="195" width="120" height="95" rx="6"/><text x="987" y="223" class="label">worker 8</text><text x="986" y="248" class="detail">1×A40</text><text x="986" y="272" class="tiny">常驻模型</text></g>
-<path class="arrow" d="M85 290 V340 H1030 M220 290 V340 M355 290 V340 M490 290 V340 M625 290 V340 M760 290 V340 M895 290 V340 M1030 290 V340"/>
+<path class="arrow" d="M305 65 H390" marker-end="url(#queue-arrow)"/><path class="arrow" d="M570 110 V150 H180 M570 150 H930"/>
+<path class="arrow" d="M180 150 V195" marker-end="url(#queue-arrow)"/><path class="arrow" d="M430 150 V195" marker-end="url(#queue-arrow)"/><path class="arrow" d="M680 150 V195" marker-end="url(#queue-arrow)"/><path class="arrow" d="M930 150 V195" marker-end="url(#queue-arrow)"/>
+<g><rect class="box" x="80" y="195" width="200" height="95" rx="6"/><text x="100" y="223" class="label">worker 1</text><text x="100" y="248" class="detail">1×A40 · 常驻模型</text><text x="100" y="272" class="tiny">完成后领取下一块</text></g>
+<g><rect class="box" x="330" y="195" width="200" height="95" rx="6"/><text x="350" y="223" class="label">worker 2</text><text x="350" y="248" class="detail">1×A40 · 常驻模型</text><text x="350" y="272" class="tiny">新增后加入领取</text></g>
+<g><rect class="pad" x="580" y="195" width="200" height="95" rx="6"/><text x="600" y="223" class="label">…</text><text x="600" y="248" class="detail">数量由资源池配置</text><text x="600" y="272" class="tiny">可运行中扩容或缩容</text></g>
+<g><rect class="box" x="830" y="195" width="200" height="95" rx="6"/><text x="850" y="223" class="label">worker N</text><text x="850" y="248" class="detail">1×A40 · 常驻模型</text><text x="850" y="272" class="tiny">缩容先封口当前局</text></g>
+<path class="arrow" d="M180 290 V340 H930 M430 290 V340 M680 290 V340 M930 290 V340"/>
 <path class="arrow" d="M570 340 V390" marker-end="url(#queue-arrow)"/><text x="20" y="370" class="detail">worker 只提交独立 attempt 结果；从不改 canonical 汇总</text>
 <rect class="motion" x="390" y="390" width="360" height="80" rx="7"/><text x="407" y="418" class="label">唯一控制器：校验 → accepted → 汇总</text><text x="407" y="445" class="detail">身份／generation／唯一局／800 coverage</text><text x="795" y="421" class="detail">旧 generation 的迟到结果隔离</text><text x="795" y="447" class="detail">只有 800 局全部接受才完成</text>
-</svg><figcaption>图三。箭头表示领取和结果提交两个方向；worker 是八个持久计算进程，不是八个固定 episode 分片。</figcaption></figure>
+</svg><figcaption>图三。四个框示意worker 1、2、…、N，不代表固定四个。N显式配置且可增减；160块任务与评估身份保持不变。</figcaption></figure>
+<p><code>target_jobs=N</code> 必须显式提供，没有固定默认值。运行中的 <code>desired_jobs</code> 与 <code>pool_revision</code> 是可变控制状态；扩容在已批准包络和配额内增加job，让新worker领取ready；缩容先停止被选worker领取，封口当前局、归还未开始局，再清理该pool明确登记的step／JobID。PENDING与UNKNOWN也占资源账本，不能因未见RUNNING而重复申请。</p>
 <p>NFS 不引入数据库：不可变清单、原子 <code>mkdir</code> claim、临时文件加 rename 提交结果。claim 后尚未写 owner 就崩溃也必须可识别。heartbeat 只诊断，不按 TTL 抢活 worker；唯一控制器先确认对应 Slurm step 已终止，再提升 generation 重发。旧 attempt 永远不能覆盖 canonical。</p>
-<p>success／fail／timeout 为正常终局，不自动重跑；基础设施 error 最多一次同 seed 重试，先确认旧 step 死亡。48 小时预算到期 drain 并保留队列，不自动增加第九个 job 或续批。建议每局墙钟上限 2,400 秒，5 局块加启动清理 1,800 秒得 <code>13,800 秒=3小时50分</code>；这是待实测的运维上限，与官方 1300 动作语义分开。</p>
+<p>success／fail／timeout 为正常终局，不自动重跑；基础设施 error 最多一次同 seed 重试，先确认旧 step 死亡。48 小时预算到期 drain 并保留队列，不超批准资源包络扩容，也不自动续批。建议每局墙钟上限 2,400 秒，5 局块加启动清理 1,800 秒得 <code>13,800 秒=3小时50分</code>；这是待实测的运维上限，与官方 1300 动作语义分开。</p>
 <h2 id="gates-human">五、先过什么闸门，再做哪些步骤</h2>
 <table><thead><tr><th style="width:21%">验收</th><th style="width:50%">怎么验证，过了说明什么</th><th>拟判定行；目前均未运行</th></tr></thead><tbody>
 <tr><td>官方语义</td><td>对官方固定源码逐项核对并用可控 step trace 对拍 timeout、success、seed 与 reset；不以脚本能跑代替语义一致。</td><td><code>OFFICIAL_PARITY=PASS</code></td></tr>
@@ -102,8 +98,8 @@ q = 0, 16, 32, 48, 64  →  exec 窗口数 = 0, 0, 1, 1, 2
 <tr><td>全量收官</td><td>精确 800 个唯一 accepted 终态、16×50 无缺失、error=0，所有身份与日志可回读；成功数／800 才是完整 score。</td><td><code>FULL_COVERAGE=PASS</code><br><code>OFFICIAL_SCORE=PASS</code></td></tr>
 </tbody></table>
 <table><thead><tr><th style="width:12%">阶段</th><th style="width:62%">实施内容与地点</th><th>进入下一步的判据</th></tr></thead><tbody>
-<tr><td>I<br>aspen／vail<br>开发与验证</td><td>获后续开工令后，在独立eval工作区实现client／runtime／queue／GL入口并做CPU测试；核SSH／NFS／解释器／原子性与八领取者队列；有已授权A40席位时做真实motion／IPC及早期同架构checkpoint五局。</td><td>代码和CPU证据先审；无A40时相关门明确pending，带入阶段II首个hold补验。不得操作AWS训练环境。</td></tr>
-<tr><td>II<br>T−2h 至收官</td><td>从aspen／vail按目标NFS到位ETA提前两小时提交唯一八hold；首个RUNNING席位补A40门。60k完整就绪、strict restore、固定seed动作检查和九门齐后，在GL节点启动八worker，核800覆盖并释放。</td><td>schedule防重复；排队不要求A40证书，正式launch必须具备。无额外第九job。</td></tr>
+<tr><td>I<br>aspen／vail<br>开发与验证</td><td>获后续开工令后，在独立eval工作区实现client／runtime／queue／GL入口并做CPU测试；核SSH／NFS／解释器／原子性与弹性多领取者队列；有已授权A40席位时做真实motion／IPC及早期同架构checkpoint五局。</td><td>代码和CPU证据先审；无A40时相关门明确pending，带入阶段II首个hold补验。不得操作AWS训练环境。</td></tr>
+<tr><td>II<br>T−2h 至收官</td><td>从aspen／vail按目标NFS到位ETA提前两小时按desired_jobs对账配置资源池；首个RUNNING席位补A40门。60k完整就绪、strict restore、固定seed动作检查和九门齐后，在GL节点启动目标数量worker，核800覆盖并释放。</td><td>schedule防重复；排队不要求A40证书，正式launch必须具备。实际N受批准包络与配额约束。</td></tr>
 </tbody></table>
 <h3>子代理分工与合并（简述）</h3>
 <p>未来阶段 I 在aspen／vail拟分client、runtime、queue、GL四个代码owner，另设独立审查；全部子代理使用 <code>gpt-6-astra / high</code>、独立worktree、不递归。共享协议先定，runtime／queue基础接口先合，client／GL联调后合；每次合前审可写集合，合后审完整语义。两阶段的GL GPU运行都由同一资源负责人从aspen／vail编排。</p>
@@ -127,7 +123,7 @@ q = 0, 16, 32, 48, 64  →  exec 窗口数 = 0, 0, 1, 1, 2
 <li>仅独立 eval 分支承接实施；主训练仓库、训练环境、训练数据、训练产物、resolved YAML 与原 motion provenance 都不原地改写。</li>
 <li>benchmark 环境源码保持官方版本；禁止运行时 monkeypatch、私有难度替换、动作空间切换、seed 重抽与 demo 伪造。</li>
 <li>当前文档编写环境为AWS：8×A100、无NFS turbo、无 <code>~/.ssh/config</code>；这里只修文档。未来评估开发、测试、调度和监督全部从aspen／vail发起；AWS训练环境、GPU、数据与venv均不用于本计划实施。</li>
-<li>八个 job 和当前 Stage2 motion 60k 是方案已定口径；未来获开工令后按 T−2h 时机在可访问集群环境提交，本轮不提交。4 CPU 仍为资源建议，实际提交前固定批准规格；状态机登记仍须用户确认。</li>
+<li>job数量可灵活增减、当前Stage2 motion 60k是方案已定口径；未来获开工令后按 T−2h 时机在可访问集群环境提交，本轮不提交。4 CPU 仍为资源建议，实际提交前固定批准规格；状态机登记仍须用户确认。</li>
 <li>用户本轮已明确同意推送 <code>v4-eval-official-1026</code>，主会话审查合入后可执行 <code>git push -u origin v4-eval-official-1026</code>，无需重复询问推送；这不授权实施或登记状态机，当前不写 <code>current.json</code>。</li>
 <li>官方 parity、A40、全量 coverage 都必须由新证据给出；标题、示例命令和期待判定行不是通过证明。</li>
 </ol>
@@ -242,7 +238,7 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 <h3>3.3 拟新增 eval_target_contract.json</h3>
 <p>身份分层避免 SHA 循环，也避免60k尚未到位阻塞阶段I组件验证或阶段II排队。<code>runtime_contract.py</code> 规范化所有 descriptor：<code>motion_identity_sha256</code> 只绑定 MJ／VAE／source_pin／软件数值／fixture／阈值；A40 证书绑定 motion identity 与验证代码 SHA。<code>model_identity_sha256</code> 在 60000 到位后绑定 VLA 文件 SHA、resolved config、normstats 与 motion identity；最终 <code>run_identity_sha256</code> 再绑定 model identity、证书 SHA、benchmark／metadata／seed／eval 参数。证书不反向绑定 final run SHA。</p>
 <p>阶段I（或阶段II首个hold补验）的早期同架构checkpoint单独生成 <code>validation_model_identity_sha256</code> 与 <code>validation_run_identity_sha256</code>，绑定早期checkpoint真实文件SHA、其resolved／normstats、同一motion identity和已核架构；server仍通过标准 <code>run_identity_sha256</code> 字段传递这份验证run身份。验证目录、purpose与结果母集独立，只能用于profile，不能进入正式60000的accepted或score；正式model／run身份仍等60000完整到位后生成。</p>
-<p><code>schedule_identity_sha256</code> 单独绑定训练 run、目标 step=60000、eval 代码、benchmark、八 job 规格与 motion identity，用于 T−2h 的批准记录和 hold ledger；它不依赖尚不存在的 VLA60k 文件、A40 证书或 final run SHA。排队和正式 launch 是两条门槛。</p>
+<p><code>schedule_identity_sha256</code> 单独绑定训练run、目标step=60000、eval代码、benchmark、单job规格与motion identity，用于T−2h调度意图与ledger；不依赖VLA60k文件、A40证书或final run SHA。worker数量／ID不进入model／run评估身份；<code>desired_jobs</code>、<code>pool_revision</code>、membership与已批准资源包络另列可变控制账本，调N不创建新评估或新schedule意图。排队和正式launch仍是两条门槛。</p>
 <pre><code>{
   "schema_version": 1,
   "training_provenance_sha256": "&lt;原件 SHA，不修改原件&gt;",
@@ -281,7 +277,7 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 <tr><td><code>scripts/evaluation/queue_store.py</code>（拟新增）</td><td>原子 claim、owner 记录、独立 attempt 提交、控制锁、generation、accepted 索引与恢复。</td><td>worker 不写 canonical；任何失败点重启不出现双重接受。</td></tr>
 <tr><td><code>scripts/evaluation/official_queue.py</code>（新增）</td><td>单控制者核 Slurm 终态、fencing、一次 infra retry、accepted 汇总、coverage 与完成判定。</td><td>TTL 不触发抢活；late attempt 隔离；800 accepted 才完成。</td></tr>
 <tr><td><code>scripts/evaluation/resident_worker.py</code>（新增）</td><td>持久 server／sidecar；每块一个 sim 子进程；ready／drain／stop；心跳与显存／RSS 采样。</td><td>同模型连续块不重复加载；最多五次 make_env 后 sim 退出。</td></tr>
-<tr><td><code>scripts/evaluation/gl_official_pool.py</code>、<code>launch_official_pool.py</code>、<code>watch_60k.py</code>（新增）</td><td>T−2h ETA、schedule ledger、防重复八 hold、shared srun；区分 submit 最小门与 launch 九门／60k 依赖。</td><td>只提交 sleep infinity；不在登录节点执行 GPU；不自动续期、不超过八个自有 hold。</td></tr>
+<tr><td><code>scripts/evaluation/gl_official_pool.py</code>、<code>launch_official_pool.py</code>、<code>watch_60k.py</code>（新增）</td><td>T−2h ETA、schedule ledger、弹性pool ledger、防重复提交、shared srun；区分 submit 最小门与 launch 九门／60k 依赖。</td><td>只提交 sleep infinity；不在登录节点执行 GPU；不自动续期，实际资源不超批准包络和账号配额。</td></tr>
 <tr><td><code>scripts/evaluation/check_runtime.py</code>、<code>check_motion_consistency.py</code>、<code>measure_target_runtime.py</code>（新增）</td><td>CPU fixture／oracle、目标固定 reference 真实测量入口与证书消费；阶段I先做CPU／mock，再由资源负责人在已授权GL A40上测量；无席位则保留pending。</td><td>测量输入与报告 SHA 绑定，验证器不修改 reference；阶段I或阶段II首个hold补验须用真实A40证据，mock不得冒充数值通过。</td></tr>
 <tr><td><code>scripts/evaluation/client/pyproject.toml</code></td><td>仅处理官方 client 所需的包环境接口；不修改或同步训练 venv、锁文件与模型配置。</td><td>在独立 eval 环境验证；依赖变动逐项审查，禁隐式升级训练环境。</td></tr>
 <tr><td><code>tests/evaluation/</code> 与相关现有 policy 测试（拟新增／扩展）</td><td>独立 oracle、官方 trace、真实 16 帧、队列 crash、目标合同负例与全量清单完整性。</td><td>测试不得直接复用生产窗口函数生成期望值；运行位置与资源见闸门表。</td></tr>
@@ -296,6 +292,7 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 <pre><code>v1-store/evaluation/official-stage2-1026/&lt;run_id&gt;/
   inputs/                 # 只读 model / episode / chunk manifests 与 SHA
   contracts/              # 原训练 provenance 副本 + 独立目标合同
+  pool/                   # 可变desired_jobs、pool_revision、资源包络与membership账本
   queue/ready/             # 当前阶段可领取任务描述
   queue/claims/&lt;chunk&gt;/    # mkdir 原子占有；owner.json 临时文件 rename
   queue/generations/       # 由唯一控制器维护的 fencing 账本
@@ -306,12 +303,12 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
   quarantine/              # 迟到、失效 generation、损坏或身份不符记录
   reports/                 # coverage、score、资源曲线、审查证据
   logs/                    # hold / worker / server / sidecar / sim
-  hold-jobs.txt            # 本轮八个确切 JobID，不从账号现状猜
+  hold-jobs.txt            # 本pool所有确切JobID及membership修订，不从账号现状猜
 </code></pre>
 <p>所有产物落新 eval 副本自己的 <code>v1-store</code>，不写训练 run 目录。NFS 原子操作采用同一文件系统内的 <code>mkdir</code>、rename 与经验证的无覆盖 link 发布；跨文件系统 move、覆盖现有 accepted、多个控制器同时写同一 JSON 都禁止。写入先关闭并同步，再发布最终 manifest；恢复时验 schema、长度、SHA 和成员集合。</p>
 <h3>5.3 claim、owner 与不可见窗口</h3>
 <p>worker 按稳定 chunk 顺序尝试 <code>mkdir(queue/claims/chunk_id)</code>；仅成功者可创建独立 attempt。owner 写入临时文件，再 rename 为 <code>owner.json</code>，至少包含 task identity、generation、attempt_id、worker UUID、JobID、StepID、PID、启动时间和 hostname。</p>
-<p><strong>mkdir 成功而 owner 未写的崩溃窗口必须单独处理。</strong>控制器将其标为 ownerless，关联 worker 启动登记、Slurm step 与日志核实；不能因为目录空、mtime 老或 heartbeat 超时就抢占。无法唯一归属时保留 claim，必要时 drain 本池全部 worker steps，确认全部相关 step 已终止后才能 generation++ 重发未提交局；复用原八 hold，并计入重试上限。</p>
+<p><strong>mkdir成功而owner未写的崩溃窗口必须单独处理。</strong>控制器将其标为ownerless，关联启动登记、Slurm step与日志；不能因空目录、mtime或heartbeat超时抢占。无法唯一归属时保留claim，冻结本pool的membership快照并暂停扩缩容，drain快照内全部相关worker steps（包括已标retiring但尚未确认终态者）；确认全部相关step终态后才generation++重发未提交局，再恢复伸缩。不能只检查当前RUNNING个数；恢复复用已登记hold，并计入重试上限。</p>
 <p>worker 的 heartbeat 可记录当前 episode、最近动作步、last_progress、PID 与资源，但只用于诊断。慢仿真、NFS 暂停、模型编译或日志停更不等于进程已死；TTL 不构成重试授权。</p>
 <h3>5.4 单控制器、fencing 与唯一接受</h3>
 <p>controller 先通过独占控制目录取得写权，记录自身身份与控制 generation；若控制器异常退出，接替者必须确认旧进程／Slurm step 已终止，才进入恢复。不能仅凭控制锁年龄新建第二个控制器。</p>
@@ -328,14 +325,19 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 <p>接近占位 48 小时边界时设置 drain：不再领取预计无法在剩余预算内完成的新块，现有 episode 按明确 deadline 收尾，尚未完成的清单保留。该轮不自动新建或续期占位 job；续批需要用户新授权。</p>
 <p>建议 <code>episode_wall_seconds=2400</code>、<code>startup_cleanup_seconds=1800</code>，则 k 局块上限至少 <code>k×2400+1800</code>；k=5 为 13,800 秒。这是 chunk deadline，不是持久 worker／srun 的总寿命；resident step 按 hold 剩余 48h 管理。旧固定 14,400 秒不得不加说明地复用成全局 worker 上限。</p>
 <p>wall deadline 是基础设施保护，触发应记录 infra error／中断原因，与官方动作步数 timeout 分开。初始单 job profile 若显示合法慢进展超过建议值，应先审资源与阈值，不能在正式批次中悄悄缩短或长时间误杀。</p>
+<h3>5.7 弹性资源池的扩容与缩容</h3>
+<p><code>target_jobs=N</code> 是启动时必须提供的目标；运行中用 <code>desired_jobs</code> 表示目标容量、<code>pool_revision</code> 表示控制状态版本。通常N≥1；显式将目标设为0只表示全池drain，尚未覆盖的评估仍未完成。控制器是唯一伸缩写者，每次变更校验expected revision，并记录发起原因、前后N、批准资源包络与实际配额。</p>
+<p>扩容先对账RUNNING、PENDING、SUBMITTING、UNKNOWN和retiring资源，确认所需增量没有被既有提交覆盖且不超资源包络，再创建唯一submission_id并提交。新job到位后逐台完成GPU／runtime／证书与server身份握手，成功后加入同一个ready队列。新增节点不能继承另一节点的现场GPU／driver检查；人数变化不改变任何episode seed、model/run身份或accepted集合。</p>
+<p>缩容先在pool控制状态将选定worker标retiring并停止其新claim，再让当前episode按既定语义完成、关闭视频／日志、发布sealed receipt；本chunk尚未开始的局由控制器确认归还ready。确认该worker的sim／server／sidecar及step退出后，只按本pool账本的确切JobID释放所选hold。正常缩容不重跑已接受局、不改seed，也不消耗未开始局的infra重试次数；不得为缩容中途硬切动作流伪造终局。</p>
+<p>尚未运行的PENDING job可以按确切JobID缩减；UNKNOWN提交必须先查明是否实际存在，未查明前继续计潜在占用，不能当作已释放。缩容过程中的实际存活数可暂高于新desired_jobs，但仍不得超过已批准资源上限；只有资源已确认释放才能腾出同一包络下的新容量。新增或缩减只改pool控制状态，任务160块及800局清单保持不变。</p>
 <h2 id="gl-runbook">六、Great Lakes 资源与未来运行手册</h2>
 <h3>6.1 环境、资源与限制</h3>
 <p>未来开发、CPU验证、SSH／NFS组件检查、GL调度与资源监督全部从已有ControlMaster的aspen／vail发起；AWS只训练并提供只读交付资产，本轮不建立连接。正式运行前复核 <code>chaijy2</code> 配额、<code>spgpu</code> 队列、A40 节点、CPU／内存余量与既有作业；不能为了排队快自行更换账号或分区。</p>
 <p>建议 NFS 独立 eval 副本：<code>/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval</code>。代码固定到获审实施 commit，benchmark 固定 gitlink，依赖使用该副本 NFS 下已锁定解释器；不得复制 AWS <code>.venv</code>，不得让远端启动时隐式升级依赖。</p>
 <table><thead><tr><th>条目</th><th>值</th><th>状态</th></tr></thead><tbody>
-<tr><td>占位 job</td><td>8 个，各 1 node／1 task／1 GPU／4 CPU／24 GiB／48h。</td><td>8 个数量已由用户指定；4 CPU 为建议待批准；GPU 型号必须现场核 A40。</td></tr>
-<tr><td>合计资源</td><td>8 GPU／32 CPU／192 GiB；每个 job 内一个 worker。</td><td>当前配额是否容纳未知；PENDING 不等于八个已运行。</td></tr>
-<tr><td>阶段 I 验证</td><td>优先复用已授权A40席位做motion数值；fullmodel五局用已到位的同架构早期checkpoint。没有席位则等待阶段II首个hold。</td><td>不等60k，不提前额外申请第九个job；已复用验证席位计入本次最多八个hold清单。</td></tr>
+<tr><td>占位job</td><td><code>target_jobs=N</code>显式设定且无默认；每job建议1 node／1 task／1 GPU／4 CPU／24 GiB／48h。</td><td>N可大可小并运行中调整；具体单job规格和总资源上限须批准，GPU型号现场核A40。</td></tr>
+<tr><td>合计资源</td><td>按上述单job建议为N GPU／4N CPU／24N GiB；每job一个worker，实际运行数与desired_jobs分别报告。</td><td>PENDING／SUBMITTING／UNKNOWN／正在drain的job均计占用或潜在占用，不因尚未运行而重复补交。</td></tr>
+<tr><td>阶段I验证</td><td>优先复用已授权A40做motion数值和早期同架构checkpoint五局；无席位则等待阶段II首个hold。</td><td>不等60k，也不为验证绕过提交时机或资源包络；复用席位纳入同一pool membership与账本。</td></tr>
 <tr><td>计算地点</td><td>所有模型、VAE、仿真、GPU 检验均在 <code>srun --jobid</code> 计算 step。</td><td>禁止登录节点 GPU 负载；控制器可做轻量文件／Slurm 管理。</td></tr>
 <tr><td>释放纪律</td><td>只按本轮 <code>hold-jobs.txt</code> 中确切 JobID 逐一取消。</td><td>禁 <code>scancel -u</code>、按名称批量取消、触碰其他会话作业。</td></tr>
 </tbody></table>
@@ -345,6 +347,7 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 EVAL_REPO=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval
 EVAL_PY="$EVAL_REPO/.venv/bin/python"
 EVAL_RUN="$EVAL_REPO/v1-store/evaluation/official-stage2-1026/stage2-60k-seed42"
+: "${EVAL_TARGET_JOBS:?请显式设置本次目标job数量N，无默认值}"
 cd "$EVAL_REPO"
 
 # 拟新增：仅生成静态800清单，不reset环境、不起GPU、不提交job
@@ -366,17 +369,22 @@ cd "$EVAL_REPO"
   tests/evaluation/test_frame_oracle.py tests/evaluation/test_queue_faults.py \
   tests/evaluation/test_eval_target_contract.py
 
-# 拟新增：先打印并审查八个占位参数；默认 dry-run
+# 拟新增：显式配置目标N并审查单job参数；默认dry-run
 "$EVAL_PY" scripts/evaluation/gl_official_pool.py \
-  --run-root "$EVAL_RUN" --count 8 --cpus 4 --mem 24G --hours 48 --dry-run
+  --run-root "$EVAL_RUN" --count "$EVAL_TARGET_JOBS" --cpus 4 --mem 24G --hours 48 --dry-run
+
+# 拟新增：运行中按已批准包络调整目标；缩容由控制器逐局drain
+"$EVAL_PY" scripts/evaluation/gl_official_pool.py scale \
+  --run-root "$EVAL_RUN" --target "$EVAL_TARGET_JOBS" \
+  --expected-pool-revision "$EVAL_POOL_REVISION" --dry-run
 </code></pre>
 <p>阶段I先固定schedule与motion身份；60000 到位后才生成最终 <code>models.json</code>，含精确 checkpoint 路径、完整文件 SHA、resolved／normstats、model seed 和 motion identity。目标就是当前 Stage2 60k，不接受自动搜索“最近 checkpoint”替代。</p>
 <h3>6.3 T−2h 排队门与正式启动门</h3>
 <p><code>watch_60k.py</code> 只读实际step／时间证据，先算 <code>ETA_train=观测时刻+(60000-step)×近期稳态秒/步</code>，再按同run早期checkpoint真实记录加入保存、发布、传输至目标NFS和校验的估时，得到 <code>ETA_ready</code>；也可消费用户明确指定的到位时间。排队触发为 <code>ETA_ready−7200秒</code>，不是训练到step60000前两小时。缺可信交付估时、日志陈旧、训练暂停或速率异常时标UNKNOWN，不把训练step当NFSready；不打开或改写仍在写入的checkpoint。实际ready始终以完整manifest／SHA硬门为准。</p>
-<p>未来提交占位的最小条件是：已经获得明确开工令，身处环境 A，现存 SSH ControlMaster 可用，NFS 路径和真实解释器可用，账号／分区／资源规格及八 job 数量批准，固定 schedule identity，T−2h 到达，独占提交锁和 ledger 可用。此时不要求 60k 文件、A40 数值证书或 final run identity 已存在。</p>
+<p>未来提交占位的最小条件是：已经获得明确开工令，身处环境 A，现存 SSH ControlMaster 可用，NFS 路径和真实解释器可用，账号／分区／单job规格及弹性资源包络批准，target_jobs=N已显式配置，固定 schedule identity，T−2h 到达，独占提交锁和 ledger 可用。此时不要求 60k 文件、A40 数值证书或 final run identity 已存在。</p>
 <p>阶段I先完成源码、CPU测试及SSH／NFS组件；若没有已授权可复用A40，<code>a40_motion_numeric</code> 与 <code>resource_fit</code> 保持pending，转在阶段II首个hold RUNNING后优先完成。不得把“九门齐”误用为占位提交前提，也不得因此绕过T−2h时机额外申请验证job；九门只约束正式worker启动。</p>
 <p>ledger 每个 slot 至少记录 <code>UNSUBMITTED／SUBMITTING／UNKNOWN／SUBMITTED</code> 和独立提交标识；先落 SUBMITTING 再 sbatch，返回后立即记录 JobID。若返回前后崩溃或网络结果不明，标 UNKNOWN，必须用唯一 schedule／slot 标签查询 Slurm 对账；UNKNOWN 绝不是“未提交”，禁止直接补交。只有已证明未产生 job 的 slot 才能提交。</p>
-<p>同一 schedule 最多八个自有 hold，已有验证席位纳入同一清单；重启 watcher 只补未提交项，不重复提交八个。ETA 提前或推迟不自动撤单重提；48h 不自动续。未来阶段I在aspen／vail实现并mock验证这个逻辑，本轮只写方案。</p>
+<p>同一schedule下的pool按 <code>desired_jobs</code> 对账，已有验证席位纳入同一membership；每个提交槽有独立ID，数量可以扩展，不预建固定数量槽。重启watcher先核全部已知／未知提交，再仅补已证明缺少的容量。增加N不新建评估或重跑已完成局；减少N不删任务。ETA变化不自动撤单重提，48h不自动续；实际N始终受已批准资源包络与账号配额约束。</p>
 <p>正式 <code>launch_official_pool.py</code> 要求九个目标运行门禁全为真实PASS，60k checkpoint 稳定发布、完整 manifest／SHA 校验、strict restore 与该 60k 的固定 seed 启动／动作检查通过，final run identity 已生成，实际 JobID／GPU 分配可核。不能只继承早期 checkpoint 的 resource_fit 代替 60k 恢复验证。PENDING hold 只能等待；不能把“已提交”当“可启动”。</p>
 <table><thead><tr><th>固定目标运行门禁键</th><th>真实通过条件</th></tr></thead><tbody>
 <tr><td><code>source_pin</code></td><td>eval／benchmark／MotionJEPA／VAE 固定来源及证据 SHA 匹配。</td></tr>
@@ -387,7 +395,7 @@ cd "$EVAL_REPO"
 <tr><td><code>a40_motion_numeric</code></td><td>真实 A40 fixed-reference＋IPC＋real16 数值报告，证书绑定 motion identity。</td></tr>
 <tr><td><code>resource_fit</code></td><td>同架构早期 VLA＋motion＋仿真五局 profile 通过；60k 后另 strict restore。</td></tr>
 <tr><td><code>official_client_parity</code></td><td>官方 client trace／seed／reset／1301边界及目标环境真实接口通过。</td></tr>
-<tr><td><code>eight_worker_queue</code></td><td>目标 NFS 上八领取者小型 mock 队列、崩溃／fencing／drain 通过，不以跑完正式800局作为前置。</td></tr>
+<tr><td><code>elastic_worker_queue</code></td><td>目标NFS上N=1／2／多个领取者的小型mock队列，运行中扩缩容、崩溃／fencing／drain通过，不以跑完正式800局作为前置。</td></tr>
 </tbody></table>
 <h3>6.4 占位提交与工作负载分离</h3>
 <pre><code># 未来逐 job 提交模板；仅在开工与资源规格已确认后执行
@@ -403,7 +411,7 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
   "$EVAL_PY" scripts/evaluation/resident_worker.py \
   --run-root "$EVAL_RUN" --worker-id worker-01
 </code></pre>
-<p><code>--gpu_cmode=shared</code> 必须同时出现在占位层与 srun 层。第一项 job 跑目标验证和五局；不把“八个 job 都已提交”写成“八个 worker 已运行”。获取席位的时刻与实际 worker 起跑时刻分别记录。</p>
+<p><code>--gpu_cmode=shared</code> 必须同时出现在占位层与 srun 层。第一项 job 跑目标验证和五局；分别记录desired、SUBMITTING／UNKNOWN、PENDING和RUNNING，不能把已提交当已运行。获取席位的时刻与实际 worker 起跑时刻分别记录。</p>
 <h3>6.5 server、worker 与 controller 拟入口</h3>
 <pre><code># 由计算 step 内的 wrapper 执行，继承 Slurm 的 CUDA_VISIBLE_DEVICES
 # --motion-online-gpu / --eval-target-contract 是拟新增参数。
@@ -421,7 +429,7 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 # 拟新增：只有一个控制器；不在此命令内运行 GPU／仿真
 "$EVAL_PY" scripts/evaluation/official_queue.py controller \
   --run-root "$EVAL_RUN" --hold-jobs "$EVAL_RUN/hold-jobs.txt" \
-  --max-infra-retries 1 --max-jobs 8 --no-auto-renew
+  --max-infra-retries 1 --pool-policy "$EVAL_RUN/pool/policy.json" --no-auto-renew
 
 # 拟新增：最后只读核算，不修改原始 attempt
 "$EVAL_PY" scripts/evaluation/official_queue.py aggregate \
@@ -430,7 +438,7 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <p>server 示例说明底层接口，实际由 worker 拥有其完整生命周期；不能同时手动执行与 wrapper 执行而产生两个 server。端口由每个 worker 独立分配并写入登记，客户端限本计算节点访问；metadata 必须与所连 server 身份匹配。</p>
 <p>client 新增 <code>expected_run_identity_sha256</code>、<code>expected_server_nonce</code>、<code>model_seed</code> 与 <code>drain_file</code>；每局之间检查 drain，退出码 <code>0</code> 表示完整正常、<code>2</code> 表示 infra error、<code>3</code> 表示 drain。正常结果的视频／日志必须关闭并计算 SHA 后才发布 receipt，不能将仍在写的视频当成完成文件。</p>
 <h3>6.6 监控、预算与结束</h3>
-<p>主会话保留唯一资源账本：八个 JobID、状态、节点、GPU UUID、worker／server／sidecar／sim PID、当前 stage／chunk／episode、已接受数、错误／重试数、剩余 walltime。长任务在受管 detached 会话中运行，日志落 NFS；监控不得另起一份计算来“确认”。</p>
+<p>主会话保留唯一资源账本：全部pool JobID、membership、pool_revision、desired_jobs、状态、节点、GPU UUID、worker／server／sidecar／sim PID、当前 stage／chunk／episode、已接受数、错误／重试数、剩余 walltime。长任务在受管 detached 会话中运行，日志落 NFS；监控不得另起一份计算来“确认”。</p>
 <p>每局采样 GPU 峰值、RSS、CPU、初始化／推理／仿真耗时；五局 profile 特别看 sim 退出后 Vulkan／GPU 占用是否回落，server／sidecar 是否仍保持正确身份。长期运行定期核 accepted 增长与输出 SHA，不只看进程存在。</p>
 <p>预算临界或用户暂停时 controller 写 drain，worker 收尾并退出负载；所有计算退出、结果原子落地、档案完成后，仅取消本轮清单中的占位 job。不能因为 commit 已完成就漏掉 sleep infinity 占卡。</p>
 <h2 id="gates-detail">七、完整闸门与证据格式</h2>
@@ -442,15 +450,15 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <tr><td>E3／CPU／固定卡</td><td>emb／mask／pos／times／order 严格比对；EMA 65 叶、同 latent 同卡 encoder 逐位；固定 VLA obs／noise。</td><td>原始几何、装配与恢复链路一致，不只看最终动作相近。</td><td><code>MEMORY_CONTRACT=PASS</code><br><code>ENCODER_BITEXACT=PASS</code></td></tr>
 <tr><td>E4／已授权计算 GPU</td><td>真实 sidecar IPC、像素→VAE→encoder、反复 reset、真实 16 节奏与同 server 连续两局。</td><td>端到端既定 ≤1e-5，跨局不泄漏；旧 G4／G12 不替代。</td><td><code>IPC_PARITY=PASS</code><br><code>EPISODE_RESET=PASS</code></td></tr>
 <tr><td>E5／单个 GL A40 job</td><td>固定 reference、目标 runtime／driver、证书签发与握手；软件／源／权重／GPU 伪造负例。</td><td>限定目标硬件迁移通过；不宣称跨卡逐位。</td><td><code>A40_TARGET=PASS</code><br><code>TARGET_CERT=PASS</code></td></tr>
-<tr><td>E6／CPU 临时队列</td><td>8 个并发领取者；mkdir 后／owner 前／单局后／完成清单前／接受后崩溃；旧 generation 迟到。</td><td>唯一 accepted，未完成可恢复；活 worker 不被 TTL 抢占。</td><td><code>QUEUE_FENCING=PASS duplicates=0</code></td></tr>
+<tr><td>E6／CPU 临时队列</td><td>N=1／2／多个并发领取者，且中途扩缩容；mkdir 后／owner 前／单局后／完成清单前／接受后崩溃；旧 generation 迟到。</td><td>唯一 accepted，未完成可恢复；活 worker 不被 TTL 抢占。</td><td><code>QUEUE_FENCING=PASS duplicates=0</code></td></tr>
 <tr><td>E7／一个 GL job</td><td>一个真实 5 局 chunk，覆盖含尾补 demo、无 demo、较长局；server 常驻、每块 sim 退出，资源 profile。</td><td>单 A40 显存／24 GiB RSS 与 CPU 建议可行；OOM、泄漏、语义偏移即阻断扩展。</td><td><code>FIVE_EP_PROFILE=PASS episodes=5</code></td></tr>
-<tr><td>E8a／阶段 I 目标 NFS</td><td>八领取者的小型 mock 队列，在目标挂载核并发、step 终态确认、fencing、重试与 drain。</td><td>这是 launch 前置 <code>eight_worker_queue</code>；不要求正式800局先完成。</td><td><code>EIGHT_WORKER_QUEUE=PASS</code></td></tr>
-<tr><td>E8b／阶段 II 八 GL job</td><td>实际八 worker 同模型执行，全 800 accepted 唯一身份，逐局 D／预算证据齐全。</td><td>动态调度没有改变 seed、episode 或母集；正式全量完成。</td><td><code>FULL_COVERAGE=PASS tasks=16 episodes=800</code><br><code>OFFICIAL_BUDGET=PASS episodes=800</code></td></tr>
-<tr><td>E9／汇总与收尾</td><td>error=0，成功数／800与每任务率均值相同；报告回读，计算与八个自有 hold 全释放。</td><td>正式完整 score 可发布；未解决 error 只交诊断，状态不写完成。</td><td><code>OFFICIAL_SCORE=PASS</code><br><code>RESOURCE_RELEASE=PASS</code></td></tr>
+<tr><td>E8a／阶段 I 目标 NFS</td><td>可伸缩领取者的小型mock队列，在目标挂载核并发、step 终态确认、fencing、重试与 drain。</td><td>这是 launch 前置 <code>elastic_worker_queue</code>；不要求正式800局先完成。</td><td><code>ELASTIC_WORKER_QUEUE=PASS</code></td></tr>
+<tr><td>E8b／阶段 II 弹性GL池</td><td>实际N个worker随资源扩缩、同模型执行，全 800 accepted 唯一身份，逐局 D／预算证据齐全。</td><td>动态调度没有改变 seed、episode 或母集；正式全量完成。</td><td><code>FULL_COVERAGE=PASS tasks=16 episodes=800</code><br><code>OFFICIAL_BUDGET=PASS episodes=800</code></td></tr>
+<tr><td>E9／汇总与收尾</td><td>error=0，成功数／800与每任务率均值相同；报告回读，计算与本pool所有自有hold全释放。</td><td>正式完整 score 可发布；未解决 error 只交诊断，状态不写完成。</td><td><code>OFFICIAL_SCORE=PASS</code><br><code>RESOURCE_RELEASE=PASS</code></td></tr>
 </tbody></table>
 <h3>7.1 队列故障测试至少覆盖的场景</h3>
 <ol>
-<li>八个进程同时争同一 chunk，只有一个 mkdir 成功；其他进程正常领下一块。</li>
+<li>不同N的进程同时争同一chunk，只有一个 mkdir 成功；其他进程正常领下一块。</li>
 <li>claim 后 owner 前退出，控制器不得仅靠 TTL 重发；确认旧 step 终态后可恢复。</li>
 <li>worker heartbeat 停更但仍在计算，controller 不抢占；迟到合法结果仍可接受。</li>
 <li>旧 generation 迟到，已接受新结果保持不变；旧记录进入 quarantine。</li>
@@ -458,23 +466,26 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <li>chunk 中两局 success／fail 后崩溃，只对缺失或 infra error 项按一次重试规则重发。</li>
 <li>无 ready 但有 running，idle worker 等待；只有完整覆盖才能 done。</li>
 <li>身份错误、缺文件、重复 episode、SHA 损坏或跨模型结果均不得进入 accepted。</li>
+<li>N=1、N=2和多个worker均完成相同固定清单；运行中扩容只增加领取者，缩容封口当前局并归还未开始局，accepted集合不变。</li>
+<li>扩缩容与SUBMITTING／UNKNOWN重启同时发生，不能重复提交或超批准包络；retiring仍计资源，只有确切终态才释放账本占用。</li>
+<li>ownerless恢复时冻结membership，包含所有尚未终态的相关step；伸缩请求排队，完成fencing后恢复，旧worker迟到结果不能覆盖canonical。</li>
 </ol>
 <h3>7.2 建议留档输出</h3>
 <p><code>identity.json</code>、<code>official_budget.json</code>、<code>frame_oracle.json</code>、<code>real16_schedule.json</code>、<code>memory_contract.json</code>、<code>numeric_reference.json</code>、<code>a40_target.json</code>、<code>queue_faults.json</code>、<code>five_ep_profile.json</code>、<code>coverage.json</code>、<code>score.json</code> 与原始日志 SHA 清单统一归本 run；未来正式结论在 <code>docs/evaluation-doc/&lt;run_name&gt;/</code> 留小型档案，大产物留 v1-store。</p>
 <h2 id="implementation">八、实施步骤与代理职责</h2>
 <table><thead><tr><th style="width:11%">阶段</th><th style="width:43%">内容（全部待后续开工）</th><th style="width:25%">依赖与顺序</th><th>完成条件</th></tr></thead><tbody>
-<tr><td>I<br>aspen／vail<br>实现＋验证</td><td>独立工作区固定接口并实现四块代码；CPU官方trace／oracle／mock与故障测试；SSH／NFS／解释器／原子性和八领取者验证；可复用已授权GL A40上的真实motion／IPC及早期同架构checkpoint五局。</td><td>用户明确开工后；runtime／queue基础先合，client／GL联调后合并审查；不等60000，不预跑800reset，不操作AWS训练环境。</td><td>clean eval HEAD、代码／CPU／环境门证据；无A40席位时相关门保持pending交阶段II首个hold，不额外申请第九job。</td></tr>
-<tr><td>II<br>T−2h 排队至收官</td><td>从aspen／vail据训练和交付证据更新ETA_ready，T−2h唯一提交八hold；首个RUNNING席位补A40门；60000完整manifest＋strictrestore＋固定seed动作检查后在GL运行，最后800局汇总、留档、释放。</td><td>提交只依赖schedule最小门；正式launch另要求九门、60k与finalrun。无自动第九job或续48h；八job不在aspen本机运行。</td><td>FULL_COVERAGE／OFFICIAL_BUDGET／OFFICIAL_SCORE／RESOURCE_RELEASE；授权登记后如实交接。</td></tr>
+<tr><td>I<br>aspen／vail<br>实现＋验证</td><td>独立工作区固定接口并实现四块代码；CPU官方trace／oracle／mock与故障测试；SSH／NFS／解释器／原子性和弹性领取者验证；可复用已授权GL A40上的真实motion／IPC及早期同架构checkpoint五局。</td><td>用户明确开工后；runtime／queue基础先合，client／GL联调后合并审查；不等60000，不预跑800reset，不操作AWS训练环境。</td><td>clean eval HEAD、代码／CPU／环境门证据；无A40席位时相关门保持pending交阶段II首个hold，不超已批准资源包络申请。</td></tr>
+<tr><td>II<br>T−2h 排队至收官</td><td>从aspen／vail据训练和交付证据更新ETA_ready，T−2h按目标N对账配置hold池；首个RUNNING席位补A40门；60000完整manifest＋strictrestore＋固定seed动作检查后在GL运行，最后800局汇总、留档、释放。</td><td>提交只依赖schedule最小门；正式launch另要求九门、60k与finalrun。N可按批准包络增减，不自动续48h；所有job都在GL节点运行。</td><td>FULL_COVERAGE／OFFICIAL_BUDGET／OFFICIAL_SCORE／RESOURCE_RELEASE；授权登记后如实交接。</td></tr>
 </tbody></table>
 <h3>8.1 子代理分配表</h3>
 <p>下表是未来实施的建议派发合同；全部使用 <code>gpt-6-astra / high</code>，不递归。每个 agent 从同一已审基线创建独立 <code>worktree-agent-eval-&lt;id&gt;-&lt;date&gt;</code> 分支，提交使用 <code>sub/&lt;id&gt;:</code>；主会话审核后按依赖 <code>--no-ff</code> 合入 eval 分支，保留子提交，不直接合回训练主分支。</p>
 <table><thead><tr><th style="width:10%">编号／目标</th><th style="width:24%">可写集合</th><th style="width:22%">禁触／共享归属</th><th style="width:25%">接口、顺序与验收</th><th>资源与运行边界</th></tr></thead><tbody>
 <tr><td>A<br>官方评估入口</td><td><code>examples/robomme/{eval.py,env_runner.py,utils.py}</code>；<code>tests/evaluation/test_official_contract.py</code>。</td><td>禁 benchmark、motion 实现、调度器；task/result schema 归主会话。</td><td>消费固定 manifest 与 metadata；runtime／queue 基础接口稳定后联调合入；CPU 官方 trace <code>OFFICIAL_PARITY</code>。</td><td>0 GPU；不占端口、不起仿真；run 前缀 <code>eval-a</code>。</td></tr>
 <tr><td>B<br>runtime</td><td><code>scripts/training/serve_policy.py</code>；policy_config／motion_client／websocket_policy_server；<code>scripts/evaluation/{runtime_contract,check_runtime,check_motion_consistency,measure_target_runtime}.py</code> 与对应测试。</td><td>禁 policy.py／framesamp_memory.py 数值语义、训练 YAML／权重／store／benchmark；缺陷补丁另由主会话裁定。</td><td>先定分层身份与server metadata；CPU fixture与mock测量，独立 D 审核；先合基础接口。</td><td>代码owner不占GPU；真实fixture由R在阶段I可用授权GL席位或阶段II首hold统一起；前缀 <code>eval-runtime</code>。</td></tr>
-<tr><td>C<br>queue</td><td><code>scripts/evaluation/{manifest,queue_store,official_queue}.py</code> 与对应测试。</td><td>禁 client／runtime／GL文件、benchmark、训练目录；queue schema归C，与GL先协调再冻结。</td><td>纯文件队列与汇总接口先合；CPU八并发crash、逐局receipt与fencing；不自行sbatch。</td><td>0 GPU；独立临时队列目录；前缀 <code>eval-queue</code>。</td></tr>
+<tr><td>C<br>queue</td><td><code>scripts/evaluation/{manifest,queue_store,official_queue}.py</code> 与对应测试。</td><td>禁 client／runtime／GL文件、benchmark、训练目录；queue schema归C，与GL先协调再冻结。</td><td>纯文件队列与汇总接口先合；CPU可变N并发crash／扩缩容、逐局receipt与fencing；不自行sbatch。</td><td>0 GPU；独立临时队列目录；前缀 <code>eval-queue</code>。</td></tr>
 <tr><td>G<br>GL 运行器</td><td><code>scripts/evaluation/{resident_worker,gl_official_pool,launch_official_pool,watch_60k}.py</code>；<code>scripts/evaluation/client/pyproject.toml</code> 与对应测试。</td><td>禁C的队列存储与B的runtime合同；不改训练venv／数据／依赖；不提交job。</td><td>消费B/C固定接口；mock验证schedule/ledger/T−2h与launch gate；client后联调合入。</td><td>代码owner只做mock；真实SSH／NFS验证及Slurm操作由R从aspen／vail按阶段和授权统一执行；前缀 <code>eval-gl</code>。</td></tr>
 <tr><td>D<br>独立验收／审查</td><td><code>tests/evaluation/test_frame_oracle.py</code>、独立 fixture／验证用测试与审查报告。</td><td>禁生产算法、训练产物；不使用线上函数生成期望结果；共享测试命名由主会话裁决。</td><td>从独立公式与官方源码建预期；最后合，审 A/B/C/G 完整链路；E0–E9 证据复核。</td><td>CPU 优先；GPU 验证交 R；无独占端口。</td></tr>
-<tr><td>R<br>资源与运行</td><td>仅本 run 的 <code>v1-store</code> 日志／句柄／JobID 清单／实测报告；不改 tracked 源码。</td><td>禁修代码、改阈值、换 seed；只取消本轮清单 JobID。</td><td>主会话给确切已审 commit、命令和预算后执行 E4/E5/E7/E8；每阶段明确判据。</td><td>首轮 1 job，放行后总 8；48h；tmux 前缀 <code>eval-stage2-1026</code>；端口按 worker 登记。</td></tr>
+<tr><td>R<br>资源与运行</td><td>仅本 run 的 <code>v1-store</code> 日志／句柄／JobID 清单／实测报告；不改 tracked 源码。</td><td>禁修代码、改阈值、换 seed；只取消本轮清单 JobID。</td><td>主会话给确切已审 commit、命令和预算后执行 E4/E5/E7/E8；每阶段明确判据。</td><td>先单job验证，放行后按desired_jobs伸缩；每hold 48h；tmux 前缀 <code>eval-stage2-1026</code>；端口按 worker 登记。</td></tr>
 <tr><td>主会话<br>接口与整合</td><td>manifest／result／target 共享 schema、计划修订、未来获准的交接和正式档案。</td><td>所有共享文件争议由主会话裁定；不越过 benchmark 保护边界。</td><td>合前 scope 审查，合后完整测试，资源账本与授权核验；冻结 source commit。</td><td>控制器唯一持有者；不与 R 重复启动计算。</td></tr>
 </tbody></table>
 <p>R 的长任务派发需在开工时补齐：已审 code commit、具体 NFS 解释器、模型／fixture SHA、确切 JobID、完整命令、tmux 名、日志路径、预计预算、最长等待、起跑判据和最多一次 infra 重试。尚未具备这些实值时，计划不能视为运行型子代理的立即派发命令。</p>
@@ -482,7 +493,7 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <table><thead><tr><th style="width:22%">风险／盲区</th><th style="width:43%">当前证据边界</th><th>处置／停点</th></tr></thead><tbody>
 <tr><td>官方 800 局 D 未新实测</td><td>历史 Dmax=1247 与 79 窗只作算例；不能推断官方全量预算必过。</td><td>静态800清单＋每局reset真实D检查，最终800预算审计；任何超96／4096停止。</td></tr>
 <tr><td>A40 软件与 driver</td><td>A100 训练严格 numerics 会拒绝异硬件；当前没有本计划目标证书。</td><td>E5 固定 reference；不改原 provenance，不放松软件身份。</td></tr>
-<tr><td>单 A40 混合显存</td><td>VLA、SigLIP、VAE、EMA、仿真共卡峰值未知，JAX 预分配可能挤占 PyTorch。</td><td>一个 job 五局 profile 后才扩八 worker；OOM 不改 precision／budget。</td></tr>
+<tr><td>单 A40 混合显存</td><td>VLA、SigLIP、VAE、EMA、仿真共卡峰值未知，JAX 预分配可能挤占 PyTorch。</td><td>单job五局profile通过后再按目标N扩容；OOM 不改 precision／budget。</td></tr>
 <tr><td>CPU／RSS 建议</td><td>仓库默认 1 CPU／24G；4 CPU 是推理＋仿真的建议，历史运行不能替本次批准。</td><td>开工前确认规格；实测后有证据再议资源，不自动扩大。</td></tr>
 <tr><td>Vulkan 长期积累</td><td>旧经验提示长期 make_env 风险，未证明所有新环境同样泄漏。</td><td>每块新 sim 进程且最多五局；测退出后的资源回收。</td></tr>
 <tr><td>NFS 一致性与控制器崩溃</td><td>mkdir／rename 的使用方式须在目标 NFS 验证；心跳没有死亡证明能力。</td><td>CPU 故障注入＋目标文件系统检查；单写者、fencing、accepted 重建。</td></tr>
@@ -491,7 +502,7 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <tr><td>server 随机流与队列顺序</td><td>若 reset 未复原策略 seed，动态任务顺序会影响随机动作。</td><td>固定 seed metadata＋跨局 reset fixture；同局不同领取顺序回放。</td></tr>
 <tr><td>60000 文件尚未到位</td><td>目标已定当前Stage2 motion VLA 60000，精确文件SHA须等产出完整后核。</td><td>不阻塞阶段I组件验证或阶段II的T−2h排队；正式launch须严格恢复与固定seed动作检查，不自动切最近模型。</td></tr>
 <tr><td>资产、数据与依赖可用性</td><td>已读官方源码不代表 GL 已下载全部 test 资产，NFS 解释器也未核。</td><td>CPU 来源／资产预检与目标运行环境锁定；不复制 AWS venv。</td></tr>
-<tr><td>调度等待与配额</td><td>本轮没查询 GL；8 个提交可长期 PENDING，不能承诺同时到位或完工时间。</td><td>现场核实；保持账号／分区／数量，按已分配席位推进前置验证。</td></tr>
+<tr><td>调度等待与配额</td><td>本轮没查询 GL；提交的job可长期PENDING，不能承诺同时到位或完工时间。</td><td>现场核实；保持账号／分区，按已批准包络调整N并核账，按已分配席位推进前置验证。</td></tr>
 </tbody></table>
 <h2 id="handoff">十、交接顺序、状态机与提交纪律</h2>
 <p>拟任务 ID 为 <code>official-benchmark-stage2-eval</code>。当前只读训练任务 handoff；本计划没有修改 <code>docs/handoff/current.json</code>。按 <code>AGENTS.md</code> 第 27 条，是否把新长任务纳入状态机须在交付时由用户确认，不能把“写计划”或“设计审查通过”升级为登记或开工。</p>
@@ -501,7 +512,7 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <tr><td><code>running</code></td><td>用户明确开工；按实际阶段核前置依赖，阶段I不等待60k产出。</td><td>阶段、精确代码／已存在模型／环境SHA、JobID、句柄、闸门状态和下一步。</td></tr>
 <tr><td><code>stopped</code></td><td>用户暂停／取消，或阻断需裁决；真实原因与未完成队列保留。</td><td>不能把 stopped 写成 done；恢复需核已有授权与用户裁决。</td></tr>
 <tr><td><code>done</code></td><td>所有 pre_handoff 通过：官方语义、数值、800 coverage、error=0、正式档案、非长尾计算退出。</td><td>完整 score 与证据；若只有上传等长尾，单独列 long_tail。</td></tr>
-<tr><td><code>closed</code></td><td>done 后所有已登记长尾完成，八个本轮占位 job 已释放。</td><td>最终结果与可复现入口；无遗留计算资源。</td></tr>
+<tr><td><code>closed</code></td><td>done 后所有已登记长尾完成，本pool所有占位job已释放。</td><td>最终结果与可复现入口；无遗留计算资源。</td></tr>
 </tbody></table>
 <p>建议 pre_handoff 项包括固定来源／官方语义、frame／token／IPC、A40证书、队列崩溃验收、五局资源、800全覆盖与零error、档案回读、资源释放。未来正式评估消费训练中已产出的60000，不等待全部80k训练结束；必须核60000的稳定发布与实际SHA，不能只信训练任务的running／done状态。阶段I交接记录代码／组件证据与pending门，阶段II未完整收官前不得将整项评估写done。</p>
 <p>源码在评估阶段固定到 clean HEAD；评估不制造空 Beta commit，只记录实际已提交 HEAD。运行中不修改源、模型、清单或阈值；必要修复用新 commit、新 code 身份重审，明确受影响任务是否需要新 run，不能让同一 run 混用多个实现。</p>
@@ -510,7 +521,7 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <h3>10.1 本计划交付自检</h3>
 <ul>
 <li>只含两个 h1，分别为“第一部分（给人看）”与“第二部分（技术细节，供 agent 追踪）”；CSS 内联，无外部 JS／字体。</li>
-<li>三张机制图均为内联 SVG、水平／垂直正交箭头：<code>motion-window-timeline</code>、<code>process-data-chain</code>、<code>eight-worker-dynamic-queue</code>；交付前渲染为位图目视核对。</li>
+<li>三张机制图均为内联 SVG、水平／垂直正交箭头：<code>motion-window-timeline</code>、<code>process-data-chain</code>、<code>elastic-worker-dynamic-queue</code>；交付前渲染为位图目视核对。</li>
 <li>实施步骤与代理分工使用表格；来源使用具体 commit／函数锚点，命令全部标“拟新增／尚未实现”。</li>
 <li>检查 only-doc diff、HTML 标签／内部链接／SVG ID、无外部资源、<code>git diff --check</code>；不执行仿真或 GPU 测试来验证文档。</li>
 </ul>
