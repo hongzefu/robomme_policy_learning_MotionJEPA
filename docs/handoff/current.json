@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-26T20:16:58Z",
-    "america_new_york": "2026-10-26T16:16:58-0400"
+    "utc": "2026-10-26T21:07:55Z",
+    "america_new_york": "2026-10-26T17:07:55.798463-04:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "d7912e4d4ccd6a158d2e0b64ccd657fc989d1a24",
+    "base_head": "50805050ef0b940cb75417028a9ff24abc59a704",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -22,53 +22,107 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-26T19:23:32Z",
-      "state_reason": "CPU65419行完整性+GPU1024窗抽样+全表verify全部PASS，库已verified，G5证据明确sampled；G6 train62/eval79/budget96 PASS，encoder两实体注册完成。G2用户例外保留，G3已PASS。当前准备绑定yaml真实SHA后G4，再20步及严格恢复。正式训练WandB已只读核viewer=hongzefu、entity=hongzefu-university-of-michigan、project=robomme-framesamp，训练未起跑。",
-      "owner": {"session": "", "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"},
-      "depends_on": [{
-        "path": "/scratch/hongze/MotionJEPA",
-        "branch": "v12-3decoder",
-        "task": "stage3-formal-training-v1",
-        "gate": "按本次计划只读消费已产出ep105；上游按用户指令第106轮停训，状态仍running，不等待原144轮。ep105 SHA256=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035；G3仍须核EMA。"
-      }],
-      "pre_handoff": [
-        {"what": "计划一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=1383aba0fd77b259f0b32eadb47ea7792190145e findings=0 blocking=0", "where": "独立Astra high审查；计划固定提交1383aba", "status": "pass"},
-        {"what": "G0至G6建库与在线对拍", "evidence": "G0/G1及全量4995段65419窗PASS；G2原FAIL由用户「可以忽略 继续做」明确接受，来源例外记录待生成；EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1；EXPORT_PARITY=PASS windows=32 seed=0 max_abs=0 geometry_all_true=1；G3退出0，G4至G6待运行。", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"},
-        {"what": "G7八卡短测与严格保存回读", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/smoke/", "status": "pending"},
-        {"what": "G8正式80k训练及16份checkpoint", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/", "status": "pending"},
-        {"what": "G12远端60k依赖回读及严格恢复", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"}
+      "state_reason": "G0/G1/G3/G4/G5/G6/G7已PASS，G2按用户裁决WAIVED。20步训练成功，65叶EMA和动作参考逐位一致，真实在线infer通过。首次恢复遗漏JAX编译缓存，固定相同缓存后复验119秒PASS，总G7用628/1800秒。正式80k即从下一clean Beta起跑，W&B固定hongzefu，随后启动增量上传。",
+      "owner": {
+        "session": "",
+        "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"
+      },
+      "depends_on": [
+        {
+          "path": "/scratch/hongze/MotionJEPA",
+          "branch": "v12-3decoder",
+          "task": "stage3-formal-training-v1",
+          "gate": "按本次计划只读消费已产出ep105；上游按用户指令第106轮停训，状态仍running，不等待原144轮。ep105 SHA256=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035；G3仍须核EMA。"
+        }
       ],
-      "long_tail": [{"what": "G10 MJ阶段II/III公开备份", "tmux": "cc-vla-s2-mjup", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/mjup.log", "done_line": "MJ_CKPT_UPLOAD=PASS source_runs=2 files=35 bytes=7545592817 sha256_mismatch=0 public=1", "status": "pass", "evidence": "2026-10-26T18:21:20Z最外层EXIT_CODE=0，tmux自然退出；bucket=HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1"}],
+      "pre_handoff": [
+        {
+          "what": "计划一致性审查",
+          "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=1383aba0fd77b259f0b32eadb47ea7792190145e findings=0 blocking=0",
+          "where": "独立Astra high审查；计划固定提交1383aba",
+          "status": "pass"
+        },
+        {
+          "what": "G0至G6建库与在线对拍",
+          "evidence": "G0/G1/G3/G4/G5/G6 PASS；G2原FAIL保留并按用户精确WAIVED。G4 windows64 encoder_max_abs0 e2e_max_abs0；G5 CPU65419行与GPU抽样1024窗 mismatch0；G6 train_max62 eval_max79 budget96。",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/",
+          "status": "pass"
+        },
+        {
+          "what": "G7八卡短测与严格保存回读",
+          "evidence": "LAUNCH_CONTRACT=PASS checks=77 failed=0；SMOKE_TRAIN_EXIT=0 steps=20；SAVE_LOAD=PASS missing=0 extra=0 shape_mismatch=0 dtype_mismatch=0 ema_mismatch=0 reference_output_max_abs=0 online_infer=1；总628秒。",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/smoke/restore-cache.json",
+          "status": "pass"
+        },
+        {
+          "what": "G8正式80k训练及16份checkpoint",
+          "evidence": "",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/",
+          "status": "pending"
+        },
+        {
+          "what": "G12远端60k依赖回读及严格恢复",
+          "evidence": "",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [
+        {
+          "what": "G10 MJ阶段II/III公开备份",
+          "tmux": "cc-vla-s2-mjup",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/mjup.log",
+          "done_line": "MJ_CKPT_UPLOAD=PASS source_runs=2 files=35 bytes=7545592817 sha256_mismatch=0 public=1",
+          "status": "pass",
+          "evidence": "2026-10-26T18:21:20Z最外层EXIT_CODE=0，tmux自然退出；bucket=HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1"
+        }
+      ],
       "running_handles": [],
-      "authorizations": [{
-        "kind": "go", "date": "2026-10-26",
-        "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md 开工 有问题问用户 所有subagebt必须全部astra high",
-        "scope": "计划1383aba主run实施、建库、短测、80k训练、VLA及MJ上传与60k交付验收；全部子代理Astra high。备选B与benchmark不在范围内。"
-      }, {
-        "kind": "decision", "date": "2026-10-26",
-        "quote": "同意推送 要和github同步",
-        "scope": "建立origin/v4-256concat1跟踪并推送；后续本次实施提交通过审查后持续同步GitHub。"
-      }, {
-        "kind": "go", "date": "2026-10-26",
-        "quote": "可以忽略 继续做",
-        "scope": "明确接受已报告G2跨精度数值失败并继续原主run；原G2.json保留FAIL，新WAIVED记录限定原失败SHA/本次ckpt/G0清单，身份和其余闸门不放松。不再进行此前建议的单窗诊断。"
-      }, {
-        "kind": "decision", "date": "2026-10-26",
-        "quote": "同意按照你说过的更省时方案 做\nencoder只抽机小部分",
-        "scope": "G5改为CPU全量字节/文件SHA核验加encoder分层1024窗（承接前一问gpu只算1024个），不再全量GPU重算。原packed表保留，只声明encoder抽样一致；其余门槛保持。"
-      }, {
-        "kind": "go", "date": "2026-10-26",
-        "quote": "同意继续",
-        "scope": "按上述CPU全量+GPU1024窗方案继续原主run，无需重复确认。"
-      }, {
-        "kind": "decision", "date": "2026-10-26",
-        "quote": "注意你的wandb 不要用tri的账号 用hongzefu的账号 正式训练",
-        "scope": "正式训练使用hongzefu账号；现有凭据API viewer已核hongzefu，配置entity为hongzefu-university-of-michigan，project为robomme-framesamp。凭据不写入日志或git。"
-      }],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-26",
+          "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md 开工 有问题问用户 所有subagebt必须全部astra high",
+          "scope": "计划1383aba主run实施、建库、短测、80k训练、VLA及MJ上传与60k交付验收；全部子代理Astra high。备选B与benchmark不在范围内。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "同意推送 要和github同步",
+          "scope": "建立origin/v4-256concat1跟踪并推送；后续本次实施提交通过审查后持续同步GitHub。"
+        },
+        {
+          "kind": "go",
+          "date": "2026-10-26",
+          "quote": "可以忽略 继续做",
+          "scope": "明确接受已报告G2跨精度数值失败并继续原主run；原G2.json保留FAIL，新WAIVED记录限定原失败SHA/本次ckpt/G0清单，身份和其余闸门不放松。不再进行此前建议的单窗诊断。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "同意按照你说过的更省时方案 做\nencoder只抽机小部分",
+          "scope": "G5改为CPU全量字节/文件SHA核验加encoder分层1024窗（承接前一问gpu只算1024个），不再全量GPU重算。原packed表保留，只声明encoder抽样一致；其余门槛保持。"
+        },
+        {
+          "kind": "go",
+          "date": "2026-10-26",
+          "quote": "同意继续",
+          "scope": "按上述CPU全量+GPU1024窗方案继续原主run，无需重复确认。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "注意你的wandb 不要用tri的账号 用hongzefu的账号 正式训练",
+          "scope": "正式训练使用hongzefu账号；现有凭据API viewer已核hongzefu，配置entity为hongzefu-university-of-michigan，project为robomme-framesamp。凭据不写入日志或git。"
+        }
+      ],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "G5/G6已通过；解除当前冻结，合回此状态分支并绑定yaml真实ep105 SHA，运行G4", "command": "check_stage2_online.py --store新verified库 --samples原G0 --history新yaml --online-gpu 0 --out validation/stage2-memory/G4.json；G4剩7126秒", "verdict_line": "ONLINE_OFFLINE_PARITY=PASS"},
-        {"what": "抽样认证4345250e7a03244ca28162a870041e1648a708ebe7e28a79c50d9cfbcb22a4eb完整随stage2_compat携带；保留原中断与G2失败证据", "command": "sampled-verify.log美东16:07:27至16:09:16，EXIT_CODE=0；register-budget.log美东16:15:12至16:15:14，EXIT_CODE=0", "verdict_line": "PACKED_TOKEN_BYTES=PASS；ENCODER_SAMPLE_BITEXACT=PASS；VERIFY_MOTION=PASS；TRAIN_ES_BOUND=PASS"},
-        {"what": "G6、G4、20步与保存恢复通过后才正式80k；G2的用户例外须完整随快照和交付传递", "command": "按原计划主run，备选B和benchmark不启动", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"}
+        {
+          "what": "正式Beta起跑80k及增量上传；首个loss有限确认启动",
+          "command": "STAGE2_FORMAL_HEAD=<正式Beta完整SHA> bash v1-store/logs/vla-s2-20261026/run-formal80k.sh",
+          "verdict_line": "LAUNCH_CONTRACT=PASS；Step 0 loss有限；ROOT_UPLOAD=PASS"
+        }
       ]
     },
     "paired4-training-smoke": {
