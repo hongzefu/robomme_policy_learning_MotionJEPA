@@ -135,8 +135,7 @@ MotionJEPA 基线 `v12-3decoder@6c79ebb`，policy 基线 `v3-motionmem-pair4@8c3
 
 ## 8. 待用户裁决
 
-1. bucket 名两处（§6.1、§6.2）是否可用默认名。
-2. **开工令**。已定项：EMA、预算 96、不跑对照臂。
+只剩 **开工令**。已定项：EMA、预算 96、不跑对照臂、demo padding 规则不变、bucket 名由执行方自定（用户 10-26：「bucket 随便你定，以后不要再来问了」）。
 
 ## 9. 不做的事
 
