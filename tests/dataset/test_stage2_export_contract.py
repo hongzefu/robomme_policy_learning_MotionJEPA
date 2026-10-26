@@ -218,12 +218,10 @@ def test_two_encoder_sources_have_exact_checkpoint_sets(export, tmp_path):
         export.encoder_sources(tmp_path)
 
 
-@pytest.mark.parametrize("fault", [None, "shape", "dtype", "live", "missing", "fingerprint", "config", "nonfinite"])
-def test_real_schema_validation_rejects_corrupt_tensor_contract(export, tmp_path, monkeypatch, fault):
+def schema_tensor_fixture(export):
+    """独立生成185项参考，故障只修改待检权重。"""
     import copy
-    import io
     import torch
-    # 使用真实Tensor和独立模型参考，隔离大模型配置依赖，覆盖各失败分支。
     expected = {}
     for prefix, count in (("encoder", 65), ("rgb_decoder", 40), ("xyz_decoder", 40), ("state_decoder", 40)):
         buffers = 0
@@ -239,12 +237,27 @@ def test_real_schema_validation_rejects_corrupt_tensor_contract(export, tmp_path
          "fingerprint": fingerprint, "fingerprint_sha256": "expected-fingerprint",
          "epoch": 105, "global_step": 7770, "model": copy.deepcopy(expected),
          "model_live": copy.deepcopy(expected), "optimizer": {"state": {}, "param_groups": []}}
+    return c, expected, cfg
+
+
+@pytest.mark.parametrize("optimize", [0, 1, 2])
+@pytest.mark.parametrize("fault", [None, "shape", "dtype", "live", "live_dtype", "live_nonfinite", "missing", "fingerprint", "config", "nonfinite"])
+def test_real_schema_validation_rejects_corrupt_tensor_contract(export, tmp_path, monkeypatch, fault, optimize):
+    import copy
+    import io
+    import torch
+    # 使用真实Tensor和独立模型参考，隔离大模型配置依赖，覆盖各失败分支。
+    c, expected, cfg = schema_tensor_fixture(export)
     if fault == "shape":
         c["model"]["encoder.leaf0"] = torch.ones(3)
     elif fault == "dtype":
         c["model"]["encoder.leaf0"] = torch.ones(2, dtype=torch.float64)
     elif fault == "live":
         c["model_live"]["encoder.leaf0"] = torch.ones(3)
+    elif fault == "live_dtype":
+        c["model_live"]["encoder.leaf0"] = torch.ones(2, dtype=torch.float64)
+    elif fault == "live_nonfinite":
+        c["model_live"]["encoder.leaf0"][0] = float("nan")
     elif fault == "missing":
         del c["model"]["xyz_decoder.leaf0"]
     elif fault == "fingerprint":
@@ -267,11 +280,13 @@ def test_real_schema_validation_rejects_corrupt_tensor_contract(export, tmp_path
     monkeypatch.setattr(torch, "load", lambda *args, **kwargs: c)
     monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps([
         {"path": str(source), "run_name": export.ENC_RUN, "name": source.name}])))
+    monkeypatch.setenv("PYTHONOPTIMIZE", str(optimize))
+    code = compile(export.MJ_SCHEMA_CODE, "stage2-schema", "exec", optimize=optimize)
     if fault:
-        with pytest.raises(AssertionError):
-            exec(export.MJ_SCHEMA_CODE, {})
+        with pytest.raises(ValueError):
+            exec(code, {})
     else:
-        exec(export.MJ_SCHEMA_CODE, {})
+        exec(code, {})
 
 
 def test_existing_stage_cannot_be_overwritten(export, tmp_path):
@@ -463,3 +478,75 @@ def test_online_delivery_inputs_reject_incomplete_portable_contract(export, snap
         record["exec_batch_lengths"] = [32, 33]
     with pytest.raises(ValueError):
         export.check_online_inputs(record, snapshot.run / "online_restore_inputs.npz")
+
+
+@pytest.mark.parametrize("keep_original", [True, False])
+def test_ready_rejects_aliased_source_pin_even_with_identical_bytes(export, snapshot, keep_original):
+    run = snapshot.run
+    original = run / "motion_evidence/SOURCE_PIN.json"
+    extra = run / "motion_evidence/extra.json"
+    extra.write_bytes(original.read_bytes())
+    snapshot.prov["stage2_compat"]["evidence"]["SOURCE_PIN"]["path"] = "motion_evidence/extra.json"
+    write(run / "motion_provenance.json", snapshot.prov)
+    if not keep_original:
+        original.unlink()
+    refresh_ready(run, export)
+    ready = export.json_file(run / export.READY)
+    assert len(ready["files"]) == (13 if keep_original else 12)
+    with pytest.raises(ValueError, match="精确等于12"):
+        export.snapshot_sources(run, snapshot.registered)
+
+
+def test_ready_source_pin_reference_must_match_fixed_file(export, snapshot):
+    # 文件集合仍是精确12项；即使引用别的已列举证据且SHA自洽，也不能替换SOURCE_PIN路径。
+    snapshot.prov["stage2_compat"]["evidence"]["SOURCE_PIN"] = dict(
+        snapshot.prov["stage2_compat"]["evidence"]["G0"])
+    write(snapshot.run / "motion_provenance.json", snapshot.prov)
+    refresh_ready(snapshot.run, export)
+    with pytest.raises(ValueError, match="固定路径"):
+        export.snapshot_sources(snapshot.run, snapshot.registered)
+
+
+@pytest.mark.parametrize("optimize", [1, 2])
+@pytest.mark.parametrize("fault", [None, "live_dtype", "live_nonfinite"])
+def test_checkpoint_subprocess_enforces_contract_with_pythonoptimize(export, tmp_path, monkeypatch, optimize, fault):
+    import os
+    import subprocess
+    import torch
+    c, _, cfg = schema_tensor_fixture(export)
+    if fault == "live_dtype":
+        c["model_live"]["encoder.leaf0"] = torch.ones(2, dtype=torch.float64)
+    elif fault == "live_nonfinite":
+        c["model_live"]["encoder.leaf0"][0] = float("nan")
+    checkpoint = tmp_path / "checkpoint_epoch_105.pt"
+    torch.save(c, checkpoint)
+    write(tmp_path / "config.yaml", cfg)
+    monkeypatch.setenv("PYTHONOPTIMIZE", str(optimize))
+    # 子进程仍运行真实schema及torch读盘，仅隔离MJ大模型工厂，使用独立的main树作结构参考。
+    setup = r'''
+import os, sys, types, torch
+if sys.flags.optimize != int(os.environ["PYTHONOPTIMIZE"]):
+    raise RuntimeError("优化级别未传入真实子进程")
+reference = torch.load(sys.argv[1], map_location="cpu", weights_only=False)["model"]
+factory = types.ModuleType("motion_jepa.models.factory")
+factory.build_stage2_model_from_cfg = lambda *a, **kw: types.SimpleNamespace(state_dict=lambda: reference)
+loader = types.ModuleType("motion_jepa.models.stage2_model")
+loader.load_stage2_checkpoint = lambda *a, **kw: None
+loader.fingerprint_sha256 = lambda value: "expected-fingerprint"
+package = types.ModuleType("motion_jepa.models")
+package.factory = factory
+sys.modules.update({"motion_jepa": types.ModuleType("motion_jepa"), "motion_jepa.models": package,
+                    "motion_jepa.models.factory": factory, "motion_jepa.models.stage2_model": loader})
+'''
+    actual_run = subprocess.run
+    def run_child(argv, **kwargs):
+        assert kwargs["env"]["PYTHONOPTIMIZE"] == str(optimize)
+        return actual_run([sys.executable, "-c", setup + "\n" + argv[-1], str(checkpoint)], **kwargs)
+    monkeypatch.setattr(export.subprocess, "run", run_child)
+    items = [{"path": str(checkpoint), "run_name": export.ENC_RUN, "name": checkpoint.name}]
+    if fault:
+        with pytest.raises(ValueError, match="schema校验失败"):
+            export.checkpoint_schemas(tmp_path, items)
+    else:
+        result = export.checkpoint_schemas(tmp_path, items)
+        assert result[f"{export.ENC_RUN}/{checkpoint.name}"]["has_model_live"] is True

@@ -44,6 +44,8 @@ ROOT_FILES = frozenset({"history_config.txt", "history_config.resolved.yaml",
     "history_config.resolved.sha256", "motion_provenance.json", "encoder_dependencies.json",
     "online_restore_inputs.json", "online_restore_inputs.npz"})
 READY = "motion_snapshot.ready.json"
+EVIDENCE_FILES = {key: f"motion_evidence/{key}.json"
+                  for key in ("G0", "G2", "G3", "restore_receipt", "SOURCE_PIN")}
 GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 SCHEMA = "stage2-delivery-manifest-v1"
@@ -166,8 +168,8 @@ def snapshot_sources(run, registered):
     ready = json_file(member(run, READY))
     need(ready.get("schema") == "stage2-motion-snapshot-v1", "根快照schema不符")
     ready_files = ready.get("files")
-    need(isinstance(ready_files, dict) and ROOT_FILES <= ready_files.keys() and READY not in ready_files,
-         "ready缺必要根文件或包含自身")
+    need(isinstance(ready_files, dict) and set(ready_files) == ROOT_FILES | set(EVIDENCE_FILES.values()),
+         "ready文件集合必须精确等于12个已知根文件及证据文件")
     sources = {}
     for name, expected in ready_files.items():
         relative(name)
@@ -193,24 +195,21 @@ def snapshot_sources(run, registered):
     need(all(isinstance(prov.get(k), dict) and prov[k] for k in GROUPS), "motion来源六组不完整")
     check_encoder(prov["encoder"], sha)
     evidence = prov["stage2_compat"].get("evidence", {})
-    need(set(evidence) == {"G0", "G2", "G3", "restore_receipt", "SOURCE_PIN"}, "来源验证证据集合不符")
+    need(set(evidence) == set(EVIDENCE_FILES), "来源验证证据集合不符")
     referenced = set()
     for key, ref in evidence.items():
         name = relative(ref["path"])
-        need(name.startswith("motion_evidence/") and ready_files.get(name) == ref["sha256"], f"证据未被ready绑定: {key}")
+        need(name == EVIDENCE_FILES[key] and ready_files.get(name) == ref["sha256"],
+             f"证据未绑定固定路径及ready摘要: {key}")
         referenced.add(name)
         if key in ("G0", "G2", "G3"):
             gate = json_file(sources[name])
             need(gate.get("gate") == key and gate.get("status") == "PASS", f"证据未通过: {key}")
             if key != "G0":
                 need(gate.get("checkpoint_sha256") == sha, f"证据encoder不符: {key}")
-    # SOURCE_PIN随快照发布，内容与provenance完整对象相同。
-    pin_files = [n for n in ready_files if n.startswith("motion_evidence/")
-                 and n.endswith("SOURCE_PIN.json")]
-    need(len(pin_files) == 1 and json_file(sources[pin_files[0]]) == prov["source_pin"], "缺少相同的SOURCE_PIN")
-    referenced.update(pin_files)
-    need({n for n in ready_files if n.startswith("motion_evidence/")} == referenced,
-         "ready包含未知来源证据")
+    # 引用、固定发布路径与内容三者必须同时匹配，不能另并入一份未引用的pin。
+    need(json_file(sources[EVIDENCE_FILES["SOURCE_PIN"]]) == prov["source_pin"], "SOURCE_PIN内容与来源身份不符")
+    need(referenced == set(EVIDENCE_FILES.values()), "ready包含未知来源证据")
     deps = json_file(sources["encoder_dependencies.json"])
     need(deps.get("schema") == "stage2-encoder-dependencies-v1", "encoder依赖schema不符")
     for key in ("encoder", "source_pin", "vae"):
@@ -328,41 +327,51 @@ MJ_SCHEMA_CODE = r'''
 import gc, hashlib, json, pathlib, sys, torch, yaml
 from motion_jepa.models import factory
 from motion_jepa.models.stage2_model import load_stage2_checkpoint, fingerprint_sha256
+
+
+def require(ok, detail):
+    # 生产合同不能使用assert；PYTHONOPTIMIZE=1/2也必须执行全部校验。
+    if not ok:
+        raise ValueError(detail)
+
+
 items = json.loads(sys.stdin.read())
 torch.set_num_threads(1)
 results = {}
 for item in items:
     p = pathlib.Path(item["path"])
     c = torch.load(p, map_location="cpu", weights_only=False, mmap=True)
-    assert c["arch"] == "wan-latent-stage2-blockwise-pool4-three-decoder"
-    assert c["weight_type"] == "ema" and c["config"]["run_name"] == item["run_name"]
-    assert c["fingerprint_sha256"] == fingerprint_sha256(c["fingerprint"])
-    assert yaml.safe_load((p.parent / "config.yaml").read_text()) == c["config"]
+    require(c["arch"] == "wan-latent-stage2-blockwise-pool4-three-decoder", "checkpoint架构不符")
+    require(c["weight_type"] == "ema" and c["config"]["run_name"] == item["run_name"], "EMA或run身份不符")
+    require(c["fingerprint_sha256"] == fingerprint_sha256(c["fingerprint"]), "checkpoint指纹摘要不符")
+    require(yaml.safe_load((p.parent / "config.yaml").read_text()) == c["config"], "checkpoint与config文件不符")
     epoch = int(item["name"].split("_")[-1][:-3]) if item["name"] != "checkpoint_final.pt" else 8
-    assert c["epoch"] == epoch and isinstance(c["global_step"], int) and c["global_step"] > 0
+    require(c["epoch"] == epoch and type(c["global_step"]) is int and c["global_step"] > 0, "epoch或global_step不符")
     # schema重建仅用已存档affine；不下载VAE，不改变待检权重的dtype/shape。
     mean, std = c["model"]["encoder.latents_mean"], c["model"]["encoder.latents_std"]
-    assert tuple(mean.shape) == tuple(std.shape) == (1, 16, 1, 1) and (std > 0).all()
+    require(tuple(mean.shape) == tuple(std.shape) == (1, 16, 1, 1) and (std > 0).all(), "latent affine结构或std不符")
     for prefix in ("rgb_decoder.", "xyz_decoder."):
-        assert torch.equal(c["model"][prefix + "latents_mean"], mean)
-        assert torch.equal(c["model"][prefix + "latents_std"], std)
+        require(torch.equal(c["model"][prefix + "latents_mean"], mean), "decoder与encoder的latent mean不符")
+        require(torch.equal(c["model"][prefix + "latents_std"], std), "decoder与encoder的latent std不符")
     factory.load_wan_latent_stats = lambda vae_id: (mean.flatten(), std.flatten())
     model = factory.build_stage2_model_from_cfg(c["config"], data_metadata=c["fingerprint"]["data_metadata"])
-    assert len(c["model"]) == 185 and sum(k.startswith("encoder.") for k in c["model"]) == 65
+    require(len(c["model"]) == 185 and sum(k.startswith("encoder.") for k in c["model"]) == 65, "模型状态项数不符")
     load_stage2_checkpoint(model, c, weights="main")
     for key in ("model", "model_live"):
         if key not in c:
             continue
         state = c[key]
         expected = model.state_dict()
-        assert set(state) == set(expected)
+        require(set(state) == set(expected), f"{key}状态键集合不符")
         for name, tensor in state.items():
-            assert tensor.dtype == expected[name].dtype and tensor.shape == expected[name].shape
-            assert torch.isfinite(tensor).all(), name
-    assert all(any(k.startswith(prefix) for k in c["model"]) for prefix in
-               ("encoder.", "rgb_decoder.", "xyz_decoder.", "state_decoder."))
+            require(tensor.dtype == expected[name].dtype and tensor.shape == expected[name].shape,
+                    f"{key}状态shape或dtype不符: {name}")
+            require(torch.isfinite(tensor).all(), f"{key}状态含非有限值: {name}")
+    require(all(any(k.startswith(prefix) for k in c["model"]) for prefix in
+                ("encoder.", "rgb_decoder.", "xyz_decoder.", "state_decoder.")), "模型分支不完整")
     if "optimizer" in c:
-        assert isinstance(c["optimizer"], dict) and {"state", "param_groups"} <= c["optimizer"].keys()
+        require(isinstance(c["optimizer"], dict) and {"state", "param_groups"} <= c["optimizer"].keys(),
+                "optimizer状态结构不符")
     results[item["run_name"] + "/" + item["name"]] = {
         "epoch": c["epoch"], "global_step": c["global_step"], "arch": c["arch"],
         "weight_type": c["weight_type"], "model_leaves": len(c["model"]),
