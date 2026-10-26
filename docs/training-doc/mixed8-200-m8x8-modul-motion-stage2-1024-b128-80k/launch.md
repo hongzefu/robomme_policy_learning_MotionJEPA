@@ -90,3 +90,51 @@ G0原帧核验 → 4段抽取冒烟 → 全量抽取与G1/G2/G3 → pack → 独
 - stage2成功响应新增小端uint32长度字段，4096只指载荷；默认3072分支和公共错误格式不变。`PROTOCOL_ADJUSTMENT_REVIEW=PASS`，数值判据不变；不把流式socket误述成能立即识别任意尾随字节。
 - G4通过后生成便携真实demo/exec输入，S2随run快照保存、S3随清单发布；恢复不依赖原机隐藏pkl/H5。VAE与tokenizer来源身份显式记录，不另复制整VAE。
 - 旧motion metadata测试的旧三layout参数集显式固定，避免自动把stride16夹具套给stage2；`TEST_ADJUSTMENT_REVIEW=PASS`，新stage2仍保留独立完整正负例。
+
+## 全量构建锚点与确定命令
+
+本节随 `commitV11.45Beta` 固定全量构建起点；该版本可用 `git log --format='%H %s' --grep='^commitV11.45Beta:'` 唯一恢复，运行日志记录完整SHA。它不是正式VLA训练Beta。全部代码合并后，分组CPU测试和真实最小验证见 `records/prebuild-verdicts.json`；曾出现启动测试旧夹具缺layout，已补真实stage2认证正负例并复测37项通过。独立torch环境正式补齐 `ml-dtypes==0.4.1`，隔离import正向通过，锁与SOURCE_PIN同步更新。
+
+4段GPU冒烟于美东13:54:02–13:54:16通过：128窗、4段、`EXIT_CODE=0`，GPU已释放；它不替代G1。后111窗跨三段写入间隔约1.98秒，约0.01784秒/窗，仅短区间观测；单遍65419窗约19.45分钟的数字只是外推。
+
+运行环境固定如下，所有缓存均位于scratch；不依赖原MJ检出的当前分支：
+
+```bash
+P=/scratch/hongze/robomme_policy_learning_MotionJEPA
+MJ_SRC=/scratch/hongze/worktrees/vla-s2-memexport-20261026
+D="$P/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f"
+LAT="$P/v1-store/restore/mixed8-200-vla-latents-20261021-a/wan-latents"
+VALID="$P/v1-store/validation/stage2-memory"
+CKPT=/scratch/hongze/MotionJEPA/runs/stage2-full144-1025-a/checkpoint_epoch_105.pt
+CKPT_SHA=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035
+VAE_SNAPSHOT="$P/v1-store/cache/hf/hub/models--Wan-AI--Wan2.1-T2V-1.3B-Diffusers/snapshots/0fad780a534b6463e45facd96134c9f345acfa5b"
+unset PYTHONPATH PYTHONHOME NVIDIA_TF32_OVERRIDE TORCH_ALLOW_TF32_CUBLAS_OVERRIDE
+export UV_CACHE_DIR=/scratch/hongze/.cache/uv
+export UV_PROJECT_ENVIRONMENT="$P/v1-store/venvs/wan-stage2"
+export HF_HOME="$P/v1-store/cache/hf" HF_HUB_OFFLINE=1
+export XDG_CACHE_HOME="$P/v1-store/cache" TORCH_HOME="$P/v1-store/cache/torch"
+export TORCHINDUCTOR_CACHE_DIR="$P/v1-store/cache/torchinductor-stage2"
+export TRITON_CACHE_DIR="$P/v1-store/cache/triton-stage2" CUDA_CACHE_PATH="$P/v1-store/cache/cuda-stage2"
+export CUDA_VISIBLE_DEVICES=0 PYTHONUNBUFFERED=1
+```
+
+`cc-vla-s2-export` 执行以下固定入口，抽取独立上限7200秒；G2/G3/G4共用两小时数值预算，逐阶段累计账目。任何失败不自动重跑。所有阶段均通过pipefail/tee记录真实退出码；源码、配置和锁在本阶段保持不变。
+
+```bash
+uv run --frozen --no-sync --project "$P/scripts/dataset/wan_stage2" python \
+  "$MJ_SRC/scripts/stage2_memory_export.py" --ckpt "$CKPT" --expected-sha256 "$CKPT_SHA" \
+  --latents "$LAT" --manifest "$D/meta/episode_manifest.json" \
+  --out "$D/motion-tokens-stage2" --grid-subsample 2 --batch 1 --device cuda:0 --check-dropout 64
+
+uv run --frozen --no-sync --project "$P/scripts/dataset/wan_stage2" python \
+  "$P/scripts/dataset/wan_stage2/validate_stage2.py" --gate G2 --samples "$VALID/windows.json" \
+  --ckpt "$CKPT" --expected-sha256 "$CKPT_SHA" --mj-root "$MJ_SRC" \
+  --vae-snapshot "$VAE_SNAPSHOT" --out "$VALID/G2.json"
+
+uv run --frozen --no-sync --project "$P/scripts/dataset/wan_stage2" python \
+  "$P/scripts/dataset/wan_stage2/validate_stage2.py" --gate G3 --samples "$VALID/windows.json" \
+  --ckpt "$CKPT" --expected-sha256 "$CKPT_SHA" --mj-root "$MJ_SRC" \
+  --rgb-root /scratch/hongze/dataset-rgb-gtxyz-16views-stride2-v1 --out "$VALID/G3.json"
+```
+
+打包和全表比较在前述阶段完成后，于 `cc-vla-s2-pack` 串行执行；实际命令和闸门记录随后补入。当前训练yaml的SHA仍保留占位，须G3与新库验证后填入，不能提前启动VLA。

@@ -1,0 +1,13 @@
+{
+  "schema": "stage2-prebuild-verdicts-v1",
+  "policy_code_head": "5b825f7bd8857239ac7a5651583058b78fdb59b3",
+  "mj_source_head": "b5d23a5fab55be16e580c5b77a8f04d68b3170c2",
+  "checkpoint_sha256": "27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035",
+  "dependency_lock_sha256": "e902806319bd7fe30e30130bae0a5ad96ebf7c0b0efb2dcf6d9f9e32576bc103",
+  "post_merge_cpu_tests": {"mj_export": 34, "g0": 39, "store_snapshot": 136, "launch": 37, "upload": 74, "online": 47, "numeric": 24, "restore": 55},
+  "real_g0": {"status": "PASS", "windows": 64, "tasks": 16, "demo_tail": 16, "sha_mismatches": 0, "elapsed_seconds": 13, "exit_code": 0, "samples_sha256": "4cb05b6b3097b22a8594576def1505957399a924d4189591980292e3bd320d30"},
+  "real_export_smoke": {"status": "PASS", "scope": "smoke", "segments": 4, "rows": 128, "elapsed_seconds": 14, "exit_code": 0, "record_sha256": "5c0473562242b80806dc44cd4de7fa29f4e4ca49868615c4c449cea46676e55a", "gpu": 0, "dropout_gate_run": false},
+  "short_throughput_observation": {"method": "最后段与第一段metadata文件mtime差；不含首段初始化，仍含后续段读取和写入", "rows": 111, "seconds": 1.9800143241882324, "seconds_per_row": 0.01783796688457867, "projection_65419_seconds": 1166.941955622252, "caveat": "短窗口外推，未测全量稳态，不是完成时间承诺"},
+  "legacy_scope": "旧Wan子项目、旧frame YAML、根pyproject/uv.lock、third_party相对1383aba零diff",
+  "pending": ["G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G12"]
+}
