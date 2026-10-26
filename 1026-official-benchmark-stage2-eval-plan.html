@@ -105,6 +105,7 @@ q = 0, 16, 32, 48, 64  →  exec 窗口数 = 0, 0, 1, 1, 2
 <h3>子代理分工与合并（简述）</h3>
 <p>未来阶段 I 在aspen／vail拟分client、runtime、queue、GL四个代码owner，另设独立审查；全部子代理使用 <code>gpt-6-astra / high</code>、独立worktree、不递归。共享协议先定，runtime／queue基础接口先合，client／GL联调后合；每次合前审可写集合，合后审完整语义。两阶段的GL GPU运行都由同一资源负责人从aspen／vail编排。</p>
 <p class="note">独立阶段 I 合同审查只说明设计可实施；它不构成开工令，也不代表最终 HTML、代码、真实 IPC、A40 数值或任何评估已通过。本计划不把该设计审查写作实施完成证据。</p>
+<p>详细风险、已修设计与仍待实测项另见 <a href="1026-official-benchmark-eval-adversarial-review.html">官方评估计划对抗审查报告</a>；该报告与本计划配套阅读，审查通过不替代目标环境数值、资源或正式800局验收。</p>
 <p class="warn">仍待验证：目标 A40 的软硬件数值合同、单卡能否同时容纳 VLA／VAE／仿真、全官方 800 局的 demo 预算，以及真实 16 帧调用节奏。现有训练闸门和旧评估分支都不能替代这些验收。下面第二部分给出逐文件设计、精确接口、拟命令与停点。</p>
 <h1 id="details" class="split">第二部分（技术细节，供 agent 追踪）</h1>
 <h2 id="sources">〇、来源、权威边界与当前事实</h2>
@@ -258,7 +259,8 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 <p>不能改训练 JSON 中的 A100 为 A40，不能覆写 <code>history_config.resolved.yaml</code>，也不能全局删掉 numerics 比较。这会消失训练身份并使任何硬件都能自称兼容。应新增一个只属于 eval 的目标合同分支，默认保持现有严格模式。</p>
 <h3>3.3 拟新增 eval_target_contract.json</h3>
 <p>身份分层避免 SHA 循环，也避免60k尚未到位阻塞阶段I组件验证或阶段II排队。<code>runtime_contract.py</code> 规范化所有 descriptor：<code>motion_identity_sha256</code> 只绑定 MJ／VAE／source_pin／软件数值／fixture／阈值；A40 证书绑定 motion identity 与验证代码 SHA。<code>model_identity_sha256</code> 在 60000 到位后绑定 VLA 文件 SHA、resolved config、normstats 与 motion identity；最终 <code>run_identity_sha256</code> 再绑定 model identity、证书 SHA、benchmark／metadata／seed／eval 参数。证书不反向绑定 final run SHA。</p>
-<p>阶段I（或阶段II首个hold补验）的早期同架构checkpoint单独生成 <code>validation_model_identity_sha256</code> 与 <code>validation_run_identity_sha256</code>，绑定早期checkpoint真实文件SHA、其resolved／normstats、同一motion identity和已核架构；server仍通过标准 <code>run_identity_sha256</code> 字段传递这份验证run身份。验证目录、purpose与结果母集独立，只能用于profile，不能进入正式60000的accepted或score；正式model／run身份仍等60000完整到位后生成。</p>
+<p>阶段I（或阶段II首个hold补验）的早期同架构checkpoint单独生成 <code>validation_model_identity_sha256</code> 与 <code>validation_run_identity_sha256</code>，绑定早期checkpoint真实文件SHA、resolved／normstats、motion identity与有效推理配置；server通过标准 <code>run_identity_sha256</code> 字段传递验证run身份。验证目录、purpose与结果母集独立，仅用于组件数值验证与profile，不能进入正式60000的accepted或score；正式model／run身份仍等60000完整到位后生成。</p>
+<p>“同架构”不能只比较shape：验证checkpoint必须与当前训练已锁定的有效推理配置相容，核history预算、窗口／stride／padding、图像变换、参数与输入dtype、num_steps=10、动作horizon20／执行16及motion identity。60000到位后对其实际resolved再复核这些字段；不相容就不能沿用早期数值／资源证据，重新确定受影响门，而不是只换权重路径。</p>
 <p><code>schedule_identity_sha256</code> 单独绑定训练run、目标step=60000、eval代码、benchmark、单job规格与motion identity，用于T−2h调度意图与ledger；不依赖VLA60k文件、A40证书或final run SHA。worker数量／ID不进入model／run评估身份；<code>desired_jobs</code>、<code>pool_revision</code>、membership与已批准资源包络另列可变控制账本，调N不创建新评估或新schedule意图。排队和正式launch仍是两条门槛。</p>
 <p><code>pool_id</code> 与 <code>schedule_id</code> 是创建调度意图时分配并持久保存的稳定ID，不由code／CPU规格／motion SHA派生。上面的schedule SHA只标识该意图的一版descriptor；代码／规格／证据修订通过revision追加并沿用同一pool ledger，不能因SHA改变开新账本再申请一批job。任何新run绑定此pool时先对账既有所有slot_instance，避免修订后重复占资源。</p>
 <pre><code>{
