@@ -8,6 +8,8 @@ dependencies = [
     "torch==2.9.0",
     "diffusers==0.39.0",
     "numpy==2.4.4",
+    # datastore 导入帧特征格式层时需要 bfloat16 类型；版本与现场主环境一致。
+    "ml-dtypes==0.4.1",
     "h5py==3.16.0",
     "pyyaml==6.0.3",
     "einops==0.8.2",

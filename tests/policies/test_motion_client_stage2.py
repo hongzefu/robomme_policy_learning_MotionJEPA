@@ -4,12 +4,14 @@ import copy
 import dataclasses
 import hashlib
 import json
+import os
 from pathlib import Path
 import socket
 import struct
 import subprocess
 import sys
 import time
+import tomllib
 from types import SimpleNamespace
 
 import numpy as np
@@ -20,6 +22,53 @@ from mme_vla_suite.policies import motion_protocol as P
 
 
 SOURCE_RUN = "stage2-full144-1025-a/checkpoint_epoch_105.pt#model"
+
+
+def test_datastore_dtype_dependency_is_directly_pinned_in_stage2_lock():
+    project = C._REPO_ROOT / "scripts/dataset/wan_stage2"
+    config = tomllib.loads((project / "pyproject.toml").read_text())
+    lock = tomllib.loads((project / "uv.lock").read_text())
+    assert "ml-dtypes==0.4.1" in config["project"]["dependencies"]
+    packages = {package["name"]: package for package in lock["package"]}
+    assert packages["ml-dtypes"]["version"] == "0.4.1"
+    assert {"name": "ml-dtypes"} in packages["mme-vla-wan-stage2"]["dependencies"]
+    assert packages["ml-dtypes"]["wheels"]
+    pin = json.loads((project / "SOURCE_PIN.json").read_text())
+    assert pin["dependency_lock_sha256"] == hashlib.sha256((project / "uv.lock").read_bytes()).hexdigest()
+
+
+def test_datastore_import_in_actual_stage2_environment():
+    """显式选择已由主会话安装的独立环境；禁止主环境包或用户路径补足依赖。"""
+    selected = os.environ.get("MMEVLA_STAGE2_IMPORT_ENV")
+    if not selected:
+        pytest.skip("独立环境导入验收需显式设置 MMEVLA_STAGE2_IMPORT_ENV；本测试不负责安装")
+    environment = Path(selected).resolve(strict=True)
+    project = C._REPO_ROOT / "scripts/dataset/wan_stage2"
+    env = dict(os.environ)
+    env.pop("PYTHONPATH", None)
+    env.pop("PYTHONHOME", None)
+    env.pop("VIRTUAL_ENV", None)
+    env.update(UV_PROJECT_ENVIRONMENT=str(environment), CUDA_VISIBLE_DEVICES="", JAX_PLATFORMS="cpu")
+    code = """
+import importlib.metadata
+import pathlib
+import sys
+assert pathlib.Path(sys.prefix).resolve() == pathlib.Path(sys.argv[1]).resolve()
+sys.path.insert(0, sys.argv[2])
+import numpy as np
+from mme_vla_suite.datastore import motion_store
+import ml_dtypes
+assert importlib.metadata.version('ml-dtypes') == '0.4.1'
+assert pathlib.Path(ml_dtypes.__file__).resolve().is_relative_to(pathlib.Path(sys.prefix).resolve())
+assert np.dtype(ml_dtypes.bfloat16).itemsize == 2
+assert callable(motion_store.layout_spec)
+print('STAGE2_DATASTORE_IMPORT=PASS ml_dtypes=0.4.1 numpy=' + np.__version__)
+"""
+    result = subprocess.run(["uv", "run", "--project", str(project), "--no-sync", "python", "-I", "-c", code,
+                             str(environment), str(C._REPO_ROOT / "src")], env=env,
+                            capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "STAGE2_DATASTORE_IMPORT=PASS" in result.stdout
 
 
 def _write(path, value):
