@@ -19,7 +19,7 @@
 <p>工作分支为 <code>v4-eval-official-1026</code>，源码起点固定为 <code>d7912e4d4ccd6a158d2e0b64ccd657fc989d1a24</code>。现有 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA-eval</code> 仅为本文编写和交付位置，未来不在 AWS 开发、测试或运行评估 GPU；AWS 只承担训练并产出只读交付资产，不操作其训练环境。</p>
 <p>未来开发检出建议为 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA-eval</code>，实际位置在 sled-aspen／sled-vail 现场确认；跨节点执行使用后文独立 NFS 副本。全部命令与资源监督从 aspen／vail 发起，模型／VAE／仿真计算在 Great Lakes 节点，不把这些job跑在aspen本地。上游后续修复须按具体 commit 移植、重新审查，不移动本计划基线。</p>
 <p>官方 policy 锚点 <code>ac846a9a4aec841e483b1dc5d620dfe426bde853</code>；其 benchmark gitlink 与本地现有 gitlink 均为 <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>。官方 benchmark 调研 HEAD <code>53673b3c94a723d757e9c235f1961e398950e5e3</code> 的 <code>src/robomme</code> 102 个文件与 gitlink 版本同字节，建议继续钉住 gitlink 以贴合官方 policy。</p>
-<nav class="toc"><a href="#overview">运行总览</a><a href="#motion-human">窗口与 padding</a><a href="#target-human">A40 阻断</a><a href="#queue-human">弹性worker队列</a><a href="#gates-human">验收与步骤</a><a href="#details">完整技术细节</a></nav>
+<nav class="toc"><a href="#overview">运行总览</a><a href="#official-parity-human">官方 eval 一致性</a><a href="#motion-human">窗口与 padding</a><a href="#target-human">A40 阻断</a><a href="#queue-human">弹性worker队列</a><a href="#gates-human">验收与步骤</a><a href="#details">完整技术细节</a></nav>
 <h2 id="overview">一、要做什么，哪些已经定了</h2>
 <table><thead><tr><th style="width:19%">项目</th><th style="width:48%">本计划口径</th><th>状态与依据</th></tr></thead><tbody>
 <tr><td>评估范围</td><td>官方 16 任务，每任务 test 50 局，共 800 局；完整保留 episode 清单与官方难度分配。</td><td><span class="pill confirmed">已定</span> 官方 policy 与 benchmark，见第二部分来源表。</td></tr>
@@ -31,7 +31,49 @@
 <tr><td>正式成功率</td><td>每任务成功数／50，16 任务均值即成功总数／800；error 与 coverage 一起保留。</td><td><span class="pill confirmed">已定</span> 未解决 error 时不发布正式完整 score，不丢母集、不换 seed。</td></tr>
 </tbody></table>
 <p>目录沿用官方结构：评估主体留在 <code>examples/robomme/</code>；模型入口沿用本 fork 的 <code>scripts/training/serve_policy.py</code>（官方原版是 <code>scripts/serve_policy.py</code>）；仅 Great Lakes 调度、队列、清单与汇总工具新增到 <code>scripts/evaluation/</code>。benchmark 继续作为官方子模块使用。</p>
-<h2 id="motion-human">二、motion 与训练一致，靠的是窗口定义而不是“每 16 步算一次”</h2>
+<h2 id="official-parity-human">二、如何与官方 eval 机制保持一致</h2>
+<p><strong>做法是锁定并复用官方benchmark与普通MME-VLA客户端单局循环。</strong>参照路径固定为 <code>perceptual / frame_sampling</code>、<code>subgoal_type=None</code>，不把symbolic／oracle／MemER路径算入一致性承诺。motion只改变policy内部可用记忆，是模型比较变量；GL队列只改变领取顺序与进程生命周期。这里的“一致”指评估协议、输入、动作执行、终止和统计口径一致，不要求不同模型动作或成功率相同。</p>
+<h3>权威来源锁到哪些代码</h3>
+<table><thead><tr><th style="width:21%">来源</th><th style="width:40%">固定版本与可读代码</th><th>本计划采用什么</th></tr></thead><tbody>
+<tr><td>官方policy</td><td><code>ac846a9a4aec841e483b1dc5d620dfe426bde853</code>；<a href="https://github.com/RoboMME/robomme_policy_learning/blob/ac846a9a4aec841e483b1dc5d620dfe426bde853/examples/robomme/eval.py">eval.py::EpisodeEvaluator／evaluate</a>、<a href="https://github.com/RoboMME/robomme_policy_learning/blob/ac846a9a4aec841e483b1dc5d620dfe426bde853/examples/robomme/env_runner.py">env_runner.py::EnvRunner</a>、<a href="https://github.com/RoboMME/robomme_policy_learning/blob/ac846a9a4aec841e483b1dc5d620dfe426bde853/examples/robomme/utils.py">utils.py::pack_buffer</a>。</td><td>普通history路径；保留正常单局调用顺序，对故障处理作明确列出的工程修复。</td></tr>
+<tr><td>官方benchmark</td><td>官方policy gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>；<a href="https://github.com/RoboMME/robomme_benchmark/blob/856bc3a189d4172f3f47dbee4424d585f8d78db3/src/robomme/env_record_wrapper/episode_config_resolver.py">BenchmarkEnvBuilder::resolve_episode／make_env_for_episode</a>、<a href="https://github.com/RoboMME/robomme_benchmark/blob/856bc3a189d4172f3f47dbee4424d585f8d78db3/src/robomme/env_record_wrapper/DemonstrationWrapper.py">DemonstrationWrapper::reset／step</a>。</td><td>直接复用官方环境、wrapper与test metadata；环境源码不改、不monkeypatch，资产与metadata另锁SHA。</td></tr>
+<tr><td>ManiSkill依赖</td><td><a href="https://github.com/YinpeiDai/ManiSkill/tree/07be6fbc66350ddca200abfb0a11b692f078f7fd">07be6fbc66350ddca200abfb0a11b692f078f7fd</a>，来自<a href="https://github.com/RoboMME/robomme_benchmark/blob/856bc3a189d4172f3f47dbee4424d585f8d78db3/pyproject.toml">benchmark的pyproject.toml／uv.lock</a>。</td><td>消费固定依赖commit；官方示例requirements中的移动dev引用不能在实际运行时漂移，现场另核真实import路径。</td></tr>
+</tbody></table>
+<h3>逐项保留什么，必要改造怎样不改变单局条件</h3>
+<table><thead><tr><th style="width:23%">官方行为</th><th style="width:26%">本fork文件／函数锚点</th><th style="width:30%">保留或必要变化</th><th>拟验证</th></tr></thead><tbody>
+<tr><td>test的16任务×50官方episode，由metadata解析seed／difficulty。</td><td><code>examples/robomme/utils.py::TASK_NAME_LIST</code>；<code>env_runner.py::EnvRunner.make_env</code>。</td><td>清单只选择官方episode；manifest／chunk不能重抽seed、改difficulty或补额外demo。</td><td>任务／episode全集、metadata SHA与每局解析值一致。</td></tr>
+<tr><td><code>action_space=joint_angle</code>，builder使用<code>control_mode=pd_joint_pos</code>。</td><td><code>env_runner.py::EnvRunner.__init__</code>；官方<code>BenchmarkEnvBuilder</code>。</td><td>直接复用控制模式与动作解释，不切末端位姿或私有控制器。</td><td>ENV_PIN与构造参数审计；固定动作回放。</td></tr>
+<tr><td>reset返回真实demo＋exec0；wrapper过滤NO RECORD，并含reset内init_action。</td><td><code>env_runner.py::get_init_obs</code>；<code>eval.py::EpisodeEvaluator.init_episode</code>。</td><td><code>D=len(images)-1</code>；用返回观测序号，保留terminal递归step行为，不把物理仿真步当帧号。</td><td>front／wrist／state对齐，D与wrapper trace、过滤、初始动作记录一致。</td></tr>
+<tr><td>state为七关节位置＋第一指qpos，共8维；当前infer使用front、wrist与prompt。</td><td><code>env_runner.py::pack_state</code>；<code>eval.py::get_action_chunk</code>。</td><td>保持float32状态与当前双视；夹爪观测不是±1动作编码，prompt仍来自官方task_goal。</td><td>原有观测字段shape／dtype／SHA与prompt逐字比较。</td></tr>
+<tr><td>history仅front，首包完整D+1帧，携带exec_start_idx。</td><td><code>utils.py::pack_buffer</code>；<code>eval.py::get_action_chunk</code>。</td><td>保留原始256域uint8 front与state；motion由server内部同一历史计算，不向环境加帧。</td><td>首包全域0…D，后续exec包连续无重漏；raw像素SHA与D一致。</td></tr>
+<tr><td>先reset完成，再add_buffer完成，最后infer。</td><td><code>eval.py::eval_each_episode／get_action_chunk</code>；websocket server。</td><td>正常ACK顺序不变；新增单活动attempt、包序与身份验证。ACK不确定时整局abort，属于明确的故障路径变化。</td><td>原语义调用trace对拍；新审计字段单验，丢ACK／重复连接禁止盲重发。</td></tr>
+<tr><td>预测20动作，只执行前16；用完后追加16个真实观测再重规划。</td><td><code>eval.py::get_action_chunk</code>与<code>EpisodeEvaluator.eval_each_episode</code>。</td><td><code>(20,8)[:16]</code>，余4个丢弃；无提前终止时每16动作一次infer，不改为32步。</td><td>确定性fake policy给可识别动作序列，核每次选出的16动作及执行顺序。</td></tr>
+<tr><td>model seed默认42；环境seed由官方episode决定。</td><td><code>scripts/training/serve_policy.py::create_policy</code>，对应<a href="https://github.com/RoboMME/robomme_policy_learning/blob/ac846a9a4aec841e483b1dc5d620dfe426bde853/scripts/serve_policy.py">官方scripts/serve_policy.py::create_policy</a>。</td><td>server实际传42并回metadata；目录名不代替RNG设置，每局reset清策略状态，环境seed不被42覆盖。</td><td>server实参／metadata／reset初始随机流与episode seed分别核验。</td></tr>
+<tr><td>max_steps=1300；先step，count+=1，再判断count&gt;1300；builder内部另加2。</td><td><code>eval.py::eval_each_episode</code>；<code>env_runner.py::step</code>；官方builder。</td><td>保留顺序和<code>&gt;</code>，不能改<code>&gt;=</code>；上层timeout检查先于处理stop_flag。</td><td>逐步trace核1300／1301，包括同一步环境报告success。</td></tr>
+<tr><td>读取<code>info.get("status","unknown")</code>，stop来自terminated或truncated。</td><td><code>env_runner.py::step</code>；<code>eval.py::eval_each_episode／evaluate</code>。</td><td>不自造距离或奖励阈值判success；保留官方status与上层timeout覆盖，再存typed结果。</td><td>核status、stop、count与最终success／fail／timeout映射。</td></tr>
+<tr><td>完整无error时，每任务成功数／50，任务均值等于总成功数／800。</td><td><code>eval.py::evaluate</code>；拟<code>scripts/evaluation/official_queue.py</code>汇总。</td><td>N只改领取顺序与生命周期，不改episode身份／seed／reset；error不丢母集，执行与artifact覆盖单列。</td><td>固定800全集；N=1与多N规范化终局收据集合和汇总公式一致。</td></tr>
+</tbody></table>
+<h3>一局实际按照什么顺序走</h3>
+<ol>
+<li><code>evaluate → EnvRunner.make_env</code>按清单选择官方episode；builder读取其test seed／difficulty，创建原版环境与wrapper。server由<code>serve_policy.create_policy</code>加载固定模型和seed42，客户端先核所连服务身份。</li>
+<li><code>EpisodeEvaluator.eval_each_episode</code>请求policy reset并等完成；<code>init_episode → get_init_obs</code>取得官方reset输出，保留完整demo＋exec0，记录D与当前front／wrist／state8／task_goal。</li>
+<li><code>get_action_chunk → utils.pack_buffer</code>送入完整首包front历史和state，确认add_buffer后才以当前双视和prompt调用infer。server内部视觉／motion处理见<a href="#process-data-chain">图二进程链</a>，不回写环境。</li>
+<li>模型返回20×8动作，客户端仅排入前16；逐步<code>EnvRunner.step</code>，先count加一和官方上限检查，再保存返回观测、处理官方stop。未提前终止时积累16个新观测后重复上一步。</li>
+<li>终局由官方status与客户端1301边界决定；先存terminal outcome，再独立封口视频／日志。正常终局不因产物失败重跑policy；N变化只决定哪个worker接下一局。</li>
+</ol>
+<p class="note"><strong>边界例子：</strong>第1300步官方报告success且终止，<code>1300&gt;1300</code>为假，结果保持success；若直到第1301步才success，官方客户端先命中<code>count&gt;1300</code>，最终仍为timeout。不按“最后成功了”自行改分。</p>
+<p><strong>两个节奏互不替代：</strong>q=0发送demo＋exec0，q=16发送exec1…16，仍按官方16动作重规划；首个exec motion窗口到q=32才成熟，只是server记忆可见性规则，不把重规划间隔改为32。demo motion可在首包产生，详见下一节。</p>
+<h3>怎么证明一致，而不只说“用了官方环境”</h3>
+<table><thead><tr><th style="width:18%">验证层</th><th style="width:57%">具体对照与覆盖</th><th>拟判定与留证</th></tr></thead><tbody>
+<tr><td>静态来源／差异</td><td>核policy／benchmark／ManiSkill固定commit、metadata／资产SHA与实际import路径；逐函数比较官方／候选diff，正常循环变化逐项解释，环境源码差异应为零。</td><td><code>ENV_PIN=PASS</code>、<code>OFFICIAL_DIFF=PASS</code>；留commit与允许差异清单。</td></tr>
+<tr><td>CPU客户端对拍</td><td>同一冻结观测trace与确定性fake policy分别驱动官方／候选普通客户端，比较reset／add_buffer／infer／step顺序、原有语义payload字段SHA、D、累计返回帧号、每次选出的16动作、count与terminal。覆盖计数0／1／1299／1300／1301、D=0／17／49和正常／error分支。</td><td><code>OFFICIAL_CLIENT_TRACE=PASS</code>；留fixture SHA、边界覆盖矩阵与首个差异位置；故障路径按明确差异断言。</td></tr>
+<tr><td>目标仿真对照</td><td>同官方seed、同固定动作回放，先核冻结上游自身重复性，再核候选env／reset／wrapper／观测计数与status。不能拿不同模型输出要求动作相等；共同支持checkpoint的数值比较归<code>vla_stack_numeric</code>，不自动新增整轮官方baseline800评估。</td><td><code>OFFICIAL_SIM_REPLAY=PASS</code>；留seed、动作SHA、wrapper事件trace与上游重复性结论。</td></tr>
+<tr><td>弹性队列对照</td><td>固定episode集合分别以N=1、多N和中途扩缩执行，核同seed初始随机流与每局reset隔离；比较剔除worker／attempt／时间戳后的终局收据集合、无重漏与成功数／800公式，故障例另留恢复记录。</td><td><code>OFFICIAL_QUEUE_PARITY=PASS</code>；留N／revision轨迹、episode全集与规范化收据摘要。</td></tr>
+</tbody></table>
+<p>trace只严格对齐官方已有语义字段与动作／调用顺序；新增<code>episode_nonce／batch_seq／replan_seq</code>等审计字段列白名单并单独核身份和顺序。ACK计时不要求相同，不能对整个网络包做字节SHA硬等；确定性fake policy用于隔离客户端机制，不依赖不同模型动作相等。</p>
+<p><strong>改动边界：</strong>直接复用官方环境／wrapper／metadata，保留客户端正常输入、动作执行和终止行为。manifest chunk、typed结果、单会话／RPC身份、ACK不确定时整局abort及结果恢复是必要工程改造，故障路径明确不同，不称“逐字复制官方”。motion有无是模型变量，不是环境变化；不沿旧xhard、2000步、challenge1500或额外demo注入。</p>
+<p class="warn">本节trace、仿真回放、N对照及PASS均为未来期待验收，本轮全部未执行；文档静态检查不能替代它们。只有来源与正常路径对拍、故障差异核验和目标环境验证共同通过，才能声明评估机制保持官方口径。</p>
+<h2 id="motion-human">三、motion 与训练一致，靠的是窗口定义而不是“每 16 步算一次”</h2>
 <p>令 <code>D=exec_start_idx</code> 为真实 demo 帧数，全域当前帧号为 <code>t</code>，执行段当前索引为 <code>q=t-D</code>。首包送入全部 demo 加执行第 0 帧；之后每执行 16 动作送 16 个新帧。训练样本覆盖每个 exec <code>t</code>，不只每 16 帧；推理只是按官方动作块节奏调用。</p>
 <p><code>FrameSampMemory::_encode_ready_windows</code> 与 <code>motion_store::visible_motion_rows</code> 都使用独立的 demo／exec 网格：窗口 <code>W=33</code>、步长 <code>S=32</code>；demo 起点 <code>32m</code> 至少有 17 个真实帧才保留，不满 33 时重复 demo 最后一帧；exec 起点 <code>D+32m</code> 必须满足 <code>32m+32≤q</code>，绝不尾补、跨段或偷看未来。</p>
 <pre><code>k_demo = max(0, floor((D - 17) / 32) + 1)
@@ -66,10 +108,10 @@ q = 0, 16, 32, 48, 64  →  exec 窗口数 = 0, 0, 1, 1, 2
 <path class="arrow" d="M260 276 H300" marker-end="url(#chain-arrow)"/><path class="arrow" d="M540 276 H580" marker-end="url(#chain-arrow)"/><path class="arrow" d="M820 276 H860" marker-end="url(#chain-arrow)"/>
 </svg><figcaption>图二。运行时不开训练更新；VAE、EMA 与 VLA 权重固定。JAX policy 与 PyTorch sidecar 的内存和设备归属仍须在单张 A40 上实测。</figcaption></figure>
 <p>训练与推理同时导入 <code>shared/sampling.py::memory_order</code>，按 <code>2×全域起点+kind</code> 稳定排序：frame 的 kind 为 0、motion 为 1，同刻 frame 在前。motion 位置码取窗口起点的 <code>pos_emb[f,0,:pos_dim]</code>；进入既有 motion MLP／位置投影与 modulation，保持 mask 语义。推理必须 <code>train=False</code>，无训练增强与 dropout。</p>
-<h2 id="target-human">三、A100 训练产物不能直接宣称已经能在 A40 跑</h2>
+<h2 id="target-human">四、A100 训练产物不能直接宣称已经能在 A40 跑</h2>
 <p>当前 <code>motion_client.py::_check_stage2_provenance</code> 逐字比较 <code>numerics</code> 与 <code>stage2_compat.online_vae</code>，其中含 GPU 名称、driver；A40 与训练 A100 不同，会被拒绝。计划新增独立 <code>eval_target_contract.json</code>：保留训练 provenance 原样，只允许明确列出的 <code>gpu_name</code>、<code>driver</code> 硬件差异，其他软件、精度、source、EMA、VAE 身份仍严格匹配。</p>
 <p>目标证书必须先在 A40 通过固定 reference 验证，绑定权重／源码／目标环境／GPU 家族／fixture／阈值／eval 代码；driver 变化重新验收。跨卡不承诺逐位相等；建议 encoder 与端到端最大绝对误差均 ≤<code>1e-5</code>，同时记录相对误差和 cosine，阈值须事前固定，失败不能放宽再报通过。已有 G2 来源例外不代表 G4、真实 16 帧节奏或 A40 合格。</p>
-<h2 id="queue-human">四、弹性 job 池动态领取，运行中可增减数量</h2>
+<h2 id="queue-human">五、弹性 job 池动态领取，运行中可增减数量</h2>
 <p>每个 worker 只在自己的占位 job 内启动一个常驻 server 与 sidecar；领取一个 5 局 chunk 后，启动独立官方 eval 仿真子进程，结束即回收仿真资源，再领下一块。固定 round-robin 混排 16 任务，无需预跑估计长短；模型阶段依次推进，worker 不跨模型阶段抢任务。</p>
 <figure><svg id="elastic-worker-dynamic-queue" viewBox="0 0 1120 490" role="img" aria-labelledby="queue-title queue-desc">
 <title id="queue-title">N个持久GPU worker从共享队列动态领取，可按资源伸缩</title><desc id="queue-desc">不可变160块清单由NFS原子mkdir领取。worker1、worker2、省略项和workerN表示可变规模，各写独立attempt结果；单控制器验证generation与coverage。新增worker领取ready；缩容worker停止领取并封口当前局后退出。</desc>
@@ -89,7 +131,7 @@ q = 0, 16, 32, 48, 64  →  exec 窗口数 = 0, 0, 1, 1, 2
 <p><code>target_jobs=N</code> 必须显式提供，没有固定默认值。运行中的 <code>desired_jobs</code> 与 <code>pool_revision</code> 是可变控制状态；扩容在已批准包络和配额内增加job，让新worker领取ready；缩容先停止被选worker领取，封口当前局、归还未开始局，再清理该pool明确登记的step／JobID。PENDING与UNKNOWN也占资源账本，不能因未见RUNNING而重复申请。</p>
 <p>NFS 不引入数据库：不可变清单、原子 <code>mkdir</code> claim、临时文件加 rename 提交结果。claim 后尚未写 owner 就崩溃也必须可识别。heartbeat 只诊断，不按 TTL 抢活 worker；唯一控制器先确认对应 Slurm step 已终止，再提升 generation 重发。旧 attempt 永远不能覆盖 canonical。</p>
 <p>success／fail／timeout 为正常终局，不自动重跑；基础设施 error 最多一次同 seed 重试，先确认旧 step 死亡。48 小时预算到期 drain 并保留队列，不超批准资源包络扩容，也不自动续批。建议每局墙钟上限 2,400 秒，5 局块加启动清理 1,800 秒得 <code>13,800 秒=3小时50分</code>；这是待实测的运维上限，与官方 1300 动作语义分开。</p>
-<h2 id="gates-human">五、先过什么闸门，再做哪些步骤</h2>
+<h2 id="gates-human">六、先过什么闸门，再做哪些步骤</h2>
 <table><thead><tr><th style="width:21%">验收</th><th style="width:50%">怎么验证，过了说明什么</th><th>拟判定行；目前均未运行</th></tr></thead><tbody>
 <tr><td>官方语义</td><td>对官方固定源码逐项核对并用可控 step trace 对拍 timeout、success、seed 与 reset；不以脚本能跑代替语义一致。</td><td><code>OFFICIAL_PARITY=PASS</code></td></tr>
 <tr><td>窗口、token 与 IPC</td><td>独立 frame-id oracle，加真实 demo 首包与每 16 帧续包；像素、mask、pos、排序严格比较，同卡同 latent encoder 逐位。</td><td><code>FRAME_ORACLE=PASS</code><br><code>MEMORY_CONTRACT=PASS</code><br><code>IPC_PARITY=PASS</code></td></tr>
