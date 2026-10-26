@@ -68,7 +68,7 @@
 <tr><td>静态来源／差异</td><td>核policy／benchmark／ManiSkill固定commit、metadata／资产SHA与实际import路径；逐函数比较官方／候选diff，正常循环变化逐项解释，环境源码差异应为零。</td><td><code>ENV_PIN=PASS</code>、<code>OFFICIAL_DIFF=PASS</code>；留commit与允许差异清单。</td></tr>
 <tr><td>CPU客户端对拍</td><td>同一冻结观测trace与确定性fake policy分别驱动官方／候选普通客户端，比较reset／add_buffer／infer／step顺序、原有语义payload字段SHA、D、累计返回帧号、每次选出的16动作、count与terminal。覆盖计数0／1／1299／1300／1301、D=0／17／49和正常／error分支。</td><td><code>OFFICIAL_CLIENT_TRACE=PASS</code>；留fixture SHA、边界覆盖矩阵与首个差异位置；故障路径按明确差异断言。</td></tr>
 <tr><td>目标仿真对照</td><td>同官方seed、同固定动作回放，先核冻结上游自身重复性，再核候选env／reset／wrapper／观测计数与status。不能拿不同模型输出要求动作相等；共同支持checkpoint的数值比较归<code>vla_stack_numeric</code>，不自动新增整轮官方baseline800评估。</td><td><code>OFFICIAL_SIM_REPLAY=PASS</code>；留seed、动作SHA、wrapper事件trace与上游重复性结论。</td></tr>
-<tr><td>弹性队列对照</td><td>固定episode集合分别以N=1、多N和中途扩缩执行，核同seed初始随机流与每局reset隔离；比较剔除worker／attempt／时间戳后的终局收据集合、无重漏与成功数／800公式，故障例另留恢复记录。</td><td><code>OFFICIAL_QUEUE_PARITY=PASS</code>；留N／revision轨迹、episode全集与规范化收据摘要。</td></tr>
+<tr><td>弹性队列对照</td><td>N=1／多N／中途扩缩的规范化终局收据集合严格相等，只在确定性mock／冻结trace重放上验证，并核同seed初始随机流、reset隔离与汇总公式。真实GL仅在已批准的有界样本核identity／reset／运行trace，先核上游自身repeatability；正式单次800只做manifest无重漏审计，不为此重复跑多轮800，也不要求真实sim跨N终态逐位相等或把固有非确定性归为调度错误。</td><td><code>OFFICIAL_QUEUE_PARITY=PASS</code>；留N／revision轨迹、mock收据摘要、有界实机trace与正式coverage审计。</td></tr>
 </tbody></table>
 <p>trace只严格对齐官方已有语义字段与动作／调用顺序；新增<code>episode_nonce／batch_seq／replan_seq</code>等审计字段列白名单并单独核身份和顺序。ACK计时不要求相同，不能对整个网络包做字节SHA硬等；确定性fake policy用于隔离客户端机制，不依赖不同模型动作相等。</p>
 <p><strong>改动边界：</strong>直接复用官方环境／wrapper／metadata，保留客户端正常输入、动作执行和终止行为。manifest chunk、typed结果、单会话／RPC身份、ACK不确定时整局abort及结果恢复是必要工程改造，故障路径明确不同，不称“逐字复制官方”。motion有无是模型变量，不是环境变化；不沿旧xhard、2000步、challenge1500或额外demo注入。</p>
