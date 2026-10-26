@@ -162,6 +162,17 @@ def read_segment_tokens(tokens_root: pathlib.Path, key: str, num_grid: int, *,
                     "bytes": size}
         if any(meta.get(k) != v for k, v in contract.items()):
             raise ValueError(f"{p} 原始 motion 合同不符，期望 {contract}")
+    if spec == ms.LAYOUT_SPECS[ms.STAGE2_LAYOUT]:
+        contract = {"schema": "stage2-memory-export-v1", "layout": ms.STAGE2_LAYOUT,
+                    "row_shape": [1, 1024], "dtype": "float32", "token_dim": 1024,
+                    "token_bytes": 4096, "bytes": size, "num_grid": num_grid, "grid_stride": 32, "window_frames": 33}
+        if any(type(meta.get(k)) is not type(v) or meta[k] != v for k, v in contract.items()):
+            raise ValueError(f"{p} stage2 行合同不符")
+        if (any(type(v) is not int for v in meta["row_shape"])
+                or not isinstance(meta.get("source_grid"), list)
+                or any(type(v) is not int for v in meta["source_grid"])
+                or meta["source_grid"] != list(range(0, num_grid * 2, 2))):
+            raise ValueError(f"{p} source_grid 不是连续偶数格")
     arr = np.frombuffer(data, dtype=np.float32)
     if not np.isfinite(arr).all():
         raise ValueError(f"{p} 含非有限值")
@@ -453,6 +464,245 @@ def gather_provenance(latents_root: pathlib.Path, tokens_root: pathlib.Path, ent
 # ══ 子命令 ════════════════════════════════════════════════════════════════════
 
 
+def validate_stage2_segments(latents_root, tokens_root, entries):
+    """精确段集合、偶数格映射及补帧契约；合法零窗段仍由索引保留。"""
+    expected = {key for _, _, key, _, _ in iter_rows_in_order(entries)}
+    for suffix in (".f32.bin", ".f32.bin.sha256", ".metadata.json"):
+        actual = {p.name[:-len(suffix)] for p in tokens_root.glob(f"*{suffix}")}
+        if actual != expected:
+            raise ValueError(f"stage2 段集合不符 {suffix}: 缺 {sorted(expected - actual)[:5]}，多 {sorted(actual - expected)[:5]}")
+    total = _load_json(latents_root / "metadata.json")
+    if set(total["segments"]) != expected:
+        raise ValueError("stage2 恢复 latent 段集合与 manifest 非零段集合不同")
+    summary = dict(real_plus_pad_ne_33=0, exec_padded=0, pad_not_last_demo=0,
+                   pad_source_mismatch=0, demo_tail_padded=0, demo_tail_dropped=0,
+                   legal_zero_segments=sum(getattr(e, s).seg_len > 0 and getattr(e, s).num_grid == 0
+                                           for e in entries for s in ms.SEGMENTS))
+    for entry, segment, key, _, ng in iter_rows_in_order(entries):
+        lm = _load_json(latents_root / f"{key}.metadata.json")
+        _, tm = read_segment_tokens(tokens_root, key, ng, spec=entry.spec)
+        info = getattr(entry, segment)
+        start = 0 if segment == "demo" else entry.exec_start_idx
+        legacy_count = ms.seg_num_grid(info.seg_len, entry.spec.min_real(segment))
+        fixed = {"segment": key, "segment_kind": segment, "seg_start_global": start, "seg_len": info.seg_len}
+        if (any(tm.get(k) != v or lm.get(k) != v for k, v in fixed.items())
+                or lm.get("num_grid") != legacy_count or lm.get("grid_stride") != 16
+                or lm.get("window_frames") != 33 or len(lm.get("rows", [])) != legacy_count
+                or len(tm.get("rows", [])) != ng):
+            raise ValueError(f"{key} 段元数据与索引合同不符")
+        if ms.canonical_json_bytes(lm["rows"]) != ms.canonical_json_bytes(total["segments"][key].get("rows")):
+            raise ValueError(f"{key} 原始行身份与 receipt 固定的总 metadata 不符")
+        for j, source_grid in enumerate(tm["source_grid"]):
+            row = tm["rows"][j]
+            real = min(33, info.seg_len - 32 * j)
+            pad = 33 - real
+            want = {"m": source_grid, "seg_offset": 32 * j, "start_global_frame": start + 32 * j,
+                    "real_frames": real, "pad_frames": pad,
+                    "pad_source_frame": start + info.seg_len - 1 if pad else None,
+                    "input_shape": [33, 256, 256, 3], "input_dtype": "uint8"}
+            if (ms.canonical_json_bytes(row) != ms.canonical_json_bytes(lm["rows"][source_grid])
+                    or any(type(row.get(k)) is not type(v) or row[k] != v for k, v in want.items())):
+                raise ValueError(f"{key} 第 {j} 行不等于原偶数格，或 padding/起点身份不符")
+            ms.require_sha256(row.get("input_frames_sha256"), f"{key} input_frames_sha256")
+            if pad and (segment != "demo" or j != ng - 1 or real < 17):
+                raise ValueError(f"{key} 非 demo 末窗补帧或真实帧不足17")
+            summary["demo_tail_padded"] += int(pad > 0)
+        if segment == "demo" and 0 < info.seg_len - ng * 32 <= 16:
+            summary["demo_tail_dropped"] += 1
+    return summary
+
+
+def _stage2_validation(validation_root, *, manifest, latent_sha, checkpoint_sha, source_pin, numerics, online_vae):
+    """读取已封口的 G0/G2/G3，要求输入摘要与关键数值指标完整绑定。"""
+    samples_path = validation_root / "windows.json"
+    samples = _load_json(samples_path)
+    counts = samples.get("counts", {})
+    windows = samples.get("windows", [])
+    if (samples.get("schema") != "stage2-validation-inputs-v1" or samples.get("gate") != "G0"
+            or samples.get("status") != "PASS" or samples.get("seed") != 0
+            or samples.get("manifest_sha256") != manifest["sha256"]
+            or samples.get("latent_metadata_sha256") != latent_sha
+            or counts.get("windows") != 64 or len(windows) != 64 or counts.get("tasks") != 16
+            or counts.get("sha_mismatches") != 0 or counts.get("demo_tail", 0) < 16):
+        raise ValueError("stage2 G0 证据不完整或绑定了不同输入")
+    tasks, identities, tail_count = {}, set(), 0
+    for window in windows:
+        required = ("key", "task", "episode", "segment_kind", "source_grid", "latent_path", "latent_block_sha256",
+                    "frame_ids", "real_frames", "pad_frames", "pad_source_frame", "input_frames_sha256",
+                    "sources", "source_frame_indices")
+        if any(k not in window for k in required):
+            raise ValueError("stage2 G0 窗口必填字段不全")
+        tasks[window["task"]] = tasks.get(window["task"], 0) + 1
+        if (len(window.get("frame_ids", [])) != 33 or len(window.get("source_frame_indices", [])) != 33
+                or not window.get("sources") or type(window.get("source_grid")) is not int
+                or window["source_grid"] < 0 or window["source_grid"] % 2
+                or type(window["episode"]) is not int or window["episode"] < 0
+                or window["segment_kind"] not in ms.SEGMENTS
+                or window["key"] != f"{window['task']}_ep{window['episode']}_{window['segment_kind']}"
+                or not isinstance(window["latent_path"], str) or not window["latent_path"]):
+            raise ValueError("stage2 G0 窗口来源不完整")
+        ident = (window["key"], window["source_grid"])
+        if ident in identities:
+            raise ValueError("stage2 G0 样本身份重复")
+        identities.add(ident)
+        real, pad = window["real_frames"], window["pad_frames"]
+        frames = window["frame_ids"]
+        if (type(real) is not int or type(pad) is not int or real + pad != 33 or pad < 0
+                or real < (17 if window["segment_kind"] == "demo" else 33)
+                or any(type(frame) is not int or frame < 0 for frame in frames)):
+            raise ValueError("stage2 G0 真实帧与补帧数量不符")
+        if (frames != list(range(frames[0], frames[0] + real)) + [frames[real - 1]] * pad
+                or window["pad_source_frame"] != (frames[real - 1] if pad else None)):
+            raise ValueError("stage2 G0 帧索引或补帧来源不符")
+        tail_count += int(pad > 0)
+        kind = "demo_h5" if window["segment_kind"] == "demo" else "exec_pkl"
+        for source in window["sources"]:
+            if (not isinstance(source, dict) or source.get("kind") != kind
+                    or not isinstance(source.get("path"), str) or not source["path"]):
+                raise ValueError("stage2 G0 源文件身份不全")
+            ms.require_sha256(source.get("sha256"), "G0.sources.sha256")
+        for index in window["source_frame_indices"]:
+            if (not isinstance(index, dict) or type(index.get("source")) is not int
+                    or not 0 <= index["source"] < len(window["sources"])
+                    or type(index.get("index")) is not int or index["index"] < 0
+                    or (kind == "exec_pkl" and index["index"] != 0)):
+                raise ValueError("stage2 G0 源帧索引不符")
+        for key in ("input_frames_sha256", "latent_block_sha256"):
+            ms.require_sha256(window.get(key), f"G0.{key}")
+    if len(tasks) != 16 or set(tasks.values()) != {4} or tail_count != counts["demo_tail"]:
+        raise ValueError("stage2 G0 必须每任务4窗")
+    samples_sha = ms.sha256_file(samples_path)
+    evidence = {"G0": {"path": str(samples_path.resolve()), "sha256": samples_sha}}
+    for gate in ("G2", "G3"):
+        path = validation_root / f"{gate}.json"
+        record = _load_json(path)
+        if (record.get("schema") != "stage2-validation-gate-v1" or record.get("gate") != gate
+                or record.get("status") != "PASS" or record.get("checkpoint_sha256") != checkpoint_sha
+                or record.get("samples_sha256") != samples_sha):
+            raise ValueError(f"stage2 {gate} 证据缺失、失败或 SHA 绑定不符")
+        if (ms.canonical_json_bytes(record.get("source_pin")) != ms.canonical_json_bytes(source_pin)
+                or ms.canonical_json_bytes(record.get("numerics")) != ms.canonical_json_bytes(numerics)):
+            raise ValueError(f"stage2 {gate} 与当前实际源码或数值环境不同源")
+        metrics = record.get("metrics", {})
+        if gate == "G2":
+            if (ms.canonical_json_bytes(record.get("online_vae")) != ms.canonical_json_bytes(online_vae)
+                    or metrics.get("windows") != 64
+                    or metrics.get("demo_tail") != counts["demo_tail"]
+                    or not isinstance(metrics.get("worst_mse"), (int, float))
+                    or not 0 <= metrics["worst_mse"] <= 1e-6
+                    or not isinstance(metrics.get("worst_max"), (int, float))
+                    or not 0 <= metrics["worst_max"] <= 0.01):
+                raise ValueError("stage2 G2 数值指标不完整或超过阈值")
+        else:
+            want = dict(windows=32, seed=0, max_abs=0, geometry_all_true=1, leaves=65,
+                        state_key="model", exact=1, live_negative_rejected=1)
+            if any(metrics.get(k) != v for k, v in want.items()):
+                raise ValueError("stage2 G3 EMA 严格核对或独立32窗证据不足")
+        evidence[gate] = {"path": str(path.resolve()), "sha256": ms.sha256_file(path)}
+    return evidence
+
+
+def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index_sha, *,
+                            encoder_run_dir, raw_dir, input_manifest_path, vae_compat,
+                            expected_ckpt_sha256, validation_root, source_pin_path, manifest_file_sha256):
+    """stage2 专属来源链：整 latent 与偶数块分别核 SHA，保留全部 encoder 身份。"""
+    if vae_compat is None:
+        raise ValueError("stage2 必须使用已封口的历史 VAE receipt")
+    ms.require_sha256(expected_ckpt_sha256, "stage2 expected_ckpt_sha256")
+    validate_stage2_segments(latents_root, tokens_root, entries)
+    keys = [key for _, _, key, _, _ in iter_rows_in_order(entries)]
+    vae, vae_workers = check_vae_group(latents_root, keys, vae_compat)
+    total = _load_json(latents_root / "metadata.json")
+    pin = _load_json(source_pin_path)
+    if ms.sha256_file(_WAN_DIR / "wan_motion_infer.py") != pin.get("vae_adapter_sha256"):
+        raise ValueError("stage2 SOURCE_PIN 的 VAE 适配件 SHA 与实际代码不符")
+    if ms.sha256_file(source_pin_path.parent / "uv.lock") != pin.get("dependency_lock_sha256"):
+        raise ValueError("stage2 SOURCE_PIN 的依赖锁 SHA 与实际文件不符")
+    source_grid, identity, workers = {}, None, []
+    for entry, _, key, _, ng in iter_rows_in_order(entries):
+        tm = _load_json(tokens_root / f"{key}.metadata.json")
+        lm = _load_json(latents_root / f"{key}.metadata.json")
+        # S1 对 manifest 文件原字节取摘要；store/G0 的 manifest_sha256 是清单内部规范摘要。
+        if tm.get("manifest_sha256") != manifest_file_sha256:
+            raise ValueError(f"{key} S1 清单文件 SHA 与当前 episode_manifest 原字节不同")
+        groups = {k: tm.get(k) for k in ("encoder", "encoder_state_sha256", "source_pin", "numerics")}
+        if any(not isinstance(v, dict) or not v for v in groups.values()):
+            raise ValueError(f"{key} stage2 身份字段缺失")
+        encoder = dict(groups["encoder"])
+        if "run_dir" in encoder and pathlib.Path(encoder["run_dir"]).resolve() != encoder_run_dir.resolve():
+            raise ValueError(f"{key} encoder_run_dir 与显式输入不同")
+        # 路径只用来定位；其余身份逐段必须完全相同。
+        encoder.pop("run_dir", None)
+        groups["encoder"] = encoder
+        if identity is None:
+            identity = groups
+        elif ms.canonical_json_bytes(groups) != ms.canonical_json_bytes(identity):
+            raise ValueError(f"{key} encoder/状态/pin/数值身份与其他段不同")
+        projection = {k: pin.get(k) for k in ("mj_repo_commit", "export_source_sha256", "encoder_source_sha256")}
+        if groups["source_pin"] != projection:
+            raise ValueError(f"{key} S1 source_pin 与 S4 三字段投影不同")
+        path = latents_root / f"{key}.bin"
+        old_count = lm["num_grid"]
+        blocks = tm.get("input_block_sha256")
+        if path.stat().st_size != old_count * CHUNK_BYTES or not isinstance(blocks, list) or len(blocks) != ng:
+            raise ValueError(f"{key} latent 字节数或偶数块 SHA 数量不符")
+        whole = hashlib.sha256()
+        with path.open("rb") as stream:
+            for g in range(old_count):
+                block = stream.read(CHUNK_BYTES)
+                whole.update(block)
+                if g % 2 == 0 and ms.sha256_bytes(block) != blocks[g // 2]:
+                    raise ValueError(f"{key} 偶数格 {g} latent 字节 SHA 不符")
+        if not (whole.hexdigest() == tm.get("input_latent_sha256") == lm.get("sha256") == total["segments"][key]["sha256"]):
+            raise ValueError(f"{key} 整 latent SHA 不符（含未选中的奇数块）")
+        source_grid[key] = tm["source_grid"]
+        if not isinstance(tm.get("worker"), dict) or not tm["worker"]:
+            raise ValueError(f"{key} 缺实际导出 worker 记录")
+        workers.append(tm["worker"])
+    if identity is None:
+        raise ValueError("stage2 表不能为空")
+    enc = identity["encoder"]
+    if enc.get("run_name") != encoder_run_dir.name or enc.get("checkpoint_sha256") != expected_ckpt_sha256:
+        raise ValueError("stage2 encoder run 或 checkpoint SHA 与显式输入不同")
+    for name, expected in ((enc["checkpoint_name"], enc["checkpoint_sha256"]), ("config.yaml", enc["config_sha256"])):
+        if pathlib.Path(name).name != name or ms.sha256_file(encoder_run_dir / name) != expected:
+            raise ValueError(f"stage2 encoder 实体文件 SHA 不符: {name}")
+    export = _load_json(tokens_root / "export_record.json")
+    if (export.get("schema") != "stage2-memory-export-v1" or export.get("scope") != "full"
+            or export.get("segments") != len(keys) or export.get("rows") != sum(e.demo.num_grid + e.exec.num_grid for e in entries)
+            or len(export.get("segment_keys", [])) != len(keys) or set(export["segment_keys"]) != set(keys)
+            or export.get("manifest_sha256") != manifest_file_sha256):
+        raise ValueError("stage2 export_record 未完整覆盖清单")
+    for group in identity:
+        actual = export.get(group)
+        if group == "encoder" and isinstance(actual, dict):
+            actual = {k: v for k, v in actual.items() if k != "run_dir"}
+        if ms.canonical_json_bytes(actual) != ms.canonical_json_bytes(identity[group]):
+            raise ValueError(f"stage2 export_record 的 {group} 与段身份不同")
+    latent_sha = ms.sha256_file(latents_root / "metadata.json")
+    online_vae = {k: vae[k] for k in ("vae_id", "vae_state_sha256", "vae_dtype", "latent_mode", "batch", "tf32", "amp")}
+    online_vae.update(adapter_sha256=pin["vae_adapter_sha256"],
+                      preprocess=dict(frame_size=256, input_dtype="uint8", input_layout="THWC", window_frames=33),
+                      numerics=identity["numerics"])
+    evidence = _stage2_validation(validation_root, manifest=manifest, latent_sha=latent_sha,
+                                 checkpoint_sha=expected_ckpt_sha256, source_pin=pin,
+                                 numerics=identity["numerics"], online_vae=online_vae)
+    evidence.update(restore_receipt={"path": vae_compat["receipt_path"], "sha256": vae_compat["receipt_sha256"]},
+                    SOURCE_PIN={"path": str(source_pin_path.resolve()), "sha256": ms.sha256_file(source_pin_path)})
+    provenance = {**identity, "source_pin": pin, "vae": vae,
+                  "stage2_compat": {"schema": "stage2-compat-v1", "restore_receipt_sha256": vae_compat["receipt_sha256"],
+                                    "historical_vae": vae_compat["identity"], "online_vae": online_vae, "evidence": evidence},
+                  "manifest_sha256": manifest["sha256"], "motion_index_sha256": index_sha,
+                  "episode_manifest_file_sha256": manifest_file_sha256,
+                  "mj_repo_commit": pin["mj_repo_commit"], "source_grid_sha256": ms.sha256_bytes(ms.canonical_json_bytes(source_grid)),
+                  "latents_metadata_sha256": latent_sha, "latents_root": str(latents_root.resolve()),
+                  "tokens_root": str(tokens_root.resolve()), "raw_dir": str(raw_dir.resolve()),
+                  "input_manifest_sha256": ms.sha256_file(input_manifest_path), "vae_compat": vae_compat,
+                  "workers_vae": vae_workers, "workers_encoder": workers}
+    ms.validate_stage2_provenance(provenance)
+    return provenance
+
+
 def check_raw_sources(manifest_path: pathlib.Path, latents_root: pathlib.Path,
                       raw_dir: pathlib.Path, oracle_report: pathlib.Path) -> pathlib.Path:
     """在写表前核对输入清单、Wan、oracle 三方绑定，并核 oracle 所验的元数据身份。"""
@@ -481,7 +731,16 @@ def check_raw_sources(manifest_path: pathlib.Path, latents_root: pathlib.Path,
 def cmd_pack(args) -> None:
     t_all = time.perf_counter()
     manifest = load_manifest(args.manifest)
-    spec = ms.LAYOUT_SPECS[ms.LAYOUT]
+    stage2 = getattr(args, "layout", "legacy") == "stage2"
+    layout = ms.STAGE2_LAYOUT if stage2 else ms.LAYOUT
+    spec = ms.LAYOUT_SPECS[layout]
+    if stage2 and (getattr(args, "latent_grid_subsample", None) != 2
+                   or not getattr(args, "stage2_validation", None)
+                   or not getattr(args, "stage2_source_pin", None)
+                   or not getattr(args, "restore_receipt", None)):
+        raise ValueError("stage2 必须显式提供 subsample=2、G0/G2/G3 目录、SOURCE_PIN 和恢复 receipt")
+    if stage2 and args.force_break_lock:
+        raise ValueError("stage2 禁止强制破锁")
     entries = ms.build_index_entries(manifest, spec)
     totals = ms.index_totals(entries)
     tokens_root = pathlib.Path(args.tokens).resolve()
@@ -500,7 +759,10 @@ def cmd_pack(args) -> None:
                                      manifest_path=pathlib.Path(args.manifest), oracle_report=oracle_report)
     elif getattr(args, "expected_ckpt_sha256", None):
         raise RuntimeError("--expected-ckpt-sha256 仅用于历史 VAE 兼容模式（须配 --restore-receipt）")
-    store_root = pathlib.Path(args.out).resolve()
+    output = pathlib.Path(args.out).absolute()
+    if stage2 and any(path.is_symlink() for path in (output, *output.parents)):
+        raise RuntimeError(f"stage2 输出路径不能穿过符号链接: {output}")
+    store_root = output.resolve()
     if store_root.is_symlink():
         raise RuntimeError(f"输出根是符号链接，拒绝写入: {store_root}")
     store_root.mkdir(parents=True, exist_ok=True)
@@ -510,18 +772,22 @@ def cmd_pack(args) -> None:
     try:
         if meta_path.exists() and not args.resume:
             raise RuntimeError(f"store_meta.json 已存在: {meta_path}；重打包须显式 --resume")
-        pin = _load_json(_WAN_DIR / "SOURCE_PIN.json")
-        index = ms.index_payload(manifest, entries, spec=spec, layout=ms.LAYOUT, mj_repo_commit=pin["mj_repo_commit"])
+        pin = _load_json(pathlib.Path(args.stage2_source_pin) if stage2 else _WAN_DIR / "SOURCE_PIN.json")
+        index = ms.index_payload(manifest, entries, spec=spec, layout=layout, mj_repo_commit=pin["mj_repo_commit"])
         index_bytes = (json.dumps(index, ensure_ascii=False, indent=1) + "\n").encode("utf-8")
         index_sha = hashlib.sha256(index_bytes).hexdigest()
         print(f"[pack] episodes={len(entries)} rows={totals['rows']} (exec {totals['exec_rows']} + "
               f"demo {totals['demo_rows']}) index_sha256={index_sha[:16]}…", flush=True)
         # 写表前预检全部来源（兼容模式含 VAE/encoder 分组）；旧 compare 记录作废，须对新表重做。
         (store_root / BITEXACT_RELPATH).unlink(missing_ok=True)
-        prov = gather_provenance(latents_root, tokens_root, entries, manifest, index_sha,
+        gather = gather_stage2_provenance if stage2 else gather_provenance
+        extra = {"validation_root": pathlib.Path(args.stage2_validation),
+                 "source_pin_path": pathlib.Path(args.stage2_source_pin),
+                 "manifest_file_sha256": ms.sha256_file(args.manifest)} if stage2 else {}
+        prov = gather(latents_root, tokens_root, entries, manifest, index_sha,
                                  encoder_run_dir=encoder_run_dir, raw_dir=raw_dir,
                                  input_manifest_path=input_manifest_path, vae_compat=vae_compat,
-                                 expected_ckpt_sha256=getattr(args, "expected_ckpt_sha256", None))
+                                 expected_ckpt_sha256=getattr(args, "expected_ckpt_sha256", None), **extra)
         print(f"PACK_PROVENANCE_PRECHECK=PASS mode={'vae_compat' if vae_compat else 'single_pin'} "
               f"segments={sum(1 for _ in iter_rows_in_order(entries))}", flush=True)
 
@@ -534,9 +800,9 @@ def cmd_pack(args) -> None:
         with open(tmp, "w+b") as f, open(progress_path, "w", encoding="utf-8") as pf:
             fd = f.fileno()
             for e, seg, key, row_base, ng in iter_rows_in_order(entries):
-                if row_base * ms.MOTION_ROW_BYTES != offset:
-                    raise RuntimeError(f"{key} row_base={row_base} 与写游标 {offset // ms.MOTION_ROW_BYTES} 不符")
-                data, _ = read_segment_tokens(tokens_root, key, ng)
+                if row_base * spec.row_bytes != offset:
+                    raise RuntimeError(f"{key} row_base={row_base} 与写游标 {offset // spec.row_bytes} 不符")
+                data, _ = read_segment_tokens(tokens_root, key, ng, spec=spec)
                 f.write(data)
                 f.flush()
                 back = os.pread(fd, len(data), offset)        # read-after-write
@@ -548,8 +814,8 @@ def cmd_pack(args) -> None:
                 pf.write(json.dumps({"segment": key, "g": e.g, "seg": seg, "row_base": row_base,
                                      "num_grid": ng, "at": _now()}) + "\n")
             os.fsync(fd)
-        if offset != totals["rows"] * ms.MOTION_ROW_BYTES:
-            raise RuntimeError(f"表字节数 {offset} != rows × {ms.MOTION_ROW_BYTES}")
+        if offset != totals["rows"] * spec.row_bytes:
+            raise RuntimeError(f"表字节数 {offset} != rows × {spec.row_bytes}")
         os.replace(tmp, table_path)
         table_sha = sha.hexdigest()
         if ms.sha256_file(table_path) != table_sha:
@@ -560,14 +826,14 @@ def cmd_pack(args) -> None:
                                   capture_output=True, text=True, check=False).stdout.strip()
         import importlib.metadata as md
         meta = {
-            "schema": ms.META_SCHEMA, "layout": ms.LAYOUT, "status": "packed",
+            "schema": ms.META_SCHEMA, "layout": layout, "status": "packed",
             **spec.fields(),
             "byte_order": ms.BYTE_ORDER, "array_order": ms.ARRAY_ORDER,
-            "grid_stride": ms.GRID_STRIDE, "window_frames": ms.WINDOW_FRAMES, "grid_origin": ms.GRID_ORIGIN,
+            "grid_stride": spec.grid_stride, "window_frames": ms.WINDOW_FRAMES, "grid_origin": ms.GRID_ORIGIN,
             "window_direction": ms.WINDOW_DIRECTION, "truncation_policy": ms.TRUNCATION_POLICY,
             "frame_size": ms.FRAME_SIZE,
-            "tables": {ms.MOTION_KEY: {"row_shape": list(ms.MOTION_ROW_SHAPE), "dtype": "float32",
-                                       "row_bytes": ms.MOTION_ROW_BYTES, "num_rows": totals["rows"],
+            "tables": {ms.MOTION_KEY: {"row_shape": list(spec.row_shape), "dtype": "float32",
+                                       "row_bytes": spec.row_bytes, "num_rows": totals["rows"],
                                        "relpath": ms.MOTION_TABLE_RELPATH, "byte_count": offset,
                                        "sha256": table_sha}},
             "num_rows": totals["rows"], "totals": totals,
@@ -603,10 +869,26 @@ def cmd_verify(args) -> None:
     entries = ms.build_index_entries(manifest, meta.spec)
     if [dataclass_tuple(e) for e in entries] != [dataclass_tuple(e) for e in meta.entries]:
         raise RuntimeError("verify: 现场按清单重算的 index 与 meta 内 motion_index 不同")
-    if meta.provenance.get("vae_compat") is not None:
+    stage2 = meta.raw["layout"] == ms.STAGE2_LAYOUT
+    if stage2 and (args.force_break_lock or not getattr(args, "check_padding", False)):
+        raise ValueError("stage2 verify 必须 --check-padding 且禁止强制破锁")
+    padding = validate_stage2_segments(pathlib.Path(meta.provenance["latents_root"]), tokens_root, entries) if stage2 else {}
+    if stage2:
+        source_grid = {key: list(range(0, ng * 2, 2)) for _, _, key, _, ng in iter_rows_in_order(entries)}
+        if ms.sha256_bytes(ms.canonical_json_bytes(source_grid)) != meta.provenance.get("source_grid_sha256"):
+            raise ValueError("verify source_grid 摘要与当前索引不符")
+        if ms.sha256_file(pathlib.Path(meta.provenance["latents_root"]) / "metadata.json") != meta.provenance["latents_metadata_sha256"]:
+            raise ValueError("verify 历史总 metadata 已变动")
+    if stage2 or meta.provenance.get("vae_compat") is not None:
         check_bitexact_record(store_root, meta.raw)
+    if stage2:
+        for label, evidence in meta.provenance["stage2_compat"]["evidence"].items():
+            if ms.sha256_file(evidence["path"]) != evidence["sha256"]:
+                raise ValueError(f"verify 来源证据已变动: {label}")
     started_at = _now()
     had_lock = (store_root / ms.LOCK_RELPATH).exists()
+    if stage2 and had_lock and not args.resume:
+        raise ValueError("stage2 verify 接管 pack 锁须显式 --resume")
     acquire_lock(store_root, resume=(args.resume if had_lock else False),
                  force_break=args.force_break_lock, phase="verify")
 
@@ -638,6 +920,8 @@ def cmd_verify(args) -> None:
     raw["status"] = "verified"
     raw["verify"] = {"scanned": scanned, "mismatches": 0, "started_at": started_at, "finished_at": _now(),
                      "conclusion": f"VERIFY_MOTION=PASS scanned={scanned} mismatches=0"}
+    if stage2:
+        raw["verify"].update(padding, nonfinite=0, segment_set_mismatch=0)
     raw["row_digests"] = {"relpath": ms.ROW_DIGESTS_RELPATH, "algo": "blake2b-128", "covered_rows": scanned,
                           "coverage": ms.ROW_DIGEST_COVERAGE, "byte_count": len(digests),
                           "sha256": hashlib.sha256(bytes(digests)).hexdigest()}
@@ -646,7 +930,8 @@ def cmd_verify(args) -> None:
     release_lock(store_root)
     print(f"[verify] meta 回填（status=verified）+ row_digests 落盘, 耗时 {time.perf_counter() - t_all:.1f}s",
           flush=True)
-    print(f"VERIFY_MOTION=PASS scanned={scanned} mismatches=0")
+    details = " nonfinite=0 segment_set_mismatch=0 " + " ".join(f"{k}={v}" for k, v in padding.items()) if stage2 else ""
+    print(f"VERIFY_MOTION=PASS scanned={scanned} mismatches=0{details}")
 
 
 def check_bitexact_record(store_root: pathlib.Path, raw_meta: dict) -> dict:
@@ -659,7 +944,14 @@ def check_bitexact_record(store_root: pathlib.Path, raw_meta: dict) -> dict:
     want = {"status": "PASS", "compared": int(raw_meta["num_rows"]), "mismatches": 0,
             "store_table_sha256": table["sha256"], "motion_index_sha256": raw_meta["motion_index_sha256"],
             "checkpoint_sha256": raw_meta["provenance"]["encoder"]["checkpoint_sha256"]}
-    bad = [k for k, v in want.items() if rec.get(k) != v]
+    if raw_meta["layout"] == ms.STAGE2_LAYOUT:
+        want.update(schema="stage2-encoder-bitexact-v1", scope="full", layout=ms.STAGE2_LAYOUT,
+                    source_grid_sha256=raw_meta["provenance"]["source_grid_sha256"])
+        if ms.sha256_file(store_root / ms.MOTION_TABLE_RELPATH) != table["sha256"]:
+            raise RuntimeError("verify: 当前表与认证所绑定的 SHA 不符")
+        if ms.sha256_file(store_root / ms.INDEX_RELPATH) != raw_meta["motion_index_sha256"]:
+            raise RuntimeError("verify: 当前索引与认证所绑定的 SHA 不符")
+    bad = [k for k, v in want.items() if type(rec.get(k)) is not type(v) or rec[k] != v]
     if bad:
         raise RuntimeError(f"verify: 逐位比较记录与当前表不符 {bad}")
     return rec
@@ -685,6 +977,10 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("pack")
+    p.add_argument("--layout", choices=("legacy", "stage2"), default="legacy")
+    p.add_argument("--latent-grid-subsample", type=int, default=1)
+    p.add_argument("--stage2-validation", default=None)
+    p.add_argument("--stage2-source-pin", default=None)
     p.add_argument("--manifest", required=True)
     p.add_argument("--tokens", required=True, help="<lib>/motion-tokens")
     p.add_argument("--latents", required=True, help="<lib>/wan-latents（只读 metadata 取 provenance）")
@@ -700,6 +996,7 @@ def main() -> None:
     p.set_defaults(func=cmd_pack)
     p = sub.add_parser("verify")
     p.add_argument("--store", required=True)
+    p.add_argument("--check-padding", action="store_true")
     p.add_argument("--manifest", default=None)
     p.add_argument("--tokens", default=None)
     p.add_argument("--resume", action="store_true")

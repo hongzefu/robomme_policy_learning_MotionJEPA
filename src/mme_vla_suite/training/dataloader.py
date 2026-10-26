@@ -48,8 +48,8 @@ def _motion_gates(history_config, frame_meta: StoreMeta) -> str | None:
     mmeta = ms.MotionMeta.load(motion_root)                # 不得拿 StoreMeta.load 解析 motion layout
     ms.require_verified(mmeta)
     check_motion_contract(mcfg, mmeta)
-    if int(mcfg.stride) != ms.GRID_STRIDE:
-        raise ValueError(f"motion.stride={mcfg.stride} != motion store GRID_STRIDE {ms.GRID_STRIDE}")
+    if int(mcfg.stride) != mmeta.spec.grid_stride:
+        raise ValueError(f"motion.stride={mcfg.stride} != motion store stride {mmeta.spec.grid_stride}")
     manifest = load_manifest(os.environ.get("MMEVLA_FRAMESAMP_MANIFEST") or frame_meta.manifest_path)
     ms.check_same_source(frame_meta.manifest_sha256, mmeta, manifest)
     want = _parse_source_run(str(mcfg.source_run))

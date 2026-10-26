@@ -1,6 +1,8 @@
 import dataclasses
 from contextlib import nullcontext
 import functools
+import copy
+import io
 import json
 import logging
 import os
@@ -144,7 +146,208 @@ def init_history_config(config: _config.TrainConfig, resolved_history_config=Non
                 "motion_table_sha256": mm.table_sha256,
                 "vae": mm.provenance.get("vae"), "encoder": mm.provenance.get("encoder"),
             })
+            if mm.raw["layout"] == _ms.STAGE2_LAYOUT:
+                _ms.validate_stage2_provenance(mm.provenance)
+                prov.update({key: copy.deepcopy(mm.provenance[key]) for key in _ms.STAGE2_GROUPS})
+                write_stage2_motion_snapshot(pathlib.Path(ckpt_root), prov)
+                return
     (ckpt_root / "motion_provenance.json").write_text(_json.dumps(prov, ensure_ascii=False, indent=1, default=str) + "\n")
+
+
+def _atomic_stage2_file(path: pathlib.Path, data: bytes) -> None:
+    """先落完整文件，再发布名称；用于快照和保存前参考的提交边界。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + f".tmp.{os.getpid()}")
+    with temporary.open("xb") as stream:
+        stream.write(data)
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+    fd = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def write_stage2_motion_snapshot(ckpt_root, provenance, *, registered_root=None):
+    """复制封口证据，列出实体 encoder 依赖，最后原子发布完整根快照。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    ckpt_root = pathlib.Path(ckpt_root)
+    ready = ckpt_root / "motion_snapshot.ready.json"
+    if ready.exists():
+        raise FileExistsError(f"stage2 根快照已发布，拒绝覆盖: {ready}")
+    ms.validate_stage2_provenance(provenance)
+    prov = copy.deepcopy(provenance)
+    files = {}
+    validation_root = pathlib.Path(prov["stage2_compat"]["evidence"]["G0"]["path"]).parent
+    portable_path = validation_root / "online_restore_inputs.json"
+    portable_blob = portable_path.read_bytes()
+    portable = json.loads(portable_blob)
+    payload = portable.get("payload", {})
+    es = portable.get("exec_start_idx")
+    tokenizer = portable.get("tokenizer", {})
+    if (portable.get("schema") != "stage2-online-restore-inputs-v1"
+            or payload.get("path") != "online_restore_inputs.npz"
+            or type(es) is not int or es < 17 or portable.get("exec_batch_lengths") != [33, 32]
+            or not isinstance(portable.get("prompt"), str) or not portable["prompt"]
+            or not isinstance(portable.get("sources"), list) or not portable["sources"]
+            or tokenizer.get("uri") != "gs://big_vision/paligemma_tokenizer.model"):
+        raise ValueError("stage2 可携带在线输入合同不完整")
+    ms.require_sha256(tokenizer.get("sha256"), "online_inputs.tokenizer")
+    for source in portable["sources"]:
+        if not isinstance(source, dict) or not isinstance(source.get("path"), str) or not source["path"]:
+            raise ValueError("stage2 可携带在线输入缺原始来源引用")
+        ms.require_sha256(source.get("sha256"), "online_inputs.source")
+    arrays_blob = (validation_root / payload["path"]).read_bytes()
+    if ms.sha256_bytes(arrays_blob) != payload.get("sha256"):
+        raise ValueError("stage2 可携带在线输入 NPZ SHA 不符")
+    expected_arrays = {"images": ([es + 65, 256, 256, 3], "uint8"),
+                       "states": ([es + 65, 8], "float32"), "wrist_image": ([256, 256, 3], "uint8")}
+    if not isinstance(portable.get("arrays"), dict) or set(portable["arrays"]) != set(expected_arrays):
+        raise ValueError("stage2 可携带在线输入数组清单不符")
+    with np.load(io.BytesIO(arrays_blob), allow_pickle=False) as arrays:
+        if set(arrays.files) != set(expected_arrays):
+            raise ValueError("stage2 可携带在线输入 NPZ 键集合不符")
+        for key, (shape, dtype) in expected_arrays.items():
+            value, identity = arrays[key], portable["arrays"][key]
+            if (list(value.shape) != shape or str(value.dtype) != dtype or not np.isfinite(value).all()
+                    or identity.get("shape") != shape or identity.get("dtype") != dtype
+                    or ms.sha256_bytes(np.ascontiguousarray(value).tobytes()) != identity.get("sha256")):
+                raise ValueError(f"stage2 可携带在线输入 {key} 形制或逐数组 SHA 不符")
+    for name, blob in ((portable_path.name, portable_blob), (payload["path"], arrays_blob)):
+        _atomic_stage2_file(ckpt_root / name, blob)
+        files[name] = ms.sha256_bytes(blob)
+    for label, item in prov["stage2_compat"]["evidence"].items():
+        if label not in ("G0", "G2", "G3", "restore_receipt", "SOURCE_PIN"):
+            raise ValueError(f"未知 stage2 证据来源: {label}")
+        source = pathlib.Path(item["path"])
+        blob = source.read_bytes()
+        if ms.sha256_bytes(blob) != item["sha256"]:
+            raise ValueError(f"stage2 {label} 证据在快照前已变动")
+        relative = f"motion_evidence/{label}.json"
+        _atomic_stage2_file(ckpt_root / relative, blob)
+        item["path"] = relative
+        files[relative] = item["sha256"]
+    enc = prov["encoder"]
+    if pathlib.Path(enc["run_name"]).name != enc["run_name"]:
+        raise ValueError("encoder run_name 不能含路径")
+    root = pathlib.Path(registered_root) if registered_root is not None else (
+        pathlib.Path(__file__).resolve().parents[2] / "v1-store/external/motionjepa")
+    dependency_files = []
+    for role, name, sha in (("encoder_checkpoint", enc["checkpoint_name"], enc["checkpoint_sha256"]),
+                            ("encoder_config", "config.yaml", enc["config_sha256"])):
+        source = root / enc["run_name"] / name
+        if (source.is_symlink() or not source.is_file() or source.resolve() != source.absolute()
+                or ms.sha256_file(source) != sha):
+            raise ValueError(f"stage2 encoder 注册件缺失、不是实体文件或 SHA 不符: {source}")
+        dependency_files.append({"role": role, "relative_path": f"encoder_dependencies/{enc['run_name']}/{name}",
+                                 "sha256": sha, "bytes": source.stat().st_size, "source_path": str(source.resolve())})
+    dependencies = {"schema": "stage2-encoder-dependencies-v1", "encoder": enc, "source_pin": prov["source_pin"],
+                    "vae": prov["vae"], "files": dependency_files}
+    for name, value in (("motion_provenance.json", prov), ("encoder_dependencies.json", dependencies)):
+        blob = ms.canonical_json_bytes(value) + b"\n"
+        _atomic_stage2_file(ckpt_root / name, blob)
+        files[name] = ms.sha256_bytes(blob)
+    for name in ("history_config.txt", "history_config.resolved.yaml", "history_config.resolved.sha256"):
+        files[name] = ms.sha256_file(ckpt_root / name)
+    if (ckpt_root / "history_config.resolved.sha256").read_text().strip() != files["history_config.resolved.yaml"]:
+        raise ValueError("stage2 解析配置与摘要文件不同步")
+    if prov.get("resolved_sha256") != files["history_config.resolved.yaml"]:
+        raise ValueError("stage2 来源记录与解析配置不同步")
+    ms.validate_stage2_provenance(prov)
+    payload = {"schema": "stage2-motion-snapshot-v1", "files": files}
+    _atomic_stage2_file(ready, ms.canonical_json_bytes(payload) + b"\n")
+    return payload
+
+
+def stage2_parameter_summary(params):
+    """逐叶描述原内存 EMA；SHA 覆盖连续原始 dtype 字节，不经过推理降精度。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    pure = params.to_pure_dict() if hasattr(params, "to_pure_dict") else params
+    leaves = {}
+    for path, value in traverse_util.flatten_dict(pure).items():
+        array = np.asarray(jax.device_get(value))
+        if not np.isfinite(array).all():
+            raise ValueError(f"保存前 EMA 非有限: {path}")
+        leaves["/".join(map(str, path))] = {"shape": list(array.shape), "dtype": str(array.dtype),
+                                         "sha256": ms.sha256_bytes(np.ascontiguousarray(array).tobytes())}
+    fp32 = {key: value for key, value in leaves.items() if value["dtype"] == "float32"}
+    return ({"algorithm": "named-arrays-v1", "leaves": leaves, "sha256": ms.sha256_bytes(ms.canonical_json_bytes(leaves))},
+            {"algorithm": "named-arrays-v1", "leaves": fp32, "sha256": ms.sha256_bytes(ms.canonical_json_bytes(fp32))})
+
+
+def _stage2_npz_payload(tree):
+    """用显式树路径描述固定输入；NPZ 仅承载验证数组，不进入训练数据表。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    arrays, leaves, none_paths = {}, {}, []
+    for path, value in traverse_util.flatten_dict(tree).items():
+        if value is None:
+            none_paths.append(list(path))
+            continue
+        key = f"leaf_{len(arrays):04d}"
+        array = np.ascontiguousarray(jax.device_get(value))
+        if array.dtype.hasobject:
+            raise ValueError("stage2 参考数组不能包含对象")
+        # NumPy 的 NPZ 不保留 bfloat16 的逻辑 dtype，显式保留其原位串和 dtype 名。
+        arrays[key] = array.view(np.uint16) if str(array.dtype) == "bfloat16" else array
+        leaves[key] = {"path": list(path), "shape": list(array.shape), "dtype": str(array.dtype),
+                       "sha256": ms.sha256_bytes(array.tobytes())}
+    stream = io.BytesIO()
+    np.savez(stream, **arrays)
+    return stream.getvalue(), {"leaves": leaves, "none_paths": none_paths}
+
+
+def write_stage2_pre_save_reference(record_root, config, train_state, observation, *, step, seed=42):
+    """step19 保存前从内存 EMA 推理；恢复进程只读本记录，不能反算参考。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    root = pathlib.Path(record_root)
+    manifest_path = root / "pre_save_reference.json"
+    if manifest_path.exists():
+        raise FileExistsError(f"保存前参考已经存在: {manifest_path}")
+    if step != 19 or config.num_train_steps != 20 or train_state.ema_params is None:
+        raise ValueError("stage2 保存前参考仅适用于20步短测的step19且必须存在内存EMA")
+    if observation.state.shape[0] != 1:
+        raise ValueError("stage2 保存前参考必须使用固定的第一个样本")
+    params = train_state.ema_params.to_pure_dict()
+    summary, fp32 = stage2_parameter_summary(params)
+    # 与 create_trained_policy 的 restore_params(dtype=bfloat16) 保持相同推理精度。
+    device = jax.devices()[0]
+    inference_params = jax.tree.map(
+        lambda x: jax.device_put(np.asarray(jax.device_get(x)).astype(jnp.bfloat16), device), params)
+    observation = jax.tree.map(lambda x: jax.device_put(x, device), observation)
+    parameter_leaves = jax.tree.leaves(inference_params)
+    input_leaves = jax.tree.leaves(observation)
+    parameter_devices = sorted({str(d) for value in parameter_leaves for d in value.devices()})
+    input_devices = sorted({str(d) for value in input_leaves for d in value.devices()})
+    sharding_kinds = {type(value.sharding).__name__ for value in parameter_leaves + input_leaves}
+    if parameter_devices != [str(device)] or input_devices != [str(device)] or sharding_kinds != {"SingleDeviceSharding"}:
+        raise ValueError("stage2 保存前推理参数与固定输入必须实际落在同一张卡")
+    model = config.model.load(inference_params, remove_extra_params=False)
+    sample_rng = jax.random.split(jax.random.key(seed))[1]
+    output = nnx_utils.module_jit(model.sample_actions)(sample_rng, observation, num_steps=10)
+    jax.block_until_ready(output)
+    if not np.isfinite(np.asarray(output)).all():
+        raise ValueError("stage2 保存前参考输出非有限")
+    input_bytes, input_meta = _stage2_npz_payload(observation.to_dict())
+    output_bytes, output_meta = _stage2_npz_payload({"actions": output})
+    for name, blob, meta in (("pre_save_inputs.npz", input_bytes, input_meta),
+                             ("pre_save_outputs.npz", output_bytes, output_meta)):
+        _atomic_stage2_file(root / name, blob)
+        meta.update(path=name, sha256=ms.sha256_bytes(blob))
+    record = {"schema": "stage2-pre-save-reference-v1", "step": step, "state_step": int(train_state.step),
+              "seed": seed, "weight_type": "ema", "parameters": summary, "fp32_ema": fp32,
+              "inference": {"parameter_dtype": "bfloat16", "num_steps": 10,
+                            "rng": "jax.random.split(jax.random.key(seed))[1]",
+                            "jax_default_matmul_precision": jax.config.jax_default_matmul_precision,
+                            "device": {"id": int(device.id), "platform": device.platform,
+                                       "device_kind": device.device_kind,
+                                       "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES", "")},
+                            "sharding": {"parameter_devices": parameter_devices, "input_devices": input_devices,
+                                         "kind": next(iter(sharding_kinds)), "batch_size": 1}},
+              "inputs": input_meta, "outputs": output_meta}
+    _atomic_stage2_file(manifest_path, ms.canonical_json_bytes(record) + b"\n")
+    return record
 
 def _load_weights_and_validate(
     loader: _weight_loaders.WeightLoader, params_shape: at.Params
@@ -427,6 +630,12 @@ def main(config: _config.TrainConfig):
     )
     data_iter = iter(data_loader)
     batch = next(data_iter)
+    reference_observation = None
+    reference_root = os.environ.get("TRAIN_FINAL_RECORD_DIR") or os.environ.get("FINAL_RECORD_DIR")
+    motion_config = getattr(resolved_history_config, "motion", None)
+    if (config.num_train_steps == 20 and reference_root and motion_config is not None
+            and motion_config.get("enabled", False) and motion_config.get("readout") == "stage2_pool4_concat_v1"):
+        reference_observation = jax.tree.map(lambda x: np.asarray(jax.device_get(x[:1])).copy(), batch[0])
     logging.info(
         f"Initialized data loader:\n{training_utils.array_tree_to_info(batch)}"
     )
@@ -506,6 +715,9 @@ def main(config: _config.TrainConfig):
                     step % config.save_interval == 0 and step > start_step
                 ) or step == config.num_train_steps - 1:
                     with timing.phase("checkpoint") if timing else nullcontext():
+                        if reference_observation is not None and step == 19:
+                            write_stage2_pre_save_reference(reference_root, config, train_state,
+                                                           reference_observation, step=step)
                         _checkpoints.save_state(checkpoint_manager, train_state, data_loader, step)
                         if final_record_handle is not None and step == config.num_train_steps - 1:
                             final_record.finish(final_record_handle, train_state, infos, step)

@@ -244,7 +244,7 @@ def test_budget_and_byte_comparator():
     assert not report_passed(report)
 
 
-@pytest.mark.parametrize("layout", list(ms.LAYOUT_SPECS))
+@pytest.mark.parametrize("layout", ["motion-768-grid16-v1", "motion-768-grid16-demopad17-v1", "motion-v10-8x256-grid16-demopad17-v1"])
 def test_motion_meta_requires_matching_contract(tmp_path, layout):
     manifest=manifest_for([(40,0)])
     spec=ms.LAYOUT_SPECS[layout]

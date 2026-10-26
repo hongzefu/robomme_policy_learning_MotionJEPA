@@ -44,7 +44,7 @@ from mme_vla_suite.datastore import (
     run_full_checks,
 )
 from mme_vla_suite.datastore import motion_store as ms
-from mme_vla_suite.datastore.motion_adapter import PAIRING, motion_policy_spec, pair_adjacent_tokens
+from mme_vla_suite.datastore.motion_adapter import PAIRING, STAGE2_READOUT, motion_policy_spec, pair_adjacent_tokens
 from mme_vla_suite.shared.sampling import MEM_ORDER_SENTINEL, even_sampling_indices, memory_order, pad_times
 
 logger = logging.getLogger(__name__)
@@ -79,6 +79,13 @@ def check_motion_contract(mcfg, meta: ms.MotionMeta):
             raise ValueError("四对 motion.checkpoint_sha256 必须显式提供 64 位小写十六进制 SHA256")
         if enc.get("arch") != "wan-latent-v10-st" or enc.get("state_key") != "encoder":
             raise ValueError("四对 motion 表必须来自 wan-latent-v10-st 的 encoder 状态")
+    if spec.readout == STAGE2_READOUT:
+        ms.validate_stage2_provenance(meta.provenance)
+        sha = mcfg.get("checkpoint_sha256")
+        if not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{64}", sha) is None:
+            raise ValueError("stage2 motion.checkpoint_sha256 必须显式提供 SHA256")
+        if (enc.get("arch"), enc.get("state_key"), enc.get("weight_type")) != (ms.STAGE2_ARCH, "model", "ema"):
+            raise ValueError("stage2 motion 必须来自阶段 III 的 model/EMA")
     if "checkpoint_sha256" in mcfg and mcfg["checkpoint_sha256"] != enc.get("checkpoint_sha256"):
         raise ValueError(
             f"motion.checkpoint_sha256={mcfg['checkpoint_sha256']!r} 与 "
@@ -153,7 +160,6 @@ class FrameSampDataset(Dataset):
             _req(int(mcfg.pos_dim) == int(hc.memory_feature.pos.input_dim) // 3,
                  f"motion.pos_dim={mcfg.pos_dim} != pos.input_dim // 3 = {int(hc.memory_feature.pos.input_dim) // 3}")
             _req(int(mcfg.stride) >= 1, f"motion.stride={mcfg.stride} < 1")
-            _req(int(mcfg.stride) == ms.GRID_STRIDE, f"motion.stride={mcfg.stride} != motion store GRID_STRIDE {ms.GRID_STRIDE}")
             _req(int(mcfg.window_frames) == ms.WINDOW_FRAMES, f"motion.window_frames={mcfg.window_frames} != {ms.WINDOW_FRAMES}")
             _req(str(mcfg.window_direction) == ms.WINDOW_DIRECTION, f"motion.window_direction={mcfg.window_direction!r}")
             _req(str(mcfg.grid_origin) == ms.GRID_ORIGIN, f"motion.grid_origin={mcfg.grid_origin!r}")
@@ -205,6 +211,8 @@ class FrameSampDataset(Dataset):
             self._motion_root = pathlib.Path(motion_root)
             self._motion_meta = ms.MotionMeta.load(self._motion_root)
             check_motion_contract(mcfg, self._motion_meta)
+            _req(int(mcfg.stride) == self._motion_meta.spec.grid_stride,
+                 f"motion.stride={mcfg.stride} != motion store stride {self._motion_meta.spec.grid_stride}")
             has_min, has_pad = "demo_min_real_frames" in mcfg, "demo_tail_pad" in mcfg
             _req(has_min == has_pad, "demo_min_real_frames 与 demo_tail_pad 必须同时提供或同时缺省")
             got_min = mcfg.get("demo_min_real_frames", 33)
@@ -390,6 +398,8 @@ class FrameSampDataset(Dataset):
             mstore = self._ensure_motion_store()
             # ②′ 先查原始窗口，再只配对一次；时间码仍取起点帧 pos 第 0 行前 pos_dim 维。
             memb = mstore.rows(rows_m) if k else np.zeros((0,) + self._motion_meta.row_shape, np.float32)
+            if self._motion_readout == STAGE2_READOUT:
+                memb = memb.reshape(k, 1024)
             if self._motion_readout == PAIRING:
                 memb = pair_adjacent_tokens(memb)
             mpos = (np.ascontiguousarray(store.pos_rows(f_m)[:, 0, : self._motion_pos_dim])
