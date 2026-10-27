@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T17:43:24Z",
-    "america_new_york": "2026-10-27T13:43:24-0400"
+    "utc": "2026-10-27T18:31:32Z",
+    "america_new_york": "2026-10-27T14:31:32-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -697,6 +697,90 @@
           "what": "写评估档案；纯512的40k/80k是否补评待用户定",
           "command": "—",
           "verdict_line": "—"
+        }
+      ]
+    },
+    "testx-stage2-60k-eval": {
+      "plan": {
+        "file": "（聊天方案，无计划文件）",
+        "sha": "2346484"
+      },
+      "state": "running",
+      "state_changed_at": {
+        "utc": "2026-10-27T18:31:32Z",
+        "america_new_york": "2026-10-27T14:31:32-0400"
+      },
+      "state_reason": "用户批准：扩展新流程支持testx（1200局hold-out xhard，seed7、max_steps2000、xhard metadata=旧testx/metadata），评这次训练stage2 1024 512+motion的60k；超预算按旧流程resample抽稀（选项C）；官方口径不变；新NFS执行副本benchmark检出943ddf3",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiQXaztwkVeY2pFPyW3",
+        "host": "sled-aspen.eecs.umich.edu"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "TX-A/TX-B合并前后审查PASS并推送",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "新执行副本（benchmark 943ddf3）建立；GPU冒烟2局ENV_ROUTE route=xhard",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "1200局全部确定终局并汇总（含抽稀局数）",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "占位逐个scancel、tmux精确清理",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [
+        {
+          "tmux": "-",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/worktrees/testx-a",
+          "done_line": "子代理TX-A（worktree-agent-testx-a-1027）"
+        },
+        {
+          "tmux": "-",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/worktrees/testx-b",
+          "done_line": "子代理TX-B（worktree-agent-testx-b-1027）"
+        }
+      ],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-27",
+          "quote": "同意开始",
+          "scope": "testx扩展：eval.py/env_runner.py/manifest.py/resident_worker.py/framesamp_memory.py/policy.py/queue_store.py；选项C抽稀；评60k；10份A40；不改bind_model（简化流程不调用）"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-27",
+          "quote": "1同意",
+          "scope": "一致性审查B1-B3补充改动并入方案"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-27",
+          "quote": "同意c",
+          "scope": "超预算按旧流程demo全保+exec等距抽稀"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "两子代理交回后：主检出复跑验收、sonnet合并前审查、--no-ff合并、合并后测试（失败集合不得多于基线30项）、push",
+          "command": "见worktree交回",
+          "verdict_line": "PRE_MERGE_REVIEW=PASS；POST_MERGE_REVIEW=PASS"
         }
       ]
     }
