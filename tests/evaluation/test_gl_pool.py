@@ -510,7 +510,7 @@ class PoolTest(unittest.TestCase):
         self.assertNotIn("env", kwargs)
         self.assertNotIn("do-not-send", command[-1])
         transport.run(["sacct", "--jobs=123"], env={"TZ": "UTC", "OTHER": "do-not-send"})
-        self.assertEqual(shlex.split(calls[-1][0][-1]), ["env", "TZ=America/New_York", "sacct", "--jobs=123"])
+        self.assertEqual(shlex.split(calls[-1][0][-1]), ["/usr/bin/env", "TZ=America/New_York", "sacct", "--jobs=123"])
         transport.popen(["srun", "--chdir=/nfs/approved/eval", "/nfs/approved/python"], start_new_session=True)
         self.assertEqual(shlex.split(calls[-1][0][-1])[0], "srun")
         self.assertTrue(calls[-1][1]["start_new_session"])
@@ -555,8 +555,8 @@ class PoolTest(unittest.TestCase):
             self.assertEqual(command[0], "ssh")
             self.assertNotIn("env", kwargs)
             remote = shlex.split(command[-1])
-            if remote[0] == "env":
-                self.assertEqual(remote[:2], ["env", "TZ=America/New_York"])
+            if remote[0] == "/usr/bin/env":
+                self.assertEqual(remote[:2], ["/usr/bin/env", "TZ=America/New_York"])
                 remote = remote[2:]
             calls.append(remote)
             if remote[0] == "scancel":

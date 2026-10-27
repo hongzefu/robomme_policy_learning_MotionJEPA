@@ -40,7 +40,7 @@ class SlurmTransport:
             return list(argv)
         if not argv or argv[0] not in {"sbatch", "srun", "sacct", "scancel", "squeue"}:
             raise ValueError("SSH传输仅执行明确的Slurm argv")
-        remote = ["env", "TZ=America/New_York", *argv] if argv[0] == "sacct" else list(argv)
+        remote = ["/usr/bin/env", "TZ=America/New_York", *argv] if argv[0] == "sacct" else list(argv)
         return ["ssh", "-o", "BatchMode=yes", self.ssh_host, shlex.join(remote)]
 
     def _kwargs(self, kwargs):

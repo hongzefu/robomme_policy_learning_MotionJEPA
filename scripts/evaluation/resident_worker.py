@@ -33,9 +33,18 @@ def worker_environment(spec):
     """缓存仅由共享spec的明确字段设置，CUDA与Slurm身份仍继承计算step。"""
     cache = spec.get("cache_env", {})
     allowed = {"UV_CACHE_DIR", "UV_LINK_MODE", "HF_HOME", "XDG_CACHE_HOME", "TORCH_HOME",
-               "WANDB_DIR", "WANDB_CACHE_DIR", "JAX_COMPILATION_CACHE_DIR", "TRANSFORMERS_CACHE"}
+               "WANDB_DIR", "WANDB_CACHE_DIR", "JAX_COMPILATION_CACHE_DIR", "TRANSFORMERS_CACHE",
+               "MMEVLA_V1_STORE", "OPENPI_DATA_HOME", "MS_ASSET_DIR", "HF_HUB_CACHE", "HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE",
+               "UV_OFFLINE", "TORCHINDUCTOR_CACHE_DIR", "TRITON_CACHE_DIR", "CUDA_CACHE_PATH", "XLA_PYTHON_CLIENT_PREALLOCATE"}
     if set(cache) - allowed or any(not isinstance(value, str) for value in cache.values()):
         raise ValueError("cache_env仅接受明确的缓存字段，不接收控制主机整份环境")
+    required = {"MMEVLA_V1_STORE", "OPENPI_DATA_HOME", "MS_ASSET_DIR", "UV_CACHE_DIR", "HF_HOME", "HF_HUB_CACHE", "XDG_CACHE_HOME"}
+    if any(not cache.get(key) or not Path(cache[key]).is_absolute() for key in required):
+        raise ValueError("cache_env必须明确给出store、tokenizer及缓存的绝对路径")
+    if any(cache.get(key) != "1" for key in ("HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE", "UV_OFFLINE")):
+        raise ValueError("本次评估的HF、Transformers与uv离线值必须固定为1")
+    if cache.get("XLA_PYTHON_CLIENT_PREALLOCATE") != "false":
+        raise ValueError("本次评估固定关闭XLA预分配")
     return dict(os.environ, **cache, PYTHONUNBUFFERED="1")
 
 
