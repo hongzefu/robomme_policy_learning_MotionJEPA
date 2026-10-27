@@ -10,6 +10,7 @@ import pytest
 
 from scripts.evaluation.manifest import (BENCHMARK_COMMIT, TASKS, build_official_manifest,
                                           bind_model, budget_record, digest, make_manifest, seal, validate_episodes)
+from scripts.evaluation.manifest import verify_model_binding
 
 
 def test_actual_official_manifest():
@@ -54,6 +55,22 @@ def test_hash_and_budget_boundaries():
     assert not budget_record(episode, 3000)["passed"]
 
 
+@pytest.mark.parametrize("sizes", [[800], [4, 6] + [5] * 158, [6, 4] + [5] * 158])
+def test_resealed_official_manifest_refuses_nonfive_chunks(sizes):
+    episodes = [{"task_name": task, "episode_id": i, "env_seed": i, "difficulty": "easy"}
+                for i in range(50) for task in TASKS]
+    manifest = make_manifest(episodes)
+    keys = [e["episode_key"] for e in manifest["episodes"]]
+    offset = 0
+    manifest["chunks"] = []
+    for size in sizes:
+        members = keys[offset:offset + size]
+        manifest["chunks"].append({"chunk_id": digest(members), "episode_keys": members})
+        offset += size
+    with pytest.raises(ValueError, match="160块"):
+        validate_episodes(seal(manifest))
+
+
 def test_model_binding_files_and_validation_identity(tmp_path, monkeypatch):
     # 只隔离B的证书边界，实体文件SHA与production/validation区分由C真实执行。
     monkeypatch.setitem(sys.modules, "scripts.evaluation.runtime_contract", SimpleNamespace(
@@ -75,11 +92,15 @@ def test_model_binding_files_and_validation_identity(tmp_path, monkeypatch):
              "checkpoint_files": entries, "resolved_path": "resolved.json", "resolved_sha256": h,
              "normstats_path": "normstats.json", "normstats_sha256": h,
              "training_provenance_path": "motion_provenance.json", "motion_identity_sha256": "a" * 64,
-             "eval_code_commit": "b" * 40}
+             "eval_code_commit": "b" * 40, "reference_manifest_sha256": "c" * 64}
     target = tmp_path / "target.json"
     target.write_text(json.dumps({"training_runtime": {}, "motion_identity_sha256": "a" * 64}))
     result = bind_model(manifest, {"models": [model]}, target)
     assert result["purpose"] == "production"
+    assert verify_model_binding(result, target, expected_checkpoint_root=root, expected_purpose="production",
+                                expected_run_identity_sha256=result["run_identity_sha256"]) == result
+    with pytest.raises(ValueError, match="用途"):
+        verify_model_binding(result, target, expected_purpose="validation")
     with pytest.raises(ValueError, match="20000"):
         bind_model(manifest, {"models": [model]}, target, validation=True)
     model["checkpoint_step"] = 20000
@@ -87,6 +108,11 @@ def test_model_binding_files_and_validation_identity(tmp_path, monkeypatch):
     assert validation["purpose"] == "validation"
     assert validation["run_identity_sha256"] != result["run_identity_sha256"]
     assert "validation_model_identity_sha256" in validation
+    assert verify_model_binding(validation, target, expected_purpose="validation") == validation
+    changed = copy.deepcopy(validation)
+    changed["run_descriptor"]["model_seed"] = 99
+    with pytest.raises(ValueError, match="重算"):
+        verify_model_binding(seal(changed), target)
     (root / "params.bin").write_bytes(b"wrong weights")
     with pytest.raises(ValueError, match="SHA"):
         bind_model(manifest, {"models": [model]}, target, validation=True)

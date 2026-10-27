@@ -2,6 +2,8 @@
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -382,3 +384,137 @@ def test_empty_artifact_error_is_retained_and_worker_infra_recovers(tmp_path):
         assert result["compute_status"] == "COMPUTE_DONE"
         assert result["score_status"] == "PASS"
         assert result["artifact_status"] == "BLOCKED_ARTIFACTS"
+
+
+def test_normal_drain_two_terminal_three_handback(tmp_path):
+    store = setup_queue(tmp_path)
+    with Controller(store) as c:
+        c.register_slot(slot())
+        g = c.claim("drain", "slot-0")["grant"]
+        for e in g["episodes"][:2]:
+            c.accept_terminal(terminal(store, g, e))
+        for e in g["episodes"][2:]:
+            store.write_attempt(g, "handback", {**e, "reason": "drain"}, "handback-" + e["episode_key"])
+        c.close_assignment(g["attempt_id"], sim_stopped=True)
+        assert c.state["retries"] == {} and c.summary()["U"] == 0
+        assert c.state["assignments"][g["attempt_id"]]["closed"]
+        c.register_slot(slot(1))
+        retry = c.claim("remaining", "slot-1")["grant"]
+        assert retry["episodes"] == g["episodes"][2:]
+        assert retry["generation"] == 1
+    with Controller(store) as c:
+        assert c.state["assignments"][g["attempt_id"]]["closed"]
+        assert c.summary()["U"] == 0
+
+
+def test_drain_refuses_started_handback(tmp_path):
+    store = setup_queue(tmp_path, 1)
+    with Controller(store) as c:
+        c.register_slot(slot())
+        g = c.claim("started", "slot-0")["grant"]
+        e = g["episodes"][0]
+        store.write_attempt(g, "started", e, "start")
+        store.write_attempt(g, "handback", {**e, "reason": "drain"}, "return")
+        with pytest.raises(ValueError, match="已开始"):
+            c.close_assignment(g["attempt_id"], sim_stopped=True)
+
+
+def test_raw_client_receipts_recovered_before_generation(tmp_path):
+    store = setup_queue(tmp_path)
+    with Controller(store) as c:
+        c.register_slot(slot())
+        g = c.claim("raw", "slot-0")["grant"]
+        client = Path(g["attempt_dir"]) / "client"
+        for e in g["episodes"][:3]:
+            identity = {**e, "run_identity_sha256": g["run_identity_sha256"],
+                        "chunk_id": g["chunk_id"], "episode_nonce": "nonce"}
+            publish(client / f"{e['episode_key']}.started.json", {**identity, "record_type": "started"})
+            if e["episode_id"] < 2:
+                publish(client / f"{e['episode_key']}.terminal.json", {**identity, "record_type": "terminal",
+                    "outcome": "success", "actions_executed": 5, "rpc_seq": 2})
+        # 模拟G一份原始收据也未来得及包裹便退出resident。
+        assert not list((Path(g["attempt_dir"]) / "started").glob("*.json"))
+        store.request("step-died", "worker_infra", {"slot_instance": "slot-0", "error": "verified step exit"})
+        c.process_requests()
+        assert c.summary()["compute_status"] == "WAIT"
+        store.request("recover", "recover", {"proofs": [proof(slot())]})
+        c.process_requests()
+        response = store.query("recover")
+        assert response["status"] == "RECOVERED"
+        assert response["summary"]["execution_coverage"] == 2
+        assert response["summary"]["U"] == 1
+        assert c.state["retries"] == {"Task:2": 1}
+        assert c.state["generations"][g["chunk_id"]] == 1
+
+
+def test_raw_client_identity_mismatch_quarantined(tmp_path):
+    store = setup_queue(tmp_path, 1)
+    with Controller(store) as c:
+        c.register_slot(slot())
+        g = c.claim("raw", "slot-0")["grant"]
+        e = g["episodes"][0]
+        payload = {**e, "env_seed": 999, "run_identity_sha256": "a" * 64, "chunk_id": g["chunk_id"],
+                   "episode_nonce": "nonce", "record_type": "terminal", "outcome": "success",
+                   "actions_executed": 1, "rpc_seq": 1}
+        publish(Path(g["attempt_dir"]) / "client" / "Task:0.terminal.json", payload)
+        c.begin_recovery("verified death")
+        c.recover([proof(slot())])
+        assert not c._accepted()
+        assert list((store.root / "quarantine").glob("*.json"))
+
+
+def test_worker_died_before_register_uses_verified_pool_step(tmp_path):
+    store = setup_queue(tmp_path)
+    member = {**slot(1, "STARTING"), "launch_id": "launch-1"}
+    publish(store.root / "pool/ledger.json", {"state": "ACTIVE", "pool_revision": 1,
+                                              "slots": {"slot-1": member}})
+    with Controller(store) as c:
+        store.request("unregistered-step-dead", "worker_infra", {"slot_instance": "slot-1", "error": "step failed"})
+        c.process_requests()
+        assert set(c.state["freeze"]["slots"]) == {"slot-1"}
+        c.recover([proof(member)])
+        assert c.state["slots"]["slot-1"]["state"] == "TERMINATED"
+
+
+def test_controller_cli_enters_recovery_and_publishes_summary(tmp_path):
+    store = setup_queue(tmp_path, 1)
+    with Controller(store) as c:
+        c.register_slot(slot())
+        c.claim("abrupt-step-exit", "slot-0")
+    proofs = tmp_path / "proofs.json"
+    proofs.write_text(json.dumps([proof(slot())]))
+    script = Path(__file__).resolve().parents[2] / "scripts/evaluation/official_queue.py"
+    result = subprocess.run([sys.executable, str(script), "controller", "--run-root", str(store.root),
+                             "--recovery-proofs", str(proofs), "--once"], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    summary = read_json(store.root / "queue/summary.json")
+    assert summary["compute_status"] == "READY"
+    with Controller(store) as c:
+        assert c.state["assignments"][next(iter(c.state["assignments"]))]["closed"]
+
+
+def test_freeze_excludes_retired_pool_slots(tmp_path):
+    store = setup_queue(tmp_path)
+    retired = slot(1, "RETIRED")
+    terminal_hold = slot(2, "TERMINAL")
+    publish(store.root / "pool/ledger.json", {"state": "ACTIVE", "pool_revision": 1,
+                 "slots": {"slot-1": retired, "slot-2": terminal_hold, "slot-0": slot()}})
+    with Controller(store) as c:
+        freeze = c.begin_recovery("new fault")
+        assert set(freeze["slots"]) == {"slot-0"}
+
+
+def test_unregistered_starting_step_late_binding_requires_exact_launch(tmp_path):
+    store = setup_queue(tmp_path)
+    member = {**slot(1, "STARTING"), "step_id": None, "launch_id": "launch-1"}
+    publish(store.root / "pool/ledger.json", {"state": "ACTIVE", "pool_revision": 1,
+                                              "slots": {"slot-1": member}})
+    with Controller(store) as c:
+        c.begin_recovery("starting death")
+        p = {**proof(member), "step_id": "0", "launch_id": "launch-1", "slurm_job_name": "wrong"}
+        with pytest.raises(ValueError, match="正向绑定"):
+            c.recover([p])
+        p["slurm_job_name"] = "official-resident-launch-1"
+        c.recover([p])
+        assert c.state["slots"]["slot-1"]["step_id"] == "0"
+        assert c.state["slots"]["slot-1"]["step_binding"]["launch_id"] == "launch-1"

@@ -70,6 +70,10 @@ def validate_episodes(manifest, *, official=True):
         flattened.extend(members)
     if flattened != keys:
         raise ValueError("chunk覆盖不符")
+    if official:
+        expected_chunks = [keys[i:i + 5] for i in range(0, 800, 5)]
+        if [chunk["episode_keys"] for chunk in manifest["chunks"]] != expected_chunks:
+            raise ValueError("官方必须为固定160块，每块恰好5局")
     return manifest
 
 
@@ -190,6 +194,9 @@ def bind_model(manifest, models, target_contract, *, validation=False):
     if provenance_path not in declared:
         raise ValueError("训练来源不在锁定成员清单")
     provenance = json.loads((root / provenance_path).read_text())
+    reference_pin = model.get("reference_manifest_sha256", "")
+    if re.fullmatch("[0-9a-f]{64}", reference_pin) is None:
+        raise ValueError("缺已交付参考包的独立SHA256锚点")
     target_path = Path(target_contract)
     target = json.loads(target_path.read_text())
 
@@ -203,7 +210,8 @@ def bind_model(manifest, models, target_contract, *, validation=False):
 
     # 此处静态复核已测目标配置；worker握手仍须核真实actual_runtime。
     validated = validate_target_contract(target_path, training_provenance=provenance,
-                                         actual_runtime=target_runtime(target["training_runtime"]))
+                                         actual_runtime=target_runtime(target["training_runtime"]),
+                                         expected_reference_manifest_sha256=reference_pin)
     if validated["motion_identity_sha256"] != model["motion_identity_sha256"]:
         raise ValueError("VLA与目标证书motion身份不符")
     purpose = "validation" if validation else "production"
@@ -221,9 +229,30 @@ def bind_model(manifest, models, target_contract, *, validation=False):
                                                "motion_budget": 96, "position_limit": 4096}}
     return seal({"schema_version": 1, "purpose": purpose, "model_id": model["model_id"],
                  "model_seed": 42, "checkpoint_root": str(root), "model_descriptor": descriptor,
+                 "episode_manifest": manifest, "model_source": model,
                  identity_key: model_identity, "run_descriptor": run_descriptor,
                  "run_identity_sha256": descriptor_identity("validation_run" if validation else "run", run_descriptor),
                  "episode_manifest_sha256": manifest["sha256"]})
+
+
+def verify_model_binding(binding_or_path, target_contract_path, *, expected_checkpoint_root=None,
+                         expected_purpose=None, expected_run_identity_sha256=None):
+    """启动入口重算签封输入和实际模型字节，绝不只相信传入run字符串。"""
+    binding = json.loads(Path(binding_or_path).read_text()) if isinstance(binding_or_path, (str, Path)) else binding_or_path
+    verify_seal(binding)
+    if binding.get("purpose") not in {"production", "validation"}:
+        raise ValueError("model binding用途不符")
+    if expected_purpose is not None and binding["purpose"] != expected_purpose:
+        raise ValueError("model binding与启动用途不符")
+    if expected_checkpoint_root is not None and Path(expected_checkpoint_root).resolve(strict=True) != Path(binding["checkpoint_root"]):
+        raise ValueError("实际加载模型目录不等于model binding")
+    if expected_run_identity_sha256 is not None and binding["run_identity_sha256"] != expected_run_identity_sha256:
+        raise ValueError("model binding与启动run身份不符")
+    actual = bind_model(binding["episode_manifest"], {"models": [binding["model_source"]]},
+                        target_contract_path, validation=binding["purpose"] == "validation")
+    if actual != binding:
+        raise ValueError("model binding重算与现场checkpoint/目标证书不符")
+    return actual
 
 
 def main(argv=None):

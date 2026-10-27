@@ -8,10 +8,10 @@ import signal
 import threading
 
 try:
-    from .queue_store import Controller, QueueStore, publish, read_json
+    from .queue_store import Controller, QueueStore, publish, read_json, replace_json
     from .manifest import validate_episodes
 except ImportError:
-    from queue_store import Controller, QueueStore, publish, read_json
+    from queue_store import Controller, QueueStore, publish, read_json, replace_json
     from manifest import validate_episodes
 
 
@@ -71,11 +71,14 @@ def main(argv=None):
         for slot in args.slot:
             controller.register_slot(read_json(slot))
         if args.recovery_proofs:
+            if controller.state["phase"] != "RECOVERING":
+                controller.begin_recovery("显式旧step静止证明")
             controller.recover(read_json(args.recovery_proofs))
         # 资源取消由G的已核账本执行；本控制器从不根据账号作业列表猜取消对象。
         while not stopped.is_set():
             controller.process_requests()
             result = controller.summary()
+            replace_json(store.root / "queue/summary.json", result)
             if args.once or result["compute_status"] in {"COMPUTE_DONE", "STOPPED_ERROR"}:
                 print(json.dumps(result, ensure_ascii=False))
                 return 2 if result["compute_status"] == "STOPPED_ERROR" else 0

@@ -16,7 +16,7 @@ except ImportError:
     from manifest import canonical_bytes, digest, validate_episodes
 
 
-TERMINAL_STATES = {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "TERMINATED"}
+TERMINAL_STATES = {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "TERMINATED", "RETIRED", "TERMINAL"}
 SLOT_FIELDS = ("slot_instance", "worker_uuid", "job_id", "job_incarnation", "step_id")
 
 
@@ -217,6 +217,11 @@ class Controller:
             exhausted.update(event.get("exhausted", []))
             for key, count in event.get("retries", {}).items():
                 retries[key] = max(retries.get(key, 0), count)
+            if event.get("kind") == "handback_close":
+                if event["attempt_id"] in self.state["assignments"]:
+                    self.state["assignments"][event["attempt_id"]]["closed"] = True
+                chunk_id = event["chunk_id"]
+                self.state["generations"][chunk_id] = max(self.state["generations"].get(chunk_id, 0), event["generation"])
         self.state["uncertain"] = sorted(uncertain)
         self.state["retries"] = retries
         self.state["exhausted"] = sorted(exhausted)
@@ -325,7 +330,7 @@ class Controller:
         if not path.is_relative_to(self.root / "attempts") or original.is_symlink():
             raise ValueError("receipt越界")
         record = read_json(path)
-        if record.get("schema_version") != 1 or not isinstance(record.get("payload"), dict):
+        if not isinstance(record, dict) or record.get("schema_version") != 1 or not isinstance(record.get("payload"), dict):
             raise ValueError("receipt schema不符")
         assignment = self.state["assignments"].get(record["attempt_id"])
         if assignment is None:
@@ -406,13 +411,90 @@ class Controller:
         self._assert_lock()
         if not sim_stopped:
             raise ValueError("必须确认sim停止")
+        if self.state["phase"] == "RECOVERING":
+            raise ValueError("恢复中须先确认全部冻结实体静止")
         assignment = self.state["assignments"][attempt_id]
+        if assignment["closed"]:
+            return
+        grant = assignment["grant"]
+        self._import_client_records(grant)
+        directory = self.root / "attempts" / attempt_id
+        for path in sorted((directory / "terminal").glob("*.json")):
+            self.accept_terminal(path)
+        for path in sorted((directory / "artifact").glob("*.json")):
+            self.accept_artifact(path)
         accepted = self._accepted()
-        if any(e["episode_key"] not in accepted and e["episode_key"] not in self.state["exhausted"]
-               for e in assignment["grant"]["episodes"]):
-            raise ValueError("assignment尚有未封口成员，须恢复或归还")
+        missing = {e["episode_key"] for e in grant["episodes"]
+                   if e["episode_key"] not in accepted and e["episode_key"] not in self.state["exhausted"]}
+        if missing:
+            returned, started = set(), set()
+            for kind in ("handback", "started", "infra"):
+                for path in sorted((directory / kind).glob("*.json")):
+                    record, _, episode = self._record(path)
+                    if kind == "handback":
+                        if record["payload"].get("reason") != "drain":
+                            raise ValueError("归还必须明确是未开始drain成员")
+                        returned.add(episode["episode_key"])
+                    else:
+                        started.add(episode["episode_key"])
+            if not missing <= returned or missing & started or returned - missing:
+                raise ValueError("assignment尚有未封口成员，或归还成员已开始")
+            event = {"kind": "handback_close", "attempt_id": attempt_id, "chunk_id": grant["chunk_id"],
+                     "generation": grant["generation"] + 1, "returned": sorted(returned)}
+            event_path = self.root / "history" / f"close-{attempt_id}.json"
+            if not event_path.exists():
+                publish(event_path, event)
+            self.state["generations"][grant["chunk_id"]] = event["generation"]
         assignment["closed"] = True
         self._save()
+
+    def _import_client_records(self, grant):
+        """仅在sim/step已确证静止后补收A原始文件，覆盖G轮询前骤死窗口。"""
+        directory = self.root / "attempts" / grant["attempt_id"] / "client"
+        if not directory.exists():
+            return
+        if directory.is_symlink() or directory.resolve() != directory:
+            raise ValueError("原始client目录不是本attempt实体目录")
+        members = {e["episode_key"]: e for e in grant["episodes"]}
+        nonces = {}
+        for kind in ("started", "terminal", "infra", "artifact"):
+            paths = list(directory.glob(f"*.{kind}.json"))
+            if kind == "artifact":
+                paths += list(directory.glob("*.close-error.json")) + list(directory.glob("*.artifact-error.json"))
+            for path in sorted(paths):
+                try:
+                    if path.is_symlink() or path.resolve().parent != directory:
+                        raise ValueError("原始client文件越界")
+                    payload = read_json(path)
+                    key = payload.get("episode_key")
+                    if kind == "infra" and key is None:
+                        # 无episode的启动错误由G正向核step后提交worker_error/worker_infra。
+                        continue
+                    if key not in members or payload.get("record_type") != kind:
+                        raise ValueError("原始client记录类型或episode身份错误")
+                    if payload.get("run_identity_sha256") != grant["run_identity_sha256"] or payload.get("chunk_id") != grant["chunk_id"]:
+                        raise ValueError("原始client记录跨run/chunk")
+                    if any(payload.get(f) != members[key][f] for f in ("task_name", "episode_id", "env_seed", "difficulty")):
+                        raise ValueError("原始client记录seed/difficulty错误")
+                    nonce = payload.get("episode_nonce")
+                    if not isinstance(nonce, str) or not nonce or key in nonces and nonces[key] != nonce:
+                        raise ValueError("原始client episode_nonce不一致")
+                    nonces[key] = nonce
+                    if kind == "artifact":
+                        files = []
+                        for item in payload.get("files", []):
+                            relative = Path(item["path"])
+                            if relative.is_absolute() or ".." in relative.parts:
+                                raise ValueError("原始artifact路径越界")
+                            asset = (directory / relative).resolve()
+                            if not asset.is_relative_to(directory):
+                                raise ValueError("原始artifact路径越界")
+                            files.append({**item, "path": str(asset.relative_to(self.root))})
+                        payload = {**payload, "files": files}
+                    receipt_id = hashlib.sha256(path.name.encode()).hexdigest()
+                    self.store.write_attempt(grant, kind, payload, receipt_id)
+                except (ValueError, KeyError, OSError, TypeError, AttributeError) as exc:
+                    self._quarantine(path, str(exc))
 
     def begin_recovery(self, reason):
         self._assert_lock()
@@ -457,6 +539,19 @@ class Controller:
             raise ValueError("必须证明全部冻结membership静止")
         for key, slot in freeze["slots"].items():
             proof = proof_map[key]
+            if slot.get("step_id") is None and proof.get("step_id") is not None:
+                # 尚未注册的launch只可凭精确launch名的正向Slurm事实补绑一次。
+                launch = slot.get("launch_id")
+                if (key in self.state["slots"] or not launch or proof.get("launch_id") != launch
+                        or proof.get("slurm_job_name") != f"official-resident-{launch}"
+                        or not str(proof["step_id"]).isdigit()
+                        or any(proof.get(f) != slot.get(f) for f in SLOT_FIELDS[:-1])
+                        or any(proof.get(f) is not True for f in ("terminal", "rpc_quiescent", "sidecar_quiescent"))):
+                    raise ValueError("未注册step缺少精确launch名的正向绑定证明")
+                slot["step_id"] = proof["step_id"]
+                slot["step_binding"] = {"launch_id": launch, "slurm_job_name": proof["slurm_job_name"],
+                                        "step_id": proof["step_id"]}
+                self._save()
             if any(proof.get(f) != slot.get(f) for f in SLOT_FIELDS) or any(proof.get(f) is not True for f in
                     ("terminal", "rpc_quiescent", "sidecar_quiescent")):
                 raise ValueError("旧step incarnation或执行实体仍不确定")
@@ -466,9 +561,12 @@ class Controller:
         # 所有静止证明齐全之后，先接收尚可接受的旧代正常终局。
         for assignment in self.state["assignments"].values():
             if not assignment["closed"]:
+                self._import_client_records(assignment["grant"])
                 directory = self.root / "attempts" / assignment["grant"]["attempt_id"]
                 for path in sorted((directory / "terminal").glob("*.json")):
                     self.accept_terminal(path, recovering=True)
+                for path in sorted((directory / "artifact").glob("*.json")):
+                    self.accept_artifact(path)
         accepted = self._accepted()
         event = {"freeze": deepcopy(freeze), "uncertain": [], "retries": {}, "exhausted": [],
                  "closed_assignments": [], "generations": {}, "ownerless": []}
@@ -532,8 +630,7 @@ class Controller:
         self.state["generations"].update(event["generations"])
         self.state["recovered_ownerless"] = sorted(set(self.state.get("recovered_ownerless", [])) | set(event["ownerless"]))
         for key in event["freeze"]["slots"]:
-            if key in self.state["slots"]:
-                self.state["slots"][key]["state"] = "TERMINATED"
+            self.state["slots"][key] = {**event["freeze"]["slots"][key], "state": "TERMINATED"}
         self.state["phase"] = "RUNNING"
         self.state["freeze"] = None
         self.state["revision"] += 1
@@ -600,10 +697,23 @@ class Controller:
                 elif operation == "artifact":
                     response = {"status": "ACCEPTED" if self.accept_artifact(payload["path"]) else "REJECTED"}
                 elif operation == "worker_infra":
+                    known = self.state["slots"].get(payload["slot_instance"])
+                    if known and known.get("state") in TERMINAL_STATES:
+                        response = {"status": "ALREADY_TERMINATED"}
+                        publish(target_response, response)
+                        responses.append((rid, response))
+                        continue
                     if payload["slot_instance"] not in self.state["slots"]:
-                        raise ValueError("未知worker错误来源")
+                        ledger = read_json(self.root / "pool/ledger.json")
+                        member = ledger["slots"].get(payload["slot_instance"])
+                        if not member or not member.get("launch_id") or member.get("step_id") is None:
+                            raise ValueError("未知或尚未核定精确step的worker错误来源")
                     self.begin_recovery("worker全局基础设施错误:" + str(payload["error"]))
                     response = {"status": "RECOVERING"}
+                elif operation == "recover":
+                    if self.state["phase"] != "RECOVERING":
+                        self.begin_recovery("资源owner核定旧step终态")
+                    response = {"status": "RECOVERED", "summary": self.recover(payload["proofs"])}
                 elif operation == "worker_error":
                     if payload.get("retryable") is not False or payload.get("uncertain_terminal") is not False:
                         raise ValueError("全局worker_error仅接受明确不可重试且无终局不确定的错误")
