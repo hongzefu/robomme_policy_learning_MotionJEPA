@@ -12,74 +12,36 @@
 <body><main>
 <div class="eyebrow">计划日期：2026-10-26（美东） · 任务标识：official-benchmark-stage2-eval · 当前状态：仅计划方案，两阶段均未开工；已获文档推送授权</div>
 <h1>第一部分（给人看）</h1>
-<div class="lead"><strong>目标：</strong>在从 policy 固定基线分出的独立 eval 分支中，沿用官方 RoboMME 的环境、测试集与动作执行口径，接入现有 Stage2 motion 在线记忆；后续在 Great Lakes 用数量可变的持久GPU worker 动态领取任务，完成每个选定 checkpoint 的 800 局官方评估。</div>
-<p><strong>这份方案分为恰好两个未来阶段，均待用户后续明确开工：</strong>阶段 I 合并源码实现与组件验证，全部从 sled-aspen／sled-vail 的独立 eval 工作区完成开发、CPU 测试、SSH／NFS／队列验证，并在可用的已授权 A40 席位上完成真实 motion 与资源验证；阶段 II 在当前 Stage2 60k checkpoint 预计到达目标 NFS 前两小时按显式目标N配置占位job池，先补可能未完成的 A40 门，待完整就绪和全部必需门禁通过后正式评估收官。</p>
-<p><strong>本轮只交付 HTML 计划。</strong>不实现代码、不启动 GPU／仿真、不连接 Great Lakes、不提交 Slurm，不改训练目录、环境或数据；代码草稿不合入 eval 分支。下文命令和 PASS 行是未来实施合同，不是开工令、实测结果或通过证明。</p>
-<p class="stop">授权边界：本轮只修订计划，用户已明确同意推送 <code>v4-eval-official-1026</code>；两个阶段的代码、验证和提交 job 仍需后续明确开工。推送和设计审查均不构成开工令，状态机登记也尚未获得明确同意。</p>
-<p>工作分支为 <code>v4-eval-official-1026</code>，源码起点固定为 <code>d7912e4d4ccd6a158d2e0b64ccd657fc989d1a24</code>。现有 <code>/scratch/hongze/robomme_policy_learning_MotionJEPA-eval</code> 仅为本文编写和交付位置，未来不在 AWS 开发、测试或运行评估 GPU；AWS 只承担训练并产出只读交付资产，不操作其训练环境。</p>
-<p>未来开发检出建议为 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA-eval</code>，实际位置在 sled-aspen／sled-vail 现场确认；跨节点执行使用后文独立 NFS 副本。全部命令与资源监督从 aspen／vail 发起，模型／VAE／仿真计算在 Great Lakes 节点，不把这些job跑在aspen本地。上游后续修复须按具体 commit 移植、重新审查，不移动本计划基线。</p>
-<p>官方 policy 锚点 <code>ac846a9a4aec841e483b1dc5d620dfe426bde853</code>；其 benchmark gitlink 与本地现有 gitlink 均为 <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>。官方 benchmark 调研 HEAD <code>53673b3c94a723d757e9c235f1961e398950e5e3</code> 的 <code>src/robomme</code> 102 个文件与 gitlink 版本同字节，建议继续钉住 gitlink 以贴合官方 policy。</p>
-<nav class="toc"><a href="#overview">运行总览</a><a href="#official-parity-human">官方 eval 一致性</a><a href="#motion-human">窗口与 padding</a><a href="#target-human">A40 阻断</a><a href="#queue-human">弹性worker队列</a><a href="#gates-human">验收与步骤</a><a href="#details">完整技术细节</a></nav>
-<h2 id="overview">一、要做什么，哪些已经定了</h2>
-<table><thead><tr><th style="width:19%">项目</th><th style="width:48%">本计划口径</th><th>状态与依据</th></tr></thead><tbody>
-<tr><td>评估范围</td><td>官方 16 任务，每任务 test 50 局，共 800 局；完整保留 episode 清单与官方难度分配。</td><td><span class="pill confirmed">已定</span> 官方 policy 与 benchmark，见第二部分来源表。</td></tr>
-<tr><td>首轮模型</td><td>当前 Stage2 motion VLA 的 <code>60000</code> checkpoint、model seed 42；就绪后锁精确路径与完整 SHA 清单。</td><td><span class="pill confirmed">已定</span> 不自动加入无 motion 或官方基线；当前文件尚未到位不阻塞阶段 I 或阶段 II 排队。</td></tr>
-<tr><td>官方动作协议</td><td><code>joint_angle</code>；<code>obs_horizon=16</code>；模型输出 <code>(20,8)</code>，每次执行前 16 动作；当前观测双视，历史仅 front。</td><td><span class="pill confirmed">已定</span> <code>examples/robomme/{eval.py,env_runner.py,utils.py}</code>。</td></tr>
-<tr><td>官方终止边界</td><td><code>max_steps=1300</code>，先 step、再 count 加一、再判断 <code>count&gt;1300</code>；第 1301 步 timeout 会覆盖该步 success。</td><td><span class="pill confirmed">已定</span> 保留顺序并对拍；benchmark 内部另有 <code>+2</code>，不能改成 <code>&gt;=</code>。</td></tr>
-<tr><td>集群数量与规格</td><td><code>target_jobs=N</code> 显式配置，无固定默认数量，可运行中增减；建议每job为1×A40、4 CPU、24 GiB、48h。</td><td>实际N受已批准资源包络和账号配额约束；4 CPU仍为待批准规格，不能无限申请或把历史规格当授权。</td></tr>
-<tr><td>工作划分</td><td>每个模型一批；800局固定切160个5局chunk，与N无关。N个worker做完领取下一块，扩容即加入领取，缩容先逐局drain。</td><td><span class="pill confirmed">弹性数量已定</span> 不固定按worker分片；每块新仿真进程，模型与sidecar常驻。</td></tr>
-<tr><td>正式成功率</td><td>无歧义完整成绩须原800局、error=0且不确定终局历史数U=0；每任务成功数／50，均值即总成功数／800。</td><td>U单调保留。U&gt;0且其余局均确定无error时才报带区间的条件成绩[S确定／800，(S确定+U)／800]；其他未知局按去重并集计，不丢母集或换seed。</td></tr>
+<div class="lead"><strong>目标：</strong>在从 policy 固定基线分出的独立 eval 分支中，沿用官方 RoboMME 的环境、测试集与动作执行口径，接入现有 Stage2 motion 在线记忆；在 Great Lakes 的 A40 上用数量可变的持久 GPU worker 动态领取任务，完成每个选定 checkpoint 的 800 局官方评估。</div>
+<p><strong>两个未来阶段，均待用户明确开工：</strong>阶段 I 在 sled-aspen／sled-vail 的独立 eval 工作区实现代码、做 CPU 对拍与 NFS／队列验证，有 A40 席位时做真实 motion 验证；阶段 II 在 Stage2 60k checkpoint 到达 NFS 前两小时配置占位 job 池，门禁齐后正式跑 800 局并收官。本轮只交付 HTML 计划，不写代码、不起 GPU、不连集群、不提交 Slurm；下文判定行是未来合同，不是实测结果。</p>
+<p class="stop">授权边界：用户已同意推送 <code>v4-eval-official-1026</code>；两阶段的代码、验证与提交 job 仍需后续开工令，状态机登记尚未获同意。</p>
+<p>锚点：工作分支 <code>v4-eval-official-1026</code>，源码起点 <code>d7912e4d4ccd6a158d2e0b64ccd657fc989d1a24</code>；官方 policy <code>ac846a9a4aec841e483b1dc5d620dfe426bde853</code>，其 benchmark gitlink 与本地 <code>third_party/robomme_benchmark</code> 子模块同为 <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>（官方 benchmark 当前 HEAD 的 <code>src/robomme</code> 102 个文件与之同字节）。开发检出建议 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA-eval</code>，计算全部在 Great Lakes 节点，aspen／vail 只做开发、控制与监督，AWS 只训练并交付只读资产。</p>
+<nav class="toc"><a href="#overview">已定口径</a><a href="#official-parity-human">官方一致性</a><a href="#motion-human">训练推理一致</a><a href="#queue-human">弹性 worker 队列</a><a href="#gates-human">闸门与步骤</a><a href="#details">完整技术细节</a></nav>
+<h2 id="overview">一、已定口径</h2>
+<table><thead><tr><th style="width:19%">项目</th><th>口径</th></tr></thead><tbody>
+<tr><td>评估范围</td><td>官方 16 任务 × test 50 局 = 800 局，episode 清单与难度完整沿用官方 metadata，不重抽 seed。</td></tr>
+<tr><td>首轮模型</td><td>当前 Stage2 motion VLA 的 60000 checkpoint，model seed 42；就绪后锁精确路径与 SHA。</td></tr>
+<tr><td>动作协议</td><td>joint_angle；obs_horizon=16；模型输出 (20,8)，每次只执行前 16 个动作再重规划；当前观测双视，历史仅 front。</td></tr>
+<tr><td>终止边界</td><td>max_steps=1300，先 step、count 加一、再判 count&gt;1300；第 1301 步 timeout 覆盖该步 success，不改成 &gt;=。</td></tr>
+<tr><td>计算资源</td><td>全部在 Great Lakes A40；worker 数 N 显式配置、无默认值、运行中可增减；每 job 建议 1×A40／4 CPU／24 GiB／48h，规格与总量仍待批准。</td></tr>
+<tr><td>工作划分</td><td>800 局固定切 160 个 5 局 chunk、16 任务 round-robin 混排，与 N 无关；worker 做完一块领下一块。</td></tr>
+<tr><td>成绩口径</td><td>无歧义成绩须原 800 局、error=0、不确定终局数 U=0：每任务成功数／50，均值即总成功数／800；U&gt;0 只报区间 [S／800，(S+U)／800]。</td></tr>
+<tr><td>环境</td><td>三套独立 NFS 解释器：policy（torch 2.7.1）、Stage2 sidecar（torch 2.9.0）、官方仿真／client（torch 2.9.1），实际 import 路径逐一核对。</td></tr>
 </tbody></table>
-<p>目录沿用官方结构：评估主体留在 <code>examples/robomme/</code>；模型入口沿用本 fork 的 <code>scripts/training/serve_policy.py</code>（官方原版是 <code>scripts/serve_policy.py</code>）；仅 Great Lakes 调度、队列、清单与汇总工具新增到 <code>scripts/evaluation/</code>。benchmark 继续作为官方子模块使用。</p>
-<h2 id="official-parity-human">二、如何与官方 eval 机制保持一致</h2>
-<p><strong>做法是锁定并复用官方benchmark与普通MME-VLA客户端单局循环。</strong>参照路径固定为 <code>perceptual / frame_sampling</code>、<code>subgoal_type=None</code>，不把symbolic／oracle／MemER路径算入一致性承诺。motion只改变policy内部可用记忆，是模型比较变量；GL队列只改变领取顺序与进程生命周期。这里的“一致”指评估协议、输入、动作执行、终止和统计口径一致，不要求不同模型动作或成功率相同。</p>
-<h3>权威来源锁到哪些代码</h3>
-<table><thead><tr><th style="width:21%">来源</th><th style="width:40%">固定版本与可读代码</th><th>本计划采用什么</th></tr></thead><tbody>
-<tr><td>官方policy</td><td><code>ac846a9a4aec841e483b1dc5d620dfe426bde853</code>；<a href="https://github.com/RoboMME/robomme_policy_learning/blob/ac846a9a4aec841e483b1dc5d620dfe426bde853/examples/robomme/eval.py">eval.py::EpisodeEvaluator／evaluate</a>、<a href="https://github.com/RoboMME/robomme_policy_learning/blob/ac846a9a4aec841e483b1dc5d620dfe426bde853/examples/robomme/env_runner.py">env_runner.py::EnvRunner</a>、<a href="https://github.com/RoboMME/robomme_policy_learning/blob/ac846a9a4aec841e483b1dc5d620dfe426bde853/examples/robomme/utils.py">utils.py::pack_buffer</a>。</td><td>普通history路径；保留正常单局调用顺序，对故障处理作明确列出的工程修复。</td></tr>
-<tr><td>官方benchmark</td><td>官方policy gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>；<a href="https://github.com/RoboMME/robomme_benchmark/blob/856bc3a189d4172f3f47dbee4424d585f8d78db3/src/robomme/env_record_wrapper/episode_config_resolver.py">BenchmarkEnvBuilder::resolve_episode／make_env_for_episode</a>、<a href="https://github.com/RoboMME/robomme_benchmark/blob/856bc3a189d4172f3f47dbee4424d585f8d78db3/src/robomme/env_record_wrapper/DemonstrationWrapper.py">DemonstrationWrapper::reset／step</a>。</td><td>直接复用官方环境、wrapper与test metadata；环境源码不改、不monkeypatch，资产与metadata另锁SHA。</td></tr>
-<tr><td>ManiSkill依赖</td><td><a href="https://github.com/YinpeiDai/ManiSkill/tree/07be6fbc66350ddca200abfb0a11b692f078f7fd">07be6fbc66350ddca200abfb0a11b692f078f7fd</a>，来自<a href="https://github.com/RoboMME/robomme_benchmark/blob/856bc3a189d4172f3f47dbee4424d585f8d78db3/pyproject.toml">benchmark的pyproject.toml／uv.lock</a>。</td><td>消费固定依赖commit；官方示例requirements中的移动dev引用不能在实际运行时漂移，现场另核真实import路径。</td></tr>
-</tbody></table>
-<h3>逐项保留什么，必要改造怎样不改变单局条件</h3>
-<table><thead><tr><th style="width:23%">官方行为</th><th style="width:26%">本fork文件／函数锚点</th><th style="width:30%">保留或必要变化</th><th>拟验证</th></tr></thead><tbody>
-<tr><td>test的16任务×50官方episode，由metadata解析seed／difficulty。</td><td><code>examples/robomme/utils.py::TASK_NAME_LIST</code>；<code>env_runner.py::EnvRunner.make_env</code>。</td><td>清单只选择官方episode；manifest／chunk不能重抽seed、改difficulty或补额外demo。</td><td>任务／episode全集、metadata SHA与每局解析值一致。</td></tr>
-<tr><td><code>action_space=joint_angle</code>，builder使用<code>control_mode=pd_joint_pos</code>。</td><td><code>env_runner.py::EnvRunner.__init__</code>；官方<code>BenchmarkEnvBuilder</code>。</td><td>直接复用控制模式与动作解释，不切末端位姿或私有控制器。</td><td>ENV_PIN与构造参数审计；固定动作回放。</td></tr>
-<tr><td>reset返回真实demo＋exec0；wrapper过滤NO RECORD，并含reset内init_action。</td><td><code>env_runner.py::get_init_obs</code>；<code>eval.py::EpisodeEvaluator.init_episode</code>。</td><td><code>D=len(images)-1</code>；用返回观测序号，保留terminal递归step行为，不把物理仿真步当帧号。</td><td>front／wrist／state对齐，D与wrapper trace、过滤、初始动作记录一致。</td></tr>
-<tr><td>state为七关节位置＋第一指qpos，共8维；当前infer使用front、wrist与prompt。</td><td><code>env_runner.py::pack_state</code>；<code>eval.py::get_action_chunk</code>。</td><td>保持float32状态与当前双视；夹爪观测不是±1动作编码，prompt仍来自官方task_goal。</td><td>原有观测字段shape／dtype／SHA与prompt逐字比较。</td></tr>
-<tr><td>history仅front，首包完整D+1帧，携带exec_start_idx。</td><td><code>utils.py::pack_buffer</code>；<code>eval.py::get_action_chunk</code>。</td><td>保留原始256域uint8 front与state；motion由server内部同一历史计算，不向环境加帧。</td><td>首包全域0…D，后续exec包连续无重漏；raw像素SHA与D一致。</td></tr>
-<tr><td>先reset完成，再add_buffer完成，最后infer。</td><td><code>eval.py::eval_each_episode／get_action_chunk</code>；websocket server。</td><td>正常ACK顺序不变；新增单活动attempt、包序与身份验证。ACK不确定时整局abort，属于明确的故障路径变化。</td><td>原语义调用trace对拍；新审计字段单验，丢ACK／重复连接禁止盲重发。</td></tr>
-<tr><td>预测20动作，只执行前16；用完后追加16个真实观测再重规划。</td><td><code>eval.py::get_action_chunk</code>与<code>EpisodeEvaluator.eval_each_episode</code>。</td><td><code>(20,8)[:16]</code>，余4个丢弃；无提前终止时每16动作一次infer，不改为32步。</td><td>确定性fake policy给可识别动作序列，核每次选出的16动作及执行顺序。</td></tr>
-<tr><td>model seed默认42；环境seed由官方episode决定。</td><td><code>scripts/training/serve_policy.py::create_policy</code>，对应<a href="https://github.com/RoboMME/robomme_policy_learning/blob/ac846a9a4aec841e483b1dc5d620dfe426bde853/scripts/serve_policy.py">官方scripts/serve_policy.py::create_policy</a>。</td><td>server实际传42并回metadata；目录名不代替RNG设置，每局reset清策略状态，环境seed不被42覆盖。</td><td>server实参／metadata／reset初始随机流与episode seed分别核验。</td></tr>
-<tr><td>max_steps=1300；先step，count+=1，再判断count&gt;1300；builder内部另加2。</td><td><code>eval.py::eval_each_episode</code>；<code>env_runner.py::step</code>；官方builder。</td><td>保留顺序和<code>&gt;</code>，不能改<code>&gt;=</code>；上层timeout检查先于处理stop_flag。</td><td>逐步trace核1300／1301，包括同一步环境报告success。</td></tr>
-<tr><td>读取<code>info.get("status","unknown")</code>，stop来自terminated或truncated。</td><td><code>env_runner.py::step</code>；<code>eval.py::eval_each_episode／evaluate</code>。</td><td>不自造距离或奖励阈值判success；保留官方status与上层timeout覆盖，再存typed结果。</td><td>核status、stop、count与最终success／fail／timeout映射。</td></tr>
-<tr><td>完整无error且无不确定终局历史时，每任务成功数／50，均值等于总成功数／800。</td><td><code>eval.py::evaluate</code>；拟<code>scripts/evaluation/official_queue.py</code>汇总。</td><td>N不改身份／seed／reset；新增不确定历史U必须保留，不能靠重试success伪装成无歧义单次成绩。</td><td>固定800全集；公式与规范化收据一致；U&gt;0只报带区间的条件成绩。</td></tr>
-</tbody></table>
-<h3>一局实际按照什么顺序走</h3>
+<p>目录沿用官方：评估主体留在 <code>examples/robomme/</code>，模型入口沿用本 fork 的 <code>scripts/training/serve_policy.py</code>，GL 调度、队列与汇总工具新增到 <code>scripts/evaluation/</code>；benchmark 继续作为官方子模块使用。</p>
+
+<h2 id="official-parity-human">二、与官方 eval 机制一致</h2>
+<p>一致靠「锁定并复用」：官方 benchmark 以子模块 gitlink 直接复用环境、wrapper 与 test metadata，环境源码零改动、不 monkeypatch；客户端沿用官方 <code>eval.py</code>／<code>env_runner.py</code>／<code>utils.py</code> 的单局顺序：reset 完成 → 首包送完整 demo＋exec0 历史并确认 add_buffer → 以当前双视＋prompt 调 infer → 取 20 动作中前 16 逐步执行 → 积累 16 个新观测后重复 → 终局由官方 status 与 1301 边界决定。motion 只改变 policy 内部记忆，是模型比较变量；队列只改变领取顺序与进程生命周期。新增的 chunk 清单、typed 结果、单会话身份、ACK 不确定即整局 abort 只改故障路径，正常路径不变。</p>
+<p>证明一致的四层验收，目前均未执行：<code>ENV_PIN</code>／<code>OFFICIAL_DIFF</code>（commit、metadata、资产 SHA 与逐函数 diff）；<code>OFFICIAL_CLIENT_TRACE</code>（冻结观测 trace＋确定性 fake policy 驱动官方与候选客户端，比较调用顺序、payload、D、每次选出的 16 动作与 count 0／1／1299／1300／1301）；<code>OFFICIAL_SIM_REPLAY</code>（同 seed 固定动作回放核 reset／wrapper／status）；<code>OFFICIAL_QUEUE_PARITY</code>（N=1、多 N、中途扩缩的终局收据集合在 mock 重放上严格相等）。</p>
+
+<h2 id="motion-human">三、训练与推理一致</h2>
+<p>一致性不是「每 16 步算一次 motion」，而是推理与训练共用同一组合同，逐项如下。</p>
 <ol>
-<li><code>evaluate → EnvRunner.make_env</code>按清单选择官方episode；builder读取其test seed／difficulty，创建原版环境与wrapper。server由<code>serve_policy.create_policy</code>加载固定模型和seed42，客户端先核所连服务身份。</li>
-<li><code>EpisodeEvaluator.eval_each_episode</code>请求policy reset并等完成；<code>init_episode → get_init_obs</code>取得官方reset输出，保留完整demo＋exec0，记录D与当前front／wrist／state8／task_goal。</li>
-<li><code>get_action_chunk → utils.pack_buffer</code>送入完整首包front历史和state，确认add_buffer后才以当前双视和prompt调用infer。server内部视觉／motion处理见<a href="#process-data-chain">图二进程链</a>，不回写环境。</li>
-<li>模型返回20×8动作，客户端仅排入前16；逐步<code>EnvRunner.step</code>，先count加一和官方上限检查，再保存返回观测、处理官方stop。未提前终止时积累16个新观测后重复上一步。</li>
-<li>终局由官方status与客户端1301边界决定；先存terminal outcome，再独立封口视频／日志。正常终局不因产物失败重跑policy；N变化只决定哪个worker接下一局。</li>
+<li><strong>同一窗口定义与两种 padding。</strong><code>FrameSampMemory::_encode_ready_windows</code> 与 <code>motion_store::visible_motion_rows</code> 用同一 demo／exec 网格：窗口 33、步长 32；demo 起点 32m 至少 17 个真实帧才保留、不满 33 重复末帧（mask=True）；exec 起点 D+32m 须满足 32m+32≤q，不尾补、不跨段、不偷看未来；窗口总数 ≤96，超过即报错。容量 padding 另算：不足 96 槽右侧填零、mask=False、时间填 2147483647。官方 16 步重规划只是调用节奏，exec 首窗到 q=32 才可见。</li>
+<li><strong>同一权重与同一数值模式，encoder dropout 关闭。</strong>固定 VAE 与 epoch105 EMA encoder，fp32、tf32 关闭；训练建库与推理 sidecar 都经同一个 <code>motion_jepa.export.stage2_memory::load_ema_encoder</code> 加载，它固定 <code>requires_grad_(False).eval()</code>，<code>encode_windows</code> 加 <code>no_grad</code>，所以 <strong>encoder 的 dropout 在建数据集与在线推理两侧同样关闭</strong>，推理不得切回 train 模式；sidecar 握手把 encoder、state SHA、source_pin、numerics 与训练离线库 provenance 逐键比对，不等即拒绝。VLA 本体推理固定 <code>train=False</code>，无训练增强与 dropout，num_steps=10、horizon 20／执行 16，消费训练交付的 <code>history_config.resolved.yaml</code> 与 normstats，不用默认模板。</li>
+<li><strong>同一排序与位置码。</strong>训练与推理同时导入 <code>shared/sampling.py::memory_order</code>，按 2×全域起点+kind 稳定排序（frame=0、motion=1，同刻 frame 在前）；motion 位置码取窗口起点的 <code>pos_emb[f,0,:pos_dim]</code>，进既有 motion MLP／位置投影与 modulation，mask 语义不变。视觉 8 帧×64=512 token，motion 96 token，总容量 608。</li>
+<li><strong>同一输入字节与 reset 语义。</strong>历史用原始 256 域 uint8 front 与 float32 state(8)，prompt 逐字来自官方 task_goal；每局 reset 清历史、token 与策略 RNG，环境 seed 由官方 episode 决定、不被 model seed 42 覆盖。</li>
 </ol>
-<p class="note"><strong>边界例子：</strong>第1300步官方报告success且终止，<code>1300&gt;1300</code>为假，结果保持success；若直到第1301步才success，官方客户端先命中<code>count&gt;1300</code>，最终仍为timeout。不按“最后成功了”自行改分。</p>
-<p><strong>两个节奏互不替代：</strong>q=0发送demo＋exec0，q=16发送exec1…16，仍按官方16动作重规划；首个exec motion窗口到q=32才成熟，只是server记忆可见性规则，不把重规划间隔改为32。demo motion可在首包产生，详见下一节。</p>
-<h3>怎么证明一致，而不只说“用了官方环境”</h3>
-<table><thead><tr><th style="width:18%">验证层</th><th style="width:57%">具体对照与覆盖</th><th>拟判定与留证</th></tr></thead><tbody>
-<tr><td>静态来源／差异</td><td>核policy／benchmark／ManiSkill固定commit、metadata／资产SHA与实际import路径；逐函数比较官方／候选diff，正常循环变化逐项解释，环境源码差异应为零。</td><td><code>ENV_PIN=PASS</code>、<code>OFFICIAL_DIFF=PASS</code>；留commit与允许差异清单。</td></tr>
-<tr><td>CPU客户端对拍</td><td>同一冻结观测trace与确定性fake policy分别驱动官方／候选普通客户端，比较reset／add_buffer／infer／step顺序、原有语义payload字段SHA、D、累计返回帧号、每次选出的16动作、count与terminal。覆盖计数0／1／1299／1300／1301、D=0／17／49和正常／error分支。</td><td><code>OFFICIAL_CLIENT_TRACE=PASS</code>；留fixture SHA、边界覆盖矩阵与首个差异位置；故障路径按明确差异断言。</td></tr>
-<tr><td>目标仿真对照</td><td>同官方seed、同固定动作回放，先核冻结上游自身重复性，再核候选env／reset／wrapper／观测计数与status。不能拿不同模型输出要求动作相等；共同支持checkpoint的数值比较归<code>vla_stack_numeric</code>，不自动新增整轮官方baseline800评估。</td><td><code>OFFICIAL_SIM_REPLAY=PASS</code>；留seed、动作SHA、wrapper事件trace与上游重复性结论。</td></tr>
-<tr><td>弹性队列对照</td><td>N=1／多N／中途扩缩的规范化终局收据集合严格相等，只在确定性mock／冻结trace重放上验证，并核同seed初始随机流、reset隔离与汇总公式。真实GL仅在已批准的有界样本核identity／reset／运行trace，先核上游自身repeatability；正式单次800只做manifest无重漏审计，不为此重复跑多轮800，也不要求真实sim跨N终态逐位相等或把固有非确定性归为调度错误。</td><td><code>OFFICIAL_QUEUE_PARITY=PASS</code>；留N／revision轨迹、mock收据摘要、有界实机trace与正式coverage审计。</td></tr>
-</tbody></table>
-<p>trace只严格对齐官方已有语义字段与动作／调用顺序；新增<code>episode_nonce／batch_seq／replan_seq</code>等审计字段列白名单并单独核身份和顺序。ACK计时不要求相同，不能对整个网络包做字节SHA硬等；确定性fake policy用于隔离客户端机制，不依赖不同模型动作相等。</p>
-<p><strong>改动边界：</strong>直接复用官方环境／wrapper／metadata，保留客户端正常输入、动作执行和终止行为。manifest chunk、typed结果、单会话／RPC身份、ACK不确定时整局abort及结果恢复是必要工程改造，故障路径明确不同，不称“逐字复制官方”。motion有无是模型变量，不是环境变化；不沿旧xhard、2000步、challenge1500或额外demo注入。</p>
-<p class="warn">本节trace、仿真回放、N对照及PASS均为未来期待验收，本轮全部未执行；文档静态检查不能替代它们。只有来源与正常路径对拍、故障差异核验和目标环境验证共同通过，才能声明评估机制保持官方口径。</p>
-<h2 id="motion-human">三、motion 与训练一致，靠的是窗口定义而不是“每 16 步算一次”</h2>
-<p>令 <code>D=exec_start_idx</code> 为真实 demo 帧数，全域当前帧号为 <code>t</code>，执行段当前索引为 <code>q=t-D</code>。首包送入全部 demo 加执行第 0 帧；之后每执行 16 动作送 16 个新帧。训练样本覆盖每个 exec <code>t</code>，不只每 16 帧；推理只是按官方动作块节奏调用。</p>
-<p><code>FrameSampMemory::_encode_ready_windows</code> 与 <code>motion_store::visible_motion_rows</code> 都使用独立的 demo／exec 网格：窗口 <code>W=33</code>、步长 <code>S=32</code>；demo 起点 <code>32m</code> 至少有 17 个真实帧才保留，不满 33 时重复 demo 最后一帧；exec 起点 <code>D+32m</code> 必须满足 <code>32m+32≤q</code>，绝不尾补、跨段或偷看未来。</p>
-<pre><code>k_demo = max(0, floor((D - 17) / 32) + 1)
-k_exec = max(0, floor((q - 32) / 32) + 1)
-q = 0, 16, 32, 48, 64  →  exec 窗口数 = 0, 0, 1, 1, 2
-窗口总数 = k_demo + k_exec ≤ 96；超过即报错，不能截断、抽稀或临时改预算。</code></pre>
 <figure><svg id="motion-window-timeline" viewBox="0 0 1120 330" role="img" aria-labelledby="window-title window-desc">
 <title id="window-title">D 等于 50 时，demo 尾补与 exec 完整窗口的区别</title>
 <desc id="window-desc">demo 第一窗为 0 到 32；第二窗 32 到 49 有 18 张真实帧，重复帧 49 十五次；exec 第一窗是 50 到 82，只有 q 达到 32 才可见。D 等于 48 时第二个 demo 窗只有 16 真实帧，必须舍弃。</desc>
@@ -90,8 +52,7 @@ q = 0, 16, 32, 48, 64  →  exec 窗口数 = 0, 0, 1, 1, 2
 <text x="20" y="218" class="detail">exec 起点 50</text><rect class="box" x="180" y="188" width="495" height="48" rx="5"/><text x="195" y="218" class="detail">50…82：必须收齐 33 张真实帧</text><path class="arrow" d="M680 212 H705" marker-end="url(#window-arrow)"/><text x="720" y="218" class="detail">q=31 不可见；q=32 才可见</text>
 <rect x="180" y="264" width="895" height="46" rx="5" fill="#fff0f2" stroke="#d69aa2"/><text x="195" y="293" class="detail">反例 D=48：起点 32 只有 16 张真实帧 → 舍弃；禁止借用 exec0 或把最小真实帧门槛降为 16。</text>
 </svg><figcaption>图一。绿色为真实 demo 像素，黄色为合法重复末帧，蓝色为完整 exec 窗；这三者与 96 槽的零填充有不同含义。</figcaption></figure>
-<p>第二种 padding 是<strong>容量 padding</strong>：不足 96 个 motion token 时，<code>motion_emb</code> 和 <code>motion_pos</code> 右侧填零，<code>motion_mask=False</code>，时间填 <code>2147483647</code>；合法 demo 尾补产生的 token 则 <code>mask=True</code>。两种 padding 不可混用。</p>
-<p>每个窗口从 <code>33×256×256×3 uint8</code>（6,488,064 字节）经固定 VAE 得 <code>(9,16,32,32) float32</code>（589,824 字节），再由 epoch105 的 EMA encoder 得 <code>(1,4,256)</code>，按 slot 顺序串接成一个 1024 维 token（4,096 字节），不均值、不做 L2。视觉路为 8 帧×64=512 token，motion 路为 96 token，总容量 608。</p>
+<p>每个窗口 33×256×256×3 uint8 经固定 VAE 得 (9,16,32,32) float32，再经 EMA encoder 得 (1,4,256)，按 slot 串接为一个 1024 维 token，不均值、不 L2。</p>
 <figure><svg id="process-data-chain" viewBox="0 0 1120 350" role="img" aria-labelledby="chain-title chain-desc">
 <title id="chain-title">每个 GPU worker 的进程与数据链</title><desc id="chain-desc">仿真子进程通过 websocket 向常驻 policy server 发当前观测和新增历史；server 通过本地 IPC 请求常驻 motion sidecar；sidecar 用固定 VAE 和 EMA 编码，返回一个 1024 维 token。动作由 server 回到仿真。</desc>
 <defs><marker id="chain-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#52778e"/></marker></defs>
@@ -106,14 +67,11 @@ q = 0, 16, 32, 48, 64  →  exec 窗口数 = 0, 0, 1, 1, 2
 <rect class="motion" x="580" y="236" width="240" height="80" rx="6"/><text x="594" y="263" class="label">EMA encoder</text><text x="594" y="289" class="detail">1×4×256 · float32</text><text x="594" y="307" class="tiny">4,096 字节；转换数值</text>
 <rect class="box" x="860" y="236" width="240" height="80" rx="6"/><text x="874" y="263" class="label">slot 顺序 concat</text><text x="874" y="289" class="detail">1×1024 → 既有 MLP</text><text x="874" y="307" class="tiny">reshape 不改值；MLP 使用已训参数</text>
 <path class="arrow" d="M260 276 H300" marker-end="url(#chain-arrow)"/><path class="arrow" d="M540 276 H580" marker-end="url(#chain-arrow)"/><path class="arrow" d="M820 276 H860" marker-end="url(#chain-arrow)"/>
-</svg><figcaption>图二。运行时不开训练更新；VAE、EMA 与 VLA 权重固定。JAX policy 与 PyTorch sidecar 的内存和设备归属仍须在单张 A40 上实测。</figcaption></figure>
-<p>训练与推理同时导入 <code>shared/sampling.py::memory_order</code>，按 <code>2×全域起点+kind</code> 稳定排序：frame 的 kind 为 0、motion 为 1，同刻 frame 在前。motion 位置码取窗口起点的 <code>pos_emb[f,0,:pos_dim]</code>；进入既有 motion MLP／位置投影与 modulation，保持 mask 语义。推理必须 <code>train=False</code>，无训练增强与 dropout。</p>
-<h2 id="target-human">四、A100 训练产物不能直接宣称已经能在 A40 跑</h2>
-<p>当前 <code>motion_client.py::_check_stage2_provenance</code> 逐字比较 <code>numerics</code> 与 <code>stage2_compat.online_vae</code>，其中含 GPU 名称、driver；A40 与训练 A100 不同，会被拒绝。计划新增独立 <code>eval_target_contract.json</code>：保留训练 provenance 原样，只允许明确列出的 <code>gpu_name</code>、<code>driver</code> 硬件差异，其他软件、精度、source、EMA、VAE 身份仍严格匹配。</p>
-<p>目标证书必须先在 A40 通过固定 reference 验证，绑定权重／源码／目标环境／GPU 家族／fixture／阈值／eval 代码；driver 变化重新验收。跨卡不承诺逐位相等；建议 encoder 与端到端最大绝对误差均 ≤<code>1e-5</code>，同时记录相对误差和 cosine，阈值须事前固定，失败不能放宽再报通过。已有 G2 来源例外不代表 G4、真实 16 帧节奏或 A40 合格。</p>
-<p>首次A40测量走隔离的 <code>measurement_bootstrap</code> 入口，不需要已有A40证书：只由锁定fixture驱动sidecar／IPC，严格核source／EMA／VAE／软件，记录待测GPU名／driver差异，输出实际数组与未授权候选报告。它不能启动正式websocket、领取正式任务或写canonical；独立重算通过并签发validated证书之后，正式服务才走严格握手。</p>
-<h2 id="queue-human">五、弹性 job 池动态领取，运行中可增减数量</h2>
-<p>每个 worker 只在自己的占位 job 内启动一个常驻 server 与 sidecar；领取一个 5 局 chunk 后，启动独立官方 eval 仿真子进程，结束即回收仿真资源，再领下一块。固定 round-robin 混排 16 任务，无需预跑估计长短；模型阶段依次推进，worker 不跨模型阶段抢任务。</p>
+</svg><figcaption>图二。运行时不开训练更新；VAE、EMA 与 VLA 权重固定。JAX policy 与 PyTorch sidecar 同住一张 A40，内存归属待实测。</figcaption></figure>
+<p class="note">跨卡数值合同（训练 A100 产物在 A40 上的证书）只作为闸门 <code>A40_TARGET</code> 保留，机制见第二部分第三节，此处不展开。</p>
+
+<h2 id="queue-human">四、弹性 worker 队列</h2>
+<p>每个 worker 是一个 1×A40 占位 job，内常驻一个 policy server 与一个 motion sidecar；领到一个 5 局 chunk 就起独立的官方仿真子进程，跑完回收，再领下一块。N 显式配置、运行中可增减：扩容即新 job 入池领取，缩容先停领、封口当前局、归还未开始局再取消。NFS 上不用数据库：不可变清单、原子 mkdir claim、临时文件加 rename 提交；唯一控制器先确认旧 Slurm step 终止再重发，旧 attempt 不覆盖 canonical。success／fail／timeout 是正常终局不重跑，基础设施 error 同 seed 最多重试一次。48h 预算到期 drain 并保留队列；只按本轮登记的 JobID 逐一释放。</p>
 <figure><svg id="elastic-worker-dynamic-queue" viewBox="0 0 1120 490" role="img" aria-labelledby="queue-title queue-desc">
 <title id="queue-title">N个持久GPU worker从共享队列动态领取，可按资源伸缩</title><desc id="queue-desc">不可变160块清单由NFS原子mkdir领取。worker1、worker2、省略项和workerN表示可变规模，各写独立attempt结果；单控制器验证generation与coverage。新增worker领取ready；缩容worker停止领取并封口当前局后退出。</desc>
 <defs><marker id="queue-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#52778e"/></marker></defs>
@@ -129,28 +87,23 @@ q = 0, 16, 32, 48, 64  →  exec 窗口数 = 0, 0, 1, 1, 2
 <path class="arrow" d="M570 340 V390" marker-end="url(#queue-arrow)"/><text x="20" y="370" class="detail">worker 只提交独立 attempt 结果；从不改 canonical 汇总</text>
 <rect class="motion" x="390" y="390" width="360" height="80" rx="7"/><text x="407" y="418" class="label">唯一控制器：校验 → accepted → 汇总</text><text x="407" y="445" class="detail">身份／generation／唯一局／800 coverage</text><text x="795" y="421" class="detail">旧 generation 的迟到结果隔离</text><text x="795" y="447" class="detail">只有 800 局全部接受才完成</text>
 </svg><figcaption>图三。四个框示意worker 1、2、…、N，不代表固定四个。N显式配置且可增减；160块任务与评估身份保持不变。</figcaption></figure>
-<p><code>target_jobs=N</code> 必须显式提供，没有固定默认值。运行中的 <code>desired_jobs</code> 与 <code>pool_revision</code> 是可变控制状态；扩容在已批准包络和配额内增加job，让新worker领取ready；缩容先停止被选worker领取，封口当前局、归还未开始局，再清理该pool明确登记的step／JobID。PENDING与UNKNOWN也占资源账本，不能因未见RUNNING而重复申请。</p>
-<p>NFS 不引入数据库：不可变清单、原子 <code>mkdir</code> claim、临时文件加 rename 提交结果。claim 后尚未写 owner 就崩溃也必须可识别。heartbeat 只诊断，不按 TTL 抢活 worker；唯一控制器先确认对应 Slurm step 已终止，再提升 generation 重发。旧 attempt 永远不能覆盖 canonical。</p>
-<p>success／fail／timeout 为正常终局，不自动重跑；基础设施 error 最多一次同 seed 重试，先确认旧 step 死亡。48 小时预算到期 drain 并保留队列，不超批准资源包络扩容，也不自动续批。建议每局墙钟上限 2,400 秒，5 局块加启动清理 1,800 秒得 <code>13,800 秒=3小时50分</code>；这是待实测的运维上限，与官方 1300 动作语义分开。</p>
-<p>每提交一个1 GPU／48h hold先在事务里预留48 GPUh，SUBMITTING／UNKNOWN按全额计承诺，确认终态与actual usage后才退未用额度。<code>workload_deadline</code>用于停领、drain和请求取消；固定48h＋sleep infinity并不保证绝对硬释放时刻。计算停止后立即清理本pool的已核实hold，不等待score通过、视频例外或完整档案。</p>
-<h2 id="gates-human">六、先过什么闸门，再做哪些步骤</h2>
-<table><thead><tr><th style="width:21%">验收</th><th style="width:50%">怎么验证，过了说明什么</th><th>拟判定行；目前均未运行</th></tr></thead><tbody>
-<tr><td>官方语义</td><td>对官方固定源码逐项核对并用可控 step trace 对拍 timeout、success、seed 与 reset；不以脚本能跑代替语义一致。</td><td><code>OFFICIAL_PARITY=PASS</code></td></tr>
-<tr><td>窗口、token 与 IPC</td><td>独立 frame-id oracle，加真实 demo 首包与每 16 帧续包；像素、mask、pos、排序严格比较，同卡同 latent encoder 逐位。</td><td><code>FRAME_ORACLE=PASS</code><br><code>MEMORY_CONTRACT=PASS</code><br><code>IPC_PARITY=PASS</code></td></tr>
-<tr><td>官方预算与 A40</td><td>静态核 800 清单；每局 reset 后按真实 D 检查 96 槽／4096 位置，上线逐局收集预算；A40 数值证书先绑定 motion 身份，不等 60k。</td><td><code>EPISODE_BUDGET=PASS</code><br><code>A40_TARGET=PASS</code></td></tr>
-<tr><td>VLA全链与参考包</td><td>既存A100参考模型、真实pos／visual／state、完整noise、10步采样与动作对拍；参考包和τ_vla目前待补／待定，不能因能输出动作放行。</td><td><code>VLA_STACK_NUMERIC=PASS</code><br>60000另严格恢复／重复性；同checkpoint跨卡真值缺失如实标NOT_AVAILABLE。</td></tr>
-<tr><td>队列与真实五局</td><td>CPU 并发抢占和崩溃注入证明唯一接受；一个 job 跑五局 profile，核模型＋VAE＋仿真显存、RSS、回收与 retry。</td><td><code>QUEUE_FENCING=PASS</code><br><code>FIVE_EP_PROFILE=PASS</code></td></tr>
-<tr><td>计算、成绩与交付</td><td>assignment／compute／artifact分离；无ready、无活跃或未知执行、无可重试项才进入COMPUTE_DONE或STOPPED_ERROR并释放hold。产物欠账可继续CPU修复。</td><td>先查缺失／execution error，任一即INVALID；否则U&gt;0为QUALIFIED；否则U=0且其余成绩门齐才PASS。artifact错误独立，成绩不阻挡释放。</td></tr>
+
+<h2 id="gates-human">五、闸门与步骤</h2>
+<table><thead><tr><th style="width:21%">验收</th><th style="width:50%">过了说明什么</th><th>判定行（均未运行）</th></tr></thead><tbody>
+<tr><td>官方语义</td><td>固定源码逐项核对＋可控 step trace 对拍 timeout、success、seed、reset。</td><td><code>OFFICIAL_PARITY=PASS</code></td></tr>
+<tr><td>窗口、token 与 IPC</td><td>独立 frame-id oracle 与真实首包／16 帧续包；像素、mask、pos、排序严格比较，同卡同 encoder 逐位。</td><td><code>FRAME_ORACLE=PASS</code><br><code>MEMORY_CONTRACT=PASS</code><br><code>IPC_PARITY=PASS</code></td></tr>
+<tr><td>官方预算与 A40</td><td>静态核 800 清单，每局按真实 D 检查 96 槽；A40 数值证书绑定 motion 身份，不等 60k。</td><td><code>EPISODE_BUDGET=PASS</code><br><code>A40_TARGET=PASS</code></td></tr>
+<tr><td>VLA 全链</td><td>既存参考模型、真实 pos／visual／state、完整 noise、10 步采样与动作对拍；参考包与阈值待补。</td><td><code>VLA_STACK_NUMERIC=PASS</code></td></tr>
+<tr><td>队列与真实五局</td><td>CPU 并发抢占与崩溃注入证明唯一接受；一个 job 跑五局 profile 核显存、RSS、回收与 retry。</td><td><code>QUEUE_FENCING=PASS</code><br><code>FIVE_EP_PROFILE=PASS</code></td></tr>
+<tr><td>计算、成绩与交付</td><td>无 ready、无活跃或未知执行、无可重试项才 COMPUTE_DONE 并释放 hold；缺失或 error 即 INVALID，U&gt;0 为 QUALIFIED，否则 PASS。</td><td>成绩判定与 artifact 错误分离</td></tr>
 </tbody></table>
-<table><thead><tr><th style="width:12%">阶段</th><th style="width:62%">实施内容与地点</th><th>进入下一步的判据</th></tr></thead><tbody>
-<tr><td>I<br>aspen／vail<br>开发与验证</td><td>获后续开工令后，在独立eval工作区实现client／runtime／queue／GL入口并做CPU测试；核SSH／NFS／解释器／原子性与弹性多领取者队列；有已授权A40席位时做真实motion／IPC及早期同架构checkpoint五局。</td><td>代码和CPU证据先审；无A40时相关门明确pending，带入阶段II首个hold补验。不得操作AWS训练环境。</td></tr>
-<tr><td>II<br>T−2h 至收官</td><td>从aspen／vail按目标NFS到位ETA提前两小时按desired_jobs对账配置资源池；首个RUNNING席位补A40门。60k完整就绪、strict restore、固定seed动作检查和全部必需门禁齐后，在GL节点启动目标数量worker，核800覆盖并释放。</td><td>schedule防重复；排队不要求A40证书，正式launch必须具备。实际N受批准包络与配额约束。</td></tr>
+<table><thead><tr><th style="width:12%">阶段</th><th style="width:62%">内容与地点</th><th>进入下一步的判据</th></tr></thead><tbody>
+<tr><td>I<br>aspen／vail</td><td>开工令后在独立 eval 工作区实现 client／runtime／queue／GL 入口，CPU 对拍；核 SSH／NFS／三套解释器／原子性与多领取者队列；有 A40 席位则做真实 motion／IPC 与早期同架构 checkpoint 五局。</td><td>代码与 CPU 证据先审；无 A40 的门标 pending，带入阶段 II 首个 hold 补验。</td></tr>
+<tr><td>II<br>T−2h 至收官</td><td>按 60k 到达 NFS 的 ETA 提前两小时配置 job 池；首个 RUNNING 席位补 A40 门；60k 就绪、strict restore、固定 seed 动作检查与全部门禁齐后启动目标数量 worker，核 800 覆盖并释放。</td><td>排队不要求 A40 证书，正式 launch 必须具备；N 受批准包络与配额约束。</td></tr>
 </tbody></table>
 <h3>子代理分工与合并（简述）</h3>
-<p>未来阶段 I 在aspen／vail拟分client、runtime、queue、GL四个代码owner，另设独立审查；子代理模型按职责、按宿主显式指定：写代码 Claude Code <code>opus</code>／Codex Sol，均独立worktree；审查 <code>sonnet</code>／Sol，只读；只读探索 <code>haiku</code>／Luna；资源与运行 <code>opus</code>／Sol，不加worktree；Codex 子代理推理强度不低于 <code>high</code>；均不递归，对照表详见 8.1。共享协议先定，runtime／queue基础接口先合，client／GL联调后合；每次合前审可写集合，合后审完整语义。两阶段的GL GPU运行都由同一资源负责人从aspen／vail编排。</p>
-<p class="note">独立阶段 I 合同审查只说明设计可实施；它不构成开工令，也不代表最终 HTML、代码、真实 IPC、A40 数值或任何评估已通过。本计划不把该设计审查写作实施完成证据。</p>
-<p>详细风险、已修设计与仍待实测项另见 <a href="1026-official-benchmark-eval-adversarial-review.html">官方评估计划对抗审查报告</a>；该报告与本计划配套阅读，审查通过不替代目标环境数值、资源或正式800局验收。</p>
-<p class="warn">仍待验证：目标 A40 的软硬件数值合同、单卡能否同时容纳 VLA／VAE／仿真、全官方 800 局的 demo 预算，以及真实 16 帧调用节奏。现有训练闸门和旧评估分支都不能替代这些验收。下面第二部分给出逐文件设计、精确接口、拟命令与停点。</p>
+<p>阶段 I 拟分 client、runtime、queue、GL 四个代码 owner，各在独立 worktree（Claude Code <code>opus</code>／Codex Sol），审查只读（<code>sonnet</code>／Sol），探索只读（<code>haiku</code>／Luna），运行型不加 worktree；共享协议先定，runtime／queue 基础接口先合，client／GL 联调后合，每次合前审可写集合、合后审完整语义。对照表见第二部分 8.1；对抗审查见 <a href="1026-official-benchmark-eval-adversarial-review.html">官方评估计划对抗审查报告</a>，审查通过不替代实测验收。</p>
+<p class="warn">仍待验证：单张 A40 能否同时容纳 VLA／VAE／仿真、全官方 800 局的 demo 预算、真实 16 帧调用节奏与 A40 数值合同。第二部分给出逐文件设计、精确接口、拟命令与停点。</p>
 <h1 id="details" class="split">第二部分（技术细节，供 agent 追踪）</h1>
 <h2 id="sources">〇、来源、权威边界与当前事实</h2>
 <p>权威顺序为：用户本轮明确范围 → 本计划锁定的官方源码与已训 Stage2 合同 → 仓库适用规则 → 历史运行经验。历史私有评估只提供故障经验，不定义官方测试集、步数、demo、seed 或成绩口径。</p>
