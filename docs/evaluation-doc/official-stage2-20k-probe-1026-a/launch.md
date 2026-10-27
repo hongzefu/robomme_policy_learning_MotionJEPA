@@ -1,5 +1,23 @@
 # Stage2 VLA20k早期试评估启动档案
 
+## 最新执行口径：美东10月27日简化重启
+
+用户已批准：「同意，按这个简化方案开工，保留弹性 worker 队列，不要再堆叠功能和校验。尽快先跑通一局，再做两卡分片评估。」现行方案为根目录 `1027-stage2-simple-elastic-eval-plan.html`，覆盖下文历史章节中的绑定收据、独立数值恢复、跨硬件及通用资源账本前置要求；历史失败记录保留。
+
+新作业 `64855345`（gl1504）与 `64855348`（gl1520）于美东00:59分配，各1 A40／4 CPU／24 GiB／48小时。旧作业 `64849606`、`64849621` 已取消。先使用第一份作业直接加载真实20k并执行 `BinFill:0`，不再先跑 `check_runtime`。两卡十局通过同一弹性队列领取两个五局块，和单局结果分目录计数。
+
+首局代码固定为 `922498b2b7be87b07a5f5065a0bc5e343495683c`，B服务入口合前复核通过；整合后入口定向4项测试通过，3.44秒。已有权重、encoder与三解释器原样复用。新产物子目录为原运行根下 `simple-1027/`，不覆盖旧日志。首局grant为 `simple-1027/smoke-grant.json`，seed540000／easy，run身份 `7c4fafa6800d952b56810747ed4d4f9d5c542d3fd5a0d142c6b0be3107bc5c6b`。
+
+首局完整入口为：
+
+```bash
+ssh -o BatchMode=yes greatlakes srun --jobid=64855345 --overlap --exact --ntasks=1 --cpus-per-task=4 --gpu_cmode=shared \
+  /usr/bin/bash /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027/run-single.sh \
+  922498b2b7be87b07a5f5065a0bc5e343495683c
+```
+
+脚本是本轮运行产物，显式设置下文同一套缓存与解释器，使用简化服务CLI启动policy及sidecar，监听后直接执行官方客户端。普通可选运行配置沿用 `contracts/runtime.json` 供既有sidecar加载；不再传模型绑定或独立运行检查器。服务端口18027，客户端结果目录 `simple-1027/smoke1-client/`；外层tmux名 `eval-simple-1027-smoke1`，日志 `simple-1027/smoke1.log`。模型监听只说明开始服务，真实单局终局另记结果。
+
 ## ① 目的与当前结论
 
 用户批准固定运行名 `official-stage2-20k-probe-1026-a`，先单局smoke1次，再两个独立A40 worker各固定五局chunk共10次，总11次，两阶段收据分开。目标是阶段一组件与早期策略试评估，不是正式60k／800成绩。当前已有三环境初始导入及单次环境reset，尚未进行策略rollout／同机恢复／IPC／分片。跨硬件已取消，记 `CROSS_HARDWARE_NUMERIC=NOT_REQUIRED reason=user_decision`，不伪写PASS。
