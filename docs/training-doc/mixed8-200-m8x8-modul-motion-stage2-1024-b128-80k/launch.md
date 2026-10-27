@@ -1,5 +1,7 @@
 # mixed8 阶段二单 token VLA：实施与起跑档案
 
+**数据来源错配：** 事后对比完整来源记录，encoder来自原版RoboMME 16×100，VLA来自本地mixed8-200；16个同名H5的记录SHA全部不同，集合交集为0。原启动审查漏掉了跨encoder/VLA同源比较，本轮不满足P-LINEAGE，不作WAIVE。70k以历史实验保留；严格恢复PASS仅说明交付文件及真实推理可恢复。比较证据见`records/data-lineage-posthoc.json`，本次未重读原始H5。
+
 本轮已按用户指令于美东2026-10-27 12:17:53停止，以完整70000 checkpoint为最终交付；14份checkpoint保留，70k远端回读及严格在线恢复已通过，最终全量备份核验进行中。原80k配置和run名保持历史身份，真实训练退出143。计划为根目录 `1026-vla-stage2-memory-1024-train-plan.md`，开工锚点 `1383aba0fd77b259f0b32eadb47ea7792190145e`。以下按时间保留实施及起跑记录，最新结论见`result.md`。
 
 ## 用户授权与范围

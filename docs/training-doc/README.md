@@ -10,7 +10,7 @@
 
 | 目录 | 内容 | 状态 |
 |---|---|---|
-| [mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k](mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/result.md) | ep105 EMA，4×256拼1×1024，窗33／stride32／budget96；8卡batch128，原计划80k，用户终点改为70k | 用户主动停止，完整保留14份checkpoint；70k远端回读及严格在线恢复PASS，最终全量备份核验进行中 |
+| [mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k](mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/result.md) | ep105 EMA，4×256拼1×1024，窗33／stride32／budget96；8卡batch128，原计划80k，用户终点改为70k | 用户70k停止，14份保留；encoder/VLA源H5记录16/16错配，不满足P-LINEAGE，仅历史留档。70k技术恢复PASS，最终备份核验进行中 |
 
 ### 四对运动 token 训练接入冒烟（2026-10-20）
 

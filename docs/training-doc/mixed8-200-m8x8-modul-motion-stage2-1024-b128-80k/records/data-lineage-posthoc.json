@@ -1,0 +1,102 @@
+{
+  "schema": "stage2-posthoc-data-lineage-v1",
+  "status": "FAIL",
+  "verdict": "DATA_LINEAGE=FAIL encoder_ckpt=27daa832 encoder_source_pin=31d6ab0f845336e76dc25db64170a0bc4ac59ecf366c161025b9800285c74467 vla_input_pin=d7dd651edb8cb9652fa647a73a2d0d3c4be64d6876e1d7a186a5e8c75b02aafb files=16 mismatches=16",
+  "comparison_scope": "既有完整source_pin与input_manifest逐文件记录SHA比较；本次不重读原始H5",
+  "raw_h5_rehashed": false,
+  "encoder_checkpoint_sha256": "27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035",
+  "encoder_source_pin_path": "/scratch/hongze/dataset-original-robomme-16x100-wan21-v1/control/source_receipts.json",
+  "encoder_source_pin_sha256": "31d6ab0f845336e76dc25db64170a0bc4ac59ecf366c161025b9800285c74467",
+  "encoder_source": "Yinpei/robomme_data_h5@a5e4e25ffe8af34f64944f9533d06455ce5f8337，16任务每源H5含100episodes；训练另留出90-99",
+  "vla_input_manifest": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/meta/input_manifest.json",
+  "vla_input_pin_sha256": "d7dd651edb8cb9652fa647a73a2d0d3c4be64d6876e1d7a186a5e8c75b02aafb",
+  "vla_source": "本地录制mixed8-200，16任务每源H5含200episodes",
+  "files": 16,
+  "mismatches": 16,
+  "sha_set_intersection": 0,
+  "differences": [
+    {
+      "file": "record_dataset_BinFill.h5",
+      "encoder_sha256": "1b3a7139c541e20e2d9f0fdfa0635f29777a280372e076b5ea340e76ac7cec7f",
+      "vla_sha256": "af14033f6697cf5c75230c130cb4c35223c946373171c24eedd2f37aa8d92855"
+    },
+    {
+      "file": "record_dataset_ButtonUnmask.h5",
+      "encoder_sha256": "6b100414429e3417f2afd600ae708406bc20b1a37ef92734ff593af6bdb70575",
+      "vla_sha256": "b98509401031959cbd144f878bd71e3d64956e4aaa0bfdca91ff0d881974929a"
+    },
+    {
+      "file": "record_dataset_ButtonUnmaskSwap.h5",
+      "encoder_sha256": "7c0441210bb1ec63aa60cfc30c5080a5f09c54f02bd0004714eba120df089274",
+      "vla_sha256": "89bd3f3b2a2cf357d9cc08ce4c7fdd9581c062082f1c904b799387b85258b0e2"
+    },
+    {
+      "file": "record_dataset_InsertPeg.h5",
+      "encoder_sha256": "9eb3834c6bb44f5cee1b631a2eaf4391cc212dd08d44f996af033610e8e854d8",
+      "vla_sha256": "cd3c4e8ee139290832864d61337aec8ce46298f3ba4b476cce1f98b6cb20fb4e"
+    },
+    {
+      "file": "record_dataset_MoveCube.h5",
+      "encoder_sha256": "e8f7f948b72e0f2e7e55f8caf6b4c404aacd6ac1332a42f26eae7872088f19d0",
+      "vla_sha256": "d13cc55ac887ba3a2d6f643246e3993ddaf5f762920c55c875c0e2719a55c7a3"
+    },
+    {
+      "file": "record_dataset_PatternLock.h5",
+      "encoder_sha256": "482d797b2cc81df984131abb5560d9d38cf4c19524656f72e72dad4232298352",
+      "vla_sha256": "dbb35939caa765598fb683ff151b96a45acc35c88487d1e32dd76585649b4ddb"
+    },
+    {
+      "file": "record_dataset_PickHighlight.h5",
+      "encoder_sha256": "549d1ef1a51d5534799100f34a73d9db67344a1f33da9254b3599db81abe472f",
+      "vla_sha256": "edb4dce0ee1b98139592976472be2f20925f388d45f5a41e888585d043b61728"
+    },
+    {
+      "file": "record_dataset_PickXtimes.h5",
+      "encoder_sha256": "3383deaf037bf7d9be83627721dfc831f440940a3ce8148888ec689392f43a81",
+      "vla_sha256": "7b7df09f524c1836b8745934743cbf73b1c0590a5c5c42df63044c38770d8482"
+    },
+    {
+      "file": "record_dataset_RouteStick.h5",
+      "encoder_sha256": "57632531dfe3303de22c0bb3980e297829695ce2e8b57428e494f1faa698716f",
+      "vla_sha256": "30ff203d962f499e4e222d52250c7d4f32297cca67f8e0f4ed7f8a8d2de38871"
+    },
+    {
+      "file": "record_dataset_StopCube.h5",
+      "encoder_sha256": "f8be65f89eda55f41e51a148576f8ada4898d1a463abe87fd73cd0d471e1cadd",
+      "vla_sha256": "124f7dd3d2fbc6283b6c054d001eba688c819ec6cfdf5e501cce8c405f45fa5b"
+    },
+    {
+      "file": "record_dataset_SwingXtimes.h5",
+      "encoder_sha256": "b2ea30dd6975a5e6154927f0a89298d2bc2a3089a6f2349f2ae7a7f251ec457d",
+      "vla_sha256": "80be83c71d832055ca0160b15fe9b99d4a3919bbd6722a51951d02d2f089ecf4"
+    },
+    {
+      "file": "record_dataset_VideoPlaceButton.h5",
+      "encoder_sha256": "02f0c47fe76d4ab134c775e866ce47287e0beed5d7f6898f2a19f22f1a8c12ec",
+      "vla_sha256": "ce6aa6def43f1f0aec6ebc589be395e234befc8a6c62d6ff61539a9da893fbf6"
+    },
+    {
+      "file": "record_dataset_VideoPlaceOrder.h5",
+      "encoder_sha256": "b05dfc5cbde434b118dceeaa7a65af6eb1a9ce50c491e90dd8cf7099ef886710",
+      "vla_sha256": "cc6601a9f185711e5bf28a89ad72875fd81d6b6eb680bb912354481e511392e9"
+    },
+    {
+      "file": "record_dataset_VideoRepick.h5",
+      "encoder_sha256": "80ea5d4339f06669bd9db3f69ac0229cb579872afd65cd5afdcf3e757d8aef88",
+      "vla_sha256": "a76811f3ac5816c60d75fe7ae1c9817dba2e5aad5c5fd521235790944759e137"
+    },
+    {
+      "file": "record_dataset_VideoUnmask.h5",
+      "encoder_sha256": "05a653a8f8232882f82c84057f328e045f4a875ff5cfcf068738c429c6081427",
+      "vla_sha256": "ff891ddad7be08a120b7c560ea5ffed01790b756aa904e20f67bd465bd980a7e"
+    },
+    {
+      "file": "record_dataset_VideoUnmaskSwap.h5",
+      "encoder_sha256": "4e83aca373b2adb469cf78d338223e41559fc6ad19d435de5c88d99d2fe49a7e",
+      "vla_sha256": "3bb91ca073e8bdbb21288541adf47757a3a44185f73c5a8499d0230c72b89008"
+    }
+  ],
+  "disposition": "用户已停止；70k仅作为来源错配的历史实验留档。恢复PASS不构成同源合规，不WAIVE同源失败，不重新建库或起跑。",
+  "startup_omission": "原启动审查遗漏encoder/VLA两套源H5集合的同源比较",
+  "recorded_at": "2026-10-27T16:58:36.516219+00:00"
+}

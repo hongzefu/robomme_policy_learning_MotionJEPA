@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T16:52:31Z",
-    "america_new_york": "2026-10-27T12:52:31.992176-04:00"
+    "utc": "2026-10-27T16:58:36Z",
+    "america_new_york": "2026-10-27T12:58:36.520286-04:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "d0445ce7b1dac220780c5d6b2bf3bf7b65728e8f",
+    "base_head": "26a99c6f38c726a169e5f2327d3f65063698609e",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -22,7 +22,7 @@
       },
       "state": "done",
       "state_changed_at": "2026-10-27T16:52:31Z",
-      "state_reason": "按用户要求停止并以70k交付：训练/inc真实143，14份完整checkpoint保留；70k远端37文件匿名回读及65叶严格恢复/真实在线infer全部PASS，交接前5项全部pass，所有GPU任务退出。432文件权限/HOLD已恢复，R13旧测速119已删除，W&B注明用户主动停止。依原计划G9可留长尾，最终14份全量匿名备份核验仍在cc-vla-s2-ckptup运行；此时done而非closed，不能声称最终G9已通过。",
+      "state_reason": "按用户要求停止并以70k交付：训练/inc真实143，14份完整checkpoint保留；70k远端37文件匿名回读及65叶严格恢复/真实在线infer全部PASS，交接前5项全部pass，所有GPU任务退出。432文件权限/HOLD已恢复，R13旧测速119已删除，W&B注明用户主动停止。依原计划G9可留长尾，最终14份全量匿名备份核验仍在cc-vla-s2-ckptup运行；此时done而非closed，不能声称最终G9已通过。 事后同源核对FAIL：encoder原版16×100与VLA本地16×200，16个同名源H5记录SHA全部不同。done仅表示用户停止后的历史归档/技术恢复完成，不表示训练数据合规，不得复用旧go继续训练。",
       "owner": {
         "session": "",
         "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"
@@ -135,6 +135,11 @@
           "what": "继续查看G9长尾；实际PASS+EXIT_CODE=0后归档最终发布清单并将本任务closed，失败则保留done并按规则记录长尾失败",
           "command": "tail -F v1-store/logs/vla-s2-20261026/close70-export.log",
           "verdict_line": "CKPT_UPLOAD=PASS steps=14 root_files=17 sha256_mismatch=0 public=1 training_status=stopped_by_user final_step=70000 training_exit_code=143；EXIT_CODE=0"
+        },
+        {
+          "what": "本历史run来源错配，不得续训；新VLA任务须另按P-LINEAGE获得真实同源PASS后才可建库/起跑",
+          "command": "当前仅归档，不执行新的训练命令",
+          "verdict_line": "历史DATA_LINEAGE=FAIL不可WAIVE"
         }
       ],
       "pre_start_self_check": [
@@ -143,11 +148,25 @@
           "evidence": "STARTUP_CONFIG_AUDIT=PASS blocking=0；STARTUP_DATA_SNAPSHOT_AUDIT=PASS blocking=0；ROOT_UPLOAD=PASS files=17",
           "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/docs/training-doc/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/records/startup-audit.json",
           "status": "pass"
+        },
+        {
+          "what": "事后补查原启动遗漏的数据同源强约束",
+          "evidence": "DATA_LINEAGE=FAIL encoder_ckpt=27daa832 encoder_source_pin=31d6ab0f845336e76dc25db64170a0bc4ac59ecf366c161025b9800285c74467 vla_input_pin=d7dd651edb8cb9652fa647a73a2d0d3c4be64d6876e1d7a186a5e8c75b02aafb files=16 mismatches=16",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/data-lineage-posthoc.json",
+          "status": "fail"
         }
       ],
       "monitoring": {
         "mode": "当前仅CPU/网络最终导出，GPU任务全部结束",
         "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/close70-export.log"
+      },
+      "data_lineage": {
+        "status": "FAIL",
+        "verdict": "DATA_LINEAGE=FAIL encoder_ckpt=27daa832 encoder_source_pin=31d6ab0f845336e76dc25db64170a0bc4ac59ecf366c161025b9800285c74467 vla_input_pin=d7dd651edb8cb9652fa647a73a2d0d3c4be64d6876e1d7a186a5e8c75b02aafb files=16 mismatches=16",
+        "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/data-lineage-posthoc.json",
+        "waived": false,
+        "raw_h5_rehashed": false,
+        "disposition": "历史归档；任何新建库或起跑须重新满足P-LINEAGE"
       }
     },
     "paired4-training-smoke": {

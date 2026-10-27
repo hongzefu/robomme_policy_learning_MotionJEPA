@@ -1,5 +1,7 @@
 # 用户停止于70k：交付验收完成，最终备份核验作为长尾运行
 
+**数据来源错配：** 事后对比完整来源记录，encoder来自原版RoboMME 16×100，VLA来自本地mixed8-200；16个同名H5的记录SHA全部不同，集合交集为0。原启动审查漏掉了跨encoder/VLA同源比较，本轮不满足P-LINEAGE，不作WAIVE。70k以历史实验保留；严格恢复PASS仅说明交付文件及真实推理可恢复。比较证据见`records/data-lineage-posthoc.json`，本次未重读原始H5。
+
 用户原话：「停止现在的training 收尾 70k够了」。正式训练于美东2026-10-27 12:17:53停止，实际运行19小时8分54秒，真实退出143；原80k配置与run名保留。最终选定已完整提交的70000，保留5000至70000共14份。70k保存时间为美东10-27 12:02:16，其loss为0.0018；最后日志指标70900步loss0.0019，未保存的末段不作为交付权重。
 
 70k远端37文件、12,218,974,941字节已重新匿名回读，SHA零不匹配；严格恢复65个参数叶、来源验证及真实在线infer通过：`CKPT_70K_READY=PASS step=70000 root_complete=1 sha256_mismatch=0 strict_restore=1 online_infer=1`。显式复用既有锁定sidecar环境、VAE缓存和tokenizer，encoder权重和归一化统计均取自隔离远端回读实体。没有重新训练或重抽encoder库。
