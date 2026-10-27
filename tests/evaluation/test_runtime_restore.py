@@ -94,18 +94,59 @@ def test_same_machine_replay_uses_real16_and_complete_noise():
     assert output[0].shape == (20, 8) and policy._sample_kwargs == {"original": True}
 
 
-def test_binding_rejection_happens_before_model_load(tmp_path, monkeypatch):
+@pytest.mark.parametrize("legacy_paths", [False, True])
+def test_simple_service_loads_and_serves_without_binding_preflight(tmp_path, monkeypatch, legacy_paths):
     from scripts.training import serve_policy
-    def reject_binding(*args, **kwargs):
-        assert kwargs["expected_purpose"] == "validation"
-        assert kwargs["expected_run_identity_sha256"] == "a" * 64
-        raise ValueError("完整模型成员字节与binding不符")
-    monkeypatch.setitem(sys.modules, "scripts.evaluation.manifest", SimpleNamespace(verify_model_binding=reject_binding))
-    monkeypatch.setattr(serve_policy, "create_policy", lambda *args: pytest.fail("binding失败不得先加载权重"))
-    args = serve_policy.Args(policy=serve_policy.Checkpoint(config="mme_vla_suite_b128_80k", dir=tmp_path / "20000"),
-        eval_target_contract=tmp_path / "runtime.json", model_binding=tmp_path / "binding.json",
-        run_identity_sha256="a" * 64, eval_purpose="validation", checkpoint_step=20000)
-    with pytest.raises(ValueError, match="完整模型成员"):
+    captured = {}
+    config = object()
+    client = SimpleNamespace(provenance={"pid": 123, "gpu_uuid": "GPU-observed"},
+                             close=lambda: captured.update(closed=True))
+    policy = SimpleNamespace(_seed=42, metadata={"model_seed": 999, "model_kind": "stage2_pool4_concat"},
+                             _motion_client=client)
+    def load(actual_config, checkpoint, **kwargs):
+        assert actual_config is config and checkpoint == tmp_path / "20000"
+        captured["load"] = kwargs
+        return policy
+    def server(**kwargs):
+        captured["server"] = kwargs
+        return SimpleNamespace(serve_forever=lambda: captured.update(served=True))
+    monkeypatch.setattr(serve_policy._config, "get_config", lambda name: config)
+    monkeypatch.setattr(serve_policy._policy_config, "create_trained_policy", load)
+    monkeypatch.setattr(serve_policy.websocket_policy_server, "WebsocketPolicyServer", server)
+    monkeypatch.setitem(sys.modules, "scripts.evaluation.manifest",
+        SimpleNamespace(verify_model_binding=lambda *args, **kwargs: pytest.fail("服务入口不再复验绑定")))
+    args = serve_policy.Args(policy=serve_policy.Checkpoint(config="actual-config", dir=tmp_path / "20000"),
+        motion_online_gpu="GPU-assigned", stage2_python="/stage2/bin/python",
+        run_identity_sha256="a" * 64, server_nonce="actual-server-nonce")
+    if legacy_paths:
+        args.model_binding = tmp_path / "missing-binding.json"
+        args.eval_target_contract = tmp_path / "missing-runtime.json"
+    serve_policy.main(args)
+    assert captured["load"]["seed"] == 42
+    assert captured["load"]["motion_online_gpu"] == "GPU-assigned"
+    assert captured["load"]["stage2_python"] == "/stage2/bin/python"
+    assert captured["load"]["eval_target_contract"] == args.eval_target_contract
+    metadata = captured["server"]["metadata"]
+    assert metadata["model_seed"] == 42 and metadata["model_kind"] == "stage2_pool4_concat"
+    assert metadata["run_identity_sha256"] == "a" * 64
+    assert metadata["server_nonce"] == "actual-server-nonce"
+    assert metadata["motion_runtime"] == client.provenance
+    assert "model_binding_sha256" not in metadata
+    assert captured["served"] and captured["closed"]
+
+
+@pytest.mark.parametrize("message", ["真实模型加载失败", "真实sidecar加载失败"])
+def test_simple_service_propagates_loading_errors(tmp_path, monkeypatch, message):
+    from scripts.training import serve_policy
+    def load(*args, **kwargs):
+        raise RuntimeError(message)
+    monkeypatch.setattr(serve_policy._config, "get_config", lambda name: object())
+    monkeypatch.setattr(serve_policy._policy_config, "create_trained_policy", load)
+    monkeypatch.setattr(serve_policy.websocket_policy_server, "WebsocketPolicyServer",
+                        lambda **kwargs: pytest.fail("加载失败不得启动服务"))
+    args = serve_policy.Args(policy=serve_policy.Checkpoint(config="actual-config", dir=tmp_path / "20000"),
+                             run_identity_sha256="a" * 64, server_nonce="nonce")
+    with pytest.raises(RuntimeError, match=message):
         serve_policy.main(args)
 
 
