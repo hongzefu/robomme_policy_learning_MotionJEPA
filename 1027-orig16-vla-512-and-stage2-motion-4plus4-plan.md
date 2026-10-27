@@ -19,7 +19,7 @@
 > - 源 H5：`/scratch/hongze/dataset-original-robomme-16x100-wan21-v1/source/h5/record_dataset_<Task>.h5`（16 个，约 512 GB），上游 `Yinpei/robomme_data_h5@a5e4e25ffe8af34f64944f9533d06455ce5f8337`。
 > - Wan VAE `Wan-AI/Wan2.1-T2V-1.3B-Diffusers`。G2a 对拍 oracle 为 MJ 已公开的 stride-1 库 `HongzeFu/robomme-original-16x100-wan21-front-33f-dense-v1@384d5db410be713a49357bf3f55ca4f4d2f559a0`。出处是日志 `/scratch/hongze/dataset-original-robomme-16x100-wan21-v1/logs/public-pipeline-20261023.log`：倒数第二行为 `PUBLIC_PIPELINE=COMPLETE repo=… revision=384d5db4… EXIT_CODE=0`，末行为 `EXIT_CODE=0`。
 >
-> **commit 体例**：功能改动 `commitV<x>.<y>: <中文>`；最新为 `commitV11.57`（`4029b1f`），本计划各块合并从 **`commitV11.58`** 起依次编号（S6 无 policy 号；S1→V11.58、S2→V11.59、S3→V11.60、S4→V11.61、S5→V11.62；契约常量回填 V11.63；建库 Beta `commitV11.64Beta`／结论 `commitV11.64`；训练 Beta `commitV11.65Beta`／结论 `commitV11.65`；实际号以合入时 `git log` 为准顺延）。文档 `docs:`，交接 `handoff:`；子代理 `sub/<编号>: <中文>`，经主会话 `git merge --no-ff <TIP sha>` 合入。
+> **commit 体例**：功能改动 `commitV<x>.<y>: <中文>`；最新为 `commitV11.57`（`4029b1f`），本计划各块合并从 **`commitV11.58`** 起依次编号，按阶段时间先后：S6 无 policy 号；S1→V11.58、S2→V11.59、S3→V11.60、S4→V11.61、S5→V11.62（阶段 1）；建库 Beta `commitV11.63Beta`（阶段 2 起点）；建库结论 `commitV11.63`（阶段 3 的 G6 之后，回写建库 result.md）；契约常量回填 `commitV11.64`（紧随建库结论）；训练 Beta `commitV11.65Beta`（阶段 5 起点）；训练结论 `commitV11.65`（阶段 6）。实际号以合入时 `git log` 为准顺延。文档 `docs:`，交接 `handoff:`；子代理 `sub/<编号>: <中文>`，经主会话 `git merge --no-ff <TIP sha>` 合入。
 
 # 第一部分（给人看）
 
@@ -183,7 +183,7 @@ CLI 必须带 `--dataset-path $DS/framesamp-8x8 --assets-base-dir ... --data.ass
 | B8 | `FEATURES_PRUNE=PASS kept=8` | features 只留 8 个抽样 |
 | B9 | `DATA_IDENTITY=PASS norm_sha=<…> steps=768897 samples=476857 manifest_sha=<…>`（主会话手工行） | 库身份四方绑定 |
 | G0 | `RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail=<≥16> sha_mismatches=0` | 抽样原帧（改读源 H5）与 latent 输入 SHA 一致；全真实窗均在 MJ 覆盖内 |
-| G1 | `DROPOUT_OFF=PASS windows=64 eval_repeat_max_abs=0 train_vs_eval_max_abs=<正数>` | dropout 真关 |
+| G1 | `MJ_CLI_LINEAGE=PASS files=16 mismatches=0`、`DROPOUT_OFF=PASS windows=64 eval_repeat_max_abs=0 train_vs_eval_max_abs=<正数>` | MJ 抽取 CLI 自身复核输入库与 encoder 训练源同源（MJ P3）；dropout 真关 |
 | G2 | `WAN_EQUIV=PASS windows=64 demo_tail=<=G0> g2a_windows=<64−demo_tail> g2a_max_abs=0 g2b_windows=64 g2b_max_abs=0 worst_mse=0 worst_max=0 oracle=mj-stride1@384d5db4`；信息行 `WAN_NUMERICS_DRIFT=INFO …` 不判 | G2a 证同帧、同窗、同 VAE、同预处理；G2b 证生产补帧链路；G2.json 须过 S2 fresh 校验器；**不允许 WAIVE** |
 | G3 | `EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1`、`EXPORT_PARITY=PASS windows=32 seed=0 max_abs=0 geometry_all_true=1` | 真加载 EMA、导出路径数值一致 |
 | G4 | `ONLINE_OFFLINE_PARITY=PASS windows=64 handshake=1 response_bytes=4096 encoder_max_abs=0 e2e_max_abs=<x> …` | 在线 sidecar 与离线库一致（x≤1e-5） |
@@ -290,6 +290,7 @@ CLI 必须带 `--dataset-path $DS/framesamp-8x8 --assets-base-dir ... --data.ass
 | 文件 | 锚点 | 改什么 | 验收 |
 |---|---|---|---|
 | `scripts/stage2_memory_export.py` | 常量 `FULL_COUNTS = (4995, 65419)`；`main` 中 `require_equal(counts, FULL_COUNTS, "mixed8 全表段数与行数")` | 新增 `--expected-counts <segments>,<rows>`，full scope 必填；不传时报错，不回落到 mixed8 常量。mixed8 以 `4995,65419` 调用时语义不变 | `tests/test_stage2_memory_export.py` 新增三个用例：错计数拒绝、正确计数通过、smoke scope 不受影响；冒烟出 `STAGE2_EXPORT=PASS scope=smoke …` |
+| `scripts/stage2_memory_export.py` | `main` 读入 latent 之前 | 新增**必填**参数 `--input-manifest <policy 库 meta/input_manifest.json>`，做输入 latent 库的 pin 校验（对应 MJ `AGENTS.md` P3）。读 `--ckpt` 同目录 `config.yaml` 的 `data.data_root` → `<data_root>/control/build_spec.json` 的 `identity.source_pin.files[]`；与 input_manifest 的 `files{}` 按文件名逐个比 `size+sha256`。集合不等即 FAIL、退出非 0，smoke 与 full 都执行，**不提供任何跳过开关**。判定行 `MJ_CLI_LINEAGE=PASS files=16 mismatches=0`（FAIL 时列出差异） | 同一测试文件新增：一致夹具 PASS；改一个 sha、少一个文件、缺 `--input-manifest` 均失败；argparse 中不存在任何跳过血缘的参数 |
 
 ### B. policy
 
@@ -297,14 +298,14 @@ CLI 必须带 `--dataset-path $DS/framesamp-8x8 --assets-base-dir ... --data.ass
 - 新增参数 `--h5-root <dir>`、`--input-manifest <LIB/meta/input_manifest.json>`、`--mj-index <dir>`。三者须同时给出；任一缺失时走原 mixed8 路径，语义不变。
 - **demo 帧**：原版模式不读 `control/scope.json`／`run_manifest.json`，改为 `h5py.File(<h5-root>/<ep.h5_file>, "r")[f"episode_{raw_ep_idx}/timestep_{t}/obs/front_rgb"]`。H5 的 size 与 sha256 须等于 input_manifest 登记值（sha 现场全量计算并在进程内缓存）。
 - **exec 帧**：仍读 `source/data/<sample>.pkl`。
-- **MJ 对齐**：从 `<mj-index>/segments.parquet` 取每集 demo 末端 `D` 与 exec 截止 `C`（首个 `is_completed` 帧）。
+- **MJ 对齐**：从 `<mj-index>/episodes.parquet` 取每集 demo 末端 `D`（列 `demo_end`）与 exec 截止 `C`（列 `completed_index`，即首个 `is_completed` 帧）。`segments.parquet` 只有段 `lo/hi`（exec 段的 `hi` 即 C），仅用于交叉核对。
   - 逐集断言 policy `exec_start_idx == D`；
   - `select_windows` 的 exec 候选窗限定 `start+33 ≤ C`；
   - demo 全真实窗本身就在 `[0,D)` 内；
   - 每个全真实窗写出 `mj_window: {task, episode, segment, start}`，补帧窗写 `null`。
   - 原有合同不变：64 窗、16 任务、≥16 个 demo 尾窗、grid16 旧格（模块常量 `GRID_STRIDE = 16` 不变，对应路径 B）。
 - **测试**：
-  - 新增 `tests/dataset/test_check_stage2_validation_h5.py`：合成 2 任务 H5 + parquet 夹具；验证补帧窗 SHA、H5 sha 不符拒绝、`D` 不等拒绝、exec 窗全部满足 `start+33 ≤ C`。
+  - 新增 `tests/dataset/test_check_stage2_validation_h5.py`：合成 2 任务 H5 + `episodes.parquet`（`demo_end`/`completed_index`）与 `segments.parquet`（`lo/hi`）夹具；验证补帧窗 SHA、H5 sha 不符拒绝、`D` 不等拒绝、exec 窗全部满足 `start+33 ≤ C`。
   - 既有 `tests/dataset/test_stage2_validation_inputs.py` 原样通过。
 - 判定行沿用：`RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail=<n> sha_mismatches=0`。
 
@@ -346,6 +347,7 @@ CLI 必须带 `--dataset-path $DS/framesamp-8x8 --assets-base-dir ... --data.ass
       - `oracle.numerics` 至少含 `weights="fp32"`、`batch=1`、`cudnn_conv_tf32=True`、`matmul_tf32=False`、`amp=False`，并与 MJ `provenance.json.numeric_mode` 的这几项一致。
     - **只认 PASS**：fresh 分支 `status` 只接受 `PASS`；`WAIVED` 或带 `exception` 字段一律拒绝。
 - **`src/mme_vla_suite/policies/motion_client.py`**：`check_provenance` 的 stage2 证据循环（上述五键）同样按 kind 分支，并以 `latent_origin="fresh-extract"` 调用 G2 校验器；fresh 模式不读 restore receipt，VAE 的当前实现即在线实现，不需要历史→当前映射。
+- **`scripts/training/check_stage2_checkpoint.py`**：smoke 与 delivery 两模式凡调用 `validate_stage2_g2_evidence` 处，改为从被检快照／交付清单内的 G2.json 和 `stage2_compat.latent_origin.kind` 读出 `latent_origin` 并传入。这样 G7（SAVE_LOAD）与 G12 会重放 fresh 专属规则；mixed8 记录无该字段，按缺省走旧规则。测试在 `tests/policies/test_stage2_restore.py` 增加 fresh 用例：篡改 g2b_max_abs 的交付清单必须被拒。
 - **`scripts/training/train.py::init_history_config`**：stage2 快照按 kind 保存对应证据集（`EVIDENCE_FILES` 的键集合随 kind 变化）；`motion_snapshot.ready.json` 机制不变。
 - **`scripts/dataset/wan_stage2/compare_stage2.py`**：把写死的 `meta.num_rows != 65419` 改为必填参数 `--expect-rows <n>`；mixed8 调用传 65419，语义不变。
 - **测试**：
@@ -385,6 +387,11 @@ CLI 必须带 `--dataset-path $DS/framesamp-8x8 --assets-base-dir ... --data.ass
   - `CUDA_VISIBLE_DEVICES=4,5,6,7`；`TRAIN_ARGS` 增加 `--fsdp-devices 4 --num-workers 8`；
   - `MMEVLA_FRAMESAMP_SOURCE`/`_MANIFEST` 指向新库；
   - 调用新契约。契约内含 `CHECK_ENCODER_DATA_LINEAGE`，契约 FAIL 时 `body` 在 `set -e` 下退出，不 exec 训练。
+  - 新增 `DRY_RUN=1` 支持（缺省不设，行为与正式入口相同）。`DRY_RUN=1` 时：
+    - 不建、不写 `$LOG`（跳过 noclobber 建日志）；
+    - 照常打印 `RUN/STEPS/TRAIN_HEAD/FINAL_RECORD_DIR` 与 `TRAIN_CMD=` 行，并跑完整契约（含 `CHECK_ENCODER_DATA_LINEAGE`），把 `LAUNCH_CONTRACT=` 行打到 stdout；
+    - 以契约退出码退出，不 `exec` 训练、不建 JAX/CUDA 缓存目录。
+    - 阶段 4／5 的 P1 `argv-s2.txt` 就取自这一输出的 `TRAIN_CMD=` 行；`argv-512.txt` 取自 512 runner 既有 `DRY_RUN=1` 输出。
 - **新契约 `scripts/training/check_orig16_stage2_1024_launch.py`**：复制 mixed8 契约后修改。
   - `HISTORY_CONFIG` 换新 yaml，`FRAME_CONFIG` 不变。
   - `Contract`：
@@ -440,11 +447,11 @@ CLI 必须带 `--dataset-path $DS/framesamp-8x8 --assets-base-dir ... --data.ass
 | 编号（批次） | 目标 | 可写集合 | 禁触 | 依赖／接口契约 | 合并顺序 | 验收命令与判定行（环境） | 资源 |
 |---|---|---|---|---|---|---|---|
 | E1（haiku，按需） | 只读核实：`check_stage2_checkpoint.py --mode delivery --delivery-step` 是否支持 79999；MJ 抽取 CLI 读 policy 新生成 `wan-latents/metadata.json` 的字段要求 | 无 | 全部写入 | 结论交主会话，作 S4/S6 与 runbook 输入 | — | 报告原文摘录 | CPU |
-| S6（opus，MJ worktree，第一批） | MJ 抽取计数参数化 | `scripts/stage2_memory_export.py`、`tests/test_stage2_memory_export.py` | 其余 MJ 文件、`runs/` | — | 1，主会话 push MJ 分支 | MJ R14 环境 pytest；`STAGE2_EXPORT=PASS scope=smoke` 夹具 | CPU |
+| S6（opus，MJ worktree，第一批） | MJ 抽取计数参数化 + 输入 latent 库 pin 校验（MJ P3） | `scripts/stage2_memory_export.py`、`tests/test_stage2_memory_export.py` | 其余 MJ 文件、`runs/` | `--input-manifest` 必填、无跳过开关 | 1，主会话 push MJ 分支 | MJ R14 环境 pytest；夹具上 `STAGE2_EXPORT=PASS scope=smoke` 与 `MJ_CLI_LINEAGE=PASS files=16 mismatches=0`，篡改夹具时 FAIL | CPU |
 | S1（opus，第一批） | G0 原版模式；血缘与配对检查 | `scripts/dataset/check_stage2_validation_inputs.py`、`scripts/training/check_data_lineage.py`（新）、`tests/dataset/test_check_stage2_validation_h5.py`（新）、`tests/dataset/test_stage2_validation_inputs.py`、`tests/training/test_check_data_lineage.py`（新） | R4 所列旧语义；源目录 | 输出 `check_lineage(...)` 签名、G0 的 `mj_window` 字段 | 2 | policy R14 环境 pytest 上列测试；对真实只读文件跑 `lineage --vla-input-manifest docs/dataset-build-doc/16task-h5-scan/records/input_manifest.json` 出 L0 行 | CPU |
-| S2（opus，第一批） | fresh-extract 来源链与 G2 fresh 校验 | `scripts/dataset/pack_motion_store.py`、`src/mme_vla_suite/datastore/motion_store.py`、`src/mme_vla_suite/policies/motion_client.py`、`scripts/training/train.py`、`scripts/dataset/wan_stage2/compare_stage2.py`、`tests/dataset/test_pack_motion_stage2_fresh.py`（新）、`tests/dataset/test_pack_motion_stage2.py`、`tests/dataset/test_stage2_sampled_compare.py`、`tests/dataset/test_stage2_numeric_contract.py`、`tests/datastore/test_motion_store_stage2.py`、`tests/training/test_stage2_snapshot.py`、`tests/policies/test_motion_client_stage2.py` | `scripts/dataset/wan/**`、`accept_stage2_g2_exception.py` | 证据键 `G0/G2/G3/wan_extract/SOURCE_PIN`；`validate_stage2_g2_evidence(..., latent_origin=)` | 3 | `tests/dataset/test_stage2_*.py`、`tests/datastore/`、`tests/training/test_stage2_snapshot.py`、`tests/policies/test_motion_client_stage2.py` 全绿 | CPU |
-| S3（opus，第一批；S2 合入后续接） | G2 两段对拍 | `scripts/dataset/wan_stage2/orig16_g2.py`（新）、`scripts/dataset/wan_stage2/tests/test_orig16_g2.py`（新）、`tests/dataset/test_orig16_g2_validator_compat.py`（新） | `validate_stage2.py`、`accept_stage2_g2_exception.py`、`scripts/dataset/wan/**` | 读 G0 的 `mj_window`；产出符合 S2 fresh 校验器的 G2.json | 4 | wan_stage2 子环境 CPU pytest；S2 合入后在子分支并入 `v5-orig16` HEAD 跑兼容测试，判定行 `G2_VALIDATOR_COMPAT=PASS` | CPU |
-| S4（opus，第二批，BASE2） | 两条 run 入口、契约、yaml、512 runner（含血缘硬调） | 一节 S4 所列 3 个新文件 + `scripts/dataset/hf_export/orig100_runner/**`（新）+ `tests/training/test_check_orig16_stage2_launch.py`（新） | mixed8 入口／契约／yaml／runner；`preflight_train_launch.py` | 调 S1 `check_lineage`；读 S2 证据键与 fresh 校验器 | 5 | pytest；`bash -n`；`DRY_RUN=1` 打印；伪造 manifest 时 runner 以退出码 3 退出 | CPU |
+| S2（opus，第一批） | fresh-extract 来源链与 G2 fresh 校验 | `scripts/dataset/pack_motion_store.py`、`src/mme_vla_suite/datastore/motion_store.py`、`src/mme_vla_suite/policies/motion_client.py`、`scripts/training/train.py`、`scripts/training/check_stage2_checkpoint.py`、`scripts/dataset/wan_stage2/compare_stage2.py`、`tests/dataset/test_pack_motion_stage2_fresh.py`（新）、`tests/policies/test_stage2_restore.py`、`tests/dataset/test_pack_motion_stage2.py`、`tests/dataset/test_stage2_sampled_compare.py`、`tests/dataset/test_stage2_numeric_contract.py`、`tests/datastore/test_motion_store_stage2.py`、`tests/training/test_stage2_snapshot.py`、`tests/policies/test_motion_client_stage2.py` | `scripts/dataset/wan/**`、`accept_stage2_g2_exception.py` | 证据键 `G0/G2/G3/wan_extract/SOURCE_PIN`；`validate_stage2_g2_evidence(..., latent_origin=)` | 3 | `tests/dataset/test_stage2_*.py`、`tests/datastore/`、`tests/training/test_stage2_snapshot.py`、`tests/policies/test_motion_client_stage2.py`、`tests/policies/test_stage2_restore.py` 全绿 | CPU |
+| S3（opus，第一批；S2 合入后续接；审查基线 BASE2） | G2 两段对拍 | `scripts/dataset/wan_stage2/orig16_g2.py`（新）、`scripts/dataset/wan_stage2/tests/test_orig16_g2.py`（新）、`tests/dataset/test_orig16_g2_validator_compat.py`（新） | `validate_stage2.py`、`accept_stage2_g2_exception.py`、`scripts/dataset/wan/**` | 读 G0 的 `mj_window`；产出符合 S2 fresh 校验器的 G2.json | 4 | wan_stage2 子环境 CPU pytest；S2 合入后在子分支并入 `v5-orig16` HEAD 跑兼容测试，判定行 `G2_VALIDATOR_COMPAT=PASS` | CPU |
+| S4（opus，第二批，BASE2） | 两条 run 入口、契约、yaml、512 runner（含血缘硬调） | 一节 S4 所列 3 个新文件 + `scripts/dataset/hf_export/orig100_runner/**`（新）+ `tests/training/test_check_orig16_stage2_launch.py`（新） | mixed8 入口／契约／yaml／runner；`preflight_train_launch.py` | 调 S1 `check_lineage`；读 S2 证据键与 fresh 校验器 | 5 | pytest；`bash -n`；512 runner 与 `run_orig16_stage2_1024_80k.sh` 的 `DRY_RUN=1` 均只打印 `TRAIN_CMD=` 与检查结果、不起训练、不写 run 日志；伪造 manifest 时 runner 以退出码 3 退出、s2 入口 `LAUNCH_CONTRACT=FAIL` | CPU |
 | S5（opus，第二批，BASE2） | 三套上传驱动 | 一节 S5 所列新文件 + `scripts/dataset/hf_export/test_orig16_export_drivers.py`（新） | mixed8 驱动、`ckpt_upload_common.py`、`scan_hygiene.py` | 依赖 S2 证据键 | 6 | pytest；`bash -n`；`SMOKE=1` 只本地 | CPU |
 | RV-*（sonnet） | 每块合前只读审查 | 无 | 全部写入 | 钉死 `REVIEW_BASE`/`REVIEW_TIP`；S1/S4 涉及起跑与契约，必须核到 `DATA_LINEAGE`／`CHECK_ENCODER_DATA_LINEAGE` 存在且 FAIL 即 `exit≠0`，缺失即判 FAIL | 每块合前 | `PRE_MERGE_REVIEW=PASS\|FAIL base=<sha> tip=<sha> files=<n> commits=<n> findings=<n>` | 无 |
 | X1（opus 运行） | 阶段 2 建库各段 | 只写新库、norm 目录、`v1-store/logs/o16-20261027/` | 代码、源 H5 | 四节 runbook 阶段 2 | 阶段 2 | `o16-siglip` 首行 `DATA_LINEAGE=PASS`、首个 STAGE 起跑行 | GPU 0–7／CPU |
@@ -454,7 +461,7 @@ CLI 必须带 `--dataset-path $DS/framesamp-8x8 --assets-base-dir ... --data.ass
 | 主会话 | 删除、L0/L1、契约常量回填 commit、Beta、只读锁、档案、handoff、合并与 push | 档案、`docs/handoff/current.json`、契约常量 | 不替运行代理改代码 | — | — | 各判定行汇总 | — |
 
 **合并流程**（每块）：
-1. 核对写集：`git diff --name-only BASE..TIP` ⊆ 可写集合，越界即 `SCOPE=FAIL`。
+1. 核对写集：`git diff --name-only BASE..TIP` ⊆ 可写集合，越界即 `SCOPE=FAIL`。S1、S2、S6 用各自派发基线（BASE1／MJ BASE）；S3 已并入含 S1/S2 的 `v5-orig16` HEAD，其写集核对基线与审查的 `REVIEW_BASE` 一律取 **BASE2**（否则 S1/S2 的改动会被误判为 S3 越界）；S4、S5 本就从 BASE2 派出。
 2. 合前审 PASS 后，`git merge --no-ff <TIP sha>`，提交号按引言块从 `commitV11.58` 依次编。
 3. 合后跑定向测试，得 `POST_MERGE_REVIEW=PASS merge=<sha> tests=<结果> files=<n>`。
 4. push，清理 worktree。
@@ -478,7 +485,7 @@ CLI 必须带 `--dataset-path $DS/framesamp-8x8 --assets-base-dir ... --data.ass
 | B8 | 主会话按 store_meta `source_spot_sha256.entries` 删 features | `FEATURES_PRUNE=PASS kept=8` | 停 |
 | B9 | 主会话：`sha256sum norm_stats.json`＋`report`＋manifest sha | `DATA_IDENTITY=PASS norm_sha=<…> steps=768897 samples=476857 manifest_sha=<…>` | 停 |
 | G0 | `check_stage2_validation_inputs.py --h5-root $RAW --input-manifest $INMANI --mj-index $MJIDX …` | `RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail=<≥16> sha_mismatches=0` | 停 |
-| G1 | MJ 抽取 `--check-dropout 64` | `DROPOUT_OFF=PASS windows=64 eval_repeat_max_abs=0 train_vs_eval_max_abs=<正数>` | 停 |
+| G1 | MJ 抽取 `--input-manifest $INMANI --check-dropout 64` | `MJ_CLI_LINEAGE=PASS files=16 mismatches=0`（读 latent 前，无跳过开关）、`DROPOUT_OFF=PASS windows=64 eval_repeat_max_abs=0 train_vs_eval_max_abs=<正数>` | 停（血缘 FAIL 按 R0 停工） |
 | G2 | `orig16_g2.py bins` → 按 `G2-bins.txt` 下载 → `orig16_g2.py compare` → S2 fresh 校验器（pack 内与契约内再验） | `WAN_EQUIV=PASS windows=64 demo_tail=<=G0> g2a_windows=<64−demo_tail> g2a_max_abs=0 g2b_windows=64 g2b_max_abs=0 worst_mse=0 worst_max=0 oracle=mj-stride1@384d5db4`；信息行 `WAN_NUMERICS_DRIFT=INFO …` 不判 | 停，**不 WAIVE** |
 | G3 | `validate_stage2.py --gate G3 --rgb-root /scratch/hongze/dataset-rgb-gtxyz-16views-stride2-v1` | `EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1`、`EXPORT_PARITY=PASS windows=32 seed=0 max_abs=0 geometry_all_true=1 ckpt_sha256=27daa832…` | 停 |
 | G5 | `pack --layout stage2 --latents-origin fresh` → `compare_stage2.py --scope sampled --expect-rows <rows>` → `verify --resume --check-padding` | `PACKED_TOKEN_BYTES=PASS compared=<rows> mismatches=0`、`ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=<rows> mismatches=0 seed=0`、`VERIFY_MOTION=PASS scanned=<rows> mismatches=0 nonfinite=0 segment_set_mismatch=0 real_plus_pad_ne_33=0 exec_padded=0 pad_not_last_demo=0 pad_source_mismatch=0 demo_tail_padded=<n>` | 停 |
@@ -497,7 +504,14 @@ CLI 必须带 `--dataset-path $DS/framesamp-8x8 --assets-base-dir ... --data.ass
 
 ## 四、runbook
 
-所有阶段脚本写成 `v1-store/logs/o16-20261027/run-<会话名>.sh`（首行 `source v1-store/logs/o16-20261027/env.sh`），日志为 `v1-store/logs/o16-20261027/<会话名>.log`。统一启动模板：
+所有阶段脚本写成 `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261027/run-<会话名>.sh`，日志为 `/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261027/<会话名>.log`。每个 `run-*.sh` 开头固定两行（绝对路径，不依赖调用方 shell 的变量）：
+
+```bash
+set -euo pipefail
+D=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261027; source "$D/env.sh"
+```
+
+下文各脚本片段里的 `set -euo pipefail; D=…; source "$D/env.sh"` 即指这两行；未写出的片段同样以这两行开头。统一启动模板（外层 shell 的 `D` 只用于拼路径）：
 
 ```bash
 D=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261027
@@ -569,13 +583,13 @@ S1 合入后，主会话跑正式 L0 与 L1（`lineage "$INMANI"`）。
 前置：
 - 全部 S 块已合入并 push；
 - 建库档案 `docs/dataset-build-doc/16task-orig100-1600ep-<pin8>/launch.md` 已提交；
-- 已打建库 Beta `commitV11.64Beta`，且 `git status --short` 为空；
+- 已打建库 Beta `commitV11.63Beta`，且 `git status --short` 为空；
 - 已写 `AGENTMETARULES_HOLD`（freeze）；
 - `DF_CHECK stage=build` ≥1.5 T。
 
 ```bash
 # run-o16-siglip.sh（首行硬检 L1；32 worker = 8 卡 × 4，XLA_PYTHON_CLIENT_MEM_FRACTION=0.15；mixed8 实测 4 worker 因 GPU 中断不送达过慢）
-set -euo pipefail; source "$D/env.sh"
+set -euo pipefail; D=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261027; source "$D/env.sh"
 lineage "$INMANI"                           # 打印 DATA_LINEAGE=PASS …；FAIL 退出码 3，SigLIP 不起
 # 每卡重复 4 次的 --gpus 写法沿用 m8v-siglip-w32.sh 原文（实施时照抄）
 XLA_PYTHON_CLIENT_MEM_FRACTION=0.15 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 uv run --no-sync python scripts/dataset/run_local.py --stage siglip --lib "$LIB" --gpus <8 卡各重复 4 次> --raw-dir "$RAW" --require-free-mib 70000
@@ -606,7 +620,7 @@ uv run --no-sync python scripts/dataset/wan/compare_wan.py latents --latents "$L
 # o16-g0
 uv run --no-sync python scripts/dataset/check_stage2_validation_inputs.py --manifest "$MANI" --latents "$LIB/wan-latents" --source "$LIB/source" --h5-root "$RAW" --input-manifest "$INMANI" --mj-index "$MJIDX" --out "$VALID/G0.json"
 # o16-s2export（MJ worktree，GPU 0；含 G1；先 --max-segments 4 冒烟到独立临时输出）
-cd "$MJW" && CUDA_VISIBLE_DEVICES=0 uv run --no-sync python scripts/stage2_memory_export.py --ckpt "$CKPT" --expected-sha256 "$CKPT_SHA" --latents "$LIB/wan-latents" --manifest "$MANI" --out "$LIB/motion-tokens-stage2" --grid-subsample 2 --batch 1 --check-dropout 64 --expected-counts <段数>,<行数>
+cd "$MJW" && CUDA_VISIBLE_DEVICES=0 uv run --no-sync python scripts/stage2_memory_export.py --ckpt "$CKPT" --expected-sha256 "$CKPT_SHA" --latents "$LIB/wan-latents" --manifest "$MANI" --out "$LIB/motion-tokens-stage2" --grid-subsample 2 --batch 1 --check-dropout 64 --expected-counts <段数>,<行数> --input-manifest "$INMANI"   # 先打 MJ_CLI_LINEAGE=PASS
 # o16-g2：bins → 下载（unset HF_HUB_OFFLINE 只在本段；合计 ≤15 GB；repo 类型与 CLI 写法实施时按 hf 版本确认）→ compare
 UV_PROJECT_ENVIRONMENT="$V1_STORE/venvs/wan-stage2" uv run --project scripts/dataset/wan_stage2 --no-sync python scripts/dataset/wan_stage2/orig16_g2.py bins --g0 "$VALID/G0.json" --mj-index "$MJIDX" --out "$G2D/G2-bins.txt"
 # hf download HongzeFu/robomme-original-16x100-wan21-front-33f-dense-v1 --repo-type dataset --revision 384d5db410be713a49357bf3f55ca4f4d2f559a0 --include <G2-bins.txt 所列> provenance.json SHA256SUMS --local-dir "$G2D/mj-oracle"
@@ -627,7 +641,7 @@ uv run --no-sync python scripts/training/tests/train_es_bound.py --manifest "$MA
 
 G6 之后主会话做三件事：
 1. 复跑 L1。
-2. 把实测 `norm_sha256/episode_manifest_sha256/input_manifest_sha256/canonical_manifest_sha256/motion_rows/train_max/eval_max` 回填 `check_orig16_stage2_1024_launch.py` 的 `Contract`，提交 `commitV11.63: 回填 orig16 启动契约实测常量`。其中 `train_max/eval_max` 取契约 BUDGET 组算法的实测值，并与 `TRAIN_ES_BOUND` 的 `max_windows` 互相核对。
+2. 把实测 `norm_sha256/episode_manifest_sha256/input_manifest_sha256/canonical_manifest_sha256/motion_rows/train_max/eval_max` 回填 `check_orig16_stage2_1024_launch.py` 的 `Contract`，提交 `commitV11.64: 回填 orig16 启动契约实测常量`（在此之前先提交建库结论 `commitV11.63`，回写建库 result.md）。其中 `train_max/eval_max` 取契约 BUDGET 组算法的实测值，并与 `TRAIN_ES_BOUND` 的 `max_windows` 互相核对。
 3. push。
 
 **4. 阶段 4 短测（X3 运行，T0+14.5 → T0+15.5 h）**
@@ -635,7 +649,10 @@ G6 之后主会话做三件事：
 ```bash
 # o16-pre512
 MMEVLA_FRAMESAMP_SOURCE="$LIB/source" MMEVLA_FRAMESAMP_MANIFEST="$MANI" uv run --no-sync python scripts/training/preflight_train_launch.py --repo "$P" --train-head <40 位 HEAD> --history-config perceptual-framesamp-modul-8frame-8x8.yaml --history-config-sha256 <sha256> --assets-dir "$V1_STORE/train-assets/mme_vla_suite/$NAME" --asset-id robomme --norm-stats-sha256 <B9 norm_sha> --dataset-path "$LIB/framesamp-8x8" --run-root "$V1_STORE/train-runs/mme_vla_suite_b128_80k/o16-smoke-512-<美东MMDDHHMM>" -- mme_vla_suite_b128_80k --exp-name o16-smoke-512-<美东MMDDHHMM> --data.assets.assets-dir "$V1_STORE/train-assets/mme_vla_suite/$NAME" --data.assets.asset-id robomme --dataset-path "$LIB/framesamp-8x8" --model.history-config perceptual-framesamp-modul-8frame-8x8.yaml --fsdp-devices 4 --num-workers 8
-# P1：两条 runner 的 DRY_RUN／契约 TRAIN_CMD= 行写入 $VALID/argv-512.txt、argv-s2.txt；paired 内部先各自跑血缘
+# P1：argv 两份均取自 DRY_RUN=1 输出的 TRAIN_CMD= 行（不起训练、不写 run 日志）；paired 内部先各自跑血缘
+DRY_RUN=1 CUDA_VISIBLE_DEVICES=0,1,2,3 FSDP_DEVICES=4 NUM_WORKERS=8 bash scripts/dataset/hf_export/orig100_runner/train-512-80k.sh o16-smoke-512-<美东MMDDHHMM> --num-train-steps 20 --no-wandb-enabled | grep '^TRAIN_CMD=' > "$VALID/argv-512.txt"
+DRY_RUN=1 RUN_NAME=o16-smoke-s2-<美东MMDDHHMM> MAX_STEPS=20 TRAIN_HEAD=<40 位 HEAD> FINAL_RECORD_DIR="$VALID/smoke/final-record" bash scripts/training/run_orig16_stage2_1024_80k.sh | grep '^TRAIN_CMD=' > "$VALID/argv-s2.txt"
+# 正式起跑前（阶段 5）以正式 run 名同法重生成 argv-512.txt、argv-s2.txt，再跑 paired
 uv run --no-sync python scripts/training/check_data_lineage.py paired --encoder-ckpt "$CKPT" --expected-ckpt-sha256 "$CKPT_SHA" --argv-a "$VALID/argv-512.txt" --argv-b "$VALID/argv-s2.txt"
 # o16-smoke512（GPU 0–3；runner 内部启动前打 DATA_LINEAGE）与 o16-smokes2（GPU 4–7；契约内 CHECK_ENCODER_DATA_LINEAGE）同时起
 CUDA_VISIBLE_DEVICES=0,1,2,3 FSDP_DEVICES=4 NUM_WORKERS=8 XLA_PYTHON_CLIENT_PREALLOCATE=false bash scripts/dataset/hf_export/orig100_runner/train-512-80k.sh o16-smoke-512-<美东MMDDHHMM> --num-train-steps 20 --no-wandb-enabled
@@ -657,12 +674,12 @@ CUDA_VISIBLE_DEVICES=0 uv run --no-sync python scripts/training/check_stage2_che
 
 ```bash
 # run-o16-train512.sh（GPU 0–3）
-set -euo pipefail; source "$D/env.sh"
+set -euo pipefail; D=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261027; source "$D/env.sh"
 lineage "$INMANI"                           # 首行 L2，FAIL 退出码 3
 uv run --no-sync python scripts/training/check_data_lineage.py paired --encoder-ckpt "$CKPT" --expected-ckpt-sha256 "$CKPT_SHA" --argv-a "$VALID/argv-512.txt" --argv-b "$VALID/argv-s2.txt"
 CUDA_VISIBLE_DEVICES=0,1,2,3 FSDP_DEVICES=4 NUM_WORKERS=8 bash scripts/dataset/hf_export/orig100_runner/train-512-80k.sh "$RUN512"   # runner 内部再打一次 DATA_LINEAGE
 # run-o16-trains2.sh（GPU 4–7）
-set -euo pipefail; source "$D/env.sh"
+set -euo pipefail; D=/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261027; source "$D/env.sh"
 lineage "$INMANI"
 uv run --no-sync python scripts/training/check_data_lineage.py paired --encoder-ckpt "$CKPT" --expected-ckpt-sha256 "$CKPT_SHA" --argv-a "$VALID/argv-512.txt" --argv-b "$VALID/argv-s2.txt"
 RUN_NAME="$RUNS2" TRAIN_HEAD=<Beta 40 位 sha> FINAL_RECORD_DIR="$VALID/$RUNS2/final-record" bash scripts/training/run_orig16_stage2_1024_80k.sh   # 契约内 CHECK_ENCODER_DATA_LINEAGE
