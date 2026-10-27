@@ -617,6 +617,17 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <div class="note"><strong>实施记录（美东2026-10-26，原计划正文保留）：</strong>用户已给阶段一开工令，确认Aspen环境A、GreatLakes连接和状态机登记；随后批准Stage2 VLA20k早期试评估、运行名<code>official-stage2-20k-probe-1026-a</code>及两个独立1×A40／4CPU／24GiB／48h占位。该新增验证不构成阶段二正式800局开工令。实施与证据分别见<code>docs/evaluation-doc/official-stage2-phase1-1026/README.md</code>及该试评估的<code>launch.md</code>。</div>
 <h3>实施中调整：在线输入原子性准确写集</h3>
 <p>独立CPU oracle在固定基线发现9项非法输入拒绝／状态污染失败。按第四章的写集裁定，由独立E owner仅修改<code>framesamp_memory.py::add_buffer</code>和<code>policy.py::MME_VLA_Policy.add_buffer</code>：整批输入校验前置、既有段边界赋值延后；不改窗口／编码／合法数值链，不新增回滚层、状态或开关。独立对抗审查为<code>ADJUST_REVIEW=PASS scale=same findings=2</code>。合法包逐键字节一致、非法包失败零写入仍须修后实测；首包严格<code>D+1</code>和边界整数类型不放宽。合前遗漏交原owner续修，未将作者首版通过数字当成最终验收。</p>
+<h3>待用户裁决：仅20k早期运行的探索性验证</h3>
+<p><strong>状态：只提方案，尚未批准或实施。</strong>现场枚举当前VLA的102个对象、MotionJEPA的35个对象及owner的23个公开bucket，已有原像素／state／wrist输入，但没有本次A100在线latent、ep105 token及同checkpoint动作输出数组。G0／G3中的身份SHA与误差日志不能替代数组。原<code>A40_TARGET</code>与<code>VLA_STACK_NUMERIC</code>因而保持pending，不能自行签证书或启动原合同约束的服务。</p>
+<table><thead><tr><th>事项</th><th>完整限定方案</th></tr></thead><tbody>
+<tr><td>用途与范围</td><td>仅固定<code>official-stage2-20k-probe-1026-a</code>、20k清单SHA <code>be34e777b9ad8962aca374d2861e97cf5561b0cc9fb63fb7160e99adf03f2452</code>、epoch105 SHA <code>27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035</code>；新增单一<code>purpose=exploratory_validation</code>并进入模型／运行身份。</td></tr>
+<tr><td>唯一前提例外</td><td>用户若明确同意，允许这个探索用途在缺A100跨卡数值认证时加载服务／仿真。源pin、EMA／VAE、模型全部文件SHA、resolved／normstats、软件精度、动作协议、真实任务与seed仍严格核验；记录实际A40／driver。production与已认证validation原门完全保留。</td></tr>
+<tr><td>执行顺序与次数</td><td>在已批准两个1×A40／4CPU／24GiB／48h hold内先严格恢复、固定完整noise两次重复性，然后独立单局冒烟，再两worker各领一个固定五局chunk：合计11次真实局。冒烟单独留档，不混入后十局分片集合；不是为挑成功而重试。基础设施重试仍单独记原因／次数。未启动正式800局。</td></tr>
+<tr><td>产物与结论</td><td>恢复、重复性、有限值、资源、分片无重叠与覆盖、独立<code>task_success</code>逐项报告；整体标签<code>EXPLORATORY/UNVALIDATED</code>，跨卡比较为<code>NOT_AVAILABLE</code>。不得生成validated证书、不得写生产canonical、不得让正式60k任何数值门由此变PASS；计算结束即释放自有hold。</td></tr>
+<tr><td>准确改动归属</td><td>B在runtime合同／恢复／server／policy_config／motion_client透传现有用途和严格来源；C扩既有用途与身份／结果标签；G调整该用途的准入、参数和作用域。沿用既有队列、进程生命周期和恢复，不加授权服务、令牌、第二套队列或回退层。A客户端仍消费相同身份与既有RPC协议。</td></tr>
+<tr><td>验收</td><td>错误用途／模型／来源／文件SHA仍拒绝；探索产物不能被生产绑定消费；单卡固定noise重复一致；两worker使用不同物理UUID与不重叠固定成员；错误及任务失败如实保留。A100参考门仍pending，不伪造通过。</td></tr>
+</tbody></table>
+<p>独立唯一对抗审查：<code>ADJUST_REVIEW=PASS scale=same findings=4</code>。确认同等规模、无额外保护层；但此例外改变原服务数值门前提，必须取得用户对上表的明确批准，既有阶段一开工令与两个占位授权不替代本次裁决。未批准前只继续无此依赖的原阶段一实现、审查、资产及环境验证。</p>
 <ul>
 <li>只含两个 h1，分别为“第一部分（给人看）”与“第二部分（技术细节，供 agent 追踪）”；CSS 内联，无外部 JS／字体。</li>
 <li>三张机制图均为内联 SVG、水平／垂直正交箭头：<code>motion-window-timeline</code>、<code>process-data-chain</code>、<code>elastic-worker-dynamic-queue</code>；交付前渲染为位图目视核对。</li>
