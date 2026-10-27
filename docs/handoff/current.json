@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T14:20:21Z",
-    "america_new_york": "2026-10-27T10:20:21-0400"
+    "utc": "2026-10-27T16:11:15Z",
+    "america_new_york": "2026-10-27T12:11:15-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -579,37 +579,65 @@
       ]
     },
     "official-60k-800-eval": {
-      "plan": {"file": "1027-stage2-simple-elastic-eval-plan.html", "sha": "6c95f62"},
-      "state": "running",
-      "state_changed_at": {"utc": "2026-10-27T05:47:16Z", "america_new_york": "2026-10-27T01:47:16-0400"},
-      "state_reason": "用户批准正式60k八百局：监听bucket，见step-55000后提交10份1×A40占位，60k清单到达后下载核SHA、READY，再起controller与弹性worker",
-      "owner": {"session": "https://claude.ai/code/session_01WvPQiQXaztwkVeY2pFPyW3", "host": "sled-aspen.eecs.umich.edu"},
-      "depends_on": ["official-benchmark-stage2-eval", {"path": "hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-motion-stage2-1024-80k-v1", "branch": "-", "task": "manifests/step-60000.json"}],
+      "plan": {
+        "file": "1027-stage2-simple-elastic-eval-plan.html",
+        "sha": "6c95f62"
+      },
+      "state": "done",
+      "state_changed_at": {
+        "utc": "2026-10-27T16:11:15Z",
+        "america_new_york": "2026-10-27T12:11:15-0400"
+      },
+      "state_reason": "正式60k八百局完成：success 336/fail 436/timeout 28，成功率42.00%（官方FrameSamp+Modul 44.51±0.77）；COMPUTE_DONE、missing/errors/retries/uncertain为空；800视频齐；10个worker EXIT_CODE=0；10份占位已逐个scancel、队列无残留",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiQXaztwkVeY2pFPyW3",
+        "host": "sled-aspen.eecs.umich.edu"
+      },
+      "depends_on": [
+        "official-benchmark-stage2-eval",
+        {
+          "path": "hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-motion-stage2-1024-80k-v1",
+          "branch": "-",
+          "task": "manifests/step-60000.json"
+        }
+      ],
       "pre_handoff": [
-        {"what": "60k下载并逐文件核SHA、发布READY", "evidence": "VLA_DOWNLOAD=PASS step=60000 files=38 bytes=12219279848 manifest_sha256=c1e6adf018a7650446e05028916db825ca3f053fa2457b6d24d9ce626785c1da", "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/fetch60k.log", "status": "pass"},
-        {"what": "800局全部有确定终局并汇总成绩", "evidence": "", "where": "", "status": "pending"},
-        {"what": "自有占位逐个scancel、队列无残留", "evidence": "", "where": "", "status": "pending"}
+        {
+          "what": "60k下载并逐文件核SHA、发布READY",
+          "evidence": "VLA_DOWNLOAD=PASS step=60000 files=38 bytes=12219279848 manifest_sha256=c1e6adf018a7650446e05028916db825ca3f053fa2457b6d24d9ce626785c1da",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/fetch60k.log",
+          "status": "pass"
+        },
+        {
+          "what": "800局全部有确定终局并汇总成绩",
+          "evidence": "compute_status=COMPUTE_DONE completed=800 success=336 fail=436 timeout=28 success_rate=0.42 missing=0 errors=0 retries=0 uncertain=0 active_chunks=0",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/aggregate-final.json",
+          "status": "pass"
+        },
+        {
+          "what": "自有占位逐个scancel、队列无残留",
+          "evidence": "64869014-64869023 CANCELLED by 114466650（各Elapsed 02:38:31）；squeue -u hongzefu 为空",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/pool/release-1027.txt",
+          "status": "pass"
+        }
       ],
       "long_tail": [],
-      "running_handles": [
-        {"tmux": "eval-60k-controller", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/stage2-60k-seed42/run800/logs/controller.log", "done_line": "EXIT_CODE="},
-        {"tmux": "eval-60k-worker-01", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/worker-01.log", "done_line": "EXIT_CODE= (占位JobID 64869014)"},
-        {"tmux": "eval-60k-worker-02", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/worker-02.log", "done_line": "EXIT_CODE= (占位JobID 64869015)"},
-        {"tmux": "eval-60k-worker-03", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/worker-03.log", "done_line": "EXIT_CODE= (占位JobID 64869016)"},
-        {"tmux": "eval-60k-worker-04", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/worker-04.log", "done_line": "EXIT_CODE= (占位JobID 64869017)"},
-        {"tmux": "eval-60k-worker-05", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/worker-05.log", "done_line": "EXIT_CODE= (占位JobID 64869018)"},
-        {"tmux": "eval-60k-worker-06", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/worker-06.log", "done_line": "EXIT_CODE= (占位JobID 64869019)"},
-        {"tmux": "eval-60k-worker-07", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/worker-07.log", "done_line": "EXIT_CODE= (占位JobID 64869020)"},
-        {"tmux": "eval-60k-worker-08", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/worker-08.log", "done_line": "EXIT_CODE= (占位JobID 64869021)"},
-        {"tmux": "eval-60k-worker-09", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/worker-09.log", "done_line": "EXIT_CODE= (占位JobID 64869022)"},
-        {"tmux": "eval-60k-worker-10", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/worker-10.log", "done_line": "EXIT_CODE= (占位JobID 64869023)"}
-      ],
+      "running_handles": [],
       "authorizations": [
-        {"kind": "go", "date": "2026-10-27", "quote": "等到55k开始排卡。其他全部同意，可以开始", "scope": "bucket监听；见step-55000后提交10份spgpu 1×A40/4CPU/24G/48h占位；60k下载核验；正式800局弹性评估；收尾逐个释放"}
+        {
+          "kind": "go",
+          "date": "2026-10-27",
+          "quote": "等到55k开始排卡。其他全部同意，可以开始",
+          "scope": "bucket监听；见step-55000后提交10份spgpu 1×A40/4CPU/24G/48h占位；60k下载核验；正式800局弹性评估；收尾逐个释放"
+        }
       ],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "等800局全部accepted后aggregate汇总成绩，逐个scancel 64869014-64869023，回写档案", "command": "official_queue aggregate --run-root <N>/run800 --out <N>/run800/summary.json", "verdict_line": "ALL_800_ACCEPTED；missing=0"}
+        {
+          "what": "写评估档案docs/evaluation-doc（launch/result）；视频按任务/结局整理或做浏览页待用户定",
+          "command": "结果根 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/stage2-60k-seed42/run800",
+          "verdict_line": "—"
+        }
       ]
     }
   }
