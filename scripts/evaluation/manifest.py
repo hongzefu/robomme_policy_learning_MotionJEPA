@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import subprocess
 import re
+from copy import deepcopy
 
 
 TASKS = (
@@ -144,7 +145,8 @@ def budget_report(manifest, records):
                  "passed": all(r["passed"] for r in checked)})
 
 
-def bind_model(manifest, models, target_contract, *, validation=False):
+def bind_model(manifest, models, target_contract, *, validation=False,
+               validation_stage=None, validation_scope=None):
     """绑定完整实体字节；验证20k与正式60k具有不同、不可混用的身份。"""
     try:
         from .runtime_contract import descriptor_identity, validate_eval_runtime_contract
@@ -153,10 +155,36 @@ def bind_model(manifest, models, target_contract, *, validation=False):
     validate_episodes(manifest)
     if not isinstance(models.get("models"), list) or len(models["models"]) != 1:
         raise ValueError("当前阶段仅允许一个明确指定的模型")
-    model = models["models"][0]
+    model = deepcopy(models["models"][0])
     step = 20000 if validation else 60000
     if model.get("checkpoint_step") != step or not model.get("model_id"):
         raise ValueError(f"本用途必须使用明确的{step} checkpoint")
+    stage_fields = {}
+    if validation:
+        stage = validation_stage if validation_stage is not None else model.get("validation_stage")
+        scope = validation_scope if validation_scope is not None else model.get("validation_scope")
+        if stage not in {"smoke1", "shards10"} or not isinstance(scope, dict):
+            raise ValueError("验证绑定必须明确smoke1或shards10阶段及封口scope清单")
+        if ("validation_stage" in model and model["validation_stage"] != stage
+                or "validation_scope" in model and model["validation_scope"] != scope):
+            raise ValueError("显式验证阶段/scope与已冻结model记录不一致")
+        validate_episodes(scope, official=False)
+        expected_count = 1 if stage == "smoke1" else 10
+        if len(scope["episodes"]) != expected_count:
+            raise ValueError(f"{stage}必须恰好{expected_count}局")
+        source = {e["episode_key"]: e for e in manifest["episodes"]}
+        if any(source.get(e["episode_key"]) != e for e in scope["episodes"]):
+            raise ValueError("验证scope含未知episode或身份与官方800源不符")
+        selected = [e["episode_key"] for e in scope["episodes"]]
+        if [chunk["episode_keys"] for chunk in scope["chunks"]] != [selected[i:i + 5] for i in range(0, expected_count, 5)]:
+            raise ValueError("验证scope必须按最多五局连续分块")
+        model.update({"validation_stage": stage, "validation_scope": deepcopy(scope)})
+        stage_fields = {"validation_stage": stage, "validation_scope": {
+            "source_episode_manifest_sha256": manifest["sha256"],
+            "scope_manifest_sha256": scope["sha256"], "episode_keys": selected}}
+    elif (validation_stage is not None or validation_scope is not None
+          or "validation_stage" in model or "validation_scope" in model):
+        raise ValueError("正式绑定不得带验证阶段或scope")
     if re.fullmatch("[0-9a-f]{40}", model.get("eval_code_commit", "")) is None:
         raise ValueError("缺锁定的eval代码commit")
     original_root = Path(model["checkpoint_root"])
@@ -213,13 +241,16 @@ def bind_model(manifest, models, target_contract, *, validation=False):
         "episode_manifest_sha256": manifest["sha256"], "eval_code_commit": model["eval_code_commit"],
         "model_seed": 42, "eval_parameters": {"max_steps": 1300, "conservative_max_q": 1301,
                                                "motion_budget": 96, "position_limit": 4096}}
+    run_descriptor.update(stage_fields)
     return seal({"schema_version": 1, "purpose": purpose, "model_id": model["model_id"],
                  "model_seed": 42, "checkpoint_root": str(root), "model_descriptor": descriptor,
                  "cross_hardware_numeric": runtime_contract["cross_hardware_numeric"],
                  "episode_manifest": manifest, "model_source": model,
                  identity_key: model_identity, "run_descriptor": run_descriptor,
                  "run_identity_sha256": descriptor_identity("validation_run" if validation else "run", run_descriptor),
-                 "episode_manifest_sha256": manifest["sha256"]})
+                 "episode_manifest_sha256": manifest["sha256"],
+                 **({"validation_stage": model["validation_stage"], "validation_scope": model["validation_scope"]}
+                    if validation else {})})
 
 
 def verify_model_binding(binding_or_path, target_contract_path, *, expected_checkpoint_root=None,
@@ -254,6 +285,8 @@ def main(argv=None):
     episodes.add_argument("--out", type=Path, required=True)
     bind = sub.add_parser("bind-model")
     bind.add_argument("--validation", action="store_true", help="仅绑定用户指定的Stage2 20000验证模型")
+    bind.add_argument("--validation-stage", choices=["smoke1", "shards10"])
+    bind.add_argument("--validation-scope", type=Path, help="选定官方局的已封口子集清单")
     for name in ("episodes", "models", "target-contract", "out"):
         bind.add_argument(f"--{name}", type=Path, required=True)
     for name, default in (("model-seed", 42), ("max-steps", 1300), ("conservative-max-q", 1301),
@@ -266,7 +299,9 @@ def main(argv=None):
     else:
         manifest = validate_episodes(json.loads(args.episodes.read_text()))
         models = json.loads(args.models.read_text())
-        result = bind_model(manifest, models, args.target_contract, validation=args.validation)
+        scope = json.loads(args.validation_scope.read_text()) if args.validation_scope is not None else None
+        result = bind_model(manifest, models, args.target_contract, validation=args.validation,
+                            validation_stage=args.validation_stage, validation_scope=scope)
     # 同盘同步后无覆盖发布，读方永不看到半份最终清单。
     try:
         from .queue_store import publish

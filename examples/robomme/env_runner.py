@@ -5,10 +5,10 @@ from __future__ import annotations
 from typing import Any
 import numpy as np
 
-from robomme.robomme_env import *  # noqa: F401, F403 - env registration
-from robomme.env_record_wrapper import BenchmarkEnvBuilder
-
-from utils import TASK_NAME_LIST
+try:
+    from .utils import TASK_NAME_LIST
+except ImportError:
+    from utils import TASK_NAME_LIST
 
 np.set_printoptions(precision=4, suppress=True)
 
@@ -24,6 +24,9 @@ class EnvRunner:
     """
 
     def __init__(self, env_id: str, video_save_dir: str, max_steps: int = 1300, dataset: str = "test") -> None:
+        # 延迟加载仿真依赖，使纯 CPU 契约测试无需创建图形环境。
+        import robomme.robomme_env  # noqa: F401
+        from robomme.env_record_wrapper import BenchmarkEnvBuilder
         if env_id not in TASK_NAME_LIST:
             raise ValueError(f"Environment ID {env_id} not in {TASK_NAME_LIST}")
         self.env_id = env_id
@@ -55,6 +58,7 @@ class EnvRunner:
         # 与 make_env_for_episode 内部写进 gym.make(env_kwargs) 的是同一组值。flush 必须有——
         # 驱动日志经 tmux + tee -a，无 flush 会卡缓冲（AGENTS 7）。
         _seed, _diff = self.env_builder.resolve_episode(episode_id)
+        self.env_seed = _seed
         print(f"EVAL_EPISODE split={self.dataset} task={self.env_id} ep={episode_id} "
               f"env_seed={_seed} difficulty={_diff}", flush=True)
         self.env = self.env_builder.make_env_for_episode(episode_id)
@@ -86,11 +90,8 @@ class EnvRunner:
         Returns ( (img, wrist_img, state), stop_flag, success_flag ).
         success_flag is one of "success", "fail", "timeout", "unknown".
         """
-        try:
-            obs, _, terminated, truncated, self.info = self.env.step(action)
-        except Exception as e:
-            print(f"Error: {e}")
-            return (None, None, None), True, "error"
+        # 原始异常由单局边界记录，不能用空观测覆盖首个异常栈。
+        obs, _, terminated, truncated, self.info = self.env.step(action)
 
         img = obs["front_rgb_list"][-1]
         wrist_img = obs["wrist_rgb_list"][-1]

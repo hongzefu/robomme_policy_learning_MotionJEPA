@@ -98,6 +98,8 @@ def test_model_binding_files_and_validation_identity(tmp_path, monkeypatch):
                                   "motion_identity_sha256": "a" * 64}))
     result = bind_model(manifest, {"models": [model]}, target)
     assert result["purpose"] == "production"
+    assert "validation_stage" not in result["run_descriptor"]
+    assert "validation_scope" not in result["run_descriptor"]
     assert result["cross_hardware_numeric"] == "not_required"
     assert result["run_descriptor"]["runtime_contract_sha256"] == hashlib.sha256(target.read_bytes()).hexdigest()
     assert "certificate_sha256" not in result["run_descriptor"]
@@ -109,18 +111,77 @@ def test_model_binding_files_and_validation_identity(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="20000"):
         bind_model(manifest, {"models": [model]}, target, validation=True)
     model["checkpoint_step"] = 20000
-    validation = bind_model(manifest, {"models": [model]}, target, validation=True)
+    smoke_scope = make_manifest(manifest["episodes"][:1], official=False)
+    shard_scope = make_manifest(manifest["episodes"][:10], official=False)
+    with pytest.raises(ValueError, match="必须明确"):
+        bind_model(manifest, {"models": [model]}, target, validation=True)
+    validation = bind_model(manifest, {"models": [model]}, target, validation=True,
+                            validation_stage="smoke1", validation_scope=smoke_scope)
+    shards = bind_model(manifest, {"models": [model]}, target, validation=True,
+                        validation_stage="shards10", validation_scope=shard_scope)
     assert validation["purpose"] == "validation"
     assert validation["run_identity_sha256"] != result["run_identity_sha256"]
+    assert validation["validation_model_identity_sha256"] == shards["validation_model_identity_sha256"]
+    assert validation["run_identity_sha256"] != shards["run_identity_sha256"]
+    assert validation["run_descriptor"]["validation_scope"]["scope_manifest_sha256"] == smoke_scope["sha256"]
+    assert shards["run_descriptor"]["validation_scope"]["episode_keys"] == [e["episode_key"] for e in shard_scope["episodes"]]
+    assert validation["episode_manifest_sha256"] == shards["episode_manifest_sha256"] == manifest["sha256"]
     assert "validation_model_identity_sha256" in validation
     assert verify_model_binding(validation, target, expected_purpose="validation") == validation
+    assert verify_model_binding(shards, target, expected_purpose="validation") == shards
+    with pytest.raises(ValueError, match="run身份"):
+        verify_model_binding(validation, target, expected_run_identity_sha256=shards["run_identity_sha256"])
+    from scripts.evaluation.queue_store import Controller, QueueStore
+    smoke_store, shards_store = QueueStore(tmp_path / "smoke"), QueueStore(tmp_path / "shards")
+    smoke_store.initialize(smoke_scope, validation["run_identity_sha256"], mode="validation", official=False)
+    shards_store.initialize(shard_scope, shards["run_identity_sha256"], mode="validation", official=False)
+    with Controller(smoke_store) as controller:
+        controller.register_slot({"slot_instance": "smoke", "worker_uuid": "worker", "job_id": "1",
+                                  "job_incarnation": "fixed", "step_id": "0", "state": "RUNNING"})
+        grant = controller.claim("smoke-claim", "smoke")["grant"]
+        payload = {**grant["episodes"][0], "episode_nonce": "nonce", "outcome": "fail",
+                   "actions_executed": 1, "rpc_seq": 1}
+        receipt = smoke_store.write_attempt(grant, "terminal", payload, "terminal")
+    with pytest.raises(ValueError, match="其他run"):
+        shards_store.write_attempt(grant, "terminal", payload, "cross-stage")
+    with Controller(shards_store) as controller:
+        assert not controller.accept_terminal(receipt)
+        assert controller.summary()["execution_coverage"] == 0
     changed = copy.deepcopy(validation)
     changed["run_descriptor"]["model_seed"] = 99
     with pytest.raises(ValueError, match="重算"):
         verify_model_binding(seal(changed), target)
+    model["validation_stage"], model["validation_scope"] = "smoke1", smoke_scope
     (root / "params.bin").write_bytes(b"wrong weights")
     with pytest.raises(ValueError, match="SHA"):
         bind_model(manifest, {"models": [model]}, target, validation=True)
+
+
+@pytest.mark.parametrize("case", ["smoke_count", "shards_count", "duplicate", "unknown", "seed", "frozen_record"])
+def test_validation_stage_scope_rejects_invalid_members(case, monkeypatch):
+    monkeypatch.setitem(sys.modules, "scripts.evaluation.runtime_contract", SimpleNamespace(
+        descriptor_identity=lambda kind, value: digest([kind, value]), validate_eval_runtime_contract=lambda *a, **kw: {}))
+    manifest = make_manifest([{"task_name": task, "episode_id": i, "env_seed": i, "difficulty": "easy"}
+                             for i in range(50) for task in TASKS])
+    stage = "shards10" if case == "shards_count" else "smoke1"
+    selected = copy.deepcopy(manifest["episodes"][:2 if case == "smoke_count" else 1])
+    if case == "duplicate":
+        selected = [selected[0], selected[0]]
+        scope = make_manifest(manifest["episodes"][:1], official=False)
+        scope["episodes"] = selected
+        scope = seal(scope)
+    else:
+        if case == "unknown":
+            selected[0]["task_name"] = "Unknown"
+        if case == "seed":
+            selected[0]["env_seed"] = 999
+        scope = make_manifest(selected, official=False)
+    model = {"model_id": "stage2", "checkpoint_step": 20000}
+    if case == "frozen_record":
+        model["validation_stage"] = "shards10"
+    with pytest.raises(ValueError):
+        bind_model(manifest, {"models": [model]}, "unused", validation=True,
+                   validation_stage=stage, validation_scope=scope)
 
 
 def test_model_binding_refuses_extra_file_and_symlink(tmp_path, monkeypatch):
