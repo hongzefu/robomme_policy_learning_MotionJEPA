@@ -47,7 +47,7 @@
 <text x="819.0" y="126.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">pos_h = SiLU(W·motion_pos + b)</text>
 <text x="819.0" y="142.0" font-size="13" font-family="'JetBrains Mono',Menlo,Consolas,monospace" fill="#111827" text-anchor="start">tok = W&#x27;·[motion_emb ‖ pos_h] + b&#x27;</text>
 <text x="773.0" y="158.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#6B7280" font-weight="bold" text-anchor="start">形状：</text>
-<text x="819.0" y="158.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">W 256→768；W&#x27; 1536→1024；</text>
+<text x="819.0" y="158.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">W 256→768；W&#x27; 1792→1024；</text>
 <text x="819.0" y="174.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">motion (B,96,1024)、帧路 (B,512,1024)</text>
 <text x="773.0" y="190.0" font-size="11" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#B91C1C" font-weight="bold" text-anchor="start">补位：</text>
 <text x="819.0" y="190.0" font-size="13" font-family="'Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" fill="#111827" text-anchor="start">输入全 0 ⇒ pos_h = SiLU(b) ≠ 0，</text>
