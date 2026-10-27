@@ -20,7 +20,7 @@ except ImportError:
 
 def server_command(spec, nonce, port):
     command = [spec["policy_python"], "-m", "scripts.training.serve_policy", "--port", str(port),
-               "--seed", "42", "--motion-online-gpu", os.environ["CUDA_VISIBLE_DEVICES"],
+               "--seed", str(spec.get("model_seed", 42)), "--motion-online-gpu", os.environ["CUDA_VISIBLE_DEVICES"],
                "--stage2-python", spec["stage2_python"],
                "--run-identity-sha256", spec["run_identity_sha256"], "--server-nonce", nonce,
                "--eval-purpose", spec.get("purpose", "validation")]
@@ -31,13 +31,17 @@ def server_command(spec, nonce, port):
 
 
 def client_command(spec, grant_path, output, nonce, port, drain_file):
-    return [spec["sim_python"], str(Path(spec["repo"]) / "examples/robomme/eval.py"),
-            "--episode-manifest", str(grant_path), "--chunk", read_json(grant_path)["chunk_id"],
-            "--attempt-output", str(output), "--run-identity-sha256", spec["run_identity_sha256"],
-            "--expected-server-nonce", nonce, "--model-kind", spec["model_kind"],
-            "--model-seed", "42", "--host", "127.0.0.1", "--port", str(port),
-            "--rpc-timeout-seconds", str(spec.get("rpc_timeout_seconds", 600)),
-            "--drain-file", str(drain_file)]
+    command = [spec["sim_python"], str(Path(spec["repo"]) / "examples/robomme/eval.py"),
+               "--episode-manifest", str(grant_path), "--chunk", read_json(grant_path)["chunk_id"],
+               "--attempt-output", str(output), "--run-identity-sha256", spec["run_identity_sha256"],
+               "--expected-server-nonce", nonce, "--model-kind", spec["model_kind"],
+               "--model-seed", str(spec.get("model_seed", 42)), "--host", "127.0.0.1", "--port", str(port),
+               "--rpc-timeout-seconds", str(spec.get("rpc_timeout_seconds", 600)),
+               "--drain-file", str(drain_file)]
+    # 只有testx口径追加；官方缺省命令行与改动前逐字相同。
+    if spec.get("profile", "official") == "testx":
+        command += ["--profile", "testx", "--max-steps", str(spec["max_steps"])]
+    return command
 
 
 def worker_environment(spec):
@@ -47,7 +51,13 @@ def worker_environment(spec):
              str(repo / "third_party/robomme_benchmark/src")]
     if os.environ.get("PYTHONPATH"):
         paths.append(os.environ["PYTHONPATH"])
-    return dict(os.environ, PYTHONPATH=os.pathsep.join(paths), PYTHONUNBUFFERED="1")
+    environment = dict(os.environ, PYTHONPATH=os.pathsep.join(paths), PYTHONUNBUFFERED="1")
+    # 服务端与客户端都以本环境启动；官方缺省两键都不设，环境与改动前相同。
+    if spec.get("xhard_metadata_dir"):
+        environment["XHARD_METADATA_DIR"] = spec["xhard_metadata_dir"]
+    if spec.get("motion_overflow", "raise") == "resample":
+        environment["MMEVLA_MOTION_OVERFLOW"] = "resample"
+    return environment
 
 
 def stop_process_tree(process, grace_seconds=10):
