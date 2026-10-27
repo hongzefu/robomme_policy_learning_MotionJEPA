@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T19:37:43Z",
-    "america_new_york": "2026-10-27T15:37:43-04:00"
+    "utc": "2026-10-27T19:41:40Z",
+    "america_new_york": "2026-10-27T15:41:40-04:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "c1a794ee205504d868e349aea1ae3ed80d2f41f4",
+    "base_head": "6126d494a7488a2f597054d9706d6007df854d3f",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -15,6 +15,27 @@
     "frozen_head": null
   },
   "tasks": {
+    "policy-worktree-consolidation-20261027": {
+      "plan": {"file": null, "sha": null},
+      "state": "closed",
+      "state_changed_at": "2026-10-27T19:41:40Z",
+      "state_reason": "按用户指令将评估分支合入主目录并删除本机-temp/-eval工作树，完整保留源提交历史与主v1-store；必要289项CPU测试通过。扩展测试的一项NFS缺失失败及两份旧测试收集错误已如实留档。",
+      "owner": {"session": "", "host": "Codex@AWS"},
+      "depends_on": [],
+      "pre_handoff": [
+        {"what": "合并兼容性与内容保全审查", "evidence": "POST_MERGE_REVIEW=PASS tree=cb08d8971294b1f21677641eba02a98daf57b7f1 findings=0 blocking=0", "where": "docs/maintenance/1027-policy-worktree-consolidation.md", "status": "pass"},
+        {"what": "合并必要CPU测试", "evidence": "REQUIRED_CPU_TESTS=PASS passed=289 failed=0 skipped=0 seconds=38.00 EXIT_CODE=0", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/maintenance/policy-consolidation-20261027/required-tests.log", "status": "pass"},
+        {"what": "本地重复工作树清理", "evidence": "WORKTREE_CONSOLIDATION=PASS copies_removed=2 unique_history_preserved=1 main_store_preserved=1", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/maintenance/policy-consolidation-20261027/after-cleanup.json", "status": "pass"},
+        {"what": "合并提交已同步远端", "evidence": "6126d494a7488a2f597054d9706d6007df854d3f", "where": "origin/v4-256concat1", "status": "pass"}
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {"kind": "go", "date": "2026-10-27", "quote": "你现在policy learning有3个repo 你看一下是否可以合并 然后删除另外两个copy的", "scope": "检查并合并三个本地policy工作目录，保留主目录，删除-temp与-eval重复副本；保全历史和独有内容。"}
+      ],
+      "pending_decisions": [],
+      "next_steps": []
+    },
     "official-benchmark-stage2-eval": {
       "plan": {
         "file": "1027-stage2-simple-elastic-eval-plan.html",
@@ -182,7 +203,7 @@
         {
           "what": "启动后全链只读审查",
           "evidence": "STARTUP_CONFIG_AUDIT=PASS blocking=0；STARTUP_DATA_SNAPSHOT_AUDIT=PASS blocking=0；ROOT_UPLOAD=PASS files=17",
-          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/docs/training-doc/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/records/startup-audit.json",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/docs/training-doc/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/records/startup-audit.json",
           "status": "pass"
         },
         {
