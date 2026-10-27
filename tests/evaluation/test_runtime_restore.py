@@ -5,6 +5,7 @@ import dataclasses
 import json
 from pathlib import Path
 import sys
+import subprocess
 from types import SimpleNamespace
 
 import numpy as np
@@ -111,12 +112,26 @@ def test_binding_rejection_happens_before_model_load(tmp_path, monkeypatch):
 def test_explicit_stage2_interpreter_runs_real_ipc_without_install(tmp_path):
     from mme_vla_suite.policies.motion_client import MotionEncoderClient
     from mme_vla_suite.policies.motion_protocol import stub_frame
-    # 真实uv/子进程/socket；stub不加载权重或GPU，明确不作为E4证据。
+    # 直接使用uv管理venv入口；真实子进程/socket，stub不加载权重或GPU。
     client = MotionEncoderClient(online_gpu="", encoder_kind="stage2_pool4_concat", stub=True,
         source_run="test/checkpoint_epoch_1.pt#model", v1_store=tmp_path, stage2_python=sys.executable,
         handshake_timeout=30)
     try:
-        assert str(Path(sys.executable).absolute()) in client.argv
+        interpreter = str(Path(sys.executable).absolute())
+        assert client.argv[0] == interpreter
+        assert client.argv[1].endswith("/scripts/dataset/wan_stage2/stage2_sidecar.py")
+        assert "uv" not in client.argv and "--python" not in client.argv
+        assert client.provenance["pid"] == client._proc.pid
+        actual_env = dict(item.split(b"=", 1) for item in Path(f"/proc/{client._proc.pid}/environ").read_bytes().split(b"\0") if b"=" in item)
+        selected_prefix = Path(interpreter).parent.parent
+        assert actual_env[b"UV_PROJECT_ENVIRONMENT"].decode() == str(selected_prefix)
+        assert actual_env[b"CUDA_VISIBLE_DEVICES"] == b""
+        assert b"PYTHONPATH" not in actual_env and b"PYTHONHOME" not in actual_env
+        # 同一入口真实启动对照，防止resolve到uv底层解释器而丢掉venv前缀。
+        probe = json.loads(subprocess.check_output([interpreter, "-c",
+            "import json,sys; print(json.dumps({'executable':sys.executable,'prefix':sys.prefix}))"], text=True))
+        assert probe["executable"] == interpreter
+        assert Path(probe["prefix"]).resolve() == selected_prefix.resolve()
         output = client(np.stack([stub_frame(i) for i in range(33)]), 0)
         assert output.shape == (1024,) and output.dtype == np.float32
         np.testing.assert_array_equal(output, np.zeros(1024, np.float32))

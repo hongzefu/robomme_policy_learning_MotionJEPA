@@ -311,7 +311,8 @@ class MotionEncoderClient:
             if not interpreter.is_file() or interpreter.parent.name != "bin":
                 raise ValueError("stage2_python必须为现存虚拟环境bin内解释器")
             child_env["UV_PROJECT_ENVIRONMENT"] = str(interpreter.parent.parent)
-            argv += ["--python", str(interpreter), str(interpreter)]
+            # 直接保留uv管理venv入口，使Popen PID就是握手进程，且不丢失venv前缀。
+            argv = [str(interpreter)]
         else:
             argv += ["python"]
         parent_sock, child_sock = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
