@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-26T20:01:46Z",
-    "america_new_york": "2026-10-26T16:01:46-0400"
+    "utc": "2026-10-27T02:55:12Z",
+    "america_new_york": "2026-10-26T22:55:12-0400"
   },
   "repo": {
-    "branch": "v4-256concat1",
-    "base_head": "a4817eedff440c888bec39c2aeb69d8f8609150a",
+    "branch": "v4-eval-official-1026",
+    "base_head": "2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -15,6 +15,39 @@
     "frozen_head": null
   },
   "tasks": {
+    "official-benchmark-stage2-eval": {
+      "plan": {
+        "file": "1026-official-benchmark-stage2-eval-plan.html",
+        "sha": "2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f"
+      },
+      "state": "planned",
+      "state_changed_at": "2026-10-27T02:55:12Z",
+      "state_reason": "已获阶段一开工、Aspen环境A、GreatLakes连接与状态机登记授权；阶段二正式800局未获开工。",
+      "owner": {"session": "01a17b42-9de4-72b3-b0ed-1be85f58fb26", "host": "sled-aspen.eecs.umich.edu"},
+      "depends_on": [],
+      "pre_handoff": [
+        {"what": "计划一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f findings=0 blocking=0", "where": "git:2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f:1026-official-benchmark-stage2-eval-plan.html", "status": "pass"},
+        {"what": "阶段一代码、独立审查与CPU核心验证", "evidence": "", "where": "docs/evaluation-doc/official-stage2-phase1-1026/", "status": "pending"},
+        {"what": "NFS与三解释器现场检查、可用资产与待验门清单", "evidence": "", "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/", "status": "pending"}
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {"kind": "go", "date": "2026-10-26", "quote": "开始实现这个阶段一,然后我授权你可以使用greatlakes。 注意你这个子代理内部的这个映射你要看清楚了，就是 Cloud 和 Codex是有映射的，你要用 Codex的映射来做。", "scope": "仅本计划阶段一，Codex非AWS映射；不启动阶段二正式800局。"},
+        {"kind": "decision", "date": "2026-10-26", "quote": "同意这个，同意是用这个Aspen来做的。", "scope": "确认Aspen实际2张RTX A6000按环境A，开发与控制在Aspen，计算在GreatLakes。"},
+        {"kind": "decision", "date": "2026-10-26", "quote": "连接这个Great Lakes。", "scope": "允许复用已认证ControlMaster连接；作业仍须遵守阶段与资源约束。"},
+        {"kind": "decision", "date": "2026-10-26", "quote": "你应该能够拿到这个已经有的这个 checkpoint，然后你可以尝试 eval 一下这个效果，就是已经有的这个 VIA 的这个训练的 checkpoint，应该是早期的这个 checkpoint。", "scope": "查找并准备早期同架构VLA试评估；不默换旧768架构，模型身份与数值门仍核验。"},
+        {"kind": "decision", "date": "2026-10-26", "quote": "登记到状态机", "scope": "登记本次阶段一与早期checkpoint试评估，保留其他任务原状态。"},
+        {"kind": "decision", "date": "2026-10-26", "quote": "还有什么问题吗？你尽可能不要阻塞 能做的想做\n先做", "scope": "独立可做事项持续推进；缺资产不阻塞无依赖的实现与CPU验证。"},
+        {"kind": "decision", "date": "2026-10-26", "quote": "Motion的encoder我应该也上传了Hugging Face，你可以直接下载，应该是最新的这个Epoch一百多的那个。", "scope": "下载并核验计划锁定epoch105 EMA，SHA256=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035。"}
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {"what": "A/B/C/G独立工作树实现与D独立oracle，合前合后审查", "command": "按1026计划8.1写集实施；只在eval分支整合", "verdict_line": "POST_MERGE_REVIEW=PASS"},
+        {"what": "获取已授权epoch105并核对314265763字节与固定SHA", "command": "从HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1获取stage2-full144-1025-a/checkpoint_epoch_105.pt", "verdict_line": "ENCODER_DOWNLOAD=PASS"},
+        {"what": "定位Stage2同架构早期VLA及reference，缺失的真实门保持pending", "command": "只读现有NFS与已发布HF交付；不干扰AWS训练", "verdict_line": "EARLY_VLA_IDENTITY=PASS|PENDING"}
+      ]
+    },
     "mixed8-vla-stage2-1024-train": {
       "plan": {
         "file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md",
