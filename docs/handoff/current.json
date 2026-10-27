@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T05:21:34Z",
-    "america_new_york": "2026-10-27T01:21:34-0400"
+    "utc": "2026-10-27T05:38:04Z",
+    "america_new_york": "2026-10-27T01:38:04-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "789ef0e5e9c241dd0f8bca11f2c3b885edc52e39",
+    "base_head": "3d17151ca1b13ebd4ab5637aee1707f95b37a1b4",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -20,24 +20,19 @@
         "file": "1027-stage2-simple-elastic-eval-plan.html",
         "sha": "9dfc391bc1427be1c3c8b2f610ec81f9f0d00caa"
       },
-      "state": "running",
-      "state_changed_at": "2026-10-27T05:01:47Z",
-      "state_reason": "简化B/C及两行WebSocket心跳修复已合并推送，固定789ef0e执行。首个客户端缺包attempt未开始局，按官方锁定server组补齐3包；随后BinFill0首次推理遇到默认心跳超时，动作0无终局。当前64855345.step2执行该已开始局唯一基础设施重试，尚未终局。十局队列已初始化，控制器等待，未启动两卡评估；两个hold仍运行。",
+      "state": "done",
+      "state_changed_at": "2026-10-27T05:38:04Z",
+      "state_reason": "用户批准的简化阶段一完成，保留弹性队列，固定789ef0e真实执行。单局完整执行342动作、任务失败0/1；随后两卡动态领取不同块并完整完成十局，1成功9失败、无遗漏或infra重试，两个worker退出0。控制器正常退出0，64855345与64855348已逐个取消且队列为空，本轮tmux全退出。结果和必要故障原文已归档，正式60k八百局未启动。",
       "owner": {"session": "01a17b42-9de4-72b3-b0ed-1be85f58fb26", "host": "sled-aspen.eecs.umich.edu"},
       "depends_on": [],
       "pre_handoff": [
-        {"what": "简化方案一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=4f1c09484217f2937c180fcb5a9384768822c82b findings=0 blocking=0", "where": "git:9dfc391bc1427be1c3c8b2f610ec81f9f0d00caa:1027-stage2-simple-elastic-eval-plan.html", "status": "pass"},
-        {"what": "简化服务、弹性队列与必要连接短测", "evidence": "SIMPLE_QUEUE=PASS tests=3；整合后队列及真实WebSocket定向4项通过0.24秒；B/C/心跳修复独立审查均PASS", "where": "git:789ef0e5e9c241dd0f8bca11f2c3b885edc52e39", "status": "pass"},
-        {"what": "真实单局完整执行并独立报告任务成功字段", "evidence": "SINGLE_EP_SMOKE=RUNNING job=64855345 step=2 code=789ef0e；旧infra动作0，无终局，未伪报成功率", "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/official-stage2-20k-probe-1026-a/simple-1027/smoke1-episode-retry1.log", "status": "pending"},
-        {"what": "两卡十局覆盖、成绩汇总及精确作业释放", "evidence": "队列READY completed=0 episodes=10；两卡阶段未起跑", "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027/shards10/", "status": "pending"}
+        {"what": "简化方案一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=4f1c09484217f2937c180fcb5a9384768822c82b findings=0 blocking=0", "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.log", "status": "pass"},
+        {"what": "简化服务、弹性队列与必要连接短测", "evidence": "SIMPLE_QUEUE=PASS tests=3 socket_tests=1 final_tests=4 seconds=0.24", "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.log", "status": "pass"},
+        {"what": "真实单局完整执行并独立报告任务成功字段", "evidence": "SINGLE_EP_SMOKE=PASS task_success=0/1 actions=342", "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.log", "status": "pass"},
+        {"what": "两卡十局覆盖、成绩汇总及精确作业释放", "evidence": "TWO_WORKER_EVAL=PASS completed=10 unique=10 success=1 fail=9 timeout=0 infra=0 retries=0", "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.log", "status": "pass"}
       ],
       "long_tail": [],
-      "running_handles": [
-        {"tmux": "eval-simple-1027-smoke1-episode-retry1", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/official-stage2-20k-probe-1026-a/simple-1027/smoke1-episode-retry1.log", "done_line": "EXIT_CODE="},
-        {"tmux": "eval-simple-1027-controller", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027/shards10/logs/controller.log", "done_line": "EXIT_CODE="},
-        {"tmux": "", "job_id": "64855345", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/logs/hold-simple-64855345.log", "done_line": "Slurm终态并释放"},
-        {"tmux": "", "job_id": "64855348", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/logs/hold-simple-64855348.log", "done_line": "Slurm终态并释放"}
-      ],
+      "running_handles": [],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "同意，按这个简化方案开工，保留弹性 worker 队列，不要再堆叠功能和校验。尽快先跑通一局，再做两卡分片评估。", "scope": "9dfc391简化方案覆盖旧复杂门禁前置，保留弹性队列；复用20k/epoch105，先单局再两卡十局，共十一局；不启动正式八百局。"},
         {"kind": "go", "date": "2026-10-26", "quote": "开始实现这个阶段一,然后我授权你可以使用greatlakes。 注意你这个子代理内部的这个映射你要看清楚了，就是 Cloud 和 Codex是有映射的，你要用 Codex的映射来做。", "scope": "仅本计划阶段一，Codex非AWS映射；不启动阶段二正式800局。"},
@@ -54,9 +49,7 @@
         {"kind": "decision", "date": "2026-10-26", "quote": "同意这么做。然后这个A100和40的问题你不用再关心了。\n不需要做到跨硬件的数值性一致。", "scope": "本任务评估不要求A100/A40跨硬件数值一致，不再等待相应输出参考、阈值或认证证书；沿现有validation用途，无需新增用途或保护层。权重/EMA/VAE/source_pin/全文件SHA/resolved/normstats/软件与精度及真实执行仍核验。同机恢复、finite与重复性独立检查；被取消项记NOT_REQUIRED reason=user_decision，不能伪PASS。"}
       ],
       "pending_decisions": [],
-      "next_steps": [
-        {"what": "观察当前单局终局，不自行追加同局重试；链路完整后启动两卡十局", "command": "固定789ef0e，按simple-1027/run-worker.sh分别启动worker-1与worker-2，使用64855345/64855348；共享shards10队列", "verdict_line": "SINGLE_EP_SMOKE=PASS；SIMPLE_QUEUE=PASS；TWO_WORKER_EVAL=PASS"}
-      ]
+      "next_steps": []
     },
     "mixed8-vla-stage2-1024-train": {
       "plan": {
