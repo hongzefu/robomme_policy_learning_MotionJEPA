@@ -195,7 +195,7 @@ class Resident:
         command = client_command(self.spec, grant_path, output, self.nonce, self.port, self.drain_file)
         env = dict(os.environ)
         repo = Path(self.spec["repo"])
-        env["PYTHONPATH"] = os.pathsep.join(str(repo/p) for p in ("src", "packages/openpi-client/src", "third_party/robomme_benchmark/src"))
+        env["PYTHONPATH"] = os.pathsep.join(str(repo/p) for p in (".", "src", "packages/openpi-client/src", "third_party/robomme_benchmark/src"))
         chunk_seconds = len(grant["episodes"])*float(self.spec.get("episode_wall_seconds", 2400)) + float(self.spec.get("startup_cleanup_seconds", 1800))
         deadline = min(time.time()+chunk_seconds, float(self.spec["hold_end_time"]), float(self.spec["workload_deadline"]))
         with (attempt/"sim.log").open("ab", buffering=0) as log:
