@@ -518,3 +518,24 @@ def test_unregistered_starting_step_late_binding_requires_exact_launch(tmp_path)
         c.recover([p])
         assert c.state["slots"]["slot-1"]["step_id"] == "0"
         assert c.state["slots"]["slot-1"]["step_binding"]["launch_id"] == "launch-1"
+
+
+def test_validation_smoke_and_shards_keep_separate_scopes(tmp_path):
+    results = []
+    for name, count, workers in (("smoke", 1, 1), ("shards", 10, 2)):
+        store = setup_queue(tmp_path / name, count, mode="validation")
+        with Controller(store) as c:
+            for i in range(workers):
+                c.register_slot(slot(i))
+            for i in range(workers):
+                grant = c.claim(f"{name}-{i}", f"slot-{i}")["grant"]
+                for episode in grant["episodes"]:
+                    assert c.accept_terminal(terminal(store, grant, episode, "fail"))
+                c.close_assignment(grant["attempt_id"], sim_stopped=True)
+            summary = c.summary()
+            assert summary["purpose"] == "validation"
+            assert summary["execution_coverage"] == count
+            assert summary["compute_status"] == "COMPUTE_DONE"
+            assert c.claim("no-success-rerun", "slot-0")["status"] == "COMPUTE_DONE"
+            results.append(summary["execution_coverage"])
+    assert results == [1, 10]

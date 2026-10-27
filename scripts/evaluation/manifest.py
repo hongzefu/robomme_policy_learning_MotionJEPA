@@ -147,9 +147,9 @@ def budget_report(manifest, records):
 def bind_model(manifest, models, target_contract, *, validation=False):
     """绑定完整实体字节；验证20k与正式60k具有不同、不可混用的身份。"""
     try:
-        from .runtime_contract import descriptor_identity, validate_target_contract
+        from .runtime_contract import descriptor_identity, validate_eval_runtime_contract
     except ImportError:
-        from runtime_contract import descriptor_identity, validate_target_contract
+        from runtime_contract import descriptor_identity, validate_eval_runtime_contract
     validate_episodes(manifest)
     if not isinstance(models.get("models"), list) or len(models["models"]) != 1:
         raise ValueError("当前阶段仅允许一个明确指定的模型")
@@ -194,26 +194,11 @@ def bind_model(manifest, models, target_contract, *, validation=False):
     if provenance_path not in declared:
         raise ValueError("训练来源不在锁定成员清单")
     provenance = json.loads((root / provenance_path).read_text())
-    reference_pin = model.get("reference_manifest_sha256", "")
-    if re.fullmatch("[0-9a-f]{64}", reference_pin) is None:
-        raise ValueError("缺已交付参考包的独立SHA256锚点")
     target_path = Path(target_contract)
-    target = json.loads(target_path.read_text())
-
-    def target_runtime(value):
-        if isinstance(value, dict):
-            return {k: target["target_gpu_family"] if k == "gpu_name" else target["target_driver"]
-                    if k == "driver" else target_runtime(v) for k, v in value.items()}
-        if isinstance(value, list):
-            return [target_runtime(v) for v in value]
-        return value
-
-    # 此处静态复核已测目标配置；worker握手仍须核真实actual_runtime。
-    validated = validate_target_contract(target_path, training_provenance=provenance,
-                                         actual_runtime=target_runtime(target["training_runtime"]),
-                                         expected_reference_manifest_sha256=reference_pin)
-    if validated["motion_identity_sha256"] != model["motion_identity_sha256"]:
-        raise ValueError("VLA与目标证书motion身份不符")
+    # 用户已取消跨硬件数值等价前置；源、权重、软件精度与运行合同继续严格绑定。
+    runtime_contract = validate_eval_runtime_contract(target_path, training_provenance=provenance)
+    if runtime_contract["motion_identity_sha256"] != model["motion_identity_sha256"]:
+        raise ValueError("VLA与运行合同motion身份不符")
     purpose = "validation" if validation else "production"
     descriptor = {"purpose": purpose, "checkpoint_step": step,
                   "checkpoint_files": files, "resolved_sha256": model["resolved_sha256"],
@@ -222,13 +207,15 @@ def bind_model(manifest, models, target_contract, *, validation=False):
     model_identity = descriptor_identity("validation_model" if validation else "model", descriptor)
     identity_key = "validation_model_identity_sha256" if validation else "model_identity_sha256"
     run_descriptor = {"purpose": purpose, identity_key: model_identity,
-        "certificate_sha256": hashlib.sha256(target_path.read_bytes()).hexdigest(),
+        "runtime_contract_sha256": hashlib.sha256(target_path.read_bytes()).hexdigest(),
+        "cross_hardware_numeric": runtime_contract["cross_hardware_numeric"],
         "benchmark_commit": manifest["benchmark_commit"], "metadata_sha256": manifest["metadata_sha256"],
         "episode_manifest_sha256": manifest["sha256"], "eval_code_commit": model["eval_code_commit"],
         "model_seed": 42, "eval_parameters": {"max_steps": 1300, "conservative_max_q": 1301,
                                                "motion_budget": 96, "position_limit": 4096}}
     return seal({"schema_version": 1, "purpose": purpose, "model_id": model["model_id"],
                  "model_seed": 42, "checkpoint_root": str(root), "model_descriptor": descriptor,
+                 "cross_hardware_numeric": runtime_contract["cross_hardware_numeric"],
                  "episode_manifest": manifest, "model_source": model,
                  identity_key: model_identity, "run_descriptor": run_descriptor,
                  "run_identity_sha256": descriptor_identity("validation_run" if validation else "run", run_descriptor),
@@ -251,7 +238,7 @@ def verify_model_binding(binding_or_path, target_contract_path, *, expected_chec
     actual = bind_model(binding["episode_manifest"], {"models": [binding["model_source"]]},
                         target_contract_path, validation=binding["purpose"] == "validation")
     if actual != binding:
-        raise ValueError("model binding重算与现场checkpoint/目标证书不符")
+        raise ValueError("model binding重算与现场checkpoint/运行合同不符")
     return actual
 
 

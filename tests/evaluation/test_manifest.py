@@ -72,10 +72,10 @@ def test_resealed_official_manifest_refuses_nonfive_chunks(sizes):
 
 
 def test_model_binding_files_and_validation_identity(tmp_path, monkeypatch):
-    # 只隔离B的证书边界，实体文件SHA与production/validation区分由C真实执行。
+    # 只隔离B的运行合同边界，实体文件SHA与production/validation区分由C真实执行。
     monkeypatch.setitem(sys.modules, "scripts.evaluation.runtime_contract", SimpleNamespace(
         descriptor_identity=lambda kind, value: digest([kind, value]),
-        validate_target_contract=lambda path, **kwargs: json.loads(Path(path).read_text())))
+        validate_eval_runtime_contract=lambda path, **kwargs: json.loads(Path(path).read_text())))
     episodes = [{"task_name": task, "episode_id": i, "env_seed": i, "difficulty": "easy"}
                 for i in range(50) for task in TASKS]
     manifest = make_manifest(episodes)
@@ -92,11 +92,16 @@ def test_model_binding_files_and_validation_identity(tmp_path, monkeypatch):
              "checkpoint_files": entries, "resolved_path": "resolved.json", "resolved_sha256": h,
              "normstats_path": "normstats.json", "normstats_sha256": h,
              "training_provenance_path": "motion_provenance.json", "motion_identity_sha256": "a" * 64,
-             "eval_code_commit": "b" * 40, "reference_manifest_sha256": "c" * 64}
+             "eval_code_commit": "b" * 40}
     target = tmp_path / "target.json"
-    target.write_text(json.dumps({"training_runtime": {}, "motion_identity_sha256": "a" * 64}))
+    target.write_text(json.dumps({"schema": "eval-runtime-contract-v1", "cross_hardware_numeric": "not_required",
+                                  "motion_identity_sha256": "a" * 64}))
     result = bind_model(manifest, {"models": [model]}, target)
     assert result["purpose"] == "production"
+    assert result["cross_hardware_numeric"] == "not_required"
+    assert result["run_descriptor"]["runtime_contract_sha256"] == hashlib.sha256(target.read_bytes()).hexdigest()
+    assert "certificate_sha256" not in result["run_descriptor"]
+    assert "reference_manifest_sha256" not in model
     assert verify_model_binding(result, target, expected_checkpoint_root=root, expected_purpose="production",
                                 expected_run_identity_sha256=result["run_identity_sha256"]) == result
     with pytest.raises(ValueError, match="用途"):
@@ -120,7 +125,7 @@ def test_model_binding_files_and_validation_identity(tmp_path, monkeypatch):
 
 def test_model_binding_refuses_extra_file_and_symlink(tmp_path, monkeypatch):
     monkeypatch.setitem(sys.modules, "scripts.evaluation.runtime_contract", SimpleNamespace(
-        descriptor_identity=lambda kind, value: digest([kind, value]), validate_target_contract=lambda *a, **kw: {}))
+        descriptor_identity=lambda kind, value: digest([kind, value]), validate_eval_runtime_contract=lambda *a, **kw: {}))
     manifest = make_manifest([{"task_name": task, "episode_id": i, "env_seed": i, "difficulty": "easy"}
                               for i in range(50) for task in TASKS])
     root = tmp_path / "checkpoint"
