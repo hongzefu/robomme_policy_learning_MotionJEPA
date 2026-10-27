@@ -6,17 +6,32 @@
 
 新作业 `64855345`（gl1504）与 `64855348`（gl1520）于美东00:59分配，各1 A40／4 CPU／24 GiB／48小时。旧作业 `64849606`、`64849621` 已取消。先使用第一份作业直接加载真实20k并执行 `BinFill:0`，不再先跑 `check_runtime`。两卡十局通过同一弹性队列领取两个五局块，和单局结果分目录计数。
 
-首局代码固定为 `922498b2b7be87b07a5f5065a0bc5e343495683c`，B服务入口合前复核通过；整合后入口定向4项测试通过，3.44秒。已有权重、encoder与三解释器原样复用。新产物子目录为原运行根下 `simple-1027/`，不覆盖旧日志。首局grant为 `simple-1027/smoke-grant.json`，seed540000／easy，run身份 `7c4fafa6800d952b56810747ed4d4f9d5c542d3fd5a0d142c6b0be3107bc5c6b`。
+首个启动版本为 `922498b2b7be87b07a5f5065a0bc5e343495683c`；修复默认心跳误断后，完整单局及两卡评估统一固定为 `789ef0e5e9c241dd0f8bca11f2c3b885edc52e39`。B服务入口合前复核通过，整合后入口定向4项测试通过，3.44秒；最终队列及真实连接4项定向测试通过，0.24秒。已有权重与encoder复用，仿真环境按官方既有锁定server组补齐3个通信包。新产物子目录为原运行根下 `simple-1027/`，不覆盖旧日志。首局grant为 `simple-1027/smoke-grant.json`，seed540000／easy，run身份 `7c4fafa6800d952b56810747ed4d4f9d5c542d3fd5a0d142c6b0be3107bc5c6b`。
 
 首局完整入口为：
 
 ```bash
 ssh -o BatchMode=yes greatlakes srun --jobid=64855345 --overlap --exact --ntasks=1 --cpus-per-task=4 --gpu_cmode=shared \
   /usr/bin/bash /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027/run-single.sh \
-  922498b2b7be87b07a5f5065a0bc5e343495683c
+  789ef0e5e9c241dd0f8bca11f2c3b885edc52e39 smoke1-episode-retry1
 ```
 
-脚本是本轮运行产物，显式设置下文同一套缓存与解释器，使用简化服务CLI启动policy及sidecar，监听后直接执行官方客户端。普通可选运行配置沿用 `contracts/runtime.json` 供既有sidecar加载；不再传模型绑定或独立运行检查器。服务端口18027，客户端结果目录 `simple-1027/smoke1-client/`；外层tmux名 `eval-simple-1027-smoke1`，日志 `simple-1027/smoke1.log`。模型监听只说明开始服务，真实单局终局另记结果。
+脚本是本轮运行产物，显式设置下文同一套缓存与解释器，使用简化服务CLI启动policy及sidecar，监听后直接执行官方客户端。普通可选运行配置沿用 `contracts/runtime.json` 供既有sidecar加载；不再传模型绑定或独立运行检查器。服务端口18027，完整单局结果目录 `simple-1027/smoke1-episode-retry1/`；外层tmux名 `eval-simple-1027-smoke1-episode-retry1`，日志同名。模型监听只说明开始服务，真实单局终局另记结果。
+
+两卡阶段的输入为 `simple-1027/shards10/manifest.json` 与 `spec.json`，任务复用既定 `stages/shards10/scope.json`，run身份为 `d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212`。Aspen唯一控制器入口为本机运行产物 `simple-1027/run-controller.sh`，tmux名 `eval-simple-1027-controller`；读取固定789ef0e源码，不做GPU计算。初始化使用 `official_queue initialize --run-root <shards10目录> --manifest <既定scope> --spec <shards10-spec-input.json>`；控制器命令为 `official_queue controller --run-root <shards10目录>`。
+
+两个worker的完整启动口径为：
+
+```bash
+EVAL_ROOT=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval
+RUN="$EVAL_ROOT/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027"
+CODE=789ef0e5e9c241dd0f8bca11f2c3b885edc52e39
+ssh -o BatchMode=yes greatlakes srun --jobid=64855345 --overlap --exact --ntasks=1 --cpus-per-task=4 --gpu_cmode=shared /usr/bin/bash "$RUN/run-worker.sh" "$CODE" worker-1
+# 先确认worker-1已领取第一块，再启动第二个worker；无需重新分片。
+ssh -o BatchMode=yes greatlakes srun --jobid=64855348 --overlap --exact --ntasks=1 --cpus-per-task=4 --gpu_cmode=shared /usr/bin/bash "$RUN/run-worker.sh" "$CODE" worker-2
+```
+
+两条命令分别放入 `eval-simple-1027-worker-1`、`eval-simple-1027-worker-2` detached tmux，pipefail、tee和真实退出码落本机 `simple-1027/worker-1.log`、`worker-2.log`。worker脚本在计算step内设置与单局相同的缓存环境，再执行固定源码的 `resident_worker --run-root <shards10目录> --spec <spec.json> --worker-id <名称> --job-id <Slurm分配ID>`。模型日志位于队列 `logs/`，每块仿真日志位于 `attempts/<attempt>/sim.log`。
 
 ## ① 目的与当前结论
 

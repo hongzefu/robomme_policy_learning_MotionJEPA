@@ -4,5 +4,5 @@
 
 | 档案 | 范围 | 状态 |
 | --- | --- | --- |
-| [阶段一实现](official-stage2-phase1-1026/README.md) | 官方客户端、runtime、队列、集群运行器与独立输入验证 | 实施与独立审查中 |
-| [20k试评估](official-stage2-20k-probe-1026-a/launch.md) | 固定Stage2 VLA20k、epoch105、两个独立A40占位及分片验证 | 资产获取与环境验证中；尚无策略成绩 |
+| [阶段一实现](official-stage2-phase1-1026/README.md) | 按1027简化方案保留弹性队列、常驻模型与逐块仿真 | 简化实现完成，实际新增worker领取不同块通过 |
+| [20k试评估](official-stage2-20k-probe-1026-a/result.md) | 固定Stage2 VLA20k、epoch105、单局及双卡十局 | 单局0/1；两卡1/10（10%）；两个worker退出0，资源收尾中 |
