@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T03:14:31Z",
-    "america_new_york": "2026-10-26T23:14:31-0400"
+    "utc": "2026-10-27T03:31:30Z",
+    "america_new_york": "2026-10-26T23:31:30-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "0087c713935c25acd34b252175965830140d30f3",
+    "base_head": "d82396119602de454966c2307b18e01057638343",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -18,11 +18,11 @@
     "official-benchmark-stage2-eval": {
       "plan": {
         "file": "1026-official-benchmark-stage2-eval-plan.html",
-        "sha": "2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f"
+        "sha": "d82396119602de454966c2307b18e01057638343"
       },
       "state": "running",
       "state_changed_at": "2026-10-27T02:57:40Z",
-      "state_reason": "阶段一独立实现及合前审查进行中；用户追加批准Stage2 VLA20k与两个A40分片试评估。64849606/64849621已RUNNING，UUID不同，三NFS环境导入通过，尚未运行模型。固定资产IPv4下载与摘要进行中，NFS IO阻塞；未启动阶段二800局。",
+      "state_reason": "用户已批准20k限定验证并明确不要求跨硬件数值一致，A100/A40参考与证书前置取消，身份与软件配置仍核验；B/C/G按原validation用途缩减接口。A/D/E合前通过，190项CPU通过；B/G其余审查修补中。两A40已分配，资产受NFS IO阻塞仍校验中；尚未模型试跑或正式800局。",
       "owner": {"session": "01a17b42-9de4-72b3-b0ed-1be85f58fb26", "host": "sled-aspen.eecs.umich.edu"},
       "depends_on": [],
       "pre_handoff": [
@@ -47,13 +47,16 @@
         {"kind": "decision", "date": "2026-10-26", "quote": "还有什么问题吗？你尽可能不要阻塞 能做的想做\n先做", "scope": "独立可做事项持续推进；缺资产不阻塞无依赖的实现与CPU验证。"},
         {"kind": "decision", "date": "2026-10-26", "quote": "Motion的encoder我应该也上传了Hugging Face，你可以直接下载，应该是最新的这个Epoch一百多的那个。", "scope": "下载并核验计划锁定epoch105 EMA，SHA256=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035。"},
         {"kind": "decision", "date": "2026-10-26", "quote": "采用这组运行名和规格", "scope": "固定Stage2 VLA20k，run_name=official-stage2-20k-probe-1026-a，先单局再五局；单job1×A40/4CPU/24GiB/48h，结束释放。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "你query两个这个A40的叫步，然后尝试一下这个多卡的分片是不是正常的。", "scope": "在同一早期验证run使用两个独立1GPU占位检验不同固定chunk分片；共两份48h承诺96GPUh，不扩为正式800局。"}
+        {"kind": "decision", "date": "2026-10-26", "quote": "你query两个这个A40的叫步，然后尝试一下这个多卡的分片是不是正常的。", "scope": "在同一早期验证run使用两个独立1GPU占位检验不同固定chunk分片；共两份48h承诺96GPUh，不扩为正式800局。"},
+        {"kind": "go", "date": "2026-10-26", "quote": "批准限定探索性验证", "scope": "批准d823961计划限定20k运行；独立单局冒烟后两worker各五局，共11次真实局，来源及全部模型身份仍核验，正常失败不为成功重跑，不启动正式800。"},
+        {"kind": "decision", "date": "2026-10-26", "quote": "继续工作，你这个原计划中的这个20K探索性验证是什么意思，稍微讲一下。", "scope": "解释20k是VLA训练步数并继续原任务，保留下载及作业句柄。"},
+        {"kind": "decision", "date": "2026-10-26", "quote": "同意这么做。然后这个A100和40的问题你不用再关心了。\n不需要做到跨硬件的数值性一致。", "scope": "本任务评估不要求A100/A40跨硬件数值一致，不再等待相应输出参考、阈值或认证证书；沿现有validation用途，无需新增用途或保护层。权重/EMA/VAE/source_pin/全文件SHA/resolved/normstats/软件与精度及真实执行仍核验。同机恢复、finite与重复性独立检查；被取消项记NOT_REQUIRED reason=user_decision，不能伪PASS。"}
       ],
       "pending_decisions": [],
       "next_steps": [
         {"what": "A/B/C/G独立工作树实现与D独立oracle，合前合后审查", "command": "按1026计划8.1写集实施；只在eval分支整合", "verdict_line": "POST_MERGE_REVIEW=PASS"},
         {"what": "获取已授权epoch105并核对314265763字节与固定SHA", "command": "从HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1获取stage2-full144-1025-a/checkpoint_epoch_105.pt", "verdict_line": "ENCODER_DOWNLOAD=PASS"},
-        {"what": "定位Stage2同架构早期VLA及reference，缺失的真实门保持pending", "command": "只读现有NFS与已发布HF交付；不干扰AWS训练", "verdict_line": "EARLY_VLA_IDENTITY=PASS|PENDING"}
+        {"what": "完成固定20k交付、严格恢复与同A40重复性，然后smoke1及两分片10", "command": "20k清单SHA be34e777b9ad8962aca374d2861e97cf5561b0cc9fb63fb7160e99adf03f2452；仅在SHA/READY和代码实审后使用64849606/64849621，跨硬件数值不再为前提", "verdict_line": "VLA_DOWNLOAD=PASS；CKPT_RESTORE=PASS；REPEATABILITY=PASS；SHARD_COVERAGE=PASS；CROSS_HARDWARE_NUMERIC=NOT_REQUIRED reason=user_decision"}
       ]
     },
     "mixed8-vla-stage2-1024-train": {
