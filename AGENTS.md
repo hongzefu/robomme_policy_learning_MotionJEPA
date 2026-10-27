@@ -527,6 +527,15 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 
 <!-- AGENTMETARULES:END common-agents src=19ba669ebd7ad1490f8349fb7ce579b08e99f153 blob=70961dd4dca6adf8f15a36ba492433fcd627022e -->
 
+## 项目专属规则
+
+- **P-LINEAGE（encoder 与 VLA 数据同源强约束，2026-10-27）**：
+  - **硬约束**：motion / memory encoder 的训练源数据集与 VLA 训练库必须是**同一个数据集**——同一组源 H5，逐文件 sha256 相同。任何混用一律视为违规，包括但不限于：一方是另一方的子集或超集、同任务不同批次录制（如原版 RoboMME 16×100 `Yinpei/robomme_data_h5` 与本地录制的 mixed8-200 16×200）、只差难度档。
+  - **机械闸门**：任何 VLA 建库／起跑合同（起跑脚本、契约文件、`kind: go` 交接）必须包含判定行 `DATA_LINEAGE=PASS encoder_ckpt=<sha8> encoder_source_pin=<sha> vla_input_pin=<sha> files=<n> mismatches=0`，口径是：比对 encoder 训练数据根的源 H5 sha256 集合与 VLA 库 `meta/input_manifest.json` 的 sha256 集合，两集合必须完全相等。`DATA_LINEAGE=FAIL` 或判定行缺失即停工、证据交用户；**不得 WAIVE、不得写成「已知风险」或风险项继续起跑**。同一批并行的多条 run 还须输出 `PAIRED_RUNS_SAME_LIB=PASS`（各 run 的 VLA 库 input pin 相同，且各自 `DATA_LINEAGE=PASS`）。
+  - **计划阶段**：VLA 计划的「外部依赖锚点」必须同时写 encoder ckpt sha 与该 encoder 的训练源 pin，并写明 VLA 库源 pin 与之相等的证据（命令与判定行）；计划审查（`PLAN_CONSISTENCY_REVIEW`）把这一项列为必查项，缺失或不等即 FAIL。
+  - **联动**：换 encoder 就必须换库（或证明新 encoder 与现库同源），换库就必须换 encoder（或证明现 encoder 与新库同源）；任何一侧变动都重跑 `DATA_LINEAGE` 闸门。
+  - **来源**：用户 2026-10-27 原话（逐字）：「加入一个强约束，以后 encoder 和 VI 必须是同一个数据集，不可以出现混用的情况。」（VI 指 VLA）。历史事故：10-26 的 VLA run `mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k` 用 mixed8-200（16×200 本地录制）库训练，其 motion encoder（MotionJEPA `stage2-full144-1025-a` ep105）却训练自原版 RoboMME 16×100（`Yinpei/robomme_data_h5`），1026 计划把这一错配登记为「已知风险」后照常起跑，用户裁定为错误。
+
 ## 对正本的覆盖项（按正本条号；未列出的条目按正本执行）
 
 - **覆盖第 2 条（计划密度标杆）**：`<PLAN_EXEMPLAR>` = benchmark 仓库 [`docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md`](https://github.com/hongzefu/robomme_benchmark_MotionJEPA/blob/newtaskRelease-taskV9/docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md) 的「第一部分（给人看）」（2026-10-06 用户原话「所有的密度的标杆都改成这个」，所有仓库统一；此前为本仓库 `0829-destructive-restructure-plan.md` 第一部分「两条核心保证的原理」一节）；历史名称与现名的对应见 [计划文件命名迁移表](docs/README.md#计划文件命名迁移表)。
