@@ -14,9 +14,9 @@ import time
 import uuid
 
 try:
-    from .gl_official_pool import ACTIVE, Pool, atomic_json, read_json, require_gates, terminal_step_proof, slurm_records, verify_job_record, TERMINAL
+    from .gl_official_pool import ACTIVE, Pool, SlurmTransport, atomic_json, read_json, require_gates, terminal_step_proof, slurm_records, verify_job_record, TERMINAL
 except ImportError:
-    from gl_official_pool import ACTIVE, Pool, atomic_json, read_json, require_gates, terminal_step_proof, slurm_records, verify_job_record, TERMINAL
+    from gl_official_pool import ACTIVE, Pool, SlurmTransport, atomic_json, read_json, require_gates, terminal_step_proof, slurm_records, verify_job_record, TERMINAL
 
 LAUNCH_GATES = {"source_pin", "ssh_controlmaster", "nfs_paths", "nfs_python", "nfs_atomicity",
                 "eval_runtime_contract",
@@ -121,6 +121,7 @@ def validate_spec(spec):
 
 def srun_command(root, ledger, slot, spec_path, policy_python, repo):
     return ["srun", f"--jobid={slot['job_id']}", "--overlap", "--exact", "--ntasks=1",
+            f"--chdir={repo}",
             f"--job-name=official-resident-{slot['launch_id']}",
             f"--cpus-per-task={ledger['envelope']['cpus']}", "--gpu_cmode=shared",
             policy_python, str(Path(repo)/"scripts/evaluation/resident_worker.py"),
@@ -248,7 +249,7 @@ def stopped_proof(ledger, slot, queue_slot, runner):
             "terminal": True, "rpc_quiescent": True, "sidecar_quiescent": True}
 
 
-def refresh_release_snapshot(pool, release_state, audit_path, ledger=None):
+def refresh_release_snapshot(pool, release_state, audit_path, ledger=None, *, runner=subprocess.run):
     """新hold启动前先持久化本机释放身份；不会因刷新另起资源账本。"""
     ledger = read_json(pool.path) if ledger is None else ledger
     proofs, unresolved = [], []
@@ -262,7 +263,7 @@ def refresh_release_snapshot(pool, release_state, audit_path, ledger=None):
         proofs.append({**slot, "pool_id": ledger["pool_id"], "account": ledger["envelope"]["account"],
                        "cluster": ledger["envelope"]["cluster"], "user": ledger["envelope"]["user"],
                        "submit_time": origin["submit_time"]})
-    pool.cancel(proofs, verified_snapshot=ledger)  # 只核身份，不执行取消。
+    pool.cancel(proofs, verified_snapshot=ledger, runner=runner)  # 只核身份，不执行取消。
     payload = {"verified_snapshot": ledger, "proofs": proofs, "unresolved": unresolved}
     atomic_json(audit_path, payload)
     release_state.update(snapshot=ledger, proofs=proofs, unresolved=unresolved)
@@ -321,7 +322,7 @@ def supervise(pool, spec, gates, children, *, runner=subprocess.run, popen=subpr
         if state["phase"] != "RECOVERING" and eligible:
             if release_state is None or release_audit_path is None:
                 raise ValueError("接纳新hold前必须有本机释放快照")
-            refresh_release_snapshot(pool, release_state, release_audit_path, ledger)
+            refresh_release_snapshot(pool, release_state, release_audit_path, ledger, runner=runner)
             _, joined = launch(pool, spec, gates, ledger["pool_revision"], execute=True, popen=popen)
             children.extend(joined)
             ledger = read_json(pool.path)
@@ -407,7 +408,7 @@ def supervise(pool, spec, gates, children, *, runner=subprocess.run, popen=subpr
                             hold = current["holds"][new_slot["hold_id"]]
                             hold["startup_restarts"] = hold.get("startup_restarts", 0)+1
                 if release_state is not None and release_audit_path is not None:
-                    refresh_release_snapshot(pool, release_state, release_audit_path)
+                    refresh_release_snapshot(pool, release_state, release_audit_path, runner=runner)
                 _, resumed = launch(pool, spec, gates, ledger["pool_revision"], execute=True, popen=popen)
                 children.extend(resumed)
                 if not resumed:
@@ -457,11 +458,13 @@ def main(argv=None):
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--release-proofs", type=Path)
     parser.add_argument("--local-release-audit", type=Path)
+    parser.add_argument("--ssh-host", help="显式通过既有SSH宿主执行Slurm；省略时在GL本地执行")
     args = parser.parse_args(argv)
     execute = args.execute and not args.dry_run
     if execute and (args.release_proofs is None or args.local_release_audit is None):
         parser.error("正式运行须先指定本pool已核Slurm身份与本机释放审计路径")
     pool = Pool(args.run_root)
+    transport = SlurmTransport(args.ssh_host)
     supervisor_lock = None
     if execute:
         supervisor_lock = (pool.path.parent/"supervisor.lock").open("a+")
@@ -473,18 +476,18 @@ def main(argv=None):
     proofs = read_json(args.release_proofs) if args.release_proofs else []
     if execute:
         # 起跑前将取消所需身份固定在本机；NFS丢失不能拖住GPU释放。
-        pool.cancel(proofs, verified_snapshot=snapshot)
+        pool.cancel(proofs, verified_snapshot=snapshot, runner=transport.run)
         active = {key for key, slot in snapshot["slots"].items() if slot["state"] in ACTIVE}
         if active != {proof["slot_instance"] for proof in proofs}:
             parser.error("释放身份必须覆盖本pool全部未终态席位，UNKNOWN须先对账")
         atomic_json(args.local_release_audit, {"verified_snapshot": snapshot, "proofs": proofs})
     release_state = {"snapshot": snapshot, "proofs": proofs, "unresolved": []}
     commands, children = launch(pool, read_json(args.launch_spec), read_json(args.gates),
-                                args.expected_pool_revision, execute=args.execute and not args.dry_run)
+                                args.expected_pool_revision, execute=args.execute and not args.dry_run, popen=transport.popen)
     if execute:
         ledger = read_json(pool.path)
         created = {child.pid for child in children}
-        children.extend(ExistingStep(pool, slot) for slot in ledger["slots"].values()
+        children.extend(ExistingStep(pool, slot, runner=transport.run) for slot in ledger["slots"].values()
                         if slot["state"] in ACTIVE and slot.get("launch_id") and slot.get("srun_pid") not in created
                         and not slot.get("launch_error"))
     print(json.dumps({"commands": commands, "started": len(children)}, ensure_ascii=False), flush=True)
@@ -500,7 +503,7 @@ def main(argv=None):
         failed_launch = execute and any(slot.get("launch_error") for slot in read_json(pool.path)["slots"].values())
         codes = ([2] if failed_launch or not children else supervise(pool, read_json(args.launch_spec), read_json(args.gates), children,
                         drain_audit_dir=args.local_release_audit.parent, release_state=release_state,
-                        release_audit_path=args.local_release_audit)) if execute else []
+                        release_audit_path=args.local_release_audit, runner=transport.run, popen=transport.popen)) if execute else []
     except KeyboardInterrupt:
         codes = [3]
     finally:
@@ -516,15 +519,15 @@ def main(argv=None):
                     if not getattr(child, "attached", False) and child.poll() is None:
                         stop_process_tree(child, 10)
                 transferred = (codes == [0] and spec.get("purpose") == "validation" and spec.get("validation_stage") == "smoke1"
-                               and handoff_smoke(pool, spec))
+                               and handoff_smoke(pool, spec, runner=transport.run))
                 if transferred:
                     print("PHASE_HANDOFF=PASS from=smoke1 to=shards10 holds=reused campaign_complete=0", flush=True)
                 else:
                     if codes == [0] and spec.get("validation_stage") == "smoke1":
                         codes = [2]
                     snapshot, proofs = release_state["snapshot"], release_state["proofs"]
-                    pool.cancel(proofs, confirmed=True, audit_path=args.local_release_audit, verified_snapshot=snapshot)
-                    released = pool.confirm_release(snapshot, args.local_release_audit) and not release_state["unresolved"]
+                    pool.cancel(proofs, confirmed=True, audit_path=args.local_release_audit, verified_snapshot=snapshot, runner=transport.run)
+                    released = pool.confirm_release(snapshot, args.local_release_audit, runner=transport.run) and not release_state["unresolved"]
                     print(f"RESOURCE_RELEASE={'PASS' if released else 'PENDING'} jobs={len(proofs)}", flush=True)
                     if not released:
                         codes = [2]

@@ -29,6 +29,16 @@ def pick_port(host="127.0.0.1", requested=0):
         return probe.getsockname()[1]
 
 
+def worker_environment(spec):
+    """缓存仅由共享spec的明确字段设置，CUDA与Slurm身份仍继承计算step。"""
+    cache = spec.get("cache_env", {})
+    allowed = {"UV_CACHE_DIR", "UV_LINK_MODE", "HF_HOME", "XDG_CACHE_HOME", "TORCH_HOME",
+               "WANDB_DIR", "WANDB_CACHE_DIR", "JAX_COMPILATION_CACHE_DIR", "TRANSFORMERS_CACHE"}
+    if set(cache) - allowed or any(not isinstance(value, str) for value in cache.values()):
+        raise ValueError("cache_env仅接受明确的缓存字段，不接收控制主机整份环境")
+    return dict(os.environ, **cache, PYTHONUNBUFFERED="1")
+
+
 def stop_process_tree(process, grace_seconds):
     """只操作本worker以新会话创建的进程组，父进程退出也检查残余子进程。"""
     if process is None:
@@ -248,7 +258,7 @@ class Resident:
         atomic_json(grant_path, grant)
         output = attempt/"client"
         command = client_command(self.spec, grant_path, output, self.nonce, self.port, self.drain_file)
-        env = dict(os.environ)
+        env = worker_environment(self.spec)
         repo = Path(self.spec["repo"])
         env["PYTHONPATH"] = os.pathsep.join(str(repo/p) for p in (".", "src", "packages/openpi-client/src", "third_party/robomme_benchmark/src"))
         chunk_seconds = len(grant["episodes"])*float(self.spec.get("episode_wall_seconds", 2400)) + float(self.spec.get("startup_cleanup_seconds", 1800))
@@ -298,7 +308,7 @@ class Resident:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("ab", buffering=0) as log:
             self.server = self.popen(server_command(self.spec, self.nonce, self.port), cwd=self.spec["repo"],
-                                     stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+                                     env=worker_environment(self.spec), stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
             health_until = time.monotonic() + float(self.spec.get("server_load_seconds", 1800))
             while True:
                 if self.server.poll() is not None or self.stop.is_set():

@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from scripts.evaluation.gl_official_pool import atomic_json
-from scripts.evaluation.resident_worker import Resident, pick_port, read_and_release_metadata, stop_process_tree, validate_permit, validate_server_metadata
+from scripts.evaluation.resident_worker import Resident, pick_port, read_and_release_metadata, stop_process_tree, validate_permit, validate_server_metadata, worker_environment
 
 try:
     from scripts.evaluation.manifest import digest, seal
@@ -148,6 +148,15 @@ class ResidentTest(unittest.TestCase):
         operation, payload = self.store.requests[-1]
         self.assertEqual(operation, "worker_error")
         self.assertFalse(payload["uncertain_terminal"])
+
+    def test_worker_cache_comes_from_spec_and_cannot_replace_slurm_or_home(self):
+        with patch.dict("os.environ", {"CUDA_VISIBLE_DEVICES": "1", "SLURM_JOB_ID": "123"}, clear=True):
+            env = worker_environment({"cache_env": {"UV_CACHE_DIR": "/nfs/approved/cache/uv", "UV_LINK_MODE": "copy"}})
+        self.assertEqual(env["CUDA_VISIBLE_DEVICES"], "1")
+        self.assertEqual(env["UV_CACHE_DIR"], "/nfs/approved/cache/uv")
+        self.assertEqual(env["PYTHONUNBUFFERED"], "1")
+        with self.assertRaises(ValueError):
+            worker_environment({"cache_env": {"HOME": "/wrong"}})
 
     @unittest.skipIf(seal is None, "C合并后运行模型binding摘要核验")
     def test_metadata_checks_actual_binding_process_and_gpu_then_releases_session(self):

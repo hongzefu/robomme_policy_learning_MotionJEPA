@@ -1,6 +1,7 @@
 """真实文件锁与原子账本，Slurm命令全部由mock接管。"""
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
+import shlex
 from pathlib import Path
 import subprocess
 import sys
@@ -10,7 +11,7 @@ import unittest
 import types
 from unittest.mock import patch
 
-from scripts.evaluation.gl_official_pool import Pool, SUBMIT_GATES, atomic_json, committed_gpu_hours, read_json, terminal_step_proof
+from scripts.evaluation.gl_official_pool import Pool, SUBMIT_GATES, SlurmTransport, atomic_json, committed_gpu_hours, read_json, terminal_step_proof
 from scripts.evaluation.launch_official_pool import ExistingStep, LAUNCH_GATES, VALIDATION_BASE_GATES, launch, srun_command, supervise, validate_spec, verify_launch_gates
 
 try:
@@ -494,6 +495,114 @@ class PoolTest(unittest.TestCase):
             validate_spec(dict(specs[0], model_binding=specs[1]["model_binding"]))
         with self.assertRaises(ValueError):
             validate_spec(dict(specs[0], checkpoint=str(model_root)))
+
+    def test_ssh_transport_quotes_original_argv_and_sets_only_remote_sacct_timezone(self):
+        calls = []
+        def backend(command, **kwargs):
+            calls.append((command, kwargs))
+            return subprocess.CompletedProcess(command, 0, "", "")
+        transport = SlurmTransport("greatlakes", runner=backend, popen=backend)
+        original = ["sbatch", "--wrap=sleep infinity", "--comment=one 'two' $(not_executed); value"]
+        transport.run(original, env={"ASPEN_PRIVATE_SENTINEL": "do-not-send"}, timeout=30)
+        command, kwargs = calls[-1]
+        self.assertEqual(command[:4], ["ssh", "-o", "BatchMode=yes", "greatlakes"])
+        self.assertEqual(shlex.split(command[-1]), original)
+        self.assertNotIn("env", kwargs)
+        self.assertNotIn("do-not-send", command[-1])
+        transport.run(["sacct", "--jobs=123"], env={"TZ": "UTC", "OTHER": "do-not-send"})
+        self.assertEqual(shlex.split(calls[-1][0][-1]), ["env", "TZ=America/New_York", "sacct", "--jobs=123"])
+        transport.popen(["srun", "--chdir=/nfs/approved/eval", "/nfs/approved/python"], start_new_session=True)
+        self.assertEqual(shlex.split(calls[-1][0][-1])[0], "srun")
+        self.assertTrue(calls[-1][1]["start_new_session"])
+        local = SlurmTransport(runner=backend)
+        local.run(["sacct", "--jobs=123"], env={"TZ": "America/New_York"})
+        self.assertEqual(calls[-1][0][0], "sacct")
+        self.assertEqual(calls[-1][1]["env"], {"TZ": "America/New_York"})
+
+    def test_ssh_submit_unknown_does_not_retry_or_fall_back_local(self):
+        with self.pool.transaction() as ledger:
+            ledger["desired_jobs"] = 1
+        calls = []
+        def broken(command, **kwargs):
+            calls.append(command)
+            return subprocess.CompletedProcess(command, 255, "", "连接中断")
+        transport = SlurmTransport("greatlakes", runner=broken)
+        self.pool.submit(self.gates, 0, execute=True, runner=transport.run)
+        self.pool.submit(self.gates, 0, execute=True, runner=transport.run)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][0], "ssh")
+        ledger = read_json(self.pool.path)
+        self.assertEqual(committed_gpu_hours(ledger), 48)
+        self.assertEqual(next(iter(ledger["slots"].values()))["state"], "UNKNOWN")
+
+    @unittest.skipIf(QueueStore is None, "C合并后运行SSH包装的启动恢复释放链路")
+    def test_ssh_wrapped_launch_existing_supervision_recovery_and_cancel(self):
+        proof = {"slot_instance": "slot", "submission_id": "submit", "job_id": "123", "job_incarnation": "inc",
+                 "pool_id": "fixed-pool", "account": "test", "cluster": "gl", "user": "me",
+                 "submit_time": "2026-10-26T10:00:00", "start_time": "2026-10-26T10:01:00",
+                 "end_time": time.time()+20000, "state": "RUNNING", "hours": 48, "gpus": 1}
+        self.pool.adopt(proof, 0, "既有hold")
+        with self.pool.transaction() as ledger:
+            ledger["desired_jobs"] = 1
+        manifest = make_manifest([{"task_name": "Task", "episode_id": 0, "env_seed": 100, "difficulty": "easy"}], official=False)
+        store = QueueStore(self.root)
+        store.initialize(manifest, "b"*64, official=False)
+        original_request = QueueStore.request
+        calls, process_count = [], 0
+        cancelled = False
+        def backend_run(command, **kwargs):
+            nonlocal cancelled
+            self.assertEqual(command[0], "ssh")
+            self.assertNotIn("env", kwargs)
+            remote = shlex.split(command[-1])
+            if remote[0] == "env":
+                self.assertEqual(remote[:2], ["env", "TZ=America/New_York"])
+                remote = remote[2:]
+            calls.append(remote)
+            if remote[0] == "scancel":
+                cancelled = True
+                return subprocess.CompletedProcess(command, 0, "", "")
+            ledger = read_json(self.pool.path)
+            slot = next(s for s in ledger["slots"].values() if s["state"] in {"STARTING", "RUNNING", "CANCEL_REQUESTED"})
+            status = "CANCELLED" if cancelled else "RUNNING"
+            text = (f"123|gl|me|test|original|2026-10-26T10:00:00|2026-10-26T10:01:00|Unknown|{status}|hold|100|0:0\n"
+                    f"123.0||||||2026-10-26T10:02:00|2026-10-26T10:03:00|FAILED|official-resident-{slot['launch_id']}|60|2:0\n")
+            return subprocess.CompletedProcess(command, 0, text, "")
+        def backend_popen(command, **kwargs):
+            nonlocal process_count
+            self.assertEqual(command[0], "ssh")
+            remote = shlex.split(command[-1])
+            self.assertIn("--chdir=/nfs/approved/eval", remote)
+            self.assertNotIn("/data/", command[-1])
+            calls.append(remote)
+            process_count += 1
+            return types.SimpleNamespace(pid=550+process_count, returncode=None, poll=lambda: None)
+        transport = SlurmTransport("greatlakes", runner=backend_run, popen=backend_popen)
+        spec = {"purpose": "production", "run_identity_sha256": "b"*64, "policy_python": "/nfs/approved/python",
+                "repo": "/nfs/approved/eval", "controller_timeout_seconds": 1}
+        with Controller(store) as controller:
+            def request(self, *args):
+                result = original_request(self, *args)
+                controller.process_requests()
+                atomic_json(self.root/"queue/summary.json", controller.summary())
+                return result
+            with patch.object(QueueStore, "request", request), patch("scripts.evaluation.launch_official_pool.verify_launch_gates"), \
+                 patch("scripts.evaluation.launch_official_pool.validate_spec"):
+                launch(self.pool, spec, {}, 0, execute=True, popen=transport.popen)
+                slot = next(iter(read_json(self.pool.path)["slots"].values()))
+                attached = ExistingStep(self.pool, slot, runner=transport.run)
+                self.assertEqual(attached.poll(), 2)
+                supervise(self.pool, spec, {}, [attached], runner=transport.run, popen=transport.popen,
+                          poll_seconds=.001, max_iterations=2)
+        snapshot = read_json(self.pool.path)
+        current = next(s for s in snapshot["slots"].values() if s["state"] == "STARTING")
+        cancel_proof = dict(proof, slot_instance=current["slot_instance"])
+        audit = self.root/"release.json"
+        self.pool.cancel([cancel_proof], confirmed=True, verified_snapshot=snapshot, audit_path=audit, runner=transport.run)
+        self.assertTrue(self.pool.confirm_release(snapshot, audit, runner=transport.run, timeout_seconds=0))
+        self.assertEqual(sum(command[0] == "srun" for command in calls), 2)
+        self.assertEqual(sum(command[0] == "scancel" for command in calls), 1)
+        self.assertTrue(any(command[0] == "sacct" for command in calls))
 
 
 if __name__ == "__main__":

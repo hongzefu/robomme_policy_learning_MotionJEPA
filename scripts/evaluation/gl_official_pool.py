@@ -16,12 +16,44 @@ import sys
 import time
 import uuid
 import re
+import shlex
 from zoneinfo import ZoneInfo
 
 ACTIVE = {"SUBMITTING", "UNKNOWN", "SUBMITTED", "STARTING", "RUNNING", "DRAINING", "CANCEL_REQUESTED"}
 TERMINAL = {"COMPLETED", "CANCELLED", "FAILED", "TIMEOUT", "OUT_OF_MEMORY", "NODE_FAIL", "PREEMPTED", "BOOT_FAIL"}
 SUBMIT_GATES = {"go", "environment_a", "ssh_controlmaster", "nfs_paths", "nfs_python",
                 "resources_approved", "schedule_identity", "eta_ready_due"}
+
+
+class SlurmTransport:
+    """显式选择GL本地或既有SSH连接，不回退、不转发控制主机环境。"""
+
+    def __init__(self, ssh_host=None, *, runner=None, popen=None):
+        if ssh_host is not None and (not re.fullmatch(r"[A-Za-z0-9_@.-]+", ssh_host) or ssh_host.startswith("-")):
+            raise ValueError("SSH宿主必须是明确的已有别名或域名")
+        self.ssh_host = ssh_host
+        self.runner = subprocess.run if runner is None else runner
+        self.process = subprocess.Popen if popen is None else popen
+
+    def command(self, argv):
+        if self.ssh_host is None:
+            return list(argv)
+        if not argv or argv[0] not in {"sbatch", "srun", "sacct", "scancel", "squeue"}:
+            raise ValueError("SSH传输仅执行明确的Slurm argv")
+        remote = ["env", "TZ=America/New_York", *argv] if argv[0] == "sacct" else list(argv)
+        return ["ssh", "-o", "BatchMode=yes", self.ssh_host, shlex.join(remote)]
+
+    def _kwargs(self, kwargs):
+        kwargs = dict(kwargs)
+        if self.ssh_host is not None:
+            kwargs.pop("env", None)  # sacct时区已在远端命令显式设置，其余不发整份Aspen环境。
+        return kwargs
+
+    def run(self, argv, **kwargs):
+        return self.runner(self.command(argv), **self._kwargs(kwargs))
+
+    def popen(self, argv, **kwargs):
+        return self.process(self.command(argv), **self._kwargs(kwargs))
 
 
 def read_json(path):
@@ -522,6 +554,7 @@ def main(argv=None):
     for name in ("init", "submit", "scale", "status", "reconcile", "settle", "revise", "cancel", "adopt", "restart"):
         p = subs.add_parser(name)
         p.add_argument("--run-root", type=Path, required=True)
+        p.add_argument("--ssh-host", help="显式通过既有SSH宿主执行Slurm；省略时在GL本地执行")
         if name == "init":
             p.add_argument("--pool-id", required=True)
             p.add_argument("--schedule-id", required=True)
@@ -553,13 +586,14 @@ def main(argv=None):
             p.add_argument("--authorization", required=True)
     args = parser.parse_args(argv)
     pool = Pool(args.run_root)
+    transport = SlurmTransport(args.ssh_host)
     if args.operation == "init":
         result = pool.initialize(pool_id=args.pool_id, schedule_id=args.schedule_id,
                                  schedule_identity_sha256=args.schedule_identity_sha256,
                                  envelope=read_json(args.pool_policy), count=args.count)
     elif args.operation == "submit":
         result = pool.submit(read_json(args.gates), args.expected_pool_revision,
-                             execute=args.execute and not args.dry_run)
+                             execute=args.execute and not args.dry_run, runner=transport.run)
     elif args.operation == "scale":
         if args.dry_run:
             result = read_json(pool.path)
@@ -581,7 +615,7 @@ def main(argv=None):
     elif args.operation == "restart":
         result = pool.restart(args.slot_instance, read_json(args.proof), args.expected_pool_revision)
     else:
-        result = pool.cancel(read_json(args.proof), confirmed=args.confirm_pool_cancel, audit_path=args.local_audit)
+        result = pool.cancel(read_json(args.proof), confirmed=args.confirm_pool_cancel, audit_path=args.local_audit, runner=transport.run)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
