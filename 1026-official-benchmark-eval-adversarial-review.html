@@ -11,7 +11,7 @@
 <body><main>
 <div class="meta">2026-10-26（美东） · 仅设计与源码对抗审查 · 所有审查子代理均为 Astra high</div>
 <h1>官方 Stage2 评估：还可能在哪些地方出错</h1>
-<div class="lead"><strong>结论：</strong>方案可以按“aspen／vail 统一实现与验证 → checkpoint 到位前排队并评估”推进，但原方案确实遗漏了传输重放、终局与视频故障、实际交付材料、资源池修订以及恢复事务等边界。下面整理为 <strong>24 项风险与落实点</strong>，并给出具体失败过程、最小修法和未来验收。</div>
+<div class="lead"><strong>结论：</strong>方案可以按“aspen／vail 统一实现与验证 → checkpoint 到位前排队并评估”推进。首轮整理了24项风险与落实点；<a href="#round2">第二轮复查</a>又收敛出4项残留合同缺口，合计<strong>28项</strong>。每项给出具体失败过程、最小修法和未来验收；不将已有覆盖或没有证据的猜测凑成新漏洞。</div>
 <p>本记录与<a href="1026-official-benchmark-stage2-eval-plan.html">修订后的 HTML 计划</a>配套。未来实现与调度均从 <strong>sled-aspen／sled-vail</strong> 发起；GL 计算在获分配的计算节点内执行。并发 job 数为可配置、可增减的 <strong>N</strong>，没有固定 8 个或默认 8 个的限制。修改计划和推送文档已经获准，代码实施、GPU 验证和提交 job 尚未开工。</p>
 <div class="warn"><strong>证据边界：</strong>这里的“补齐”指设计中明确了输入、状态转换和验收方法，不表示代码已实现或故障测试已通过。本轮只做源码／文档核查与一个隔离的 CPU 控制逻辑实验；没有运行模型、仿真、NFS 现场测试、SSH 或 Slurm。此前被误启动的代码草稿未合入评估分支。</div>
 
@@ -184,7 +184,56 @@ raised=False</pre>
 <tr><td>无法恢复的结果产物</td><td>确定是否允许缺失视频等产物；已有terminal不能重跑挑成绩。</td><td>保留artifact_error和真实terminal，待修复或明确接受缺失。</td></tr>
 </tbody></table>
 <p>推荐先按修订计划实现这些最小合同，再运行具名负控和现场检查；不引入自动跨机主备、TTL抢占、大型ACK缓存或物理计算“恰好一次”的承诺。当前只把设计补齐，后续每项真正通过都须有固定输入、代码、环境和原始结果证据。</p>
-<h2 id="closure">七、最终文档复核</h2>
+<h2 id="closure">七、首轮文档复核记录</h2>
 <p>独立复核的计划提交为 <code>494d7428cabb18ed7a0c3cba59fc9292ef3ce182</code>，计划文件SHA256为 <code>bd2ce0dddbbd6bffcdb6c56f14c77e9baa2116bcabf021237906d69d417fe93c</code>。判定：<code>ADVERSARIAL_DESIGN_CLOSURE=PASS scope=plan_and_report blocking=0</code>。原风险均已落实为明确合同或必要的待验条件，没有剩余阻断级设计问题；这不等于代码实现、数值实验或集群验收通过。</p>
-<p>文档自检：计划两个h1、三张机制图；本报告24个风险条目；内部ID无重复、页内锚点有效、无外部脚本或字体资源。弹性N池新图已用禁GPU无头浏览器渲染并目视核对。当前提交只包含文档；代码实施继续等待后续明确开工。</p>
+<p>该轮文档自检：计划两个h1、三张机制图；当时报告24个风险条目；内部ID无重复、页内锚点有效、无外部脚本或字体资源。弹性N池新图已用禁GPU无头浏览器渲染并目视核对。此记录对应上述固定提交；第二轮增量如下，代码实施仍等待后续明确开工。</p>
+
+<h2 id="round2">八、第二轮复查：四项残留合同缺口</h2>
+<p>本轮审查基线为 <code>420ae9801b4d23ed3a798e29a4580960301b9d20</code>，已经包含第一部分的官方机制一致性说明。三路分别从数据独立性／成绩语义、数值验证可执行性、资源账本／结束状态检查。只有下面四项计为新增；原24项不重复统计。实验仍限小型JSON读取、隔离源码控制逻辑和纯Python谓词／算术推演，没有运行真实评估。</p>
+
+<section class="issue" id="r25"><h3>R25 <span class="level">P1</span> 不确定终局历史不能被最新一次重试结果洗掉</h3>
+<p><strong>原合同缺口：</strong>基线计划第391行允许 <code>uncertain_terminal</code> 后同seed重试，第141／556行却主要以800个accepted和当前error=0放行官方完整score。R03已经要求保留不确定记录，但最终成绩门还没有消费这段历史。</p>
+<p><strong>具体反例：</strong>第一次执行实际fail，终局持久化前崩溃；重试success。最新accepted=800、error=0成立，历史中仍有1个不确定终局，却可以输出没有任何限定的完整成绩。计划已承认真实sim不必逐位确定，因此同seed不足以消除该不确定性。</p>
+<p><strong>最小修法：</strong>episode级 <code>had_uncertain_terminal</code> 单调保留，汇总U。默认无歧义 <code>OFFICIAL_SCORE=PASS</code> 另要求U=0；重试成功不清零。U&gt;0时仍可交付明确标注的“含不确定终局重试的条件成绩”，并给出首次执行可能成功率区间 <code>[S确定/800,(S确定+U)/800]</code>，S确定排除全部U。该区间限定其余800−U局均已有确定终局、没有另外缺失或耗尽错误；若还有其他未观测局，未知数须按uncertain、未运行及无确定终局error的episode并集计算，不能漏计或重复相加。用户接受限定结果也不能删除标记，不能换目录掩盖原attempt历史。</p>
+<p><strong>本轮CPU谓词核验：</strong>构造800 accepted、0 error、1 uncertain历史，旧文字门为True，新无歧义门为False；若其他确定成功数为0，则首次执行可能成功率在 <code>[0,0.00125]</code>。这是文字合同反例，不是生产队列测试，也不是已经发生了刷分。</p>
+<p><strong>未来验收：</strong>在首次终局持久化前崩溃、重试success之后，U仍为1；所有汇总、resume和跨worker迁移都保留该标记。计算可以结束并释放GPU，score是否无歧义另判。</p></section>
+
+<section class="issue" id="r26"><h3>R26 <span class="level">P1</span> 首份A40证书需要一条尚无证书时可运行的测量路径</h3>
+<p><strong>原合同缺口：</strong>基线第325／337—340行只说明生产握手在验证证书后才能允许硬件差异；第348行虽新增测量入口，却未定义它在证书签发前的权限边界。现有 <code>MotionEncoderClient</code> 在初始化阶段严格比较numerics，A100与A40不同即关闭，第一数据请求前就会失败。</p>
+<p><strong>反例与证据：</strong>首个A40已就绪、权重和固定reference齐全，但无目标证书。若测量复用生产客户端，就无法得到首份用于签证的真实IPC结果。隔离AST抽取真实 <code>_check_stage2_provenance</code>、仅替换外围结构验证后，保留其他身份一致而改变GPU名称，得到 <code>A40_BOOTSTRAP_PROBE accepted=False</code>，理由为numerics与离线来源不同。没有加载模型或GPU；这证明现有严格入口会拒绝，不证明A40无法计算。</p>
+<p><strong>最小修法：</strong>定义独立measurement路径，直接驱动固定sidecar／IPC fixture；它不要求已签目标证书，但仍严格核源码、EMA、VAE和软件身份，只记录明确允许的待测GPU／driver差异。输入限锁定fixture，输出实际数组与未授权测量报告；不能启动正式websocket服务、领取正式任务、写canonical或产production PASS。独立验证器重算通过后才签发validated证书，随后恢复生产严格握手。</p>
+<p><strong>未来验收：</strong>无证书时固定测量可以进入、正式推理必须拒绝；测量报告不能冒充已签证书；错权重／错软件／非fixture输入仍拒绝。禁止通用 <code>--skip-provenance</code>。缺reference或超阈仍保持pending，不回AWS擅自补GPU计算。</p></section>
+
+<section class="issue" id="r27"><h3>R27 <span class="level">P1</span> 预算需要提交时预留，运行48小时不等于整轮48小时截止</h3>
+<p><strong>区别于R20：</strong>这里不发生自动续期或扩容，仅正常提交和晚启动就能越过当前文字承诺。基线第397行声明累计GPU小时和绝对deadline，第498—500行仍为固定48h的 <code>sleep infinity</code> 占位；只按已发生用量核账，没有最坏承诺预留。</p>
+<p><strong>纯CPU时间线：</strong>A、B两个单GPU hold在t=0提交，A立即开始，B到t=47h才开始；各自48h意味着A到48h结束、B到95h结束。campaign截止为48h时，B自然释放晚了47h；总承诺96 GPUh，而截止时实际仅占49 GPUh。没有任何重复提交或续期，也不能由并发N正确推导时间边界正确。</p>
+<p><strong>额度算例：</strong>GPU小时上限96，已用40，已知活跃剩余上界8，一个UNKNOWN可能完整占48，则可再承诺额度为 <code>96−40−8−48=0</code>。若还提交新48h hold，最大承诺变成144 GPUh。</p>
+<p><strong>最小修法：</strong>在写SUBMITTING的同一事务预留 <code>gpu_count×scheduler_time_limit</code>；UNKNOWN保留全额，运行者保留剩余上界，确认终态并取得可核实际使用量才结算／退未用额。不得用预期episode耗时抵扣allocation最坏占用。</p>
+<p><strong>截止的软硬边界：</strong>明确 <code>workload_deadline</code> 是停领／drain／请求取消时间，不能在控制器失联时自动变成资源硬释放保证。若用户要求 <code>hard_release_deadline</code>，须先现场验证Slurm的调度截止、运行时限及清理容差能约束每个allocation；固定48h不满足的迟起作业应拒绝或等待新的明确资源方案。不能默默缩短既定48h，也不能把软取消承诺写成硬保证。<a href="https://slurm.schedmd.com/sbatch.html">Slurm文档</a>区分allocation运行时长、deadline及实际终止相关配置。</p>
+<p><strong>未来验收：</strong>UNKNOWN延迟发现、PENDING晚起、提交后controller失联和requeue均保持承诺账本；未确认释放不退额度。启动时由用户明确实际GPU小时、截止类型及容差，不在本文替用户虚构数值。</p></section>
+
+<section class="issue" id="r28"><h3>R28 <span class="level p2">P2</span> 没有剩余计算时，产物欠账不能继续占住GPU</h3>
+<p><strong>原合同缺口：</strong>基线第379行要求每slot一个未终态assignment，第395行以800 accepted定义完成，第541行把取消hold放在结果落地和档案完成后。失败耗尽或产物无法恢复时，如何关闭assignment、结束计算和释放资源仍可能被实现成互相等待。</p>
+<p><strong>两个纯状态反例：</strong><code>799正常终局＋1次重试耗尽error</code>，或 <code>800正常终局＋1份不可恢复视频</code>；两者ready=0、活跃执行=0、可重试项=0，剩余GPU工作均为0。但前者永远不能等到800条正常accepted，后者可能要等人工接受产物缺失；继续持有GPU不能解决问题。</p>
+<p><strong>最小修法：</strong>assignment成员已经正常终局、耗尽错误或持久归还，且原sim已停止，即可关闭；历史claim是审计记录，不算活跃，artifact欠账不占slot。无ready、无活跃／未知执行、无可重试项时进入 <code>COMPUTE_DONE</code> 或 <code>STOPPED_ERROR</code>，落完整未完成清单并返回明确状态。</p>
+<p>score可仍INVALID／QUALIFIED，产物可仍 <code>BLOCKED_ARTIFACTS</code>；确认计算停止后释放本pool的hold，不等待score PASS、人工视频例外、文档commit或上传。CPU修产物和留档可在GPU释放后继续；NFS失联也不能把“档案写成功”变成唯一释放前提。</p>
+<p><strong>未来验收：</strong>所有slot各有产物欠账、最后一次重试耗尽、只剩历史claim目录、NFS不能落档，均能进入明确的无计算／待交付状态，不误报完成、不无限WAIT、不重跑已有终局凑分母。</p></section>
+
+<h2 id="round2-exclusions">九、第二轮排除项与实际材料核查</h2>
+<p><strong>没有发现训练／test seed身份重叠。</strong>只读连接实际训练scope与manifest的3200行，按任务和原始episode索引连接后，长度和demo边界全部匹配；与官方test800比较 <code>(task,seed)</code> 和 <code>(task,difficulty,seed)</code>，交集均为0。官方任务名集合相等，16份test metadata均为0…49且各50条。</p>
+<pre>train_rows=3200  test_rows=800
+source_manifest_join_mismatches=0
+task_seed_overlap=0
+task_difficulty_seed_overlap=0</pre>
+<table><thead><tr><th style="width:38%">只读输入</th><th>本轮证据身份</th></tr></thead><tbody>
+<tr><td><code>/scratch/hongze/dataset-local-a100-16task-mixed8-200/control/scope.json</code>，8,248,621字节</td><td>整文件SHA256：<code>af89df0840ad2736c4a05a6743d6458cd0cd93498722cf97f74cf40f9abf1881</code></td></tr>
+<tr><td><code>/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/meta/episode_manifest.json</code>，959,956字节</td><td>整文件SHA256：<code>c6a063dfbfc6da404dd8f1d3ddc38e9ba6e25abca81417fe742872401e7f97df</code>；不能与清单内部自定义内容摘要混用。</td></tr>
+<tr><td><code>/scratch/hongze/tmp/official-benchmark-eval-research-1026/src/robomme/env_metadata/test/record_dataset_*_metadata.json</code>，16份</td><td>集合SHA256：<code>c4f8a5f9b7539af26e5bccc154ede5e1d760abcfdafc4da13a644264630037db</code>。按文件名排序，每项固定为 <code>{"path":相对文件名,"bytes":字节数,"sha256":整文件摘要}</code>，列表用UTF-8／sort_keys／紧凑JSON编码，不追加换行。</td></tr>
+</tbody></table>
+<p>连接键为scope的 <code>(task,output_episode_index)</code> 对训练清单从h5_file提取task后的 <code>(task,raw_ep_idx)</code>，核 <code>timestep_count=num_timesteps</code>、<code>demo_frames=exec_start_idx</code>；原始seed取scope的rows，不取重复列示demo／exec变体的entries。这个核验只证明这些清单没有相同任务seed，<strong>不证明场景、像素或基础模型全部预训练数据绝无重叠</strong>；换数据必须重新审计。</p>
+<p><strong>没有把已知缺失重复计项。</strong>当前主训练检出中step19的 <code>pre_save_reference.json</code> 和输入／输出NPZ文件已经存在，身份为A100、bf16、10步；清单仍只记录seed／RNG表达式，没有独立noise数组。这是R05材料清单的进一步具体化，不算第五个新漏洞，也不代表已向aspen／vail交付。</p>
+<p><strong>没有找到新的窗口因果错误、显式身份哈希环或任务别名差异。</strong>单seed42的结果只能称“固定checkpoint与推理seed42下的test800成绩”，不能解释为多训练seed／多推理seed均值。未实现的工具本来就是计划内容，不作为“新漏洞”。第二轮仍只检查和修订文档，不执行评估。</p>
+<h2 id="round2-closure">十、第二轮修订复核记录</h2>
+<p>计划修订提交 <code>50eb78ec134644e18f423647a0002faf37f8893d</code>，计划文件SHA256为 <code>b7c9dd8ce34681179149913222c8602de302439f81ddaa753351dbc3a350bf24</code>。三路定点复核分别给出 <code>SCORE_DATA_DESIGN_REVIEW=PASS</code>、<code>BOOTSTRAP_DESIGN_REVIEW=PASS</code>、<code>R27_R28_DOC_REVIEW=PASS</code>，本轮新增范围均无剩余阻断级设计问题。</p>
+<p>这只说明本轮发现的四处合同已补明，并不保证穷尽所有未知风险。真实参考包、数值阈值、模型／仿真、NFS／Slurm、资源参数和现场释放能力仍待后续实施验收。此次提交只修改计划及审查记录，未实施评估代码、未启动GPU或集群作业。</p>
 </main></body></html>
