@@ -218,7 +218,7 @@ x = x + g2 * FFN(z)                          # 残差用调制前的 x
 5. `gemma_150m` 在 modulation 下未构建、未使用。
 6. 多处旧注释仍写 768 维，实际 1024：`history_observation.py:26-29`、`robomme_policy.py:68`、`training/config.py:314`、`framesamp_memory.py:252`。
 7. （本文核对补充）`percep_mem.py:42` 注释写「1536 → memory_token_dim」，stage2 配置下实际输入为 1024+768 = 1792。
-8. yaml 中 `streaming_obs_horizon` 与 `pool_type` 两键在 `mme_vla_suite` 中未被读取。
+8. yaml 里 `streaming_obs_horizon` 与 `pool_type` 两个键未被传入使用：`pool_type` 作为构造参数出现在 `mme_vla_suite/dataset_builder/mem_buffer.py:37,45`，但 yaml 的值没传进去；`streaming_obs_horizon` 只出现在 yaml。
 9. `MemoryRMSNorm` 注释 `:39` 说明已由零初始化改为 `normal(0.002)`，初始非严格恒等；不要按「零初始化恒等」理解。
 
 ---
