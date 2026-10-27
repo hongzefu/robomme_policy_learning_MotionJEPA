@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T04:55:06Z",
-    "america_new_york": "2026-10-27T00:55:06-0400"
+    "utc": "2026-10-27T05:01:47Z",
+    "america_new_york": "2026-10-27T01:01:47-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "dce2441b1575cfd0798fd71a5d5cbd4104b0493c",
+    "base_head": "9dfc391bc1427be1c3c8b2f610ec81f9f0d00caa",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -17,12 +17,12 @@
   "tasks": {
     "official-benchmark-stage2-eval": {
       "plan": {
-        "file": "1026-official-benchmark-stage2-eval-plan.html",
-        "sha": "d82396119602de454966c2307b18e01057638343"
+        "file": "1027-stage2-simple-elastic-eval-plan.html",
+        "sha": "9dfc391bc1427be1c3c8b2f610ec81f9f0d00caa"
       },
-      "state": "stopped",
-      "state_changed_at": "2026-10-27T04:55:06Z",
-      "state_reason": "用户明确要求先停下来并反思过度实现，只需最简单的分片与评估。实施代理已停止；64849606与64849621已逐个取消，队列为空。权重下载完成，真实策略评估仍为0局；两次恢复检查失败日志保留。未合并独立分支94cba791修复，不回滚或删除现场；等待用户审阅简化方案。",
+      "state": "running",
+      "state_changed_at": "2026-10-27T05:01:47Z",
+      "state_reason": "用户批准简化方案重新开工：保留弹性worker队列，先真实单局再两卡十局，不再堆叠功能校验。新hold64855345、64855348均运行；B简化服务入口，C收缩队列，旧作业保持已取消，旧失败日志与独立修复分支保留。",
       "owner": {"session": "01a17b42-9de4-72b3-b0ed-1be85f58fb26", "host": "sled-aspen.eecs.umich.edu"},
       "depends_on": [],
       "pre_handoff": [
@@ -32,8 +32,12 @@
         {"what": "用户追加早期20k单局及双卡分片验证与资源释放", "evidence": "HOLD_POOL=PASS jobs=2 running=2 reserved_gpu_hours=96；模型、数值、仿真与分片未验。", "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/", "status": "pending"}
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {"tmux": "", "job_id": "64855345", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/logs/hold-simple-64855345.log", "done_line": "Slurm终态并释放"},
+        {"tmux": "", "job_id": "64855348", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/logs/hold-simple-64855348.log", "done_line": "Slurm终态并释放"}
+      ],
       "authorizations": [
+        {"kind": "go", "date": "2026-10-27", "quote": "同意，按这个简化方案开工，保留弹性 worker 队列，不要再堆叠功能和校验。尽快先跑通一局，再做两卡分片评估。", "scope": "9dfc391简化方案覆盖旧复杂门禁前置，保留弹性队列；复用20k/epoch105，先单局再两卡十局，共十一局；不启动正式八百局。"},
         {"kind": "go", "date": "2026-10-26", "quote": "开始实现这个阶段一,然后我授权你可以使用greatlakes。 注意你这个子代理内部的这个映射你要看清楚了，就是 Cloud 和 Codex是有映射的，你要用 Codex的映射来做。", "scope": "仅本计划阶段一，Codex非AWS映射；不启动阶段二正式800局。"},
         {"kind": "decision", "date": "2026-10-26", "quote": "同意这个，同意是用这个Aspen来做的。", "scope": "确认Aspen实际2张RTX A6000按环境A，开发与控制在Aspen，计算在GreatLakes。"},
         {"kind": "decision", "date": "2026-10-26", "quote": "连接这个Great Lakes。", "scope": "允许复用已认证ControlMaster连接；作业仍须遵守阶段与资源约束。"},
@@ -47,9 +51,9 @@
         {"kind": "decision", "date": "2026-10-26", "quote": "继续工作，你这个原计划中的这个20K探索性验证是什么意思，稍微讲一下。", "scope": "解释20k是VLA训练步数并继续原任务，保留下载及作业句柄。"},
         {"kind": "decision", "date": "2026-10-26", "quote": "同意这么做。然后这个A100和40的问题你不用再关心了。\n不需要做到跨硬件的数值性一致。", "scope": "本任务评估不要求A100/A40跨硬件数值一致，不再等待相应输出参考、阈值或认证证书；沿现有validation用途，无需新增用途或保护层。权重/EMA/VAE/source_pin/全文件SHA/resolved/normstats/软件与精度及真实执行仍核验。同机恢复、finite与重复性独立检查；被取消项记NOT_REQUIRED reason=user_decision，不能伪PASS。"}
       ],
-      "pending_decisions": [{"what": "用户叫停原实现，要求先给出最简分片与评估的重做方案；原开工令不用于自动恢复。", "status": "待用户审阅"}],
+      "pending_decisions": [],
       "next_steps": [
-        {"what": "仅呈现简化方案，等待用户明确批准后重新实施", "command": "", "verdict_line": "USER_APPROVAL=PENDING"}
+        {"what": "先整合简化服务入口，启动真实单局；队列并行收缩，随后两卡十局", "command": "按1027简化计划，使用新hold64855345/64855348", "verdict_line": "SINGLE_EP_SMOKE=PASS；SIMPLE_QUEUE=PASS；TWO_WORKER_EVAL=PASS"}
       ]
     },
     "mixed8-vla-stage2-1024-train": {
