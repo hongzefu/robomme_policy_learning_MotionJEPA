@@ -2,6 +2,9 @@ import dataclasses
 import enum
 import logging
 import socket
+import os
+import uuid
+from typing import Literal
 
 import tyro
 
@@ -52,6 +55,16 @@ class Args:
     # Record the policy's behavior for debugging.
     record: bool = False
     seed: int = 42
+    # 设备与解释器覆盖只作用于恢复后的内存配置。
+    motion_online_gpu: str | None = None
+    stage2_python: str | None = None
+    eval_target_contract: Path | None = None
+    run_identity_sha256: str | None = None
+    server_nonce: str | None = None
+    eval_purpose: Literal["production", "validation"] = "production"
+    checkpoint_step: int | None = None
+    worker_uuid: str | None = None
+    model_binding: Path | None = None
 
     # Specifies how to load the policy. If not provided, the default policy for the environment will be used.
     policy: Checkpoint | Default = dataclasses.field(default_factory=Default)
@@ -66,11 +79,13 @@ DEFAULT_CHECKPOINT: dict[EnvMode, Checkpoint] = {
 }
 
 
-def create_default_policy(env: EnvMode, *, default_prompt: str | None = None) -> _policy.MME_VLA_Policy:
+def create_default_policy(env: EnvMode, *, default_prompt: str | None = None, seed: int = 42,
+                          motion_online_gpu=None, stage2_python=None) -> _policy.MME_VLA_Policy:
     """Create a default policy for the given environment."""
     if checkpoint := DEFAULT_CHECKPOINT.get(env):
         return _policy_config.create_trained_policy(
-            _config.get_config(checkpoint.config), checkpoint.dir, default_prompt=default_prompt
+            _config.get_config(checkpoint.config), checkpoint.dir, default_prompt=default_prompt,
+            seed=seed, motion_online_gpu=motion_online_gpu, stage2_python=stage2_python,
         )
     raise ValueError(f"Unsupported environment mode: {env}")
 
@@ -82,14 +97,62 @@ def create_policy(args: Args) -> _policy.MME_VLA_Policy:
             return _policy_config.create_trained_policy(
                 _config.get_config(args.policy.config), args.policy.dir, default_prompt=args.default_prompt,
                 seed=args.seed,
+                motion_online_gpu=args.motion_online_gpu, stage2_python=args.stage2_python,
+                eval_target_contract=args.eval_target_contract,
             )
         case Default():
-            return create_default_policy(args.env, default_prompt=args.default_prompt)
+            return create_default_policy(args.env, default_prompt=args.default_prompt, seed=args.seed,
+                                         motion_online_gpu=args.motion_online_gpu, stage2_python=args.stage2_python)
 
 
 def main(args: Args) -> None:
+    binding = None
+    if (args.eval_target_contract is None) != (args.run_identity_sha256 is None):
+        raise ValueError("评估目标证书与run身份必须成对提供")
+    if args.run_identity_sha256 is not None:
+        from scripts.evaluation.runtime_contract import require_sha256
+        require_sha256(args.run_identity_sha256)
+        if args.seed != 42:
+            raise ValueError("官方评估模型seed必须为42")
+        if args.eval_target_contract is None or not isinstance(args.policy, Checkpoint):
+            raise ValueError("正式评估必须提供checkpoint和目标证书")
+        if args.model_binding is None:
+            raise ValueError("评估服务须在加载模型前消费已签封model_binding")
+        from scripts.evaluation.check_runtime import validate_restore_purpose
+        validate_restore_purpose(args.policy.dir, args.checkpoint_step, args.eval_purpose)
+        # 模型绑定重算包含普通运行合同，旧validated数值证书不能作为该合同消费。
+        from scripts.evaluation.manifest import verify_model_binding
+        binding = verify_model_binding(args.model_binding, args.eval_target_contract,
+            expected_checkpoint_root=args.policy.dir.parent, expected_purpose=args.eval_purpose,
+            expected_run_identity_sha256=args.run_identity_sha256)
+        if binding["model_source"]["checkpoint_step"] != args.checkpoint_step:
+            raise ValueError("实际加载step与model_binding不符")
     policy = create_policy(args)
-    policy_metadata = policy.metadata
+    policy_metadata = dict(policy.metadata)
+    policy_metadata.update(model_seed=policy._seed, server_pid=os.getpid(),
+                           cuda_visible_devices=os.environ.get("CUDA_VISIBLE_DEVICES"),
+                           slurm_job_id=os.environ.get("SLURM_JOB_ID"), slurm_step_id=os.environ.get("SLURM_STEP_ID"))
+    if args.run_identity_sha256 is not None:
+        policy_metadata.update(run_identity_sha256=args.run_identity_sha256,
+                               server_nonce=args.server_nonce or uuid.uuid4().hex,
+                               eval_purpose=args.eval_purpose, checkpoint_step=args.checkpoint_step,
+                               worker_uuid=args.worker_uuid)
+        from scripts.evaluation.runtime_contract import identity_sha256
+        policy_metadata.update(run_identity_sha256=binding["run_identity_sha256"],
+            model_binding_sha256=binding["sha256"],
+            model_identity_sha256=binding.get("model_identity_sha256", binding.get("validation_model_identity_sha256")),
+            checkpoint_files_sha256=identity_sha256(binding["model_descriptor"]["checkpoint_files"]))
+    client = getattr(policy, "_motion_client", None)
+    if args.run_identity_sha256 is not None and (
+            client is None or client.stub or policy_metadata.get("model_kind") != "stage2_pool4_concat"
+            or getattr(client, "_eval_target_contract", None) is None):
+        if client is not None:
+            client.close()
+        raise ValueError("评估必须使用已核普通运行合同的真实stage2 motion策略")
+    if client is not None:
+        policy_metadata["motion_runtime"] = client.provenance
+        if binding is not None:
+            policy_metadata["cross_hardware_numeric"] = "not_required"
 
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
@@ -101,7 +164,11 @@ def main(args: Args) -> None:
         port=args.port,
         metadata=policy_metadata,
     )
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    finally:
+        if client is not None:
+            client.close()
 
 
 if __name__ == "__main__":

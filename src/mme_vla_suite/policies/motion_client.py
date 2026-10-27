@@ -188,13 +188,17 @@ class MotionEncoderClient:
                  expected_ckpt_sha256: str | None = None, store_provenance: dict | None = None, stub: bool = False,
                  v1_store: str | pathlib.Path | None = None, handshake_timeout: float = P.HANDSHAKE_TIMEOUT_S,
                  source_run: str | None = None, encoder_kind: str = "v10",
-                 provenance_root: str | pathlib.Path | None = None):
+                 provenance_root: str | pathlib.Path | None = None,
+                 stage2_python: str | None = None, eval_target_contract: str | pathlib.Path | None = None):
         self.encoder_kind = encoder_kind
+        self._eval_target_contract = eval_target_contract
+        if encoder_kind != STAGE2_KIND and (stage2_python or eval_target_contract):
+            raise ValueError("阶段二评估选项不能用于其他encoder")
         if encoder_kind == STAGE2_KIND:
             self._init_stage2(online_gpu=online_gpu, encoder_run_dir=encoder_run_dir,
                              expected_ckpt_sha256=expected_ckpt_sha256, store_provenance=store_provenance,
                              stub=stub, v1_store=v1_store, handshake_timeout=handshake_timeout,
-                             source_run=source_run, provenance_root=provenance_root)
+                             source_run=source_run, provenance_root=provenance_root, stage2_python=stage2_python)
             return
         if encoder_kind != "v10":
             raise ValueError(f"未知 motion.encoder_kind: {encoder_kind}")
@@ -258,7 +262,7 @@ class MotionEncoderClient:
         self.total_s = 0.0
 
     def _init_stage2(self, *, online_gpu, encoder_run_dir, expected_ckpt_sha256, store_provenance,
-                     stub, v1_store, handshake_timeout, source_run, provenance_root) -> None:
+                     stub, v1_store, handshake_timeout, source_run, provenance_root, stage2_python=None) -> None:
         self._lock = threading.Lock()
         self.stub = bool(stub)
         self._online_gpu = str(online_gpu)
@@ -295,15 +299,24 @@ class MotionEncoderClient:
             raise ValueError("阶段二 store 与当前 SOURCE_PIN 不同源")
         child_env = dict(os.environ)
         child_env.update(UV_LINK_MODE="copy", UV_PROJECT_ENVIRONMENT=str(v1 / "venvs/wan-stage2"),
+                         UV_CACHE_DIR=str(v1 / "cache/uv"),
                          HF_HOME=str(v1 / "cache/hf"), HF_HUB_OFFLINE="1",
                          CUDA_VISIBLE_DEVICES=str(online_gpu), PYTHONUNBUFFERED="1")
         # 子环境必须从锁定安装包 import，不能继承主环境的 Python 注入路径。
         child_env.pop("PYTHONPATH", None)
         child_env.pop("PYTHONHOME", None)
+        argv = ["uv", "run", "--project", str(project), "--no-sync"]
+        if stage2_python is not None:
+            interpreter = pathlib.Path(stage2_python).absolute()
+            if not interpreter.is_file() or interpreter.parent.name != "bin":
+                raise ValueError("stage2_python必须为现存虚拟环境bin内解释器")
+            child_env["UV_PROJECT_ENVIRONMENT"] = str(interpreter.parent.parent)
+            argv += ["--python", str(interpreter), str(interpreter)]
+        else:
+            argv += ["python"]
         parent_sock, child_sock = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
         self._sock = parent_sock
-        argv = ["uv", "run", "--project", str(project), "--no-sync", "python",
-                str(project / "stage2_sidecar.py"), "--fd", str(child_sock.fileno())]
+        argv += [str(project / "stage2_sidecar.py"), "--fd", str(child_sock.fileno())]
         if self.stub:
             argv.append("--stub")
         else:
@@ -340,14 +353,26 @@ class MotionEncoderClient:
         from mme_vla_suite.datastore.motion_store import validate_stage2_provenance
         validate_stage2_provenance(store_prov)
         validate_stage2_evidence(store_prov, self._provenance_root)
+        target = None
+        if getattr(self, "_eval_target_contract", None) is not None:
+            from scripts.evaluation.runtime_contract import validate_eval_runtime_contract
+            target = validate_eval_runtime_contract(self._eval_target_contract, training_provenance=store_prov,
+                actual_runtime={"numerics": self.provenance.get("numerics"),
+                                "online_vae": self.provenance.get("online_vae")})
         for group in ("encoder", "encoder_state_sha256", "source_pin", "numerics"):
             actual, expected = self.provenance.get(group), store_prov[group]
             if group == "encoder" and isinstance(actual, dict):
                 actual = {key: value for key, value in actual.items() if key != "run_dir"}
                 expected = {key: value for key, value in expected.items() if key != "run_dir"}
-            if actual != expected:
+            if target is not None and group == "numerics":
+                from scripts.evaluation.runtime_contract import compare_runtime, software_runtime
+                compare_runtime(software_runtime(expected), software_runtime(actual))
+            elif actual != expected:
                 raise ValueError(f"阶段二真实握手的 {group} 与离线来源不同")
-        if self.provenance.get("online_vae") != store_prov["stage2_compat"]["online_vae"]:
+        if target is not None:
+            from scripts.evaluation.runtime_contract import compare_runtime, software_runtime
+            compare_runtime(software_runtime(store_prov["stage2_compat"]["online_vae"]), software_runtime(self.provenance.get("online_vae")))
+        elif self.provenance.get("online_vae") != store_prov["stage2_compat"]["online_vae"]:
             raise ValueError("阶段二真实 VAE 与兼容合同的 online_vae 不同")
         if (type(self.provenance.get("pid")) is not int or self.provenance["pid"] != self._proc.pid
                 or not self.provenance.get("gpu_uuid") or not self.provenance.get("cuda_visible_devices")

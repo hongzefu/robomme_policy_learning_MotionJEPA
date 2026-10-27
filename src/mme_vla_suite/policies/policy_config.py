@@ -74,6 +74,8 @@ def create_trained_policy(
     norm_stats: dict[str, transforms.NormStats] | None = None,
     motion_stub: bool = False,
     motion_online_gpu: int | str | None = None,
+    stage2_python: str | None = None,
+    eval_target_contract: pathlib.Path | str | None = None,
 ) -> _policy.MME_VLA_Policy:
     
     repack_transforms = repack_transforms or transforms.Group()
@@ -97,11 +99,14 @@ def create_trained_policy(
     ckpt_has_motion = _params_have_motion(params)
     if resolved_path.exists():
         resolved_history_config, snapshot_enabled = _load_resolved_snapshot(run_root)
-        if motion_online_gpu is not None and snapshot_enabled:
+        if (motion_online_gpu is not None or stage2_python is not None) and snapshot_enabled:
             from omegaconf import OmegaConf
             # 只调整推理配置副本；已核 SHA 的原快照及调用方配置保持原样。
             resolved_history_config = OmegaConf.create(OmegaConf.to_container(resolved_history_config, resolve=True))
-            resolved_history_config.motion.online_gpu = motion_online_gpu
+            if motion_online_gpu is not None:
+                resolved_history_config.motion.online_gpu = motion_online_gpu
+            if stage2_python is not None:
+                resolved_history_config.motion.stage2_python = stage2_python
         if snapshot_enabled != ckpt_has_motion:
             raise ValueError(
                 f"run 快照 motion.enabled={snapshot_enabled} 与 checkpoint 参数树含 motion 参数={ckpt_has_motion} 不符: {run_root}")
@@ -155,6 +160,7 @@ def create_trained_policy(
             source_run=str(mcfg.source_run),
             online_gpu=mcfg.get("online_gpu", 1), stub=motion_stub, store_provenance=store_prov,
             encoder_kind=encoder_kind, provenance_root=run_root,
+            stage2_python=mcfg.get("stage2_python"), eval_target_contract=eval_target_contract,
             expected_ckpt_sha256=(store_prov["encoder"] or {}).get("checkpoint_sha256") if not motion_stub else None)
 
     return _policy.MME_VLA_Policy(
@@ -174,7 +180,9 @@ def create_trained_policy(
             *repack_transforms.outputs,
         ],
         sample_kwargs=sample_kwargs,
-        metadata=train_config.policy_metadata,
+        metadata={**(train_config.policy_metadata or {}), "model_seed": seed,
+                  "model_kind": "stage2_pool4_concat" if mcfg is not None and mcfg.get("enabled", False)
+                  and mcfg.get("encoder_kind") == "stage2_pool4_concat" else "history"},
         norm_stats=norm_stats,
         use_quantiles=data_config.use_quantile_norm,
         motion_enc_fn=motion_enc_fn,
