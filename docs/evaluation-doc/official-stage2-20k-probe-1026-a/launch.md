@@ -6,9 +6,9 @@
 
 ## ② 版本与代码状态
 
-开工计划commit为 `2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f`，开发分支 `v4-eval-official-1026`。官方benchmark gitlink固定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`，MotionJEPA固定 `b5d23a5fab55be16e580c5b77a8f04d68b3170c2`。NFS历史 `releases/420ae9801b4d23ed3a798e29a4580960301b9d20`只提供三环境初始import来源，未跑本轮实现。最终执行commit／release尚待整合审查发布，不把占位提交HEAD当作已跑策略版本。
+开工计划commit为 `2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f`，开发分支 `v4-eval-official-1026`。官方benchmark gitlink固定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`，MotionJEPA固定 `b5d23a5fab55be16e580c5b77a8f04d68b3170c2`。NFS历史 `releases/420ae9801b4d23ed3a798e29a4580960301b9d20`只提供初始import来源。实际执行版本固定为 `5c5bff55c6ce1ba873058e4537615ff45091eb72`，同名NFS release已核HEAD、benchmark gitlink与clean工作区，独立合后复核通过且代码已推送；不把占位提交HEAD当作策略版本。
 
-早期VLA清单固定为公开bucket `HongzeFu/robomme-vla-mixed8-200-modul-motion-stage2-1024-80k-v1` 的 `manifests/step-20000.json`，SHA256 `be34e777b9ad8962aca374d2861e97cf5561b0cc9fb63fb7160e99adf03f2452`。36成员共12,220,441,623字节；根清单SHA `10848d66aa3b281d23c8029033bea4ee31d269bf8abd89d69458c5792a7cda42`。36文件传输SHA全通过，完整读回与READY尚未完成，目录存在不代表就绪。
+早期VLA清单固定为公开bucket `HongzeFu/robomme-vla-mixed8-200-modul-motion-stage2-1024-80k-v1` 的 `manifests/step-20000.json`，SHA256 `be34e777b9ad8962aca374d2861e97cf5561b0cc9fb63fb7160e99adf03f2452`。36成员共12,220,441,623字节；根清单SHA `10848d66aa3b281d23c8029033bea4ee31d269bf8abd89d69458c5792a7cda42`。传输SHA与完整落盘读回均通过，READY已于美东10月26日23:50:43发布，原下载自然退出0。
 
 绑定encoder为epoch105 EMA，314,265,763字节，SHA256 `27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035`。已有 `ENCODER_DOWNLOAD=PASS files=3`、`EXIT_CODE=0`。1024维、96槽、W33／S32；不使用旧768维10k。恢复使用真实131帧RGB、state／wrist，D66首67＋四次16续包；原 `[33,32]`记录不能冒充真实16节奏验证。
 
@@ -72,3 +72,38 @@ sbatch --parsable --account=chaijy2 --partition=spgpu --nodes=1 --ntasks-per-nod
 首次HF CLI及Python urllib传输均在不可达IPv6地址停留，`ss`原始输出为相关精确PID的 `SYN_SENT`；尚无已验证文件。美东23:07:58按本轮确切tmux名逐一停止，删前删后其余会话完全保留，原日志追加停止原因；不把强停写成成功退出。随后仅把传输改为 `curl -4`，对象、清单、SHA与预算不变，各进行一次明确基础设施重试。旧暂存目录保留。
 
 IPv4传输已产生真实文件进度；随后NFS读取、写入及摘要出现D状态等待，部分源代码复测同样受影响。只记录现场事实，不重算模型、不增加并发或重试，不把仍在读取中的校验写成通过。
+
+## 首个GPU负载：严格恢复及同机重复性
+
+本节在GPU起跑前填写。执行release固定为上面的 `5c5bff5`；后续主检出只改档案不会移动执行树。使用已核 `64849606`，不提交新job。原始日志落本机镜像 `logs/restore-initial.log`，报告落NFS运行根 `reports/restore-initial.json`。启动脚本为运行产物 `scripts/run-restore-5c5bff5.sh`，SHA256 `f793cfc63ec532416239231893c3cdb7b90d3096b620ce39070fbe2b5b910e53`；下列代码块还原其全部运行口径：
+
+```bash
+EVAL_ROOT=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval
+REPO="$EVAL_ROOT/releases/5c5bff55c6ce1ba873058e4537615ff45091eb72"
+STORE="$EVAL_ROOT/v1-store"
+RUN="$STORE/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a"
+MODEL="$STORE/assets/vla20k-be34e777b9ad8962aca374d2861e97cf5561b0cc9fb63fb7160e99adf03f2452"
+# 以下环境在srun的计算step内设置；CUDA_VISIBLE_DEVICES保持Slurm原值。
+unset JAX_PLATFORMS
+export PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+export MMEVLA_V1_STORE="$STORE" OPENPI_DATA_HOME="$STORE/models"
+export MS_ASSET_DIR="$STORE/cache/maniskill"
+export HF_HOME="$STORE/cache/hf" HF_HUB_CACHE="$STORE/cache/hf/hub"
+export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 UV_OFFLINE=1
+export UV_CACHE_DIR="$STORE/cache/uv" UV_LINK_MODE=copy
+export XDG_CACHE_HOME="$STORE/cache" TORCH_HOME="$STORE/cache/torch"
+export TORCHINDUCTOR_CACHE_DIR="$STORE/cache/torchinductor" TRITON_CACHE_DIR="$STORE/cache/triton"
+export CUDA_CACHE_PATH="$STORE/cache/cuda" JAX_COMPILATION_CACHE_DIR="$STORE/cache/jax"
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
+export PYTHONPATH="$REPO:$REPO/src:$REPO/packages/openpi-client/src:$REPO/third_party/robomme_benchmark/src"
+cd "$REPO"
+"$STORE/envs/policy/bin/python" -u -m scripts.evaluation.check_runtime \
+  --checkpoint "$MODEL/20000" --step 20000 --purpose validation \
+  --motion-online-gpu "$CUDA_VISIBLE_DEVICES" \
+  --stage2-python "$STORE/envs/stage2/bin/python" \
+  --eval-target-contract "$RUN/contracts/runtime.json" \
+  --expected-manifest "$MODEL/manifests/step-20000.json" \
+  --config mme_vla_suite_b128_80k --output "$RUN/reports/restore-initial.json"
+```
+
+从Aspen复用主连接的外层命令为 `ssh -o BatchMode=yes greatlakes srun --jobid=64849606 --overlap --exact --ntasks=1 --cpus-per-task=4 --gpu_cmode=shared /usr/bin/bash <运行根>/scripts/run-restore-5c5bff5.sh`。放在本轮唯一 `eval-stage2-1026-restore` detached tmux，使用pipefail、tee及真实EXIT_CODE。该负载不计入11个官方仿真局，不产生任务成功率；先做完整参数树、bf16摘要、真实131帧和完整noise的同机重复性。真实策略单局／两分片在此负载之后执行。
