@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T18:48:35Z",
-    "america_new_york": "2026-10-27T14:48:35-0400"
+    "utc": "2026-10-27T19:47:24Z",
+    "america_new_york": "2026-10-27T15:47:24-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -725,9 +725,9 @@
         },
         {
           "what": "新执行副本（benchmark 943ddf3）建立；GPU冒烟2局ENV_ROUTE route=xhard",
-          "evidence": "执行副本 releases/5bbd814…，benchmark 943ddf3（含robomme_xhard）；TESTX_MANIFEST=PASS episodes=1200 chunks=240；run身份 da7fa333…；冒烟待卡",
-          "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/testx-stage2-60k-seed7",
-          "status": "pending"
+          "evidence": "smoke2 accepted=2：BinFill:0 easy success 286步；BinFill:50 xhard12 fail 1246步；ENV_ROUTE route=base env=BinFill / route=xhard env=BinFillXHard；conservative_exec_windows=62；motion_downsample_steps字段在；seed7经客户端validate_metadata核对通过",
+          "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/testx-stage2-60k-seed7/smoke2",
+          "status": "pass"
         },
         {
           "what": "1200局全部确定终局并汇总（含抽稀局数）",
@@ -745,9 +745,64 @@
       "long_tail": [],
       "running_handles": [
         {
-          "tmux": "-",
-          "log": "greatlakes squeue -u hongzefu",
-          "done_line": "占位64893990-64893999（spgpu 1×A40/4CPU/24G/48h，美东14:48提交，PENDING Priority）"
+          "tmux": "eval-tx-controller",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/testx-stage2-60k-seed7/run1200/logs/controller.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "eval-tx-launcher",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/launcher.log",
+          "done_line": "ALL_10_LAUNCHED"
+        },
+        {
+          "tmux": "eval-tx-worker-64893990",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893990.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "eval-tx-worker-64893991",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893991.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "eval-tx-worker-64893992",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893992.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "eval-tx-worker-64893993",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893993.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "eval-tx-worker-64893994",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893994.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "eval-tx-worker-64893995",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893995.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "eval-tx-worker-64893996",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893996.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "eval-tx-worker-64893997",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893997.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "eval-tx-worker-64893998",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893998.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "eval-tx-worker-64893999",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893999.log",
+          "done_line": "EXIT_CODE="
         }
       ],
       "authorizations": [
@@ -773,9 +828,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "首份占位RUNNING后跑smoke2（BinFill:0、BinFill:50），核ENV_ROUTE route=xhard env=BinFillXHard；通过后initialize run1200并起controller与worker",
-          "command": "run-controller-smoke.sh / run-worker-smoke.sh",
-          "verdict_line": "ENV_ROUTE route=xhard env=BinFillXHard；smoke2 2/2终局"
+          "what": "1200局全部accepted后aggregate（含downsampled_episodes），逐个scancel 64893990-64893999，停controller，写结果对比表",
+          "command": "official_queue aggregate --run-root /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/testx-stage2-60k-seed7/run1200",
+          "verdict_line": "compute_status=COMPUTE_DONE completed=1200"
         }
       ]
     }
