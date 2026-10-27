@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T02:55:12Z",
-    "america_new_york": "2026-10-26T22:55:12-0400"
+    "utc": "2026-10-27T02:57:40Z",
+    "america_new_york": "2026-10-26T22:57:40-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f",
+    "base_head": "6ed9341d945ab0ca68a5f0f2e0266a8b300d1870",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -20,9 +20,9 @@
         "file": "1026-official-benchmark-stage2-eval-plan.html",
         "sha": "2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f"
       },
-      "state": "planned",
-      "state_changed_at": "2026-10-27T02:55:12Z",
-      "state_reason": "已获阶段一开工、Aspen环境A、GreatLakes连接与状态机登记授权；阶段二正式800局未获开工。",
+      "state": "running",
+      "state_changed_at": "2026-10-27T02:57:40Z",
+      "state_reason": "阶段一A/B/C/G独立worktree实现与D独立oracle已派发；GreatLakes现有ControlMaster已连接验证，账号队列为空；epoch105固定下载已交R。未启动阶段二或GPU作业。",
       "owner": {"session": "01a17b42-9de4-72b3-b0ed-1be85f58fb26", "host": "sled-aspen.eecs.umich.edu"},
       "depends_on": [],
       "pre_handoff": [
@@ -31,7 +31,7 @@
         {"what": "NFS与三解释器现场检查、可用资产与待验门清单", "evidence": "", "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/", "status": "pending"}
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [{"tmux": "eval-stage2-1026-encoder-fetch", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/encoder105-fetch-1026.log", "done_line": "ENCODER_DOWNLOAD=PASS；EXIT_CODE=0"}],
       "authorizations": [
         {"kind": "go", "date": "2026-10-26", "quote": "开始实现这个阶段一,然后我授权你可以使用greatlakes。 注意你这个子代理内部的这个映射你要看清楚了，就是 Cloud 和 Codex是有映射的，你要用 Codex的映射来做。", "scope": "仅本计划阶段一，Codex非AWS映射；不启动阶段二正式800局。"},
         {"kind": "decision", "date": "2026-10-26", "quote": "同意这个，同意是用这个Aspen来做的。", "scope": "确认Aspen实际2张RTX A6000按环境A，开发与控制在Aspen，计算在GreatLakes。"},
