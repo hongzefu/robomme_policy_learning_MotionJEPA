@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T02:57:40Z",
-    "america_new_york": "2026-10-26T22:57:40-0400"
+    "utc": "2026-10-27T03:14:31Z",
+    "america_new_york": "2026-10-26T23:14:31-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "6ed9341d945ab0ca68a5f0f2e0266a8b300d1870",
+    "base_head": "0087c713935c25acd34b252175965830140d30f3",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -22,16 +22,22 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-27T02:57:40Z",
-      "state_reason": "阶段一A/B/C/G独立worktree实现与D独立oracle已派发；GreatLakes现有ControlMaster已连接验证，账号队列为空；epoch105固定下载已交R。未启动阶段二或GPU作业。",
+      "state_reason": "阶段一独立实现及合前审查进行中；用户追加批准Stage2 VLA20k与两个A40分片试评估。64849606/64849621已RUNNING，UUID不同，三NFS环境导入通过，尚未运行模型。固定资产IPv4下载与摘要进行中，NFS IO阻塞；未启动阶段二800局。",
       "owner": {"session": "01a17b42-9de4-72b3-b0ed-1be85f58fb26", "host": "sled-aspen.eecs.umich.edu"},
       "depends_on": [],
       "pre_handoff": [
         {"what": "计划一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f findings=0 blocking=0", "where": "git:2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f:1026-official-benchmark-stage2-eval-plan.html", "status": "pass"},
         {"what": "阶段一代码、独立审查与CPU核心验证", "evidence": "", "where": "docs/evaluation-doc/official-stage2-phase1-1026/", "status": "pending"},
-        {"what": "NFS与三解释器现场检查、可用资产与待验门清单", "evidence": "", "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/", "status": "pending"}
+        {"what": "NFS与三解释器现场检查、可用资产与待验门清单", "evidence": "NFS_ENV_IMPORT=PASS role=policy；NFS_ENV_IMPORT=PASS role=stage2；NFS_ENV_IMPORT=PASS role=official-sim；EXIT_CODE=0。仅import，不含渲染与新release路径。", "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/logs/env-probe.log", "status": "pending"},
+        {"what": "用户追加早期20k单局及双卡分片验证与资源释放", "evidence": "HOLD_POOL=PASS jobs=2 running=2 reserved_gpu_hours=96；模型、数值、仿真与分片未验。", "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/", "status": "pending"}
       ],
       "long_tail": [],
-      "running_handles": [{"tmux": "eval-stage2-1026-encoder-fetch", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/encoder105-fetch-1026.log", "done_line": "ENCODER_DOWNLOAD=PASS；EXIT_CODE=0"}],
+      "running_handles": [
+        {"tmux": "eval-stage2-1026-encoder-ipv4", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/encoder105-fetch-1026-ipv4.log", "done_line": "ENCODER_DOWNLOAD=PASS；EXIT_CODE=0"},
+        {"tmux": "eval-stage2-1026-vla20k-ipv4", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/logs/vla20k-fetch-1026-ipv4.log", "done_line": "VLA_DOWNLOAD=PASS；EXIT_CODE=0"},
+        {"tmux": "", "job_id": "64849606", "slot_instance": "probe-s0", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/logs/hold-64849606.log", "done_line": "Slurm已确认终态并释放"},
+        {"tmux": "", "job_id": "64849621", "slot_instance": "probe-s1", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/logs/hold-64849621.log", "done_line": "Slurm已确认终态并释放"}
+      ],
       "authorizations": [
         {"kind": "go", "date": "2026-10-26", "quote": "开始实现这个阶段一,然后我授权你可以使用greatlakes。 注意你这个子代理内部的这个映射你要看清楚了，就是 Cloud 和 Codex是有映射的，你要用 Codex的映射来做。", "scope": "仅本计划阶段一，Codex非AWS映射；不启动阶段二正式800局。"},
         {"kind": "decision", "date": "2026-10-26", "quote": "同意这个，同意是用这个Aspen来做的。", "scope": "确认Aspen实际2张RTX A6000按环境A，开发与控制在Aspen，计算在GreatLakes。"},
@@ -39,7 +45,9 @@
         {"kind": "decision", "date": "2026-10-26", "quote": "你应该能够拿到这个已经有的这个 checkpoint，然后你可以尝试 eval 一下这个效果，就是已经有的这个 VIA 的这个训练的 checkpoint，应该是早期的这个 checkpoint。", "scope": "查找并准备早期同架构VLA试评估；不默换旧768架构，模型身份与数值门仍核验。"},
         {"kind": "decision", "date": "2026-10-26", "quote": "登记到状态机", "scope": "登记本次阶段一与早期checkpoint试评估，保留其他任务原状态。"},
         {"kind": "decision", "date": "2026-10-26", "quote": "还有什么问题吗？你尽可能不要阻塞 能做的想做\n先做", "scope": "独立可做事项持续推进；缺资产不阻塞无依赖的实现与CPU验证。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "Motion的encoder我应该也上传了Hugging Face，你可以直接下载，应该是最新的这个Epoch一百多的那个。", "scope": "下载并核验计划锁定epoch105 EMA，SHA256=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035。"}
+        {"kind": "decision", "date": "2026-10-26", "quote": "Motion的encoder我应该也上传了Hugging Face，你可以直接下载，应该是最新的这个Epoch一百多的那个。", "scope": "下载并核验计划锁定epoch105 EMA，SHA256=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035。"},
+        {"kind": "decision", "date": "2026-10-26", "quote": "采用这组运行名和规格", "scope": "固定Stage2 VLA20k，run_name=official-stage2-20k-probe-1026-a，先单局再五局；单job1×A40/4CPU/24GiB/48h，结束释放。"},
+        {"kind": "decision", "date": "2026-10-26", "quote": "你query两个这个A40的叫步，然后尝试一下这个多卡的分片是不是正常的。", "scope": "在同一早期验证run使用两个独立1GPU占位检验不同固定chunk分片；共两份48h承诺96GPUh，不扩为正式800局。"}
       ],
       "pending_decisions": [],
       "next_steps": [

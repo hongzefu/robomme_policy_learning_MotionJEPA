@@ -614,6 +614,9 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <p>本轮文档子代理在专属 <code>worktree-agent-eval-plan-doc-20261026</code> 分支以 <code>sub/eval-plan-doc:</code> 提交，由主会话在eval分支审查整合。用户已明确同意推送，主会话可 <code>git push -u origin v4-eval-official-1026</code> 建立upstream并推送文档；子代理不自行推送、不合训练分支。状态机登记尚未明确同意，继续不写 <code>docs/handoff/current.json</code>；推送不代表开工。</p>
 <p>正式实施提交应留用户开工范围、方案、实际变更、异常处置、测试和下一步；子提交保留原始历史。代码审查、闸门报告和实际资源数据在后续档案中追加，不回写本计划把“建议”伪装成“当时已通过”。</p>
 <h3>10.1 本计划交付自检</h3>
+<div class="note"><strong>实施记录（美东2026-10-26，原计划正文保留）：</strong>用户已给阶段一开工令，确认Aspen环境A、GreatLakes连接和状态机登记；随后批准Stage2 VLA20k早期试评估、运行名<code>official-stage2-20k-probe-1026-a</code>及两个独立1×A40／4CPU／24GiB／48h占位。该新增验证不构成阶段二正式800局开工令。实施与证据分别见<code>docs/evaluation-doc/official-stage2-phase1-1026/README.md</code>及该试评估的<code>launch.md</code>。</div>
+<h3>实施中调整：在线输入原子性准确写集</h3>
+<p>独立CPU oracle在固定基线发现9项非法输入拒绝／状态污染失败。按第四章的写集裁定，由独立E owner仅修改<code>framesamp_memory.py::add_buffer</code>和<code>policy.py::MME_VLA_Policy.add_buffer</code>：整批输入校验前置、既有段边界赋值延后；不改窗口／编码／合法数值链，不新增回滚层、状态或开关。独立对抗审查为<code>ADJUST_REVIEW=PASS scale=same findings=2</code>。合法包逐键字节一致、非法包失败零写入仍须修后实测；首包严格<code>D+1</code>和边界整数类型不放宽。合前遗漏交原owner续修，未将作者首版通过数字当成最终验收。</p>
 <ul>
 <li>只含两个 h1，分别为“第一部分（给人看）”与“第二部分（技术细节，供 agent 追踪）”；CSS 内联，无外部 JS／字体。</li>
 <li>三张机制图均为内联 SVG、水平／垂直正交箭头：<code>motion-window-timeline</code>、<code>process-data-chain</code>、<code>elastic-worker-dynamic-queue</code>；交付前渲染为位图目视核对。</li>
