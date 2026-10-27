@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T05:38:04Z",
-    "america_new_york": "2026-10-27T01:38:04-0400"
+    "utc": "2026-10-27T05:47:16Z",
+    "america_new_york": "2026-10-27T01:47:16-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -576,6 +576,30 @@
         "SMOKE20=PASS oom=0 loss_finite=1 peak_mib=71983 steady_s_per_step=7.500",
         "PREFLIGHT=PASS n=30",
         "G6: Step 0 loss=0.5756; 50it rate 3.9s/it; 无 Traceback/OOM/NaN"
+      ]
+    },
+    "official-60k-800-eval": {
+      "plan": {"file": "1027-stage2-simple-elastic-eval-plan.html", "sha": "6c95f62"},
+      "state": "running",
+      "state_changed_at": {"utc": "2026-10-27T05:47:16Z", "america_new_york": "2026-10-27T01:47:16-0400"},
+      "state_reason": "用户批准正式60k八百局：监听bucket，见step-55000后提交10份1×A40占位，60k清单到达后下载核SHA、READY，再起controller与弹性worker",
+      "owner": {"session": "https://claude.ai/code/session_01WvPQiQXaztwkVeY2pFPyW3", "host": "sled-aspen.eecs.umich.edu"},
+      "depends_on": ["official-benchmark-stage2-eval", {"path": "hf://buckets/HongzeFu/robomme-vla-mixed8-200-modul-motion-stage2-1024-80k-v1", "branch": "-", "task": "manifests/step-60000.json"}],
+      "pre_handoff": [
+        {"what": "60k下载并逐文件核SHA、发布READY", "evidence": "", "where": "", "status": "pending"},
+        {"what": "800局全部有确定终局并汇总成绩", "evidence": "", "where": "", "status": "pending"},
+        {"what": "自有占位逐个scancel、队列无残留", "evidence": "", "where": "", "status": "pending"}
+      ],
+      "long_tail": [],
+      "running_handles": [
+        {"tmux": "eval-60k-watch", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stage2-60k-seed42/watch/watch_bucket.log", "done_line": "STEP60000_SEEN"}
+      ],
+      "authorizations": [
+        {"kind": "go", "date": "2026-10-27", "quote": "等到55k开始排卡。其他全部同意，可以开始", "scope": "bucket监听；见step-55000后提交10份spgpu 1×A40/4CPU/24G/48h占位；60k下载核验；正式800局弹性评估；收尾逐个释放"}
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {"what": "step-55000出现后查greatlakes-usage并提交10份占位", "command": "sbatch --parsable --account=chaijy2 --partition=spgpu --nodes=1 --ntasks-per-node=1 --gres=gpu:1 --gpu_cmode=shared --cpus-per-task=4 --mem=24G --time=48:00:00 --wrap='sleep infinity'", "verdict_line": "NEW_STEP step=55000"}
       ]
     }
   }
