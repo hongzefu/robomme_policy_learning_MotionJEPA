@@ -104,6 +104,19 @@ def test_invalid_first_packet_is_rejected_without_partial_state(fault):
     assert memory.motion_enc.calls == [(window.start, window.frame_ids) for window in oracle_windows(17, 0)]
 
 
+@pytest.mark.parametrize("demo_length", [0, 17])
+def test_overlong_first_packet_is_rejected_without_partial_state(demo_length):
+    memory = make_memory()
+    before = memory_snapshot(memory)
+    # 首包只能包含完整 demo 与 exec0，不能夹带 exec1。
+    with pytest.raises((ValueError, RuntimeError)):
+        feed_packet(memory, list(range(demo_length + 2)), demo_length)
+    assert memory_snapshot(memory) == before
+    feed_packet(memory, list(range(demo_length + 1)), demo_length)
+    assert memory.n_steps == demo_length + 1
+    assert memory.motion_enc.calls == [(window.start, window.frame_ids) for window in oracle_windows(demo_length, 0)]
+
+
 @pytest.mark.parametrize("fault", ["duplicate_existing", "missing_frame", "future_frame", "unordered_exec", "cross_segment", "boundary_drift"])
 def test_invalid_execution_packet_is_rejected_without_partial_state(fault):
     memory = make_memory()

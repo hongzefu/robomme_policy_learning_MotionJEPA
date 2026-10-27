@@ -96,7 +96,8 @@ def test_clear_discards_episode_frames_tokens_and_grid_state():
 
 def test_real_ingestion_visual_padding_and_state_alignment():
     memory = make_memory()
-    feed_packet(memory, [0, 1], 0)
+    feed_packet(memory, [0], 0)
+    feed_packet(memory, [1], 0)
     emb, pos, states, mask = memory.prepare_frame_sampling(1, 512, 64, memory.default_history_feats_gather_fn)
     assert emb.shape == (512, 2) and emb.dtype == np.dtype("bfloat16")
     assert pos.shape == (512, 256) and pos.dtype == np.float32
