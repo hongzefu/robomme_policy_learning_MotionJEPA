@@ -1,0 +1,709 @@
+{
+  "code_commit": "789ef0e5e9c241dd0f8bca11f2c3b885edc52e39",
+  "run_root": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027",
+  "single_episode": {
+    "episode_key": "BinFill:0",
+    "task_name": "BinFill",
+    "episode_id": 0,
+    "env_seed": 540000,
+    "difficulty": "easy",
+    "episode_nonce": "c6ffeadc9bcf48a7ab8f1b7f59cdccca",
+    "run_identity_sha256": "7c4fafa6800d952b56810747ed4d4f9d5c542d3fd5a0d142c6b0be3107bc5c6b",
+    "chunk_id": "smoke1",
+    "record_type": "terminal",
+    "outcome": "fail",
+    "actions_executed": 342,
+    "wall_seconds": 107.76976533327252,
+    "rpc_seq": 45,
+    "budget": {
+      "demo_frames": 0,
+      "demo_windows": 0,
+      "conservative_exec_windows": 40
+    }
+  },
+  "single_attempt": {
+    "status": "complete",
+    "exit_code": 0,
+    "started_episode_keys": [
+      "BinFill:0"
+    ],
+    "completed_episode_keys": [
+      "BinFill:0"
+    ],
+    "unstarted_episode_keys": []
+  },
+  "startup_error": {
+    "record_type": "infra",
+    "error_type": "ModuleNotFoundError",
+    "retryable": true,
+    "error": "Traceback (most recent call last):\n  File \"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/922498b2b7be87b07a5f5065a0bc5e343495683c/examples/robomme/eval.py\", line 295, in evaluate\n    client = client_factory(args)\n             ^^^^^^^^^^^^^^^^^^^^\n  File \"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/922498b2b7be87b07a5f5065a0bc5e343495683c/examples/robomme/eval.py\", line 52, in __init__\n    import websockets.sync.client\nModuleNotFoundError: No module named 'websockets'\n"
+  },
+  "first_episode_infra_error": {
+    "episode_key": "BinFill:0",
+    "task_name": "BinFill",
+    "episode_id": 0,
+    "env_seed": 540000,
+    "difficulty": "easy",
+    "episode_nonce": "b89f1a88fa2f47d49a01eb96b3507720",
+    "run_identity_sha256": "7c4fafa6800d952b56810747ed4d4f9d5c542d3fd5a0d142c6b0be3107bc5c6b",
+    "chunk_id": "smoke1",
+    "record_type": "infra",
+    "error_type": "UncertainRPC",
+    "retryable": true,
+    "uncertain_terminal": false,
+    "uncertain_rpc": true,
+    "actions_executed": 0,
+    "error": "TimeoutError: timed out while closing connection\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/922498b2b7be87b07a5f5065a0bc5e343495683c/examples/robomme/eval.py\", line 86, in request\n    return self._receive()\n           ^^^^^^^^^^^^^^^\n  File \"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/922498b2b7be87b07a5f5065a0bc5e343495683c/examples/robomme/eval.py\", line 71, in _receive\n    response = self.ws.recv(timeout=self.timeout)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/envs/official-sim/lib/python3.11/site-packages/websockets/sync/connection.py\", line 336, in recv\n    raise self.protocol.close_exc from self.recv_exc\nwebsockets.exceptions.ConnectionClosedError: sent 1011 (internal error) keepalive ping timeout; no close frame received\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/922498b2b7be87b07a5f5065a0bc5e343495683c/examples/robomme/eval.py\", line 319, in evaluate\n    outcome = evaluator.eval_each_episode(runner, video_dir, client, nonce)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/922498b2b7be87b07a5f5065a0bc5e343495683c/examples/robomme/eval.py\", line 200, in eval_each_episode\n    state.action_plan.extend(self.get_action_chunk(client, state, img, wrist, robot_state, prompt, 16))\n                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/922498b2b7be87b07a5f5065a0bc5e343495683c/examples/robomme/eval.py\", line 179, in get_action_chunk\n    response = client.request({\"observation/image\": img, \"observation/wrist_image\": wrist_img,\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/922498b2b7be87b07a5f5065a0bc5e343495683c/examples/robomme/eval.py\", line 90, in request\n    raise UncertainRPC(\"RPC 响应不确定，禁止在原局重发\") from exc\nUncertainRPC: RPC 响应不确定，禁止在原局重发\n"
+  },
+  "queue_summary": {
+    "active_chunks": 0,
+    "completed": 10,
+    "compute_status": "COMPUTE_DONE",
+    "episodes": 10,
+    "errors": {},
+    "missing": [],
+    "outcomes": {
+      "fail": 9,
+      "success": 1,
+      "timeout": 0
+    },
+    "retries": {},
+    "success_rate": 0.1,
+    "uncertain": []
+  },
+  "queue_state": {
+    "assignments": {
+      "b676e01e3179424cb271199a1e05fede": {
+        "closed": true,
+        "grant": {
+          "attempt_dir": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027/shards10/attempts/b676e01e3179424cb271199a1e05fede",
+          "attempt_id": "b676e01e3179424cb271199a1e05fede",
+          "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+          "episodes": [
+            {
+              "difficulty": "easy",
+              "env_seed": 540000,
+              "episode_id": 0,
+              "episode_key": "BinFill:0",
+              "task_name": "BinFill"
+            },
+            {
+              "difficulty": "easy",
+              "env_seed": 520000,
+              "episode_id": 0,
+              "episode_key": "StopCube:0",
+              "task_name": "StopCube"
+            },
+            {
+              "difficulty": "easy",
+              "env_seed": 510000,
+              "episode_id": 0,
+              "episode_key": "PickXtimes:0",
+              "task_name": "PickXtimes"
+            },
+            {
+              "difficulty": "easy",
+              "env_seed": 530000,
+              "episode_id": 0,
+              "episode_key": "SwingXtimes:0",
+              "task_name": "SwingXtimes"
+            },
+            {
+              "difficulty": "easy",
+              "env_seed": 580000,
+              "episode_id": 0,
+              "episode_key": "ButtonUnmask:0",
+              "task_name": "ButtonUnmask"
+            }
+          ],
+          "job_id": "64855345",
+          "request_id": "worker-1-f9a3723ff4a14e78b926584c6dbd3faa",
+          "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+          "state": "RUNNING",
+          "step_id": "3",
+          "worker_id": "worker-1"
+        },
+        "returned": []
+      },
+      "dbe9f9e33b034989b075ae550f75bcf7": {
+        "closed": true,
+        "grant": {
+          "attempt_dir": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027/shards10/attempts/dbe9f9e33b034989b075ae550f75bcf7",
+          "attempt_id": "dbe9f9e33b034989b075ae550f75bcf7",
+          "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+          "episodes": [
+            {
+              "difficulty": "easy",
+              "env_seed": 560000,
+              "episode_id": 0,
+              "episode_key": "VideoUnmask:0",
+              "task_name": "VideoUnmask"
+            },
+            {
+              "difficulty": "easy",
+              "env_seed": 550000,
+              "episode_id": 0,
+              "episode_key": "VideoUnmaskSwap:0",
+              "task_name": "VideoUnmaskSwap"
+            },
+            {
+              "difficulty": "easy",
+              "env_seed": 570000,
+              "episode_id": 0,
+              "episode_key": "ButtonUnmaskSwap:0",
+              "task_name": "ButtonUnmaskSwap"
+            },
+            {
+              "difficulty": "easy",
+              "env_seed": 620000,
+              "episode_id": 0,
+              "episode_key": "PickHighlight:0",
+              "task_name": "PickHighlight"
+            },
+            {
+              "difficulty": "easy",
+              "env_seed": 590000,
+              "episode_id": 0,
+              "episode_key": "VideoRepick:0",
+              "task_name": "VideoRepick"
+            }
+          ],
+          "job_id": "64855348",
+          "request_id": "worker-2-98c5dc8c2d5a4741a50354196d9e738a",
+          "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+          "state": "RUNNING",
+          "step_id": "0",
+          "worker_id": "worker-2"
+        },
+        "returned": []
+      }
+    },
+    "errors": {},
+    "grants": {
+      "worker-1-f9a3723ff4a14e78b926584c6dbd3faa": {
+        "attempt_dir": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027/shards10/attempts/b676e01e3179424cb271199a1e05fede",
+        "attempt_id": "b676e01e3179424cb271199a1e05fede",
+        "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+        "episodes": [
+          {
+            "difficulty": "easy",
+            "env_seed": 540000,
+            "episode_id": 0,
+            "episode_key": "BinFill:0",
+            "task_name": "BinFill"
+          },
+          {
+            "difficulty": "easy",
+            "env_seed": 520000,
+            "episode_id": 0,
+            "episode_key": "StopCube:0",
+            "task_name": "StopCube"
+          },
+          {
+            "difficulty": "easy",
+            "env_seed": 510000,
+            "episode_id": 0,
+            "episode_key": "PickXtimes:0",
+            "task_name": "PickXtimes"
+          },
+          {
+            "difficulty": "easy",
+            "env_seed": 530000,
+            "episode_id": 0,
+            "episode_key": "SwingXtimes:0",
+            "task_name": "SwingXtimes"
+          },
+          {
+            "difficulty": "easy",
+            "env_seed": 580000,
+            "episode_id": 0,
+            "episode_key": "ButtonUnmask:0",
+            "task_name": "ButtonUnmask"
+          }
+        ],
+        "job_id": "64855345",
+        "request_id": "worker-1-f9a3723ff4a14e78b926584c6dbd3faa",
+        "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+        "state": "RUNNING",
+        "step_id": "3",
+        "worker_id": "worker-1"
+      },
+      "worker-2-98c5dc8c2d5a4741a50354196d9e738a": {
+        "attempt_dir": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027/shards10/attempts/dbe9f9e33b034989b075ae550f75bcf7",
+        "attempt_id": "dbe9f9e33b034989b075ae550f75bcf7",
+        "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+        "episodes": [
+          {
+            "difficulty": "easy",
+            "env_seed": 560000,
+            "episode_id": 0,
+            "episode_key": "VideoUnmask:0",
+            "task_name": "VideoUnmask"
+          },
+          {
+            "difficulty": "easy",
+            "env_seed": 550000,
+            "episode_id": 0,
+            "episode_key": "VideoUnmaskSwap:0",
+            "task_name": "VideoUnmaskSwap"
+          },
+          {
+            "difficulty": "easy",
+            "env_seed": 570000,
+            "episode_id": 0,
+            "episode_key": "ButtonUnmaskSwap:0",
+            "task_name": "ButtonUnmaskSwap"
+          },
+          {
+            "difficulty": "easy",
+            "env_seed": 620000,
+            "episode_id": 0,
+            "episode_key": "PickHighlight:0",
+            "task_name": "PickHighlight"
+          },
+          {
+            "difficulty": "easy",
+            "env_seed": 590000,
+            "episode_id": 0,
+            "episode_key": "VideoRepick:0",
+            "task_name": "VideoRepick"
+          }
+        ],
+        "job_id": "64855348",
+        "request_id": "worker-2-98c5dc8c2d5a4741a50354196d9e738a",
+        "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+        "state": "RUNNING",
+        "step_id": "0",
+        "worker_id": "worker-2"
+      }
+    },
+    "retries": {},
+    "uncertain": [],
+    "workers": {
+      "worker-1": {
+        "job_id": "64855345",
+        "state": "RUNNING",
+        "step_id": "3"
+      },
+      "worker-2": {
+        "job_id": "64855348",
+        "state": "RUNNING",
+        "step_id": "0"
+      }
+    }
+  },
+  "terminals": [
+    {
+      "actions_executed": 342,
+      "attempt_id": "b676e01e3179424cb271199a1e05fede",
+      "budget": {
+        "conservative_exec_windows": 40,
+        "demo_frames": 0,
+        "demo_windows": 0
+      },
+      "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+      "difficulty": "easy",
+      "env_seed": 540000,
+      "episode_id": 0,
+      "episode_key": "BinFill:0",
+      "episode_nonce": "5111be34e63945ad860526761fce99aa",
+      "outcome": "fail",
+      "record_type": "terminal",
+      "rpc_seq": 45,
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "task_name": "BinFill",
+      "wall_seconds": 43.70845119934529,
+      "worker_id": "worker-1"
+    },
+    {
+      "actions_executed": 221,
+      "attempt_id": "b676e01e3179424cb271199a1e05fede",
+      "budget": {
+        "conservative_exec_windows": 40,
+        "demo_frames": 0,
+        "demo_windows": 0
+      },
+      "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+      "difficulty": "easy",
+      "env_seed": 580000,
+      "episode_id": 0,
+      "episode_key": "ButtonUnmask:0",
+      "episode_nonce": "25d3917cced6404abf5946cc7c8ce5ae",
+      "outcome": "success",
+      "record_type": "terminal",
+      "rpc_seq": 29,
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "task_name": "ButtonUnmask",
+      "wall_seconds": 18.03502823319286,
+      "worker_id": "worker-1"
+    },
+    {
+      "actions_executed": 382,
+      "attempt_id": "dbe9f9e33b034989b075ae550f75bcf7",
+      "budget": {
+        "conservative_exec_windows": 40,
+        "demo_frames": 0,
+        "demo_windows": 0
+      },
+      "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+      "difficulty": "easy",
+      "env_seed": 570000,
+      "episode_id": 0,
+      "episode_key": "ButtonUnmaskSwap:0",
+      "episode_nonce": "f2197a9fce894a13a4f2c2d54e0025f0",
+      "outcome": "fail",
+      "record_type": "terminal",
+      "rpc_seq": 49,
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "task_name": "ButtonUnmaskSwap",
+      "wall_seconds": 32.00549778249115,
+      "worker_id": "worker-2"
+    },
+    {
+      "actions_executed": 200,
+      "attempt_id": "dbe9f9e33b034989b075ae550f75bcf7",
+      "budget": {
+        "conservative_exec_windows": 40,
+        "demo_frames": 0,
+        "demo_windows": 0
+      },
+      "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+      "difficulty": "easy",
+      "env_seed": 620000,
+      "episode_id": 0,
+      "episode_key": "PickHighlight:0",
+      "episode_nonce": "83f11b25ca4c4c489520c4e5c7f326db",
+      "outcome": "fail",
+      "record_type": "terminal",
+      "rpc_seq": 27,
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "task_name": "PickHighlight",
+      "wall_seconds": 18.632963621988893,
+      "worker_id": "worker-2"
+    },
+    {
+      "actions_executed": 643,
+      "attempt_id": "b676e01e3179424cb271199a1e05fede",
+      "budget": {
+        "conservative_exec_windows": 40,
+        "demo_frames": 0,
+        "demo_windows": 0
+      },
+      "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+      "difficulty": "easy",
+      "env_seed": 510000,
+      "episode_id": 0,
+      "episode_key": "PickXtimes:0",
+      "episode_nonce": "08116cb6196140ccb9bb336a83325687",
+      "outcome": "fail",
+      "record_type": "terminal",
+      "rpc_seq": 83,
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "task_name": "PickXtimes",
+      "wall_seconds": 52.216665506362915,
+      "worker_id": "worker-1"
+    },
+    {
+      "actions_executed": 286,
+      "attempt_id": "b676e01e3179424cb271199a1e05fede",
+      "budget": {
+        "conservative_exec_windows": 40,
+        "demo_frames": 0,
+        "demo_windows": 0
+      },
+      "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+      "difficulty": "easy",
+      "env_seed": 520000,
+      "episode_id": 0,
+      "episode_key": "StopCube:0",
+      "episode_nonce": "ede9b4832eb2480881e7415f97775797",
+      "outcome": "fail",
+      "record_type": "terminal",
+      "rpc_seq": 37,
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "task_name": "StopCube",
+      "wall_seconds": 22.56545862276107,
+      "worker_id": "worker-1"
+    },
+    {
+      "actions_executed": 321,
+      "attempt_id": "b676e01e3179424cb271199a1e05fede",
+      "budget": {
+        "conservative_exec_windows": 40,
+        "demo_frames": 0,
+        "demo_windows": 0
+      },
+      "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+      "difficulty": "easy",
+      "env_seed": 530000,
+      "episode_id": 0,
+      "episode_key": "SwingXtimes:0",
+      "episode_nonce": "39404e764dca473b90540d819b4c8a5f",
+      "outcome": "fail",
+      "record_type": "terminal",
+      "rpc_seq": 43,
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "task_name": "SwingXtimes",
+      "wall_seconds": 27.493094813078642,
+      "worker_id": "worker-1"
+    },
+    {
+      "actions_executed": 272,
+      "attempt_id": "dbe9f9e33b034989b075ae550f75bcf7",
+      "budget": {
+        "conservative_exec_windows": 40,
+        "demo_frames": 257,
+        "demo_windows": 8
+      },
+      "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+      "difficulty": "easy",
+      "env_seed": 590000,
+      "episode_id": 0,
+      "episode_key": "VideoRepick:0",
+      "episode_nonce": "f3d3c62bc2d44d83a4e77dbaae9e506a",
+      "outcome": "fail",
+      "record_type": "terminal",
+      "rpc_seq": 35,
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "task_name": "VideoRepick",
+      "wall_seconds": 61.61663782596588,
+      "worker_id": "worker-2"
+    },
+    {
+      "actions_executed": 113,
+      "attempt_id": "dbe9f9e33b034989b075ae550f75bcf7",
+      "budget": {
+        "conservative_exec_windows": 40,
+        "demo_frames": 66,
+        "demo_windows": 2
+      },
+      "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+      "difficulty": "easy",
+      "env_seed": 560000,
+      "episode_id": 0,
+      "episode_key": "VideoUnmask:0",
+      "episode_nonce": "ef159843fdc84af3bde5226c438a0ef4",
+      "outcome": "fail",
+      "record_type": "terminal",
+      "rpc_seq": 17,
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "task_name": "VideoUnmask",
+      "wall_seconds": 52.17750457767397,
+      "worker_id": "worker-2"
+    },
+    {
+      "actions_executed": 132,
+      "attempt_id": "dbe9f9e33b034989b075ae550f75bcf7",
+      "budget": {
+        "conservative_exec_windows": 40,
+        "demo_frames": 114,
+        "demo_windows": 4
+      },
+      "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+      "difficulty": "easy",
+      "env_seed": 550000,
+      "episode_id": 0,
+      "episode_key": "VideoUnmaskSwap:0",
+      "episode_nonce": "dab4e7f647344e3388ab2c4ae8a0db5f",
+      "outcome": "fail",
+      "record_type": "terminal",
+      "rpc_seq": 19,
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "task_name": "VideoUnmaskSwap",
+      "wall_seconds": 38.609261989593506,
+      "worker_id": "worker-2"
+    }
+  ],
+  "artifacts": [
+    {
+      "difficulty": "easy",
+      "env_seed": 540000,
+      "episode_id": 0,
+      "episode_key": "BinFill:0",
+      "task_name": "BinFill",
+      "episode_nonce": "5111be34e63945ad860526761fce99aa",
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+      "record_type": "artifact",
+      "artifact_error": false,
+      "files": [
+        {
+          "path": "videos/BinFill_ep0_fail.mp4",
+          "bytes": 1094284,
+          "sha256": "e70bf9beb215bf30c4bda32058ac5cf9e2fefad992fb4053bdcbd8608e0dad49"
+        }
+      ]
+    },
+    {
+      "difficulty": "easy",
+      "env_seed": 580000,
+      "episode_id": 0,
+      "episode_key": "ButtonUnmask:0",
+      "task_name": "ButtonUnmask",
+      "episode_nonce": "25d3917cced6404abf5946cc7c8ce5ae",
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+      "record_type": "artifact",
+      "artifact_error": false,
+      "files": [
+        {
+          "path": "videos/ButtonUnmask_ep0_success.mp4",
+          "bytes": 722238,
+          "sha256": "a335fd6e397268a34dbe9ca576042807f282571e0c185ecf733cfe81a6a719b4"
+        }
+      ]
+    },
+    {
+      "difficulty": "easy",
+      "env_seed": 510000,
+      "episode_id": 0,
+      "episode_key": "PickXtimes:0",
+      "task_name": "PickXtimes",
+      "episode_nonce": "08116cb6196140ccb9bb336a83325687",
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+      "record_type": "artifact",
+      "artifact_error": false,
+      "files": [
+        {
+          "path": "videos/PickXtimes_ep0_fail.mp4",
+          "bytes": 1990678,
+          "sha256": "b97767b4d9659fc6f3d1a24df40aba06bf6ae7ec35515652d46183e1bcb65deb"
+        }
+      ]
+    },
+    {
+      "difficulty": "easy",
+      "env_seed": 520000,
+      "episode_id": 0,
+      "episode_key": "StopCube:0",
+      "task_name": "StopCube",
+      "episode_nonce": "ede9b4832eb2480881e7415f97775797",
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+      "record_type": "artifact",
+      "artifact_error": false,
+      "files": [
+        {
+          "path": "videos/StopCube_ep0_fail.mp4",
+          "bytes": 613143,
+          "sha256": "a8e08aef145ffe6cedeeb21ad76cc5ce9debd826744986385abc66dae582f0cc"
+        }
+      ]
+    },
+    {
+      "difficulty": "easy",
+      "env_seed": 530000,
+      "episode_id": 0,
+      "episode_key": "SwingXtimes:0",
+      "task_name": "SwingXtimes",
+      "episode_nonce": "39404e764dca473b90540d819b4c8a5f",
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "chunk_id": "7292cb1f5ba16e8d33f0331a92e0bcbe5d681c95370611fcc54beead4c377ec6",
+      "record_type": "artifact",
+      "artifact_error": false,
+      "files": [
+        {
+          "path": "videos/SwingXtimes_ep0_fail.mp4",
+          "bytes": 1172657,
+          "sha256": "430b136e5d1fe34d3d2c07ae6943f71d109600b1e8a4762822b4f12639ceb2a7"
+        }
+      ]
+    },
+    {
+      "difficulty": "easy",
+      "env_seed": 570000,
+      "episode_id": 0,
+      "episode_key": "ButtonUnmaskSwap:0",
+      "task_name": "ButtonUnmaskSwap",
+      "episode_nonce": "f2197a9fce894a13a4f2c2d54e0025f0",
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+      "record_type": "artifact",
+      "artifact_error": false,
+      "files": [
+        {
+          "path": "videos/ButtonUnmaskSwap_ep0_fail.mp4",
+          "bytes": 1281333,
+          "sha256": "ae59f25e7b9d4d5a7dbd8581561d9b7b80830cd1ec3688e2da7236971e0b53e8"
+        }
+      ]
+    },
+    {
+      "difficulty": "easy",
+      "env_seed": 620000,
+      "episode_id": 0,
+      "episode_key": "PickHighlight:0",
+      "task_name": "PickHighlight",
+      "episode_nonce": "83f11b25ca4c4c489520c4e5c7f326db",
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+      "record_type": "artifact",
+      "artifact_error": false,
+      "files": [
+        {
+          "path": "videos/PickHighlight_ep0_fail.mp4",
+          "bytes": 651203,
+          "sha256": "e11fd4fcbfb62489ffc636c18865e9f46fb6262e46b99b0bbc2abaeb8d30162e"
+        }
+      ]
+    },
+    {
+      "difficulty": "easy",
+      "env_seed": 590000,
+      "episode_id": 0,
+      "episode_key": "VideoRepick:0",
+      "task_name": "VideoRepick",
+      "episode_nonce": "f3d3c62bc2d44d83a4e77dbaae9e506a",
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+      "record_type": "artifact",
+      "artifact_error": false,
+      "files": [
+        {
+          "path": "videos/VideoRepick_ep0_fail.mp4",
+          "bytes": 1401405,
+          "sha256": "4c3c019f5158854dd22cc69832bad1232f3de884e4b7462d1270aace65081ce0"
+        }
+      ]
+    },
+    {
+      "difficulty": "easy",
+      "env_seed": 560000,
+      "episode_id": 0,
+      "episode_key": "VideoUnmask:0",
+      "task_name": "VideoUnmask",
+      "episode_nonce": "ef159843fdc84af3bde5226c438a0ef4",
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+      "record_type": "artifact",
+      "artifact_error": false,
+      "files": [
+        {
+          "path": "videos/VideoUnmask_ep0_fail.mp4",
+          "bytes": 414603,
+          "sha256": "b0091f05a4dc34fbf7c409401d77e0f79154943766e94a68d5530dff20c588fe"
+        }
+      ]
+    },
+    {
+      "difficulty": "easy",
+      "env_seed": 550000,
+      "episode_id": 0,
+      "episode_key": "VideoUnmaskSwap:0",
+      "task_name": "VideoUnmaskSwap",
+      "episode_nonce": "dab4e7f647344e3388ab2c4ae8a0db5f",
+      "run_identity_sha256": "d0bcf65d9c91b7aec4644d7da61dfda9b8579851735571aa32506fb2a369e212",
+      "chunk_id": "e9b119d6f572d79c7d916562fa63fc59eb85990c3c13d59a4a42d40eb28a2405",
+      "record_type": "artifact",
+      "artifact_error": false,
+      "files": [
+        {
+          "path": "videos/VideoUnmaskSwap_ep0_fail.mp4",
+          "bytes": 475741,
+          "sha256": "b5926ee09ba9689d41743e25b4361aa85765aa4c33154eaac348df7b7d6e7550"
+        }
+      ]
+    }
+  ]
+}

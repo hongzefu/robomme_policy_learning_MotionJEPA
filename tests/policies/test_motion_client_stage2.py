@@ -139,9 +139,11 @@ def stub_process(monkeypatch):
     return calls
 
 
-def test_three_complete_stage2_ipc_windows(stub_process, tmp_path):
+@pytest.mark.parametrize("explicit_python", [False, True])
+def test_three_complete_stage2_ipc_windows(stub_process, tmp_path, explicit_python):
     client = C.MotionEncoderClient(online_gpu="", encoder_kind=C.STAGE2_KIND, source_run=SOURCE_RUN,
-                                   stub=True, v1_store=tmp_path, handshake_timeout=20)
+                                   stub=True, v1_store=tmp_path, handshake_timeout=20,
+                                   stage2_python=sys.executable if explicit_python else None)
     try:
         assert client.provenance["shape"] == [1024]
         assert client.provenance["response_bytes"] == 4096
@@ -153,7 +155,26 @@ def test_three_complete_stage2_ipc_windows(stub_process, tmp_path):
         assert client.n_calls == 3 and client.alive
     finally:
         client.close()
-    assert not client.alive and len(stub_process) == 1
+    assert not client.alive and len(stub_process) == (0 if explicit_python else 1)
+
+
+@pytest.mark.parametrize("explicit_python", [False, True])
+def test_stage2_launcher_rejects_changed_script(stub_process, tmp_path, explicit_python):
+    """两种启动入口都须核验实际进程的完整脚本参数，拒绝错误脚本。"""
+    client = C.MotionEncoderClient(online_gpu="", encoder_kind=C.STAGE2_KIND, source_run=SOURCE_RUN,
+                                   stub=True, v1_store=tmp_path, handshake_timeout=20,
+                                   stage2_python=sys.executable if explicit_python else None)
+    offset = 1 if explicit_python else 6
+    original = client.argv[offset]
+    try:
+        assert client.worker_pid == client.provenance["pid"]
+        client.argv[offset] = str(Path(original).with_name("unrelated.py"))
+        with pytest.raises(ValueError, match="脚本身份"):
+            client.worker_pid
+    finally:
+        client.argv[offset] = original
+        client.close()
+    assert not client.alive
 
 
 @pytest.mark.parametrize("field,value", [("encoder_kind", "v10"), ("dtype", "float16"),

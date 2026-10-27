@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+import os
 import time
 from typing import Any, TypeAlias
 
@@ -15,6 +16,15 @@ from mme_vla_suite.models.integration.history_observation import HistAugObservat
 from mme_vla_suite.models.integration.history_pi0 import HistoryPi0, _motion_enabled
 from mme_vla_suite.policies.framesamp_memory import FrameSampMemory
 from mme_vla_suite.shared.sampling import memory_order, pad_times   # 与训练侧 FrameSampDataset 同一份排序函数（R20）
+
+
+def motion_overflow_from_env() -> str:
+    """motion 超预算口径只从环境变量 MMEVLA_MOTION_OVERFLOW 读（缺省 raise）；不碰 resolved yaml 及其 sha。"""
+    overflow = os.environ.get("MMEVLA_MOTION_OVERFLOW", "raise")
+    if overflow not in ("raise", "resample"):
+        raise ValueError(f"MMEVLA_MOTION_OVERFLOW 只能是 raise / resample，得到 {overflow!r}")
+    return overflow
+
 
 class MME_VLA_Policy:
     def __init__(
@@ -61,6 +71,9 @@ class MME_VLA_Policy:
                                                      "window_direction", "grid_origin")}
             self._motion_cfg.update(demo_min_real_frames=mcfg.get("demo_min_real_frames", 33),
                                     demo_tail_pad=mcfg.get("demo_tail_pad", "none"))
+            # 只在 resample 时写键；缺省 raise 不加键，motion_cfg 与改动前逐键相同（FrameSampMemory 缺省即 raise）
+            if motion_overflow_from_env() == "resample":
+                self._motion_cfg["overflow"] = "resample"
         
         self.reset()
         
@@ -103,7 +116,10 @@ class MME_VLA_Policy:
         outputs = jax.tree.map(lambda x: np.asarray(x[0, ...]), outputs)      
         outputs = self._output_transform(outputs)
         outputs["infer_time_ms"] = model_time * 1000
-        
+        # 只有 resample 口径附带本局累计降级步数；官方缺省响应字典与改动前相同
+        if self.motion_enabled and self._motion_cfg.get("overflow") == "resample":
+            outputs["motion_downsample_steps"] = int(self.mem_buffer.motion_downsample_steps)
+
         return outputs
     
     @override
@@ -120,19 +136,26 @@ class MME_VLA_Policy:
             return
         images = obs["images"]
         states = obs["state"]
-        es_in = int(obs.get("exec_start_idx", 0))
+        es_raw = obs.get("exec_start_idx", 0)
+        if isinstance(es_raw, (bool, np.bool_)) or not isinstance(es_raw, (int, np.integer)):
+            raise ValueError("exec_start_idx 必须为非布尔整数")
+        es_in = int(es_raw)
+        if es_in < 0:
+            raise ValueError("exec_start_idx 不得为负数")
+        next_exec_start_idx = self.exec_start_idx
         # 段边界状态机（S3 P4）：首批接受真实 es；后续客户端 clear_buffers 后传回的 0 按协议解释为「沿用已保存值」；
         # 后续非零值只有等于已保存值才合法，不同则 raise（Button 首批 / 后续均为 0；Video 首批 66 / 114 / 168 / 216…）
         if es_in > 0:
             if self.step_idx >= 0 and es_in != self.exec_start_idx:
                 raise ValueError(f"exec_start_idx 在 episode 中途变化: 已保存 {self.exec_start_idx} → 本批 {es_in}")
-            self.exec_start_idx = es_in
+            next_exec_start_idx = es_in
         
         step_idx_list = list(range(self.step_idx+1, self.step_idx + len(images) + 1))
         if self.motion_enabled:
-            self.mem_buffer.add_buffer(images, states, step_idx_list, exec_start_idx=self.exec_start_idx)
+            self.mem_buffer.add_buffer(images, states, step_idx_list, exec_start_idx=next_exec_start_idx)
         else:
             self.mem_buffer.add_buffer(images, states, step_idx_list)
+        self.exec_start_idx = next_exec_start_idx
         self.step_idx += len(images)
 
     def _normalize_state(self, state):

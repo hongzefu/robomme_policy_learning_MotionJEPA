@@ -100,6 +100,12 @@ class FrameSampMemory:
                 raise ValueError(f"在线 demo 窗口契约不合法: {self.demo_min_real}, {self.demo_tail_pad!r}")
             if str(motion_cfg.get("window_direction", "forward")) != "forward" or str(motion_cfg.get("grid_origin", "segment_start")) != "segment_start":
                 raise ValueError("在线运动路只实现 forward + segment_start 口径")
+            # 超预算口径（移植旧流程）：缺省 "raise"，与改动前一字不差；"resample" 只在 k > budget 时生效，
+            # 做「demo 段全保 + exec 段内等距抽稀」。开关由 policy 层从环境变量 MMEVLA_MOTION_OVERFLOW 读入，
+            # 不进 resolved 快照（其 sha 被钉死）。
+            self.motion_overflow = str(motion_cfg.get("overflow", "raise"))
+            if self.motion_overflow not in ("raise", "resample"):
+                raise ValueError(f"motion.overflow 只能是 raise / resample，得到 {self.motion_overflow!r}")
         self._history_feats_motion: dict[int, np.ndarray] = {}
         self._raw_frames: dict[int, np.ndarray] = {}
         self._next_grid_start_demo = 0
@@ -107,6 +113,8 @@ class FrameSampMemory:
         self.exec_start_idx: int | None = None
         self.motion_encode_calls = 0
         self.motion_encode_s = 0.0
+        # 本局降级步数：resample 口径下由 policy.infer 回传客户端
+        self.motion_downsample_steps = 0
 
     @property
     def n_steps(self) -> int:
@@ -119,6 +127,7 @@ class FrameSampMemory:
         self._next_grid_start_demo = 0
         self._next_grid_start_exec = 0
         self.exec_start_idx = None
+        self.motion_downsample_steps = 0
 
     def add_buffer(
         self,
@@ -127,26 +136,44 @@ class FrameSampMemory:
         step_idx_list: list[int],
         exec_start_idx: int | None = None,
     ):
+        # 整包预检必须在任何缓冲写入前完成；这里只拒绝输入错误，不回滚编码器运行故障。
+        if getattr(images, "ndim", None) != 5 or images.shape[1] != self.num_views or images.shape[-1] != 3:
+            raise ValueError(f"images 须为 (t, {self.num_views}, h, w, 3)")
         t, v, _, _, _ = images.shape
-        assert v == self.num_views
+        if t == 0 or len(step_idx_list) != t:
+            raise ValueError("images 与 step_idx_list 必须等长且非空")
+        if images.dtype != np.uint8:
+            raise ValueError("images 必须为 uint8")
+        if getattr(states, "shape", None) != (t, self.state_emb_dim) or states.dtype != np.float32:
+            raise ValueError(f"states 须为 ({t}, {self.state_emb_dim}) float32")
 
         for step_idx in step_idx_list:
             # 有效域上界显式 raise：pos 表只有 max_steps 行，numpy 切片越界会静默
             # 返回空数组、坏数据一路流到装配层——禁止依赖切片行为
-            if step_idx >= self.max_steps:
+            if isinstance(step_idx, (bool, np.bool_)) or not isinstance(step_idx, (int, np.integer)):
+                raise ValueError("step_idx 必须为整数")
+            if step_idx < 0 or step_idx >= self.max_steps:
                 raise ValueError(
                     f"step_idx {step_idx} 超出记忆有效域 [0, {self.max_steps})"
                 )
             if step_idx in self._history_feats:
                 raise ValueError(f"step_idx {step_idx} already in buffer")
+        if list(step_idx_list) != list(range(self.n_steps, self.n_steps + t)):
+            raise ValueError(f"step_idx 必须从 {self.n_steps} 起连续递增，禁止重复、乱序或缺帧")
 
         if self.motion_enabled:
             # 运动路入库前校验：段边界必须下传；原始帧必须是 256 域（喂 224 / 512 网络照样能算、结果却与训练不同，属静默错配）
             # 先全部校验、后写状态（校验失败的批不得留下 exec_start_idx / 原始帧等半截状态）
             if exec_start_idx is None:
                 raise ValueError("motion 开启时 add_buffer 必须显式传 exec_start_idx（段边界下传）")
+            if (isinstance(exec_start_idx, (bool, np.bool_))
+                    or not isinstance(exec_start_idx, (int, np.integer))
+                    or not 0 <= exec_start_idx < self.max_steps):
+                raise ValueError(f"exec_start_idx 必须为 [0, {self.max_steps}) 内的整数")
             if self.exec_start_idx is not None and int(exec_start_idx) != self.exec_start_idx:
                 raise ValueError(f"exec_start_idx 变化: 已保存 {self.exec_start_idx} → 本批 {exec_start_idx}")
+            if self.exec_start_idx is None and t != exec_start_idx + 1:
+                raise ValueError("首包必须恰好包含完整 demo 及 exec 第零帧，共 D+1 帧")
             if tuple(images.shape[-3:]) != (self.motion_frame_size, self.motion_frame_size, 3) or images.dtype != np.uint8:
                 raise ValueError(
                     f"原始帧尺寸 {tuple(images.shape[-3:])} {images.dtype} != ({self.motion_frame_size}, {self.motion_frame_size}, 3) uint8")
@@ -256,7 +283,24 @@ class FrameSampMemory:
         k = len(frames)
         B = self.motion_budget
         if k > B:
-            raise RuntimeError(f"step {step_idx} 合法 motion 起点数 {k} > motion.budget {B}（零截断契约，禁止裁剪）")
+            # getattr 缺省 raise：测试夹具 / 对拍脚本用 __new__ 绕过构造，未设该字段时行为同改动前
+            if getattr(self, "motion_overflow", "raise") != "resample":
+                raise RuntimeError(f"step {step_idx} 合法 motion 起点数 {k} > motion.budget {B}（零截断契约，禁止裁剪）")
+            # 降级（overflow=resample，旧流程原样移植）：demo 段全保，超额由 exec 段内等距抽稀承担。
+            # 被丢的窗仍留在 _history_feats_motion 里，下一步重算取点时可能又被选中，直接取用、不重编码。
+            es = self.exec_start_idx
+            demo = [f for f in frames if f < es]
+            exec_ = [f for f in frames if f >= es]
+            keep_demo, keep_exec = _motion_quota(len(demo), len(exec_), B)
+            frames = ([demo[i] for i in _even_pick(len(demo), keep_demo)]
+                      + [exec_[i] for i in _even_pick(len(exec_), keep_exec)])
+            if len(frames) != B or any(b <= a for a, b in zip(frames, frames[1:])):
+                raise RuntimeError(
+                    f"降级结果非法：step {step_idx} 得到 {len(frames)} 个起点（应为 {B}）或次序非严格递增")
+            self.motion_downsample_steps += 1
+            print(f"MOTION_DOWNSAMPLE step={step_idx} es={es} k={k} k_demo={len(demo)} k_exec={len(exec_)} "
+                  f"kept_demo={keep_demo} kept_exec={keep_exec} budget={B}", flush=True)
+            k = len(frames)
         emb = np.zeros((B, self.motion_dim), np.float32)
         pos = np.zeros((B, self.motion_pos_dim), np.float32)
         for i, f in enumerate(frames):
@@ -311,6 +355,38 @@ class FrameSampMemory:
 
     def default_history_feats_gather_fn(self, indices_to_load, *args, **kwargs):
         return {idx: self._history_feats[idx] for idx in indices_to_load}
+
+
+def _even_pick(n: int, keep: int) -> list[int]:
+    """在 ``[0, n)`` 上等距取 ``keep`` 个下标（升序、无重复；旧流程原样移植）。
+
+    ``keep == n`` 时恒等返回、不走 linspace。取点用 ``np.linspace(...).astype(np.int64)`` **截断**，
+    与帧路 ``sampling.even_sampling_indices`` 同一算子；``keep < n`` 时步长 > 1，截断不会撞出重复，仍显式核一遍。
+    """
+    if keep == n:
+        return list(range(n))
+    if not (0 < keep < n):
+        raise RuntimeError(f"_even_pick 非法参数 n={n} keep={keep}")
+    out = [int(i) for i in np.linspace(0, n - 1, keep, dtype=np.int64)]
+    if len(out) != keep or any(b <= a for a, b in zip(out, out[1:])):
+        raise RuntimeError(f"_even_pick 产生重复或非递增下标 n={n} keep={keep}")
+    return out
+
+
+def _motion_quota(k_demo: int, k_exec: int, budget: int) -> tuple[int, int]:
+    """超预算时两段各保留几个窗（旧流程原样移植）。调用方保证 ``k_demo + k_exec > budget``。
+
+    demo 段优先全保，但不超过 ``budget // 2``（防 demo 过长把 exec 挤成 0）；
+    exec 段吃不满余额时把余额退回 demo 段，保证合计恰好等于 budget。
+    """
+    keep_demo = min(k_demo, budget // 2)
+    keep_exec = min(k_exec, budget - keep_demo)
+    keep_demo = budget - keep_exec
+    if keep_demo > k_demo or keep_exec > k_exec or keep_demo + keep_exec != budget:
+        raise RuntimeError(
+            f"_motion_quota 配额非法：k_demo={k_demo} k_exec={k_exec} budget={budget} "
+            f"→ keep_demo={keep_demo} keep_exec={keep_exec}")
+    return keep_demo, keep_exec
 
 
 def _accepts_start(fn) -> bool:
