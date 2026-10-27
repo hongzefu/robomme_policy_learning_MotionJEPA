@@ -107,6 +107,14 @@ def validate_spec(spec):
                 or spec.get("scope_manifest_sha256") != manifest["sha256"]
                 or any(item != source.get(item["episode_key"]) for item in manifest["episodes"])):
             raise ValueError("validation范围不是已绑定官方800身份的不可变子集")
+        bound_scope = verify_seal(binding["validation_scope"])
+        stage_scope = binding["run_descriptor"]["validation_scope"]
+        if (binding["validation_stage"] != spec["validation_stage"]
+                or binding["run_descriptor"]["validation_stage"] != spec["validation_stage"]
+                or bound_scope["sha256"] != manifest["sha256"]
+                or stage_scope != {"source_episode_manifest_sha256": original["sha256"],
+                                   "scope_manifest_sha256": manifest["sha256"], "episode_keys": keys}):
+            raise ValueError("阶段或scope与C签封的独立validation run身份不符")
     elif binding["episode_manifest_sha256"] != manifest["sha256"]:
         raise ValueError("production必须消费完整已绑定800局清单")
 
@@ -117,6 +125,18 @@ def srun_command(root, ledger, slot, spec_path, policy_python, repo):
             f"--cpus-per-task={ledger['envelope']['cpus']}", "--gpu_cmode=shared",
             policy_python, str(Path(repo)/"scripts/evaluation/resident_worker.py"),
             "--run-root", str(root), "--worker-id", slot["worker_uuid"], "--launch-spec", str(spec_path)]
+
+
+def launch_candidates(ledger, spec):
+    """smoke只起一份模型，闲置第二hold保留给同campaign的十局阶段。"""
+    width = ledger["desired_jobs"]
+    if spec.get("purpose") == "validation":
+        width = min(width, {"smoke1": 1, "shards10": 2}[spec["validation_stage"]])
+    occupied = sum(slot["state"] in ACTIVE and bool(slot.get("launch_id")) and not slot.get("retiring")
+                   for slot in ledger["slots"].values())
+    candidates = [slot for slot in ledger["slots"].values() if slot["state"] == "RUNNING"
+                  and not slot.get("retiring") and not slot.get("launch_id")]
+    return sorted(candidates, key=lambda slot: slot["slot_instance"])[:max(0, width-occupied)]
 
 
 def launch(pool, spec, gates, expected_revision, *, execute=False, popen=subprocess.Popen):
@@ -140,9 +160,7 @@ def launch(pool, spec, gates, expected_revision, *, execute=False, popen=subproc
             if execute:
                 ledger["campaign"] = {"parent_run_name": spec["parent_run_name"], "current_stage": spec["validation_stage"],
                                       "stage_state": "RUNNING", "scope_manifest_sha256": spec["scope_manifest_sha256"]}
-        for slot in ledger["slots"].values():
-            if slot["state"] != "RUNNING" or slot.get("retiring") or slot.get("launch_id"):
-                continue
+        for slot in launch_candidates(ledger, spec):
             if not slot.get("job_incarnation") or not slot.get("end_time"):
                 raise ValueError("launch前须现场对账JobID incarnation与EndTime")
             current = dict(slot)
@@ -230,6 +248,26 @@ def stopped_proof(ledger, slot, queue_slot, runner):
             "terminal": True, "rpc_quiescent": True, "sidecar_quiescent": True}
 
 
+def refresh_release_snapshot(pool, release_state, audit_path, ledger=None):
+    """新hold启动前先持久化本机释放身份；不会因刷新另起资源账本。"""
+    ledger = read_json(pool.path) if ledger is None else ledger
+    proofs, unresolved = [], []
+    for key, slot in ledger["slots"].items():
+        if slot["state"] not in ACTIVE:
+            continue
+        origin = slot.get("adoption_proof", slot)
+        if not slot.get("job_id") or not slot.get("job_incarnation") or not origin.get("submit_time"):
+            unresolved.append(key)
+            continue
+        proofs.append({**slot, "pool_id": ledger["pool_id"], "account": ledger["envelope"]["account"],
+                       "cluster": ledger["envelope"]["cluster"], "user": ledger["envelope"]["user"],
+                       "submit_time": origin["submit_time"]})
+    pool.cancel(proofs, verified_snapshot=ledger)  # 只核身份，不执行取消。
+    payload = {"verified_snapshot": ledger, "proofs": proofs, "unresolved": unresolved}
+    atomic_json(audit_path, payload)
+    release_state.update(snapshot=ledger, proofs=proofs, unresolved=unresolved)
+
+
 class ExistingStep:
     """launcher重启后跟踪已登记的Slurm step，不向可能复用的旧本机PID发信号。"""
     attached = True
@@ -257,7 +295,8 @@ class ExistingStep:
 
 
 def supervise(pool, spec, gates, children, *, runner=subprocess.run, popen=subprocess.Popen,
-              poll_seconds=1, max_iterations=None, drain_audit_dir=None):
+              poll_seconds=1, max_iterations=None, drain_audit_dir=None,
+              release_state=None, release_audit_path=None):
     """消费真实srun句柄与精确sacct终态，冻结后静止恢复；不以心跳判死。"""
     try:
         from .queue_store import QueueStore
@@ -278,6 +317,16 @@ def supervise(pool, spec, gates, children, *, runner=subprocess.run, popen=subpr
         summary = read_json(summary_path) if summary_path.exists() else {}
         if summary.get("compute_status") in {"COMPUTE_DONE", "STOPPED_ERROR"}:
             return [0 if summary["compute_status"] == "COMPUTE_DONE" else 2]
+        eligible = bool(launch_candidates(ledger, spec))
+        if state["phase"] != "RECOVERING" and eligible:
+            if release_state is None or release_audit_path is None:
+                raise ValueError("接纳新hold前必须有本机释放快照")
+            refresh_release_snapshot(pool, release_state, release_audit_path, ledger)
+            _, joined = launch(pool, spec, gates, ledger["pool_revision"], execute=True, popen=popen)
+            children.extend(joined)
+            ledger = read_json(pool.path)
+            if any(slot.get("launch_error") for slot in ledger["slots"].values() if slot["state"] in ACTIVE):
+                return [2]
         for child in children:
             code = child.poll()
             if code is None or child.pid in seen or code == 0:
@@ -357,6 +406,8 @@ def supervise(pool, spec, gates, children, *, runner=subprocess.run, popen=subpr
                         with pool.transaction() as current:
                             hold = current["holds"][new_slot["hold_id"]]
                             hold["startup_restarts"] = hold.get("startup_restarts", 0)+1
+                if release_state is not None and release_audit_path is not None:
+                    refresh_release_snapshot(pool, release_state, release_audit_path)
                 _, resumed = launch(pool, spec, gates, ledger["pool_revision"], execute=True, popen=popen)
                 children.extend(resumed)
                 if not resumed:
@@ -427,6 +478,7 @@ def main(argv=None):
         if active != {proof["slot_instance"] for proof in proofs}:
             parser.error("释放身份必须覆盖本pool全部未终态席位，UNKNOWN须先对账")
         atomic_json(args.local_release_audit, {"verified_snapshot": snapshot, "proofs": proofs})
+    release_state = {"snapshot": snapshot, "proofs": proofs, "unresolved": []}
     commands, children = launch(pool, read_json(args.launch_spec), read_json(args.gates),
                                 args.expected_pool_revision, execute=args.execute and not args.dry_run)
     if execute:
@@ -447,7 +499,8 @@ def main(argv=None):
     try:
         failed_launch = execute and any(slot.get("launch_error") for slot in read_json(pool.path)["slots"].values())
         codes = ([2] if failed_launch or not children else supervise(pool, read_json(args.launch_spec), read_json(args.gates), children,
-                        drain_audit_dir=args.local_release_audit.parent)) if execute else []
+                        drain_audit_dir=args.local_release_audit.parent, release_state=release_state,
+                        release_audit_path=args.local_release_audit)) if execute else []
     except KeyboardInterrupt:
         codes = [3]
     finally:
@@ -469,8 +522,9 @@ def main(argv=None):
                 else:
                     if codes == [0] and spec.get("validation_stage") == "smoke1":
                         codes = [2]
+                    snapshot, proofs = release_state["snapshot"], release_state["proofs"]
                     pool.cancel(proofs, confirmed=True, audit_path=args.local_release_audit, verified_snapshot=snapshot)
-                    released = pool.confirm_release(snapshot, args.local_release_audit)
+                    released = pool.confirm_release(snapshot, args.local_release_audit) and not release_state["unresolved"]
                     print(f"RESOURCE_RELEASE={'PASS' if released else 'PENDING'} jobs={len(proofs)}", flush=True)
                     if not released:
                         codes = [2]

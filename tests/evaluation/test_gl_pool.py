@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 import hashlib
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import time
 import unittest
@@ -10,10 +11,10 @@ import types
 from unittest.mock import patch
 
 from scripts.evaluation.gl_official_pool import Pool, SUBMIT_GATES, atomic_json, committed_gpu_hours, read_json, terminal_step_proof
-from scripts.evaluation.launch_official_pool import ExistingStep, LAUNCH_GATES, VALIDATION_BASE_GATES, srun_command, supervise, validate_spec, verify_launch_gates
+from scripts.evaluation.launch_official_pool import ExistingStep, LAUNCH_GATES, VALIDATION_BASE_GATES, launch, srun_command, supervise, validate_spec, verify_launch_gates
 
 try:
-    from scripts.evaluation.manifest import make_manifest
+    from scripts.evaluation.manifest import TASKS, digest, make_manifest, seal
     from scripts.evaluation.queue_store import Controller, QueueStore
 except ImportError:
     QueueStore = None
@@ -350,6 +351,149 @@ class PoolTest(unittest.TestCase):
                   drain_audit_dir=self.root/"local-audit")
         self.assertEqual([command for command in calls if command[0] == "scancel"], [["scancel", "123"]])
         self.assertEqual(read_json(self.pool.path)["slots"]["slot"]["state"], "TERMINAL")
+
+    @unittest.skipIf(QueueStore is None, "C合并后运行错峰扩容的真实文件协议")
+    def test_late_running_hold_joins_existing_supervisor_once_after_local_snapshot(self):
+        base = {"submission_id": "submit", "job_incarnation": "inc", "pool_id": "fixed-pool", "account": "test",
+                "cluster": "gl", "user": "me", "submit_time": "2026-10-26T10:00:00", "hours": 48, "gpus": 1}
+        first = dict(base, slot_instance="first", job_id="123", state="RUNNING", start_time=time.time(), end_time=time.time()+20000)
+        second = dict(base, slot_instance="second", job_id="124", state="PENDING", start_time=None, end_time=None)
+        self.pool.adopt(first, 0, "已批准两个原hold")
+        self.pool.adopt(second, 0, "已批准两个原hold")
+        with self.pool.transaction() as ledger:
+            ledger["slots"]["first"].update(worker_uuid="old-worker", launch_id="old-launch", srun_pid=111, step_id="0")
+        manifest = make_manifest([{"task_name": "Task", "episode_id": i, "env_seed": i+100, "difficulty": "easy"}
+                                  for i in range(10)], official=False)
+        store = QueueStore(self.root)
+        store.initialize(manifest, "b"*64, official=False)
+        original_request = QueueStore.request
+        audit = self.root/"local-release.json"
+        release_state = {}
+        commands = []
+        arrived = False
+        def old_poll():
+            nonlocal arrived
+            if not arrived:
+                arrived = True
+                self.pool.reconcile("second", dict(second, state="RUNNING", start_time=time.time(), end_time=time.time()+20000))
+            return None
+        old = types.SimpleNamespace(pid=111, returncode=None, poll=old_poll)
+        new = types.SimpleNamespace(pid=222, returncode=None, poll=lambda: None)
+        def spawn(command, **kwargs):
+            # 本机释放身份已落盘，之后才允许执行新的srun。
+            saved = read_json(audit)
+            self.assertIn("124", {item["job_id"] for item in saved["proofs"]})
+            commands.append(command)
+            return new
+        with Controller(store) as controller:
+            controller.register_slot({"slot_instance": "first", "worker_uuid": "old-worker", "job_id": "123",
+                                      "job_incarnation": "inc", "step_id": "0", "state": "RUNNING"})
+            old_grant = controller.claim("old-claim", "first")["grant"]
+            def request(self, *args):
+                result = original_request(self, *args)
+                controller.process_requests()
+                return result
+            spec = {"purpose": "production", "run_identity_sha256": "b"*64, "policy_python": "/mock/policy",
+                    "repo": str(self.root), "controller_timeout_seconds": 1}
+            children = [old]
+            with patch.object(QueueStore, "request", request), patch("scripts.evaluation.launch_official_pool.verify_launch_gates"), \
+                 patch("scripts.evaluation.launch_official_pool.validate_spec"):
+                supervise(self.pool, spec, {}, children, popen=spawn, poll_seconds=.001, max_iterations=3,
+                          release_state=release_state, release_audit_path=audit)
+                ledger = read_json(self.pool.path)
+                member = {key: ledger["slots"]["second"][key] for key in ("slot_instance", "worker_uuid", "job_id", "job_incarnation")}
+                member.update(step_id="1", state="RUNNING")
+                store.request("new-register", "register_slot", {"slot": member})
+                store.request("new-claim", "claim", {"slot_instance": "second"})
+                new_grant = store.query("new-claim")["grant"]
+                terminal = store.write_attempt(new_grant, "terminal", dict(new_grant["episodes"][0], outcome="fail",
+                                                actions_executed=1, episode_nonce="nonce", rpc_seq=1), "new-terminal")
+                store.request("new-terminal", "terminal", {"path": str(terminal)})
+            self.assertNotEqual(old_grant["chunk_id"], new_grant["chunk_id"])
+            self.assertEqual(controller.summary()["execution_coverage"], 1)
+            self.assertIsNone(old.poll())
+        self.assertEqual(len(commands), 1)
+        self.assertIn("--jobid=124", commands[0])
+        self.assertEqual(len(children), 2)
+        ledger = read_json(self.pool.path)
+        self.assertTrue(ledger["slots"]["second"]["launch_id"])
+        self.assertEqual(len(ledger["holds"]), 2)
+        self.assertEqual(committed_gpu_hours(ledger), 96)
+
+    @unittest.skipIf(QueueStore is None, "C合并后运行smoke阶段单resident限制")
+    def test_smoke_starts_one_resident_and_supervisor_keeps_second_hold_idle(self):
+        base = {"submission_id": "submit", "job_incarnation": "inc", "pool_id": "fixed-pool", "account": "test",
+                "cluster": "gl", "user": "me", "submit_time": "2026-10-26T10:00:00", "hours": 48, "gpus": 1,
+                "state": "RUNNING", "start_time": time.time(), "end_time": time.time()+20000}
+        for key, job in (("first", "123"), ("second", "124")):
+            self.pool.adopt(dict(base, slot_instance=key, job_id=job), 0, "已有两hold")
+        manifest = make_manifest([{"task_name": "Task", "episode_id": 0, "env_seed": 100, "difficulty": "easy"}], official=False)
+        store = QueueStore(self.root)
+        store.initialize(manifest, "b"*64, official=False, mode="validation")
+        original_request = QueueStore.request
+        commands = []
+        child = types.SimpleNamespace(pid=111, returncode=None, poll=lambda: None)
+        def spawn(command, **kwargs):
+            commands.append(command)
+            return child
+        spec = {"purpose": "validation", "validation_stage": "smoke1", "parent_run_name": "parent",
+                "scope_manifest_sha256": manifest["sha256"], "run_identity_sha256": "b"*64,
+                "policy_python": "/mock/policy", "repo": str(self.root), "controller_timeout_seconds": 1}
+        with Controller(store) as controller:
+            def request(self, *args):
+                result = original_request(self, *args)
+                controller.process_requests()
+                return result
+            with patch.object(QueueStore, "request", request), patch("scripts.evaluation.launch_official_pool.verify_launch_gates"), \
+                 patch("scripts.evaluation.launch_official_pool.validate_spec"):
+                _, children = launch(self.pool, spec, {}, 0, execute=True, popen=spawn)
+                supervise(self.pool, spec, {}, children, popen=spawn, poll_seconds=.001, max_iterations=1)
+        ledger = read_json(self.pool.path)
+        self.assertEqual(len(commands), 1)
+        self.assertFalse(ledger["slots"]["second"].get("launch_id"))
+        self.assertEqual(committed_gpu_hours(ledger), 96)
+
+    @unittest.skipIf(QueueStore is None, "C合并后运行阶段binding消费测试")
+    def test_stage_binding_scope_and_concrete_checkpoint_directory(self):
+        source = make_manifest([{"task_name": task, "episode_id": i, "env_seed": i*16+j, "difficulty": "easy"}
+                                for i in range(50) for j, task in enumerate(TASKS)])
+        source_path = self.root/"official.json"
+        atomic_json(source_path, source)
+        model_root = self.root/"model"
+        checkpoint = model_root/"20000"
+        checkpoint.mkdir(parents=True)
+        contract = self.root/"runtime.json"
+        atomic_json(contract, {"schema": "eval-runtime-contract-v1", "cross_hardware_numeric": "not_required"})
+        specs = []
+        for stage, count in (("smoke1", 1), ("shards10", 10)):
+            scope = make_manifest(source["episodes"][:count], official=False)
+            scope_path = self.root/f"{stage}-scope.json"
+            atomic_json(scope_path, scope)
+            descriptor = {"purpose": "validation", "cross_hardware_numeric": "not_required", "validation_stage": stage,
+                          "runtime_contract_sha256": hashlib.sha256(contract.read_bytes()).hexdigest(),
+                          "validation_scope": {"source_episode_manifest_sha256": source["sha256"],
+                                               "scope_manifest_sha256": scope["sha256"],
+                                               "episode_keys": [item["episode_key"] for item in scope["episodes"]]}}
+            run_sha = digest({"kind": "validation_run", "descriptor": descriptor})
+            binding = seal({"purpose": "validation", "cross_hardware_numeric": "not_required", "run_descriptor": descriptor,
+                            "model_descriptor": {"purpose": "validation", "checkpoint_step": 20000},
+                            "checkpoint_root": str(model_root), "run_identity_sha256": run_sha,
+                            "episode_manifest_sha256": source["sha256"], "validation_stage": stage, "validation_scope": scope})
+            binding_path = self.root/f"{stage}-binding.json"
+            atomic_json(binding_path, binding)
+            spec = {"purpose": "validation", "validation_stage": stage, "parent_run_name": "parent", "checkpoint_step": 20000,
+                    "model_seed": 42, "policy_python": sys.executable, "stage2_python": sys.executable, "sim_python": sys.executable,
+                    "repo": str(self.root), "checkpoint": str(checkpoint), "target_contract": str(contract),
+                    "model_binding": str(binding_path), "run_identity_sha256": run_sha, "episode_manifest": str(scope_path),
+                    "official_episode_manifest": str(source_path), "scope_manifest_sha256": scope["sha256"],
+                    "validation_episode_keys": [item["episode_key"] for item in scope["episodes"]]}
+            validate_spec(spec)
+            specs.append(spec)
+        self.assertNotEqual(specs[0]["run_identity_sha256"], specs[1]["run_identity_sha256"])
+        with self.assertRaises(ValueError):
+            validate_spec(dict(specs[0], model_binding=specs[1]["model_binding"]))
+        with self.assertRaises(ValueError):
+            validate_spec(dict(specs[0], checkpoint=str(model_root)))
 
 
 if __name__ == "__main__":
