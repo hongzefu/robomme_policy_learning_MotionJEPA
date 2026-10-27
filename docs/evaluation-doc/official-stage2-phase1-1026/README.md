@@ -25,7 +25,7 @@ PLAN_CONSISTENCY_REVIEW=PASS base=2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f findi
 | 归属 | 范围 | 当前证据与边界 |
 | --- | --- | --- |
 | A | `examples/robomme/{eval,env_runner,utils}.py`与客户端测试 | 38项CPU测试通过，包含真实本地WebSocket；修正确定性格式错误被误标可重试的问题后独立复核通过；真实仿真未验 |
-| B | server、policy恢复、motion client、目标合同与独立测量工具 | 作者98项CPU通过、1项原条件测试跳过；合前审查中；无真实A40证书 |
+| B | server、policy恢复、motion client、运行合同与同机验证 | 作者早期98项CPU通过、1项原条件测试跳过；最新简化口径仍需整合审查及真实GPU验证；不再要求A40数值证书 |
 | C | 固定清单、文件队列、控制器与汇总 | 作者24项CPU通过；独立审查指出骤死恢复、drain归还、固定分块验证缺口，原owner续修中 |
 | G | 占位池、发布与常驻worker、ETA工具 | CPU mock与文件协议联调中；真实Slurm资源操作由独立R执行 |
 | D | 独立窗口、位置选行、mask与装配oracle | 基线147通过、9失败；随后补充手算案例，生产修复后全套重测；编码器为替身，不能声称真实VAE／EMA通过 |
@@ -43,4 +43,10 @@ PLAN_CONSISTENCY_REVIEW=PASS base=2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f findi
 
 ## 待完成
 
-合入所有独立审查通过的子提交，完成同仓接口与NFS文件协议验证；发布固定执行commit的独立NFS release。真实A40门需要锁定的A100参考数组和事前阈值；已发布的恢复输入不能冒充跨卡输出真值。正式800覆盖、全量真实D预算、最终成绩和资源适配仍无实测结论。
+用户已明确批准「同意这么做。然后这个A100和40的问题你不用再关心了。」「不需要做到跨硬件的数值性一致。」前案审查为 `ADJUST_REVIEW=PASS scale=same findings=4`，最新简化复核为 `ADJUST_REVIEW=PASS scale=same findings=0 blocking=0`。沿既有validation20000，不新增用途、参考数组pin、签发器或证书层。`eval-runtime-contract-v1`记录原话和 `cross_hardware_numeric=not_required`；run身份绑定 `runtime_contract_sha256`。全模型成员、resolved／normstats、motion身份、原料SHA／EMA／source／VAE／软件精度仍严格；实际GPU名称／driver／架构单独记录。无eval参数时训练strict不变，历史G2 FAIL／WAIVED及上游材料不改。
+
+合入独立审查通过的子提交并发布最终固定执行commit。现有NFS `releases/420ae9801b4d23ed3a798e29a4580960301b9d20`只提供三环境初始import来源，未跑本轮实现，最终执行release尚未发布。epoch105已有 `ENCODER_DOWNLOAD=PASS files=3`、`EXIT_CODE=0`；20k36成员传输SHA全过，完整读回／READY未完成，仍有NFS等待。现有BinFill testep0真实reset通过（seed540000／easy，actions0，D0，初始1观测，RGB256×256×3／state8，3.9504s，退出0）；它只证明环境reset，不是策略rollout。
+
+已批运行名 `official-stage2-20k-probe-1026-a`、两个独立1×A40／4CPU／24GiB／48h，以及先单局smoke1次、后两worker各固定五局chunk共10次，总11次。先静态／完整资产与单GPUstrict restore：真实131帧、D66首67＋四次16续包、真实state／wrist；seed42完整noise按model.action_dim生成锁SHA，num_steps10两次重复，动作(20,8)／执行(16,8)及有限值。单局通过后两chunk实采profile，不以五局profile阻挡首局；两阶段收据分开、十局分片无重叠，独立报告task_success与错误／基础设施重试。
+
+`CROSS_HARDWARE_NUMERIC=NOT_REQUIRED reason=user_decision`，不能伪写PASS。真实恢复／IPC／策略rollout、资源profile和分片仍待实跑；早期小样本不是正式60k／800成绩。阶段二仍未开工，正式800覆盖、真实D预算及最终成绩无实测结论。
