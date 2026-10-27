@@ -1,4 +1,4 @@
-"""官方队列控制与计算、成绩、交付三个独立状态的核算入口。"""
+"""弹性worker队列的控制、归还、明确恢复和成绩汇总命令。"""
 from __future__ import annotations
 
 import argparse
@@ -6,84 +6,92 @@ import json
 from pathlib import Path
 import signal
 import threading
+import time
+import uuid
 
 try:
-    from .queue_store import Controller, QueueStore, publish, read_json, replace_json
-    from .manifest import validate_episodes
+    from .queue_store import Controller, QueueStore, publish, read_json, replace_json, summarize
 except ImportError:
-    from queue_store import Controller, QueueStore, publish, read_json, replace_json
-    from manifest import validate_episodes
+    from queue_store import Controller, QueueStore, publish, read_json, replace_json, summarize
 
 
-def aggregate(run_root, *, expect_tasks=16, expect_episodes=800):
-    """取得唯一控制锁，只读原receipt并从不可变accepted重建核算。"""
-    store = QueueStore(run_root)
-    with Controller(store, readonly=True) as controller:
-        validate_episodes(controller.manifest, official=controller.config["mode"] == "production")
-        if len(controller.episodes) != expect_episodes or len({e["task_name"] for e in controller.episodes.values()}) != expect_tasks:
-            raise ValueError("预期母集数量不符")
-        return controller.summary()
+def aggregate(root):
+    store = QueueStore(root)
+    path = store.root / "manifest.json"
+    manifest = read_json(path if path.exists() else store.root / "inputs/episodes.json")
+    episodes = manifest.get("episodes") or [e for chunk in manifest["chunks"] for e in chunk["episodes"]]
+    return summarize(store, read_json(store.root / "queue/state.json"), {e["episode_key"]: e for e in episodes})
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     init = sub.add_parser("initialize")
-    init.add_argument("--run-root", type=Path, required=True)
+    init.add_argument("--run-root", required=True)
     init.add_argument("--manifest", type=Path, required=True)
-    init.add_argument("--run-identity-sha256", required=True)
-    init.add_argument("--mode", choices=["production", "validation", "measurement_bootstrap"], default="production")
+    init.add_argument("--spec", type=Path, required=True)
     control = sub.add_parser("controller")
-    control.add_argument("--run-root", type=Path, required=True)
-    control.add_argument("--hold-jobs", type=Path)
-    control.add_argument("--pool-policy", type=Path)
-    control.add_argument("--max-infra-retries", type=int, choices=[1], default=1)
-    control.add_argument("--no-auto-renew", action="store_true")
+    control.add_argument("--run-root", required=True)
     control.add_argument("--once", action="store_true")
-    control.add_argument("--slot", type=Path, action="append", default=[])
-    control.add_argument("--recovery-proofs", type=Path)
+    control.add_argument("--slurm-host", default="greatlakes")
     report = sub.add_parser("aggregate")
-    report.add_argument("--run-root", type=Path, required=True)
-    report.add_argument("--expect-tasks", type=int, default=16)
-    report.add_argument("--expect-episodes", type=int, default=800)
-    report.add_argument("--require-zero-errors", action="store_true")
-    report.add_argument("--require-no-uncertain-terminal", action="store_true")
+    report.add_argument("--run-root", required=True)
     report.add_argument("--out", type=Path)
+    for operation in ("drain", "recover"):
+        item = sub.add_parser(operation)
+        item.add_argument("--run-root", required=True)
+        item.add_argument("--worker-id", required=True)
+        item.add_argument("--request-id")
+        if operation == "recover":
+            item.add_argument("--job-id", required=True)
+            item.add_argument("--step-id", required=True)
+        item.add_argument("--wait-seconds", type=float, default=60)
     args = parser.parse_args(argv)
     store = QueueStore(args.run_root)
     if args.command == "initialize":
-        store.initialize(read_json(args.manifest), args.run_identity_sha256, mode=args.mode,
-                         official=args.mode == "production")
-        print("QUEUE_INITIALIZE=PASS")
+        store.initialize(read_json(args.manifest), read_json(args.spec))
         return 0
     if args.command == "aggregate":
-        result = aggregate(args.run_root, expect_tasks=args.expect_tasks, expect_episodes=args.expect_episodes)
+        result = aggregate(args.run_root)
         if args.out:
             publish(args.out, result)
         print(json.dumps(result, ensure_ascii=False))
-        label = "VALIDATION_SCORE" if result["purpose"] == "validation" else "OFFICIAL_SCORE"
-        print(f"{label}={result['score_status']} U={result['U']} coverage={result['execution_coverage']}")
-        return 0 if result["score_status"] == "PASS" else 2
-    stopped = threading.Event()
-    for name in (signal.SIGINT, signal.SIGTERM):
-        signal.signal(name, lambda *_: stopped.set())
-    with Controller(store) as controller:
-        for slot in args.slot:
-            controller.register_slot(read_json(slot))
-        if args.recovery_proofs:
-            if controller.state["phase"] != "RECOVERING":
-                controller.begin_recovery("显式旧step静止证明")
-            controller.recover(read_json(args.recovery_proofs))
-        # 资源取消由G的已核账本执行；本控制器从不根据账号作业列表猜取消对象。
-        while not stopped.is_set():
+        return 2 if result["missing"] else 0
+    if args.command in {"drain", "recover"}:
+        request_id = args.request_id or f"{args.command}-{uuid.uuid4().hex}"
+        payload = {"worker_id": args.worker_id}
+        if args.command == "recover":
+            payload.update(job_id=args.job_id, step_id=args.step_id)
+        store.request(request_id, args.command, payload)
+        print(f"REQUEST_ID={request_id}", flush=True)
+        end = time.monotonic() + args.wait_seconds
+        while time.monotonic() < end:
+            response = store.query(request_id)
+            if response is not None:
+                print(json.dumps(response, ensure_ascii=False))
+                return 2 if response["status"] == "REJECTED" else 0
+            threading.Event().wait(0.1)
+        print("控制器回执未确认，请用原request-id查询或重发。")
+        return 3
+    stop = threading.Event()
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(sig, lambda *_: stop.set())
+    from functools import partial
+    try:
+        from .queue_store import confirm_step_terminal
+    except ImportError:
+        from queue_store import confirm_step_terminal
+    with Controller(store, terminal_lookup=partial(confirm_step_terminal, slurm_host=args.slurm_host)) as controller:
+        while not stop.is_set():
             controller.process_requests()
             result = controller.summary()
             replace_json(store.root / "queue/summary.json", result)
-            if args.once or result["compute_status"] in {"COMPUTE_DONE", "STOPPED_ERROR"}:
-                print(json.dumps(result, ensure_ascii=False))
+            # 保持响应到操作方停止，让最后一块结束后的worker也能领到完成回执。
+            if args.once:
+                print(json.dumps(result, ensure_ascii=False), flush=True)
                 return 2 if result["compute_status"] == "STOPPED_ERROR" else 0
-            stopped.wait(1)
-    return 3
+            stop.wait(0.25)
+    return 0
 
 
 if __name__ == "__main__":
