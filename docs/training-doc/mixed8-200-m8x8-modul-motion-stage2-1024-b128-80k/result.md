@@ -1,3 +1,23 @@
+# 用户停止于70k：严格交付恢复通过，最终备份核验进行中
+
+用户原话：「停止现在的training 收尾 70k够了」。正式训练于美东2026-10-27 12:17:53停止，实际运行19小时8分54秒，真实退出143；原80k配置与run名保留。最终选定已完整提交的70000，保留5000至70000共14份。70k保存时间为美东10-27 12:02:16，其loss为0.0018；最后日志指标70900步loss0.0019，未保存的末段不作为交付权重。
+
+70k远端37文件、12,218,974,941字节已重新匿名回读，SHA零不匹配；严格恢复65个参数叶、来源验证及真实在线infer通过：`CKPT_70K_READY=PASS step=70000 root_complete=1 sha256_mismatch=0 strict_restore=1 online_infer=1`。显式复用既有锁定sidecar环境、VAE缓存和tokenizer，encoder权重和归一化统计均取自隔离远端回读实体。没有重新训练或重抽encoder库。
+
+432份源码/脚本已恢复原权限，HOLD已解除；R13授权旧测速step119已删除，正式14份checkpoint及短训诊断权重保留。当前仅final70最终备份核验运行，完成后补最终清单与判定。W&B summary/notes已标明用户主动停止、最终70000及真实143；服务端把外部SIGTERM显示为crashed，此界面标签不代表训练数值报错。
+
+以下为历史过程记录，以本节用户终点变更为准。
+
+# 正式80k运行中：启动后检查通过
+
+美东2026-10-26 17:08:59从`5730a0cfc7a62036585362a03a8c922f14b4d94f`启动；17:13:20首个loss为0.0871，梯度有限。8卡FSDP8、B128、W16、80000步、pi05_base初始化、原学习率与EMA均符合计划。W&B为hongzefu，run `al3p8t77`。
+
+启动后配置和数据/快照两路独立只读审查均PASS，未发现阻断问题。数据16任务/3200episodes/1383846执行样本，motion65419行/96×1024，encoder为ep105的EMA。G2按用户精确WAIVED保留原FAIL，G5明确CPU全表和1024窗encoder抽样；G7原EMA与动作逐位比较及真实在线infer通过，逐位结论限定同一训练编译缓存。
+
+根快照和encoder依赖17件已上传并匿名回读PASS，增量会话等待首个5000步。正式checkpoint保存、60k严格交付、80k训练完成和最终全量上传尚未到时机，均不冒记PASS。主检出持续冻结；当前状态真源为开发副本`docs/handoff/current.json`。
+
+以下为历史过程记录，以本节最新结果为准。
+
 # 阶段结果：G2超阈值，正式VLA尚未起跑
 
 **最新实测（美东16:16）**：用户批准的省时G5已完成。`PACKED_TOKEN_BYTES=PASS compared=65419 mismatches=0`、`ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=65419 mismatches=0 seed=0`、`VERIFY_MOTION=PASS scanned=65419 mismatches=0`；749个补帧窗、1051个丢弃短尾、5个合法零窗均核对通过。CPU完整性＋GPU抽样98秒，verify约10.8秒，总计109秒，退出0；库为verified。随后注册encoder/config两实体并通过G6：`TRAIN_ES_BOUND=PASS train_max=62 eval_max=79 budget=96`，2秒、退出0。认证明确scope=sampled，SHA为 `4345250e7a03244ca28162a870041e1648a708ebe7e28a79c50d9cfbcb22a4eb`，不代表全量encoder重算。下一步G4与20步/恢复，正式训练仍未起跑。

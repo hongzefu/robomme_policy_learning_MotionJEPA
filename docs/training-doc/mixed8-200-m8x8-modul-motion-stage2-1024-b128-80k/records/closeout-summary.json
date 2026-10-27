@@ -1,0 +1,51 @@
+{
+  "schema": "stage2-training-closeout-v1",
+  "training_status": "stopped_by_user",
+  "training_beta": "5730a0cfc7a62036585362a03a8c922f14b4d94f",
+  "closeout_code": "b25fd992f8ed4df74726888a452d87d33a28c86e",
+  "run_name": "mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k",
+  "planned_steps": 80000,
+  "selected_checkpoint": 70000,
+  "complete_checkpoints": [
+    5000,
+    10000,
+    15000,
+    20000,
+    25000,
+    30000,
+    35000,
+    40000,
+    45000,
+    50000,
+    55000,
+    60000,
+    65000,
+    70000
+  ],
+  "start_utc": "2026-10-26T21:08:59Z",
+  "stop_utc": "2026-10-27T16:17:53Z",
+  "elapsed_seconds": 68934,
+  "train_exit_code": 143,
+  "incremental_exit_code": 143,
+  "last_metrics": {
+    "step": 70900,
+    "grad_norm": 0.0216,
+    "llm_grad_norm": 0.0183,
+    "loss": 0.0019,
+    "mem_enc_norm": 0.0032,
+    "param_norm": 1859.7072
+  },
+  "selected_checkpoint_metrics": {
+    "step": 70000,
+    "grad_norm": 0.0241,
+    "llm_grad_norm": 0.0211,
+    "loss": 0.0018,
+    "mem_enc_norm": 0.0036,
+    "param_norm": 1859.1921
+  },
+  "metrics_rows": 710,
+  "strict_restore": "PASS",
+  "remote_readback": "PASS",
+  "final_export": "running",
+  "selected_checkpoint_saved_edt": "2026-10-27T12:02:16.498179-04:00"
+}
