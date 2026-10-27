@@ -35,6 +35,8 @@ class Args:
     max_steps: int = 1300
     dataset: str = "test"
     use_history: bool = True
+    # official：官方 test 16×50、seed 42、1300 步；testx：hold-out xhard 清单，放宽只在此口径生效。
+    profile: str = "official"
 
 
 class UncertainRPC(RuntimeError):
@@ -102,8 +104,14 @@ def validate_metadata(metadata, args):
             raise ContractError(f"服务端身份不符：{key}")
 
 
-def validate_budget(demo_frames):
+def validate_budget(demo_frames, profile="official", max_steps=1300):
     k_demo = max(0, (demo_frames - 17) // 32 + 1)
+    if profile == "testx":
+        # testx 只查帧数上限；窗口超 96 由服务端抽稀处理，客户端不按窗口数拒绝。
+        q = max_steps + 1
+        if demo_frames + q >= 4096:
+            raise ContractError(f"testx 帧预算越界：D={demo_frames} q={q}")
+        return {"demo_frames": demo_frames, "demo_windows": k_demo, "conservative_exec_windows": q // 32}
     if demo_frames + 1301 >= 4096 or k_demo + 40 > 96:
         raise ContractError(f"零截断预算越界：D={demo_frames} k_demo={k_demo} k_exec=40")
     return {"demo_frames": demo_frames, "demo_windows": k_demo, "conservative_exec_windows": 40}
@@ -124,6 +132,7 @@ class EpisodeEvaluator:
         self.recorder = None
         self.budget = None
         self.artifact_errors = []
+        self.motion_downsample_steps = 0
 
     def record_frame(self, **frame):
         if self.recorder is not None:
@@ -142,7 +151,7 @@ class EpisodeEvaluator:
         epstate.wrist_image_buffer.extend(wrists)
         epstate.state_buffer.extend(states)
         epstate.exec_start_idx = len(images) - 1
-        self.budget = validate_budget(epstate.exec_start_idx)
+        self.budget = validate_budget(epstate.exec_start_idx, self.args.profile, self.args.max_steps)
         try:
             pack_buffer(images, states, epstate.exec_start_idx)
         except ValueError as exc:
@@ -181,6 +190,9 @@ class EpisodeEvaluator:
                                    "observation/state": robot_state, "prompt": prompt, "eval_rpc": infer_rpc})
         if response.get("eval_rpc") != infer_rpc:
             raise UncertainRPC("infer 响应身份或序号不符")
+        if "motion_downsample_steps" in response:
+            # 服务端回传本局累计抽稀次数，保留最新值。
+            self.motion_downsample_steps = response["motion_downsample_steps"]
         actions = np.asarray(response.get("actions"))
         if actions.shape != (20, 8) or not np.issubdtype(actions.dtype, np.number) or not np.isfinite(actions).all():
             raise ContractError("policy 必须返回有限的 (20,8) 动作")
@@ -244,6 +256,7 @@ def write_record(path, record):
 
 
 def load_chunk(args):
+    episode_limit = 110 if args.profile == "testx" else 50
     with Path(args.episode_manifest).open() as stream:
         manifest = json.load(stream)
     if "chunks" in manifest:
@@ -264,7 +277,7 @@ def load_chunk(args):
     for episode in episodes:
         key = f"{episode['task_name']}:{episode['episode_id']}"
         if (episode["task_name"] not in TASK_NAME_LIST or type(episode["episode_id"]) is not int
-                or not 0 <= episode["episode_id"] < 50 or key in keys or episode.get("episode_key") != key
+                or not 0 <= episode["episode_id"] < episode_limit or key in keys or episode.get("episode_key") != key
                 or type(episode.get("env_seed")) is not int or not isinstance(episode.get("difficulty"), str)
                 or not episode["difficulty"]):
             raise ContractError("chunk 含非法或重复官方 episode")
@@ -275,7 +288,11 @@ def load_chunk(args):
 def evaluate(args: Args, *, runner_factory=EnvRunner, client_factory=EvaluationClient):
     from scripts.evaluation.runtime_contract import require_sha256, sha256_file
 
-    if (args.dataset != "test" or args.max_steps != 1300 or args.obs_horizon != 16 or not args.use_history
+    if args.profile == "testx":
+        if (args.dataset != "test" or args.obs_horizon != 16 or not args.use_history or args.rpc_timeout_seconds <= 0
+                or args.max_steps <= 0 or args.model_seed <= 0):
+            raise ContractError("testx 评估固定 test、16 步和历史模式，max_steps、model_seed 与 RPC 超时须为正")
+    elif (args.dataset != "test" or args.max_steps != 1300 or args.obs_horizon != 16 or not args.use_history
             or args.rpc_timeout_seconds <= 0 or args.model_seed != 42):
         raise ContractError("官方评估固定 test、1300、16 步和历史模式，RPC 超时须为正")
     require_sha256(args.run_identity_sha256)
@@ -310,9 +327,13 @@ def evaluate(args: Args, *, runner_factory=EnvRunner, client_factory=EvaluationC
             terminal_saved = False
             try:
                 write_record(output / f"{key}.started.json", dict(identity, record_type="started"))
-                runner = runner_factory(episode["task_name"], video_dir, max_steps=1300, dataset="test")
-                if runner.num_episodes != 50:
-                    raise ContractError("官方 test builder 必须返回 50 局")
+                if args.profile == "testx":
+                    runner = runner_factory(episode["task_name"], video_dir, max_steps=args.max_steps, dataset="test",
+                                            difficulty=episode["difficulty"])
+                else:
+                    runner = runner_factory(episode["task_name"], video_dir, max_steps=1300, dataset="test")
+                    if runner.num_episodes != 50:
+                        raise ContractError("官方 test builder 必须返回 50 局")
                 seed, difficulty = runner.env_builder.resolve_episode(episode["episode_id"])
                 if seed != episode["env_seed"] or difficulty != episode["difficulty"]:
                     raise ContractError("builder seed／difficulty 与不可变清单不符")
@@ -321,6 +342,8 @@ def evaluate(args: Args, *, runner_factory=EnvRunner, client_factory=EvaluationC
                 terminal = dict(identity, record_type="terminal", outcome=outcome,
                                 actions_executed=evaluator.actions_executed, wall_seconds=time.monotonic() - began,
                                 rpc_seq=1 + evaluator.batch_seq + evaluator.replan_seq, budget=evaluator.budget)
+                if args.profile == "testx":
+                    terminal["motion_downsample_steps"] = evaluator.motion_downsample_steps
                 write_record(output / f"{key}.terminal.json", terminal)
                 terminal_saved = True
                 completed.append(key)
