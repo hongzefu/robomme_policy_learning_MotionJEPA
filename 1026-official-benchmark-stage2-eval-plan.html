@@ -582,9 +582,9 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <p>下表是未来实施的建议派发合同；模型按下方「模型口径对照」按职责、按宿主显式指定，不递归。写入型 agent 从同一已审基线创建独立分支：Claude Code 由宿主 <code>isolation: "worktree"</code> 创建 <code>worktree-agent-&lt;id&gt;</code>（worktree 位于 <code>.claude/worktrees/agent-&lt;id&gt;/</code>），Codex 手建 <code>worktree-agent-eval-&lt;id&gt;-&lt;date&gt;</code>；提交使用 <code>sub/&lt;id&gt;:</code>；主会话审核后按依赖 <code>--no-ff</code> 合入 eval 分支，保留子提交，不直接合回训练主分支。</p>
 <p><b>模型口径对照</b>（AGENTS.md 第 26 条；本计划在 aspen／vail 实施，Codex 属非 AWS 口径）：</p>
 <table><thead><tr><th style="width:22%">编号／职责</th><th style="width:16%">Claude Code</th><th style="width:28%">Codex（aspen／vail）</th><th>隔离</th></tr></thead><tbody>
-<tr><td>A／B／C／G 写代码</td><td><code>opus</code></td><td>Sol（aspen <code>gpt-6-sol</code>；vail <code>gpt-6.1-sol</code>）</td><td>独立 worktree</td></tr>
+<tr><td>A／B／C／G 写代码</td><td><code>opus</code></td><td>Sol（vail 实际为 <code>gpt-6.1-sol</code>；aspen 按宿主实际暴露的 GPT-6／6.1 系 Sol 型号显式指定）</td><td>独立 worktree</td></tr>
 <tr><td>D 独立验收／审查</td><td><code>sonnet</code></td><td>Sol</td><td>只读、不加 worktree；若 D 需写测试文件，写测试部分按写入型 <code>opus</code>／Sol + 独立 worktree，审查报告部分由另一个 <code>sonnet</code>／Sol 只读代理出，写入方与审查方不同</td></tr>
-<tr><td>R 资源与运行</td><td><code>opus</code></td><td>Sol</td><td>不加 worktree，在 NFS 执行副本启动</td></tr>
+<tr><td>R 资源与运行</td><td><code>opus</code></td><td>Sol</td><td>不加 worktree，在已指定且有环境／产物的主检出或 NFS 集群执行副本启动</td></tr>
 <tr><td>只读探索</td><td><code>haiku</code></td><td>Luna（<code>gpt-6-luna</code>）</td><td>只读</td></tr>
 <tr><td>合并前后审查</td><td><code>sonnet</code></td><td>Sol</td><td>只读，钉死 <code>BASE</code>／<code>TIP</code> sha</td></tr>
 </tbody></table>
