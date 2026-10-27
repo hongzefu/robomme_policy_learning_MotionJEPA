@@ -25,7 +25,8 @@ def bare_policy(memory):
 
 @pytest.mark.parametrize("fault", [
     "partial_demo", "missing_exec0", "image_dtype", "image_shape", "state_dtype",
-    "state_shape", "negative_boundary", "boundary_drift", "continuation_state",
+    "state_shape", "negative_boundary", "boundary_drift", "continuation_state", "overlong_first",
+    "boolean_boundary", "numpy_boolean_boundary", "positive_fractional_boundary", "negative_fractional_boundary",
 ])
 def test_policy_rejection_preserves_boundary_step_and_memory(fault):
     memory = make_memory()
@@ -41,6 +42,15 @@ def test_policy_rejection_preserves_boundary_step_and_memory(fault):
         ids = list(range(17))
     elif fault == "negative_boundary":
         boundary = -1
+    elif fault == "overlong_first":
+        ids = list(range(19))
+    elif fault in ("boolean_boundary", "numpy_boolean_boundary", "positive_fractional_boundary"):
+        # 帧数故意与错误强转后的 D=1 匹配，避免首包长度检查掩盖类型漏洞。
+        ids = [0, 1]
+        boundary = {"boolean_boundary": True, "numpy_boolean_boundary": np.bool_(True),
+                    "positive_fractional_boundary": 1.5}[fault]
+    elif fault == "negative_fractional_boundary":
+        ids, boundary = [0], -0.5
     images, states = packet(ids)
     if fault == "image_dtype":
         images = images.astype(np.float32)
@@ -61,9 +71,18 @@ def test_policy_rejection_preserves_boundary_step_and_memory(fault):
     assert policy.exec_start_idx == 17 and policy.step_idx == ids[-1]
 
 
+def test_policy_accepts_numpy_integer_boundary_and_zero_continuation_marker():
+    policy = bare_policy(make_memory())
+    images, states = packet(list(range(18)))
+    policy.add_buffer(dict(images=images, state=states, exec_start_idx=np.int64(17)))
+    images, states = packet([18])
+    policy.add_buffer(dict(images=images, state=states, exec_start_idx=np.int32(0)))
+    assert policy.exec_start_idx == 17 and policy.step_idx == 18
+
+
 def test_memory_rejects_structural_errors_before_encoder_or_state_write():
     for fault in ("empty", "length", "boolean_index", "fractional_index", "negative_boundary",
-                  "boolean_boundary", "fractional_boundary", "overflow_boundary", "missing_boundary"):
+                  "boolean_boundary", "fractional_boundary", "overflow_boundary", "missing_boundary", "overlong_first"):
         memory = make_memory()
         images, states = packet([0])
         ids, boundary = [0], 0
@@ -85,6 +104,9 @@ def test_memory_rejects_structural_errors_before_encoder_or_state_write():
             boundary = 4096
         elif fault == "missing_boundary":
             boundary = None
+        elif fault == "overlong_first":
+            images, states = packet([0, 1])
+            ids = [0, 1]
         before = memory_snapshot(memory)
         memory.vision_enc = lambda _: pytest.fail("非法输入不应调用视觉编码器")
         with pytest.raises(ValueError):

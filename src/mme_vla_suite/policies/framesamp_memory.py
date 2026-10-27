@@ -163,8 +163,8 @@ class FrameSampMemory:
                 raise ValueError(f"exec_start_idx 必须为 [0, {self.max_steps}) 内的整数")
             if self.exec_start_idx is not None and int(exec_start_idx) != self.exec_start_idx:
                 raise ValueError(f"exec_start_idx 变化: 已保存 {self.exec_start_idx} → 本批 {exec_start_idx}")
-            if self.exec_start_idx is None and t < exec_start_idx + 1:
-                raise ValueError("首包必须包含完整 demo 及 exec 第零帧")
+            if self.exec_start_idx is None and t != exec_start_idx + 1:
+                raise ValueError("首包必须恰好包含完整 demo 及 exec 第零帧，共 D+1 帧")
             if tuple(images.shape[-3:]) != (self.motion_frame_size, self.motion_frame_size, 3) or images.dtype != np.uint8:
                 raise ValueError(
                     f"原始帧尺寸 {tuple(images.shape[-3:])} {images.dtype} != ({self.motion_frame_size}, {self.motion_frame_size}, 3) uint8")

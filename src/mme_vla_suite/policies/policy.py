@@ -120,7 +120,10 @@ class MME_VLA_Policy:
             return
         images = obs["images"]
         states = obs["state"]
-        es_in = int(obs.get("exec_start_idx", 0))
+        es_raw = obs.get("exec_start_idx", 0)
+        if isinstance(es_raw, (bool, np.bool_)) or not isinstance(es_raw, (int, np.integer)):
+            raise ValueError("exec_start_idx 必须为非布尔整数")
+        es_in = int(es_raw)
         if es_in < 0:
             raise ValueError("exec_start_idx 不得为负数")
         next_exec_start_idx = self.exec_start_idx
