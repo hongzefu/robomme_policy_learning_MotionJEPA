@@ -354,9 +354,19 @@ def test_server_error_classification(error, expected):
         client._receive()
 
 
-def test_real_cpu_websocket_roundtrip(tmp_path):
+def test_real_cpu_websocket_roundtrip(tmp_path, monkeypatch):
     from openpi_client import msgpack_numpy
+    import websockets.sync.client
     from websockets.sync.server import serve
+
+    real_connect = websockets.sync.client.connect
+    def checked_real_connect(*args, **kwargs):
+        assert kwargs["ping_interval"] is None
+        connection = real_connect(*args, **kwargs)
+        assert connection.ping_interval is None
+        return connection
+    monkeypatch.setattr(websockets.sync.client, "connect", checked_real_connect)
+    assert candidate.Args().rpc_timeout_seconds == 600.0
 
     args = args_for(tmp_path)
     server_client = FakeClient()
