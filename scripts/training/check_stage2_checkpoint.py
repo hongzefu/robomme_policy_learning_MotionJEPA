@@ -487,7 +487,7 @@ def restore_and_check(args, report):
     if checkpoint.is_symlink() or checkpoint.resolve() != checkpoint or not checkpoint.is_dir():
         raise ValueError("checkpoint 必须为无符号链接的现存绝对实体目录")
     root = checkpoint.parent
-    step = 19 if args.mode == "smoke" else 60000
+    step = 19 if args.mode == "smoke" else args.delivery_step
     if checkpoint.name != str(step):
         raise ValueError(f"{args.mode} 只验收 step{step}，实际 {checkpoint.name}")
     report.update(checkpoint=str(checkpoint), step=step)
@@ -603,7 +603,8 @@ def restore_and_check(args, report):
     if args.mode == "smoke":
         return ("SAVE_LOAD=PASS missing=0 extra=0 shape_mismatch=0 dtype_mismatch=0 "
                 "ema_mismatch=0 reference_output_max_abs=0 online_infer=1")
-    return "CKPT_60K_READY=PASS step=60000 root_complete=1 sha256_mismatch=0 strict_restore=1 online_infer=1"
+    return (f"CKPT_{step // 1000}K_READY=PASS step={step} root_complete=1 "
+            "sha256_mismatch=0 strict_restore=1 online_infer=1")
 
 
 def parse_args(argv=None):
@@ -612,6 +613,8 @@ def parse_args(argv=None):
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--expected-manifest", type=Path)
+    parser.add_argument("--delivery-step", type=int, choices=(60000, 70000),
+                        help="交付验收步数，默认 60000；smoke 不接受此参数")
     parser.add_argument("--online-gpu", required=True, type=int)
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args(argv)
@@ -619,6 +622,10 @@ def parse_args(argv=None):
         parser.error("smoke 必须仅给 --reference")
     if args.mode == "delivery" and (args.expected_manifest is None or args.reference is not None):
         parser.error("delivery 必须仅给 --expected-manifest")
+    if args.mode == "smoke" and args.delivery_step is not None:
+        parser.error("smoke 只验收 step19，不能给 --delivery-step")
+    if args.mode == "delivery" and args.delivery_step is None:
+        args.delivery_step = 60000
     if args.out.resolve().is_relative_to(args.checkpoint.resolve().parent):
         parser.error("报告必须写在 checkpoint/run 根之外，避免污染交付文件")
     if any(path is not None and args.out.resolve() == path.resolve()
@@ -637,7 +644,8 @@ def main(argv=None):
         code = 0
     except Exception as error:
         report["error"] = f"{type(error).__name__}: {error}"
-        line = f"{'SAVE_LOAD' if args.mode == 'smoke' else 'CKPT_60K_READY'}=FAIL"
+        verdict = "SAVE_LOAD" if args.mode == "smoke" else f"CKPT_{args.delivery_step // 1000}K_READY"
+        line = f"{verdict}=FAIL"
         report["verdict"] = line
         print(report["error"], file=sys.stderr)
         code = 1

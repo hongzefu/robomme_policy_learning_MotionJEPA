@@ -131,12 +131,12 @@ def test_output_comparison_requires_exact_bits_and_dtype(corrupt):
         restore.compare_outputs(expected, actual)
 
 
-def delivery_fixture(tmp_path):
+def delivery_fixture(tmp_path, step=60000):
     root = tmp_path / "delivery"
     root.mkdir()
     files = {}
-    for name in restore.ROOT_FILES | {"motion_snapshot.ready.json", "60000/params/_METADATA", "60000/params/d/0",
-                                      "60000/assets/robomme/norm_stats.json", "encoder_dependencies/run/encoder.pt"}:
+    for name in restore.ROOT_FILES | {"motion_snapshot.ready.json", f"{step}/params/_METADATA", f"{step}/params/d/0",
+                                      f"{step}/assets/robomme/norm_stats.json", "encoder_dependencies/run/encoder.pt"}:
         path = root / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(name.encode())
@@ -147,30 +147,32 @@ def delivery_fixture(tmp_path):
     return root, path, manifest
 
 
-def test_delivery_verifies_every_listed_file_including_dependencies(tmp_path):
-    root, path, manifest = delivery_fixture(tmp_path)
-    assert restore.verify_delivery_manifest(root, path, root / "60000") == manifest
+@pytest.mark.parametrize("step", [60000, 70000])
+def test_delivery_verifies_every_listed_file_including_dependencies(tmp_path, step):
+    root, path, manifest = delivery_fixture(tmp_path, step)
+    assert restore.verify_delivery_manifest(root, path, root / str(step)) == manifest
     (root / "encoder_dependencies/run/encoder.pt").write_bytes("篡改".encode())
     with pytest.raises(ValueError):
-        restore.verify_delivery_manifest(root, path, root / "60000")
+        restore.verify_delivery_manifest(root, path, root / str(step))
 
 
 @pytest.mark.parametrize("corrupt", ["missing_root", "missing_metadata", "extra_checkpoint", "size", "sha"])
-def test_incomplete_delivery_is_rejected(tmp_path, corrupt):
-    root, path, manifest = delivery_fixture(tmp_path)
+@pytest.mark.parametrize("step", [60000, 70000])
+def test_incomplete_delivery_is_rejected(tmp_path, corrupt, step):
+    root, path, manifest = delivery_fixture(tmp_path, step)
     if corrupt == "missing_root":
         del manifest["files"]["online_restore_inputs.npz"]
     elif corrupt == "missing_metadata":
-        del manifest["files"]["60000/params/_METADATA"]
+        del manifest["files"][f"{step}/params/_METADATA"]
     elif corrupt == "extra_checkpoint":
-        (root / "60000/params/new").write_bytes(b"new")
+        (root / f"{step}/params/new").write_bytes(b"new")
     elif corrupt == "size":
-        manifest["files"]["60000/params/d/0"]["bytes"] += 1
+        manifest["files"][f"{step}/params/d/0"]["bytes"] += 1
     else:
-        manifest["files"]["60000/params/d/0"]["sha256"] = "0" * 64
+        manifest["files"][f"{step}/params/d/0"]["sha256"] = "0" * 64
     write_json(path, manifest)
     with pytest.raises(ValueError):
-        restore.verify_delivery_manifest(root, path, root / "60000")
+        restore.verify_delivery_manifest(root, path, root / str(step))
 
 
 @pytest.mark.parametrize("name", ["../secret", "/tmp/secret", "a/../secret", "a//b", "./a", "a\\b"])
@@ -284,6 +286,79 @@ def test_cli_modes_cannot_mix_reference_and_delivery(tmp_path, mode, extra):
     with pytest.raises(SystemExit):
         restore.parse_args(["--mode", mode, "--checkpoint", str(tmp_path / "run/19"),
                             "--online-gpu", "1", "--out", str(tmp_path / "report"), *extra])
+
+
+@pytest.mark.parametrize("extra,step", [([], 60000), (["--delivery-step", "60000"], 60000),
+                                       (["--delivery-step", "70000"], 70000)])
+def test_delivery_step_is_explicit_with_60k_default(tmp_path, extra, step):
+    args = restore.parse_args(["--mode", "delivery", "--checkpoint", str(tmp_path / f"run/{step}"),
+                               "--expected-manifest", str(tmp_path / "manifest.json"),
+                               "--online-gpu", "1", "--out", str(tmp_path / "report"), *extra])
+    assert args.delivery_step == step
+
+
+@pytest.mark.parametrize("mode,step", [("smoke", "60000"), ("smoke", "70000"),
+                                      ("delivery", "19"), ("delivery", "65000"), ("delivery", "80000")])
+def test_cli_rejects_inapplicable_delivery_step(tmp_path, mode, step):
+    source = ["--reference", "r"] if mode == "smoke" else ["--expected-manifest", "m"]
+    with pytest.raises(SystemExit):
+        restore.parse_args(["--mode", mode, "--checkpoint", str(tmp_path / "run/19"),
+                            "--online-gpu", "1", "--out", str(tmp_path / "report"),
+                            "--delivery-step", step, *source])
+
+
+@pytest.mark.parametrize("step", [60000, 70000])
+def test_delivery_selected_step_reaches_verified_manifest_before_runtime(tmp_path, monkeypatch, step):
+    root, path, manifest = delivery_fixture(tmp_path, step)
+    args = restore.parse_args(["--mode", "delivery", "--checkpoint", str(root / str(step)),
+                               "--expected-manifest", str(path), "--delivery-step", str(step),
+                               "--online-gpu", "1", "--out", str(tmp_path / "report")])
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
+    monkeypatch.delenv("JAX_PLATFORMS", raising=False)
+
+    def stop_before_runtime(actual_root, delivery):
+        assert actual_root == root
+        assert delivery == manifest
+        raise RuntimeError("已核交付清单，在导入 GPU 运行时前停止")
+
+    monkeypatch.setattr(restore, "verify_snapshot", stop_before_runtime)
+    report = {}
+    with pytest.raises(RuntimeError, match="在导入 GPU 运行时前停止"):
+        restore.restore_and_check(args, report)
+    assert report["step"] == step
+    assert report["delivery"] == {"manifest_sha256": restore.sha256_file(path),
+                                  "files": len(manifest["files"]), "sha256_mismatch": 0}
+
+
+@pytest.mark.parametrize("mode,selected,actual", [("delivery", 60000, 70000), ("delivery", 70000, 60000),
+                                                ("smoke", None, 70000)])
+def test_checkpoint_directory_must_match_selected_step(tmp_path, monkeypatch, mode, selected, actual):
+    checkpoint = tmp_path / f"run/{actual}"
+    checkpoint.mkdir(parents=True)
+    source = (["--reference", "r"] if mode == "smoke" else
+              ["--expected-manifest", "m", "--delivery-step", str(selected)])
+    args = restore.parse_args(["--mode", mode, "--checkpoint", str(checkpoint),
+                               "--online-gpu", "1", "--out", str(tmp_path / "report"), *source])
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "0")
+    monkeypatch.delenv("JAX_PLATFORMS", raising=False)
+    with pytest.raises(ValueError, match=f"只验收 step{19 if mode == 'smoke' else selected}"):
+        restore.restore_and_check(args, {})
+
+
+@pytest.mark.parametrize("step", [60000, 70000])
+def test_delivery_failure_keeps_selected_step_label(tmp_path, monkeypatch, capsys, step):
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "")
+    monkeypatch.setenv("JAX_PLATFORMS", "cpu")
+    report_path = tmp_path / "report.json"
+    status = restore.main(["--mode", "delivery", "--checkpoint", str(tmp_path / f"run/{step}"),
+                           "--expected-manifest", str(tmp_path / "manifest.json"), "--delivery-step", str(step),
+                           "--online-gpu", "1", "--out", str(report_path)])
+    report = restore.read_json(report_path)
+    assert status == 1
+    assert report["status"] == "FAIL"
+    assert report["verdict"] == f"CKPT_{step // 1000}K_READY=FAIL"
+    assert capsys.readouterr().out.strip() == report["verdict"]
+    assert "online" not in report
 
 
 def test_explicit_runtime_cache_is_required(tmp_path, monkeypatch):
