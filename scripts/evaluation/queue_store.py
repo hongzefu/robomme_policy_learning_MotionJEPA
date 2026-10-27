@@ -329,4 +329,6 @@ def summarize(store, state, episodes):
     return {"compute_status": status, "episodes": len(episodes), "completed": len(accepted),
             "outcomes": outcomes, "success_rate": outcomes["success"] / len(episodes),
             "missing": sorted(missing), "errors": deepcopy(state["errors"]),
-            "retries": deepcopy(state["retries"]), "uncertain": list(state["uncertain"]), "active_chunks": active}
+            "retries": deepcopy(state["retries"]), "uncertain": list(state["uncertain"]), "active_chunks": active,
+            # testx resample 口径：终局记录带 motion_downsample_steps（缺失按 0）
+            "downsampled_episodes": sum(r.get("motion_downsample_steps", 0) > 0 for r in accepted.values())}

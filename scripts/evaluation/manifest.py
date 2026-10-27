@@ -124,6 +124,25 @@ def build_official_manifest(benchmark_root, *, benchmark_commit=BENCHMARK_COMMIT
                          metadata_sha256=hashes, benchmark_commit=benchmark_commit)
 
 
+def build_testx_manifest(jsonl_path, xhard_metadata_dir, *, benchmark_commit):
+    """testx 口径：按 jsonl 原顺序转成与官方同结构的清单（每五局一块，末块可不足五局）。
+
+    metadata_sha256 = {文件名: sha256}，取 xhard 目录下全部 *_metadata.json、按文件名升序；
+    返回 (清单, jsonl 本身的 sha256)。
+    """
+    raw = Path(jsonl_path).read_bytes()
+    rows = [json.loads(line) for line in raw.decode().splitlines() if line.strip()]
+    episodes = [{"task_name": r["task"], "episode_id": r["episode"], "env_seed": r["seed"],
+                 "difficulty": r["difficulty"]} for r in rows]
+    hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+              for path in sorted(Path(xhard_metadata_dir).glob("*_metadata.json"), key=lambda p: p.name)}
+    manifest = make_manifest(episodes, metadata_sha256=hashes, benchmark_commit=benchmark_commit,
+                             official=False)
+    if len(manifest["episodes"]) != len(rows):
+        raise ValueError("testx清单局数与jsonl行数不符")
+    return manifest, hashlib.sha256(raw).hexdigest()
+
+
 def budget_record(episode, demo_frames, *, q=1301, budget=96, position_limit=4096):
     """D为demo末尾序号；窗口W33、S32，demo段尾补一次。"""
     if type(demo_frames) is not int or demo_frames < 0:
@@ -292,7 +311,26 @@ def main(argv=None):
     for name, default in (("model-seed", 42), ("max-steps", 1300), ("conservative-max-q", 1301),
                           ("motion-budget", 96), ("position-limit", 4096)):
         bind.add_argument(f"--{name}", type=int, choices=[default], default=default)
+    testx = sub.add_parser("testx-episodes", help="testx口径：hold-out xhard jsonl转成同结构清单")
+    testx.add_argument("--jsonl", type=Path, required=True)
+    testx.add_argument("--benchmark-commit", required=True)
+    testx.add_argument("--xhard-metadata-dir", type=Path, required=True)
+    testx.add_argument("--out", type=Path, required=True)
     args = parser.parse_args(argv)
+    if args.command == "testx-episodes":
+        if re.fullmatch("[0-9a-f]{40}", args.benchmark_commit) is None:
+            raise ValueError("--benchmark-commit必须为40位sha")
+        result, jsonl_sha256 = build_testx_manifest(args.jsonl, args.xhard_metadata_dir,
+                                                    benchmark_commit=args.benchmark_commit)
+        try:
+            from .queue_store import publish
+        except ImportError:
+            from queue_store import publish
+        publish(args.out, result)
+        print(f"TESTX_MANIFEST=PASS episodes={len(result['episodes'])} chunks={len(result['chunks'])} "
+              f"jsonl_sha256={jsonl_sha256} metadata_files={len(result['metadata_sha256'])} "
+              f"metadata_digest={digest(result['metadata_sha256'])} sha256={result['sha256']} out={args.out}")
+        return
     if args.command == "episodes":
         result = build_official_manifest(args.benchmark_root, benchmark_commit=args.benchmark_commit,
                                          utils_path=Path(__file__).resolve().parents[2] / "examples/robomme/utils.py")

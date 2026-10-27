@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+import os
 import time
 from typing import Any, TypeAlias
 
@@ -15,6 +16,15 @@ from mme_vla_suite.models.integration.history_observation import HistAugObservat
 from mme_vla_suite.models.integration.history_pi0 import HistoryPi0, _motion_enabled
 from mme_vla_suite.policies.framesamp_memory import FrameSampMemory
 from mme_vla_suite.shared.sampling import memory_order, pad_times   # 与训练侧 FrameSampDataset 同一份排序函数（R20）
+
+
+def motion_overflow_from_env() -> str:
+    """motion 超预算口径只从环境变量 MMEVLA_MOTION_OVERFLOW 读（缺省 raise）；不碰 resolved yaml 及其 sha。"""
+    overflow = os.environ.get("MMEVLA_MOTION_OVERFLOW", "raise")
+    if overflow not in ("raise", "resample"):
+        raise ValueError(f"MMEVLA_MOTION_OVERFLOW 只能是 raise / resample，得到 {overflow!r}")
+    return overflow
+
 
 class MME_VLA_Policy:
     def __init__(
@@ -61,6 +71,9 @@ class MME_VLA_Policy:
                                                      "window_direction", "grid_origin")}
             self._motion_cfg.update(demo_min_real_frames=mcfg.get("demo_min_real_frames", 33),
                                     demo_tail_pad=mcfg.get("demo_tail_pad", "none"))
+            # 只在 resample 时写键；缺省 raise 不加键，motion_cfg 与改动前逐键相同（FrameSampMemory 缺省即 raise）
+            if motion_overflow_from_env() == "resample":
+                self._motion_cfg["overflow"] = "resample"
         
         self.reset()
         
@@ -103,7 +116,10 @@ class MME_VLA_Policy:
         outputs = jax.tree.map(lambda x: np.asarray(x[0, ...]), outputs)      
         outputs = self._output_transform(outputs)
         outputs["infer_time_ms"] = model_time * 1000
-        
+        # 只有 resample 口径附带本局累计降级步数；官方缺省响应字典与改动前相同
+        if self.motion_enabled and self._motion_cfg.get("overflow") == "resample":
+            outputs["motion_downsample_steps"] = int(self.mem_buffer.motion_downsample_steps)
+
         return outputs
     
     @override
