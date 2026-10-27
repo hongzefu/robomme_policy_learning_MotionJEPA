@@ -10,7 +10,7 @@ import types
 from unittest.mock import patch
 
 from scripts.evaluation.gl_official_pool import Pool, SUBMIT_GATES, atomic_json, committed_gpu_hours, read_json, terminal_step_proof
-from scripts.evaluation.launch_official_pool import LAUNCH_GATES, srun_command, supervise, validate_spec, verify_launch_gates
+from scripts.evaluation.launch_official_pool import ExistingStep, LAUNCH_GATES, VALIDATION_BASE_GATES, srun_command, supervise, validate_spec, verify_launch_gates
 
 try:
     from scripts.evaluation.manifest import make_manifest
@@ -156,7 +156,7 @@ class PoolTest(unittest.TestCase):
         data = b"REAL_REPORT=PASS\n"
         evidence = self.root/"real-report.txt"
         evidence.write_bytes(data)
-        report = {"required_gates": {"launch": list(LAUNCH_GATES)}, "gates": {
+        report = {"cross_hardware_numeric": "not_required", "required_gates": {"launch": list(LAUNCH_GATES)}, "gates": {
             key: {"status": "PASS", "evidence": {"path": str(evidence), "sha256": hashlib.sha256(data).hexdigest(),
                                                    "verdict_line": "REAL_REPORT=PASS"}} for key in LAUNCH_GATES}}
         verify_launch_gates(report)
@@ -177,8 +177,8 @@ class PoolTest(unittest.TestCase):
         origin = {"submit_time": "2026-10-26T10:00:00", "start_time": "2026-10-26T10:01:00"}
         slot = {"slot_instance": "slot", "job_id": "123", "worker_uuid": "worker", "job_incarnation": "inc",
                 "launch_id": "launch", "adoption_proof": origin, "step_id": "0"}
-        rows = ("123|gl|me|test|original|2026-10-26T10:00:00|2026-10-26T10:01:00|Unknown|RUNNING|hold|100\n"
-                "123.0||||||2026-10-26T10:02:00|2026-10-26T10:03:00|FAILED|official-resident-launch|60\n")
+        rows = ("123|gl|me|test|original|2026-10-26T10:00:00|2026-10-26T10:01:00|Unknown|RUNNING|hold|100|0:0\n"
+                "123.0||||||2026-10-26T10:02:00|2026-10-26T10:03:00|FAILED|official-resident-launch|60|2:0\n")
         def runner(command, **kwargs):
             return subprocess.CompletedProcess(command, 0, rows, "")
         proof = terminal_step_proof(ledger, slot, runner=runner)
@@ -197,7 +197,7 @@ class PoolTest(unittest.TestCase):
         snapshot = read_json(self.pool.path)
         audit = self.root/"release.json"
         atomic_json(audit, {})
-        output = "123|gl|me|test|original|2026-10-26T10:00:00|2026-10-26T10:01:00|2026-10-26T11:01:00|CANCELLED|hold|3600\n"
+        output = "123|gl|me|test|original|2026-10-26T10:00:00|2026-10-26T10:01:00|2026-10-26T11:01:00|CANCELLED|hold|3600|0:15\n"
         def runner(command, **kwargs):
             return subprocess.CompletedProcess(command, 0, output, "")
         self.assertTrue(self.pool.confirm_release(snapshot, audit, runner=runner, timeout_seconds=0))
@@ -232,8 +232,8 @@ class PoolTest(unittest.TestCase):
                 controller.process_requests()
                 atomic_json(self.root/"queue/summary.json", controller.summary())
                 return result
-            rows = ("123|gl|me|test|original|2026-10-26T10:00:00|2026-10-26T10:01:00|Unknown|RUNNING|hold|100\n"
-                    "123.0||||||2026-10-26T10:02:00|2026-10-26T10:03:00|FAILED|official-resident-launch|60\n")
+            rows = ("123|gl|me|test|original|2026-10-26T10:00:00|2026-10-26T10:01:00|Unknown|RUNNING|hold|100|0:0\n"
+                    "123.0||||||2026-10-26T10:02:00|2026-10-26T10:03:00|FAILED|official-resident-launch|60|2:0\n")
             def runner(command, **kwargs):
                 return subprocess.CompletedProcess(command, 0, rows, "")
             failed = types.SimpleNamespace(pid=111, returncode=2, poll=lambda: 2)
@@ -251,6 +251,105 @@ class PoolTest(unittest.TestCase):
             self.assertEqual(ledger["slots"]["slot"]["state"], "RETIRED")
             self.assertEqual(len(ledger["slots"]), 2)
             self.assertEqual(committed_gpu_hours(ledger), 48)
+
+    def test_validation_smoke_gate_does_not_require_five_episode_profile(self):
+        evidence = self.root/"preflight.txt"
+        evidence.write_text("PREFLIGHT=PASS\n")
+        data = {"path": str(evidence), "sha256": hashlib.sha256(evidence.read_bytes()).hexdigest(), "verdict_line": "PREFLIGHT=PASS"}
+        report = {"cross_hardware_numeric": "not_required", "required_gates": {"launch": list(VALIDATION_BASE_GATES)},
+                  "gates": {key: {"status": "PASS", "evidence": data} for key in VALIDATION_BASE_GATES}}
+        verify_launch_gates(report, "validation", "smoke1")
+        with self.assertRaises(ValueError):
+            verify_launch_gates(report, "validation", "shards10")
+        report["gates"]["validation_smoke1"] = {"status": "PASS", "evidence": data}
+        verify_launch_gates(report, "validation", "shards10")
+        report["required_gates"]["launch"].append("a40_motion_numeric")
+        with self.assertRaises(ValueError):
+            verify_launch_gates(report, "validation", "smoke1")
+
+    def test_pending_unknown_start_can_cancel_without_relaxing_running_start(self):
+        proof = {"slot_instance": "pending", "submission_id": "submit", "job_id": "123", "job_incarnation": "inc",
+                 "pool_id": "fixed-pool", "account": "test", "cluster": "gl", "user": "me",
+                 "submit_time": "2026-10-26T10:00:00", "start_time": None, "end_time": None,
+                 "state": "PENDING", "hours": 48, "gpus": 1}
+        self.pool.adopt(proof, 0, "已批准")
+        calls = []
+        def runner(command, **kwargs):
+            calls.append(command)
+            text = "123|gl|me|test|original|2026-10-26T10:00:00|Unknown|Unknown|PENDING|hold|0|0:0\n"
+            return subprocess.CompletedProcess(command, 0, text if command[0] == "sacct" else "", "")
+        self.pool.cancel([proof], confirmed=True, runner=runner, audit_path=self.root/"pending-cancel.json")
+        self.assertEqual(calls[-1], ["scancel", "123"])
+        slot = read_json(self.pool.path)["slots"]["pending"]
+        slot["start_time"] = "2026-10-26T10:01:00"
+        ledger = read_json(self.pool.path)
+        from scripts.evaluation.gl_official_pool import slurm_records, verify_job_record
+        self.assertIsNone(verify_job_record(ledger, slot, slurm_records("123", runner)))
+
+    @unittest.skipIf(QueueStore is None, "C合并后运行实际step接管测试")
+    def test_existing_step_attach_reads_slurm_exit_without_old_pid_signal(self):
+        proof = {"slot_instance": "slot", "submission_id": "original-submit", "job_id": "123", "job_incarnation": "inc",
+                 "pool_id": "fixed-pool", "account": "test", "cluster": "gl", "user": "me",
+                 "submit_time": "2026-10-26T10:00:00", "start_time": "2026-10-26T10:01:00",
+                 "end_time": time.time()+20000, "state": "RUNNING", "hours": 48, "gpus": 1}
+        self.pool.adopt(proof, 0, "已批准")
+        with self.pool.transaction() as ledger:
+            ledger["slots"]["slot"].update(worker_uuid="worker", launch_id="launch", srun_pid=99999, step_id="0")
+        atomic_json(self.root/"queue/state.json", {"slots": {"slot": {"step_id": "0"}}})
+        text = ("123|gl|me|test|original|2026-10-26T10:00:00|2026-10-26T10:01:00|Unknown|RUNNING|hold|100|0:0\n"
+                "123.0||||||2026-10-26T10:02:00|2026-10-26T10:03:00|FAILED|official-resident-launch|60|3:0\n")
+        handle = ExistingStep(self.pool, read_json(self.pool.path)["slots"]["slot"],
+                              runner=lambda *a, **k: subprocess.CompletedProcess(a[0], 0, text, ""))
+        self.assertEqual(handle.poll(), 3)
+        self.assertTrue(handle.attached)
+
+    def test_smoke_handoff_keeps_hold_budget_and_creates_new_execution_slot(self):
+        self.pool.submit(self.gates, 0, execute=True, runner=self.success)
+        with self.pool.transaction() as ledger:
+            for slot in ledger["slots"].values():
+                slot.update(state="RUNNING", worker_uuid="worker-"+slot["slot_instance"], job_incarnation="inc",
+                            launch_id="launch", start_time=time.time(), end_time=time.time()+20000)
+        before = read_json(self.pool.path)
+        proofs = [{**{name: slot[name] for name in ("slot_instance", "worker_uuid", "job_id", "job_incarnation")},
+                   "step_id": "0", "terminal": True, "rpc_quiescent": True, "sidecar_quiescent": True}
+                  for slot in before["slots"].values()]
+        self.pool.handoff_smoke(proofs, parent_run_name="official-stage2-20k-probe-1026-a", scope_manifest_sha256="c"*64)
+        ledger = read_json(self.pool.path)
+        self.assertEqual(len(ledger["holds"]), 2)
+        self.assertEqual(committed_gpu_hours(ledger), 96)
+        self.assertEqual(ledger["campaign"]["stage_state"], "HANDOFF_READY")
+        self.assertEqual(sum(slot["state"] == "RUNNING" for slot in ledger["slots"].values()), 2)
+
+    @unittest.skipIf(QueueStore is None, "C合并后运行drain监督实际调用链")
+    def test_normal_drain_releases_only_its_hold_while_another_worker_runs(self):
+        proof = {"slot_instance": "slot", "submission_id": "original-submit", "job_id": "123", "job_incarnation": "inc",
+                 "pool_id": "fixed-pool", "account": "test", "cluster": "gl", "user": "me",
+                 "submit_time": "2026-10-26T10:00:00", "start_time": "2026-10-26T10:01:00",
+                 "end_time": time.time()+20000, "state": "RUNNING", "hours": 48, "gpus": 1}
+        self.pool.adopt(proof, 0, "已批准")
+        with self.pool.transaction() as ledger:
+            ledger["slots"]["slot"].update(worker_uuid="worker", launch_id="launch", srun_pid=111, step_id="0", state="DRAINING", retiring=True)
+        store = QueueStore(self.root)
+        store.initialize(make_manifest([{"task_name": "Task", "episode_id": 0, "env_seed": 100, "difficulty": "easy"}], official=False),
+                         "b"*64, official=False)
+        calls = []
+        cancelled = False
+        def runner(command, **kwargs):
+            nonlocal cancelled
+            calls.append(command)
+            if command[0] == "scancel":
+                cancelled = True
+                return subprocess.CompletedProcess(command, 0, "", "")
+            status = "CANCELLED" if cancelled else "RUNNING"
+            rows = (f"123|gl|me|test|original|2026-10-26T10:00:00|2026-10-26T10:01:00|Unknown|{status}|hold|100|0:0\n"
+                    "123.0||||||2026-10-26T10:02:00|2026-10-26T10:03:00|FAILED|official-resident-launch|60|3:0\n")
+            return subprocess.CompletedProcess(command, 0, rows, "")
+        drained = types.SimpleNamespace(pid=111, returncode=3, poll=lambda: 3)
+        other = types.SimpleNamespace(pid=222, returncode=None, poll=lambda: None)
+        supervise(self.pool, {}, {}, [drained, other], runner=runner, poll_seconds=.001, max_iterations=1,
+                  drain_audit_dir=self.root/"local-audit")
+        self.assertEqual([command for command in calls if command[0] == "scancel"], [["scancel", "123"]])
+        self.assertEqual(read_json(self.pool.path)["slots"]["slot"]["state"], "TERMINAL")
 
 
 if __name__ == "__main__":

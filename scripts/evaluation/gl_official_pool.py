@@ -99,7 +99,7 @@ def slurm_timestamp(value):
 
 def slurm_records(job_id, runner=subprocess.run):
     """只在状态事件或低频对账时查指定JobID；查询失败保持未知。"""
-    fields = ["JobIDRaw", "Cluster", "User", "Account", "Comment", "Submit", "Start", "End", "State", "JobName", "ElapsedRaw"]
+    fields = ["JobIDRaw", "Cluster", "User", "Account", "Comment", "Submit", "Start", "End", "State", "JobName", "ElapsedRaw", "ExitCode"]
     command = ["sacct", "--noheader", "--parsable2", f"--jobs={job_id}", "--format=" + ",".join(fields)]
     try:
         result = runner(command, capture_output=True, text=True, timeout=20, check=False,
@@ -128,9 +128,14 @@ def verify_job_record(ledger, slot, records):
     try:
         if (row["Cluster"] != ledger["envelope"]["cluster"] or row["User"] != ledger["envelope"]["user"]
                 or row["Account"] != ledger["envelope"]["account"]
-                or slurm_timestamp(row["Submit"]) != slurm_timestamp(origin["submit_time"])
-                or slurm_timestamp(row["Start"]) != slurm_timestamp(origin["start_time"])):
+                or slurm_timestamp(row["Submit"]) != slurm_timestamp(origin["submit_time"])):
             return None
+        expected_start = slot.get("start_time") or origin.get("start_time")
+        if expected_start not in {None, "Unknown", "N/A", ""}:
+            if slurm_timestamp(row["Start"]) != slurm_timestamp(expected_start):
+                return None
+        # 从未开始的提交以Submit及标签识别；Start=Unknown不转换为虚构时刻。
+        # 一旦账本已记录真实Start，上面的严格比对永不放宽。
     except (KeyError, TypeError, ValueError):
         return None
     if not slot.get("adoption_proof"):
@@ -156,6 +161,7 @@ def terminal_step_proof(ledger, slot, queue_slot=None, *, runner=subprocess.run)
     return {**{key: slot[key] for key in ("slot_instance", "worker_uuid", "job_id", "job_incarnation")},
             "step_id": step_id, "terminal": True, "rpc_quiescent": True, "sidecar_quiescent": True,
             "launch_id": slot.get("launch_id"), "slurm_job_name": rows[0]["JobName"],
+            "slurm_exit_code": rows[0]["ExitCode"],
             "slurm_state": rows[0]["State"], "slurm_start": rows[0]["Start"], "slurm_end": rows[0]["End"]}
 
 
@@ -316,8 +322,8 @@ class Pool:
             slot.update({key: proof[key] for key in ("job_id", "job_incarnation", "cluster", "user", "submit_time")})
             slot["slurm_state"] = proof["state"]
             slot["step_id"] = proof.get("step_id")
-            slot["start_time"] = slurm_timestamp(proof["start_time"]) if proof.get("start_time") is not None else None
-            slot["end_time"] = slurm_timestamp(proof["end_time"]) if proof.get("end_time") is not None else None
+            slot["start_time"] = slurm_timestamp(proof["start_time"]) if proof.get("start_time") not in {None, "Unknown", "N/A", ""} else None
+            slot["end_time"] = slurm_timestamp(proof["end_time"]) if proof.get("end_time") not in {None, "Unknown", "N/A", ""} else None
             slot["submission_comment"] = proof.get("submission_comment")
             if proof["state"] in TERMINAL:
                 slot["state"] = "TERMINAL"
@@ -353,13 +359,14 @@ class Pool:
                 raise ValueError("slot_instance必须是单个安全标识符")
             if not matches_proof(ledger, slot, proof) or proof.get("hours") != 48 or proof.get("gpus") != 1:
                 raise ValueError("既有hold身份或1GPU/48h规格不符")
-            if not proof.get("start_time") or not proof.get("end_time"):
+            if proof["state"] == "RUNNING" and (not proof.get("start_time") or not proof.get("end_time")):
                 raise ValueError("复用必须现场核独立StartTime/EndTime")
             slot.update({"state": "RUNNING" if proof["state"] == "RUNNING" else "SUBMITTED",
                          "hold_id": slot["slot_instance"],
                          "adoption_authorization": authorization, "adoption_proof": proof,
                          "reserved_gpu_hours": 48, "settled": False,
-                         "start_time": slurm_timestamp(proof["start_time"]), "end_time": slurm_timestamp(proof["end_time"]),
+                         "start_time": slurm_timestamp(proof["start_time"]) if proof.get("start_time") not in {None, "Unknown", "N/A", ""} else None,
+                         "end_time": slurm_timestamp(proof["end_time"]) if proof.get("end_time") not in {None, "Unknown", "N/A", ""} else None,
                          "pool_revision": expected_revision})
             ledger["slots"][slot["slot_instance"]] = slot
             ledger["holds"][slot["hold_id"]] = {"hold_id": slot["hold_id"], "settled": False, "reserved_gpu_hours": 48}
@@ -401,6 +408,32 @@ class Pool:
                 raise ValueError("step未静止")
             slot["step_id"] = proof["step_id"]
             slot["step_terminal_proof"] = proof
+
+    def handoff_smoke(self, proofs, *, parent_run_name, scope_manifest_sha256):
+        """同一campaign的阶段移交：保留hold及剩余原walltime，不新提交或续期。"""
+        with self.transaction() as ledger:
+            by_slot = {item["slot_instance"]: item for item in proofs}
+            launched = {key: slot for key, slot in ledger["slots"].items() if slot["state"] in ACTIVE and slot.get("launch_id")}
+            if set(launched) != set(by_slot):
+                raise ValueError("smoke移交必须核全部已启动resident静止")
+            for key, slot in launched.items():
+                proof = by_slot[key]
+                if (any(proof.get(name) != slot.get(name) for name in ("slot_instance", "worker_uuid", "job_id", "job_incarnation"))
+                        or any(proof.get(name) is not True for name in ("terminal", "rpc_quiescent", "sidecar_quiescent"))):
+                    raise ValueError("smoke移交的step/RPC/sidecar未确认静止")
+                new_id = uuid.uuid4().hex
+                member = {name: slot[name] for name in ("hold_id", "submission_id", "job_id", "job_incarnation", "start_time", "end_time")}
+                for name in ("adoption_proof", "submit_time", "cluster", "user", "gpu_uuid"):
+                    if name in slot:
+                        member[name] = slot[name]
+                member.update(slot_instance=new_id, state="RUNNING", previous_slot=key,
+                              original_slot=slot.get("original_slot", key), pool_revision=ledger["pool_revision"], settled=False)
+                slot.update(state="RETIRED", replacement_slot=new_id, step_terminal_proof=proof)
+                ledger["slots"][new_id] = member
+            ledger["campaign"] = {"parent_run_name": parent_run_name, "current_stage": "smoke1",
+                                  "stage_state": "HANDOFF_READY", "next_stage": "shards10",
+                                  "scope_manifest_sha256": scope_manifest_sha256, "proofs": proofs}
+        return ledger
 
     def cancel(self, proofs, *, confirmed=False, runner=subprocess.run, audit_path=None, verified_snapshot=None,
                verify_current=True):

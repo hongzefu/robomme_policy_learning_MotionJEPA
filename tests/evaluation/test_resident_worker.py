@@ -1,4 +1,5 @@
 """进程生命周期、终局先于产物、Slurm启动许可负控。"""
+import json
 from pathlib import Path
 import socket
 import subprocess
@@ -8,7 +9,12 @@ import unittest
 from unittest.mock import patch
 
 from scripts.evaluation.gl_official_pool import atomic_json
-from scripts.evaluation.resident_worker import Resident, pick_port, stop_process_tree, validate_permit
+from scripts.evaluation.resident_worker import Resident, pick_port, read_and_release_metadata, stop_process_tree, validate_permit, validate_server_metadata
+
+try:
+    from scripts.evaluation.manifest import digest, seal
+except ImportError:
+    seal = None
 
 
 class Store:
@@ -142,6 +148,49 @@ class ResidentTest(unittest.TestCase):
         operation, payload = self.store.requests[-1]
         self.assertEqual(operation, "worker_error")
         self.assertFalse(payload["uncertain_terminal"])
+
+    @unittest.skipIf(seal is None, "C合并后运行模型binding摘要核验")
+    def test_metadata_checks_actual_binding_process_and_gpu_then_releases_session(self):
+        binding = seal({"run_identity_sha256": "a"*64, "validation_model_identity_sha256": "b"*64,
+                        "model_descriptor": {"checkpoint_files": [{"path": "20000/params", "sha256": "c"*64, "bytes": 10}]}})
+        path = self.root/"binding.json"
+        atomic_json(path, binding)
+        spec = dict(self.spec, model_binding=str(path), purpose="validation", checkpoint_step=20000,
+                    model_kind="stage2_pool4_concat", expected_gpu_uuid="GPU-owned")
+        env = {"SLURM_JOB_ID": "1", "SLURM_STEP_ID": "0", "CUDA_VISIBLE_DEVICES": "0"}
+        metadata = {"run_identity_sha256": "a"*64, "server_nonce": "nonce", "model_seed": 42,
+                    "model_kind": spec["model_kind"], "server_pid": 111, "eval_purpose": "validation",
+                    "checkpoint_step": 20000, "worker_uuid": "worker", "model_binding_sha256": binding["sha256"],
+                    "model_identity_sha256": "b"*64, "checkpoint_files_sha256": digest(binding["model_descriptor"]["checkpoint_files"]),
+                    "slurm_job_id": "1", "slurm_step_id": "0", "cuda_visible_devices": "0",
+                    "cross_hardware_numeric": "not_required", "motion_runtime": {"gpu_uuid": "GPU-owned", "pid": 222, "cuda_visible_devices": "0"}}
+        for change in ({"model_binding_sha256": "d"*64}, {"server_pid": 333}, {"server_nonce": "other"},
+                       {"motion_runtime": {"gpu_uuid": "GPU-other", "pid": 222, "cuda_visible_devices": "0"}}):
+            with self.assertRaises(ValueError):
+                validate_server_metadata(dict(metadata, **change), spec, "nonce", 111, env)
+        class Codec:
+            unpackb = staticmethod(json.loads)
+            class Packer:
+                def pack(self, data):
+                    return json.dumps(data).encode()
+        class Connection:
+            def __enter__(self):
+                self.count, self.sent, self.closed = 0, None, False
+                return self
+            def __exit__(self, *args):
+                self.closed = True
+            def send(self, data):
+                self.sent = json.loads(data)
+            def recv(self, **kwargs):
+                self.count += 1
+                if self.count == 1:
+                    return json.dumps(metadata).encode()
+                return json.dumps({"release_attempt_finished": True, "quiescent": True, "eval_rpc": self.sent["eval_rpc"]}).encode()
+        connection = Connection()
+        result = read_and_release_metadata(spec, "nonce", 111, 1234, connector=lambda *a, **k: connection, codec=Codec, environment=env)
+        self.assertEqual(result["model_binding_sha256"], binding["sha256"])
+        self.assertTrue(connection.sent["release_attempt"])
+        self.assertTrue(connection.closed)
 
 
 if __name__ == "__main__":

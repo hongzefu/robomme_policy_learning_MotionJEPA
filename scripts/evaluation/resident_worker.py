@@ -92,6 +92,61 @@ def validate_permit(root, spec, environment):
     return dict(slot, step_id=environment["SLURM_STEP_ID"], state="RUNNING")
 
 
+def validate_server_metadata(metadata, spec, nonce, server_pid, environment):
+    """只比对已签封的摘要；12GB实体由刚启动的确定版server现场核验一次。"""
+    try:
+        from .manifest import digest, verify_seal
+    except ImportError:
+        from manifest import digest, verify_seal
+    binding = verify_seal(read_json(spec["model_binding"]))
+    identity_key = "validation_model_identity_sha256" if spec["purpose"] == "validation" else "model_identity_sha256"
+    expected = {"run_identity_sha256": binding["run_identity_sha256"], "server_nonce": nonce,
+                "model_seed": 42, "model_kind": spec["model_kind"], "server_pid": server_pid,
+                "eval_purpose": spec["purpose"], "checkpoint_step": spec["checkpoint_step"],
+                "worker_uuid": spec["worker_uuid"], "model_binding_sha256": binding["sha256"],
+                "model_identity_sha256": binding[identity_key],
+                "checkpoint_files_sha256": digest(binding["model_descriptor"]["checkpoint_files"]),
+                "slurm_job_id": environment["SLURM_JOB_ID"], "slurm_step_id": environment["SLURM_STEP_ID"],
+                "cuda_visible_devices": environment["CUDA_VISIBLE_DEVICES"], "cross_hardware_numeric": "not_required"}
+    for key, value in expected.items():
+        if metadata.get(key) != value:
+            raise ValueError(f"刚启动服务的现场身份不符：{key}")
+    runtime = metadata.get("motion_runtime", {})
+    if (not runtime.get("gpu_uuid") or type(runtime.get("pid")) is not int
+            or runtime["pid"] <= 0 or runtime.get("cuda_visible_devices") != environment["CUDA_VISIBLE_DEVICES"]):
+        raise ValueError("缺真实sidecar进程/GPU UUID/分配token")
+    if spec.get("expected_gpu_uuid") is not None and runtime["gpu_uuid"] != spec["expected_gpu_uuid"]:
+        raise ValueError("sidecar实际GPU UUID与本hold已核分配不符")
+    return metadata
+
+
+def read_and_release_metadata(spec, nonce, server_pid, port, *, connector=None, codec=None, environment=None):
+    """读取首包后使用既有release协议释放会话；不reset、不推理、不多占仿真局。"""
+    if connector is None:
+        from websockets.sync.client import connect
+        connector = connect
+    if codec is None:
+        from openpi_client import msgpack_numpy
+        codec = msgpack_numpy
+    timeout = float(spec.get("metadata_timeout_seconds", 30))
+    with connector(f"ws://127.0.0.1:{port}", compression=None, max_size=None,
+                   open_timeout=timeout, close_timeout=min(10, timeout)) as websocket:
+        response = websocket.recv(timeout=timeout)
+        if not isinstance(response, bytes):
+            raise RuntimeError("metadata不是有类型的协议首包")
+        metadata = codec.unpackb(response)
+        validate_server_metadata(metadata, spec, nonce, server_pid, os.environ if environment is None else environment)
+        rpc = {"episode_nonce": uuid.uuid4().hex}
+        websocket.send(codec.Packer().pack({"release_attempt": True, "eval_rpc": rpc}))
+        reply = websocket.recv(timeout=timeout)
+        if not isinstance(reply, bytes):
+            raise RuntimeError("metadata探针的会话释放响应不确定")
+        ack = codec.unpackb(reply)
+        if ack.get("release_attempt_finished") is not True or ack.get("quiescent") is not True or ack.get("eval_rpc") != rpc:
+            raise RuntimeError("metadata探针未确认静止释放，停止resident")
+        return metadata
+
+
 class Resident:
     def __init__(self, root, spec, store, *, popen=subprocess.Popen):
         self.root, self.spec, self.store = Path(root), spec, store
@@ -233,8 +288,8 @@ class Resident:
 
     def run(self):
         slot = validate_permit(self.root, self.spec, os.environ)
-        # 计算节点再次核门；目标证书由server真实恢复与sidecar握手校验。
-        verify_launch_gates(self.spec["gates"], self.spec.get("purpose"))
+        # 计算节点再次核门；来源与软件精度由server真实恢复和sidecar握手校验。
+        verify_launch_gates(self.spec["gates"], self.spec.get("purpose"), self.spec.get("validation_stage"))
         validate_spec(self.spec)
         self.rpc("register_slot", {"slot": {key: slot[key] for key in
                  ("slot_instance", "worker_uuid", "job_id", "job_incarnation", "step_id", "state")}})
@@ -257,7 +312,17 @@ class Resident:
                 if time.monotonic() >= health_until:
                     raise TimeoutError("server健康检查超时")
                 self.stop.wait(0.25)
-            self.heartbeat("loaded", first_inference_ready="pending")
+            try:
+                metadata = read_and_release_metadata(self.spec, self.nonce, self.server.pid, self.port)
+            except ValueError as error:
+                self.rpc("worker_error", {"slot_instance": self.spec["slot_instance"], "error": str(error),
+                                          "retryable": False, "uncertain_terminal": False})
+                raise
+            if self.server.poll() is not None:
+                raise RuntimeError("metadata核验后服务已退出")
+            atomic_json(self.root/"pool/server-metadata"/(self.spec["worker_uuid"]+".json"), metadata)
+            self.heartbeat("loaded", first_inference_ready="pending", gpu_uuid=metadata["motion_runtime"]["gpu_uuid"],
+                           sidecar_pid=metadata["motion_runtime"]["pid"], cross_hardware_numeric="not_required")
             while not self.stop.is_set():
                 # 每个hold独立计时，不把chunk deadline当resident总寿命。
                 remaining = min(float(self.spec["hold_end_time"]), float(self.spec["workload_deadline"])) - time.time()
