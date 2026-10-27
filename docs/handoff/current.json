@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T16:11:15Z",
-    "america_new_york": "2026-10-27T12:11:15-0400"
+    "utc": "2026-10-27T16:56:02Z",
+    "america_new_york": "2026-10-27T12:56:02-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -637,6 +637,72 @@
           "what": "写评估档案docs/evaluation-doc（launch/result）；视频按任务/结局整理或做浏览页待用户定",
           "command": "结果根 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/stage2-60k-seed42/run800",
           "verdict_line": "—"
+        }
+      ]
+    },
+    "off800-512-60k-eval": {
+      "plan": {
+        "file": "（聊天方案，无计划文件）",
+        "sha": "2f9cd46"
+      },
+      "state": "running",
+      "state_changed_at": {
+        "utc": "2026-10-27T16:56:02Z",
+        "america_new_york": "2026-10-27T12:56:02-0400"
+      },
+      "state_reason": "用户批准：用10-19旧流程（gl_hold_pool.sh，NFS评测仓库2f9cd46）在官方800局补评上次训练纯512（mixed8-200-m8x8-modul-b128-80k）的60k；seed42、max_steps1300、10片×80局，与off800-512m-60k同口径，仅POLICY=mixed8-512",
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiQXaztwkVeY2pFPyW3",
+        "host": "sled-aspen.eecs.umich.edu"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "纯512 60k checkpoint按SHA256SUMS.pre核验23文件",
+          "evidence": "",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/off800-512-60k/sha60000.check",
+          "status": "pending"
+        },
+        {
+          "what": "10片均SHARD_DONE且EXIT_CODE=0，800局汇总",
+          "evidence": "",
+          "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/off800-512-60k/",
+          "status": "pending"
+        },
+        {
+          "what": "10份占位逐个scancel、登录节点tmux精确清理",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [
+        {
+          "tmux": "-",
+          "log": "greatlakes squeue -u hongzefu",
+          "done_line": "占位JobID 64885734-64885743（spgpu 1×A40/4CPU/24G/48h，美东12:54全部RUNNING）"
+        }
+      ],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-27",
+          "quote": "同意开始。",
+          "scope": "只评纯512的60k；旧流程；10份A40占位；不改代码不下载；收尾释放与留档"
+        }
+      ],
+      "pending_decisions": [
+        {
+          "what": "是否追加纯512的40k/80k（ckpt已在NFS）",
+          "status": "待用户定"
+        }
+      ],
+      "next_steps": [
+        {
+          "what": "SHA核验PASS后在GL登录节点每份占位起tmux跑gl_hold_pool.sh（MANIFEST=official800-512/manifest.tsv，QUEUE_DIR=official800-512/queue，EVAL_SEED=42，EVAL_MAX_STEPS=1300）",
+          "command": "见eval-off800-1019/launch.md第六节命令，仅换MANIFEST/QUEUE_DIR",
+          "verdict_line": "QUEUE_SHARD_DONE … rc=0 ×10"
         }
       ]
     }
