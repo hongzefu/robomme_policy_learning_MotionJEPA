@@ -1,6 +1,7 @@
 """RPC前置校验与真实本机websocket占用/断线故障测试。"""
 
 import asyncio
+import copy
 
 import numpy as np
 from openpi_client import msgpack_numpy
@@ -105,6 +106,7 @@ class FakePolicy:
     def __init__(self):
         self.calls = []
         self.done = None
+        self.rng = np.random.default_rng(42)
     def record(self, operation):
         self.calls.append(operation)
         if self.done is not None:
@@ -117,7 +119,7 @@ class FakePolicy:
     def infer(self, obs):
         assert "eval_rpc" not in obs
         self.record("infer")
-        return {"actions": np.zeros((20, 8), np.float32)}
+        return {"actions": self.rng.standard_normal((20, 8)).astype(np.float32)}
 
 
 async def rpc(socket, obs):
@@ -138,12 +140,44 @@ def test_real_socket_single_connection_release_and_reconnect():
                 for obs in (reset(), batch(), infer()):
                     result = await rpc(first, obs)
                     assert result["eval_rpc"] == obs["eval_rpc"]
+                continuation = batch()
+                continuation.update(images=np.zeros((16, 2, 2, 3), np.uint8), state=np.zeros((16, 8), np.float32))
+                continuation["eval_rpc"].update(batch_seq=1, first_global_frame=1, frame_count=16,
+                                                payload_sha256=payload_sha256(continuation))
+                assert (await rpc(first, continuation))["add_buffer_finished"]
+                replanning = infer()
+                replanning["eval_rpc"].update(replan_seq=1, last_global_frame=16)
+                assert "actions" in await rpc(first, replanning)
                 released = await rpc(first, {"release_attempt": True, "eval_rpc": {"episode_nonce": "episode"}})
                 assert released["release_attempt_finished"] and released["quiescent"]
             async with connect(uri) as next_client:
                 assert msgpack_numpy.unpackb(await next_client.recv()) == META
                 assert (await rpc(next_client, {"release_attempt": True, "eval_rpc": {"episode_nonce": "unused-attempt"}}))["quiescent"]
-        assert policy.calls == ["reset", "add_buffer", "infer"]
+        assert policy.calls == ["reset", "add_buffer", "infer", "add_buffer", "infer"]
+    asyncio.run(scenario())
+
+
+def test_real_socket_rejects_continuation_before_infer_without_mutation():
+    async def scenario():
+        policy = FakePolicy()
+        server = WebsocketPolicyServer(policy, metadata=META)
+        async with serve(server._handler, "127.0.0.1", 0) as listener:
+            uri = f"ws://127.0.0.1:{listener.sockets[0].getsockname()[1]}"
+            async with connect(uri) as socket:
+                await socket.recv()
+                assert (await rpc(socket, reset()))["reset_finished"]
+                assert (await rpc(socket, batch()))["add_buffer_finished"]
+                rng_before = copy.deepcopy(policy.rng.bit_generator.state)
+                continuation = batch()
+                continuation.update(images=np.zeros((16, 2, 2, 3), np.uint8), state=np.zeros((16, 8), np.float32))
+                continuation["eval_rpc"].update(batch_seq=1, first_global_frame=1, frame_count=16,
+                                                payload_sha256=payload_sha256(continuation))
+                rejected = await rpc(socket, continuation)
+                assert rejected["error"] == "contract_violation" and rejected["rpc_executed"] is False
+                assert "先infer" in rejected["message"]
+                assert policy.calls == ["reset", "add_buffer"]
+                assert policy.rng.bit_generator.state == rng_before
+        assert policy.calls.count("add_buffer") == 1 and policy.calls.count("infer") == 0
     asyncio.run(scenario())
 
 
