@@ -285,7 +285,7 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 <p>禁触路径：<code>third_party/robomme_benchmark/src/robomme/</code> 及整个 benchmark 子模块内容、<code>AGENTS.md</code>／<code>CLAUDE.md</code>／<code>greatlakes.md</code>、现有训练 resolved 配置、checkpoint、packed store 与上游 MotionJEPA 源码。依赖如确需变更，应先形成单独差异和目标 runtime 证据，不在此计划预设升级。</p>
 <h2 id="queue-detail">五、动态队列：身份、持久化与崩溃边界</h2>
 <h3>5.1 一模型一阶段与稳定混排</h3>
-<p>当前只评估当前 Stage2 motion VLA 的 60000 checkpoint。清单可为未来经用户指定的多个模型保留顺序配置；当前模型全部已接受或明确停止之前不开放其他模型，worker 不跨模型偷取，server／sidecar 因而常驻。</p>
+<p>阶段II正式队列只评估当前Stage2 motion VLA的60000 checkpoint。阶段I另有已批准的validation20000早期11局，使用独立run、清单与收据，不进入正式60000的accepted／score。未来多个模型仅按用户指定顺序开放；同一run的当前模型全部已接受或明确停止前不开放其他模型，worker不跨模型领取，server／sidecar因而常驻。</p>
 <p>先以 episode 编号为外循环、官方 task 顺序为内循环生成 800 项，再每 5 项切块，得到 160 块。这个固定 round-robin 让不同任务交错，不依赖事先知道耗时；每块内可跨任务，因此仿真进程每局创建并关闭对应 builder 环境。</p>
 <p>任务身份至少绑定 <code>model_id</code>、VLA checkpoint 完整 SHA 清单、config SHA、model seed、benchmark commit、episode manifest SHA、eval code commit、目标合同 SHA。chunk_id 还绑定成员序列；attempt_id 再绑定 generation、attempt 编号、JobID／StepID、worker UUID。输出目录名称不是身份凭据。</p>
 <h3>5.2 建议目录布局</h3>
@@ -370,7 +370,7 @@ exec 窗口 = [f…f+32]，必须全部已接收，禁止补帧
 <tr><td>释放纪律</td><td>只按本轮 <code>hold-jobs.txt</code> 中确切 JobID 逐一取消。</td><td>禁 <code>scancel -u</code>、按名称批量取消、触碰其他会话作业。</td></tr>
 </tbody></table>
 <h3>6.2 命令设计与真实执行边界</h3>
-<p class="warn">以下是接口设计，不是执行记录。阶段I已获授权；保留已冻结CLI兼容名：server用<code>--eval-target-contract</code>与<code>--model-binding</code>，bind-model用<code>--target-contract</code>，内容均为新runtime schema，文件名可用eval_runtime_contract.json；不增别名层。整合后按真实--help验证。阶段II正式800仍待开工，GPU／仿真仅在GL计算step。</p>
+<p class="warn">以下是运行手册，不是执行记录。server参数按固定B提交<code>5a0a744</code>的<code>Args／main</code>、绑定输出按固定C提交<code>f309422</code>的<code>bind_model</code>核对：兼容名仍为<code>--eval-target-contract</code>／<code>--model-binding</code>和bind-model的<code>--target-contract</code>，内容为新runtime schema，不增别名层。以下完整示例对应阶段II production60000，尚未获得该阶段开工令；阶段I validation20000必须使用独立run及模型绑定。GPU／仿真仅在GL计算step。</p>
 <pre><code># 在未来 NFS eval 副本，先定义本任务变量；仅示意
 EVAL_ROOT=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval
 : "${EVAL_CODE_COMMIT:?先指定已审定代码commit C}"
@@ -454,12 +454,24 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <p>占位与srun均用<code>--gpu_cmode=shared</code>。先一个job做恢复和单局smoke，随后两个job各五局chunk；提交、分配、真实负载起跑分开记录，不把占位RUNNING称为已跑策略。</p>
 <h3>6.5 server、worker 与 controller 拟入口</h3>
 <pre><code># 由计算 step 内的 wrapper 执行，继承 Slurm 的 CUDA_VISIBLE_DEVICES
-# motion-online-gpu及eval运行合同参数须与整合后的真实--help核对。
+# 本段沿用6.2的EVAL_RUN／POLICY_PY／STAGE2_PY与inputs/run.json。
+# 变量由已核绑定与worker分配记录提供，不生成新的run身份或随机替代值。
+: "${EVAL_SERVER_PORT:?先提供本worker已探测可用且登记的端口}"
+: "${CUDA_VISIBLE_DEVICES:?必须继承本Slurm单GPU分配token}"
+: "${EVAL_CONFIG_NAME:?先提供该模型已核配置名}"
+: "${EVAL_CHECKPOINT:?先提供已核60000 checkpoint实体目录}"
+: "${EVAL_RUN_IDENTITY_SHA256:?取inputs/run.json中run_identity_sha256原值}"
+: "${EVAL_SERVER_NONCE:?先提供本worker本次server的已登记nonce}"
+: "${EVAL_WORKER_UUID:?先提供pool登记的本worker UUID}"
 "$POLICY_PY" scripts/training/serve_policy.py \
   --port "$EVAL_SERVER_PORT" --seed 42 \
   --motion-online-gpu "$CUDA_VISIBLE_DEVICES" \
   --stage2-python "$STAGE2_PY" \
   --eval-target-contract "$EVAL_RUN/contracts/eval_runtime_contract.json" \
+  --model-binding "$EVAL_RUN/inputs/run.json" \
+  --run-identity-sha256 "$EVAL_RUN_IDENTITY_SHA256" \
+  --server-nonce "$EVAL_SERVER_NONCE" --worker-uuid "$EVAL_WORKER_UUID" \
+  --eval-purpose production --checkpoint-step 60000 \
   policy:checkpoint --policy.config "$EVAL_CONFIG_NAME" --policy.dir "$EVAL_CHECKPOINT"
 
 # 拟新增：worker 管理常驻模型与每块仿真子进程，不要另手动重复启动 server。
@@ -478,7 +490,7 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
   --run-root "$EVAL_RUN" --expect-tasks 16 --expect-episodes 800 \
   --require-zero-errors --require-no-uncertain-terminal
 </code></pre>
-<p>server 示例说明底层接口，实际由 worker 拥有其完整生命周期；不能同时手动执行与 wrapper 执行而产生两个 server。端口由每个 worker 独立分配并写入登记，客户端限本计算节点访问；metadata 必须与所连 server 身份匹配。</p>
+<p>server由worker拥有完整生命周期，不能再手动并起第二个server。<code>--model-binding</code>精确消费6.2 bind-model的同一<code>--out "$EVAL_RUN/inputs/run.json"</code>；<code>EVAL_RUN_IDENTITY_SHA256</code>必须从该已签封文件读取，不能自填。端口、nonce、worker UUID来自本worker分配记录，client核相同身份。阶段I20k改用独立<code>EVAL_RUN</code>／20000模型清单，以bind-model的<code>--validation</code>生成该run自己的inputs/run.json，并传<code>--eval-purpose validation --checkpoint-step 20000</code>；其余身份／合同参数同样完整核验，不能消费production60000绑定。</p>
 <p>client由 <code>SIM_PY</code> 执行，新增expected_run_identity_sha256、expected_server_nonce、model_seed、drain_file和RPC序号字段；每局之间检查drain，退出码0完整正常／2 infra error／3 drain。环境终局先持久terminal outcome；随后视频／日志关闭并算SHA发布独立artifact receipt，不将仍在写的视频当完成文件，也不因产物失败重跑已终局policy。</p>
 <h3>6.6 监控、预算与结束</h3>
 <p>主会话保留唯一资源账本：全部pool JobID、membership、pool_revision、desired_jobs、状态、节点、GPU UUID、worker／server／sidecar／sim PID、当前 stage／chunk／episode、已接受数、错误／重试数、剩余 walltime。长任务在受管 detached 会话中运行，日志落 NFS；监控不得另起一份计算来“确认”。</p>
@@ -589,7 +601,7 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <h3>10.1 本计划交付自检</h3>
 <div class="note"><strong>实施记录（美东2026-10-26，现行正文已同步）：</strong>阶段I、Aspen／GreatLakes、状态机登记、20k运行名和两个独立A40各4CPU／24GiB／48h已批；最新11局及取消跨硬件数值前置见下节。阶段II正式800未开工。证据见阶段I README与20k launch。</div>
 <h3>实施中调整：在线输入原子性准确写集</h3>
-<p>独立CPU oracle在固定基线发现9项非法输入拒绝／状态污染失败。按第四章的写集裁定，由独立E owner仅修改<code>framesamp_memory.py::add_buffer</code>和<code>policy.py::MME_VLA_Policy.add_buffer</code>：整批输入校验前置、既有段边界赋值延后；不改窗口／编码／合法数值链，不新增回滚层、状态或开关。独立对抗审查为<code>ADJUST_REVIEW=PASS scale=same findings=2</code>。合法包逐键字节一致、非法包失败零写入仍须修后实测；首包严格<code>D+1</code>和边界整数类型不放宽。合前遗漏交原owner续修，未将作者首版通过数字当成最终验收。</p>
+<p>独立CPU oracle在固定基线发现9项非法输入拒绝／状态污染失败。按第四章的写集裁定，E仅改<code>framesamp_memory.py::add_buffer</code>和<code>policy.py::MME_VLA_Policy.add_buffer</code>：整批校验前置、既有段边界赋值延后，不改窗口／编码／合法数值链，不增状态或回滚层。调整审查为<code>ADJUST_REVIEW=PASS scale=same findings=2</code>。合前首包／边界类型遗漏已在E提交<code>f3497ab109aac3542e16b82d4c9bf0266943285f</code>修正并独立审查；配对D提交<code>8bd4f3600fb9f2416d9efb68373e8b328a5639f3</code>，190项CPU通过、57.78秒、退出0，<code>INPUT_ATOMICITY=PASS total=190</code>、<code>LEGAL_BUFFER_BYTES=PASS</code>。证据只覆盖替身编码条件下的合法包字节与非法输入零写入，不证明真实VAE／EMA或训练梯度。</p>
 <h3>已批准的实施中调整：取消跨硬件数值前置，执行20k共11局</h3>
 <p>用户完整原话为「同意这么做。然后这个A100和40的问题你不用再关心了。」「不需要做到跨硬件的数值性一致。」前一轮探索例外审查为<code>ADJUST_REVIEW=PASS scale=same findings=4</code>；最新简化方案独立复核为<code>ADJUST_REVIEW=PASS scale=same findings=0 blocking=0</code>，覆盖前案新增用途／证书分支的设计。授权已清楚，无需再次确认；阶段II正式800仍未获开工。</p>
 <p>原方案要求A100参考数组、跨卡阈值及目标证书；新方案沿既有validation20000与严格来源恢复，记录实际硬件，同机有限值／重复性与真实IPC验证，跨硬件统一NOT_REQUIRED reason=user_decision。原料SHA／EMA／source／VAE／软件精度、完整模型成员／resolved／normstats仍严格；无eval参数的训练strict路径不动。删除签发器、可信参考包、首次证书循环、fixture pin及exploratory_validation新增用途，不叠加保护层。</p>
