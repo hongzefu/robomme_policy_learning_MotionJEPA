@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T16:56:02Z",
-    "america_new_york": "2026-10-27T12:56:02-0400"
+    "utc": "2026-10-27T17:13:54Z",
+    "america_new_york": "2026-10-27T13:13:54-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -659,9 +659,9 @@
       "pre_handoff": [
         {
           "what": "纯512 60k checkpoint按SHA256SUMS.pre核验23文件",
-          "evidence": "",
+          "evidence": "sha256sum -c 23/23 OK，SHA_EXIT=0",
           "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/off800-512-60k/sha60000.check",
-          "status": "pending"
+          "status": "pass"
         },
         {
           "what": "10片均SHARD_DONE且EXIT_CODE=0，800局汇总",
@@ -679,9 +679,54 @@
       "long_tail": [],
       "running_handles": [
         {
-          "tmux": "-",
-          "log": "greatlakes squeue -u hongzefu",
-          "done_line": "占位JobID 64885734-64885743（spgpu 1×A40/4CPU/24G/48h，美东12:54全部RUNNING）"
+          "tmux": "gl-login2:xh-off800-512-pool-64885734",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-512-pool-64885734.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "gl-login2:xh-off800-512-pool-64885735",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-512-pool-64885735.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "gl-login2:xh-off800-512-pool-64885736",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-512-pool-64885736.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "gl-login2:xh-off800-512-pool-64885737",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-512-pool-64885737.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "gl-login2:xh-off800-512-pool-64885738",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-512-pool-64885738.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "gl-login2:xh-off800-512-pool-64885739",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-512-pool-64885739.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "gl-login2:xh-off800-512-pool-64885740",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-512-pool-64885740.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "gl-login2:xh-off800-512-pool-64885741",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-512-pool-64885741.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "gl-login2:xh-off800-512-pool-64885742",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-512-pool-64885742.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "gl-login2:xh-off800-512-pool-64885743",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/policy-eval/off800-512-pool-64885743.log",
+          "done_line": "EXIT_CODE="
         }
       ],
       "authorizations": [
@@ -700,8 +745,8 @@
       ],
       "next_steps": [
         {
-          "what": "SHA核验PASS后在GL登录节点每份占位起tmux跑gl_hold_pool.sh（MANIFEST=official800-512/manifest.tsv，QUEUE_DIR=official800-512/queue，EVAL_SEED=42，EVAL_MAX_STEPS=1300）",
-          "command": "见eval-off800-1019/launch.md第六节命令，仅换MANIFEST/QUEUE_DIR",
+          "what": "10片完成后汇总800局、逐个scancel 64885734-64885743、精确清理gl-login2的xh-off800-512-pool-*会话、写档案",
+          "command": "队列 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/official800-512/queue/done",
           "verdict_line": "QUEUE_SHARD_DONE … rc=0 ×10"
         }
       ]
