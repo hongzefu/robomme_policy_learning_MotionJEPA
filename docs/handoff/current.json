@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T05:01:47Z",
-    "america_new_york": "2026-10-27T01:01:47-0400"
+    "utc": "2026-10-27T05:21:34Z",
+    "america_new_york": "2026-10-27T01:21:34-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "9dfc391bc1427be1c3c8b2f610ec81f9f0d00caa",
+    "base_head": "789ef0e5e9c241dd0f8bca11f2c3b885edc52e39",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -22,17 +22,19 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-27T05:01:47Z",
-      "state_reason": "用户批准简化方案重新开工：保留弹性worker队列，先真实单局再两卡十局，不再堆叠功能校验。新hold64855345、64855348均运行；B简化服务入口，C收缩队列，旧作业保持已取消，旧失败日志与独立修复分支保留。",
+      "state_reason": "简化B/C及两行WebSocket心跳修复已合并推送，固定789ef0e执行。首个客户端缺包attempt未开始局，按官方锁定server组补齐3包；随后BinFill0首次推理遇到默认心跳超时，动作0无终局。当前64855345.step2执行该已开始局唯一基础设施重试，尚未终局。十局队列已初始化，控制器等待，未启动两卡评估；两个hold仍运行。",
       "owner": {"session": "01a17b42-9de4-72b3-b0ed-1be85f58fb26", "host": "sled-aspen.eecs.umich.edu"},
       "depends_on": [],
       "pre_handoff": [
-        {"what": "计划一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f findings=0 blocking=0", "where": "git:2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f:1026-official-benchmark-stage2-eval-plan.html", "status": "pass"},
-        {"what": "阶段一代码、独立审查与CPU核心验证", "evidence": "", "where": "docs/evaluation-doc/official-stage2-phase1-1026/", "status": "pending"},
-        {"what": "NFS与三解释器现场检查、可用资产与待验门清单", "evidence": "NFS_ENV_IMPORT=PASS role=policy；NFS_ENV_IMPORT=PASS role=stage2；NFS_ENV_IMPORT=PASS role=official-sim；EXIT_CODE=0。仅import，不含渲染与新release路径。", "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/logs/env-probe.log", "status": "pending"},
-        {"what": "用户追加早期20k单局及双卡分片验证与资源释放", "evidence": "HOLD_POOL=PASS jobs=2 running=2 reserved_gpu_hours=96；模型、数值、仿真与分片未验。", "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/", "status": "pending"}
+        {"what": "简化方案一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=4f1c09484217f2937c180fcb5a9384768822c82b findings=0 blocking=0", "where": "git:9dfc391bc1427be1c3c8b2f610ec81f9f0d00caa:1027-stage2-simple-elastic-eval-plan.html", "status": "pass"},
+        {"what": "简化服务、弹性队列与必要连接短测", "evidence": "SIMPLE_QUEUE=PASS tests=3；整合后队列及真实WebSocket定向4项通过0.24秒；B/C/心跳修复独立审查均PASS", "where": "git:789ef0e5e9c241dd0f8bca11f2c3b885edc52e39", "status": "pass"},
+        {"what": "真实单局完整执行并独立报告任务成功字段", "evidence": "SINGLE_EP_SMOKE=RUNNING job=64855345 step=2 code=789ef0e；旧infra动作0，无终局，未伪报成功率", "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/official-stage2-20k-probe-1026-a/simple-1027/smoke1-episode-retry1.log", "status": "pending"},
+        {"what": "两卡十局覆盖、成绩汇总及精确作业释放", "evidence": "队列READY completed=0 episodes=10；两卡阶段未起跑", "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027/shards10/", "status": "pending"}
       ],
       "long_tail": [],
       "running_handles": [
+        {"tmux": "eval-simple-1027-smoke1-episode-retry1", "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/official-stage2-20k-probe-1026-a/simple-1027/smoke1-episode-retry1.log", "done_line": "EXIT_CODE="},
+        {"tmux": "eval-simple-1027-controller", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027/shards10/logs/controller.log", "done_line": "EXIT_CODE="},
         {"tmux": "", "job_id": "64855345", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/logs/hold-simple-64855345.log", "done_line": "Slurm终态并释放"},
         {"tmux": "", "job_id": "64855348", "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/logs/hold-simple-64855348.log", "done_line": "Slurm终态并释放"}
       ],
@@ -53,7 +55,7 @@
       ],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "先整合简化服务入口，启动真实单局；队列并行收缩，随后两卡十局", "command": "按1027简化计划，使用新hold64855345/64855348", "verdict_line": "SINGLE_EP_SMOKE=PASS；SIMPLE_QUEUE=PASS；TWO_WORKER_EVAL=PASS"}
+        {"what": "观察当前单局终局，不自行追加同局重试；链路完整后启动两卡十局", "command": "固定789ef0e，按simple-1027/run-worker.sh分别启动worker-1与worker-2，使用64855345/64855348；共享shards10队列", "verdict_line": "SINGLE_EP_SMOKE=PASS；SIMPLE_QUEUE=PASS；TWO_WORKER_EVAL=PASS"}
       ]
     },
     "mixed8-vla-stage2-1024-train": {
