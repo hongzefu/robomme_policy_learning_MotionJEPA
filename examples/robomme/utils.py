@@ -36,8 +36,15 @@ TASK_NAME_LIST=  [
 ]
 
 def pack_buffer(image_buffer, state_buffer, exec_start_idx=0):
-    image_output = np.stack(image_buffer, axis=0).astype(np.uint8)[:, None]
-    state_output = np.stack(state_buffer, axis=0).astype(np.float32)
+    if not image_buffer or len(image_buffer) != len(state_buffer):
+        raise ValueError("历史图像与状态必须非空且逐帧对齐")
+    image_output = np.stack(image_buffer, axis=0)
+    state_output = np.stack(state_buffer, axis=0)
+    if image_output.dtype != np.uint8 or image_output.shape[1:] != (256, 256, 3):
+        raise ValueError("历史 front 必须是 (T,256,256,3) uint8 原始像素")
+    if state_output.dtype != np.float32 or state_output.shape != (len(image_buffer), 8):
+        raise ValueError("历史 state 必须是 (T,8) float32")
+    image_output = image_output[:, None]
     return {
         "images": image_output,
         "state": state_output,
@@ -71,7 +78,7 @@ class EpisodeState:
         self.image_buffer.clear()
         self.wrist_image_buffer.clear()
         self.state_buffer.clear()
-        self.exec_start_idx = 0
+        # D 是整局稳定的 demo 边界，不随续包清空而归零。
 
     def get_current_obs(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         return self.image_buffer[-1], self.wrist_image_buffer[-1], self.state_buffer[-1]
