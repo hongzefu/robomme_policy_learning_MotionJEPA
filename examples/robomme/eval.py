@@ -142,7 +142,10 @@ class EpisodeEvaluator:
         epstate.state_buffer.extend(states)
         epstate.exec_start_idx = len(images) - 1
         self.budget = validate_budget(epstate.exec_start_idx)
-        pack_buffer(images, states, epstate.exec_start_idx)
+        try:
+            pack_buffer(images, states, epstate.exec_start_idx)
+        except ValueError as exc:
+            raise ContractError("reset 历史图像或状态不符合输入合同") from exc
         try:
             self.recorder = RolloutRecorder(video_save_dir, pre_traj["task_goal"], fps=30)
         except Exception:
@@ -155,7 +158,10 @@ class EpisodeEvaluator:
     def get_action_chunk(self, client, state, img, wrist_img, robot_state, prompt, exec_horizon):
         from scripts.evaluation.runtime_contract import payload_sha256
 
-        payload = pack_buffer(state.image_buffer, state.state_buffer, state.exec_start_idx)
+        try:
+            payload = pack_buffer(state.image_buffer, state.state_buffer, state.exec_start_idx)
+        except ValueError as exc:
+            raise ContractError("历史续包图像或状态不符合输入合同") from exc
         frame_count = len(state.image_buffer)
         if self.batch_seq == 0 and frame_count != state.exec_start_idx + 1:
             raise ContractError("首包必须完整包含 D+1 帧")

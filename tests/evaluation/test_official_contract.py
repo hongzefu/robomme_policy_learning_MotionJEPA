@@ -206,6 +206,38 @@ def test_stale_ack_is_rejected_without_polling():
         candidate.require_ack({"reset_finished": False}, "reset_finished", {"episode_nonce": "x"})
 
 
+@pytest.mark.parametrize("field,value", [("images", IMAGE.astype(np.float32)),
+                                         ("states", STATE.astype(np.float64)),
+                                         ("states", np.zeros(7, np.float32))])
+def test_invalid_initial_payload_is_nonretryable_before_action(tmp_path, monkeypatch, field, value):
+    args = args_for(tmp_path)
+    original = FrozenRunner.get_init_obs
+    def invalid_obs(self):
+        observation = original(self)
+        observation[field] = [value] * len(observation[field])
+        return observation
+    monkeypatch.setattr(FrozenRunner, "get_init_obs", invalid_obs)
+    assert candidate.evaluate(args, runner_factory=FrozenRunner, client_factory=FakeClient) == 2
+    error = json.loads((Path(args.attempt_output) / "BinFill:0.infra.json").read_text())
+    assert error["error_type"] == "ContractError"
+    assert error["retryable"] is False
+    assert error["actions_executed"] == 0
+    assert "ValueError" in error["error"]
+    assert "direct cause" in error["error"]
+    assert FrozenRunner.created[0].count == 0
+
+
+def test_invalid_replan_payload_preserves_input_error_chain(tmp_path):
+    evaluator = candidate.EpisodeEvaluator(candidate.Args(), tmp_path)
+    evaluator.batch_seq = 1
+    state = EpisodeState()
+    state.image_buffer = [IMAGE.astype(np.float32)] * 16
+    state.state_buffer = [STATE] * 16
+    with pytest.raises(candidate.ContractError) as raised:
+        evaluator.get_action_chunk(FakeClient(), state, IMAGE, WRIST, STATE, "prompt", 16)
+    assert isinstance(raised.value.__cause__, ValueError)
+
+
 @pytest.mark.parametrize("key", ["model_seed", "model_kind", "run_identity_sha256", "server_nonce"])
 def test_metadata_wrong_before_environment(tmp_path, key):
     args = args_for(tmp_path)
