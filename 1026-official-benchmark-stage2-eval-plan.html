@@ -145,7 +145,7 @@ q = 0, 16, 32, 48, 64  →  exec 窗口数 = 0, 0, 1, 1, 2
 <tr><td>II<br>T−2h 至收官</td><td>从aspen／vail按目标NFS到位ETA提前两小时按desired_jobs对账配置资源池；首个RUNNING席位补A40门。60k完整就绪、strict restore、固定seed动作检查和全部必需门禁齐后，在GL节点启动目标数量worker，核800覆盖并释放。</td><td>schedule防重复；排队不要求A40证书，正式launch必须具备。实际N受批准包络与配额约束。</td></tr>
 </tbody></table>
 <h3>子代理分工与合并（简述）</h3>
-<p>未来阶段 I 在aspen／vail拟分client、runtime、queue、GL四个代码owner，另设独立审查；全部子代理使用 <code>gpt-6-astra / high</code>、独立worktree、不递归。共享协议先定，runtime／queue基础接口先合，client／GL联调后合；每次合前审可写集合，合后审完整语义。两阶段的GL GPU运行都由同一资源负责人从aspen／vail编排。</p>
+<p>未来阶段 I 在aspen／vail拟分client、runtime、queue、GL四个代码owner，另设独立审查；子代理模型按职责、按宿主显式指定：写代码 Claude Code <code>opus</code>／Codex Sol，均独立worktree；审查 <code>sonnet</code>／Sol，只读；只读探索 <code>haiku</code>／Luna；资源与运行 <code>opus</code>／Sol，不加worktree；Codex 子代理推理强度不低于 <code>high</code>；均不递归，对照表详见 8.1。共享协议先定，runtime／queue基础接口先合，client／GL联调后合；每次合前审可写集合，合后审完整语义。两阶段的GL GPU运行都由同一资源负责人从aspen／vail编排。</p>
 <p class="note">独立阶段 I 合同审查只说明设计可实施；它不构成开工令，也不代表最终 HTML、代码、真实 IPC、A40 数值或任何评估已通过。本计划不把该设计审查写作实施完成证据。</p>
 <p>详细风险、已修设计与仍待实测项另见 <a href="1026-official-benchmark-eval-adversarial-review.html">官方评估计划对抗审查报告</a>；该报告与本计划配套阅读，审查通过不替代目标环境数值、资源或正式800局验收。</p>
 <p class="warn">仍待验证：目标 A40 的软硬件数值合同、单卡能否同时容纳 VLA／VAE／仿真、全官方 800 局的 demo 预算，以及真实 16 帧调用节奏。现有训练闸门和旧评估分支都不能替代这些验收。下面第二部分给出逐文件设计、精确接口、拟命令与停点。</p>
@@ -579,7 +579,16 @@ srun --jobid="$EVAL_JOB_ID" --overlap --exact --ntasks=1 \
 <tr><td>II<br>T−2h 排队至收官</td><td>从aspen／vail据训练和交付证据更新ETA_ready，T−2h按目标N对账配置hold池；首个RUNNING席位补A40门；60000完整manifest＋strictrestore＋固定seed动作检查后在GL运行，最后800局汇总、留档、释放。</td><td>提交只依赖schedule最小门；正式launch另要求全部必需门禁、60k与finalrun。N可按批准包络增减，不自动续48h；所有job都在GL节点运行。</td><td>FULL_COVERAGE／OFFICIAL_BUDGET／OFFICIAL_SCORE／RESOURCE_RELEASE；授权登记后如实交接。</td></tr>
 </tbody></table>
 <h3>8.1 子代理分配表</h3>
-<p>下表是未来实施的建议派发合同；全部使用 <code>gpt-6-astra / high</code>，不递归。每个 agent 从同一已审基线创建独立 <code>worktree-agent-eval-&lt;id&gt;-&lt;date&gt;</code> 分支，提交使用 <code>sub/&lt;id&gt;:</code>；主会话审核后按依赖 <code>--no-ff</code> 合入 eval 分支，保留子提交，不直接合回训练主分支。</p>
+<p>下表是未来实施的建议派发合同；模型按下方「模型口径对照」按职责、按宿主显式指定，不递归。写入型 agent 从同一已审基线创建独立分支：Claude Code 由宿主 <code>isolation: "worktree"</code> 创建 <code>worktree-agent-&lt;id&gt;</code>（worktree 位于 <code>.claude/worktrees/agent-&lt;id&gt;/</code>），Codex 手建 <code>worktree-agent-eval-&lt;id&gt;-&lt;date&gt;</code>；提交使用 <code>sub/&lt;id&gt;:</code>；主会话审核后按依赖 <code>--no-ff</code> 合入 eval 分支，保留子提交，不直接合回训练主分支。</p>
+<p><b>模型口径对照</b>（AGENTS.md 第 26 条；本计划在 aspen／vail 实施，Codex 属非 AWS 口径）：</p>
+<table><thead><tr><th style="width:22%">编号／职责</th><th style="width:16%">Claude Code</th><th style="width:28%">Codex（aspen／vail）</th><th>隔离</th></tr></thead><tbody>
+<tr><td>A／B／C／G 写代码</td><td><code>opus</code></td><td>Sol（vail 实际为 <code>gpt-6.1-sol</code>；aspen 按宿主实际暴露的 GPT-6／6.1 系 Sol 型号显式指定）</td><td>独立 worktree</td></tr>
+<tr><td>D 独立验收／审查</td><td><code>sonnet</code></td><td>Sol</td><td>只读、不加 worktree；若 D 需写测试文件，写测试部分按写入型 <code>opus</code>／Sol + 独立 worktree，审查报告部分由另一个 <code>sonnet</code>／Sol 只读代理出，写入方与审查方不同</td></tr>
+<tr><td>R 资源与运行</td><td><code>opus</code></td><td>Sol</td><td>不加 worktree，在已指定且有环境／产物的主检出或 NFS 集群执行副本启动</td></tr>
+<tr><td>只读探索</td><td><code>haiku</code></td><td>Luna（<code>gpt-6-luna</code>）</td><td>只读</td></tr>
+<tr><td>合并前后审查</td><td><code>sonnet</code></td><td>Sol</td><td>只读，钉死 <code>BASE</code>／<code>TIP</code> sha</td></tr>
+</tbody></table>
+<p>Codex 子代理推理强度不低于 <code>high</code>，只用 GPT-6／6.1 系列；AWS Codex 专属覆盖为全部 <code>gpt-6-astra</code> + <code>ultra</code>，本计划不在 AWS 实施。两宿主均每次显式指定模型、不继承父模型，模型不可用即停止该项派发并报告，不静默换档；同一 finding 只派一个审查者。</p>
 <table><thead><tr><th style="width:10%">编号／目标</th><th style="width:24%">可写集合</th><th style="width:22%">禁触／共享归属</th><th style="width:25%">接口、顺序与验收</th><th>资源与运行边界</th></tr></thead><tbody>
 <tr><td>A<br>官方评估入口</td><td><code>examples/robomme/{eval.py,env_runner.py,utils.py}</code>；<code>tests/evaluation/test_official_contract.py</code>。</td><td>禁 benchmark、motion 实现、调度器；task/result schema 归主会话。</td><td>消费固定 manifest 与 metadata；runtime／queue 基础接口稳定后联调合入；CPU 官方 trace <code>OFFICIAL_PARITY</code>。</td><td>0 GPU；不占端口、不起仿真；run 前缀 <code>eval-a</code>。</td></tr>
 <tr><td>B<br>runtime</td><td><code>scripts/training/serve_policy.py</code>；policy_config／motion_client／websocket_policy_server；<code>scripts/evaluation/{runtime_contract,check_runtime,check_motion_consistency,measure_target_runtime}.py</code>与测试。</td><td>禁policy.py／framesamp_memory.py数值语义、原训练checkpoint检查器与训练YAML／权重／store／benchmark；缺陷补丁另裁定。</td><td>分层身份、单活动RPC、三解释器与eval check_restore合同；CPU fixture和独立数值重算器先合，D审核。</td><td>代码owner不占GPU；真实fixture由R在阶段I授权GL席位或II首hold统一起；前缀eval-runtime。</td></tr>
