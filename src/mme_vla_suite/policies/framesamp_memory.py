@@ -127,26 +127,44 @@ class FrameSampMemory:
         step_idx_list: list[int],
         exec_start_idx: int | None = None,
     ):
+        # 整包预检必须在任何缓冲写入前完成；这里只拒绝输入错误，不回滚编码器运行故障。
+        if getattr(images, "ndim", None) != 5 or images.shape[1] != self.num_views or images.shape[-1] != 3:
+            raise ValueError(f"images 须为 (t, {self.num_views}, h, w, 3)")
         t, v, _, _, _ = images.shape
-        assert v == self.num_views
+        if t == 0 or len(step_idx_list) != t:
+            raise ValueError("images 与 step_idx_list 必须等长且非空")
+        if images.dtype != np.uint8:
+            raise ValueError("images 必须为 uint8")
+        if getattr(states, "shape", None) != (t, self.state_emb_dim) or states.dtype != np.float32:
+            raise ValueError(f"states 须为 ({t}, {self.state_emb_dim}) float32")
 
         for step_idx in step_idx_list:
             # 有效域上界显式 raise：pos 表只有 max_steps 行，numpy 切片越界会静默
             # 返回空数组、坏数据一路流到装配层——禁止依赖切片行为
-            if step_idx >= self.max_steps:
+            if isinstance(step_idx, (bool, np.bool_)) or not isinstance(step_idx, (int, np.integer)):
+                raise ValueError("step_idx 必须为整数")
+            if step_idx < 0 or step_idx >= self.max_steps:
                 raise ValueError(
                     f"step_idx {step_idx} 超出记忆有效域 [0, {self.max_steps})"
                 )
             if step_idx in self._history_feats:
                 raise ValueError(f"step_idx {step_idx} already in buffer")
+        if list(step_idx_list) != list(range(self.n_steps, self.n_steps + t)):
+            raise ValueError(f"step_idx 必须从 {self.n_steps} 起连续递增，禁止重复、乱序或缺帧")
 
         if self.motion_enabled:
             # 运动路入库前校验：段边界必须下传；原始帧必须是 256 域（喂 224 / 512 网络照样能算、结果却与训练不同，属静默错配）
             # 先全部校验、后写状态（校验失败的批不得留下 exec_start_idx / 原始帧等半截状态）
             if exec_start_idx is None:
                 raise ValueError("motion 开启时 add_buffer 必须显式传 exec_start_idx（段边界下传）")
+            if (isinstance(exec_start_idx, (bool, np.bool_))
+                    or not isinstance(exec_start_idx, (int, np.integer))
+                    or not 0 <= exec_start_idx < self.max_steps):
+                raise ValueError(f"exec_start_idx 必须为 [0, {self.max_steps}) 内的整数")
             if self.exec_start_idx is not None and int(exec_start_idx) != self.exec_start_idx:
                 raise ValueError(f"exec_start_idx 变化: 已保存 {self.exec_start_idx} → 本批 {exec_start_idx}")
+            if self.exec_start_idx is None and t < exec_start_idx + 1:
+                raise ValueError("首包必须包含完整 demo 及 exec 第零帧")
             if tuple(images.shape[-3:]) != (self.motion_frame_size, self.motion_frame_size, 3) or images.dtype != np.uint8:
                 raise ValueError(
                     f"原始帧尺寸 {tuple(images.shape[-3:])} {images.dtype} != ({self.motion_frame_size}, {self.motion_frame_size}, 3) uint8")

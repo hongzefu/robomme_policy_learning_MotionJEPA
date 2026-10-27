@@ -121,18 +121,22 @@ class MME_VLA_Policy:
         images = obs["images"]
         states = obs["state"]
         es_in = int(obs.get("exec_start_idx", 0))
+        if es_in < 0:
+            raise ValueError("exec_start_idx 不得为负数")
+        next_exec_start_idx = self.exec_start_idx
         # 段边界状态机（S3 P4）：首批接受真实 es；后续客户端 clear_buffers 后传回的 0 按协议解释为「沿用已保存值」；
         # 后续非零值只有等于已保存值才合法，不同则 raise（Button 首批 / 后续均为 0；Video 首批 66 / 114 / 168 / 216…）
         if es_in > 0:
             if self.step_idx >= 0 and es_in != self.exec_start_idx:
                 raise ValueError(f"exec_start_idx 在 episode 中途变化: 已保存 {self.exec_start_idx} → 本批 {es_in}")
-            self.exec_start_idx = es_in
+            next_exec_start_idx = es_in
         
         step_idx_list = list(range(self.step_idx+1, self.step_idx + len(images) + 1))
         if self.motion_enabled:
-            self.mem_buffer.add_buffer(images, states, step_idx_list, exec_start_idx=self.exec_start_idx)
+            self.mem_buffer.add_buffer(images, states, step_idx_list, exec_start_idx=next_exec_start_idx)
         else:
             self.mem_buffer.add_buffer(images, states, step_idx_list)
+        self.exec_start_idx = next_exec_start_idx
         self.step_idx += len(images)
 
     def _normalize_state(self, state):
