@@ -57,6 +57,7 @@ class EvaluationClient:
         self.packer = msgpack_numpy.Packer()
         self.connection = websockets.sync.client.connect(
             f"ws://{args.host}:{args.port}", compression=None, max_size=None,
+            ping_interval=None,
             open_timeout=self.timeout, close_timeout=min(self.timeout, 10),
         )
         self.ws = self.connection.__enter__()
