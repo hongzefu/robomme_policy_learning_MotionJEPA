@@ -450,3 +450,11 @@ export UV_CACHE_DIR=/scratch/hongze/.cache/uv
 - 初始数据Beta `7ff55d6` 与S1源 `b5d23a5` 保留；后续例外处理另经合前/合后验收形成新版本，不改已抽取token或S1数值代码。备选B与benchmark仍不在范围内。
 
 - **G5省时裁决**：用户原话「同意按照你说过的更省时方案 做\nencoder只抽机小部分」「同意继续」。原全量比较已按精确PID停止，退出130、GPU和encoder锁释放；packed表SHA `8de36e670d58c60859d48b37f29c989f2eed45344f5cd5fb2f7a96126394ee5c` 保留，不重pack或重抽。新策略固定seed0、16任务各64个唯一样本；补帧8是优先配额，随机补齐可选更多尾窗。`SAMPLED_G5_DESIGN_REVIEW=PASS`；认证内容、SHA、抽样范围随run与交付保留，不能冒充全表encoder数值验证。
+
+## 2026-10-27用户终点变更：70k收尾
+
+用户原话：「停止现在的training 收尾 70k够了」。以此覆盖原80k终点和16份交付集合：立即停止训练和增量循环，保留原run名、80k启动配置与真实退出记录；最终选定70000，完整集合为5000至70000共14份。训练及增量于美东12:17:53真实SIGTERM退出143，最后日志指标70900步；不把原80k完成门伪写PASS。
+
+G9改用显式`run_mixed8_200_vla_stage2_1024_user_stop_70k_ckpt_export.sh`，先SMOKE后最终导出；绑定用户stop收据、原Beta、真实143控制日志、14份完整checkpoint和原发布owner，保留既有README/根快照/标记。新增TERMINATION.md、脱敏stop_receipt及最终清单，继续全量匿名SHA核验。原默认80k驱动不放宽。
+
+最终交付恢复门改验70000：`check_stage2_checkpoint.py --mode delivery --delivery-step 70000`，从远端匿名回读的37件实体执行完整SHA、参数树、来源、真实在线infer，成功判定`CKPT_70K_READY=PASS`。原60000默认模式仍保持，但本次最终终点变更后不声称已运行60k的GPU恢复。源码权限/HOLD和R13清理按实际停止后收尾，训练不再继续。

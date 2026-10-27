@@ -1,0 +1,101 @@
+{
+  "schema": "stage2-user-stop-v1",
+  "requested_at": "2026-10-27T16:17:53.656119+00:00",
+  "user_quote": "停止现在的training 收尾 70k够了",
+  "beta": "5730a0cfc7a62036585362a03a8c922f14b4d94f",
+  "run": "mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k",
+  "accepted_final_checkpoint": 70000,
+  "training_process": {
+    "pid": 2780633,
+    "ppid": 2780013,
+    "pgid": 2779991,
+    "start_ticks": 671150482,
+    "argv": [
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python3",
+      "scripts/training/train.py",
+      "mme_vla_suite_b128_80k",
+      "--exp-name",
+      "mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k",
+      "--dataset-path",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/framesamp-8x8",
+      "--assets-base-dir",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+      "--data.assets.assets-dir",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/16task-mixed8-200-3200ep-e3c7564f",
+      "--data.assets.asset-id",
+      "robomme",
+      "--checkpoint-base-dir",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs",
+      "--weight-loader.params-path",
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params",
+      "--model.use-history",
+      "--model.history-config",
+      "perceptual-framesamp-modul-8frame-8x8-motion-stage2-mixed8.yaml"
+    ]
+  },
+  "incremental_process": {
+    "pid": 2781330,
+    "ppid": 2781319,
+    "pgid": 2781311,
+    "start_ticks": 671151371,
+    "argv": [
+      "/scratch/hongze/robomme_policy_learning_MotionJEPA/.venv/bin/python3",
+      "-"
+    ]
+  },
+  "signal": "SIGTERM",
+  "latest_metrics": [
+    "70900",
+    "grad_norm=0.0216, llm_grad_norm=0.0183, loss=0.0019, mem_enc_norm=0.0032, param_norm=1859.7072"
+  ],
+  "logs": {
+    "training": {
+      "path": "v1-store/logs/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k.log",
+      "sha256": "5f96b390ac0e41fc080151841fb0d6c62129233bf924b6854c42ecb3a5026fc5",
+      "bytes": 1109090,
+      "exit_code": null
+    },
+    "control": {
+      "path": "v1-store/logs/vla-s2-20261026/formal80k-control.log",
+      "sha256": "d84e3c1e3c7eaca4c26a5f4d16553a9a1ebbcaf0c843385067db886577c0ff7d",
+      "bytes": 1109287,
+      "exit_code": 143
+    },
+    "incremental": {
+      "path": "v1-store/logs/vla-s2-20261026/vla-inc.log",
+      "sha256": "10f2e64e41287a68676711173222b3471662ed93f8c600bbaf5248962a00b025",
+      "bytes": 61280,
+      "exit_code": 143
+    }
+  },
+  "training_status": "stopped_by_user",
+  "status": "STOPPED_BY_USER",
+  "terminal_step": 70000,
+  "completed_steps": [
+    5000,
+    10000,
+    15000,
+    20000,
+    25000,
+    30000,
+    35000,
+    40000,
+    45000,
+    50000,
+    55000,
+    60000,
+    65000,
+    70000
+  ],
+  "stopped_at": "2026-10-27T16:17:53Z",
+  "processes_exited": true,
+  "last_logged_step": 70900,
+  "terminal_checkpoint_metadata_sha256": "f19744043bf771135b7bc16f40f8dff1e7a2cf484350c48bccad25f343150ded",
+  "terminal_uploaded_marker_sha256": "ef2a27212aad2ad747d149c4fc318f9813df0dd94b3608f26e9bc1003f8d74a0",
+  "publisher_owner": {
+    "bucket": "HongzeFu/robomme-vla-mixed8-200-modul-motion-stage2-1024-80k-v1",
+    "kind": "stage2-vla",
+    "root_manifest_sha256": "10848d66aa3b281d23c8029033bea4ee31d269bf8abd89d69458c5792a7cda42",
+    "run_name": "mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k"
+  }
+}
