@@ -10,7 +10,7 @@
 
 | 目录 | 内容 | 状态 |
 |---|---|---|
-| [mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k](mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/launch.md) | ep105 EMA，4×256拼1×1024，窗33／stride32／budget96；8卡batch128，计划80k | 已授权实施；独立开工审查PASS，运行闸门与正式训练尚未开始 |
+| [mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k](mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/result.md) | ep105 EMA，4×256拼1×1024，窗33／stride32／budget96；8卡batch128，原计划80k，用户终点改为70k | 用户主动停止，完整保留14份checkpoint；70k远端回读及严格在线恢复PASS，最终全量备份核验进行中 |
 
 ### 四对运动 token 训练接入冒烟（2026-10-20）
 

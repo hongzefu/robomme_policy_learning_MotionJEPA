@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T16:35:40Z",
-    "america_new_york": "2026-10-27T12:35:40.351539-04:00"
+    "utc": "2026-10-27T16:52:31Z",
+    "america_new_york": "2026-10-27T12:52:31.992176-04:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "b25fd992f8ed4df74726888a452d87d33a28c86e",
+    "base_head": "d0445ce7b1dac220780c5d6b2bf3bf7b65728e8f",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -20,9 +20,9 @@
         "file": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md",
         "sha": "1383aba0fd77b259f0b32eadb47ea7792190145e"
       },
-      "state": "running",
-      "state_changed_at": "2026-10-27T16:17:53Z",
-      "state_reason": "用户明确停止当前training、70k足够；训练/inc真实SIGTERM退出143，最后完整终点70000，共14份已增量上传/匿名回读。70k远端37文件12218974941字节重新匿名回读SHA零差、严格恢复及真实在线infer已PASS；训练GPU已释放，源码432文件原权限已恢复/HOLD已解除，R13旧测速step119已删除。当前仅最终14份全量备份核验运行，不再训练。",
+      "state": "done",
+      "state_changed_at": "2026-10-27T16:52:31Z",
+      "state_reason": "按用户要求停止并以70k交付：训练/inc真实143，14份完整checkpoint保留；70k远端37文件匿名回读及65叶严格恢复/真实在线infer全部PASS，交接前5项全部pass，所有GPU任务退出。432文件权限/HOLD已恢复，R13旧测速119已删除，W&B注明用户主动停止。依原计划G9可留长尾，最终14份全量匿名备份核验仍在cc-vla-s2-ckptup运行；此时done而非closed，不能声称最终G9已通过。",
       "owner": {
         "session": "",
         "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"
@@ -132,7 +132,7 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "等待final70导出SMOKE及最终全量匿名回读完成，保留真实143；随后最终档案合回主分支并push",
+          "what": "继续查看G9长尾；实际PASS+EXIT_CODE=0后归档最终发布清单并将本任务closed，失败则保留done并按规则记录长尾失败",
           "command": "tail -F v1-store/logs/vla-s2-20261026/close70-export.log",
           "verdict_line": "CKPT_UPLOAD=PASS steps=14 root_files=17 sha256_mismatch=0 public=1 training_status=stopped_by_user final_step=70000 training_exit_code=143；EXIT_CODE=0"
         }
