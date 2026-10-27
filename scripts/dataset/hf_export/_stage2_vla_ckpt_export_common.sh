@@ -40,6 +40,11 @@ LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
 DATASET = "16task-mixed8-200-3200ep-e3c7564f"
 HISTORY = "perceptual-framesamp-modul-8frame-8x8-motion-stage2-mixed8.yaml"
 STEPS = tuple(range(5000, 80000, 5000)) + (79999,)
+STOP_STEPS = tuple(range(5000, 70001, 5000))
+STOP_BETA = "5730a0cfc7a62036585362a03a8c922f14b4d94f"
+STOP_QUOTE = "停止现在的training 收尾 70k够了"
+STOP_RECEIPT = "v1-store/validation/stage2-memory/user-stop-70000.json"
+STOP_LOG = "v1-store/logs/vla-s2-20261026/formal80k-control.log"
 ROOT_FILES = frozenset({"history_config.txt", "history_config.resolved.yaml",
     "history_config.resolved.sha256", "motion_provenance.json", "encoder_dependencies.json",
     "online_restore_inputs.json", "online_restore_inputs.npz"})
@@ -564,14 +569,78 @@ def strict_final(run, log):
     need(not any("tmp" in p.name.lower() for p in run.iterdir()), "run根仍有临时保存目录")
 
 
+def strict_user_stop(run, log, root):
+    """只接受本次明确70k授权及真实143退出，不降低原80k最终合同。"""
+    receipt_path = member(REPO, STOP_RECEIPT)
+    receipt_info = file_info(receipt_path)
+    receipt = json_file(receipt_path)
+    fixed = {"schema": "stage2-user-stop-v1", "beta": STOP_BETA, "run": RUN,
+             "user_quote": STOP_QUOTE, "accepted_final_checkpoint": 70000,
+             "terminal_step": 70000, "training_status": "stopped_by_user",
+             "status": "STOPPED_BY_USER", "signal": "SIGTERM", "processes_exited": True,
+             "completed_steps": list(STOP_STEPS)}
+    need(all(receipt.get(key) == value for key, value in fixed.items()), "70k停止收据授权或运行身份不符")
+    need(receipt.get("processes_exited") is True, "停止进程尚未确认退出")
+    need(isinstance(receipt.get("requested_at"), str) and receipt["requested_at"], "停止授权缺请求时间")
+    stopped_at = receipt.get("stopped_at", "")
+    need(isinstance(stopped_at, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", stopped_at),
+         "停止收据缺实际退出时间")
+    logs = receipt.get("logs", {})
+    expected_logs = {"training": (f"v1-store/logs/{RUN}.log", None),
+                     "control": (STOP_LOG, 143),
+                     "incremental": ("v1-store/logs/vla-s2-20261026/vla-inc.log", 143)}
+    for key, (path, exit_code) in expected_logs.items():
+        source = member(REPO, path)
+        need(logs.get(key) == {"path": path, **file_info(source), "exit_code": exit_code},
+             f"停止收据日志身份不符: {key}")
+        if exit_code is not None:
+            lines = source.read_text(errors="replace").splitlines()
+            need(lines and lines[-1] == "EXIT_CODE=143", f"停止日志未以真实143退出: {key}")
+    need(log == member(REPO, STOP_LOG), "停止收尾必须使用实际外层训练日志")
+    lines = log.read_text(errors="replace").splitlines()
+    for prefix, value in (("RUN=", RUN), ("FORMAL_HEAD=", STOP_BETA),
+                          ("TRAIN_HEAD=", STOP_BETA), ("FORMAL_END_UTC=", stopped_at)):
+        need([line for line in lines if line.startswith(prefix)] == [prefix + value], "停止训练日志身份不符")
+    numeric = {p.name for p in run.iterdir() if p.name.isdecimal()}
+    need(numeric == {str(step) for step in STOP_STEPS}, "停止收尾必须精确包含5000至70000的14步")
+    need(not any("tmp" in p.name.lower() for p in run.iterdir()), "run根仍有临时保存目录")
+    terminal = member(run, "70000/_CHECKPOINT_METADATA")
+    need(file_info(terminal)["sha256"] == receipt.get("terminal_checkpoint_metadata_sha256"), "70k保存元数据身份不符")
+    owner = json_file(member(root, "owner.json"))
+    need(owner == receipt.get("publisher_owner") and owner.get("kind") == "stage2-vla"
+         and owner.get("run_name") == RUN and owner.get("bucket") == VLA_BUCKET,
+         "停止收尾原发布归属不符")
+    marker = member(root, "logs/uploaded/70000.done")
+    need(file_info(marker)["sha256"] == receipt.get("terminal_uploaded_marker_sha256"), "70k已发布标记身份不符")
+    marker_body = json_file(marker)
+    need(all(marker_body.get(key) == value for key, value in owner.items())
+         and marker_body.get("schema") == "stage2-uploaded-v1" and marker_body.get("object") == "70000",
+         "70k已发布标记归属不符")
+    need(file_info(receipt_path) == receipt_info, "验证期间停止收据发生变化")
+    return {"schema": "stage2-user-stop-public-v1", "run_name": RUN, "beta": STOP_BETA,
+            "user_quote": STOP_QUOTE, "requested_at": receipt["requested_at"], "stopped_at": stopped_at,
+            "signal": "SIGTERM", "training_status": "stopped_by_user", "training_exit_code": 143,
+            "final_step": 70000, "steps": list(STOP_STEPS), "planned_training_steps": 80000,
+            "source_receipt": receipt_info, "train_log": {"path": "_run-meta/train.log", **file_info(log)},
+            "terminal_checkpoint_metadata_sha256": receipt["terminal_checkpoint_metadata_sha256"],
+            "terminal_uploaded_marker_sha256": receipt["terminal_uploaded_marker_sha256"],
+            "export_owner": owner}
+
+
 def run_vla(mode, smoke, root):
     run = REPO / "v1-store/train-runs/mme_vla_suite_b128_80k" / RUN
     registered = REPO / "v1-store/external/motionjepa" / ENC_RUN
     log = REPO / "v1-store/logs" / f"{RUN}.log"
+    final = mode in ("final", "final70")
+    steps = STOP_STEPS if mode == "final70" else STEPS
+    stop = None
     stage = root / "stage"
     allow = REPO / "scripts/dataset/hf_export/hygiene_allowlist_stage2_vla.json"
     if mode == "final":
         strict_final(run, log)
+    elif mode == "final70":
+        log = member(REPO, STOP_LOG)
+        stop = strict_user_stop(run, log, root)
     while not (run / READY).is_file():
         need(mode == "incremental" and not smoke and not train_finished(log), "缺原子根快照ready")
         print("ROOT_WAIT=1", flush=True)
@@ -584,13 +653,20 @@ def run_vla(mode, smoke, root):
     root_files = freeze_sources(sources, stage)
     root_manifest = write_generated(stage, "manifests/root.json", manifest(root_files, run_name=RUN, bucket=VLA_BUCKET))
     root_files["manifests/root.json"] = file_info(root_manifest)
+    identity = {"kind": "stage2-vla", "run_name": RUN, "bucket": VLA_BUCKET,
+                "root_manifest_sha256": file_info(root_manifest)["sha256"]}
+    if stop:
+        need(stop["export_owner"] == identity, "停止收尾不得改变原根快照归属")
     all_files = dict(root_files)
     smoke_digest = file_info(root_manifest)["sha256"]
-    if mode == "final":
-        # 最终SMOKE须绑定全部16步内容；不能拿训练期的根快照SMOKE代替。
-        preflight = {name: file_info(path) for step in STEPS for name, path in step_sources(run, step).items()}
-        smoke_digest = hashlib.sha256(canon({"root": smoke_digest, "steps": preflight,
-                                            "log": file_info(log)})).hexdigest()
+    if final:
+        # 最终SMOKE绑定本模式的全部checkpoint；停止模式另绑定授权收据和说明。
+        preflight = {name: file_info(path) for step in steps for name, path in step_sources(run, step).items()}
+        smoke_inputs = {"root": smoke_digest, "steps": preflight, "log": file_info(log)}
+        if stop:
+            termination = member(REPO, "scripts/dataset/hf_export/stage2_vla_TERMINATION_70000.md")
+            smoke_inputs.update(stop_receipt=stop, termination=file_info(termination))
+        smoke_digest = hashlib.sha256(canon(smoke_inputs)).hexdigest()
     if mode == "incremental":
         # ready在训练启动后才出现；根源校验、扫描和实体stage全部成功后才签发本地预检。
         smoke_path, smoke_record = smoke_gate(root, mode, smoke_digest, True)
@@ -598,9 +674,7 @@ def run_vla(mode, smoke, root):
         print(f"ROOT_LOCAL_SMOKE=PASS files={len(root_files)} sha256={smoke_digest}", flush=True)
     else:
         smoke_path, smoke_record = smoke_gate(root, mode, smoke_digest, smoke)
-    publisher = None if smoke else Publisher(root, VLA_BUCKET,
-        {"kind": "stage2-vla", "run_name": RUN, "bucket": VLA_BUCKET,
-         "root_manifest_sha256": file_info(root_manifest)["sha256"]})
+    publisher = None if smoke else Publisher(root, VLA_BUCKET, identity)
     if publisher:
         publisher.transfer("root", stage, root_files)
         # 每次增量/最终启动都重新匿名核根快照，不能信任旧done代替当前可读性。
@@ -609,7 +683,7 @@ def run_vla(mode, smoke, root):
         print(f"ROOT_UPLOAD=PASS files={len(root_files)}", flush=True)
     processed = set()
     while True:
-        for step in STEPS:
+        for step in steps:
             if step in processed:
                 continue
             if not (run / str(step)).exists():
@@ -620,7 +694,7 @@ def run_vla(mode, smoke, root):
             step_src = step_sources(run, step)
             scan(step_src, allow)
             files = freeze_sources(step_src, stage)
-            if mode == "final":
+            if final:
                 need(all(preflight[name] == info for name, info in files.items()), "最终预检后step内容发生变化")
             step_manifest = write_generated(stage, f"manifests/step-{step}.json",
                 manifest({**root_files, **files}, run_name=RUN, bucket=VLA_BUCKET, step=step))
@@ -631,19 +705,25 @@ def run_vla(mode, smoke, root):
             processed.add(step)
             all_files.update(files)
             sources.update(step_src)
-        if mode == "final":
-            need(processed == set(STEPS), "最终导出缺step")
+        if final:
+            need(processed == set(steps), "最终导出缺step")
             # 日志仅在训练结束后固定，不能污染训练期间不可变根快照身份。
             extra = {"_run-meta/train.log": log}
+            delivery_identity = {"run_name": RUN, "bucket": VLA_BUCKET, "steps": list(steps)}
+            if stop:
+                extra["_run-meta/stop_receipt.json"] = write_generated(stage, "_run-meta/stop_receipt.json", stop)
+                extra["TERMINATION.md"] = termination
+                delivery_identity.update(training_status="stopped_by_user", final_step=70000,
+                                         planned_training_steps=80000, training_exit_code=143)
             scan(extra, allow)
             files = freeze_sources(extra, stage)
             all_files.update(files)
             sources.update(extra)
             final_manifest = write_generated(stage, "delivery_manifest.json",
-                manifest(all_files, run_name=RUN, bucket=VLA_BUCKET, steps=list(STEPS)))
+                manifest(all_files, **delivery_identity))
             all_files["delivery_manifest.json"] = file_info(final_manifest)
             if publisher:
-                publisher.transfer("final", stage, {**files, "delivery_manifest.json": all_files["delivery_manifest.json"]})
+                publisher.transfer(mode, stage, {**files, "delivery_manifest.json": all_files["delivery_manifest.json"]})
                 publisher.verify_all(stage, all_files)
             break
         if smoke or train_finished(log):
@@ -652,11 +732,14 @@ def run_vla(mode, smoke, root):
         time.sleep(30)
     for name, source in sources.items():
         need(file_info(source) == all_files[name], f"源内容改变: {name}")
+    if stop:
+        need(strict_user_stop(run, log, root) == stop, "停止收尾期间授权证据发生变化")
     if smoke:
         io.atomic_write_json(smoke_path, smoke_record)
         print(f"SMOKE=PASS kind=vla mode={mode} steps={len(processed)} root_files={len(root_files)}")
-    elif mode == "final":
-        print(f"CKPT_UPLOAD=PASS steps=16 root_files={len(root_files)} sha256_mismatch=0 public=1")
+    elif final:
+        status = " training_status=stopped_by_user final_step=70000 training_exit_code=143" if stop else ""
+        print(f"CKPT_UPLOAD=PASS steps={len(steps)} root_files={len(root_files)} sha256_mismatch=0 public=1{status}")
     else:
         need(processed == set(STEPS), "训练结束但增量未齐16步；最终驱动补传并验收")
         print(f"INC_END run={RUN} done={len(processed)}")
@@ -699,7 +782,7 @@ def run_encoder(smoke, root):
 
 def main():
     mode = os.environ["STAGE2_MODE"]
-    need(mode in ("final", "incremental", "encoder"), "未知导出模式")
+    need(mode in ("final", "final70", "incremental", "encoder"), "未知导出模式")
     smoke = os.environ.get("SMOKE", "0")
     need(smoke in ("0", "1"), "SMOKE只允许0或1")
     name = "hf-ckpt-stage2-pool4-3decoder-1025" if mode == "encoder" else EXPORT_NAME
