@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T19:47:24Z",
-    "america_new_york": "2026-10-27T15:47:24-0400"
+    "utc": "2026-10-27T21:53:18Z",
+    "america_new_york": "2026-10-27T17:53:18-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -750,11 +750,6 @@
           "done_line": "EXIT_CODE="
         },
         {
-          "tmux": "eval-tx-launcher",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/launcher.log",
-          "done_line": "ALL_10_LAUNCHED"
-        },
-        {
           "tmux": "eval-tx-worker-64893990",
           "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893990.log",
           "done_line": "EXIT_CODE="
@@ -772,36 +767,6 @@
         {
           "tmux": "eval-tx-worker-64893993",
           "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893993.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "eval-tx-worker-64893994",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893994.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "eval-tx-worker-64893995",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893995.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "eval-tx-worker-64893996",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893996.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "eval-tx-worker-64893997",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893997.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "eval-tx-worker-64893998",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893998.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "eval-tx-worker-64893999",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893999.log",
           "done_line": "EXIT_CODE="
         }
       ],
@@ -823,6 +788,12 @@
           "date": "2026-10-27",
           "quote": "同意c",
           "scope": "超预算按旧流程demo全保+exec等距抽稀"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-27",
+          "quote": "降低到现在的4卡",
+          "scope": "AskUserQuestion选「在跑的减到4张」：取消排队64893996-99；drain worker-64893994/95后scancel；保留64893990-93"
         }
       ],
       "pending_decisions": [],
