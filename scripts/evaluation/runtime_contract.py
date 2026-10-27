@@ -219,6 +219,8 @@ class RpcSession:
                 raise ValueError("首包帧数必须严格为D+1")
             if self.batch_seq > 0 and count != 16:
                 raise ValueError("官方续包帧数必须严格为16")
+            if self.batch_seq > 0 and self.last_inferred_frame != self.next_frame - 1:
+                raise ValueError("收到上一历史包后必须先infer，才能接收16帧续包")
             return "add_buffer"
         if (type(rpc.get("replan_seq")) is not int or rpc["replan_seq"] != self.replan_seq
                 or type(rpc.get("last_global_frame")) is not int or rpc["last_global_frame"] != self.next_frame - 1
