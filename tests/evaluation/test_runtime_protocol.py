@@ -75,6 +75,32 @@ def test_infer_cannot_replay_rng_or_use_future_frame():
         session.validate(obs)
 
 
+@pytest.mark.parametrize("demo,count", [(0, 2), (16, 18), (33, 33), (33, 35)])
+def test_first_packet_is_exactly_demo_plus_exec0(demo, count):
+    session = RpcSession(META)
+    obs = reset()
+    session.commit(session.validate(obs), obs["eval_rpc"])
+    obs = batch()
+    obs.update(images=np.zeros((count, 2, 2, 3), np.uint8), state=np.zeros((count, 8), np.float32), exec_start_idx=demo)
+    obs["eval_rpc"].update(frame_count=count, payload_sha256=payload_sha256(obs))
+    with pytest.raises(ValueError, match=r"D\+1"):
+        session.validate(obs)
+    assert session.next_frame == 0
+
+
+@pytest.mark.parametrize("count", [1, 15, 17, 32])
+def test_following_packet_is_exactly_16(count):
+    session = RpcSession(META)
+    for obs in (reset(), batch()):
+        session.commit(session.validate(obs), obs["eval_rpc"])
+    obs = batch()
+    obs.update(images=np.zeros((count, 2, 2, 3), np.uint8), state=np.zeros((count, 8), np.float32))
+    obs["eval_rpc"].update(batch_seq=1, first_global_frame=1, frame_count=count, payload_sha256=payload_sha256(obs))
+    with pytest.raises(ValueError, match="16"):
+        session.validate(obs)
+    assert session.next_frame == 1 and session.batch_seq == 1
+
+
 class FakePolicy:
     def __init__(self):
         self.calls = []

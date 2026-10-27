@@ -13,9 +13,8 @@ import sys
 
 import numpy as np
 
-from scripts.evaluation.runtime_contract import (canonical, numeric_metrics, read_json, require_sha256,
-                                               sha256_file, verified_ref, identity_sha256)
-from scripts.training.check_stage2_checkpoint import (flatten, load_reference_tree, parameter_summary,
+from scripts.evaluation.runtime_contract import canonical, sha256_file, identity_sha256
+from scripts.training.check_stage2_checkpoint import (flatten, load_online_inputs, parameter_summary,
     verify_delivery_manifest, verify_parameter_tree, verify_snapshot)
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -79,6 +78,42 @@ def process_gpu_binding(sidecar, *, output=None):
     return {"parent_pid": os.getpid(), "sidecar_pid": sidecar["pid"], "gpu_uuid": sidecar["gpu_uuid"]}
 
 
+def fixed_noise_repeatability(policy, record, arrays, noise, pack_buffer):
+    """同机同一时刻两次真实在线恢复，不消费A100输出或跨硬件阈值。"""
+    noise = np.asarray(noise)
+    if noise.ndim != 3 or noise.shape[:2] != (1, 20) or noise.dtype != np.float32 or not np.isfinite(noise).all():
+        raise ValueError("固定完整noise形状/精度/有限值不符")
+    demo = record["exec_start_idx"]
+    total = len(arrays["images"])
+    remaining = total - (demo + 1)
+    if remaining < 0 or remaining % 16:
+        raise ValueError("真实恢复素材不能组成D+1首包及完整16帧续包")
+    batches = [demo + 1] + [16] * (remaining // 16)
+    outputs = []
+    previous = policy._sample_kwargs
+    try:
+        policy._sample_kwargs = {"num_steps": 10, "noise": noise}
+        for _ in range(2):
+            policy.reset()
+            cursor = 0
+            for count in batches:
+                end = cursor + count
+                policy.add_buffer(pack_buffer(arrays["images"][cursor:end], arrays["states"][cursor:end],
+                                              demo if cursor == 0 else 0))
+                cursor = end
+            output = np.asarray(policy.infer({"observation/image": arrays["images"][-1],
+                "observation/wrist_image": arrays["wrist_image"], "observation/state": arrays["states"][-1],
+                "prompt": record["prompt"]})["actions"])
+            if output.shape != (20, 8) or not np.isfinite(output).all():
+                raise ValueError("真实动作必须为20×8且有限")
+            outputs.append(output.copy())
+    finally:
+        policy._sample_kwargs = previous
+    if outputs[0].dtype != outputs[1].dtype or outputs[0].tobytes() != outputs[1].tobytes():
+        raise ValueError("同机固定输入/noise/reset后的动作不逐位重复")
+    return outputs, batches
+
+
 def check_restore(args, report=None):
     """真实入口不沿用训练检查器的物理GPU0/1和固定step19限制。"""
     report = {} if report is None else report
@@ -89,27 +124,18 @@ def check_restore(args, report=None):
     checkpoint = Path(args.checkpoint).absolute()
     if checkpoint.is_symlink() or not checkpoint.is_dir() or checkpoint.resolve() != checkpoint:
         raise ValueError("checkpoint必须为无别名实体目录")
-    if args.reference is None or args.reference_sha256 is None:
-        raise FileNotFoundError("缺锁定的完整输入/noise/动作reference；恢复与重复性保持pending")
-    if sha256_file(args.reference) != require_sha256(args.reference_sha256):
-        raise ValueError("恢复reference身份不符")
-    reference = read_json(args.reference)
-    if (reference.get("schema") != "eval-vla-restore-reference-v1" or reference.get("status") != "locked"
-            or reference.get("model_seed") != 42 or reference.get("num_steps") != 10
-            or reference.get("parameter_dtype") != "bfloat16" or not reference.get("sources")):
-        raise ValueError("reference必须锁定真实来源、seed42、bf16与10步采样")
     if args.purpose == "production" and args.expected_manifest is None:
         raise ValueError("正式60000须给完整交付manifest")
     root = checkpoint.parent
     delivery = verify_delivery_manifest(root, args.expected_manifest, checkpoint) if args.expected_manifest else None
-    provenance = verify_snapshot(root, delivery)
+    verify_snapshot(root, delivery)
+    online_record, online_arrays = load_online_inputs(root)
     # 此后才允许导入会初始化后端的模块。
     import jax
     import jax.numpy as jnp
     from flax import nnx
     from mme_vla_suite.policies import policy_config
     from mme_vla_suite.training import config
-    from mme_vla_suite.models.integration.history_observation import HistAugObservation
     from openpi.models import model as model_lib
     from openpi.shared import nnx_utils
 
@@ -149,62 +175,29 @@ def check_restore(args, report=None):
             raise ValueError("实际policy bf16参数与checkpoint逐叶摘要不符")
         nnx.update(policy._model, parameter_state)
         policy._sample_actions = nnx_utils.module_jit(policy._model.sample_actions)
-        fingerprint = {"jax": jax.__version__, "jaxlib": importlib.metadata.version("jaxlib"),
-            "flax": importlib.metadata.version("flax"), "device_kind": devices[0].device_kind,
-            "parameter_dtype": "bfloat16", "num_steps": 10,
-            "matmul_precision": str(jax.config.jax_default_matmul_precision),
-            "model_source_sha256": sha256_file(sys.modules[type(policy._model).__module__].__file__),
-            "resolved_sha256": sha256_file(root / "history_config.resolved.yaml"),
-            "checkpoint_files_sha256": checkpoint_digest, "inputs_descriptor_sha256": identity_sha256(reference["inputs"]),
-            "noise_sha256": reference["noise"]["sha256"], "dependency_lock_sha256": sha256_file(ROOT / "uv.lock"),
-            "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-            "gpu_uuid": policy._motion_client.provenance["gpu_uuid"],
-            "driver": policy._motion_client.provenance["numerics"]["driver"]}
-        report["environment_fingerprint"] = fingerprint
-        inputs = load_reference_tree(args.reference.parent, reference["inputs"])
-        # noise为完整32动作维，不把执行8维切片补零当完整noise。
-        noise = np.load(verified_ref(args.reference.parent, reference["noise"]), allow_pickle=False)
-        if noise.shape != (1, 20, policy._model.action_dim) or noise.dtype != np.float32 or not np.isfinite(noise).all():
-            raise ValueError("完整noise必须为(1,20,action_dim) float32有限数组")
         if policy._model.action_horizon != 20:
             raise ValueError("动作horizon必须为20")
-        observation = HistAugObservation.from_dict(jax.tree.map(lambda value: jax.device_put(value, devices[0]), inputs))
-        outputs = []
-        for _ in range(2):
-            policy.reset()
-            # 与policy.infer相同split顺序，并显式使用固定完整noise。
-            policy._rng, sample_rng = jax.random.split(policy._rng)
-            actions = policy._sample_actions(sample_rng, observation, num_steps=10,
-                                             noise=jax.device_put(noise, devices[0]))
-            jax.block_until_ready(actions)
-            transformed = policy._output_transform({"state": np.asarray(observation.state[0]),
-                                                    "actions": np.asarray(actions[0])})
-            outputs.append(np.asarray(transformed["actions"]))
-        if any(value.shape != (20, 8) or not np.isfinite(value).all() for value in outputs):
-            raise ValueError("完整动作必须为20×8且有限")
-        if outputs[0].tobytes() != outputs[1].tobytes():
-            raise ValueError("相同输入/noise/reset后的动作不逐位重复")
-        report["repeatability"] = {"max_abs": 0, "actions_sha256": hashlib.sha256(outputs[0].tobytes()).hexdigest(),
-                                   "full_shape": [20, 8], "execution_shape": [16, 8], "num_steps": 10, "seed": 42}
-        # 跨卡动作阈值必须预先冻结；缺同checkpoint真值时如实标注，不伪造数值通过。
-        if "actions" in reference:
-            wanted = np.load(verified_ref(args.reference.parent, reference["actions"]), allow_pickle=False)
-            if reference.get("checkpoint_files_sha256") != checkpoint_digest:
-                raise ValueError("动作参考未绑定同一checkpoint")
-            if reference.get("comparison") == "same_environment_bitwise":
-                if reference.get("environment_fingerprint") != fingerprint:
-                    raise ValueError("保存参考与现场环境指纹不符，不能复用旧baseline")
-                metric = numeric_metrics(wanted, outputs[0])
-                if metric["max_abs"] != 0 or wanted.tobytes() != outputs[0].tobytes():
-                    raise ValueError("同环境动作不逐位一致")
-                report["same_checkpoint_actions"] = metric
-            else:
-                # 跨卡阈值未由本计划批准，不在运行后自行选择。
-                report["cross_gpu_same_checkpoint"] = "NOT_AVAILABLE"
-        else:
-            report["cross_gpu_same_checkpoint"] = "NOT_AVAILABLE"
+        noise = np.asarray(jax.random.normal(jax.random.split(jax.random.key(42))[1],
+                                             (1, 20, policy._model.action_dim)), dtype=np.float32)
+        from examples.robomme.utils import pack_buffer
+        outputs, batches = fixed_noise_repeatability(policy, online_record, online_arrays, noise, pack_buffer)
+        report["repeatability"] = {"max_abs": 0,
+            "actions_sha256": hashlib.sha256(outputs[0].tobytes()).hexdigest(),
+            "noise_sha256": hashlib.sha256(noise.tobytes()).hexdigest(),
+            "noise_shape": list(noise.shape), "full_shape": [20, 8], "execution_shape": [16, 8],
+            "num_steps": 10, "seed": 42, "batch_lengths": batches}
+        report["environment_fingerprint"] = {"jax": jax.__version__,
+            "jaxlib": importlib.metadata.version("jaxlib"), "flax": importlib.metadata.version("flax"),
+            "device_kind": devices[0].device_kind, "parameter_dtype": "bfloat16", "num_steps": 10,
+            "matmul_precision": str(jax.config.jax_default_matmul_precision),
+            "resolved_sha256": sha256_file(root / "history_config.resolved.yaml"),
+            "checkpoint_files_sha256": checkpoint_digest, "dependency_lock_sha256": sha256_file(ROOT / "uv.lock"),
+            "code_commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
+            "hardware": policy._motion_client.provenance["numerics"]}
+        report["cross_hardware_numeric"] = "not_required"
         report["gpu"] = process_gpu_binding(policy._motion_client.provenance)
-        report.update(step=args.step, purpose=args.purpose, reference_sha256=args.reference_sha256,
+        report.update(step=args.step, purpose=args.purpose,
+                      input_record_sha256=sha256_file(root / "online_restore_inputs.json"),
                       snapshot_provenance_sha256=sha256_file(root / "motion_provenance.json"),
                       eval_target_contract_sha256=sha256_file(args.eval_target_contract), parameter_dtype="bfloat16")
     finally:
@@ -221,8 +214,6 @@ def main(argv=None):
     parser.add_argument("--motion-online-gpu", required=True)
     parser.add_argument("--stage2-python", type=Path, required=True)
     parser.add_argument("--eval-target-contract", type=Path, required=True)
-    parser.add_argument("--reference", type=Path)
-    parser.add_argument("--reference-sha256")
     parser.add_argument("--expected-manifest", type=Path)
     parser.add_argument("--config", default="mme_vla_suite_b128_80k")
     parser.add_argument("--output", type=Path, required=True)

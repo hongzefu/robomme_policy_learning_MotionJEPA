@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from scripts.evaluation.check_runtime import bf16_parameter_summary, check_restore_tree, check_single_gpu_token, validate_restore_purpose
+from scripts.evaluation.check_runtime import bf16_parameter_summary, check_restore_tree, check_single_gpu_token, validate_restore_purpose, fixed_noise_repeatability
 
 
 def test_actual_parameter_tree_and_digest():
@@ -67,6 +67,45 @@ def test_bf16_summary_matches_actual_rounded_bytes():
     value = np.array([1.003, 2.007], np.float32)
     assert bf16_parameter_summary({"w": value}) == bf16_parameter_summary({"w": value.astype(ml_dtypes.bfloat16)})
     assert bf16_parameter_summary({"w": np.asarray(1.0, np.float32)})["leaves"]["w"]["shape"] == []
+
+
+def test_same_machine_replay_uses_real16_and_complete_noise():
+    class Policy:
+        _sample_kwargs = {"original": True}
+        def __init__(self):
+            self.counts = []
+        def reset(self):
+            self.counts.append([])
+        def add_buffer(self, obs):
+            self.counts[-1].append(len(obs["images"]))
+        def infer(self, obs):
+            assert self._sample_kwargs["noise"].shape == (1, 20, 32)
+            assert self._sample_kwargs["num_steps"] == 10
+            return {"actions": np.zeros((20, 8), np.float32)}
+    policy = Policy()
+    arrays = {"images": np.zeros((131, 2, 2, 3), np.uint8), "states": np.zeros((131, 8), np.float32),
+              "wrist_image": np.zeros((2, 2, 3), np.uint8)}
+    record = {"exec_start_idx": 66, "exec_batch_lengths": [33, 32], "prompt": "真实输入契约"}
+    output, batches = fixed_noise_repeatability(policy, record, arrays, np.zeros((1, 20, 32), np.float32),
+        lambda images, states, boundary: {"images": images, "state": states, "exec_start_idx": boundary})
+    assert batches == [67, 16, 16, 16, 16]
+    assert policy.counts == [batches, batches] and record["exec_batch_lengths"] == [33, 32]
+    assert output[0].shape == (20, 8) and policy._sample_kwargs == {"original": True}
+
+
+def test_binding_rejection_happens_before_model_load(tmp_path, monkeypatch):
+    from scripts.training import serve_policy
+    def reject_binding(*args, **kwargs):
+        assert kwargs["expected_purpose"] == "validation"
+        assert kwargs["expected_run_identity_sha256"] == "a" * 64
+        raise ValueError("完整模型成员字节与binding不符")
+    monkeypatch.setitem(sys.modules, "scripts.evaluation.manifest", SimpleNamespace(verify_model_binding=reject_binding))
+    monkeypatch.setattr(serve_policy, "create_policy", lambda *args: pytest.fail("binding失败不得先加载权重"))
+    args = serve_policy.Args(policy=serve_policy.Checkpoint(config="mme_vla_suite_b128_80k", dir=tmp_path / "20000"),
+        eval_target_contract=tmp_path / "runtime.json", model_binding=tmp_path / "binding.json",
+        run_identity_sha256="a" * 64, eval_purpose="validation", checkpoint_step=20000)
+    with pytest.raises(ValueError, match="完整模型成员"):
+        serve_policy.main(args)
 
 
 def test_explicit_stage2_interpreter_runs_real_ipc_without_install(tmp_path):

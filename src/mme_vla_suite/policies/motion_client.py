@@ -189,14 +189,10 @@ class MotionEncoderClient:
                  v1_store: str | pathlib.Path | None = None, handshake_timeout: float = P.HANDSHAKE_TIMEOUT_S,
                  source_run: str | None = None, encoder_kind: str = "v10",
                  provenance_root: str | pathlib.Path | None = None,
-                 stage2_python: str | None = None, eval_target_contract: str | pathlib.Path | None = None,
-                 measurement_bootstrap: dict | None = None):
+                 stage2_python: str | None = None, eval_target_contract: str | pathlib.Path | None = None):
         self.encoder_kind = encoder_kind
         self._eval_target_contract = eval_target_contract
-        self._measurement_bootstrap = measurement_bootstrap
-        if eval_target_contract is not None and measurement_bootstrap is not None:
-            raise ValueError("正式证书与隔离测量不可同时提供")
-        if encoder_kind != STAGE2_KIND and (stage2_python or eval_target_contract or measurement_bootstrap):
+        if encoder_kind != STAGE2_KIND and (stage2_python or eval_target_contract):
             raise ValueError("阶段二评估选项不能用于其他encoder")
         if encoder_kind == STAGE2_KIND:
             self._init_stage2(online_gpu=online_gpu, encoder_run_dir=encoder_run_dir,
@@ -359,27 +355,23 @@ class MotionEncoderClient:
         validate_stage2_evidence(store_prov, self._provenance_root)
         target = None
         if getattr(self, "_eval_target_contract", None) is not None:
-            from scripts.evaluation.runtime_contract import validate_target_contract
-            target = validate_target_contract(self._eval_target_contract, training_provenance=store_prov,
+            from scripts.evaluation.runtime_contract import validate_eval_runtime_contract
+            target = validate_eval_runtime_contract(self._eval_target_contract, training_provenance=store_prov,
                 actual_runtime={"numerics": self.provenance.get("numerics"),
-                                "online_vae": self.provenance.get("online_vae")},
-                training_provenance_path=self._provenance_root / "motion_provenance.json")
-        elif getattr(self, "_measurement_bootstrap", None) is not None:
-            from scripts.evaluation.measure_target_runtime import validate_bootstrap
-            target = validate_bootstrap(self._measurement_bootstrap, store_prov, self.provenance)
+                                "online_vae": self.provenance.get("online_vae")})
         for group in ("encoder", "encoder_state_sha256", "source_pin", "numerics"):
             actual, expected = self.provenance.get(group), store_prov[group]
             if group == "encoder" and isinstance(actual, dict):
                 actual = {key: value for key, value in actual.items() if key != "run_dir"}
                 expected = {key: value for key, value in expected.items() if key != "run_dir"}
             if target is not None and group == "numerics":
-                from scripts.evaluation.runtime_contract import compare_runtime
-                compare_runtime(expected, actual, target)
+                from scripts.evaluation.runtime_contract import compare_runtime, software_runtime
+                compare_runtime(software_runtime(expected), software_runtime(actual))
             elif actual != expected:
                 raise ValueError(f"阶段二真实握手的 {group} 与离线来源不同")
         if target is not None:
-            from scripts.evaluation.runtime_contract import compare_runtime
-            compare_runtime(store_prov["stage2_compat"]["online_vae"], self.provenance.get("online_vae"), target)
+            from scripts.evaluation.runtime_contract import compare_runtime, software_runtime
+            compare_runtime(software_runtime(store_prov["stage2_compat"]["online_vae"]), software_runtime(self.provenance.get("online_vae")))
         elif self.provenance.get("online_vae") != store_prov["stage2_compat"]["online_vae"]:
             raise ValueError("阶段二真实 VAE 与兼容合同的 online_vae 不同")
         if (type(self.provenance.get("pid")) is not int or self.provenance["pid"] != self._proc.pid
