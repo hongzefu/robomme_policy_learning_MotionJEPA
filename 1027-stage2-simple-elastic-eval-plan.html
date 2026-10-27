@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>Stage2 简化弹性评估实施计划</title>
+<style>body{max-width:960px;margin:32px auto;padding:0 20px;font:17px/1.7 sans-serif;color:#202830}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:8px;text-align:left}code{font-size:.9em}h1{margin-top:32px}</style>
+<body>
+<p>本方案以用户在聊天中批准的简化方案为准，替代旧1026计划中的复杂调度及校验前置要求。代码起点为 <code>4f1c09484217f2937c180fcb5a9384768822c82b</code>，工作副本为 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>，沿现有独立评估分支整合，子任务各用独立工作树。权重、环境、官方benchmark版本及模型输入语义复用，不重新下载。</p>
+<h1>第一部分（给人看）</h1>
+<h2>目标与已定口径</h2>
+<p>保留弹性worker队列，尽快先跑一局真实评估，再两卡动态领取十局，总计十一局。正式六万步八百局不在本次范围。运行名沿用 <code>official-stage2-20k-probe-1026-a</code>，新产物写其 <code>simple-1027/</code> 子目录，不覆盖旧日志与结果。</p>
+<p>用户开工原话：「同意，按这个简化方案开工，保留弹性 worker 队列，不要再堆叠功能和校验。尽快先跑通一局，再做两卡分片评估。」</p>
+<h2>最简机制</h2>
+<p>任务每五局一块，划分与卡数无关。一个控制器串行分配和记录结果；worker每卡常驻模型，完成一块领取下一块。新worker加入即可领取；缩容通知指定worker停止领取，完成当前局、归还未开始项后退出。各attempt独立目录，每局结束保存结果。旧step确认停止后才能重新分配未完成项；基础设施错误每局最多重试一次，正常任务失败和超时直接计分。心跳只显示进度，不按超时抢任务。</p>
+<p>模型服务启动直接加载已下载的真实checkpoint，只补必要输入和设备适配。复用已有普通运行配置供现有sidecar加载，不再要求模型绑定收据、独立数值恢复检查、跨硬件证书或通用资源账本。保留原有模型实际加载检查，不新增保护层。</p>
+<h2>步骤与验收</h2>
+<table><tr><th>步骤</th><th>内容</th><th>判据</th></tr>
+<tr><td>一</td><td>简化服务入口，先一局真实评估</td><td><code>SINGLE_EP_SMOKE=PASS</code>：有完整终局与成功字段；正常失败不等于链路失败</td></tr>
+<tr><td>二</td><td>收缩队列，少量CPU验证并发领取、加入退出、故障归还</td><td><code>SIMPLE_QUEUE=PASS</code>：无重复分配、已完成项不重跑</td></tr>
+<tr><td>三</td><td>两个独立A40 worker领取两块十局</td><td><code>TWO_WORKER_EVAL=PASS</code>：十局无重复遗漏，独立报告任务成功率</td></tr>
+<tr><td>四</td><td>汇总、留档、逐个释放本轮作业</td><td>结果、退出状态和精确JobID记录齐全</td></tr></table>
+<h2>子代理分工与合并（简述）</h2>
+<p>B只简化服务入口，C收缩队列和worker。主会话先整合B起单局，不等待C完成；随后整合C做两卡评估。一个独立审查者检查关键差异，主会话负责版本、资源、日志、汇总及清理。不增加重复审查或额外测试矩阵。</p>
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+<h2>红线与逐文件改动</h2>
+<p>不改benchmark子模块、训练配置、checkpoint、精度和动作执行口径。新旧结果分目录；不清理既有现场，不对正常失败重试。两份新占位各1 A40、4 CPU、24 GiB、48小时；只经对应srun计算step运行。</p>
+<table><tr><th>归属</th><th>可写文件</th><th>接口及验证</th></tr>
+<tr><td>B，独立eval-b工作树</td><td><code>scripts/training/serve_policy.py</code>及定向入口测试</td><td>checkpoint、seed、设备、普通可选运行配置、run身份与nonce；少量CPU入口测试</td></tr>
+<tr><td>C，独立eval-c工作树</td><td><code>scripts/evaluation/{queue_store,official_queue,resident_worker,launch_official_pool,gl_official_pool}.py</code>及定向测试</td><td>controller、worker、drain、recover、aggregate；沿现有eval.py生成单块grant</td></tr>
+<tr><td>主会话</td><td>本计划、运行档案及本任务交接状态</td><td>先B后C整合，真实命令与实测证据写运行档案</td></tr>
+<tr><td>运行代理</td><td>仅运行产物，不改源码</td><td>新JobID 64855345、64855348；只按主会话提供的固定版本和命令运行</td></tr></table>
+<h2>运行顺序与验证</h2>
+<p>新产物根为NFS评估副本 <code>v1-store/evaluation/official-stage2-1026/official-stage2-20k-probe-1026-a/simple-1027/</code>。缓存使用评估副本已有v1-store，解释器使用已有policy、stage2、official-sim环境。先单局真实评估，再CPU队列定向验证和两卡十局；长运行放本轮唯一tmux，pipefail、tee及退出码落日志。没有真实证据不写通过，不用CPU通过代替真实评估。</p>
+<h2>风险与盲区</h2>
+<p>真实加载、推理和仿真仍可能报错，针对实际阻塞做最小修复。十一局只能说明链路与小规模分片运行情况，不能代表正式八百局性能。尚未实测的扩缩容行为明确区分CPU验证与GPU证据。</p>
+<h2>交接顺序与状态机登记</h2>
+<p>任务id仍为 <code>official-benchmark-stage2-eval</code>，用户已授权登记。交接前需单局、队列短测、十局结果与资源释放完成；无长尾，无新增上游依赖，不自动解锁正式八百局。当前开工记录及JobID写入 <code>docs/handoff/current.json</code>，保留其他任务不变。日志与结果归入原运行档案；提交只含本轮文件，提交后推送。</p>
+</body></html>
