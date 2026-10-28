@@ -1,18 +1,18 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T09:23:21Z",
-    "america_new_york": "2026-10-28T05:23:21-04:00"
+    "utc": "2026-10-28T09:25:09Z",
+    "america_new_york": "2026-10-28T05:25:09-04:00"
   },
   "repo": {
-    "branch": "v4-256concat1",
-    "base_head": "607d7bb47105bb48407386edcbbb965b8b3be18e",
+    "branch": "worktree-agent-o16-state-20261028",
+    "base_head": "9459859384589b3553148cf53f715c1318f1a533",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
-    "active": false,
+    "active": true,
     "main_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
-    "frozen_head": "bd4bad0957e5162073f9bbfec0e4c985c3f830bc"
+    "frozen_head": "9459859384589b3553148cf53f715c1318f1a533"
   },
   "tasks": {
     "orig16-vla-build": {
@@ -42,7 +42,7 @@
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "planned",
       "state_changed_at": "2026-10-28T01:31:26Z",
-      "state_reason": "全部原前置验收已PASS，准备从本次commitV11.67Beta clean起跑context60k；随后按原chain接modulation。正式期间实际运行态写入-temp，主HEAD/src保持冻结，上传与G12独立长尾。",
+      "state_reason": "全部原训练前检查与两条严格恢复已PASS；正式Beta9459859384589b3553148cf53f715c1318f1a533已推送clean，src原权限台账已保存并锁定234文件45目录。正在启动原context60k→mod60k链，真实PID/日志结果随后回填；正式期间状态仅此开发副本更新，main HEAD不变。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": [{"path": "/scratch/hongze/robomme_policy_learning_MotionJEPA", "branch": "v4-256concat1", "task": "orig16-vla-build", "gate": "本地数据及全部原起跑检查已PASS；训练库公开上传属于独立长尾，不等待任务整体done。"}],
       "pre_handoff": [
