@@ -634,7 +634,8 @@ def main(config: _config.TrainConfig):
     reference_root = os.environ.get("TRAIN_FINAL_RECORD_DIR") or os.environ.get("FINAL_RECORD_DIR")
     motion_config = getattr(resolved_history_config, "motion", None)
     if (config.num_train_steps == 20 and reference_root and motion_config is not None
-            and motion_config.get("enabled", False) and motion_config.get("readout") == "stage2_pool4_concat_v1"):
+            and motion_config.get("enabled", False)
+            and motion_config.get("readout") in ("stage2_pool4_concat_v1", "stage2_pool4_split_v1")):
         reference_observation = jax.tree.map(lambda x: np.asarray(jax.device_get(x[:1])).copy(), batch[0])
     logging.info(
         f"Initialized data loader:\n{training_utils.array_tree_to_info(batch)}"
