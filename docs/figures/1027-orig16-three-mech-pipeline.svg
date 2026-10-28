@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1600" viewBox="0 0 1500 1600"
+     font-family="Noto Sans CJK SC, Source Han Sans SC, WenQuanYi Micro Hei, sans-serif" font-size="13">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333"/>
+    </marker>
+    <style>
+      .t { font-size:14px; font-weight:bold; fill:#1a1a1a; }
+      .b { font-size:13px; fill:#1a1a1a; }
+      .s { font-size:12px; fill:#1a1a1a; }
+      .red { fill:#c62828; }
+      .grn { fill:#2e8b57; }
+      .org { fill:#e07b00; }
+      .box-blue { fill:#e3eaf3; stroke:#5b7a9f; stroke-width:1.6; }
+      .box-green { fill:#e6f4ea; stroke:#2e8b57; stroke-width:1.6; }
+      .box-red { fill:#fff5f5; stroke:#d32f2f; stroke-width:2; }
+      .sub { fill:#ffffff; stroke:#2e8b57; stroke-width:1.4; }
+      .sub-sel { fill:#fff8ec; stroke:#f08c00; stroke-width:4; }
+      .flow { stroke:#333; stroke-width:1.8; fill:none; marker-end:url(#arr); }
+      .note { stroke:#d32f2f; stroke-width:1.6; stroke-dasharray:6 4; fill:none; }
+    </style>
+  </defs>
+  <rect width="1500" height="1600" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="40" y="48" font-size="20" font-weight="bold" fill="#1a1a1a">官方 RoboMME 16×100 → 三机制 VLA 训练流水线（1027 计划）</text>
+
+  <!-- 图例 -->
+  <rect x="1080" y="20" width="390" height="98" fill="#fafafa" stroke="#999" stroke-width="1"/>
+  <rect x="1092" y="30" width="28" height="14" class="box-blue"/>
+  <text x="1128" y="42" class="s">灰蓝框 = 现有代码直接复用</text>
+  <rect x="1092" y="52" width="28" height="14" class="box-green"/>
+  <text x="1128" y="64" class="s">绿框 = 三个可切换机制的开关点（M1/M2/M3）</text>
+  <rect x="1092" y="74" width="28" height="14" class="box-red"/>
+  <text x="1128" y="86" class="s red">红描边+红字 = 本计划新增、不属于三机制的额外机制</text>
+  <rect x="1092" y="96" width="28" height="14" fill="#fff8ec" stroke="#f08c00" stroke-width="4"/>
+  <text x="1128" y="108" class="s">粗橙描边 = 本次正式训练选中的分支</text>
+
+  <!-- S0 数据源 -->
+  <rect x="180" y="80" width="710" height="70" class="box-blue"/>
+  <text x="192" y="102" class="t">S0 官方 RoboMME 16×100 原始 H5</text>
+  <text x="192" y="120" class="b">输入：Yinpei/robomme_data_h5@a5e4e25，16 个 H5（逐文件 sha256 已核）</text>
+  <text x="192" y="138" class="b">输出：1600 集、768,897 帧前视 RGB 256×256</text>
+
+  <!-- X1 血缘闸门（红） -->
+  <rect x="1080" y="130" width="390" height="106" class="box-red"/>
+  <text x="1092" y="152" class="t red">X1 P-LINEAGE 血缘闸门（新增）</text>
+  <text x="1092" y="170" class="b red">check_data_lineage.py</text>
+  <text x="1092" y="188" class="b red">encoder 训练源 16 文件</text>
+  <text x="1092" y="206" class="b red">= VLA 库 input_manifest 16 文件</text>
+  <text x="1092" y="224" class="b red">DATA_LINEAGE=PASS mismatches=0</text>
+  <line x1="890" y1="140" x2="1080" y2="140" class="note"/>
+
+  <!-- S0 → V1 / W1 -->
+  <line x1="270" y1="150" x2="270" y2="190" class="flow"/>
+  <line x1="800" y1="150" x2="800" y2="190" class="flow"/>
+
+  <!-- ===== 左列：视觉路 ===== -->
+  <rect x="40" y="190" width="460" height="70" class="box-blue"/>
+  <text x="52" y="212" class="t">V1 SigLIP 逐帧特征</text>
+  <text x="52" y="230" class="b">输入：每帧 RGB 256×256</text>
+  <text x="52" y="248" class="b">输出：16×16×2048 → 池化为 8×8 与 4×4 两份</text>
+  <line x1="270" y1="260" x2="270" y2="300" class="flow"/>
+
+  <rect x="40" y="300" width="460" height="106" class="box-blue"/>
+  <text x="52" y="322" class="t">V2 打两种帧表</text>
+  <text x="52" y="340" class="b">输入：source 特征</text>
+  <text x="52" y="358" class="b">输出：framesamp-4x4-v1 (行,16,2048) bf16</text>
+  <text x="52" y="376" class="b">　　　framesamp-8x8-v1 (行,64,2048) bf16</text>
+  <text x="52" y="394" class="b">（pack_framesamp_store.py --layout，两种都建）</text>
+  <line x1="270" y1="406" x2="270" y2="446" class="flow"/>
+
+  <!-- M1 机制1 -->
+  <rect x="40" y="446" width="460" height="140" class="box-green"/>
+  <text x="52" y="468" class="t">M1 机制1 帧布局开关（总预算 512）</text>
+  <rect x="52" y="482" width="210" height="70" class="sub-sel"/>
+  <text x="157" y="504" class="b" text-anchor="middle">32 帧 × 4×4</text>
+  <text x="157" y="522" class="b" text-anchor="middle">16 token/帧 → 512</text>
+  <text x="157" y="540" class="s org" text-anchor="middle">正式训练选用</text>
+  <rect x="278" y="482" width="210" height="70" class="sub"/>
+  <text x="383" y="504" class="b" text-anchor="middle">8 帧 × 8×8</text>
+  <text x="383" y="522" class="b" text-anchor="middle">64 token/帧 → 512</text>
+  <text x="52" y="574" class="b">输出：frame_emb [512,2048] + pos [512,768] + mask [512]</text>
+  <line x1="270" y1="586" x2="270" y2="626" class="flow"/>
+
+  <rect x="40" y="626" width="460" height="88" class="box-blue"/>
+  <text x="52" y="648" class="t">V4 帧记忆投影</text>
+  <text x="52" y="666" class="b">输入：frame_emb + pos</text>
+  <text x="52" y="684" class="b">输出：512 个 D 维 token</text>
+  <text x="52" y="702" class="b">（D 由机制3 决定：context 2048 / modulation 1024）</text>
+  <line x1="270" y1="714" x2="270" y2="1098" class="flow"/>
+
+  <!-- ===== 中列：motion 路 ===== -->
+  <rect x="560" y="190" width="480" height="88" class="box-blue"/>
+  <text x="572" y="212" class="t">W1 切窗口</text>
+  <text x="572" y="230" class="b">输入：每段前视 RGB（demo/exec 分段，不跨段）</text>
+  <text x="572" y="248" class="b">输出：33 帧窗口，步长 32，段起点起算</text>
+  <text x="572" y="266" class="b">备注：demo 末窗真实帧 ≥17 用末帧补满；exec 只收完整窗</text>
+  <line x1="800" y1="278" x2="800" y2="318" class="flow"/>
+
+  <rect x="560" y="318" width="480" height="106" class="box-blue"/>
+  <text x="572" y="340" class="t">W2 Wan2.1 VAE latent</text>
+  <text x="572" y="358" class="b">输入：33 帧</text>
+  <text x="572" y="376" class="b">输出：[9,16,32,32] fp32</text>
+  <text x="572" y="394" class="b">备注：复用发布缓存 42,404 窗 + 本地只补 2,824 缺窗；</text>
+  <text x="572" y="412" class="b">　　　精度差按用户裁决记 NOT_REQUIRED</text>
+  <!-- X2 -->
+  <rect x="1080" y="327" width="390" height="88" class="box-red"/>
+  <text x="1092" y="349" class="t red">X2 缓存导入与补窗工具（新增）</text>
+  <text x="1092" y="367" class="b red">orig16_wan_cache.py</text>
+  <text x="1092" y="385" class="b red">+ 来源合同</text>
+  <text x="1092" y="403" class="b red">published-cache-with-local-fill</text>
+  <line x1="1040" y1="371" x2="1080" y2="371" class="note"/>
+  <line x1="800" y1="424" x2="800" y2="464" class="flow"/>
+
+  <rect x="560" y="464" width="480" height="106" class="box-blue"/>
+  <text x="572" y="486" class="t">W3 MotionJEPA stage2 encoder</text>
+  <text x="572" y="504" class="b">（ep105 EMA 冻结，官方 16×100 训练）</text>
+  <text x="572" y="522" class="b">输入：latent [9,16,32,32]</text>
+  <text x="572" y="540" class="b">输出：4 个 pool token [4,256]（组 0/3/5/8）</text>
+  <text x="572" y="558" class="b">　　　落盘为 [1,1024]（grid32，23,253 窗）</text>
+  <!-- X3 -->
+  <rect x="1080" y="482" width="390" height="70" class="box-red"/>
+  <text x="1092" y="504" class="t red">X3 导出 CLI 新增参数（新增）</text>
+  <text x="1092" y="522" class="b red">--expected-counts</text>
+  <text x="1092" y="540" class="b red">--input-manifest</text>
+  <line x1="1040" y1="517" x2="1080" y2="517" class="note"/>
+  <line x1="800" y1="570" x2="800" y2="610" class="flow"/>
+
+  <!-- M2 机制2 -->
+  <rect x="560" y="610" width="480" height="174" class="box-green"/>
+  <text x="572" y="632" class="t">M2 机制2 motion token 读法开关</text>
+  <rect x="572" y="646" width="220" height="124" class="sub"/>
+  <text x="682" y="668" class="t" text-anchor="middle">concat</text>
+  <text x="682" y="686" class="b" text-anchor="middle">每窗 1 个 1024 维 token</text>
+  <text x="682" y="704" class="b" text-anchor="middle">budget 96</text>
+  <rect x="808" y="646" width="220" height="124" class="sub-sel"/>
+  <text x="918" y="668" class="t" text-anchor="middle">split</text>
+  <text x="918" y="686" class="b" text-anchor="middle">每窗 4 个 256 维 token</text>
+  <text x="918" y="704" class="b" text-anchor="middle">（逐位 reshape，不重算）</text>
+  <text x="918" y="722" class="b" text-anchor="middle">budget 384 token = 96 窗</text>
+  <text x="918" y="740" class="s grn" text-anchor="middle">新增 readout</text>
+  <text x="918" y="758" class="s grn" text-anchor="middle">stage2_pool4_split_v1</text>
+  <line x1="800" y1="784" x2="800" y2="824" class="flow"/>
+
+  <rect x="560" y="824" width="480" height="106" class="box-blue"/>
+  <text x="572" y="846" class="t">W5 按时刻 t 取可见窗口并补齐</text>
+  <text x="572" y="864" class="b">输入：t、exec 起点、全部窗口</text>
+  <text x="572" y="882" class="b">输出：motion_emb [B,1024 或 256]、mask [B]</text>
+  <text x="572" y="900" class="b">　　　motion_pos [B,256]（窗口起点帧时间码，</text>
+  <text x="572" y="918" class="b">　　　4 个 token 共用同一位置）</text>
+  <line x1="800" y1="930" x2="800" y2="970" class="flow"/>
+
+  <rect x="560" y="970" width="480" height="88" class="box-blue"/>
+  <text x="572" y="992" class="t">W6 motion 投影</text>
+  <text x="572" y="1010" class="b">输入：motion_emb ⊕ SiLU(Linear 256→768 (pos))</text>
+  <text x="572" y="1028" class="b">输出：B 个 D 维 token</text>
+  <text x="572" y="1046" class="b">（Linear 1792→D 或 1024→D）</text>
+  <line x1="800" y1="1058" x2="800" y2="1098" class="flow"/>
+
+  <!-- ===== 底部汇合 ===== -->
+  <rect x="180" y="1098" width="710" height="88" class="box-blue"/>
+  <text x="192" y="1120" class="t">F1 拼接并按时间排序</text>
+  <text x="192" y="1138" class="b">输入：512 帧 token + B motion token</text>
+  <text x="192" y="1156" class="b">输出：608（concat）或 896（split）个 D 维记忆位置</text>
+  <text x="192" y="1174" class="b">排序键 = 时刻×2+类型，同刻帧在前，padding 落尾</text>
+  <line x1="535" y1="1186" x2="535" y2="1226" class="flow"/>
+
+  <!-- M3 机制3 -->
+  <rect x="180" y="1226" width="710" height="120" class="box-green"/>
+  <text x="192" y="1248" class="t">M3 机制3 融合方式开关</text>
+  <rect x="192" y="1262" width="340" height="70" class="sub-sel"/>
+  <text x="362" y="1284" class="t" text-anchor="middle">context（D=2048）</text>
+  <text x="362" y="1302" class="b" text-anchor="middle">记忆 token 拼在 Gemma prefix</text>
+  <text x="362" y="1320" class="b" text-anchor="middle">图像 token 之前</text>
+  <rect x="538" y="1262" width="340" height="70" class="sub"/>
+  <text x="708" y="1284" class="t" text-anchor="middle">modulation（D=1024）</text>
+  <text x="708" y="1302" class="b" text-anchor="middle">action expert 每层 MemoryAttention</text>
+  <text x="708" y="1320" class="b" text-anchor="middle">读记忆，调制 FFN 前 RMSNorm</text>
+  <line x1="535" y1="1346" x2="535" y2="1386" class="flow"/>
+
+  <rect x="180" y="1386" width="710" height="70" class="box-blue"/>
+  <text x="192" y="1408" class="t">F3 π0.5 策略输出</text>
+  <text x="192" y="1426" class="b">输入：prefix（图像+语言[+记忆]）与动作 suffix</text>
+  <text x="192" y="1444" class="b">输出：动作块 horizon 20</text>
+  <line x1="535" y1="1456" x2="535" y2="1496" class="flow"/>
+
+  <!-- 橙色横幅 -->
+  <rect x="40" y="1496" width="1430" height="56" fill="#fff3e0" stroke="#f08c00" stroke-width="4"/>
+  <text x="755" y="1530" font-size="15" font-weight="bold" fill="#8a4b00" text-anchor="middle">正式训练：context + 32帧4×4 + motion 每窗 4 token → 记忆 896 位，D=2048；8 卡，global batch 128；pi05_base 起训</text>
+</svg>
