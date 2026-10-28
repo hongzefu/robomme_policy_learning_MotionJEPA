@@ -147,3 +147,5 @@ SigLIP实际起跑于美东10月28日00:47:46，`o16-siglip`、pane PID222562，
 先于美东01:07:07在GPU0同驻执行1段smoke，01:07:14完成：`STAGE2_EXPORT=PASS scope=smoke segments=1 rows=17`、`EXIT_CODE=0`。源码身份逐键核为锁定b5d23a5，未改用MJ editable环境。随后01:09:42起`o16-s2export`（pane248995、worker249030），保持`--expected-counts 2496,23253 --check-dropout 64`及已定解释器/CLI；写`LIB/motion-tokens-stage2`，与SigLIP的`LIB/source`分离。调度载体`motion-stage.sh` SHA为`f89143b1b76cb4261cc8b6aa51fe5364922d94e03d57a83499e8676dc2263fc9`，分别设置`STAGE=export-smoke`和`STAGE=export`。全量导出此时进行中，不因smoke通过而标全量成功。
 
 G0和后续验证仍在原有输入就绪后全部执行；提前完成的全量编码不重复烧GPU。所有已有GPU0进程均核为本轮SigLIP后代；若同驻短测失败，原定独立导出仍会执行，失败记录保留，不影响SigLIP现场。
+
+截至美东01:17，全量导出已实际完成并退出：`STAGE2_EXPORT=PASS segments=2496 rows=23253`、`EXIT_CODE=0`，2496个f32文件共95244288字节；export_record明确`scope=full`，SHA为`9f56b96c8c881cf11db7d50bda7a16da0ebb24d71f7fcea3e3a846c9f12031e0`。64窗dropout诊断为`eval_repeat_max_abs=0.0`、`train_vs_eval_max_abs=1.5240858793258667`，后者用于证实训练/推理模式差异，不是失败指标。共享来源三键与固定SOURCE_PIN逐项相同。导出会话已退出，SigLIP继续；此结果不替代后续G0/G2/G3/pack/verify。
