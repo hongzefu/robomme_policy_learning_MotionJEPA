@@ -235,3 +235,5 @@ G12须用导出根的`stage/59999`及同一stage的`manifests/step-59999.json`�
 真实常量提交941fcfde1571e3c164937b4f817e38a7229f8d07已推送且clean。美东04:03:47启动`o16-g4-ctx`，pane415106/worker415157，日志`check-g4-ctx.log`；父GPU0/sidecar1。先输出原`STAGE2_LATENT_PARITY=NOT_REQUIRED reason=user_decision_same_input`，随后继续完整输入身份检查，此时尚未生成G4 PASS报告。
 
 04:04:35同一clean HEAD启动`o16-trainset-up`，pane416218/worker416274，正式输出根从不存在的`v1-store/exports/hf-orig100-trainset`新建，未复用中止测试目录。载体`trainset-export.sh` SHA为`0ffab76d9bb78c76e1f42750f7ed056442ef7745ceea5e4e07cad7ed7be2f132`；命令`EXPORT_HEAD=941fcfde1571e3c164937b4f817e38a7229f8d07 bash v1-store/logs/o16-20261028/trainset-export.sh`，执行既定`run_orig100_trainset_export.sh`，日志`trainset-export.log`。CUDA隐藏、JAX CPU、8打包线程、HF/uv缓存位于工作盘，固定公开bucket不变。实际`HYGIENE=PASS files=11620`，尚在本地打包，不能写成已上传或匿名验收通过。两任务的监督预算分别2小时/12小时，由主会话持续监听。
+
+美东04:11:19启动原八组合CPU矩阵`o16-matrix`，pane423136/worker423189，从clean432c9edd80a2eaccfe6a40fc1e99d388b3f64fdc执行`CHECK_HEAD=<该sha> STAGE=matrix bash v1-store/logs/o16-20261028/post-build-checks.sh`，日志`check-matrix.log`，监督预算30分钟。独立同规模调度审查确认矩阵强制CPU、仅读隔离临时夹具、`--lib`只打印定位，无共享数据/输出依赖，可与G4/导出并行；原工作量和判据不变。保持单层小FFN真实宽度/位数的适用范围，不冒充完整VLA或GPU20步。此时矩阵尚未结束。
