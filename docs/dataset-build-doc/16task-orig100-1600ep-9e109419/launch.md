@@ -133,3 +133,9 @@ AWS本地NVMe RAID，8×A100-SXM4-80GB。开工预核空闲2.757TiB、8卡空闲
 另一个真实启动程序缺陷已在独立S2树修复：`init_history_config`漏向快照传递已有`source_grid_sha256`和`latents_metadata_sha256`，实际入口联测复现KeyError；`3fa6665e39e77eb671daed15358311a6e76b2519`只增加一行来源字段转交及直接测试，修后14项通过，独立`PRE_MERGE_REVIEW=PASS`。该必要修复与CR修复一样待解冻后、训练前整合，不删除检查或伪造来源。
 
 为落实“失败只记录”，S7在CR修复后追加`c5a2e31fc62f85d54d9fe94de0f5077a7b503435`：日志数值扫描与final.json诊断仍全部执行，原FAIL保留并明确`action=record_only reason=user_decision`；诊断不再覆盖实际训练退出码，也不单独阻止完成后的串行接续。真实程序非零、日志写入失败、缺真实结束日志或59999仍按客观未完成处理；启动合同和诊断判据未改变。新策略37项定向测试及独立审查通过，旧阻断策略的测试原记录另存。解冻后合最新c5a2e31即可同时包含CR修复，不能只合旧f50742e。
+
+## 九、Wan实际结果与SigLIP起跑
+
+原导入器先完成约901GB的缓存及H5完整复核，再启动8个GPU worker；最后2496段全部汇总并检查，实际产物26676559872字节。`WAN_CACHE_IMPORT=PASS copied=42404 filled=2824 total=45228 input_mismatches=0 nonfinite=0`、`WAN_INPUT_COVERAGE=PASS windows=45228 missing=0 duplicate=0 mismatches=0`、`EXIT_CODE=0`。导入收据SHA为`1a976182ca3868b6dec25a4411ccc85eed254978f2e4bb9cee11532e3093e22e`。主会话复核收据、元数据摘要及计数后，仅删除确切`LIB/cache-source/official-wan`实体目录；`CACHE_TEMP_REMOVED=PASS`，原H5和完整wan-latents保留。
+
+SigLIP实际起跑于美东10月28日00:47:46，`o16-siglip`、pane PID222562，日志`siglip-source.log`。权重cheap校验PASS，global_episode_idx=0单集550帧短测完成，`SHARD_DONE ... elapsed=94.1s`、`SIGLIP_EPISODE_SMOKE=PASS episodes=1`；这94.1秒包含首次初始化，不作为稳态速度。随后按原命令启动8卡16worker全量source构建；当前阶段仍在运行，不记完成。
