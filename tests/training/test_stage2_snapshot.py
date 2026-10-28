@@ -15,7 +15,9 @@ from flax import nnx,struct
 
 ROOT=pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/"tests/datastore"))
+sys.path.insert(0,str(ROOT/"tests/dataset"))
 from test_motion_store_stage2 import stage2_identity
+from test_pack_motion_stage2_cached import cached_fx
 from mme_vla_suite.datastore import motion_store as ms
 
 spec=importlib.util.spec_from_file_location("train_stage2_snapshot",ROOT/"scripts/training/train.py")
@@ -81,6 +83,28 @@ def test_failed_snapshot_never_publishes_ready(snapshot,monkeypatch):
     monkeypatch.setattr(train,"_atomic_stage2_file",fail)
     with pytest.raises(OSError):train.write_stage2_motion_snapshot(root,provenance,registered_root=registered)
     assert not (root/"motion_snapshot.ready.json").exists()
+
+
+def test_cached_snapshot_preserves_evidence_and_streaming_batches(snapshot, cached_fx):
+    from test_pack_motion_stage2_cached import pack, load, dump, verify_args
+    from mme_vla_suite.policies.motion_client import validate_stage2_evidence
+    root, _, _ = snapshot
+    s = cached_fx
+    pack.cmd_pack(s.args)
+    pack.cmd_verify(verify_args(s))
+    provenance = ms.MotionMeta.load(s.args.out).provenance
+    provenance["resolved_sha256"] = ms.sha256_file(root / "history_config.resolved.yaml")
+    portable = load(root.parent / "online_restore_inputs.json")
+    portable["exec_batch_lengths"] = [1, 16, 16, 16, 16]
+    dump(s.validation / "online_restore_inputs.json", portable)
+    (s.validation / "online_restore_inputs.npz").write_bytes((root.parent / "online_restore_inputs.npz").read_bytes())
+    train.write_stage2_motion_snapshot(root, provenance, registered_root=s.fx.enc_dir.parent)
+    saved = load(root / "motion_provenance.json")
+    validate_stage2_evidence(saved, root)
+    assert ms.stage2_uses_cache(saved)
+    assert set(saved["stage2_compat"]["evidence"]) == set(ms.stage2_evidence_roles(saved))
+    assert not (root / "motion_evidence/restore_receipt.json").exists()
+    assert load(root / "online_restore_inputs.json")["exec_batch_lengths"] == [1, 16, 16, 16, 16]
 
 
 @pytest.mark.parametrize("fault",["missing_group","changed_evidence","symlink_dependency","changed_dependency","portable_sha","array_sha"])

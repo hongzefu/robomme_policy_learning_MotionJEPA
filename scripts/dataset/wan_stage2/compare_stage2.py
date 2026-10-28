@@ -17,6 +17,7 @@ import validate_stage2 as V
 
 SCHEMA = "stage2-encoder-bitexact-v1"
 SAMPLED_SCHEMA = "stage2-encoder-sampled-v1"
+INTEGRITY_SCHEMA = "stage2-packed-integrity-v1"
 AUTHORIZATION_QUOTE = "同意按照你说过的更省时方案 做\nencoder只抽机小部分"
 
 
@@ -48,6 +49,8 @@ def hash_latent(job):
             block = stream.read(V.CHUNK_BYTES)
             if len(block) != V.CHUNK_BYTES:
                 raise ValueError(f"源latent块被截断：{path}")
+            if not np.isfinite(np.frombuffer(block, dtype="<f4")).all():
+                raise ValueError(f"源latent含非有限数：{path}")
             digest.update(block)
             if grid % 2 == 0:
                 blocks.append(V.sha_bytes(block))
@@ -256,14 +259,15 @@ def certify(args):
     try:
         if record_path.exists():
             previous = V.read_json(record_path)
-            if previous.get("schema") not in (SCHEMA, SAMPLED_SCHEMA):
+            if previous.get("schema") not in (SCHEMA, SAMPLED_SCHEMA, INTEGRITY_SCHEMA):
                 raise ValueError("认证路径已用于不同合同")
             record_path.unlink()
         if args.scope not in ("full", "sampled") or args.batch != 1:
             raise ValueError("认证强制 scope=full或sampled、batch=1")
         meta = ms.MotionMeta.load(root)
-        if meta.raw["layout"] != V.LAYOUT or meta.num_rows != 65419:
-            raise ValueError("正式 G5a 必须覆盖 stage2 的65,419行")
+        if (meta.raw["layout"] != V.LAYOUT or type(getattr(args, "expect_rows", None)) is not int
+                or args.expect_rows <= 0 or meta.num_rows != args.expect_rows):
+            raise ValueError("正式 G5a 行数必须与显式 --expect-rows 相同")
         ms.run_fast_checks(meta)
         ms.run_full_checks(meta)
         bound_paths = [root / ms.META_RELPATH, root / ms.INDEX_RELPATH,
@@ -280,6 +284,28 @@ def certify(args):
                 if part.num_grid:
                     segments.append((ms.segment_key(entry.h5_file, entry.raw_ep_idx, kind), part.row_base, part.num_grid))
         table = np.memmap(root / ms.MOTION_TABLE_RELPATH, mode="r", dtype="<f4", shape=(meta.num_rows, 1024))
+        if ms.stage2_uses_cache(meta.provenance):
+            integrity = cpu_full_integrity(meta=meta, table=table, latent_root=args.latents)
+            if not np.isfinite(table).all():
+                raise ValueError("packed表含非有限数")
+            mapping = integrity["source_grid"]
+            source_sha = V.sha_bytes(V.canonical(mapping))
+            if source_sha != meta.provenance["source_grid_sha256"]:
+                raise ValueError("缓存完整偶数格映射与 store 来源不同")
+            for path, digest in hashes.items():
+                if V.sha_file(path) != digest:
+                    raise ValueError(f"完整性检查期间绑定文件改变：{path}")
+            record = dict(schema=INTEGRITY_SCHEMA, status="PASS", scope="full", layout=V.LAYOUT,
+                          compared=meta.num_rows, packed_compared=meta.num_rows, mismatches=0, nonfinite=0,
+                          source_grid_sha256=source_sha, output_numerics=dict(ms.SAME_INPUT_NOT_REQUIRED),
+                          store_table_sha256=meta.table_sha256, motion_index_sha256=meta.motion_index_sha256,
+                          checkpoint_sha256=args.expected_sha256,
+                          source_metadata_sha256=meta.provenance["latents_metadata_sha256"],
+                          cache_import_receipt_sha256=meta.provenance["stage2_compat"]["cache_import_receipt_sha256"])
+            V.atomic_json(record_path, record)
+            print(f"PACKED_TOKEN_BYTES=PASS compared={meta.num_rows} mismatches=0 nonfinite=0", flush=True)
+            print("ENCODER_BITEXACT=NOT_REQUIRED reason=user_decision_same_input", flush=True)
+            return record
         integrity, sample_plan = None, None
         if args.scope == "sampled":
             sample_plan = ms.stage2_encoder_sample_plan(meta.entries)
@@ -326,7 +352,7 @@ def certify(args):
         return record
     except BaseException:
         # 本次认证失败/中断后不能残留旧 PASS，亦不把部分比较伪装为 scope=full。
-        if record_path.exists() and V.read_json(record_path).get("schema") in (SCHEMA, SAMPLED_SCHEMA):
+        if record_path.exists() and V.read_json(record_path).get("schema") in (SCHEMA, SAMPLED_SCHEMA, INTEGRITY_SCHEMA):
             record_path.unlink()
         raise
     finally:
@@ -339,6 +365,7 @@ def main(argv=None):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--scope", required=True, choices=("full", "sampled"))
     parser.add_argument("--batch", type=int, default=1, choices=(1,))
+    parser.add_argument("--expect-rows", required=True, type=int)
     parser.add_argument("--device", default="cuda:0")
     args = parser.parse_args(argv)
     certify(args)

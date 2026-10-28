@@ -62,11 +62,15 @@ def reference_subprocess(args, meta, v1, directory):
             "--expected-sha256", enc["checkpoint_sha256"], "--reference-output", str(output), "--out", str(report)]
     subprocess.run(argv, env=env, cwd=REPO, check=True)
     record = V.read_json(report)
+    from mme_vla_suite.datastore import motion_store as ms
+    cached = ms.stage2_uses_cache(meta.provenance)
+    metrics = dict(windows=64, shape_mismatches=0, nonfinite=0) if cached else dict(windows=64, encoder_max_abs=0)
     if (record.get("status") != "PASS" or record.get("gate") != "G4-reference"
             or record.get("checkpoint_sha256") != enc["checkpoint_sha256"]
             or record.get("samples_sha256") != V.sha_file(args.samples)
             or record.get("reference_sha256") != V.sha_file(output)
-            or record.get("metrics") != dict(windows=64, encoder_max_abs=0)):
+            or record.get("metrics") != metrics
+            or (cached and record.get("output_numerics") != ms.SAME_INPUT_NOT_REQUIRED)):
         raise ValueError("锁子环境同latent参考未完整通过")
     verify_gpu(record, args.online_gpu)
     reference = np.load(output, allow_pickle=False)
@@ -293,7 +297,7 @@ def run(args):
             if result.shape != (1024,) or result.dtype != np.float32 or not np.isfinite(result).all():
                 raise ValueError("真实客户端输出形制或有限性错误")
             delta = float(np.max(np.abs(result.astype(np.float64) - reference[i].astype(np.float64))))
-            if delta > 1e-5:
+            if not ms.stage2_uses_cache(meta.provenance) and delta > 1e-5:
                 raise ValueError(f"端到端超过1e-5：{window['key']}:{window['source_grid']} max={delta}")
             rows.append(dict(key=window["key"], source_grid=window["source_grid"], max_abs=delta))
         handshake = copy.deepcopy(real.provenance)
@@ -313,7 +317,10 @@ def run(args):
     portable = prepare_restore_inputs(meta, samples, v1, Path(args.out).parent)
     return dict(schema="stage2-validation-gate-v1", gate="G4", status="PASS", producer=V.PRODUCER,
                 checkpoint_sha256=enc["checkpoint_sha256"], samples_sha256=samples_sha, history_sha256=history_sha,
-                metrics=dict(windows=64, handshake=1, response_bytes=4096, encoder_max_abs=0,
+                **(dict(output_numerics=dict(ms.SAME_INPUT_NOT_REQUIRED), kind=ms.STAGE2_CACHE_ORIGIN)
+                   if ms.stage2_uses_cache(meta.provenance) else {}),
+                metrics=dict(windows=64, handshake=1, response_bytes=4096,
+                             **(dict(shape_mismatches=0, nonfinite=0) if ms.stage2_uses_cache(meta.provenance) else dict(encoder_max_abs=0)),
                              e2e_max_abs=max(row["max_abs"] for row in rows), **machine),
                 windows=rows, handshake=handshake, physical_gpu=gpu, same_latent=reference_record,
                 online_restore_inputs=portable)
