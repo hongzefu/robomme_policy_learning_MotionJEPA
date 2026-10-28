@@ -507,6 +507,33 @@ def run_checkpoints(mode, smoke, root):
         print(f"INC_END run={RUN} done=12")
 
 
+def packed_trainset_files(stage):
+    """以既有打包清单核交付对象，不能给续跑时同尺寸损坏的文件重新签摘要。"""
+    packed = json_file(member(stage, "manifest/upload_manifest.json"))
+    files = {}
+    for group, checksum in (("shards", "sha256-shards.txt"), ("plain_files", "sha256-plain.txt")):
+        hashes = {}
+        for entry in packed[group]:
+            name = relative(entry["rel"])
+            need(name not in files, f"打包清单存在重复对象: {name}")
+            files[name] = {"sha256": entry["sha256"], "bytes": entry["bytes"]}
+            hashes[name] = entry["sha256"]
+        lines = [line.split("  ", 1) for line in member(stage, f"checksums/{checksum}").read_text().splitlines()]
+        listed = {name: digest for digest, name in lines}
+        need(len(lines) == len(listed) and listed == hashes, f"打包校验和与清单不符: {checksum}")
+    controls = {"manifest/upload_manifest.json", "checksums/sha256-shards.txt", "checksums/sha256-plain.txt",
+                "checksums/sha256-source-files.txt", "README.md"}
+    need(not controls.intersection(files), "打包对象与清单文件路径冲突")
+    actual = {p.relative_to(stage).as_posix() for p in stage.rglob("*") if p.is_file()}
+    need(actual - {"delivery_manifest.json"} == set(files) | controls, "打包交付对象集合不符")
+    for name, expected in files.items():
+        need(file_info(member(stage, name)) == expected, f"打包清单SHA或字节数不符: {name}")
+    need(sum(info["bytes"] for info in files.values()) == packed["total_bytes"], "打包清单总字节数不符")
+    files.update({name: file_info(member(stage, name)) for name in controls})
+    print(f"PACK_MANIFEST_VERIFY=PASS files={len(files)}", flush=True)
+    return files
+
+
 def run_trainset(smoke, root):
     lib = Path(os.environ.get("O16_LIB", REPO / "v1-store/datasets" / DATASET))
     norm = Path(os.environ.get("O16_NORM_STATS", REPO / "v1-store/train-assets/mme_vla_suite" / DATASET / "robomme/norm_stats.json"))
@@ -557,8 +584,7 @@ def run_trainset(smoke, root):
         need(checked > 0, "SMOKE没有tar成员")
         print(f"SMOKE=PASS kind=trainset members={checked} network=0")
         return
-    files = {p.relative_to(stage).as_posix(): file_info(p) for p in stage.rglob("*") if p.is_file()
-             and p.name != "delivery_manifest.json"}
+    files = packed_trainset_files(stage)
     files = add_manifest(stage, files, "delivery_manifest.json", bucket=TRAINSET_BUCKET, dataset=DATASET)
     scan({name: stage / name for name in files}, allow)
     publisher = Publisher(root, TRAINSET_BUCKET, {"kind": "orig100-trainset", "bucket": TRAINSET_BUCKET,

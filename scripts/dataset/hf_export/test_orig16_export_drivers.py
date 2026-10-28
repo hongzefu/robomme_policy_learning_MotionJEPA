@@ -137,6 +137,55 @@ def test_full_pack_and_readback(tmp_path, exporter):
     assert before == {p.relative_to(stage).as_posix(): sha(p.read_bytes()) for p in stage.rglob("*") if p.is_file()}
 
 
+@pytest.mark.parametrize("corrupt_rel", [
+    "source/data_tars/data-00000.tar", "framesamp-4x4/image_emb_4x4/part_000.bf16.bin"])
+def test_trainset_resume_rejects_same_size_corruption(tmp_path, exporter, monkeypatch, corrupt_rel):
+    lib, norm = fixture_library(tmp_path)
+    root = tmp_path / "export"
+    result = run_pack(lib, norm, root)
+    assert result.returncode == 0, result.stdout + result.stderr
+    target = root / "stage" / corrupt_rel
+    data = bytearray(target.read_bytes())
+    # 改tar首个成员的数据字节，仍是有效tar且尺寸不变；表文件同样原位改一个字节。
+    offset = 512 if target.suffix == ".tar" else 0
+    data[offset] ^= 1
+    target.write_bytes(data)
+    for key, value in env_for_scripts(O16_LIB=str(lib), O16_NORM_STATS=str(norm)).items():
+        monkeypatch.setenv(key, value)
+    # 真实重跑pack会因尺寸相同而跳过；正式驱动必须在发布器读取凭据之前拒绝。
+    with pytest.raises(ValueError, match="打包清单SHA或字节数不符"):
+        exporter.run_trainset(False, root)
+    assert not (root / "stage/delivery_manifest.json").exists()
+
+
+@pytest.mark.parametrize("failure", [None, "extra", "missing", "checksum", "bytes"])
+def test_trainset_uses_pack_manifest_object_set(tmp_path, exporter, failure):
+    lib, norm = fixture_library(tmp_path)
+    root = tmp_path / "export"
+    result = run_pack(lib, norm, root)
+    assert result.returncode == 0, result.stdout + result.stderr
+    stage = root / "stage"
+    write(stage / "README.md", "夹具")
+    if failure == "extra":
+        write(stage / "unexpected.bin", "未列举对象")
+    elif failure == "missing":
+        (stage / "source/data_tars/data-00000.tar").unlink()
+    elif failure == "checksum":
+        checksum = stage / "checksums/sha256-shards.txt"
+        checksum.write_text("f" * 64 + checksum.read_text()[64:])
+    elif failure == "bytes":
+        manifest = stage / "manifest/upload_manifest.json"
+        packed = json.loads(manifest.read_text())
+        packed["shards"][0]["bytes"] += 1
+        write(manifest, packed)
+    if failure:
+        with pytest.raises(ValueError, match="对象集合|校验和|SHA或字节数"):
+            exporter.packed_trainset_files(stage)
+    else:
+        files = exporter.packed_trainset_files(stage)
+        assert files == {p.relative_to(stage).as_posix(): exporter.file_info(p) for p in stage.rglob("*") if p.is_file()}
+
+
 @pytest.mark.parametrize("failure", ["layout", "count", "lock", "evidence", "sha"])
 def test_pack_rejects_invalid_library(tmp_path, failure):
     lib, norm = fixture_library(tmp_path)
