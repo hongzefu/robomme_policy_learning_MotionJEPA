@@ -107,6 +107,81 @@ def test_cached_snapshot_preserves_evidence_and_streaming_batches(snapshot, cach
     assert load(root / "online_restore_inputs.json")["exec_batch_lengths"] == [1, 16, 16, 16, 16]
 
 
+@pytest.fixture
+def cached_init(snapshot, cached_fx, monkeypatch, tmp_path):
+    """实际帧表元数据、motion表与注册件，贯通入口组包和快照写入。"""
+    from omegaconf import OmegaConf
+    from mme_vla_suite.datastore import framesamp_store as fs
+    from test_pack_motion_stage2_cached import pack, load, dump, verify_args
+    root, _, _ = snapshot
+    s = cached_fx
+    pack.cmd_pack(s.args)
+    pack.cmd_verify(verify_args(s))
+    portable = load(root.parent / "online_restore_inputs.json")
+    portable["exec_batch_lengths"] = [1, 16, 16, 16, 16]
+    dump(s.validation / "online_restore_inputs.json", portable)
+    (s.validation / "online_restore_inputs.npz").write_bytes((root.parent / "online_restore_inputs.npz").read_bytes())
+    repository = tmp_path / "合成注册根"
+    registered = repository / "v1-store/external/motionjepa" / s.fx.enc_dir.name
+    registered.mkdir(parents=True)
+    for name in ("checkpoint_epoch_105.pt", "config.yaml"):
+        (registered / name).write_bytes((s.fx.enc_dir / name).read_bytes())
+    monkeypatch.setattr(train, "__file__", str(repository / "scripts/training/train.py"))
+    monkeypatch.delenv("MMEVLA_MOTION_STORE", raising=False)
+    monkeypatch.delenv("MMEVLA_FRAMESAMP_MANIFEST", raising=False)
+    frames = tmp_path / "framesamp"
+    (frames / "meta").mkdir(parents=True)
+    spec = fs.SPECS[fs.LAYOUT]
+    rows = s.fx.manifest["totals"]["timesteps"]
+    dump(frames / fs.META_RELPATH, dict(layout=spec.layout, byte_order=fs.BYTE_ORDER, array_order=fs.ARRAY_ORDER,
+        bf16_encoding=fs.BF16_ENCODING, status="verified", manifest_scope="full", num_rows=rows,
+        num_exec_samples=s.fx.manifest["totals"]["exec_samples"], num_pos_rows=114,
+        manifest_sha256=s.fx.manifest["sha256"], manifest_path=str(s.fx.manifest_path), source_dataset_root=str(frames),
+        tables={spec.image_key: dict(row_shape=list(spec.image_row_shape), dtype="bfloat16", row_bytes=spec.image_row_bytes,
+                                    part_dir=spec.image_part_dir),
+                spec.pos_key: dict(row_shape=list(spec.pos_row_shape), dtype="float32", row_bytes=spec.pos_row_bytes,
+                                  relpath=spec.pos_table_relpath),
+                fs.STATE_KEY: dict(row_shape=list(fs.STATE_ROW_SHAPE), dtype="float32", row_bytes=fs.STATE_ROW_BYTES)},
+        parts=[dict(index=0, start_row=0, num_rows=rows, bytes=rows * spec.image_row_bytes,
+                    path=f"{spec.image_part_dir}/part_000.bf16.bin", sha256="a" * 64,
+                    head_tail_digest="b" * 64, full_covered=True)]))
+    history = OmegaConf.create(dict(motion=dict(enabled=True, store_path=s.args.out, source_shape=[1, 1024],
+        readout="stage2_pool4_split_v1", num_tokens=4, dim=256, budget=384, stride=32,
+        checkpoint_sha256=s.fx.ckpt_sha, source_run=f"{s.fx.enc_dir.name}/checkpoint_epoch_105.pt#model")))
+    config = SimpleNamespace(checkpoint_dir=root, model=SimpleNamespace(history_config="合成配置.yaml"))
+    return SimpleNamespace(config=config, history=history, frames=frames, stage2=s)
+
+
+def test_cached_init_history_writes_complete_snapshot(cached_init):
+    from mme_vla_suite.policies.motion_client import validate_stage2_evidence
+    from test_pack_motion_stage2_cached import load
+    item = cached_init
+    source = ms.MotionMeta.load(item.stage2.args.out).provenance
+    train.init_history_config(item.config, item.history, framesamp_root=item.frames)
+    root = item.config.checkpoint_dir
+    saved = load(root / "motion_provenance.json")
+    for key in ("source_grid_sha256", "latents_metadata_sha256"):
+        assert saved[key] == source[key]
+    assert saved["stage2_compat"]["encoder_validation"] == source["stage2_compat"]["encoder_validation"]
+    ms.validate_stage2_provenance(saved)
+    validate_stage2_evidence(saved, root)
+    ready = load(root / "motion_snapshot.ready.json")
+    assert all(ms.sha256_file(root / name) == digest for name, digest in ready["files"].items())
+
+
+@pytest.mark.parametrize("missing", ["source_grid_sha256", "latents_metadata_sha256"])
+def test_cached_init_history_rejects_missing_source_binding(cached_init, missing):
+    from test_pack_motion_stage2_cached import load, dump
+    item = cached_init
+    path = pathlib.Path(item.stage2.args.out) / ms.META_RELPATH
+    metadata = load(path)
+    del metadata["provenance"][missing]
+    dump(path, metadata)
+    with pytest.raises(KeyError, match=missing):
+        train.init_history_config(item.config, item.history, framesamp_root=item.frames)
+    assert not (item.config.checkpoint_dir / "motion_snapshot.ready.json").exists()
+
+
 @pytest.mark.parametrize("fault",["missing_group","changed_evidence","symlink_dependency","changed_dependency","portable_sha","array_sha"])
 def test_snapshot_source_negatives(snapshot,fault):
     root,registered,provenance=snapshot

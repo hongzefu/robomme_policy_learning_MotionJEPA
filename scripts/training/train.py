@@ -149,6 +149,7 @@ def init_history_config(config: _config.TrainConfig, resolved_history_config=Non
             if mm.raw["layout"] == _ms.STAGE2_LAYOUT:
                 _ms.validate_stage2_provenance(mm.provenance)
                 prov.update({key: copy.deepcopy(mm.provenance[key]) for key in _ms.STAGE2_GROUPS})
+                prov.update({key: mm.provenance[key] for key in ("source_grid_sha256", "latents_metadata_sha256")})
                 write_stage2_motion_snapshot(pathlib.Path(ckpt_root), prov)
                 return
     (ckpt_root / "motion_provenance.json").write_text(_json.dumps(prov, ensure_ascii=False, indent=1, default=str) + "\n")
