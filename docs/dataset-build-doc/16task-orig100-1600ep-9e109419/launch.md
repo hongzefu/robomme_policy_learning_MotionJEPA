@@ -181,3 +181,11 @@ norm正常完成，`norm_stats.json`实际SHA为`c5d45b4bdb481ca46d18aeb32446bbe
 美东02:59，G2原检查实际完成：`G2_INPUT_IDENTITY=PASS windows=64 mismatches=0`、`G2_NUMERICS=NOT_REQUIRED reason=user_decision_same_input`、`EXIT_CODE=0`。JSON中SHA、帧、形状失配和非有限值均0，copy32/demo-fill16/exec-fill16；不重复已完成的导出。
 
 03:01:22启动`o16-s2pack`，pane345433／worker345487，原`motion-stage.sh STAGE=pack-verify`、冻结HEAD bd4bad0957e5162073f9bbfec0e4c985c3f830bc和全部原参数不变。日志`motion-pack-verify.log`；此时仅确认起跑，待真实`VERIFY_MOTION`和退出码。后续全表split、在线两组合、预算检查、两条20步与保存恢复仍全部执行；用户当前要求失败真实留档、继续技术上可执行步骤，不把FAIL改成PASS。
+
+### 后续执行准备中的最小接口修正
+
+G4在读取真实YAML后要求`motion.store_path`与传入表路径一致，原计划文字将常量回填排在G4之后会被占位路径拒绝。固定bd4bad0独立审查`ADJUST_REVIEW=PASS scale=same findings=0`：动作表pack/verify结束后先做G6与全表split，再回填原定真实常量，随后跑最终YAML的G4两组合、八组合矩阵及两条20步保存恢复。只前移既定常量，不取消、放宽或后置验证到正式训练之后。
+
+准备G12时又发现新上传驱动产出的`orig16-stage2-delivery-manifest-v1`与既有恢复器接受的`stage2-delivery-manifest-v1`不兼容。独立同规模调整审查通过；S5提交`9679613e1ce08b272b7c3fecfb8b0804069323cc`只统一新驱动schema常量并补真实生产/消费联测，不扩宽恢复器。两条run在修前均真实复现schema拒绝；改后导出与恢复定向125项通过（13.29秒），独立`PRE_MERGE_REVIEW=PASS findings=0 blocking=0`。与c5a2e31和3fa6665两项已审修复一起等待数据冻结结束后合入；此时主HEAD未变。
+
+G12须用导出根的`stage/59999`及同一stage的`manifests/step-59999.json`；该目录包含实际交付依赖实体。原run缺这些实体，不能代替stage。已完成阶段16份日志归档共885797字节（含归档校验JSON），所有退出记录及SHARD_DONE原样保留，详见`records/archive-validation.json`。
