@@ -131,3 +131,5 @@ AWS本地NVMe RAID，8×A100-SXM4-80GB。开工预核空闲2.757TiB、8卡空闲
 先前提出的后置与可选SHA并发改码均未实施，已撤回；主建库代码仍为`bd4bad0`。缓存388310630400字节及5个metadata已经原fetch全SHA验收通过，`WAN_CACHE_FETCH=PASS`、`EXIT_CODE=0`；GPU导入原脚本于美东23:56:30启动，真实一窗`WAN_FILL_SMOKE=PASS windows=1 key=BinFill_ep0_exec m=30 shape=9,16,32,32 nonfinite=0`，随后继续原全量检查和导入。
 
 另一个真实启动程序缺陷已在独立S2树修复：`init_history_config`漏向快照传递已有`source_grid_sha256`和`latents_metadata_sha256`，实际入口联测复现KeyError；`3fa6665e39e77eb671daed15358311a6e76b2519`只增加一行来源字段转交及直接测试，修后14项通过，独立`PRE_MERGE_REVIEW=PASS`。该必要修复与CR修复一样待解冻后、训练前整合，不删除检查或伪造来源。
+
+为落实“失败只记录”，S7在CR修复后追加`c5a2e31fc62f85d54d9fe94de0f5077a7b503435`：日志数值扫描与final.json诊断仍全部执行，原FAIL保留并明确`action=record_only reason=user_decision`；诊断不再覆盖实际训练退出码，也不单独阻止完成后的串行接续。真实程序非零、日志写入失败、缺真实结束日志或59999仍按客观未完成处理；启动合同和诊断判据未改变。新策略37项定向测试及独立审查通过，旧阻断策略的测试原记录另存。解冻后合最新c5a2e31即可同时包含CR修复，不能只合旧f50742e。
