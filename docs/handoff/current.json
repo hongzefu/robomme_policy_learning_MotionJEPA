@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T19:41:40Z",
-    "america_new_york": "2026-10-27T15:41:40-04:00"
+    "utc": "2026-10-28T01:31:26Z",
+    "america_new_york": "2026-10-27T21:31:26-04:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "6126d494a7488a2f597054d9706d6007df854d3f",
+    "base_head": "d5fe05d647a899e016bc513aa5fba03485a9b398",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -15,6 +15,68 @@
     "frozen_head": null
   },
   "tasks": {
+    "orig16-vla-build": {
+      "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
+      "state": "running",
+      "state_changed_at": "2026-10-28T01:31:26Z",
+      "state_reason": "用户已开工并批准登记三项任务；正在进行独立计划审查与只读资产核查，尚未开始代码实施或建库。全部子代理按本轮明确指令使用 gpt-6-astra/high。",
+      "owner": {"session": "", "host": "Codex@AWS"},
+      "depends_on": [],
+      "pre_handoff": [
+        {"what": "固定版本计划审查、代码合入与定向验证", "evidence": "", "where": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "status": "pending"},
+        {"what": "官方16×100同源、双帧表、缓存导入与motion全量验收", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"},
+        {"what": "G0至G6、八组合CPU验证与契约常量回填", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"}
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "按固定计划实施三机制、官方16×100建库、全部验收后两条8卡60k串行训练及公开上传；不做评估，不扩大清理范围。"},
+        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记建库、context 60k、modulation 60k，依赖按计划。"}
+      ],
+      "pending_decisions": [],
+      "next_steps": [{"what": "完成独立计划审查后并行派发互不冲突代码块", "command": "", "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS"}]
+    },
+    "orig16-vla-train-ctx32x4x4-split4-60k": {
+      "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
+      "state": "planned",
+      "state_changed_at": "2026-10-28T01:31:26Z",
+      "state_reason": "已获开工授权，等待建库与两种融合的20步短测全部通过；固定8卡、global batch128、context、32帧4×4、motion每窗4×256、60k。",
+      "owner": {"session": "", "host": "Codex@AWS"},
+      "depends_on": ["orig16-vla-build"],
+      "pre_handoff": [
+        {"what": "同源、配对配置、两条短测与保存恢复通过", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"},
+        {"what": "context正式训练退出0且59999已保存，满足modulation即时接续条件", "evidence": "", "where": "v1-store/runs/orig100-ctx32x4x4-motion-s2split4x256-b128-60k", "status": "pending"},
+        {"what": "两条训练结束后完成context 59999严格恢复与交付", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"}
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "计划全部前置通过后自动开始context 60k，公开增量上传12份checkpoint。"},
+        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记串行训练任务。"}
+      ],
+      "pending_decisions": [],
+      "next_steps": [{"what": "等待建库及两条短测通过后从训练Beta启动", "command": "bash scripts/training/run_orig16_ctx_then_modul_60k.sh", "verdict_line": "LAUNCH_CONTRACT=PASS"}]
+    },
+    "orig16-vla-train-modul32x4x4-split4-60k": {
+      "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
+      "state": "planned",
+      "state_changed_at": "2026-10-28T01:31:26Z",
+      "state_reason": "已获开工授权，串行驱动在context训练退出0且59999已保存后立即接续；按计划不等待context上传或G12，两条G12均在modulation结束后执行。",
+      "owner": {"session": "", "host": "Codex@AWS"},
+      "depends_on": [{"task": "orig16-vla-train-ctx32x4x4-split4-60k", "gate": "仅等待正式训练EXIT_CODE=0及59999已保存；不等待任务done、上传或G12。"}],
+      "pre_handoff": [
+        {"what": "modulation正式训练退出0且59999已保存", "evidence": "", "where": "v1-store/runs/orig100-m32x4x4-modul-motion-s2split4x256-b128-60k", "status": "pending"},
+        {"what": "59999严格恢复、交付与档案完成", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"}
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "context满足计划接续条件后立即开始同配置modulation 60k，公开增量上传12份checkpoint；两条只差融合方式及对应memory_token_dim。"},
+        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记串行训练任务。"}
+      ],
+      "pending_decisions": [],
+      "next_steps": [{"what": "由已批准串行驱动接续，第一条失败即停", "command": "bash scripts/training/run_orig16_ctx_then_modul_60k.sh", "verdict_line": "EXIT_CODE=0"}]
+    },
     "policy-worktree-consolidation-20261027": {
       "plan": {"file": null, "sha": null},
       "state": "closed",
