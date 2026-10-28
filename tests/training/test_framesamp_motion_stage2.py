@@ -42,8 +42,8 @@ def dataset(stage2_fx,monkeypatch,tmp_path):
     data_config=SimpleNamespace(norm_stats={"state":SimpleNamespace(mean=np.zeros(8),std=np.ones(8))},use_quantile_norm=False)
     def create(history=cfg):
         ds=fd.FrameSampDataset(str(tmp_path/"frames"),data_config,history,20,motion_root=s.args.out)
-        frames=SimpleNamespace(read_image_rows=lambda rows:np.zeros((len(rows),64,2048),np.float32),
-             pos_rows=lambda rows:np.broadcast_to(np.asarray(rows,dtype=np.float32)[:,None,None],(len(rows),64,768)),
+        frames=SimpleNamespace(read_image_rows=lambda rows:np.zeros((len(rows),history.token_per_image,2048),np.float32),
+             pos_rows=lambda rows:np.broadcast_to(np.asarray(rows,dtype=np.float32)[:,None,None],(len(rows),history.token_per_image,768)),
              state_rows=lambda rows:np.zeros((len(rows),8),np.float32))
         ds._ensure_store=lambda:frames
         return ds
@@ -102,3 +102,27 @@ def test_legacy_getitem_equal_baseline(dataset,layout):
                 assert expected[key].dtype==actual[key].dtype and expected[key].shape==actual[key].shape
                 assert expected[key].tobytes()==actual[key].tobytes(),key
             else:assert expected[key]==actual[key]
+
+
+@pytest.mark.parametrize("fusion,dim", [("context", 2048), ("modulation", 1024)])
+@pytest.mark.parametrize("split", [False, True])
+def test_16_token_layout_at_32_frame_boundary(dataset, fusion, dim, split):
+    cfg = copy.deepcopy(dataset.config)
+    cfg.token_per_image = 16
+    cfg.integration_type, cfg.memory_token_dim = fusion, dim
+    if split:
+        cfg.motion.update(readout="stage2_pool4_split_v1", num_tokens=4, dim=256, budget=384)
+    dataset.frame_meta.spec.tokens_per_frame = 16
+    ds = dataset.create(cfg)
+    episode = dataset.fixture.fx.manifest["episodes"][-1]
+    assert episode["exec_start_idx"] == 0 and episode["num_timesteps"] == 32
+    for step in (0, 15, 30, 31):
+        sample = ds[episode["exec_sample_offset"] + step]
+        assert sample["static_image_emb"].shape == (512, 2048)
+        assert sample["static_mask"].sum() == (step + 1) * 16
+        total = 896 if split else 608
+        assert sample["mem_order"].shape == (total,)
+        np.testing.assert_array_equal(np.sort(sample["mem_order"]), np.arange(total))
+        # 只有32帧时exec窗口尚未形成，不能提前泄漏第33帧。
+        assert not sample["motion_mask"].any()
+    ds.close()

@@ -147,7 +147,7 @@ def delivery_fixture(tmp_path, step=60000):
     return root, path, manifest
 
 
-@pytest.mark.parametrize("step", [60000, 70000])
+@pytest.mark.parametrize("step", [59999, 60000, 70000])
 def test_delivery_verifies_every_listed_file_including_dependencies(tmp_path, step):
     root, path, manifest = delivery_fixture(tmp_path, step)
     assert restore.verify_delivery_manifest(root, path, root / str(step)) == manifest
@@ -157,7 +157,7 @@ def test_delivery_verifies_every_listed_file_including_dependencies(tmp_path, st
 
 
 @pytest.mark.parametrize("corrupt", ["missing_root", "missing_metadata", "extra_checkpoint", "size", "sha"])
-@pytest.mark.parametrize("step", [60000, 70000])
+@pytest.mark.parametrize("step", [59999, 60000, 70000])
 def test_incomplete_delivery_is_rejected(tmp_path, corrupt, step):
     root, path, manifest = delivery_fixture(tmp_path, step)
     if corrupt == "missing_root":
@@ -289,7 +289,7 @@ def test_cli_modes_cannot_mix_reference_and_delivery(tmp_path, mode, extra):
 
 
 @pytest.mark.parametrize("extra,step", [([], 60000), (["--delivery-step", "60000"], 60000),
-                                       (["--delivery-step", "70000"], 70000)])
+                                       (["--delivery-step", "70000"], 70000), (["--delivery-step", "59999"], 59999)])
 def test_delivery_step_is_explicit_with_60k_default(tmp_path, extra, step):
     args = restore.parse_args(["--mode", "delivery", "--checkpoint", str(tmp_path / f"run/{step}"),
                                "--expected-manifest", str(tmp_path / "manifest.json"),
@@ -307,7 +307,7 @@ def test_cli_rejects_inapplicable_delivery_step(tmp_path, mode, step):
                             "--delivery-step", step, *source])
 
 
-@pytest.mark.parametrize("step", [60000, 70000])
+@pytest.mark.parametrize("step", [59999, 60000, 70000])
 def test_delivery_selected_step_reaches_verified_manifest_before_runtime(tmp_path, monkeypatch, step):
     root, path, manifest = delivery_fixture(tmp_path, step)
     args = restore.parse_args(["--mode", "delivery", "--checkpoint", str(root / str(step)),
@@ -345,7 +345,7 @@ def test_checkpoint_directory_must_match_selected_step(tmp_path, monkeypatch, mo
         restore.restore_and_check(args, {})
 
 
-@pytest.mark.parametrize("step", [60000, 70000])
+@pytest.mark.parametrize("step", [59999, 60000, 70000])
 def test_delivery_failure_keeps_selected_step_label(tmp_path, monkeypatch, capsys, step):
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "")
     monkeypatch.setenv("JAX_PLATFORMS", "cpu")
@@ -356,7 +356,7 @@ def test_delivery_failure_keeps_selected_step_label(tmp_path, monkeypatch, capsy
     report = restore.read_json(report_path)
     assert status == 1
     assert report["status"] == "FAIL"
-    assert report["verdict"] == f"CKPT_{step // 1000}K_READY=FAIL"
+    assert report["verdict"] == ("CKPT_DELIVERY_READY=FAIL" if step == 59999 else f"CKPT_{step // 1000}K_READY=FAIL")
     assert capsys.readouterr().out.strip() == report["verdict"]
     assert "online" not in report
 
@@ -499,3 +499,138 @@ def test_restore_uuid_prefix_is_format_only(uuid):
     client.provenance["gpu_uuid"] = "GPU-C"
     with pytest.raises(ValueError, match="GPU/PID"):
         restore.verified_sidecar_pid(client, 1, inventory)
+
+
+@pytest.mark.parametrize("fusion,dim", [("context", 2048), ("modulation", 1024)])
+@pytest.mark.parametrize("schedule", [[33, 32], [1, 16, 16, 16, 16]])
+def test_restore_online_real_policy_dplus1_split896(monkeypatch, fusion, dim, schedule):
+    """真实pack_buffer/FrameSampMemory/policy组包；sidecar与动作网络用确定性CPU夹具。"""
+    import functools
+    import jax.numpy as jnp
+    from omegaconf import OmegaConf
+    from mme_vla_suite.policies import policy as module
+    from mme_vla_suite.policies.framesamp_memory import FrameSampMemory
+    hc = OmegaConf.load(SCRIPT.parents[2] / "src/mme_vla_suite/models/config/robomme/perceptual-framesamp-ctx-32frame-4x4-motion-stage2-4x256-orig16.yaml")
+    hc.integration_type, hc.memory_token_dim = fusion, dim
+    monkeypatch.setattr(module.nnx_utils, "module_jit", lambda fn: fn)
+    monkeypatch.setattr(module, "FrameSampMemory", functools.partial(FrameSampMemory, max_steps=128))
+    monkeypatch.setattr(restore, "verified_sidecar_pid", lambda *args: 11)
+    monkeypatch.setattr(restore, "verify_process_gpus", lambda *args: {"scope": "CPU夹具"})
+
+    class Client:
+        stub = False
+        alive = True
+        n_calls = 0
+        provenance = {"scope": "CPU夹具"}
+
+        def __call__(self, frames, start):
+            self.n_calls += 1
+            return np.arange(1024, dtype=np.float32) + start
+
+    model = SimpleNamespace(history_config=hc, action_horizon=20, sample_actions=lambda *a: None,
+        vision_encode=lambda images: jnp.zeros((*images.shape[:2], 256, 2048), jnp.float32))
+    policy = module.MME_VLA_Policy(model, motion_enc_fn=Client(),
+        norm_stats={"state": SimpleNamespace(mean=np.zeros(8), std=np.ones(8))})
+    seen = []
+    original_add = policy.add_buffer
+
+    def add(value):
+        seen.append((value["images"].shape[0], value["exec_start_idx"], int(value["images"][0, 0, 0, 0, 0])))
+        original_add(value)
+
+    policy.add_buffer = add
+    policy.infer = lambda observation: {"actions": np.zeros((20, 8), np.float32)}
+    arrays = dict(images=np.broadcast_to(np.arange(82, dtype=np.uint8)[:, None, None, None], (82, 256, 256, 3)).copy(),
+                  states=np.zeros((82, 8), np.float32), wrist_image=np.zeros((256, 256, 3), np.uint8))
+    result = restore.run_online(policy, dict(exec_start_idx=17, exec_batch_lengths=schedule, prompt="夹具"), arrays, 1, {})
+    assert seen == [(18, 17, 0), (16, 17, 18), (16, 17, 34), (16, 17, 50), (16, 17, 66)]
+    assert result["memory_tokens"] == 896 and result["sidecar_calls"] == 3 and result["reset"] == 1
+    assert result["batches"][2]["motion_keys"] == [0, 17]
+    assert result["batches"][4]["motion_keys"] == [0, 17, 49]
+
+
+@pytest.mark.parametrize("tokens,layout", [(16, "4x4"), (64, "8x8")])
+def test_raw_h5_portable_state_source_and_layout(tmp_path, monkeypatch, tokens, layout):
+    import h5py
+    import pickle
+    from mme_vla_suite.datastore import framesamp_store as fs
+    from mme_vla_suite.datastore import manifest as manifests
+    spec = importlib.util.spec_from_file_location("o16_online_fixture", SCRIPT.with_name("check_stage2_online.py"))
+    online = importlib.util.module_from_spec(spec); spec.loader.exec_module(online)
+    parent = tmp_path / "dataset"; source = parent / "source/data"
+    frames = parent / f"framesamp-{layout}"; raw = tmp_path / "raw"
+    for folder in (parent / "meta", frames / "meta", source, raw): folder.mkdir(parents=True)
+    manifest = parent / "meta/episode_manifest.json"; manifest.write_text("{}")
+    ep = dict(h5_file="record_dataset_Task.h5", raw_ep_idx=2, global_episode_idx=0,
+              total_sample_offset=0, exec_sample_offset=0, exec_start_idx=17, num_timesteps=82)
+    monkeypatch.setattr(manifests, "load_manifest", lambda path: dict(episodes=[ep]))
+    states = np.arange(82 * 8, dtype=np.float32).reshape(82, 8)
+    state_path = frames / fs.STATE_TABLE_RELPATH; state_path.write_bytes(states.tobytes())
+    (frames / fs.META_RELPATH).write_text("{}")
+    fm = SimpleNamespace(status="verified", manifest_scope="full", manifest_sha256="a" * 64, num_rows=82,
+        source_dataset_root=str(source.parent), raw=dict(layout=f"framesamp-{layout}-v1", tables={fs.STATE_KEY:
+            dict(sha256=online.V.sha_file(state_path), row_shape=[8], dtype="float32")}))
+    monkeypatch.setattr(fs.StoreMeta, "load", lambda root: fm)
+    h5 = raw / ep["h5_file"]
+    with h5py.File(h5, "w") as handle:
+        for index in range(17): handle.create_dataset(f"episode_2/timestep_{index}/obs/front_rgb", data=np.full((256, 256, 3), index, np.uint8))
+    sha = online.V.sha_file(h5)
+    inputs = parent / "meta/input_manifest.json"
+    write_json(inputs, dict(files={ep["h5_file"]: dict(size=h5.stat().st_size, sha256=sha)}))
+    for index in range(65):
+        (source / f"{index}.pkl").write_bytes(pickle.dumps(dict(epis_idx=np.array([0], np.int32),
+            step_idx=np.array([17 + index], np.int32), exec_start_idx=np.array([17], np.int32),
+            is_demo=np.array([False], bool), image=np.full((256, 256, 3), 17 + index, np.uint8),
+            state=states[17 + index], wrist_image=np.zeros((256, 256, 3), np.uint8), prompt="夹具")))
+    tokenizer = tmp_path / "models/big_vision/paligemma_tokenizer.model"
+    tokenizer.parent.mkdir(parents=True); tokenizer.write_bytes(b"test")
+    samples = dict(windows=[dict(key="Task_ep2_demo", segment_kind="demo",
+        sources=[dict(kind="raw_h5", path=str(h5), sha256=sha, episode=2)])])
+    kwargs = dict(framesamp_store=frames, h5_root=raw, input_manifest=inputs, history=dict(token_per_image=tokens))
+    result = online.prepare_restore_inputs(SimpleNamespace(manifest_path=str(manifest), manifest_sha256="a" * 64),
+        samples, tmp_path, tmp_path, **kwargs)
+    record = online.V.read_json(result["path"])
+    assert record["exec_batch_lengths"] == [1, 16, 16, 16, 16]
+    assert record["demo_state_origin"]["path"] == f"framesamp-{layout}/{fs.STATE_TABLE_RELPATH}"
+    with np.load(result["payload"]["path"]) as payload:
+        np.testing.assert_array_equal(payload["states"], states)
+        np.testing.assert_array_equal(payload["images"][:, 0, 0, 0], np.arange(82))
+    fm.raw["layout"] = "framesamp-8x8-v1" if layout == "4x4" else "framesamp-4x4-v1"
+    with pytest.raises(ValueError, match="layout"):
+        online.prepare_restore_inputs(SimpleNamespace(manifest_path=str(manifest), manifest_sha256="a" * 64),
+            samples, tmp_path, tmp_path, **kwargs)
+
+
+@pytest.mark.parametrize("tokens", [16, 64])
+@pytest.mark.parametrize("split", [False, True])
+def test_g4_state_machine_both_layouts_and_readouts(tokens, split):
+    from mme_vla_suite.policies import motion_protocol as protocol
+    spec = importlib.util.spec_from_file_location("o16_g4_machine", SCRIPT.with_name("check_stage2_online.py"))
+    online = importlib.util.module_from_spec(spec); spec.loader.exec_module(online)
+
+    class Client:
+        alive = True
+
+        def __call__(self, frames, start):
+            assert protocol.stub_decode(frames)[0] == start
+            return np.full(1024, start, np.float32)
+
+    motion = dict(stride=32, window_frames=33, budget=384 if split else 96, frame_size=256,
+        pos_dim=256, dim=256 if split else 1024, demo_min_real_frames=17, demo_tail_pad="repeat_last",
+        source_shape=[1, 1024], num_tokens=4 if split else 1,
+        readout="stage2_pool4_split_v1" if split else "stage2_pool4_concat_v1")
+    result = online.check_state_machine(Client(), motion, token_per_image=tokens)
+    assert result["stub_windows"] == 6 and result["first_packet"] == "D+1" and result["max_followup_frames"] == 16
+
+
+@pytest.mark.parametrize("cached", [False, True])
+def test_g4_cached_verdict_does_not_claim_numeric_parity(tmp_path, monkeypatch, capsys, cached):
+    spec = importlib.util.spec_from_file_location("o16_g4_verdict", SCRIPT.with_name("check_stage2_online.py"))
+    online = importlib.util.module_from_spec(spec); spec.loader.exec_module(online)
+    record = dict(metrics={"windows": 64}, kind="published-cache-with-local-fill" if cached else "local-restore")
+    monkeypatch.setattr(online, "run", lambda args: record)
+    assert online.main(["--store", "fixture", "--samples", "fixture", "--history", "fixture",
+                        "--online-gpu", "1", "--out", str(tmp_path / "G4.json")]) == 0
+    output = capsys.readouterr().out
+    assert ("ONLINE_INPUT_IDENTITY=PASS" in output) == cached
+    assert ("ONLINE_OFFLINE_PARITY=PASS" in output) != cached
