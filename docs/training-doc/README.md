@@ -6,6 +6,13 @@
 
 ## 一、环境 B 现行（AWS 8×A100，2026-09-04 起）
 
+### 官方16×100两条串行60k（2026-10-27美东开工）
+
+| 目录 | 内容 | 状态 |
+|---|---|---|
+| [context](orig100-ctx32x4x4-motion-s2split4x256-b128-60k/launch.md) | 32帧4×4+每窗4个motion token，8卡/B128/60k，首条 | 已授权，等待建库与两条20步短测 |
+| [modulation](orig100-m32x4x4-modul-motion-s2split4x256-b128-60k/launch.md) | 与context仅融合方式/宽度不同，其余相同 | 已授权，首条成功后立即接续；两条G12留到本条结束后 |
+
 ### mixed8 阶段二单 token VLA（2026-10-26）
 
 | 目录 | 内容 | 状态 |

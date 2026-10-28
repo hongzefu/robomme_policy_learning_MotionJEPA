@@ -1,0 +1,407 @@
+[pack] episodes=16 rows=64 (exec 32 + demo 32) index_sha256=53b042096df44633…
+PACK_PROVENANCE_PRECHECK=PASS mode=vae_compat segments=32
+[pack] 表 262,144 B / 64 行 / 32 段, sha256=00f2c484030d0c6a…; meta 阶段1 落盘（status=packed）; 耗时 0.6s
+PACK_MOTION_DONE=1 raw_dir_match=1 （pack.lock 保留，verify 回填后才释放）
+[verify] meta 回填（status=verified）+ row_digests 落盘, 耗时 0.3s
+VERIFY_MOTION=PASS scanned=64 mismatches=0 nonfinite=0 segment_set_mismatch=0 real_plus_pad_ne_33=0 exec_padded=0 pad_not_last_demo=0 pad_source_mismatch=0 demo_tail_padded=16 demo_tail_dropped=0 legal_zero_segments=0
+CHECK_PAIRED_CONFIG=PASS 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/tmp/o16-mech-matrix-qxgym5en/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 单JAX进程8卡 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/train-record
+GPU_SCOPE=PASS allowed=0-7
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除三机制与已固定来源以外不接受配置漂移
+FRAME_LAYOUT=PASS layout=4x4 frames=32 tokens_per_frame=16 budget=512
+MOTION_LAYOUT=PASS readout=concat tokens_per_window=1 budget=96 total_tokens=608
+FUSION=PASS integration=context memory_token_dim=2048
+CHECK_NO_PLACEHOLDER=PASS 
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_MOTION_VERIFIED=PASS 
+CHECK_INPUT_EQUIVALENCE=PASS G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入
+CHECK_ENCODER_CONFIG_SHA=PASS 
+CHECK_ENCODER_DATA_LINEAGE=PASS 
+DATA_LINEAGE=PASS encoder_ckpt=add39ac3 encoder_source_pin=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee vla_input_pin=b3f11f56defa7a598736c49790ccee1c984a7ca6b77a487c6a82e12ff70e6f6a files=16 mismatches=0
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS 
+CHECK_CFG_NEW_RUN=PASS 
+MECH_FORWARD=PASS history=perceptual-framesamp-ctx-32frame-4x4-motion-stage2-1x1024-orig16.yaml scope=single_layer_small_ffn result={'tokens': 608, 'width': 2048, 'motion_projection': [1792, 2048], 'depth': 1, 'ffn': 64, 'memory_changes_actions': 1, 'nonzero_gate_probe': 1}
+CHECK_PAIRED_CONFIG=PASS 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/tmp/o16-mech-matrix-qxgym5en/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 单JAX进程8卡 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/train-record
+GPU_SCOPE=PASS allowed=0-7
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除三机制与已固定来源以外不接受配置漂移
+FRAME_LAYOUT=PASS layout=4x4 frames=32 tokens_per_frame=16 budget=512
+MOTION_LAYOUT=PASS readout=split tokens_per_window=4 budget=384 total_tokens=896
+FUSION=PASS integration=context memory_token_dim=2048
+CHECK_NO_PLACEHOLDER=PASS 
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_MOTION_VERIFIED=PASS 
+CHECK_INPUT_EQUIVALENCE=PASS G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入
+CHECK_ENCODER_CONFIG_SHA=PASS 
+CHECK_ENCODER_DATA_LINEAGE=PASS 
+DATA_LINEAGE=PASS encoder_ckpt=add39ac3 encoder_source_pin=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee vla_input_pin=b3f11f56defa7a598736c49790ccee1c984a7ca6b77a487c6a82e12ff70e6f6a files=16 mismatches=0
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS 
+CHECK_CFG_NEW_RUN=PASS 
+MECH_FORWARD=PASS history=perceptual-framesamp-ctx-32frame-4x4-motion-stage2-4x256-orig16.yaml scope=single_layer_small_ffn result={'tokens': 896, 'width': 2048, 'motion_projection': [1024, 2048], 'depth': 1, 'ffn': 64, 'memory_changes_actions': 1, 'nonzero_gate_probe': 1}
+CHECK_PAIRED_CONFIG=PASS 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/tmp/o16-mech-matrix-qxgym5en/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 单JAX进程8卡 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/train-record
+GPU_SCOPE=PASS allowed=0-7
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除三机制与已固定来源以外不接受配置漂移
+FRAME_LAYOUT=PASS layout=8x8 frames=8 tokens_per_frame=64 budget=512
+MOTION_LAYOUT=PASS readout=concat tokens_per_window=1 budget=96 total_tokens=608
+FUSION=PASS integration=context memory_token_dim=2048
+CHECK_NO_PLACEHOLDER=PASS 
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_MOTION_VERIFIED=PASS 
+CHECK_INPUT_EQUIVALENCE=PASS G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入
+CHECK_ENCODER_CONFIG_SHA=PASS 
+CHECK_ENCODER_DATA_LINEAGE=PASS 
+DATA_LINEAGE=PASS encoder_ckpt=add39ac3 encoder_source_pin=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee vla_input_pin=b3f11f56defa7a598736c49790ccee1c984a7ca6b77a487c6a82e12ff70e6f6a files=16 mismatches=0
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS 
+CHECK_CFG_NEW_RUN=PASS 
+MECH_FORWARD=PASS history=perceptual-framesamp-ctx-8frame-8x8-motion-stage2-1x1024-orig16.yaml scope=single_layer_small_ffn result={'tokens': 608, 'width': 2048, 'motion_projection': [1792, 2048], 'depth': 1, 'ffn': 64, 'memory_changes_actions': 1, 'nonzero_gate_probe': 1}
+CHECK_PAIRED_CONFIG=PASS 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/tmp/o16-mech-matrix-qxgym5en/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 单JAX进程8卡 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/train-record
+GPU_SCOPE=PASS allowed=0-7
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除三机制与已固定来源以外不接受配置漂移
+FRAME_LAYOUT=PASS layout=8x8 frames=8 tokens_per_frame=64 budget=512
+MOTION_LAYOUT=PASS readout=split tokens_per_window=4 budget=384 total_tokens=896
+FUSION=PASS integration=context memory_token_dim=2048
+CHECK_NO_PLACEHOLDER=PASS 
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_MOTION_VERIFIED=PASS 
+CHECK_INPUT_EQUIVALENCE=PASS G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入
+CHECK_ENCODER_CONFIG_SHA=PASS 
+CHECK_ENCODER_DATA_LINEAGE=PASS 
+DATA_LINEAGE=PASS encoder_ckpt=add39ac3 encoder_source_pin=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee vla_input_pin=b3f11f56defa7a598736c49790ccee1c984a7ca6b77a487c6a82e12ff70e6f6a files=16 mismatches=0
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS 
+CHECK_CFG_NEW_RUN=PASS 
+MECH_FORWARD=PASS history=perceptual-framesamp-ctx-8frame-8x8-motion-stage2-4x256-orig16.yaml scope=single_layer_small_ffn result={'tokens': 896, 'width': 2048, 'motion_projection': [1024, 2048], 'depth': 1, 'ffn': 64, 'memory_changes_actions': 1, 'nonzero_gate_probe': 1}
+CHECK_PAIRED_CONFIG=PASS 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/tmp/o16-mech-matrix-qxgym5en/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 单JAX进程8卡 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/train-record
+GPU_SCOPE=PASS allowed=0-7
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除三机制与已固定来源以外不接受配置漂移
+FRAME_LAYOUT=PASS layout=4x4 frames=32 tokens_per_frame=16 budget=512
+MOTION_LAYOUT=PASS readout=concat tokens_per_window=1 budget=96 total_tokens=608
+FUSION=PASS integration=modulation memory_token_dim=1024
+CHECK_NO_PLACEHOLDER=PASS 
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_MOTION_VERIFIED=PASS 
+CHECK_INPUT_EQUIVALENCE=PASS G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入
+CHECK_ENCODER_CONFIG_SHA=PASS 
+CHECK_ENCODER_DATA_LINEAGE=PASS 
+DATA_LINEAGE=PASS encoder_ckpt=add39ac3 encoder_source_pin=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee vla_input_pin=b3f11f56defa7a598736c49790ccee1c984a7ca6b77a487c6a82e12ff70e6f6a files=16 mismatches=0
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS 
+CHECK_CFG_NEW_RUN=PASS 
+MECH_FORWARD=PASS history=perceptual-framesamp-modul-32frame-4x4-motion-stage2-1x1024-orig16.yaml scope=single_layer_small_ffn result={'tokens': 608, 'width': 1024, 'motion_projection': [1792, 1024], 'depth': 1, 'ffn': 64, 'memory_changes_actions': 1, 'nonzero_gate_probe': 1}
+CHECK_PAIRED_CONFIG=PASS 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/tmp/o16-mech-matrix-qxgym5en/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 单JAX进程8卡 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/train-record
+GPU_SCOPE=PASS allowed=0-7
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除三机制与已固定来源以外不接受配置漂移
+FRAME_LAYOUT=PASS layout=4x4 frames=32 tokens_per_frame=16 budget=512
+MOTION_LAYOUT=PASS readout=split tokens_per_window=4 budget=384 total_tokens=896
+FUSION=PASS integration=modulation memory_token_dim=1024
+CHECK_NO_PLACEHOLDER=PASS 
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_MOTION_VERIFIED=PASS 
+CHECK_INPUT_EQUIVALENCE=PASS G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入
+CHECK_ENCODER_CONFIG_SHA=PASS 
+CHECK_ENCODER_DATA_LINEAGE=PASS 
+DATA_LINEAGE=PASS encoder_ckpt=add39ac3 encoder_source_pin=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee vla_input_pin=b3f11f56defa7a598736c49790ccee1c984a7ca6b77a487c6a82e12ff70e6f6a files=16 mismatches=0
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS 
+CHECK_CFG_NEW_RUN=PASS 
+MECH_FORWARD=PASS history=perceptual-framesamp-modul-32frame-4x4-motion-stage2-4x256-orig16.yaml scope=single_layer_small_ffn result={'tokens': 896, 'width': 1024, 'motion_projection': [1024, 1024], 'depth': 1, 'ffn': 64, 'memory_changes_actions': 1, 'nonzero_gate_probe': 1}
+CHECK_PAIRED_CONFIG=PASS 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/tmp/o16-mech-matrix-qxgym5en/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 单JAX进程8卡 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/train-record
+GPU_SCOPE=PASS allowed=0-7
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除三机制与已固定来源以外不接受配置漂移
+FRAME_LAYOUT=PASS layout=8x8 frames=8 tokens_per_frame=64 budget=512
+MOTION_LAYOUT=PASS readout=concat tokens_per_window=1 budget=96 total_tokens=608
+FUSION=PASS integration=modulation memory_token_dim=1024
+CHECK_NO_PLACEHOLDER=PASS 
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_MOTION_VERIFIED=PASS 
+CHECK_INPUT_EQUIVALENCE=PASS G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入
+CHECK_ENCODER_CONFIG_SHA=PASS 
+CHECK_ENCODER_DATA_LINEAGE=PASS 
+DATA_LINEAGE=PASS encoder_ckpt=add39ac3 encoder_source_pin=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee vla_input_pin=b3f11f56defa7a598736c49790ccee1c984a7ca6b77a487c6a82e12ff70e6f6a files=16 mismatches=0
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS 
+CHECK_CFG_NEW_RUN=PASS 
+MECH_FORWARD=PASS history=perceptual-framesamp-modul-8frame-8x8-motion-stage2-1x1024-orig16.yaml scope=single_layer_small_ffn result={'tokens': 608, 'width': 1024, 'motion_projection': [1792, 1024], 'depth': 1, 'ffn': 64, 'memory_changes_actions': 1, 'nonzero_gate_probe': 1}
+CHECK_PAIRED_CONFIG=PASS 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/tmp/o16-mech-matrix-qxgym5en/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/datasets/fixture/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 单JAX进程8卡 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/tmp/o16-mech-matrix-qxgym5en/v1-store/validation/train-record
+GPU_SCOPE=PASS allowed=0-7
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除三机制与已固定来源以外不接受配置漂移
+FRAME_LAYOUT=PASS layout=8x8 frames=8 tokens_per_frame=64 budget=512
+MOTION_LAYOUT=PASS readout=split tokens_per_window=4 budget=384 total_tokens=896
+FUSION=PASS integration=modulation memory_token_dim=1024
+CHECK_NO_PLACEHOLDER=PASS 
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_MOTION_VERIFIED=PASS 
+CHECK_INPUT_EQUIVALENCE=PASS G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入
+CHECK_ENCODER_CONFIG_SHA=PASS 
+CHECK_ENCODER_DATA_LINEAGE=PASS 
+DATA_LINEAGE=PASS encoder_ckpt=add39ac3 encoder_source_pin=eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee vla_input_pin=b3f11f56defa7a598736c49790ccee1c984a7ca6b77a487c6a82e12ff70e6f6a files=16 mismatches=0
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS 
+CHECK_CFG_NEW_RUN=PASS 
+MECH_FORWARD=PASS history=perceptual-framesamp-modul-8frame-8x8-motion-stage2-4x256-orig16.yaml scope=single_layer_small_ffn result={'tokens': 896, 'width': 1024, 'motion_projection': [1024, 1024], 'depth': 1, 'ffn': 64, 'memory_changes_actions': 1, 'nonzero_gate_probe': 1}
+MECH_MATRIX=PASS combos=8 contract_ok=8 forward_ok=8

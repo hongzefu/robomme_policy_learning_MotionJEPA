@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T01:31:26Z",
-    "america_new_york": "2026-10-27T21:31:26-04:00"
+    "utc": "2026-10-28T02:14:27Z",
+    "america_new_york": "2026-10-27T22:14:27-04:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "d5fe05d647a899e016bc513aa5fba03485a9b398",
+    "base_head": "58d3b5c47731f68fd085b81f68595e641b5ec6fc",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -19,11 +19,11 @@
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "running",
       "state_changed_at": "2026-10-28T01:31:26Z",
-      "state_reason": "用户已开工并批准登记三项任务；正在进行独立计划审查与只读资产核查，尚未开始代码实施或建库。全部子代理按本轮明确指令使用 gpt-6-astra/high。",
+      "state_reason": "全部代码块已按序合入并推送至58d3b5c，固定审查与定向CPU验证通过，八组合真实单层机制前向通过。正建立建库Beta与档案，尚未启动实际数据构建；全部子代理使用gpt-6-astra/high。冻结期间读取主目录-temp的同名状态副本。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": [],
       "pre_handoff": [
-        {"what": "固定版本计划审查、代码合入与定向验证", "evidence": "", "where": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "status": "pending"},
+        {"what": "固定版本计划审查、代码合入与定向验证", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS findings=2 blocking=0；全部合前合后审查PASS；S7合后261项及S5合后66项通过；MECH_MATRIX=PASS combos=8 contract_ok=8 forward_ok=8", "where": "docs/dataset-build-doc/16task-orig100-1600ep-9e109419/launch.md；58d3b5c47731f68fd085b81f68595e641b5ec6fc", "status": "pass"},
         {"what": "官方16×100同源、双帧表、缓存导入与motion全量验收", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"},
         {"what": "G0至G6、八组合CPU验证与契约常量回填", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"}
       ],
@@ -34,7 +34,7 @@
         {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记建库、context 60k、modulation 60k，依赖按计划。"}
       ],
       "pending_decisions": [],
-      "next_steps": [{"what": "完成独立计划审查后并行派发互不冲突代码块", "command": "", "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS"}]
+      "next_steps": [{"what": "从建库Beta在o16-manifest生成实际清单及哈希，再顺序恢复/导入缓存和构建双帧表", "command": "BUILD_HEAD=<建库Beta> bash v1-store/logs/o16-20261028/prepare-manifest.sh", "verdict_line": "DATA_LINEAGE=PASS；WAN_CACHE_AUDIT=PASS；EXIT_CODE=0"}]
     },
     "orig16-vla-train-ctx32x4x4-split4-60k": {
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
@@ -45,7 +45,7 @@
       "depends_on": ["orig16-vla-build"],
       "pre_handoff": [
         {"what": "同源、配对配置、两条短测与保存恢复通过", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"},
-        {"what": "context正式训练退出0且59999已保存，满足modulation即时接续条件", "evidence": "", "where": "v1-store/runs/orig100-ctx32x4x4-motion-s2split4x256-b128-60k", "status": "pending"},
+        {"what": "context正式训练退出0且59999已保存，满足modulation即时接续条件", "evidence": "", "where": "v1-store/train-runs/mme_vla_suite_orig16_b128_60k/orig100-ctx32x4x4-motion-s2split4x256-b128-60k", "status": "pending"},
         {"what": "两条训练结束后完成context 59999严格恢复与交付", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"}
       ],
       "long_tail": [],
@@ -63,9 +63,9 @@
       "state_changed_at": "2026-10-28T01:31:26Z",
       "state_reason": "已获开工授权，串行驱动在context训练退出0且59999已保存后立即接续；按计划不等待context上传或G12，两条G12均在modulation结束后执行。",
       "owner": {"session": "", "host": "Codex@AWS"},
-      "depends_on": [{"task": "orig16-vla-train-ctx32x4x4-split4-60k", "gate": "仅等待正式训练EXIT_CODE=0及59999已保存；不等待任务done、上传或G12。"}],
+      "depends_on": [{"path": "/scratch/hongze/robomme_policy_learning_MotionJEPA", "branch": "v4-256concat1", "task": "orig16-vla-train-ctx32x4x4-split4-60k", "gate": "仅等待正式训练EXIT_CODE=0及59999已保存；不等待任务done、上传或G12。"}],
       "pre_handoff": [
-        {"what": "modulation正式训练退出0且59999已保存", "evidence": "", "where": "v1-store/runs/orig100-m32x4x4-modul-motion-s2split4x256-b128-60k", "status": "pending"},
+        {"what": "modulation正式训练退出0且59999已保存", "evidence": "", "where": "v1-store/train-runs/mme_vla_suite_orig16_b128_60k/orig100-m32x4x4-modul-motion-s2split4x256-b128-60k", "status": "pending"},
         {"what": "59999严格恢复、交付与档案完成", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"}
       ],
       "long_tail": [],
