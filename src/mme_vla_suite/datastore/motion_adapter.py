@@ -1,4 +1,4 @@
-"""训练 loader 的原始 motion 合同与唯一相邻配对边界。"""
+"""训练与在线策略的原始 motion 合同及无损配对／拆分边界。"""
 
 from __future__ import annotations
 
@@ -13,6 +13,8 @@ PAIR_SHAPE = (4, 512)
 PAIRING = "adjacent_pair_v1"
 STAGE2_READOUT = "stage2_pool4_concat_v1"
 STAGE2_SHAPE = (1, 1024)
+STAGE2_SPLIT_READOUT = "stage2_pool4_split_v1"
+STAGE2_SPLIT_SHAPE = (4, 256)
 STAGE2_LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
 RAW_LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
 LEGACY_LAYOUTS = ("motion-768-grid16-v1", "motion-768-grid16-demopad17-v1")
@@ -27,6 +29,17 @@ def pair_adjacent_tokens(raw: np.ndarray) -> np.ndarray:
     if raw.ndim < 2 or raw.shape[-2:] != RAW_SHAPE:
         raise ValueError(f"原始 motion 末两维必须为 {RAW_SHAPE}，得到 {raw.shape}；禁止重复配对")
     return np.ascontiguousarray(raw).reshape(raw.shape[:-2] + PAIR_SHAPE)
+
+
+def split_stage2_tokens(raw: np.ndarray) -> np.ndarray:
+    """保持全部 fp32 位串，按原 pool 组顺序拆成四个 256 维槽。"""
+    if not isinstance(raw, np.ndarray):
+        raise TypeError("原始 stage2 motion 必须是 numpy.ndarray")
+    if raw.dtype != np.dtype(np.float32):
+        raise ValueError(f"原始 stage2 motion 必须为 float32，得到 {raw.dtype}")
+    if raw.ndim < 2 or raw.shape[-2:] != STAGE2_SHAPE:
+        raise ValueError(f"原始 stage2 motion 末两维必须为 {STAGE2_SHAPE}，得到 {raw.shape}；禁止重复拆分")
+    return np.ascontiguousarray(raw).reshape(raw.shape[:-2] + STAGE2_SPLIT_SHAPE)
 
 
 @dataclass(frozen=True)
@@ -50,9 +63,26 @@ def _integer(cfg: Mapping, key: str, default: int) -> int:
 
 
 def motion_policy_spec(cfg: Mapping) -> MotionPolicySpec:
-    """解析 motion 节；新四对必须显式声明全部形状键，旧配置保持单个 768 维槽。"""
+    """解析 motion 节；新读法显式声明形状键，旧配置保持单个 768 维槽。"""
     if not isinstance(cfg, Mapping):
         raise TypeError("motion 配置必须为映射")
+    if cfg.get("readout") == STAGE2_SPLIT_READOUT:
+        required = {"source_shape", "num_tokens", "dim", "budget"}
+        if required - cfg.keys():
+            raise ValueError(f"stage2 split motion 缺字段 {sorted(required - cfg.keys())}")
+        try:
+            shape = tuple(cfg["source_shape"])
+        except TypeError as exc:
+            raise ValueError("stage2 split motion.source_shape 必须为 [1,1024]") from exc
+        budget = _integer(cfg, "budget", 384)
+        if (any(isinstance(v, bool) or not isinstance(v, Integral) for v in shape)
+                or shape != STAGE2_SHAPE or _integer(cfg, "num_tokens", 4) != 4
+                or _integer(cfg, "dim", 256) != 256):
+            raise ValueError("stage2 split motion 必须为 source_shape=[1,1024]、num_tokens=4、dim=256")
+        if budget <= 0 or budget % 4:
+            raise ValueError("stage2 split motion.budget 必须为正数且能被 num_tokens=4 整除")
+        return MotionPolicySpec(STAGE2_SHAPE, STAGE2_SPLIT_READOUT, 4, 256, budget,
+                                budget // 4, (STAGE2_LAYOUT,))
     if cfg.get("readout") == STAGE2_READOUT:
         required = {"source_shape", "num_tokens", "dim", "budget"}
         if required - cfg.keys():
