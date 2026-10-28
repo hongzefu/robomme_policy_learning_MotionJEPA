@@ -17,8 +17,8 @@
 
 | 目录 | 内容 | 状态 |
 |---|---|---|
-| [o16-smoke-ctx-10280431](o16-smoke-ctx-10280431/launch.md) | ctx，8卡/B128/20步及严格保存恢复 | 准备执行 |
-| [o16-smoke-modul-10280431](o16-smoke-modul-10280431/launch.md) | modul，8卡/B128/20步及严格保存恢复 | 准备执行 |
+| [o16-smoke-ctx-10280431](o16-smoke-ctx-10280431/result.md) | ctx，8卡/B128/20步及严格保存恢复 | 全部通过：20步及恢复退出0，参考输出0差 |
+| [o16-smoke-modul-10280431](o16-smoke-modul-10280431/result.md) | modul，8卡/B128/20步及严格保存恢复 | 全部通过：20步及恢复退出0，参考输出0差 |
 
 ### mixed8 阶段二单 token VLA（2026-10-26）
 

@@ -10,7 +10,7 @@
 
 | 档案 | 库 | 内容 | 状态 |
 |---|---|---|---|
-| [`16task-orig100-1600ep-9e109419/`](16task-orig100-1600ep-9e109419/launch.md) | `v1-store/datasets/16task-orig100-1600ep-9e109419` | 官方16×100，完整source、4×4/8×8双表、固定Wan缓存复用与补窗、ep105 EMA阶段二motion；服务context→modulation两条60k | 建库Beta准备；代码与CPU机制验收通过，真实数据验收待运行 |
+| [`16task-orig100-1600ep-9e109419/`](16task-orig100-1600ep-9e109419/result.md) | `v1-store/datasets/16task-orig100-1600ep-9e109419` | 官方16×100双帧表、缓存Wan、阶段二motion及两条真实VLA短测 | 全部本地验收及两条20步/保存恢复通过；公开上传长尾进行中 |
 | [`16task-mixed8-200-3200ep-e3c7564f/`](16task-mixed8-200-3200ep-e3c7564f/launch.md) | `v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f` | mixed8-200 公开 H5（MANIFEST `e3c7564f`）16 任务×200 共 3200 primary 全新建库：合并 H5、SigLIP、4×4/8×8 framesamp、独立 norm_stats、e72 EMA encoder 的 Wan/motion 表与独立 oracle 对拍 | 完成：3200 集/2145548 帧/1383846 样本，合并 full verify、finalize1024、两档 VERIFY_PACK、xgrid、motion 128342 行与独立 oracle 逐位对拍全部零失配，两条 4 卡 20 步短测 PASS；latent 库与 VLA 新库（1405.0 GB）上传读回零差并公开，合并 H5 等中间件已按口径 24 删除（[result](16task-mixed8-200-3200ep-e3c7564f/result.md)） |
 | [`16task-pub-smoke16-0925/`](16task-pub-smoke16-0925/result.md) | `v1-store/datasets/16task-pub-smoke16-0925` | 公开16文件重新hash/全集scan与来源绑定；每任务首集16集source及4×4冒烟 | 全部PASS：16集/7898帧/5018样本，finalize1024零差，verify7898零失配；两正式库剩余预算PASS，smoke约7.36GB保留 |
 | [`16task-pub-1600ep/`](16task-pub-1600ep/README.md) | `v1-store/datasets/16task-pub-1600ep` | 公开16任务×100集，source、4×4 packed及仅供比较的自算统计量 | PASS：1600集/768897帧/476857样本，finalize1024最大差0、verify零失配，full20保存恢复PASS |

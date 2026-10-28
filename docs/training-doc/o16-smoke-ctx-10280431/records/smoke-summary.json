@@ -1,0 +1,81 @@
+{
+  "status": "PASS",
+  "verdict": "SMOKE_8GPU=PASS fusion=context steps=20 batch=128",
+  "run": "o16-smoke-ctx-10280431",
+  "head": "491340dfb210acb0e399f9105d8283b8a2bc66f7",
+  "exit_code": 0,
+  "state_step": 20,
+  "checkpoint_step": 19,
+  "tail_steps": 19,
+  "ema_leaves": 59,
+  "step0_loss": 0.60966,
+  "last_step_scalars": {
+    "grad_norm": 15.96452808380127,
+    "llm_grad_norm": 10.616772651672363,
+    "loss": 0.4735048711299896,
+    "mem_enc_norm": 11.79589557647705,
+    "param_norm": 1803.3463134765625
+  },
+  "timing": {
+    "scope": "日志进度6至16的墙钟窗口，不等同独立GPU内核计时；排除首次编译及保存前参考",
+    "first_progress": 6,
+    "last_progress": 16,
+    "seconds": 24.062999963760376,
+    "seconds_per_progress_step": 2.4062999963760374
+  },
+  "gpu_samples": {
+    "interval_ms": 500,
+    "per_gpu": {
+      "0": {
+        "observed_peak_mib": 42045.0,
+        "window_samples": 48,
+        "window_util_mean_pct": 99.83333333333333,
+        "window_util_zero_fraction": 0.0
+      },
+      "1": {
+        "observed_peak_mib": 42029.0,
+        "window_samples": 48,
+        "window_util_mean_pct": 99.9375,
+        "window_util_zero_fraction": 0.0
+      },
+      "2": {
+        "observed_peak_mib": 42029.0,
+        "window_samples": 48,
+        "window_util_mean_pct": 99.91666666666667,
+        "window_util_zero_fraction": 0.0
+      },
+      "3": {
+        "observed_peak_mib": 42029.0,
+        "window_samples": 48,
+        "window_util_mean_pct": 99.9375,
+        "window_util_zero_fraction": 0.0
+      },
+      "4": {
+        "observed_peak_mib": 42029.0,
+        "window_samples": 48,
+        "window_util_mean_pct": 99.89583333333333,
+        "window_util_zero_fraction": 0.0
+      },
+      "5": {
+        "observed_peak_mib": 42029.0,
+        "window_samples": 48,
+        "window_util_mean_pct": 99.875,
+        "window_util_zero_fraction": 0.0
+      },
+      "6": {
+        "observed_peak_mib": 42029.0,
+        "window_samples": 48,
+        "window_util_mean_pct": 99.91666666666667,
+        "window_util_zero_fraction": 0.0
+      },
+      "7": {
+        "observed_peak_mib": 42029.0,
+        "window_samples": 48,
+        "window_util_mean_pct": 99.9375,
+        "window_util_zero_fraction": 0.0
+      }
+    }
+  },
+  "save_load_status": "PASS",
+  "save_load_reference_output_max_abs": 0.0
+}
