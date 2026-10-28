@@ -1,25 +1,25 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T02:14:27Z",
-    "america_new_york": "2026-10-27T22:14:27-04:00"
+    "utc": "2026-10-28T02:21:29Z",
+    "america_new_york": "2026-10-27T22:21:29-04:00"
   },
   "repo": {
-    "branch": "v4-256concat1",
-    "base_head": "58d3b5c47731f68fd085b81f68595e641b5ec6fc",
+    "branch": "worktree-agent-o16-state-20261028",
+    "base_head": "bd4bad0957e5162073f9bbfec0e4c985c3f830bc",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
-    "active": false,
-    "main_path": null,
-    "frozen_head": null
+    "active": true,
+    "main_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+    "frozen_head": "bd4bad0957e5162073f9bbfec0e4c985c3f830bc"
   },
   "tasks": {
     "orig16-vla-build": {
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "running",
       "state_changed_at": "2026-10-28T01:31:26Z",
-      "state_reason": "全部代码块已按序合入并推送至58d3b5c，固定审查与定向CPU验证通过，八组合真实单层机制前向通过。正建立建库Beta与档案，尚未启动实际数据构建；全部子代理使用gpt-6-astra/high。冻结期间读取主目录-temp的同名状态副本。",
+      "state_reason": "实际建库已于美东2026-10-27 22:20:12从Beta bd4bad0启动，o16-manifest正在CPU扫描清单，随后逐文件hash并核三源血缘。起跑clean、脚本SHA、16个源H5及磁盘2.753TiB均通过；截至22:21:29已扫描1100集，尚无阶段EXIT_CODE。本分支是冻结期间状态真源。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": [],
       "pre_handoff": [
@@ -28,13 +28,13 @@
         {"what": "G0至G6、八组合CPU验证与契约常量回填", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"}
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [{"kind": "tmux", "name": "o16-manifest", "host": "AWS", "pane_pid": 68571, "started_at_utc": "2026-10-28T02:20:12Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/prepare-manifest.log", "done_line": "EXIT_CODE=0"}],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "按固定计划实施三机制、官方16×100建库、全部验收后两条8卡60k串行训练及公开上传；不做评估，不扩大清理范围。"},
         {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记建库、context 60k、modulation 60k，依赖按计划。"}
       ],
       "pending_decisions": [],
-      "next_steps": [{"what": "从建库Beta在o16-manifest生成实际清单及哈希，再顺序恢复/导入缓存和构建双帧表", "command": "BUILD_HEAD=<建库Beta> bash v1-store/logs/o16-20261028/prepare-manifest.sh", "verdict_line": "DATA_LINEAGE=PASS；WAN_CACHE_AUDIT=PASS；EXIT_CODE=0"}]
+      "next_steps": [{"what": "监听o16-manifest，核实际计数/同源及退出0后启动固定缓存恢复；失败不重试", "command": "BUILD_HEAD=bd4bad0957e5162073f9bbfec0e4c985c3f830bc bash v1-store/logs/o16-20261028/fetch-cache.sh", "verdict_line": "DATA_LINEAGE=PASS；WAN_CACHE_AUDIT=PASS；EXIT_CODE=0"}]
     },
     "orig16-vla-train-ctx32x4x4-split4-60k": {
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
