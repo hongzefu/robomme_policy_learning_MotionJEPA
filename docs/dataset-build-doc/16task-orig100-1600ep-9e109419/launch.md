@@ -169,3 +169,9 @@ finalize原五阶段已执行完：1024条同架构视觉复算全部逐位一�
 新`o16-verify4`、`o16-verify8`于02:29:09启动，分别24秒、38秒完成：两条均`VERIFY_PACK=PASS scanned=768897 mismatches=0`、`EXIT_CODE=0`，meta真实回填verified。新日志为`verify-frames-4x4.log`、`verify-frames-8x8.log`。meta SHA分别为`1318229bd58f4e32a8a44705c862d476d7c92890004b97e69314904433e8d3f9`及`8bad885bcc8344bff533c7fc6ccf7abfbc3d207c67ae7692b7319878587409b8`。新载体`verify-frames.sh` SHA为`ee2702869783ad8080b833f0ffb4b08221fe341fd65425d11d716378f32fa2a5`；旧失败不被新结果覆盖。
 
 norm正常完成，`norm_stats.json`实际SHA为`c5d45b4bdb481ca46d18aeb32446bbedec34de435eef31d3212a179ee7868bcd`，`EXIT_CODE=0`。截至02:30，G0仍在原输入核对中，后续G2/G3和motion打包等尚未宣称通过。用户要求所有步骤做完、失败只记录；上述接口失败与修复经过留待用户复核，没有等待额外确认而阻断其他任务。
+
+### G0和G3实际完成
+
+美东约02:36，G0完成：`RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail=16 sha_mismatches=0`、`EXIT_CODE=0`；copy32、demo-fill16、exec-fill16。G0.json SHA为`6a74227d17f347bfd7e7a1f6dea9a5969ac1d959fcac969edf2ac57ea97fdc32`。
+
+02:38:10并行启动原G2与G3。G3实际完成：`EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1`、`EXPORT_PARITY=NOT_REQUIRED reason=user_decision_same_input`、`EXIT_CODE=0`。JSON的32个参考窗口形状失配和非有限值均0，geometry_all_true=1；G3.json SHA为`3e72fa45fc2702291754d42d69b21293de43ff38ea6b78047c5a29446e81f6e2`。未恢复用户已取消的跨路径精度准入。G2此时仍在CPU核验输入，不能因G3完成而记G2通过。
