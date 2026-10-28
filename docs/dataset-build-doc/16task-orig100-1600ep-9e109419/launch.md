@@ -22,6 +22,8 @@
 
 Beta至`VERIFY_MOTION=PASS`冻结主检出HEAD并写`AGENTMETARULES_HOLD`。期间状态写入`/scratch/hongze/robomme_policy_learning_MotionJEPA-temp/docs/handoff/current.json`，专属本地分支`worktree-agent-o16-state-20261028`；该状态分支随解冻后合并一起推送，不修改冻结主检出。
 
+起跑前归档复核：首份Beta `a0c1948`之后发现复制的矩阵日志含原程序打印的行尾空白，尚未启动任何数据步骤。本次仅清理归档副本的行尾空白并重新固定实际起跑Beta；判定字段、数值、代码与运行参数不变，原日志仍保留在S7工作树。实际起跑SHA以`build-start.json`及日志`BUILD_HEAD=`为准。
+
 ## 三、启动、配置与完整命令
 
 所有命令在主检出执行。长步骤使用独立`o16-`前缀tmux、`PYTHONUNBUFFERED=1`、`tee`和真实`EXIT_CODE=`。运行包装脚本只是以下命令的调度载体，位于日志根，不复制进档案；固定SHA为：
