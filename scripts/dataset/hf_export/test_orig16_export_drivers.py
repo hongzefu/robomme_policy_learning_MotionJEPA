@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -43,6 +44,15 @@ def exporter(monkeypatch):
     exec(compile(code, str(COMMON), "exec"), module.__dict__)
     monkeypatch.setattr(module.io, "load_hf_token", lambda *a: pytest.fail("离线测试不得读取凭据"))
     monkeypatch.setattr(module.io.HFBucket, "_run", lambda *a: pytest.fail("离线测试不得联网"))
+    return module
+
+
+@pytest.fixture
+def checkpoint_consumer():
+    path = REPO / "scripts/training/check_stage2_checkpoint.py"
+    spec = importlib.util.spec_from_file_location("orig16_checkpoint_consumer", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
     return module
 
 
@@ -294,8 +304,55 @@ def make_run(tmp_path, exporter, monkeypatch, index=0):
         write(run / str(step) / "_CHECKPOINT_METADATA", {"commit_timestamp_nsecs": 1})
         write(run / str(step) / "params/_METADATA", {"fixture": True})
         write(run / str(step) / "params/part.bin", bytes(8))
+        write(run / str(step) / "assets/robomme/norm_stats.json", {"norm_stats": {"state": {"mean": [0.0]}}})
     write(repo / "v1-store/logs" / f"{run_name}.log", f"RUN={run_name}\nEXIT_CODE=0\n")
     return run, reg
+
+
+def make_producer_delivery(tmp_path, exporter, monkeypatch, index=0):
+    """按真实producer函数生成根及59999清单，不替换快照或文件核验函数。"""
+    run, reg = make_run(tmp_path, exporter, monkeypatch, index)
+    stage = tmp_path / "export/stage"
+    stage.mkdir(parents=True)
+    sources, _, _ = exporter.snapshot_sources(run, reg)
+    sources["README.md"] = HERE / f"orig16_{exporter.RUNS[exporter.RUN][1]}32x4x4_split_60k_bucket_README.md"
+    identity = {"run_name": exporter.RUN, "bucket": exporter.RUNS[exporter.RUN][0]}
+    root_files = exporter.add_manifest(stage, exporter.freeze_sources(sources, stage), "manifests/root.json", **identity)
+    step_files = exporter.freeze_sources(exporter.step_sources(run, 59999), stage)
+    path = exporter.write_generated(stage, "manifests/step-59999.json",
+                                    exporter.manifest({**root_files, **step_files}, step=59999, **identity))
+    # 原run只有依赖来源声明；交付恢复必须使用stage中复制的依赖实体。
+    assert not (run / "encoder_dependencies").exists()
+    return stage, path
+
+
+@pytest.mark.parametrize("index", [0, 1])
+def test_producer_manifest_consumed_by_restore(tmp_path, exporter, checkpoint_consumer, monkeypatch, index):
+    stage, path = make_producer_delivery(tmp_path, exporter, monkeypatch, index)
+    record = checkpoint_consumer.verify_delivery_manifest(stage, path, stage / "59999")
+    assert record["step"] == 59999
+    assert set(record["files"]) == {p.relative_to(stage).as_posix() for p in stage.rglob("*") if p.is_file() and p != path}
+
+
+@pytest.mark.parametrize("failure", ["asset_sha", "asset_omitted", "root_omitted", "unlisted_param"])
+def test_producer_delivery_preserves_consumer_checks(tmp_path, exporter, checkpoint_consumer, monkeypatch, failure):
+    stage, path = make_producer_delivery(tmp_path, exporter, monkeypatch)
+    record = json.loads(path.read_text())
+    asset = "59999/assets/robomme/norm_stats.json"
+    if failure == "asset_sha":
+        data = bytearray((stage / asset).read_bytes())
+        data[-2] ^= 1
+        (stage / asset).write_bytes(data)
+        match = "SHA256"
+    elif failure == "unlisted_param":
+        write(stage / "59999/params/unlisted.bin", bytes(8))
+        match = "完整 checkpoint"
+    else:
+        del record["files"][asset if failure == "asset_omitted" else "online_restore_inputs.npz"]
+        write(path, record)
+        match = "完整 checkpoint|缺根文件"
+    with pytest.raises(ValueError, match=match):
+        checkpoint_consumer.verify_delivery_manifest(stage, path, stage / "59999")
 
 
 @pytest.mark.parametrize("index", [0, 1])

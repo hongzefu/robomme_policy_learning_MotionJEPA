@@ -52,7 +52,7 @@ EVIDENCE_FILES = {role: f"motion_evidence/{role}.json"
                   for role in ("G0", "G2", "G3", "wan_cache_import", "SOURCE_PIN")}
 GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
 SHA = re.compile(r"[0-9a-f]{64}\Z")
-SCHEMA = "orig16-stage2-delivery-manifest-v1"
+SCHEMA = "stage2-delivery-manifest-v1"
 TOKENIZER_URI = "gs://big_vision/paligemma_tokenizer.model"
 TOKENIZER_SHA = "8986bb4f423f07f8c7f70d0dbe3526fb2316056c17bae71b1ea975e77a168fc6"
 MAX_STEP_BYTES = 16 * 1024**3
