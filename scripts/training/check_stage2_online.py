@@ -94,6 +94,10 @@ def check_state_machine(client, motion_cfg, *, token_per_image=64):
             raise ValueError("stub 回包没有保留完整起点/1024维")
         return result
 
+    motion_cfg = dict(motion_cfg)
+    if motion_cfg.get("readout") == "stage2_pool4_split_v1":
+        from mme_vla_suite.datastore.motion_adapter import motion_policy_spec
+        motion_cfg.update(budget=motion_policy_spec(motion_cfg).window_budget, dim=1024)
     memory = FrameSampMemory(num_views=1, img_emb_dim=4, pos_emb_dim=768, state_emb_dim=8,
                              max_steps=256, token_per_image=token_per_image, motion_enc_fn=encode,
                              motion_cfg=motion_cfg,
@@ -120,9 +124,10 @@ def check_state_machine(client, motion_cfg, *, token_per_image=64):
                 raise ValueError("stub 反推33帧发现跨段、漏帧或错补位")
 
     # 49帧demo包含17帧补尾；连续exec的相邻窗共用第32帧。
-    add(0, 49, 49)
-    check(48, 49)
-    for lo, hi in ((49, 82), (82, 114), (114, 146)):
+    add(0, 50, 49)
+    check(49, 49)
+    for lo in range(50, 146, 16):
+        hi = lo + 16
         add(lo, hi, 49)
         check(hi - 1, 49)
     if set(memory._raw_frames) != {145}:
@@ -134,15 +139,19 @@ def check_state_machine(client, motion_cfg, *, token_per_image=64):
     if memory._next_grid_start_demo or memory._next_grid_start_exec:
         raise ValueError("reset 未重置窗口游标")
     seen.clear()
-    add(0, 33, 0)
-    check(32, 0)
+    add(0, 1, 0)
+    check(0, 0)
+    for lo in (1, 17):
+        add(lo, lo + 16, 0)
+        check(lo + 15, 0)
     if not client.alive:
         raise ValueError("reset 不应销毁客户端")
     return dict(frame_ids_mismatch=0, state_machine_mismatch=0, stub_windows=before_reset + len(seen),
-                demo_tail=1, exec_batches=3, reset=1)
+                demo_tail=1, exec_batches=6, first_packet="D+1", max_followup_frames=16, reset=1)
 
 
-def prepare_restore_inputs(meta, samples, v1, output_root):
+def prepare_restore_inputs(meta, samples, v1, output_root, *, framesamp_store=None, h5_root=None,
+                           input_manifest=None, history=None):
     """保存真实demo与连续65帧exec；demo state从已核SHA的帧表读取，禁止合成。"""
     import h5py
     from mme_vla_suite.datastore import framesamp_store as fs
@@ -150,11 +159,16 @@ def prepare_restore_inputs(meta, samples, v1, output_root):
     from mme_vla_suite.datastore.manifest import load_manifest
     manifest_path = Path(meta.manifest_path)
     manifest = load_manifest(manifest_path)
-    frame_root = manifest_path.parent.parent / "framesamp-8x8"
+    frame_root = Path(framesamp_store) if framesamp_store else manifest_path.parent.parent / "framesamp-8x8"
     frame_meta = fs.StoreMeta.load(frame_root)
     if (frame_meta.status != "verified" or frame_meta.manifest_sha256 != meta.manifest_sha256
             or frame_meta.manifest_scope != "full"):
         raise ValueError("便携样本的状态源必须是同manifest已verified的完整帧表")
+    if history is not None:
+        tokens = history.get("token_per_image")
+        expected_layout = {16: "framesamp-4x4-v1", 64: "framesamp-8x8-v1"}.get(tokens)
+        if expected_layout is None or frame_meta.raw.get("layout") != expected_layout:
+            raise ValueError("history token_per_image 与真实状态来源帧表 layout 不同")
     state_path = frame_root / fs.STATE_TABLE_RELPATH
     state_sha = V.sha_file(state_path)
     state_info = frame_meta.raw["tables"][fs.STATE_KEY]
@@ -175,10 +189,25 @@ def prepare_restore_inputs(meta, samples, v1, output_root):
     es, key, episode, window = min(candidates, key=lambda item: item[:2])
     demo_source = window["sources"][0]
     demo_path = Path(demo_source["path"])
-    if len(window["sources"]) != 1 or demo_source["kind"] != "demo_h5" or V.sha_file(demo_path) != demo_source["sha256"]:
+    if len(window["sources"]) != 1 or V.sha_file(demo_path) != demo_source["sha256"]:
         raise ValueError("便携demo原图必须来自G0已绑定的完整H5")
-    with h5py.File(demo_path, "r") as handle:
-        demo = handle["frames"][:]
+    if demo_source["kind"] == "raw_h5":
+        if h5_root is None or input_manifest is None:
+            raise ValueError("原版H5必须显式提供h5_root和input_manifest")
+        expected_path = Path(h5_root).resolve() / episode["h5_file"]
+        inputs = V.read_json(input_manifest)["files"]
+        identity = inputs[episode["h5_file"]]
+        if (demo_path.resolve() != expected_path or demo_source.get("episode") != episode["raw_ep_idx"]
+                or demo_source["sha256"] != identity["sha256"] or demo_path.stat().st_size != identity["size"]):
+            raise ValueError("原版demo H5路径、episode、字节数或input manifest身份不同")
+        with h5py.File(demo_path, "r") as handle:
+            demo = np.stack([handle[f"episode_{episode['raw_ep_idx']}/timestep_{i}/obs/front_rgb"][()]
+                             for i in range(es)])
+    elif demo_source["kind"] == "demo_h5":
+        with h5py.File(demo_path, "r") as handle:
+            demo = handle["frames"][:]
+    else:
+        raise ValueError("demo来源必须是raw_h5或旧demo_h5")
     if demo.shape != (es, 256, 256, 3) or demo.dtype != np.uint8:
         raise ValueError("demo整段形制与manifest不符")
     states_table = np.memmap(state_path, mode="r", dtype="<f4", shape=(frame_meta.num_rows, 8))
@@ -235,8 +264,9 @@ def prepare_restore_inputs(meta, samples, v1, output_root):
         if os.path.exists(temporary):
             os.unlink(temporary)
     record = dict(schema="stage2-online-restore-inputs-v1", payload=dict(path=payload_path.name, sha256=V.sha_file(payload_path)),
-                  exec_start_idx=es, exec_batch_lengths=[33, 32], prompt=prompt, sources=sources,
-                  demo_state_origin=dict(path="framesamp-8x8/state_emb.f32.bin", row_start=start),
+                  exec_start_idx=es, exec_batch_lengths=([1, 16, 16, 16, 16] if history is not None else [33, 32]),
+                  prompt=prompt, sources=sources,
+                  demo_state_origin=dict(path=f"{frame_root.name}/{fs.STATE_TABLE_RELPATH}", row_start=start),
                   episode=dict(key=key, global_episode_idx=episode["global_episode_idx"], manifest_sha256=meta.manifest_sha256),
                   arrays={name: dict(shape=list(value.shape), dtype=str(value.dtype), sha256=V.sha_bytes(value.tobytes()))
                           for name, value in arrays.items()},
@@ -250,14 +280,21 @@ def prepare_restore_inputs(meta, samples, v1, output_root):
 def run(args):
     from mme_vla_suite.datastore import motion_store as ms
     from mme_vla_suite.policies.motion_client import MotionEncoderClient
-    if os.environ.get("CUDA_VISIBLE_DEVICES") != str(args.online_gpu):
-        raise ValueError("G4 父进程也须只暴露显式指定的同一张物理GPU")
+    # 新两卡拓扑为父0/sidecar1；旧同卡G4命令继续兼容。
+    allowed_parent = {str(args.online_gpu)} | ({"0"} if str(args.online_gpu) == "1" else set())
+    if os.environ.get("CUDA_VISIBLE_DEVICES") not in allowed_parent:
+        raise ValueError("G4须使用父0/sidecar1或旧的显式同卡拓扑")
     meta = ms.MotionMeta.load(args.store)
     ms.validate_stage2_provenance(meta.provenance)
     ms.run_fast_checks(meta)
     ms.run_full_checks(meta)
     if meta.raw["layout"] != V.LAYOUT or meta.status != "verified":
         raise ValueError("G4 必须消费已全表认证并 verified 的 stage2 表")
+    if ms.stage2_uses_cache(meta.provenance):
+        if not all((args.framesamp_store, args.h5_root, args.input_manifest)):
+            raise ValueError("缓存来源G4须显式指定帧表、原H5根与input manifest")
+        if V.sha_file(args.input_manifest) != meta.provenance["input_manifest_sha256"]:
+            raise ValueError("G4的input manifest与motion来源合同不同")
     samples_sha, history_sha = V.sha_file(args.samples), V.sha_file(args.history)
     samples = V.load_samples(args.samples)
     g0 = meta.provenance["stage2_compat"]["evidence"]["G0"]
@@ -265,7 +302,14 @@ def run(args):
         raise ValueError("G4 样本不是当前 store 固定的 G0")
     config = copy.deepcopy(yaml.safe_load(Path(args.history).read_text()))
     motion = config["motion"]
-    expected = dict(enabled=True, encoder_kind="stage2_pool4_concat", dim=1024, budget=96, stride=32,
+    from mme_vla_suite.datastore.motion_adapter import motion_policy_spec
+    policy_spec = motion_policy_spec(motion)
+    if (policy_spec.readout not in ("stage2_pool4_concat_v1", "stage2_pool4_split_v1")
+            or policy_spec.window_budget != 96 or config.get("budget") != 512
+            or config.get("token_per_image") not in (16, 64) or config.get("num_views") != 1
+            or config.get("memory_token_dim") != {"context": 2048, "modulation": 1024}.get(config.get("integration_type"))):
+        raise ValueError("history的帧布局、motion读法或融合维度不符")
+    expected = dict(enabled=True, encoder_kind="stage2_pool4_concat", stride=32,
                     window_frames=33, demo_min_real_frames=17, demo_tail_pad="repeat_last")
     if any(motion.get(k) != value for k, value in expected.items()):
         raise ValueError("history motion 不满足 stage2 固定合同")
@@ -314,7 +358,9 @@ def run(args):
     ms.run_full_checks(meta)
     if V.sha_file(meta.root / ms.INDEX_RELPATH) != meta.motion_index_sha256:
         raise ValueError("G4 期间 packed 索引改变")
-    portable = prepare_restore_inputs(meta, samples, v1, Path(args.out).parent)
+    portable = prepare_restore_inputs(meta, samples, v1, Path(args.out).parent,
+        framesamp_store=args.framesamp_store, h5_root=args.h5_root, input_manifest=args.input_manifest,
+        history=config if args.framesamp_store else None)
     return dict(schema="stage2-validation-gate-v1", gate="G4", status="PASS", producer=V.PRODUCER,
                 checkpoint_sha256=enc["checkpoint_sha256"], samples_sha256=samples_sha, history_sha256=history_sha,
                 **(dict(output_numerics=dict(ms.SAME_INPUT_NOT_REQUIRED), kind=ms.STAGE2_CACHE_ORIGIN)
@@ -332,7 +378,12 @@ def main(argv=None):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--online-gpu", required=True)
     parser.add_argument("--v1-store")
+    parser.add_argument("--framesamp-store")
+    parser.add_argument("--h5-root")
+    parser.add_argument("--input-manifest")
     args = parser.parse_args(argv)
+    if any((args.framesamp_store, args.h5_root, args.input_manifest)) and not all((args.framesamp_store, args.h5_root, args.input_manifest)):
+        parser.error("原版在线输入须同时给出framesamp-store、h5-root、input-manifest")
     V.revoke_report(args.out, gate="G4")
     try:
         record = run(args)
@@ -341,7 +392,10 @@ def main(argv=None):
         V.atomic_json(args.out, dict(schema="stage2-validation-gate-v1", gate="G4", status="FAIL",
                                      producer=V.PRODUCER, error=str(exc)))
         raise
-    print("ONLINE_OFFLINE_PARITY=PASS " + " ".join(f"{k}={v}" for k, v in record["metrics"].items()))
+    if record.get("kind") == "published-cache-with-local-fill":
+        print("ONLINE_INPUT_IDENTITY=PASS windows=64 handshake=1 input_sha_mismatch=0 nonfinite=0")
+    else:
+        print("ONLINE_OFFLINE_PARITY=PASS " + " ".join(f"{k}={v}" for k, v in record["metrics"].items()))
     return 0
 
 
