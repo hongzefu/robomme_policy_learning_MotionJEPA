@@ -437,6 +437,65 @@ def build_jobs(args, logs: Path, smoke: bool):
         data_prefix, feat_prefix = "source/data_tars", None
         data_dir, feat_dir = lib / "source/data", None
         num = fs8_meta["num_exec_samples"]
+    elif args.layout == "orig100-stage2-v1":
+        # 官方16×100：两种帧表共用source，concat/split共用一张1024维motion表。
+        # 证据路径来自已验证来源合同，可能位于库外；发布别名不改写原始元数据字节。
+        expected_small = {}
+        spot_feats = set()
+        counts = set()
+        for sub, grid in (("framesamp-4x4", "4x4"), ("framesamp-8x8", "8x8")):
+            root = lib / sub
+            meta = json.loads((root / "meta/store_meta.json").read_text())
+            if (root / "meta/pack.lock").exists() or meta.get("status") != "verified":
+                raise SystemExit(f"错误: {sub} 尚未验证完成")
+            if meta.get("layout") != f"framesamp-{grid}-v1":
+                raise SystemExit(f"错误: {sub} 帧表layout不符")
+            counts.add(meta["num_exec_samples"])
+            for name in (f"pos_emb_{grid}", "state_emb"):
+                expected_small[f"{sub}/{name}.f32.bin"] = meta["tables"][name]["sha256"]
+            spot_feats.update(e["relpath"] for e in meta.get("source_spot_sha256", {}).get("entries", [])
+                              if e["relpath"].startswith("features/"))
+            jobs = _scan_dir_files(root, sub, "link")
+            if smoke:
+                jobs = [job for job in jobs if "/meta/" in job[1] or job[1] in expected_small]
+            copy_jobs += jobs
+        if len(counts) != 1 or not spot_feats:
+            raise SystemExit("错误: 两种帧表执行样本数不一致或缺少抽样features")
+        for relpath in sorted(spot_feats):
+            source = lib / "source" / relpath
+            if not source.is_file() or not source.resolve().is_relative_to((lib / "source").resolve()):
+                raise SystemExit(f"错误: 抽样features缺失或越界: {relpath}")
+        for sub in ("meta", "source/meta", "motion-stage2-1024"):
+            copy_jobs += _scan_dir_files(lib / sub, sub, "link")
+        motion_root = lib / "motion-stage2-1024"
+        motion = json.loads((motion_root / "meta/store_meta.json").read_text())
+        if (motion_root / "meta/pack.lock").exists() or motion.get("status") != "verified":
+            raise SystemExit("错误: motion-stage2-1024 尚未验证完成")
+        table = motion["tables"]["motion_token"]
+        expected_small[f"motion-stage2-1024/{table['relpath']}"] = table["sha256"]
+        compat = motion["provenance"]["stage2_compat"]
+        roles = {"G0", "G2", "G3", "wan_cache_import", "SOURCE_PIN"}
+        if compat.get("kind") != "published-cache-with-local-fill" or set(compat["evidence"]) != roles:
+            raise SystemExit("错误: 缓存来源合同或证据集合不符")
+        for role, ref in sorted(compat["evidence"].items()):
+            source = Path(ref["path"])
+            if not source.is_absolute():
+                source = motion_root / source
+            relpath = f"evidence/{role}.json"
+            copy_jobs.append((source, relpath, "link"))
+            expected_small[relpath] = ref["sha256"]
+        if args.norm_stats is None:
+            raise SystemExit("错误: orig100-stage2-v1 必须给 --norm-stats")
+        copy_jobs.append((args.norm_stats, "assets/robomme/norm_stats.json", "link"))
+        if not smoke:
+            for sub in ("wan-latents", "motion-tokens-stage2"):
+                if not (lib / sub).is_dir() or not any((lib / sub).iterdir()):
+                    raise SystemExit(f"错误: 缺少 {sub}")
+                tar_groups += build_flat_plan(logs / f"{sub}_plan.json", lib / sub, f"{sub}_tars", sub, sub)
+        # 本轮要求source全量交付，包含完整features；不沿用旧库的仅抽样件策略。
+        data_prefix, feat_prefix = "source/data_tars", "source/features_tars"
+        data_dir, feat_dir = lib / "source/data", lib / "source/features"
+        num = counts.pop()
     else:
         raise SystemExit(f"错误: 未知 layout {args.layout}")
 
@@ -494,7 +553,7 @@ def main() -> int:
     ap.add_argument("--bucket", required=True, help="目标 bucket URI，写进 upload_manifest.json")
     ap.add_argument(
         "--layout", required=True,
-        choices=("gl-v1", "motion400ep-v1", "v2-1600ep-v1", "mixed8-200-v1"),
+        choices=("gl-v1", "motion400ep-v1", "v2-1600ep-v1", "mixed8-200-v1", "orig100-stage2-v1"),
     )
     ap.add_argument("--norm-stats", type=Path, default=None, help="额外带上的 norm_stats.json")
     ap.add_argument("--workers", type=int, default=8)
