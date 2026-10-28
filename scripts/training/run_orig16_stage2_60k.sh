@@ -46,12 +46,21 @@ export MMEVLA_FRAMESAMP_SOURCE="$LIB/source" MMEVLA_FRAMESAMP_MANIFEST="$LIB/met
 export TRAIN_FINAL_RECORD_DIR="$FINAL" TRAIN_RECORD_DIR="$(dirname "$FINAL")/train-record"
 export MMEVLA_EXPECTED_TRAIN_HEAD="$TRAIN_HEAD" MMEVLA_V1_STORE="$ROOT/v1-store"
 export MMEVLA_JAX_CACHE_DIR="$ROOT/v1-store/cache/jax/$RUN" CUDA_CACHE_PATH="$ROOT/v1-store/cache/cuda/$RUN"
+# 沿用旧入口：存在本地W&B环境文件则启用，否则关闭；不把凭据写进命令或日志。
+WANDB_ARGS=()
+if [[ -f "$ROOT/v1-store/secrets/wandb.env" ]]; then
+  set -a
+  source "$ROOT/v1-store/secrets/wandb.env"
+  set +a
+else
+  WANDB_ARGS=(--no-wandb-enabled)
+fi
 ARGS=("$CONFIG" --exp-name "$RUN" --dataset-path "$LIB/$FRAME"
   --assets-base-dir "$ROOT/v1-store/train-assets"
   --data.assets.assets-dir "$ROOT/v1-store/train-assets/mme_vla_suite/$LIBRARY" --data.assets.asset-id robomme
   --checkpoint-base-dir "$ROOT/v1-store/train-runs"
   --weight-loader.params-path "$ROOT/v1-store/models/openpi-assets/checkpoints/pi05_base/params"
-  --model.use-history --model.history-config "$HC" "${STEP_ARGS[@]}" --no-wandb-enabled)
+  --model.use-history --model.history-config "$HC" "${STEP_ARGS[@]}" "${WANDB_ARGS[@]}")
 print_command() {
   printf 'TRAIN_CMD='
   printf '%q ' "$PY" scripts/training/train.py "${ARGS[@]}"
@@ -87,6 +96,10 @@ if [[ ${statuses[1]} != 0 && $rc == 0 ]]; then rc=${statuses[1]}; fi
 if [[ $rc == 0 ]] && rg -qi '^Step [0-9]+:.*(loss|[a-z_]*grad_norm|param_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$LOG"; then
   printf 'TRAIN_NUMERICS=FAIL reason=nonfinite_or_oom\n' >> "$LOG"
   rc=1
+fi
+if [[ $rc == 0 ]]; then
+  JAX_PLATFORMS=cpu "$PY" scripts/training/check_orig16_stage2_launch.py \
+    --check-final-record "$FINAL/final.json" --run "$RUN" --steps "$STEPS" --train-head "$TRAIN_HEAD" >> "$LOG" 2>&1 || rc=1
 fi
 printf 'END_UTC=%s\nEXIT_CODE=%s\n' "$(date -u +%FT%TZ)" "$rc" >> "$LOG" || rc=1
 exit "$rc"

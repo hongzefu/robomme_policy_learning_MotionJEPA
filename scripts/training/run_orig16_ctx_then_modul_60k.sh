@@ -32,6 +32,10 @@ for pair in "$CTX:$CTX_H" "$MOD:$MOD_H"; do
   if [[ ! -d "$checkpoint" || -L "$checkpoint" ]]; then
     echo "CHAIN=STOP reason=missing_59999 run=$run"; exit 1
   fi
+  if ! JAX_PLATFORMS=cpu "$ROOT/.venv/bin/python" "$ROOT/scripts/training/check_orig16_stage2_launch.py" \
+      --check-final-record "$FINAL_ROOT/$run/final-record/final.json" --run "$run" --steps 60000 --train-head "$TRAIN_HEAD"; then
+    echo "CHAIN=STOP reason=invalid_final_record run=$run"; exit 1
+  fi
   printf 'CHAIN_RUN=PASS run=%s step=59999\n' "$run"
 done
 echo 'CHAIN=PASS runs=2'

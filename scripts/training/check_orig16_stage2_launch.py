@@ -227,8 +227,46 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
     return rec
 
 
+def check_final_record(path, *, run, steps, head):
+    """消费既有最终记录：拒绝末段缺行、非有限标量或非有限EMA，不重算模型。"""
+    record = json.loads(Path(path).read_text())
+    expected = dict(run_name=run, head=head, num_train_steps=steps, state_step=steps,
+                    loop_step=steps - 1, checkpoint_step=steps - 1, log_interval=100)
+    if any(record.get(key) != value for key, value in expected.items()):
+        raise ValueError("最终记录的run、代码或末步身份不符")
+    tail = record.get("tail")
+    first = (steps - 1) // 100 * 100 + 1
+    if not isinstance(tail, list) or [row.get("step") for row in tail] != list(range(first, steps)):
+        raise ValueError("最终尾段标量证据缺失或步集合不完整")
+    scalars = load_script("scripts/training/final_record.py").SCALARS
+    for row in tail:
+        values = row.get("scalars")
+        if (not isinstance(values, dict) or set(values) != scalars
+                or any(not isinstance(value, dict) or value.get("finite") is not True for value in values.values())):
+            raise ValueError(f"最终尾段含非有限值或缺标量证据: step={row.get('step')}")
+    leaves = record.get("ema_leaves")
+    if (not isinstance(leaves, dict) or not leaves
+            or any(not isinstance(value, dict) or value.get("finite") is not True for value in leaves.values())):
+        raise ValueError("最终EMA含非有限值或缺有限性证据")
+    return dict(tail_steps=len(tail), ema_leaves=len(leaves))
+
+
 def main(raw=None):
     raw = list(sys.argv[1:] if raw is None else raw)
+    if raw and raw[0] == "--check-final-record":
+        parser = argparse.ArgumentParser(description="核验已有最终保存现场的有限性")
+        parser.add_argument("--check-final-record", type=Path, required=True)
+        parser.add_argument("--run", required=True)
+        parser.add_argument("--steps", type=int, choices=(20, 60000), required=True)
+        parser.add_argument("--train-head", required=True)
+        args = parser.parse_args(raw)
+        try:
+            result = check_final_record(args.check_final_record, run=args.run, steps=args.steps, head=args.train_head)
+        except (OSError, ValueError, TypeError, AttributeError) as error:
+            print(f"TRAIN_FINAL_RECORD=FAIL reason={error}")
+            return 1
+        print(f"TRAIN_FINAL_RECORD=PASS run={args.run} tail_steps={result['tail_steps']} ema_leaves={result['ema_leaves']}")
+        return 0
     if raw == ["--print-library"]:
         print(Contract().library)
         return 0

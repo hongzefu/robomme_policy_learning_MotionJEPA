@@ -144,19 +144,31 @@ def shell_tree(tmp_path):
     root = tmp_path / "repo"
     scripts = root / "scripts/training"
     scripts.mkdir(parents=True)
-    for name in ("run_orig16_stage2_60k.sh", "run_orig16_ctx_then_modul_60k.sh"):
+    for name in ("run_orig16_stage2_60k.sh", "run_orig16_ctx_then_modul_60k.sh",
+                 "check_orig16_stage2_launch.py", "check_mixed8_stage2_1024_launch.py", "final_record.py"):
         shutil.copyfile(REPO / "scripts/training" / name, scripts / name)
     return root
 
 
 @pytest.mark.parametrize("checker_exit", [0, 7])
-def test_actual_shell_dry_run_creates_no_log_run_or_cache(tmp_path, checker_exit):
+@pytest.mark.parametrize("wandb", [False, True])
+def test_actual_shell_dry_run_creates_no_log_run_or_cache(tmp_path, checker_exit, wandb):
     root = shell_tree(tmp_path)
+    secret = "test-only-wandb-key"
+    if wandb:
+        path = root / "v1-store/secrets/wandb.env"
+        path.parent.mkdir(parents=True)
+        path.write_text(f"WANDB_API_KEY='{secret}'\n")
     py = root / ".venv/bin/python"; py.parent.mkdir(parents=True)
     py.write_text(f'''#!/usr/bin/env bash
 if [[ "$*" == *--print-library* ]]; then echo fixture; exit 0; fi
 [[ "$1" == scripts/training/check_orig16_stage2_launch.py ]] || exit 91
 [[ "$JAX_PLATFORMS" == cpu && "$*" == *--num-train-steps* ]] || exit 92
+if [[ {int(wandb)} == 1 ]]; then
+  [[ "$*" != *--no-wandb-enabled* && "$WANDB_API_KEY" == {secret} ]] || exit 93
+else
+  [[ "$*" == *--no-wandb-enabled* ]] || exit 94
+fi
 echo CONTRACT_INVOKED=1
 exit {checker_exit}
 '''); py.chmod(0o755)
@@ -168,12 +180,23 @@ exit {checker_exit}
                             capture_output=True, text=True)
     assert result.returncode == checker_exit, result.stdout + result.stderr
     assert "TRAIN_CMD=" in result.stdout and "CONTRACT_INVOKED=1" in result.stdout
+    assert ("--no-wandb-enabled" in result.stdout) != wandb
+    assert secret not in result.stdout + result.stderr
     assert {str(p.relative_to(root)) for p in root.rglob("*")} == before
 
 
-@pytest.mark.parametrize("fault", ["exit", "checkpoint", "log", "nan", "grad_inf", "oom", None])
+@pytest.mark.parametrize("fault", ["exit", "checkpoint", "log", "nan", "grad_inf", "oom",
+                                   "tail_nonfinite", "ema_nonfinite", "missing_final", None])
 def test_serial_driver_requires_exit_log_and_59999(tmp_path, fault):
     root = shell_tree(tmp_path)
+    py = root / ".venv/bin/python"; py.parent.mkdir(parents=True); py.symlink_to(sys.executable)
+    for run in launch.RUNS.values():
+        final = final_fixture(run, steps=60000)
+        if run == launch.RUNS["context"]:
+            if fault == "tail_nonfinite": final["tail"][-1]["scalars"]["loss"]["finite"] = False
+            if fault == "ema_nonfinite": final["ema_leaves"]["weight"]["finite"] = False
+            if fault == "missing_final": continue
+        dump(root / "v1-store/validation" / run / "final-record/final.json", final)
     child = root / "scripts/training/run_orig16_stage2_60k.sh"
     child.write_text(f'''#!/usr/bin/env bash
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -194,3 +217,83 @@ exit 0
     calls = (root / "calls").read_text().splitlines()
     assert calls == [launch.RUNS["context"]] + ([launch.RUNS["modulation"]] if fault is None else [])
     assert (result.returncode == 0) == (fault is None), result.stdout + result.stderr
+
+
+
+def final_fixture(run="o16-smoke-shell", *, steps=20):
+    scalars = {"loss", "grad_norm", "llm_grad_norm", "param_norm", "mem_enc_norm"}
+    return dict(run_name=run, head="a" * 40, num_train_steps=steps, state_step=steps,
+        loop_step=steps - 1, checkpoint_step=steps - 1, log_interval=100,
+        tail=[dict(step=index, scalars={name: dict(finite=True) for name in scalars})
+              for index in range((steps - 1) // 100 * 100 + 1, steps)],
+        ema_leaves=dict(weight=dict(finite=True)))
+
+
+@pytest.mark.parametrize("fault", ["missing", "tail_step", "tail_scalar", "tail_nonfinite", "ema_flag", "ema_nonfinite", "run", None])
+def test_final_record_fails_closed(tmp_path, fault):
+    record = final_fixture(launch.RUNS["context"], steps=60000)
+    if fault == "tail_step": record["tail"].pop()
+    if fault == "tail_scalar": del record["tail"][-1]["scalars"]["loss"]
+    if fault == "tail_nonfinite": record["tail"][-1]["scalars"]["loss"]["finite"] = False
+    if fault == "ema_flag": del record["ema_leaves"]["weight"]["finite"]
+    if fault == "ema_nonfinite": record["ema_leaves"]["weight"]["finite"] = False
+    if fault == "run": record["run_name"] = "another-run"
+    path = tmp_path / "final.json"
+    if fault != "missing": dump(path, record)
+    code = launch.main(["--check-final-record", str(path), "--run", launch.RUNS["context"],
+                        "--steps", "60000", "--train-head", "a" * 40])
+    assert code == int(fault is not None)
+
+
+@pytest.mark.parametrize("fault", ["missing_final", "tail_nonfinite", "ema_nonfinite", None])
+def test_single_entry_checks_final_record_before_success(tmp_path, fault):
+    root = shell_tree(tmp_path)
+    (root / "v1-store/logs").mkdir(parents=True)
+    record = final_fixture()
+    if fault == "tail_nonfinite": record["tail"][-1]["scalars"]["loss"]["finite"] = False
+    if fault == "ema_nonfinite": record["ema_leaves"]["weight"]["finite"] = False
+    if fault != "missing_final": dump(root / "fixture-final.json", record)
+    py = root / ".venv/bin/python"; py.parent.mkdir(parents=True)
+    py.write_text(f'''#!{sys.executable}
+import os
+from pathlib import Path
+import shutil
+import sys
+if "--print-library" in sys.argv:
+    print("fixture")
+elif "--check-final-record" in sys.argv:
+    os.execv({sys.executable!r}, [{sys.executable!r}, *sys.argv[1:]])
+elif sys.argv[1] == "scripts/training/train.py":
+    source = Path("fixture-final.json")
+    if source.exists():
+        final = Path(os.environ["TRAIN_FINAL_RECORD_DIR"]) / "final.json"
+        final.parent.mkdir(parents=True)
+        shutil.copyfile(source, final)
+    print("Step 0: loss=0.2, grad_norm=0.1")
+''')
+    py.chmod(0o755)
+    env = dict(os.environ, CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7", DRY_RUN="0", MAX_STEPS="20",
+        RUN_NAME="o16-smoke-shell", HISTORY=launch.HISTORIES[0], TRAIN_HEAD="a" * 40,
+        FINAL_RECORD_DIR=str(root / "v1-store/validation/final-record"))
+    result = subprocess.run(["bash", str(root / "scripts/training/run_orig16_stage2_60k.sh")],
+                            env=env, capture_output=True, text=True)
+    log = (root / "v1-store/logs/o16-smoke-shell.log").read_text()
+    assert (result.returncode == 0) == (fault is None), result.stdout + result.stderr + log
+    assert log.splitlines()[-1] == f"EXIT_CODE={int(fault is not None)}"
+    assert f"TRAIN_FINAL_RECORD={'PASS' if fault is None else 'FAIL'}" in log
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_wandb_real_cli_matches_entry_choice(tmp_path, monkeypatch, enabled):
+    from mme_vla_suite.training import config
+    contract = launch.Contract(library="fixture")
+    fx = SimpleNamespace(root=tmp_path, parent=tmp_path / contract.parent_rel, contract=contract)
+    args, argv, env, history = arguments(fx, launch.HISTORIES[0])
+    if enabled: argv.remove("--no-wandb-enabled")
+    monkeypatch.setattr(config, "OPENPI_DATA_HOME", env["OPENPI_DATA_HOME"])
+    cfg, base = launch.parse_cli(argv)
+    assert cfg.wandb_enabled is enabled
+    record = launch.Recorder()
+    launch.check_config(record, cfg, base, store=fx.root, contract=contract, steps=args.steps,
+                        history_name=launch.HISTORIES[0], history=history)
+    assert not record.failed
