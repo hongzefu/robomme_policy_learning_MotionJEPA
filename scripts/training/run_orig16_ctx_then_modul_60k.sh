@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# context成功且59999已保存即接modulation；上传和G12由外部长尾任务负责。
+# context进程退出0且59999已保存即接modulation；上传和G12由外部长尾任务负责。
+# 运行后诊断FAIL按用户裁决仅记录，真实非零退出或缺结束证据仍停止。
 set -euo pipefail
 [[ $# == 0 ]] || { echo '串行入口不接受参数' >&2; exit 2; }
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -26,15 +27,15 @@ for pair in "$CTX:$CTX_H" "$MOD:$MOD_H"; do
   if [[ ! -f "$log" || $(tail -n 1 "$log") != EXIT_CODE=0 ]] || ! rg -q -x "RUN=$run" "$log"; then
     echo "CHAIN=STOP reason=missing_success_log run=$run"; exit 1
   fi
-  if rg -qi '^Step [0-9]+:.*(loss|[a-z_]*grad_norm|param_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$log"; then
-    echo "CHAIN=STOP reason=nonfinite_or_oom run=$run"; exit 1
+  if rg -qi '^\r*Step [0-9]+:.*(loss|grad_norm|llm_grad_norm|param_norm|mem_enc_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$log"; then
+    echo "CHAIN_DIAGNOSTIC=FAIL check=train_numerics detail=nonfinite_or_oom action=record_only reason=user_decision run=$run"
   fi
   if [[ ! -d "$checkpoint" || -L "$checkpoint" ]]; then
     echo "CHAIN=STOP reason=missing_59999 run=$run"; exit 1
   fi
   if ! JAX_PLATFORMS=cpu "$ROOT/.venv/bin/python" "$ROOT/scripts/training/check_orig16_stage2_launch.py" \
       --check-final-record "$FINAL_ROOT/$run/final-record/final.json" --run "$run" --steps 60000 --train-head "$TRAIN_HEAD"; then
-    echo "CHAIN=STOP reason=invalid_final_record run=$run"; exit 1
+    echo "CHAIN_DIAGNOSTIC=FAIL check=final_record action=record_only reason=user_decision run=$run"
   fi
   printf 'CHAIN_RUN=PASS run=%s step=59999\n' "$run"
 done

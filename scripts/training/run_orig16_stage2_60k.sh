@@ -93,13 +93,14 @@ body 2>&1 | tee -a "$LOG"
 statuses=("${PIPESTATUS[@]}")
 rc=${statuses[0]}
 if [[ ${statuses[1]} != 0 && $rc == 0 ]]; then rc=${statuses[1]}; fi
-if [[ $rc == 0 ]] && rg -qi '^Step [0-9]+:.*(loss|[a-z_]*grad_norm|param_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$LOG"; then
+# 用户要求运行后诊断全部执行并如实记录；诊断失败不改训练程序退出码。
+if rg -qi '^\r*Step [0-9]+:.*(loss|grad_norm|llm_grad_norm|param_norm|mem_enc_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$LOG"; then
   printf 'TRAIN_NUMERICS=FAIL reason=nonfinite_or_oom\n' >> "$LOG"
-  rc=1
+  printf 'TRAIN_DIAGNOSTIC=FAIL check=train_numerics action=record_only reason=user_decision\n' >> "$LOG"
 fi
-if [[ $rc == 0 ]]; then
-  JAX_PLATFORMS=cpu "$PY" scripts/training/check_orig16_stage2_launch.py \
-    --check-final-record "$FINAL/final.json" --run "$RUN" --steps "$STEPS" --train-head "$TRAIN_HEAD" >> "$LOG" 2>&1 || rc=1
+if ! JAX_PLATFORMS=cpu "$PY" scripts/training/check_orig16_stage2_launch.py \
+    --check-final-record "$FINAL/final.json" --run "$RUN" --steps "$STEPS" --train-head "$TRAIN_HEAD" >> "$LOG" 2>&1; then
+  printf 'TRAIN_DIAGNOSTIC=FAIL check=final_record action=record_only reason=user_decision\n' >> "$LOG"
 fi
 printf 'END_UTC=%s\nEXIT_CODE=%s\n' "$(date -u +%FT%TZ)" "$rc" >> "$LOG" || rc=1
 exit "$rc"
