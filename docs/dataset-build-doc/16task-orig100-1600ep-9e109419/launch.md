@@ -195,3 +195,9 @@ G12须用导出根的`stage/59999`及同一stage的`manifests/step-59999.json`�
 美东03:25左右，原pack正常完成：`PACK_PROVENANCE_PRECHECK=PASS mode=vae_compat segments=2496`，表23253行（exec14138/demo9115）、2496段、95244288字节，耗时1444.3秒；`PACK_MOTION_DONE=1 raw_dir_match=1`。metadata此时仍为`status=packed`，不能记verified；索引SHA为`7aad314e4daee3b7513770deee62f38714e06c57d3f63bbd634d4e52db54eee6`。
 
 同一`o16-s2pack`于03:25:27启动原verify，worker370731，pane345433未变。原`--resume --check-padding`及全文件来源核对保留，日志继续写`motion-pack-verify.log`；等待真实`VERIFY_MOTION`和总退出码，冻结尚未解除。
+
+### 真实缓存G2与上传器合同对齐
+
+运行准备只读审查发现：S5原`snapshot_sources`同时要求G2/G3含顶层encoder摘要，而真实缓存G2按既有合同只绑定输入、收据和VAE；G3才绑定encoder。原测试夹具给G2加了生产记录没有的字段。独立同规模调整审查通过后，S5追加`c01b6501350cd964a04542468ce2d8a6c57d39c5`，仅将条件改为只检查G3的encoder，真实G2产物及恢复器均不变。
+
+去掉夹具伪字段后修前3项真实失败；修后相关完整133项通过（13.86秒），覆盖原samples、G3 encoder、compat收据绑定的缺失/错误负例。独立`PRE_MERGE_REVIEW=PASS findings=0 blocking=0`；此tip包含前一schema修复，解冻后一起合入。准确边界：上传器通过已verified表的实体SHA及run/store证据一致性复用原S2验证，并未新加完整G2语义复验。两份后续运行载体的接口、参考文件与CPU/GPU环境核对未发现其他必然失败的错配。

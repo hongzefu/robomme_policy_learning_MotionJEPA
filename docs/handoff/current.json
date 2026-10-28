@@ -40,7 +40,7 @@
       "pending_decisions": [{"what": "按用户要求保留原失败供明早复核：两张帧表verify首次因不支持--layout返回2，检查当时未执行；接口已最小修正且后续真实全量verify均PASS，数据及判据未变。", "evidence": "原frames-4x4.log/frames-8x8.log EXIT_CODE=2；新verify-frames-4x4.log/verify-frames-8x8.log各VERIFY_PACK=PASS scanned=768897 mismatches=0 EXIT_CODE=0", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/", "status": "recorded_resolved"}],
       "next_steps": [
         {"what": "G0/G3及全部生产步骤已完成勿重复；G2结束后原motion pack+verify、全表split、G4两组合、G6、回填和两条20步恢复均照做，失败真实留证", "command": "BUILD_HEAD=bd4bad0957e5162073f9bbfec0e4c985c3f830bc STAGE=pack-verify bash v1-store/logs/o16-20261028/motion-stage.sh", "verdict_line": "G2及各原验证真实结果和EXIT_CODE"},
-        {"what": "动作表验证完成解冻后，先G6与全表split，再整合三项已审修复并回填实际常量；G4必须消费真实路径，常量前移经独立同规模审查通过。全部检查仍在训练前。", "command": "整合c5a2e31fc62f85d54d9fe94de0f5077a7b503435（含f50742e）、3fa6665e39e77eb671daed15358311a6e76b2519、9679613e1ce08b272b7c3fecfb8b0804069323cc", "verdict_line": "三项PRE_MERGE_REVIEW=PASS；记录策略37项/来源修复14项/清单生产消费联测125项通过，合后复核待执行"}
+        {"what": "动作表验证完成解冻后，先G6与全表split，再整合三项已审修复并回填实际常量；G4必须消费真实路径，常量前移经独立同规模审查通过。全部检查仍在训练前。", "command": "整合c5a2e31fc62f85d54d9fe94de0f5077a7b503435（含f50742e）、3fa6665e39e77eb671daed15358311a6e76b2519、c01b6501350cd964a04542468ce2d8a6c57d39c5（含9679613）", "verdict_line": "三项PRE_MERGE_REVIEW=PASS；记录策略37项/来源修复14项/清单与缓存G2合同联测133项通过，合后复核待执行"}
       ]
     },
     "orig16-vla-train-ctx32x4x4-split4-60k": {
