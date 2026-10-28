@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-27T21:53:18Z",
-    "america_new_york": "2026-10-27T17:53:18-0400"
+    "utc": "2026-10-28T03:21:33Z",
+    "america_new_york": "2026-10-27T23:21:33-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -705,12 +705,12 @@
         "file": "（聊天方案，无计划文件）",
         "sha": "2346484"
       },
-      "state": "running",
+      "state": "done",
       "state_changed_at": {
-        "utc": "2026-10-27T18:31:32Z",
-        "america_new_york": "2026-10-27T14:31:32-0400"
+        "utc": "2026-10-28T03:21:33Z",
+        "america_new_york": "2026-10-27T23:21:33-0400"
       },
-      "state_reason": "用户批准：扩展新流程支持testx（1200局hold-out xhard，seed7、max_steps2000、xhard metadata=旧testx/metadata），评这次训练stage2 1024 512+motion的60k；超预算按旧流程resample抽稀（选项C）；官方口径不变；新NFS执行副本benchmark检出943ddf3",
+      "state_reason": "testx 1200局（seed7、2000步）stage2 1024 512+motion@60k：success 357/fail 737/timeout 106/error 0，成功率29.75%；base 38.2%、xhard 22.0%；抽稀局数0；对照上次纯512@60k 25.8%、上次512+motion@60k 32.0%；10份占位全部释放",
       "owner": {
         "session": "https://claude.ai/code/session_01WvPQiQXaztwkVeY2pFPyW3",
         "host": "sled-aspen.eecs.umich.edu"
@@ -731,45 +731,19 @@
         },
         {
           "what": "1200局全部确定终局并汇总（含抽稀局数）",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "compute_status=COMPUTE_DONE completed=1200 missing=0 errors=0 retries=0 uncertain=0 downsampled_episodes=0；1200个mp4",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/aggregate-final.json",
+          "status": "pass"
         },
         {
           "what": "占位逐个scancel、tmux精确清理",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "64893996-99排队时scancel；64893994/95 drain后scancel；64893990-93在worker EXIT_CODE=0后scancel，scontrol CANCELLED 23:21:12；squeue为空；eval-tx-controller精确kill，前后tmux ls只少该会话",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/release.txt",
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "eval-tx-controller",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/testx-stage2-60k-seed7/run1200/logs/controller.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "eval-tx-worker-64893990",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893990.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "eval-tx-worker-64893991",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893991.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "eval-tx-worker-64893992",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893992.log",
-          "done_line": "EXIT_CODE="
-        },
-        {
-          "tmux": "eval-tx-worker-64893993",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/testx-stage2-60k/worker-64893993.log",
-          "done_line": "EXIT_CODE="
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -799,9 +773,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "1200局全部accepted后aggregate（含downsampled_episodes），逐个scancel 64893990-64893999，停controller，写结果对比表",
-          "command": "official_queue aggregate --run-root /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/testx-stage2-60k-seed7/run1200",
-          "verdict_line": "compute_status=COMPUTE_DONE completed=1200"
+          "what": "写评估档案（可选）",
+          "command": "—",
+          "verdict_line": "—"
         }
       ]
     }
