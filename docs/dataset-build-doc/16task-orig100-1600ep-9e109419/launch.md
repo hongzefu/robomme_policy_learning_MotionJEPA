@@ -175,3 +175,9 @@ norm正常完成，`norm_stats.json`实际SHA为`c5d45b4bdb481ca46d18aeb32446bbe
 美东约02:36，G0完成：`RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail=16 sha_mismatches=0`、`EXIT_CODE=0`；copy32、demo-fill16、exec-fill16。G0.json SHA为`6a74227d17f347bfd7e7a1f6dea9a5969ac1d959fcac969edf2ac57ea97fdc32`。
 
 02:38:10并行启动原G2与G3。G3实际完成：`EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1`、`EXPORT_PARITY=NOT_REQUIRED reason=user_decision_same_input`、`EXIT_CODE=0`。JSON的32个参考窗口形状失配和非有限值均0，geometry_all_true=1；G3.json SHA为`3e72fa45fc2702291754d42d69b21293de43ff38ea6b78047c5a29446e81f6e2`。未恢复用户已取消的跨路径精度准入。G2此时仍在CPU核验输入，不能因G3完成而记G2通过。
+
+### G2完成，原motion打包与验证起跑
+
+美东02:59，G2原检查实际完成：`G2_INPUT_IDENTITY=PASS windows=64 mismatches=0`、`G2_NUMERICS=NOT_REQUIRED reason=user_decision_same_input`、`EXIT_CODE=0`。JSON中SHA、帧、形状失配和非有限值均0，copy32/demo-fill16/exec-fill16；不重复已完成的导出。
+
+03:01:22启动`o16-s2pack`，pane345433／worker345487，原`motion-stage.sh STAGE=pack-verify`、冻结HEAD bd4bad0957e5162073f9bbfec0e4c985c3f830bc和全部原参数不变。日志`motion-pack-verify.log`；此时仅确认起跑，待真实`VERIFY_MOTION`和退出码。后续全表split、在线两组合、预算检查、两条20步与保存恢复仍全部执行；用户当前要求失败真实留档、继续技术上可执行步骤，不把FAIL改成PASS。
