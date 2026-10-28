@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T03:05:10Z",
-    "america_new_york": "2026-10-27T23:05:10-04:00"
+    "utc": "2026-10-28T03:58:10Z",
+    "america_new_york": "2026-10-27T23:58:10-04:00"
   },
   "repo": {
     "branch": "worktree-agent-o16-state-20261028",
-    "base_head": "7a508fdd7ce515d974ee2acc33c79cc43465e387",
+    "base_head": "246ba4bfbf80724e5193ebe1b1a1064a6e2b256a",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -19,7 +19,7 @@
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "running",
       "state_changed_at": "2026-10-28T01:31:26Z",
-      "state_reason": "Beta bd4bad0冻结不变。实际清单、16个H5全量hash/同源和缓存规划全部PASS，首阶段EXIT_CODE=0。串行下载约47MB/s，经ADJUST_REVIEW=PASS同规模调整后已于美东22:54:11启动8路并行，随后仍由原fetch全量SHA验收；原串行自有进程受控中止的真实EXIT_CODE=143已保留。",
+      "state_reason": "Beta bd4bad0冻结不变。388310630400字节缓存下载及全量SHA已PASS，fetch EXIT_CODE=0；o16-cache-import于美东23:56:30起跑，GPU0真实单窗WAN_FILL_SMOKE=PASS，当前按原步骤继续全量导入前复核。用户最新明确所有步骤仍按原顺序做、不后置，失败原样记录交用户决策，继续技术上可执行的后续工作；未实施先前提出的后置或SHA并发改码。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": [],
       "pre_handoff": [
@@ -28,15 +28,17 @@
         {"what": "G0至G6、八组合CPU验证与契约常量回填", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"}
       ],
       "long_tail": [],
-      "running_handles": [{"kind": "tmux", "name": "o16-cache-fetch-parallel", "host": "AWS", "pane_pid": 104919, "worker_pid": 104973, "started_at_utc": "2026-10-28T02:54:11Z", "stage_budget_from_utc": "2026-10-28T02:45:28Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/cache-fetch-parallel.log", "done_line": "WAN_CACHE_FETCH=PASS；EXIT_CODE=0"}],
+      "running_handles": [{"kind": "tmux", "name": "o16-cache-import", "host": "AWS", "pane_pid": 173329, "started_at_utc": "2026-10-28T03:56:30Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/cache-import.log", "done_line": "WAN_CACHE_IMPORT=PASS；WAN_INPUT_COVERAGE=PASS；EXIT_CODE=0"}],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "按固定计划实施三机制、官方16×100建库、全部验收后两条8卡60k串行训练及公开上传；不做评估，不扩大清理范围。"},
-        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记建库、context 60k、modulation 60k，依赖按计划。"}
+        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记建库、context 60k、modulation 60k，依赖按计划。"},
+        {"kind": "decision", "date": "2026-10-27", "quote": "训练前尽可能不要阻塞 先跑起来 明天上午用户再来决策", "scope": "夜间持续推进可执行事项并记录实际结果；下条明确仍须执行原步骤。"},
+        {"kind": "decision", "date": "2026-10-27", "quote": "不要后置任何步骤 该做的还是做 但是失败了只记录 让用户决策", "scope": "所有原步骤不跳过、不后置；失败真实记FAIL及证据，不伪改PASS，继续技术上可执行的后续工作，交用户决策；数据、模型、seed、批量、步数和两条顺序不变。撤回未实施的后置方案。"}
       ],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "监听并行下载及原fetch逐文件验收，通过后启动GPU缺窗短测和导入；阶段4小时预算从02:45:28Z计", "command": "BUILD_HEAD=bd4bad0957e5162073f9bbfec0e4c985c3f830bc bash v1-store/logs/o16-20261028/import-cache.sh", "verdict_line": "WAN_CACHE_FETCH=PASS；EXIT_CODE=0"},
-        {"what": "VERIFY_MOTION通过并解冻后、训练短测前，合入已审S7日志回车前缀及五字段非有限识别小修，再回填实际常量；当前冻结期不得合", "command": "git merge --no-ff f50742e0d1f3ed5c7181a884f724420bfbc7c4ae", "verdict_line": "PRE_MERGE_REVIEW=PASS findings=0 blocking=0；原S7定向24项通过，合后复核待执行"}
+        {"what": "监听原WAN导入，完成后继续原SigLIP、两帧表、norm、motion及全部验证；FAIL如实记录，不因单项诊断失败等待用户，产物缺失等无法执行时记录受影响依赖", "command": "BUILD_HEAD=bd4bad0957e5162073f9bbfec0e4c985c3f830bc bash v1-store/logs/o16-20261028/siglip-source.sh", "verdict_line": "WAN_CACHE_IMPORT；WAN_INPUT_COVERAGE；实际EXIT_CODE"},
+        {"what": "构建冻结边界解冻后、原20步短测前，整合已审CR日志修复与生产快照两键修复，再回填实际常量；当前冻结期不合", "command": "整合f50742e0d1f3ed5c7181a884f724420bfbc7c4ae及3fa6665e39e77eb671daed15358311a6e76b2519", "verdict_line": "两项PRE_MERGE_REVIEW=PASS；CR测试24项/来源修复14项通过，合后复核待执行"}
       ]
     },
     "orig16-vla-train-ctx32x4x4-split4-60k": {
@@ -55,7 +57,8 @@
       "running_handles": [],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "计划全部前置通过后自动开始context 60k，公开增量上传12份checkpoint。"},
-        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记串行训练任务。"}
+        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记串行训练任务。"},
+        {"kind": "decision", "date": "2026-10-27", "quote": "不要后置任何步骤 该做的还是做 但是失败了只记录 让用户决策", "scope": "原验证及20步保存恢复仍执行，不后置；失败原样留证，继续可执行事项，用户明早决策，不擅自改实验。"}
       ],
       "pending_decisions": [],
       "next_steps": [{"what": "等待建库及两条短测通过后从训练Beta启动", "command": "bash scripts/training/run_orig16_ctx_then_modul_60k.sh", "verdict_line": "LAUNCH_CONTRACT=PASS"}]
@@ -75,7 +78,8 @@
       "running_handles": [],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "context满足计划接续条件后立即开始同配置modulation 60k，公开增量上传12份checkpoint；两条只差融合方式及对应memory_token_dim。"},
-        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记串行训练任务。"}
+        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记串行训练任务。"},
+        {"kind": "decision", "date": "2026-10-27", "quote": "不要后置任何步骤 该做的还是做 但是失败了只记录 让用户决策", "scope": "保留原验证顺序；诊断失败原样记录交用户决策，能执行的工作继续，实验配置与串行顺序不变。"}
       ],
       "pending_decisions": [],
       "next_steps": [{"what": "由已批准串行驱动接续，第一条失败即停", "command": "bash scripts/training/run_orig16_ctx_then_modul_60k.sh", "verdict_line": "EXIT_CODE=0"}]
