@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T09:20:24Z",
-    "america_new_york": "2026-10-28T05:20:24-04:00"
+    "utc": "2026-10-28T09:23:21Z",
+    "america_new_york": "2026-10-28T05:23:21-04:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "491340dfb210acb0e399f9105d8283b8a2bc66f7",
+    "base_head": "607d7bb47105bb48407386edcbbb965b8b3be18e",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -42,7 +42,7 @@
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "planned",
       "state_changed_at": "2026-10-28T01:31:26Z",
-      "state_reason": "已获开工授权；先完整执行建库验收、两种融合20步及保存恢复，失败按用户最新裁决真实记录，继续技术上可执行事项。固定8卡、global batch128、context、32帧4×4、motion每窗4×256、60k。",
+      "state_reason": "全部原前置验收已PASS，准备从本次commitV11.67Beta clean起跑context60k；随后按原chain接modulation。正式期间实际运行态写入-temp，主HEAD/src保持冻结，上传与G12独立长尾。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": [{"path": "/scratch/hongze/robomme_policy_learning_MotionJEPA", "branch": "v4-256concat1", "task": "orig16-vla-build", "gate": "本地数据及全部原起跑检查已PASS；训练库公开上传属于独立长尾，不等待任务整体done。"}],
       "pre_handoff": [
@@ -64,7 +64,7 @@
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "planned",
       "state_changed_at": "2026-10-28T01:31:26Z",
-      "state_reason": "已获开工授权，串行驱动在context训练退出0且59999已保存后立即接续；按计划不等待context上传或G12，两条G12均在modulation结束后执行。",
+      "state_reason": "全部原前置验收已PASS；正式chain在context程序0退出且59999已保存后接本条60k，不等待context上传或G12。备份等待本条实际开始，G12在两条训练后，真实运行态写-temp。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": [{"path": "/scratch/hongze/robomme_policy_learning_MotionJEPA", "branch": "v4-256concat1", "task": "orig16-vla-train-ctx32x4x4-split4-60k", "gate": "仅等待正式训练EXIT_CODE=0及59999已保存；不等待任务done、上传或G12。"}],
       "pre_handoff": [
