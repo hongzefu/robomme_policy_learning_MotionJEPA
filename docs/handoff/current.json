@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T09:32:53Z",
-    "america_new_york": "2026-10-28T05:32:53-04:00"
+    "utc": "2026-10-28T09:38:02Z",
+    "america_new_york": "2026-10-28T05:38:02-04:00"
   },
   "repo": {
     "branch": "worktree-agent-o16-state-20261028",
-    "base_head": "78f958f17b299381fce5bc637a7cdd859a3313ab",
+    "base_head": "5d95d4c728b7e2ed58d7e7f78810f4f2a6315526",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -42,7 +42,7 @@
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "running",
       "state_changed_at": "2026-10-28T09:25:14Z",
-      "state_reason": "正式context60k于美东05:25:14从clean Beta9459859起跑，真实合同49/49通过；8卡/B128/workers16/seed42/60000步已核。05:30:50完成Step0，loss0.6093，五标量有限。链路完成context后自动接modulation，不等备份/G12。ROOT_UPLOAD=PASS files17，INC_WAIT0/12；主src只读/HEAD冻结，运行态仅本副本更新。",
+      "state_reason": "正式context60k从冻结Beta9459859持续运行，美东05:25:14起跑。最新同步日志Step100，loss0.30680981，五标量有限；日志间墙钟约2.4238秒/步（Step0后窗口）。ctx根17文件上传验证PASS，等待5000；mod备份与两条G12按依赖等待。全部原前置均PASS，main HEAD/src保持冻结，实际进展以日志现场复核。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": [{"path": "/scratch/hongze/robomme_policy_learning_MotionJEPA", "branch": "v4-256concat1", "task": "orig16-vla-build", "gate": "本地数据及全部原起跑检查已PASS；训练库公开上传属于独立长尾，不等待任务整体done。"}],
       "pre_handoff": [
@@ -58,7 +58,7 @@
         {"kind": "decision", "date": "2026-10-27", "quote": "不要后置任何步骤 该做的还是做 但是失败了只记录 让用户决策", "scope": "原验证及20步保存恢复仍执行，不后置；失败原样留证，继续可执行事项，用户明早决策，不擅自改实验。"}
       ],
       "pending_decisions": [],
-      "next_steps": [{"what": "完成原建库检查与两条短测后，从训练Beta推进正式训练；诊断失败原样留证", "command": "bash scripts/training/run_orig16_ctx_then_modul_60k.sh", "verdict_line": "LAUNCH_CONTRACT=PASS"}]
+      "next_steps": [{"what": "保持主Beta与src冻结，监听原chain和备份/G12；context完成后自动接modulation；诊断失败真实留证", "command": "tmux o16-train-chain；各run日志与三个长尾日志；运行态仅本开发副本更新", "verdict_line": "原训练EXIT_CODE/59999、CKPT_UPLOAD、G12真实结果"}]
     },
     "orig16-vla-train-modul32x4x4-split4-60k": {
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
