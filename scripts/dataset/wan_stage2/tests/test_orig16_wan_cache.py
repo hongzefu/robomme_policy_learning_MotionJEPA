@@ -276,3 +276,54 @@ def test_plan_digest_and_safe_paths_fail_closed(tmp_path):
     for name in ("../secret", "/absolute", "x/../../secret"):
         with pytest.raises(ValueError, match="非法相对路径"):
             cache.safe_path(tmp_path, name)
+
+
+@pytest.mark.parametrize(
+    ("command", "function", "arguments", "expected"),
+    [
+        (
+            "plan",
+            "build_plan",
+            ("manifest", "input-manifest", "published-index"),
+            "WAN_CACHE_AUDIT=PASS candidates=45228 route=published-cache-with-local-fill\n",
+        ),
+        (
+            "import",
+            "import_plan",
+            ("plan", "cache-root", "raw-dir", "receipt", "gpus"),
+            "WAN_CACHE_IMPORT=PASS copied=42404 filled=2824 total=45228 input_mismatches=0 nonfinite=0\n"
+            "WAN_INPUT_COVERAGE=PASS windows=45228 missing=0 duplicate=0 mismatches=0\n",
+        ),
+        (
+            "check",
+            "check_import",
+            ("samples", "receipt", "raw-dir"),
+            "G2_INPUT_IDENTITY=PASS windows=64 mismatches=0\n"
+            "G2_NUMERICS=NOT_REQUIRED reason=user_decision_same_input\n",
+        ),
+    ],
+)
+@pytest.mark.parametrize("passes", [True, False])
+def test_cli_gate_lines_follow_successful_validation(
+    tmp_path, monkeypatch, capsys, command, function, arguments, expected, passes
+):
+    """只有既有校验正常返回后，CLI 才能发布计划约定的闸门信号。"""
+
+    def validate(*args):
+        if not passes:
+            raise ValueError("夹具校验失败")
+        if command == "check":
+            return {"metrics": {"windows": 64}}
+        return {"counts": {"windows": 45228, "copy": 42404, "fill": 2824}}
+
+    monkeypatch.setattr(cache, function, validate)
+    argv = [command, "--out", str(tmp_path / "result.json")]
+    for name in arguments:
+        argv.extend(("--" + name, "fixture"))
+    if passes:
+        cache.main(argv)
+        assert capsys.readouterr().out == expected
+    else:
+        with pytest.raises(ValueError, match="夹具校验失败"):
+            cache.main(argv)
+        assert capsys.readouterr().out == ""

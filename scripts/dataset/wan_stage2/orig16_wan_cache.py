@@ -888,7 +888,19 @@ def main(argv=None):
             raise FileExistsError("G2 已存在，拒绝覆盖")
         write_json(args.out, result)
     counts = result.get("counts", result.get("metrics", {}))
-    print(f"WAN_CACHE_{args.command.upper()}=PASS " + " ".join(f"{k}={v}" for k, v in counts.items()))
+    if args.command == "plan":
+        print(f"WAN_CACHE_AUDIT=PASS candidates={counts['windows']} route={KIND}")
+    elif args.command == "import":
+        print(
+            f"WAN_CACHE_IMPORT=PASS copied={counts['copy']} filled={counts['fill']} "
+            f"total={counts['windows']} input_mismatches=0 nonfinite=0"
+        )
+        print(f"WAN_INPUT_COVERAGE=PASS windows={counts['windows']} missing=0 duplicate=0 mismatches=0")
+    elif args.command == "check":
+        print(f"G2_INPUT_IDENTITY=PASS windows={counts['windows']} mismatches=0")
+        print("G2_NUMERICS=NOT_REQUIRED reason=user_decision_same_input")
+    else:
+        print("WAN_CACHE_FETCH=PASS " + " ".join(f"{k}={v}" for k, v in counts.items()))
 
 
 if __name__ == "__main__":
