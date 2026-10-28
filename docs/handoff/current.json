@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T05:20:15Z",
-    "america_new_york": "2026-10-28T01:20:15-04:00"
+    "utc": "2026-10-28T06:16:27Z",
+    "america_new_york": "2026-10-28T02:16:27-04:00"
   },
   "repo": {
     "branch": "worktree-agent-o16-state-20261028",
-    "base_head": "ddaef156e6b7d3053e284beb2b245673e6da615c",
+    "base_head": "55362e2faf70c819c33949c651c65d432d31a03e",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -19,7 +19,7 @@
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "running",
       "state_changed_at": "2026-10-28T01:31:26Z",
-      "state_reason": "Beta bd4bad0冻结不变。Wan导入完成：42404复制+2824补算=45228窗，2496段，输入/finite/覆盖全部零差且EXIT_CODE=0；本轮临时发布缓存按批准范围已删除。SigLIP于美东10-28 00:47:46起跑，550帧单集短测PASS，现8卡16worker全量构建source。用户要求原步骤全部做、不后置，FAIL原样留证并继续可执行事项。",
+      "state_reason": "Beta bd4bad0冻结不变。Wan导入和motion full导出均已PASS；SigLIP全量1600集/768897帧、16个worker正常退出，elapsed4928s、EXIT_CODE=0。美东02:15:29启动原finalize与G0并行，独立审查确认读写无竞态；全检查/参数不减。用户要求原步骤全部做、不后置，FAIL原样留证并继续可执行事项。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": [],
       "pre_handoff": [
@@ -29,7 +29,8 @@
       ],
       "long_tail": [],
       "running_handles": [
-        {"kind": "tmux", "name": "o16-siglip", "host": "AWS", "pane_pid": 222562, "started_at_utc": "2026-10-28T04:47:46Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/siglip-source.log", "done_line": "STAGE_DONE stage=siglip；EXIT_CODE=0"}
+        {"kind": "tmux", "name": "o16-finalize", "host": "AWS", "pane_pid": 301478, "worker_pid": 301578, "started_at_utc": "2026-10-28T06:15:29Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/finalize-source.log", "done_line": "实际finalize判定；EXIT_CODE=0"},
+        {"kind": "tmux", "name": "o16-g0", "host": "AWS", "pane_pid": 301527, "worker_pid": 301586, "started_at_utc": "2026-10-28T06:15:29Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/motion-g0.log", "done_line": "实际G0判定；EXIT_CODE=0"}
       ],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "按固定计划实施三机制、官方16×100建库、全部验收后两条8卡60k串行训练及公开上传；不做评估，不扩大清理范围。"},
@@ -39,7 +40,7 @@
       ],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "motion full导出已PASS（2496段23253行、64窗dropout诊断齐全），不要重复；继续监听SigLIP，完成后原样执行finalize、4x4/8x8两表、norm、G0/G2/G3等全部关口；无检查后置或取消，FAIL真实留证", "command": "BUILD_HEAD=bd4bad0957e5162073f9bbfec0e4c985c3f830bc bash v1-store/logs/o16-20261028/finalize-source.sh", "verdict_line": "STAGE2_EXPORT=PASS segments=2496 rows=23253 EXIT_CODE=0；后续各验证真实结果"},
+        {"what": "finalize结束后启动4x4/8x8各48进程pack+verify及norm；G0生成后可并行G2 CPU和G3 GPU0，motion pack等两结果；全部原检查照做，真实FAIL留证", "command": "pack-frames.sh（FRAME_LAYOUT=4x4或8x8）、norm-stats.sh、motion-stage.sh（STAGE=g2或g3）；均传BUILD_HEAD=bd4bad0957e5162073f9bbfec0e4c985c3f830bc", "verdict_line": "各原验证真实结果和EXIT_CODE；motion full已完成勿重复"},
         {"what": "构建冻结边界解冻后、原20步短测前，整合CR识别及诊断仅记录策略、生产快照两键修复，再回填实际常量；当前冻结期不合", "command": "整合c5a2e31fc62f85d54d9fe94de0f5077a7b503435（含f50742e）及3fa6665e39e77eb671daed15358311a6e76b2519", "verdict_line": "两项PRE_MERGE_REVIEW=PASS；记录策略37项/来源修复14项通过，合后复核待执行"}
       ]
     },

@@ -149,3 +149,13 @@ SigLIP实际起跑于美东10月28日00:47:46，`o16-siglip`、pane PID222562，
 G0和后续验证仍在原有输入就绪后全部执行；提前完成的全量编码不重复烧GPU。所有已有GPU0进程均核为本轮SigLIP后代；若同驻短测失败，原定独立导出仍会执行，失败记录保留，不影响SigLIP现场。
 
 截至美东01:17，全量导出已实际完成并退出：`STAGE2_EXPORT=PASS segments=2496 rows=23253`、`EXIT_CODE=0`，2496个f32文件共95244288字节；export_record明确`scope=full`，SHA为`9f56b96c8c881cf11db7d50bda7a16da0ebb24d71f7fcea3e3a846c9f12031e0`。64窗dropout诊断为`eval_repeat_max_abs=0.0`、`train_vs_eval_max_abs=1.5240858793258667`，后者用于证实训练/推理模式差异，不是失败指标。共享来源三键与固定SOURCE_PIN逐项相同。导出会话已退出，SigLIP继续；此结果不替代后续G0/G2/G3/pack/verify。
+
+### SigLIP完成与两组独立检查重叠
+
+SigLIP已于美东约02:11实际完成：1600个唯一EP、768897帧、重复完成事件0，16条SHARD_DONE均正常；`STAGE_DONE stage=siglip workers=16 items=1600 elapsed=4928s`、`EXIT_CODE=0`，所有GPU进程已释放。后续仍须完整finalize及两种帧表验证，不能把生产结束等同全部数据验收。
+
+独立固定代码审查给出`ADJUST_REVIEW=PASS scale=same findings=0`：source封口后，finalize仅读源文件并最终写source/meta统计；G0原H5路径仅读source/data，不依赖stats、帧表或norm，写独立G0.json，因此两者可重叠。原`input_level=sha256`和1024视觉spot均保留；finalize的SHA阶段已有最多4线程，G0纯CPU。两会话均于美东02:15:29启动：`o16-finalize` pane301478／worker301578，`o16-g0` pane301527／worker301586；全部参数与原脚本不变。
+
+同一审查确认G0发布后，G2（CPU）与G3（GPU0）互不消费对方结果，可并行各写独立JSON。4×4/8×8 pack及norm仍等finalize结束，motion pack仍等G2/G3结果；没有验证被取消或后置。失败按用户要求真实记录，不改判据。
+
+独立只读服务准备：HF官方认证HTTP200、目标namespace及写角色匹配，三个目标bucket查询均404，仅记未查到、不记空bucket；W&B单次viewer认证HTTP200且GraphQL有效。没有创建bucket/run/项目，没有上传或改变可见性，没有输出或落盘凭据。
