@@ -4,7 +4,7 @@
 >
 > **固定外部锚点（用户 10-28：encoder 与数据集固定用官方 16×100 及其训练完的 encoder）**：encoder `MotionJEPA/runs/stage2-full144-1025-a/checkpoint_epoch_105.pt`（sha256 `27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035`，取 `model` 键 EMA）；其训练源 `config.yaml::data.data_root=/scratch/hongze/dataset-rgb-gtxyz-16views-stride2-v1`，`control/build_spec.json::identity.source_pin.files[]` 16 个 H5；源 H5 `/scratch/hongze/dataset-original-robomme-16x100-wan21-v1/source/h5/`（`Yinpei/robomme_data_h5@a5e4e25`）；Wan 缓存 `HongzeFu/robomme-original-16x100-wan21-front-33f-dense-v1@384d5db`。2026-10-28 预核：encoder 训练源 16 个 H5 与缓存 `source_manifest.json` 的 sha256＋字节数逐文件相同（`PRELIM_LINEAGE files=16 diff_lines=0`）；VLA 库清单建好后再跑正式 `DATA_LINEAGE`。
 >
-> **用户原话**：①「修改这个计划 改为只用gpu0123 只跑512+motion 且是 32frame4*4」②「Wan 的抽取不是已经有缓存了吗」③「不考虑精度的额外不一致 只要输入是一样的就不考虑 之前有一个根目录md已经讨论过这个问题了」④「修改这个计划 只说修改的部分 dataset怎么构造 model的训练配置是什么 32frame4*4+motion 需要改什么 你现在很多不改动的地方也在说」⑤（10-28）「我需要支持三个机制 32frame44 8frame88 这个是第一个机制 第二个机制 256变成44token和 1024变为1token 第三个机制context和modulation 然后画图写清楚流水线 一张图即可 每一步都写清楚 没有需要添加的额外机制额外用红色注明 然后现在的encoder和数据集都固定必须用16*100官方的和官方训练完的 wan尽可能用已经缓存的 缓存的精度的一致性已经有过裁决 你要引用一下 画图用fable 然后你还要写现在数据集还缺什么怎么构造」⑥「机制都实现 然后我训context 32frame44 然后4个token」⑦「用8卡 batch size和现在一致」⑧「目前还是先用，modulation，然后三十二帧四乘四，再加上……每一个窗口四个 token，就是三八四的……三八四个 token，来跑八卡来跑，然后六十 K其他都只做实现不跑，然后构造完数据集之后直接开始跑。」⑨「你可以新建这个配置，然后八乘八的帧现在就建完，然后建完之后，这个这个数据集上传到 Hugging Face 上面，然后 Checkpoint 也要上传，然后磁盘清理，你给我一个方案，你可以一次性的多清理一些，……上市的十六乘以二百的数据，你只要是 Hugging Face 上面有的都可以不要了。」
+> **用户原话**：①「修改这个计划 改为只用gpu0123 只跑512+motion 且是 32frame4*4」②「Wan 的抽取不是已经有缓存了吗」③「不考虑精度的额外不一致 只要输入是一样的就不考虑 之前有一个根目录md已经讨论过这个问题了」④「修改这个计划 只说修改的部分 dataset怎么构造 model的训练配置是什么 32frame4*4+motion 需要改什么 你现在很多不改动的地方也在说」⑤（10-28）「我需要支持三个机制 32frame44 8frame88 这个是第一个机制 第二个机制 256变成44token和 1024变为1token 第三个机制context和modulation 然后画图写清楚流水线 一张图即可 每一步都写清楚 没有需要添加的额外机制额外用红色注明 然后现在的encoder和数据集都固定必须用16*100官方的和官方训练完的 wan尽可能用已经缓存的 缓存的精度的一致性已经有过裁决 你要引用一下 画图用fable 然后你还要写现在数据集还缺什么怎么构造」⑥「机制都实现 然后我训context 32frame44 然后4个token」⑦「用8卡 batch size和现在一致」⑧「目前还是先用，modulation，然后三十二帧四乘四，再加上……每一个窗口四个 token，就是三八四的……三八四个 token，来跑八卡来跑，然后六十 K其他都只做实现不跑，然后构造完数据集之后直接开始跑。」⑨「你可以新建这个配置，然后八乘八的帧现在就建完，然后建完之后，这个这个数据集上传到 Hugging Face 上面，然后 Checkpoint 也要上传，然后磁盘清理，你给我一个方案，你可以一次性的多清理一些，……上市的十六乘以二百的数据，你只要是 Hugging Face 上面有的都可以不要了。」⑩「删除的事情你现在就可以做了，不用再放入这个计划里了。」
 >
 > **选择题裁决（AskUserQuestion，10-28，全部选推荐）**：K1 其余 7 种组合只做单测＋启动契约＋CPU 前向，不占 GPU；K2 代码合入→建库→血缘→各闸门→8 卡 20 步短测全部 PASS 即自动起正式 60k，任一 FAIL 即停（血缘 FAIL 必停）；K3 新数据集与 ckpt 都公开上传 HF；K4 本计划不做评估。默认项（用户未改）：K5 run 名 `orig100-m32x4x4-modul-motion-s2split4x256-b128-60k`；K6 4 个 motion token 共用窗口起点时间码。
 >
@@ -28,7 +28,7 @@
 
 ![三机制流水线](docs/figures/1027-orig16-three-mech-pipeline.svg)
 
-三机制以外需要新增的机制共五项，都是「官方 16×100 + 复用缓存 + 新配置」本身需要的：图中红框 X1 血缘闸门 `check_data_lineage.py`（P-LINEAGE 强制）、X2 Wan 缓存导入/补窗工具与来源合同 `published-cache-with-local-fill`、X3 MJ 导出 CLI 的 `--expected-counts`/`--input-manifest`；另有 X4 上传驱动、X5 磁盘清理核验脚本不在训练流水线上，未入图。模型侧不加任何三机制以外的东西：不给 4 个 motion token 各配不同时间码，不改 mem_order 规则，不改 loss/精度。
+三机制以外需要新增的机制共四项，都是「官方 16×100 + 复用缓存」本身需要的：图中红框 X1 血缘闸门 `check_data_lineage.py`（P-LINEAGE 强制）、X2 Wan 缓存导入/补窗工具与来源合同 `published-cache-with-local-fill`、X3 MJ 导出 CLI 的 `--expected-counts`/`--input-manifest`；另有 X4 上传驱动不在训练流水线上，未入图。模型侧不加任何三机制以外的东西：不给 4 个 motion token 各配不同时间码，不改 mem_order 规则，不改 loss/精度。
 
 ## 二、数据集：现在有什么、缺什么、怎么构造
 
@@ -49,23 +49,9 @@
 
 **Wan 精度（引用既有裁决，不再讨论）**：发布缓存的数值口径见其 `provenance.json::numeric_mode`（FP32 权重/输入/输出、B＝1、卷积 TF32 开、matmul TF32 关）；补窗走现有 sidecar 口径（FP32、TF32 关）。用户已裁决「不考虑精度的额外不一致 只要输入是一样的就不考虑」（原话③，记于提交 `f76e5bd` body），此前 `1026-official-benchmark-stage2-eval-plan.html` 已「采用用户取消跨硬件数值一致的决定」。据此记 `NUMERIC_EQUIVALENCE=NOT_REQUIRED reason=user_decision_same_input`；输入身份（源 H5、帧号、像素 SHA、补帧来源）、权重、shape/finite、文件 SHA 仍硬核。
 
-## 三、磁盘清理方案（开工后第 0 阶段，先于建库）
+## 三、磁盘
 
-`/scratch` 现余 1.3 T；本计划建库峰值约 1.13 T（source 465＋两种帧表 252＋缓存拉取临时 388＋latent 25），训练库上传还要临时打包空间。按原话⑨，上一轮 16×200（mixed8）的本地产物只要 HF 上有就删。2026-10-28 盘点（`hf buckets list HongzeFu`＋model/dataset repo 两类都查；16×200 资产全在 bucket，repo 侧只有官方 16×100 Wan 缓存一个）：
-
-| # | 本地路径 | 大小 | HF 对应（bucket） | 删除闸门 |
-|---|---|---|---|---|
-| D1 | `v1-store/datasets/16task-mixed8-200-3200ep-e3c7564f/` 下 `source`、`framesamp`、`framesamp-8x8`、`motion`、`meta` | 约 1,167 G | `robomme-16task-mixed8-200-trainset-20261016-v1`（1.405 TB／544 文件，含同名四目录与 `checksums/`） | 逐文件 sha256 对 bucket `checksums/`＋`SHA256SUMS.pre.txt` 全中 |
-| D2 | `v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/` 下 14 份 ckpt（5000–70000） | 155 G | `robomme-vla-mixed8-200-modul-motion-stage2-1024-80k-v1`（14 个步数目录齐） | 逐文件 sha 全中，**且** 状态机 `mixed8-vla-stage2-1024-train` 长尾「70k 终点最终全量匿名 SHA 核验」为 pass；run 目录内配置与证据小文件保留 |
-| D3 | `v1-store/exports/hf-ckpt-mixed8-200-vla-stage2-1024-80k/` | 156 G | 同 D2（上传暂存副本） | 同 D2 |
-| D4 | `v1-store/restore/mixed8-200-vla-latents-20261021-a/` | 71 G | 训练库 bucket 的 `wan-latents_tars`/`oracle_tars`（本目录即由其还原，`restore_receipt.json` `status=PASS`） | 收据逐对象 sha 与 bucket 一致 |
-| D5 | `v1-store/exports/hf-mixed8-200-encoder-ckpt/` | 18 G | `motionjepa-wan-mixed8-200-72ep-v1`（18.5 GB） | 逐文件 sha 全中 |
-| D6 | `MotionJEPA/runs/wan-mixed8-200-filter2-stop075-b88x8-72ep-a/` | 17 G | 同 D5 | 逐文件 sha 全中；未上传的文件单列保留 |
-| D7 | `MotionJEPA/runs/wan-mixed8-200-v10-inseq256q8-b352x8-60ep-20261020-a/` | 12 G | `motionjepa-v10-mixed8-200-60ep-20261020-a`（11.75 GB） | 同 D6 |
-
-合计可腾约 **1.6 T**，清理后约 2.9 T 可用。**不删**（HF 无逐文件对应，按原话⑨口径保留，单列交用户）：`dataset-local-a100-16task-mixed8-200/data-raw`（279 G，逐 episode `video_exec.h5`；HF 只有按任务合并的 H5 压缩包）、`…/smoke100`（45 G）、mixed8 库内 `motion-stage2-1024`/`motion-tokens-stage2`（约 0.7 G）、MJ 其余 mixed8 实验 run（v11-h512 38 G、v10-h768 9.6 G 等）、两份 VLA smoke run（各 12 G）、代码 worktree。官方 16×100 相关（`dataset-rgb-gtxyz-16views-stride2-v1`、`dataset-original-robomme-16x100-wan21-v1`、ep105）一律不动。
-
-做法：核验脚本只读，逐项输出 `CLEAN_VERIFY=PASS|FAIL item=D<n> files=<n> missing=0 mismatches=0 bytes=<n>`；只有 PASS 的项，删前 `ls -ld` 确认实体目录、显式写全路径 `rm -rf`（不 glob、不跨目录），删后 `df` 留证。FAIL 或对不上的文件整项保留并报告，不放宽。
+16×200（mixed8）旧产物的清理按原话⑩已在本计划之外单独执行（逐文件核对 HF bucket sha256 后删除，记录在 `v1-store/logs/cleanup-mixed8-20261028/`）。本计划只要求建库前 `/scratch` 可用空间不少于 1.5 T（建库峰值约 1.13 T＋上传打包临时），不足即停。
 
 ## 四、正式训练配置
 
@@ -95,13 +81,12 @@
 | X2 缓存复用（红） | 新工具 plan/fetch/import/check；来源合同 `published-cache-with-local-fill` | `wan_stage2/orig16_wan_cache.py`（新）、`pack_motion_store.py`、`motion_store.py`、`motion_client.py`、`train.py`、`validate_stage2.py`、`compare_stage2.py` |
 | X3 MJ 抽取（红） | `--expected-counts`、`--input-manifest` | MJ `scripts/stage2_memory_export.py` |
 | X4 上传（红） | 训练库（两种帧表）／ckpt 公开导出驱动；`pack_and_hash.py` 认两种帧表 | `hf_export/` |
-| X5 清理核验（红） | 只读核验 D1–D7 与 HF bucket 逐文件 sha | `scripts/maintenance/verify_hf_before_delete.py`（新） |
 
 ## 六、验收（只列新增判定行）
 
 | 编号 | 判定行 |
 |---|---|
-| D | `CLEAN_VERIFY=PASS item=D<1..7> files=<n> missing=0 mismatches=0`；`DISK_FREE=PASS free_tib=<≥2.5>` |
+| D | `DISK_FREE=PASS free_tib=<≥1.5>`（建库前） |
 | L0/L1/L2 | `DATA_LINEAGE=PASS encoder_ckpt=27daa832 encoder_source_pin=<sha> vla_input_pin=<sha> files=16 mismatches=0` |
 | C0 | `WAN_CACHE_AUDIT=PASS candidates=<n> route=published-cache-with-local-fill`（copy 42404 + fill 2824 = 45228） |
 | B4 | `VERIFY_PACK=PASS layout=framesamp-4x4-v1 scanned=768897 mismatches=0`、`VERIFY_PACK=PASS layout=framesamp-8x8-v1 scanned=768897 mismatches=0` |
@@ -121,19 +106,17 @@
 
 | 阶段 | 内容 | 判据 |
 |---|---|---|
-| 0 清理 | D1–D7 核验 → 逐项删 | D 行、DISK_FREE |
-| 1 代码 | S6→S1→S2→S3→S4→S7→S5 实现并合入（含 X5） | 各块定向测试、合前/合后审查、MATRIX |
-| 2 建库 | 清单 → 缓存拉取/导入/删临时 → SigLIP → 4×4 与 8×8 两种帧表 → norm | L1、C0、B1–B9 |
+| 1 代码 | S6→S1→S2→S3→S4→S7→S5 实现并合入 | 各块定向测试、合前/合后审查、MATRIX |
+| 2 建库 | 磁盘余量检查 → 清单 → 缓存拉取/导入/删临时 → SigLIP → 4×4 与 8×8 两种帧表 → norm | D、L1、C0、B1–B9 |
 | 3 motion | G0 → ep105 抽取 → G2/G3 → pack/verify → M2 逐位 → G4/G6 → 回填契约常量 | G0–G6、M2 |
 | 4 短测 | DRY_RUN 契约 + 8 卡 20 步 + 保存恢复 | L2、G7 |
 | 5 正式 | 唯一 run 60k，增量公开上传 ckpt；同时训练库公开上传并读回校验（长尾） | G8、H |
 | 6 收尾 | 59999 恢复验证、档案、handoff | G12 |
 
-阶段 0 与阶段 1 可并行（清理只用 CPU/IO，代码在 worktree）。
 
 ## 八、子代理分工与合并（简述）
 
-七块写入型子代理各在独立 worktree：S6 MJ 计数与源核；S1 血缘与 G0；S2 缓存来源合同；S3 缓存工具；S4 M2 split readout；S7 M1/M3 yaml 矩阵、新训练配置、入口、契约、在线与恢复检查；S5 上传驱动与 X5 清理核验脚本。S7 依赖 S2 与 S4，从二者合入后的 HEAD 续做。按 S6→S1→S2→S3→S4→S7→S5 逐个 `--no-ff` 合入，每次合前 sonnet 审固定 BASE/TIP，合后跑定向测试再 push。运行型（清理、建库、训练、上传）由主会话派 opus 运行代理在主检出启动，主会话监听与接续。
+七块写入型子代理各在独立 worktree：S6 MJ 计数与源核；S1 血缘与 G0；S2 缓存来源合同；S3 缓存工具；S4 M2 split readout；S7 M1/M3 yaml 矩阵、新训练配置、入口、契约、在线与恢复检查；S5 上传驱动。S7 依赖 S2 与 S4，从二者合入后的 HEAD 续做。按 S6→S1→S2→S3→S4→S7→S5 逐个 `--no-ff` 合入，每次合前 sonnet 审固定 BASE/TIP，合后跑定向测试再 push。运行型（建库、训练、上传）由主会话派 opus 运行代理在主检出启动，主会话监听与接续。
 
 ## 九、待用户裁决
 
@@ -150,8 +133,7 @@
 - **R5 不加三机制以外的模型机制**：不加 per-token 时间码、不改 `sampling.py::memory_order` 键、不改 loss/精度/attention。
 - **R6 冻结**：建库 Beta 到 `VERIFY_MOTION=PASS` 不 commit（写 `AGENTMETARULES_HOLD`）；训练 Beta 到上传完成 `src/` 只读。
 - **R7 tmux 前缀 `o16-`**，日志根 `v1-store/logs/o16-20261028/`。
-- **R8 清理只删 D1–D7 中 `CLEAN_VERIFY=PASS` 的项**：删前 `ls -ld`、显式全路径、一次一个目录、不 glob；D2/D3 另须 stage2 长尾 SHA 核验 pass；清单外一律不动；`data-raw` 等无逐文件对应者保留。
-- **R9 其余 7 种组合不占 GPU**（K1）。
+- **R8 其余 7 种组合不占 GPU**（K1）。
 
 ## 一、逐文件改动清单
 
@@ -208,12 +190,11 @@
 - MATRIX 驱动 `scripts/training/tests/mech_matrix.py`：8 份 yaml 各跑 DRY_RUN 契约（夹具库）＋1 batch CPU 前向，输出 `MECH_MATRIX=`。
 - 测试：`tests/training/test_check_orig16_stage2_launch.py`（layout 错配/融合维度错配/readout 错配/错 GPU/步数非 60000/占位符/G2 缺失/血缘不符均 FAIL）；`test_framesamp_motion_stage2.py` 增 16 token 矩阵、32 帧边界、`mem_order[896]`；`test_stage2_restore.py` 增 4×4 状态来源、D+1、59999、modulation 896。
 
-**S5（X4 上传、X5 清理核验）**
+**S5（X4 上传）**
 - 新 `hf_export/run_orig100_trainset_export.sh`（公开 bucket `HongzeFu/robomme-16task-orig100-1600ep-trainset-20261028-v1`）+ README + allowlist；范围 source、framesamp-4x4 与 framesamp-8x8、norm、wan-latents、motion 两表、缓存导入证明；末尾读回校验 `HF_VERIFY=`（本机无集群，按第 15 条在本机校验并写明原因）。
 - 新 `_stage2_orig16_vla_ckpt_export_common.sh`、`run_orig16_stage2_ckpt_inc.sh`、`run_orig16_modul32x4x4_split_60k_ckpt_export.sh`（公开 bucket `HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2split-60k-v1`，STEPS 5000…55000+59999，证据集同 S2）+ README + allowlist。
 - `pack_and_hash.py::build_jobs` 认两种 layout。
-- 新 `scripts/maintenance/verify_hf_before_delete.py`：输入「本地目录 + bucket + bucket 内前缀 + 清单文件（`checksums/*`、`SHA256SUMS*`、或 restore 收据）」，逐文件比 path/bytes/sha256，tar 分片按清单里的分片 sha 比；只读，不删；输出 `CLEAN_VERIFY=`。不以 `xetHash` 代替 sha256。
-- 测试 `hf_export/test_orig16_export_drivers.py`、`tests/maintenance/test_verify_hf_before_delete.py`（缺文件/改字节/多文件均 FAIL）。
+- 测试 `hf_export/test_orig16_export_drivers.py`。
 
 ## 二、子代理分配表
 
@@ -225,10 +206,9 @@
 | S3 | `orig16_wan_cache.py` 及两份测试 | 4（兼容测试待 S2） | copy/fill、SHA、S2 兼容 | CPU |
 | S4 | `motion_adapter.py`、`framesamp_dataset.py`、`policy.py`、`percep_mem.py`（仅必要时）、`test_motion_split.py` | 5 | split 逐位、896 置换、旧 concat/paired 测试全绿 | CPU |
 | S7 | `config.py`（只增条目）、8 份 yaml、新入口、新契约、`check_stage2_online.py`、`check_stage2_checkpoint.py`、`mech_matrix.py`、列出测试 | 6（基于 S2+S4 合入后 HEAD） | MATRIX、契约负例、59999 | CPU |
-| S5 | 新导出驱动、`pack_and_hash.py` 分支、`verify_hf_before_delete.py` 及测试 | 7（X5 可提前单独合入，供阶段 0 使用） | 双 layout 夹具打包回读、清理核验负例 | CPU |
-| X0 运行 | 清理核验与删除（只 D1–D7 PASS 项） | X5 合入后 | D 行 | CPU/IO |
+| S5 | 新导出驱动、`pack_and_hash.py` 分支及测试 | 7 | 双 layout 夹具打包回读 | CPU |
 | X1–X4 运行 | 新库 / motion / run / 上传产物与日志（运行型，不改代码） | 代码全合入后 | B/G/H 闸门 | GPU 0–7 |
-| 主会话 | Beta、HOLD、契约常量回填、删除执行确认、档案、handoff | — | — | CPU |
+| 主会话 | Beta、HOLD、契约常量回填、档案、handoff | — | — | CPU |
 
 共享文件归属：`check_stage2_online.py`、`check_stage2_checkpoint.py` 由 S2 先改证据集部分，S7 在其合入后续改；`train.py` 只归 S2；`config.py` 只归 S7。
 
@@ -249,10 +229,7 @@ HC=src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-32frame-4x
 RUN=orig100-m32x4x4-modul-motion-s2split4x256-b128-60k
 lineage() { uv run --no-sync python scripts/training/check_data_lineage.py lineage --encoder-ckpt "$CKPT" --expected-ckpt-sha256 "$CKPT_SHA" --vla-input-manifest "$1" --mj-source-manifest "$MJSRC"; }
 
-# 0 清理（每项一条 tmux：o16-clean-D<n>）
-env $CPU uv run --no-sync python scripts/maintenance/verify_hf_before_delete.py --item D1 --local "$V1_STORE/datasets/16task-mixed8-200-3200ep-e3c7564f" --subdirs source,framesamp,framesamp-8x8,motion,meta --bucket HongzeFu/robomme-16task-mixed8-200-trainset-20261016-v1 --out "$V1_STORE/logs/o16-20261028/clean-D1.json"
-# … D2–D7 同式样；PASS 后：ls -ld <确切目录>; rm -rf <确切目录>; df -h /scratch
-# 1 清单
+# 1 清单（先 df -h /scratch，可用 <1.5T 即停）
 env $CPU uv run --no-sync python scripts/dataset/scan_manifest.py build --raw_dir "$RAW" --episodes-per-task 100 --num_shards 1 --out "$MANI"
 env $CPU uv run --no-sync python scripts/dataset/finalize_checks.py hash-inputs --raw_dir "$RAW" --out "$INMANI"
 lineage "$INMANI"
@@ -286,17 +263,15 @@ bash scripts/dataset/hf_export/run_orig16_stage2_ckpt_inc.sh      # tmux o16-inc
 bash scripts/dataset/hf_export/run_orig100_trainset_export.sh     # tmux o16-trainset-up，长尾
 ```
 
-G3（`validate_stage2.py --gate G3 --cache-import-receipt`）、保存恢复（`check_stage2_checkpoint.py --mode smoke`）、G12（`--mode delivery --delivery-step 59999`）命令同上式样，GPU 父 0 / sidecar 1。tmux 名：`o16-clean-D1..D7`、`o16-cache-fetch`、`o16-cache-import`、`o16-siglip`、`o16-finalize`、`o16-pack4`、`o16-pack8`、`o16-s2export`、`o16-s2pack`、`o16-g0/g2/g3/g4`、`o16-smoke`、`o16-train`、`o16-inc`、`o16-trainset-up`、`o16-ups`、`o16-g12`。
+G3（`validate_stage2.py --gate G3 --cache-import-receipt`）、保存恢复（`check_stage2_checkpoint.py --mode smoke`）、G12（`--mode delivery --delivery-step 59999`）命令同上式样，GPU 父 0 / sidecar 1。tmux 名：`o16-cache-fetch`、`o16-cache-import`、`o16-siglip`、`o16-finalize`、`o16-pack4`、`o16-pack8`、`o16-s2export`、`o16-s2pack`、`o16-g0/g2/g3/g4`、`o16-smoke`、`o16-train`、`o16-inc`、`o16-trainset-up`、`o16-ups`、`o16-g12`。
 
 ## 四、风险与未验证
 
 - 缺窗计数（2824 物理 / 1439 消费）是索引推算，正式 manifest 不符须先解释，不改补帧或截尾规则凑数。
-- 清理核验：训练库 bucket 部分目录以 tar 分片存储，若分片清单无法逐文件对回本地，该项整体保留，腾出空间可能少于 1.6 T；最低需求（建库峰值约 1.13 T＋上传打包临时）仍须先过 `DISK_FREE`。
-- D2/D3 依赖另一会话的长尾 SHA 核验完成；未完成则先删其余各项。
 - modulation 896 位 8 卡步时（预计约 1.0 s/步）与显存未实测；59999 恢复未实测；发布缓存逐文件 SHA 未下载核验。
 - split 的 4 个 token 共用窗口起点时间码，组 3/5/8 实际对应窗口内更晚的帧；这是按 R5 不加机制的取舍（K6）。
 - 训练库公开上传约 1 TB 级，耗时以网络为准，作为长尾不阻塞训练。
 
 ## 五、留档与提交
 
-建库档案 `docs/dataset-build-doc/16task-orig100-1600ep-<pin8>/`，训练档案 `docs/training-doc/orig100-m32x4x4-modul-motion-s2split4x256-b128-60k/`，清理记录写入建库档案「计划外/前置」一节。建库 Beta、训练 Beta 各自配对结论提交；状态机任务 id `orig16-vla-build`、`orig16-vla-train-modul32x4x4-split4-60k`，登记与否开工时问用户。流水线图 `docs/figures/1027-orig16-three-mech-pipeline.svg` 由 fable 画图子代理绘制并按本版改为 modulation 分支；主会话 2026-10-28 用 Noto Sans CJK SC 经 cairosvg 渲染 1500 px 位图目视复查两版：正交走线无交叉、框无重叠、文字无溢出、图例与三处选中分支一致。
+建库档案 `docs/dataset-build-doc/16task-orig100-1600ep-<pin8>/`，训练档案 `docs/training-doc/orig100-m32x4x4-modul-motion-s2split4x256-b128-60k/`。建库 Beta、训练 Beta 各自配对结论提交；状态机任务 id `orig16-vla-build`、`orig16-vla-train-modul32x4x4-split4-60k`，登记与否开工时问用户。流水线图 `docs/figures/1027-orig16-three-mech-pipeline.svg` 由 fable 画图子代理绘制并按本版改为 modulation 分支；主会话 2026-10-28 用 Noto Sans CJK SC 经 cairosvg 渲染 1500 px 位图目视复查两版：正交走线无交叉、框无重叠、文字无溢出、图例与三处选中分支一致。
