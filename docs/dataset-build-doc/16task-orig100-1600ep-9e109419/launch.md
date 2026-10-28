@@ -239,3 +239,13 @@ G12须用导出根的`stage/59999`及同一stage的`manifests/step-59999.json`�
 美东04:11:19启动原八组合CPU矩阵`o16-matrix`，pane423136/worker423189，从clean432c9edd80a2eaccfe6a40fc1e99d388b3f64fdc执行`CHECK_HEAD=<该sha> STAGE=matrix bash v1-store/logs/o16-20261028/post-build-checks.sh`，日志`check-matrix.log`，监督预算30分钟。独立同规模调度审查确认矩阵强制CPU、仅读隔离临时夹具、`--lib`只打印定位，无共享数据/输出依赖，可与G4/导出并行；原工作量和判据不变。保持单层小FFN真实宽度/位数的适用范围，不冒充完整VLA或GPU20步。此时矩阵尚未结束。
 
 原矩阵于美东04:12:32实际完成，8条`MECH_FORWARD=PASS`，`MECH_MATRIX=PASS combos=8 contract_ok=8 forward_ok=8`、`EXIT_CODE=0`，用时约73秒；会话已退出。完整清洗日志见`records/check-matrix.summary.log`。判定只属于隔离夹具和单层小FFN机制范围；G4两组合、完整VLA20步及保存恢复仍按原流程继续。
+
+### context在线检查通过，modulation接续
+
+美东04:19:23，G4 context完成：`ONLINE_INPUT_IDENTITY=PASS windows=64 handshake=1 input_sha_mismatch=0 nonfinite=0`、`EXIT_CODE=0`。JSON的shape/frame/state-machine失配均0，首包D+1、后续最多16帧、reset通过；报告SHA为`ad8236f841e18cc7d0aedfe58bd4a5272c32edc1e47d24ec3440cff9c8eefcff`。跨路径最大数值差`0.005493879318237305`如实保留，按用户既有缓存口径`NOT_REQUIRED reason=user_decision_same_input`不作同值准入，不能表述为encoder输出逐位相同。
+
+已生成真实便携恢复输入：JSON SHA `3ca016472b031ac5ef41faad5a2a2866f847860c2f8c3e3f54621339539ab9ac`，NPZ SHA `d3447de2941f2d723ecd76417deeb9758b7d16701a8fdb0550a7e5074e7e9ae8`。源数据和配置未改。
+
+04:20:55从clean297a036f7ce3b66dcfca69ec2016bd005a63cdf7启动原`STAGE=g4-mod`，`o16-g4-mod`、pane433887/worker433938，父0/sidecar1、完整参数不变；日志`check-g4-mod.log`，2小时监督归主会话。此时modulation尚未完成，不记PASS。
+
+正式训练库本地打包于04:18:18完成：369tar、106平文件、1262332个tar成员、932600728830字节，打包耗时12.8分钟；后续完整SHA、上传和匿名读回仍在进行，未记交付完成。
