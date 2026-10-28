@@ -36,13 +36,13 @@ Recorder, sha256_file = legacy.Recorder, legacy.sha256_file
 @dataclasses.dataclass(frozen=True)
 class Contract:
     """S7统一维护构建pin；阶段3回填前任何正式启动必须失败。"""
-    library: str = "16task-orig100-1600ep-__FILL_AFTER_BUILD__"
-    norm_sha256: str = PLACEHOLDER
-    episode_manifest_sha256: str = PLACEHOLDER
-    input_manifest_sha256: str = PLACEHOLDER
-    canonical_manifest_sha256: str = PLACEHOLDER
-    motion_rows: int | str = PLACEHOLDER
-    train_max: int | str = PLACEHOLDER
+    library: str = "16task-orig100-1600ep-9e109419"
+    norm_sha256: str = "c5d45b4bdb481ca46d18aeb32446bbedec34de435eef31d3212a179ee7868bcd"
+    episode_manifest_sha256: str = "93d7c5a0c1f34fd955de5f8c37370369e54457019f75e56aea8908cba894d999"
+    input_manifest_sha256: str = "5d1bfed54377c22e68bc1883ebd35fdf77372129ac1565dd6a78601c1d9965f9"
+    canonical_manifest_sha256: str = "337c4fcde163974039b5c0f2ad1f46ebaacd272719f72818503e23c1360447e2"
+    motion_rows: int | str = 23253
+    train_max: int | str = 44
     encoder_sha256: str = ENCODER_SHA
     encoder_run: str = "stage2-full144-1025-a"
     mj_source_manifest: str = "/scratch/hongze/dataset-original-robomme-16x100-wan21-v1/dataset/source_manifest.json"

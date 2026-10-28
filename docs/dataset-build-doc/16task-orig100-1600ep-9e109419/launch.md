@@ -209,3 +209,23 @@ G12须用导出根的`stage/59999`及同一stage的`manifests/step-59999.json`�
 03:47:34独立执行原全表split和G6，两者退出0：`MOTION_SPLIT_BITWISE=PASS windows=23253 mismatches=0`；`TRAIN_ES_BOUND=PASS episodes=1600 tasks=16 max_windows=44 budget=96 headroom=52`。最坏为VideoPlaceOrder第4集，demo1118帧/35窗、exec293帧/9窗。旧合并H5的源文件映射不存在，脚本仅将该辅助名称记unknown，真实任务、原episode索引与窗口计算不受影响。
 
 实际常量见`records/build-pins.json`。后续G4/矩阵/20步及保存恢复尚未执行，不因数据验收通过而代记这些结果。状态快照准备合回主分支，三项已审代码修复及常量随后合入。
+
+### 已审修复合回与真实常量回填
+
+状态分支以c7f2cae合回。S7以4320ef8合入f507/c5两提交，合后37项通过；S2以7ce2220合入3fa6665，合后14项通过；S5以2f5bb2b合入967/c01两提交，合后154项通过。每次均无冲突、独立合后审查PASS、随即推送，全部子提交历史保留。
+
+随后单独回填既定常量：新库`16task-orig100-1600ep-9e109419`、norm/两种manifest SHA、canonical manifest SHA、motion_rows23253和train_max44；八份YAML、唯一新训练配置资产路径及新导出公共体使用同一库名。占位检测哨兵与负例保留，不改变模型、预算96、batch128、seed42、60k或两条顺序。实际常量全部来自`records/build-pins.json`及真实G6结果。
+
+后续运行载体为`v1-store/logs/o16-20261028/post-build-checks.sh`（SHA `f726fc57c604016876951fdcb8f202f1849c13f12ae2be567a5191c3544db61e`），通过`CHECK_HEAD=<本次完整提交>`及`STAGE=g4-ctx`、`g4-mod`、`matrix`分别执行原检查，日志`check-<STAGE>.log`。G4父GPU0/sidecar1，完整参数及检查均保留。两条20步载体为`smoke-stage.sh`（SHA `6c1724f61245e981740ddf4c760b931d3a892bde5378f845e17b69d8c417ee2f`）；每条显式给新的`RUN_NAME`、`FUSION=ctx|modul`、`TRAIN_HEAD`，依次`MODE=contract|train|restore`。保存前参考位于该条`FINAL_RECORD_DIR/pre_save_reference.json`，恢复其真实step19。此时这些实际GPU检查尚待执行。
+
+### 回填后占位负例的中断与修复
+
+原三文件测试在75项通过后，`test_formal_placeholder_fails_before_credentials`因依赖模块默认占位值而误进入真实库的本地打包。主会话精确停止pytest404213及uv406311/pack406314子进程，全部确认退出；原测试真实退出2、75项通过、163.37秒，日志以`build-pins-tests-aborted.summary.log`单独保留。运行尚未到Publisher，未上传、未改源数据。
+
+已现场核对导出根出生时间为美东03:55:51，确为本轮测试新建；原路径整体rename为`v1-store/exports/hf-orig100-trainset-test-aborted-20261028`留证，不删除、不作为正式结果复用。112文件中106为数据的硬链接，独立文件合计440559838字节；详见`build-pins-test-incident.json`。
+
+独立同规模调整审查通过后，S5提交0d1f88c仅在该负例显式monkeypatch占位DATASET，模拟两种默认均由原guard拒绝，0导出调用、输出根未创建，定向1项通过。主以e8e517b单独合并此测试修复并推送，合前/合后审查PASS；13项主会话常量与文档改动没有混入该合并。随后完整重跑原三文件测试，原中断记录不被覆盖。
+
+另经独立`ADJUST_REVIEW=PASS scale=same findings=0`确认，既定训练库导出仅依赖已封口数据/G0/G2/G3/norm，不依赖G4、portable输入或短测。因此真实常量提交后可提前与原G4/20步并行启动，输出仍为独立正式根`v1-store/exports/hf-orig100-trainset`，GPU禁用、8打包线程，公开范围和完整SHA/匿名回读不变；所有GPU验证仍在正式训练前完整执行。
+
+修复后原三文件完整重跑实际为`106 passed in 34.18s`、退出0，见`records/build-pins-tests.summary.log`；原75项后中断的记录保持不变。真实常量与配套档案随后单独提交。

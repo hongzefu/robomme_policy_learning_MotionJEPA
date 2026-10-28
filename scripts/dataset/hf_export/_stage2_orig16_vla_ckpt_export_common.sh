@@ -31,7 +31,7 @@ import ckpt_upload_common as io
 import scan_hygiene as hygiene
 
 # 建库后仅回填库名；哈希和行数由实际已验证产物进入发布清单，不复制训练契约常量。
-DATASET = "16task-orig100-1600ep-__FILL_AFTER_BUILD__"
+DATASET = "16task-orig100-1600ep-9e109419"
 TRAINSET_BUCKET = "HongzeFu/robomme-16task-orig100-1600ep-trainset-20261028-v1"
 RUNS = {
     "orig100-ctx32x4x4-motion-s2split4x256-b128-60k": (

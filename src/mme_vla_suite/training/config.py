@@ -583,7 +583,7 @@ _CONFIGS = [
         data=RoboMMEDataConfig(
             repo_id=f"robomme",
             assets=AssetsConfig(
-                assets_dir="v1-store/train-assets/mme_vla_suite/16task-orig100-1600ep-__FILL_AFTER_BUILD__",
+                assets_dir="v1-store/train-assets/mme_vla_suite/16task-orig100-1600ep-9e109419",
                 asset_id="robomme",
             ),
             base_config=DataConfig(prompt_from_task=True),
