@@ -139,3 +139,11 @@ AWS本地NVMe RAID，8×A100-SXM4-80GB。开工预核空闲2.757TiB、8卡空闲
 原导入器先完成约901GB的缓存及H5完整复核，再启动8个GPU worker；最后2496段全部汇总并检查，实际产物26676559872字节。`WAN_CACHE_IMPORT=PASS copied=42404 filled=2824 total=45228 input_mismatches=0 nonfinite=0`、`WAN_INPUT_COVERAGE=PASS windows=45228 missing=0 duplicate=0 mismatches=0`、`EXIT_CODE=0`。导入收据SHA为`1a976182ca3868b6dec25a4411ccc85eed254978f2e4bb9cee11532e3093e22e`。主会话复核收据、元数据摘要及计数后，仅删除确切`LIB/cache-source/official-wan`实体目录；`CACHE_TEMP_REMOVED=PASS`，原H5和完整wan-latents保留。
 
 SigLIP实际起跑于美东10月28日00:47:46，`o16-siglip`、pane PID222562，日志`siglip-source.log`。权重cheap校验PASS，global_episode_idx=0单集550帧短测完成，`SHARD_DONE ... elapsed=94.1s`、`SIGLIP_EPISODE_SMOKE=PASS episodes=1`；这94.1秒包含首次初始化，不作为稳态速度。随后按原命令启动8卡16worker全量source构建；当前阶段仍在运行，不记完成。
+
+### 独立导出提前并行，所有检查仍保留
+
+固定代码审查确认S6只读已完成的latent、episode/input manifest、固定checkpoint、旁置config和训练源build_spec，不依赖G0、SigLIP source、帧表或norm。主会话在GPU0约20GiB为本轮SigLIP占用、约60GiB空闲时提出提前导出，`ADJUST_REVIEW=PASS scale=same findings=0`；不改变代码、输入、B1/FP32/TF32口径、输出格式、总工作量或物理GPU范围，不取消或后置G0等任何验证。
+
+先于美东01:07:07在GPU0同驻执行1段smoke，01:07:14完成：`STAGE2_EXPORT=PASS scope=smoke segments=1 rows=17`、`EXIT_CODE=0`。源码身份逐键核为锁定b5d23a5，未改用MJ editable环境。随后01:09:42起`o16-s2export`（pane248995、worker249030），保持`--expected-counts 2496,23253 --check-dropout 64`及已定解释器/CLI；写`LIB/motion-tokens-stage2`，与SigLIP的`LIB/source`分离。调度载体`motion-stage.sh` SHA为`f89143b1b76cb4261cc8b6aa51fe5364922d94e03d57a83499e8676dc2263fc9`，分别设置`STAGE=export-smoke`和`STAGE=export`。全量导出此时进行中，不因smoke通过而标全量成功。
+
+G0和后续验证仍在原有输入就绪后全部执行；提前完成的全量编码不重复烧GPU。所有已有GPU0进程均核为本轮SigLIP后代；若同驻短测失败，原定独立导出仍会执行，失败记录保留，不影响SigLIP现场。

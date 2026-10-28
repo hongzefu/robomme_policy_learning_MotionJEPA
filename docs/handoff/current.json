@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T04:54:38Z",
-    "america_new_york": "2026-10-28T00:54:38-04:00"
+    "utc": "2026-10-28T05:11:29Z",
+    "america_new_york": "2026-10-28T01:11:29-04:00"
   },
   "repo": {
     "branch": "worktree-agent-o16-state-20261028",
-    "base_head": "b4fc934c60751d3c067687013e1c4f5ae52785d5",
+    "base_head": "2e1bda1a4421419de64adb6aeb853ca7a400ee85",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -28,7 +28,10 @@
         {"what": "G0至G6、八组合CPU验证与契约常量回填", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"}
       ],
       "long_tail": [],
-      "running_handles": [{"kind": "tmux", "name": "o16-siglip", "host": "AWS", "pane_pid": 222562, "started_at_utc": "2026-10-28T04:47:46Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/siglip-source.log", "done_line": "STAGE_DONE stage=siglip；EXIT_CODE=0"}],
+      "running_handles": [
+        {"kind": "tmux", "name": "o16-siglip", "host": "AWS", "pane_pid": 222562, "started_at_utc": "2026-10-28T04:47:46Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/siglip-source.log", "done_line": "STAGE_DONE stage=siglip；EXIT_CODE=0"},
+        {"kind": "tmux", "name": "o16-s2export", "host": "AWS", "pane_pid": 248995, "worker_pid": 249030, "started_at_utc": "2026-10-28T05:09:42Z", "gpu": "0（与本轮SigLIP同驻，单段实测PASS）", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/motion-export.log", "done_line": "STAGE2_EXPORT=PASS scope=full segments=2496 rows=23253；EXIT_CODE=0"}
+      ],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "按固定计划实施三机制、官方16×100建库、全部验收后两条8卡60k串行训练及公开上传；不做评估，不扩大清理范围。"},
         {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记建库、context 60k、modulation 60k，依赖按计划。"},
@@ -37,7 +40,7 @@
       ],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "监听SigLIP全量，完成后原样执行finalize、4x4/8x8两表、norm及motion各关口；FAIL如实记录并继续可执行事项", "command": "BUILD_HEAD=bd4bad0957e5162073f9bbfec0e4c985c3f830bc bash v1-store/logs/o16-20261028/finalize-source.sh", "verdict_line": "STAGE_DONE stage=siglip；实际EXIT_CODE；后续各验证真实结果"},
+        {"what": "监听SigLIP与提前并行的motion导出；SigLIP完成后原样执行finalize、4x4/8x8两表、norm、G0等全部关口，已完成的full导出不重复；无检查后置或取消，FAIL真实留证", "command": "BUILD_HEAD=bd4bad0957e5162073f9bbfec0e4c985c3f830bc bash v1-store/logs/o16-20261028/finalize-source.sh", "verdict_line": "两个生产任务真实EXIT_CODE；后续各验证真实结果"},
         {"what": "构建冻结边界解冻后、原20步短测前，整合CR识别及诊断仅记录策略、生产快照两键修复，再回填实际常量；当前冻结期不合", "command": "整合c5a2e31fc62f85d54d9fe94de0f5077a7b503435（含f50742e）及3fa6665e39e77eb671daed15358311a6e76b2519", "verdict_line": "两项PRE_MERGE_REVIEW=PASS；记录策略37项/来源修复14项通过，合后复核待执行"}
       ]
     },
