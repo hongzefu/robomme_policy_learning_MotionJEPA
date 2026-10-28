@@ -269,11 +269,24 @@ def make_run(tmp_path, exporter, monkeypatch, index=0):
     write(run / "history_config.resolved.sha256", resolved_sha)
     source_pin = {"fixture": True}
     g0 = write(run / exporter.EVIDENCE_FILES["G0"], {"gate": "G0", "status": "PASS"})
-    for gate in ("G2", "G3"):
-        write(run / exporter.EVIDENCE_FILES[gate], {"gate": gate, "status": "PASS", "checkpoint_sha256": enc_sha,
-                                                     "samples_sha256": sha(g0.read_bytes())})
+    receipt_record = {"copy": 1, "fill": 1, "manifest_sha256": "c" * 64,
+                      "latents": {"metadata_sha256": "d" * 64}, "vae": {"fixture": True},
+                      "preprocess": {"frame_size": 256, "input_dtype": "uint8", "input_layout": "THWC", "window_frames": 33},
+                      "numeric_modes": {"copy": {"dtype": "float32", "tf32": "on"},
+                                        "fill": {"dtype": "float32", "tf32": "off"}}}
+    receipt = write(run / exporter.EVIDENCE_FILES["wan_cache_import"], receipt_record)
+    # 缓存G2形制来自check_import：绑定输入和receipt，不含encoder字段；完整S2语义不在此夹具中重建。
+    write(run / exporter.EVIDENCE_FILES["G2"], {
+        "schema": "stage2-validation-gate-v1", "gate": "G2", "status": "PASS", "kind": "published-cache-with-local-fill",
+        "samples_sha256": sha(g0.read_bytes()), "cache_import_receipt_sha256": sha(receipt.read_bytes()),
+        "manifest_sha256": receipt_record["manifest_sha256"], "latent_metadata_sha256": receipt_record["latents"]["metadata_sha256"],
+        "vae": receipt_record["vae"], "preprocess": receipt_record["preprocess"], "numeric_modes": receipt_record["numeric_modes"],
+        "output_numerics": {"status": "NOT_REQUIRED", "reason": "user_decision_same_input"},
+        "metrics": {"windows": 64, "demo_tail": 16, "copy": 32, "demo_fill": 16, "exec_fill": 16,
+                    "sha_mismatches": 0, "frame_mismatches": 0, "shape_mismatches": 0, "nonfinite": 0}})
+    write(run / exporter.EVIDENCE_FILES["G3"], {"gate": "G3", "status": "PASS", "checkpoint_sha256": enc_sha,
+                                               "samples_sha256": sha(g0.read_bytes())})
     write(run / exporter.EVIDENCE_FILES["SOURCE_PIN"], source_pin)
-    write(run / exporter.EVIDENCE_FILES["wan_cache_import"], {"copy": 1, "fill": 1})
     evidence = {role: {"path": rel, "sha256": sha((run / rel).read_bytes())} for role, rel in exporter.EVIDENCE_FILES.items()}
     encoder = {"run_name": exporter.ENC_RUN, "checkpoint_name": "checkpoint_epoch_105.pt", "epoch": 105,
                "global_step": 7770, "arch": exporter.ARCH, "state_key": "model", "weight_type": "ema",
@@ -378,6 +391,39 @@ def test_snapshot_rejects_missing_or_changed_evidence(tmp_path, exporter, monkey
         exporter.snapshot_sources(run, reg)
 
 
+def test_snapshot_accepts_cache_g2_without_encoder(tmp_path, exporter, monkeypatch):
+    run, reg = make_run(tmp_path, exporter, monkeypatch)
+    g2 = json.loads((run / exporter.EVIDENCE_FILES["G2"]).read_text())
+    assert "checkpoint_sha256" not in g2
+    exporter.snapshot_sources(run, reg)
+
+
+@pytest.mark.parametrize("role,field,match", [
+    ("G2", "samples_sha256", "G2没有绑定同一G0"),
+    ("G3", "samples_sha256", "G3没有绑定同一G0"),
+    ("G3", "checkpoint_sha256", "证据encoder不符: G3")])
+@pytest.mark.parametrize("fault", ["missing", "wrong"])
+def test_snapshot_keeps_existing_gate_bindings(tmp_path, exporter, monkeypatch, role, field, match, fault):
+    run, reg = make_run(tmp_path, exporter, monkeypatch)
+    rel = exporter.EVIDENCE_FILES[role]
+    record = json.loads((run / rel).read_text())
+    if fault == "missing":
+        del record[field]
+    else:
+        record[field] = "f" * 64
+    write(run / rel, record)
+    # 更新外层实体摘要，确保负例命中既有samples/encoder合同，而非提前撞上ready的SHA检查。
+    prov = json.loads((run / "motion_provenance.json").read_text())
+    prov["stage2_compat"]["evidence"][role]["sha256"] = sha((run / rel).read_bytes())
+    write(run / "motion_provenance.json", prov)
+    ready = json.loads((run / exporter.READY).read_text())
+    for name in (rel, "motion_provenance.json"):
+        ready["files"][name] = sha((run / name).read_bytes())
+    write(run / exporter.READY, ready)
+    with pytest.raises(ValueError, match=match):
+        exporter.snapshot_sources(run, reg)
+
+
 def test_restore_batches_keep_legacy_compatibility(tmp_path, exporter, monkeypatch):
     run, _ = make_run(tmp_path, exporter, monkeypatch)
     record = json.loads((run / "online_restore_inputs.json").read_text())
@@ -402,11 +448,15 @@ def test_incremental_only_stages_committed_steps(tmp_path, exporter, monkeypatch
     assert "SMOKE=PASS kind=checkpoint mode=incremental steps=10" in capsys.readouterr().out
 
 
-def test_snapshot_binds_cache_receipt(tmp_path, exporter, monkeypatch):
+@pytest.mark.parametrize("fault", ["missing", "wrong"])
+def test_snapshot_binds_compat_cache_receipt(tmp_path, exporter, monkeypatch, fault):
     run, reg = make_run(tmp_path, exporter, monkeypatch)
     path = run / "motion_provenance.json"
     prov = json.loads(path.read_text())
-    prov["stage2_compat"]["cache_import_receipt_sha256"] = "f" * 64
+    if fault == "missing":
+        del prov["stage2_compat"]["cache_import_receipt_sha256"]
+    else:
+        prov["stage2_compat"]["cache_import_receipt_sha256"] = "f" * 64
     write(path, prov)
     ready = json.loads((run / exporter.READY).read_text())
     ready["files"][path.name] = sha(path.read_bytes())

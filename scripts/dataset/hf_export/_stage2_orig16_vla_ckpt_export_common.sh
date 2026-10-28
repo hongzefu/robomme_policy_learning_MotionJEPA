@@ -202,7 +202,7 @@ def snapshot_sources(run, registered):
         if key in ("G0", "G2", "G3"):
             gate = json_file(sources[name])
             need(gate.get("gate") == key and gate.get("status") == "PASS", f"证据未通过: {key}")
-            if key != "G0":
+            if key == "G3":
                 need(gate.get("checkpoint_sha256") == sha, f"证据encoder不符: {key}")
     # 引用、固定发布路径与内容三者必须同时匹配，不能另并入一份未引用的pin。
     need(json_file(sources[EVIDENCE_FILES["SOURCE_PIN"]]) == prov["source_pin"], "SOURCE_PIN内容与来源身份不符")
