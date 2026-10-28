@@ -201,3 +201,11 @@ G12须用导出根的`stage/59999`及同一stage的`manifests/step-59999.json`�
 运行准备只读审查发现：S5原`snapshot_sources`同时要求G2/G3含顶层encoder摘要，而真实缓存G2按既有合同只绑定输入、收据和VAE；G3才绑定encoder。原测试夹具给G2加了生产记录没有的字段。独立同规模调整审查通过后，S5追加`c01b6501350cd964a04542468ce2d8a6c57d39c5`，仅将条件改为只检查G3的encoder，真实G2产物及恢复器均不变。
 
 去掉夹具伪字段后修前3项真实失败；修后相关完整133项通过（13.86秒），覆盖原samples、G3 encoder、compat收据绑定的缺失/错误负例。独立`PRE_MERGE_REVIEW=PASS findings=0 blocking=0`；此tip包含前一schema修复，解冻后一起合入。准确边界：上传器通过已verified表的实体SHA及run/store证据一致性复用原S2验证，并未新加完整G2语义复验。两份后续运行载体的接口、参考文件与CPU/GPU环境核对未发现其他必然失败的错配。
+
+### 全表验收与冻结结束
+
+美东03:47，原verify完成：`VERIFY_MOTION=PASS scanned=23253 mismatches=0 nonfinite=0 segment_set_mismatch=0 real_plus_pad_ne_33=0 exec_padded=0 pad_not_last_demo=0 pad_source_mismatch=0 demo_tail_padded=386 demo_tail_dropped=514 legal_zero_segments=4`、`EXIT_CODE=0`，耗时1320.3秒；metadata已回填verified，row_digests已落盘。所有本轮数据任务已退出，建库HEAD始终bd4bad0957e5162073f9bbfec0e4c985c3f830bc，达到原定解冻边界。
+
+03:47:34独立执行原全表split和G6，两者退出0：`MOTION_SPLIT_BITWISE=PASS windows=23253 mismatches=0`；`TRAIN_ES_BOUND=PASS episodes=1600 tasks=16 max_windows=44 budget=96 headroom=52`。最坏为VideoPlaceOrder第4集，demo1118帧/35窗、exec293帧/9窗。旧合并H5的源文件映射不存在，脚本仅将该辅助名称记unknown，真实任务、原episode索引与窗口计算不受影响。
+
+实际常量见`records/build-pins.json`。后续G4/矩阵/20步及保存恢复尚未执行，不因数据验收通过而代记这些结果。状态快照准备合回主分支，三项已审代码修复及常量随后合入。
