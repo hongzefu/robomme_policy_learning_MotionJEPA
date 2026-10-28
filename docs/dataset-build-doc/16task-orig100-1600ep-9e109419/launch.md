@@ -107,3 +107,105 @@ AWS本地NVMe RAID，8×A100-SXM4-80GB。开工预核空闲2.757TiB、8卡空闲
 用户原话：「开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high」「登记三项任务（推荐）」。沿用计划K1–K6：其他六组合仅CPU验证；全部正式前置通过即自动训练；训练库与checkpoint公开上传；不评估；两条固定run名；四个motion token共用窗口起点时间码。
 
 实施中的依赖补齐、文字统一及各审查修复见[开工记录](../../maintenance/1027-orig16-vla-start.md)和各合并提交。实际数据/资源/失败/耗时及上传结果完成后写`result.md`与`records/`；当前不把预核、CPU夹具或存在性检查写成真实建库通过。
+
+## 七、执行中的同规模调度调整
+
+美东10月27日22:44，第一阶段实际完成：1600集、768897帧、476857执行样本；16个H5全量SHA与encoder源逐文件相同，`DATA_LINEAGE=PASS files=16 mismatches=0`，VLA输入清单SHA为`5d1bfed54377c22e68bc1883ebd35fdf77372129ac1565dd6a78601c1d9965f9`。episode清单内部摘要`337c4fcde163974039b5c0f2ad1f46ebaacd272719f72818503e23c1360447e2`，整文件SHA为`93d7c5a0c1f34fd955de5f8c37370369e54457019f75e56aea8908cba894d999`。实际缓存规划计数全部符合预核，原阶段`EXIT_CODE=0`。
+
+串行缓存恢复于美东22:45:28启动；22:48:42已下载28个bin、约9.12GB，吞吐约47MB/s。为缩短这一已批准下载的等待，独立审查给出`ADJUST_REVIEW=PASS scale=same findings=0`，改为SDK自带8路下载：版本、2491个明确允许路径（SHA256SUMS＋5个metadata＋2485个bin）、有效bin字节388310630400均不变。保持`HF_HUB_ENABLE_HF_TRANSFER=0`、`force_download=False`；完整文件依SDK同revision metadata复用，partial依HTTP续传/Xet块缓存处理，不承诺所有partial字节零重复传输。
+
+主会话核准自有Python PID94695、pane PID94641及无子进程后发送SIGTERM，等待两者完全退出，保留真实`EXIT_CODE=143`和`cache-fetch.log`／`cache-fetch-serial.log`，不把该次中止写成成功。随后才启动唯一的新写者，避免两个进程并发写同一目标。新运行载体`v1-store/logs/o16-20261028/fetch-cache-parallel.sh`的SHA256为`a233d64f895d0228702a567749c56e9cf858538f5b11deac1cf76bd5558f3443`；它调用已安装`huggingface_hub.snapshot_download(..., allow_patterns=<上述明确路径>, max_workers=8)`，返回后仍执行原`orig16_wan_cache.py fetch`逐文件全量SHA／字节数核验并生成原收据。下载完成本身不算验收通过。
+
+新会话`o16-cache-fetch-parallel`于美东22:54:11启动，pane PID104919、下载PID104973，`CACHE_PARALLEL_STARTUP=PASS`；日志`cache-fetch-parallel.log`确认8 workers和2491路径/388310630400 bin字节。起跑后约8秒，完整bin从74增至77个、24152113152字节，另有8个partial；此时尚未完成下载或验收。
+
+此次只调整CPU／网络文件并发，不改任何冻结仓库源码、数值路径、验收或GPU资源。下载阶段最长等待仍从22:45:28起计4小时，不因调整重置；主会话持续监督，验证通过前不启动import。冻结结束后将此记录随状态分支合回；原批准计划正文保持不变，最终收尾再追加实施记录。
+
+### 训练入口待解冻合入的小修
+
+只读检查旧生产日志发现`tqdm`写入`tee`的实际Step行以两个回车开头，原入口`^Step`不能匹配。S7在独立树追加`f50742e0d1f3ed5c7181a884f724420bfbc7c4ae`，仅将两入口改为`^\r*Step`并精确覆盖现有五个标量（包括`mem_enc_norm`），保留最终记录与明确OOM检查，不引入`tr|rg -q`管道。真实字节格式的两入口×五字段负例及正常日志共24项定向测试通过；独立`PRE_MERGE_REVIEW=PASS findings=0 blocking=0`。此提交尚未合入冻结主分支，不影响数据构建，必须在`VERIFY_MOTION`解冻后、实际20步训练前合入并复核。
+
+## 八、用户更新：步骤照做，失败如实记录
+
+用户先说：「训练前尽可能不要阻塞 先跑起来 明天上午用户再来决策」，随后明确纠正：「不要后置任何步骤 该做的还是做 但是失败了只记录 让用户决策」。以后一条为准：所有原步骤、两种帧表、G4、独立20步及严格保存恢复都执行，不跳过、不后置；失败保留原始`FAIL`、退出码和证据，不改成PASS，继续技术上可执行的后续事项，交用户决策。程序崩溃、产物缺失或格式不兼容导致某一步客观无法执行时如实记录受影响依赖，不伪造结果、不擅自换数据或实验配置。原计划K2的单项验收FAIL即整体停工口径按本次明确指令调整。
+
+先前提出的后置与可选SHA并发改码均未实施，已撤回；主建库代码仍为`bd4bad0`。缓存388310630400字节及5个metadata已经原fetch全SHA验收通过，`WAN_CACHE_FETCH=PASS`、`EXIT_CODE=0`；GPU导入原脚本于美东23:56:30启动，真实一窗`WAN_FILL_SMOKE=PASS windows=1 key=BinFill_ep0_exec m=30 shape=9,16,32,32 nonfinite=0`，随后继续原全量检查和导入。
+
+另一个真实启动程序缺陷已在独立S2树修复：`init_history_config`漏向快照传递已有`source_grid_sha256`和`latents_metadata_sha256`，实际入口联测复现KeyError；`3fa6665e39e77eb671daed15358311a6e76b2519`只增加一行来源字段转交及直接测试，修后14项通过，独立`PRE_MERGE_REVIEW=PASS`。该必要修复与CR修复一样待解冻后、训练前整合，不删除检查或伪造来源。
+
+为落实“失败只记录”，S7在CR修复后追加`c5a2e31fc62f85d54d9fe94de0f5077a7b503435`：日志数值扫描与final.json诊断仍全部执行，原FAIL保留并明确`action=record_only reason=user_decision`；诊断不再覆盖实际训练退出码，也不单独阻止完成后的串行接续。真实程序非零、日志写入失败、缺真实结束日志或59999仍按客观未完成处理；启动合同和诊断判据未改变。新策略37项定向测试及独立审查通过，旧阻断策略的测试原记录另存。解冻后合最新c5a2e31即可同时包含CR修复，不能只合旧f50742e。
+
+## 九、Wan实际结果与SigLIP起跑
+
+原导入器先完成约901GB的缓存及H5完整复核，再启动8个GPU worker；最后2496段全部汇总并检查，实际产物26676559872字节。`WAN_CACHE_IMPORT=PASS copied=42404 filled=2824 total=45228 input_mismatches=0 nonfinite=0`、`WAN_INPUT_COVERAGE=PASS windows=45228 missing=0 duplicate=0 mismatches=0`、`EXIT_CODE=0`。导入收据SHA为`1a976182ca3868b6dec25a4411ccc85eed254978f2e4bb9cee11532e3093e22e`。主会话复核收据、元数据摘要及计数后，仅删除确切`LIB/cache-source/official-wan`实体目录；`CACHE_TEMP_REMOVED=PASS`，原H5和完整wan-latents保留。
+
+SigLIP实际起跑于美东10月28日00:47:46，`o16-siglip`、pane PID222562，日志`siglip-source.log`。权重cheap校验PASS，global_episode_idx=0单集550帧短测完成，`SHARD_DONE ... elapsed=94.1s`、`SIGLIP_EPISODE_SMOKE=PASS episodes=1`；这94.1秒包含首次初始化，不作为稳态速度。随后按原命令启动8卡16worker全量source构建；当前阶段仍在运行，不记完成。
+
+### 独立导出提前并行，所有检查仍保留
+
+固定代码审查确认S6只读已完成的latent、episode/input manifest、固定checkpoint、旁置config和训练源build_spec，不依赖G0、SigLIP source、帧表或norm。主会话在GPU0约20GiB为本轮SigLIP占用、约60GiB空闲时提出提前导出，`ADJUST_REVIEW=PASS scale=same findings=0`；不改变代码、输入、B1/FP32/TF32口径、输出格式、总工作量或物理GPU范围，不取消或后置G0等任何验证。
+
+先于美东01:07:07在GPU0同驻执行1段smoke，01:07:14完成：`STAGE2_EXPORT=PASS scope=smoke segments=1 rows=17`、`EXIT_CODE=0`。源码身份逐键核为锁定b5d23a5，未改用MJ editable环境。随后01:09:42起`o16-s2export`（pane248995、worker249030），保持`--expected-counts 2496,23253 --check-dropout 64`及已定解释器/CLI；写`LIB/motion-tokens-stage2`，与SigLIP的`LIB/source`分离。调度载体`motion-stage.sh` SHA为`f89143b1b76cb4261cc8b6aa51fe5364922d94e03d57a83499e8676dc2263fc9`，分别设置`STAGE=export-smoke`和`STAGE=export`。全量导出此时进行中，不因smoke通过而标全量成功。
+
+G0和后续验证仍在原有输入就绪后全部执行；提前完成的全量编码不重复烧GPU。所有已有GPU0进程均核为本轮SigLIP后代；若同驻短测失败，原定独立导出仍会执行，失败记录保留，不影响SigLIP现场。
+
+截至美东01:17，全量导出已实际完成并退出：`STAGE2_EXPORT=PASS segments=2496 rows=23253`、`EXIT_CODE=0`，2496个f32文件共95244288字节；export_record明确`scope=full`，SHA为`9f56b96c8c881cf11db7d50bda7a16da0ebb24d71f7fcea3e3a846c9f12031e0`。64窗dropout诊断为`eval_repeat_max_abs=0.0`、`train_vs_eval_max_abs=1.5240858793258667`，后者用于证实训练/推理模式差异，不是失败指标。共享来源三键与固定SOURCE_PIN逐项相同。导出会话已退出，SigLIP继续；此结果不替代后续G0/G2/G3/pack/verify。
+
+### SigLIP完成与两组独立检查重叠
+
+SigLIP已于美东约02:11实际完成：1600个唯一EP、768897帧、重复完成事件0，16条SHARD_DONE均正常；`STAGE_DONE stage=siglip workers=16 items=1600 elapsed=4928s`、`EXIT_CODE=0`，所有GPU进程已释放。后续仍须完整finalize及两种帧表验证，不能把生产结束等同全部数据验收。
+
+独立固定代码审查给出`ADJUST_REVIEW=PASS scale=same findings=0`：source封口后，finalize仅读源文件并最终写source/meta统计；G0原H5路径仅读source/data，不依赖stats、帧表或norm，写独立G0.json，因此两者可重叠。原`input_level=sha256`和1024视觉spot均保留；finalize的SHA阶段已有最多4线程，G0纯CPU。两会话均于美东02:15:29启动：`o16-finalize` pane301478／worker301578，`o16-g0` pane301527／worker301586；全部参数与原脚本不变。
+
+同一审查确认G0发布后，G2（CPU）与G3（GPU0）互不消费对方结果，可并行各写独立JSON。4×4/8×8 pack及norm仍等finalize结束，motion pack仍等G2/G3结果；没有验证被取消或后置。失败按用户要求真实记录，不改判据。
+
+独立只读服务准备：HF官方认证HTTP200、目标namespace及写角色匹配，三个目标bucket查询均404，仅记未查到、不记空bucket；W&B单次viewer认证HTTP200且GraphQL有效。没有创建bucket/run/项目，没有上传或改变可见性，没有输出或落盘凭据。
+
+## 十、源验收、两帧表与norm实际结果
+
+finalize原五阶段已执行完：1024条同架构视觉复算全部逐位一致，`全部检查通过 PASS`、`FINALIZE_EXIT_CODE=0`、`EXIT_CODE=0`。随后02:25:12启动两张帧表与norm。两表pack分别约90秒、151秒完成32个分片，均写`status=packed`。
+
+运行载体沿计划示例在verify上附了`--layout`，实际verify接口不支持，故两次均出现`unrecognized arguments: --layout ...`并真实`EXIT_CODE=2`；这时verify未执行，不能写成数据校验失败或通过。原`frames-4x4.log`／`frames-8x8.log`完整保留。独立`ADJUST_REVIEW=PASS scale=same findings=0`确认verify从store_meta选择正确layout；不重跑pack，仅使用`verify --store <对应库> --resume --procs 48`继续原完整检查，不改数据或阈值。
+
+新`o16-verify4`、`o16-verify8`于02:29:09启动，分别24秒、38秒完成：两条均`VERIFY_PACK=PASS scanned=768897 mismatches=0`、`EXIT_CODE=0`，meta真实回填verified。新日志为`verify-frames-4x4.log`、`verify-frames-8x8.log`。meta SHA分别为`1318229bd58f4e32a8a44705c862d476d7c92890004b97e69314904433e8d3f9`及`8bad885bcc8344bff533c7fc6ccf7abfbc3d207c67ae7692b7319878587409b8`。新载体`verify-frames.sh` SHA为`ee2702869783ad8080b833f0ffb4b08221fe341fd65425d11d716378f32fa2a5`；旧失败不被新结果覆盖。
+
+norm正常完成，`norm_stats.json`实际SHA为`c5d45b4bdb481ca46d18aeb32446bbedec34de435eef31d3212a179ee7868bcd`，`EXIT_CODE=0`。截至02:30，G0仍在原输入核对中，后续G2/G3和motion打包等尚未宣称通过。用户要求所有步骤做完、失败只记录；上述接口失败与修复经过留待用户复核，没有等待额外确认而阻断其他任务。
+
+### G0和G3实际完成
+
+美东约02:36，G0完成：`RAW_WINDOWS_READY=PASS windows=64 tasks=16 demo_tail=16 sha_mismatches=0`、`EXIT_CODE=0`；copy32、demo-fill16、exec-fill16。G0.json SHA为`6a74227d17f347bfd7e7a1f6dea9a5969ac1d959fcac969edf2ac57ea97fdc32`。
+
+02:38:10并行启动原G2与G3。G3实际完成：`EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1`、`EXPORT_PARITY=NOT_REQUIRED reason=user_decision_same_input`、`EXIT_CODE=0`。JSON的32个参考窗口形状失配和非有限值均0，geometry_all_true=1；G3.json SHA为`3e72fa45fc2702291754d42d69b21293de43ff38ea6b78047c5a29446e81f6e2`。未恢复用户已取消的跨路径精度准入。G2此时仍在CPU核验输入，不能因G3完成而记G2通过。
+
+### G2完成，原motion打包与验证起跑
+
+美东02:59，G2原检查实际完成：`G2_INPUT_IDENTITY=PASS windows=64 mismatches=0`、`G2_NUMERICS=NOT_REQUIRED reason=user_decision_same_input`、`EXIT_CODE=0`。JSON中SHA、帧、形状失配和非有限值均0，copy32/demo-fill16/exec-fill16；不重复已完成的导出。
+
+03:01:22启动`o16-s2pack`，pane345433／worker345487，原`motion-stage.sh STAGE=pack-verify`、冻结HEAD bd4bad0957e5162073f9bbfec0e4c985c3f830bc和全部原参数不变。日志`motion-pack-verify.log`；此时仅确认起跑，待真实`VERIFY_MOTION`和退出码。后续全表split、在线两组合、预算检查、两条20步与保存恢复仍全部执行；用户当前要求失败真实留档、继续技术上可执行步骤，不把FAIL改成PASS。
+
+### 后续执行准备中的最小接口修正
+
+G4在读取真实YAML后要求`motion.store_path`与传入表路径一致，原计划文字将常量回填排在G4之后会被占位路径拒绝。固定bd4bad0独立审查`ADJUST_REVIEW=PASS scale=same findings=0`：动作表pack/verify结束后先做G6与全表split，再回填原定真实常量，随后跑最终YAML的G4两组合、八组合矩阵及两条20步保存恢复。只前移既定常量，不取消、放宽或后置验证到正式训练之后。
+
+准备G12时又发现新上传驱动产出的`orig16-stage2-delivery-manifest-v1`与既有恢复器接受的`stage2-delivery-manifest-v1`不兼容。独立同规模调整审查通过；S5提交`9679613e1ce08b272b7c3fecfb8b0804069323cc`只统一新驱动schema常量并补真实生产/消费联测，不扩宽恢复器。两条run在修前均真实复现schema拒绝；改后导出与恢复定向125项通过（13.29秒），独立`PRE_MERGE_REVIEW=PASS findings=0 blocking=0`。与c5a2e31和3fa6665两项已审修复一起等待数据冻结结束后合入；此时主HEAD未变。
+
+G12须用导出根的`stage/59999`及同一stage的`manifests/step-59999.json`；该目录包含实际交付依赖实体。原run缺这些实体，不能代替stage。已完成阶段16份日志归档共885797字节（含归档校验JSON），所有退出记录及SHARD_DONE原样保留，详见`records/archive-validation.json`。
+
+### motion打包完成，独立全表验证进行中
+
+美东03:25左右，原pack正常完成：`PACK_PROVENANCE_PRECHECK=PASS mode=vae_compat segments=2496`，表23253行（exec14138/demo9115）、2496段、95244288字节，耗时1444.3秒；`PACK_MOTION_DONE=1 raw_dir_match=1`。metadata此时仍为`status=packed`，不能记verified；索引SHA为`7aad314e4daee3b7513770deee62f38714e06c57d3f63bbd634d4e52db54eee6`。
+
+同一`o16-s2pack`于03:25:27启动原verify，worker370731，pane345433未变。原`--resume --check-padding`及全文件来源核对保留，日志继续写`motion-pack-verify.log`；等待真实`VERIFY_MOTION`和总退出码，冻结尚未解除。
+
+### 真实缓存G2与上传器合同对齐
+
+运行准备只读审查发现：S5原`snapshot_sources`同时要求G2/G3含顶层encoder摘要，而真实缓存G2按既有合同只绑定输入、收据和VAE；G3才绑定encoder。原测试夹具给G2加了生产记录没有的字段。独立同规模调整审查通过后，S5追加`c01b6501350cd964a04542468ce2d8a6c57d39c5`，仅将条件改为只检查G3的encoder，真实G2产物及恢复器均不变。
+
+去掉夹具伪字段后修前3项真实失败；修后相关完整133项通过（13.86秒），覆盖原samples、G3 encoder、compat收据绑定的缺失/错误负例。独立`PRE_MERGE_REVIEW=PASS findings=0 blocking=0`；此tip包含前一schema修复，解冻后一起合入。准确边界：上传器通过已verified表的实体SHA及run/store证据一致性复用原S2验证，并未新加完整G2语义复验。两份后续运行载体的接口、参考文件与CPU/GPU环境核对未发现其他必然失败的错配。
+
+### 全表验收与冻结结束
+
+美东03:47，原verify完成：`VERIFY_MOTION=PASS scanned=23253 mismatches=0 nonfinite=0 segment_set_mismatch=0 real_plus_pad_ne_33=0 exec_padded=0 pad_not_last_demo=0 pad_source_mismatch=0 demo_tail_padded=386 demo_tail_dropped=514 legal_zero_segments=4`、`EXIT_CODE=0`，耗时1320.3秒；metadata已回填verified，row_digests已落盘。所有本轮数据任务已退出，建库HEAD始终bd4bad0957e5162073f9bbfec0e4c985c3f830bc，达到原定解冻边界。
+
+03:47:34独立执行原全表split和G6，两者退出0：`MOTION_SPLIT_BITWISE=PASS windows=23253 mismatches=0`；`TRAIN_ES_BOUND=PASS episodes=1600 tasks=16 max_windows=44 budget=96 headroom=52`。最坏为VideoPlaceOrder第4集，demo1118帧/35窗、exec293帧/9窗。旧合并H5的源文件映射不存在，脚本仅将该辅助名称记unknown，真实任务、原episode索引与窗口计算不受影响。
+
+实际常量见`records/build-pins.json`。后续G4/矩阵/20步及保存恢复尚未执行，不因数据验收通过而代记这些结果。状态快照准备合回主分支，三项已审代码修复及常量随后合入。

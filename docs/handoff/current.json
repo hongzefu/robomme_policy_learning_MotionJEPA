@@ -1,46 +1,51 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T02:14:27Z",
-    "america_new_york": "2026-10-27T22:14:27-04:00"
+    "utc": "2026-10-28T07:49:02Z",
+    "america_new_york": "2026-10-28T03:49:02-04:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "58d3b5c47731f68fd085b81f68595e641b5ec6fc",
+    "base_head": "bd4bad0957e5162073f9bbfec0e4c985c3f830bc",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
     "active": false,
-    "main_path": null,
-    "frozen_head": null
+    "main_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
+    "frozen_head": "bd4bad0957e5162073f9bbfec0e4c985c3f830bc"
   },
   "tasks": {
     "orig16-vla-build": {
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "running",
       "state_changed_at": "2026-10-28T01:31:26Z",
-      "state_reason": "全部代码块已按序合入并推送至58d3b5c，固定审查与定向CPU验证通过，八组合真实单层机制前向通过。正建立建库Beta与档案，尚未启动实际数据构建；全部子代理使用gpt-6-astra/high。冻结期间读取主目录-temp的同名状态副本。",
+      "state_reason": "全量数据生产和验证完成：双帧表各768897行零失配，motion23253行VERIFY_MOTION零失配/非有限值、退出0。全表split23253窗逐位一致；G6实际max_windows44、budget96、headroom52。建库冻结边界已达到，准备合回状态和三项已审修复、回填真实常量，然后执行G4两组合、矩阵和两条20步保存恢复；训练尚未开始，所有原检查保留。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": [],
       "pre_handoff": [
         {"what": "固定版本计划审查、代码合入与定向验证", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS findings=2 blocking=0；全部合前合后审查PASS；S7合后261项及S5合后66项通过；MECH_MATRIX=PASS combos=8 contract_ok=8 forward_ok=8", "where": "docs/dataset-build-doc/16task-orig100-1600ep-9e109419/launch.md；58d3b5c47731f68fd085b81f68595e641b5ec6fc", "status": "pass"},
-        {"what": "官方16×100同源、双帧表、缓存导入与motion全量验收", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"},
+        {"what": "官方16×100同源、双帧表、缓存导入与motion全量验收", "evidence": "DATA_LINEAGE=PASS files=16 mismatches=0；1600集/768897帧/476857样本；双帧表各VERIFY_PACK=PASS scanned=768897 mismatches=0；WAN_CACHE_IMPORT=PASS copied42404 filled2824；VERIFY_MOTION=PASS scanned23253 mismatches0 nonfinite0；各阶段最终EXIT_CODE=0", "where": "docs/dataset-build-doc/16task-orig100-1600ep-9e109419/records/", "status": "pass"},
         {"what": "G0至G6、八组合CPU验证与契约常量回填", "evidence": "", "where": "v1-store/validation/orig16-stage2", "status": "pending"}
       ],
       "long_tail": [],
       "running_handles": [],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "按固定计划实施三机制、官方16×100建库、全部验收后两条8卡60k串行训练及公开上传；不做评估，不扩大清理范围。"},
-        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记建库、context 60k、modulation 60k，依赖按计划。"}
+        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记建库、context 60k、modulation 60k，依赖按计划。"},
+        {"kind": "decision", "date": "2026-10-27", "quote": "训练前尽可能不要阻塞 先跑起来 明天上午用户再来决策", "scope": "夜间持续推进可执行事项并记录实际结果；下条明确仍须执行原步骤。"},
+        {"kind": "decision", "date": "2026-10-27", "quote": "不要后置任何步骤 该做的还是做 但是失败了只记录 让用户决策", "scope": "所有原步骤不跳过、不后置；失败真实记FAIL及证据，不伪改PASS，继续技术上可执行的后续工作，交用户决策；数据、模型、seed、批量、步数和两条顺序不变。撤回未实施的后置方案。"}
       ],
-      "pending_decisions": [],
-      "next_steps": [{"what": "从建库Beta在o16-manifest生成实际清单及哈希，再顺序恢复/导入缓存和构建双帧表", "command": "BUILD_HEAD=<建库Beta> bash v1-store/logs/o16-20261028/prepare-manifest.sh", "verdict_line": "DATA_LINEAGE=PASS；WAN_CACHE_AUDIT=PASS；EXIT_CODE=0"}]
+      "pending_decisions": [{"what": "按用户要求保留原失败供明早复核：两张帧表verify首次因不支持--layout返回2，检查当时未执行；接口已最小修正且后续真实全量verify均PASS，数据及判据未变。", "evidence": "原frames-4x4.log/frames-8x8.log EXIT_CODE=2；新verify-frames-4x4.log/verify-frames-8x8.log各VERIFY_PACK=PASS scanned=768897 mismatches=0 EXIT_CODE=0", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/", "status": "recorded_resolved"}],
+      "next_steps": [
+        {"what": "数据生产、G0/G2/G3、motion verify、全表split、G6已完成；合已审修复并回填后执行G4两组合、矩阵、两条20步恢复，失败真实留证", "command": "按launch.md执行最终真实YAML的G4和两条20步短测/保存恢复", "verdict_line": "各原验证真实结果和EXIT_CODE"},
+        {"what": "动作表验证完成解冻后，先G6与全表split，再整合三项已审修复并回填实际常量；G4必须消费真实路径，常量前移经独立同规模审查通过。全部检查仍在训练前。", "command": "整合c5a2e31fc62f85d54d9fe94de0f5077a7b503435（含f50742e）、3fa6665e39e77eb671daed15358311a6e76b2519、c01b6501350cd964a04542468ce2d8a6c57d39c5（含9679613）", "verdict_line": "三项PRE_MERGE_REVIEW=PASS；记录策略37项/来源修复14项/清单与缓存G2合同联测133项通过，合后复核待执行"}
+      ]
     },
     "orig16-vla-train-ctx32x4x4-split4-60k": {
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "planned",
       "state_changed_at": "2026-10-28T01:31:26Z",
-      "state_reason": "已获开工授权，等待建库与两种融合的20步短测全部通过；固定8卡、global batch128、context、32帧4×4、motion每窗4×256、60k。",
+      "state_reason": "已获开工授权；先完整执行建库验收、两种融合20步及保存恢复，失败按用户最新裁决真实记录，继续技术上可执行事项。固定8卡、global batch128、context、32帧4×4、motion每窗4×256、60k。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": ["orig16-vla-build"],
       "pre_handoff": [
@@ -52,10 +57,11 @@
       "running_handles": [],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "计划全部前置通过后自动开始context 60k，公开增量上传12份checkpoint。"},
-        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记串行训练任务。"}
+        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记串行训练任务。"},
+        {"kind": "decision", "date": "2026-10-27", "quote": "不要后置任何步骤 该做的还是做 但是失败了只记录 让用户决策", "scope": "原验证及20步保存恢复仍执行，不后置；失败原样留证，继续可执行事项，用户明早决策，不擅自改实验。"}
       ],
       "pending_decisions": [],
-      "next_steps": [{"what": "等待建库及两条短测通过后从训练Beta启动", "command": "bash scripts/training/run_orig16_ctx_then_modul_60k.sh", "verdict_line": "LAUNCH_CONTRACT=PASS"}]
+      "next_steps": [{"what": "完成原建库检查与两条短测后，从训练Beta推进正式训练；诊断失败原样留证", "command": "bash scripts/training/run_orig16_ctx_then_modul_60k.sh", "verdict_line": "LAUNCH_CONTRACT=PASS"}]
     },
     "orig16-vla-train-modul32x4x4-split4-60k": {
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
@@ -72,10 +78,11 @@
       "running_handles": [],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "context满足计划接续条件后立即开始同配置modulation 60k，公开增量上传12份checkpoint；两条只差融合方式及对应memory_token_dim。"},
-        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记串行训练任务。"}
+        {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记串行训练任务。"},
+        {"kind": "decision", "date": "2026-10-27", "quote": "不要后置任何步骤 该做的还是做 但是失败了只记录 让用户决策", "scope": "保留原验证顺序；诊断失败原样记录交用户决策，能执行的工作继续，实验配置与串行顺序不变。"}
       ],
       "pending_decisions": [],
-      "next_steps": [{"what": "由已批准串行驱动接续，第一条失败即停", "command": "bash scripts/training/run_orig16_ctx_then_modul_60k.sh", "verdict_line": "EXIT_CODE=0"}]
+      "next_steps": [{"what": "由已批准串行驱动接续；诊断FAIL仅记录，真实训练未完成或缺59999不能记作完成", "command": "bash scripts/training/run_orig16_ctx_then_modul_60k.sh", "verdict_line": "EXIT_CODE=0"}]
     },
     "policy-worktree-consolidation-20261027": {
       "plan": {"file": null, "sha": null},
