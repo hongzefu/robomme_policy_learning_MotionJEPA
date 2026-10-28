@@ -249,3 +249,9 @@ G12须用导出根的`stage/59999`及同一stage的`manifests/step-59999.json`�
 04:20:55从clean297a036f7ce3b66dcfca69ec2016bd005a63cdf7启动原`STAGE=g4-mod`，`o16-g4-mod`、pane433887/worker433938，父0/sidecar1、完整参数不变；日志`check-g4-mod.log`，2小时监督归主会话。此时modulation尚未完成，不记PASS。
 
 正式训练库本地打包于04:18:18完成：369tar、106平文件、1262332个tar成员、932600728830字节，打包耗时12.8分钟；后续完整SHA、上传和匿名读回仍在进行，未记交付完成。
+
+### 两种G4及配对配置全部完成
+
+美东04:36:15，G4 modulation实际完成：`ONLINE_INPUT_IDENTITY=PASS windows=64 handshake=1 input_sha_mismatch=0 nonfinite=0`、`EXIT_CODE=0`；其他形状/帧身份/状态机失配均0。报告SHA `ad7b52fe614b0da5ed656bb08b8437aaaccfb9976634fe9e6ddb5d872608da7a`，数值差仍为`0.005493879318237305`并按既有用户裁决NOT_REQUIRED。两报告的portable引用完全相同，当前JSON和NPZ SHA仍分别3ca01647…和d3447de2…，未出现覆盖后证据漂移。
+
+真实解析两份正式YAML后，`PAIRED_CONFIG=PASS diff_keys=integration_type,memory_token_dim`，证据`records/paired-config.json`。至此原数据、在线、全表split、窗口预算、最终CPU矩阵均完整执行且通过；下一步为两条完整VLA20步和严格保存恢复，仍不把CPU矩阵或在线encoder检查冒充VLA训练。短测名及起跑档案已固定为`o16-smoke-ctx-10280431`、`o16-smoke-modul-10280431`，后续各入口记录真实clean TRAIN_HEAD。

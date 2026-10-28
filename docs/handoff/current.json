@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T08:22:54Z",
-    "america_new_york": "2026-10-28T04:22:54-04:00"
+    "utc": "2026-10-28T08:37:29Z",
+    "america_new_york": "2026-10-28T04:37:29-04:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "297a036f7ce3b66dcfca69ec2016bd005a63cdf7",
+    "base_head": "79b29f7fa9fbd48f09f4626c19a0505ab97ba37d",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -19,16 +19,16 @@
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "running",
       "state_changed_at": "2026-10-28T01:31:26Z",
-      "state_reason": "数据全部verified、split/G6及最终矩阵均PASS；真实常量已回填，106项重测通过。G4 context于美东04:19:23实际PASS64窗/握手1/输入差0/nonfinite0/退出0；G4 modulation04:20:55从clean297a036启动，仍在运行。训练库已完成369tar+106平文件共932600728830字节的本地打包，完整SHA/上传/匿名读回仍进行。两条20步与保存恢复待执行，正式60k未开始。",
+      "state_reason": "数据与G0至G6全部实际完成，G4两组合各64窗输入差0/nonfinite0/退出0，最终CPU矩阵8/8通过，配对配置仅差integration_type与memory_token_dim。真实常量和修复均已合入。准备依次执行ctx/modul各20步与保存恢复，固定短测名见档案；正式60k未开始。训练库932.6GB已打包，SHA/上传/匿名读回长尾继续。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": [],
       "pre_handoff": [
         {"what": "固定版本计划审查、代码合入与定向验证", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS findings=2 blocking=0；全部合前合后审查PASS；S7合后261项及S5合后66项通过；MECH_MATRIX=PASS combos=8 contract_ok=8 forward_ok=8", "where": "docs/dataset-build-doc/16task-orig100-1600ep-9e109419/launch.md；58d3b5c47731f68fd085b81f68595e641b5ec6fc", "status": "pass"},
         {"what": "官方16×100同源、双帧表、缓存导入与motion全量验收", "evidence": "DATA_LINEAGE=PASS files=16 mismatches=0；1600集/768897帧/476857样本；双帧表各VERIFY_PACK=PASS scanned=768897 mismatches=0；WAN_CACHE_IMPORT=PASS copied42404 filled2824；VERIFY_MOTION=PASS scanned23253 mismatches0 nonfinite0；各阶段最终EXIT_CODE=0", "where": "docs/dataset-build-doc/16task-orig100-1600ep-9e109419/records/", "status": "pass"},
-        {"what": "G0至G6、八组合CPU验证与契约常量回填", "evidence": "G0/G2/G3/G6、全表split、真实常量回填、最终CPU矩阵8/8均PASS；G4 ctx64窗输入差0/nonfinite0/退出0，mod运行，故本项仍pending。", "where": "v1-store/validation/orig16-stage2", "status": "pending"}
+        {"what": "G0至G6、八组合CPU验证与契约常量回填", "evidence": "G0/G2/G3/G6、全表split、真实常量回填、最终CPU矩阵8/8、G4 ctx/mod各64窗输入差0/nonfinite0/退出0均PASS；PAIRED_CONFIG=PASS diff_keys=integration_type,memory_token_dim", "where": "v1-store/validation/orig16-stage2", "status": "pass"}
       ],
       "long_tail": [{"what": "已授权完整训练库公开导出及全量匿名读回，与原GPU检查并行", "tmux": "o16-trainset-up", "pane_pid": 416218, "worker_pid": 416274, "started_at_utc": "2026-10-28T08:04:35Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/trainset-export.log", "done_line": "HF_VERIFY=PASS及真实EXIT_CODE", "status": "running"}],
-      "running_handles": [{"kind": "tmux", "name": "o16-g4-mod", "host": "AWS", "pane_pid": 433887, "worker_pid": 433938, "started_at_utc": "2026-10-28T08:20:55Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/check-g4-mod.log", "done_line": "ONLINE_INPUT_IDENTITY与真实EXIT_CODE"}],
+      "running_handles": [{"kind": "tmux", "name": "o16-smoke-ctx", "host": "AWS", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-smoke-ctx-10280431.log", "done_line": "实际20步结果和EXIT_CODE；当前准备起跑，以现场tmux/日志复核"}],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "按固定计划实施三机制、官方16×100建库、全部验收后两条8卡60k串行训练及公开上传；不做评估，不扩大清理范围。"},
         {"kind": "decision", "date": "2026-10-27", "quote": "登记三项任务（推荐）", "scope": "登记建库、context 60k、modulation 60k，依赖按计划。"},
@@ -37,7 +37,7 @@
       ],
       "pending_decisions": [{"what": "按用户要求保留原失败供明早复核：两张帧表verify首次因不支持--layout返回2，检查当时未执行；接口已最小修正且后续真实全量verify均PASS，数据及判据未变。", "evidence": "原frames-4x4.log/frames-8x8.log EXIT_CODE=2；新verify-frames-4x4.log/verify-frames-8x8.log各VERIFY_PACK=PASS scanned=768897 mismatches=0 EXIT_CODE=0", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/", "status": "recorded_resolved"}, {"what": "占位负例依赖默认DATASET，真实回填后误进入本地打包；已精确中断、保留原退出2及产物，测试修复已合入，原三文件完整重测106项通过；未上传、未改源数据。", "evidence": "原75 passed后KeyboardInterrupt，EXIT_CODE=2，163.37s；e8e517b测试修复合前合后审查PASS；完整重测106 passed/34.18s/退出0", "where": "docs/dataset-build-doc/16task-orig100-1600ep-9e109419/records/build-pins-test-incident.json", "status": "recorded_resolved"}],
       "next_steps": [
-        {"what": "数据生产、G0/G2/G3、motion verify、全表split、G6已完成；合已审修复并回填后执行G4两组合、矩阵、两条20步恢复，失败真实留证", "command": "按launch.md执行最终真实YAML的G4和两条20步短测/保存恢复", "verdict_line": "各原验证真实结果和EXIT_CODE"},
+        {"what": "已完成全部原数据/在线/矩阵检查；从本次clean HEAD先ctx契约、20步、恢复，再modul同三步，失败真实记录继续可执行事项", "command": "RUN_NAME=o16-smoke-ctx-10280431 FUSION=ctx TRAIN_HEAD=<起跑clean完整sha> MODE=contract|train|restore bash v1-store/logs/o16-20261028/smoke-stage.sh；modul名o16-smoke-modul-10280431", "verdict_line": "LAUNCH_CONTRACT、SMOKE_8GPU、SAVE_LOAD和真实EXIT_CODE"},
         {"what": "三项已审修复均已合入并推送；真实常量回填后执行G4两组合、矩阵和两条20步保存恢复", "command": "S7合并4320ef8；S2合并7ce2220；S5合并2f5bb2b；按launch.md执行后续检查", "verdict_line": "三项POST_MERGE_REVIEW=PASS；合后定向37/14/154项通过"}
       ]
     },

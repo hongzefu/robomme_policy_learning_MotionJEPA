@@ -43,3 +43,5 @@ MODE=restore bash v1-store/logs/o16-20261028/smoke-stage.sh
 - 恢复结果：同级`save-load.json`。
 
 原判据为实际20步、8GPU/B128、有限标量及严格`SAVE_LOAD`；任何失败保持真实结果，不能改写PASS。正式60k仍是后续两条固定名称，本短测不是正式训练，也不做评估。
+
+训练启动后同时起只读资源采集tmux `o16-gpu-ctx`：`RUN_NAME=o16-smoke-ctx-10280431 TRAIN_PANE_PID=<该训练pane实际PID> bash v1-store/logs/o16-20261028/smoke-gpu-sample.sh`。该载体SHA为`9c91caa5fe5c459d682281e6dbac4c8c50edbbb095f46127d028808547cbec6d`；每500ms记录全部8卡显存和利用率到本条验证目录`gpu-samples.csv`，不控制或改动训练。采集器在训练pane结束后受控终止自身nvidia-smi子进程，并保留其真实退出码。显存报告使用观测峰值，利用率用均值/0%占比；不以整体中位数掩盖初始化与保存阶段。
