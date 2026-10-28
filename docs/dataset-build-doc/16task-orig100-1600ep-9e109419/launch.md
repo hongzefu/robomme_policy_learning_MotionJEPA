@@ -159,3 +159,13 @@ SigLIP已于美东约02:11实际完成：1600个唯一EP、768897帧、重复完
 同一审查确认G0发布后，G2（CPU）与G3（GPU0）互不消费对方结果，可并行各写独立JSON。4×4/8×8 pack及norm仍等finalize结束，motion pack仍等G2/G3结果；没有验证被取消或后置。失败按用户要求真实记录，不改判据。
 
 独立只读服务准备：HF官方认证HTTP200、目标namespace及写角色匹配，三个目标bucket查询均404，仅记未查到、不记空bucket；W&B单次viewer认证HTTP200且GraphQL有效。没有创建bucket/run/项目，没有上传或改变可见性，没有输出或落盘凭据。
+
+## 十、源验收、两帧表与norm实际结果
+
+finalize原五阶段已执行完：1024条同架构视觉复算全部逐位一致，`全部检查通过 PASS`、`FINALIZE_EXIT_CODE=0`、`EXIT_CODE=0`。随后02:25:12启动两张帧表与norm。两表pack分别约90秒、151秒完成32个分片，均写`status=packed`。
+
+运行载体沿计划示例在verify上附了`--layout`，实际verify接口不支持，故两次均出现`unrecognized arguments: --layout ...`并真实`EXIT_CODE=2`；这时verify未执行，不能写成数据校验失败或通过。原`frames-4x4.log`／`frames-8x8.log`完整保留。独立`ADJUST_REVIEW=PASS scale=same findings=0`确认verify从store_meta选择正确layout；不重跑pack，仅使用`verify --store <对应库> --resume --procs 48`继续原完整检查，不改数据或阈值。
+
+新`o16-verify4`、`o16-verify8`于02:29:09启动，分别24秒、38秒完成：两条均`VERIFY_PACK=PASS scanned=768897 mismatches=0`、`EXIT_CODE=0`，meta真实回填verified。新日志为`verify-frames-4x4.log`、`verify-frames-8x8.log`。meta SHA分别为`1318229bd58f4e32a8a44705c862d476d7c92890004b97e69314904433e8d3f9`及`8bad885bcc8344bff533c7fc6ccf7abfbc3d207c67ae7692b7319878587409b8`。新载体`verify-frames.sh` SHA为`ee2702869783ad8080b833f0ffb4b08221fe341fd65425d11d716378f32fa2a5`；旧失败不被新结果覆盖。
+
+norm正常完成，`norm_stats.json`实际SHA为`c5d45b4bdb481ca46d18aeb32446bbedec34de435eef31d3212a179ee7868bcd`，`EXIT_CODE=0`。截至02:30，G0仍在原输入核对中，后续G2/G3和motion打包等尚未宣称通过。用户要求所有步骤做完、失败只记录；上述接口失败与修复经过留待用户复核，没有等待额外确认而阻断其他任务。
