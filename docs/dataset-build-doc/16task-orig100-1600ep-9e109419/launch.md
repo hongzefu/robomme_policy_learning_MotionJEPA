@@ -229,3 +229,9 @@ G12须用导出根的`stage/59999`及同一stage的`manifests/step-59999.json`�
 另经独立`ADJUST_REVIEW=PASS scale=same findings=0`确认，既定训练库导出仅依赖已封口数据/G0/G2/G3/norm，不依赖G4、portable输入或短测。因此真实常量提交后可提前与原G4/20步并行启动，输出仍为独立正式根`v1-store/exports/hf-orig100-trainset`，GPU禁用、8打包线程，公开范围和完整SHA/匿名回读不变；所有GPU验证仍在正式训练前完整执行。
 
 修复后原三文件完整重跑实际为`106 passed in 34.18s`、退出0，见`records/build-pins-tests.summary.log`；原75项后中断的记录保持不变。真实常量与配套档案随后单独提交。
+
+### context在线验收与正式训练库导出起跑
+
+真实常量提交941fcfde1571e3c164937b4f817e38a7229f8d07已推送且clean。美东04:03:47启动`o16-g4-ctx`，pane415106/worker415157，日志`check-g4-ctx.log`；父GPU0/sidecar1。先输出原`STAGE2_LATENT_PARITY=NOT_REQUIRED reason=user_decision_same_input`，随后继续完整输入身份检查，此时尚未生成G4 PASS报告。
+
+04:04:35同一clean HEAD启动`o16-trainset-up`，pane416218/worker416274，正式输出根从不存在的`v1-store/exports/hf-orig100-trainset`新建，未复用中止测试目录。载体`trainset-export.sh` SHA为`0ffab76d9bb78c76e1f42750f7ed056442ef7745ceea5e4e07cad7ed7be2f132`；命令`EXPORT_HEAD=941fcfde1571e3c164937b4f817e38a7229f8d07 bash v1-store/logs/o16-20261028/trainset-export.sh`，执行既定`run_orig100_trainset_export.sh`，日志`trainset-export.log`。CUDA隐藏、JAX CPU、8打包线程、HF/uv缓存位于工作盘，固定公开bucket不变。实际`HYGIENE=PASS files=11620`，尚在本地打包，不能写成已上传或匿名验收通过。两任务的监督预算分别2小时/12小时，由主会话持续监听。
