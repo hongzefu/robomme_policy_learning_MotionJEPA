@@ -107,3 +107,15 @@ AWS本地NVMe RAID，8×A100-SXM4-80GB。开工预核空闲2.757TiB、8卡空闲
 用户原话：「开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high」「登记三项任务（推荐）」。沿用计划K1–K6：其他六组合仅CPU验证；全部正式前置通过即自动训练；训练库与checkpoint公开上传；不评估；两条固定run名；四个motion token共用窗口起点时间码。
 
 实施中的依赖补齐、文字统一及各审查修复见[开工记录](../../maintenance/1027-orig16-vla-start.md)和各合并提交。实际数据/资源/失败/耗时及上传结果完成后写`result.md`与`records/`；当前不把预核、CPU夹具或存在性检查写成真实建库通过。
+
+## 七、执行中的同规模调度调整
+
+美东10月27日22:44，第一阶段实际完成：1600集、768897帧、476857执行样本；16个H5全量SHA与encoder源逐文件相同，`DATA_LINEAGE=PASS files=16 mismatches=0`，VLA输入清单SHA为`5d1bfed54377c22e68bc1883ebd35fdf77372129ac1565dd6a78601c1d9965f9`。episode清单内部摘要`337c4fcde163974039b5c0f2ad1f46ebaacd272719f72818503e23c1360447e2`，整文件SHA为`93d7c5a0c1f34fd955de5f8c37370369e54457019f75e56aea8908cba894d999`。实际缓存规划计数全部符合预核，原阶段`EXIT_CODE=0`。
+
+串行缓存恢复于美东22:45:28启动；22:48:42已下载28个bin、约9.12GB，吞吐约47MB/s。为缩短这一已批准下载的等待，独立审查给出`ADJUST_REVIEW=PASS scale=same findings=0`，改为SDK自带8路下载：版本、2491个明确允许路径（SHA256SUMS＋5个metadata＋2485个bin）、有效bin字节388310630400均不变。保持`HF_HUB_ENABLE_HF_TRANSFER=0`、`force_download=False`；完整文件依SDK同revision metadata复用，partial依HTTP续传/Xet块缓存处理，不承诺所有partial字节零重复传输。
+
+主会话核准自有Python PID94695、pane PID94641及无子进程后发送SIGTERM，等待两者完全退出，保留真实`EXIT_CODE=143`和`cache-fetch.log`／`cache-fetch-serial.log`，不把该次中止写成成功。随后才启动唯一的新写者，避免两个进程并发写同一目标。新运行载体`v1-store/logs/o16-20261028/fetch-cache-parallel.sh`的SHA256为`a233d64f895d0228702a567749c56e9cf858538f5b11deac1cf76bd5558f3443`；它调用已安装`huggingface_hub.snapshot_download(..., allow_patterns=<上述明确路径>, max_workers=8)`，返回后仍执行原`orig16_wan_cache.py fetch`逐文件全量SHA／字节数核验并生成原收据。下载完成本身不算验收通过。
+
+新会话`o16-cache-fetch-parallel`于美东22:54:11启动，pane PID104919、下载PID104973，`CACHE_PARALLEL_STARTUP=PASS`；日志`cache-fetch-parallel.log`确认8 workers和2491路径/388310630400 bin字节。起跑后约8秒，完整bin从74增至77个、24152113152字节，另有8个partial；此时尚未完成下载或验收。
+
+此次只调整CPU／网络文件并发，不改任何冻结仓库源码、数值路径、验收或GPU资源。下载阶段最长等待仍从22:45:28起计4小时，不因调整重置；主会话持续监督，验证通过前不启动import。冻结结束后将此记录随状态分支合回；原批准计划正文保持不变，最终收尾再追加实施记录。
