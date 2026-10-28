@@ -11,6 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 
+CR_SCALARS = ("loss", "grad_norm", "llm_grad_norm", "param_norm", "mem_enc_norm")
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "tests/dataset"))
 sys.path.insert(0, str(REPO / "scripts/dataset"))
@@ -186,8 +187,10 @@ exit {checker_exit}
 
 
 @pytest.mark.parametrize("fault", ["exit", "checkpoint", "log", "nan", "grad_inf", "oom",
-                                   "tail_nonfinite", "ema_nonfinite", "missing_final", None])
+                                   "tail_nonfinite", "ema_nonfinite", "missing_final", None]
+                                  + [f"cr_{key}" for key in CR_SCALARS])
 def test_serial_driver_requires_exit_log_and_59999(tmp_path, fault):
+    cr_field = fault[3:] if fault and fault.startswith("cr_") else None
     root = shell_tree(tmp_path)
     py = root / ".venv/bin/python"; py.parent.mkdir(parents=True); py.symlink_to(sys.executable)
     for run in launch.RUNS.values():
@@ -205,7 +208,8 @@ echo "$RUN_NAME" >> "$ROOT/calls"
 mkdir -p "$ROOT/v1-store/logs"
 printf 'RUN=%s\\ninference nan_count=0 bloom NaN/Inf说明\\nStep 59999: loss=0.25, grad_norm=0.5\\nEXIT_CODE=%s\\n' "$RUN_NAME" {'3' if fault == 'log' else '0'} > "$ROOT/v1-store/logs/$RUN_NAME.log"
 if [[ {fault!s} == nan ]]; then printf 'Step 59999: loss=nan\\nEXIT_CODE=0\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"; fi
-if [[ {fault!s} == grad_inf ]]; then printf 'Step 59999: loss=0.2, memory_grad_norm=inf\\nEXIT_CODE=0\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"; fi
+if [[ {cr_field is not None} == True ]]; then printf '\\r\\rStep 59900: {cr_field}=nan\\nEXIT_CODE=0\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"; fi
+if [[ {fault!s} == grad_inf ]]; then printf 'Step 59999: loss=0.2, llm_grad_norm=inf\\nEXIT_CODE=0\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"; fi
 if [[ {fault!s} == oom ]]; then printf 'RESOURCE_EXHAUSTED: failed to allocate\\nEXIT_CODE=0\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"; fi
 [[ {fault!s} == checkpoint ]] || mkdir -p "$ROOT/v1-store/train-runs/{launch.CONFIG_NAME}/$RUN_NAME/59999"
 exit 0
@@ -217,6 +221,9 @@ exit 0
     calls = (root / "calls").read_text().splitlines()
     assert calls == [launch.RUNS["context"]] + ([launch.RUNS["modulation"]] if fault is None else [])
     assert (result.returncode == 0) == (fault is None), result.stdout + result.stderr
+    if cr_field:
+        assert f"\r\rStep 59900: {cr_field}=nan".encode() in (root / f"v1-store/logs/{launch.RUNS['context']}.log").read_bytes()
+        assert "CHAIN=STOP reason=nonfinite_or_oom" in result.stdout
 
 
 
@@ -245,8 +252,10 @@ def test_final_record_fails_closed(tmp_path, fault):
     assert code == int(fault is not None)
 
 
-@pytest.mark.parametrize("fault", ["missing_final", "tail_nonfinite", "ema_nonfinite", None])
+@pytest.mark.parametrize("fault", ["missing_final", "tail_nonfinite", "ema_nonfinite", None]
+                                  + [f"cr_{key}" for key in CR_SCALARS])
 def test_single_entry_checks_final_record_before_success(tmp_path, fault):
+    cr_field = fault[3:] if fault and fault.startswith("cr_") else None
     root = shell_tree(tmp_path)
     (root / "v1-store/logs").mkdir(parents=True)
     record = final_fixture()
@@ -269,7 +278,9 @@ elif sys.argv[1] == "scripts/training/train.py":
         final = Path(os.environ["TRAIN_FINAL_RECORD_DIR"]) / "final.json"
         final.parent.mkdir(parents=True)
         shutil.copyfile(source, final)
-    print("Step 0: loss=0.2, grad_norm=0.1")
+    print("\\r\\rStep 0: loss=0.2, grad_norm=0.1")
+    if {cr_field is not None}:
+        print("\\r\\rStep 0: {cr_field}=nan")
 ''')
     py.chmod(0o755)
     env = dict(os.environ, CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7", DRY_RUN="0", MAX_STEPS="20",
@@ -280,7 +291,12 @@ elif sys.argv[1] == "scripts/training/train.py":
     log = (root / "v1-store/logs/o16-smoke-shell.log").read_text()
     assert (result.returncode == 0) == (fault is None), result.stdout + result.stderr + log
     assert log.splitlines()[-1] == f"EXIT_CODE={int(fault is not None)}"
-    assert f"TRAIN_FINAL_RECORD={'PASS' if fault is None else 'FAIL'}" in log
+    if cr_field:
+        assert f"\r\rStep 0: {cr_field}=nan".encode() in (root / "v1-store/logs/o16-smoke-shell.log").read_bytes()
+        assert "TRAIN_NUMERICS=FAIL reason=nonfinite_or_oom" in log
+        assert "TRAIN_FINAL_RECORD=" not in log
+    else:
+        assert f"TRAIN_FINAL_RECORD={'PASS' if fault is None else 'FAIL'}" in log
 
 
 @pytest.mark.parametrize("enabled", [False, True])

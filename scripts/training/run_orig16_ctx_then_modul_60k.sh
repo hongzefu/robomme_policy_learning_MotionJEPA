@@ -26,7 +26,7 @@ for pair in "$CTX:$CTX_H" "$MOD:$MOD_H"; do
   if [[ ! -f "$log" || $(tail -n 1 "$log") != EXIT_CODE=0 ]] || ! rg -q -x "RUN=$run" "$log"; then
     echo "CHAIN=STOP reason=missing_success_log run=$run"; exit 1
   fi
-  if rg -qi '^Step [0-9]+:.*(loss|[a-z_]*grad_norm|param_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$log"; then
+  if rg -qi '^\r*Step [0-9]+:.*(loss|grad_norm|llm_grad_norm|param_norm|mem_enc_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$log"; then
     echo "CHAIN=STOP reason=nonfinite_or_oom run=$run"; exit 1
   fi
   if [[ ! -d "$checkpoint" || -L "$checkpoint" ]]; then

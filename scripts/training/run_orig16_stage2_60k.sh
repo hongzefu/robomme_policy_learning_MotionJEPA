@@ -93,7 +93,7 @@ body 2>&1 | tee -a "$LOG"
 statuses=("${PIPESTATUS[@]}")
 rc=${statuses[0]}
 if [[ ${statuses[1]} != 0 && $rc == 0 ]]; then rc=${statuses[1]}; fi
-if [[ $rc == 0 ]] && rg -qi '^Step [0-9]+:.*(loss|[a-z_]*grad_norm|param_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$LOG"; then
+if [[ $rc == 0 ]] && rg -qi '^\r*Step [0-9]+:.*(loss|grad_norm|llm_grad_norm|param_norm|mem_enc_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$LOG"; then
   printf 'TRAIN_NUMERICS=FAIL reason=nonfinite_or_oom\n' >> "$LOG"
   rc=1
 fi
