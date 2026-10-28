@@ -69,3 +69,9 @@ AWS 8×A100-SXM4-80GB、本地NVMe RAID。训练8卡独占并串行；G12仅训�
 | o16-trainset-up | 已启动的训练库上传/匿名回读 | v1-store/logs/o16-20261028/trainset-export.log |
 
 不等待context上传或G12就接modulation；训练库上传也不阻塞训练。若chain提前结束、某条没有实际输入，不把等待或未执行项记成成功。当前不做benchmark评估。结果、权重及恢复素材留v1-store，Git档案只收实测日志、指标和JSON。
+
+## 实际起跑回填
+
+正式Beta为`9459859384589b3553148cf53f715c1318f1a533`，已推送且clean；src权限台账保存234文件45目录原模式，无symlink，主HEAD冻结。美东2026-10-28 05:25:14启动`o16-train-chain`，pane507785/context worker507849，`STEPS=60000`、真实合同49/49通过。05:30:50完成Step0：loss0.6093、grad_norm22.0420、llm_grad_norm14.0851、mem_enc_norm16.8178、param_norm1803.3462，均有限；此时仅第0步，不能宣称训练完成。
+
+三个长尾均05:27:28起跑：ctx备份pane510570/worker510689，mod备份pane510622/worker510626，G12 pane510670/worker510674。ctx实际`HYGIENE=PASS files16`、`ROOT_UPLOAD=PASS files17`，等待首份5000；mod仅等其训练日志，G12仅Bash等待chain，不加载GPU。整体初始监督截止2026-10-31 05:25:14美东；运行态持续写开发副本。
