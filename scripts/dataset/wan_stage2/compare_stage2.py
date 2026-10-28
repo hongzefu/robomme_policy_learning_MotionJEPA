@@ -145,23 +145,17 @@ def cpu_full_integrity(*, meta, table, latent_root, hash_workers=4):
                 raise ValueError(f"S1的{group}与packed来源不符")
 
     check_identity(export)
-    export_files = export.get("files")
-    if not isinstance(export_files, list) or [item.get("key") for item in export_files] != sorted(keys):
-        raise ValueError("S1根记录files未精确覆盖每段")
-    declared_files = {item["key"]: item for item in export_files}
+    pack.validate_stage2_export_files(export, tokens_root, meta.entries)
     cursor, mapping, jobs = 0, {}, []
     # S1按段键排序，packed按episode/demo/exec排序；只通过完整键映射连接两套顺序。
     for entry, _, key, row_base, count in segments:
-        declared = declared_files[key]
         if row_base != cursor:
             raise ValueError("packed行覆盖不连续")
         token_path = tokens_root / f"{key}.f32.bin"
-        token_meta_path = tokens_root / f"{key}.metadata.json"
         data, tm = pack.read_segment_tokens(tokens_root, key, count, spec=entry.spec)
         check_sidecar(token_path, tm["sha256"])
         check_identity(tm)
-        if (tm.get("manifest_sha256") != manifest_sha or declared.get("sha256") != tm["sha256"]
-                or declared.get("num_grid") != count or declared.get("metadata_sha256") != V.sha_file(token_meta_path)):
+        if tm.get("manifest_sha256") != manifest_sha:
             raise ValueError(f"{key} token元数据与S1根记录不符")
         if table[row_base:row_base + count].astype("<f4", copy=False).tobytes() != data:
             raise ValueError(f"packed表与S1 token原始字节不同：{key}")

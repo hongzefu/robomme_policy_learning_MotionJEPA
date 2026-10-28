@@ -96,6 +96,12 @@ def cached_fx(tmp_path, monkeypatch):
 
     monkeypatch.setattr(legacy, "manifest_for", sixteen_tasks)
     s = stage2_fx.__wrapped__(tmp_path, monkeypatch)
+    export = load(s.fx.tokens / "export_record.json")
+    export["files"] = [dict(key=key, sha256=ms.sha256_file(s.fx.tokens / f"{key}.f32.bin"),
+                            num_grid=load(s.fx.tokens / f"{key}.metadata.json")["num_grid"],
+                            metadata_sha256=ms.sha256_file(s.fx.tokens / f"{key}.metadata.json"))
+                       for key in sorted(s.content)]
+    dump(s.fx.tokens / "export_record.json", export)
     receipt, windows = cache_receipt_for(s)
     s.receipt = tmp_path / "cache_import.json"
     dump(s.receipt, receipt)
@@ -198,3 +204,46 @@ def test_cached_verify_detects_forged_packed_sha(cached_fx):
     with pytest.raises(SystemExit):
         pack.cmd_verify(verify_args(s))
     assert load(root / ms.META_RELPATH)["status"] == "packed"
+
+
+@pytest.mark.parametrize("phase", ["pack", "verify"])
+def test_cached_rejects_consistent_segment_tampering_without_root_update(cached_fx, phase):
+    s = cached_fx
+    root = pathlib.Path(s.args.out)
+    if phase == "verify":
+        pack.cmd_pack(s.args)
+    key = next(iter(s.content))
+    original_export = (s.fx.tokens / "export_record.json").read_bytes()
+    path = s.fx.tokens / f"{key}.f32.bin"
+    values = np.frombuffer(path.read_bytes(), dtype="<f4").copy()
+    values[0] += np.float32(1)
+    assert np.isfinite(values).all()
+    blob = values.tobytes()
+    path.write_bytes(blob)
+    digest = ms.sha256_bytes(blob)
+    pathlib.Path(str(path) + ".sha256").write_text(f"{digest}  {path.name}\n")
+    metadata_path = s.fx.tokens / f"{key}.metadata.json"
+    metadata = load(metadata_path)
+    metadata["sha256"] = digest
+    dump(metadata_path, metadata)
+    # 三份分段文件自洽；verify 负例同步改 packed 表，排除单纯 memcmp 拦住的可能。
+    actual, _ = pack.read_segment_tokens(s.fx.tokens, key, metadata["num_grid"], spec=s.entries[0].spec)
+    assert actual == blob
+    if phase == "verify":
+        table_path = root / ms.MOTION_TABLE_RELPATH
+        table = bytearray(table_path.read_bytes())
+        row_base = next(base for _, _, segment, base, _ in pack.iter_rows_in_order(s.entries) if segment == key)
+        offset = row_base * s.entries[0].spec.row_bytes
+        table[offset:offset + len(blob)] = blob
+        table_path.write_bytes(table)
+        store_meta = load(root / ms.META_RELPATH)
+        store_meta["tables"][ms.MOTION_KEY]["sha256"] = ms.sha256_file(table_path)
+        dump(root / ms.META_RELPATH, store_meta)
+    assert (s.fx.tokens / "export_record.json").read_bytes() == original_export
+    with pytest.raises(ValueError, match="token元数据与S1根记录不符"):
+        pack.cmd_pack(s.args) if phase == "pack" else pack.cmd_verify(verify_args(s))
+    if phase == "pack":
+        assert not (root / ms.MOTION_TABLE_RELPATH).exists()
+    else:
+        assert load(root / ms.META_RELPATH)["status"] == "packed"
+        assert not (root / pack.BITEXACT_RELPATH).exists()

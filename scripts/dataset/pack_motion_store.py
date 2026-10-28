@@ -600,6 +600,24 @@ def _stage2_validation(validation_root, *, manifest, latent_sha, checkpoint_sha,
     return evidence
 
 
+def validate_stage2_export_files(export, tokens_root, entries):
+    """复用全表比较器的根记录绑定：每段 token 与元数据必须属于同次导出。"""
+    segments = list(iter_rows_in_order(entries))
+    keys = sorted(item[2] for item in segments)
+    files = export.get("files")
+    if (not isinstance(files, list) or any(not isinstance(item, dict) for item in files)
+            or [item.get("key") for item in files] != keys):
+        raise ValueError("S1根记录files未精确覆盖每段")
+    declared_files = {item["key"]: item for item in files}
+    for _, _, key, _, count in segments:
+        declared = declared_files[key]
+        path = tokens_root / f"{key}.metadata.json"
+        metadata = _load_json(path)
+        if (declared.get("sha256") != metadata.get("sha256") or declared.get("num_grid") != count
+                or declared.get("metadata_sha256") != ms.sha256_file(path)):
+            raise ValueError(f"{key} token元数据与S1根记录不符")
+
+
 def load_cache_import(receipt_path, latents_root, manifest_path, raw_dir):
     """核原 H5 与最终 latent 的全文件摘要、逐窗字节和有限性。"""
     receipt_path = pathlib.Path(receipt_path).resolve()
@@ -729,6 +747,8 @@ def gather_stage2_provenance(latents_root, tokens_root, entries, manifest, index
             actual = {k: v for k, v in actual.items() if k != "run_dir"}
         if ms.canonical_json_bytes(actual) != ms.canonical_json_bytes(identity[group]):
             raise ValueError(f"stage2 export_record 的 {group} 与段身份不同")
+    if cached:
+        validate_stage2_export_files(export, tokens_root, entries)
     latent_sha = ms.sha256_file(latents_root / "metadata.json")
     online_vae = (dict(vae, vae_dtype="float32", batch=1, tf32="off", amp="off") if cached else
                   {k: vae[k] for k in ("vae_id", "vae_state_sha256", "vae_dtype", "latent_mode", "batch", "tf32", "amp")})
@@ -956,6 +976,7 @@ def cmd_verify(args) -> None:
             raise ValueError("verify 历史总 metadata 已变动")
     certification = certification_bytes = None
     if cached:
+        validate_stage2_export_files(_load_json(tokens_root / "export_record.json"), tokens_root, entries)
         ref = meta.provenance["stage2_compat"]["evidence"]["wan_cache_import"]
         load_cache_import(ref["path"], pathlib.Path(meta.provenance["latents_root"]),
                           pathlib.Path(manifest_path), pathlib.Path(meta.provenance["raw_dir"]))
