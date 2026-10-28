@@ -189,3 +189,9 @@ G4在读取真实YAML后要求`motion.store_path`与传入表路径一致，原�
 准备G12时又发现新上传驱动产出的`orig16-stage2-delivery-manifest-v1`与既有恢复器接受的`stage2-delivery-manifest-v1`不兼容。独立同规模调整审查通过；S5提交`9679613e1ce08b272b7c3fecfb8b0804069323cc`只统一新驱动schema常量并补真实生产/消费联测，不扩宽恢复器。两条run在修前均真实复现schema拒绝；改后导出与恢复定向125项通过（13.29秒），独立`PRE_MERGE_REVIEW=PASS findings=0 blocking=0`。与c5a2e31和3fa6665两项已审修复一起等待数据冻结结束后合入；此时主HEAD未变。
 
 G12须用导出根的`stage/59999`及同一stage的`manifests/step-59999.json`；该目录包含实际交付依赖实体。原run缺这些实体，不能代替stage。已完成阶段16份日志归档共885797字节（含归档校验JSON），所有退出记录及SHARD_DONE原样保留，详见`records/archive-validation.json`。
+
+### motion打包完成，独立全表验证进行中
+
+美东03:25左右，原pack正常完成：`PACK_PROVENANCE_PRECHECK=PASS mode=vae_compat segments=2496`，表23253行（exec14138/demo9115）、2496段、95244288字节，耗时1444.3秒；`PACK_MOTION_DONE=1 raw_dir_match=1`。metadata此时仍为`status=packed`，不能记verified；索引SHA为`7aad314e4daee3b7513770deee62f38714e06c57d3f63bbd634d4e52db54eee6`。
+
+同一`o16-s2pack`于03:25:27启动原verify，worker370731，pane345433未变。原`--resume --check-padding`及全文件来源核对保留，日志继续写`motion-pack-verify.log`；等待真实`VERIFY_MOTION`和总退出码，冻结尚未解除。

@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T07:13:46Z",
-    "america_new_york": "2026-10-28T03:13:46-04:00"
+    "utc": "2026-10-28T07:26:23Z",
+    "america_new_york": "2026-10-28T03:26:23-04:00"
   },
   "repo": {
     "branch": "worktree-agent-o16-state-20261028",
-    "base_head": "6d2d3f339cd1b10849a6b480b200a375ea910105",
+    "base_head": "2ab79b34ee9f322317397bbda6f1e7604b0abc0c",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -19,7 +19,7 @@
       "plan": {"file": "1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md", "sha": "d5fe05d647a899e016bc513aa5fba03485a9b398"},
       "state": "running",
       "state_changed_at": "2026-10-28T01:31:26Z",
-      "state_reason": "Beta bd4bad0不变。源特征/双帧表/norm/Wan及motion导出均完成，G0/G2/G3均真实PASS。G2完整输入身份核验64窗，SHA/帧/形状失配和非有限值均0，EXIT_CODE=0。美东03:01:22启动原motion pack+verify，尚未完成；后续全表split、G4两组合及两条20步保存恢复全部照做，失败真实留证。",
+      "state_reason": "Beta bd4bad0不变。源特征/双帧表/norm/Wan/motion导出及G0/G2/G3均完成。motion pack实际完成：2496段23253行（exec14138/demo9115）95244288字节、来源预检PASS；美东03:25:27进入原全表verify，尚未最终通过。验证后执行split/G6、合三项已审修复与真实常量、G4/矩阵/两条20步保存恢复，全部原步骤保留，失败真实留证。",
       "owner": {"session": "", "host": "Codex@AWS"},
       "depends_on": [],
       "pre_handoff": [
@@ -29,7 +29,7 @@
       ],
       "long_tail": [],
       "running_handles": [
-        {"kind": "tmux", "name": "o16-s2pack", "host": "AWS", "pane_pid": 345433, "worker_pid": 345487, "started_at_utc": "2026-10-28T07:01:22Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/motion-pack-verify.log", "done_line": "VERIFY_MOTION；实际EXIT_CODE"}
+        {"kind": "tmux", "name": "o16-s2pack", "host": "AWS", "pane_pid": 345433, "worker_pid": 370731, "started_at_utc": "2026-10-28T07:01:22Z", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/motion-pack-verify.log", "done_line": "VERIFY_MOTION；实际EXIT_CODE"}
       ],
       "authorizations": [
         {"kind": "go", "date": "2026-10-27", "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md 开工 有问题问用户 尽可能不要阻塞 所有subagent全部astra high", "scope": "按固定计划实施三机制、官方16×100建库、全部验收后两条8卡60k串行训练及公开上传；不做评估，不扩大清理范围。"},
