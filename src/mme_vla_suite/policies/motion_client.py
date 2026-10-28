@@ -84,13 +84,17 @@ def validate_stage2_evidence(provenance: dict, root: pathlib.Path | None) -> Non
     """实际读取引用证据并核内容身份；历史 VAE 身份不改写成当前源码。"""
     compat = provenance["stage2_compat"]
     evidence = compat["evidence"]
+    from mme_vla_suite.datastore import motion_store as ms
     records = {}
-    for key in ("G0", "G2", "G3", "restore_receipt", "SOURCE_PIN"):
+    for key in ms.stage2_evidence_roles(provenance):
         ref = evidence[key]
         path = _evidence_path(ref["path"], root)
         if _sha256(path) != ref["sha256"]:
             raise ValueError(f"阶段二证据 SHA 不符: {key}")
         records[key] = json.loads(path.read_text(encoding="utf-8"))
+    if ms.stage2_uses_cache(provenance):
+        ms.validate_stage2_cache_evidence(provenance, records)
+        return
     if records["SOURCE_PIN"] != provenance["source_pin"]:
         raise ValueError("证据 SOURCE_PIN 与来源不一致")
     if evidence["restore_receipt"]["sha256"] != compat["restore_receipt_sha256"]:

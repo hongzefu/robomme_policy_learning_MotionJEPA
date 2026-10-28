@@ -189,7 +189,7 @@ def write_stage2_motion_snapshot(ckpt_root, provenance, *, registered_root=None)
     tokenizer = portable.get("tokenizer", {})
     if (portable.get("schema") != "stage2-online-restore-inputs-v1"
             or payload.get("path") != "online_restore_inputs.npz"
-            or type(es) is not int or es < 17 or portable.get("exec_batch_lengths") != [33, 32]
+            or type(es) is not int or es < 17 or portable.get("exec_batch_lengths") not in ([33, 32], [1, 16, 16, 16, 16])
             or not isinstance(portable.get("prompt"), str) or not portable["prompt"]
             or not isinstance(portable.get("sources"), list) or not portable["sources"]
             or tokenizer.get("uri") != "gs://big_vision/paligemma_tokenizer.model"):
@@ -219,7 +219,7 @@ def write_stage2_motion_snapshot(ckpt_root, provenance, *, registered_root=None)
         _atomic_stage2_file(ckpt_root / name, blob)
         files[name] = ms.sha256_bytes(blob)
     for label, item in prov["stage2_compat"]["evidence"].items():
-        if label not in ("G0", "G2", "G3", "restore_receipt", "SOURCE_PIN"):
+        if label not in ms.stage2_evidence_roles(prov):
             raise ValueError(f"未知 stage2 证据来源: {label}")
         source = pathlib.Path(item["path"])
         blob = source.read_bytes()
