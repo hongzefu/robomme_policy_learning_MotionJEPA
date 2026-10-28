@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1600" viewBox="0 0 1500 1600"
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1618" viewBox="0 0 1500 1618"
      font-family="Noto Sans CJK SC, Source Han Sans SC, WenQuanYi Micro Hei, sans-serif" font-size="13">
   <defs>
     <marker id="arr" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="userSpaceOnUse">
@@ -21,7 +21,7 @@
       .note { stroke:#d32f2f; stroke-width:1.6; stroke-dasharray:6 4; fill:none; }
     </style>
   </defs>
-  <rect width="1500" height="1600" fill="#ffffff"/>
+  <rect width="1500" height="1618" fill="#ffffff"/>
 
   <!-- 标题 -->
   <text x="40" y="48" font-size="20" font-weight="bold" fill="#1a1a1a">官方 RoboMME 16×100 → 三机制 VLA 训练流水线（1027 计划）</text>
@@ -168,25 +168,26 @@
   <line x1="535" y1="1186" x2="535" y2="1226" class="flow"/>
 
   <!-- M3 机制3 -->
-  <rect x="180" y="1226" width="710" height="120" class="box-green"/>
+  <rect x="180" y="1226" width="710" height="138" class="box-green"/>
   <text x="192" y="1248" class="t">M3 机制3 融合方式开关</text>
-  <rect x="192" y="1262" width="340" height="70" class="sub-sel"/>
+  <rect x="192" y="1262" width="340" height="88" class="sub"/>
   <text x="362" y="1284" class="t" text-anchor="middle">context（D=2048）</text>
   <text x="362" y="1302" class="b" text-anchor="middle">记忆 token 拼在 Gemma prefix</text>
   <text x="362" y="1320" class="b" text-anchor="middle">图像 token 之前</text>
-  <rect x="538" y="1262" width="340" height="70" class="sub"/>
+  <rect x="538" y="1262" width="340" height="88" class="sub-sel"/>
   <text x="708" y="1284" class="t" text-anchor="middle">modulation（D=1024）</text>
   <text x="708" y="1302" class="b" text-anchor="middle">action expert 每层 MemoryAttention</text>
   <text x="708" y="1320" class="b" text-anchor="middle">读记忆，调制 FFN 前 RMSNorm</text>
-  <line x1="535" y1="1346" x2="535" y2="1386" class="flow"/>
+  <text x="708" y="1338" class="s org" text-anchor="middle">正式训练选用</text>
+  <line x1="535" y1="1364" x2="535" y2="1404" class="flow"/>
 
-  <rect x="180" y="1386" width="710" height="70" class="box-blue"/>
-  <text x="192" y="1408" class="t">F3 π0.5 策略输出</text>
-  <text x="192" y="1426" class="b">输入：prefix（图像+语言[+记忆]）与动作 suffix</text>
-  <text x="192" y="1444" class="b">输出：动作块 horizon 20</text>
-  <line x1="535" y1="1456" x2="535" y2="1496" class="flow"/>
+  <rect x="180" y="1404" width="710" height="70" class="box-blue"/>
+  <text x="192" y="1426" class="t">F3 π0.5 策略输出</text>
+  <text x="192" y="1444" class="b">输入：prefix（图像+语言[+记忆]）与动作 suffix</text>
+  <text x="192" y="1462" class="b">输出：动作块 horizon 20</text>
+  <line x1="535" y1="1474" x2="535" y2="1514" class="flow"/>
 
   <!-- 橙色横幅 -->
-  <rect x="40" y="1496" width="1430" height="56" fill="#fff3e0" stroke="#f08c00" stroke-width="4"/>
-  <text x="755" y="1530" font-size="15" font-weight="bold" fill="#8a4b00" text-anchor="middle">正式训练：context + 32帧4×4 + motion 每窗 4 token → 记忆 896 位，D=2048；8 卡，global batch 128；pi05_base 起训</text>
+  <rect x="40" y="1514" width="1430" height="56" fill="#fff3e0" stroke="#f08c00" stroke-width="4"/>
+  <text x="755" y="1548" font-size="15" font-weight="bold" fill="#8a4b00" text-anchor="middle">正式训练：modulation + 32帧4×4 + motion 每窗 4 token → 记忆 896 位，D=1024；8 卡，global batch 128，60k 步；pi05_base 起训</text>
 </svg>
