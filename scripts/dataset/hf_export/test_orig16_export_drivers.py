@@ -228,6 +228,7 @@ def test_trainset_shell_smoke_is_offline(tmp_path):
 
 
 def test_formal_placeholder_fails_before_credentials(exporter, monkeypatch):
+    monkeypatch.setattr(exporter, "DATASET", "16task-orig100-1600ep-__FILL_AFTER_BUILD__")
     monkeypatch.setenv("O16_MODE", "trainset")
     monkeypatch.setenv("SMOKE", "0")
     with pytest.raises(ValueError, match="__FILL_AFTER_BUILD__"):
