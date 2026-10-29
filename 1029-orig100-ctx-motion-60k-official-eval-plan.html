@@ -23,7 +23,7 @@ h1{margin-top:36px;border-bottom:2px solid #333}h2{margin-top:28px}blockquote{bo
 <p><b>一句话方案</b>：AWS 上正在训练官方 16 任务×100 集的 context+motion 模型（run <code>orig100-ctx32x4x4-motion-s2split4x256-b128-60k</code>），等它的最终 checkpoint <b>59999</b> 上传到公开 bucket，拉到 turbo 并逐文件核对 SHA，然后沿用 10-27 跑通的简化弹性队列，在 GreatLakes 上用 <b>12 份 A40</b> 并行跑官方 test 800 局。在等待期间，先用已经上传的 50k 跑 2 局冒烟，把推理链路的问题提前暴露出来。</p>
 
 <table><tr><th>编号</th><th>已定口径</th><th>依据</th></tr>
-<tr><td>K0 <span class="warn">（待用户确认）</span></td><td><b>评估集用官方 test 16×50 = 800 局</b>。用户说的「官方16*100」理解为训练集是官方 16×100（bucket README 标题即「官方16任务×100集」），不是评估局数：官方 test 每任务只有 50 局，<code>scripts/evaluation/manifest.py::validate_episodes</code> 强制「官方母集必须按固定顺序包含16×50局」，benchmark <code>856bc3a</code> 的 test 元数据中 easy/medium/hard = 416/192/192。如果用户其实要 16×100 局，现有官方集合做不到，需另外商定集合。</td><td>用户原话「我只看官方的16*100episode」；§二.1</td></tr>
+<tr><td>K0（用户已确认）</td><td><b>评估集用官方 test 16×50 = 800 局</b>。用户确认原话「eval是官方800」；「官方16*100」指训练集是官方 16×100（bucket README 标题即「官方16任务×100集」）。佐证：官方 test 每任务只有 50 局，<code>scripts/evaluation/manifest.py::validate_episodes</code> 强制「官方母集必须按固定顺序包含16×50局」，benchmark <code>856bc3a</code> 的 test 元数据中 easy/medium/hard = 416/192/192。</td><td>用户原话「我只看官方的16*100episode」；§二.1</td></tr>
 <tr><td>K1</td><td>被评对象：bucket 中最终 checkpoint <code>59999</code>（训练只存 5000…55000、59999 共 12 份，没有 60000）。</td><td>bucket README「交付12份完整checkpoint：…55000、59999」</td></tr>
 <tr><td>K2</td><td>并行规模：<b>12 份</b> spgpu 1×A40／4 CPU／24 GiB／48 h 占位，弹性领取 160 块（每块 5 局）。</td><td>用户原话「然后改为12卡并行跑」</td></tr>
 <tr><td>K3</td><td>评估参数与 10-27 正式 800 局完全相同：官方 profile、<code>max_steps=1300</code>、<code>model_seed=42</code>、motion 超预算直接抛错（不抽稀）、不重试正常失败、基础设施错误每局最多重试 1 次。</td><td>10-27 <code>official-60k-800-eval</code>；§二.3</td></tr>
