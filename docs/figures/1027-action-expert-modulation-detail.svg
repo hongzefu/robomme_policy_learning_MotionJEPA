@@ -1,322 +1,505 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 3400" width="2400" height="3400" role="img" aria-labelledby="title desc">
-<title id="title">动作网络完整单层：共享主干、时间条件、两处残差与记忆调制支路</title>
-<desc id="desc">单张连续竖向图。中间为原版①到⑧的action expert主干，在④与⑤之间插入绿色M3；右侧M1用④的x1查询历史记忆，再经M2生成逐token缩放与偏移，传入M3。左侧两套独立time条件生成scale、shift、gate，并用同名gate来源端口接入④和⑧。最外侧分别保留层初x0到④、保留④的原x1到⑧，最终残差不使用z。主干和各memory模块明确标出输入来源、关键运算、输出尺寸与用途。所有batch维省略；T=20，主干宽1024，FFN隐藏宽4096，M为896×1024；原Attention的Q为8头、MemoryAttention的Q为4头。层重复18次后执行层外输出头，得到20×32速度场。</desc>
-<defs><marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#374151"/></marker></defs>
-<g font-family="'Noto Sans CJK SC','Source Han Sans SC','PingFang SC','Microsoft YaHei','Droid Sans Fallback',sans-serif">
-<rect width="2400" height="3400" fill="#fff"/>
-<text x="1200" y="42" font-size="30" font-weight="700" fill="#111827" text-anchor="middle">动作网络的完整单层：主干与记忆调制共用一条计算路径</text>
-<text x="1200" y="79" font-size="20" font-weight="400" fill="#6B7280" text-anchor="middle">从上到下读取 · 省略批量维度 B · T=20 · 32 为模型动作接口宽度 · 绿色为新增记忆模块</text>
-<g id="action-embedding">
-<rect x="700" y="110" width="850" height="120" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="718" y="141" font-size="24" font-weight="700" fill="#111827" text-anchor="start">层外输入投影：动作接口 → 第一层 x0</text>
-<text x="720" y="172" font-size="21" font-weight="700" fill="#111827" text-anchor="start">动作输入 (20,32) → action_in_proj：32→1024 → x0 (20,1024)</text>
-<text x="720" y="207" font-size="18" font-weight="400" fill="#111827" text-anchor="start">后续层的 x0 来自上一层 x_next；输入投影只在堆叠入口执行。</text>
-</g>
-<g id="main-layer-outline">
-<rect x="670" y="290" width="910" height="2830" rx="8" fill="#fff" stroke="#9CA3AF" stroke-width="1.5" class="panel" stroke-dasharray="8,7"/>
-<text x="700" y="3092" font-size="20" font-weight="700" fill="#6B7280" text-anchor="start">单层含记忆支路，重复 18 次</text>
-</g>
-<g id="time-coefficients-attn">
-<rect x="210" y="320" width="410" height="210" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="228" y="351" font-size="20" font-weight="700" fill="#111827" text-anchor="start">① 的时间系数（独立参数）</text>
-<text x="230" y="382" font-size="18" font-weight="400" fill="#111827" text-anchor="start">c (1024)：既有 time MLP 的输出</text>
-<text x="230" y="411" font-size="19" font-weight="700" fill="#111827" text-anchor="start">本 norm：Linear 1024→3072</text>
-<text x="230" y="440" font-size="16" font-weight="700" fill="#111827" text-anchor="start"><tspan fill="#DC2626">scale_attn</tspan> / <tspan fill="#DC2626">shift_attn</tspan> / <tspan fill="#DC2626">gate_attn</tspan></text>
-<text x="230" y="468" font-size="17" font-weight="400" fill="#111827" text-anchor="start">拆分各 1024 维 → 插入 token 轴</text>
-<text x="230" y="496" font-size="17" font-weight="400" fill="#111827" text-anchor="start">计算 / 返回：(1,1024)，广播 20 token</text>
-</g>
-<g id="original-step-1">
-<rect x="700" y="320" width="850" height="210" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="718" y="351" font-size="24" font-weight="700" fill="#111827" text-anchor="start">① pre_attention_norm_1：归一化与时间条件调整</text>
-<text x="720" y="383" font-size="19" font-weight="400" fill="#111827" text-anchor="start">输入：层初 x0 (20,1024)；c (1024) 来自左侧。</text>
-<text x="720" y="426" font-size="21" font-weight="700" fill="#111827" text-anchor="start">h_attn = RMS(x0) ⊙ (1 + <tspan fill="#DC2626">scale_attn</tspan>) + <tspan fill="#DC2626">shift_attn</tspan></text>
-<text x="720" y="469" font-size="20" font-weight="700" fill="#111827" text-anchor="start">输出：h_attn (20,1024) → ②；<tspan fill="#DC2626">gate_attn</tspan> 留给④。</text>
-<text x="720" y="509" font-size="18" font-weight="400" fill="#111827" text-anchor="start">用途：调整注意力输入，并保留独立的残差系数。</text>
-</g>
-<path d="M620,425 H700" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M1125,230 V320" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="original-step-2">
-<rect x="700" y="570" width="850" height="220" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="718" y="601" font-size="24" font-weight="700" fill="#111827" text-anchor="start">② 各分支投影 Q / K / V</text>
-<g id="action-qkv-projection">
-<rect x="720" y="630" width="390" height="120" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="915.0" y="658.26" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">h_attn (20,1024) ← ①</text>
-<text x="915.0" y="683.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">action 本层投影</text>
-<text x="915.0" y="708.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">Q_action (20,8,256)</text>
-<text x="915.0" y="733.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">K/V_action 各 (20,1,256)</text>
-</g>
-<g id="prefix-kv-projection">
-<rect x="1140" y="630" width="390" height="120" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1335.0" y="658.26" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">p (P,2048) ← 对应层</text>
-<text x="1335.0" y="683.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">prefix 本层投影</text>
-<text x="1335.0" y="708.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">K_prefix / V_prefix</text>
-<text x="1335.0" y="733.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">各 (P,1,256)</text>
-</g>
-<text x="720" y="775" font-size="18" font-weight="400" fill="#111827" text-anchor="start">用途：Q 匹配、K 寻址、V 供内容；这里只跟踪 action，不展开 prefix 自身 Q。</text>
-</g>
-<g id="prefix-input">
-<rect x="1660" y="570" width="690" height="190" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1678" y="601" font-size="24" font-weight="700" fill="#111827" text-anchor="start">当前图像 / 语言：对应 PaliGemma 层提供</text>
-<text x="1680" y="631" font-size="21" font-weight="700" fill="#111827" text-anchor="start">已归一化特征 p (P,2048) → ②的 prefix K/V 投影</text>
-<text x="1680" y="673" font-size="19" font-weight="400" fill="#111827" text-anchor="start">P 只计当前图像 / 语言 token；各层 p 不同。</text>
-<text x="1680" y="716" font-size="19" font-weight="400" fill="#111827" text-anchor="start">memory M 不进入 modulation 的 prefix。</text>
-</g>
-<path d="M1660,675 H1550" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M1125,530 V570" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="original-step-3">
-<rect x="700" y="830" width="850" height="300" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="718" y="861" font-size="24" font-weight="700" fill="#111827" text-anchor="start">③ 原联合 Attention：读取与输出投影</text>
-<text x="720" y="890" font-size="18" font-weight="400" fill="#111827" text-anchor="start">输入：②的 Q_action 与两组 K/V；位置序号；mask (20,P+20)。</text>
-<g id="attention-concat-kv">
-<rect x="720" y="910" width="230" height="65" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="835.0" y="935.44" font-size="17" font-weight="700" fill="#111827" text-anchor="middle">K/V 各沿 token 拼接</text>
-<text x="835.0" y="960.44" font-size="17" font-weight="400" fill="#111827" text-anchor="middle">(P+20,1,256)</text>
-</g>
-<g id="attention-scores">
-<rect x="980" y="910" width="260" height="65" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1110.0" y="935.44" font-size="17" font-weight="700" fill="#111827" text-anchor="middle">Q/K RoPE；QKᵀ / 16</text>
-<text x="1110.0" y="960.44" font-size="17" font-weight="400" fill="#111827" text-anchor="middle">每头 scores (20,P+20)</text>
-</g>
-<g id="attention-read-values">
-<rect x="1270" y="910" width="260" height="65" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1400.0" y="935.76" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">mask→softmax→读 V</text>
-<text x="1400.0" y="960.76" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">(20,8,256)</text>
-</g>
-<path d="M950,942.5 H980" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M1240,942.5 H1270" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="attention-merge-heads">
-<rect x="720" y="1000" width="390" height="65" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="915.0" y="1026.08" font-size="19" font-weight="700" fill="#111827" text-anchor="middle">上行读出 → 拼头</text>
-<text x="915.0" y="1051.08" font-size="19" font-weight="400" fill="#111827" text-anchor="middle">(20,8,256) → (20,2048)</text>
-</g>
-<g id="attention-output-projection">
-<rect x="1140" y="1000" width="390" height="65" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1335.0" y="1026.4" font-size="20" font-weight="700" fill="#111827" text-anchor="middle">输出投影 2048→1024</text>
-<text x="1335.0" y="1051.4" font-size="20" font-weight="400" fill="#111827" text-anchor="middle">attn_out (20,1024) → ④</text>
-</g>
-<path d="M1110,1032.5 H1140" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<text x="720" y="1107" font-size="19" font-weight="400" fill="#111827" text-anchor="start">用途：汇总有效 prefix / action 信息；输出恢复为 1024 维残差宽度。</text>
-</g>
-<path d="M1125,790 V830" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="gate-attn-source">
-<rect x="210" y="1155" width="410" height="70" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="415.0" y="1183.26" font-size="18" font-weight="700" fill="#111827" text-anchor="middle"><tspan fill="#DC2626">gate_attn</tspan> ← ① 的时间系数</text>
-<text x="415.0" y="1208.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">(1,1024)，广播到 20 token</text>
-</g>
-<g id="original-step-4">
-<rect x="700" y="1170" width="850" height="170" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="718" y="1201" font-size="24" font-weight="700" fill="#111827" text-anchor="start">④ attention residual：保留层初 x0，再加更新</text>
-<text x="720" y="1235" font-size="17" font-weight="400" fill="#111827" text-anchor="start">输入：x0（层初）与 attn_out（③）各(20,1024)；<tspan fill="#DC2626">gate_attn</tspan>（①）(1,1024)。</text>
-<text x="720" y="1271" font-size="24" font-weight="700" fill="#111827" text-anchor="start">x1 = x0 + <tspan fill="#DC2626">gate_attn</tspan> ⊙ attn_out</text>
-<text x="720" y="1312" font-size="20" font-weight="700" fill="#111827" text-anchor="start">输出 x1 (20,1024)：保存给⑧，同时送往 M1 / M3。</text>
-</g>
-<path d="M620,1190 H660 V1225 H700" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M1125,1130 V1170" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="projected-memory-input">
-<rect x="1660" y="850" width="690" height="200" rx="8" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5" class="card"/>
-<text x="1678" y="881" font-size="24" font-weight="700" fill="#111827" text-anchor="start">历史记忆输入 M</text>
-<text x="1680" y="910" font-size="20" font-weight="400" fill="#111827" text-anchor="start">帧路 512 位 + motion 384 位 → 投影到 1024 → 排序</text>
-<text x="1680" y="953" font-size="24" font-weight="700" fill="#111827" text-anchor="start">M (896,1024)；mem_mask (896)</text>
-<text x="1680" y="996" font-size="19" font-weight="400" fill="#111827" text-anchor="start">同一份 M 供 18 层读取，M 本身不经过这些层更新。</text>
-<text x="1680" y="1029" font-size="18" font-weight="400" fill="#111827" text-anchor="start">各层 MemoryAttention 使用各自独立的参数。</text>
-</g>
-<g id="memory-step-m1">
-<rect x="1660" y="1140" width="690" height="500" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="1678" y="1171" font-size="23" font-weight="700" fill="#111827" text-anchor="start">M1 MemoryAttention：相关历史信息读出</text>
-<text x="1680" y="1200" font-size="18" font-weight="400" fill="#111827" text-anchor="start">输入：x1（④）20×1024；M 896×1024；mask 896。</text>
-<g id="memory-shared-normalization">
-<rect x="1680" y="1225" width="650" height="90" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="2005" y="1251" font-size="19" font-weight="700" fill="#111827" text-anchor="middle">同一普通 MemoryRMSNorm：共享 <tspan fill="#DC2626">scale</tspan> (1024)</text>
-<text x="1840" y="1289" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">x1 → r_x (20,1024)</text>
-<text x="2165" y="1289" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">M → r_M (896,1024)</text>
-</g>
-<g id="memory-query-projection">
-<rect x="1680" y="1335" width="310" height="92" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="1835.0" y="1374.9" font-size="20" font-weight="700" fill="#111827" text-anchor="middle">r_x → Q 投影</text>
-<text x="1835.0" y="1399.9" font-size="20" font-weight="400" fill="#111827" text-anchor="middle">Q_mem (20,4,256)</text>
-</g>
-<g id="memory-kv-projection">
-<rect x="2030" y="1335" width="300" height="92" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="2180.0" y="1374.9" font-size="20" font-weight="700" fill="#111827" text-anchor="middle">r_M → K/V 投影</text>
-<text x="2180.0" y="1399.9" font-size="20" font-weight="400" fill="#111827" text-anchor="middle">各 (896,1,256)</text>
-</g>
-<path d="M1840,1315 V1335" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M2165,1315 V1335" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="memory-attention-read">
-<rect x="1680" y="1450" width="650" height="120" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="1700" y="1479" font-size="19" font-weight="700" fill="#111827" text-anchor="start">Q/K RoPE；QKᵀ / 16 → 每头 scores (20,896)</text>
-<text x="1700" y="1513" font-size="19" font-weight="400" fill="#111827" text-anchor="start">mem_mask → softmax → 加权 V → (20,4,256)</text>
-<text x="1700" y="1547" font-size="19" font-weight="400" fill="#111827" text-anchor="start">拼头 (20,1024) → 输出投影 1024→1024</text>
-</g>
-<path d="M1840,1427 V1450" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M2165,1427 V1450" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="memory-readout-u">
-<rect x="1680" y="1595" width="650" height="38" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="2005.0" y="1620.4" font-size="20" font-weight="700" fill="#111827" text-anchor="middle">u (20,1024)：每个 action 的历史读出 → M2</text>
-</g>
-<path d="M2005,1570 V1595" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-</g>
-<path d="M2005,1050 V1140" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M1550,1260 H1660" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<text x="1605" y="1236" font-size="19" font-weight="700" fill="#111827" text-anchor="middle">x1</text>
-<g id="memory-step-m2">
-<rect x="1660" y="1680" width="690" height="330" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="1678" y="1711" font-size="23" font-weight="700" fill="#111827" text-anchor="start">M2：生成逐 token、逐通道的调制系数</text>
-<text x="1680" y="1747" font-size="20" font-weight="700" fill="#111827" text-anchor="start">输入 u（M1）：(20,1024)</text>
-<g id="memory-coefficient-linear">
-<rect x="1680" y="1765" width="650" height="74" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="2005.0" y="1792" font-size="21" font-weight="700" fill="#111827" text-anchor="middle">Linear 1024→2048</text>
-<text x="2005.0" y="1825" font-size="21" font-weight="400" fill="#111827" text-anchor="middle">中间向量 (20,2048)</text>
-</g>
-<text x="2025" y="1866" font-size="18" font-weight="700" fill="#111827" text-anchor="start">沿末维 split → 两组系数</text>
-<path d="M2005,1839 V1885" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="memory-scale-shift-output">
-<rect x="1680" y="1885" width="650" height="80" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="2005.0" y="1914" font-size="21" font-weight="700" fill="#111827" text-anchor="middle"><tspan fill="#DC2626">scale_mem</tspan> (20,1024)</text>
-<text x="2005.0" y="1947" font-size="21" font-weight="400" fill="#111827" text-anchor="middle"><tspan fill="#DC2626">shift_mem</tspan> (20,1024)</text>
-</g>
-<text x="1680" y="1993" font-size="18" font-weight="700" fill="#111827" text-anchor="start">用途：生成逐 token 调制系数；没有 memory <tspan fill="#DC2626">gate</tspan>。</text>
-</g>
-<path d="M2005,1640 V1680" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="memory-step-m3">
-<rect x="700" y="1750" width="850" height="230" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="718" y="1781" font-size="24" font-weight="700" fill="#111827" text-anchor="start">新增 M3：重新处理原 x1，改变 FFN 输入</text>
-<text x="720" y="1810" font-size="18" font-weight="400" fill="#111827" text-anchor="start">输入 x1（④）(20,1024)；<tspan fill="#DC2626">scale_mem</tspan> / <tspan fill="#DC2626">shift_mem</tspan>（M2）各 (20,1024)。</text>
-<text x="720" y="1861" font-size="22" font-weight="700" fill="#111827" text-anchor="start">z = RMS(x1) ⊙ (1 + <tspan fill="#DC2626">scale_mem</tspan>) + <tspan fill="#DC2626">shift_mem</tspan></text>
-<text x="720" y="1905" font-size="20" font-weight="700" fill="#111827" text-anchor="start">输出 z (20,1024) → 原⑤；不用 M1 中的 r_x 替代 x1。</text>
-<text x="720" y="1940" font-size="18" font-weight="400" fill="#111827" text-anchor="start">M2 + M3 合为 mem_rms_norm_ffn(x1,u)。</text>
-<text x="720" y="1967" font-size="18" font-weight="400" fill="#111827" text-anchor="start">它与 M1 的普通共享 norm 是不同实例；用途是调整 FFN 输入。</text>
-</g>
-<path d="M1680,1900 H1550" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<text x="1615" y="1877" font-size="18" font-weight="700" fill="#111827" text-anchor="middle"><tspan fill="#DC2626">s / b</tspan></text>
-<path d="M1125,1340 V1750" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<text x="1170" y="1516" font-size="21" font-weight="700" fill="#111827" text-anchor="start">x1 (20,1024)</text>
-<text x="1170" y="1550" font-size="19" font-weight="400" fill="#6B7280" text-anchor="start">继续保留原特征</text>
-<g id="time-coefficients-ffn">
-<rect x="210" y="2020" width="410" height="210" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="228" y="2051" font-size="20" font-weight="700" fill="#111827" text-anchor="start">⑤ 的时间系数（独立参数）</text>
-<text x="230" y="2082" font-size="18" font-weight="400" fill="#111827" text-anchor="start">c (1024)：既有 time MLP 的输出</text>
-<text x="230" y="2111" font-size="19" font-weight="700" fill="#111827" text-anchor="start">本 norm：Linear 1024→3072</text>
-<text x="230" y="2140" font-size="16" font-weight="700" fill="#111827" text-anchor="start"><tspan fill="#DC2626">scale_ffn</tspan> / <tspan fill="#DC2626">shift_ffn</tspan> / <tspan fill="#DC2626">gate_ffn</tspan></text>
-<text x="230" y="2168" font-size="17" font-weight="400" fill="#111827" text-anchor="start">拆分各 1024 维 → 插入 token 轴</text>
-<text x="230" y="2196" font-size="17" font-weight="400" fill="#111827" text-anchor="start">计算 / 返回：(1,1024)，广播 20 token</text>
-</g>
-<g id="original-step-5">
-<rect x="700" y="2020" width="850" height="220" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="718" y="2051" font-size="24" font-weight="700" fill="#111827" text-anchor="start">⑤ 原 pre_ffw_norm_1 保留：输入改为 z 与 c</text>
-<text x="720" y="2079" font-size="19" font-weight="400" fill="#111827" text-anchor="start">带 memory：z（M3）(20,1024)；原版：x1（④）(20,1024)。</text>
-<text x="720" y="2124" font-size="22" font-weight="700" fill="#111827" text-anchor="start">h_ffn = RMS(z) ⊙ (1 + <tspan fill="#DC2626">scale_ffn</tspan>) + <tspan fill="#DC2626">shift_ffn</tspan></text>
-<text x="720" y="2169" font-size="20" font-weight="700" fill="#111827" text-anchor="start">输出 h_ffn (20,1024) → ⑥；<tspan fill="#DC2626">gate_ffn</tspan> 留给⑧。</text>
-<text x="720" y="2215" font-size="18" font-weight="400" fill="#111827" text-anchor="start">用途：准备 FFN 输入；原版将公式中的 z 换成 x1。</text>
-</g>
-<path d="M620,2125 H700" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M1125,1980 V2020" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="original-step-6">
-<rect x="700" y="2280" width="850" height="300" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="718" y="2311" font-size="24" font-weight="700" fill="#111827" text-anchor="start">⑥ FFN：两套独立线性投影，GELU 后逐元素相乘</text>
-<g id="ffn-input">
-<rect x="720" y="2360" width="170" height="110" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="805.0" y="2408.26" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">h_ffn ← ⑤</text>
-<text x="805.0" y="2433.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">(20,1024)</text>
-</g>
-<g id="ffn-branch-one">
-<rect x="950" y="2330" width="230" height="90" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1065.0" y="2367.94" font-size="17" font-weight="700" fill="#111827" text-anchor="middle">Linear 1024→4096</text>
-<text x="1065.0" y="2392.94" font-size="17" font-weight="400" fill="#111827" text-anchor="middle">branch1 (20,4096)</text>
-</g>
-<g id="ffn-gelu">
-<rect x="1210" y="2330" width="120" height="90" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1270.0" y="2368.58" font-size="19" font-weight="700" fill="#111827" text-anchor="middle">GELU</text>
-<text x="1270.0" y="2393.58" font-size="19" font-weight="400" fill="#111827" text-anchor="middle">branch1</text>
-</g>
-<g id="ffn-branch-two">
-<rect x="950" y="2440" width="380" height="90" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1140.0" y="2478.58" font-size="19" font-weight="700" fill="#111827" text-anchor="middle">另一套 Linear 1024→4096</text>
-<text x="1140.0" y="2503.58" font-size="19" font-weight="400" fill="#111827" text-anchor="middle">branch2 (20,4096)</text>
-</g>
-<g id="ffn-product">
-<rect x="1360" y="2340" width="170" height="190" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1445.0" y="2403.26" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">逐元素乘</text>
-<text x="1445.0" y="2428.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">GELU(b1)</text>
-<text x="1445.0" y="2453.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">× b2</text>
-<text x="1445.0" y="2478.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">f (20,4096)</text>
-</g>
-<path d="M890,2415 H920 V2375 H950" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M890,2415 H920 V2485 H950" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M1180,2375 H1210" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M1330,2375 H1360" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M1330,2485 H1360" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<text x="720" y="2561" font-size="18" font-weight="700" fill="#111827" text-anchor="start">f = GELU(branch1) ⊙ branch2；输出 (20,4096) → ⑦。用途：非线性特征组合。</text>
-</g>
-<path d="M1125,2240 V2280" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="original-step-7">
-<rect x="700" y="2620" width="850" height="150" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="718" y="2651" font-size="24" font-weight="700" fill="#111827" text-anchor="start">⑦ FFN 输出投影：恢复残差宽度</text>
-<g id="ffn-down-input">
-<rect x="720" y="2675" width="230" height="60" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="835.0" y="2698.26" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">f ← ⑥</text>
-<text x="835.0" y="2723.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">(20,4096)</text>
-</g>
-<g id="ffn-down-projection">
-<rect x="980" y="2675" width="260" height="60" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1110.0" y="2711.4" font-size="20" font-weight="700" fill="#111827" text-anchor="middle">Linear 4096→1024</text>
-</g>
-<g id="ffn-delta">
-<rect x="1270" y="2675" width="260" height="60" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1400.0" y="2698.9" font-size="20" font-weight="700" fill="#111827" text-anchor="middle">delta (20,1024)</text>
-<text x="1400.0" y="2723.9" font-size="20" font-weight="400" fill="#111827" text-anchor="middle">送往⑧</text>
-</g>
-<path d="M950,2705 H980" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M1240,2705 H1270" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<text x="720" y="2760" font-size="17" font-weight="400" fill="#111827" text-anchor="start">用途：把 FFN 特征变成可与 x1 相加的更新量。</text>
-</g>
-<path d="M1125,2580 V2620" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="gate-ffn-source">
-<rect x="210" y="2780" width="410" height="80" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="415.0" y="2813.26" font-size="18" font-weight="700" fill="#111827" text-anchor="middle"><tspan fill="#DC2626">gate_ffn</tspan> ← ⑤ 的时间系数</text>
-<text x="415.0" y="2838.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">(1,1024)，广播到 20 token</text>
-</g>
-<g id="original-step-8">
-<rect x="700" y="2800" width="850" height="160" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="718" y="2831" font-size="24" font-weight="700" fill="#111827" text-anchor="start">⑧ FFN residual：底座始终是④保存的 x1</text>
-<text x="720" y="2857" font-size="17" font-weight="400" fill="#111827" text-anchor="start">输入：x1（④保存）与 delta（⑦）各(20,1024)；<tspan fill="#DC2626">gate_ffn</tspan>（⑤）(1,1024)。</text>
-<text x="720" y="2898" font-size="24" font-weight="700" fill="#111827" text-anchor="start">x_next = x1 + <tspan fill="#DC2626">gate_ffn</tspan> ⊙ delta</text>
-<text x="720" y="2942" font-size="19" font-weight="700" fill="#111827" text-anchor="start">输出 (20,1024) → 下一层 x0；用途：保留原特征并叠加 FFN 更新。</text>
-</g>
-<path d="M620,2820 H660 V2865 H700" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<path d="M1125,2770 V2800" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="layer-output">
-<rect x="700" y="3000" width="850" height="60" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1125.0" y="3038.0" font-size="25" font-weight="700" fill="#111827" text-anchor="middle">本层输出 x_next (20,1024)</text>
-</g>
-<path d="M1125,2960 V3000" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<g id="preserved-residual-bases">
-<path d="M1125,270 H90 V1290 H700" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<text x="115" y="740" font-size="22" font-weight="700" fill="#111827" text-anchor="start">保留层初 x0</text>
-<text x="115" y="777" font-size="21" font-weight="400" fill="#111827" text-anchor="start">(20,1024)</text>
-<path d="M1125,1420 H150 V2895 H700" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<text x="175" y="2405" font-size="22" font-weight="700" fill="#111827" text-anchor="start">保留原 x1（④）</text>
-<text x="175" y="2442" font-size="21" font-weight="400" fill="#111827" text-anchor="start">(20,1024)</text>
-<text x="175" y="2477" font-size="19" font-weight="700" fill="#111827" text-anchor="start">不是 z，也不是 r_x</text>
-<circle cx="1125" cy="270" r="4.5" fill="#374151"/>
-<circle cx="1125" cy="1420" r="4.5" fill="#374151"/>
-</g>
-<g id="after-eighteen-layer-head">
-<rect x="700" y="3160" width="850" height="150" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="718" y="3191" font-size="24" font-weight="700" fill="#111827" text-anchor="start">18 层之后：最终归一化与动作输出头</text>
-<text x="720" y="3220" font-size="20" font-weight="400" fill="#111827" text-anchor="start">输入：最终 x_next (20,1024) 与 c (1024)。</text>
-<g id="final-normalization">
-<rect x="720" y="3240" width="390" height="60" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="915.0" y="3262.94" font-size="17" font-weight="700" fill="#111827" text-anchor="middle">final adaRMS → (20,1024)</text>
-<text x="915.0" y="3287.94" font-size="17" font-weight="400" fill="#111827" text-anchor="middle">返回的 <tspan fill="#DC2626">gate</tspan> 不使用</text>
-</g>
-<g id="final-action-projection">
-<rect x="1140" y="3240" width="390" height="60" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="1335.0" y="3263.9" font-size="20" font-weight="700" fill="#111827" text-anchor="middle">输出投影 1024→32</text>
-<text x="1335.0" y="3288.9" font-size="20" font-weight="400" fill="#111827" text-anchor="middle">速度场 v_t (20,32)</text>
-</g>
-<path d="M1110,3270 H1140" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-</g>
-<path d="M1125,3060 V3160" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<text x="1200" y="3360" font-size="23" font-weight="700" fill="#111827" text-anchor="middle">绿色为新增记忆模块。无 memory 时，x1 直接进入⑤；原有①–⑧共用同一条主干。</text>
-</g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 4432" width="2400" height="4432" role="img" aria-labelledby="title desc">
+  <title id="title">动作网络单层与记忆调制：统一输入、运算、输出、用途版式</title>
+  <desc id="desc">单张竖向共享主干。每个计算模块使用标题、输入、运算、输出、用途五个字段，并保留内部小框和连接。①与⑤各自从c经独立可训练Linear生成3072维中间向量，再Split成单独红色scale、shift、gate输出，加入token轴并广播。M1的scale_shared来自直接复用的可训练参数，不由当前条件生成；x1和M共享该scale。M2从u生成2048维中间量，再Split成两组逐token系数。蓝色表示继承π0.5参数而非冻结，绿色表示新增记忆权重；无参数运算保持中性。两条残差保留x0和原x1，最终底座不是z。</desc>
+  <defs>
+    <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 Z" fill="#374151" />
+    </marker>
+  </defs>
+  <g font-family="'Noto Sans CJK SC','Source Han Sans SC','PingFang SC','Microsoft YaHei','Droid Sans Fallback',sans-serif">
+    <rect width="2400" height="4432" fill="#fff" />
+    <text x="1200" y="40" font-size="28" font-weight="700" fill="#111827" text-anchor="middle">动作网络单层与记忆调制：输入 → 运算 → 输出 → 用途</text>
+    <text x="1200" y="78" font-size="20" font-weight="400" fill="#6B7280" text-anchor="middle">省略 B；T=20。蓝：继承π0.5权重（不表示冻结）；绿：新增记忆模块/路径；红字：调制系数。</text>
+    <g id="action-input-head" data-module="true" data-weight-origin="pi05">
+      <rect x="550" y="100" width="1000" height="160" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4" class="panel" />
+      <text x="568" y="128" font-size="23" font-weight="700" fill="#111827" text-anchor="start">层外输入投影</text>
+      <text x="568" y="159" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：动作接口 (20,32)。32 仅为模型接口宽度。</text>
+      <text x="568" y="183" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：action_in_proj，Linear 32→1024。</text>
+      <text x="568" y="214" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：第一层 x0 (20,1024)；后续层 x0 来自上一层 x_next。</text>
+      <text x="568" y="242" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：对齐残差宽度</text>
+    </g>
+    <g id="module-1" data-module="true" data-weight-origin="none">
+      <rect x="160" y="280" width="1390" height="400" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+      <text x="178" y="308" font-size="23" font-weight="700" fill="#111827" text-anchor="start">① pre_attention_norm_1：时间条件归一化（各自独立参数）</text>
+      <text x="178" y="343" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：x0（层入口）(20,1024)；c (1024) 来自 time MLP。</text>
+      <text x="178" y="373" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：时间系数生成 → RMS 仿射；(1,1024) 广播到 20 个 token</text>
+      <text x="178" y="632" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：h_attn (20,1024)；<tspan fill="#DC2626">gate_attn</tspan> (1,1024) → ④</text>
+      <text x="178" y="662" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：准备注意力输入</text>
+      <g id="module-1-linear" data-module="true" data-weight-origin="pi05">
+        <rect x="180" y="398" width="280" height="160" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4" class="panel" />
+        <text x="198" y="420.0" font-size="18" font-weight="700" fill="#111827" text-anchor="start">独立可训练 Linear</text>
+        <text x="192" y="448.0" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：c (1024)←time MLP</text>
+        <text x="192" y="471" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：1024→3072</text>
+        <text x="192" y="514" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：<tspan fill="#DC2626">v_time_attn</tspan> (3072)</text>
+        <text x="192" y="540" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：生成时间参数</text>
+      </g>
+      <g id="module-1-intermediate" data-port="true" data-weight-origin="none">
+        <rect x="480" y="432" width="170" height="92" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+        <text x="565.0" y="453.12" font-size="16" font-weight="700" fill="#DC2626" text-anchor="middle"><tspan fill="#DC2626">v_time_attn</tspan></text>
+        <text x="565.0" y="483.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">来自 Linear</text>
+        <text x="565.0" y="513.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">(3072)</text>
+      </g>
+      <g id="module-1-split" data-module="true" data-weight-origin="none">
+        <rect x="670" y="398" width="240" height="160" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+        <text x="688" y="420.0" font-size="18" font-weight="700" fill="#111827" text-anchor="start">Split：末维三等分</text>
+        <text x="682" y="448.0" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：<tspan fill="#DC2626">v_time_attn</tspan>←左</text>
+        <text x="682" y="468.0" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">　　(3072)</text>
+        <text x="682" y="491" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：三等分，不复制 c</text>
+        <text x="682" y="514" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：3 组，各 1024 维</text>
+        <text x="682" y="540" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：分离三种系数</text>
+      </g>
+      <path d="M460,478 H480" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M650,478 H670" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <g id="module-1-scale_attn" data-port="true" data-weight-origin="none">
+        <rect x="950" y="382" width="240" height="60" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+        <text x="1070.0" y="402.12" font-size="16" font-weight="700" fill="#DC2626" text-anchor="middle"><tspan fill="#DC2626">scale_attn</tspan> ←Split①</text>
+        <text x="1070.0" y="432.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">1024 → (1,1024)</text>
+      </g>
+      <path d="M910,478 H930 V412 H950" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <g id="module-1-shift_attn" data-port="true" data-weight-origin="none">
+        <rect x="950" y="450" width="240" height="60" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+        <text x="1070.0" y="470.12" font-size="16" font-weight="700" fill="#DC2626" text-anchor="middle"><tspan fill="#DC2626">shift_attn</tspan> ←Split①</text>
+        <text x="1070.0" y="500.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">1024 → (1,1024)</text>
+      </g>
+      <path d="M910,478 H930 V480 H950" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <g id="module-1-gate_attn" data-port="true" data-weight-origin="none">
+        <rect x="950" y="518" width="240" height="60" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+        <text x="1070.0" y="538.12" font-size="16" font-weight="700" fill="#DC2626" text-anchor="middle"><tspan fill="#DC2626">gate_attn</tspan> ←Split①</text>
+        <text x="1070.0" y="568.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">1024 → (1,1024)</text>
+      </g>
+      <path d="M910,478 H930 V548 H950" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <g id="module-1-rms-affine" data-module="true" data-weight-origin="none">
+        <rect x="1230" y="398" width="300" height="160" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+        <text x="1248" y="420.0" font-size="18" font-weight="700" fill="#111827" text-anchor="start">RMS + 条件仿射</text>
+        <text x="1242" y="448.0" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：x0 (20,1024)</text>
+        <text x="1242" y="468.0" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input"><tspan fill="#DC2626">scale_attn</tspan> / <tspan fill="#DC2626">shift_attn</tspan></text>
+        <text x="1242" y="491" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：RMS→20×1024→仿射</text>
+        <text x="1242" y="514" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：h_attn (20,1024)</text>
+        <text x="1242" y="540" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：按时间调整特征</text>
+      </g>
+      <path d="M1190,412 H1230" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M1190,480 H1230" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <text x="180" y="602" font-size="20" font-weight="700" fill="#111827" text-anchor="start">h_attn = RMS(x0) ⊙ (1 + <tspan fill="#DC2626">scale_attn</tspan>) + <tspan fill="#DC2626">shift_attn</tspan></text>
+    </g>
+    <path d="M1050,260 V280" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="module-2" data-module="true" data-weight-origin="none">
+      <rect x="550" y="700" width="1000" height="398" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+      <text x="568" y="728" font-size="23" font-weight="700" fill="#111827" text-anchor="start">② 两个分支各自投影 Q / K / V</text>
+      <text x="568" y="763" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：h_attn（①）(20,1024)；p（右侧对应层）(P,2048)。</text>
+      <text x="568" y="793" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：内部流程如下</text>
+      <text x="568" y="1028" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：Q_action (20,8,256)；K_action / V_action 各 (20,1,256)</text>
+      <text x="568" y="1056" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">K_prefix / V_prefix 各 (P,1,256) → ③</text><text x="568" y="1084" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：形成查询与内容</text>
+      <g id="action-qkv" data-module="true" data-weight-origin="pi05">
+        <rect x="570" y="810" width="460" height="184" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4" class="panel" />
+        <text x="588" y="832.0" font-size="18" font-weight="700" fill="#111827" text-anchor="start">action 本层投影</text>
+        <text x="582" y="860.0" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：h_attn←①，(20,1024)</text>
+        <text x="582" y="883" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：各自 Q / K / V 线性投影</text>
+        <text x="582" y="928" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：Q_action (20,8,256)</text>
+        <text x="582" y="950" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">　　K_action/V_action 各 (20,1,256)</text>
+        <text x="582" y="976" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：提供动作查询内容</text>
+      </g>
+      <g id="prefix-kv" data-module="true" data-weight-origin="pi05">
+        <rect x="1070" y="810" width="460" height="184" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4" class="panel" />
+        <text x="1088" y="832.0" font-size="18" font-weight="700" fill="#111827" text-anchor="start">prefix 本层投影</text>
+        <text x="1082" y="860.0" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：p←对应 PaliGemma 层，(P,2048)</text>
+        <text x="1082" y="883" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：只展开 K / V 投影</text>
+        <text x="1082" y="950" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：K_prefix/V_prefix 各 (P,1,256)</text>
+        <text x="1082" y="976" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：提供当前上下文</text>
+      </g>
+    </g>
+    <g id="prefix-source" data-port="true" data-weight-origin="none">
+      <rect x="1650" y="700" width="700" height="170" rx="8" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4" class="card" />
+      <text x="2000.0" y="757.4" font-size="20" font-weight="700" fill="#111827" text-anchor="middle">p：对应 PaliGemma 层已归一化特征</text>
+      <text x="2000.0" y="791.4" font-size="20" font-weight="400" fill="#111827" text-anchor="middle">(P,2048)；P 仅含当前图像 / 语言</text>
+      <text x="2000.0" y="825.4" font-size="20" font-weight="400" fill="#111827" text-anchor="middle">各层 p 不同；不展开 prefix 自身 Q</text>
+    </g>
+    <path d="M1650,820 H1600 V900 H1550" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <path d="M1050,680 V700" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="module-3" data-module="true" data-weight-origin="none">
+      <rect x="550" y="1118" width="1000" height="558" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+      <text x="568" y="1146" font-size="23" font-weight="700" fill="#111827" text-anchor="start">③ 原联合 Attention：读取后回到残差宽度</text>
+      <text x="568" y="1181" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：Q_action (20,8,256)；K_action / V_action 各 (20,1,256)；</text>
+      <text x="568" y="1209.0" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">K_prefix / V_prefix 各 (P,1,256)；mask (20,P+20) 与位置序号。</text><text x="568" y="1239.0" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：内部流程如下</text>
+      <text x="568" y="1628" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：attn_out (20,1024) → ④。</text>
+      <text x="568" y="1658" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：汇总可见信息</text>
+      <g transform="translate(0,28)"><g id="attention-concat" data-module="true" data-weight-origin="none">
+        <rect x="570" y="1228" width="300" height="160" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+        <text x="588" y="1250" font-size="18" font-weight="700" fill="#111827" text-anchor="start">拼接 K / V</text>
+        <text x="582" y="1278" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：prefix：P×1×256</text>
+        <text x="582" y="1298" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">　　action：20×1×256</text>
+        <text x="582" y="1321" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：分别沿 token 轴 concat</text>
+        <text x="582" y="1344" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：K/V_all 各 (P+20,1,256)</text>
+        <text x="582" y="1370" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：合并读取范围</text>
+      </g>
+      <g id="attention-rope-scores" data-module="true" data-weight-origin="none">
+        <rect x="900" y="1228" width="300" height="160" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+        <text x="918" y="1250" font-size="18" font-weight="700" fill="#111827" text-anchor="start">RoPE 与匹配分数</text>
+        <text x="912" y="1278" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：Q：20×8×256</text>
+        <text x="912" y="1298" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">　　K_all：(P+20)×1×256</text>
+        <text x="912" y="1321" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：Q/K RoPE；QKᵀ÷16</text>
+        <text x="912" y="1344" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：每头 scores (20,P+20)</text>
+        <text x="912" y="1370" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：计算匹配分数</text>
+      </g>
+      <g id="attention-softmax-read" data-module="true" data-weight-origin="none">
+        <rect x="1230" y="1228" width="300" height="160" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+        <text x="1248" y="1250" font-size="18" font-weight="700" fill="#111827" text-anchor="start">掩码、概率与读取</text>
+        <text x="1242" y="1278" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：scores←左；可见性 mask</text>
+        <text x="1242" y="1298" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">　　V_all：(P+20)×1×256</text>
+        <text x="1242" y="1321" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：mask→softmax→加权 V</text>
+        <text x="1242" y="1344" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：encoded (20,8,256)</text>
+        <text x="1242" y="1370" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：读取可见内容</text>
+      </g>
+      <path d="M870,1308 H900" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M1200,1308 H1230" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <g id="attention-merge-heads" data-module="true" data-weight-origin="none">
+        <rect x="570" y="1408" width="460" height="160" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+        <text x="588" y="1430" font-size="18" font-weight="700" fill="#111827" text-anchor="start">拼接注意力头</text>
+        <text x="582" y="1458" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：encoded←上行，(20,8,256)</text>
+        <text x="582" y="1481" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：合并 head 维</text>
+        <text x="582" y="1524" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：merged (20,2048)</text>
+        <text x="582" y="1550" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：汇合多头读出</text>
+      </g>
+      <g id="attention-out-proj" data-module="true" data-weight-origin="pi05">
+        <rect x="1070" y="1408" width="460" height="160" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4" class="panel" />
+        <text x="1088" y="1430" font-size="18" font-weight="700" fill="#111827" text-anchor="start">注意力输出投影</text>
+        <text x="1082" y="1458" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：merged←左，(20,2048)</text>
+        <text x="1082" y="1481" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：Linear 2048→1024</text>
+        <text x="1082" y="1524" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：attn_out (20,1024)</text>
+        <text x="1082" y="1550" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：恢复残差宽度</text>
+      </g>
+      <path d="M1030,1488 H1070" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    </g></g>
+    <path d="M1050,1098 V1118" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="module-4" data-module="true" data-weight-origin="none">
+      <rect x="550" y="1696" width="1000" height="190" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+      <text x="568" y="1724" font-size="23" font-weight="700" fill="#111827" text-anchor="start">④ attention residual</text>
+      <text x="568" y="1759" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：层初 x0 (20,1024)；attn_out（③）(20,1024)；<tspan fill="#DC2626">gate_attn</tspan>（①）(1,1024)。</text>
+      <text x="568" y="1801" font-size="20" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：x1 = x0 + <tspan fill="#DC2626">gate_attn</tspan> ⊙ attn_out；gate 沿 20 token 广播。</text>
+      <text x="568" y="1838" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：x1 (20,1024) → M1 / M3，并保留给⑧。</text>
+      <text x="568" y="1868" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：保留底座加更新</text>
+    </g>
+    <g id="gate-attn-input" data-port="true" data-weight-origin="none">
+      <rect x="180" y="1646" width="310" height="90" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+      <text x="335.0" y="1681.44" font-size="17" font-weight="700" fill="#DC2626" text-anchor="middle"><tspan fill="#DC2626">gate_attn</tspan>：来自①</text>
+      <text x="335.0" y="1711.44" font-size="17" font-weight="400" fill="#DC2626" text-anchor="middle">(1,1024)，广播 20 token</text>
+    </g>
+    <path d="M490,1691 H520 V1781 H550" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <path d="M1050,1676 V1696" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="memory-source" data-port="true" data-weight-origin="none">
+      <rect x="1650" y="900" width="700" height="80" rx="8" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.4" class="card" />
+      <text x="2000.0" y="929.76" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">M (896,1024)；mem_mask (896)</text>
+      <text x="2000.0" y="961.76" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">512 帧路 + 384 motion，经投影与排序；同一 M 供 18 层读取</text>
+    </g>
+    <g id="memory-module-1" data-module="true" data-weight-origin="new">
+      <rect x="1650" y="1000" width="700" height="788" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.4" class="panel" />
+      <text x="1668" y="1028" font-size="23" font-weight="700" fill="#111827" text-anchor="start">M1 MemoryAttention</text>
+      <text x="1668" y="1063" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：x1←④：20×1024；M：896×1024；mem_mask：896。</text>
+      <text x="1668" y="1093" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：内部流程如下</text>
+      <text x="1668" y="1740" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：u (20,1024) → M2。</text>
+      <text x="1668" y="1770" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：按动作检索历史</text>
+      <g id="shared-scale-parameter" data-port="true" data-weight-origin="new">
+        <rect x="1670" y="1105" width="660" height="60" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.4" class="card" />
+        <text x="2000" y="1125.12" font-size="16" font-weight="700" fill="#DC2626" text-anchor="middle">scale_shared (1024)：可训练参数；前向时复用</text><text x="2000" y="1155.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">不由当前 c / M / u 生成；此处没有 shift 或 gate</text></g>
+      <g id="memory-shared-rms" data-module="true" data-weight-origin="new">
+        <rect x="1670" y="1170" width="660" height="145" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.4" class="panel" />
+        <text x="1688" y="1192.0" font-size="18" font-weight="700" fill="#111827" text-anchor="start">同一普通 MemoryRMSNorm</text>
+        <text x="1682" y="1220.0" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：x1：20×1024；M：896×1024；<tspan fill="#DC2626">scale_shared</tspan>：1024</text>
+        <text x="1682" y="1243" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：分别 RMS(x1)、RMS(M)，均乘 (1 + <tspan fill="#DC2626">scale_shared</tspan>)</text>
+        <text x="1682" y="1271" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：r_x (20,1024)；r_M (896,1024)</text>
+        <text x="1682" y="1297" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：统一检索尺度</text>
+      </g>
+      <g id="memory-query-proj" data-module="true" data-weight-origin="new">
+        <rect x="1670" y="1335" width="310" height="145" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.4" class="panel" />
+        <text x="1688" y="1357.0" font-size="18" font-weight="700" fill="#111827" text-anchor="start">动作查询投影</text>
+        <text x="1682" y="1385.0" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：r_x←共享 norm，(20,1024)</text>
+        <text x="1682" y="1408" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：1024→4×256</text>
+        <text x="1682" y="1436" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：Q_mem (20,4,256)</text>
+        <text x="1682" y="1462" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：形成历史查询</text>
+      </g>
+      <g id="memory-kv-proj" data-module="true" data-weight-origin="new">
+        <rect x="2000" y="1335" width="330" height="145" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.4" class="panel" />
+        <text x="2018.0" y="1357.0" font-size="18" font-weight="700" fill="#111827" text-anchor="start">记忆 K / V 投影</text>
+        <text x="2012.0" y="1385.0" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：r_M←共享 norm，(896,1024)</text>
+        <text x="2012.0" y="1408" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：各 1024→1×256</text>
+        <text x="2012.0" y="1436" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：K_mem/V_mem 各 (896,1,256)</text>
+        <text x="2012.0" y="1462" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：提供历史内容</text>
+      </g>
+      <path d="M1825,1315 V1335" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M2175,1315 V1335" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <g id="memory-attention-read" data-module="true" data-weight-origin="new">
+        <rect x="1670" y="1500" width="660" height="190" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.4" class="panel" />
+        <text x="1688" y="1522.0" font-size="18" font-weight="700" fill="#111827" text-anchor="start">记忆读取与输出投影</text>
+        <text x="1682" y="1550.0" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：Q_mem：20×4×256；K/V：896×1×256；mask：896</text>
+        <text x="1682" y="1573" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：Q/K RoPE；Q÷16 → 每头 scores (20,896)</text>
+        <text x="1682" y="1595" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">　　mem_mask→softmax→加权 V → (20,4,256)</text>
+        <text x="1682" y="1617" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">　　拼头 (20,1024) → Linear 1024→1024</text>
+        <text x="1682" y="1646" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：u (20,1024)</text>
+        <text x="1682" y="1672" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：生成历史读出</text>
+      </g>
+      <path d="M1825,1480 V1500" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M2175,1480 V1500" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    </g>
+    <path d="M2000,980 V1000" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="memory-module-2" data-module="true" data-weight-origin="new">
+      <rect x="1650" y="1856" width="700" height="418" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.4" class="panel" />
+      <text x="1668" y="1884" font-size="23" font-weight="700" fill="#111827" text-anchor="start">M2：生成记忆缩放与偏移</text>
+      <text x="1668" y="1919" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：u（M1）(20,1024)。</text>
+      <text x="1668" y="1949" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：Linear → <tspan fill="#DC2626">v_mem</tspan> → Split（两组，无 memory gate）。</text>
+      <g id="memory-linear" data-module="true" data-weight-origin="new">
+        <rect x="1670" y="1974" width="230" height="170" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.4" class="panel" />
+        <text x="1688" y="1996" font-size="18" font-weight="700" fill="#111827" text-anchor="start">可训练 Linear</text>
+        <text x="1682" y="2024" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：u←M1，(20,1024)</text>
+        <text x="1682" y="2047" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：1024→2048</text>
+        <text x="1682" y="2078" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：<tspan fill="#DC2626">v_mem</tspan></text>
+        <text x="1682" y="2100" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">　　(20,2048)</text>
+        <text x="1682" y="2126" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：生成调制参数</text>
+      </g>
+      <g id="memory-intermediate" data-port="true" data-weight-origin="none">
+        <rect x="1920" y="2013" width="120" height="92" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+        <text x="1980.0" y="2034.12" font-size="16" font-weight="700" fill="#DC2626" text-anchor="middle"><tspan fill="#DC2626">v_mem</tspan></text>
+        <text x="1980.0" y="2064.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">来自Linear</text>
+        <text x="1980.0" y="2094.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">20×2048</text>
+      </g>
+      <g id="memory-split" data-module="true" data-weight-origin="none">
+        <rect x="2060" y="1974" width="270" height="170" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+        <text x="2078" y="1996" font-size="18" font-weight="700" fill="#111827" text-anchor="start">Split：末维二等分</text>
+        <text x="2072" y="2024" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：<tspan fill="#DC2626">v_mem</tspan>←左，(20,2048)</text>
+        <text x="2072" y="2047" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：拆为缩放与偏移</text>
+        <text x="2072" y="2100" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：两组，各 (20,1024)</text>
+        <text x="2072" y="2126" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：分离缩放与偏移</text>
+      </g>
+      <path d="M1900,2059 H1920" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M2040,2059 H2060" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <text x="1668" y="2194" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：</text>
+      <g id="scale-mem-output" data-port="true" data-weight-origin="none">
+        <rect x="1740" y="2166" width="270" height="60" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+        <text x="1875.0" y="2186.44" font-size="17" font-weight="700" fill="#DC2626" text-anchor="middle" data-field="output"><tspan fill="#DC2626">scale_mem</tspan> ← M2 Split</text>
+        <text x="1875.0" y="2216.44" font-size="17" font-weight="400" fill="#DC2626" text-anchor="middle" data-field="output">(20,1024)</text>
+      </g>
+      <g id="shift-mem-output" data-port="true" data-weight-origin="none">
+        <rect x="2040" y="2166" width="290" height="60" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+        <text x="2185.0" y="2186.44" font-size="17" font-weight="700" fill="#DC2626" text-anchor="middle" data-field="output"><tspan fill="#DC2626">shift_mem</tspan> ← M2 Split</text>
+        <text x="2185.0" y="2216.44" font-size="17" font-weight="400" fill="#DC2626" text-anchor="middle" data-field="output">(20,1024)</text>
+      </g>
+      <path d="M2195,2144 V2154 H1875 V2166" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M2195,2144 V2154 H2185 V2166" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <text x="1668" y="2256" font-size="17" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：生成记忆调制量</text>
+    </g>
+    <path d="M2000,1788 V1856" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="memory-module-3" data-module="true" data-weight-origin="none">
+      <rect x="550" y="2016" width="1000" height="240" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.4" class="panel" />
+      <text x="568" y="2044" font-size="23" font-weight="700" fill="#111827" text-anchor="start">M3：重新处理原 x1</text>
+      <text x="568" y="2079" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：x1（④）(20,1024)；<tspan fill="#DC2626">scale_mem</tspan> / <tspan fill="#DC2626">shift_mem</tspan>（M2）各 (20,1024)。</text>
+      <text x="568" y="2115" font-size="19" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：RMS(x1) → (20,1024)；z = RMS(x1) ⊙ (1 + <tspan fill="#DC2626">scale_mem</tspan>) + <tspan fill="#DC2626">shift_mem</tspan>。</text>
+      <text x="568" y="2151" font-size="17" font-weight="400" fill="#111827" text-anchor="start">M2 + M3 组成 mem_rms_norm_ffn(x1,u)；与 M1 的普通 norm 是不同实例。</text>
+      <text x="568" y="2208" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：z (20,1024) → ⑤；重新使用原 x1，不使用 M1 的 r_x。</text>
+      <text x="568" y="2238" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：调整前馈输入</text>
+    </g>
+    <path d="M1650,2194 H1550" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <text x="1600" y="2173" font-size="17" font-weight="700" fill="#111827" text-anchor="middle">两组系数</text>
+    <path d="M1050,1886 V2016" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="module-5" data-module="true" data-weight-origin="none">
+      <rect x="160" y="2276" width="1390" height="400" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+      <text x="178" y="2304" font-size="23" font-weight="700" fill="#111827" text-anchor="start">⑤ pre_ffw_norm_1：时间条件归一化（各自独立参数）</text>
+      <text x="178" y="2339" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：带 memory：z（M3）(20,1024)；原版：x1（④）(20,1024)；c (1024) 来自 time MLP。</text>
+      <text x="178" y="2369" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：时间系数生成 → RMS 仿射；(1,1024) 广播到 20 个 token</text>
+      <text x="178" y="2628" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：h_ffn (20,1024)；<tspan fill="#DC2626">gate_ffn</tspan> (1,1024) → ⑧</text>
+      <text x="178" y="2658" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：准备前馈输入</text>
+      <g id="module-5-linear" data-module="true" data-weight-origin="pi05">
+        <rect x="180" y="2394" width="280" height="160" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4" class="panel" />
+        <text x="198" y="2416" font-size="18" font-weight="700" fill="#111827" text-anchor="start">独立可训练 Linear</text>
+        <text x="192" y="2444" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：c (1024)←time MLP</text>
+        <text x="192" y="2467" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：1024→3072</text>
+        <text x="192" y="2510" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：<tspan fill="#DC2626">v_time_ffn</tspan> (3072)</text>
+        <text x="192" y="2536" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：生成时间参数</text>
+      </g>
+      <g id="module-5-intermediate" data-port="true" data-weight-origin="none">
+        <rect x="480" y="2428" width="170" height="92" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+        <text x="565.0" y="2449.12" font-size="16" font-weight="700" fill="#DC2626" text-anchor="middle"><tspan fill="#DC2626">v_time_ffn</tspan></text>
+        <text x="565.0" y="2479.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">来自 Linear</text>
+        <text x="565.0" y="2509.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">(3072)</text>
+      </g>
+      <g id="module-5-split" data-module="true" data-weight-origin="none">
+        <rect x="670" y="2394" width="240" height="160" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+        <text x="688" y="2416" font-size="18" font-weight="700" fill="#111827" text-anchor="start">Split：末维三等分</text>
+        <text x="682" y="2444" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：<tspan fill="#DC2626">v_time_ffn</tspan>←左</text>
+        <text x="682" y="2464" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">　　(3072)</text>
+        <text x="682" y="2487" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：三等分，不复制 c</text>
+        <text x="682" y="2510" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：3 组，各 1024 维</text>
+        <text x="682" y="2536" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：分离三种系数</text>
+      </g>
+      <path d="M460,2474 H480" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M650,2474 H670" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <g id="module-5-scale_ffn" data-port="true" data-weight-origin="none">
+        <rect x="950" y="2378" width="240" height="60" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+        <text x="1070.0" y="2398.12" font-size="16" font-weight="700" fill="#DC2626" text-anchor="middle"><tspan fill="#DC2626">scale_ffn</tspan> ←Split⑤</text>
+        <text x="1070.0" y="2428.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">1024 → (1,1024)</text>
+      </g>
+      <path d="M910,2474 H930 V2408 H950" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <g id="module-5-shift_ffn" data-port="true" data-weight-origin="none">
+        <rect x="950" y="2446" width="240" height="60" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+        <text x="1070.0" y="2466.12" font-size="16" font-weight="700" fill="#DC2626" text-anchor="middle"><tspan fill="#DC2626">shift_ffn</tspan> ←Split⑤</text>
+        <text x="1070.0" y="2496.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">1024 → (1,1024)</text>
+      </g>
+      <path d="M910,2474 H930 V2476 H950" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <g id="module-5-gate_ffn" data-port="true" data-weight-origin="none">
+        <rect x="950" y="2514" width="240" height="60" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+        <text x="1070.0" y="2534.12" font-size="16" font-weight="700" fill="#DC2626" text-anchor="middle"><tspan fill="#DC2626">gate_ffn</tspan> ←Split⑤</text>
+        <text x="1070.0" y="2564.12" font-size="16" font-weight="400" fill="#DC2626" text-anchor="middle">1024 → (1,1024)</text>
+      </g>
+      <path d="M910,2474 H930 V2544 H950" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <g id="module-5-rms-affine" data-module="true" data-weight-origin="none">
+        <rect x="1230" y="2394" width="300" height="160" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+        <text x="1248" y="2416" font-size="18" font-weight="700" fill="#111827" text-anchor="start">RMS + 条件仿射</text>
+        <text x="1242" y="2444" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：z (20,1024)</text>
+        <text x="1242" y="2464" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input"><tspan fill="#DC2626">scale_ffn</tspan> / <tspan fill="#DC2626">shift_ffn</tspan></text>
+        <text x="1242" y="2487" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：RMS→20×1024→仿射</text>
+        <text x="1242" y="2510" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：h_ffn (20,1024)</text>
+        <text x="1242" y="2536" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：按时间调整特征</text>
+      </g>
+      <path d="M1190,2408 H1230" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M1190,2476 H1230" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <text x="180" y="2598" font-size="20" font-weight="700" fill="#111827" text-anchor="start">h_ffn = RMS(z) ⊙ (1 + <tspan fill="#DC2626">scale_ffn</tspan>) + <tspan fill="#DC2626">shift_ffn</tspan></text>
+    </g>
+    <path d="M1050,2256 V2276" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="module-6" data-module="true" data-weight-origin="none">
+      <rect x="550" y="2696" width="1000" height="558" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+      <text x="568" y="2724" font-size="23" font-weight="700" fill="#111827" text-anchor="start">⑥ FFN：独立双分支、GELU、逐元素相乘</text>
+      <text x="568" y="2759" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：h_ffn（⑤）(20,1024)。</text>
+      <text x="568" y="2789" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：内部流程如下</text>
+      <text x="568" y="3206" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：f = GELU(branch1) ⊙ branch2，形状 (20,4096) → ⑦。</text>
+      <text x="568" y="3236" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：非线性特征组合</text>
+      <g id="ffn-feature-input" data-port="true" data-weight-origin="none">
+        <rect x="570" y="2926" width="160" height="80" rx="8" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4" class="card" />
+        <text x="650.0" y="2955.44" font-size="17" font-weight="700" fill="#111827" text-anchor="middle">h_ffn←⑤</text>
+        <text x="650.0" y="2987.44" font-size="17" font-weight="400" fill="#111827" text-anchor="middle">20×1024</text>
+      </g>
+      <g id="ffn-linear-1" data-module="true" data-weight-origin="pi05">
+        <rect x="790" y="2806" width="260" height="160" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4" class="panel" />
+        <text x="808" y="2828" font-size="18" font-weight="700" fill="#111827" text-anchor="start">分支1：branch1=b1</text>
+        <text x="802" y="2856" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：h_ffn (20,1024)</text>
+        <text x="802" y="2879" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：Linear 1024→4096</text>
+        <text x="802" y="2922" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：b1 (20,4096)</text>
+        <text x="802" y="2948" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：扩展隐藏通道</text>
+      </g>
+      <g id="ffn-gelu" data-module="true" data-weight-origin="none">
+        <rect x="1080" y="2806" width="180" height="160" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+        <text x="1098" y="2828" font-size="18" font-weight="700" fill="#111827" text-anchor="start">GELU 激活</text>
+        <text x="1092" y="2856" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：b1←左</text>
+        <text x="1092" y="2876" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">　　(20,4096)</text>
+        <text x="1092" y="2899" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：GELU(b1)</text>
+        <text x="1092" y="2922" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：a1 20×4096</text>
+        <text x="1092" y="2948" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：激活分支特征</text>
+      </g>
+      <g id="ffn-linear-2" data-module="true" data-weight-origin="pi05">
+        <rect x="790" y="2986" width="470" height="160" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4" class="panel" />
+        <text x="808" y="3008" font-size="18" font-weight="700" fill="#111827" text-anchor="start">分支2：branch2=b2</text>
+        <text x="802" y="3036" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：h_ffn (20,1024)</text>
+        <text x="802" y="3059" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：另一套独立 Linear 1024→4096</text>
+        <text x="802" y="3102" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：b2 (20,4096)</text>
+        <text x="802" y="3128" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：扩展隐藏通道</text>
+      </g>
+      <g id="ffn-elementwise-product" data-module="true" data-weight-origin="none">
+        <rect x="1290" y="2876" width="240" height="210" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+        <text x="1308" y="2898" font-size="18" font-weight="700" fill="#111827" text-anchor="start">逐元素相乘</text>
+        <text x="1302" y="2926" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：a1（GELU）；b2</text>
+        <text x="1302" y="2946" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">　　两路均 (20,4096)</text>
+        <text x="1302" y="2969" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：a1 ⊙ b2</text>
+        <text x="1302" y="3042" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：f (20,4096)</text>
+        <text x="1302" y="3068" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：组合两路特征</text>
+      </g>
+      <path d="M730,2966 H760 V2886 H790" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M730,2966 H760 V3066 H790" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M1050,2886 H1080" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M1260,2886 H1275 V2926 H1290" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M1260,3066 H1280 V2956 H1290" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    </g>
+    <path d="M1050,2676 V2696" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="module-7" data-module="true" data-weight-origin="none">
+      <rect x="550" y="3274" width="1000" height="370" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+      <text x="568" y="3302" font-size="23" font-weight="700" fill="#111827" text-anchor="start">⑦ FFN 输出投影</text>
+      <text x="568" y="3337" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：f（⑥）(20,4096)。</text>
+      <text x="568" y="3367" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：内部流程如下</text>
+      <text x="568" y="3596" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：delta (20,1024) → ⑧。</text>
+      <text x="568" y="3626" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：恢复残差宽度</text>
+      <g id="ffn-down-input" data-port="true" data-weight-origin="none">
+        <rect x="570" y="3424" width="220" height="75" rx="8" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4" class="card" />
+        <text x="680.0" y="3451.58" font-size="19" font-weight="700" fill="#111827" text-anchor="middle">f ← ⑥</text>
+        <text x="680.0" y="3483.58" font-size="19" font-weight="400" fill="#111827" text-anchor="middle">(20,4096)</text>
+      </g>
+      <g id="ffn-down-projection" data-module="true" data-weight-origin="pi05">
+        <rect x="820" y="3384" width="390" height="160" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4" class="panel" />
+        <text x="838" y="3406" font-size="18" font-weight="700" fill="#111827" text-anchor="start">输出 Linear</text>
+        <text x="832" y="3434" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：f←左，(20,4096)</text>
+        <text x="832" y="3457" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：4096→1024</text>
+        <text x="832" y="3500" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：delta (20,1024)</text>
+        <text x="832" y="3526" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：恢复残差宽度</text>
+      </g>
+      <g id="ffn-delta-output" data-port="true" data-weight-origin="none">
+        <rect x="1240" y="3424" width="290" height="75" rx="8" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4" class="card" />
+        <text x="1385.0" y="3451.58" font-size="19" font-weight="700" fill="#111827" text-anchor="middle">delta ← 输出Linear</text>
+        <text x="1385.0" y="3483.58" font-size="19" font-weight="400" fill="#111827" text-anchor="middle">(20,1024)</text>
+      </g>
+      <path d="M790,3461.5 H820" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <path d="M1210,3461.5 H1240" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    </g>
+    <path d="M1050,3254 V3274" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="module-8" data-module="true" data-weight-origin="none">
+      <rect x="550" y="3664" width="1000" height="190" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+      <text x="568" y="3692" font-size="23" font-weight="700" fill="#111827" text-anchor="start">⑧ FFN residual：底座必须是④保存的 x1</text>
+      <text x="568" y="3727" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：x1（④）(20,1024)；delta（⑦）(20,1024)；<tspan fill="#DC2626">gate_ffn</tspan>（⑤）(1,1024)。</text>
+      <text x="568" y="3769" font-size="20" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：x_next = x1 + <tspan fill="#DC2626">gate_ffn</tspan> ⊙ delta；gate 广播20token，底座不是 z。</text>
+      <text x="568" y="3806" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：x_next (20,1024) → 下一层 x0。</text>
+      <text x="568" y="3836" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：叠加前馈更新</text>
+    </g>
+    <path d="M1050,3644 V3664" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="gate-ffn-input" data-port="true" data-weight-origin="none">
+      <rect x="180" y="3614" width="310" height="90" rx="8" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.4" class="card" />
+      <text x="335.0" y="3649.44" font-size="17" font-weight="700" fill="#DC2626" text-anchor="middle"><tspan fill="#DC2626">gate_ffn</tspan>：来自⑤</text>
+      <text x="335.0" y="3679.44" font-size="17" font-weight="400" fill="#DC2626" text-anchor="middle">(1,1024)，广播20token</text>
+    </g>
+    <path d="M490,3659 H520 V3744 H550" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="saved-residual-bases">
+      <path d="M1050,270 H70 V1816 H550" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <text x="85" y="930" font-size="20" font-weight="700" fill="#111827" text-anchor="start">保存 x0</text>
+      <text x="85" y="960" font-size="18" font-weight="400" fill="#111827" text-anchor="start">(20,1024)</text>
+      <path d="M1050,1946 H130 V3794 H550" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+      <text x="145" y="3214" font-size="20" font-weight="700" fill="#111827" text-anchor="start">保存原 x1（④）</text>
+      <text x="145" y="3244" font-size="18" font-weight="400" fill="#111827" text-anchor="start">(20,1024)</text>
+      <circle cx="1050" cy="270" r="4" fill="#374151" />
+      <circle cx="1050" cy="1946" r="4" fill="#374151" />
+    </g>
+    <g id="layer-result" data-port="true" data-weight-origin="none">
+      <rect x="550" y="3874" width="1000" height="60" rx="8" fill="#F3F4F6" stroke="#9CA3AF" stroke-width="1.4" class="card" />
+      <text x="1050.0" y="3911.04" font-size="22" font-weight="700" fill="#111827" text-anchor="middle">x_next (20,1024)：下一层的 x0；这一层与记忆支路重复18次</text>
+    </g>
+    <path d="M1050,3854 V3874" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <g id="final-output-head" data-module="true" data-weight-origin="none">
+      <rect x="550" y="3954" width="1000" height="378" rx="8" fill="#fff" stroke="#374151" stroke-width="1.4" class="panel" />
+      <text x="568" y="3982" font-size="23" font-weight="700" fill="#111827" text-anchor="start">18 层之后：层外最终归一化与输出头</text>
+      <text x="568" y="4017" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：第18层 x_next (20,1024) 与 c (1024)。</text>
+      <text x="568" y="4047" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="operation">运算：内部流程如下</text>
+      <text x="568" y="4284" font-size="18" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：速度场 v_t (20,32)；这里只标输出身份。</text>
+      <text x="568" y="4314" font-size="18" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：输出速度场</text>
+      <g id="final-normalization" data-module="true" data-weight-origin="pi05">
+        <rect x="570" y="4064" width="460" height="160" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4" class="panel" />
+        <text x="588" y="4086" font-size="18" font-weight="700" fill="#111827" text-anchor="start">最终 adaRMS</text>
+        <text x="582" y="4114" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：x_next (20,1024)；c (1024)</text>
+        <text x="582" y="4137" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：条件 Linear 1024→3072；RMS 仿射</text>
+        <text x="582" y="4180" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：normalized (20,1024)；返回 gate 不使用</text>
+        <text x="582" y="4206" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：调整末端特征</text>
+      </g>
+      <g id="final-action-projection" data-module="true" data-weight-origin="pi05">
+        <rect x="1070" y="4064" width="460" height="160" rx="8" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.4" class="panel" />
+        <text x="1088" y="4086" font-size="18" font-weight="700" fill="#111827" text-anchor="start">动作输出投影</text>
+        <text x="1082" y="4114" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="input">输入：normalized←左，(20,1024)</text>
+        <text x="1082" y="4137" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="operation">运算：Linear 1024→32</text>
+        <text x="1082" y="4180" font-size="16" font-weight="700" fill="#111827" text-anchor="start" data-field="output">输出：v_t (20,32)</text>
+        <text x="1082" y="4206" font-size="16" font-weight="400" fill="#111827" text-anchor="start" data-field="purpose">用途：输出速度场</text>
+      </g>
+      <path d="M1030,4144 H1070" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    </g>
+    <path d="M1050,3934 V3954" fill="none" stroke="#374151" stroke-width="1.7" marker-end="url(#arrow)" />
+    <text x="1200" y="4386" font-size="22" font-weight="700" fill="#111827" text-anchor="middle">无 memory 时：跳过绿色记忆支路，让 x1 直接进入⑤；原版与改版共用同一条主干。</text>
+  </g>
+</svg>
