@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1730" width="1800" height="1730" role="img" aria-labelledby="context-title context-desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 3030" width="1800" height="3030" role="img" aria-labelledby="context-title context-desc">
   <title id="context-title">context memory 注入机制：split4 输入、prefix 可见性、18 层联合注意力与推理缓存</title>
   <desc id="context-desc">冻结的 Wan 与 stage2 encoder 将每个 33 帧窗编码为 store 中的一个 1024 维向量；无损拆成四个 256 维 motion token。512 个历史帧 token 与 384 个 motion token 分别结合位置特征投影为 2048 维，按时刻重排后组成 896 位 memory，放在当前图像和语言之前成为 prefix。图中给出行 query、列 key 的四段可见矩阵：memory 为 1000，图像为 0110，语言为 1110，action 为 1111。18 层中 prefix 与 action 分别归一化并投影 QKV，使用原有的 8 Q 头、1 KV 头、头维 256 的联合注意力；memory 影响经 action 输出投影和 gated residual 进入。推理预填充一次，缓存每层 prefix K 和 V，各为 18×B×P×1×256；单次 sample_actions 中的去噪步复用缓存，仅新算本步 suffix，旧 action K/V 不累计。参数量与缓存容量为按形状计算的理论值。</desc>
   <defs>
@@ -7,7 +7,7 @@
     </marker>
   </defs>
   <g font-family="'Noto Sans CJK SC','Source Han Sans SC','PingFang SC','Microsoft YaHei','Droid Sans Fallback',sans-serif">
-    <rect x="0" y="0" width="1800" height="1730" rx="0" fill="#fff" stroke="#fff" stroke-width="0" />
+    <rect x="0" y="0" width="1800" height="3030" rx="0" fill="#fff" stroke="#fff" stroke-width="0" />
     <text x="900" y="38" font-size="26" fill="#111827" font-weight="700" text-anchor="middle">context：memory 进入 prefix，沿原有联合 Attention 注入 action expert</text>
     <text x="900" y="67" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">32 帧 × 4×4 ＋ stage2 split4 · S=896 · prefix 宽 2048 / action 宽 1024 · 本图对应正文 §11</text>
     <g id="section-1-frozen-upstream">
@@ -343,6 +343,274 @@
       <text x="953" y="1690" font-size="14" fill="#111827" font-weight="400" text-anchor="start">原有残差中的注入点</text>
       <text x="1752" y="1681" font-size="12" fill="#6B7280" font-weight="400" text-anchor="end">参数量 / cache 容量均按形状推算；锚点见正文 §11</text>
       <text x="1752" y="1700" font-size="12" fill="#6B7280" font-weight="400" text-anchor="end">每层 memory 专属新增 = 0；18 层原有权重独立</text>
+    </g>
+    <g id="section-4-padding-detail" role="group" aria-labelledby="padding-detail-title padding-detail-desc">
+    <title id="padding-detail-title">padding 展开：有效位来源、注意力掩码、有限负数 softmax 与推理缓存</title>
+    <desc id="padding-detail-desc">此追加区域保留上图全部内容，展开其 padding 机制。有效位来自历史帧、motion 窗、当前图像视角、语言与 action suffix，随输入拼接和重排。最终布尔注意力掩码由 query 与 key 有效位、ar 累计块约束、na 禁读边相交得到。七位示例 M、m、I、L、l、A0、A1 的有效位为 1011011，最终布尔矩阵行依次为 1000000、0000000、0011000、1011000、0000000、1011011、1011011。有限大负数使全屏蔽的 padding query 行成为均匀 softmax，而非零输出；联合前向与 prefix-only 预填充的 padding hidden 可不同，但这些位置不能作为有效 query 可见的 key，因此不影响有效 prefix 的缓存独立性。mask 不删除物理 token，也不强制 embedding、hidden、QKV 或 cache 数值为零。</desc>
+    <rect x="30" y="1745" width="1740" height="1270" rx="8" fill="#fff" stroke="#1F2937" stroke-width="1.4" class="panel"/>
+    <text x="48" y="1778" font-size="22" fill="#111827" font-weight="700" text-anchor="start">④ 展开：padding 的 mask 从哪里来、屏蔽什么、屏蔽后是什么</text>
+    <path d="M48,1790 H1752" fill="none" stroke="#E5E7EB" stroke-width="1.2"/>
+    <g id="padding-mask-sources">
+    <rect x="48" y="1802" width="850" height="286" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card"/>
+    <text x="64" y="1830" font-size="17" fill="#111827" font-weight="700" text-anchor="start">A. 各段有效位：True = 有效输入；False = 无效 / 补位</text>
+    <rect x="64" y="1850" width="255" height="30" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="319" y="1850" width="150" height="30" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="469" y="1850" width="413" height="30" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <text x="76" y="1871" font-size="15" fill="#111827" font-weight="700" text-anchor="start">来源 / 字段</text>
+    <text x="331" y="1871" font-size="15" fill="#111827" font-weight="700" text-anchor="start">形状</text>
+    <text x="481" y="1871" font-size="15" fill="#111827" font-weight="700" text-anchor="start">有效位如何展开</text>
+    <rect x="64" y="1880" width="255" height="31" rx="0" fill="#EFF6FF" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="319" y="1880" width="150" height="31" rx="0" fill="#EFF6FF" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="469" y="1880" width="413" height="31" rx="0" fill="#EFF6FF" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <text x="76" y="1901" font-size="15" fill="#111827" font-weight="400" text-anchor="start">static_mask</text>
+    <text x="331" y="1901" font-size="14" fill="#111827" font-weight="400" text-anchor="start">(B,512)</text>
+    <text x="481" y="1901" font-size="14" fill="#111827" font-weight="400" text-anchor="start">历史帧：每帧 16 位一组</text>
+    <rect x="64" y="1911" width="255" height="31" rx="0" fill="#FFFBEB" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="319" y="1911" width="150" height="31" rx="0" fill="#FFFBEB" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="469" y="1911" width="413" height="31" rx="0" fill="#FFFBEB" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <text x="76" y="1932" font-size="15" fill="#111827" font-weight="400" text-anchor="start">motion_mask</text>
+    <text x="331" y="1932" font-size="14" fill="#111827" font-weight="400" text-anchor="start">(B,384)</text>
+    <text x="481" y="1932" font-size="14" fill="#111827" font-weight="400" text-anchor="start">历史窗：每窗 4 位一组；补窗全 False</text>
+    <rect x="64" y="1942" width="255" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="319" y="1942" width="150" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="469" y="1942" width="413" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <text x="76" y="1963" font-size="15" fill="#111827" font-weight="400" text-anchor="start">obs.image_masks[view]</text>
+    <text x="331" y="1963" font-size="14" fill="#111827" font-weight="400" text-anchor="start">(B,) → (B,I_v)</text>
+    <text x="481" y="1963" font-size="14" fill="#111827" font-weight="400" text-anchor="start">每视角有效位重复为 I_v 个图像 token</text>
+    <rect x="64" y="1973" width="255" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="319" y="1973" width="150" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="469" y="1973" width="413" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <text x="76" y="1994" font-size="15" fill="#111827" font-weight="400" text-anchor="start">tokenized_prompt_mask</text>
+    <text x="331" y="1994" font-size="14" fill="#111827" font-weight="400" text-anchor="start">(B,L)</text>
+    <text x="481" y="1994" font-size="14" fill="#111827" font-weight="400" text-anchor="start">语言有效位；文本 padding 为 False</text>
+    <rect x="64" y="2004" width="255" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="319" y="2004" width="150" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <rect x="469" y="2004" width="413" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="table-cell"/>
+    <text x="76" y="2025" font-size="15" fill="#111827" font-weight="400" text-anchor="start">suffix_mask</text>
+    <text x="331" y="2025" font-size="14" fill="#111827" font-weight="400" text-anchor="start">(B,T)</text>
+    <text x="481" y="2025" font-size="14" fill="#111827" font-weight="400" text-anchor="start">本 π0.5 配置 T=20，全部 True</text>
+    <text x="64" y="2048" font-size="15" fill="#111827" font-weight="400" text-anchor="start">当前图像的有效位表示该视角输入是否可用，不是图像背景 / 像素分割。</text>
+    <text x="64" y="2072" font-size="15" fill="#111827" font-weight="400" text-anchor="start">memory 的帧补位与窗补位分别按整帧 16 位、整窗 4 位一起置 False。</text>
+    </g>
+    <g id="padding-mask-assembly">
+    <rect x="922" y="1802" width="830" height="286" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card"/>
+    <text x="938" y="1830" font-size="17" fill="#111827" font-weight="700" text-anchor="start">A. token 与有效位同行：从两路 memory 到完整序列</text>
+    <text x="938" y="1858" font-size="15" fill="#111827" font-weight="400" text-anchor="start">mem_input_mask = concat[static_mask | motion_mask] → (B,896)</text>
+    <text x="938" y="1883" font-size="15" fill="#111827" font-weight="400" text-anchor="start">memory token 与 mem_input_mask 都按同一 mem_order 重排。</text>
+    <text x="938" y="1908" font-size="15" fill="#111827" font-weight="400" text-anchor="start">prefix_mask = concat[memory | image | prompt 的有效位] → (B,P)</text>
+    <text x="938" y="1933" font-size="15" fill="#111827" font-weight="400" text-anchor="start">input_mask = concat[prefix_mask | suffix_mask] → (B,P+T)</text>
+    <path d="M938,1947 H1736" fill="none" stroke="#E5E7EB" stroke-width="1.2"/>
+    <text x="938" y="1972" font-size="15" fill="#111827" font-weight="700" text-anchor="start">v = input_mask：True 有效，False 无效 / 补位。</text>
+    <text x="938" y="1996" font-size="15" fill="#111827" font-weight="400" text-anchor="start">ar_mask 的 True 开启新块；na_mask 的 True 标记图像 query 禁读边。</text>
+    <text x="938" y="2020" font-size="15" fill="#111827" font-weight="400" text-anchor="start">mem_order 只排序；memory 补位在该段尾，后面仍接当前图像和语言。</text>
+    <text x="938" y="2044" font-size="14" fill="#111827" font-weight="400" text-anchor="start">图② mask = static_mask；图③ mask = 重排后的 mem_input_mask。</text>
+    <text x="938" y="2068" font-size="15" fill="#111827" font-weight="400" text-anchor="start">context 不使用 MemoryAttention 的独立 mem_mask。</text>
+    </g>
+    <text x="48" y="2115" font-size="18" fill="#111827" font-weight="700" text-anchor="start">B. 最终 attn_mask = valid_mask &amp; block_mask &amp; ~mask_not_attend；最终 True = 允许注意力</text>
+    <g id="padding-rule-valid">
+    <rect x="48" y="2130" width="540" height="175" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card"/>
+    <text x="64" y="2158" font-size="16" fill="#111827" font-weight="700" text-anchor="start">有效位：query 与 key 都必须有效</text>
+    <text x="64" y="2185" font-size="17" fill="#111827" font-weight="700" text-anchor="start">valid_mask(i,j) = v_i &amp; v_j</text>
+    <text x="64" y="2211" font-size="14" fill="#111827" font-weight="400" text-anchor="start">False query：整行禁读；False key：整列禁读。</text>
+    <text x="64" y="2237" font-size="14" fill="#111827" font-weight="400" text-anchor="start">最终 mask 只控制每对 query / key 是否可见。</text>
+    <text x="64" y="2263" font-size="14" fill="#111827" font-weight="400" text-anchor="start">block_mask 是本图解释名；代码局部也叫 attn_mask。</text>
+    <text x="64" y="2289" font-size="14" fill="#111827" font-weight="400" text-anchor="start">同一个最终 mask 广播给全部 attention 头。</text>
+    </g>
+    <g id="padding-rule-ar">
+    <rect x="618" y="2130" width="540" height="175" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card"/>
+    <text x="634" y="2158" font-size="16" fill="#111827" font-weight="700" text-anchor="start">ar_mask：True = 开始一个新块</text>
+    <text x="634" y="2185" font-size="14" fill="#111827" font-weight="400" text-anchor="start">mem_ar_mask 全 False；I 首位 True；L 全 False</text>
+    <text x="634" y="2211" font-size="14" fill="#111827" font-weight="400" text-anchor="start">合成 prefix_ar_mask；suffix_ar_mask = [1,0,…]</text>
+    <text x="634" y="2237" font-size="14" fill="#111827" font-weight="400" text-anchor="start">二者 concat → ar_mask（函数参数名 mask_ar）</text>
+    <text x="634" y="2263" font-size="15" fill="#111827" font-weight="700" text-anchor="start">累计块号：M = 0，I / L = 1，A = 2</text>
+    <text x="634" y="2289" font-size="14" fill="#111827" font-weight="400" text-anchor="start">block_mask(i,j)：block_j ≤ block_i（key ≤ query）</text>
+    </g>
+    <g id="padding-rule-na">
+    <rect x="1188" y="2130" width="564" height="175" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card"/>
+    <text x="1204" y="2158" font-size="16" fill="#111827" font-weight="700" text-anchor="start">na_mask：True = 图像 query 的禁读标志</text>
+    <text x="1204" y="2185" font-size="14" fill="#111827" font-weight="400" text-anchor="start">mem_na_mask 全 False；I 全 True；L 全 False</text>
+    <text x="1204" y="2211" font-size="14" fill="#111827" font-weight="400" text-anchor="start">合成 prefix_na_mask；suffix_na_mask 全 False</text>
+    <text x="1204" y="2237" font-size="14" fill="#111827" font-weight="400" text-anchor="start">二者 concat → na_mask（函数参数名 mask_na）</text>
+    <text x="1204" y="2263" font-size="14" fill="#111827" font-weight="700" text-anchor="start">mask_not_attend：禁止 I_query 直接读取 M_key</text>
+    <text x="1204" y="2289" font-size="14" fill="#111827" font-weight="400" text-anchor="start">此处 True 不代表 token 无效；跨层仍可 M → L → I。</text>
+    </g>
+    <g id="padding-seven-token-matrix">
+    <rect x="48" y="2325" width="850" height="390" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card"/>
+    <text x="64" y="2353" font-size="17" fill="#111827" font-weight="700" text-anchor="start">C. 最终布尔 attn_mask（不是 softmax 权重）</text>
+    <text x="64" y="2378" font-size="15" fill="#111827" font-weight="700" text-anchor="start">[M,m,I,L,l,A₀,A₁]；v = [1,0,1,1,0,1,1]（A 只示意两位）</text>
+    <rect x="64" y="2392" width="120" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="124.0" y="2414" font-size="14" fill="#111827" font-weight="700" text-anchor="middle">query ＼ key</text>
+    <rect x="184" y="2392" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="233.0" y="2414" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">M</text>
+    <rect x="282" y="2392" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="331.0" y="2414" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">m（补）</text>
+    <rect x="380" y="2392" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="429.0" y="2414" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">I</text>
+    <rect x="478" y="2392" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="527.0" y="2414" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">L</text>
+    <rect x="576" y="2392" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="625.0" y="2414" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">l（补）</text>
+    <rect x="674" y="2392" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="723.0" y="2414" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">A₀</text>
+    <rect x="772" y="2392" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="821.0" y="2414" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">A₁</text>
+    <rect x="64" y="2423" width="120" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="124.0" y="2445" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">M</text>
+    <rect x="184" y="2423" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="233.0" y="2445" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="282" y="2423" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="331.0" y="2445" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="380" y="2423" width="98" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="429.0" y="2445" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="478" y="2423" width="98" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="527.0" y="2445" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="576" y="2423" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="625.0" y="2445" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="674" y="2423" width="98" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="723.0" y="2445" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="772" y="2423" width="98" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="821.0" y="2445" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="64" y="2454" width="120" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="124.0" y="2476" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">m（补）</text>
+    <rect x="184" y="2454" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="233.0" y="2476" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="282" y="2454" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="331.0" y="2476" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="380" y="2454" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="429.0" y="2476" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="478" y="2454" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="527.0" y="2476" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="576" y="2454" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="625.0" y="2476" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="674" y="2454" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="723.0" y="2476" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="772" y="2454" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="821.0" y="2476" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="64" y="2485" width="120" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="124.0" y="2507" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">I</text>
+    <rect x="184" y="2485" width="98" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="233.0" y="2507" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="282" y="2485" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="331.0" y="2507" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="380" y="2485" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="429.0" y="2507" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="478" y="2485" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="527.0" y="2507" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="576" y="2485" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="625.0" y="2507" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="674" y="2485" width="98" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="723.0" y="2507" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="772" y="2485" width="98" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="821.0" y="2507" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="64" y="2516" width="120" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="124.0" y="2538" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">L</text>
+    <rect x="184" y="2516" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="233.0" y="2538" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="282" y="2516" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="331.0" y="2538" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="380" y="2516" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="429.0" y="2538" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="478" y="2516" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="527.0" y="2538" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="576" y="2516" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="625.0" y="2538" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="674" y="2516" width="98" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="723.0" y="2538" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="772" y="2516" width="98" height="31" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="821.0" y="2538" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="64" y="2547" width="120" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="124.0" y="2569" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">l（补）</text>
+    <rect x="184" y="2547" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="233.0" y="2569" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="282" y="2547" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="331.0" y="2569" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="380" y="2547" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="429.0" y="2569" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="478" y="2547" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="527.0" y="2569" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="576" y="2547" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="625.0" y="2569" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="674" y="2547" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="723.0" y="2569" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="772" y="2547" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="821.0" y="2569" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="64" y="2578" width="120" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="124.0" y="2600" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">A₀</text>
+    <rect x="184" y="2578" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="233.0" y="2600" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="282" y="2578" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="331.0" y="2600" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="380" y="2578" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="429.0" y="2600" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="478" y="2578" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="527.0" y="2600" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="576" y="2578" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="625.0" y="2600" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="674" y="2578" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="723.0" y="2600" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="772" y="2578" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="821.0" y="2600" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="64" y="2609" width="120" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="124.0" y="2631" font-size="15" fill="#111827" font-weight="700" text-anchor="middle">A₁</text>
+    <rect x="184" y="2609" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="233.0" y="2631" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="282" y="2609" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="331.0" y="2631" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="380" y="2609" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="429.0" y="2631" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="478" y="2609" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="527.0" y="2631" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="576" y="2609" width="98" height="31" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="625.0" y="2631" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+    <rect x="674" y="2609" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="723.0" y="2631" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <rect x="772" y="2609" width="98" height="31" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell"/>
+    <text x="821.0" y="2631" font-size="16" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+    <text x="64" y="2667" font-size="15" fill="#111827" font-weight="400" text-anchor="start">ar = 0010010；na = 0010000；累计块号 = 0011122</text>
+    <text x="64" y="2691" font-size="15" fill="#111827" font-weight="400" text-anchor="start">灰色行 / 列无效：m 是 memory 补位，l 是语言补位；1 可见，0 不可见。</text>
+    </g>
+    <g id="padding-softmax-behavior">
+    <rect x="922" y="2325" width="830" height="390" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card"/>
+    <text x="938" y="2353" font-size="16" fill="#111827" font-weight="700" text-anchor="start">D. 屏蔽发生在 logits：全 False 行不等于全零输出</text>
+    <text x="938" y="2378" font-size="16" fill="#111827" font-weight="700" text-anchor="start">有效 action query：假设原 logits 全为 0</text>
+    <rect x="938" y="2392" width="798" height="88" rx="5" fill="#ECFDF5" stroke="#10B981" stroke-width="1.1" class="note"/>
+    <text x="952" y="2417" font-size="15" fill="#111827" font-weight="400" text-anchor="start">where(mask, logits, −C) → [0, −C, 0, 0, −C, 0, 0]</text>
+    <text x="952" y="2442" font-size="15" fill="#111827" font-weight="700" text-anchor="start">softmax → [1/5, 0, 1/5, 1/5, 0, 1/5, 1/5]（算术示意）</text>
+    <text x="952" y="2467" font-size="15" fill="#111827" font-weight="400" text-anchor="start">有效 action 只给 5 个有效 key 概率；padding key 不获概率质量。</text>
+    <text x="938" y="2506" font-size="16" fill="#111827" font-weight="700" text-anchor="start">padding query（m 或 l）：整行 mask 为 False</text>
+    <rect x="938" y="2520" width="798" height="65" rx="5" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.1" class="note"/>
+    <text x="952" y="2545" font-size="15" fill="#111827" font-weight="400" text-anchor="start">where(...) → [−C, −C, −C, −C, −C, −C, −C]</text>
+    <text x="952" y="2571" font-size="15" fill="#111827" font-weight="700" text-anchor="start">联合 7 位 → 均匀 ≈1/7；仅预填 prefix 的 5 位 → 均匀 ≈1/5</text>
+    <text x="938" y="2611" font-size="15" fill="#111827" font-weight="400" text-anchor="start">C = 2.3819763e38；分数为示意，概率随后转输入 dtype。</text>
+    <text x="938" y="2636" font-size="15" fill="#111827" font-weight="400" text-anchor="start">联合前向该行可混入 action，padding hidden 因而可与预填不同。</text>
+    <text x="938" y="2661" font-size="15" fill="#111827" font-weight="700" text-anchor="start">可缓存、不依赖 action 只指有效 prefix；padding 从不作为</text>
+    <text x="938" y="2686" font-size="15" fill="#111827" font-weight="700" text-anchor="start">有效 query 可见的 key，所以这些差异不回流到有效 token。</text>
+    </g>
+    <g id="padding-inference-mask-shapes">
+    <rect x="48" y="2735" width="850" height="255" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card"/>
+    <text x="64" y="2763" font-size="16" fill="#111827" font-weight="700" text-anchor="start">E. 推理：两处 prefix_attn_mask 名字相同，含义不同</text>
+    <text x="64" y="2788" font-size="15" fill="#111827" font-weight="700" text-anchor="start">预填充：prefix_attn_mask (B,P,P)，三条规则全部使用。</text>
+    <text x="64" y="2814" font-size="15" fill="#111827" font-weight="400" text-anchor="start">本例取左上 5×5；prefix padding query 均匀读取这 5 个物理位。</text>
+    <path d="M64,2826 H882" fill="none" stroke="#E5E7EB" stroke-width="1.2"/>
+    <text x="64" y="2852" font-size="15" fill="#111827" font-weight="400" text-anchor="start">去噪 step：repeat(prefix_mask) → prefix_attn_mask (B,T,P)</text>
+    <text x="64" y="2878" font-size="15" fill="#111827" font-weight="400" text-anchor="start">本例两行均为 10110，只屏蔽 prefix key 列；action query 全有效。</text>
+    <text x="64" y="2904" font-size="15" fill="#111827" font-weight="400" text-anchor="start">suffix_attn_mask (B,T,T)：本 π0.5 全可见；例中 2×2 全 1。</text>
+    <text x="64" y="2930" font-size="14" fill="#111827" font-weight="400" text-anchor="start">full_attn_mask = [prefix_attn_mask | suffix_attn_mask] → (B,T,P+T)</text>
+    <text x="64" y="2956" font-size="15" fill="#111827" font-weight="700" text-anchor="start">沿 key 轴横拼；本例 full_attn_mask 两行均为 1011011。</text>
+    </g>
+    <g id="padding-physical-slots-rope">
+    <rect x="922" y="2735" width="830" height="255" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card"/>
+    <text x="938" y="2763" font-size="16" fill="#111827" font-weight="700" text-anchor="start">F. 保留物理槽位：mask 不把 token / hidden / cache 置零</text>
+    <text x="938" y="2788" font-size="15" fill="#111827" font-weight="400" text-anchor="start">mask 不删 token，也不把 embedding / hidden / QKV / cache 乘零。</text>
+    <text x="938" y="2814" font-size="15" fill="#111827" font-weight="400" text-anchor="start">memory 原始补位 emb / pos 为 0；经过 bias 等操作后可非零。</text>
+    <text x="938" y="2840" font-size="15" fill="#111827" font-weight="400" text-anchor="start">无效当前视角、语言 padding 的 embedding 本来也不保证为 0。</text>
+    <text x="938" y="2866" font-size="15" fill="#111827" font-weight="400" text-anchor="start">cache 保留 P 个物理槽；本实现仍按固定物理长度计算。</text>
+    <text x="938" y="2892" font-size="16" fill="#111827" font-weight="700" text-anchor="start">RoPE 序号 = cumsum(v) − 1 = [0,0,1,2,2,3,4]</text>
+    <text x="938" y="2918" font-size="15" fill="#111827" font-weight="400" text-anchor="start">本例 prefix 物理 5 位、有效 3 位；A₀ 的序号从 3 开始。</text>
+    <text x="938" y="2944" font-size="15" fill="#111827" font-weight="400" text-anchor="start">padding 不加有效计数；四个有效 motion 槽各占一个序号。</text>
+    <text x="938" y="2970" font-size="15" fill="#111827" font-weight="700" text-anchor="start">屏蔽保证补位不影响有效 token，不保证补位向量为 0。</text>
+    </g>
+    <text x="48" y="3008" font-size="14" fill="#6B7280" font-weight="400" text-anchor="start">锚点：FrameSampDataset._pad / _pad_motion · HistoryPi0.embed_memory / embed_prefix / embed_suffix / make_attn_mask / sample_actions · Attention.__call__</text>
     </g>
   </g>
 </svg>
