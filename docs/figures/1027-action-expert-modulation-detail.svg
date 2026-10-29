@@ -21,7 +21,7 @@
 <text x="228" y="351" font-size="20" font-weight="700" fill="#111827" text-anchor="start">① 的时间系数（独立参数）</text>
 <text x="230" y="382" font-size="18" font-weight="400" fill="#111827" text-anchor="start">c (1024)：既有 time MLP 的输出</text>
 <text x="230" y="411" font-size="19" font-weight="700" fill="#111827" text-anchor="start">本 norm：Linear 1024→3072</text>
-<text x="230" y="440" font-size="16" font-weight="700" fill="#111827" text-anchor="start">scale_attn / shift_attn / gate_attn</text>
+<text x="230" y="440" font-size="16" font-weight="700" fill="#111827" text-anchor="start"><tspan fill="#DC2626">scale_attn</tspan> / <tspan fill="#DC2626">shift_attn</tspan> / <tspan fill="#DC2626">gate_attn</tspan></text>
 <text x="230" y="468" font-size="17" font-weight="400" fill="#111827" text-anchor="start">拆分各 1024 维 → 插入 token 轴</text>
 <text x="230" y="496" font-size="17" font-weight="400" fill="#111827" text-anchor="start">计算 / 返回：(1,1024)，广播 20 token</text>
 </g>
@@ -29,8 +29,8 @@
 <rect x="700" y="320" width="850" height="210" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
 <text x="718" y="351" font-size="24" font-weight="700" fill="#111827" text-anchor="start">① pre_attention_norm_1：归一化与时间条件调整</text>
 <text x="720" y="383" font-size="19" font-weight="400" fill="#111827" text-anchor="start">输入：层初 x0 (20,1024)；c (1024) 来自左侧。</text>
-<text x="720" y="426" font-size="21" font-weight="700" fill="#111827" text-anchor="start">h_attn = RMS(x0) ⊙ (1 + scale_attn) + shift_attn</text>
-<text x="720" y="469" font-size="20" font-weight="700" fill="#111827" text-anchor="start">输出：h_attn (20,1024) → ②；gate_attn 留给④。</text>
+<text x="720" y="426" font-size="21" font-weight="700" fill="#111827" text-anchor="start">h_attn = RMS(x0) ⊙ (1 + <tspan fill="#DC2626">scale_attn</tspan>) + <tspan fill="#DC2626">shift_attn</tspan></text>
+<text x="720" y="469" font-size="20" font-weight="700" fill="#111827" text-anchor="start">输出：h_attn (20,1024) → ②；<tspan fill="#DC2626">gate_attn</tspan> 留给④。</text>
 <text x="720" y="509" font-size="18" font-weight="400" fill="#111827" text-anchor="start">用途：调整注意力输入，并保留独立的残差系数。</text>
 </g>
 <path d="M620,425 H700" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
@@ -100,14 +100,14 @@
 <path d="M1125,790 V830" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
 <g id="gate-attn-source">
 <rect x="210" y="1155" width="410" height="70" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="415.0" y="1183.26" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">gate_attn ← ① 的时间系数</text>
+<text x="415.0" y="1183.26" font-size="18" font-weight="700" fill="#111827" text-anchor="middle"><tspan fill="#DC2626">gate_attn</tspan> ← ① 的时间系数</text>
 <text x="415.0" y="1208.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">(1,1024)，广播到 20 token</text>
 </g>
 <g id="original-step-4">
 <rect x="700" y="1170" width="850" height="170" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
 <text x="718" y="1201" font-size="24" font-weight="700" fill="#111827" text-anchor="start">④ attention residual：保留层初 x0，再加更新</text>
-<text x="720" y="1235" font-size="17" font-weight="400" fill="#111827" text-anchor="start">输入：x0（层初）与 attn_out（③）各(20,1024)；gate_attn（①）(1,1024)。</text>
-<text x="720" y="1271" font-size="24" font-weight="700" fill="#111827" text-anchor="start">x1 = x0 + gate_attn ⊙ attn_out</text>
+<text x="720" y="1235" font-size="17" font-weight="400" fill="#111827" text-anchor="start">输入：x0（层初）与 attn_out（③）各(20,1024)；<tspan fill="#DC2626">gate_attn</tspan>（①）(1,1024)。</text>
+<text x="720" y="1271" font-size="24" font-weight="700" fill="#111827" text-anchor="start">x1 = x0 + <tspan fill="#DC2626">gate_attn</tspan> ⊙ attn_out</text>
 <text x="720" y="1312" font-size="20" font-weight="700" fill="#111827" text-anchor="start">输出 x1 (20,1024)：保存给⑧，同时送往 M1 / M3。</text>
 </g>
 <path d="M620,1190 H660 V1225 H700" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
@@ -126,7 +126,7 @@
 <text x="1680" y="1200" font-size="18" font-weight="400" fill="#111827" text-anchor="start">输入：x1（④）20×1024；M 896×1024；mask 896。</text>
 <g id="memory-shared-normalization">
 <rect x="1680" y="1225" width="650" height="90" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="2005" y="1251" font-size="19" font-weight="700" fill="#111827" text-anchor="middle">同一普通 MemoryRMSNorm：共享 scale (1024)</text>
+<text x="2005" y="1251" font-size="19" font-weight="700" fill="#111827" text-anchor="middle">同一普通 MemoryRMSNorm：共享 <tspan fill="#DC2626">scale</tspan> (1024)</text>
 <text x="1840" y="1289" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">x1 → r_x (20,1024)</text>
 <text x="2165" y="1289" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">M → r_M (896,1024)</text>
 </g>
@@ -172,23 +172,23 @@
 <path d="M2005,1839 V1885" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
 <g id="memory-scale-shift-output">
 <rect x="1680" y="1885" width="650" height="80" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
-<text x="2005.0" y="1914" font-size="21" font-weight="700" fill="#111827" text-anchor="middle">scale_mem (20,1024)</text>
-<text x="2005.0" y="1947" font-size="21" font-weight="400" fill="#111827" text-anchor="middle">shift_mem (20,1024)</text>
+<text x="2005.0" y="1914" font-size="21" font-weight="700" fill="#111827" text-anchor="middle"><tspan fill="#DC2626">scale_mem</tspan> (20,1024)</text>
+<text x="2005.0" y="1947" font-size="21" font-weight="400" fill="#111827" text-anchor="middle"><tspan fill="#DC2626">shift_mem</tspan> (20,1024)</text>
 </g>
-<text x="1680" y="1993" font-size="18" font-weight="700" fill="#111827" text-anchor="start">用途：生成逐 token 调制系数；没有 memory gate。</text>
+<text x="1680" y="1993" font-size="18" font-weight="700" fill="#111827" text-anchor="start">用途：生成逐 token 调制系数；没有 memory <tspan fill="#DC2626">gate</tspan>。</text>
 </g>
 <path d="M2005,1640 V1680" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
 <g id="memory-step-m3">
 <rect x="700" y="1750" width="850" height="230" rx="8" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" class="card"/>
 <text x="718" y="1781" font-size="24" font-weight="700" fill="#111827" text-anchor="start">新增 M3：重新处理原 x1，改变 FFN 输入</text>
-<text x="720" y="1810" font-size="18" font-weight="400" fill="#111827" text-anchor="start">输入 x1（④）(20,1024)；scale_mem / shift_mem（M2）各 (20,1024)。</text>
-<text x="720" y="1861" font-size="22" font-weight="700" fill="#111827" text-anchor="start">z = RMS(x1) ⊙ (1 + scale_mem) + shift_mem</text>
+<text x="720" y="1810" font-size="18" font-weight="400" fill="#111827" text-anchor="start">输入 x1（④）(20,1024)；<tspan fill="#DC2626">scale_mem</tspan> / <tspan fill="#DC2626">shift_mem</tspan>（M2）各 (20,1024)。</text>
+<text x="720" y="1861" font-size="22" font-weight="700" fill="#111827" text-anchor="start">z = RMS(x1) ⊙ (1 + <tspan fill="#DC2626">scale_mem</tspan>) + <tspan fill="#DC2626">shift_mem</tspan></text>
 <text x="720" y="1905" font-size="20" font-weight="700" fill="#111827" text-anchor="start">输出 z (20,1024) → 原⑤；不用 M1 中的 r_x 替代 x1。</text>
 <text x="720" y="1940" font-size="18" font-weight="400" fill="#111827" text-anchor="start">M2 + M3 合为 mem_rms_norm_ffn(x1,u)。</text>
 <text x="720" y="1967" font-size="18" font-weight="400" fill="#111827" text-anchor="start">它与 M1 的普通共享 norm 是不同实例；用途是调整 FFN 输入。</text>
 </g>
 <path d="M1680,1900 H1550" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
-<text x="1615" y="1877" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">s / b</text>
+<text x="1615" y="1877" font-size="18" font-weight="700" fill="#111827" text-anchor="middle"><tspan fill="#DC2626">s / b</tspan></text>
 <path d="M1125,1340 V1750" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
 <text x="1170" y="1516" font-size="21" font-weight="700" fill="#111827" text-anchor="start">x1 (20,1024)</text>
 <text x="1170" y="1550" font-size="19" font-weight="400" fill="#6B7280" text-anchor="start">继续保留原特征</text>
@@ -197,7 +197,7 @@
 <text x="228" y="2051" font-size="20" font-weight="700" fill="#111827" text-anchor="start">⑤ 的时间系数（独立参数）</text>
 <text x="230" y="2082" font-size="18" font-weight="400" fill="#111827" text-anchor="start">c (1024)：既有 time MLP 的输出</text>
 <text x="230" y="2111" font-size="19" font-weight="700" fill="#111827" text-anchor="start">本 norm：Linear 1024→3072</text>
-<text x="230" y="2140" font-size="16" font-weight="700" fill="#111827" text-anchor="start">scale_ffn / shift_ffn / gate_ffn</text>
+<text x="230" y="2140" font-size="16" font-weight="700" fill="#111827" text-anchor="start"><tspan fill="#DC2626">scale_ffn</tspan> / <tspan fill="#DC2626">shift_ffn</tspan> / <tspan fill="#DC2626">gate_ffn</tspan></text>
 <text x="230" y="2168" font-size="17" font-weight="400" fill="#111827" text-anchor="start">拆分各 1024 维 → 插入 token 轴</text>
 <text x="230" y="2196" font-size="17" font-weight="400" fill="#111827" text-anchor="start">计算 / 返回：(1,1024)，广播 20 token</text>
 </g>
@@ -205,8 +205,8 @@
 <rect x="700" y="2020" width="850" height="220" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
 <text x="718" y="2051" font-size="24" font-weight="700" fill="#111827" text-anchor="start">⑤ 原 pre_ffw_norm_1 保留：输入改为 z 与 c</text>
 <text x="720" y="2079" font-size="19" font-weight="400" fill="#111827" text-anchor="start">带 memory：z（M3）(20,1024)；原版：x1（④）(20,1024)。</text>
-<text x="720" y="2124" font-size="22" font-weight="700" fill="#111827" text-anchor="start">h_ffn = RMS(z) ⊙ (1 + scale_ffn) + shift_ffn</text>
-<text x="720" y="2169" font-size="20" font-weight="700" fill="#111827" text-anchor="start">输出 h_ffn (20,1024) → ⑥；gate_ffn 留给⑧。</text>
+<text x="720" y="2124" font-size="22" font-weight="700" fill="#111827" text-anchor="start">h_ffn = RMS(z) ⊙ (1 + <tspan fill="#DC2626">scale_ffn</tspan>) + <tspan fill="#DC2626">shift_ffn</tspan></text>
+<text x="720" y="2169" font-size="20" font-weight="700" fill="#111827" text-anchor="start">输出 h_ffn (20,1024) → ⑥；<tspan fill="#DC2626">gate_ffn</tspan> 留给⑧。</text>
 <text x="720" y="2215" font-size="18" font-weight="400" fill="#111827" text-anchor="start">用途：准备 FFN 输入；原版将公式中的 z 换成 x1。</text>
 </g>
 <path d="M620,2125 H700" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
@@ -273,14 +273,14 @@
 <path d="M1125,2580 V2620" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
 <g id="gate-ffn-source">
 <rect x="210" y="2780" width="410" height="80" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
-<text x="415.0" y="2813.26" font-size="18" font-weight="700" fill="#111827" text-anchor="middle">gate_ffn ← ⑤ 的时间系数</text>
+<text x="415.0" y="2813.26" font-size="18" font-weight="700" fill="#111827" text-anchor="middle"><tspan fill="#DC2626">gate_ffn</tspan> ← ⑤ 的时间系数</text>
 <text x="415.0" y="2838.26" font-size="18" font-weight="400" fill="#111827" text-anchor="middle">(1,1024)，广播到 20 token</text>
 </g>
 <g id="original-step-8">
 <rect x="700" y="2800" width="850" height="160" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
 <text x="718" y="2831" font-size="24" font-weight="700" fill="#111827" text-anchor="start">⑧ FFN residual：底座始终是④保存的 x1</text>
-<text x="720" y="2857" font-size="17" font-weight="400" fill="#111827" text-anchor="start">输入：x1（④保存）与 delta（⑦）各(20,1024)；gate_ffn（⑤）(1,1024)。</text>
-<text x="720" y="2898" font-size="24" font-weight="700" fill="#111827" text-anchor="start">x_next = x1 + gate_ffn ⊙ delta</text>
+<text x="720" y="2857" font-size="17" font-weight="400" fill="#111827" text-anchor="start">输入：x1（④保存）与 delta（⑦）各(20,1024)；<tspan fill="#DC2626">gate_ffn</tspan>（⑤）(1,1024)。</text>
+<text x="720" y="2898" font-size="24" font-weight="700" fill="#111827" text-anchor="start">x_next = x1 + <tspan fill="#DC2626">gate_ffn</tspan> ⊙ delta</text>
 <text x="720" y="2942" font-size="19" font-weight="700" fill="#111827" text-anchor="start">输出 (20,1024) → 下一层 x0；用途：保留原特征并叠加 FFN 更新。</text>
 </g>
 <path d="M620,2820 H660 V2865 H700" fill="none" stroke="#374151" stroke-width="1.8" marker-end="url(#arrow)"/>
@@ -308,7 +308,7 @@
 <g id="final-normalization">
 <rect x="720" y="3240" width="390" height="60" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
 <text x="915.0" y="3262.94" font-size="17" font-weight="700" fill="#111827" text-anchor="middle">final adaRMS → (20,1024)</text>
-<text x="915.0" y="3287.94" font-size="17" font-weight="400" fill="#111827" text-anchor="middle">返回的 gate 不使用</text>
+<text x="915.0" y="3287.94" font-size="17" font-weight="400" fill="#111827" text-anchor="middle">返回的 <tspan fill="#DC2626">gate</tspan> 不使用</text>
 </g>
 <g id="final-action-projection">
 <rect x="1140" y="3240" width="390" height="60" rx="8" fill="#fff" stroke="#374151" stroke-width="1.5" class="card"/>
