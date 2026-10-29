@@ -10,7 +10,7 @@
 
 实施中用户又要求「能并行的尽可能并行 8个gpu你可以用」，并授权「1000步测速后如果占用率高于50% 并且没有其他的问题 可以直接启动训练」。本轮按800步稳态窗口八卡总体平均GPU利用率严格大于50%、全部正确性与容量门通过、SPEED_REPORT=READY且无未解决问题判断；满足后绑定实际报告/runner/HEAD与已定run_name，重跑V10并直接起跑，不重复询问。条件未满足则停在起跑前报告。
 
-本轮遵循[0920计划](../../../0920-32frame-8x8-modul-2048-plan.md)。生产提交commitV11.0只含三个Python文件、新YAML和直接守卫用例；其余工具单独提交，便于数值回归失败时只撤销生产改动。AGENTS.md、全局训练配置、采样/归一化/collate数值实现、MemoryAttention、优化器及checkpoint实现均未改。
+本轮遵循[0920计划](../../root-archive/0920-32frame-8x8-modul-2048-plan.md)。生产提交commitV11.0只含三个Python文件、新YAML和直接守卫用例；其余工具单独提交，便于数值回归失败时只撤销生产改动。AGENTS.md、全局训练配置、采样/归一化/collate数值实现、MemoryAttention、优化器及checkpoint实现均未改。
 
 ## 版本与环境
 

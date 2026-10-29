@@ -1,6 +1,6 @@
 # 旧 YAML 与旧表完整取证
 
-环境 B：AWS 本地 NVMe RAID（/dev/md0，XFS），8 × A100-SXM4-80GB。用户原话「开始实施 有问题尽早问用户」。依据 [0916 计划](../../../0916-motion-modul-8x8-plan.md) 步骤 2a，只采集生产改动前证据。
+环境 B：AWS 本地 NVMe RAID（/dev/md0，XFS），8 × A100-SXM4-80GB。用户原话「开始实施 有问题尽早问用户」。依据 [0916 计划](../../root-archive/0916-motion-modul-8x8-plan.md) 步骤 2a，只采集生产改动前证据。
 
 BASE 为包含本档案与步骤 1b 修补的 clean HEAD，由 runner 在启动前断言，并写入 `v1-store/bench/mv2/<阶段>-launch.json`；启动版本不是较早的计划提交。运行期间主副本不改码、不改依赖。所有 Python 命令使用现有 uv 环境，`UV_NO_SYNC=1`、`UV_CACHE_DIR=v1-store/cache/uv`，其余缓存经 `scripts/training/paths.sh` 收敛到 v1-store；额外设置 CUDA / WandB / XDG data 缓存。使用 detached tmux，管道启用 pipefail，日志 tee 并记录 EXIT_CODE。
 

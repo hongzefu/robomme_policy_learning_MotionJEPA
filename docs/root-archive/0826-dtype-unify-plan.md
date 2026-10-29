@@ -1,6 +1,6 @@
 # dtype 统一修复计划（framesample+context 双 dtype 路径消除）
 
-> **人类审阅版报告**：本文件第一部分与全部实测结论已整理为 [`docs/v1-phase2-dtype-unify-report.md`](docs/archive/v1-phase2-dtype-unify-report.md)（第二阶段报告）。只想看做了什么、结论是什么，读那份；本文件保留实现级细节（第二部分 T1–T7）。
+> **人类审阅版报告**：本文件第一部分与全部实测结论已整理为 [`docs/v1-phase2-dtype-unify-report.md`](../archive/v1-phase2-dtype-unify-report.md)（第二阶段报告）。只想看做了什么、结论是什么，读那份；本文件保留实现级细节（第二部分 T1–T7）。
 
 > **实施状态（2026-08-27）：P3–P7 全部执行完毕，两块正确性与性能对比均已产出。** 工具 commit **V2.4a `f2e7348`** + 三行修复 **V2.4b `a0f76f8`**；第一块 `COMPARE_DTYPE=PASS`（2,600 样本 / 200 batch / 0 失配）、单步定点梯度 `COMPARE_GRAD=PASS`（3 档 × 32 叶逐位相同）、第二块 G1 vs G0b 千步 bitwise 全过（`scalars_hex.tsv` sha256 与 G0b r1/r2 逐字节相同）、P7 `v1-g1-speed` vs `v1-g0-speed-r2` 步时均值 **−7.21%** / util 均值 **+5.64pp**。留档见 `docs/training-doc/v1-dtype-p{3,4,5}-*`、`v1-dtype-ab-post-r1`、`v1-g1-speed`；登记簿以 [`v1-gradient-baseline.md`](v1-gradient-baseline.md) T8 为权威。
 >
@@ -23,7 +23,7 @@
 
 ## 一、改动内容（唯一一处，三行）
 
-[`src/mme_vla_suite/shared/data_utils.py`](src/mme_vla_suite/shared/data_utils.py) 的 `right_padding_token_emb`：三个 `np.zeros`（img / pos / state 的 padding 段）各自加 `dtype=对应输入.dtype`。mask 的 padding 已显式 `dtype=np.bool_`，不动；满长分支（纯切片）不动。
+[`src/mme_vla_suite/shared/data_utils.py`](../../src/mme_vla_suite/shared/data_utils.py) 的 `right_padding_token_emb`：三个 `np.zeros`（img / pos / state 的 padding 段）各自加 `dtype=对应输入.dtype`。mask 的 padding 已显式 `dtype=np.bool_`，不动；满长分支（纯切片）不动。
 
 - **红线例外授权记录**：该文件属 IO 重构计划红线 R2 的「`shared/**` 不动」范围；用户已于 2026-08-26 授权**精确到函数**的例外——仅限该函数的三个 `np.zeros` 加 dtype 参数，其余 `shared/**` 仍不动。
 - **实际影响面与验收范围分开声明（2026-08-26 审计修正）**：

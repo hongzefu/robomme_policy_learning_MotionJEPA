@@ -11,7 +11,7 @@
 
 ### 1. 结论
 
-新版数据 `HongzeFu/robomme-4task-h5-20260912-v2`（原 dataset repo 的 revision `604f16da36d6b6d175884df8fb687dc08e0a36eb`；**2026-09-14 起该 dataset repo 已删除，数据搬到同名 bucket `hf://buckets/HongzeFu/robomme-4task-h5-20260912-v2`，内容逐位不变、bucket 无版本概念故不再有 revision 可钉**，见 [`docs/dataset-build-doc/hf-export-h5v2-rehost-20260914/`](docs/dataset-build-doc/hf-export-h5v2-rehost-20260914/result.md)）的本地副本已经完整落在 `/scratch/hongze/robomme-4task-h5-20260912-v2/`：`snapshot/` 是 HF 原件（14 个 tar.xz，90.5 GB / 84.3 GiB），`extracted/` 是已解开的 1600 条 primary h5（793.8 GB / 739.3 GiB），`control/COMPLETE.json` 记 `status=PASS`。注意 **`control/` 与 `snapshot/` 平级**，不在 `snapshot/` 内部。
+新版数据 `HongzeFu/robomme-4task-h5-20260912-v2`（原 dataset repo 的 revision `604f16da36d6b6d175884df8fb687dc08e0a36eb`；**2026-09-14 起该 dataset repo 已删除，数据搬到同名 bucket `hf://buckets/HongzeFu/robomme-4task-h5-20260912-v2`，内容逐位不变、bucket 无版本概念故不再有 revision 可钉**，见 [`docs/dataset-build-doc/hf-export-h5v2-rehost-20260914/`](../dataset-build-doc/hf-export-h5v2-rehost-20260914/result.md)）的本地副本已经完整落在 `/scratch/hongze/robomme-4task-h5-20260912-v2/`：`snapshot/` 是 HF 原件（14 个 tar.xz，90.5 GB / 84.3 GiB），`extracted/` 是已解开的 1600 条 primary h5（793.8 GB / 739.3 GiB），`control/COMPLETE.json` 记 `status=PASS`。注意 **`control/` 与 `snapshot/` 平级**，不在 `snapshot/` 内部。
 
 它与旧版只有**文件形状**不同：旧版每任务一个大 h5、内含 `episode_0..99`；新版每「任务×难度」一个目录、每个 h5 只含**一个顶层组**。
 

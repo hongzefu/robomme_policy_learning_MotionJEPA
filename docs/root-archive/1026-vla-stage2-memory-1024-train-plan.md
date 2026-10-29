@@ -84,7 +84,7 @@ exec 段 len=100，min_real=33 → 合法起点 < 68：stride32 = 0 32 64，三�
 
 **2.6 1300 步上限**：`examples/robomme/eval.py` 的执行步数上限为1300；最坏 demo（VideoPlaceOrder 1247帧）39窗、exec 40窗，合计 **79（预算96，余量17）**。manifest 与恢复 metadata 只读统计：新库65,419窗、其中749个 demo 补帧窗，训练最大可见窗数62（PickXtimes ep196）。PatternLock ep0／ep11／ep12 的exec各32帧、ep17为24帧、ep22为25帧，均不足33帧，合法零窗；不存在应有非零窗却缺失的段。G5按manifest推导的非零段键集合精确核对，G6复算窗口预算。
 
-**2.7 motion 不满 96 时补位怎么参与计算**：k 个真实窗之后的位零填充、mask 为 False、时刻记哨兵（`framesamp_dataset.py`，在线 `framesamp_memory.py` 同式）；96 位全部过两层 Linear（补位也算），再按时刻与帧路一起排序、补位落尾；action expert 的 Q 对 608 个 memory token 做注意力，`mask==False` 处 logit 置 −2.38e38，softmax 权重为 0、也不进分母（`history_gemma.py`）。结论：补位零贡献；序列长恒为 608、算力不随 k 变；k 小只是注意力在更少的 key 上分配。图：![](docs/figures/1026-motion-pad-modulation.svg)
+**2.7 motion 不满 96 时补位怎么参与计算**：k 个真实窗之后的位零填充、mask 为 False、时刻记哨兵（`framesamp_dataset.py`，在线 `framesamp_memory.py` 同式）；96 位全部过两层 Linear（补位也算），再按时刻与帧路一起排序、补位落尾；action expert 的 Q 对 608 个 memory token 做注意力，`mask==False` 处 logit 置 −2.38e38，softmax 权重为 0、也不进分母（`history_gemma.py`）。结论：补位零贡献；序列长恒为 608、算力不随 k 变；k 小只是注意力在更少的 key 上分配。图：![](../figures/1026-motion-pad-modulation.svg)
 
 ## 三、我们这一侧要改什么
 

@@ -23,11 +23,11 @@
    opt_state / step）的 pytree，逐叶子 `sha256(device_get(leaf).tobytes())`，写
    `param_checksums.jsonl`。`--save-interval` 因此成为校验和间隔。`global_digest`
    只覆盖 params+ema（与 2026-08-24 之前的旧记录同口径），`state_digest` 覆盖全部
-   叶子（Adam 动量是「两条轨迹是否同一条」最灵敏的累积量，见 v1-gradient-baseline.md）。
+   叶子（Adam 动量是「两条轨迹是否同一条」最灵敏的累积量，见 docs/root-archive/v1-gradient-baseline.md）。
    逐叶子摘要为将来「定位哪个模块开始分叉」铺路（见同目录 README.md 的三级比较协议）。
 
 3. `train.init_train_state` → 包一层：初始化完成后立即对初始 TrainState 记一次
-   step 0 摘要（「步 0 必记」，v1-gradient-baseline.md 产物清单）；train.main 的
+   step 0 摘要（「步 0 必记」，docs/root-archive/v1-gradient-baseline.md 产物清单）；train.main 的
    save 触发条件 `step % save_interval == 0 and step > start_step` 永远轮不到步 0。
 
 4. `openpi.training.data_loader.TorchDataLoader.__iter__` → 输入摘要记录器：对
@@ -345,7 +345,7 @@ def _install_checksum_recorder(record_dir: pathlib.Path, enabled: bool, gate,
             _checksum_full_state(checksums_path, state, step,
                                  dump_dir=dump_dir if step in dump_steps else None)
         if save_final and step == final_step:
-            # 0901-motion-memory-plan.md 2.8：沿现有外层编号把最终 EMA checkpoint 放目录 999（orbax save 仍走原版
+            # docs/root-archive/0901-motion-memory-plan.md 2.8：沿现有外层编号把最终 EMA checkpoint 放目录 999（orbax save 仍走原版
             # save_state：params 项 = ema_params，assets 项 = norm_stats）；metadata 明记 checkpoint_id / state_step / param_kind
             orig_save_state(checkpoint_manager, state, data_loader, 999)
             checkpoint_manager.wait_until_finished()
@@ -763,7 +763,7 @@ def main() -> None:
         if finalize_digests is not None:
             finalize_digests()
         # 真实 argv 与编译缓存事件计数——驱动脚本收官时并进 env.json
-        # 0901-motion-memory-plan.md 2.8：实际 epoch 样本数（数据集真值源）、batch、history config 文件名 / resolved sha 进 run_meta
+        # docs/root-archive/0901-motion-memory-plan.md 2.8：实际 epoch 样本数（数据集真值源）、batch、history config 文件名 / resolved sha 进 run_meta
         _ds = pathlib.Path(config.dataset_path)
         _es = {}
         if os.environ.get("BENCH_DATASET_IMPL", "packed") == "refnpy":

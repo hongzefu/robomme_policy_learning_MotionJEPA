@@ -2,7 +2,7 @@
 
 本页是 commitV11.30Beta 起跑前档案（AGENTS 第 12 条两段式第一段）；跑完后结果回写同号 commitV11.30 与 result.md。起跑 HEAD 即本 Beta 提交，由 preflight 的 `REPO_HEAD` 与 runner 打印的 `GIT_HEAD=` 固定，本页不预填自身 sha。
 
-实施依据：根目录 [`1019-mixed8-ctx512-motion-plan.md`](../../../1019-mixed8-ctx512-motion-plan.md)（开工审查 `PLAN_CONSISTENCY_REVIEW=PASS base=222e08e findings=12 blocking=0`，修订 `92437d0`）。用户原话（美东 2026-10-19）：「gpu0-3跑context 512+motion 写计划 直接用plan模式的md 不用再写html 但是要留在根目录」「不是！」「我的意思是全部走conetxxt」「现在已经实现过了」「1234都按照推荐的」「再审查一遍 没问题就开始」。
+实施依据：根目录 [`1019-mixed8-ctx512-motion-plan.md`](../../root-archive/1019-mixed8-ctx512-motion-plan.md)（开工审查 `PLAN_CONSISTENCY_REVIEW=PASS base=222e08e findings=12 blocking=0`，修订 `92437d0`）。用户原话（美东 2026-10-19）：「gpu0-3跑context 512+motion 写计划 直接用plan模式的md 不用再写html 但是要留在根目录」「不是！」「我的意思是全部走conetxxt」「现在已经实现过了」「1234都按照推荐的」「再审查一遍 没问题就开始」。
 
 ## 版本与代码状态
 

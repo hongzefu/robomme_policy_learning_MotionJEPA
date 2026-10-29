@@ -1,10 +1,10 @@
 # 8 帧 × 8×8 训练支持与前后对拍（实施过程档案）
 
-> 本轮实施和验收已完成。现行数据接口与前后链路见[数据链路正本](docs/dataloader-restructure.md)，实际推理覆盖与边界见[训练/推理一致性正本](docs/train-infer-consistency.md)。下方保留实施前计划的组织与命令口径，完成结果以各run档案为准。
+> 本轮实施和验收已完成。现行数据接口与前后链路见[数据链路正本](../dataloader-restructure.md)，实际推理覆盖与边界见[训练/推理一致性正本](../train-infer-consistency.md)。下方保留实施前计划的组织与命令口径，完成结果以各run档案为准。
 
 本文是 2026-09-13 细化版经对抗验证后的修订版。对抗验证锚定 HEAD `9c344fa1bf615847c0233be012420d21d8a7841b`（7 个只读审计 agent 与 Codex 独立审稿交叉核对，全部结论以代码原文为证；当时的计划修订未执行仓库脚本或训练，后续实施结果见文首链接）。结构仍按 `AGENTS.md` 第 2 条分两部分：**第一部分给人看**，分「数据预处理」「训练」「推理」三块；**第二部分供 agent 追踪**，列文件、函数、命令与判定行。环境判定为 B：仓库 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，8 × A100-SXM4-80GB，无 turbo、无 GreatLakes，`/scratch` 余量 4.1 T（实测 `df -h /scratch` = 6.9T / 2.9T 已用 / 4.1T 可用）。
 
-**授权与完成状态**：用户随后明确要求“开始实现”“一口气全做完”，本轮代码、两库构建、完整输入、12条1000次更新轨迹、四profile三batch全梯度，以及C8/M8七关和各48集闭环已完成。只使用物理GPU4–7；1000次参数更新没有用短测代替。详细结果见[训练总览](docs/training-doc/t8-training/result.md)、[全梯度](docs/training-doc/t8-gradient/result.md)、[C8推理](docs/training-doc/t8-infer-c8/result.md)和[M8推理](docs/training-doc/t8-infer-m8/result.md)。
+**授权与完成状态**：用户随后明确要求“开始实现”“一口气全做完”，本轮代码、两库构建、完整输入、12条1000次更新轨迹、四profile三batch全梯度，以及C8/M8七关和各48集闭环已完成。只使用物理GPU4–7；1000次参数更新没有用短测代替。详细结果见[训练总览](../training-doc/t8-training/result.md)、[全梯度](../training-doc/t8-gradient/result.md)、[C8推理](../training-doc/t8-infer-c8/result.md)和[M8推理](../training-doc/t8-infer-m8/result.md)。
 
 **GPU 约束（2026-09-14 用户新增，最高优先级）**：本计划一切用 GPU 的命令**只能用 GPU 4、5、6、7**，GPU 0–3 一律不碰。落地三条：每条起 GPU 进程的命令都显式写 `CUDA_VISIBLE_DEVICES`，取值只能是 `{4,5,6,7}` 的子集，禁止不设而继承默认全卡，也禁止「照抄历史留档命令」（`tic-obs-model-40k/launch.md` 等历史命令写的是 `CUDA_VISIBLE_DEVICES=0`，照抄即违规）；motion sidecar 的卡号**不跟随** `CUDA_VISIBLE_DEVICES`——主线 `policies/policy_config.py::create_trained_policy` 直接读 yaml 快照的 `motion.online_gpu`（现值 1，绝对物理卡号）且无环境变量覆盖，`motion_client.py` 把它整体写进子进程的 `CUDA_VISIBLE_DEVICES`，所以凡起 sidecar 的路径必须走带显式卡号参数的入口（`scripts/motion-variance/serve_policy_mv.py --motion-gpu`、`compare_train_infer_obs.py --motion-gpu`、`compare_online_motion.py --gpu`），并把新 8×8 motion yaml 的 `online_gpu` 写成 4 作兜底；第二块 12 条轨迹只有两对卡可用，分两波跑（见第二块）。
 
@@ -711,4 +711,4 @@ framesamp-8x8/ (framesamp-8x8-v1)：image 行 (64,2048) bf16；pos 表 586 行 (
 
 源码分三次落地：REF `99faacb1319adfc63c0cf9a15187e24c34e38fd1`（commitV9.0），双布局 `236765fdb7b35f8fc96fb7d71133870b70b76271`（commitV9.1），在线与评估候选 `c08ec2060a544af1869c1e24f755e536150569ca`（commitV9.2）。具体run从各自启动档案中的clean HEAD执行，不能把候选功能提交误当成每次实际启动HEAD。
 
-两库的全量行校验、512帧抽样和586行跨网格位置检查见[40ep](docs/dataset-build-doc/4task-motion-40ep-framesamp-8x8/result.md)与[400ep](docs/dataset-build-doc/4task-motion-400ep-framesamp-8x8/result.md)。输入、worker矩阵、29项拒绝和独立手算见[fixture档案](docs/training-doc/t8-fixture/result.md)。四组1000更新全部11状态点和三batch全梯度均逐位通过；推理按bf16观察/f32阻断的已确认口径验收。实际数值、命令、硬件、耗时及限制均在文首链接的结果档案中。开环与探针实际按C8用GPU7、M8用GPU6并行，各组内部始终同卡比较；48集仍按M8→C8顺序使用GPU4–7四卡，实际命令以各run启动档案为准。长期链路图明确标出host static_state_emb为f64、JAX x64关闭后交付f32的既有转换。
+两库的全量行校验、512帧抽样和586行跨网格位置检查见[40ep](../dataset-build-doc/4task-motion-40ep-framesamp-8x8/result.md)与[400ep](../dataset-build-doc/4task-motion-400ep-framesamp-8x8/result.md)。输入、worker矩阵、29项拒绝和独立手算见[fixture档案](../training-doc/t8-fixture/result.md)。四组1000更新全部11状态点和三batch全梯度均逐位通过；推理按bf16观察/f32阻断的已确认口径验收。实际数值、命令、硬件、耗时及限制均在文首链接的结果档案中。开环与探针实际按C8用GPU7、M8用GPU6并行，各组内部始终同卡比较；48集仍按M8→C8顺序使用GPU4–7四卡，实际命令以各run启动档案为准。长期链路图明确标出host static_state_emb为f64、JAX x64关闭后交付f32的既有转换。

@@ -2,7 +2,7 @@
 
 **P1及100步训练对拍尚未运行，当前没有100步或并跑等价结论。** 两组正式CPU输入已在真实INPUT_HEAD **`3a1582db39c723c735e04752e5027bfe40ecc3e1`** 完成并分别通过，全部会话已结束。该提交也是本文已有接口的静态核对基线，不能当作尚待创建的TRAIN_HEAD。本文件与[p1-launch.md](p1-launch.md)及本轮工具补齐须共同形成clean Beta；实际100步TRAIN_HEAD在该提交创建后填40位字面量，具体标签、名称与命令展开在起跑现场记录。
 
-依据[主计划第2步与C节](../../../0925-orig-80k-full-counting-4plus4-plan.md)和[P1正式起跑档案](p1-launch.md)，在已完成INPUT的跨版本沿用复核及P1实际验收通过后，再按“两组上游A并行 → A全部完成 → B-full独占S1 → B-count独占S3 → 新B-full+B-count并行S2”执行。2a比较上游A与各自B单跑；2b复用S1/S3，分别比较同入口S2。六次训练及四份judge的B侧代码和共用harness必须始终属于同一 `TRAIN_HEAD`；A项目源码固定上游 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`，不把它误写为B侧HEAD。
+依据[主计划第2步与C节](../../root-archive/0925-orig-80k-full-counting-4plus4-plan.md)和[P1正式起跑档案](p1-launch.md)，在已完成INPUT的跨版本沿用复核及P1实际验收通过后，再按“两组上游A并行 → A全部完成 → B-full独占S1 → B-count独占S3 → 新B-full+B-count并行S2”执行。2a比较上游A与各自B单跑；2b复用S1/S3，分别比较同入口S2。六次训练及四份judge的B侧代码和共用harness必须始终属于同一 `TRAIN_HEAD`；A项目源码固定上游 `ecf086c3be7c2223167d9bb2f6ef1f0a6e24353b`，不把它误写为B侧HEAD。
 
 用户已批准「允许仅对拍关闭 W&B」；P1/100步A/B关闭在线W&B，完整五标量及参数/EMA/优化器/step状态留在本地。20步可读性、300步perf和80k仍开启。这里只在对拍入口覆盖100步、log1/save50，保持global b64/fsdp4/workers4/seed42、modul 512/4×4、原warmup/lr/EMA/keep和确定性档。perf磁盘采样虽已获准，本阶段不运行perf，不把状态摘要器当作真实checkpoint保存。
 

@@ -146,7 +146,7 @@ class HistoryPi0Config(Pi0Config):
                     ],
                     jnp.float32,
                 ),
-                # motion memory（0901-motion-memory-plan.md 2.3）：仅当 motion.enabled 时补四个 spec，从 config 键推导；
+                # motion memory（docs/root-archive/0901-motion-memory-plan.md 2.3）：仅当 motion.enabled 时补四个 spec，从 config 键推导；
                 # 关闭态返回值与 HEAD 同构
                 **_motion_specs(self.history_config, batch_size),
             )

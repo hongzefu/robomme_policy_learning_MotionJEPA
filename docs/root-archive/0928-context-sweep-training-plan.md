@@ -1,10 +1,10 @@
 # context 五组训练与通路验证计划
 
-> **当前范围：原训练入口验证、结果核对与方案记录，训练链路保持原样。** 用户要求「不要修改训练计算的机制 如果发现训练计算机制有改进空间只做记录」「dataloader也是 读取逻辑也不要改」。本轮没有修改或替换训练计算、数据加载器、sampler、读取配置、输入守卫或批次组装；没有启动正式60k/80k训练。守卫扩展、mask/attention优化、重计算和梯度累积只保留历史候选记录，不属于后续自动执行步骤。八轮原入口验证及收尾核验完成后更新本文，完整证据以[本轮结果](docs/training-doc/ctx-stock-scaling-20260928/result.md)和[运行口径](docs/training-doc/ctx-stock-scaling-20260928/launch.md)为准。
+> **当前范围：原训练入口验证、结果核对与方案记录，训练链路保持原样。** 用户要求「不要修改训练计算的机制 如果发现训练计算机制有改进空间只做记录」「dataloader也是 读取逻辑也不要改」。本轮没有修改或替换训练计算、数据加载器、sampler、读取配置、输入守卫或批次组装；没有启动正式60k/80k训练。守卫扩展、mask/attention优化、重计算和梯度累积只保留历史候选记录，不属于后续自动执行步骤。八轮原入口验证及收尾核验完成后更新本文，完整证据以[本轮结果](../training-doc/ctx-stock-scaling-20260928/result.md)和[运行口径](../training-doc/ctx-stock-scaling-20260928/launch.md)为准。
 >
 > 创建日期保持2026-09-28，America/New_York，文件名不改。权威工作副本为 `/scratch/hongze/robomme_policy_learning_MotionJEPA`，环境B、分支 `v2-motionmem`。第8.1–8.7节保存最初 `8aee9ced0bbc7bc4d2a863539fa8c14873bb9832` 锚点下的历史实验；本次八轮原入口诊断实际运行干净源码快照 `6db0e0ab9ef266d0e80fc1dd8d4383705bd81ab0`，快照位于 `v1-store/bench/context-stock-scaling-20260928/source-6db0e0a`。后续文档提交不追称为起跑源码。
 >
-> 外部依赖以实际源码快照的 `uv.lock`、`scripts/assets/ASSETS_LOCK.json` 为准，benchmark gitlink为 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。提交体例沿用 `docs:` 与仓库既有训练提交编号；本轮结果与根计划只做文档留档，不制造正式训练Beta。不升级依赖、不下载或重建数据、不使用Slurm或turbo。[64代理只读检查报告](docs/context-gpu-scaling-readonly-audit-20260928.md)及其排除项保留。
+> 外部依赖以实际源码快照的 `uv.lock`、`scripts/assets/ASSETS_LOCK.json` 为准，benchmark gitlink为 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。提交体例沿用 `docs:` 与仓库既有训练提交编号；本轮结果与根计划只做文档留档，不制造正式训练Beta。不升级依赖、不下载或重建数据、不使用Slurm或turbo。[64代理只读检查报告](../context-gpu-scaling-readonly-audit-20260928.md)及其排除项保留。
 
 用户决定按时间顺序原文保留：
 
@@ -49,15 +49,15 @@
 
 | 基线组 | 已训练 run / 权威档案 | 起跑提交 | 完成依据 |
 |---|---|---|---|
-| 512 | [v2-1600ep-m8x8-modul-b128-60k](docs/training-doc/v2-1600ep-m8x8-modul-b128-60k/result.md) | `dd07f18fc385b01eb52db7563fe5f202997b9706` | 60k、12份 checkpoint、最终59999、退出0；历史真实恢复61叶 |
-| 2048 | [v2-1600ep-m32x8x8-modul-b128-80k](docs/training-doc/v2-1600ep-m32x8x8-modul-b128-80k/result.md) | `55647ff33c8ddb9ec324fdbcee8bd1491456725b` | 80k、16份 checkpoint、最终79999、退出0；历史真实恢复61叶 |
-| 4096 | [v2-1600ep-m64x8x8-modul-b128-80k](docs/training-doc/v2-1600ep-m64x8x8-modul-b128-80k/result.md) | `0571fea5f626e822ca2b23b9e5f90c5bf31dd5eb` | 80k、16份 checkpoint、`completed.json::status=PASS` |
-| 512+motion | [v2-1600ep-m8x8-modul-motion-b128-80k](docs/training-doc/v2-1600ep-m8x8-modul-motion-b128-80k/result.md) | `2f10473161b760f16d9240d3c2959ff326cde66b` | 80k、16份 checkpoint、最终79999、退出0；历史真实恢复65叶 |
+| 512 | [v2-1600ep-m8x8-modul-b128-60k](../training-doc/v2-1600ep-m8x8-modul-b128-60k/result.md) | `dd07f18fc385b01eb52db7563fe5f202997b9706` | 60k、12份 checkpoint、最终59999、退出0；历史真实恢复61叶 |
+| 2048 | [v2-1600ep-m32x8x8-modul-b128-80k](../training-doc/v2-1600ep-m32x8x8-modul-b128-80k/result.md) | `55647ff33c8ddb9ec324fdbcee8bd1491456725b` | 80k、16份 checkpoint、最终79999、退出0；历史真实恢复61叶 |
+| 4096 | [v2-1600ep-m64x8x8-modul-b128-80k](../training-doc/v2-1600ep-m64x8x8-modul-b128-80k/result.md) | `0571fea5f626e822ca2b23b9e5f90c5bf31dd5eb` | 80k、16份 checkpoint、`completed.json::status=PASS` |
+| 512+motion | [v2-1600ep-m8x8-modul-motion-b128-80k](../training-doc/v2-1600ep-m8x8-modul-motion-b128-80k/result.md) | `2f10473161b760f16d9240d3c2959ff326cde66b` | 80k、16份 checkpoint、最终79999、退出0；历史真实恢复65叶 |
 | 8192 | 当前本地未找到同预算 modulation 档案 | 无 | 本计划按4096扩展；同预算历史对照未验证 |
 
 上述完成结果来自既有归档，最初方案核对了档案及本地产物在位，没有重新读取所有历史modulation权重。额外发现的 modulation1024 历史 run 不属于本轮训练矩阵。
 
-**除机制、预算和已指定的卡数外，训练条件保持如下。** 权威入口为 [training/config.py](src/mme_vla_suite/training/config.py) 的 `_CONFIGS`；60k 与80k分别继承自己的具名配置，本轮没有修改全局默认超参。
+**除机制、预算和已指定的卡数外，训练条件保持如下。** 权威入口为 [training/config.py](../../src/mme_vla_suite/training/config.py) 的 `_CONFIGS`；60k 与80k分别继承自己的具名配置，本轮没有修改全局默认超参。
 
 | 项目 | 固定值 |
 |---|---|
@@ -100,7 +100,7 @@ warmup后因 peak=decay，学习率恒为 `5e-5`，但60k与80k的曝光量仍�
 
 ### 4. 既有机制、实际输入与有效性边界
 
-**context把历史token接入主干前缀，所以不仅是改一个融合字符串。** [history_pi0.py](src/mme_vla_suite/models/integration/history_pi0.py) 的 `HistoryPi0.embed_prefix` 在当前两路图像和文本之前插入记忆；主干 `gemma_2b` 的宽度为2048，故 `memory_token_dim` 要从modulation的1024改成2048。modulation走 `HistoryBlock` 的 `MemoryAttention/MemoryRMSNorm` 动作调制分支；context走主干注意力。配置选择键是 `integration_type`，没有名为 `memory_mode` 的入口。
+**context把历史token接入主干前缀，所以不仅是改一个融合字符串。** [history_pi0.py](../../src/mme_vla_suite/models/integration/history_pi0.py) 的 `HistoryPi0.embed_prefix` 在当前两路图像和文本之前插入记忆；主干 `gemma_2b` 的宽度为2048，故 `memory_token_dim` 要从modulation的1024改成2048。modulation走 `HistoryBlock` 的 `MemoryAttention/MemoryRMSNorm` 动作调制分支；context走主干注意力。配置选择键是 `integration_type`，没有名为 `memory_mode` 的入口。
 
 记 `B` 为全局batch、`L`为视觉记忆预算、`F=L/64`。下图比较既有modulation与context两种机制，不表示本轮正在重构生产链路；实际测速直接调用原训练入口与原数据交付链：
 
@@ -145,7 +145,7 @@ warmup后因 peak=decay，学习率恒为 `5e-5`，但60k与80k的曝光量仍�
 
 ### 5. 当前原入口阻断与历史候选
 
-**原入口的阻断发生在取得首批数据之前。** [framesamp_dataset.py](src/mme_vla_suite/training/framesamp_dataset.py) 的 `FrameSampDataset.__init__::new_shape` 仅接受既有1024/2048/4096、modulation、无motion组合，context大预算不在该集合；旧512走原legacy路径。本轮原构造器检查确认context512可构造605611个样本，context2048/4096/8192均按形制断言拒绝，原异常及退出0的检查记录见[原始守卫结果](docs/training-doc/ctx-stock-scaling-20260928/records/original-guards.json)。`ORIGINAL_CONTEXT_GUARDS=PASS`表示守卫行为被如实核实，不表示被拒绝的训练组合通过。
+**原入口的阻断发生在取得首批数据之前。** [framesamp_dataset.py](../../src/mme_vla_suite/training/framesamp_dataset.py) 的 `FrameSampDataset.__init__::new_shape` 仅接受既有1024/2048/4096、modulation、无motion组合，context大预算不在该集合；旧512走原legacy路径。本轮原构造器检查确认context512可构造605611个样本，context2048/4096/8192均按形制断言拒绝，原异常及退出0的检查记录见[原始守卫结果](../training-doc/ctx-stock-scaling-20260928/records/original-guards.json)。`ORIGINAL_CONTEXT_GUARDS=PASS`表示守卫行为被如实核实，不表示被拒绝的训练组合通过。
 
 原 `train.py::main` 先取得真实首批数据，再初始化模型并编译训练步；守卫拒绝后没有现成原入口容量模式。现有 `inputs_spec`包含三路当前图像及float32历史，而实际交付是两路图像及bfloat16历史；`fake_obs/fake_act`生成假输入，`eval_shape`仅推形状，编译内存分析也不能替代真实读取与执行。当前不改守卫、不借用modulation读取器、不采用独立装配来伪称原入口通过，增加GPU数量也不能解除这个输入阻断。
 
@@ -256,7 +256,7 @@ EXIT_CODE=0
 
 9216个选帧例由独立float64步长/截断公式复算，不调用被测`np.linspace`；96对真实样本从packed与独立源NPY装配并比较19键。8192的真实边界index `257079/257105/257106/257107` 对应step `100/126/127/128`，有效token为 `6464/8128/8192/8192`。8192生产构造仍拒绝；大预算模型实验通过独立读取器或已合法的配对modulation读取器取得相同字节，**不冒充大预算context生产入口已经放行**。
 
-五组 `complete_record` 配对是**当前HEAD参考modulation配置与内存派生context候选**的全字段比对；实际data变换、归一化、tokenizer及资产摘要相同，batch128篡改成64的五个负例全部拒绝。本轮没有重建所有历史Beta。另只读复核既存 [2048历史V2记录](docs/training-doc/modul-sweep-20260923-c/records/baseline-2048.json) 与 [4096正式保存现场](docs/training-doc/v2-1600ep-m64x8x8-modul-b128-80k/records/final/final.json)：14项固定训练字段、完整resolved_data/assets/history_values均与当前参考相同。全记录的差别限于诊断run身份、同实体资产目录的相对/绝对写法和history文件名/已解析字典表示。512和512+motion已核历史命令、runtime和指纹，但未作历史V2全字段重建；8192没有同预算历史记录。
+五组 `complete_record` 配对是**当前HEAD参考modulation配置与内存派生context候选**的全字段比对；实际data变换、归一化、tokenizer及资产摘要相同，batch128篡改成64的五个负例全部拒绝。本轮没有重建所有历史Beta。另只读复核既存 [2048历史V2记录](../training-doc/modul-sweep-20260923-c/records/baseline-2048.json) 与 [4096正式保存现场](../training-doc/v2-1600ep-m64x8x8-modul-b128-80k/records/final/final.json)：14项固定训练字段、完整resolved_data/assets/history_values均与当前参考相同。全记录的差别限于诊断run身份、同实体资产目录的相对/绝对写法和history文件名/已解析字典表示。512和512+motion已核历史命令、runtime和指纹，但未作历史V2全字段重建；8192没有同预算历史记录。
 
 #### 8.3 真实模型的记忆作用与mask
 
@@ -374,7 +374,7 @@ ctx-cap-512-mask-f4-0928
 
 本次实际源码为 `6db0e0ab9ef266d0e80fc1dd8d4383705bd81ab0`，运行原 `scripts/training/train.py`、原模型、原数据加载器和原读取守卫。AWS本地NVMe RAID `/dev/md0`、8张A100-SXM4-80GB、global batch128；motion为workers16，纯512为workers8；每run401步。没有运行三份冻结的 `scripts/training/tests/context_gpu_scaling.py`、`compare_context_gpu_scaling.py`、`run_context_gpu_scaling.sh`，没有向样本添加索引键，没有进程内替换mask、attention或loss。八份独立run全部原生及外层退出0，checkpoint400提交完成，CPU按实际模型schema完成原dtype恢复和有限性检查。
 
-原 `train.py::_MetricsProxy`在log100同步后记录wall_time；主窗口使用 `(t300-t100)/200`，即更新101–300，八卡参照为前后两个独立200步窗口等权均值。双四卡各自主窗口内均有另一侧原训练进度完整覆盖；计算公式与边界见第10节。完整结果分别为[motion比较](docs/training-doc/ctx-stock-scaling-20260928/records/motion-comparison.json)、[纯512比较](docs/training-doc/ctx-stock-scaling-20260928/records/plain-comparison.json)。
+原 `train.py::_MetricsProxy`在log100同步后记录wall_time；主窗口使用 `(t300-t100)/200`，即更新101–300，八卡参照为前后两个独立200步窗口等权均值。双四卡各自主窗口内均有另一侧原训练进度完整覆盖；计算公式与边界见第10节。完整结果分别为[motion比较](../training-doc/ctx-stock-scaling-20260928/records/motion-comparison.json)、[纯512比较](../training-doc/ctx-stock-scaling-20260928/records/plain-comparison.json)。
 
 | 原生主窗口 | 512+motion160秒/步 | 纯512秒/步 |
 |---|---:|---:|
@@ -397,13 +397,13 @@ motion双四卡主窗口单卡平均GPU利用率为99.8403%–99.9195%，单卡�
 
 八份checkpoint400均完整恢复：motion每份59叶、12622947936字节，纯512每份55叶、12609567328字节，精确路径、shape、原dtype、全部有限值及归一化比较通过。预期schema由原模型和freeze_filter独立生成，恢复使用CPU、`restore_type=np.ndarray,dtype=None`。本轮未启用 `TRAIN_FINAL_RECORD_DIR`，没有保存前现场EMA逐叶摘要；不能将完整恢复写成与现场EMA逐位相等，也不能声称没有AdamW状态的checkpoint可以无损续训。
 
-**初始化参考另做独立核验。** `check_initial_reference.py`在八轮测速后检查pi05_base及tokenizer的21文件、12445985954字节完整指纹，只恢复一次初始权重；按原 `_merge_params`规则转换到独立schema要求的dtype，与八份恢复报告的原字节SHA比较。65.893秒完成，原日志为 `INITIAL_ASSETS_FULL=PASS`、`INITIAL_REFERENCE_CHECK=PASS shared=51 frozen=23 runs=8`，唯一退出0，证据见[初始化参考结果](docs/training-doc/ctx-stock-scaling-20260928/records/initial-reference-check.json)。八run的23个冻结图像共享叶逐字节匹配参考，28个共享非冻结EMA叶各自摘要变化；这不表示每个元素均改变或给出变化幅度。纯512新增4叶、motion新增8叶是随机记忆参数，不在该参考比较内。
+**初始化参考另做独立核验。** `check_initial_reference.py`在八轮测速后检查pi05_base及tokenizer的21文件、12445985954字节完整指纹，只恢复一次初始权重；按原 `_merge_params`规则转换到独立schema要求的dtype，与八份恢复报告的原字节SHA比较。65.893秒完成，原日志为 `INITIAL_ASSETS_FULL=PASS`、`INITIAL_REFERENCE_CHECK=PASS shared=51 frozen=23 runs=8`，唯一退出0，证据见[初始化参考结果](../training-doc/ctx-stock-scaling-20260928/records/initial-reference-check.json)。八run的23个冻结图像共享叶逐字节匹配参考，28个共享非冻结EMA叶各自摘要变化；这不表示每个元素均改变或给出变化幅度。纯512新增4叶、motion新增8叶是随机记忆参数，不在该参考比较内。
 
 同一八卡拓扑前后run也存在首步数值差异，本轮没有完整首批张量、初始随机记忆参数和实际随机数组取证，故不把差异单独归因于卡数，不宣称逐位训练轨迹一致。全部401步仍处于原5000步学习率预热；没有策略rollout、全程60k/80k稳定性或统计置信区间。初始化、编译、周期保存、长训练变化和一侧提前结束后的资源变化不包含在稳态完工时间外推中。
 
 #### 8.9 当前训练特征内容的完整只读核验
 
-本次核验在全部八轮原入口训练和保存结束后执行，进入时已核对八份唯一退出回执与GPU无计算进程；没有在测速窗口内全量预热数据。会话 `ctx-stock-data-fullhash-0928`从2026-09-29 00:37:11.535746 UTC运行至00:49:41.454804 UTC，总耗时749.919秒，其中帧库检查749.413秒。完整输出见[数据核验JSON](docs/training-doc/ctx-stock-scaling-20260928/records/data-content-recheck.json)和[原始核验日志](docs/training-doc/ctx-stock-scaling-20260928/records/data-content-recheck.log)。
+本次核验在全部八轮原入口训练和保存结束后执行，进入时已核对八份唯一退出回执与GPU无计算进程；没有在测速窗口内全量预热数据。会话 `ctx-stock-data-fullhash-0928`从2026-09-29 00:37:11.535746 UTC运行至00:49:41.454804 UTC，总耗时749.919秒，其中帧库检查749.413秒。完整输出见[数据核验JSON](../training-doc/ctx-stock-scaling-20260928/records/data-content-recheck.json)和[原始核验日志](../training-doc/ctx-stock-scaling-20260928/records/data-content-recheck.log)。
 
 外层 `check_current_data.py`调用原 `framesamp_store.run_full_checks(StoreMeta.load(...))`与 `motion_store.run_full_checks(MotionMeta.load(...))`，完整读取32个帧图像特征part、位置表、状态表和motion表，共35文件、313426537152字节，逐项SHA256与事先固定的元数据一致。帧库1192918行，motion库71316行；motion索引SHA另由元数据加载核验，不计入这35个数据文件。前后帧/motion元数据SHA均与第3节相同，没有创建pack.lock或改写元数据，原日志为：
 
@@ -415,7 +415,7 @@ DATA_FULL_CHECK=PASS metadata_unchanged=1
 EXIT_CODE=0
 ```
 
-该结果证明当前已打包训练特征内容与固定元数据完整指纹一致，范围不含重新扫描原始RGB/pkl、重新运行VAE或motion encoder。历史帧库逐行源NPY对拍、motion整表独立oracle和9月20日更大payload集合的哈希仍按各自[数据档案](docs/dataset-build-doc/4task-v2-1600ep-604f16da/result.md)、[motion档案](docs/dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)、[导出验证档案](docs/dataset-build-doc/hf-export-v2-1600ep-trainset-20260920-v1/result.md)引用；不能把这些不同范围相加后宣称本次重新验证了全部编码数值。
+该结果证明当前已打包训练特征内容与固定元数据完整指纹一致，范围不含重新扫描原始RGB/pkl、重新运行VAE或motion encoder。历史帧库逐行源NPY对拍、motion整表独立oracle和9月20日更大payload集合的哈希仍按各自[数据档案](../dataset-build-doc/4task-v2-1600ep-604f16da/result.md)、[motion档案](../dataset-build-doc/4task-v2-1600ep-motion-demopad17/result.md)、[导出验证档案](../dataset-build-doc/hf-export-v2-1600ep-trainset-20260920-v1/result.md)引用；不能把这些不同范围相加后宣称本次重新验证了全部编码数值。
 
 ## 第二部分：实际运行口径与证据追踪
 
@@ -426,7 +426,7 @@ EXIT_CODE=0
 3. Dataset、sampler、shuffle/seed/drop_last、spawn、persistent workers、原prefetch与共享内存collate不变。没有独立大预算读取器、配对modulation读取配置、索引包装或小batch替身。
 4. 原mask、attention、loss、dtype、RoPE、随机数调用和训练循环保持原样；原log100同步及最后checkpoint400保存仍执行，没有额外训练同步点或保持负载循环。
 5. 原始实验在 `v1-store/diagnostics/context-plan-20260928/`；原入口诊断与外层核验在 `v1-store/bench/context-stock-scaling-20260928/`。两个目录各有独立身份，不能混用相同标签或将历史候选结果归入原入口运行。
-6. 外层 `run_original.sh`、`preflight.py`、`run_dual4.sh`只负责启动、核查和外部采样；离线 `summarize_native.py`、`check_checkpoint.py`、`check_initial_reference.py`、`check_current_data.py`不注入被测进程。实际脚本SHA、环境和命令均在[launch](docs/training-doc/ctx-stock-scaling-20260928/launch.md)与[result](docs/training-doc/ctx-stock-scaling-20260928/result.md)留档。
+6. 外层 `run_original.sh`、`preflight.py`、`run_dual4.sh`只负责启动、核查和外部采样；离线 `summarize_native.py`、`check_checkpoint.py`、`check_initial_reference.py`、`check_current_data.py`不注入被测进程。实际脚本SHA、环境和命令均在[launch](../training-doc/ctx-stock-scaling-20260928/launch.md)与[result](../training-doc/ctx-stock-scaling-20260928/result.md)留档。
 
 最初拟新增的五份history生产YAML、context启动契约、守卫分支和完成控制器未实施；第5节保留其候选身份。主工作区三份未提交测量草稿冻结且排除，没有清理、提交或借用它们取得本轮结果。
 
@@ -452,7 +452,7 @@ t8_ref = (t8_before + t8_after) / 2
 
 ### 11. 已执行诊断入口与会话记录
 
-**下面记录已经执行的诊断形态，不安排重跑或正式训练启动。** 完整命令、包版本、环境、源码与history指纹见[本轮launch](docs/training-doc/ctx-stock-scaling-20260928/launch.md)。外层入口为：
+**下面记录已经执行的诊断形态，不安排重跑或正式训练启动。** 完整命令、包版本、环境、源码与history指纹见[本轮launch](../training-doc/ctx-stock-scaling-20260928/launch.md)。外层入口为：
 
 ```text
 BASE=v1-store/bench/context-stock-scaling-20260928
@@ -479,6 +479,6 @@ SOURCE/scripts/training/train.py CONFIG
 
 本轮没有保存前现场EMA逐叶摘要，因此未声明磁盘EMA与训练现场逐位相等；checkpoint不含AdamW动量，不证明可无损续训。未来正式目标若执行，60k的12份checkpoint（5000至55000及59999）、80k的16份（5000至75000及79999）仍是原保存策略的验收口径，但当前八份checkpoint400不替代它们，也不以目录编号反推未记录的训练状态。
 
-证据落在[本轮档案](docs/training-doc/ctx-stock-scaling-20260928/result.md)及其 `records/`，原始大日志、外层脚本与权重留在 `v1-store/`；仓库只保留Git不能还原的必要测量、恢复、比较和核验记录，不提交checkpoint、生产YAML副本或启动shell；每轮派生完整配置JSON保留在records。历史第8.1–8.7节的失败、超时和候选路径完整保留。根计划在已授权验证全部收尾后更新，不改源码、依赖、训练配置、loader或读取。
+证据落在[本轮档案](../training-doc/ctx-stock-scaling-20260928/result.md)及其 `records/`，原始大日志、外层脚本与权重留在 `v1-store/`；仓库只保留Git不能还原的必要测量、恢复、比较和核验记录，不提交checkpoint、生产YAML副本或启动shell；每轮派生完整配置JSON保留在records。历史第8.1–8.7节的失败、超时和候选路径完整保留。根计划在已授权验证全部收尾后更新，不改源码、依赖、训练配置、loader或读取。
 
 **剩余边界明确保留：** 2048/4096/8192原context守卫仍拒绝，8192现成生产配置缺失，这三档原入口四卡/八卡容量和速度未知；512+2048、4096+8192异组并发没有原入口测量。八次401步不证明完整60k/80k稳定、收敛、策略成功率或跨卡逐位轨迹；没有逐步慢步分布、全部样本梯度覆盖或完整训练工期置信区间。五组完整保存空间仍需以真实可用空间核对，不能自动删除历史产物或改保存频率。这些是本轮结束时的已知限制，不转成自动实施优化或启动训练的安排。

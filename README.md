@@ -1,5 +1,7 @@
 # 🚀 MME-VLA Policy Learning and Evaluation
 
+本仓库文档入口：[当前训练计划、机制说明与实验总结](docs/README.md#根目录当前保留的专题文档)；[其他计划和说明的归档索引](docs/root-archive/README.md)。
+
 ### [Website](https://robomme.github.io/) | [Paper](https://arxiv.org/abs/2603.04639) | [Benchmark Repo](https://github.com/RoboMME/robomme_benchmark) | [Dataset](https://huggingface.co/datasets/Yinpei/robomme_data_h5) | [Models](https://huggingface.co/Yinpei/mme_vla_suite) | [Leaderboard](https://robomme.github.io/leaderboard.html)
 
 ## 🧭 Outline

@@ -42,7 +42,7 @@
 
 不足96个窗口时右侧补零，并把补位 mask 设为 False；超过96则明确报错，不截断早期窗口。dataset 还会校验 pickle 中的 episode/timestep 与 manifest 推导值是否一致。transforms 保留 motion 四个键，collate 加 batch 维；VLA 不再给 motion 内容做一套统计归一化，encoder 的入口 affine 常数来自 checkpoint buffer。
 
-代码入口：[wan_motion_infer.py](scripts/dataset/wan/wan_motion_infer.py) 的 `encode_chunk/load_encoder/motion_token`、[motion_store.py](src/mme_vla_suite/datastore/motion_store.py) 的 `build_index_entries/visible_motion_rows`、[framesamp_dataset.py](src/mme_vla_suite/training/framesamp_dataset.py) 的 `__init__/__getitem__/_pad_motion`。
+代码入口：[wan_motion_infer.py](../../scripts/dataset/wan/wan_motion_infer.py) 的 `encode_chunk/load_encoder/motion_token`、[motion_store.py](../../src/mme_vla_suite/datastore/motion_store.py) 的 `build_index_entries/visible_motion_rows`、[framesamp_dataset.py](../../src/mme_vla_suite/training/framesamp_dataset.py) 的 `__init__/__getitem__/_pad_motion`。
 
 ### 2.2 时间含义：按起点标记，但必须等尾帧出现
 
@@ -68,7 +68,7 @@ exec 转成 episode 内绝对起点：f = es + u
 
 ### 2.3 在线：每16步补历史，再预测下一段动作
 
-正式路径是 [eval.py](examples/robomme/eval.py) 的 `EpisodeEvaluator` → websocket → [policy.py](src/mme_vla_suite/policies/policy.py) → [FrameSampMemory](src/mme_vla_suite/policies/framesamp_memory.py) → motion sidecar → 模型。
+正式路径是 [eval.py](../../examples/robomme/eval.py) 的 `EpisodeEvaluator` → websocket → [policy.py](../../src/mme_vla_suite/policies/policy.py) → [FrameSampMemory](../../src/mme_vla_suite/policies/framesamp_memory.py) → motion sidecar → 模型。
 
 1. 每集先 `reset()`。首批提交 `[0,es]`，即完整 demo 加 exec 第一帧。
 2. 模型预测20步，只执行前16步。执行中收集每一帧，下一次先 `add_buffer` 这16帧，再 `infer`。
@@ -101,7 +101,7 @@ attention 的实际依赖是：memory 读有效 memory；图像不能读 memory�
 
 现有测试支持有限 padding 垃圾不会改变有效输出或梯度。不能把它说成“任意无效数据都没影响”：全遮蔽 query 行的 softmax 并非字面上的全零，隔离靠后续 key mask；NaN/Inf 也不在已验证保证内。
 
-代码定位：[percep_mem.py](src/mme_vla_suite/models/representation/percep_mem.py) 的 `PerceptualMemory`、[history_pi0.py](src/mme_vla_suite/models/integration/history_pi0.py) 的 `embed_memory/make_attn_mask/compute_loss/sample_actions`、[sampling.py](src/mme_vla_suite/shared/sampling.py) 的 `memory_order`。
+代码定位：[percep_mem.py](../../src/mme_vla_suite/models/representation/percep_mem.py) 的 `PerceptualMemory`、[history_pi0.py](../../src/mme_vla_suite/models/integration/history_pi0.py) 的 `embed_memory/make_attn_mask/compute_loss/sample_actions`、[sampling.py](../../src/mme_vla_suite/shared/sampling.py) 的 `memory_order`。
 
 ## 3. 已确认的可触发问题
 
@@ -111,7 +111,7 @@ attention 的实际依赖是：memory 读有效 memory；图像不能读 memory�
 
 **触发过程：** 窗口A的编码超过60秒，客户端超时返回；sidecar没有退出，稍后仍发回A。评估继续下一集，客户端发请求B，却先读到留在连接里的A。响应没有 request ID、episode 或起点供核对，A就可能被当成B写入 memory。
 
-**代码原因：** [motion_client.py](src/mme_vla_suite/policies/motion_client.py) 的 `MotionEncoderClient.__call__` 在 `recv_response` 失败后没有作废连接；[motion_protocol.py](src/mme_vla_suite/policies/motion_protocol.py) 的响应只有 status和token；`MME_VLA_Policy.reset` 重建 memory 但保留 client。服务端异常只结束该 websocket handler，长存 policy 仍在。
+**代码原因：** [motion_client.py](../../src/mme_vla_suite/policies/motion_client.py) 的 `MotionEncoderClient.__call__` 在 `recv_response` 失败后没有作废连接；[motion_protocol.py](../../src/mme_vla_suite/policies/motion_protocol.py) 的响应只有 status和token；`MME_VLA_Policy.reset` 重建 memory 但保留 client。服务端异常只结束该 websocket handler，长存 policy 仍在。
 
 这条路径能接上正式 eval：`success_flag` 只在每个 task 开头设为 unknown；若同任务此前已有一集正常结束，后集异常不会重置它，驱动可以继续下一集。**如果任务第一集就失败，通常会提前返回，不能泛称所有超时都会继续。**
 
@@ -123,7 +123,7 @@ attention 的实际依赖是：memory 读有效 memory；图像不能读 memory�
 
 **具体反例：** 生产留档中 `ButtonUnmask_ep0_exec` 和 `ep1_exec` 都有17窗。抽取完成后，若把ep1的 token文件、SHA文件、metadata三件套误复制成ep0文件名，文件内部的SHA仍自洽，metadata内部也仍诚实写ep1。
 
-**代码原因：** [pack_motion_store.py](scripts/dataset/pack_motion_store.py) 的 `read_segment_tokens` 核字节数、SHA和窗数，但不核 `segment/g/segment_kind`；`gather_provenance` 没有把 token 的输入 latent SHA 与对应段绑定；`cmd_verify` 又和同一批源token比较。结果可能是 index正确写ep0，内容却来自ep1，仍得到 `verified`。
+**代码原因：** [pack_motion_store.py](../../scripts/dataset/pack_motion_store.py) 的 `read_segment_tokens` 核字节数、SHA和窗数，但不核 `segment/g/segment_kind`；`gather_provenance` 没有把 token 的输入 latent SHA 与对应段绑定；`cmd_verify` 又和同一批源token比较。结果可能是 index正确写ep0，内容却来自ep1，仍得到 `verified`。
 
 已检查的反证：抽取阶段汇总能挡住部分当场错名，但独立pack入口不调用它，挡不住阶段完成后的错置。**当前库另有全量D3对拍，未发现此类内容不一致；M1直接读候选表，本身不能独立排除它。**
 
@@ -131,7 +131,7 @@ attention 的实际依赖是：memory 读有效 memory；图像不能读 memory�
 
 ### 3.3 中优先级、基线已有：错误记录会被重试覆盖
 
-**代码原因：** [eval.py](examples/robomme/eval.py) 的 `evaluate` 把异常记为字符串 `"error"`，随后 `sum(values)` 不能处理字符串，汇总异常被捕获后外层循环继续。当轮写入episode键为int，跳过检查却用str，因此部分结果可能再次评估并覆盖。重新启动时，`setup_log_dict` 又删除error条目。
+**代码原因：** [eval.py](../../examples/robomme/eval.py) 的 `evaluate` 把异常记为字符串 `"error"`，随后 `sum(values)` 不能处理字符串，汇总异常被捕获后外层循环继续。当轮写入episode键为int，跳过检查却用str，因此部分结果可能再次评估并覆盖。重新启动时，`setup_log_dict` 又删除error条目。
 
 **影响：** 最终没有error，只说明最后保留下来的结果没有error，不能证明第一次就成功完成评估。失败次数、首次分母和重试过程不易追溯。这个问题在实施前基线已有，不能归因于 motion 新增代码。
 
@@ -141,7 +141,7 @@ attention 的实际依赖是：memory 读有效 memory；图像不能读 memory�
 
 ### 3.4 中低优先级：编码续跑检查找错metadata文件
 
-[encode_motion.py](scripts/dataset/wan/encode_motion.py) 的 `main` 把 `key + ".f32"` 交给 [wan_common.py](scripts/dataset/wan/wan_common.py) 的 `segment_outputs_complete`，于是检查的是 `<key>.f32.metadata.json`；实际写出的却是 `<key>.metadata.json`。
+[encode_motion.py](../../scripts/dataset/wan/encode_motion.py) 的 `main` 把 `key + ".f32"` 交给 [wan_common.py](../../scripts/dataset/wan/wan_common.py) 的 `segment_outputs_complete`，于是检查的是 `<key>.f32.metadata.json`；实际写出的却是 `<key>.metadata.json`。
 
 正常已完成段因此仍被判未完成，进入删除重算。单worker重启就能触发；并行时所有worker遍历同一清单、claim完成即释放，落后的worker也可能重做已完成段。汇总 `items=600` 只数最终唯一段，不能排除重复计算。
 
@@ -149,7 +149,7 @@ attention 的实际依赖是：memory 读有效 memory；图像不能读 memory�
 
 ### 3.5 中低优先级、仅legacy工具：总条数对不等于名单对
 
-[aggregate_seed_runs.py](scripts/training/legacy-eval/aggregate_seed_runs.py) 的 `collect_one` 对跨shard重复episode静默覆盖；`main` 算了missing，却只按总数量相等、error为零判DONE。
+[aggregate_seed_runs.py](../../scripts/training/legacy-eval/aggregate_seed_runs.py) 的 `collect_one` 对跨shard重复episode静默覆盖；`main` 算了missing，却只按总数量相等、error为零判DONE。
 
 反例：预期 `0…49`，实际 `1…50`，仍是50条；不同cell少一条、多一条也可能抵消。应逐cell核精确集合，并拒绝重复来源和非法结果类型。**现有三seed JSON经额外核查，各cell确实为0…49，没有触发这个缺陷。**
 
@@ -159,9 +159,9 @@ attention 的实际依赖是：memory 读有效 memory；图像不能读 memory�
 
 `motion.enabled=false` 时两个新增层根本不创建，不消耗新增RNG；原memory路径直接返回，不重排；新增观测字段为None。静态差异和历史对照支持关闭态语义保留，但不代表最终版本已对任意输入、设备直接做过逐位验证。
 
-新motion checkpoint恢复会校验resolved history YAML、hash、provenance、启用状态、参数树及shape；含motion参数却缺快照会被拒绝。旧非motion checkpoint保留 `history_config.txt` 兼容路径。对应 [policy_config.py](src/mme_vla_suite/policies/policy_config.py) 的 `create_trained_policy/_load_resolved_snapshot/_assert_param_tree_exact`。
+新motion checkpoint恢复会校验resolved history YAML、hash、provenance、启用状态、参数树及shape；含motion参数却缺快照会被拒绝。旧非motion checkpoint保留 `history_config.txt` 兼容路径。对应 [policy_config.py](../../src/mme_vla_suite/policies/policy_config.py) 的 `create_trained_policy/_load_resolved_snapshot/_assert_param_tree_exact`。
 
-**严格加载不等于无损续训。** [train.py](scripts/training/train.py) 的正式入口明确拒绝resume/overwrite；保存的是推理参数（启用EMA时为EMA）和norm assets，没有完整AdamW状态与训练计数，因此不能宣称可恢复原训练轨迹。
+**严格加载不等于无损续训。** [train.py](../../scripts/training/train.py) 的正式入口明确拒绝resume/overwrite；保存的是推理参数（启用EMA时为EMA）和norm assets，没有完整AdamW状态与训练计数，因此不能宣称可恢复原训练轨迹。
 
 ### 4.2 PASS的实际覆盖范围
 
@@ -177,11 +177,11 @@ attention 的实际依赖是：memory 读有效 memory；图像不能读 memory�
 
 T2实际reference为 `c5925d96305f771058e2206ae89461269af9d97c`，candidate为历史 `8093ebd/cbf24e9`。记录包含100步标量、5次state摘要、7次batch摘要；A22是3类fixture、32个trainable梯度叶。静态桥接检查支持沿用相关结论，但不能改写实验锚点。400ep的A6只查前40条且用同一清单，也不能单独当独立全库证明。
 
-主要原始记录：[D3编码报告](docs/dataset-build-doc/4task-motion-400ep/records/encoder_report.json)、[M1/A19输出](docs/training-doc/tic-l0-rhythm-40k/records/l0-rhythm-m1.txt)、[P5输出](docs/training-doc/aws-p5-online/records/p5_driver.txt)、[T2输出](docs/training-doc/aws-t2-cand-s100/records/t2_gate.txt)。
+主要原始记录：[D3编码报告](../dataset-build-doc/4task-motion-400ep/records/encoder_report.json)、[M1/A19输出](../training-doc/tic-l0-rhythm-40k/records/l0-rhythm-m1.txt)、[P5输出](../training-doc/aws-p5-online/records/p5_driver.txt)、[T2输出](../training-doc/aws-t2-cand-s100/records/t2_gate.txt)。
 
 ### 4.3 “动作逐位一样”比较的其实是什么
 
-[compare_train_infer_obs.py](scripts/training/g0/compare_train_infer_obs.py) 的S臂，直接把在线历史帧特征替换成离线表真值。随后T/I两边都调用同一个 `f_prefix`，最终动作都调用同一个 `policy._sample_actions`。
+[compare_train_infer_obs.py](../../scripts/training/g0/compare_train_infer_obs.py) 的S臂，直接把在线历史帧特征替换成离线表真值。随后T/I两边都调用同一个 `f_prefix`，最终动作都调用同一个 `policy._sample_actions`。
 
 所以 `KV_T_VS_I/ACT_T_VS_I=PASS` 有价值：它证明两侧交付的受控输入能产生相同推理结果。**它没有独立证明训练的整段前向与推理的缓存前向逐位相同。** 后者由L4分别重构两条前向来比较，原始结果仍是FAIL。
 
@@ -193,15 +193,15 @@ T2实际reference为 `c5925d96305f771058e2206ae89461269af9d97c`，candidate为�
 | LLM整段前向与prefix缓存前向 | 120点速度场相对差约 `0.001855–0.003051`，ULP p99为10–22.5，超过预设 `0.001/4` | 两个TIC总gate仍FAIL，不能按解释合理就改称PASS |
 | 推理将全部checkpoint参数转bf16，训练只将冻结参数转bf16 | 仅1点对照，动作 `rms_norm=0.0006769` | 这是基线已有数值差，且覆盖太少；L4两侧都用生产bf16权重，没有包含这项差异 |
 
-sidecar run的120点中，有效prefix KV逐位相同为 **0/120**，但mask子块、动作行与位置号120/120相同。f32 highest诊断只测5点：prefix KV误差为零，速度场相对差 `1.352e-7`。这强烈支持这些点主要是数值来源，不能写成“速度场逐位相同”或“所有状态的差异都已排除”。[原始输出](docs/training-doc/tic-sidecar-40k/records/obsmodel-sidecar.txt)
+sidecar run的120点中，有效prefix KV逐位相同为 **0/120**，但mask子块、动作行与位置号120/120相同。f32 highest诊断只测5点：prefix KV误差为零，速度场相对差 `1.352e-7`。这强烈支持这些点主要是数值来源，不能写成“速度场逐位相同”或“所有状态的差异都已排除”。[原始输出](../training-doc/tic-sidecar-40k/records/obsmodel-sidecar.txt)
 
-真仿真探针另查了24集、359次infer，验证对应关系、公式、排列和后端等不变量；没有训练真值oracle。最大motion数35，未覆盖预算边缘；一个训练未见goal使总判据为 `6/7 FAIL`。[原始汇总](docs/training-doc/tic-eval-probe-40k/records/eval_probe_summary.json)
+真仿真探针另查了24集、359次infer，验证对应关系、公式、排列和后端等不变量；没有训练真值oracle。最大motion数35，未覆盖预算边缘；一个训练未见goal使总判据为 `6/7 FAIL`。[原始汇总](../training-doc/tic-eval-probe-40k/records/eval_probe_summary.json)
 
 ### 4.4 T3证明了接线，但没有证明40k模型学会了motion
 
-`tic-t3-causal-40k` 的名字容易误导。[motion_gates_model.py](scripts/training/tests/motion_gates_model.py) 的 `cmd_t3mechanism/_t3_init_state` 实际重新初始化模型，要求命中短run的step0，使用40ep库的一个b8批次，没有加载39999。
+`tic-t3-causal-40k` 的名字容易误导。[motion_gates_model.py](../../scripts/training/tests/motion_gates_model.py) 的 `cmd_t3mechanism/_t3_init_state` 实际重新初始化模型，要求命中短run的step0，使用40ep库的一个b8批次，没有加载39999。
 
-新版记录确实是：36/36个trainable叶覆盖，排除叶为0；有限padding干预不改变loss/梯度；有效内容清零或置乱、位置扰动会改变loss或梯度。有效motion内容输入梯度范数为0.94053。**这是扎实的初态接线和敏感性证据，不能替代训练后模型的内容干预。** 原先T3的FAIL记录也应保留，不能因为新版通过而删除历史。[原始输出](docs/training-doc/tic-t3-causal-40k/records/t3-causal.txt)
+新版记录确实是：36/36个trainable叶覆盖，排除叶为0；有限padding干预不改变loss/梯度；有效内容清零或置乱、位置扰动会改变loss或梯度。有效motion内容输入梯度范数为0.94053。**这是扎实的初态接线和敏感性证据，不能替代训练后模型的内容干预。** 原先T3的FAIL记录也应保留，不能因为新版通过而删除历史。[原始输出](../training-doc/tic-t3-causal-40k/records/t3-causal.txt)
 
 ## 5. motion有没有用：现有结果能说到哪一步
 
@@ -217,7 +217,7 @@ sidecar run的120点中，有效prefix KV逐位相同为 **0/120**，但mask子�
 | VideoUnmaskSwap | 30/150 | 37/150 | +4.67pp |
 | 合计 | **147/600，24.50%** | **145/600，24.17%** | **−0.33pp** |
 
-这不是三个独立训练seed，也不是600个独立环境。最终1200项结果中，各cell恰为ep0–49，无缺失或非法结果；motion的9次timeout、官方的1次timeout均计入失败分母。技术重试在历史留档中确实出现过，因此最终无error不能解释为全过程无异常。[逐集JSON](docs/training-doc/eval-3seed-context-vs-motion/records/per_episode_by_seed.json)、[事故与补评记录](docs/training-doc/eval-3seed-context-vs-motion/result.md)
+这不是三个独立训练seed，也不是600个独立环境。最终1200项结果中，各cell恰为ep0–49，无缺失或非法结果；motion的9次timeout、官方的1次timeout均计入失败分母。技术重试在历史留档中确实出现过，因此最终无error不能解释为全过程无异常。[逐集JSON](../training-doc/eval-3seed-context-vs-motion/records/per_episode_by_seed.json)、[事故与补评记录](../training-doc/eval-3seed-context-vs-motion/result.md)
 
 按每个环境先平均三seed差值，再以200个环境为单位作配对正态近似，整体95%区间约为 **−5.51pp～+4.84pp**；VideoUnmaskSwap的50个环境约为 **−5.21pp～+14.55pp**。这只是两份固定模型、当前任务范围下的描述性估计，不涵盖训练随机性。单任务+4.67pp可以作为后续线索，不能当已确证优势。
 
@@ -231,7 +231,7 @@ loss下降、非零梯度、参数更新说明模型在优化；token非零说�
 
 A100正式评估记录里，常规 `add_buffer` 均值约1.23–1.36秒，包含帧编码、IPC和motion；VideoSwap首批约11.8–11.9秒。不能把整项耗时都归给MotionJEPA，也不能只用较短的动作采样时间代表完整延迟。
 
-Ada三seed留档中motion每轮44–52分钟、官方约19分钟，但两组worker并发数分别2和4，不能把墙钟比直接当单次调用成本比。仿真会等待同步推理，没有真实部署的时间截止实验，因此仿真成功率不能自动证明实机实用收益。[A100评估记录](docs/training-doc/eval-awsprod40k-b128-motion/records/per_episode.json)、[Ada评估留档](docs/training-doc/eval-3seed-context-vs-motion/result.md)
+Ada三seed留档中motion每轮44–52分钟、官方约19分钟，但两组worker并发数分别2和4，不能把墙钟比直接当单次调用成本比。仿真会等待同步推理，没有真实部署的时间截止实验，因此仿真成功率不能自动证明实机实用收益。[A100评估记录](../training-doc/eval-awsprod40k-b128-motion/records/per_episode.json)、[Ada评估留档](../training-doc/eval-3seed-context-vs-motion/result.md)
 
 ## 6. 尚未闭合的风险与文档表述
 
@@ -248,9 +248,9 @@ Ada三seed留档中motion每轮44–52分钟、官方约19分钟，但两组work
 
 文档中以下说法应收窄：
 
-- [train-infer-consistency.md](docs/train-infer-consistency.md) 把受控回放和真仿真一起描述为训练真值逐位相同，并据此说“剩下只有token有限或噪声”，超过了实际覆盖。
+- [train-infer-consistency.md](../train-infer-consistency.md) 把受控回放和真仿真一起描述为训练真值逐位相同，并据此说“剩下只有token有限或噪声”，超过了实际覆盖。
 - “只有两处数值差”漏掉checkpoint参数转换；“f32差异归零”不符合速度场原始值；帧特征写成 `(16,1152)` 与当前 `(16,2048)` 不符。
-- [tic-t3-causal-40k的launch](docs/training-doc/tic-t3-causal-40k/launch.md) 中生产指纹表写b128/39999/400ep，实际命令是40ep、短run初态，必须明确区分。
+- [tic-t3-causal-40k的launch](../training-doc/tic-t3-causal-40k/launch.md) 中生产指纹表写b128/39999/400ep，实际命令是40ep、短run初态，必须明确区分。
 - 三seed留档的“跨机唯一变量是GPU”“一切差异不是bug”缺控制实验支持；benchmark曾从另一外部editable checkout导入，完整版本没有固化，不能把差异全部归因于舍入。
 
 可以保留正常路径的时间契约、模型接线、有限padding隔离和指定样本编码一致性；全链逐位一致、跨硬件排他归因必须收窄；学会运动语义和公平闭环收益仍缺证据。

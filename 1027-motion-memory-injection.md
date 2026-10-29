@@ -4,7 +4,7 @@
 
 ![motion memory 注入全链路](docs/figures/1027-motion-memory-injection.svg)
 
-**阅读指引**：本文件只讲机制（数据怎么流、在哪里注入、算了什么），不讲训练计划、闸门与 run 安排；那些见 `1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md` 与 `1026-vla-stage2-memory-1024-train-plan.md`。补位（motion 不满 96 时）的细节见既有图 `docs/figures/1026-motion-pad-modulation.svg`。
+**阅读指引**：本文件只讲机制（数据怎么流、在哪里注入、算了什么），不讲训练计划、闸门与 run 安排；那些见 `1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md` 与 `docs/root-archive/1026-vla-stage2-memory-1024-train-plan.md`。补位（motion 不满 96 时）的细节见既有图 `docs/figures/1026-motion-pad-modulation.svg`。
 
 **口径**：代码锚点均以 policy 仓 HEAD `4029b1f`（`commitV11.57`）为准，路径省略前缀 `src/`；MotionJEPA 侧事实照抄 1026 计划 §2.2–§2.4。参数量是按权重形状推算的，未实际运行统计（见第 10 节）。行号与旧计划/旧注释不一致处一律以代码为准（见第 9 节）。
 

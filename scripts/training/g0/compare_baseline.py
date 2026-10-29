@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """基线对拍工具：两份 records 目录的逐步标量 hex / state_digest / batch_digest 对比。
 
-对应 v1-gradient-baseline.md T2 与六节（量化判据权威版本）。与基线同 commit 固化，
+对应 docs/root-archive/v1-gradient-baseline.md T2 与六节（量化判据权威版本）。与基线同 commit 固化，
 防一年后工具漂移、口径变了。
 
 输出（全部为机器可判定行）：

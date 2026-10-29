@@ -142,6 +142,6 @@ run为 `ctx-stock-motion-8before-20260928`，实际会话 `ctx-stock-motion-8bef
 
 2026-09-29 00:49 UTC收尾时GPU计算进程为空，工作盘可用374842220544字节，即349.099GiB。本轮原始记录和八份检查点保留；未删除其他数据或调整保存频率。按现有60k/80k及keep5000口径，五组共76份检查点的参数逻辑保留量约892.71GiB，实际压缩后占盘可能不同；当前空间不能按该完整逻辑预算覆盖全部五组，正式训练排程仍须独立核算空间。
 
-`git diff --exit-code 8aee9ced0bbc7bc4d2a863539fa8c14873bb9832 -- src scripts pyproject.toml uv.lock`退出0；实际被测6db源码工作树干净，原入口外层及前置脚本SHA保持起跑版本。三份旧未跟踪测速草稿与64代理审查时的SHA一致，均未用于本轮原入口测量、修补或提交。根目录最终方案见[context五组训练计划](../../../0928-context-sweep-training-plan.md)，64代理静态审查及未实施建议见[只读审查报告](../../context-gpu-scaling-readonly-audit-20260928.md)。context2048、4096、8192仍是原读取守卫阻断；本轮验证完成不代表这三档已能训练。
+`git diff --exit-code 8aee9ced0bbc7bc4d2a863539fa8c14873bb9832 -- src scripts pyproject.toml uv.lock`退出0；实际被测6db源码工作树干净，原入口外层及前置脚本SHA保持起跑版本。三份旧未跟踪测速草稿与64代理审查时的SHA一致，均未用于本轮原入口测量、修补或提交。根目录最终方案见[context五组训练计划](../../root-archive/0928-context-sweep-training-plan.md)，64代理静态审查及未实施建议见[只读审查报告](../../context-gpu-scaling-readonly-audit-20260928.md)。context2048、4096、8192仍是原读取守卫阻断；本轮验证完成不代表这三档已能训练。
 
 最后独立核查源码差异、冻结文件SHA、两项CPU结果与归档字节、GPU空闲及本轮八个确切tmux会话均已结束，判定 `FINAL_INTEGRITY=PASS source_unchanged=1 frozen_drafts=3 gpu_idle=1 owned_sessions_completed=8`，退出0，见[收尾完整性记录](records/final-integrity.json)。文档核查得到 `DOCUMENT_LINKS=PASS files=4 local_links=236`、`HISTORICAL_SECTIONS=PASS sections=8.1-8.7 unchanged=1`；历史8.1–8.7与修订前逐字一致。

@@ -7,9 +7,9 @@ model repo，并让链路**六处**真正读这张表。终判：`ASSETS=PASS as
 五个 commit：`1ebab97` / `f07ee19` / `c7406e4` / `ee0ae46` / `1b75d63`。
 
 本文是**高层导读**。逐条判定行、实测耗时、records 快照与完整盲区清单在
-[`docs/dataset-build-doc/hf-export-motionjepa-encoder-v1/result.md`](docs/dataset-build-doc/hf-export-motionjepa-encoder-v1/result.md)；
+[`docs/dataset-build-doc/hf-export-motionjepa-encoder-v1/result.md`](../dataset-build-doc/hf-export-motionjepa-encoder-v1/result.md)；
 模型本身的一切事实（结构、训练 commit、数据集、超参、数值合同、加载示例）在同目录
-[`model-card.md`](docs/dataset-build-doc/hf-export-motionjepa-encoder-v1/model-card.md)。本文不复述这两份。
+[`model-card.md`](../dataset-build-doc/hf-export-motionjepa-encoder-v1/model-card.md)。本文不复述这两份。
 
 ## 一、为什么要锁
 

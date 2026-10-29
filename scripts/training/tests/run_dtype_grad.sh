@@ -3,7 +3,7 @@
 #
 # 与 dump 驱动同理：修复前后各跑一次，两侧口径必须逐字相同，只剩 RUN_TAG 一个变量。
 # 确定性档 XLA_FLAGS 写死在这里——正确性族 run 一律注入 D2 档
-# （`v1-gradient-baseline.md` 符号总表），不由调用方随手改。
+# （`docs/root-archive/v1-gradient-baseline.md` 符号总表），不由调用方随手改。
 #
 # 用法：
 #   RUN_TAG=v1-dtype-p3-dump-pre GRAD_ARRAYS_DIR=/data/hongzefu/v1-baselines/dtype-p5-grad-pre \

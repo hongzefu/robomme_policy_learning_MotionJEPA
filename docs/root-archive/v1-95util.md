@@ -3,7 +3,7 @@
 > ## ✅ 已收官（2026-08-28）：L0 一层达标，L1–L4 全部不做
 >
 > **`E2E95_ACCEPT` 双 PASS，目标达成。** 数字权威源见 v2 计划 T8 登记簿（S0 与 S0 复验行）
-> 与 [`docs/training-doc/v1-l0-gauge/`](docs/training-doc/v1-l0-gauge/)；本文件不复制（T9-B4）。
+> 与 [`docs/training-doc/v1-l0-gauge/`](../training-doc/v1-l0-gauge)；本文件不复制（T9-B4）。
 >
 > | 档 | run_name | job | util 均值 | 步时均值 |
 > |---|---|---|---|---|

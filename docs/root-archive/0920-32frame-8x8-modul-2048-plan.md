@@ -1,6 +1,6 @@
 # 32 帧 × 8×8、2048 token 的无 motion modulation 训练方案
 
-> **2026-09-22完成记录：** 实现、完整取证、V9容量、V9b测速、条件授权后的V10与正式80k均完成。训练于06:19:30 UTC以0退出，耗时22小时58分52秒；16份checkpoint与最终61叶加载通过。用户进一步要求「完成合并」「和训练的收尾」，已恢复主仓源码权限、快进全部提交并归档；本轮独立副本已清理，旧temp仍有其他会话使用，原样保留。详见[正式训练结果](docs/training-doc/v2-1600ep-m32x8x8-modul-b128-80k/result.md)。以下实施中状态与等待安排为历史计划，后续明确用户决定及本完成记录优先；策略评估仍另立计划。
+> **2026-09-22完成记录：** 实现、完整取证、V9容量、V9b测速、条件授权后的V10与正式80k均完成。训练于06:19:30 UTC以0退出，耗时22小时58分52秒；16份checkpoint与最终61叶加载通过。用户进一步要求「完成合并」「和训练的收尾」，已恢复主仓源码权限、快进全部提交并归档；本轮独立副本已清理，旧temp仍有其他会话使用，原样保留。详见[正式训练结果](../training-doc/v2-1600ep-m32x8x8-modul-b128-80k/result.md)。以下实施中状态与等待安排为历史计划，后续明确用户决定及本完成记录优先；策略评估仍另立计划。
 
 > 创建日期：2026-09-20（America/New_York），修订保留原文件名。状态：实施中。2026-09-21 用户原话：「开始实现 有问题立刻越早问用户越好 一路实现到测速结束报告用户为止」。本轮授权覆盖代码、验证、V9 容量检查、V9b 测速及 V9c 报告与可检查的启动草案；正式 80k 起跑仍须收到针对本次报告的明确同意。下文修订记录中的「仅改计划」描述的是当时授权，不限制本轮已授权实施。
 
@@ -24,7 +24,7 @@
 
 ### 二、为什么现在不能直接跑
 
-**训练侧**：只把 YAML 的 `budget` 改成 2048，训练会在构造 Dataset 时抛 `ValueError`。原因是 [FrameSampDataset.__init__](src/mme_vla_suite/training/framesamp_dataset.py) 里有一个形制守卫，只放行 `(budget, token_per_image, num_views)` 为 `(512,16,1)` 或 `(512,64,1)` 的组合。守卫之后的选帧、读行、补零、展平、模型前向都已经按 `budget` 参数化（最大帧数 = `budget // 64`），不需要为 32 帧另写任何分支。所以生产改动本身很小，工作量主要在验证。
+**训练侧**：只把 YAML 的 `budget` 改成 2048，训练会在构造 Dataset 时抛 `ValueError`。原因是 [FrameSampDataset.__init__](../../src/mme_vla_suite/training/framesamp_dataset.py) 里有一个形制守卫，只放行 `(budget, token_per_image, num_views)` 为 `(512,16,1)` 或 `(512,64,1)` 的组合。守卫之后的选帧、读行、补零、展平、模型前向都已经按 `budget` 参数化（最大帧数 = `budget // 64`），不需要为 32 帧另写任何分支。所以生产改动本身很小，工作量主要在验证。
 
 **验证侧还有一个独立阻塞，必须一并解决。** 仓库现成的定点取证链（`dump_fixture_samples.py` → `compare_fixture_dumps.py`）硬性要求清单里存在 `exec_start_idx == 0` 的 episode，用来覆盖「历史不足、需要补零」的分支。而 v2 私有采集给**四个任务的每一集都注入了 demo 前缀**，1600ep 清单的 `exec_start_idx` 最小 100、等于 0 的一个都没有，所以这条取证链在读任何数据之前就 `raise`。这不是取样问题而是采集契约决定的，**任何 v2 衍生库都不可能有零起点 episode**（详见 §2 与 §6.1）。因此本方案必须改 `_common.py` 的定点时刻口径，并为「补零/短历史」另找一条不依赖零起点 episode 的覆盖路径。
 
@@ -148,7 +148,7 @@
 
 目标是在现有 `perceptual + frame_sampling + modulation` 链路上增加一个独立配置：**最多采样 32 帧，每帧 8×8 = 64 个视觉 token，总预算 2048，motion 关闭**。已有 512 token 配置继续保留原有行为。
 
-当前模型已经按输入长度处理 modulation memory；实际阻塞在 [FrameSampDataset.__init__](src/mme_vla_suite/training/framesamp_dataset.py)：`(budget, token_per_image, num_views)` 只允许 `(512,16,1)` 和 `(512,64,1)`。因此只把 YAML 的 `budget` 改为 2048 会在 Dataset 构造时抛出 `ValueError`。
+当前模型已经按输入长度处理 modulation memory；实际阻塞在 [FrameSampDataset.__init__](../../src/mme_vla_suite/training/framesamp_dataset.py)：`(budget, token_per_image, num_views)` 只允许 `(512,16,1)` 和 `(512,64,1)`。因此只把 YAML 的 `budget` 改为 2048 会在 Dataset 构造时抛出 `ValueError`。
 
 训练路径改动为**一份新 YAML、Dataset 守卫、PerceptualMemory 三键长度守卫、HistoryPi0 的 spec 与 mask 守卫**（三个 Python 文件 + YAML）；启动工具另补正式配置核验。已有 packed 表可直接选出 32 帧，不重抽 SigLIP、不重建库、不重算 norm_stats；模型数值计算、优化器、采样算法与 collate 不变。
 
@@ -185,9 +185,9 @@
 
 起跑前核对方法固定为：**整文件哈希行用 `sha256sum <path>` 直核；清单内容指纹行不得用 `sha256sum`**，由 `datastore/manifest.py::load_manifest` 在加载时现场重算比对（不符即 raise），或由 `scripts/training/g0/check_config_provenance.py` 的 `LIB_PROVENANCE_MATCH` 判定行覆盖（该脚本文件头明文写着「口径是 `manifest_sha256` 的规范化摘要，不是文件全文 sha256」）。两种口径不得互相替代，也不得混写为同一个「SHA256」标签。
 
-既有建库结果见[1600ep 数据档案](docs/dataset-build-doc/4task-v2-1600ep-604f16da/result.md)。`FrameSampStore.read_image_rows` 每行提供 `(64,2048)` 的 bf16 图像特征，`pos_rows` 每行提供 `(64,768)` 的 f32 位置特征；存储布局不包含“每个训练样本最多 8 帧”的限制。
+既有建库结果见[1600ep 数据档案](../dataset-build-doc/4task-v2-1600ep-604f16da/result.md)。`FrameSampStore.read_image_rows` 每行提供 `(64,2048)` 的 bf16 图像特征，`pos_rows` 每行提供 `(64,768)` 的 f32 位置特征；存储布局不包含“每个训练样本最多 8 帧”的限制。
 
-选帧继续使用 [shared/sampling.py::even_sampling_indices](src/mme_vla_suite/shared/sampling.py)。令当前 episode 的全域帧号为 `t`，最大帧数由 `2048 // (64 × 1) = 32` 得出：
+选帧继续使用 [shared/sampling.py::even_sampling_indices](../../src/mme_vla_suite/shared/sampling.py)。令当前 episode 的全域帧号为 `t`，最大帧数由 `2048 // (64 × 1) = 32` 得出：
 
 - `t < 32`：选择 `0..t`，不足 32 帧的部分右侧补零，padding mask 为 False。
 - `t >= 32`：按 `np.linspace(0, t, 32, dtype=np.int32)` 均匀选择 32 帧，覆盖到当前帧；这不是取最近 32 帧。
@@ -212,7 +212,7 @@
 
 #### 3.1 新增独立 YAML
 
-在 `src/mme_vla_suite/models/config/robomme/` 新增 `perceptual-framesamp-modul-32frame-8x8.yaml`。从现有[无 motion 8×8 YAML](src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8.yaml) 派生，除 `budget` 和说明注释外，其余配置值相同：
+在 `src/mme_vla_suite/models/config/robomme/` 新增 `perceptual-framesamp-modul-32frame-8x8.yaml`。从现有[无 motion 8×8 YAML](../../src/mme_vla_suite/models/config/robomme/perceptual-framesamp-modul-8frame-8x8.yaml) 派生，除 `budget` 和说明注释外，其余配置值相同：
 
 ```yaml
 # 32 帧 × 8×8 = 2048 个帧记忆 token；modulation，无 motion。
@@ -356,7 +356,7 @@ flowchart TD
 
 ### 5. 模型语义与 checkpoint 边界
 
-[history_gemma.py::MemoryAttention.__call__](src/mme_vla_suite/models/integration/history_gemma.py) 从 `mem_seq.shape` 读取长度，并使用 `q_positions = arange(mem_len, mem_len + x_len)`。在 20 个动作 token 下，query 位置由 `512..531` 改为 `2048..2067`；key 位置由 `0..511` 改为 `0..2047`。**这一位移与有效帧数无关、对满历史样本同样成立**，因此扩大 budget 必然改变前向语义。（不要把理由写成「短历史 + padding 仍占序列位置」——本库所有样本都是满 32 帧，那个情形根本不存在，读者照字面核对会核不到。）
+[history_gemma.py::MemoryAttention.__call__](../../src/mme_vla_suite/models/integration/history_gemma.py) 从 `mem_seq.shape` 读取长度，并使用 `q_positions = arange(mem_len, mem_len + x_len)`。在 20 个动作 token 下，query 位置由 `512..531` 改为 `2048..2067`；key 位置由 `0..511` 改为 `0..2047`。**这一位移与有效帧数无关、对满历史样本同样成立**，因此扩大 budget 必然改变前向语义。（不要把理由写成「短历史 + padding 仍占序列位置」——本库所有样本都是满 32 帧，那个情形根本不存在，读者照字面核对会核不到。）
 
 补充两点缓解事实，避免把这条读成 2048 特有的高风险：该函数内部 `(num_heads, num_kv_heads, head_dim, width) = (4, 1, 256, 1024)` 与序列长度无关，`mem_len` 纯由 `mem_seq.shape` 运行时读出，512 与 2048 执行**完全相同**的一段代码；`openpi/models/gemma.py::_apply_rope` 是 `max_wavelength=10_000` 的标准实现、float32 计算，position 到 2067 远在稳定范围内。而且 modulation + 512 档已有两次完整正式训练留档（`docs/training-doc/v2-1600ep-m8x8-modul-b128-60k`、`v2-1600ep-m8x8-modul-motion-b128-80k`）。所以这是「补一个独立锚点」的问题，不是高风险项——锚点见 §6.1a。
 
@@ -366,7 +366,7 @@ flowchart TD
 
 #### 5.1 加载判据必须能证伪（原判据已被证明零分辨力）
 
-[policy_config.py::_load_resolved_snapshot](src/mme_vla_suite/policies/policy_config.py) 与 `create_trained_policy` 优先读取 run 保存的解析快照。新 run 必须保存 `budget=2048`、`token_per_image=64`、`memory_token_dim=1024`，`motion_provenance.json` 记载关闭状态；仅给旧 checkpoint 换 CLI YAML 名不会把它变成 2048 模型。
+[policy_config.py::_load_resolved_snapshot](../../src/mme_vla_suite/policies/policy_config.py) 与 `create_trained_policy` 优先读取 run 保存的解析快照。新 run 必须保存 `budget=2048`、`token_per_image=64`、`memory_token_dim=1024`，`motion_provenance.json` 记载关闭状态；仅给旧 checkpoint 换 CLI YAML 名不会把它变成 2048 模型。
 
 **但原先写的两条判据（`_assert_param_tree_exact` 通过、`_params_have_motion` 为 False）无法支撑上面那句话，必须替换。** 三条实测事实：
 
@@ -542,7 +542,7 @@ export XLA_FLAGS="--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0"
 
 实施时重新确认环境和正在运行的任务。2026-09-20 实测：8 张 A100 全部空闲（0 MiB / 0%），主副本 `src/mme_vla_suite/training/framesamp_dataset.py` 权限为 `-rw-r--r--`、**未只读锁定**，即「主副本因长训练锁定」的前提当前不成立，本轮可直接在主副本工作。
 
-若日后确因长训练锁定而转到开发副本，遵循 [AGENTS.md](AGENTS.md) 第 14 条的开发副本机制，**四条一条都不能漏**：开发副本必须有**自己的 `.venv`**（不得共用主副本的，`uv sync` 会换掉正被训练进程使用的包文件）；开发副本的 `v1-store` 是一条**可写**的 symlink，**一切写入 `v1-store/` 的操作等同于直接写主副本数据**，按写主副本的标准审慎对待；**红线：开发副本里禁止执行任何带 `--force` 或输出根参数的破坏性命令**（`build_dataset.py --force` 会 `rmtree` 整个输出根，穿透 symlink 即删主副本数据），确需执行时回主副本，并先 `ls -ld <输出根>` 确认它是本环境的实体目录；开发副本是临时工作区，不跨长训练周期保留。本方案现有命令中没有一条带 `--force` 或输出根位置参数（`--basetemp` 只写 `v1-store/tmp/` 下的全新子目录，`--dataset-path` 只读既有目录），不触发该红线；后续若新增带输出根的命令，须逐条按上述红线复核。当前 HF 导出相关在途文件不属于本方案的修改或提交范围。
+若日后确因长训练锁定而转到开发副本，遵循 [AGENTS.md](../../AGENTS.md) 第 14 条的开发副本机制，**四条一条都不能漏**：开发副本必须有**自己的 `.venv`**（不得共用主副本的，`uv sync` 会换掉正被训练进程使用的包文件）；开发副本的 `v1-store` 是一条**可写**的 symlink，**一切写入 `v1-store/` 的操作等同于直接写主副本数据**，按写主副本的标准审慎对待；**红线：开发副本里禁止执行任何带 `--force` 或输出根参数的破坏性命令**（`build_dataset.py --force` 会 `rmtree` 整个输出根，穿透 symlink 即删主副本数据），确需执行时回主副本，并先 `ls -ld <输出根>` 确认它是本环境的实体目录；开发副本是临时工作区，不跨长训练周期保留。本方案现有命令中没有一条带 `--force` 或输出根位置参数（`--basetemp` 只写 `v1-store/tmp/` 下的全新子目录，`--dataset-path` 只读既有目录），不触发该红线；后续若新增带输出根的命令，须逐条按上述红线复核。当前 HF 导出相关在途文件不属于本方案的修改或提交范围。
 
 所有 Python 检查均使用 `uv run --no-sync`，缓存与结果置于 `v1-store/`。预计超过 5 分钟的取证、训练、诊断，从 clean HEAD 启动，放入 detached tmux，使用 `PYTHONUNBUFFERED=1`、`set -o pipefail`、`tee` 和最终 `EXIT_CODE=`，在 `docs/training-doc/<run_name>/` 记录命令、commit、配置 SHA、数据摘要及结果。≤5 分钟的临时 smoke 完成后清理准确对应的临时 run。
 

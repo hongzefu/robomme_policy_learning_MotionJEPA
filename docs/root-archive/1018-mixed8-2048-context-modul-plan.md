@@ -117,7 +117,7 @@
 
 1. 美东 2026-10-18 16:42 用户「开工」；S1 `bb74c95`、S2 `870857f` 合入（commitV11.26）；G0、G4 两处判定方式调整均 `ADJUST_REVIEW=PASS scale=same`；G2–G5 全过。
 2. 美东 17:43:57 context 自 V11.27Beta `42b2523` 起跑（GPU 0–3），17:45:01 modulation 自 V11.28Beta `1c95c06` 起跑（GPU 4–7）；实测 10.1 / 1.9 s/步。
-3. 美东 19:09 用户「停止context2048 作为测速留档」「大产物删除」：`m2k-train-ctx` 于 455/80k 步停止（无 ckpt、未建 bucket），测速结论写入 [context result.md](docs/training-doc/mixed8-200-m32x8x8-context-b128-80k/result.md)（commitV11.27）；删除三份短测 ckpt（约 34G）。context 相关的 pre_handoff、long_tail、正式上传驱动取消；modulation 照计划继续，GPU 0–3 空出不挪用。
+3. 美东 19:09 用户「停止context2048 作为测速留档」「大产物删除」：`m2k-train-ctx` 于 455/80k 步停止（无 ckpt、未建 bucket），测速结论写入 [context result.md](../training-doc/mixed8-200-m32x8x8-context-b128-80k/result.md)（commitV11.27）；删除三份短测 ckpt（约 34G）。context 相关的 pre_handoff、long_tail、正式上传驱动取消；modulation 照计划继续，GPU 0–3 空出不挪用。
 
 # 第二部分（技术细节，供 agent 追踪）
 

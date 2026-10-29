@@ -23,7 +23,7 @@
 
 ## 2. 用户原话与范围
 
-用户对数据明确：「纯counting跑4*100 公开集合的子集合」，执行授权为「恢复计划中的建库，严格按前置闸门推进」。依据[原版80k计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)，本库使用同一公开全集中四个counting任务的全部100集，独立构造source、4×4 packed与本库norm_stats，不从full库切分改号，不生成8×8 packed、Wan或motion。
+用户对数据明确：「纯counting跑4*100 公开集合的子集合」，执行授权为「恢复计划中的建库，严格按前置闸门推进」。依据[原版80k计划](../../root-archive/0925-orig-80k-full-counting-4plus4-plan.md)，本库使用同一公开全集中四个counting任务的全部100集，独立构造source、4×4 packed与本库norm_stats，不从full库切分改号，不生成8×8 packed、Wan或motion。
 
 用户同时决定「允许主机 dtype 不同，但要求数值一致且训练标量/状态逐位一致」，以及「允许这四键缺失与 None 等价」。后一条仅限 `motion_emb/motion_pos/motion_mask/mem_order` 缺失与严格None，其他键、非None值和signed zero要求不变，原始dtype/raw SHA仍留证。这些许可仅适用于指定训练输入的比较口径；本次full/counting子集比较仍严格核对feature文件字节及pkl字段的dtype、shape与原始字节，未借主机dtype许可放宽它。
 

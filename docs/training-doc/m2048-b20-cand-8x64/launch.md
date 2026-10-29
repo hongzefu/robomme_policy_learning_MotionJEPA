@@ -1,6 +1,6 @@
 # m2048-b20-cand-8x64 起跑口径
 
-用户要求实现至测速报告，后续又明确选择「保持原计划，完整取证（推荐）」。本档遵循[实施计划](../../../0920-32frame-8x8-modul-2048-plan.md)，仅使用1600ep库；物理GPU4、5，batch8、worker4、FSDP2、seed42、20步与同配置1步补跑，均为启动覆盖，保持全局默认。
+用户要求实现至测速报告，后续又明确选择「保持原计划，完整取证（推荐）」。本档遵循[实施计划](../../root-archive/0920-32frame-8x8-modul-2048-plan.md)，仅使用1600ep库；物理GPU4、5，batch8、worker4、FSDP2、seed42、20步与同配置1步补跑，均为启动覆盖，保持全局默认。
 
 本档须在生产与验证工具提交完毕后的同一clean CAND运行；完整实际HEAD与UTC由下面的START_HEAD/RUN_START记录，版本不是未来分支名。参考BASE固定为29a27c0be9f218ca0cfe4ab2abf1d3372ed308b6，逐步五标量、输入和全部状态摘要必须逐位相等。依赖固定uv.lock，本轮不更改；存储是AWS /dev/md0 XFS NVMe RAID。
 
