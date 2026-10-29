@@ -32,7 +32,7 @@ h1{margin-top:36px;border-bottom:2px solid #333}h2{margin-top:28px}blockquote{bo
 <tr><td>K7</td><td>只评 59999：不评 55000 兜底、不评 modulation 那条、不评其他中间步；800 局跑完（预计半夜）立即逐个 scancel 全部占位。</td><td>用户原话「其他都不评 然后跑到半夜结束了就cancel」</td></tr>
 <tr><td>K8</td><td>冒烟用最早的 5000 步 checkpoint。冒烟属于本计划步骤（S2–S3），与其他步骤一样，须等修订后的完整计划重新获得用户明确开工令后才执行。</td><td>用户原话「现在可以冒烟跑一个最早期的ckpt」</td></tr>
 <tr><td>K10</td><td>冒烟占位用完即释放：S3 冒烟 2 局跑完，停止冒烟控制器与 worker、确认退出码后立即 scancel 该份占位，不留给正式评估复用；正式评估的 12 份全部在 59999 出现时新提交。</td><td>用户原话「生成 runtime 合同；提交 1 份占位，用 5000 跑 2 局冒烟（purpose=validation） 跑完之后就释放」</td></tr>
-<tr><td>K9</td><td>时机：step-59999 清单一出现，<b>立刻</b>提交 12 份占位并开始下载；下载完立刻初始化 run800、起控制器和 worker，<b>不等 sha256 校验结束</b>。下载时逐文件只核字节数，sha256 由独立进程在后台并行核对；已 RUNNING 的占位立刻起 worker，仍在 PENDING 的排到后加入（动态队列）。后台校验 FAIL 时立即停止派发并报告用户，已产出结果不计入。</td><td>用户原话「59999出现后立刻提交任务 然后开始下载 下载完立刻开始 不用等校验结束」</td></tr>
+<tr><td>K9</td><td>时机：step-59999 清单一出现，<b>立刻</b>提交 12 份占位并开始下载；下载完立刻初始化 run800、起控制器和 worker，<b>不等 sha256 校验结束</b>。下载时逐文件只核字节数，sha256 由独立进程在后台并行核对；已 RUNNING 的占位立刻起 worker，仍在 PENDING 的排到后加入（动态队列）。后台校验 FAIL 时立即停止派发并报告用户，已产出结果不计入；此时 12 份占位是否 scancel 由用户裁决。</td><td>用户原话「59999出现后立刻提交任务 然后开始下载 下载完立刻开始 不用等校验结束」</td></tr>
 <tr><td>K6</td><td>不改训练侧任何东西，不联系 AWS，只匿名读 bucket。</td><td>用户原话「aws是codex在跑训练 你无法发信息询问」</td></tr>
 </table>
 
@@ -78,10 +78,10 @@ h1{margin-top:36px;border-bottom:2px solid #333}h2{margin-top:28px}blockquote{bo
 <tr><td>S1</td><td>导出执行副本 <code>9459859</code>（含子模块 <code>856bc3a</code>）</td><td><code>RELEASE_SNAPSHOT=PASS commit=9459859… files=&lt;n&gt; tree_diff=0</code></td></tr>
 <tr><td>S2</td><td>下载 5000 并逐文件核对 SHA（root.json 加 step-5000.json）</td><td><code>VLA_DOWNLOAD=PASS step=5000 files=&lt;n&gt; bytes=&lt;n&gt; mismatch=0</code></td></tr>
 <tr><td>S3</td><td>生成 runtime 合同；提交 1 份占位，用 5000 跑 2 局冒烟（<code>purpose=validation</code>）；跑完对冒烟控制器发 SIGTERM、确认冒烟 worker 与控制器 <code>EXIT_CODE=</code>，随即 scancel 该份占位（K10）</td><td><code>SMOKE2=PASS accepted=2 errors=0</code>，两局都有确定终局；server 日志里 readout 为 split、memory 共 896 个位置；sidecar 身份校验通过；冒烟占位 CANCELLED。任务失败不算链路失败</td></tr>
-<tr><td>S4</td><td>bucket 监听：出现 step-59999 后立刻查 chaijy2 余量、提交 12 份占位，同时开始 S5 下载</td><td><code>HOLD_SUBMIT=PASS jobs=12</code>，JobID 逐个登记</td></tr>
+<tr><td>S4</td><td>bucket 监听：出现 step-59999 后立刻查 chaijy2 余量、提交 12 份占位，同时开始 S5 下载；若此时冒烟尚未结束，余量按 13 卡核对；冒烟 FAIL 时已提交占位如何处置报告用户裁决</td><td><code>HOLD_SUBMIT=PASS jobs=12</code>，JobID 逐个登记</td></tr>
 <tr><td>S5</td><td>下载 59999，逐文件只核字节数，下载完写 <code>DOWNLOADED.json</code> 并立即进入 S6；sha256 由后台进程 <code>verify.py 59999</code> 并行核对（K9）</td><td>下载：<code>VLA_DOWNLOAD=PASS step=59999 files=&lt;n&gt; bytes=&lt;n&gt; size_mismatch=0</code>；后台：<code>VLA_VERIFY=PASS step=59999 files=&lt;n&gt; sha_mismatch=0</code>（FAIL 即停止派发并报告用户）</td></tr>
-<tr><td>S6</td><td>初始化全新 run800（<code>purpose=production</code>，spec 在 <code>$R/spec-input.json</code>；冒烟 spec 在 <code>$R/smoke2-5k/spec-input.json</code>）；冒烟占位已在 S3 释放，不复用；先写好并提交评估档案 <code>launch.md</code>（第二部分 §八），再在 Aspen 起控制器；已 RUNNING 的占位立刻起 worker，其余排到后加入（K9）</td><td>每个 worker 打出 <code>WORKER_START</code>；控制器 <code>INIT_EXIT=0</code></td></tr>
-<tr><td>S7</td><td>12 个 worker 退出后读 <code>queue/summary.json</code> 汇总；对控制器发 SIGTERM 正常停止；逐个 scancel；写 <code>result.md</code> 与 <code>records/</code></td><td><code>summary.json</code> 中 <code>COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0</code>；800 个视频齐全；12 个 worker 都是 <code>EXIT_CODE=0</code>；12 份占位逐个 scancel 后 squeue 为空</td></tr>
+<tr><td>S6</td><td>初始化全新 run800（<code>purpose=production</code>，spec 在 <code>$R/spec-input.json</code>；冒烟 spec 在 <code>$R/smoke2-5k/spec-input.json</code>）；冒烟占位已在 S3 释放，不复用；先写好并提交评估档案 <code>launch.md</code>（第二部分 §八），再在 Aspen 起控制器；已 RUNNING 的占位立刻起 worker，其余排到后加入（K9）</td><td>已 RUNNING 占位上的 worker 均打出 <code>WORKER_START</code>，其余排到后补起并同样打出；控制器 <code>INIT_EXIT=0</code></td></tr>
+<tr><td>S7</td><td>12 个 worker 退出后读 <code>queue/summary.json</code> 汇总；对控制器发 SIGTERM 正常停止；逐个 scancel；写 <code>result.md</code> 与 <code>records/</code></td><td><code>summary.json</code> 中 <code>COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0</code>；800 个视频齐全；12 个 worker 都是 <code>EXIT_CODE=0</code>；后台 <code>VLA_VERIFY=PASS step=59999</code>；12 份占位逐个 scancel 后 squeue 为空</td></tr>
 </table>
 <p>报告内容：总成功率，easy／medium／hard 分档成功率，与 K5 对照。</p>
 
@@ -137,7 +137,7 @@ h1{margin-top:36px;border-bottom:2px solid #333}h2{margin-top:28px}blockquote{bo
 <tr><td>主</td><td>主会话</td><td>S1 导出，写全部运行产物脚本，S4 监听与提交，Monitor，评估档案 <code>launch.md</code>／<code>result.md</code>，S7 汇总、停止控制器、释放与交接</td><td><code>$E/releases/9459859…</code>、<code>$R</code>、本机日志目录、<code>docs/handoff/current.json</code>、本计划</td><td>旧 run 目录、bucket、训练侧</td><td>A0</td><td><code>RELEASE_SNAPSHOT</code>、<code>HOLD_SUBMIT</code>、<code>COMPUTE_DONE</code></td><td>Aspen CPU</td></tr>
 <tr><td>R1</td><td>运行／opus</td><td>S2 在 tmux <code>eval-o16-fetch5k</code> 执行 <code>fetch.py 5000</code></td><td>仅 5000 资产目录与其日志</td><td>源码、脚本</td><td>S1</td><td><code>VLA_DOWNLOAD step=5000</code></td><td>网络，约 40 min</td></tr>
 <tr><td>R2</td><td>运行／opus</td><td>S3 冒烟：在冒烟专用占位内用 5000 跑 2 局，跑完交回句柄，由主会话停止冒烟控制器并 scancel 该占位</td><td><code>$R/smoke2-5k/</code></td><td>源码、脚本、spec</td><td>R1，冒烟占位进入 RUNNING</td><td><code>SMOKE2</code></td><td>1 A40，端口沿用 worker 的自动分配</td></tr>
-<tr><td>R3</td><td>运行／opus</td><td>S5–S6：执行 <code>fetch.py 59999 --size-only</code>，下载完立即初始化 run800、起控制器，并在已 RUNNING 的占位上起 worker；后续排到的占位由主会话交回句柄后补起</td><td><code>$R/run800/</code>、59999 资产目录</td><td>源码、脚本、spec</td><td>R2 PASS，S4 已提交</td><td><code>VLA_DOWNLOAD step=59999</code>、每个已起 worker 的 <code>WORKER_START</code></td><td>12 A40</td></tr>
+<tr><td>R3</td><td>运行／opus</td><td>S5–S6：执行 <code>fetch.py 59999 --size-only</code>，下载完、主会话提交 launch.md 后立即初始化 run800、起控制器，并在已 RUNNING 的占位上起 worker；后续排到的占位由主会话补起</td><td><code>$R/run800/</code>、59999 资产目录</td><td>源码、脚本、spec</td><td>R2 PASS，S4 已提交，主会话已提交 launch.md</td><td><code>VLA_DOWNLOAD step=59999</code>、每个已起 worker 的 <code>WORKER_START</code></td><td>12 A40</td></tr>
 <tr><td>F（仅在冒烟失败时）</td><td>修复／opus，<code>isolation: worktree</code></td><td>针对具体阻塞做最小修复</td><td>按实际阻塞由主会话划定</td><td>其余全部</td><td>R2 的证据</td><td>定向测试；合并前后审查 PASS</td><td>CPU</td></tr>
 </table>
 <p>共享文件归属：<code>current.json</code> 只由主会话写；各运行代理只写各自的产物目录。</p>
@@ -199,7 +199,7 @@ tmux new-session -d -s eval-o16-controller "bash $R/run-controller.sh"
 <h2>八、留档与 commit 纪律</h2>
 <p><b>评估档案（第 12 条，本轮必做）</b>：run 名 <code>o16ctx-60k-800</code>，档案目录 <code>docs/evaluation-doc/o16ctx-60k-800/</code>（与既有 <code>docs/evaluation-doc/official-stage2-20k-probe-1026-a/</code> 同体例），两段式写入：</p>
 <ul>
-<li><b>起跑时写 <code>launch.md</code></b>（S6 起控制器之前写好并提交）：目的；执行代码 <code>9459859…</code> 与 benchmark <code>856bc3a…</code>；checkpoint 资产路径、清单 sha、<code>DOWNLOADED.json</code>（<code>READY.json</code> 与 <code>VLA_VERIFY</code> 结果写进 <code>result.md</code>）；spec、run 身份及 runtime 合同的 sha；控制器与 worker 的完整命令；12 个 JobID 与节点；本轮 tmux 会话清单；日志与结果路径。</li>
+<li><b>起跑时写 <code>launch.md</code></b>（S6 起控制器之前写好并提交）：目的；执行代码 <code>9459859…</code> 与 benchmark <code>856bc3a…</code>；checkpoint 资产路径、清单 sha、<code>DOWNLOADED.json</code>（<code>READY.json</code> 与 <code>VLA_VERIFY</code> 结果写进 <code>result.md</code>）；spec、run 身份及 runtime 合同的 sha；控制器与 worker 的完整命令；12 个 JobID 与当时已知的节点（起控制器时仍 PENDING 的占位，节点补进 <code>result.md</code>）；本轮 tmux 会话清单；日志与结果路径。</li>
 <li><b>跑完写 <code>result.md</code></b>：总成功率与 easy／medium／hard 分档、与 K5 的对照、<code>queue/summary.json</code> 原文判定、占位释放记录、计划外事件。</li>
 <li><b><code>records/</code></b>：只放 git 还原不出来的东西，即 <code>summary.json</code>、清洗后的控制器与 worker 日志摘要、下载核验日志；不放视频和 checkpoint，脚本和 spec 以 <code>launch.md</code> 里的命令块与 sha 记录，不拷贝。</li>
 </ul>
