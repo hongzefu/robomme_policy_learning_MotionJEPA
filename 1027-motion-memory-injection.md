@@ -182,7 +182,7 @@ x = x + g2 * FFN(z)                          # 残差用调制前的 x
 
 ### 6.6 单层完整输入输出图（当前 896-token 配置）
 
-![action expert 单层计算：原有八步、memory 读取与调制、各步骤输入输出和残差来源](docs/figures/1027-action-expert-modulation-detail.svg)
+<img src="docs/figures/1027-action-expert-modulation-detail.svg" alt="action expert 单层计算：原有八步、memory 读取与调制、各步骤输入输出和残差来源" width="1800">
 
 图中保留一条从上到下的主干：原有步骤为①–⑧；开启 modulation 后，在④与⑤之间接入绿色的 M1–M3。每一步标明输入来自哪里、输入输出形状、关键运算和用途；右侧支路给出 memory 如何读成 `u`、如何生成 `scale_mem` / `shift_mem`，以及如何把原来的 `x1` 调制成 `z`。可[打开原尺寸 SVG](docs/figures/1027-action-expert-modulation-detail.svg)查看细节。
 
