@@ -68,7 +68,7 @@ h1{margin-top:36px;border-bottom:2px solid #333}h2{margin-top:28px}blockquote{bo
 <tr><td>55k 清单预计</td><td>10-29 约 18:40</td><td>5k→50k 相邻清单间隔约 3 h 22 min</td></tr>
 <tr><td>59999 清单预计</td><td>10-29 约 22:00</td><td>同上，最后一段少 1 步</td></tr>
 <tr><td>59999 下载完成</td><td>约 22:40</td><td>10-27 下载 12.2 GB 用时 2289 s</td></tr>
-<tr><td>800 局完成</td><td>10-30 约 01:00–02:00</td><td>10-27 用 10 卡占位 2 h 38 min。本次 12 卡，但 context 的 896 个 memory 位置推理更慢，按 2–3 h 估算，未实测</td></tr>
+<tr><td>800 局完成</td><td>10-30 约 00:40–01:40</td><td>10-27 用 10 卡占位 2 h 38 min。本次 12 卡，但 context 的 896 个 memory 位置推理更慢，按 2–3 h 估算，未实测</td></tr>
 </table>
 
 <h2>四、步骤与验收</h2>
@@ -79,8 +79,8 @@ h1{margin-top:36px;border-bottom:2px solid #333}h2{margin-top:28px}blockquote{bo
 <tr><td>S3</td><td>生成 runtime 合同；提交 1 份占位，用 5000 跑 2 局冒烟（<code>purpose=validation</code>）</td><td><code>SMOKE2=PASS accepted=2 errors=0</code>，两局都有确定终局；server 日志里 readout 为 split、memory 共 896 个位置；sidecar 身份校验通过。任务失败不算链路失败</td></tr>
 <tr><td>S4</td><td>bucket 监听：出现 step-55000 后查 chaijy2 余量，补交 11 份占位，与 S3 那份合计 12 份</td><td><code>HOLD_SUBMIT=PASS jobs=12</code>，JobID 逐个登记</td></tr>
 <tr><td>S5</td><td>出现 step-59999 后下载、核对 SHA，发布 READY</td><td><code>VLA_DOWNLOAD=PASS step=59999 files=&lt;n&gt; mismatch=0</code></td></tr>
-<tr><td>S6</td><td>初始化全新 run800（<code>purpose=production</code>），Aspen 起控制器，12 个 worker 弹性领取</td><td>每个 worker 打出 <code>WORKER_START</code>；控制器 <code>INIT_EXIT=0</code></td></tr>
-<tr><td>S7</td><td>汇总、逐个 scancel、交接</td><td><code>COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0</code>；800 个视频齐全；12 个 worker 都是 <code>EXIT_CODE=0</code>；squeue 为空</td></tr>
+<tr><td>S6</td><td>初始化全新 run800（<code>purpose=production</code>，spec 在 <code>$R/spec-input.json</code>；冒烟 spec 在 <code>$R/smoke2-5k/spec-input.json</code>）；冒烟的控制器和 worker 必须已退出并写出 <code>EXIT_CODE=</code> 后，slot01 才作为 worker-01 复用；Aspen 起控制器，12 个 worker 弹性领取</td><td>每个 worker 打出 <code>WORKER_START</code>；控制器 <code>INIT_EXIT=0</code></td></tr>
+<tr><td>S7</td><td>汇总、逐个 scancel、交接</td><td><code>COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0</code>；800 个视频齐全；12 个 worker 都是 <code>EXIT_CODE=0</code>；12 份占位逐个 scancel 后 squeue 为空</td></tr>
 </table>
 <p>报告内容：总成功率，easy／medium／hard 分档成功率，与 K5 对照。</p>
 
@@ -123,9 +123,9 @@ h1{margin-top:36px;border-bottom:2px solid #333}h2{margin-top:28px}blockquote{bo
 <tr><td>执行副本</td><td><code>git archive 9459859</code> 加子模块 <code>git -C third_party/robomme_benchmark archive 856bc3a</code>，解到 <code>releases/9459859…</code>；导出后与 <code>git ls-tree -r</code> 比对文件集合和 blob</td><td>既有 <code>releases/5bbd814…</code>（纯导出，无 .git）</td></tr>
 <tr><td><code>fetch.sh &lt;step&gt;</code></td><td>匿名下载 root.json、step 清单列出的全部文件，逐文件核对 bytes 与 sha256，失败即非零退出；成功后写 <code>READY.json</code>（清单 sha、文件数、字节数），末行 <code>VLA_DOWNLOAD=PASS|FAIL</code></td><td><code>v1-store/evaluation/stage2-60k-seed42/fetch60k.log</code> 的输出体例</td></tr>
 <tr><td><code>watch_bucket.sh</code></td><td>每 5 分钟查 <code>…/tree/manifests</code>；出现新 step 输出 <code>NEW_STEP</code>；超过 100 分钟没有新 step 输出 <code>STALE</code>；出现 55000 输出 <code>STEP55000_SEEN</code>，出现 59999 输出 <code>STEP59999_SEEN</code> 后退出</td><td><code>v1-store/evaluation/stage2-60k-seed42/watch/watch_bucket.sh</code>，只换 bucket 名和目标步</td></tr>
-<tr><td><code>contracts/runtime.json</code></td><td><code>policy python -m scripts.evaluation.measure_target_runtime --provenance &lt;资产&gt;/motion_provenance.json --output $R/contracts/runtime.json</code>，在执行副本内运行；5000 与 59999 的 provenance 同属一个 run，若字节不同则各生成一份</td><td><code>runtime_contract.py::make_eval_runtime_contract</code></td></tr>
+<tr><td><code>contracts/runtime.json</code></td><td><code>policy python -m scripts.evaluation.measure_target_runtime --provenance &lt;资产&gt;/motion_provenance.json --output $R/contracts/runtime.json</code>，在执行副本内运行；5000 与 59999 的 provenance 同属一个 run。S5 下载后比对两份 <code>motion_provenance.json</code> 的 SHA：相同则正式 spec 沿用 <code>contracts/runtime.json</code>；不同则用 59999 的另生成 <code>contracts/runtime-59999.json</code>，正式 identity 和 spec 指向它</td><td><code>runtime_contract.py::make_eval_runtime_contract</code></td></tr>
 <tr><td><code>inputs/episodes.json</code></td><td>复制 10-27 的 <code>stage2-60k-seed42/inputs/episodes.json</code>，复制后核对 SHA <code>991c3496…</code></td><td>同上</td></tr>
-<tr><td><code>inputs/smoke2-episodes.json</code></td><td>从 800 局中取 2 局：<code>BinFill:0</code>，加一局 demo 最长的局（用来检验 motion 窗口数接近 96 时的表现）；按 <code>testx-stage2-60k-seed7/inputs/smoke2-episodes.json</code> 的体例写</td><td>同左</td></tr>
+<tr><td><code>inputs/smoke2-episodes.json</code></td><td>从 800 局中取 2 局：<code>BinFill:0</code>，加一局 demo 最长的局（检验长 demo 下的推理时间与显存）；按 <code>testx-stage2-60k-seed7/inputs/smoke2-episodes.json</code> 的体例写</td><td>同左</td></tr>
 <tr><td><code>inputs/run-identity.json</code> 与 spec</td><td>schema <code>simple-run-identity-1027</code>；字段改为 checkpoint 清单 sha、<code>checkpoint_step=59999</code>（冒烟用 5000）、episodes sha、<code>eval_code_commit=9459859…</code>、runtime 合同 sha、<code>model_seed=42</code>、purpose、<code>model_kind=stage2_pool4_concat</code>、<code>policy_config=mme_vla_suite_orig16_b128_60k</code>；<code>run_identity_sha256</code> 按上次同一算法计算</td><td><code>stage2-60k-seed42/inputs/run-identity.json</code>、<code>spec-input.json</code></td></tr>
 <tr><td><code>run-controller.sh</code>、<code>run-worker.sh</code>、<code>start-worker.sh</code></td><td>只换 run 根、执行副本 sha、日志路径，其余逐行沿用</td><td><code>stage2-60k-seed42/</code> 下同名脚本</td></tr>
 </table>
@@ -163,7 +163,7 @@ python -m scripts.evaluation.official_queue initialize --run-root $R/run800 --ma
 tmux new-session -d -s eval-o16-controller "bash $R/run-controller.sh"
 # 每个 worker：start-worker.sh &lt;JobID&gt; worker-NN（内部 srun --jobid --overlap --exact --gpu_cmode=shared）</pre>
 <p>Monitor：每份日志各挂一个。下载日志盯 <code>VLA_DOWNLOAD=|EXIT_CODE=|Traceback</code>；worker 日志盯 <code>WORKER_START|WORKER_DONE|EXIT_CODE=|Traceback|RuntimeError|out of memory|Killed</code>；控制器盯 <code>COMPUTE_DONE|EXIT_CODE=|Traceback</code>；监听脚本盯 <code>NEW_STEP|STALE|STEP55000_SEEN|STEP59999_SEEN|QUERY_FAIL</code>。管道每一级都必须行缓冲。</p>
-<p>占位提交前先调 <code>greatlakes-usage</code> 查 chaijy2 的 GPU、内存余量：12×24 G = 288 G。余量不足时报告用户，不擅自减卡。</p>
+<p>S4 补交 11 份前先调 <code>greatlakes-usage</code> 查 chaijy2 的 GPU、内存余量，需要 11 卡、11×24 G = 264 G（S3 的 1 份在默认上限内，直接提交）。余量不足时报告用户，不擅自减卡。若 bucket 长时间不更新（STALE），已提交的占位如何处置交用户决定。<code>$L</code> 指本机日志目录 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16ctx-60k</code>。</p>
 
 <h2>五、风险登记</h2>
 <table><tr><th>风险</th><th>表现</th><th>处置</th></tr>
@@ -171,7 +171,7 @@ tmux new-session -d -s eval-o16-controller "bash $R/run-controller.sh"
 <tr><td>context 896 个位置推理慢、显存高</td><td>单局时间明显长于 10-27</td><td>如实记录；A40 48 GB 显存未实测，冒烟时记录峰值</td></tr>
 <tr><td>AWS 训练中断或 59999 迟迟不上传</td><td>监听输出 <code>STALE</code></td><td>报告用户；按 K7 不改评 55000</td></tr>
 <tr><td>bucket 增量上传未完成就被读取</td><td>SHA 不符</td><td>只在清单出现后按清单逐文件核对；不符就重下该文件，最多 1 次，仍不符即停</td></tr>
-<tr><td>motion 窗口数超过 96</td><td>官方口径下抛 RuntimeError，该局计为基础设施错误</td><td>按 K3 不抽稀；冒烟用最长 demo 局提前看</td></tr>
+<tr><td>motion 窗口数超过 96</td><td>官方口径下抛 RuntimeError</td><td>不抽稀、不改口径（K3）。实际不会发生：窗口预算 96、stride 32、window 33 与 10-27 模型相同，按 demo 长度决定的窗口数逐局相同；10-27 的 800 局实测 <code>errors=0</code>。若仍出现，作为 S7 判据 FAIL 交用户裁决</td></tr>
 <tr><td>chaijy2 余量不足 12 卡</td><td>sbatch 进入 PENDING（AssocGrpGRES 等）</td><td>报告用户</td></tr>
 </table>
 
@@ -186,14 +186,14 @@ tmux new-session -d -s eval-o16-controller "bash $R/run-controller.sh"
 <h2>七、交接顺序与状态机登记</h2>
 <table><tr><th>项</th><th>内容</th></tr>
 <tr><td>任务 id</td><td><code>o16ctx-60k-800-eval</code></td></tr>
-<tr><td>交接前必须完成</td><td>① <code>VLA_DOWNLOAD=PASS step=59999</code>；② <code>COMPUTE_DONE completed=800 missing=0 errors=0</code>；③ 12 份占位逐个 CANCELLED、squeue 为空；④ 自有 tmux 全部退出</td></tr>
+<tr><td>交接前必须完成</td><td>① <code>VLA_DOWNLOAD=PASS step=59999</code>；② <code>COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0</code>、800 个视频、12 个 worker <code>EXIT_CODE=0</code>；③ 12 份占位逐个 CANCELLED、squeue 为空；④ 自有 tmux 全部退出</td></tr>
 <tr><td>长尾</td><td>无</td></tr>
 <tr><td>上游依赖</td><td>bucket <code>manifests/step-59999.json</code>（AWS 训练，只读）。假设：清单文件集合完整、resolved yaml SHA 与 root.json 一致</td></tr>
 <tr><td>done 后可开工的下游</td><td>无自动解锁；评估档案和 modulation 那条（<code>orig100-m32x4x4-modul-motion-s2split4x256-b128-60k</code>）的评估另行商定</td></tr>
-<tr><td>是否登记进状态机</td><td>用户未答复，暂不登记</td></tr>
+<tr><td>是否登记进状态机</td><td>用户未答复，暂不登记；不登记期间不写 <code>handoff:</code> commit，结果写进本计划末尾的实施结果小节</td></tr>
 </table>
 
 <h2>八、留档与 commit 纪律</h2>
-<p>本计划以 <code>docs:</code> 提交并推送；开工令、开工、完成各用一个 <code>handoff:</code> 小 commit，只 add <code>docs/handoff/current.json</code>。评估结果写进 current.json 和 commit body：总成功率、分档成功率、JobID 清单、tmux 清单。若有代码修复，按第 11 条 commitV 体例提交，body 六项详写。运行产物留在 <code>$R</code> 和本机日志目录，不进 git。</p>
+<p>本计划以 <code>docs:</code> 提交并推送。若用户同意登记状态机，开工令、开工、完成各用一个 <code>handoff:</code> 小 commit，只 add <code>docs/handoff/current.json</code>；未登记时结果以 <code>docs:</code> 追加到本计划。评估结果写进 current.json 和 commit body：总成功率、分档成功率、JobID 清单、tmux 清单。若有代码修复，按第 11 条 commitV 体例提交，body 六项详写。运行产物留在 <code>$R</code> 和本机日志目录，不进 git。</p>
 
 </body></html>
