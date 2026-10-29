@@ -6,9 +6,9 @@
 
 ![modulation：motion memory 注入全链路（第 1–10 节）](docs/figures/1027-motion-memory-injection.svg)
 
-**阅读指引**：本文件只讲机制（数据怎么流、在哪里注入、算了什么），不讲训练计划、闸门与 run 安排；那些见 `1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md` 与 `docs/root-archive/1026-vla-stage2-memory-1024-train-plan.md`。第 1–10 节保留原 modulation 说明；第 11 节配有 context 全链路图，按同样的「全链路 → 输入与投影 → 注入点 → 公式 → 训练与推理」顺序展开，末尾用同一套输入配置对照两种机制。补位（motion 不满 96 时）的细节见既有图 `docs/figures/1026-motion-pad-modulation.svg`。
+**阅读指引**：本文件只讲机制（数据怎么流、在哪里注入、算了什么），不讲训练计划、闸门与 run 安排；那些见 `1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md` 与 `docs/root-archive/1026-vla-stage2-memory-1024-train-plan.md`。第 1–10 节保留原 modulation 说明，第 6.6 节补充单层完整输入输出图；第 11 节配有 context 全链路图，按同样的「全链路 → 输入与投影 → 注入点 → 公式 → 训练与推理」顺序展开，末尾用同一套输入配置对照两种机制。补位（motion 不满 96 时）的细节见既有图 `docs/figures/1026-motion-pad-modulation.svg`。
 
-**口径**：第 1–10 节代码锚点沿用 policy 仓 `4029b1f`（`commitV11.57`）；新增第 11 节以开发副本 `f2de48b` 为准，使用稳定函数名锚点。两版 `history_pi0.py`、`history_gemma.py`、`percep_mem.py`、`mem_encoder.py` 中本文涉及的注入计算相同；新配置与 split4 输入处理按第 11 节单列，不把新形状套进旧章节。路径省略前缀 `src/`；MotionJEPA 侧事实沿用 1026 计划 §2.2–§2.4。参数量是按权重形状推算的，未实际加载参数树统计（见第 10、11.9 节）。行号与旧计划/旧注释不一致处一律以代码为准（见第 9 节）。
+**口径**：第 1–10 节原有正文的代码锚点沿用 policy 仓 `4029b1f`（`commitV11.57`）；第 6.6 节新增图及第 11 节以开发副本 `f2de48b` 为准，使用稳定函数名锚点。两版 `history_pi0.py`、`history_gemma.py`、`percep_mem.py`、`mem_encoder.py` 中本文涉及的注入计算相同；新配置与 split4 输入处理按第 11 节单列，第 6.6 节图中另标当前配置，不把新形状套进旧章节。路径省略前缀 `src/`；MotionJEPA 侧事实沿用 1026 计划 §2.2–§2.4。参数量是按权重形状推算的，未实际加载参数树统计（见第 10、11.9 节）。行号与旧计划/旧注释不一致处一律以代码为准（见第 9 节）。
 
 ---
 
@@ -179,6 +179,17 @@ x = x + g2 * FFN(z)                          # 残差用调制前的 x
 - 每层新增 2,622,464 + 2,099,200 = **4,721,664**；×18 = **84,989,952**（按形状推算）。全部只在 action expert 一侧（参数名带 `_1` 一侧），paligemma 一侧无 memory 参数。
 
 **代码锚点**：`history_gemma.py:27-43,45-108,111-205,236-260`；`mme_vla_suite/models/representation/utils.py:5`；`openpi/models/gemma.py:69-77,113-131,284-331,453-459`。
+
+### 6.6 单层完整输入输出图（当前 896-token 配置）
+
+![action expert 单层计算：原有八步、memory 读取与调制、各步骤输入输出和残差来源](docs/figures/1027-action-expert-modulation-detail.svg)
+
+图中保留一条从上到下的主干：原有步骤为①–⑧；开启 modulation 后，在④与⑤之间接入绿色的 M1–M3。每一步标明输入来自哪里、输入输出形状、关键运算和用途；右侧支路给出 memory 如何读成 `u`、如何生成 `scale_mem` / `shift_mem`，以及如何把原来的 `x1` 调制成 `z`。可[打开原尺寸 SVG](docs/figures/1027-action-expert-modulation-detail.svg)查看细节。
+
+- **配置与形状**：本图采用第 11.8 节的 `perceptual-framesamp-modul-32frame-4x4-motion-stage2-4x256-orig16.yaml`，memory 为 512 个帧路 token + 384 个 motion token = **896** 个，每个投影到 1024 维。训练配置 `mme_vla_suite_orig16_b128_60k` 的 action 长度为 **20**，模型动作接口宽度为 **32**；图内省略 batch 维。第 6.1–6.5 节的 **608** 是原历史配置示例，层内注入位置与计算方式相同。
+- **系数与残差**：时间条件 `c` 在①、⑤分别生成 scale / shift / gate；每个系数向量为 1024 维，计算时形状为 `(1,1024)`、广播给 20 个 token。memory 的 `u` 生成两组 `(20,1024)` 的 scale / shift。⑤开启态读取 `z`，⑧的残差底座仍读取④保存的 `x1`。
+
+**代码锚点**：`mme_vla_suite/models/integration/history_pi0.py::HistoryPi0.embed_suffix`、`embed_memory`；`history_gemma.py::HistoryBlock.__call__`、`MemoryAttention.__call__`、`MemoryRMSNorm.__call__`、`Module.__call__`；`openpi/models/gemma.py::RMSNorm.__call__`、`Attention.__call__`；`openpi/models/lora.py::FeedForward.__call__`。
 
 ---
 
