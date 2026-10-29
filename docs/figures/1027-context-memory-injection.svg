@@ -1,0 +1,348 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1730" width="1800" height="1730" role="img" aria-labelledby="context-title context-desc">
+  <title id="context-title">context memory 注入机制：split4 输入、prefix 可见性、18 层联合注意力与推理缓存</title>
+  <desc id="context-desc">冻结的 Wan 与 stage2 encoder 将每个 33 帧窗编码为 store 中的一个 1024 维向量；无损拆成四个 256 维 motion token。512 个历史帧 token 与 384 个 motion token 分别结合位置特征投影为 2048 维，按时刻重排后组成 896 位 memory，放在当前图像和语言之前成为 prefix。图中给出行 query、列 key 的四段可见矩阵：memory 为 1000，图像为 0110，语言为 1110，action 为 1111。18 层中 prefix 与 action 分别归一化并投影 QKV，使用原有的 8 Q 头、1 KV 头、头维 256 的联合注意力；memory 影响经 action 输出投影和 gated residual 进入。推理预填充一次，缓存每层 prefix K 和 V，各为 18×B×P×1×256；单次 sample_actions 中的去噪步复用缓存，仅新算本步 suffix，旧 action K/V 不累计。参数量与缓存容量为按形状计算的理论值。</desc>
+  <defs>
+    <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" refX="7.5" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#1F2937" />
+    </marker>
+  </defs>
+  <g font-family="'Noto Sans CJK SC','Source Han Sans SC','PingFang SC','Microsoft YaHei','Droid Sans Fallback',sans-serif">
+    <rect x="0" y="0" width="1800" height="1730" rx="0" fill="#fff" stroke="#fff" stroke-width="0" />
+    <text x="900" y="38" font-size="26" fill="#111827" font-weight="700" text-anchor="middle">context：memory 进入 prefix，沿原有联合 Attention 注入 action expert</text>
+    <text x="900" y="67" font-size="16" fill="#6B7280" font-weight="400" text-anchor="middle">32 帧 × 4×4 ＋ stage2 split4 · S=896 · prefix 宽 2048 / action 宽 1024 · 本图对应正文 §11</text>
+    <g id="section-1-frozen-upstream">
+      <rect x="30" y="90" width="1740" height="190" rx="8" fill="#F9FAFB" stroke="#6B7280" stroke-width="1.4" stroke-dasharray="6,4" class="panel" />
+      <text x="48" y="117" font-size="18" fill="#111827" font-weight="700" text-anchor="start">① 冻结上游与 split4：同一份 store，只恢复四个 readout 槽</text>
+      <path d="M48,130 H1752" fill="none" stroke="#E5E7EB" stroke-width="1.2" />
+      <g id="section-1-frozen-upstream-card-01">
+        <rect x="48" y="144" width="244" height="103" rx="7" fill="#fff" stroke="#6B7280" stroke-width="1.3" class="card" />
+        <text x="62" y="170" font-size="17" fill="#111827" font-weight="700" text-anchor="start">33 帧 RGB 窗</text>
+        <text x="62" y="195" font-size="14" fill="#111827" font-weight="400" text-anchor="start">256×256 RGB；窗长 33</text>
+        <text x="62" y="218" font-size="14" fill="#111827" font-weight="400" text-anchor="start">步长 32；沿用可见窗选择</text>
+      </g>
+      <g id="section-1-frozen-upstream-card-02">
+        <rect x="322" y="144" width="234" height="103" rx="7" fill="#fff" stroke="#6B7280" stroke-width="1.3" class="card" />
+        <text x="336" y="170" font-size="17" fill="#111827" font-weight="700" text-anchor="start">Wan2.1 VAE</text>
+        <text x="336" y="195" font-size="14" fill="#111827" font-weight="400" text-anchor="start">latent (9,16,32,32)</text>
+        <text x="336" y="218" font-size="14" fill="#111827" font-weight="400" text-anchor="start">fp32；沿用原编码链</text>
+      </g>
+      <g id="section-1-frozen-upstream-card-03">
+        <rect x="586" y="144" width="329" height="103" rx="7" fill="#fff" stroke="#6B7280" stroke-width="1.3" class="card" />
+        <text x="600" y="170" font-size="17" fill="#111827" font-weight="700" text-anchor="start">stage2 encoder（EMA）</text>
+        <text x="600" y="195" font-size="14" fill="#111827" font-weight="400" text-anchor="start">4 个 256 维 readout → concat</text>
+        <text x="600" y="218" font-size="14" fill="#111827" font-weight="400" text-anchor="start">冻结；eval() / no_grad</text>
+      </g>
+      <g id="section-1-frozen-upstream-card-04">
+        <rect x="945" y="144" width="294" height="103" rx="7" fill="#fff" stroke="#6B7280" stroke-width="1.3" class="card" />
+        <text x="959" y="170" font-size="17" fill="#111827" font-weight="700" text-anchor="start">store：每窗一行</text>
+        <text x="959" y="195" font-size="14" fill="#111827" font-weight="400" text-anchor="start">(1,1024) fp32；4,096 B</text>
+        <text x="959" y="218" font-size="14" fill="#111827" font-weight="400" text-anchor="start">槽顺序：0 ‖ 3 ‖ 5 ‖ 8</text>
+      </g>
+      <g id="section-1-frozen-upstream-card-05">
+        <rect x="1269" y="144" width="483" height="103" rx="7" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.3" class="card" />
+        <text x="1283" y="170" font-size="17" fill="#B45309" font-weight="700" text-anchor="start">split_stage2_tokens</text>
+        <text x="1283" y="195" font-size="15" fill="#111827" font-weight="400" text-anchor="start">reshape → (k,4,256)，数值不变</text>
+        <text x="1283" y="218" font-size="15" fill="#111827" font-weight="400" text-anchor="start">96 个窗位 × 4 token = 384 位</text>
+      </g>
+      <path d="M292,195 H322" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M556,195 H586" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M915,195 H945" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M1239,195 H1269" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <text x="48" y="267" font-size="14" fill="#6B7280" font-weight="400" text-anchor="start">离线训练与在线 sidecar 使用同一编码式；split4 不重跑 encoder、不平均、不增加拆分网络。</text>
+      <text x="1752" y="267" font-size="13" fill="#6B7280" font-weight="400" text-anchor="end">锚点：motion_adapter.py::split_stage2_tokens</text>
+    </g>
+    <g id="section-2-3-projection-order">
+      <rect x="30" y="300" width="1740" height="300" rx="8" fill="#fff" stroke="#1F2937" stroke-width="1.4" class="panel" />
+      <text x="48" y="327" font-size="18" fill="#111827" font-weight="700" text-anchor="start">② 两路位置特征拼接后投影到 2048</text>
+      <text x="1752" y="327" font-size="13" fill="#6B7280" font-weight="400" text-anchor="end">新增输入投影参数共 8,656,384（按形状推算）</text>
+      <path d="M48,340 H1752" fill="none" stroke="#E5E7EB" stroke-width="1.2" />
+      <g id="section-2-3-projection-order-card-01">
+        <rect x="48" y="355" width="455" height="106" rx="7" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.3" class="card" />
+        <text x="62" y="380" font-size="17" fill="#3B82F6" font-weight="700" text-anchor="start">帧路：32 帧 × 16 token = 512 位</text>
+        <text x="62" y="406" font-size="15" fill="#111827" font-weight="400" text-anchor="start">image (B,512,2048)；pos (B,512,768)</text>
+        <text x="62" y="432" font-size="15" fill="#111827" font-weight="400" text-anchor="start">mask (B,512)；每帧为 4×4 空间网格</text>
+      </g>
+      <g id="section-2-3-projection-order-card-02">
+        <rect x="531" y="355" width="609" height="106" rx="7" fill="#ECFDF5" stroke="#10B981" stroke-width="1.3" class="card" />
+        <text x="545" y="380" font-size="16" fill="#065F46" font-weight="700" text-anchor="start">FeatureEncoder：concat[image ‖ SiLU(pos_proj(pos))]</text>
+        <text x="545" y="406" font-size="15" fill="#111827" font-weight="400" text-anchor="start">pos：768→768；2816→2048 的单层 Linear，无激活</text>
+        <text x="545" y="432" font-size="15" fill="#111827" font-weight="400" text-anchor="start">590,592 + 5,769,216 = 6,359,808 参数</text>
+      </g>
+      <g id="section-2-3-projection-order-card-03">
+        <rect x="48" y="477" width="455" height="100" rx="7" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.3" class="card" />
+        <text x="62" y="502" font-size="17" fill="#B45309" font-weight="700" text-anchor="start">motion 路：96 窗 × 4 token = 384 位</text>
+        <text x="62" y="528" font-size="15" fill="#111827" font-weight="400" text-anchor="start">emb (B,384,256)；pos (B,384,256)</text>
+        <text x="62" y="553" font-size="15" fill="#111827" font-weight="400" text-anchor="start">pos / mask / times：每窗各重复 4 次</text>
+      </g>
+      <g id="section-2-3-projection-order-card-04">
+        <rect x="531" y="477" width="609" height="100" rx="7" fill="#ECFDF5" stroke="#10B981" stroke-width="1.3" class="card" />
+        <text x="545" y="502" font-size="16" fill="#065F46" font-weight="700" text-anchor="start">concat[motion ‖ SiLU(motion_pos_proj(pos))]</text>
+        <text x="545" y="528" font-size="15" fill="#111827" font-weight="400" text-anchor="start">pos：256→768；1024→2048 的单层 Linear，无激活</text>
+        <text x="545" y="553" font-size="15" fill="#111827" font-weight="400" text-anchor="start">197,376 + 2,099,200 = 2,296,576 参数</text>
+      </g>
+      <path d="M503,408 H531" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M503,527 H531" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <g id="section-2-3-projection-order-card-05">
+        <rect x="1170" y="355" width="582" height="222" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="1184" y="382" font-size="18" fill="#111827" font-weight="700" text-anchor="start">③ concat → 按 mem_order 稳定重排</text>
+        <text x="1184" y="412" font-size="17" fill="#111827" font-weight="400" text-anchor="start">(B,512,2048) ＋ (B,384,2048)</text>
+        <text x="1184" y="442" font-size="18" fill="#111827" font-weight="700" text-anchor="start">memory：(B,896,2048)；mask：(B,896)</text>
+      </g>
+      <path d="M1184,457 H1738" fill="none" stroke="#E5E7EB" stroke-width="1.2" />
+      <text x="1184" y="480" font-size="15" fill="#111827" font-weight="400" text-anchor="start">同刻：帧路在前；同窗四槽保持原序；padding 排末尾。</text>
+      <text x="1184" y="506" font-size="15" fill="#111827" font-weight="400" text-anchor="start">96 是窗容量，384 是 token 位数；k &gt; 96 报错。</text>
+      <text x="1184" y="532" font-size="15" fill="#111827" font-weight="400" text-anchor="start">每路 token 共享该路投影；同窗四槽不各建参数。</text>
+      <text x="1184" y="558" font-size="13" fill="#6B7280" font-weight="400" text-anchor="start">锚点：PerceptualMemory / HistoryPi0.embed_memory</text>
+      <path d="M1140,408 H1170" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M1140,527 H1170" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <text x="48" y="593" font-size="12" fill="#6B7280" font-weight="400" text-anchor="start">锚点：FrameSampDataset._pad_motion / __getitem__ · FeatureEncoder._add_pos_emb / _encode_memory · sampling.py::memory_order</text>
+    </g>
+    <g id="section-4-prefix-mask">
+      <rect x="30" y="620" width="1740" height="300" rx="8" fill="#fff" stroke="#1F2937" stroke-width="1.4" class="panel" />
+      <text x="48" y="647" font-size="18" fill="#111827" font-weight="700" text-anchor="start">④ prefix / suffix 与最终可见性：按块约束，padding 另行屏蔽</text>
+      <path d="M48,660 H1752" fill="none" stroke="#E5E7EB" stroke-width="1.2" />
+      <path d="M830,674 V902" fill="none" stroke="#E5E7EB" stroke-width="1.2" />
+      <text x="48" y="683" font-size="18" fill="#111827" font-weight="700" text-anchor="start">prefix H：(B,P,2048)，P = 896 + I + L</text>
+      <g id="section-4-prefix-mask-card-01">
+        <rect x="48" y="697" width="400" height="49" rx="5" fill="#F9FAFB" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="248" y="723" font-size="17" fill="#111827" font-weight="700" text-anchor="middle">M：memory 896 位（交错示意）</text>
+      </g>
+      <rect x="61" y="732" width="373" height="5" rx="0" fill="#3B82F6" stroke-width="0" />
+      <g fill="#F59E0B">
+        <rect x="83" y="732" width="15" height="5" />
+        <rect x="121" y="732" width="15" height="5" />
+        <rect x="159" y="732" width="15" height="5" />
+        <rect x="197" y="732" width="15" height="5" />
+        <rect x="235" y="732" width="15" height="5" />
+        <rect x="273" y="732" width="15" height="5" />
+        <rect x="311" y="732" width="15" height="5" />
+        <rect x="349" y="732" width="15" height="5" />
+        <rect x="387" y="732" width="15" height="5" />
+      </g>
+      <g id="section-4-prefix-mask-card-02">
+        <rect x="448" y="697" width="160" height="49" rx="0" fill="#F3F4F6" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="528" y="727" font-size="17" fill="#111827" font-weight="400" text-anchor="middle">I：当前图像</text>
+      </g>
+      <g id="section-4-prefix-mask-card-03">
+        <rect x="608" y="697" width="160" height="49" rx="5" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="688" y="727" font-size="17" fill="#111827" font-weight="400" text-anchor="middle">L：语言</text>
+      </g>
+      <text x="48" y="769" font-size="15" fill="#111827" font-weight="400" text-anchor="start">整个 prefix 使用 paligemma 参数（含 memory 的逐层更新）。</text>
+      <g id="section-4-prefix-mask-card-04">
+        <rect x="48" y="786" width="720" height="47" rx="5" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="62" y="815" font-size="16" fill="#111827" font-weight="700" text-anchor="start">A：action suffix (B,T,1024)，T=20；使用 action expert 参数</text>
+      </g>
+      <text x="48" y="857" font-size="15" fill="#111827" font-weight="400" text-anchor="start">两张不同宽度的 hidden 张量分别传入；仅在 Attention 内拼 Q/K/V。</text>
+      <text x="48" y="880" font-size="15" fill="#111827" font-weight="400" text-anchor="start">RoPE：有效 token 连续编号；四槽各占一号；padding 不增加计数。</text>
+      <text x="48" y="903" font-size="15" fill="#111827" font-weight="400" text-anchor="start">input_mask 同时屏蔽 padding 的 query / key，物理槽位仍保留。</text>
+      <text x="850" y="681" font-size="16" fill="#111827" font-weight="700" text-anchor="start">行 = query；列 = key（仅列出有效 token）</text>
+      <rect x="850" y="695" width="140" height="38" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="920.0" y="720" font-size="14" fill="#111827" font-weight="700" text-anchor="middle">query ＼ key</text>
+      <rect x="990" y="695" width="90" height="38" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1035.0" y="720" font-size="17" fill="#111827" font-weight="700" text-anchor="middle">M</text>
+      <rect x="1080" y="695" width="90" height="38" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1125.0" y="720" font-size="17" fill="#111827" font-weight="700" text-anchor="middle">I</text>
+      <rect x="1170" y="695" width="90" height="38" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1215.0" y="720" font-size="17" fill="#111827" font-weight="700" text-anchor="middle">L</text>
+      <rect x="1260" y="695" width="90" height="38" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1305.0" y="720" font-size="17" fill="#111827" font-weight="700" text-anchor="middle">A</text>
+      <rect x="850" y="733" width="140" height="38" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="920" y="759" font-size="17" fill="#111827" font-weight="700" text-anchor="middle">M</text>
+      <rect x="990" y="733" width="90" height="38" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1035" y="759" font-size="18" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+      <rect x="1080" y="733" width="90" height="38" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1125" y="759" font-size="18" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+      <rect x="1170" y="733" width="90" height="38" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1215" y="759" font-size="18" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+      <rect x="1260" y="733" width="90" height="38" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1305" y="759" font-size="18" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+      <rect x="850" y="771" width="140" height="38" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="920" y="797" font-size="17" fill="#111827" font-weight="700" text-anchor="middle">I</text>
+      <rect x="990" y="771" width="90" height="38" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1035" y="797" font-size="18" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+      <rect x="1080" y="771" width="90" height="38" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1125" y="797" font-size="18" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+      <rect x="1170" y="771" width="90" height="38" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1215" y="797" font-size="18" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+      <rect x="1260" y="771" width="90" height="38" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1305" y="797" font-size="18" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+      <rect x="850" y="809" width="140" height="38" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="920" y="835" font-size="17" fill="#111827" font-weight="700" text-anchor="middle">L</text>
+      <rect x="990" y="809" width="90" height="38" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1035" y="835" font-size="18" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+      <rect x="1080" y="809" width="90" height="38" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1125" y="835" font-size="18" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+      <rect x="1170" y="809" width="90" height="38" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1215" y="835" font-size="18" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+      <rect x="1260" y="809" width="90" height="38" rx="0" fill="#fff" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1305" y="835" font-size="18" fill="#6B7280" font-weight="400" text-anchor="middle">0</text>
+      <rect x="850" y="847" width="140" height="38" rx="0" fill="#F3F4F6" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="920" y="873" font-size="17" fill="#111827" font-weight="700" text-anchor="middle">A</text>
+      <rect x="990" y="847" width="90" height="38" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1035" y="873" font-size="18" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+      <rect x="1080" y="847" width="90" height="38" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1125" y="873" font-size="18" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+      <rect x="1170" y="847" width="90" height="38" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1215" y="873" font-size="18" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+      <rect x="1260" y="847" width="90" height="38" rx="0" fill="#ECFDF5" stroke="#D1D5DB" stroke-width="1" class="mask-cell" />
+      <text x="1305" y="873" font-size="18" fill="#065F46" font-weight="700" text-anchor="middle">1</text>
+      <text x="1380" y="714" font-size="16" fill="#111827" font-weight="700" text-anchor="start">1 可见　0 不可见</text>
+      <text x="1380" y="744" font-size="15" fill="#111827" font-weight="400" text-anchor="start">M 内部双向互读，</text>
+      <text x="1380" y="766" font-size="15" fill="#111827" font-weight="400" text-anchor="start">时刻排序不产生三角 mask。</text>
+      <text x="1380" y="798" font-size="15" fill="#111827" font-weight="400" text-anchor="start">I 不能直接读 M；</text>
+      <text x="1380" y="820" font-size="15" fill="#111827" font-weight="400" text-anchor="start">跨层仍有 M → L → I 的路径。</text>
+      <text x="1380" y="852" font-size="15" fill="#111827" font-weight="400" text-anchor="start">A 可读四段全部有效 key，</text>
+      <text x="1380" y="874" font-size="15" fill="#111827" font-weight="400" text-anchor="start">同块 action 之间也可双向读。</text>
+      <text x="850" y="907" font-size="12" fill="#6B7280" font-weight="400" text-anchor="start">锚点：HistoryPi0.embed_prefix / embed_suffix / make_attn_mask</text>
+    </g>
+    <g id="section-5-joint-attention">
+      <rect x="30" y="940" width="1740" height="390" rx="8" fill="#fff" stroke="#1F2937" stroke-width="1.4" class="panel" />
+      <text x="48" y="967" font-size="18" fill="#111827" font-weight="700" text-anchor="start">⑤ 18 层 HistoryBlock：两侧分别 norm 与 Q/K/V，使用同一个原有 Attention</text>
+      <text x="1752" y="967" font-size="13" fill="#6B7280" font-weight="400" text-anchor="end">每层各有原有参数；context 不创建额外 MemoryAttention</text>
+      <path d="M48,980 H1752" fill="none" stroke="#E5E7EB" stroke-width="1.2" />
+      <g id="section-5-joint-attention-card-01">
+        <rect x="48" y="1006" width="210" height="108" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="62" y="1030" font-size="15" fill="#111827" font-weight="700" text-anchor="start">prefix Hℓ (B,P,2048)</text>
+        <text x="62" y="1055" font-size="14" fill="#111827" font-weight="400" text-anchor="start">pre_attention_norm</text>
+        <text x="62" y="1079" font-size="15" fill="#111827" font-weight="400" text-anchor="start">普通 RMSNorm</text>
+        <text x="62" y="1101" font-size="14" fill="#6B7280" font-weight="400" text-anchor="start">memory 在 Hℓ 内</text>
+      </g>
+      <g id="section-5-joint-attention-card-02">
+        <rect x="280" y="1006" width="240" height="108" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="294" y="1030" font-size="16" fill="#111827" font-weight="700" text-anchor="start">paligemma Q/K/V</text>
+        <text x="294" y="1057" font-size="15" fill="#111827" font-weight="400" text-anchor="start">Q：(B,P,8,256)</text>
+        <text x="294" y="1082" font-size="15" fill="#111827" font-weight="400" text-anchor="start">K/V：各 (B,P,1,256)</text>
+        <text x="294" y="1104" font-size="13" fill="#6B7280" font-weight="400" text-anchor="start">2048 → head_dim 256</text>
+      </g>
+      <path d="M258,1060 H280" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M520,1060 H550" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <g id="section-5-joint-attention-card-03">
+        <rect x="48" y="1170" width="210" height="108" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="62" y="1194" font-size="15" fill="#111827" font-weight="700" text-anchor="start">action xℓ (B,T,1024)</text>
+        <text x="62" y="1219" font-size="14" fill="#111827" font-weight="400" text-anchor="start">pre_attention_norm_1</text>
+        <text x="62" y="1243" font-size="15" fill="#111827" font-weight="400" text-anchor="start">adaRMS(time)</text>
+        <text x="62" y="1265" font-size="13" fill="#6B7280" font-weight="400" text-anchor="start">并产出 attention gate g₁</text>
+      </g>
+      <g id="section-5-joint-attention-card-04">
+        <rect x="280" y="1170" width="240" height="108" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="294" y="1194" font-size="16" fill="#111827" font-weight="700" text-anchor="start">action expert Q/K/V</text>
+        <text x="294" y="1221" font-size="15" fill="#111827" font-weight="400" text-anchor="start">Q：(B,T,8,256)</text>
+        <text x="294" y="1246" font-size="15" fill="#111827" font-weight="400" text-anchor="start">K/V：各 (B,T,1,256)</text>
+        <text x="294" y="1268" font-size="13" fill="#6B7280" font-weight="400" text-anchor="start">1024 → head_dim 256</text>
+      </g>
+      <path d="M258,1224 H280" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M520,1224 H550" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <g id="section-5-joint-attention-card-05">
+        <rect x="550" y="1006" width="354" height="272" rx="7" fill="#F9FAFB" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="727" y="1033" font-size="19" fill="#111827" font-weight="700" text-anchor="middle">原有联合 Attention</text>
+        <text x="566" y="1070" font-size="16" fill="#111827" font-weight="400" text-anchor="start">沿 token 轴拼接 Q、K、V</text>
+        <text x="566" y="1099" font-size="15" fill="#111827" font-weight="700" text-anchor="start">8 Q 头 / 1 KV 头 / head_dim 256</text>
+        <text x="566" y="1128" font-size="15" fill="#111827" font-weight="400" text-anchor="start">Q、K 做 RoPE；Q 缩放为 Q / 16</text>
+        <text x="566" y="1157" font-size="15" fill="#111827" font-weight="700" text-anchor="start">action：M / I / L / A 共用 softmax</text>
+        <text x="566" y="1186" font-size="14" fill="#111827" font-weight="400" text-anchor="start">logits / softmax：f32；使用④的 mask</text>
+        <text x="566" y="1215" font-size="15" fill="#111827" font-weight="400" text-anchor="start">概率转回输入 dtype 后乘 V</text>
+        <text x="566" y="1244" font-size="15" fill="#111827" font-weight="400" text-anchor="start">按 prefix / action 两段拆开读出</text>
+      </g>
+      <g id="section-5-joint-attention-card-06">
+        <rect x="934" y="1006" width="175" height="108" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="1021.5" y="1032" font-size="16" fill="#111827" font-weight="700" text-anchor="middle">原有输出投影</text>
+        <text x="1021.5" y="1063" font-size="14" fill="#111827" font-weight="400" text-anchor="middle">out_prefix(y₀)</text>
+        <text x="1021.5" y="1090" font-size="15" fill="#111827" font-weight="400" text-anchor="middle">8×256 → 2048</text>
+      </g>
+      <g id="section-5-joint-attention-card-07">
+        <rect x="1139" y="1006" width="275" height="108" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="1153" y="1032" font-size="16" fill="#111827" font-weight="700" text-anchor="start">原有 attention residual</text>
+        <text x="1153" y="1062" font-size="14" fill="#111827" font-weight="700" text-anchor="start">H ← H + out_prefix(y₀)</text>
+        <text x="1153" y="1090" font-size="14" fill="#6B7280" font-weight="400" text-anchor="start">普通 residual；无 time gate</text>
+      </g>
+      <g id="section-5-joint-attention-card-08">
+        <rect x="1444" y="1006" width="308" height="108" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="1458" y="1030" font-size="16" fill="#111827" font-weight="700" text-anchor="start">原有 FFN 路径 → 下一层</text>
+        <text x="1458" y="1055" font-size="14" fill="#111827" font-weight="400" text-anchor="start">pre_ffw_norm：RMSNorm</text>
+        <text x="1458" y="1079" font-size="14" fill="#111827" font-weight="400" text-anchor="start">FFN 16384 → 普通 residual</text>
+        <text x="1458" y="1101" font-size="14" fill="#6B7280" font-weight="400" text-anchor="start">Hℓ₊₁ (B,P,2048)</text>
+      </g>
+      <path d="M904,1060 H934" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M1109,1060 H1139" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M1414,1060 H1444" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <g id="section-5-joint-attention-card-09">
+        <rect x="934" y="1170" width="175" height="108" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="1021.5" y="1196" font-size="16" fill="#111827" font-weight="700" text-anchor="middle">原有输出投影</text>
+        <text x="1021.5" y="1227" font-size="14" fill="#111827" font-weight="400" text-anchor="middle">out_action(y₁)</text>
+        <text x="1021.5" y="1254" font-size="15" fill="#111827" font-weight="400" text-anchor="middle">8×256 → 1024</text>
+      </g>
+      <g id="section-5-joint-attention-card-10">
+        <rect x="1139" y="1170" width="275" height="108" rx="7" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.3" class="card" />
+        <text x="1153" y="1196" font-size="16" fill="#111827" font-weight="700" text-anchor="start">原有 attention residual</text>
+        <text x="1153" y="1226" font-size="14" fill="#111827" font-weight="700" text-anchor="start">x ← x + g₁ · out_action(y₁)</text>
+        <text x="1153" y="1254" font-size="14" fill="#B91C1C" font-weight="400" text-anchor="start">memory 信息由此进入 action</text>
+      </g>
+      <g id="section-5-joint-attention-card-11">
+        <rect x="1444" y="1170" width="308" height="108" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="1458" y="1194" font-size="16" fill="#111827" font-weight="700" text-anchor="start">原有 FFN 路径 → 下一层</text>
+        <text x="1458" y="1219" font-size="14" fill="#111827" font-weight="400" text-anchor="start">pre_ffw_norm_1：adaRMS(time)</text>
+        <text x="1458" y="1243" font-size="14" fill="#111827" font-weight="400" text-anchor="start">FFN 4096 → gated residual（g₂）</text>
+        <text x="1458" y="1265" font-size="14" fill="#6B7280" font-weight="400" text-anchor="start">xℓ₊₁ (B,T,1024)</text>
+      </g>
+      <path d="M904,1224 H934" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M1109,1224 H1139" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M1414,1224 H1444" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <text x="48" y="1302" font-size="14" fill="#111827" font-weight="700" text-anchor="start">逐层对应：action 第 ℓ 层读取本层 prefix 输入经 norm 后投影出的 K/V；memory 随 prefix 更新。没有插入式 MemoryRMSNorm。</text>
+      <text x="1752" y="1302" font-size="12" fill="#6B7280" font-weight="400" text-anchor="end">第18层 suffix → final norm → action_out_proj</text>
+      <text x="48" y="1322" font-size="12" fill="#6B7280" font-weight="400" text-anchor="start">锚点：history_gemma.py::HistoryBlock.__call__ / Module.setup · openpi/models/gemma.py::Attention.__call__ / RMSNorm.__call__ / _gated_residual</text>
+    </g>
+    <g id="section-6-prefill-cache">
+      <rect x="30" y="1350" width="1740" height="290" rx="8" fill="#fff" stroke="#1F2937" stroke-width="1.4" class="panel" />
+      <text x="48" y="1377" font-size="18" fill="#111827" font-weight="700" text-anchor="start">⑥ 推理：prefix 预填充一次，18 层各自 K/V 在本次去噪中复用</text>
+      <text x="1752" y="1377" font-size="13" fill="#6B7280" font-weight="400" text-anchor="end">HistoryPi0.sample_actions（循环外）与内部 step（循环内）</text>
+      <path d="M48,1390 H1752" fill="none" stroke="#E5E7EB" stroke-width="1.2" />
+      <g id="section-6-prefill-cache-card-01">
+        <rect x="48" y="1405" width="490" height="174" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="62" y="1432" font-size="18" fill="#111827" font-weight="700" text-anchor="start">循环外：embed_prefix + 预填充</text>
+        <text x="62" y="1459" font-size="15" fill="#111827" font-weight="400" text-anchor="start">memory 只构造一次；[M | I | L] 一起进入</text>
+        <text x="62" y="1485" font-size="16" fill="#111827" font-weight="400" text-anchor="start">llm([prefix_tokens, None])</text>
+        <text x="62" y="1511" font-size="15" fill="#111827" font-weight="400" text-anchor="start">prefix 独自跑完 paligemma 的 18 层</text>
+        <text x="62" y="1537" font-size="15" fill="#111827" font-weight="400" text-anchor="start">prefix query 不读 action，且不接收 time</text>
+        <text x="62" y="1563" font-size="15" fill="#111827" font-weight="400" text-anchor="start">因此各层状态不依赖本步 noisy action / time</text>
+      </g>
+      <g id="section-6-prefill-cache-card-02">
+        <rect x="568" y="1405" width="570" height="174" rx="7" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.3" class="card" />
+        <text x="582" y="1432" font-size="18" fill="#111827" font-weight="700" text-anchor="start">每层对应的 prefix cache</text>
+        <text x="582" y="1459" font-size="19" fill="#111827" font-weight="700" text-anchor="start">K、V 各：(18,B,P,1,256)</text>
+        <text x="582" y="1485" font-size="15" fill="#111827" font-weight="400" text-anchor="start">K 已做 RoPE；V 不做 RoPE</text>
+        <text x="582" y="1511" font-size="15" fill="#111827" font-weight="400" text-anchor="start">P 包含 padding；读取仍由 prefix mask 屏蔽</text>
+        <text x="582" y="1537" font-size="15" fill="#111827" font-weight="400" text-anchor="start">缓存的是逐层 K/V，不是最终 memory hidden</text>
+        <text x="582" y="1563" font-size="14" fill="#6B7280" font-weight="400" text-anchor="start">仅 memory 的 K+V：15.75 MiB/样本（bf16，理论值）</text>
+      </g>
+      <g id="section-6-prefill-cache-card-03">
+        <rect x="1168" y="1405" width="584" height="174" rx="7" fill="#fff" stroke="#1F2937" stroke-width="1.3" class="card" />
+        <text x="1182" y="1432" font-size="18" fill="#111827" font-weight="700" text-anchor="start">每个去噪步：只新算当前 suffix</text>
+        <text x="1182" y="1459" font-size="15" fill="#111827" font-weight="400" text-anchor="start">重新嵌入 noisy action 与 time；新算 suffix Q/K/V</text>
+        <text x="1182" y="1485" font-size="15" fill="#111827" font-weight="400" text-anchor="start">第 ℓ 层读取：[缓存 prefix Kℓ/Vℓ | 本步 suffix Kℓ/Vℓ]</text>
+        <text x="1182" y="1511" font-size="15" fill="#111827" font-weight="400" text-anchor="start">action Q 读取全部有效 prefix 与本步 action</text>
+        <text x="1182" y="1537" font-size="15" fill="#111827" font-weight="400" text-anchor="start">新返回的 cache 丢弃；下步仍读原 prefix cache</text>
+        <text x="1182" y="1563" font-size="15" fill="#111827" font-weight="700" text-anchor="start">不累计上一去噪步的 action K/V</text>
+      </g>
+      <path d="M538,1492 H568" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <path d="M1138,1492 H1168" fill="none" stroke="#1F2937" stroke-width="1.5" marker-end="url(#arrow)" />
+      <text x="48" y="1604" font-size="15" fill="#111827" font-weight="700" text-anchor="start">复用范围：仅同一次 sample_actions；下次调用重建 prefix 并重新预填充。suffix RoPE 从 sum(prefix_mask) 开始，不把 padding 算进有效位置。</text>
+      <text x="48" y="1628" font-size="13" fill="#6B7280" font-weight="400" text-anchor="start">训练：compute_loss 联合计算 prefix + suffix，suffix 经 action_out_proj 得到速度场；上述缓存可复用性为源码结构推导，未声称浮点逐位对拍。</text>
+    </g>
+    <g id="legend-and-scope">
+      <rect x="30" y="1660" width="1740" height="50" rx="7" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1" class="legend" />
+      <text x="48" y="1690" font-size="15" fill="#111827" font-weight="700" text-anchor="start">图例</text>
+      <rect x="104" y="1676" width="17" height="17" rx="2" fill="#EFF6FF" stroke="#3B82F6" stroke-width="1.2" />
+      <text x="130" y="1690" font-size="14" fill="#111827" font-weight="400" text-anchor="start">历史帧 token</text>
+      <rect x="292" y="1676" width="17" height="17" rx="2" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.2" />
+      <text x="318" y="1690" font-size="14" fill="#111827" font-weight="400" text-anchor="start">motion token</text>
+      <rect x="480" y="1676" width="17" height="17" rx="2" fill="#ECFDF5" stroke="#10B981" stroke-width="1.2" />
+      <text x="506" y="1690" font-size="14" fill="#111827" font-weight="400" text-anchor="start">新增输入投影</text>
+      <rect x="683" y="1676" width="17" height="17" rx="2" fill="#F3F4F6" stroke="#6B7280" stroke-width="1.2" />
+      <text x="709" y="1690" font-size="14" fill="#111827" font-weight="400" text-anchor="start">冻结上游 / cache</text>
+      <rect x="927" y="1676" width="17" height="17" rx="2" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.2" />
+      <text x="953" y="1690" font-size="14" fill="#111827" font-weight="400" text-anchor="start">原有残差中的注入点</text>
+      <text x="1752" y="1681" font-size="12" fill="#6B7280" font-weight="400" text-anchor="end">参数量 / cache 容量均按形状推算；锚点见正文 §11</text>
+      <text x="1752" y="1700" font-size="12" fill="#6B7280" font-weight="400" text-anchor="end">每层 memory 专属新增 = 0；18 层原有权重独立</text>
+    </g>
+  </g>
+</svg>

@@ -6,7 +6,7 @@
 
 ![modulation：motion memory 注入全链路（第 1–10 节）](docs/figures/1027-motion-memory-injection.svg)
 
-**阅读指引**：本文件只讲机制（数据怎么流、在哪里注入、算了什么），不讲训练计划、闸门与 run 安排；那些见 `1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md` 与 `docs/root-archive/1026-vla-stage2-memory-1024-train-plan.md`。第 1–10 节保留原 modulation 说明；第 11 节按同样的「全链路 → 输入与投影 → 注入点 → 公式 → 训练与推理」顺序展开 context，末尾用同一套输入配置对照两种机制。补位（motion 不满 96 时）的细节见既有图 `docs/figures/1026-motion-pad-modulation.svg`。
+**阅读指引**：本文件只讲机制（数据怎么流、在哪里注入、算了什么），不讲训练计划、闸门与 run 安排；那些见 `1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md` 与 `docs/root-archive/1026-vla-stage2-memory-1024-train-plan.md`。第 1–10 节保留原 modulation 说明；第 11 节配有 context 全链路图，按同样的「全链路 → 输入与投影 → 注入点 → 公式 → 训练与推理」顺序展开，末尾用同一套输入配置对照两种机制。补位（motion 不满 96 时）的细节见既有图 `docs/figures/1026-motion-pad-modulation.svg`。
 
 **口径**：第 1–10 节代码锚点沿用 policy 仓 `4029b1f`（`commitV11.57`）；新增第 11 节以开发副本 `f2de48b` 为准，使用稳定函数名锚点。两版 `history_pi0.py`、`history_gemma.py`、`percep_mem.py`、`mem_encoder.py` 中本文涉及的注入计算相同；新配置与 split4 输入处理按第 11 节单列，不把新形状套进旧章节。路径省略前缀 `src/`；MotionJEPA 侧事实沿用 1026 计划 §2.2–§2.4。参数量是按权重形状推算的，未实际加载参数树统计（见第 10、11.9 节）。行号与旧计划/旧注释不一致处一律以代码为准（见第 9 节）。
 
@@ -238,6 +238,10 @@ x = x + g2 * FFN(z)                          # 残差用调制前的 x
 ---
 
 ## 11. context：memory 放进 prefix 后，怎么进入 action expert
+
+![context：motion memory 注入全链路、逐层联合注意力与推理 KV cache](docs/figures/1027-context-memory-injection.svg)
+
+图中沿用帧路蓝、motion 路橙、投影绿、冻结上游灰；示例为本节的 **512+384=896** 配置。⑤ 展开一层的注入点，⑥ 单列推理时各层 K/V 的缓存方式；两者按层对应，不是把最后一层 memory 输出重复送给所有 action 层。
 
 ### 11.1 全链路总览
 
