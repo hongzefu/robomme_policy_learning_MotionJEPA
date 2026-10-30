@@ -77,3 +77,7 @@ AWS 8×A100-SXM4-80GB、本地NVMe RAID。训练8卡独占并串行；G12仅训�
 三个长尾均05:27:28起跑：ctx备份pane510570/worker510689，mod备份pane510622/worker510626，G12 pane510670/worker510674。ctx实际`HYGIENE=PASS files16`、`ROOT_UPLOAD=PASS files17`，等待首份5000；mod仅等其训练日志，G12仅Bash等待chain，不加载GPU。整体初始监督截止2026-10-31 05:25:14美东；运行态持续写开发副本。
 
 美东05:38启动后复核：最新同步日志Step100、loss0.30680981，五标量有限；Step0后日志墙钟窗口约2.4238秒/步。只是运行中快照，不是60k完成结论；实际后续以日志为准。快照在`v1-store/validation/orig16-stage2/formal-start-snapshot.json`。
+
+## 完成回写（美东2026-10-30）
+
+本条已完成60000步、12份checkpoint公开上传及全量匿名读回、G12严格恢复与在线推理；实际耗时与证据见[result.md](result.md)。训练Beta未改变；全部后台任务退出后按原值恢复src权限并解除冻结。
