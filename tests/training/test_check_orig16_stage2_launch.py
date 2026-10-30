@@ -444,3 +444,130 @@ def test_attempt_manifest_faults_fail(fx, tmp_path, fault):
     path, run = attempt_files(tmp_path, **kwargs)
     rec = formal_contract(fx, CONCAT_CTX, run=run, attempt=path)
     assert "ATTEMPT" in rec.failed
+
+
+CONCAT_RUNS = {fusion: launch.RUNS[fusion, launch.CONCAT] for fusion in ("context", "modulation")}
+
+
+def concat_chain(tmp_path, fault=None, *, start_role=None, setup=None, attempt_ctx=None):
+    """以假单条入口驱动concat串行脚本；fault只作用于context条。"""
+    root = shell_tree(tmp_path)
+    shutil.copyfile(REPO / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh",
+                    root / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh")
+    py = root / ".venv/bin/python"; py.parent.mkdir(parents=True); py.symlink_to(sys.executable)
+    final_root = root / "v1-store/validation/orig16-concat-60k"
+    ctx = attempt_ctx[1] if attempt_ctx else CONCAT_RUNS["context"]
+    for run in (ctx, CONCAT_RUNS["modulation"]):
+        dump(final_root / run / "final-record/final.json", final_fixture(run, steps=60000))
+    (root / "scripts/training/run_orig16_stage2_60k.sh").write_text(f'''#!/usr/bin/env bash
+ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+echo "$RUN_NAME $HISTORY ${{ATTEMPT_MANIFEST:-none}}" >> "$ROOT/calls"
+f={fault!s}
+[[ "$RUN_NAME" == {ctx} ]] || f=None
+[[ $f != exit ]] || exit 9
+mkdir -p "$ROOT/v1-store/logs"
+printf 'RUN=%s\\nSTEPS=60000\\nTRAIN_HEAD=%s\\nStep 59999: loss=0.25, grad_norm=0.5\\n' "$RUN_NAME" "$TRAIN_HEAD" > "$ROOT/v1-store/logs/$RUN_NAME.log"
+[[ $f != nan ]] || printf 'Step 59999: loss=nan\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"
+printf 'EXIT_CODE=0\\n' >> "$ROOT/v1-store/logs/$RUN_NAME.log"
+[[ $f == checkpoint ]] || mkdir -p "$ROOT/v1-store/train-runs/{launch.CONFIG_NAME}/$RUN_NAME/59999"
+exit 0
+''')
+    if setup:
+        setup(root, final_root)
+    env = dict(os.environ, TRAIN_HEAD="a" * 40, FINAL_ROOT=str(final_root))
+    for key in ("MAX_STEPS", "DRY_RUN", "START_ROLE", "ATTEMPT_MANIFEST", "ATTEMPT_MANIFEST_CTX", "ATTEMPT_MANIFEST_MODUL"):
+        env.pop(key, None)
+    if start_role: env["START_ROLE"] = start_role
+    if attempt_ctx: env["ATTEMPT_MANIFEST_CTX"] = str(attempt_ctx[0])
+    result = subprocess.run(["bash", str(root / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh")],
+                            env=env, capture_output=True, text=True)
+    calls = (root / "calls").read_text().splitlines() if (root / "calls").exists() else []
+    return result, [line.split()[0] for line in calls], root, final_root, calls
+
+
+def test_concat_chain_two_runs_pass(tmp_path):
+    result, runs, _, final_root, calls = concat_chain(tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert runs == [CONCAT_RUNS["context"], CONCAT_RUNS["modulation"]]
+    assert calls[0].split()[1:] == [CONCAT_CTX, "none"] and calls[1].split()[1:] == [CONCAT_MOD, "none"]
+    assert "CHAIN=PASS runs=2" in result.stdout and "WAIT_USER_DECISION" not in result.stdout
+    assert not (final_root / "pending").exists()
+
+
+@pytest.mark.parametrize("fault,stage,code", [("exit", "train_exit", 9), ("nan", "train_numerics", 3),
+                                              ("checkpoint", "missing_59999", 3)])
+def test_concat_chain_failure_waits_user_and_stops(tmp_path, fault, stage, code):
+    result, runs, _, final_root, _ = concat_chain(tmp_path, fault)
+    ctx = CONCAT_RUNS["context"]
+    assert result.returncode == code, result.stdout + result.stderr
+    assert runs == [ctx]
+    assert f"WAIT_USER_DECISION run={ctx} stage={stage} evidence=" in result.stdout
+    assert "CHAIN=PASS" not in result.stdout and "CHAIN_RUN=PASS" not in result.stdout
+    pending = json.loads((final_root / f"pending/{ctx}-{stage}.json").read_text())
+    assert pending["run"] == ctx and pending["stage"] == stage and pending["train_head"] == "a" * 40
+    assert pending["evidence"] and pending["utc"].endswith("Z")
+    assert not (final_root / "decisions").exists()
+
+
+def test_concat_chain_final_record_fail_waits(tmp_path):
+    def setup(root, final_root):
+        path = final_root / CONCAT_RUNS["context"] / "final-record/final.json"
+        record = json.loads(path.read_text()); record["ema_leaves"]["weight"]["finite"] = False
+        dump(path, record)
+    result, runs, *_ = concat_chain(tmp_path, setup=setup)
+    assert result.returncode == 3 and runs == [CONCAT_RUNS["context"]]
+    assert f"WAIT_USER_DECISION run={CONCAT_RUNS['context']} stage=final_record" in result.stdout
+
+
+def completed_context(root, final_root, *, head="a" * 40):
+    ctx = CONCAT_RUNS["context"]
+    log = root / f"v1-store/logs/{ctx}.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    log.write_text(f"RUN={ctx}\nTRAIN_HEAD={head}\nStep 59999: loss=0.25\nTRAIN_FINAL_RECORD=PASS\nEXIT_CODE=0\n")
+    (root / f"v1-store/train-runs/{launch.CONFIG_NAME}/{ctx}/59999").mkdir(parents=True)
+
+
+@pytest.mark.parametrize("state", ["complete", "pending", "decided", "head", "no_59999"])
+def test_concat_chain_start_modul(tmp_path, state):
+    ctx = CONCAT_RUNS["context"]
+
+    def setup(root, final_root):
+        completed_context(root, final_root, head="b" * 40 if state == "head" else "a" * 40)
+        if state == "no_59999":
+            (root / f"v1-store/train-runs/{launch.CONFIG_NAME}/{ctx}/59999").rmdir()
+        if state in ("pending", "decided"):
+            dump(final_root / f"pending/{ctx}-train_numerics.json", dict(run=ctx))
+        if state == "decided":
+            dump(final_root / f"decisions/{ctx}-train_numerics.json", dict(allowed_runs=[]))
+    result, runs, *_ = concat_chain(tmp_path, start_role="modul", setup=setup)
+    if state in ("complete", "decided"):
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert runs == [CONCAT_RUNS["modulation"]]
+        assert f"CHAIN_RUN=PASS run={ctx} step=59999 resumed=1" in result.stdout
+        assert "CHAIN=PASS runs=2" in result.stdout
+    else:
+        assert result.returncode == 3 and runs == []
+        assert f"WAIT_USER_DECISION run={ctx} stage=resume_check" in result.stdout
+
+
+def test_concat_chain_attempt_manifest_passed_to_single_entry(tmp_path):
+    base = CONCAT_RUNS["context"]
+    run = base + "-attempt02"
+    manifest = tmp_path / "attempt-ctx.json"
+    dump(manifest, dict(base_run=base, run=run, history=CONCAT_CTX, train_head="a" * 40,
+                        decision=str(tmp_path / "d.json"), bucket=launch.BUCKETS[base] + "-attempt02"))
+    result, runs, _, _, calls = concat_chain(tmp_path / "t", attempt_ctx=(manifest, run))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert runs == [run, CONCAT_RUNS["modulation"]]
+    assert calls[0].split()[2] == str(manifest) and calls[1].split()[2] == "none"
+
+
+@pytest.mark.parametrize("bad", [dict(MAX_STEPS="20"), dict(DRY_RUN="0"), dict(START_ROLE="x")])
+def test_concat_chain_rejects_non_formal(tmp_path, bad):
+    root = shell_tree(tmp_path)
+    shutil.copyfile(REPO / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh",
+                    root / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh")
+    env = dict(os.environ, TRAIN_HEAD="a" * 40, FINAL_ROOT=str(tmp_path / "f"), **bad)
+    result = subprocess.run(["bash", str(root / "scripts/training/run_orig16_concat_ctx_then_modul_60k.sh")],
+                            env=env, capture_output=True, text=True)
+    assert result.returncode == 2 and not (root / "calls").exists()
