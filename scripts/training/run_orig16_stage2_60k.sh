@@ -94,7 +94,7 @@ statuses=("${PIPESTATUS[@]}")
 rc=${statuses[0]}
 if [[ ${statuses[1]} != 0 && $rc == 0 ]]; then rc=${statuses[1]}; fi
 # 用户要求运行后诊断全部执行并如实记录；诊断失败不改训练程序退出码。
-if rg -qi '^\r*Step [0-9]+:.*(loss|grad_norm|llm_grad_norm|param_norm|mem_enc_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$LOG"; then
+if LC_ALL=C grep -aqiP '^\r*Step [0-9]+:.*(loss|grad_norm|llm_grad_norm|param_norm|mem_enc_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$LOG"; then
   printf 'TRAIN_NUMERICS=FAIL reason=nonfinite_or_oom\n' >> "$LOG"
   printf 'TRAIN_DIAGNOSTIC=FAIL check=train_numerics action=record_only reason=user_decision\n' >> "$LOG"
 fi
