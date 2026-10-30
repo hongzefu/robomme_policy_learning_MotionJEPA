@@ -21,7 +21,8 @@ REPO = HERE.parents[2]
 COMMON = HERE / "_stage2_orig16_vla_ckpt_export_common.sh"
 DRIVERS = [HERE / name for name in (
     "run_orig100_trainset_export.sh", "run_orig16_stage2_ckpt_inc.sh",
-    "run_orig16_ctx32x4x4_split_60k_ckpt_export.sh", "run_orig16_modul32x4x4_split_60k_ckpt_export.sh")]
+    "run_orig16_ctx32x4x4_split_60k_ckpt_export.sh", "run_orig16_modul32x4x4_split_60k_ckpt_export.sh",
+    "run_orig16_ctx32x4x4_concat_60k_ckpt_export.sh", "run_orig16_modul32x4x4_concat_60k_ckpt_export.sh")]
 
 
 def sha(data):
@@ -246,8 +247,9 @@ def test_bucket_pair_is_fixed(exporter, monkeypatch, run_index):
         exporter.main()
 
 
-def make_run(tmp_path, exporter, monkeypatch, index=0):
-    run_name = list(exporter.RUNS)[index]
+def make_run(tmp_path, exporter, monkeypatch, index=0, run_name=None):
+    base = list(exporter.RUNS)[index]
+    run_name = run_name or base
     repo = tmp_path / "repo"
     monkeypatch.setattr(exporter, "REPO", repo)
     monkeypatch.setattr(exporter, "RUN", run_name)
@@ -259,10 +261,12 @@ def make_run(tmp_path, exporter, monkeypatch, index=0):
     with zipfile.ZipFile(ckpt, "w") as archive:
         archive.writestr("fixture/data.pkl", b"\x80\x04N.")
     enc_sha = sha(ckpt.read_bytes())
+    readout = ({"readout": "stage2_pool4_split_v1", "num_tokens": 4, "dim": 256}
+               if exporter.RUNS[base][4] == "4x256"
+               else {"readout": "stage2_pool4_concat_v1", "num_tokens": 1, "dim": 1024, "budget": 96})
     history = {"motion": {"store_path": f"v1-store/datasets/{exporter.DATASET}/motion-stage2-1024",
-                           "readout": "stage2_pool4_split_v1", "num_tokens": 4, "dim": 256,
-                           "checkpoint_sha256": enc_sha}}
-    name = exporter.history_name(run_name)
+                           **readout, "checkpoint_sha256": enc_sha}}
+    name = exporter.history_name(base)
     write(repo / "src/mme_vla_suite/models/config/robomme" / name, history)
     write(run / "history_config.txt", name)
     resolved = write(run / "history_config.resolved.yaml", history)
@@ -329,7 +333,7 @@ def make_producer_delivery(tmp_path, exporter, monkeypatch, index=0):
     stage = tmp_path / "export/stage"
     stage.mkdir(parents=True)
     sources, _, _ = exporter.snapshot_sources(run, reg)
-    sources["README.md"] = HERE / f"orig16_{exporter.RUNS[exporter.RUN][1]}32x4x4_split_60k_bucket_README.md"
+    sources["README.md"] = exporter.readme_path(exporter.RUN)
     identity = {"run_name": exporter.RUN, "bucket": exporter.RUNS[exporter.RUN][0]}
     root_files = exporter.add_manifest(stage, exporter.freeze_sources(sources, stage), "manifests/root.json", **identity)
     step_files = exporter.freeze_sources(exporter.step_sources(run, 59999), stage)
@@ -544,3 +548,138 @@ def test_wrapper_syntax_and_runtime_selection():
     text = COMMON.read_text()
     assert "python3" not in text and "--private" not in text and "restore_receipt" not in text
     assert "mme_vla_suite_orig16_b128_60k" in text
+
+
+CONCAT_INDEX = (2, 3)
+
+
+def test_runs_include_two_concat_pairs(exporter):
+    assert list(exporter.RUNS)[2:] == ["orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k",
+                                       "orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k"]
+    assert [exporter.RUNS[run][0] for run in list(exporter.RUNS)[2:]] == [
+        "HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1",
+        "HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2concat1x1024-60k-v1"]
+    for run in list(exporter.RUNS)[2:]:
+        assert exporter.history_name(run).endswith("-32frame-4x4-motion-stage2-1x1024-orig16.yaml")
+        assert exporter.readme_path(run).is_file() and "concat" in exporter.readme_path(run).name
+
+
+@pytest.mark.parametrize("index", CONCAT_INDEX)
+def test_concat_final_checkpoint_smoke(tmp_path, exporter, monkeypatch, capsys, index):
+    make_run(tmp_path, exporter, monkeypatch, index)
+    monkeypatch.setattr(exporter, "validate_store", lambda *args: None)
+    root = tmp_path / "export"
+    (root / "stage").mkdir(parents=True)
+    exporter.run_checkpoints("final", True, root)
+    manifest = json.loads((root / "stage/delivery_manifest.json").read_text())
+    assert manifest["bucket"] == exporter.RUNS[exporter.RUN][0] and manifest["steps"][-1] == 59999
+    assert (root / "stage/README.md").read_bytes() == exporter.readme_path(exporter.RUN).read_bytes()
+    assert f"encoder_dependencies/{exporter.ENC_RUN}/checkpoint_epoch_105.pt" in manifest["files"]
+    assert "SMOKE=PASS kind=checkpoint mode=final steps=12" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("index", CONCAT_INDEX)
+def test_concat_producer_manifest_consumed_by_restore(tmp_path, exporter, checkpoint_consumer, monkeypatch, index):
+    stage, path = make_producer_delivery(tmp_path, exporter, monkeypatch, index)
+    record = checkpoint_consumer.verify_delivery_manifest(stage, path, stage / "59999")
+    assert record["step"] == 59999
+
+
+@pytest.mark.parametrize("pair", [(2, 0), (0, 2), (2, 3), (3, 1)])
+def test_concat_run_bucket_mismatch_fails(exporter, monkeypatch, pair):
+    runs = list(exporter.RUNS)
+    monkeypatch.setattr(exporter, "DATASET", "16task-orig100-1600ep-12345678")
+    monkeypatch.setattr(exporter, "RUN", runs[pair[0]])
+    monkeypatch.setenv("O16_MODE", "final")
+    monkeypatch.setenv("BUCKET", exporter.RUNS[runs[pair[1]]][0])
+    monkeypatch.delenv("ATTEMPT_MANIFEST", raising=False)
+    with pytest.raises(ValueError, match="固定配对"):
+        exporter.main()
+
+
+@pytest.mark.parametrize("motion,match", [({"budget": 384}, "1×1024"), ({"num_tokens": 4, "dim": 256}, "1×1024"),
+                                          ({"readout": "stage2_pool4_split_v1"}, "1×1024")])
+def test_concat_history_checked(tmp_path, exporter, monkeypatch, motion, match):
+    run, _ = make_run(tmp_path, exporter, monkeypatch, 2)
+    history = json.loads((run / "history_config.resolved.yaml").read_text())
+    exporter.check_history(history)
+    history["motion"].update(motion)
+    # yaml与快照同时漂移，负例必须命中concat读法校验而非仅仅是快照不等。
+    write(exporter.REPO / "src/mme_vla_suite/models/config/robomme" / exporter.history_name(exporter.RUN), history)
+    with pytest.raises(ValueError, match=match):
+        exporter.check_history(history)
+
+
+def test_concat_split_history_cannot_cross(tmp_path, exporter, monkeypatch):
+    run, reg = make_run(tmp_path, exporter, monkeypatch, 2)
+    write(run / "history_config.txt", exporter.history_name(list(exporter.RUNS)[0]))
+    with pytest.raises(ValueError, match="history标签不符|根快照SHA不符"):
+        exporter.snapshot_sources(run, reg)
+
+
+@pytest.mark.parametrize("index", CONCAT_INDEX)
+def test_concat_stage_missing_encoder_entity_rejected(tmp_path, exporter, checkpoint_consumer, monkeypatch, index):
+    stage, path = make_producer_delivery(tmp_path, exporter, monkeypatch, index)
+    external = exporter.REPO / "v1-store/external/motionjepa" / exporter.ENC_RUN / "checkpoint_epoch_105.pt"
+    entity = stage / "encoder_dependencies" / exporter.ENC_RUN / "checkpoint_epoch_105.pt"
+    assert external.is_file() and entity.is_file()
+    entity.unlink()
+    # 外部源仍在，但stage缺依赖实体：交付恢复必须拒绝。
+    with pytest.raises((ValueError, FileNotFoundError, OSError)):
+        checkpoint_consumer.verify_delivery_manifest(stage, path, stage / "59999")
+
+
+def attempt_record(tmp_path, exporter, *, index=2, nn="02", allowed=True, **override):
+    base = list(exporter.RUNS)[index]
+    run = f"{base}-attempt{nn}"
+    decision = write(tmp_path / "decisions/evt.json", {"allowed_runs": [run] if allowed else []})
+    record = {"base_run": base, "run": run, "history": exporter.history_name(base), "train_head": "a" * 40,
+              "decision": str(decision), "bucket": exporter.RUNS[base][0] + f"-attempt{nn}"}
+    record.update(override)
+    return write(tmp_path / "attempt.json", record), record
+
+
+def test_registered_attempt_final_smoke(tmp_path, exporter, monkeypatch, capsys):
+    path, record = attempt_record(tmp_path, exporter)
+    make_run(tmp_path, exporter, monkeypatch, 2, run_name=record["run"])
+    monkeypatch.setattr(exporter, "validate_store", lambda *args: None)
+    for key, value in dict(O16_MODE="final", SMOKE="1", BUCKET=record["bucket"], ATTEMPT_MANIFEST=str(path),
+                           O16_EXPORT_ROOT=str(tmp_path / "export")).items():
+        monkeypatch.setenv(key, value)
+    exporter.main()
+    out = capsys.readouterr().out
+    assert f"ATTEMPT=PASS run={record['run']}" in out and "SMOKE=PASS kind=checkpoint mode=final steps=12" in out
+    manifest = json.loads((tmp_path / "export/stage/delivery_manifest.json").read_text())
+    assert manifest["run_name"] == record["run"] and manifest["bucket"] == record["bucket"]
+
+
+@pytest.mark.parametrize("fault", ["unregistered", "no_manifest", "nn01", "bucket", "history", "run_env"])
+def test_attempt_faults_rejected(tmp_path, exporter, monkeypatch, fault):
+    kwargs = {}
+    if fault == "unregistered": kwargs["allowed"] = False
+    if fault == "nn01": kwargs["nn"] = "01"
+    if fault == "bucket": kwargs["bucket"] = exporter.RUNS[list(exporter.RUNS)[2]][0] + "-attempt03"
+    if fault == "history": kwargs["history"] = exporter.history_name(list(exporter.RUNS)[0])
+    path, record = attempt_record(tmp_path, exporter, **kwargs)
+    monkeypatch.setattr(exporter, "DATASET", "16task-orig100-1600ep-12345678")
+    monkeypatch.setattr(exporter, "RUN", record["run"] if fault != "run_env" else list(exporter.RUNS)[2])
+    for key, value in dict(O16_MODE="final", SMOKE="1", BUCKET=record["bucket"],
+                           O16_EXPORT_ROOT=str(tmp_path / "export")).items():
+        monkeypatch.setenv(key, value)
+    if fault == "no_manifest":
+        monkeypatch.delenv("ATTEMPT_MANIFEST", raising=False)
+    else:
+        monkeypatch.setenv("ATTEMPT_MANIFEST", str(path))
+    with pytest.raises(ValueError, match="固定配对|attempt|决定记录|RUN/BUCKET"):
+        exporter.main()
+    assert not (tmp_path / "export").exists()
+
+
+def test_concat_wrapper_rejects_other_role_attempt(tmp_path, exporter):
+    path, _ = attempt_record(tmp_path, exporter, index=3)
+    result = subprocess.run(["bash", str(HERE / "run_orig16_ctx32x4x4_concat_60k_ckpt_export.sh")],
+                            env=env_for_scripts(SMOKE="1", ATTEMPT_MANIFEST=str(path),
+                                                O16_EXPORT_ROOT=str(tmp_path / "export")),
+                            capture_output=True, text=True, timeout=60)
+    assert result.returncode == 2 and "base_run" in result.stderr
+    assert not (tmp_path / "export").exists()

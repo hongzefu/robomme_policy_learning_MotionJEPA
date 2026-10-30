@@ -24,10 +24,10 @@ for pair in "$CTX:$CTX_H" "$MOD:$MOD_H"; do
   log="$ROOT/v1-store/logs/$run.log"
   checkpoint="$ROOT/v1-store/train-runs/mme_vla_suite_orig16_b128_60k/$run/59999"
   if [[ $rc != 0 ]]; then echo "CHAIN=STOP reason=training_exit run=$run code=$rc"; exit "$rc"; fi
-  if [[ ! -f "$log" || $(tail -n 1 "$log") != EXIT_CODE=0 ]] || ! rg -q -x "RUN=$run" "$log"; then
+  if [[ ! -f "$log" || $(tail -n 1 "$log") != EXIT_CODE=0 ]] || ! LC_ALL=C grep -aqxF "RUN=$run" "$log"; then
     echo "CHAIN=STOP reason=missing_success_log run=$run"; exit 1
   fi
-  if rg -qi '^\r*Step [0-9]+:.*(loss|grad_norm|llm_grad_norm|param_norm|mem_enc_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$log"; then
+  if LC_ALL=C grep -aqiP '^\r*Step [0-9]+:.*(loss|grad_norm|llm_grad_norm|param_norm|mem_enc_norm)=[-+]?(nan|inf)(,|[[:space:]]|$)|RESOURCE_EXHAUSTED:|CUDA out of memory|OutOfMemoryError' "$log"; then
     echo "CHAIN_DIAGNOSTIC=FAIL check=train_numerics detail=nonfinite_or_oom action=record_only reason=user_decision run=$run"
   fi
   if [[ ! -d "$checkpoint" || -L "$checkpoint" ]]; then

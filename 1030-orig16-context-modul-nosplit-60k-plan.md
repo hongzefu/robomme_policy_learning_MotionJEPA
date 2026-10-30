@@ -4,7 +4,7 @@
 >
 > 最新决定：「同意增量上传诊断失败后就问用户 改写md」。因此两条均做每 5000 步增量公开备份；诊断失败立即留证并询问用户，未经答复不继续依赖失败结果的后续步骤。此前审查中的两项待定偏好已经确定，不重复询问。
 >
-> 代码参考：现有 split 正式训练锚点 `9459859384589b3553148cf53f715c1318f1a533`；开发副本当前锚点 `6d2a219c59210e61e9f0f05757136a6e51e3bf61`，分支 `worktree-agent-o16-state-20261028`。后续训练使用完成最小改动、验收并固定后的新提交，不能把旧提交写成新训练的版本。
+> 代码参考：现有 split 正式训练锚点 `9459859384589b3553148cf53f715c1318f1a533`。开工时（美东 10-30 15:3x）冻结已解除、原开发分支已合回主检出，主检出 `v4-256concat1` 当前锚点 `6bb7d4dfe320e595daef023688dfb85f4c1b5eaf`；新开发副本 `robomme_policy_learning_MotionJEPA-temp` 从该提交建分支 `dev-o16-concat-20261030`。后续训练使用完成最小改动、验收并固定后的新提交，不能把旧提交写成新训练的版本。
 
 # 第一部分（给人看）
 
@@ -34,7 +34,7 @@
 
 ## 2. 现有实验已核实的状态
 
-美东 10 月 30 日现场读取日志与检查点目录，结果如下；交接文件仍写着 running/planned，已经落后于日志。
+美东 10 月 30 日现场读取日志与检查点目录，结果如下；交接文件当时仍写着 running/planned；开工前已由交接会话更新为三项 closed（主检出 `9f08748`）。
 
 | 现有模型 | 完成时间（美东） | 现场证据 |
 |---|---|---|
@@ -108,7 +108,7 @@ HANDOFF_READ=STALE base=6fefaf56c0d536bc0d1ecc1842df4503beb6a93a tasks=14 done=1
 | A：固定实验 | 两个 concat YAML、四组实验身份、库与 encoder 来源固定 | `NOSPLIT_CONFIG=PASS`、`DATA_LINEAGE=PASS files=16 mismatches=0` |
 | B：启动合同 | 初次只放行指定四个正式组合；重试只接受用户决定后登记的 attempt；拒绝串名、改预算和覆盖旧 run | `LAUNCH_CONTRACT=PASS`，新负例测试通过 |
 | C：输入与模型 | 相同数据顺序与窗口内容；concat 形状正确；在线输出消费同一读法 | `NOSPLIT_INPUT=PASS`、`MOTION_LAYOUT=PASS readout=concat tokens_per_window=1 budget=96 total_tokens=608` |
-| D：真实短测 | 两条各 20 步、保存 step19、严格恢复及在线推理；loss/梯度有限、无 OOM | `SMOKE20=PASS`、现有恢复工具输出 `SAVE_LOAD=PASS`，实际退出 0 |
+| D：真实短测 | 两条各 20 步、保存 step19、严格恢复及在线推理；loss/梯度有限、无 OOM | 两条各 `TRAIN_FINAL_RECORD=PASS`（steps=20）与现有恢复工具输出 `SAVE_LOAD=PASS`，实际退出 0 |
 | E：正式训练 | 两条各 60000 步、各有 `59999` 与完整末段记录 | `TRAIN_FINAL_RECORD=PASS`、`EXIT_CODE=0` |
 | F：交付 | 两条最终检查点严格恢复、根级依赖齐全，恢复后在线推理通过 | `CKPT_DELIVERY_READY=PASS step=59999` |
 | G：公开备份 | 每条 12 份增量齐全、最终 manifest 完整、全量匿名回读零失配 | `INC_END run=<run> done=12`、`HF_VERIFY=PASS`、`CKPT_UPLOAD=PASS steps=12`，实际退出 0 |
@@ -143,7 +143,7 @@ HANDOFF_READ=STALE base=6fefaf56c0d536bc0d1ecc1842df4503beb6a93a tasks=14 done=1
 
 **两个源 pin 的字符串不相等是正常的**：它们摘要的清单格式不同。必须由 `check_data_lineage.py::check_lineage` 比较 encoder、VLA、MJ 三方的 H5 文件名、字节数、SHA256 集合完全一致，不能将 pin 字符串相等作为替代判据。两条 split 启动日志已经记录相同的 `DATA_LINEAGE=PASS`；本轮重新读取并核对了 input manifest、episode manifest、norm 三份文件摘要，与表中一致。
 
-开发副本的 `v1-store` 指向主副本，任何写入都是主数据写入；新产物只写专属路径。主副本完成旧任务冻结期后才合入新代码，禁止在旧任务仍依赖其版本时移动 HEAD。开发副本使用自己的依赖环境；本轮发现其 `.venv` 缺少 `yaml`，运行血缘脚本在导入阶段失败，**没有获得一次新的血缘复验通过结果**。实施时按锁文件恢复环境后重新验收。
+开发副本的 `v1-store` 指向主副本，任何写入都是主数据写入；新产物只写专属路径。主副本完成旧任务冻结期后才合入新代码，禁止在旧任务仍依赖其版本时移动 HEAD。开发副本不建也不同步自己的 `.venv`：CPU 测试以 `UV_PROJECT_ENVIRONMENT=<主检出>/.venv PYTHONPATH=<开发副本>/src uv run --no-sync` 只读借用主检出环境（主检出此时无训练在跑，开发副本不执行 `uv sync`/`uv add`）；血缘复验与正式训练都在合并后的主检出执行。
 
 本轮对旧 Beta 到当前开发 HEAD 的 `src/`、`scripts/training/` 中 31 个发生变化的 Python 文件做了去注释／文档字符串后的 AST 比较，未发现可执行 AST 差异。该结果支持当前改动主要为文档引用迁移，不代替完整环境、依赖、配置或运行行为一致性验证。
 
@@ -155,7 +155,7 @@ HANDOFF_READ=STALE base=6fefaf56c0d536bc0d1ecc1842df4503beb6a93a tasks=14 done=1
 | 同文件 `core` | 配对 YAML 固定为 `4x256` | 根据当前有效 history 选择同读法的 ctx/modul 配对；两个配对都只允许 `integration_type,memory_token_dim` 不同 |
 | 同文件 `check_history`、`check_dataset` | 已支持 concat 的 96 窗与 608 总 token、同源和来源校验 | 复用；保留原形状、摘要、清单、窗口与来源检查，不增跳过选项 |
 | `scripts/training/run_orig16_concat_ctx_then_modul_60k.sh`（新增） | 无 concat 正式串行入口 | 固定两条实验身份；正常完成后接续；诊断失败写待决记录并返回主会话询问；支持复核已完成前条后从后条进入 |
-| `scripts/training/run_orig16_stage2_60k.sh` | 参数化单条入口，已支持两种读法的配置文件名 | 八卡串行方案原则上无需修改；保留日志防覆盖与全配置合同 |
+| `scripts/training/run_orig16_stage2_60k.sh` | 参数化单条入口，已支持两种读法的配置文件名 | 开工后调整：诊断与成功日志检查里的 `rg` 等价替换为 GNU `grep`（本机无 `rg` 可执行文件，见第 13 节）；其余不改，保留日志防覆盖与全配置合同。attempt 由合同直接读环境变量 `ATTEMPT_MANIFEST`，本入口不透传也不 unset |
 | `tests/training/test_check_orig16_stage2_launch.py` | 八组合短测、旧正式训练与串行检查 | 增 concat 正式正例、身份错配负例、诊断失败等待用户决定、无决定不能重试、已完成 context 不重跑、已登记 attempt；保持 split 回归 |
 | `tests/training/test_paired_ctx_modul_yaml.py` | 只检查 split 配对 | 参数化检查 split、concat 两对；新增同融合前后仅 motion 四个字段不同的断言 |
 | 两份 `*-32frame-4x4-motion-stage2-1x1024-orig16.yaml` | 已具备全部目标值 | 直接复用，不创建重复配置 |
@@ -171,7 +171,7 @@ HANDOFF_READ=STALE base=6fefaf56c0d536bc0d1ecc1842df4503beb6a93a tasks=14 done=1
 
 ## 9. 子代理分配与整合
 
-下表为后续实施分工；延续用户「全部astra high」要求，本任务审查与实施子代理使用 `gpt-6-astra`、`high`。
+下表为后续实施分工；本次由 Claude Code 执行：按 `AGENTS.md` 第 26 条，实施代理用 `opus`、审查用 `sonnet`（原稿「astra high」为 Codex 口径）。按用户开工时要求「开工的时候只有一份仓库和一份temp」，A1–A3 合并为一个写入代理，直接在 `-temp` 开发分支上按 `sub/<编号>: ` 前缀提交，不另开 worktree；主会话审查后 `--no-ff` 合入主检出。
 
 | 子任务 | 目标／可写文件 | 禁触路径 | 接口、依赖与合并顺序 | 验收与资源 |
 |---|---|---|---|---|
@@ -357,7 +357,7 @@ tokenizer、VAE 及运行环境仍使用现有按摘要核验的本机缓存；s
 | 情况 | 处理 |
 |---|---|
 | 当前 GPU 查询失败 | 规划阶段已登记；实施前复核驱动、8×A100-80GB 与占用，仍失败则报告并询问，不能启动 GPU 工作 |
-| 开发环境缺 `yaml` | 按锁文件准备独立环境，真实检查仍失败则留证并询问；本轮不安装依赖 |
+| 开发环境 | 开发副本只读借用主检出 `.venv`，不安装依赖；真实检查失败则留证并询问 |
 | 数据／encoder 身份不符 | 记录 FAIL，停止受影响工作并询问，不绕过血缘检查 |
 | 20 步 OOM、非有限值或保存恢复失败 | 保留现场，暂停正式训练准入，立即询问；不得自行减 batch、改预算、精度或跳过检查 |
 | 正式训练退出非零、末步缺失或诊断失败 | 写待决事件、暂停接续第二条并立即询问；真实退出码与诊断结果分别记录 |
@@ -382,3 +382,18 @@ tokenizer、VAE 及运行环境仍使用现有按摘要核验的本机缓存；s
 文档交付检查：恰好保留两个一级标题；本地已存在链接可解析；新入口明确标注为拟新增；命令中的现有参数与当前脚本一致；新增文件执行空白检查。两条新训练和其验收结果均不得提前标为完成。
 
 本次修订对应[对抗审查记录](1030-orig16-context-modul-nosplit-adversarial-review.md)：F1 改为实体 stage 后恢复；F2 补受控重入及用户决定后的 attempt；F3 补全两条短测恢复命令与环境；F4 补充 RoPE 位置影响。以上为方案层修正，代码尚未实施、运行验证尚未完成，不能将原审查失败改写为已实测通过。
+
+## 13. 开工令与实施中调整（2026-10-30 美东）
+
+开工令原话：「同意计划更新」「规则可以更新」「登记你也可以确认」「其他你来决策」「开工」；此前「我希望开工的时候只有一份仓库和一份temp」「和上次一样」。
+
+开工前计划一致性审查（锚点 `bce07e8`）：`PLAN_CONSISTENCY_REVIEW=FAIL base=bce07e875e80411cb7d6801b73042b8d2167bc2a findings=5 blocking=2`。按用户授权由主会话裁决如下，并已改入上文：
+
+| 项 | 旧 | 新 | 理由 |
+|---|---|---|---|
+| attempt 通道（阻塞 1） | 合同/导出器「增加 `ATTEMPT_MANIFEST` 输入」，单条入口「无需修改」 | 合同与导出器直接读环境变量 `ATTEMPT_MANIFEST`；单条入口不透传、不 unset | 不扩大单条入口改动面 |
+| 短测判定行（阻塞 2） | `SMOKE20=PASS` | `TRAIN_FINAL_RECORD=PASS`（steps=20）+ `SAVE_LOAD=PASS` | 两行均由现有程序产出 |
+| `rg` 依赖（开工后新发现） | 单条与 split 串行入口用 `rg` 做诊断/成功日志检查 | 等价替换为 GNU `grep`，正则与判定行不变 | 本机无 `rg` 可执行文件：HEAD 上 `test_check_orig16_stage2_launch.py` 19 失败（`rg: command not found`）；从本会话起跑时串行入口会误报 `missing_success_log`，单条入口 nan/OOM 诊断会静默失效 |
+| 子代理与工作树 | Astra high、三路 worktree | Claude opus 单写入代理在 `-temp` 分支提交；sonnet 审查 | 用户要求只保留一份仓库和一份 temp |
+| 诊断失败口径 | — | 「暂停并询问」只适用于新 concat 入口与本计划短测；旧 split 入口保持 record_only | 审查 finding 4 文字限定 |
+| bucket 命名 | — | 保持第 4 节带 `1x1024` 的命名 | 审查 finding 5：有意区分读法，非错误 |
