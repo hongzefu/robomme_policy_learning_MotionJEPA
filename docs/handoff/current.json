@@ -1,19 +1,17 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-30T19:34:58+00:00",
-    "america_new_york": "2026-10-30T15:34:58-04:00"
+    "utc": "2026-10-30T20:20:56+00:00",
+    "america_new_york": "2026-10-30T16:20:56-04:00"
   },
   "repo": {
-    "branch": "v4-256concat1",
-    "base_head": "6bb7d4dfe320e595daef023688dfb85f4c1b5eaf"
+    "branch": "dev-o16-concat-20261030",
+    "base_head": "6424d7f39569739eae1ca6cdbb50c7f26897e738"
   },
   "freeze": {
-    "active": false,
+    "active": true,
     "main_path": "/scratch/hongze/robomme_policy_learning_MotionJEPA",
-    "frozen_head": "9459859384589b3553148cf53f715c1318f1a533",
-    "thawed_at_utc": "2026-10-30T19:22:38.071499+00:00",
-    "evidence": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-20261028/thaw-result.json"
+    "frozen_head": "6424d7f39569739eae1ca6cdbb50c7f26897e738"
   },
   "tasks": {
     "orig16-vla-build": {
@@ -1301,17 +1299,33 @@
       ],
       "pending_decisions": [],
       "long_tail": [],
-      "running_handles": [],
-      "state_reason": "开工：在 -temp 分支 dev-o16-concat-20261030 实施最小代码改动（concat 合同/串行入口/导出、rg→grep），待审查合入主检出后短测与起跑",
+      "running_handles": [
+        {
+          "tmux": "o16-concat-train-chain-10301615",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-concat-20261030/formal-chain-ctx.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "o16-concat-train-chain-10301615",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k.log",
+          "done_line": "EXIT_CODE="
+        },
+        {
+          "tmux": "o16-concat-backup-ctx-10301615",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-concat-20261030/checkpoint-backup-ctx.log",
+          "done_line": "EXIT_CODE="
+        }
+      ],
+      "state_reason": "commitV11.69Beta 6424d7f clean 起跑：美东 10-30 16:15:48 tmux o16-concat-train-chain-10301615；合同 50/50 PASS，Step0 loss0.5556 有限；短测两条 SMOKE_ALL=PASS；增量备份 ROOT_UPLOAD=PASS 等待 5000",
       "depends_on": [
         "orig16-vla-build"
       ],
       "pre_handoff": [
         {
           "what": "20步短测",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "SMOKE_ALL=PASS runs=2 train_head=6cd4d6cd11ab6e718d05af5b8dc9cda8c656599c",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-concat-20261030/smoke.log",
+          "status": "pass"
         },
         {
           "what": "正式60k训练 EXIT_CODE=0 且 TRAIN_FINAL_RECORD=PASS",
@@ -1334,9 +1348,9 @@
       ],
       "next_steps": [
         {
-          "what": "实施并合入后跑两条20步短测",
-          "command": "见计划10.2",
-          "verdict_line": "TRAIN_FINAL_RECORD=PASS + SAVE_LOAD=PASS"
+          "what": "监听训练至 59999 与增量备份；结束后 modulation 自动接续",
+          "command": "tail -F 上列日志",
+          "verdict_line": "TRAIN_FINAL_RECORD=PASS；EXIT_CODE=0；INC_UPLOADED step=59999"
         }
       ]
     },
@@ -1364,8 +1378,14 @@
       ],
       "pending_decisions": [],
       "long_tail": [],
-      "running_handles": [],
-      "state_reason": "开工：与 context concat 同批实施；正式训练在 context concat 结束且无待决失败后串行起跑",
+      "running_handles": [
+        {
+          "tmux": "o16-concat-backup-modul-10301615",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-concat-20261030/checkpoint-backup-modul.log",
+          "done_line": "EXIT_CODE="
+        }
+      ],
+      "state_reason": "同链排队：context 正常结束且无 pending 后由串行入口接续；备份会话已起、等待本条训练日志出现",
       "depends_on": [
         "orig16-vla-build",
         "orig16-vla-train-ctx32x4x4-concat1x1024-60k"
@@ -1373,9 +1393,9 @@
       "pre_handoff": [
         {
           "what": "20步短测",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "SMOKE_ALL=PASS runs=2 train_head=6cd4d6cd11ab6e718d05af5b8dc9cda8c656599c",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/o16-concat-20261030/smoke.log",
+          "status": "pass"
         },
         {
           "what": "正式60k训练 EXIT_CODE=0 且 TRAIN_FINAL_RECORD=PASS",
