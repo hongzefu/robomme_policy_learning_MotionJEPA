@@ -1,14 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-30T19:26:04.632009+00:00",
-    "america_new_york": "2026-10-30T15:26:04.632009-04:00"
+    "utc": "2026-10-30T19:34:58+00:00",
+    "america_new_york": "2026-10-30T15:34:58-04:00"
   },
   "repo": {
     "branch": "v4-256concat1",
-    "base_head": "05e163075ec2c359d3cc161811203a61a1981c6d",
-    "note": "本轮训练Beta9459859已完成全部训练、公开交付与恢复验收；冻结期开发分支worktree-agent-o16-state-20261028以--no-ff合入主分支v4-256concat1，主副本恢复为交接状态权威来源。旧分支历史与既有开发提交完整保留。",
-    "closeout_merge": "05e163075ec2c359d3cc161811203a61a1981c6d"
+    "base_head": "6bb7d4dfe320e595daef023688dfb85f4c1b5eaf"
   },
   "freeze": {
     "active": false,
@@ -1276,6 +1274,133 @@
           "what": "首份占位RUNNING后跑smoke2（BinFill:0、BinFill:50），核ENV_ROUTE route=xhard env=BinFillXHard；通过后initialize run1200并起controller与worker",
           "command": "run-controller-smoke.sh / run-worker-smoke.sh",
           "verdict_line": "ENV_ROUTE route=xhard env=BinFillXHard；smoke2 2/2终局"
+        }
+      ]
+    },
+    "orig16-vla-train-ctx32x4x4-concat1x1024-60k": {
+      "plan": {
+        "file": "1030-orig16-context-modul-nosplit-60k-plan.md",
+        "sha": "1fe56c6"
+      },
+      "state": "running",
+      "state_changed_at": {
+        "utc": "2026-10-30T19:34:58+00:00",
+        "america_new_york": "2026-10-30T15:34:58-04:00"
+      },
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiT7q62diEc2dNrQP9U",
+        "host": "Claude@AWS"
+      },
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-30",
+          "quote": "「我希望开工的时候只有一份仓库和一份temp」「和上次一样」「同意计划更新」「规则可以更新」「登记你也可以确认」「其他你来决策」「开工」；计划内既定授权：「同意增量上传诊断失败后就问用户 改写md」",
+          "scope": "1030 计划全部：代码最小改动、两条20步短测、context→modulation 串行60k、两条各12份增量公开上传与最终匿名回读、G12恢复；诊断失败即停并询问用户；HF验收后删本地stage"
+        }
+      ],
+      "pending_decisions": [],
+      "long_tail": [],
+      "running_handles": [],
+      "state_reason": "开工：在 -temp 分支 dev-o16-concat-20261030 实施最小代码改动（concat 合同/串行入口/导出、rg→grep），待审查合入主检出后短测与起跑",
+      "depends_on": [
+        "orig16-vla-build"
+      ],
+      "pre_handoff": [
+        {
+          "what": "20步短测",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "正式60k训练 EXIT_CODE=0 且 TRAIN_FINAL_RECORD=PASS",
+          "evidence": "",
+          "where": "v1-store/logs/orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k.log",
+          "status": "pending"
+        },
+        {
+          "what": "G12 CKPT_DELIVERY_READY=PASS step=59999",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "12份增量+最终 HF_VERIFY=PASS CKPT_UPLOAD=PASS steps=12",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        }
+      ],
+      "next_steps": [
+        {
+          "what": "实施并合入后跑两条20步短测",
+          "command": "见计划10.2",
+          "verdict_line": "TRAIN_FINAL_RECORD=PASS + SAVE_LOAD=PASS"
+        }
+      ]
+    },
+    "orig16-vla-train-modul32x4x4-concat1x1024-60k": {
+      "plan": {
+        "file": "1030-orig16-context-modul-nosplit-60k-plan.md",
+        "sha": "1fe56c6"
+      },
+      "state": "running",
+      "state_changed_at": {
+        "utc": "2026-10-30T19:34:58+00:00",
+        "america_new_york": "2026-10-30T15:34:58-04:00"
+      },
+      "owner": {
+        "session": "https://claude.ai/code/session_01WvPQiT7q62diEc2dNrQP9U",
+        "host": "Claude@AWS"
+      },
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-30",
+          "quote": "「我希望开工的时候只有一份仓库和一份temp」「和上次一样」「同意计划更新」「规则可以更新」「登记你也可以确认」「其他你来决策」「开工」；计划内既定授权：「同意增量上传诊断失败后就问用户 改写md」",
+          "scope": "1030 计划全部：代码最小改动、两条20步短测、context→modulation 串行60k、两条各12份增量公开上传与最终匿名回读、G12恢复；诊断失败即停并询问用户；HF验收后删本地stage"
+        }
+      ],
+      "pending_decisions": [],
+      "long_tail": [],
+      "running_handles": [],
+      "state_reason": "开工：与 context concat 同批实施；正式训练在 context concat 结束且无待决失败后串行起跑",
+      "depends_on": [
+        "orig16-vla-build",
+        "orig16-vla-train-ctx32x4x4-concat1x1024-60k"
+      ],
+      "pre_handoff": [
+        {
+          "what": "20步短测",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "正式60k训练 EXIT_CODE=0 且 TRAIN_FINAL_RECORD=PASS",
+          "evidence": "",
+          "where": "v1-store/logs/orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k.log",
+          "status": "pending"
+        },
+        {
+          "what": "G12 CKPT_DELIVERY_READY=PASS step=59999",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "12份增量+最终 HF_VERIFY=PASS CKPT_UPLOAD=PASS steps=12",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        }
+      ],
+      "next_steps": [
+        {
+          "what": "串行入口接续",
+          "command": "bash scripts/training/run_orig16_concat_ctx_then_modul_60k.sh",
+          "verdict_line": "EXIT_CODE=0"
         }
       ]
     }
