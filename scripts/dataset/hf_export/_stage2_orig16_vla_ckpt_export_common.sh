@@ -5,6 +5,7 @@ set -euo pipefail
 [ "$#" = 0 ] || { echo "本入口不接受额外参数" >&2; exit 2; }
 O16_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 export O16_REPO O16_MODE RUN BUCKET
+[ -z "${ATTEMPT_MANIFEST:-}" ] || export ATTEMPT_MANIFEST
 export UV_CACHE_DIR=/scratch/hongze/.cache/uv CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu
 export XLA_PYTHON_CLIENT_PREALLOCATE=false PYTHONUNBUFFERED=1
 cd "$O16_REPO"
@@ -33,13 +34,21 @@ import scan_hygiene as hygiene
 # 建库后仅回填库名；哈希和行数由实际已验证产物进入发布清单，不复制训练契约常量。
 DATASET = "16task-orig100-1600ep-9e109419"
 TRAINSET_BUCKET = "HongzeFu/robomme-16task-orig100-1600ep-trainset-20261028-v1"
+# 运行名 → (bucket, 融合标签, 融合方式, memory_token_dim, 读法标签)；split两条在前，concat两条在后。
 RUNS = {
     "orig100-ctx32x4x4-motion-s2split4x256-b128-60k": (
-        "HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2split-60k-v1", "ctx", "context", 2048),
+        "HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2split-60k-v1", "ctx", "context", 2048, "4x256"),
     "orig100-m32x4x4-modul-motion-s2split4x256-b128-60k": (
-        "HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2split-60k-v1", "modul", "modulation", 1024),
+        "HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2split-60k-v1", "modul", "modulation", 1024, "4x256"),
+    "orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k": (
+        "HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1", "ctx", "context", 2048, "1x1024"),
+    "orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k": (
+        "HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2concat1x1024-60k-v1", "modul", "modulation", 1024, "1x1024"),
 }
+README_KIND = {"4x256": "split", "1x1024": "concat"}
 RUN = os.environ.get("RUN", "")
+# 用户决定后登记的attempt清单（main中校验后设置）；未设置时RUN即正式名。
+ATTEMPT = None
 ENC_RUN = "stage2-full144-1025-a"
 ARCH = "wan-latent-stage2-blockwise-pool4-three-decoder"
 LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
@@ -140,19 +149,56 @@ def check_online_inputs(record, payload):
                                 "sha256": hashlib.sha256(value.tobytes(order="C")).hexdigest()},
                  f"恢复数组描述或SHA不符: {key}")
 
+def base_run():
+    """attempt按其base_run校验历史与读法；未登记attempt时即RUN本身。"""
+    return ATTEMPT["base_run"] if ATTEMPT else RUN
+
+
+def bucket_id():
+    return ATTEMPT["bucket"] if ATTEMPT else RUNS[RUN][0]
+
+
 def history_name(run):
-    need(run in RUNS, "RUN不在两条已批准训练中")
-    return f"perceptual-framesamp-{RUNS[run][1]}-32frame-4x4-motion-stage2-4x256-orig16.yaml"
+    need(run in RUNS, "RUN不在四条已批准训练中")
+    return f"perceptual-framesamp-{RUNS[run][1]}-32frame-4x4-motion-stage2-{RUNS[run][4]}-orig16.yaml"
+
+
+def readme_path(run):
+    return EXPORT / f"orig16_{RUNS[run][1]}32x4x4_{README_KIND[RUNS[run][4]]}_60k_bucket_README.md"
+
+
+def check_attempt(path):
+    """attempt清单须与RUN/BUCKET、base及决定记录同时一致；任一不符即失败，不回退固定名。"""
+    record = json_file(path)
+    need(isinstance(record, dict) and set(record) == {"base_run", "run", "history", "train_head", "decision", "bucket"},
+         "attempt清单字段不符")
+    base, run = record["base_run"], record["run"]
+    need(base in RUNS, "attempt base_run不是四条已批准训练之一")
+    match = re.fullmatch(re.escape(base) + r"-attempt(\d{2})", str(run))
+    need(match is not None and int(match.group(1)) >= 2, "attempt run必须为base_run加-attemptNN（NN≥02）")
+    need(run == RUN and record["bucket"] == os.environ.get("BUCKET"), "RUN/BUCKET与attempt清单不符")
+    need(record["bucket"] == RUNS[base][0] + f"-attempt{match.group(1)}", "attempt bucket必须为base bucket加相同后缀")
+    need(record["history"] == history_name(base), "attempt history与base读法或融合不符")
+    decision = Path(record["decision"])
+    need(decision.is_file() and not decision.is_symlink(), "attempt决定记录不存在")
+    allowed = json_file(decision).get("allowed_runs")
+    need(isinstance(allowed, list) and run in allowed, "决定记录未登记该attempt")
+    return record
 
 
 def check_history(history):
-    need(history == load_yaml(REPO / "src/mme_vla_suite/models/config/robomme" / history_name(RUN)),
+    base = base_run()
+    need(history == load_yaml(REPO / "src/mme_vla_suite/models/config/robomme" / history_name(base)),
          "run快照与对应正式yaml不同")
     motion = history.get("motion", {})
     need(motion.get("store_path") == f"v1-store/datasets/{DATASET}/motion-stage2-1024",
          "motion库与固定库名不符")
-    need(motion.get("readout") == "stage2_pool4_split_v1" and motion.get("num_tokens") == 4
-         and motion.get("dim") == 256, "正式训练必须为4×256读法")
+    if RUNS[base][4] == "1x1024":
+        need(motion.get("readout") == "stage2_pool4_concat_v1" and motion.get("num_tokens") == 1
+             and motion.get("dim") == 1024 and motion.get("budget") == 96, "concat训练必须为1×1024、96窗读法")
+    else:
+        need(motion.get("readout") == "stage2_pool4_split_v1" and motion.get("num_tokens") == 4
+             and motion.get("dim") == 256, "正式训练必须为4×256读法")
     sha = motion.get("checkpoint_sha256", "")
     need(isinstance(sha, str) and SHA.fullmatch(sha), "yaml含占位SHA")
     return sha
@@ -181,7 +227,7 @@ def snapshot_sources(run, registered):
     need(payload.get("path") == "online_restore_inputs.npz"
          and payload.get("sha256") == ready_files["online_restore_inputs.npz"], "在线恢复NPZ未闭合SHA")
     check_online_inputs(online, sources["online_restore_inputs.npz"])
-    need((run / "history_config.txt").read_text().strip() == history_name(RUN), "history标签不符")
+    need((run / "history_config.txt").read_text().strip() == history_name(base_run()), "history标签不符")
     history = load_yaml(sources["history_config.resolved.yaml"])
     sha = check_history(history)
     resolved_sha = file_info(sources["history_config.resolved.yaml"])["sha256"]
@@ -434,7 +480,7 @@ def run_checkpoints(mode, smoke, root):
     run = REPO / "v1-store/train-runs/mme_vla_suite_orig16_b128_60k" / RUN
     registered = REPO / "v1-store/external/motionjepa" / ENC_RUN
     log = REPO / "v1-store/logs" / f"{RUN}.log"
-    bucket_id = RUNS[RUN][0]
+    bucket = bucket_id()
     stage = root / "stage"
     allow = EXPORT / "hygiene_allowlist_orig16_stage2_vla.json"
     if mode == "final":
@@ -445,13 +491,13 @@ def run_checkpoints(mode, smoke, root):
         time.sleep(30)
     sources, prov, history = snapshot_sources(run, registered)
     validate_store(REPO, prov, history)
-    sources["README.md"] = EXPORT / f"orig16_{RUNS[RUN][1]}32x4x4_split_60k_bucket_README.md"
+    sources["README.md"] = readme_path(base_run())
     scan(sources, allow)
     files = freeze_sources(sources, stage)
-    root_files = add_manifest(stage, files, "manifests/root.json", run_name=RUN, bucket=bucket_id)
-    identity = {"kind": "orig16-stage2-vla", "run_name": RUN, "bucket": bucket_id,
+    root_files = add_manifest(stage, files, "manifests/root.json", run_name=RUN, bucket=bucket)
+    identity = {"kind": "orig16-stage2-vla", "run_name": RUN, "bucket": bucket,
                 "root_manifest_sha256": root_files["manifests/root.json"]["sha256"]}
-    publisher = None if smoke else Publisher(root, bucket_id, identity)
+    publisher = None if smoke else Publisher(root, bucket, identity)
     if publisher:
         publisher.transfer("root", stage, root_files)
         for name, info in root_files.items():
@@ -470,7 +516,7 @@ def run_checkpoints(mode, smoke, root):
             files = freeze_sources(step_src, stage)
             # 每份step清单包含根快照与encoder依赖，异地单步恢复不依赖其他step。
             path = write_generated(stage, f"manifests/step-{step}.json",
-                                   manifest({**root_files, **files}, run_name=RUN, bucket=bucket_id, step=step))
+                                   manifest({**root_files, **files}, run_name=RUN, bucket=bucket, step=step))
             files[f"manifests/step-{step}.json"] = file_info(path)
             if publisher:
                 publisher.transfer(str(step), stage, files)
@@ -485,7 +531,7 @@ def run_checkpoints(mode, smoke, root):
             all_files.update(files)
             sources.update(extra)
             path = write_generated(stage, "delivery_manifest.json",
-                                   manifest(all_files, run_name=RUN, bucket=bucket_id, steps=list(STEPS)))
+                                   manifest(all_files, run_name=RUN, bucket=bucket, steps=list(STEPS)))
             all_files["delivery_manifest.json"] = file_info(path)
             if publisher:
                 publisher.transfer("final", stage, {**files, "delivery_manifest.json": all_files["delivery_manifest.json"]})
@@ -500,7 +546,7 @@ def run_checkpoints(mode, smoke, root):
     if smoke:
         print(f"SMOKE=PASS kind=checkpoint mode={mode} steps={len(processed)}")
     elif mode == "final":
-        print(f"HF_VERIFY=PASS bucket={bucket_id} objects={len(all_files)} bytes={sum(v['bytes'] for v in all_files.values())} mismatches=0")
+        print(f"HF_VERIFY=PASS bucket={bucket} objects={len(all_files)} bytes={sum(v['bytes'] for v in all_files.values())} mismatches=0")
         print("CKPT_UPLOAD=PASS steps=12")
     else:
         need(processed == set(STEPS), "训练结束但增量未齐12步")
@@ -595,6 +641,7 @@ def run_trainset(smoke, root):
 
 
 def main():
+    global ATTEMPT
     mode = os.environ["O16_MODE"]
     need(mode in ("trainset", "incremental", "final"), "未知导出模式")
     smoke = os.environ.get("SMOKE", "0")
@@ -605,7 +652,11 @@ def main():
     need("__FILL_AFTER_BUILD__" not in DATASET or (smoke and mode == "trainset" and "O16_LIB" in os.environ),
          "建库后须回填DATASET，当前仍含__FILL_AFTER_BUILD__")
     if mode != "trainset":
-        need(RUN in RUNS and os.environ.get("BUCKET") == RUNS[RUN][0], "RUN与BUCKET必须是计划固定配对")
+        if os.environ.get("ATTEMPT_MANIFEST"):
+            ATTEMPT = check_attempt(os.environ["ATTEMPT_MANIFEST"])
+            print(f"ATTEMPT=PASS run={RUN} base={ATTEMPT['base_run']} bucket={ATTEMPT['bucket']}", flush=True)
+        else:
+            need(RUN in RUNS and os.environ.get("BUCKET") == RUNS[RUN][0], "RUN与BUCKET必须是计划固定配对")
     name = "hf-orig100-trainset" if mode == "trainset" else f"hf-ckpt-{RUN}"
     root = no_symlink(Path(os.environ.get("O16_EXPORT_ROOT", REPO / "v1-store/exports" / name)))
     root.mkdir(parents=True, exist_ok=True)
