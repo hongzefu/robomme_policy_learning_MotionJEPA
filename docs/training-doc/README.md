@@ -13,6 +13,13 @@
 | [context](orig100-ctx32x4x4-motion-s2split4x256-b128-60k/result.md) | 32帧4×4+每窗4个motion token，8卡/B128/60k，首条 | 完成：60000步/退出0，12份上传及全量读回、G12均PASS，40小时33分58秒 |
 | [modulation](orig100-m32x4x4-modul-motion-s2split4x256-b128-60k/result.md) | 与context仅融合方式/宽度不同，其余相同 | 完成：60000步/退出0，12份上传及全量读回、G12均PASS，16小时18分51秒 |
 
+### 官方16×100 concat（不 split）两条串行60k（2026-10-30美东开工）
+
+| 目录 | 内容 | 状态 |
+|---|---|---|
+| [context concat](orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/launch.md) | 32帧4×4+每窗1个1024维motion token（总608），8卡/B128/60k，首条；对照上表 split | 起跑中 |
+| [modulation concat](orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k/launch.md) | 与context concat仅融合方式/宽度不同 | 排队（context 后接续） |
+
 ### 官方16×100两条完整VLA短测（2026-10-28）
 
 | 目录 | 内容 | 状态 |
