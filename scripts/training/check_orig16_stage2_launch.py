@@ -7,6 +7,7 @@ import dataclasses
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import sys
 
@@ -15,8 +16,20 @@ CONFIG_NAME = "mme_vla_suite_orig16_b128_60k"
 PLACEHOLDER = "__FILL_AFTER_BUILD__"
 YAML_DIR = "src/mme_vla_suite/models/config/robomme"
 ENCODER_SHA = "27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035"
-RUNS = {"context": "orig100-ctx32x4x4-motion-s2split4x256-b128-60k",
-        "modulation": "orig100-m32x4x4-modul-motion-s2split4x256-b128-60k"}
+SPLIT, CONCAT = "stage2_pool4_split_v1", "stage2_pool4_concat_v1"
+# (融合方式, motion读法) → 正式60k运行名；四项显式映射，不按字符串规则推导。
+RUNS = {("context", SPLIT): "orig100-ctx32x4x4-motion-s2split4x256-b128-60k",
+        ("modulation", SPLIT): "orig100-m32x4x4-modul-motion-s2split4x256-b128-60k",
+        ("context", CONCAT): "orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k",
+        ("modulation", CONCAT): "orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k"}
+# 正式运行名 → 公开备份bucket；attempt的bucket只能是同base加相同后缀。
+BUCKETS = {RUNS["context", SPLIT]: "HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2split-60k-v1",
+           RUNS["modulation", SPLIT]: "HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2split-60k-v1",
+           RUNS["context", CONCAT]: "HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1",
+           RUNS["modulation", CONCAT]: "HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2concat1x1024-60k-v1"}
+FUSIONS = {"ctx": "context", "modul": "modulation"}
+READOUTS = {"4x256": SPLIT, "1x1024": CONCAT}
+ATTEMPT_KEYS = {"base_run", "run", "history", "train_head", "decision", "bucket"}
 HISTORIES = tuple(f"perceptual-framesamp-{fusion}-{frames}-motion-stage2-{readout}-orig16.yaml"
     for fusion in ("ctx", "modul") for frames in ("32frame-4x4", "8frame-8x8") for readout in ("1x1024", "4x256"))
 
@@ -63,6 +76,60 @@ class Contract:
     @property
     def assets_rel(self):
         return f"v1-store/train-assets/mme_vla_suite/{self.library}"
+
+
+def history_key(name):
+    """由八组合history文件名取 (融合方式, 读法)。"""
+    if name not in HISTORIES:
+        raise ValueError(f"history不在八组合内: {name}")
+    parts = name.split("-")
+    return FUSIONS[parts[2]], READOUTS[parts[-2]]
+
+
+def pair_name(fusion, readout):
+    """32×4×4正式配置文件名；fusion取ctx/modul，readout取4x256/1x1024。"""
+    return f"perceptual-framesamp-{fusion}-32frame-4x4-motion-stage2-{readout}-orig16.yaml"
+
+
+def check_attempt(path, *, history_name, train_head):
+    """读取用户决定后登记的attempt清单；任一字段不符即抛错，不回退到正式名。"""
+    manifest = json.loads(Path(path).read_text())
+    if not isinstance(manifest, dict) or set(manifest) != ATTEMPT_KEYS:
+        raise ValueError(f"attempt清单字段必须恰为{sorted(ATTEMPT_KEYS)}")
+    base, run = manifest["base_run"], manifest["run"]
+    match = re.fullmatch(re.escape(str(base)) + r"-attempt(\d{2})", str(run))
+    if match is None or int(match.group(1)) < 2:
+        raise ValueError("attempt run必须为base_run加-attemptNN（NN≥02两位）")
+    suffix = f"-attempt{match.group(1)}"
+    keys = [key for key, value in RUNS.items() if value == base]
+    if not keys:
+        raise ValueError("attempt base_run不是四个正式运行名之一")
+    if keys[0] != history_key(history_name):
+        raise ValueError("attempt base_run的融合或读法与当前history不一致")
+    if manifest["history"] != history_name:
+        raise ValueError("attempt清单history与当前history不同")
+    if manifest["train_head"] != train_head:
+        raise ValueError("attempt清单train_head与--train-head不同")
+    decision = Path(manifest["decision"])
+    if decision.is_symlink() or not decision.is_file():
+        raise ValueError("attempt决定记录不存在或不是实体文件")
+    allowed = json.loads(decision.read_text()).get("allowed_runs")
+    if not isinstance(allowed, list) or run not in allowed:
+        raise ValueError("决定记录allowed_runs未登记该attempt")
+    if manifest["bucket"] != BUCKETS[base] + suffix:
+        raise ValueError("attempt bucket必须为base bucket加相同-attemptNN后缀")
+    return run
+
+
+def check_nosplit_config(repo, fusion):
+    """同融合split/concat两份yaml只允许motion读法四项不同。"""
+    split = legacy.load_yaml(repo, pair_name(fusion, "4x256"))
+    concat = legacy.load_yaml(repo, pair_name(fusion, "1x1024"))
+    top = {key for key in set(split) | set(concat) if split.get(key) != concat.get(key)}
+    motion = {key for key in set(split["motion"]) | set(concat["motion"])
+              if split["motion"].get(key) != concat["motion"].get(key)}
+    return top <= {"motion"} and set(split["motion"]) == set(concat["motion"]) \
+        and motion == {"readout", "num_tokens", "dim", "budget"}
 
 
 def load_yaml(repo, name):
@@ -130,7 +197,7 @@ def check_argv(rec, argv, steps):
     rec("ARGV_HISTORY", argv.count("--model.use-history") == 1)
 
 
-def check_config(rec, cfg, base, *, store, contract, steps, history_name, history):
+def check_config(rec, cfg, base, *, store, contract, steps, history_name, history, attempt=None):
     from mme_vla_suite.training import config
     for key in ("batch_size", "fsdp_devices", "num_workers", "seed", "ema_decay"):
         rec(f"CFG_{key.upper()}", getattr(cfg, key) == getattr(base, key) == getattr(contract, key))
@@ -149,9 +216,10 @@ def check_config(rec, cfg, base, *, store, contract, steps, history_name, histor
         wandb_enabled=cfg.wandb_enabled)
     rec("CFG_EXACT", cfg == expected, "完整配置除已列CLI路径/名称/短测步数外须等于新60k配置")
     rec("CFG_IMPORT_ROOT", config.OPENPI_DATA_HOME == str(store / "v1-store/models"))
-    formal = history["token_per_image"] == 16 and history["motion"]["readout"] == "stage2_pool4_split_v1"
-    rec("CFG_RUN", (formal and cfg.exp_name == RUNS[history["integration_type"]]) if steps == 60000
-        else cfg.exp_name.startswith("o16-smoke-"))
+    # 正式60k只允许32×4×4与(融合,读法)映射的运行名；设置attempt时只放行其已登记的run。
+    allowed = RUNS.get((history["integration_type"], history["motion"]["readout"])) if attempt is None else attempt
+    rec("CFG_RUN", (history["token_per_image"] == 16 and cfg.exp_name == allowed) if steps == 60000
+        else cfg.exp_name.startswith("o16-smoke-"), f"exp_name={cfg.exp_name} allowed={allowed}")
     rec("CFG_NEW_RUN", not cfg.checkpoint_dir.exists() and not cfg.checkpoint_dir.is_symlink())
 
 
@@ -201,10 +269,6 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
     rec = Recorder()
     env = dict(os.environ if env is None else env)
     store = Path(args.store_root).resolve()
-    pairs = [load_yaml(args.repo, f"perceptual-framesamp-{fusion}-32frame-4x4-motion-stage2-4x256-orig16.yaml")
-             for fusion in ("ctx", "modul")]
-    rec("PAIRED_CONFIG", {key for key in pairs[0] if pairs[0].get(key) != pairs[1].get(key)}
-        == {"integration_type", "memory_token_dim"} and set(pairs[0]) == set(pairs[1]))
     rec("BUILD_PINS", PLACEHOLDER not in str(dataclasses.asdict(contract)), "构建pin必须全部回填")
     rec.guard("ARGV", check_argv, rec, argv, args.steps)
     rec.guard("ENV", legacy.check_env, rec, env, store, contract)
@@ -215,6 +279,19 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
         rec("HISTORY_NAME", False, str(names))
         return rec
     name = names[0]
+    # 按当前history读法选ctx/modul配对；两份只允许融合方式与记忆宽度不同。
+    fusion_tag, readout_tag = name.split("-")[2], name.split("-")[-2]
+    pairs = [load_yaml(args.repo, pair_name(fusion, readout_tag)) for fusion in ("ctx", "modul")]
+    rec("PAIRED_CONFIG", {key for key in pairs[0] if pairs[0].get(key) != pairs[1].get(key)}
+        == {"integration_type", "memory_token_dim"} and set(pairs[0]) == set(pairs[1]), f"readout={readout_tag}")
+    if rec("NOSPLIT_CONFIG", check_nosplit_config(args.repo, fusion_tag), f"fusion={fusion_tag}") and readout_tag == "1x1024":
+        print(f"NOSPLIT_CONFIG=PASS fusion={fusion_tag} diff_keys=motion.readout,motion.num_tokens,motion.dim,motion.budget")
+    attempt = None
+    if env.get("ATTEMPT_MANIFEST"):
+        attempt = rec.guard("ATTEMPT", check_attempt, env["ATTEMPT_MANIFEST"], history_name=name,
+                            train_head=getattr(args, "train_head", None))
+        if attempt is not None:
+            print(f"ATTEMPT=PASS run={attempt}")
     history = load_yaml(args.repo, name) if history is None else history
     rec.guard("HISTORY", check_history, rec, history, contract)
     rec("NO_PLACEHOLDER", PLACEHOLDER not in str(history) and PLACEHOLDER not in str(argv))
@@ -223,7 +300,7 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
     parsed = rec.guard("CLI", parse_cli, argv)
     if parsed:
         rec.guard("CONFIG", check_config, rec, *parsed, store=store, contract=contract,
-                  steps=args.steps, history_name=name, history=history)
+                  steps=args.steps, history_name=name, history=history, attempt=attempt)
     return rec
 
 

@@ -19,6 +19,8 @@ spec = importlib.util.spec_from_file_location("orig16_launch", REPO / "scripts/t
 launch = importlib.util.module_from_spec(spec)
 sys.modules[spec.name] = launch
 spec.loader.exec_module(launch)
+# 旧split串行入口固定的两条运行名；RUNS已按(融合,读法)四项映射。
+SPLIT_RUNS = {fusion: launch.RUNS[fusion, launch.SPLIT] for fusion in ("context", "modulation")}
 
 
 def dump(path, value):
@@ -73,7 +75,7 @@ def arguments(fx, name, *, steps=20):
     h["motion"].update(store_path=c.parent_rel + "/motion-stage2-1024", checkpoint_sha256=c.encoder_sha256,
                        source_run=f"{c.encoder_run}/checkpoint_epoch_105.pt#model")
     layout = "framesamp-4x4" if h["token_per_image"] == 16 else "framesamp-8x8"
-    run = "o16-smoke-fixture" if steps == 20 else launch.RUNS[h["integration_type"]]
+    run = "o16-smoke-fixture" if steps == 20 else launch.RUNS[h["integration_type"], h["motion"]["readout"]]
     argv = [launch.CONFIG_NAME, "--exp-name", run,
         "--dataset-path", str(fx.parent / layout), "--assets-base-dir", str(fx.root / "v1-store/train-assets"),
         "--data.assets.assets-dir", str(fx.root / c.assets_rel), "--data.assets.asset-id", "robomme",
@@ -193,9 +195,9 @@ def test_serial_driver_requires_exit_log_and_59999(tmp_path, fault):
     cr_field = fault[3:] if fault and fault.startswith("cr_") else None
     root = shell_tree(tmp_path)
     py = root / ".venv/bin/python"; py.parent.mkdir(parents=True); py.symlink_to(sys.executable)
-    for run in launch.RUNS.values():
+    for run in SPLIT_RUNS.values():
         final = final_fixture(run, steps=60000)
-        if run == launch.RUNS["context"]:
+        if run == SPLIT_RUNS["context"]:
             if fault in ("tail_nonfinite", "nan_and_tail"): final["tail"][-1]["scalars"]["loss"]["finite"] = False
             if fault == "ema_nonfinite": final["ema_leaves"]["weight"]["finite"] = False
             if fault == "missing_final": continue
@@ -221,7 +223,7 @@ exit 0
                             env=env, capture_output=True, text=True)
     calls = (root / "calls").read_text().splitlines()
     objective_failure = fault in ("exit", "checkpoint", "log", "missing_log")
-    assert calls == [launch.RUNS["context"]] + ([] if objective_failure else [launch.RUNS["modulation"]])
+    assert calls == [SPLIT_RUNS["context"]] + ([] if objective_failure else [SPLIT_RUNS["modulation"]])
     assert (result.returncode == 0) != objective_failure, result.stdout + result.stderr
     if objective_failure:
         assert "CHAIN=STOP" in result.stdout
@@ -237,7 +239,7 @@ exit 0
         if fault in ("nan", "grad_inf", "oom", "nan_and_tail") or cr_field:
             assert "CHAIN_DIAGNOSTIC=FAIL check=train_numerics" in result.stdout
     if cr_field:
-        assert f"\r\rStep 59900: {cr_field}=nan".encode() in (root / f"v1-store/logs/{launch.RUNS['context']}.log").read_bytes()
+        assert f"\r\rStep 59900: {cr_field}=nan".encode() in (root / f"v1-store/logs/{SPLIT_RUNS['context']}.log").read_bytes()
         assert "CHAIN_DIAGNOSTIC=FAIL check=train_numerics" in result.stdout
 
 
@@ -253,7 +255,7 @@ def final_fixture(run="o16-smoke-shell", *, steps=20):
 
 @pytest.mark.parametrize("fault", ["missing", "tail_step", "tail_scalar", "tail_nonfinite", "ema_flag", "ema_nonfinite", "run", None])
 def test_final_record_fails_closed(tmp_path, fault):
-    record = final_fixture(launch.RUNS["context"], steps=60000)
+    record = final_fixture(SPLIT_RUNS["context"], steps=60000)
     if fault == "tail_step": record["tail"].pop()
     if fault == "tail_scalar": del record["tail"][-1]["scalars"]["loss"]
     if fault == "tail_nonfinite": record["tail"][-1]["scalars"]["loss"]["finite"] = False
@@ -262,7 +264,7 @@ def test_final_record_fails_closed(tmp_path, fault):
     if fault == "run": record["run_name"] = "another-run"
     path = tmp_path / "final.json"
     if fault != "missing": dump(path, record)
-    code = launch.main(["--check-final-record", str(path), "--run", launch.RUNS["context"],
+    code = launch.main(["--check-final-record", str(path), "--run", SPLIT_RUNS["context"],
                         "--steps", "60000", "--train-head", "a" * 40])
     assert code == int(fault is not None)
 
@@ -335,3 +337,110 @@ def test_wandb_real_cli_matches_entry_choice(tmp_path, monkeypatch, enabled):
     launch.check_config(record, cfg, base, store=fx.root, contract=contract, steps=args.steps,
                         history_name=launch.HISTORIES[0], history=history)
     assert not record.failed
+
+
+CONCAT_CTX = launch.pair_name("ctx", "1x1024")
+CONCAT_MOD = launch.pair_name("modul", "1x1024")
+
+
+def formal_contract(fx, name, *, run=None, attempt=None, mutate=None, train_head="a" * 40):
+    """正式60k合同：可替换运行名、history字段与ATTEMPT_MANIFEST。"""
+    args, argv, env, h = arguments(fx, name, steps=60000)
+    args.train_head = train_head
+    if run is not None:
+        argv[argv.index("--exp-name") + 1] = run
+    if mutate:
+        mutate(h)
+    if attempt is not None:
+        env["ATTEMPT_MANIFEST"] = str(attempt)
+    from mme_vla_suite.training import config
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(config, "OPENPI_DATA_HOME", env["OPENPI_DATA_HOME"])
+        return launch.core(args, argv, contract=fx.contract, env=env, history=h)
+
+
+def test_runs_are_four_explicit_formal_names():
+    assert launch.RUNS == {
+        ("context", launch.SPLIT): "orig100-ctx32x4x4-motion-s2split4x256-b128-60k",
+        ("modulation", launch.SPLIT): "orig100-m32x4x4-modul-motion-s2split4x256-b128-60k",
+        ("context", launch.CONCAT): "orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k",
+        ("modulation", launch.CONCAT): "orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k"}
+    assert set(launch.BUCKETS) == set(launch.RUNS.values())
+
+
+@pytest.mark.parametrize("name", [CONCAT_CTX, CONCAT_MOD, launch.pair_name("ctx", "4x256"),
+                                  launch.pair_name("modul", "4x256")])
+def test_formal_60k_positive_for_all_four(fx, name, capsys):
+    rec = formal_contract(fx, name)
+    assert not rec.failed
+    out = capsys.readouterr().out
+    if "1x1024" in name:
+        fusion = name.split("-")[2]
+        assert (f"NOSPLIT_CONFIG=PASS fusion={fusion} "
+                "diff_keys=motion.readout,motion.num_tokens,motion.dim,motion.budget") in out
+        assert "MOTION_LAYOUT=PASS readout=concat tokens_per_window=1 budget=96 total_tokens=608" in out
+    else:
+        assert not any(line.startswith("NOSPLIT_CONFIG=") for line in out.splitlines())
+
+
+def test_concat_yaml_with_split_run_name_fails(fx):
+    rec = formal_contract(fx, CONCAT_CTX, run=launch.RUNS["context", launch.SPLIT])
+    assert rec.failed == ["CFG_RUN"]
+
+
+def test_fusion_and_run_mismatch_fails(fx):
+    rec = formal_contract(fx, CONCAT_CTX, run=launch.RUNS["modulation", launch.CONCAT])
+    assert rec.failed == ["CFG_RUN"]
+
+
+def test_concat_budget_384_with_one_token_fails(fx):
+    rec = formal_contract(fx, CONCAT_CTX, mutate=lambda h: h["motion"].update(budget=384))
+    assert "MOTION_READOUT" in rec.failed or "HISTORY" in rec.failed
+
+
+def test_formal_8x8_concat_fails(fx):
+    name = "perceptual-framesamp-ctx-8frame-8x8-motion-stage2-1x1024-orig16.yaml"
+    rec = formal_contract(fx, name, run=launch.RUNS["context", launch.CONCAT])
+    assert rec.failed == ["CFG_RUN"]
+
+
+def attempt_files(tmp_path, *, base=None, nn="02", allowed=True, **override):
+    base = base or launch.RUNS["context", launch.CONCAT]
+    run = f"{base}-attempt{nn}"
+    decision = tmp_path / "decisions/evt-1.json"
+    dump(decision, dict(allowed_runs=[run] if allowed else []))
+    manifest = dict(base_run=base, run=run, history=CONCAT_CTX, train_head="a" * 40, decision=str(decision),
+                    bucket=launch.BUCKETS[base] + f"-attempt{nn}")
+    manifest.update(override)
+    path = tmp_path / "attempt.json"
+    dump(path, manifest)
+    return path, run
+
+
+def test_registered_attempt_passes(fx, tmp_path, capsys):
+    path, run = attempt_files(tmp_path)
+    rec = formal_contract(fx, CONCAT_CTX, run=run, attempt=path)
+    assert not rec.failed
+    assert f"ATTEMPT=PASS run={run}" in capsys.readouterr().out
+
+
+def test_unregistered_attempt_name_fails(fx):
+    rec = formal_contract(fx, CONCAT_CTX, run=launch.RUNS["context", launch.CONCAT] + "-attempt02")
+    assert rec.failed == ["CFG_RUN"]
+
+
+@pytest.mark.parametrize("fault", ["not_allowed", "nn01", "bucket", "head", "history", "base_readout",
+                                   "missing_decision", "extra_key"])
+def test_attempt_manifest_faults_fail(fx, tmp_path, fault):
+    kwargs = {}
+    if fault == "not_allowed": kwargs["allowed"] = False
+    if fault == "nn01": kwargs["nn"] = "01"
+    if fault == "bucket": kwargs["bucket"] = launch.BUCKETS[launch.RUNS["context", launch.CONCAT]] + "-attempt03"
+    if fault == "head": kwargs["train_head"] = "b" * 40
+    if fault == "history": kwargs["history"] = launch.pair_name("ctx", "4x256")
+    if fault == "base_readout": kwargs["base"] = launch.RUNS["context", launch.SPLIT]
+    if fault == "missing_decision": kwargs["decision"] = str(tmp_path / "nope.json")
+    if fault == "extra_key": kwargs["note"] = "x"
+    path, run = attempt_files(tmp_path, **kwargs)
+    rec = formal_contract(fx, CONCAT_CTX, run=run, attempt=path)
+    assert "ATTEMPT" in rec.failed
