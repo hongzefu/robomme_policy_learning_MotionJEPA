@@ -69,3 +69,9 @@ AWS 8×A100-SXM4-80GB、本地NVMe RAID。训练8卡独占并串行；G12仅训�
 | o16-trainset-up | 已启动的训练库上传/匿名回读 | v1-store/logs/o16-20261028/trainset-export.log |
 
 不等待context上传或G12就接modulation；训练库上传也不阻塞训练。若chain提前结束、某条没有实际输入，不把等待或未执行项记成成功。当前不做benchmark评估。结果、权重及恢复素材留v1-store，Git档案只收实测日志、指标和JSON。
+
+实际共享正式Beta为`9459859384589b3553148cf53f715c1318f1a533`。chain于美东10月28日05:25:14启动第一条context；本条仍待自动接续，不能记为已训练。mod备份会话05:27:28提前进入日志等待，pane510622/worker510626；G12共享pane510670，当前不加载GPU。
+
+## 完成回写（美东2026-10-30）
+
+本条已完成60000步、12份checkpoint公开上传及全量匿名读回、G12严格恢复与在线推理；实际耗时与证据见[result.md](result.md)。训练Beta未改变；全部后台任务退出后按原值恢复src权限并解除冻结。

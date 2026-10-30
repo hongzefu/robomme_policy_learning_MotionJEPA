@@ -1,0 +1,28 @@
+{
+  "argv": [
+    "scripts/training/train.py",
+    "mme_vla_suite_orig16_b128_60k",
+    "--exp-name",
+    "orig100-m32x4x4-modul-motion-s2split4x256-b128-60k",
+    "--dataset-path",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-orig100-1600ep-9e109419/framesamp-4x4",
+    "--assets-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets",
+    "--data.assets.assets-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-assets/mme_vla_suite/16task-orig100-1600ep-9e109419",
+    "--data.assets.asset-id",
+    "robomme",
+    "--checkpoint-base-dir",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs",
+    "--weight-loader.params-path",
+    "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/models/openpi-assets/checkpoints/pi05_base/params",
+    "--model.use-history",
+    "--model.history-config",
+    "perceptual-framesamp-modul-32frame-4x4-motion-stage2-4x256-orig16.yaml"
+  ],
+  "entry": "scripts/training/train.py",
+  "checkpoint_dir": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_orig16_b128_60k/orig100-m32x4x4-modul-motion-s2split4x256-b128-60k",
+  "num_train_steps": 60000,
+  "log_interval": 100,
+  "save_interval": 5000
+}

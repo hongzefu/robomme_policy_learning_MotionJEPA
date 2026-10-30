@@ -4,4 +4,4 @@
 
 CAND `0c877c7495dfe5db8b83f033442013c6d6fd8552`，CPU运行，04:08:00Z→04:10:07Z，127秒、EXIT_CODE=0；未启动参数更新。原始逐叶结果在[init.json](records/init.json)，判定见[日志](records/driver.summary.log)。该结论不意味着不同记忆长度的前向输出相同。
 
-用户明确选择「保持原计划，完整取证（推荐）」。环境为AWS 8×A100-SXM4-80GB，底层 `/dev/md0` XFS本地NVMe RAID；依赖锁未改。执行口径见[实施计划](../../../0920-32frame-8x8-modul-2048-plan.md)，实际版本、时刻与退出记录见[运行记录](records/launch.actual.json)。
+用户明确选择「保持原计划，完整取证（推荐）」。环境为AWS 8×A100-SXM4-80GB，底层 `/dev/md0` XFS本地NVMe RAID；依赖锁未改。执行口径见[实施计划](../../root-archive/0920-32frame-8x8-modul-2048-plan.md)，实际版本、时刻与退出记录见[运行记录](records/launch.actual.json)。

@@ -1,6 +1,6 @@
 # mixed8-200 32 帧 8×8 modulation 2048（无 motion）80k 正式训练——结果
 
-本页是 AGENTS 第 12 条两段式档案的第二段，承载十二节中的 ①⑦⑧⑨⑩⑪⑫；版本与代码状态、配置与启动覆盖、数据与身份、起跑前闸门（含实施中调整）、训练中增量上传与 tmux 会话清单都在同目录 [launch.md](launch.md)，此处不重复。同一计划 [`1018-mixed8-2048-context-modul-plan.md`](../../../1018-mixed8-2048-context-modul-plan.md) 下 GPU 0–3 的 context 2048 已于 455 步叫停作测速留档，见 [mixed8-200-m32x8x8-context-b128-80k](../mixed8-200-m32x8x8-context-b128-80k/result.md)。结构与口径照搬上一轮 512 档案 [mixed8-200-m8x8-modul-b128-80k](../mixed8-200-m8x8-modul-b128-80k/result.md)。时刻一律写美东（EDT，UTC−4）；引用日志原文中的 UTC 时间戳时原样保留并括注。
+本页是 AGENTS 第 12 条两段式档案的第二段，承载十二节中的 ①⑦⑧⑨⑩⑪⑫；版本与代码状态、配置与启动覆盖、数据与身份、起跑前闸门（含实施中调整）、训练中增量上传与 tmux 会话清单都在同目录 [launch.md](launch.md)，此处不重复。同一计划 [`1018-mixed8-2048-context-modul-plan.md`](../../root-archive/1018-mixed8-2048-context-modul-plan.md) 下 GPU 0–3 的 context 2048 已于 455 步叫停作测速留档，见 [mixed8-200-m32x8x8-context-b128-80k](../mixed8-200-m32x8x8-context-b128-80k/result.md)。结构与口径照搬上一轮 512 档案 [mixed8-200-m8x8-modul-b128-80k](../mixed8-200-m8x8-modul-b128-80k/result.md)。时刻一律写美东（EDT，UTC−4）；引用日志原文中的 UTC 时间戳时原样保留并括注。
 
 ## ① 一句话结论与指标速览
 

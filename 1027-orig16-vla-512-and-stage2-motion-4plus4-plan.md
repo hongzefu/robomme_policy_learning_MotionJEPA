@@ -47,7 +47,7 @@
 
 窗口规则不变：33 帧、步长 32、每 segment 从 0 起算；demo 末窗真实帧≥17 重复末帧补满，<17 丢弃；exec 只收完整 33 帧并到原始 T。计数是索引推算，正式以新 manifest 为准。
 
-**Wan 精度（引用既有裁决，不再讨论）**：发布缓存的数值口径见其 `provenance.json::numeric_mode`（FP32 权重/输入/输出、B＝1、卷积 TF32 开、matmul TF32 关）；补窗走现有 sidecar 口径（FP32、TF32 关）。用户已裁决「不考虑精度的额外不一致 只要输入是一样的就不考虑」（原话③，记于提交 `f76e5bd` body），此前 `1026-official-benchmark-stage2-eval-plan.html` 已「采用用户取消跨硬件数值一致的决定」。据此记 `NUMERIC_EQUIVALENCE=NOT_REQUIRED reason=user_decision_same_input`；输入身份（源 H5、帧号、像素 SHA、补帧来源）、权重、shape/finite、文件 SHA 仍硬核。
+**Wan 精度（引用既有裁决，不再讨论）**：发布缓存的数值口径见其 `provenance.json::numeric_mode`（FP32 权重/输入/输出、B＝1、卷积 TF32 开、matmul TF32 关）；补窗走现有 sidecar 口径（FP32、TF32 关）。用户已裁决「不考虑精度的额外不一致 只要输入是一样的就不考虑」（原话③，记于提交 `f76e5bd` body），此前 `docs/root-archive/1026-official-benchmark-stage2-eval-plan.html` 已「采用用户取消跨硬件数值一致的决定」。据此记 `NUMERIC_EQUIVALENCE=NOT_REQUIRED reason=user_decision_same_input`；输入身份（源 H5、帧号、像素 SHA、补帧来源）、权重、shape/finite、文件 SHA 仍硬核。
 
 ## 三、磁盘
 

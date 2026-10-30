@@ -25,7 +25,7 @@ class PerceptualMemory(nnx.Module):
             use_state_emb=self.config.use_state_emb,
         )
 
-        # ── motion memory 运动路（0901-motion-memory-plan.md 2.4 / 2.9）──────────────────────────
+        # ── motion memory 运动路（docs/root-archive/0901-motion-memory-plan.md 2.4 / 2.9）──────────────────────────
         # 唯一原则：模块不是在 __call__ 里跳过，而是在 __init__ 里根本不创建（红线 5）——两个新 kernel 只要存在，
         # train_step 的 param_norm 与参数叶数就会改变，关闭态将无法命中原有锚点。
         # 且必须建在 feature_encoder 之后：flax nnx 单条 default RNG 流按调用顺序 fold_in，插在前面会改变帧路的初始化值。

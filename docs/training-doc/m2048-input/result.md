@@ -11,4 +11,4 @@
 
 各项JSON与[判定日志](records/driver.summary.log)已保存，[归档清单](records/archive_manifest.json)核对原字节。真实1600ep恒满32帧，短历史覆盖来自明确的合成协议；本档不宣称使用了真实短历史样本，也不改变模型对static_state的既有消费范围。
 
-用户明确选择「保持原计划，完整取证（推荐）」。环境为AWS 8×A100-SXM4-80GB，底层 `/dev/md0` XFS本地NVMe RAID；依赖锁未改。执行口径见[实施计划](../../../0920-32frame-8x8-modul-2048-plan.md)，实际版本、时刻与退出记录见[运行记录](records/launch.actual.json)。
+用户明确选择「保持原计划，完整取证（推荐）」。环境为AWS 8×A100-SXM4-80GB，底层 `/dev/md0` XFS本地NVMe RAID；依赖锁未改。执行口径见[实施计划](../../root-archive/0920-32frame-8x8-modul-2048-plan.md)，实际版本、时刻与退出记录见[运行记录](records/launch.actual.json)。

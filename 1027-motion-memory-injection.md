@@ -1,12 +1,14 @@
-# 1027-motion-memory-injection.md — motion memory 是怎么注入 π0.5 的（memory-as-modulation）
+# 1027-motion-memory-injection.md — motion memory 是怎么注入 π0.5 的（memory-as-modulation / context）
 
-**一句话结论**：每个 33 帧窗经冻结的 stage2 encoder（EMA）变成 1 个 1024 维 motion token，与 512 个帧路 token 一起投影成 608 个 1024 维 memory token、按时刻排序；它们**不经任何自注意力编码**，直接在 action expert 的 18 层里各被一个 `MemoryAttention`（Q 来自 action token，4 头×256，1 KV 头）读取，读出的 `mem_mod_vec` 经插入式 `MemoryRMSNorm` 对 FFN 输入做 scale/shift 调制；paligemma 一侧完全不见 memory。
+**一句话结论（modulation，第 1–10 节）**：每个 33 帧窗经冻结的 stage2 encoder（EMA）变成 1 个 1024 维 motion token，与 512 个帧路 token 一起投影成 608 个 1024 维 memory token、按时刻排序；它们**不经任何自注意力编码**，直接在 action expert 的 18 层里各被一个 `MemoryAttention`（Q 来自 action token，4 头×256，1 KV 头）读取，读出的 `mem_mod_vec` 经插入式 `MemoryRMSNorm` 对 FFN 输入做 scale/shift 调制；paligemma 一侧完全不见 memory。
 
-![motion memory 注入全链路](docs/figures/1027-motion-memory-injection.svg)
+**一句话结论（context，第 11 节）**：memory 投影到 paligemma 的 2048 维，放在「当前图像、语言」之前组成 prefix；memory token 在 paligemma 的 18 层中逐层做自注意力与 FFN，action token 在各层**原有联合 Attention** 中读取同层的 memory K/V，注意力结果经原有输出投影与 gated residual 进入 action 残差流；推理时包含 memory 的 prefix 各层 K/V 在去噪循环外算一次并缓存。下文 context 采用已有的 32 帧×4×4、每窗拆成 4×256 的配置，memory 长度为 512+384=896；**608 与 896 是输入配置之差，不是两种注入机制各自固定的长度**。
 
-**阅读指引**：本文件只讲机制（数据怎么流、在哪里注入、算了什么），不讲训练计划、闸门与 run 安排；那些见 `1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md` 与 `1026-vla-stage2-memory-1024-train-plan.md`。补位（motion 不满 96 时）的细节见既有图 `docs/figures/1026-motion-pad-modulation.svg`。
+![modulation：motion memory 注入全链路（第 1–10 节）](docs/figures/1027-motion-memory-injection.svg)
 
-**口径**：代码锚点均以 policy 仓 HEAD `4029b1f`（`commitV11.57`）为准，路径省略前缀 `src/`；MotionJEPA 侧事实照抄 1026 计划 §2.2–§2.4。参数量是按权重形状推算的，未实际运行统计（见第 10 节）。行号与旧计划/旧注释不一致处一律以代码为准（见第 9 节）。
+**阅读指引**：本文件只讲机制（数据怎么流、在哪里注入、算了什么），不讲训练计划、闸门与 run 安排；那些见 `1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md` 与 `docs/root-archive/1026-vla-stage2-memory-1024-train-plan.md`。第 1–10 节保留原 modulation 说明，第 6.6 节补充单层完整输入输出图；第 11 节配有 context 全链路图，按同样的「全链路 → 输入与投影 → 注入点 → 公式 → 训练与推理」顺序展开，末尾用同一套输入配置对照两种机制。补位（motion 不满 96 时）的细节见既有图 `docs/figures/1026-motion-pad-modulation.svg`。
+
+**口径**：第 1–10 节原有正文的代码锚点沿用 policy 仓 `4029b1f`（`commitV11.57`）；第 6.6 节新增图及第 11 节以开发副本 `f2de48b` 为准，使用稳定函数名锚点。两版 `history_pi0.py`、`history_gemma.py`、`percep_mem.py`、`mem_encoder.py` 中本文涉及的注入计算相同；新配置与 split4 输入处理按第 11 节单列，第 6.6 节图中另标当前配置，不把新形状套进旧章节。路径省略前缀 `src/`；MotionJEPA 侧事实沿用 1026 计划 §2.2–§2.4。参数量是按权重形状推算的，未实际加载参数树统计（见第 10、11.9 节）。行号与旧计划/旧注释不一致处一律以代码为准（见第 9 节）。
 
 ---
 
@@ -178,6 +180,17 @@ x = x + g2 * FFN(z)                          # 残差用调制前的 x
 
 **代码锚点**：`history_gemma.py:27-43,45-108,111-205,236-260`；`mme_vla_suite/models/representation/utils.py:5`；`openpi/models/gemma.py:69-77,113-131,284-331,453-459`。
 
+### 6.6 单层完整输入输出图（当前 896-token 配置）
+
+<img src="docs/figures/1027-action-expert-modulation-detail.svg" alt="action expert 单层计算：原有八步、memory 读取与调制、各步骤输入输出和残差来源" width="1800">
+
+图中保留一条从上到下的主干：原有步骤为①–⑧；开启 modulation 后，在④与⑤之间接入绿色的 M1–M3。每一步标明输入来自哪里、输入输出形状、关键运算和用途；右侧支路给出 memory 如何读成 `u`、如何生成 `scale_mem` / `shift_mem`，以及如何把原来的 `x1` 调制成 `z`。可[打开原尺寸 SVG](docs/figures/1027-action-expert-modulation-detail.svg)查看细节。
+
+- **配置与形状**：本图采用第 11.8 节的 `perceptual-framesamp-modul-32frame-4x4-motion-stage2-4x256-orig16.yaml`，memory 为 512 个帧路 token + 384 个 motion token = **896** 个，每个投影到 1024 维。训练配置 `mme_vla_suite_orig16_b128_60k` 的 action 长度为 **20**，模型动作接口宽度为 **32**；图内省略 batch 维。第 6.1–6.5 节的 **608** 是原历史配置示例，层内注入位置与计算方式相同。
+- **系数与残差**：时间条件 `c` 在①、⑤分别生成 scale / shift / gate；每个系数向量为 1024 维，计算时形状为 `(1,1024)`、广播给 20 个 token。memory 的 `u` 生成两组 `(20,1024)` 的 scale / shift。⑤开启态读取 `z`，⑧的残差底座仍读取④保存的 `x1`。
+
+**代码锚点**：`mme_vla_suite/models/integration/history_pi0.py::HistoryPi0.embed_suffix`、`embed_memory`；`history_gemma.py::HistoryBlock.__call__`、`MemoryAttention.__call__`、`MemoryRMSNorm.__call__`、`Module.__call__`；`openpi/models/gemma.py::RMSNorm.__call__`、`Attention.__call__`；`openpi/models/lora.py::FeedForward.__call__`。
+
 ---
 
 ## 7. 训练与推理同路
@@ -232,3 +245,201 @@ x = x + g2 * FFN(z)                          # 残差用调制前的 x
 - suffix 长度 T 的具体取值本文未核对。
 - 第 6.1 节关于「残差用调制前的 x」「pre_ffw_norm 重新归一化」两点是对代码的直接读取，未做数值实验验证其对训练的影响。
 - stage2 96×1024 motion run 的步时未在本文引用任何实测（第 8 节只引用旧 160×768 版本）。
+
+---
+
+## 11. context：memory 放进 prefix 后，怎么进入 action expert
+
+![context：motion memory 注入全链路、逐层联合注意力与推理 KV cache](docs/figures/1027-context-memory-injection.svg)
+
+图中沿用帧路蓝、motion 路橙、投影绿、冻结上游灰；示例为本节的 **512+384=896** 配置。⑤ 展开一层的注入点，⑥ 单列推理时各层 K/V 的缓存方式；两者按层对应，不是把最后一层 memory 输出重复送给所有 action 层。
+
+### 11.1 全链路总览
+
+**本节配置**：`mme_vla_suite/models/config/robomme/perceptual-framesamp-ctx-32frame-4x4-motion-stage2-4x256-orig16.yaml`：`integration_type: context`、`memory_token_dim: 2048`；帧路 `budget: 512`、`token_per_image: 16`、`num_views: 1`；motion 路 `source_shape: [1,1024]`、`readout: stage2_pool4_split_v1`、`num_tokens: 4`、`dim: 256`、`budget: 384`。这是已有配置，不是把旧 608-token modulation run 改名为 context。
+
+| # | 输入 | 模块 | 输出（形状 / dtype） | 是否新增参数？ | 代码锚点 |
+|---|---|---|---|---|---|
+| 1 | 每窗 stage2 encoder 的 4 个 256 维 readout | 沿用第 2 节的冻结 encoder 与 concat store | 每窗 (1,1024) f32，仍为 4,096 B | 否，encoder 冻结 | `datastore/motion_adapter.py::split_stage2_tokens` 的输入契约 |
+| 2 | k 行 (k,1,1024) store 数据 | `split_stage2_tokens`，按原槽顺序 reshape | (k,4,256) f32，不改数 | 否 | 同上 |
+| 3 | 帧特征 + 拆开的 motion | `FrameSampDataset`，96 窗补位后展开 | 帧路 512 位；motion 路 384 位；`mem_order` (896,) int32 | 否 | `training/framesamp_dataset.py::FrameSampDataset.__getitem__`、`_pad_motion` |
+| 4 | 帧路 image (B,512,2048) ‖ pos | `FeatureEncoder` | (B,512,2048) | 是，从零训 | `models/representation/mem_encoder.py::FeatureEncoder` |
+| 5 | motion (B,384,256) ‖ pos | `motion_pos_proj` + `motion_encoder_static` | (B,384,2048) | 是，从零训 | `models/representation/percep_mem.py::PerceptualMemory` |
+| 6 | 两路投影 + mask | concat，再按 `mem_order` 重排 | memory (B,896,2048)、mask (B,896) bool | 否 | `models/integration/history_pi0.py::HistoryPi0.embed_memory` |
+| 7 | memory + 当前图像 + 语言 | `embed_prefix`，按此顺序拼接 | prefix (B,P,2048)；LLM 入口转 `embed_dtype` | 否 | `HistoryPi0.embed_prefix`；`history_gemma.py::Module.__call__` |
+| 8 | prefix (2048 维) + action suffix (1024 维) | 18 层 `HistoryBlock`，两侧分别投 Q/K/V 后做联合 `Attention` | 每层 action 输出 (B,T,1024)；prefix 同时逐层更新 | 沿用两侧原有层参数 | `history_gemma.py::HistoryBlock.__call__`；`openpi/models/gemma.py::Attention.__call__` |
+| 9 | 第 18 层 suffix → final norm | `action_out_proj` | 速度场 / 去噪动作 | 沿用原有输出头 | `HistoryPi0.compute_loss`、`sample_actions` |
+
+本节锚点中的 `datastore/`、`training/`、`shared/`、`models/` 均位于 `mme_vla_suite/` 下；`history_pi0.py`、`history_gemma.py` 位于其 `models/integration/` 下。本节记 memory 位数为 S=896，当前图像 token 数为 I，语言 token 数为 L，故 **P=S+I+L**；T 是 action suffix 长度，所用训练配置 `mme_vla_suite_orig16_b128_60k` 的 `action_horizon=20`，即 T=20。896 只算 memory，不能当成整个 prefix 的长度。
+
+### 11.2 Dataset 与 PerceptualMemory（两路分别投到 2048）
+
+**帧路（512 token）**：`max_frames = 512 // (16 × 1) = 32`；「4×4」指每帧 16 个空间 token，32 帧仍共 512 位。相比第 3 节的 8 帧×8×8，改变的是采样帧数与每帧空间网格，不改变 `static_image_emb` (512,2048)、`static_pos_emb` (512,768)、`static_mask` (512,) 的形状；`use_state_emb false` 仍不走 state 投影。
+
+**motion 路（384 位）**：同一个 store 行原来是槽 0‖3‖5‖8 的 1024 维拼接，现在只 reshape 回 4×256，按原顺序变成四个独立 token；**没有再跑 encoder，没有平均、配对或新增拆分网络**。
+
+| 字段 | 每样本形状 / dtype | 说明 |
+|---|---|---|
+| `motion_emb` | (384,256) f32 | 96 个窗位 × 每窗 4 token；k 个真实窗占前 4k 位 |
+| `motion_pos` | (384,256) f32 | 每窗起点的 `pos_rows(f)[:,0,:256]` 重复 4 次 |
+| `motion_mask` | (384,) bool | 窗级 mask 重复 4 次；不足 96 窗的部分为 False |
+| `mem_order` | (896,) int32 | 合并帧路 512 位与 motion 路 384 位，按时间稳定排序 |
+
+- **同窗四个 token 的位置编码**：重复的是同一个**窗口起点**的位置编码与排序时刻，不分别赋成 readout 槽 [0,3,5,8] 的时刻。稳定排序保留同窗四槽的原顺序；同一时刻的帧路 token 仍在 motion token 前面。
+- **补位单位**：`_pad_motion` 先以 96 个完整窗为容量补位，再展开为 384 个 token；k>96 仍直接报错。每个补窗的四个位一起无效，不能把 384 当成可容纳 384 个窗。
+- **注意力位置另算**：上述 `motion_pos` 是投影输入里的位置特征；进入 LLM 后，四个有效 token 各自占一个 RoPE 序号（见第 11.3 节），两者不是同一种位置编号。
+
+| 路 | 模块 | 计算 | 参数量 |
+|---|---|---|---|
+| 帧路 | `pos_proj` | Linear(768→768, bias) + SiLU | 590,592 |
+| 帧路 | image | identity（2048 不投影） | 0 |
+| 帧路 | `encoder_static` | concat[img 2048 ‖ pos 768] = 2816 → Linear(2816→2048, bias)，无激活 | 5,769,216 |
+| 帧路 | state 分支 | `use_state_emb false`，不建 | 0 |
+| motion 路 | `motion_pos_proj` | Linear(256→768, bias) + SiLU | 197,376 |
+| motion 路 | `motion_encoder_static` | concat[motion 256 ‖ pos 768] = 1024 → Linear(1024→2048, bias)，无激活 | 2,099,200 |
+| **合计** | | 帧路 6,359,808 + motion 路 2,296,576 | **8,656,384** |
+
+输出：帧路 (B,512,2048)、motion 路 (B,384,2048)，concat 后重排，得到 (B,896,2048)。同一路的所有 token 共享投影参数，同窗四槽也共用同一套 motion 投影；不是每槽各建一套。**context 的目标宽度是 paligemma 的 2048，不是 action expert 的 1024**；memory 后续如何被 1024 维的 action 读取，见第 11.4 节。
+
+**代码锚点**：`mme_vla_suite/datastore/motion_adapter.py::split_stage2_tokens`；`training/framesamp_dataset.py::FrameSampDataset.__init__`、`_pad_motion`、`__getitem__`；`shared/sampling.py::memory_order`；`models/representation/mem_encoder.py::FeatureEncoder.__init__`、`_add_pos_emb`、`_encode_memory`；`models/representation/percep_mem.py::PerceptualMemory.__call__`；`training/config.py` 的 `mme_vla_suite_orig16_b128_60k`。
+
+### 11.3 进入 prefix：拼接顺序、mask 与位置
+
+- **拼接顺序**：`embed_prefix` 首先调用 `embed_memory`，再遍历 `obs.images` 加入当前图像 token，最后加入 `tokenized_prompt`。即 **[按时刻排序的 memory ‖ 当前图像 ‖ 语言]**；这里的「当前图像」与 memory 帧路里的历史图像特征是两段不同输入。
+- **LLM 组成**：与 modulation 一样只含 `[paligemma, action_expert]`；context 下 `mem_mods=[False, False]`，不构建 `MemoryAttention`、`mem_rms_norm_ffn` 或第三个 memory expert。整个 prefix 都走 paligemma 参数，suffix 走 action expert 参数。
+- **宽度与 dtype**：prefix 为 (B,P,2048)，suffix 为 (B,T,1024)，不是先把两者在 hidden 维度统一后拼成一个张量；LLM 接收两个张量的列表，在 `Module.__call__` 内各转成 `embed_dtype`（本配置链的默认值为 bf16），再在 Attention 内拼各自投影出的 Q/K/V。
+
+**mask 的三部分**（`make_attn_mask`）：
+
+| token 段 | `ar_mask` | `na_mask` | 作用 |
+|---|---|---|---|
+| memory | 全 False | 全 False | 属于最前面的块，块内可双向读 |
+| 当前图像 | 第一张图首 token 为 True，其余 False | 全 True | 开始第二个块；额外屏蔽图像 query 直接读 memory key |
+| 语言 | 全 False | 全 False | 与当前图像在同一块，可读 memory |
+| action suffix（π0.5） | 首 token 为 True，其余 False | 全 False | 开始第三个块，可读整个有效 prefix 和同块 action |
+
+先按 `cumsum(ar_mask)` 实现「只能读自身及更早的块」，再叠加 `na_mask` 与 `input_mask`。对**有效 token**，最终直接可见性如下（行是 query，列是 key）：
+
+| query ＼ key | memory | 当前图像 | 语言 | action |
+|---|---|---|---|---|
+| memory | 可见 | 不可见 | 不可见 | 不可见 |
+| 当前图像 | **不可见** | 可见 | 可见 | 不可见 |
+| 语言 | 可见 | 可见 | 可见 | 不可见 |
+| action | **可见** | 可见 | 可见 | 可见 |
+
+- **memory 内部不是时间因果注意力**：按时刻排序只决定序列顺序，所有有效 memory token 都在同一块，帧路与 motion 路可以双向互读。上游可见窗选择已限制输入中有哪些历史窗；这里不会再做「早 memory 不能读晚 memory」的三角 mask。
+- **图像直接边与间接影响要分开**：图像 query 不能直接读 memory key，但语言可读 memory，图像又可读语言；跨层仍可有 memory → 语言 → 图像的信息传播。不能写成「图像残差流始终不受 memory 影响」。
+- **补位**：`input_mask` 同时约束 query 与 key；padding 在 mask 中无有效行/列，其他有效 token 不能读取它。实现用有限大负数填 logits，不能据此断言「全被屏蔽的 padding query 行，softmax 后或层输出必然为零」；机制依赖的是这些位置不会成为有效 key。
+- **RoPE 序号**：训练与 prefix 预填充用 `positions = cumsum(input_mask, axis=-1)-1`。有效 token 按 memory → 当前图像 → 语言 → action 连续编号，padding 不增加有效计数；它们仍占物理序列位置与 cache 槽位。若本样本有效 memory 数为 Sᵥ，则首个有效当前图像 token 的位置从 Sᵥ 开始，而不是固定从 896 开始。去噪时 suffix 接在有效 prefix 数之后（见第 11.6 节）。
+
+**代码锚点**：`mme_vla_suite/models/integration/history_pi0.py::HistoryPi0.__init__`、`embed_memory`、`embed_prefix`、`embed_suffix`、`make_attn_mask`、`compute_loss`；`history_gemma.py::Module.__call__`。
+
+### 11.4 注入点逐层剖析（核心）
+
+paligemma 为 `gemma_2b`：width 2048、depth 18、mlp 16384；action expert 为 `gemma_300m`：width 1024、depth 18、mlp 4096。**两侧原有 Attention 都是 8 个 Q 头、1 个 KV 头、head_dim 256**，不是第 6.2 节额外 `MemoryAttention` 的 4 头。
+
+一层 `HistoryBlock` 在 context 下的顺序：
+
+1. prefix（含 memory）走 `pre_attention_norm`，普通 RMSNorm；action 走 `pre_attention_norm_1`，adaRMS，cond=time，同时产出 action attention 的 gate。
+2. prefix 用 paligemma 的 Q/K/V 权重，action 用 action expert 的 Q/K/V 权重；各自投影后，沿 token 轴拼 Q、K、V，用第 11.3 节的 mask 做**同一个联合 Attention**。
+3. 把注意力读出按 prefix / action 分段，分别经各自输出投影，回到 2048 / 1024 维；prefix 做普通 residual，action 做原有 gated residual。**memory 对 action 的直接影响就在这次 attention residual 中进入**。
+4. prefix 走原有 `pre_ffw_norm → FFN → residual`；action 走原有 `pre_ffw_norm_1`（adaRMS，cond=time）→ FFN → gated residual。
+5. 更新后的 prefix 与 action 分别进入下一层；memory token 是 prefix 残差流的一部分，也随这 18 层逐层更新。
+
+| 项 | prefix 一侧（含 memory） | action 一侧 |
+|---|---|---|
+| norm 后输入 | (B,P,2048) | (B,T,1024) |
+| Q 权重 / 输出 | (8,2048,256) → (B,P,8,256) | (8,1024,256) → (B,T,8,256) |
+| K/V 权重 / 各自输出 | (2,1,2048,256) → 各 (B,P,1,256) | (2,1,1024,256) → 各 (B,T,1,256) |
+| Q/K 位置 | 第 11.3 节的有效 token 序号，做 RoPE | 接在有效 prefix 之后，做 RoPE |
+| 注意力缩放 / 计算 | Q 乘 1/16；logits 与 softmax 在 f32，概率转回输入 dtype | 同左 |
+| 输出投影 | (8,256,2048) → (B,P,2048) | (8,256,1024) → (B,T,1024) |
+
+8 个 Q 头共用 1 组 K/V（GQA，K=1、G=8）。action query 可同时读 memory、当前图像、语言与 action 的有效 key，**四段共用一次 softmax 的分母**；不存在只在 memory 段上单独归一化的一次额外注意力。
+
+这里不需要一层额外的「memory 2048→action 1024」适配器：memory 用 paligemma 权重投成 head_dim=256 的 K/V，action 用自己的权重投成同样 head_dim=256 的 Q；读出后由 action 原有输出投影回 1024。memory 在 prefix 内与当前图像、语言共享 paligemma 层参数，不另建 memory 专属 Transformer。
+
+**逐层含义**：action 第 ℓ 层读的是 prefix 的**本层输入残差流经 `pre_attention_norm`、再经本层 K/V 权重投影的结果**（K 另做 RoPE）。第一层的 memory 来自 `PerceptualMemory` 投影；后续层的 memory 已经过前面层的残差更新。不是先取 memory 第 18 层输出，再把这同一份最终输出送给 action 的所有层。
+
+**代码锚点**：`mme_vla_suite/models/integration/utils.py::get_config`（由 `history_gemma.py` 导入）；`openpi/models/gemma.py::RMSNorm.__call__`、`Attention.__call__`、`_gated_residual`；`mme_vla_suite/models/integration/history_gemma.py::HistoryBlock.__call__`、`Module.setup`。
+
+### 11.5 一层的公式（伪代码，context）
+
+```
+# H: (B,P,2048) prefix 残差流，开头 S 位为 memory
+# x: (B,T,1024) action 残差流；c: time 条件；A: 第 11.3 节的完整 attention mask
+h = RMS_prefix_attn(H)
+a, g1 = adaRMS_action_attn(x, c)
+
+q0, k0, v0 = proj_prefix(h)                # Q: 8×256，K/V: 1×256，paligemma 权重
+q1, k1, v1 = proj_action(a)                # Q: 8×256，K/V: 1×256，action 权重
+q = rope(concat_tokens[q0, q1], positions) / 16
+k = rope(concat_tokens[k0, k1], positions)
+v = concat_tokens[v0, v1]
+p = softmax_f32(where(A, q·kᵀ, -2.38e38)).astype(v.dtype)
+y0, y1 = split_prefix_action(p @ v)        # action 的 y1 已混合 memory 与其余可见段
+
+H = H + out_prefix(y0)                    # 回到 2048 维；prefix 无 time gate
+x = x + g1 * out_action(y1)               # 回到 1024 维；memory 影响经这里进入 action
+H = H + FFN_prefix(RMS_prefix_ffw(H))
+z, g2 = adaRMS_action_ffw(x, c)
+x = x + g2 * FFN_action(z)                # 原有 FFN 路径，无插入式 MemoryRMSNorm
+```
+
+Q/K 的 RoPE 与 head 维运算按第 11.4 节；伪代码省略 batch/head 广播和默认 0.0 的 dropout。memory 在 H 内逐层更新，action 的 time 条件仍只进入 action 一侧的 adaRMS。
+
+### 11.6 训练与推理同路：context 缓存的是什么
+
+- **训练** `compute_loss`：`embed_prefix` 已把 memory 放进 prefix；与 suffix 一起构造 mask 与 positions，一次调用 `llm([prefix_tokens, suffix_tokens], adarms_cond=[None, time_cond])`。context 不另外传 `mem_seq` / `mem_mask`。逐层计算遵循第 11.4 节；损失仍由 suffix 经 `action_out_proj` 得到的速度场计算，memory 没有单独的预测头或损失。
+- **推理预填充** `sample_actions`：去噪循环外，先 `embed_prefix`（含一次 `embed_memory`），然后 `llm([prefix_tokens, None], mask=prefix_attn_mask, positions=...)`。memory、当前图像、语言一起跑完 paligemma 的 18 层，得到**每层各自的 prefix K/V**。
+- **cache 形状**：K 与 V 各为 (18,B,P,1,256)，不是 (B,S,2048) 的最终 memory hidden state；K 已做 RoPE，V 不做 RoPE。物理长度 P 包含 padding 槽位，读取时靠 prefix mask 屏蔽。bf16 下，仅 S=896 个 memory 槽位对应的 K+V 理论存储为 `18 × B × 896 × 1 × 256 × 2 × 2 = 16,515,072 × B` B（15.75 MiB/样本），不含图像/语言部分与其他运行内存。
+- **每个去噪步**：只重新嵌入 noisy action 与 time，调用 `llm([None, suffix_tokens], kv_cache=kv_cache, adarms_cond=[None, time_cond])`。每层只新算 suffix 的 Q/K/V，把缓存的 prefix K/V 接在当前 suffix K/V 前面；action 可见全部有效 prefix 和全部 suffix。新返回的 cache 被丢弃，下一去噪步仍读取循环外同一份 prefix cache，不累计前一步 action 的 K/V。
+- **suffix 位置**：`positions = sum(prefix_mask, axis=-1)[:,None] + cumsum(suffix_mask, axis=-1)-1`；因此与训练时完整序列的有效 token 编号一致，不按物理 P 把 padding 算进去。
+- **为什么能缓存**：第 11.3 节中所有 prefix query 都不能看 action，且 prefix 没有 action time 条件；所以 prefix 各层状态不依赖当前去噪步的 noisy action / time。这个结构支持一次预填充、多步复用；它本身不是训练与推理浮点结果逐位一致的实测证据。
+- **缓存范围**：只在一次 `sample_actions` 调用内的多个去噪步之间复用；下次调用会重新构造 prefix 并预填充，代码没有跨环境步直接沿用旧 prefix cache。
+- **在线构造**：`MME_VLA_Policy._prepare_history` 对在线得到的 (96,1024) 窗级向量调用同一个 `split_stage2_tokens`，再把 pos、mask、times 各重复 4 次；随后按与离线相同的 `memory_order` 排序。进入 `embed_memory` 后，使用相同的两路投影与 context prefix 路径。
+
+与第 7 节 modulation 的区别发生在缓存内容上：modulation 缓存的 prefix 不含 memory，每个去噪步仍由各层额外 `MemoryAttention` 重投 memory K/V；context 的 memory 已在 prefix cache 中，各去噪步直接复用其对应层的 K/V。
+
+**代码锚点**：`mme_vla_suite/models/integration/history_pi0.py::HistoryPi0.compute_loss`、`sample_actions`（含内部 `step`）；`history_gemma.py::Module.setup`、`Module.__call__`；`openpi/models/gemma.py::Attention.__call__`、`KVCache`；`mme_vla_suite/policies/policy.py::MME_VLA_Policy._prepare_history`。
+
+### 11.7 每层参数与总参数量
+
+- **memory 输入投影**：第 11.2 节共 **8,656,384** 个新增参数，属于 `mem_encoder`，从零训。
+- **每层新增 memory 专属参数**：**0**。context 复用 paligemma / action expert 原有的 Q/K/V、输出投影、norm 与 FFN，不创建第 6 节每层 4,721,664 参数的额外 attention / modulation 模块。
+- **每层仍各有自己的原有权重**：`nn.scan(variable_axes={"params":0}, length=18)` 没变；「不新增每层模块」不等于「18 层共享一套参数」，也不等于「原有模型参数被冻结」。这里仅统计 memory 新增部分。
+- **没有额外参数不等于没有计算开销**：896 个 memory token 要走 paligemma 的 18 层 Attention 与 FFN，训练时参与前向与反传；推理时此部分在 prefix 预填充中完成。实际显存与步时不能由新增参数少直接推出。
+
+**代码锚点**：`mme_vla_suite/models/integration/history_pi0.py::HistoryPi0.__init__`；`history_gemma.py::HistoryBlock.__call__`、`Module.setup`；`models/representation/percep_mem.py::PerceptualMemory.__init__`。
+
+### 11.8 同一套输入下，context 与 modulation 的差别
+
+这里使用已有的两份 **32frame-4x4-motion-stage2-4x256-orig16** yaml 作对照：`perceptual-framesamp-ctx-...yaml` 与 `perceptual-framesamp-modul-...yaml`。两份配置只差 `integration_type` 与 `memory_token_dim`；因此下表两侧都是 **512 帧路 + 384 motion = 896 个 memory token**，不混用第 1–10 节的 608 配置。
+
+| 项 | context | modulation |
+|---|---|---|
+| 输入（共同） | 32 帧×16 token；96 窗×4 token；拆分后每个 motion token 的输入宽度 256 | 同左 |
+| memory 投影目标宽度 | 2048（paligemma） | 1024（action expert） |
+| `mem_encoder` 参数 | 8,656,384 | 4,722,176（帧路 3,475,200 + motion 路 1,246,976） |
+| memory 是否进 prefix | 是，放在当前图像与语言之前 | 否，通过独立 `mem_seq` / `mem_mask` 参数传入 |
+| memory 是否逐层自注意力 / FFN | 是，在 paligemma 残差流中逐层更新 | 否，各层读取同一份投影后的 memory |
+| action 读取 memory 的模块 | 原有联合 Attention，8 Q 头、1 KV 头、head_dim 256 | 额外 `MemoryAttention`，4 Q 头、1 KV 头、head_dim 256 |
+| 读取时 softmax 的 key 范围 | memory、当前图像、语言、action 的全部有效位 | 仅 memory 的有效位 |
+| 进入 action 残差流的位置 | 原有 attention 输出投影 → gated residual；随后原有 FFN | 额外读出 → `MemoryRMSNorm` 调制 FFN 输入 → 原有 FFN gated residual |
+| 每层 memory 专属新增参数 | 0 | 4,721,664；18 层合计 84,989,952 |
+| memory 新增参数合计 | **8,656,384** | **89,712,128**（含输入投影与 18 层额外模块） |
+| 推理时 memory 的 K/V | prefix 预填充时逐层计算一次，随 cache 复用 | 每层、每个去噪步重算，不进入 prefix cache |
+| paligemma 一侧与 memory 的关系 | memory 本身由其编码，语言可直接读 memory | 不接收 memory |
+
+**回到原文的 1×1024 读法**：当前仓库也有 `perceptual-framesamp-ctx-8frame-8x8-motion-stage2-1x1024-orig16.yaml`，它与第 1–10 节具有相同的输入形状：512+96=608，motion 每 token 1024 维；context 投影后为 (B,608,2048)，motion 最后一层输入为 1024+768=1792，`mem_encoder` 合计 **10,229,248** 参数。把本节 S=896 换成 S=608、换回对应投影尺寸，后续 prefix、mask、逐层 Attention 与 cache 机制完全相同。这只是输入形状对照，不表示两份配置的数据源或训练结果相同。
+
+**版本边界**：原锚点 `4029b1f` 中现成的 stage2 96×1024 yaml 是 modulation；当时的旧 context motion yaml 仍为 160×768。上面引用的 orig16 context yaml 来自新增章节锚点 `f2de48b`，不能据此声称旧版本已存在一条 stage2 context 实跑结果。
+
+**代码锚点**：`mme_vla_suite/models/config/robomme/perceptual-framesamp-ctx-32frame-4x4-motion-stage2-4x256-orig16.yaml`、`perceptual-framesamp-modul-32frame-4x4-motion-stage2-4x256-orig16.yaml`、`perceptual-framesamp-ctx-8frame-8x8-motion-stage2-1x1024-orig16.yaml`；投影与注入代码见第 11.2、11.4、11.7 节。
+
+### 11.9 本节未核实项
+
+- 新增参数量与 cache 字节量均按形状推算，未加载完整模型统计参数树或实测显存。
+- mask 矩阵、位置编号及 prefix cache 的可复用性均根据源码静态推导；本文未完成最小掩码数值测试，也未做完整模型逐位数值对拍。
+- mask 所允许的 memory → 语言 → 图像跨层路径是结构事实；本文未测量该路径实际传递的信息量或对动作的影响。
+- 本节不引用 context / modulation 的实际训练步时、推理延迟或成功率，不用参数量与 cache 方式推断哪一种效果更好或一定更快。

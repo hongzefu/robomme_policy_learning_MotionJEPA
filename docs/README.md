@@ -1,7 +1,17 @@
 # docs/ 索引
 
-> 环境 B（AWS 单机 8×A100，2026-09-04 起）现行。本目录顶层只剩四份正本与本索引；上游原文、图、环境 A 只读报告与历史 run 留档全部在 `archive/`；
-> 根目录的各 `*-plan.md` 是过程档案，与本目录正本冲突时以正本为准（对照表见末节）。
+> 环境 B（AWS 单机 8×A100，2026-09-04 起）现行。本目录收录机制说明、图、训练与评估档案；环境 A 的旧归档仍在 `archive/`。
+> 原根目录的其他计划和说明共 34 份已整理到 [`root-archive/`](root-archive/README.md)，保留原文件名与历史口径。该目录的归档表示位置整理，任务状态仍以交接记录为准。
+
+## 根目录当前保留的专题文档
+
+| 文件 | 内容 |
+|---|---|
+| [1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md](../1027-orig16-vla-512-and-stage2-motion-4plus4-plan.md) | 当前官方 16×100、先 context 后 modulation 的两条 VLA 训练计划 |
+| [1027-motion-memory-injection.md](../1027-motion-memory-injection.md) | memory 注入机制说明，按文内固定代码版本阅读 |
+| [1028-4task400-vs-orig16-trained-evaluated-summary.md](../1028-4task400-vs-orig16-trained-evaluated-summary.md) | 数据集、训练配置与评估结果对比总结 |
+
+根目录同时保留项目 README 和规则文件。其余文档的完整清单、旧路径与新路径映射见 [根目录文档归档索引](root-archive/README.md)。
 
 ## 一、正式正本（先读这四份）
 
@@ -80,16 +90,18 @@
 
 ## 七、根目录计划文件对照表
 
+下表记录原根目录文档与机制说明的对应关系；完整的 34 份迁移清单见 [归档索引](root-archive/README.md)。
+
 | 根目录文件 | 性质 | 对应正本 / 处置 |
 |---|---|---|
-| `0901-motion-memory-plan.md`、`motion-memory-interleave.md` | motion 接入计划与交错设计（过程档案，冻结） | [`motion-memory.md`](motion-memory.md) |
-| `0827-framesamp-restructure-plan.md`、`0829-destructive-restructure-plan.md`、`0830-train-entry-restructure-plan.md` | dataloader 三阶段计划（过程档案，冻结） | [`dataloader-restructure.md`](dataloader-restructure.md) |
-| `0825-framesamp-restructure-plan.md`、`v1-framesamp-restructure-adversarial-review.md`、`v1-post-restructure-roadmap.md` | 已被 v2 取代的首版计划、对抗审查与 roadmap（三个加速项不立项） | 历史，只读 |
-| `v1-gradient-baseline.md`、`0826-dtype-unify-plan.md`、`v1-95util.md` | 第一 / 二阶段与 util 计划（环境 A） | 报告见第三节（已归档） |
-| `0830-prod-60k-wandb-plan.md` | GreatLakes 60k 正式训练计划（环境 A） | 留档已归档：`archive/training-doc/v1-prod-60k/` |
+| `docs/root-archive/0901-motion-memory-plan.md`、`docs/root-archive/motion-memory-interleave.md` | motion 接入计划与交错设计（过程档案，冻结） | [`motion-memory.md`](motion-memory.md) |
+| `docs/root-archive/0827-framesamp-restructure-plan.md`、`docs/root-archive/0829-destructive-restructure-plan.md`、`docs/root-archive/0830-train-entry-restructure-plan.md` | dataloader 三阶段计划（过程档案，冻结） | [`dataloader-restructure.md`](dataloader-restructure.md) |
+| `docs/root-archive/0825-framesamp-restructure-plan.md`、`docs/root-archive/v1-framesamp-restructure-adversarial-review.md`、`docs/root-archive/v1-post-restructure-roadmap.md` | 已被 v2 取代的首版计划、对抗审查与 roadmap（三个加速项不立项） | 历史，只读 |
+| `docs/root-archive/v1-gradient-baseline.md`、`docs/root-archive/0826-dtype-unify-plan.md`、`docs/root-archive/v1-95util.md` | 第一 / 二阶段与 util 计划（环境 A） | 报告见第三节（已归档） |
+| `docs/root-archive/0830-prod-60k-wandb-plan.md` | GreatLakes 60k 正式训练计划（环境 A） | 留档已归档：`archive/training-doc/v1-prod-60k/` |
 | `greatlakes.md` | 集群操作指引 | 环境 B 下只读存档（AGENTS 第 8 条） |
-| `env-b-aws-replication.md` | 环境 B 从零复刻实录 | 现行，与本目录正本互补 |
-| `external-assets-lock.md`、`HF-EXPORT-robomme-vla-motionjepa-v1.md` | 外部资产锁与 HF 发布实录 | 现行 |
+| `docs/root-archive/env-b-aws-replication.md` | 环境 B 从零复刻实录 | 现行，与本目录正本互补 |
+| `docs/root-archive/external-assets-lock.md`、`docs/root-archive/HF-EXPORT-robomme-vla-motionjepa-v1.md` | 外部资产锁与 HF 发布实录 | 现行 |
 
 ### 计划文件命名迁移表
 
@@ -97,16 +109,16 @@
 
 | 历史文件名 | 当前文件名 | 首次新增提交 |
 |---|---|---|
-| `v1-framesamp-restructure-plan.md` | [0825-framesamp-restructure-plan.md](../0825-framesamp-restructure-plan.md) | `40857c4`（2026-08-25） |
-| `v1-dtype-unify-plan.md` | [0826-dtype-unify-plan.md](../0826-dtype-unify-plan.md) | `a0cb5fc`（2026-08-26） |
-| `v2-framesamp-restructure-plan.md` | [0827-framesamp-restructure-plan.md](../0827-framesamp-restructure-plan.md) | `fb99027`（2026-08-27） |
-| `v3-destructive-restructure-plan.md` | [0829-destructive-restructure-plan.md](../0829-destructive-restructure-plan.md) | `f2eb900`（2026-08-29） |
-| `v5.0-train-entry-restructure-plan.md` | [0830-train-entry-restructure-plan.md](../0830-train-entry-restructure-plan.md) | `f33d51f`（2026-08-30） |
-| `v5.1-prod-60k-wandb-plan.md` | [0830-prod-60k-wandb-plan.md](../0830-prod-60k-wandb-plan.md) | `4da7f12`（2026-08-30） |
-| `motion-memory-plan.md` | [0901-motion-memory-plan.md](../0901-motion-memory-plan.md) | `132ca7f`（2026-09-01） |
-| `8frame-8x8-training-plan.md` | [0908-8frame-8x8-training-plan.md](../0908-8frame-8x8-training-plan.md) | `82c2cce`（2026-09-08） |
-| `v2-4task-h5-merge-plan.md` | [0914-4task-h5-merge-plan.md](../0914-4task-h5-merge-plan.md) | `21d9b13`（2026-09-14） |
-| `v2-1600ep-m8x8-modul-training-plan.md` | [0915-1600ep-m8x8-modul-training-plan.md](../0915-1600ep-m8x8-modul-training-plan.md) | `b625f48`（2026-09-15） |
-| `v2-motion-modul-8x8-plan.md` | [0916-motion-modul-8x8-plan.md](../0916-motion-modul-8x8-plan.md) | `9a58dc8`（2026-09-16） |
+| `v1-framesamp-restructure-plan.md` | [0825-framesamp-restructure-plan.md](root-archive/0825-framesamp-restructure-plan.md) | `40857c4`（2026-08-25） |
+| `v1-dtype-unify-plan.md` | [0826-dtype-unify-plan.md](root-archive/0826-dtype-unify-plan.md) | `a0cb5fc`（2026-08-26） |
+| `v2-framesamp-restructure-plan.md` | [0827-framesamp-restructure-plan.md](root-archive/0827-framesamp-restructure-plan.md) | `fb99027`（2026-08-27） |
+| `v3-destructive-restructure-plan.md` | [0829-destructive-restructure-plan.md](root-archive/0829-destructive-restructure-plan.md) | `f2eb900`（2026-08-29） |
+| `v5.0-train-entry-restructure-plan.md` | [0830-train-entry-restructure-plan.md](root-archive/0830-train-entry-restructure-plan.md) | `f33d51f`（2026-08-30） |
+| `v5.1-prod-60k-wandb-plan.md` | [0830-prod-60k-wandb-plan.md](root-archive/0830-prod-60k-wandb-plan.md) | `4da7f12`（2026-08-30） |
+| `motion-memory-plan.md` | [0901-motion-memory-plan.md](root-archive/0901-motion-memory-plan.md) | `132ca7f`（2026-09-01） |
+| `8frame-8x8-training-plan.md` | [0908-8frame-8x8-training-plan.md](root-archive/0908-8frame-8x8-training-plan.md) | `82c2cce`（2026-09-08） |
+| `v2-4task-h5-merge-plan.md` | [0914-4task-h5-merge-plan.md](root-archive/0914-4task-h5-merge-plan.md) | `21d9b13`（2026-09-14） |
+| `v2-1600ep-m8x8-modul-training-plan.md` | [0915-1600ep-m8x8-modul-training-plan.md](root-archive/0915-1600ep-m8x8-modul-training-plan.md) | `b625f48`（2026-09-15） |
+| `v2-motion-modul-8x8-plan.md` | [0916-motion-modul-8x8-plan.md](root-archive/0916-motion-modul-8x8-plan.md) | `9a58dc8`（2026-09-16） |
 
 历史用户原话、固定提交变更描述、归档软引用和只读源码快照中的旧名保留为原文，可按本表查找现文件。历史版本号、分支名与 run_name 不随文件改名变化；本表未列出的旧文件名（例如 `v6-motion-memory-plan.md`）不属于本次迁移。

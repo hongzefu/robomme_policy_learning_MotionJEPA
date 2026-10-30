@@ -29,7 +29,7 @@
 
 用户另批准「允许主机 dtype 不同，但要求数值一致且训练标量/状态逐位一致」及「允许这四键缺失与 None 等价」。后一条仅适用于 `motion_emb/motion_pos/motion_mask/mem_order` 缺失与严格 `None` 的训练输入比较投影；其他键、非None值和signed zero要求不变，原始ALL字段、dtype/raw SHA仍留证。它不放宽源数据、packed或 full/counting 子集的字节守卫，也不代替正式输入与训练对拍。
 
-本库使用同一公开全集，生成 source、4×4 packed及仅供比较的自算统计量；未生成8×8 packed、Wan或motion。后续依赖顺序遵循[原版80k计划](../../../0925-orig-80k-full-counting-4plus4-plan.md)。本档案确认full数据阶段和full20；同组counting数据、严格子集与count20的独立结果见[counting档案](../4task-counting-pub-400ep/README.md)。
+本库使用同一公开全集，生成 source、4×4 packed及仅供比较的自算统计量；未生成8×8 packed、Wan或motion。后续依赖顺序遵循[原版80k计划](../../root-archive/0925-orig-80k-full-counting-4plus4-plan.md)。本档案确认full数据阶段和full20；同组counting数据、严格子集与count20的独立结果见[counting档案](../4task-counting-pub-400ep/README.md)。
 
 ## 3. 版本与代码状态
 

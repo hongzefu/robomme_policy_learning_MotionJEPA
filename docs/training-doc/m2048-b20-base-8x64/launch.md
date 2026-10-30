@@ -1,6 +1,6 @@
 # m2048-b20-base-8x64 启动记录
 
-用户原话：「开始实现 有问题立刻越早问用户越好 一路实现到测速结束报告用户为止」。执行 [2048 计划](../../../0920-32frame-8x8-modul-2048-plan.md) 步 2a，本档只建立旧 8x64 modulation、motion 关闭的改前证据。
+用户原话：「开始实现 有问题立刻越早问用户越好 一路实现到测速结束报告用户为止」。执行 [2048 计划](../../root-archive/0920-32frame-8x8-modul-2048-plan.md) 步 2a，本档只建立旧 8x64 modulation、motion 关闭的改前证据。
 
 版本锚点为引入本启动档案及第一批工具适配的同一个提交，运行前强制 porcelain 为空；完整实际提交、UTC 起点由下列命令输出的 START_HEAD / START_UTC 和原始日志记录，后续结果档案回填该值。生产 src 与初始提交 c31b0509be3f76a6cc262fd655f5f0080b12c266 相同，依赖不变。环境 B：8×A100-SXM4-80GB，本档仅 GPU 4、5，FSDP 2；底层存储为 /dev/md0 XFS 本地 NVMe RAID。
 

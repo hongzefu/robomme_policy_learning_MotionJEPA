@@ -559,7 +559,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 - **覆盖第 15 条（原始 H5 的来源与暂存，按环境分叉；本仓库原规则 15 原文）**：
   - 原始 H5 的来源与暂存按环境分叉：
     - **仅环境 A 适用**：为集群作业而在 turbo 上暂存的原始 H5 副本属于**临时暂存**，必须与本机原件逐文件 sha256 核对同源，并在全流程验收通过后删除；本机 `/data` 的原件永久保留。
-    - **环境 B（当前）**：无 turbo，本机也**没有 H5 原件**。原始 16 任务 × 100 episode 的 H5 需从公开数据集 `Yinpei/robomme_data_h5` 获取（口径见根目录 `external-assets-lock.md` 第五节「异地无 NFS 机器从零复刻」），落点在 `/scratch/hongze/` 下，并逐文件记 sha256 入 `v1-store/` 的 input manifest。**获取前先与用户确认落点与 episode 口径，不得自行开始几百 GB 的下载。**
+    - **环境 B（当前）**：无 turbo，本机也**没有 H5 原件**。原始 16 任务 × 100 episode 的 H5 需从公开数据集 `Yinpei/robomme_data_h5` 获取（口径见 `docs/root-archive/external-assets-lock.md` 第五节「异地无 NFS 机器从零复刻」），落点在 `/scratch/hongze/` 下，并逐文件记 sha256 入 `v1-store/` 的 input manifest。**获取前先与用户确认落点与 episode 口径，不得自行开始几百 GB 的下载。**
 - **覆盖第 24 条（第三方源码）**：本仓库以 submodule + 锁定 gitlink 方式引入 `third_party/robomme_benchmark`（来源 RoboMME / robomme_benchmark）；修改第三方代码走 `PolicyEvalThirdParty-<主仓库任务分支>` 专用分支，禁止以 fork 最新 HEAD 替换锁定版本。
 - **覆盖第 12 / 13 条（留档根）**：`<DOC_ROOT>` = `docs/training-doc/`（训练 / 评估）与 `docs/dataset-build-doc/`（数据集构建）。
 

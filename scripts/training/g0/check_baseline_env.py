@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """基线环境指纹：dump（起跑留档）/ check（引用基线产物前的强制 preflight）/ manifest。
 
-对应 v1-gradient-baseline.md 四节与 T5。三个子命令：
+对应 docs/root-archive/v1-gradient-baseline.md 四节与 T5。三个子命令：
 
 - `dump --record-dir DIR [--dataset PATH]`：采集当前环境指纹，合并进
   DIR/env.json 的 `fingerprint` 键（无 env.json 时单独写 fingerprint.json）。
@@ -33,7 +33,7 @@ _REPO_ROOT = pathlib.Path(__file__).resolve().parents[3]
 if not (_REPO_ROOT / "pyproject.toml").exists():
     raise SystemExit(f"错误: 仓库根解析失败 {_REPO_ROOT}（缺 pyproject.toml）")
 def _epoch_samples(dataset: pathlib.Path) -> int:
-    """epoch 样本数真值源（0901-motion-memory-plan.md 2.8 / R14）：packed 根读 store_meta.num_exec_samples，
+    """epoch 样本数真值源（docs/root-archive/0901-motion-memory-plan.md 2.8 / R14）：packed 根读 store_meta.num_exec_samples，
     旧 source 根读 stats.execution_samples；两者同时存在却不等、或都读不到即 raise。"""
     vals = {}
     sm = dataset / "meta" / "store_meta.json"

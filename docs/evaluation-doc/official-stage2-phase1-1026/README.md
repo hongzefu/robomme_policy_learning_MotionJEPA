@@ -1,10 +1,10 @@
 # 官方评估阶段一实施
 
-任务最终按用户批准的 [1027简化方案](../../../1027-stage2-simple-elastic-eval-plan.html) 完成：保留弹性队列，收缩服务入口和资源调度，队列相关变更净删1590行。固定执行版本为 `789ef0e5e9c241dd0f8bca11f2c3b885edc52e39`。真实单局完整执行，随后新增第二个worker加入同一队列领取不同五局块，十局无重无漏，1成功、9失败，两个worker退出0。详见 [试评估结果](../official-stage2-20k-probe-1026-a/result.md)。正式800局未启动。
+任务最终按用户批准的 [1027简化方案](../../root-archive/1027-stage2-simple-elastic-eval-plan.html) 完成：保留弹性队列，收缩服务入口和资源调度，队列相关变更净删1590行。固定执行版本为 `789ef0e5e9c241dd0f8bca11f2c3b885edc52e39`。真实单局完整执行，随后新增第二个worker加入同一队列领取不同五局块，十局无重无漏，1成功、9失败，两个worker退出0。详见 [试评估结果](../official-stage2-20k-probe-1026-a/result.md)。正式800局未启动。
 
 最终保留的主线是任务分配、逐局结果、加入与drain、确认旧step停止后归还，以及每卡常驻模型／每块独立仿真。最终队列和真实连接4项短测通过，0.24秒；不把CPU短测写成GPU故障注入结果。两卡阶段无基础设施错误或重试，原首局启动故障及必要修复已留档。
 
-下文保留此前 [1026计划](../../../1026-official-benchmark-stage2-eval-plan.html) 的实施历史，旧复杂门禁和资源账本不再作为当前启动前置，接口以1027方案及运行档案为准。最初开工锚点为 `2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f`，评估分支为 `v4-eval-official-1026`；最初代码起点为 `d7912e4d4ccd6a158d2e0b64ccd657fc989d1a24`。
+下文保留此前 [1026计划](../../root-archive/1026-official-benchmark-stage2-eval-plan.html) 的实施历史，旧复杂门禁和资源账本不再作为当前启动前置，接口以1027方案及运行档案为准。最初开工锚点为 `2789ae42f3166788ec7d5efc4baf29d8d5a1bc4f`，评估分支为 `v4-eval-official-1026`；最初代码起点为 `d7912e4d4ccd6a158d2e0b64ccd657fc989d1a24`。
 
 ## 授权与环境
 
