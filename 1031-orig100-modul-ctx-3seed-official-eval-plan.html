@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>官方16×100 modulation 与 context 两模型三 seed 官方评估计划</title>
+<style>
+:root{--bg:#fff;--fg:#1d1d1f;--muted:#666;--line:#ddd;--code:#f4f4f6;--warn:#b35c00;--accent:#2457a6}
+@media (prefers-color-scheme: dark){:root{--bg:#16171a;--fg:#e6e6e6;--muted:#9a9a9a;--line:#333;--code:#23252a;--warn:#e0a050;--accent:#7aa7ff}}
+body{background:var(--bg);color:var(--fg);font:15px/1.65 -apple-system,"PingFang SC","Noto Sans CJK SC",sans-serif;max-width:1100px;margin:0 auto;padding:16px}
+h1{border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:40px}
+h2{margin-top:30px}h3{margin-top:22px}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:14px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:5px 8px;vertical-align:top;text-align:left}
+th{background:var(--code)}
+code{background:var(--code);padding:1px 4px;border-radius:3px;font-size:13px;word-break:break-all}
+pre{background:var(--code);padding:10px;overflow-x:auto;font-size:13px;border-radius:4px}
+blockquote{border-left:4px solid var(--accent);margin:10px 0;padding:6px 12px;color:var(--muted)}
+.warn{color:var(--warn)}
+</style>
+</head>
+<body>
+
+<blockquote>
+<p><b>权威性</b>：本文件是 2026-10-31（美东）起「官方16×100 modulation 与 context 两模型三 seed 官方评估」的唯一计划。<b>代码锚点</b>：执行代码基于 <code>9459859384589b3553148cf53f715c1318f1a533</code>（<code>commitV11.67Beta</code>，两条官方16×100六万步训练的起跑锚点，也是 10-29 context seed 42 评估所用代码），benchmark 子模块 <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>。<b>工作副本</b>：计划与留档在 Aspen 主检出 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>（分支 <code>v4-eval-official-1026</code>）；执行副本在 turbo <code>$E/releases/&lt;新执行 sha&gt;/</code>。<b>commit 体例</b>：计划与留档用 <code>docs:</code>，执行代码改动在新分支上用 <code>commitV11.70: …</code>（9459859 所在分支 v4-256concat1 已用到 V11.69，接续为 V11.70），交接用 <code>handoff:</code>。<b>外部依赖</b>：两个公开 bucket 匿名读取，<code>HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2split-60k-v1</code> 与 <code>HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2split-60k-v1</code>。<b>授权边界</b>：本文件只规划、不实施；须用户对本计划不改而直接认可（开工令）后才动手。</p>
+</blockquote>
+
+<h1>第一部分（给人看）</h1>
+
+<h2>一、要做什么与全部运行一览</h2>
+<p>把手上两条官方 16 任务×100 集训练的模型（modulation 与 context，二者 motion 读法都是 split 4×256、都只评最终 checkpoint 59999）按官方三 seed 口径各评三次，每次是官方 test 16×50 = 800 局。context 的 seed 42 已在 10-29 评过（311/800 = 38.88%），直接复用，只补 seed 7 和 0；modulation 三个 seed 全跑。合计新跑 <b>5 次 × 800 = 4000 局</b>，在 GreatLakes 上用 10 份 A40 依次排队跑，预计 7.5～8.5 小时。</p>
+
+<pre>
+ S0 改代码(放开 seed) ─ S1 导出执行副本 ─┬─ S2 下载 modul 5000 + 59999（后台 sha 校验）
+                                         └─ S3 提交 10 份占位
+ S4 冒烟：modul 5000，2 局，seed 0（1 份占位） ‖ 同时 C-s7 用其余 9 份起跑
+ S5 冒烟过 → 第 10 个 worker 加入 C-s7
+ S6 依次：C-s7 → C-s0 → M-s42 → M-s7 → M-s0   （每次 800 局，约 1.5 h）
+ S7 汇总三 seed 均值 ± std，逐个 scancel 10 份占位
+</pre>
+
+<table>
+<tr><th>编号</th><th>模型</th><th>checkpoint</th><th>seed</th><th>局数</th><th>run 根（<code>$O=$E/v1-store/evaluation/official-stage2-1026</code>）</th><th>状态</th></tr>
+<tr><td>C-s42</td><td>context split</td><td>59999（清单 <code>ada0653d…</code>）</td><td>42</td><td>800</td><td><code>$O/o16ctx-60k-seed42/run800-r2</code></td><td>已完成，311/800，复用</td></tr>
+<tr><td>C-s7</td><td>context split</td><td>59999（同上）</td><td>7</td><td>800</td><td><code>$O/o16ctx-60k-seed7/run800</code></td><td>新跑</td></tr>
+<tr><td>C-s0</td><td>context split</td><td>59999（同上）</td><td>0</td><td>800</td><td><code>$O/o16ctx-60k-seed0/run800</code></td><td>新跑</td></tr>
+<tr><td>M-smoke</td><td>modulation split</td><td>5000（清单 <code>de6d9909…</code>）</td><td>0</td><td>2</td><td><code>$O/o16modul-60k-seed42/smoke2-5k</code></td><td>新跑，冒烟</td></tr>
+<tr><td>M-s42</td><td>modulation split</td><td>59999（清单 <code>05f0b3dc…</code>）</td><td>42</td><td>800</td><td><code>$O/o16modul-60k-seed42/run800</code></td><td>新跑</td></tr>
+<tr><td>M-s7</td><td>modulation split</td><td>59999（同上）</td><td>7</td><td>800</td><td><code>$O/o16modul-60k-seed7/run800</code></td><td>新跑</td></tr>
+<tr><td>M-s0</td><td>modulation split</td><td>59999（同上）</td><td>0</td><td>800</td><td><code>$O/o16modul-60k-seed0/run800</code></td><td>新跑</td></tr>
+</table>
+
+<h3>已定死口径</h3>
+<table>
+<tr><th>编号</th><th>口径</th><th>依据</th></tr>
+<tr><td>K0</td><td>被评对象只有两条：modulation split（<code>orig100-m32x4x4-modul-motion-s2split4x256-b128-60k</code>）与 context split（<code>orig100-ctx32x4x4-motion-s2split4x256-b128-60k</code>）。新的 concat1x1024 不评。用户原话：「modulation robomme-vla-orig100-m32x4x4-modul-motion-s2split-60k-v1 …… context（split） robomme-vla-orig100-ctx32x4x4-motion-s2split-60k-v1 …… eval这两个」</td><td>§二.1</td></tr>
+<tr><td>K1</td><td>每个模型评三次，seed 取官方的 7、42、0。用户原话：「官方的 checkpoint evaluate 了三次，是哪三个 seed 你找一下……都要 evaluate 三次」</td><td>§二.2</td></tr>
+<tr><td>K2</td><td>只评 59999，不评中间步（沿用 10-29 K7）。</td><td>bucket README「交付12份……55000、59999」</td></tr>
+<tr><td>K3</td><td>context seed 42 复用 10-29 的 <code>run800-r2</code> 结果，不重跑。理由见 §二.3；如用户要求三个 seed 同一份执行代码，改为重跑 C-s42，规模 +800 局。</td><td>§二.3</td></tr>
+<tr><td>K4</td><td>评估参数除 seed 外与 10-29 完全相同：官方 profile、test 800 局（清单内部签封 <code>991c3496…</code>）、<code>max_steps=1300</code>、motion 超 96 窗直接抛错不抽稀、正常失败不重试、基础设施错误每局最多重试 1 次。</td><td><code>docs/evaluation-doc/o16ctx-60k-800/launch.md</code></td></tr>
+<tr><td>K5</td><td>对照：modulation 对论文 FrameSamp + Modul 44.51 ± 0.77；context 对 FrameSamp + Context 30.68 ± 1.17（arXiv 2603.04639 Table 3）。</td><td><code>o16ctx-60k-800/result.md</code> ②</td></tr>
+<tr><td>K6</td><td>资源：10 份 spgpu 占位，各 1×A40 / 4 CPU / 24 G / 48 h，5 次运行共用、依次排队；全部完成后逐个 <code>scancel</code>。10 份是 Aspen→GreatLakes ControlMaster 并发会话上限（10-29 实测第 11 个被拒）。</td><td>10-29 result ③</td></tr>
+<tr><td>K7</td><td>控制器放 sled-vail（10-29 实测 Aspen 读 turbo 小文件约 200 ms／个，导致 worker 超时）。</td><td>10-29 result ③</td></tr>
+</table>
+
+<h2>二、机制</h2>
+
+<h3>1. 两个模型是什么、和已评那份差在哪</h3>
+<table>
+<tr><th>项</th><th>context split（已评 seed 42）</th><th>modulation split（未评）</th></tr>
+<tr><td>bucket</td><td><code>…-ctx32x4x4-motion-s2split-60k-v1</code></td><td><code>…-m32x4x4-modul-motion-s2split-60k-v1</code></td></tr>
+<tr><td>融合方式 / memory_token_dim</td><td>context / 2048</td><td>modulation / 1024</td></tr>
+<tr><td>memory 位置</td><td colspan="2">相同：帧路 32 帧×16 = 512，motion 每窗 4×256、预算 384，合计 896</td></tr>
+<tr><td>训练集 / encoder</td><td colspan="2">相同：<code>16task-orig100-1600ep-9e109419</code>；<code>stage2-full144-1025-a/checkpoint_epoch_105.pt</code> EMA（SHA <code>27daa832…</code>）</td></tr>
+<tr><td>policy_config</td><td colspan="2">相同：<code>mme_vla_suite_orig16_b128_60k</code>；结构由 <code>policy_config.py::create_trained_policy</code> 读 <code>checkpoint_dir.parent/history_config.resolved.yaml</code> 决定，不看配置名</td></tr>
+<tr><td>59999 清单</td><td>36 文件 11,970,445,281 字节，已下载、<code>VLA_VERIFY=PASS</code></td><td>42 文件 12,271,321,532 字节，未下载；清单文件 sha256 <code>05f0b3dc04f745298a675b46213688bf118b4f372743540e14a677042eb1a814</code></td></tr>
+<tr><td>runtime 合同</td><td>已有 <code>o16ctx-60k-seed42/contracts/runtime.json</code>（<code>e254f115…</code>）</td><td>新生成（motion 来源与融合不同，不能套用）</td></tr>
+</table>
+<p class="warn">⚠ modulation 这一条在本评估链路上从未跑过（10-29 K7「不评 modulation 那条」），所以先用 5000 步跑 2 局冒烟，确认 server 回显 <code>integration_type=modulation</code>、readout <code>stage2_pool4_split_v1</code>、<code>num_tokens=4</code>、<code>dim=256</code>、<code>budget=384</code>。</p>
+
+<h3>2. 三个 seed 是哪三个、seed 管什么</h3>
+<ul>
+<li><b>官方 seed = 7、42、0</b>。证据一：benchmark 官方提交模板 <code>third_party/robomme_benchmark/doc/submission/model_example.md</code> 写「require at least three runs with different random seeds……The benchmark seed is fixed internally」，结果表头 <code>Seed 7 | Seed 42 | Seed 0 | Avg</code>。证据二：官方训练仓库副本 <code>/data/hongzefu/robomme_policy_learning-memER/scripts/compute_results.py</code> 的 <code>--seed_list</code> 默认 <code>seed0,seed42,seed7</code>。论文正文没有列出 seed，本地也没有 PDF，这一点未核实。</li>
+<li><b>seed 只管模型采样噪声</b>：server 端 <code>serve_policy --seed</code> → <code>policy.py</code> 在 <code>reset()</code> 里 <code>self._rng = jax.random.key(self._seed)</code>。环境局由 test 元数据 <code>records[].seed</code> 固定（benchmark readme「All seeds are fixed for benchmarking」），所以三个 seed 跑的是同一批 800 局。</li>
+<li>不要和项目早期 <code>docs/training-doc/eval-3seed-context-vs-motion/</code> 的 42/7/2024 混淆：那是自己的 4 任务口径。</li>
+<li class="warn">⚠ 官方 <code>compute_results.py</code> 默认还对 3 个 checkpoint（60000、70000、79999）取平均，std 用 pandas 默认的样本标准差（ddof=1）。本计划按 K2 只评 59999，std 只来自三个 seed，比论文少了 checkpoint 这一维的方差；报告里会写明这一点。</li>
+</ul>
+
+<h3>3. 为什么必须改代码、改多少</h3>
+<p>seed 的传递链路本来就通：spec 的 <code>model_seed</code> 字段 → <code>resident_worker.py::server_command</code> 拼 <code>--seed</code>，<code>client_command</code> 拼 <code>--model-seed</code>（缺省 42），客户端首包核对 server 回显的 <code>model_seed</code>。唯一的阻塞是官方 profile 把 seed 写死成 42：</p>
+<pre>
+# examples/robomme/eval.py::evaluate（9459859）
+elif (args.dataset != "test" or args.max_steps != 1300 or ... or args.model_seed != 42):
+    raise ContractError("官方评估固定 test、1300、16 步和历史模式，RPC 超时须为正")
+</pre>
+<p>改法：把 <code>args.model_seed != 42</code> 改为 <code>args.model_seed not in (0, 7, 42)</code>，错误信息同步写明「seed 须为官方 0／7／42」，并加一条定向单测。<code>scripts/evaluation/manifest.py</code> 与 <code>check_runtime.py</code> 里的 42 只用于生成 validation 身份和 runtime 合同的模型检查，不在官方评估链路上，<b>不改</b>。spec 里新增 <code>"model_seed": &lt;seed&gt;</code>，run 身份 <code>run-identity.json</code> 的 <code>model_seed</code> 写对应 seed，所以 5 次运行的 <code>run_identity_sha256</code> 互不相同。</p>
+<p>改动在新分支 <code>v4-eval-3seed-1031</code>（从 <code>9459859</code> 分出）上做，因为当前分支 <code>v4-eval-official-1026</code> 没有 <code>mme_vla_suite_orig16_b128_60k</code> 配置。C-s42 用的是 9459859；新跑 5 次用新 sha，两者差别只有这一行判断和一个测试文件（K3 复用的依据）。</p>
+
+<h3>4. 排队与资源</h3>
+<p>同一时刻只跑一个 run 根，10 个 worker 都挂在它上面；一次 800 局跑完（控制器 <code>COMPUTE_DONE</code>、worker 自然退出），换下一个 run 根，在同样的 10 份占位里重新 <code>srun</code> 起 worker。冒烟占用第 10 份占位，此时 C-s7 先用 9 个 worker 起跑，冒烟通过后第 10 个 worker 加入 C-s7（动态队列允许中途加 worker）。10-29 实测 10 卡 800 局约 1 小时 28 分，5 次合计约 7.5 小时，加上换 run 根的间隙约 8～8.5 小时。占位承诺 10×48 = 480 GPU·h，实际占用约 85 GPU·h，跑完立即释放。</p>
+
+<h2>三、验收判定行</h2>
+<table>
+<tr><th>判定行</th><th>查什么</th><th>怎么查</th><th>过了说明什么</th></tr>
+<tr><td><code>SEED_GATE=PASS allowed=0,7,42 rejected=1</code></td><td>官方 profile 接受 0／7／42、拒绝其他值（如 1）</td><td>新分支 worktree 内 <code>uv run python -m pytest tests/evaluation/test_official_seed_gate.py -q</code></td><td>代码只放开这三个值，没有放松其他官方口径</td></tr>
+<tr><td><code>RELEASE_SNAPSHOT=PASS files=&lt;n&gt; tree_diff=0</code></td><td>执行副本与新 sha 的 git 树逐路径一致</td><td>同 10-29 导出流程</td><td>跑的就是审过的代码</td></tr>
+<tr><td><code>VLA_DOWNLOAD=PASS</code>／<code>VLA_VERIFY=PASS step=59999 files=42 sha_mismatch=0</code></td><td>modul 59999 下载与后台 sha256 校验</td><td><code>fetch.py 59999 --size-only</code>、<code>verify.py 59999</code></td><td>评的是 bucket 里那份字节；VERIFY 未过则 M-* 结果作废</td></tr>
+<tr><td><code>SMOKE2=PASS accepted=2 errors=0 seed=0 server_seed=0 integration=modulation</code></td><td>modul 5000 两局完整执行，server 回显 seed 0 与 modulation 结构</td><td>冒烟控制器汇总 + server 日志</td><td>modulation 推理链路与非 42 seed 链路都通；5000 步局失败属预期</td></tr>
+<tr><td><code>COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0</code>（每次运行一行，共 5 行）</td><td>每个 run 根 800 局齐全</td><td><code>queue/summary.json</code></td><td>该 seed 的成功率可用</td></tr>
+<tr><td><code>SEED_ECHO=PASS run=&lt;编号&gt; seed=&lt;s&gt; records=800 mismatch=0</code></td><td>每局 accepted 记录里的 <code>model_seed</code> 等于本次 seed</td><td>遍历 <code>accepted/*.json</code></td><td>没有 worker 用错 seed</td></tr>
+<tr><td><code>THREE_SEED=PASS model=&lt;modul|ctx&gt; seeds=7,42,0 runs=3</code></td><td>每模型逐任务与总体三 seed 均值 ± std（ddof=1）</td><td>汇总脚本读 3 份 accepted</td><td>可以和 Table 3 对照</td></tr>
+<tr><td><code>HOLDS_RELEASED=PASS cancelled=11 squeue_empty=1</code></td><td>10 份正式占位 + 1 份冒烟（若单独提交）都已 CANCELLED</td><td>逐个 <code>scancel &lt;JobID&gt;</code> 后 <code>squeue -u hongzefu</code></td><td>没有残留资源</td></tr>
+</table>
+
+<h2>四、步骤</h2>
+<table>
+<tr><th>阶段</th><th>内容</th><th>判据</th></tr>
+<tr><td>S0</td><td>新分支 <code>v4-eval-3seed-1031</code> 上改 <code>eval.py</code> seed 判断并加单测（子代理），合并前后审查，push</td><td><code>SEED_GATE=PASS</code></td></tr>
+<tr><td>S1</td><td>导出执行副本 <code>$E/releases/&lt;新 sha&gt;/</code></td><td><code>RELEASE_SNAPSHOT=PASS</code></td></tr>
+<tr><td>S2</td><td>下载 modul 5000（全 sha 核对）与 59999（只核字节，sha 后台），生成 modul runtime 合同</td><td><code>VLA_DOWNLOAD=PASS</code>×2</td></tr>
+<tr><td>S3</td><td>提交 10 份占位；为 5 次运行各建 run 根、spec、run 身份（seed 字段各异）</td><td>JobID 登记进 launch.md</td></tr>
+<tr><td>S4</td><td>第 10 份占位跑 M-smoke；其余 9 份起 C-s7</td><td><code>SMOKE2=PASS</code></td></tr>
+<tr><td>S5</td><td>冒烟过后第 10 个 worker 加入 C-s7；冒烟不过则 M-* 停，C-* 照跑，交用户裁决</td><td>—</td></tr>
+<tr><td>S6</td><td>依次 C-s7 → C-s0 → M-s42 → M-s7 → M-s0</td><td>每次 <code>COMPUTE_DONE</code> + <code>SEED_ECHO=PASS</code>；M-* 另需 <code>VLA_VERIFY=PASS</code></td></tr>
+<tr><td>S7</td><td>汇总、写 result.md、逐个释放占位、commit 并 push</td><td><code>THREE_SEED=PASS</code>×2、<code>HOLDS_RELEASED=PASS</code></td></tr>
+</table>
+
+<h2>五、子代理分工与合并（简述）</h2>
+<p>只有 S0 一块代码改动，交给一个写代码子代理（opus，独立 worktree，从 <code>9459859</code> 分出），只许改 <code>examples/robomme/eval.py</code> 并新增一个测试文件。主会话做合并前审查（另派一个 sonnet 审查子代理，看 diff 是否只动了这一个判断），<code>--no-ff</code> 合入 <code>v4-eval-3seed-1031</code>，复跑单测后 push。下载、建 run 根、提交占位、起控制器与 worker、监听和释放由主会话亲自做：这些步骤要用 Aspen／sled-vail 的 GreatLakes ControlMaster，并要持续挂 Monitor，交给一次性子代理反而要多交接一次。详细分配表见第二部分 §三。</p>
+
+<h2>六、交接顺序与状态机登记</h2>
+<ul>
+<li>任务 id：<code>o16-modul-ctx-3seed-eval</code>。</li>
+<li>交接前必须完成：<code>SEED_GATE</code>、两模型 <code>THREE_SEED=PASS</code>、5 行 <code>COMPUTE_DONE</code>、<code>VLA_VERIFY=PASS step=59999</code>、<code>HOLDS_RELEASED=PASS</code>。</li>
+<li>长尾：无。</li>
+<li>上游：AWS 两条训练已交付（两个 bucket 的 59999 清单均已存在），只读，不写依赖。</li>
+<li>下游：无自动解锁。</li>
+</ul>
+<p>第一部分到此为止；逐文件改动、分配表、runbook、风险与盲区见第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇、前置声明与红线</h2>
+<ul>
+<li>R1 只评 K0 两条模型的 59999 与 modul 5000 冒烟；不评 concat1x1024、不评中间步、不重跑 C-s42（K3 被用户推翻时除外）。</li>
+<li>R2 除 seed 判断一行外不改 benchmark 子模块、checkpoint 字节、精度、动作执行口径；不对正常任务失败重试。</li>
+<li>R3 每个 run 根全新；<code>official_queue initialize</code> 遇已存在目标抛 <code>FileExistsError</code>。旧 run（<code>o16ctx-60k-seed42/*</code>、<code>stage2-60k-seed42</code>、<code>testx-*</code>）只读不动。</li>
+<li>R4 worker 环境不导出 <code>MMEVLA_MOTION_OVERFLOW</code>、<code>XHARD_METADATA_DIR</code>；spec 不写 <code>profile</code>、<code>max_steps</code>。</li>
+<li>R5 tmux 会话一律 <code>ev3-</code> 前缀，清理只用 <code>tmux kill-session -t '=名'</code>；禁 <code>kill-server</code>。</li>
+<li>R6 占位按清单里自己的 JobID 逐个 <code>scancel</code>，禁 <code>scancel -u</code>。</li>
+<li>R7 ControlMaster 断了需重建时先问用户 Okta 验证方式。</li>
+<li>R8 删除 staging 目录前先 <code>ls -ld</code>，只删本轮登记的路径。</li>
+</ul>
+
+<h2>一、逐文件改动清单</h2>
+<table>
+<tr><th>文件</th><th>锚点</th><th>改什么</th><th>改前</th><th>改后</th></tr>
+<tr><td><code>examples/robomme/eval.py</code></td><td><code>evaluate</code> 的官方 profile 分支</td><td>seed 判断</td><td><code>args.model_seed != 42</code></td><td><code>args.model_seed not in OFFICIAL_SEEDS</code>，模块常量 <code>OFFICIAL_SEEDS = (0, 7, 42)</code>；错误信息加「seed 须为官方 0／7／42」</td></tr>
+<tr><td><code>tests/evaluation/test_official_seed_gate.py</code>（新增）</td><td>—</td><td>定向单测</td><td>—</td><td>0／7／42 通过 seed 判断（后续因缺 sha 等参数抛的其他错误不算）、1 与 -1 抛「seed 须为官方」；testx 分支行为不变；末行打印 <code>SEED_GATE=PASS allowed=0,7,42 rejected=1</code></td></tr>
+<tr><td>turbo 侧（不进 git）</td><td><code>$O/o16modul-60k-seed*/</code>、<code>$O/o16ctx-60k-seed{7,0}/</code></td><td>新建</td><td>—</td><td><code>fetch.py</code>／<code>verify.py</code>（只换 bucket 名、资产前缀 <code>vla-o16modul-</code>）、<code>inputs/episodes.json</code>（复制 10-29，双 sha 核对）、<code>inputs/run-identity.json</code>、<code>spec-input.json</code>（加 <code>model_seed</code>）、<code>run-controller-vail.sh</code>、<code>run-worker.sh</code>（只换 run 根与执行 sha）</td></tr>
+</table>
+<p>spec 模板（以 M-s7 为例，其余只换 checkpoint、run 身份、seed、contract）：</p>
+<pre>{
+  "repo": "$E/releases/&lt;新 sha&gt;",
+  "policy_python": "$E/v1-store/envs/policy/bin/python",
+  "stage2_python": "$E/v1-store/envs/stage2/bin/python",
+  "sim_python": "$E/v1-store/envs/official-sim/bin/python",
+  "checkpoint": "$E/v1-store/assets/vla-o16modul-59999-05f0b3dc…/59999",
+  "policy_config": "mme_vla_suite_orig16_b128_60k",
+  "run_identity_sha256": "&lt;按 simple-run-identity-1027 算法&gt;",
+  "model_kind": "stage2_pool4_concat",
+  "model_seed": 7,
+  "purpose": "production",
+  "target_contract": "$O/o16modul-60k-seed42/contracts/runtime.json"
+}</pre>
+<p><code>model_kind</code> 沿用 <code>stage2_pool4_concat</code>：<code>launch_official_pool.py::validate_spec</code> 只接受这个值，10-29 的 split 模型也用它，它是评估入口的类别名，不区分 readout。modulation 三个 seed 共用一份 runtime 合同（放在 seed42 目录下）。</p>
+
+<h2>二、run 身份</h2>
+<p>schema <code>simple-run-identity-1027</code>，字段：<code>checkpoint_manifest_sha256</code>（ctx <code>ada0653d6b603b5641013314d10f4e5c2ef9e68a35693730d3e67c3735d57fed</code>／modul <code>05f0b3dc04f745298a675b46213688bf118b4f372743540e14a677042eb1a814</code>）、<code>checkpoint_step=59999</code>（冒烟 5000，清单 <code>de6d990965e0477abf1aa87b1f250b13db4d795d9d38a8c579564652f725d9d8</code>）、<code>episodes_sha256=991c34960b431f4e6170357dfe428e74e404f5ccdbf8dafddc3a0a380eaeecc6</code>、<code>eval_code_commit=&lt;新 sha&gt;</code>、<code>runtime_contract_sha256</code>、<code>model_seed</code>、<code>purpose</code>、<code>model_kind</code>、<code>policy_config</code>。算法与 10-29 <code>o16ctx-60k-seed42/inputs/run-identity.json</code> 相同。</p>
+
+<h2>三、子代理分配表</h2>
+<table>
+<tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触</th><th>依赖</th><th>合并顺序</th><th>验收</th><th>资源</th><th>模型</th></tr>
+<tr><td>S0-A</td><td>官方 seed 放开到 0／7／42</td><td><code>examples/robomme/eval.py</code>、<code>tests/evaluation/test_official_seed_gate.py</code></td><td>其余全部，含 <code>scripts/evaluation/*</code>、子模块</td><td>基线 <code>9459859</code></td><td>唯一一块</td><td>worktree 内 <code>UV_PROJECT_ENVIRONMENT=&lt;主检出 .venv&gt; PYTHONPATH=&lt;worktree&gt;:&lt;worktree&gt;/src uv run --no-sync python -m pytest tests/evaluation/test_official_seed_gate.py -q</code> → <code>SEED_GATE=PASS</code>（若当前 .venv 缺依赖，改用 turbo <code>$E/v1-store/envs/policy/bin/python</code>）</td><td>CPU，无 GPU</td><td>opus，worktree</td></tr>
+<tr><td>R-S0</td><td>合并前审查</td><td>无（只读）</td><td>—</td><td>S0-A 交回</td><td>—</td><td><code>PRE_MERGE_REVIEW=PASS base=9459859… tip=&lt;sha&gt;</code></td><td>—</td><td>sonnet</td></tr>
+<tr><td>主会话</td><td>S1–S7 下载、建根、占位、控制器、worker、监听、汇总、释放</td><td>turbo run 根、<code>docs/evaluation-doc/o16-3seed-1031/</code>、<code>docs/handoff/current.json</code></td><td>旧 run 根</td><td>S0 合入</td><td>—</td><td>第一部分 §三</td><td>10×A40 占位</td><td>主会话自做：需 ControlMaster 与持续 Monitor</td></tr>
+</table>
+
+<h2>四、闸门总表</h2>
+<table>
+<tr><th>闸门</th><th>不过怎么办</th></tr>
+<tr><td><code>SEED_GATE</code></td><td>交回 S0-A 续改，两轮不过交用户</td></tr>
+<tr><td><code>VLA_DOWNLOAD</code>（5000）</td><td>重下一次，仍失败交用户；C-* 不受影响照跑</td></tr>
+<tr><td><code>SMOKE2</code></td><td>M-* 全部暂停，C-s7／C-s0 照跑；冒烟证据交用户</td></tr>
+<tr><td><code>VLA_VERIFY</code>（59999）</td><td>M-* 结果作废，交用户</td></tr>
+<tr><td><code>COMPUTE_DONE</code> 有 missing／errors</td><td>按队列既有机制处理基础设施重试；仍不齐交用户，不为成功率重跑</td></tr>
+<tr><td><code>SEED_ECHO</code> mismatch&gt;0</td><td>该 run 作废，交用户</td></tr>
+</table>
+
+<h2>五、runbook</h2>
+<pre>
+# 变量
+E=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval
+O=$E/v1-store/evaluation/official-stage2-1026
+L=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed
+
+# S2 下载（Aspen，tmux）
+tmux new-session -d -s ev3-fetch5k  "set -o pipefail; python3 -u $O/o16modul-60k-seed42/fetch.py 5000 2&gt;&amp;1 | tee $L/fetch5k.log; echo \"EXIT_CODE=\$?\" &gt;&gt; $L/fetch5k.log"
+tmux new-session -d -s ev3-fetch60k "set -o pipefail; python3 -u $O/o16modul-60k-seed42/fetch.py 59999 --size-only 2&gt;&amp;1 | tee $L/fetch60k.log; echo \"EXIT_CODE=\$?\" &gt;&gt; $L/fetch60k.log"
+#   下载完再起 ev3-verify60k：verify.py 59999
+
+# S3 占位（10 份，按 greatlakes.md 标准块）
+ssh greatlakes sbatch --account=chaijy2 --partition=spgpu --nodes=1 --ntasks-per-node=1 --gres=gpu:1 \
+  --cpus-per-task=4 --mem=24G --time=48:00:00 --job-name=ev3-hold-NN --wrap='sleep infinity'
+
+# 每次运行：初始化（执行副本内）→ sled-vail 控制器 → 10 个 worker
+python -m scripts.evaluation.official_queue initialize --run-root &lt;run 根&gt; --manifest &lt;root&gt;/inputs/episodes.json --spec &lt;root&gt;/spec-input.json
+ssh sled-vail "tmux new-session -d -s ev3-ctl-&lt;编号&gt; 'bash &lt;root&gt;/run-controller-vail.sh'"
+tmux new-session -d -s ev3-w-&lt;编号&gt;-NN "bash $L/start-worker.sh &lt;JobID&gt; worker-NN &lt;run 根&gt;"
+
+# 监听：每份 worker 日志与控制器日志各挂一个 Monitor
+tail -n +1 -F &lt;日志&gt; | stdbuf -oL tr '\r' '\n' | grep --line-buffered -E "COMPUTE_DONE|EXIT_CODE=|Error|Traceback|TimeoutError|out of memory|Session open refused"
+</pre>
+
+<h2>六、风险登记</h2>
+<table>
+<tr><th>风险</th><th>处置</th></tr>
+<tr><td>modulation 在 server 侧恢复失败（融合类型或 dim 与配置不匹配）</td><td>冒烟暴露；M-* 暂停，C-* 照跑</td></tr>
+<tr><td>seed 0 在某处被当作「未设置」走缺省 42（<code>spec.get("model_seed", 42)</code> 对 0 没问题，但其他地方若写 <code>or 42</code> 会出错）</td><td>冒烟用 seed 0 并要求 <code>server_seed=0</code>；<code>SEED_ECHO</code> 再逐局核</td></tr>
+<tr><td>ControlMaster 掉线</td><td>先问用户 Okta 方式再重建；队列支持 worker 重连</td></tr>
+<tr><td>换 run 根间隙浪费占位时间</td><td>上一 run <code>COMPUTE_DONE</code> 时即初始化下一 run 根，间隙控制在 10 分钟内</td></tr>
+<tr><td>spgpu 排队</td><td>可用占位不足 10 份时先用已到手的跑，不等齐</td></tr>
+</table>
+
+<h2>七、盲区诚实清单</h2>
+<ul>
+<li>官方 seed 7／42／0 来自提交模板与 <code>compute_results.py</code> 默认值，论文原文未列 seed，未从 PDF 核实。</li>
+<li>论文 std 可能还包含 3 个 checkpoint 的方差，本计划只有 seed 方差，两者不完全可比。</li>
+<li>C-s42 与新 5 次用的执行 sha 不同（只差 seed 判断一行）；如用户要求严格同 sha，按 K3 重跑。</li>
+<li>modulation 59999 的 <code>motion_provenance.json</code> 与 5000 是否相同尚未核对；不同则为 59999 另生成 runtime 合同。</li>
+<li>10 个 worker 并行的稳态吞吐对 modulation 未实测，时长估计按 context 的 1.5 h／800 局。</li>
+</ul>
+
+<h2>八、留档与 commit 纪律</h2>
+<ul>
+<li>留档 <code>docs/evaluation-doc/o16-3seed-1031/</code>：<code>launch.md</code>（S4 起控制器之前写好并提交）、<code>result.md</code>（逐任务三 seed 表、均值 ± std、与 Table 3 对照、5 行 COMPUTE_DONE）、<code>records/</code>（各 run 的 <code>summary.json</code>、清洗后日志摘要、下载核验日志）。</li>
+<li>S0 合并提交 subject <code>commitV11.70: 官方评估 seed 放开到 0／7／42</code>，在 <code>v4-eval-3seed-1031</code> 上，push。</li>
+<li>本分支 <code>v4-eval-official-1026</code> 只提交计划、留档与 <code>current.json</code>；每次 commit 后立即 push。</li>
+<li>开工令写进 <code>current.json</code> 的 <code>authorizations</code>（如用户同意登记状态机）。</li>
+</ul>
+
+</body>
+</html>
