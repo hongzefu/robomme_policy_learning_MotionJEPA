@@ -932,11 +932,11 @@
     "o16-modul-ctx-3seed-eval": {
       "plan": {
         "file": "1031-orig100-modul-ctx-3seed-official-eval-plan.html",
-        "sha": "e60dd9963a611fa516263e99509e88c1d20bb8b7"
+        "sha": "5db7311d12c031ad82fb898706345686aa87ee8e"
       },
-      "state": "running",
+      "state": "planned",
       "state_changed_at": "2026-10-31T22:52:02Z",
-      "state_reason": "用户对计划e60dd99直接开工；先做开工前一致性审查，再S0放开官方seed。",
+      "state_reason": "用户在开工令后要求modulation优先；计划已修订（含审查F1判据改法），等待用户对修订版重新认可，未执行任何步骤。",
       "owner": {
         "session": "3f9a4bbe-ca7a-47ff-b72e-88daea707921",
         "host": "sled-aspen.eecs.umich.edu"
@@ -976,15 +976,10 @@
       ],
       "long_tail": [],
       "running_handles": [],
-      "authorizations": [
-        {
-          "kind": "go",
-          "date": "2026-10-31",
-          "quote": "开工并登记",
-          "scope": "计划e60dd99全部步骤：S0放开seed0/7/42、modul5000冒烟2局、C-s7/C-s0/M-s42/M-s7/M-s0共4000局、10份A40占位、跑完逐个释放；C-s42复用。"
-        }
+      "authorizations": [],
+      "pending_decisions": [
+        "认可修订版计划（顺序M-s42→M-s7→M-s0→C-s7→C-s0、59999冒烟、SEED_ECHO改为三处比对）后开工"
       ],
-      "pending_decisions": [],
       "next_steps": [
         {
           "what": "开工前一致性审查后派S0子代理",
