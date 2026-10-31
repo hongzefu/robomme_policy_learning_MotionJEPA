@@ -936,7 +936,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-31T22:56:21Z",
-      "state_reason": "用户对修订版5db7311直接开工；先审修订部分，再S0。",
+      "state_reason": "S0合入5fce5d3（SEED_GATE=PASS、POST_MERGE_REVIEW=PASS），执行副本RELEASE_SNAPSHOT=PASS files=4674；modul59999 VLA_VERIFY=PASS files=42；冒烟SMOKE2=PASS accepted=2 errors=0 seed=0 integration=modulation；M-s42美东19:59起跑。",
       "owner": {
         "session": "3f9a4bbe-ca7a-47ff-b72e-88daea707921",
         "host": "sled-aspen.eecs.umich.edu"
@@ -945,15 +945,15 @@
       "pre_handoff": [
         {
           "what": "SEED_GATE=PASS allowed=0,7,42 rejected=1",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "SEED_GATE=PASS allowed=0,7,42 rejected=1；45 passed；merge 5fce5d3",
+          "where": "origin/v4-eval-3seed-1031",
+          "status": "pass"
         },
         {
           "what": "VLA_VERIFY=PASS step=59999 files=42 sha_mismatch=0（modul）",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "VLA_VERIFY=PASS step=59999 files=42 sha_mismatch=0",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/verify60k.log",
+          "status": "pass"
         },
         {
           "what": "5行COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0（C-s7/C-s0/M-s42/M-s7/M-s0）",
@@ -975,7 +975,63 @@
         }
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "ev3-ctl-ms42（sled-vail）",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/o16modul-60k-seed42/run800/logs/controller-vail.log",
+          "done_line": "COMPUTE_DONE（queue/summary.json）"
+        },
+        {
+          "tmux": "ev3-w-ms42-00",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms42-worker-00.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "ev3-w-ms42-01",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms42-worker-01.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "ev3-w-ms42-02",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms42-worker-02.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "ev3-w-ms42-03",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms42-worker-03.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "ev3-w-ms42-04",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms42-worker-04.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "ev3-w-ms42-05",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms42-worker-05.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "ev3-w-ms42-06",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms42-worker-06.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "ev3-w-ms42-07",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms42-worker-07.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "ev3-w-ms42-08",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms42-worker-08.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "ev3-w-ms42-09",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms42-worker-09.log",
+          "done_line": "EXIT_CODE=0"
+        }
+      ],
       "authorizations": [
         {
           "kind": "go",
@@ -987,9 +1043,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "开工前一致性审查后派S0子代理",
-          "command": "见计划第二部分§三",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS；SEED_GATE=PASS"
+          "what": "M-s42完成后依次M-s7→M-s0→C-s7→C-s0，同10份占位65146920-65146929",
+          "command": "各run根已有inputs/<tag>.spec-input.json与run-worker/run-controller脚本；先initialize",
+          "verdict_line": "COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0；SEED_ECHO=PASS"
         }
       ]
     }
