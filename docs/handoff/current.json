@@ -934,9 +934,9 @@
         "file": "1031-orig100-modul-ctx-3seed-official-eval-plan.html",
         "sha": "5db7311d12c031ad82fb898706345686aa87ee8e"
       },
-      "state": "planned",
-      "state_changed_at": "2026-10-31T22:52:02Z",
-      "state_reason": "用户在开工令后要求modulation优先；计划已修订（含审查F1判据改法），等待用户对修订版重新认可，未执行任何步骤。",
+      "state": "running",
+      "state_changed_at": "2026-10-31T22:56:21Z",
+      "state_reason": "用户对修订版5db7311直接开工；先审修订部分，再S0。",
       "owner": {
         "session": "3f9a4bbe-ca7a-47ff-b72e-88daea707921",
         "host": "sled-aspen.eecs.umich.edu"
@@ -976,10 +976,15 @@
       ],
       "long_tail": [],
       "running_handles": [],
-      "authorizations": [],
-      "pending_decisions": [
-        "认可修订版计划（顺序M-s42→M-s7→M-s0→C-s7→C-s0、59999冒烟、SEED_ECHO改为三处比对）后开工"
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-31",
+          "quote": "开工",
+          "scope": "修订版计划5db7311全部步骤：S0放开seed0/7/42；modul59999冒烟2局seed0；M-s42→M-s7→M-s0→C-s7→C-s0共4000局；10份A40占位跑完逐个释放；C-s42复用；SEED_ECHO按三处比对。"
+        }
       ],
+      "pending_decisions": [],
       "next_steps": [
         {
           "what": "开工前一致性审查后派S0子代理",
