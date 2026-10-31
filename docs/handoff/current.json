@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-28T03:21:33Z",
-    "america_new_york": "2026-10-27T23:21:33-0400"
+    "utc": "2026-10-31T22:52:02Z",
+    "america_new_york": "2026-10-31T18:52:02-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "3d17151ca1b13ebd4ab5637aee1707f95b37a1b4",
+    "base_head": "e60dd9963a611fa516263e99509e88c1d20bb8b7",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -23,30 +23,118 @@
       "state": "done",
       "state_changed_at": "2026-10-27T05:38:04Z",
       "state_reason": "用户批准的简化阶段一完成，保留弹性队列，固定789ef0e真实执行。单局完整执行342动作、任务失败0/1；随后两卡动态领取不同块并完整完成十局，1成功9失败、无遗漏或infra重试，两个worker退出0。控制器正常退出0，64855345与64855348已逐个取消且队列为空，本轮tmux全退出。结果和必要故障原文已归档，正式60k八百局未启动。",
-      "owner": {"session": "01a17b42-9de4-72b3-b0ed-1be85f58fb26", "host": "sled-aspen.eecs.umich.edu"},
+      "owner": {
+        "session": "01a17b42-9de4-72b3-b0ed-1be85f58fb26",
+        "host": "sled-aspen.eecs.umich.edu"
+      },
       "depends_on": [],
       "pre_handoff": [
-        {"what": "简化方案一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=4f1c09484217f2937c180fcb5a9384768822c82b findings=0 blocking=0", "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.txt", "status": "pass"},
-        {"what": "简化服务、弹性队列与必要连接短测", "evidence": "SIMPLE_QUEUE=PASS tests=3 socket_tests=1 final_tests=4 seconds=0.24", "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.txt", "status": "pass"},
-        {"what": "真实单局完整执行并独立报告任务成功字段", "evidence": "SINGLE_EP_SMOKE=PASS task_success=0/1 actions=342", "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.txt", "status": "pass"},
-        {"what": "两卡十局覆盖、成绩汇总及精确作业释放", "evidence": "TWO_WORKER_EVAL=PASS completed=10 unique=10 success=1 fail=9 timeout=0 infra=0 retries=0", "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.txt", "status": "pass"}
+        {
+          "what": "简化方案一致性审查",
+          "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=4f1c09484217f2937c180fcb5a9384768822c82b findings=0 blocking=0",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.txt",
+          "status": "pass"
+        },
+        {
+          "what": "简化服务、弹性队列与必要连接短测",
+          "evidence": "SIMPLE_QUEUE=PASS tests=3 socket_tests=1 final_tests=4 seconds=0.24",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.txt",
+          "status": "pass"
+        },
+        {
+          "what": "真实单局完整执行并独立报告任务成功字段",
+          "evidence": "SINGLE_EP_SMOKE=PASS task_success=0/1 actions=342",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.txt",
+          "status": "pass"
+        },
+        {
+          "what": "两卡十局覆盖、成绩汇总及精确作业释放",
+          "evidence": "TWO_WORKER_EVAL=PASS completed=10 unique=10 success=1 fail=9 timeout=0 infra=0 retries=0",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/official-stage2-20k-probe-1026-a/records/verification.summary.txt",
+          "status": "pass"
+        }
       ],
       "long_tail": [],
       "running_handles": [],
       "authorizations": [
-        {"kind": "go", "date": "2026-10-27", "quote": "同意，按这个简化方案开工，保留弹性 worker 队列，不要再堆叠功能和校验。尽快先跑通一局，再做两卡分片评估。", "scope": "9dfc391简化方案覆盖旧复杂门禁前置，保留弹性队列；复用20k/epoch105，先单局再两卡十局，共十一局；不启动正式八百局。"},
-        {"kind": "go", "date": "2026-10-26", "quote": "开始实现这个阶段一,然后我授权你可以使用greatlakes。 注意你这个子代理内部的这个映射你要看清楚了，就是 Cloud 和 Codex是有映射的，你要用 Codex的映射来做。", "scope": "仅本计划阶段一，Codex非AWS映射；不启动阶段二正式800局。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "同意这个，同意是用这个Aspen来做的。", "scope": "确认Aspen实际2张RTX A6000按环境A，开发与控制在Aspen，计算在GreatLakes。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "连接这个Great Lakes。", "scope": "允许复用已认证ControlMaster连接；作业仍须遵守阶段与资源约束。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "你应该能够拿到这个已经有的这个 checkpoint，然后你可以尝试 eval 一下这个效果，就是已经有的这个 VIA 的这个训练的 checkpoint，应该是早期的这个 checkpoint。", "scope": "查找并准备早期同架构VLA试评估；不默换旧768架构，模型身份与数值门仍核验。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "登记到状态机", "scope": "登记本次阶段一与早期checkpoint试评估，保留其他任务原状态。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "还有什么问题吗？你尽可能不要阻塞 能做的想做\n先做", "scope": "独立可做事项持续推进；缺资产不阻塞无依赖的实现与CPU验证。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "Motion的encoder我应该也上传了Hugging Face，你可以直接下载，应该是最新的这个Epoch一百多的那个。", "scope": "下载并核验计划锁定epoch105 EMA，SHA256=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "采用这组运行名和规格", "scope": "固定Stage2 VLA20k，run_name=official-stage2-20k-probe-1026-a，先单局再五局；单job1×A40/4CPU/24GiB/48h，结束释放。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "你query两个这个A40的叫步，然后尝试一下这个多卡的分片是不是正常的。", "scope": "在同一早期验证run使用两个独立1GPU占位检验不同固定chunk分片；共两份48h承诺96GPUh，不扩为正式800局。"},
-        {"kind": "go", "date": "2026-10-26", "quote": "批准限定探索性验证", "scope": "批准d823961计划限定20k运行；独立单局冒烟后两worker各五局，共11次真实局，来源及全部模型身份仍核验，正常失败不为成功重跑，不启动正式800。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "继续工作，你这个原计划中的这个20K探索性验证是什么意思，稍微讲一下。", "scope": "解释20k是VLA训练步数并继续原任务，保留下载及作业句柄。"},
-        {"kind": "decision", "date": "2026-10-26", "quote": "同意这么做。然后这个A100和40的问题你不用再关心了。\n不需要做到跨硬件的数值性一致。", "scope": "本任务评估不要求A100/A40跨硬件数值一致，不再等待相应输出参考、阈值或认证证书；沿现有validation用途，无需新增用途或保护层。权重/EMA/VAE/source_pin/全文件SHA/resolved/normstats/软件与精度及真实执行仍核验。同机恢复、finite与重复性独立检查；被取消项记NOT_REQUIRED reason=user_decision，不能伪PASS。"}
+        {
+          "kind": "go",
+          "date": "2026-10-27",
+          "quote": "同意，按这个简化方案开工，保留弹性 worker 队列，不要再堆叠功能和校验。尽快先跑通一局，再做两卡分片评估。",
+          "scope": "9dfc391简化方案覆盖旧复杂门禁前置，保留弹性队列；复用20k/epoch105，先单局再两卡十局，共十一局；不启动正式八百局。"
+        },
+        {
+          "kind": "go",
+          "date": "2026-10-26",
+          "quote": "开始实现这个阶段一,然后我授权你可以使用greatlakes。 注意你这个子代理内部的这个映射你要看清楚了，就是 Cloud 和 Codex是有映射的，你要用 Codex的映射来做。",
+          "scope": "仅本计划阶段一，Codex非AWS映射；不启动阶段二正式800局。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "同意这个，同意是用这个Aspen来做的。",
+          "scope": "确认Aspen实际2张RTX A6000按环境A，开发与控制在Aspen，计算在GreatLakes。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "连接这个Great Lakes。",
+          "scope": "允许复用已认证ControlMaster连接；作业仍须遵守阶段与资源约束。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "你应该能够拿到这个已经有的这个 checkpoint，然后你可以尝试 eval 一下这个效果，就是已经有的这个 VIA 的这个训练的 checkpoint，应该是早期的这个 checkpoint。",
+          "scope": "查找并准备早期同架构VLA试评估；不默换旧768架构，模型身份与数值门仍核验。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "登记到状态机",
+          "scope": "登记本次阶段一与早期checkpoint试评估，保留其他任务原状态。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "还有什么问题吗？你尽可能不要阻塞 能做的想做\n先做",
+          "scope": "独立可做事项持续推进；缺资产不阻塞无依赖的实现与CPU验证。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "Motion的encoder我应该也上传了Hugging Face，你可以直接下载，应该是最新的这个Epoch一百多的那个。",
+          "scope": "下载并核验计划锁定epoch105 EMA，SHA256=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "采用这组运行名和规格",
+          "scope": "固定Stage2 VLA20k，run_name=official-stage2-20k-probe-1026-a，先单局再五局；单job1×A40/4CPU/24GiB/48h，结束释放。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "你query两个这个A40的叫步，然后尝试一下这个多卡的分片是不是正常的。",
+          "scope": "在同一早期验证run使用两个独立1GPU占位检验不同固定chunk分片；共两份48h承诺96GPUh，不扩为正式800局。"
+        },
+        {
+          "kind": "go",
+          "date": "2026-10-26",
+          "quote": "批准限定探索性验证",
+          "scope": "批准d823961计划限定20k运行；独立单局冒烟后两worker各五局，共11次真实局，来源及全部模型身份仍核验，正常失败不为成功重跑，不启动正式800。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "继续工作，你这个原计划中的这个20K探索性验证是什么意思，稍微讲一下。",
+          "scope": "解释20k是VLA训练步数并继续原任务，保留下载及作业句柄。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "同意这么做。然后这个A100和40的问题你不用再关心了。\n不需要做到跨硬件的数值性一致。",
+          "scope": "本任务评估不要求A100/A40跨硬件数值一致，不再等待相应输出参考、阈值或认证证书；沿现有validation用途，无需新增用途或保护层。权重/EMA/VAE/source_pin/全文件SHA/resolved/normstats/软件与精度及真实执行仍核验。同机恢复、finite与重复性独立检查；被取消项记NOT_REQUIRED reason=user_decision，不能伪PASS。"
+        }
       ],
       "pending_decisions": [],
       "next_steps": []
@@ -59,48 +147,110 @@
       "state": "running",
       "state_changed_at": "2026-10-26T19:23:32Z",
       "state_reason": "用户批准CPU全量完整性+encoder1024窗并继续。原全量比较按指令停止130，packed表保留。抽样消费合同和比较器两份合前审查PASS，准备解除当前冻结合入CPU复测；真实索引跨主/torch环境得到相同1024样本SHA、16任务各64、demo332/exec692/pad68。G2例外/G3保持，正式VLA未起跑。",
-      "owner": {"session": "", "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"},
-      "depends_on": [{
-        "path": "/scratch/hongze/MotionJEPA",
-        "branch": "v12-3decoder",
-        "task": "stage3-formal-training-v1",
-        "gate": "按本次计划只读消费已产出ep105；上游按用户指令第106轮停训，状态仍running，不等待原144轮。ep105 SHA256=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035；G3仍须核EMA。"
-      }],
-      "pre_handoff": [
-        {"what": "计划一致性审查", "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=1383aba0fd77b259f0b32eadb47ea7792190145e findings=0 blocking=0", "where": "独立Astra high审查；计划固定提交1383aba", "status": "pass"},
-        {"what": "G0至G6建库与在线对拍", "evidence": "G0/G1及全量4995段65419窗PASS；G2原FAIL由用户「可以忽略 继续做」明确接受，来源例外记录待生成；EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1；EXPORT_PARITY=PASS windows=32 seed=0 max_abs=0 geometry_all_true=1；G3退出0，G4至G6待运行。", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"},
-        {"what": "G7八卡短测与严格保存回读", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/smoke/", "status": "pending"},
-        {"what": "G8正式80k训练及16份checkpoint", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/", "status": "pending"},
-        {"what": "G12远端60k依赖回读及严格恢复", "evidence": "", "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/", "status": "pending"}
+      "owner": {
+        "session": "",
+        "host": "Codex@ip-10-242-11-177.us-west-2.compute.internal"
+      },
+      "depends_on": [
+        {
+          "path": "/scratch/hongze/MotionJEPA",
+          "branch": "v12-3decoder",
+          "task": "stage3-formal-training-v1",
+          "gate": "按本次计划只读消费已产出ep105；上游按用户指令第106轮停训，状态仍running，不等待原144轮。ep105 SHA256=27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035；G3仍须核EMA。"
+        }
       ],
-      "long_tail": [{"what": "G10 MJ阶段II/III公开备份", "tmux": "cc-vla-s2-mjup", "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/mjup.log", "done_line": "MJ_CKPT_UPLOAD=PASS source_runs=2 files=35 bytes=7545592817 sha256_mismatch=0 public=1", "status": "pass", "evidence": "2026-10-26T18:21:20Z最外层EXIT_CODE=0，tmux自然退出；bucket=HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1"}],
+      "pre_handoff": [
+        {
+          "what": "计划一致性审查",
+          "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=1383aba0fd77b259f0b32eadb47ea7792190145e findings=0 blocking=0",
+          "where": "独立Astra high审查；计划固定提交1383aba",
+          "status": "pass"
+        },
+        {
+          "what": "G0至G6建库与在线对拍",
+          "evidence": "G0/G1及全量4995段65419窗PASS；G2原FAIL由用户「可以忽略 继续做」明确接受，来源例外记录待生成；EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1；EXPORT_PARITY=PASS windows=32 seed=0 max_abs=0 geometry_all_true=1；G3退出0，G4至G6待运行。",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/",
+          "status": "pending"
+        },
+        {
+          "what": "G7八卡短测与严格保存回读",
+          "evidence": "",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/validation/stage2-memory/smoke/",
+          "status": "pending"
+        },
+        {
+          "what": "G8正式80k训练及16份checkpoint",
+          "evidence": "",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/train-runs/mme_vla_suite_b128_80k/mixed8-200-m8x8-modul-motion-stage2-1024-b128-80k/",
+          "status": "pending"
+        },
+        {
+          "what": "G12远端60k依赖回读及严格恢复",
+          "evidence": "",
+          "where": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [
+        {
+          "what": "G10 MJ阶段II/III公开备份",
+          "tmux": "cc-vla-s2-mjup",
+          "log": "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/logs/vla-s2-20261026/mjup.log",
+          "done_line": "MJ_CKPT_UPLOAD=PASS source_runs=2 files=35 bytes=7545592817 sha256_mismatch=0 public=1",
+          "status": "pass",
+          "evidence": "2026-10-26T18:21:20Z最外层EXIT_CODE=0，tmux自然退出；bucket=HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1"
+        }
+      ],
       "running_handles": [],
-      "authorizations": [{
-        "kind": "go", "date": "2026-10-26",
-        "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md 开工 有问题问用户 所有subagebt必须全部astra high",
-        "scope": "计划1383aba主run实施、建库、短测、80k训练、VLA及MJ上传与60k交付验收；全部子代理Astra high。备选B与benchmark不在范围内。"
-      }, {
-        "kind": "decision", "date": "2026-10-26",
-        "quote": "同意推送 要和github同步",
-        "scope": "建立origin/v4-256concat1跟踪并推送；后续本次实施提交通过审查后持续同步GitHub。"
-      }, {
-        "kind": "go", "date": "2026-10-26",
-        "quote": "可以忽略 继续做",
-        "scope": "明确接受已报告G2跨精度数值失败并继续原主run；原G2.json保留FAIL，新WAIVED记录限定原失败SHA/本次ckpt/G0清单，身份和其余闸门不放松。不再进行此前建议的单窗诊断。"
-      }, {
-        "kind": "decision", "date": "2026-10-26",
-        "quote": "同意按照你说过的更省时方案 做\nencoder只抽机小部分",
-        "scope": "G5改为CPU全量字节/文件SHA核验加encoder分层1024窗（承接前一问gpu只算1024个），不再全量GPU重算。原packed表保留，只声明encoder抽样一致；其余门槛保持。"
-      }, {
-        "kind": "go", "date": "2026-10-26",
-        "quote": "同意继续",
-        "scope": "按上述CPU全量+GPU1024窗方案继续原主run，无需重复确认。"
-      }],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-26",
+          "quote": "/scratch/hongze/robomme_policy_learning_MotionJEPA/1026-vla-stage2-memory-1024-train-plan.md 开工 有问题问用户 所有subagebt必须全部astra high",
+          "scope": "计划1383aba主run实施、建库、短测、80k训练、VLA及MJ上传与60k交付验收；全部子代理Astra high。备选B与benchmark不在范围内。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "同意推送 要和github同步",
+          "scope": "建立origin/v4-256concat1跟踪并推送；后续本次实施提交通过审查后持续同步GitHub。"
+        },
+        {
+          "kind": "go",
+          "date": "2026-10-26",
+          "quote": "可以忽略 继续做",
+          "scope": "明确接受已报告G2跨精度数值失败并继续原主run；原G2.json保留FAIL，新WAIVED记录限定原失败SHA/本次ckpt/G0清单，身份和其余闸门不放松。不再进行此前建议的单窗诊断。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-26",
+          "quote": "同意按照你说过的更省时方案 做\nencoder只抽机小部分",
+          "scope": "G5改为CPU全量字节/文件SHA核验加encoder分层1024窗（承接前一问gpu只算1024个），不再全量GPU重算。原packed表保留，只声明encoder抽样一致；其余门槛保持。"
+        },
+        {
+          "kind": "go",
+          "date": "2026-10-26",
+          "quote": "同意继续",
+          "scope": "按上述CPU全量+GPU1024窗方案继续原主run，无需重复确认。"
+        }
+      ],
       "pending_decisions": [],
       "next_steps": [
-        {"what": "完成sampled比较器/消费合同合审并合入；仅恢复sampled→verify，不再次启动run-pack.sh", "command": "合同主仓validation/stage2-memory/sampled-g5-contract.md；固定seed0/16任务每64/总1024；SAMPLED_G5_DESIGN_REVIEW=PASS", "verdict_line": "PACKED_TOKEN_BYTES=PASS compared=65419；ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=65419；VERIFY_MOTION=PASS"},
-        {"what": "保留packed表和原中断日志；抽样认证随stage2_compat完整传递；完成后绑定yaml SHA、注册encoder并G6/G4", "command": "table SHA=8de36e670d58c60859d48b37f29c989f2eed45344f5cd5fb2f7a96126394ee5c；index SHA=de388cb42f1fbb27e39dc429a6252cd755d6f67324c4eb8f236c4f60bf68e1ec；G4剩7126秒", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS"},
-        {"what": "G6、G4、20步与保存恢复通过后才正式80k；G2的用户例外须完整随快照和交付传递", "command": "按原计划主run，备选B和benchmark不启动", "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"}
+        {
+          "what": "完成sampled比较器/消费合同合审并合入；仅恢复sampled→verify，不再次启动run-pack.sh",
+          "command": "合同主仓validation/stage2-memory/sampled-g5-contract.md；固定seed0/16任务每64/总1024；SAMPLED_G5_DESIGN_REVIEW=PASS",
+          "verdict_line": "PACKED_TOKEN_BYTES=PASS compared=65419；ENCODER_SAMPLE_BITEXACT=PASS compared=1024 total=65419；VERIFY_MOTION=PASS"
+        },
+        {
+          "what": "保留packed表和原中断日志；抽样认证随stage2_compat完整传递；完成后绑定yaml SHA、注册encoder并G6/G4",
+          "command": "table SHA=8de36e670d58c60859d48b37f29c989f2eed45344f5cd5fb2f7a96126394ee5c；index SHA=de388cb42f1fbb27e39dc429a6252cd755d6f67324c4eb8f236c4f60bf68e1ec；G4剩7126秒",
+          "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS"
+        },
+        {
+          "what": "G6、G4、20步与保存恢复通过后才正式80k；G2的用户例外须完整随快照和交付传递",
+          "command": "按原计划主run，备选B和benchmark不启动",
+          "verdict_line": "TRAIN_ES_BOUND=PASS；ONLINE_OFFLINE_PARITY=PASS；SMOKE_TRAIN=PASS；SAVE_LOAD=PASS"
+        }
       ]
     },
     "paired4-training-smoke": {
@@ -776,6 +926,70 @@
           "what": "写评估档案（可选）",
           "command": "—",
           "verdict_line": "—"
+        }
+      ]
+    },
+    "o16-modul-ctx-3seed-eval": {
+      "plan": {
+        "file": "1031-orig100-modul-ctx-3seed-official-eval-plan.html",
+        "sha": "e60dd9963a611fa516263e99509e88c1d20bb8b7"
+      },
+      "state": "running",
+      "state_changed_at": "2026-10-31T22:52:02Z",
+      "state_reason": "用户对计划e60dd99直接开工；先做开工前一致性审查，再S0放开官方seed。",
+      "owner": {
+        "session": "3f9a4bbe-ca7a-47ff-b72e-88daea707921",
+        "host": "sled-aspen.eecs.umich.edu"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "SEED_GATE=PASS allowed=0,7,42 rejected=1",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "VLA_VERIFY=PASS step=59999 files=42 sha_mismatch=0（modul）",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "5行COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0（C-s7/C-s0/M-s42/M-s7/M-s0）",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "THREE_SEED=PASS model=modul与model=ctx",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "HOLDS_RELEASED=PASS",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "go",
+          "date": "2026-10-31",
+          "quote": "开工并登记",
+          "scope": "计划e60dd99全部步骤：S0放开seed0/7/42、modul5000冒烟2局、C-s7/C-s0/M-s42/M-s7/M-s0共4000局、10份A40占位、跑完逐个释放；C-s42复用。"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "开工前一致性审查后派S0子代理",
+          "command": "见计划第二部分§三",
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS；SEED_GATE=PASS"
         }
       ]
     }
