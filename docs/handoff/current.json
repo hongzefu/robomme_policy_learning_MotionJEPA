@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-10-31T22:52:02Z",
-    "america_new_york": "2026-10-31T18:52:02-0400"
+    "utc": "2026-11-01T03:29:46Z",
+    "america_new_york": "2026-10-31T23:29:46-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "e60dd9963a611fa516263e99509e88c1d20bb8b7",
+    "base_head": "9bacb4c1c49d417b2fd94e7345d07a39d10a33dd",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1070,6 +1070,138 @@
           "what": "M-s42完成后依次M-s7→M-s0→C-s7→C-s0，同10份占位65146920-65146929",
           "command": "各run根已有inputs/<tag>.spec-input.json与run-worker/run-controller脚本；先initialize",
           "verdict_line": "COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0；SEED_ECHO=PASS"
+        }
+      ]
+    },
+    "gl-orig100-ctx-reproduce-phase1": {
+      "plan": {
+        "file": "1031-gl-orig100-ctx-motion-reproduce-plan.html",
+        "sha": null
+      },
+      "state": "planned",
+      "state_changed_at": "2026-11-01T03:29:46Z",
+      "state_reason": "计划已提交（9bacb4c），等第一阶段开工令",
+      "owner": {
+        "session": "",
+        "host": "sled-aspen.eecs.umich.edu"
+      },
+      "depends_on": [],
+      "pre_handoff": [
+        {
+          "what": "V1–V8 含 V7b 全部 PASS；冒烟占位已 scancel",
+          "evidence": "",
+          "where": "turbo v1-store/logs/o16gl-*.log；计划「实施中实测」小节",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "decision",
+          "date": "2026-10-31",
+          "quote": "你可以使用本地 Aspen 的 GPU 去进行一次冒烟测试，但是 Great Lakes 的 job 在用户批准之后再开始。就是这个计划分为两阶段……正式训练需要用户再批准。",
+          "scope": "两阶段；第二阶段另要开工令"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-31",
+          "quote": "我同意你不要续跑，直接一次申请一个非常长的 job。",
+          "scope": "正式训练不续跑，一次超长 walltime 占位"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-31",
+          "quote": "原始的这个 H5 不要下载了。",
+          "scope": "K3"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-31",
+          "quote": "都用四个 A 四零，放弃八个 A 四零",
+          "scope": "K5；三档测时位置选「GreatLakes 4×A40（推荐）」，等于放行第一阶段 1 份 4 卡 48h 占位"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-31",
+          "quote": "用global batch size 64 不行再降低",
+          "scope": "K4：global 64 兜底 32"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-31",
+          "quote": "登记（推荐）",
+          "scope": "K10：登记两阶段任务"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "等用户对计划 9bacb4c 给第一阶段开工令；开工前先派 sonnet 做 PLAN_CONSISTENCY_REVIEW",
+          "command": "",
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS base=<sha> blocking=0"
+        }
+      ]
+    },
+    "gl-orig100-ctx-reproduce-train": {
+      "plan": {
+        "file": "1031-gl-orig100-ctx-motion-reproduce-plan.html",
+        "sha": null
+      },
+      "state": "planned",
+      "state_changed_at": "2026-11-01T03:29:46Z",
+      "state_reason": "等第一阶段 done 且用户另给开工令",
+      "owner": {
+        "session": "",
+        "host": "sled-aspen.eecs.umich.edu"
+      },
+      "depends_on": [
+        "gl-orig100-ctx-reproduce-phase1"
+      ],
+      "pre_handoff": [
+        {
+          "what": "V9、V10；占位已 scancel；档案与回写 commit 已 push",
+          "evidence": "",
+          "where": "turbo v1-store/logs/<run>.log；docs/training-doc/<run>/",
+          "status": "pending"
+        }
+      ],
+      "long_tail": [
+        {
+          "what": "12 份 ckpt 公开上传并集群 CPU job 读回校验",
+          "tmux": "o16gl-ckpt-up",
+          "log": "v1-store/logs/o16gl-ckpt-up.log",
+          "done_line": "HF_VERIFY=PASS",
+          "status": "pending"
+        }
+      ],
+      "running_handles": [],
+      "authorizations": [
+        {
+          "kind": "decision",
+          "date": "2026-10-31",
+          "quote": "你可以使用本地 Aspen 的 GPU 去进行一次冒烟测试，但是 Great Lakes 的 job 在用户批准之后再开始。就是这个计划分为两阶段……正式训练需要用户再批准。",
+          "scope": "两阶段；第二阶段另要开工令"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-31",
+          "quote": "都用四个 A 四零，放弃八个 A 四零",
+          "scope": "K5；三档测时位置选「GreatLakes 4×A40（推荐）」，等于放行第一阶段 1 份 4 卡 48h 占位"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-31",
+          "quote": "用global batch size 64 不行再降低",
+          "scope": "K4：global 64 兜底 32"
+        }
+      ],
+      "pending_decisions": [],
+      "next_steps": [
+        {
+          "what": "第一阶段 A4 汇总后交用户批准第二阶段",
+          "command": "",
+          "verdict_line": "HOLD_SUBMIT=PASS jobid=<id> gpus=4 time=<h>"
         }
       ]
     }
