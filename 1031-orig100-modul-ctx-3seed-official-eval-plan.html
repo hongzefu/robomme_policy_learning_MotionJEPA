@@ -120,7 +120,7 @@ elif (args.dataset != "test" or args.max_steps != 1300 or ... or args.model_seed
 <tr><td>冒烟</td><td>59999、seed 0、同两局（<code>BinFill:0</code>、<code>VideoPlaceOrder:18</code>）、<code>purpose=validation</code>。放在 59999 下载并 <code>VLA_VERIFY=PASS</code> 后的第一个换 run 根间隙：上一次运行 <code>COMPUTE_DONE</code> 后先用 1 份占位跑冒烟（约 20 分钟，其余 9 份空等），通过后再起下一次运行。ControlMaster 只允许 10 个会话，不能和正在跑的 10 个 worker 并行。判定 <code>SMOKE2=PASS accepted=2 errors=0 seed=0 readout=stage2_pool4_concat_v1 budget=96</code>；不过则 CC-* 停、交用户裁决，其余运行照跑。</td></tr>
 <tr><td>顺序与时间</td><td>M-s42（21:25）→ M-s7（23:00）→ M-s0（00:35）→ C-s7 → C-s0 → CC-s42 → CC-s7 → CC-s0。冒烟插在 59999 可用后的第一个间隙，整体推迟约 20 分钟。按实测每次 800 局约 85 分钟、换根约 10 分钟，C-s0 约 11-01 04:05，CC 三次约 09:00 完成，汇总与释放约 09:15（均美东）。</td></tr>
 <tr><td>资源</td><td>沿用 10 份占位 65146920–65146929（美东 10-31 18:58 提交、48 h，到期约 11-02 18:58），不新提交。实际占用由约 85 GPU·h 增至约 135 GPU·h。</td></tr>
-<tr><td>59999 迟迟不出现</td><td>C-s0 跑完时若 59999 仍未上传：报告用户，占位是保留等待还是先释放由用户决定，不自动处置。</td></tr>
+<tr><td>59999 迟迟不出现</td><td>C-s0 跑完时若 59999 仍未上传：10 份占位直接逐个 <code>scancel</code>（用户 2026-10-31 裁决原话：「C-s0 跑完时 59999 还没上传 10 份占位直接取消」），CC-* 本轮不跑，报告用户。</td></tr>
 <tr><td>验收追加</td><td>concat <code>VLA_DOWNLOAD=PASS</code>／<code>VLA_VERIFY=PASS step=59999</code>、冒烟 <code>SMOKE2=PASS</code>、3 行 <code>COMPUTE_DONE</code>、3 行 <code>SEED_ECHO=PASS</code>、<code>THREE_SEED=PASS model=ctxcat</code>。<code>HOLDS_RELEASED=PASS cancelled=10</code> 移到 CC-s0 之后。</td></tr>
 </table>
 <h2>三、验收判定行</h2>
