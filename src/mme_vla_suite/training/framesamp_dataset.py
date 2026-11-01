@@ -148,7 +148,14 @@ class FrameSampDataset(Dataset):
             and hc.memory_token_dim == 2048
             and not self._motion_enabled
         )
-        _req(legacy_shape or new_shape or ctx_shape,
+        # GL 三档测时（1031 计划 K9）：只放行 (256,16,1)/(1024,16,1)+context+无 motion，仅供 o16gl-tier 测时 yaml。
+        tier_shape = (
+            all(type(v) is int for v in raw)
+            and raw in {(256, 16, 1), (1024, 16, 1)}
+            and str(hc.integration_type) == "context"
+            and not self._motion_enabled
+        )
+        _req(legacy_shape or new_shape or ctx_shape or tier_shape,
              f"(budget,token_per_image,num_views)={raw}（类型 {tuple(type(v).__name__ for v in raw)}）、"
              f"integration_type={hc.integration_type!r}、motion_enabled={self._motion_enabled} "
              "不在支持的 (512,16,1)/(512,64,1)、(1024/2048/4096,64,1)+modulation+无 motion "

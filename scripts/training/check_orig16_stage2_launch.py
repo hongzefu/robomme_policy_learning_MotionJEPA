@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import dataclasses
 import importlib.util
 import json
@@ -32,6 +33,64 @@ READOUTS = {"4x256": SPLIT, "1x1024": CONCAT}
 ATTEMPT_KEYS = {"base_run", "run", "history", "train_head", "decision", "bucket"}
 HISTORIES = tuple(f"perceptual-framesamp-{fusion}-{frames}-motion-stage2-{readout}-orig16.yaml"
     for fusion in ("ctx", "modul") for frames in ("32frame-4x4", "8frame-8x8") for readout in ("1x1024", "4x256"))
+# ── GreatLakes 复现（1031 计划 K4/K6/K9/K11）：卡数可变口径，只对 fsdp 2/4 生效，默认 8 卡 B128 不变 ──
+GL_FSDP = (2, 4)
+GL_HISTORY = "perceptual-framesamp-ctx-32frame-4x4-motion-stage2-4x256-orig16.yaml"
+# 三份测时 yaml（仅供 o16gl-tier- 测时）→ 帧路记忆总预算。
+TIER_HISTORIES = {f"perceptual-framesamp-ctx-{frames}frame-4x4-nomotion-tier-orig16.yaml": frames * 16
+                  for frames in (16, 32, 64)}
+GL_SMOKE, GL_TIER = "o16gl-smoke-", "o16gl-tier-"
+# (运行类别, 步数) → 允许的 global batch；表外组合一律 FAIL。
+GL_COMBOS = {("formal", 60000): (64, 32), ("smoke", 20): (32, 16), ("smoke", 100): (64, 32), ("tier", 100): (64,)}
+EVIDENCE_ENV = "MMEVLA_STAGE2_EVIDENCE_ROOT"
+ONLINE_INPUTS = "online_restore_inputs.json"
+
+
+def gl_formal_run(batch):
+    return f"gl-orig100-ctx32x4x4-motion-s2split4x256-b{batch}-60k"
+
+
+def gl_kind(run):
+    """GL 运行类别：o16gl-tier- 测时、o16gl-smoke- 冒烟，其余按正式口径。"""
+    return "tier" if run.startswith(GL_TIER) else "smoke" if run.startswith(GL_SMOKE) else "formal"
+
+
+def gl_combo_ok(*, fsdp, batch, steps, run, history_name):
+    """入口与合同共用的 GL 组合表；正式只认 ctx 4x256 与 gl-orig100-…-b<batch>-60k。"""
+    kind = gl_kind(run)
+    if fsdp not in GL_FSDP or batch not in GL_COMBOS.get((kind, steps), ()):
+        return False
+    if kind == "tier":
+        return history_name in TIER_HISTORIES
+    return history_name == GL_HISTORY and (kind != "formal" or run == gl_formal_run(batch))
+
+
+def rebase_provenance(provenance, root):
+    """只把 stage2_compat.evidence.*.path 的父目录换成 root（不换文件名），其余逐字不动。"""
+    prov = copy.deepcopy(provenance)
+    for item in prov["stage2_compat"]["evidence"].values():
+        item["path"] = str(Path(root) / Path(item["path"]).name)
+    return prov
+
+
+def verify_evidence_root(root, provenance):
+    """逐文件核重定根目录：五份证据按 provenance 记录的 SHA，在线输入 NPZ 按其 JSON 内 payload SHA。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    root = Path(root)
+    evidence = provenance["stage2_compat"]["evidence"]
+    bad = []
+    for role in ms.stage2_evidence_roles(provenance):
+        path = root / Path(evidence[role]["path"]).name
+        if not path.is_file() or sha256_file(path) != evidence[role]["sha256"]:
+            bad.append(role)
+    portable = root / ONLINE_INPUTS
+    payload = json.loads(portable.read_text()).get("payload", {}) if portable.is_file() else {}
+    npz = root / "online_restore_inputs.npz"
+    if not portable.is_file():
+        bad.append(ONLINE_INPUTS)
+    if payload.get("path") != npz.name or not npz.is_file() or sha256_file(npz) != payload.get("sha256"):
+        bad.append(npz.name)
+    return len(ms.stage2_evidence_roles(provenance)) + 2, bad
 
 
 def load_script(relative):
@@ -133,7 +192,7 @@ def check_nosplit_config(repo, fusion):
 
 
 def load_yaml(repo, name):
-    if name not in HISTORIES:
+    if name not in HISTORIES and name not in TIER_HISTORIES:
         raise ValueError(f"history不在八组合内: {name}")
     return legacy.load_yaml(repo, name)
 
@@ -162,6 +221,22 @@ def check_history(rec, history, contract=Contract()):
     return spec
 
 
+def check_tier_history(rec, history, name):
+    """测时 yaml：正式 ctx 4x256 删 motion 段、只改 budget，其余逐键相同。"""
+    budget = TIER_HISTORIES[name]
+    rec("FRAME_LAYOUT", history.get("token_per_image") == 16 and history.get("budget") == budget
+        and history.get("num_views") == 1 and history.get("streaming_obs_horizon") == 16)
+    rec("FUSION", history.get("integration_type") == "context" and history.get("memory_token_dim") == 2048)
+    expected = {key: value for key, value in legacy.load_yaml(REPO, GL_HISTORY).items() if key != "motion"}
+    expected["budget"] = budget
+    rec("HISTORY_KEYS", history == expected, "测时yaml只允许删motion段与改budget")
+    if not rec.failed:
+        print(f"FRAME_LAYOUT=PASS layout=4x4 frames={budget // 16} tokens_per_frame=16 budget={budget}")
+        print("MOTION_LAYOUT=SKIP motion=0 reason=tier")
+        print("FUSION=PASS integration=context memory_token_dim=2048")
+    return None
+
+
 def parse_cli(argv):
     from mme_vla_suite.training import config
     previous = sys.argv
@@ -172,9 +247,11 @@ def parse_cli(argv):
         sys.argv = previous
 
 
-def check_argv(rec, argv, steps):
+def check_argv(rec, argv, steps, gl=False):
     rec("ARGV_CONFIG_NAME", bool(argv) and argv[0] == CONFIG_NAME)
     allowed = legacy.VALUE_FLAGS | {"--model.history-config"}
+    if gl:
+        allowed |= {"--fsdp-devices", "--num-workers", "--batch-size"}
     unknown, seen, i = [], set(), 1
     while i < len(argv):
         token = argv[i]
@@ -193,20 +270,29 @@ def check_argv(rec, argv, steps):
             i += 1
     rec("ARGV_ALLOWLIST", not unknown, str(unknown))
     values = legacy.flag_value(argv, "--num-train-steps")
-    rec("ARGV_STEPS", (steps == 60000 and not values) or (steps == 20 and values == ["20"]))
+    rec("ARGV_STEPS", (steps == 60000 and not values) or (steps == 20 and values == ["20"])
+        or (gl and steps == 100 and values == ["100"]))
     rec("ARGV_HISTORY", argv.count("--model.use-history") == 1)
 
 
-def check_config(rec, cfg, base, *, store, contract, steps, history_name, history, attempt=None):
+def check_config(rec, cfg, base, *, store, contract, steps, history_name, history, attempt=None,
+                 fsdp_devices=None, batch_size=None):
     from mme_vla_suite.training import config
+    # GL 口径只放开 batch 与 fsdp/num_workers 两项资源量；未传时期望值即合同默认（逐位同原检查）。
+    fsdp = contract.fsdp_devices if fsdp_devices is None else fsdp_devices
+    gl = fsdp in GL_FSDP
+    want = dict(batch_size=contract.batch_size if batch_size is None else batch_size, fsdp_devices=fsdp,
+                num_workers=2 * fsdp if gl else contract.num_workers, seed=contract.seed, ema_decay=contract.ema_decay)
     for key in ("batch_size", "fsdp_devices", "num_workers", "seed", "ema_decay"):
-        rec(f"CFG_{key.upper()}", getattr(cfg, key) == getattr(base, key) == getattr(contract, key))
-    rec("CFG_STEPS", cfg.num_train_steps == steps and base.num_train_steps == 60000 and steps in (20, 60000))
+        rec(f"CFG_{key.upper()}", getattr(cfg, key) == want[key] and getattr(base, key) == getattr(contract, key))
+    rec("CFG_STEPS", cfg.num_train_steps == steps and base.num_train_steps == 60000
+        and steps in ((20, 100, 60000) if gl else (20, 60000)))
     rec("CFG_SCHEDULE", cfg.lr_schedule == base.lr_schedule and (cfg.lr_schedule.warmup_steps,
         cfg.lr_schedule.peak_lr, cfg.lr_schedule.decay_steps, cfg.lr_schedule.decay_lr) == (5000, 5e-5, 60000, 5e-5))
     rec("CFG_MODEL", cfg.model == dataclasses.replace(base.model, history_config=history_name) and cfg.model.use_history)
     layout = "framesamp-4x4" if history["token_per_image"] == 16 else "framesamp-8x8"
     expected = dataclasses.replace(base, exp_name=cfg.exp_name, num_train_steps=steps,
+        batch_size=want["batch_size"], fsdp_devices=want["fsdp_devices"], num_workers=want["num_workers"],
         model=dataclasses.replace(base.model, history_config=history_name),
         dataset_path=str(store / contract.parent_rel / layout), assets_base_dir=str(store / "v1-store/train-assets"),
         checkpoint_base_dir=str(store / "v1-store/train-runs"),
@@ -217,13 +303,34 @@ def check_config(rec, cfg, base, *, store, contract, steps, history_name, histor
     rec("CFG_EXACT", cfg == expected, "完整配置除已列CLI路径/名称/短测步数外须等于新60k配置")
     rec("CFG_IMPORT_ROOT", config.OPENPI_DATA_HOME == str(store / "v1-store/models"))
     # 正式60k只允许32×4×4与(融合,读法)映射的运行名；设置attempt时只放行其已登记的run。
-    allowed = RUNS.get((history["integration_type"], history["motion"]["readout"])) if attempt is None else attempt
-    rec("CFG_RUN", (history["token_per_image"] == 16 and cfg.exp_name == allowed) if steps == 60000
-        else cfg.exp_name.startswith("o16-smoke-"), f"exp_name={cfg.exp_name} allowed={allowed}")
+    if gl:
+        # GL：正式只认 gl-orig100-…-b<64|32>-60k；20/100 步只认 o16gl- 前缀，组合细则见 GL_COMBO。
+        kind = gl_kind(cfg.exp_name)
+        rec("CFG_RUN", gl_combo_ok(fsdp=fsdp, batch=want["batch_size"], steps=steps, run=cfg.exp_name,
+            history_name=history_name) and (kind == "formal") == (steps == 60000), f"exp_name={cfg.exp_name} kind={kind}")
+    else:
+        allowed = RUNS.get((history["integration_type"], history["motion"]["readout"])) if attempt is None else attempt
+        rec("CFG_RUN", (history["token_per_image"] == 16 and cfg.exp_name == allowed) if steps == 60000
+            else cfg.exp_name.startswith("o16-smoke-"), f"exp_name={cfg.exp_name} allowed={allowed}")
     rec("CFG_NEW_RUN", not cfg.checkpoint_dir.exists() and not cfg.checkpoint_dir.is_symlink())
 
 
-def check_dataset(rec, store, contract, history):
+def check_evidence_lineage(rec, evidence_dir, motion, checkpoint, contract):
+    """MJ 源清单缺失时的证据 SHA 路由（K11/F4）：核库根 evidence/ 五份与 encoder，不调 check_lineage、不读 H5。"""
+    from mme_vla_suite.datastore import motion_store as ms
+    evidence = motion.provenance["stage2_compat"]["evidence"]
+    roles = ms.stage2_evidence_roles(motion.provenance)
+    bad = [role for role in roles if sha256_file(evidence_dir / f"{role}.json") != evidence[role]["sha256"]]
+    ckpt = sha256_file(checkpoint)
+    ok = rec("ENCODER_DATA_LINEAGE", not bad and ckpt == contract.encoder_sha256
+             == motion.provenance["encoder"]["checkpoint_sha256"], f"route=evidence mismatches={bad}")
+    print("LINEAGE_ROUTE=evidence")
+    if ok:
+        print(f"DATA_LINEAGE=PASS route=evidence encoder_ckpt={ckpt[:8]} evidence_files={len(roles)} mismatches=0")
+    return {"route": "evidence", "encoder_ckpt": ckpt, "files": len(roles), "mismatches": len(bad)}
+
+
+def check_dataset(rec, store, contract, history, env=None):
     from mme_vla_suite.datastore import motion_store as ms
     from mme_vla_suite.datastore.manifest import load_manifest
     from mme_vla_suite.policies.motion_client import validate_stage2_evidence
@@ -240,6 +347,8 @@ def check_dataset(rec, store, contract, history):
     meta = json.loads((frame_path / "meta/store_meta.json").read_text())
     rec("DATASET_LAYOUT", meta.get("layout") == layout and meta.get("status") == "verified"
         and meta.get("manifest_scope") == "full" and meta.get("manifest_sha256") == manifest["sha256"])
+    if "motion" not in history:
+        return None  # 测时 yaml 无 motion：跳过 motion 表、证据与血缘（计划 S1 契约行）
     bounds = legacy.manifest_bounds(manifest)
     rec("WINDOW_BUDGET", bounds["rows"] == contract.motion_rows and bounds["train_max"] == contract.train_max
         and type(contract.train_max) is int and contract.train_max <= 96)
@@ -252,11 +361,23 @@ def check_dataset(rec, store, contract, history):
         and motion.provenance["encoder"]["checkpoint_sha256"] == contract.encoder_sha256)
     if not ms.stage2_uses_cache(motion.provenance):
         raise ValueError("原版16×100必须使用published-cache-with-local-fill来源合同")
-    validate_stage2_evidence(motion.provenance, motion.root)
+    evidence_root = (env or {}).get(EVIDENCE_ENV)
+    if evidence_root:
+        files, bad = verify_evidence_root(evidence_root, motion.provenance)
+        if bad:
+            raise ValueError(f"重定根证据SHA不符: {bad}")
+        print(f"EVIDENCE_REBASE=PASS files={files} sha_mismatch=0")
+        validate_stage2_evidence(rebase_provenance(motion.provenance, evidence_root), motion.root)
+    else:
+        validate_stage2_evidence(motion.provenance, motion.root)
     rec("INPUT_EQUIVALENCE", True, "G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入")
     lineage = load_script("scripts/training/check_data_lineage.py")
     checkpoint = store / "v1-store/external/motionjepa" / contract.encoder_run / "checkpoint_epoch_105.pt"
     rec("ENCODER_CONFIG_SHA", sha256_file(checkpoint.parent / "config.yaml") == motion.provenance["encoder"]["config_sha256"])
+    evidence_dir = parent / "evidence"
+    if not Path(contract.mj_source_manifest).exists() and all(
+            (evidence_dir / f"{role}.json").is_file() for role in ms.stage2_evidence_roles(motion.provenance)):
+        return check_evidence_lineage(rec, evidence_dir, motion, checkpoint, contract)
     result = lineage.check_lineage(checkpoint, contract.encoder_sha256, parent / "meta/input_manifest.json",
                                    contract.mj_source_manifest)
     rec("ENCODER_DATA_LINEAGE", result["files"] == contract.tasks and result["mismatches"] == 0)
@@ -269,18 +390,39 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
     rec = Recorder()
     env = dict(os.environ if env is None else env)
     store = Path(args.store_root).resolve()
+    fsdp = getattr(args, "fsdp_devices", contract.fsdp_devices)
+    batch = getattr(args, "batch_size", contract.batch_size)
+    gpus_visible = getattr(args, "gpus_visible", None)
+    gl = fsdp in GL_FSDP
     rec("BUILD_PINS", PLACEHOLDER not in str(dataclasses.asdict(contract)), "构建pin必须全部回填")
-    rec.guard("ARGV", check_argv, rec, argv, args.steps)
-    rec.guard("ENV", legacy.check_env, rec, env, store, contract)
-    if env.get("CUDA_VISIBLE_DEVICES") == contract.gpus:
+    rec.guard("ARGV", check_argv, rec, argv, args.steps, gl)
+    rec.guard("ENV", legacy.check_env, rec, env, store, contract, gpus_visible)
+    if not gl and (fsdp, batch) != (contract.fsdp_devices, contract.batch_size):
+        rec("GL_COMBO", False, f"非GL口径只认fsdp={contract.fsdp_devices} batch={contract.batch_size}")
+    if gl:
+        count = len(gpus_visible.split(",")) if gpus_visible else None
+        if rec("GL_GPU_COUNT", gpus_visible is not None and count in (None, fsdp), f"visible={gpus_visible} fsdp={fsdp}"):
+            print(f"GPU_SCOPE=PASS visible={gpus_visible or '<slurm>'} fsdp={fsdp}")
+    elif env.get("CUDA_VISIBLE_DEVICES") == contract.gpus:
         print("GPU_SCOPE=PASS allowed=0-7")
     names = legacy.flag_value(argv, "--model.history-config")
-    if len(names) != 1 or names[0] not in HISTORIES:
+    if len(names) != 1 or names[0] not in (HISTORIES + tuple(TIER_HISTORIES) if gl else HISTORIES):
         rec("HISTORY_NAME", False, str(names))
         return rec
     name = names[0]
-    # 按当前history读法选ctx/modul配对；两份只允许融合方式与记忆宽度不同。
-    fusion_tag, readout_tag = name.split("-")[2], name.split("-")[-2]
+    tier = name in TIER_HISTORIES
+    if gl:
+        runs = legacy.flag_value(argv, "--exp-name")
+        rec("GL_COMBO", len(runs) == 1 and gl_combo_ok(fsdp=fsdp, batch=batch, steps=args.steps, run=runs[0],
+            history_name=name), f"fsdp={fsdp} batch={batch} steps={args.steps} run={runs} history={name}")
+        root = env.get(EVIDENCE_ENV)
+        if tier:
+            rec("ENV_EVIDENCE_ROOT", not root, "测时无motion，不设证据重定根")
+        else:
+            rec("ENV_EVIDENCE_ROOT", bool(root) and Path(root).is_absolute() and Path(root).is_dir(),
+                f"{EVIDENCE_ENV}={root or '<未设置>'}")
+    # 按当前history读法选ctx/modul配对；两份只允许融合方式与记忆宽度不同。测时yaml按正式split配对核。
+    fusion_tag, readout_tag = ("ctx", "4x256") if tier else (name.split("-")[2], name.split("-")[-2])
     pairs = [load_yaml(args.repo, pair_name(fusion, readout_tag)) for fusion in ("ctx", "modul")]
     rec("PAIRED_CONFIG", {key for key in pairs[0] if pairs[0].get(key) != pairs[1].get(key)}
         == {"integration_type", "memory_token_dim"} and set(pairs[0]) == set(pairs[1]), f"readout={readout_tag}")
@@ -293,14 +435,18 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
         if attempt is not None:
             print(f"ATTEMPT=PASS run={attempt}")
     history = load_yaml(args.repo, name) if history is None else history
-    rec.guard("HISTORY", check_history, rec, history, contract)
+    if tier:
+        rec.guard("HISTORY", check_tier_history, rec, history, name)
+    else:
+        rec.guard("HISTORY", check_history, rec, history, contract)
     rec("NO_PLACEHOLDER", PLACEHOLDER not in str(history) and PLACEHOLDER not in str(argv))
     if not any(x in rec.failed for x in ("BUILD_PINS", "NO_PLACEHOLDER", "HISTORY")):
-        rec.guard("DATASET", check_dataset, rec, store, contract, history)
+        rec.guard("DATASET", check_dataset, rec, store, contract, history, env)
     parsed = rec.guard("CLI", parse_cli, argv)
     if parsed:
         rec.guard("CONFIG", check_config, rec, *parsed, store=store, contract=contract,
-                  steps=args.steps, history_name=name, history=history, attempt=attempt)
+                  steps=args.steps, history_name=name, history=history, attempt=attempt,
+                  fsdp_devices=fsdp, batch_size=batch)
     return rec
 
 
@@ -334,7 +480,7 @@ def main(raw=None):
         parser = argparse.ArgumentParser(description="核验已有最终保存现场的有限性")
         parser.add_argument("--check-final-record", type=Path, required=True)
         parser.add_argument("--run", required=True)
-        parser.add_argument("--steps", type=int, choices=(20, 60000), required=True)
+        parser.add_argument("--steps", type=int, choices=(20, 100, 60000), required=True)
         parser.add_argument("--train-head", required=True)
         args = parser.parse_args(raw)
         try:
@@ -343,6 +489,25 @@ def main(raw=None):
             print(f"TRAIN_FINAL_RECORD=FAIL reason={error}")
             return 1
         print(f"TRAIN_FINAL_RECORD=PASS run={args.run} tail_steps={result['tail_steps']} ema_leaves={result['ema_leaves']}")
+        return 0
+    if raw and raw[0] == "--verify-evidence-root":
+        parser = argparse.ArgumentParser(description="逐文件核证据重定根目录（K11）")
+        parser.add_argument("--verify-evidence-root", type=Path, required=True)
+        parser.add_argument("--store", type=Path, required=True, help="motion-stage2-1024 表根")
+        args = parser.parse_args(raw)
+        try:
+            from mme_vla_suite.datastore import motion_store as ms
+            from mme_vla_suite.policies.motion_client import validate_stage2_evidence
+            provenance = ms.MotionMeta.load(args.store).provenance
+            files, bad = verify_evidence_root(args.verify_evidence_root, provenance)
+            if bad:
+                print(f"EVIDENCE_REBASE=FAIL files={files} sha_mismatch={len(bad)} bad={','.join(bad)}")
+                return 1
+            validate_stage2_evidence(rebase_provenance(provenance, args.verify_evidence_root), args.store)
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            print(f"EVIDENCE_REBASE=FAIL reason={error}")
+            return 1
+        print(f"EVIDENCE_REBASE=PASS files={files} sha_mismatch=0")
         return 0
     if raw == ["--print-library"]:
         print(Contract().library)
@@ -355,7 +520,10 @@ def main(raw=None):
     parser.add_argument("--repo", default=str(REPO))
     parser.add_argument("--store-root", default=str(REPO))
     parser.add_argument("--train-head", required=True)
-    parser.add_argument("--steps", type=int, choices=(20, 60000), default=60000)
+    parser.add_argument("--steps", type=int, choices=(20, 100, 60000), default=60000)
+    parser.add_argument("--fsdp-devices", type=int, choices=(2, 4, 8), default=8)
+    parser.add_argument("--gpus-visible", default=None, help="GL 入口传入的期望可见卡列表；Slurm 下未设时为空串")
+    parser.add_argument("--batch-size", type=int, default=128)
     args = parser.parse_args(raw)
     rec = core(args, argv)
     rec.guard("REPO", legacy.check_repo, rec, Path(args.repo), args.train_head)
@@ -365,6 +533,9 @@ def main(raw=None):
         print("PAIRED_CONFIG=PASS diff_keys=integration_type,memory_token_dim")
         print(f"PAIRED_RUNS_SAME_LIB=PASS input_pin={Contract().input_manifest_sha256}")
     print(f"LAUNCH_CONTRACT={'FAIL' if rec.failed else 'PASS'} checks={len(rec.rows)} failed={','.join(rec.failed) or 0}")
+    if args.fsdp_devices in GL_FSDP:
+        print(f"LAUNCH_CONTRACT_GL={'FAIL' if rec.failed else 'PASS'} gpus={args.fsdp_devices} fsdp={args.fsdp_devices} "
+              f"batch={args.batch_size} checks={len(rec.rows)} failed={','.join(rec.failed) or 0}")
     return int(bool(rec.failed))
 
 

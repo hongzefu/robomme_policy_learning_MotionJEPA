@@ -102,6 +102,8 @@ export WANDB_DIR="${LOGS_DIR}/wandb"
 export WANDB_CACHE_DIR="${CACHE_DIR}/wandb"
 export WANDB_CONFIG_DIR="${CACHE_DIR}/wandb-config"
 export UV_LINK_MODE=copy
+# 训练入口的 jax/cuda 编译缓存根（1031 GL 复现计划）：本机与 turbo 均为本副本 v1-store/cache。
+export TRAIN_CACHE_ROOT="${CACHE_DIR}"
 
 v1_prepare_dirs() {
   mkdir -p \
