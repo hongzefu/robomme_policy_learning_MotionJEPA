@@ -1,0 +1,23 @@
+# 仅供 o16gl-tier 测时（1031 计划 K9/R8）：由 perceptual-framesamp-ctx-32frame-4x4-motion-stage2-4x256-orig16.yaml 拷贝，删 motion 段，budget=1024（64 帧×16）；契约拒绝其进入正式训练与评估。
+budget: 1024
+num_views: 1
+token_per_image: 16
+streaming_obs_horizon: 16
+pool_type: mean
+use_pos_emb: true
+use_state_emb: false
+memory_feature:
+  img:
+    net: identity
+    input_dim: 2048
+  pos:
+    input_dim: 768
+    hidden_dim: 768
+  state:
+    input_dim: 8
+    hidden_dim: 512
+integration_type: context
+memory_token_dim: 2048
+representation_type: perceptual
+perceptual_memory:
+  type: frame_sampling

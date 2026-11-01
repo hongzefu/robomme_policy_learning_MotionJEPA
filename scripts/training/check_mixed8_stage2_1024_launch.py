@@ -358,7 +358,8 @@ def check_motion(rec, repo, store, fields, contract):
 # ── 环境与记录目录 ──────────────────────────────────────────────────────────
 
 
-def check_env(rec, env, store, contract):
+def check_env(rec, env, store, contract, gpus=None):
+    """gpus 为调用方传入的期望可见卡列表；未传时逐位沿用 contract.gpus（GL 入口在 Slurm 下按实际可见卡核）。"""
     rec("ENV_MOTION_STORE_UNSET", "MMEVLA_MOTION_STORE" not in env, f"MMEVLA_MOTION_STORE={env.get('MMEVLA_MOTION_STORE', '<未设置>')}")
     leftovers = sorted(k for k in env if k.endswith("_ALLOW_UNVERIFIED") or k == "MMEVLA_FRAMESAMP_ALLOW_SUBSET")
     rec("ENV_NO_ALLOW_OVERRIDES", not leftovers, f"残留放行变量={leftovers}")
@@ -373,8 +374,12 @@ def check_env(rec, env, store, contract):
     rec("ENV_FRAMESAMP_MANIFEST", env.get("MMEVLA_FRAMESAMP_MANIFEST") == str(parent / "meta/episode_manifest.json"),
         f"实际={env.get('MMEVLA_FRAMESAMP_MANIFEST')}")
     rec("ENV_PREALLOCATE", env.get("XLA_PYTHON_CLIENT_PREALLOCATE") == "false")
-    rec("ENV_GPUS", env.get("CUDA_VISIBLE_DEVICES") == contract.gpus,
-        f"单JAX进程8卡 CUDA_VISIBLE_DEVICES={env.get('CUDA_VISIBLE_DEVICES')}")
+    if gpus is None:
+        rec("ENV_GPUS", env.get("CUDA_VISIBLE_DEVICES") == contract.gpus,
+            f"单JAX进程8卡 CUDA_VISIBLE_DEVICES={env.get('CUDA_VISIBLE_DEVICES')}")
+    else:
+        rec("ENV_GPUS", env.get("CUDA_VISIBLE_DEVICES", "") == gpus,
+            f"期望可见卡={gpus or '<Slurm未设>'} CUDA_VISIBLE_DEVICES={env.get('CUDA_VISIBLE_DEVICES')}")
     final = env.get("TRAIN_FINAL_RECORD_DIR", "")
     path = Path(final)
     empty = path.is_absolute() and (not path.exists() or (path.is_dir() and not path.is_symlink() and not any(path.iterdir())))

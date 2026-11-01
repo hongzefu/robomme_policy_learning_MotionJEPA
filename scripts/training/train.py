@@ -171,6 +171,16 @@ def _atomic_stage2_file(path: pathlib.Path, data: bytes) -> None:
         os.close(fd)
 
 
+STAGE2_EVIDENCE_ROOT_ENV = "MMEVLA_STAGE2_EVIDENCE_ROOT"
+
+
+def stage2_evidence_path(path):
+    """证据重定根（1031 计划 K11）：设置 MMEVLA_STAGE2_EVIDENCE_ROOT 时只把父目录换成该根、不换文件名；未设置时原路径。"""
+    path = pathlib.Path(path)
+    root = os.environ.get(STAGE2_EVIDENCE_ROOT_ENV)
+    return pathlib.Path(root) / path.name if root else path
+
+
 def write_stage2_motion_snapshot(ckpt_root, provenance, *, registered_root=None):
     """复制封口证据，列出实体 encoder 依赖，最后原子发布完整根快照。"""
     from mme_vla_suite.datastore import motion_store as ms
@@ -181,7 +191,7 @@ def write_stage2_motion_snapshot(ckpt_root, provenance, *, registered_root=None)
     ms.validate_stage2_provenance(provenance)
     prov = copy.deepcopy(provenance)
     files = {}
-    validation_root = pathlib.Path(prov["stage2_compat"]["evidence"]["G0"]["path"]).parent
+    validation_root = stage2_evidence_path(prov["stage2_compat"]["evidence"]["G0"]["path"]).parent
     portable_path = validation_root / "online_restore_inputs.json"
     portable_blob = portable_path.read_bytes()
     portable = json.loads(portable_blob)
@@ -222,7 +232,7 @@ def write_stage2_motion_snapshot(ckpt_root, provenance, *, registered_root=None)
     for label, item in prov["stage2_compat"]["evidence"].items():
         if label not in ms.stage2_evidence_roles(prov):
             raise ValueError(f"未知 stage2 证据来源: {label}")
-        source = pathlib.Path(item["path"])
+        source = stage2_evidence_path(item["path"])
         blob = source.read_bytes()
         if ms.sha256_bytes(blob) != item["sha256"]:
             raise ValueError(f"stage2 {label} 证据在快照前已变动")
