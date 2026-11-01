@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-01T03:52:24Z",
-    "america_new_york": "2026-10-31T23:52:24-0400"
+    "utc": "2026-11-01T12:00:37Z",
+    "america_new_york": "2026-11-01T07:00:37-0500"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "cba5bd55a39c9f67ec64d0ef351e73fd89ea4825",
+    "base_head": "eee67689ea37d7aba6ed5875c95eb6b4742aa1b5",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -934,9 +934,9 @@
         "file": "1031-orig100-modul-ctx-3seed-official-eval-plan.html",
         "sha": "62c9d9b99b430e38e3fbed3f319f5af83939e63a"
       },
-      "state": "running",
-      "state_changed_at": "2026-10-31T22:56:21Z",
-      "state_reason": "modulation三seed完成：M-s42 346/800、M-s7 344/800、M-s0 352/800，均值43.42±0.52（ddof=1），三次COMPUTE_DONE与SEED_ECHO均PASS。concat59999 VLA_VERIFY=PASS files=38；CC冒烟SMOKE2=PASS accepted=2 errors=0 seed=0 readout=stage2_pool4_concat_v1 budget=96。C-s7美东00:37起跑；串联脚本ev3-chain负责C-s0→CC-s42→CC-s7→CC-s0。",
+      "state": "done",
+      "state_changed_at": "2026-11-01T12:00:37Z",
+      "state_reason": "三模型三seed官方800局全部完成：modul 43.42±0.52、ctx split 38.42±1.25、ctx concat 37.33±0.59；8行COMPUTE_DONE与SEED_ECHO=PASS、3行THREE_SEED=PASS；10份占位逐个scancel，squeue为空，本轮tmux全部清理。",
       "owner": {
         "session": "3f9a4bbe-ca7a-47ff-b72e-88daea707921",
         "host": "sled-aspen.eecs.umich.edu"
@@ -945,110 +945,49 @@
       "pre_handoff": [
         {
           "what": "SEED_GATE=PASS allowed=0,7,42 rejected=1",
-          "evidence": "SEED_GATE=PASS allowed=0,7,42 rejected=1；45 passed；merge 5fce5d3",
+          "evidence": "SEED_GATE=PASS allowed=0,7,42 rejected=1；POST_MERGE_REVIEW=PASS merge=5fce5d3",
           "where": "origin/v4-eval-3seed-1031",
           "status": "pass"
         },
         {
           "what": "VLA_VERIFY=PASS step=59999 files=42 sha_mismatch=0（modul）",
           "evidence": "VLA_VERIFY=PASS step=59999 files=42 sha_mismatch=0",
-          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/verify60k.log",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/o16-3seed-1031/records/verify-modul-59999.log",
           "status": "pass"
         },
         {
           "what": "8行COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0（M-s42/M-s7/M-s0/C-s7/C-s0/CC-s42/CC-s7/CC-s0）",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "8行COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0；8行SEED_ECHO=PASS",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/o16-3seed-1031/records/runs.txt",
+          "status": "pass"
         },
         {
           "what": "THREE_SEED=PASS model=modul与model=ctx",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "THREE_SEED=PASS model=modul overall=43.42±0.52；model=ctx overall=38.42±1.25",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/o16-3seed-1031/records/three_seed_summary.txt",
+          "status": "pass"
         },
         {
           "what": "HOLDS_RELEASED=PASS",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "HOLDS_RELEASED=PASS cancelled=10 squeue_empty=1",
+          "where": "sacct 65146920-65146929 CANCELLED",
+          "status": "pass"
         },
         {
           "what": "concat VLA_VERIFY=PASS step=59999",
           "evidence": "VLA_VERIFY=PASS step=59999 files=38 sha_mismatch=0",
-          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/verify-cc60k.log",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/o16-3seed-1031/records/verify-cc-59999.log",
           "status": "pass"
         },
         {
           "what": "THREE_SEED=PASS model=ctxcat",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "THREE_SEED=PASS model=ctxcat overall=37.33±0.59",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/evaluation-doc/o16-3seed-1031/records/three_seed_summary.txt",
+          "status": "pass"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "tmux": "ev3-chain",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/chain-rest.log",
-          "done_line": "ALL_DONE"
-        },
-        {
-          "tmux": "ev3-ctl-cs7（sled-vail）",
-          "log": "o16ctx-60k-seed7/run800/queue/summary.json",
-          "done_line": "COMPUTE_DONE"
-        },
-        {
-          "tmux": "ev3-w-cs7-00",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-00.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "ev3-w-cs7-01",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-01.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "ev3-w-cs7-02",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-02.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "ev3-w-cs7-03",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-03.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "ev3-w-cs7-04",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-04.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "ev3-w-cs7-05",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-05.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "ev3-w-cs7-06",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-06.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "ev3-w-cs7-07",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-07.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "ev3-w-cs7-08",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-08.log",
-          "done_line": "EXIT_CODE=0"
-        },
-        {
-          "tmux": "ev3-w-cs7-09",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-09.log",
-          "done_line": "EXIT_CODE=0"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "go",
@@ -1070,13 +1009,7 @@
         }
       ],
       "pending_decisions": [],
-      "next_steps": [
-        {
-          "what": "ev3-chain完成后汇总三模型三seed、写result.md、逐个scancel 65146920-65146929",
-          "command": "见计划S7",
-          "verdict_line": "THREE_SEED=PASS×3；HOLDS_RELEASED=PASS cancelled=10"
-        }
-      ]
+      "next_steps": []
     },
     "gl-orig100-ctx-reproduce-phase1": {
       "plan": {
