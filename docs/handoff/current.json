@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-01T03:29:46Z",
-    "america_new_york": "2026-10-31T23:29:46-0400"
+    "utc": "2026-11-01T03:39:54Z",
+    "america_new_york": "2026-10-31T23:39:54-0400"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "9bacb4c1c49d417b2fd94e7345d07a39d10a33dd",
+    "base_head": "6def34d0cce8519a7b48122b45486ed7347779da",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1080,7 +1080,7 @@
       },
       "state": "planned",
       "state_changed_at": "2026-11-01T03:29:46Z",
-      "state_reason": "计划已提交（9bacb4c），等第一阶段开工令",
+      "state_reason": "计划按对抗审查修订（6def34d），等第一阶段开工令",
       "owner": {
         "session": "",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1088,7 +1088,7 @@
       "depends_on": [],
       "pre_handoff": [
         {
-          "what": "V1–V8 含 V7b 全部 PASS；冒烟占位已 scancel",
+          "what": "V1–V6、V7、V8 全部 PASS；V7b 三档判定行齐全（FAIL 原样保留进 pending_decisions）；冒烟占位已 scancel",
           "evidence": "",
           "where": "turbo v1-store/logs/o16gl-*.log；计划「实施中实测」小节",
           "status": "pending"
@@ -1137,7 +1137,7 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "等用户对计划 9bacb4c 给第一阶段开工令；开工前先派 sonnet 做 PLAN_CONSISTENCY_REVIEW",
+          "what": "等用户对计划 6def34d 给第一阶段开工令；开工前先派 sonnet 做 PLAN_CONSISTENCY_REVIEW",
           "command": "",
           "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS base=<sha> blocking=0"
         }
