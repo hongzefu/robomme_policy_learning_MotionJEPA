@@ -41,7 +41,7 @@ TIER_HISTORIES = {f"perceptual-framesamp-ctx-{frames}frame-4x4-nomotion-tier-ori
                   for frames in (16, 32, 64)}
 GL_SMOKE, GL_TIER = "o16gl-smoke-", "o16gl-tier-"
 # (运行类别, 步数) → 允许的 global batch；表外组合一律 FAIL。
-GL_COMBOS = {("formal", 60000): (64, 32), ("smoke", 20): (32, 16), ("smoke", 100): (64, 32), ("tier", 100): (64,)}
+GL_COMBOS = {("formal", 60000): (64, 32), ("smoke", 20): (32, 16, 8, 4), ("smoke", 100): (64, 32), ("tier", 100): (64,)}
 EVIDENCE_ENV = "MMEVLA_STAGE2_EVIDENCE_ROOT"
 ONLINE_INPUTS = "online_restore_inputs.json"
 
