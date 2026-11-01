@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-01T16:14:53Z",
-    "America/New_York": "2026-11-01T11:14:53-05:00"
+    "utc": "2026-11-01T20:44:24Z",
+    "America/New_York": "2026-11-01T15:44:24-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -1019,7 +1019,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-01T15:35:07Z",
-      "state_reason": "A1：S3/S1/S2 已合入 v4-gl-orig100-1031（d658c7e）；训练库下载因 aspen 出口约 21 MB/s 改在 sled-vail 续传（ADJUST_REVIEW=PASS scale=same）",
+      "state_reason": "A1 基本完成：下载 TRAINSET_FETCH=PASS、解包进行中；V5 LAUNCH_CONTRACT_GL=PASS×4、CONTRACT_REJECTS=PASS cases=7；EVIDENCE_REBASE=PASS；占位 65186886 PENDING",
       "owner": {
         "session": "",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1041,6 +1041,12 @@
           "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16gl-fetch.log",
           "done_line": "TRAINSET_VERIFY=PASS 与 EXIT_CODE=0",
           "script": "/data/hongzefu/o16gl-fetch-tmp/o16gl-fetch-vail.sh（vail）"
+        },
+        {
+          "host": "greatlakes",
+          "slurm_job": "65186886",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16gl-hold-65186886.log",
+          "done_line": "scancel 65186886（A3 完成后，按 v1-store/logs/hold-jobs-o16gl.txt）"
         }
       ],
       "authorizations": [
@@ -1091,6 +1097,12 @@
           "date": "2026-11-01",
           "quote": "开工",
           "scope": "计划 cba5bd5 第一阶段（A1 实施、A2 本机冒烟、A3 集群 1 份 4 卡 48h 占位 100 步实测与三档测时、A4 汇总）；第二阶段另要开工令"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-01",
+          "quote": "我放行，你来交",
+          "scope": "提交第一阶段 1 份 4×A40 48h 占位（下载完成后、本机冒烟前提交）"
         }
       ],
       "pending_decisions": [],
