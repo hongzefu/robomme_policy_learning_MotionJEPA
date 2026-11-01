@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-01T15:35:07Z",
-    "America/New_York": "2026-11-01T10:35:07-0500"
+    "utc": "2026-11-01T15:49:34Z",
+    "America/New_York": "2026-11-01T10:49:34-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -1014,11 +1014,12 @@
     "gl-orig100-ctx-reproduce-phase1": {
       "plan": {
         "file": "1031-gl-orig100-ctx-motion-reproduce-plan.html",
-        "sha": "cba5bd55a39c9f67ec64d0ef351e73fd89ea4825"
+        "sha": "cba5bd55a39c9f67ec64d0ef351e73fd89ea4825",
+        "revision_sha": "f62959f8dda9cb13da9897c70496423bcfbff943"
       },
       "state": "running",
       "state_changed_at": "2026-11-01T15:35:07Z",
-      "state_reason": "用户 2026-11-01 对 cba5bd5 下开工令",
+      "state_reason": "A1 进行中：S3 已合，S1 写代码中，S2 审过待合；训练库下载中",
       "owner": {
         "session": "",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1033,7 +1034,13 @@
         }
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "o16gl-fetch",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16gl-fetch.log",
+          "done_line": "TRAINSET_VERIFY=PASS 与 EXIT_CODE=0"
+        }
+      ],
       "authorizations": [
         {
           "kind": "decision",
@@ -1087,9 +1094,19 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "只对 cba5bd5 新修订部分派 sonnet 审查，无阻塞进入 A1",
+          "what": "S1 交回后合并前审查，按 S1→S2 合入 v4-gl-orig100-1031（S3 已合 2fd08cb）",
           "command": "",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS base=cba5bd55a39c9f67ec64d0ef351e73fd89ea4825 findings=<n> blocking=0"
+          "verdict_line": "PRE_MERGE_REVIEW=PASS / POST_MERGE_REVIEW=PASS"
+        },
+        {
+          "what": "下载完成后 turbo 副本 checkout --detach origin/v4-gl-orig100-1031，建 NFS venv 与 wan-stage2，EVIDENCE_REBASE",
+          "command": "",
+          "verdict_line": "TRAINSET_VERIFY=PASS、EVIDENCE_REBASE=PASS、VENV_PORTABLE=PASS host=<本机|gl-login>"
+        },
+        {
+          "what": "A2 本机两档冒烟",
+          "command": "",
+          "verdict_line": "V6"
         }
       ]
     },
