@@ -62,3 +62,7 @@ SMOKE_ALL=PASS runs=2 train_head=6cd4d6cd11ab6e718d05af5b8dc9cda8c656599c
 ```
 
 Step0：ctx loss 0.5561、grad_norm 23.1155；modul loss 0.0923、grad_norm 1.3414，均有限，与 split 对照 Step0（ctx 0.6093／modul 0.0918）同量级。报告在 `v1-store/validation/orig16-concat-60k/o16-smoke-concat-*-10301556/`；短测 checkpoint（11G＋12G）按用户「以后都要删除」于通过后删除，日志与报告保留。
+
+## 状态：用户放弃，未训练
+
+用户 2026-10-31 美东原话：「modulation concat不训练放弃 context训练完毕就收尾」。本条未起跑，无 run 目录、无 checkpoint、无 bucket 对象；备份会话在等待阶段停止。占位日志 `v1-store/logs/orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k.log` 记录放弃原因。

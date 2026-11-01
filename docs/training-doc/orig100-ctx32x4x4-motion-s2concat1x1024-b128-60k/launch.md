@@ -62,3 +62,7 @@ SMOKE_ALL=PASS runs=2 train_head=6cd4d6cd11ab6e718d05af5b8dc9cda8c656599c
 ```
 
 Step0：ctx loss 0.5561、grad_norm 23.1155；modul loss 0.0923、grad_norm 1.3414，均有限，与 split 对照 Step0（ctx 0.6093／modul 0.0918）同量级。报告在 `v1-store/validation/orig16-concat-60k/o16-smoke-concat-*-10301556/`；短测 checkpoint（11G＋12G）按用户「以后都要删除」于通过后删除，日志与报告保留。
+
+## 实际起跑回填
+
+正式 Beta `6424d7f39569739eae1ca6cdbb50c7f26897e738` clean 已推送，主检出写 HOLD。美东 2026-10-30 16:15:48 起 `o16-concat-train-chain-10301615`，备份 `o16-concat-backup-ctx-10301615`、`o16-concat-backup-modul-10301615` 同时起；合同 50/50 PASS，Step0 loss 0.5556、grad_norm 23.1226 有限。用户 10-31 放弃 modulation 后停 modul 备份；G12 会话 `o16-concat-g12-ctx-10312225`。完成情况见 [result.md](result.md)。
