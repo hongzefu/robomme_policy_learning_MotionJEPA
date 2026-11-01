@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-01T12:00:37Z",
-    "america_new_york": "2026-11-01T07:00:37-0500"
+    "utc": "2026-11-01T15:35:07Z",
+    "America/New_York": "2026-11-01T10:35:07-0500"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "eee67689ea37d7aba6ed5875c95eb6b4742aa1b5",
+    "base_head": "567d01a3fc3912384f9fc7e281c9aa24301fd9ea",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1014,11 +1014,11 @@
     "gl-orig100-ctx-reproduce-phase1": {
       "plan": {
         "file": "1031-gl-orig100-ctx-motion-reproduce-plan.html",
-        "sha": null
+        "sha": "cba5bd55a39c9f67ec64d0ef351e73fd89ea4825"
       },
-      "state": "planned",
-      "state_changed_at": "2026-11-01T03:29:46Z",
-      "state_reason": "一致性审查 FAIL（12/5 阻塞）已按用户裁决修订为 cba5bd5，等用户对修订版的开工令",
+      "state": "running",
+      "state_changed_at": "2026-11-01T15:35:07Z",
+      "state_reason": "用户 2026-11-01 对 cba5bd5 下开工令",
       "owner": {
         "session": "",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1075,15 +1075,21 @@
           "kind": "decision",
           "date": "2026-10-31",
           "quote": "另开检出（推荐）；走证据 SHA 路由（推荐）；用现有记录（推荐）；全部按建议（推荐）",
-          "scope": "开工前一致性审查 5 条阻塞项裁决；对 6def34d 的「同意开工」因计划修订失效，待对 cba5bd5 重新给开工令"
+          "scope": "开工前一致性审查 5 条阻塞项裁决；对 6def34d 的「同意开工」因计划修订失效；2026-11-01 已对 cba5bd5 重给开工令"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-01",
+          "quote": "开工",
+          "scope": "计划 cba5bd5 第一阶段（A1 实施、A2 本机冒烟、A3 集群 1 份 4 卡 48h 占位 100 步实测与三档测时、A4 汇总）；第二阶段另要开工令"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "用户对计划 cba5bd5 给开工令后，只对新修订部分再派 sonnet 审查，无阻塞进入 A1",
+          "what": "只对 cba5bd5 新修订部分派 sonnet 审查，无阻塞进入 A1",
           "command": "",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS base=<sha> findings=<n> blocking=0"
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS base=cba5bd55a39c9f67ec64d0ef351e73fd89ea4825 findings=<n> blocking=0"
         }
       ]
     },
