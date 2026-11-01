@@ -96,7 +96,7 @@ def test_gl_formal_passes(fx, fsdp, batch, capsys):
 
 
 @pytest.mark.parametrize("fsdp", [2, 4])
-@pytest.mark.parametrize("batch", [128, 16])
+@pytest.mark.parametrize("batch", [128, 16, 8, 4])
 def test_gl_formal_rejects_batch(fx, fsdp, batch):
     assert "GL_COMBO" in gl_core(fx, fsdp=fsdp, batch=batch).failed
 
@@ -154,16 +154,16 @@ def test_gl_rebased_evidence_sha_mismatch_fails(fx):
         path.write_bytes(before)
 
 
-# ── 冒烟前缀：20 步 32/16、100 步 64/32 通过；20 步 64、100 步 16 被拒 ──────────────
+# ── 冒烟前缀：20 步 32/16/8/4、100 步 64/32 通过；20 步 64、100 步 16/8/4 被拒 ──────────────
 
 @pytest.mark.parametrize("fsdp", [2, 4])
-@pytest.mark.parametrize("steps,batch", [(20, 32), (20, 16), (100, 64), (100, 32)])
+@pytest.mark.parametrize("steps,batch", [(20, 32), (20, 16), (20, 8), (20, 4), (100, 64), (100, 32)])
 def test_gl_smoke_passes(fx, fsdp, steps, batch):
     rec = gl_core(fx, steps=steps, batch=batch, fsdp=fsdp, run="o16gl-smoke-fixture")
     assert not rec.failed, rec.failed
 
 
-@pytest.mark.parametrize("steps,batch", [(20, 64), (100, 16), (20, 128), (60000, 64)])
+@pytest.mark.parametrize("steps,batch", [(20, 64), (100, 16), (100, 8), (100, 4), (20, 128), (60000, 64)])
 def test_gl_smoke_rejects(fx, steps, batch):
     rec = gl_core(fx, steps=steps, batch=batch, run="o16gl-smoke-fixture")
     assert "GL_COMBO" in rec.failed
@@ -359,6 +359,8 @@ def test_entry_formal_dry_run(gl_tree, gpus, batch):
     ("o16gl-smoke-a", "20", "32", launch.GL_HISTORY, None),
     ("o16gl-smoke-a", "20", "16", launch.GL_HISTORY, "20"),
     ("o16gl-smoke-a", "100", "64", launch.GL_HISTORY, "100"),
+    ("o16gl-smoke-a", "20", "8", launch.GL_HISTORY, None),
+    ("o16gl-smoke-a", "20", "4", launch.GL_HISTORY, "20"),
     ("o16gl-smoke-a", "100", "32", launch.GL_HISTORY, None),
     *[("o16gl-tier-a", "100", "64", tier, "100") for tier in TIERS]])
 def test_entry_prefix_dry_run(gl_tree, run, steps, batch, history, timing):
@@ -379,6 +381,7 @@ def test_entry_prefix_dry_run(gl_tree, run, steps, batch, history, timing):
     dict(extra={"MAX_STEPS": "20"}), dict(extra={"TRAIN_TIMING_STEPS": "100"}),
     dict(run="o16gl-smoke-a", batch="64", extra={"MAX_STEPS": "20"}),
     dict(run="o16gl-smoke-a", batch="16", extra={"MAX_STEPS": "100"}),
+    dict(run="o16gl-smoke-a", batch="8", extra={"MAX_STEPS": "100"}), dict(batch="8"), dict(batch="4"),
     dict(run="o16gl-smoke-a", batch="32", drop=("MAX_STEPS",)),
     dict(run="o16gl-smoke-a", batch="32", history=TIERS[0], extra={"MAX_STEPS": "20"}),
     dict(run="o16gl-smoke-a", batch="32", extra={"MAX_STEPS": "20", "TRAIN_TIMING_STEPS": "21"}),

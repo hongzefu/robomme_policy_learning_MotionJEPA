@@ -36,8 +36,8 @@ case "$RUN" in
   o16gl-smoke-*)
     [[ "$HC" == "$GL_HC" ]] || { echo "o16gl-smoke-只认$GL_HC" >&2; exit 2; }
     case "${MAX_STEPS-}:$B" in
-      20:32|20:16|100:64|100:32) STEPS=$MAX_STEPS ;;
-      *) echo 'o16gl-smoke-仅允许20步32/16或100步64/32' >&2; exit 2 ;;
+      20:32|20:16|20:8|20:4|100:64|100:32) STEPS=$MAX_STEPS ;;
+      *) echo 'o16gl-smoke-仅允许20步32/16/8/4或100步64/32' >&2; exit 2 ;;
     esac ;;
   *)
     [[ -z ${MAX_STEPS+x} ]] || { echo '正式口径不得设MAX_STEPS' >&2; exit 2; }
