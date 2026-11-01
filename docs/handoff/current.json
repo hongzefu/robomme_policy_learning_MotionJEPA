@@ -936,7 +936,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-10-31T22:56:21Z",
-      "state_reason": "M-s42完成：COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0，346/800=43.25%；SEED_ECHO=PASS run=M-s42。M-s7美东21:28起跑；M-s0已initialize；concat bucket轮询等59999。",
+      "state_reason": "modulation三seed完成：M-s42 346/800、M-s7 344/800、M-s0 352/800，均值43.42±0.52（ddof=1），三次COMPUTE_DONE与SEED_ECHO均PASS。concat59999 VLA_VERIFY=PASS files=38；CC冒烟SMOKE2=PASS accepted=2 errors=0 seed=0 readout=stage2_pool4_concat_v1 budget=96。C-s7美东00:37起跑；串联脚本ev3-chain负责C-s0→CC-s42→CC-s7→CC-s0。",
       "owner": {
         "session": "3f9a4bbe-ca7a-47ff-b72e-88daea707921",
         "host": "sled-aspen.eecs.umich.edu"
@@ -975,9 +975,9 @@
         },
         {
           "what": "concat VLA_VERIFY=PASS step=59999",
-          "evidence": "",
-          "where": "",
-          "status": "pending"
+          "evidence": "VLA_VERIFY=PASS step=59999 files=38 sha_mismatch=0",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/verify-cc60k.log",
+          "status": "pass"
         },
         {
           "what": "THREE_SEED=PASS model=ctxcat",
@@ -989,58 +989,63 @@
       "long_tail": [],
       "running_handles": [
         {
-          "tmux": "ev3-ctl-ms7（sled-vail）",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/o16modul-60k-seed7/run800/queue/summary.json",
+          "tmux": "ev3-chain",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/chain-rest.log",
+          "done_line": "ALL_DONE"
+        },
+        {
+          "tmux": "ev3-ctl-cs7（sled-vail）",
+          "log": "o16ctx-60k-seed7/run800/queue/summary.json",
           "done_line": "COMPUTE_DONE"
         },
         {
-          "tmux": "ev3-w-ms7-00",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms7-worker-00.log",
+          "tmux": "ev3-w-cs7-00",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-00.log",
           "done_line": "EXIT_CODE=0"
         },
         {
-          "tmux": "ev3-w-ms7-01",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms7-worker-01.log",
+          "tmux": "ev3-w-cs7-01",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-01.log",
           "done_line": "EXIT_CODE=0"
         },
         {
-          "tmux": "ev3-w-ms7-02",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms7-worker-02.log",
+          "tmux": "ev3-w-cs7-02",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-02.log",
           "done_line": "EXIT_CODE=0"
         },
         {
-          "tmux": "ev3-w-ms7-03",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms7-worker-03.log",
+          "tmux": "ev3-w-cs7-03",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-03.log",
           "done_line": "EXIT_CODE=0"
         },
         {
-          "tmux": "ev3-w-ms7-04",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms7-worker-04.log",
+          "tmux": "ev3-w-cs7-04",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-04.log",
           "done_line": "EXIT_CODE=0"
         },
         {
-          "tmux": "ev3-w-ms7-05",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms7-worker-05.log",
+          "tmux": "ev3-w-cs7-05",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-05.log",
           "done_line": "EXIT_CODE=0"
         },
         {
-          "tmux": "ev3-w-ms7-06",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms7-worker-06.log",
+          "tmux": "ev3-w-cs7-06",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-06.log",
           "done_line": "EXIT_CODE=0"
         },
         {
-          "tmux": "ev3-w-ms7-07",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms7-worker-07.log",
+          "tmux": "ev3-w-cs7-07",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-07.log",
           "done_line": "EXIT_CODE=0"
         },
         {
-          "tmux": "ev3-w-ms7-08",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms7-worker-08.log",
+          "tmux": "ev3-w-cs7-08",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-08.log",
           "done_line": "EXIT_CODE=0"
         },
         {
-          "tmux": "ev3-w-ms7-09",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/ms7-worker-09.log",
+          "tmux": "ev3-w-cs7-09",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/o16-3seed/cs7-worker-09.log",
           "done_line": "EXIT_CODE=0"
         }
       ],
@@ -1067,9 +1072,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "M-s42完成后依次M-s7→M-s0→C-s7→C-s0，同10份占位65146920-65146929",
-          "command": "各run根已有inputs/<tag>.spec-input.json与run-worker/run-controller脚本；先initialize",
-          "verdict_line": "COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0；SEED_ECHO=PASS"
+          "what": "ev3-chain完成后汇总三模型三seed、写result.md、逐个scancel 65146920-65146929",
+          "command": "见计划S7",
+          "verdict_line": "THREE_SEED=PASS×3；HOLDS_RELEASED=PASS cancelled=10"
         }
       ]
     },
