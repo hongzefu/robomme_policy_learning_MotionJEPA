@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-01T15:49:34Z",
-    "America/New_York": "2026-11-01T10:49:34-05:00"
+    "utc": "2026-11-01T16:14:53Z",
+    "America/New_York": "2026-11-01T11:14:53-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -1019,7 +1019,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-01T15:35:07Z",
-      "state_reason": "A1 进行中：S3 已合，S1 写代码中，S2 审过待合；训练库下载中",
+      "state_reason": "A1：S3/S1/S2 已合入 v4-gl-orig100-1031（d658c7e）；训练库下载因 aspen 出口约 21 MB/s 改在 sled-vail 续传（ADJUST_REVIEW=PASS scale=same）",
       "owner": {
         "session": "",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1036,9 +1036,11 @@
       "long_tail": [],
       "running_handles": [
         {
+          "host": "sled-vail.eecs.umich.edu",
           "tmux": "o16gl-fetch",
           "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16gl-fetch.log",
-          "done_line": "TRAINSET_VERIFY=PASS 与 EXIT_CODE=0"
+          "done_line": "TRAINSET_VERIFY=PASS 与 EXIT_CODE=0",
+          "script": "/data/hongzefu/o16gl-fetch-tmp/o16gl-fetch-vail.sh（vail）"
         }
       ],
       "authorizations": [
@@ -1094,9 +1096,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "S1 交回后合并前审查，按 S1→S2 合入 v4-gl-orig100-1031（S3 已合 2fd08cb）",
+          "what": "下载+解包+verify 完成后：turbo 副本 checkout --detach origin/v4-gl-orig100-1031，建 NFS venv 与 wan-stage2，EVIDENCE_REBASE，V5 DRY_RUN",
           "command": "",
-          "verdict_line": "PRE_MERGE_REVIEW=PASS / POST_MERGE_REVIEW=PASS"
+          "verdict_line": "TRAINSET_VERIFY=PASS、EVIDENCE_REBASE=PASS、LAUNCH_CONTRACT_GL=PASS"
         },
         {
           "what": "下载完成后 turbo 副本 checkout --detach origin/v4-gl-orig100-1031，建 NFS venv 与 wan-stage2，EVIDENCE_REBASE",
