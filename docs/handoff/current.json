@@ -932,7 +932,7 @@
     "o16-modul-ctx-3seed-eval": {
       "plan": {
         "file": "1031-orig100-modul-ctx-3seed-official-eval-plan.html",
-        "sha": "5db7311d12c031ad82fb898706345686aa87ee8e"
+        "sha": "62c9d9b99b430e38e3fbed3f319f5af83939e63a"
       },
       "state": "running",
       "state_changed_at": "2026-10-31T22:56:21Z",
@@ -956,7 +956,7 @@
           "status": "pass"
         },
         {
-          "what": "5行COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0（C-s7/C-s0/M-s42/M-s7/M-s0）",
+          "what": "8行COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0（M-s42/M-s7/M-s0/C-s7/C-s0/CC-s42/CC-s7/CC-s0）",
           "evidence": "",
           "where": "",
           "status": "pending"
@@ -969,6 +969,18 @@
         },
         {
           "what": "HOLDS_RELEASED=PASS",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "concat VLA_VERIFY=PASS step=59999",
+          "evidence": "",
+          "where": "",
+          "status": "pending"
+        },
+        {
+          "what": "THREE_SEED=PASS model=ctxcat",
           "evidence": "",
           "where": "",
           "status": "pending"
@@ -1038,6 +1050,12 @@
           "date": "2026-10-31",
           "quote": "开工",
           "scope": "修订版计划5db7311全部步骤：S0放开seed0/7/42；modul59999冒烟2局seed0；M-s42→M-s7→M-s0→C-s7→C-s0共4000局；10份A40占位跑完逐个释放；C-s42复用；SEED_ECHO按三处比对。"
+        },
+        {
+          "kind": "go",
+          "date": "2026-10-31",
+          "quote": "开工",
+          "scope": "计划62c9d9b追加部分：context concat1x1024 59999 冒烟2局seed0，CC-s42→CC-s7→CC-s0共2400局，排在C-s0之后，沿用5fce5d3与10份占位；59999迟迟不出现时报告用户。"
         }
       ],
       "pending_decisions": [],
