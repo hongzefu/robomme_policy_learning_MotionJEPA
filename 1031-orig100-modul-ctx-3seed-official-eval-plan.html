@@ -281,5 +281,16 @@ tail -n +1 -F &lt;日志&gt; | stdbuf -oL tr '\r' '\n' | grep --line-buffered -E
 <li>开工令写进 <code>current.json</code> 的 <code>authorizations</code>（如用户同意登记状态机）。</li>
 </ul>
 
+<h2>实施中调整与实测结果（2026-11-01 追加，不改写上文原计划）</h2>
+<table>
+<tr><th>调整</th><th>旧 → 新</th><th>理由与处置</th></tr>
+<tr><td>运行顺序</td><td>C-s7 → C-s0 → M-* → 改为 M-s42 → M-s7 → M-s0 → C-s7 → C-s0</td><td>用户「优先先跑 modulation……」；修订 5db7311 后重新获开工令</td></tr>
+<tr><td>modulation 冒烟</td><td>5000 步 → 59999</td><td>modulation 排第一后冒烟在关键路径；5000 与 59999 的 17 个根文件 sha 逐个相同</td></tr>
+<tr><td>SEED_ECHO 判据</td><td>读逐局 model_seed → spec、run 身份、逐局 run_identity_sha256 三处比对</td><td>开工前审查 F1：逐局记录无 model_seed 字段；不改代码</td></tr>
+<tr><td>追加 concat1x1024</td><td>不评 → CC-s42、CC-s7、CC-s0 + 冒烟</td><td>用户「context concat1*1024加入计划」，修订 62c9d9b 获开工令；59999 于 10-31 23:40 EDT 出现</td></tr>
+<tr><td>换 run 根方式</td><td>手动 → 切换脚本（switch-run.sh / switch-with-smoke.sh / chain-rest.sh）</td><td>只把计划 runbook 的同一组步骤串起来，口径与资源不变；间隙缩到 1–2 分钟</td></tr>
+<tr><td>CC-s42 02 号 worker</td><td>端口冲突失败 → 同 worker-id 重起被拒 → worker-10 重起</td><td>同节点两个 server 抢同一端口（基础设施）；失败在领块前，无局受影响</td></tr>
+</table>
+<p>结果：modulation 43.42 ± 0.52（论文 FrameSamp + Modul 44.51 ± 0.77）；context split 38.42 ± 1.25、context concat 1×1024 37.33 ± 0.59（论文 FrameSamp + Context 30.68 ± 1.17）。8 行 <code>COMPUTE_DONE completed=800 missing=0 errors=0 uncertain=0</code>、8 行 <code>SEED_ECHO=PASS</code>、3 行 <code>THREE_SEED=PASS</code>、<code>HOLDS_RELEASED=PASS cancelled=10 squeue_empty=1</code>。详见 <code>docs/evaluation-doc/o16-3seed-1031/result.md</code>。</p>
 </body>
 </html>

@@ -6,3 +6,5 @@
 | --- | --- | --- |
 | [阶段一实现](official-stage2-phase1-1026/README.md) | 按1027简化方案保留弹性队列、常驻模型与逐块仿真 | 简化实现完成，实际新增worker领取不同块通过 |
 | [20k试评估](official-stage2-20k-probe-1026-a/result.md) | 固定Stage2 VLA20k、epoch105、单局及双卡十局 | 单局0/1；两卡1/10（10%）；两个worker退出0，资源已释放 |
+| [o16ctx 60k 官方800](o16ctx-60k-800/result.md) | 官方16×100 context split 59999，seed 42，800局 | 311/800（38.88%）；资源已释放 |
+| [三模型三seed](o16-3seed-1031/result.md) | 官方16×100 modulation split、context split、context concat 1×1024 的 59999，seed 7／42／0 各800局 | modul 43.42±0.52；ctx split 38.42±1.25；ctx concat 37.33±0.59；10份占位已释放 |

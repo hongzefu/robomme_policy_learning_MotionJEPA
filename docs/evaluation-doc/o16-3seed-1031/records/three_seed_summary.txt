@@ -1,0 +1,60 @@
+== modul（论文 FrameSamp+Modul 44.51±0.77）
+任务                 s   42 s    7 s    0   均值±std
+BinFill              32.0   30.0   40.0   34.00±5.29
+PickXtimes           68.0   76.0   74.0   72.67±4.16
+SwingXtimes          96.0   96.0   94.0   95.33±1.15
+StopCube             70.0   66.0   58.0   64.67±6.11
+VideoUnmask          32.0   30.0   30.0   30.67±1.15
+ButtonUnmask         30.0   26.0   20.0   25.33±5.03
+VideoUnmaskSwap      26.0   22.0   26.0   24.67±2.31
+ButtonUnmaskSwap     20.0   20.0   22.0   20.67±1.15
+PickHighlight        24.0   28.0   32.0   28.00±4.00
+VideoRepick          20.0   24.0   28.0   24.00±4.00
+VideoPlaceButton     34.0   30.0   32.0   32.00±2.00
+VideoPlaceOrder      38.0   30.0   30.0   32.67±4.62
+MoveCube             84.0   76.0   92.0   84.00±8.00
+InsertPeg             8.0   12.0   12.0   10.67±2.31
+PatternLock          42.0   52.0   46.0   46.67±5.03
+RouteStick           68.0   70.0   68.0   68.67±1.15
+Overall              43.2   43.0   44.0   43.42±0.52
+THREE_SEED=PASS model=modul seeds=7,42,0 runs=3 overall=43.42±0.52
+== ctx（论文 FrameSamp+Context 30.68±1.17）
+任务                 s   42 s    7 s    0   均值±std
+BinFill              24.0   16.0   24.0   21.33±4.62
+PickXtimes           68.0   68.0   66.0   67.33±1.15
+SwingXtimes          96.0   86.0   96.0   92.67±5.77
+StopCube             72.0   56.0   70.0   66.00±8.72
+VideoUnmask          30.0   32.0   30.0   30.67±1.15
+ButtonUnmask         32.0   32.0   30.0   31.33±1.15
+VideoUnmaskSwap      26.0   22.0   20.0   22.67±3.06
+ButtonUnmaskSwap     14.0   18.0   16.0   16.00±2.00
+PickHighlight        18.0   16.0   18.0   17.33±1.15
+VideoRepick          18.0   18.0   18.0   18.00±0.00
+VideoPlaceButton     34.0   34.0   44.0   37.33±5.77
+VideoPlaceOrder      18.0   16.0   22.0   18.67±3.06
+MoveCube             88.0   86.0   92.0   88.67±3.06
+InsertPeg             2.0    2.0    8.0   4.00±3.46
+PatternLock          32.0   36.0   28.0   32.00±4.00
+RouteStick           50.0   54.0   48.0   50.67±3.06
+Overall              38.9   37.0   39.4   38.42±1.25
+THREE_SEED=PASS model=ctx seeds=7,42,0 runs=3 overall=38.42±1.25
+== ctxcat（论文 FrameSamp+Context 30.68±1.17）
+任务                 s   42 s    7 s    0   均值±std
+BinFill              34.0   34.0   36.0   34.67±1.15
+PickXtimes           56.0   50.0   54.0   53.33±3.06
+SwingXtimes          82.0   86.0   82.0   83.33±2.31
+StopCube             42.0   46.0   42.0   43.33±2.31
+VideoUnmask          34.0   32.0   34.0   33.33±1.15
+ButtonUnmask         30.0   24.0   36.0   30.00±6.00
+VideoUnmaskSwap      40.0   32.0   40.0   37.33±4.62
+ButtonUnmaskSwap     24.0   30.0   28.0   27.33±3.06
+PickHighlight        24.0   22.0   14.0   20.00±5.29
+VideoRepick          22.0   20.0   26.0   22.67±3.06
+VideoPlaceButton     38.0   34.0   36.0   36.00±2.00
+VideoPlaceOrder      32.0   30.0   22.0   28.00±5.29
+MoveCube             80.0   86.0   82.0   82.67±3.06
+InsertPeg             4.0    2.0    0.0   2.00±2.00
+PatternLock          34.0   32.0   32.0   32.67±1.15
+RouteStick           32.0   30.0   30.0   30.67±1.15
+Overall              38.0   36.9   37.1   37.33±0.59
+THREE_SEED=PASS model=ctxcat seeds=7,42,0 runs=3 overall=37.33±0.59

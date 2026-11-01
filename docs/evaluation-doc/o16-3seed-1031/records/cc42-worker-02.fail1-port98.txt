@@ -1,0 +1,15 @@
+WORKER_START code=5fce5d3c153956708d1470132c22201c456756a7 worker=worker-02 job=65146922 step=5 host=gl1513.arc-ts.umich.edu
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/5fce5d3c153956708d1470132c22201c456756a7/scripts/evaluation/resident_worker.py", line 201, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/5fce5d3c153956708d1470132c22201c456756a7/scripts/evaluation/resident_worker.py", line 197, in main
+    return worker.run()
+           ^^^^^^^^^^^^
+  File "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/releases/5fce5d3c153956708d1470132c22201c456756a7/scripts/evaluation/resident_worker.py", line 160, in run
+    raise RuntimeError("策略服务启动退出")
+RuntimeError: 策略服务启动退出
+srun: error: gl1513: task 0: Exited with exit code 1
+EXIT_CODE=1
