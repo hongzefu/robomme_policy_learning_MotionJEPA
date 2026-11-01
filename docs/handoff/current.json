@@ -1056,6 +1056,12 @@
           "date": "2026-10-31",
           "quote": "开工",
           "scope": "计划62c9d9b追加部分：context concat1x1024 59999 冒烟2局seed0，CC-s42→CC-s7→CC-s0共2400局，排在C-s0之后，沿用5fce5d3与10份占位；59999迟迟不出现时报告用户。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-10-31",
+          "quote": "C-s0 跑完时 59999 还没上传 10 份占位直接取消",
+          "scope": "C-s0 COMPUTE_DONE 时 concat step-59999.json 未出现，则逐个 scancel 65146920-65146929，CC-* 不跑。"
         }
       ],
       "pending_decisions": [],
