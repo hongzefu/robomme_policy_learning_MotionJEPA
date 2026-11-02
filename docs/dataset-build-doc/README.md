@@ -6,6 +6,15 @@
 > 数据集格式与建库链路的正文见 [`docs/motion-memory.md`](../motion-memory.md)（motion 表）与
 > [`docs/dataloader-restructure.md`](../dataloader-restructure.md)（framesamp 三表）。
 
+## Aspen 环境 A 当前双消融建表
+
+| 档案 | 输出 | 状态 |
+|---|---|---|
+| [orig100 去 depth](16task-orig100-1600ep-9e109419-motion-noxyz/launch.md) | `motion-stage2-1024-noxyz` | 输入准备；共用 latent 恢复，尚未导出或打包 |
+| [orig100 去 action](16task-orig100-1600ep-9e109419-motion-nostate/launch.md) | `motion-stage2-1024-nostate` | 输入准备；共用 latent 恢复，尚未导出或打包 |
+
+以下环境 B 与历史记录保留原口径，不与本次混比。
+
 ## 环境 B 现行库与待构建档案
 
 | 档案 | 库 | 内容 | 状态 |
