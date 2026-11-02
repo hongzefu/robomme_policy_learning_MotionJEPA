@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-02T05:49:53Z",
-    "America/New_York": "2026-11-02T00:49:53-0500"
+    "utc": "2026-11-02T06:47:02Z",
+    "America/New_York": "2026-11-02T01:47:02-0500"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "a8fe928d353356d45af135ce310a4f734aac1fb0",
+    "base_head": "eecabb86e9b7d8fd1eed867cd27995f5bbd43bb0",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1185,7 +1185,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-02T05:49:53Z",
-      "state_reason": "v5独立审查通过，用户明确免再次确认后直接实施。占位65209321、65209330已提交，两encoder下载及共享SHA通过；S2已整合推送b297ada，S1/S4/S3/S5与S6代码完成正审查，尚未冒烟或正式训练。",
+      "state_reason": "代码S1至S5与必要S6/S7均已审查整合推送。完整CPU范围962通过7跳过，两组各小于5分钟；旧身份默认DRY_RUN stdout/stderr逐位一致。两encoder下载/共享SHA、16份H5来源元数据预检及在线素材暂存通过；latent恢复与G3 fetch两tmux进行中，占位两份已提交且最近现场均PENDING。尚未GPU导出、集群冒烟或正式训练。",
       "owner": {
         "session": "01a19abc-1926-71b0-bac0-a2d7375a739d",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1211,6 +1211,24 @@
           "status": "pass"
         },
         {
+          "what": "V6a所需完整CPU回归范围",
+          "evidence": "452 passed, 6 skipped in 140.58s；510 passed, 1 skipped in 96.00s；两组TEST_EXIT_CODE=0，合计962通过7跳过",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-contract-all-training.log；/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-contract-all-dataset.log",
+          "status": "pass"
+        },
+        {
+          "what": "旧身份默认启动入口及契约同环境逐位输出",
+          "evidence": "DEFAULT_BITEXACT=PASS base=f1dbe7c9c85ffbf23aaba2bc73321f696bdf4b69 head=7c02c9f9566946703ca76f79619099b4fd424328 route=old_identity_smoke20_b4 stdout=exact stderr=exact",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-default-bitexact.log",
+          "status": "pass"
+        },
+        {
+          "what": "G3真实子集规划及发布规格SHA",
+          "evidence": "G3_SUBSET_PLAN=PASS windows=32 shards=14 bytes=32476096020；build_spec sha256=5943608ef0f1a5febe79069d6081c7427c6f149f071cdf397c0d21a1b567ef7a，与发布清单一致",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-g3plan.log；/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/external/rgb-gtxyz-g3-subset/g3-subset-plan.json",
+          "status": "pass"
+        },
+        {
           "what": "V1–V5、V6a、V8 全部 PASS；两个 run 的 V6 64 档均 PASS、各自 V6b/V7 判定齐全并核当时剩余时间才能 done。任一64档FAIL补32/16与HOLD_CANCEL后 stopped，不解锁正式训练。",
           "evidence": "",
           "where": "$P/v1-store/logs/o16abl-*.log；turbo v1-store/logs/o16abl-*.log；计划「实施中实测」小节",
@@ -1230,6 +1248,16 @@
           "tmux": "",
           "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16abl-hold-submit-1102.log",
           "done_line": "HOLD_CANCEL=PASS jobid=65209330"
+        },
+        {
+          "tmux": "o16abl-fetch-latents",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-fetch-latents.log",
+          "done_line": "LATENTS_SYNC=PASS members=7489 mismatch=0"
+        },
+        {
+          "tmux": "o16abl-g3fetch",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-g3fetch.log",
+          "done_line": "G3_SUBSET=PASS shards=14 bytes=32476096020 sha_mismatch=0"
         }
       ],
       "authorizations": [
@@ -1315,9 +1343,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "依次独立审查与合入S1/S4/S3/S5，整合S6；latent与G3下载核验、两表构建、Beta部署后两run集群冒烟，全部通过才正式起跑。",
-          "command": "见计划v5和实施中调整；ssh greatlakes squeue -j 65209321,65209330",
-          "verdict_line": "GL_CONTRACT_TESTS=PASS；G3_SUBSET=PASS；VERIFY_MOTION=PASS；SMOKE_GL=PASS"
+          "what": "继续两份已授权输入下载。输入核验完后按已审S7入口先每encoder单段smoke，再完整导出；GPU0上G3按noxyz先串行，两表pack/verify后Beta部署；两个run均通过64档及第一阶段后正式起跑。",
+          "command": "见完整计划及两建表launch.md；占位65209321/65209330；tmux o16abl-fetch-latents、o16abl-g3fetch",
+          "verdict_line": "LATENTS_SYNC=PASS；G3_SUBSET=PASS；STAGE2_EXPORT=PASS；VERIFY_MOTION=PASS；SMOKE_GL=PASS"
         }
       ]
     },
