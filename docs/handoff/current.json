@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-02T15:35:08Z",
-    "America/New_York": "2026-11-02T10:35:08-0500"
+    "utc": "2026-11-02T15:55:59Z",
+    "America/New_York": "2026-11-02T10:55:59-0500"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "60e96dd211b8cb4e41978bc3d24730c34749b6c8",
+    "base_head": "b4d7b7319e62aaf4166d03c8bf53dde9f8d25638",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1315,7 +1315,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-02T15:35:08Z",
-      "state_reason": "用户明确跳过测速后已核原预算预留约19%，继续既有占位。两正式80k/B64/FSDP4于美东2026-11-02 10:23:07实际启动，job steps65209321.7/gl1519与65209330.7/gl1503。54项合同各PASS，TRAIN_MESH shape(1,4)与FINAL_RECORD_START已现场读回，当前模型初始化/编译，未达100步起跑验收。Beta8b52210ff0048a9ea22776090fda3d76cd181c89，源码保持不动。",
+      "state_reason": "两正式80k/B64/FSDP4已于美东2026-11-02 10:23:07在65209321.7/gl1519和65209330.7/gl1503实际启动，Beta8b52210固定。两条均已到同步step100且指标finite，正式日志step0至100间隔6.1363/6.3915秒，估全程136.36/142.03小时，现有占位够用。任务继续running，80k完成/16份checkpoint/79999严格恢复及上传长尾尚未执行；原SAVE_LOAD numerics元数据握手FAIL保留，不伪PASS。",
       "owner": {
         "session": "01a19abc-1926-71b0-bac0-a2d7375a739d",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1325,7 +1325,13 @@
       ],
       "pre_handoff": [
         {
-          "what": "V9、V10（两个 run 各 EXIT_CODE=0、CKPT_STEPS count=16、79999 严格恢复）；两份占位已 scancel；档案与回写 commit 已 push",
+          "what": "V9两正式run已达同步step100并finite",
+          "evidence": "TRAIN_START=PASS run=gl-orig100-ctx32x4x4-noxyz-motion-s2split4x256-b64-80k head=8b52210ff0048a9ea22776090fda3d76cd181c89 jobid=65209321 step=100；nostate对应65209330 step100亦PASS",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-train-start.summary.txt",
+          "status": "pass"
+        },
+        {
+          "what": "V10：两个run最终EXIT0、final record、精确16份checkpoint与79999严格恢复；两hold释放；结果归档回写并push。尚待实际完成，不用起跑PASS替代。",
           "evidence": "",
           "where": "turbo v1-store/logs/<run>.log；docs/training-doc/<run>/",
           "status": "pending"
@@ -1434,9 +1440,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "读两正式训练Step0/100与后续5000步进度，按真正训练日志复核余量，不起额外测速。完成后核final record/精确16步集合/79999原严格恢复；SAVE_LOAD数值握手原FAIL不能伪PASS。",
+          "what": "继续正式运行，按训练日志每5000步核finite/进度/余量，不起额外测速；结束后按V10核终态checkpoint与原严格恢复，原SAVE_LOAD FAIL不能伪PASS，再做既定上传读回长尾。",
           "command": "查看running_handles日志及G/v1-store/train-runs/mme_vla_suite_orig16_b64_80k/<run>；代码固定Beta8b52210",
-          "verdict_line": "TRAIN_START=PASS（待Step100）；TRAIN_FINAL_RECORD=PASS；CKPT_STEPS=PASS count=16；CKPT_DELIVERY_READY=PASS step=79999"
+          "verdict_line": "TRAIN_FINAL_RECORD=PASS；CKPT_STEPS=PASS count=16；CKPT_DELIVERY_READY=PASS step=79999（均待实际验收）"
         }
       ]
     }
