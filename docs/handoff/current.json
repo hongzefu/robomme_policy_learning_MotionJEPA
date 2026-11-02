@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-02T05:36:58Z",
-    "America/New_York": "2026-11-02T00:36:58-0500"
+    "utc": "2026-11-02T05:49:53Z",
+    "America/New_York": "2026-11-02T00:49:53-0500"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "2e9b8dc09acf5a5518c95284da9658c1961fd1c9",
+    "base_head": "a8fe928d353356d45af135ce310a4f734aac1fb0",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1183,9 +1183,9 @@
         "file": "1101-gl-ablation-encoders-ctx-b64-80k-plan.md",
         "sha": "2e9b8dc09acf5a5518c95284da9658c1961fd1c9"
       },
-      "state": "stopped",
-      "state_changed_at": "2026-11-02T05:33:08Z",
-      "state_reason": "两项时序已获用户裁决，v5已完整修订并呈现；用户明确无需再确认直接开始，正在等待修订版独立开工审查，通过后实施。",
+      "state": "running",
+      "state_changed_at": "2026-11-02T05:49:53Z",
+      "state_reason": "v5独立审查通过，用户明确免再次确认后直接实施。占位65209321、65209330已提交，两encoder下载及共享SHA通过；S2已整合推送b297ada，S1/S4/S3/S5与S6代码完成正审查，尚未冒烟或正式训练。",
       "owner": {
         "session": "01a19abc-1926-71b0-bac0-a2d7375a739d",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1194,9 +1194,21 @@
       "pre_handoff": [
         {
           "what": "修订版开工前独立计划一致性审查",
-          "evidence": "",
-          "where": "独立审查者 /root/plan_consistency，固定计划提交 2e9b8dc09acf5a5518c95284da9658c1961fd1c9；旧版FAIL保留在docs/validation/1102-gl-ablation-plan-consistency.md",
-          "status": "pending"
+          "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=2e9b8dc09acf5a5518c95284da9658c1961fd1c9 findings=0 blocking=0",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/validation/1102-gl-ablation-plan-consistency.md",
+          "status": "pass"
+        },
+        {
+          "what": "两份4卡176小时占位提交",
+          "evidence": "HOLD_SUBMIT=PASS jobid=65209321 gpus=4 time=176:00:00；HOLD_SUBMIT=PASS jobid=65209330 gpus=4 time=176:00:00",
+          "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16abl-hold-submit-1102.log",
+          "status": "pass"
+        },
+        {
+          "what": "V1两个encoder下载及共享副本字节核验",
+          "evidence": "ENCODER_FETCH=PASS run=aws-stage2-noxyz-1101-a ckpt_sha=6acc92af239e9b9a4c58ced4c5123bc25183188ec518b10734e917879240d00d config_sha=583e48c0a6afa2a798eb14fc8ccdcfe8d9274cb13f1393e05859d6bca368bada；ENCODER_FETCH=PASS run=aws-stage2-nostate-1101-a ckpt_sha=be7cdec7d96c889193f27cd925977c7ff47423d4321d1fd7446799d38495e3d4 config_sha=869ac77872092a0d0b08e1bc3ac60b0a893946af02ae3de193aa5715e8aecc34",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-fetch-enc.log",
+          "status": "pass"
         },
         {
           "what": "V1–V5、V6a、V8 全部 PASS；两个 run 的 V6 64 档均 PASS、各自 V6b/V7 判定齐全并核当时剩余时间才能 done。任一64档FAIL补32/16与HOLD_CANCEL后 stopped，不解锁正式训练。",
@@ -1206,7 +1218,20 @@
         }
       ],
       "long_tail": [],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "jobid": "65209321",
+          "tmux": "",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16abl-hold-submit-1102.log",
+          "done_line": "HOLD_CANCEL=PASS jobid=65209321"
+        },
+        {
+          "jobid": "65209330",
+          "tmux": "",
+          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16abl-hold-submit-1102.log",
+          "done_line": "HOLD_CANCEL=PASS jobid=65209330"
+        }
+      ],
       "authorizations": [
         {
           "kind": "decision",
@@ -1290,9 +1315,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "修订版独立审查通过后，登记phase1 running，提交两份4×A40/176h占位；并行五块代码与资产下载。",
-          "command": "见计划 v5 第一部分步骤及第二部分分配表与runbook",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS base=2e9b8dc09acf5a5518c95284da9658c1961fd1c9 findings=<n> blocking=0"
+          "what": "依次独立审查与合入S1/S4/S3/S5，整合S6；latent与G3下载核验、两表构建、Beta部署后两run集群冒烟，全部通过才正式起跑。",
+          "command": "见计划v5和实施中调整；ssh greatlakes squeue -j 65209321,65209330",
+          "verdict_line": "GL_CONTRACT_TESTS=PASS；G3_SUBSET=PASS；VERIFY_MOTION=PASS；SMOKE_GL=PASS"
         }
       ]
     },
@@ -1301,9 +1326,9 @@
         "file": "1101-gl-ablation-encoders-ctx-b64-80k-plan.md",
         "sha": "2e9b8dc09acf5a5518c95284da9658c1961fd1c9"
       },
-      "state": "stopped",
-      "state_changed_at": "2026-11-02T05:33:08Z",
-      "state_reason": "两项时序已获用户裁决，v5已完整修订并呈现；用户明确无需再确认直接开始，正在等待修订版独立开工审查，通过后实施。",
+      "state": "planned",
+      "state_changed_at": "2026-11-02T05:49:53Z",
+      "state_reason": "用户已授权修订后直接实施；等两个run的64档均通过和phase1 done后自动正式起跑，不再问用户。",
       "owner": {
         "session": "01a19abc-1926-71b0-bac0-a2d7375a739d",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1401,9 +1426,9 @@
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "修订版独立审查通过后，登记phase1 running，提交两份4×A40/176h占位；并行五块代码与资产下载。",
-          "command": "见计划 v5 第一部分步骤及第二部分分配表与runbook",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS base=2e9b8dc09acf5a5518c95284da9658c1961fd1c9 findings=<n> blocking=0"
+          "what": "phase1 done且两个run均64档PASS后接手占位直接起正式训练。",
+          "command": "见计划runbook B1",
+          "verdict_line": "TRAIN_START=PASS run=<run> head=<Beta sha> jobid=<hold> ×2"
         }
       ]
     }
