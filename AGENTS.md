@@ -39,7 +39,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 
 下方标记块 `common-agents` 是 [AgentMetaRules-hongzefu](https://github.com/hongzefu/AgentMetaRules-hongzefu) 正本 `AGENTS.md`「强制规则」第 1–26 条与附录 A 的逐字副本（标记行 `src=` 记正本 commit、`blob=` 记块内容 blob id，**块内禁止手改**；同步核对命令 `uv run --no-project python /data/hongzefu/AgentMetaRules-hongzefu/scripts/sync_rules.py check --repo policy`）。上方「运行环境判定」是正本第 0 条的本仓库实例（判据表两列：环境 A = sled-vail 本机 + turbo 归档 + GreatLakes；环境 B = AWS 单机）。优先级：系统 / 开发者 / 用户当前指令 > 标记块外明确写出的覆盖项 > 标记块内的正本条目。平时只读本文件，不需要去读 GitHub 上的正本；正本改动经同步脚本回流。标记块之后是本仓库的覆盖项、占位符取值、项目 scope 与规则来源。
 
-<!-- AGENTMETARULES:BEGIN common-agents src=9d0855bda68068269fc1789527a61f6df5b99ee7 blob=4db89a2a0026fc408c42aad1e4ca589b54e7a7f7 -->
+<!-- AGENTMETARULES:BEGIN common-agents src=85f05a3ecfb81ec9272c71ba90df53bee666ebd5 blob=6a92fba2c4cd20d60c0ac3866e127418b4eb3780 -->
 
 ## 强制规则（最高优先级）
 
@@ -500,6 +500,9 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
       - `reason=hold`：存在本地标记文件 `$(git rev-parse --git-dir)/AGENTMETARULES_HOLD`（在 `.git` 里，不进版本库）。由主会话在两种情况下写入：合并后审查 `POST_MERGE_REVIEW=FAIL`（写合并提交 sha 与原因，`CLAUDE.md`「计划执行模式」）、进入第 12 条冻结期（写 `freeze` 与冻结锚点 sha）。`fix` 看到它就不提交、不推送、不快进，只输出三行判定和文件内容；用户裁决或打包完成后由主会话删除该文件。
     - **提交后检查**：每次 `git commit` 之后确认 `git status -sb` 首行没有 `ahead`，有就立即裸 `git push`（第 11 条）。Claude Code 由全局 `PostToolUse` hook（匹配 Bash 里的 `git … commit`）自动检查，有未推送 commit 时注入 `PUSH_STATE=AHEAD n=<n> branch=<b>` 提醒；豁免情形不提醒。
     - **Codex 手动执行**：Codex 没有 hook，开工时手动跑 `start` 与 `fix` 并把三行判定写进第一条回复，每次 commit 后手动跑 `git status -sb` 核对。
+    - **Codex 百万上下文配置与启动核验（2026-11-02 新增）**：每次 Codex 主会话开工，除上述仓库同步检查外，必须人工核对当前宿主实际使用的 `CODEX_HOME/config.toml`（默认 `~/.codex/config.toml`；远程服务可能使用独立的 `remote-control-host` 目录，不能只查默认路径）。顶层统一设置 `model_context_window = 1000000`、`model_auto_compact_token_limit = 900000`，并核查活动 profile 与启动参数是否覆盖这两项。缺失或不符时，在保留模型、推理强度与其他配置的前提下对齐；受权限限制时按宿主审批流程处理，失败如实报告。这是 agent 的手动启动责任，`repo_guard.py start/fix` 的现有三行判定不代表已检查上下文配置，不宣称脚本已经自动实现此项。
+      - **配置与实际生效分别验收**：读回并解析配置，报告 `CODEX_CONTEXT_CONFIG=PASS|FAIL home=<实际目录> window=<读回值> compact=<读回值>`；存在尚未核实的启动覆盖时不能报 PASS。再读取本会话日志中 `token_count` 的 `info.model_context_window`，连同实际模型和证据路径报告 `CODEX_CONTEXT_RUNTIME=OBSERVED|UNVERIFIED model=<模型> effective=<实测值或unknown> evidence=<日志路径或none>`。`OBSERVED` 只表示读到了运行值，不等于达到了配置值；有效窗口受当前模型与宿主限制，必须按实测值报告，不能把 `1000000` 配置值说成实际可用一百万，也不能把 `900000` 配置阈值当成已经测得的压缩触发点。
+      - **旧会话不保证热更新**：写入配置后仍须单独核对会话日志；无新证据就报告未验证，仍是旧值就如实报告旧值。不得通过修改模型缓存伪造生效，不为验证而擅自重启、停止用户会话或服务。两项配置键的语义见 [Codex 配置参考](https://learn.chatgpt.com/docs/config-file/config-reference)。本项只适用于 Codex，不改变 Claude Code 的上下文设置。
     - **新 clone 与第二份检出自动接入**：仓库不再按路径登记（第 25 条），任何一份检出——新 clone、第二份检出、嵌在别的仓库里的检出各自开工时——由 `start` 报 `RULES_SYNC=NOT_ONBOARDED`、`fix` 第 ③ 步自动接入子模块，不依赖登记。
     - **worktree 里的子代理不跑检查**：子代理 worktree 是干净检出、子模块目录为空，开工检查只在主检出做；worktree 里的子代理不跑 `start`／`fix`，也不改规则文件。
     - **hook 不阻断会话**：不在 git 仓库里的目录 `start` 只输出 `REPO_SYNC=NOT_GIT`；脚本任何异常只输出一行 `GUARD_ERROR=`，退出码恒为 0。
@@ -525,7 +528,7 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 | `<COMMIT_SUBJECT_STYLE>` | commit subject 体例 | 第 11 条 |
 | `<PLAN_EXEMPLAR>` | 计划密度标杆文档 | 第 2 条 |
 
-<!-- AGENTMETARULES:END common-agents src=9d0855bda68068269fc1789527a61f6df5b99ee7 blob=4db89a2a0026fc408c42aad1e4ca589b54e7a7f7 -->
+<!-- AGENTMETARULES:END common-agents src=85f05a3ecfb81ec9272c71ba90df53bee666ebd5 blob=6a92fba2c4cd20d60c0ac3866e127418b4eb3780 -->
 
 ## 对正本的覆盖项（按正本条号；未列出的条目按正本执行）
 
