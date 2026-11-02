@@ -1,6 +1,6 @@
 # GreatLakes 4×A40 并行训练两个消融 encoder（去 depth／去 action）的 context VLA 计划（b64、80k）
 
-> **修订记录**：v1（29841c1）首版；v2（29d9dea、fdbebc6、ea231ca）按用户裁决改为一次开工令覆盖全程、占位 176 h、余量不足 10% 自动重申请；**v3（本版）按 Astra 对抗审查（审计锚点 125feda，`PLAN_ADVERSARIAL_REVIEW=FAIL scope=static`）逐条回代码核实后修订**：10 条阻塞 9 条成立或部分成立（第 2 条「A100 守卫」成立；第 4 条「逐位比较」部分成立），处置见第二部分「八、对抗审查处置」；用户 2026-11-02 裁决「1 2 同意 3 不要」（G3 沿用 AWS 缓存先例、放宽 A100 守卫、不加旧 encoder 对照 run）。
+> **修订记录**：v1（29841c1）首版；v2（29d9dea、fdbebc6、ea231ca）按用户裁决改为一次开工令覆盖全程、占位 176 h、余量不足 10% 自动重申请；**v3（本版）按 Astra 对抗审查（审计锚点 125feda，`PLAN_ADVERSARIAL_REVIEW=FAIL scope=static`）逐条回代码核实后修订**：10 条阻塞 9 条成立或部分成立（第 2 条「A100 守卫」成立；第 4 条「逐位比较」部分成立），处置见第二部分「八、对抗审查处置」；用户 2026-11-02 裁决「1 2 同意 3 不要」（G3 沿用 AWS 缓存先例、放宽 A100 守卫、不加旧 encoder 对照 run）；**v4：执行宿主改为 Codex**（用户原话「这个计划需要改成用 Codex 来做，你把所有的 agent 都映射成 Codex 的要求」），全部子代理按正本 `docs/codex-aspen-gpt56-roles.md` §二与 `AGENTS.md` 第 26 条 Codex 专节映射，见第一部分 §八与第二部分「〇-C Codex 执行专章」。
 >
 > **权威性与授权边界**：本计划只规划、不实施。下载、本机建表、提交占位 job、冒烟、正式起跑都是开工步骤，须等用户对本版不改而直接认可后才执行（`AGENTS.md` 第 2 条）。**一次开工令覆盖全程**（K10）：64 档冒烟通过即直接正式起跑，不再另问；唯一停点是 64 档 OOM（K2）。
 >
@@ -33,6 +33,7 @@
 | K9 | ckpt 存 turbo `<GL_REPO>/v1-store/train-runs/mme_vla_suite_orig16_b64_80k/<run>/`，每 5000 步一份共 16 份（约 12 GB × 16 × 2 ≈ 390 GB，turbo 余量 12 T）；交付步 79999；跑完各上传公开 bucket `HongzeFu/robomme-vla-gl-orig100-ctx-s2split-<noxyz|nostate>-b64-80k-v1` 作长尾，读回校验在集群 CPU job 做 | 同 1031 K8；审查第 7 条 |
 | K10 | **一次开工令覆盖全程**：本机建表 + 代码 + 两份占位提交 + Beta + 占位内 64 档冒烟 + （PASS 时）正式 80k 起跑 + 收尾上传。Beta commit 在代码合入、契约 PASS、两张表落地之后、占位 RUNNING 之前打好，冒烟与正式用同一 Beta sha | 用户 2026-11-01 修订原话（见 K2） |
 | K11 | 任务已登记 `docs/handoff/current.json`（b019081）：`gl-abl-encoders-phase1`、`gl-abl-encoders-train`（`depends_on` 前者）；phase1 `done`（含 V6 PASS）即自动进入 train，不另问 | 用户原话「登记」；第 27 条 |
+| K13 | **执行宿主 = 本机（sled-aspen）Codex**，主代理 `gpt-6.1-sol/high`；探索→`explorer`（`gpt-6-luna/high`，read-only）、写代码→`worker`（`gpt-6.1-sol/high`，主代理预建独立 worktree）、运行型→`tester`（`gpt-6.1-sol/high`，只起跑不改码）、审查与对抗验证→`reviewer`（`gpt-6.1-sol/high`，read-only）；每次派发显式写 `model` 与 `reasoning_effort="high"`，禁 GPT-5.6；持久代理同职责续用 `followup_task`；无 hook，开工手动 `repo_guard.py start/fix`、每次 commit 后手动 `git status -sb` | 用户原话「用 Codex 来做……映射成 Codex 的要求」；正本 `docs/codex-aspen-gpt56-roles.md` §二；第 26 条 |
 | K12 | **不加旧 encoder 同制度对照 run**。两个消融互比成立；与旧全量 encoder（B128×60k）成绩的差异只作探索性比较，结论里注明制度不同 | 用户 2026-11-02「3 不要」；审查「唯一实验变量」项 |
 
 ## 二、被复现的实验与本次的差别
@@ -90,7 +91,7 @@
 
 | 编号 | 查什么 | 怎么查 | 过了说明什么 | 判定行 |
 |---|---|---|---|---|
-| V0 | 计划无自相矛盾 | 开工令后一个 sonnet 只读审查，锚定本计划 sha | 可照着实施 | `PLAN_CONSISTENCY_REVIEW=PASS base=<sha> findings=<n> blocking=0` |
+| V0 | 计划无自相矛盾 | 开工令后一个 `reviewer`（`gpt-6.1-sol/high`，read-only）审查，锚定本计划 sha | 可照着实施 | `PLAN_CONSISTENCY_REVIEW=PASS base=<sha> findings=<n> blocking=0` |
 | V1 | encoder 字节同一 | B1 后 `sha256sum` 等于 K4 两值；config.yaml SHA 等于 `583e48c0…`／`869ac778…` | 用的就是 AWS 训出的 ep105 | `ENCODER_FETCH=PASS run=<run> ckpt_sha=<8> config_sha=<8>` ×2 |
 | V2 | wan-latents 同一 | B2 逐对象 SHA + 按 `checksums/` 核成员 | 与 AWS latent 字节同一 | `LATENTS_FETCH=PASS objects=13 bytes=<n> sha_mismatch=0`、`LATENTS_UNPACK=PASS members=<n> mismatch=0` |
 | V3 | 导出完整 | B4 日志 | 2496 段 23253 行、`scope=full`、dropout 诊断 `eval_repeat_max_abs=0` | `STAGE2_EXPORT=PASS segments=2496 rows=23253` ×2 |
@@ -110,7 +111,7 @@
 | 阶段 | 内容 | 判据 |
 |---|---|---|
 | A0 | 开工审查 | V0 |
-| A1（开工令后立即） | **先提交两份 4×A40 176 h 占位**（K7）；同时派五个写入型子代理在 `$P` 分支建 worktree 写 S1～S5（§八）；同时 detached tmux 起 B1、B2、B3 | V8（占位行）、V1、V2 |
+| A1（开工令后立即） | **先提交两份 4×A40 176 h 占位**（K7）；同时由主代理在 `$P` 分支为 S1～S5 各建一个独立 worktree，派五个 `worker` 写（§八）；同时 detached tmux 起 B1、B2、B3 | V8（占位行）、V1、V2 |
 | A2 | S3 合入后跑 B5；S4 合入后 B6 可跑；S1/S2/S5 合入后跑 V6a | V4 子集行、V6a |
 | A3 | 两个 encoder：B4 并行（GPU 0／1）→ B6 串行（GPU 0）→ B6b → B7 → B8；表与证据直接落 turbo `$LIB` | V3、V4、V5 |
 | A3b | 写两份 `docs/training-doc/<run>/launch.md` 第一段 → **Beta commit**（`git status --short` 为空）→ 集群副本 `git fetch && git checkout <Beta sha>` → V8 部署行 | V8 |
@@ -118,9 +119,13 @@
 | B1（V6/V6b/V7 后立即，不另问） | 两个 run 各在自己占位里 `srun` 起训练（tmux `o16abl-train-<tag>`）→ 每份日志挂 Monitor；两个占位不同时 RUNNING 时先到先起 | V9 |
 | B2 | 跑完核 EXIT_CODE、final record、步集合；导出脚本产 manifest；同占位内 79999 严格恢复；`scancel` 两份占位；写 result.md、清洗日志、回写 commit、handoff；起上传长尾 | V10、V11 |
 
-## 八、子代理分工与合并（简述）
+## 八、子代理分工与合并（简述，Codex 映射）
 
-五块写入型子代理（opus，各自独立 worktree，主会话从 `$P` 的 `v4-gl-orig100-1031` 建好再派，同一批派出）：S2 配置与 yaml、S1 契约与入口与运行器、S3 G3 子集工具、S4 打包路径别名与 A100 守卫、S5 79999 交付与上传泛化；五者文件不重叠。合入顺序 S2 → S1 → S4 → S3 → S5（S1 的测试引用 S2 的文件名；S5 的导出脚本引用 S1 的 `ENCODERS` 表约定，但各自文件独立）。每块合前一个 sonnet 审固定 BASE/TIP（范围、`sub/` 前缀、默认行为逐位不变、K3 数字、SHA 比对未被削弱），合后主会话跑该块定向短测再 push。B1～B8、占位提交、冒烟测时、正式起跑由 opus 运行代理在 `$P` 或集群副本启动，只起跑、验起跑、交回句柄；主会话负责 Monitor、占位登记与释放、合并审查、建档与交接；运行代理发现代码问题只交证据，主会话另派修复代理。
+执行宿主是本机 Codex（K13）。角色对应：原计划的「haiku 探索」→ `explorer`，「opus worktree 写入」→ `worker`，「opus 运行型」→ `tester`，「sonnet 审查」→ `reviewer`；主代理 `gpt-6.1-sol/high`，所有子代理显式 `reasoning_effort="high"`，模型不高于主代理档位。
+
+五块写入型任务（S2、S1、S4、S3、S5）：Codex 没有自动的子代理 worktree 参数，**主代理先在 `$P` 的 `v4-gl-orig100-1031` 上 `git worktree add` 五个独立目录（`$P/.claude/worktrees/codex-<S编号>/`，分支 `worktree-codex-<S编号>`），再各派一个 `worker`**，委派写明工作树绝对路径、基线 sha、可写集合、禁触路径、验收命令；worker 只在自己的 worktree 提交 `sub/<编号>: ` 前缀的 commit，不 push、不合分支。五者文件不重叠，合入顺序 S2 → S1 → S4 → S3 → S5。每块合前一个 `reviewer` 审固定 BASE/TIP（范围、前缀、默认行为逐位不变、K3 数字、SHA 比对未削弱），合后主代理在 `$P` 跑该块定向短测，`--no-ff` 合入、push。审查 FAIL 时用 `followup_task` 把 findings 交回原 worker 续改，不新开。
+
+B1～B8 建表、占位提交、冒烟测时、正式起跑由 `tester` 启动：只起跑、验起跑、交回句柄，不改码、不改参数；主代理负责 tmux 监听（Codex 无 Monitor 工具，用 `tail -F` 管道加宿主等待机制）、占位登记与释放、合并审查、建档与交接。tester 发现代码问题只交证据，主代理另派 `worker` 修复并走同一审查合并流程。探索按需派 `explorer`，无需预列。
 
 ## 九、交接顺序与状态机登记（第 27 条）
 
@@ -152,6 +157,23 @@
 - R7 全部 tmux 前缀 `o16abl-`，清单写进 launch.md 与 current.json；清理只按清单。
 - R8 证据目录按表分离（`evidence-<tag>/`），库根 `evidence/` 原件不改不删。
 
+## 〇-C Codex 执行专章（第 26 条 Codex 专节与正本 `docs/codex-aspen-gpt56-roles.md` 的落地）
+
+| 项 | 要求 | 核对命令／判定行 |
+|---|---|---|
+| 主代理 | `gpt-6.1-sol`，`model_reasoning_effort = "high"`（`~/.codex/config.toml` 现值一致） | 新任务 `/status` 核对；`CODEX_MAIN=PASS model=gpt-6.1-sol effort=high` |
+| 并发 | `[agents] max_concurrent_threads_per_session = 32`（现值一致，开工时仍按第 26 条重查） | `grep -A3 '^\[agents\]' ~/.codex/config.toml`；`CODEX_THREADS=PASS n=32` |
+| 角色预设 | `~/.codex/agents/{default,planner,explorer,worker,reviewer,tester}.toml` 全为 GPT-6／6.1 系列：explorer `gpt-6-luna/high` read-only；planner `gpt-6.1-sol/xhigh` read-only；reviewer `gpt-6.1-sol/high` read-only；worker、tester、default `gpt-6.1-sol/high`。注意：正本文档 §二 把 worker／tester 写成 `gpt-6-sol`，本机实际安装为 `gpt-6.1-sol`，本计划按实际安装值写，不改配置 | 开工时逐文件 `grep ^model`；任一绑 GPT-5.6 即停止派发并报告；`CODEX_ROLES=PASS roles=6 gpt6_series=6` |
+| 派发纪律 | 每次 spawn 显式 `model` 与 `reasoning_effort="high"`，不依赖默认；全历史 fork 不接受覆盖时 `fork_turns="none"` 并给自含委派；子代理档位不高于主代理 | 委派文本留档 |
+| 角色映射 | 探索→explorer；写代码／解冲突→worker；运行型（下载、建表、占位、冒烟、起跑）→tester；审查／对抗验证／V0→reviewer；计划修订（若需）→planner | 分配表「Codex 角色」列 |
+| 写入隔离 | Codex 无自动 worktree：主代理 `git -C $P worktree add --detach $P/.claude/worktrees/codex-<S> <HEAD>` 后 `git checkout -b worktree-codex-<S>`，再派 worker；worker 每次写入前核 `git rev-parse --show-toplevel` 与 `git branch --show-current`；commit 前缀 `sub/<S>: `；不 push、不合分支、不 `--amend`／`reset --hard` | 合前 reviewer 核 `git diff --name-only BASE..TIP ⊆ 可写集合` |
+| 生命周期 | 持久代理：同职责续用 `followup_task`，审查 FAIL 的续改交回原 worker；`wait_agent` 等待，不忙轮询；`list_agents` 核状态；不长期空挂，职责结束按宿主工具关闭 | — |
+| 运行／修码分工 | tester 不改码、不改参数、不自派修复；证据交主代理 → 主代理派 worker → reviewer → 合入 → 交 tester 确定版本续跑 | — |
+| 无 hook | 开工手动 `uv run --no-project python .agentmetarules/scripts/repo_guard.py start` 与 `fix`，三行判定写进第一条回复；每次 commit 后手动 `git status -sb` 核无 `ahead` | `REPO_SYNC`／`PUSH_STATE`／`RULES_SYNC` |
+| 补丁工具 | 编辑优先 `apply_patch`；仅 Bubblewrap 权限故障时按第 20 条 `patch --dry-run --fuzz=0` 回退，禁整文件覆盖 | — |
+| 监听 | Codex 无 Monitor 工具：每份日志 `tail -n +1 -F <log> \| stdbuf -oL tr '\r' '\n' \| grep --line-buffered …` 挂在宿主等待机制上，禁 `sleep` 忙轮询；tmux 规范照第 7 条 | — |
+| 中文 | 子代理内部可英文，交回首行标「[内部产出，英文]」；主代理对用户一律中文 | — |
+
 ## 一、逐文件改动清单
 
 | 块 | 文件 | 锚点 | 改什么 | 关闭态（默认） |
@@ -170,19 +192,19 @@
 
 ## 二、子代理分配表
 
-| 子任务 | 模型／隔离 | 目标 | 可写文件集合 | 禁触路径 | 接口契约与依赖 | 合并顺序 | 验收命令与判定行（`$P` 的 `.venv`，`UV_PROJECT_ENVIRONMENT=$P/.venv PYTHONPATH=<worktree>/src uv run --no-sync …`） | 资源 |
+| 子任务 | Codex 角色／隔离 | 目标 | 可写文件集合 | 禁触路径 | 接口契约与依赖 | 合并顺序 | 验收命令与判定行（`$P` 的 `.venv`，`UV_PROJECT_ENVIRONMENT=$P/.venv PYTHONPATH=<worktree>/src uv run --no-sync …`） | 资源 |
 |---|---|---|---|---|---|---|---|---|
-| S2 | opus，worktree | 新 TrainConfig + 两份 yaml | `config.py`（只增条目）、两份新 yaml | 其余全部 | 文件名与 config 名固定如 K4／§五 | 1 | `python -c` 断言五项数值 → `CFG_B64_80K=PASS`；`diff` 新旧 yaml 恰 3 行 → `YAML_DIFF=PASS lines=3` ×2 | CPU |
-| S1 | opus，worktree | 契约、入口、运行器参数化 | `check_orig16_stage2_launch.py`、`run_orig16_stage2_60k_gl.sh`、`gl/run_in_hold_o16.sh`、两份契约测试 | config.py、yaml、模型、`pack_motion_store.py`、`motion_store.py`、`train.py`、`check_stage2_checkpoint.py` | 依赖 S2 文件名；`ENCODERS` 字段名写进文件头供 S5 引用 | 2 | `pytest tests/training/test_check_orig16_stage2_launch.py tests/training/test_orig16_gl_contract.py tests/training/test_stage2_launch.py tests/datastore -q` → `GL_CONTRACT_TESTS=PASS`；合后主会话跑 V6a 六条 DRY_RUN、拒绝用例、`DEFAULT_BITEXACT` | CPU |
-| S4 | opus，worktree | 打包路径别名、A100 守卫 | `scripts/dataset/pack_motion_store.py`、`scripts/dataset/wan_stage2/validate_stage2.py`、对应测试 | `motion_store.py`、其余 | 不动任何 SHA 比对；root 相同时逐位同原行为 | 3 | `pytest tests/dataset -q -k "motion or stage2"` → `PACK_ALIAS_TESTS=PASS`；用旧表 provenance 构造 root 相同／不同两用例 | CPU |
-| S3 | opus，worktree | G3 子集工具 | `plan_g3_subset.py`、`test_plan_g3_subset.py` | `validate_stage2.py`、MJ reader、其余 | 抽样表达式与 `gate_g3` 逐字相同；只读 bucket | 4 | `pytest tests/dataset/test_plan_g3_subset.py -q` → `G3_SUBSET_TESTS=PASS`；合后主会话真跑 `plan` → `G3_SUBSET_PLAN=PASS windows=32 shards=<n> bytes=<n>` | CPU，网络 |
-| S5 | opus，worktree | 79999 交付与上传泛化 | `check_stage2_checkpoint.py`、`tests/policies/test_stage2_restore.py`、`_stage2_orig16_vla_ckpt_export_common.sh` 与 README | 其余 | 引用 S1 文件头的 `ENCODERS` 约定（不 import，只对齐名字） | 5 | `pytest tests/policies/test_stage2_restore.py -q` → `DELIVERY_79999_TESTS=PASS`；导出脚本 `DRY_RUN` 对 K8 两 run → `EXPORT_CONTRACT=PASS runs=2 steps=16` | CPU |
-| R1 | opus，运行型，`$P` | B1、B2、B3 | turbo `$LIB/wan-latents/`、`$P` 与 turbo 的 `v1-store/external/motionjepa/<run>/`、`/data/hongzefu/MotionJEPA-4a16ab4`（worktree）、日志 `$P/v1-store/logs/o16abl-fetch-*.log` | 代码 | 无 | — | V1、V2、B3 三 SHA 行；tmux `o16abl-fetch-enc`、`o16abl-fetch-latents` | 网络 |
-| R2 | opus，运行型，`$P` | B5 | `$P/v1-store/external/rgb-gtxyz-g3-subset/`、日志 `o16abl-g3fetch.log` | 代码 | 依赖 S3 合入 | — | `G3_SUBSET=PASS …`；tmux `o16abl-g3fetch` | 网络，≤80 GB |
-| R3a／R3b | opus，运行型 ×2，`$P` | 各一个 encoder 的 B4→B6→B6b→B7→B8 | `$LIB/motion-tokens-stage2-<tag>`、`$LIB/evidence-<tag>/`、`$LIB/motion-stage2-1024-<tag>`、日志 `o16abl-build-<tag>.log` | 代码；另一 tag 目录；库根 `evidence/` | 依赖 R1、R2、S4 合入；B6 两者串行共用 GPU 0（noxyz 先，驱动脚本内用锁文件交接） | — | V3、V4、V5；tmux `o16abl-build-<tag>` | GPU 0／1 各一张（B4），CPU 48 线程（B7/B8） |
-| R4 | opus，运行型，集群副本 | 两份占位提交 | turbo `v1-store/logs/o16abl-hold-*.log` | 代码 | 开工令 | — | V8 占位行；JobID 立即交回 | 2 × (4×A40, 176 h, 16 CPU, 128G) |
-| R5a／R5b | opus，运行型 ×2，集群副本 | 占位内 V4b、V6、V6b、V7（含 K7 自动重申请） | turbo `train-runs/o16gl-smoke-*`、`logs/o16abl-smoke-*.log` | 代码 | 依赖 R3 表落地、S1～S5 合入、Beta、部署 V8、占位 RUNNING | — | V6、V6b、V7；tmux `o16abl-smoke-<tag>` | 各自占位 |
-| R6a／R6b | opus，运行型 ×2，集群副本 | 正式起跑 | turbo `train-runs/<run>`、`logs/<run>.log` | 代码 | V6 PASS、V6b/V7 判定行、Beta、建档第一段 | — | V9；tmux `o16abl-train-<tag>` | 各自占位 |
+| S2 | `worker` gpt-6.1-sol/high，主代理预建 worktree | 新 TrainConfig + 两份 yaml | `config.py`（只增条目）、两份新 yaml | 其余全部 | 文件名与 config 名固定如 K4／§五 | 1 | `python -c` 断言五项数值 → `CFG_B64_80K=PASS`；`diff` 新旧 yaml 恰 3 行 → `YAML_DIFF=PASS lines=3` ×2 | CPU |
+| S1 | `worker` gpt-6.1-sol/high，主代理预建 worktree | 契约、入口、运行器参数化 | `check_orig16_stage2_launch.py`、`run_orig16_stage2_60k_gl.sh`、`gl/run_in_hold_o16.sh`、两份契约测试 | config.py、yaml、模型、`pack_motion_store.py`、`motion_store.py`、`train.py`、`check_stage2_checkpoint.py` | 依赖 S2 文件名；`ENCODERS` 字段名写进文件头供 S5 引用 | 2 | `pytest tests/training/test_check_orig16_stage2_launch.py tests/training/test_orig16_gl_contract.py tests/training/test_stage2_launch.py tests/datastore -q` → `GL_CONTRACT_TESTS=PASS`；合后主会话跑 V6a 六条 DRY_RUN、拒绝用例、`DEFAULT_BITEXACT` | CPU |
+| S4 | `worker` gpt-6.1-sol/high，主代理预建 worktree | 打包路径别名、A100 守卫 | `scripts/dataset/pack_motion_store.py`、`scripts/dataset/wan_stage2/validate_stage2.py`、对应测试 | `motion_store.py`、其余 | 不动任何 SHA 比对；root 相同时逐位同原行为 | 3 | `pytest tests/dataset -q -k "motion or stage2"` → `PACK_ALIAS_TESTS=PASS`；用旧表 provenance 构造 root 相同／不同两用例 | CPU |
+| S3 | `worker` gpt-6.1-sol/high，主代理预建 worktree | G3 子集工具 | `plan_g3_subset.py`、`test_plan_g3_subset.py` | `validate_stage2.py`、MJ reader、其余 | 抽样表达式与 `gate_g3` 逐字相同；只读 bucket | 4 | `pytest tests/dataset/test_plan_g3_subset.py -q` → `G3_SUBSET_TESTS=PASS`；合后主会话真跑 `plan` → `G3_SUBSET_PLAN=PASS windows=32 shards=<n> bytes=<n>` | CPU，网络 |
+| S5 | `worker` gpt-6.1-sol/high，主代理预建 worktree | 79999 交付与上传泛化 | `check_stage2_checkpoint.py`、`tests/policies/test_stage2_restore.py`、`_stage2_orig16_vla_ckpt_export_common.sh` 与 README | 其余 | 引用 S1 文件头的 `ENCODERS` 约定（不 import，只对齐名字） | 5 | `pytest tests/policies/test_stage2_restore.py -q` → `DELIVERY_79999_TESTS=PASS`；导出脚本 `DRY_RUN` 对 K8 两 run → `EXPORT_CONTRACT=PASS runs=2 steps=16` | CPU |
+| R1 | `tester` gpt-6.1-sol/high，`$P` | B1、B2、B3 | turbo `$LIB/wan-latents/`、`$P` 与 turbo 的 `v1-store/external/motionjepa/<run>/`、`/data/hongzefu/MotionJEPA-4a16ab4`（worktree）、日志 `$P/v1-store/logs/o16abl-fetch-*.log` | 代码 | 无 | — | V1、V2、B3 三 SHA 行；tmux `o16abl-fetch-enc`、`o16abl-fetch-latents` | 网络 |
+| R2 | `tester` gpt-6.1-sol/high，`$P` | B5 | `$P/v1-store/external/rgb-gtxyz-g3-subset/`、日志 `o16abl-g3fetch.log` | 代码 | 依赖 S3 合入 | — | `G3_SUBSET=PASS …`；tmux `o16abl-g3fetch` | 网络，≤80 GB |
+| R3a／R3b | `tester` ×2 gpt-6.1-sol/high，`$P` | 各一个 encoder 的 B4→B6→B6b→B7→B8 | `$LIB/motion-tokens-stage2-<tag>`、`$LIB/evidence-<tag>/`、`$LIB/motion-stage2-1024-<tag>`、日志 `o16abl-build-<tag>.log` | 代码；另一 tag 目录；库根 `evidence/` | 依赖 R1、R2、S4 合入；B6 两者串行共用 GPU 0（noxyz 先，驱动脚本内用锁文件交接） | — | V3、V4、V5；tmux `o16abl-build-<tag>` | GPU 0／1 各一张（B4），CPU 48 线程（B7/B8） |
+| R4 | `tester` gpt-6.1-sol/high，集群副本 | 两份占位提交 | turbo `v1-store/logs/o16abl-hold-*.log` | 代码 | 开工令 | — | V8 占位行；JobID 立即交回 | 2 × (4×A40, 176 h, 16 CPU, 128G) |
+| R5a／R5b | `tester` ×2 gpt-6.1-sol/high，集群副本 | 占位内 V4b、V6、V6b、V7（含 K7 自动重申请） | turbo `train-runs/o16gl-smoke-*`、`logs/o16abl-smoke-*.log` | 代码 | 依赖 R3 表落地、S1～S5 合入、Beta、部署 V8、占位 RUNNING | — | V6、V6b、V7；tmux `o16abl-smoke-<tag>` | 各自占位 |
+| R6a／R6b | `tester` ×2 gpt-6.1-sol/high，集群副本 | 正式起跑 | turbo `train-runs/<run>`、`logs/<run>.log` | 代码 | V6 PASS、V6b/V7 判定行、Beta、建档第一段 | — | V9；tmux `o16abl-train-<tag>` | 各自占位 |
 | 主会话 | — | 占位登记／释放、Monitor、合并审查、Beta、集群副本 checkout 与部署核对、建档、handoff、batch 裁决转交 | — | — | — | — | V0、V6a、V8、V10、V11 | — |
 
 共享文件归属：`check_orig16_stage2_launch.py`／GL 入口／运行器只属 S1；`config.py` 与 yaml 只属 S2；`pack_motion_store.py`／`validate_stage2.py` 只属 S4；`check_stage2_checkpoint.py`／导出脚本只属 S5；`$LIB` 下按 `<tag>` 子目录分属 R3a／R3b；turbo `v1-store/logs/` 按前缀分属。
