@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import ml_dtypes
 import numpy as np
@@ -147,7 +147,7 @@ def delivery_fixture(tmp_path, step=60000):
     return root, path, manifest
 
 
-@pytest.mark.parametrize("step", [59999, 60000, 70000])
+@pytest.mark.parametrize("step", [59999, 60000, 70000, 79999])
 def test_delivery_verifies_every_listed_file_including_dependencies(tmp_path, step):
     root, path, manifest = delivery_fixture(tmp_path, step)
     assert restore.verify_delivery_manifest(root, path, root / str(step)) == manifest
@@ -157,7 +157,7 @@ def test_delivery_verifies_every_listed_file_including_dependencies(tmp_path, st
 
 
 @pytest.mark.parametrize("corrupt", ["missing_root", "missing_metadata", "extra_checkpoint", "size", "sha"])
-@pytest.mark.parametrize("step", [59999, 60000, 70000])
+@pytest.mark.parametrize("step", [59999, 60000, 70000, 79999])
 def test_incomplete_delivery_is_rejected(tmp_path, corrupt, step):
     root, path, manifest = delivery_fixture(tmp_path, step)
     if corrupt == "missing_root":
@@ -289,7 +289,8 @@ def test_cli_modes_cannot_mix_reference_and_delivery(tmp_path, mode, extra):
 
 
 @pytest.mark.parametrize("extra,step", [([], 60000), (["--delivery-step", "60000"], 60000),
-                                       (["--delivery-step", "70000"], 70000), (["--delivery-step", "59999"], 59999)])
+                                       (["--delivery-step", "70000"], 70000), (["--delivery-step", "59999"], 59999),
+                                       (["--delivery-step", "79999"], 79999)])
 def test_delivery_step_is_explicit_with_60k_default(tmp_path, extra, step):
     args = restore.parse_args(["--mode", "delivery", "--checkpoint", str(tmp_path / f"run/{step}"),
                                "--expected-manifest", str(tmp_path / "manifest.json"),
@@ -297,7 +298,13 @@ def test_delivery_step_is_explicit_with_60k_default(tmp_path, extra, step):
     assert args.delivery_step == step
 
 
-@pytest.mark.parametrize("mode,step", [("smoke", "60000"), ("smoke", "70000"),
+@pytest.mark.parametrize("step,label", [(59999, "CKPT_DELIVERY_READY"), (60000, "CKPT_60K_READY"),
+                                       (70000, "CKPT_70K_READY"), (79999, "CKPT_DELIVERY_READY")])
+def test_delivery_label_preserves_previous_steps(step, label):
+    assert restore.delivery_label(step) == label
+
+
+@pytest.mark.parametrize("mode,step", [("smoke", "60000"), ("smoke", "70000"), ("smoke", "79999"),
                                       ("delivery", "19"), ("delivery", "65000"), ("delivery", "80000")])
 def test_cli_rejects_inapplicable_delivery_step(tmp_path, mode, step):
     source = ["--reference", "r"] if mode == "smoke" else ["--expected-manifest", "m"]
@@ -307,7 +314,7 @@ def test_cli_rejects_inapplicable_delivery_step(tmp_path, mode, step):
                             "--delivery-step", step, *source])
 
 
-@pytest.mark.parametrize("step", [59999, 60000, 70000])
+@pytest.mark.parametrize("step", [59999, 60000, 70000, 79999])
 def test_delivery_selected_step_reaches_verified_manifest_before_runtime(tmp_path, monkeypatch, step):
     root, path, manifest = delivery_fixture(tmp_path, step)
     args = restore.parse_args(["--mode", "delivery", "--checkpoint", str(root / str(step)),
@@ -331,6 +338,7 @@ def test_delivery_selected_step_reaches_verified_manifest_before_runtime(tmp_pat
 
 
 @pytest.mark.parametrize("mode,selected,actual", [("delivery", 60000, 70000), ("delivery", 70000, 60000),
+                                                ("delivery", 79999, 80000),
                                                 ("smoke", None, 70000)])
 def test_checkpoint_directory_must_match_selected_step(tmp_path, monkeypatch, mode, selected, actual):
     checkpoint = tmp_path / f"run/{actual}"
@@ -345,7 +353,7 @@ def test_checkpoint_directory_must_match_selected_step(tmp_path, monkeypatch, mo
         restore.restore_and_check(args, {})
 
 
-@pytest.mark.parametrize("step", [59999, 60000, 70000])
+@pytest.mark.parametrize("step", [59999, 60000, 70000, 79999])
 def test_delivery_failure_keeps_selected_step_label(tmp_path, monkeypatch, capsys, step):
     monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "")
     monkeypatch.setenv("JAX_PLATFORMS", "cpu")
@@ -356,9 +364,82 @@ def test_delivery_failure_keeps_selected_step_label(tmp_path, monkeypatch, capsy
     report = restore.read_json(report_path)
     assert status == 1
     assert report["status"] == "FAIL"
-    assert report["verdict"] == ("CKPT_DELIVERY_READY=FAIL" if step == 59999 else f"CKPT_{step // 1000}K_READY=FAIL")
+    assert report["verdict"] == ("CKPT_DELIVERY_READY=FAIL" if step in (59999, 79999)
+                                 else f"CKPT_{step // 1000}K_READY=FAIL")
     assert capsys.readouterr().out.strip() == report["verdict"]
     assert "online" not in report
+
+
+@pytest.fixture(params=["noxyz", "nostate"])
+def ablation_exporter(request, monkeypatch):
+    """加载真实导出公共体；只检查合同，不读取凭据、不启动上传。"""
+    tag = request.param
+    path = SCRIPT.parents[1] / "dataset/hf_export/_stage2_orig16_vla_ckpt_export_common.sh"
+    monkeypatch.syspath_prepend(str(path.parent))
+    monkeypatch.setenv("O16_REPO", str(SCRIPT.parents[2]))
+    monkeypatch.setenv("RUN", f"gl-orig100-ctx32x4x4-{tag}-motion-s2split4x256-b64-80k")
+    monkeypatch.setenv("BUCKET", f"HongzeFu/robomme-vla-gl-orig100-ctx-s2split-{tag}-b64-80k-v1")
+    monkeypatch.setenv("O16_MODE", "final")
+    monkeypatch.setenv("DRY_RUN", "1")
+    monkeypatch.delenv("ATTEMPT_MANIFEST", raising=False)
+    module = ModuleType("stage2_export_contract")
+    code = path.read_text().split("<<'O16_PY'\n", 1)[1].rsplit("\nO16_PY", 1)[0]
+    exec(compile(code, str(path), "exec"), module.__dict__)
+    return tag, module
+
+
+def test_ablation_export_dry_run_precedes_all_output_and_credentials(ablation_exporter, monkeypatch, capsys):
+    tag, exporter = ablation_exporter
+    monkeypatch.setattr(exporter, "no_symlink", lambda *args: pytest.fail("演练不得创建导出目录"))
+    monkeypatch.setattr(exporter.io, "load_hf_token", lambda *args: pytest.fail("演练不得读取凭据"))
+    exporter.main()
+    output = capsys.readouterr().out
+    assert f"encoder=aws-stage2-{tag}-1101-a table=motion-stage2-1024-{tag}" in output
+    assert "config=mme_vla_suite_orig16_b64_80k" in output
+    assert "steps=16 step_set=" + ",".join(map(str, [*range(5000, 80000, 5000), 79999])) in output
+    assert exporter.readme_path(exporter.RUN).is_file()
+
+
+def test_ablation_export_attempt_uses_base_identity(tmp_path, ablation_exporter, monkeypatch, capsys):
+    tag, exporter = ablation_exporter
+    base, bucket = exporter.RUN, exporter.bucket_id()
+    attempt = base + "-attempt02"
+    decision = tmp_path / "decision.json"
+    write_json(decision, {"allowed_runs": [attempt]})
+    manifest = tmp_path / "attempt.json"
+    write_json(manifest, {"base_run": base, "run": attempt, "history": exporter.history_name(base),
+                          "train_head": "a" * 40, "decision": str(decision), "bucket": bucket + "-attempt02"})
+    monkeypatch.setattr(exporter, "RUN", attempt)
+    monkeypatch.setenv("BUCKET", bucket + "-attempt02")
+    monkeypatch.setenv("ATTEMPT_MANIFEST", str(manifest))
+    exporter.main()
+    output = capsys.readouterr().out
+    assert f"ATTEMPT=PASS run={attempt} base={base}" in output
+    assert f"encoder=aws-stage2-{tag}-1101-a" in output
+    assert exporter.checkpoint_steps()[-1] == 79999
+    assert exporter.bucket_id() == bucket + "-attempt02"
+
+
+def test_ablation_export_rejects_crossed_bucket(ablation_exporter, monkeypatch):
+    tag, exporter = ablation_exporter
+    other = "nostate" if tag == "noxyz" else "noxyz"
+    monkeypatch.setenv("BUCKET", f"HongzeFu/robomme-vla-gl-orig100-ctx-s2split-{other}-b64-80k-v1")
+    with pytest.raises(ValueError, match="固定配对"):
+        exporter.main()
+
+
+def test_ablation_final_requires_exact_sixteen_steps(tmp_path, ablation_exporter):
+    _, exporter = ablation_exporter
+    run = tmp_path / "run"
+    run.mkdir()
+    for step in [*range(5000, 80000, 5000), 79999]:
+        (run / str(step)).mkdir()
+    log = tmp_path / "train.log"
+    log.write_text(f"RUN={exporter.RUN}\nEXIT_CODE=0\n")
+    exporter.strict_final(run, log)
+    (run / "80000").mkdir()
+    with pytest.raises(ValueError, match="最终16步集合不符"):
+        exporter.strict_final(run, log)
 
 
 def test_explicit_runtime_cache_is_required(tmp_path, monkeypatch):

@@ -6,11 +6,11 @@ set -euo pipefail
 O16_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 export O16_REPO O16_MODE RUN BUCKET
 [ -z "${ATTEMPT_MANIFEST:-}" ] || export ATTEMPT_MANIFEST
-export UV_CACHE_DIR=/scratch/hongze/.cache/uv CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu
+export UV_CACHE_DIR="${UV_CACHE_DIR:-/scratch/hongze/.cache/uv}" CUDA_VISIBLE_DEVICES='' JAX_PLATFORMS=cpu
 export XLA_PYTHON_CLIENT_PREALLOCATE=false PYTHONUNBUFFERED=1
 cd "$O16_REPO"
 uv run --no-sync python - <<'O16_PY'
-"""公开训练库和两条60k checkpoint；复用现有打包、HF CLI与逐对象匿名回读。"""
+"""公开训练库与60k／80k checkpoint；复用现有打包、HF CLI与逐对象匿名回读。"""
 from __future__ import annotations
 
 import fnmatch
@@ -44,6 +44,25 @@ RUNS = {
         "HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1", "ctx", "context", 2048, "1x1024"),
     "orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k": (
         "HongzeFu/robomme-vla-orig100-m32x4x4-modul-motion-s2concat1x1024-60k-v1", "modul", "modulation", 1024, "1x1024"),
+}
+# 与启动契约的 encoder 身份同名；旧四条 RUNS 保留原映射与默认行为。
+ENCODERS = {
+    "aws-stage2-noxyz-1101-a": {
+        "ckpt_sha256": "6acc92af239e9b9a4c58ced4c5123bc25183188ec518b10734e917879240d00d",
+        "store_dir": "motion-stage2-1024-noxyz",
+        "yaml": "perceptual-framesamp-ctx-32frame-4x4-noxyz-motion-stage2-4x256-orig16.yaml"},
+    "aws-stage2-nostate-1101-a": {
+        "ckpt_sha256": "be7cdec7d96c889193f27cd925977c7ff47423d4321d1fd7446799d38495e3d4",
+        "store_dir": "motion-stage2-1024-nostate",
+        "yaml": "perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml"},
+}
+ABLATION_RUNS = {
+    "gl-orig100-ctx32x4x4-noxyz-motion-s2split4x256-b64-80k": (
+        "HongzeFu/robomme-vla-gl-orig100-ctx-s2split-noxyz-b64-80k-v1", "ctx", "context", 2048, "4x256",
+        "aws-stage2-noxyz-1101-a"),
+    "gl-orig100-ctx32x4x4-nostate-motion-s2split4x256-b64-80k": (
+        "HongzeFu/robomme-vla-gl-orig100-ctx-s2split-nostate-b64-80k-v1", "ctx", "context", 2048, "4x256",
+        "aws-stage2-nostate-1101-a"),
 }
 README_KIND = {"4x256": "split", "1x1024": "concat"}
 RUN = os.environ.get("RUN", "")
@@ -107,8 +126,25 @@ def canon(value):
 def manifest(files, **identity):
     return {"schema": SCHEMA, **identity, "files": dict(sorted(files.items()))}
 
+def run_spec(run):
+    need(run in RUNS or run in ABLATION_RUNS, "RUN不在已批准训练中")
+    return RUNS[run] if run in RUNS else ABLATION_RUNS[run]
+
+def encoder_run():
+    base = base_run()
+    return ABLATION_RUNS[base][5] if base in ABLATION_RUNS else ENC_RUN
+
+def checkpoint_steps():
+    return tuple(range(5000, 80000, 5000)) + (79999,) if base_run() in ABLATION_RUNS else STEPS
+
+def train_config():
+    return "mme_vla_suite_orig16_b64_80k" if base_run() in ABLATION_RUNS else "mme_vla_suite_orig16_b128_60k"
+
+def store_dir():
+    return ENCODERS[encoder_run()]["store_dir"] if base_run() in ABLATION_RUNS else "motion-stage2-1024"
+
 def check_encoder(encoder, sha=None):
-    expected = {"run_name": ENC_RUN, "checkpoint_name": "checkpoint_epoch_105.pt", "epoch": 105,
+    expected = {"run_name": encoder_run(), "checkpoint_name": "checkpoint_epoch_105.pt", "epoch": 105,
         "global_step": 7770, "arch": ARCH, "state_key": "model", "weight_type": "ema",
         "source_times": [0, 3, 5, 8], "output_shape": [1, 1024]}
     need(isinstance(encoder, dict) and all(encoder.get(k) == v for k, v in expected.items()), "encoder不是ep105/model/EMA")
@@ -116,6 +152,8 @@ def check_encoder(encoder, sha=None):
         need(isinstance(encoder.get(key), str) and SHA.fullmatch(encoder[key]), f"encoder缺少{key}")
     if sha is not None:
         need(encoder["checkpoint_sha256"] == sha, "encoder SHA与yaml不一致")
+    if base_run() in ABLATION_RUNS:
+        need(encoder["checkpoint_sha256"] == ENCODERS[encoder_run()]["ckpt_sha256"], "消融encoder SHA与计划身份不符")
 
 def load_yaml(path):
     from omegaconf import OmegaConf
@@ -155,16 +193,22 @@ def base_run():
 
 
 def bucket_id():
-    return ATTEMPT["bucket"] if ATTEMPT else RUNS[RUN][0]
+    return ATTEMPT["bucket"] if ATTEMPT else run_spec(RUN)[0]
 
 
 def history_name(run):
-    need(run in RUNS, "RUN不在四条已批准训练中")
-    return f"perceptual-framesamp-{RUNS[run][1]}-32frame-4x4-motion-stage2-{RUNS[run][4]}-orig16.yaml"
+    spec = run_spec(run)
+    if run in ABLATION_RUNS:
+        return ENCODERS[spec[5]]["yaml"]
+    return f"perceptual-framesamp-{spec[1]}-32frame-4x4-motion-stage2-{spec[4]}-orig16.yaml"
 
 
 def readme_path(run):
-    return EXPORT / f"orig16_{RUNS[run][1]}32x4x4_{README_KIND[RUNS[run][4]]}_60k_bucket_README.md"
+    spec = run_spec(run)
+    if run in ABLATION_RUNS:
+        tag = ENCODERS[spec[5]]["store_dir"].removeprefix("motion-stage2-1024-")
+        return EXPORT / f"orig16_ctx32x4x4_{tag}_split_80k_bucket_README.md"
+    return EXPORT / f"orig16_{spec[1]}32x4x4_{README_KIND[spec[4]]}_60k_bucket_README.md"
 
 
 def check_attempt(path):
@@ -173,11 +217,11 @@ def check_attempt(path):
     need(isinstance(record, dict) and set(record) == {"base_run", "run", "history", "train_head", "decision", "bucket"},
          "attempt清单字段不符")
     base, run = record["base_run"], record["run"]
-    need(base in RUNS, "attempt base_run不是四条已批准训练之一")
+    run_spec(base)
     match = re.fullmatch(re.escape(base) + r"-attempt(\d{2})", str(run))
     need(match is not None and int(match.group(1)) >= 2, "attempt run必须为base_run加-attemptNN（NN≥02）")
     need(run == RUN and record["bucket"] == os.environ.get("BUCKET"), "RUN/BUCKET与attempt清单不符")
-    need(record["bucket"] == RUNS[base][0] + f"-attempt{match.group(1)}", "attempt bucket必须为base bucket加相同后缀")
+    need(record["bucket"] == run_spec(base)[0] + f"-attempt{match.group(1)}", "attempt bucket必须为base bucket加相同后缀")
     need(record["history"] == history_name(base), "attempt history与base读法或融合不符")
     decision = Path(record["decision"])
     need(decision.is_file() and not decision.is_symlink(), "attempt决定记录不存在")
@@ -191,9 +235,9 @@ def check_history(history):
     need(history == load_yaml(REPO / "src/mme_vla_suite/models/config/robomme" / history_name(base)),
          "run快照与对应正式yaml不同")
     motion = history.get("motion", {})
-    need(motion.get("store_path") == f"v1-store/datasets/{DATASET}/motion-stage2-1024",
+    need(motion.get("store_path") == f"v1-store/datasets/{DATASET}/{store_dir()}",
          "motion库与固定库名不符")
-    if RUNS[base][4] == "1x1024":
+    if run_spec(base)[4] == "1x1024":
         need(motion.get("readout") == "stage2_pool4_concat_v1" and motion.get("num_tokens") == 1
              and motion.get("dim") == 1024 and motion.get("budget") == 96, "concat训练必须为1×1024、96窗读法")
     else:
@@ -201,6 +245,8 @@ def check_history(history):
              and motion.get("dim") == 256, "正式训练必须为4×256读法")
     sha = motion.get("checkpoint_sha256", "")
     need(isinstance(sha, str) and SHA.fullmatch(sha), "yaml含占位SHA")
+    if base in ABLATION_RUNS:
+        need(sha == ENCODERS[encoder_run()]["ckpt_sha256"], "消融yaml encoder SHA与计划身份不符")
     return sha
 
 
@@ -262,7 +308,7 @@ def snapshot_sources(run, registered):
          "依赖必须恰为encoder checkpoint/config")
     for item in dep_files:
         filename = "checkpoint_epoch_105.pt" if item["role"] == "encoder_checkpoint" else "config.yaml"
-        expected_path = f"encoder_dependencies/{ENC_RUN}/{filename}"
+        expected_path = f"encoder_dependencies/{encoder_run()}/{filename}"
         need(relative(item["relative_path"]) == expected_path, "依赖发布路径不符")
         path = member(registered, filename)
         need(Path(item["source_path"]).absolute() == path, "未知依赖源路径")
@@ -309,7 +355,7 @@ def validate_store(repo, prov, history):
 
 
 def step_sources(run, step):
-    need(step in STEPS, "非计划step")
+    need(step in checkpoint_steps(), "非计划step")
     root = no_symlink(Path(run) / str(step))
     need(root.is_dir(), f"step缺失: {step}")
     metadata = json_file(member(root, "_CHECKPOINT_METADATA"))
@@ -468,7 +514,7 @@ def strict_final(run, log):
     need(train_finished(log), "最终导出要求训练EXIT_CODE=0")
     need(any(s == f"RUN={RUN}" for s in log.read_text().splitlines()), "训练日志缺run身份")
     numeric = {p.name for p in run.iterdir() if p.name.isdecimal()}
-    need(numeric == {str(s) for s in STEPS}, "最终12步集合不符")
+    need(numeric == {str(s) for s in checkpoint_steps()}, f"最终{len(checkpoint_steps())}步集合不符")
     need(not any("tmp" in p.name.lower() for p in run.iterdir()), "run根仍有临时保存目录")
 
 def add_manifest(stage, files, name, **identity):
@@ -477,8 +523,9 @@ def add_manifest(stage, files, name, **identity):
 
 
 def run_checkpoints(mode, smoke, root):
-    run = REPO / "v1-store/train-runs/mme_vla_suite_orig16_b128_60k" / RUN
-    registered = REPO / "v1-store/external/motionjepa" / ENC_RUN
+    steps = checkpoint_steps()
+    run = REPO / "v1-store/train-runs" / train_config() / RUN
+    registered = REPO / "v1-store/external/motionjepa" / encoder_run()
     log = REPO / "v1-store/logs" / f"{RUN}.log"
     bucket = bucket_id()
     stage = root / "stage"
@@ -505,7 +552,7 @@ def run_checkpoints(mode, smoke, root):
         print(f"ROOT_UPLOAD=PASS files={len(root_files)}", flush=True)
     all_files, processed = dict(root_files), set()
     while True:
-        for step in STEPS:
+        for step in steps:
             if step in processed:
                 continue
             metadata = run / str(step) / "_CHECKPOINT_METADATA"
@@ -531,15 +578,15 @@ def run_checkpoints(mode, smoke, root):
             all_files.update(files)
             sources.update(extra)
             path = write_generated(stage, "delivery_manifest.json",
-                                   manifest(all_files, run_name=RUN, bucket=bucket, steps=list(STEPS)))
+                                   manifest(all_files, run_name=RUN, bucket=bucket, steps=list(steps)))
             all_files["delivery_manifest.json"] = file_info(path)
             if publisher:
                 publisher.transfer("final", stage, {**files, "delivery_manifest.json": all_files["delivery_manifest.json"]})
                 publisher.verify_all(stage, all_files)
             break
-        if smoke or processed == set(STEPS) or train_finished(log):
+        if smoke or processed == set(steps) or train_finished(log):
             break
-        print(f"INC_WAIT done={len(processed)} expected=12", flush=True)
+        print(f"INC_WAIT done={len(processed)} expected={len(steps)}", flush=True)
         time.sleep(30)
     for name, path in sources.items():
         need(file_info(path) == all_files[name], f"源文件变化: {name}")
@@ -547,10 +594,10 @@ def run_checkpoints(mode, smoke, root):
         print(f"SMOKE=PASS kind=checkpoint mode={mode} steps={len(processed)}")
     elif mode == "final":
         print(f"HF_VERIFY=PASS bucket={bucket} objects={len(all_files)} bytes={sum(v['bytes'] for v in all_files.values())} mismatches=0")
-        print("CKPT_UPLOAD=PASS steps=12")
+        print(f"CKPT_UPLOAD=PASS steps={len(steps)}")
     else:
-        need(processed == set(STEPS), "训练结束但增量未齐12步")
-        print(f"INC_END run={RUN} done=12")
+        need(processed == set(steps), f"训练结束但增量未齐{len(steps)}步")
+        print(f"INC_END run={RUN} done={len(steps)}")
 
 
 def packed_trainset_files(stage):
@@ -656,7 +703,13 @@ def main():
             ATTEMPT = check_attempt(os.environ["ATTEMPT_MANIFEST"])
             print(f"ATTEMPT=PASS run={RUN} base={ATTEMPT['base_run']} bucket={ATTEMPT['bucket']}", flush=True)
         else:
-            need(RUN in RUNS and os.environ.get("BUCKET") == RUNS[RUN][0], "RUN与BUCKET必须是计划固定配对")
+            need((RUN in RUNS or RUN in ABLATION_RUNS) and os.environ.get("BUCKET") == run_spec(RUN)[0],
+                 "RUN与BUCKET必须是计划固定配对")
+        if os.environ.get("DRY_RUN") == "1":
+            print(f"EXPORT_CONTRACT=PASS run={RUN} encoder={encoder_run()} table={store_dir()} "
+                  f"config={train_config()} history={history_name(base_run())} bucket={bucket_id()} "
+                  f"steps={len(checkpoint_steps())} step_set={','.join(map(str, checkpoint_steps()))}", flush=True)
+            return
     name = "hf-orig100-trainset" if mode == "trainset" else f"hf-ckpt-{RUN}"
     root = no_symlink(Path(os.environ.get("O16_EXPORT_ROOT", REPO / "v1-store/exports" / name)))
     root.mkdir(parents=True, exist_ok=True)
