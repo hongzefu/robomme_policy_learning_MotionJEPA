@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-02T05:01:41Z",
-    "America/New_York": "2026-11-02T00:01:41-0500"
+    "utc": "2026-11-02T05:02:55Z",
+    "America/New_York": "2026-11-02T00:02:55-0500"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "29d9dea129e486ab26112d63039db19cb5b59f7b",
+    "base_head": "a62b08d4df727d703a1bbb66becc7d40feb67c70",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1248,7 +1248,13 @@
           "kind": "decision",
           "date": "2026-11-02",
           "quote": "你现在占位是排十天吗？能不能稍微再少一点，就是余量稍微留的稍微少一点。",
-          "scope": "K7 占位 240h→192h"
+          "scope": "K7 占位 240h→192h（随后再压至 176h，见下一条）"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-02",
+          "quote": "你的余量保持在这个百分之二十左右就可以了，因为它这个任务太长了。",
+          "scope": "K7 占位 192h→176h（上限估算 144h+2h ×1.2）"
         }
       ],
       "pending_decisions": [],
@@ -1329,7 +1335,13 @@
           "kind": "decision",
           "date": "2026-11-02",
           "quote": "你现在占位是排十天吗？能不能稍微再少一点，就是余量稍微留的稍微少一点。",
-          "scope": "K7 占位 240h→192h"
+          "scope": "K7 占位 240h→192h（随后再压至 176h，见下一条）"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-02",
+          "quote": "你的余量保持在这个百分之二十左右就可以了，因为它这个任务太长了。",
+          "scope": "K7 占位 192h→176h（上限估算 144h+2h ×1.2）"
         }
       ],
       "pending_decisions": [],

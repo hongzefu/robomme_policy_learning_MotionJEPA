@@ -24,7 +24,7 @@
 | K4 | 两个新 encoder 身份与表名：去 depth `aws-stage2-noxyz-1101-a/checkpoint_epoch_105.pt` SHA256 `6acc92af239e9b9a4c58ced4c5123bc25183188ec518b10734e917879240d00d` → 表 `$LIB/motion-stage2-1024-noxyz`；去 action `aws-stage2-nostate-1101-a/checkpoint_epoch_105.pt` SHA256 `be7cdec7d96c889193f27cd925977c7ff47423d4321d1fd7446799d38495e3d4` → 表 `$LIB/motion-stage2-1024-nostate` | MotionJEPA `bb9f9ab` 两份 `records/upload-SHA256SUMS.txt`；两个 encoder 的 `config.yaml` SHA `583e48c0…`／`869ac778…` |
 | K5 | motion 表全部在本机重算，不与 AWS 沟通：MotionJEPA `b5d23a5` 的 `scripts/stage2_memory_export.py` 单卡导出 → G3 数值闸门 → `pack_motion_store.py pack/verify`；G0、G2 复用库内 `evidence/`（缓存路线与 encoder 无关，`motion_store.validate_stage2_g2_evidence` 带 `cache_import_receipt` 分支不核 ckpt） | 用户原话「不和 AWS 沟通，你在本地进行。」；§四 |
 | K6 | G3 不整下 3 TB：只下 `control/build_spec.json` 与 `index/` 四文件（约 3 MB），本地复现 `gate_g3` 的 `default_rng(0).choice(val 候选, 32)` 得到确切 32 窗，再只下所在分片（每满片 2.45 GB，上限 32 片约 78.5 GB）与对应 `masks/source_valid/<task>/epNNN.bits` | reader `rgb_gtxyz_reader.py::PairedWanCacheReader._init_v2` 只校验 4 个索引文件，`_load_shard_full` 按 `row_start // 4096` 打开单片，rgb／gtxyz 只核大小；§四 |
-| K7 | 占位方式：**开工即为每个 run 提交一份 4×A40、walltime 8 天（192 h）的占位 job**（`--wrap='sleep infinity'`），排队与本机建表并行；64 档 20 步冒烟、32／16 档显存冒烟、100 步测时、正式 80k 训练全部用 `srun --overlap` 塞进同一份占位，64 档冒烟通过后正式训练**紧接着起跑，中间不等用户**；起跑失败在占位内修复重起，不再排第二次队；64 档 OOM 时按 K2 测完三档后 `scancel` 两份占位；不续跑、不实现 `--resume`。8 天 = 估算 5.1～6.0 天 × 1.3～1.6 余量（步时实测到 8 s/步仍放得下），低于 `spgpu MaxTime=14-00:00:00`（2026-11-01 `scontrol` 实测）；V7 实测步时折算总时长超过占位剩余时间 90% 即停下问用户 | 用户原话「直接申请一个有安全余量的 Great Lakes 的 job，然后万一启动失败了，就不用再排队了，就是你启动的时候以占位 job 的形式启动」；2026-11-02 修订原话「能不能稍微再少一点，就是余量稍微留的稍微少一点」；1031 口径「不续跑」沿用 |
+| K7 | 占位方式：**开工即为每个 run 提交一份 4×A40、walltime 176 h（7 天 8 小时）的占位 job**（`--wrap='sleep infinity'`），排队与本机建表并行；64 档 20 步冒烟、32／16 档显存冒烟、100 步测时、正式 80k 训练全部用 `srun --overlap` 塞进同一份占位，64 档冒烟通过后正式训练**紧接着起跑，中间不等用户**；起跑失败在占位内修复重起，不再排第二次队；64 档 OOM 时按 K2 测完三档后 `scancel` 两份占位；不续跑、不实现 `--resume`。176 h = （上限估算 144 h + 冒烟测时约 2 h）× 1.2，余量约 20%（步时实测到 7.3 s/步仍放得下），低于 `spgpu MaxTime=14-00:00:00`（2026-11-01 `scontrol` 实测）；V7 实测步时折算总时长超过占位剩余时间即停下问用户 | 用户原话「直接申请一个有安全余量的 Great Lakes 的 job，然后万一启动失败了，就不用再排队了，就是你启动的时候以占位 job 的形式启动」；2026-11-02 修订原话「能不能稍微再少一点，就是余量稍微留的稍微少一点」「余量保持在这个百分之二十左右就可以了，因为它这个任务太长了」；1031 口径「不续跑」沿用 |
 | K8 | run 名 `gl-orig100-ctx32x4x4-motion-s2split4x256-noxyz-b64-80k`、`gl-orig100-ctx32x4x4-motion-s2split4x256-nostate-b64-80k`；冒烟前缀 `o16gl-smoke-`，测时前缀 `o16gl-tier-`；tmux 前缀 `o16abl-` | 沿用 1031 命名法，batch 段按实际值 |
 | K9 | ckpt 存 turbo `<GL_REPO>/v1-store/train-runs/mme_vla_suite_orig16_b64_80k/<run>/`，每 5000 步一份共 16 份（约 12 GB × 16 × 2 run ≈ 390 GB，turbo 余量 12 T）；跑完各上传公开 bucket `HongzeFu/robomme-vla-gl-orig100-ctx-s2split-<noxyz|nostate>-b64-80k-v1` 作长尾，读回校验在集群 CPU job 做 | 同 1031 K8 |
 | K10 | **一次开工令覆盖全程**：本机建表 + 代码 + 两份占位提交 + 占位内 64 档冒烟 + （通过时）Beta commit 与正式 80k 起跑 + 收尾上传。唯一的停点是 K2 的 64 档 OOM。Beta commit 在占位 RUNNING 前、代码合入与契约 PASS 后就打好，冒烟与正式用同一个 Beta sha | 用户 2026-11-01 修订原话（见 K2）；取代 1031 的两阶段口径 |
@@ -52,7 +52,7 @@
 
 ⚠ 结论先写明：64 档很可能过不了。按 K2，V6 的 64 档 FAIL 不是本计划失败，而是测完 64／32／16 三档峰值、取消两份占位后把数字交用户裁决；若用户改选 32 或 16，步数等效口径（总样本 5.12M）分别为 160 000／320 000 步，占位要重新提交，但那是另一次裁决与另一次开工令，本计划不预设。64 档 PASS 则按 K10 直接起正式训练。
 
-耗时锚点：历史 `v1-prod-trend-10h`（4×A40、b64、512 位 context、无 motion）4.81 s/步；本次 896 位，按 Gemma prefix 长度近似线性外推 5.5～6.5 s/步；80 000 步 = 122～144 h（5.1～6.0 天）；K7 的 192 h 占位余量 1.3～1.6 倍。两个 run 并行占 8 张 A40，约 1 000～1 150 GPU·h（含冒烟测时）。V7 实测步时若使 80k 总时长超过占位剩余时间的 90%（约 170 h，对应 7.6 s/步），停下交用户，不起正式训练。
+耗时锚点：历史 `v1-prod-trend-10h`（4×A40、b64、512 位 context、无 motion）4.81 s/步；本次 896 位，按 Gemma prefix 长度近似线性外推 5.5～6.5 s/步；80 000 步 = 122～144 h（5.1～6.0 天）；K7 的 176 h 占位对上限估算余量约 20%（对下限估算 1.4 倍）。两个 run 并行占 8 张 A40，约 1 000～1 150 GPU·h（含冒烟测时）。V7 实测步时若使 80k 总时长超过占位剩余时间（约 174 h，对应 7.8 s/步），停下交用户，不起正式训练；余量只有 20%，正式训练期间步时若比 V7 稳态慢 20% 以上就会跑不完，Monitor 每 5000 步核一次进度与剩余时间，预计超时即报用户裁决。
 
 ## 四、本机建表链路（每个 encoder 一遍，两个可并行各占一张 A6000）
 
@@ -91,8 +91,8 @@
 | V6a | S1/S2 契约（CPU） | `DRY_RUN=1` 对两份新 yaml × GPUS=4 × GLOBAL_BATCH=64 各一次；拒绝用例：旧 yaml 配新 config、b128、60000、旧 encoder 身份配新表；既有测试 `tests/training/test_check_orig16_stage2_launch.py tests/training/test_orig16_gl_contract.py tests/training/test_stage2_launch.py tests/datastore/` 全过；默认参数（旧身份）行为逐位不变 | 除 batch／步数／日程／encoder 三键外与 AWS 契约逐键相同 | `LAUNCH_CONTRACT_GL=PASS gpus=4 fsdp=4 batch=64 steps=80000 encoder=<run> checks=<n> failed=0` ×2、`CONTRACT_REJECTS=PASS cases=<n>`、`GL_CONTRACT_TESTS=PASS` |
 | V6 | 占位内 64 档冒烟 | 占位 RUNNING 后，每个 run 在自己占位里 `o16gl-smoke-` 20 步 global 64，nvidia-smi 500 ms 采样；PASS → 接 V6b、V7 后立即 V9；OOM → 记 FAIL，再各跑 32、16 档 20 步只取峰值，然后 `scancel` 两份占位，停下交用户 | A40 上 64 档是否可行；决定直接起跑还是停下 | `SMOKE_GL=PASS|FAIL gpus=4 batch=64 steps=20 peak_mib=<n> nonfinite=0 [reason=oom]`，另两档 `SMOKE_GL_TIER=… batch=<32|16> peak_mib=<n>` |
 | V6b | 保存恢复 | 20 步冒烟的 step 19 用 `check_stage2_checkpoint.py --mode smoke`（父 GPU 0、sidecar GPU 1）；跨卡型握手失败如实记录不改判据（1031 已知） | 保存与恢复链路通 | `SAVE_LOAD=PASS|FAIL …` |
-| V7 | 100 步测时 | 同占位 `o16gl-tier-`？不用测时 yaml，用正式 yaml 与 V6 定下的 batch 跑 100 步 `TRAIN_TIMING_STEPS=100`，稳态取第 21–98 步 `host_step_s` 均值；超过 5 分钟按第 17 条诊断 run 留档 | 得到正式步时，核 K7 余量（est_total_h ≤ 0.9 × 占位剩余小时才放行 V9） | `TIMING_GL=PASS|FAIL gpus=4 batch=<b> steps=100 window=21-98 steady_step_s=<x> est_total_h=<x> hold_left_h=<x> margin=<x>` |
-| V8 | 占位与 walltime | `sbatch` 回执、`squeue`；`scontrol show partition spgpu` 的 MaxTime | 两份 8 天占位已拿到或在排 | `HOLD_SUBMIT=PASS jobid=<id> gpus=4 time=192:00:00` ×2、`PARTITION_MAXTIME=14-00:00:00` |
+| V7 | 100 步测时 | 同占位 `o16gl-tier-`？不用测时 yaml，用正式 yaml 与 V6 定下的 batch 跑 100 步 `TRAIN_TIMING_STEPS=100`，稳态取第 21–98 步 `host_step_s` 均值；超过 5 分钟按第 17 条诊断 run 留档 | 得到正式步时，核 K7 余量（est_total_h ≤ 占位剩余小时才放行 V9） | `TIMING_GL=PASS|FAIL gpus=4 batch=<b> steps=100 window=21-98 steady_step_s=<x> est_total_h=<x> hold_left_h=<x> margin=<x>` |
+| V8 | 占位与 walltime | `sbatch` 回执、`squeue`；`scontrol show partition spgpu` 的 MaxTime | 两份 176 h 占位已拿到或在排 | `HOLD_SUBMIT=PASS jobid=<id> gpus=4 time=176:00:00` ×2、`PARTITION_MAXTIME=14-00:00:00` |
 | V9 | 正式起跑（V6 PASS 后立即） | Beta commit 已在占位 RUNNING 前打好、`git status --short` 为空、档案 launch.md 第一段写好、`srun` 起训练、日志出现 `TRAIN_CMD=` 与 `Step 100` | 跑的是锚点代码，与冒烟同一 sha | `TRAIN_START=PASS run=<run> head=<sha> jobid=<id>` ×2 |
 | V10 | 正式完成与交付可读 | 日志尾 `EXIT_CODE=0`；`--check-final-record`；步集合 {5000,…,75000,79999} 共 16；同占位内 `check_stage2_checkpoint.py --mode delivery --delivery-step 79999` | 80k 跑完、79999 可读回 | `TRAIN_FINAL_RECORD=PASS run=<run> …`、`CKPT_STEPS=PASS … count=16`、`CKPT_DELIVERY_READY=PASS step=79999 …` ×2 |
 | V11 | 上传长尾 | 集群 CPU job 逐对象读回 | 公开备份可信 | `HF_VERIFY=PASS bucket=<b> objects=<n> mismatches=0` ×2 |
@@ -102,7 +102,7 @@
 | 阶段 | 内容 | 判据 |
 |---|---|---|
 | A0 | 开工审查 | V0 |
-| A1（开工令后立即） | **先提交两份 4×A40 192 h 占位**（K7，排队与下面并行）；同时派三个写入型子代理在 `$P` 分支上建 worktree 写 S1、S2、S3（§八）；同时 detached tmux 下 encoder（B1）、wan-latents（B2）、建 MJ worktree（B3） | V8、V1、V2 |
+| A1（开工令后立即） | **先提交两份 4×A40 176 h 占位**（K7，排队与下面并行）；同时派三个写入型子代理在 `$P` 分支上建 worktree 写 S1、S2、S3（§八）；同时 detached tmux 下 encoder（B1）、wan-latents（B2）、建 MJ worktree（B3） | V8、V1、V2 |
 | A2 | S3 合入后跑 G3 子集下载（B5）；S1/S2 合入后跑 CPU 契约（V6a） | V4 子集行、V6a |
 | A3 | 两个 encoder 并行：B4 导出（GPU 0／GPU 1）→ B6 G3（串行共用 GPU 0）→ B7 pack → B8 verify；表与 `$VALID/<tag>/` 证据落 turbo；两份 yaml 的 `checkpoint_sha256`/`store_path` 与表 provenance 互核（契约 `MOTION_VERIFIED`） | V3、V4、V5 |
 | A3b | 表与代码齐备后、占位 RUNNING 前：写两份 `docs/training-doc/<run>/launch.md` 第一段 → **Beta commit**（`git status --short` 为空） | 工作区为空、Beta sha 记入 launch.md |
@@ -136,7 +136,7 @@
 ## 〇 前置声明与红线
 
 - R1 不改训练语义：不改模型前向、loss、精度、数据格式、既有 yaml、`config.py` 既有条目、`framesamp_dataset.py`、`pack_motion_store.py`、`validate_stage2.py`、`motion_store.py`、`save_state`；新 config 条目除 K3 四项（batch、fsdp/workers、步数、日程）外逐键等于 60k 条目。
-- R2 不续跑：不启用 `--resume`；占位一次申请 192 h（K7）。64 档 OOM 时按 K2 `scancel` 两份占位（逐 JobID），正式训练只在 64 档 PASS 的占位内起。
+- R2 不续跑：不启用 `--resume`；占位一次申请 176 h（K7）。64 档 OOM 时按 K2 `scancel` 两份占位（逐 JobID），正式训练只在 64 档 PASS 的占位内起。
 - R3 不下载原始 H5（本机已有原件 `/data/hongzefu/data_0226`，只读）；不写 `/scratch/hongze` 进任何新默认值；不在本机新建 `/scratch`。
 - R4 G3 子集目录 `/data/hongzefu/dataset-rgb-gtxyz-g3-subset/` 只放下载物，验证完成后保留到两个 run 评估结束，删前问用户。
 - R5 占位 job 两份 4 GPU 规格超默认，K7 已放行；同批两份是「同批多 job 并行」，S3 起跑时记进 `greatlakes.md` 项目节；`scancel` 只按本计划登记的两个 JobID 逐个做。
@@ -165,7 +165,7 @@
 | R1 | opus，运行型，`$P` | B1、B2、B3 | turbo `$LIB/wan-latents/`、`$P` 与 turbo 的 `v1-store/external/motionjepa/<run>/`、`/data/hongzefu/MotionJEPA-b5d23a5`（worktree）、日志 `$P/v1-store/logs/o16abl-fetch-*.log` | 代码 | 无 | — | V1、V2；tmux `o16abl-fetch-enc`、`o16abl-fetch-latents` | 网络 |
 | R2 | opus，运行型，`$P` | B5 | `/data/hongzefu/dataset-rgb-gtxyz-g3-subset/`、日志 `o16abl-g3fetch.log` | 代码 | 依赖 S3 合入 | — | `G3_SUBSET=PASS …`；tmux `o16abl-g3fetch` | 网络，≤80 GB 本机盘 |
 | R3a／R3b | opus，运行型 ×2，`$P` | 各一个 encoder 的 B4→B6→B7→B8 | `$LIB/motion-tokens-stage2-<tag>`、`$LIB/motion-stage2-1024-<tag>`、`$P/v1-store/validation/orig16-stage2-<tag>/`（G0/G2 复制 + G3）、日志 `o16abl-build-<tag>.log` | 代码；另一个 tag 的目录 | 依赖 R1、R2；B6 两者串行共用 GPU 0（先 noxyz 后 nostate） | — | V3、V4、V5；tmux `o16abl-build-noxyz`、`o16abl-build-nostate` | GPU 0／GPU 1 各一张（B4），CPU 48 线程（B7/B8） |
-| R4 | opus，运行型，turbo 副本 | 两份占位提交 | turbo `v1-store/logs/o16abl-hold-*.log` | 代码 | 开工令 | — | V8；JobID 立即交回 | 2 × (4×A40, 192 h, `--cpus-per-task=16 --mem=192G`，规格沿用 `scripts/training/gl/hold_o16.sbatch`) |
+| R4 | opus，运行型，turbo 副本 | 两份占位提交 | turbo `v1-store/logs/o16abl-hold-*.log` | 代码 | 开工令 | — | V8；JobID 立即交回 | 2 × (4×A40, 176 h, `--cpus-per-task=16 --mem=192G`，规格沿用 `scripts/training/gl/hold_o16.sbatch`) |
 | R5a／R5b | opus，运行型 ×2，turbo 副本 | 占位内 V4b、V6、V6b、V7 | turbo `train-runs/o16gl-smoke-*`、`train-runs/o16gl-tier-*`、`logs/o16abl-smoke-*.log` | 代码 | 依赖 R3 表落地、S1/S2 合入、占位 RUNNING | — | V6、V6b、V7；tmux `o16abl-smoke-<tag>` | 各自占位 |
 | R6a／R6b | opus，运行型 ×2，turbo 副本 | 正式起跑（V6 PASS 后立即） | turbo `train-runs/<run>`、`logs/<run>.log` | 代码 | V6 PASS、V6b/V7 判定行、Beta 已打、建档第一段已写 | — | V9；tmux `o16abl-train-<tag>` | 各自占位 |
 | 主会话 | — | 占位登记／释放、Monitor、合并审查、G0/G2 证据复制与 SHA 核、建档、handoff、batch 裁决转交 | — | — | — | — | V0、V6a、V8、V10、V11 | — |
@@ -181,7 +181,7 @@
 ```bash
 # A1-占位（turbo 副本，每个 tag 一份；规格沿用 scripts/training/gl/hold_o16.sbatch，只改 --time 与 --job-name）
 sbatch --account=chaijy2 --partition=spgpu --nodes=1 --ntasks-per-node=1 --gres=gpu:4 \
-  --cpus-per-task=16 --mem=192G --time=192:00:00 --job-name=o16abl-hold-<tag> --wrap='sleep infinity'
+  --cpus-per-task=16 --mem=192G --time=176:00:00 --job-name=o16abl-hold-<tag> --wrap='sleep infinity'
 # A1-数据（$P，detached tmux，日志三件套）
 tmux new-session -d -s o16abl-fetch-enc "set -o pipefail; PYTHONUNBUFFERED=1 bash v1-store/logs/o16abl-fetch-enc.sh 2>&1 | tee v1-store/logs/o16abl-fetch-enc.log; echo \"EXIT_CODE=\$?\" >> v1-store/logs/o16abl-fetch-enc.log"
 # A3-建表（$P，每 tag 一个 tmux，驱动脚本按 §四 B4→B8 串行；GPU 由脚本参数给）
@@ -207,11 +207,12 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 | 风险 | 处置 |
 |---|---|
 | 64 档 OOM（概率高，§三） | K2：记 FAIL，补 32／16 峰值，停下交用户；占位不释放，等裁决后在同占位继续 |
-| spgpu 常年满卡，两份 4 卡 192 h 占位排队时间不可控 | 开工即提交（K7），排队期间完成本机建表与代码；排到一份先跑该 run 的 A4 |
-| 192 h 对 32／16 档可能不够 | 若用户改选小 batch，步数与 walltime 另算，占位不够则由用户决定是否重交 |
+| spgpu 常年满卡，两份 4 卡 176 h 占位排队时间不可控 | 开工即提交（K7），排队期间完成本机建表与代码；排到一份先跑该 run 的 A4 |
+| 176 h 对 32／16 档可能不够 | 若用户改选小 batch，步数与 walltime 另算，占位不够则由用户决定是否重交 |
 | G3 子集抽样复现偏差（`windows.parquet` 过滤条件与 `gate_g3` 不一致） | S3 用逐字相同表达式并在测试里对拍；真跑 B6 时 reader 若要的分片不在本地会直接报错，按 FAIL 记并补下 |
 | 本机 H5 原件与 AWS 不同源（只核过字节数） | B7 的 `load_cache_import` 逐文件 SHA 核对，不符即 FAIL 停下 |
 | `numerics.gpu_name` 绑定：导出与 G3 必须同一卡型 | B4、B6 都在 A6000 上做；B6 两 encoder 串行用 GPU 0 |
+| 余量仅 20%：正式训练步时慢于 V7 稳态 20% 即超时，ckpt 只存 EMA 不能续跑 | Monitor 每 5000 步按日志时间戳核进度；预计超时立即报用户，由用户决定是否放弃或在新占位重跑；不自行改 batch／步数 |
 | SAVE_LOAD 跨卡型握手（A100 产 reference 对 A40） | 1031 已知，V6b 如实记录不改判据 |
 | NFS 读 wan-latents 与 H5 的 IO | 26.8 GB latent 在 turbo，本机 NFS 实测约 130 MB/s，B4 读取 3～4 min；H5 在本机 NVMe |
 
