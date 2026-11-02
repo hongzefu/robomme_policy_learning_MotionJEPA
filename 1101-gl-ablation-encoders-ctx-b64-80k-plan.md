@@ -1,6 +1,6 @@
 # GreatLakes 4×A40 并行训练两个消融 encoder（去 depth／去 action）的 context VLA 计划（b64、80k）
 
-> **修订记录**：v1（29841c1）首版；v2（29d9dea、fdbebc6、ea231ca）按用户裁决改为一次开工令覆盖全程、占位 176 h、余量不足 10% 自动重申请；**v3 按 Astra 对抗审查（审计锚点 125feda，`PLAN_ADVERSARIAL_REVIEW=FAIL scope=static`）逐条回代码核实后修订**：10 条阻塞 9 条成立或部分成立（第 2 条「A100 守卫」成立；第 4 条「逐位比较」部分成立），处置见第二部分「八、对抗审查处置」；用户 2026-11-02 裁决「1 2 同意 3 不要」（G3 沿用 AWS 缓存先例、放宽 A100 守卫、不加旧 encoder 对照 run）；**v4：执行宿主改为 Codex**（用户原话「这个计划需要改成用 Codex 来做，你把所有的 agent 都映射成 Codex 的要求」），全部子代理按正本 `docs/codex-aspen-gpt56-roles.md` §二与 `AGENTS.md` 第 26 条 Codex 专节映射，见第一部分 §八与第二部分「〇-C Codex 执行专章」。**v5（本版）按开工审查与用户 2026-11-02 裁决同步两项时序**：两个 run 全部通过 64 档及第一阶段后再正式起跑；Beta 早于首次冒烟或训练工作负载，占位可提前 RUNNING 等待。用户先说「同意修订 继续做」，随后明确「不需要再确认，你可以直接开始了。」；本版修订后直接完成独立开工审查并实施，不再请求开工确认。
+> **修订记录**：v1（29841c1）首版；v2（29d9dea、fdbebc6、ea231ca）按用户裁决改为一次开工令覆盖全程、占位 176 h、余量不足 10% 自动重申请；**v3 按 Astra 对抗审查（审计锚点 125feda，`PLAN_ADVERSARIAL_REVIEW=FAIL scope=static`）逐条回代码核实后修订**：10 条阻塞 9 条成立或部分成立（第 2 条「A100 守卫」成立；第 4 条「逐位比较」部分成立），处置见第二部分「八、对抗审查处置」；用户 2026-11-02 裁决「1 2 同意 3 不要」（G3 沿用 AWS 缓存先例、放宽 A100 守卫、不加旧 encoder 对照 run）；**v4：执行宿主改为 Codex**（用户原话「这个计划需要改成用 Codex 来做，你把所有的 agent 都映射成 Codex 的要求」），全部子代理按正本 `docs/codex-aspen-gpt56-roles.md` §二与 `AGENTS.md` 第 26 条 Codex 专节映射，见第一部分 §八与第二部分「〇-C Codex 执行专章」。**v5按开工审查与用户 2026-11-02 裁决同步两项时序**：两个 run 全部通过 64 档及第一阶段后再正式起跑；Beta 早于首次冒烟或训练工作负载，占位可提前 RUNNING 等待。用户先说「同意修订 继续做」，随后明确「不需要再确认，你可以直接开始了。」；本版修订后直接完成独立开工审查并实施，不再请求开工确认。 **v6（当前执行口径）**：用户原话「不用再测速了，可以正式训练启动。你再看一下这个，你先看一下这个冗余的时间还够不够，不够的话要重新启动任务。」取消独立100步测时。V7记NOT_REQUIRED，按原预算上界核实际余量；两个64/20均PASS、余量约19%后，已于美东11月2日10:23:07在两原占位正式起跑。
 >
 > **权威性与授权边界**：本计划只规划、不实施。下载、本机建表、提交占位 job、冒烟、正式起跑都是开工步骤，用户已明确授权本次两项修订后直接实施：「不需要再确认，你可以直接开始了。」无需再请求开工确认；独立开工审查仍执行（`AGENTS.md` 第 2 条）。**一次开工令覆盖全程**（K10）：两个 run 的 64 档都通过并完成第一阶段后，直接正式起跑，不再另问；训练 batch 裁决停点是 64 档 OOM（K2），身份与原始数据 SHA 失败停点仍按第二部分 §三。
 >
@@ -21,14 +21,14 @@
 | 编号 | 已定口径 | 依据 |
 |---|---|---|
 | K1 | 两个 run 并行，各一份 4×A40 占位；不做梯度累积 | 用户 2026-11-01 原话「同意并行。不做任何的梯度累积。」 |
-| K2 | global batch 先测 64（每卡 16）。**每个 run 的 64 档 PASS → 接该 run 的 SAVE_LOAD 与 100 步测时；先到的占位可先做这些工作，等待另一 run。两个 run 的 64 档都 PASS 且第一阶段完成后，直接正式起跑，不再等待用户确认**；**64 档 OOM → 同占位内补测 32、16 两档各 20 步只取显存峰值（不跑 V7），然后逐 JobID `scancel` 两份占位，停下交用户裁决**，不自动降档、不自动训练 | 用户原话「在 Great Lakes 上先测 batch size，总共六十四，如果不够的话就问用户」「先跑这个六十四的档位」；2026-11-01 修订原话「第二阶段的开工令不需要再问用户，如果六十四这一档不通过的话，就停下来，然后取消你的占位 job，然后问用户。但是在问用户之前，需要把六十四、三十二、十六这三档都测了。如果六十四这档通过了，就直接开始正式训练，就不要在中间等了。」；§三；用户 2026-11-02「同意修订 继续做」「不需要再确认，你可以直接开始了。」批准两个 run 的共同起跑条件 |
+| K2 | global batch 先测 64（每卡 16）。**每个 run 的 64 档 PASS → 记录该 run 的 SAVE_LOAD 原始判定；独立100步测时按用户最新指令取消，核实际余量后继续。两个 run 的 64 档都 PASS 且第一阶段完成后，直接正式起跑，不再等待用户确认**；**64 档 OOM → 同占位内补测 32、16 两档各 20 步只取显存峰值（V7现已取消），然后逐 JobID `scancel` 两份占位，停下交用户裁决**，不自动降档、不自动训练 | 用户原话「在 Great Lakes 上先测 batch size，总共六十四，如果不够的话就问用户」「先跑这个六十四的档位」；2026-11-01 修订原话「第二阶段的开工令不需要再问用户，如果六十四这一档不通过的话，就停下来，然后取消你的占位 job，然后问用户。但是在问用户之前，需要把六十四、三十二、十六这三档都测了。如果六十四这档通过了，就直接开始正式训练，就不要在中间等了。」；§三；用户 2026-11-02「同意修订 继续做」「不需要再确认，你可以直接开始了。」批准两个 run 的共同起跑条件 |
 | K3 | 步数 80 000；warmup 10 000；decay_steps 80 000；peak_lr = decay_lr = 5e-5；EMA 0.999；seed 42；save_interval = keep_period = 5000（16 份 ckpt 含 79999）；fsdp_devices 4、num_workers 8 | 用户原话「步数从一百二十 K 降到八十 K step」；lr 不缩放沿用 `config.py` 既有注释口径；warmup 按样本量等价 5000×128 = 10000×64，与官方 `mme_vla_suite`（b64、warmup 10000）同值 |
 | K4 | encoder 身份与表名：去 depth `aws-stage2-noxyz-1101-a/checkpoint_epoch_105.pt` SHA256 `6acc92af239e9b9a4c58ced4c5123bc25183188ec518b10734e917879240d00d`（config.yaml SHA `583e48c0…`）→ 表 `$LIB/motion-stage2-1024-noxyz`、证据目录 `$LIB/evidence-noxyz/`；去 action `aws-stage2-nostate-1101-a/checkpoint_epoch_105.pt` SHA256 `be7cdec7d96c889193f27cd925977c7ff47423d4321d1fd7446799d38495e3d4`（config.yaml SHA `869ac778…`）→ `$LIB/motion-stage2-1024-nostate`、`$LIB/evidence-nostate/`。两份新 yaml 名 `perceptual-framesamp-ctx-32frame-4x4-noxyz-motion-stage2-4x256-orig16.yaml`、`…-4x4-nostate-motion-…-orig16.yaml`（标签放中段，`history_key` 的 `parts[2]=ctx`、`parts[-2]=4x256`、结尾 `-orig16.yaml` 三处解析都不变） | MotionJEPA `bb9f9ab` 两份 `records/upload-SHA256SUMS.txt`；审查第 5 条命名解析核实 |
 | K5 | motion 表全部在本机重算，不与 AWS 沟通：固定 4a 入口的本地副本（S7，显式 `--lineage-build-spec`） 单卡导出 → 缓存路线 G3 → `pack_motion_store.py pack/verify`；G0、G2、缓存收据复用库内 `evidence/`（缓存路线下三者都不绑定 encoder；G2 带收据分支不核 ckpt） | 用户原话「不和 AWS 沟通，你在本地进行。」；§四 |
 | K6 | G3 子集：只下 `control/build_spec.json` 与 `index/` 四文件（约 3 MB），本地复现 `gate_g3` 的 `default_rng(0).choice(val 候选, 32)` 得到确切 32 窗，再只下所在分片（每满片 2.45 GB，上限 32 片约 78.5 GB）与对应 `masks/source_valid/<task>/epNNN.bits`；落点 `$P/v1-store/external/rgb-gtxyz-g3-subset/`（在 `<STORE_ROOT>` 内，不落仓库外） | reader `_init_v2` 只校验 4 个索引文件、`_load_shard_full` 按 `row_start // 4096` 开单片；审查「G3 目录落在仓库外」项 |
 | K6a | **G3 验收口径沿用 AWS 缓存先例**：带 `--cache-import-receipt`，不做两路径逐位比较，判定为 `EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1`、record `metrics` 固定为 `windows=32 seed=0 geometry_all_true=1 shape_mismatches=0 nonfinite=0`（无 `max_abs`）、`output_numerics=NOT_REQUIRED`，`EXPORT_PARITY=NOT_REQUIRED reason=user_decision_same_input`；训练侧 `validate_stage2_cache_evidence` 核的正是这组字段 | 用户 2026-11-02「1 同意」；AWS 原 run `evidence/G3.json` 即此形制 |
 | K6b | **放宽 A100 守卫**：`validate_stage2.py::setup_runtime` 的「数值闸门要求同型号 A100」改为接受 `A100` 或 `RTX A6000`，`numerics.gpu_name` 照实记录；导出（B4）与 G3（B6）必须在同一卡型（本机 A6000）完成，训练侧只比对 G3 与表 provenance 的 `numerics` 一致 | 用户 2026-11-02「2 同意」；GL 只有 A40、本机只有 A6000，没有 A100 可用 |
-| K7 | 占位方式：**开工即为每个 run 提交一份 4×A40、walltime 176 h（7 天 8 小时）的占位 job**（`--wrap='sleep infinity'`，规格沿用 `scripts/training/gl/hold_o16.sbatch`：`--cpus-per-task=16 --mem=128G --gpu_cmode=shared`），排队与本机建表并行，占位可提前 RUNNING 等待；冒烟、测时、正式训练全部用 `srun --overlap` 经占位运行器 `run_in_hold_o16.sh` 塞进同一份占位；176 h =（上限估算 144 h + 冒烟测时约 2 h）× 1.2，余量约 20%；V7 用**该 JobID 当时的实际剩余时间**算余量：**不足 10%（`est_total_h > 0.9 × hold_left_h`）时不问用户，立即按 `est_total_h × 1.2` 另交一份同规格新占位，新占位 RUNNING 且两个 run 已满足 K2 的共同起跑条件后在其中起正式训练，旧占位随即 `scancel`**；≥ 10% 且共同起跑条件满足则直接在原占位起；先到者等待期间消耗的时间须计入正式起跑前重新读取的 `hold_left_h`。不续跑、不实现 `--resume` | 用户原话「直接申请一个有安全余量的 Great Lakes 的 job……以占位 job 的形式启动」「余量保持在这个百分之二十左右就可以了，因为它这个任务太长了」「如果实测步数的余量小于百分之十，你就要重新再申请 job，不需要再问用户」；`spgpu MaxTime=14-00:00:00` |
+| K7 | 占位方式：**开工即为每个 run 提交一份 4×A40、walltime 176 h（7 天 8 小时）的占位 job**（`--wrap='sleep infinity'`，规格沿用 `scripts/training/gl/hold_o16.sbatch`：`--cpus-per-task=16 --mem=128G --gpu_cmode=shared`），排队与本机建表并行，占位可提前 RUNNING 等待；冒烟、正式训练全部用 `srun --overlap` 经占位运行器 `run_in_hold_o16.sh` 塞进同一份占位；176 h =（上限估算 144 h + 冒烟测时约 2 h）× 1.2，余量约 20%；取消V7后，起跑前以原计划6.5s/步上界估80k为144.44h，并用**该 JobID 当时的实际剩余时间**算余量；正式运行后以其实际同步日志复核：**不足 10%（`est_total_h > 0.9 × hold_left_h`）时不问用户，立即按 `est_total_h × 1.2` 另交一份同规格新占位，新占位 RUNNING 且两个 run 已满足 K2 的共同起跑条件后在其中起正式训练，旧占位随即 `scancel`**；≥ 10% 且共同起跑条件满足则直接在原占位起；先到者等待期间消耗的时间须计入正式起跑前重新读取的 `hold_left_h`。不续跑、不实现 `--resume` | 用户原话「直接申请一个有安全余量的 Great Lakes 的 job……以占位 job 的形式启动」「余量保持在这个百分之二十左右就可以了，因为它这个任务太长了」「如果实测步数的余量小于百分之十，你就要重新再申请 job，不需要再问用户」；`spgpu MaxTime=14-00:00:00` |
 | K8 | run 名 `gl-orig100-ctx32x4x4-noxyz-motion-s2split4x256-b64-80k`、`gl-orig100-ctx32x4x4-nostate-motion-s2split4x256-b64-80k`；**失败重起用 `-attemptNN`（NN ≥ 02）后缀**，经 `ATTEMPT_MANIFEST` 清单登记，新 `FINAL_RECORD_DIR`，失败产物原样保留；冒烟前缀 `o16gl-smoke-`，tmux 前缀 `o16abl-` | 沿用 1031 命名法；审查第 8 条 |
 | K9 | ckpt 存 turbo `<GL_REPO>/v1-store/train-runs/mme_vla_suite_orig16_b64_80k/<run>/`，每 5000 步一份共 16 份（约 12 GB × 16 × 2 ≈ 390 GB，turbo 余量 12 T）；交付步 79999；跑完各上传公开 bucket `HongzeFu/robomme-vla-gl-orig100-ctx-s2split-<noxyz|nostate>-b64-80k-v1` 作长尾，读回校验在集群 CPU job 做 | 同 1031 K8；审查第 7 条 |
 | K10 | **一次开工令覆盖全程**：本机建表 + 代码 + 两份占位提交 + Beta + 占位内 64 档冒烟 + （PASS 时）正式 80k 起跑 + 收尾上传。Beta commit 在代码合入、契约 PASS、两张表落地之后、占位内首次运行冒烟或训练工作负载之前打好；占位可提前 RUNNING 等待，冒烟与正式用同一 Beta sha | 用户 2026-11-01 修订原话（见 K2） |
@@ -58,7 +58,7 @@
 
 ⚠ 64 档很可能过不了。按 K2，V6 的 64 档 FAIL 不是本计划失败，而是测完 64／32／16 三档峰值、取消两份占位后把数字交用户；若用户改选 32 或 16，步数等效口径（总样本 5.12M）分别为 160 000／320 000 步，占位重交，那是另一次裁决与开工令。两个 run 的 64 档都 PASS 且完成第一阶段后，按 K10 直接起正式训练。
 
-耗时锚点：历史 `v1-prod-trend-10h`（4×A40、b64、512 位 context、无 motion）4.81 s/步；本次 896 位，按 Gemma prefix 长度近似线性外推 5.5～6.5 s/步；80 000 步 = 122～144 h（5.1～6.0 天）；176 h 占位对上限估算余量约 20%。两个 run 并行占 8 张 A40，约 1 000～1 150 GPU·h。**V7 的步时用两种口径同时记**：`host_step_s`（主线程，不逐步同步设备）与 1031 已有的设备 trace 窗口（`trace=on`）同步总耗时除以步数，取后者算 `est_total_h`；余量按 `squeue -j <JobID> -h -o %L` 读到的实际剩余时间算。正式训练期间 Monitor 每 5000 步按日志时间戳核进度，预计超时（剩余步数 × 稳态步时 > 剩余时间）立即报用户（ckpt 只存 EMA，不能续跑）。
+耗时锚点：历史 `v1-prod-trend-10h`（4×A40、b64、512 位 context、无 motion）4.81 s/步；本次 896 位，按 Gemma prefix 长度近似线性外推 5.5～6.5 s/步；80 000 步 = 122～144 h（5.1～6.0 天）；176 h 占位对上限估算余量约 20%。两个 run 并行占 8 张 A40，约 1 000～1 150 GPU·h。用户已取消V7独立测时；起跑前采用原6.5s/步上界，实际剩171.40/171.83h、运行预留18.66%/18.96%，足够复用。正式step0到100的同步日志给出6.1363/6.3915s每步，80k估136.36/142.03h；这是正式运行日志，未新增测速任务。正式训练期间 Monitor 每 5000 步按日志时间戳核进度，预计超时（剩余步数 × 稳态步时 > 剩余时间）立即报用户（ckpt 只存 EMA，不能续跑）。
 
 ## 四、本机建表链路（每个 encoder 一遍，B4 两个并行各占一张 A6000，B6 串行共用 GPU 0）
 
@@ -98,11 +98,11 @@
 | V4 | G3 缓存路线（K6a） | B5、B6 | encoder 在 32 个 val 窗上形状有限、EMA 65 叶严格一致 | `G3_SUBSET=PASS shards=<n> bytes=<n> sha_mismatch=0`；`EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1`、`EXPORT_PARITY=NOT_REQUIRED reason=user_decision_same_input`、record `windows=32 shape_mismatches=0 nonfinite=0` ×2 |
 | V5 | 表打包与验证 | B7、B8；H5 核对由 `load_cache_import` 内置 | 表行序、字节、padding、provenance 闭合，证据目录自洽 | `PACK_PROVENANCE_PRECHECK=PASS mode=vae_compat segments=2496`、`VERIFY_MOTION=PASS scanned=23253 mismatches=0 nonfinite=0 …` ×2 |
 | V6a | S1/S2/S4/S5 契约（CPU） | `DRY_RUN=1` 对两份新 yaml 的 **20 步 b64、100 步 b64、80000 步 b64 三条完整启动命令**各一次；拒绝用例：旧 yaml 配新 config、b128、60000、旧身份配新表、`-attempt01`；既有测试 `tests/training/ tests/datastore/ tests/dataset/ tests/policies/test_stage2_restore.py` 全过；默认参数（旧身份、60k）DRY_RUN 输出与 S4 的既有日志逐位相同 | 契约闭合、默认行为不变 | `LAUNCH_CONTRACT_GL=PASS gpus=4 fsdp=4 batch=64 steps=<20|100|80000> encoder=<run> checks=<n> failed=0` ×6、`CONTRACT_REJECTS=PASS cases=<n>`、`GL_CONTRACT_TESTS=PASS`、`DEFAULT_BITEXACT=PASS` |
-| V6 | 占位内 64 档冒烟 | 占位 RUNNING 后，每个 run 在自己占位里 `o16gl-smoke-<tag>-b64` 20 步，nvidia-smi 500 ms 单持久进程采样（只查本 job 4 卡；采样对 20 步步时的干扰以 1031 本机冒烟有／无采样的步时对照为参考，写进留档）；PASS → 该 run 的 V6b、V7，等两个 run 都通过并完成第一阶段后才 V9；OOM → 32、16 档 20 步只取峰值 → `scancel` ×2 → 停下交用户 | A40 上 64 档是否可行 | `SMOKE_GL=PASS|FAIL gpus=4 batch=64 steps=20 peak_mib=<n> nonfinite=0 [reason=oom]`；FAIL 时另两行 `SMOKE_GL_TIER=… batch=<32|16> peak_mib=<n>` 与 `HOLD_CANCEL=PASS jobids=<a>,<b>` |
+| V6 | 占位内 64 档冒烟 | 占位 RUNNING 后，每个 run 在自己占位里 `o16gl-smoke-<tag>-b64` 20 步，nvidia-smi 500 ms 单持久进程采样（只查本 job 4 卡；采样对 20 步步时的干扰以 1031 本机冒烟有／无采样的步时对照为参考，写进留档）；PASS → 该 run 的 V6b记录与余量核算（V7用户取消），等两个 run 都通过并完成第一阶段后才 V9；OOM → 32、16 档 20 步只取峰值 → `scancel` ×2 → 停下交用户 | A40 上 64 档是否可行 | `SMOKE_GL=PASS|FAIL gpus=4 batch=64 steps=20 peak_mib=<n> nonfinite=0 [reason=oom]`；FAIL 时另两行 `SMOKE_GL_TIER=… batch=<32|16> peak_mib=<n>` 与 `HOLD_CANCEL=PASS jobids=<a>,<b>` |
 | V6b | 保存恢复 | 20 步冒烟的 step 19 用 `check_stage2_checkpoint.py --mode smoke`（父 GPU 0、sidecar GPU 1）；跨卡型握手失败如实记录不改判据 | 链路通 | `SAVE_LOAD=PASS|FAIL …` |
-| V7 | 100 步测时与余量 | 同占位、正式 yaml、b64、`TRAIN_TIMING_STEPS=100`，稳态第 21–98 步，trace 口径算 `est_total_h`；`hold_left_h` 取 `squeue %L` | 余量 ≥ 10% 原占位起；< 10% 自动重申请（K7） | `TIMING_GL=PASS gpus=4 batch=64 steps=100 window=21-98 trace=on steady_step_s=<x> host_step_s=<x> est_total_h=<x> hold_left_h=<x> margin=<x>`；重申请时加 `HOLD_RESUBMIT=PASS old=<id> new=<id> time=<h>` |
+| V7 | 独立100步测时取消 | 用户最新明确指令；仅精确取消65209321.6、65209330.6，保留原占位。起跑预算按K7，正式进度仍照常读日志 | 不再把额外测时作为正式前置，不伪填测时PASS | `TIMING_GL=NOT_REQUIRED reason=user_skip_timing`；`HOLD_MARGIN=PASS basis=plan_upper_6.5s est_train_h=144.4444 …` |
 | V8 | 占位与部署 | `sbatch` 回执、`squeue`；集群副本 `git rev-parse HEAD` == Beta sha 且 `status --porcelain` 空；`.venv/bin/python -c "import mme_vla_suite;print(mme_vla_suite.__file__)"` 指向 `<GL_REPO>/src` | 两份占位在排，集群跑的是锚点代码 | `HOLD_SUBMIT=PASS jobid=<id> gpus=4 time=176:00:00` ×2、`DEPLOY_GL=PASS head=<sha> clean=1 pkg=<GL_REPO>/src` |
-| V9 | 正式起跑（两个 run 的第一阶段完成后立即） | 两个 run 的 V6 均 PASS、V6b/V7 判定齐全，phase1 已 done；Beta 已打、launch.md 第一段已写、`srun` 起训练、日志 `TRAIN_CMD=` 与 `Step 100` | 跑的是锚点代码，与冒烟同 sha | `TRAIN_START=PASS run=<run> head=<sha> jobid=<id>` ×2 |
+| V9 | 正式起跑（两个 run 的第一阶段完成后立即） | 两个 run 的 V6 均 PASS、V6b判定已记录、V7用户取消且余量够用，phase1 已 done；Beta 已打、launch.md 第一段已写、`srun` 起训练、日志 `TRAIN_CMD=` 与 `Step 100` | 跑的是锚点代码，与冒烟同 sha | `TRAIN_START=PASS run=<run> head=<sha> jobid=<id>` ×2 |
 | V10 | 正式完成与交付 | 日志尾 `EXIT_CODE=0`；`--check-final-record`；步集合 {5000,…,75000,79999} 共 16；导出脚本产 `manifests/step-79999.json`；同占位内 `check_stage2_checkpoint.py --mode delivery --delivery-step 79999 --expected-manifest <manifest>` | 80k 跑完、79999 可读回 | `TRAIN_FINAL_RECORD=PASS run=<run> …`、`CKPT_STEPS=PASS … count=16`、`CKPT_DELIVERY_READY=PASS step=79999 …` ×2 |
 | V11 | 上传长尾 | 集群 CPU job 逐对象读回 | 公开备份可信 | `HF_VERIFY=PASS bucket=<b> objects=<n> mismatches=0` ×2 |
 
@@ -115,8 +115,8 @@
 | A2 | S3 合入后跑 B5；S4 合入后 B6 可跑；S1/S2/S5 合入后跑 V6a | V4 子集行、V6a |
 | A3 | 两个 encoder：B4 并行（GPU 0／1）→ B6 串行（GPU 0）→ B6b → B7 → B8；表与证据直接落 turbo `$LIB` | V3、V4、V5 |
 | A3b | 写两份 `docs/training-doc/<run>/launch.md` 第一段 → **Beta commit**（`git status --short` 为空）→ 集群副本 `git fetch && git checkout <Beta sha>` → V8 部署行；占位可早于 Beta RUNNING，但部署前不得启动冒烟或训练 | V8 |
-| A4 | 占位 RUNNING 后：V4b 计算节点 venv 核对（1031 同式）→ 64 档冒烟。**PASS** → 该 run 的 SAVE_LOAD → 100 步测时；先到者可以先做并等待另一 run。两个 run 的 64 档都通过后统一完成第一阶段，起跑前刷新剩余时间，余量 < 10% 自动重申请，否则原占位 B1；**FAIL** → 32／16 档峰值 → `scancel` ×2 → 停下交用户 | V6、V6b、V7 |
-| B1（两个 run 的第一阶段完成后立即，不另问） | 两个 run 各在自己占位里 `srun` 起训练（tmux `o16abl-train-<tag>`）→ 每份日志挂 Monitor；两个 run 的 64 档都通过、V6b/V7 判定齐全且 phase1 done 后才起正式训练；先到的占位在此之前只做冒烟与测时并等待 | V9 |
+| A4 | 占位 RUNNING 后：V4b 计算节点 venv 核对（1031 同式）→ 64 档冒烟。**PASS** → 该 run 的 SAVE_LOAD原判定记录；100步测时已由用户取消。两个 run 的 64 档都通过后统一完成第一阶段，起跑前刷新剩余时间，余量 < 10% 自动重申请，否则原占位 B1；**FAIL** → 32／16 档峰值 → `scancel` ×2 → 停下交用户 | V6、V6b记录、K7余量（V7取消） |
+| B1（两个 run 的第一阶段完成后立即，不另问） | 两个 run 各在自己占位里 `srun` 起训练（tmux `o16abl-train-<tag>`）→ 每份日志挂 Monitor；两个 run 的 64 档都通过、V6b原判定已记录、V7取消且余量够用且 phase1 done 后才起正式训练；先到的占位在此之前只做冒烟及规定判定并等待 | V9 |
 | B2 | 跑完核 EXIT_CODE、final record、步集合；导出脚本产 manifest；同占位内 79999 严格恢复；`scancel` 两份占位；写 result.md、清洗日志、回写 commit、handoff；起上传长尾 | V10、V11 |
 
 ## 八、子代理分工与合并（简述，Codex 映射）
@@ -132,7 +132,7 @@ B1～B8 建表、占位提交、冒烟测时、正式起跑由 `tester` 启动�
 | 项 | 内容 |
 |---|---|
 | 任务 id | `gl-abl-encoders-phase1`（A0–A4）、`gl-abl-encoders-train`（B1–B2，`depends_on` 前者） |
-| phase1 交接前必须完成 | V1–V5、V6a、V8 全部 PASS；两个 run 的 V6 64 档均 PASS，且各自 V6b、V7 判定行齐全、起跑前剩余时间检查完成；任一 64 档 FAIL 时记录 32/16 档与 `HOLD_CANCEL`，phase1 保持 stopped 并交用户，不解锁 train；出处 `$P/v1-store/logs/o16abl-*.log`、turbo `v1-store/logs/o16abl-*.log`、本计划「实施中实测」小节 |
+| phase1 交接前必须完成 | V1–V5、V6a、V8 全部 PASS；两个 run 的 V6 64 档均 PASS，且各自V6b原判定已记录（允许FAIL且不放宽），V7由用户取消记NOT_REQUIRED，起跑前实际剩余时间检查完成；任一 64 档 FAIL 时记录 32/16 档与 `HOLD_CANCEL`，phase1 保持 stopped 并交用户，不解锁 train；出处 `$P/v1-store/logs/o16abl-*.log`、turbo `v1-store/logs/o16abl-*.log`、本计划「实施中实测」小节 |
 | 长尾 | phase1 无；train 两条 ckpt 上传（tmux `o16abl-upload-<tag>`，日志 turbo `v1-store/logs/o16abl-upload-<tag>.log`，完成行 `HF_VERIFY=PASS`） |
 | 依赖的上游 | 无（两个 encoder 已 `done`，取自公开 bucket，不读 AWS 状态机） |
 | done 后可开工的下游 | phase1 `done`（含两个 run 的 V6 64 档 PASS）→ train 自动 `running`，不另问；**train `done` 后**才可另立两个 run 的官方 800 局评估计划 |
@@ -203,15 +203,15 @@ B1～B8 建表、占位提交、冒烟测时、正式起跑由 `tester` 启动�
 | R2 | `tester` gpt-6.1-sol/high，`$P` | B5 | `$P/v1-store/external/rgb-gtxyz-g3-subset/`、日志 `o16abl-g3fetch.log` | 代码 | 依赖 S3 合入 | — | `G3_SUBSET=PASS …`；tmux `o16abl-g3fetch` | 网络，4 workers，≤80 GB（实测 32.48 GB） |
 | R3a／R3b | `tester` ×2 gpt-6.1-sol/high，`$P` | 各一个 encoder 的 B4→B6→B6b→B7→B8 | `$LIB/motion-tokens-stage2-<tag>`、`$LIB/evidence-<tag>/`、`$LIB/motion-stage2-1024-<tag>`、日志 `o16abl-build-<tag>.log` | 代码；另一 tag 目录；库根 `evidence/` | 依赖 R1、R2、S4/S7 合入；B4 另须 B5 build_spec 发布 SHA 已核；B6 两者串行共用 GPU 0（noxyz 先，驱动脚本内用锁文件交接） | — | V3、V4、V5；tmux `o16abl-build-<tag>` | GPU 0／1 各一张（B4），CPU 48 线程（B7/B8） |
 | R4 | `tester` gpt-6.1-sol/high，集群副本 | 两份占位提交 | turbo `v1-store/logs/o16abl-hold-*.log` | 代码 | 开工令 | — | V8 占位行；JobID 立即交回 | 2 × (4×A40, 176 h, 16 CPU, 128G) |
-| R5a／R5b | `tester` ×2 gpt-6.1-sol/high，集群副本 | 占位内 V4b、V6、V6b、V7（含 K7 自动重申请） | turbo `train-runs/o16gl-smoke-*`、`logs/o16abl-smoke-*.log` | 代码 | 依赖 R3 表落地、S1～S5 合入、Beta、部署 V8、占位 RUNNING | — | V6、V6b、V7；tmux `o16abl-smoke-<tag>` | 各自占位 |
-| R6a／R6b | `tester` ×2 gpt-6.1-sol/high，集群副本 | 正式起跑 | turbo `train-runs/<run>`、`logs/<run>.log` | 代码 | 两个 run 的 V6 均 PASS、各自 V6b/V7 判定齐全、phase1 done、Beta、建档第一段 | — | V9；tmux `o16abl-train-<tag>` | 各自占位 |
+| R5a／R5b | `tester` ×2 gpt-6.1-sol/high，集群副本 | 占位内 V4b、V6、V6b原判定、K7余量（V7用户取消） | turbo `train-runs/o16gl-smoke-*`、`logs/o16abl-smoke-*.log` | 代码 | 依赖 R3 表落地、S1～S5 合入、Beta、部署 V8、占位 RUNNING | — | V6、V6b记录、余量；tmux `o16abl-smoke-<tag>` | 各自占位 |
+| R6a／R6b | `tester` ×2 gpt-6.1-sol/high，集群副本 | 正式起跑 | turbo `train-runs/<run>`、`logs/<run>.log` | 代码 | 两个 run 的 V6 均 PASS、V6b已记录、V7取消且余量够用、phase1 done、Beta、建档第一段 | — | V9；tmux `o16abl-train-<tag>` | 各自占位 |
 | 主会话 | — | 占位登记／释放、Monitor、合并审查、Beta、集群副本 checkout 与部署核对、建档、handoff、batch 裁决转交 | — | — | — | — | V0、V6a、V8、V10、V11 | — |
 
 共享文件归属：`check_orig16_stage2_launch.py`／GL 入口／运行器只属 S1；`config.py` 与 yaml 只属 S2；`pack_motion_store.py`／`validate_stage2.py` 只属 S4；`check_stage2_checkpoint.py`／导出脚本只属 S5；`$LIB` 下按 `<tag>` 子目录分属 R3a／R3b；turbo `v1-store/logs/` 按前缀分属。
 
 ## 三、闸门总表
 
-顺序：V0 → (V8 占位提交 ∥ V1、V2、B3 ∥ S1～S5 写与审) → S2 合 → S1 合 → S4 合 → S3 合 → S5 合 → V6a → B5（V4 子集行）→ V3 ×2 → V4 ×2 → V5 ×2 → A3b Beta → V8 部署行 →（占位已 RUNNING 或等待其 RUNNING）→ 各 run 的 V4b → V6 → [PASS] 各自 V6b → V7 → 等两个 run 的 64 档全部 PASS、V6b/V7 判定齐全 → 起跑前重新读取各占位剩余时间，余量 < 10% 则 `HOLD_RESUBMIT` → phase1 done → V9 ×2 → V10 → V11 ／ [任一 64 档 FAIL] 32、16 档峰值 → `HOLD_CANCEL` → 停下交用户。任一 FAIL 只记证据不改判据；V6 的 64 档 FAIL 按 K2 不算计划失败；V4 任一 encoder 的 `EMA_SOURCE` 不过（encoder 与锁定源码不同源）、V5 H5 SHA 不符（本机原件与 AWS 不同源）两种情形停下交用户。
+顺序：V0 → (V8 占位提交 ∥ V1、V2、B3 ∥ S1～S5 写与审) → S2 合 → S1 合 → S4 合 → S3 合 → S5 合 → V6a → B5（V4 子集行）→ V3 ×2 → V4 ×2 → V5 ×2 → A3b Beta → V8 部署行 →（占位已 RUNNING 或等待其 RUNNING）→ 各 run 的 V4b → V6 → [PASS] 各自V6b原判定记录 → V7用户取消 → 等两个run的64档全部PASS并完成规定记录 → 起跑前重新读取各占位剩余时间，余量 < 10% 则 `HOLD_RESUBMIT` → phase1 done → V9 ×2 → V10 → V11 ／ [任一 64 档 FAIL] 32、16 档峰值 → `HOLD_CANCEL` → 停下交用户。任一 FAIL 只记证据不改判据；V6 的 64 档 FAIL 按 K2 不算计划失败；V4 任一 encoder 的 `EMA_SOURCE` 不过（encoder 与锁定源码不同源）、V5 H5 SHA 不符（本机原件与 AWS 不同源）两种情形停下交用户。
 
 ## 四、runbook（开工后模板）
 
@@ -234,7 +234,7 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
       MMEVLA_STAGE2_EVIDENCE_ROOT=<GL_REPO>/v1-store/datasets/16task-orig100-1600ep-9e109419/evidence-<tag> \
       FINAL_RECORD_DIR=<GL_REPO>/v1-store/validation/o16abl/<run>/final-record \
   bash scripts/training/gl/run_in_hold_o16.sh
-# B1-正式（两个 run 的 64 档均 PASS、V6b/V7 判定齐全且 phase1 done 后，同占位，不另问；失败重起换 RUN_NAME=<run>-attempt02 与新 FINAL_RECORD_DIR，并给 ATTEMPT_MANIFEST）
+# B1-正式（两个 run 的 64 档均 PASS、V6b已记录、V7取消且余量够用且 phase1 done 后，同占位，不另问；失败重起换 RUN_NAME=<run>-attempt02 与新 FINAL_RECORD_DIR，并给 ATTEMPT_MANIFEST）
 srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared \
   env RUN_NAME=gl-orig100-ctx32x4x4-<tag>-motion-s2split4x256-b64-80k CONFIG=mme_vla_suite_orig16_b64_80k \
       ENCODER_RUN=<run> HISTORY=<新 yaml> GPUS=4 GLOBAL_BATCH=64 TRAIN_HEAD=<Beta sha> \
@@ -250,7 +250,7 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 |---|---|
 | 64 档 OOM（概率高，§三） | K2：记 FAIL，补 32／16 峰值，`scancel` 两占位，停下交用户 |
 | spgpu 常年满卡，两份 4 卡 176 h 占位排队不可控 | 开工即提交，排队期间完成建表、代码、Beta、部署；排到一份且 Beta 已部署后先跑该 run 的 A4；待两个 run 都通过并完成第一阶段才正式起跑 |
-| 余量仅 20%：正式期步时慢于 V7 稳态 20% 即超时，ckpt 只存 EMA 不能续跑 | V7 余量 < 10% 自动重申请（K7）；Monitor 每 5000 步核进度，预计超时立即报用户 |
+| 实际步时可能高于初始预算，checkpoint只存EMA不能续跑 | 用户已取消V7；按原上界核余量并起跑后，持续以正式日志核进度，沿K7处理不足10%的余量，不伪造未完成测速结果 |
 | 176 h 对 32／16 档可能不够 | 用户改选小 batch 时步数与 walltime 另算、占位重交 |
 | G3 子集抽样复现偏差 | S3 逐字相同表达式并测试对拍；B6 若报缺分片按 FAIL 记并补下 |
 | 本机 H5 原件与 AWS 不同源（只核过字节数） | B7 `load_cache_import` 逐文件 SHA，不符即 FAIL 停下 |
@@ -262,7 +262,7 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 
 ## 六、盲区诚实清单
 
-- 4×A40 FSDP4 的显存与步时未实测；V6、V7 替换。
+- 已实际通过两个B64/20：显存峰38489/38491MiB、nonfinite=0；正式首100步同步日志间隔6.1363/6.3915秒每步。未来整段吞吐及最终完成仍须以真实记录验收。
 - G3 子集分片数（1～32）与字节（2.5～78.5 GB）在 S3 `plan` 跑完前不知道。
 - 固定 4a 入口的本地副本（S7）在 A6000 上的耗时未测，按 AWS 8 min 外推；本次包实际提交 b5，两核心模块与 4a 字节相同。AWS 实际使用 4a 是历史参数推断，未读 AWS 日志。
 - 两个 bucket 的对象列表只从 upload-SHA256SUMS 读到。
@@ -289,7 +289,7 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 | 9 FAIL 分支顺序 | 成立 | K2：FAIL 不跑 V7；§九条件改写 |
 | 10 部署缺步骤 | 部分成立：两边现同 sha，无同步机制 | A3b 显式 checkout，运行器核 HEAD 与 clean |
 | 「唯一实验变量」 | 成立 | K12、§二措辞（用户裁决不加对照 run） |
-| 测时与余量算法 | 成立 | V7 双口径、`squeue %L` 剩余时间 |
+| 测时与余量算法 | 成立 | 历史V7双口径设计；当前用户取消V7，保留`squeue %L`实际余量与正式日志核算 |
 | B6 串行、运行器、128G、采样干扰 | 成立 | R3 锁文件；经运行器；128G；V6 干扰说明 |
 | K11 陈旧、接口不统一、读取关系、「done 后可评估」、G3 目录 | 成立 | 已改 |
 | 保存步集合、三 decoder 兼容、`chunk_motion.parquet` | 审查自己排除的误报 | 不改 |
@@ -300,10 +300,10 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 
 | 项 | 原口径 | 已批准的新口径 | 核对场景 |
 |---|---|---|---|
-| 正式起跑与交接 | phase1 统一 done 与先到先正式起跑同时存在 | 先到者只先做冒烟、保存恢复与测时；两个 run 都通过 64 档并完成第一阶段后统一解锁正式训练 | 甲 PASS、乙 PENDING：甲等待；乙后来 OOM：尚无正式训练，按 K2 测完档位并取消两占位 |
+| 正式起跑与交接 | phase1 统一 done 与先到先正式起跑同时存在 | 先到者只先做冒烟与原保存恢复判定记录（V7已取消）；两个 run 都通过 64 档并完成第一阶段后统一解锁正式训练 | 甲 PASS、乙 PENDING：甲等待；乙后来 OOM：尚无正式训练，按 K2 测完档位并取消两占位 |
 | Beta 时点 | Beta 必须早于占位 RUNNING | Beta 必须早于占位内首次冒烟或训练工作负载；占位可提前运行等待 | 占位立即 RUNNING：保持空占位，代码、建表、Beta、部署完成后才冒烟 |
 
-共同起跑前用 V7 已测步时与当时重新读取的 `squeue %L` 核余量，沿 K7 不足 10% 自动重申请；不因等待而使用陈旧剩余时间。文首「唯一停点」仅指训练 batch 裁决，EMA 身份与 H5 SHA 失败仍按既有规则停工。两个一级部分、原定 S1～S5 写入任务与资源规模、80k 超参和身份判据均保持既定口径。按用户本轮明确授权，修订提交后直接做一次开工审查，通过后实施，不再次询问开工。
+共同起跑前按用户最新指令取消V7，使用原计划6.5s/步上界144.44h估算并使用当时重新读取的 `squeue %L` 核余量，沿 K7 不足 10% 自动重申请；不因等待而使用陈旧剩余时间。文首「唯一停点」仅指训练 batch 裁决，EMA 身份与 H5 SHA 失败仍按既有规则停工。两个一级部分、原定 S1～S5 写入任务与资源规模、80k 超参和身份判据均保持既定口径。按用户本轮明确授权，修订提交后直接做一次开工审查，通过后实施，不再次询问开工。
 
 ## 十、实施中调整
 
@@ -323,3 +323,11 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 | G3下载worker细节 | 真规划32窗/14片/115对象/32476096020字节，默认workers1不变，运行显式4。先核SUMS与全部对象身份，再并发唯一对象；不改对象清单、预算或源字节。 | `G3_PARALLEL_FETCH=PASS workers=4`；6项HTTP回归、独立 `PRE_MERGE_REVIEW=PASS task=S3-fetch ... findings=0`；实际fetch以tmux `o16abl-g3fetch`起跑。 |
 
 S1合前与合后复核曾分别发现旧8卡分支绕过、K2诊断小batch误拦，均由原S1代理在原五文件集合内最小续改，保留失败报告与全部sub提交。最终固定 `ccbbda239535e887e2acd38f1fa0156117526ed0` 的独立审查通过，完整core/shell成功与拒绝矩阵通过；正式100/80000步仍仅B64，20步诊断允许B64/B32/B16。以上属于把原计划实现正确，未改变用户口径。
+
+## 十一、用户取消测时与正式启动实测
+
+用户原话：「不用再测速了，可以正式训练启动。你再看一下这个，你先看一下这个冗余的时间还够不够，不够的话要重新启动任务。」随后要求「赶紧开始了你还在等什么！！！」。主会话仅停止两个100步测时step `.6`，保留两份hold；当时剩171.40/171.83h，对原计划144.44h估计分别留18.66%/18.96%，超过10%更换门槛，复用原占位。该起跑前值是预算估计，没有伪称完成精确测速。
+
+两条正式任务在美东2026-11-02 10:23:07真正起跑，Beta `8b52210ff0048a9ea22776090fda3d76cd181c89`，step `65209321.7/gl1519`、`65209330.7/gl1503`，各4×A40、global64、workers8、80000步；MAX_STEPS和TRAIN_TIMING_STEPS均未设置、无NVML采样。各54项合同及实际mesh `(1,4)`通过。正式同步step100已到，step0→100日志间隔分别6.1363/6.3915秒每步，对全程估计136.36/142.03h；loss100分别0.36810/0.36983、grad_norm有限。两条`TRAIN_START=PASS`已可按实际step100记录，未把正式运行完成或策略性能写成PASS。
+
+`SAVE_LOAD=FAIL`源于真实A40握手numerics与A6000离线来源不同，按既定V6b口径保留原判定，不改阈值。第一次post64因PATH把env解析到HOME不可执行路径，目标程序未起；独立`ADJUST_REVIEW=PASS scale=same findings=0`后仅改两个命令为`/usr/bin/env`，保留旧载体及失败日志，做一次基础设施重试。后续100步测时按用户要求取消，记`NOT_REQUIRED`。完整建表、代码、缓存及输入适配结果见数据档案；实际正式日志与句柄登记`docs/handoff/current.json`。
