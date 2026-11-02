@@ -1,0 +1,15 @@
+{
+  "schema": "vendored-python-runner-source-v1",
+  "upstream": {
+    "repository": "https://github.com/hongzefu/MotionJEPA",
+    "commit": "4a16ab42a0ef5d70b9658e296b4944180842f248",
+    "path": "scripts/stage2_memory_export.py",
+    "sha256": "305fb59a497010ca7ef540092a7a2b3a8b6bd919ba4680c990d15b6eff67c53e"
+  },
+  "imported_files": [
+    "scripts/dataset/wan_stage2/export_stage2_memory.py"
+  ],
+  "changes": [
+    "仅新增可选 --lineage-build-spec，显式覆盖来源 build_spec.json 路径；不传时沿用原配置路径。"
+  ]
+}
