@@ -31,7 +31,6 @@ RUN=${RUN_NAME:?必须指定RUN_NAME}
 FINAL=${FINAL_RECORD_DIR:?必须指定FINAL_RECORD_DIR}
 N=${GPUS:?必须指定GPUS}
 B=${GLOBAL_BATCH:?必须指定GLOBAL_BATCH}
-[[ $FORMAL_STEPS != 80000 || "$B" == 64 ]] || { echo '80k消融仅允许GLOBAL_BATCH=64' >&2; exit 2; }
 : "${TRAIN_HEAD:?必须指定完整TRAIN_HEAD}"
 [[ "$TRAIN_HEAD" =~ ^[0-9a-f]{40}$ ]] || { echo 'TRAIN_HEAD必须为40位SHA' >&2; exit 2; }
 [[ "$RUN" =~ ^[a-zA-Z0-9_.-]+$ ]] || { echo 'RUN_NAME非法' >&2; exit 2; }
@@ -65,6 +64,11 @@ case "$RUN" in
     [[ "$HC" == "$GL_HC" ]] || { echo "正式只认$GL_HC" >&2; exit 2; }
     STEPS=$FORMAL_STEPS ;;
 esac
+if [[ $FORMAL_STEPS == 80000 ]]; then
+  [[ "$B" == 64 || ( "$RUN" == o16gl-smoke-* && "$STEPS" == 20 && ( "$B" == 32 || "$B" == 16 ) ) ]] || {
+    echo '80k消融仅20步冒烟允许GLOBAL_BATCH=32或16，其余要求64' >&2; exit 2;
+  }
+fi
 if [[ $STEPS != "$FORMAL_STEPS" ]]; then STEP_ARGS=(--num-train-steps "$STEPS"); fi
 if [[ -n "$TIMING" ]]; then
   [[ "$TIMING" =~ ^[1-9][0-9]*$ && "$TIMING" -le "$STEPS" ]] || { echo 'TRAIN_TIMING_STEPS须为1..步数的整数' >&2; exit 2; }

@@ -286,19 +286,25 @@ def ablation_fixture(tmp_path, monkeypatch, encoder_run):
 
 
 @pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
-@pytest.mark.parametrize("steps", [20, 100, 80000])
-def test_ablation_full_contract(tmp_path, monkeypatch, encoder_run, steps):
-    """真实 CLI 与真实新 yaml；仅外部资产身份替换为完整证据小库。"""
+@pytest.mark.parametrize("steps,batch,allowed", [
+    (20, 64, True), (20, 32, True), (20, 16, True), (100, 64, True), (80000, 64, True),
+    (100, 32, False), (100, 16, False), (80000, 32, False), (80000, 16, False),
+    (20, 128, False), (20, 8, False), (20, 4, False)])
+def test_ablation_full_contract(tmp_path, monkeypatch, encoder_run, steps, batch, allowed):
+    """完整核心覆盖正式配置、20步小batch诊断及其拒绝边界。"""
     fx, identity = ablation_fixture(tmp_path, monkeypatch, encoder_run)
     name = identity["yaml"]
     run = launch.gl_formal_run(64, encoder_run) if steps == 80000 else f"o16gl-smoke-{encoder_run}"
-    args, argv, env, h = gl_arguments(fx, name, steps=steps, run=run, fsdp=4, batch=64,
+    args, argv, env, h = gl_arguments(fx, name, steps=steps, run=run, fsdp=4, batch=batch,
                                      config_name=launch.ABLATION_CONFIG)
     args.encoder_run = encoder_run
     from mme_vla_suite.training import config
     monkeypatch.setattr(config, "OPENPI_DATA_HOME", env["OPENPI_DATA_HOME"])
     rec = launch.core(args, argv, contract=fx.contract, env=env, history=h)
-    assert not rec.failed, rec.failed
+    if allowed:
+        assert not rec.failed, rec.failed
+    else:
+        assert {"ENCODER_COMBO", "GL_COMBO", "CFG_RUN"} <= set(rec.failed), rec.failed
 
 
 @pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
@@ -471,18 +477,32 @@ def test_entry_prefix_dry_run(gl_tree, run, steps, batch, history, timing):
 
 
 @pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
-@pytest.mark.parametrize("steps", [20, 100, 80000])
-def test_entry_ablation_three_commands(gl_tree, encoder_run, steps):
+@pytest.mark.parametrize("steps,batch", [(20, 64), (20, 32), (20, 16), (100, 64), (80000, 64)])
+def test_entry_ablation_three_commands(gl_tree, encoder_run, steps, batch):
     extra = dict(CONFIG=launch.ABLATION_CONFIG, ENCODER_RUN=encoder_run)
     if steps != 80000:
         extra["MAX_STEPS"] = str(steps)
     run = launch.gl_formal_run(64, encoder_run) if steps == 80000 else "o16gl-smoke-ablation"
-    result = run_entry(gl_tree, run=run, history=launch.ENCODERS[encoder_run]["yaml"], extra=extra)
+    result = run_entry(gl_tree, run=run, batch=str(batch), history=launch.ENCODERS[encoder_run]["yaml"], extra=extra)
     assert result.returncode == 0, result.stdout + result.stderr
     assert f"--config-name {launch.ABLATION_CONFIG} --encoder-run {encoder_run}" in result.stdout
     assert f"--steps {steps}" in result.stdout
     cmd = next(line for line in result.stdout.splitlines() if line.startswith("TRAIN_CMD="))
     assert ("--num-train-steps" in cmd) == (steps != 80000)
+    assert f"--batch-size {batch}" in cmd
+
+
+@pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
+@pytest.mark.parametrize("steps,batch", [(100, 32), (100, 16), (80000, 32), (80000, 16),
+                                         (20, 128), (20, 8), (20, 4)])
+def test_entry_ablation_rejects_batch_outside_diagnostic(gl_tree, encoder_run, steps, batch):
+    extra = dict(CONFIG=launch.ABLATION_CONFIG, ENCODER_RUN=encoder_run)
+    if steps != 80000:
+        extra["MAX_STEPS"] = str(steps)
+    run = launch.gl_formal_run(64, encoder_run) if steps == 80000 else "o16gl-smoke-ablation"
+    result = run_entry(gl_tree, run=run, batch=str(batch), history=launch.ENCODERS[encoder_run]["yaml"], extra=extra)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "CONTRACT_ARGS=" not in result.stdout
 
 
 @pytest.mark.parametrize("manifest", [None, "/absolute/attempt.json"])

@@ -98,7 +98,8 @@ def gl_combo_ok(*, fsdp, batch, steps, run, history_name, encoder_run=ENCODER_RU
     new = encoder_run != ENCODER_RUN
     if config_name != (ABLATION_CONFIG if new else CONFIG_NAME):
         return False
-    if new and (fsdp != 4 or batch != 64 or steps not in (20, 100, 80000)):
+    if new and (fsdp != 4 or steps not in (20, 100, 80000)
+                or batch not in ((64, 32, 16) if kind == "smoke" and steps == 20 else (64,))):
         return False
     if not new and steps == 80000:
         return False
@@ -475,8 +476,9 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
         return rec
     name = names[0]
     if contract.encoder_run in ENCODERS and contract.encoder_run != ENCODER_RUN:
-        rec("ENCODER_COMBO", config_name == ABLATION_CONFIG and (fsdp, batch) == (4, 64)
-            and args.steps in (20, 100, 80000) and name == ENCODERS[contract.encoder_run]["yaml"],
+        runs = legacy.flag_value(argv, "--exp-name")
+        rec("ENCODER_COMBO", len(runs) == 1 and gl_combo_ok(fsdp=fsdp, batch=batch,
+            steps=args.steps, run=runs[0], history_name=name, encoder_run=contract.encoder_run, config_name=config_name),
             f"encoder={contract.encoder_run} config={config_name} fsdp={fsdp} batch={batch} steps={args.steps} history={name}")
     tier = name in TIER_HISTORIES
     if gl:
