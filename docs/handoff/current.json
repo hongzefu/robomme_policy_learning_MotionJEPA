@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-02T01:24:12Z",
-    "America/New_York": "2026-11-01T20:24:12-05:00"
+    "utc": "2026-11-02T04:18:53Z",
+    "America/New_York": "2026-11-01T23:18:53-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "567d01a3fc3912384f9fc7e281c9aa24301fd9ea",
+    "base_head": "d0e5fcf3891f8ab49099647c1af7b99c27a45f82",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1017,9 +1017,9 @@
         "sha": "cba5bd55a39c9f67ec64d0ef351e73fd89ea4825",
         "revision_sha": "f62959f8dda9cb13da9897c70496423bcfbff943"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-01T15:35:07Z",
-      "state_reason": "A2 本机：global 32/16/8 OOM，global 4 跑通（1.088 s/步，util 99.8%），SAVE_LOAD=FAIL（numerics gpu_name A100≠A6000，ema_mismatch=0）；turbo 副本 f1dbe7c、子模块对齐 gitlink、契约 DRY_RUN PASS；等占位 65186886 RUNNING 后执行 v1-store/logs/o16gl-a3-orchestrate.sh",
+      "state": "stopped",
+      "state_changed_at": "2026-11-01T23:18:53-05:00",
+      "state_reason": "用户 2026-11-01 美东约 23:30 叫停：「停止你现在的所有测试，然后立刻收尾，然后 Great Lakes 的 job 也不要再排了。」占位 65186886 在 PENDING 中已 scancel（sacct CANCELLED），A3 未起跑；本机三档 budget 测时的 S5 放行改动未提交、worktree 已删。叫停前发现：本机 2×A6000 global 8/16/32 均 OOM、仅 4 能跑（峰值约 39 GB），A40 同为 48 GB，GL 每卡 16（global 64）与每卡 8（global 32）大概率 OOM，计划 batch 口径不可行。",
       "owner": {
         "session": "",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1034,14 +1034,7 @@
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "host": "greatlakes",
-          "slurm_job": "65186886",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16gl-hold-65186886.log",
-          "done_line": "scancel 65186886（A3 完成后，按 v1-store/logs/hold-jobs-o16gl.txt）"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "decision",
@@ -1110,12 +1103,16 @@
           "scope": "占位排到后在 GL 4 卡先跑 20 步冒烟（global 32）+ SAVE_LOAD 代替 V6，再接 V7/V7b；SAVE_LOAD 因 GPU 名/驱动与 AWS A100 不同的握手失败如实记录、不改判据；握手跨卡型方案在第二阶段开工前另出方案交用户"
         }
       ],
-      "pending_decisions": [],
+      "pending_decisions": [
+        "A40 48GB 上 global 64/32 显存不够：是否改梯度累积、改 80GB 卡或放弃 GL 复现，由用户裁决",
+        "是否恢复本机三档 budget（16/32/64 帧 nomotion）小 batch 测时（S5 未落地）",
+        "SAVE_LOAD/G12 跨卡型握手方案（原定第二阶段前另出）"
+      ],
       "next_steps": [
         {
-          "what": "占位 RUNNING 后在 GL 登录节点 tmux o16gl-a3 里 srun --jobid=65186886 --overlap 执行 o16gl-a3-orchestrate.sh",
-          "command": "srun --jobid=65186886 --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared bash /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16gl-a3-orchestrate.sh",
-          "verdict_line": "VENV_PORTABLE=PASS devices=4、A3_RUN …、A3_ALL_DONE"
+          "what": "等待用户裁决；未裁决前不提交任何 GL 作业、不跑任何测试",
+          "command": "",
+          "verdict_line": "用户在本任务 authorizations 写入新 kind: go"
         }
       ]
     },
