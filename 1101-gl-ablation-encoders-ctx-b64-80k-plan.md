@@ -4,7 +4,7 @@
 >
 > **权威性与授权边界**：本计划只规划、不实施。下载、本机建表、提交占位 job、冒烟、正式起跑都是开工步骤，用户已明确授权本次两项修订后直接实施：「不需要再确认，你可以直接开始了。」无需再请求开工确认；独立开工审查仍执行（`AGENTS.md` 第 2 条）。**一次开工令覆盖全程**（K10）：两个 run 的 64 档都通过并完成第一阶段后，直接正式起跑，不再另问；训练 batch 裁决停点是 64 档 OOM（K2），身份与原始数据 SHA 失败停点仍按第二部分 §三。
 >
-> **代码锚点**：训练代码固定为分支 `origin/v4-gl-orig100-1031` 的 `f1dbe7c9c85ffbf23aaba2bc73321f696bdf4b69`（commitV11.73，含 1031 计划已合入的 S1 卡数可变入口、S2 占位运行器、S3 训练库拉取工具、S4 小 batch 冒烟放行）。本计划新增代码在该分支继续（commitV11.74 起），起跑前打 `commitV11.<n>Beta`。MotionJEPA 导出脚本固定为 `remotes/hzf/v12-3decoder-memexport` 的 `4a16ab4`（AWS 2026-10-28 建库实际使用的版本：含 `--expected-counts`／`--input-manifest`，其 `src/motion_jepa/export/stage2_memory.py` SHA256 `c9e260ea…` 与 `SOURCE_PIN.json` 的 `export_source_sha256` 相同；锁定提交 `b5d23a5` 的脚本没有这两个参数且写死 mixed8 计数，不能用）。
+> **代码锚点**：训练代码固定为分支 `origin/v4-gl-orig100-1031` 的 `f1dbe7c9c85ffbf23aaba2bc73321f696bdf4b69`（commitV11.73，含 1031 计划已合入的 S1 卡数可变入口、S2 占位运行器、S3 训练库拉取工具、S4 小 batch 冒烟放行）。本计划新增代码在该分支继续（commitV11.74 起），起跑前打 `commitV11.<n>Beta`。MotionJEPA 导出入口来源锁定为 `4a16ab42a0ef5d70b9658e296b4944180842f248` 的 `scripts/stage2_memory_export.py`，原文件 SHA256 为 `305fb59a497010ca7ef540092a7a2b3a8b6bd919ba4680c990d15b6eff67c53e`；按实施中 S7 以单文件 vendoring 放到 `scripts/dataset/wan_stage2/export_stage2_memory.py`，只增加 `--lineage-build-spec` 显式来源落点。实际导入的 MotionJEPA 包提交为 `b5d23a5fab55be16e580c5b77a8f04d68b3170c2`，其 export 模块 SHA `c9e260ea…`、encoder 模块 SHA `c9b967f3…` 与 4a 对应文件逐字节相同，保持仓库 `SOURCE_PIN.json`。入口来源、实际包提交和本地 Beta 分别如实记录。
 >
 > **工作副本**：本机实施副本 `$P=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl`（环境 A，sled-aspen，2×RTX A6000 48 GB，自带 `.venv` 与 `v1-store/venvs/wan-stage2`，torch 2.9.0+cu128）；主检出 `/data/hongzefu/robomme_policy_learning_MotionJEPA`（评估分支 `v4-eval-official-1026`）只放本计划与 `docs/handoff/current.json`；集群副本 `<GL_REPO>=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA`（计算节点唯一可见路径，现为 detached HEAD `f1dbe7c`、干净，NFS 上已有主 venv 与 wan-stage2 子环境）。训练库 `$LIB=<GL_REPO>/v1-store/datasets/16task-orig100-1600ep-9e109419`（本机 `$P/v1-store/datasets/` 下是指向它的只读 symlink）。三处的读取关系：计划与状态机只在主检出评估分支；代码与 Beta 只在 `$P` 的 `v4-gl-orig100-1031`；集群执行副本在 Beta 后 `git fetch` 并 `checkout <Beta sha>`（detached），运行器核 HEAD 与 clean。
 >
@@ -24,7 +24,7 @@
 | K2 | global batch 先测 64（每卡 16）。**每个 run 的 64 档 PASS → 接该 run 的 SAVE_LOAD 与 100 步测时；先到的占位可先做这些工作，等待另一 run。两个 run 的 64 档都 PASS 且第一阶段完成后，直接正式起跑，不再等待用户确认**；**64 档 OOM → 同占位内补测 32、16 两档各 20 步只取显存峰值（不跑 V7），然后逐 JobID `scancel` 两份占位，停下交用户裁决**，不自动降档、不自动训练 | 用户原话「在 Great Lakes 上先测 batch size，总共六十四，如果不够的话就问用户」「先跑这个六十四的档位」；2026-11-01 修订原话「第二阶段的开工令不需要再问用户，如果六十四这一档不通过的话，就停下来，然后取消你的占位 job，然后问用户。但是在问用户之前，需要把六十四、三十二、十六这三档都测了。如果六十四这档通过了，就直接开始正式训练，就不要在中间等了。」；§三；用户 2026-11-02「同意修订 继续做」「不需要再确认，你可以直接开始了。」批准两个 run 的共同起跑条件 |
 | K3 | 步数 80 000；warmup 10 000；decay_steps 80 000；peak_lr = decay_lr = 5e-5；EMA 0.999；seed 42；save_interval = keep_period = 5000（16 份 ckpt 含 79999）；fsdp_devices 4、num_workers 8 | 用户原话「步数从一百二十 K 降到八十 K step」；lr 不缩放沿用 `config.py` 既有注释口径；warmup 按样本量等价 5000×128 = 10000×64，与官方 `mme_vla_suite`（b64、warmup 10000）同值 |
 | K4 | encoder 身份与表名：去 depth `aws-stage2-noxyz-1101-a/checkpoint_epoch_105.pt` SHA256 `6acc92af239e9b9a4c58ced4c5123bc25183188ec518b10734e917879240d00d`（config.yaml SHA `583e48c0…`）→ 表 `$LIB/motion-stage2-1024-noxyz`、证据目录 `$LIB/evidence-noxyz/`；去 action `aws-stage2-nostate-1101-a/checkpoint_epoch_105.pt` SHA256 `be7cdec7d96c889193f27cd925977c7ff47423d4321d1fd7446799d38495e3d4`（config.yaml SHA `869ac778…`）→ `$LIB/motion-stage2-1024-nostate`、`$LIB/evidence-nostate/`。两份新 yaml 名 `perceptual-framesamp-ctx-32frame-4x4-noxyz-motion-stage2-4x256-orig16.yaml`、`…-4x4-nostate-motion-…-orig16.yaml`（标签放中段，`history_key` 的 `parts[2]=ctx`、`parts[-2]=4x256`、结尾 `-orig16.yaml` 三处解析都不变） | MotionJEPA `bb9f9ab` 两份 `records/upload-SHA256SUMS.txt`；审查第 5 条命名解析核实 |
-| K5 | motion 表全部在本机重算，不与 AWS 沟通：`4a16ab4` 的 `stage2_memory_export.py` 单卡导出 → 缓存路线 G3 → `pack_motion_store.py pack/verify`；G0、G2、缓存收据复用库内 `evidence/`（缓存路线下三者都不绑定 encoder；G2 带收据分支不核 ckpt） | 用户原话「不和 AWS 沟通，你在本地进行。」；§四 |
+| K5 | motion 表全部在本机重算，不与 AWS 沟通：固定 4a 入口的本地副本（S7，显式 `--lineage-build-spec`） 单卡导出 → 缓存路线 G3 → `pack_motion_store.py pack/verify`；G0、G2、缓存收据复用库内 `evidence/`（缓存路线下三者都不绑定 encoder；G2 带收据分支不核 ckpt） | 用户原话「不和 AWS 沟通，你在本地进行。」；§四 |
 | K6 | G3 子集：只下 `control/build_spec.json` 与 `index/` 四文件（约 3 MB），本地复现 `gate_g3` 的 `default_rng(0).choice(val 候选, 32)` 得到确切 32 窗，再只下所在分片（每满片 2.45 GB，上限 32 片约 78.5 GB）与对应 `masks/source_valid/<task>/epNNN.bits`；落点 `$P/v1-store/external/rgb-gtxyz-g3-subset/`（在 `<STORE_ROOT>` 内，不落仓库外） | reader `_init_v2` 只校验 4 个索引文件、`_load_shard_full` 按 `row_start // 4096` 开单片；审查「G3 目录落在仓库外」项 |
 | K6a | **G3 验收口径沿用 AWS 缓存先例**：带 `--cache-import-receipt`，不做两路径逐位比较，判定为 `EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1`、record `metrics` 固定为 `windows=32 seed=0 geometry_all_true=1 shape_mismatches=0 nonfinite=0`（无 `max_abs`）、`output_numerics=NOT_REQUIRED`，`EXPORT_PARITY=NOT_REQUIRED reason=user_decision_same_input`；训练侧 `validate_stage2_cache_evidence` 核的正是这组字段 | 用户 2026-11-02「1 同意」；AWS 原 run `evidence/G3.json` 即此形制 |
 | K6b | **放宽 A100 守卫**：`validate_stage2.py::setup_runtime` 的「数值闸门要求同型号 A100」改为接受 `A100` 或 `RTX A6000`，`numerics.gpu_name` 照实记录；导出（B4）与 G3（B6）必须在同一卡型（本机 A6000）完成，训练侧只比对 G3 与表 provenance 的 `numerics` 一致 | 用户 2026-11-02「2 同意」；GL 只有 A40、本机只有 A6000，没有 A100 可用 |
@@ -66,11 +66,11 @@
 |---|---|---|---|---|
 | B1 下 encoder | 逐对象匿名下载并核 SHA（同 `fetch_orig100_trainset.py` 式样） | bucket 的 `checkpoint_epoch_105.pt`（314 265 827 B）、`config.yaml`、`source_pin/source_receipts.json`、`acceptance/identity.json` | `$P/v1-store/external/motionjepa/<run>/` 与 turbo 同路径各一份 | 分钟级 |
 | B2 下 wan-latents | `fetch_orig100_trainset.py fetch/unpack` 加 `wan-latents_tars/` 过滤 | 13 tar、26.80 GB | `$LIB/wan-latents/`（2496 段 `.bin` + metadata，26 676 559 872 B，按 `checksums/` 核成员） | 10～20 min |
-| B3 MJ 检出 | `git -C /data/hongzefu/MotionJEPA worktree add --detach /data/hongzefu/MotionJEPA-4a16ab4 4a16ab4` | — | `$MJW`；核 `src/motion_jepa/export/stage2_memory.py` SHA = `c9e260ea…`、`wan_latent_encoder.py` SHA = `c9b967f3…`（与 SOURCE_PIN 相同） | 分钟级 |
-| B4 导出 | `env -u PYTHONPATH CUDA_VISIBLE_DEVICES=<0|1> $P/v1-store/venvs/wan-stage2/bin/python $MJW/scripts/stage2_memory_export.py --ckpt <ckpt> --expected-sha256 <sha> --latents $LIB/wan-latents --manifest $LIB/meta/episode_manifest.json --out $LIB/motion-tokens-stage2-<tag> --grid-subsample 2 --batch 1 --check-dropout 64 --expected-counts 2496,23253 --input-manifest $LIB/meta/input_manifest.json`（与 AWS 原命令逐字相同，只换路径与 ckpt） | wan-latents、encoder | 2496 个 `.f32.bin` 共 95 244 288 B，export_record `scope=full` | AWS A100 8 min，A6000 估 15～20 min |
-| B5 G3 子集 | S3 新工具 `plan_g3_subset.py plan/fetch` | rgb-gtxyz bucket | `$P/v1-store/external/rgb-gtxyz-g3-subset/`（≤ 80 GB，两 encoder 共用） | 下载 1～2 h |
-| B6 G3（缓存路线，K6a/K6b） | `CUDA_VISIBLE_DEVICES=0 UV_PROJECT_ENVIRONMENT=$P/v1-store/venvs/wan-stage2 uv run --project scripts/dataset/wan_stage2 --no-sync python scripts/dataset/wan_stage2/validate_stage2.py --gate G3 --samples $LIB/evidence/G0.json --ckpt <ckpt> --expected-sha256 <sha> --rgb-root <B5 目录> --mj-root $MJW --cache-import-receipt $LIB/evidence/wan_cache_import.json --out $LIB/evidence-<tag>/G3.json` | B5、encoder、库内 G0 与收据 | `G3.json`（K6a 形制） | 分钟级 |
-| B6b 证据目录 | 把库内 `evidence/{G0,G2,SOURCE_PIN,wan_cache_import}.json` 逐字节复制进 `$LIB/evidence-<tag>/`（SHA 不变），加 B6 的 G3 | — | 五份证据齐全，供 pack 与训练侧读 | 分钟级 |
+| B3 源码身份 | 核 S7 来源清单与固定 4a 原 runner SHA；实际 WAN 包的 `source_pin()` 三字段匹配 `SOURCE_PIN.json`，G3 通过 `--mj-root /data/hongzefu/MotionJEPA` 按锁定 b5 blob 核两个实际加载文件 | 已有包与源码，不新增 MJ worktree | 包提交 b5、模块 SHA 不变；runner 单独锁原 4a 与本地 Beta | 分钟级 |
+| B4 导出 | `env -u PYTHONPATH CUDA_VISIBLE_DEVICES=<0|1> $P/v1-store/venvs/wan-stage2/bin/python $P/scripts/dataset/wan_stage2/export_stage2_memory.py --lineage-build-spec $P/v1-store/external/rgb-gtxyz-g3-subset/control/build_spec.json --ckpt <ckpt> --expected-sha256 <sha> --latents $LIB/wan-latents --manifest $LIB/meta/episode_manifest.json --out $LIB/motion-tokens-stage2-<tag> --grid-subsample 2 --batch 1 --check-dropout 64 --expected-counts 2496,23253 --input-manifest $LIB/meta/input_manifest.json`（编码参数沿用 AWS；唯一新增参数是已按发布 SHA 核验的来源规格落点，不改原 config 或来源比较） | wan-latents、encoder、B5 已核 SHA 的 build_spec | 2496 个 `.f32.bin` 共 95 244 288 B，export_record `scope=full` | AWS A100 8 min，A6000 估 15～20 min |
+| B5 G3 子集 | S3 新工具 `plan_g3_subset.py plan/fetch`，fetch 显式 `--workers 4` | rgb-gtxyz bucket | `$P/v1-store/external/rgb-gtxyz-g3-subset/`（真实为 14 片、115 对象、32.48 GB，两 encoder 共用） | 下载 1～2 h |
+| B6 G3（缓存路线，K6a/K6b） | `CUDA_VISIBLE_DEVICES=0 UV_PROJECT_ENVIRONMENT=$P/v1-store/venvs/wan-stage2 uv run --project scripts/dataset/wan_stage2 --no-sync python scripts/dataset/wan_stage2/validate_stage2.py --gate G3 --samples $LIB/evidence/G0.json --ckpt <ckpt> --expected-sha256 <sha> --rgb-root <B5 目录> --mj-root /data/hongzefu/MotionJEPA --cache-import-receipt $LIB/evidence/wan_cache_import.json --out $LIB/evidence-<tag>/G3.json` | B5、encoder、库内 G0 与收据 | `G3.json`（K6a 形制） | 分钟级 |
+| B6b 证据目录 | 把库内 `evidence/{G0,G2,SOURCE_PIN,wan_cache_import}.json` 与本机 `v1-store/validation/orig16-stage2/online_restore_inputs.{json,npz}` 逐字节复制进 `$LIB/evidence-<tag>/`，加 B6 的新 G3；在线输入先核原成功冒烟根快照、payload SHA、逐数组 shape/dtype/SHA | 原证据与两份 encoder 无关的真实在线输入，SHA 不变 | 新 G3 完成后五份闸门证据与两份在线素材齐全，供 pack、训练根快照及 SAVE_LOAD 读 | 分钟级 |
 | B7 pack（S4 路径别名） | `pack_motion_store.py pack --layout stage2 --latent-grid-subsample 2 --latents-origin published-cache-with-local-fill --cache-import-receipt $LIB/evidence-<tag>/wan_cache_import.json --manifest $LIB/meta/episode_manifest.json --tokens $LIB/motion-tokens-stage2-<tag> --latents $LIB/wan-latents --out $LIB/motion-stage2-1024-<tag> --encoder-run-dir $P/v1-store/external/motionjepa/<run> --raw-dir /data/hongzefu/data_0226 --expected-ckpt-sha256 <sha> --stage2-validation $LIB/evidence-<tag> --stage2-source-pin scripts/dataset/wan_stage2/SOURCE_PIN.json` | B4、B6b、本机 H5 | 表 + meta（status=packed），provenance 的 evidence 路径指向 `$LIB/evidence-<tag>/` | AWS 24 min；本机含 16 个 H5 全量 SHA（约 500 GB）估 1～2 h |
 | B8 verify | `pack_motion_store.py verify --store $LIB/motion-stage2-1024-<tag> --resume --check-padding` | B7 | status=verified | AWS 22 min |
 
@@ -199,9 +199,9 @@ B1～B8 建表、占位提交、冒烟测时、正式起跑由 `tester` 启动�
 | S4 | `worker` gpt-6.1-sol/high，主代理预建 worktree | 打包路径别名、A100 守卫 | `scripts/dataset/pack_motion_store.py`、`scripts/dataset/wan_stage2/validate_stage2.py`、对应测试 | `motion_store.py`、其余 | 不动任何 SHA 比对；root 相同时逐位同原行为 | 3 | `pytest tests/dataset -q -k "motion or stage2"` → `PACK_ALIAS_TESTS=PASS`；用旧表 provenance 构造 root 相同／不同两用例 | CPU |
 | S3 | `worker` gpt-6.1-sol/high，主代理预建 worktree | G3 子集工具 | `plan_g3_subset.py`、`test_plan_g3_subset.py` | `validate_stage2.py`、MJ reader、其余 | 抽样表达式与 `gate_g3` 逐字相同；只读 bucket | 4 | `pytest tests/dataset/test_plan_g3_subset.py -q` → `G3_SUBSET_TESTS=PASS`；合后主会话真跑 `plan` → `G3_SUBSET_PLAN=PASS windows=32 shards=<n> bytes=<n>` | CPU，网络 |
 | S5 | `worker` gpt-6.1-sol/high，主代理预建 worktree | 79999 交付与上传泛化 | `check_stage2_checkpoint.py`、`tests/policies/test_stage2_restore.py`、`_stage2_orig16_vla_ckpt_export_common.sh` 与 README | 其余 | 引用 S1 文件头的 `ENCODERS` 约定（不 import，只对齐名字） | 5 | `pytest tests/policies/test_stage2_restore.py -q` → `DELIVERY_79999_TESTS=PASS`；导出脚本 `DRY_RUN` 对 K8 两 run → `EXPORT_CONTRACT=PASS runs=2 steps=16` | CPU |
-| R1 | `tester` gpt-6.1-sol/high，`$P` | B1、B2、B3 | turbo `$LIB/wan-latents/`、`$P` 与 turbo 的 `v1-store/external/motionjepa/<run>/`、`/data/hongzefu/MotionJEPA-4a16ab4`（worktree）、日志 `$P/v1-store/logs/o16abl-fetch-*.log` | 代码 | 无 | — | V1、V2、B3 三 SHA 行；tmux `o16abl-fetch-enc`、`o16abl-fetch-latents` | 网络 |
-| R2 | `tester` gpt-6.1-sol/high，`$P` | B5 | `$P/v1-store/external/rgb-gtxyz-g3-subset/`、日志 `o16abl-g3fetch.log` | 代码 | 依赖 S3 合入 | — | `G3_SUBSET=PASS …`；tmux `o16abl-g3fetch` | 网络，≤80 GB |
-| R3a／R3b | `tester` ×2 gpt-6.1-sol/high，`$P` | 各一个 encoder 的 B4→B6→B6b→B7→B8 | `$LIB/motion-tokens-stage2-<tag>`、`$LIB/evidence-<tag>/`、`$LIB/motion-stage2-1024-<tag>`、日志 `o16abl-build-<tag>.log` | 代码；另一 tag 目录；库根 `evidence/` | 依赖 R1、R2、S4 合入；B6 两者串行共用 GPU 0（noxyz 先，驱动脚本内用锁文件交接） | — | V3、V4、V5；tmux `o16abl-build-<tag>` | GPU 0／1 各一张（B4），CPU 48 线程（B7/B8） |
+| R1 | `tester` gpt-6.1-sol/high，`$P` | B1、B2 | turbo `$LIB/wan-latents/`、`$P` 与 turbo 的 `v1-store/external/motionjepa/<run>/`、日志 `$P/v1-store/logs/o16abl-fetch-*.log` | 代码 | 无 | — | V1、V2；B3 实际源码身份由主会话核并记录；tmux `o16abl-fetch-enc`、`o16abl-fetch-latents` | 网络 |
+| R2 | `tester` gpt-6.1-sol/high，`$P` | B5 | `$P/v1-store/external/rgb-gtxyz-g3-subset/`、日志 `o16abl-g3fetch.log` | 代码 | 依赖 S3 合入 | — | `G3_SUBSET=PASS …`；tmux `o16abl-g3fetch` | 网络，4 workers，≤80 GB（实测 32.48 GB） |
+| R3a／R3b | `tester` ×2 gpt-6.1-sol/high，`$P` | 各一个 encoder 的 B4→B6→B6b→B7→B8 | `$LIB/motion-tokens-stage2-<tag>`、`$LIB/evidence-<tag>/`、`$LIB/motion-stage2-1024-<tag>`、日志 `o16abl-build-<tag>.log` | 代码；另一 tag 目录；库根 `evidence/` | 依赖 R1、R2、S4/S7 合入；B4 另须 B5 build_spec 发布 SHA 已核；B6 两者串行共用 GPU 0（noxyz 先，驱动脚本内用锁文件交接） | — | V3、V4、V5；tmux `o16abl-build-<tag>` | GPU 0／1 各一张（B4），CPU 48 线程（B7/B8） |
 | R4 | `tester` gpt-6.1-sol/high，集群副本 | 两份占位提交 | turbo `v1-store/logs/o16abl-hold-*.log` | 代码 | 开工令 | — | V8 占位行；JobID 立即交回 | 2 × (4×A40, 176 h, 16 CPU, 128G) |
 | R5a／R5b | `tester` ×2 gpt-6.1-sol/high，集群副本 | 占位内 V4b、V6、V6b、V7（含 K7 自动重申请） | turbo `train-runs/o16gl-smoke-*`、`logs/o16abl-smoke-*.log` | 代码 | 依赖 R3 表落地、S1～S5 合入、Beta、部署 V8、占位 RUNNING | — | V6、V6b、V7；tmux `o16abl-smoke-<tag>` | 各自占位 |
 | R6a／R6b | `tester` ×2 gpt-6.1-sol/high，集群副本 | 正式起跑 | turbo `train-runs/<run>`、`logs/<run>.log` | 代码 | 两个 run 的 V6 均 PASS、各自 V6b/V7 判定齐全、phase1 done、Beta、建档第一段 | — | V9；tmux `o16abl-train-<tag>` | 各自占位 |
@@ -264,7 +264,7 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 
 - 4×A40 FSDP4 的显存与步时未实测；V6、V7 替换。
 - G3 子集分片数（1～32）与字节（2.5～78.5 GB）在 S3 `plan` 跑完前不知道。
-- `4a16ab4` 脚本在 A6000 上的耗时未测；按 AWS 8 min 外推。AWS 实际使用 `4a16ab4` 是由其命令行参数推断，未读 AWS 日志。
+- 固定 4a 入口的本地副本（S7）在 A6000 上的耗时未测，按 AWS 8 min 外推；本次包实际提交 b5，两核心模块与 4a 字节相同。AWS 实际使用 4a 是历史参数推断，未读 AWS 日志。
 - 两个 bucket 的对象列表只从 upload-SHA256SUMS 读到。
 - 评估侧（800 局）不在本计划内。
 
@@ -278,7 +278,7 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 
 | 条 | 核实 | 处置 |
 |---|---|---|
-| 1 导出脚本缺 `--expected-counts` | 部分成立：`b5d23a5` 无此参数且写死 mixed8 计数；AWS 实际用 `4a16ab4`，模块 SHA 不变 | B3 改停 `4a16ab4`；B4 命令与 AWS 逐字相同 |
+| 1 导出脚本缺 `--expected-counts` | 部分成立：`b5d23a5` 无此参数且写死 mixed8 计数；AWS 实际用 `4a16ab4`，模块 SHA 不变 | 历史修订先固定 4a 入口；实施中 S7 保留其字节及四处显式路径参数差异，实际包仍为 b5，详见 §十 |
 | 2 G3 入口强制 A100 | 成立：`setup_runtime` 对带收据的 G3 仍生效 | K6b、S4 白名单加 `RTX A6000`（用户同意） |
 | 3 收据 root 绑 AWS 路径 | 成立 | S4 路径别名，SHA 不动 |
 | 4 「逐位相等」不会产生 | 部分成立：缓存路线本就不比较；AWS 先例 `EXPORT_PARITY=NOT_REQUIRED` | K6a、V4 改写为缓存口径（用户同意沿用先例） |
@@ -303,7 +303,7 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 | 正式起跑与交接 | phase1 统一 done 与先到先正式起跑同时存在 | 先到者只先做冒烟、保存恢复与测时；两个 run 都通过 64 档并完成第一阶段后统一解锁正式训练 | 甲 PASS、乙 PENDING：甲等待；乙后来 OOM：尚无正式训练，按 K2 测完档位并取消两占位 |
 | Beta 时点 | Beta 必须早于占位 RUNNING | Beta 必须早于占位内首次冒烟或训练工作负载；占位可提前运行等待 | 占位立即 RUNNING：保持空占位，代码、建表、Beta、部署完成后才冒烟 |
 
-共同起跑前用 V7 已测步时与当时重新读取的 `squeue %L` 核余量，沿 K7 不足 10% 自动重申请；不因等待而使用陈旧剩余时间。文首「唯一停点」仅指训练 batch 裁决，EMA 身份与 H5 SHA 失败仍按既有规则停工。两个一级部分、五个写入任务、资源规模、80k 超参和身份判据均保持既定口径。按用户本轮明确授权，修订提交后直接做一次开工审查，通过后实施，不再次询问开工。
+共同起跑前用 V7 已测步时与当时重新读取的 `squeue %L` 核余量，沿 K7 不足 10% 自动重申请；不因等待而使用陈旧剩余时间。文首「唯一停点」仅指训练 batch 裁决，EMA 身份与 H5 SHA 失败仍按既有规则停工。两个一级部分、原定 S1～S5 写入任务与资源规模、80k 超参和身份判据均保持既定口径。按用户本轮明确授权，修订提交后直接做一次开工审查，通过后实施，不再次询问开工。
 
 ## 十、实施中调整
 
@@ -313,3 +313,13 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 | B2 latent 解包 | 原以为只加过滤即可复用；实际 `TAR_DIRS`、解包根和校验入口仅认 source。补 latent tar 分支，成员 SHA 已在原 `sha256-source-files.txt`，复用现有校验；先下载至 `$P/v1-store/external/o16abl-latents-import/`，核验解包后只 `rsync -a` 同步 `wan-latents/` 至 `$LIB`，保留库原控制文件。 | 新增 S6，由 S2 同职责续用，专属分支 `worktree-codex-S6`；仅 `scripts/dataset/hf_export/fetch_orig100_trainset.py`、`tests/dataset/test_fetch_orig100_trainset.py`，其余禁触；CPU 本地 HTTP/tar 回归，独立审查后整合，网络运行另交 tester | `ADJUST_REVIEW=PASS scale=same findings=0`；下载总量、资源、原默认过滤及 source 行为不变；不增加状态、回退或保护层 |
 
 原开工版本和两次调整审查出处见 `docs/validation/1102-gl-ablation-plan-consistency.md`。子代理宿主禁止自行提交时，由主会话在其独立工作树逐路径代作 `sub/<编号>` 提交，仍保留合前审查与 `--no-ff` 整合，不直接把改动带入主检出。
+
+### S7 与在线素材的实际处置
+
+| 项 | 旧 → 新、必要性与实际文件 | 审查与验证 |
+|---|---|---|
+| S7 固定入口的来源路径 | 4a runner 原先必读 config 中 AWS 绝对路径；改为入库单文件副本显式 `--lineage-build-spec`，不改原config/ckpt、编码、数值或完整16份H5来源比较。只新增 runner、`.source.json` 和对应测试；S4原写入代理在独立 `worktree-codex-S7` 同职责续用。G3直接按 b5 blob 核现有MJ两源码文件，无需新worktree或新包。 | `ADJUST_REVIEW=PASS scale=same findings=0`；`PRE_MERGE_REVIEW=PASS task=S7 ... findings=0`；10 CPU测试与撤去4处改动后的原文件SHA/AST还原通过。真实两encoder来源预检 `MJ_CLI_LINEAGE=PASS files=16 mismatches=0`。 |
+| 在线恢复素材 | 原B6b仅五份闸门证据，训练根快照另必读两份在线输入。新增逐字节暂存 `online_restore_inputs.json/npz`，输入与encoder无关；原20步成功冒烟根快照的两份文件SHA、payload和逐数组shape/dtype/SHA均匹配。 | `ADJUST_REVIEW=PASS scale=same findings=0`；`EVIDENCE_STAGE=PASS tag=noxyz files=6 sha_mismatch=0 online_arrays=3` 与nostate同项，退出0；新G3尚待生成。 |
+| G3下载worker细节 | 真规划32窗/14片/115对象/32476096020字节，默认workers1不变，运行显式4。先核SUMS与全部对象身份，再并发唯一对象；不改对象清单、预算或源字节。 | `G3_PARALLEL_FETCH=PASS workers=4`；6项HTTP回归、独立 `PRE_MERGE_REVIEW=PASS task=S3-fetch ... findings=0`；实际fetch以tmux `o16abl-g3fetch`起跑。 |
+
+S1合前与合后复核曾分别发现旧8卡分支绕过、K2诊断小batch误拦，均由原S1代理在原五文件集合内最小续改，保留失败报告与全部sub提交。最终固定 `ccbbda239535e887e2acd38f1fa0156117526ed0` 的独立审查通过，完整core/shell成功与拒绝矩阵通过；正式100/80000步仍仅B64，20步诊断允许B64/B32/B16。以上属于把原计划实现正确，未改变用户口径。
