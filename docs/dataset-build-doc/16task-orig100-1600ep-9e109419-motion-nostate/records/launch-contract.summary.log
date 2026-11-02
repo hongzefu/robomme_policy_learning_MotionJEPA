@@ -1,0 +1,203 @@
+CPU_DRY_START tag=nostate steps=20 head=4c05451082ea9617cf7c721d769f2be84f851471
+TRAIN_CMD=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/.venv/bin/python scripts/training/train.py mme_vla_suite_orig16_b64_80k --exp-name o16gl-smoke-nostate-dry20-1102-a --dataset-path /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/datasets/16task-orig100-1600ep-9e109419/framesamp-4x4 --assets-base-dir /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/train-assets --data.assets.assets-dir /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/train-assets/mme_vla_suite/16task-orig100-1600ep-9e109419 --data.assets.asset-id robomme --checkpoint-base-dir /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/train-runs --weight-loader.params-path /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/models/openpi-assets/checkpoints/pi05_base/params --model.use-history --model.history-config perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml --num-train-steps 20 --no-wandb-enabled --fsdp-devices 4 --num-workers 8 --batch-size 64 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/datasets/16task-orig100-1600ep-9e109419/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/datasets/16task-orig100-1600ep-9e109419/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 期望可见卡=0,1,2,3 CUDA_VISIBLE_DEVICES=0,1,2,3
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/validation/o16abl/dry-nostate-20/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/validation/o16abl/dry-nostate-20/train-record
+CHECK_GL_GPU_COUNT=PASS visible=0,1,2,3 fsdp=4
+GPU_SCOPE=PASS visible=0,1,2,3 fsdp=4
+CHECK_ENCODER_COMBO=PASS encoder=aws-stage2-nostate-1101-a config=mme_vla_suite_orig16_b64_80k fsdp=4 batch=64 steps=20 history=perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml
+CHECK_GL_COMBO=PASS fsdp=4 batch=64 steps=20 run=['o16gl-smoke-nostate-dry20-1102-a'] history=perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml
+CHECK_ENV_EVIDENCE_ROOT=PASS MMEVLA_STAGE2_EVIDENCE_ROOT=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-orig100-1600ep-9e109419/evidence-nostate
+CHECK_PAIRED_CONFIG=PASS readout=4x256
+CHECK_NOSPLIT_CONFIG=PASS fusion=ctx
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除三机制与已固定来源以外不接受配置漂移
+FRAME_LAYOUT=PASS layout=4x4 frames=32 tokens_per_frame=16 budget=512
+MOTION_LAYOUT=PASS readout=split tokens_per_window=4 budget=384 total_tokens=896
+FUSION=PASS integration=context memory_token_dim=2048
+CHECK_NO_PLACEHOLDER=PASS 
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_MOTION_VERIFIED=PASS 
+EVIDENCE_REBASE=PASS files=7 sha_mismatch=0
+CHECK_INPUT_EQUIVALENCE=PASS G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入
+CHECK_ENCODER_CONFIG_SHA=PASS 
+CHECK_ENCODER_DATA_LINEAGE=PASS route=evidence mismatches=[]
+LINEAGE_ROUTE=evidence
+DATA_LINEAGE=PASS route=evidence encoder_ckpt=be7cdec7 evidence_files=5 mismatches=0
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS exp_name=o16gl-smoke-nostate-dry20-1102-a kind=smoke
+CHECK_CFG_NEW_RUN=PASS 
+CHECK_REPO_CWD=PASS 期望=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl
+CHECK_REPO_PACKAGE=PASS mme_vla_suite=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/src/mme_vla_suite/__init__.py
+CHECK_REPO_HEAD=PASS 期望=4c05451082ea9617cf7c721d769f2be84f851471 实际=4c05451082ea9617cf7c721d769f2be84f851471
+CHECK_REPO_CLEAN=PASS porcelain=空
+CHECK_PI05_ASSET_LOCK=PASS ASSETS_LOCK cheap pi05_base 失败=[]
+PAIRED_CONFIG=PASS diff_keys=integration_type,memory_token_dim
+PAIRED_RUNS_SAME_LIB=PASS input_pin=5d1bfed54377c22e68bc1883ebd35fdf77372129ac1565dd6a78601c1d9965f9
+LAUNCH_CONTRACT=PASS checks=54 failed=0
+LAUNCH_CONTRACT_GL=PASS gpus=4 fsdp=4 batch=64 steps=20 encoder=aws-stage2-nostate-1101-a checks=54 failed=0
+CPU_DRY_START tag=nostate steps=100 head=4c05451082ea9617cf7c721d769f2be84f851471
+TRAIN_CMD=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/.venv/bin/python scripts/training/train.py mme_vla_suite_orig16_b64_80k --exp-name o16gl-smoke-nostate-dry100-1102-a --dataset-path /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/datasets/16task-orig100-1600ep-9e109419/framesamp-4x4 --assets-base-dir /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/train-assets --data.assets.assets-dir /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/train-assets/mme_vla_suite/16task-orig100-1600ep-9e109419 --data.assets.asset-id robomme --checkpoint-base-dir /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/train-runs --weight-loader.params-path /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/models/openpi-assets/checkpoints/pi05_base/params --model.use-history --model.history-config perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml --num-train-steps 100 --no-wandb-enabled --fsdp-devices 4 --num-workers 8 --batch-size 64 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/datasets/16task-orig100-1600ep-9e109419/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/datasets/16task-orig100-1600ep-9e109419/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 期望可见卡=0,1,2,3 CUDA_VISIBLE_DEVICES=0,1,2,3
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/validation/o16abl/dry-nostate-100/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/validation/o16abl/dry-nostate-100/train-record
+CHECK_GL_GPU_COUNT=PASS visible=0,1,2,3 fsdp=4
+GPU_SCOPE=PASS visible=0,1,2,3 fsdp=4
+CHECK_ENCODER_COMBO=PASS encoder=aws-stage2-nostate-1101-a config=mme_vla_suite_orig16_b64_80k fsdp=4 batch=64 steps=100 history=perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml
+CHECK_GL_COMBO=PASS fsdp=4 batch=64 steps=100 run=['o16gl-smoke-nostate-dry100-1102-a'] history=perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml
+CHECK_ENV_EVIDENCE_ROOT=PASS MMEVLA_STAGE2_EVIDENCE_ROOT=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-orig100-1600ep-9e109419/evidence-nostate
+CHECK_PAIRED_CONFIG=PASS readout=4x256
+CHECK_NOSPLIT_CONFIG=PASS fusion=ctx
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除三机制与已固定来源以外不接受配置漂移
+FRAME_LAYOUT=PASS layout=4x4 frames=32 tokens_per_frame=16 budget=512
+MOTION_LAYOUT=PASS readout=split tokens_per_window=4 budget=384 total_tokens=896
+FUSION=PASS integration=context memory_token_dim=2048
+CHECK_NO_PLACEHOLDER=PASS 
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_MOTION_VERIFIED=PASS 
+EVIDENCE_REBASE=PASS files=7 sha_mismatch=0
+CHECK_INPUT_EQUIVALENCE=PASS G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入
+CHECK_ENCODER_CONFIG_SHA=PASS 
+CHECK_ENCODER_DATA_LINEAGE=PASS route=evidence mismatches=[]
+LINEAGE_ROUTE=evidence
+DATA_LINEAGE=PASS route=evidence encoder_ckpt=be7cdec7 evidence_files=5 mismatches=0
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS exp_name=o16gl-smoke-nostate-dry100-1102-a kind=smoke
+CHECK_CFG_NEW_RUN=PASS 
+CHECK_REPO_CWD=PASS 期望=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl
+CHECK_REPO_PACKAGE=PASS mme_vla_suite=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/src/mme_vla_suite/__init__.py
+CHECK_REPO_HEAD=PASS 期望=4c05451082ea9617cf7c721d769f2be84f851471 实际=4c05451082ea9617cf7c721d769f2be84f851471
+CHECK_REPO_CLEAN=PASS porcelain=空
+CHECK_PI05_ASSET_LOCK=PASS ASSETS_LOCK cheap pi05_base 失败=[]
+PAIRED_CONFIG=PASS diff_keys=integration_type,memory_token_dim
+PAIRED_RUNS_SAME_LIB=PASS input_pin=5d1bfed54377c22e68bc1883ebd35fdf77372129ac1565dd6a78601c1d9965f9
+LAUNCH_CONTRACT=PASS checks=54 failed=0
+LAUNCH_CONTRACT_GL=PASS gpus=4 fsdp=4 batch=64 steps=100 encoder=aws-stage2-nostate-1101-a checks=54 failed=0
+CPU_DRY_START tag=nostate steps=80000 head=4c05451082ea9617cf7c721d769f2be84f851471
+TRAIN_CMD=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/.venv/bin/python scripts/training/train.py mme_vla_suite_orig16_b64_80k --exp-name gl-orig100-ctx32x4x4-nostate-motion-s2split4x256-b64-80k --dataset-path /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/datasets/16task-orig100-1600ep-9e109419/framesamp-4x4 --assets-base-dir /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/train-assets --data.assets.assets-dir /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/train-assets/mme_vla_suite/16task-orig100-1600ep-9e109419 --data.assets.asset-id robomme --checkpoint-base-dir /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/train-runs --weight-loader.params-path /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/models/openpi-assets/checkpoints/pi05_base/params --model.use-history --model.history-config perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml --no-wandb-enabled --fsdp-devices 4 --num-workers 8 --batch-size 64 
+CHECK_BUILD_PINS=PASS 构建pin必须全部回填
+CHECK_ARGV_CONFIG_NAME=PASS 
+CHECK_ARGV_ALLOWLIST=PASS []
+CHECK_ARGV_STEPS=PASS 
+CHECK_ARGV_HISTORY=PASS 
+CHECK_ENV_MOTION_STORE_UNSET=PASS MMEVLA_MOTION_STORE=<未设置>
+CHECK_ENV_NO_ALLOW_OVERRIDES=PASS 残留放行变量=[]
+CHECK_ENV_VERIFY_LEVEL=PASS MMEVLA_FRAMESAMP_VERIFY=<未设置>
+CHECK_ENV_PYTHONPATH_UNSET=PASS PYTHONPATH=<未设置>
+CHECK_ENV_OPENPI_DATA_HOME=PASS OPENPI_DATA_HOME=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/models
+CHECK_ENV_FRAMESAMP_SOURCE=PASS 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/datasets/16task-orig100-1600ep-9e109419/source
+CHECK_ENV_FRAMESAMP_MANIFEST=PASS 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/datasets/16task-orig100-1600ep-9e109419/meta/episode_manifest.json
+CHECK_ENV_PREALLOCATE=PASS 
+CHECK_ENV_GPUS=PASS 期望可见卡=0,1,2,3 CUDA_VISIBLE_DEVICES=0,1,2,3
+CHECK_ENV_FINAL_RECORD_DIR=PASS 须为 v1-store 内绝对、名为final-record、不存在或为空 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/validation/o16abl/dry-nostate-80000/final-record
+CHECK_ENV_TRAIN_RECORD_DIR=PASS 须为 final-record 同级 train-record 且无 metrics.jsonl 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/validation/o16abl/dry-nostate-80000/train-record
+CHECK_GL_GPU_COUNT=PASS visible=0,1,2,3 fsdp=4
+GPU_SCOPE=PASS visible=0,1,2,3 fsdp=4
+CHECK_ENCODER_COMBO=PASS encoder=aws-stage2-nostate-1101-a config=mme_vla_suite_orig16_b64_80k fsdp=4 batch=64 steps=80000 history=perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml
+CHECK_GL_COMBO=PASS fsdp=4 batch=64 steps=80000 run=['gl-orig100-ctx32x4x4-nostate-motion-s2split4x256-b64-80k'] history=perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml
+CHECK_ENV_EVIDENCE_ROOT=PASS MMEVLA_STAGE2_EVIDENCE_ROOT=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-orig100-1600ep-9e109419/evidence-nostate
+CHECK_PAIRED_CONFIG=PASS readout=4x256
+CHECK_NOSPLIT_CONFIG=PASS fusion=ctx
+CHECK_FRAME_LAYOUT=PASS 
+CHECK_FUSION=PASS 
+CHECK_MOTION_READOUT=PASS 
+CHECK_HISTORY_KEYS=PASS 除三机制与已固定来源以外不接受配置漂移
+FRAME_LAYOUT=PASS layout=4x4 frames=32 tokens_per_frame=16 budget=512
+MOTION_LAYOUT=PASS readout=split tokens_per_window=4 budget=384 total_tokens=896
+FUSION=PASS integration=context memory_token_dim=2048
+CHECK_NO_PLACEHOLDER=PASS 
+CHECK_EPISODE_MANIFEST.JSON_SHA=PASS 
+CHECK_INPUT_MANIFEST.JSON_SHA=PASS 
+CHECK_NORM_SHA=PASS 
+CHECK_MANIFEST_IDENTITY=PASS 
+CHECK_DATASET_LAYOUT=PASS 
+CHECK_WINDOW_BUDGET=PASS 
+CHECK_MOTION_VERIFIED=PASS 
+EVIDENCE_REBASE=PASS files=7 sha_mismatch=0
+CHECK_INPUT_EQUIVALENCE=PASS G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入
+CHECK_ENCODER_CONFIG_SHA=PASS 
+CHECK_ENCODER_DATA_LINEAGE=PASS route=evidence mismatches=[]
+LINEAGE_ROUTE=evidence
+DATA_LINEAGE=PASS route=evidence encoder_ckpt=be7cdec7 evidence_files=5 mismatches=0
+CHECK_CFG_BATCH_SIZE=PASS 
+CHECK_CFG_FSDP_DEVICES=PASS 
+CHECK_CFG_NUM_WORKERS=PASS 
+CHECK_CFG_SEED=PASS 
+CHECK_CFG_EMA_DECAY=PASS 
+CHECK_CFG_STEPS=PASS 
+CHECK_CFG_SCHEDULE=PASS 
+CHECK_CFG_MODEL=PASS 
+CHECK_CFG_EXACT=PASS 完整配置除已列CLI路径/名称/短测步数外须等于新60k配置
+CHECK_CFG_IMPORT_ROOT=PASS 
+CHECK_CFG_RUN=PASS exp_name=gl-orig100-ctx32x4x4-nostate-motion-s2split4x256-b64-80k kind=formal
+CHECK_CFG_NEW_RUN=PASS 
+CHECK_REPO_CWD=PASS 期望=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl 实际=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl
+CHECK_REPO_PACKAGE=PASS mme_vla_suite=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/src/mme_vla_suite/__init__.py
+CHECK_REPO_HEAD=PASS 期望=4c05451082ea9617cf7c721d769f2be84f851471 实际=4c05451082ea9617cf7c721d769f2be84f851471
+CHECK_REPO_CLEAN=PASS porcelain=空
+CHECK_PI05_ASSET_LOCK=PASS ASSETS_LOCK cheap pi05_base 失败=[]
+PAIRED_CONFIG=PASS diff_keys=integration_type,memory_token_dim
+PAIRED_RUNS_SAME_LIB=PASS input_pin=5d1bfed54377c22e68bc1883ebd35fdf77372129ac1565dd6a78601c1d9965f9
+LAUNCH_CONTRACT=PASS checks=54 failed=0
+LAUNCH_CONTRACT_GL=PASS gpus=4 fsdp=4 batch=64 steps=80000 encoder=aws-stage2-nostate-1101-a checks=54 failed=0
+REAL_LAUNCH_CONTRACT=PASS encoder=nostate commands=3
+EXIT_CODE=0

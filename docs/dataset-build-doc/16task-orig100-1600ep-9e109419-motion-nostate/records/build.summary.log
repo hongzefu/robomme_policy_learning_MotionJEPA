@@ -1,0 +1,40 @@
+BUILD_START=tag=nostate head=4c05451082ea9617cf7c721d769f2be84f851471 gpu=1
+drwxrwxr-x  2 hongzefu hongzefu                458752 Nov  2 01:49 /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/external/o16abl-latents-import/wan-latents
+drwxrwxr-x  6 hongzefu hongzefu                  4096 Nov  2 01:28 /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/external/rgb-gtxyz-g3-subset
+drwxrws--- 15 hongzefu coe-chaijy-unreplicated    438 Nov  2 08:17 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-orig100-1600ep-9e109419
+drwxrws---  2 hongzefu coe-chaijy-unreplicated    209 Nov  2 01:14 /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-orig100-1600ep-9e109419/evidence-nostate
+STAGE_START tag=nostate stage=export_smoke
+MJ_CLI_LINEAGE=PASS files=16 mismatches=0
+/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/torch/backends/__init__.py:46: UserWarning: Please use the new API settings to control TF32 behavior, such as torch.backends.cudnn.conv.fp32_precision = 'tf32' or torch.backends.cuda.matmul.fp32_precision = 'ieee'. Old settings, e.g, torch.backends.cuda.matmul.allow_tf32 = True, torch.backends.cudnn.allow_tf32 = True, allowTF32CuDNN() and allowTF32CuBLAS() will be deprecated after Pytorch 2.9. Please see https://pytorch.org/docs/main/notes/cuda.html#tensorfloat-32-tf32-on-ampere-and-later-devices (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:80.)
+  self.setter(val)
+/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+STAGE2_EXPORT=PASS scope=smoke segments=1 rows=17
+ENCODER_SMOKE=PASS tag=nostate segments=1
+STAGE_START tag=nostate stage=export_full
+MJ_CLI_LINEAGE=PASS files=16 mismatches=0
+/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/torch/backends/__init__.py:46: UserWarning: Please use the new API settings to control TF32 behavior, such as torch.backends.cudnn.conv.fp32_precision = 'tf32' or torch.backends.cuda.matmul.fp32_precision = 'ieee'. Old settings, e.g, torch.backends.cuda.matmul.allow_tf32 = True, torch.backends.cudnn.allow_tf32 = True, allowTF32CuDNN() and allowTF32CuBLAS() will be deprecated after Pytorch 2.9. Please see https://pytorch.org/docs/main/notes/cuda.html#tensorfloat-32-tf32-on-ampere-and-later-devices (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:80.)
+  self.setter(val)
+/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+DROPOUT_OFF=PASS windows=64 eval_repeat_max_abs=0.0 train_vs_eval_max_abs=4.141170024871826
+STAGE2_EXPORT=PASS segments=2496 rows=23253
+LOCK_ACQUIRED tag=nostate gpu=0
+STAGE_START tag=nostate stage=G3
+/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/venvs/wan-stage2/lib/python3.11/site-packages/huggingface_hub/utils/_validators.py:206: UserWarning: The `local_dir_use_symlinks` argument is deprecated and ignored in `hf_hub_download`. Downloading to a local directory does not use symlinks anymore.
+  warnings.warn(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+EMA_SOURCE=PASS leaves=65 state_key=model exact=1 live_negative_rejected=1
+EXPORT_PARITY=NOT_REQUIRED reason=user_decision_same_input
+LOCK_RELEASED tag=nostate gpu=0
+STAGE_START tag=nostate stage=pack
+[pack] episodes=1600 rows=23253 (exec 14138 + demo 9115) index_sha256=7aad314e4daee3b7…
+PACK_PROVENANCE_PRECHECK=PASS mode=vae_compat segments=2496
+[pack] 表 95,244,288 B / 23253 行 / 2496 段, sha256=1f399ccb645975f7…; meta 阶段1 落盘（status=packed）; 耗时 634.7s
+PACK_MOTION_DONE=1 raw_dir_match=1 （pack.lock 保留，verify 回填后才释放）
+STAGE_START tag=nostate stage=verify
+[verify] meta 回填（status=verified）+ row_digests 落盘, 耗时 587.3s
+VERIFY_MOTION=PASS scanned=23253 mismatches=0 nonfinite=0 segment_set_mismatch=0 real_plus_pad_ne_33=0 exec_padded=0 pad_not_last_demo=0 pad_source_mismatch=0 demo_tail_padded=386 demo_tail_dropped=514 legal_zero_segments=4
+BUILD_DONE=PASS tag=nostate
+EXIT_CODE=0

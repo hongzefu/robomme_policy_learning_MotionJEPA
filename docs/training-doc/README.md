@@ -4,6 +4,13 @@
 > 新 run 仍落本目录；环境 A 的吞吐 / 确定性 / dtype 中间产物 / v5 对拍与集群正式 run 留档已于 2026-09-07 迁入 [`../archive/training-doc/`](../archive/README.md)。
 > 环境 A（GreatLakes / turbo + 2×RTX 6000 Ada）与环境 B（AWS 8×A100）的数字按 `AGENTS.md` 第 13 条不混比，下表按环境分档。
 
+## Aspen 控制与 GreatLakes 双消融 context VLA（2026-11-02）
+
+| 档案 | 配置 | 状态 |
+|---|---|---|
+| [去 depth](gl-orig100-ctx32x4x4-noxyz-motion-s2split4x256-b64-80k/launch.md) | 新encoder ep105、ctx896、4×A40、B64、80k | 两表已验证；准备训练Beta与64档冒烟，正式未起 |
+| [去 action](gl-orig100-ctx32x4x4-nostate-motion-s2split4x256-b64-80k/launch.md) | 同制度、另一encoder | 两表已验证；准备训练Beta与64档冒烟，正式未起 |
+
 ## 一、环境 B 现行（AWS 8×A100，2026-09-04 起）
 
 ### 官方16×100两条串行60k（2026-10-27美东开工）
