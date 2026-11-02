@@ -635,7 +635,7 @@ def restore_and_check(args, report):
 
 
 def delivery_label(step):
-    return "CKPT_DELIVERY_READY" if step == 59999 else f"CKPT_{step // 1000}K_READY"
+    return "CKPT_DELIVERY_READY" if step in (59999, 79999) else f"CKPT_{step // 1000}K_READY"
 
 
 def parse_args(argv=None):
@@ -644,7 +644,7 @@ def parse_args(argv=None):
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--reference", type=Path)
     parser.add_argument("--expected-manifest", type=Path)
-    parser.add_argument("--delivery-step", type=int, choices=(59999, 60000, 70000),
+    parser.add_argument("--delivery-step", type=int, choices=(59999, 60000, 70000, 79999),
                         help="交付验收步数，默认 60000；smoke 不接受此参数")
     parser.add_argument("--online-gpu", required=True, type=int)
     parser.add_argument("--out", required=True, type=Path)
