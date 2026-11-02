@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-02T06:47:02Z",
-    "America/New_York": "2026-11-02T01:47:02-0500"
+    "utc": "2026-11-02T15:35:08Z",
+    "America/New_York": "2026-11-02T10:35:08-0500"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "eecabb86e9b7d8fd1eed867cd27995f5bbd43bb0",
+    "base_head": "60e96dd211b8cb4e41978bc3d24730c34749b6c8",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1183,9 +1183,9 @@
         "file": "1101-gl-ablation-encoders-ctx-b64-80k-plan.md",
         "sha": "2e9b8dc09acf5a5518c95284da9658c1961fd1c9"
       },
-      "state": "running",
-      "state_changed_at": "2026-11-02T05:49:53Z",
-      "state_reason": "代码S1至S5与必要S6/S7均已审查整合推送。完整CPU范围962通过7跳过，两组各小于5分钟；旧身份默认DRY_RUN stdout/stderr逐位一致。两encoder下载/共享SHA、16份H5来源元数据预检及在线素材暂存通过；latent恢复与G3 fetch两tmux进行中，占位两份已提交且最近现场均PENDING。尚未GPU导出、集群冒烟或正式训练。",
+      "state": "done",
+      "state_changed_at": "2026-11-02T15:35:08Z",
+      "state_reason": "两表全量verified、真实启动契约与两个B64/20实际通过；SAVE_LOAD跨A6000/A40 numerics握手FAIL按既定口径记录而未放宽。用户明确取消100步测速并要求余量够则正式起跑，两测速step已精确取消、holds保留；按原计划6.5s/步上限144.44h估算，余171.40/171.83h约19%预留足够。正式任务已于美东10:23:07起于两hold step7，资源句柄转交train。",
       "owner": {
         "session": "01a19abc-1926-71b0-bac0-a2d7375a739d",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1193,73 +1193,32 @@
       "depends_on": [],
       "pre_handoff": [
         {
-          "what": "修订版开工前独立计划一致性审查",
-          "evidence": "PLAN_CONSISTENCY_REVIEW=PASS base=2e9b8dc09acf5a5518c95284da9658c1961fd1c9 findings=0 blocking=0",
-          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/validation/1102-gl-ablation-plan-consistency.md",
+          "what": "V1至V5与全部CPU契约及两表构建实际通过",
+          "evidence": "BUILD_DONE=PASS tag=noxyz；BUILD_DONE=PASS tag=nostate；真实6命令LAUNCH_CONTRACT_GL failed=0，962短测通过7跳过，DEFAULT_BITEXACT与5拒绝实际通过",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-verification.summary.txt",
           "status": "pass"
         },
         {
-          "what": "两份4卡176小时占位提交",
-          "evidence": "HOLD_SUBMIT=PASS jobid=65209321 gpus=4 time=176:00:00；HOLD_SUBMIT=PASS jobid=65209330 gpus=4 time=176:00:00",
-          "where": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16abl-hold-submit-1102.log",
+          "what": "两个64档20步实跑通过",
+          "evidence": "SMOKE_GL=PASS tag=noxyz gpus=4 batch=64 steps=20 completed_steps=20 peak_mib=38489 nonfinite=0 reason=none exit=0；nostate同项peak_mib=38491",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-verification.summary.txt",
           "status": "pass"
         },
         {
-          "what": "V1两个encoder下载及共享副本字节核验",
-          "evidence": "ENCODER_FETCH=PASS run=aws-stage2-noxyz-1101-a ckpt_sha=6acc92af239e9b9a4c58ced4c5123bc25183188ec518b10734e917879240d00d config_sha=583e48c0a6afa2a798eb14fc8ccdcfe8d9274cb13f1393e05859d6bca368bada；ENCODER_FETCH=PASS run=aws-stage2-nostate-1101-a ckpt_sha=be7cdec7d96c889193f27cd925977c7ff47423d4321d1fd7446799d38495e3d4 config_sha=869ac77872092a0d0b08e1bc3ac60b0a893946af02ae3de193aa5715e8aecc34",
-          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-fetch-enc.log",
+          "what": "V6b按既定要求保留两份原始判定，非要求SAVE_LOAD通过",
+          "evidence": "SAVE_LOAD=FAIL；两个报告均numerics与离线来源不同，判据未放宽，报告留档完成",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-verification.summary.txt",
           "status": "pass"
         },
         {
-          "what": "V6a所需完整CPU回归范围",
-          "evidence": "452 passed, 6 skipped in 140.58s；510 passed, 1 skipped in 96.00s；两组TEST_EXIT_CODE=0，合计962通过7跳过",
-          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-contract-all-training.log；/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-contract-all-dataset.log",
+          "what": "用户取消V7，核占位余量并解除第一阶段条件",
+          "evidence": "TIMING_GL=NOT_REQUIRED reason=user_skip_timing steps_cancelled=65209321.6,65209330.6；HOLD_MARGIN=PASS basis=plan_upper_6.5s est_train_h=144.4444 reserve_vs_train=18.66%,18.96% resubmit=0",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-verification.summary.txt",
           "status": "pass"
-        },
-        {
-          "what": "旧身份默认启动入口及契约同环境逐位输出",
-          "evidence": "DEFAULT_BITEXACT=PASS base=f1dbe7c9c85ffbf23aaba2bc73321f696bdf4b69 head=7c02c9f9566946703ca76f79619099b4fd424328 route=old_identity_smoke20_b4 stdout=exact stderr=exact",
-          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-default-bitexact.log",
-          "status": "pass"
-        },
-        {
-          "what": "G3真实子集规划及发布规格SHA",
-          "evidence": "G3_SUBSET_PLAN=PASS windows=32 shards=14 bytes=32476096020；build_spec sha256=5943608ef0f1a5febe79069d6081c7427c6f149f071cdf397c0d21a1b567ef7a，与发布清单一致",
-          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-g3plan.log；/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/external/rgb-gtxyz-g3-subset/g3-subset-plan.json",
-          "status": "pass"
-        },
-        {
-          "what": "V1–V5、V6a、V8 全部 PASS；两个 run 的 V6 64 档均 PASS、各自 V6b/V7 判定齐全并核当时剩余时间才能 done。任一64档FAIL补32/16与HOLD_CANCEL后 stopped，不解锁正式训练。",
-          "evidence": "",
-          "where": "$P/v1-store/logs/o16abl-*.log；turbo v1-store/logs/o16abl-*.log；计划「实施中实测」小节",
-          "status": "pending"
         }
       ],
       "long_tail": [],
-      "running_handles": [
-        {
-          "jobid": "65209321",
-          "tmux": "",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16abl-hold-submit-1102.log",
-          "done_line": "HOLD_CANCEL=PASS jobid=65209321"
-        },
-        {
-          "jobid": "65209330",
-          "tmux": "",
-          "log": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16abl-hold-submit-1102.log",
-          "done_line": "HOLD_CANCEL=PASS jobid=65209330"
-        },
-        {
-          "tmux": "o16abl-fetch-latents",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-fetch-latents.log",
-          "done_line": "LATENTS_SYNC=PASS members=7489 mismatch=0"
-        },
-        {
-          "tmux": "o16abl-g3fetch",
-          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-g3fetch.log",
-          "done_line": "G3_SUBSET=PASS shards=14 bytes=32476096020 sha_mismatch=0"
-        }
-      ],
+      "running_handles": [],
       "authorizations": [
         {
           "kind": "decision",
@@ -1338,25 +1297,25 @@
           "date": "2026-11-02",
           "quote": "不需要再确认，你可以直接开始了。",
           "scope": "明确授权按上述两项裁决修订计划后直接实施 v5 全程，无需再次请求开工确认；独立开工审查仍执行。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-02",
+          "quote": "不用再测速了，可以正式训练启动。你再看一下这个，你先看一下这个冗余的时间还够不够，不够的话要重新启动任务。",
+          "scope": "取消100步独立测时；按现有预算核实际剩余，够则直接正式、不够重新申请；用户随后「赶紧开始了你还在等什么！！！」再次要求立即起跑。"
         }
       ],
       "pending_decisions": [],
-      "next_steps": [
-        {
-          "what": "继续两份已授权输入下载。输入核验完后按已审S7入口先每encoder单段smoke，再完整导出；GPU0上G3按noxyz先串行，两表pack/verify后Beta部署；两个run均通过64档及第一阶段后正式起跑。",
-          "command": "见完整计划及两建表launch.md；占位65209321/65209330；tmux o16abl-fetch-latents、o16abl-g3fetch",
-          "verdict_line": "LATENTS_SYNC=PASS；G3_SUBSET=PASS；STAGE2_EXPORT=PASS；VERIFY_MOTION=PASS；SMOKE_GL=PASS"
-        }
-      ]
+      "next_steps": []
     },
     "gl-abl-encoders-train": {
       "plan": {
         "file": "1101-gl-ablation-encoders-ctx-b64-80k-plan.md",
         "sha": "2e9b8dc09acf5a5518c95284da9658c1961fd1c9"
       },
-      "state": "planned",
-      "state_changed_at": "2026-11-02T05:49:53Z",
-      "state_reason": "用户已授权修订后直接实施；等两个run的64档均通过和phase1 done后自动正式起跑，不再问用户。",
+      "state": "running",
+      "state_changed_at": "2026-11-02T15:35:08Z",
+      "state_reason": "用户明确跳过测速后已核原预算预留约19%，继续既有占位。两正式80k/B64/FSDP4于美东2026-11-02 10:23:07实际启动，job steps65209321.7/gl1519与65209330.7/gl1503。54项合同各PASS，TRAIN_MESH shape(1,4)与FINAL_RECORD_START已现场读回，当前模型初始化/编译，未达100步起跑验收。Beta8b52210ff0048a9ea22776090fda3d76cd181c89，源码保持不动。",
       "owner": {
         "session": "01a19abc-1926-71b0-bac0-a2d7375a739d",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1388,7 +1347,22 @@
           "status": "pending"
         }
       ],
-      "running_handles": [],
+      "running_handles": [
+        {
+          "tmux": "o16abl-train-noxyz",
+          "jobid": "65209321",
+          "step": "65209321.7",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-train-noxyz.log",
+          "done_line": "EXIT_CODE=0"
+        },
+        {
+          "tmux": "o16abl-train-nostate",
+          "jobid": "65209330",
+          "step": "65209330.7",
+          "log": "/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-train-nostate.log",
+          "done_line": "EXIT_CODE=0"
+        }
+      ],
       "authorizations": [
         {
           "kind": "decision",
@@ -1449,14 +1423,20 @@
           "date": "2026-11-02",
           "quote": "不需要再确认，你可以直接开始了。",
           "scope": "明确授权按上述两项裁决修订计划后直接实施 v5 全程，无需再次请求开工确认；独立开工审查仍执行。"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-02",
+          "quote": "不用再测速了，可以正式训练启动。你再看一下这个，你先看一下这个冗余的时间还够不够，不够的话要重新启动任务。",
+          "scope": "取消100步独立测时；按现有预算核实际剩余，够则直接正式、不够重新申请；用户随后「赶紧开始了你还在等什么！！！」再次要求立即起跑。"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "phase1 done且两个run均64档PASS后接手占位直接起正式训练。",
-          "command": "见计划runbook B1",
-          "verdict_line": "TRAIN_START=PASS run=<run> head=<Beta sha> jobid=<hold> ×2"
+          "what": "读两正式训练Step0/100与后续5000步进度，按真正训练日志复核余量，不起额外测速。完成后核final record/精确16步集合/79999原严格恢复；SAVE_LOAD数值握手原FAIL不能伪PASS。",
+          "command": "查看running_handles日志及G/v1-store/train-runs/mme_vla_suite_orig16_b64_80k/<run>；代码固定Beta8b52210",
+          "verdict_line": "TRAIN_START=PASS（待Step100）；TRAIN_FINAL_RECORD=PASS；CKPT_STEPS=PASS count=16；CKPT_DELIVERY_READY=PASS step=79999"
         }
       ]
     }
