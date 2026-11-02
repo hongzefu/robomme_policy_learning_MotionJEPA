@@ -608,6 +608,44 @@ _CONFIGS = [
         ema_decay=0.999,
         fsdp_devices=8,
     ),
+    # 官方16×100 的 B64/80k 档：只改 batch_size、lr_schedule、训练步数、worker 数与分片数五项。
+    TrainConfig(
+        name="mme_vla_suite_orig16_b64_80k",
+        model=history_pi0.HistoryPi0Config(
+            pi05=True,
+            action_horizon=20,
+            use_history=True,
+            history_config=None,
+            discrete_state_input=False,
+        ),
+        data=RoboMMEDataConfig(
+            repo_id=f"robomme",
+            assets=AssetsConfig(
+                assets_dir="v1-store/train-assets/mme_vla_suite/16task-orig100-1600ep-9e109419",
+                asset_id="robomme",
+            ),
+            base_config=DataConfig(prompt_from_task=True),
+        ),
+        batch_size=64,
+        lr_schedule=_optimizer.CosineDecaySchedule(
+            warmup_steps=10_000,
+            peak_lr=5e-5,
+            decay_steps=80_000,
+            decay_lr=5e-5,
+        ),
+        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
+        freeze_filter=history_pi0.HistoryPi0Config().get_freeze_filter(),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            os.path.join(OPENPI_DATA_HOME, "openpi-assets/checkpoints/pi05_base/params"),
+        ),
+        num_train_steps=80_000,
+        save_interval=5_000,
+        keep_period=5_000,
+        project_name="robomme-framesamp",
+        num_workers=8,
+        ema_decay=0.999,
+        fsdp_devices=4,
+    ),
     # 只改 60k 条目的训练步数、decay_steps、fsdp_devices、num_workers 四项。
     # peak_lr == decay_lr == 5e-5，因此任意 step 的学习率与 60k 条目逐步相同。
     TrainConfig(
