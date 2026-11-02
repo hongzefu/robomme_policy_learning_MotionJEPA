@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-02T05:32:03Z",
-    "America/New_York": "2026-11-02T00:32:03-0500"
+    "utc": "2026-11-02T05:33:36Z",
+    "America/New_York": "2026-11-02T00:33:36-0500"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "9551a288b2d4b5927a0aef6720a4e97b8c51893e",
+    "base_head": "4eb89edc23bc90f05eeb3ed9540e2f208f8c05f6",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1183,17 +1183,23 @@
         "file": "1101-gl-ablation-encoders-ctx-b64-80k-plan.md",
         "sha": "a084aa273fe73c83ad1767c43cd03c4e6762f53e"
       },
-      "state": "planned",
-      "state_changed_at": "2026-11-02T04:55:58Z",
-      "state_reason": "计划 v4 a084aa2（执行宿主 Codex）已提交，等用户不改而直接认可的开工令；接手的 Codex 会话按第 27 条读方复核后把 owner 改成自己",
+      "state": "stopped",
+      "state_changed_at": "2026-11-02T05:33:08Z",
+      "state_reason": "开工前独立审查发现两项执行时序冲突，涉及起跑、取消与统一交接，按第 2 条停在实施前待用户裁决；未提交占位、下载、建表或训练。",
       "owner": {
-        "session": "",
+        "session": "01a19abc-1926-71b0-bac0-a2d7375a739d",
         "host": "sled-aspen.eecs.umich.edu"
       },
       "depends_on": [],
       "pre_handoff": [
         {
-          "what": "V1–V5、V6a、V8 全部 PASS；V6 三档（64/32/16）判定行齐全（64 档 FAIL 原样保留进 pending_decisions）；V6b、V7 判定行齐全",
+          "what": "开工前独立计划一致性审查",
+          "evidence": "PLAN_CONSISTENCY_REVIEW=FAIL base=9551a288b2d4b5927a0aef6720a4e97b8c51893e findings=2 blocking=2",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/validation/1102-gl-ablation-plan-consistency.md",
+          "status": "fail"
+        },
+        {
+          "what": "V1–V5、V6a、V8 全部 PASS；64 档 PASS 时接 V6b、V7；64 档 FAIL 时补 32/16 档峰值并 HOLD_CANCEL，保留失败证据和用户待裁决项。",
           "evidence": "",
           "where": "$P/v1-store/logs/o16abl-*.log；turbo v1-store/logs/o16abl-*.log；计划「实施中实测」小节",
           "status": "pending"
@@ -1275,12 +1281,24 @@
           "scope": "批准 a084aa2 计划 v4 全程；64 档通过继续正式训练，64 档 OOM 测完 32/16 后取消两份占位并交用户裁决；实施前须通过计划一致性审查。"
         }
       ],
-      "pending_decisions": [],
+      "pending_decisions": [
+        {
+          "what": "统一第一阶段交接与先到先起冲突",
+          "recommendation": "两个 run 均完成 64 档冒烟及第一阶段后再正式起跑；先到者可先冒烟和测时。任一 OOM 按 K2 测完档位并取消两占位。",
+          "alternative": "若保留先到先起，须分 run 交接并明确另一 run OOM 时已经正式训练者的取消范围。",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/validation/1102-gl-ablation-plan-consistency.md"
+        },
+        {
+          "what": "Beta 早于占位 RUNNING 与立即排队冲突",
+          "recommendation": "Beta 必须早于占位内首次冒烟或训练工作负载；占位可先 RUNNING 等待。",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/validation/1102-gl-ablation-plan-consistency.md"
+        }
+      ],
       "next_steps": [
         {
-          "what": "用户给开工令后：A0 sonnet 一致性审查 → A1 提交两份占位、派 S1/S2/S3、起 B1/B2/B3 下载",
-          "command": "见计划第一部分 §七 与第二部分 §四 runbook",
-          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS base=<sha> findings=<n> blocking=0；HOLD_SUBMIT=PASS jobid=<id> gpus=4 time=240:00:00 ×2"
+          "what": "用户裁决两项时序冲突后，全文修订计划并重新完整呈现；取得修订版开工令并重新通过独立审查后实施。",
+          "command": "",
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS base=<修订版提交> findings=<n> blocking=0"
         }
       ]
     },
@@ -1289,11 +1307,11 @@
         "file": "1101-gl-ablation-encoders-ctx-b64-80k-plan.md",
         "sha": "a084aa273fe73c83ad1767c43cd03c4e6762f53e"
       },
-      "state": "planned",
-      "state_changed_at": "2026-11-02T04:55:58Z",
-      "state_reason": "等 phase1 done（含 V6 64 档 PASS）；开工令与 phase1 同一条，不另问",
+      "state": "stopped",
+      "state_changed_at": "2026-11-02T05:33:08Z",
+      "state_reason": "开工前独立审查发现两项执行时序冲突，涉及起跑、取消与统一交接，按第 2 条停在实施前待用户裁决；未提交占位、下载、建表或训练。",
       "owner": {
-        "session": "",
+        "session": "01a19abc-1926-71b0-bac0-a2d7375a739d",
         "host": "sled-aspen.eecs.umich.edu"
       },
       "depends_on": [
@@ -1380,12 +1398,24 @@
           "scope": "批准 a084aa2 计划 v4 全程；64 档通过继续正式训练，64 档 OOM 测完 32/16 后取消两份占位并交用户裁决；实施前须通过计划一致性审查。"
         }
       ],
-      "pending_decisions": [],
+      "pending_decisions": [
+        {
+          "what": "统一第一阶段交接与先到先起冲突",
+          "recommendation": "两个 run 均完成 64 档冒烟及第一阶段后再正式起跑；先到者可先冒烟和测时。任一 OOM 按 K2 测完档位并取消两占位。",
+          "alternative": "若保留先到先起，须分 run 交接并明确另一 run OOM 时已经正式训练者的取消范围。",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/validation/1102-gl-ablation-plan-consistency.md"
+        },
+        {
+          "what": "Beta 早于占位 RUNNING 与立即排队冲突",
+          "recommendation": "Beta 必须早于占位内首次冒烟或训练工作负载；占位可先 RUNNING 等待。",
+          "where": "/data/hongzefu/robomme_policy_learning_MotionJEPA/docs/validation/1102-gl-ablation-plan-consistency.md"
+        }
+      ],
       "next_steps": [
         {
-          "what": "phase1 done 且 V6 PASS → 自动置 running、起 R6a/R6b",
-          "command": "见计划 runbook B1",
-          "verdict_line": "TRAIN_START=PASS run=<run> head=<sha> jobid=<id> ×2"
+          "what": "用户裁决两项时序冲突后，全文修订计划并重新完整呈现；取得修订版开工令并重新通过独立审查后实施。",
+          "command": "",
+          "verdict_line": "PLAN_CONSISTENCY_REVIEW=PASS base=<修订版提交> findings=<n> blocking=0"
         }
       ]
     }
