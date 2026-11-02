@@ -38,6 +38,10 @@ echo "HOST=$HOST"
 GPU_NAMES="$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | sort -u || true)"
 [[ "$GPU_NAMES" == "$EXPECTED_GPU" ]] || { echo "GPU 型号不符或 step 未拿到 GPU: ${GPU_NAMES:-无}" >&2; exit 2; }
 [[ -f "$ENTRY" ]] || { echo "S1 入口不存在: $ENTRY" >&2; exit 2; }
+[[ -n ${TRAIN_HEAD-} && "$(git -C "$REPO" rev-parse HEAD)" == "$TRAIN_HEAD" ]] || { echo 'TRAIN_HEAD与计算节点代码不符' >&2; exit 2; }
+[[ -z "$(git -C "$REPO" status --porcelain)" ]] || { echo '计算节点工作区不干净' >&2; exit 2; }
+MODULE=$(cd "$REPO" && env -u PYTHONPATH -u PYTHONHOME "$REPO/.venv/bin/python" -c 'import pathlib, mme_vla_suite; print(pathlib.Path(mme_vla_suite.__file__).resolve())') || exit 2
+[[ "$MODULE" == "$REPO/src/"* ]] || { echo "mme_vla_suite导入位置错误: $MODULE" >&2; exit 2; }
 # ---- 计算节点判定（END）----
 
 # srun 默认把提交侧环境原样带进计算节点：显式 unset 诊断遗留开关。清单与原入口 run_orig16_stage2_60k.sh
@@ -50,7 +54,7 @@ for key in $(compgen -e); do
 done
 
 # S1 入口的 env 接口：只透传，已设的保持原值 export，未设的保持未设。
-for key in GPUS GLOBAL_BATCH HISTORY RUN_NAME TRAIN_HEAD FINAL_RECORD_DIR MAX_STEPS TRAIN_TIMING_STEPS MMEVLA_STAGE2_EVIDENCE_ROOT; do
+for key in GPUS GLOBAL_BATCH HISTORY RUN_NAME TRAIN_HEAD FINAL_RECORD_DIR MAX_STEPS TRAIN_TIMING_STEPS MMEVLA_STAGE2_EVIDENCE_ROOT CONFIG ENCODER_RUN ATTEMPT_MANIFEST; do
   if [[ -n "${!key+x}" ]]; then
     export "${key?}"
   fi

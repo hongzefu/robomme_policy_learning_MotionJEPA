@@ -17,6 +17,26 @@ CONFIG_NAME = "mme_vla_suite_orig16_b128_60k"
 PLACEHOLDER = "__FILL_AFTER_BUILD__"
 YAML_DIR = "src/mme_vla_suite/models/config/robomme"
 ENCODER_SHA = "27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035"
+ENCODER_RUN = "stage2-full144-1025-a"
+ABLATION_CONFIG = "mme_vla_suite_orig16_b64_80k"
+# S5 对齐此身份表：run 为键，字段为 ckpt_sha256/config_sha256/store_dir/evidence_dir/yaml。
+# 新配置指纹来自各公开 encoder bucket 的 SHA256SUMS.txt；旧值来自入库 G4-ctx.json。
+ENCODERS = {
+    ENCODER_RUN: dict(ckpt_sha256=ENCODER_SHA,
+        config_sha256="879213d9bc47d3cb39b133acc7b6534333cc70faf0222cf566d52d28348262c6",
+        store_dir="motion-stage2-1024", evidence_dir="evidence",
+        yaml="perceptual-framesamp-ctx-32frame-4x4-motion-stage2-4x256-orig16.yaml"),
+    "aws-stage2-noxyz-1101-a": dict(
+        ckpt_sha256="6acc92af239e9b9a4c58ced4c5123bc25183188ec518b10734e917879240d00d",
+        config_sha256="583e48c0a6afa2a798eb14fc8ccdcfe8d9274cb13f1393e05859d6bca368bada",
+        store_dir="motion-stage2-1024-noxyz", evidence_dir="evidence-noxyz",
+        yaml="perceptual-framesamp-ctx-32frame-4x4-noxyz-motion-stage2-4x256-orig16.yaml"),
+    "aws-stage2-nostate-1101-a": dict(
+        ckpt_sha256="be7cdec7d96c889193f27cd925977c7ff47423d4321d1fd7446799d38495e3d4",
+        config_sha256="869ac77872092a0d0b08e1bc3ac60b0a893946af02ae3de193aa5715e8aecc34",
+        store_dir="motion-stage2-1024-nostate", evidence_dir="evidence-nostate",
+        yaml="perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml"),
+}
 SPLIT, CONCAT = "stage2_pool4_split_v1", "stage2_pool4_concat_v1"
 # (融合方式, motion读法) → 正式60k运行名；四项显式映射，不按字符串规则推导。
 RUNS = {("context", SPLIT): "orig100-ctx32x4x4-motion-s2split4x256-b128-60k",
@@ -32,7 +52,8 @@ FUSIONS = {"ctx": "context", "modul": "modulation"}
 READOUTS = {"4x256": SPLIT, "1x1024": CONCAT}
 ATTEMPT_KEYS = {"base_run", "run", "history", "train_head", "decision", "bucket"}
 HISTORIES = tuple(f"perceptual-framesamp-{fusion}-{frames}-motion-stage2-{readout}-orig16.yaml"
-    for fusion in ("ctx", "modul") for frames in ("32frame-4x4", "8frame-8x8") for readout in ("1x1024", "4x256"))
+    for fusion in ("ctx", "modul") for frames in ("32frame-4x4", "8frame-8x8") for readout in ("1x1024", "4x256")) + tuple(
+        item["yaml"] for run, item in ENCODERS.items() if run != ENCODER_RUN)
 # ── GreatLakes 复现（1031 计划 K4/K6/K9/K11）：卡数可变口径，只对 fsdp 2/4 生效，默认 8 卡 B128 不变 ──
 GL_FSDP = (2, 4)
 GL_HISTORY = "perceptual-framesamp-ctx-32frame-4x4-motion-stage2-4x256-orig16.yaml"
@@ -41,13 +62,25 @@ TIER_HISTORIES = {f"perceptual-framesamp-ctx-{frames}frame-4x4-nomotion-tier-ori
                   for frames in (16, 32, 64)}
 GL_SMOKE, GL_TIER = "o16gl-smoke-", "o16gl-tier-"
 # (运行类别, 步数) → 允许的 global batch；表外组合一律 FAIL。
-GL_COMBOS = {("formal", 60000): (64, 32), ("smoke", 20): (32, 16, 8, 4), ("smoke", 100): (64, 32), ("tier", 100): (64,)}
+GL_COMBOS = {("formal", 60000): (64, 32), ("formal", 80000): (64,),
+             ("smoke", 20): (64, 32, 16, 8, 4), ("smoke", 100): (64, 32), ("tier", 100): (64,)}
 EVIDENCE_ENV = "MMEVLA_STAGE2_EVIDENCE_ROOT"
 ONLINE_INPUTS = "online_restore_inputs.json"
 
 
-def gl_formal_run(batch):
+def gl_formal_run(batch, encoder_run=ENCODER_RUN):
+    if encoder_run != ENCODER_RUN:
+        tag = ENCODERS[encoder_run]["store_dir"].removeprefix("motion-stage2-1024-")
+        return f"gl-orig100-ctx32x4x4-{tag}-motion-s2split4x256-b{batch}-80k"
     return f"gl-orig100-ctx32x4x4-motion-s2split4x256-b{batch}-60k"
+
+
+GL_RUNS = {gl_formal_run(batch): GL_HISTORY for batch in (64, 32)} | {
+    gl_formal_run(64, run): item["yaml"] for run, item in ENCODERS.items() if run != ENCODER_RUN}
+BUCKETS.update({gl_formal_run(batch): "HongzeFu/robomme-vla-gl-orig100-ctx32x4x4-motion-s2split-60k-v1"
+                for batch in (64, 32)})
+BUCKETS.update({gl_formal_run(64, f"aws-stage2-{tag}-1101-a"):
+    f"HongzeFu/robomme-vla-gl-orig100-ctx-s2split-{tag}-b64-80k-v1" for tag in ("noxyz", "nostate")})
 
 
 def gl_kind(run):
@@ -55,14 +88,23 @@ def gl_kind(run):
     return "tier" if run.startswith(GL_TIER) else "smoke" if run.startswith(GL_SMOKE) else "formal"
 
 
-def gl_combo_ok(*, fsdp, batch, steps, run, history_name):
+def gl_combo_ok(*, fsdp, batch, steps, run, history_name, encoder_run=ENCODER_RUN, config_name=CONFIG_NAME):
     """入口与合同共用的 GL 组合表；正式只认 ctx 4x256 与 gl-orig100-…-b<batch>-60k。"""
     kind = gl_kind(run)
     if fsdp not in GL_FSDP or batch not in GL_COMBOS.get((kind, steps), ()):
         return False
     if kind == "tier":
-        return history_name in TIER_HISTORIES
-    return history_name == GL_HISTORY and (kind != "formal" or run == gl_formal_run(batch))
+        return history_name in TIER_HISTORIES and encoder_run == ENCODER_RUN and config_name == CONFIG_NAME
+    new = encoder_run != ENCODER_RUN
+    if config_name != (ABLATION_CONFIG if new else CONFIG_NAME):
+        return False
+    if new and (fsdp != 4 or batch != 64 or steps not in (20, 100, 80000)):
+        return False
+    if not new and steps == 80000:
+        return False
+    formal = gl_formal_run(batch, encoder_run)
+    return history_name == ENCODERS[encoder_run]["yaml"] and (kind != "formal" or
+        re.fullmatch(re.escape(formal) + r"(?:-attempt(0[2-9]|[1-9][0-9]))?", run) is not None)
 
 
 def rebase_provenance(provenance, root):
@@ -117,6 +159,8 @@ class Contract:
     train_max: int | str = 44
     encoder_sha256: str = ENCODER_SHA
     encoder_run: str = "stage2-full144-1025-a"
+    store_dir: str = "motion-stage2-1024"
+    evidence_dir: str = "evidence"
     mj_source_manifest: str = "/scratch/hongze/dataset-original-robomme-16x100-wan21-v1/dataset/source_manifest.json"
     episodes: int = 1600
     tasks: int = 16
@@ -145,8 +189,10 @@ def history_key(name):
     return FUSIONS[parts[2]], READOUTS[parts[-2]]
 
 
-def pair_name(fusion, readout):
+def pair_name(fusion, readout, encoder_run=ENCODER_RUN):
     """32×4×4正式配置文件名；fusion取ctx/modul，readout取4x256/1x1024。"""
+    if encoder_run != ENCODER_RUN and (fusion, readout) == ("ctx", "4x256"):
+        return ENCODERS[encoder_run]["yaml"]
     return f"perceptual-framesamp-{fusion}-32frame-4x4-motion-stage2-{readout}-orig16.yaml"
 
 
@@ -161,9 +207,9 @@ def check_attempt(path, *, history_name, train_head):
         raise ValueError("attempt run必须为base_run加-attemptNN（NN≥02两位）")
     suffix = f"-attempt{match.group(1)}"
     keys = [key for key, value in RUNS.items() if value == base]
-    if not keys:
-        raise ValueError("attempt base_run不是四个正式运行名之一")
-    if keys[0] != history_key(history_name):
+    if not keys and base not in GL_RUNS:
+        raise ValueError("attempt base_run不是已登记的正式运行名")
+    if (keys and keys[0] != history_key(history_name)) or (base in GL_RUNS and GL_RUNS[base] != history_name):
         raise ValueError("attempt base_run的融合或读法与当前history不一致")
     if manifest["history"] != history_name:
         raise ValueError("attempt清单history与当前history不同")
@@ -211,7 +257,7 @@ def check_history(rec, history, contract=Contract()):
     expected = legacy.load_yaml(REPO, legacy.HISTORY_CONFIG)
     expected.update(token_per_image=tokens, integration_type=history.get("integration_type"), memory_token_dim=dim)
     expected["motion"].update(readout=spec.readout, num_tokens=spec.num_tokens, dim=spec.dim, budget=spec.budget,
-        store_path=contract.parent_rel + "/motion-stage2-1024", online_gpu=1,
+        store_path=contract.parent_rel + "/" + contract.store_dir, online_gpu=1,
         source_run=f"{contract.encoder_run}/checkpoint_epoch_105.pt#model", checkpoint_sha256=contract.encoder_sha256)
     rec("HISTORY_KEYS", history == expected, "除三机制与已固定来源以外不接受配置漂移")
     if not rec.failed:
@@ -237,18 +283,18 @@ def check_tier_history(rec, history, name):
     return None
 
 
-def parse_cli(argv):
+def parse_cli(argv, config_name=CONFIG_NAME):
     from mme_vla_suite.training import config
     previous = sys.argv
     try:
         sys.argv = ["train.py", *argv]
-        return config.cli(), config.get_config(CONFIG_NAME)
+        return config.cli(), config.get_config(config_name)
     finally:
         sys.argv = previous
 
 
-def check_argv(rec, argv, steps, gl=False):
-    rec("ARGV_CONFIG_NAME", bool(argv) and argv[0] == CONFIG_NAME)
+def check_argv(rec, argv, steps, gl=False, config_name=CONFIG_NAME):
+    rec("ARGV_CONFIG_NAME", bool(argv) and argv[0] == config_name)
     allowed = legacy.VALUE_FLAGS | {"--model.history-config"}
     if gl:
         allowed |= {"--fsdp-devices", "--num-workers", "--batch-size"}
@@ -270,25 +316,31 @@ def check_argv(rec, argv, steps, gl=False):
             i += 1
     rec("ARGV_ALLOWLIST", not unknown, str(unknown))
     values = legacy.flag_value(argv, "--num-train-steps")
-    rec("ARGV_STEPS", (steps == 60000 and not values) or (steps == 20 and values == ["20"])
+    formal_steps = 80000 if config_name == ABLATION_CONFIG else 60000
+    rec("ARGV_STEPS", (steps == formal_steps and not values) or (steps == 20 and values == ["20"])
         or (gl and steps == 100 and values == ["100"]))
     rec("ARGV_HISTORY", argv.count("--model.use-history") == 1)
 
 
 def check_config(rec, cfg, base, *, store, contract, steps, history_name, history, attempt=None,
-                 fsdp_devices=None, batch_size=None):
+                 fsdp_devices=None, batch_size=None, config_name=CONFIG_NAME):
     from mme_vla_suite.training import config
     # GL 口径只放开 batch 与 fsdp/num_workers 两项资源量；未传时期望值即合同默认（逐位同原检查）。
     fsdp = contract.fsdp_devices if fsdp_devices is None else fsdp_devices
     gl = fsdp in GL_FSDP
+    ablation = config_name == ABLATION_CONFIG
+    formal_steps = 80000 if ablation else 60000
+    base_resources = dict(batch_size=64, fsdp_devices=4, num_workers=8) if ablation else {}
     want = dict(batch_size=contract.batch_size if batch_size is None else batch_size, fsdp_devices=fsdp,
                 num_workers=2 * fsdp if gl else contract.num_workers, seed=contract.seed, ema_decay=contract.ema_decay)
     for key in ("batch_size", "fsdp_devices", "num_workers", "seed", "ema_decay"):
-        rec(f"CFG_{key.upper()}", getattr(cfg, key) == want[key] and getattr(base, key) == getattr(contract, key))
-    rec("CFG_STEPS", cfg.num_train_steps == steps and base.num_train_steps == 60000
-        and steps in ((20, 100, 60000) if gl else (20, 60000)))
+        rec(f"CFG_{key.upper()}", getattr(cfg, key) == want[key]
+            and getattr(base, key) == base_resources.get(key, getattr(contract, key)))
+    rec("CFG_STEPS", cfg.num_train_steps == steps and base.num_train_steps == formal_steps
+        and steps in ((20, 100, formal_steps) if gl else (20, 60000)))
     rec("CFG_SCHEDULE", cfg.lr_schedule == base.lr_schedule and (cfg.lr_schedule.warmup_steps,
-        cfg.lr_schedule.peak_lr, cfg.lr_schedule.decay_steps, cfg.lr_schedule.decay_lr) == (5000, 5e-5, 60000, 5e-5))
+        cfg.lr_schedule.peak_lr, cfg.lr_schedule.decay_steps, cfg.lr_schedule.decay_lr)
+        == (10000 if ablation else 5000, 5e-5, formal_steps, 5e-5))
     rec("CFG_MODEL", cfg.model == dataclasses.replace(base.model, history_config=history_name) and cfg.model.use_history)
     layout = "framesamp-4x4" if history["token_per_image"] == 16 else "framesamp-8x8"
     expected = dataclasses.replace(base, exp_name=cfg.exp_name, num_train_steps=steps,
@@ -307,7 +359,10 @@ def check_config(rec, cfg, base, *, store, contract, steps, history_name, histor
         # GL：正式只认 gl-orig100-…-b<64|32>-60k；20/100 步只认 o16gl- 前缀，组合细则见 GL_COMBO。
         kind = gl_kind(cfg.exp_name)
         rec("CFG_RUN", gl_combo_ok(fsdp=fsdp, batch=want["batch_size"], steps=steps, run=cfg.exp_name,
-            history_name=history_name) and (kind == "formal") == (steps == 60000), f"exp_name={cfg.exp_name} kind={kind}")
+            history_name=history_name, encoder_run=contract.encoder_run if contract.encoder_run in ENCODERS else ENCODER_RUN,
+            config_name=config_name) and (kind == "formal") == (steps == formal_steps)
+            and (kind != "formal" or "-attempt" not in cfg.exp_name or cfg.exp_name == attempt),
+            f"exp_name={cfg.exp_name} kind={kind}")
     else:
         allowed = RUNS.get((history["integration_type"], history["motion"]["readout"])) if attempt is None else attempt
         rec("CFG_RUN", (history["token_per_image"] == 16 and cfg.exp_name == allowed) if steps == 60000
@@ -352,7 +407,7 @@ def check_dataset(rec, store, contract, history, env=None):
     bounds = legacy.manifest_bounds(manifest)
     rec("WINDOW_BUDGET", bounds["rows"] == contract.motion_rows and bounds["train_max"] == contract.train_max
         and type(contract.train_max) is int and contract.train_max <= 96)
-    motion = ms.MotionMeta.load(parent / "motion-stage2-1024")
+    motion = ms.MotionMeta.load(parent / contract.store_dir)
     ms.run_fast_checks(motion, manifest_path=parent / "meta/episode_manifest.json")
     ms.run_full_checks(motion)
     ms.check_same_source(manifest["sha256"], motion, manifest)
@@ -373,8 +428,11 @@ def check_dataset(rec, store, contract, history, env=None):
     rec("INPUT_EQUIVALENCE", True, "G0/G2/G3/缓存收据逐SHA回读并验证；输出数值按用户裁决不作同值准入")
     lineage = load_script("scripts/training/check_data_lineage.py")
     checkpoint = store / "v1-store/external/motionjepa" / contract.encoder_run / "checkpoint_epoch_105.pt"
-    rec("ENCODER_CONFIG_SHA", sha256_file(checkpoint.parent / "config.yaml") == motion.provenance["encoder"]["config_sha256"])
-    evidence_dir = parent / "evidence"
+    config_sha = sha256_file(checkpoint.parent / "config.yaml")
+    expected_sha = ENCODERS.get(contract.encoder_run, {}).get("config_sha256")
+    rec("ENCODER_CONFIG_SHA", config_sha == motion.provenance["encoder"]["config_sha256"]
+        and (contract.encoder_run == ENCODER_RUN or expected_sha is None or config_sha == expected_sha))
+    evidence_dir = parent / contract.evidence_dir
     if not Path(contract.mj_source_manifest).exists() and all(
             (evidence_dir / f"{role}.json").is_file() for role in ms.stage2_evidence_roles(motion.provenance)):
         return check_evidence_lineage(rec, evidence_dir, motion, checkpoint, contract)
@@ -389,13 +447,19 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
     """同一只读契约核心；CPU夹具仅由Python调用替换身份值，正式CLI无此选项。"""
     rec = Recorder()
     env = dict(os.environ if env is None else env)
+    encoder_run = getattr(args, "encoder_run", None)
+    if encoder_run is not None:
+        identity = ENCODERS[encoder_run]
+        contract = dataclasses.replace(contract, encoder_run=encoder_run, encoder_sha256=identity["ckpt_sha256"],
+            store_dir=identity["store_dir"], evidence_dir=identity["evidence_dir"])
+    config_name = getattr(args, "config_name", CONFIG_NAME)
     store = Path(args.store_root).resolve()
     fsdp = getattr(args, "fsdp_devices", contract.fsdp_devices)
     batch = getattr(args, "batch_size", contract.batch_size)
     gpus_visible = getattr(args, "gpus_visible", None)
     gl = fsdp in GL_FSDP
     rec("BUILD_PINS", PLACEHOLDER not in str(dataclasses.asdict(contract)), "构建pin必须全部回填")
-    rec.guard("ARGV", check_argv, rec, argv, args.steps, gl)
+    rec.guard("ARGV", check_argv, rec, argv, args.steps, gl, config_name)
     rec.guard("ENV", legacy.check_env, rec, env, store, contract, gpus_visible)
     if not gl and (fsdp, batch) != (contract.fsdp_devices, contract.batch_size):
         rec("GL_COMBO", False, f"非GL口径只认fsdp={contract.fsdp_devices} batch={contract.batch_size}")
@@ -414,7 +478,8 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
     if gl:
         runs = legacy.flag_value(argv, "--exp-name")
         rec("GL_COMBO", len(runs) == 1 and gl_combo_ok(fsdp=fsdp, batch=batch, steps=args.steps, run=runs[0],
-            history_name=name), f"fsdp={fsdp} batch={batch} steps={args.steps} run={runs} history={name}")
+            history_name=name, encoder_run=contract.encoder_run if contract.encoder_run in ENCODERS else ENCODER_RUN,
+            config_name=config_name), f"fsdp={fsdp} batch={batch} steps={args.steps} run={runs} history={name}")
         root = env.get(EVIDENCE_ENV)
         if tier:
             rec("ENV_EVIDENCE_ROOT", not root, "测时无motion，不设证据重定根")
@@ -442,11 +507,11 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
     rec("NO_PLACEHOLDER", PLACEHOLDER not in str(history) and PLACEHOLDER not in str(argv))
     if not any(x in rec.failed for x in ("BUILD_PINS", "NO_PLACEHOLDER", "HISTORY")):
         rec.guard("DATASET", check_dataset, rec, store, contract, history, env)
-    parsed = rec.guard("CLI", parse_cli, argv)
+    parsed = rec.guard("CLI", parse_cli, argv, config_name)
     if parsed:
         rec.guard("CONFIG", check_config, rec, *parsed, store=store, contract=contract,
                   steps=args.steps, history_name=name, history=history, attempt=attempt,
-                  fsdp_devices=fsdp, batch_size=batch)
+                  fsdp_devices=fsdp, batch_size=batch, config_name=config_name)
     return rec
 
 
@@ -480,7 +545,7 @@ def main(raw=None):
         parser = argparse.ArgumentParser(description="核验已有最终保存现场的有限性")
         parser.add_argument("--check-final-record", type=Path, required=True)
         parser.add_argument("--run", required=True)
-        parser.add_argument("--steps", type=int, choices=(20, 100, 60000), required=True)
+        parser.add_argument("--steps", type=int, choices=(20, 100, 60000, 80000), required=True)
         parser.add_argument("--train-head", required=True)
         args = parser.parse_args(raw)
         try:
@@ -520,7 +585,9 @@ def main(raw=None):
     parser.add_argument("--repo", default=str(REPO))
     parser.add_argument("--store-root", default=str(REPO))
     parser.add_argument("--train-head", required=True)
-    parser.add_argument("--steps", type=int, choices=(20, 100, 60000), default=60000)
+    parser.add_argument("--steps", type=int, choices=(20, 100, 60000, 80000), default=60000)
+    parser.add_argument("--encoder-run", choices=tuple(ENCODERS), default=None)
+    parser.add_argument("--config-name", choices=(CONFIG_NAME, ABLATION_CONFIG), default=CONFIG_NAME)
     parser.add_argument("--fsdp-devices", type=int, choices=(2, 4, 8), default=8)
     parser.add_argument("--gpus-visible", default=None, help="GL 入口传入的期望可见卡列表；Slurm 下未设时为空串")
     parser.add_argument("--batch-size", type=int, default=128)
@@ -534,8 +601,9 @@ def main(raw=None):
         print(f"PAIRED_RUNS_SAME_LIB=PASS input_pin={Contract().input_manifest_sha256}")
     print(f"LAUNCH_CONTRACT={'FAIL' if rec.failed else 'PASS'} checks={len(rec.rows)} failed={','.join(rec.failed) or 0}")
     if args.fsdp_devices in GL_FSDP:
+        extra = f"steps={args.steps} encoder={args.encoder_run} " if args.encoder_run not in (None, ENCODER_RUN) else ""
         print(f"LAUNCH_CONTRACT_GL={'FAIL' if rec.failed else 'PASS'} gpus={args.fsdp_devices} fsdp={args.fsdp_devices} "
-              f"batch={args.batch_size} checks={len(rec.rows)} failed={','.join(rec.failed) or 0}")
+              f"batch={args.batch_size} {extra}checks={len(rec.rows)} failed={','.join(rec.failed) or 0}")
     return int(bool(rec.failed))
 
 

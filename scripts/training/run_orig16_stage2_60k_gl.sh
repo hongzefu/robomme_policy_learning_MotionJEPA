@@ -8,13 +8,30 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 cd "$ROOT"
 # 路径与缓存一律按仓库前缀取 v1-store/（paths.sh 设 OPENPI_DATA_HOME、XDG_CACHE_HOME、HF_HOME、TRAIN_CACHE_ROOT，并只读定义 PY）。
 source "$ROOT/scripts/training/paths.sh"
-CONFIG=mme_vla_suite_orig16_b128_60k
+CONFIG=${CONFIG:-mme_vla_suite_orig16_b128_60k}
+ENCODER_RUN=${ENCODER_RUN:-stage2-full144-1025-a}
 GL_HC=perceptual-framesamp-ctx-32frame-4x4-motion-stage2-4x256-orig16.yaml
+FORMAL_STEPS=60000
+CONTRACT_ARGS=()
+case "$ENCODER_RUN:$CONFIG" in
+  stage2-full144-1025-a:mme_vla_suite_orig16_b128_60k) ;;
+  aws-stage2-noxyz-1101-a:mme_vla_suite_orig16_b64_80k)
+    GL_HC=perceptual-framesamp-ctx-32frame-4x4-noxyz-motion-stage2-4x256-orig16.yaml
+    FORMAL_STEPS=80000 ;;
+  aws-stage2-nostate-1101-a:mme_vla_suite_orig16_b64_80k)
+    GL_HC=perceptual-framesamp-ctx-32frame-4x4-nostate-motion-stage2-4x256-orig16.yaml
+    FORMAL_STEPS=80000 ;;
+  *) echo 'CONFIG与ENCODER_RUN身份不匹配' >&2; exit 2 ;;
+esac
+if [[ $FORMAL_STEPS == 80000 ]]; then
+  CONTRACT_ARGS=(--config-name "$CONFIG" --encoder-run "$ENCODER_RUN")
+fi
 HC=${HISTORY:?必须指定HISTORY}
 RUN=${RUN_NAME:?必须指定RUN_NAME}
 FINAL=${FINAL_RECORD_DIR:?必须指定FINAL_RECORD_DIR}
 N=${GPUS:?必须指定GPUS}
 B=${GLOBAL_BATCH:?必须指定GLOBAL_BATCH}
+[[ $FORMAL_STEPS != 80000 || "$B" == 64 ]] || { echo '80k消融仅允许GLOBAL_BATCH=64' >&2; exit 2; }
 : "${TRAIN_HEAD:?必须指定完整TRAIN_HEAD}"
 [[ "$TRAIN_HEAD" =~ ^[0-9a-f]{40}$ ]] || { echo 'TRAIN_HEAD必须为40位SHA' >&2; exit 2; }
 [[ "$RUN" =~ ^[a-zA-Z0-9_.-]+$ ]] || { echo 'RUN_NAME非法' >&2; exit 2; }
@@ -22,11 +39,13 @@ B=${GLOBAL_BATCH:?必须指定GLOBAL_BATCH}
 [[ "$FINAL" == /* && "$(basename "$FINAL")" == final-record ]] || { echo 'FINAL_RECORD_DIR必须是绝对final-record路径' >&2; exit 2; }
 [[ ${DRY_RUN:-0} == 0 || ${DRY_RUN:-0} == 1 ]] || { echo 'DRY_RUN仅允许0或1' >&2; exit 2; }
 [[ "$N" == 2 || "$N" == 4 ]] || { echo 'GPUS仅允许2或4' >&2; exit 2; }
+[[ $FORMAL_STEPS != 80000 || "$N" == 4 ]] || { echo '80k消融仅允许GPUS=4' >&2; exit 2; }
 # 运行类别 × 步数 × batch × history 组合表（与 check_orig16_stage2_launch.py::GL_COMBOS 同表）。
 STEP_ARGS=()
 TIMING=${TRAIN_TIMING_STEPS-}
 case "$RUN" in
   o16gl-tier-*)
+    [[ $FORMAL_STEPS == 60000 ]] || { echo '80k消融不支持测时yaml' >&2; exit 2; }
     [[ ${MAX_STEPS-} == 100 && "$B" == 64 ]] || { echo 'o16gl-tier-仅允许MAX_STEPS=100且GLOBAL_BATCH=64' >&2; exit 2; }
     case "$HC" in
       perceptual-framesamp-ctx-16frame-4x4-nomotion-tier-orig16.yaml|perceptual-framesamp-ctx-32frame-4x4-nomotion-tier-orig16.yaml|perceptual-framesamp-ctx-64frame-4x4-nomotion-tier-orig16.yaml) ;;
@@ -36,17 +55,17 @@ case "$RUN" in
   o16gl-smoke-*)
     [[ "$HC" == "$GL_HC" ]] || { echo "o16gl-smoke-只认$GL_HC" >&2; exit 2; }
     case "${MAX_STEPS-}:$B" in
-      20:32|20:16|20:8|20:4|100:64|100:32) STEPS=$MAX_STEPS ;;
-      *) echo 'o16gl-smoke-仅允许20步32/16/8/4或100步64/32' >&2; exit 2 ;;
+      20:64|20:32|20:16|20:8|20:4|100:64|100:32) STEPS=$MAX_STEPS ;;
+      *) echo 'o16gl-smoke-仅允许20步64/32/16/8/4或100步64/32' >&2; exit 2 ;;
     esac ;;
   *)
     [[ -z ${MAX_STEPS+x} ]] || { echo '正式口径不得设MAX_STEPS' >&2; exit 2; }
     [[ -z "$TIMING" ]] || { echo 'TRAIN_TIMING_STEPS只在o16gl-smoke-/o16gl-tier-放行' >&2; exit 2; }
     [[ "$B" == 64 || "$B" == 32 ]] || { echo '正式GLOBAL_BATCH仅允许64或32' >&2; exit 2; }
     [[ "$HC" == "$GL_HC" ]] || { echo "正式只认$GL_HC" >&2; exit 2; }
-    STEPS=60000 ;;
+    STEPS=$FORMAL_STEPS ;;
 esac
-if [[ $STEPS != 60000 ]]; then STEP_ARGS=(--num-train-steps "$STEPS"); fi
+if [[ $STEPS != "$FORMAL_STEPS" ]]; then STEP_ARGS=(--num-train-steps "$STEPS"); fi
 if [[ -n "$TIMING" ]]; then
   [[ "$TIMING" =~ ^[1-9][0-9]*$ && "$TIMING" -le "$STEPS" ]] || { echo 'TRAIN_TIMING_STEPS须为1..步数的整数' >&2; exit 2; }
 fi
@@ -69,13 +88,15 @@ else
   [[ -n "$VISIBLE" && ${#ids[@]} == "$N" ]] || { echo "GPU_SCOPE=FAIL CUDA_VISIBLE_DEVICES须恰有${N}张" >&2; exit 2; }
 fi
 # 清除会改变数据、模型环境与放宽来源检查的外部覆盖（逐行同原入口）；计时与证据根在核验后按上面结果恢复。
+ATTEMPT=${ATTEMPT_MANIFEST-}
 unset PYTHONPATH PYTHONHOME XLA_FLAGS MMEVLA_MOTION_STORE MMEVLA_FRAMESAMP_ALLOW_SUBSET MMEVLA_FRAMESAMP_VERIFY \
-  TRAIN_TIMING_STEPS WANDB_MODE JAX_COMPILATION_CACHE_DIR MMEVLA_MOTION_OVERFLOW MMEVLA_STAGE2_EVIDENCE_ROOT
+  TRAIN_TIMING_STEPS WANDB_MODE JAX_COMPILATION_CACHE_DIR MMEVLA_MOTION_OVERFLOW MMEVLA_STAGE2_EVIDENCE_ROOT ATTEMPT_MANIFEST
 for key in $(compgen -e); do
   case "$key" in *_ALLOW_UNVERIFIED) unset "$key" ;; esac
 done
 [[ -z "$TIMING" ]] || export TRAIN_TIMING_STEPS="$TIMING"
 [[ -z "$EVIDENCE" ]] || export MMEVLA_STAGE2_EVIDENCE_ROOT="$EVIDENCE"
+[[ -z "$ATTEMPT" ]] || export ATTEMPT_MANIFEST="$ATTEMPT"
 [[ -n ${SLURM_JOB_ID-} ]] || export CUDA_VISIBLE_DEVICES="$VISIBLE"
 export PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 export UV_CACHE_DIR="$HOME/.cache/uv" OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
@@ -116,7 +137,7 @@ print_command() {
 contract() {
   JAX_PLATFORMS=cpu "$PY" scripts/training/check_orig16_stage2_launch.py \
     --repo "$ROOT" --store-root "$ROOT" --train-head "$TRAIN_HEAD" --steps "$STEPS" \
-    --fsdp-devices "$N" --batch-size "$B" --gpus-visible "$VISIBLE" -- "${ARGS[@]}"
+    --fsdp-devices "$N" --batch-size "$B" --gpus-visible "$VISIBLE" "${CONTRACT_ARGS[@]}" -- "${ARGS[@]}"
 }
 # 只读分支在日志、run和缓存任何mkdir/open之前返回。
 if [[ ${DRY_RUN:-0} == 1 ]]; then
