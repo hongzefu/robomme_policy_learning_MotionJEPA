@@ -474,6 +474,10 @@ def core(args, argv, *, contract=Contract(), env=None, history=None):
         rec("HISTORY_NAME", False, str(names))
         return rec
     name = names[0]
+    if contract.encoder_run in ENCODERS and contract.encoder_run != ENCODER_RUN:
+        rec("ENCODER_COMBO", config_name == ABLATION_CONFIG and (fsdp, batch) == (4, 64)
+            and args.steps in (20, 100, 80000) and name == ENCODERS[contract.encoder_run]["yaml"],
+            f"encoder={contract.encoder_run} config={config_name} fsdp={fsdp} batch={batch} steps={args.steps} history={name}")
     tier = name in TIER_HISTORIES
     if gl:
         runs = legacy.flag_value(argv, "--exp-name")

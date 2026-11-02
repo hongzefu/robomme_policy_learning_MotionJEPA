@@ -262,10 +262,8 @@ def test_default_fsdp8_rejects_gl_batch_and_tier(fx):
 ABLATION_RUNS = tuple(run for run in launch.ENCODERS if run != launch.ENCODER_RUN)
 
 
-@pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
-@pytest.mark.parametrize("steps", [20, 100, 80000])
-def test_ablation_full_contract(tmp_path, monkeypatch, encoder_run, steps):
-    """真实 CLI 与真实新 yaml；仅外部资产身份替换为完整证据小库。"""
+def ablation_fixture(tmp_path, monkeypatch, encoder_run):
+    """外部资产身份替换为完整证据小库，保留真实配置及 yaml。"""
     fx = base.make_fixture(tmp_path)
     fx.evidence_root, fx.motion = flatten_evidence(fx)
     identity = dict(launch.ENCODERS[encoder_run])
@@ -284,6 +282,14 @@ def test_ablation_full_contract(tmp_path, monkeypatch, encoder_run, steps):
     for role in ms.stage2_evidence_roles(fx.motion.provenance):
         shutil.copyfile(fx.motion.provenance["stage2_compat"]["evidence"][role]["path"], folder / f"{role}.json")
     fx.contract = dataclasses.replace(fx.contract, mj_source_manifest=str(tmp_path / "absent.json"))
+    return fx, identity
+
+
+@pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
+@pytest.mark.parametrize("steps", [20, 100, 80000])
+def test_ablation_full_contract(tmp_path, monkeypatch, encoder_run, steps):
+    """真实 CLI 与真实新 yaml；仅外部资产身份替换为完整证据小库。"""
+    fx, identity = ablation_fixture(tmp_path, monkeypatch, encoder_run)
     name = identity["yaml"]
     run = launch.gl_formal_run(64, encoder_run) if steps == 80000 else f"o16gl-smoke-{encoder_run}"
     args, argv, env, h = gl_arguments(fx, name, steps=steps, run=run, fsdp=4, batch=64,
@@ -293,6 +299,20 @@ def test_ablation_full_contract(tmp_path, monkeypatch, encoder_run, steps):
     monkeypatch.setattr(config, "OPENPI_DATA_HOME", env["OPENPI_DATA_HOME"])
     rec = launch.core(args, argv, contract=fx.contract, env=env, history=h)
     assert not rec.failed, rec.failed
+
+
+@pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
+@pytest.mark.parametrize("steps", [20, 60000])
+def test_ablation_core_rejects_legacy_eight_gpu_config(tmp_path, monkeypatch, encoder_run, steps):
+    """完整核心拒绝新 encoder 借旧八卡 B128 配置绕过 GL 组合检查。"""
+    fx, identity = ablation_fixture(tmp_path, monkeypatch, encoder_run)
+    args, argv, env, h = base.arguments(fx, identity["yaml"], steps=steps)
+    h["motion"]["store_path"] = fx.contract.parent_rel + "/" + identity["store_dir"]
+    args.encoder_run = encoder_run
+    from mme_vla_suite.training import config
+    monkeypatch.setattr(config, "OPENPI_DATA_HOME", env["OPENPI_DATA_HOME"])
+    rec = launch.core(args, argv, contract=fx.contract, env=env, history=h)
+    assert rec.failed == ["ENCODER_COMBO"]
 
 
 @pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
