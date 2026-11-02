@@ -626,8 +626,12 @@ def load_cache_import(receipt_path, latents_root, manifest_path, raw_dir):
     manifest = load_manifest(manifest_path)
     mapping = ms.validate_wan_cache_import_receipt(receipt, manifest_sha256=manifest["sha256"],
                                                   input_manifest_sha256=ms.sha256_file(input_path))
+    receipt_root = pathlib.Path(receipt["latents"]["root"]).resolve()
+    target_root = latents_root.resolve()
+    # 跨主机只重基 wan-latents 库根；身份仍由下方全部摘要核实。
+    same_root = receipt_root == target_root or receipt_root.name == target_root.name == "wan-latents"
     if (receipt["manifest_file_sha256"] != ms.sha256_file(manifest_path)
-            or pathlib.Path(receipt["latents"]["root"]).resolve() != latents_root.resolve()
+            or not same_root
             or receipt["latents"]["metadata_sha256"] != ms.sha256_file(latents_root / "metadata.json")):
         raise ValueError("缓存收据与目标清单或 latent 目录不同")
     inputs = _load_json(input_path)
@@ -965,23 +969,29 @@ def cmd_verify(args) -> None:
         raise RuntimeError("verify: 现场按清单重算的 index 与 meta 内 motion_index 不同")
     stage2 = meta.raw["layout"] == ms.STAGE2_LAYOUT
     cached = stage2 and ms.stage2_uses_cache(meta.provenance)
+    latents_root = None
+    if stage2:
+        latents_arg = getattr(args, "latents", None)
+        latents_root = pathlib.Path(latents_arg or meta.provenance["latents_root"]).resolve()
+        if not latents_arg and not (latents_root / "metadata.json").is_file():
+            latents_root = store_root.parent / "wan-latents"
     if stage2 and (args.force_break_lock or not getattr(args, "check_padding", False)):
         raise ValueError("stage2 verify 必须 --check-padding 且禁止强制破锁")
-    padding = validate_stage2_segments(pathlib.Path(meta.provenance["latents_root"]), tokens_root, entries) if stage2 else {}
+    padding = validate_stage2_segments(latents_root, tokens_root, entries) if stage2 else {}
     if stage2:
         source_grid = {key: list(range(0, ng * 2, 2)) for _, _, key, _, ng in iter_rows_in_order(entries)}
         if ms.sha256_bytes(ms.canonical_json_bytes(source_grid)) != meta.provenance.get("source_grid_sha256"):
             raise ValueError("verify source_grid 摘要与当前索引不符")
-        if ms.sha256_file(pathlib.Path(meta.provenance["latents_root"]) / "metadata.json") != meta.provenance["latents_metadata_sha256"]:
+        if ms.sha256_file(latents_root / "metadata.json") != meta.provenance["latents_metadata_sha256"]:
             raise ValueError("verify 历史总 metadata 已变动")
     certification = certification_bytes = None
     if cached:
         validate_stage2_export_files(_load_json(tokens_root / "export_record.json"), tokens_root, entries)
         ref = meta.provenance["stage2_compat"]["evidence"]["wan_cache_import"]
-        load_cache_import(ref["path"], pathlib.Path(meta.provenance["latents_root"]),
+        load_cache_import(ref["path"], latents_root,
                           pathlib.Path(manifest_path), pathlib.Path(meta.provenance["raw_dir"]))
     elif stage2 or meta.provenance.get("vae_compat") is not None:
-        certification = check_bitexact_record(store_root, meta.raw)
+        certification = check_bitexact_record(store_root, meta.raw, latents_root=latents_root)
         if stage2:
             certification_bytes = (store_root / BITEXACT_RELPATH).read_bytes()
             if json.loads(certification_bytes) != certification:
@@ -1069,7 +1079,7 @@ def _encoder_validation_summary(raw_bytes, record, total_rows, packed_compared):
     return summary
 
 
-def check_bitexact_record(store_root: pathlib.Path, raw_meta: dict) -> dict:
+def check_bitexact_record(store_root: pathlib.Path, raw_meta: dict, *, latents_root=None) -> dict:
     """兼容模式 verify 前置：必须已有 compare_wan.py tokens 对**本张 packed 表**写下的 PASS 记录（R2）。"""
     path = store_root / BITEXACT_RELPATH
     if not path.is_file():
@@ -1090,7 +1100,7 @@ def check_bitexact_record(store_root: pathlib.Path, raw_meta: dict) -> dict:
             entries = ms.parse_index(_load_json(store_root / ms.INDEX_RELPATH))
             plan = ms.stage2_encoder_sample_plan(entries)
             prov = raw_meta["provenance"]
-            metadata_path = pathlib.Path(prov["latents_root"]) / "metadata.json"
+            metadata_path = pathlib.Path(latents_root or prov["latents_root"]) / "metadata.json"
             if ms.sha256_file(metadata_path) != prov["latents_metadata_sha256"]:
                 raise RuntimeError("verify: 当前源metadata与抽样认证不同")
             want.update(schema="stage2-encoder-sampled-v1", scope="sampled", compared=1024,
@@ -1165,6 +1175,7 @@ def main() -> None:
     p.add_argument("--check-padding", action="store_true")
     p.add_argument("--manifest", default=None)
     p.add_argument("--tokens", default=None)
+    p.add_argument("--latents", default=None, help="重基源 latent 目录；默认沿用来源路径，不可用时取表同级 wan-latents")
     p.add_argument("--resume", action="store_true")
     p.add_argument("--force-break-lock", action="store_true")
     p.set_defaults(func=cmd_verify)

@@ -2,6 +2,7 @@
 import copy
 import json
 import pathlib
+import shutil
 import sys
 
 import numpy as np
@@ -151,6 +152,57 @@ def test_cached_pack_verify_and_portable_evidence(cached_fx):
     dump(root / ms.META_RELPATH, raw)
     with pytest.raises(ValueError, match="完整性认证"):
         ms.MotionMeta.load(root)
+
+
+@pytest.mark.parametrize("alias", [False, True])
+def test_cached_receipt_root_alias_preserves_receipt_and_hashes(cached_fx, alias):
+    s = cached_fx
+    receipt = load(s.receipt)
+    if alias:
+        receipt["latents"]["root"] = (
+            "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/"
+            "16task-orig100-1600ep-9e109419/wan-latents")
+        dump(s.receipt, receipt)
+    original = s.receipt.read_bytes()
+    result = pack.load_cache_import(s.receipt, s.fx.latents, s.fx.manifest_path,
+                                    pathlib.Path(s.args.raw_dir))
+    assert result["receipt"] == receipt
+    assert result["receipt_sha256"] == ms.sha256_bytes(original)
+    assert s.receipt.read_bytes() == original
+    for fault in ("metadata_sha256", "latent_sha256", "root"):
+        damaged = copy.deepcopy(receipt)
+        if fault == "metadata_sha256":
+            damaged["latents"][fault] = "0" * 64
+        elif fault == "latent_sha256":
+            damaged["windows"][0][fault] = "0" * 64
+        else:
+            damaged["latents"]["root"] = "/scratch/another-latents"
+        dump(s.receipt, damaged)
+        with pytest.raises(ValueError):
+            pack.load_cache_import(s.receipt, s.fx.latents, s.fx.manifest_path,
+                                   pathlib.Path(s.args.raw_dir))
+
+
+@pytest.mark.parametrize("explicit", [False, True])
+def test_cached_verify_rebases_old_provenance_latents(cached_fx, explicit):
+    s = cached_fx
+    pack.cmd_pack(s.args)
+    root = pathlib.Path(s.args.out)
+    raw = load(root / ms.META_RELPATH)
+    raw["provenance"]["latents_root"] = (
+        "/scratch/hongze/robomme_policy_learning_MotionJEPA/v1-store/datasets/"
+        "16task-orig100-1600ep-9e109419/wan-latents")
+    dump(root / ms.META_RELPATH, raw)
+    args = verify_args(s)
+    if explicit:
+        args.latents = str(s.fx.latents)
+    else:
+        shutil.copytree(s.fx.latents, root.parent / "wan-latents")
+    pack.cmd_verify(args)
+    verified = ms.MotionMeta.load(root)
+    assert verified.status == "verified"
+    assert verified.provenance["latents_root"] == raw["provenance"]["latents_root"]
+    assert verified.provenance["latents_metadata_sha256"] == raw["provenance"]["latents_metadata_sha256"]
 
 
 @pytest.mark.parametrize("fault", ["h5", "frame", "augmentation", "axis", "missing", "duplicate", "bytes", "nan", "weight", "g2_finite", "g3_finite"])
