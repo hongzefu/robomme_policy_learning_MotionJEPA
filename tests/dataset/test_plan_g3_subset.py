@@ -108,7 +108,8 @@ def test_selection_matches_gate_g3():
         g3.select_windows({"only": dict(split="val")})
 
 
-def test_plan_fetch_success_and_resume(bucket, tmp_path, capsys):
+@pytest.mark.parametrize("workers", [1, 4])
+def test_plan_fetch_success_and_resume(bucket, tmp_path, capsys, workers):
     dest = tmp_path / "subset"
     result = plan(bucket, dest)
     by_key = {w["window_key"]: w for w in bucket.windows}
@@ -124,16 +125,20 @@ def test_plan_fetch_success_and_resume(bucket, tmp_path, capsys):
     obj = next(obj for obj in result["objects"] if obj["path"].endswith("rgb.raw.f16.bin"))
     path = dest / obj["path"]
     path.with_name(path.name + ".part").write_bytes(bucket.objects[obj["path"]][:7])
-    assert g3.main(["fetch", "--root", str(dest), "--retries", "0"]) == 0
+    worker_args = ["--workers", str(workers)] if workers != 1 else []
+    assert g3.main(["fetch", "--root", str(dest), "--retries", "0", *worker_args]) == 0
     assert ("/" + obj["path"], "bytes=7-") in Handler.hits
     for name in want:
         assert (dest / name).read_bytes() == bucket.objects[name]
     Handler.hits.clear()
-    assert g3.main(["fetch", "--root", str(dest), "--retries", "0"]) == 0
+    assert g3.main(["fetch", "--root", str(dest), "--retries", "0", *worker_args]) == 0
     assert Handler.hits == []
     out = capsys.readouterr().out
     assert "G3_SUBSET_PLAN=PASS windows=32" in out
     assert f"G3_SUBSET=PASS shards={len(shards)} bytes={result['total_bytes']} sha_mismatch=0" in out
+    progress = [line for line in out.splitlines() if line.startswith("G3_FETCH_PROGRESS ")]
+    assert len(progress) == 2 * len(want)
+    assert progress[-1] == f"G3_FETCH_PROGRESS objects={len(want)}/{len(want)} bytes={result['total_bytes']}/{result['total_bytes']}"
 
 
 def test_reject_index_sha(bucket, tmp_path, capsys):
@@ -144,12 +149,16 @@ def test_reject_index_sha(bucket, tmp_path, capsys):
     assert not (dest / "g3-subset-plan.json").exists()
 
 
-def test_reject_shard_sha(bucket, tmp_path, capsys):
+@pytest.mark.parametrize("workers", [1, 4])
+def test_reject_shard_sha(bucket, tmp_path, capsys, workers):
     dest = tmp_path / "subset"
     result = plan(bucket, dest)
     obj = next(obj for obj in result["objects"] if obj["path"].endswith("rgb.raw.f16.bin"))
     (bucket.root / obj["path"]).write_bytes(b"X" * obj["bytes"])
-    assert g3.main(["fetch", "--root", str(dest), "--retries", "0"]) == 1
-    assert "G3_SUBSET=FAIL" in capsys.readouterr().err
+    worker_args = ["--workers", str(workers)] if workers != 1 else []
+    assert g3.main(["fetch", "--root", str(dest), "--retries", "0", *worker_args]) == 1
+    captured = capsys.readouterr()
+    assert "G3_SUBSET=FAIL" in captured.err
+    assert "G3_SUBSET=PASS" not in captured.out
     assert not (dest / obj["path"]).exists()
     assert not (dest / obj["path"]).with_name("rgb.raw.f16.bin.part").exists()

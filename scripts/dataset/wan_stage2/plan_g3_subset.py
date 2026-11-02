@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
 import os
@@ -184,14 +185,26 @@ def download(root, base_url, obj, retries, timeout):
 def cmd_fetch(args):
     plan = json.loads((args.plan or args.root / "g3-subset-plan.json").read_bytes())
     objects = plan["objects"]
+    if len({obj["path"] for obj in objects}) != len(objects):
+        raise ValueError("计划包含重复对象，不能并发写同一文件")
     sums_obj = next(obj for obj in objects if obj["path"] == SUMS)
     download(args.root, plan["base_url"], sums_obj, args.retries, args.timeout)
     sums = read_sums((args.root / SUMS).read_bytes())
+    # 全部身份先核完，再启动下载；SUMS 已单线程核过，不重复派发。
     for obj in objects:
         if obj["path"] != SUMS and sums[obj["path"]] != obj["sha256"]:
             raise ValueError(f"计划与 bucket SHA256SUMS 不一致：{obj['path']}")
-        download(args.root, plan["base_url"], obj, args.retries, args.timeout)
     total = sum(obj["bytes"] for obj in objects)
+    completed, completed_bytes = 1, sums_obj["bytes"]
+    print(f"G3_FETCH_PROGRESS objects={completed}/{len(objects)} bytes={completed_bytes}/{total}", flush=True)
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+        pending = {pool.submit(download, args.root, plan["base_url"], obj, args.retries, args.timeout): obj
+                   for obj in objects if obj["path"] != SUMS}
+        for future in as_completed(pending):
+            future.result()
+            completed += 1
+            completed_bytes += pending[future]["bytes"]
+            print(f"G3_FETCH_PROGRESS objects={completed}/{len(objects)} bytes={completed_bytes}/{total}", flush=True)
     print(f"G3_SUBSET=PASS shards={len(plan['shards'])} bytes={total} sha_mismatch=0", flush=True)
     return 0
 
@@ -204,9 +217,10 @@ def main(argv=None):
     parser.add_argument("--base-url", default=BASE_URL, help="plan 使用的匿名对象地址前缀")
     parser.add_argument("--retries", type=int, default=2)
     parser.add_argument("--timeout", type=float, default=60)
+    parser.add_argument("--workers", type=int, default=1, help="fetch 的对象并发数，默认单线程")
     args = parser.parse_args(argv)
-    if args.retries < 0 or args.timeout <= 0:
-        parser.error("重试次数须非负、超时须为正")
+    if args.retries < 0 or args.timeout <= 0 or args.workers < 1:
+        parser.error("重试次数须非负、超时与并发数须为正")
     args.base_url = args.base_url.rstrip("/") + "/"
     # Aspen 的 IPv6 不可达；只改变本进程的解析，与既有 orig100 拉取工具一致。
     original = socket.getaddrinfo
