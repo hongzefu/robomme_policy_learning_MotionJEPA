@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-02T04:55:58Z",
-    "America/New_York": "2026-11-01T23:55:58-0500"
+    "utc": "2026-11-02T05:01:41Z",
+    "America/New_York": "2026-11-02T00:01:41-0500"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "29841c165393c859c56182e15c3e56f27515aa73",
+    "base_head": "29d9dea129e486ab26112d63039db19cb5b59f7b",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1185,7 +1185,7 @@
       },
       "state": "planned",
       "state_changed_at": "2026-11-02T04:55:58Z",
-      "state_reason": "计划 29841c1 已提交，等用户对计划不改而直接认可的开工令；第一阶段 = 本机建两张 motion 表 + S1/S2/S3 代码 + 两份 4×A40 240h 占位提交 + 占位内 64 档冒烟与测时",
+      "state_reason": "计划 29d9dea（修订后）已提交，等用户不改而直接认可的开工令",
       "owner": {
         "session": "",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1237,6 +1237,18 @@
           "date": "2026-11-01",
           "quote": "登记",
           "scope": "K11 登记两任务进状态机"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-01",
+          "quote": "可以，现在这样挺好的，非常的优秀。然后第二阶段的开工令不需要再问用户，如果 batch size 六十四这一档不通过的话，就停下来，然后取消你的占位 job，然后问用户。但是在问用户之前，需要把六十四、三十二、十六这三档都测了。如果六十四这档通过了，就直接开始正式训练，就不要在中间等了。",
+          "scope": "K2/K10 修订：一次开工令覆盖全程；64 PASS 直接正式起跑；64 FAIL 测完 32/16 后 scancel 两占位再问"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-02",
+          "quote": "你现在占位是排十天吗？能不能稍微再少一点，就是余量稍微留的稍微少一点。",
+          "scope": "K7 占位 240h→192h"
         }
       ],
       "pending_decisions": [],
@@ -1255,7 +1267,7 @@
       },
       "state": "planned",
       "state_changed_at": "2026-11-02T04:55:58Z",
-      "state_reason": "等第一阶段 done、用户裁决 batch（K2）并另给第二阶段开工令",
+      "state_reason": "等 phase1 done（含 V6 64 档 PASS）；开工令与 phase1 同一条，不另问",
       "owner": {
         "session": "",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1306,14 +1318,26 @@
           "date": "2026-11-01",
           "quote": "这个任务不要直接排队，改为直接申请一个有安全余量的 Great Lakes 的 job，然后万一启动失败了，就不用再排队了，就是你启动的时候以占位 job 的形式启动。",
           "scope": "K7 开工即提交两份 4×A40 240 h 占位，冒烟与正式都在占位内 srun"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-01",
+          "quote": "可以，现在这样挺好的，非常的优秀。然后第二阶段的开工令不需要再问用户，如果 batch size 六十四这一档不通过的话，就停下来，然后取消你的占位 job，然后问用户。但是在问用户之前，需要把六十四、三十二、十六这三档都测了。如果六十四这档通过了，就直接开始正式训练，就不要在中间等了。",
+          "scope": "K2/K10 修订：一次开工令覆盖全程；64 PASS 直接正式起跑；64 FAIL 测完 32/16 后 scancel 两占位再问"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-02",
+          "quote": "你现在占位是排十天吗？能不能稍微再少一点，就是余量稍微留的稍微少一点。",
+          "scope": "K7 占位 240h→192h"
         }
       ],
       "pending_decisions": [],
       "next_steps": [
         {
-          "what": "第一阶段 done 且 batch 裁决后，用户对第二阶段给开工令",
-          "command": "",
-          "verdict_line": "用户 kind: go 记录写入本任务 authorizations"
+          "what": "phase1 done 且 V6 PASS → 自动置 running、起 R6a/R6b",
+          "command": "见计划 runbook B1",
+          "verdict_line": "TRAIN_START=PASS run=<run> head=<sha> jobid=<id> ×2"
         }
       ]
     }

@@ -102,7 +102,7 @@
 | 阶段 | 内容 | 判据 |
 |---|---|---|
 | A0 | 开工审查 | V0 |
-| A1（开工令后立即） | **先提交两份 4×A40 240 h 占位**（K7，排队与下面并行）；同时派三个写入型子代理在 `$P` 分支上建 worktree 写 S1、S2、S3（§八）；同时 detached tmux 下 encoder（B1）、wan-latents（B2）、建 MJ worktree（B3） | V8、V1、V2 |
+| A1（开工令后立即） | **先提交两份 4×A40 192 h 占位**（K7，排队与下面并行）；同时派三个写入型子代理在 `$P` 分支上建 worktree 写 S1、S2、S3（§八）；同时 detached tmux 下 encoder（B1）、wan-latents（B2）、建 MJ worktree（B3） | V8、V1、V2 |
 | A2 | S3 合入后跑 G3 子集下载（B5）；S1/S2 合入后跑 CPU 契约（V6a） | V4 子集行、V6a |
 | A3 | 两个 encoder 并行：B4 导出（GPU 0／GPU 1）→ B6 G3（串行共用 GPU 0）→ B7 pack → B8 verify；表与 `$VALID/<tag>/` 证据落 turbo；两份 yaml 的 `checkpoint_sha256`/`store_path` 与表 provenance 互核（契约 `MOTION_VERIFIED`） | V3、V4、V5 |
 | A3b | 表与代码齐备后、占位 RUNNING 前：写两份 `docs/training-doc/<run>/launch.md` 第一段 → **Beta commit**（`git status --short` 为空） | 工作区为空、Beta sha 记入 launch.md |
@@ -225,6 +225,6 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 
 ## 七、留档与 commit 纪律
 
-- 第一阶段结束在本计划末追加「实施中实测」小节（V1–V8 判定行原文、三档峰值表、`PLAN_CONSISTENCY_REVIEW` 行）；不改写上文口径。
+- phase1 的 V1–V8 齐全后在本计划末追加「实施中实测」小节（V1–V8 判定行原文、三档峰值表、`PLAN_CONSISTENCY_REVIEW` 行）；不改写上文口径。
 - 两个 run 各建 `docs/training-doc/<run>/{launch.md,result.md,records/}`，两段式写入；B4～B8 建表按第 13 条在 `docs/dataset-build-doc/16task-orig100-1600ep-9e109419-motion-<tag>/` 留压缩版档案（新表不是新库，只记 motion 表增量）。
 - 代码 commit `commitV11.74+`，合并提交 body 按第 11 条六项；起跑前 `commitV11.<n>Beta`；状态变化只碰 `docs/handoff/current.json` 的 `handoff:` 小 commit；每次 commit 后裸 `git push`。
