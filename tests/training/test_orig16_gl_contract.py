@@ -41,19 +41,19 @@ def fx(tmp_path_factory):
     return fx
 
 
-def gl_arguments(fx, name, *, steps, run, fsdp, batch, visible=None, contract=None):
+def gl_arguments(fx, name, *, steps, run, fsdp, batch, visible=None, contract=None, config_name=launch.CONFIG_NAME):
     c = contract or fx.contract
     h = launch.load_yaml(REPO, name)
     if "motion" in h:
-        h["motion"].update(store_path=c.parent_rel + "/motion-stage2-1024", checkpoint_sha256=c.encoder_sha256,
+        h["motion"].update(store_path=c.parent_rel + "/" + c.store_dir, checkpoint_sha256=c.encoder_sha256,
                            source_run=f"{c.encoder_run}/checkpoint_epoch_105.pt#model")
-    argv = [launch.CONFIG_NAME, "--exp-name", run, "--dataset-path", str(fx.parent / "framesamp-4x4"),
+    argv = [config_name, "--exp-name", run, "--dataset-path", str(fx.parent / "framesamp-4x4"),
             "--assets-base-dir", str(fx.root / "v1-store/train-assets"),
             "--data.assets.assets-dir", str(fx.root / c.assets_rel), "--data.assets.asset-id", "robomme",
             "--checkpoint-base-dir", str(fx.root / "v1-store/train-runs"),
             "--weight-loader.params-path", str(fx.root / c.pi05_rel), "--model.use-history",
             "--model.history-config", name, "--no-wandb-enabled"]
-    if steps != 60000:
+    if steps != (80000 if config_name == launch.ABLATION_CONFIG else 60000):
         argv += ["--num-train-steps", str(steps)]
     argv += ["--fsdp-devices", str(fsdp), "--num-workers", str(2 * fsdp), "--batch-size", str(batch)]
     visible = ",".join(str(i) for i in range(fsdp)) if visible is None else visible
@@ -65,7 +65,7 @@ def gl_arguments(fx, name, *, steps, run, fsdp, batch, visible=None, contract=No
     if "motion" in h:
         env[launch.EVIDENCE_ENV] = str(fx.evidence_root)
     args = SimpleNamespace(repo=REPO, store_root=fx.root, steps=steps, fsdp_devices=fsdp, batch_size=batch,
-                           gpus_visible=visible)
+                           gpus_visible=visible, config_name=config_name)
     return args, argv, env, h
 
 
@@ -117,6 +117,19 @@ def test_gl_formal_run_name_must_match_batch(fx):
     assert {"GL_COMBO", "CFG_RUN"} <= set(rec.failed)
 
 
+@pytest.mark.parametrize("registered", [False, True])
+def test_gl_attempt_requires_matching_manifest(fx, tmp_path, registered):
+    path, run = base.attempt_files(tmp_path, base=launch.gl_formal_run(64), history=launch.GL_HISTORY)
+    def mutate(args, argv, env, h):
+        args.train_head = "a" * 40
+        if registered:
+            env["ATTEMPT_MANIFEST"] = str(path)
+    rec = gl_core(fx, run=run, mutate=mutate)
+    assert ("CFG_RUN" not in rec.failed) == registered
+    if registered:
+        assert not rec.failed, rec.failed
+
+
 def test_gl_num_workers_must_be_twice_fsdp(fx):
     def mutate(args, argv, env, h):
         argv[argv.index("--num-workers") + 1] = "16"
@@ -154,16 +167,16 @@ def test_gl_rebased_evidence_sha_mismatch_fails(fx):
         path.write_bytes(before)
 
 
-# ── 冒烟前缀：20 步 32/16/8/4、100 步 64/32 通过；20 步 64、100 步 16/8/4 被拒 ──────────────
+# ── 冒烟前缀：20 步 64/32/16/8/4、100 步 64/32 通过 ──────────────────────────────
 
 @pytest.mark.parametrize("fsdp", [2, 4])
-@pytest.mark.parametrize("steps,batch", [(20, 32), (20, 16), (20, 8), (20, 4), (100, 64), (100, 32)])
+@pytest.mark.parametrize("steps,batch", [(20, 64), (20, 32), (20, 16), (20, 8), (20, 4), (100, 64), (100, 32)])
 def test_gl_smoke_passes(fx, fsdp, steps, batch):
     rec = gl_core(fx, steps=steps, batch=batch, fsdp=fsdp, run="o16gl-smoke-fixture")
     assert not rec.failed, rec.failed
 
 
-@pytest.mark.parametrize("steps,batch", [(20, 64), (100, 16), (100, 8), (100, 4), (20, 128), (60000, 64)])
+@pytest.mark.parametrize("steps,batch", [(100, 16), (100, 8), (100, 4), (20, 128), (60000, 64)])
 def test_gl_smoke_rejects(fx, steps, batch):
     rec = gl_core(fx, steps=steps, batch=batch, run="o16gl-smoke-fixture")
     assert "GL_COMBO" in rec.failed
@@ -246,6 +259,88 @@ def test_default_fsdp8_rejects_gl_batch_and_tier(fx):
     assert "ARGV_STEPS" in run(launch.GL_HISTORY, 128, 100).failed
 
 
+ABLATION_RUNS = tuple(run for run in launch.ENCODERS if run != launch.ENCODER_RUN)
+
+
+def ablation_fixture(tmp_path, monkeypatch, encoder_run):
+    """外部资产身份替换为完整证据小库，保留真实配置及 yaml。"""
+    fx = base.make_fixture(tmp_path)
+    fx.evidence_root, fx.motion = flatten_evidence(fx)
+    identity = dict(launch.ENCODERS[encoder_run])
+    encoder = fx.root / "v1-store/external/motionjepa"
+    shutil.copytree(encoder / fx.contract.encoder_run, encoder / encoder_run)
+    shutil.copytree(fx.parent / "motion-stage2-1024", fx.parent / identity["store_dir"])
+    identity.update(ckpt_sha256=fx.contract.encoder_sha256,
+                    config_sha256=launch.sha256_file(encoder / encoder_run / "config.yaml"))
+    monkeypatch.setitem(launch.ENCODERS, encoder_run, identity)
+    fx.contract = dataclasses.replace(fx.contract, encoder_run=encoder_run, store_dir=identity["store_dir"],
+                                      evidence_dir=identity["evidence_dir"])
+    # 缺源清单时必须走当前 encoder 的证据目录，旧 evidence/ 不参与。
+    folder = fx.parent / identity["evidence_dir"]
+    folder.mkdir()
+    from mme_vla_suite.datastore import motion_store as ms
+    for role in ms.stage2_evidence_roles(fx.motion.provenance):
+        shutil.copyfile(fx.motion.provenance["stage2_compat"]["evidence"][role]["path"], folder / f"{role}.json")
+    fx.contract = dataclasses.replace(fx.contract, mj_source_manifest=str(tmp_path / "absent.json"))
+    return fx, identity
+
+
+@pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
+@pytest.mark.parametrize("steps,batch,allowed", [
+    (20, 64, True), (20, 32, True), (20, 16, True), (100, 64, True), (80000, 64, True),
+    (100, 32, False), (100, 16, False), (80000, 32, False), (80000, 16, False),
+    (20, 128, False), (20, 8, False), (20, 4, False)])
+def test_ablation_full_contract(tmp_path, monkeypatch, encoder_run, steps, batch, allowed):
+    """完整核心覆盖正式配置、20步小batch诊断及其拒绝边界。"""
+    fx, identity = ablation_fixture(tmp_path, monkeypatch, encoder_run)
+    name = identity["yaml"]
+    run = launch.gl_formal_run(64, encoder_run) if steps == 80000 else f"o16gl-smoke-{encoder_run}"
+    args, argv, env, h = gl_arguments(fx, name, steps=steps, run=run, fsdp=4, batch=batch,
+                                     config_name=launch.ABLATION_CONFIG)
+    args.encoder_run = encoder_run
+    from mme_vla_suite.training import config
+    monkeypatch.setattr(config, "OPENPI_DATA_HOME", env["OPENPI_DATA_HOME"])
+    rec = launch.core(args, argv, contract=fx.contract, env=env, history=h)
+    if allowed:
+        assert not rec.failed, rec.failed
+    else:
+        assert {"ENCODER_COMBO", "GL_COMBO", "CFG_RUN"} <= set(rec.failed), rec.failed
+
+
+@pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
+@pytest.mark.parametrize("steps", [20, 60000])
+def test_ablation_core_rejects_legacy_eight_gpu_config(tmp_path, monkeypatch, encoder_run, steps):
+    """完整核心拒绝新 encoder 借旧八卡 B128 配置绕过 GL 组合检查。"""
+    fx, identity = ablation_fixture(tmp_path, monkeypatch, encoder_run)
+    args, argv, env, h = base.arguments(fx, identity["yaml"], steps=steps)
+    h["motion"]["store_path"] = fx.contract.parent_rel + "/" + identity["store_dir"]
+    args.encoder_run = encoder_run
+    from mme_vla_suite.training import config
+    monkeypatch.setattr(config, "OPENPI_DATA_HOME", env["OPENPI_DATA_HOME"])
+    rec = launch.core(args, argv, contract=fx.contract, env=env, history=h)
+    assert rec.failed == ["ENCODER_COMBO"]
+
+
+@pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
+@pytest.mark.parametrize("fault", ["old_yaml", "batch128", "steps60000", "old_encoder", "attempt01", "fsdp2"])
+def test_ablation_combo_rejects(encoder_run, fault):
+    values = dict(fsdp=4, batch=64, steps=80000, run=launch.gl_formal_run(64, encoder_run),
+                  history_name=launch.ENCODERS[encoder_run]["yaml"], encoder_run=encoder_run,
+                  config_name=launch.ABLATION_CONFIG)
+    if fault == "old_yaml": values["history_name"] = launch.GL_HISTORY
+    if fault == "batch128": values["batch"] = 128
+    if fault == "steps60000": values["steps"] = 60000
+    if fault == "old_encoder": values["encoder_run"] = launch.ENCODER_RUN
+    if fault == "attempt01": values["run"] += "-attempt01"
+    if fault == "fsdp2": values["fsdp"] = 2
+    assert not launch.gl_combo_ok(**values)
+
+
+def test_ablation_identity_sha_constants():
+    assert launch.ENCODERS["aws-stage2-noxyz-1101-a"]["config_sha256"] == "583e48c0a6afa2a798eb14fc8ccdcfe8d9274cb13f1393e05859d6bca368bada"
+    assert launch.ENCODERS["aws-stage2-nostate-1101-a"]["config_sha256"] == "869ac77872092a0d0b08e1bc3ac60b0a893946af02ae3de193aa5715e8aecc34"
+
+
 def test_final_record_accepts_100_steps(tmp_path, capsys):
     path = tmp_path / "final.json"
     path.write_text(json.dumps(base.final_fixture("o16gl-tier-x", steps=100)))
@@ -304,6 +399,10 @@ def gl_tree():
         for name in ("run_orig16_stage2_60k_gl.sh", "paths.sh", "check_orig16_stage2_launch.py",
                      "check_mixed8_stage2_1024_launch.py", "final_record.py"):
             shutil.copyfile(REPO / "scripts/training" / name, scripts / name)
+        # 临时副本沿用当前工作树前缀，允许在独立工作树运行同一 shell 测试。
+        paths = scripts / "paths.sh"
+        paths.write_text(paths.read_text().replace('readonly LOCAL_WORK_PREFIX="/data/hongzefu/"',
+                                                   f'readonly LOCAL_WORK_PREFIX="{REPO}/"'))
         (root / "pyproject.toml").write_text("")
         evidence = root / "v1-store/validation/orig16-stage2"
         evidence.mkdir(parents=True)
@@ -313,7 +412,7 @@ def gl_tree():
 if [[ "$*" == *--print-library* ]]; then echo fixture; exit 0; fi
 [[ "$1" == scripts/training/check_orig16_stage2_launch.py && "$JAX_PLATFORMS" == cpu ]] || exit 91
 echo "CONTRACT_ARGS=$*"
-echo "CONTRACT_ENV timing=${TRAIN_TIMING_STEPS-<unset>} evidence=${MMEVLA_STAGE2_EVIDENCE_ROOT-<unset>} cvd=${CUDA_VISIBLE_DEVICES-<unset>} jaxcache=$MMEVLA_JAX_CACHE_DIR uvcache=$UV_CACHE_DIR"
+echo "CONTRACT_ENV timing=${TRAIN_TIMING_STEPS-<unset>} evidence=${MMEVLA_STAGE2_EVIDENCE_ROOT-<unset>} cvd=${CUDA_VISIBLE_DEVICES-<unset>} jaxcache=$MMEVLA_JAX_CACHE_DIR uvcache=$UV_CACHE_DIR attempt=${ATTEMPT_MANIFEST-<unset>}"
 exit 0
 ''')
         py.chmod(0o755)
@@ -324,7 +423,8 @@ exit 0
 
 def run_entry(root, *, gpus="4", batch="64", run=None, history=launch.GL_HISTORY, extra=None, drop=()):
     env = {k: v for k, v in os.environ.items() if k not in ("SLURM_JOB_ID", "MAX_STEPS", "TRAIN_TIMING_STEPS",
-                                                             launch.EVIDENCE_ENV, "CUDA_VISIBLE_DEVICES")}
+                                                             launch.EVIDENCE_ENV, "CUDA_VISIBLE_DEVICES", "CONFIG",
+                                                             "ENCODER_RUN", "ATTEMPT_MANIFEST")}
     env.update(DRY_RUN="1", GPUS=gpus, GLOBAL_BATCH=batch, HISTORY=history, TRAIN_HEAD="a" * 40,
                RUN_NAME=run or launch.gl_formal_run(batch), CUDA_VISIBLE_DEVICES=",".join(map(str, range(int(gpus)))),
                FINAL_RECORD_DIR=str(root / "v1-store/validation/o16gl/final-record"))
@@ -356,6 +456,7 @@ def test_entry_formal_dry_run(gl_tree, gpus, batch):
 
 
 @pytest.mark.parametrize("run,steps,batch,history,timing", [
+    ("o16gl-smoke-a", "20", "64", launch.GL_HISTORY, None),
     ("o16gl-smoke-a", "20", "32", launch.GL_HISTORY, None),
     ("o16gl-smoke-a", "20", "16", launch.GL_HISTORY, "20"),
     ("o16gl-smoke-a", "100", "64", launch.GL_HISTORY, "100"),
@@ -375,11 +476,47 @@ def test_entry_prefix_dry_run(gl_tree, run, steps, batch, history, timing):
         assert "--dataset-path" in result.stdout and "framesamp-4x4" in result.stdout
 
 
+@pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
+@pytest.mark.parametrize("steps,batch", [(20, 64), (20, 32), (20, 16), (100, 64), (80000, 64)])
+def test_entry_ablation_three_commands(gl_tree, encoder_run, steps, batch):
+    extra = dict(CONFIG=launch.ABLATION_CONFIG, ENCODER_RUN=encoder_run)
+    if steps != 80000:
+        extra["MAX_STEPS"] = str(steps)
+    run = launch.gl_formal_run(64, encoder_run) if steps == 80000 else "o16gl-smoke-ablation"
+    result = run_entry(gl_tree, run=run, batch=str(batch), history=launch.ENCODERS[encoder_run]["yaml"], extra=extra)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert f"--config-name {launch.ABLATION_CONFIG} --encoder-run {encoder_run}" in result.stdout
+    assert f"--steps {steps}" in result.stdout
+    cmd = next(line for line in result.stdout.splitlines() if line.startswith("TRAIN_CMD="))
+    assert ("--num-train-steps" in cmd) == (steps != 80000)
+    assert f"--batch-size {batch}" in cmd
+
+
+@pytest.mark.parametrize("encoder_run", ABLATION_RUNS)
+@pytest.mark.parametrize("steps,batch", [(100, 32), (100, 16), (80000, 32), (80000, 16),
+                                         (20, 128), (20, 8), (20, 4)])
+def test_entry_ablation_rejects_batch_outside_diagnostic(gl_tree, encoder_run, steps, batch):
+    extra = dict(CONFIG=launch.ABLATION_CONFIG, ENCODER_RUN=encoder_run)
+    if steps != 80000:
+        extra["MAX_STEPS"] = str(steps)
+    run = launch.gl_formal_run(64, encoder_run) if steps == 80000 else "o16gl-smoke-ablation"
+    result = run_entry(gl_tree, run=run, batch=str(batch), history=launch.ENCODERS[encoder_run]["yaml"], extra=extra)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "CONTRACT_ARGS=" not in result.stdout
+
+
+@pytest.mark.parametrize("manifest", [None, "/absolute/attempt.json"])
+def test_entry_attempt_explicit_environment(gl_tree, manifest):
+    extra = {"ATTEMPT_MANIFEST": manifest} if manifest else {}
+    result = run_entry(gl_tree, extra=extra)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert f"attempt={manifest or '<unset>'}" in result.stdout
+
+
 @pytest.mark.parametrize("case", [
     dict(gpus="8"), dict(gpus="1"), dict(batch="128"), dict(batch="16"),
     dict(history=TIERS[1]), dict(history=launch.pair_name("modul", "4x256")),
     dict(extra={"MAX_STEPS": "20"}), dict(extra={"TRAIN_TIMING_STEPS": "100"}),
-    dict(run="o16gl-smoke-a", batch="64", extra={"MAX_STEPS": "20"}),
     dict(run="o16gl-smoke-a", batch="16", extra={"MAX_STEPS": "100"}),
     dict(run="o16gl-smoke-a", batch="8", extra={"MAX_STEPS": "100"}), dict(batch="8"), dict(batch="4"),
     dict(run="o16gl-smoke-a", batch="32", drop=("MAX_STEPS",)),

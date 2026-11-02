@@ -112,7 +112,7 @@ def fx(tmp_path_factory):
     return make_fixture(tmp_path_factory.mktemp("o16-contract"))
 
 
-@pytest.mark.parametrize("name", launch.HISTORIES)
+@pytest.mark.parametrize("name", launch.HISTORIES[:8])
 def test_all_eight_real_cli_and_fixture_contracts(fx, name):
     assert not run_contract(fx, name).failed
 
@@ -365,7 +365,26 @@ def test_runs_are_four_explicit_formal_names():
         ("modulation", launch.SPLIT): "orig100-m32x4x4-modul-motion-s2split4x256-b128-60k",
         ("context", launch.CONCAT): "orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k",
         ("modulation", launch.CONCAT): "orig100-m32x4x4-modul-motion-s2concat1x1024-b128-60k"}
-    assert set(launch.BUCKETS) == set(launch.RUNS.values())
+    assert set(launch.BUCKETS) == set(launch.RUNS.values()) | set(launch.GL_RUNS)
+
+
+@pytest.mark.parametrize("encoder_run", [run for run in launch.ENCODERS if run != launch.ENCODER_RUN])
+@pytest.mark.parametrize("nn", ["02", "99"])
+def test_ablation_attempt_identity(tmp_path, encoder_run, nn):
+    name = launch.ENCODERS[encoder_run]["yaml"]
+    base = launch.gl_formal_run(64, encoder_run)
+    path, run = attempt_files(tmp_path, base=base, nn=nn, history=name)
+    assert launch.check_attempt(path, history_name=name, train_head="a" * 40) == run
+    assert launch.history_key(name) == ("context", launch.SPLIT)
+    assert launch.pair_name("ctx", "4x256", encoder_run) == name
+
+
+def test_ablation_attempt01_rejected(tmp_path):
+    encoder_run = "aws-stage2-noxyz-1101-a"
+    name = launch.ENCODERS[encoder_run]["yaml"]
+    path, _ = attempt_files(tmp_path, base=launch.gl_formal_run(64, encoder_run), nn="01", history=name)
+    with pytest.raises(ValueError, match="NN≥02"):
+        launch.check_attempt(path, history_name=name, train_head="a" * 40)
 
 
 @pytest.mark.parametrize("name", [CONCAT_CTX, CONCAT_MOD, launch.pair_name("ctx", "4x256"),
