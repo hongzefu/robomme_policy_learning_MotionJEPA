@@ -304,3 +304,12 @@ srun --jobid=<hold> --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=
 | Beta 时点 | Beta 必须早于占位 RUNNING | Beta 必须早于占位内首次冒烟或训练工作负载；占位可提前运行等待 | 占位立即 RUNNING：保持空占位，代码、建表、Beta、部署完成后才冒烟 |
 
 共同起跑前用 V7 已测步时与当时重新读取的 `squeue %L` 核余量，沿 K7 不足 10% 自动重申请；不因等待而使用陈旧剩余时间。文首「唯一停点」仅指训练 batch 裁决，EMA 身份与 H5 SHA 失败仍按既有规则停工。两个一级部分、五个写入任务、资源规模、80k 超参和身份判据均保持既定口径。按用户本轮明确授权，修订提交后直接做一次开工审查，通过后实施，不再次询问开工。
+
+## 十、实施中调整
+
+| 项 | 旧 → 新与理由 | 文件或归属 | 审查与规模 |
+|---|---|---|---|
+| 子代理工作树 | `$P/.claude/worktrees/` → 宿主工具返回的 `/home/hongzefu/.codex/worktrees/o16abl-sN/robomme_policy_learning_MotionJEPA`。宿主只接受主检出为创建入口，主检出与 `$P` 共用 Git 对象库；基线、写集和合入目标不变。 | S1～S5，原专属分支 `worktree-codex-SN`；仍整合至 `$P` 的 `v4-gl-orig100-1031` | `ADJUST_REVIEW=PASS scale=same findings=0`；仅改创建入口与实际路径 |
+| B2 latent 解包 | 原以为只加过滤即可复用；实际 `TAR_DIRS`、解包根和校验入口仅认 source。补 latent tar 分支，成员 SHA 已在原 `sha256-source-files.txt`，复用现有校验；先下载至 `$P/v1-store/external/o16abl-latents-import/`，核验解包后只 `rsync -a` 同步 `wan-latents/` 至 `$LIB`，保留库原控制文件。 | 新增 S6，由 S2 同职责续用，专属分支 `worktree-codex-S6`；仅 `scripts/dataset/hf_export/fetch_orig100_trainset.py`、`tests/dataset/test_fetch_orig100_trainset.py`，其余禁触；CPU 本地 HTTP/tar 回归，独立审查后整合，网络运行另交 tester | `ADJUST_REVIEW=PASS scale=same findings=0`；下载总量、资源、原默认过滤及 source 行为不变；不增加状态、回退或保护层 |
+
+原开工版本和两次调整审查出处见 `docs/validation/1102-gl-ablation-plan-consistency.md`。子代理宿主禁止自行提交时，由主会话在其独立工作树逐路径代作 `sub/<编号>` 提交，仍保留合前审查与 `--no-ff` 整合，不直接把改动带入主检出。

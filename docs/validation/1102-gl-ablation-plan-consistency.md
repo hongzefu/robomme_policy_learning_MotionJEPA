@@ -39,3 +39,22 @@
 ## 四、复核方式
 
 通过 `git show 9551a288b2d4b5927a0aef6720a4e97b8c51893e:1101-gl-ablation-encoders-ctx-b64-80k-plan.md` 可重读上述各节。交付前运行 `git diff --check`、用标准库解析交接 JSON，并核对仅本次两个任务的状态字段及报告变化；不运行训练测试。待用户裁决后，全文同步修订相关口径、步骤、闸门与状态条件，再完整呈现修订版供用户确认开工。
+
+## 五、用户裁决与修订版开工审查
+
+用户随后原话依次为「同意修订 继续做」「不需要再确认，你可以直接开始了。」。按这条明确授权，两项口径已全文统一，完整 v5 计划提交 `2e9b8dc09acf5a5518c95284da9658c1961fd1c9` 已呈现并推送；无需再次请求开工确认。
+
+同一独立审查者重新只读审查该固定版本全文，结论为：
+
+`PLAN_CONSISTENCY_REVIEW=PASS base=2e9b8dc09acf5a5518c95284da9658c1961fd1c9 findings=0 blocking=0`
+
+两 run 共用第一阶段起跑条件、Beta 早于首次工作负载、等待后刷新剩余时间三处衔接一致。上述旧版 FAIL 为历史证据，未改写成 PASS；本节 PASS 仅属于修订版内部一致性，源码、资产与运行仍分别验收。
+
+## 六、实施中最小调整审查
+
+| 调整 | 必要性与实际改法 | 独立审查 |
+|---|---|---|
+| 工作树入口与落点 | 宿主 `create_worktree` 拒绝以实施副本作为来源；改从同一 Git 对象库的主检出创建，固定基线仍为 `f1dbe7c9c85ffbf23aaba2bc73321f696bdf4b69`。实际五树位于 `/home/hongzefu/.codex/worktrees/o16abl-sN/robomme_policy_learning_MotionJEPA`，仍只整合到实施副本 `v4-gl-orig100-1031`。 | `ADJUST_REVIEW=PASS scale=same findings=0` |
+| latent 解包支持 | 现工具仅认 source tar，不能完成 B2。S6 只扩展既有下载器与对应测试，识别 latent tar 并复用既有逐成员 SHA、成员数和解包后删除本轮 tar 的流程；独立暂存后只用 `rsync -a` 同步 `wan-latents/`，不覆盖现库控制文件。 | `ADJUST_REVIEW=PASS scale=same findings=0` |
+
+两项均由同一独立审查者分别确认必要、同等规模、未新增保护层或触及硬停。S6 由原 S2 写入代理同职责续用，独立分支 `worktree-codex-S6`，仅可写 `scripts/dataset/hf_export/fetch_orig100_trainset.py` 与 `tests/dataset/test_fetch_orig100_trainset.py`；下载总量和资源不扩张。

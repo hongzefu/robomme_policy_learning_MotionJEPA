@@ -404,6 +404,12 @@ sbatch --account=chaijy2 --partition=spgpu --nodes=1 --ntasks-per-node=1 --gres=
 
 ## 项目专属
 
+### 双消融 encoder context VLA 占位放行（2026-11-02 美东）
+
+用户批准根目录 `1101-gl-ablation-encoders-ctx-b64-80k-plan.md`，随后明确「同意修订 继续做」「不需要再确认，你可以直接开始了。」；v5 独立一致性审查通过。两份占位同批无依赖并行，每份 `chaijy2/spgpu`、单节点单任务、4×A40、16 CPU、128G、176 小时、`gpu_cmode=shared`、`--wrap='sleep infinity'`。实际作业为 `o16abl-hold-noxyz` = `65209321`、`o16abl-hold-nostate` = `65209330`，提交各一次、退出均为 0。完整回执与资源确认在 turbo 仓库 `v1-store/logs/o16abl-hold-submit-1102.log`。
+
+工作负载仍通过占位运行器 `srun --overlap`；两个 run 均通过 64 档与第一阶段后再正式起跑。任一 64 档 OOM，按计划补测 32/16 后由主会话逐个取消上述作业，交用户裁决；余量不足 10% 的自动重申请仍按计划 K7 执行并更新精确清单，禁止取消其他作业。
+
 下面是本仓库自己的放行记录与集群侧路径：`<GL_REPO>` = `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA`；提交器 `scripts/training/gl_submit.py` 的 `REPO` 仍指 turbo；占位 job 清单 `<日志目录>/hold-jobs-<任务名>.txt`。
 
 ## 放行记录（robomme framesamp v2 计划，2026-08-27）
