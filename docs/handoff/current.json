@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-02T05:02:55Z",
-    "America/New_York": "2026-11-02T00:02:55-0500"
+    "utc": "2026-11-02T05:24:12Z",
+    "America/New_York": "2026-11-02T00:24:12-0500"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "a62b08d4df727d703a1bbb66becc7d40feb67c70",
+    "base_head": "dac08a7059fee1d890ae7b190d41f942bdb52bfe",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1185,7 +1185,7 @@
       },
       "state": "planned",
       "state_changed_at": "2026-11-02T04:55:58Z",
-      "state_reason": "计划 29d9dea（修订后）已提交，等用户不改而直接认可的开工令",
+      "state_reason": "计划 v3 dac08a7（按 Astra 对抗审查修订）已提交，等用户不改而直接认可的开工令",
       "owner": {
         "session": "",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1255,6 +1255,12 @@
           "date": "2026-11-02",
           "quote": "你的余量保持在这个百分之二十左右就可以了，因为它这个任务太长了。",
           "scope": "K7 占位 192h→176h（上限估算 144h+2h ×1.2）"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-02",
+          "quote": "12同意3不要",
+          "scope": "K6a G3 沿用 AWS 缓存先例；K6b 放宽 A100 守卫加 RTX A6000；K12 不加旧 encoder 对照 run（对 Astra 对抗审查三项待决的裁决）"
         }
       ],
       "pending_decisions": [],
@@ -1342,6 +1348,12 @@
           "date": "2026-11-02",
           "quote": "你的余量保持在这个百分之二十左右就可以了，因为它这个任务太长了。",
           "scope": "K7 占位 192h→176h（上限估算 144h+2h ×1.2）"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-02",
+          "quote": "12同意3不要",
+          "scope": "K6a G3 沿用 AWS 缓存先例；K6b 放宽 A100 守卫加 RTX A6000；K12 不加旧 encoder 对照 run（对 Astra 对抗审查三项待决的裁决）"
         }
       ],
       "pending_decisions": [],
