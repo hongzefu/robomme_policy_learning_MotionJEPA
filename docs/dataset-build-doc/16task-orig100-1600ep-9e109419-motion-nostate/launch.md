@@ -1,5 +1,60 @@
 # orig100 nostate motion 表启动记录
 
+## 正式建表：版本与代码状态
+
+完整代码已整合，最终 CPU 范围为 962 通过、7 跳过，两组分别 140.58 秒、96.00 秒，均退出 0。默认旧身份入口及契约在同一当前环境、旧真实资产下 stdout/stderr 逐字节一致。业务代码为 `2b3c5cd`（后续仅启动档案），正式建表起跑前提交 `commitV11.82Beta`；实际 Beta 全 SHA 由日志 `BUILD_START` 记录，起跑时工作区干净。VLA 的训练 Beta 仍在两表完成后单独提交。
+
+两 encoder 的源配置、权重 SHA 不变。导出 runner 来自固定 `4a16ab42a0ef5d70b9658e296b4944180842f248`，入库版本只增加显式 `--lineage-build-spec`；来源清单与四处可还原差异随 Beta 还原。实际 WAN 包提交为 `b5d23a5fab55be16e580c5b77a8f04d68b3170c2`，两核心模块 SHA 匹配仓库 `SOURCE_PIN.json`。来源元数据完整 16 份 H5 名字、字节数、SHA 已预检一致。
+
+## 正式建表：启动与配置还原
+
+本任务 tmux 为 `o16abl-build-nostate`，日志 `/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-build-nostate.log`，运行载体 `/data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-build.sh` SHA256 为 `256969bba47332cb5df6791dd1f15d0245d5e1446016725039c0c052decf2768`，静态 `RUNTIME_REVIEW=PASS findings=0`。主会话先启动 noxyz 并核到锁已取得，再启动 nostate。完整启动命令：
+
+```bash
+tmux new-session -d -s o16abl-build-nostate "set -o pipefail; PYTHONUNBUFFERED=1 bash /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-build.sh nostate 2>&1 | tee /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-build-nostate.log; rc=\$?; echo EXIT_CODE=\$rc >> /data/hongzefu/robomme_policy_learning_MotionJEPA-gl/v1-store/logs/o16abl-build-nostate.log; exit \$rc"
+```
+
+载体只按下列确定参数顺序调用 Beta 中的生产入口（所有原始命令可由此重建，档案不另存脚本或 YAML）：
+
+```bash
+P=/data/hongzefu/robomme_policy_learning_MotionJEPA-gl
+LIB=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/datasets/16task-orig100-1600ep-9e109419
+TAG=nostate
+GPU=1
+SHA=be7cdec7d96c889193f27cd925977c7ff47423d4321d1fd7446799d38495e3d4
+RUN=aws-stage2-nostate-1101-a
+LATENTS="$P/v1-store/external/o16abl-latents-import/wan-latents"
+RGB="$P/v1-store/external/rgb-gtxyz-g3-subset"
+ENCODER="$P/v1-store/external/motionjepa/$RUN"
+EVIDENCE="$LIB/evidence-$TAG"
+TOKENS="$LIB/motion-tokens-stage2-$TAG"
+TABLE="$LIB/motion-stage2-1024-$TAG"
+WANPY="$P/v1-store/venvs/wan-stage2/bin/python"
+export UV_CACHE_DIR="$P/v1-store/cache/uv" PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1
+cd "$P"
+exec 9> "$P/v1-store/logs/o16abl-g3.lock"
+env -u PYTHONPATH CUDA_VISIBLE_DEVICES="$GPU" "$WANPY" scripts/dataset/wan_stage2/export_stage2_memory.py --lineage-build-spec "$RGB/control/build_spec.json" --ckpt "$ENCODER/checkpoint_epoch_105.pt" --expected-sha256 "$SHA" --latents "$LATENTS" --manifest "$LIB/meta/episode_manifest.json" --out "$LIB/motion-tokens-stage2-$TAG-smoke-1102-a" --grid-subsample 2 --batch 1 --check-dropout 0 --max-segments 1 --expected-counts 2496,23253 --input-manifest "$LIB/meta/input_manifest.json"
+env -u PYTHONPATH CUDA_VISIBLE_DEVICES="$GPU" "$WANPY" scripts/dataset/wan_stage2/export_stage2_memory.py --lineage-build-spec "$RGB/control/build_spec.json" --ckpt "$ENCODER/checkpoint_epoch_105.pt" --expected-sha256 "$SHA" --latents "$LATENTS" --manifest "$LIB/meta/episode_manifest.json" --out "$TOKENS" --grid-subsample 2 --batch 1 --check-dropout 64 --expected-counts 2496,23253 --input-manifest "$LIB/meta/input_manifest.json"
+flock 9
+env -u PYTHONPATH CUDA_VISIBLE_DEVICES=0 "$WANPY" scripts/dataset/wan_stage2/validate_stage2.py --gate G3 --samples "$EVIDENCE/G0.json" --ckpt "$ENCODER/checkpoint_epoch_105.pt" --expected-sha256 "$SHA" --rgb-root "$RGB" --mj-root /data/hongzefu/MotionJEPA --cache-import-receipt "$EVIDENCE/wan_cache_import.json" --out "$EVIDENCE/G3.json"
+flock -u 9
+PYTHONPATH="$P/src" "$P/.venv/bin/python" scripts/dataset/pack_motion_store.py pack --layout stage2 --latent-grid-subsample 2 --latents-origin published-cache-with-local-fill --cache-import-receipt "$EVIDENCE/wan_cache_import.json" --manifest "$LIB/meta/episode_manifest.json" --tokens "$TOKENS" --latents "$LATENTS" --out "$TABLE" --encoder-run-dir "$ENCODER" --raw-dir /data/hongzefu/data_0226 --expected-ckpt-sha256 "$SHA" --stage2-validation "$EVIDENCE" --stage2-source-pin scripts/dataset/wan_stage2/SOURCE_PIN.json
+PYTHONPATH="$P/src" "$P/.venv/bin/python" scripts/dataset/pack_motion_store.py verify --store "$TABLE" --latents "$LATENTS" --resume --check-padding
+```
+
+## 正式建表：输入划分、关键参数与预期判定
+
+R1 的 13 tar、7,489 成员全量 SHA、共享盘同步后 SHA 已通过且退出 0；G3 的 32 窗、14 分片、115 对象、32,476,096,020 字节也全部通过且退出 0。两输入实际完成后才启动本次 GPU 工作。按本机快盘优先要求，B4/B7/B8 的三个已有 latent 参数读已核验的本机副本，表与证据输出仍在共享盘；该位置调整已独立 `ADJUST_REVIEW=PASS scale=same findings=0`。
+
+先单段实际编码冒烟（不做 dropout 诊断），成功后才完整导出 2,496 段、23,253 行并做 64 窗 dropout 诊断。输出 `<f4`、每行 `(1,1024)`、总 95,244,288 字节。G3 沿用户批准的缓存路线检查 32 窗形状、有限性与 65 叶 EMA 身份，输出数值仍按既定口径标 `NOT_REQUIRED`。原四份证据和在线输入两文件已各 tag 暂存；G3 后七份齐全。打包读取本机永久原始 H5，仅做完整 SHA，不写原件。
+
+验收分别记录 `ENCODER_SMOKE=PASS`、`STAGE2_EXPORT=PASS segments=2496 rows=23253`、`EMA_SOURCE=PASS`、`PACK_PROVENANCE_PRECHECK=PASS`、`VERIFY_MOTION=PASS scanned=23253 mismatches=0 nonfinite=0`，末行 `BUILD_DONE=PASS tag=nostate` 和外层 `EXIT_CODE=0`。任一命令非零，该 tag 不继续后续步骤。
+
+## 正式建表：硬件与盯盘
+
+Aspen 2×RTX A6000，导出 nostate 使用物理 GPU 1；G3 统一 GPU0，noxyz 持锁至其 G3 完成，nostate 导出后取锁。CPU 线程变量为 1，两个 tag 的原始 H5 与 latent 只读、输出目录独立。现场另有他人服务的小显存上下文，本轮不干预，耗时按共享现场记录。预计两 encoder 导出并行，G3 串行，pack/verify 各自完成；实际耗时、故障原文、退出码和最终指标写 result.md。当前只登记启动口径，不预写实际完成。
+
+
 ## 目的、输入与版本
 
 对应 encoder 为 `aws-stage2-nostate-1101-a/checkpoint_epoch_105.pt#model`，已下载且原始 config、权重和共享副本 SHA 核验通过。目标表为训练库内 `motion-stage2-1024-nostate`，目标证据目录为 `evidence-nostate`；另一消融的输出目录独立。
