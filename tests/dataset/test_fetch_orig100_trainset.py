@@ -42,28 +42,36 @@ SOURCE = {
 }
 DATA_TAR = {k: v for k, v in SOURCE.items() if k.startswith("data/")}
 FEAT_TAR = {k: v for k, v in SOURCE.items() if k.startswith("features/")}
+LATENTS = {
+    "wan-latents/BinFill_ep0_exec.bin": b"latent-zero" * 100,
+    "wan-latents/BinFill_ep0_exec.bin.sha256": b"latent-sidecar",
+    "wan-latents/BinFill_ep0_exec.metadata.json": b'{"shape": [1, 16]}',
+}
+LATENTS_INCLUDE = ("wan-latents_tars/", "checksums/", "manifest/")
 
 
-def build_bucket(root: Path, source_sums: dict[str, bytes] | None = None, data_tar=None) -> dict:
+def build_bucket(root: Path, source_sums: dict[str, bytes] | None = None, data_tar=None, latent_tar=None) -> dict:
     """在 root 下造一个假 bucket，返回 {rel: bytes}。"""
     data_tar = DATA_TAR if data_tar is None else data_tar
-    sums_src = SOURCE if source_sums is None else source_sums
+    latent_tar = LATENTS if latent_tar is None else latent_tar
+    sums_src = {**SOURCE, **LATENTS} if source_sums is None else source_sums
     tars = {
         "source/data_tars/data-00000.tar": make_tar(data_tar),
         "source/features_tars/features-00000.tar": make_tar(FEAT_TAR),
+        "wan-latents_tars/wan-00000.tar": make_tar(latent_tar),
     }
     objs = {
         "meta/episode_manifest.json": b'{"episodes": 2}',
         "source/meta/info.json": b"{}",
         "framesamp-4x4/image_emb_4x4/part_000.bf16.bin": bytes(range(256)) * 4000,  # ~1 MB，测续传
         "framesamp-8x8/part_000.bf16.bin": b"not-included",
-        "wan-latents_tars/wan-00000.tar": b"not-included",
         "assets/robomme/norm_stats.json": b'{"norm": 1}',
         "checksums/sha256-source-files.txt": "".join(
             "%s  %s\n" % (sha(v), k) for k, v in sums_src.items()).encode(),
         "manifest/upload_manifest.json": json.dumps({"shards": [
             {"rel": "source/data_tars/data-00000.tar", "members": len(data_tar)},
             {"rel": "source/features_tars/features-00000.tar", "members": len(FEAT_TAR)},
+            {"rel": "wan-latents_tars/wan-00000.tar", "members": len(LATENTS)},
         ]}).encode(),
         **tars,
     }
@@ -131,10 +139,13 @@ def run(argv, capsys):
     return code, out
 
 
-def do_plan(bucket, tmp_path, capsys):
+def do_plan(bucket, tmp_path, capsys, include=None):
     plan = tmp_path / "plan.json"
-    code, out = run(["plan", "--manifest-url", bucket["url"] + "delivery_manifest.json",
-                     "--base-url", bucket["url"], "--out", plan], capsys)
+    argv = ["plan", "--manifest-url", bucket["url"] + "delivery_manifest.json",
+            "--base-url", bucket["url"], "--out", plan]
+    if include is not None:
+        argv += ["--include", *include]
+    code, out = run(argv, capsys)
     assert code == 0
     return plan, out
 
@@ -206,6 +217,67 @@ def test_fetch_resumes_from_part(bucket, tmp_path, capsys):
     assert code == 0, out
     assert (rel, "bytes=%d-" % (len(data) // 3)) in bucket["state"]["hits"]
     assert (lib / rel).read_bytes() == data
+
+
+@pytest.mark.parametrize("include", [LATENTS_INCLUDE, (*fot.DEFAULT_INCLUDE, "wan-latents_tars/")])
+def test_latents_http_unpack_verify(bucket, tmp_path, capsys, include):
+    """真实 HTTP 拉取和 tar 解包；只选 latent 与 source 混选均落在正确根目录。"""
+    plan, _ = do_plan(bucket, tmp_path, capsys, include=include)
+    lib = tmp_path / "lib"
+    code, out = run(["fetch", "--plan", plan, "--out", lib], capsys)
+    assert code == 0 and "TRAINSET_FETCH=PASS" in out
+    code, out = run(["unpack", "--lib", lib], capsys)
+    assert code == 0 and "TRAINSET_UNPACK=PASS" in out, out
+    for rel, data in LATENTS.items():
+        assert (lib / rel).read_bytes() == data
+    assert not (lib / "source/wan-latents").exists()
+    tar_rel = "wan-latents_tars/wan-00000.tar"
+    assert not (lib / tar_rel).exists()
+    assert fot.unpack_marker(lib, tar_rel).is_file()
+    expected = len(LATENTS) + (len(SOURCE) if "source/data_tars/" in include else 0)
+    code, out = run(["verify", "--lib", lib, "--deep"], capsys)
+    assert code == 0 and "TRAINSET_VERIFY=PASS" in out, out
+    assert f"unpacked_files={expected} expected={expected}" in out and "deep_mismatch=0" in out
+
+    # 成功删除 tar 后，重跑 fetch/unpack 沿用既有标记，不再下载。
+    bucket["state"]["hits"].clear()
+    code, out = run(["fetch", "--plan", plan, "--out", lib], capsys)
+    assert code == 0 and bucket["state"]["hits"] == []
+    code, out = run(["unpack", "--lib", lib], capsys)
+    assert code == 0 and "TRAINSET_UNPACK=PASS" in out
+
+    # 等长篡改不能靠计数检出，必须由逐成员 SHA 拒绝。
+    rel = next(iter(LATENTS))
+    (lib / rel).write_bytes(b"X" + LATENTS[rel][1:])
+    code, out = run(["verify", "--lib", lib, "--deep"], capsys)
+    assert code == 1 and "TRAINSET_VERIFY=FAIL" in out and "deep_mismatch=1" in out
+    (lib / rel).write_bytes(LATENTS[rel])
+
+    # 多出文件时，原有成员 SHA 仍匹配，根目录文件数必须拒绝。
+    (lib / "wan-latents/extra.bin").write_bytes(b"unexpected")
+    code, out = run(["verify", "--lib", lib, "--deep"], capsys)
+    assert code == 1 and "TRAINSET_VERIFY=FAIL" in out and "deep_mismatch=0" in out
+    assert f"unpacked_files={expected + 1} expected={expected}" in out
+
+
+@pytest.mark.parametrize("damage", ["sha", "members"])
+def test_latents_unpack_rejects_member_damage(bucket, tmp_path, capsys, damage):
+    bad = dict(LATENTS)
+    if damage == "sha":
+        rel = next(iter(bad))
+        bad[rel] = b"X" + bad[rel][1:]
+    else:
+        bad.pop("wan-latents/BinFill_ep0_exec.metadata.json")
+    build_bucket(bucket["root"], latent_tar=bad)
+    plan, _ = do_plan(bucket, tmp_path, capsys, include=LATENTS_INCLUDE)
+    lib = tmp_path / "lib"
+    code, out = run(["fetch", "--plan", plan, "--out", lib], capsys)
+    assert code == 0, out
+    code, out = run(["unpack", "--lib", lib], capsys)
+    assert code == 1 and "TRAINSET_UNPACK=FAIL" in out and "mismatch=1" in out, out
+    assert (lib / "wan-latents_tars/wan-00000.tar").is_file()
+    assert not fot.unpack_marker(lib, "wan-latents_tars/wan-00000.tar").exists()
+    assert not (lib / "source/wan-latents").exists()
 
 
 def test_fetch_mismatch_retry_then_fail(bucket, tmp_path, capsys):
