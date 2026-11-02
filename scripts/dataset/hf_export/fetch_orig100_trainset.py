@@ -13,14 +13,17 @@
           下载时流式算 sha256，完成后核 sha256 + 字节数，不符删 .part 重试（有限次）；通过后
           原子改名并在 <LIB>/.fetch-state/ok/ 写标记，重跑时已核过的对象直接跳过。
           末行 `TRAINSET_FETCH=PASS|FAIL objects=<n> bytes=<n> sha_mismatch=<n>`。
-  unpack  把 source/data_tars/*.tar、source/features_tars/*.tar 流式解到 <LIB>/source/，按
-          checksums/sha256-source-files.txt（路径相对 source/，如 `data/0.pkl`）逐成员核 sha256；
+  unpack  把 source/data_tars/*.tar、source/features_tars/*.tar 流式解到 <LIB>/source/，
+          wan-latents_tars/*.tar 解到 <LIB>/（成员名已带 wan-latents/）。按
+          checksums/sha256-source-files.txt（如 `data/0.pkl`、`wan-latents/xxx.bin`）逐成员核 sha256；
           成员数与 manifest/upload_manifest.json 记录一致且零不符才写解包标记并删除该 tar。
           拒绝绝对路径、`..`、符号链接、设备等非常规成员。按 tar 并行（--workers）。
           末行 `TRAINSET_UNPACK=PASS|FAIL members=<n> mismatch=<n>`。
-  verify  复核：plan 内平文件逐个重算 sha256；每个 tar 都有解包标记；source/data、source/features
-          实际文件数等于各 tar 记录成员数之和。--deep 时另按 sha256-source-files.txt 重算全部成员。
+  verify  复核：plan 内平文件逐个重算 sha256；每个 tar 都有解包标记；所选 tar 对应的 source/data、
+          source/features 或 wan-latents 实际文件数等于各 tar 记录成员数之和。
+          --deep 时另按 sha256-source-files.txt 重算所选目录的全部成员。
           末行 `TRAINSET_VERIFY=PASS|FAIL plain=<n> plain_mismatch=<n> tars_unpacked=<n>/<n> source_files=<n> expected=<n>`。
+          选中 latent tar 时，文件计数字段名为 `unpacked_files`，包含所选目录的文件总数。
 """
 
 from __future__ import annotations
@@ -47,7 +50,7 @@ DEFAULT_INCLUDE = (
     "meta/", "source/data_tars/", "source/features_tars/", "source/meta/", "framesamp-4x4/",
     "motion-stage2-1024/", "assets/", "checksums/", "evidence/", "manifest/",
 )
-TAR_DIRS = ("source/data_tars/", "source/features_tars/")
+TAR_DIRS = ("source/data_tars/", "source/features_tars/", "wan-latents_tars/")
 SOURCE_SUMS = "checksums/sha256-source-files.txt"
 UPLOAD_MANIFEST = "manifest/upload_manifest.json"
 STATE_DIR = ".fetch-state"
@@ -321,7 +324,8 @@ def unpack_one(lib: Path, tar_rel: str, sums: dict[str, str], expected: int | No
         if tar_path.exists():
             tar_path.unlink()  # 上次写完标记后没来得及删
         return n, 0, "skip"
-    src_root = lib / "source"
+    # latent 成员名自带 wan-latents/；source 成员名则相对 source/。
+    src_root = lib if tar_rel.startswith("wan-latents_tars/") else lib / "source"
     members = 0
     mismatch = 0
     notes = []
@@ -435,9 +439,13 @@ def cmd_verify(args) -> int:
     unpacked = sum(1 for t in tars if unpack_marker(lib, t).is_file())
     expected_map = load_expected_members(lib)
     expected = sum(expected_map.get(t, 0) for t in tars)
+    source_selected = any(t.startswith("source/") for t in tars)
+    latents_selected = any(t.startswith("wan-latents_tars/") for t in tars)
+    roots = [lib / "source" / sub for sub in ("data", "features")] if source_selected else []
+    if latents_selected:
+        roots.append(lib / "wan-latents")
     actual = 0
-    for sub in ("data", "features"):
-        root = lib / "source" / sub
+    for root in roots:
         if root.is_dir():
             for _dirpath, _dirs, names in os.walk(root):
                 actual += sum(1 for n in names if not n.endswith(".unpack-tmp"))
@@ -445,16 +453,20 @@ def cmd_verify(args) -> int:
     if args.deep:
         sums = load_source_sums(lib)
         for rel, digest in sums.items():
-            if not rel.startswith(("data/", "features/")):
+            if source_selected and rel.startswith(("data/", "features/")):
+                p = under(lib / "source", rel)
+            elif latents_selected and rel.startswith("wan-latents/"):
+                p = under(lib, rel)
+            else:
                 continue
-            p = under(lib / "source", rel)
             if not p.is_file() or sha256_file(p) != digest:
                 deep_bad += 1
                 if deep_bad <= 20:
                     log("VERIFY_DEEP_BAD %s" % rel)
     ok = plain_bad == 0 and unpacked == len(tars) and actual == expected and deep_bad == 0
-    log("TRAINSET_VERIFY=%s plain=%d plain_mismatch=%d tars_unpacked=%d/%d source_files=%d expected=%d%s"
-        % ("PASS" if ok else "FAIL", len(plain), plain_bad, unpacked, len(tars), actual, expected,
+    count_label = "unpacked_files" if latents_selected else "source_files"
+    log("TRAINSET_VERIFY=%s plain=%d plain_mismatch=%d tars_unpacked=%d/%d %s=%d expected=%d%s"
+        % ("PASS" if ok else "FAIL", len(plain), plain_bad, unpacked, len(tars), count_label, actual, expected,
            (" deep_mismatch=%d" % deep_bad) if args.deep else ""))
     return 0 if ok else 1
 
