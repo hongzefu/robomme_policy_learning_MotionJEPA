@@ -252,9 +252,9 @@ def setup_runtime(args):
     adapter.pin_numerics()
     adapter.check_versions(strict=True, with_diffusers=True)
     if not torch.cuda.is_available() or not args.device.startswith("cuda"):
-        raise RuntimeError("正式数值闸门只能使用已分配的 A100 CUDA 设备")
-    if "A100" not in torch.cuda.get_device_name(args.device):
-        raise RuntimeError("数值闸门要求同型号 A100")
+        raise RuntimeError("正式数值闸门只能使用已分配的 A100 或 RTX A6000 CUDA 设备")
+    if not any(name in torch.cuda.get_device_name(args.device) for name in ("A100", "RTX A6000")):
+        raise RuntimeError("数值闸门要求 A100 或 RTX A6000")
     torch.manual_seed(0)
     encoder, info = memory.load_ema_encoder(args.ckpt, device=args.device,
                                            expected_sha256=args.expected_sha256)

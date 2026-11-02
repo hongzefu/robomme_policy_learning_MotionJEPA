@@ -26,6 +26,37 @@ O = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(O)
 
 
+@pytest.mark.parametrize("gpu,device,allowed", [
+    ("NVIDIA A100-SXM4-80GB", "cuda:0", True),
+    ("NVIDIA RTX A6000", "cuda:0", True),
+    ("NVIDIA A40", "cuda:0", False),
+    ("NVIDIA RTX A6000", "cpu", False),
+])
+def test_setup_runtime_gpu_allowlist_preserves_numerics(monkeypatch, gpu, device, allowed):
+    info = dict(source_pin={}, numerics=dict(gpu_name=gpu))
+    encoder = object()
+    memory = SimpleNamespace(load_ema_encoder=lambda *a, **k: (encoder, info))
+    monkeypatch.setitem(sys.modules, "motion_jepa", SimpleNamespace())
+    monkeypatch.setitem(sys.modules, "motion_jepa.export", SimpleNamespace(stage2_memory=memory))
+    torch = SimpleNamespace(cuda=SimpleNamespace(is_available=lambda: True,
+                            get_device_name=lambda _device: gpu), manual_seed=lambda _seed: None)
+    monkeypatch.setitem(sys.modules, "torch", torch)
+    adapter = SimpleNamespace(check_env=lambda: None, pin_numerics=lambda: None,
+                              check_versions=lambda **k: None)
+    monkeypatch.setattr(V, "load_module", lambda *a: adapter)
+    monkeypatch.setattr(V, "sha_file", lambda _path: "a" * 64)
+    monkeypatch.setattr(V, "read_json", lambda _path: dict(vae_adapter_sha256="a" * 64,
+                                                         dependency_lock_sha256="a" * 64))
+    args = SimpleNamespace(device=device, ckpt="encoder.pt", expected_sha256="b" * 64)
+    if allowed:
+        runtime = V.setup_runtime(args)
+        assert runtime[3] is encoder and runtime[4] is info
+        assert runtime[4]["numerics"]["gpu_name"] == gpu
+    else:
+        with pytest.raises(RuntimeError, match="A100 或 RTX A6000"):
+            V.setup_runtime(args)
+
+
 def window(tmp_path, kind="demo"):
     real = 17 if kind == "demo" else 33
     pixels = np.arange(real, dtype=np.uint8)[:, None, None, None] * np.ones((real, 256, 256, 3), np.uint8)
