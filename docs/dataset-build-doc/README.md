@@ -10,8 +10,8 @@
 
 | 档案 | 输出 | 状态 |
 |---|---|---|
-| [orig100 去 depth](16task-orig100-1600ep-9e109419-motion-noxyz/launch.md) | `motion-stage2-1024-noxyz` | 输入准备；共用 latent 恢复，尚未导出或打包 |
-| [orig100 去 action](16task-orig100-1600ep-9e109419-motion-nostate/launch.md) | `motion-stage2-1024-nostate` | 输入准备；共用 latent 恢复，尚未导出或打包 |
+| [orig100 去 depth](16task-orig100-1600ep-9e109419-motion-noxyz/result.md) | `motion-stage2-1024-noxyz` | 完成：23253行，全量零失配/非有限；集群训练待冒烟 |
+| [orig100 去 action](16task-orig100-1600ep-9e109419-motion-nostate/result.md) | `motion-stage2-1024-nostate` | 完成：23253行，全量零失配/非有限；集群训练待冒烟 |
 
 以下环境 B 与历史记录保留原口径，不与本次混比。
 
