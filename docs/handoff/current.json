@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-01T22:18:43Z",
-    "America/New_York": "2026-11-01T17:18:43-05:00"
+    "utc": "2026-11-02T01:24:12Z",
+    "America/New_York": "2026-11-01T20:24:12-05:00"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
@@ -1019,7 +1019,7 @@
       },
       "state": "running",
       "state_changed_at": "2026-11-01T15:35:07Z",
-      "state_reason": "A1 完成（TRAINSET_FETCH=PASS、TRAINSET_UNPACK=PASS members=1247354、V5 PASS、EVIDENCE_REBASE=PASS）；A2 V6 两档 OOM，待用户裁决；占位 65186886 PENDING",
+      "state_reason": "A2 本机：global 32/16/8 OOM，global 4 跑通（1.088 s/步，util 99.8%），SAVE_LOAD=FAIL（numerics gpu_name A100≠A6000，ema_mismatch=0）；turbo 副本 f1dbe7c、子模块对齐 gitlink、契约 DRY_RUN PASS；等占位 65186886 RUNNING 后执行 v1-store/logs/o16gl-a3-orchestrate.sh",
       "owner": {
         "session": "",
         "host": "sled-aspen.eecs.umich.edu"
@@ -1096,30 +1096,26 @@
           "date": "2026-11-01",
           "quote": "我放行，你来交",
           "scope": "提交第一阶段 1 份 4×A40 48h 占位（下载完成后、本机冒烟前提交）"
-        }
-      ],
-      "pending_decisions": [
+        },
         {
-          "what": "V6 本机两档冒烟均 OOM（2×RTX A6000 48GB，FSDP2）：每卡 16 需额外分配 14.1GiB 失败、每卡 8 峰值 39054MiB 后再分配 11.47GiB 失败；XLA 训练步程序 36.75GiB/34.18GiB（下限 18.4GiB），显存主要是 2 路切分的参数与优化器状态。本机无法跑此配置，V6 与用户追加的本机测速都无法完成",
-          "evidence": "v1-store/logs/o16gl-smoke-b32-11011710.log、o16gl-smoke-b16-11011715.log（实施检出 $P）",
-          "options": "推荐：占位 65186886 排到后在 GL 4 卡上先跑 20 步冒烟 + SAVE_LOAD 代替 V6，再接 V7；或停下"
+          "kind": "decision",
+          "date": "2026-11-01",
+          "quote": "本机冒烟两档用小batch size测试",
+          "scope": "smoke 20 步放行 global 8/4（S4 合入 f1dbe7c）"
+        },
+        {
+          "kind": "decision",
+          "date": "2026-11-01",
+          "quote": "按推荐继续",
+          "scope": "占位排到后在 GL 4 卡先跑 20 步冒烟（global 32）+ SAVE_LOAD 代替 V6，再接 V7/V7b；SAVE_LOAD 因 GPU 名/驱动与 AWS A100 不同的握手失败如实记录、不改判据；握手跨卡型方案在第二阶段开工前另出方案交用户"
         }
       ],
+      "pending_decisions": [],
       "next_steps": [
         {
-          "what": "下载+解包+verify 完成后：turbo 副本 checkout --detach origin/v4-gl-orig100-1031，建 NFS venv 与 wan-stage2，EVIDENCE_REBASE，V5 DRY_RUN",
-          "command": "",
-          "verdict_line": "TRAINSET_VERIFY=PASS、EVIDENCE_REBASE=PASS、LAUNCH_CONTRACT_GL=PASS"
-        },
-        {
-          "what": "下载完成后 turbo 副本 checkout --detach origin/v4-gl-orig100-1031，建 NFS venv 与 wan-stage2，EVIDENCE_REBASE",
-          "command": "",
-          "verdict_line": "TRAINSET_VERIFY=PASS、EVIDENCE_REBASE=PASS、VENV_PORTABLE=PASS host=<本机|gl-login>"
-        },
-        {
-          "what": "A2 本机两档冒烟",
-          "command": "",
-          "verdict_line": "V6"
+          "what": "占位 RUNNING 后在 GL 登录节点 tmux o16gl-a3 里 srun --jobid=65186886 --overlap 执行 o16gl-a3-orchestrate.sh",
+          "command": "srun --jobid=65186886 --overlap --exact --ntasks=1 --cpus-per-task=16 --gpu_cmode=shared bash /nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/logs/o16gl-a3-orchestrate.sh",
+          "verdict_line": "VENV_PORTABLE=PASS devices=4、A3_RUN …、A3_ALL_DONE"
         }
       ]
     },
