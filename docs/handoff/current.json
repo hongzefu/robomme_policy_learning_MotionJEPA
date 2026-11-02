@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "written_at": {
-    "utc": "2026-11-02T05:28:54Z",
-    "America/New_York": "2026-11-02T00:28:54-0500"
+    "utc": "2026-11-02T05:32:03Z",
+    "America/New_York": "2026-11-02T00:32:03-0500"
   },
   "repo": {
     "branch": "v4-eval-official-1026",
-    "base_head": "a084aa273fe73c83ad1767c43cd03c4e6762f53e",
+    "base_head": "9551a288b2d4b5927a0aef6720a4e97b8c51893e",
     "note": "用户 2026-10-21 美东：「policy改名为v3 motionmem pair4」「能不能再开一个新的分支 只有部分历史 并且维持现在的命名？」「同意开始」。原 v2-motionmem 完整末端 4272f59 改名为 v3-motionmem-pair4（含 v10 四对 28 个提交 cce6cd9..4272f59）；旧名 v2-motionmem 经用户批准 force-with-lease 回退到 2b2954c（v10 之前）；保险标签 archive/v2-motionmem-full-4272f59。"
   },
   "freeze": {
@@ -1181,7 +1181,7 @@
     "gl-abl-encoders-phase1": {
       "plan": {
         "file": "1101-gl-ablation-encoders-ctx-b64-80k-plan.md",
-        "sha": null
+        "sha": "a084aa273fe73c83ad1767c43cd03c4e6762f53e"
       },
       "state": "planned",
       "state_changed_at": "2026-11-02T04:55:58Z",
@@ -1267,6 +1267,12 @@
           "date": "2026-11-02",
           "quote": "这个计划需要改成这个用 Codex 来做，你把所有的 agent 都映射成 Codex 的要求。我记得我有一个映射的模板。",
           "scope": "K13 执行宿主改为本机 Codex；角色按正本 docs/codex-aspen-gpt56-roles.md §二 映射"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-02",
+          "quote": "/data/hongzefu/robomme_policy_learning_MotionJEPA/1101-gl-ablation-encoders-ctx-b64-80k-plan.md 开工",
+          "scope": "批准 a084aa2 计划 v4 全程；64 档通过继续正式训练，64 档 OOM 测完 32/16 后取消两份占位并交用户裁决；实施前须通过计划一致性审查。"
         }
       ],
       "pending_decisions": [],
@@ -1281,7 +1287,7 @@
     "gl-abl-encoders-train": {
       "plan": {
         "file": "1101-gl-ablation-encoders-ctx-b64-80k-plan.md",
-        "sha": null
+        "sha": "a084aa273fe73c83ad1767c43cd03c4e6762f53e"
       },
       "state": "planned",
       "state_changed_at": "2026-11-02T04:55:58Z",
@@ -1366,6 +1372,12 @@
           "date": "2026-11-02",
           "quote": "这个计划需要改成这个用 Codex 来做，你把所有的 agent 都映射成 Codex 的要求。我记得我有一个映射的模板。",
           "scope": "K13 执行宿主改为本机 Codex；角色按正本 docs/codex-aspen-gpt56-roles.md §二 映射"
+        },
+        {
+          "kind": "go",
+          "date": "2026-11-02",
+          "quote": "/data/hongzefu/robomme_policy_learning_MotionJEPA/1101-gl-ablation-encoders-ctx-b64-80k-plan.md 开工",
+          "scope": "批准 a084aa2 计划 v4 全程；64 档通过继续正式训练，64 档 OOM 测完 32/16 后取消两份占位并交用户裁决；实施前须通过计划一致性审查。"
         }
       ],
       "pending_decisions": [],
