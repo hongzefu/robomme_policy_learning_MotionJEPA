@@ -24,7 +24,7 @@ figure{margin:14px 0}figure img{max-width:100%;border:1px solid var(--line)}figc
 
 <blockquote>
 <p><b>权威性</b>：本文件是「在 pi0.5 VLA 主干上采集并对比 ctx512 基线与 ctx512+motion 模型的 attention map」任务的唯一计划正本；与聊天记录冲突以本文件为准。<b>只规划不实施</b>：每一步须用户对本计划不改而直接认可后才开工（<code>AGENTS.md</code> 第 2 条开工令）。</p>
-<p><b>代码锚点</b>：分支 <code>v4.1-interpretMotion</code>（自 <code>v4-eval-official-1026</code> 的 <code>1d10bf26</code> 分出），工作副本 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>（环境 A）。评估执行副本与资产在 NFS <code>$E=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval</code>（第 14 条「评估任务经授权例外可写」）。</p>
+<p><b>代码锚点</b>：分支 <code>v4.1-interpretMotion</code>（自 <code>v4-eval-official-1026</code> 的 <code>1d10bf26</code> 分出），工作副本 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>（环境 A）。40 局在<b>本机 2×RTX A6000</b> 上跑（用户 2026-11-03 裁决）；NFS 执行副本 <code>$E=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval</code> 只作为权重与两套解释器（stage2、official-sim）的只读来源。</p>
 <p><b>外部锚点</b>：论文 <i>Memory Without Curation: Learning Multi-Stream Latent Memory for Robot Policies</i>（arXiv 2610.14406）Figure 9 与附录 C.4「Attention visualization」；官方权重 HF <code>Yinpei/mme_vla_suite@5db4d53d</code> 的 <code>perceptual-framesamp-context/79999.zip</code>（sha256 <code>387d4bd5…8ae8</code>，11,574,223,742 B）；我们的 concat 1×1024 权重 <code>$E/v1-store/assets/vla-o16cc-59999-bd35a857…/59999</code>（38 文件 11,976,241,540 B，<code>DOWNLOADED.json</code> 已核）。</p>
 <p><b>commit 体例</b>：功能 <code>commitV&lt;x&gt;.&lt;y&gt;:</code>，文档 <code>docs:</code>，子代理 <code>sub/&lt;编号&gt;:</code>，合并 <code>--no-ff</code>。本计划日期前缀 <code>1103</code>（美东 2026-11-03）。</p>
 </blockquote>
@@ -36,10 +36,10 @@ figure{margin:14px 0}figure img{max-width:100%;border:1px solid var(--line)}figc
 
 <table>
 <tr><th>批次</th><th>模型</th><th>任务 × 局数</th><th>在哪跑</th><th>产物</th></tr>
-<tr><td>R-CTX</td><td>官方 <code>perceptual-framesamp-context/79999</code>（<code>motion.enabled=false</code>，<code>budget 512</code>，<code>token_per_image 16</code>）</td><td>ButtonUnmaskSwap 10 + RouteStick 10 = 20 局</td><td>GreatLakes spgpu 1 份占位（1×A40）</td><td>逐次推理 attention npz + 官方协议的 accepted json + 视频</td></tr>
-<tr><td>R-MOT</td><td><code>orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/59999</code>（<code>stage2_pool4_concat</code>，motion 96 槽）</td><td>同一批 20 局（同 episode_id）</td><td>GreatLakes spgpu 1 份占位（sidecar 与策略同卡，<code>--gpu_cmode=shared</code>）</td><td>同上</td></tr>
+<tr><td>R-CTX</td><td>官方 <code>perceptual-framesamp-context/79999</code>（<code>motion.enabled=false</code>，<code>budget 512</code>，<code>token_per_image 16</code>）</td><td>ButtonUnmaskSwap 10 + RouteStick 10 = 20 局</td><td>本机 GPU0（无 sidecar）</td><td>逐次推理 attention npz + 官方协议的 accepted json + 视频</td></tr>
+<tr><td>R-MOT</td><td><code>orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/59999</code>（<code>stage2_pool4_concat</code>，motion 96 槽）</td><td>同一批 20 局（同 episode_id）</td><td>本机 GPU1（策略与 stage2 sidecar 同卡，<code>--motion-online-gpu 1</code>）</td><td>同上</td></tr>
 </table>
-<p>合计 40 局。参照 10-31 官方 800 局的实测（concat 模型两任务每局墙钟均值 RouteStick 29.3 s、ButtonUnmaskSwap 31.2 s，含仿真），即使 attention 采集把推理放慢 2～3 倍，两批串行也在 2 小时内；占位 job 规格沿用 <code>1×A40 / 4 CPU / 24 G / 48 h</code>，用完即 <code>scancel</code>。</p>
+<p>合计 40 局。参照 10-31 官方 800 局的实测（concat 模型两任务每局墙钟均值 RouteStick 29.3 s、ButtonUnmaskSwap 31.2 s，含仿真），即使 attention 采集把推理放慢 2～3 倍，两批<b>并行各占一卡</b>也在 1.5 小时内；本机 A6000 数字与 A40／A100 历史耗时不混比。</p>
 
 <h3>已定口径（用户 2026-11-03 拍板，原话逐字）</h3>
 <table>
@@ -51,7 +51,8 @@ figure{margin:14px 0}figure img{max-width:100%;border:1px solid var(--line)}figc
 <tr><td>K5</td><td>任务：「先设计两个 task，一个是 button and mask swap，一个是 route stick」→ <code>ButtonUnmaskSwap</code>、<code>RouteStick</code>（仓库里不存在 RouteSticker／RotateStick 变体）</td><td>§三</td></tr>
 <tr><td>K6</td><td>环境：本机 GPU 实测 2×RTX A6000 与判据表不符，用户答复「按环境 A 继续（仅判据表写错）」</td><td>§〇 红线 0</td></tr>
 <tr><td>K7<span class="warn">（agent 默认，待用户确认）</span></td><td>每任务每模型 10 局，seed 42；20 局按 concat 模型 seed 42 官方 800 局的结局<b>成功 5 + 失败 5</b> 取 episode_id 最小者，两模型跑同一批 episode_id</td><td>§三</td></tr>
-<tr><td>K8<span class="warn">（agent 推荐，待用户确认）</span></td><td>运行位置 GreatLakes 而非本机：本机 <code>v1-store/models</code> 已清空、无 sidecar 与仿真 venv；NFS 执行副本已有 <code>envs/{policy,stage2,official-sim}</code> 与 concat 59999 资产，只缺官方 79999（需下载 11.6 GB 到 <code>$E/v1-store/assets/</code>）</td><td>§五</td></tr>
+<tr><td>K8</td><td>运行位置本机（用户原话「在本地运行」）。本机现状：策略 <code>.venv</code> 为空壳（site-packages 仅 3 项，需 <code>uv sync</code>）；无 sidecar／仿真 venv，但 NFS 的 <code>$E/v1-store/envs/stage2/bin/python</code>（torch 2.9.0+cu128，<code>cuda.is_available()=True</code>）与 <code>$E/v1-store/envs/official-sim/bin/python</code>（robomme 可导入，editable 指向 release 420ae98 的 <code>third_party/robomme_benchmark/src</code>，其 gitlink <code>856bc3a</code> 与本分支一致）在本机实测可直接用；权重两份都要落到本机 <code>v1-store/</code>（官方 79999 自 HF 下载 11.6 GB，concat 59999 自 NFS rsync 13 GB，stage2 encoder 自 NFS 拷 1 份）；Vulkan 1.4.303 可见 A6000</td><td>§五</td></tr>
+<tr><td>K9</td><td>不登记状态机（用户原话「不登记」）；交接走人工</td><td>§八</td></tr>
 </table>
 
 <h2>二、机制：在 pi0.5 上 attention 怎么采、怎么分流</h2>
@@ -105,8 +106,8 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <h2>三、两个模型、两个任务、20 局是哪些</h2>
 <table>
 <tr><th>项</th><th>官方 ctx512（R-CTX）</th><th>ctx512+motion concat（R-MOT）</th></tr>
-<tr><td>checkpoint</td><td>HF <code>Yinpei/mme_vla_suite@5db4d53d</code> <code>perceptual-framesamp-context/79999.zip</code> → 解压到 <code>$E/v1-store/assets/vla-official-ctx512-79999-387d4bd5/79999</code></td><td><code>$E/v1-store/assets/vla-o16cc-59999-bd35a857…/59999</code>（已在）</td></tr>
-<tr><td>加载分支</td><td><code>history_config.txt</code> 旧兼容路径（非严格恢复），无 sidecar</td><td><code>history_config.resolved.yaml</code> 严格恢复，自动拉起 stage2 sidecar（encoder <code>$E/v1-store/assets/stage2-epoch105-27daa832/checkpoint_epoch_105.pt</code>）</td></tr>
+<tr><td>checkpoint</td><td>HF <code>Yinpei/mme_vla_suite@5db4d53d</code> <code>perceptual-framesamp-context/79999.zip</code> → 解压到本机 <code>v1-store/models/official-mme-vla/perceptual-framesamp-context/79999</code>（下载脚本抄 <code>docs/training-doc/eval-3seed-context-vs-motion/download_official.sh</code>）</td><td>本机 <code>v1-store/assets/vla-o16cc-59999/59999</code>（自 <code>$E/v1-store/assets/vla-o16cc-59999-bd35a857…/</code> rsync，连同 <code>history_config.*</code>、<code>manifests/</code>、<code>encoder_dependencies*</code>）</td></tr>
+<tr><td>加载分支</td><td><code>history_config.txt</code> 旧兼容路径（非严格恢复），无 sidecar</td><td><code>history_config.resolved.yaml</code> 严格恢复，自动拉起 stage2 sidecar（encoder 自 <code>$E/v1-store/assets/stage2-epoch105-27daa832/</code> rsync 到本机 <code>v1-store/assets/stage2-epoch105-27daa832/</code>；sidecar 解释器 <code>--stage2-python $E/v1-store/envs/stage2/bin/python</code>）</td></tr>
 <tr><td>policy_config</td><td><code>mme_vla_suite_b128</code>（motion-variance 对官方权重用的名字；<code>CFG_RESOLVE</code> 闸核实与 <code>mme_vla_suite_orig16_b128_60k</code> 的差异只在训练侧数据键，不影响推理归一化——归一化统计来自 checkpoint <code>assets/</code>）</td><td><code>mme_vla_suite_orig16_b128_60k</code>（10-31 spec 原值）</td></tr>
 <tr><td>prefix 长度 P</td><td>1088</td><td>1184</td></tr>
 <tr><td>已知成功率（参考）</td><td>4 任务 200 局 24.5%（三 seed）；16 任务无记录</td><td>16 任务 800 局 37.33 ± 0.59%；seed 42 下 ButtonUnmaskSwap 12/50、RouteStick 16/50</td></tr>
@@ -120,25 +121,27 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <p>语言目标（<code>task_goal.py</code>）：ButtonUnmaskSwap「first press both buttons on the table, then pick up the container hiding the {c0} cube, finally pick up another container hiding the {c1} cube」；RouteStick「watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path」。</p>
 
 <h2>四、我们这一侧要改什么（先说为什么非改不可）</h2>
-<p>现有评估链路（<code>official_queue.py</code> → <code>resident_worker.py</code> → <code>serve_policy.py</code> + <code>eval.py</code>）完全不吐 attention，而 K3 要求走真实在线协议，所以必须换一个会落盘 attention 的服务端，其余（客户端、队列、身份校验、视频）一律不动。</p>
+<p>现有评估链路（<code>official_queue.py</code> → <code>resident_worker.py</code> → <code>serve_policy.py</code> + <code>eval.py</code>）完全不吐 attention，而 K3 要求走真实在线协议，所以必须换一个会落盘 attention 的服务端；又因 <code>resident_worker.py</code> 把 worker 绑死在 Slurm step 内（<code>worker必须在指定JobID的GPU srun step内执行</code>），本机（K8）需要一个不经队列、直接「起服务端 → 跑一个 5 局 chunk 的 <code>eval.py</code> → 收尾」的本地驱动。客户端 <code>eval.py</code>、manifest 签封、身份校验、视频一律不动。</p>
 <table>
 <tr><th>文件</th><th>锚点</th><th>改什么</th><th>关闭态</th><th>开启态</th></tr>
 <tr><td><code>scripts/interpret/attn_adapter.py</code>（新）</td><td><code>AttnAdapter.f_sample_attn</code></td><td>复刻 <code>sample_actions</code>（context 分支）的 18 层手工展开版：prefill 每层 <code>block_apply</code> 存 K/V，去噪 10 步每层捕获 <code>probs</code>，累加 <code>a_layer (18, P+20)</code>；返回 <code>x_0</code> 与 <code>a_layer</code>。依赖 <code>mv_model_adapter._make_patched_attention / _capture_attn / _guard_model_source</code>（import 复用，不复制）</td><td>不存在</td><td>只被下面的服务端 import</td></tr>
-<tr><td><code>scripts/interpret/serve_policy_attn.py</code>（新）</td><td><code>main</code></td><td>照 <code>scripts/motion-variance/serve_policy_mv.py</code> 骨架：起同一个 <code>MME_VLA_Policy</code>，在<b>实例属性</b>上把 <code>policy._sample_actions</code> 换成 <code>f_sample_attn</code> 包装；每次 <code>infer</code> 把 <code>a_layer</code>、<code>mem_order</code>、<code>static_mask</code>、<code>motion_mask</code>、帧号、<code>motion_times</code>、<code>step_idx</code>、<code>exec_start_idx</code>、prompt 有效长度写一份 <code>npz</code> 到 <code>--attn-out/&lt;episode_nonce&gt;/infer_&lt;seq&gt;.npz</code>；D 图所需原始帧按 top-3 另存 jpg。命令行与 <code>serve_policy.py</code> 兼容（<code>--port/--seed/--motion-online-gpu/--stage2-python/--run-identity-sha256/--server-nonce/--eval-purpose policy:checkpoint …</code>）再加 <code>--attn-out</code></td><td>不存在</td><td>由 worker 以 <code>server_module</code> 启动</td></tr>
-<tr><td><code>scripts/evaluation/resident_worker.py</code></td><td><code>server_command</code></td><td>模块名从硬编码 <code>scripts.training.serve_policy</code> 改为 <code>spec.get("server_module", "scripts.training.serve_policy")</code>，并把 <code>spec.get("server_extra_args", [])</code> 追加到命令</td><td>spec 不含两键时命令逐字节不变</td><td>spec 写 <code>server_module=scripts.interpret.serve_policy_attn</code></td></tr>
+<tr><td><code>scripts/interpret/serve_policy_attn.py</code>（新）</td><td><code>main</code></td><td>照 <code>scripts/motion-variance/serve_policy_mv.py</code> 骨架：起同一个 <code>MME_VLA_Policy</code>，在<b>实例属性</b>上把 <code>policy._sample_actions</code> 换成 <code>f_sample_attn</code> 包装；每次 <code>infer</code> 把 <code>a_layer</code>、<code>mem_order</code>、<code>static_mask</code>、<code>motion_mask</code>、帧号、<code>motion_times</code>、<code>step_idx</code>、<code>exec_start_idx</code>、prompt 有效长度写一份 <code>npz</code> 到 <code>--attn-out/&lt;episode_nonce&gt;/infer_&lt;seq&gt;.npz</code>；D 图所需原始帧按 top-3 另存 jpg。命令行与 <code>serve_policy.py</code> 兼容（<code>--port/--seed/--motion-online-gpu/--stage2-python/--run-identity-sha256/--server-nonce/--eval-purpose policy:checkpoint …</code>）再加 <code>--attn-out</code></td><td>不存在</td><td>由 <code>run_local.py</code> 启动</td></tr>
+<tr><td><code>scripts/interpret/run_local.py</code>（新）</td><td><code>main</code></td><td>本地驱动：读 spec（<code>policy_python/sim_python/stage2_python/checkpoint/policy_config/model_kind/run_identity_sha256/cuda/attn_out</code>）与 manifest；逐 chunk：生成 nonce → 起 <code>serve_policy_attn</code>（命令形状照抄 <code>resident_worker.server_command</code>，只换模块名并加 <code>--attn-out</code>）→ 探 <code>/healthz</code> 就绪（同时 <code>kill -0</code> 服务端进程）→ 以 <code>resident_worker.client_command</code> 同形命令起 <code>eval.py</code>（grant 由 <code>manifest.py</code> 的签封清单切块）→ 等客户端退出 → 终止服务端 → 下一 chunk。环境变量照 <code>worker_environment</code>（<code>PYTHONPATH=repo:repo/src:packages/openpi-client/src:third_party/robomme_benchmark/src</code>）。<code>trap</code> 收尾服务端，端口起跑前探占用</td><td>不存在</td><td>每模型一条 tmux</td></tr>
 <tr><td><code>scripts/interpret/build_manifest.py</code>（新）</td><td><code>main</code></td><td>用 <code>scripts/evaluation/manifest.py::make_manifest</code> 生成 20 局清单（4 块 × 5 局，按任务分块），episode 的 <code>env_seed/difficulty</code> 从官方元数据读</td><td>—</td><td>—</td></tr>
 <tr><td><code>scripts/interpret/aggregate_attn.py</code>（新）</td><td><code>main</code></td><td>读 npz，按 §2.3 分流，输出每局 <code>streams.json</code>（A/B/C 图的数值）与跨局汇总 <code>summary.json</code>，末行 <code>ATTN_AGG=…</code></td><td>—</td><td>—</td></tr>
 <tr><td><code>scripts/interpret/plot_attn.py</code>（新）</td><td><code>main</code></td><td>matplotlib 画 A/B/C/D 四类图（PNG，热图 <code>interpolation="nearest"</code>），末行 <code>ATTN_PLOT=…</code></td><td>—</td><td>—</td></tr>
 </table>
-<p><code>src/</code>、<code>examples/</code>、<code>third_party/</code>、<code>scripts/training/</code> 零改动；<code>scripts/evaluation/</code> 只改上面那一处。</p>
+<p><code>src/</code>、<code>examples/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code> 全部零改动。</p>
 
 <h2>五、验收判定行</h2>
 <table>
 <tr><th>判定行</th><th>查什么 / 怎么查</th><th>过了说明什么</th></tr>
 <tr><td><code>OFFICIAL_CTX_ASSET=PASS sha256=387d4bd5… bytes=11574223742 files=&lt;n&gt;</code></td><td>下载 zip 三方核 sha256（HF LFS、钉死值、本地），解压后文件数与 <code>history_config.txt</code> 存在</td><td>基线权重身份钉死（第 15 条）</td></tr>
+<tr><td><code>LOCAL_ASSETS=PASS cc59999_files=38 cc59999_bytes=11976241540 encoder_sha256=27daa832…</code></td><td>rsync 后按 <code>DOWNLOADED.json</code>／<code>source-manifest.json</code> 核文件数、字节数与 encoder sha256</td><td>motion 侧权重与 encoder 同源</td></tr>
+<tr><td><code>LOCAL_ENVS=PASS policy=&lt;.venv&gt; jax=0.5.3 torch=2.7.1 stage2_torch=2.9.0 sim_robomme=&lt;path&gt;</code></td><td>三个解释器各 import 一次并打印来源路径：本机 <code>.venv</code> 的 <code>mme_vla_suite.__file__</code> 必须在本仓库 <code>src/</code>；NFS official-sim 的 <code>robomme.__file__</code> 指向 release 420ae98、gitlink 与本分支 <code>856bc3a</code> 相同</td><td>环境指向正确（第 24 条 editable 校验）</td></tr>
 <tr><td><code>CFG_RESOLVE=PASS official=mme_vla_suite_b128 motion=mme_vla_suite_orig16_b128_60k</code></td><td>两份 <code>create_trained_policy</code> 构造成功，打印 <code>P</code>（1088／1184）、<code>motion_enabled</code>（False／True）</td><td>两条加载路径都通</td></tr>
 <tr><td><code>ATTN_SELFTEST=PASS f32_maxabs≤1e-5 bf16_relfro=&lt;v&gt; rowsum_err≤1e-4 uniform_ok=1</code></td><td>同一观测同一噪声：① f32 下展开版 vs 生产 <code>_sample_actions</code> 动作最大绝对差；② bf16 下 Frobenius 相对差（观察项）；③ 每行 probs 求和 = 1；④ 把 q 置零应得合法 key 上的均匀分布（抄 <code>ATTN_UNIFORM_SELFCHECK</code>）</td><td>采集到的概率就是模型真实用的概率，不是旁路近似；为什么能逐位：f32 下两份编译产物的算子序相同</td></tr>
-<tr><td><code>ATTN_SMOKE=PASS task=ButtonUnmaskSwap ep=4 infers=&lt;n&gt; npz=&lt;n&gt;</code></td><td>GL 上各模型先跑 1 局，npz 数 = infer 数，每份含全部键且 <code>a_layer.shape==(18,P+20)</code></td><td>第 4 条最小 smoke</td></tr>
+<tr><td><code>ATTN_SMOKE=PASS task=ButtonUnmaskSwap ep=4 infers=&lt;n&gt; npz=&lt;n&gt;</code></td><td>本机各模型先跑 1 局，npz 数 = infer 数，每份含全部键且 <code>a_layer.shape==(18,P+20)</code></td><td>第 4 条最小 smoke</td></tr>
 <tr><td><code>RUN20=PASS model=&lt;ctx|motion&gt; episodes=20 success=&lt;k&gt; npz=&lt;n&gt;</code></td><td>每模型 20 局全部 <code>record_type=terminal</code>；成功数与 10-31 同 episode 的官方结局并列（motion 侧 10-31 为 10/20）</td><td>40 局跑完、数据齐</td></tr>
 <tr><td><code>ATTN_AGG=PASS episodes=40 pad_mass≤1e-6 stream_sum_err≤1e-4</code></td><td>padding 位质量为 0；五流质量之和 = 1</td><td>分流映射没算错</td></tr>
 <tr><td><code>ATTN_PLOT=PASS figs=&lt;n&gt;</code> + 主会话目视复查</td><td>A/B/C/D 图生成；按第 2 条画图规则渲染后亲眼看坐标轴、图例、留白</td><td>可交付</td></tr>
@@ -148,25 +151,25 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
 <tr><td>P0</td><td>开工前审查子代理审本计划自相矛盾处</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS base=&lt;sha&gt;</code></td></tr>
-<tr><td>P1</td><td>提交 2 份 spgpu 占位 job（开工第一步，与下面并行）；下载官方 79999 到 NFS（tmux <code>ia-dl-ctx79999</code>）</td><td>JobID 登记；<code>OFFICIAL_CTX_ASSET=PASS</code></td></tr>
-<tr><td>P2</td><td>S1／S2／S3 三个 worktree 子代理并行写代码；S1 在本机 1 张 A6000 跑自检（≤5 min，需要 concat 59999 的一份本机副本：rsync 13 G 到 <code>v1-store/assets/</code>，或直接读 NFS）</td><td><code>ATTN_SELFTEST=PASS</code>、<code>CFG_RESOLVE=PASS</code>、各 <code>sub/</code> 提交</td></tr>
-<tr><td>P3</td><td>合并前审查 → <code>--no-ff</code> 合并 → 合并后审查 → push；打 <code>commitV…Beta</code> 锚点、建执行副本快照 <code>$E/releases/&lt;sha&gt;</code></td><td><code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code>、<code>RELEASE_SNAPSHOT=PASS</code></td></tr>
-<tr><td>P4</td><td>GL 冒烟各 1 局</td><td><code>ATTN_SMOKE=PASS</code> ×2</td></tr>
-<tr><td>P5</td><td>R-CTX、R-MOT 各 20 局（可两份占位并行）</td><td><code>RUN20=PASS</code> ×2</td></tr>
-<tr><td>P6</td><td>汇总、出图、目视复查、写档案 <code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/{launch,result}.md</code>、<code>scancel</code> 占位</td><td><code>ATTN_AGG</code>、<code>ATTN_PLOT</code>、<code>HOLDS_RELEASED=PASS</code></td></tr>
+<tr><td>P1</td><td>资产与环境（与 P2 并行，均 tmux）：下载官方 79999（<code>ia-dl-ctx79999</code>）；rsync concat 59999 与 stage2 encoder（<code>ia-rsync-assets</code>）；<code>UV_CACHE_DIR=v1-store/cache/uv UV_LINK_MODE=copy uv sync</code> 重建本机 <code>.venv</code>（<code>ia-uv-sync</code>）</td><td><code>OFFICIAL_CTX_ASSET</code>、<code>LOCAL_ASSETS</code>、<code>LOCAL_ENVS</code> 均 PASS</td></tr>
+<tr><td>P2</td><td>S1／S2／S3 三个 worktree 子代理并行写代码；S1 自检在 P1 完成后由主会话在 GPU0 跑（≤5 min）</td><td><code>ATTN_SELFTEST=PASS</code>、<code>CFG_RESOLVE=PASS</code>、各 <code>sub/</code> 提交</td></tr>
+<tr><td>P3</td><td>合并前审查 → <code>--no-ff</code> 合并 → 合并后审查 → push；打 <code>commitV…Beta</code> 锚点，<code>git status --short</code> 为空</td><td><code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code>、<code>SRC_ZERO_DIFF</code></td></tr>
+<tr><td>P4</td><td>本机冒烟各 1 局（GPU0 基线、GPU1 motion）</td><td><code>ATTN_SMOKE=PASS</code> ×2</td></tr>
+<tr><td>P5</td><td>R-CTX（GPU0）、R-MOT（GPU1）各 20 局并行，各一条 tmux、各挂一个 Monitor</td><td><code>RUN20=PASS</code> ×2</td></tr>
+<tr><td>P6</td><td>汇总、出图、目视复查、写档案 <code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/{launch,result}.md</code>、核对 <code>tmux ls</code> 本轮会话全部退出</td><td><code>ATTN_AGG</code>、<code>ATTN_PLOT</code></td></tr>
 </table>
 
 <h2>七、子代理分工与合并（简述）</h2>
-<p>拆三块、写集不相交：S1 写采集适配器与自检（最难、最先合）；S2 写服务端、manifest 与 worker 的两键钩子；S3 写汇总与画图（只依赖 npz 键名契约，见第二部分 §1.3）。顺序 S1 → S2 → S3 逐个 <code>--no-ff</code> 合回 <code>v4.1-interpretMotion</code>；每次合并前由 sonnet 审查子代理钉 BASE/TIP 审「越界、契约、前缀」，合并后主会话跑 S1 自检 + S3 的合成数据单测。GL 作业提交、下载、tmux、Monitor 全部主会话自做。</p>
+<p>拆三块、写集不相交：S1 写采集适配器与自检（最难、最先合）；S2 写服务端、manifest 与 worker 的两键钩子；S3 写汇总与画图（只依赖 npz 键名契约，见第二部分 §1.3）。顺序 S1 → S2 → S3 逐个 <code>--no-ff</code> 合回 <code>v4.1-interpretMotion</code>；每次合并前由 sonnet 审查子代理钉 BASE/TIP 审「越界、契约、前缀」，合并后主会话跑 S1 自检 + S2/S3 的单测。下载、rsync、<code>uv sync</code>、tmux、Monitor、40 局起跑全部主会话自做。</p>
 
 <h2>八、交接顺序与状态机登记</h2>
 <ul>
 <li>任务 id：<code>interpret-attn-ctx512-vs-motion</code>。</li>
-<li>交接前必须完成：<code>OFFICIAL_CTX_ASSET</code>、<code>ATTN_SELFTEST</code>、两份 <code>RUN20</code>、<code>ATTN_AGG</code>、<code>ATTN_PLOT</code>、<code>HOLDS_RELEASED</code>。</li>
+<li>交接前必须完成：<code>OFFICIAL_CTX_ASSET</code>、<code>LOCAL_ASSETS</code>、<code>LOCAL_ENVS</code>、<code>ATTN_SELFTEST</code>、两份 <code>RUN20</code>、<code>ATTN_AGG</code>、<code>ATTN_PLOT</code>。</li>
 <li>长尾：无（npz 总量 &lt; 100 MB，不上传 HF）。</li>
 <li>上游：无依赖（两份权重都是已发布资产）。</li>
 <li>下游：<code>gl-orig100-ctx-reproduce-train</code> 交付后可用同一脚本补「同口径 ctx512 无 motion」一组，届时另起计划。</li>
-<li><span class="warn">待用户答复：是否登记进 <code>docs/handoff/current.json</code> 状态机。</span></li>
+<li>用户裁决（2026-11-03）：<b>不登记</b>进 <code>docs/handoff/current.json</code>；交接走人工，本节只作留档。</li>
 </ul>
 <p>第一部分到此为止；逐文件改动、分配表、契约、runbook、风险与盲区见第二部分。</p>
 
@@ -174,13 +177,13 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 
 <h2>〇、前置声明与红线</h2>
 <ol start="0">
-<li>环境 A；GPU 实测 2×RTX A6000（用户裁决按 A 走）。本机只跑 ≤5 min 自检；40 局在 GreatLakes（K8 待确认，若用户改为本机则 P1 多出「下载 79999 + rsync 59999 + 建 stage2／sim 两个 venv」三步，预计半天）。</li>
+<li>环境 A；GPU 实测 2×RTX A6000（用户裁决按 A 走）。全部在本机跑（K8）：GPU0 基线、GPU1 motion+sidecar；不连 GreatLakes、不提交 Slurm。</li>
 <li><code>src/</code>、<code>examples/</code>、<code>third_party/</code>、<code>scripts/training/</code> 零 diff（闸：<code>git diff --quiet &lt;BASE&gt;..HEAD -- src examples third_party scripts/training</code>）。</li>
 <li>采集只读 <code>probs</code>；禁止改 <code>input_mask</code>／<code>positions</code>／mask 任何一层；禁止在 <code>src/mme_vla_suite/policies/</code> 下出现 <code>MotionStore</code>（既有静态闸 <code>check_config_provenance.py</code>）。</li>
 <li>官方协议不动：<code>eval.py</code> 的 <code>profile=official</code> 校验（test、1300 步、16 帧包、seed 42）原样；manifest 走 <code>make_manifest</code> 签封。</li>
 <li>执行局的动作由展开版产生（与热图同源）；不得在 npz 外另行「修正」动作。</li>
-<li>NFS 只写 <code>$E/v1-store/assets/vla-official-ctx512-79999-387d4bd5/</code>、<code>$E/v1-store/evaluation/interpret-1103/</code>、<code>$E/releases/&lt;sha&gt;/</code>；本机只写 <code>v1-store/evaluation/interpret-1103/</code>、<code>v1-store/logs/</code>。</li>
-<li>tmux 前缀 <code>ia-</code>；GL 占位最多 2 份；用完逐个 <code>scancel</code>，绝不 <code>scancel -u</code>。</li>
+<li>NFS 一律只读（rsync 源、两套解释器）；本机只写 <code>v1-store/models/official-mme-vla/</code>、<code>v1-store/assets/</code>、<code>v1-store/evaluation/interpret-1103/</code>、<code>v1-store/logs/</code>、<code>.venv/</code>。</li>
+<li>tmux 前缀 <code>ia-</code>；清理只用 <code>tmux kill-session -t '=确切名'</code>，删前删后各 <code>tmux ls</code>。</li>
 <li>XLA 口径与 motion-variance 一致：<code>XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'</code>，所有 python 入口硬闸。</li>
 </ol>
 
@@ -232,10 +235,14 @@ return x_0, acc / num_steps</pre>
 <tr><td><code>top_frames</code></td><td>int32 (N,)</td><td>帧流前 N 名的帧号</td></tr>
 </table>
 
-<h3>1.4 <code>scripts/evaluation/resident_worker.py</code>（S2，仅两行）</h3>
-<pre>module = spec.get("server_module", "scripts.training.serve_policy")
-command = [spec["policy_python"], "-m", module, "--port", str(port), ...] + list(spec.get("server_extra_args", []))</pre>
-<p>闸：spec 无两键时 <code>server_command</code> 返回值与改前逐元素相等（单测 <code>tests/interpret/test_worker_cmd.py</code>）。</p>
+<h3>1.4 <code>scripts/interpret/run_local.py</code>（S2）</h3>
+<ul>
+<li>spec（JSON）键：<code>repo</code>（本仓库绝对路径）、<code>policy_python</code>（<code>&lt;repo&gt;/.venv/bin/python</code>）、<code>sim_python</code>（<code>$E/v1-store/envs/official-sim/bin/python</code>）、<code>stage2_python</code>（<code>$E/v1-store/envs/stage2/bin/python</code>）、<code>checkpoint</code>、<code>policy_config</code>、<code>model_kind</code>（<code>frame_sampling</code>／<code>stage2_pool4_concat</code>）、<code>model_seed=42</code>、<code>purpose=validation</code>、<code>cuda</code>（<code>"0"</code>／<code>"1"</code>）、<code>attn_out</code>、<code>run_identity_sha256</code>（由 <code>manifest.py bind_model</code> 同法生成，服务端与客户端共用）。</li>
+<li>服务端命令 = <code>resident_worker.server_command</code> 的形状，模块换成 <code>scripts.interpret.serve_policy_attn</code>，追加 <code>--attn-out</code>；基线不传 <code>--motion-online-gpu</code>（checkpoint 的 motion 关闭态不起 sidecar）。客户端命令 = <code>resident_worker.client_command</code> 原形。两者都通过 <code>import</code> 复用这两个函数，不复制文本。</li>
+<li>就绪：<code>GET /healthz</code> 200 且 <code>kill -0 server_pid</code>；超时 600 s。端口起跑前 <code>(exec 3&lt;&gt;/dev/tcp/127.0.0.1/$PORT)</code> 探占用，占用则换。</li>
+<li>每 chunk 输出目录 <code>&lt;run_root&gt;/attempts/&lt;chunk_id&gt;/</code>（eval.py 要求 <code>exist_ok=False</code>）；结束把 <code>*.terminal.json</code> 汇到 <code>&lt;run_root&gt;/accepted/</code>，末行 <code>RUN20=…</code>。</li>
+<li>单测 <code>tests/interpret/test_run_local.py</code>：用假 python 脚本代替服务端/客户端，核命令形状与 chunk 顺序。</li>
+</ul>
 
 <h3>1.5 <code>scripts/interpret/build_manifest.py</code>（S2）</h3>
 <p>输入：任务 → episode_id 列表（§三表硬编码为默认，可 <code>--episodes JSON</code> 覆盖）；读 <code>third_party/robomme_benchmark/src/robomme/env_metadata/test/record_dataset_&lt;task&gt;_metadata.json</code> 的 <code>records[i].seed/difficulty</code>；调 <code>manifest.make_manifest(episodes, …)</code>，按任务分 4 块各 5 局；输出 <code>manifest.json</code> 与 <code>MANIFEST=PASS episodes=20 chunks=4 seal=&lt;sha&gt;</code>。</p>
@@ -253,10 +260,10 @@ command = [spec["policy_python"], "-m", module, "--port", str(port), ...] + list
 <h2>二、子代理分配表</h2>
 <table>
 <tr><th>编号</th><th>目标</th><th>可写集合</th><th>禁触</th><th>契约 / 依赖</th><th>合并顺序</th><th>验收命令与判定行（环境）</th><th>资源</th></tr>
-<tr><td>S1</td><td>采集适配器 + 自检</td><td><code>scripts/interpret/attn_adapter.py</code>、<code>scripts/interpret/__init__.py</code></td><td>其余一切</td><td>import <code>scripts/motion-variance/mv_model_adapter.py</code> 的三个符号；产出 <code>a_layer</code> 契约</td><td>1</td><td><code>CUDA_VISIBLE_DEVICES=0 XLA_FLAGS=… UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;worktree&gt;/src uv run --no-sync python scripts/interpret/attn_adapter.py --selftest --ckpt &lt;concat 59999 本机副本&gt; --config mme_vla_suite_orig16_b128_60k</code> → <code>ATTN_SELFTEST=PASS</code>；无 GPU 时在 worktree 只跑 <code>--dry-shapes</code>，GPU 自检由主会话合并后跑</td><td>本机 GPU0 ≤5 min；需 concat 59999 本机副本（主会话先 rsync 13 G 到 <code>v1-store/assets/vla-o16cc-59999/</code>）</td></tr>
-<tr><td>S2</td><td>服务端、manifest、worker 钩子</td><td><code>scripts/interpret/serve_policy_attn.py</code>、<code>scripts/interpret/build_manifest.py</code>、<code>scripts/evaluation/resident_worker.py</code>（仅 <code>server_command</code>）、<code>tests/interpret/test_worker_cmd.py</code></td><td><code>src/</code>、<code>scripts/training/</code>、S1／S3 文件</td><td>消费 S1 的 <code>AttnAdapter.make_sample_fn/last_attn</code> 接口（名字先定死）；产 npz 契约 §1.3</td><td>2</td><td><code>uv run --no-sync python -m pytest tests/interpret/test_worker_cmd.py -q</code>；<code>build_manifest.py</code> → <code>MANIFEST=PASS episodes=20 chunks=4</code>；服务端 <code>--help</code> 通过且 <code>--attn-out</code> 必填</td><td>CPU</td></tr>
+<tr><td>S1</td><td>采集适配器 + 自检</td><td><code>scripts/interpret/attn_adapter.py</code>、<code>scripts/interpret/__init__.py</code></td><td>其余一切</td><td>import <code>scripts/motion-variance/mv_model_adapter.py</code> 的三个符号；产出 <code>a_layer</code> 契约</td><td>1</td><td><code>CUDA_VISIBLE_DEVICES=0 XLA_FLAGS=… UV_PROJECT_ENVIRONMENT=&lt;主 .venv&gt; PYTHONPATH=&lt;worktree&gt;/src uv run --no-sync python scripts/interpret/attn_adapter.py --selftest --ckpt v1-store/assets/vla-o16cc-59999/59999 --config mme_vla_suite_orig16_b128_60k</code> → <code>ATTN_SELFTEST=PASS</code>；worktree 内只跑 <code>--dry-shapes</code>（CPU），GPU 自检由主会话在 P1 资产就绪后跑</td><td>本机 GPU0 ≤5 min</td></tr>
+<tr><td>S2</td><td>服务端、manifest、本地驱动</td><td><code>scripts/interpret/serve_policy_attn.py</code>、<code>scripts/interpret/build_manifest.py</code>、<code>scripts/interpret/run_local.py</code>、<code>tests/interpret/test_run_local.py</code></td><td><code>src/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code>、S1／S3 文件</td><td>消费 S1 的 <code>AttnAdapter.make_sample_fn/last_attn</code> 接口（名字先定死）；产 npz 契约 §1.3；import <code>resident_worker.server_command/client_command</code></td><td>2</td><td><code>uv run --no-sync python -m pytest tests/interpret/test_run_local.py -q</code>；<code>build_manifest.py</code> → <code>MANIFEST=PASS episodes=20 chunks=4</code>；服务端 <code>--help</code> 通过且 <code>--attn-out</code> 必填</td><td>CPU</td></tr>
 <tr><td>S3</td><td>汇总与画图</td><td><code>scripts/interpret/aggregate_attn.py</code>、<code>scripts/interpret/plot_attn.py</code>、<code>tests/interpret/test_streams.py</code></td><td>其余一切</td><td>只依赖 §1.3 契约</td><td>3</td><td><code>uv run --no-sync python -m pytest tests/interpret/test_streams.py -q</code>；合成 npz 跑通 <code>ATTN_AGG=PASS</code>、<code>ATTN_PLOT=PASS</code></td><td>CPU</td></tr>
-<tr><td>主会话</td><td>占位提交、下载 79999、rsync、release 快照、冒烟、40 局、Monitor、档案、画图复查</td><td>NFS 与本机 <code>v1-store</code> 指定目录、<code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/</code>、<code>docs/handoff/current.json</code></td><td>—</td><td>—</td><td>—</td><td>§五全部判定行</td><td>GL 2×A40 占位；本机 GPU0 自检</td></tr>
+<tr><td>主会话</td><td>下载 79999、rsync、<code>uv sync</code>、S1 自检、冒烟、40 局、Monitor、档案、画图复查</td><td>本机 <code>v1-store</code> 指定目录、<code>.venv/</code>、<code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/</code></td><td>—</td><td>—</td><td>—</td><td>§五全部判定行</td><td>本机 GPU0 + GPU1</td></tr>
 </table>
 <p>审查：每个 S 合并前一个 sonnet 只读审查（钉 BASE／TIP），输出 <code>PRE_MERGE_REVIEW=…</code>；合并后主会话跑 S1 自检 + 两份 pytest，输出 <code>POST_MERGE_REVIEW=…</code>。</p>
 
@@ -275,27 +282,31 @@ command = [spec["policy_python"], "-m", module, "--port", str(port), ...] + list
 </table>
 
 <h2>四、runbook（主会话）</h2>
-<pre># P1 占位（greatlakes.md 标准块，2 份）
-sbatch --account=chaijy2 --partition=spgpu --nodes=1 --ntasks-per-node=1 --gres=gpu:1 --cpus-per-task=4 --mem=24G --time=48:00:00 --wrap='sleep infinity'
-# P1 下载官方 79999 到 NFS（本机发起，tmux ia-dl-ctx79999；脚本抄 docs/training-doc/eval-3seed-context-vs-motion/download_official.sh，DST 改为 $E/v1-store/assets/vla-official-ctx512-79999-387d4bd5）
-# P2 本机 rsync concat 59999（S1 自检用）
-rsync -a --info=progress2 $E/v1-store/assets/vla-o16cc-59999-bd35a857…/ v1-store/assets/vla-o16cc-59999/
-# P3 release 快照：按 scripts/evaluation 既有流程落 $E/releases/&lt;sha&gt;，RELEASE_SNAPSHOT=PASS
-# P4/P5：spec-input.json 加 "server_module": "scripts.interpret.serve_policy_attn", "server_extra_args": ["--attn-out", "$E/v1-store/evaluation/interpret-1103/&lt;model&gt;/attn"]
-python -m scripts.evaluation.official_queue initialize --run-root $E/v1-store/evaluation/interpret-1103/&lt;model&gt; --manifest &lt;20 局清单&gt; --spec &lt;spec&gt;
-srun --jobid=&lt;hold&gt; --overlap --exact --ntasks=1 --cpus-per-task=4 --gpu_cmode=shared bash run-worker.sh &lt;sha&gt; worker-00
+<pre># P1 资产与环境（三条 tmux 并行）
+E=/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval
+tmux new-session -d -s ia-dl-ctx79999 "bash docs/evaluation-doc/attn-ctx512-vs-motion-1103/download_official.sh"   # 抄 eval-3seed 的脚本，DST=v1-store/models/official-mme-vla
+tmux new-session -d -s ia-rsync-assets "set -o pipefail; rsync -a --info=progress2 $E/v1-store/assets/vla-o16cc-59999-bd35a857…/ v1-store/assets/vla-o16cc-59999/ \
+   &amp;&amp; rsync -a --info=progress2 $E/v1-store/assets/stage2-epoch105-27daa832/ v1-store/assets/stage2-epoch105-27daa832/ 2&gt;&amp;1 | tee v1-store/logs/ia-rsync.log; echo EXIT_CODE=\$? &gt;&gt; v1-store/logs/ia-rsync.log"
+tmux new-session -d -s ia-uv-sync "set -o pipefail; UV_CACHE_DIR=$PWD/v1-store/cache/uv UV_LINK_MODE=copy uv sync 2&gt;&amp;1 | tee v1-store/logs/ia-uv-sync.log; echo EXIT_CODE=\$? &gt;&gt; v1-store/logs/ia-uv-sync.log"
+# P2 自检（合并后）
+CUDA_VISIBLE_DEVICES=0 XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0' uv run --no-sync python scripts/interpret/attn_adapter.py --selftest --ckpt v1-store/assets/vla-o16cc-59999/59999 --config mme_vla_suite_orig16_b128_60k
+# P4/P5（每模型一条 tmux，spec 见第二部分 §1.4；冒烟用 --chunks 1 --episodes 1）
+uv run --no-sync python scripts/interpret/build_manifest.py --out v1-store/evaluation/interpret-1103/manifest.json
+tmux new-session -d -s ia-run-ctx "uv run --no-sync python scripts/interpret/run_local.py --spec v1-store/evaluation/interpret-1103/spec-ctx.json"      # CUDA 0
+tmux new-session -d -s ia-run-mot "uv run --no-sync python scripts/interpret/run_local.py --spec v1-store/evaluation/interpret-1103/spec-mot.json"      # CUDA 1
 # P6
-uv run --no-sync python scripts/interpret/aggregate_attn.py --runs $E/v1-store/evaluation/interpret-1103 --out docs/evaluation-doc/attn-ctx512-vs-motion-1103/records
+uv run --no-sync python scripts/interpret/aggregate_attn.py --runs v1-store/evaluation/interpret-1103 --out docs/evaluation-doc/attn-ctx512-vs-motion-1103/records
 uv run --no-sync python scripts/interpret/plot_attn.py --records … --out docs/evaluation-doc/attn-ctx512-vs-motion-1103/figures</pre>
-<p>每份日志一个 Monitor，过滤词 <code>EXIT_CODE=|Traceback|Error|out of memory|ATTN_|RUN20|COMPUTE_DONE|nan|Killed</code>。</p>
+<p>每份日志一个 Monitor，过滤词 <code>EXIT_CODE=|Traceback|Error|out of memory|ATTN_|RUN20|MANIFEST=|nan|Killed|找不到</code>。</p>
 
 <h2>五、风险登记</h2>
 <table>
 <tr><th>风险</th><th>影响</th><th>处置</th></tr>
 <tr><td>官方 79999 用 <code>mme_vla_suite_b128</code> 构造在 orig16 任务上归一化统计不对</td><td>基线动作错</td><td><code>CFG_RESOLVE</code> 同时打印 <code>norm_stats</code> 来源路径（应在 checkpoint <code>assets/</code>），与 motion-variance 的 official 条件一致即可</td></tr>
 <tr><td>展开版推理慢（18 层 × 10 步 × 2 模型无 scan 融合）</td><td>每局墙钟 ×2～3</td><td>40 局预算仍 &lt; 2 h；超过 5 倍才停</td></tr>
-<tr><td>GL 上 A40 显存：bf16 2.6B 参数 + sidecar 同卡</td><td>OOM</td><td>10-31 已在同规格跑过 concat 模型 + sidecar；attention 额外只存 (18, 1204) f32</td></tr>
-<tr><td>ControlMaster 断线</td><td>无法提交</td><td>先 <code>ssh -O check greatlakes</code>（11-03 14:00 美东 <code>Master running</code>）；断了先问用户 Okta 方式</td></tr>
+<tr><td>A6000 46 GB 上策略 + sidecar 同卡</td><td>OOM</td><td>A40 同为 46 GB，10-31 已跑过 concat + sidecar 同卡；attention 额外只存 (18, 1204) f32；<code>XLA_PYTHON_CLIENT_MEM_FRACTION</code> 按 eval-3seed 的 0.40／0.55 口径</td></tr>
+<tr><td>NFS 解释器导入慢、每 chunk 新起一次仿真进程</td><td>每 chunk 多 1～2 分钟</td><td>8 chunk 共 &lt; 20 分钟，可接受；不把 venv 复制到本机（避免改 editable 指向）</td></tr>
+<tr><td>本机 <code>uv sync</code> 需下载 torch/jax 等数 GB</td><td>P1 变慢</td><td>放 tmux，与下载并行；<code>uv.lock</code> 已钉版本，产物进 <code>v1-store/cache/uv</code></td></tr>
 <tr><td>K7 的「成功 5 失败 5」是按 concat 模型 seed 42 的结局挑的，对基线不对称</td><td>基线的成功/失败分面不均衡</td><td>报告里按各自实际结局重新分面；episode 集合两模型相同即可</td></tr>
 </table>
 
@@ -304,6 +315,7 @@ uv run --no-sync python scripts/interpret/plot_attn.py --records … --out docs/
 <li>attention 只说明「看哪里」，不说明「用到了什么」；与因果消融结论可能不一致。</li>
 <li>只有 seed 42、20 局/模型；不做统计显著性。</li>
 <li>两模型训练口径不同（80k 官方 vs 60k 自训 + motion）；同口径对照待 <code>gl-orig100-ctx-reproduce-train</code>。</li>
+<li>仿真与 sidecar 解释器在 NFS 上、策略解释器在本机，三者 CUDA 栈不同（cu126／cu128）；只共享文件系统与显卡，不共享进程，历史 10-31 评估即同构。</li>
 <li>展开版与 scan 版 bf16 不逐位；执行局动作来自展开版。</li>
 <li>D 图缩略图只取 top-3，不构成完整归因。</li>
 </ul>
@@ -313,7 +325,7 @@ uv run --no-sync python scripts/interpret/plot_attn.py --records … --out docs/
 <li>代码：三个 <code>sub/S1…S3</code> 分支 <code>--no-ff</code> 合入；起跑前 <code>commitV&lt;x&gt;.&lt;y&gt;Beta</code>，<code>git status --short</code> 为空；跑完 <code>commitV&lt;x&gt;.&lt;y&gt;</code> 回写结论。</li>
 <li>档案：<code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/launch.md</code>（起跑时写：环境、权重、命令、JobID、tmux 清单）、<code>result.md</code>（结论 + 四类图 + 判定行原文）、<code>records/</code>（summary.json、清洗后日志；不归档 npz 与视频，留 NFS）；<code>docs/evaluation-doc/README.md</code> 加一行。</li>
 <li>图：A/B/C/D 为脚本产出的 PNG，交付前主会话渲染目视复查并把结论写进 commit body。</li>
-<li>状态机：用户同意登记则 <code>docs/handoff/current.json</code> 新增任务 <code>interpret-attn-ctx512-vs-motion</code>（<code>planned</code>）。</li>
+<li>状态机：不登记（K9）。</li>
 </ul>
 
 </body>
