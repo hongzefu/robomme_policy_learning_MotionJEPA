@@ -10,8 +10,9 @@
 2. [在 pi0.5 上怎么加 context：两路记忆、一个前缀](#二在-pi05-上怎么加-context两路记忆一个前缀)
 3. [encoder 怎么推理：帧路 SigLIP、运动路 Wan VAE + MotionJEPA stage2](#三encoder-怎么推理)
 4. [预存了什么、H5 在哪一步用、推理时怎么重建](#四预存了什么h5-在哪一步用推理时怎么重建)
-5. [训练与推理一致性是怎么保证的](#五训练与推理一致性是怎么保证的)
-6. [数字速查](#六数字速查)
+5. [padding：训练与测试两侧的填充怎么对齐](#五padding训练与测试两侧各有哪些填充怎么对齐)
+6. [训练与推理一致性是怎么保证的](#六训练与推理一致性是怎么保证的)
+7. [数字速查](#七数字速查)
 
 ---
 
@@ -213,7 +214,78 @@ RoboMME 原始 H5（每任务一个 `record_dataset_<Task>.h5`，`episode_{i}/ti
 
 ---
 
-## 五、训练与推理一致性是怎么保证的
+## 五、padding：训练与测试两侧各有哪些填充、怎么对齐
+
+这里的「padding」有三个层次，容易混在一起。按从里到外的顺序说：encoder 内部 → 窗口级补帧 → 记忆预算级右填充。前两层决定 encoder **输入**长什么样、必须两侧逐位同式；第三层只影响 pi0.5 看到的记忆区形状，由 mask 屏蔽。
+
+### 5.1 encoder 内部：没有我们加的 padding
+
+| 环节 | 情况 |
+|---|---|
+| SigLIP 输入 | 原始帧 256×256 正方形，`image_tools.resize_with_pad(…, 224, 224)` 等比缩到 224，长宽比相同所以**不产生 pad 边**；训练建库与在线 `add_buffer` 同一函数 |
+| Wan VAE 输入 | 窗口固定 33 帧 = 4k+1，正好对齐 VAE 的时间压缩率（33→9 组），`encode_chunk` 用形状断言挡住 diffusers 对 T≠4k+1 的静默截断；没有我们加的时间或空间 padding（VAE 自身因果卷积的内部填充属于模型实现，两侧同一份权重与代码） |
+| 阶段二 encoder | `encode_windows` 传入的几何掩码 `geometry = ones(B, 32, 32)` 全 True：576 个 patch 全有效，掩码均值池化不丢任何格子；块因果 attention 的 `-inf` 只用于「后块不看前块」，不是 padding |
+
+结论：encoder 层面两侧输入字节同一、没有任何一侧独有的填充。
+
+### 5.2 窗口级补帧：demo 段尾窗「重复最后一帧」，exec 段永不补
+
+布局 `motion-stage2-1x1024-grid32-demopad17-v1` 的契约（`motion_store.py::LAYOUT_SPECS`）：`demo_min_real=17`、`exec_min_real=33`、`demo_tail_pad=repeat_last`。
+
+- **demo 段**：起点 `s ∈ {0, 32, 64, …}`，合法条件 `s + 16 ≤ es − 1`（至少 17 个真实帧）。实际帧数 `real = min(33, es − s)`；`real < 33` 时窗口为 `[s, …, es−1]` 再重复 **demo 最后一帧 `es−1`** 补到 33 帧，**不借用 exec 的任何一帧**（避免 demo 窗泄露 exec 信息）。每个 episode 最多只有最后 1～2 个 demo 窗需要补。
+- **exec 段**：起点 `u ∈ {0, 32, …}`，合法条件 `u + 32 ≤ t − es`，必须凑齐完整 33 个真实帧才可见，**没有补帧**；没凑够的起点就是「还不可见」，等后面的帧到了再编。
+- **两侧实现**：
+  - 训练（离线抽取）：`scripts/dataset/wan/extract_wan.py` 按 `wan_common.DEMO_TAIL_PAD = "repeat_last"` 补帧，并在每段 `.metadata.json` 记 `real_frames / pad_frames / pad_source_frame`（补帧来源帧号 = `seg_start + seg_len − 1`），表的 `motion_index.json` 行数按 `seg_num_grid(seg_len, min_real, 32)` 计。
+  - 测试（在线）：`framesamp_memory.py::FrameSampMemory._encode_window`——`real = min(W, es − f) if f < es else W`，`frame_ids = [f … f+real−1] + [es−1] × (W − real)`；`real` 不满足段契约或 `demo_tail_pad != repeat_last` 直接 raise。
+  - 前提是**首批 `add_buffer` 必须恰好送整段 demo 加 exec 第 0 帧（共 `es+1` 帧）**并显式传 `exec_start_idx`，否则 raise；这样 demo 段全部窗口在首批一次编完，之后每批 16 帧只推进 exec 网格。
+
+因为 encoder 对补帧窗看到的 33 帧字节在两侧完全相同，所以同一窗口离线表与在线现算可以逐位对拍（`check_stage2_online.py`）。
+
+### 5.3 记忆预算级右填充：零向量 + mask=False，位置号不占
+
+pi0.5 的 JAX jit 要求形状固定，所以两路都填到固定预算，再用 `input_mask` 屏蔽。
+
+**帧路（512 位）**：`even_sampling_indices(t, 32)` 在 `t < 32` 时只取 `t+1` 帧（含 demo 帧，`t` 是全域帧号），不足 32 帧的部分右填充：
+
+| 侧 | 实现 | 填充值 |
+|---|---|---|
+| 训练 | `framesamp_dataset.py::FrameSampDataset._pad` | image bf16 全零、pos f32 全零、state 全零、`static_mask[n:] = False` |
+| 测试 | `framesamp_memory.py::_prepare_frame_sampling` → `shared/data_utils.py::right_padding_token_emb` | 同样右侧补零、mask False |
+
+两侧按帧补、再 `repeat` 到每帧 16 位，交付 dtype 逐键一致（零的 bf16/f32 位型同为全零字节）。
+
+**运动路（96 位）**：合法起点 `k ≤ 96`（超过直接 raise，零截断、不抽稀），其余位填零：
+
+| 侧 | 实现 | 填充值 |
+|---|---|---|
+| 训练 | `framesamp_dataset.py::FrameSampDataset._pad_motion` | `motion_emb` (96,1024) 零、`motion_pos` (96,256) 零、`motion_mask[k:] = False`、时刻用哨兵 `MEM_ORDER_SENTINEL` |
+| 测试 | `framesamp_memory.py::_prepare_motion` | 同式：`emb = zeros(96, 1024)`，`pos = zeros(96, 256)`，`mask[:k] = True`，`pad_times(frames, 96)` |
+
+**填充位在模型里的去向**：
+
+1. 填充行照常过 `motion_encoder_static` / `encoder_static`（输入全零，输出等于 bias），不做特殊处理，与帧路对 padding 帧的处理同构。
+2. `memory_order` 的键用「时刻」排序，padding 时刻记 `int32 最大值` 哨兵，所以**所有 padding 位一并排到记忆区尾部**（帧路 padding 在 motion padding 之前，`kind="stable"` 保证）。
+3. `make_attn_mask` 用 `valid_mask = input_mask[:, None, :] * input_mask[:, :, None]`：padding 位既不被任何 token 看到，也不作为 query 产生有效输出。
+4. `positions = cumsum(input_mask) − 1`：padding 位**不消耗 RoPE 位置号**，真 token 的位置号与其在有效序列里的次序一致，不会因为填充多少而漂移。
+
+**填充比例（代价）**：96 位里平均只有十几个是真 motion token（stride 32 口径比 `docs/motion-memory.md` 记录的 stride 16 时期更稀），episode 早期 `t` 小时帧路也大量填充；这是「零截断 + 形状固定」的既定代价，不是 bug。评估「motion 有没有用」时要按真 motion 数分层看。
+
+### 5.4 一张表对齐两侧
+
+| 层次 | 训练（离线建库 / dataset） | 测试（在线 server） | 是否同式 |
+|---|---|---|---|
+| SigLIP 输入 resize | `resize_with_pad` 256→224，无 pad 边 | 同函数 | 是（权重精度 f32 vs bf16 有 0.33% 差，已拍板） |
+| Wan VAE / 阶段二输入 | 33 帧，无额外 padding | 同 | 是，逐位 |
+| demo 尾窗补帧 | `extract_wan.py` 重复 `es−1` 帧，`real ≥ 17` | `_encode_window` 同式 | 是，逐位 |
+| exec 窗 | 必须 33 真实帧，不补 | 同 | 是 |
+| 帧路不足 32 帧 | `_pad` 右补零 + mask | `right_padding_token_emb` 右补零 + mask | 是 |
+| motion 不足 96 窗 | `_pad_motion` 右补零 + mask + 哨兵时刻 | `_prepare_motion` 同式 | 是 |
+| 超过 96 窗 | raise | raise（官方评估口径；`MMEVLA_MOTION_OVERFLOW=resample` 才抽稀，本模型评估未开） | 是 |
+| 排序与位置号 | `memory_order`，padding 落尾、不占 RoPE 号 | 同一函数对象 | 是 |
+
+---
+
+## 六、训练与推理一致性是怎么保证的
 
 缺任何一条都「不报错、只静默降效果」：
 
@@ -224,7 +296,7 @@ RoboMME 原始 H5（每任务一个 `record_dataset_<Task>.h5`，`episode_{i}/ti
 
 ---
 
-## 六、数字速查
+## 七、数字速查
 
 | 项 | 值 | 出处 |
 |---|---|---|
