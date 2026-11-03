@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="620" viewBox="0 0 1400 620" font-family="Noto Sans CJK SC, PingFang SC, Microsoft YaHei, sans-serif" font-size="14">
+  <defs>
+    <marker id="ar" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#444"/>
+    </marker>
+  </defs>
+  <rect width="1400" height="620" fill="#ffffff"/>
+
+  <!-- 图题 -->
+  <text x="700" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#222">pi0.5 VLA 上 attention map 的采集与分流映射（ctx512 基线 vs ctx512+motion）</text>
+
+  <!-- ===== 第一行：前缀序列 ===== -->
+  <text x="40" y="62" font-size="15" font-weight="bold" fill="#333">① 前缀序列（prefix，一局中每次推理一次）</text>
+
+  <!-- 记忆区 608 -->
+  <rect x="40" y="80" width="530" height="50" fill="#f3f3f3" stroke="#666"/>
+  <text x="48" y="98" font-size="13" fill="#222">记忆区 608（帧 token 与 motion 槽按时刻交错）</text>
+  <g>
+    <rect x="46" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="60" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="74" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="88" y="108" width="12" height="14" fill="#e3903c"/>
+    <rect x="102" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="116" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="130" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="144" y="108" width="12" height="14" fill="#e3903c"/>
+    <rect x="158" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="172" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="186" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="200" y="108" width="12" height="14" fill="#e3903c"/>
+    <rect x="214" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="228" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="242" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="256" y="108" width="12" height="14" fill="#e3903c"/>
+    <rect x="270" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="284" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="298" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="312" y="108" width="12" height="14" fill="#e3903c"/>
+    <rect x="326" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="340" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="354" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="368" y="108" width="12" height="14" fill="#e3903c"/>
+    <rect x="382" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="396" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="410" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="424" y="108" width="12" height="14" fill="#e3903c"/>
+    <rect x="438" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="452" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="466" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="480" y="108" width="12" height="14" fill="#e3903c"/>
+    <rect x="494" y="108" width="12" height="14" fill="#5b8dd6"/>
+    <rect x="508" y="108" width="12" height="14" fill="#e3903c"/>
+    <rect x="522" y="108" width="12" height="14" fill="#cccccc"/>
+    <rect x="536" y="108" width="12" height="14" fill="#cccccc"/>
+    <rect x="550" y="108" width="12" height="14" fill="#cccccc"/>
+  </g>
+  <!-- 当前帧图像 512 -->
+  <rect x="570" y="80" width="450" height="50" fill="#e8eef8" stroke="#666"/>
+  <text x="795" y="110" text-anchor="middle" fill="#222">当前帧图像 512（base 256 + wrist 256）</text>
+  <!-- 文本 64 -->
+  <rect x="1020" y="80" width="60" height="50" fill="#f3f3f3" stroke="#666"/>
+  <text x="1050" y="110" text-anchor="middle" font-size="13" fill="#222">文本 64</text>
+  <!-- 动作 20 -->
+  <rect x="1110" y="80" width="260" height="50" fill="#fdf1e4" stroke="#666"/>
+  <text x="1240" y="100" text-anchor="middle" font-size="13" fill="#222">动作 20（action expert）</text>
+  <text x="1240" y="120" text-anchor="middle" font-size="13" fill="#555">去噪 10 步每步重算</text>
+
+  <!-- 记忆区说明 -->
+  <text x="40" y="150" font-size="13" fill="#333">记忆区 608：512 个帧 token（32 帧×4×4，等距取自 [0,当前步]）</text>
+  <text x="40" y="168" font-size="13" fill="#333">+ 96 个 motion 槽（每槽 1 个 1024 维 token，33 帧窗口）</text>
+  <text x="40" y="186" font-size="13" fill="#333">按时刻交错，交错顺序 = mem_order；padding 排尾部</text>
+  <rect x="40" y="195" width="12" height="12" fill="#5b8dd6"/><text x="58" y="206" font-size="13" fill="#333">帧 token</text>
+  <rect x="130" y="195" width="12" height="12" fill="#e3903c"/><text x="148" y="206" font-size="13" fill="#333">motion 槽</text>
+  <rect x="230" y="195" width="12" height="12" fill="#cccccc"/><text x="248" y="206" font-size="13" fill="#333">padding</text>
+  <text x="40" y="226" font-size="13" fill="#777">ctx512 基线：无 motion 槽，记忆区仅 512 帧 token</text>
+
+  <!-- 竖直箭头：前缀 → Attention（key/value） -->
+  <line x1="600" y1="130" x2="600" y2="290" stroke="#444" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="608" y="215" font-size="13" fill="#444">key / value（KV cache）</text>
+  <!-- 正交箭头：动作 → Attention（query） -->
+  <polyline points="1240,130 1240,240 860,240 860,290" fill="none" stroke="#444" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="1248" y="195" font-size="13" fill="#444">query</text>
+
+  <!-- ===== 第二行：采集点 ===== -->
+  <text x="40" y="270" font-size="15" font-weight="bold" fill="#333">② 采集点</text>
+
+  <rect x="40" y="290" width="230" height="80" fill="#fafafa" stroke="#999" stroke-dasharray="4 3"/>
+  <text x="50" y="313" font-size="13" fill="#333">18 层手工展开</text>
+  <text x="50" y="333" font-size="13" fill="#333">复用 scripts/motion-variance</text>
+  <text x="50" y="353" font-size="13" fill="#333">的 _PatchedAttention，src/ 零改动</text>
+  <line x1="270" y1="330" x2="300" y2="330" stroke="#444" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="300" y="290" width="580" height="80" fill="#e8eef8" stroke="#3b5f9e" stroke-width="1.5"/>
+  <text x="590" y="320" text-anchor="middle" fill="#222">gemma Attention（每层、每头）：probs = softmax(q·k)</text>
+  <text x="590" y="348" text-anchor="middle" fill="#222">形状 (1, 8 头, 20 个动作 query, 1184+20 个 key)</text>
+  <line x1="880" y1="330" x2="920" y2="330" stroke="#444" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <rect x="920" y="290" width="440" height="80" fill="#f3f3f3" stroke="#666"/>
+  <text x="1140" y="320" text-anchor="middle" fill="#222">对 18 层 × 8 头 × 20 query × 10 去噪步取平均</text>
+  <text x="1140" y="348" text-anchor="middle" fill="#222">→ 每个 key 一个分数 a[s]，s∈[0,1204)</text>
+
+  <!-- ===== 第三行：分流 ===== -->
+  <text x="40" y="405" font-size="15" font-weight="bold" fill="#333">③ 用 mem_order 反推分流，再沿时间轴画</text>
+
+  <!-- 正交树：a[s] → 母线 → 四框 -->
+  <line x1="1140" y1="370" x2="1140" y2="420" stroke="#444" stroke-width="1.5"/>
+  <line x1="197" y1="420" x2="1202" y2="420" stroke="#444" stroke-width="1.5"/>
+  <line x1="197" y1="420" x2="197" y2="440" stroke="#444" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="532" y1="420" x2="532" y2="440" stroke="#444" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="867" y1="420" x2="867" y2="440" stroke="#444" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="1202" y1="420" x2="1202" y2="440" stroke="#444" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <!-- 框1 帧流 -->
+  <rect x="40" y="440" width="315" height="120" fill="#e8eef8" stroke="#5b8dd6" stroke-width="1.5"/>
+  <text x="50" y="464" font-size="13" font-weight="bold" fill="#222">帧流：s&lt;608 且 mem_order[s]&lt;512</text>
+  <text x="50" y="488" font-size="13" fill="#333">→ 帧号 mem_order[s]//16</text>
+  <text x="50" y="510" font-size="13" fill="#333">→ 该帧的全域时刻 t</text>
+  <text x="50" y="532" font-size="13" fill="#333">16 个 token 求和得 A_frame(t)</text>
+
+  <!-- 框2 motion 流 -->
+  <rect x="375" y="440" width="315" height="120" fill="#fdf1e4" stroke="#e3903c" stroke-width="1.5"/>
+  <text x="385" y="464" font-size="13" font-weight="bold" fill="#222">motion 流：s&lt;608 且 mem_order[s]≥512</text>
+  <text x="385" y="488" font-size="13" fill="#333">→ 窗口 w = mem_order[s]−512</text>
+  <text x="385" y="510" font-size="13" fill="#333">→ 窗口起点时刻 t_w；A_motion(t_w)</text>
+  <text x="385" y="545" font-size="13" fill="#c0392b">（ctx512 基线无此流）</text>
+
+  <!-- 框3 当前图像 -->
+  <rect x="710" y="440" width="315" height="120" fill="#f3f3f3" stroke="#666"/>
+  <text x="720" y="464" font-size="13" font-weight="bold" fill="#222">当前图像：608≤s&lt;1120</text>
+  <text x="720" y="488" font-size="13" fill="#333">→ base / wrist 各 256 求和</text>
+
+  <!-- 框4 文本+动作 -->
+  <rect x="1045" y="440" width="315" height="120" fill="#f3f3f3" stroke="#666"/>
+  <text x="1055" y="464" font-size="13" font-weight="bold" fill="#222">文本 64 + 动作 20</text>
+  <text x="1055" y="488" font-size="13" fill="#333">→ 按 mask 有效位求和</text>
+
+  <!-- 底部输出说明 -->
+  <text x="40" y="586" font-size="13" fill="#555">输出：① 流内按排名归一化、紫→红着色，横轴 = 全域时刻（含 demo 段），纵轴 = 第几次推理（论文 Figure 9 画法）；</text>
+  <text x="40" y="606" font-size="13" fill="#555">② 跨流总质量占比随推理步变化（帧 / motion / 当前图 / 文本 / 动作）</text>
+</svg>
