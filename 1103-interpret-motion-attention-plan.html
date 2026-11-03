@@ -31,17 +31,64 @@ figure{margin:14px 0}figure img{max-width:100%;border:1px solid var(--line)}figc
 
 <h1>第一部分（给人看）</h1>
 
-<h2>一、要做什么与全部运行一览</h2>
-<p><b>一句话方案</b>：把论文 Figure 9 的「attention 可视化」搬到我们的 VLA 上——不是看 memory encoder 的 cross-attention，而是看 pi0.5 主干里<b>动作 token 对 prefix 的 self-attention</b>，按「帧流 / motion 流 / 当前图像 / 文本」分流后沿全域时间轴画热图，对比<b>官方 ctx512 基线</b>（纯 512 帧 token）与<b>我们的 ctx512+motion concat 1×1024</b>（512 帧 token + 96 motion 槽按时刻交错），任务取 ButtonUnmaskSwap 与 RouteStick 各 10 局，在线仿真真跑。</p>
+<h2>一、打算做什么（四步）</h2>
+<ol>
+<li><b>跑局</b>：两个模型（官方 ctx512、我们的 ctx512+motion）在本机真跑 ButtonUnmaskSwap 和 RouteStick，走和官方评估一模一样的协议。<b>第一阶段</b>只跑每任务 1 局、且两个模型都成功的那局（官方 ctx512 没有 16 任务成功记录，按 concat 模型 seed 42 的成功局升序逐个试，基线成功即停）；<b>第二阶段</b>各 10 局（成功 5 + 失败 5），另等开工令。</li>
+<li><b>记 attention</b>：跑的时候，策略服务端每次推理都把「20 个动作 token 对整条输入的 attention」原样存下来，画图时再把 18 层 × 8 头 × 10 去噪步平均成一个向量。靠复用仓库里已有的 attention 捕获补丁（<code>scripts/motion-variance</code>），不改 <code>src/</code>。</li>
+<li><b>分流</b>：用 <code>mem_order</code> 把这个向量拆成五份：历史帧、motion 槽、当前图像、文本、动作。基线没有 motion 那份。</li>
+<li><b>画图</b>（草图见图 2）：
+  <ul>
+  <li><b>A 热图</b>（论文 Figure 9 画法）：横轴是时间（含 demo 段），纵轴是第几次推理，颜色是「这次推理在回看哪一段历史」；motion 模型多一栏 motion 流。回答「它在看哪儿」。</li>
+  <li><b>B 占比图</b>：五份各占多少注意力，随推理步变化。回答「多出来的 motion 槽到底分走多少注意力」。</li>
+  <li><b>C 分层柱图</b>：18 层里 motion 在哪几层被读。</li>
+  <li><b>D 缩略图</b>：每局挑 3 个时刻，把注意力最高的 3 帧和最高的 motion 窗口贴出来给人看。</li>
+  </ul></li>
+</ol>
 
+<h2>二、保存哪些 attention</h2>
 <table>
-<tr><th>批次</th><th>模型</th><th>任务 × 局数</th><th>在哪跑</th><th>产物</th></tr>
-<tr><td>R-CTX</td><td>官方 <code>perceptual-framesamp-context/79999</code>（<code>motion.enabled=false</code>，<code>budget 512</code>，<code>token_per_image 16</code>）</td><td>ButtonUnmaskSwap 10 + RouteStick 10 = 20 局</td><td>本机 GPU0（无 sidecar）</td><td>逐次推理 attention npz + 官方协议的 accepted json + 视频</td></tr>
-<tr><td>R-MOT</td><td><code>orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/59999</code>（<code>stage2_pool4_concat</code>，motion 96 槽）</td><td>同一批 20 局（同 episode_id）</td><td>本机 GPU1（策略与 stage2 sidecar 同卡，<code>--motion-online-gpu 1</code>）</td><td>同上</td></tr>
+<tr><th>存</th><th>张量</th><th>形状（f16）</th><th>单次推理</th><th>说明</th></tr>
+<tr><td>✅</td><td><code>probs_action</code></td><td>(10 去噪步, 18 层, 8 头, 20 动作 query, P+20 key)</td><td>约 70 MB</td><td>主数据，任何聚合、任何画法都从它算</td></tr>
+<tr><td>✅</td><td><code>probs_text</code></td><td>(18 层, 8 头, 64 文本 query, P key)</td><td>约 22 MB</td><td>文本 token 看历史的那 64 行（用户「文本也要」）；它来自 prefill 阶段，只取这 64 行</td></tr>
+<tr><td>❌</td><td>prefill 阶段 prefix 自身的全量 attention（记忆区、当前图像互看）</td><td>(18, 8, P, P)</td><td>约 200 MB</td><td><b>不存</b>（用户 2026-11-03）</td></tr>
+<tr><td>✅</td><td>元数据</td><td>—</td><td>&lt; 1 MB</td><td><code>mem_order</code>、记忆区 mask、32 个帧号、96 个 motion 窗口起点、<code>step_idx</code>、<code>exec_start_idx</code>、文本有效长度、本次动作 (20,8)、top-3 帧号</td></tr>
 </table>
-<p>合计 40 局。参照 10-31 官方 800 局的实测（concat 模型两任务每局墙钟均值 RouteStick 29.3 s、ButtonUnmaskSwap 31.2 s，含仿真），即使 attention 采集把推理放慢 2～3 倍，两批<b>并行各占一卡</b>也在 1.5 小时内；本机 A6000 数字与 A40／A100 历史耗时不混比。</p>
+<p>P = prefix 长度：基线 1088，motion 模型 1184。第一阶段 2 局约 5 GB，第二阶段 40 局约 90 GB，都落本机 <code>v1-store/evaluation/interpret-1103/</code>，不进 git。</p>
 
-<h3>已定口径（用户 2026-11-03 拍板，原话逐字）</h3>
+<h2>三、已定口径（摘要）</h2>
+<ul>
+<li>K1 看 VLA 主干的 self-attention，不看 memory encoder；K4 query = 动作 token，默认全层全头全步平均（原始张量都在，可改）。</li>
+<li>K2 对比官方 <code>perceptual-framesamp-context/79999</code> vs <code>orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/59999</code>。</li>
+<li>K3 在线仿真重跑，官方协议；K8 本机 GPU0 基线、GPU1 motion+sidecar；K9 不登记状态机。</li>
+<li>K5／K7／K11 任务 ButtonUnmaskSwap、RouteStick；第一阶段两模型都成功的各 1 局，第二阶段各 10 局。</li>
+<li>K10 原始 attention f16 全存，含文本 query 行，不含 prefix 自身全量。</li>
+</ul>
+
+<figure>
+<img src="docs/figures/attn-capture-pipeline.svg" alt="attention 采集与分流映射">
+<figcaption>图 1　从 prefix 序列到动作 token attention 的采集点、聚合与分流映射（基线无 motion 流）。</figcaption>
+</figure>
+<figure>
+<img src="docs/figures/attn-figures-mockup.svg" alt="四类图草图">
+<figcaption>图 2　四类图的版式草图（示意数据，非真实结果）。</figcaption>
+</figure>
+<p>第一部分到此为止；机制细节、模型与局清单、判定行、步骤、分工、逐文件改动、runbook、风险与盲区全部在第二部分。</p>
+
+<h1>第二部分（技术细节，供 agent 追踪）</h1>
+
+<h2>〇、前置声明与红线</h2>
+<ol start="0">
+<li>环境 A；GPU 实测 2×RTX A6000（用户裁决按 A 走）。全部在本机跑（K8）：GPU0 基线、GPU1 motion+sidecar；不连 GreatLakes、不提交 Slurm。</li>
+<li><code>src/</code>、<code>examples/</code>、<code>third_party/</code>、<code>scripts/training/</code> 零 diff（闸：<code>git diff --quiet &lt;BASE&gt;..HEAD -- src examples third_party scripts/training</code>）。</li>
+<li>采集只读 <code>probs</code>；禁止改 <code>input_mask</code>／<code>positions</code>／mask 任何一层；禁止在 <code>src/mme_vla_suite/policies/</code> 下出现 <code>MotionStore</code>（既有静态闸 <code>check_config_provenance.py</code>）。</li>
+<li>官方协议不动：<code>eval.py</code> 的 <code>profile=official</code> 校验（test、1300 步、16 帧包、seed 42）原样；manifest 走 <code>make_manifest</code> 签封。</li>
+<li>执行局的动作由展开版产生（与热图同源）；不得在 npz 外另行「修正」动作。</li>
+<li>原始 attention 约 90 GB 全落 <code>v1-store/evaluation/interpret-1103/</code>（K10），不进 git、不上传；<code>np.savez</code> 不压缩（概率张量压不动，省 CPU）。NFS 一律只读（rsync 源、两套解释器）；本机只写 <code>v1-store/models/official-mme-vla/</code>、<code>v1-store/assets/</code>、<code>v1-store/evaluation/interpret-1103/</code>、<code>v1-store/logs/</code>、<code>.venv/</code>。</li>
+<li>tmux 前缀 <code>ia-</code>；清理只用 <code>tmux kill-session -t '=确切名'</code>，删前删后各 <code>tmux ls</code>。</li>
+<li>XLA 口径与 motion-variance 一致：<code>XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'</code>，所有 python 入口硬闸。</li>
+</ol>
+
+<h3>已定口径全表（用户 2026-11-03 拍板，原话逐字；第一部分只留摘要）</h3>
 <table>
 <tr><th>#</th><th>口径</th><th>依据</th></tr>
 <tr><td>K1</td><td>看的是 <b>VLA 主干自身的 attention</b>，不是 memory encoder：「我要的不是对于 encoder 做 cross attention，我要的是在 VLA 上……因为我们是通过 context 的方式来注入的……要看这个在对 VLA 上的 attention map」</td><td>§二</td></tr>
@@ -57,16 +104,17 @@ figure{margin:14px 0}figure img{max-width:100%;border:1px solid var(--line)}figc
 <tr><td>K10</td><td><b>原始 attention 全存、后期再画</b>：用户原话「是否可以先记录所有的attn？ 记录所有源数据 后期我再画图不同形式？」「同意 修改 f16就可以 文本也要」。每次推理落盘平均前的完整张量：动作 query 的 (10 去噪步, 18 层, 8 头, 20 query, P+20 key) 与 prefill 阶段文本 query 的 (18, 8, 64, P)，均 f16；画图脚本只读盘</td><td>§2.3、第二部分 §1.3</td></tr>
 </table>
 
-<h2>二、机制：在 pi0.5 上 attention 怎么采、怎么分流</h2>
+<h2>〇′、机制、对象、改动一览、判定行、步骤与分工（自第一部分移入，内容不变）</h2>
+<h3>二、机制：在 pi0.5 上 attention 怎么采、怎么分流</h3>
 
-<h3>2.1 序列与可见关系（现状，不改）</h3>
+<h4>2.1 序列与可见关系（现状，不改）</h4>
 <p>prefix = <code>[记忆区 | 当前帧图像 512 | 文本 64]</code>，其后是动作专家的 20 个动作 token。记忆区在基线里是 512 个帧 token（32 帧 × 4×4，等距取自 <code>[0, 当前步]</code>）；在 concat 模型里是 512 帧 token + 96 motion 槽共 608 位，两路按时刻稳定排序交错，置换存在 <code>obs.mem_order</code>（<code>HistoryPi0.embed_memory</code> 里 <code>jnp.take_along_axis(tokens, obs.mem_order[:, :, None], axis=1)</code>），padding 排尾部、mask 为 False、不占位置号。可见关系（<code>make_attn_mask</code> 的 ar／na／input 三层 mask）：记忆区双向；当前图像看不到记忆区；文本看记忆区；<b>动作看全部</b>。因此 query 取动作 token 时，key 覆盖整条 prefix（含 motion 槽）+ 20 个动作 token，正是 K1／K4 要的那张图。</p>
 
-<h3>2.2 采集点：<code>gemma.Attention</code> 的 <code>probs</code></h3>
+<h4>2.2 采集点：<code>gemma.Attention</code> 的 <code>probs</code></h4>
 <p><code>src/openpi/models/gemma.py::Attention.__call__</code> 里 <code>logits = einsum("BTKGH,BSKH->BKGTS")</code> → <code>masked_logits = where(attn_mask, logits, big_neg)</code> → <code>probs = softmax(masked_logits).astype(dtype)</code>，<code>probs</code> 只是局部变量，模型没有任何 <code>output_attentions</code> 开关；主干 18 层是 <code>nn.scan</code> 扫出来的，在 scan 体里追加到 Python 列表会泄漏 tracer。仓库已有解法：<code>scripts/motion-variance/mv_model_adapter.py</code> 的 <code>_make_patched_attention()</code> 把 <code>Attention.__call__</code> 全文照抄、只把 softmax 拆成 f32 概率 + astype 两句并追加到 <code>_CAPTURE</code>，配合 <code>_build_unrolled()</code> 把 18 层按 <code>block.apply({"params": p_l}, …)</code> 手工展开，每层调一次 <code>_capture_attn</code> 拿到该层 <code>probs</code>（形状 <code>(b, 1 kv头, 8 头, T, S)</code>）。这套东西已经过 <code>UNROLL_VS_SCAN_F32</code>／<code>LAYER_SELFCHECK_F32</code>／<code>ATTN_UNIFORM_SELFCHECK</code> 三道闸，<b>本计划原样复用其机制，<code>src/</code> 零改动</b>。</p>
 <p>去噪 10 步（<code>sample_actions</code> 的 <code>while_loop</code>，<code>dt=-1/10</code>）每步动作 token 都重新过 18 层，所以每次推理得到的原始量是 <code>probs[step][layer]</code>，形状 <code>(1, 1, 8, 20, P+20)</code>，<code>P</code> = prefix 长度（基线 512+512+64=1088，concat 608+512+64=1184）。</p>
 
-<h3>2.3 聚合（K4）与分流映射</h3>
+<h4>2.3 聚合（K4）与分流映射</h4>
 <pre>a[s] = mean_{step∈10} mean_{layer∈18} mean_{head∈8} mean_{query∈20 动作 token} probs[step][layer][0,0,head,query,s]      # s ∈ [0, P+20)
 a_layer[l, s] = 同上但不对 layer 平均                                                                           # (18, P+20)，供分层观察</pre>
 <p>分流靠数据侧的四个量反推（都在 <code>MME_VLA_Policy._prepare_history</code> 已算出：<code>static_mask</code>、<code>motion_mask</code>、<code>mem_order</code>，帧号来自 <code>get_frame_sampling_indices</code>、窗口起点来自 <code>_prepare_motion</code> 的 <code>motion_times</code>）：</p>
@@ -81,12 +129,8 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <p>padding 位（mask False）的 <code>a[s]</code> 被 softmax 的 <code>big_neg</code> 压为 0，不参与任何归一化。</p>
 <p><b>K10：平均是画图时做的，不是落盘时做的。</b>服务端存的是平均前的原始张量 <code>probs_action</code>（10 步 × 18 层 × 8 头 × 20 query × (P+20)，f16，约 70 MB／次推理）与 <code>probs_text</code>（prefill 阶段 64 个文本 token 作 query 的 18 × 8 × 64 × P，f16，约 22 MB／次），上面的 <code>a</code>、<code>a_layer</code> 都由 <code>aggregate_attn.py</code> 从盘上算；以后换 query（文本 token）、换聚合（某几层、某几头、最后一步去噪）都不用重跑。40 局约 1000 次推理，合计约 90 GB，落 <code>v1-store/evaluation/interpret-1103/</code>，不进 git。</p>
 
-<figure>
-<img src="docs/figures/attn-capture-pipeline.svg" alt="attention 采集与分流映射">
-<figcaption>图 1　从 prefix 序列到动作 token attention 的采集点、聚合与分流映射（基线无 motion 流）。</figcaption>
-</figure>
 
-<h3>2.4 画什么（照论文 Figure 9 的呈现法，加两张我们需要的）</h3>
+<h4>2.4 画什么（照论文 Figure 9 的呈现法，加两张我们需要的）</h4>
 <table>
 <tr><th>图</th><th>横轴 / 纵轴</th><th>值</th><th>回答什么</th></tr>
 <tr><td>A 流内时间热图（论文法）</td><td>横轴 = 全域帧号 0…T（demo 段用竖线标 <code>exec_start_idx</code>）；纵轴 = 第几次推理（每 16 步一次）</td><td>每行内<b>按流分别</b>把 <code>A_frame(t)</code>／<code>A_motion(t_w)</code> 排名归一化，紫→红；左右两栏分别是帧流与 motion 流，基线只有帧流</td><td>模型在每个决策点回看的是哪段历史；motion 流是否盯着 swap 时刻（ButtonUnmaskSwap）或 demo 的路径段（RouteStick）</td></tr>
@@ -95,12 +139,8 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <tr><td>D 最高注意力帧缩略图（论文图 9 右侧那种）</td><td>每局 3 个决策点（exec 1/4、1/2、3/4 处）</td><td>帧流前 3 名的原始帧 + motion 流前 1 名窗口的首尾帧</td><td>给人看「它在看什么」</td></tr>
 </table>
 <p>每张图都按「任务 × 模型 × 成功/失败」分面：A 图逐局一张（40 张）+ 成功/失败各一张平均；B、C 图平均并画 20 局的带。</p>
-<figure>
-<img src="docs/figures/attn-figures-mockup.svg" alt="四类图草图">
-<figcaption>图 2　四类图的版式草图（示意数据，非真实结果；用户 2026-11-03 认可）。</figcaption>
-</figure>
 
-<h3>2.5 ⚠ 陷阱与反例</h3>
+<h4>2.5 ⚠ 陷阱与反例</h4>
 <ul>
 <li><b>不能改 <code>input_mask</code>、不能动 <code>positions</code></b>：采集只读 <code>probs</code>，不插任何门控；<code>positions = cumsum(input_mask) − 1</code> 原样。</li>
 <li><b>手工展开 vs <code>nn.scan</code> 不逐位</b>：bf16 下是两份 XLA 编译产物，motion-variance 实测 <code>rel_fro≈3e-3</code>；语义等价只能靠 f32 闸判定。本计划执行局里<b>真正下发给仿真的动作就是展开版算出来的</b>，所以热图和动作同源；展开版与生产版的差异另用 <code>ATTN_SELFTEST</code> 闸量化（§四），并把 40 局的成功数与 10-31 同 episode 的官方结局并列报告，不宣称可替代官方成功率。</li>
@@ -110,7 +150,7 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <li><b>motion 槽在局初为空</b>：demo 段至少 17 个真实帧才成窗、exec 段要 33 帧，ButtonUnmaskSwap 无 demo（<code>demo_frames=0</code>），前两次推理 motion 流全是 padding，A 图对应行留白而非画 0。</li>
 </ul>
 
-<h2>三、两个模型、两个任务、20 局是哪些</h2>
+<h3>三、两个模型、两个任务、20 局是哪些</h3>
 <table>
 <tr><th>项</th><th>官方 ctx512（R-CTX）</th><th>ctx512+motion concat（R-MOT）</th></tr>
 <tr><td>checkpoint</td><td>HF <code>Yinpei/mme_vla_suite@5db4d53d</code> <code>perceptual-framesamp-context/79999.zip</code> → 解压到本机 <code>v1-store/models/official-mme-vla/perceptual-framesamp-context/79999</code>（下载脚本抄 <code>docs/training-doc/eval-3seed-context-vs-motion/download_official.sh</code>）</td><td>本机 <code>v1-store/assets/vla-o16cc-59999/59999</code>（自 <code>$E/v1-store/assets/vla-o16cc-59999-bd35a857…/</code> rsync，连同 <code>history_config.*</code>、<code>manifests/</code>、<code>encoder_dependencies*</code>）</td></tr>
@@ -128,7 +168,7 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 </table>
 <p>语言目标（<code>task_goal.py</code>）：ButtonUnmaskSwap「first press both buttons on the table, then pick up the container hiding the {c0} cube, finally pick up another container hiding the {c1} cube」；RouteStick「watch the video carefully, then use the stick attached to the robot to navigate around the sticks on the table, following the same path」。</p>
 
-<h2>四、我们这一侧要改什么（先说为什么非改不可）</h2>
+<h3>四、我们这一侧要改什么（先说为什么非改不可）</h3>
 <p>现有评估链路（<code>official_queue.py</code> → <code>resident_worker.py</code> → <code>serve_policy.py</code> + <code>eval.py</code>）完全不吐 attention，而 K3 要求走真实在线协议，所以必须换一个会落盘 attention 的服务端；又因 <code>resident_worker.py</code> 把 worker 绑死在 Slurm step 内（<code>worker必须在指定JobID的GPU srun step内执行</code>），本机（K8）需要一个不经队列、直接「起服务端 → 跑一个 5 局 chunk 的 <code>eval.py</code> → 收尾」的本地驱动。客户端 <code>eval.py</code>、manifest 签封、身份校验、视频一律不动。</p>
 <table>
 <tr><th>文件</th><th>锚点</th><th>改什么</th><th>关闭态</th><th>开启态</th></tr>
@@ -141,7 +181,7 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 </table>
 <p><code>src/</code>、<code>examples/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code> 全部零改动。</p>
 
-<h2>五、验收判定行</h2>
+<h3>五、验收判定行</h3>
 <table>
 <tr><th>判定行</th><th>查什么 / 怎么查</th><th>过了说明什么</th></tr>
 <tr><td><code>OFFICIAL_CTX_ASSET=PASS sha256=387d4bd5… bytes=11574223742 files=&lt;n&gt;</code></td><td>下载 zip 三方核 sha256（HF LFS、钉死值、本地），解压后文件数与 <code>history_config.txt</code> 存在</td><td>基线权重身份钉死（第 15 条）</td></tr>
@@ -155,7 +195,7 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <tr><td><code>ATTN_PLOT=PASS figs=&lt;n&gt;</code> + 主会话目视复查</td><td>A/B/C/D 图生成；按第 2 条画图规则渲染后亲眼看坐标轴、图例、留白</td><td>可交付</td></tr>
 </table>
 
-<h2>六、实施步骤</h2>
+<h3>六、实施步骤</h3>
 <table>
 <tr><th>阶段</th><th>内容</th><th>判据</th></tr>
 <tr><td>P0</td><td>开工前审查子代理审本计划自相矛盾处</td><td><code>PLAN_CONSISTENCY_REVIEW=PASS base=&lt;sha&gt;</code></td></tr>
@@ -167,10 +207,10 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <tr><td>P6</td><td>汇总、出图、目视复查、写档案 <code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/{launch,result}.md</code>、核对 <code>tmux ls</code> 本轮会话全部退出</td><td><code>ATTN_AGG</code>、<code>ATTN_PLOT</code></td></tr>
 </table>
 
-<h2>七、子代理分工与合并（简述）</h2>
+<h3>七、子代理分工与合并（简述）</h3>
 <p>拆三块、写集不相交：S1 写采集适配器与自检（最难、最先合）；S2 写服务端、manifest 与 worker 的两键钩子；S3 写汇总与画图（只依赖 npz 键名契约，见第二部分 §1.3）。顺序 S1 → S2 → S3 逐个 <code>--no-ff</code> 合回 <code>v4.1-interpretMotion</code>；每次合并前由 sonnet 审查子代理钉 BASE/TIP 审「越界、契约、前缀」，合并后主会话跑 S1 自检 + S2/S3 的单测。下载、rsync、<code>uv sync</code>、tmux、Monitor、40 局起跑全部主会话自做。</p>
 
-<h2>八、交接顺序与状态机登记</h2>
+<h3>八、交接顺序与状态机登记</h3>
 <ul>
 <li>任务 id：<code>interpret-attn-ctx512-vs-motion</code>。</li>
 <li>第一阶段交接前必须完成：<code>OFFICIAL_CTX_ASSET</code>、<code>LOCAL_ASSETS</code>、<code>LOCAL_ENVS</code>、<code>ATTN_SELFTEST</code>、两份 <code>STAGE1_PAIR</code>、<code>ATTN_AGG</code>、<code>ATTN_PLOT</code>；第二阶段另加两份 <code>RUN20</code>。</li>
@@ -179,21 +219,9 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <li>下游：<code>gl-orig100-ctx-reproduce-train</code> 交付后可用同一脚本补「同口径 ctx512 无 motion」一组，届时另起计划。</li>
 <li>用户裁决（2026-11-03）：<b>不登记</b>进 <code>docs/handoff/current.json</code>；交接走人工，本节只作留档。</li>
 </ul>
-<p>第一部分到此为止；逐文件改动、分配表、契约、runbook、风险与盲区见第二部分。</p>
 
-<h1>第二部分（技术细节，供 agent 追踪）</h1>
 
-<h2>〇、前置声明与红线</h2>
-<ol start="0">
-<li>环境 A；GPU 实测 2×RTX A6000（用户裁决按 A 走）。全部在本机跑（K8）：GPU0 基线、GPU1 motion+sidecar；不连 GreatLakes、不提交 Slurm。</li>
-<li><code>src/</code>、<code>examples/</code>、<code>third_party/</code>、<code>scripts/training/</code> 零 diff（闸：<code>git diff --quiet &lt;BASE&gt;..HEAD -- src examples third_party scripts/training</code>）。</li>
-<li>采集只读 <code>probs</code>；禁止改 <code>input_mask</code>／<code>positions</code>／mask 任何一层；禁止在 <code>src/mme_vla_suite/policies/</code> 下出现 <code>MotionStore</code>（既有静态闸 <code>check_config_provenance.py</code>）。</li>
-<li>官方协议不动：<code>eval.py</code> 的 <code>profile=official</code> 校验（test、1300 步、16 帧包、seed 42）原样；manifest 走 <code>make_manifest</code> 签封。</li>
-<li>执行局的动作由展开版产生（与热图同源）；不得在 npz 外另行「修正」动作。</li>
-<li>原始 attention 约 90 GB 全落 <code>v1-store/evaluation/interpret-1103/</code>（K10），不进 git、不上传；<code>np.savez</code> 不压缩（概率张量压不动，省 CPU）。NFS 一律只读（rsync 源、两套解释器）；本机只写 <code>v1-store/models/official-mme-vla/</code>、<code>v1-store/assets/</code>、<code>v1-store/evaluation/interpret-1103/</code>、<code>v1-store/logs/</code>、<code>.venv/</code>。</li>
-<li>tmux 前缀 <code>ia-</code>；清理只用 <code>tmux kill-session -t '=确切名'</code>，删前删后各 <code>tmux ls</code>。</li>
-<li>XLA 口径与 motion-variance 一致：<code>XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'</code>，所有 python 入口硬闸。</li>
-</ol>
+
 
 <h2>一、逐文件改动清单</h2>
 
