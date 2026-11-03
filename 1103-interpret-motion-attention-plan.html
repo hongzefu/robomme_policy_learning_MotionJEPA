@@ -33,12 +33,14 @@ figure{margin:14px 0}figure img{max-width:100%;border:1px solid var(--line)}figc
 
 <h2>一、打算做什么（四步）</h2>
 <ol>
-<li><b>跑局</b>：两个模型（官方 ctx512、我们的 ctx512+motion）在本机真跑 ButtonUnmaskSwap 和 RouteStick，走和官方评估一模一样的协议。<b>第一阶段</b>只跑每任务 1 局、且两个模型都成功的那局（官方 ctx512 没有 16 任务成功记录，按 concat 模型 seed 42 的成功局升序逐个试，基线成功即停）；<b>第二阶段</b>各 10 局（成功 5 + 失败 5），另等开工令。</li>
+<li><b>跑局</b>：两个模型（官方 ctx512、我们的 ctx512+motion）在本机真跑 <b>ButtonUnmaskSwap</b>，走和官方评估一模一样的协议。<b>第一阶段</b>只跑 1 局、且两个模型都成功的那局（官方 ctx512 没有 16 任务成功记录，按 concat 模型 seed 42 的成功局 4→8→11→12→17 逐个试，基线成功即停，再让 concat 复跑确认）。RouteStick 先不做（用户 2026-11-03）；第二阶段 10 局另等开工令。</li>
 <li><b>记 attention</b>：跑的时候，策略服务端每次推理都把「20 个动作 token 对整条输入的 attention」原样存下来，画图时再把 18 层 × 8 头 × 10 去噪步平均成一个向量。靠复用仓库里已有的 attention 捕获补丁（<code>scripts/motion-variance</code>），不改 <code>src/</code>。</li>
 <li><b>分流</b>：用 <code>mem_order</code> 把这个向量拆成五份：历史帧、motion 槽、当前图像、文本、动作。基线没有 motion 那份。</li>
-<li><b>画图</b>（草图见图 2）：
+<li><b>只看一次推理</b>：ButtonUnmaskSwap 的关键决策是「揭开」——按完两个按钮后第一次夹爪闭合并抬起目标容器的那次推理。只分析这一次推理的 attention（单步，不跨推理平均），看它有没有盯住两处：① 帧流里<b>方块还没被盖住的早期帧</b>（全域帧 0～32，容器被抬走、方块裸露）；② motion 流里<b>容器交换那几段</b>（全域帧 64～64+50k，k 为交换次数 1～3）。</li>
+<li><b>画图</b>（草图见图 2，其中 A 改为只画关键推理那一行的放大版；B/C 取该次推理）：
   <ul>
-  <li><b>A 热图</b>（论文 Figure 9 画法）：横轴是时间（含 demo 段），纵轴是第几次推理，颜色是「这次推理在回看哪一段历史」；motion 模型多一栏 motion 流。回答「它在看哪儿」。</li>
+  <li><b>A 热图</b>（论文 Figure 9 画法）：横轴是时间，纵轴是第几次推理，颜色是「这次推理在回看哪一段历史」；motion 模型多一栏 motion 流；关键推理那一行加粗框，并在横轴上标出「裸露窗口 [0,32)」与「交换窗口」。回答「它在看哪儿」。</li>
+  <li><b>A′ 关键推理放大图</b>：只取「揭开」那次推理，帧流按 32 帧画柱、motion 流按窗口画柱，底色标裸露窗口与交换窗口；并给两个数：落在裸露窗口帧上的注意力质量占帧流的比例、落在交换窗口 motion 槽上的质量占 motion 流的比例，各自与均匀分布下的期望值并列。两模型并排。</li>
   <li><b>B 占比图</b>：五份各占多少注意力，随推理步变化。回答「多出来的 motion 槽到底分走多少注意力」。</li>
   <li><b>C 分层柱图</b>：18 层里 motion 在哪几层被读。</li>
   <li><b>D 缩略图</b>：每局挑 3 个时刻，把注意力最高的 3 帧和最高的 motion 窗口贴出来给人看。</li>
@@ -53,14 +55,14 @@ figure{margin:14px 0}figure img{max-width:100%;border:1px solid var(--line)}figc
 <tr><td>❌</td><td>prefill 阶段 prefix 自身的全量 attention（记忆区、当前图像互看）</td><td>(18, 8, P, P)</td><td>约 200 MB</td><td><b>不存</b>（用户 2026-11-03）</td></tr>
 <tr><td>✅</td><td>元数据</td><td>—</td><td>&lt; 1 MB</td><td><code>mem_order</code>、记忆区 mask、32 个帧号、96 个 motion 窗口起点、<code>step_idx</code>、<code>exec_start_idx</code>、文本有效长度、本次动作 (20,8)、top-3 帧号</td></tr>
 </table>
-<p>P = prefix 长度：基线 1088，motion 模型 1184。第一阶段 2 局约 5 GB，第二阶段 40 局约 90 GB，都落本机 <code>v1-store/evaluation/interpret-1103/</code>，不进 git。</p>
+<p>P = prefix 长度：基线 1088，motion 模型 1184。第一阶段 1 局（含试错最多 10 次运行）约 2～10 GB，第二阶段 40 局约 90 GB，都落本机 <code>v1-store/evaluation/interpret-1103/</code>，不进 git。</p>
 
 <h2>三、已定口径（摘要）</h2>
 <ul>
 <li>K1 看 VLA 主干的 self-attention，不看 memory encoder；K4 query = 动作 token，默认全层全头全步平均（原始张量都在，可改）。</li>
 <li>K2 对比官方 <code>perceptual-framesamp-context/79999</code> vs <code>orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k/59999</code>。</li>
 <li>K3 在线仿真重跑，官方协议；K8 本机 GPU0 基线、GPU1 motion+sidecar；K9 不登记状态机。</li>
-<li>K5／K7／K11 任务 ButtonUnmaskSwap、RouteStick；第一阶段两模型都成功的各 1 局，第二阶段各 10 局。</li>
+<li>K5／K7／K11／K12 任务只做 ButtonUnmaskSwap（RouteStick 先不做）；第一阶段两模型都成功的 1 局；只分析「揭开」那一次推理；第二阶段 10 局另等开工令。</li>
 <li>K10 原始 attention f16 全存，含文本 query 行，不含 prefix 自身全量。</li>
 </ul>
 
@@ -101,6 +103,7 @@ figure{margin:14px 0}figure img{max-width:100%;border:1px solid var(--line)}figc
 <tr><td>K8</td><td>运行位置本机（用户原话「在本地运行」）。本机现状：策略 <code>.venv</code> 为空壳（site-packages 仅 3 项，需 <code>uv sync</code>）；无 sidecar／仿真 venv，但 NFS 的 <code>$E/v1-store/envs/stage2/bin/python</code>（torch 2.9.0+cu128，<code>cuda.is_available()=True</code>）与 <code>$E/v1-store/envs/official-sim/bin/python</code>（robomme 可导入，editable 指向 release 420ae98 的 <code>third_party/robomme_benchmark/src</code>，其 gitlink <code>856bc3a</code> 与本分支一致）在本机实测可直接用；权重两份都要落到本机 <code>v1-store/</code>（官方 79999 自 HF 下载 11.6 GB，concat 59999 自 NFS rsync 13 GB，stage2 encoder 自 NFS 拷 1 份）；Vulkan 1.4.303 可见 A6000</td><td>§五</td></tr>
 <tr><td>K9</td><td>不登记状态机（用户原话「不登记」）；交接走人工</td><td>§八</td></tr>
 <tr><td>K11</td><td><b>分两阶段；第一阶段只跑「两模型都成功」的各 1 局</b>。用户原话「先只测一句成功的 routestick和buttonunmaskswap都是 两个model都成功的」。官方 ctx512 在 16 任务上没有评估记录，哪局成功未知，故第一阶段按 concat 模型 seed 42 的成功局 episode_id 升序逐局试基线（RouteStick 1→8→9→10→13，ButtonUnmaskSwap 4→8→11→12→17），基线成功即停，再用 concat 模型跑同一局确认也成功；每次尝试的 attention 都落盘不丢。第二阶段 20 局（K7）另等开工令</td><td>§三、§六</td></tr>
+<tr><td>K12</td><td><b>只做 ButtonUnmaskSwap，只看「揭开」单次推理</b>。用户原话「对于unmaskswap任务你需要重点看 frame里面第一针没被mask的情况 和 swap的motion 有没有被注意力注意到」「你只关心关键决策 ummask动作那一刻这个动作 的 注意力 单步的 然后routestick先不做了」。关键时刻由环境 <code>ButtonUnmaskSwap.step</code> 定：容器抬走露出方块 <code>lift_and_drop_objects_back_to_original(start 0, end 64)</code>（中点约 32 帧落回）；交换 <code>swap_schedule</code> 为 [64,114)、[114,164)、[164,214)（按 <code>swap_times</code> 取前 k 段）；「揭开」= <code>is_bin_pickup</code>（目标容器 z &gt; 0.15）首次为真之前、发出那段动作的推理</td><td>§一</td></tr>
 <tr><td>K10</td><td><b>原始 attention 全存、后期再画</b>：用户原话「是否可以先记录所有的attn？ 记录所有源数据 后期我再画图不同形式？」「同意 修改 f16就可以 文本也要」，2026-11-03 最终确认「好的就保留这些」（去噪 action 全存 + prefill 文本 64 行）。每次推理落盘平均前的完整张量：动作 query 的 (10 去噪步, 18 层, 8 头, 20 query, P+20 key) 与 prefill 阶段文本 query 的 (18, 8, 64, P)，均 f16；画图脚本只读盘</td><td>§2.3、第二部分 §1.3</td></tr>
 </table>
 
@@ -159,7 +162,7 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <tr><td>prefix 长度 P</td><td>1088</td><td>1184</td></tr>
 <tr><td>已知成功率（参考）</td><td>4 任务 200 局 24.5%（三 seed）；16 任务无记录</td><td>16 任务 800 局 37.33 ± 0.59%；seed 42 下 ButtonUnmaskSwap 12/50、RouteStick 16/50</td></tr>
 </table>
-<p><b>第一阶段（K11）</b>：目标 2 局——RouteStick 与 ButtonUnmaskSwap 各 1 局，两模型都成功。候选序列见 K11，每试一局两模型各跑一次（基线先跑），最多试 5 局；5 局都不成就把逐局结局交用户定。判定行 <code>STAGE1_PAIR=PASS task=&lt;t&gt; ep=&lt;id&gt; ctx=success motion=success tries=&lt;n&gt;</code>。</p>
+<p><b>第一阶段（K11／K12）</b>：目标 1 局——ButtonUnmaskSwap，两模型都成功。候选 4→8→11→12→17，每试一局两模型各跑一次（基线先跑），最多试 5 局；5 局都不成就把逐局结局交用户定。判定行 <code>STAGE1_PAIR=PASS task=ButtonUnmaskSwap ep=&lt;id&gt; ctx=success motion=success tries=&lt;n&gt;</code>、<code>KEY_STEP=…</code> ×2。RouteStick 暂缓。</p>
 <p><b>第二阶段 20 局清单（K7，另等开工令）</b>，取自 <code>$E/v1-store/evaluation/official-stage2-1026/o16cc-60k-seed42/run800/accepted/</code> 的 <code>outcome</code>，episode_id 升序各取 5：</p>
 <table>
 <tr><th>任务</th><th>concat 成功局</th><th>concat 失败局</th><th>局长参考</th></tr>
@@ -202,7 +205,7 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <tr><td>P1</td><td>资产与环境（与 P2 并行，均 tmux）：下载官方 79999（<code>ia-dl-ctx79999</code>）；rsync concat 59999 与 stage2 encoder（<code>ia-rsync-assets</code>）；<code>UV_CACHE_DIR=v1-store/cache/uv UV_LINK_MODE=copy uv sync</code> 重建本机 <code>.venv</code>（<code>ia-uv-sync</code>）</td><td><code>OFFICIAL_CTX_ASSET</code>、<code>LOCAL_ASSETS</code>、<code>LOCAL_ENVS</code> 均 PASS</td></tr>
 <tr><td>P2</td><td>S1／S2／S3 三个 worktree 子代理并行写代码；S1 自检在 P1 完成后由主会话在 GPU0 跑（≤5 min）</td><td><code>ATTN_SELFTEST=PASS</code>、<code>CFG_RESOLVE=PASS</code>、各 <code>sub/</code> 提交</td></tr>
 <tr><td>P3</td><td>合并前审查 → <code>--no-ff</code> 合并 → 合并后审查 → push；打 <code>commitV…Beta</code> 锚点，<code>git status --short</code> 为空</td><td><code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code>、<code>SRC_ZERO_DIFF</code></td></tr>
-<tr><td>P4</td><td>第一阶段（K11）：按候选序列逐局找「两模型都成功」的 RouteStick、ButtonUnmaskSwap 各 1 局；拿到即出这 2 局的 A/B/C/D 图交用户</td><td><code>ATTN_SMOKE=PASS</code>、<code>STAGE1_PAIR=PASS</code> ×2</td></tr>
+<tr><td>P4</td><td>第一阶段（K11／K12）：按候选序列逐局找「两模型都成功」的 ButtonUnmaskSwap 1 局；定位「揭开」推理，出 A′ 与 A/B/C/D 图交用户</td><td><code>ATTN_SMOKE=PASS</code>、<code>STAGE1_PAIR=PASS</code>、<code>KEY_STEP</code> ×2</td></tr>
 <tr><td>P5<span class="warn">（第二阶段，另等开工令）</span></td><td>R-CTX（GPU0）、R-MOT（GPU1）各 20 局并行，各一条 tmux、各挂一个 Monitor</td><td><code>RUN20=PASS</code> ×2</td></tr>
 <tr><td>P6</td><td>汇总、出图、目视复查、写档案 <code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/{launch,result}.md</code>、核对 <code>tmux ls</code> 本轮会话全部退出</td><td><code>ATTN_AGG</code>、<code>ATTN_PLOT</code></td></tr>
 </table>
@@ -213,7 +216,7 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <h3>八、交接顺序与状态机登记</h3>
 <ul>
 <li>任务 id：<code>interpret-attn-ctx512-vs-motion</code>。</li>
-<li>第一阶段交接前必须完成：<code>OFFICIAL_CTX_ASSET</code>、<code>LOCAL_ASSETS</code>、<code>LOCAL_ENVS</code>、<code>ATTN_SELFTEST</code>、两份 <code>STAGE1_PAIR</code>、<code>ATTN_AGG</code>、<code>ATTN_PLOT</code>；第二阶段另加两份 <code>RUN20</code>。</li>
+<li>第一阶段交接前必须完成：<code>OFFICIAL_CTX_ASSET</code>、<code>LOCAL_ASSETS</code>、<code>LOCAL_ENVS</code>、<code>ATTN_SELFTEST</code>、<code>STAGE1_PAIR</code>、两份 <code>KEY_STEP</code>、<code>ATTN_AGG</code>、<code>ATTN_PLOT</code>；第二阶段另加两份 <code>RUN20</code>。</li>
 <li>长尾：无（npz 总量 &lt; 100 MB，不上传 HF）。</li>
 <li>上游：无依赖（两份权重都是已发布资产）。</li>
 <li>下游：<code>gl-orig100-ctx-reproduce-train</code> 交付后可用同一脚本补「同口径 ctx512 无 motion」一组，届时另起计划。</li>
@@ -269,7 +272,8 @@ return x_0, acc.astype(f16)</pre>
 <tr><td><code>frame_times</code></td><td>int32 (32,)</td><td>帧路帧号，padding 为 −1</td></tr>
 <tr><td><code>motion_times</code>, <code>motion_mask</code></td><td>int32 (96,), bool (96,)</td><td>基线为空数组</td></tr>
 <tr><td><code>txt_len</code></td><td>int</td><td>文本有效 token 数</td></tr>
-<tr><td><code>actions</code></td><td>f32 (20, 8)</td><td>本次下发的动作（同源核对）</td></tr>
+<tr><td><code>actions</code></td><td>f32 (20, 8)</td><td>本次下发的动作（同源核对；第 7 维夹爪用于定位关键推理）</td></tr>
+<tr><td><code>state</code></td><td>f32 (8,)</td><td>本次推理输入的机器人状态（未归一化原值），用于定位关键推理</td></tr>
 <tr><td><code>top_frames</code></td><td>int32 (N,)</td><td>帧流前 N 名的帧号</td></tr>
 </table>
 
@@ -289,6 +293,8 @@ return x_0, acc.astype(f16)</pre>
 <h3>1.6 <code>scripts/interpret/aggregate_attn.py</code>、<code>plot_attn.py</code>（S3）</h3>
 <ul>
 <li>分流函数 <code>split_streams(npz) -> dict(frame: {t: mass}, motion: {t_w: mass}, image_base, image_wrist, text, action, pad)</code>，严格按 §2.3；断言 <code>pad ≤ 1e-6</code>、总和误差 ≤ 1e-4。</li>
+<li>关键推理定位（K12）：从每次推理 npz 里的 <code>actions</code>（第 7 维夹爪）与 <code>state</code>（新增键，机器人 8 维状态）自动找「两个按钮阶段之后、夹爪指令由开到闭且随后 16 步内末端 z 上升」的第一次推理，记 <code>key_infer_seq</code>；主会话对照该局视频人工核对一次，写进 result.md；窗口常量 <code>VISIBLE=[0,32)</code>、<code>SWAP_k=[64+50(k−1), 64+50k)</code>，k 取自该局难度（easy/medium 1～2 次、hard 2～3 次，实际次数从视频核对）。</li>
+<li>A′ 图与两个判据数：<code>VIS_SHARE = Σ_{帧∈VISIBLE} A_frame / Σ A_frame</code>、<code>SWAP_SHARE = Σ_{窗∈SWAP} A_motion / Σ A_motion</code>，各与均匀期望（可见帧数/有效帧数、交换窗数/有效窗数）并列，输出 <code>KEY_STEP=task=ButtonUnmaskSwap ep=&lt;id&gt; model=&lt;m&gt; infer=&lt;k&gt; vis_share=&lt;v&gt; vis_uniform=&lt;u&gt; swap_share=&lt;v|na&gt; swap_uniform=&lt;u|na&gt;</code>。</li>
 <li>A 图：每局一张，两栏（帧流／motion 流），每行流内 <code>rankdata/len</code> 归一化，<code>imshow(interpolation="nearest")</code>，colormap <code>plasma</code>，<code>exec_start_idx</code> 竖线；成功/失败各取平均图（时间轴按局长归一到 [0,1] 分 50 格再平均）。</li>
 <li>B 图：五流质量堆叠面积，20 局均值 + 10–90 分位带；两模型并排。</li>
 <li>C 图：motion 模型 <code>a_layer[:, motion cols].sum(1)</code> 的 18 根柱，均值 ± std。</li>
