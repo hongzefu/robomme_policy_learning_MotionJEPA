@@ -398,5 +398,18 @@ uv run --no-sync python scripts/interpret/plot_attn.py --records … --out docs/
 <p>其余 12 条为纯文字统一，已直接改：F3 长尾数据量、F4 第一阶段磁盘估计（17～33 GB）、F5 统一 <code>np.savez</code> 不压缩、F6 adapter 返回原始 probs（以 K10 为准）、F7 §1.3 为 npz 单一真源并补 §1.2 取数来源（含 <code>state</code>）、F9 §五补 <code>STAGE1_PAIR</code>／<code>KEY_STEP</code>，<code>ATTN_AGG</code> 第一阶段 episodes=2，P4 加汇总与出图、P6 标第二阶段、F11 可选分层小图不做、F13 删「worker 两键钩子」并把 <code>scripts/evaluation</code> 加进零改动闸、F14 交换窗口改并集记号、F15 K7 标 agent 默认待第二阶段定、F16 §四→§五、A6000 48 GB，另补 <code>resident_worker.py</code> 完整路径。</p>
 <p>复审（只审修订部分）：<code>PLAN_CONSISTENCY_REVIEW=FAIL base=b48666b findings=8 blocking=1</code>。阻断项：state／actions 是关节角，npz 无末端 z，「末端 z 上升」不可算；用户裁决「sim里面应该可以读到eef pose」→ 新增 S3 文件 <code>scripts/interpret/read_sim_eef_pose.py</code>（在仿真里设关节角后读 <code>agent.tcp_pose</code>，只读 import 环境；用户 2026-11-03「这个不是fk！你要命名写清楚了」，脚本名定为 read_sim_eef_pose.py），候选由脚本列、唯一一次推理由主会话看视频定。其余 7 条文字统一：K11 删 RouteStick 并补基线失败规则、K12 旧叙述并入 §1.6 口径、§七 留档改一张图、runbook 补 P4 汇总出图命令、第一部分元数据补 state、§八 交接清单补 <code>SRC_ZERO_DIFF</code>／<code>ATTN_SMOKE</code>、红线与档案的 90 GB 标第二阶段。</p>
 <p>第三轮复审（只审 b48666b→7c802e3）：<code>PLAN_CONSISTENCY_REVIEW=FAIL base=7c802e3 findings=5 blocking=1</code>。主会话核实：所谓阻断项是「仿真 qpos 9 维、npz 8 维，指关节怎么补未写」，属计划未写定的实现细节（TCP 位姿只取决于 7 个臂关节），不涉及接口、范围、失败处理与验收，直接写明为「指关节保持 reset 后原值」；其余 4 条文字统一：§五 KEY_STEP 出处与 P4 改为「列候选 + 看视频定」、§四 文件清单补 <code>--candidates</code>／<code>--key-infer</code> 与新脚本行、新增 <code>SIM_EEF_POSE</code> 判定行（主会话 P4 跑）并进交接清单、F8 裁决栏补后续。用户另要求「这个不是fk！你要命名写清楚了」，脚本名定为 <code>read_sim_eef_pose.py</code>、输出 <code>sim_eef_pose.json</code>，全文删去 FK 说法。</p>
+<h2>九、实施中调整与第一阶段结果（2026-11-03，美东）</h2>
+<p>各项调整均经一个只读对抗验证子代理审查（<code>ADJUST_REVIEW=PASS scale=same</code>），或由用户裁决：</p>
+<table>
+<tr><th>#</th><th>旧</th><th>新</th><th>理由／依据</th></tr>
+<tr><td>1</td><td>concat 59999 与 encoder 从 turbo rsync；两套解释器从 turbo 只读使用</td><td>权重从公开 HF bucket 下载（14 个文件 8.18 GB 复用 rsync 半成品，逐文件核 sha256）；official-sim、stage2 在本机 <code>v1-store/envs/</code> 按 uv.lock 重建（official-sim 另补 turbo 原环境 lock 外的 dm-tree 0.1.8／msgpack 1.1.2／websockets 15.0.1，dist-info 逐项一致）；Wan VAE 按 revision 0fad780a 下到本机 HF 缓存</td><td>用户「全部在本地datahongzefu上保存」「尽可能不要turbo」；turbo NFS 上 import torch 139.5 s、rsync 0.2～0.5 MB/s</td></tr>
+<tr><td>2</td><td>stage2 encoder 单独从 turbo 拷</td><td>取 59999 资产自带 encoder_dependencies（sha 27daa832）</td><td>motion_client 只读资产内 encoder_dependencies</td></tr>
+<tr><td>3</td><td>红线 src 零改动</td><td>src 与 release 5fce5d3 一致（15 个文件）</td><td>59999 的 published-cache 来源本分支不支持；用户裁决「把 5fce5d3 的 src 同步进本分支」；BASELINE_PATH_UNCHANGED=YES</td></tr>
+<tr><td>4</td><td>基线 model_kind=frame_sampling；run_identity 由 bind_model 生成</td><td>model_kind=history；run_local 自算 digest</td><td>policy_config 实际取值；bind_model 只接受 20k/60k</td></tr>
+<tr><td>5</td><td>（未写）</td><td>motion 侧 spec 加 target_contract（measure_target_runtime.py 生成）</td><td>provenance 硬件为 A100，本机 A6000，合同只比软件口径</td></tr>
+<tr><td>6</td><td>（未写）</td><td>HF 下载强制 IPv4</td><td>本机 IPv6 到 HF CDN SYN-SENT 挂起；网卡 100 Mb/s</td></tr>
+<tr><td>7</td><td>自检观测一次喂 49 帧、零 motion 768 维</td><td>首包 1 帧之后每包 16 帧；零 motion 维度取 motion.dim</td><td>FrameSampMemory 首包约束；本模型 1024 维</td></tr>
+</table>
+<p>第一阶段结果：<code>STAGE1_PAIR=PASS task=ButtonUnmaskSwap ep=8 ctx=success motion=success tries=2</code>；关键推理第 18 次（step 288）；<code>KEY_STEP</code> 基线 vis_share=0.0357（均匀 0.125），motion vis_share=0.1705（均匀 0.125）、swap_share=0.6100（均匀 0.5556）；帧流总质量仅 0.90%／1.35%，motion 流 0.26%。详见 <code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/result.md</code>。</p>
 </body>
 </html>
