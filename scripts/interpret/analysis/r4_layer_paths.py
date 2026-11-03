@@ -380,6 +380,28 @@ def summarize(ep) -> dict:
     return s
 
 
+def cell_stats(ep) -> dict:
+    """逐 (推理, 层) 格的 VIS 富集分布，供 README 引用。
+
+    只取帧流均匀期望非平凡（0 < n_VIS帧/n帧 < 1）的推理，排除 #0～#2 这类记忆全在 VIS 内、倍数恒≈1 的推理。
+    """
+    keep = [i for i, r in enumerate(ep["infers"])
+            if r["targets"].get("VIS") and r["targets"]["VIS"]["u_f"] is not None
+            and 0 < r["targets"]["VIS"]["u_f"] < 1]
+    out = {"infers_used": keep}
+    ind = _ratio(_arr(ep, "VIS", "ind_total"), _arr(ep, "VIS", "exp_ind"))[keep]
+    for name, arr, lay in (("vis_ind_L1_13", ind, slice(1, 14)), ("vis_ind_L1_17", ind, slice(1, 18))):
+        v = arr[:, lay].ravel(); v = v[np.isfinite(v)]
+        out[name] = {"n": int(v.size), "median": _nan(np.median(v)), "p10": _nan(np.percentile(v, 10)),
+                     "p25": _nan(np.percentile(v, 25)), "p75": _nan(np.percentile(v, 75)),
+                     "p90": _nan(np.percentile(v, 90)), "frac_lt_1_8": _nan(float((v < 0.125).mean())),
+                     "frac_ge_1": _nan(float((v >= 1).mean())), "max": _nan(v.max())}
+    full = _ratio(_arr(ep, "VIS", "direct"), _arr(ep, "VIS", "exp_direct"))
+    out["vis_direct_L3_by_infer"] = {str(i): _nan(full[i, 3]) for i in NEIGH}
+    out["vis_direct_L16_by_infer"] = {str(i): _nan(full[i, 16]) for i in NEIGH}
+    return out
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--ep", action="append", required=True, help="label=目录:k:标题")
@@ -414,6 +436,7 @@ def main(argv=None) -> int:
         "uniform": "帧流质量·n_T/n帧 + motion 流质量·mean_w g_T(w)",
         "recent_frames": RECENT_N, "approximation": "attention-only，忽略 MLP、残差强度与 value 范数"},
         "episodes": {lab: summarize(eps[lab]) for lab in labels},
+        "cell_stats": {lab: cell_stats(eps[lab]) for lab in labels},
         "per_infer": {lab: [{"infer_seq": r["infer_seq"], "step_idx": r["step_idx"],
                              "fullmean_frame_vis_share": _nan(r["fullmean_frame_vis_share"]),
                              "targets": r["targets"]} for r in eps[lab]["infers"]] for lab in labels}}
