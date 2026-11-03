@@ -53,6 +53,7 @@ figure{margin:14px 0}figure img{max-width:100%;border:1px solid var(--line)}figc
 <tr><td>K7<span class="warn">（agent 默认，待用户确认）</span></td><td>每任务每模型 10 局，seed 42；20 局按 concat 模型 seed 42 官方 800 局的结局<b>成功 5 + 失败 5</b> 取 episode_id 最小者，两模型跑同一批 episode_id</td><td>§三</td></tr>
 <tr><td>K8</td><td>运行位置本机（用户原话「在本地运行」）。本机现状：策略 <code>.venv</code> 为空壳（site-packages 仅 3 项，需 <code>uv sync</code>）；无 sidecar／仿真 venv，但 NFS 的 <code>$E/v1-store/envs/stage2/bin/python</code>（torch 2.9.0+cu128，<code>cuda.is_available()=True</code>）与 <code>$E/v1-store/envs/official-sim/bin/python</code>（robomme 可导入，editable 指向 release 420ae98 的 <code>third_party/robomme_benchmark/src</code>，其 gitlink <code>856bc3a</code> 与本分支一致）在本机实测可直接用；权重两份都要落到本机 <code>v1-store/</code>（官方 79999 自 HF 下载 11.6 GB，concat 59999 自 NFS rsync 13 GB，stage2 encoder 自 NFS 拷 1 份）；Vulkan 1.4.303 可见 A6000</td><td>§五</td></tr>
 <tr><td>K9</td><td>不登记状态机（用户原话「不登记」）；交接走人工</td><td>§八</td></tr>
+<tr><td>K10</td><td><b>原始 attention 全存、后期再画</b>：用户原话「是否可以先记录所有的attn？ 记录所有源数据 后期我再画图不同形式？」「同意 修改 f16就可以 文本也要」。每次推理落盘平均前的完整张量：动作 query 的 (10 去噪步, 18 层, 8 头, 20 query, P+20 key) 与 prefill 阶段文本 query 的 (18, 8, 64, P)，均 f16；画图脚本只读盘</td><td>§2.3、第二部分 §1.3</td></tr>
 </table>
 
 <h2>二、机制：在 pi0.5 上 attention 怎么采、怎么分流</h2>
@@ -77,6 +78,7 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <tr><td>动作</td><td><code>P ≤ s &lt; P+20</code></td><td>—</td><td>有</td></tr>
 </table>
 <p>padding 位（mask False）的 <code>a[s]</code> 被 softmax 的 <code>big_neg</code> 压为 0，不参与任何归一化。</p>
+<p><b>K10：平均是画图时做的，不是落盘时做的。</b>服务端存的是平均前的原始张量 <code>probs_action</code>（10 步 × 18 层 × 8 头 × 20 query × (P+20)，f16，约 70 MB／次推理）与 <code>probs_text</code>（prefill 阶段 64 个文本 token 作 query 的 18 × 8 × 64 × P，f16，约 22 MB／次），上面的 <code>a</code>、<code>a_layer</code> 都由 <code>aggregate_attn.py</code> 从盘上算；以后换 query（文本 token）、换聚合（某几层、某几头、最后一步去噪）都不用重跑。40 局约 1000 次推理，合计约 90 GB，落 <code>v1-store/evaluation/interpret-1103/</code>，不进 git。</p>
 
 <figure>
 <img src="docs/figures/attn-capture-pipeline.svg" alt="attention 采集与分流映射">
@@ -92,6 +94,10 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <tr><td>D 最高注意力帧缩略图（论文图 9 右侧那种）</td><td>每局 3 个决策点（exec 1/4、1/2、3/4 处）</td><td>帧流前 3 名的原始帧 + motion 流前 1 名窗口的首尾帧</td><td>给人看「它在看什么」</td></tr>
 </table>
 <p>每张图都按「任务 × 模型 × 成功/失败」分面：A 图逐局一张（40 张）+ 成功/失败各一张平均；B、C 图平均并画 20 局的带。</p>
+<figure>
+<img src="docs/figures/attn-figures-mockup.svg" alt="四类图草图">
+<figcaption>图 2　四类图的版式草图（示意数据，非真实结果；用户 2026-11-03 认可）。</figcaption>
+</figure>
 
 <h3>2.5 ⚠ 陷阱与反例</h3>
 <ul>
@@ -125,10 +131,10 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <table>
 <tr><th>文件</th><th>锚点</th><th>改什么</th><th>关闭态</th><th>开启态</th></tr>
 <tr><td><code>scripts/interpret/attn_adapter.py</code>（新）</td><td><code>AttnAdapter.f_sample_attn</code></td><td>复刻 <code>sample_actions</code>（context 分支）的 18 层手工展开版：prefill 每层 <code>block_apply</code> 存 K/V，去噪 10 步每层捕获 <code>probs</code>，累加 <code>a_layer (18, P+20)</code>；返回 <code>x_0</code> 与 <code>a_layer</code>。依赖 <code>mv_model_adapter._make_patched_attention / _capture_attn / _guard_model_source</code>（import 复用，不复制）</td><td>不存在</td><td>只被下面的服务端 import</td></tr>
-<tr><td><code>scripts/interpret/serve_policy_attn.py</code>（新）</td><td><code>main</code></td><td>照 <code>scripts/motion-variance/serve_policy_mv.py</code> 骨架：起同一个 <code>MME_VLA_Policy</code>，在<b>实例属性</b>上把 <code>policy._sample_actions</code> 换成 <code>f_sample_attn</code> 包装；每次 <code>infer</code> 把 <code>a_layer</code>、<code>mem_order</code>、<code>static_mask</code>、<code>motion_mask</code>、帧号、<code>motion_times</code>、<code>step_idx</code>、<code>exec_start_idx</code>、prompt 有效长度写一份 <code>npz</code> 到 <code>--attn-out/&lt;episode_nonce&gt;/infer_&lt;seq&gt;.npz</code>；D 图所需原始帧按 top-3 另存 jpg。命令行与 <code>serve_policy.py</code> 兼容（<code>--port/--seed/--motion-online-gpu/--stage2-python/--run-identity-sha256/--server-nonce/--eval-purpose policy:checkpoint …</code>）再加 <code>--attn-out</code></td><td>不存在</td><td>由 <code>run_local.py</code> 启动</td></tr>
+<tr><td><code>scripts/interpret/serve_policy_attn.py</code>（新）</td><td><code>main</code></td><td>照 <code>scripts/motion-variance/serve_policy_mv.py</code> 骨架：起同一个 <code>MME_VLA_Policy</code>，在<b>实例属性</b>上把 <code>policy._sample_actions</code> 换成 <code>f_sample_attn</code> 包装；每次 <code>infer</code> 把原始 <code>probs_action</code>／<code>probs_text</code>（f16，K10）、<code>mem_order</code>、<code>static_mask</code>、<code>motion_mask</code>、帧号、<code>motion_times</code>、<code>step_idx</code>、<code>exec_start_idx</code>、prompt 有效长度写一份 <code>npz</code> 到 <code>--attn-out/&lt;episode_nonce&gt;/infer_&lt;seq&gt;.npz</code>；D 图所需原始帧按 top-3 另存 jpg。命令行与 <code>serve_policy.py</code> 兼容（<code>--port/--seed/--motion-online-gpu/--stage2-python/--run-identity-sha256/--server-nonce/--eval-purpose policy:checkpoint …</code>）再加 <code>--attn-out</code></td><td>不存在</td><td>由 <code>run_local.py</code> 启动</td></tr>
 <tr><td><code>scripts/interpret/run_local.py</code>（新）</td><td><code>main</code></td><td>本地驱动：读 spec（<code>policy_python/sim_python/stage2_python/checkpoint/policy_config/model_kind/run_identity_sha256/cuda/attn_out</code>）与 manifest；逐 chunk：生成 nonce → 起 <code>serve_policy_attn</code>（命令形状照抄 <code>resident_worker.server_command</code>，只换模块名并加 <code>--attn-out</code>）→ 探 <code>/healthz</code> 就绪（同时 <code>kill -0</code> 服务端进程）→ 以 <code>resident_worker.client_command</code> 同形命令起 <code>eval.py</code>（grant 由 <code>manifest.py</code> 的签封清单切块）→ 等客户端退出 → 终止服务端 → 下一 chunk。环境变量照 <code>worker_environment</code>（<code>PYTHONPATH=repo:repo/src:packages/openpi-client/src:third_party/robomme_benchmark/src</code>）。<code>trap</code> 收尾服务端，端口起跑前探占用</td><td>不存在</td><td>每模型一条 tmux</td></tr>
 <tr><td><code>scripts/interpret/build_manifest.py</code>（新）</td><td><code>main</code></td><td>用 <code>scripts/evaluation/manifest.py::make_manifest</code> 生成 20 局清单（4 块 × 5 局，按任务分块），episode 的 <code>env_seed/difficulty</code> 从官方元数据读</td><td>—</td><td>—</td></tr>
-<tr><td><code>scripts/interpret/aggregate_attn.py</code>（新）</td><td><code>main</code></td><td>读 npz，按 §2.3 分流，输出每局 <code>streams.json</code>（A/B/C 图的数值）与跨局汇总 <code>summary.json</code>，末行 <code>ATTN_AGG=…</code></td><td>—</td><td>—</td></tr>
+<tr><td><code>scripts/interpret/aggregate_attn.py</code>（新）</td><td><code>main</code></td><td>读 npz，先把 <code>probs_action</code> 按 K4 平均成 <code>a</code>／<code>a_layer</code>（聚合轴可由命令行改：<code>--steps last|all</code>、<code>--layers</code>、<code>--heads</code>、<code>--query action|text</code>），再按 §2.3 分流，输出每局 <code>streams.json</code> 与跨局汇总 <code>summary.json</code>，末行 <code>ATTN_AGG=…</code></td><td>—</td><td>—</td></tr>
 <tr><td><code>scripts/interpret/plot_attn.py</code>（新）</td><td><code>main</code></td><td>matplotlib 画 A/B/C/D 四类图（PNG，热图 <code>interpolation="nearest"</code>），末行 <code>ATTN_PLOT=…</code></td><td>—</td><td>—</td></tr>
 </table>
 <p><code>src/</code>、<code>examples/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code> 全部零改动。</p>
@@ -141,7 +147,7 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <tr><td><code>LOCAL_ENVS=PASS policy=&lt;.venv&gt; jax=0.5.3 torch=2.7.1 stage2_torch=2.9.0 sim_robomme=&lt;path&gt;</code></td><td>三个解释器各 import 一次并打印来源路径：本机 <code>.venv</code> 的 <code>mme_vla_suite.__file__</code> 必须在本仓库 <code>src/</code>；NFS official-sim 的 <code>robomme.__file__</code> 指向 release 420ae98、gitlink 与本分支 <code>856bc3a</code> 相同</td><td>环境指向正确（第 24 条 editable 校验）</td></tr>
 <tr><td><code>CFG_RESOLVE=PASS official=mme_vla_suite_b128 motion=mme_vla_suite_orig16_b128_60k</code></td><td>两份 <code>create_trained_policy</code> 构造成功，打印 <code>P</code>（1088／1184）、<code>motion_enabled</code>（False／True）</td><td>两条加载路径都通</td></tr>
 <tr><td><code>ATTN_SELFTEST=PASS f32_maxabs≤1e-5 bf16_relfro=&lt;v&gt; rowsum_err≤1e-4 uniform_ok=1</code></td><td>同一观测同一噪声：① f32 下展开版 vs 生产 <code>_sample_actions</code> 动作最大绝对差；② bf16 下 Frobenius 相对差（观察项）；③ 每行 probs 求和 = 1；④ 把 q 置零应得合法 key 上的均匀分布（抄 <code>ATTN_UNIFORM_SELFCHECK</code>）</td><td>采集到的概率就是模型真实用的概率，不是旁路近似；为什么能逐位：f32 下两份编译产物的算子序相同</td></tr>
-<tr><td><code>ATTN_SMOKE=PASS task=ButtonUnmaskSwap ep=4 infers=&lt;n&gt; npz=&lt;n&gt;</code></td><td>本机各模型先跑 1 局，npz 数 = infer 数，每份含全部键且 <code>a_layer.shape==(18,P+20)</code></td><td>第 4 条最小 smoke</td></tr>
+<tr><td><code>ATTN_SMOKE=PASS task=ButtonUnmaskSwap ep=4 infers=&lt;n&gt; npz=&lt;n&gt;</code></td><td>本机各模型先跑 1 局，npz 数 = infer 数，每份含全部键且 <code>probs_action.shape==(10,18,8,20,P+20)</code>、<code>probs_text.shape==(18,8,64,P)</code>、每个 (step,layer,head,query) 行求和 = 1±2e-3（f16）</td><td>第 4 条最小 smoke</td></tr>
 <tr><td><code>RUN20=PASS model=&lt;ctx|motion&gt; episodes=20 success=&lt;k&gt; npz=&lt;n&gt;</code></td><td>每模型 20 局全部 <code>record_type=terminal</code>；成功数与 10-31 同 episode 的官方结局并列（motion 侧 10-31 为 10/20）</td><td>40 局跑完、数据齐</td></tr>
 <tr><td><code>ATTN_AGG=PASS episodes=40 pad_mass≤1e-6 stream_sum_err≤1e-4</code></td><td>padding 位质量为 0；五流质量之和 = 1</td><td>分流映射没算错</td></tr>
 <tr><td><code>ATTN_PLOT=PASS figs=&lt;n&gt;</code> + 主会话目视复查</td><td>A/B/C/D 图生成；按第 2 条画图规则渲染后亲眼看坐标轴、图例、留白</td><td>可交付</td></tr>
@@ -182,7 +188,7 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <li>采集只读 <code>probs</code>；禁止改 <code>input_mask</code>／<code>positions</code>／mask 任何一层；禁止在 <code>src/mme_vla_suite/policies/</code> 下出现 <code>MotionStore</code>（既有静态闸 <code>check_config_provenance.py</code>）。</li>
 <li>官方协议不动：<code>eval.py</code> 的 <code>profile=official</code> 校验（test、1300 步、16 帧包、seed 42）原样；manifest 走 <code>make_manifest</code> 签封。</li>
 <li>执行局的动作由展开版产生（与热图同源）；不得在 npz 外另行「修正」动作。</li>
-<li>NFS 一律只读（rsync 源、两套解释器）；本机只写 <code>v1-store/models/official-mme-vla/</code>、<code>v1-store/assets/</code>、<code>v1-store/evaluation/interpret-1103/</code>、<code>v1-store/logs/</code>、<code>.venv/</code>。</li>
+<li>原始 attention 约 90 GB 全落 <code>v1-store/evaluation/interpret-1103/</code>（K10），不进 git、不上传；<code>np.savez</code> 不压缩（概率张量压不动，省 CPU）。NFS 一律只读（rsync 源、两套解释器）；本机只写 <code>v1-store/models/official-mme-vla/</code>、<code>v1-store/assets/</code>、<code>v1-store/evaluation/interpret-1103/</code>、<code>v1-store/logs/</code>、<code>.venv/</code>。</li>
 <li>tmux 前缀 <code>ia-</code>；清理只用 <code>tmux kill-session -t '=确切名'</code>，删前删后各 <code>tmux ls</code>。</li>
 <li>XLA 口径与 motion-variance 一致：<code>XLA_FLAGS='--xla_gpu_deterministic_ops=true --xla_gpu_autotune_level=0'</code>，所有 python 入口硬闸。</li>
 </ol>
@@ -203,13 +209,14 @@ def step(carry): x_t, time, acc = carry
     full = concat([repeat(pm,"b p -> b s p",s=AH), sattn], -1); spos = sum(pm)[:,None] + cumsum(sm) - 1
     hs = st.astype(ed); rows=[]
     for l in range(L): (_,hs),_,probs = block_apply(layers,l,[None,hs],(K[l],V[l]),spos,full,[None,ad])
-        rows.append(probs[:,0].mean(axis=(1,2)))          # (b, P+AH)：对 8 头、20 query 平均
+        rows.append(probs[:,0])                            # (b, 8, AH, P+AH)：不平均，原样保留
     hs,_ = final_norm_1.apply(...); v_t = m.action_out_proj(hs[:, -AH:])
-    return x_t + dt*v_t, time + dt, acc + stack(rows)      # acc (L, b, P+AH)
+    return x_t + dt*v_t, time + dt, acc.at[i].set(stack(rows))   # acc (steps, L, b, 8, AH, P+AH) f32，不平均
 x_0, _, acc = lax.while_loop(cond, step, (noise, 1.0, zeros))
-return x_0, acc / num_steps</pre>
+return x_0, acc.astype(f16)</pre>
+<p>prefill 循环里同样捕获每层 <code>probs</code>，只切出文本 query 行 <code>[MEM+512 : P]</code> 存为 <code>probs_text</code>（18, 8, 64, P）f16。device 上两份合计约 100 MB／次，<code>device_get</code> 一次。</p>
   <code>block_apply</code> 与 <code>llm_of</code> 照抄 <code>MVAdapter._build_unrolled</code>（<code>hg.HistoryBlock(configs, integration_type="context")</code>）。</li>
-<li><code>make_sample_fn()</code>：返回 <code>fn(rng, observation, **kw) -> actions</code>，同时把最近一次的 <code>a_layer</code>（<code>np.asarray(acc[:,0])</code>，f32 <code>(18, P+20)</code>）存到 <code>self.last_attn</code>，供服务端取。</li>
+<li><code>make_sample_fn()</code>：返回 <code>fn(rng, observation, **kw) -> actions</code>，同时把最近一次的 <code>probs_action</code>（f16 <code>(10, 18, 8, 20, P+20)</code>）与 <code>probs_text</code>（f16 <code>(18, 8, 64, P)</code>）存到 <code>self.last_attn</code>，供服务端取。</li>
 <li><code>--selftest</code>：加载 <code>--ckpt --config</code>，用 <code>scripts/motion-variance/mv_points.py</code> 现成的决策点驱动取 1 个 test 观测（或随机合法观测），输出 <code>ATTN_SELFTEST=…</code>（§五闸）。f32 对比方式照 <code>mv_model_adapter --f32-check</code>：把 state 与输入 <code>astype(float32)</code>、<code>embed_dtype</code> 临时改 f32，两边各算一次。</li>
 </ul>
 
@@ -224,7 +231,8 @@ return x_0, acc / num_steps</pre>
 <h3>1.3 npz 键名契约（S2 产、S3 消费，S1 定 <code>a_layer</code>）</h3>
 <table>
 <tr><th>键</th><th>dtype / shape</th><th>含义</th></tr>
-<tr><td><code>a_layer</code></td><td>f32 (18, P+20)</td><td>§2.3 的 <code>a_layer</code>；<code>a = a_layer.mean(0)</code></td></tr>
+<tr><td><code>probs_action</code></td><td>f16 (10, 18, 8, 20, P+20)</td><td>K10 原始张量：去噪步 × 层 × 头 × 动作 query × key；§2.3 的 <code>a_layer = probs_action.astype(f32).mean((0,2,3))</code></td></tr>
+<tr><td><code>probs_text</code></td><td>f16 (18, 8, 64, P)</td><td>prefill 阶段文本 token 作 query 的原始张量（padding 行全 0）</td></tr>
 <tr><td><code>P</code>, <code>MEM</code>, <code>step_idx</code>, <code>exec_start_idx</code>, <code>infer_seq</code></td><td>int</td><td>P=1088/1184；MEM=512/608；<code>step_idx</code> 为当前全域帧号</td></tr>
 <tr><td><code>mem_order</code></td><td>int32 (MEM,)</td><td>基线写 <code>arange(512)</code></td></tr>
 <tr><td><code>mem_mask</code></td><td>bool (MEM,)</td><td>重排后的记忆区 input_mask</td></tr>
@@ -254,7 +262,7 @@ return x_0, acc / num_steps</pre>
 <li>B 图：五流质量堆叠面积，20 局均值 + 10–90 分位带；两模型并排。</li>
 <li>C 图：motion 模型 <code>a_layer[:, motion cols].sum(1)</code> 的 18 根柱，均值 ± std。</li>
 <li>D 图：每局 3 个决策点（exec 段 1/4、1/2、3/4）的 top-3 帧缩略图拼图。</li>
-<li>合成数据单测：造一份 P=1184 的随机 <code>a_layer</code> + 已知 <code>mem_order</code>，核对分流求和与反推帧号。</li>
+<li>合成数据单测：造一份 P=1184 的随机 <code>probs_action</code>（每行 softmax 归一）+ 已知 <code>mem_order</code>，核对聚合、分流求和与反推帧号。</li>
 </ul>
 
 <h2>二、子代理分配表</h2>
@@ -306,6 +314,7 @@ uv run --no-sync python scripts/interpret/plot_attn.py --records … --out docs/
 <tr><td>展开版推理慢（18 层 × 10 步 × 2 模型无 scan 融合）</td><td>每局墙钟 ×2～3</td><td>40 局预算仍 &lt; 2 h；超过 5 倍才停</td></tr>
 <tr><td>A6000 46 GB 上策略 + sidecar 同卡</td><td>OOM</td><td>A40 同为 46 GB，10-31 已跑过 concat + sidecar 同卡；attention 额外只存 (18, 1204) f32；<code>XLA_PYTHON_CLIENT_MEM_FRACTION</code> 按 eval-3seed 的 0.40／0.55 口径</td></tr>
 <tr><td>NFS 解释器导入慢、每 chunk 新起一次仿真进程</td><td>每 chunk 多 1～2 分钟</td><td>8 chunk 共 &lt; 20 分钟，可接受；不把 venv 复制到本机（避免改 editable 指向）</td></tr>
+<tr><td>每次推理多搬 ~100 MB device→host 并写盘</td><td>每次推理多 0.1～0.3 s，40 局多 3～5 分钟；90 GB 磁盘</td><td>/data 余量 6.1 TB；写盘放在 infer 返回之后、不阻塞 RPC 计时段</td></tr>
 <tr><td>本机 <code>uv sync</code> 需下载 torch/jax 等数 GB</td><td>P1 变慢</td><td>放 tmux，与下载并行；<code>uv.lock</code> 已钉版本，产物进 <code>v1-store/cache/uv</code></td></tr>
 <tr><td>K7 的「成功 5 失败 5」是按 concat 模型 seed 42 的结局挑的，对基线不对称</td><td>基线的成功/失败分面不均衡</td><td>报告里按各自实际结局重新分面；episode 集合两模型相同即可</td></tr>
 </table>
@@ -323,7 +332,7 @@ uv run --no-sync python scripts/interpret/plot_attn.py --records … --out docs/
 <h2>七、留档与 commit 纪律</h2>
 <ul>
 <li>代码：三个 <code>sub/S1…S3</code> 分支 <code>--no-ff</code> 合入；起跑前 <code>commitV&lt;x&gt;.&lt;y&gt;Beta</code>，<code>git status --short</code> 为空；跑完 <code>commitV&lt;x&gt;.&lt;y&gt;</code> 回写结论。</li>
-<li>档案：<code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/launch.md</code>（起跑时写：环境、权重、命令、JobID、tmux 清单）、<code>result.md</code>（结论 + 四类图 + 判定行原文）、<code>records/</code>（summary.json、清洗后日志；不归档 npz 与视频，留 NFS）；<code>docs/evaluation-doc/README.md</code> 加一行。</li>
+<li>档案：<code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/launch.md</code>（起跑时写：环境、权重、命令、JobID、tmux 清单）、<code>result.md</code>（结论 + 四类图 + 判定行原文）、<code>records/</code>（summary.json、清洗后日志；原始 npz 约 90 GB 与视频留在本机 <code>v1-store</code>，不归档）；<code>docs/evaluation-doc/README.md</code> 加一行。</li>
 <li>图：A/B/C/D 为脚本产出的 PNG，交付前主会话渲染目视复查并把结论写进 commit body。</li>
 <li>状态机：不登记（K9）。</li>
 </ul>
