@@ -52,6 +52,7 @@ FOCUS = 18
 N_INFER = 20
 IMG = 512
 ROW_TOL = 1e-4
+BLOCK_TOL = 1e-6  # 被 mask 屏蔽的块质量上限（f16 存储下实测为 0）
 COLORS = {"direct": "#1c7ed6", "rollout": "#e8590c", "joint": "#2f9e44", "uniform": "#868e96"}
 
 
@@ -155,6 +156,8 @@ def process_infer(d: Path, i: int, swaps) -> dict:
     via = np.zeros((L, 3, P))  # 按中介类别拆的 c_l（prefix 部分）
     row_err = 0.0
     eyeV = np.eye(nV)
+    blk = {k: [] for k in ("img_to_mem_mean", "img_to_mem_max", "img_to_txt_mean", "txt_to_mem_mean",
+                           "mem_to_imgtxt_max", "zero_rows")}
     for l in range(L):
         # c_l 用第 l 层输入的 R_l（R_0 = I）
         al = a_l[l]
@@ -165,7 +168,16 @@ def process_infer(d: Path, i: int, swaps) -> dict:
         c_layers[l] = c
         for t in range(3):
             via[l, t, V] = (alV * (catV == t)) @ R
-        A = pp[l].astype(np.float32).mean(axis=0).astype(np.float64)[np.ix_(V, V)]
+        H = pp[l].astype(np.float32).mean(axis=0)  # (P,P) 头平均，含 padding 行列
+        # 块质量诊断（行内求和后对有效行取均值／最大值）
+        img_rows, txt_rows, mem_rows = H[MEM:MEM + IMG], H[MEM + IMG:MEM + IMG + txt_len], H[:MEM][mem_mask]
+        blk["img_to_mem_mean"].append(float(img_rows[:, :MEM].sum(1).mean()))
+        blk["img_to_mem_max"].append(float(img_rows[:, :MEM].sum(1).max()))
+        blk["img_to_txt_mean"].append(float(img_rows[:, MEM + IMG:].sum(1).mean()))
+        blk["txt_to_mem_mean"].append(float(txt_rows[:, :MEM].sum(1).mean()))
+        blk["mem_to_imgtxt_max"].append(float(mem_rows[:, MEM:].sum(1).max()))
+        blk["zero_rows"].append(int((H.sum(1) == 0).sum()))
+        A = H.astype(np.float64)[np.ix_(V, V)]
         A /= A.sum(axis=1, keepdims=True)
         At = 0.5 * A + 0.5 * eyeV
         At /= At.sum(axis=1, keepdims=True)
@@ -181,6 +193,13 @@ def process_infer(d: Path, i: int, swaps) -> dict:
         Rj = J @ Rj
         row_err = max(row_err, float(np.abs(Rj.sum(axis=1) - 1).max()))
     del pp, zp
+    # 封闭性断言：记忆区有效行对图像＋文本的质量为 0（「经记忆区」＝记忆子块 rollout 的前提）；图像行对记忆区为 0。
+    assert max(blk["mem_to_imgtxt_max"]) <= BLOCK_TOL, f"记忆行对图像/文本质量 {max(blk['mem_to_imgtxt_max']):.2e}"
+    assert max(blk["img_to_mem_max"]) <= BLOCK_TOL, f"图像行对记忆区质量 {max(blk['img_to_mem_max']):.2e}"
+    # 层对齐单元式自检：R_0 = I，故 c_0 的 prefix 部分应逐位等于 a_0 的 prefix 部分。
+    c0_err = float(np.abs(c_layers[0][:P] - np.where(valid, a_l[0][:P], 0.0)).max())
+    assert c0_err <= 1e-12, f"c_0 与 a_0 不符 {c0_err:.2e}"
+    blk["n_pad_rows_expected"] = int((~valid).sum())
     joint = np.zeros(P + 20)
     jr = Rj[nV:].mean(axis=0)
     joint[V] = jr[:nV]
@@ -188,7 +207,8 @@ def process_infer(d: Path, i: int, swaps) -> dict:
 
     direct = a_l.mean(axis=0)
     roll = c_layers.mean(axis=0)
-    out = {"infer_seq": i, "step_idx": int(meta["step_idx"]), "row_err": row_err}
+    out = {"infer_seq": i, "step_idx": int(meta["step_idx"]), "row_err": row_err, "c0_err": c0_err,
+           "blocks": blk}
     st_d, st_r, st_j = streams_from_vec(meta, direct), streams_from_vec(meta, roll), streams_from_vec(meta, joint)
     out["direct"], out["rollout"], out["joint"] = shares(st_d, swaps), shares(st_r, swaps), shares(st_j, swaps)
     for kind, vec in (("direct", direct), ("rollout", roll), ("joint", joint)):
@@ -237,9 +257,20 @@ def process_infer(d: Path, i: int, swaps) -> dict:
         M = M / np.maximum(cnt, 1)[:, None]
         order = np.argsort(ft)
         to_motion = float(R[np.ix_(memV[isf], memV[~isf])].sum(axis=1).mean()) if (~isf).any() else 0.0
-        out["mem_R"] = {"times": ft[order].tolist(), "M": M[np.ix_(order, order)].tolist(),
+        Ms = M[np.ix_(order, order)]
+        col = Ms.mean(axis=0)  # 各来源帧的平均质量（行=记忆帧位置平均）
+        ts = ft[order]
+        vis_cols = float(col[(ts >= VIS[0]) & (ts < VIS[1])].sum())
+        top = np.argsort(col)[::-1][:5]
+        out["mem_R"] = {"times": ts.tolist(), "M": Ms.tolist(),
                         "self_frame": float(np.mean(np.diag(M))), "frame_rows_to_motion": to_motion,
-                        "n_motion_tokens": int((~isf).sum())}
+                        "n_motion_tokens": int((~isf).sum()),
+                        "col_mass": col.tolist(), "frame_part_total": float(col.sum()),
+                        "vis_cols_sum": vis_cols, "vis_share_in_frame_part": vis_cols / float(col.sum()),
+                        "top_source_frames": [{"t": int(ts[k]), "mass": float(col[k])} for k in top],
+                        "row_std_max": float(Ms.std(axis=0).max()),
+                        "row_absdiff_max": float(np.abs(Ms - col[None]).max()),
+                        "col_mass_max": float(col.max())}
     return out
 
 
@@ -456,12 +487,38 @@ def main() -> int:
     row_err = max(r["row_err"] for e in res.values() for r in e.values())
     figs = [fig_curves(res, out), fig_focus_frames(res, out), fig_routing(res, out), fig_layers(res, out),
             fig_mem_R(res, out)]
-    summary = {"口径": "Ã_l=0.5·头平均A_l+0.5·I 行归一；R_0=I；c_l=a_l·R_l；c=层平均；联合 rollout 含动作行",
-               "row_err_max": row_err, "row_tol": ROW_TOL, "figs": figs,
+    c0_err = max(r["c0_err"] for e in res.values() for r in e.values())
+    # 块质量诊断汇总（每局：全部推理 × 18 层的范围；以及 #18 的逐层值）
+    diag = {}
+    for n, e in res.items():
+        b = [r["blocks"] for r in e.values()]
+        f = e[FOCUS]["blocks"]
+        diag[n] = {
+            "all_infers_img_to_mem_max": max(max(x["img_to_mem_max"]) for x in b),
+            "all_infers_mem_to_imgtxt_max": max(max(x["mem_to_imgtxt_max"]) for x in b),
+            "all_infers_img_to_txt_mean_range": [min(min(x["img_to_txt_mean"]) for x in b),
+                                                 max(max(x["img_to_txt_mean"]) for x in b)],
+            "all_infers_zero_rows_set": sorted({z for x in b for z in x["zero_rows"]}),
+            "all_infers_zero_rows_eq_pad": all(z == x["n_pad_rows_expected"] for x in b for z in x["zero_rows"]),
+            "focus_img_to_txt_mean_range": [min(f["img_to_txt_mean"]), max(f["img_to_txt_mean"])],
+            "focus_txt_to_mem_layer0": f["txt_to_mem_mean"][0], "focus_txt_to_mem_layer1": f["txt_to_mem_mean"][1],
+            "focus_txt_to_mem_layer2plus_max": max(f["txt_to_mem_mean"][2:]),
+            "focus_n_pad_rows": f["n_pad_rows_expected"],
+        }
+    summary = {"口径": "Ã_l=0.5·头平均A_l+0.5·I 行归一；R_0=I；c_l=a_l·R_l（先用当前 R 再更新）；c=层平均；联合 rollout 含动作行",
+               "row_err_max": row_err, "row_tol": ROW_TOL,
+               "row_check_note": "R 按构造行归一，该检查只验数值误差，不验证层对齐；层对齐见 c0_err",
+               "c0_err_max": c0_err, "block_tol": BLOCK_TOL, "block_diagnostics": diag, "figs": figs,
                "episodes": {n: {"label": RUNS[n][1], "swaps": RUNS[n][2], "infers": res[n]} for n in RUNS}}
     (out / "r1_summary.json").write_text(json.dumps(_clean(summary), ensure_ascii=False, indent=1, allow_nan=False))
-    ok = row_err <= ROW_TOL and len(res) == 3
-    print(f"ROW_SUM_CHECK max_err={row_err:.2e} tol={ROW_TOL}")
+    blk_ok = all(d["all_infers_mem_to_imgtxt_max"] <= BLOCK_TOL and d["all_infers_img_to_mem_max"] <= BLOCK_TOL
+                 and d["all_infers_zero_rows_eq_pad"] for d in diag.values())
+    ok = row_err <= ROW_TOL and c0_err <= 1e-12 and blk_ok and len(res) == 3
+    print(f"ROW_SUM_CHECK max_err={row_err:.2e} tol={ROW_TOL}（只验数值误差，不验层对齐）")
+    print(f"C0_ALIGN_CHECK max_err={c0_err:.2e} tol=1e-12")
+    print(f"BLOCK_CLOSURE_CHECK={'PASS' if blk_ok else 'FAIL'} "
+          f"mem_to_imgtxt_max={max(d['all_infers_mem_to_imgtxt_max'] for d in diag.values()):.2e} "
+          f"img_to_mem_max={max(d['all_infers_img_to_mem_max'] for d in diag.values()):.2e}")
     print(f"R1_ROLLOUT={'PASS' if ok else 'FAIL'} episodes={len(res)} figs={len(figs)}")
     return 0 if ok else 1
 
