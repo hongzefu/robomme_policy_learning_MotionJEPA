@@ -1,312 +1,66 @@
-# 说明：pi0.5 上的 context 512 + motion 1×1024（concat）是怎么接的、encoder 怎么推理、预存与重建脚本在哪
+# 给 VLA 加 motion memory：怎么拼、怎么建库、窗口怎么补帧
 
-> 对象：AWS 8×A100 上训练的 `orig100-ctx32x4x4-motion-s2concat1x1024-b128-60k`（官方 16 任务×100 集，60k 步，global batch 128，seed 42），history 配置 `perceptual-framesamp-ctx-32frame-4x4-motion-stage2-1x1024-orig16.yaml`（在训练分支 `origin/v4-256concat1`；评估副本资产目录里的 `history_config.resolved.yaml` 就是它的解析快照）。
-> 代码锚点一律写 `文件::类/函数/配置键`，不写行号。本文只描述现状，不是实施授权。
-> 评估结果：官方 test 800 局、三 seed（7/42/0）均值 **37.33 ± 0.59%**（`docs/evaluation-doc/o16-3seed-1031/result.md`）。
+> 写给要把同一套 motion memory 搬到别的 VLA（例如 Qwen 系）上的人。只讲机制，不讲本仓库的工程细节。
+> 参考实现：本仓库在 pi0.5 上的 `context 512 + motion 1×1024（concat）` 模型，AWS 8×A100 训练，官方 800 局三 seed 37.33 ± 0.59%。
 
-## 目录
+## 一、总体思路
 
-1. [一句话总览](#一一句话总览)
-2. [在 pi0.5 上怎么加 context：两路记忆、一个前缀](#二在-pi05-上怎么加-context两路记忆一个前缀)
-3. [encoder 怎么推理：帧路 SigLIP、运动路 Wan VAE + MotionJEPA stage2](#三encoder-怎么推理)
-4. [预存了什么、H5 在哪一步用、推理时怎么重建](#四预存了什么h5-在哪一步用推理时怎么重建)
-5. [padding：训练与测试两侧的填充怎么对齐](#五padding训练与测试两侧各有哪些填充怎么对齐)
-6. [训练与推理一致性是怎么保证的](#六训练与推理一致性是怎么保证的)
-7. [数字速查](#七数字速查)
+VLA 原本只看当前帧 + 文本。我们给它加一段「记忆」，放在主干（这里是 PaliGemma）输入序列的最前面，让语言 token 和动作 token 能回看历史。记忆由两路 token 组成：
 
----
+| 路 | 一个 token 代表什么 | 怎么得到 | 每样本多少个 | 原始维度 |
+|---|---|---|---|---|
+| 帧路（context） | 某一历史帧「长什么样」 | 历史帧过 VLA 自带的视觉编码器（SigLIP），再池化到 4×4 = 16 个 token | 等距取 32 帧 × 16 = 512 | 2048 |
+| 运动路（motion） | 某段 33 帧「发生了什么运动」 | 33 帧 → Wan2.1 VAE → MotionJEPA 阶段二 encoder，输出 (4,256) 展平成一个 1024 维向量 | 最多 96 个窗口，每窗 1 个 | 1024 |
 
-## 一、一句话总览
+两路各自接一个小的线性投影，投到主干宽度（2048），然后**按时间交错**拼成一段 608 位的记忆区。两个 encoder 都冻结，训练只更新 VLA 本体和这两个投影。
 
-基座是 openpi 的 **pi0.5**（PaliGemma 2B 主干 + Gemma 300M 动作专家，flow matching 出 20 步动作）。我们没有改 pi0.5 的任何层，而是用 `src/mme_vla_suite/models/integration/history_pi0.py::HistoryPi0` 把它包一层：在 PaliGemma 的 prefix **最前面**多拼一段「记忆区」，记忆区由两路 token 按时间交错组成：
-
-| 路 | 来源 | 每个 token 代表什么 | 位置数 | 原始维度 | 投到 2048 维的层 |
-|---|---|---|---|---|---|
-| 帧路（context 512） | 历史帧经 pi0.5 自带的 SigLIP，再 4×4 池化 | 某一历史帧「长什么样」 | 32 帧 × 16 token = **512** | 2048（bf16）+ 768 维时间码 | `FeatureEncoder.encoder_static`：Linear(2816→2048) |
-| 运动路（motion 1×1024） | 33 帧窗口 → Wan2.1 VAE → MotionJEPA 阶段二 encoder（EMA） | 某一段 33 帧「发生了什么运动」 | 最多 **96** 个窗口，每窗 1 个 token | 1024（f32）+ 256 维时间码 | `PerceptualMemory.motion_encoder_static`：Linear(1792→2048) |
-
-两路合计 608 个记忆位，加上当前帧图像 512 + 文本 64，prefix 为 1184；再加 20 个动作 token，全序列 1204。相对不带 motion 的纯 context 512 模型，每样本训练 FLOPs 只多 **8.9%**（`results-now.md` §2.4）。
-
-「concat 1×1024」的含义：阶段二 encoder 每窗输出 (4, 256)，**concat** 读法是把它展平成**一个** 1024 维 token（`readout: stage2_pool4_concat_v1`）；对照的 **split** 读法（`stage2_pool4_split_v1`）是把同一份输出拆成 4 个 256 维 token、占 384 位。两者训练库同一张、encoder 同一个，只差 YAML 的 `readout / num_tokens / dim / budget` 四键。
-
----
-
-## 二、在 pi0.5 上怎么加 context：两路记忆、一个前缀
-
-### 2.1 总开关与配置键
-
-history YAML 的 `integration_type: context` 决定接入方式（另两种 `modulation`、`expert` 不在本文范围）；`memory_token_dim: 2048` 是记忆 token 投到主干宽度；`budget: 512`、`token_per_image: 16` 定帧路；`motion.*` 节定运动路。本模型的 motion 节原文：
-
-```yaml
-motion:
-  enabled: true
-  source_shape: [1, 1024]          # 落盘每行形状
-  readout: stage2_pool4_concat_v1  # 一窗一个 1024 维 token
-  num_tokens: 1
-  dim: 1024
-  budget: 96                        # 最多 96 个窗口位置，零截断
-  pos_dim: 256                      # 时间码取 pos_emb 前 256 维
-  demo_min_real_frames: 17          # demo 段尾窗最少 17 个真实帧，不足 33 用末帧补
-  demo_tail_pad: repeat_last
-  stride: 32                        # 段内绝对网格 0,32,64,…（阶段二口径；旧 768 维 encoder 是 16）
-  window_frames: 33
-  window_direction: forward
-  grid_origin: segment_start
-  frame_size: 256
-  store_path: v1-store/datasets/16task-orig100-1600ep-9e109419/motion-stage2-1024
-  source_run: stage2-full144-1025-a/checkpoint_epoch_105.pt#model
-  checkpoint_sha256: 27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035
-  encoder_kind: stage2_pool4_concat
-  online_gpu: 1
-```
-
-`src/mme_vla_suite/datastore/motion_adapter.py::motion_policy_spec` 把这一节解析成 `MotionPolicySpec`：readout 为 stage2 时强制 `source_shape=[1,1024]、num_tokens=1、dim=1024`，布局名必须是 `motion-stage2-1x1024-grid32-demopad17-v1`。
-
-### 2.2 帧路：32 帧 × 16 token
-
-- **选帧**：`src/mme_vla_suite/shared/sampling.py::even_sampling_indices(step, 32)`——当前步 `t` 不足 32 帧时全取，否则在 `[0, t]` 上 `linspace` 等距取 32 帧。训练与在线共用同一函数。
-- **每帧特征**：SigLIP So400m（pi0.5 自带的视觉塔）输出 256 个 2048 维 token，`pool_tokens_to_size` 均值池化到 4×4 = 16 个 token。所以 32 帧 × 16 = 512 个位置。
-- **时间码**：`pos_emb` 是帧号 `t` 的纯函数（3D 位置编码，768 维），训练库只存一份；每个 token 带所在帧的时间码，state 路本模型关闭（`use_state_emb: false`）。
-- **投影**：`src/mme_vla_suite/models/representation/mem_encoder.py::FeatureEncoder`——`concat(image_emb[2048], silu(pos_proj(pos)[768→768]))` → `encoder_static` Linear(2816→2048)。`img.net: identity`，图像特征本身不再过网络。
-
-### 2.3 运动路：最多 96 个窗口，每窗 1×1024
-
-- **窗口**：从起点 `f` 往后连续 33 帧 `[f, f+32]`（前视，与 encoder 训练语义一致），尾端不得超过当前帧。
-- **起点网格**：钉在**段内绝对位置** `0, 32, 64, …`，demo 段与 exec 段各自起算、窗口不跨段。当前帧只决定哪些起点「已可见」，网格本身不随时间平移，因此离线表小、在线每 32 帧只新编 1 个窗。demo 段尾窗允许只有 17 个真实帧、其余用 demo 最后一帧补齐；exec 段始终要求完整 33 帧。公式在 `src/mme_vla_suite/datastore/motion_store.py::visible_motion_rows`，训练侧与在线侧 `import` 同一份。
-- **预算 96、零截断**：合法起点数超过 96 直接 raise，不抽稀（官方评估口径）。没凑够的位置右填充零向量、`motion_mask=False`。
-- **投影**：`src/mme_vla_suite/models/representation/percep_mem.py::PerceptualMemory`——`pos_h = silu(motion_pos_proj(motion_pos[256]))`（256→768），`motion_encoder_static(concat(motion_emb[1024], pos_h[768]))`（1792→2048）。本模型新增可训练参数：`motion_pos_proj` 197,376 + `motion_encoder_static` 1792×2048+2048 = 3,672,064，合计约 **3.87 M**；`motion.enabled=false` 时这两层根本不创建。
-
-### 2.4 两路怎么合成一段记忆区
-
-`PerceptualMemory.__call__` 先返回并列序 `(b, 512 + 96, 2048)`；`HistoryPi0.embed_memory` 再用 `mem_order` 重排：
-
-- `src/mme_vla_suite/shared/sampling.py::memory_order(frame_times, 16, motion_times)`：键 = `时刻×2 + 类型`（帧 0、motion 1），稳定排序；同一时刻帧 token 在 motion 前，同帧 16 位保持内部次序，两路 padding 一并落到尾部。产出后显式校验是合法置换。
-- `jnp.take_along_axis(tokens, mem_order)` 与 `take_along_axis(mask, mem_order)` 同步重排。结果是一条**按时间交错**的 608 位记忆区，时间上相邻的「样子」和「运动」token 靠在一起。
-
-### 2.5 拼进 prefix 与 attention 规则
-
-`HistoryPi0.embed_prefix`：`integration_type == "context"` 时先 `embed_memory`，记忆区 append 在最前，然后才是当前帧图像（SigLIP 512 token）与文本（64）。prefix 顺序：`[记忆 608 | 图像 512 | 文本 64]`。
-
-attention 由 `history_pi0.py::make_attn_mask(input_mask, ar_mask, na_mask)` 决定：
-
-- 记忆区 `ar_mask` 全 False，位于最前（cumsum 为 0）；第一个图像 token `ar=True`。因此记忆 token 之间**互看**（双向），记忆看不到图像与文本。
-- 图像 token `na_mask=True`，`mask_not_attend` 屏蔽「query 或 key 是 na 且 key 落在记忆区」的格子，所以**图像 token 看不到记忆**（保持 SigLIP→PaliGemma 的原始视觉流不被历史干扰）；文本 token 和动作 token 可以看到记忆。
-- 动作专家的 20 个 suffix token 按 pi0.5 原规则看到全部 prefix（含记忆），再走 10 步去噪。
-- 位置编码：`positions = cumsum(input_mask) - 1`，记忆 token 占 RoPE 位置 0…607，padding 位不占号。
-
-`HistoryPi0.sample_actions` 推理时先对 prefix 跑一遍 PaliGemma 得 `kv_cache`，去噪 10 步只重算 suffix——记忆区的开销只付一次。
-
-### 2.6 训练时数据从哪来
-
-`src/mme_vla_suite/training/framesamp_dataset.py::FrameSampDataset.__getitem__` 产出 8 个键：
-
-| 键 | 形状 | 来源 |
-|---|---|---|
-| `static_image_emb` | (512, 2048) bf16 | packed 帧表 `framesamp-4x4/image_emb_4x4/part_*.bf16.bin`，按 `row_of(g, t)` 直读 |
-| `static_pos_emb` | (512, 768) f32 | `pos_emb_4x4.f32.bin` |
-| `static_state_emb` | (512, 8) f32 | `state_emb.f32.bin`（本模型 `use_state_emb=false`，模型侧不用） |
-| `static_mask` | (512,) bool | 真帧 True、padding False |
-| `motion_emb` | (96, 1024) f32 | motion 表 `motion-stage2-1024/motion_token.f32.bin`，按 `visible_motion_rows` 查 `meta/motion_index.json` 取行，`reshape(k, 1024)` |
-| `motion_pos` | (96, 256) f32 | 起点帧 `pos_emb[f, 0, :256]` |
-| `motion_mask` | (96,) bool | 前 k 个 True |
-| `mem_order` | (608,) int32 | `memory_order(...)` |
-
-`check_motion_contract` 在构造时核：表布局 = `motion-stage2-1x1024-grid32-demopad17-v1`、`provenance.encoder` 为阶段二 `model/ema`、`checkpoint_sha256` 与 YAML 一致、`stride` 与表的 `grid_stride` 一致。openpi 的 `_collate_fn` 对每键 `np.stack` 加 batch 维，`HistAugObservation.from_dict` 接收。
-
----
-
-## 三、encoder 怎么推理
-
-两路 encoder 都是**冻结**的，训练时不反传到它们；只训 pi0.5 本体 + 上面两组投影层。
-
-### 3.1 帧路：SigLIP
-
-- **离线建库**（训练用）：`src/mme_vla_suite/dataset_builder/build_robomme_dataset.py` 逐 episode 读原始 H5 的 `episode_{i}/timestep_{t}/obs/front_rgb`（256×256 uint8），resize 到 224，用 `siglip_tokenizer.py::SigLipTokenizer` 加载 f32 的 `siglip_params.pkl`（资产锁 `siglip_params`，HF `Yinpei/pi05_vision_encoder`）逐帧编码，写 `source/features/.../token_emb_{t}.npy` 与每步 `data/{idx}.pkl`；`scripts/dataset/pack_framesamp_store.py pack` 再做 4×4 池化打成三张裸 `.bin` 表。
-- **在线**（评估用）：`src/mme_vla_suite/policies/framesamp_memory.py::FrameSampMemory.add_buffer` 把新到的帧归一化、`resize_with_pad` 到 224，调 `HistoryPi0.vision_encode`（checkpoint 里的 bf16 SigLIP）整批编码，`pool_tokens_to_size` 池化到 16 token，存进 `_history_feats[step]`。
-
-两侧差别：离线 f32 逐帧、在线 bf16 整批，相对差约 0.33%，用户早已拍板接受（`docs/train-infer-consistency.md`）。
-
-### 3.2 运动路：Wan2.1 VAE → MotionJEPA 阶段二 encoder
-
-**输入**：`(33, 256, 256, 3)` uint8 原始帧（不是 224 的 SigLIP 输入，所以在线侧要单独缓存 256 域原图 `_raw_frames`）。
-
-**第一跳 Wan VAE**：`scripts/dataset/wan/wan_motion_infer.py::encode_chunk`——`Wan-AI/Wan2.1-T2V-1.3B-Diffusers` 的 `AutoencoderKLWan`，fp32、关 TF32、关 tiling/slicing、batch 恒 1；像素 `/127.5 - 1` 到 [-1,1]，`vae.encode(x).latent_dist.mode()`（取均值不采样），输出 `(1,16,9,32,32)` 转成组优先 `(9, 16, 32, 32)` f32 latent（33 帧压成 9 个时间组，每组 16 通道 32×32）。一窗 VAE 约 0.85 s（RTX 6000 Ada 实测，`docs/dataset-build-doc/4task-motion-40ep/result.md`），是运动路耗时的主体。
-
-**第二跳 阶段二 encoder**：MotionJEPA 仓库 `src/motion_jepa/models/wan_latent_encoder.py::Stage2WanLatentMotionEncoder`（锚点 commit `b5d23a5`，经 `scripts/dataset/wan_stage2/pyproject.toml` 以 git 依赖钉死）：
-
-- 9 组 latent 先按 checkpoint 内的 `latents_mean/std` 做 fp32 affine 归一化；每组 32×32 按 4×4 patch 切成 64 个 patch token（共 576），`input_proj` Linear(256→256)，加可学习的 t/h/w 绝对位置。
-- 另从归一化 latent 上做 8×8→4×4 掩码均值池化，取**来源时刻槽 [0, 3, 5, 8]**（9 组中的 4 组）得 4 个内容池化 token，`pool_proj` Linear(256→256)，加对应时间位置。
-- 580 行一起过 8 层 Transformer（宽 256、4 头、SwiGLU、3D RoPE），attention 是**块因果**（`block_ids` 小于等于才可见，4 个读出 token 的块号为 9，能看到全部 patch）。
-- 取末尾 4 个读出位，`final_norm` + `output_proj` Linear(256→256)，得 `(4, 256)` f32。
-
-**导出接口**（离线与在线唯一入口）：`src/motion_jepa/export/stage2_memory.py::encode_windows`——要求 eval 模式、fp32、关 TF32、`autocast(enabled=False)`，输出 `(B, 4, 256)` 后 `reshape(B, 1024)`。`load_ema_encoder` 加载 `stage2-full144-1025-a/checkpoint_epoch_105.pt` 的 `model` 键（`weight_type=ema`，arch `wan-latent-stage2-blockwise-pool4-three-decoder`），逐张量核 EMA 状态精确相等，并产出 65 个叶的 `encoder_state_sha256` 身份。
-
-所以每个窗口最终是一个 **1024 维 f32 向量**（4 个时刻槽 × 256），这就是 `motion_emb` 的一行。
-
-### 3.3 在线推理时运动路怎么跑（评估 server 内）
+## 二、memory 怎么拼接
 
 ```
-benchmark client ──websocket──▶ serve_policy.py（JAX 主进程，GPU 0）
-                                   │ MME_VLA_Policy.add_buffer / infer
-                                   │ FrameSampMemory._encode_ready_windows
-                                   │     33 帧 uint8（6,488,064 B）
-                                   ▼  Unix socketpair，一次一窗，Lock 串行
-                              stage2_sidecar.py（torch 子进程，GPU=motion.online_gpu）
-                                   │ wan_motion_infer.encode_chunk → stage2_memory.encode_windows
-                                   ▼
-                              (1024,) f32，4096 B 回包
+[ 记忆区 608 位（帧 token 与 motion token 按时刻交错） | 当前帧图像 512 | 文本 64 ]  →  主干  →  动作专家 20 步
 ```
 
-- **进程**：`src/mme_vla_suite/policies/policy_config.py::create_trained_policy` 读 run 根的 `history_config.resolved.yaml`（核 sha256）与 `motion_provenance.json`，`encoder_kind == "stage2_pool4_concat"` 时构造 `src/mme_vla_suite/policies/motion_client.py::MotionEncoderClient`，由它 `Popen` 起 `scripts/dataset/wan_stage2/stage2_sidecar.py`：独立 uv 子环境 `v1-store/venvs/wan-stage2`（torch 2.9.0 + diffusers 0.39.0），`CUDA_VISIBLE_DEVICES=<online_gpu>`，socketpair 经 `pass_fds` 传入。一个 policy 配一个 sidecar，跨 episode 常驻。
-- **握手**：sidecar 先核 `SOURCE_PIN.json`（`wan_motion_infer.py` 复制件 sha、`uv.lock` sha、实际导入的 MotionJEPA 包 `source_pin()` 三字段），加载 VAE（核权重指纹）与 EMA encoder（核 checkpoint sha），把 `encoder / encoder_state_sha256 / source_pin / numerics / vae` 五组 provenance 发回；客户端与 run 内 `motion_provenance.json`（= 离线建表时的 provenance）逐键比对，任一不等即 raise。协议见 `src/mme_vla_suite/policies/motion_protocol.py`。
-- **增量编码**：`FrameSampMemory.add_buffer` 每收一批帧（首批是整段 demo + exec 第 0 帧共 `es+1` 帧，之后每批 16 帧）就调 `_encode_ready_windows`：demo 段的所有起点首批一次编完；exec 段用 `while` 把「本批末帧已凑齐 33 帧」的起点全部编掉，每个起点编一次、结果存 `_history_feats_motion[f]`；编完就丢掉不再需要的原始帧。stride 32 意味着稳态每 2 个 action chunk 才新编 1 窗。
-- **组包**：`FrameSampMemory._prepare_motion(step)` 取当前可见起点（与训练同一公式）、填 (96,1024)/(96,256)/(96,) 并右填充，`MME_VLA_Policy._prepare_history` 再用同一个 `memory_order` 算 `mem_order`，交给 `sample_actions`。
+1. **投影**。帧 token：`concat(视觉特征 2048, silu(Linear(时间码 768→768)))` → `Linear(2816→2048)`。motion token：`concat(motion 1024, silu(Linear(时间码 256→768)))` → `Linear(1792→2048)`。时间码就是该帧 / 该窗口起点帧的位置编码，让主干知道「这是什么时候的记忆」。
+2. **交错**。每个 token 带一个「时刻」（帧号或窗口起点帧号），两路合在一起按时刻稳定排序：同一时刻帧 token 排在 motion token 前。效果是时间上相邻的「样子」和「运动」靠在一起，而不是 512 个帧 token 后面跟 96 个 motion token。
+3. **固定形状 + mask**。为了 jit 形状固定，帧路填满 512 位、运动路填满 96 位；不够的位置填零向量并把 mask 置 False。排序时 padding 的时刻记成最大值，所以 padding 全部落在记忆区尾部。位置编号按有效 token 累加，padding 不占位置号。
+4. **attention 规则**。记忆 token 之间双向互看，看不到当前图像和文本；当前图像 token **看不到记忆**（不让历史污染当前视觉流）；文本 token 和动作 token 能看到全部记忆。记忆区只在 prefix 里算一次并进 KV cache，动作去噪的多步只重算动作那一段。
+5. **预算与截断**。motion 位置数 96 按全部数据集定标，保证最长 episode 也不截断；合法窗口数超过 96 直接报错，不抽稀。
 
----
+搬到 Qwen 时需要对应改的只有三处：投影输出维度换成 Qwen 隐宽；记忆区插在 Qwen 的视觉 token 之前；attention mask 按上面第 4 条写。
 
-## 四、预存了什么、H5 在哪一步用、推理时怎么重建
+## 三、motion token 的两种获取方式
 
-### 4.1 原始 H5 只在建库时读一次
+同一个 encoder、同一份代码，但训练和推理两侧拿 token 的方式不同：
 
-RoboMME 原始 H5（每任务一个 `record_dataset_<Task>.h5`，`episode_{i}/timestep_{t}/obs/front_rgb` 256×256 uint8，共 16 任务×100 集）**只在建库阶段被读**：
-
-- SigLIP 建库读它出帧特征（§3.1）；
-- Wan 抽取 `scripts/dataset/wan/extract_wan.py`（经 `wan_common.py::read_segment_frames`）读它切 33 帧窗口→latent；
-- 打包 `pack_motion_store.py pack --raw-dir …` 对 H5 做 sha256 写进 `input_manifest`，绑定血缘。
-
-训练与推理**都不读 H5**。训练读下面两张预存表；推理读环境实时帧。
-
-### 4.2 预存产物（训练库 `16task-orig100-1600ep-9e109419`，AWS 建、公开 bucket 发布）
-
-| 目录 | 内容 | 读者 |
+| | 训练：离线建库预存 | 推理：在线现算 |
 |---|---|---|
-| `meta/episode_manifest.json`、`meta/input_manifest.json` | 1600 集清单（canonical 顺序）、16 个 H5 的 sha256 | 全部 |
-| `source/data/{idx}.pkl`、`source/features/` | 每步样本（动作、prompt 等）与逐帧 SigLIP 原始特征 | `FrameSampDataset` 必读 pkl；features 只做快速校验 |
-| `framesamp-4x4/` | 帧表三张裸 `.bin`（`image_emb_4x4` bf16、`pos_emb_4x4` f32、`state_emb` f32），`meta/store_meta.json` 状态 `verified` | 训练帧路 |
-| `wan-latents/` | 逐段 `.bin`，每窗 589,824 B = `(9,16,32,32)` f32，2496 段，26.8 GB | 只用于编 motion 表、对拍；训练不读 |
-| `motion-tokens-stage2/` | 导出脚本产出的逐段 `.f32.bin`，每窗 4096 B，共 95 MB | 打包输入 |
-| `motion-stage2-1024/` | **motion 表**：`motion_token.f32.bin`（23,253 行 × (1,1024) f32）、`meta/motion_index.json`（段基址，唯一身份）、`meta/store_meta.json`（含 `provenance.encoder/vae/numerics/source_pin/…`）、`meta/row_digests.blake2b.bin` | 训练运动路；在线握手核对的 provenance 真源 |
-| `evidence/` | `G0.json`（64 个固定样本窗）、`G2.json`、`G3.json`、`SOURCE_PIN.json`、`wan_cache_import.json` | 训练起跑与封口时核；在线恢复复算 |
-| `assets/robomme/norm_stats.json` | 动作/状态归一化统计 | 训练与推理 |
+| 做什么 | 对整个训练集提前算好所有窗口的 motion token，存成一张表；帧路同理存一张 SigLIP 特征表 | 评估时 policy 进程旁边起一个 encoder 子进程，环境每送来新帧就把凑齐的窗口现场编码 |
+| 输入 | 原始 H5 视频帧（只在建库这一步读 H5） | 环境实时帧（256×256 原图） |
+| 存储 | 每窗 1024 维 f32，整个 1600 集训练库只有 23k 行、约 95 MB；中间产物 Wan latent 另存可复用 | 不落盘，按 episode 缓存在内存里 |
+| 流程 | 帧 → VAE latent → encoder token → 打包成表（三步各自可断点续跑、可逐位对拍） | 首批送整段 demo，之后每 16 帧送一批；每批到后用 while 把已凑齐 33 帧的起点全部编掉，一个起点只编一次 |
+| 一致性 | 两侧 encoder 入口是同一个函数（fp32、关 TF32、batch 1），启动时核对权重哈希与数值环境，同一窗口离线表与在线现算逐位相同 | |
 
-表格式层唯一实现是 `src/mme_vla_suite/datastore/motion_store.py` 与 `framesamp_store.py`，打包器与 dataset 都从这里 import，不复制。
+训练不用在线算是因为太慢（一个窗口 VAE 约 1 s）；推理不用预存表是因为推理时的帧是新的。所以必须保证两侧算出来的东西一样，核心就是「同一函数、同一权重、同一窗口定义」。
 
-### 4.3 「重新构造推理 encoder」的脚本一览
+## 四、窗口怎么取、怎么补帧
 
-有，而且分离线重建与在线复算两套：
+窗口 = 从起点往后连续 33 帧。起点钉在**段内绝对网格** 0, 32, 64, …（demo 段与 exec 段各自从 0 起算，窗口不跨段），当前时刻只决定哪些起点「已经可见」。这样每过 32 帧才多一个窗口，离线表小，在线每隔两个 action chunk 才编一次。
 
-| 用途 | 脚本 | 做什么 |
-|---|---|---|
-| 离线：帧 → latent | `scripts/dataset/wan/extract_wan.py`（经 `run_local.py --stage wan` 多卡调度） | 33 帧窗 → `encode_chunk` → `wan-latents/<段>.bin` + `.sha256` + `.metadata.json` |
-| 离线：latent → 1024 维 token | MotionJEPA `scripts/stage2_memory_export.py`（GL 分支 `v4-gl-orig100-1031` 以单文件 vendoring 放在 `scripts/dataset/wan_stage2/export_stage2_memory.py`） | `load_ema_encoder` + `encode_windows`，参数 `--grid-subsample 2`（stride 16 的 latent 网格只取偶数位 = stride 32）、`--batch 1`、`--check-dropout 64`，写 `motion-tokens-stage2/` 与 export_record |
-| 离线：打包成表 | `scripts/dataset/pack_motion_store.py pack --layout stage2 … --stage2-validation <evidence 目录> --stage2-source-pin scripts/dataset/wan_stage2/SOURCE_PIN.json`，再 `verify --resume --check-padding` | 按行序契约拼表、逐行 digest、写 provenance，`packed → verified` |
-| 离线：数值闸门 | `scripts/dataset/wan_stage2/validate_stage2.py --gate G2 / G3 / G4-reference` | G2：缓存 latent 与现算 latent 对拍；G3：从原像素重算 encoder 输出、两条调用路径逐位相等；G4-reference：对 G0 的 64 窗生成参考 token 供在线对拍 |
-| 在线：sidecar 本体 | `scripts/dataset/wan_stage2/stage2_sidecar.py` | §3.3 的子进程；`--stub` 模式只回帧号用于状态机测试 |
-| 在线：复算对拍 | `scripts/training/check_stage2_online.py` | 真实客户端 + 真实 sidecar 对 G0 的 64 窗现算，与 `validate_stage2.py --gate G4-reference` 的参考值比对，输出 `ONLINE_OFFLINE_PARITY=PASS` |
-| 交付恢复 | `scripts/training/check_stage2_checkpoint.py --mode delivery …` | 下载某步 checkpoint 后核清单、root 快照（`history_config.resolved.yaml`、`motion_provenance.json`、`encoder_dependencies/`、`online_restore_inputs.npz`）并做一次真实在线推理 |
-| 启动合同 | `scripts/training/check_mixed8_stage2_1024_launch.py`（mixed8 版）、GL 分支的 `check_orig16_stage2_launch.py` | 起跑前核 argv、配置、数据身份、14 个记忆叶冷初始化、`motion_encoder_static` 形状 |
+补帧规则（训练建库与在线现算完全一致）：
 
-旧 768 维 encoder 那套（`scripts/dataset/wan/encode_motion.py`、`motion_sidecar.py`，输出 (8,256)、stride 16）仍在仓库，但**本模型不用**；两套靠 `encoder_kind` 分派（`policy_config.py` 按 `stage2_pool4_concat` 走 `MotionEncoderClient._init_stage2`）。
+- **demo 段**：尾部窗口不足 33 帧时，用 **demo 最后一帧重复补到 33 帧**；要求至少 17 个真实帧，不足 17 的起点不算窗口；**绝不借用 exec 的帧**，避免 demo 窗口泄露执行阶段信息。
+- **exec 段**：**永不补帧**，必须凑齐 33 个真实帧才算可见；没凑齐就等后面的帧到了再编。
 
-### 4.4 评估副本里随 checkpoint 一起发的东西
+换一个 encoder 或窗口长度时，这条规则和 stride 要同时写进离线建库脚本与在线编码器，否则不会报错，只会静默地训练与推理不一致。
 
-公开 bucket `HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1` 的根快照（本机评估副本 `/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/assets/vla-o16cc-59999-bd35a857…/`）除 Orbax 参数外还有：`history_config.resolved.yaml`、`motion_provenance.json`、`encoder_dependencies/stage2-full144-1025-a/`（encoder 权重与 config 实体，477 MB）、`motion_evidence/{G0,G2,G3,SOURCE_PIN,wan_cache_import}.json`、`online_restore_inputs.{json,npz}`（PatternLock ep36 的 161 帧真实在线输入，供异地做一次真实推理核身份）。Wan VAE、tokenizer、pi05_base 不随包发，按 `scripts/assets/ASSETS_LOCK.json` 的 sha 用本机缓存。
+## 五、参考代码位置（本仓库）
 
----
-
-## 五、padding：训练与测试两侧各有哪些填充、怎么对齐
-
-这里的「padding」有三个层次，容易混在一起。按从里到外的顺序说：encoder 内部 → 窗口级补帧 → 记忆预算级右填充。前两层决定 encoder **输入**长什么样、必须两侧逐位同式；第三层只影响 pi0.5 看到的记忆区形状，由 mask 屏蔽。
-
-### 5.1 encoder 内部：没有我们加的 padding
-
-| 环节 | 情况 |
+| 内容 | 位置 |
 |---|---|
-| SigLIP 输入 | 原始帧 256×256 正方形，`image_tools.resize_with_pad(…, 224, 224)` 等比缩到 224，长宽比相同所以**不产生 pad 边**；训练建库与在线 `add_buffer` 同一函数 |
-| Wan VAE 输入 | 窗口固定 33 帧 = 4k+1，正好对齐 VAE 的时间压缩率（33→9 组），`encode_chunk` 用形状断言挡住 diffusers 对 T≠4k+1 的静默截断；没有我们加的时间或空间 padding（VAE 自身因果卷积的内部填充属于模型实现，两侧同一份权重与代码） |
-| 阶段二 encoder | `encode_windows` 传入的几何掩码 `geometry = ones(B, 32, 32)` 全 True：576 个 patch 全有效，掩码均值池化不丢任何格子；块因果 attention 的 `-inf` 只用于「后块不看前块」，不是 padding |
-
-结论：encoder 层面两侧输入字节同一、没有任何一侧独有的填充。
-
-### 5.2 窗口级补帧：demo 段尾窗「重复最后一帧」，exec 段永不补
-
-布局 `motion-stage2-1x1024-grid32-demopad17-v1` 的契约（`motion_store.py::LAYOUT_SPECS`）：`demo_min_real=17`、`exec_min_real=33`、`demo_tail_pad=repeat_last`。
-
-- **demo 段**：起点 `s ∈ {0, 32, 64, …}`，合法条件 `s + 16 ≤ es − 1`（至少 17 个真实帧）。实际帧数 `real = min(33, es − s)`；`real < 33` 时窗口为 `[s, …, es−1]` 再重复 **demo 最后一帧 `es−1`** 补到 33 帧，**不借用 exec 的任何一帧**（避免 demo 窗泄露 exec 信息）。每个 episode 最多只有最后 1～2 个 demo 窗需要补。
-- **exec 段**：起点 `u ∈ {0, 32, …}`，合法条件 `u + 32 ≤ t − es`，必须凑齐完整 33 个真实帧才可见，**没有补帧**；没凑够的起点就是「还不可见」，等后面的帧到了再编。
-- **两侧实现**：
-  - 训练（离线抽取）：`scripts/dataset/wan/extract_wan.py` 按 `wan_common.DEMO_TAIL_PAD = "repeat_last"` 补帧，并在每段 `.metadata.json` 记 `real_frames / pad_frames / pad_source_frame`（补帧来源帧号 = `seg_start + seg_len − 1`），表的 `motion_index.json` 行数按 `seg_num_grid(seg_len, min_real, 32)` 计。
-  - 测试（在线）：`framesamp_memory.py::FrameSampMemory._encode_window`——`real = min(W, es − f) if f < es else W`，`frame_ids = [f … f+real−1] + [es−1] × (W − real)`；`real` 不满足段契约或 `demo_tail_pad != repeat_last` 直接 raise。
-  - 前提是**首批 `add_buffer` 必须恰好送整段 demo 加 exec 第 0 帧（共 `es+1` 帧）**并显式传 `exec_start_idx`，否则 raise；这样 demo 段全部窗口在首批一次编完，之后每批 16 帧只推进 exec 网格。
-
-因为 encoder 对补帧窗看到的 33 帧字节在两侧完全相同，所以同一窗口离线表与在线现算可以逐位对拍（`check_stage2_online.py`）。
-
-### 5.3 记忆预算级右填充：零向量 + mask=False，位置号不占
-
-pi0.5 的 JAX jit 要求形状固定，所以两路都填到固定预算，再用 `input_mask` 屏蔽。
-
-**帧路（512 位）**：`even_sampling_indices(t, 32)` 在 `t < 32` 时只取 `t+1` 帧（含 demo 帧，`t` 是全域帧号），不足 32 帧的部分右填充：
-
-| 侧 | 实现 | 填充值 |
-|---|---|---|
-| 训练 | `framesamp_dataset.py::FrameSampDataset._pad` | image bf16 全零、pos f32 全零、state 全零、`static_mask[n:] = False` |
-| 测试 | `framesamp_memory.py::_prepare_frame_sampling` → `shared/data_utils.py::right_padding_token_emb` | 同样右侧补零、mask False |
-
-两侧按帧补、再 `repeat` 到每帧 16 位，交付 dtype 逐键一致（零的 bf16/f32 位型同为全零字节）。
-
-**运动路（96 位）**：合法起点 `k ≤ 96`（超过直接 raise，零截断、不抽稀），其余位填零：
-
-| 侧 | 实现 | 填充值 |
-|---|---|---|
-| 训练 | `framesamp_dataset.py::FrameSampDataset._pad_motion` | `motion_emb` (96,1024) 零、`motion_pos` (96,256) 零、`motion_mask[k:] = False`、时刻用哨兵 `MEM_ORDER_SENTINEL` |
-| 测试 | `framesamp_memory.py::_prepare_motion` | 同式：`emb = zeros(96, 1024)`，`pos = zeros(96, 256)`，`mask[:k] = True`，`pad_times(frames, 96)` |
-
-**填充位在模型里的去向**：
-
-1. 填充行照常过 `motion_encoder_static` / `encoder_static`（输入全零，输出等于 bias），不做特殊处理，与帧路对 padding 帧的处理同构。
-2. `memory_order` 的键用「时刻」排序，padding 时刻记 `int32 最大值` 哨兵，所以**所有 padding 位一并排到记忆区尾部**（帧路 padding 在 motion padding 之前，`kind="stable"` 保证）。
-3. `make_attn_mask` 用 `valid_mask = input_mask[:, None, :] * input_mask[:, :, None]`：padding 位既不被任何 token 看到，也不作为 query 产生有效输出。
-4. `positions = cumsum(input_mask) − 1`：padding 位**不消耗 RoPE 位置号**，真 token 的位置号与其在有效序列里的次序一致，不会因为填充多少而漂移。
-
-**填充比例（代价）**：96 位里平均只有十几个是真 motion token（stride 32 口径比 `docs/motion-memory.md` 记录的 stride 16 时期更稀），episode 早期 `t` 小时帧路也大量填充；这是「零截断 + 形状固定」的既定代价，不是 bug。评估「motion 有没有用」时要按真 motion 数分层看。
-
-### 5.4 一张表对齐两侧
-
-| 层次 | 训练（离线建库 / dataset） | 测试（在线 server） | 是否同式 |
-|---|---|---|---|
-| SigLIP 输入 resize | `resize_with_pad` 256→224，无 pad 边 | 同函数 | 是（权重精度 f32 vs bf16 有 0.33% 差，已拍板） |
-| Wan VAE / 阶段二输入 | 33 帧，无额外 padding | 同 | 是，逐位 |
-| demo 尾窗补帧 | `extract_wan.py` 重复 `es−1` 帧，`real ≥ 17` | `_encode_window` 同式 | 是，逐位 |
-| exec 窗 | 必须 33 真实帧，不补 | 同 | 是 |
-| 帧路不足 32 帧 | `_pad` 右补零 + mask | `right_padding_token_emb` 右补零 + mask | 是 |
-| motion 不足 96 窗 | `_pad_motion` 右补零 + mask + 哨兵时刻 | `_prepare_motion` 同式 | 是 |
-| 超过 96 窗 | raise | raise（官方评估口径；`MMEVLA_MOTION_OVERFLOW=resample` 才抽稀，本模型评估未开） | 是 |
-| 排序与位置号 | `memory_order`，padding 落尾、不占 RoPE 号 | 同一函数对象 | 是 |
-
----
-
-## 六、训练与推理一致性是怎么保证的
-
-缺任何一条都「不报错、只静默降效果」：
-
-1. **同一套起点公式**：`motion_store.py::visible_motion_rows`（训练）与 `framesamp_memory.py::visible_motion_frames`（在线）同式；`memory_order` 两侧 `import` 同一个函数对象。
-2. **同一个编码入口**：离线导出与在线 sidecar 都走 `wan_motion_infer.py::encode_chunk`（VAE）+ `stage2_memory.py::encode_windows`（encoder），同样 fp32、关 TF32、batch 1、eval；sidecar 起手核 `SOURCE_PIN.json`。
-3. **身份逐键比对**：在线握手 provenance 与离线表 `store_meta.provenance` 五组逐键相等（含 `encoder_state_sha256` 65 叶、VAE 权重 sha、torch/cuda/cudnn 版本、`numerics`）；训练 dataset 构造时核 YAML 的 `checkpoint_sha256` 与表一致。
-4. **真实复算闸门**：`check_stage2_online.py` 的 `ONLINE_OFFLINE_PARITY`、交付恢复的真实在线推理。阶段二跨卡型（A100 建表、A40/A6000 评估）的数值差按用户裁决记 `NUMERIC_EQUIVALENCE=NOT_REQUIRED`，只要求身份与来源一致，不要求逐位。
-
----
-
-## 七、数字速查
-
-| 项 | 值 | 出处 |
-|---|---|---|
-| 记忆位 | 512 帧路 + 96 运动路 = 608 | YAML |
-| prefix / 全序列 | 1184 / 1204 | `results-now.md` §2.1 口径 |
-| 每样本训练 FLOPs（相对纯 512） | 15.17 TFLOP，×1.089 | `results-now.md` §2.4 |
-| 新增可训练参数（运动路投影） | 3,672,064 | `percep_mem.py` 形状手算 |
-| motion 表 | 23,253 行 × 4096 B；wan-latents 2496 段 26.8 GB | `1101-gl-ablation-encoders-ctx-b64-80k-plan.md` |
-| encoder | `stage2-full144-1025-a` ep105 EMA，sha `27daa832…`，8 层宽 256，输出 (4,256)→1024 | `motion_provenance.json` |
-| VAE | `Wan-AI/Wan2.1-T2V-1.3B-Diffusers`，fp32，33 帧→(9,16,32,32) | `wan_motion_infer.py` |
-| 在线单窗耗时 | 约 1.4 s（A100，VAE 占绝大部分；阶段二 encoder 本身毫秒级） | `docs/training-doc/aws-p5-online/result.md`（旧 encoder 实测，VAE 同一份） |
-| 三 seed 成功率 | 37.33 ± 0.59%（split 38.42 ± 1.25，modulation split 43.42 ± 0.52，论文 FrameSamp+Context 30.68 ± 1.17） | `docs/evaluation-doc/o16-3seed-1031/result.md` |
-| 训练 | AWS 8×A100-80GB，b128，60k，seed 42，`mme_vla_suite_orig16_b128_60k`，初始化 `pi05_base` | bucket README |
+| 记忆拼接、attention mask | `src/mme_vla_suite/models/integration/history_pi0.py::HistoryPi0.embed_prefix / embed_memory / make_attn_mask` |
+| 两路投影 | `src/mme_vla_suite/models/representation/percep_mem.py::PerceptualMemory` |
+| 交错排序 | `src/mme_vla_suite/shared/sampling.py::memory_order` |
+| 窗口网格与补帧契约 | `src/mme_vla_suite/datastore/motion_store.py::visible_motion_rows / LAYOUT_SPECS` |
+| 离线建库 | `scripts/dataset/wan/extract_wan.py`（帧→latent）、MotionJEPA `stage2_memory_export.py`（latent→token）、`scripts/dataset/pack_motion_store.py`（打包） |
+| 在线现算 | `scripts/dataset/wan_stage2/stage2_sidecar.py`（encoder 子进程）、`src/mme_vla_suite/policies/framesamp_memory.py::FrameSampMemory`（窗口状态机与补帧） |
+| encoder 本体 | MotionJEPA `src/motion_jepa/models/wan_latent_encoder.py::Stage2WanLatentMotionEncoder`，导出入口 `src/motion_jepa/export/stage2_memory.py::encode_windows` |

@@ -7,7 +7,7 @@
 
 | 文件 | 内容 |
 |---|---|
-| [`ctx512-motion1x1024-concat-explainer.md`](../ctx512-motion1x1024-concat-explainer.md)（仓库根目录） | 说明文档：AWS 训的 context 512 + motion 1×1024（concat）模型在 pi0.5 上怎么接记忆、帧路 SigLIP 与运动路 Wan VAE + MotionJEPA 阶段二 encoder 怎么推理、预存表与 H5 的关系、离线重建与在线 sidecar 复算脚本一览 |
+| [`ctx512-motion1x1024-concat-explainer.md`](../ctx512-motion1x1024-concat-explainer.md)（仓库根目录） | 高层说明：给别的 VLA 加 motion memory 时记忆怎么拼接、motion token 的离线建库与在线现算两种获取方式、窗口网格与 demo 尾窗补帧规则；面向移植者，不讲工程细节 |
 | [`motion-memory.md`](motion-memory.md) | MotionJEPA motion token 接入 HistoryPi0 的现行正本：窗口口径、交错次序、三层代码、训练 / 推理链路逐跳、离线表与建库、闸门体系、生产 run 与评估、已知未知 |
 | [`dataloader-restructure.md`](dataloader-restructure.md) | 训练特征库从每帧一个小文件改成三张连续大表：改前改后的文件结构、生成链路（清单 → SigLIP 建库 → 打包 → verify）、改前改后一致的证明（轻量对拍 + 1000 步梯度链六份 sha256 同值）；细节见文件 git 历史 `3f4afb5` 版本 |
 | [`train-infer-consistency.md`](train-infer-consistency.md) | 训练 / 推理一致性验证：结论（输入链闭合、五处非逐位来源、能推出什么）与待拍板项、两侧调用链、七关结果、第 5 关与第 6 关各单独一节、五个发现、Codex 2026-09-08 审计补验一节；Vulkan 第 28 次建环境崩溃的根因与修法见 `training-doc/tic-vulkan-makeenv/` |
