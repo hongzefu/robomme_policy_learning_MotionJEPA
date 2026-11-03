@@ -333,7 +333,9 @@ def dry_shapes(args) -> int:
 # ══════════════════════════════════════════ selftest（GPU）══════════════════════════════════════════
 def _legal_obs(policy, *, n_frames: int, seed: int = 0):
     """走生产 infer 的同一条装配链（add_buffer → _prepare_history → _input_transform → HistAugObservation），
-    帧与状态为随机合法值；两种 checkpoint 都能用（motion 用 ZeroMotion 句柄，attention 机制与 motion 内容无关）。"""
+    帧与状态为随机合法值；两种 checkpoint 都能用（motion 用 ZeroMotion 句柄，attention 机制与 motion 内容无关）。
+    分包与真实 eval 客户端同形：首包只喂第 0 帧（motion 开启时 FrameSampMemory.add_buffer 要求首包恰好
+    exec_start_idx+1 帧，无 demo 即 1 帧），之后每包 16 帧（exec_start_idx=0 表示沿用）；基线无此约束、分包不影响结果。"""
     import jax
     import jax.numpy as jnp
     from mme_vla_suite.models.integration.history_observation import HistAugObservation
@@ -344,7 +346,9 @@ def _legal_obs(policy, *, n_frames: int, seed: int = 0):
     wrists = rng.integers(0, 256, size=(n_frames, 256, 256, 3), dtype=np.uint8)
     states = rng.normal(0, 0.5, size=(n_frames, sd)).astype(np.float32)
     policy.reset()
-    policy.add_buffer({"images": frames, "state": states, "exec_start_idx": 0})
+    policy.add_buffer({"images": frames[:1], "state": states[:1], "exec_start_idx": 0})
+    for s in range(1, n_frames, 16):
+        policy.add_buffer({"images": frames[s:s + 16], "state": states[s:s + 16], "exec_start_idx": 0})
     t = n_frames - 1
     element = {"observation/image": frames[t, 0], "observation/wrist_image": wrists[t],
                "observation/state": states[t], "prompt": "press the button to reveal the cube"}
