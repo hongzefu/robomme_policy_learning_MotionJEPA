@@ -7,7 +7,7 @@
 
 | 文件 | 内容 |
 |---|---|
-| [`ctx512-motion1x1024-concat-explainer.md`](../ctx512-motion1x1024-concat-explainer.md)（仓库根目录） | 面向移植者的 TODO 式说明：把 motion memory 接进 Qwen3-VL——每项先写我们（pi0.5 侧）怎么做再写 Qwen 侧怎么做；memory 拼接（投影、交错、放置、可见性）、motion token 的离线建库与在线现算（跑通一个窗口、训练建库、推理在线现算各几行）、窗口网格与 demo 尾窗补帧规则、评估流程、开工前决策与已知坑 |
+| [`ctx512-motion1x1024-concat-explainer.md`](../ctx512-motion1x1024-concat-explainer.md)（仓库根目录） | 给外人看的说明：我们在 pi0.5 上怎么拼 memory（两路 token、投影、按时刻交错、填充与 mask、放进前缀）及代码范围；motion token 怎么拿（跑通一窗、训练建库、推理在线现算）；窗口网格与 demo 尾窗补帧规则 |
 | [`motion-memory.md`](motion-memory.md) | MotionJEPA motion token 接入 HistoryPi0 的现行正本：窗口口径、交错次序、三层代码、训练 / 推理链路逐跳、离线表与建库、闸门体系、生产 run 与评估、已知未知 |
 | [`dataloader-restructure.md`](dataloader-restructure.md) | 训练特征库从每帧一个小文件改成三张连续大表：改前改后的文件结构、生成链路（清单 → SigLIP 建库 → 打包 → verify）、改前改后一致的证明（轻量对拍 + 1000 步梯度链六份 sha256 同值）；细节见文件 git 历史 `3f4afb5` 版本 |
 | [`train-infer-consistency.md`](train-infer-consistency.md) | 训练 / 推理一致性验证：结论（输入链闭合、五处非逐位来源、能推出什么）与待拍板项、两侧调用链、七关结果、第 5 关与第 6 关各单独一节、五个发现、Codex 2026-09-08 审计补验一节；Vulkan 第 28 次建环境崩溃的根因与修法见 `training-doc/tic-vulkan-makeenv/` |
