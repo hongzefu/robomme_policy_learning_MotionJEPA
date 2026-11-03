@@ -90,9 +90,11 @@ token  = encode_windows(encoder, latent.unsqueeze(0))[0]   # (1024,) f32 ← 一
 
 ### 2.3 训练：提前建库
 
-太慢，不能在线算。对训练集所有窗口跑一遍 2.2，存成一张 `(rows, 1024)` f32 表，训练时按 (episode, 当前步) 查可见窗口（第 3 节公式）。脚本：`scripts/dataset/wan/extract_wan.py`（帧→latent）→ MotionJEPA `scripts/stage2_memory_export.py`（latent→token）→ `scripts/dataset/pack_motion_store.py`（打包、校验）；表格式见 `src/mme_vla_suite/datastore/motion_store.py`。1600 集训练库的表 23,253 行、约 95 MB，建好的在公开 bucket `HongzeFu/robomme-16task-orig100-1600ep-trainset-20261028-v1` 的 `motion-stage2-1024/`。
+太慢，不能在线算。对训练集所有窗口跑一遍 2.2，存成一张 `(rows, 1024)` f32 表，训练时按 (episode, 当前步) 查可见窗口（第 3 节公式）。脚本：`scripts/dataset/wan/extract_wan.py`（帧→latent）→ MotionJEPA `scripts/stage2_memory_export.py`（latent→token）→ `scripts/dataset/pack_motion_store.py`（打包、校验）；表格式见 `src/mme_vla_suite/datastore/motion_store.py`。1600 集训练库的表 23,253 行、约 95 MB。
 
-**表的行怎么对应到 H5 的帧**。表只有一个裸文件 `motion_token.f32.bin`（第 r 行 = 字节 `r*4096` 起的 1024 个 f32），行与帧的对应全靠两份 JSON：
+#### 已经有预先处理好的：公开 bucket `HongzeFu/robomme-16task-orig100-1600ep-trainset-20261028-v1` 的 `motion-stage2-1024/`
+
+表只有一个裸文件 `motion_token.f32.bin`（第 r 行 = 字节 `r*4096` 起的 1024 个 f32），行与帧的对应全靠两份 JSON：
 
 - `meta/episode_manifest.json`（库根）：1600 个 episode 的顺序 `canonical_order`，每条记 `h5_file`、`raw_ep_idx`、`num_timesteps`、`exec_start_idx`。全域帧号 `t` 就是 H5 里的 `timestep_{t}`，demo 段在前（`t < exec_start_idx`）、exec 段在后。
 - `motion-stage2-1024/meta/motion_index.json`：同一顺序每个 episode 一条，demo 段与 exec 段各给 `row_base`（该段第一行的行号）与 `num_grid`（该段窗口数）。段内第 m 个窗口 = 第 `row_base + m` 行，起点 = 段起点 + 32·m。
