@@ -186,6 +186,26 @@ def memory_patches(a: np.ndarray, z: dict) -> np.ndarray:
     return out
 
 
+def sink_diag(patch: np.ndarray, frame_times: np.ndarray) -> dict:
+    """一次推理的帧流 sink 诊断：top-3 帧、t=0 帧占比与其单 token 占比，
+    以及「剔除每帧最大单 token 后」的 VIS 占比（去 sink 稳健对照；均匀期望不变 = VIS 帧数／有效帧数）。"""
+    valid = [f for f in range(len(frame_times)) if frame_times[f] >= 0]
+    fm = patch.sum(1)
+    tot = fm[valid].sum()
+    order = sorted(valid, key=lambda f: -fm[f])[:3]
+    top = [{"t": int(frame_times[f]), "share": float(fm[f] / tot),
+            "max_token_in_frame": float(patch[f].max() / fm[f]), "max_token_j": int(np.argmax(patch[f]))}
+           for f in order]
+    f0 = [f for f in valid if frame_times[f] == 0]
+    vis = [f for f in valid if VISIBLE[0] <= frame_times[f] < VISIBLE[1]]
+    ds = fm - patch.max(1)
+    return {"top_frames": top,
+            "t0_share": float(fm[f0[0]] / tot) if f0 else None,
+            "t0_max_token_in_frame": float(patch[f0[0]].max() / fm[f0[0]]) if f0 else None,
+            "vis": float(fm[vis].sum() / tot), "vis_u": len(vis) / len(valid),
+            "desink_vis": float(ds[vis].sum() / ds[valid].sum())}
+
+
 def pick_frames(patch: np.ndarray, frame_times: np.ndarray, k: int) -> dict:
     mass = patch.sum(1)
     res = {}
@@ -305,6 +325,26 @@ def main(argv=None) -> int:
         data[tag] = {"npzs": npzs, "k": k, "meta": meta, "dir": d, "model": model, "label": label,
                      "frames_green": frames_green, "rows": rows}
         print(f"X4_EP tag={tag} k={k} infers={len(npzs)} txt_len={txt_len}", flush=True)
+    # ---- sink 诊断扩展到 #15～#19（三局；green 词 query 与全部动作 query）
+    summary["sink_focus"] = {}
+    for tag, dd in data.items():
+        rec = {}
+        for seq in range(FOCUS[0], FOCUS[1] + 1):
+            z = dd["npzs"][seq]
+            ft = np.asarray(z["frame_times"])
+            r_seq = {}
+            for qn, a in (("green", aggregate(_word_npz(z, dd["rows"]["green"]), query="text")),
+                          ("action", aggregate(z, query="action"))):
+                r_seq[qn] = sink_diag(memory_patches(a, z), ft)
+            rec[str(seq)] = r_seq
+        summary["sink_focus"][tag] = rec
+        for qn in ("green", "action"):
+            t0s = [rec[s][qn]["t0_share"] for s in rec]
+            t0m = [rec[s][qn]["t0_max_token_in_frame"] for s in rec]
+            dv = [rec[s][qn]["desink_vis"] for s in rec]
+            print(f"X4_SINK tag={tag} q={qn} t0_share={min(t0s):.3f}-{max(t0s):.3f} "
+                  f"t0_max_token={min(t0m):.3f}-{max(t0m):.3f} vis={np.mean([rec[s][qn]['vis'] for s in rec]):.3f} "
+                  f"desink_vis={np.mean(dv):.3f} uniform={np.mean([rec[s][qn]['vis_u'] for s in rec]):.3f}", flush=True)
     summary["token_table"] = table
     summary["text_rowsum_max_dev_before_renorm"] = ROWSUM_DEV[0]
     print(f"X4_ROWSUM_DEV={ROWSUM_DEV[0]:.3e}", flush=True)
