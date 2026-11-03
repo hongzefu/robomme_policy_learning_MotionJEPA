@@ -109,6 +109,10 @@ token  = encode_windows(encoder, latent.unsqueeze(0))[0]   # (1024,) f32 ← 一
 
 ![motion 窗口网格与补帧（例：192 帧，es=96，当前步 150）](docs/figures/motion-window-grid.svg)
 
+demo 段尾窗的三种情况（需要补、不需要补、不成窗）：
+
+![demo 尾窗三种情况：es=129 不补、es=96 补 1 帧、es=80 不成窗](docs/figures/motion-demo-tail-cases.svg)
+
 补帧规则，训练建库与在线现算一字不差：
 
 - **demo 段**：尾部窗口不足 33 帧时，用 **demo 最后一帧（es−1）重复补到 33 帧**；要求至少 17 个真实帧，不足 17 的起点不算窗口；**绝不借用 exec 的帧**。
