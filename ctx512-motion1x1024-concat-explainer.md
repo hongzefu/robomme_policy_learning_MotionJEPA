@@ -30,6 +30,17 @@ pi0.5 原本的输入是 `[当前帧图像 | 文本]`，动作专家读它的 K/
 3. **固定形状 + mask**。帧路填满 512 位、运动路填满 96 位，不够的填零向量、mask 置 False；排序时 padding 的时刻记最大值，所以全部落在记忆区尾部。位置编号按有效 token 累加，padding 不占号。运动路预算 96 按全部数据集的最长 episode 定，合法窗口数超过 96 直接报错，不抽稀。
 4. **放进前缀**。序列变成 `[记忆区 608 | 当前帧图像 512 | 文本 64]`，再接 20 个动作 token。attention：记忆 token 之间双向互看、看不到当前图像和文本；当前图像 token 看不到记忆；文本 token 和动作 token 看到全部记忆。记忆只在前缀里算一次进 KV cache，去噪多步只重算动作段。**这一步是 pi0.5（PaliGemma 前缀 + 动作专家）的实现；换到 Qwen 时放哪里、谁能看谁要单独讨论，不在本文范围。**
 
+**记忆区的位置编码**（pi0.5 一共有四处与「位置／时间」有关的编码，记忆区碰到前三处）：
+
+| 处 | 是什么 | 对记忆区怎么作用 |
+|---|---|---|
+| ① SigLIP 内部 patch 位置编码 | ViT 对 224 输入的 16×16 个 patch 加一张**可学习**位置表（`siglip.py::get_posemb`，`posemb="learn"`） | 历史帧和当前帧一样先过 SigLIP，所以每个 patch 都带了它；之后 4×4 均值池化把 16 个 patch 揉成 1 个，细粒度空间位置被抹平 |
+| ② 记忆 token 自带的 3D 时间码 | `PosEmb3D`：768 维固定 sin/cos，无参数。按 6 等份分：2 份时间（帧号 `t` 的 sin/cos，base 10000，共 256 维）+ 4 份空间（池化后格点的行、列各 sin/cos，base 1000，共 512 维；4×4 池化的格点坐标取 2/6/10/14） | 帧 token 用完整 768 维：`silu(Linear(768→768))` 后与 2048 维视觉特征 concat 再投影。motion token 只取**前 256 维时间部分**（窗口起点帧的 `t`），`silu(Linear(256→768))` 后与 1024 维 motion concat 再投影。`t` 是含 demo 段的全域帧号，所以记忆 token 带的是**绝对时间**；训练时这张表按 `t` 预存（`pos_emb_4x4.f32.bin`），在线用同一个 `PosEmb3D` 现算 |
+| ③ Gemma 每层的 RoPE | PaliGemma 主干 18 层、动作专家 18 层，每层 attention 对 q、k 施加 RoPE（`gemma.py::_apply_rope`，波长 10000），输入端没有绝对位置向量 | 位置号 `positions = cumsum(input_mask) − 1`：记忆区有效 token 占 0 … 607 中的前若干号，padding 不占号；当前图像、文本接着排；动作 token 位置 = prefix 有效数 + 自身序号。记忆区按 `mem_order` 时间排序后，RoPE 位置号随时间单调，但它只是**稠密的排名**（第几个 token），不是帧号；帧间隔多大只能从 ② 的时间码里读 |
+| ④ flow-matching 时间步 | `posemb_sincos(timestep)` → MLP → adaRMS 调制动作专家 | 与序列位置无关，记忆区不参与 |
+
+一句话：记忆 token「是什么时候的」靠 ② 的绝对帧号时间码；「在序列里排第几」靠 ③ 的 RoPE 稠密位置号；两者都不训练位置表本身，只训 ② 后面的两个 Linear。
+
 ```
 时间轴 →   f0 ─ m0 ─ f1 ─ f2 ─ m32 ─ f3 ─ … ─ f31 ─ [帧 padding] ─ [motion padding] | 当前图像 512 | 文本 64 | 动作 20
            16位  1位  16位 16位  1位                       mask=False
