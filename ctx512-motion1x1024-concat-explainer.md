@@ -30,7 +30,16 @@ pi0.5 原本的输入是 `[当前帧图像 | 文本]`，动作专家读它的 K/
 3. **固定形状 + mask**。帧路填满 512 位、运动路填满 96 位，不够的填零向量、mask 置 False；排序时 padding 的时刻记最大值，所以全部落在记忆区尾部。位置编号按有效 token 累加，padding 不占号。运动路预算 96 按全部数据集的最长 episode 定，合法窗口数超过 96 直接报错，不抽稀。
 4. **放进前缀**。序列变成 `[记忆区 608 | 当前帧图像 512 | 文本 64]`，再接 20 个动作 token。记忆只在前缀里算一次进 KV cache，去噪多步只重算动作段。
    - **RoPE 与交错的关系**。Gemma 输入端没有绝对位置向量，序列位置只靠每一层 attention 对 q、k 施加的 RoPE（PaliGemma 主干 18 层、动作专家 18 层，`gemma.py::_apply_rope`，波长 10000）。位置号 `positions = cumsum(input_mask) − 1`，是稠密排名：记忆区有效 token 占 0 … 607 中的前若干号，padding 不占号，当前图像、文本接着排，动作 token = prefix 有效数 + 自身序号。RoPE 只知道「第几个」，不知道帧号——如果把 96 个 motion token 整段放在 512 个帧 token 之后，同一时刻的帧和运动在每一层 RoPE 里都相隔几百个位置；按时刻交错后，RoPE 位置号随时间单调，时间上相邻的帧 token 与 motion token 在位置上也相邻。这就是第 2 步交错的原因。帧与帧之间隔多少步，RoPE 读不出来，只能从第 1 步的时间码里读。
-   - **attention mask**。沿用 pi0 的块因果写法再加一道切口：`ar_mask` 做分块（记忆区全 False，第一个图像 token True，其余 False），`cumsum(ar)` 相等或更小才可见，所以记忆 token 之间双向互看、看不到当前图像和文本，图像、文本、动作看得到记忆；`na_mask` 在图像 token 上为 True，`make_attn_mask` 额外屏蔽「query 或 key 是 na、且 key 落在记忆区」的格子，所以当前图像 token 看不到记忆；文本和动作 token 看到全部记忆；`input_mask` 外积再把 padding 位全部切掉。**与上游 RoboMME/robomme_policy_learning 一致**：`make_attn_mask` 函数与上游逐字相同，记忆区、图像、文本的 ar/na 取值也相同；我们只是把 motion 的 mask 拼进了记忆区的 `input_mask`，记忆区从 512 位变成 608 位。**这一步是 pi0.5（PaliGemma 前缀 + 动作专家）的实现；换到 Qwen 时放哪里、谁能看谁要单独讨论，不在本文范围。**
+   - **attention mask**。实际生效的可见关系（行 = 谁在看，列 = 看到什么；padding 位既不被看也不产生输出）：
+
+     | 看 → 被看 | 记忆区 608 | 当前图像 512 | 文本 64 | 动作 20 |
+     |---|---|---|---|---|
+     | 记忆区 | ✅ 双向 | ❌ | ❌ | ❌ |
+     | 当前图像 | ❌ | ✅ | ✅ | ❌ |
+     | 文本 | ✅ | ✅ | ✅ | ❌ |
+     | 动作 | ✅ | ✅ | ✅ | ✅ |
+
+     实现：`history_pi0.py::make_attn_mask`，`ar_mask` 分块（记忆区全 False、第一个图像 token True、其余 False）给出前三行的块因果，`na_mask`（图像 token 为 True）额外切掉「当前图像看记忆」这一格，`input_mask` 外积切掉 padding。与上游 RoboMME/robomme_policy_learning 逐字相同，差别只是记忆区从 512 位变成 608 位。**这一步是 pi0.5（PaliGemma 前缀 + 动作专家）的实现；换到 Qwen 时放哪里、谁能看谁要单独讨论，不在本文范围。**
 
 ```
 时间轴 →   f0 ─ m0 ─ f1 ─ f2 ─ m32 ─ f3 ─ … ─ f31 ─ [帧 padding] ─ [motion padding] | 当前图像 512 | 文本 64 | 动作 20
