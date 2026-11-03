@@ -1,0 +1,3349 @@
+{
+ "note": "动作 query、全部去噪步／层／头平均；VIS=[0,32)，SWAP=[64,64+50k)；motion SWAP 按重叠帧数/33 加权",
+ "episodes": [
+  {
+   "key": "ctx_ep4",
+   "label": "基线 ctx512 ep4（失败，k=1）",
+   "dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/interpret-1103/stage1/ctx/attn/1d677dadd3f34872a5779dbe8ab815e4",
+   "k": 1,
+   "outcome": "fail",
+   "episode_id": 4,
+   "segs": [
+    [
+     64,
+     114
+    ]
+   ],
+   "infers": [
+    {
+     "infer": 0,
+     "step_idx": 0,
+     "phase": "靠近按钮",
+     "grip_state": 0.03999999910593033,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.00010218800562951299,
+      "motion": 0.0,
+      "image_base": 0.05663871160397927,
+      "image_wrist": 0.27095130074148377,
+      "text": 0.3769101357377239,
+      "action": 0.29539830891001556,
+      "pad": 0.0
+     },
+     "n_frames": 1,
+     "n_motion": 0,
+     "vis_share": 1.0,
+     "vis_uniform": 1.0,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 1,
+     "step_idx": 16,
+     "phase": "靠近按钮",
+     "grip_state": 0.03996998444199562,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.0009359615337517528,
+      "motion": 0.0,
+      "image_base": 0.06487247792383036,
+      "image_wrist": 0.36507559563757647,
+      "text": 0.2886134482982258,
+      "action": 0.28050156464800236,
+      "pad": 0.0
+     },
+     "n_frames": 17,
+     "n_motion": 0,
+     "vis_share": 1.0,
+     "vis_uniform": 1.0,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 2,
+     "step_idx": 32,
+     "phase": "靠近按钮",
+     "grip_state": 0.03992696478962898,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.0017599473148584366,
+      "motion": 0.0,
+      "image_base": 0.07053024484879442,
+      "image_wrist": 0.36219099446303316,
+      "text": 0.27519597469518586,
+      "action": 0.290321750746419,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.9315758999560652,
+     "vis_uniform": 0.96875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 3,
+     "step_idx": 48,
+     "phase": "靠近按钮",
+     "grip_state": 0.039982736110687256,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.003206662734349569,
+      "motion": 0.0,
+      "image_base": 0.07360701596778299,
+      "image_wrist": 0.3102462669027348,
+      "text": 0.3015901394147012,
+      "action": 0.3113491568879949,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.5359342065476135,
+     "vis_uniform": 0.65625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 4,
+     "step_idx": 64,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.006979386715425385,
+      "motion": 0.0,
+      "image_base": 0.09382144113381705,
+      "image_wrist": 0.2816994898041917,
+      "text": 0.29816258215241964,
+      "action": 0.31933605926318304,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.2343976408406974,
+     "vis_uniform": 0.5,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.13619792309923087,
+       "uniform": 0.03125,
+       "n": 1
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 5,
+     "step_idx": 80,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.010012302371776766,
+      "motion": 0.0,
+      "image_base": 0.10149451423229441,
+      "image_wrist": 0.28642364715536434,
+      "text": 0.2883481598210831,
+      "action": 0.3137206893704003,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.12377467882100526,
+     "vis_uniform": 0.40625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.5906420107022937,
+       "uniform": 0.21875,
+       "n": 7
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 6,
+     "step_idx": 96,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.010801744554191826,
+      "motion": 0.0,
+      "image_base": 0.10225652304995392,
+      "image_wrist": 0.2944698636440767,
+      "text": 0.2882835953972406,
+      "action": 0.30418883590441614,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.07861068857018871,
+     "vis_uniform": 0.34375,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.801522708087833,
+       "uniform": 0.34375,
+       "n": 11
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 7,
+     "step_idx": 112,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.006893378742453125,
+      "motion": 0.0,
+      "image_base": 0.08087179034948348,
+      "image_wrist": 0.29994782156828376,
+      "text": 0.2922721969998545,
+      "action": 0.32001422433596516,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.11745785034051591,
+     "vis_uniform": 0.28125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.4096532604444776,
+       "uniform": 0.4375,
+       "n": 14
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 8,
+     "step_idx": 128,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.00583629060536623,
+      "motion": 0.0,
+      "image_base": 0.09003917302108473,
+      "image_wrist": 0.3178128241416481,
+      "text": 0.27571736077467607,
+      "action": 0.31059371355921034,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.10112184441862332,
+     "vis_uniform": 0.25,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.4782004319250654,
+       "uniform": 0.375,
+       "n": 12
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 9,
+     "step_idx": 144,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.0031086612575583986,
+      "motion": 0.0,
+      "image_base": 0.08858215148457221,
+      "image_wrist": 0.32791766695057356,
+      "text": 0.2760865934338007,
+      "action": 0.3043039621164402,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.15281957910745342,
+     "vis_uniform": 0.21875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.6215972094238286,
+       "uniform": 0.34375,
+       "n": 11
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 10,
+     "step_idx": 160,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.0039988978600336445,
+      "motion": 0.0,
+      "image_base": 0.09645868552227815,
+      "image_wrist": 0.3110037614384459,
+      "text": 0.26431373219730125,
+      "action": 0.3242241993173957,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.13096437700075375,
+     "vis_uniform": 0.21875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.5004393314838818,
+       "uniform": 0.3125,
+       "n": 10
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 11,
+     "step_idx": 176,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.00951553491047687,
+      "motion": 0.0,
+      "image_base": 0.1275546222863098,
+      "image_wrist": 0.27746551024624044,
+      "text": 0.2765814158154858,
+      "action": 0.30888267758819793,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.051226326391341226,
+     "vis_uniform": 0.1875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.2849170088486157,
+       "uniform": 0.28125,
+       "n": 9
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 12,
+     "step_idx": 192,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.011408650833699439,
+      "motion": 0.0,
+      "image_base": 0.11023291988298296,
+      "image_wrist": 0.26259457374612494,
+      "text": 0.3125728093377418,
+      "action": 0.30319076292216773,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.04088515295895647,
+     "vis_uniform": 0.1875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.266462630446158,
+       "uniform": 0.25,
+       "n": 8
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 13,
+     "step_idx": 208,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.004406016686310371,
+      "motion": 0.0,
+      "image_base": 0.099951406063305,
+      "image_wrist": 0.2945429459814396,
+      "text": 0.2691577875241638,
+      "action": 0.3319411462483307,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.08729747815688454,
+     "vis_uniform": 0.15625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.4158280174342456,
+       "uniform": 0.21875,
+       "n": 7
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 14,
+     "step_idx": 224,
+     "phase": "张开靠近",
+     "grip_state": 0.034558407962322235,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.007621970615453191,
+      "motion": 0.0,
+      "image_base": 0.07692479683086276,
+      "image_wrist": 0.34411369932815433,
+      "text": 0.2596292812170254,
+      "action": 0.3117104033484227,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.1019180682870664,
+     "vis_uniform": 0.15625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.14094854214700306,
+       "uniform": 0.21875,
+       "n": 7
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 15,
+     "step_idx": 240,
+     "phase": "张开靠近",
+     "grip_state": 0.03998776897788048,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.006272053050084247,
+      "motion": 0.0,
+      "image_base": 0.09078439698865017,
+      "image_wrist": 0.3485119318217039,
+      "text": 0.24203636771481896,
+      "action": 0.31239503637577093,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.06311109349878634,
+     "vis_uniform": 0.15625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.08904993786587687,
+       "uniform": 0.1875,
+       "n": 6
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 16,
+     "step_idx": 256,
+     "phase": "张开靠近",
+     "grip_state": 0.039999935775995255,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.0043300811077157655,
+      "motion": 0.0,
+      "image_base": 0.08511119390941328,
+      "image_wrist": 0.3423760603678723,
+      "text": 0.25220041854307057,
+      "action": 0.3159818980532388,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.07772239485963464,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.2061466717854657,
+       "uniform": 0.1875,
+       "n": 6
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 17,
+     "step_idx": 272,
+     "phase": "张开靠近",
+     "grip_state": 0.039999932050704956,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.0029896043986082075,
+      "motion": 0.0,
+      "image_base": 0.0918007744062278,
+      "image_wrist": 0.3143007311618162,
+      "text": 0.2688742993296021,
+      "action": 0.32203342381243905,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.10047326128308186,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.14352724674151737,
+       "uniform": 0.15625,
+       "n": 5
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 18,
+     "step_idx": 288,
+     "phase": "下降闭合",
+     "grip_state": 0.03999175876379013,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.007576992190960381,
+      "motion": 0.0,
+      "image_base": 0.10154999538842174,
+      "image_wrist": 0.3241545200306508,
+      "text": 0.2491282157889671,
+      "action": 0.3175902858562768,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.051551981954116456,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.06988981131635391,
+       "uniform": 0.1875,
+       "n": 6
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 19,
+     "step_idx": 304,
+     "phase": "抬起",
+     "grip_state": 0.018305623903870583,
+     "tcp_z": null,
+     "mass": {
+      "frame": 0.010030005998495552,
+      "motion": 0.0,
+      "image_base": 0.15278074382493895,
+      "image_wrist": 0.22385528879447117,
+      "text": 0.31008227343360584,
+      "action": 0.3032509685659574,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.04075151881613384,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.049109953478817595,
+       "uniform": 0.15625,
+       "n": 5
+      }
+     ],
+     "swap_motion": null
+    }
+   ],
+   "phase_summary": {
+    "靠近按钮": {
+     "infers": [
+      1,
+      2,
+      3
+     ],
+     "vis_share": 0.8225033688345595,
+     "vis_uniform": 0.875,
+     "vis_ratio": 0.9400038500966394,
+     "swap_frame": [],
+     "mass_frame": 0.001967523860986586,
+     "mass_motion": 0.0,
+     "mass_image_base": 0.06966991291346926,
+     "mass_image_wrist": 0.3458376190011148,
+     "mass_text": 0.28846652080270424,
+     "mass_action": 0.2940574907608054
+    },
+    "按按钮": {
+     "infers": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+     ],
+     "vis_share": 0.11185556166064199,
+     "vis_uniform": 0.275,
+     "vis_ratio": 0.406747496947789,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.450546053189563,
+       "uniform": 0.28125,
+       "ratio": 1.6019415224517795
+      }
+     ],
+     "mass_frame": 0.0072960864537292055,
+     "mass_motion": 0.0,
+     "mass_image_base": 0.09912632270260818,
+     "mass_image_wrist": 0.29538781046763896,
+     "mass_text": 0.28414962334537675,
+     "mass_action": 0.3140396270625707
+    },
+    "张开靠近": {
+     "infers": [
+      14,
+      15,
+      16,
+      17
+     ],
+     "vis_share": 0.08580620448214231,
+     "vis_uniform": 0.140625,
+     "vis_ratio": 0.6101774540952342,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.14491809963496574,
+       "uniform": 0.1875,
+       "ratio": 0.772896531386484
+      }
+     ],
+     "mass_frame": 0.005303427292965353,
+     "mass_motion": 0.0,
+     "mass_image_base": 0.08615529053378851,
+     "mass_image_wrist": 0.3373256056698867,
+     "mass_text": 0.25568509170112924,
+     "mass_action": 0.3155301903974679
+    },
+    "下降闭合": {
+     "infers": [
+      18
+     ],
+     "vis_share": 0.051551981954116456,
+     "vis_uniform": 0.125,
+     "vis_ratio": 0.41241585563293165,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.06988981131635391,
+       "uniform": 0.1875,
+       "ratio": 0.3727456603538875
+      }
+     ],
+     "mass_frame": 0.007576992190960381,
+     "mass_motion": 0.0,
+     "mass_image_base": 0.10154999538842174,
+     "mass_image_wrist": 0.3241545200306508,
+     "mass_text": 0.2491282157889671,
+     "mass_action": 0.3175902858562768
+    },
+    "抬起": {
+     "infers": [
+      19
+     ],
+     "vis_share": 0.04075151881613384,
+     "vis_uniform": 0.125,
+     "vis_ratio": 0.32601215052907073,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.049109953478817595,
+       "uniform": 0.15625,
+       "ratio": 0.3143037022644326
+      }
+     ],
+     "mass_frame": 0.010030005998495552,
+     "mass_motion": 0.0,
+     "mass_image_base": 0.15278074382493895,
+     "mass_image_wrist": 0.22385528879447117,
+     "mass_text": 0.31008227343360584,
+     "mass_action": 0.3032509685659574
+    }
+   },
+   "above_uniform": {
+    "vis_frame": {
+     "above": [],
+     "first": null,
+     "last": null
+    },
+    "swap1_frame": {
+     "above": [
+      4,
+      5,
+      6,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      16
+     ],
+     "first": 4,
+     "last": 16
+    }
+   }
+  },
+  {
+   "key": "ctx_ep8",
+   "label": "基线 ctx512 ep8（成功，k=2）",
+   "dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/interpret-1103/stage1/ctx/attn/3625db1fb81a48af8aa5a136b3a7aa68",
+   "k": 2,
+   "outcome": "success",
+   "episode_id": 8,
+   "segs": [
+    [
+     64,
+     114
+    ],
+    [
+     114,
+     164
+    ]
+   ],
+   "infers": [
+    {
+     "infer": 0,
+     "step_idx": 0,
+     "phase": "靠近按钮",
+     "grip_state": 0.03999999910593033,
+     "tcp_z": 0.5211001038551331,
+     "mass": {
+      "frame": 0.00010004780151777796,
+      "motion": 0.0,
+      "image_base": 0.05555338510001699,
+      "image_wrist": 0.27113843352430395,
+      "text": 0.3764615885727107,
+      "action": 0.29674693836313154,
+      "pad": 0.0
+     },
+     "n_frames": 1,
+     "n_motion": 0,
+     "vis_share": 1.0,
+     "vis_uniform": 1.0,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 1,
+     "step_idx": 16,
+     "phase": "靠近按钮",
+     "grip_state": 0.03996558114886284,
+     "tcp_z": 0.47372502088546753,
+     "mass": {
+      "frame": 0.0009297776718934377,
+      "motion": 0.0,
+      "image_base": 0.06317256036731932,
+      "image_wrist": 0.3644293584136499,
+      "text": 0.29018708986954556,
+      "action": 0.2812800952398942,
+      "pad": 0.0
+     },
+     "n_frames": 17,
+     "n_motion": 0,
+     "vis_share": 1.0,
+     "vis_uniform": 1.0,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 2,
+     "step_idx": 32,
+     "phase": "靠近按钮",
+     "grip_state": 0.03992585465312004,
+     "tcp_z": 0.285908579826355,
+     "mass": {
+      "frame": 0.001841404911958509,
+      "motion": 0.0,
+      "image_base": 0.07035395114165213,
+      "image_wrist": 0.36618779432028536,
+      "text": 0.27158352013677356,
+      "action": 0.2900326855791112,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.8941982973102207,
+     "vis_uniform": 0.96875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 3,
+     "step_idx": 48,
+     "phase": "靠近按钮",
+     "grip_state": 0.03999955579638481,
+     "tcp_z": 0.16531220078468323,
+     "mass": {
+      "frame": 0.00338975770605935,
+      "motion": 0.0,
+      "image_base": 0.0706044983305037,
+      "image_wrist": 0.3118646342224545,
+      "text": 0.2980922770479487,
+      "action": 0.31604803926000996,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.5943011134273357,
+     "vis_uniform": 0.65625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 4,
+     "step_idx": 64,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.15167537331581116,
+     "mass": {
+      "frame": 0.005375438032464849,
+      "motion": 0.0,
+      "image_base": 0.09388635971893866,
+      "image_wrist": 0.2942689875347747,
+      "text": 0.2954387438897458,
+      "action": 0.311029164277845,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.27911563564944475,
+     "vis_uniform": 0.5,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.21629208539532893,
+       "uniform": 0.03125,
+       "n": 1
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 5,
+     "step_idx": 80,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.03983428329229355,
+     "mass": {
+      "frame": 0.009648606932411591,
+      "motion": 0.0,
+      "image_base": 0.09792802435863349,
+      "image_wrist": 0.2837142625099255,
+      "text": 0.29648072740476994,
+      "action": 0.3122273000640174,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.12878042293423222,
+     "vis_uniform": 0.40625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.6161926845153917,
+       "uniform": 0.21875,
+       "n": 7
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 6,
+     "step_idx": 96,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.03615869581699371,
+     "mass": {
+      "frame": 0.01099343173412813,
+      "motion": 0.0,
+      "image_base": 0.10478119185401334,
+      "image_wrist": 0.2978679504224824,
+      "text": 0.2840603511242402,
+      "action": 0.30229695896721553,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.08277761959879328,
+     "vis_uniform": 0.34375,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.7857245156077781,
+       "uniform": 0.34375,
+       "n": 11
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 7,
+     "step_idx": 112,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.13515405356884003,
+     "mass": {
+      "frame": 0.005692896911253532,
+      "motion": 0.0,
+      "image_base": 0.07269405610238514,
+      "image_wrist": 0.31998077331524755,
+      "text": 0.28852726607893897,
+      "action": 0.3131044362692369,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.13354799535895762,
+     "vis_uniform": 0.28125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.48225967015163856,
+       "uniform": 0.4375,
+       "n": 14
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 8,
+     "step_idx": 128,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.14683982729911804,
+     "mass": {
+      "frame": 0.004462073070721494,
+      "motion": 0.0,
+      "image_base": 0.08561191060683794,
+      "image_wrist": 0.33193622190712224,
+      "text": 0.2792005010549393,
+      "action": 0.298788491261916,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.10961692714766019,
+     "vis_uniform": 0.25,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.3630073961242091,
+       "uniform": 0.375,
+       "n": 12
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.029111638634446876,
+       "uniform": 0.125,
+       "n": 4
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 9,
+     "step_idx": 144,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.14998236298561096,
+     "mass": {
+      "frame": 0.0056580551465352374,
+      "motion": 0.0,
+      "image_base": 0.07727640322720011,
+      "image_wrist": 0.3261020955029461,
+      "text": 0.2845998279067377,
+      "action": 0.3063632170649039,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.1061534380689641,
+     "vis_uniform": 0.21875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.7519879532387965,
+       "uniform": 0.34375,
+       "n": 11
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.056801541037541925,
+       "uniform": 0.21875,
+       "n": 7
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 10,
+     "step_idx": 160,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.14249512553215027,
+     "mass": {
+      "frame": 0.004609096435209114,
+      "motion": 0.0,
+      "image_base": 0.10467840980738402,
+      "image_wrist": 0.30461119979619977,
+      "text": 0.2774662410053942,
+      "action": 0.3086343635473814,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.11184017153711577,
+     "vis_uniform": 0.21875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.500304644168207,
+       "uniform": 0.3125,
+       "n": 10
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.3089779773978871,
+       "uniform": 0.28125,
+       "n": 9
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 11,
+     "step_idx": 176,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.032209619879722595,
+     "mass": {
+      "frame": 0.011514493953436613,
+      "motion": 0.0,
+      "image_base": 0.11297556620712082,
+      "image_wrist": 0.26905428914767177,
+      "text": 0.28707438317231004,
+      "action": 0.31937994044067125,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.05627683657975357,
+     "vis_uniform": 0.1875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.44595927620277465,
+       "uniform": 0.28125,
+       "n": 9
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.03591699076827011,
+       "uniform": 0.25,
+       "n": 8
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 12,
+     "step_idx": 192,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.03883304446935654,
+     "mass": {
+      "frame": 0.01157482705803381,
+      "motion": 0.0,
+      "image_base": 0.11602319756108855,
+      "image_wrist": 0.2804268578295078,
+      "text": 0.2887193578626547,
+      "action": 0.3032556475988693,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.039477620578491225,
+     "vis_uniform": 0.1875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.3367145097742343,
+       "uniform": 0.25,
+       "n": 8
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.026372656496496987,
+       "uniform": 0.25,
+       "n": 8
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 13,
+     "step_idx": 208,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.1401146948337555,
+     "mass": {
+      "frame": 0.004019611092905204,
+      "motion": 0.0,
+      "image_base": 0.07556871066076888,
+      "image_wrist": 0.3050407805604239,
+      "text": 0.2804340934360193,
+      "action": 0.3349355213530362,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.11736736564724486,
+     "vis_uniform": 0.15625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.3999789469841167,
+       "uniform": 0.21875,
+       "n": 7
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.08860381386174032,
+       "uniform": 0.25,
+       "n": 8
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 14,
+     "step_idx": 224,
+     "phase": "张开靠近",
+     "grip_state": 0.03989991173148155,
+     "tcp_z": 0.148055762052536,
+     "mass": {
+      "frame": 0.003402610369440582,
+      "motion": 0.0,
+      "image_base": 0.08995608703543742,
+      "image_wrist": 0.34876776633370254,
+      "text": 0.2363600272581809,
+      "action": 0.3215125801414251,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.1354058937438526,
+     "vis_uniform": 0.15625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.2513057838128214,
+       "uniform": 0.21875,
+       "n": 7
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.09001785118602039,
+       "uniform": 0.21875,
+       "n": 7
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 15,
+     "step_idx": 240,
+     "phase": "张开靠近",
+     "grip_state": 0.03999999910593033,
+     "tcp_z": 0.1684480905532837,
+     "mass": {
+      "frame": 0.0023204210255708957,
+      "motion": 0.0,
+      "image_base": 0.08982248993176553,
+      "image_wrist": 0.35615711116542415,
+      "text": 0.22344123150325484,
+      "action": 0.3282576974088119,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.14186281416340665,
+     "vis_uniform": 0.15625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.24646580185871944,
+       "uniform": 0.1875,
+       "n": 6
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.11572778112537702,
+       "uniform": 0.21875,
+       "n": 7
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 16,
+     "step_idx": 256,
+     "phase": "张开靠近",
+     "grip_state": 0.03999993950128555,
+     "tcp_z": 0.18974778056144714,
+     "mass": {
+      "frame": 0.003525926681856314,
+      "motion": 0.0,
+      "image_base": 0.06838644415554074,
+      "image_wrist": 0.35512469896011883,
+      "text": 0.2521472412120137,
+      "action": 0.32081505813739364,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.08472769226886392,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.24139769893539864,
+       "uniform": 0.1875,
+       "n": 6
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.12449665581681185,
+       "uniform": 0.1875,
+       "n": 6
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 17,
+     "step_idx": 272,
+     "phase": "下降闭合",
+     "grip_state": 0.039985351264476776,
+     "tcp_z": 0.14372608065605164,
+     "mass": {
+      "frame": 0.006388067458238868,
+      "motion": 0.0,
+      "image_base": 0.08307505877481566,
+      "image_wrist": 0.3434685184972154,
+      "text": 0.26021421488167507,
+      "action": 0.30685399578470324,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.044148856456326796,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.11077978938816929,
+       "uniform": 0.15625,
+       "n": 5
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.056150799978301885,
+       "uniform": 0.1875,
+       "n": 6
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 18,
+     "step_idx": 288,
+     "phase": "抬起",
+     "grip_state": 0.019751254469156265,
+     "tcp_z": 0.0630943700671196,
+     "mass": {
+      "frame": 0.00896203979642855,
+      "motion": 0.0,
+      "image_base": 0.10298167098106609,
+      "image_wrist": 0.25220291358936164,
+      "text": 0.331806719261739,
+      "action": 0.3040457874536514,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.035727043791818076,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.09305870368693014,
+       "uniform": 0.1875,
+       "n": 6
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.041565384381597084,
+       "uniform": 0.15625,
+       "n": 5
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 19,
+     "step_idx": 304,
+     "phase": "抬起",
+     "grip_state": 0.01976454071700573,
+     "tcp_z": 0.10620082169771194,
+     "mass": {
+      "frame": 0.008257035445421935,
+      "motion": 0.0,
+      "image_base": 0.11073593779777487,
+      "image_wrist": 0.2917424697428942,
+      "text": 0.2824930670546989,
+      "action": 0.3067711126142078,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 0,
+     "vis_share": 0.042413304962587044,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.06373507409963135,
+       "uniform": 0.15625,
+       "n": 5
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.04121473794522097,
+       "uniform": 0.15625,
+       "n": 5
+      }
+     ],
+     "swap_motion": null
+    }
+   ],
+   "phase_summary": {
+    "靠近按钮": {
+     "infers": [
+      1,
+      2,
+      3
+     ],
+     "vis_share": 0.8294998035791855,
+     "vis_uniform": 0.875,
+     "vis_ratio": 0.9479997755190691,
+     "swap_frame": [],
+     "mass_frame": 0.0020536467633037654,
+     "mass_motion": 0.0,
+     "mass_image_base": 0.0680436699464917,
+     "mass_image_wrist": 0.3474939289854633,
+     "mass_text": 0.2866209623514226,
+     "mass_action": 0.2957869400263385
+    },
+    "按按钮": {
+     "infers": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+     ],
+     "vis_share": 0.11649540331006576,
+     "vis_uniform": 0.275,
+     "vis_ratio": 0.4236196484002391,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.4898421682162476,
+       "uniform": 0.28125,
+       "ratio": 1.741661042546658
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.09096410303273056,
+       "uniform": 0.22916666666666666,
+       "ratio": 0.3969342677791879
+      }
+     ],
+     "mass_frame": 0.007354853036709958,
+     "mass_motion": 0.0,
+     "mass_image_base": 0.09414238301043709,
+     "mass_image_wrist": 0.30130034185263016,
+     "mass_text": 0.286200149293575,
+     "mass_action": 0.3110015040845092
+    },
+    "张开靠近": {
+     "infers": [
+      14,
+      15,
+      16
+     ],
+     "vis_share": 0.12066546672537437,
+     "vis_uniform": 0.14583333333333334,
+     "vis_ratio": 0.8274203432597099,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.2463897615356465,
+       "uniform": 0.19791666666666666,
+       "ratio": 1.2449166898643194
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.11008076270940309,
+       "uniform": 0.20833333333333334,
+       "ratio": 0.5283876610051348
+      }
+     ],
+     "mass_frame": 0.003082986025622597,
+     "mass_motion": 0.0,
+     "mass_image_base": 0.08272167370758123,
+     "mass_image_wrist": 0.3533498588197485,
+     "mass_text": 0.2373161666578165,
+     "mass_action": 0.3235284452292102
+    },
+    "下降闭合": {
+     "infers": [
+      17
+     ],
+     "vis_share": 0.044148856456326796,
+     "vis_uniform": 0.125,
+     "vis_ratio": 0.35319085165061437,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.11077978938816929,
+       "uniform": 0.15625,
+       "ratio": 0.7089906520842835
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.056150799978301885,
+       "uniform": 0.1875,
+       "ratio": 0.29947093321761004
+      }
+     ],
+     "mass_frame": 0.006388067458238868,
+     "mass_motion": 0.0,
+     "mass_image_base": 0.08307505877481566,
+     "mass_image_wrist": 0.3434685184972154,
+     "mass_text": 0.26021421488167507,
+     "mass_action": 0.30685399578470324
+    },
+    "抬起": {
+     "infers": [
+      18,
+      19
+     ],
+     "vis_share": 0.03907017437720256,
+     "vis_uniform": 0.125,
+     "vis_ratio": 0.3125613950176205,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.07839688889328075,
+       "uniform": 0.171875,
+       "ratio": 0.4561273535609062
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.04139006116340903,
+       "uniform": 0.15625,
+       "ratio": 0.2648963914458178
+      }
+     ],
+     "mass_frame": 0.008609537620925242,
+     "mass_motion": 0.0,
+     "mass_image_base": 0.10685880438942047,
+     "mass_image_wrist": 0.2719726916661279,
+     "mass_text": 0.30714989315821895,
+     "mass_action": 0.3054084500339296
+    }
+   },
+   "above_uniform": {
+    "vis_frame": {
+     "above": [],
+     "first": null,
+     "last": null
+    },
+    "swap1_frame": {
+     "above": [
+      4,
+      5,
+      6,
+      7,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+     ],
+     "first": 4,
+     "last": 16
+    },
+    "swap2_frame": {
+     "above": [
+      10
+     ],
+     "first": 10,
+     "last": 10
+    }
+   }
+  },
+  {
+   "key": "mot_ep8",
+   "label": "ctx512+motion ep8（成功，k=2）",
+   "dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/interpret-1103/stage1/mot/attn/af10850c1f7d47549fcd8934178a7497",
+   "k": 2,
+   "outcome": "success",
+   "episode_id": 8,
+   "segs": [
+    [
+     64,
+     114
+    ],
+    [
+     114,
+     164
+    ]
+   ],
+   "infers": [
+    {
+     "infer": 0,
+     "step_idx": 0,
+     "phase": "靠近按钮",
+     "grip_state": 0.03999999910593033,
+     "tcp_z": 0.5211001038551331,
+     "mass": {
+      "frame": 0.000593589200741715,
+      "motion": 0.0,
+      "image_base": 0.051831373456451627,
+      "image_wrist": 0.2521601277858847,
+      "text": 0.4191673233546317,
+      "action": 0.27624836978192124,
+      "pad": 0.0
+     },
+     "n_frames": 1,
+     "n_motion": 0,
+     "vis_share": 1.0,
+     "vis_uniform": 1.0,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 1,
+     "step_idx": 16,
+     "phase": "靠近按钮",
+     "grip_state": 0.03999987244606018,
+     "tcp_z": 0.47390317916870117,
+     "mass": {
+      "frame": 0.008456577875961858,
+      "motion": 0.0,
+      "image_base": 0.05442305346536967,
+      "image_wrist": 0.332498262723287,
+      "text": 0.32903978596131,
+      "action": 0.27558175407557023,
+      "pad": 0.0
+     },
+     "n_frames": 17,
+     "n_motion": 0,
+     "vis_share": 1.0,
+     "vis_uniform": 1.0,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": null
+    },
+    {
+     "infer": 2,
+     "step_idx": 32,
+     "phase": "靠近按钮",
+     "grip_state": 0.03995110094547272,
+     "tcp_z": 0.2861037254333496,
+     "mass": {
+      "frame": 0.007727278284728526,
+      "motion": 0.0001042529402507676,
+      "image_base": 0.05316357360531886,
+      "image_wrist": 0.3459553631850415,
+      "text": 0.3073437401445375,
+      "action": 0.28570553504758417,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 1,
+     "vis_share": 0.9763722516137701,
+     "vis_uniform": 0.96875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.0,
+       "uniform": 0.0
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.0,
+        "uniform": 0.0
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.0,
+        "uniform": 0.0
+       }
+      ]
+     }
+    },
+    {
+     "infer": 3,
+     "step_idx": 48,
+     "phase": "靠近按钮",
+     "grip_state": 0.03999655693769455,
+     "tcp_z": 0.16567595303058624,
+     "mass": {
+      "frame": 0.009666087528069814,
+      "motion": 0.00013982827878660626,
+      "image_base": 0.06596659256145358,
+      "image_wrist": 0.2987781832677623,
+      "text": 0.3324550028000441,
+      "action": 0.2929945332018865,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 1,
+     "vis_share": 0.6741325134970045,
+     "vis_uniform": 0.65625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.0,
+       "uniform": 0.0
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.0,
+        "uniform": 0.0
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.0,
+        "uniform": 0.0
+       }
+      ]
+     }
+    },
+    {
+     "infer": 4,
+     "step_idx": 64,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.15491271018981934,
+     "mass": {
+      "frame": 0.021644316975855164,
+      "motion": 0.00138883248799377,
+      "image_base": 0.09110936475503775,
+      "image_wrist": 0.25143795696811544,
+      "text": 0.34900118598921426,
+      "action": 0.285417837517129,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 2,
+     "vis_share": 0.536938366050084,
+     "vis_uniform": 0.5,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.029901056027292847,
+       "uniform": 0.03125,
+       "n": 1
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.026529219888914428,
+       "uniform": 0.015151515151515152
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.026529219888914428,
+        "uniform": 0.015151515151515152
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.0,
+        "uniform": 0.0
+       }
+      ]
+     }
+    },
+    {
+     "infer": 5,
+     "step_idx": 80,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.04755324125289917,
+     "mass": {
+      "frame": 0.022137138781448205,
+      "motion": 0.0006981538484493892,
+      "image_base": 0.09528888490878873,
+      "image_wrist": 0.2753787030424509,
+      "text": 0.30762593333092,
+      "action": 0.2988714112030963,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 2,
+     "vis_share": 0.4242021547799403,
+     "vis_uniform": 0.40625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.21244492287771974,
+       "uniform": 0.21875,
+       "n": 7
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.02229792040132953,
+       "uniform": 0.015151515151515152
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.02229792040132953,
+        "uniform": 0.015151515151515152
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.0,
+        "uniform": 0.0
+       }
+      ]
+     }
+    },
+    {
+     "infer": 6,
+     "step_idx": 96,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.03281088173389435,
+     "mass": {
+      "frame": 0.03143557804740137,
+      "motion": 0.0014693765114578935,
+      "image_base": 0.10271916672587393,
+      "image_wrist": 0.2817648501156105,
+      "text": 0.29945953522084495,
+      "action": 0.2831503065696193,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 3,
+     "vis_share": 0.33801736823977974,
+     "vis_uniform": 0.34375,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.30598444711769107,
+       "uniform": 0.34375,
+       "n": 11
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.2755354720899271,
+       "uniform": 0.3434343434343434
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.2755354720899271,
+        "uniform": 0.3434343434343434
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.0,
+        "uniform": 0.0
+       }
+      ]
+     }
+    },
+    {
+     "infer": 7,
+     "step_idx": 112,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.1338154673576355,
+     "mass": {
+      "frame": 0.016357859422763188,
+      "motion": 0.0007537317317393092,
+      "image_base": 0.07061802336118288,
+      "image_wrist": 0.29040759274943007,
+      "text": 0.34441718077287087,
+      "action": 0.2774454882596102,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 3,
+     "vis_share": 0.3644689095518979,
+     "vis_uniform": 0.28125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.41656030183443876,
+       "uniform": 0.4375,
+       "n": 14
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0,
+       "uniform": 0.0,
+       "n": 0
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.18239529918816216,
+       "uniform": 0.3434343434343434
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.18239529918816216,
+        "uniform": 0.3434343434343434
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.0,
+        "uniform": 0.0
+       }
+      ]
+     }
+    },
+    {
+     "infer": 8,
+     "step_idx": 128,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.1503204107284546,
+     "mass": {
+      "frame": 0.017866547600262697,
+      "motion": 0.0009880530337492623,
+      "image_base": 0.07196133946585986,
+      "image_wrist": 0.2781816160182158,
+      "text": 0.3497183822447227,
+      "action": 0.2812830949284964,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 4,
+     "vis_share": 0.46725149470606747,
+     "vis_uniform": 0.25,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.26143339957366035,
+       "uniform": 0.375,
+       "n": 12
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.0985519170272739,
+       "uniform": 0.125,
+       "n": 4
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.2724427353683842,
+       "uniform": 0.5075757575757576
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.23580867577192008,
+        "uniform": 0.3939393939393939
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.03663405959646409,
+        "uniform": 0.11363636363636363
+       }
+      ]
+     }
+    },
+    {
+     "infer": 9,
+     "step_idx": 144,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.1511574387550354,
+     "mass": {
+      "frame": 0.015596330726726188,
+      "motion": 0.0008191513684060838,
+      "image_base": 0.06516641415034731,
+      "image_wrist": 0.2847300380696025,
+      "text": 0.3481384651280111,
+      "action": 0.28555008391539255,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 4,
+     "vis_share": 0.39426113735819224,
+     "vis_uniform": 0.21875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.26816409467302654,
+       "uniform": 0.34375,
+       "n": 11
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.19632299568800596,
+       "uniform": 0.21875,
+       "n": 7
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.32897462308482683,
+       "uniform": 0.5075757575757576
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.2678167444139706,
+        "uniform": 0.3939393939393939
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.061157878670856314,
+        "uniform": 0.11363636363636363
+       }
+      ]
+     }
+    },
+    {
+     "infer": 10,
+     "step_idx": 160,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.1475861817598343,
+     "mass": {
+      "frame": 0.022565191899322802,
+      "motion": 0.0027410815842449665,
+      "image_base": 0.09573573557866943,
+      "image_wrist": 0.24060731342062353,
+      "text": 0.3509876351368924,
+      "action": 0.28736325619742276,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 5,
+     "vis_share": 0.34693945111251867,
+     "vis_uniform": 0.21875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.272663624981984,
+       "uniform": 0.3125,
+       "n": 10
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.241618861603158,
+       "uniform": 0.28125,
+       "n": 9
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.7724604252120699,
+       "uniform": 0.6060606060606061
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.3098862832765085,
+        "uniform": 0.3151515151515151
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.4625741419355614,
+        "uniform": 0.2909090909090909
+       }
+      ]
+     }
+    },
+    {
+     "infer": 11,
+     "step_idx": 176,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.036907799541950226,
+     "mass": {
+      "frame": 0.019806473762210872,
+      "motion": 0.0016496641726957426,
+      "image_base": 0.0861881926159064,
+      "image_wrist": 0.27222146708725226,
+      "text": 0.3215975694544614,
+      "action": 0.2985360162912144,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 5,
+     "vis_share": 0.3403571085333301,
+     "vis_uniform": 0.1875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.241405726723428,
+       "uniform": 0.28125,
+       "n": 9
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.21935452382929405,
+       "uniform": 0.25,
+       "n": 8
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.6837276603338858,
+       "uniform": 0.6060606060606061
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.20015722325620333,
+        "uniform": 0.3151515151515151
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.4835704370776825,
+        "uniform": 0.2909090909090909
+       }
+      ]
+     }
+    },
+    {
+     "infer": 12,
+     "step_idx": 192,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.03358618915081024,
+     "mass": {
+      "frame": 0.0325360111768047,
+      "motion": 0.0031721935172875724,
+      "image_base": 0.10426285193612181,
+      "image_wrist": 0.27103813802823423,
+      "text": 0.3037344604068333,
+      "action": 0.2852560482877824,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 6,
+     "vis_share": 0.1974891263480077,
+     "vis_uniform": 0.1875,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.26553990035701946,
+       "uniform": 0.25,
+       "n": 8
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.2663019481192599,
+       "uniform": 0.25,
+       "n": 8
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.4618550304947601,
+       "uniform": 0.5252525252525252
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.14587390001217454,
+        "uniform": 0.2626262626262626
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.3159811304825856,
+        "uniform": 0.2626262626262626
+       }
+      ]
+     }
+    },
+    {
+     "infer": 13,
+     "step_idx": 208,
+     "phase": "按按钮",
+     "grip_state": 0.0,
+     "tcp_z": 0.1332027167081833,
+     "mass": {
+      "frame": 0.015903728322850332,
+      "motion": 0.003477376407633225,
+      "image_base": 0.07603841123688553,
+      "image_wrist": 0.28070836671731536,
+      "text": 0.3263663012223938,
+      "action": 0.29750599277723166,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 6,
+     "vis_share": 0.19790465313374106,
+     "vis_uniform": 0.15625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.19539834147542592,
+       "uniform": 0.21875,
+       "n": 7
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.23477375458315017,
+       "uniform": 0.25,
+       "n": 8
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.29529591867969657,
+       "uniform": 0.5252525252525252
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.061885562081627515,
+        "uniform": 0.2626262626262626
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.233410356598069,
+        "uniform": 0.2626262626262626
+       }
+      ]
+     }
+    },
+    {
+     "infer": 14,
+     "step_idx": 224,
+     "phase": "张开靠近",
+     "grip_state": 0.039548665285110474,
+     "tcp_z": 0.1545858383178711,
+     "mass": {
+      "frame": 0.018768660866965853,
+      "motion": 0.006454268379343881,
+      "image_base": 0.0723454541588823,
+      "image_wrist": 0.29875699242783915,
+      "text": 0.3113502077385783,
+      "action": 0.29232288453727956,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 7,
+     "vis_share": 0.17077703639545957,
+     "vis_uniform": 0.15625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.1849941178242803,
+       "uniform": 0.21875,
+       "n": 7
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.22913785113300178,
+       "uniform": 0.21875,
+       "n": 7
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.2632108748341237,
+       "uniform": 0.4502164502164502
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.0415666477147242,
+        "uniform": 0.2251082251082251
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.22164422711939952,
+        "uniform": 0.2251082251082251
+       }
+      ]
+     }
+    },
+    {
+     "infer": 15,
+     "step_idx": 240,
+     "phase": "张开靠近",
+     "grip_state": 0.03999999910593033,
+     "tcp_z": 0.17920126020908356,
+     "mass": {
+      "frame": 0.01679633023424281,
+      "motion": 0.009029993568029668,
+      "image_base": 0.08187505933766563,
+      "image_wrist": 0.32030141411763097,
+      "text": 0.28317307522727386,
+      "action": 0.2888239307660196,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 7,
+     "vis_share": 0.1526342242491985,
+     "vis_uniform": 0.15625,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.17221836633002388,
+       "uniform": 0.1875,
+       "n": 6
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.22765237405481312,
+       "uniform": 0.21875,
+       "n": 7
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.21690348001950482,
+       "uniform": 0.4502164502164502
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.024906930884334495,
+        "uniform": 0.2251082251082251
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.1919965491351703,
+        "uniform": 0.2251082251082251
+       }
+      ]
+     }
+    },
+    {
+     "infer": 16,
+     "step_idx": 256,
+     "phase": "张开靠近",
+     "grip_state": 0.03999999910593033,
+     "tcp_z": 0.20645932853221893,
+     "mass": {
+      "frame": 0.01104179624054167,
+      "motion": 0.0057821433328919935,
+      "image_base": 0.06706360101492868,
+      "image_wrist": 0.31475366171242464,
+      "text": 0.3166009160131215,
+      "action": 0.28475704295560716,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 8,
+     "vis_share": 0.21012057050431335,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.1773058841875519,
+       "uniform": 0.1875,
+       "n": 6
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.16813692380862302,
+       "uniform": 0.1875,
+       "n": 6
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.4775443903423197,
+       "uniform": 0.3939393939393939
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.03696202262684447,
+        "uniform": 0.19696969696969696
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.44058236771547526,
+        "uniform": 0.19696969696969696
+       }
+      ]
+     }
+    },
+    {
+     "infer": 17,
+     "step_idx": 272,
+     "phase": "下降闭合",
+     "grip_state": 0.039999932050704956,
+     "tcp_z": 0.19627881050109863,
+     "mass": {
+      "frame": 0.010494947692172397,
+      "motion": 0.003235767686532604,
+      "image_base": 0.0830116798211303,
+      "image_wrist": 0.29674747370804355,
+      "text": 0.29461163350070513,
+      "action": 0.31189838813617826,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 8,
+     "vis_share": 0.16994622838778928,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.14685920301038716,
+       "uniform": 0.15625,
+       "n": 5
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.19145201879927198,
+       "uniform": 0.1875,
+       "n": 6
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.22077891816962011,
+       "uniform": 0.3939393939393939
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.06014373806558966,
+        "uniform": 0.19696969696969696
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.16063518010403047,
+        "uniform": 0.19696969696969696
+       }
+      ]
+     }
+    },
+    {
+     "infer": 18,
+     "step_idx": 288,
+     "phase": "下降闭合",
+     "grip_state": 0.039999961853027344,
+     "tcp_z": 0.06821820884943008,
+     "mass": {
+      "frame": 0.01352915854503711,
+      "motion": 0.0026396792920099364,
+      "image_base": 0.08889143496337865,
+      "image_wrist": 0.2775734701048997,
+      "text": 0.3210531444599231,
+      "action": 0.29631289491016,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 9,
+     "vis_share": 0.17045021327701704,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.17186822903414795,
+       "uniform": 0.1875,
+       "n": 6
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.13455161139505398,
+       "uniform": 0.15625,
+       "n": 5
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.30545393034013224,
+       "uniform": 0.35016835016835013
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.08966367678664013,
+        "uniform": 0.17508417508417506
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.21579025355349213,
+        "uniform": 0.17508417508417506
+       }
+      ]
+     }
+    },
+    {
+     "infer": 19,
+     "step_idx": 304,
+     "phase": "抬起",
+     "grip_state": 0.019024377688765526,
+     "tcp_z": 0.0950271412730217,
+     "mass": {
+      "frame": 0.019278369552145402,
+      "motion": 0.003307301669071118,
+      "image_base": 0.11812381583162482,
+      "image_wrist": 0.2783326208446589,
+      "text": 0.2918142778385017,
+      "action": 0.2891431909530527,
+      "pad": 0.0
+     },
+     "n_frames": 32,
+     "n_motion": 9,
+     "vis_share": 0.15526340910793487,
+     "vis_uniform": 0.125,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.14451809690200756,
+       "uniform": 0.15625,
+       "n": 5
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.1578586781051331,
+       "uniform": 0.15625,
+       "n": 5
+      }
+     ],
+     "swap_motion": {
+      "union": {
+       "share": 0.3624206483177933,
+       "uniform": 0.35016835016835013
+      },
+      "per_seg": [
+       {
+        "seg": [
+         64,
+         114
+        ],
+        "share": 0.0943997097858215,
+        "uniform": 0.17508417508417506
+       },
+       {
+        "seg": [
+         114,
+         164
+        ],
+        "share": 0.26802093853197173,
+        "uniform": 0.17508417508417506
+       }
+      ]
+     }
+    }
+   ],
+   "phase_summary": {
+    "靠近按钮": {
+     "infers": [
+      1,
+      2,
+      3
+     ],
+     "vis_share": 0.8835015883702582,
+     "vis_uniform": 0.875,
+     "vis_ratio": 1.0097161009945808,
+     "swap_frame": [],
+     "mass_frame": 0.0086166478962534,
+     "mass_motion": 8.136040634579128e-05,
+     "mass_image_base": 0.05785107321071403,
+     "mass_image_wrist": 0.32574393639203025,
+     "mass_text": 0.32294617630196387,
+     "mass_action": 0.2847606074416803
+    },
+    "按按钮": {
+     "infers": [
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+     ],
+     "vis_share": 0.3607829769813559,
+     "vis_uniform": 0.275,
+     "vis_ratio": 1.3119380981140214,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.24694958156416874,
+       "uniform": 0.28125,
+       "ratio": 0.8780429566726
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.20948733347502366,
+       "uniform": 0.22916666666666666,
+       "ratio": 0.9141265460728305
+      }
+     ],
+     "swap_motion": {
+      "share": 0.33215143047419565,
+      "uniform": 0.39949494949494946,
+      "ratio": 0.8314283594676454
+     },
+     "mass_frame": 0.021584917671564556,
+     "mass_motion": 0.0017157614663657213,
+     "mass_image_base": 0.08590883847346736,
+     "mass_image_wrist": 0.27264760422168505,
+     "mass_text": 0.3301046648907165,
+     "mass_action": 0.2880379535946995
+    },
+    "张开靠近": {
+     "infers": [
+      14,
+      15,
+      16
+     ],
+     "vis_share": 0.1778439437163238,
+     "vis_uniform": 0.14583333333333334,
+     "vis_ratio": 1.219501328340506,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.17817278944728535,
+       "uniform": 0.19791666666666666,
+       "ratio": 0.9002414624704944
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.20830904966547928,
+       "uniform": 0.20833333333333334,
+       "ratio": 0.9998834383943005
+      }
+     ],
+     "swap_motion": {
+      "share": 0.3192195817319827,
+      "uniform": 0.4314574314574314,
+      "ratio": 0.7398634452851641
+     },
+     "mass_frame": 0.015535595780583444,
+     "mass_motion": 0.007088801760088514,
+     "mass_image_base": 0.07376137150382554,
+     "mass_image_wrist": 0.31127068941929825,
+     "mass_text": 0.3037080663263246,
+     "mass_action": 0.2886346194196354
+    },
+    "下降闭合": {
+     "infers": [
+      17,
+      18
+     ],
+     "vis_share": 0.17019822083240316,
+     "vis_uniform": 0.125,
+     "vis_ratio": 1.3615857666592253,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.15936371602226757,
+       "uniform": 0.171875,
+       "ratio": 0.9272070750386476
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.163001815097163,
+       "uniform": 0.171875,
+       "ratio": 0.9483741969289483
+      }
+     ],
+     "swap_motion": {
+      "share": 0.2631164242548762,
+      "uniform": 0.372053872053872,
+      "ratio": 0.7071998009384456
+     },
+     "mass_frame": 0.012012053118604753,
+     "mass_motion": 0.00293772348927127,
+     "mass_image_base": 0.08595155739225446,
+     "mass_image_wrist": 0.28716047190647165,
+     "mass_text": 0.3078323889803141,
+     "mass_action": 0.3041056415231691
+    },
+    "抬起": {
+     "infers": [
+      19
+     ],
+     "vis_share": 0.15526340910793487,
+     "vis_uniform": 0.125,
+     "vis_ratio": 1.242107272863479,
+     "swap_frame": [
+      {
+       "seg": [
+        64,
+        114
+       ],
+       "share": 0.14451809690200756,
+       "uniform": 0.15625,
+       "ratio": 0.9249158201728485
+      },
+      {
+       "seg": [
+        114,
+        164
+       ],
+       "share": 0.1578586781051331,
+       "uniform": 0.15625,
+       "ratio": 1.010295539872852
+      }
+     ],
+     "swap_motion": {
+      "share": 0.3624206483177933,
+      "uniform": 0.35016835016835013,
+      "ratio": 1.0349897360613907
+     },
+     "mass_frame": 0.019278369552145402,
+     "mass_motion": 0.003307301669071118,
+     "mass_image_base": 0.11812381583162482,
+     "mass_image_wrist": 0.2783326208446589,
+     "mass_text": 0.2918142778385017,
+     "mass_action": 0.2891431909530527
+    }
+   },
+   "above_uniform": {
+    "vis_frame": {
+     "above": [
+      2,
+      3,
+      4,
+      5,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      16,
+      17,
+      18,
+      19
+     ],
+     "first": 2,
+     "last": 19
+    },
+    "swap1_frame": {
+     "above": [
+      12
+     ],
+     "first": 12,
+     "last": 12
+    },
+    "swap2_frame": {
+     "above": [
+      12,
+      14,
+      15,
+      17,
+      19
+     ],
+     "first": 12,
+     "last": 19
+    },
+    "swap_motion": {
+     "above": [
+      4,
+      5,
+      10,
+      11,
+      16,
+      19
+     ],
+     "first": 4,
+     "last": 19
+    }
+   }
+  }
+ ]
+}
