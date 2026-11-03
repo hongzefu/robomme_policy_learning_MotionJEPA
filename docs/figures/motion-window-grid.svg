@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- motion 窗口取法与补帧示意。比例尺：1 帧 = 4px，x(t) = 60 + 4·t；所有窗口条的 x 均由帧号算出。 -->
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="776" viewBox="0 0 1100 776" font-family="sans-serif" font-size="14">
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="984" viewBox="0 0 1100 984" font-family="sans-serif" font-size="14">
   <defs>
     <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <rect width="6" height="6" fill="#dbeafe"/>
@@ -10,7 +10,7 @@
       <path d="M0,0 L7,3.5 L0,7 Z" fill="#1d4ed8"/>
     </marker>
   </defs>
-  <rect width="1100" height="776" fill="#ffffff"/>
+  <rect width="1100" height="984" fill="#ffffff"/>
 
   <!-- 标题 -->
   <text x="60" y="28" font-size="16" font-weight="bold" fill="#111827">motion 窗口怎么取、怎么补帧（例：一个 episode 共 192 帧，es = 96，当前步 s = 150）</text>
@@ -54,12 +54,12 @@
   <!-- R1 demo 起点 0：t = 0…32 → x 60…192 -->
   <rect x="60" y="168" width="132" height="20" fill="#2563eb"/>
   <text x="850" y="182" fill="#1e3a8a">demo 起点 0</text>
-  <text x="850" y="199" fill="#374151">真实 33 帧（t = 0…32）</text>
+  <text x="850" y="199" fill="#374151">真实 33 帧（t = 0…32）→ 不需要补</text>
 
   <!-- R2 demo 起点 32：t = 32…64 → x 188…320 -->
   <rect x="188" y="222" width="132" height="20" fill="#2563eb"/>
   <text x="850" y="236" fill="#1e3a8a">demo 起点 32</text>
-  <text x="850" y="253" fill="#374151">真实 33 帧（t = 32…64）</text>
+  <text x="850" y="253" fill="#374151">真实 33 帧（t = 32…64）→ 不需要补</text>
 
   <!-- R3 demo 起点 64：真实 t = 64…95 → x 316…444；第 33 格补帧 → x 444…448 -->
   <rect x="316" y="276" width="128" height="20" fill="#2563eb"/>
@@ -102,22 +102,65 @@
   <text x="850" y="542" fill="#4b5563">exec 起点 160</text>
   <text x="850" y="559" fill="#374151">起点未到（s = 150 &lt; 160）</text>
 
+  <!-- demo 尾窗三种情况 -->
+  <text x="60" y="588" font-weight="bold" fill="#111827">demo 尾窗的三种情况（只看 demo 段尾部）</text>
+  <!-- 面板 A：es = 129，x(t) = 76 + 3·(t − 64) -->
+  <rect x="60" y="600" width="330" height="164" fill="#f9fafb" stroke="#d1d5db" rx="4"/>
+  <text x="72" y="620" font-weight="bold" fill="#111827">A 尾窗正好 33 帧 → 不补（es = 129）</text>
+  <text x="72" y="638" font-size="12" fill="#6b7280">比例尺 1 帧 = 3px，只画 demo 段尾部的最后两条窗口</text>
+  <line x1="76" y1="652" x2="271" y2="652" stroke="#374151" stroke-width="1.5"/>
+  <line x1="76" y1="652" x2="76" y2="658" stroke="#374151" stroke-width="1.5"/><text x="76" y="671" font-size="12" fill="#374151" text-anchor="middle">64</text>
+  <line x1="172" y1="652" x2="172" y2="658" stroke="#374151" stroke-width="1.5"/><text x="172" y="671" font-size="12" fill="#374151" text-anchor="middle">96</text>
+  <line x1="271" y1="652" x2="271" y2="658" stroke="#14532d" stroke-width="1.5"/><text x="271" y="671" font-size="12" fill="#14532d" text-anchor="middle">es = 129</text>
+  <rect x="76" y="682" width="99" height="14" fill="#2563eb"/><text x="183" y="693" font-size="13" fill="#374151">起点 64（完整 33 帧）</text>
+  <rect x="172" y="704" width="99" height="14" fill="#2563eb"/><text x="279" y="715" font-size="13" fill="#374151">起点 96</text>
+  <text x="72" y="736" font-size="13" fill="#1e3a8a">起点 96：真实 33 帧 → 不补</text>
+  <text x="72" y="752" font-size="13" fill="#374151">96 + 32 = 128 = es − 1，恰好填满</text>
+  <!-- 面板 B：es = 96，x(t) = 421 + 3·(t − 32) -->
+  <rect x="405" y="600" width="330" height="164" fill="#f9fafb" stroke="#d1d5db" rx="4"/>
+  <text x="417" y="620" font-weight="bold" fill="#111827">B 尾窗 17～32 帧 → 补到 33（es = 96）</text>
+  <text x="417" y="638" font-size="12" fill="#6b7280">比例尺 1 帧 = 3px，只画 demo 段尾部的最后两条窗口</text>
+  <line x1="421" y1="652" x2="613" y2="652" stroke="#374151" stroke-width="1.5"/>
+  <line x1="421" y1="652" x2="421" y2="658" stroke="#374151" stroke-width="1.5"/><text x="421" y="671" font-size="12" fill="#374151" text-anchor="middle">32</text>
+  <line x1="517" y1="652" x2="517" y2="658" stroke="#374151" stroke-width="1.5"/><text x="517" y="671" font-size="12" fill="#374151" text-anchor="middle">64</text>
+  <line x1="613" y1="652" x2="613" y2="658" stroke="#14532d" stroke-width="1.5"/><text x="613" y="671" font-size="12" fill="#14532d" text-anchor="middle">es = 96</text>
+  <rect x="421" y="682" width="99" height="14" fill="#2563eb"/><text x="528" y="693" font-size="13" fill="#374151">起点 32（完整 33 帧）</text>
+  <rect x="517" y="704" width="96" height="14" fill="#2563eb"/>
+  <rect x="613" y="704" width="3" height="14" fill="url(#hatch)" stroke="#2563eb" stroke-width="1"/>
+  <text x="624" y="715" font-size="13" fill="#374151">起点 64</text>
+  <text x="417" y="736" font-size="13" fill="#1e3a8a">起点 64：真实 32 + 补 1 → 补到 33</text>
+  <text x="417" y="752" font-size="13" fill="#374151">补格（斜纹）重复 demo 最后一帧 t = 95</text>
+  <!-- 面板 C：es = 80，x(t) = 766 + 3·(t − 32) -->
+  <rect x="750" y="600" width="330" height="164" fill="#f9fafb" stroke="#d1d5db" rx="4"/>
+  <text x="762" y="620" font-weight="bold" fill="#111827">C 尾窗不足 17 帧 → 不成窗（es = 80）</text>
+  <text x="762" y="638" font-size="12" fill="#6b7280">比例尺 1 帧 = 3px，只画 demo 段尾部的最后两条窗口</text>
+  <line x1="766" y1="652" x2="910" y2="652" stroke="#374151" stroke-width="1.5"/>
+  <line x1="766" y1="652" x2="766" y2="658" stroke="#374151" stroke-width="1.5"/><text x="766" y="671" font-size="12" fill="#374151" text-anchor="middle">32</text>
+  <line x1="862" y1="652" x2="862" y2="658" stroke="#374151" stroke-width="1.5"/><text x="862" y="671" font-size="12" fill="#374151" text-anchor="middle">64</text>
+  <line x1="910" y1="652" x2="910" y2="658" stroke="#14532d" stroke-width="1.5"/><text x="910" y="671" font-size="12" fill="#14532d" text-anchor="middle">es = 80</text>
+  <rect x="766" y="682" width="99" height="14" fill="#2563eb"/><text x="873" y="693" font-size="13" fill="#374151">起点 32（完整 33 帧）</text>
+  <rect x="862" y="704" width="48" height="14" fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="2,2"/>
+  <text x="918" y="715" font-size="13" fill="#374151">起点 64</text>
+  <text x="762" y="736" font-size="13" fill="#1e3a8a">起点 64：只有 t = 64…79 共 16 帧</text>
+  <text x="762" y="752" font-size="13" fill="#374151">16 &lt; 17 → 不成窗、不补</text>
+
   <!-- 图例 -->
   <g font-size="14" fill="#374151">
-    <rect x="60" y="584" width="24" height="16" fill="#2563eb"/><text x="92" y="597">demo 真实帧</text>
-    <rect x="230" y="584" width="24" height="16" fill="url(#hatch)" stroke="#2563eb"/><text x="262" y="597">补帧（重复 t = es−1）</text>
-    <rect x="480" y="584" width="24" height="16" fill="#16a34a"/><text x="512" y="597">exec 可见窗口</text>
-    <rect x="640" y="584" width="24" height="16" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="5,3"/><text x="672" y="597">尚不可见（未凑齐 33 帧）</text>
-    <rect x="880" y="584" width="24" height="16" fill="none" stroke="#9ca3af" stroke-width="2" stroke-dasharray="5,3"/><text x="912" y="597">起点未到</text>
+    <rect x="60" y="784" width="24" height="16" fill="#2563eb"/><text x="92" y="797">demo 真实帧</text>
+    <rect x="230" y="784" width="24" height="16" fill="url(#hatch)" stroke="#2563eb"/><text x="262" y="797">补帧（重复 t = es−1）</text>
+    <rect x="480" y="784" width="24" height="16" fill="#16a34a"/><text x="512" y="797">exec 可见窗口</text>
+    <rect x="60" y="808" width="24" height="16" fill="none" stroke="#16a34a" stroke-width="2" stroke-dasharray="5,3"/><text x="92" y="821">尚不可见（未凑齐 33 帧）</text>
+    <rect x="330" y="808" width="24" height="16" fill="none" stroke="#9ca3af" stroke-width="2" stroke-dasharray="5,3"/><text x="362" y="821">起点未到（exec 起点 &gt; s）</text>
+    <rect x="580" y="808" width="24" height="16" fill="none" stroke="#6b7280" stroke-width="2" stroke-dasharray="2,2"/><text x="612" y="821">不成窗（demo 尾部真实帧 &lt; 17）</text>
   </g>
 
   <!-- 规则框 -->
-  <rect x="60" y="620" width="1030" height="136" fill="#f9fafb" stroke="#d1d5db" rx="4"/>
-  <text x="76" y="642" font-weight="bold" fill="#111827">规则</text>
+  <rect x="60" y="844" width="1030" height="136" fill="#f9fafb" stroke="#d1d5db" rx="4"/>
+  <text x="76" y="866" font-weight="bold" fill="#111827">规则</text>
   <g fill="#374151">
-    <text x="76" y="666">1. 窗口 = 起点往后连续 33 帧；起点钉在段内绝对网格 0, 32, 64, …；demo 与 exec 各自从段起点起算，窗口不跨段。</text>
-    <text x="76" y="690">2. demo 段：至少 17 个真实帧才算一个窗口；不足 33 帧时重复 demo 最后一帧（es−1）补齐；绝不借 exec 的帧。</text>
-    <text x="76" y="714">3. exec 段：永不补帧，必须凑齐 33 个真实帧才可见。</text>
-    <text x="76" y="738">4. 可见窗口数随当前步 s 增长，每过 32 帧多一个；训练建库与在线现算用同一条规则。</text>
+    <text x="76" y="890">1. 窗口 = 起点往后连续 33 帧；起点钉在段内绝对网格 0, 32, 64, …；demo 与 exec 各自从段起点起算，窗口不跨段。</text>
+    <text x="76" y="914">2. demo 段：至少 17 个真实帧才算一个窗口；不足 33 帧时重复 demo 最后一帧（es−1）补齐；绝不借 exec 的帧；不足 17 帧的起点不成窗。</text>
+    <text x="76" y="938">3. exec 段：永不补帧，必须凑齐 33 个真实帧才可见。</text>
+    <text x="76" y="962">4. 可见窗口数随当前步 s 增长，每过 32 帧多一个；训练建库与在线现算用同一条规则。</text>
   </g>
 </svg>
