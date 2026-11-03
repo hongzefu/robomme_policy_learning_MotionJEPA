@@ -207,6 +207,68 @@ def _r(x, n=4):
     return None if not np.isfinite(x) else round(x, n)
 
 
+# README 引用的头级、帧级、token 级数字（每条都在 r2_summary.json 的 "cited" 里可查）
+CITED_HEADS = {
+    "ctx_ep8": [(14, 6, "recent", "VIS"), (1, 0, "recent", "VIS"), (5, 4, "recent", "SWAP"), (12, 7, "recent", "SWAP")],
+    "ctx_ep4": [(14, 6, "recent", "VIS"), (1, 0, "recent", "VIS"), (5, 4, "recent", "SWAP"), (12, 7, "recent", "SWAP")],
+    "mot_ep8": [(0, 5, "recent", "VIS"), (14, 6, "recent", "VIS"), (1, 0, "recent", "VIS"),
+                (5, 4, "recent", "SWAP"), (12, 7, "recent", "SWAP"), (5, 5, "motSWAP", "SWAP")],
+}
+# #18 逐头「最近帧 query 读哪里」：(局, 层, 头)
+CITED_PROBES = [("ctx_ep8", 14, 6), ("ctx_ep8", 1, 0), ("ctx_ep8", 5, 4), ("ctx_ep8", 12, 7),
+                ("mot_ep8", 0, 5), ("mot_ep8", 8, 0), ("mot_ep8", 5, 5)]
+
+
+def _head_series(M, U, l, h, gq, gk) -> dict:
+    m = [float(M[i, l, h, GI[gq], GI[gk]]) for i in range(N_INFER)]
+    e = [m[i] / U[i, GI[gk]] if U[i, GI[gk]] > 0 else float("nan") for i in range(N_INFER)]
+    return {"mass_k15_19": [_r(m[i], 3) for i in KEY], "enrich_k15_19": [_r(e[i], 2) for i in KEY],
+            "mass_median_infer4_19": _r(np.nanmedian(m[4:]), 3)}
+
+
+def _probe_k18(name: str, heads: list) -> dict:
+    """读 #18 的 prefix：指定头上最近帧 query 的 top 帧／窗与 top token；全部记忆 query 对各 motion 窗的质量。"""
+    rel, _, n_swap = RUNS[name]
+    d = STAGE1B / rel
+    z = np.load(d / f"infer_{KEY_MAIN:04d}.npz")
+    _, MEM, mem_order, _ = _mem_layout(z)
+    idx, W, info = group_weights(z, n_swap)
+    ft = np.asarray(z["frame_times"], np.int64)
+    mt = np.asarray(z["motion_times"], np.int64).reshape(-1)
+    with np.load(d / f"prefix_{KEY_MAIN:04d}.npz") as pz:
+        A = pz["probs_prefix"][:, :, idx][:, :, :, idx].astype(np.float32)  # (L,H,nq,nk)
+    orders = mem_order[idx]
+    lab = [f"f{o // 16}/t{ft[o // 16]}/j{o % 16}" if o < FRAME_TOKENS else
+           f"win[{mt[o - FRAME_TOKENS]},{mt[o - FRAME_TOKENS] + MOTION_WINDOW})" for o in orders]
+    qrec = W[:, GI["recent"]] > 0
+    out = {"heads": {}}
+    for l, h in heads:
+        a = A[l, h][qrec].mean(0)
+        fm: dict = {}
+        for k, o in enumerate(orders):
+            key = f"t{ft[o // 16]}" if o < FRAME_TOKENS else lab[k]
+            fm[key] = fm.get(key, 0.0) + float(a[k])
+        top_t = np.argsort(a)[::-1][:6]
+        out["heads"][f"L{l}H{h}"] = {
+            "top_frames_or_windows": [[k, _r(v, 3)] for k, v in sorted(fm.items(), key=lambda x: -x[1])[:6]],
+            "top_tokens": [[lab[k], _r(a[k], 3)] for k in top_t]}
+    if np.any(orders >= FRAME_TOKENS):
+        allq = A.mean((0, 1)).mean(0)  # 全部有效记忆 query、层均头均
+        out["window_mass_all_queries"] = {lab[k]: _r(allq[k], 3) for k in np.where(orders >= FRAME_TOKENS)[0]}
+    del A
+    return out
+
+
+def cited_numbers(data: dict) -> dict:
+    c = {"head_series": {}, "k18_probe": {}}
+    for name, lst in CITED_HEADS.items():
+        M, qw, U, meta = data[name]
+        c["head_series"][name] = {f"L{l}H{h}:{gq}->{gk}": _head_series(M, U, l, h, gq, gk) for l, h, gq, gk in lst}
+    for name in ["ctx_ep8", "mot_ep8"]:
+        c["k18_probe"][name] = _probe_k18(name, [(l, h) for n, l, h in CITED_PROBES if n == name])
+    return c
+
+
 def cmd_report(args) -> int:
     from plot_attn import CJK  # noqa: F401  导入即设置中文字体
     import matplotlib.pyplot as plt
@@ -278,8 +340,14 @@ def cmd_report(args) -> int:
                                     "enrich": _r(np.nanmean(E[:, GI[gq], GI[g]]), 3)}
                                 for g in GROUPS if Ubar[GI[gq], GI[g]] > 0}
                 blk["motion_rows"] = mrow
+            # 完整组矩阵（层均、头均）：质量与富集
+            blk["matrix"] = {gq: {gk: {"mass": _r(Mh[:, GI[gq], GI[gk]].mean()),
+                                       "enrich": _r(np.nanmean(E[:, GI[gq], GI[gk]]), 3)}
+                                  for gk in GROUPS if Ubar[GI[gq], GI[gk]] > 0}
+                             for gq in GROUPS if qw[infers, GI[gq]].sum() > 0}
             ep[tag] = blk
         summary["episodes"][name] = ep
+    summary["cited"] = cited_numbers(data)
 
     figs = []
     # 图 1～3：#18 每层 query 组×key 组富集热图（log2，nearest）
