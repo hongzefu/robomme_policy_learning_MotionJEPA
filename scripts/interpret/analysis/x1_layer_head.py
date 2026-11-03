@@ -311,6 +311,17 @@ def _summ_heads(d: dict, keys: list[str], heads) -> list[dict]:
     return [{"layer": li, "head": hi, **{k: float(d[k][li, hi]) for k in keys}} for li, hi, *_ in heads]
 
 
+def _nan_to_none(o):
+    """递归把 NaN／±inf 换成 None，保证 x1_summary.json 是严格 JSON。"""
+    if isinstance(o, dict):
+        return {k: _nan_to_none(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_nan_to_none(v) for v in o]
+    if isinstance(o, float) and not np.isfinite(o):
+        return None
+    return o
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--ep", action="append", required=True,
@@ -445,7 +456,8 @@ def main(argv: list[str] | None = None) -> int:
     summary["mot_ep8_infer18_top10_vis_vs_motion_swap_overlap"] = sorted(tm & ts)
 
     summary["figs"] = [str(x.name) for x in figs]
-    (a.out / "x1_summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1))
+    (a.out / "x1_summary.json").write_text(
+        json.dumps(_nan_to_none(summary), ensure_ascii=False, indent=1, allow_nan=False))
     n_models = len({lab.split("_")[0] for lab in eps})
     print(f"X1_LAYER_HEAD=PASS models={n_models} episodes={len(eps)} figs={len(figs)}")
     return 0
