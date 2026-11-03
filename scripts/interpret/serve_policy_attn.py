@@ -16,6 +16,15 @@ mem_buffer._prepare_motion），websocket 层只把模块内的 RpcSession 名�
 <attn-out>/<episode_nonce>/prefix_<seq:04d>.npz（键见 PREFIX_NPZ_KEYS：probs_prefix f16 (18, 8, P, P)、P、MEM、
 infer_seq、step_idx），不压缩、先写临时文件再 os.replace；infer_<seq>.npz 的 16 键不变。
 
+--ablate <名>（S7 因果遮挡，默认 none）：
+  mask_motion            遮所有 motion token（记忆位 mem_order[s] ≥ budget）；基线（无 motion）报错退出
+  mask_vis               遮全域帧号 ∈ [0, 32) 的帧 token（帧 f = mem_order[s] // tokens_per_frame，帧号 = frame_times[f]）
+  heads:L3H0,L16H0       头遮挡（层、头从 0 起）：该层该头 attention 输出置零
+  组合用 + 连接，如 mask_vis+heads:L14H6。key 遮挡只作用于当次有效的记忆 token（与 mem_mask 取与），
+  每次推理按观测重算并动态传入 adapter；只改 attention mask 的 key 列，不改 input_mask / positions / mem_order。
+  每份 infer npz 另附两键 ABLATE_NPZ_KEYS：ablate（名，str）与 n_masked_keys（本次被遮 key 数，int64；none 时 0）；
+  episode.json 记 ablate 与逐次 n_masked_keys；启动打印 ATTN_SERVE_ENV ... ablate=<名>。
+
 用法（通常由 scripts/interpret/run_local.py 启动）：
   python -m scripts.interpret.serve_policy_attn --port 8011 --seed 42 --attn-out <dir> \
       policy:checkpoint --policy.config <cfg> --policy.dir <ckpt>
@@ -37,6 +46,10 @@ NPZ_KEYS = ("P", "MEM", "step_idx", "exec_start_idx", "infer_seq", "mem_order", 
             "motion_times", "motion_mask", "txt_len", "actions", "state", "top_frames", "probs_action", "probs_text")
 # --save-prefix 另写的 prefix_<seq>.npz 键表
 PREFIX_NPZ_KEYS = ("probs_prefix", "P", "MEM", "infer_seq", "step_idx")
+# S7 附加键（每份 infer npz 都写；§1.3 原 16 键不变）
+ABLATE_NPZ_KEYS = ("ablate", "n_masked_keys")
+MASK_KINDS = ("mask_motion", "mask_vis")
+VIS_WINDOW = (0, 32)          # mask_vis 遮的全域帧号区间 [lo, hi)
 NUM_STEPS, NUM_LAYERS, NUM_HEADS, ACTION_HORIZON, TEXT_LEN = 10, 18, 8, 20, 64
 ACTION_DIM, STATE_DIM = 8, 8
 
@@ -51,6 +64,53 @@ def _pad_times(times, budget: int) -> np.ndarray:
         raise ValueError(f"真实时刻数 {t.size} > 预算 {budget}")
     out = np.full(budget, -1, dtype=np.int32)
     out[:t.size] = t
+    return out
+
+
+def parse_ablate(name) -> dict:
+    """--ablate 字符串 → {"name", "masks": frozenset(MASK_KINDS 子集), "heads": ((layer, head), ...)}；非法即 ValueError。"""
+    import re
+    text = (name or "none").strip()
+    masks, heads = set(), set()
+    if text != "none":
+        for part in text.split("+"):
+            part = part.strip()
+            if part in MASK_KINDS:
+                masks.add(part)
+            elif part.startswith("heads:"):
+                items = [x.strip() for x in part[len("heads:"):].split(",") if x.strip()]
+                if not items:
+                    raise ValueError(f"--ablate {text!r}: heads: 后为空")
+                for item in items:
+                    m = re.fullmatch(r"L(\d+)H(\d+)", item)
+                    if m is None:
+                        raise ValueError(f"--ablate {text!r}: 头写法应为 L<层>H<头>，得到 {item!r}")
+                    layer, head = int(m.group(1)), int(m.group(2))
+                    if not (0 <= layer < NUM_LAYERS and 0 <= head < NUM_HEADS):
+                        raise ValueError(f"--ablate {text!r}: L{layer}H{head} 越界（层 0..{NUM_LAYERS - 1}，头 0..{NUM_HEADS - 1}）")
+                    heads.add((layer, head))
+            else:
+                raise ValueError(f"--ablate {text!r}: 未知项 {part!r}（可选 none / {' / '.join(MASK_KINDS)} / heads:L<i>H<j>,...）")
+    return {"name": text, "masks": frozenset(masks), "heads": tuple(sorted(heads))}
+
+
+def memory_key_mask(masks, mem_order, frame_times, *, budget: int, tokens_per_frame: int, valid=None,
+                    vis_window=VIS_WINDOW) -> np.ndarray:
+    """记忆区 key 遮挡 bool[MEM]（True = 遮）：mem_order[s] ≥ budget 为 motion token，< budget 为帧 token
+    （帧 f = mem_order[s] // tokens_per_frame，全域帧号 frame_times[f]，−1 为 padding 帧）。valid 给出时只遮有效位。"""
+    order = np.asarray(mem_order, dtype=np.int64).reshape(-1)
+    times = np.asarray(frame_times, dtype=np.int64).reshape(-1)
+    out = np.zeros(order.shape, bool)
+    if "mask_motion" in masks:
+        out |= order >= budget
+    if "mask_vis" in masks:
+        is_frame = order < budget
+        f = np.where(is_frame, order // tokens_per_frame, 0)
+        inside = is_frame & (f < times.size)
+        t = np.where(inside, times[np.minimum(f, max(times.size - 1, 0))] if times.size else -1, -1)
+        out |= inside & (t >= vis_window[0]) & (t < vis_window[1])
+    if valid is not None:
+        out &= np.asarray(valid, bool).reshape(-1)
     return out
 
 
@@ -88,7 +148,8 @@ def top_frame_indices(probs_action, mem_order, frame_times, tokens_per_frame: in
 class AttnRecorder:
     """在 policy 实例属性上遮蔽 reset / add_buffer / infer / _sample_actions，每次推理落一份 npz。"""
 
-    def __init__(self, policy, adapter, attn_out, *, save_top_frames: int = 3, save_prefix: bool = False):
+    def __init__(self, policy, adapter, attn_out, *, save_top_frames: int = 3, save_prefix: bool = False,
+                 ablate: str = "none"):
         self.policy, self.adapter = policy, adapter
         self.attn_out = Path(attn_out)
         self.save_top_frames = int(save_top_frames)
@@ -101,6 +162,9 @@ class AttnRecorder:
         self.max_frames = self.budget // self.tokens_per_frame
         self.motion_enabled = bool(policy.motion_enabled)
         self.motion_budget = int(cfg.motion.budget) if self.motion_enabled else 0
+        self.ablate = parse_ablate(ablate)
+        if "mask_motion" in self.ablate["masks"] and not self.motion_enabled:
+            raise SystemExit(f"错误: --ablate {self.ablate['name']} 含 mask_motion，但本模型无 motion token（基线）")
         self.ep_seq = 0
         self.ep_dir: Path | None = None
         self.episode: dict = {}
@@ -121,6 +185,11 @@ class AttnRecorder:
             self.captured["motion_mask_obs"] = getattr(observation, "motion_mask", None)
             self.captured["mem_order"] = getattr(observation, "mem_order", None)
             self.captured["prompt_mask"] = getattr(observation, "tokenized_prompt_mask", None)
+            self.captured["n_masked_keys"] = 0
+            if self.ablate["masks"]:
+                mask = self.key_mask(observation)
+                self.captured["n_masked_keys"] = int(mask.sum())
+                return inner(rng, observation, mask_keys=mask, **kwargs)
             return inner(rng, observation, **kwargs)
 
         self.policy._sample_actions = sample
@@ -128,6 +197,30 @@ class AttnRecorder:
         self.policy.add_buffer = self.add_buffer
         self.policy.infer = self.infer
         self._hook_mem_buffer()
+
+    def _frame_times(self) -> np.ndarray:
+        frames = self.policy.mem_buffer.get_frame_sampling_indices(int(self.policy.step_idx), self.budget,
+                                                                  self.token_per_image)
+        return _pad_times(frames, self.max_frames)
+
+    def _memory_layout(self, observation) -> tuple[np.ndarray, np.ndarray]:
+        """(mem_order, 记忆区有效位 mem_mask)，与 build_record 同法；基线无 mem_order 时恒等。"""
+        static_mask = np.asarray(getattr(observation, "static_mask")).reshape(-1).astype(bool)
+        if self.motion_enabled:
+            mem_order = np.asarray(getattr(observation, "mem_order")).reshape(-1).astype(np.int64)
+            full = np.concatenate([static_mask, np.asarray(getattr(observation, "motion_mask")).reshape(-1).astype(bool)])
+        else:
+            mem_order = np.arange(self.budget, dtype=np.int64)
+            full = static_mask
+        if mem_order.shape != full.shape:
+            raise RuntimeError(f"mem_order {mem_order.shape} 与记忆区 mask {full.shape} 不符")
+        return mem_order, full[mem_order]
+
+    def key_mask(self, observation) -> np.ndarray:
+        """本次推理的记忆区 key 遮挡 bool[MEM]（adapter 右补 False 到 P）。"""
+        mem_order, valid = self._memory_layout(observation)
+        return memory_key_mask(self.ablate["masks"], mem_order, self._frame_times(), budget=self.budget,
+                               tokens_per_frame=self.tokens_per_frame, valid=valid)
 
     def _hook_mem_buffer(self) -> None:
         # mem_buffer 每次 reset 重建，包装须在 reset 后重新挂；只捕获返回值，不重复调用（不重复编码 sidecar）
@@ -160,7 +253,8 @@ class AttnRecorder:
         self.episode = {"episode_nonce": str(nonce), "ep_seq": self.ep_seq, "reset_rpc": rpc,
                         "server_pid": os.getpid(), "reset_unix_time": time.time(),
                         "model_kind": self.policy.metadata.get("model_kind"), "motion_enabled": self.motion_enabled,
-                        "save_top_frames": self.save_top_frames, "infers": 0, "prompt": None}
+                        "save_top_frames": self.save_top_frames, "infers": 0, "prompt": None,
+                        "ablate": self.ablate["name"], "n_masked_keys": []}
         _write_json(self.ep_dir / "episode.json", self.episode)
         print(f"ATTN_EPISODE_BEGIN nonce={nonce} ep_seq={self.ep_seq} dir={self.ep_dir}", flush=True)
 
@@ -188,11 +282,13 @@ class AttnRecorder:
         self._save_frames(record["top_frames"])
         if not self.printed_env:
             print(f"ATTN_SERVE_ENV P={int(record['P'])} motion={int(self.motion_enabled)} L={NUM_LAYERS} AH={ACTION_HORIZON} "
-                  f"attn_out={self.attn_out}", flush=True)
+                  f"attn_out={self.attn_out} ablate={self.ablate['name']}", flush=True)
             self.printed_env = True
         print(f"ATTN_INFER nonce={self.episode['episode_nonce']} infer_seq={self.infer_seq} step_idx={int(record['step_idx'])} "
-              f"top_frames={record['top_frames'].tolist()} npz={path.name}", flush=True)
+              f"top_frames={record['top_frames'].tolist()} npz={path.name} ablate={self.ablate['name']} "
+              f"n_masked_keys={int(record['n_masked_keys'])}", flush=True)
         self.infer_seq += 1
+        self.episode.setdefault("n_masked_keys", []).append(int(record["n_masked_keys"]))
         self.episode.update(infers=self.infer_seq, prompt=self.episode.get("prompt") or _as_str(obs.get("prompt")))
         _write_json(self.ep_dir / "episode.json", self.episode)
         return outputs
@@ -251,6 +347,7 @@ class AttnRecorder:
             "motion_times": motion_times, "motion_mask": motion_mask, "txt_len": np.int64(txt_len),
             "actions": actions, "state": state, "top_frames": top,
             "probs_action": probs_action, "probs_text": probs_text,
+            "ablate": np.str_(self.ablate["name"]), "n_masked_keys": np.int64(int(self.captured.get("n_masked_keys", 0))),
         }
 
     def _write_prefix(self, record: dict) -> None:
@@ -317,6 +414,8 @@ def _make_args_class():
         save_top_frames: int = 3
         # 另写 prefix_<seq>.npz：prefill 每层完整 prefix 自注意力 (18, 8, P, P) f16；默认关
         save_prefix: bool = False
+        # 因果遮挡：none | mask_motion | mask_vis | heads:L3H0,L16H0，可用 + 组合；默认 none
+        ablate: str = "none"
 
     return Args
 
@@ -327,6 +426,11 @@ def main(args) -> None:
 
     if args.save_top_frames < 0:
         raise SystemExit("--save-top-frames 不得为负")
+    ablate_name = str(getattr(args, "ablate", "none") or "none")
+    try:
+        ablate = parse_ablate(ablate_name)
+    except ValueError as exc:
+        raise SystemExit(f"错误: {exc}") from exc
     attn_out = Path(args.attn_out).resolve()
     attn_out.mkdir(parents=True, exist_ok=True)
     original_create = serve_policy.create_policy
@@ -334,18 +438,22 @@ def main(args) -> None:
     def create_policy(policy_args):
         policy = original_create(policy_args)
         save_prefix = bool(getattr(args, "save_prefix", False))
-        adapter = AttnAdapter(policy, save_prefix=True) if save_prefix else AttnAdapter(policy)
+        kw ={"save_prefix": True} if save_prefix else {}
+        if ablate["heads"]:
+            kw["ablate_heads"] = ablate["heads"]
+        adapter = AttnAdapter(policy, **kw)
         recorder = AttnRecorder(policy, adapter, attn_out, save_top_frames=args.save_top_frames,
-                                save_prefix=save_prefix)
+                                save_prefix=save_prefix, ablate=ablate_name)
         recorder.install()
         P = getattr(recorder.adapter, "P", None)
         if P is not None:
             print(f"ATTN_SERVE_ENV P={int(P)} motion={int(recorder.motion_enabled)} L={NUM_LAYERS} AH={ACTION_HORIZON} "
-                  f"attn_out={attn_out}", flush=True)
+                  f"attn_out={attn_out} ablate={ablate['name']}", flush=True)
             recorder.printed_env = True
         return policy
 
     serve_policy.create_policy = create_policy
+    print(f"ATTN_ABLATE name={ablate['name']} masks={sorted(ablate['masks'])} heads={list(ablate['heads'])}", flush=True)
     _install_rpc_tracking()
     # metadata、server 构造与 sidecar 收尾全部走主线 main，字段与 serve_policy.py 完全一致
     serve_policy.main(args)
