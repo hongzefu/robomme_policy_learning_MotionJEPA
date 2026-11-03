@@ -15,7 +15,7 @@
 
 ## 一句话结论
 
-三局 60 次推理里，跨层、跨 query 族、跨推理都成立的 sink 只有一个：**文本第 0 个 token `<bos>`**。它在 5 个看得见它的 query 族（当前 base、当前 wrist、文本、「green」词、动作）的 60/60 次推理里、几乎全部 18 层都超过均匀的 20 倍；动作 query 平均把约 24% 的注意力给它（#18 为 26%～28%），文本 query 给 44%～45%。`<bos>` 不在记忆区里，所以把它剔掉、每行重新归一以后，上一轮各项记忆区指标在 #15～#19 平均和整局平均上的变化都 ≤ 1.0 个百分点（逐次推理最大 3.1 个百分点，即 #16 motion SWAP2 44.1% → 41.0%），各结论都成立：基线裸露窗 VIS 低于均匀，motion 模型 VIS 高于均匀（#15～#19 原口径 17.2%，去 sink 后 16.8%，均匀 13.1%），motion 流对 SWAP1 低于均匀，#16 对 SWAP2 偏高。记忆区内部还有第二类 sink：motion 模型里**记忆区 query 自己**把 45%～54% 的注意力压在几个 motion 窗上，但动作 query 不这样看它们（动作 query 对任何记忆 key 都没到 20 倍）。如果把这些窗也从动作 query 里剔掉（RC 压力测试），帧流结论不变，motion 流 SWAP2 的偏好会翻转（#16 从 44.1% 降到 8.6%，均匀 15.2%）。上一轮 X4 说的「green 词 query 帧流里单 token 占 73%～99%」只出现在第 0 层，其余 17 层都在 5.3 倍以下，不是跨层的 sink。
+三局 60 次推理里，跨层、跨 query 族、跨推理都成立的 sink 只有一个：**文本第 0 个 token `<bos>`**。它在 5 个看得见它的 query 族（当前 base、当前 wrist、文本、「green」词、动作）的 60/60 次推理里、几乎全部 18 层都超过均匀的 20 倍；动作 query 给它的质量按局 20 次推理平均为 ctx_ep8 23.6%、ctx_ep4 23.4%、mot_ep8 26.0%（#18 分别为 28.0%、22.0%、26.1%），文本 query 为 40.8%、40.6%、52.4%（`episodes.*.per_infer_sinks[i].bos_mass`）。`<bos>` 不在记忆区里，所以把它剔掉、每行重新归一以后，上一轮各项记忆区指标在 #15～#19 平均和整局平均上的变化都 ≤ 1.0 个百分点（逐次推理最大 3.1 个百分点，即 #16 motion SWAP2 44.1% → 41.0%），各结论都成立：基线裸露窗 VIS 低于均匀，motion 模型 VIS 高于均匀（#15～#19 原口径 17.2%，去 sink 后 16.8%，均匀 13.1%），motion 流对 SWAP1 低于均匀，#16 对 SWAP2 偏高。记忆区内部还有第二类 sink：motion 模型里**记忆区 query 自己**在 #15～#19 把 45.1%～54.4% 的注意力（`episodes.mot_ep8.per_infer_sinks[i].q_mem.sink_mass_layer_mean`）压在几个 motion 窗上，但动作 query 不这样看它们（动作 query 对任何记忆 key 都没到 20 倍）。如果把这些窗也从动作 query 里剔掉（RC 压力测试），帧流结论不变，motion 流 SWAP2 的偏好会翻转（#16 从 44.1% 降到 8.6%，均匀 15.2%）。上一轮 X4 说的「green 词 query 帧流里单 token 占 73%～99%」在 motion 模型里只出现在第 0 层，其余 17 层都在 5.3 倍以下；基线主要集中在第 1 层，≥20 倍的层数为 1～5，也不到 6 层（`x4_green_check`）。所以都不是跨层的 sink。
 
 ## 一、注意力可见性（先弄清每类 query 能看到哪些 key）
 
@@ -34,18 +34,18 @@ prefix 不是全双向的：记忆区 query 只看记忆区，当前图像 query
 ## 二、sink 判据
 
 1. **单次推理、单族**：对某个 query 族（记忆区／base／wrist／文本 19 行平均／「green」词第 16 行／动作 10 步 × 20 query 平均），每层先在头上平均，得到每个 key 的质量 m，倍数 r = m × 该族看得见的 key 数（均匀时 r = 1）。key 在 **≥ 6/18 层 r ≥ 20** 时，记为该族该次推理的 sink。
-   - 为什么取 20 倍：P ≈ 1100 时，20 倍相当于单个 key 拿到 1.8% 的质量。`<bos>` 中位倍数 157～449，远高于这条线；排在它后面的普通 key（当前图像 patch、记忆帧 token）层平均倍数多在 3～10、偶尔 17，不会被误判。#18 用 5/10/20/50 倍做过敏感性检查（ctx_ep8，≥6 层成立的 key 数）：prefix 全部 query 平均为 29/4/1/1，动作 query 为 41/28/9/1（20 倍处的 9 个是 `<bos>` 加 8 个动作 token）。20 倍处排除了大部分偶发尖峰，剩下的都是 `<bos>`、motion 窗、动作 token 这类每次推理都在的位置。
+   - 为什么取 20 倍：P ≈ 1100 时，20 倍相当于单个 key 拿到 1.8% 的质量。`<bos>` 各族层平均倍数的中位数为 157～448（`sink_list[0].per_family.*.median_ratio_layer_mean`），远高于这条线；排在它后面的普通 key（当前图像 patch、记忆帧 token）层平均倍数多在 3～10、偶尔 17，不会被误判。#18 用 5/10/20/50 倍做过敏感性检查（≥6 层成立的 key 数，`threshold_sensitivity_infer18`）：prefix 全部 query 平均，ctx_ep8 / ctx_ep4 / mot_ep8 分别为 29/4/1/1、25/11/2/1、13/9/6/3；动作 query 分别为 41/28/9/1、41/25/8/1、37/21/5/2。20 倍处的动作族 key 只有 `<bos>` 和动作 token（`action_ge20_keys`）。20 倍处排除了大部分偶发尖峰，剩下的都是 `<bos>`、motion 窗、动作 token 这类每次推理都在的位置。
    - 为什么取 6 层：sink 的特点是跨层持续出现。只在 1～2 层偶尔冒头的尖峰（例如下文 X4 的第 0 层）是层特有的选择，不按 sink 处理。
 2. **跨推理**：语义位置（记忆帧写作「最新记忆帧／首帧 t=0／帧时刻 t」+ 帧内 j；motion 窗写起点；当前图像写 patch(行,列)；文本写 token；动作写序号）在该族 **≥ 50%** 的「该位置存在」的推理里被判为 sink，才算该族的确认 sink。
 3. **跨 query**：在 ≥ 2 个族、而且至少一半看得见它的族里被确认的，才是「全局 sink」。只在一个族里确认的有两种情况：key 位于该族自己的小区域（文本 query → 文本 19 token、动作 query → 动作 20 token），算「自区域局部注意」，不当 sink 处理，因为这些族本来就把大量注意力放在自己的区域上（文本 query 给文本 65%～69%、动作 query 给动作 30%～32%），区域内的均匀份额已是全局均匀的约 17～39 倍；其余算「族内 sink」。
 4. **帧流内**：另外只在记忆帧 token 内部算均匀（1/帧 token 数），判据同 1、2。这一步检查帧流内部有没有吃掉大部分质量的单 token。
 5. **逐头**：另在 144 个（层，头）上分别统计 ≥ 20 倍的次数，作为旁证（`perhead_infer18`）。
 
-## 三、sink 清单（`sink_list`，图 `fig_r3_2_sink_list.png`）
+## 三、sink 清单（`sink_list[*].per_family`，图 `fig_r3_2_sink_list.png`）
 
 | 类别 | 位置 | 被确认的族（sink 推理数／存在推理数） | 中位 ≥20× 层数 | 层平均倍数中位 | 平均质量 |
 |---|---|---|---|---|---|
-| **全局 sink** | 文本#0 `<bos>` | base 60/60、wrist 60/60、文本 60/60、green 60/60、动作 60/60 | 17～18 | 157（base）～449（green） | base 29%、wrist 33%、文本 45%、green 44%、动作 24% |
+| **全局 sink** | 文本#0 `<bos>` | base 60/60、wrist 60/60、文本 60/60、green 60/60、动作 60/60 | 17～18 | 157（base）～448（green） | base 29%、wrist 33%、文本 45%、green 44%、动作 24% |
 | 族内 sink（仅记忆区 query） | motion 窗 [224,257) | 记忆区 4/4 | 15 | 98 | 19.7% |
 | 族内 sink | motion 窗 [128,161) | 记忆区 10/10 | 14 | 67 | 16.3% |
 | 族内 sink | motion 窗 [160,193) | 记忆区 8/8 | 14 | 83 | 16.2% |
@@ -58,26 +58,26 @@ prefix 不是全双向的：记忆区 query 只看记忆区，当前图像 query
 
 另外：
 
-- 7 条 motion 窗在文本、green、动作三个族里的 sink 比例都是 0。也就是说，motion 窗只被记忆区自己的 query 当 sink，动作 query 不这样看它们。#15～#19 记忆区 query 给这些窗的合计质量是 45.1%～54.4%（`per_infer_sinks[*].q_mem`）。motion 模型从 #3 起出现这一现象（12.6%），随窗数增多升到 50% 以上。
-- 基线记忆区里没有确认 sink。「最新记忆帧」的 j=3、9、11～15 在 #18 的 144 个（层，头）里有 13～47 个超过 20 倍（ctx_ep4 j=15 有 47 个），但跨推理看，j=15 只在 ep8 的 2 次、ep4 的 3 次推理里达到 ≥6 层（j=12 在 ep4 有 1 次），没过 50%。
-- **动作 query 看记忆区时没有任何 sink**：#18 动作族在记忆 key 上 ≥20× 的（层，头）最多只有 1/144 个；帧流内判据下各局没有一个帧 token 在任何一层 ≥20×（`near_miss["frame/action"]` 最大层数 0）。各局还有零星的单次推理候选（文本 `\n` 3～12 次、wrist patch(9,8) 3～4 次），都没过 50%。
+- 7 条 motion 窗在文本、green、动作三个族里的 sink 比例都是 0。也就是说，motion 窗只被记忆区自己的 query 当 sink，动作 query 不这样看它们。#15～#19 记忆区 query 给这些窗的合计质量是 45.1%～54.4%（`episodes.mot_ep8.per_infer_sinks[i].q_mem.sink_mass_layer_mean`）。motion 模型从 #3 起出现这一现象（12.6%），随窗数增多升到 50% 以上。
+- 基线记忆区里没有确认 sink。「最新记忆帧」的 j=3、9、11～15 在 #18 的 144 个（层，头）里有 13～47 个超过 20 倍（ctx_ep4 j=15 有 47 个；`episodes.ctx_ep*.perhead_infer18.prefix_all`），但跨推理看，j=15 只在 ep8 的 2 次、ep4 的 3 次推理里达到 ≥6 层（j=12 在 ep4 有 1 次；`single_infer_candidate_counts.ctx_ep*.q_mem`），没过 50%。
+- **动作 query 看记忆区时没有任何 sink**：#18 动作族在记忆 key 上 ≥20× 的（层，头）最多只有 1/144 个（`episodes.*.perhead_infer18.action_memory_only`）；帧流内判据下各局没有一个帧 token 在任何一层 ≥20×（`near_miss["frame/action"]` 最大层数 0）。各局还有零星的单次推理候选（文本 `\n` 在 mot/ep8/ep4 为 3/9/12 次，wrist patch(9,8) 在 ep8/ep4 为 3/4 次；`single_infer_candidate_counts.*.action_non_self_non_global`），都没过 50%。
 - 当前图像没有 sink：X4 疑为 sink 的 base／wrist patch(14,1) 在 base、wrist query 族里最多只在 2～3 层超过 20 倍（`near_miss`），图 5 里也没有绿框。
 
 ### X4「green 词帧流单 token sink」复核（`x4_green_check`）
 
-按帧流内判据逐层看「green」query：motion 模型 #15～#19 层平均后帧流内最大的那个 token（#18 是首帧 t=0 j=11，其余几次是最近某帧 j=1／3），每次**只在第 0 层超过 20 倍**（倍数 171～256，即该层帧流 33%～50% 落在这一个 token 上），第 1～17 层都 ≤5.3 倍。基线 ep8／ep4 的最大 token 在 1～5 层超过 20 倍。所以 X4 看到的「单 token 占 73%～99%」是第 0 层（以及基线少数几层）在层平均时占了主导，不是跨层持续的 sink。X4「剔每帧最大 token」后 motion VIS 37.8% → 20.8% 的下降，主要是去掉了这一层的集中。
+按帧流内判据逐层看「green」query：motion 模型 #15～#19 层平均后帧流内最大的那个 token（#15～#19 依次为记忆帧 t=224 j=1、t=239 j=1、t=193 j=1、首帧 t=0 j=11、t=284 j=3），每次**只在第 0 层超过 20 倍**（倍数 171～256，`per_layer_ratio[0]`；即该层帧流 33.3%～50.0% 落在这一个 token 上，`max_layer_frame_share`），其余层最大 5.3 倍（`max_ratio_other_layers`）。基线 ep8／ep4 的最大 token 多在第 1 层最集中（该层帧流占 40.0%～94.6%，ep8 #19 在第 5 层），≥20 倍的层数为 1～5（`layers_ge20`），其余层最大 2.5～57.6 倍。所以 X4 看到的「单 token 占 73%～99%」是单一层（motion 第 0 层、基线主要第 1 层）在层平均时占了主导，不是跨层持续的 sink。X4「剔每帧最大 token」后 motion VIS 37.8% → 20.8% 的下降，主要是去掉了这一层的集中。
 
 ## 四、稳健重算（动作 query）
 
-**做法**：对 `probs_action` 的每个（步，层，头，query）行，把剔除列置 0，再除以剩余列之和，然后与原口径一样全平均，交给 `aggregate_attn.split_streams` 分流（只 import 不改）。剩余质量 < 1% 的行（几乎全在 sink 上，重归一只会放大 f16 噪声）不参与平均，这类行占 0.3%～0.5%（主要在第 5 层）。阈值换成 1e-3（`RB_resid1e-3`，丢弃 0%～0.02%）后，各指标变化 ≤ 0.1 个百分点。保留行的行和偏差 4.4e-16。均匀期望按剔除后剩余的帧 token 数／窗数计。三档：
+**做法**：对 `probs_action` 的每个（步，层，头，query）行，把剔除列置 0，再除以剩余列之和，然后与原口径一样全平均，交给 `aggregate_attn.split_streams` 分流（只 import 不改）。剩余质量 < 1% 的行（几乎全在 sink 上，重归一只会放大 f16 噪声）不参与平均，这类行占 0.3%～0.5%（`episodes.*.{focus,global}.RB.dropped_row_frac`）。阈值换成 1e-3（`RB_resid1e-3`，丢弃 0%～0.02%）后，各指标变化 ≤ 0.1 个百分点。保留行的行和偏差 4.4e-16。均匀期望按剔除后剩余的帧 token 数／窗数计。三档：
 
 - **RA** = 剔全局 sink（`<bos>`）。
-- **RB**（主口径）= RA + 动作族确认 sink + 该次推理动作族自己判出的非自区域 sink + 帧流内 sink。实测动作族没有自区域以外的确认 sink，RB_extra 为空，只在个别推理多剔一两个文本或 wrist 位置，所以 RB 与 RA 几乎相同。剔掉的原质量：ctx 23.5%～24.6%，mot 25.1%。
+- **RB**（主口径）= RA + 动作族确认 sink + 该次推理动作族自己判出的非自区域 sink + 帧流内 sink。实测动作族没有自区域以外的确认 sink，RB_extra 为空，只在个别推理多剔一两个文本或 wrist 位置，所以 RB 与 RA 几乎相同。剔掉的原质量：ctx 23.5%～24.6%，mot 25.1%（`episodes.*.focus.RB.removed_mass_orig`）。
 - **RC**（压力测试）= RB + 记忆区 query 的族内 sink（6 个 motion 窗），即把记忆区内部的 sink 也从动作 query 里剔掉。
 
 **原口径复现**：#18 mot VIS 17.05%、SWAP1 17.19%、SWAP2 13.46%、motion SWAP 30.55%（均匀 35.02%）；ctx_ep8 VIS 3.57%、SWAP1 9.31%、SWAP2 4.16%。与 X3 表（17.0／17.2／13.5／30.5（35.0）；3.6／9.3／4.2）一致。
 
-### 4.1 #15～#19 平均（占比 / 均匀期望，%）
+### 4.1 #15～#19 平均（占比 / 均匀期望，%；`episodes.*.focus.{orig,RB,RC}`）
 
 | 局 | 指标 | 原口径 | RB 去 sink | RC 压力 | 原 vs 均匀 → RB vs 均匀 |
 |---|---|---|---|---|---|
@@ -93,7 +93,7 @@ prefix 不是全双向的：记忆区 query 只看记忆区，当前图像 query
 | mot_ep8 | motion SWAP1 | 6.1 / 19.4 | 6.1 / 19.4 | 44.2 / 51.5 | 低于 → 低于（RC 也低于） |
 | mot_ep8 | motion SWAP2 | 25.5 / 19.4 | 24.9 / 19.4 | 6.2 / 15.2 | 高于 → 高于；**RC 翻转为低于** |
 
-### 4.2 全部 20 次推理平均（%）
+### 4.2 全部 20 次推理平均（%；`episodes.*.global.{orig,RB,RC}`）
 
 | 局 | 帧流 VIS 原 → RB（均匀） | 帧流 SWAP1 原 → RB（均匀） | 帧流 SWAP2 原 → RB（均匀） | motion SWAP 并集 原 → RB → RC（均匀 原／RC） |
 |---|---|---|---|---|
@@ -103,7 +103,7 @@ prefix 不是全双向的：记忆区 query 只看记忆区，当前图像 query
 
 （全局含 #0～#3 这类历史帧全在 VIS 内、占比恒为 1 的早期推理，均匀期望被抬高；基线 SWAP1 全局高于均匀来自 #4～#13 的近因，X2/X3 已说明。）
 
-### 4.3 逐次推理（mot_ep8，原 / RB / RC，均匀写在括号里）
+### 4.3 逐次推理（mot_ep8，原 / RB / RC，均匀写在括号里；`episodes.mot_ep8.action_shares`）
 
 | 推理 | 帧流 VIS | motion SWAP1 | motion SWAP2 |
 |---|---|---|---|
@@ -132,7 +132,7 @@ prefix 不是全双向的：记忆区 query 只看记忆区，当前图像 query
 
 - `fig_r3_1_layer_key_heat.png`：#18 三局 × 三族（记忆区／文本／动作 query）逐层 key 倍数热图（log10，黑 = 看不见或 ≪ 均匀，绿三角 = 该次判为 sink）。记忆区 query 只有左边一块；motion 模型那几条亮竖线就是 motion 窗；文本与动作族最右边的亮竖线是 `<bos>`。
 - `fig_r3_2_sink_list.png`：确认 sink 清单 × 6 个族的「判为 sink 推理比例」矩阵（灰 = 看不见）。
-- `fig_r3_3_sink_mass_by_layer.png`：#15～#19 平均的逐层 sink 合计质量（记忆区 query：只有 motion 模型有，第 11 层达 75%；文本与动作 query 的曲线里含自区域局部注意的 token）。
+- `fig_r3_3_sink_mass_by_layer.png`：#15～#19 平均的逐层 sink 合计质量（记忆区 query：只有 motion 模型有，第 11 层达 75.4%，`sink_mass_by_layer_focus.mot_ep8.q_mem`；文本与动作 query 的曲线里含自区域局部注意的 token）。
 - `fig_r3_4_orig_vs_robust.png`：20 次推理的帧流 VIS／SWAP1／SWAP2、motion 流 SWAP 并集曲线，实线为原口径、虚线为 RB、点线为 RC、浅色粗线为均匀期望。
 - `fig_r3_5_image_patch_sink.png`：#18 动作 query 在当前 base／wrist 16×16 patch 上的倍数（`cv2.INTER_NEAREST` 放大），没有一处被判为 sink。
 

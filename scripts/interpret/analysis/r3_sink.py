@@ -464,8 +464,56 @@ def cmd_report(args) -> int:
             k = int(np.argmax(wl))
             rows.append({"infer": i, "sid": rec["labels"][k]["sid"], "layer_mean_ratio": float(wl[k]),
                          "layers_ge20": int((w[:, k] >= SINK_RATIO).sum()),
-                         "per_layer_ratio": [round(float(x), 1) for x in w[:, k]]})
+                         "per_layer_ratio": [round(float(x), 1) for x in w[:, k]],
+                         # 帧流内倍数 / 帧 token 数 = 该层帧流里这个 token 的占比
+                         "max_layer": int(np.argmax(w[:, k])),
+                         "max_layer_frame_share": float(w[:, k].max() / sum(lb["kind"] == "mem_frame" for lb in rec["labels"])),
+                         "max_ratio_other_layers": float(np.delete(w[:, k], int(np.argmax(w[:, k]))).max())})
         summary["x4_green_check"][tag] = rows
+    # 阈值敏感性（#18）：≥6 层达到各倍数的 key 数；prefix 全部有效 query 平均（不分族）与动作族
+    summary["threshold_sensitivity_infer18"] = {}
+    for tag in EPISODES:
+        s18 = data[tag][KEY_INFER]
+        rec = per[tag][KEY_INFER]
+        kva = rec["kva"]
+        P = int(rec["meta"]["P"])
+        r_pref = s18["pref"].mean(1).astype(np.float64) * int(kva[:P].sum())
+        r_pref[:, ~kva[:P]] = 0
+        r_act = rec["rat"]["action"]
+        summary["threshold_sensitivity_infer18"][tag] = {
+            fam: {str(int(th)): int(((r >= th).sum(0) >= SINK_MIN_LAYERS).sum()) for th in (5, 10, 20, 50)}
+            for fam, r in (("prefix_all_queries", r_pref), ("action", r_act))}
+        summary["threshold_sensitivity_infer18"][tag]["action_ge20_keys"] = [
+            rec["labels"][k]["sid"] for k in np.where(((r_act >= 20).sum(0) >= SINK_MIN_LAYERS))[0]]
+    # 单次推理（未过 50%）候选计数：记忆区族与动作族（动作族去掉 <bos> 与动作 token）
+    summary["single_infer_candidate_counts"] = {}
+    for tag in EPISODES:
+        cm, ca = {}, {}
+        for i in range(N_INFER):
+            rec = per[tag][i]
+            for k in np.where(rec["sink"]["q_mem"])[0]:
+                sd = rec["labels"][k]["sid"]
+                cm[sd] = cm.get(sd, 0) + 1
+            for k in np.where(rec["sink"]["action"])[0]:
+                lb = rec["labels"][k]
+                if lb["kind"] != "action" and lb["sid"] not in sid_global:
+                    ca[lb["sid"]] = ca.get(lb["sid"], 0) + 1
+        summary["single_infer_candidate_counts"][tag] = {"q_mem": cm, "action_non_self_non_global": ca}
+    # 逐层 sink 合计质量（#15～#19 平均，图 3 数据）与逐推理 <bos> 质量（各族头/层平均）
+    summary["sink_mass_by_layer_focus"] = {}
+    for tag in EPISODES:
+        out_f = {}
+        for f in FAMILIES:
+            vals = [per[tag][i]["rat"][f][:, per[tag][i]["sink"][f]].sum(1) / int(per[tag][i]["vis"][f].sum())
+                    for i in range(FOCUS[0], FOCUS[1] + 1)]
+            out_f[f] = [float(x) for x in np.mean(vals, 0)]
+        summary["sink_mass_by_layer_focus"][tag] = out_f
+        for i in range(N_INFER):
+            rec = per[tag][i]
+            kb = [k for k, lb in enumerate(rec["labels"]) if lb["sid"].endswith("<bos>")]
+            assert len(kb) == 1
+            summary["episodes"][tag]["per_infer_sinks"][i]["bos_mass"] = {
+                f: float(rec["rat"][f][:, kb[0]].mean() / int(rec["vis"][f].sum())) for f in FAMILIES if rec["vis"][f][kb[0]]}
     # 逐头：#18 在 144 个（层,头）里 ≥20× 的次数，前 8
     for tag in EPISODES:
         rec = per[tag][KEY_INFER]
