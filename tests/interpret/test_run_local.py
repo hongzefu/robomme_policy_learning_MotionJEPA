@@ -365,3 +365,78 @@ def test_npz_top_frames_off(tmp_path, monkeypatch):
     with np.load(tmp_path / "attn" / "z" / "infer_0000.npz") as z:
         assert z["top_frames"].shape == (0,) and z["top_frames"].dtype == np.int32
     assert not (tmp_path / "attn" / "z" / "frames").exists()
+
+
+# ―――――――――――――――――――――――― save_prefix（S6）――――――――――――――――――――――――
+
+@pytest.mark.parametrize("save_prefix", [None, False, True])
+def test_server_command_save_prefix(save_prefix):
+    spec = {"policy_python": "/p/python", "stage2_python": "/s/python", "run_identity_sha256": "a" * 64,
+            "checkpoint": "/ck", "policy_config": "cfg", "model_kind": "history", "cuda": "1", "attn_out": "/attn"}
+    if save_prefix is not None:
+        spec["save_prefix"] = save_prefix
+    command = RL.build_server_command(spec, "n" * 32, 9100)
+    i = command.index("policy:checkpoint")
+    assert command[i:] == ["policy:checkpoint", "--policy.config", "cfg", "--policy.dir", "/ck"]
+    if save_prefix:
+        assert command.count("--save-prefix") == 1
+        assert command[i - 1] == "--save-prefix" and command[i - 3:i - 1] == ["--attn-out", "/attn"]
+    else:
+        assert "--save-prefix" not in command
+        assert command[i - 2:i] == ["--attn-out", "/attn"]
+
+
+class FakePrefixAdapter(FakeAdapter):
+    def make_sample_fn(self):
+        inner = super().make_sample_fn()
+
+        def sample(rng, observation):
+            out = inner(rng, observation)
+            pp = np.zeros((18, 8, self.P, self.P), np.float16)
+            pp[..., 0] = 1.0
+            self.last_attn["probs_prefix"] = pp
+            return out
+        return sample
+
+
+@pytest.mark.parametrize("motion", [False, True])
+def test_prefix_npz_contract(tmp_path, monkeypatch, motion):
+    P, MEM = (1184, 608) if motion else (1088, 512)
+    policy = FakePolicy(motion)
+    recorder = SA.AttnRecorder(policy, FakePrefixAdapter(P, MEM, hot_slot=3), tmp_path / "attn",
+                               save_top_frames=0, save_prefix=True)
+    recorder.install()
+    monkeypatch.setitem(SA._RPC, "op", "reset")
+    monkeypatch.setitem(SA._RPC, "rpc", {"episode_nonce": "pfx"})
+    policy.reset()
+    policy.add_buffer({"images": np.zeros((40, 2, 4, 4, 3), np.uint8), "state": np.zeros((40, 8), np.float32)})
+    for _ in range(2):
+        policy.infer({"observation/state": np.zeros(8), "prompt": "p"})
+    ep = tmp_path / "attn" / "pfx"
+    assert sorted(p.name for p in ep.glob("infer_*.npz")) == ["infer_0000.npz", "infer_0001.npz"]
+    assert sorted(p.name for p in ep.glob("prefix_*.npz")) == ["prefix_0000.npz", "prefix_0001.npz"]
+    assert not list(ep.glob(".*tmp*"))
+    with np.load(ep / "infer_0000.npz") as z:
+        assert set(z.files) == set(SA.NPZ_KEYS)          # infer npz 16 键不变
+    for seq in range(2):
+        with np.load(ep / f"prefix_{seq:04d}.npz") as z:
+            assert set(z.files) == set(SA.PREFIX_NPZ_KEYS)
+            assert z["probs_prefix"].dtype == np.float16 and z["probs_prefix"].shape == (18, 8, P, P)
+            for key in ("P", "MEM", "infer_seq", "step_idx"):
+                assert z[key].dtype == np.int64 and z[key].shape == (), key
+            assert int(z["P"]) == P and int(z["MEM"]) == MEM
+            assert int(z["infer_seq"]) == seq and int(z["step_idx"]) == 39
+            assert float(z["probs_prefix"][3, 2, 5, 0]) == 1.0
+
+
+def test_prefix_off_writes_nothing(tmp_path, monkeypatch):
+    policy = FakePolicy(False)
+    recorder = SA.AttnRecorder(policy, FakePrefixAdapter(1088, 512, hot_slot=3), tmp_path / "attn", save_top_frames=0)
+    recorder.install()
+    monkeypatch.setitem(SA._RPC, "op", "reset")
+    monkeypatch.setitem(SA._RPC, "rpc", {"episode_nonce": "off"})
+    policy.reset()
+    policy.add_buffer({"images": np.zeros((5, 2, 4, 4, 3), np.uint8), "state": np.zeros((5, 8), np.float32)})
+    policy.infer({"observation/state": np.zeros(8), "prompt": "p"})
+    assert (tmp_path / "attn" / "off" / "infer_0000.npz").exists()
+    assert not list((tmp_path / "attn" / "off").glob("prefix_*.npz"))

@@ -12,6 +12,9 @@ mem_buffer._prepare_motion），websocket 层只把模块内的 RpcSession 名�
 
 每次 infer 返回之后写 <attn-out>/<episode_nonce>/infer_<seq:04d>.npz（键表见 NPZ_KEYS，与 §1.3 单一真源一致），
 不压缩；每局目录另写 episode.json，top-N 帧原图写 frames/<frame_idx>.jpg（去重）。
+--save-prefix（默认关）开启时，adapter 以 save_prefix=True 构造，每次 infer npz 写完后另写
+<attn-out>/<episode_nonce>/prefix_<seq:04d>.npz（键见 PREFIX_NPZ_KEYS：probs_prefix f16 (18, 8, P, P)、P、MEM、
+infer_seq、step_idx），不压缩、先写临时文件再 os.replace；infer_<seq>.npz 的 16 键不变。
 
 用法（通常由 scripts/interpret/run_local.py 启动）：
   python -m scripts.interpret.serve_policy_attn --port 8011 --seed 42 --attn-out <dir> \
@@ -32,6 +35,8 @@ import numpy as np
 # §1.3 npz 键表（单一真源在计划里；S3 只按这里的键消费）
 NPZ_KEYS = ("P", "MEM", "step_idx", "exec_start_idx", "infer_seq", "mem_order", "mem_mask", "frame_times",
             "motion_times", "motion_mask", "txt_len", "actions", "state", "top_frames", "probs_action", "probs_text")
+# --save-prefix 另写的 prefix_<seq>.npz 键表
+PREFIX_NPZ_KEYS = ("probs_prefix", "P", "MEM", "infer_seq", "step_idx")
 NUM_STEPS, NUM_LAYERS, NUM_HEADS, ACTION_HORIZON, TEXT_LEN = 10, 18, 8, 20, 64
 ACTION_DIM, STATE_DIM = 8, 8
 
@@ -83,10 +88,11 @@ def top_frame_indices(probs_action, mem_order, frame_times, tokens_per_frame: in
 class AttnRecorder:
     """在 policy 实例属性上遮蔽 reset / add_buffer / infer / _sample_actions，每次推理落一份 npz。"""
 
-    def __init__(self, policy, adapter, attn_out, *, save_top_frames: int = 3):
+    def __init__(self, policy, adapter, attn_out, *, save_top_frames: int = 3, save_prefix: bool = False):
         self.policy, self.adapter = policy, adapter
         self.attn_out = Path(attn_out)
         self.save_top_frames = int(save_top_frames)
+        self.save_prefix = bool(save_prefix)
         cfg = policy.config
         self.budget = int(cfg.budget)
         self.token_per_image = int(cfg.token_per_image)
@@ -177,6 +183,8 @@ class AttnRecorder:
         tmp = self.ep_dir / f".infer_{self.infer_seq:04d}.{uuid.uuid4().hex}.tmp.npz"
         np.savez(tmp, **record)
         os.replace(tmp, path)
+        if self.save_prefix:
+            self._write_prefix(record)
         self._save_frames(record["top_frames"])
         if not self.printed_env:
             print(f"ATTN_SERVE_ENV P={int(record['P'])} motion={int(self.motion_enabled)} L={NUM_LAYERS} AH={ACTION_HORIZON} "
@@ -245,6 +253,18 @@ class AttnRecorder:
             "probs_action": probs_action, "probs_text": probs_text,
         }
 
+    def _write_prefix(self, record: dict) -> None:
+        """prefix_<seq>.npz：prefill 每层完整 prefix 自注意力 (18, 8, P, P) f16。"""
+        P = int(record["P"])
+        probs_prefix = np.asarray(self.adapter.last_attn["probs_prefix"]).astype(np.float16, copy=False)
+        if probs_prefix.shape != (NUM_LAYERS, NUM_HEADS, P, P):
+            raise RuntimeError(f"probs_prefix 形状 {probs_prefix.shape} 不符 {(NUM_LAYERS, NUM_HEADS, P, P)}")
+        path = self.ep_dir / f"prefix_{self.infer_seq:04d}.npz"
+        tmp = self.ep_dir / f".prefix_{self.infer_seq:04d}.{uuid.uuid4().hex}.tmp.npz"
+        np.savez(tmp, probs_prefix=probs_prefix, P=record["P"], MEM=record["MEM"],
+                 infer_seq=record["infer_seq"], step_idx=record["step_idx"])
+        os.replace(tmp, path)
+
     def _save_frames(self, top) -> None:
         if self.save_top_frames <= 0 or len(top) == 0:
             return
@@ -295,6 +315,8 @@ def _make_args_class():
         attn_out: Path
         # 每次推理另存帧流前 N 名的原图 jpg；0 关闭
         save_top_frames: int = 3
+        # 另写 prefix_<seq>.npz：prefill 每层完整 prefix 自注意力 (18, 8, P, P) f16；默认关
+        save_prefix: bool = False
 
     return Args
 
@@ -311,7 +333,10 @@ def main(args) -> None:
 
     def create_policy(policy_args):
         policy = original_create(policy_args)
-        recorder = AttnRecorder(policy, AttnAdapter(policy), attn_out, save_top_frames=args.save_top_frames)
+        save_prefix = bool(getattr(args, "save_prefix", False))
+        adapter = AttnAdapter(policy, save_prefix=True) if save_prefix else AttnAdapter(policy)
+        recorder = AttnRecorder(policy, adapter, attn_out, save_top_frames=args.save_top_frames,
+                                save_prefix=save_prefix)
         recorder.install()
         P = getattr(recorder.adapter, "P", None)
         if P is not None:
