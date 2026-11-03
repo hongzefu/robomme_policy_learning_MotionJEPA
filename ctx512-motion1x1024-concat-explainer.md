@@ -97,18 +97,6 @@ token  = encode_windows(encoder, latent.unsqueeze(0))[0]   # (1024,) f32 ← 一
 - `meta/episode_manifest.json`（库根）：1600 个 episode 的顺序 `canonical_order`，每条记 `h5_file`、`raw_ep_idx`、`num_timesteps`、`exec_start_idx`。全域帧号 `t` 就是 H5 里的 `timestep_{t}`，demo 段在前（`t < exec_start_idx`）、exec 段在后。
 - `motion-stage2-1024/meta/motion_index.json`：同一顺序每个 episode 一条，demo 段与 exec 段各给 `row_base`（该段第一行的行号）与 `num_grid`（该段窗口数）。段内第 m 个窗口 = 第 `row_base + m` 行，起点 = 段起点 + 32·m。
 
-举例，第 536 个 episode（`record_dataset_PatternLock.h5` 的 `episode_36`，192 帧，`exec_start_idx = 96`）：
-
-| 行号 | 段 | 段内 m | 起点全域帧号 f | 窗口帧（H5 `episode_36/timestep_{t}/obs/front_rgb`） |
-|---|---|---|---|---|
-| 6656 | demo | 0 | 0 | t = 0 … 32 |
-| 6657 | demo | 1 | 32 | t = 32 … 64 |
-| 6658 | demo | 2 | 64 | t = 64 … 95 共 32 帧，再补 1 帧 t = 95（demo 尾窗补帧） |
-| 6659 | exec | 0 | 96 + 0 | t = 96 … 128 |
-| 6660 | exec | 1 | 96 + 32 | t = 128 … 160 |
-
-demo 段起点 s 要满足 `s + 16 ≤ es − 1`（至少 17 个真实帧），exec 段起点 u 要满足 `u + 32 ≤ 段长 − 1`，所以 exec 的 u = 64 起点（需要到 t = 192）不存在。训练某一步 `t` 时可见的行 = demo 段全部 + exec 段里 `es + u + 32 ≤ t` 的那些（`motion_store.py::visible_motion_rows`）；每行的时间码取起点帧 f 的 `PosEmb3D` 前 256 维。
-
 ### 2.4 推理：在线现算
 
 帧是新的，只能现算。起一个 torch 子进程常驻一张卡，每凑齐一个新窗口就送 33 帧过去、收回 (1024,)；一个起点只编一次，缓存到 episode 结束。实现：子进程 `scripts/dataset/wan_stage2/stage2_sidecar.py`，socket 协议与客户端 `src/mme_vla_suite/policies/{motion_protocol,motion_client}.py`，窗口状态机 `src/mme_vla_suite/policies/framesamp_memory.py::FrameSampMemory`（首批送整段 demo 一次编完，之后每 16 帧一批）。子进程启动时回传 encoder / VAE / 数值环境身份，与离线表记录的逐键比对，不等即拒绝启动。
