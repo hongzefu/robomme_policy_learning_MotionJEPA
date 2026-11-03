@@ -53,6 +53,7 @@ figure{margin:14px 0}figure img{max-width:100%;border:1px solid var(--line)}figc
 <tr><td>K7<span class="warn">（agent 默认，待用户确认）</span></td><td>每任务每模型 10 局，seed 42；20 局按 concat 模型 seed 42 官方 800 局的结局<b>成功 5 + 失败 5</b> 取 episode_id 最小者，两模型跑同一批 episode_id</td><td>§三</td></tr>
 <tr><td>K8</td><td>运行位置本机（用户原话「在本地运行」）。本机现状：策略 <code>.venv</code> 为空壳（site-packages 仅 3 项，需 <code>uv sync</code>）；无 sidecar／仿真 venv，但 NFS 的 <code>$E/v1-store/envs/stage2/bin/python</code>（torch 2.9.0+cu128，<code>cuda.is_available()=True</code>）与 <code>$E/v1-store/envs/official-sim/bin/python</code>（robomme 可导入，editable 指向 release 420ae98 的 <code>third_party/robomme_benchmark/src</code>，其 gitlink <code>856bc3a</code> 与本分支一致）在本机实测可直接用；权重两份都要落到本机 <code>v1-store/</code>（官方 79999 自 HF 下载 11.6 GB，concat 59999 自 NFS rsync 13 GB，stage2 encoder 自 NFS 拷 1 份）；Vulkan 1.4.303 可见 A6000</td><td>§五</td></tr>
 <tr><td>K9</td><td>不登记状态机（用户原话「不登记」）；交接走人工</td><td>§八</td></tr>
+<tr><td>K11</td><td><b>分两阶段；第一阶段只跑「两模型都成功」的各 1 局</b>。用户原话「先只测一句成功的 routestick和buttonunmaskswap都是 两个model都成功的」。官方 ctx512 在 16 任务上没有评估记录，哪局成功未知，故第一阶段按 concat 模型 seed 42 的成功局 episode_id 升序逐局试基线（RouteStick 1→8→9→10→13，ButtonUnmaskSwap 4→8→11→12→17），基线成功即停，再用 concat 模型跑同一局确认也成功；每次尝试的 attention 都落盘不丢。第二阶段 20 局（K7）另等开工令</td><td>§三、§六</td></tr>
 <tr><td>K10</td><td><b>原始 attention 全存、后期再画</b>：用户原话「是否可以先记录所有的attn？ 记录所有源数据 后期我再画图不同形式？」「同意 修改 f16就可以 文本也要」。每次推理落盘平均前的完整张量：动作 query 的 (10 去噪步, 18 层, 8 头, 20 query, P+20 key) 与 prefill 阶段文本 query 的 (18, 8, 64, P)，均 f16；画图脚本只读盘</td><td>§2.3、第二部分 §1.3</td></tr>
 </table>
 
@@ -118,7 +119,8 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <tr><td>prefix 长度 P</td><td>1088</td><td>1184</td></tr>
 <tr><td>已知成功率（参考）</td><td>4 任务 200 局 24.5%（三 seed）；16 任务无记录</td><td>16 任务 800 局 37.33 ± 0.59%；seed 42 下 ButtonUnmaskSwap 12/50、RouteStick 16/50</td></tr>
 </table>
-<p><b>20 局清单（K7）</b>，取自 <code>$E/v1-store/evaluation/official-stage2-1026/o16cc-60k-seed42/run800/accepted/</code> 的 <code>outcome</code>，episode_id 升序各取 5：</p>
+<p><b>第一阶段（K11）</b>：目标 2 局——RouteStick 与 ButtonUnmaskSwap 各 1 局，两模型都成功。候选序列见 K11，每试一局两模型各跑一次（基线先跑），最多试 5 局；5 局都不成就把逐局结局交用户定。判定行 <code>STAGE1_PAIR=PASS task=&lt;t&gt; ep=&lt;id&gt; ctx=success motion=success tries=&lt;n&gt;</code>。</p>
+<p><b>第二阶段 20 局清单（K7，另等开工令）</b>，取自 <code>$E/v1-store/evaluation/official-stage2-1026/o16cc-60k-seed42/run800/accepted/</code> 的 <code>outcome</code>，episode_id 升序各取 5：</p>
 <table>
 <tr><th>任务</th><th>concat 成功局</th><th>concat 失败局</th><th>局长参考</th></tr>
 <tr><td>ButtonUnmaskSwap（无 demo）</td><td>4, 8, 11, 12, 17</td><td>0, 1, 2, 3, 5</td><td>exec 296～574 步 → 每局 19～36 次推理</td></tr>
@@ -160,8 +162,8 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <tr><td>P1</td><td>资产与环境（与 P2 并行，均 tmux）：下载官方 79999（<code>ia-dl-ctx79999</code>）；rsync concat 59999 与 stage2 encoder（<code>ia-rsync-assets</code>）；<code>UV_CACHE_DIR=v1-store/cache/uv UV_LINK_MODE=copy uv sync</code> 重建本机 <code>.venv</code>（<code>ia-uv-sync</code>）</td><td><code>OFFICIAL_CTX_ASSET</code>、<code>LOCAL_ASSETS</code>、<code>LOCAL_ENVS</code> 均 PASS</td></tr>
 <tr><td>P2</td><td>S1／S2／S3 三个 worktree 子代理并行写代码；S1 自检在 P1 完成后由主会话在 GPU0 跑（≤5 min）</td><td><code>ATTN_SELFTEST=PASS</code>、<code>CFG_RESOLVE=PASS</code>、各 <code>sub/</code> 提交</td></tr>
 <tr><td>P3</td><td>合并前审查 → <code>--no-ff</code> 合并 → 合并后审查 → push；打 <code>commitV…Beta</code> 锚点，<code>git status --short</code> 为空</td><td><code>PRE_MERGE_REVIEW=PASS</code>、<code>POST_MERGE_REVIEW=PASS</code>、<code>SRC_ZERO_DIFF</code></td></tr>
-<tr><td>P4</td><td>本机冒烟各 1 局（GPU0 基线、GPU1 motion）</td><td><code>ATTN_SMOKE=PASS</code> ×2</td></tr>
-<tr><td>P5</td><td>R-CTX（GPU0）、R-MOT（GPU1）各 20 局并行，各一条 tmux、各挂一个 Monitor</td><td><code>RUN20=PASS</code> ×2</td></tr>
+<tr><td>P4</td><td>第一阶段（K11）：按候选序列逐局找「两模型都成功」的 RouteStick、ButtonUnmaskSwap 各 1 局；拿到即出这 2 局的 A/B/C/D 图交用户</td><td><code>ATTN_SMOKE=PASS</code>、<code>STAGE1_PAIR=PASS</code> ×2</td></tr>
+<tr><td>P5<span class="warn">（第二阶段，另等开工令）</span></td><td>R-CTX（GPU0）、R-MOT（GPU1）各 20 局并行，各一条 tmux、各挂一个 Monitor</td><td><code>RUN20=PASS</code> ×2</td></tr>
 <tr><td>P6</td><td>汇总、出图、目视复查、写档案 <code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/{launch,result}.md</code>、核对 <code>tmux ls</code> 本轮会话全部退出</td><td><code>ATTN_AGG</code>、<code>ATTN_PLOT</code></td></tr>
 </table>
 
@@ -171,7 +173,7 @@ a_layer[l, s] = 同上但不对 layer 平均                                    
 <h2>八、交接顺序与状态机登记</h2>
 <ul>
 <li>任务 id：<code>interpret-attn-ctx512-vs-motion</code>。</li>
-<li>交接前必须完成：<code>OFFICIAL_CTX_ASSET</code>、<code>LOCAL_ASSETS</code>、<code>LOCAL_ENVS</code>、<code>ATTN_SELFTEST</code>、两份 <code>RUN20</code>、<code>ATTN_AGG</code>、<code>ATTN_PLOT</code>。</li>
+<li>第一阶段交接前必须完成：<code>OFFICIAL_CTX_ASSET</code>、<code>LOCAL_ASSETS</code>、<code>LOCAL_ENVS</code>、<code>ATTN_SELFTEST</code>、两份 <code>STAGE1_PAIR</code>、<code>ATTN_AGG</code>、<code>ATTN_PLOT</code>；第二阶段另加两份 <code>RUN20</code>。</li>
 <li>长尾：无（npz 总量 &lt; 100 MB，不上传 HF）。</li>
 <li>上游：无依赖（两份权重都是已发布资产）。</li>
 <li>下游：<code>gl-orig100-ctx-reproduce-train</code> 交付后可用同一脚本补「同口径 ctx512 无 motion」一组，届时另起计划。</li>
@@ -248,6 +250,7 @@ return x_0, acc.astype(f16)</pre>
 <li>spec（JSON）键：<code>repo</code>（本仓库绝对路径）、<code>policy_python</code>（<code>&lt;repo&gt;/.venv/bin/python</code>）、<code>sim_python</code>（<code>$E/v1-store/envs/official-sim/bin/python</code>）、<code>stage2_python</code>（<code>$E/v1-store/envs/stage2/bin/python</code>）、<code>checkpoint</code>、<code>policy_config</code>、<code>model_kind</code>（<code>frame_sampling</code>／<code>stage2_pool4_concat</code>）、<code>model_seed=42</code>、<code>purpose=validation</code>、<code>cuda</code>（<code>"0"</code>／<code>"1"</code>）、<code>attn_out</code>、<code>run_identity_sha256</code>（由 <code>manifest.py bind_model</code> 同法生成，服务端与客户端共用）。</li>
 <li>服务端命令 = <code>resident_worker.server_command</code> 的形状，模块换成 <code>scripts.interpret.serve_policy_attn</code>，追加 <code>--attn-out</code>；基线不传 <code>--motion-online-gpu</code>（checkpoint 的 motion 关闭态不起 sidecar）。客户端命令 = <code>resident_worker.client_command</code> 原形。两者都通过 <code>import</code> 复用这两个函数，不复制文本。</li>
 <li>就绪：<code>GET /healthz</code> 200 且 <code>kill -0 server_pid</code>；超时 600 s。端口起跑前 <code>(exec 3&lt;&gt;/dev/tcp/127.0.0.1/$PORT)</code> 探占用，占用则换。</li>
+<li><code>--episodes task:id[,task:id]</code> 允许只跑指定局（第一阶段逐局试用），每局单独成 chunk；</li>
 <li>每 chunk 输出目录 <code>&lt;run_root&gt;/attempts/&lt;chunk_id&gt;/</code>（eval.py 要求 <code>exist_ok=False</code>）；结束把 <code>*.terminal.json</code> 汇到 <code>&lt;run_root&gt;/accepted/</code>，末行 <code>RUN20=…</code>。</li>
 <li>单测 <code>tests/interpret/test_run_local.py</code>：用假 python 脚本代替服务端/客户端，核命令形状与 chunk 顺序。</li>
 </ul>
