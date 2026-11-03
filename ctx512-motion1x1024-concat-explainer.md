@@ -100,94 +100,45 @@ mask_not_attend = (na[:, None, :] | na[:, :, None]) & (cumsum(na) <= 0)[:, None,
 
 **Qwen 侧**：dataset 多输出 `motion_tokens (k, 1024)` 与 `motion_step_ids (k,)`，k 由第 4 节的可见窗口公式算；组装时按 2.2 插入。
 
-## 3. motion token 的两种获取方式
+## 3. motion token 怎么拿
 
-同一个 encoder、同一个入口函数；训练用离线预存表，推理用在线现算。两侧一致性只靠三条：同一权重、同一窗口定义、同一数值口径（fp32、关 TF32、batch 1）。
+同一个 encoder、同一个入口函数。先把一个窗口跑通，剩下的只是「训练时提前算好存表，推理时现算」。
 
-### 3.0 资产与环境
+### 3.1 资产
 
 | 东西 | 从哪拿 |
 |---|---|
-| encoder `stage2-full144-1025-a/checkpoint_epoch_105.pt`（EMA，sha256 `27daa832…6035`，314 MB）+ `config.yaml` | 公开 bucket `HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1`；VLA 交付包 `HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1` 的 `encoder_dependencies/stage2-full144-1025-a/` 也有 |
+| encoder `stage2-full144-1025-a/checkpoint_epoch_105.pt`（EMA，sha256 `27daa832…6035`，314 MB）+ `config.yaml` | 公开 bucket `HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1` |
 | Wan VAE | HF `Wan-AI/Wan2.1-T2V-1.3B-Diffusers` 子目录 `vae`，diffusers `AutoencoderKLWan`，fp32 |
-| 我们建好的训练库 | 公开 bucket `HongzeFu/robomme-16task-orig100-1600ep-trainset-20261028-v1`：`motion-stage2-1024/` 是最终表（23,253 行 × 4096 B ≈ 95 MB），`wan-latents/` 是中间 latent（26.8 GB，可复用免跑 VAE），`framesamp-4x4/` 是帧表 |
 | torch 环境 | `scripts/dataset/wan_stage2/pyproject.toml`（torch 2.9.0、diffusers 0.39.0、`motion-jepa` 以 git 依赖钉 `b5d23a5`）：`UV_PROJECT_ENVIRONMENT=v1-store/venvs/wan-stage2 uv sync --project scripts/dataset/wan_stage2` |
 | VAE 适配函数 | `scripts/dataset/wan/wan_motion_infer.py::load_vae / encode_chunk` |
 
-### 3.1 先跑通一个窗口
-
-离线与在线都是这十行，Qwen 侧第一件事就是把它跑通：
+### 3.2 跑通一个窗口
 
 ```python
 import torch
 from motion_jepa.export.stage2_memory import load_ema_encoder, encode_windows   # MotionJEPA b5d23a5
 import wan_motion_infer as W                                                   # scripts/dataset/wan/
 
-W.check_env(); W.pin_numerics()
+W.check_env(); W.pin_numerics()                # fp32、关 TF32
 dev = torch.device("cuda:0")
-vae, _     = W.load_vae("Wan-AI/Wan2.1-T2V-1.3B-Diffusers", dev)             # fp32、eval、关 tiling
+vae, _ = W.load_vae("Wan-AI/Wan2.1-T2V-1.3B-Diffusers", dev)                  # fp32、eval、关 tiling
 encoder, einfo = load_ema_encoder("<…>/checkpoint_epoch_105.pt", device="cuda:0",
                                   expected_sha256="27daa832…6035")
-frames = ...                                   # (33, 256, 256, 3) uint8，按第 4 节取窗
+frames = ...                                   # (33, 256, 256, 3) uint8 原图，按第 4 节取窗
 latent = W.encode_chunk(vae, frames, dev)      # (9, 16, 32, 32) f32
 token  = encode_windows(encoder, latent.unsqueeze(0))[0]   # (1024,) f32 ← 一个 motion token
 ```
 
-`einfo["encoder_state_sha256"]`（65 个叶）与 `einfo["numerics"]` 随表存下，在线启动时比对。
+一窗约 1 s，几乎全在 VAE。`einfo` 里的 `encoder_state_sha256` 与 `numerics` 存下来，训练与推理两侧比对。
 
-### 3.2 方式一：离线建库预存（训练用）
+### 3.3 训练：提前建库
 
-对整个训练集提前算好所有窗口存成一张表，dataloader 按 (episode, 当前步) 查可见窗口。三步，各自可断点续跑：
+太慢，不能在线算。对训练集所有窗口跑一遍 3.2，按「清单顺序逐 episode、每 episode 先 demo 后 exec、段内起点升序」存成一张 `(rows, 1024)` f32 表，训练时按 (episode, 当前步) 查可见窗口（第 4 节公式）。我们的实现：`scripts/dataset/wan/extract_wan.py`（帧→latent）→ MotionJEPA `scripts/stage2_memory_export.py`（latent→token）→ `scripts/dataset/pack_motion_store.py`（打包、校验）；表格式见 `src/mme_vla_suite/datastore/motion_store.py`。1600 集训练库的表 23,253 行、约 95 MB，已建好的在公开 bucket `HongzeFu/robomme-16task-orig100-1600ep-trainset-20261028-v1` 的 `motion-stage2-1024/`，可直接用。
 
-```bash
-LIB=<数据集根>   # 需有 meta/episode_manifest.json（episode 清单，含 exec_start_idx）与 meta/input_manifest.json（H5 sha256）
-R=<robomme_policy_learning_MotionJEPA 根>
+### 3.4 推理：在线现算
 
-# 1) 帧 → Wan latent：读原始 H5，每 GPU 一个 worker 动态领段（已有 wan-latents/ 可跳过）
-uv run --no-sync python $R/scripts/dataset/run_local.py --stage wan --lib $LIB --gpus 0,1 --raw-dir <H5 目录>
-#    → $LIB/wan-latents/<段>.bin（每窗 589,824 B，stride 16 网格）+ .sha256 + .metadata.json（记 real_frames / pad_frames）
-
-# 2) latent → 1024 维 token：MotionJEPA 4a16ab4 的 scripts/stage2_memory_export.py；--grid-subsample 2 取偶数位 = stride 32
-env -u PYTHONPATH CUDA_VISIBLE_DEVICES=0 $R/v1-store/venvs/wan-stage2/bin/python <MotionJEPA>/scripts/stage2_memory_export.py \
-  --ckpt <…>/checkpoint_epoch_105.pt --expected-sha256 27daa832…6035 \
-  --latents $LIB/wan-latents --manifest $LIB/meta/episode_manifest.json --input-manifest $LIB/meta/input_manifest.json \
-  --out $LIB/motion-tokens-stage2 --grid-subsample 2 --batch 1 --check-dropout 64 --expected-counts <段数>,<行数>
-#    → $LIB/motion-tokens-stage2/<段>.f32.bin（每窗 4096 B）；末行 STAGE2_EXPORT=PASS
-
-# 3) 打包成表并校验
-uv run --no-sync python $R/scripts/dataset/pack_motion_store.py pack --layout stage2 --latent-grid-subsample 2 \
-  --manifest $LIB/meta/episode_manifest.json --tokens $LIB/motion-tokens-stage2 --latents $LIB/wan-latents \
-  --out $LIB/motion-stage2-1024 --encoder-run-dir <…>/stage2-full144-1025-a --raw-dir <H5 目录> \
-  --expected-ckpt-sha256 27daa832…6035 --stage2-validation $LIB/evidence --stage2-source-pin $R/scripts/dataset/wan_stage2/SOURCE_PIN.json
-uv run --no-sync python $R/scripts/dataset/pack_motion_store.py verify --store $LIB/motion-stage2-1024 --resume --check-padding
-```
-
-表的格式（`src/mme_vla_suite/datastore/motion_store.py`），Qwen 侧照着读就行：
-
-```
-motion-stage2-1024/
-├── motion_token.f32.bin     (rows, 1, 1024) f32 裸字节；行序 = 清单顺序逐 episode，每 episode 先 demo 段后 exec 段，段内按起点 0,32,64,… 升序
-├── meta/motion_index.json   每 episode 两段的行基址与起点数（查表唯一依据）
-├── meta/store_meta.json     布局名 motion-stage2-1x1024-grid32-demopad17-v1 + encoder / VAE / 数值环境 provenance
-└── meta/row_digests.blake2b.bin
-```
-
-读表：`MotionStore.rows(行号)`；当前步可见的行号由 `motion_store.py::visible_motion_rows(entry, t)` 算（第 4 节规则）。
-
-### 3.3 方式二：在线现算（推理用）
-
-评估时在 policy 旁边起一个 encoder 子进程，环境每送来新帧就把凑齐的窗口现场编码，不读表。
-
-| 部件 | 文件 | 说明 |
-|---|---|---|
-| 子进程 | `scripts/dataset/wan_stage2/stage2_sidecar.py` | 在 3.0 环境里跑；加载 VAE 与 encoder，循环收请求。启动：`UV_PROJECT_ENVIRONMENT=v1-store/venvs/wan-stage2 CUDA_VISIBLE_DEVICES=<卡> uv run --project scripts/dataset/wan_stage2 --no-sync python scripts/dataset/wan_stage2/stage2_sidecar.py --fd <socketpair 子端> --ckpt <…> --expected-sha256 <…> --expected-vae-sha256 <…>` |
-| 协议 | `src/mme_vla_suite/policies/motion_protocol.py` | Unix socketpair；请求 = 起点帧号 + 33×256×256×3 uint8（6,488,064 B）；响应 = (1024,) f32 4096 B；一次一窗、同步、加锁串行。握手回传 encoder / VAE / 数值 provenance，客户端与离线表 `store_meta.json` 逐键比对，不等即拒绝启动 |
-| 客户端 | `src/mme_vla_suite/policies/motion_client.py::MotionEncoderClient` | `Popen` 起子进程、握手、`__call__(frames) -> (1024,)` |
-| 窗口状态机 | `src/mme_vla_suite/policies/framesamp_memory.py::FrameSampMemory` | `add_buffer` 收帧（首批 = 整段 demo + exec 第 0 帧，之后每批 16 帧），缓存 256² 原图；`_encode_ready_windows` 用 while 把已凑齐的起点全部编掉，一个起点只编一次；`_prepare_motion(step)` 取当前可见窗口 |
-
-**Qwen 侧**：这四件都不依赖 pi0.5，整体拿走。第二步里记忆在 client 侧、server 无状态，所以 `FrameSampMemory` 的运动路部分放进 client：reset 时 demo 帧进 buffer 并一次编完 demo 窗口，之后每 16 步 `add_buffer` 一批、编新凑齐的 exec 窗口，replan 时把 k 个 (1024,) 向量连同起点帧号一起发给 server。sidecar 单独占一张卡（或与 server 共卡但显存约 4 GB）。
-
-训练不在线算是因为一窗 VAE 约 1 s；推理不读表是因为帧是新的。两侧对拍工具 `scripts/training/check_stage2_online.py`：对 64 个固定窗口在线现算 vs 离线表，判定 `ONLINE_OFFLINE_PARITY=PASS`。
+帧是新的，只能现算。起一个 torch 子进程常驻一张卡，每凑齐一个新窗口就送 33 帧过去、收回 (1024,)；一个起点只编一次，缓存到 episode 结束。我们的实现：子进程 `scripts/dataset/wan_stage2/stage2_sidecar.py`，socket 协议与客户端 `src/mme_vla_suite/policies/{motion_protocol,motion_client}.py`，窗口状态机 `src/mme_vla_suite/policies/framesamp_memory.py::FrameSampMemory`（首批送整段 demo 一次编完，之后每 16 帧一批）。这几件不依赖 pi0.5，可整体拿到 Qwen 侧 client 里。
 
 ## 4. 窗口怎么取、怎么补帧（两侧必须一字不差）
 
