@@ -20,6 +20,8 @@ P / MEM / IMG / TXT 一律从当次观测经 `embed_prefix` / `embed_memory` 的
   adapter.last_attn = {"probs_action": f16 (num_steps, 18, 8, 20, P+20),
                        "probs_text":   f16 (18, 8, 64, P),        # padding 文本行置 0（npz 契约 §1.3）
                        "P": int, "MEM": int}
+  # 可选 AttnAdapter(policy, save_prefix=True)：last_attn 另含 "probs_prefix": f16 (18, 8, P, P)，
+  # 即 prefill 每层完整 prefix 自注意力（padding query 行置 0）；默认关闭时 jit 不产出该张量、其余输出不变。
 
 用法：
   # CPU、不加载权重，抽象求值两种 P 下的输出形状
@@ -62,7 +64,7 @@ class _ModelShim:
 
 
 class AttnAdapter:
-    def __init__(self, policy, *, require_flags: bool = True):
+    def __init__(self, policy, *, require_flags: bool = True, save_prefix: bool = False):
         import einops
         import flax.nnx as nnx
         import jax
@@ -94,6 +96,7 @@ class AttnAdapter:
         self._make_attn_mask = make_attn_mask
         self._layout_cache: dict = {}
         self.last_attn: dict | None = None
+        self.save_prefix = bool(save_prefix)
         self._check_param_tree()
         self._build()
 
@@ -151,10 +154,11 @@ class AttnAdapter:
                 probs = cap[0]
             return out, kv_out, probs
 
-        @functools.partial(jax.jit, static_argnames=("num_steps", "txt_lo", "out_f16"))
-        def f_sample_attn(state, rng, obs, noise, num_steps, txt_lo, out_f16=True):
-            """逐字复刻 HistoryPi0.sample_actions（context 分支）的 18 层展开版；返回 (x_0, probs_action, probs_text)。
-            probs_action (num_steps, L, b, G, AH, P+AH)；probs_text (L, b, G, TXT, P)，padding 文本行置 0。"""
+        @functools.partial(jax.jit, static_argnames=("num_steps", "txt_lo", "out_f16", "save_prefix"))
+        def f_sample_attn(state, rng, obs, noise, num_steps, txt_lo, out_f16=True, save_prefix=False):
+            """逐字复刻 HistoryPi0.sample_actions（context 分支）的 18 层展开版；返回 (x_0, probs_action, probs_text, n_done)。
+            probs_action (num_steps, L, b, G, AH, P+AH)；probs_text (L, b, G, TXT, P)，padding 文本行置 0。
+            save_prefix=True（static）时末尾多返回 probs_prefix (L, b, G, P, P)：prefill 每层完整概率，padding query 行置 0。"""
             m = nnx.merge(gdef, state)
             llm = llm_of(state)
             layers, fn1 = llm["layers"], llm["final_norm_1"]
@@ -168,11 +172,13 @@ class AttnAdapter:
             pos = jnp.cumsum(pm, axis=1) - 1
             P = pt.shape[1]
             h = pt.astype(ed)
-            ks, vs, txt = [], [], []
+            ks, vs, txt, pre = [], [], [], []
             for l in range(L):
                 (h, _), (k, v), probs = block_apply(layers, l, [h, None], None, pos, base, [None, None])
                 ks.append(k); vs.append(v)
                 txt.append(probs[:, 0, :, txt_lo:P, :])                  # (b,G,TXT,P)
+                if save_prefix:
+                    pre.append(probs[:, 0])                              # (b,G,P,P)：完整 prefix 自注意力
             K = jnp.stack(ks); V = jnp.stack(vs)                         # (L,b,P,1,H)
             txt_valid = pm[:, txt_lo:P].astype(jnp.float32)              # padding 文本 query 行（全遮蔽 → softmax 均匀）置 0
             probs_text = jnp.stack(txt) * txt_valid[None, :, None, :, None]
@@ -199,6 +205,12 @@ class AttnAdapter:
 
             acc0 = jnp.zeros((num_steps, L, b, cfgs[0].num_heads, AH, P + AH), jnp.float32)
             x_0, _, n_done, acc = jax.lax.while_loop(cond, step, (noise, 1.0, jnp.int32(0), acc0))
+            if save_prefix:                                              # padding query 行（全遮蔽 → softmax 均匀）置 0，同 probs_text
+                probs_prefix = jnp.stack(pre) * pm.astype(jnp.float32)[None, :, None, :, None]
+                if out_f16:
+                    return (x_0, acc.astype(jnp.float16), probs_text.astype(jnp.float16), n_done,
+                            probs_prefix.astype(jnp.float16))
+                return x_0, acc, probs_text, n_done, probs_prefix
             if out_f16:
                 return x_0, acc.astype(jnp.float16), probs_text.astype(jnp.float16), n_done
             return x_0, acc, probs_text, n_done
@@ -215,15 +227,21 @@ class AttnAdapter:
             st, sm, sar, _, _ = m.embed_suffix(o, x0, jnp.ones((b,), jnp.float32))
             sattn = make_attn_mask(sm, sar)
             full = jnp.concatenate([einops.repeat(pm, "b p -> b s p", s=st.shape[1]), sattn], axis=-1)
-            return {"text": base[:, txt_lo:], "text_valid": pm[:, txt_lo:], "action": full}
+            return {"text": base[:, txt_lo:], "text_valid": pm[:, txt_lo:], "action": full, "prefix_valid": pm}
 
         self.f_sample_attn = f_sample_attn
         self.f_masks = f_masks
 
-    def run(self, rng, observation, *, noise=None, num_steps: int = DEFAULT_NUM_STEPS, out_f16: bool = True, state=None):
-        """调一次展开版；返回 (x_0, probs_action, probs_text, layout)，probs 仍在 device 上、保留 batch 轴。"""
+    def run(self, rng, observation, *, noise=None, num_steps: int = DEFAULT_NUM_STEPS, out_f16: bool = True, state=None,
+            save_prefix: bool | None = None):
+        """调一次展开版；返回 (x_0, probs_action, probs_text, n_done, layout)，probs 仍在 device 上、保留 batch 轴。
+        save_prefix（缺省取构造参数）为真时末尾多一个 probs_prefix (L, b, G, P, P)。"""
         lay = self.layout(observation)
         st = self.gstate if state is None else state
+        if self.save_prefix if save_prefix is None else bool(save_prefix):
+            x_0, pa, ptxt, n_done, pp = self.f_sample_attn(st, rng, observation, noise, int(num_steps),
+                                                           lay["MEM"] + lay["IMG"], out_f16, save_prefix=True)
+            return x_0, pa, ptxt, n_done, lay, pp
         x_0, pa, ptxt, n_done = self.f_sample_attn(st, rng, observation, noise, int(num_steps),
                                                    lay["MEM"] + lay["IMG"], out_f16)
         return x_0, pa, ptxt, n_done, lay
@@ -240,13 +258,16 @@ class AttnAdapter:
             num_steps = int(kw.get("num_steps", DEFAULT_NUM_STEPS))
             if observation.state.shape[0] != 1:
                 raise ValueError(f"只支持 batch=1，得到 {observation.state.shape[0]}")
-            x_0, pa, ptxt, n_done, lay = self.run(rng, observation, noise=kw.get("noise"), num_steps=num_steps)
+            out = self.run(rng, observation, noise=kw.get("noise"), num_steps=num_steps)
+            x_0, pa, ptxt, n_done, lay = out[:5]
             pa_h, ptxt_h, n_h = jax.device_get((pa, ptxt, n_done))
             if int(n_h) != num_steps:
                 raise RuntimeError(f"去噪循环实际步数 {int(n_h)} != num_steps {num_steps}")
             self.last_attn = {"probs_action": np.asarray(pa_h[:, :, 0]),       # (num_steps, L, G, AH, P+AH) f16
                               "probs_text": np.asarray(ptxt_h[:, 0]),          # (L, G, TXT, P) f16
                               "P": int(lay["P"]), "MEM": int(lay["MEM"])}
+            if self.save_prefix:
+                self.last_attn["probs_prefix"] = np.asarray(jax.device_get(out[5])[:, 0])   # (L, G, P, P) f16
             return x_0
 
         fn.__name__ = "f_sample_attn"
@@ -310,13 +331,20 @@ def dry_shapes(args) -> int:
         out = jax.eval_shape(lambda s, r, o: ad.f_sample_attn(s, r, o, None, steps, lay["MEM"] + lay["IMG"], True),
                              ad.gstate, jax.random.key(0), obs)
         x_0, pa, ptxt, _ = out
+        out_p = jax.eval_shape(lambda s, r, o: ad.f_sample_attn(s, r, o, None, steps, lay["MEM"] + lay["IMG"], True,
+                                                                save_prefix=True),
+                               ad.gstate, jax.random.key(0), obs)
         P, MEM = lay["P"], lay["MEM"]
+        pp = out_p[4]
+        want_pp = (N_LAYERS, 1, ad.n_heads, P, P)
+        same_rest = all(tuple(a.shape) == tuple(b.shape) and a.dtype == b.dtype for a, b in zip(out, out_p[:4]))
         want_pa = (steps, N_LAYERS, 1, ad.n_heads, ad.AH, P + ad.AH)
         want_pt = (N_LAYERS, 1, ad.n_heads, lay["TXT"], P)
         want_x = (1, ad.AH, ad.AD)
         ok = (tuple(pa.shape) == want_pa and tuple(ptxt.shape) == want_pt and tuple(x_0.shape) == want_x
               and pa.dtype == jnp.float16 and ptxt.dtype == jnp.float16 and x_0.dtype == jnp.float32
-              and lay["TXT"] == 64 and ad.AH == 20 and ad.n_heads == 8)
+              and lay["TXT"] == 64 and ad.AH == 20 and ad.n_heads == 8
+              and tuple(pp.shape) == want_pp and pp.dtype == jnp.float16 and same_rest)
         ok_all &= ok
         la = (steps, N_LAYERS) + want_pa[3:]
         lt = (N_LAYERS,) + want_pt[2:]
@@ -324,7 +352,8 @@ def dry_shapes(args) -> int:
               f"motion={int(bool(getattr(model.mem_encoder, 'motion_enabled', False)))} "
               f"P={P} MEM={MEM} IMG={lay['IMG']} TXT={lay['TXT']} n_img={lay['n_img']} "
               f"actions={tuple(x_0.shape)}/{x_0.dtype} last_attn.probs_action={la}/float16 "
-              f"last_attn.probs_text={lt}/float16 wall={time.perf_counter() - t0:.0f}s", flush=True)
+              f"last_attn.probs_text={lt}/float16 last_attn.probs_prefix={(N_LAYERS,) + want_pp[2:]}/float16(save_prefix) "
+              f"wall={time.perf_counter() - t0:.0f}s", flush=True)
         summary.append(f"{tag}:P={P},MEM={MEM}")
     print(f"ATTN_DRY_SHAPES={'PASS' if ok_all else 'FAIL'} {' '.join(summary)} num_steps={args.num_steps} L={N_LAYERS} AH=20")
     return 0 if ok_all else 1
@@ -482,6 +511,35 @@ def selftest(args) -> int:
     spread, illegal = _uniform_err(pa_u, pt_u, masks)
     uniform_ok = int(n_zero[0] > 0 and spread <= 1e-5 and illegal <= 1e-6)
     del st_q0, pa_u, pt_u
+
+    # ③′ save_prefix：f32 口径 probs_prefix 有效行行和 = 1、padding 行为 0；开启/关闭两态的其余输出逐位比对（f32 与 f16 落盘口径）
+    _, pa32b, pt32b, _, _ = ad.run(key0, obs, noise=noise, out_f16=False)
+    _, pa32p, pt32p, _, _, pp32 = ad.run(key0, obs, noise=noise, out_f16=False, save_prefix=True)
+    pa32b, pt32b, pa32p, pt32p, pp32 = jax.device_get((pa32b, pt32b, pa32p, pt32p, pp32))
+    pv = np.asarray(masks["prefix_valid"], bool)                  # (b,P)
+    ps = pp32.astype(np.float64).sum(-1)                          # (L,b,G,P)
+    prefix_rowsum_err = float(np.abs(np.where(pv[None, :, None, :], ps - 1.0, 0.0)).max())
+    prefix_pad_max = float(np.abs(np.where(pv[None, :, None, :, None], 0.0, pp32)).max())
+    f32_same = int(np.array_equal(pa32b, pa32p) and np.array_equal(pt32b, pt32p))
+    del ps, pp32
+    x_off, pa_off, pt_off, _, _ = ad.run(key0, obs, noise=noise)
+    x_on, pa_on, pt_on, _, _, pp_on = ad.run(key0, obs, noise=noise, save_prefix=True)
+    pp_shape, pp_dtype = tuple(pp_on.shape), pp_on.dtype
+    x_off, pa_off, pt_off, x_on, pa_on, pt_on = jax.device_get((x_off, pa_off, pt_off, x_on, pa_on, pt_on))
+    del pp_on
+
+    def _maxd(a, b):
+        return float(np.abs(np.asarray(a, np.float64) - np.asarray(b, np.float64)).max())
+
+    d_x, d_pa, d_pt = _maxd(x_off, x_on), _maxd(pa_off, pa_on), _maxd(pt_off, pt_on)
+    d_pa32, d_pt32 = _maxd(pa32b, pa32p), _maxd(pt32b, pt32p)
+    del pa32b, pt32b, pa32p, pt32p
+    prefix_same = int(np.array_equal(x_off, x_on) and np.array_equal(pa_off, pa_on) and np.array_equal(pt_off, pt_on)
+                      and f32_same == 1)
+    prefix_shape_ok = int(pp_shape == (N_LAYERS, 1, ad.n_heads, P, P) and pp_dtype == jnp.float16)
+    print(f"[attn] save_prefix rowsum_err_f32={prefix_rowsum_err:.3g} pad_rows_max={prefix_pad_max:.3g} "
+          f"shape={pp_shape}/{pp_dtype} on_vs_off max_abs f16: actions={d_x:.3g} probs_action={d_pa:.3g} "
+          f"probs_text={d_pt:.3g} | f32: probs_action={d_pa32:.3g} probs_text={d_pt32:.3g} same={prefix_same}", flush=True)
     print(f"[attn] rowsum_err_f32={rowsum_err:.3g} rowsum_err_f16={rowsum16:.3g} uniform spread={spread:.3g} "
           f"illegal_max={illegal:.3g} q_einsum_leaves_zeroed={n_zero[0]}", flush=True)
 
@@ -504,11 +562,13 @@ def selftest(args) -> int:
     print(f"[attn] f32 prod_vs_unrolled max_abs={f32_maxabs:.3g} strict_load={int(strict)} wall={time.perf_counter() - t1:.0f}s", flush=True)
 
     ok = (shape_ok and f32_maxabs <= 1e-5 and rowsum_err <= 1e-4 and uniform_ok == 1
-          and np.all(np.isfinite(a_mine_np)))
+          and np.all(np.isfinite(a_mine_np))
+          and prefix_rowsum_err <= 1e-4 and prefix_pad_max == 0.0 and prefix_same == 1 and prefix_shape_ok == 1)
     note = f"motion=Zero{motion_dim}(免sidecar,attention机制与motion内容无关)" if motion else "motion=off"
     print(f"ATTN_SELFTEST={'PASS' if ok else 'FAIL'} f32_maxabs={f32_maxabs:.3g} bf16_relfro={bf16_relfro:.3g} "
           f"rowsum_err={rowsum_err:.3g} uniform_ok={uniform_ok} P={P} MEM={MEM} "
-          f"shape_ok={int(shape_ok)} rowsum_err_f16={rowsum16:.3g} {note} wall={time.perf_counter() - t0:.0f}s")
+          f"shape_ok={int(shape_ok)} rowsum_err_f16={rowsum16:.3g} {note} wall={time.perf_counter() - t0:.0f}s "
+          f"prefix_rowsum_err={prefix_rowsum_err:.3g} prefix_same_actions={prefix_same}")
     return 0 if ok else 1
 
 

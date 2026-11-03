@@ -8,7 +8,7 @@
 spec（JSON）键：repo, policy_python, sim_python, stage2_python, checkpoint, policy_config,
 model_kind（history | stage2_pool4_concat）, model_seed=42, purpose=validation, cuda, attn_out, run_root, manifest,
 xla_mem_fraction；可选 port（起始端口，缺省 0=临时端口）、startup_timeout_seconds（缺省 600）、save_top_frames、
-rpc_timeout_seconds。run_identity_sha256 由本脚本自算（见 run_identity）。
+rpc_timeout_seconds、save_prefix（缺省 false；为真时服务端加 --save-prefix，另写 prefix_<seq>.npz）。run_identity_sha256 由本脚本自算（见 run_identity）。
 
 逐局打印 EPISODE_RESULT task=<t> ep=<i> success=<0|1> npz=<n>，末行
 RUN_LOCAL=PASS|FAIL model=<model_kind> episodes=<n> success=<k> npz=<n>。
@@ -132,6 +132,8 @@ def build_server_command(spec, nonce, port):
     extra = ["--attn-out", str(spec["attn_out"])]
     if spec.get("save_top_frames") is not None:
         extra += ["--save-top-frames", str(int(spec["save_top_frames"]))]
+    if spec.get("save_prefix"):
+        extra += ["--save-prefix"]
     index = command.index("policy:checkpoint")
     return command[:index] + extra + command[index:]
 
