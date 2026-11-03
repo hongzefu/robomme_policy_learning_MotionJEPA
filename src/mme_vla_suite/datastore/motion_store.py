@@ -48,6 +48,10 @@ LAYOUT = "motion-v10-8x256-grid16-demopad17-v1"
 STAGE2_LAYOUT = "motion-stage2-1x1024-grid32-demopad17-v1"
 STAGE2_ARCH = "wan-latent-stage2-blockwise-pool4-three-decoder"
 STAGE2_GROUPS = ("encoder", "encoder_state_sha256", "source_pin", "numerics", "stage2_compat", "vae")
+STAGE2_CACHE_ORIGIN = "published-cache-with-local-fill"
+WAN_CACHE_IMPORT_SCHEMA = "orig16-wan-cache-import-v1"
+WAN_CHUNK_BYTES = 9 * 16 * 32 * 32 * 4
+SAME_INPUT_NOT_REQUIRED = {"status": "NOT_REQUIRED", "reason": "user_decision_same_input"}
 STAGE2_SAMPLE_STRATEGY = "task64-endpoints-pad8-seed0-v1"
 STAGE2_SAMPLE_AUTHORIZATION = "同意按照你说过的更省时方案 做\nencoder只抽机小部分"
 STAGE2_G2_WAIVER_CHECKPOINT_SHA256 = "27daa8320c9a392616778a7cd3e3a2041f9b52a440181f51df7e996352716035"
@@ -245,9 +249,144 @@ def require_sha256(value, ctx: str) -> str:
     return value
 
 
+def stage2_uses_cache(provenance):
+    """只对明确声明的新来源合同放宽跨精度输出比较。"""
+    return provenance.get("stage2_compat", {}).get("kind") == STAGE2_CACHE_ORIGIN
+
+
+def stage2_evidence_roles(provenance):
+    return ("G0", "G2", "G3", "wan_cache_import" if stage2_uses_cache(provenance) else "restore_receipt", "SOURCE_PIN")
+
+
+def validate_wan_cache_import_receipt(receipt, *, manifest_sha256=None, input_manifest_sha256=None):
+    """校验发布缓存导入的可携带合同；文件内容由生产与打包入口现场核验。"""
+    if (not isinstance(receipt, dict) or receipt.get("schema") != WAN_CACHE_IMPORT_SCHEMA
+            or receipt.get("kind") != STAGE2_CACHE_ORIGIN or receipt.get("status") != "PASS"):
+        raise ValueError("Wan 缓存收据 schema、kind 或状态不符")
+    for key in ("manifest_sha256", "manifest_file_sha256", "input_manifest_sha256", "importer_sha256"):
+        require_sha256(receipt.get(key), f"cache.{key}")
+    for key, expected in (("manifest_sha256", manifest_sha256), ("input_manifest_sha256", input_manifest_sha256)):
+        if expected is not None and receipt[key] != expected:
+            raise ValueError(f"缓存收据的 {key} 与当前输入不同")
+
+    def files(items, label, name_key="path"):
+        result = {}
+        if not isinstance(items, list) or not items:
+            raise ValueError(f"{label} 文件清单为空")
+        for item in items:
+            name = item.get(name_key) if isinstance(item, dict) else None
+            if (not isinstance(name, str) or not name or pathlib.PurePosixPath(name).is_absolute()
+                    or ".." in pathlib.PurePosixPath(name).parts or name in result
+                    or type(item.get("bytes")) is not int or item["bytes"] <= 0):
+                raise ValueError(f"{label} 文件路径、字节或唯一性不符")
+            require_sha256(item.get("sha256"), f"{label}.{name}")
+            result[name] = item
+        return result
+
+    published = receipt.get("published", {})
+    if (not isinstance(published.get("repo"), str) or not published["repo"]
+            or re.fullmatch(r"[0-9a-f]{40}", str(published.get("revision"))) is None):
+        raise ValueError("缓存发布 repo/revision 不完整")
+    require_sha256(published.get("sha256sums_sha256"), "published.SHA256SUMS")
+    source_files = files(published.get("files"), "published")
+    h5_files = files(receipt.get("source_h5_files"), "source_h5", "name")
+    if any(pathlib.PurePosixPath(name).name != name or not name.endswith(".h5") for name in h5_files):
+        raise ValueError("源 H5 清单必须以原文件名标识")
+    latents = receipt.get("latents", {})
+    if not isinstance(latents.get("root"), str) or not latents["root"]:
+        raise ValueError("缓存收据缺目标 latent 根")
+    require_sha256(latents.get("metadata_sha256"), "latents.metadata_sha256")
+    output_files = files(latents.get("files"), "latents")
+    vae = receipt.get("vae", {})
+    if vae.get("vae_id") != "Wan-AI/Wan2.1-T2V-1.3B-Diffusers" or vae.get("latent_mode") != "mode":
+        raise ValueError("缓存 VAE 模型或 latent_mode 不符")
+    require_sha256(vae.get("vae_state_sha256"), "cache.vae_state_sha256")
+    if receipt.get("preprocess") != dict(frame_size=256, input_dtype="uint8", input_layout="THWC",
+                                          window_frames=33, augmentation="none"):
+        raise ValueError("缓存预处理或增强合同不符")
+    modes = receipt.get("numeric_modes", {})
+    if set(modes) != {"copy", "fill"} or any(not isinstance(v, dict) or not v for v in modes.values()):
+        raise ValueError("缓存必须分别记录 copy/fill 实际数值环境")
+    windows = receipt.get("windows")
+    if not isinstance(windows, list) or not windows:
+        raise ValueError("缓存收据缺逐窗映射")
+    mapping, outputs, counts = {}, {}, dict(windows=len(windows), copy=0, fill=0)
+    for window in windows:
+        if not isinstance(window, dict):
+            raise ValueError("缓存窗口必须为对象")
+        key, m, route = window.get("key"), window.get("m"), window.get("route")
+        if (not isinstance(key, str) or re.fullmatch(r".+_ep[0-9]+_(demo|exec)", key) is None
+                or type(m) is not int or m < 0 or (key, m) in mapping or route not in ("copy", "fill")):
+            raise ValueError("缓存窗口键、网格或路线缺失/重复")
+        real, pad, frames = window.get("real_frames"), window.get("pad_frames"), window.get("frame_ids")
+        if (type(real) is not int or type(pad) is not int or real + pad != 33 or pad < 0
+                or real < (17 if key.endswith("_demo") else 33) or not isinstance(frames, list)
+                or len(frames) != 33 or any(type(f) is not int or f < 0 for f in frames)
+                or frames != list(range(frames[0], frames[0] + real)) + [frames[real - 1]] * pad
+                or window.get("pad_source_frame") != (frames[real - 1] if pad else None)):
+            raise ValueError("缓存窗口帧号、补帧或真实帧数不符")
+        for name in ("input_frames_sha256", "latent_sha256"):
+            require_sha256(window.get(name), f"cache.window.{name}")
+        output, offset = window.get("output_file"), window.get("output_offset")
+        if (output not in output_files or output != f"{key}.bin" or type(offset) is not int
+                or offset != m * WAN_CHUNK_BYTES or offset + WAN_CHUNK_BYTES > output_files[output]["bytes"]):
+            raise ValueError("缓存目标文件、offset 或边界不符")
+        if route == "copy":
+            source, row, offset = window.get("source_file"), window.get("source_row"), window.get("source_offset")
+            if (source not in source_files or type(row) is not int or row < 0 or type(offset) is not int
+                    or offset != row * WAN_CHUNK_BYTES or offset + WAN_CHUNK_BYTES > source_files[source]["bytes"]
+                    or pathlib.PurePosixPath(source).name != f"{key}.bin" or row != m * 16
+                    or window.get("source_layout") not in ("group_first", "channel_first")):
+                raise ValueError("缓存源 row/offset/轴序或文件边界不符")
+        elif any(window.get(name) is not None for name in ("source_file", "source_row", "source_offset", "source_layout")):
+            raise ValueError("fill 窗口不得伪造发布缓存来源")
+        if "h5_file" in window and window["h5_file"] not in h5_files:
+            raise ValueError("窗口源 H5 不在收据清单")
+        if key.endswith("_demo") and frames[0] != m * 16:
+            raise ValueError("demo 缓存窗口起点与 grid16 不符")
+        mapping[key, m] = window
+        outputs.setdefault(output, []).append(m)
+        counts[route] += 1
+    if receipt.get("counts") != counts:
+        raise ValueError("缓存 copy/fill 计数与逐窗映射不符")
+    if {name for name in output_files if name.endswith(".bin")} != set(outputs):
+        raise ValueError("缓存最终文件缺映射或含多余段")
+    for name, rows in outputs.items():
+        if sorted(rows) != list(range(len(rows))) or output_files[name]["bytes"] != len(rows) * WAN_CHUNK_BYTES:
+            raise ValueError("缓存逐段映射有缺窗、重窗或额外字节")
+    return mapping
+
+
 def validate_stage2_g2_evidence(record, *, checkpoint_sha256, samples_sha256,
-                               source_pin, numerics, online_vae, demo_tail=None) -> str:
+                               source_pin, numerics, online_vae, demo_tail=None,
+                               cache_import_receipt=None, cache_import_receipt_sha256=None) -> str:
     """只接受严格数值PASS，或用户针对固定三份身份授权的数值例外；来源检查始终执行。"""
+    if cache_import_receipt is not None:
+        receipt = cache_import_receipt
+        validate_wan_cache_import_receipt(receipt)
+        require_sha256(cache_import_receipt_sha256, "G2.cache_import_receipt_sha256")
+        if (record.get("schema") != "stage2-validation-gate-v1" or record.get("gate") != "G2"
+                or record.get("status") != "PASS" or record.get("kind") != STAGE2_CACHE_ORIGIN
+                or record.get("samples_sha256") != samples_sha256
+                or record.get("cache_import_receipt_sha256") != cache_import_receipt_sha256
+                or record.get("output_numerics") != SAME_INPUT_NOT_REQUIRED):
+            raise ValueError("缓存 G2 的证据绑定或数值 NOT_REQUIRED 声明不符")
+        for key, expected in (("manifest_sha256", receipt["manifest_sha256"]),
+                              ("latent_metadata_sha256", receipt["latents"]["metadata_sha256"]),
+                              ("vae", receipt["vae"]), ("preprocess", receipt["preprocess"]),
+                              ("numeric_modes", receipt["numeric_modes"])):
+            if record.get(key) != expected:
+                raise ValueError(f"缓存 G2 的 {key} 不同源")
+        if online_vae.get("vae_state_sha256") != receipt["vae"]["vae_state_sha256"]:
+            raise ValueError("缓存与在线 VAE 权重不同源")
+        metrics = record.get("metrics", {})
+        fixed = dict(windows=64, sha_mismatches=0, frame_mismatches=0, shape_mismatches=0, nonfinite=0)
+        if (any(type(metrics.get(k)) is not int or metrics[k] != v for k, v in fixed.items())
+                or type(metrics.get("demo_tail")) is not int or metrics["demo_tail"] < 16
+                or (demo_tail is not None and metrics["demo_tail"] != demo_tail)
+                or any(type(metrics.get(k)) is not int or metrics[k] < 1 for k in ("copy", "demo_fill", "exec_fill"))):
+            raise ValueError("缓存 G2 输入、形状、有限性或路线覆盖未通过")
+        return "PASS"
     require_sha256(checkpoint_sha256, "G2.checkpoint_sha256")
     require_sha256(samples_sha256, "G2.samples_sha256")
     if (not isinstance(record, dict) or record.get("schema") != "stage2-validation-gate-v1"
@@ -380,6 +519,14 @@ def validate_stage2_provenance(provenance: dict) -> None:
     compat = provenance["stage2_compat"]
     if compat.get("schema") != "stage2-compat-v1":
         raise ValueError("stage2_compat schema 不符")
+    if stage2_uses_cache(provenance):
+        _validate_stage2_cache_provenance(provenance)
+        if "encoder_validation" in compat:
+            validate_stage2_encoder_validation(compat["encoder_validation"], provenance)
+        canonical_json_bytes(provenance)
+        return
+    if compat.get("kind") not in (None, "historical-restore-receipt"):
+        raise ValueError("stage2_compat 未知来源 kind")
     require_sha256(compat.get("restore_receipt_sha256"), "stage2_compat.restore_receipt_sha256")
     historical, online = compat.get("historical_vae"), compat.get("online_vae")
     if not isinstance(historical, dict) or not isinstance(online, dict) or not historical or not online:
@@ -419,6 +566,115 @@ def validate_stage2_provenance(provenance: dict) -> None:
     canonical_json_bytes(provenance)
 
 
+def _validate_stage2_cache_provenance(provenance):
+    """新缓存合同只区分数值环境，模型、权重与输入规范仍唯一。"""
+    compat, vae, pin = provenance["stage2_compat"], provenance["vae"], provenance["source_pin"]
+    online = compat.get("online_vae", {})
+    if (vae.get("vae_id") != "Wan-AI/Wan2.1-T2V-1.3B-Diffusers" or vae.get("latent_mode") != "mode"
+            or any(online.get(key) != vae.get(key) for key in ("vae_id", "vae_state_sha256", "latent_mode"))):
+        raise ValueError("缓存与在线 VAE 模型/权重/取值方式不同")
+    require_sha256(vae.get("vae_state_sha256"), "cache.vae_state_sha256")
+    fixed = dict(vae_dtype="float32", batch=1, tf32="off", amp="off")
+    if (any(type(online.get(k)) is not type(v) or online[k] != v for k, v in fixed.items())
+            or online.get("adapter_sha256") != pin["vae_adapter_sha256"]
+            or online.get("preprocess") != dict(frame_size=256, input_dtype="uint8", input_layout="THWC", window_frames=33)
+            or online.get("numerics") != provenance["numerics"]):
+        raise ValueError("缓存合同的在线 VAE 精度、适配件或预处理不符")
+    modes = compat.get("numeric_modes", {})
+    if (set(modes) != {"copy", "fill"} or any(not isinstance(v, dict) or not v for v in modes.values())
+            or compat.get("output_numerics") != SAME_INPUT_NOT_REQUIRED):
+        raise ValueError("缓存合同缺 copy/fill 数值记录或明确 NOT_REQUIRED")
+    require_sha256(compat.get("cache_import_receipt_sha256"), "cache_import_receipt_sha256")
+    evidence = compat.get("evidence", {})
+    if set(evidence) != set(stage2_evidence_roles(provenance)):
+        raise ValueError("缓存合同证据集合不完整或混入历史收据")
+    for label, item in evidence.items():
+        if not isinstance(item, dict) or not isinstance(item.get("path"), str) or not item["path"]:
+            raise ValueError(f"缓存合同缺 {label} 路径")
+        require_sha256(item.get("sha256"), f"cache.evidence.{label}")
+    if evidence["wan_cache_import"]["sha256"] != compat["cache_import_receipt_sha256"]:
+        raise ValueError("缓存收据引用与合同身份不符")
+
+
+def validate_stage2_cache_evidence(provenance, records):
+    """共用 G0/G2/G3 消费校验，不把跨精度输出差异伪标为 PASS。"""
+    compat = provenance["stage2_compat"]
+    receipt, g0, g3 = records["wan_cache_import"], records["G0"], records["G3"]
+    mapping = validate_wan_cache_import_receipt(receipt, manifest_sha256=provenance.get("manifest_sha256"),
+                                               input_manifest_sha256=provenance.get("input_manifest_sha256"))
+    if (records["SOURCE_PIN"] != provenance["source_pin"] or receipt["vae"] != provenance["vae"]
+            or receipt["numeric_modes"] != compat["numeric_modes"]):
+        raise ValueError("缓存证据的权重、源码或数值记录与来源合同不同")
+    counts, windows = g0.get("counts", {}), g0.get("windows", [])
+    if (g0.get("schema") != "stage2-validation-inputs-v1" or g0.get("gate") != "G0"
+            or g0.get("status") != "PASS" or g0.get("seed") != 0 or len(windows) != 64
+            or counts.get("windows") != 64 or counts.get("tasks") != 16 or counts.get("sha_mismatches") != 0
+            or g0.get("cache_import_receipt_sha256") != compat["cache_import_receipt_sha256"]
+            or g0.get("manifest_sha256") != receipt["manifest_sha256"]
+            or g0.get("latent_metadata_sha256") != receipt["latents"]["metadata_sha256"]):
+        raise ValueError("缓存 G0 证据不完整或绑定不同输入")
+    tasks, seen, routes, tails = {}, set(), set(), 0
+    h5 = {f["name"]: f for f in receipt["source_h5_files"]}
+    for window in windows:
+        identity = (window.get("key"), window.get("source_grid"))
+        row = mapping.get(identity)
+        if row is None or identity in seen or type(identity[1]) is not int or identity[1] % 2:
+            raise ValueError("缓存 G0 窗口重复、缺映射或不是偶数格")
+        seen.add(identity)
+        for key in ("frame_ids", "real_frames", "pad_frames", "pad_source_frame", "input_frames_sha256", "route"):
+            if window.get(key) != row.get(key):
+                raise ValueError(f"缓存 G0 窗口与导入收据不同: {key}")
+        if window.get("latent_block_sha256") != row["latent_sha256"]:
+            raise ValueError("缓存 G0 latent 块 SHA 不同")
+        task, episode, segment = window.get("task"), window.get("episode"), window.get("segment_kind")
+        if (not isinstance(task, str) or type(episode) is not int or episode < 0 or segment not in SEGMENTS
+                or identity[0] != f"{task}_ep{episode}_{segment}"):
+            raise ValueError("缓存 G0 的任务、episode 或段身份不符")
+        sources = window.get("sources", [])
+        if len(sources) == 1 and sources[0].get("kind") == "raw_h5":
+            source = sources[0]
+            expected_indices = [dict(source=0, index=f) for f in row["frame_ids"]]
+        elif segment == "exec" and len(sources) == 33 and all(s.get("kind") == "exec_pkl" for s in sources):
+            source = window.get("raw_h5", {})
+            expected_indices = [dict(source=i, index=0) for i in range(33)]
+            for item in sources:
+                require_sha256(item.get("sha256"), "G0.exec_pkl.sha256")
+                if not isinstance(item.get("path"), str) or not item["path"]:
+                    raise ValueError("缓存 G0 exec_pkl 路径缺失")
+        else:
+            raise ValueError("缓存 G0 必须绑定原始 H5 与实际执行样本")
+        if source.get("kind") != "raw_h5" or source.get("episode") != episode:
+            raise ValueError("缓存 G0 原 H5 episode 不同")
+        source_name = pathlib.Path(source.get("path", "")).name
+        if (source_name not in h5 or source_name != f"record_dataset_{task}.h5"
+                or source.get("sha256") != h5[source_name]["sha256"]
+                or ("h5_file" in row and source_name != row["h5_file"])):
+            raise ValueError("缓存 G0 源 H5 SHA 与收据不同")
+        if window.get("source_frame_indices") != expected_indices:
+            raise ValueError("缓存 G0 源帧映射与输入不符")
+        tasks[task] = tasks.get(task, 0) + 1
+        routes.add("copy" if row["route"] == "copy" else f"{segment}_fill")
+        tails += int(row["pad_frames"] > 0)
+    if (len(tasks) != 16 or set(tasks.values()) != {4} or tails < 16 or counts.get("demo_tail") != tails
+            or routes != {"copy", "demo_fill", "exec_fill"}):
+        raise ValueError("缓存 G0 每任务四窗、尾窗或三种路线覆盖不完整")
+    validate_stage2_g2_evidence(records["G2"], checkpoint_sha256=provenance["encoder"]["checkpoint_sha256"],
+        samples_sha256=compat["evidence"]["G0"]["sha256"], source_pin=provenance["source_pin"],
+        numerics=provenance["numerics"], online_vae=compat["online_vae"], demo_tail=tails,
+        cache_import_receipt=receipt, cache_import_receipt_sha256=compat["cache_import_receipt_sha256"])
+    metrics = g3.get("metrics", {})
+    fixed = dict(windows=32, seed=0, geometry_all_true=1, leaves=65, state_key="model", exact=1,
+                 live_negative_rejected=1, shape_mismatches=0, nonfinite=0)
+    if (g3.get("schema") != "stage2-validation-gate-v1" or g3.get("gate") != "G3" or g3.get("status") != "PASS"
+            or g3.get("kind") != STAGE2_CACHE_ORIGIN or g3.get("output_numerics") != SAME_INPUT_NOT_REQUIRED
+            or g3.get("cache_import_receipt_sha256") != compat["cache_import_receipt_sha256"]
+            or g3.get("samples_sha256") != compat["evidence"]["G0"]["sha256"]
+            or g3.get("checkpoint_sha256") != provenance["encoder"]["checkpoint_sha256"]
+            or any(metrics.get(k) != v for k, v in fixed.items())
+            or any(g3.get(k) != provenance[k] for k in ("source_pin", "numerics", "encoder_state_sha256"))):
+        raise ValueError("缓存 G3 的 EMA、输入绑定、形状或有限性证据不完整")
+
+
 def validate_stage2_encoder_validation(summary, provenance, *, total_rows=None,
                                        table_sha256=None, index_sha256=None):
     """校验随快照携带的认证原文与覆盖范围；交付环境不依赖原机器索引。"""
@@ -430,6 +686,25 @@ def validate_stage2_encoder_validation(summary, provenance, *, total_rows=None,
         record = json.loads(summary["record_json"])
     except json.JSONDecodeError as exc:
         raise ValueError("encoder认证原文不可解析") from exc
+    if stage2_uses_cache(provenance):
+        rows = summary.get("total_rows")
+        fixed = dict(schema="stage2-packed-integrity-v1", scope="full", layout=STAGE2_LAYOUT, status="PASS",
+                     compared=rows, packed_compared=rows, mismatches=0, nonfinite=0,
+                     output_numerics=SAME_INPUT_NOT_REQUIRED,
+                     checkpoint_sha256=provenance["encoder"]["checkpoint_sha256"],
+                     cache_import_receipt_sha256=provenance["stage2_compat"]["cache_import_receipt_sha256"],
+                     source_grid_sha256=provenance["source_grid_sha256"],
+                     source_metadata_sha256=provenance["latents_metadata_sha256"])
+        if (type(rows) is not int or rows <= 0 or (total_rows is not None and rows != total_rows)
+                or summary.get("scope") != "full" or summary.get("encoder_compared") != 0
+                or summary.get("packed_compared") != rows or any(record.get(k) != v for k, v in fixed.items())):
+            raise ValueError("缓存完整性认证缺全表 memcmp/finite 或明确数值 NOT_REQUIRED")
+        for key, expected in (("store_table_sha256", table_sha256 or provenance.get("motion_table_sha256")),
+                              ("motion_index_sha256", index_sha256 or provenance.get("motion_index_sha256"))):
+            require_sha256(record.get(key), f"cache.integrity.{key}")
+            if expected is not None and record[key] != expected:
+                raise ValueError(f"缓存完整性认证与当前表不同: {key}")
+        return record
     scope = summary.get("scope")
     rows = summary.get("total_rows")
     if (not isinstance(record, dict) or scope not in ("full", "sampled") or record.get("scope") != scope
@@ -800,6 +1075,8 @@ class MotionMeta:
             raise ValueError("provenance 须为对象")
         if raw["layout"] == STAGE2_LAYOUT:
             validate_stage2_provenance(provenance)
+            if status == "verified" and stage2_uses_cache(provenance) and "encoder_validation" not in provenance["stage2_compat"]:
+                raise ValueError("已 verified 的缓存表缺完整性认证")
             if "encoder_validation" in provenance["stage2_compat"]:
                 validate_stage2_encoder_validation(provenance["stage2_compat"]["encoder_validation"], provenance,
                                                    total_rows=num_rows, table_sha256=t.get("sha256"),

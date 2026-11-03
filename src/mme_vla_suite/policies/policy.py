@@ -12,6 +12,7 @@ from openpi import transforms as _transforms
 from openpi.shared import array_typing as at
 from openpi.shared import nnx_utils
 
+from mme_vla_suite.datastore.motion_adapter import STAGE2_SPLIT_READOUT, motion_policy_spec, split_stage2_tokens
 from mme_vla_suite.models.integration.history_observation import HistAugObservation
 from mme_vla_suite.models.integration.history_pi0 import HistoryPi0, _motion_enabled
 from mme_vla_suite.policies.framesamp_memory import FrameSampMemory
@@ -71,6 +72,10 @@ class MME_VLA_Policy:
                                                      "window_direction", "grid_origin")}
             self._motion_cfg.update(demo_min_real_frames=mcfg.get("demo_min_real_frames", 33),
                                     demo_tail_pad=mcfg.get("demo_tail_pad", "none"))
+            if mcfg.get("readout") == STAGE2_SPLIT_READOUT:
+                spec = motion_policy_spec(mcfg)
+                # 底层仍缓存每窗一个 1024 维编码；策略组包时才拆分，容量按完整窗口计。
+                self._motion_cfg.update(budget=spec.window_budget, dim=1024)
             # 只在 resample 时写键；缺省 raise 不加键，motion_cfg 与改动前逐键相同（FrameSampMemory 缺省即 raise）
             if motion_overflow_from_env() == "resample":
                 self._motion_cfg["overflow"] = "resample"
@@ -180,6 +185,11 @@ class MME_VLA_Policy:
         if self.motion_enabled:
             # 运动路装配 + 与训练侧同一份 memory_order 交错（帧路帧号再调一次纯函数 get_frame_sampling_indices，与内部那次同值）
             motion_emb, motion_pos, motion_mask, motion_times = self.mem_buffer._prepare_motion(self.step_idx)
+            if getattr(self.config, "motion", {}).get("readout") == STAGE2_SPLIT_READOUT:
+                motion_emb = split_stage2_tokens(motion_emb[:, None, :]).reshape(-1, 256)
+                motion_pos = np.repeat(motion_pos, 4, axis=0)
+                motion_mask = np.repeat(motion_mask, 4)
+                motion_times = np.repeat(motion_times, 4)
             frames = self.mem_buffer.get_frame_sampling_indices(self.step_idx, token_budget, token_per_image)
             max_frames = token_budget // (token_per_image * self.config.num_views)
             frame_times = pad_times(frames, max_frames)
