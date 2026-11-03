@@ -44,7 +44,14 @@ from mme_vla_suite.datastore import (
     run_full_checks,
 )
 from mme_vla_suite.datastore import motion_store as ms
-from mme_vla_suite.datastore.motion_adapter import PAIRING, STAGE2_READOUT, motion_policy_spec, pair_adjacent_tokens
+from mme_vla_suite.datastore.motion_adapter import (
+    PAIRING,
+    STAGE2_READOUT,
+    STAGE2_SPLIT_READOUT,
+    motion_policy_spec,
+    pair_adjacent_tokens,
+    split_stage2_tokens,
+)
 from mme_vla_suite.shared.sampling import MEM_ORDER_SENTINEL, even_sampling_indices, memory_order, pad_times
 
 logger = logging.getLogger(__name__)
@@ -79,7 +86,7 @@ def check_motion_contract(mcfg, meta: ms.MotionMeta):
             raise ValueError("四对 motion.checkpoint_sha256 必须显式提供 64 位小写十六进制 SHA256")
         if enc.get("arch") != "wan-latent-v10-st" or enc.get("state_key") != "encoder":
             raise ValueError("四对 motion 表必须来自 wan-latent-v10-st 的 encoder 状态")
-    if spec.readout == STAGE2_READOUT:
+    if spec.readout in (STAGE2_READOUT, STAGE2_SPLIT_READOUT):
         ms.validate_stage2_provenance(meta.provenance)
         sha = mcfg.get("checkpoint_sha256")
         if not isinstance(sha, str) or re.fullmatch(r"[0-9a-f]{64}", sha) is None:
@@ -400,6 +407,8 @@ class FrameSampDataset(Dataset):
             memb = mstore.rows(rows_m) if k else np.zeros((0,) + self._motion_meta.row_shape, np.float32)
             if self._motion_readout == STAGE2_READOUT:
                 memb = memb.reshape(k, 1024)
+            elif self._motion_readout == STAGE2_SPLIT_READOUT:
+                memb = split_stage2_tokens(memb)
             if self._motion_readout == PAIRING:
                 memb = pair_adjacent_tokens(memb)
             mpos = (np.ascontiguousarray(store.pos_rows(f_m)[:, 0, : self._motion_pos_dim])
