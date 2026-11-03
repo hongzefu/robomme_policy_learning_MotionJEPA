@@ -333,7 +333,7 @@ def dry_shapes(args) -> int:
 # ══════════════════════════════════════════ selftest（GPU）══════════════════════════════════════════
 def _legal_obs(policy, *, n_frames: int, seed: int = 0):
     """走生产 infer 的同一条装配链（add_buffer → _prepare_history → _input_transform → HistAugObservation），
-    帧与状态为随机合法值；两种 checkpoint 都能用（motion 用 ZeroMotion 句柄，attention 机制与 motion 内容无关）。
+    帧与状态为随机合法值；两种 checkpoint 都能用（motion 用本文件 _ZeroMotion 零句柄、维度取 checkpoint 的 motion.dim，attention 机制与 motion 内容无关）。
     分包与真实 eval 客户端同形：首包只喂第 0 帧（motion 开启时 FrameSampMemory.add_buffer 要求首包恰好
     exec_start_idx+1 帧，无 demo 即 1 帧），之后每包 16 帧（exec_start_idx=0 表示沿用）；基线无此约束、分包不影响结果。"""
     import jax
@@ -382,6 +382,25 @@ def _uniform_err(pa, ptxt, masks) -> tuple[float, float]:
     return spread, illegal
 
 
+class _ZeroMotion:
+    """自检用零向量编码句柄（与 MotionEncoderClient 同调用约定：(frames, start_frame) -> (dim,) f32，有 close()）。
+
+    输出维度 `dim` 在 policy 构造后取自 `policy._motion_cfg["dim"]`——即 FrameSampMemory 校验用 motion_dim 的同源值
+    （run 的 history_config.resolved.yaml 里 motion.dim）；未赋值即调用会直接报错。
+    """
+
+    def __init__(self):
+        self.calls = 0
+        self.dim: int | None = None
+
+    def __call__(self, frames, start_frame: int = 0):
+        self.calls += 1
+        return np.zeros(self.dim, np.float32)
+
+    def close(self) -> None:
+        pass
+
+
 def selftest(args) -> int:
     import gc
     import jax
@@ -389,7 +408,7 @@ def selftest(args) -> int:
     from mme_vla_suite.training import config as _config
     from openpi.models import model as _model
     from openpi.shared import nnx_utils
-    from mv_model_adapter import ZeroMotion, build_policy
+    from mv_model_adapter import build_policy
 
     C.require_gpu()
     C.require_det_flags()
@@ -400,12 +419,15 @@ def selftest(args) -> int:
     zm_calls = []
 
     def factory(**kw):
-        zm = ZeroMotion()
+        zm = _ZeroMotion()
         zm_calls.append(zm)
         return zm
 
     policy = build_policy(train_config, ckpt, seed=42, motion_factory=factory)
     motion = bool(policy.motion_enabled)
+    motion_dim = int(policy._motion_cfg["dim"]) if motion else 0
+    for zm in zm_calls:
+        zm.dim = motion_dim
     print(f"[attn] policy 构造 {time.perf_counter() - t0:.1f}s ckpt={ckpt} config={args.config} motion={int(motion)}", flush=True)
     ad = AttnAdapter(policy)
     obs = _legal_obs(policy, n_frames=int(args.n_frames))
@@ -483,7 +505,7 @@ def selftest(args) -> int:
 
     ok = (shape_ok and f32_maxabs <= 1e-5 and rowsum_err <= 1e-4 and uniform_ok == 1
           and np.all(np.isfinite(a_mine_np)))
-    note = "motion=ZeroMotion(免sidecar,attention机制与motion内容无关)" if motion else "motion=off"
+    note = f"motion=Zero{motion_dim}(免sidecar,attention机制与motion内容无关)" if motion else "motion=off"
     print(f"ATTN_SELFTEST={'PASS' if ok else 'FAIL'} f32_maxabs={f32_maxabs:.3g} bf16_relfro={bf16_relfro:.3g} "
           f"rowsum_err={rowsum_err:.3g} uniform_ok={uniform_ok} P={P} MEM={MEM} "
           f"shape_ok={int(shape_ok)} rowsum_err_f16={rowsum16:.3g} {note} wall={time.perf_counter() - t0:.0f}s")
