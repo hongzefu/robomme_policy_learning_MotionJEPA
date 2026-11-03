@@ -1,7 +1,18 @@
 # 我们是怎么在 pi0.5 上加 motion memory 的：memory 怎么拼、motion token 怎么拿、窗口怎么补帧
 
 > 对象：`context 512 + motion 1×1024（concat）` 模型（AWS 8×A100 训练，官方 800 局三 seed 37.33 ± 0.59%）。只写我们做了什么。
-> 仓库：`github.com/hongzefu/robomme_policy_learning_MotionJEPA`（训练分支 `v4-256concat1`，下文路径相对仓库根）；encoder 在 `github.com/hongzefu/MotionJEPA`（commit `b5d23a5`）。
+
+## 0. 资源一览（2026-11-03 11:26 美东，不带任何 token 实测匿名访问）
+
+| 资源 | 地址 | 匿名可达 |
+|---|---|---|
+| encoder checkpoint | HF bucket `HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1`，文件 `stage2-full144-1025-a/checkpoint_epoch_105.pt`（314,265,763 B，sha256 `27daa832…6035`）与 `config.yaml`；下载 `https://huggingface.co/buckets/HongzeFu/motionjepa-stage2-pool4-3decoder-1025-v1/resolve/<路径>` | ✅ `resolve` 匿名 200（bucket 的网页 `tree` 视图匿名 404，不影响下载） |
+| 预处理好的训练数据集（含 motion 表、帧表、Wan latent） | HF bucket `HongzeFu/robomme-16task-orig100-1600ep-trainset-20261028-v1`，先取 `delivery_manifest.json` 看全部文件与 sha256；motion 表在 `motion-stage2-1024/` | ✅ `resolve` 匿名 200 |
+| 原始 H5（16 任务 × 100 集） | HF dataset `Yinpei/robomme_data_h5`（预处理 pkl 版 `Yinpei/robomme_preprocessed_data`） | ✅ 公开 |
+| 训好的 VLA checkpoint（12 步） | HF bucket `HongzeFu/robomme-vla-orig100-ctx32x4x4-motion-s2concat1x1024-60k-v1` | ✅ `resolve` 匿名 200 |
+| VLA 仓库（本文全部路径相对其仓库根） | `github.com/hongzefu/robomme_policy_learning_MotionJEPA`，训练分支 `v4-256concat1` | ✅ 公开 |
+| encoder 仓库 | `github.com/hongzefu/MotionJEPA`，commit `b5d23a5`（encoder 定义与 `encode_windows` 导出接口） | ❌ **私有**，匿名 404；`scripts/dataset/wan_stage2/pyproject.toml` 以 git 依赖钉它，无权限的人装不了这个环境，需要先开权限或公开 |
+| Wan VAE | HF `Wan-AI/Wan2.1-T2V-1.3B-Diffusers` 子目录 `vae` | ✅ 公开 |
 
 ## 1. memory 怎么拼接
 
