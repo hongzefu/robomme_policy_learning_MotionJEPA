@@ -126,3 +126,11 @@ bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-
 据此，18:20:13 启动两条剩余列表：`ia-success-all-with-motion-1104` 跑 11 条，`ia-success-all-without-motion-1104` 跑 9 条，命令和版本保持上文不变。正常任务失败保留并继续；基础设施失败不自动重试。每模型 4 小时预算从冒烟起始计，预算终点为美东 22:11:20，由主会话统一掌握。
 
 关节状态回放的首次命令因额外隐藏 CUDA 设备而退出 139，失败日志保留为 `R/logs/poses-smoke-with_motion.log`；审查后仅恢复 CUDA 设备可见性，两侧均以原 CPU 物理路径回放通过，`SIM_EEF_POSE=PASS infers=20`、`EXIT_CODE=0`。未改变渲染实现、未修改第三方代码、未重新采样策略回合。后续回放只选已完成终局的精确局目录，避免读取仍在写入的回合。
+
+## 多次取物与分析版本
+
+实际第 11 局提示包含先取蓝色目标、再取绿色目标；取物次数不能固定为 1。离线分析因此把提示中的全部已核目标色 query 行先等权平均，仍作为唯一第六族；不新增第七族，不改变 R3 的 20 倍、6 层、50% 有效出现或跨族阈值。单目标保持原式，缺少任一目标行时整族未核实。真实第 11 局 `txt_len=29`、目标行为 `[16,26]`，与显式两行均值逐元素一致；第 8 局单目标也与原式逐元素一致。详见 [多目标定向验证](records/S2-multi_target_verdict.json)。
+
+采集版本仍固定 `e56bbceca5fe1c734c2553e83b8b6de1db71ca08`。离线分析改在现有工作树 `/home/hongzefu/.codex/worktrees/button-attn-analysis/robomme_policy_learning_MotionJEPA` 运行，固定新提交 `c55700b63b89de451adfc0c459bd99ecefce8443`，该工作树干净；不在采集期间切换采集代码。分别记录 `capture_commit` 与 `analysis_commit`，所有产物仍写入本任务 R。
+
+上述修正的 `ADJUST_REVIEW=PASS scale=same findings=0`；独立复审 `PRE_MERGE_REVIEW=PASS base=1e0ba0edfdbbc8bd480f10602176523585924707 tip=c55700b63b89de451adfc0c459bd99ecefce8443 files=1 findings=0`。这是同一任务对真实多目标输入的适配，不新增或重试策略回合。

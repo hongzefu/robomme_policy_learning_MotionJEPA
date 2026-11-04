@@ -1,0 +1,132 @@
+{
+ "MULTI_TARGET_COLOR": "PASS",
+ "ep11_source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/cae5e66a1c5e4a0eb0d2a4c34b5a9b65/infer_0000.npz",
+ "ep11_prompt": "first press both buttons on the table, then pick up the container hiding the blue cube, finally pick up another container hiding the green cube",
+ "ep11_txt_len": 29,
+ "ep11_targets": {
+  "color": null,
+  "row": null,
+  "piece": null,
+  "targets": [
+   {
+    "target_index": 0,
+    "color": "blue",
+    "row": 16,
+    "piece": "▁blue",
+    "verified": true
+   },
+   {
+    "target_index": 1,
+    "color": "green",
+    "row": 26,
+    "piece": "▁green",
+    "verified": true
+   }
+  ],
+  "rows": [
+   16,
+   26
+  ],
+  "verified": true,
+  "reason": null
+ },
+ "explicit_two_row_mean_max_abs_diff": 0.0,
+ "ep8_infer18_single_target": {
+  "color": "green",
+  "row": 16,
+  "piece": "▁green",
+  "targets": [
+   {
+    "target_index": 0,
+    "color": "green",
+    "row": 16,
+    "piece": "▁green",
+    "verified": true
+   }
+  ],
+  "rows": [
+   16
+  ],
+  "verified": true,
+  "reason": null
+ },
+ "ep8_legacy_max_abs_diff": 0.0,
+ "repeated_color": {
+  "color": null,
+  "row": null,
+  "piece": null,
+  "targets": [
+   {
+    "target_index": 0,
+    "color": "blue",
+    "row": 16,
+    "piece": "▁blue",
+    "verified": true
+   },
+   {
+    "target_index": 1,
+    "color": "blue",
+    "row": 26,
+    "piece": "▁blue",
+    "verified": true
+   }
+  ],
+  "rows": [
+   16,
+   26
+  ],
+  "verified": true,
+  "reason": null
+ },
+ "truncated": {
+  "color": null,
+  "row": null,
+  "piece": null,
+  "targets": [
+   {
+    "target_index": 0,
+    "color": "blue",
+    "row": 16,
+    "piece": "▁blue",
+    "verified": true
+   },
+   {
+    "target_index": 1,
+    "color": "green",
+    "row": null,
+    "piece": null,
+    "verified": false
+   }
+  ],
+  "rows": [],
+  "verified": false,
+  "reason": "至少一个目标色短语或对应单token行未完整核实"
+ },
+ "missing": {
+  "color": null,
+  "row": null,
+  "piece": null,
+  "targets": [
+   {
+    "target_index": 0,
+    "color": "blue",
+    "row": 16,
+    "piece": "▁blue",
+    "verified": true
+   },
+   {
+    "target_index": 1,
+    "color": "green",
+    "row": null,
+    "piece": null,
+    "verified": false
+   }
+  ],
+  "rows": [],
+  "verified": false,
+  "reason": "至少一个目标色短语或对应单token行未完整核实"
+ },
+ "families_added": 1,
+ "R3_thresholds_unchanged": true,
+ "elapsed_seconds": 0.5150296008214355
+}
