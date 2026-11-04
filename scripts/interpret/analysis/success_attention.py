@@ -248,13 +248,31 @@ def phase_record(e, z, pose):
 
 
 def target_color_info(prompt, pieces):
-    """以实际目标短语和已核token表共同定位目标色，不继承ep8的绿色或第16行。"""
+    """按实际目标顺序定位全部颜色行；缺少任一行时整组不参与第6族。"""
     matches=re.findall(r"hiding\s+the\s+([a-z]+)\s+cube",prompt.lower().replace("_"," "))
-    color=matches[0] if len(matches)==1 else None
-    rows=[i for i,piece in enumerate(pieces or []) if color and piece.replace("▁", "").strip(",")==color]
-    row=rows[0] if len(rows)==1 else None
-    return {"color":color,"row":row,"piece":pieces[row] if row is not None else None,
-            "verified":row is not None,"reason":None if row is not None else "目标色短语或对应单token行未唯一核实"}
+    positions={color:[i for i,piece in enumerate(pieces or [])
+                      if piece.replace("▁", "").strip(",")==color] for color in set(matches)}
+    used=defaultdict(int)
+    targets=[]
+    for index,color in enumerate(matches):
+        rows=positions[color]
+        row=rows[used[color]] if len(rows)==matches.count(color) else None
+        used[color]+=1
+        targets.append({"target_index":index,"color":color,"row":row,
+                        "piece":pieces[row] if row is not None else None,"verified":row is not None})
+    verified=bool(targets) and all(target["verified"] for target in targets)
+    single=targets[0] if len(targets)==1 else {}
+    return {"color":single.get("color"),"row":single.get("row"),"piece":single.get("piece"),
+            "targets":targets,"rows":[target["row"] for target in targets] if verified else [],
+            "verified":verified,"reason":None if verified else "至少一个目标色短语或对应单token行未完整核实"}
+
+
+def target_color_family(probs_text, target):
+    """所有已核目标行先等权平均，仍只产生一个目标色query族；单目标保持原式。"""
+    if not target["verified"]:
+        return None
+    selected=np.asarray(probs_text[:,:,target["rows"]],np.float32)
+    return np.pad(selected.mean(axis=2).mean(axis=1),((0,0),(0,20)))
 
 
 def sink_observation(z, pp, pieces, prompt=""):
@@ -277,8 +295,9 @@ def sink_observation(z, pp, pieces, prompt=""):
             families[f"q_{name}"] = np.pad(pp[:, :, q, :].astype(np.float32).mean((1, 2)), ((0, 0), (0, 20)))
     target=target_color_info(prompt,pieces)
     target_row=target["row"]
-    if target_row is not None:
-        families["q_target_color"] = np.pad(np.asarray(z["probs_text"][:, :, target_row], np.float32).mean(1), ((0, 0), (0, 20)))
+    target_family=target_color_family(z["probs_text"],target)
+    if target_family is not None:
+        families["q_target_color"] = target_family
     families["action"] = np.asarray(z["probs_action"], np.float32).mean((0, 2, 3))
     labels = r3.key_labels(meta, pieces or [f"未核实文本行{i}" for i in range(int(meta["txt_len"]))])
     masks, stats = {}, []
