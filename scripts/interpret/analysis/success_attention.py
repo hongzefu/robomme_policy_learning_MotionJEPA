@@ -74,6 +74,20 @@ def swaps_for(k):
     return [(64 + 50 * j, 114 + 50 * j) for j in range(k)]
 
 
+def task_success_for(outcome):
+    """保留原始终局枚举；任务失败和超时均为失败，未知及基础设施状态不作判断。"""
+    if outcome == "success":
+        return True
+    if outcome in ("fail", "timeout", "failure", "failed"):
+        return False
+    return None
+
+
+def outcome_label(outcome):
+    return {"success":"成功", "fail":"失败", "timeout":"超时",
+            "failure":"失败", "failed":"失败"}.get(outcome,"结局未核实")
+
+
 def ov(t, width, interval):
     lo, hi = interval
     return max(0, min(t + width, hi) - max(t, lo)) / width
@@ -171,7 +185,7 @@ def memory_metrics(z, pp, k):
     with np.errstate(invalid="ignore", divide="ignore"):
         mass = num / qw[None, None, :, None]
     uniform = qw/len(idx)
-    if not np.any(np.asarray(z["motion_mask"], bool)):
+    if int(z["MEM"]) == FRAME_TOKENS:
         motion_groups = [groups.index(g) for g in ("motVIS", "motSWAP", "motOther", "motion")]
         mass[:, :, motion_groups, :] = np.nan
         mass[:, :, :, motion_groups] = np.nan
@@ -449,7 +463,7 @@ def episode_analysis(e, out, tokenizer_model=None, max_infers=None):
         rec["R3"] = robust_infer(z, obs, sinks, swaps)
     completeness = len(files) == all_count and (not meta.get("infers") or all_count == meta["infers"])
     result = {"identity": {k: e[k] for k in e if not k.startswith("_")}, "outcome": outcome,
-              "task_success": True if outcome == "success" else False if outcome in ("failure", "failed") else None,
+              "task_success": task_success_for(outcome),
               "inference_count": len(files), "available_inference_count": all_count, "complete": completeness,
               "R3_confirmation_scope": "逐局：分母仅包括本局该位置可见的有效推理",
               "R3_full_six_families": all("q_target_color" in x["families"] for x in observations),
@@ -512,7 +526,7 @@ def episode_summary(ep):
 
 def figure_episode(ep, out):
     rows = ep["records"]
-    outcome={"success":"成功","failure":"失败","failed":"失败"}.get(ep["outcome"],"结局未核实")
+    outcome=outcome_label(ep["outcome"])
     title = f"{ep['identity']['label']} · 第{ep['identity']['episode_id']}局 · {outcome}"
     if not ep["complete"]:title+=" · 仅截断诊断"
     xs = [r["step_idx"] for r in rows]
