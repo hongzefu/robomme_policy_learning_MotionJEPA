@@ -12,6 +12,29 @@
 
 modulation 比论文同口径低约 1.1 个百分点，落在两边标准差之内；两条 context 模型都比论文 FrameSamp + Context 高约 7 个百分点。同为 context 融合，motion 读法 split（4×256）与 concat（1×1024）相差约 1.1 个百分点（38.42 vs 37.33），与 seed 间波动同量级。modulation 比 context split 高 5.0 个百分点。
 
+**eval 阶段每任务 motion 窗口数**（2026-11-04 补算）：两条 context 模型的最大值都是 70 窗（VideoPlaceOrder），未达到 budget 96 窗。concat 每窗 1 个 token，最大 70 token；split 每窗 4 个 token，最大 280 token（上限 384）。每局窗口数 = `k_demo + k_exec`，由逐局 `accepted/*.json` 的 `budget.demo_windows` 与 `actions_executed // 32` 算出（`stride=32`，`window_frames=33`）；每任务 3 个 seed 共 150 局。
+
+| 任务 | demo 长度 D 最大 | concat 最大窗口 | concat 成功局最大 | concat 超时局数 | split 最大窗口 | split 成功局最大 | split 超时局数 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| VideoPlaceOrder | 1134 | 70 | 41 | 5 | 70 | 39 | 5 |
+| VideoPlaceButton | 833 | 63 | 32 | 1 | 63 | 32 | 1 |
+| InsertPeg | 375 | 52 | 19 | 48 | 49 | 16 | 47 |
+| MoveCube | 283 | 49 | 35 | 23 | 49 | 32 | 14 |
+| VideoRepick | 383 | 45 | 25 | 1 | 25 | 25 | 0 |
+| BinFill | 0 | 40 | 29 | 1 | 38 | 24 | 0 |
+| SwingXtimes | 0 | 40 | 17 | 1 | 16 | 16 | 0 |
+| PickHighlight | 0 | 40 | 18 | 13 | 40 | 25 | 9 |
+| PickXtimes | 0 | 23 | 23 | 0 | 26 | 26 | 0 |
+| ButtonUnmaskSwap | 0 | 20 | 17 | 0 | 40 | 16 | 4 |
+| VideoUnmaskSwap | 216 | 20 | 20 | 0 | 14 | 14 | 0 |
+| RouteStick | 350 | 18 | 16 | 0 | 17 | 17 | 0 |
+| StopCube | 0 | 17 | 17 | 0 | 16 | 16 | 0 |
+| ButtonUnmask | 0 | 17 | 16 | 0 | 21 | 15 | 0 |
+| VideoUnmask | 66 | 13 | 12 | 0 | 11 | 10 | 0 |
+| PatternLock | 258 | 10 | 7 | 0 | 11 | 10 | 0 |
+
+口径：`actions_executed` 是一局结束时的步数，模型最后一次推理在最后一段动作之前，实际见到的窗口数可能略少，因此表中是上界。超时局的执行步数为 1301，`k_exec` 封顶 40，会抬高最大值；看任务正常所需长度时以「成功局最大」为准。执行步数取决于模型，换模型后最大值会变。原值见 `records/motion_windows_by_task.json`。
+
 最终判定（逐行原文）：
 
 - `SEED_GATE=PASS allowed=0,7,42 rejected=1`；`PRE_MERGE_REVIEW=PASS base=9459859384589b3553148cf53f715c1318f1a533 tip=2cb5d8e7d4b0b092207a58dcab6fe8432c0fc20f files=2 commits=1 findings=0`；`POST_MERGE_REVIEW=PASS merge=5fce5d3 tests=45passed files=2`
@@ -103,4 +126,4 @@ concat 与 split 总体接近，但任务分布不同：concat 在 Unmask/Swap �
 
 ## ⑧ 归档文件清单（`records/`）
 
-`three_seed_summary.txt`、`three_seed_summary.json`、`runs.txt`、`summary-<运行>.json`（10 份）、`fetch-modul-59999.log`、`verify-modul-59999.log`、`fetch-cc-59999.log`、`verify-cc-59999.log`、`switch-ms7-ms0.log`、`switch-ms0-cs7.log`、`chain-rest.log`、`cc42-worker-02.fail1-port98.txt`、`cc42-worker-02.fail2-workerid.txt`。
+`three_seed_summary.txt`、`three_seed_summary.json`、`motion_windows_by_task.json`、`runs.txt`、`summary-<运行>.json`（10 份）、`fetch-modul-59999.log`、`verify-modul-59999.log`、`fetch-cc-59999.log`、`verify-cc-59999.log`、`switch-ms7-ms0.log`、`switch-ms0-cs7.log`、`chain-rest.log`、`cc42-worker-02.fail1-port98.txt`、`cc42-worker-02.fail2-workerid.txt`。

@@ -1,0 +1,262 @@
+{
+ "formula": "k=demo_windows+actions_executed//32",
+ "source_root": "/nfs/turbo/coe-chaijy-unreplicated/hongzefu/robomme_policy_learning_MotionJEPA-eval/v1-store/evaluation/official-stage2-1026/",
+ "runs": {
+  "concat": [
+   "o16cc-60k-seed42/run800",
+   "o16cc-60k-seed7/run800",
+   "o16cc-60k-seed0/run800"
+  ],
+  "split": [
+   "o16ctx-60k-seed42/run800-r2",
+   "o16ctx-60k-seed7/run800",
+   "o16ctx-60k-seed0/run800"
+  ]
+ },
+ "models": {
+  "concat": {
+   "episodes_per_run": [
+    800,
+    800,
+    800
+   ],
+   "tasks": {
+    "PickHighlight": {
+     "episodes": 150,
+     "max_windows": 40,
+     "max_windows_success": 18,
+     "max_demo_frames": 0,
+     "timeouts": 13
+    },
+    "VideoPlaceButton": {
+     "episodes": 150,
+     "max_windows": 63,
+     "max_windows_success": 32,
+     "max_demo_frames": 833,
+     "timeouts": 1
+    },
+    "VideoUnmaskSwap": {
+     "episodes": 150,
+     "max_windows": 20,
+     "max_windows_success": 20,
+     "max_demo_frames": 216,
+     "timeouts": 0
+    },
+    "MoveCube": {
+     "episodes": 150,
+     "max_windows": 49,
+     "max_windows_success": 35,
+     "max_demo_frames": 283,
+     "timeouts": 23
+    },
+    "VideoUnmask": {
+     "episodes": 150,
+     "max_windows": 13,
+     "max_windows_success": 12,
+     "max_demo_frames": 66,
+     "timeouts": 0
+    },
+    "ButtonUnmask": {
+     "episodes": 150,
+     "max_windows": 17,
+     "max_windows_success": 16,
+     "max_demo_frames": 0,
+     "timeouts": 0
+    },
+    "StopCube": {
+     "episodes": 150,
+     "max_windows": 17,
+     "max_windows_success": 17,
+     "max_demo_frames": 0,
+     "timeouts": 0
+    },
+    "PatternLock": {
+     "episodes": 150,
+     "max_windows": 10,
+     "max_windows_success": 7,
+     "max_demo_frames": 258,
+     "timeouts": 0
+    },
+    "PickXtimes": {
+     "episodes": 150,
+     "max_windows": 23,
+     "max_windows_success": 23,
+     "max_demo_frames": 0,
+     "timeouts": 0
+    },
+    "VideoPlaceOrder": {
+     "episodes": 150,
+     "max_windows": 70,
+     "max_windows_success": 41,
+     "max_demo_frames": 1134,
+     "timeouts": 5
+    },
+    "InsertPeg": {
+     "episodes": 150,
+     "max_windows": 52,
+     "max_windows_success": 19,
+     "max_demo_frames": 375,
+     "timeouts": 48
+    },
+    "SwingXtimes": {
+     "episodes": 150,
+     "max_windows": 40,
+     "max_windows_success": 17,
+     "max_demo_frames": 0,
+     "timeouts": 1
+    },
+    "RouteStick": {
+     "episodes": 150,
+     "max_windows": 18,
+     "max_windows_success": 16,
+     "max_demo_frames": 350,
+     "timeouts": 0
+    },
+    "BinFill": {
+     "episodes": 150,
+     "max_windows": 40,
+     "max_windows_success": 29,
+     "max_demo_frames": 0,
+     "timeouts": 1
+    },
+    "ButtonUnmaskSwap": {
+     "episodes": 150,
+     "max_windows": 20,
+     "max_windows_success": 17,
+     "max_demo_frames": 0,
+     "timeouts": 0
+    },
+    "VideoRepick": {
+     "episodes": 150,
+     "max_windows": 45,
+     "max_windows_success": 25,
+     "max_demo_frames": 383,
+     "timeouts": 1
+    }
+   },
+   "overall_max": 70
+  },
+  "split": {
+   "episodes_per_run": [
+    800,
+    800,
+    800
+   ],
+   "tasks": {
+    "PickHighlight": {
+     "episodes": 150,
+     "max_windows": 40,
+     "max_windows_success": 25,
+     "max_demo_frames": 0,
+     "timeouts": 9
+    },
+    "VideoPlaceButton": {
+     "episodes": 150,
+     "max_windows": 63,
+     "max_windows_success": 32,
+     "max_demo_frames": 833,
+     "timeouts": 1
+    },
+    "VideoUnmaskSwap": {
+     "episodes": 150,
+     "max_windows": 14,
+     "max_windows_success": 14,
+     "max_demo_frames": 216,
+     "timeouts": 0
+    },
+    "MoveCube": {
+     "episodes": 150,
+     "max_windows": 49,
+     "max_windows_success": 32,
+     "max_demo_frames": 283,
+     "timeouts": 14
+    },
+    "VideoUnmask": {
+     "episodes": 150,
+     "max_windows": 11,
+     "max_windows_success": 10,
+     "max_demo_frames": 66,
+     "timeouts": 0
+    },
+    "ButtonUnmask": {
+     "episodes": 150,
+     "max_windows": 21,
+     "max_windows_success": 15,
+     "max_demo_frames": 0,
+     "timeouts": 0
+    },
+    "StopCube": {
+     "episodes": 150,
+     "max_windows": 16,
+     "max_windows_success": 16,
+     "max_demo_frames": 0,
+     "timeouts": 0
+    },
+    "PatternLock": {
+     "episodes": 150,
+     "max_windows": 11,
+     "max_windows_success": 10,
+     "max_demo_frames": 258,
+     "timeouts": 0
+    },
+    "PickXtimes": {
+     "episodes": 150,
+     "max_windows": 26,
+     "max_windows_success": 26,
+     "max_demo_frames": 0,
+     "timeouts": 0
+    },
+    "VideoPlaceOrder": {
+     "episodes": 150,
+     "max_windows": 70,
+     "max_windows_success": 39,
+     "max_demo_frames": 1134,
+     "timeouts": 5
+    },
+    "InsertPeg": {
+     "episodes": 150,
+     "max_windows": 49,
+     "max_windows_success": 16,
+     "max_demo_frames": 375,
+     "timeouts": 47
+    },
+    "SwingXtimes": {
+     "episodes": 150,
+     "max_windows": 16,
+     "max_windows_success": 16,
+     "max_demo_frames": 0,
+     "timeouts": 0
+    },
+    "RouteStick": {
+     "episodes": 150,
+     "max_windows": 17,
+     "max_windows_success": 17,
+     "max_demo_frames": 350,
+     "timeouts": 0
+    },
+    "BinFill": {
+     "episodes": 150,
+     "max_windows": 38,
+     "max_windows_success": 24,
+     "max_demo_frames": 0,
+     "timeouts": 0
+    },
+    "ButtonUnmaskSwap": {
+     "episodes": 150,
+     "max_windows": 40,
+     "max_windows_success": 16,
+     "max_demo_frames": 0,
+     "timeouts": 4
+    },
+    "VideoRepick": {
+     "episodes": 150,
+     "max_windows": 25,
+     "max_windows_success": 25,
+     "max_demo_frames": 383,
+     "timeouts": 0
+    }
+   },
+   "overall_max": 70
+  }
+ }
+}
