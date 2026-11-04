@@ -108,3 +108,9 @@ bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-
 | 离线分析 | `ia-success-analysis-1104` | `logs/analysis.log` |
 
 只允许主会话按这份清单核实后逐个操作本任务会话，不处理其他用户或任务的会话。
+
+## 起跑版本现场固定
+
+真实执行提交固定为 `e56bbceca5fe1c734c2553e83b8b6de1db71ca08`，运行工作树为上文的 `button-attn-run`。起跑前核对 `git status --porcelain` 为空，实际导入的 `mme_vla_suite`、`openpi`、`openpi_client` 均来自该工作树；benchmark 使用主检出锁定的 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。证据为 [runtime-fixed.json](records/runtime-fixed.json)，`RUNTIME_FIXED=PASS head=e56bbceca5fe1c734c2553e83b8b6de1db71ca08 clean=1`。
+
+带 motion token 的 VLA 运行身份为 `d53a39c003b06f653a54fff9beb9aff35eaa3d9ddb402789b5d90526ab7cfffa`；不带 motion token 的 VLA 运行身份为 `7d0b43fcf96394ebacffb8833a6ebba482d31a4699dc4b69371d6676b5b1918e`。主检出后续只回写本任务档案，不能据主检出的文档提交误称运行代码已变化。
