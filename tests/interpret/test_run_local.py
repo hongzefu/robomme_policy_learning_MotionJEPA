@@ -251,9 +251,10 @@ class FakePolicy:
         static_mask = np.repeat(np.arange(32) < n_frames, 16)[None]
         prompt_mask = (np.arange(64) < 21)[None]
         if self.motion_enabled:
-            _, _, motion_mask, _ = self.mem_buffer._prepare_motion(self.step_idx)
+            motion_emb, motion_pos, motion_mask, _ = self.mem_buffer._prepare_motion(self.step_idx)
             mem_order = np.random.default_rng(0).permutation(608).astype(np.int32)[None]
             observation = SimpleNamespace(static_mask=static_mask, motion_mask=motion_mask[None], mem_order=mem_order,
+                                          motion_emb=motion_emb[None], motion_pos=motion_pos[None],
                                           tokenized_prompt_mask=prompt_mask)
         else:
             observation = SimpleNamespace(static_mask=static_mask, motion_mask=None, mem_order=None,
@@ -312,11 +313,17 @@ def test_npz_contract(tmp_path, monkeypatch, motion):
     ep = tmp_path / "attn" / "nonce123"
     assert sorted(p.name for p in ep.glob("infer_*.npz")) == ["infer_0000.npz", "infer_0001.npz"]
     with np.load(ep / "infer_0000.npz") as z:
-        assert set(z.files) == set(SA.NPZ_KEYS) | set(SA.ABLATE_NPZ_KEYS)
+        expected_keys = set(SA.NPZ_KEYS) | set(SA.ABLATE_NPZ_KEYS)
+        if motion:
+            expected_keys |= set(SA.MOTION_INPUT_NPZ_KEYS)
+        assert set(z.files) == expected_keys
         expected = dict(EXPECTED)
         expected["motion_times"] = (np.int32, lambda P, MEM: (96,) if motion else (0,))
         expected["motion_mask"] = (np.bool_, lambda P, MEM: (96,) if motion else (0,))
         assert set(expected) == set(SA.NPZ_KEYS)
+        if motion:
+            expected["motion_emb"] = (np.float32, lambda P, MEM: (96, 768))
+            expected["motion_pos"] = (np.float32, lambda P, MEM: (96, 4))
         for key, (dtype, shape) in expected.items():
             assert z[key].dtype == dtype, key
             assert z[key].shape == shape(P, MEM), key
@@ -417,7 +424,10 @@ def test_prefix_npz_contract(tmp_path, monkeypatch, motion):
     assert sorted(p.name for p in ep.glob("prefix_*.npz")) == ["prefix_0000.npz", "prefix_0001.npz"]
     assert not list(ep.glob(".*tmp*"))
     with np.load(ep / "infer_0000.npz") as z:
-        assert set(z.files) == set(SA.NPZ_KEYS) | set(SA.ABLATE_NPZ_KEYS)   # 16 键不变 + S7 附加 2 键
+        expected_keys = set(SA.NPZ_KEYS) | set(SA.ABLATE_NPZ_KEYS)
+        if motion:
+            expected_keys |= set(SA.MOTION_INPUT_NPZ_KEYS)
+        assert set(z.files) == expected_keys
     for seq in range(2):
         with np.load(ep / f"prefix_{seq:04d}.npz") as z:
             assert set(z.files) == set(SA.PREFIX_NPZ_KEYS)

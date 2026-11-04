@@ -172,8 +172,9 @@ class FakePolicy:
     def infer(self, obs):
         n_frames = len(self.mem_buffer.get_frame_sampling_indices(self.step_idx, 512, 8))
         static_mask = np.repeat(np.arange(32) < n_frames, 16)[None]
-        _, _, motion_mask, _ = self.mem_buffer._prepare_motion(self.step_idx)
+        motion_emb, motion_pos, motion_mask, _ = self.mem_buffer._prepare_motion(self.step_idx)
         observation = SimpleNamespace(static_mask=static_mask, motion_mask=motion_mask[None],
+                                      motion_emb=motion_emb[None], motion_pos=motion_pos[None],
                                       mem_order=np.arange(608, dtype=np.int32)[None],
                                       tokenized_prompt_mask=(np.arange(64) < 21)[None])
         return {"actions": self._sample_actions(None, observation), "state": np.zeros(8, np.float32)}
@@ -224,7 +225,8 @@ def test_recorder_record_then_swap(tmp_path, monkeypatch):
     for f in (0, 16, 32):
         np.testing.assert_array_equal(policy.mem_buffer.feats[f], _emb(8, f))
     with np.load(ep / "infer_0000.npz") as z0, np.load(ep / "infer_0001.npz") as z1:
-        assert set(z1.files) == set(SA.NPZ_KEYS) | set(SA.ABLATE_NPZ_KEYS) | set(SA.MOTION_REPLACE_NPZ_KEYS)
+        assert set(z1.files) == (set(SA.NPZ_KEYS) | set(SA.ABLATE_NPZ_KEYS)
+                                 | set(SA.MOTION_REPLACE_NPZ_KEYS) | set(SA.MOTION_INPUT_NPZ_KEYS))
         assert int(z0["n_motion_replaced"]) == 2 and int(z1["n_motion_replaced"]) == 3
         assert int(z1["n_masked_keys"]) == 0 and str(z1["ablate"]) == f"motion_swap:{rec}"
         assert z1["motion_mask"].sum() == 3                              # 位置 / mask 不动
