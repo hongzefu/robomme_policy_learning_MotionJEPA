@@ -114,3 +114,15 @@ bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-
 真实执行提交固定为 `e56bbceca5fe1c734c2553e83b8b6de1db71ca08`，运行工作树为上文的 `button-attn-run`。起跑前核对 `git status --porcelain` 为空，实际导入的 `mme_vla_suite`、`openpi`、`openpi_client` 均来自该工作树；benchmark 使用主检出锁定的 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。证据为 [runtime-fixed.json](records/runtime-fixed.json)，`RUNTIME_FIXED=PASS head=e56bbceca5fe1c734c2553e83b8b6de1db71ca08 clean=1`。
 
 带 motion token 的 VLA 运行身份为 `d53a39c003b06f653a54fff9beb9aff35eaa3d9ddb402789b5d90526ab7cfffa`；不带 motion token 的 VLA 运行身份为 `7d0b43fcf96394ebacffb8833a6ebba482d31a4699dc4b69371d6676b5b1918e`。主检出后续只回写本任务档案，不能据主检出的文档提交误称运行代码已变化。
+
+## 冒烟结果与放大依据（美东 2026-11-04）
+
+两侧第 8 局于 18:11:20 并行启动；带 motion token 的 VLA 于 18:17:34、不带 motion token 的 VLA 于 18:17:18 留下 `EXIT_CODE=0`。两局任务均成功，分别执行 312／310 个动作，各有 20 份动作／文本 attention 与 20 份 prefix attention。
+
+主会话逐次读回所有 attention 与 prefix，核对维度、有限性、行和、padding、时间和 key 映射、视频帧数与动作数；两侧全部 20 次推理的动作与旧同硬件第 8 局逐位一致，最大绝对差均为 0。带 motion token 的 VLA 的 9 次编码调用完整保存，20 次推理累计使用 90 个有效 token，每个有效向量均与生成历史对应；实际输入为 `motion_emb=(96,1024)`、`motion_pos=(96,256)`，均 `float32`，padding 槽位与有效 token 分开统计。
+
+`CAPTURE_SMOKE=PASS expected=2 completed=2 seconds=59.4`，验收退出 0；详见 [capture-validation-smoke.json](records/capture-validation-smoke.json)。这两局计入 22 条组合，不再重跑。
+
+据此，18:20:13 启动两条剩余列表：`ia-success-all-with-motion-1104` 跑 11 条，`ia-success-all-without-motion-1104` 跑 9 条，命令和版本保持上文不变。正常任务失败保留并继续；基础设施失败不自动重试。每模型 4 小时预算从冒烟起始计，预算终点为美东 22:11:20，由主会话统一掌握。
+
+关节状态回放的首次命令因额外隐藏 CUDA 设备而退出 139，失败日志保留为 `R/logs/poses-smoke-with_motion.log`；审查后仅恢复 CUDA 设备可见性，两侧均以原 CPU 物理路径回放通过，`SIM_EEF_POSE=PASS infers=20`、`EXIT_CODE=0`。未改变渲染实现、未修改第三方代码、未重新采样策略回合。后续回放只选已完成终局的精确局目录，避免读取仍在写入的回合。

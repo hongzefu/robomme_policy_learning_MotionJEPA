@@ -1,0 +1,61 @@
+{
+  "phase": "smoke",
+  "verdict": "PASS",
+  "expected": 2,
+  "completed": 2,
+  "elapsed_seconds": 59.38777970522642,
+  "execution_commit": "e56bbceca5fe1c734c2553e83b8b6de1db71ca08",
+  "episodes": [
+    {
+      "model": "with_motion",
+      "label": "带 motion token 的 VLA",
+      "episode_id": 8,
+      "env_seed": 570800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/attn/6b75de61eded4b5694b2a0acc5c7c618",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/accepted/ButtonUnmaskSwap:8.6b75de61.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/run/attempts/000-f94d3288a905-e3d628bd/client/videos/ButtonUnmaskSwap_ep8_success.mp4",
+      "outcome": "success",
+      "task_success": true,
+      "infers": 20,
+      "prefixes": 20,
+      "action_rowsum_max_error": 0.0003783106803894043,
+      "prefix_rowsum_max_error": 0.0003986358642578125,
+      "pad_mass": 0.0,
+      "motion_token_uses": 90,
+      "motion_input_dtypes": [
+        [
+          "float32",
+          "float32"
+        ]
+      ],
+      "motion_calls": 9,
+      "motion_record": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/with_motion/motion_records/ButtonUnmaskSwap_ep8.npz",
+      "ep8_actions_max_abs_diff": 0.0
+    },
+    {
+      "model": "without_motion",
+      "label": "不带 motion token 的 VLA",
+      "episode_id": 8,
+      "env_seed": 570800,
+      "difficulty": "easy",
+      "swap_times": 2,
+      "attn_dir": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/attn/e011959b71ec46738108f45e32b8ad44",
+      "terminal": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/accepted/ButtonUnmaskSwap:8.e011959b.terminal.json",
+      "video": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/without_motion/run/attempts/000-f94d3288a905-2be0293c/client/videos/ButtonUnmaskSwap_ep8_success.mp4",
+      "outcome": "success",
+      "task_success": true,
+      "infers": 20,
+      "prefixes": 20,
+      "action_rowsum_max_error": 0.0003940463066101074,
+      "prefix_rowsum_max_error": 0.0003972053527832031,
+      "pad_mass": 0.0,
+      "motion_token_uses": null,
+      "motion_input_dtypes": null,
+      "motion_calls": null,
+      "motion_record": null,
+      "ep8_actions_max_abs_diff": 0.0
+    }
+  ]
+}

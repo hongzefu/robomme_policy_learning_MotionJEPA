@@ -21,5 +21,13 @@
     "带运动模型早期空窗会污染R2整局期望"
   ],
   "S2_final_review": "PRE_MERGE_REVIEW=PASS base=b7ad0560e4315a8b1ecb669a86cb584e0eff68d7 tip=1e0ba0edfdbbc8bd480f10602176523585924707 files=1 findings=0",
-  "S2_post_merge": "POST_MERGE_REVIEW=PASS code_matches_reviewed_tip=1 outcome_cases=8"
+  "S2_post_merge": "POST_MERGE_REVIEW=PASS code_matches_reviewed_tip=1 outcome_cases=8",
+  "pose_command_adjustment": {
+    "failure_exit": 139,
+    "cause": "额外隐藏CUDA设备导致SAPIEN找不到原渲染设备",
+    "change": "只将离线诊断命令CUDA_VISIBLE_DEVICES恢复为0，原CPU物理不改",
+    "review": "ADJUST_REVIEW=PASS scale=same findings=0",
+    "readback": "SIM_EEF_POSE=PASS infers=20 EXIT_CODE=0",
+    "policy_retries": 0
+  }
 }
