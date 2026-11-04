@@ -25,6 +25,19 @@ infer_seq、step_idx），不压缩、先写临时文件再 os.replace；infer_<
   每份 infer npz 另附两键 ABLATE_NPZ_KEYS：ablate（名，str）与 n_masked_keys（本次被遮 key 数，int64；none 时 0）；
   episode.json 记 ablate 与逐次 n_masked_keys；启动打印 ATTN_SERVE_ENV ... ablate=<名>。
 
+motion 内容替换（S8；只换 motion 编码内容，motion token 个数、位置、motion_mask、mem_order 一概不动）：
+  motion_zero            每个 motion 窗口的编码换成 np.zeros(dim, f32)
+  motion_swap:<DIR>      换成供体局同起点窗口的编码；供体 = DIR/<task>_ep<id>.npz（--record-motion 录下），
+                         供体局由 --swap-donor task:ep 指定（run_local 按 spec.swap_map 逐局成块并传入）；
+                         供体缺该起点时取起点 ≤ 它的最大窗口，再没有就取供体第一个窗口（donor_lookup）。
+  两种替换都先照常调用原 motion client（sidecar 侧调用序列与计时与主线一致），再丢弃其输出换成替换值；
+  可与 key 遮挡 / 头遮挡用 + 组合。替换时每份 infer npz 另附 n_motion_replaced（本局截至本次推理累计替换窗数，int64）；
+  episode.json 的 motion_content 记 mode、donor、n_windows、n_replaced 与逐窗 replace_log [start, donor_start]。
+--record-motion <DIR>：原样返回原编码，同时把本局每个窗口 (start_frame, emb) 写 DIR/<episode_nonce>.npz
+  （start_frames int32 (n,)、embs f32 (n, dim)、counts int32 (n,)、mode；swap 时另有 donor_start_frames、donor）；
+  每次 add_buffer / infer 后有新窗口即重写（先写临时文件再 os.replace），进程被杀也不丢已完成窗口；
+  记录的永远是原 client 的编码（替换前）。run_local 收尾时按 terminal 记录的局身份把 <nonce>.npz 改名为 <task>_ep<id>.npz。
+
 用法（通常由 scripts/interpret/run_local.py 启动）：
   python -m scripts.interpret.serve_policy_attn --port 8011 --seed 42 --attn-out <dir> \
       policy:checkpoint --policy.config <cfg> --policy.dir <ckpt>
@@ -48,6 +61,8 @@ NPZ_KEYS = ("P", "MEM", "step_idx", "exec_start_idx", "infer_seq", "mem_order", 
 PREFIX_NPZ_KEYS = ("probs_prefix", "P", "MEM", "infer_seq", "step_idx")
 # S7 附加键（每份 infer npz 都写；§1.3 原 16 键不变）
 ABLATE_NPZ_KEYS = ("ablate", "n_masked_keys")
+# S8 motion 内容替换时另附的键（只在 motion_zero / motion_swap 时写）
+MOTION_REPLACE_NPZ_KEYS = ("n_motion_replaced",)
 MASK_KINDS = ("mask_motion", "mask_vis")
 VIS_WINDOW = (0, 32)          # mask_vis 遮的全域帧号区间 [lo, hi)
 NUM_STEPS, NUM_LAYERS, NUM_HEADS, ACTION_HORIZON, TEXT_LEN = 10, 18, 8, 20, 64
@@ -68,15 +83,26 @@ def _pad_times(times, budget: int) -> np.ndarray:
 
 
 def parse_ablate(name) -> dict:
-    """--ablate 字符串 → {"name", "masks": frozenset(MASK_KINDS 子集), "heads": ((layer, head), ...)}；非法即 ValueError。"""
+    """--ablate 字符串 → {"name", "masks": frozenset(MASK_KINDS 子集), "heads": ((layer, head), ...),
+    "motion": None | {"kind": "zero"} | {"kind": "swap", "dir": <供体目录>}}；非法即 ValueError。"""
     import re
     text = (name or "none").strip()
-    masks, heads = set(), set()
+    masks, heads, motion = set(), set(), None
     if text != "none":
         for part in text.split("+"):
             part = part.strip()
             if part in MASK_KINDS:
                 masks.add(part)
+            elif part == "motion_zero" or part.startswith("motion_swap:"):
+                if motion is not None:
+                    raise ValueError(f"--ablate {text!r}: motion_zero / motion_swap 只能出现一次")
+                if part == "motion_zero":
+                    motion = {"kind": "zero"}
+                else:
+                    donor_dir = part[len("motion_swap:"):].strip()
+                    if not donor_dir:
+                        raise ValueError(f"--ablate {text!r}: motion_swap: 后须给供体目录")
+                    motion = {"kind": "swap", "dir": donor_dir}
             elif part.startswith("heads:"):
                 items = [x.strip() for x in part[len("heads:"):].split(",") if x.strip()]
                 if not items:
@@ -90,8 +116,152 @@ def parse_ablate(name) -> dict:
                         raise ValueError(f"--ablate {text!r}: L{layer}H{head} 越界（层 0..{NUM_LAYERS - 1}，头 0..{NUM_HEADS - 1}）")
                     heads.add((layer, head))
             else:
-                raise ValueError(f"--ablate {text!r}: 未知项 {part!r}（可选 none / {' / '.join(MASK_KINDS)} / heads:L<i>H<j>,...）")
-    return {"name": text, "masks": frozenset(masks), "heads": tuple(sorted(heads))}
+                raise ValueError(f"--ablate {text!r}: 未知项 {part!r}（可选 none / {' / '.join(MASK_KINDS)} / "
+                                 f"heads:L<i>H<j>,... / motion_zero / motion_swap:<DIR>）")
+    return {"name": text, "masks": frozenset(masks), "heads": tuple(sorted(heads)), "motion": motion}
+
+
+def parse_episode(text) -> tuple[str, int]:
+    """"task:ep" → (task, int(ep))；非法即 ValueError。"""
+    task, sep, ep = str(text).strip().rpartition(":")
+    if not sep or not task or not ep.strip().isdigit():
+        raise ValueError(f"局写法应为 task:ep，得到 {text!r}")
+    return task, int(ep)
+
+
+def record_name(task: str, episode_id: int) -> str:
+    """--record-motion 改名后的文件名，也是 motion_swap 供体文件名。"""
+    return f"{task}_ep{int(episode_id)}.npz"
+
+
+def donor_lookup(donor_starts, start_frame: int) -> int:
+    """供体窗口下标：同起点优先；否则起点 ≤ start_frame 的最大窗口；再没有就第 0 个窗口。"""
+    starts = np.asarray(donor_starts, np.int64).reshape(-1)
+    if starts.size == 0:
+        raise ValueError("供体没有任何窗口")
+    exact = np.flatnonzero(starts == start_frame)
+    if exact.size:
+        return int(exact[0])
+    lower = np.flatnonzero(starts <= start_frame)
+    if lower.size:
+        return int(lower[np.argmax(starts[lower])])
+    return 0
+
+
+def _accepts_start(fn) -> bool:
+    """与 framesamp_memory._accepts_start 同判据：接受第二个位置参数才传起点帧号。"""
+    import inspect
+    try:
+        sig = inspect.signature(fn)
+    except (TypeError, ValueError):
+        return False
+    params = [p for p in sig.parameters.values() if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
+    return len(params) >= 2
+
+
+class MotionContentClient:
+    """替换 policy._motion_client 的包装句柄，签名 (frames, start_frame) -> (dim,) f32。
+
+    每次先照常调用原 client（sidecar 侧行为与计时不变），再按 mode 处理返回值：none 原样、zero 置零、
+    swap 换成供体同起点窗口（donor_lookup）。record_dir 给出时记录原编码（同起点只留首次，counts 计次）。
+    其余属性（provenance、close 等）透传原 client。"""
+
+    def __init__(self, inner, *, mode: str = "none", donor: dict | None = None, record_dir=None):
+        if mode not in ("none", "zero", "swap"):
+            raise ValueError(f"未知 motion 替换模式 {mode!r}")
+        if mode == "swap" and donor is None:
+            raise ValueError("swap 模式须给供体")
+        self.inner, self.mode, self.donor = inner, mode, donor
+        self.record_dir = Path(record_dir) if record_dir is not None else None
+        self._inner_accepts_start = _accepts_start(inner)
+        self.episode_nonce = None
+        self._reset_state()
+
+    def __getattr__(self, name):
+        if name == "inner":
+            raise AttributeError(name)
+        return getattr(self.inner, name)
+
+    def _reset_state(self):
+        self.starts, self.embs, self.counts, self.donor_starts = [], [], [], []
+        self.index: dict[int, int] = {}
+        self.replace_log: list[list[int]] = []   # 每次替换 [start_frame, donor_start_frame]；zero 时 donor 记 -1
+        self.replaced = 0
+        self.dirty = False
+
+    def __call__(self, frames, start_frame=None):
+        emb = self.inner(frames, start_frame) if self._inner_accepts_start else self.inner(frames)
+        emb = np.asarray(emb, dtype=np.float32)
+        donor_start = -1
+        if self.mode == "none":
+            out = emb
+        elif self.mode == "zero":
+            out = np.zeros_like(emb)
+        else:
+            if start_frame is None:
+                raise RuntimeError("motion_swap 需要起点帧号，但 motion_enc_fn 调用未传 start_frame")
+            i = donor_lookup(self.donor["start_frames"], int(start_frame))
+            out = np.asarray(self.donor["embs"][i], dtype=np.float32).copy()
+            if out.shape != emb.shape:
+                raise RuntimeError(f"供体编码形状 {out.shape} 与原编码 {emb.shape} 不符")
+            donor_start = int(self.donor["start_frames"][i])
+        if self.mode != "none":
+            self.replaced += 1
+            self.replace_log.append([int(start_frame) if start_frame is not None else -1, donor_start])
+        key = int(start_frame) if start_frame is not None else len(self.starts)
+        if key in self.index:
+            self.counts[self.index[key]] += 1
+        else:
+            self.index[key] = len(self.starts)
+            self.starts.append(key)
+            self.embs.append(emb.copy())
+            self.counts.append(1)
+            self.donor_starts.append(donor_start)
+        self.dirty = True
+        return out
+
+    def begin_episode(self, nonce: str) -> None:
+        self.flush()
+        self.episode_nonce = str(nonce)
+        self._reset_state()
+
+    def flush(self) -> Path | None:
+        """有新窗口时重写 record_dir/<nonce>.npz；不记录或无变化时什么也不做。"""
+        if self.record_dir is None or self.episode_nonce is None or not self.dirty:
+            return None
+        self.record_dir.mkdir(parents=True, exist_ok=True)
+        path = self.record_dir / f"{self.episode_nonce}.npz"
+        tmp = self.record_dir / f".{self.episode_nonce}.{uuid.uuid4().hex}.tmp.npz"
+        record = {"start_frames": np.asarray(self.starts, np.int32), "embs": np.stack(self.embs).astype(np.float32),
+                  "counts": np.asarray(self.counts, np.int32), "mode": np.str_(self.mode),
+                  "episode_nonce": np.str_(self.episode_nonce)}
+        if self.mode == "swap":
+            record["donor_start_frames"] = np.asarray(self.donor_starts, np.int32)
+            record["donor"] = np.str_(self.donor.get("name", ""))
+        np.savez(tmp, **record)
+        os.replace(tmp, path)
+        self.dirty = False
+        return path
+
+    def summary(self) -> dict:
+        return {"mode": self.mode, "donor": (self.donor or {}).get("name"), "n_windows": len(self.starts),
+                "n_replaced": self.replaced, "replace_log": [list(x) for x in self.replace_log],
+                "record_file": (str(self.record_dir / f"{self.episode_nonce}.npz")
+                                if self.record_dir is not None and self.episode_nonce else None)}
+
+
+def load_donor(donor_dir, donor_episode) -> dict:
+    """读 DIR/<task>_ep<id>.npz → {"name", "path", "start_frames", "embs"}；缺文件 / 无窗口即 SystemExit。"""
+    task, ep = parse_episode(donor_episode)
+    path = Path(donor_dir) / record_name(task, ep)
+    if not path.is_file():
+        raise SystemExit(f"错误: motion_swap 供体文件不存在: {path}")
+    with np.load(path) as z:
+        starts = np.asarray(z["start_frames"], np.int32)
+        embs = np.asarray(z["embs"], np.float32)
+    if starts.size == 0 or embs.ndim != 2 or embs.shape[0] != starts.size:
+        raise SystemExit(f"错误: 供体文件 {path} 无窗口或 start_frames / embs 不对齐")
+    return {"name": f"{task}:{ep}", "path": str(path), "start_frames": starts, "embs": embs}
 
 
 def memory_key_mask(masks, mem_order, frame_times, *, budget: int, tokens_per_frame: int, valid=None,
@@ -149,7 +319,7 @@ class AttnRecorder:
     """在 policy 实例属性上遮蔽 reset / add_buffer / infer / _sample_actions，每次推理落一份 npz。"""
 
     def __init__(self, policy, adapter, attn_out, *, save_top_frames: int = 3, save_prefix: bool = False,
-                 ablate: str = "none"):
+                 ablate: str = "none", record_motion=None, swap_donor: str | None = None):
         self.policy, self.adapter = policy, adapter
         self.attn_out = Path(attn_out)
         self.save_top_frames = int(save_top_frames)
@@ -165,6 +335,14 @@ class AttnRecorder:
         self.ablate = parse_ablate(ablate)
         if "mask_motion" in self.ablate["masks"] and not self.motion_enabled:
             raise SystemExit(f"错误: --ablate {self.ablate['name']} 含 mask_motion，但本模型无 motion token（基线）")
+        motion = self.ablate["motion"]
+        if (motion is not None or record_motion is not None) and not self.motion_enabled:
+            raise SystemExit("错误: motion_zero / motion_swap / --record-motion 需要 motion 模型，本模型无 motion token（基线）")
+        if (motion is not None and motion["kind"] == "swap") != (swap_donor is not None):
+            raise SystemExit("错误: --ablate motion_swap:<DIR> 与 --swap-donor task:ep 必须同时给出")
+        self.record_motion = Path(record_motion) if record_motion is not None else None
+        self.donor = load_donor(motion["dir"], swap_donor) if swap_donor is not None else None
+        self.motion_client: MotionContentClient | None = None
         self.ep_seq = 0
         self.ep_dir: Path | None = None
         self.episode: dict = {}
@@ -196,7 +374,26 @@ class AttnRecorder:
         self.policy.reset = self.reset
         self.policy.add_buffer = self.add_buffer
         self.policy.infer = self.infer
+        self._install_motion_client()
         self._hook_mem_buffer()
+
+    def _install_motion_client(self) -> None:
+        """motion 内容替换 / 记录：policy._motion_client 换成包装句柄（policy.reset 用它重建 mem_buffer），
+        已建好的 mem_buffer.motion_enc 也一并换掉（首局 reset 之前那个实例）。"""
+        motion = self.ablate["motion"]
+        if motion is None and self.record_motion is None:
+            return
+        mode = "none" if motion is None else motion["kind"]
+        self.motion_client = MotionContentClient(self.policy._motion_client, mode=mode, donor=self.donor,
+                                                 record_dir=self.record_motion)
+        self.policy._motion_client = self.motion_client
+        mem_buffer = getattr(self.policy, "mem_buffer", None)
+        if mem_buffer is not None and hasattr(mem_buffer, "motion_enc"):
+            mem_buffer.motion_enc = self.motion_client
+        import atexit
+        atexit.register(self.motion_client.flush)
+        print(f"ATTN_MOTION_CONTENT mode={mode} donor={(self.donor or {}).get('path')} "
+              f"record_motion={self.record_motion}", flush=True)
 
     def _frame_times(self) -> np.ndarray:
         frames = self.policy.mem_buffer.get_frame_sampling_indices(int(self.policy.step_idx), self.budget,
@@ -250,17 +447,23 @@ class AttnRecorder:
         self.infer_seq = 0
         self.frames.clear()
         self.saved_frames.clear()
+        if self.motion_client is not None:
+            self.motion_client.begin_episode(str(nonce))
         self.episode = {"episode_nonce": str(nonce), "ep_seq": self.ep_seq, "reset_rpc": rpc,
                         "server_pid": os.getpid(), "reset_unix_time": time.time(),
                         "model_kind": self.policy.metadata.get("model_kind"), "motion_enabled": self.motion_enabled,
                         "save_top_frames": self.save_top_frames, "infers": 0, "prompt": None,
                         "ablate": self.ablate["name"], "n_masked_keys": []}
+        if self.motion_client is not None:
+            self.episode["motion_content"] = self.motion_client.summary()
         _write_json(self.ep_dir / "episode.json", self.episode)
         print(f"ATTN_EPISODE_BEGIN nonce={nonce} ep_seq={self.ep_seq} dir={self.ep_dir}", flush=True)
 
     def add_buffer(self, obs: dict) -> None:
         before = int(self.policy.step_idx)
         self._orig_add(obs)
+        if self.motion_client is not None:
+            self.motion_client.flush()
         if self.save_top_frames > 0:
             images = np.asarray(obs["images"])
             for i, step in enumerate(range(before + 1, int(self.policy.step_idx) + 1)):
@@ -286,9 +489,14 @@ class AttnRecorder:
             self.printed_env = True
         print(f"ATTN_INFER nonce={self.episode['episode_nonce']} infer_seq={self.infer_seq} step_idx={int(record['step_idx'])} "
               f"top_frames={record['top_frames'].tolist()} npz={path.name} ablate={self.ablate['name']} "
-              f"n_masked_keys={int(record['n_masked_keys'])}", flush=True)
+              f"n_masked_keys={int(record['n_masked_keys'])}"
+              + (f" n_motion_replaced={int(record['n_motion_replaced'])}" if "n_motion_replaced" in record else ""),
+              flush=True)
         self.infer_seq += 1
         self.episode.setdefault("n_masked_keys", []).append(int(record["n_masked_keys"]))
+        if self.motion_client is not None:
+            self.motion_client.flush()
+            self.episode["motion_content"] = self.motion_client.summary()
         self.episode.update(infers=self.infer_seq, prompt=self.episode.get("prompt") or _as_str(obs.get("prompt")))
         _write_json(self.ep_dir / "episode.json", self.episode)
         return outputs
@@ -340,7 +548,7 @@ class AttnRecorder:
         if state.shape != (STATE_DIM,):
             raise RuntimeError(f"observation/state 形状 {state.shape} 不符 (8,)")
         top = top_frame_indices(probs_action, mem_order, frame_times, self.tokens_per_frame, self.save_top_frames)
-        return {
+        record = {
             "P": np.int64(P), "MEM": np.int64(MEM), "step_idx": np.int64(step_idx),
             "exec_start_idx": np.int64(int(self.policy.exec_start_idx)), "infer_seq": np.int64(self.infer_seq),
             "mem_order": mem_order, "mem_mask": mem_mask, "frame_times": frame_times,
@@ -349,6 +557,9 @@ class AttnRecorder:
             "probs_action": probs_action, "probs_text": probs_text,
             "ablate": np.str_(self.ablate["name"]), "n_masked_keys": np.int64(int(self.captured.get("n_masked_keys", 0))),
         }
+        if self.ablate["motion"] is not None and self.motion_client is not None:
+            record["n_motion_replaced"] = np.int64(self.motion_client.replaced)
+        return record
 
     def _write_prefix(self, record: dict) -> None:
         """prefix_<seq>.npz：prefill 每层完整 prefix 自注意力 (18, 8, P, P) f16。"""
@@ -414,8 +625,13 @@ def _make_args_class():
         save_top_frames: int = 3
         # 另写 prefix_<seq>.npz：prefill 每层完整 prefix 自注意力 (18, 8, P, P) f16；默认关
         save_prefix: bool = False
-        # 因果遮挡：none | mask_motion | mask_vis | heads:L3H0,L16H0，可用 + 组合；默认 none
+        # 因果遮挡 / motion 内容替换：none | mask_motion | mask_vis | heads:L3H0,L16H0 | motion_zero |
+        # motion_swap:<供体目录>，可用 + 组合；默认 none
         ablate: str = "none"
+        # 记录每局每个 motion 窗口的原编码到 <目录>/<episode_nonce>.npz（run_local 收尾改名 <task>_ep<id>.npz）
+        record_motion: Path | None = None
+        # motion_swap 的供体局 task:ep（供体文件 <供体目录>/<task>_ep<id>.npz）
+        swap_donor: str | None = None
 
     return Args
 
@@ -442,8 +658,11 @@ def main(args) -> None:
         if ablate["heads"]:
             kw["ablate_heads"] = ablate["heads"]
         adapter = AttnAdapter(policy, **kw)
+        record_motion = getattr(args, "record_motion", None)
         recorder = AttnRecorder(policy, adapter, attn_out, save_top_frames=args.save_top_frames,
-                                save_prefix=save_prefix, ablate=ablate_name)
+                                save_prefix=save_prefix, ablate=ablate_name,
+                                record_motion=Path(record_motion).resolve() if record_motion else None,
+                                swap_donor=getattr(args, "swap_donor", None))
         recorder.install()
         P = getattr(recorder.adapter, "P", None)
         if P is not None:
@@ -453,7 +672,9 @@ def main(args) -> None:
         return policy
 
     serve_policy.create_policy = create_policy
-    print(f"ATTN_ABLATE name={ablate['name']} masks={sorted(ablate['masks'])} heads={list(ablate['heads'])}", flush=True)
+    print(f"ATTN_ABLATE name={ablate['name']} masks={sorted(ablate['masks'])} heads={list(ablate['heads'])} "
+          f"motion={ablate['motion']} swap_donor={getattr(args, 'swap_donor', None)} "
+          f"record_motion={getattr(args, 'record_motion', None)}", flush=True)
     _install_rpc_tracking()
     # metadata、server 构造与 sidecar 收尾全部走主线 main，字段与 serve_policy.py 完全一致
     serve_policy.main(args)

@@ -16,7 +16,7 @@ SENTINEL = int(np.iinfo(np.int32).max)
 # ―――――――――――――――――――――――― 解析 ――――――――――――――――――――――――
 
 def test_parse_ablate_presets():
-    assert SA.parse_ablate("none") == {"name": "none", "masks": frozenset(), "heads": ()}
+    assert SA.parse_ablate("none") == {"name": "none", "masks": frozenset(), "heads": (), "motion": None}
     assert SA.parse_ablate(None)["name"] == "none"
     assert SA.parse_ablate("mask_motion")["masks"] == {"mask_motion"}
     assert SA.parse_ablate("mask_vis")["masks"] == {"mask_vis"}
