@@ -35,6 +35,16 @@ modulation 比论文同口径低约 1.1 个百分点，落在两边标准差之�
 
 口径：`actions_executed` 是一局结束时的步数，模型最后一次推理在最后一段动作之前，实际见到的窗口数可能略少，因此表中是上界。超时局的执行步数为 1301，`k_exec` 封顶 40，会抬高最大值；看任务正常所需长度时以「成功局最大」为准。执行步数取决于模型，换模型后最大值会变。原值见 `records/motion_windows_by_task.json`。
 
+**concat 每局 motion token 数的分布**（2026-11-04 补算，论文 CVPR 稿 Cost 段表 2 的真源）：按上表同一公式 k = `demo_windows` + `actions_executed // 32` 对 concat 三 seed 共 2,400 局逐局计算，每任务 150 局；分位数用线性插值（numpy `linear` 口径），Median 为偶数样本时取中间两值均值、不取整（论文表中整数行四舍五入，如 ButtonUnmaskSwap Median 10.5 写作 11、VideoRepick 13.5 写作 14、P90／P95 的小数同样取整）。无一局超过 budget 96，「Episodes > 96」全为 0，故不单列。逐局记录已复制到论文仓库 `CVPR2027-submission/data/motion_tokens/concat_episodes.json`（sha256 6f1380a36e976d6d17cfda6cb60cea450cbb27142d0bae960bae989d542336a4），由 `scripts/make_motion_tokens_table.py` 出表。
+
+| 统计量 | BinFill | PickXtimes | SwingXtimes | StopCube | VideoUnmask | ButtonUnmask | VideoUnmaskSwap | ButtonUnmaskSwap | PickHighlight | VideoRepick | VideoPlaceButton | VideoPlaceOrder | MoveCube | InsertPeg | PatternLock | RouteStick | All |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Mean | 15.2 | 13.3 | 12.3 | 7.1 | 5.7 | 7.1 | 9.0 | 11.1 | 10.5 | 14.7 | 29.2 | 34.4 | 17.2 | 23.0 | 3.9 | 8.5 | 13.9 |
+| Median | 15 | 13 | 12 | 6 | 5 | 7 | 8 | 10.5 | 6 | 13.5 | 29 | 34 | 13 | 11 | 3 | 7 | 10 |
+| P90 | 21 | 19 | 15 | 13.3 | 7 | 10.1 | 13 | 13.1 | 17.1 | 23 | 30 | 40 | 45.2 | 47 | 7 | 14 | 29 |
+| P95 | 24 | 20 | 15 | 16 | 10 | 11.55 | 15 | 14 | 40 | 24 | 31.55 | 40 | 48 | 48 | 7 | 15 | 39 |
+| Maximum | 40 | 23 | 40 | 17 | 13 | 17 | 20 | 20 | 40 | 45 | 63 | 70 | 49 | 52 | 10 | 18 | 70 |
+
 最终判定（逐行原文）：
 
 - `SEED_GATE=PASS allowed=0,7,42 rejected=1`；`PRE_MERGE_REVIEW=PASS base=9459859384589b3553148cf53f715c1318f1a533 tip=2cb5d8e7d4b0b092207a58dcab6fe8432c0fc20f files=2 commits=1 findings=0`；`POST_MERGE_REVIEW=PASS merge=5fce5d3 tests=45passed files=2`
