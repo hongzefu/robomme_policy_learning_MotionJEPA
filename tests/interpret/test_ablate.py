@@ -157,9 +157,10 @@ class FakePolicy:
         static_mask = np.repeat(np.arange(32) < n_frames, 16)[None]
         prompt_mask = (np.arange(64) < 21)[None]
         if self.motion_enabled:
-            _, _, motion_mask, _ = self.mem_buffer._prepare_motion(self.step_idx)
+            motion_emb, motion_pos, motion_mask, _ = self.mem_buffer._prepare_motion(self.step_idx)
             mem_order = np.random.default_rng(0).permutation(608).astype(np.int32)[None]
             observation = SimpleNamespace(static_mask=static_mask, motion_mask=motion_mask[None], mem_order=mem_order,
+                                          motion_emb=motion_emb[None], motion_pos=motion_pos[None],
                                           tokenized_prompt_mask=prompt_mask)
         else:
             observation = SimpleNamespace(static_mask=static_mask, motion_mask=None, mem_order=None,
@@ -217,7 +218,10 @@ def test_recorder_ablate_record(tmp_path, monkeypatch, motion, ablate):
         assert adapter.seen == [None]                              # 无 key 遮挡时不传 mask_keys
         n = 0
     with np.load(ep / "infer_0000.npz") as z:
-        assert set(z.files) == set(SA.NPZ_KEYS) | set(SA.ABLATE_NPZ_KEYS)
+        expected_keys = set(SA.NPZ_KEYS) | set(SA.ABLATE_NPZ_KEYS)
+        if motion:
+            expected_keys |= set(SA.MOTION_INPUT_NPZ_KEYS)
+        assert set(z.files) == expected_keys
         assert str(z["ablate"]) == ablate and z["n_masked_keys"].dtype == np.int64 and int(z["n_masked_keys"]) == n
     info = json.loads((ep / "episode.json").read_text())
     assert info["ablate"] == ablate and info["n_masked_keys"] == [n]

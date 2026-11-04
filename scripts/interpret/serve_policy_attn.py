@@ -14,7 +14,9 @@ mem_buffer._prepare_motion），websocket 层只把模块内的 RpcSession 名�
 不压缩；每局目录另写 episode.json，top-N 帧原图写 frames/<frame_idx>.jpg（去重）。
 --save-prefix（默认关）开启时，adapter 以 save_prefix=True 构造，每次 infer npz 写完后另写
 <attn-out>/<episode_nonce>/prefix_<seq:04d>.npz（键见 PREFIX_NPZ_KEYS：probs_prefix f16 (18, 8, P, P)、P、MEM、
-infer_seq、step_idx），不压缩、先写临时文件再 os.replace；infer_<seq>.npz 的 16 键不变。
+infer_seq、step_idx），不压缩、先写临时文件再 os.replace。
+带 motion token 的 VLA 的 infer_<seq>.npz 另存实际输入 motion_emb、motion_pos，去掉 batch 轴并保留原 dtype；
+motion_mask 使用实际输入有效位，motion_times 与该 token 轴对齐。两键不写入不带 motion token 的 VLA 的记录。
 
 --ablate <名>（S7 因果遮挡，默认 none）：
   mask_motion            遮所有 motion token（记忆位 mem_order[s] ≥ budget）；基线（无 motion）报错退出
@@ -35,6 +37,7 @@ motion 内容替换（S8；只换 motion 编码内容，motion token 个数、�
   episode.json 的 motion_content 记 mode、donor、n_windows、n_replaced 与逐窗 replace_log [start, donor_start]。
 --record-motion <DIR>：原样返回原编码，同时把本局每个窗口 (start_frame, emb) 写 DIR/<episode_nonce>.npz
   （start_frames int32 (n,)、embs f32 (n, dim)、counts int32 (n,)、mode；swap 时另有 donor_start_frames、donor）；
+  另存 call_start_frames int32 (c,)、call_embs f32 (c, dim)、call_seq int64 (c,)，按调用顺序保留重复起点的全部原编码；
   每次 add_buffer / infer 后有新窗口即重写（先写临时文件再 os.replace），进程被杀也不丢已完成窗口；
   记录的永远是原 client 的编码（替换前）。run_local 收尾时按 terminal 记录的局身份把 <nonce>.npz 改名为 <task>_ep<id>.npz。
 
@@ -63,6 +66,8 @@ PREFIX_NPZ_KEYS = ("probs_prefix", "P", "MEM", "infer_seq", "step_idx")
 ABLATE_NPZ_KEYS = ("ablate", "n_masked_keys")
 # S8 motion 内容替换时另附的键（只在 motion_zero / motion_swap 时写）
 MOTION_REPLACE_NPZ_KEYS = ("n_motion_replaced",)
+# 带 motion token 的 VLA 每次推理的实际输入；不带 motion token 的 VLA 不写这两键
+MOTION_INPUT_NPZ_KEYS = ("motion_emb", "motion_pos")
 MASK_KINDS = ("mask_motion", "mask_vis")
 VIS_WINDOW = (0, 32)          # mask_vis 遮的全域帧号区间 [lo, hi)
 NUM_STEPS, NUM_LAYERS, NUM_HEADS, ACTION_HORIZON, TEXT_LEN = 10, 18, 8, 20, 64
@@ -163,7 +168,8 @@ class MotionContentClient:
     """替换 policy._motion_client 的包装句柄，签名 (frames, start_frame) -> (dim,) f32。
 
     每次先照常调用原 client（sidecar 侧行为与计时不变），再按 mode 处理返回值：none 原样、zero 置零、
-    swap 换成供体同起点窗口（donor_lookup）。record_dir 给出时记录原编码（同起点只留首次，counts 计次）。
+    swap 换成供体同起点窗口（donor_lookup）。record_dir 给出时同时记录原编码的完整调用轨迹；
+    旧字段同起点只留首次，counts 计次，以保持供体替换接口兼容。
     其余属性（provenance、close 等）透传原 client。"""
 
     def __init__(self, inner, *, mode: str = "none", donor: dict | None = None, record_dir=None):
@@ -184,6 +190,7 @@ class MotionContentClient:
 
     def _reset_state(self):
         self.starts, self.embs, self.counts, self.donor_starts = [], [], [], []
+        self.call_starts, self.call_embs = [], []
         self.index: dict[int, int] = {}
         self.replace_log: list[list[int]] = []   # 每次替换 [start_frame, donor_start_frame]；zero 时 donor 记 -1
         self.replaced = 0
@@ -209,6 +216,9 @@ class MotionContentClient:
             self.replaced += 1
             self.replace_log.append([int(start_frame) if start_frame is not None else -1, donor_start])
         key = int(start_frame) if start_frame is not None else len(self.starts)
+        if self.record_dir is not None:
+            self.call_starts.append(key)
+            self.call_embs.append(emb.copy())
         if key in self.index:
             self.counts[self.index[key]] += 1
         else:
@@ -234,7 +244,10 @@ class MotionContentClient:
         tmp = self.record_dir / f".{self.episode_nonce}.{uuid.uuid4().hex}.tmp.npz"
         record = {"start_frames": np.asarray(self.starts, np.int32), "embs": np.stack(self.embs).astype(np.float32),
                   "counts": np.asarray(self.counts, np.int32), "mode": np.str_(self.mode),
-                  "episode_nonce": np.str_(self.episode_nonce)}
+                  "episode_nonce": np.str_(self.episode_nonce),
+                  "call_start_frames": np.asarray(self.call_starts, np.int32),
+                  "call_embs": np.stack(self.call_embs),
+                  "call_seq": np.arange(len(self.call_starts), dtype=np.int64)}
         if self.mode == "swap":
             record["donor_start_frames"] = np.asarray(self.donor_starts, np.int32)
             record["donor"] = np.str_(self.donor.get("name", ""))
@@ -361,6 +374,9 @@ class AttnRecorder:
             # 只存引用，不在计时段内搬回主机；记录在 infer 返回之后做
             self.captured["static_mask"] = getattr(observation, "static_mask", None)
             self.captured["motion_mask_obs"] = getattr(observation, "motion_mask", None)
+            if self.motion_enabled:
+                for key in MOTION_INPUT_NPZ_KEYS:
+                    self.captured[key] = getattr(observation, key)
             self.captured["mem_order"] = getattr(observation, "mem_order", None)
             self.captured["prompt_mask"] = getattr(observation, "tokenized_prompt_mask", None)
             self.captured["n_masked_keys"] = 0
@@ -524,8 +540,11 @@ class AttnRecorder:
             mem_order = np.asarray(self.captured["mem_order"]).reshape(-1).astype(np.int32)
             obs_motion_mask = np.asarray(self.captured["motion_mask_obs"]).reshape(-1).astype(bool)
             full_mask = np.concatenate([static_mask, obs_motion_mask])
-            _, _, motion_mask, motion_times = self.captured["motion"]
-            motion_mask = np.asarray(motion_mask).reshape(-1).astype(bool)
+            _, _, _, motion_times = self.captured["motion"]
+            # 与策略组包时的拆分一致，只展开时刻，不重新编码或改动实际输入。
+            if getattr(self.policy.config.motion, "readout", None) == "stage2_pool4_split_v1":
+                motion_times = np.repeat(motion_times, 4)
+            motion_mask = obs_motion_mask
             motion_times = np.where(motion_mask, np.asarray(motion_times).reshape(-1), -1).astype(np.int32)
         else:
             mem_order = np.arange(MEM, dtype=np.int32)
@@ -557,6 +576,9 @@ class AttnRecorder:
             "probs_action": probs_action, "probs_text": probs_text,
             "ablate": np.str_(self.ablate["name"]), "n_masked_keys": np.int64(int(self.captured.get("n_masked_keys", 0))),
         }
+        if self.motion_enabled:
+            for key in MOTION_INPUT_NPZ_KEYS:
+                record[key] = np.asarray(self.captured[key])[0]
         if self.ablate["motion"] is not None and self.motion_client is not None:
             record["n_motion_replaced"] = np.int64(self.motion_client.replaced)
         return record

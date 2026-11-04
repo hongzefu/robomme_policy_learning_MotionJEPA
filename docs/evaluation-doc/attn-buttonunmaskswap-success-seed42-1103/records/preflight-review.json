@@ -1,0 +1,18 @@
+{
+  "plan_base": "b7ad0560e4315a8b1ecb669a86cb584e0eff68d7",
+  "plan_consistency": "PLAN_CONSISTENCY_REVIEW=PASS base=b7ad0560e4315a8b1ecb669a86cb584e0eff68d7 findings=0 blocking=0",
+  "adjustments": [
+    {
+      "what": "干净运行工作树，保留用户文件",
+      "verdict": "ADJUST_REVIEW=PASS scale=same findings=0"
+    },
+    {
+      "what": "补齐三份旧测试假观测和精确键合同",
+      "verdict": "ADJUST_REVIEW=PASS scale=same findings=0"
+    }
+  ],
+  "selection_verdict": "SUCCESS_MANIFEST=PASS models=2 episodes=22",
+  "S1_pre_merge": "PRE_MERGE_REVIEW=PASS base=b7ad0560e4315a8b1ecb669a86cb584e0eff68d7 tip=ec5774d2f5d15f47f00f9f76e2840945abe044a9 files=5 findings=0",
+  "S1_post_merge": "POST_MERGE_REVIEW=PASS code_matches_reviewed_tip=1 tests=9",
+  "S1_cpu": "MOTION_CAPTURE_CPU=PASS tests=75 elapsed_seconds=155.75"
+}

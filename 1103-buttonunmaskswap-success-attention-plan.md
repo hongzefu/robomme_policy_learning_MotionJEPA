@@ -177,3 +177,16 @@ UV_CACHE_DIR=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/cache/uv
 本次文档写入验证：检查两个一级标题、名称、22 条组合及来源链接；执行 `git diff --check`，只逐路径暂存本计划，中文 `docs:` 提交后立即推送到当前既有 upstream。用户未跟踪文件保持原状。
 
 未来运行在新档案目录写 `launch.md`、`result.md` 和 `records/`；启动时记录代码、权重、完整命令、参数、模型与环境 seed、清单、存储、tmux、日志和预算，结束后补真实终局与验收。不复制可由 Git 还原的脚本或配置，不把大体积权重和原始 attention 提交进 Git。实施中调整按通用规则先审查并留档，不能静默更换口径。
+
+## 七、实施追加记录（2026-11-04，美东）
+
+用户在完整计划保存并推送后明确指令：「开始实现」。本指令是本计划的开工令，覆盖上文创建时的“尚未开工”历史状态；状态机登记仍未单独获准，因此不改 `docs/handoff/current.json`。
+
+开工代码基线为 `b7ad0560e4315a8b1ecb669a86cb584e0eff68d7`，计划与原保存提交之间无内容变化。独立子代理审查结论：`PLAN_CONSISTENCY_REVIEW=PASS base=b7ad0560e4315a8b1ecb669a86cb584e0eff68d7 findings=0 blocking=0`。
+
+### 实施中调整
+
+1. **执行位置**：主检出含用户未跟踪 HTML，正式运行改用同一整合提交的干净工作树 `/home/hongzefu/.codex/worktrees/button-attn-run/robomme_policy_learning_MotionJEPA`；所有写产物仍落主检出本轮 `v1-store` 新运行根。复用已有只读环境、权重和锁定 benchmark；实际核对 VLA 导入来自运行工作树，benchmark 导入来自主检出已有子模块，不初始化第二份 benchmark。没有移动、暂存或删除用户文件。审查结论：`ADJUST_REVIEW=PASS scale=same findings=0`。
+2. **测试夹具**：S1 可写集合追加 `tests/interpret/test_motion_replace.py`、`tests/interpret/test_ablate.py` 和 `tests/interpret/test_run_local.py`。它们的假观测缺少本次必须记录的 `motion_emb`、`motion_pos`，需补齐真实字段，并更新带／不带运动输入两态的精确键集合、shape 与 dtype 断言。保留原有命令、错误退出、nonce、identity、mask、动作与调用次数检查，不为旧假夹具新增生产回退，prefix 独立记录合同不变。两次按实际发现范围进行的独立审查均为 `ADJUST_REVIEW=PASS scale=same findings=0`。
+
+以上调整保持两份权重、seed、22 条模型与回合组合、全部采集维度及验收判据不变。最终运行命令、提交与资源记录于本任务独立启动档案。
