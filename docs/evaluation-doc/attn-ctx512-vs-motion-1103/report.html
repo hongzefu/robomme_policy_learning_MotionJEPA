@@ -1,0 +1,306 @@
+<title>Motion 记忆可解释性报告</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* 版式：单栏读文，图与矩阵放宽；配色直接取自实验区间：裸露窗绿、交换琥珀、基线蓝、motion 陶土 */
+:root {
+  --bg: #f5f7f8; --panel: #ffffff; --fg: #1b2428; --muted: #5a6a72; --rule: #d5dde1;
+  --vis: #1f8a57; --swap: #c07a12; --base: #2c62ad; --mot: #b24f36;
+  --ok-bg: #d8efe2; --ok-fg: #12603a; --no-bg: #f6dedb; --no-fg: #92291c; --to-bg: #e3dcef; --to-fg: #4f3a80;
+  --note: #eaf0f3;
+  --serif: "Noto Serif SC", "Songti SC", serif;
+  --sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12181b; --panel: #1b2327; --fg: #e4eaed; --muted: #9aaab2; --rule: #33424a;
+  --vis: #4cc48a; --swap: #e3a544; --base: #79a7ea; --mot: #e38a70;
+  --ok-bg: #173d2b; --ok-fg: #8fe0b6; --no-bg: #47211c; --no-fg: #f3b0a6; --to-bg: #322a4a; --to-fg: #c9b8f2;
+  --note: #202b30; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #12181b; --panel: #1b2327; --fg: #e4eaed; --muted: #9aaab2; --rule: #33424a;
+  --vis: #4cc48a; --swap: #e3a544; --base: #79a7ea; --mot: #e38a70;
+  --ok-bg: #173d2b; --ok-fg: #8fe0b6; --no-bg: #47211c; --no-fg: #f3b0a6; --to-bg: #322a4a; --to-fg: #c9b8f2;
+  --note: #202b30; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.8 var(--sans); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.prose { max-width: 44rem; }
+h1, h2, h3 { font-family: var(--serif); line-height: 1.35; text-wrap: balance; margin: 0; }
+h1 { font-size: 2.1rem; }
+h2 { font-size: 1.5rem; margin-top: 56px; padding-top: 18px; border-top: 2px solid var(--fg); }
+h3 { font-size: 1.12rem; margin-top: 30px; }
+p { margin: 12px 0; }
+ul, ol { margin: 12px 0; padding-left: 1.4em; }
+li { margin: 6px 0; }
+code { font: 0.86em var(--mono); overflow-wrap: anywhere; }
+.meta { color: var(--muted); font-size: 0.92rem; margin-top: 10px; }
+.vis { color: var(--vis); font-weight: 700; } .swap { color: var(--swap); font-weight: 700; }
+.b { color: var(--base); font-weight: 700; } .m { color: var(--mot); font-weight: 700; }
+nav { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 20px; font-size: 0.92rem; }
+nav a, a { color: var(--base); }
+.answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 26px; }
+.answer { background: var(--panel); border: 1px solid var(--rule); padding: 18px 20px; min-width: 0; }
+.answer h3 { margin: 0 0 8px; }
+.answer p { margin: 8px 0; font-size: 0.96rem; }
+.note { background: var(--note); padding: 12px 16px; margin: 16px 0; font-size: 0.95rem; }
+.tbl { overflow-x: auto; margin: 16px 0; }
+table { border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 10px; border-bottom: 1px solid var(--rule); text-align: left; vertical-align: top; }
+th { font-weight: 700; white-space: nowrap; }
+.matrix td, .matrix th { text-align: center; padding: 5px 6px; white-space: nowrap; }
+.matrix .l { text-align: left; }
+.matrix .sub th { font-weight: 400; color: var(--muted); font-size: 0.8rem; }
+.c { font-weight: 700; display: block; min-width: 26px; }
+.ok { background: var(--ok-bg); color: var(--ok-fg); }
+.no { background: var(--no-bg); color: var(--no-fg); }
+.to { background: var(--to-bg); color: var(--to-fg); }
+.sep td { border-top: 2px solid var(--fg); }
+figure { margin: 22px 0; }
+.shot { overflow-x: auto; background: #fff; border: 1px solid var(--rule); padding: 8px; }
+.shot img { display: block; width: 100%; min-width: 720px; height: auto; }
+figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 8px; max-width: 44rem; }
+.axis { position: relative; height: 34px; background: var(--note); margin-top: 12px; }
+.seg { position: absolute; top: 0; bottom: 0; }
+.ticks { position: relative; height: 22px; font: 0.76rem var(--mono); color: var(--muted); }
+.ticks span { position: absolute; transform: translateX(-50%); }
+.key { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 0.9rem; margin-top: 4px; }
+.key i { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -1px; }
+.bar { display: flex; height: 24px; margin: 3px 0 10px; }
+.bar span { display: block; height: 100%; }
+.barlabel { font-size: 0.88rem; }
+pre { font: 0.82rem/1.6 var(--mono); background: var(--note); padding: 12px 14px; overflow-x: auto; margin: 12px 0; }
+</style>
+
+<div class="wrap">
+<header class="prose">
+<h1>Motion 记忆可解释性报告</h1>
+<p class="meta">ButtonUnmaskSwap 任务｜官方 ctx512（79999）对比 ctx512+motion（orig100 concat，59999）｜本机 sled-aspen，2×RTX A6000｜2026-11-03（美东）｜分支 <code>v4.1-interpretMotion</code>，结果提交 <code>a5b1b63</code></p>
+<nav>
+<a href="#s1">因果实验</a><a href="#s2">任务与区间</a><a href="#s3">指标怎么读</a><a href="#s4">注意力结果</a><a href="#s5">口径更正</a><a href="#s6">局限</a><a href="#s7">下一步</a><a href="#s8">过程与复现</a>
+</nav>
+</header>
+
+<section class="answers">
+<div class="answer">
+<h3>改变 motion 会影响成功率吗？</h3>
+<p><b>会，但要分情况。</b>在 12 局上，motion 模型正常成功 11 局。把 motion 换成全 0 只剩 1 局，整体遮掉是 0 局，这两种几乎都跑到超时，差异明确（p≈0.002、0.001）。</p>
+<p>换成相邻局的真实 motion 还有 8 局，比正常少 3 局，失败也是普通失败。12 局分辨不出这 3 局是真实影响还是扰动（p≈0.38）。<b>所以 motion 输入不可缺已有证据，「本局 motion 的内容」是否重要还没有结论。</b></p>
+</div>
+<div class="answer">
+<h3>注意力看到了什么？</h3>
+<p>两个模型的注意力主体都在当前图像、文本和动作 token 上，记忆区只占约 1～3%。在这一小块里，<span class="b">基线</span>几乎只看最近帧，落在方块裸露窗的占比低于均匀；<span class="m">motion 模型</span>稳定地多看裸露窗（#18：17.0%，均匀 12.5%），去掉 sink 后仍成立。</p>
+<p>motion 流没有稳定地盯交换过程。遮掉裸露窗或那两个最突出的头，成功局只少 2～3 局，不足以说明它们是任务所必需。</p>
+</div>
+</section>
+
+<div class="prose">
+<h2 id="s1">因果实验：改动 motion 与遮挡</h2>
+<p>局从 10-31 官方评估（seed 42，每任务 50 局）里选：motion 模型在 ButtonUnmaskSwap 上成功的 12 局全部入选，两个模型跑同一批局。每种条件只改一处，其余代码、权重、seed 都不变。</p>
+<ul>
+<li><b>motion 换成下一局的（swap）</b>：token 数、位置、mask 不动，只替换编码内容。12 局全部窗口都被替换，动作从第 2 次推理起开始偏离。</li>
+<li><b>motion 换成 0（zero）</b>：同样只换内容。这是你提出的「平凡变量」版本。</li>
+<li><b>遮全部 motion token</b>：只改 attention mask 的 key 列，作为分布外参照。</li>
+<li><b>遮裸露窗</b>：同样只改 mask，遮掉帧流中落在 [0,32) 的 token。</li>
+<li><b>遮头</b>：把指定头的输出置零，头来自后面的注意力分析（基线 L14H6；motion L3H0、L16H0）。</li>
+</ul>
+</div>
+
+<div class="tbl"><table class="matrix"><thead><tr><th class="l">模型</th><th class="l">条件</th><th>成功</th><th>95% 区间</th><th>均推理</th><th>失/得</th><th>p</th><th>4</th><th>8</th><th>11</th><th>12</th><th>17</th><th>18</th><th>20</th><th>26</th><th>34</th><th>37</th><th>38</th><th>40</th></tr><tr class="sub"><th class="l" colspan="7">交换次数</th><th>1</th><th>2</th><th>3</th><th>1</th><th>1</th><th>2</th><th>2</th><th>1</th><th>1</th><th>2</th><th>1</th><th>2</th></tr><tr class="sub"><th class="l" colspan="7">目标色</th><th>绿</th><th>绿</th><th>蓝</th><th>红</th><th>绿</th><th>红</th><th>红</th><th>绿</th><th>蓝</th><th>绿</th><th>蓝</th><th>蓝</th></tr><tr class="sub"><th class="l" colspan="7">难度</th><th>易</th><th>易</th><th>难</th><th>易</th><th>易</th><th>中</th><th>易</th><th>中</th><th>中</th><th>易</th><th>中</th><th>易</th></tr></thead><tbody><tr><td class="l b">基线</td><td class="l">正常</td><td><b>4/12</b></td><td>10～65%</td><td>24</td><td>—</td><td>—</td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="no"><span class="c">✗</span></td><td class="no"><span class="c">✗</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td></tr><tr><td class="l b">基线</td><td class="l">遮裸露窗</td><td><b>6/12</b></td><td>21～79%</td><td>24</td><td>−2 / +4</td><td>0.688</td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td></tr><tr><td class="l b">基线</td><td class="l">遮 L14H6</td><td><b>5/12</b></td><td>15～72%</td><td>24</td><td>−3 / +4</td><td>1</td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="no"><span class="c">✗</span></td><td class="no"><span class="c">✗</span></td><td class="no"><span class="c">✗</span></td><td class="no"><span class="c">✗</span></td></tr><tr class="sep"><td class="l m">motion</td><td class="l">正常</td><td><b>11/12</b></td><td>62～100%</td><td>23</td><td>—</td><td>—</td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td></tr><tr><td class="l m">motion</td><td class="l">换成下一局的 motion</td><td><b>8/12</b></td><td>35～90%</td><td>23</td><td>−4 / +1</td><td>0.375</td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td></tr><tr><td class="l m">motion</td><td class="l">换成 0</td><td><b>1/12</b></td><td>0～38%</td><td>77</td><td>−10 / +0</td><td>0.002</td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="ok"><span class="c">✓</span></td><td class="to"><span class="c">超</span></td></tr><tr><td class="l m">motion</td><td class="l">遮全部 motion token</td><td><b>0/12</b></td><td>0～26%</td><td>82</td><td>−11 / +0</td><td>0.001</td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td><td class="to"><span class="c">超</span></td></tr><tr><td class="l m">motion</td><td class="l">遮裸露窗</td><td><b>9/12</b></td><td>43～95%</td><td>22</td><td>−3 / +1</td><td>0.625</td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td></tr><tr><td class="l m">motion</td><td class="l">遮 L3H0+L16H0</td><td><b>8/12</b></td><td>35～90%</td><td>27</td><td>−3 / +0</td><td>0.25</td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="to"><span class="c">超</span></td><td class="ok"><span class="c">✓</span></td><td class="no"><span class="c">✗</span></td><td class="no"><span class="c">✗</span></td><td class="no"><span class="c">✗</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td><td class="ok"><span class="c">✓</span></td></tr></tbody></table></div>
+<p class="meta prose">✓ 成功；✗ 失败；超 = 跑满步数超时。「失/得」与 p 都相对同模型正常组；p 为只看翻转局的精确配对符号检验（双侧），95% 区间为 Clopper-Pearson。这两列是写报告时补算的。带记录重跑的正常组与原正常组 12 局结局相同，279 次推理动作最大差 0，所以替换开关本身没有改变行为。</p>
+
+<div class="prose">
+<h3>从这张表能说什么</h3>
+<ul>
+<li><b>motion 模型需要合法的 motion 输入。</b>全 0 和全遮让 11 个成功局分别丢 10 个和 11 个，平均推理次数从 23 涨到 77、82，表现为完成不了任务。这两种输入模型训练时都没见过，所以只能证明「缺少分布内的 motion 不行」，不能证明它读到了什么具体信息。</li>
+<li><b>真实 motion 换局后，模型仍能正常运行。</b>平均 23 次推理，与正常相同。8/12 比正常少 3 局（失 17/20/34/40，得 26），差异不显著。</li>
+<li><b>不能把 8/12 读成「内容不重要」。</b>事后按交换次数 k 拆开看：供体与本局 k 相同的 3 局（12、18、26）全部成功，其中第 26 局正常时还是失败的；k 不同的 9 局成功 5 局。这个方向提示内容可能有用，但样本太小（单侧 p≈0.25），也是看完数据才拆的，只能当线索。之前我口头说的「不太依赖本局内容」说重了，这里改为「尚无结论」。</li>
+<li><b>遮裸露窗（9/12）和遮两个头（8/12）都不显著。</b>这些是注意力最突出的地方，遮掉后没有明显崩溃。它们可能有贡献，也可能有替代通路，当前样本分不开。</li>
+<li><b>基线的结局对扰动很敏感。</b>遮挡后总数只在 4～6 之间变，但分别有 6 局、7 局翻转，成功的局和失败的局大面积互换。遮 L14H6 没有造成净下降，所以记忆区内部那条「最近帧→裸露窗」的强通路没有得到因果支持。</li>
+</ul>
+<p class="note"><b>不能用这张表比较两个模型的好坏。</b>这 12 局是按 motion 模型成功挑的（50 局里全部 12 个成功局），对基线不公平，4/12 不是基线的真实成功率。同理，swap 的 8/12 也高于全部 50 局的 24%，可能只是这批局本身容易，并不能归功于换来的 motion。</p>
+
+<h2 id="s2">任务与关键区间</h2>
+<p>ButtonUnmaskSwap 的指令形如「先按两个按钮，再拿起藏着绿色方块的容器」。方块只在开局短暂可见，随后容器盖住并交换位置。要选对容器，模型原则上要记住开局方块在哪，再跟踪交换。我们关注的就是下面这几段。</p>
+</div>
+
+<div>
+<div class="axis" role="img" aria-label="第 8 局时间轴，帧号 0 到 320">
+  <div class="seg" style="left:0;width:10%;background:var(--vis)"></div>
+  <div class="seg" style="left:20%;width:15.625%;background:var(--swap)"></div>
+  <div class="seg" style="left:35.625%;width:15.625%;background:var(--swap);opacity:.6"></div>
+  <div class="seg" style="left:90%;width:5%;background:var(--mot)"></div>
+</div>
+<div class="ticks">
+  <span style="left:0;transform:none">0</span><span style="left:10%">32</span><span style="left:20%">64</span><span style="left:35.625%">114</span><span style="left:51.25%">164</span><span style="left:90%">288</span><span style="left:95%">304</span>
+</div>
+<div class="key">
+  <span><i style="background:var(--vis)"></i>裸露窗 VIS [0,32)：方块可见，第 32 帧容器瞬间落回</span>
+  <span><i style="background:var(--swap)"></i>交换 1 [64,114)</span>
+  <span><i style="background:var(--swap);opacity:.6"></i>交换 2 [114,164)</span>
+  <span><i style="background:var(--mot)"></i>关键推理 #18 [288,304)：抬起容器，约第 302 帧方块重现</span>
+</div>
+</div>
+
+<div class="prose">
+<p>注意力分析用了 3 局：基线第 8 局（成功，交换 2 次）、基线第 4 局（失败，只交换 1 次）、motion 第 8 局（成功，交换 2 次）。每局 20 次推理，每 16 步一次，第 18 次（step 288）正好是抬起容器。</p>
+<p>输入序列是「记忆区 + 当前 base 图 256 + 当前 wrist 图 256 + 文本 64」再接 20 个动作 token。基线记忆区 512 个 token，是 32 帧、每帧 16 个。motion 模型多 96 个 motion 槽（prefix 长度 1184 对 1088），每 33 帧一窗、每窗一个 token，和帧 token 交错排列。模型共 18 层、每层 8 头，每次推理去噪 10 步。</p>
+</div>
+
+<figure>
+<div class="shot"><img src="analysis/x3/fig_x3_2_video_signals.png" alt="三局视频逐帧的绿色方块像素数与容器掩码变化量"></div>
+<figcaption>区间核实。绿线是方块可见的像素数，蓝线是容器逐帧变化量。视频量出的区间与源码完全一致，第 4 局只有一段交换，全程没有再露出绿方块。</figcaption>
+</figure>
+
+<div class="prose">
+<h2 id="s3">指标怎么读</h2>
+<table>
+<tr><th>帧流</th><td>注意力落在记忆区历史帧 token 上的部分。</td></tr>
+<tr><th>motion 流</th><td>注意力落在 motion token 上的部分，基线没有这一路。</td></tr>
+<tr><th>占比</th><td>先只看帧流（或 motion 流）内部，再算落在某区间的比例。分母本身很小，占比高不代表总注意力高。</td></tr>
+<tr><th>均匀期望</th><td>如果平均分配，这个区间本该得到的比例。#18 时 32 帧中有 4 帧在裸露窗，期望就是 12.5%。高于它才算偏好。</td></tr>
+<tr><th>富集倍数</th><td>实测除以均匀期望，1× 表示没有偏好。</td></tr>
+<tr><th>motion 窗计权</th><td>一窗盖 33 帧，只把与区间重叠的那部分算进去（重叠帧数 / 33）。</td></tr>
+<tr><th>sink</th><td>不论内容、总是吃掉大量注意力的固定 token，这里主要是文本的 <code>&lt;bos&gt;</code>，会干扰「看哪里」的判断。</td></tr>
+<tr><th>rollout</th><td>把各层注意力连乘，估计经中转 token 的间接读取。这是粗略近似，会过度平滑，也不含 MLP。</td></tr>
+</table>
+
+<h2 id="s4">注意力结果</h2>
+<h3>记忆区只占很小一部分</h3>
+<p>第 18 次推理，全部去噪步、层、头、动作 query 平均后的质量分布：</p>
+<div class="barlabel"><span class="b">基线</span>：帧流 0.90%｜base 10.30%｜wrist 25.22%｜文本 33.18%｜动作 30.40%</div>
+<div class="bar"><span style="width:0.9%;background:var(--vis)"></span><span style="width:10.3%;background:var(--base)"></span><span style="width:25.22%;background:var(--base);opacity:.6"></span><span style="width:33.18%;background:var(--muted)"></span><span style="width:30.4%;background:var(--rule)"></span></div>
+<div class="barlabel"><span class="m">motion</span>：帧流 1.35%｜motion 0.26%｜base 8.89%｜wrist 27.76%｜文本 32.11%｜动作 29.63%</div>
+<div class="bar"><span style="width:1.35%;background:var(--vis)"></span><span style="width:0.26%;background:var(--mot)"></span><span style="width:8.89%;background:var(--base)"></span><span style="width:27.76%;background:var(--base);opacity:.6"></span><span style="width:32.11%;background:var(--muted)"></span><span style="width:29.63%;background:var(--rule)"></span></div>
+<p>下面所有占比都是这一小块内部的相对比较。动作 query 平均还把 23～26% 给了 <code>&lt;bos&gt;</code>。</p>
+</div>
+
+<figure>
+<div class="shot"><img src="figures/fig_key_step.png" alt="第 18 次推理两模型的帧流与 motion 流注意力柱状图"></div>
+<figcaption>第 18 次推理。左上基线的帧流几乎全压在最后一帧，右上 motion 模型铺满 32 帧、开头 4 帧略高。两列纵轴各自缩放，柱高不能跨列比。<b>右下角标里的 61.0% / 55.6% 是旧口径，已更正为 30.5% / 35.0%，见下文。</b></figcaption>
+</figure>
+
+<div class="prose">
+<h3>基线：只看最近帧，不回看裸露窗</h3>
+<ul>
+<li>从 #4 起，帧流裸露窗占比始终只有均匀期望的约 0.3～0.9 倍，成功局和失败局都一样；#18 为 3.6%（第 4 局 5.2%）。</li>
+<li>最大的记忆头 L15H1 把 75.9% 的注意力给记忆区，其中 99.8% 落在最近 4 帧。#18 帧流有 63～64% 在当前帧。</li>
+<li>交换期间偏向交换帧（#4～13 第 1 段 1.6～1.7 倍），主要是因为这些帧当时就是最近的帧。</li>
+<li>间接通路也看不到回看：#15～#19 VIS 直接 7.0% / 6.7%，rollout 1.7% / 1.8%（均匀 13.1%）；逐层的一跳间接，格级中位数只有 0.17× / 0.20×。</li>
+<li>有一个例外：记忆区内部 L14H6 让最近帧约 88% 的注意力落在裸露窗 4 帧上（#18 富集 7.04×，第 4 局 7.02×）。头平均把它稀释了，而遮掉它也没有造成净下降（4→5 局，见因果表）。</li>
+</ul>
+
+<h3>motion 模型：稳定多看裸露窗</h3>
+<ul>
+<li>#2～#19 里几乎每次都高于均匀（只有 #6、#15 例外）；#16～#19 为 15.5～21.0%（均匀 12.5%），窗内 4 帧大致均分，并非只盯一帧。</li>
+<li>去掉 <code>&lt;bos&gt;</code> 重算后，#15～#19 从 17.2% 变为 16.8%（均匀 13.1%，1.28 倍）；再剔除 6 个 motion 窗的压力测试下仍有 16.5%。这是所有方向里最稳的正向信号。</li>
+<li>主要由两个头承担：L16H0（帧流质量 0.464，富集 1.81 倍，逐次波动大）和 L3H0（0.110，3.65 倍），合计约占正向超额的 69%，与基线回看裸露窗的头几乎不重合（相关 r=0.091）。</li>
+<li>送到动作的裸露窗量更多：#18 直接 0.0454、一跳间接 0.0434，基线第 8 局 0.0058、0.0085，分别约 7.8 倍和 5.1 倍。</li>
+<li>回看偏去噪前半段：#18 前 3 步 19.8%，后 3 步 13.0%；基线各步几乎持平。</li>
+</ul>
+</div>
+
+<figure>
+<div class="shot"><img src="analysis/x2/x2_share_curves.png" alt="三局每次推理的 VIS 与 SWAP 占比曲线及阶段底色"></div>
+<figcaption>整局时间线。上排绿线是帧流裸露窗占比，虚线是均匀期望：两列基线从 #4 起一直在虚线下方，motion 列基本在虚线上方。中排是交换区间，下排是手指开度和 TCP 高度。</figcaption>
+</figure>
+<figure>
+<div class="shot"><img src="analysis/x1/fig_x1_heat_ep8_infer18.png" alt="第 18 次推理逐层逐头的帧流质量和富集倍数热图"></div>
+<figcaption>第 18 次推理的 18 层 × 8 头。第 1 列是帧流质量，基线最亮在 L15H1，motion 最亮在 L16H0。第 2 列是裸露窗富集，斜线格表示该头帧流质量不足 1%，富集倍数不要解读。热图为最近邻显示。</figcaption>
+</figure>
+<figure>
+<div class="shot"><img src="analysis/r4/fig_r4_infer18_layer_paths.png" alt="第 18 次推理逐层直接与一跳间接读取"></div>
+<figcaption>第 18 次推理逐层通路。每层左柱是直接读取，右柱是一跳间接，按中转类别堆叠；短横是均匀期望。右上 motion 模型的 VIS 直接读取在 L3、L16 明显高出均匀，左侧基线的柱子大多低于短横。</figcaption>
+</figure>
+
+<div class="prose">
+<h3>motion 流：没有稳定地盯交换</h3>
+<ul>
+<li>修正计权后，第 1 次交换基本不看（#15～#19 为 2.5～9.4%，均匀 17.5～22.5%）。</li>
+<li>唯一明显高于均匀的是 #16 对第 2 次交换（44.1%，均匀 19.7%），它主要来自窗 [128,161)。这个窗在记忆区内部也是 sink，把它剔除后 #16 的偏好翻转（8.6%，均匀 15.2%）。</li>
+<li>在记忆区内部，帧 query 有 58% 的质量给了 9 个 motion token，富集 37 倍，但汇聚在 [224,257)、[160,193) 等窗，不是交换窗；覆盖交换期的 motion 窗读交换期帧只有 0.40 倍。</li>
+<li>也没有稳定的专门头：#18 时 134/144 个头的 motion 流质量低于 1%。</li>
+</ul>
+<h3>成功局和失败局：头结构几乎相同</h3>
+<p>基线第 4 局与第 8 局每头裸露窗超额的相关 r=0.996，前 10 头完全重合，L14H6 富集也几乎一样。唯一能看到的差别在张开靠近阶段（#14～17）：成功局仍让交换 1 高于均匀（1.24 倍），失败局降到 0.77 倍，抬起时差别消失。这只是一对局的观察，两局的交换次数还不同，不能当作成败原因。</p>
+<h3>文字和画面位置：没有对准目标物</h3>
+<ul>
+<li>文本 query 只把 5.4～8.0% 给记忆区，8 个词之间看不出分工，没有「green 这个词去找方块那几帧」的迹象。「green」的裸露窗高占比（37.8%）主要来自第 0 帧的单个 token，去 sink 后 20.8%。这一集中在 motion 模型里只出现在第 0 层，不算跨层 sink。</li>
+<li>动作 query 在历史帧的 4×4 网格上近乎均匀（最大块 1.07～1.6 倍），没有对准方块或容器。</li>
+<li>当前图像里 wrist 视角拿到 36～48% 的 prefix 质量，集中在被抓容器边缘和指尖。</li>
+</ul>
+</div>
+
+<figure>
+<div class="shot"><img src="analysis/r3/fig_r3_4_orig_vs_robust.png" alt="原口径与去 sink 口径的占比对比"></div>
+<figcaption>去 sink 前后对比。实线是原口径，虚线去掉 <code>&lt;bos&gt;</code>，点线再剔除 6 个 motion 窗。帧流结论都没变；只有右下 motion 流的交换偏好对这一压力测试敏感。</figcaption>
+</figure>
+<figure>
+<div class="shot"><img src="analysis/r2/fig_r2_4_heads_k18.png" alt="第 18 次推理记忆区内部逐层逐头富集"></div>
+<figcaption>记忆区内部逐头富集。基线第 1、3 列可以看到 L14H6 和 L1H0 的「最近帧→裸露窗」约 6～7 倍，两局位置相同。右下是 motion 模型的帧→motion，大多数头富集几十倍。</figcaption>
+</figure>
+
+<div class="prose">
+<h2 id="s5">口径更正</h2>
+<p>第一版报给你的「motion 流落在交换区间 61.0%」和「靠近阶段 92%、85% 明显盯交换」不成立。原因是当时只要窗口与区间沾边就整窗计入，起点 160 的窗只有 4 帧在交换里，也被算满。</p>
+<table>
+<tr><th>推理</th><th>旧口径（均匀）</th><th>重叠 / 33（均匀）</th><th>读法</th></tr>
+<tr><td>#15</td><td>92.2%（71.4）</td><td>21.7%（45.0）</td><td>低于均匀</td></tr>
+<tr><td>#16</td><td>85.5%（62.5）</td><td>47.8%（39.4）</td><td>高于均匀，集中在第 2 次交换</td></tr>
+<tr><td>#17</td><td>69.2%（62.5）</td><td>22.1%（39.4）</td><td>低于均匀</td></tr>
+<tr><td>#18</td><td>61.0%（55.6）</td><td>30.5%（35.0）</td><td>低于均匀</td></tr>
+<tr><td>#19</td><td>57.5%（55.6）</td><td>36.2%（35.0）</td><td>接近均匀</td></tr>
+</table>
+<p>帧流口径不受影响。<code>result.md</code> 的一句话结论和评估总索引在这次提交里一并改为新口径。</p>
+</div>
+<figure>
+<div class="shot"><img src="analysis/x3/fig_x3_5_swap_split.png" alt="motion 流交换占比修正前后"></div>
+<figcaption>左图灰线是旧口径，橙线是修正后，橙色点线是修正口径的均匀期望，黄底是 #15～#19。</figcaption>
+</figure>
+<figure>
+<div class="shot"><img src="analysis/r1/fig_r1_1_share_curves.png" alt="三局直接注意力与 rollout 占比曲线"></div>
+<figcaption>rollout 对照。基线 VIS 的 rollout（橙）比直接注意力（蓝）更低，这个近似下看不到间接回看。它会过度平滑，不能排除信息走了 MLP 或残差。</figcaption>
+</figure>
+
+<div class="prose">
+<h2 id="s6">局限</h2>
+<ul>
+<li><b>样本小。</b>因果每组 12 局、单 seed，95% 区间很宽，±2～3 局在这个样本下分不开。注意力只有 3 局，基线的成败对比只有一对，motion 没有失败局对照。</li>
+<li><b>选局偏差。</b>12 局按 motion 模型成功挑选，正常组 11/12 是这个挑选的结果，不是模型真实水平（10-31 三个 seed 平均 27.33%）。</li>
+<li><b>扰动本身会造成翻转。</b>任何微小改动都会让动作偏离，结局翻转不一定来自被改内容本身；基线的大面积翻转就是例子。</li>
+<li><b>供体没有控制。</b>swap 固定用列表中的下一局，交换次数相同的只有 3 局，也没有比对具体交换路径和目标颜色。</li>
+<li><b>全 0、全遮都是分布外。</b>它们说明模型需要合法信号，不能说明信号里哪部分有用。</li>
+<li><b>attention 不等于贡献。</b>只存了注意力概率，没有值向量，不能按范数加权；rollout 与一跳间接都是线性近似。sink 阈值手设（已做 5～50 倍敏感性）。</li>
+<li><b>只有这一个任务</b>，也没有拿到其他任务的对照。两个模型训练口径也不同（官方 80k、自训 60k + motion），差异不能全归因于 motion。</li>
+<li><b>运行硬件不同。</b>权重在 A100 上训练，10-31 评估跑在 A40，本机是 A6000；展开版与 scan 版 bf16 不逐位（相对误差约 3e-3），执行局的动作来自展开版。第 26 局在 10-31 成功，这里正常组失败。</li>
+</ul>
+
+<h2 id="s7">下一步建议（未开始，需要你决定）</h2>
+<p>要回答「本局 motion 内容重要吗」，现有 12 局不够。按优先级：</p>
+<ol>
+<li><b>取消选局偏差</b>：同一 seed 的全部 50 局跑正常和 swap，再加第二个 seed。这样能看 swap 在未筛选局上的真实差距。</li>
+<li><b>控制供体</b>：同一局配「交换次数和路径都相同」与「明显不同」两类供体做配对，比固定用下一局更能回答内容问题。</li>
+<li><b>加分布内的平凡输入</b>：比如同一局 motion 的窗口打乱顺序、或静止片段的 motion。它比全 0 更接近分布，能区分「需要信号」和「需要本局时序」。</li>
+</ol>
+
+<h2 id="s8">过程与复现</h2>
+<table>
+<tr><th>阶段</th><th>做了什么</th><th>产物</th></tr>
+<tr><td>采集链</td><td>18 层手工展开捕获 attention，f32 语义闸通过（误差 1.19e-07、5.96e-08）；三局 60 次推理重跑动作逐位一致</td><td><code>scripts/interpret/</code></td></tr>
+<tr><td>第一阶段</td><td>基线第 4 局失败、第 8 局成功，motion 第 8 局成功；infra 尝试 npz=0，不计结局</td><td><code>stage1/</code>，4.9 GB</td></tr>
+<tr><td>X1～X4</td><td>动作与文本注意力：层头、时间线、区间核实、词与空间</td><td><code>analysis/x1～x4/</code></td></tr>
+<tr><td>R1～R4</td><td>存 prefix 全量注意力后：rollout、记忆区内部、sink、逐层通路</td><td><code>stage1b/</code>，26 GB；<code>analysis/r1～r4/</code></td></tr>
+<tr><td>因果</td><td>S7 遮挡开关、S8 motion 内容替换，共 9 组 × 12 局，另加 1 组带记录重跑</td><td><code>ablate12/</code>，352G</td></tr>
+</table>
+<p>文档在 <code>docs/evaluation-doc/attn-ctx512-vs-motion-1103/</code>，本报告是其中的 <code>report.html</code>，细节见 <code>result.md</code> 与各 <code>analysis/*/README.md</code>。原始数据在本机 <code>v1-store/evaluation/interpret-1103/</code>，不进 git。</p>
+<pre>OFFICIAL_CTX_ASSET=PASS sha256=387d4bd5…8ae8 bytes=11574223742 files=17
+LOCAL_ASSETS=PASS cc59999_files=38 cc59999_bytes=11976241540 encoder_sha256=27daa832
+STAGE1_PAIR=PASS task=ButtonUnmaskSwap ep=8 ctx=success motion=success tries=2
+SRC_EQ_5FCE5D3=PASS
+R3_SINK=PASS episodes=3 sinks=7 figs=5</pre>
+<p><b>和计划的出入。</b>计划 <code>1103-interpret-motion-attention-plan.html</code> 只写了第一阶段和第二阶段；X、R 两轮分析和因果实验是你在对话中逐步加的，没有写回计划文件，也没有走计划一致性审查，实施中调整也只记到第一阶段。计划第二阶段（20 局规模）尚未开始。代码合并都经过了独立审查，图都渲染后目视复查过。</p>
+</div>
+</div>
