@@ -70,3 +70,41 @@
 本轮运行 tmux 会话清单将在启动前固定并写入；当前尚未启动任何 GPU 运行会话。基础设施错误不自动更换配置；正常任务失败不重跑。启动顺序为代码整合与审查、定向验证、两种 VLA 各一局冒烟、核对全部采集字段及动作不变、再补齐其余清单。
 
 独立开工审查：`PLAN_CONSISTENCY_REVIEW=PASS base=b7ad0560e4315a8b1ecb669a86cb584e0eff68d7 findings=0 blocking=0`。执行位置和测试夹具调整均已独立审查通过，详见计划“实施追加记录”；没有改变模型、22 条组合或验收。
+
+## 起跑前确定的规格与完整命令
+
+运行根以下用 `R=/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103` 表示。所有命令的实际代码提交以起跑前写出的 `runtime-fixed.json` 为准，运行工作树必须处于该提交且 `git status --porcelain` 为空。
+
+两个 spec 的全部共同覆盖项为：`repo` 指向上述运行工作树；三个解释器使用第二节的绝对路径；`model_seed=42`、`purpose=validation`、`save_prefix=true`、`ablate=none`、`startup_timeout_seconds=900`、`rpc_timeout_seconds=600`。每组 `manifest`、`attn_out`、`run_root` 分别为 `R/manifest-<组>.json`、`R/<组>/attn`、`R/<组>/run`。组名是路径标识符 `with_motion`、`without_motion`，用户可见名称仍为本档案的两个固定名称。
+
+带 motion token 的 VLA 使用 `cuda=1`、`xla_mem_fraction=0.55`、`record_motion=R/with_motion/motion_records`，并传入第三节已有运行合同；不带 motion token 的 VLA 使用 `cuda=0`、`xla_mem_fraction=0.40`，不传运动记录或运动合同。权重与配置使用第三节的固定对象。
+
+执行入口为主会话在本轮运行根生成的 `run_capture.sh`。它先进入干净工作树，显式将该工作树根、`src`、`packages/openpi-client/src` 和主检出已有 benchmark 源码加入 `PYTHONPATH`；复用主检出的 uv 管理解释器，不同步依赖。缓存环境为：`UV_CACHE_DIR=<主根>/v1-store/cache/uv`、`XDG_CACHE_HOME=<主根>/v1-store/cache`、`HF_HOME=<主根>/v1-store/cache/hf`、`MPLCONFIGDIR=<主根>/v1-store/cache/matplotlib`；`OPENPI_DATA_HOME=<主根>/v1-store/models`、`MMEVLA_V1_STORE=<主根>/v1-store`；`HF_HUB_OFFLINE=1`、`TRANSFORMERS_OFFLINE=1`、`WANDB_MODE=disabled`、`PYTHONUNBUFFERED=1`。脚本最终执行 `timeout --signal=TERM --kill-after=30s 4h <主根>/.venv/bin/python -m scripts.interpret.run_local --spec R/spec-<组>.json --episodes <明确局号>`。不自动重试基础设施错误或正常失败；每模型总执行预算上限 4 小时由主会话监督，实际耗时与预算消耗在结果档案回写。
+
+两次冒烟分别为：
+
+```bash
+bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/run_capture.sh with_motion ButtonUnmaskSwap:8
+bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/run_capture.sh without_motion ButtonUnmaskSwap:8
+```
+
+通过采集验收后补齐剩余组合：
+
+```bash
+bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/run_capture.sh with_motion ButtonUnmaskSwap:4,ButtonUnmaskSwap:11,ButtonUnmaskSwap:12,ButtonUnmaskSwap:17,ButtonUnmaskSwap:18,ButtonUnmaskSwap:20,ButtonUnmaskSwap:26,ButtonUnmaskSwap:34,ButtonUnmaskSwap:37,ButtonUnmaskSwap:38,ButtonUnmaskSwap:40
+bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/run_capture.sh without_motion ButtonUnmaskSwap:12,ButtonUnmaskSwap:14,ButtonUnmaskSwap:16,ButtonUnmaskSwap:18,ButtonUnmaskSwap:20,ButtonUnmaskSwap:26,ButtonUnmaskSwap:34,ButtonUnmaskSwap:38,ButtonUnmaskSwap:47
+```
+
+上述命令各自在 detached tmux 中运行，外层使用 `set -o pipefail` 与 `tee` 记录 stdout/stderr，结束追加真实 `EXIT_CODE=`；程序原有退出处理负责清理本次创建的策略与仿真子进程。健康端点只作为服务已加载的证据，首次 `ATTN_INFER` 及完整记录才作为首次推理证据。
+
+本轮预留 tmux 名单与日志如下；实际启动时间、状态与运行提交起跑时写入运行根记录，没有启动的项不能当作已有进程：
+
+| 阶段 | 精确会话名 | 日志（相对 R） |
+|---|---|---|
+| 带 motion token 的 VLA 冒烟 | `ia-success-smoke-with-motion-1104` | `logs/smoke-with_motion.log` |
+| 不带 motion token 的 VLA 冒烟 | `ia-success-smoke-without-motion-1104` | `logs/smoke-without_motion.log` |
+| 带 motion token 的 VLA 剩余回合 | `ia-success-all-with-motion-1104` | `logs/all-with_motion.log` |
+| 不带 motion token 的 VLA 剩余回合 | `ia-success-all-without-motion-1104` | `logs/all-without_motion.log` |
+| 离线分析 | `ia-success-analysis-1104` | `logs/analysis.log` |
+
+只允许主会话按这份清单核实后逐个操作本任务会话，不处理其他用户或任务的会话。

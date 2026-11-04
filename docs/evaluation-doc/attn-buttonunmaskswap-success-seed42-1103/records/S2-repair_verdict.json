@@ -1,0 +1,82 @@
+{
+ "S2_REPAIR": "PASS",
+ "R2_real_infers": [
+  0,
+  18
+ ],
+ "valid_motion_windows": [
+  0,
+  9
+ ],
+ "U_all_finite": true,
+ "infer18_cached_path_max_abs_diff": 0,
+ "R2_aggregate_paths": {
+  "recent→VIS": {
+   "uniform": 0.0982725527831094,
+   "mean_mass": 0.02397406519287162,
+   "mean_enrich": 0.2439548430759007
+  },
+  "recent→SWAP": {
+   "uniform": 0.27024952015355086,
+   "mean_mass": 0.07572893853713242,
+   "mean_enrich": 0.28021858649038345
+  },
+  "motSWAP→SWAP": {
+   "uniform": 0.3378119001919386,
+   "mean_mass": 0.1333193239115625,
+   "mean_enrich": 0.39465549862456856
+  },
+  "frames→motion": {
+   "uniform": 0.01675100331530274,
+   "mean_mass": 0.5835337981225779,
+   "mean_enrich": 34.83575205250514
+  }
+ },
+ "outcomes": {
+  "success": {
+   "task_success": true,
+   "label": "成功"
+  },
+  "fail": {
+   "task_success": false,
+   "label": "失败"
+  },
+  "timeout": {
+   "task_success": false,
+   "label": "超时"
+  },
+  "failure": {
+   "task_success": false,
+   "label": "失败"
+  },
+  "failed": {
+   "task_success": false,
+   "label": "失败"
+  },
+  "unknown": {
+   "task_success": null,
+   "label": "结局未核实"
+  },
+  "infra_error": {
+   "task_success": null,
+   "label": "结局未核实"
+  },
+  "None": {
+   "task_success": null,
+   "label": "结局未核实"
+  }
+ },
+ "real_terminals": [
+  {
+   "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/interpret-1103/stage1b/ctx/attn/3a79ca2d563c4a679d51013e15394130/episode.json",
+   "outcome": "fail",
+   "task_success": false
+  },
+  {
+   "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/interpret-1103/ablate12/mot/motion_zero/attn/0ab0373ad45543ab9ff9495803cc3b7c/episode.json",
+   "outcome": "timeout",
+   "task_success": false
+  }
+ ],
+ "elapsed_seconds": 13.258476674556732
+}

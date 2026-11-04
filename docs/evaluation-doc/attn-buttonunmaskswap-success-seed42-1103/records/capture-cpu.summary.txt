@@ -1,0 +1,20 @@
+........................................................................ [ 96%]
+...                                                                      [100%]
+=============================== warnings summary ===============================
+tests/interpret/test_ablate.py::test_serve_help_has_ablate
+  /data/hongzefu/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/ml_collections/config_dict/config_dict.py:163: DeprecationWarning: invalid escape sequence '\['
+    index_match = re.match("(.*)\[([0-9]+)\]", key)
+
+tests/interpret/test_ablate.py::test_serve_help_has_ablate
+  /data/hongzefu/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/beartype/_util/error/utilerrwarn.py:105: BeartypeDecorHintPep585DeprecationWarning: Function openpi.training.utils.state_tree_to_info() parameter "state" PEP 484 type hint typing.Hashable deprecated by PEP 585. This hint is scheduled for removal in the first Python version released after October 5th, 2025. To resolve this, import this hint from "beartype.typing" rather than "typing". For further commentary and alternatives, see also:
+      https://beartype.readthedocs.io/en/latest/api_roar/#pep-585-deprecations
+    warn(message, cls)
+
+tests/interpret/test_ablate.py: 18 warnings
+  /data/hongzefu/robomme_policy_learning_MotionJEPA/.venv/lib/python3.11/site-packages/flax/core/scope.py:959: DeprecationWarning: shape requires ndarray or scalar arguments, got <class 'jax._src.api.ShapeDtypeStruct'> at position 0. In a future JAX release this will be an error.
+    if jnp.shape(val) != jnp.shape(abs_val):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+75 passed, 20 warnings in 155.75s (0:02:35)
+MOTION_CAPTURE_CPU=PASS tests=75 elapsed_seconds=155.75
+EXIT_CODE=0
