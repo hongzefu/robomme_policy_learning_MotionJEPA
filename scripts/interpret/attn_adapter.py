@@ -23,6 +23,16 @@ P / MEM / IMG / TXT 一律从当次观测经 `embed_prefix` / `embed_memory` 的
   # 可选 AttnAdapter(policy, save_prefix=True)：last_attn 另含 "probs_prefix": f16 (18, 8, P, P)，
   # 即 prefill 每层完整 prefix 自注意力（padding query 行置 0）；默认关闭时 jit 不产出该张量、其余输出不变。
 
+因果遮挡（S7，默认全关；关闭时走与原来逐字相同的 trace，编译产物与输出不变）：
+  - key 遮挡 mask_keys：bool[P]（或 bool[MEM]，自动右补 False 到 P），True = 该 key 列被遮；每次推理动态传入
+    （jit 普通参数，非 static）。prefill：非被遮 query 行 × 被遮 key 列 → False，被遮 token 之间照常互读
+    （同 mv_model_adapter.MVAdapter._build_sample 的 apply_gate）；去噪：动作 query 不能读被遮列。
+    只改 attention mask 的 key 列，不改 input_mask / positions / mem_order（positions 仍按原 prefix_mask 求）。
+  - 头遮挡 ablate_heads：static 元组 ((layer, head), ...)，把该层该头的 attention 输出（out_einsum 之前的
+    encoded，B T K G H 里 query 头 head = k*G+g）置零，prefill 与去噪都生效；由本文件 _make_ablate_attention 实现。
+  用法：AttnAdapter(policy, ablate_heads=((3, 0),))；fn = adapter.make_sample_fn()；fn(rng, obs, mask_keys=<bool[P]>)。
+  last_attn 另含 "n_masked_keys"（本次被遮 key 列数）与 "ablate_heads"。
+
 用法：
   # CPU、不加载权重，抽象求值两种 P 下的输出形状
   JAX_PLATFORMS=cpu uv run --no-sync python scripts/interpret/attn_adapter.py --dry-shapes
@@ -48,12 +58,158 @@ _HERE = pathlib.Path(__file__).resolve().parent
 _MV_DIR = _HERE.parent / "motion-variance"
 sys.path.insert(0, str(_MV_DIR))
 import mv_common as C  # noqa: E402
+import mv_model_adapter as _MVA  # noqa: E402
 from mv_model_adapter import _capture_attn, _guard_model_source, _make_patched_attention  # noqa: E402
 
 N_LAYERS = 18
 DEFAULT_NUM_STEPS = 10
 # RoboMME 推理只喂两路图像（robomme_policy.py 去掉了 right_wrist_0_rgb），dry-shapes 的抽象观测与之一致
 ROBOMME_IMAGE_KEYS = ("base_0_rgb", "left_wrist_0_rgb")
+
+
+def normalize_heads(ablate_heads, n_layers: int = N_LAYERS, n_heads: int = 8) -> tuple:
+    """((layer, head), ...) → 去重排序的 int 元组；越界即 ValueError。"""
+    out = set()
+    for item in ablate_heads or ():
+        layer, head = (int(x) for x in item)
+        if not (0 <= layer < n_layers and 0 <= head < n_heads):
+            raise ValueError(f"头遮挡越界 L{layer}H{head}（层 0..{n_layers - 1}，头 0..{n_heads - 1}）")
+        out.add((layer, head))
+    return tuple(sorted(out))
+
+
+_ABLATE_CLS: dict = {}
+
+
+def _make_ablate_attention(zero_heads: tuple):
+    """与 mv_model_adapter._make_patched_attention 的 _PatchedAttention 逐字同式（同样把 f32 概率追加到 _CAPTURE），
+    只在 out_einsum 之前把 zero_heads 这些 query 头的 encoded 置零（jnp.where，未遮的头原值透传）。"""
+    zero_heads = tuple(sorted(set(int(h) for h in zero_heads)))
+    if zero_heads in _ABLATE_CLS:
+        return _ABLATE_CLS[zero_heads]
+    import einops
+    import flax.linen as nn
+    import jax
+    import jax.numpy as jnp
+    import openpi.models.lora as lora
+    from openpi.models import gemma
+    from openpi.models.gemma import _apply_rope, _name
+
+    capture = _MVA._CAPTURE
+
+    class _AblateAttention(gemma.Attention):
+        @nn.compact
+        def __call__(self, xs, positions, attn_mask, kv_cache):
+            assert all(config.head_dim == self.configs[0].head_dim for config in self.configs)
+            assert all(config.num_heads == self.configs[0].num_heads for config in self.configs)
+            assert all(config.num_kv_heads == self.configs[0].num_kv_heads for config in self.configs)
+            dtype = next(x.dtype for x in xs if x is not None)
+            qkvs = []
+            for i, (x, config) in enumerate(zip(xs, self.configs, strict=True)):
+                if x is None:
+                    continue
+                if config.num_kv_heads == config.num_heads:
+                    qkv_einsum = lora.Einsum(
+                        shape=(3, config.num_heads, config.width, config.head_dim),
+                        name=_name("qkv_einsum", i),
+                        init_fn=nn.initializers.lecun_normal(in_axis=-2, out_axis=-1, batch_axis=(0, 1)),
+                        lora_config=config.lora_configs.get("attn"))
+                    qkvs.append(qkv_einsum("BSD,3KDH->3BSKH", x))
+                else:
+                    q_einsum = lora.Einsum(
+                        shape=(config.num_heads, config.width, config.head_dim),
+                        name=_name("q_einsum", i),
+                        init_fn=nn.initializers.lecun_normal(in_axis=-2, out_axis=-1, batch_axis=(0,)),
+                        lora_config=config.lora_configs.get("attn"))
+                    q = q_einsum("BTD,NDH->BTNH", x)
+                    kv_einsum = lora.Einsum(
+                        shape=(2, config.num_kv_heads, config.width, config.head_dim),
+                        name=_name("kv_einsum", i),
+                        init_fn=nn.initializers.lecun_normal(in_axis=-2, out_axis=-1, batch_axis=(0, 1)),
+                        lora_config=config.lora_configs.get("attn"))
+                    k, v = kv_einsum("BSD,2KDH->2BSKH", x)
+                    qkvs.append((q, k, v))
+            q, k, v = (jnp.concatenate(y, axis=1) for y in zip(*qkvs, strict=True))
+            q = _apply_rope(q, positions=positions)
+            q *= self.configs[0].head_dim ** -0.5
+            k = _apply_rope(k, positions=positions)
+            assert q.dtype == k.dtype == v.dtype == dtype
+            if kv_cache is not None:
+                cache_k, cache_v = kv_cache
+                k = jnp.concatenate([cache_k, k], axis=1)
+                v = jnp.concatenate([cache_v, v], axis=1)
+            q = einops.rearrange(q, "B T (K G) H -> B T K G H", K=self.configs[0].num_kv_heads)
+            logits = jnp.einsum("BTKGH,BSKH->BKGTS", q, k, preferred_element_type=jnp.float32)
+            if attn_mask.shape != (q.shape[0], 1, q.shape[1], k.shape[1]):
+                raise ValueError(f"Attention mask with shape {attn_mask.shape} but shapes for q and k are: {q.shape} and {k.shape}")
+            big_neg = -2.3819763e38
+            masked_logits = jnp.where(attn_mask[:, :, None, :, :], logits, big_neg)
+            probs_f32 = jax.nn.softmax(masked_logits, axis=-1)
+            capture.append(probs_f32)
+            probs = probs_f32.astype(dtype)
+            encoded = jnp.einsum("BKGTS,BSKH->BTKGH", probs, v)
+            # ← 头遮挡：query 头 h = k*G + g 的输出置零（out_einsum 之前）
+            n_k, n_g = encoded.shape[2], encoded.shape[3]
+            keep = np.ones((n_k, n_g), bool)
+            for h in zero_heads:
+                if not 0 <= h < n_k * n_g:
+                    raise ValueError(f"头号 {h} 越界（共 {n_k * n_g} 个 query 头）")
+                keep[h // n_g, h % n_g] = False
+            encoded = jnp.where(jnp.asarray(keep)[None, None, :, :, None], encoded, jnp.zeros((), encoded.dtype))
+            encoded = einops.rearrange(encoded, "B T K G H -> B T (K G) H")
+            out = []
+            start = 0
+            for i, (x, config) in enumerate(zip(xs, self.configs, strict=True)):
+                if x is not None:
+                    end = start + x.shape[1]
+                    out_einsum = lora.Einsum(
+                        shape=(config.num_heads, config.head_dim, config.width),
+                        name=_name("attn_vec_einsum", i),
+                        init_fn=nn.initializers.lecun_normal(in_axis=(-3, -2), out_axis=-1),
+                        lora_config=config.lora_configs.get("attn"))
+                    out.append(out_einsum("BTNH,NHD->BTD", encoded[:, start:end]))
+                    start = end
+                else:
+                    out.append(None)
+            return out, (k, v)
+
+    _ABLATE_CLS[zero_heads] = _AblateAttention
+    return _AblateAttention
+
+
+def head_out_leaves(state) -> list:
+    """llm 里 attn_vec_einsum（两路 expert）的参数叶子 (keystr, shape)；自检用权重置零的定位。"""
+    import jax
+    found = []
+
+    def visit(path, x):
+        ks = jax.tree_util.keystr(path)
+        if "llm" in ks and "attn_vec_einsum" in ks:
+            found.append((ks, tuple(x.shape)))
+        return x
+
+    jax.tree_util.tree_map_with_path(visit, state)
+    return found
+
+
+def zero_head_out_weights(state, ablate_heads, n_layers: int = N_LAYERS):
+    """把 attn_vec_einsum 权重的 [layer, head] 行置零（与 encoded 该头置零在数学上等价）；返回 (新 state, 置零叶子数)。"""
+    import jax
+    import jax.numpy as jnp
+    heads = normalize_heads(ablate_heads, n_layers)
+    n = [0]
+
+    def f(path, x):
+        ks = jax.tree_util.keystr(path)
+        if "llm" in ks and "attn_vec_einsum" in ks:
+            if x.ndim != 4 or x.shape[0] != n_layers:
+                raise SystemExit(f"错误: {ks} 形状 {x.shape} 不是 (L, N, H, D)")
+            n[0] += 1
+            for layer, head in heads:
+                x = x.at[layer, head].set(jnp.zeros((), x.dtype))
+        return x
+
+    return jax.tree_util.tree_map_with_path(f, state), n[0]
 
 
 class _ModelShim:
@@ -64,7 +220,7 @@ class _ModelShim:
 
 
 class AttnAdapter:
-    def __init__(self, policy, *, require_flags: bool = True, save_prefix: bool = False):
+    def __init__(self, policy, *, require_flags: bool = True, save_prefix: bool = False, ablate_heads=()):
         import einops
         import flax.nnx as nnx
         import jax
@@ -97,6 +253,7 @@ class AttnAdapter:
         self._layout_cache: dict = {}
         self.last_attn: dict | None = None
         self.save_prefix = bool(save_prefix)
+        self.ablate_heads = normalize_heads(ablate_heads, N_LAYERS, self.n_heads)
         self._check_param_tree()
         self._build()
 
@@ -146,19 +303,25 @@ class AttnAdapter:
         def llm_of(state):
             return state.to_pure_dict()["PaliGemma"]["llm"]
 
-        def block_apply(layers, l, xs, kv, positions, mask3d, adarms):
+        def block_apply(layers, l, xs, kv, positions, mask3d, adarms, attn_cls=patched):
             p_l = jax.tree.map(lambda x: x[l], layers)
-            with _capture_attn(hg, patched) as cap:
+            with _capture_attn(hg, attn_cls) as cap:
                 out, kv_out = block.apply({"params": p_l}, xs, kv, positions, mask3d[:, None, :, :],
                                           adarms, None, None, True)
                 probs = cap[0]
             return out, kv_out, probs
 
-        @functools.partial(jax.jit, static_argnames=("num_steps", "txt_lo", "out_f16", "save_prefix"))
-        def f_sample_attn(state, rng, obs, noise, num_steps, txt_lo, out_f16=True, save_prefix=False):
+        @functools.partial(jax.jit, static_argnames=("num_steps", "txt_lo", "out_f16", "save_prefix", "ablate_heads"))
+        def f_sample_attn(state, rng, obs, noise, num_steps, txt_lo, out_f16=True, save_prefix=False,
+                          mask_keys=None, ablate_heads=()):
             """逐字复刻 HistoryPi0.sample_actions（context 分支）的 18 层展开版；返回 (x_0, probs_action, probs_text, n_done)。
             probs_action (num_steps, L, b, G, AH, P+AH)；probs_text (L, b, G, TXT, P)，padding 文本行置 0。
-            save_prefix=True（static）时末尾多返回 probs_prefix (L, b, G, P, P)：prefill 每层完整概率，padding query 行置 0。"""
+            save_prefix=True（static）时末尾多返回 probs_prefix (L, b, G, P, P)：prefill 每层完整概率，padding query 行置 0。
+            mask_keys bool[b,P]（动态，None=关）：被遮 key 列；ablate_heads（static）((layer, head), ...)：头输出置零。"""
+            by_layer: dict = {}
+            for layer, head in ablate_heads:
+                by_layer.setdefault(int(layer), []).append(int(head))
+            cls_of = {layer: _make_ablate_attention(tuple(hs)) for layer, hs in by_layer.items()}
             m = nnx.merge(gdef, state)
             llm = llm_of(state)
             layers, fn1 = llm["layers"], llm["final_norm_1"]
@@ -169,12 +332,17 @@ class AttnAdapter:
                 noise = jax.random.normal(rng, (b, m.action_horizon, m.action_dim))
             pt, pm, par_, pna = m.embed_prefix(o)
             base = make_attn_mask(pm, par_, pna)                        # (b,P,P)
-            pos = jnp.cumsum(pm, axis=1) - 1
+            if mask_keys is not None:
+                # 干预点 1（prefill）：非被遮 query 行 × 被遮 key 列 → False；被遮 token 之间照常互读
+                mk = jnp.broadcast_to(mask_keys.astype(bool), pm.shape)
+                base = base & ~(mk[:, None, :] & ~mk[:, :, None])
+            pos = jnp.cumsum(pm, axis=1) - 1                             # 用原 prefix_mask，绝不用遮挡
             P = pt.shape[1]
             h = pt.astype(ed)
             ks, vs, txt, pre = [], [], [], []
             for l in range(L):
-                (h, _), (k, v), probs = block_apply(layers, l, [h, None], None, pos, base, [None, None])
+                (h, _), (k, v), probs = block_apply(layers, l, [h, None], None, pos, base, [None, None],
+                                                    cls_of.get(l, patched))
                 ks.append(k); vs.append(v)
                 txt.append(probs[:, 0, :, txt_lo:P, :])                  # (b,G,TXT,P)
                 if save_prefix:
@@ -189,12 +357,15 @@ class AttnAdapter:
                 st, sm, sar, _, ad = m.embed_suffix(o, x_t, jnp.broadcast_to(time, b))
                 sattn = make_attn_mask(sm, sar)
                 prefix_attn = einops.repeat(pm, "b p -> b s p", s=st.shape[1])
+                if mask_keys is not None:
+                    prefix_attn = prefix_attn & ~mk[:, None, :]          # 干预点 2（去噪）：动作 query 不读被遮列
                 full = jnp.concatenate([prefix_attn, sattn], axis=-1)
                 spos = spos_base + jnp.cumsum(sm, axis=-1) - 1
                 hs = st.astype(ed)
                 rows = []
                 for l in range(L):
-                    (_, hs), _, probs = block_apply(layers, l, [None, hs], (K[l], V[l]), spos, full, [None, ad])
+                    (_, hs), _, probs = block_apply(layers, l, [None, hs], (K[l], V[l]), spos, full, [None, ad],
+                                                    cls_of.get(l, patched))
                     rows.append(probs[:, 0])                             # (b,G,AH,P+AH)：不平均，原样保留
                 hs, _ = final_norm_1.apply({"params": fn1}, hs, ad)
                 v_t = m.action_out_proj(hs[:, -AH:])
@@ -232,40 +403,68 @@ class AttnAdapter:
         self.f_sample_attn = f_sample_attn
         self.f_masks = f_masks
 
+    def pad_mask_keys(self, mask_keys, lay):
+        """bool[P] / bool[MEM] / bool[b,·] → jnp bool[b,P]（MEM 长度右补 False）；None 透传。"""
+        if mask_keys is None:
+            return None
+        mk = np.asarray(mask_keys, dtype=bool)
+        if mk.ndim == 1:
+            mk = mk[None]
+        P, MEM = lay["P"], lay["MEM"]
+        if mk.shape[-1] == MEM and MEM != P:
+            mk = np.concatenate([mk, np.zeros(mk.shape[:-1] + (P - MEM,), bool)], axis=-1)
+        if mk.shape[-1] != P:
+            raise ValueError(f"mask_keys 长度 {mk.shape[-1]} 既不是 P={P} 也不是 MEM={MEM}")
+        return self.jnp.asarray(mk)
+
     def run(self, rng, observation, *, noise=None, num_steps: int = DEFAULT_NUM_STEPS, out_f16: bool = True, state=None,
-            save_prefix: bool | None = None):
+            save_prefix: bool | None = None, mask_keys=None, ablate_heads=None):
         """调一次展开版；返回 (x_0, probs_action, probs_text, n_done, layout)，probs 仍在 device 上、保留 batch 轴。
-        save_prefix（缺省取构造参数）为真时末尾多一个 probs_prefix (L, b, G, P, P)。"""
+        save_prefix（缺省取构造参数）为真时末尾多一个 probs_prefix (L, b, G, P, P)。
+        mask_keys（缺省 None=关）见 pad_mask_keys；ablate_heads（缺省取构造参数）((layer, head), ...)。
+        遮挡全关时调用形式与 S7 之前逐字相同（不传 mask_keys / ablate_heads），trace 与编译产物不变。"""
         lay = self.layout(observation)
         st = self.gstate if state is None else state
+        heads = self.ablate_heads if ablate_heads is None else normalize_heads(ablate_heads, N_LAYERS, self.n_heads)
+        extra = {}
+        if mask_keys is not None:
+            extra["mask_keys"] = self.pad_mask_keys(mask_keys, lay)
+        if heads:
+            extra["ablate_heads"] = heads
         if self.save_prefix if save_prefix is None else bool(save_prefix):
             x_0, pa, ptxt, n_done, pp = self.f_sample_attn(st, rng, observation, noise, int(num_steps),
-                                                           lay["MEM"] + lay["IMG"], out_f16, save_prefix=True)
+                                                           lay["MEM"] + lay["IMG"], out_f16, save_prefix=True, **extra)
             return x_0, pa, ptxt, n_done, lay, pp
         x_0, pa, ptxt, n_done = self.f_sample_attn(st, rng, observation, noise, int(num_steps),
-                                                   lay["MEM"] + lay["IMG"], out_f16)
+                                                   lay["MEM"] + lay["IMG"], out_f16, **extra)
         return x_0, pa, ptxt, n_done, lay
 
-    def make_sample_fn(self):
+    def make_sample_fn(self, ablate_heads=None):
         """返回可顶掉 policy._sample_actions 的可调用：fn(rng, observation, **kw) -> actions（与生产同形同 dtype）。
-        每次调用后 self.last_attn 存本次推理的原始概率（batch=1，去 batch 轴，f16，不平均）。"""
+        kw 支持 noise / num_steps / mask_keys（每次推理由调用方按观测算好，bool[P] 或 bool[MEM]，None=关）。
+        ablate_heads 缺省取构造参数。每次调用后 self.last_attn 存本次推理的原始概率（batch=1，去 batch 轴，f16，不平均）。"""
         jax = self.jax
+        heads = self.ablate_heads if ablate_heads is None else normalize_heads(ablate_heads, N_LAYERS, self.n_heads)
 
         def fn(rng, observation, **kw):
-            extra = set(kw) - {"noise", "num_steps"}
+            extra = set(kw) - {"noise", "num_steps", "mask_keys"}
             if extra:
                 raise TypeError(f"AttnAdapter sample_fn 不支持的参数 {sorted(extra)}")
             num_steps = int(kw.get("num_steps", DEFAULT_NUM_STEPS))
             if observation.state.shape[0] != 1:
                 raise ValueError(f"只支持 batch=1，得到 {observation.state.shape[0]}")
-            out = self.run(rng, observation, noise=kw.get("noise"), num_steps=num_steps)
+            mask_keys = kw.get("mask_keys")
+            out = self.run(rng, observation, noise=kw.get("noise"), num_steps=num_steps, mask_keys=mask_keys,
+                           ablate_heads=heads)
             x_0, pa, ptxt, n_done, lay = out[:5]
             pa_h, ptxt_h, n_h = jax.device_get((pa, ptxt, n_done))
             if int(n_h) != num_steps:
                 raise RuntimeError(f"去噪循环实际步数 {int(n_h)} != num_steps {num_steps}")
             self.last_attn = {"probs_action": np.asarray(pa_h[:, :, 0]),       # (num_steps, L, G, AH, P+AH) f16
                               "probs_text": np.asarray(ptxt_h[:, 0]),          # (L, G, TXT, P) f16
-                              "P": int(lay["P"]), "MEM": int(lay["MEM"])}
+                              "P": int(lay["P"]), "MEM": int(lay["MEM"]),
+                              "n_masked_keys": int(np.asarray(mask_keys, bool).sum()) if mask_keys is not None else 0,
+                              "ablate_heads": heads}
             if self.save_prefix:
                 self.last_attn["probs_prefix"] = np.asarray(jax.device_get(out[5])[:, 0])   # (L, G, P, P) f16
             return x_0
@@ -335,6 +534,14 @@ def dry_shapes(args) -> int:
                                                                 save_prefix=True),
                                ad.gstate, jax.random.key(0), obs)
         P, MEM = lay["P"], lay["MEM"]
+        # S7 遮挡态：mask_keys（动态 bool[1,P]）+ 头遮挡（static）同时开，形状 / dtype 与关闭态一致
+        heads = ((3, 0), (16, 0))
+        out_a = jax.eval_shape(lambda s, r, o, mk: ad.f_sample_attn(s, r, o, None, steps, lay["MEM"] + lay["IMG"], True,
+                                                                    mask_keys=mk, ablate_heads=heads),
+                               ad.gstate, jax.random.key(0), obs, jax.ShapeDtypeStruct((1, P), jnp.bool_))
+        ablate_same = all(tuple(a.shape) == tuple(b.shape) and a.dtype == b.dtype for a, b in zip(out, out_a))
+        hol = head_out_leaves(ad.gstate)
+        hol_ok = (len(hol) == 2 and all(len(sh) == 4 and sh[:2] == (N_LAYERS, ad.n_heads) for _, sh in hol))
         pp = out_p[4]
         want_pp = (N_LAYERS, 1, ad.n_heads, P, P)
         same_rest = all(tuple(a.shape) == tuple(b.shape) and a.dtype == b.dtype for a, b in zip(out, out_p[:4]))
@@ -344,8 +551,11 @@ def dry_shapes(args) -> int:
         ok = (tuple(pa.shape) == want_pa and tuple(ptxt.shape) == want_pt and tuple(x_0.shape) == want_x
               and pa.dtype == jnp.float16 and ptxt.dtype == jnp.float16 and x_0.dtype == jnp.float32
               and lay["TXT"] == 64 and ad.AH == 20 and ad.n_heads == 8
-              and tuple(pp.shape) == want_pp and pp.dtype == jnp.float16 and same_rest)
+              and tuple(pp.shape) == want_pp and pp.dtype == jnp.float16 and same_rest
+              and ablate_same and hol_ok)
         ok_all &= ok
+        print(f"DRY_ABLATE {tag} ablate_shapes_same={int(ablate_same)} head_out_leaves={len(hol)} "
+              f"shapes={[sh for _, sh in hol]} ok={int(ablate_same and hol_ok)}", flush=True)
         la = (steps, N_LAYERS) + want_pa[3:]
         lt = (N_LAYERS,) + want_pt[2:]
         print(f"DRY_SHAPES {tag} ok={int(ok)} config={cfg_used} history={hc_src} "
@@ -543,6 +753,52 @@ def selftest(args) -> int:
     print(f"[attn] rowsum_err_f32={rowsum_err:.3g} rowsum_err_f16={rowsum16:.3g} uniform spread={spread:.3g} "
           f"illegal_max={illegal:.3g} q_einsum_leaves_zeroed={n_zero[0]}", flush=True)
 
+    # ⑤ 因果遮挡（S7）：mask 预设按服务端同一函数从观测算出（motion → mask_motion，基线 → mask_vis）
+    if str(_HERE.parents[1]) not in sys.path:
+        sys.path.insert(0, str(_HERE.parents[1]))
+    from scripts.interpret.serve_policy_attn import _pad_times, memory_key_mask, parse_ablate
+    cfgp = policy.config
+    tpf = int(cfgp.token_per_image) * int(cfgp.num_views)
+    budget = int(cfgp.budget)
+    static = np.asarray(obs.static_mask).reshape(-1).astype(bool)
+    if motion:
+        mem_order_np = np.asarray(obs.mem_order).reshape(-1).astype(np.int64)
+        valid = np.concatenate([static, np.asarray(obs.motion_mask).reshape(-1).astype(bool)])[mem_order_np]
+    else:
+        mem_order_np = np.arange(MEM, dtype=np.int64)
+        valid = static
+    frames = policy.mem_buffer.get_frame_sampling_indices(int(policy.step_idx), budget, int(cfgp.token_per_image))
+    ft = _pad_times(frames, budget // tpf)
+    mask_kind = "mask_motion" if motion else "mask_vis"
+    mk = np.zeros(P, bool)
+    mk[:MEM] = memory_key_mask({mask_kind}, mem_order_np, ft, budget=budget, tokens_per_frame=tpf, valid=valid)
+    n_mk = int(mk.sum())
+    heads = parse_ablate(f"heads:{args.ablate_heads}")["heads"]
+    # ① 遮挡全关 ≡ 原路径：空 mask（全 False）走门控分支、空头元组，动作与概率逐位一致
+    x_z, pa_z, pt_z, _, _ = ad.run(key0, obs, noise=noise, mask_keys=np.zeros(P, bool), ablate_heads=())
+    x_z, pa_z, pt_z = jax.device_get((x_z, pa_z, pt_z))
+    ablate_off_same = int(np.array_equal(x_off, x_z) and np.array_equal(pa_off, pa_z) and np.array_equal(pt_off, pt_z)
+                          and np.array_equal(a_mine_np, np.asarray(x_off)))
+    del pa_z, pt_z
+    # ② mask_keys：被遮列在 probs_action 与 probs_prefix（非被遮且有效的 query 行）上质量为 0，行和仍为 1（f32）
+    _, pa_m, _, _, _, pp_m = ad.run(key0, obs, noise=noise, out_f16=False, save_prefix=True, mask_keys=mk)
+    pa_m, pp_m = jax.device_get((pa_m, pp_m))
+    rows = pv[0] & ~mk
+    mass_a = float(pa_m[..., :P][..., mk].max()) if n_mk else 0.0
+    pp0 = pp_m[:, 0]                                              # (L,G,P,P)
+    mass_p = float(pp0[:, :, rows][..., mk].max()) if n_mk else 0.0
+    masked_cols_mass = max(mass_a, mass_p)
+    masked_rowsum = max(float(np.abs(pa_m.astype(np.float64).sum(-1) - 1.0).max()),
+                        float(np.abs(pp0[:, :, pv[0]].astype(np.float64).sum(-1) - 1.0).max()))
+    del pa_m, pp_m, pp0
+    # ④ 遮挡后动作确实改变（bf16 生产口径）
+    x_mb = np.asarray(jax.device_get(ad.run(key0, obs, noise=noise, mask_keys=mk)[0]))
+    x_hb = np.asarray(jax.device_get(ad.run(key0, obs, noise=noise, ablate_heads=heads)[0]))
+    d_mask, d_head = _maxd(x_off, x_mb), _maxd(x_off, x_hb)
+    print(f"[attn] ablate {mask_kind} n_masked_keys={n_mk} masked_cols_mass={masked_cols_mass:.3g} "
+          f"masked_rowsum_err={masked_rowsum:.3g} off_same={ablate_off_same} | actions max_abs vs off: "
+          f"mask={d_mask:.4g} heads{list(heads)}={d_head:.4g}", flush=True)
+
     # ④ f32 语义闸：参数与 embed_dtype 升 f32、matmul_precision=highest，生产 nn.scan 路径 vs 展开版
     t1 = time.perf_counter()
     run_root = ckpt.parent
@@ -558,17 +814,32 @@ def selftest(args) -> int:
         b32_prod = np.asarray(jax.block_until_ready(prod32(key0, obs, noise=noise)))
         x32, _, _, _, _ = ad32.run(key0, obs, noise=noise, out_f16=True)
         b32_mine = np.asarray(jax.block_until_ready(x32))
+        # ③ 头遮挡 ≡ 把该层该头的 attn_vec_einsum 权重行置零（两路 expert）：encoded 该头贡献为 0 的独立对照
+        st_w, n_w = zero_head_out_weights(ad32.gstate, heads)
+        x_ab = np.asarray(jax.block_until_ready(ad32.run(key0, obs, noise=noise, ablate_heads=heads)[0]))
+        x_wz = np.asarray(jax.block_until_ready(ad32.run(key0, obs, noise=noise, state=st_w)[0]))
+        del st_w
     f32_maxabs = float(np.abs(b32_prod.astype(np.float64) - b32_mine.astype(np.float64)).max())
+    head_vs_weightzero = _maxd(x_ab, x_wz)
+    head_effect32 = _maxd(x_ab, b32_mine)
+    head_zero_ok = int(n_w == 2 and head_vs_weightzero <= 1e-5)
     print(f"[attn] f32 prod_vs_unrolled max_abs={f32_maxabs:.3g} strict_load={int(strict)} wall={time.perf_counter() - t1:.0f}s", flush=True)
+    print(f"[attn] f32 heads{list(heads)} ablate_vs_weightzero max_abs={head_vs_weightzero:.3g} "
+          f"(attn_vec_einsum 叶子 {n_w}) ablate_vs_off max_abs={head_effect32:.4g}", flush=True)
 
+    ablate_ok = (ablate_off_same == 1 and n_mk > 0 and masked_cols_mass <= 1e-7 and masked_rowsum <= 1e-4
+                 and head_zero_ok == 1 and d_mask > 0 and d_head > 0)
     ok = (shape_ok and f32_maxabs <= 1e-5 and rowsum_err <= 1e-4 and uniform_ok == 1
           and np.all(np.isfinite(a_mine_np))
-          and prefix_rowsum_err <= 1e-4 and prefix_pad_max == 0.0 and prefix_same == 1 and prefix_shape_ok == 1)
+          and prefix_rowsum_err <= 1e-4 and prefix_pad_max == 0.0 and prefix_same == 1 and prefix_shape_ok == 1
+          and ablate_ok)
     note = f"motion=Zero{motion_dim}(免sidecar,attention机制与motion内容无关)" if motion else "motion=off"
     print(f"ATTN_SELFTEST={'PASS' if ok else 'FAIL'} f32_maxabs={f32_maxabs:.3g} bf16_relfro={bf16_relfro:.3g} "
           f"rowsum_err={rowsum_err:.3g} uniform_ok={uniform_ok} P={P} MEM={MEM} "
           f"shape_ok={int(shape_ok)} rowsum_err_f16={rowsum16:.3g} {note} wall={time.perf_counter() - t0:.0f}s "
-          f"prefix_rowsum_err={prefix_rowsum_err:.3g} prefix_same_actions={prefix_same}")
+          f"prefix_rowsum_err={prefix_rowsum_err:.3g} prefix_same_actions={prefix_same} "
+          f"ablate_off_same={ablate_off_same} masked_cols_mass={masked_cols_mass:.3g} head_zero_ok={head_zero_ok} "
+          f"ablate_mask={mask_kind} n_masked_keys={n_mk} ablate_mask_maxabs={d_mask:.3g} ablate_head_maxabs={d_head:.3g}")
     return 0 if ok else 1
 
 
@@ -580,6 +851,7 @@ def main() -> int:
     ap.add_argument("--config", default=None, help="--selftest 的 train config 名")
     ap.add_argument("--n-frames", type=int, default=49, help="selftest 喂入的随机帧数（49 帧 → motion 侧 2 个窗口）")
     ap.add_argument("--num-steps", type=int, default=DEFAULT_NUM_STEPS)
+    ap.add_argument("--ablate-heads", default="L3H0,L16H0", help="selftest 头遮挡用的头（L<层>H<头>,...）")
     ap.add_argument("--official-ckpt", default=str(C.V1 / "models/official-mme-vla/perceptual-framesamp-context/79999"))
     ap.add_argument("--official-config", default="mme_vla_suite_b128")
     ap.add_argument("--motion-ckpt", default=str(C.V1 / "assets/vla-o16cc-59999/59999"))

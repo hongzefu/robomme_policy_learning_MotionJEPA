@@ -312,7 +312,7 @@ def test_npz_contract(tmp_path, monkeypatch, motion):
     ep = tmp_path / "attn" / "nonce123"
     assert sorted(p.name for p in ep.glob("infer_*.npz")) == ["infer_0000.npz", "infer_0001.npz"]
     with np.load(ep / "infer_0000.npz") as z:
-        assert set(z.files) == set(SA.NPZ_KEYS)
+        assert set(z.files) == set(SA.NPZ_KEYS) | set(SA.ABLATE_NPZ_KEYS)
         expected = dict(EXPECTED)
         expected["motion_times"] = (np.int32, lambda P, MEM: (96,) if motion else (0,))
         expected["motion_mask"] = (np.bool_, lambda P, MEM: (96,) if motion else (0,))
@@ -417,7 +417,7 @@ def test_prefix_npz_contract(tmp_path, monkeypatch, motion):
     assert sorted(p.name for p in ep.glob("prefix_*.npz")) == ["prefix_0000.npz", "prefix_0001.npz"]
     assert not list(ep.glob(".*tmp*"))
     with np.load(ep / "infer_0000.npz") as z:
-        assert set(z.files) == set(SA.NPZ_KEYS)          # infer npz 16 键不变
+        assert set(z.files) == set(SA.NPZ_KEYS) | set(SA.ABLATE_NPZ_KEYS)   # 16 键不变 + S7 附加 2 键
     for seq in range(2):
         with np.load(ep / f"prefix_{seq:04d}.npz") as z:
             assert set(z.files) == set(SA.PREFIX_NPZ_KEYS)

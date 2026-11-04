@@ -8,7 +8,9 @@
 spec（JSON）键：repo, policy_python, sim_python, stage2_python, checkpoint, policy_config,
 model_kind（history | stage2_pool4_concat）, model_seed=42, purpose=validation, cuda, attn_out, run_root, manifest,
 xla_mem_fraction；可选 port（起始端口，缺省 0=临时端口）、startup_timeout_seconds（缺省 600）、save_top_frames、
-rpc_timeout_seconds、save_prefix（缺省 false；为真时服务端加 --save-prefix，另写 prefix_<seq>.npz）。run_identity_sha256 由本脚本自算（见 run_identity）。
+rpc_timeout_seconds、save_prefix（缺省 false；为真时服务端加 --save-prefix，另写 prefix_<seq>.npz）、
+ablate（缺省 "none"；其他值原样透传 --ablate，语义见 serve_policy_attn 文档，如 mask_motion / mask_vis / heads:L3H0）。
+run_identity_sha256 由本脚本自算（见 run_identity；ablate 非 none 时并入身份，none 时身份与 S7 之前相同）。
 
 逐局打印 EPISODE_RESULT task=<t> ep=<i> success=<0|1> npz=<n>，末行
 RUN_LOCAL=PASS|FAIL model=<model_kind> episodes=<n> success=<k> npz=<n>。
@@ -71,9 +73,17 @@ def load_spec(path):
 
 def run_identity(spec, manifest):
     """本地评估身份：清单封签 + checkpoint 绝对路径 + 配置名 + model_kind + seed（bind_model 只接受 20k/60k 步，不能用）。"""
-    return M.digest({"manifest_seal": manifest["sha256"], "checkpoint": str(Path(spec["checkpoint"]).resolve()),
-                     "policy_config": spec["policy_config"], "model_kind": spec["model_kind"],
-                     "model_seed": int(spec["model_seed"])})
+    ident = {"manifest_seal": manifest["sha256"], "checkpoint": str(Path(spec["checkpoint"]).resolve()),
+             "policy_config": spec["policy_config"], "model_kind": spec["model_kind"],
+             "model_seed": int(spec["model_seed"])}
+    if ablate_of(spec) != "none":
+        ident["ablate"] = ablate_of(spec)
+    return M.digest(ident)
+
+
+def ablate_of(spec):
+    value = spec.get("ablate")
+    return "none" if value is None else str(value).strip() or "none"
 
 
 def select_chunks(manifest, episodes_arg=None, limit=None):
@@ -134,6 +144,8 @@ def build_server_command(spec, nonce, port):
         extra += ["--save-top-frames", str(int(spec["save_top_frames"]))]
     if spec.get("save_prefix"):
         extra += ["--save-prefix"]
+    if ablate_of(spec) != "none":
+        extra += ["--ablate", ablate_of(spec)]
     index = command.index("policy:checkpoint")
     return command[:index] + extra + command[index:]
 
@@ -257,7 +269,8 @@ def main(argv=None, popen=subprocess.Popen):
     Path(spec["attn_out"]).mkdir(parents=True, exist_ok=True)
     chunks = select_chunks(manifest, args.episodes, args.chunks)
     print(f"RUN_LOCAL_BEGIN model={spec['model_kind']} run_identity={spec['run_identity_sha256']} "
-          f"manifest_seal={manifest['sha256']} chunks={len(chunks)} cuda={spec['cuda']}", flush=True)
+          f"manifest_seal={manifest['sha256']} chunks={len(chunks)} cuda={spec['cuda']} ablate={ablate_of(spec)}",
+          flush=True)
 
     def stop(signum, _frame):
         raise SystemExit(128 + signum)   # 走 finally 收掉服务端与客户端进程组
