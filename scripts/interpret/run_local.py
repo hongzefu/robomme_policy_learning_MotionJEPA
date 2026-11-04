@@ -9,8 +9,18 @@ spec（JSON）键：repo, policy_python, sim_python, stage2_python, checkpoint, 
 model_kind（history | stage2_pool4_concat）, model_seed=42, purpose=validation, cuda, attn_out, run_root, manifest,
 xla_mem_fraction；可选 port（起始端口，缺省 0=临时端口）、startup_timeout_seconds（缺省 600）、save_top_frames、
 rpc_timeout_seconds、save_prefix（缺省 false；为真时服务端加 --save-prefix，另写 prefix_<seq>.npz）、
-ablate（缺省 "none"；其他值原样透传 --ablate，语义见 serve_policy_attn 文档，如 mask_motion / mask_vis / heads:L3H0）。
-run_identity_sha256 由本脚本自算（见 run_identity；ablate 非 none 时并入身份，none 时身份与 S7 之前相同）。
+ablate（缺省 "none"；其他值原样透传 --ablate，语义见 serve_policy_attn 文档，如 mask_motion / mask_vis / heads:L3H0 /
+motion_zero / motion_swap:<供体目录>）。
+S8 motion 内容替换的可选键：
+  record_motion   目录；服务端加 --record-motion，每局写 <目录>/<nonce>.npz，本脚本收尾按 terminal 局身份改名为
+                  <目录>/<task>_ep<id>.npz（与 motion_swap 供体文件同名规则）；局的 episode.json 记 motion_record。
+  swap_map        motion_swap 的供体映射，{"ButtonUnmaskSwap:4": "ButtonUnmaskSwap:8", ...} 或字符串
+                  "ButtonUnmaskSwap:4=ButtonUnmaskSwap:8,..."；ablate 含 motion_swap 时必填、否则不得给出。
+                  给出时每局单独成块（chunk_id = digest([episode_key])，与 --episodes 同法），服务端按块加
+                  --swap-donor <供体局>：服务端在 reset 时只知道 nonce，单局成块后「本服务进程服务的局」即确定。
+                  选中的每局都必须在 swap_map 里，否则启动前报错。
+run_identity_sha256 由本脚本自算（见 run_identity；ablate 非 none 时并入身份，none 时身份与 S7 之前相同；
+swap_map 给出时也并入身份；record_motion 只记录不改行为，不并入）。
 
 逐局打印 EPISODE_RESULT task=<t> ep=<i> success=<0|1> npz=<n>，末行
 RUN_LOCAL=PASS|FAIL model=<model_kind> episodes=<n> success=<k> npz=<n>。
@@ -68,7 +78,45 @@ def load_spec(path):
     spec.setdefault("model_seed", 42)
     spec.setdefault("purpose", "validation")
     spec["cuda"] = str(spec["cuda"])
+    has_swap = any(part.strip().startswith("motion_swap:") for part in ablate_of(spec).split("+"))
+    if spec.get("swap_map") is not None:
+        spec["swap_map"] = parse_swap_map(spec["swap_map"])
+    if has_swap != bool(spec.get("swap_map")):
+        raise SystemExit("spec: ablate 含 motion_swap 时必须给非空 swap_map，反之 swap_map 只能配 motion_swap")
+    uses_motion = has_swap or spec.get("record_motion") or any(
+        part.strip() == "motion_zero" for part in ablate_of(spec).split("+"))
+    if uses_motion and spec["model_kind"] != MOTION_MODEL_KIND:
+        raise SystemExit(f"spec: motion_zero / motion_swap / record_motion 只适用于 {MOTION_MODEL_KIND}")
     return spec
+
+
+def _episode_key(text):
+    task, sep, ep = str(text).strip().rpartition(":")
+    if not sep or not task or not ep.strip().isdigit():
+        raise SystemExit(f"swap_map 局写法应为 task:ep，得到 {text!r}")
+    return f"{task}:{int(ep)}"
+
+
+def parse_swap_map(value):
+    """dict 或 "a:1=b:2,..." → {"task:ep": "task:ep"}（局号规范成整数写法）。"""
+    if isinstance(value, str):
+        pairs = []
+        for item in (x.strip() for x in value.split(",") if x.strip()):
+            target, sep, donor = item.partition("=")
+            if not sep:
+                raise SystemExit(f"swap_map 项应为 task:ep=task:ep，得到 {item!r}")
+            pairs.append((target, donor))
+    elif isinstance(value, dict):
+        pairs = list(value.items())
+    else:
+        raise SystemExit(f"swap_map 须为 dict 或字符串，得到 {type(value).__name__}")
+    out = {}
+    for target, donor in pairs:
+        key = _episode_key(target)
+        if key in out:
+            raise SystemExit(f"swap_map 目标局重复: {key}")
+        out[key] = _episode_key(donor)
+    return out
 
 
 def run_identity(spec, manifest):
@@ -78,6 +126,8 @@ def run_identity(spec, manifest):
              "model_seed": int(spec["model_seed"])}
     if ablate_of(spec) != "none":
         ident["ablate"] = ablate_of(spec)
+    if spec.get("swap_map"):
+        ident["swap_map"] = dict(sorted(parse_swap_map(spec["swap_map"]).items()))
     return M.digest(ident)
 
 
@@ -86,8 +136,9 @@ def ablate_of(spec):
     return "none" if value is None else str(value).strip() or "none"
 
 
-def select_chunks(manifest, episodes_arg=None, limit=None):
-    """返回 [(chunk_id, [episode, ...])]；给 --episodes 时只跑这些局，每局单独一块。"""
+def select_chunks(manifest, episodes_arg=None, limit=None, single=False):
+    """返回 [(chunk_id, [episode, ...])]；给 --episodes 时只跑这些局，每局单独一块；single=True（swap_map）时
+    清单分块也拆成每局一块（按清单分块顺序）。"""
     by_key = {episode["episode_key"]: episode for episode in manifest["episodes"]}
     if episodes_arg:
         keys = [item.strip() for item in episodes_arg.split(",") if item.strip()]
@@ -97,6 +148,8 @@ def select_chunks(manifest, episodes_arg=None, limit=None):
         if len(set(keys)) != len(keys):
             raise SystemExit("--episodes 有重复局")
         chunks = [(M.digest([key]), [by_key[key]]) for key in keys]
+    elif single:
+        chunks = [(M.digest([key]), [by_key[key]]) for chunk in manifest["chunks"] for key in chunk["episode_keys"]]
     else:
         chunks = [(chunk["chunk_id"], [by_key[key] for key in chunk["episode_keys"]]) for chunk in manifest["chunks"]]
     return chunks[:limit] if limit else chunks
@@ -122,8 +175,9 @@ def pick_port(start=0, tries=64):
     raise RuntimeError(f"从 {start} 起 {tries} 个端口均被占用")
 
 
-def build_server_command(spec, nonce, port):
-    """resident_worker.server_command 原形 → 换模块、插 --attn-out、motion 关闭去掉 --motion-online-gpu。"""
+def build_server_command(spec, nonce, port, episodes=None):
+    """resident_worker.server_command 原形 → 换模块、插 --attn-out、motion 关闭去掉 --motion-online-gpu。
+    swap_map 给出时 episodes 必须恰为 1 局，按映射加 --swap-donor。"""
     previous = os.environ.get("CUDA_VISIBLE_DEVICES")
     os.environ["CUDA_VISIBLE_DEVICES"] = spec["cuda"]   # server_command 从环境读卡号
     try:
@@ -146,6 +200,16 @@ def build_server_command(spec, nonce, port):
         extra += ["--save-prefix"]
     if ablate_of(spec) != "none":
         extra += ["--ablate", ablate_of(spec)]
+    if spec.get("record_motion"):
+        extra += ["--record-motion", str(spec["record_motion"])]
+    if spec.get("swap_map"):
+        if not episodes or len(episodes) != 1:
+            raise ValueError("swap_map 要求每块恰 1 局")
+        key = episodes[0]["episode_key"]
+        donor = parse_swap_map(spec["swap_map"]).get(_episode_key(key))
+        if donor is None:
+            raise ValueError(f"swap_map 没有局 {key}")
+        extra += ["--swap-donor", donor]
     index = command.index("policy:checkpoint")
     return command[:index] + extra + command[index:]
 
@@ -190,7 +254,7 @@ def run_chunk(spec, index, chunk_id, episodes, popen=subprocess.Popen):
     grant_path, output, drain_file = attempt / "grant.json", attempt / "client", attempt / "drain"
     write_json(grant_path, {"chunk_id": chunk_id, "run_identity_sha256": spec["run_identity_sha256"],
                             "episodes": episodes})
-    server_cmd = build_server_command(spec, nonce, port)
+    server_cmd = build_server_command(spec, nonce, port, episodes)
     client_cmd = RW.client_command(spec, grant_path, output, nonce, port, drain_file)
     write_json(attempt / "commands.json", {"server": server_cmd, "client": client_cmd, "port": port, "nonce": nonce,
                                            "chunk_id": chunk_id, "episode_keys": [e["episode_key"] for e in episodes]})
@@ -245,6 +309,11 @@ def collect(spec, attempt, output, episodes):
             info.update({k: (terminal or started)[k] for k in ("task_name", "episode_id", "env_seed", "difficulty",
                                                                "episode_key", "chunk_id", "run_identity_sha256")})
             info.update(outcome=terminal["outcome"] if terminal else None, attempt=str(attempt))
+            motion_record = rename_motion_record(spec, nonce, episode)
+            if motion_record is not None:
+                info["motion_record"] = motion_record
+            if spec.get("swap_map"):
+                info["swap_donor"] = parse_swap_map(spec["swap_map"]).get(_episode_key(key))
             write_json(attn_out / nonce / "episode.json", info)
         # terminal 的 rpc_seq = 1 + batch_seq + replan_seq，官方循环里每次 infer 前恰好一次 add_buffer
         infers = (int(terminal["rpc_seq"]) - 1) // 2 if terminal else None
@@ -254,6 +323,21 @@ def collect(spec, attempt, output, episodes):
         print(f"EPISODE_RESULT task={episode['task_name']} ep={episode['episode_id']} success={success} npz={npz}",
               flush=True)
     return results
+
+
+def rename_motion_record(spec, nonce, episode):
+    """record_motion 目录下 <nonce>.npz → <task>_ep<id>.npz（同名已存在则覆盖并打印提示）；返回新路径或 None。"""
+    if not spec.get("record_motion") or not nonce:
+        return None
+    directory = Path(spec["record_motion"])
+    source = directory / f"{nonce}.npz"
+    target = directory / f"{episode['task_name']}_ep{int(episode['episode_id'])}.npz"
+    if not source.exists():
+        return str(target) if target.exists() else None
+    if target.exists():
+        print(f"RECORD_MOTION_OVERWRITE {target}", flush=True)
+    os.replace(source, target)
+    return str(target)
 
 
 def main(argv=None, popen=subprocess.Popen):
@@ -267,7 +351,13 @@ def main(argv=None, popen=subprocess.Popen):
     spec["run_identity_sha256"] = run_identity(spec, manifest)
     Path(spec["run_root"]).mkdir(parents=True, exist_ok=True)
     Path(spec["attn_out"]).mkdir(parents=True, exist_ok=True)
-    chunks = select_chunks(manifest, args.episodes, args.chunks)
+    if spec.get("record_motion"):
+        Path(spec["record_motion"]).mkdir(parents=True, exist_ok=True)
+    chunks = select_chunks(manifest, args.episodes, args.chunks, single=bool(spec.get("swap_map")))
+    if spec.get("swap_map"):
+        missing = [e["episode_key"] for _, eps in chunks for e in eps if _episode_key(e["episode_key"]) not in spec["swap_map"]]
+        if missing:
+            raise SystemExit(f"swap_map 缺这些局的供体: {missing}")
     print(f"RUN_LOCAL_BEGIN model={spec['model_kind']} run_identity={spec['run_identity_sha256']} "
           f"manifest_seal={manifest['sha256']} chunks={len(chunks)} cuda={spec['cuda']} ablate={ablate_of(spec)}",
           flush=True)
