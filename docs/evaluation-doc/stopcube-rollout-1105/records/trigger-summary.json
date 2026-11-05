@@ -1,0 +1,1129 @@
+{
+  "schema_version": 1,
+  "table": {
+    "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/oracle/oracle_table.json",
+    "sha256": "6a9647cd6e7442136221b2d5c7f3d3d3ed4ed60e734eb02aaa8984798c6322a3"
+  },
+  "category_order": [
+    "窗口内",
+    "偏晚",
+    "偏早",
+    "未按"
+  ],
+  "models": {
+    "ctx": {
+      "n_valid": 50,
+      "n_q1": 50,
+      "n_invalid": 0,
+      "invalid": [],
+      "mismatched": [],
+      "infra_retries": 0,
+      "cube_maxabs": 0.0,
+      "uncovered_after_window": 0,
+      "reach": {
+        "min": 46.0,
+        "median": 48.0,
+        "max": 51.0,
+        "not_reached": 0,
+        "reach_after_cross": 0
+      },
+      "counts": {
+        "窗口内": 7,
+        "偏晚": 5,
+        "偏早": 20,
+        "未按": 18
+      },
+      "by_move_interval": {
+        "80": {
+          "窗口内": 1,
+          "偏晚": 3,
+          "偏早": 8,
+          "未按": 10
+        },
+        "60": {
+          "窗口内": 2,
+          "偏晚": 2,
+          "偏早": 0,
+          "未按": 8
+        },
+        "120": {
+          "窗口内": 4,
+          "偏晚": 0,
+          "偏早": 12,
+          "未按": 0
+        }
+      },
+      "trigger_minus_center": {
+        "n": 32,
+        "mean": -64.84375,
+        "median": -25.0,
+        "min": -261.0,
+        "max": 13.0
+      },
+      "stop_timestep": {
+        "n": 10,
+        "episodes": {
+          "StopCube:0": null,
+          "StopCube:1": null,
+          "StopCube:2": null,
+          "StopCube:3": null,
+          "StopCube:4": 95,
+          "StopCube:5": null,
+          "StopCube:6": null,
+          "StopCube:7": null,
+          "StopCube:8": null,
+          "StopCube:9": null,
+          "StopCube:10": null,
+          "StopCube:11": null,
+          "StopCube:12": null,
+          "StopCube:13": null,
+          "StopCube:14": null,
+          "StopCube:15": null,
+          "StopCube:16": null,
+          "StopCube:17": null,
+          "StopCube:18": null,
+          "StopCube:19": null,
+          "StopCube:20": null,
+          "StopCube:21": 286,
+          "StopCube:22": 184,
+          "StopCube:23": 300,
+          "StopCube:24": null,
+          "StopCube:25": 209,
+          "StopCube:26": null,
+          "StopCube:27": 94,
+          "StopCube:28": null,
+          "StopCube:29": null,
+          "StopCube:30": null,
+          "StopCube:31": null,
+          "StopCube:32": null,
+          "StopCube:33": null,
+          "StopCube:34": null,
+          "StopCube:35": null,
+          "StopCube:36": 201,
+          "StopCube:37": null,
+          "StopCube:38": null,
+          "StopCube:39": 297,
+          "StopCube:40": null,
+          "StopCube:41": 277,
+          "StopCube:42": null,
+          "StopCube:43": null,
+          "StopCube:44": null,
+          "StopCube:45": null,
+          "StopCube:46": null,
+          "StopCube:47": null,
+          "StopCube:48": 420,
+          "StopCube:49": null
+        }
+      },
+      "task_success": {
+        "n": 50,
+        "success": 7
+      },
+      "window_vs_official_disagree": []
+    },
+    "mot": {
+      "n_valid": 50,
+      "n_q1": 50,
+      "n_invalid": 0,
+      "invalid": [],
+      "mismatched": [],
+      "infra_retries": 0,
+      "cube_maxabs": 0.0,
+      "uncovered_after_window": 0,
+      "reach": {
+        "min": 46.0,
+        "median": 48.0,
+        "max": 50.0,
+        "not_reached": 1,
+        "reach_after_cross": 0
+      },
+      "counts": {
+        "窗口内": 22,
+        "偏晚": 17,
+        "偏早": 7,
+        "未按": 4
+      },
+      "by_move_interval": {
+        "80": {
+          "窗口内": 5,
+          "偏晚": 9,
+          "偏早": 6,
+          "未按": 2
+        },
+        "60": {
+          "窗口内": 2,
+          "偏晚": 8,
+          "偏早": 0,
+          "未按": 2
+        },
+        "120": {
+          "窗口内": 15,
+          "偏晚": 0,
+          "偏早": 1,
+          "未按": 0
+        }
+      },
+      "trigger_minus_center": {
+        "n": 46,
+        "mean": -4.043478260869565,
+        "median": 1.5,
+        "min": -171.0,
+        "max": 18.0
+      },
+      "stop_timestep": {
+        "n": 24,
+        "episodes": {
+          "StopCube:0": 282,
+          "StopCube:1": null,
+          "StopCube:2": null,
+          "StopCube:3": null,
+          "StopCube:4": null,
+          "StopCube:5": null,
+          "StopCube:6": 300,
+          "StopCube:7": 153,
+          "StopCube:8": null,
+          "StopCube:9": 536,
+          "StopCube:10": 300,
+          "StopCube:11": null,
+          "StopCube:12": null,
+          "StopCube:13": null,
+          "StopCube:14": null,
+          "StopCube:15": null,
+          "StopCube:16": 416,
+          "StopCube:17": null,
+          "StopCube:18": 538,
+          "StopCube:19": null,
+          "StopCube:20": null,
+          "StopCube:21": 362,
+          "StopCube:22": 180,
+          "StopCube:23": 298,
+          "StopCube:24": 366,
+          "StopCube:25": null,
+          "StopCube:26": null,
+          "StopCube:27": 94,
+          "StopCube:28": 536,
+          "StopCube:29": null,
+          "StopCube:30": 206,
+          "StopCube:31": null,
+          "StopCube:32": null,
+          "StopCube:33": 540,
+          "StopCube:34": 297,
+          "StopCube:35": null,
+          "StopCube:36": null,
+          "StopCube:37": 301,
+          "StopCube:38": 299,
+          "StopCube:39": 301,
+          "StopCube:40": 119,
+          "StopCube:41": 362,
+          "StopCube:42": null,
+          "StopCube:43": null,
+          "StopCube:44": null,
+          "StopCube:45": 281,
+          "StopCube:46": 543,
+          "StopCube:47": null,
+          "StopCube:48": 420,
+          "StopCube:49": null
+        }
+      },
+      "task_success": {
+        "n": 50,
+        "success": 22
+      },
+      "window_vs_official_disagree": []
+    }
+  },
+  "paired": {
+    "direction": "mot_minus_ctx",
+    "episodes": [
+      {
+        "episode_key": "StopCube:0",
+        "move_interval": 80,
+        "target_pass": 4,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 282,
+          "trigger_minus_center": 2.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:1",
+        "move_interval": 60,
+        "target_pass": 4,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 220,
+          "trigger_minus_center": 10.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:2",
+        "move_interval": 80,
+        "target_pass": 2,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 95,
+          "trigger_minus_center": -25.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏早",
+          "trigger_step": 98,
+          "trigger_minus_center": -22.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:3",
+        "move_interval": 60,
+        "target_pass": 2,
+        "ctx": {
+          "category": "偏晚",
+          "trigger_step": 99,
+          "trigger_minus_center": 9.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 98,
+          "trigger_minus_center": 8.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:4",
+        "move_interval": 60,
+        "target_pass": 2,
+        "ctx": {
+          "category": "偏晚",
+          "trigger_step": 95,
+          "trigger_minus_center": 5.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 104,
+          "trigger_minus_center": 14.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:5",
+        "move_interval": 60,
+        "target_pass": 2,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 103,
+          "trigger_minus_center": 13.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:6",
+        "move_interval": 120,
+        "target_pass": 3,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 279,
+          "trigger_minus_center": -21.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 300,
+          "trigger_minus_center": 0.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:7",
+        "move_interval": 60,
+        "target_pass": 3,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 153,
+          "trigger_minus_center": 3.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:8",
+        "move_interval": 60,
+        "target_pass": 3,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 157,
+          "trigger_minus_center": 7.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:9",
+        "move_interval": 120,
+        "target_pass": 5,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 282,
+          "trigger_minus_center": -258.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 536,
+          "trigger_minus_center": -4.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:10",
+        "move_interval": 120,
+        "target_pass": 3,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 289,
+          "trigger_minus_center": -11.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 300,
+          "trigger_minus_center": 0.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:11",
+        "move_interval": 60,
+        "target_pass": 4,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 217,
+          "trigger_minus_center": 7.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:12",
+        "move_interval": 80,
+        "target_pass": 2,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 95,
+          "trigger_minus_center": -25.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏早",
+          "trigger_step": 95,
+          "trigger_minus_center": -25.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:13",
+        "move_interval": 80,
+        "target_pass": 2,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 94,
+          "trigger_minus_center": -26.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏早",
+          "trigger_step": 97,
+          "trigger_minus_center": -23.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:14",
+        "move_interval": 120,
+        "target_pass": 2,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 124,
+          "trigger_minus_center": -56.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏早",
+          "trigger_step": 109,
+          "trigger_minus_center": -71.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:15",
+        "move_interval": 80,
+        "target_pass": 5,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 370,
+          "trigger_minus_center": 10.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:16",
+        "move_interval": 120,
+        "target_pass": 4,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 278,
+          "trigger_minus_center": -142.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 416,
+          "trigger_minus_center": -4.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:17",
+        "move_interval": 80,
+        "target_pass": 2,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 97,
+          "trigger_minus_center": -23.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏早",
+          "trigger_step": 98,
+          "trigger_minus_center": -22.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:18",
+        "move_interval": 120,
+        "target_pass": 5,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 281,
+          "trigger_minus_center": -259.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 538,
+          "trigger_minus_center": -2.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:19",
+        "move_interval": 80,
+        "target_pass": 3,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 218,
+          "trigger_minus_center": 18.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:20",
+        "move_interval": 80,
+        "target_pass": 5,
+        "ctx": {
+          "category": "偏晚",
+          "trigger_step": 373,
+          "trigger_minus_center": 13.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 368,
+          "trigger_minus_center": 8.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:21",
+        "move_interval": 80,
+        "target_pass": 5,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 286,
+          "trigger_minus_center": -74.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 362,
+          "trigger_minus_center": 2.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:22",
+        "move_interval": 120,
+        "target_pass": 2,
+        "ctx": {
+          "category": "窗口内",
+          "trigger_step": 184,
+          "trigger_minus_center": 4.0,
+          "task_success": 1
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 180,
+          "trigger_minus_center": 0.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:23",
+        "move_interval": 120,
+        "target_pass": 3,
+        "ctx": {
+          "category": "窗口内",
+          "trigger_step": 300,
+          "trigger_minus_center": 0.0,
+          "task_success": 1
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 298,
+          "trigger_minus_center": -2.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:24",
+        "move_interval": 80,
+        "target_pass": 5,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 366,
+          "trigger_minus_center": 6.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:25",
+        "move_interval": 60,
+        "target_pass": 4,
+        "ctx": {
+          "category": "窗口内",
+          "trigger_step": 209,
+          "trigger_minus_center": -1.0,
+          "task_success": 1
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 220,
+          "trigger_minus_center": 10.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:26",
+        "move_interval": 80,
+        "target_pass": 4,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏早",
+          "trigger_step": 109,
+          "trigger_minus_center": -171.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:27",
+        "move_interval": 60,
+        "target_pass": 2,
+        "ctx": {
+          "category": "窗口内",
+          "trigger_step": 94,
+          "trigger_minus_center": 4.0,
+          "task_success": 1
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 94,
+          "trigger_minus_center": 4.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:28",
+        "move_interval": 120,
+        "target_pass": 5,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 279,
+          "trigger_minus_center": -261.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 536,
+          "trigger_minus_center": -4.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:29",
+        "move_interval": 80,
+        "target_pass": 3,
+        "ctx": {
+          "category": "偏晚",
+          "trigger_step": 209,
+          "trigger_minus_center": 9.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 214,
+          "trigger_minus_center": 14.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:30",
+        "move_interval": 80,
+        "target_pass": 3,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 206,
+          "trigger_minus_center": 6.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:31",
+        "move_interval": 80,
+        "target_pass": 3,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 213,
+          "trigger_minus_center": 13.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:32",
+        "move_interval": 80,
+        "target_pass": 2,
+        "ctx": {
+          "category": "偏晚",
+          "trigger_step": 129,
+          "trigger_minus_center": 9.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:33",
+        "move_interval": 120,
+        "target_pass": 5,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 285,
+          "trigger_minus_center": -255.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 540,
+          "trigger_minus_center": 0.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:34",
+        "move_interval": 120,
+        "target_pass": 3,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 204,
+          "trigger_minus_center": -96.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 297,
+          "trigger_minus_center": -3.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:35",
+        "move_interval": 80,
+        "target_pass": 5,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 368,
+          "trigger_minus_center": 8.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:36",
+        "move_interval": 80,
+        "target_pass": 3,
+        "ctx": {
+          "category": "窗口内",
+          "trigger_step": 201,
+          "trigger_minus_center": 1.0,
+          "task_success": 1
+        },
+        "mot": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:37",
+        "move_interval": 120,
+        "target_pass": 3,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 268,
+          "trigger_minus_center": -32.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 301,
+          "trigger_minus_center": 1.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:38",
+        "move_interval": 120,
+        "target_pass": 3,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 130,
+          "trigger_minus_center": -170.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 299,
+          "trigger_minus_center": -1.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:39",
+        "move_interval": 120,
+        "target_pass": 3,
+        "ctx": {
+          "category": "窗口内",
+          "trigger_step": 297,
+          "trigger_minus_center": -3.0,
+          "task_success": 1
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 301,
+          "trigger_minus_center": 1.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:40",
+        "move_interval": 80,
+        "target_pass": 2,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 93,
+          "trigger_minus_center": -27.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 119,
+          "trigger_minus_center": -1.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:41",
+        "move_interval": 80,
+        "target_pass": 5,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 277,
+          "trigger_minus_center": -83.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 362,
+          "trigger_minus_center": 2.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:42",
+        "move_interval": 80,
+        "target_pass": 3,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 216,
+          "trigger_minus_center": 16.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:43",
+        "move_interval": 60,
+        "target_pass": 2,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:44",
+        "move_interval": 60,
+        "target_pass": 2,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:45",
+        "move_interval": 80,
+        "target_pass": 4,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 281,
+          "trigger_minus_center": 1.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:46",
+        "move_interval": 120,
+        "target_pass": 5,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 284,
+          "trigger_minus_center": -256.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 543,
+          "trigger_minus_center": 3.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:47",
+        "move_interval": 60,
+        "target_pass": 4,
+        "ctx": {
+          "category": "未按",
+          "trigger_step": null,
+          "trigger_minus_center": null,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏晚",
+          "trigger_step": 218,
+          "trigger_minus_center": 8.0,
+          "task_success": 0
+        }
+      },
+      {
+        "episode_key": "StopCube:48",
+        "move_interval": 120,
+        "target_pass": 4,
+        "ctx": {
+          "category": "窗口内",
+          "trigger_step": 420,
+          "trigger_minus_center": 0.0,
+          "task_success": 1
+        },
+        "mot": {
+          "category": "窗口内",
+          "trigger_step": 420,
+          "trigger_minus_center": 0.0,
+          "task_success": 1
+        }
+      },
+      {
+        "episode_key": "StopCube:49",
+        "move_interval": 80,
+        "target_pass": 2,
+        "ctx": {
+          "category": "偏早",
+          "trigger_step": 95,
+          "trigger_minus_center": -25.0,
+          "task_success": 0
+        },
+        "mot": {
+          "category": "偏早",
+          "trigger_step": 94,
+          "trigger_minus_center": -26.0,
+          "task_success": 0
+        }
+      }
+    ],
+    "window_in_rate_diff": {
+      "n_episodes": 50,
+      "mean": 0.3,
+      "ci95": [
+        0.14,
+        0.44
+      ]
+    },
+    "trigger_minus_center_diff": {
+      "n_episodes": 30,
+      "mean": 64.73333333333333,
+      "ci95": [
+        32.266666666666666,
+        99.40749999999997
+      ]
+    },
+    "bootstrap": {
+      "repeats": 2000,
+      "seed": 42,
+      "unit": "episode"
+    }
+  },
+  "record_checks": {
+    "ctx": {
+      "episodes": 50,
+      "inferences": 721,
+      "problems": {}
+    },
+    "mot": {
+      "episodes": 50,
+      "inferences": 806,
+      "problems": {}
+    }
+  },
+  "verdicts": [
+    "ROLLOUT_RUN=PASS models=2 valid_ctx=50 valid_mot=50 invalid=0 infra_retries=0",
+    "WINDOW_TABLE_MATCH=PASS models=2 checked=100 mismatched=0 uncovered_after_window=0 cube_maxabs=0 tol=1e-6",
+    "TRIGGER_DISTRIBUTION=PASS models=2 n_ctx=50 n_mot=50 paired=50 ctx=7/5/20/18 mot=22/17/7/4",
+    "ROLLOUT_RECORD=PASS models=2 valid_episodes=100 inferences=1527 missing=0 readback=1"
+  ]
+}

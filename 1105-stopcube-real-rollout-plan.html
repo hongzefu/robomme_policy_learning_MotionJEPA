@@ -450,7 +450,10 @@ uv run python -m scripts.interpret.analysis.rollout_probe     --root $O</pre>
 <tr><td>隐状态闸门</td><td><code>maxabs=0</code>（逐位）→ 动作≤0.02、单头≤0.005、总质量≤0.001、motion 相对差≤10% → 单头再放宽到≤0.02（最终值）</td><td>真实权重下开关捕获的差异：bf16 动作差 0.00195，f32 约 1.2e-7，说明逻辑不变，逐位在 bf16 下做不到。放宽前后的值都在判定行里，<code>ROLLOUT_REPLAY</code> 的 1e-6 不动。放宽不影响后续结论：总质量差约 5e-5，比分析尺度小两到三个量级。第二次放宽的依据：基线 18 点单头差中位 0.00115、p90 0.00448、最大 0.00657，集中在文字组大占比头，motion 26 点最大 0.00346；x0、总质量、motion 相对差都没有放宽。0.02 是判断逻辑没坏的闸门；0.01 是解读下限，单头差异小于 0.01 与数值波动同量级，不解读。这个下限只管同模型同输入的数值噪声，全量实测超过 0.01 时只如实记录并把下限抬到实测最大值的约 1.5 倍，不再放宽闸门</td><td><code>ADJUST_REVIEW=PASS scale=same findings=5</code>；第二次 <code>ADJUST_REVIEW=PASS scale=same findings=3</code>；<code>HIDDEN_PARITY_LOGIC_F32=PASS models=2 points=6 x0_maxabs=1.34e-07</code></td></tr>
 <tr><td>隐状态精度补测（计划外的一次性诊断）</td><td>新增</td><td>上面的比较没有直接测隐状态。结果：<code>HIDDEN_PRECISION=PASS model=ctx worst_rel=0.0039 min_dist_over_err=32.6</code>；<code>HIDDEN_PRECISION=PASS model=mot worst_rel=0.0090 min_dist_over_err=16.4</code>（前段）；<code>HIDDEN_PRECISION=FAIL model=mot worst_rel=0.0076 min_dist_over_err=8.4</code>（后段，覆盖 motion 组）。不是计划闸门，如实记录并写入盲区，不阻塞</td><td>随上一项</td></tr>
 <tr><td>启动方式与顺序</td><td>运行子代理启动 → 主会话直接启动；W5 合并前先做冒烟</td><td>冒烟结果马上要用，监听也归主会话；W5 只影响 CPU 分析</td><td>小幅调整，范围不变</td></tr>
+<tr><td>探针分解（计划外）</td><td>新增</td><td>第 0 层拼接异常强，拆开才能回答问题；只用已有隐状态和同一折划分，结果标为事后分析</td><td><code>FINAL_REVIEW=PASS round=2 checked=44 mismatches=0 findings=0 blocking=0</code></td></tr>
 </table></div>
+<h2>十一、实测结果</h2>
+<p>全部阶段已完成，人工交接，未登记状态机。结果见 <a href="docs/evaluation-doc/stopcube-rollout-1105/result.md">result.md</a>，判定行见同目录 <code>records/verification.summary.txt</code>。基线成功 7/50，motion 成功 22/50；窗口内比例差 +0.30，区间 [0.14, 0.44]。</p>
 </main>
 </body>
 </html>

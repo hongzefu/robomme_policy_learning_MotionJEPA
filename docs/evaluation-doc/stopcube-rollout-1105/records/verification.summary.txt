@@ -1,0 +1,50 @@
+PLAN_CONSISTENCY_REVIEW=FAIL base=331243156e630923c1eebb0b3aa34308ce7fd0f5 findings=8 blocking=2
+PLAN_CONSISTENCY_REVIEW=PASS base=331243156e630923c1eebb0b3aa34308ce7fd0f5 tip=2929ec3535a6984eaaad6854b75d0d4f5257b630 findings=4 blocking=0 scope=revision
+ADJUST_REVIEW=PASS scale=same findings=3 task=reach_tolerance_1.5cm
+ADJUST_REVIEW=PASS scale=same findings=5 task=hidden_parity_tolerance
+ADJUST_REVIEW=PASS scale=same findings=3 task=hidden_parity_group_0.02_final
+PRE_MERGE_REVIEW=PASS task=W1 base=7dca6cd1fc1a961d0e8aee554ee16d0afa6a6617 tip=e48f4fc5d879e26574fdf9528b5b19eb0ae9b52c files=3 commits=1 findings=2 blocking=0
+POST_MERGE_REVIEW=PASS task=W1 merge=0d9933fdef0d6da4bea58c019199098c0122a4ab tests=65passed files=3
+PRE_MERGE_REVIEW=PASS task=W2 base=7dca6cd1fc1a961d0e8aee554ee16d0afa6a6617 tip=b00414db844c3efec037c3b6ff6e1ddbe655e658 files=2 commits=1 findings=0 blocking=0
+POST_MERGE_REVIEW=PASS task=W2 merge=cb1d4e6d9c9a34147d39cd70e71a0aa44548469f files=2
+PRE_MERGE_REVIEW=FAIL task=W3 base=7dca6cd1fc1a961d0e8aee554ee16d0afa6a6617 tip=30d90ce3be5d58fbd0b900c9e1caf4f676aea170 files=2 commits=1 findings=5 blocking=1
+PRE_MERGE_REVIEW=PASS task=W3 round=2 base=7dca6cd1fc1a961d0e8aee554ee16d0afa6a6617 tip=588da0004c643def1ec6b20df56cf00f59f765e2 files=2 commits=3 findings=1 blocking=0
+POST_MERGE_REVIEW=PASS task=W3 merge=6eb08bc334a89fc5b886772f3c995043c8e4439f files=2
+PRE_MERGE_REVIEW=FAIL task=W4 base=cb1d4e6d9c9a34147d39cd70e71a0aa44548469f tip=c0cc7c80b38660cd630585ea15307953b0b3b249 files=2 commits=1 findings=3 blocking=1
+PRE_MERGE_REVIEW=PASS task=W4 round=2 base=cb1d4e6d9c9a34147d39cd70e71a0aa44548469f tip=62896844f82eec5e44fbcfacb7615bd94428648c files=2 commits=2 findings=1 blocking=0
+POST_MERGE_REVIEW=PASS task=W4 merge=7822a6aad15fbd5d6d1641ee4cc0dacfe6ce58ee files=2
+PRE_MERGE_REVIEW=PASS task=W5 base=f822dd4a64aa2bb3d28644beb5d855597fa7516f tip=27b691e8ab74f6c61ab93f611e21f1075cda2db9 files=3 commits=1 findings=1 blocking=0
+POST_MERGE_REVIEW=PASS task=W5 merge=f64fb96686b728bb0fc9e1aede04d9d0308617c4 files=3
+PRE_MERGE_REVIEW=PASS task=W6 base=f64fb96686b728bb0fc9e1aede04d9d0308617c4 tip=d53214561f70d56c6db0efc6f99758e848e7b55e files=2 commits=1 findings=0 blocking=0
+POST_MERGE_REVIEW=PASS task=W6 merge=04a1635a8a766e870146840f9fa49b6ac50adb42 files=2
+PRE_MERGE_REVIEW=PASS task=W7 base=a904e8d4842d57df790ccdbcf8b5326ea82d35e0 tip=c57c31327a2525e9475248ee50112cfa37fa38fb files=2 commits=1 findings=2 blocking=0
+POST_MERGE_REVIEW=PASS task=W7 merge=7379c73119412575708c8d9e7c94d275d60b16cc files=2
+HIDDEN_PARITY_LOGIC_F32=PASS models=2 points=6 x0_maxabs=1.34e-07
+HIDDEN_PRECISION=PASS model=ctx points=3 worst_rel=0.0039 min_dist_over_err=32.6
+HIDDEN_PRECISION=PASS model=mot points=3 worst_rel=0.0090 min_dist_over_err=16.4 scope=first_mid_last_no_motion_group
+HIDDEN_PRECISION=FAIL model=mot points=3 worst_rel=0.0076 min_dist_over_err=8.4 scope=late_points_with_motion_group not_a_plan_gate=1
+ROLLOUT_RUN=PASS models=2 valid_ctx=50 valid_mot=50 invalid=0 infra_retries=0
+WINDOW_TABLE_MATCH=PASS models=2 checked=100 mismatched=0 uncovered_after_window=0 cube_maxabs=0 tol=1e-6
+TRIGGER_DISTRIBUTION=PASS models=2 n_ctx=50 n_mot=50 paired=50 ctx=7/5/20/18 mot=22/17/7/4
+ROLLOUT_RECORD=PASS models=2 valid_episodes=100 inferences=1527 missing=0 readback=1
+REACH_STATS model=ctx min=46 median=48 max=51 not_reached=0 reach_after_cross=0
+REACH_STATS model=mot min=46 median=48 max=50 not_reached=1 reach_after_cross=0
+RUN_LOCAL=PASS model=history episodes=50 success=7 npz=721
+RUN_LOCAL=PASS model=stage2_pool4_concat episodes=50 success=22 npz=806
+ROLLOUT_REPLAY=PASS model=ctx points=721 same_path_maxabs=0 tol=1e-6
+ROLLOUT_REPLAY=PASS model=mot points=806 same_path_maxabs=0 tol=1e-6
+HIDDEN_PARITY=PASS model=ctx points=50 x0_maxabs=0.0029296875 group_mass_maxabs=0.00486123306 group_total_maxabs=0.000149492506 motion_rel_maxabs=null tol_x0=0.02 tol_group=0.02 tol_total=0.001 tol_motion_rel=0.1
+HIDDEN_PARITY=PASS model=mot points=50 x0_maxabs=0.001953125 group_mass_maxabs=0.00411433359 group_total_maxabs=0.000172394775 motion_rel_maxabs=null tol_x0=0.02 tol_group=0.02 tol_total=0.001 tol_motion_rel=0.1
+OFFLINE_RUN=PASS model=ctx records=721 skipped=0 skipped_nonce=0 attn_path_maxabs=1.63232422 seconds=2360.9
+OFFLINE_RUN=PASS model=mot records=806 skipped=0 skipped_nonce=0 attn_path_maxabs=0.0615234375 seconds=2476.7
+OFFLINE_COVERAGE=PASS episodes=100 missing=0
+ATTN_ALIGN=PASS models=2 points=412 sum_err=6.5018e-08 attn_path_maxabs=1.63232
+PROBE_REPORT=PASS models=2 labels=2 group_leak=0 shuffle_r2_max=0.335448
+PROBE_DECOMPOSE=DONE leak=0 not_a_plan_gate=1
+ROLLOUT_REPORT=PASS figures=8 visual_review=pass
+ATTN_PATH_DISTRIBUTION model=ctx n=721 median=0.0027 p99=0.0122 max=1.632 method=numpy_percentile_linear
+ATTN_PATH_DISTRIBUTION model=mot n=806 median=0.0029 p99=0.0078 max=0.062 method=numpy_percentile_linear
+FINAL_REVIEW=FAIL checked=170 mismatches=6 findings=10 blocking=2
+FINAL_REVIEW=PASS round=2 checked=44 mismatches=0 findings=0 blocking=0
+MANUAL_HANDOFF=PASS task=stopcube-rollout-1105 state=complete state_machine=not_registered
+OWN_RUN_HANDLES=PASS active_tmux=0
