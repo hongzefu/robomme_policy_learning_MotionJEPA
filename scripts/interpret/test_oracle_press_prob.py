@@ -209,6 +209,8 @@ def test_calibration_results_keep_trigger_and_success_separate(tmp_path):
     assert results[0]["trigger_within48"] is True
     assert results[0]["trigger_category"] == "早于区间"
     assert results[0]["task_success"] == 0
+    assert results[0]["predicted_p"] == 0.5
+    assert analysis.calibration_probability_groups(results)[0]["trigger_within48"] == 1
     counts = analysis.calibration_summary(results, plan)
     high = next(row for row in counts if row["kind"] == "high_probability")
     assert high["completed"] == 1 and high["task_success"] == 0

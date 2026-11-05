@@ -391,6 +391,7 @@ def calibration_results(roots, table, plan):
                 "晚于区间" if trigger > entry["target_visit_out"] else "区间内")
             records.append({"model_id": model, "episode_key": key, "kind": kind,
                 "release_step": release, "trigger_step": trigger, "trigger_category": category,
+                "predicted_p": plan["models"][model]["episodes"].get(key, {}).get(kind, {}).get("p"),
                 "trigger_within48": trigger is not None and release is not None and 0 <= trigger - release <= 48,
                 "task_success": item.get("task_success"), "receipt_path": str(path.resolve()),
                 "trace_path": str(trace.resolve()),
@@ -417,6 +418,16 @@ def calibration_summary(records, plan):
                 "task_success": sum(r["task_success"] in (True, 1) for r in completed),
                 "task_success_known": sum(r["task_success"] is not None for r in completed)})
     return result
+
+
+def calibration_probability_groups(records):
+    groups = {}
+    for row in records:
+        if row["predicted_p"] is not None:
+            groups.setdefault((row["model_id"], row["kind"], row["predicted_p"]), []).append(row)
+    return [{"model_id": model, "kind": kind, "predicted_p": p, "runs": len(rows),
+             "trigger_within48": sum(row["trigger_within48"] for row in rows)}
+            for (model, kind, p), rows in sorted(groups.items())]
 
 
 def grouped_visits(rows, repeats):
@@ -452,6 +463,7 @@ def summarize(cache_root, table_path, output, repeats=2000, calibration_roots=()
             "相邻询问点不独立；聚合区间按局重采样", "模型训练来源和步数不同，差异不能完全归因于 motion",
             "12 局校准只能看方向；不按结果调整 2 cm 阈值"]}
     summary["calibration_summary"] = calibration_summary(summary["calibration_results"], plan)
+    summary["calibration_probability_groups"] = calibration_probability_groups(summary["calibration_results"])
     write_json(output / "summary.json", summary)
     with (output / "probabilities.csv").open("w", newline="") as stream:
         fields = ("model_id", "episode_key", "env_step", "relative_step", "move_interval", "visit", "pre_reach", "cadence16", "p")
@@ -546,9 +558,12 @@ def report(summary_path, output, repeats=2000):
     for comparison in summary["comparisons"]:
         for name, stat in comparison["metrics"].items():
             parts.append(f"<tr><td>{escape(comparison['left'])} − {escape(comparison['right'])}</td><td>{escape(name)}</td><td>{stat['n_episodes']}</td><td>{escape(stat['mean'])}</td><td>{escape(stat['ci95'])}</td></tr>")
-    parts.append("</table><h2>校准与固定放手的真实结果</h2><p>是否触发和任务成功分开报告；缺失结果不算失败，不补挑成功局。</p><table><tr><th>模型</th><th>局</th><th>类型</th><th>交还步</th><th>触发步</th><th>48 步内触发</th><th>区间分类</th><th>任务成功</th></tr>")
+    parts.append("</table><h2>校准与固定放手的真实结果</h2><p>是否触发和任务成功分开报告；缺失结果不算失败，不补挑成功局。</p><table><tr><th>模型</th><th>局</th><th>类型</th><th>选点 P(t)</th><th>交还步</th><th>触发步</th><th>48 步内触发</th><th>区间分类</th><th>任务成功</th></tr>")
     for row in summary["calibration_results"]:
-        parts.append("<tr>" + "".join(f"<td>{escape(row[key])}</td>" for key in ("model_id", "episode_key", "kind", "release_step", "trigger_step", "trigger_within48", "trigger_category", "task_success")) + "</tr>")
+        parts.append("<tr>" + "".join(f"<td>{escape(row[key])}</td>" for key in ("model_id", "episode_key", "kind", "predicted_p", "release_step", "trigger_step", "trigger_within48", "trigger_category", "task_success")) + "</tr>")
+    parts.append("</table><h2>按选点 P(t) 对照实际触发</h2><table><tr><th>模型</th><th>类型</th><th>P(t)</th><th>运行数</th><th>48 步内触发数</th></tr>")
+    for row in summary["calibration_probability_groups"]:
+        parts.append("<tr>" + "".join(f"<td>{escape(row[key])}</td>" for key in ("model_id", "kind", "predicted_p", "runs", "trigger_within48")) + "</tr>")
     parts.append("</table><h2>校准完成量与跳过原因</h2><table><tr><th>模型</th><th>类型</th><th>计划/完成</th><th>48 步内触发</th><th>任务成功/已知</th><th>缺失局与跳过原因</th></tr>")
     for row in summary["calibration_summary"]:
         parts.append(f"<tr><td>{escape(row['model_id'])}</td><td>{escape(row['kind'])}</td><td>{row['planned']}/{row['completed']}</td><td>{row['trigger_within48']}</td><td>{row['task_success']}/{row['task_success_known']}</td><td>{escape(row['missing_episodes'])} {escape(row['skipped'])}</td></tr>")
