@@ -367,6 +367,11 @@ def add_fk(trace, benchmark_root):
         env.close()
 
 
+def probe_hold_action(qpos, reset_action):
+    """机械臂沿用实测关节角，夹爪沿用官方 reset 动作的归一化命令。"""
+    return list(qpos[:7]) + [reset_action[-1]]
+
+
 def probe_episode(episode_id, episode_key, output_dir, benchmark_root):
     """独立同 seed 仿真保持初始关节位置，只采几何，不把它算作策略成功局。"""
     try:
@@ -374,6 +379,7 @@ def probe_episode(episode_id, episode_key, output_dir, benchmark_root):
     except ImportError:
         from read_sim_eef_pose import build_env
     import numpy as np
+    from robomme.robomme_env.utils import reset_panda
     from robomme.robomme_env.utils.subgoal_evaluate_func import is_button_pressed
     env, seed, difficulty = build_env("StopCube", episode_id)
     try:
@@ -383,7 +389,7 @@ def probe_episode(episode_id, episode_key, output_dir, benchmark_root):
                           difficulty=difficulty, trajectory_kind="window_probe")
         u = env.unwrapped
         q = _plain(u.agent.robot.get_qpos())
-        action = np.asarray(q[:7] + [q[7]], dtype=np.float32)
+        action = np.asarray(probe_hold_action(q, reset_panda.get_reset_panda_param("action")), dtype=np.float32)
         rows = [{"event": "meta", **definition}]
         for _ in range(definition["move_interval"] * definition["target_pass"]):
             before = int(_plain(u.elapsed_steps)[0]) if hasattr(u.elapsed_steps, "reshape") else int(u.elapsed_steps)
