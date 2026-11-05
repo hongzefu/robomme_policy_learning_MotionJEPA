@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "episodes": {
+    "StopCube:16": {
+      "episode_key": "StopCube:16",
+      "episode_id": 16,
+      "env_seed": 521600,
+      "difficulty": "easy",
+      "move_interval": 120,
+      "target_pass": 4,
+      "hover_z": 0.15,
+      "delta_z": 0.02,
+      "motion_delay": 13,
+      "calibration_source": "same_episode_measured",
+      "target_visit_in": 412,
+      "target_visit_out": 428,
+      "visits": [
+        {
+          "target_pass": 1,
+          "in": 52,
+          "out": 68
+        },
+        {
+          "target_pass": 2,
+          "in": 172,
+          "out": 188
+        },
+        {
+          "target_pass": 3,
+          "in": 292,
+          "out": 308
+        },
+        {
+          "target_pass": 4,
+          "in": 412,
+          "out": 428
+        }
+      ],
+      "window_source": {
+        "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/window-probes/smoke16-a/window_probe.jsonl",
+        "sha256": "8c7cd01e8433c077f4ad653f6e6bd1f6348bc93f3a79911e04def27811eceb6b"
+      },
+      "window_status": "resolved",
+      "window_reasons": [],
+      "formula_crosscheck": {
+        "linear_center": 420.0,
+        "linear_range": [
+          408.0,
+          432.0
+        ],
+        "role": "crosscheck_only"
+      },
+      "start_range": [
+        399,
+        415
+      ],
+      "status": "resolved",
+      "reasons": [],
+      "success_validation": [
+        {
+          "trajectory_kind": "normal",
+          "task_success": 1,
+          "status": "pass",
+          "reasons": [],
+          "button_trigger_step": 416,
+          "stop_timestep": 416,
+          "source": {
+            "path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/smoke-normal-ep16-a/run/attempts/000-354041088486-5db74eba/client/traces/57bf2f188404463591e62b9cbb5baf5b/step_trace.jsonl",
+            "sha256": "65285fa07b5f648ea8a424d029854f5e7d9c112226b1c8073ba149f234ecff3f"
+          }
+        },
+        {
+          "trajectory_kind": "window_probe",
+          "task_success": null,
+          "status": "not_applicable",
+          "reasons": []
+        }
+      ]
+    }
+  },
+  "window_sim": {
+    "status": "pass",
+    "groups": {
+      "120": {
+        "episodes": 1,
+        "successful": 1,
+        "validated": 1,
+        "failed": 0
+      }
+    },
+    "missing_success_groups": [],
+    "successful": 1,
+    "validated": 1
+  }
+}

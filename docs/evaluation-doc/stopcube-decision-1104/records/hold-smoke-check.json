@@ -1,0 +1,68 @@
+{
+  "verdict": "HOLD_SMOKE=PASS prefix_actions=374 held_steps=26 takeover=375 release=401 restore_infer=25 infers=27 task_success=1 mismatches=0",
+  "reference_trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/smoke-normal-ep16-a/run/attempts/000-354041088486-5db74eba/client/traces/57bf2f188404463591e62b9cbb5baf5b/step_trace.jsonl",
+  "hold_trace": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/smoke-hold-ep16-a/run/attempts/000-354041088486-0d570226/client/traces/510fefa7f4804e5cba370a416346f65e/step_trace.jsonl",
+  "config": {
+    "takeover_step": 375,
+    "release_step": 401,
+    "hold_qpos": [
+      0.019584840163588524,
+      -0.1547088772058487,
+      0.02559380792081356,
+      -2.7586092948913574,
+      0.004642883315682411,
+      2.60357666015625,
+      0.8250196576118469,
+      -1.0039340752248764
+    ],
+    "ideal_release_step": 407.0,
+    "release_offset": -6.0,
+    "normal_trace_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/smoke-normal-ep16-a/run/attempts/000-354041088486-5db74eba/client/traces/57bf2f188404463591e62b9cbb5baf5b/step_trace.jsonl",
+    "source_trace_sha256": "65285fa07b5f648ea8a424d029854f5e7d9c112226b1c8073ba149f234ecff3f"
+  },
+  "receipt": {
+    "schema_version": 1,
+    "episode_key": "StopCube:16",
+    "episode_nonce": "510fefa7f4804e5cba370a416346f65e",
+    "episode_id": 16,
+    "env_seed": 521600,
+    "difficulty": "easy",
+    "trajectory_kind": "hold_extended",
+    "trace_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/smoke-hold-ep16-a/run/attempts/000-354041088486-0d570226/client/traces/510fefa7f4804e5cba370a416346f65e/step_trace.jsonl",
+    "terminal_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/smoke-hold-ep16-a/run/attempts/000-354041088486-0d570226/client/StopCube:16.terminal.json",
+    "video_path": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/smoke-hold-ep16-a/run/attempts/000-354041088486-0d570226/client/videos/StopCube_ep16_success.mp4",
+    "outcome": "success",
+    "task_success": 1,
+    "D": 0,
+    "exec_start_idx": 0,
+    "initial_env_step": 1,
+    "takeover_step": 375,
+    "release_step": 401,
+    "hold_qpos": [
+      0.019584840163588524,
+      -0.1547088772058487,
+      0.02559380792081356,
+      -2.7586092948913574,
+      0.004642883315682411,
+      2.60357666015625,
+      0.8250196576118469,
+      -1.0039340752248764
+    ],
+    "actual_takeover_step": 375,
+    "actual_release_step": 401,
+    "extra": {
+      "cube_half_size": 0.02,
+      "button_position": [
+        -0.2211505025625229,
+        0.015007471665740013,
+        0.007499999832361937
+      ],
+      "hover_z": null,
+      "hover_source": null
+    },
+    "video_fps": 30,
+    "video_start_env_step": 1,
+    "video_exec0_frame_index": 0,
+    "actions_executed": 422
+  }
+}

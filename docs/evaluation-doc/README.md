@@ -4,7 +4,7 @@
 
 | 档案 | 范围 | 状态 |
 | --- | --- | --- |
-| [StopCube 关键时间与动作第一阶段](stopcube-decision-1104/launch.md) | motion 59999、seed42、正常50局及提前按错局悬停延长，交人工确认页 | 实现与验证中；正常/延长分别统计，人工确认前不深采；美东11月5日04:52绝对截止 |
+| [StopCube 关键时间与动作第一阶段](stopcube-decision-1104/launch.md) | motion 59999、seed42、正常50局及提前按错局悬停延长，交人工确认页 | 正式正常采集中；正常/时间/控制冒烟已过，人工确认前不深采；美东11月5日04:52绝对截止 |
 | [阶段一实现](official-stage2-phase1-1026/README.md) | 按1027简化方案保留弹性队列、常驻模型与逐块仿真 | 简化实现完成，实际新增worker领取不同块通过 |
 | [20k试评估](official-stage2-20k-probe-1026-a/result.md) | 固定Stage2 VLA20k、epoch105、单局及双卡十局 | 单局0/1；两卡1/10（10%）；两个worker退出0，资源已释放 |
 | [o16ctx 60k 官方800](o16ctx-60k-800/result.md) | 官方16×100 context split 59999，seed 42，800局 | 311/800（38.88%）；资源已释放 |
