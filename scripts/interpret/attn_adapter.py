@@ -40,6 +40,10 @@ P / MEM / IMG / TXT 一律从当次观测经 `embed_prefix` / `embed_memory` 的
                 "group_tokens":  int32 (G,)}          # 每组实际参与均值的有效 token 数；空组对应的均值全 0
   只读隐状态，不改采样计算；只支持 batch=1；与 mask_keys / ablate_heads 同时给时直接报错。
 
+只做前缀的隐状态捕获（计划 1105-stopcube-hover-probe-plan.html W2）：
+  adapter.run_prefix(obs, group_masks=<bool[G,P]>) -> {"hidden_prefix": f32 (19, G, W), "group_tokens": int32 (G,)}
+  前缀段的计算与 capture_hidden=True 相同，不做去噪；只支持 batch=1；由独立的 jit 函数 f_prefix 执行，不影响 f_sample_attn。
+
 用法：
   # CPU、不加载权重，抽象求值两种 P 下的输出形状
   JAX_PLATFORMS=cpu uv run --no-sync python scripts/interpret/attn_adapter.py --dry-shapes
@@ -449,8 +453,31 @@ class AttnAdapter:
             full = jnp.concatenate([einops.repeat(pm, "b p -> b s p", s=st.shape[1]), sattn], axis=-1)
             return {"text": base[:, txt_lo:], "text_valid": pm[:, txt_lo:], "action": full, "prefix_valid": pm}
 
+        @jax.jit
+        def f_prefix(state, obs, group_masks):
+            """f_sample_attn 在 capture_hidden=True 时的前缀段，不做去噪；返回 hidden_prefix f32 (L+1,G,W)、group_tokens int32 (G,)。"""
+            m = nnx.merge(gdef, state)
+            layers = llm_of(state)["layers"]
+            o = preprocess_observation(None, obs, train=False)
+            b = o.state.shape[0]
+            pt, pm, par_, pna = m.embed_prefix(o)
+            base = make_attn_mask(pm, par_, pna)
+            pos = jnp.cumsum(pm, axis=1) - 1
+            P = pt.shape[1]
+            if b != 1 or group_masks.ndim != 2 or group_masks.shape[1] != P:
+                raise ValueError(f"隐状态捕获只支持 batch=1 且 group_masks 为 bool[G,{P}]，"
+                                 f"得到 batch={b}、group_masks.shape={group_masks.shape}")
+            h = pt.astype(ed)
+            hidden0, group_tokens = group_token_mean(pt[0], group_masks, pm[0])
+            hidden_rows = [hidden0]
+            for l in range(L):
+                (h, _), _, _ = block_apply(layers, l, [h, None], None, pos, base, [None, None])
+                hidden_rows.append(group_token_mean(h[0], group_masks, pm[0])[0])
+            return {"hidden_prefix": jnp.stack(hidden_rows), "group_tokens": group_tokens}
+
         self.f_sample_attn = f_sample_attn
         self.f_masks = f_masks
+        self.f_prefix = f_prefix
 
     def pad_mask_keys(self, mask_keys, lay):
         """bool[P] / bool[MEM] / bool[b,·] → jnp bool[b,P]（MEM 长度右补 False）；None 透传。"""
@@ -495,6 +522,10 @@ class AttnAdapter:
         x_0, pa, ptxt, n_done, *hidden = self.f_sample_attn(st, rng, observation, noise, int(num_steps),
                                                             lay["MEM"] + lay["IMG"], out_f16, **extra)
         return (x_0, pa, ptxt, n_done, lay, *hidden)
+
+    def run_prefix(self, observation, group_masks):
+        """只做前缀前向；返回 {"hidden_prefix": f32 (19,G,W), "group_tokens": int32 (G,)}，仍在 device 上。只支持 batch=1。"""
+        return self.f_prefix(self.gstate, observation, self.jnp.asarray(np.asarray(group_masks, dtype=bool)))
 
     def make_sample_fn(self, ablate_heads=None):
         """返回可顶掉 policy._sample_actions 的可调用：fn(rng, observation, **kw) -> actions（与生产同形同 dtype）。
