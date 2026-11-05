@@ -33,6 +33,11 @@ def vector(value, length):
     return isinstance(value, (list, tuple)) and len(value) == length and all(finite(x) for x in value)
 
 
+def is_task_success(value):
+    """仅 JSON 布尔值与整数 0/1 是合法成功字段，保留原始值供审查。"""
+    return type(value) in (bool, int) and value == 1
+
+
 def _plain(value):
     if hasattr(value, "detach"):
         value = value.detach().cpu().numpy()
@@ -232,7 +237,7 @@ def validate_success_window(trace, events, geometry, definition):
     """成功字段独立于运动耗时；用真实成功轨迹核对按钮、停步与几何窗口。"""
     result = {"trajectory_kind": trace["meta"]["trajectory_kind"],
               "task_success": trace["meta"].get("task_success"), "status": "not_applicable", "reasons": []}
-    if result["task_success"] is not True:
+    if not is_task_success(result["task_success"]):
         return result
     reasons = result["reasons"]
     begin, end = geometry["target_visit_in"], geometry["target_visit_out"]
@@ -315,7 +320,7 @@ def analyze(traces, definitions=None, delta_z=0.02):
         window["success_validation"] = validation
         group = groups.setdefault(str(definition.get("move_interval")), {"episodes": 0, "successful": 0, "validated": 0, "failed": 0})
         group["episodes"] += 1
-        group["successful"] += sum(v["task_success"] is True for v in validation)
+        group["successful"] += sum(is_task_success(v["task_success"]) for v in validation)
         group["validated"] += sum(v["status"] == "pass" for v in validation)
         group["failed"] += sum(v["status"] == "fail" for v in validation)
         windows[key], calibrations[key] = window, calibration

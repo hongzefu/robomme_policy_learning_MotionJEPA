@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from scripts.interpret.stopcube_windows import add_fk, analyze, extract_events, geometry_window, main, read_trace
+from scripts.interpret.stopcube_windows import add_fk, analyze, extract_events, geometry_window, is_task_success, main, read_trace
 
 
 def definition():
@@ -217,7 +217,7 @@ class StopCubeWindowsTests(unittest.TestCase):
             path = folder / "step_trace.jsonl"
             path.write_text("\n".join(json.dumps(row) for row in item["rows"]))
             receipt = {"episode_key": "StopCube/7", "episode_id": 7, "env_seed": 7,
-                       "difficulty": "easy", "trajectory_kind": "normal", "task_success": False,
+                       "difficulty": "easy", "trajectory_kind": "normal", "task_success": 0,
                        "extra": definition()}
             (folder / "meta" / "hold_receipt.json").write_text(json.dumps(receipt))
             parsed = read_trace(path)
@@ -234,6 +234,29 @@ class StopCubeWindowsTests(unittest.TestCase):
             env.reset.assert_called_once_with(seed=7)
             env.close.assert_called_once()
             self.assertEqual(parsed["rows"][0]["executed_target_tcp"], [0, 0, 0.15])
+
+    def test_real_s2_integer_receipt_success_and_failure(self):
+        root = os.environ.get("STOPCUBE_TEST_ROOT")
+        with tempfile.TemporaryDirectory(dir=root) as tmp:
+            folder = Path(tmp)
+            (folder / "meta").mkdir()
+            path = folder / "step_trace.jsonl"
+            path.write_text("\n".join(json.dumps(row) for row in successful_trace()["rows"]))
+            for value, expected in ((1, "pass"), (0, "fail")):
+                with self.subTest(task_success=value):
+                    receipt = {"episode_key": "StopCube/7", "episode_id": 7, "env_seed": 7,
+                               "difficulty": "easy", "trajectory_kind": "normal", "task_success": value,
+                               "extra": definition()}
+                    (folder / "meta" / "hold_receipt.json").write_text(json.dumps(receipt))
+                    windows, _ = analyze([read_trace(path), trace("window_probe", 40)])
+                    self.assertEqual(windows["window_sim"]["status"], expected)
+                    self.assertEqual(windows["window_sim"]["successful"], value)
+
+    def test_success_field_only_accepts_boolean_or_integer_one(self):
+        for value in (True, 1):
+            self.assertTrue(is_task_success(value))
+        for value in (False, 0, 1.0, 2, -1, "1", "true", None, [], {}):
+            self.assertFalse(is_task_success(value))
 
     def test_failed_only_cli_keeps_values_but_returns_failure(self):
         root = os.environ.get("STOPCUBE_TEST_ROOT")
