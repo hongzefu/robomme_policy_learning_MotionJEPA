@@ -289,7 +289,8 @@ def report(paths, output):
         if len(actual) != len(set(actual)) or set(actual) != expected:
             raise ValueError("分析结果有重复或缺失固定时刻")
     parts = ["<!doctype html><meta charset='utf-8'><title>同输入机制分析</title><h1>同输入机制分析</h1>",
-             "<p>这些固定成功案例只描述关联，不能证明因果或替代50局总体比较。注意力路径与原路径数值差异分别报告。图需主会话目视复核。</p>"]
+             "<p>这些固定成功案例只描述关联，不能证明因果或替代50局总体比较。注意力路径与原路径数值差异分别报告。图需主会话目视复核。</p>",
+             "<p>这里的成功指该局固定放手运行存在有效的任务成功结果，仅用于按既定规则选局。注意力实际来自同局已保存的Oracle询问输入与原十份噪声，不代表成功闭环全过程的注意力，也不代表闭环实际执行动作所用的噪声。</p>"]
     if not any(data["results"] for data in reports):
         parts.append("<p>没有固定选中的共同输入，分析未执行；未加载模型、未补跑寻找成功，不能判定机制分析通过。具体缺失原因如下。</p>")
     total, valid = 0, True
