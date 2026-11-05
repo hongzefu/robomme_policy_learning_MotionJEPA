@@ -72,4 +72,4 @@ python -m scripts.interpret.analysis.hover_probe --points "$O/hover_points.json"
 
 ## 产物
 
-隐状态库 `$O/replay/{ctx,mot}/episode_<k>.npz`，各 1.7 GB；分析在 `$O/analysis/`。`records/` 归档标签表、汇总 JSON、三张图、两张标签抽查图和清洗后的日志。
+隐状态库 `$O/replay/{ctx,mot}/episode_<k>.npz`，各 1.7 GB；分析在 `$O/analysis/`。`records/` 归档标签表、汇总 JSON、图、两张标签抽查图和判定行汇总 `verification.summary.txt`。清洗后的日志在 `records/logs/`，被 `.gitignore` 的 `*.log` 忽略，只留在本机，不进 git。
