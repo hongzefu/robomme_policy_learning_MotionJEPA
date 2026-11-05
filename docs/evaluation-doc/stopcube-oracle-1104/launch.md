@@ -50,6 +50,19 @@ FK完成后用`bash <产物根>/prepare_release38.sh`从既有汇总逐局调用
 
 ## 模型询问试跑规格
 
+第二阶段接续也先登记、后实际执行：38局固定放手结束后，`bash <产物根>/merge_release50.sh`分别按原12局计划和新38局固定计划验证收据、轨迹与终态；输出`analysis/release38-results.json`、`release50-summary.json`及`mechanism-source-summary.json`。原12局的高/低/早校准分母、计划和汇总保持不变，50局固定放手另表报告，机制选局只追加有效成功证据。既定附指标用`bash <产物根>/summarize_sensitivity.sh`汇总1/2/3厘米、16/20行，直接复用原逐点比例与局级bootstrap2000、种子42，不新增预测、不改主判据。
+
+在向用户报告第一阶段结果之后，从干净离线树`050632677bea16f86a6b317d96c7d79f6eccabe6`执行以下步骤。CPU选择、渲染与聚合都用既有uv管理策略解释器；分析各卡一份模型、配置与显存仍沿原口径，不与放手服务共驻。
+
+```bash
+source /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/offline_env.sh ctx
+"$py" -m scripts.interpret.analysis.offline_mechanism select --summary "$out/analysis/mechanism-source-summary.json" --output "$out/analysis/mechanism/selection.json"
+tmux new-session -d -s so-mechanism-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_mechanism.sh ctx'
+tmux new-session -d -s so-mechanism-mot-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_mechanism.sh mot'
+```
+
+每卡实质命令为同模块`analyze --selection <selection.json> --model-id <原checkpoint绝对路径> --config <原配置名> --output <产物根>/analysis/mechanism/<模型>.json`；日志`logs/mechanism-<模型>-a.log`。固定选择最多三局、24输入、240份原噪声预测，重放阈值仍1e-6。完成后同模块`report --analysis <产物根>/analysis/mechanism/mot.json <产物根>/analysis/mechanism/ctx.json --output-dir <产物根>/analysis/mechanism/report`；主会话逐图目视复查。`bash <产物根>/summarize_mechanism.sh`仅把既有层/头质量、每token质量、原噪声分组和真实帧聚合为`analysis/mechanism/compact.json`，不新增推理。motion缺少显式原始窗口时间字段时保留缺失，不由位置编码反推；所有结论按观察关联陈述。全部GPU命令仍受美东08:00绝对截止控制，无自动重试、输入替换或探针训练。
+
 固定实现提交 `48a52f1e083ee11777795e6d6f8dbc86056d0544`，执行工作树与缓存路径同下。S1～S4合前与合后均独立审查通过，合后分别41、17、26、25项定向测试通过。先单局 `StopCube:16`、每模型单服务，ctx用GPU0、motion用GPU1。规格文件为本轮产物根 `spec-smoke-query16-ctx-a.json` 与 `spec-smoke-query16-mot-a.json`；基线配置 `mme_vla_suite_b128`、XLA0.40，motion配置 `mme_vla_suite_orig16_b128_60k`、XLA0.55及原运行合同，checkpoint与三套解释器保持本档案已核路径。新增值为 `stopcube_mode=oracle_query`、`query_interval=4`、`query_record=10`、`query_batch_size=2`、`save_top_frames=0`、`save_prefix=false`；动作表为两局合并的 `oracle-smoke-table.json`。`model_id` 使用checkpoint绝对路径，与实际query记录一致。
 
 完整命令分别为 `tmux new-session -d -s so-query16-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_smoke_query16.sh ctx'`，以及同脚本参数 `mot`、会话名 `so-query16-mot-a`。实质命令是策略环境 `-m scripts.interpret.run_local --spec <本轮spec绝对路径> --episodes StopCube:16`；脚本核精确提交与clean、按绝对08:00减去现场时间计算timeout，截止前10秒TERM，无自动重试。输出分别为 `<产物根>/smoke/query16-ctx-a/` 与 `query16-mot-a/`，含 `attn/` 和 `run/`；日志 `<产物根>/logs/query16-ctx-a.log`、`query16-mot-a.log`。会话均先预留，收到回执后记实际启动。
