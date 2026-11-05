@@ -40,6 +40,12 @@ benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主
 
 ## 本轮会话清单
 
+正式Oracle于美东00:29:12启动 `so-oracle-all-a`（窗格PID491779），已正常退出0：`ORACLE_TABLE=PASS episodes=50 failed=0 late_reach=0`；`ORACLE_PRESS=PASS episodes=50 success=49 trigger_outside=1`。非成功局为4，正常任务失败，不重试；悬停表和真实几何窗口完整，询问消费悬停段不受真下压失败影响。
+
+正式两模型分层12局询问预留 `so-query12-ctx-a`、`so-query12-mot-a`。完整命令为 `tmux new-session -d -s so-query12-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_queries.sh ctx query12'`（motion参数mot）。固定同一48a52f1干净树、原检查点/环境/显存与batch2，每点仍十预测。`manifest-query12.json` seal=`bf094f6aac88f9cd27925be80fbf744db07b4a250a4755407a7998945794a77e`，12局三客户端分块5/5/2，每模型整段复用一份服务，740个询问点。顺序为M60局1/3/4/5，M80局0/2/12/13，M120局6/9/10/14；均为每M最小四局。规格 `spec-query12-<模型>-a.json`，输出 `query/<模型>/query12-a/{attn,run}`，日志 `logs/query12-<模型>-a.log`。实际端口现场探测，服务nonce、各client grant与每局nonce由原驱动生成并落commands.json；不重试、不减预测，绝对08:00。
+
+其余38局清单亦已封签，与12局互斥且并集50：`manifest-query38.json` seal=`68a60f2171969aa82985cced4d7cc7e98d080163da38843c8d8bd5b52a1caff9`，每模型2990点、8客户端。其余38局只在12局询问、校准及向用户汇报后运行；不得据预先准备的spec视为已经启动。
+
 小规模校准实际于美东00:24:26启动，`so-smoke-calibrate-ctx-a`、`so-smoke-calibrate-mot-a`，窗格PID485167、485165；8次两类型两局两模型均有持久终态和有效控制权证据。fixed_release两模型各2/2官方成功；high_probability两模型各2/2在交还后48步内触发，随即以calibration_stop截断，不能将其原始task_success=0字段解释为完整任务失败。`PRESS_CALIBRATION_SMOKE=PASS models=2 episodes=2 run_types=2 runs=8 valid=8`。正式构表4进程各设置OMP/MKL/OpenBLAS线程数1，避免CPU线程过度占用；不更改物理参数或环境seed。仍采用上文预留so-oracle-all-a命令，起跑回执后补。
 
 小规模八项验证已通过：Oracle两局hold/press退出0；第16局两模型动作差0、7臂关节/TCP/方块轨迹差0；询问300点每点10预测；第16局4/16节奏各30公共点输入差0、帧号差0；两模型两局各首尾2点共8点原路径离线误差0（tol1e-6），注意力展开差异单列；FK同期300个原始状态高度差0（tol1e-3），同时换算60000行目标高度。随后预留两模型校准试跑：`so-smoke-calibrate-ctx-a`、`so-smoke-calibrate-mot-a`，完整命令 `tmux new-session -d -s so-smoke-calibrate-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_smoke_calibrate.sh ctx'`（motion参数mot）。同一48a52f1干净树及原解释器/缓存/显存，按fixed_release→high_probability顺序，每类型复用一个服务依次运行第16、3局；使用smoke/analysis-a/calibration_plan.json固定选点，动作表oracle-smoke-table.json。规格文件 `spec-smoke-calibrate-<模型>-<类型>-a.json`，输出 `smoke/calibrate-<模型>-<类型>-a/{attn,run}`，日志 `logs/smoke-calibrate-<模型>-a.log`，不自动重试、仍截止08:00。
