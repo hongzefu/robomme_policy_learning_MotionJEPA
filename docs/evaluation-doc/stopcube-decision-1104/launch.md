@@ -53,7 +53,32 @@
 
 最多两张 A6000；起跑前只做必要的低频资源核对，不新增高频 GPU 监控。先单局正常/接管冒烟，再放大正常 50 局；正常结果完成后识别提前按错局，生成接管表，执行延长，再汇总人工确认页。生产者退出并核退出码和完整性后才分析其产物。
 
-本轮已启动的长计算 tmux 清单：**无**。实际起跑时补入唯一 `sd-` 会话名、命令、日志、GPU、代码 sha 和截止控制；不能把预留名称写成已启动。到绝对截止停止计算，保留超时或非零退出码和部分结果，不自动延期。
+截至本段落地，尚无已启动的长计算句柄。下面为已经固定、即将派发的单局冒烟，不代表起跑成功：
+
+- 干净执行工作树为 `/home/hongzefu/.codex/worktrees/stopcube-runner/robomme_policy_learning_MotionJEPA`，实现提交 `65395f2524b5ac9e9debf4374d6226638d1bb3f5`，与主检出已推送的整合代码一致。三次合并后审查均通过；整合定向验证 `74 passed in 14.36s`，退出 0。
+- 官方清单已签封：`MANIFEST=PASS episodes=50 chunks=50 seal=9401b7b3ff89a02d351460c388739a28c8c3312e01f9797e29803584d825f4f6`，文件位于产物根 `preflight/manifest-all.json`。
+- 单局为 `StopCube:16`，run 为 `smoke-normal-ep16-a`，使用物理 GPU 1。起跑前 GPU 0 出现其他用户计算，本任务先用 GPU 1，不操作其进程；最多两卡不是强制同时占满两卡。
+- 预留 tmux 名 `sd-smoke-normal-1104a`；日志 `/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/logs/sd-smoke-normal-1104a.log`；只有收到起跑回执后才转入实际句柄清单。
+
+完整起跑命令为：
+
+```bash
+tmux new-session -d -s sd-smoke-normal-1104a \
+  'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/smoke_entry.sh'
+```
+
+入口的实质命令为下面这条，并通过 `pipefail`、`tee`、`PYTHONUNBUFFERED=1` 和 `EXIT_CODE=` 尾行留存结果：
+
+```bash
+/data/hongzefu/robomme_policy_learning_MotionJEPA/.venv/bin/python \
+  -m scripts.interpret.run_local \
+  --spec /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/spec-smoke-normal.json \
+  --episodes StopCube:16
+```
+
+spec 的额外值为 `cuda="1"`、`xla_mem_fraction=0.55`、`startup_timeout_seconds=900`、`rpc_timeout_seconds=600`、`stopcube_mode="normal"`、`stopcube_config=<产物根>/normal_config.json`（精确内容 `{"schema_version":1,"episodes":{}}` 后接换行）、`manifest=<产物根>/preflight/manifest-all.json`；`repo` 为上述执行工作树，`attn_out=<产物根>/smoke-normal-ep16-a/attn`、`run_root=<产物根>/smoke-normal-ep16-a/run`。其余模型和解释器值见第三节。正常冒烟不保存额外 prefix 全矩阵和 motion 生成历史，既有推理记录仍保存实际 motion 输入。
+
+起跑脚本每次以固定截止减去当前时间计算剩余秒数，不设置新的八小时。提前 10 秒向当前任务发 TERM，至绝对截止执行 KILL 上限；现有 `run_local` 的信号处理和 `finally` 收尾关闭自己的服务端及客户端，原失败日志保留。任何超时按非零/超时状态报告，不能当成功。
 
 ## ⑨ 用户决定原话
 
