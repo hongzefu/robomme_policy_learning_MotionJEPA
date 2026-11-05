@@ -104,6 +104,12 @@ P 是每次推理用 10 份独立噪声走原路径算出的预测里，前 16 �
 
 ![各层 R²](records/probe-vs-time-r2.png)
 
+下面两张图只用 R²。第一张在上图基础上加了「只用时间」的细点线。第二张是第 17 层各组的折外预测对真值，彩色粗线是每局等权的拟合直线，灰线是猜对的位置；R² 来自 `records/fit-summary.json`，其中 22 项和 `records/probe-summary.json` 相同。第 17 层是固定选择，看不到文字组在第 0 层的高点，这个高点看第一张图。
+
+![每一层的 R²](records/rollout-r2-layers.png)
+
+![第 17 层拟合直线](records/rollout-r2-fit.png)
+
 ### motion 输入带有互补的进度信息
 
 下表是计划外的事后分解，只用已有隐状态和同一折划分，没有新增推理，见 `records/probe-decompose.json`、`records/probe-decompose-ci.json`。
