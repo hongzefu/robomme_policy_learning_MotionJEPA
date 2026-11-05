@@ -40,6 +40,10 @@ benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主
 
 ## 本轮会话清单
 
+正式分层询问实际于美东00:36:19启动：`so-query12-ctx-a`、`so-query12-mot-a`，窗格PID504851、504849。实际服务端口52005、35027，服务nonce分别9cad3d54793f4232bc5eac3b374f35ea、5f45ed2262eb4132a00d46142122d487；运行身份分别9c5188ae2e8f03114b55601abd40a87ba6174f73e4289a1576a38b7d7440248b、a1a70a1c5b4870e564f8de81ef75c813237c4f4ef1d892eb4f6a17dcc7781661。
+
+询问两模型完整退出0并核740点后，下一步预留 `so-fk12-a`：`tmux new-session -d -s so-fk12-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_fk12.sh'`。同一48a52f1，official-sim调用 `-m scripts.interpret.analysis.oracle_press_prob convert-z --query-root <产物根>/query/ctx/query12-a/attn --query-root <产物根>/query/mot/query12-a/attn --trace-root <两模型对应run目录，各一项> --oracle-table <产物根>/oracle/oracle_table.json --output-dir <产物根>/analysis/query12/cache --workers 4`；每进程OMP/MKL/OpenBLAS1线程。随后策略解释器调用同模块 `summarize --cache-root <该cache> --oracle-table <全50表> --output-dir <产物根>/analysis/query12`，固定12局校准选点，原2cm/16行判据与bootstrap2000保持。日志 `logs/fk12-a.log`，仍绝对08:00，无自动重试。此处只是预先记命令，不能据此声称已经算完或起跑。
+
 正式Oracle于美东00:29:12启动 `so-oracle-all-a`（窗格PID491779），已正常退出0：`ORACLE_TABLE=PASS episodes=50 failed=0 late_reach=0`；`ORACLE_PRESS=PASS episodes=50 success=49 trigger_outside=1`。非成功局为4，正常任务失败，不重试；悬停表和真实几何窗口完整，询问消费悬停段不受真下压失败影响。
 
 正式两模型分层12局询问预留 `so-query12-ctx-a`、`so-query12-mot-a`。完整命令为 `tmux new-session -d -s so-query12-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_queries.sh ctx query12'`（motion参数mot）。固定同一48a52f1干净树、原检查点/环境/显存与batch2，每点仍十预测。`manifest-query12.json` seal=`bf094f6aac88f9cd27925be80fbf744db07b4a250a4755407a7998945794a77e`，12局三客户端分块5/5/2，每模型整段复用一份服务，740个询问点。顺序为M60局1/3/4/5，M80局0/2/12/13，M120局6/9/10/14；均为每M最小四局。规格 `spec-query12-<模型>-a.json`，输出 `query/<模型>/query12-a/{attn,run}`，日志 `logs/query12-<模型>-a.log`。实际端口现场探测，服务nonce、各client grant与每局nonce由原驱动生成并落commands.json；不重试、不减预测，绝对08:00。
