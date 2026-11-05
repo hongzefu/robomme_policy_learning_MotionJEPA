@@ -40,6 +40,14 @@ benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主
 
 ## 本轮会话清单
 
+剩余38局实际于美东01:35:18启动：`so-query38-ctx-a`、`so-query38-mot-a`，窗格PID559354、559351，八客户端。实际服务端口57671、39501，nonce分别d06befe2d7f945b79c6bee3eb4eeae9b、12a174b4298b454ebc1e586980427ce4；运行身份分别624b40a858e99fd0832e33637a71bc27b94e388060eec182c727f08ad1bdc4e9、6f18489db1c58a9ea4eaef164e9402fb3a806e8cf5797636ae983e3588c40a99。生产代码仍固定48a52f1。
+
+中间12局概率图与经过图已实际渲染、目视后修复图例遮挡及混合目标次数的问题；新版短图例位于图外、M×N分面、中文字体正常，主会话再次查看两张真实位图通过：`REPORT_VISUAL=PASS stage=query12 figures=2`。修复只改显示，不改数据或统计；新报告工具源码在050632677bea16f86a6b317d96c7d79f6eccabe6，单独干净离线树 `/home/hongzefu/.codex/worktrees/stopcube-offline-run/robomme_policy_learning_MotionJEPA` 已备妥，避免触碰正在采集的树。
+
+正式50局每局两点离线验收将在两侧38局完成并核完整后运行。预留 `so-offline-verify-ctx-a`、`so-offline-verify-mot-a`，命令 `tmux new-session -d -s so-offline-verify-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_offline_verify.sh ctx'`（motion参数mot）。离线树固定0506326，沿用原模型/环境/确定性XLA/显存比例；从正式query12/query38每模型50个局各取首尾两份记录，共100点/模型，保存 `analysis/offline-inputs-<模型>.json`。策略解释器 `-m scripts.interpret.offline_query --query <固定100路径> --ckpt <原检查点> --config <原配置名> --attention --output <产物根>/analysis/offline-verify-<模型>.json`，复用每点原十噪声及实际batch2，原路径tol1e-6，展开差异独立报告；日志 `logs/offline-verify-<模型>.log`，逐点实时判定，不换输入、不重试、截止08:00。此为第一阶段既定每局两点验收，不计作第二阶段选例扩张。
+
+另预留全量高度换算 `so-fk38-a`，命令 `tmux new-session -d -s so-fk38-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_fk38.sh'`。仍固定48a52f1；将已核24份query12高度缓存逐字节复制到新的analysis/all/cache，再对query38两模型76局目录执行原convert-z四worker，最后对合计100份缓存运行summarize并消费既有calibrate结果。输入/query与trace路径严格指向正式query38，动作表全50，输出analysis/all与日志logs/fk38-a.log；不重算已经通过的query12模型或高度，不改原固定校准点。运行后现场核新全量计划与原12局计划选点完全一致。
+
 正式校准实际于美东01:16:51启动，`so-calibrate12-ctx-a`、`so-calibrate12-mot-a`，窗格PID537210、537208，均已退出0。逐项核74条收据与独立轨迹、实际交还点、Oracle前缀、首次预测及模型控制权、合法停止和持久终态，`PRESS_CALIBRATION=PASS models=2 episodes=12 planned=74 completed=74 valid=74 skipped=22`。固定放手ctx2/12、motion6/12最终任务成功；高比例48步触发10/12、12/12，低比例5/12、3/12。低比例组首次至多16个模型动作的实测TCP均未低于悬停2cm，后续重新推理可能触发，故不能用48步触发反推首次预测错误。此辅助统计不改变原2cm/16行预测判据或48步运行上限。校准结果已先在聊天汇报，不等待额外确认继续。
 
 剩余38局询问预留 `so-query38-ctx-a`、`so-query38-mot-a`，完整命令 `tmux new-session -d -s so-query38-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_queries.sh ctx query38'`（motion参数mot）。固定48a52f1与原GPU/解释器/检查点/显存/十预测batch2；清单为前述互斥38局seal68a60f21…a1caff9，每模型2990点、8客户端共用一服务。规格 `spec-query38-<模型>-a.json`，输出 `query/<模型>/query38-a/{attn,run}`，日志 `logs/query38-<模型>-a.log`，绝对08:00、不自动重试。预先准备不等于已起跑。
