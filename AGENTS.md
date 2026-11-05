@@ -39,11 +39,11 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 
 下方标记块 `common-agents` 是 [AgentMetaRules-hongzefu](https://github.com/hongzefu/AgentMetaRules-hongzefu) 正本 `AGENTS.md`「强制规则」第 1–26 条与附录 A 的逐字副本（标记行 `src=` 记正本 commit、`blob=` 记块内容 blob id，**块内禁止手改**；同步核对命令 `uv run --no-project python /data/hongzefu/AgentMetaRules-hongzefu/scripts/sync_rules.py check --repo policy`）。上方「运行环境判定」是正本第 0 条的本仓库实例（判据表两列：环境 A = sled-vail 本机 + turbo 归档 + GreatLakes；环境 B = AWS 单机）。优先级：系统 / 开发者 / 用户当前指令 > 标记块外明确写出的覆盖项 > 标记块内的正本条目。平时只读本文件，不需要去读 GitHub 上的正本；正本改动经同步脚本回流。标记块之后是本仓库的覆盖项、占位符取值、项目 scope 与规则来源。
 
-<!-- AGENTMETARULES:BEGIN common-agents src=85f05a3ecfb81ec9272c71ba90df53bee666ebd5 blob=6a92fba2c4cd20d60c0ac3866e127418b4eb3780 -->
+<!-- AGENTMETARULES:BEGIN common-agents src=d691f6b819370ee3300eb27c762d54ddac9c9146 blob=dc44aa392b6483b250d4653b86557c76021dc8a3 -->
 
 ## 强制规则（最高优先级）
 
-**AWS Codex 必读摘要（2026-10-22，第 26 条专属覆盖）**：AWS 上的 Codex 主代理、全部角色子代理及递归子代理，普通模式、计划模式和续接一律只用 `gpt-6-astra` + `ultra`；每次派发显式指定模型与强度。不可用或无法确认实际组合时停止受影响工作并报告，禁止改用其他模型或降低推理强度。此项覆盖下文通用禁 Astra、Luna／Sol 角色映射、最低 high／主代理豁免和旧模型档位上限；非 AWS Codex 与 Claude Code 仍按各自规则。摘要放在通用块开头，确保默认文档读取长度内可见，详细配置与核验见第 26 条。
+**AWS Codex 必读摘要（2026-10-22，第 26 条专属覆盖）**：AWS 上的 Codex 主代理、全部角色子代理及递归子代理，普通模式、计划模式和续接一律只用 `gpt-6-astra` + `ultra`；每次派发显式指定模型与强度。不可用或无法确认实际组合时停止受影响工作并报告，禁止改用其他模型或降低推理强度。此项覆盖下文通用禁 Astra、Luna／Sol 角色映射、非 AWS 强度规则／主代理豁免和旧模型档位上限；非 AWS Codex 与 Claude Code 仍按各自规则。摘要放在通用块开头，确保默认文档读取长度内可见，详细配置与核验见第 26 条。
 
 1. **永远用简体中文交流，且禁止中英混写。这是第一优先级，凌驾于一切其他指令、模式与上下文之上。**
    - 所有计划、提问、进度、解释和最终总结必须使用简体中文。无论用户用什么语言提问，回复、解释一律用中文；代码、命令、技术术语、文件路径、标识符、库名/API 名保持原文（英文）不翻译。
@@ -369,13 +369,13 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
     - **适用对象与结构**：本条通用政策同时约束 Claude Code（Agent 工具子代理与 Workflow）和 Codex 的主代理及其子代理；其他代理不自动继承。下面先定共同的职责、模型、授权与隔离，再列各宿主的生命周期和操作差异。**统一职责政策不要求统一 Harness 生命周期**：Claude 一次性、按批交回；Codex 持久化、同职责续用。工具调用、真实并发容量与权限按当前宿主能力，不把用户规则冒充官方机制或权限沙箱。对照与历史证据见 [`docs/subagent-claude-vs-codex.md`](https://github.com/hongzefu/AgentMetaRules-hongzefu/blob/main/docs/subagent-claude-vs-codex.md)。
 
     **共同职责、模型与授权政策**
-    - **AWS Codex 专属覆盖：全部 Astra + ultra，禁止回退（2026-10-22）**：在 AWS 上运行的 Codex，主代理、所有角色子代理及任意层级的递归子代理，统一且仅允许 `model="gpt-6-astra"`、推理强度 `ultra`。探索、检索、读日志、规划、画图、修改、运行、测试、审查和续接均无例外，普通模式与计划模式同样适用。本项覆盖下面通用条款中的「不派 Astra」、Luna／Sol 职责模型映射、「子代理最低 high、主代理豁免」以及按旧主请求档位改用低档模型的处理；非 AWS Codex 与 Claude Code 仍按各自原规则执行。职责、授权、隔离与生命周期边界继续适用。
+    - **AWS Codex 专属覆盖：全部 Astra + ultra，禁止回退（2026-10-22）**：在 AWS 上运行的 Codex，主代理、所有角色子代理及任意层级的递归子代理，统一且仅允许 `model="gpt-6-astra"`、推理强度 `ultra`。探索、检索、读日志、规划、画图、修改、运行、测试、审查和续接均无例外，普通模式与计划模式同样适用。本项覆盖下面通用条款中的「不派 Astra」、Luna／Sol 职责模型映射、「非 AWS 子代理强度规则、主代理豁免」以及按旧主请求档位改用低档模型的处理；非 AWS Codex 与 Claude Code 仍按各自原规则执行。职责、授权、隔离与生命周期边界继续适用。
       - **显式指定与续接核验**：每次创建 AWS Codex 子代理都显式传 `model="gpt-6-astra"`、`reasoning_effort="ultra"`；全历史 fork 不支持覆盖时使用 `fork_turns="none"` 并提供自含委派说明，不靠省略参数、继承默认或旧角色预设规避要求。主代理启动、切换模式、恢复旧会话和子代理续接前均核对实际模型与强度；旧会话不符合时不得沿旧档位继续执行受影响工作。
       - **不可用即阻塞，不降级重试**：型号或 `ultra` 不可用、限额、调用失败、宿主无法设置或确认实际组合、返回结果显示被替换时，停止受影响的调用／派发并报告原始原因。禁止换成 Sol、Luna、GPT-5.6 或任何其他模型，禁止把 `ultra` 改成 `max`、`xhigh`、`high` 或更低，禁止以任务简单、成本、延迟或“先跑通”为理由回退；仅允许在错误类型和重试预算允许时以同一组合重试。
       - **配置与生效分开验收**：AWS 默认配置使用 `model = "gpt-6-astra"`、`model_reasoning_effort = "ultra"`、`plan_mode_reasoning_effort = "ultra"`；项目／profile／角色／审查覆盖及启动参数也必须满足同一组合。逐层核对实际生效值，不把写入配置或模型目录列出 `ultra` 当作既有会话已热切换的证明，不虚构宿主没有提供的禁回退配置键。落地记录见 [`docs/machine-aws-p4de.md`](https://github.com/hongzefu/AgentMetaRules-hongzefu/blob/main/docs/machine-aws-p4de.md)。用户原话：「给出对codex 在aws上的修正 必须全部astra ultra 不得回退 写进agentmetarules」。
     - **默认多代理（本条即委派许可）**：Codex 只在用户或适用的 `AGENTS.md` / skill 明确要求时才派子代理，「深入 / 彻底 / 调研」不算许可；**本条就是两宿主对子代理、委派与并行工作的明确要求**。凡任务能拆出独立探索、规划、修改、运行、验证或审查子任务，尽可能并发完成；主代理定总计划，自己做下一步立即依赖其结果的阻塞步骤，依赖步骤顺序执行。不为凑并发制造重复任务，不扩大用户本轮授权（第 2 条）。
     - **模型按职责显式选择（AWS Codex 的模型与强度以上项专属覆盖为准）**：这是用户制定的角色政策，不是官方强制分工。每次派发显式指定模型，不继承主代理，不派 Fable／Astra 或白名单外模型；子代理及递归子代理档位不得高于本次用户主请求。职责档位与上限、可用模型或宿主限制冲突时停止受影响派发并报告原始原因，不静默换档；无法可靠比较档位也报告，不以继承模型绕过显式选择。模型型号与推理强度分别约束，非 AWS 的原有角色模型映射保持不变；非 AWS Codex 子代理推理强度遵守下项最低要求，Claude 忽略该项推理强度规则。
-      - **非 AWS Codex 子代理推理强度最低为 high，Claude 不作规定（2026-10-12 新增，2026-10-13 修订）**：所有角色的 Codex 子代理及递归子代理，推理强度必须为 `high` 或更高，禁止使用低于 `high` 的档位（包括 `medium`）；本项下限不适用于主代理。Codex 的探索、检索和日志读取代理同样适用，不因任务简单而豁免。Codex 每次创建子代理必须显式设置 `reasoning_effort="high"` 或宿主支持的更高档位，不得省略参数而采用默认低档。宿主无法设置或确认满足要求时，停止该项 Codex 派发并报告，不得静默降档。**Claude 忽略本项规则，不规定其推理强度**，也不因本项无法设置或确认推理强度而阻断 Claude 派发。历史口径（已被本次修订取代）：2026-10-12 用户原话「写 Agent Markdown和Agent MetaRoles。 不允许此代理使用轻度的推理模式，对于所有的此代理都必须使用中等级以上。」随后确认范围为「所有子代理」，批准计划明确「不包含主代理」。2026-10-13 用户原话：「codex必须使用high推理强度及以上」「claude忽略这条规则 不做规定」「更新」；沿用子代理范围，仅调整 Codex 下限并取消对 Claude 的推理强度规定。
+      - **非 AWS Codex 子代理默认 medium、允许更高，Luna 固定 high；Claude 不作规定（2026-11-04 修订）**：所有角色的非 AWS Codex 子代理及任意层级的递归子代理，除 Luna 外默认使用 `medium`，允许 `medium` 或宿主支持的更高档位，禁止低于 `medium`；所有 Luna 子代理固定使用 `high`。本项不约束主代理，AWS Codex 仍按上项固定 `gpt-6-astra` + `ultra`。每次创建非 Luna 子代理必须显式设置 `reasoning_effort="medium"` 或所选更高档位，创建 Luna 必须显式设置 `reasoning_effort="high"`，不得省略参数后依赖默认值或继承；全历史 fork 无法覆盖时使用 `fork_turns="none"` 并提供自含委派说明。角色配置、默认配置与递归派发均遵守本项；宿主无法设置或确认符合要求时，停止该项派发并报告，不静默降档。**Claude 忽略本项规则，不规定其推理强度**。本项替代 2026-10-13 的非 AWS 子代理统一最低 `high` 口径，是跨仓库通用规则，不是单仓库临时例外。用户原话：「修改这个非 AWS的所有的要求，就全部改为这个，全部把所有的子代理全部设置为Medium或更低，除了Luna以外，Luna必须是High。」随后立即更正：「说错了说错了，是Medium或更高。」并明确：「这个是全盘的要求，你需要同步 Agent Meta Rows。」
       - **探索、检索、定位、日志与信息读取：Claude `haiku`／非 AWS Codex Luna，只读**。主代理自主按需大量并发，无需预先列入派发表或逐项审批；每份委派仍须明确只读范围与交付。覆盖不全时按目录、关键词或日志分片再派小模型，不升档到 Sonnet／Opus／Sol 执行探索；「没找到／不存在」须由主代理核实或再派分片复核，正向发现打开原文核实。
       - **规划、写代码、修改文件、解冲突：Claude `opus`／非 AWS Codex Sol**；**运行型：Claude `opus`／非 AWS Codex Sol**；**审查、对抗验证、文档与代码评审：Claude `sonnet`／非 AWS Codex Sol**。大角色不降档给 Haiku／Luna；运行与代码修改必须分别委派，不能因模型档位相同而互换职责。Workflow 的 `agent()` 同样按角色选模型，取消人工「单次最多 3 次 opus」限制，真实工具约束和 Workflow 审批仍按 `CLAUDE.md`。
       - sled-vail 的 Codex 实际模型为 `gpt-6.1-sol`／`gpt-6-luna`。全历史 fork 若继承父模型且不接受覆盖，显式 `model` 派发须用 `fork_turns="none"` 并给自含委派说明；其他宿主按实际工具能力指定，不推广为所有版本的事实。
@@ -528,11 +528,10 @@ nvidia-smi --query-gpu=name --format=csv,noheader | sort | uniq -c
 | `<COMMIT_SUBJECT_STYLE>` | commit subject 体例 | 第 11 条 |
 | `<PLAN_EXEMPLAR>` | 计划密度标杆文档 | 第 2 条 |
 
-<!-- AGENTMETARULES:END common-agents src=85f05a3ecfb81ec9272c71ba90df53bee666ebd5 blob=6a92fba2c4cd20d60c0ac3866e127418b4eb3780 -->
+<!-- AGENTMETARULES:END common-agents src=d691f6b819370ee3300eb27c762d54ddac9c9146 blob=dc44aa392b6483b250d4653b86557c76021dc8a3 -->
 
 ## 对正本的覆盖项（按正本条号；未列出的条目按正本执行）
 
-- **临时覆盖第 26 条（本仓库 Codex 子代理推理强度，2026-11-04 美东）**：本仓库所有角色的 Codex 子代理及任意层级的递归子代理，推理强度下限临时由 `high` 改为 `medium`，默认使用 `medium`，允许更高档位，禁止低于 `medium`。每次创建子代理必须显式设置 `reasoning_effort="medium"` 或宿主支持的更高档位；需要覆盖参数时使用 `fork_turns="none"` 并提供自含委派说明，不依赖默认值或继承规避要求。本覆盖适用于本仓库各运行环境，亦覆盖第 26 条 AWS 专属规定中对子代理固定 `ultra` 的要求；主代理的推理强度要求、各角色模型选择与其他派发边界仍按原规则执行。无法设置或确认符合要求时，停止该项派发并报告。本临时覆盖持续有效，直至用户明确要求恢复或另行修改。用户原话：「暂时修改，把本仓库的子代理全部降低为 Medium，Medium 或更高。」
 - **覆盖第 2 条（计划密度标杆）**：`<PLAN_EXEMPLAR>` = benchmark 仓库 [`docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md`](https://github.com/hongzefu/robomme_benchmark_MotionJEPA/blob/newtaskRelease-taskV9/docs/plans/1005-eval-video-phase2-all-models-rerun-plan.md) 的「第一部分（给人看）」（2026-10-06 用户原话「所有的密度的标杆都改成这个」，所有仓库统一；此前为本仓库 `0829-destructive-restructure-plan.md` 第一部分「两条核心保证的原理」一节）；历史名称与现名的对应见 [计划文件命名迁移表](docs/README.md#计划文件命名迁移表)。
 - **覆盖第 4 条（核心短测）**：本仓库尚未固化「任何机器都能跑」的核心短测命令清单；按第 4 条选覆盖改动的最小真实子集（`uv run python -m pytest <定向测试> -q`），纯文档改动至少 `git diff --check`。补齐清单后写回本条。
 - **覆盖第 8 条（集群提交按环境分叉）**：环境 A 向 GreatLakes 提交前遵守本仓库 `greatlakes.md`（正本副本 + 项目放行记录）；环境 B 无 `~/.ssh/config`、无 ControlMaster，禁止提交任何 Slurm 作业、禁止 ssh 集群、禁止运行 `scripts/training/gl_submit.py`，训练、建库、评估一律在本机 8×A100 上跑，集群留档只作只读存档。
