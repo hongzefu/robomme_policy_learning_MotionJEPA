@@ -1,0 +1,590 @@
+{
+  "verdict": "PASS",
+  "figures": 96,
+  "analysis": 67,
+  "overview": 4,
+  "phase_evidence": 25,
+  "notes": [
+    "motion交换图将边界值改为3位小数，避免1.004被显示成1.00而误读",
+    "未交付的早期双排拼图有标题接近图框，终稿改为单行六图",
+    "不带motion token的VLA空motion面板明确不适用，不作为零值"
+  ],
+  "files": [
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/opening_and_recent.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/report-figures/opening_and_recent.png",
+      "sha256": "a3605f0500a112c8e0a846f93c93ff486307029200ffada139df4c63ae52af64",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/named_head_stability.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/report-figures/named_head_stability.png",
+      "sha256": "62720463d0431c959688cb8cae8c8c76266f820c5545dd5952e05a5bada917d2",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/motion_swap_by_episode.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/report-figures/motion_swap_by_episode.png",
+      "sha256": "14a7b2dbbe1b761a3b8d85e095af057440f8cfb8cfa40ef79796ebb73660425e",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/fixed_motion_window160.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/report-figures/fixed_motion_window160.png",
+      "sha256": "69bdeb6e56026c2883639870911cf4ebf452863a579dbd0b8fe922a8243972d1",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cross_episode_stability_and_outcomes.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/cross_episode_stability_and_outcomes.png",
+      "sha256": "2721e9a224d9324268758ebc65544bbd9b66eec7f5fad05546edffc962279c37",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep4/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep4/head_strength.png",
+      "sha256": "63129ab6fd59dc71a894c53dd12921ef618d64f51c83d5282ddca75540c76afd",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep4/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep4/opening_and_robust.png",
+      "sha256": "63737b2778dff5c8b67f109431a005f452219eefff93da1e55c2892b266eb68c",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep4/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep4/motion_and_paths.png",
+      "sha256": "85f2bbdc13930c2854b96e1c5edb370855c87625c07b04ba63bd440bf8fdb921",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep4-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep4-pick1-phases.png",
+      "sha256": "d71327b1ab36690ba2f22f734052b7f234858556cf48ab5c25135870150ef38e",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep8/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep8/head_strength.png",
+      "sha256": "d430ad287d6b1d8e10d115865a61d762fcae1252b19e3e3f15c8b92863e4fa73",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep8/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep8/opening_and_robust.png",
+      "sha256": "ffc0e728bd7cdf4c59e33feb6089e9bdc11ae87f36cf21699a8f8aaed9025675",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep8/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep8/motion_and_paths.png",
+      "sha256": "84c05e2444dc08ebfcd8d31e1620c2226cad25310ac7037457d979b3a97ff057",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep8-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep8-pick1-phases.png",
+      "sha256": "a1c1f180ad9c0db577ab11f03def391a7878f92772f244d0b3d9efe31873fbfd",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep11/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep11/head_strength.png",
+      "sha256": "c3ea4df6a3cd4db2fcde99296666885fe318f00d33f9f5c333d5f2451b652eca",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep11/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep11/opening_and_robust.png",
+      "sha256": "c1d8f0c9eedfbb6ea0cebe5572fc666ccd10041d19e28c8cbfd9124720b3c1bf",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep11/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep11/motion_and_paths.png",
+      "sha256": "9549f24d390af0b988e8d1790b9ac664d655db2d939099e4ffe6be7b6538526e",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep11-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep11-pick1-phases.png",
+      "sha256": "68e7e81b9c64f117e2f5d2742c012c7e2350b86b19e63fc40d8fff18d6f31d6e",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep11-pick2-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep11-pick2-phases.png",
+      "sha256": "1c7cdf3b1c48d890cc74aa69ab6579f9365988914def43047b8c25a0c41e87f8",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep12/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep12/head_strength.png",
+      "sha256": "2d36270ad00deb073cbd5a77973c025d085189d4f1b0a3c97b8164f90859d1c8",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep12/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep12/opening_and_robust.png",
+      "sha256": "d3ebf136d4645febc24930faaeb845df9079d711a91fae6e102309765f37f7fc",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep12/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep12/motion_and_paths.png",
+      "sha256": "6f403e1bedf028c09164d5ac8aa58ee5d4058478273102cf5e7066f69d61e9dc",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep12-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep12-pick1-phases.png",
+      "sha256": "abf4033fdbc6d5ddc2d1de19ae5e7345ea69d524c96a460d749a5891483ac455",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep17/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep17/head_strength.png",
+      "sha256": "d81202e7c2334fde0fe4238a67e04e40cf43e2c64f616ea0103db31a363c0f55",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep17/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep17/opening_and_robust.png",
+      "sha256": "45f1daa5f2e4ae2abd8bea787ba771c7472359a21a6a634b8b35d3964e0f0301",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep17/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep17/motion_and_paths.png",
+      "sha256": "7a8c3d4df4f6a3e30f516675df57c30456e733a55f99a42277c25f95d183c9ac",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep17-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep17-pick1-phases.png",
+      "sha256": "b54e01b4dbfc63105c0a0e47837ebd2dbd41e8a4a2cee1e18016ff8eff77b2a2",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep17-pick2-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep17-pick2-phases.png",
+      "sha256": "8eac3b76b4ba64e36495f34c6a75b22a3003590732d2d0f8eae02a8aff34c82c",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep18/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep18/head_strength.png",
+      "sha256": "60376dd9ce88bb507987216ab4c9a909fc929f0a017eb41e818a7e0e95ee047a",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep18/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep18/opening_and_robust.png",
+      "sha256": "ab71556a2c2a1b2519cd22aede6b498137e4fe70e00ad1f395057db15314f2bb",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep18/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep18/motion_and_paths.png",
+      "sha256": "715227dc48b5962230a5790396c0ca86da239404ebc5eb649fdfc37c335fa108",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep18-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep18-pick1-phases.png",
+      "sha256": "b9c27f8736797393574fca5f02a8d83f86bc1cc36b4a8e4f0f081d7918d25973",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep20/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep20/head_strength.png",
+      "sha256": "325b466fc1edc4a4000a4a06b81da5ab380d3ecc851f82835f4a9f9eadf91501",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep20/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep20/opening_and_robust.png",
+      "sha256": "5005cd7da243aafeab2b3f39d60933b6e36e0950ee2e45ee8eadd2a54f445db0",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep20/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep20/motion_and_paths.png",
+      "sha256": "50e404ddddbfae859b74ad86e9f81a41d639ce775501be478be5bffba87263d8",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep20-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep20-pick1-phases.png",
+      "sha256": "b8733e79452280df80d5378dc2c030fa6c653cab59d47607fa5b907eadbfb265",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep26/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep26/head_strength.png",
+      "sha256": "12c6ced83e159ea4e44a5f63a34887a5ce29a0229223ce7e46782a0b6ebbd498",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep26/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep26/opening_and_robust.png",
+      "sha256": "2f295fb4eb98dd057e81adad06d774ef4b0f74314f0abd9a8cacd288dea264a6",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep26/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep26/motion_and_paths.png",
+      "sha256": "14e98f65b5a34a89835c9c4611e9e46e8e21a7631318ff72573e6588eed1aca0",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep26-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep26-pick1-phases.png",
+      "sha256": "0ee29fde812160acfae876d2ceca9b074dcef0be582ed00b011ecea0705f6917",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep34/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep34/head_strength.png",
+      "sha256": "4c26c8d22692609184bcf4f2b7d7fbe2a2640325021676bea5e2d9fc417ae4e2",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep34/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep34/opening_and_robust.png",
+      "sha256": "bd889ad0ad031025491e100dd4d1643fee87abcad79fecca8bf0538ceb0ff1a4",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep34/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep34/motion_and_paths.png",
+      "sha256": "94db2c15253b0188e18e82bebcff5377951e6f23b061d97710573fad58e32d43",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep34-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep34-pick1-phases.png",
+      "sha256": "e4eb3dd076fbd282c3f7a155c89bee46d4f9c4b64ed812f93f14176215b1fcc3",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep37/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep37/head_strength.png",
+      "sha256": "e433359d7eae913e71f8224161eb72dc643cdea95005424f103174f2b07acfe3",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep37/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep37/opening_and_robust.png",
+      "sha256": "d65ee2d814d6ef847625e0cf6a32458557afe94070933b7ec791cdc47184a1ec",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep37/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep37/motion_and_paths.png",
+      "sha256": "c3f7aa6edd814c19032ece4658274640e3cb0bcf88f6d2451b0e0952f823f488",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep37-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep37-pick1-phases.png",
+      "sha256": "f1b162219af1f087d13f16d5ef176a271304d74533a89700d464e13ed7f9b6de",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep38/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep38/head_strength.png",
+      "sha256": "77e23c967e773590a986d5ca0e1aee78ff60c5b41d1684208884de885a84ec85",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep38/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep38/opening_and_robust.png",
+      "sha256": "e2bed42adf413452c6f01e8915f4602520ec77aac6036f955a35ea8d5f4f4905",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep38/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep38/motion_and_paths.png",
+      "sha256": "ad074ad654df328eb1199205b45337a25b85c0496d642deb62685a65b5a5ba3b",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep38-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep38-pick1-phases.png",
+      "sha256": "5f7c2507a945e5d7d2fab415e85e206aae65ba35b4bff48e435b77dde53abe49",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep40/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep40/head_strength.png",
+      "sha256": "b88baec3cfcee08b86d87d4ffaca67031077060931e8b89856925d2b41257429",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep40/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep40/opening_and_robust.png",
+      "sha256": "a7ec240f69cbd1bfc77ea676628287d9fb92cad888e7d623b2611171f5d2f635",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/with_motion_ep40/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/with_motion_ep40/motion_and_paths.png",
+      "sha256": "186e10c5fa5ae75270a52daab1f5798000369db0e2e088893884e0587916e4ac",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/with_motion-ep40-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/with_motion-ep40-pick1-phases.png",
+      "sha256": "62400161c3c8b3dfe9828c1ae7742c5deb0d81403b5810a439b13bfc2e081cd1",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep8/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep8/head_strength.png",
+      "sha256": "f9e90b1e88ffc87f28bf1f115f1c2a24e3ffc80bd5394e303474706847ba74e4",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep8/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep8/opening_and_robust.png",
+      "sha256": "9d156a17ebd867e2ab6327271f71850b10ec715974057ca2d0b9007818261f36",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep8/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep8/motion_and_paths.png",
+      "sha256": "1570dcc14fb3ec117026491d368f893d657c857a57662234cfa36fbcd05b09c5",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/without_motion-ep8-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep8-pick1-phases.png",
+      "sha256": "c1fb8da84da77b0caca7954cae81a59de4edac349f7c8cacedd194bbe4e3e76f",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep12/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep12/head_strength.png",
+      "sha256": "a65316e0c19393cf349ddb7c250790dceebada36bdea5d4d5fa04b69d41f21e1",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep12/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep12/opening_and_robust.png",
+      "sha256": "9df0ecf95958dbc59348e6168908c8524f64664b0c5d5b18e5f5132bb04fc7f4",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep12/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep12/motion_and_paths.png",
+      "sha256": "171446a671359ea8404773189a38de70c52e533c50aeea40c39da94abd51598b",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/without_motion-ep12-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep12-pick1-phases.png",
+      "sha256": "a306b70f9a3fa4e337485d715f0b4703590afe1ecc59441f8fd13d3e2cb1b148",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep14/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep14/head_strength.png",
+      "sha256": "566ea964e39ef94859251f23b6007182fadbadfa601c0645681e52102833af1d",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep14/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep14/opening_and_robust.png",
+      "sha256": "20c6b85619ac50621bca671cc381ced827029bdcb2955416e90314c3c91994ac",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep14/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep14/motion_and_paths.png",
+      "sha256": "67e5c398ea5dc99c805bd97579356655eeb60db0b02f2053319009613f37f658",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/without_motion-ep14-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep14-pick1-phases.png",
+      "sha256": "831e940496a2f3ed6514b0f05747d3fa6c2c96122b5b871d16b23a33e4422638",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep16/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep16/head_strength.png",
+      "sha256": "4203b4819284a54650650202b69e8217f04080ebac6765f86afc099bb1379e31",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep16/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep16/opening_and_robust.png",
+      "sha256": "c6cf7b01b8ab095ddb5cab92bc29914d864b300c2d6940453fc21c97080433be",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep16/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep16/motion_and_paths.png",
+      "sha256": "aabcfa704963c49f6aabbf01b42965ab646f75ec5897610944c998bc4bcbabe6",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/without_motion-ep16-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep16-pick1-phases.png",
+      "sha256": "239f50edc2801c00f4c9a04a67a5e63e37b72e1bc92adfd4018837f09362a3a5",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep18/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep18/head_strength.png",
+      "sha256": "cd3e7e8784a23e9b78fef99bc57415c73583c05526fab5811d2b5ca5ad6e71dd",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep18/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep18/opening_and_robust.png",
+      "sha256": "0c31e80612b082417588d078e84aa0e1b722306389f71579f0a3a5a56306734a",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep18/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep18/motion_and_paths.png",
+      "sha256": "98470fa5d9c5f269940550f612641d5052ef55808288494784c64ccc3ffd666c",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/without_motion-ep18-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep18-pick1-phases.png",
+      "sha256": "da15af9526cf3d1ef7fc1cd125550cbf4ea19b724b3da2d7d05171cd7b267e45",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep20/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep20/head_strength.png",
+      "sha256": "246d24ff29507eea6a98b79f352078d2cabe38878feb1b1a6986a86f019f798c",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep20/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep20/opening_and_robust.png",
+      "sha256": "da4e27f1e738a79fdffdba9fa69f5b5fdd981b4cf31d72a64ee26e5961b4dd98",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep20/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep20/motion_and_paths.png",
+      "sha256": "ead474d02116553dfd09c21680624d085e8594f79491732c2973ff81fe2d6d87",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/without_motion-ep20-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep20-pick1-phases.png",
+      "sha256": "c1135a84fbd870c8dbfa8f5272d7f83efc30d1f9141f00c3b430a31997e0c463",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep26/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep26/head_strength.png",
+      "sha256": "04088847ed2abab583ec54888a27554d0bfcb2049171e2dbe02db419d354eee3",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep26/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep26/opening_and_robust.png",
+      "sha256": "2d0f7cfd7ed1d1c7581c7dbc7f69aa806a6ef751fa04c98e935b33745b17b78d",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep26/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep26/motion_and_paths.png",
+      "sha256": "ff8839724418a5c66501007787fa752eb57678a1214aa3d9920733ab671556da",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/without_motion-ep26-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep26-pick1-phases.png",
+      "sha256": "90891067dd605f8568a631e655a7d5fd141cdc379f98d4764682761f2cdc8d9f",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep34/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep34/head_strength.png",
+      "sha256": "9e72cfd14feb37fb9f3b4e3d9a09b531c01dbf823070c70aa602eb8bb6f14e5a",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep34/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep34/opening_and_robust.png",
+      "sha256": "a9b1400b255bfb306cee615a68c64161e1c5e9676485872b8ddc89baa5afb05a",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep34/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep34/motion_and_paths.png",
+      "sha256": "af045f417b77edda2a8bb2372a347159f176c9e62b3d1b348da2eeb0f6dd2bed",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/without_motion-ep34-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep34-pick1-phases.png",
+      "sha256": "4235ec7f47036c6cf278fee0291b3c65d03b2445d2fd7954ba08d4d798268696",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep38/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep38/head_strength.png",
+      "sha256": "b6a207a39f6224afe4e2005d477789c479008ea1c155faf8615e09b56b755517",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep38/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep38/opening_and_robust.png",
+      "sha256": "b34c08889b25f9c8904a1a9d67990e23766b47f5bed9ad8d551711ff8be026ca",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep38/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep38/motion_and_paths.png",
+      "sha256": "e4720123ca94f471a3fb8562f1faa3e6127cab9dcd34115fb274487e19d493e3",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/without_motion-ep38-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep38-pick1-phases.png",
+      "sha256": "93932317124f75b35946f19b778da38540e79b91d80ca99e2f72dc945f5b59b4",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep47/head_strength.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep47/head_strength.png",
+      "sha256": "62a57c27e856c14264957534589de160a0d3aef76f86811e8b2659f0640e6b3e",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep47/opening_and_robust.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep47/opening_and_robust.png",
+      "sha256": "7ca7f976a9435bd6c3b1d31d15b39c917b9581aced01fb4e6b45796ec8f25ad4",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/cases/without_motion_ep47/motion_and_paths.png",
+      "source": "v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/analysis/without_motion_ep47/motion_and_paths.png",
+      "sha256": "327d29ebfc94d7a400139f328223b19796270ab4c9f6c69eeb90952df1dd2973",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/without_motion-ep47-pick1-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep47-pick1-phases.png",
+      "sha256": "ae3c1be16c8b08ff8dc21bc502f05cf050acce06ea812c0e3c0a80db813553db",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    },
+    {
+      "file": "docs/evaluation-doc/attn-buttonunmaskswap-success-seed42-1103/figures/phases/without_motion-ep47-pick2-phases.png",
+      "source": "/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/attn-buttonunmaskswap-success-seed42-1103/phase-evidence/without_motion-ep47-pick2-phases.png",
+      "sha256": "df751410b397c357bebd92d37c51186f85b55ff63ddacdc72d932f8f26af4b51",
+      "review": "主会话已目视位图；单局图按两图联检，概览与关键例另看原尺寸；无文字截断或重叠，颜色与图例一致"
+    }
+  ]
+}
