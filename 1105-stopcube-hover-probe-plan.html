@@ -127,6 +127,7 @@
 <tr><td>历史帧、motion、当前画面、文字</td><td>18 层每层按组取平均（沿用现有 <code>hidden_prefix</code> 和 <code>build_groups</code>）。历史帧组是记忆里等距抽样的最多 32 帧，每帧 16 个 token，<b>最后一帧就是当前帧</b>，不单独切开：它只占这组的 1/32，并且这样才是模型实际的记忆布局。当前画面组是 <code>base_0_rgb</code> 和 <code>left_wrist_0_rgb</code> 两路图像 token</td></tr>
 <tr><td>动作 token（第二批，本轮不做）</td><td>18 层每层取平均，5 个噪声样本再平均</td></tr>
 <tr><td>最近一个 motion token</td><td>不取平均，只取时间上最新的那个 motion token（<code>motion_times</code> 最大的那个）。每个窗口一个 token，33 帧，起点间隔 32 步，所以 t ≥ 32 才有；取点都在第 49 步之后，每个点都有。实现上给 <code>group_masks</code> 多加一行只含这个 token 的掩码。速度可以从单个窗口里的位移读出，对全部窗口取平均会稀释它</td></tr>
+<tr><td>层号约定</td><td>层号 k（0–17）是第 k 层的输出，对应数组下标 <code>hidden_prefix[k + 1]</code>；<code>hidden_prefix[0]</code> 是输入级。本文「第 17 层」即下标 18；A8 精度一行的「第 0 层」指下标 0 的输入级</td></tr>
 <tr><td>输入级对照</td><td>各组在进入第 0 层之前的 token（<code>hidden_prefix[0]</code>，即 <code>embed_prefix</code> 的输出），对应参照论文的「原始输入」对照：区分编码器给了什么和 VLA 算出了什么</td></tr>
 </table></div>
 <p>每个特征组在外层训练折内先标准化、再 PCA 到 64 维（主成分只用外层训练折算，内层选系数时不重算；PCA 得分不再标准化，所以不能直接用会再标准化一次的 <code>fit_path</code>，W3 要去掉这一步），然后进同一个岭回归或最小二乘分类器。这样不同组、不同模型的探针容量相同。分类用一对多：每个类别一个独热目标，各自按现有 <code>select_lambda</code> 选系数，预测取最大。</p>
@@ -205,7 +206,7 @@
 
 <h2>B1 红线</h2>
 <ol>
-<li>稿件仓库不跑模型；全部运行在 sled-aspen 策略仓库。</li>
+<li>全部运行在 sled-aspen 策略仓库。</li>
 <li>不新增数据。</li>
 <li>按局划分；选层、选正则系数、PCA 都只用训练折。</li>
 <li>主读数只有 A7 写死的两个，其余标探索性。</li>
@@ -215,6 +216,7 @@
 
 <h2>B2 可复用的现有实现（策略仓库）</h2>
 <div class="tbl"><table>
+<tr><td colspan="2">下列函数中行为要变的（时间基线、打乱、不再标准化），由 W3 在 <code>hover_probe.py</code> 里新写，不改原函数。</td></tr>
 <tr><th>用途</th><th>锚点</th></tr>
 <tr><td>观测组装</td><td><code>policy.py</code> 的 <code>add_buffer</code>、<code>_prepare_history</code>、<code>infer</code>；真实 motion 编码器走 <code>create_trained_policy(..., motion_stub=False)</code>，<code>MotionEncoderClient</code> 按 <code>encoder_kind=stage2_pool4_concat</code> 走 <code>_init_stage2</code>，起侧车子进程，占 <code>motion.online_gpu</code>（配置为 1），解释器用 <code>v1-store/envs/stage2/bin/python</code>，和上一轮 <code>spec-all-mot.json</code> 的 <code>stage2_python</code> 相同。观测组装照 <code>attn_adapter._legal_obs</code>：四个键 <code>observation/image</code>、<code>observation/wrist_image</code>、<code>observation/state</code>、<code>prompt</code>；<code>_prepare_history</code> 不返回 <code>motion_times</code>，要用 <code>visible_motion_frames</code> 和 <code>pad_times</code> 另算</td></tr>
 <tr><td>float32 前向的做法</td><td><code>docs/evaluation-doc/stopcube-rollout-1105/records/diagnostics/diag_hidden.py</code>：<code>restore_params(dtype=float32)</code>、<code>dataclasses.replace(config, dtype="float32").load(...)</code>、<code>AttnAdapter(_ModelShim(model32))</code>、<code>default_matmul_precision("highest")</code></td></tr>
@@ -287,7 +289,7 @@
 <li><b>Q2 <code>REPLAY_PARITY</code> 换法：</b>rollout 没存原始帧，原写法做不到；推荐 A8 的布局加分批两步。</li>
 <li><b>Q3 时间基线：</b>推荐独热 t。线性 t 对不单调的标签太弱，会高估探针超出时间的部分。</li>
 <li><b>Q4 <code>POSITIVE_CONTROL</code> 阈值：</b>原计划没定，推荐 R² ≥ 0.8。</li>
-<li><b>Q5：</b>是否登记进状态机。</li>
+<li><b>Q5：</b>是否登记进状态机。用户裁决：不登记。</li>
 <li><b>Q6 计划自定的阈值：</b>到位 1 mm、配对容差 8 且保留率 ≥ 80%、<code>REPLAY_PARITY</code> 1e-3。前两个已用 H5 算过（保留 608/655，92.8%）。1e-3 没有实测依据，按 B8 它 FAIL 就不起全量；推荐照写，冒烟 FAIL 时交用户裁决。</li>
 <li><b>Q7 <code>HIDDEN_PRECISION</code> 的参考路径：</b>推荐 float32 全路径。这样能核对新路径算的是同一件事，但比值大概率远超 10，起不到拦截精度问题的作用。另一选择是 bf16 全路径，保留上一轮的含义，但它量的是 bf16 的误差，不是本轮 float32 捕获的误差，而且可能像上一轮一样 FAIL（当时 8.4）。</li>
 <li><b>Q8 第一部分的结构：</b>规则第 2 条要求第一部分含已定口径和验收表，现在它们在 A 节（细化前就是这样）。推荐不动，因为您要求不加内容，也是您之前把它们移过去的；要合规就把这两节移回第一部分。</li>
