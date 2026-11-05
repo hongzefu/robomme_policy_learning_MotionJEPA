@@ -44,6 +44,9 @@ motion 内容替换（S8；只换 motion 编码内容，motion token 个数、�
 用法（通常由 scripts/interpret/run_local.py 启动）：
   python -m scripts.interpret.serve_policy_attn --port 8011 --seed 42 --attn-out <dir> \
       policy:checkpoint --policy.config <cfg> --policy.dir <ckpt>
+
+Oracle 询问：加 --query-record 10 --oracle-mode oracle_query；不构造注意力适配器。
+校准交还：--oracle-mode oracle_calibrate，恢复原 infer，不写询问或注意力数组。
 """
 from __future__ import annotations
 
@@ -54,6 +57,7 @@ import os
 from pathlib import Path
 import time
 import uuid
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -326,6 +330,117 @@ def top_frame_indices(probs_action, mem_order, frame_times, tokens_per_frame: in
     valid = np.flatnonzero(frame_times >= 0)
     order = valid[np.argsort(-mass[valid], kind="stable")][:n]
     return frame_times[order].astype(np.int32)
+
+
+class QueryRecorder:
+    """原推理只组包一次；询问批量采样不写注意力、不改变记忆或策略 RNG。"""
+
+    def __init__(self, policy, output_dir, count, *, seed=42, model_id="", batch_size=None, oracle_mode=""):
+        if count <= 0:
+            raise ValueError("询问预测数必须为正数")
+        self.policy, self.output_dir, self.count = policy, Path(output_dir), int(count)
+        self.seed, self.model_id, self.oracle_mode = int(seed), str(model_id), oracle_mode
+        self.batch_size = self.count if batch_size is None else int(batch_size)
+        if self.batch_size <= 0 or self.count % self.batch_size:
+            raise ValueError("--query-batch-size 必须为预测总数的正约数")
+        self.original_reset, self.original_infer = policy.reset, policy.infer
+        self.original_sample = policy._sample_actions
+        self.ep_dir, self.query_seq, self.context = None, 0, None
+        self.episode = {}
+
+    def install(self):
+        self.policy.reset = self.reset
+        self.policy.infer = self.infer
+        self.policy._sample_actions = self.sample
+
+    def reset(self):
+        self.original_reset()
+        rpc = _RPC.get("rpc") or {}
+        context = _RPC.get("oracle_context") or {}
+        nonce = rpc.get("episode_nonce") or f"local-{uuid.uuid4().hex}"
+        self.ep_dir = self.output_dir / nonce
+        self.ep_dir.mkdir(parents=True, exist_ok=False)
+        self.query_seq = 0
+        self.episode = {"episode_nonce": nonce, "reset_rpc": rpc, "oracle_context": context,
+                        "model_id": self.model_id, "queries": 0, "infers": 0}
+        _write_json(self.ep_dir / "episode.json", self.episode)
+
+    def sample(self, rng, observation, **kwargs):
+        if self.context is None:
+            return self.original_sample(rng, observation, **kwargs)
+        import jax
+        from scripts.interpret.offline_query import pack_observation, query_noise, sample_predictions
+
+        noise = query_noise(self.seed, self.context["episode_key"], self.query_seq, self.count,
+                            int(self.policy._model.action_horizon), int(self.policy._model.action_dim))
+        # 原 infer 的随机拆分只是组包接口；实际询问 key 固定，且稍后恢复原 RNG。
+        key = jax.random.PRNGKey(self.seed)
+        proxy = SimpleNamespace(_sample_actions=self.original_sample, _sample_kwargs=kwargs,
+                                _output_transform=self.policy._output_transform)
+        normalized, actions = sample_predictions(proxy, observation, noise, sample_rng=key,
+                                                batch_size=self.batch_size)
+        self.captured = pack_observation(observation)
+        self.captured.update(noise=noise, actions_normalized=normalized, actions=actions,
+                             sample_rng=np.asarray(key), sample_batch_size=np.int64(self.batch_size),
+                             sample_kwargs=np.str_(json.dumps({k: v for k, v in kwargs.items() if k != "noise"})))
+        return normalized[:1]
+
+    def infer(self, obs):
+        context = obs.get("oracle_context")
+        if not isinstance(context, dict) or context.get("mode") not in ("oracle_query", "oracle_calibrate"):
+            raise ValueError("询问服务需要合法 oracle_context.mode")
+        if self.oracle_mode and context["mode"] != self.oracle_mode:
+            raise ValueError("请求模式与 --oracle-mode 不符")
+        clean = {key: value for key, value in obs.items() if key != "oracle_context"}
+        if context["mode"] == "oracle_calibrate":
+            output = self.original_infer(clean)
+            self.episode["infers"] += 1
+            _write_json(self.ep_dir / "episode.json", self.episode)
+            return output
+        if self.ep_dir is None:
+            raise RuntimeError("询问前必须先 reset")
+        if not isinstance(context.get("episode_key"), str) or not context["episode_key"]:
+            raise ValueError("询问缺 episode_key")
+        if type(context.get("env_step")) is not int or type(context.get("pre_reach")) is not bool:
+            raise ValueError("询问需要整数 env_step 与布尔 pre_reach")
+        raw = np.asarray(context.get("raw_state"), dtype=np.float32)
+        if raw.shape != (8,) or not np.isfinite(raw).all():
+            raise ValueError("询问 raw_state 必须为有限 (8,) 物理状态")
+        self.context, self.captured = context, None
+        rng_before = self.policy._rng
+        try:
+            output = self.original_infer(clean)
+        finally:
+            self.policy._rng = rng_before
+            self.context = None
+        if self.captured is None:
+            raise RuntimeError("原 infer 未调用采样器")
+        budget, tpi = int(self.policy.config.budget), int(self.policy.config.token_per_image)
+        frame_times = self.policy.mem_buffer.get_frame_sampling_indices(int(self.policy.step_idx), budget, tpi)
+        record = {**self.captured, "raw_state": raw, "model_id": np.str_(self.model_id),
+                  "env_step": np.int64(context["env_step"]), "step_idx": np.int64(self.policy.step_idx),
+                  "query_seq": np.int64(self.query_seq), "episode_key": np.str_(context["episode_key"]),
+                  "frame_times": np.asarray(frame_times, dtype=np.int64), "pre_reach": np.bool_(context["pre_reach"])}
+        path = self.ep_dir / f"query_{self.query_seq:04d}.npz"
+        tmp = self.ep_dir / f".query_{self.query_seq:04d}.{uuid.uuid4().hex}.tmp.npz"
+        np.savez(tmp, **record)
+        os.replace(tmp, path)
+        # 写后读回结构与全部叶子，防止 npy 对扩展 dtype 的描述符丢失。
+        from scripts.interpret.offline_query import pack_observation, unpack_observation
+        with np.load(path, allow_pickle=False) as archive:
+            recovered = pack_observation(unpack_observation(archive))
+        if set(recovered) != set(self.captured) - {"noise", "actions_normalized", "actions", "sample_rng",
+                                                           "sample_batch_size", "sample_kwargs"}:
+            raise RuntimeError("询问观测读回结构不符")
+        for key, value in recovered.items():
+            if not np.array_equal(value, self.captured[key]):
+                raise RuntimeError(f"询问观测读回不符: {key}")
+        output.update(query_actions=record["actions"], query_record=str(path.resolve()), query_seq=self.query_seq)
+        self.query_seq += 1
+        self.episode["queries"] = self.query_seq
+        _write_json(self.ep_dir / "episode.json", self.episode)
+        print(f"QUERY_RECORD=PASS points=1 predictions={self.count} missing=0 npz={path}", flush=True)
+        return output
 
 
 class AttnRecorder:
@@ -623,14 +738,60 @@ def _as_str(value):
     return str(np.asarray(value).item()) if isinstance(value, np.ndarray) else str(value)
 
 
-def _install_rpc_tracking() -> None:
+def query_session_class(oracle_mode=""):
+    """仅 interpret 询问服务使用；身份、首包、哈希和单调帧号仍严格。"""
+    from scripts.evaluation.runtime_contract import RpcSession
+    from scripts.evaluation.runtime_contract import payload_sha256
+
+    class QuerySession(RpcSession):
+        def validate(self, obs):
+            if obs.get("release_attempt"):
+                return super().validate(obs)
+            context = obs.get("oracle_context") or {}
+            mode = context.get("mode")
+            if mode not in ("oracle_query", "oracle_calibrate") or (oracle_mode and mode != oracle_mode):
+                raise ValueError("询问 RPC 模式不符")
+            if not isinstance(context.get("episode_key"), str) or not context["episode_key"]:
+                raise ValueError("询问 RPC 缺 episode_key")
+            if obs.get("reset"):
+                operation = super().validate(obs)
+                self.oracle_identity = (mode, context["episode_key"])
+                return operation
+            if (mode, context["episode_key"]) != getattr(self, "oracle_identity", None):
+                raise ValueError("询问 RPC 局身份或模式变化")
+            if not obs.get("add_buffer"):
+                return super().validate(obs)
+            rpc = obs.get("eval_rpc")
+            if not isinstance(rpc, dict) or rpc.get("episode_nonce") != self.episode_nonce:
+                raise ValueError("旧局或未reset")
+            if sum(bool(obs.get(key)) for key in ("reset", "add_buffer", "release_attempt")) != 1:
+                raise ValueError("每个 RPC 只能有一个操作")
+            count = len(obs.get("images", []))
+            for key, value in (("batch_seq", self.batch_seq), ("first_global_frame", self.next_frame), ("frame_count", count)):
+                if type(rpc.get(key)) is not int or rpc[key] != value:
+                    raise ValueError(f"历史顺序不符: {key}")
+            if count <= 0 or len(obs.get("state", [])) != count or rpc.get("payload_sha256") != payload_sha256(obs):
+                raise ValueError("历史 payload 不符")
+            boundary = obs.get("exec_start_idx", 0)
+            if type(boundary) is not int or boundary < 0 or (self.batch_seq == 0 and count != boundary + 1):
+                raise ValueError("首包帧数必须严格为D+1")
+            if self.batch_seq > 0 and count not in (4, 16):
+                raise ValueError("询问续包帧数必须为4或16")
+            return "add_buffer"
+
+    return QuerySession
+
+
+def _install_rpc_tracking(*, query_record=0, oracle_mode="") -> None:
     from mme_vla_suite.serving import websocket_policy_server
     from scripts.evaluation.runtime_contract import RpcSession
 
-    class _TrackingSession(RpcSession):
+    base = query_session_class(oracle_mode) if query_record else RpcSession
+
+    class _TrackingSession(base):
         def validate(self, obs):
             operation = super().validate(obs)
-            _RPC.update(op=operation, rpc=obs.get("eval_rpc"))
+            _RPC.update(op=operation, rpc=obs.get("eval_rpc"), oracle_context=obs.get("oracle_context"))
             return operation
 
     websocket_policy_server.RpcSession = _TrackingSession
@@ -654,6 +815,12 @@ def _make_args_class():
         record_motion: Path | None = None
         # motion_swap 的供体局 task:ep（供体文件 <供体目录>/<task>_ep<id>.npz）
         swap_donor: str | None = None
+        # 每个询问点记录 N 个原路径预测；0 保持原注意力路径
+        query_record: int = 0
+        # 固定采样批量，须整除 N；缺省一次算完，显存不足时可用 1、2、5
+        query_batch_size: int | None = None
+        # 询问服务的专用模式；空字符串依请求的 oracle_context 判定
+        oracle_mode: str = ""
 
     return Args
 
@@ -664,17 +831,32 @@ def main(args) -> None:
 
     if args.save_top_frames < 0:
         raise SystemExit("--save-top-frames 不得为负")
+    query_count = int(getattr(args, "query_record", 0))
+    oracle_mode = str(getattr(args, "oracle_mode", ""))
+    if query_count < 0 or oracle_mode not in ("", "oracle_query", "oracle_calibrate"):
+        raise SystemExit("询问预测数或 --oracle-mode 不合法")
+    if oracle_mode and not query_count:
+        raise SystemExit("--oracle-mode 需要 --query-record")
     ablate_name = str(getattr(args, "ablate", "none") or "none")
     try:
         ablate = parse_ablate(ablate_name)
     except ValueError as exc:
         raise SystemExit(f"错误: {exc}") from exc
+    if query_count and (ablate["name"] != "none" or args.save_prefix or args.record_motion or args.swap_donor):
+        raise SystemExit("询问模式不允许遮挡、注意力或 motion 内容替换")
     attn_out = Path(args.attn_out).resolve()
     attn_out.mkdir(parents=True, exist_ok=True)
     original_create = serve_policy.create_policy
 
     def create_policy(policy_args):
         policy = original_create(policy_args)
+        if query_count:
+            recorder = QueryRecorder(policy, attn_out, query_count, seed=args.seed,
+                model_id=str(getattr(policy_args.policy, "dir", policy.metadata.get("model_kind", ""))),
+                batch_size=getattr(args, "query_batch_size", None), oracle_mode=oracle_mode)
+            recorder.install()
+            print(f"QUERY_SERVE predictions={query_count} batch={recorder.batch_size} out={attn_out}", flush=True)
+            return policy
         save_prefix = bool(getattr(args, "save_prefix", False))
         kw ={"save_prefix": True} if save_prefix else {}
         if ablate["heads"]:
@@ -697,7 +879,7 @@ def main(args) -> None:
     print(f"ATTN_ABLATE name={ablate['name']} masks={sorted(ablate['masks'])} heads={list(ablate['heads'])} "
           f"motion={ablate['motion']} swap_donor={getattr(args, 'swap_donor', None)} "
           f"record_motion={getattr(args, 'record_motion', None)}", flush=True)
-    _install_rpc_tracking()
+    _install_rpc_tracking(query_record=query_count, oracle_mode=oracle_mode)
     # metadata、server 构造与 sidecar 收尾全部走主线 main，字段与 serve_policy.py 完全一致
     serve_policy.main(args)
 
