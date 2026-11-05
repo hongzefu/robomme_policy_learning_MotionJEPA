@@ -193,19 +193,50 @@ def test_summary_cli_cache_provenance_and_fixed_plan(tmp_path):
         analysis.summarize_caches(tmp_path, analysis.load_table(table))
 
 
-def test_calibration_results_keep_trigger_and_success_separate(tmp_path):
+def calibration_case(tmp_path, *, kind="high_probability", stop="button_trigger", duration=37):
     root = tmp_path / "calibration" / "nonce"
     (root / "meta").mkdir(parents=True)
     trace = root / "step_trace.jsonl"
-    trace.write_text(json.dumps({"event": "step", "env_step_after": 410, "button_pressed_after": True}) + "\n")
-    receipt = {"model_id": "motion", "episode_key": "StopCube:16", "calibration_kind": "high_probability",
-        "release_step": 373, "actual_release_step": 373, "task_success": 0, "trace_path": str(trace)}
+    definition = entry()
+    definition.update(first_env_step=1, actions=[[0.0] * 8 for _ in range(480)])
+    points = [point(step) for step in range(1, 481, 4)]
+    table = {"StopCube:16": definition}
+    plan = analysis.make_plan(points, table)
+    selection = plan["models"]["motion"]["episodes"]["StopCube:16"][kind]
+    release = selection["release_step"]
+    prediction = np.repeat(np.arange(20, dtype=float)[:, None], 8, axis=1).tolist()
+    rows = []
+    for step in range(1, release + duration):
+        post = step >= release
+        index = step - release
+        command = prediction[index % 16] if post else [0.0] * 8
+        rows.append({"event": "step", "episode_key": "StopCube:16", "trajectory_kind": "oracle_calibrate",
+            "env_step_before": step, "env_step_after": step + 1,
+            "control_source": "model" if post else "oracle", "command_action": command,
+            "executed_action": command, "row_in_chunk": index % 16 if post else step - 1,
+            "chunk_start_env_step": release + (index // 16) * 16 if post else None,
+            "infer_seq": index // 16 if post else None, "button_pressed_before": False,
+            "button_pressed_after": stop == "button_trigger" and step == release + duration - 1})
+    trace.write_text("\n".join(json.dumps(row) for row in rows) + "\n")
+    outcome = "fail" if stop == "official_terminal" else "calibration_stop"
+    terminal = tmp_path / "terminal.json"
+    terminal.write_text(json.dumps({"record_type": "terminal", "episode_key": "StopCube:16", "episode_nonce": "nonce",
+        "outcome": outcome, "actions_executed": len(rows)}))
+    receipt = {"model_id": "motion", "episode_key": "StopCube:16", "episode_nonce": "nonce", "calibration_kind": kind,
+        "calibration": selection, "trajectory_kind": "oracle_calibrate", "calibration_stop": stop,
+        "outcome": outcome, "first_release_prediction": prediction, "execution_infers": int(np.ceil(duration / 16)),
+        "actions_executed": len(rows), "button_trigger_step": release + duration if stop == "button_trigger" else None,
+        "release_step": release, "actual_release_step": release, "task_success": 0,
+        "trace_path": str(trace), "terminal_path": str(terminal)}
     path = root / "meta" / "hold_receipt.json"
     path.write_text(json.dumps(receipt))
-    rows = [point(step) for step in range(1, 481, 4)]
-    table = {"StopCube:16": entry()}
-    plan = analysis.make_plan(rows, table)
+    return table, plan, receipt, rows, path
+
+
+def test_calibration_results_keep_trigger_and_success_separate(tmp_path):
+    table, plan, _, _, _ = calibration_case(tmp_path)
     results = analysis.calibration_results([tmp_path / "calibration"], table, plan)
+    assert results[0]["valid"], results[0]["validation_errors"]
     assert results[0]["trigger_within48"] is True
     assert results[0]["trigger_category"] == "早于区间"
     assert results[0]["task_success"] == 0
@@ -215,6 +246,62 @@ def test_calibration_results_keep_trigger_and_success_separate(tmp_path):
     high = next(row for row in counts if row["kind"] == "high_probability")
     assert high["completed"] == 1 and high["task_success"] == 0
     assert next(row for row in counts if row["kind"] == "fixed_release")["missing_episodes"] == ["StopCube:16"]
+
+
+@pytest.mark.parametrize("failure", ["old_release", "missing_prediction", "wrong_prediction", "wrong_execution", "wrong_control",
+                                     "wrong_prefix", "no_stop", "terminal_mismatch", "short_48"])
+def test_invalid_calibration_is_preserved_and_not_completed(tmp_path, failure):
+    table, plan, receipt, rows, path = calibration_case(tmp_path)
+    if failure == "old_release":
+        receipt["actual_release_step"] = 369
+    elif failure == "missing_prediction":
+        receipt.pop("first_release_prediction")
+    elif failure == "wrong_prediction":
+        receipt["first_release_prediction"][0] = [99.0] * 8
+    elif failure == "wrong_execution":
+        rows[-1]["executed_action"] = [-99.0] * 8
+    elif failure == "wrong_control":
+        rows[-1]["control_source"] = "oracle"
+    elif failure == "wrong_prefix":
+        rows[0]["command_action"] = [-1.0] * 8
+    elif failure == "no_stop":
+        receipt.update(calibration_stop=None, outcome=None)
+    elif failure == "terminal_mismatch":
+        Path(receipt["terminal_path"]).write_text(json.dumps({"outcome": "error"}))
+    elif failure == "short_48":
+        receipt.update(calibration_stop="release_48_steps", button_trigger_step=None)
+        rows[-1]["button_pressed_after"] = False
+    path.write_text(json.dumps(receipt))
+    Path(receipt["trace_path"]).write_text("\n".join(json.dumps(row) for row in rows) + "\n")
+    results = analysis.calibration_results([tmp_path / "calibration"], table, plan)
+    assert len(results) == 1 and not results[0]["valid"] and results[0]["validation_errors"]
+    counts = analysis.calibration_summary(results, plan)
+    high = next(row for row in counts if row["kind"] == "high_probability")
+    assert high["completed"] == high["trigger_within48"] == high["task_success_known"] == 0
+    assert len(high["failed"]) == 1 and high["missing_episodes"] == []
+    assert analysis.calibration_probability_groups(results) == []
+
+
+@pytest.mark.parametrize("kind,stop,duration", [("high_probability", "release_48_steps", 48),
+    ("high_probability", "official_terminal", 10), ("fixed_release", "official_terminal", 80)])
+def test_valid_calibration_stop_boundaries(tmp_path, kind, stop, duration):
+    table, plan, _, _, _ = calibration_case(tmp_path, kind=kind, stop=stop, duration=duration)
+    results = analysis.calibration_results([tmp_path / "calibration"], table, plan)
+    assert results[0]["valid"], results[0]["validation_errors"]
+    counts = analysis.calibration_summary(results, plan)
+    assert next(row for row in counts if row["kind"] == kind)["completed"] == 1
+
+
+def test_duplicate_calibration_retains_both_without_selecting_success(tmp_path):
+    table, plan, receipt, _, path = calibration_case(tmp_path)
+    other = path.parents[2] / "duplicate" / "meta"
+    other.mkdir(parents=True)
+    (other / "hold_receipt.json").write_text(json.dumps(receipt))
+    results = analysis.calibration_results([tmp_path / "calibration"], table, plan)
+    assert len(results) == 2 and all(not row["valid"] for row in results)
+    counts = analysis.calibration_summary(results, plan)
+    high = next(row for row in counts if row["kind"] == "high_probability")
+    assert high["completed"] == 0 and len(high["failed"]) == 2
 
 
 def test_report_cli_renders_figures_and_escapes_model(tmp_path):

@@ -365,8 +365,117 @@ def coverage(rows, table):
     return result
 
 
+def validate_calibration(item, rows, entry, selection, terminal):
+    """核对已批校准要求的交还点、逐步动作证据和真实完成边界。"""
+    errors = []
+
+    def fail(reason):
+        if reason not in errors:
+            errors.append(reason)
+
+    def action_equal(left, right):
+        try:
+            a, b = np.asarray(left, dtype=float), np.asarray(right, dtype=float)
+            return a.shape == b.shape == (8,) and np.isfinite(a).all() and np.array_equal(a, b)
+        except (TypeError, ValueError):
+            return False
+
+    release = selection.get("release_step")
+    kind = item.get("calibration_kind")
+    duration = None if kind == "fixed_release" else 48
+    if selection.get("status") != "selected" or type(release) is not int:
+        return ["该模型本局运行类型未在固定计划中选定"]
+    if (item.get("actual_release_step") != release or item.get("release_step") != release
+            or (item.get("calibration") or {}).get("release_step") != release
+            or (item.get("calibration") or {}).get("stop_after_release") != duration
+            or selection.get("stop_after_release") != duration):
+        fail("实际交还点或运行时选点与固定计划不符")
+    if (release < entry["reach_step"] or (release - entry["first_env_step"]) % 4
+            or release > entry["move_interval"] * entry["target_pass"]):
+        fail("交还点不是到位后的合法询问点")
+    if item.get("trajectory_kind") != "oracle_calibrate":
+        fail("收据不是校准运行")
+    if not rows:
+        return errors + ["缺少逐步轨迹"]
+    if rows[0].get("env_step_before") != entry["first_env_step"]:
+        fail("轨迹缺少从动作表首步开始的完整前缀")
+    post = []
+    previous = None
+    for row in rows:
+        before, after = row.get("env_step_before"), row.get("env_step_after")
+        if (type(before) is not int or type(after) is not int or after <= before
+                or (previous is not None and before != previous)):
+            fail("轨迹步号缺失、重复或不连续")
+            continue
+        previous = after
+        if row.get("episode_key") != item["episode_key"] or row.get("trajectory_kind") != "oracle_calibrate":
+            fail("轨迹身份或运行类型不符")
+        if any(type(row.get(f"button_pressed_{suffix}")) is not bool for suffix in ("before", "after")):
+            fail("轨迹缺少明确的按钮状态，不能判断未触发")
+        if before < release:
+            index = before - entry["first_env_step"]
+            actions = entry["actions"]
+            if (not 0 <= index < len(actions) or row.get("control_source") != "oracle"
+                    or not action_equal(row.get("executed_action"), actions[index])
+                    or not action_equal(row.get("command_action"), actions[index])):
+                fail("交还前动作或控制权与Oracle动作表不符")
+            if row.get("button_pressed_before") is not False or row.get("button_pressed_after") is not False:
+                fail("交还前已触发按钮或缺少未触发证据")
+        else:
+            post.append(row)
+            if (row.get("control_source") != "model"
+                    or not action_equal(row.get("executed_action"), row.get("command_action"))):
+                fail("交还后执行动作或控制权不是模型输出")
+    if not post or post[0].get("env_step_before") != release:
+        fail("缺少固定交还步的新模型动作")
+    try:
+        prediction = np.asarray(item.get("first_release_prediction"), dtype=float)
+        prediction_ok = prediction.shape == (20, 8) and np.isfinite(prediction).all()
+    except (TypeError, ValueError):
+        prediction_ok = False
+    if not prediction_ok:
+        fail("缺少完整有限的首次交还预测")
+    for index, row in enumerate(post):
+        if (row.get("row_in_chunk") != index % 16 or row.get("infer_seq") != index // 16
+                or row.get("chunk_start_env_step") != post[(index // 16) * 16].get("env_step_before")):
+            fail("交还后没有按新推理的前16行连续执行")
+        if index < 16 and prediction_ok and not action_equal(row.get("command_action"), prediction[index]):
+            fail("首次执行动作与首次交还预测不符")
+    if item.get("execution_infers") != math.ceil(len(post) / 16):
+        fail("实际执行推理次数与轨迹动作块不符")
+    triggers = [row["env_step_after"] for row in rows
+                if row.get("button_pressed_after") is True and type(row.get("env_step_after")) is int]
+    trigger = min(triggers) if triggers else None
+    if item.get("button_trigger_step") != trigger:
+        fail("按钮触发步与独立轨迹不符")
+    stop, outcome = item.get("calibration_stop"), item.get("outcome")
+    if stop == "official_terminal":
+        if outcome not in ("success", "fail", "timeout") or item.get("task_success") != int(outcome == "success"):
+            fail("官方终局状态或独立任务成功字段不符")
+    elif kind == "fixed_release":
+        fail("固定放手没有运行到官方终局")
+    elif stop == "release_48_steps":
+        if outcome != "calibration_stop" or len(post) != 48 or trigger is not None:
+            fail("48步截止没有完整48步或已有触发却未及时停止")
+    elif stop == "button_trigger":
+        if (outcome != "calibration_stop" or trigger is None or not post
+                or trigger != post[-1].get("env_step_after") or not release < trigger <= release + 48):
+            fail("按钮停止没有交还后48步内的即时触发证据")
+    else:
+        fail("缺少有效的校准停止或正常终局")
+    if kind != "fixed_release" and (len(post) > 48 or (trigger is not None and post
+            and trigger != post[-1].get("env_step_after"))):
+        fail("非固定放手超过48步或按钮触发后仍继续执行")
+    if (terminal.get("record_type") != "terminal" or terminal.get("episode_key") != item["episode_key"]
+            or not item.get("episode_nonce") or terminal.get("episode_nonce") != item.get("episode_nonce")
+            or terminal.get("outcome") != outcome or terminal.get("actions_executed") != len(rows)
+            or item.get("actions_executed") != len(rows)):
+        fail("缺少同局同nonce且动作计数一致的持久终态记录")
+    return errors
+
+
 def calibration_results(roots, table, plan):
-    records, seen = [], set()
+    records = []
     for root in roots:
         for path in sorted(Path(root).rglob("hold_receipt.json")):
             item = json.loads(path.read_text())
@@ -375,16 +484,24 @@ def calibration_results(roots, table, plan):
             key = item.get("episode_key")
             if kind not in KINDS or key not in table or model not in plan["models"]:
                 continue
-            identity = (model, key, kind)
-            if identity in seen:
-                raise ValueError(f"重复校准结果，不挑成功运行：{identity}")
-            seen.add(identity)
             release = item.get("actual_release_step")
-            if release is None:
-                release = item.get("release_step")
             trace = Path(item.get("trace_path") or path.parent.parent / "step_trace.jsonl")
-            rows = [json.loads(line) for line in trace.read_text().splitlines() if line.strip()]
-            triggers = [row["env_step_after"] for row in rows if row.get("button_pressed_after") is True]
+            read_errors = []
+            try:
+                rows = [json.loads(line) for line in trace.read_text().splitlines() if line.strip()]
+                rows = [row for row in rows if row.get("event") == "step"]
+            except (OSError, ValueError) as error:
+                rows = []
+                read_errors.append(f"无法读取逐步轨迹：{error}")
+            try:
+                terminal = json.loads(Path(item["terminal_path"]).read_text())
+            except (KeyError, OSError, ValueError) as error:
+                terminal = {}
+                read_errors.append(f"无法读取持久终态：{error}")
+            selection = plan["models"][model]["episodes"].get(key, {}).get(kind, {})
+            errors = read_errors + validate_calibration(item, rows, table[key], selection, terminal)
+            triggers = [row["env_step_after"] for row in rows
+                        if row.get("button_pressed_after") is True and type(row.get("env_step_after")) is int]
             trigger = min(triggers) if triggers else None
             entry = table[key]
             category = "没按" if trigger is None else ("早于区间" if trigger < entry["target_visit_in"] else
@@ -392,17 +509,28 @@ def calibration_results(roots, table, plan):
             records.append({"model_id": model, "episode_key": key, "kind": kind,
                 "release_step": release, "trigger_step": trigger, "trigger_category": category,
                 "predicted_p": plan["models"][model]["episodes"].get(key, {}).get(kind, {}).get("p"),
-                "trigger_within48": trigger is not None and release is not None and 0 <= trigger - release <= 48,
+                "trigger_within48": trigger is not None and type(release) is int and 0 <= trigger - release <= 48,
                 "task_success": item.get("task_success"), "receipt_path": str(path.resolve()),
                 "trace_path": str(trace.resolve()),
+                "terminal_path": item.get("terminal_path"), "outcome": item.get("outcome"),
+                "valid": not errors, "validation_errors": errors,
                 "first_release_prediction": item.get("first_release_prediction"),
                 "calibration_stop": item.get("calibration_stop")})
+    counts = {}
+    for row in records:
+        identity = (row["model_id"], row["episode_key"], row["kind"])
+        counts[identity] = counts.get(identity, 0) + 1
+    for row in records:
+        if counts[row["model_id"], row["episode_key"], row["kind"]] > 1:
+            row["valid"] = False
+            row["validation_errors"].append("同一选点有重复运行，全部保留且不挑成功样本")
     return records
 
 
 def calibration_summary(records, plan):
     """结果缺失与运行跳过分开；分组按原计划，不用结果重选。"""
-    actual = {(r["model_id"], r["episode_key"], r["kind"]): r for r in records}
+    actual = {(r["model_id"], r["episode_key"], r["kind"]): r for r in records if r["valid"]}
+    attempted = {(r["model_id"], r["episode_key"], r["kind"]) for r in records}
     result = []
     for model, model_plan in plan["models"].items():
         for kind in KINDS:
@@ -412,7 +540,10 @@ def calibration_summary(records, plan):
             skipped = [{"episode_key": key, "reason": item[kind]["reason"]}
                        for key, item in model_plan["episodes"].items() if item[kind]["status"] != "selected"]
             result.append({"model_id": model, "kind": kind, "planned": len(selected), "completed": len(completed),
-                "missing_episodes": [key for key, _ in selected if (model, key, kind) not in actual],
+                "missing_episodes": [key for key, _ in selected if (model, key, kind) not in attempted],
+                "failed": [{"episode_key": row["episode_key"], "receipt_path": row["receipt_path"],
+                            "errors": row["validation_errors"]} for row in records
+                           if row["model_id"] == model and row["kind"] == kind and not row["valid"]],
                 "skipped": skipped, "trigger_within48": sum(r["trigger_within48"] for r in completed),
                 "trigger_any": sum(r["trigger_step"] is not None for r in completed),
                 "task_success": sum(r["task_success"] in (True, 1) for r in completed),
@@ -423,7 +554,7 @@ def calibration_summary(records, plan):
 def calibration_probability_groups(records):
     groups = {}
     for row in records:
-        if row["predicted_p"] is not None:
+        if row["valid"] and row["predicted_p"] is not None:
             groups.setdefault((row["model_id"], row["kind"], row["predicted_p"]), []).append(row)
     return [{"model_id": model, "kind": kind, "predicted_p": p, "runs": len(rows),
              "trigger_within48": sum(row["trigger_within48"] for row in rows)}
@@ -558,15 +689,15 @@ def report(summary_path, output, repeats=2000):
     for comparison in summary["comparisons"]:
         for name, stat in comparison["metrics"].items():
             parts.append(f"<tr><td>{escape(comparison['left'])} − {escape(comparison['right'])}</td><td>{escape(name)}</td><td>{stat['n_episodes']}</td><td>{escape(stat['mean'])}</td><td>{escape(stat['ci95'])}</td></tr>")
-    parts.append("</table><h2>校准与固定放手的真实结果</h2><p>是否触发和任务成功分开报告；缺失结果不算失败，不补挑成功局。</p><table><tr><th>模型</th><th>局</th><th>类型</th><th>选点 P(t)</th><th>交还步</th><th>触发步</th><th>48 步内触发</th><th>区间分类</th><th>任务成功</th></tr>")
+    parts.append("</table><h2>校准与固定放手的真实结果</h2><p>是否触发和任务成功分开报告；缺失结果不算失败，不补挑成功局。证据无效的样本保留在表中，不进入完成数和比例分母。</p><table><tr><th>模型</th><th>局</th><th>类型</th><th>证据有效</th><th>无效原因</th><th>选点 P(t)</th><th>交还步</th><th>触发步</th><th>48 步内触发</th><th>区间分类</th><th>任务成功</th></tr>")
     for row in summary["calibration_results"]:
-        parts.append("<tr>" + "".join(f"<td>{escape(row[key])}</td>" for key in ("model_id", "episode_key", "kind", "predicted_p", "release_step", "trigger_step", "trigger_within48", "trigger_category", "task_success")) + "</tr>")
+        parts.append("<tr>" + "".join(f"<td>{escape(row[key])}</td>" for key in ("model_id", "episode_key", "kind", "valid", "validation_errors", "predicted_p", "release_step", "trigger_step", "trigger_within48", "trigger_category", "task_success")) + "</tr>")
     parts.append("</table><h2>按选点 P(t) 对照实际触发</h2><table><tr><th>模型</th><th>类型</th><th>P(t)</th><th>运行数</th><th>48 步内触发数</th></tr>")
     for row in summary["calibration_probability_groups"]:
         parts.append("<tr>" + "".join(f"<td>{escape(row[key])}</td>" for key in ("model_id", "kind", "predicted_p", "runs", "trigger_within48")) + "</tr>")
-    parts.append("</table><h2>校准完成量与跳过原因</h2><table><tr><th>模型</th><th>类型</th><th>计划/完成</th><th>48 步内触发</th><th>任务成功/已知</th><th>缺失局与跳过原因</th></tr>")
+    parts.append("</table><h2>校准完成量与跳过原因</h2><table><tr><th>模型</th><th>类型</th><th>计划/有效完成</th><th>48 步内触发</th><th>任务成功/已知</th><th>无效样本</th><th>缺失局与跳过原因</th></tr>")
     for row in summary["calibration_summary"]:
-        parts.append(f"<tr><td>{escape(row['model_id'])}</td><td>{escape(row['kind'])}</td><td>{row['planned']}/{row['completed']}</td><td>{row['trigger_within48']}</td><td>{row['task_success']}/{row['task_success_known']}</td><td>{escape(row['missing_episodes'])} {escape(row['skipped'])}</td></tr>")
+        parts.append(f"<tr><td>{escape(row['model_id'])}</td><td>{escape(row['kind'])}</td><td>{row['planned']}/{row['completed']}</td><td>{row['trigger_within48']}</td><td>{row['task_success']}/{row['task_success_known']}</td><td>{escape(row['failed'])}</td><td>{escape(row['missing_episodes'])} {escape(row['skipped'])}</td></tr>")
     parts.append("</table><h2>按 M、目标次数和实际经过分组</h2><table><tr><th>模型</th><th>M</th><th>目标 N</th><th>经过次数</th><th>局数</th><th>P 均值</th><th>95% 区间</th></tr>")
     for row in summary["visit_groups"]:
         parts.append("<tr>" + "".join(f"<td>{escape(row[key])}</td>" for key in ("model_id", "move_interval", "target_pass", "visit", "n_episodes", "mean", "ci95")) + "</tr>")
