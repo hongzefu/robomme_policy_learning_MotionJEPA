@@ -1,8 +1,10 @@
 """示教回放入口的 CPU 测试：桩 policy、桩适配器和小合成 H5，不加载权重；前缀路径用假模型跑真实的 HistoryBlock 展开。"""
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
+from pathlib import Path
 from types import SimpleNamespace
 
 import h5py
@@ -17,7 +19,10 @@ import jax.numpy as jnp  # noqa: E402
 from mme_vla_suite.datastore.motion_adapter import STAGE2_SPLIT_READOUT  # noqa: E402
 from mme_vla_suite.models.integration import history_observation as ho  # noqa: E402
 from mme_vla_suite.models.integration import utils as hu  # noqa: E402
+from mme_vla_suite.policies import policy_config  # noqa: E402
 from mme_vla_suite.shared.sampling import memory_order, pad_times  # noqa: E402
+from mme_vla_suite.training import config as training_config  # noqa: E402
+from openpi.models import model as openpi_model  # noqa: E402
 from scripts.interpret import attn_adapter as A  # noqa: E402
 from scripts.interpret import hover_replay as HR  # noqa: E402
 from scripts.interpret import test_rollout_hidden as THR  # noqa: E402
@@ -476,6 +481,39 @@ def test_check_layout_mismatch_fail(tmp_path, h5_path, capsys):
     assert code == 1
     assert "REPLAY_LAYOUT_DIFF step=64 fields=frame_times" in out
     assert "REPLAY_PARITY=FAIL layout_mismatch=1 points=2 maxabs=0" in out
+
+
+@dataclasses.dataclass
+class StubModelConfig:
+    dtype: str = "bfloat16"
+
+    def load(self, params, remove_extra_params):
+        return SimpleNamespace(config=self)
+
+
+@pytest.mark.parametrize("contract", [None, "contracts/runtime-mot.json"])
+def test_eval_target_contract_reaches_create_trained_policy(tmp_path, h5_path, monkeypatch, contract):
+    calls = []
+
+    def create_trained_policy(train_config, checkpoint_dir, **kwargs):
+        calls.append(kwargs)
+        policy = StubPolicy(False)
+        policy._model = SimpleNamespace(config=StubModelConfig())
+        return policy
+
+    monkeypatch.setattr(policy_config, "create_trained_policy", create_trained_policy)
+    monkeypatch.setattr(training_config, "get_config", lambda name: name)
+    monkeypatch.setattr(openpi_model, "restore_params", lambda path, dtype: {})
+    monkeypatch.setattr(A, "AttnAdapter", lambda shim: StubAdapter(False))
+    points = tmp_path / "points.json"
+    points.write_text(json.dumps({"episodes": {}}), encoding="utf-8")
+    argv = ["run", "--points", str(points), "--h5", str(h5_path), "--ckpt", str(tmp_path), "--config", "cfg",
+            "--label", "ctx", "--output", str(tmp_path / "out"), "--stage2-python", "/py/stage2"]
+    if contract is not None:
+        argv += ["--eval-target-contract", contract]
+    assert HR.main(argv) == 0
+    assert calls == [{"seed": 42, "motion_stub": False, "stage2_python": "/py/stage2",
+                      "eval_target_contract": None if contract is None else Path(contract)}]
 
 
 @pytest.fixture(scope="module")

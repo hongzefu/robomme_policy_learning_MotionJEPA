@@ -4,9 +4,11 @@ bf16 的 policy 逐帧生成记忆（motion 模型走真实编码器），float3
 
 用法（公共参数相同；check 不写文件，--output 不使用）：
   python -m scripts.interpret.hover_replay run --points <hover_points.json> --h5 <H5> --ckpt <dir> --config <配置名> \
-    --label ctx|mot --output <根目录> --seed 42 [--stage2-python <解释器>] [--episodes 0 1 ...]
+    --label ctx|mot --output <根目录> --seed 42 [--stage2-python <解释器>] [--eval-target-contract <路径>] [--episodes 0 1 ...]
   python -m scripts.interpret.hover_replay check --points ... --h5 ... --ckpt ... --config ... --label ctx|mot \
-    --output <根目录> --seed 42 [--stage2-python <解释器>] --episode 0 --rollout-attn <某局 attn 目录>
+    --output <根目录> --seed 42 [--stage2-python <解释器>] [--eval-target-contract <路径>] --episode 0 --rollout-attn <某局 attn 目录>
+
+--eval-target-contract 是运行契约（同 scripts/training/serve_policy.py），motion 模型用；基线不传。
 
 JAX 确定性环境变量由外部脚本给。
 """
@@ -315,7 +317,8 @@ def build_models(args):
 
     ckpt = args.ckpt.resolve()
     policy = policy_config.create_trained_policy(_config.get_config(args.config), ckpt, seed=args.seed, motion_stub=False,
-                                                 stage2_python=args.stage2_python)
+                                                 stage2_python=args.stage2_python,
+                                                 eval_target_contract=args.eval_target_contract)
     params = _model.restore_params(ckpt / "params", dtype=jnp.float32)
     strict = (ckpt.parent / "history_config.resolved.yaml").is_file()
     model32 = dataclasses.replace(policy._model.config, dtype="float32").load(params, remove_extra_params=not strict)
@@ -334,6 +337,7 @@ def main(argv=None):
     common.add_argument("--output", type=Path, required=True)
     common.add_argument("--seed", type=int, default=42)
     common.add_argument("--stage2-python", default=None)
+    common.add_argument("--eval-target-contract", type=Path, default=None)
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", required=True)
     run_parser = commands.add_parser("run", parents=[common])
