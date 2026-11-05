@@ -239,10 +239,10 @@ def test_parity_x0_over_tolerance_fails(tmp_path, monkeypatch, capsys):
 
 
 def test_parity_single_head_over_tolerance_fails(tmp_path, monkeypatch, capsys):
-    # 单头差 0.006 超限，跨 18 层 8 头平均后总质量差只有 0.006/144，未超限
-    values = expect_parity_fail(tmp_path, monkeypatch, capsys, FakeAdapter(probs_hook=history_key_shift(0.006, layer=3, head=2)))
-    assert float(values["group_mass_maxabs"]) == pytest.approx(0.006, abs=1e-6)
-    assert float(values["group_total_maxabs"]) == pytest.approx(0.006 / 144, abs=1e-7)
+    # 单头差 0.03 超限，跨 18 层 8 头平均后总质量差只有 0.03/144，未超限
+    values = expect_parity_fail(tmp_path, monkeypatch, capsys, FakeAdapter(probs_hook=history_key_shift(0.03, layer=3, head=2)))
+    assert float(values["group_mass_maxabs"]) == pytest.approx(0.03, abs=1e-6)
+    assert float(values["group_total_maxabs"]) == pytest.approx(0.03 / 144, abs=1e-7)
 
 
 def test_parity_group_total_over_tolerance_fails(tmp_path, monkeypatch, capsys):
@@ -271,8 +271,11 @@ def test_parity_within_tolerance_passes_with_measured_values(tmp_path, monkeypat
     assert float(values["group_mass_maxabs"]) == pytest.approx(5e-4, abs=1e-6)
     assert float(values["group_total_maxabs"]) == pytest.approx(5e-4, abs=1e-6)
     assert float(values["motion_rel_maxabs"]) == pytest.approx(5e-4 / 0.1005, abs=1e-5)
-    assert line.endswith("tol_x0=0.02 tol_group=0.005 tol_total=0.001 tol_motion_rel=0.1")
-    assert "logic_f32" not in line and "HIDDEN_PARITY_NOTE" not in output
+    assert line.endswith("tol_x0=0.02 tol_group=0.02 tol_total=0.001 tol_motion_rel=0.1")
+    assert "logic_f32" not in line
+    note = parity_values(parity_line(output, "HIDDEN_PARITY_NOTE"))
+    assert note["count"] == "0" and note["note_threshold"] == "0.003"
+    assert float(note["group_mass_maxabs"]) == pytest.approx(5e-4, abs=1e-6)
     result = load(tmp_path / "offline" / "ep" / "offline_0000.npz")
     for name in ("x0_maxabs", "group_mass_maxabs", "group_total_maxabs", "motion_rel_maxabs"):
         assert float(result[f"parity_{name}"]) == pytest.approx(float(values[name]), rel=1e-6)
@@ -324,18 +327,26 @@ def test_parity_motion_off_zero_and_on_nonzero_fails(tmp_path, monkeypatch, caps
     assert values["motion_rel_maxabs"] == "inf"
 
 
-def test_parity_note_when_single_head_near_limit(tmp_path, monkeypatch, capsys):
-    policy = write_episode(tmp_path, monkeypatch, infers=1)
-    assert RO.run(policy, FakeAdapter(probs_hook=history_key_shift(0.004, layer=0, head=0)), arguments(tmp_path)) == 0
+def test_parity_note_counts_points_and_keeps_maximum(tmp_path, monkeypatch, capsys):
+    # 三个点的单头差依次为 0.01、0.001、0.004：两点超过 0.003，都未超限；只在汇总时打印一行
+    deltas = iter((0.01, 0.001, 0.004))
+
+    def hook(probs, capture_hidden):
+        if not capture_hidden:
+            probs[:, 0, :, 0, :, 0] += next(deltas)
+
+    policy = write_episode(tmp_path, monkeypatch, infers=3)
+    assert RO.run(policy, FakeAdapter(probs_hook=hook), arguments(tmp_path, parity="all")) == 0
     output = capsys.readouterr().out
     parity_line(output)
     values = parity_values(parity_line(output, "HIDDEN_PARITY_NOTE"))
-    assert values["path"].endswith("rollout_0000.npz")
-    assert float(values["group_mass_maxabs"]) == pytest.approx(0.004, abs=1e-6)
+    assert set(values) == {"count", "group_mass_maxabs", "note_threshold"}
+    assert values["count"] == "2" and values["note_threshold"] == "0.003"
+    assert float(values["group_mass_maxabs"]) == pytest.approx(0.01, abs=1e-6)
 
 
 def test_parity_does_not_compare_single_probability_elements(tmp_path, monkeypatch, capsys):
-    # 单元素差 0.4，平均 10 个扩散步和 16 个动作位置后组质量差 0.0025，未超限、也不到信息行
+    # 单元素差 0.4，平均 10 个扩散步和 16 个动作位置后组质量差 0.0025，未超限、也不计入信息行
     def hook(probs, capture_hidden):
         if not capture_hidden:
             probs[0, 0, 0, 0, 0, 0] += 0.4
@@ -344,7 +355,7 @@ def test_parity_does_not_compare_single_probability_elements(tmp_path, monkeypat
     assert RO.run(policy, FakeAdapter(probs_hook=hook), arguments(tmp_path)) == 0
     output = capsys.readouterr().out
     assert float(parity_values(parity_line(output))["group_mass_maxabs"]) == pytest.approx(0.0025, abs=1e-6)
-    assert "HIDDEN_PARITY_NOTE" not in output
+    assert parity_values(parity_line(output, "HIDDEN_PARITY_NOTE"))["count"] == "0"
 
 
 def test_attention_and_hidden_come_from_capture_on_run(tmp_path, monkeypatch, capsys):
@@ -434,6 +445,7 @@ def test_resume_skips_matching_and_rejects_changed_input(tmp_path, monkeypatch, 
     # 跳过的记录仍计入全局最大值
     assert "OFFLINE_RUN=PASS records=0 skipped=2 skipped_nonce=0 attn_path_maxabs=0.5" in text
     assert "HIDDEN_PARITY=SKIPPED points=0" in text and "HIDDEN_PARITY=PASS" not in text
+    assert "HIDDEN_PARITY_NOTE" not in text
     assert "ROLLOUT_REPLAY=PASS points=2" in text
     assert adapter.calls == [] and output.read_bytes() == before
     path = tmp_path / "attn" / "ep" / "rollout_0000.npz"

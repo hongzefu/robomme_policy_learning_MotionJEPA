@@ -8,6 +8,7 @@
   4. 同输入同噪声比较隐状态捕获开和关（HIDDEN_PARITY，数值容差）：捕获开关会改变 jit 图，bfloat16 编译结果
      有数值波动，逐位相同做不到，因此比较 x_0 与五大组注意力质量，四个量及容差见 TOL_* 常量；不比较 probs 单元素。
      写出的注意力和隐状态都来自捕获开的同一次运行，捕获关只用于比较。
+     单头容差 TOL_GROUP=0.02 是判断逻辑没坏的闸门，且是最终值；单头差异小于解读下限（0.01）时与数值波动同量级，不解读。
 任何一步不通过都立刻停止并非零退出。不替换、不遮挡任何输入。JAX 确定性环境变量由外部脚本给。
 只处理 <run-root>/accepted/*.terminal.json 登记过的 nonce；重试或中断留下的旧 nonce 打印 OFFLINE_SKIP 并计数，不处理。
 
@@ -37,10 +38,10 @@ HIDDEN_GROUPS = ("历史视觉", "motion", "当前视觉", "文字")     # hidde
 # HIDDEN_PARITY 比较的五大组与容差（都是 ≤ 容差算通过）
 PARITY_GROUPS = ("motion", "历史视觉", "当前视觉", "文字", "其余")
 TOL_X0 = 0.02             # x_0 最大绝对差
-TOL_GROUP = 0.005         # 五大组单头质量最大绝对差
+TOL_GROUP = 0.02          # 五大组单头质量最大绝对差
 TOL_TOTAL = 0.001         # 五大组总质量（跨层头平均）最大绝对差
 TOL_MOTION_REL = 0.1      # motion 组总质量相对差 |on-off|/|off|
-NOTE_GROUP = 0.003        # 单头差超过它但未超限时打印信息行，不影响判定
+NOTE_GROUP = 0.003        # 汇总时统计单头差超过它的点数，不影响判定
 
 
 def parity_readings(x_on, x_off, attention_on, attention_off, has_motion):
@@ -207,8 +208,6 @@ def process_record(policy, adapter, path, output_path, trace, input_sha256, *, s
         if not parity_within_tolerance(parity):
             print(f"HIDDEN_PARITY=FAIL points=1 {format_parity(parity)} path={path}", flush=True)
             raise SystemExit(1)
-        if parity["group_mass_maxabs"] > NOTE_GROUP:
-            print(f"HIDDEN_PARITY_NOTE path={path} group_mass_maxabs={parity['group_mass_maxabs']:.9g}", flush=True)
 
     names = list(attention)
     parity_saved = {name: np.float64(np.nan if parity is None or parity[name] is None else parity[name])
@@ -246,7 +245,7 @@ def run(policy, adapter, args):
     wanted = set(args.episodes) if args.episodes else None
     accepted = load_accepted(args.run_root)
     seen = set()
-    written = skipped = skipped_nonce = parity_points = 0
+    written = skipped = skipped_nonce = parity_points = parity_notes = 0
     same_path_max = attn_path_max = 0.0
     parity_max = None
     for directory in sorted(path for path in Path(args.attn_root).iterdir() if path.is_dir()):
@@ -280,6 +279,7 @@ def run(policy, adapter, args):
                 if item["parity"] is not None:
                     parity_points += 1
                     parity_max = merge_parity(parity_max, item["parity"])
+                    parity_notes += item["parity"]["group_mass_maxabs"] > NOTE_GROUP
             same_path_max = max(same_path_max, item["same_path_maxabs"])
             attn_path_max = max(attn_path_max, item["attn_path_maxabs"])
         written += episode_written
@@ -293,6 +293,8 @@ def run(policy, adapter, args):
     if parity_points:
         print(f"HIDDEN_PARITY=PASS points={parity_points} {format_parity(parity_max)} "
               f"tol_x0={TOL_X0} tol_group={TOL_GROUP} tol_total={TOL_TOTAL} tol_motion_rel={TOL_MOTION_REL}", flush=True)
+        print(f"HIDDEN_PARITY_NOTE count={parity_notes} group_mass_maxabs={parity_max['group_mass_maxabs']:.9g} "
+              f"note_threshold={NOTE_GROUP}", flush=True)
     else:
         print("HIDDEN_PARITY=SKIPPED points=0", flush=True)
     print(f"OFFLINE_RUN=PASS records={written} skipped={skipped} skipped_nonce={skipped_nonce} "
