@@ -139,8 +139,22 @@ spec 的额外值为 `cuda="1"`、`xla_mem_fraction=0.55`、`startup_timeout_sec
 
 预留唯一会话 `sd-smoke-hold16-1104a`，GPU1，日志 `<产物根>/logs/sd-smoke-hold16-1104a.log`；启动命令为 `tmux new-session -d -s sd-smoke-hold16-1104a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/hold_smoke_entry.sh'`。实际程序为第三节解释器运行 `-m scripts.interpret.run_local --spec <产物根>/spec-smoke-hold.json --episodes StopCube:16`，该 spec 复用正常冒烟全部模型/解释器/合同覆盖，仅模式改 `hold_extended`、接管表改上述文件、输出分为 `<产物根>/smoke-hold-ep16-a/{attn,run}`。缓存和固定截止沿用正常入口，正常失败或成功都记录，不为成功重试。
 
+该功能冒烟于美东 22:30:02 唯一起跑并正常结束，程序 `RUN_LOCAL=PASS episodes=1 success=1 npz=27`、`EXIT_CODE=0`。主会话逐项读回：`HOLD_SMOKE=PASS prefix_actions=374 held_steps=26 takeover=375 release=401 restore_infer=25 infers=27 task_success=1 mismatches=0`。恢复推理的模型步为 400，实际环境步 401，最新 frame_times 为 400；输入 state 与现场 state_before 完全一致，12 个有效 motion 槽，记录为本轮真实输入证据。它只验证这份受测轨迹，不泛称所有局或跨硬件逐位等价。
+
 ### 正式分块的实施细节
 
 正式 50 局拟使用已有 `chunk_size=5`，共 10 块，每五局复用一次服务，各局仍按官方循环新建环境与评估器、reset 记忆及模型 seed42。正式入口只消费明确 50 局的清单，不传 `--episodes` 造成重新拆单局；单局冒烟仍使用原始一局入口。独立静态审查 `ADJUST_REVIEW=PASS scale=same findings=0`：这是计划未固定的调度细节，不增加任务、协议、运行规模或恢复机制，真实多局行为仍待实跑。当前 GPU0 有其他用户计算，先使用 GPU1，最多两卡的资源上限不变。
+
+正式清单为 `<产物根>/preflight/manifest-all-b5.json`，明确包含 StopCube:0～49 各一次：`MANIFEST=PASS episodes=50 chunks=10 seal=05313f4116785920f732984648e7958aecbeeb07592379ebcf6997539b3e2fdd`。主会话另核每块恰 5 局、模型 seed42、normal 模式、GPU1 和新输出目录，`FORMAL_SPEC=PASS episodes=50 chunks=10 cuda=1 outputs=new`。
+
+正式 run 为 `normal-gpu1-1104a`，固定干净执行提交 `731df5ed5c4d663a15557c224b5a8b0e520a4d86`，预留 tmux `sd-normal50-gpu1-1104a`，日志 `<产物根>/logs/sd-normal50-gpu1-1104a.log`。实际程序命令为：
+
+```bash
+/data/hongzefu/robomme_policy_learning_MotionJEPA/.venv/bin/python \
+  -m scripts.interpret.run_local \
+  --spec /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/spec-normal-gpu1.json
+```
+
+该 spec 与正常冒烟模型/环境/合同覆盖相同，改为上述五局分块清单与新输出 `<产物根>/normal/gpu1/attn`、`<产物根>/normal/gpu1/run`。启动命令 `tmux new-session -d -s sd-normal50-gpu1-1104a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/normal50_entry.sh'`，入口仍固定绝对截止与退出码，不自动重试；只有收到实际起跑回执才写为正在运行。
 
 完成后在 `result.md` 补实际覆盖、正常与延长的独立成绩、时刻与动作一致性、人工确认入口和未完成项；轻量证据进 `records/`，大数组、视频、完整轨迹留在 `v1-store`。
