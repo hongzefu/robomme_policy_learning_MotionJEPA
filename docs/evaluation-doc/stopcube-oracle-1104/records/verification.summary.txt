@@ -2,3 +2,10 @@ PLAN_CONSISTENCY_REVIEW=PASS base=48be54c0414a362bfc5684d1357f383881103f92 findi
 CODEX_CONTEXT_CONFIG=PASS home=/home/hongzefu/.codex window=1000000 compact=900000
 CODEX_CONTEXT_RUNTIME=OBSERVED model=gpt-6.1-sol effective=828400 evidence=/home/hongzefu/.codex/sessions/2026/11/04/rollout-2026-11-04T23-41-19-01a1aa02-e212-74b2-bd6a-783baeaafb2f.jsonl
 MANIFEST=PASS episodes=50 chunks=10 seal=05313f4116785920f732984648e7958aecbeeb07592379ebcf6997539b3e2fdd
+PRE_MERGE_REVIEW=PASS task=S1 base=48be54c0414a362bfc5684d1357f383881103f92 tip=1f308967791e1f860b4ceef1eddeffe334de224f findings=0 blocking=0
+POST_MERGE_REVIEW=PASS task=S1 base=cd49cac6f15975069709c7fc246a6d1fc1b8a5e2 tip=bc0cc3dee4889d52f4fa79b294bbc600f3ac8d29 findings=0
+ORACLE_TABLE=PASS episodes=1 failed=0 late_reach=0
+PRE_MERGE_REVIEW=PASS task=S2 base=48be54c0414a362bfc5684d1357f383881103f92 tip=559ecb97bf1071981e91029013fdc598edc95e1a findings=0 blocking=0
+POST_MERGE_REVIEW=PASS task=S2 base=c058cf8318dc9b713dcf00d25eea47a1c6275368 tip=7ad43776cd71a71848f1e137f640862b93354fff findings=0 blocking=0
+PRE_MERGE_REVIEW=PASS task=S3 base=48be54c0414a362bfc5684d1357f383881103f92 tip=b158d86feec773cabfba14454a0d74deeab42df0 findings=0 blocking=0
+POST_MERGE_REVIEW=PASS task=S3 base=7ad43776cd71a71848f1e137f640862b93354fff tip=96cdb76a86bff6fee7b45ed0b9e8e59ca5022abc findings=0 blocking=0

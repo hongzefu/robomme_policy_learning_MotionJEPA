@@ -44,3 +44,7 @@ CUDA_VISIBLE_DEVICES=1 /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-stor
 ```
 
 执行工作树 `/home/hongzefu/.codex/worktrees/stopcube-oracle-run/robomme_policy_learning_MotionJEPA`，固定 S1 合并提交 `bc0cc3dee4889d52f4fa79b294bbc600f3ac8d29`，启动前须干净；`PYTHONPATH` 先指向该工作树及其 `src`，benchmark 指向主检出已锁定源码。`UV_CACHE_DIR`、`XDG_CACHE_HOME`、`HF_HOME`、`TORCH_HOME`、`MMEVLA_V1_STORE`、`OPENPI_DATA_HOME` 均显式设置为主检出本机产物根下相应目录。策略模型尚未启动，本次只验证无模型的 Oracle 单局。
+
+`so-oracle16-hold-a` 已于美东 11-04 23:51:51 实际启动并退出 0。第 16 局 `reach_step=51`、`z_hover=0.15438616275787354`、真实区间 412～428，481 动作至 `terminal_env_step=482`；只悬停官方任务失败符合预期，不当作模型成绩。
+
+预留下份会话 `so-oracle-more-a`：`tmux new-session -d -s so-oracle-more-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/smoke_oracle_more.sh'`。同一干净 `bc0cc3d` 工作树、解释器、GPU1 与缓存口径，按顺序各起独立进程：`--episode-key StopCube:16 --mode press --hold-table <产物根>/smoke/oracle16-hold-a/oracle_table.json`；`--episode-key StopCube:3 --mode hold`；`--episode-key StopCube:3 --mode press --hold-table <产物根>/smoke/oracle3-hold-a/oracle_table.json`。每条附同一 `--benchmark-root`，输出分别为 `<产物根>/smoke/oracle16-press-a`、`oracle3-hold-a`、`oracle3-press-a`。每例 290 秒上限，失败即退出、不重试；总日志 `<产物根>/logs/oracle-more-a.log`，逐例日志同名。第 3 局按官方 seed 随机序列推算为 M=60、N=2，实跑再核实。
