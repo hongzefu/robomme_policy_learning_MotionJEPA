@@ -27,7 +27,8 @@
 <b>范围：</b>只做 StopCube 的第一阶段（弱可解码）。历史反事实、RouteStick、其他任务都在待办。<br>
 <b>与其他文件的关系：</b>本计划取代 <code>probe/1105-keypoint-probe-plan.html</code> 里 StopCube 的取点与探针口径（「每次经过前 30 步」改为悬停期全程）；该文件的 RouteStick 部分与第二阶段保持原样。<br>
 <b>经验来源：</b>策略仓库 <code>docs/evaluation-doc/stopcube-rollout-1105/result.md</code>（commit <code>019542c</code>，2026-11-05 美东读取）。<br>
-<b>不新增数据：</b>只用已有的官方示教与已有记录。
+<b>不新增数据：</b>只用已有的官方示教与已有记录。<br>
+<b>2026-11-05 美东细化：</b>代码锚点 <code>d27c9da</code>；只读核实了示教 H5、记忆适配器和环境源码（第三方 gitlink <code>856bc3a</code>），实测数字见 B3。细化没有新增读数和对照，只把未定义的地方写实，把和实测不符的地方改掉。标「待确认 Q<i>n</i>」的条目暂按推荐写，等用户裁决（B9）。
 </div>
 
 <h1>第一部分（给人看）</h1>
@@ -54,18 +55,20 @@
 <h2>二、我们每一步做什么</h2>
 <div class="tbl"><table>
 <tr><th>步骤</th><th>做什么</th><th>怎么做</th><th>得到什么</th><th>判据</th></tr>
-<tr><td>0</td><td>开工前确认四件事</td><td>示教能否经评测用的记忆适配器逐帧回放；专家悬停期末端是否完全静止；float32 捕获的显存与耗时；帧记忆是否含当前帧</td><td>四项的书面结论</td><td>四项都有结论</td></tr>
-<tr><td>1</td><td>做示教回放入口，先冒烟 1 局</td><td>把示教的帧逐步喂给记忆适配器；在选定的步上只做一次前缀前向，存下四组 token 在 18 层的隐状态（float32）；模型输出的动作不执行</td><td>1 局约 25 个点的隐状态；单点实际耗时</td><td><code>REPLAY_PARITY</code>、<code>PAIR_FRAMES</code>、<code>HIDDEN_PRECISION</code></td></tr>
-<tr><td>2</td><td>选点、打标签</td><td>官方 100 局示教。用末端高度判断悬停到位；到位后到 T − 30 之前，每 8 步取一个点；去掉方块越过目标中心前后各 2 步。M、N 按种子重算，再算出每个点的已过次数、该不该按、剩余次数、距按下步数、方块位置</td><td>约 2250–2500 个点及其标签</td><td><code>LABELS</code></td></tr>
-<tr><td>3</td><td>两个模型全量回放</td><td>motion 模型和无 motion 的基线各跑一遍，只捕获前缀四组（历史帧、motion、当前画面、文字），另存最近一个 motion token 和进入第 0 层之前的输入 token。放 detached tmux，两张卡各一个模型</td><td>每模型一份隐状态库</td><td>点数与步骤 2 一致，日志 <code>EXIT_CODE=0</code></td></tr>
+<tr><td>0</td><td>开工前确认四件事</td><td>写计划时已只读核实三件（见 B3）：能回放，但仓库没有现成入口；悬停静止要从夹爪闭合完算起；帧记忆含当前帧。剩下的显存与耗时在步骤 1 实测。开工时只补 H5 的 sha256 核对</td><td>四项的书面结论</td><td>四项都有结论；<code>H5_SOURCE</code></td></tr>
+<tr><td>1</td><td>做示教回放入口，先冒烟 1 局</td><td>把示教的帧逐步喂给记忆适配器；在选定的步上只做一次前缀前向，存下四组 token 在 18 层的隐状态（float32）；模型不采样，也就没有动作。冒烟用第 0 局（M=120，N=4）</td><td>1 局约 40 个点的隐状态；单点实际耗时</td><td><code>REPLAY_PARITY</code>、<code>PAIR_FRAMES</code>、<code>HIDDEN_PRECISION</code></td></tr>
+<tr><td>2</td><td>选点、打标签</td><td>官方 100 局示教。用末端高度和夹爪开度判断悬停到位；到位后到 T − 30 之前，每 8 步取一个点；去掉方块越过目标中心前后各 2 步。M、N 按种子重算，再算出每个点的已过次数、该不该按、剩余次数、距按下步数、方块位置</td><td>2344 个点及其标签（实测，98 局有点）；可用严格配对最多 655 对</td><td><code>LABELS</code></td></tr>
+<tr><td>3</td><td>两个模型全量回放</td><td>motion 模型和无 motion 的基线各跑一遍，只捕获前缀四组（历史帧、motion、当前画面、文字），另存最近一个 motion token 和进入第 0 层之前的输入 token（基线没有 motion，这两列留空）。放 detached tmux，两张卡各一个模型</td><td>每模型一份隐状态库</td><td><code>REPLAY_RUN</code>：点数与步骤 2 一致，日志 <code>EXIT_CODE=0</code></td></tr>
 <tr><td>4</td><td>训探针，跑基线和对照</td><td>每个（层 × 组 × 标签）一个线性探针。按局 5 折；每折在训练局上标准化、PCA 到 64 维、内部选岭系数。同时算：时间基线、当前画面基线、整局换 (M, N) 的打乱对照、学习曲线。已过次数分严格档、同时刻档、全量档三种报法</td><td>各标签逐层 × 组的折外结果，以及相对时间基线的差和局级区间</td><td><code>GROUP_LEAK</code>、<code>POSITIVE_CONTROL</code>、<code>PROBE</code></td></tr>
-<tr><td>5</td><td>出图、留档</td><td>逐层图：行是标签，列是模型，每格四条线加最近一个 motion token，水平线为时间基线与打乱对照。另出进度曲线和同时刻对比表。图渲染后目视复查</td><td>三张图表和 <code>result.md</code></td><td>图无重叠溢出；留档写入策略仓库</td></tr>
+<tr><td>5</td><td>出图、留档</td><td>逐层图：行是标签，列是模型，每格四条线加最近一个 motion token，水平线为时间基线与打乱对照。另出进度曲线和同时刻对比表。图渲染后目视复查</td><td>三张图表和 <code>result.md</code></td><td>图无重叠溢出；留档写入 <code>docs/evaluation-doc/stopcube-hover-probe-1105/</code></td></tr>
 </table></div>
+<h2>三、子代理分工与合并（简述）</h2>
+<p>代码拆三块，都只新增或改 <code>scripts/interpret/</code> 下的文件：W1 选点与标签，W2 回放入口和前缀捕获，W3 探针与出图。三块写集不重叠，各在独立 worktree 里做，按 W1、W2、W3 的顺序合回 <code>v4.1-interpretMotion</code>。每次合并前由只读审查代理对固定 sha 审差异和接口，合并后主会话跑定向测试并核对文件清单，通过才推送。冒烟、全量回放和出图目视由主会话做，因为结果马上要用来定阈值，监听也归主会话。细节在 B4。</p>
 <p>之后的事不在本轮：动作 token 组（5 个噪声样本）、历史反事实、RouteStick。</p>
 <p>取点、标签、特征、对照、报法、判定行、出图版式、耗时估计、上一轮教训与已定口径，都在第二部分的 A 节；红线、可复用实现、风险与盲区在 B 节。</p>
 
 <h1>第二部分（技术细节，供 agent 追踪）</h1>
-<p>A 节是方案细节（原第一部分各节整体移入，内容未改），B 节是执行约束。</p>
+<p>A 节是方案细节（原第一部分各节整体移入，2026-11-05 细化时补了定义和实测），B 节是执行约束。</p>
 
 
 <h2>A1 上一轮小规模探针的教训</h2>
@@ -97,55 +100,55 @@
 <h2>A3 数据与取点</h2>
 <div class="tbl"><table>
 <tr><th>项目</th><th>做法</th></tr>
-<tr><td>数据</td><td>官方 StopCube 示教 100 局（两个模型训练时都见过，报结果时写明）</td></tr>
-<tr><td>回放方式</td><td>把示教的帧逐步喂给评测时用的同一个记忆适配器，在选定的步上做一次前向并捕获隐状态；模型输出的动作不执行</td></tr>
-<tr><td>取点范围</td><td>悬停到位之后、T − 30 之前；到位用末端高度逐点判断，不按次数一刀切</td></tr>
+<tr><td>数据</td><td>官方 StopCube 示教 100 局：<code>/data/hongzefu/data_0226/record_dataset_StopCube.h5</code>，字节数 21074856224，与建库档案 <code>source-preflight.summary.log</code> 的大小相同（sha256 开工时核对）。第 k 局就是 <code>episode_k</code>。两个模型训练时都见过，报结果时写明</td></tr>
+<tr><td>回放方式</td><td>每局先 <code>policy.reset()</code>，第 0 帧单独 <code>policy.add_buffer</code>，之后每批 8 帧，所以每批喂完正好落在 8 的倍数步（<code>exec_start_idx=0</code>，与评测相同）。帧用 <code>obs/front_rgb</code>，状态用 <code>joint_state</code> 加 <code>gripper_state[:1]</code>（同 <code>pack_state</code>）。在选定步走 <code>policy.infer</code> 的同一段输入路径（<code>_prepare_history</code>、<code>_input_transform</code>、<code>HistAugObservation.from_dict</code>）得到观测，当前图像是该步的 <code>front_rgb</code> 和 <code>wrist_rgb</code>，指令取 <code>setup/task_goal[0]</code>（评测也取第一条）。只做前缀前向，不采样。评测每 16 步推理一次，所以 t 除以 16 余 8 的点是模型在评测里没遇到过的推理时刻；记忆内容只由 0 到 t 的帧决定，和分批无关（<code>REPLAY_PARITY</code> 核对）</td></tr>
+<tr><td>取点范围</td><td>悬停到位之后、T − 30 之前，其中 T = M(N − ½)。到位的定义：从某一步起直到 T − 31，末端高度（<code>eef_state_raw/pose</code> 第 3 维）和夹爪开度（<code>gripper_state[0]</code>）都与第 T − 31 步相差不超过 1 mm；取满足条件的最早一步。夹爪要算进来，因为实测高度到位在第 45–53 步，夹爪第 46–55 步才开始闭合，闭合时画面明显在变。实测到位在第 49–58 步，真实下压（低于悬停 2 cm）在 T − 15 到 T − 10，所以 T − 30 之前都安全</td></tr>
 <tr><td>降采样</td><td>每 8 步一个点，取 t 能被 8 整除的步。2M 为 120 / 160 / 240，都是 8 的倍数，所以 t 与 t + 2M 总是同时被取到</td></tr>
-<tr><td>规模估计</td><td>每局约 20–25 个点，共约 2250–2500 个点；本轮每个点只做一次前缀前向，不去噪</td></tr>
+<tr><td>规模（按上述规则实算）</td><td>共 2344 个点，每局中位 20 个，四分位 12 和 32，最多 57。第 5、93 局（都是 M=60，N=2）到位时只剩不到一个取点，没有点；另有 9 局只有 1–2 个点。按速度：M=120 共 1403 点，M=80 共 677 点，M=60 共 264 点。本轮每个点只做一次前缀前向，不去噪</td></tr>
 <tr><td>去掉的点</td><td>方块越过目标中心前后各 2 步（已过次数在这里跳变，画面几乎相同）</td></tr>
 </table></div>
-<p>同帧异史：悬停期机械臂不动，方块以 2M 为周期往返（smoothstep 变速），所以同一局里第 t 步与第 t + 2M 步画面相同，已过次数差 2。</p>
+<p>同帧异史：悬停期机械臂不动，方块以 2M 为周期往返（smoothstep 变速），所以同一局里第 t 步与第 t + 2M 步画面相同，已过次数差 2。实测：按上述到位规则共 655 对，分布在 52 局；前视两帧逐像素最大差为 0 的有 609 对，超过 8 的 16 对（最大 123）；腕部超过 8 的 43 对（最大 183）。所以「画面相同」只能算近似：严格档只用两个视角最大差都不超过 8 的配对，去掉的配对数如实记录。环境里方块的运动只由 t 和 M 决定，见 <code>StopCube.step</code> 与 <code>move_straight_line</code>。H5 里没有方块位置，帧号对齐这样核对：抽样 31 个折返点，相邻帧差最小的位置都落在 kM − 2 到 kM − 1，与第 i 个 timestep 就是第 i 步相符。</p>
 
 <h2>A4 标签</h2>
 <div class="tbl"><table>
 <tr><th>标签</th><th>定义</th><th>类型</th><th>依赖什么</th><th>地位</th></tr>
-<tr><td>速度 M</td><td>60 / 80 / 120</td><td>三分类</td><td>只依赖历史</td><td>第一主读数</td></tr>
-<tr><td>已过次数 c</td><td>方块已越过目标中心几次</td><td>分类</td><td>历史（等于 t 与 M 的函数）</td><td>第二主读数</td></tr>
-<tr><td>该不该按</td><td>即将到来的这次经过是不是第 N 次</td><td>二分类</td><td>历史 + 文字</td><td>副读数</td></tr>
+<tr><td>速度 M</td><td>60 / 80 / 120，按种子重算：<code>torch.Generator().manual_seed(seed)</code> 后依次 <code>randint(27,33)</code> 丢弃、<code>randint(0,3)</code> 选 M、<code>randint(2,6)</code> 得 N（<code>StopCube._initialize_episode</code>；仓库没有现成函数）。100 局的序数词都与重算的 N 相符；50 局测试局也与 <code>oracle_table.json</code> 相符</td><td>三分类</td><td>只依赖历史</td><td>第一主读数</td></tr>
+<tr><td>已过次数 c</td><td>方块已越过目标中心几次，第 k 次经过在 M(k − ½)，即 c = 满足 M(k − ½) ≤ t 的 k 的个数。实测 c = 0 到 4 分别有 37、881、739、484、203 个点，c = 0 只出现在 M=120</td><td>分类</td><td>历史（等于 t 与 M 的函数）</td><td>第二主读数</td></tr>
+<tr><td>该不该按</td><td>即将到来的这次经过是不是第 N 次，即 c + 1 = N。正类 696 点，负类 1648 点</td><td>二分类</td><td>历史 + 文字</td><td>副读数</td></tr>
 <tr><td>剩余次数</td><td>N − c</td><td>分类</td><td>历史 + 文字</td><td>副读数</td></tr>
-<tr><td>距按下步数</td><td>T − t</td><td>回归</td><td>M × N 与 t</td><td>副读数，用于进度曲线</td></tr>
-<tr><td>方块位置</td><td>沿轨道的归一化位置</td><td>回归</td><td>当前画面</td><td>正对照：当前画面组应当读得出</td></tr>
+<tr><td>距按下步数</td><td>T − t，T = M(N − ½) 按公式算，不取示教实际触发步（专家实测触发步减 T 为 −3 到 +5，中位 0，来自测试局）</td><td>回归</td><td>M × N 与 t</td><td>副读数，用于进度曲线</td></tr>
+<tr><td>方块位置</td><td>沿轨道的归一化位置，由 t 和 M 算：k = ⌊t/M⌋，a = t/M − k，s = 3a² − 2a³；k 为偶数时取 s，为奇数时取 1 − s（0 是起点，1 是终点，0.5 是目标中心）</td><td>回归</td><td>当前画面</td><td>正对照：当前画面组应当读得出</td></tr>
 </table></div>
 
 <h2>A5 特征</h2>
 <div class="tbl"><table>
 <tr><th>特征组</th><th>取法</th></tr>
-<tr><td>历史帧、motion、当前画面、文字</td><td>18 层每层按组取平均（沿用现有 <code>hidden_prefix</code>）</td></tr>
+<tr><td>历史帧、motion、当前画面、文字</td><td>18 层每层按组取平均（沿用现有 <code>hidden_prefix</code> 和 <code>build_groups</code>）。历史帧组是记忆里等距抽样的最多 32 帧，每帧 16 个 token，<b>最后一帧就是当前帧</b>，不单独切开：它只占这组的 1/32，并且这样才是模型实际的记忆布局。当前画面组是 <code>base_0_rgb</code> 和 <code>left_wrist_0_rgb</code> 两路图像 token</td></tr>
 <tr><td>动作 token（第二批，本轮不做）</td><td>18 层每层取平均，5 个噪声样本再平均</td></tr>
-<tr><td>最近一个 motion token</td><td>不取平均，只取时间上最新的那个 motion token。速度可以从单个窗口里的位移读出，对全部窗口取平均会稀释它</td></tr>
-<tr><td>输入级对照</td><td>各组在进入第 0 层之前的 token，对应参照论文的「原始输入」对照：区分编码器给了什么和 VLA 算出了什么</td></tr>
+<tr><td>最近一个 motion token</td><td>不取平均，只取时间上最新的那个 motion token（<code>motion_times</code> 最大的那个）。每个窗口一个 token，33 帧，起点间隔 32 步，所以 t ≥ 32 才有；取点都在第 49 步之后，每个点都有。实现上给 <code>group_masks</code> 多加一行只含这个 token 的掩码。速度可以从单个窗口里的位移读出，对全部窗口取平均会稀释它</td></tr>
+<tr><td>输入级对照</td><td>各组在进入第 0 层之前的 token（<code>hidden_prefix[0]</code>，即 <code>embed_prefix</code> 的输出），对应参照论文的「原始输入」对照：区分编码器给了什么和 VLA 算出了什么</td></tr>
 </table></div>
-<p>每个特征组在训练折内先标准化、再 PCA 到 64 维，然后进同一个岭回归或最小二乘分类器。这样不同组、不同模型的探针容量相同。</p>
+<p>每个特征组在外层训练折内先标准化、再 PCA 到 64 维（主成分只用外层训练折算，内层选系数时不重算），然后进同一个岭回归或最小二乘分类器。这样不同组、不同模型的探针容量相同。分类用一对多：每个类别一个独热目标，各自按现有 <code>select_lambda</code> 选系数，预测取最大。</p>
 
 <h2>A6 探针、基线与对照</h2>
 <div class="tbl"><table>
 <tr><th>项目</th><th>做法</th></tr>
 <tr><td>划分</td><td>按局 5 折，同一局的点不跨折；每局等权</td></tr>
 <tr><td>正则</td><td>岭系数在训练折内部嵌套选择</td></tr>
-<tr><td>区间</td><td>局级重采样</td></tr>
-<tr><td>时间基线</td><td>特征只有 <code>[t]</code>，以及 <code>[t, N]</code>；每个标签都报探针减时间基线的差和区间</td></tr>
+<tr><td>区间</td><td>局级重采样：<code>oracle_press_prob.bootstrap</code>，2000 次，种子 42；准确率先算到每局再比较。没有点的 2 局不参与</td></tr>
+<tr><td>时间基线（待确认 Q3）</td><td>特征只有 <code>[t]</code>，以及 <code>[t, N]</code>；每个标签都报探针减时间基线的差和区间。t 用独热编码（8 的倍数各占一维，不经 PCA），N 也用独热。这样基线就是「只知道时间，每个时刻猜最可能的答案」。不用线性 t，因为这些标签对 t 不单调，线性 t 会低估时间能解释的量</td></tr>
 <tr><td>当前画面基线</td><td>当前画面组的探针。严格配对上应在机会水平；全量点上是实测值</td></tr>
-<tr><td>打乱对照</td><td>整局换参数：把另一局的 (M, N) 配给这一局，按本局的 t 重算标签。这样时间结构保留，只打断历史与标签的对应</td></tr>
-<tr><td>学习曲线</td><td>用 25% / 50% / 100% 的局训练，看折外结果是否走平</td></tr>
+<tr><td>打乱对照</td><td>整局换参数：把另一局的 (M, N) 配给这一局，按本局的 t 重算标签。这样时间结构保留，只打断历史与标签的对应。重复 20 次（同 <code>SHUFFLES</code>），只对主读数两个特征和时间基线做。重算后可能超出原类别（如剩余次数为负），超出的值各算一类，不裁剪、不丢点</td></tr>
+<tr><td>学习曲线</td><td>外层训练局按局编号的哈希排序，取前 25% / 50% / 100% 训练，测试折不变，看折外结果是否走平。只对主读数做</td></tr>
 <tr><td>基线模型</td><td>官方 ctx512 第 79999 步，同一流程。两个模型训练来源和步数不同，跨模型只作描述</td></tr>
 </table></div>
 
 <h2>A7 怎么报</h2>
 <div class="tbl"><table>
 <tr><th>读数</th><th>指标</th><th>要排除的解释</th></tr>
-<tr><td>速度 M</td><td>折外准确率，按层 × 特征组；另按 M 分别报</td><td>M 大的局更长，t 大的点多为 M = 120。所以同时报 <code>[t]</code> 基线，并只在三种速度都有点的 t 区间内再报一次</td></tr>
-<tr><td>已过次数（严格档）</td><td>配对准确率：t 与 t + 2M 两个点都读对</td><td>画面相同，只剩历史和时间。对比 <code>[t]</code> 基线</td></tr>
-<tr><td>已过次数（同时刻档）</td><td>固定 t，不同 M 的局之间的准确率</td><td>时间完全相同，次数不同，读得出就不是在读时间</td></tr>
+<tr><td>速度 M</td><td>折外准确率，按层 × 特征组；另按 M 分别报</td><td>M 大的局更长，t 大的点多为 M = 120（60%）。所以同时报 <code>[t]</code> 基线，并只在三种速度都有点的 t 区间（第 56–232 步，实算）内再报一次</td></tr>
+<tr><td>已过次数（严格档）</td><td>配对准确率：t 与 t + 2M 两个点都读对</td><td>画面相同，只剩历史和时间。对比 <code>[t]</code> 基线。只读时间的探针也能在配对上读对（t 不同），所以必须看超出基线多少。配对两点都读对才算对，每局先平均；只有 52 局有配对</td></tr>
+<tr><td>已过次数（同时刻档）</td><td>固定 t，不同 M 的局之间的准确率</td><td>时间完全相同，次数不同，读得出就不是在读时间。但固定 t 时次数由 M 决定，所以这一档排除了时间，没有排除速度。用第 56–232 步、探针用全部训练点训，按 t 分别算准确率</td></tr>
 <tr><td>已过次数（全量档）</td><td>悬停期所有点的折外准确率</td><td>反方向的经过会从画面泄露奇偶，对比当前画面基线</td></tr>
 <tr><td>该不该按、剩余次数</td><td>折外准确率</td><td>对比文字组单独、<code>[t, N]</code> 基线</td></tr>
 <tr><td>距按下步数</td><td>MAE 减时间基线，局级区间；折外预测对真值的曲线</td><td>同上一轮</td></tr>
@@ -155,15 +158,17 @@
 <h2>A8 验收</h2>
 <div class="tbl"><table>
 <tr><th>查什么</th><th>怎么查</th><th>判定行</th></tr>
-<tr><td>回放与真实推理一致</td><td>取 1 局已有 rollout 的记录，用回放路径重算同一次推理的隐状态，比较差异</td><td><code>REPLAY_PARITY=PASS|FAIL points=&lt;n&gt; maxabs=&lt;值&gt;</code></td></tr>
-<tr><td>同帧配对成立</td><td>t 与 t + 2M 两帧逐像素差的最大值</td><td><code>PAIR_FRAMES=PASS|FAIL pairs=&lt;n&gt; maxabs=&lt;值&gt;</code></td></tr>
-<tr><td>标签正确</td><td>抽 10 局，把若干取点存图，人工核对方块位置、已过次数与 M</td><td><code>LABELS=PASS|FAIL episodes=10 mismatches=&lt;n&gt;</code></td></tr>
-<tr><td>精度够用</td><td>各特征组：相邻取点的距离中位数 ÷ 捕获误差</td><td><code>HIDDEN_PRECISION=PASS|FAIL group=&lt;组&gt; min_dist_over_err=&lt;值&gt;</code></td></tr>
+<tr><td>回放与真实推理一致</td><td>（待确认 Q2）已有 rollout 记录没有存原始帧，不能用回放路径重算同一局。改为两步：① 布局：同一 <code>step_idx</code> 下，回放的观测和 rollout 记录比较键、形状、dtype、<code>frame_times</code>、<code>motion_times</code>、<code>mem_order</code>，应逐位相同（motion 窗口数相同的点）；② 分批：H5 第 0 局按评测节奏（首批 1 帧，之后每批 16 帧）和回放节奏（每批 8 帧）各喂一遍，在 16 的倍数步比较观测和隐状态，最大差不超过 1e-3。这两步核对的是适配器路径，不证明 H5 的帧与评测时环境输出逐位相同（评测局的种子和示教局不重叠）</td><td><code>REPLAY_PARITY=PASS|FAIL layout_mismatch=&lt;n&gt; points=&lt;n&gt; maxabs=&lt;值&gt;</code></td></tr>
+<tr><td>同帧配对成立</td><td>t 与 t + 2M 两帧逐像素差的最大值，前视、腕部各算；两视角都不超过 8 的配对才进严格档；保留比例不低于 80% 算 PASS（写计划时实测 655 对里前视超标 16 对、腕部超标 43 对）</td><td><code>PAIR_FRAMES=PASS|FAIL pairs=&lt;n&gt; kept=&lt;n&gt; front_maxabs=&lt;值&gt; wrist_maxabs=&lt;值&gt; tol=8</code></td></tr>
+<tr><td>标签正确</td><td>① 100 局的序数词与重算 N 全部相符；② 抽 10 局（速度各至少 3 局），把若干取点存图，主会话目视核对方块位置、已过次数与 M</td><td><code>LABELS=PASS|FAIL ordinal_mismatch=&lt;n&gt; episodes=10 mismatches=&lt;n&gt;</code></td></tr>
+<tr><td>精度够用</td><td>（待确认 Q1）冒烟局各特征组：相邻取点的距离中位数 ÷ 捕获误差，不低于 10 算 PASS（沿用上一轮的判据）。捕获误差取同一输入在 float32 下新的只做前缀路径与现有 <code>capture_hidden</code> 全路径的 <code>hidden_prefix</code> 差，这也同时核对新路径算的是同一件事</td><td><code>HIDDEN_PRECISION=PASS|FAIL group=&lt;组&gt; min_dist_over_err=&lt;值&gt; path_maxabs=&lt;值&gt;</code></td></tr>
 <tr><td>无同局泄漏</td><td>每折训练局与测试局的交集</td><td><code>GROUP_LEAK=PASS leak=0</code></td></tr>
-<tr><td>正对照</td><td>当前画面组读方块位置</td><td><code>POSITIVE_CONTROL=PASS|FAIL r2=&lt;值&gt;</code></td></tr>
-<tr><td>主读数</td><td>探针减 <code>[t]</code> 基线的差与区间</td><td><code>PROBE=PASS|FAIL model=&lt;模型&gt; label=&lt;标签&gt; feature=&lt;组&gt; layer=&lt;层&gt; value=&lt;值&gt; minus_time=&lt;差&gt; ci=[&lt;下&gt;,&lt;上&gt;] shuffled=&lt;值&gt;</code></td></tr>
+<tr><td>正对照</td><td>（待确认 Q4）当前画面组第 17 层读方块位置，折外 R² 不低于 0.8 算 PASS</td><td><code>POSITIVE_CONTROL=PASS|FAIL r2=&lt;值&gt; tol=0.8</code></td></tr>
+<tr><td>输入来源</td><td>H5 的 sha256 与建库档案记录的 <code>f8be65f89eda55f41e51a148576f8ada4898d1a463abe87fd73cd0d471e1cadd</code> 相同</td><td><code>H5_SOURCE=PASS|FAIL sha256=&lt;值&gt;</code></td></tr>
+<tr><td>全量回放完成</td><td>每模型的点数等于标签表的点数，日志 <code>EXIT_CODE=0</code></td><td><code>REPLAY_RUN=PASS|FAIL model=&lt;模型&gt; points=&lt;n&gt; expected=&lt;n&gt;</code></td></tr>
+<tr><td>主读数</td><td>探针减 <code>[t]</code> 基线的差与区间。PASS 只表示流程完整（无泄漏、对照齐全、结果非空），不表示解码成功，科学结论写在 <code>result.md</code>，只到「可解码」。两个主读数都只在 motion 模型上有</td><td><code>PROBE=PASS|FAIL model=&lt;模型&gt; label=&lt;标签&gt; feature=&lt;组&gt; layer=&lt;层&gt; value=&lt;值&gt; minus_time=&lt;差&gt; ci=[&lt;下&gt;,&lt;上&gt;] shuffled=&lt;值&gt;</code></td></tr>
 </table></div>
-<p>阈值沿用上一轮的写法；新增项的阈值在冒烟后定。FAIL 如实记录，不改判据。</p>
+<p>阈值都已写在上表，开工后不再调整。FAIL 如实记录，不改判据。</p>
 
 <h2>A9 出图</h2>
 <div class="tbl"><table>
@@ -186,14 +191,14 @@
 <p>上一轮全量离线的实测（<code>launch.md</code> 时间线）：motion 模型 806 次推理用 2476.7 秒，基线 721 次用 2360.9 秒，每次约 3.1–3.3 秒。那一轮是 bf16、10 个噪声样本各走 10 个去噪步、同时捕获注意力和隐状态。</p>
 <div class="tbl"><table>
 <tr><th>项目</th><th>估计</th><th>怎么来的</th></tr>
-<tr><td>取点数</td><td>每模型约 2250–2500</td><td>悬停期每局约 180–200 步，每 8 步一个点，100 局</td></tr>
-<tr><td>上限（按上一轮单次耗时）</td><td>每模型约 2 小时</td><td>2400 × 3.1 秒</td></tr>
+<tr><td>取点数</td><td>每模型 2344</td><td>按 A3 规则对 100 局实算</td></tr>
+<tr><td>上限（按上一轮单次耗时）</td><td>每模型约 2 小时</td><td>2344 × 3.1 秒；不含下一行的逐帧编码</td></tr>
 <tr><td>本轮实际</td><td>应明显低于上限</td><td>只跑前缀前向，不去噪、不捕获注意力；上一轮单次耗时里去噪占多少没有分项实测，所以不给具体数字</td></tr>
-<tr><td>会变慢的因素</td><td>—</td><td>float32 捕获；示教要逐帧过记忆适配器</td></tr>
-<tr><td>冒烟（1 局）</td><td>每模型一两分钟</td><td>约 25 个点</td></tr>
-<tr><td>探针分析</td><td>CPU 上十几分钟以内</td><td>上一轮分析约 5 分钟</td></tr>
+<tr><td>会变慢的因素</td><td>—</td><td>float32 捕获；示教要逐帧过记忆适配器（每局喂到最后一个取点，约 2 万帧视觉编码）；motion 模型每个窗口还要走一次编码器。上一轮的单次耗时不含这些</td></tr>
+<tr><td>冒烟（1 局）</td><td>每模型几分钟（含编译）</td><td>第 0 局约 40 个点，喂约 390 帧</td></tr>
+<tr><td>探针分析</td><td>CPU 上未实测</td><td>上一轮分析约 5 分钟；本轮特征数更多、还要做 PCA，冒烟后估算</td></tr>
 </table></div>
-<p>两张 A6000 各跑一个模型，墙钟不超过约 2 小时。冒烟时量出单点实际耗时后回填这一节。全量回放超过 5 分钟，按规则放 detached tmux 并挂监听。</p>
+<p>两张 A6000 各跑一个模型。墙钟要等冒烟量出单点耗时和编码耗时后才能定，回填这一节。全量回放超过 5 分钟，按规则放 detached tmux 并挂监听。</p>
 
 
 
@@ -204,53 +209,84 @@
 <li>按局划分；选层、选正则系数、PCA 都只用训练折。</li>
 <li>主读数只有 A7 写死的两个，其余标探索性。</li>
 <li>FAIL 不改判据。</li>
-<li><code>src/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code> 是否允许改动，按策略仓库自己的受保护目录规则，本计划不授权。</li>
+<li><code>src/</code>、<code>third_party/</code>、<code>scripts/training/</code>、<code>scripts/evaluation/</code> 本计划零改动；代码只改 B4 列出的 <code>scripts/interpret/</code> 文件。</li>
 </ol>
 
 <h2>B2 可复用的现有实现（策略仓库）</h2>
 <div class="tbl"><table>
 <tr><th>用途</th><th>锚点</th></tr>
+<tr><td>观测组装</td><td><code>policy.py</code> 的 <code>add_buffer</code>、<code>_prepare_history</code>、<code>infer</code>；真实 motion 编码器走 <code>create_trained_policy(..., motion_stub=False)</code></td></tr>
+<tr><td>float32 前向的做法（待确认 Q1）</td><td><code>docs/evaluation-doc/stopcube-rollout-1105/records/diagnostics/diag_hidden.py</code>：<code>restore_params(dtype=float32)</code>、<code>dataclasses.replace(config, dtype="float32").load(...)</code>、<code>AttnAdapter(_ModelShim(model32))</code>、<code>default_matmul_precision("highest")</code></td></tr>
 <tr><td>按局哈希分折、每局等权</td><td><code>scripts/interpret/analysis/rollout_probe.py</code> 的 <code>hash_fold</code>、<code>episode_weights</code></td></tr>
 <tr><td>岭回归路径与嵌套选系数</td><td>同文件 <code>fit_path</code>、<code>select_lambda</code>、<code>ridge_cv</code></td></tr>
 <tr><td>局级 MAE 与差值区间</td><td>同文件 <code>episode_mae</code>、<code>mae_difference</code></td></tr>
 <tr><td>时间基线特征</td><td>同文件 <code>time_features</code>（现为 <code>[t, n_pass]</code>）</td></tr>
 <tr><td>整局打乱</td><td>同文件 <code>shuffle_labels</code>（现只换锚点，t 未处理；本计划改为整局换 (M, N) 后重算）</td></tr>
-<tr><td>隐状态捕获与分组</td><td><code>scripts/interpret/rollout_offline.py</code> 的 <code>build_groups</code>、<code>process_record</code>、<code>HIDDEN_GROUPS</code></td></tr>
-<tr><td>窗口、M、N、悬停高度</td><td><code>v1-store/evaluation/stopcube-oracle-1104/oracle/oracle_table.json</code>（只覆盖测试 50 局；示教 100 局的 M、N 要按种子另算）</td></tr>
+<tr><td>隐状态捕获与分组</td><td><code>scripts/interpret/rollout_offline.py</code> 的 <code>build_groups</code>、<code>motion_window_groups</code>、<code>HIDDEN_GROUPS</code>；<code>attn_adapter.py</code> 的 <code>group_token_mean</code>。现有 <code>capture_hidden</code> 一定会走完去噪，只做前缀要新增一条路径；另外它的 float32 只是把 bf16 结果转型，不是真的 float32 计算</td></tr>
+<tr><td>窗口、M、N、悬停高度</td><td><code>v1-store/evaluation/stopcube-oracle-1104/oracle/oracle_table.json</code>（只覆盖测试 50 局，用来核对种子重算）；示教 100 局的 M、N 按种子另算，到位按 A3 从 H5 读</td></tr>
 </table></div>
 
-<h2>B3 开工前要确认的四件事</h2>
+<h2>B3 开工前要确认的四件事（2026-11-05 美东只读核实结果）</h2>
 <div class="tbl"><table>
-<tr><th>事项</th><th>为什么要紧</th></tr>
-<tr><td>示教 h5 能否经评测适配器逐帧回放，记忆布局是否与真实推理一致</td><td>这是整个计划的入口；不一致就要另写入口并过 <code>REPLAY_PARITY</code></td></tr>
-<tr><td>专家悬停期末端是否完全静止</td><td>决定 <code>PAIR_FRAMES</code> 能否逐像素为 0；有抖动就改用容差并记录</td></tr>
-<tr><td>float32 捕获的显存与耗时</td><td>上一轮 bf16 下全量离线每模型约 2400 秒、800 次推理；本轮约 2400 次前缀前向，且要 float32</td></tr>
-<tr><td>帧记忆是否含当前帧</td><td>决定「历史帧」与「当前画面」两组怎么切</td></tr>
+<tr><th>事项</th><th>结论</th><th>证据</th></tr>
+<tr><td>示教 h5 能否经评测适配器逐帧回放，记忆布局是否与真实推理一致</td><td>能回放，但 <code>scripts/interpret/</code> 没有现成入口，要新写（W2）。帧和状态的形状与类型都符合 <code>add_buffer</code>。布局一致性未实跑，由 <code>REPLAY_PARITY</code> 核对</td><td>H5 每步有 256×256 uint8 的 <code>front_rgb</code>、<code>wrist_rgb</code>，<code>joint_state</code>、<code>gripper_state</code>；StopCube 没有示教前缀，<code>exec_start_idx=0</code>（102 份 <code>hold_receipt.json</code> 都是）；<code>is_video_demo</code> 全为 False</td></tr>
+<tr><td>专家悬停期末端是否完全静止</td><td>不完全。高度到位时夹爪还在闭合；闭合完之后前视基本静止，少数配对仍有差异，腕部差异更多。所以到位判定加夹爪，<code>PAIR_FRAMES</code> 用容差 8</td><td>A3 的实测；相邻取点因方块运动，前视最大差 135–196</td></tr>
+<tr><td>float32 捕获的显存与耗时</td><td>未实测，步骤 1 量。上一轮诊断同进程放过 bf16 和 float32 两份模型</td><td><code>diag_hidden.py</code>；现场两张 A6000 各约 2 GB 被其他用户占用</td></tr>
+<tr><td>帧记忆是否含当前帧</td><td>含。两组不再切，按 A5 写</td><td><code>even_sampling_indices</code> 的最大下标就是 <code>step_idx</code>；rollout 记录第 64 步的 <code>frame_times</code> 末项是 64</td></tr>
 </table></div>
 
 <h2>B4 子代理分配</h2>
-<p>在策略仓库开工时按该仓库规则另写分配表；稿件仓库这边不派子代理。</p>
+<p>写入型子代理 <code>model: opus</code> + <code>isolation: worktree</code>，审查 <code>model: sonnet</code> 只读，一次一个。worktree 环境取法：<code>UV_PROJECT_ENVIRONMENT=&lt;主检出 .venv&gt; PYTHONPATH=&lt;worktree&gt;:&lt;worktree&gt;/src uv run --no-sync …</code>，先打印模块 <code>__file__</code> 核实指向 worktree。worktree 内只跑不超过 5 分钟的 CPU 测试，不用 GPU。</p>
+<div class="tbl"><table>
+<tr><th>编号</th><th>目标</th><th>可写文件</th><th>禁触路径</th><th>接口与依赖</th><th>合并顺序</th><th>验收（在 worktree、CPU）</th><th>资源</th></tr>
+<tr><td>W1</td><td>A3 选点、A4 标签、配对清单</td><td><code>scripts/interpret/hover_points.py</code>、<code>scripts/interpret/test_hover_points.py</code></td><td>其余全部；不写 <code>v1-store/</code>，输出路径由参数给</td><td>输出 <code>hover_points.json</code>：每局 seed、M、N、T、到位步，每点 t、c、该不该按、剩余次数、T − t、方块位置、配对点。无依赖</td><td>1</td><td><code>pytest scripts/interpret/test_hover_points.py -q</code>：种子重算对 <code>oracle_table.json</code> 50 局相符；用合成序列测到位、c、方块位置、配对、去点；读真实 H5 第 0 局</td><td>CPU</td></tr>
+<tr><td>W2</td><td>回放入口、只做前缀路径</td><td><code>scripts/interpret/hover_replay.py</code>、<code>scripts/interpret/attn_adapter.py</code>（只新增方法，现有路径的调用形式和编译产物不变）、<code>scripts/interpret/test_hover_replay.py</code></td><td><code>src/</code>、<code>third_party/</code>、其余</td><td>读 <code>hover_points.json</code>（键按 W1 的约定）。每局写 <code>&lt;输出根&gt;/&lt;模型&gt;/episode_&lt;k&gt;.npz</code>：<code>t</code>、<code>hidden_prefix</code> f32 (n,19,5,W)（第 5 列是最近 motion token）、<code>group_tokens</code>。已存在且指纹相同的局跳过；指纹不同报错不覆盖</td><td>2</td><td><code>pytest scripts/interpret/test_hover_replay.py -q</code>：<code>--dry-shapes</code> 式抽象求值、分批逻辑、掩码，不加载真实权重</td><td>CPU；GPU 验收归主会话</td></tr>
+<tr><td>W3</td><td>A5–A7 探针、A9 出图</td><td><code>scripts/interpret/analysis/hover_probe.py</code>、<code>scripts/interpret/test_hover_probe.py</code></td><td><code>rollout_probe.py</code> 只导入不改；其余</td><td>读 W1、W2 的输出。复用 B2 的函数。打印 <code>GROUP_LEAK</code>、<code>POSITIVE_CONTROL</code>、<code>PROBE</code></td><td>3</td><td><code>pytest scripts/interpret/test_hover_probe.py -q</code>：合成数据测泄漏、独热基线、配对准确率、整局换参数</td><td>CPU</td></tr>
+<tr><td>主会话</td><td>H5 校验、冒烟、全量回放、分析、目视、留档</td><td><code>docs/evaluation-doc/stopcube-hover-probe-1105/</code></td><td>—</td><td>依赖 W1–W3 合并</td><td>—</td><td>A8 全部判定行</td><td>GPU0 基线、GPU1 motion，tmux 前缀 <code>cc-hp-</code></td></tr>
+</table></div>
+<p>共享文件：<code>attn_adapter.py</code> 只归 W2。三块的计划外调整按第 2 条走对抗验证。</p>
 
 <h2>B5 风险</h2>
 <div class="tbl"><table>
 <tr><th>风险</th><th>处置</th></tr>
 <tr><td>相邻取点高度相关，点多不等于独立样本多</td><td>统计单位是局；区间用局级重采样</td></tr>
-<tr><td>严格配对只在 N ≥ 4 的局里有，约一半的局</td><td>同时报同时刻档与全量档；严格档区间会宽，如实报</td></tr>
+<tr><td>严格配对只在 N ≥ 4 的局里有（实测 52 局，还要再去掉画面超差的）</td><td>同时报同时刻档与全量档；严格档区间会宽，如实报</td></tr>
+<tr><td>短局点很少（11 局不超过 2 个点），每局等权时这些点权重很大</td><td>这些局都是 M 小、N 小的局。沿用每局等权，同时按 M 分别报；不加别的处理</td></tr>
 <tr><td>示教是两个模型都见过的数据</td><td>结果里写明；上一轮测试 50 局的 rollout 记录可作未见局的旁证，但那是每 16 步一次推理、策略自己控制的数据，只作描述</td></tr>
 <tr><td>motion 窗口每 32 步才新增一个，相邻几个取点的 motion 组相同</td><td>已过次数的跳变若落在窗口更新之前，motion 组读不出属正常；按「距最近窗口更新的步数」分层再看一次</td></tr>
-<tr><td>M = 60 时方块快，单个窗口跨过多次经过</td><td>速度准确率按 M 分别报</td></tr>
+<tr><td>单个 motion 窗口的位移依相位而变：窗口 32 步，比任何单程（M 最小 60）都短，至多跨一次经过；窗口落在折返点附近时位移很小</td><td>速度准确率按 M 分别报</td></tr>
 </table></div>
 
 <h2>B6 盲区</h2>
 <ul>
-<li>没有读示教 h5 与评测适配器的代码，回放是否可行未核实。</li>
-<li>上一轮的隐状态定义（动作 token 取前 16 个动作位、10 个去噪步平均）是否原样沿用，未与用户确认；本计划按「沿用定义，噪声样本改为 5」写。</li>
-<li>测试 50 局的专家轨迹（<code>stopcube-oracle-1104</code>）是否存有逐帧图像，未核实。</li>
-<li>环境源码读的是 GitHub 默认分支；策略仓库锁定的是 gitlink <code>856bc3a</code>，两者是否一致未核实。</li>
+<li>H5 的帧与评测时环境输出是否逐位相同，未核实；示教局与评测局种子不重叠，本轮也不核实。</li>
+<li>float32 计算的显存与实际耗时，未实测。</li>
+<li>上一轮的隐状态定义（动作 token 取前 16 个动作位、10 个去噪步平均）是否原样沿用，未与用户确认；只影响第二批，到时按「沿用定义，噪声样本改为 5」写。</li>
+<li>腕部画面在配对里有差异的原因没有查（43 对超过 8，最大 183）；本轮只用容差排除。</li>
+<li>到位规则只在这 100 局示教上算过。环境源码已按 gitlink <code>856bc3a</code> 读，<code>oracle/</code> 没有逐帧图像，这两项已不是盲区。</li>
 </ul>
 
 <h2>B7 留档</h2>
-<p>本文件在稿件仓库 <code>probe/</code>；开工时复制到策略仓库根目录，运行留档按策略仓库规则写入 <code>docs/evaluation-doc/</code>。</p>
+<p>本文件已在策略仓库根目录。run_name 为 <code>stopcube-hover-probe-1105</code>；产物落 <code>v1-store/evaluation/stopcube-hover-probe-1105/</code>，隐状态每模型约 1.8 GB（2344 × 19 × 5 × 2048 × 4 字节）。超过 5 分钟的运行从干净 HEAD 启动（第 17 条，不制造空提交，记录 commit），留档写 <code>docs/evaluation-doc/stopcube-hover-probe-1105/</code> 的 <code>launch.md</code>、<code>result.md</code>、<code>records/</code>。</p>
+
+<h2>B8 Runbook 与交接登记</h2>
+<ol>
+<li>W1–W3 按 B4 合并后，在干净 HEAD 上跑（环境变量同 <code>v1-store/evaluation/stopcube-rollout-1105/env.sh</code> 的做法）：<code>H5_SOURCE</code> → W1 生成 <code>hover_points.json</code>、<code>LABELS</code>、<code>PAIR_FRAMES</code>。</li>
+<li>冒烟：两个模型各跑第 0 局，得 <code>REPLAY_PARITY</code>、<code>HIDDEN_PRECISION</code> 和单点耗时，回填 A11。任一 FAIL 不起全量，交用户。</li>
+<li>全量：tmux <code>cc-hp-ctx</code>（GPU0）、<code>cc-hp-mot</code>（GPU1），日志 <code>v1-store/evaluation/stopcube-hover-probe-1105/logs/&lt;模型&gt;.log</code>，各挂一个 Monitor。过滤词加 <code>nan</code>、<code>NaN</code>、<code>out of memory</code>、<code>Killed</code>、<code>Traceback</code>、<code>EXIT_CODE=</code>。OOM 不改精度和点数，停下交用户。</li>
+<li>分析与出图：<code>hover_probe</code> 放 tmux <code>cc-hp-probe</code>；图渲染后主会话目视复查。</li>
+<li>写 <code>result.md</code>，commit 并 push。</li>
+</ol>
+<p>状态机（第 27 条）：任务 id <code>stopcube-hover-probe</code>。交接前完成：A8 全部判定行与 <code>result.md</code> 提交。没有长尾。没有依赖的上游任务；下游（第二批动作 token、反事实）都要另给开工令。是否登记进 <code>current.json</code> 待确认 Q5。</p>
+
+<h2>B9 待用户确认</h2>
+<ol>
+<li><b>Q1 float32 做到哪一步：</b>推荐只把前缀前向改成 float32，帧记忆仍由 bf16 的 <code>policy</code> 生成，这是模型真实看到的输入，也有 <code>diag_hidden.py</code> 现成做法。另一选择是视觉编码也换 float32。</li>
+<li><b>Q2 <code>REPLAY_PARITY</code> 换法：</b>rollout 没存原始帧，原写法做不到；推荐 A8 的布局加分批两步。</li>
+<li><b>Q3 时间基线：</b>推荐独热 t。线性 t 对不单调的标签太弱，会高估探针超出时间的部分。</li>
+<li><b>Q4 <code>POSITIVE_CONTROL</code> 阈值：</b>原计划没定，推荐 R² ≥ 0.8。</li>
+<li><b>Q5：</b>是否登记进状态机。</li>
+</ol>
 
 </main>
 </body>
