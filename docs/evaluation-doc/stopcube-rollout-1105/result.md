@@ -116,6 +116,16 @@ P 是每次推理用 10 份独立噪声走原路径算出的预测里，前 16 �
 
 ![Q4 第 17 层两个模型对比](records/rollout-r2-fit-q4-compare.png)
 
+### 同位置配对：回归换算成分类
+
+下面两张图没有训练分类探针，只把第 17 层 Q4 回归的折外预测用真实 M、N 换算成类别：0 < y ≤ M 判为该按，ceil(y/M) 是剩余次数，N 减剩余次数是已过次数。配对取同一局内方块 xy 相差不超过 2 cm、TCP 相差不超过 1 cm 且标签不同的决策点，容差由用户指定，没有逐张比对画面。已过次数基线 155 对 28 局、motion 277 对 27 局；该不该按基线 73 对 17 局、motion 146 对 26 局。结果见 `records/class-derived.json`，脚本 `records/diagnostics/derive_class.py`。
+
+换算结果没有明显超过只用时间和次数：该不该按的配对准确率，基线最高 0.46（时间和次数 0.40），motion 最高 0.48（时间和次数 0.54），区间都很宽。这个结果既可能低估分类能力（回归不是为分类训练的，还往中间收缩），也借用了探针没读到的 M、N，所以不能回答隐状态里能否分清。
+
+![换算分类准确率](records/rollout-class-accuracy.png)
+
+![同位置配对能否分开](records/rollout-class-pairs.png)
+
 ### motion 输入带有互补的进度信息
 
 下表是计划外的事后分解，只用已有隐状态和同一折划分，没有新增推理，见 `records/probe-decompose.json`、`records/probe-decompose-ci.json`。
