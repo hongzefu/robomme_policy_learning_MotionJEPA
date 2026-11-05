@@ -28,7 +28,7 @@
 <b>状态与授权：</b>用户已对提交 <code>48be54c0414a362bfc5684d1357f383881103f92</code> 的完整计划直接回复「开工」。这是独立的新版方案，不修订也不覆盖 <code>1104-stopcube-decision-point-plan.html</code>（下称「旧计划」）；本次授权覆盖本计划所列两个模型及阶段，状态机登记仍待答复，按末节暂不登记。<br>
 <b>代码锚点：</b>写作时 HEAD 为 <code>038fe71</code>，分支 <code>v4.1-interpretMotion</code>；工作副本 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>；功能提交用 <code>commitV4.1.x:</code>，文档用 <code>docs:</code>。实际运行另固定含实现的干净提交。<br>
 <b>外部依赖：</b>benchmark gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>。motion 模型 <code>orig100-ctx32x4x4-motion-s2concat1x1024-60k</code>（59999）；基线模型官方 ctx512（79999，本次开工认可，见 K2）；模型 seed 均为 42。<br>
-<b>时限：</b>绝对截止为美东 <b>2026-11-05 04:52 EST</b>（<code>2026-11-05T09:52:00Z</code>），用户确认：「保持 04:52」。修订时为美东 11 月 4 日 23:40 左右。不重新起算，不自动延期。<br>
+<b>时限与扩展授权：</b>绝对截止改为美东 <b>2026-11-05 08:00 EST</b>（<code>2026-11-05T13:00:00Z</code>）。用户明确延至早上八点，要求第一阶段后继续同样输入的离线机制分析，并在完整聊天计划呈现后回复「同意开工了，有问题可以现在立刻问，但是之后就尽可能不要问阻塞问题」。原 04:52 截止已被本次决定替代，不自动再延期。<br>
 <b>与旧计划的关系：</b>用户说明旧计划已停止（美东 22:57:56 中止，<code>EXIT_CODE=143</code>）。本计划不恢复旧任务，不使用其运行产物，产物根独立。<br>
 <b>本次修订依据：</b>外部静态审查锚定 <code>6e88d78</code>，结论 <code>PLAN_STATIC_REVIEW=FAIL</code>；其八项问题已回到源码核实，并写入本版。
 </div>
@@ -71,7 +71,12 @@
 <h3>第 5 步：补跑固定放手（时间够才做）</h3>
 <p>其余 38 局各跑一次固定放手，得到两个模型 50 局的真实按下比例。时间不够就不做，并在报告中写明只有 12 局。</p>
 <h3>第 6 步：比较两个模型并出报告</h3>
-<p>同一张图上画两个模型的想按比例曲线，比较三件事：该按时想按的比例、提前想按的比例、按方块第几次经过分组后能否分清次数。再加上校准和放手的真实结果。注意力、信息流量、梯度归因、逐层投影和线性探针放到第二阶段，用第 2、4 步存下的数据离线计算。</p>
+<p>同一张图上画两个模型的想按比例曲线，比较三件事：该按时想按的比例、提前想按的比例、按方块第几次经过分组后能否分清次数。再加上校准和放手的真实结果。第一阶段汇报后，按下节限定案例离线分析注意力和逐层统计；梯度归因、逐层投影、线性探针和任何输入干预均不在本次扩展范围。</p>
+
+<h2>第二阶段：相同输入的离线机制分析</h2>
+<p>每种运动周期 M，按局号选取至少一个模型固定放手成功的最早一局，最多三局；两个模型都分析这同一组局。某组没有成功局就明确缺失，不补跑寻找成功。每局选择决策段开始附近、高比例、低比例、较早经过的最高比例四类已保存询问点；重复点去重，无候选记原因。最多 3 局×4 点×2 模型＝24 份输入，各复用原十份噪声，最多 240 个预测。</p>
+<p>先用原采样路径按原批量、原噪声验证动作重放，阈值仍为 1e-6；再用现有 <code>AttnAdapter</code> 展开路径提取注意力，单独记录数值差异。比较注意力落在哪些真实历史帧、哪次经过，以及 motion、视觉、文字各部分的总质量与每 token 平均值；按层、头和预测是否满足下压判据分组。与实际校准并列解释，成功案例只用于关联性解释，不替代全部 50 局统计，不宣称因果。</p>
+<p>仅保存可复核的聚合数值及必要图，不额外保存庞大的完整前缀注意力矩阵。所有输入原样使用，不替换 motion、不遮挡或删除 token、不伪造观测。先完成少量案例的完整分析，再利用余量整理对照和结论。</p>
 
 <h2>为什么要问整段悬停期</h2>
 <p>按 50 局的真实 seed 推算（M、N 取自 <code>StopCube._initialize_episode</code> 的同一随机序列）：</p>
@@ -226,10 +231,10 @@
 <tr><td>K6</td><td>想按的定义</td><td>接下来 16 行的目标 TCP 高度低于悬停高度 2 cm 以上。另报全部 20 行的同一量和 1 cm、3 cm 两档。到位前的询问点不计入。是否换阈值由用户定</td></tr>
 <tr><td>K7</td><td>校准</td><td>12 局、每模型 4 种运行，从选定时刻交给模型真实推理，不再注入保存的预测。决策段统一为 <code>[T-48, target_visit_out]</code>。校准结果先报告用户，不自动改判据，也不自动停工</td></tr>
 <tr><td>K8</td><td>正常局</td><td>不跑，也不做与真实运行的对照</td></tr>
-<tr><td>K9</td><td>第二阶段范围</td><td>注意力等工具不在本计划内运行，只验证存盘数据能离线重算</td></tr>
+<tr><td>K9</td><td>第二阶段范围</td><td>第一阶段汇报后继续最多三局、24份原输入、240预测的离线注意力与逐层统计；原输入和噪声不变，不做输入替换、训练探针或干预实验</td></tr>
 <tr><td>K10</td><td>不干预模型内部</td><td>不做 token 遮挡、替换、伪造观测；只替换送入环境的动作</td></tr>
 <tr><td>K11</td><td>成绩口径</td><td>询问局的终局不是模型成绩；校准和放手运行单独统计，不计入官方成功率；不为成功重试</td></tr>
-<tr><td>K12</td><td>并行方式</td><td>两张 A6000 各一份模型服务，各跑一个模型；不同局顺序进入服务，10 个预测批量计算；Oracle 和高度换算用多进程。不用集群，不在同一张卡起两份服务</td></tr>
+<tr><td>K12</td><td>并行方式</td><td>两张 A6000 各一份模型服务，各跑一个模型；不同局顺序进入服务，每点仍10个预测，显式小批量并记录实际批量；Oracle 和高度换算用多进程。不用集群，不在同一张卡起两份服务。用户允许使用剩余显存，不操作其他用户进程</td></tr>
 </table></div>
 
 <h2>机制</h2>
@@ -405,7 +410,7 @@ P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
 <tr><td>补跑放手</td><td>每模型 38 次</td><td>两卡并行约 20 分钟；时间不够就不做</td><td>小</td></tr>
 <tr><td>分析报告</td><td>两模型汇总</td><td>约 20 分钟</td><td>小</td></tr>
 </table></div>
-<p>以上按 23:40 开工推算。乐观情况下约 04:20 询问和分析都完成，补跑放手基本没有时间；慢的情况下询问结束已贴近 04:52，来不及出完整报告。优先级固定为：校准（含 12 局询问）&gt; 其余 38 局询问 &gt; 报告 &gt; 补跑放手。试跑后由 <code>BUDGET</code> 判定行给出实测估算；超时风险明确时先报告用户，不擅自减询问点或预测数。</p>
+<p>以上各阶段估时保留为原估算，实际以模型试跑更新。新绝对截止为 08:00，额外余量用于第一阶段补齐与限定离线分析。顺序为校准（含12局询问）→其余38局询问→第一阶段汇报→限定离线机制分析；其余38局固定放手仍按余量补跑，不阻塞已有12局的机制分析。用户要求尽可能一路推进；失败如实记录并局部定位，不为成功重跑、不减每点十预测、不放宽数值判据。</p>
 
 <h2>验收</h2>
 <div class="tbl"><table>
@@ -434,6 +439,7 @@ P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
 <tr><td>第 4 步</td><td>两模型询问其余 38 局</td><td><code>QUERY_RECORD</code>、<code>OFFLINE_REPLAY</code></td></tr>
 <tr><td>第 5 步</td><td>时间够时补跑固定放手</td><td><code>RELEASE_RUN</code></td></tr>
 <tr><td>第 6 步</td><td>两模型比较、出图、报告与留档，交用户</td><td><code>REPORT_READY</code></td></tr>
+<tr><td>第二阶段</td><td>固定成功案例与最多24份输入，原路径重放后提取注意力、逐层统计与结论</td><td><code>MECHANISM_SELECTION</code>、<code>OFFLINE_REPLAY</code>、<code>MECHANISM_REPORT</code></td></tr>
 </table></div>
 
 <h2>子代理分工与合并（简述）</h2>
@@ -493,6 +499,7 @@ P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
 <tr><td><code>scripts/interpret/serve_policy_attn.py</code></td><td>修改</td><td>新增 <code>QueryRecorder</code> 与 <code>--query-record N</code>：构建一次 observation，复制到实际批量，调原 <code>_sample_actions</code>，逐预测做原输出变换，写 <code>query_&lt;seq&gt;.npz</code>。专用 RPC 校验放开帧数和连续 <code>add_buffer</code>，保留身份、帧号连续与首包合同</td><td>默认关闭，<code>AttnRecorder</code> 与原校验不变</td></tr>
 <tr><td><code>scripts/interpret/offline_query.py</code></td><td>新增</td><td>读 <code>query_*.npz</code> 和检查点，走原采样路径重算并比较；可调 <code>AttnAdapter.run</code> 输出注意力并报告差异。第二阶段的统一入口</td><td>新文件，无影响</td></tr>
 <tr><td><code>scripts/interpret/analysis/oracle_press_prob.py</code></td><td>新增</td><td>多进程算目标高度，缓存 <code>query_z_&lt;模型&gt;_&lt;局&gt;.npz</code>；算 <code>P(t)</code>、Wilson 区间、分组表、校准选点和结果表；两模型对比图和 <code>report.html</code></td><td>新文件，无影响</td></tr>
+<tr><td><code>scripts/interpret/analysis/offline_mechanism.py</code> 与定向短测</td><td>新增</td><td>第二阶段独立入口：固定案例与询问路径清单，调用原离线重算及现有适配器；保存逐层/头/输入组与真实帧分组统计、数值差异和中文报告，不写全前缀矩阵</td><td>新文件，无影响</td></tr>
 <tr><td>对应 <code>scripts/interpret/test_*.py</code></td><td>新增或修改</td><td>见第六节验收</td><td>—</td></tr>
 </table></div>
 
@@ -548,6 +555,7 @@ P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
 <tr><td>R1：<code>opus</code>，运行型，不加 worktree</td><td>试跑与正式运行</td><td>只写第十一节产物路径</td><td>全部源码、配置、依赖</td><td>主会话给固定 sha、完整命令、GPU、tmux 名、日志路径、起跑判据、最长等待、不自动重试</td><td>S1～S4 合并后</td><td>回执、起跑判据原文、句柄</td><td>每卡一个模型；<code>so-</code> 前缀</td></tr>
 <tr><td>审查：<code>sonnet</code>，只读</td><td>开工一致性、合并前审查</td><td>无</td><td>全部写入、测试、作业</td><td>钉死 BASE／TIP</td><td>开工及每次合并</td><td><code>PLAN_CONSISTENCY_REVIEW</code>、<code>PRE_MERGE_REVIEW</code></td><td>无</td></tr>
 <tr><td>主会话</td><td>整合、合并后审查、监听、报告</td><td>留档、<code>launch.md</code>、<code>result.md</code></td><td>旧计划产物</td><td>唯一资源与清理负责人</td><td>—</td><td><code>POST_MERGE_REVIEW</code> 与全部判定行</td><td>—</td></tr>
+<tr><td>S5：Codex Sol，独立 worktree</td><td>限定离线机制分析</td><td><code>analysis/offline_mechanism.py</code>、<code>test_offline_mechanism.py</code></td><td>其余源码，适配器仅只读调用</td><td>消费S3记录与S4汇总、校准真值；最多24份输入、每份原10噪声</td><td>S4之后</td><td>选择规则、去重、聚合/缺失、无干预与数值差异短测；真实GPU由R1执行</td><td>CPU实现；运行复用两卡，so-前缀，截止08:00</td></tr>
 </table></div>
 <p>此表按 Claude Code 角色写。如果改由 Codex 执行，按用户此前的映射把修改、运行、审查换成 Sol，探索换成 Luna，全部显式指定 high。环境取法：worktree 内 <code>UV_PROJECT_ENVIRONMENT=&lt;主检出&gt;/.venv PYTHONPATH=&lt;worktree&gt;:&lt;worktree&gt;/src uv run --no-sync python -m pytest &lt;定向测试&gt; -q</code>，子代理先打印模块 <code>__file__</code> 核实指向 worktree。</p>
 
@@ -564,7 +572,8 @@ P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
 <tr><td>高度换算</td><td>用 <code>raw_state</code> 算高度与同步实测 TCP 比较</td><td>确认换算链接对</td><td>见验收表 <code>FK_PARITY</code></td></tr>
 <tr><td>校准</td><td>交还前动作等于表；交还步是询问点；之后动作等于模型输出；四类结果齐全或写明跳过原因</td><td>证明控制权确实交回</td><td>见验收表 <code>PRESS_CALIBRATION</code></td></tr>
 <tr><td>放手</td><td>同校准，运行到官方终局</td><td>得到真实结果</td><td>见验收表 <code>RELEASE_RUN</code></td></tr>
-<tr><td>时间</td><td>试跑实测，含服务启动、首次编译、离线回放和高度换算</td><td>决定能否在截止前跑完</td><td><code>BUDGET=PASS deadline=2026-11-05T09:52:00Z remaining_s=&lt;n&gt; estimated_s=&lt;m&gt;</code></td></tr>
+<tr><td>时间</td><td>试跑实测，含服务启动、首次编译、离线回放和高度换算</td><td>决定能否在截止前跑完</td><td><code>BUDGET=PASS deadline=2026-11-05T13:00:00Z remaining_s=&lt;n&gt; estimated_s=&lt;m&gt;</code></td></tr>
+<tr><td>离线机制</td><td>固定成功选局、原输入路径与噪声、原路径误差、分组统计和图</td><td>仅解释限定成功案例，不能外推因果或总体成功率</td><td><code>MECHANISM_SELECTION=PASS episodes=&lt;n&gt; inputs=&lt;n≤24&gt;</code>；<code>MECHANISM_REPORT=PASS inputs=&lt;n&gt; visual_review=pass</code></td></tr>
 <tr><td>报告</td><td>齐全、可追溯，图渲染后目视复查</td><td>第 2 条画图复查要求</td><td>见验收表 <code>REPORT_READY</code></td></tr>
 </table></div>
 <p>任一阈值不过只记录证据交用户裁决，不自行放宽。<code>ORACLE_PRESS</code> 的成功数没有门槛，低于 50 时列局号；询问只用只悬停段，不受影响。</p>
@@ -582,6 +591,7 @@ P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
 <li>两卡同时询问其余 38 局；CPU 上同步做已完成局的高度换算。</li>
 <li>剩余时间足够时补跑其余 38 局的固定放手。</li>
 <li>汇总、出图；写 <code>result.md</code>、更新评估索引；收尾列 tmux 清单。截止前未完成的运行如实列出。</li>
+<li>第一阶段结果汇报后，不再等待逐阶段确认，按限定选例继续原输入离线重算、注意力与逐层统计；完成图目视复查，写机制结论与反例。08:00前10秒停止本轮计算并收尾，未完成不伪PASS。</li>
 </ol>
 
 <h2>九 风险登记</h2>
@@ -606,7 +616,7 @@ P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
 <li>50 局，部分 (M,N) 格子只有 2 局，结论不能外推。</li>
 <li>目标高度来自关节目标的运动学换算，真实 TCP 有滞后。</li>
 <li>离线重算只能回答同一输入下的问题；要改变历史就必须重跑环境。</li>
-<li>本计划不回答「模型依据什么决定下压」，只保证第二阶段有可用的输入数据。</li>
+<li>第二阶段只给同输入注意力与预测行为的关联性解释，不通过干预证明「模型依据什么决定下压」。最多三个成功案例，不能替代总体比较。</li>
 </ul>
 
 <h2>十一 留档与 commit 纪律</h2>
@@ -623,7 +633,7 @@ P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
 <li><b>交接前必须完成：</b>第七节除放手补跑外的判定行（保存在 <code>docs/evaluation-doc/stopcube-oracle-1104/records/verification.summary.txt</code>）、本轮 tmux 退出且退出码已核、留档已提交推送。</li>
 <li><b>长尾：</b>无。</li>
 <li><b>上游：</b>无解锁依赖。旧计划已停止，不使用其产物。</li>
-<li><b>下游：</b>无自动解锁。第二阶段基于 <code>query_*.npz</code> 离线做，另定计划和开工令。</li>
+<li><b>下游：</b>本次用户完整开工令已含第二阶段；第一阶段汇报后在同一任务内继续限定离线分析，不自动解锁其他任务，不再另问逐阶段开工。状态机未获登记许可，仍人工交接。</li>
 </ul>
 
 <h2>开工审查与实际分工</h2>
