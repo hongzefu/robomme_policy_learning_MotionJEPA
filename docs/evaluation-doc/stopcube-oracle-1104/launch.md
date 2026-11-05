@@ -40,6 +40,10 @@ benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主
 
 ## 本轮会话清单
 
+两模型询问试跑实际均于美东11-05 00:04:43启动：`so-query16-ctx-a`、`so-query16-mot-a`，窗格PID分别465684、465681。首段稳定点间隔约2.5秒，最终退出及数值验收另记，不以存活替代完成。
+
+预留续测会话 `so-followup-ctx-a`、`so-followup-mot-a`，各自在对应第16局询问退出0且输出完整之后启动；不同模型可以并行，同卡不共驻两份服务。完整命令为 `tmux new-session -d -s so-followup-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_smoke_followup.sh ctx'`（motion对应参数mot）。固定同一干净48a52f1，顺序执行：`run_local --spec <产物根>/spec-smoke-query3-<模型>-a.json --episodes StopCube:3`；`run_local --spec <产物根>/spec-smoke-cadence16-<模型>-a.json --episodes StopCube:16`；`offline_query --query <第16局首尾两点> <第3局首尾两点> --ckpt <已核检查点> --config <原配置名> --attention --output <产物根>/smoke/offline-<模型>-a.json`。前两条采用策略解释器 `-m scripts.interpret.run_local`，最后为同解释器 `-m scripts.interpret.offline_query`。原点路径从完成局的原子存盘文件确定，原噪声与batch2随记录恢复；环境XLA确定性参数与线上一致。日志 `<产物根>/logs/followup-<模型>-a.log`，任一命令失败保留退出码，不自动重试；截止仍绝对08:00。诊断16步只用于输入节奏验收，不与正式4步点混作独立样本。
+
 实际启动：`so-assets-1104`，CPU 资产验证，干净工作树提交 `49db7d7bbc0d7a772f512d9804cb33966c04cafe`，日志 `<产物根>/logs/assets.log`。核验耗时 47.73 秒、退出 0，54 个 motion 文件和 17 个官方基线文件通过。
 
 预留下一份会话：`so-oracle16-hold-a`，只有收到启动回执才视为已运行。完整命令为 `tmux new-session -d -s so-oracle16-hold-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/smoke_oracle16.sh'`。实质命令如下，外层使用 `pipefail`、`tee`、无缓冲和 `EXIT_CODE=`；单次最长 290 秒，不重试：
