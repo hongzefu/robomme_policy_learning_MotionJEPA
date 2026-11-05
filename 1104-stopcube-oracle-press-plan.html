@@ -25,9 +25,9 @@
 <main>
 <div style="font-size:2rem;font-weight:700;line-height:1.35">StopCube：Oracle 到位后的下压比例计划</div>
 <div class="note">
-<b>状态与授权：</b>只规划，未开工。这是独立的新版方案，不修订也不覆盖 <code>1104-stopcube-decision-point-plan.html</code>（下称「旧计划」）。本文件呈现后，用户不改而直接认可才算开工令；旧计划的第一阶段授权不延伸到这里。<br>
+<b>状态与授权：</b>用户已对提交 <code>48be54c0414a362bfc5684d1357f383881103f92</code> 的完整计划直接回复「开工」。这是独立的新版方案，不修订也不覆盖 <code>1104-stopcube-decision-point-plan.html</code>（下称「旧计划」）；本次授权覆盖本计划所列两个模型及阶段，状态机登记仍待答复，按末节暂不登记。<br>
 <b>代码锚点：</b>写作时 HEAD 为 <code>038fe71</code>，分支 <code>v4.1-interpretMotion</code>；工作副本 <code>/data/hongzefu/robomme_policy_learning_MotionJEPA</code>；功能提交用 <code>commitV4.1.x:</code>，文档用 <code>docs:</code>。实际运行另固定含实现的干净提交。<br>
-<b>外部依赖：</b>benchmark gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>。motion 模型 <code>orig100-ctx32x4x4-motion-s2concat1x1024-60k</code>（59999）；基线模型官方 ctx512（79999，待用户确认，见 K2）；模型 seed 均为 42。<br>
+<b>外部依赖：</b>benchmark gitlink <code>856bc3a189d4172f3f47dbee4424d585f8d78db3</code>。motion 模型 <code>orig100-ctx32x4x4-motion-s2concat1x1024-60k</code>（59999）；基线模型官方 ctx512（79999，本次开工认可，见 K2）；模型 seed 均为 42。<br>
 <b>时限：</b>绝对截止为美东 <b>2026-11-05 04:52 EST</b>（<code>2026-11-05T09:52:00Z</code>），用户确认：「保持 04:52」。修订时为美东 11 月 4 日 23:40 左右。不重新起算，不自动延期。<br>
 <b>与旧计划的关系：</b>用户说明旧计划已停止（美东 22:57:56 中止，<code>EXIT_CODE=143</code>）。本计划不恢复旧任务，不使用其运行产物，产物根独立。<br>
 <b>本次修订依据：</b>外部静态审查锚定 <code>6e88d78</code>，结论 <code>PLAN_STATIC_REVIEW=FAIL</code>；其八项问题已回到源码核实，并写入本版。
@@ -50,7 +50,7 @@
 
 <h2>每一步做什么（用第 16 局举例）</h2>
 <p>第 16 局：M=120、N=4，按钮要在第 412～428 步之间按下才算对，正中间是第 420 步（<code>T</code>）。</p>
-<h3>第 0 步：写代码并试跑（约 1.5 小时）</h3>
+<h3>第 0 步：写代码并试跑（约 2 小时）</h3>
 <p>新写四块：生成 Oracle 动作；让环境按 Oracle 动作走并每过 4 步询问；保存输入输出并能离线重算；校准与分析报告。写完拿第 16 局和一个最短的局（M=60、N=2），两个模型各试跑一次，测出真实耗时。</p>
 <h3>第 1 步：算区间并生成 Oracle 动作（不用模型）</h3>
 <p>每局多进程跑两遍，两个模型共用结果。<b>只悬停版</b>：Oracle 到按钮上方后一直保持到任务官方结束，存逐步动作表，并算出 412～428 这个区间。<b>真下压版</b>：到约第 390 步（<code>T-30</code>）开始下压，确认区间和官方判定一致，并测 Oracle 的实际下压时刻和耗时。</p>
@@ -219,7 +219,7 @@
 <div class="tbl"><table>
 <tr><th>编号</th><th>项目</th><th>口径</th></tr>
 <tr><td>K1</td><td>局</td><td>StopCube 官方测试集全部 50 局，不换环境 seed，不挑局</td></tr>
-<tr><td>K2</td><td>两个模型</td><td>带 motion：59999。基线（<b>待用户确认</b>）：官方 ctx512 79999，它是本机现有的不带 motion 的权重，已在 11-03 的对比中使用过。它的训练步数和训练来源都与 motion 模型不同，差异不能全部归因于 motion</td></tr>
+<tr><td>K2</td><td>两个模型</td><td>带 motion：59999。基线（本次开工认可）：官方 ctx512 79999，它是本机现有的不带 motion 的权重，已在 11-03 的对比中使用过。它的训练步数和训练来源都与 motion 模型不同，差异不能全部归因于 motion</td></tr>
 <tr><td>K3</td><td>下压区间</td><td>由仿真直接算：方块到目标水平距离 ≤ <code>3×cube_half_size</code>（0.06 m）且落在第 N 程</td></tr>
 <tr><td>K4</td><td>询问方式</td><td>Oracle 全程控制环境；每过 4 步询问一次，每次 10 个预测，只记录不执行；两模型噪声相同。询问不改变模型记忆，也不影响环境</td></tr>
 <tr><td>K5</td><td>第一遍记录</td><td>不记注意力，记完整输入和输出（含原始状态）</td></tr>
@@ -488,7 +488,7 @@ P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
 <div class="tbl"><table>
 <tr><th>文件</th><th>类型</th><th>改什么</th><th>关闭态行为</th></tr>
 <tr><td><code>scripts/interpret/stopcube_oracle.py</code></td><td>新增</td><td>CLI：<code>--episode-key</code>、<code>--mode hold|press</code>、<code>--output-dir</code>、<code>--benchmark-root</code>。每进程一个单局环境，包一层记录 <code>env.step</code> 的动作，调任务 solve 函数。hold 模式写动作表和 <code>window_probe.jsonl</code>；press 模式写实际下压起点、触发步、<code>stop_timestep</code>、任务成功</td><td>新文件，无影响</td></tr>
-<tr><td><code>scripts/interpret/stopcube_runner.py</code></td><td>修改</td><td>新增 <code>oracle_query</code>、<code>oracle_calibrate</code>：专用循环。询问模式每执行 4 个表内动作，提交 4 帧并询问，预测丢弃执行权。校准模式交还点前连续提交历史不询问，交还后由模型每 16 步推理执行；<code>stop_after_release</code> 控制 48 步截止，终局记 <code>calibration_stop</code></td><td><code>normal</code>、<code>hold_extended</code> 不变</td></tr>
+<tr><td><code>scripts/interpret/stopcube_runner.py</code></td><td>修改</td><td>新增 <code>oracle_query</code>、<code>oracle_calibrate</code>：专用循环。询问模式先提交完整 <code>D+1</code> 首包，在步前值 <code>t=1</code> 首问；随后每执行 4 个表内动作，提交 4 帧并询问，预测丢弃执行权。校准模式交还点前连续提交历史不询问，交还后由模型每 16 步推理执行；<code>stop_after_release</code> 控制 48 步截止，终局记 <code>calibration_stop</code></td><td><code>normal</code>、<code>hold_extended</code> 不变</td></tr>
 <tr><td><code>scripts/interpret/run_local.py</code></td><td>修改</td><td>白名单加两种模式；透传询问参数；表内容指纹并入 <code>run_identity</code>；<code>collect</code> 按模式分别统计历史包、询问点和执行推理次数</td><td>不传时命令、身份和统计不变</td></tr>
 <tr><td><code>scripts/interpret/serve_policy_attn.py</code></td><td>修改</td><td>新增 <code>QueryRecorder</code> 与 <code>--query-record N</code>：构建一次 observation，复制到实际批量，调原 <code>_sample_actions</code>，逐预测做原输出变换，写 <code>query_&lt;seq&gt;.npz</code>。专用 RPC 校验放开帧数和连续 <code>add_buffer</code>，保留身份、帧号连续与首包合同</td><td>默认关闭，<code>AttnRecorder</code> 与原校验不变</td></tr>
 <tr><td><code>scripts/interpret/offline_query.py</code></td><td>新增</td><td>读 <code>query_*.npz</code> 和检查点，走原采样路径重算并比较；可调 <code>AttnAdapter.run</code> 输出注意力并报告差异。第二阶段的统一入口</td><td>新文件，无影响</td></tr>
@@ -626,6 +626,8 @@ P(t)            = 10 个预测中想按的比例（t ≥ reach_step）
 <li><b>下游：</b>无自动解锁。第二阶段基于 <code>query_*.npz</code> 离线做，另定计划和开工令。</li>
 </ul>
 
+<h2>开工审查与实际分工</h2>
+<p><code>PLAN_CONSISTENCY_REVIEW=PASS base=48be54c0414a362bfc5684d1357f383881103f92 findings=2 blocking=0</code>。独立 Sol 审查确认两个文字问题：第 0 步估时统一为规模表的约 2 小时；运行器说明补明已有口径的首包及 <code>t=1</code> 首问。未改变机制、阈值或绝对截止。S1～S4 按原文件边界分别在独立工作树实施，均使用 Codex Sol、high；运行与审查分别委派，资源与整合由主会话负责。</p>
 </main>
 </body>
 </html>
