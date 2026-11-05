@@ -305,17 +305,25 @@ def generate_episode(episode_id, mode, output_dir, benchmark_root, hold_table=No
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--episode", type=int, required=True)
+    identity = parser.add_mutually_exclusive_group(required=True)
+    identity.add_argument("--episode-key", help="官方局身份，例如 StopCube:16")
+    identity.add_argument("--episode", type=int, help="局号别名，例如 16")
     parser.add_argument("--mode", choices=("hold", "press"), required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--benchmark-root", type=Path, required=True)
     parser.add_argument("--hold-table", type=Path)
     args = parser.parse_args(argv)
-    if not 0 <= args.episode < 50:
+    episode_id = args.episode
+    if args.episode_key is not None:
+        task, separator, number = args.episode_key.partition(":")
+        if task != "StopCube" or not separator or not number or any(c not in "0123456789" for c in number):
+            parser.error("--episode-key 必须为 StopCube:<官方局号>，例如 StopCube:16")
+        episode_id = int(number)
+    if not 0 <= episode_id < 50:
         parser.error("官方测试局号范围为 0～49")
     if args.mode == "press" and args.hold_table is None:
         parser.error("press 模式必须指定 --hold-table")
-    receipt = generate_episode(args.episode, args.mode, args.output_dir, args.benchmark_root, args.hold_table)
+    receipt = generate_episode(episode_id, args.mode, args.output_dir, args.benchmark_root, args.hold_table)
     if args.mode == "hold":
         print(f"ORACLE_TABLE=PASS episodes=1 failed=0 late_reach={int(receipt['late_reach'])}", flush=True)
     else:

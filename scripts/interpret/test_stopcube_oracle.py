@@ -9,6 +9,7 @@ from unittest.mock import Mock
 import numpy as np
 import pytest
 
+from scripts.interpret import stopcube_oracle as oracle
 from scripts.interpret.stopcube_oracle import (
     EpisodeFinished, OracleError, PhysicalRecorder, TerminalBoundary,
     drive_episode, hover_measurement, install_recorder, main, make_table_entry, press_result,
@@ -192,3 +193,29 @@ def test_cli_requires_single_official_episode_and_hold_table(tmp_path):
     with pytest.raises(SystemExit) as exc:
         main(["--episode", "16", "--mode", "press", *common])
     assert exc.value.code == 2
+
+
+@pytest.mark.parametrize("identity", [["--episode-key", "StopCube:16"], ["--episode", "16"]])
+def test_cli_identity_and_alias_dispatch_same_episode(tmp_path, monkeypatch, capsys, identity):
+    generate = Mock(return_value={"late_reach": False})
+    monkeypatch.setattr(oracle, "generate_episode", generate)
+    assert main([*identity, "--mode", "hold", "--output-dir", str(tmp_path),
+                 "--benchmark-root", str(tmp_path / "benchmark")]) == 0
+    generate.assert_called_once_with(16, "hold", tmp_path, tmp_path / "benchmark", None)
+    assert "ORACLE_TABLE=PASS episodes=1 failed=0 late_reach=0" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("identity", [
+    ["--episode-key", "OtherTask:16"], ["--episode-key", "StopCube:"],
+    ["--episode-key", "StopCube:16:17"], ["--episode-key", "StopCube:-1"],
+    ["--episode-key", "StopCube:50"], ["--episode-key", "16"],
+    ["--episode-key", "StopCube:16", "--episode", "16"], [],
+])
+def test_cli_rejects_invalid_or_conflicting_identity_before_simulation(tmp_path, monkeypatch, identity):
+    generate = Mock()
+    monkeypatch.setattr(oracle, "generate_episode", generate)
+    with pytest.raises(SystemExit) as exc:
+        main([*identity, "--mode", "hold", "--output-dir", str(tmp_path),
+              "--benchmark-root", str(tmp_path)])
+    assert exc.value.code == 2
+    generate.assert_not_called()
