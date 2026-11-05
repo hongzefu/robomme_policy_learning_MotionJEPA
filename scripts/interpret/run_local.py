@@ -15,6 +15,7 @@ StopCube 可选键：stopcube_mode（normal、hold_extended、oracle_query、ora
 同时提供时改用 interpret 记录入口，模式与配置文件字节 sha256 并入身份，其他任务不受影响。
 Oracle 另用 query_interval=4（节奏诊断可16）、query_record=10；校准另需 calibration_plan、calibration_kind，
 多模型选点文件由 model_id（默认 model_kind）选择。校准选点文件内容也并入身份。
+query_batch_size 可显式指定1、2、5、10，缺省实际批量10；该批量进入身份，不做自动回退。
 S8 motion 内容替换的可选键：
   record_motion   目录；服务端加 --record-motion，每局写 <目录>/<nonce>.npz，本脚本收尾按 terminal 局身份改名为
                   <目录>/<task>_ep<id>.npz（与 motion_swap 供体文件同名规则）；局的 episode.json 记 motion_record。
@@ -101,6 +102,9 @@ def load_spec(path):
             spec.setdefault("query_record", 10)
             if spec["query_interval"] not in (4, 16) or spec["query_record"] != 10 or ablate_of(spec) != "none":
                 raise SystemExit("Oracle 固定10预测、间隔4或诊断16，且禁止 ablate")
+            if spec.get("query_batch_size") is not None and (
+                    type(spec["query_batch_size"]) is not int or spec["query_batch_size"] not in (1, 2, 5, 10)):
+                raise SystemExit("query_batch_size 只能显式选1、2、5、10，不做自动回退")
         if spec["stopcube_mode"] == "oracle_calibrate":
             from scripts.interpret.stopcube_runner import CALIBRATION_KINDS
             if not spec.get("calibration_plan") or spec.get("calibration_kind") not in CALIBRATION_KINDS:
@@ -153,7 +157,8 @@ def run_identity(spec, manifest):
         ident["stopcube_mode"] = spec["stopcube_mode"]
         ident["stopcube_config_sha256"] = hashlib.sha256(Path(spec["stopcube_config"]).read_bytes()).hexdigest()
         if spec["stopcube_mode"].startswith("oracle_"):
-            ident.update(query_interval=spec.get("query_interval", 4), query_record=spec.get("query_record", 10))
+            ident.update(query_interval=spec.get("query_interval", 4), query_record=spec.get("query_record", 10),
+                         query_batch_size=spec.get("query_batch_size") or spec.get("query_record", 10))
         if spec["stopcube_mode"] == "oracle_calibrate":
             ident.update(calibration_plan_sha256=hashlib.sha256(Path(spec["calibration_plan"]).read_bytes()).hexdigest(),
                          calibration_kind=spec["calibration_kind"], model_id=spec.get("model_id", spec["model_kind"]))
@@ -225,6 +230,8 @@ def build_server_command(spec, nonce, port, episodes=None):
     extra = ["--attn-out", str(spec["attn_out"])]
     if spec.get("stopcube_mode", "").startswith("oracle_"):
         extra += ["--query-record", str(spec.get("query_record", 10)), "--oracle-mode", spec["stopcube_mode"]]
+        if spec.get("query_batch_size") is not None:
+            extra += ["--query-batch-size", str(spec["query_batch_size"])]
     if spec.get("save_top_frames") is not None:
         extra += ["--save-top-frames", str(int(spec["save_top_frames"]))]
     if spec.get("save_prefix"):

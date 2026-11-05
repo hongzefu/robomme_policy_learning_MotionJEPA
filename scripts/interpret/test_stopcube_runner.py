@@ -384,3 +384,28 @@ def test_oracle_service_cleanup_on_consumer_close(tmp_path, monkeypatch):
     assert next(stream)[2] == 0
     stream.close()
     assert stopped == [process, server]
+
+
+def test_query_batch_size_command_and_identity(tmp_path, monkeypatch):
+    table = tmp_path / "table.json"
+    table.write_text(json.dumps({"schema_version": 1, "episodes": {}}))
+    spec = {"repo": "/repo", "policy_python": "/policy/python", "sim_python": "/sim/python",
+            "stage2_python": "/stage2/python", "run_identity_sha256": "a" * 64, "cuda": "0",
+            "model_kind": "history", "checkpoint": "/ckpt", "policy_config": "cfg", "model_seed": 42,
+            "stopcube_mode": "oracle_query", "stopcube_config": str(table), "attn_out": "/out",
+            "run_root": "/run", "manifest": "/manifest.json", "xla_mem_fraction": 0.55}
+    implicit = local.run_identity(spec, {"sha256": "b" * 64})
+    explicit = dict(spec, query_batch_size=10)
+    assert implicit == local.run_identity(explicit, {"sha256": "b" * 64})
+    small = dict(spec, query_batch_size=2)
+    assert implicit != local.run_identity(small, {"sha256": "b" * 64})
+    command = local.build_server_command(small, "nonce", 9000)
+    assert command[command.index("--query-batch-size") + 1] == "2"
+    assert command[command.index("--query-record") + 1] == "10"
+    assert "--query-batch-size" not in local.build_server_command(spec, "nonce", 9000)
+    spec_path = tmp_path / "spec.json"
+    spec_path.write_text(json.dumps(small))
+    assert local.load_spec(spec_path)["query_batch_size"] == 2
+    spec_path.write_text(json.dumps(dict(small, query_batch_size=3)))
+    with pytest.raises(SystemExit, match="query_batch_size"):
+        local.load_spec(spec_path)
