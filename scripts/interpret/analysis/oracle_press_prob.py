@@ -604,13 +604,27 @@ def summarize(cache_root, table_path, output, repeats=2000, calibration_roots=()
     return summary
 
 
+def model_display_label(model):
+    """图例用短名；JSON 和报告表仍保留原始模型身份。"""
+    if "59999" in model:
+        return "motion59999"
+    if "79999" in model:
+        return "ctx51279999"
+    return Path(model).name
+
+
 def plot_report(summary, output, repeats=2000):
     os.environ.setdefault("MPLCONFIGDIR", str(Path(output).resolve() / "matplotlib-cache"))
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    # Linux 的 TTC 集合通常以首个 JP 字体名注册，但同样包含中文字形。
-    plt.rcParams["font.family"] = ["Noto Sans CJK SC", "Noto Sans CJK JP", "DejaVu Sans"]
+    from matplotlib import font_manager
+    from matplotlib.lines import Line2D
+
+    # TTC 在本机以 JP 名称登记，只选实际可用字体，避免逐字重复报找不到字体。
+    available_fonts = {font.name for font in font_manager.fontManager.ttflist}
+    plt.rcParams["font.family"] = [next(name for name in (
+        "Noto Sans CJK SC", "Noto Sans CJK JP", "WenQuanYi Zen Hei", "DejaVu Sans") if name in available_fonts)]
     plt.rcParams["axes.unicode_minus"] = False
 
     rows = [row for row in summary["rows"] if not row["pre_reach"]]
@@ -618,7 +632,9 @@ def plot_report(summary, output, repeats=2000):
     intervals = sorted({row["move_interval"] for row in rows})
     if not intervals:
         raise ValueError("没有到位后的有效询问点")
-    figure, axes = plt.subplots(len(intervals), 1, figsize=(11, 3.3 * len(intervals)), squeeze=False)
+    height = 3.3 * len(intervals) + 0.65
+    figure, axes = plt.subplots(len(intervals), 1, figsize=(11, height), squeeze=False)
+    colors = {model: plt.rcParams["axes.prop_cycle"].by_key()["color"][i % 10] for i, model in enumerate(models)}
     curves = []
     for axis, interval in zip(axes[:, 0], intervals):
         for model in models:
@@ -626,44 +642,56 @@ def plot_report(summary, output, repeats=2000):
             steps = sorted({row["relative_step"] for row in group})
             stats = [bootstrap([row["p"] for row in group if row["relative_step"] == step], repeats) for step in steps]
             if steps:
-                line, = axis.plot(steps, [s["mean"] for s in stats], label=model)
+                line, = axis.plot(steps, [s["mean"] for s in stats], color=colors[model], label=model_display_label(model))
                 axis.fill_between(steps, [s["ci95"][0] for s in stats], [s["ci95"][1] for s in stats], color=line.get_color(), alpha=0.16)
                 subset = [row for row in group if row["cadence16"]]
                 subset_steps = sorted({row["relative_step"] for row in subset})
                 axis.plot(subset_steps, [np.mean([row["p"] for row in subset if row["relative_step"] == step])
-                    for step in subset_steps], linestyle="--", color=line.get_color(), alpha=0.7, label=f"{model} / 1+16k 子集")
+                    for step in subset_steps], linestyle="--", color=line.get_color(), alpha=0.7,
+                    label=f"{model_display_label(model)} / 1+16k 子集")
                 curves.extend({"model_id": model, "move_interval": interval, "relative_step": step, **stat}
                               for step, stat in zip(steps, stats))
         axis.axvline(0, color="black", linewidth=0.8)
         axis.axvline(-48, color="gray", linestyle=":", linewidth=0.8)
         axis.set(title=f"M={interval}", xlabel="询问步减去目标经过中心 T", ylabel="P(t)", ylim=(-0.03, 1.03))
-        axis.legend(fontsize=7)
         axis.grid(alpha=0.2)
-    figure.tight_layout()
+    legend = {}
+    for axis in axes[:, 0]:
+        handles, labels = axis.get_legend_handles_labels()
+        legend.update(zip(labels, handles))
+    figure.legend(legend.values(), legend.keys(), loc="upper center", ncol=2, fontsize=9, frameon=False)
+    figure.tight_layout(rect=(0, 0, 1, 1 - 0.65 / height))
     figure.savefig(Path(output) / "probability_curves.png", dpi=150)
     plt.close(figure)
     write_json(Path(output) / "curve_intervals.json", curves)
 
-    # 先在每局的每次经过内求均值，再跨局计算，避免长局/多点局支配。
-    figure, axis = plt.subplots(figsize=(10, 4))
-    visit_stats = []
-    for model in models:
-        visits = sorted({row["visit"] for row in rows if row["model_id"] == model and row["visit"] is not None})
-        values = []
-        for visit in visits:
-            group = [row for row in rows if row["model_id"] == model and row["visit"] == visit]
-            keys = sorted({row["episode_key"] for row in group})
-            stat = bootstrap([np.mean([row["p"] for row in group if row["episode_key"] == key]) for key in keys], repeats)
-            values.append(stat)
-            visit_stats.append({"model_id": model, "visit": visit, **stat})
-        if visits:
-            axis.errorbar(visits, [v["mean"] for v in values],
-                yerr=[[v["mean"] - v["ci95"][0] for v in values], [v["ci95"][1] - v["mean"] for v in values]],
-                marker="o", capsize=3, label=model)
-    axis.set(xlabel="方块经过次数", ylabel="局内平均 P(t)", ylim=(-0.03, 1.03))
-    axis.legend(fontsize=7)
-    axis.grid(alpha=0.2)
-    figure.tight_layout()
+    # 直接展示已汇总的 M/N/经过统计，禁止跨目标 N 混成一条曲线或重新计算统计。
+    figure, axes = plt.subplots(3, 4, figsize=(14, 9.4), squeeze=False)
+    visit_stats = summary["visit_groups"]
+    for row_index, interval in enumerate((60, 80, 120)):
+        for column_index, target in enumerate((2, 3, 4, 5)):
+            axis = axes[row_index, column_index]
+            panel = [stat for stat in visit_stats if stat["move_interval"] == interval and stat["target_pass"] == target]
+            for model in models:
+                values = sorted((stat for stat in panel if stat["model_id"] == model), key=lambda stat: stat["visit"])
+                if values:
+                    axis.errorbar([v["visit"] for v in values], [v["mean"] for v in values],
+                        yerr=[[v["mean"] - v["ci95"][0] for v in values],
+                              [v["ci95"][1] - v["mean"] for v in values]],
+                        marker="o", capsize=3, color=colors[model], label=model_display_label(model))
+            if not panel:
+                axis.text(0.5, 0.5, "无数据", ha="center", va="center", transform=axis.transAxes, color="gray")
+            axis.axvline(target, color="black", linestyle=":", linewidth=1)
+            axis.set(title=f"M={interval}，目标 N={target}", xticks=list(range(1, target + 1)),
+                     xlim=(0.7, target + 0.3), ylim=(-0.03, 1.03))
+            axis.set_xlabel("方块经过次数 j", fontsize=9)
+            axis.set_ylabel("局内平均 P(t)", fontsize=9)
+            axis.tick_params(labelsize=8)
+            axis.grid(alpha=0.2)
+    handles = [Line2D([0], [0], color=colors[model], marker="o", label=model_display_label(model)) for model in models]
+    handles.append(Line2D([0], [0], color="black", linestyle=":", label="目标次数 N"))
+    figure.legend(handles=handles, loc="upper center", ncol=len(handles), fontsize=10, frameon=False)
+    figure.tight_layout(rect=(0, 0, 1, 0.95))
     figure.savefig(Path(output) / "visit_groups.png", dpi=150)
     plt.close(figure)
     write_json(Path(output) / "visit_intervals.json", visit_stats)
@@ -684,7 +712,7 @@ def report(summary_path, output, repeats=2000):
         parts.append(f"<tr><td>{escape(model)}</td><td>{sum(v['actual'] > 0 for v in episodes.values())}</td><td>{len(episodes)}</td><td>{sum(len(v['missing_steps']) for v in episodes.values())}</td></tr>")
     parts.extend(["</table><h2>同步状态的高度核验</h2><pre>" + escape(json.dumps(summary["fk"], ensure_ascii=False)) + "</pre>",
         "<h2>两个模型的下压比例</h2><img src='probability_curves.png' alt='按 M 分面的 P(t) 曲线'>",
-        "<h2>按方块经过次数分组</h2><img src='visit_groups.png' alt='按经过次数的局均值'>",
+        "<h2>按 M 与目标 N 分面的经过次数</h2><p>每面板固定 M 和目标 N，黑色竖虚线标目标次数；各点直接展示既有局级均值及区间，不跨 N 混合。各模型、各经过的可用局数见下方分组表，空面板明确标无数据。</p><img src='visit_groups.png' alt='按 M、目标 N 与经过次数分面的局均值'>",
         "<h2>局级配对比较</h2><table><tr><th>左减右</th><th>量</th><th>配对局数</th><th>差值</th><th>95% 区间</th></tr>"])
     for comparison in summary["comparisons"]:
         for name, stat in comparison["metrics"].items():
