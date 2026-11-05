@@ -32,6 +32,22 @@ benchmark 锁定 `856bc3a189d4172f3f47dbee4424d585f8d78db3`。策略环境为主
 
 本轮产物根 `/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/`，各局各目录；子目录为 `oracle/`、`smoke/`、`query/`、`calibrate/`、`release/`、`analysis/`、`logs/`。大数组和视频不进 git。具名验证写入 `records/verification.summary.txt`，失败不改阈值、不为成功重试。
 
+## 全量询问结束后的固定接续命令
+
+以下是预登记的接续规格，不代表已起跑。原生产树固定`48a52f1e083ee11777795e6d6f8dbc86056d0544`，离线树固定`050632677bea16f86a6b317d96c7d79f6eccabe6`；两者均须保持干净，不移动在跑树的HEAD。两模型query38自然退出0且各2990点完整后，运行`bash <产物根>/verify_collection.sh`，结果为`analysis/collection-verdict.json`，核两模型50局网格、十噪声、原始状态、全部Oracle控制及同步轨迹端点。官方终局会自动重复最后动作一次，因此外层轨迹最后一行跨两物理步；按真实`env_step_after`对齐Oracle逐物理步表的终点，不将两种记录粒度错配。
+
+随后并行启动三份独立会话，主会话仍统一负责监听与清理：
+
+```bash
+tmux new-session -d -s so-fk38-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_fk38.sh'
+tmux new-session -d -s so-offline-verify-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_offline_verify.sh ctx'
+tmux new-session -d -s so-offline-verify-mot-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_offline_verify.sh mot'
+```
+
+FK使用生产树和official-sim解释器，4个单线程CPU进程，复用已验证24份缓存、只新增76份；完整200点原路径/注意力重放使用离线树、每卡一个模型，原batch2、十噪声、阈值1e-6不变，结果与日志分别为`analysis/offline-verify-<模型>.json`、`logs/offline-verify-<模型>.log`。FK输出`analysis/all/{cache,summary.json,calibration_plan.json}`和`logs/fk38-a.log`。同一原预测不追加或替换采样。
+
+FK完成后用`bash <产物根>/prepare_release38.sh`从既有汇总逐局调用原`select_points`只取`fixed_release`，先核原12局固定计划完全相同，另存`analysis/release38-plan.json`与`spec-release38-<模型>-a.json`。两模型离线验证各自退出后，预留`so-release38-ctx-a`、`so-release38-mot-a`，命令为`tmux new-session -d -s so-release38-ctx-a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-oracle-1104/run_release38.sh ctx'`（motion参数mot）；固定原生产树、原38局manifest、原模型配置/显存/种子，输出`release/<模型>/release38-a/{attn,run}`，日志`logs/release38-<模型>-a.log`。不根据12局结果改放手规则，不为失败重试。全部命令仍使用绝对08:00截止；非零退出保留，主会话记录并继续不依赖失败项的授权工作。
+
 ## 模型询问试跑规格
 
 固定实现提交 `48a52f1e083ee11777795e6d6f8dbc86056d0544`，执行工作树与缓存路径同下。S1～S4合前与合后均独立审查通过，合后分别41、17、26、25项定向测试通过。先单局 `StopCube:16`、每模型单服务，ctx用GPU0、motion用GPU1。规格文件为本轮产物根 `spec-smoke-query16-ctx-a.json` 与 `spec-smoke-query16-mot-a.json`；基线配置 `mme_vla_suite_b128`、XLA0.40，motion配置 `mme_vla_suite_orig16_b128_60k`、XLA0.55及原运行合同，checkpoint与三套解释器保持本档案已核路径。新增值为 `stopcube_mode=oracle_query`、`query_interval=4`、`query_record=10`、`query_batch_size=2`、`save_top_frames=0`、`save_prefix=false`；动作表为两局合并的 `oracle-smoke-table.json`。`model_id` 使用checkpoint绝对路径，与实际query记录一致。
