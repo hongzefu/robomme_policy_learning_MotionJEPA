@@ -115,4 +115,22 @@ spec 的额外值为 `cuda="1"`、`xla_mem_fraction=0.55`、`startup_timeout_sec
 
 程序外层同样使用绝对截止、`tee` 与退出码尾行。主会话生成的固定入口为 `<产物根>/probe16_entry.sh`，运行代理只执行 `tmux new-session -d -s sd-window-probe16-1104a 'bash /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/probe16_entry.sh'`；启动前核会话不存在，不自动重试或覆盖旧目录。`WINDOW_GEOMETRY` 只证明采到了几何窗口，正式 `WINDOW_SIM` 要结合正常成功事件另验。
 
+几何探针已于美东 22:21:18 唯一启动并正常结束，`WINDOW_GEOMETRY=PASS episode=StopCube:16`、`EXIT_CODE=0`；下一步单独在相同干净提交做独立 FK，环境与截止沿用探针，预留会话 `sd-fk16-1104a`，日志 `<产物根>/logs/sd-fk16-1104a.log`，具体程序命令为：
+
+```bash
+/data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/envs/official-sim/bin/python \
+  -m scripts.interpret.stopcube_windows \
+  --trace /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/smoke-normal-ep16-a/run \
+  --trace /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/window-probes/smoke16-a/window_probe.jsonl \
+  --task-definitions /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/window-probes/smoke16-a/task_definitions.json \
+  --fk --benchmark-root /data/hongzefu/robomme_policy_learning_MotionJEPA/third_party/robomme_benchmark \
+  --output-dir /data/hongzefu/robomme_policy_learning_MotionJEPA/v1-store/evaluation/stopcube-decision-1104/calibration-smoke16-a
+```
+
+起跑入口为 `<产物根>/fk16_entry.sh`，仍由唯一 tmux 加日志退出码包裹；不得将 FK 目标高度说成实际 TCP。输出校准与窗口之后，先核真实成功事件，再构造一局独立悬停恢复冒烟，不与正式成绩混合。
+
+### 正式分块的实施细节
+
+正式 50 局拟使用已有 `chunk_size=5`，共 10 块，每五局复用一次服务，各局仍按官方循环新建环境与评估器、reset 记忆及模型 seed42。正式入口只消费明确 50 局的清单，不传 `--episodes` 造成重新拆单局；单局冒烟仍使用原始一局入口。独立静态审查 `ADJUST_REVIEW=PASS scale=same findings=0`：这是计划未固定的调度细节，不增加任务、协议、运行规模或恢复机制，真实多局行为仍待实跑。当前 GPU0 有其他用户计算，先使用 GPU1，最多两卡的资源上限不变。
+
 完成后在 `result.md` 补实际覆盖、正常与延长的独立成绩、时刻与动作一致性、人工确认入口和未完成项；轻量证据进 `records/`，大数组、视频、完整轨迹留在 `v1-store`。
