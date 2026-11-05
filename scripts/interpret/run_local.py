@@ -11,8 +11,11 @@ xla_mem_fraction；可选 port（起始端口，缺省 0=临时端口）、start
 rpc_timeout_seconds、save_prefix（缺省 false；为真时服务端加 --save-prefix，另写 prefix_<seq>.npz）、
 ablate（缺省 "none"；其他值原样透传 --ablate，语义见 serve_policy_attn 文档，如 mask_motion / mask_vis / heads:L3H0 /
 motion_zero / motion_swap:<供体目录>）。
-StopCube 第一阶段可选键：stopcube_mode（normal 或 hold_extended）、stopcube_config（固定 JSON 表路径）；
+StopCube 可选键：stopcube_mode（normal、hold_extended、oracle_query、oracle_calibrate）、stopcube_config（固定 JSON 表路径）；
 同时提供时改用 interpret 记录入口，模式与配置文件字节 sha256 并入身份，其他任务不受影响。
+Oracle 另用 query_interval=4（节奏诊断可16）、query_record=10；校准另需 calibration_plan、calibration_kind，
+多模型选点文件由 model_id（默认 model_kind）选择。校准选点文件内容也并入身份。
+query_batch_size 可显式指定1、2、5、10，缺省实际批量10；该批量进入身份，不做自动回退。
 S8 motion 内容替换的可选键：
   record_motion   目录；服务端加 --record-motion，每局写 <目录>/<nonce>.npz，本脚本收尾按 terminal 局身份改名为
                   <目录>/<task>_ep<id>.npz（与 motion_swap 供体文件同名规则）；局的 episode.json 记 motion_record。
@@ -91,9 +94,22 @@ def load_spec(path):
     if uses_motion and spec["model_kind"] != MOTION_MODEL_KIND:
         raise SystemExit(f"spec: motion_zero / motion_swap / record_motion 只适用于 {MOTION_MODEL_KIND}")
     if spec.get("stopcube_mode") is not None:
-        if spec["stopcube_mode"] not in ("normal", "hold_extended") or not spec.get("stopcube_config"):
-            raise SystemExit("spec: stopcube_mode 须为 normal/hold_extended 且提供 stopcube_config")
+        if spec["stopcube_mode"] not in ("normal", "hold_extended", "oracle_query", "oracle_calibrate") or not spec.get("stopcube_config"):
+            raise SystemExit("spec: stopcube_mode 非法或未提供 stopcube_config")
         spec["stopcube_config"] = str(Path(spec["stopcube_config"]).resolve())
+        if spec["stopcube_mode"].startswith("oracle_"):
+            spec.setdefault("query_interval", 4)
+            spec.setdefault("query_record", 10)
+            if spec["query_interval"] not in (4, 16) or spec["query_record"] != 10 or ablate_of(spec) != "none":
+                raise SystemExit("Oracle 固定10预测、间隔4或诊断16，且禁止 ablate")
+            if spec.get("query_batch_size") is not None and (
+                    type(spec["query_batch_size"]) is not int or spec["query_batch_size"] not in (1, 2, 5, 10)):
+                raise SystemExit("query_batch_size 只能显式选1、2、5、10，不做自动回退")
+        if spec["stopcube_mode"] == "oracle_calibrate":
+            from scripts.interpret.stopcube_runner import CALIBRATION_KINDS
+            if not spec.get("calibration_plan") or spec.get("calibration_kind") not in CALIBRATION_KINDS:
+                raise SystemExit("校准须提供 calibration_plan 和固定的 calibration_kind")
+            spec["calibration_plan"] = str(Path(spec["calibration_plan"]).resolve())
     elif spec.get("stopcube_config") is not None:
         raise SystemExit("spec: stopcube_config 需要 stopcube_mode")
     return spec
@@ -140,6 +156,12 @@ def run_identity(spec, manifest):
     if spec.get("stopcube_mode") is not None:
         ident["stopcube_mode"] = spec["stopcube_mode"]
         ident["stopcube_config_sha256"] = hashlib.sha256(Path(spec["stopcube_config"]).read_bytes()).hexdigest()
+        if spec["stopcube_mode"].startswith("oracle_"):
+            ident.update(query_interval=spec.get("query_interval", 4), query_record=spec.get("query_record", 10),
+                         query_batch_size=spec.get("query_batch_size") or spec.get("query_record", 10))
+        if spec["stopcube_mode"] == "oracle_calibrate":
+            ident.update(calibration_plan_sha256=hashlib.sha256(Path(spec["calibration_plan"]).read_bytes()).hexdigest(),
+                         calibration_kind=spec["calibration_kind"], model_id=spec.get("model_id", spec["model_kind"]))
     return M.digest(ident)
 
 
@@ -206,6 +228,10 @@ def build_server_command(spec, nonce, port, episodes=None):
         index = command.index("--motion-online-gpu")
         del command[index:index + 2]
     extra = ["--attn-out", str(spec["attn_out"])]
+    if spec.get("stopcube_mode", "").startswith("oracle_"):
+        extra += ["--query-record", str(spec.get("query_record", 10)), "--oracle-mode", spec["stopcube_mode"]]
+        if spec.get("query_batch_size") is not None:
+            extra += ["--query-batch-size", str(spec["query_batch_size"])]
     if spec.get("save_top_frames") is not None:
         extra += ["--save-top-frames", str(int(spec["save_top_frames"]))]
     if spec.get("save_prefix"):
@@ -239,6 +265,12 @@ def build_client_command(spec, grant_path, output, nonce, port, drain_file):
     if spec.get("stopcube_mode") is not None:
         command[1] = str(Path(spec["repo"]) / "scripts/interpret/stopcube_runner.py")
         command += ["--stopcube-mode", spec["stopcube_mode"], "--stopcube-config", str(spec["stopcube_config"])]
+        if spec["stopcube_mode"].startswith("oracle_"):
+            command += ["--query-interval", str(spec.get("query_interval", 4)),
+                        "--query-record", str(spec.get("query_record", 10))]
+        if spec["stopcube_mode"] == "oracle_calibrate":
+            command += ["--calibration-plan", spec["calibration_plan"], "--calibration-kind", spec["calibration_kind"],
+                        "--calibration-model-id", spec.get("model_id", spec["model_kind"])]
     return command
 
 
@@ -306,6 +338,63 @@ def run_chunk(spec, index, chunk_id, episodes, popen=subprocess.Popen):
     return attempt, output, code
 
 
+def run_oracle_chunks(spec, chunks, popen=subprocess.Popen):
+    """Oracle 清单共用一个服务；每个客户端至多5局、独立授权与输出。"""
+    if not chunks:
+        return
+    nonce = uuid.uuid4().hex
+    root = Path(spec["run_root"]) / "attempts" / f"oracle-service-{nonce[:8]}"
+    root.mkdir(parents=True, exist_ok=False)
+    port = pick_port(int(spec.get("port", 0)))
+    environment = build_environment(spec)
+    server_cmd = build_server_command(spec, nonce, port)
+    write_json(root / "server-command.json", {"server": server_cmd, "nonce": nonce, "port": port})
+    server = client = None
+    try:
+        with (root / "server.log").open("ab", buffering=0) as log:
+            server = popen(server_cmd, cwd=spec["repo"], env=environment, stdout=log,
+                           stderr=subprocess.STDOUT, start_new_session=True)
+        wait_ready(server, port, root / "server.log", float(spec.get("startup_timeout_seconds", 600)))
+        batches = []
+        for chunk_id, episodes in chunks:
+            for start in range(0, len(episodes), 5):
+                group = episodes[start:start + 5]
+                batches.append((chunk_id if len(episodes) <= 5 else M.digest([e["episode_key"] for e in group]), group))
+        for index, (chunk_id, episodes) in enumerate(batches):
+            attempt = root / f"{index:03d}-{chunk_id[:12]}"
+            attempt.mkdir(exist_ok=False)
+            grant, output, drain = attempt / "grant.json", attempt / "client", attempt / "drain"
+            write_json(grant, {"chunk_id": chunk_id, "run_identity_sha256": spec["run_identity_sha256"], "episodes": episodes})
+            command = build_client_command(spec, grant, output, nonce, port, drain)
+            write_json(attempt / "commands.json", {"server": server_cmd, "client": command, "port": port,
+                       "nonce": nonce, "chunk_id": chunk_id, "episode_keys": [e["episode_key"] for e in episodes]})
+            print(f"CHUNK_BEGIN index={index} chunk_id={chunk_id} port={port} nonce={nonce} attempt={attempt}", flush=True)
+            code = -1
+            try:
+                if server.poll() is not None:
+                    raise RuntimeError("常驻 Oracle 服务已退出")
+                with (attempt / "sim.log").open("ab", buffering=0) as log:
+                    client = popen(command, cwd=spec["repo"], env=environment, stdout=log,
+                                   stderr=subprocess.STDOUT, start_new_session=True)
+                while client.poll() is None:
+                    if server.poll() is not None:
+                        raise RuntimeError(f"策略服务在仿真期间退出\n{tail(root / 'server.log')}")
+                    threading.Event().wait(0.5)
+                code = client.returncode
+            except Exception as exc:
+                print(f"CHUNK_ERROR index={index} error={type(exc).__name__}: {exc}", flush=True)
+            finally:
+                RW.stop_process_tree(client)
+                client = None
+            print(f"CHUNK_END index={index} client_exit={code}", flush=True)
+            yield attempt, output, code, episodes
+            if code != 0:
+                return
+    finally:
+        RW.stop_process_tree(client)
+        RW.stop_process_tree(server)
+
+
 def collect(spec, attempt, output, episodes):
     """把 terminal 汇到 accepted/，并把局身份并入 attn_out/<nonce>/episode.json。返回逐局结果。"""
     accepted = Path(spec["run_root"]) / "accepted"
@@ -325,6 +414,11 @@ def collect(spec, attempt, output, episodes):
         terminal, started = found.get("terminal"), found.get("started")
         nonce = (terminal or started or {}).get("episode_nonce")
         npz = len(list((attn_out / nonce).glob("infer_*.npz"))) if nonce else 0
+        mode = spec.get("stopcube_mode")
+        oracle_mode = mode in ("oracle_query", "oracle_calibrate")
+        query_npz = len(list((attn_out / nonce).glob("query_*.npz"))) if nonce else 0
+        receipt_path = output / "traces" / str(nonce) / "meta" / "hold_receipt.json"
+        receipt = read_json(receipt_path) if oracle_mode and receipt_path.exists() else None
         if nonce and (attn_out / nonce / "episode.json").exists():
             info = read_json(attn_out / nonce / "episode.json")
             info.update({k: (terminal or started)[k] for k in ("task_name", "episode_id", "env_seed", "difficulty",
@@ -343,9 +437,31 @@ def collect(spec, attempt, output, episodes):
             write_json(attn_out / nonce / "episode.json", info)
         # terminal 的 rpc_seq = 1 + batch_seq + replan_seq，官方循环里每次 infer 前恰好一次 add_buffer
         infers = (int(terminal["rpc_seq"]) - 1) // 2 if terminal else None
+        history_batches = query_points = execution_infers = None
+        cadence_ok = None
+        if oracle_mode:
+            history_batches = (receipt or {}).get("history_batches", 0)
+            query_points = (receipt or {}).get("query_points", 0)
+            execution_infers = (receipt or {}).get("execution_infers", 0)
+            infers = execution_infers
+            cadence_ok = bool(terminal and receipt and int(terminal["rpc_seq"]) == 1 + history_batches + query_points + execution_infers)
+            if mode == "oracle_query":
+                table = read_json(spec["stopcube_config"])["episodes"][key]
+                expected_steps = list(range(table["first_env_step"], table["move_interval"] * table["target_pass"] + 1,
+                                            spec.get("query_interval", 4)))
+                cadence_ok = bool(cadence_ok and receipt["query_steps"] == expected_steps
+                                  and query_npz == query_points == len(expected_steps) and execution_infers == 0)
+            else:
+                cadence_ok = bool(cadence_ok and query_npz == query_points == 0 and execution_infers > 0
+                                  and receipt.get("actual_release_step") == receipt.get("release_step"))
         success = int(bool(terminal) and terminal["outcome"] == "success")
-        results.append({"task": episode["task_name"], "ep": episode["episode_id"], "success": success, "npz": npz,
-                        "infers": infers, "terminal": terminal is not None, "nonce": nonce})
+        row = {"task": episode["task_name"], "ep": episode["episode_id"], "success": success, "npz": npz,
+               "infers": infers, "terminal": terminal is not None, "nonce": nonce}
+        if oracle_mode:
+            row.update(mode=mode, history_batches=history_batches, query_points=query_points,
+                       execution_infers=execution_infers, query_npz=query_npz, cadence_ok=cadence_ok,
+                       receipt_path=str(receipt_path.resolve()))
+        results.append(row)
         print(f"EPISODE_RESULT task={episode['task_name']} ep={episode['episode_id']} success={success} npz={npz}",
               flush=True)
     return results
@@ -383,6 +499,25 @@ def main(argv=None, popen=subprocess.Popen):
     if spec.get("stopcube_mode") is not None and any(
             e["task_name"] != "StopCube" for _, episodes in chunks for e in episodes):
         raise SystemExit("stopcube_mode 只能选择 StopCube 局")
+    skipped = []
+    if spec.get("stopcube_mode") == "oracle_calibrate":
+        from scripts.interpret.stopcube_runner import load_calibration
+        selected = load_calibration(spec["calibration_plan"], spec.get("model_id", spec["model_kind"]))
+        filtered = []
+        for chunk_id, episodes in chunks:
+            kept = []
+            for episode in episodes:
+                entry = selected.get(episode["episode_key"], {}).get(spec["calibration_kind"])
+                if entry is None:
+                    raise SystemExit(f"校准文件缺选点 {episode['episode_key']} {spec['calibration_kind']}")
+                if entry.get("status") == "skipped":
+                    skipped.append(dict(episode_key=episode["episode_key"], kind=spec["calibration_kind"], reason=entry.get("reason")))
+                    print(f"CALIBRATION_SKIP episode={episode['episode_key']} kind={spec['calibration_kind']} reason={entry.get('reason')}", flush=True)
+                else:
+                    kept.append(episode)
+            if kept:
+                filtered.append((chunk_id if len(kept) == len(episodes) else M.digest([e["episode_key"] for e in kept]), kept))
+        chunks = filtered
     if spec.get("swap_map"):
         missing = [e["episode_key"] for _, eps in chunks for e in eps if _episode_key(e["episode_key"]) not in spec["swap_map"]]
         if missing:
@@ -397,17 +532,26 @@ def main(argv=None, popen=subprocess.Popen):
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, stop)
     results, codes = [], []
-    for index, (chunk_id, episodes) in enumerate(chunks):
-        attempt, output, code = run_chunk(spec, index, chunk_id, episodes, popen=popen)
-        codes.append(code)
-        results.extend(collect(spec, attempt, output, episodes))
-        if code == -1:
-            break   # 服务端或驱动故障：不再起后续 chunk
+    oracle_mode = spec.get("stopcube_mode") in ("oracle_query", "oracle_calibrate")
+    if oracle_mode:
+        attempts = run_oracle_chunks(spec, chunks, popen=popen)
+    else:
+        attempts = ((*run_chunk(spec, index, chunk_id, episodes, popen=popen), episodes)
+                    for index, (chunk_id, episodes) in enumerate(chunks))
+    try:
+        for attempt, output, code, episodes in attempts:
+            codes.append(code)
+            results.extend(collect(spec, attempt, output, episodes))
+            if code == -1:
+                break   # 服务端或驱动故障：不再起后续 chunk
+    finally:
+        attempts.close()   # 信号或收集失败同样触发常驻服务的精确进程组收尾。
     ok = (all(code == 0 for code in codes) and all(r["terminal"] for r in results)
-          and all(r["npz"] > 0 and r["npz"] == r["infers"] for r in results))
+          and all(r["cadence_ok"] if "cadence_ok" in r else r["npz"] > 0 and r["npz"] == r["infers"] for r in results))
     total_npz, success = sum(r["npz"] for r in results), sum(r["success"] for r in results)
     write_json(Path(spec["run_root"]) / f"run_local-{uuid.uuid4().hex[:8]}.json",
-               {"run_identity_sha256": spec["run_identity_sha256"], "client_exit_codes": codes, "results": results})
+               {"run_identity_sha256": spec["run_identity_sha256"], "client_exit_codes": codes, "results": results,
+                **({"skipped": skipped} if spec.get("stopcube_mode") == "oracle_calibrate" else {})})
     print(f"RUN_LOCAL={'PASS' if ok else 'FAIL'} model={spec['model_kind']} episodes={len(results)} "
           f"success={success} npz={total_npz}", flush=True)
     return 0 if ok else 1
