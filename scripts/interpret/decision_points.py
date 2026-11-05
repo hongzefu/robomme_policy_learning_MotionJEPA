@@ -454,42 +454,74 @@ EVENT_BOUNDS = {"actual_press_onset": "actual_press_onset_bounds", "button_trigg
 
 def render_html(draft, out):
     summary = draft["summary"]
+    outcomes = {"success": "成功", "fail": "未成功", "failure": "未成功", "timeout": "超时",
+                "infra": "运行异常", None: "未记录"}
+    statuses = {"resolved": "已校准", "unresolved": "待校准", None: "未记录"}
+    sources = {"same_episode_measured": "同局实际运动测量", None: "尚无来源"}
+
+    def title(key):
+        return f'StopCube 第 {key.rpartition(":")[2]} 局'
+
+    def outcome(item):
+        return outcomes.get(item.get("outcome"), "其他结果，详见原始证据")
+
+    def review_status(episode):
+        if not episode["trajectories"]["normal"]["present"]:
+            return "尚缺正常轨迹"
+        if episode["hold_required"] and not episode["trajectories"]["hold_extended"]["present"]:
+            return "尚缺必需的延长轨迹"
+        return "待人工确认" if episode["ready"] else "证据待补，详见原始证据"
+
     content = ['<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
-               '<title>StopCube 第一阶段人工确认</title><style>body{font-family:system-ui,sans-serif;max-width:1400px;margin:24px auto;padding:0 16px;color:#182230;background:#f5f7fa}table{border-collapse:collapse;width:100%;background:white}td,th{border:1px solid #cad2dc;padding:8px;text-align:left;vertical-align:top}code{overflow-wrap:anywhere}section{margin:22px 0;padding:18px;background:white;border:1px solid #cad2dc}video{max-width:100%;width:520px}.missing{color:#a12323}.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}a{color:#124eb0}li{margin:6px 0}</style>',
+               '<title>StopCube 第一阶段人工确认</title><style>body{font-family:system-ui,sans-serif;max-width:1400px;margin:24px auto;padding:0 16px;color:#182230;background:#f5f7fa}table{border-collapse:collapse;width:100%;background:white}td,th{border:1px solid #cad2dc;padding:8px;text-align:left;vertical-align:top}code{overflow-wrap:anywhere}section{margin:22px 0;padding:18px;background:white;border:1px solid #cad2dc}video{max-width:100%;width:520px}.notice{color:#5c6570}.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px}a{color:#124eb0}li{margin:6px 0}details{margin-top:18px;border-top:1px solid #cad2dc;padding-top:12px}summary{cursor:pointer;font-weight:600}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.5}</style>',
                '<h1>StopCube 第一阶段人工确认</h1><p>状态：待用户审核。本页不会批准决策点，也不会启动第二阶段。正常与悬停延长分别计分，延长成功不计入官方成功率。</p>',
                f'<p>正常轨迹 {summary["normal"]}/{summary["expected"]}；正常成功 {summary["normal_success"]}；延长轨迹 {summary["extended"]}；延长成功 {summary["extended_success"]}；提前按错需延长 {summary["hold_required"]}。</p>',
-               '<p>所有时刻均为环境步；下压命令按 env_step_before 计，实际运动与按钮保留校准区间。视频按 action_index 定位外层动作帧，不声称看到复合调用省略的中间物理步；不改写原视频。没有视频步制时保留缺失说明。</p>',
-               '<table><thead><tr><th>局</th><th>合适下压范围</th><th>正常结果／命令分类</th><th>延长结果</th><th>审核状态与缺失</th></tr></thead><tbody>']
+               '<p>时刻均为环境步，实际运动与按钮事件可能只确定在一个区间内。视频按外层动作帧定位，不补造中间物理步。展开各局的“原始证据”可核对完整记录与来源。</p>',
+               '<table><thead><tr><th>局</th><th>合适下压范围</th><th>正常结果／下压时机</th><th>延长结果</th><th>审核状态</th></tr></thead><tbody>']
     for index, (key, episode) in enumerate(draft["episodes"].items()):
         normal, ext = episode["trajectories"]["normal"], episode["trajectories"]["hold_extended"]
-        reasons = episode["reasons"] + normal["reasons"] + normal["observability_reasons"] + (ext["reasons"] if episode["hold_required"] else [])
-        content.append(f'<tr><td><a href="#episode-{index}">{escaped(key)}</a></td><td>{escaped(episode["window"].get("start_range"))}</td><td>{escaped(normal.get("outcome"))}／{escaped(normal.get("classification"))}</td><td>{escaped(ext.get("outcome"))}</td><td>{"待人工确认" if episode["ready"] else "证据未齐"}<br>{escaped(reasons)}</td></tr>')
+        extended_label = outcome(ext) if ext["present"] else "尚缺必需延长" if episode["hold_required"] else "无需延长" if normal["present"] else "待确认"
+        content.append(f'<tr><td><a href="#episode-{index}">{escaped(title(key))}</a></td><td>{escaped(episode["window"].get("start_range"))}</td><td>{escaped(outcome(normal))}／{escaped(normal.get("classification"))}</td><td>{escaped(extended_label)}</td><td>{escaped(review_status(episode))}</td></tr>')
     content.append('</tbody></table>')
     if summary["unexpected_episodes"]:
-        content.append(f'<p class="missing">清单外局：{escaped(summary["unexpected_episodes"])}</p>')
+        content.append(f'<details><summary>原始证据：清单外局</summary><pre>{escaped(summary["unexpected_episodes"])}</pre></details>')
     for index, (key, episode) in enumerate(draft["episodes"].items()):
         window, cal = episode["window"], episode["calibration"]
-        content.extend([f'<section id="episode-{index}"><h2>{escaped(key)}</h2>',
-                        '<table><tr><th>移动间隔／目标经过次数</th><th>目标进入／离开</th><th>下压范围／运动耗时</th><th>悬停参考／阈值差</th></tr>',
-                        f'<tr><td>{escaped(window.get("move_interval"))}／{escaped(window.get("target_pass"))}</td><td>{escaped(window.get("target_visit_in"))}／{escaped(window.get("target_visit_out"))}</td><td>{escaped(window.get("start_range"))}／{escaped(cal.get("motion_delay"))}</td><td>{escaped(cal.get("hover_z"))}／{escaped(cal.get("delta_z"))} 米</td></tr></table>',
-                        f'<p>校准状态：{escaped(cal.get("status"))}；来源：<code>{escaped(cal.get("calibration_source"))}</code>；缺失原因：{escaped(cal.get("reasons", []))}</p>',
-                        f'<p>接管候选（hold_qpos 前 7 维取实测关节位置，末维保持已执行的夹爪控制目标，不把物理手指位置作为归一化命令）：<code>{escaped(episode["hold_candidate"])}</code>；不适用原因：{escaped(episode["hold_inapplicable_reasons"])}</p><div class="pair">'])
+        content.extend([f'<section id="episode-{index}"><h2>{escaped(title(key))}</h2>',
+                        '<table><tr><th>合适下压范围</th><th>实测机械耗时</th><th>校准</th></tr>',
+                        f'<tr><td>{escaped(window.get("start_range"))}</td><td>{escaped(cal.get("motion_delay"))} 步</td><td>{escaped(statuses.get(cal.get("status"), "其他状态，详见原始证据"))}；{escaped(sources.get(cal.get("calibration_source"), "其他来源，详见原始证据"))}</td></tr></table>',
+                        '<div class="pair">'])
         for kind, label in (("normal", "正常轨迹"), ("hold_extended", "悬停延长轨迹（独立成绩）")):
             item = episode["trajectories"][kind]
-            content.append(f'<div><h3>{label}</h3><p>终局：{escaped(item.get("outcome"))}；独立成功字段：{escaped(item.get("task_success"))}；轨迹标识：{escaped(item.get("episode_nonce"))}</p>')
+            content.append(f'<div><h3>{label}</h3>')
+            if not item["present"]:
+                message = "尚缺正常轨迹" if kind == "normal" else "尚缺必需的延长轨迹" if episode["hold_required"] else "无需延长" if episode["trajectories"]["normal"]["present"] else "延长需求待确认"
+                content.append(f'<p class="notice">{message}</p>')
+                candidate = episode["hold_candidate"]
+                if kind == "hold_extended" and candidate:
+                    content.append(f'<p>计划接管：{escaped(candidate.get("takeover_step"))} 步；理想恢复：{escaped(candidate.get("ideal_release_step"))} 步；计划恢复：{escaped(candidate.get("release_step"))} 步；计划偏差：{escaped(candidate.get("release_offset"))} 步。</p>')
+                content.append('</div>')
+                continue
+            content.append(f'<p>终局：{escaped(outcome(item))}</p>')
             content.append('<ul>')
-            for name in EVENT_NAMES:
+            for name in ("command_press_step", "actual_press_onset", "button_trigger_step", "stop_timestep", "terminal_step"):
                 bounds = item["events"].get(EVENT_BOUNDS.get(name))
                 value = bounds if vector(bounds, 2) and bounds[0] != bounds[1] else item["events"].get(name, item.get(name))
                 suffix = "（区间，非精确步）" if vector(bounds, 2) and bounds[0] != bounds[1] else ""
                 content.append(f'<li>{escaped(EVENT_NAMES[name])}：{escaped(value)}{suffix}</li>')
-            content.append(f'<li>窗口重叠推理：{escaped(item["window_infers"])}；代表推理：{escaped(item["window_rep"])}</li>')
-            content.append(f'<li>接管计划／实际：{escaped(item.get("takeover_step"))}／{escaped(item.get("actual_takeover_step"))}</li><li>恢复理想／计划／实际：{escaped(item.get("ideal_release_step"))}／{escaped(item.get("planned_release_step", item.get("release_step")))}／{escaped(item.get("actual_release_step"))}；实际偏差：{escaped(item.get("release_offset"))}</li></ul>')
-            content.append(f'<p>关键步模型命令与实际执行动作：<code>{escaped(item.get("action_samples"))}</code></p>')
-            content.append(f'<p>第一遍推理文件：{len(item.get("infer_files", []))}；已执行推理序号：{escaped(item.get("observed_infers"))}</p>')
-            content.append(f'<p>窗口可观测性：{escaped(item["observability_reasons"])}</p>')
-            content.append(f'<p class="missing">{escaped(item["reasons"])}</p>{media_section(item, out)}</div>')
-        content.append('</div></section>')
+            if kind == "hold_extended":
+                content.append(f'<li>接管计划／实际：{escaped(item.get("takeover_step"))}／{escaped(item.get("actual_takeover_step"))}</li><li>恢复理想／计划／实际：{escaped(item.get("ideal_release_step"))}／{escaped(item.get("planned_release_step", item.get("release_step")))}／{escaped(item.get("actual_release_step"))}；实际偏差：{escaped(item.get("release_offset"))}</li>')
+            content.append('</ul>')
+            if not item.get("video_path") or not Path(item["video_path"]).is_file():
+                content.append('<p class="notice">尚缺原始视频，详见原始证据。</p>')
+            content.append(f'{media_section({**item, "trace_path": None}, out)}</div>')
+        content.append('</div><details><summary>原始证据</summary>')
+        for kind, item in episode["trajectories"].items():
+            trace = file_url(item.get("trace_path"), out)
+            if trace:
+                label = "正常轨迹逐步记录" if kind == "normal" else "延长轨迹逐步记录"
+                content.append(f'<p><a href="{escaped(trace)}">{label}</a></p>')
+        content.append(f'<p>悬停命令前 7 维取实测关节位置，末维保持已执行的夹爪控制目标，不把物理手指位置作为归一化命令。以下保留完整字段、来源和不适用原因。</p><pre>{escaped(json.dumps(episode, ensure_ascii=False, indent=2))}</pre></details></section>')
     content.append('</html>')
     return "\n".join(content)
 

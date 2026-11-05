@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import html
 from pathlib import Path
 
 import pytest
@@ -352,3 +353,37 @@ def test_cli_writes_only_drafts_and_reports_missing(tmp_path, capsys):
     assert "STAGE1_REVIEW_READY=FAIL normal=0 extended=0 approval=pending" in capsys.readouterr().out
     assert {p.name for p in out.iterdir()} == {"decision_points_draft.json", "hold_candidates.json", "review.html"}
     assert len(json.loads((out / "decision_points_draft.json").read_text())["episodes"]) == 50
+
+
+def test_readable_page_folds_full_evidence_after_video_without_changing_data(tmp_path):
+    record, window, cal = fixture(tmp_path, outcome="success", press=44)
+    cal["events"]["hover_steps"] = list(range(350))
+    record["meta"]["episode_nonce"] = "原始轨迹标识"
+    draft, _ = D.build_review({KEY: window}, {KEY: cal}, {KEY: [record]}, {}, [KEY])
+    original = json.dumps(draft, ensure_ascii=False, sort_keys=True)
+    page = D.render_html(draft, tmp_path)
+    front, evidence = page.split('<details><summary>原始证据</summary>', 1)
+    assert '<details open' not in page
+    assert '<video controls' in front
+    assert '无需延长' in front and '成功' in front and '已校准' in front
+    assert '同局实际运动测量' in front
+    for raw in ('hover_steps', 'action_samples', 'observed_infers', 'same_episode_measured', 'success',
+                'resolved', '原始轨迹标识'):
+        assert raw not in front
+        assert raw in evidence
+    preserved = html.unescape(evidence.split('<pre>', 1)[1].split('</pre>', 1)[0])
+    assert json.loads(preserved) == draft["episodes"][KEY]
+    assert json.dumps(draft, ensure_ascii=False, sort_keys=True) == original
+
+
+def test_readable_page_keeps_required_missing_trajectories_explicit(tmp_path):
+    record, window, cal = fixture(tmp_path, end=30)
+    draft, _ = D.build_review({KEY: window}, {KEY: cal}, {KEY: [record]}, {}, [KEY])
+    front = D.render_html(draft, tmp_path).split('<details>', 1)[0]
+    assert '尚缺必需的延长轨迹' in front
+    assert '无需延长' not in front
+    draft, _ = D.build_review({KEY: window}, {KEY: cal}, {}, {}, [KEY])
+    front = D.render_html(draft, tmp_path).split('<details>', 1)[0]
+    assert '尚缺正常轨迹' in front
+    assert '无需延长' not in front
+    assert 'class="missing"' not in front
